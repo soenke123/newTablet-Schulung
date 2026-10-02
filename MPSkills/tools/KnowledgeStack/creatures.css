@@ -1,1379 +1,837 @@
-
-    /* Neo-Brutalist Hard Edge Shadows & Tactile Buttons */
-    .brutal-card {
-      box-shadow: 6px 6px 0px 0px #000000;
-      transition: all 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
-    }
-    .brutal-card:hover {
-      transform: translate(-2px, -2px);
-      box-shadow: 8px 8px 0px 0px #000000;
-    }
-    .brutal-card-sm {
-      box-shadow: 3px 3px 0px 0px #000000;
-    }
-    .btn-tactile {
-      transition: all 0.1s ease;
-    }
-    .btn-tactile:active {
-      transform: translate(2px, 2px);
-      box-shadow: 1px 1px 0px 0px #000000 !important;
-    }
-
-    /* Floating particles for emote celebration */
-    @keyframes floatUpFade {
-      0% { transform: translateY(0) scale(0.8); opacity: 1; }
-      100% { transform: translateY(-55px) scale(1.4); opacity: 0; }
-    }
-    .float-particle {
-      position: absolute;
-      pointer-events: none;
-      animation: floatUpFade 1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
-      z-index: 60;
-      font-size: 1.6rem;
-    }
-
-    /* ================= PALETTES (36 CREATURES x 3 SKINS = 108 SKINS) ================= */
-.creature-card[data-id="0"].pal-0, #spotlight-card.creature-0.pal-0 { --p-main: #ff007f; --p-sub: #00f0ff; --p-accent: #ffe600; --p-shine: #ff80bf; }
-.creature-card[data-id="0"].pal-1, #spotlight-card.creature-0.pal-1 { --p-main: #10b981; --p-sub: #f59e0b; --p-accent: #a855f7; --p-shine: #6ee7b7; }
-.creature-card[data-id="0"].pal-2, #spotlight-card.creature-0.pal-2 { --p-main: #0284c7; --p-sub: #ec4899; --p-accent: #facc15; --p-shine: #7dd3fc; }
-.creature-card[data-id="1"].pal-0, #spotlight-card.creature-1.pal-0 { --p-main: #c084fc; --p-sub: #a855f7; --p-accent: #ffe600; --p-ear: #ff77b4; }
-.creature-card[data-id="1"].pal-1, #spotlight-card.creature-1.pal-1 { --p-main: #fbbf24; --p-sub: #f59e0b; --p-accent: #06b6d4; --p-ear: #f43f5e; }
-.creature-card[data-id="1"].pal-2, #spotlight-card.creature-1.pal-2 { --p-main: #334155; --p-sub: #1e293b; --p-accent: #38bdf8; --p-ear: #c084fc; }
-.creature-card[data-id="2"].pal-0, #spotlight-card.creature-2.pal-0 { --p-main: #00e676; --p-sub: #00c853; --p-cap: #ff1744; --p-tie: #ffe600; }
-.creature-card[data-id="2"].pal-1, #spotlight-card.creature-2.pal-1 { --p-main: #0284c7; --p-sub: #0369a1; --p-cap: #f59e0b; --p-tie: #ec4899; }
-.creature-card[data-id="2"].pal-2, #spotlight-card.creature-2.pal-2 { --p-main: #eab308; --p-sub: #ca8a04; --p-cap: #8b5cf6; --p-tie: #06b6d4; }
-.creature-card[data-id="3"].pal-0, #spotlight-card.creature-3.pal-0 { --p-main: #00f0ff; --p-sub: #0284c7; --p-wing: #ff6d00; --p-blush: #ff007f; }
-.creature-card[data-id="3"].pal-1, #spotlight-card.creature-3.pal-1 { --p-main: #f43f5e; --p-sub: #e11d48; --p-wing: #facc15; --p-blush: #38bdf8; }
-.creature-card[data-id="3"].pal-2, #spotlight-card.creature-3.pal-2 { --p-main: #1e1b4b; --p-sub: #312e81; --p-wing: #10b981; --p-blush: #f43f5e; }
-.creature-card[data-id="4"].pal-0, #spotlight-card.creature-4.pal-0 { --p-main: #fbbf24; --p-sub: #f59e0b; --p-cap: #38bdf8; --p-belly: #fef3c7; }
-.creature-card[data-id="4"].pal-1, #spotlight-card.creature-4.pal-1 { --p-main: #e2e8f0; --p-sub: #cbd5e1; --p-cap: #f43f5e; --p-belly: #ffffff; }
-.creature-card[data-id="4"].pal-2, #spotlight-card.creature-4.pal-2 { --p-main: #1e293b; --p-sub: #0f172a; --p-cap: #10b981; --p-belly: #f8fafc; }
-.creature-card[data-id="5"].pal-0, #spotlight-card.creature-5.pal-0 { --p-main: #e2e8f0; --p-sub: #94a3b8; --p-screen: #0f172a; --p-glow: #00f0ff; }
-.creature-card[data-id="5"].pal-1, #spotlight-card.creature-5.pal-1 { --p-main: #0f172a; --p-sub: #1e293b; --p-screen: #1e1b4b; --p-glow: #ec4899; }
-.creature-card[data-id="5"].pal-2, #spotlight-card.creature-5.pal-2 { --p-main: #f43f5e; --p-sub: #be123c; --p-screen: #0f172a; --p-glow: #ffe600; }
-.creature-card[data-id="6"].pal-0, #spotlight-card.creature-6.pal-0 { --p-main: #ff3d00; --p-belly: #ffe600; --p-horn: #ffe600; --p-wing: #ffb703; }
-.creature-card[data-id="6"].pal-1, #spotlight-card.creature-6.pal-1 { --p-main: #0284c7; --p-belly: #bae6fd; --p-horn: #e0f2fe; --p-wing: #38bdf8; }
-.creature-card[data-id="6"].pal-2, #spotlight-card.creature-6.pal-2 { --p-main: #059669; --p-belly: #fef08a; --p-horn: #fbbf24; --p-wing: #34d399; }
-.creature-card[data-id="7"].pal-0, #spotlight-card.creature-7.pal-0 { --p-main: #e0f2fe; --p-feet: #38bdf8; --p-sun: #facc15; --p-blush: #f43f5e; }
-.creature-card[data-id="7"].pal-1, #spotlight-card.creature-7.pal-1 { --p-main: #fce7f3; --p-feet: #f43f5e; --p-sun: #fb923c; --p-blush: #f59e0b; }
-.creature-card[data-id="7"].pal-2, #spotlight-card.creature-7.pal-2 { --p-main: #e9d5ff; --p-feet: #a855f7; --p-sun: #38bdf8; --p-blush: #ec4899; }
-.creature-card[data-id="8"].pal-0, #spotlight-card.creature-8.pal-0 { --p-main: #84cc16; --p-sub: #65a30d; --p-gold: #facc15; --p-iris: #00f0ff; }
-.creature-card[data-id="8"].pal-1, #spotlight-card.creature-8.pal-1 { --p-main: #f43f5e; --p-sub: #be123c; --p-gold: #38bdf8; --p-iris: #ffe600; }
-.creature-card[data-id="8"].pal-2, #spotlight-card.creature-8.pal-2 { --p-main: #8b5cf6; --p-sub: #6d28d9; --p-gold: #facc15; --p-iris: #10b981; }
-.creature-card[data-id="9"].pal-0, #spotlight-card.creature-9.pal-0 { --p-main: #fbcfe8; --p-gills: #f43f5e; --p-tiara: #ffe600; --p-belly: #fdf2f8; }
-.creature-card[data-id="9"].pal-1, #spotlight-card.creature-9.pal-1 { --p-main: #f8fafc; --p-gills: #fb7185; --p-tiara: #38bdf8; --p-belly: #ffffff; }
-.creature-card[data-id="9"].pal-2, #spotlight-card.creature-9.pal-2 { --p-main: #a7f3d0; --p-gills: #059669; --p-tiara: #facc15; --p-belly: #ecfdf5; }
-.creature-card[data-id="10"].pal-0, #spotlight-card.creature-10.pal-0 { --p-main: #64748b; --p-stone: #475569; --p-crystal: #10b981; --p-moss: #84cc16; }
-.creature-card[data-id="10"].pal-1, #spotlight-card.creature-10.pal-1 { --p-main: #475569; --p-stone: #334155; --p-crystal: #ef4444; --p-moss: #f97316; }
-.creature-card[data-id="10"].pal-2, #spotlight-card.creature-10.pal-2 { --p-main: #334155; --p-stone: #1e293b; --p-crystal: #c084fc; --p-moss: #06b6d4; }
-.creature-card[data-id="11"].pal-0, #spotlight-card.creature-11.pal-0 { --p-main: #fff1f2; --p-cheek: #fda4af; --p-hat: #ffffff; --p-whisk: #f43f5e; }
-.creature-card[data-id="11"].pal-1, #spotlight-card.creature-11.pal-1 { --p-main: #f0fdf4; --p-cheek: #86efac; --p-hat: #ffffff; --p-whisk: #10b981; }
-.creature-card[data-id="11"].pal-2, #spotlight-card.creature-11.pal-2 { --p-main: #fefce8; --p-cheek: #fde047; --p-hat: #78350f; --p-whisk: #f59e0b; }
-.creature-card[data-id="12"].pal-0, #spotlight-card.creature-12.pal-0 { --p-main: #e11d48; --p-belly: #fecdd3; --p-leaf: #22c55e; --p-root: #be123c; }
-.creature-card[data-id="12"].pal-1, #spotlight-card.creature-12.pal-1 { --p-main: #eab308; --p-belly: #fef9c3; --p-leaf: #16a34a; --p-root: #ca8a04; }
-.creature-card[data-id="12"].pal-2, #spotlight-card.creature-12.pal-2 { --p-main: #9333ea; --p-belly: #f3e8ff; --p-leaf: #06b6d4; --p-root: #7e22ce; }
-.creature-card[data-id="13"].pal-0, #spotlight-card.creature-13.pal-0 { --p-main: #facc15; --p-stripe: #1e293b; --p-wing: #bae6fd; --p-glass: #d97706; }
-.creature-card[data-id="13"].pal-1, #spotlight-card.creature-13.pal-1 { --p-main: #00f0ff; --p-stripe: #0f172a; --p-wing: #f43f5e; --p-glass: #ffe600; }
-.creature-card[data-id="13"].pal-2, #spotlight-card.creature-13.pal-2 { --p-main: #f472b6; --p-stripe: #831843; --p-wing: #ffffff; --p-glass: #0284c7; }
-.creature-card[data-id="14"].pal-0, #spotlight-card.creature-14.pal-0 { --p-main: #a7f3d0; --p-metal: #6ee7b7; --p-toast: #fde047; --p-dial: #065f46; }
-.creature-card[data-id="14"].pal-1, #spotlight-card.creature-14.pal-1 { --p-main: #e2e8f0; --p-metal: #cbd5e1; --p-toast: #f59e0b; --p-dial: #ef4444; }
-.creature-card[data-id="14"].pal-2, #spotlight-card.creature-14.pal-2 { --p-main: #facc15; --p-metal: #eab308; --p-toast: #ffffff; --p-dial: #ec4899; }
-.creature-card[data-id="15"].pal-0, #spotlight-card.creature-15.pal-0 { --p-wood: #92400e; --p-feather: #facc15; --p-flame: #ef4444; --p-paint: #06b6d4; }
-.creature-card[data-id="15"].pal-1, #spotlight-card.creature-15.pal-1 { --p-wood: #374151; --p-feather: #f97316; --p-flame: #fbbf24; --p-paint: #ef4444; }
-.creature-card[data-id="15"].pal-2, #spotlight-card.creature-15.pal-2 { --p-wood: #0891b2; --p-feather: #f43f5e; --p-flame: #ffe600; --p-paint: #ffffff; }
-.creature-card[data-id="16"].pal-0, #spotlight-card.creature-16.pal-0 { --p-cup: #ffffff; --p-gold: #f59e0b; --p-crab: #ef4444; --p-claw: #dc2626; }
-.creature-card[data-id="16"].pal-1, #spotlight-card.creature-16.pal-1 { --p-cup: #fef3c7; --p-gold: #b45309; --p-crab: #f97316; --p-claw: #ea580c; }
-.creature-card[data-id="16"].pal-2, #spotlight-card.creature-16.pal-2 { --p-cup: #ecfdf5; --p-gold: #10b981; --p-crab: #06b6d4; --p-claw: #0891b2; }
-.creature-card[data-id="17"].pal-0, #spotlight-card.creature-17.pal-0 { --p-paper: #fff1f2; --p-fold: #f43f5e; --p-tip: #be123c; --p-accent: #ffe600; }
-.creature-card[data-id="17"].pal-1, #spotlight-card.creature-17.pal-1 { --p-paper: #1e293b; --p-fold: #38bdf8; --p-tip: #0ea5e9; --p-accent: #fbbf24; }
-.creature-card[data-id="17"].pal-2, #spotlight-card.creature-17.pal-2 { --p-paper: #fefce8; --p-fold: #facc15; --p-tip: #ca8a04; --p-accent: #ec4899; }
-.creature-card[data-id="18"].pal-0, #spotlight-card.creature-18.pal-0 { --p-fur: #1e293b; --p-rim: #facc15; --p-pom: #38bdf8; --p-lens: #e0f2fe; }
-.creature-card[data-id="18"].pal-1, #spotlight-card.creature-18.pal-1 { --p-fur: #f472b6; --p-rim: #ffffff; --p-pom: #fde047; --p-lens: #ffffff; }
-.creature-card[data-id="18"].pal-2, #spotlight-card.creature-18.pal-2 { --p-fur: #64748b; --p-rim: #ef4444; --p-pom: #22c55e; --p-lens: #e0f2fe; }
-.creature-card[data-id="19"].pal-0, #spotlight-card.creature-19.pal-0 { --p-body: #10b981; --p-belly: #facc15; --p-tail: #06b6d4; --p-eye: #ec4899; }
-.creature-card[data-id="19"].pal-1, #spotlight-card.creature-19.pal-1 { --p-body: #8b5cf6; --p-belly: #00f0ff; --p-tail: #f43f5e; --p-eye: #ffe600; }
-.creature-card[data-id="19"].pal-2, #spotlight-card.creature-19.pal-2 { --p-body: #f59e0b; --p-belly: #fef3c7; --p-tail: #d97706; --p-eye: #10b981; }
-.creature-card[data-id="20"].pal-0, #spotlight-card.creature-20.pal-0 { --p-metal: #fef3c7; --p-bell: #f59e0b; --p-face: #ffffff; --p-feet: #b45309; }
-.creature-card[data-id="20"].pal-1, #spotlight-card.creature-20.pal-1 { --p-metal: #0f172a; --p-bell: #f43f5e; --p-face: #00f0ff; --p-feet: #facc15; }
-.creature-card[data-id="20"].pal-2, #spotlight-card.creature-20.pal-2 { --p-metal: #e0f2fe; --p-bell: #fbcfe8; --p-face: #ffffff; --p-feet: #38bdf8; }
-.creature-card[data-id="21"].pal-0, #spotlight-card.creature-21.pal-0 { --p-coat: #0f172a; --p-belly: #ffffff; --p-scarf: #f43f5e; --p-muffs: #facc15; }
-.creature-card[data-id="21"].pal-1, #spotlight-card.creature-21.pal-1 { --p-coat: #1e3a8a; --p-belly: #f0fdf4; --p-scarf: #38bdf8; --p-muffs: #f472b6; }
-.creature-card[data-id="21"].pal-2, #spotlight-card.creature-21.pal-2 { --p-coat: #78350f; --p-belly: #fefce8; --p-scarf: #22c55e; --p-muffs: #ea580c; }
-.creature-card[data-id="22"].pal-0, #spotlight-card.creature-22.pal-0 { --p-block: #84cc16; --p-dark: #3f6212; --p-screen: #14532d; --p-glow: #bef264; }
-.creature-card[data-id="22"].pal-1, #spotlight-card.creature-22.pal-1 { --p-block: #ec4899; --p-dark: #831843; --p-screen: #0891b2; --p-glow: #00f0ff; }
-.creature-card[data-id="22"].pal-2, #spotlight-card.creature-22.pal-2 { --p-block: #ef4444; --p-dark: #7f1d1d; --p-screen: #450a0a; --p-glow: #fca5a5; }
-.creature-card[data-id="23"].pal-0, #spotlight-card.creature-23.pal-0 { --p-cactus: #15803d; --p-flower: #f43f5e; --p-pot: #ea580c; --p-thorn: #bbf7d0; }
-.creature-card[data-id="23"].pal-1, #spotlight-card.creature-23.pal-1 { --p-cactus: #0891b2; --p-flower: #facc15; --p-pot: #9333ea; --p-thorn: #a5f3fc; }
-.creature-card[data-id="23"].pal-2, #spotlight-card.creature-23.pal-2 { --p-cactus: #ca8a04; --p-flower: #ec4899; --p-pot: #c2410c; --p-thorn: #fef08a; }
-.creature-card[data-id="24"].pal-0, #spotlight-card.creature-24.pal-0 { --p-bat: #f59e0b; --p-wing: #fde047; --p-hat: #16a34a; --p-cheese: #ea580c; }
-.creature-card[data-id="24"].pal-1, #spotlight-card.creature-24.pal-1 { --p-bat: #dc2626; --p-wing: #fca5a5; --p-hat: #ca8a04; --p-cheese: #fef08a; }
-.creature-card[data-id="24"].pal-2, #spotlight-card.creature-24.pal-2 { --p-bat: #4338ca; --p-wing: #a5b4fc; --p-hat: #dc2626; --p-cheese: #fde047; }
-.creature-card[data-id="25"].pal-0, #spotlight-card.creature-25.pal-0 { --p-cube: #ffffff; --p-pips: #0f172a; --p-hat: #1e293b; --p-wand: #facc15; }
-.creature-card[data-id="25"].pal-1, #spotlight-card.creature-25.pal-1 { --p-cube: #dc2626; --p-pips: #ffffff; --p-hat: #0f172a; --p-wand: #fbbf24; }
-.creature-card[data-id="25"].pal-2, #spotlight-card.creature-25.pal-2 { --p-cube: #581c87; --p-pips: #38bdf8; --p-hat: #0f172a; --p-wand: #ec4899; }
-.creature-card[data-id="26"].pal-0, #spotlight-card.creature-26.pal-0 { --p-duck: #facc15; --p-boot: #ef4444; --p-hat: #eab308; --p-beak: #f97316; }
-.creature-card[data-id="26"].pal-1, #spotlight-card.creature-26.pal-1 { --p-duck: #047857; --p-boot: #eab308; --p-hat: #065f46; --p-beak: #facc15; }
-.creature-card[data-id="26"].pal-2, #spotlight-card.creature-26.pal-2 { --p-duck: #c084fc; --p-boot: #06b6d4; --p-hat: #a855f7; --p-beak: #fb923c; }
-.creature-card[data-id="27"].pal-0, #spotlight-card.creature-27.pal-0 { --p-wool: #2dd4bf; --p-btn1: #facc15; --p-btn2: #f43f5e; --p-thread: #14b8a6; }
-.creature-card[data-id="27"].pal-1, #spotlight-card.creature-27.pal-1 { --p-wool: #c084fc; --p-btn1: #38bdf8; --p-btn2: #facc15; --p-thread: #a855f7; }
-.creature-card[data-id="27"].pal-2, #spotlight-card.creature-27.pal-2 { --p-wool: #fb7185; --p-btn1: #ffffff; --p-btn2: #38bdf8; --p-thread: #e11d48; }
-.creature-card[data-id="28"].pal-0, #spotlight-card.creature-28.pal-0 { --p-snail: #a3e635; --p-shell: #dc2626; --p-pipe: #e2e8f0; --p-stripe: #ffffff; }
-.creature-card[data-id="28"].pal-1, #spotlight-card.creature-28.pal-1 { --p-snail: #facc15; --p-shell: #0284c7; --p-pipe: #f97316; --p-stripe: #f97316; }
-.creature-card[data-id="28"].pal-2, #spotlight-card.creature-28.pal-2 { --p-snail: #38bdf8; --p-shell: #1e293b; --p-pipe: #fbbf24; --p-stripe: #facc15; }
-.creature-card[data-id="29"].pal-0, #spotlight-card.creature-29.pal-0 { --p-fish: #0891b2; --p-glow: #00f0ff; --p-belly: #bae6fd; --p-fin: #06b6d4; }
-.creature-card[data-id="29"].pal-1, #spotlight-card.creature-29.pal-1 { --p-fish: #d97706; --p-glow: #facc15; --p-belly: #fef3c7; --p-fin: #f59e0b; }
-.creature-card[data-id="29"].pal-2, #spotlight-card.creature-29.pal-2 { --p-fish: #db2777; --p-glow: #fde047; --p-belly: #fce7f3; --p-fin: #f43f5e; }
-.creature-card[data-id="30"].pal-0, #spotlight-card.creature-30.pal-0 { --p-cloak: #0f0c1b; --p-flame: #a855f7; --p-wax: #e9d5ff; --p-soul: #4ade80; }
-.creature-card[data-id="30"].pal-1, #spotlight-card.creature-30.pal-1 { --p-cloak: #1c1917; --p-flame: #dc2626; --p-wax: #fca5a5; --p-soul: #f97316; }
-.creature-card[data-id="30"].pal-2, #spotlight-card.creature-30.pal-2 { --p-cloak: #334155; --p-flame: #00f0ff; --p-wax: #f8fafc; --p-soul: #38bdf8; }
-.creature-card[data-id="31"].pal-0, #spotlight-card.creature-31.pal-0 { --p-wood: #451a03; --p-iron: #78350f; --p-teeth: #fef08a; --p-tongue: #c084fc; }
-.creature-card[data-id="31"].pal-1, #spotlight-card.creature-31.pal-1 { --p-wood: #0f172a; --p-iron: #cbd5e1; --p-teeth: #e2e8f0; --p-tongue: #00f0ff; }
-.creature-card[data-id="31"].pal-2, #spotlight-card.creature-31.pal-2 { --p-wood: #881337; --p-iron: #facc15; --p-teeth: #fefce8; --p-tongue: #f43f5e; }
-.creature-card[data-id="32"].pal-0, #spotlight-card.creature-32.pal-0 { --p-fur: #0f172a; --p-rings: #00f0ff; --p-galaxy: #facc15; --p-stars: #ffffff; }
-.creature-card[data-id="32"].pal-1, #spotlight-card.creature-32.pal-1 { --p-fur: #581c87; --p-rings: #f43f5e; --p-galaxy: #2dd4bf; --p-stars: #fde047; }
-.creature-card[data-id="32"].pal-2, #spotlight-card.creature-32.pal-2 { --p-fur: #18181b; --p-rings: #fbbf24; --p-galaxy: #ea580c; --p-stars: #fed7aa; }
-.creature-card[data-id="33"].pal-0, #spotlight-card.creature-33.pal-0 { --p-leather: #4c1d95; --p-gold: #f59e0b; --p-rune: #06b6d4; --p-paper: #fef3c7; }
-.creature-card[data-id="33"].pal-1, #spotlight-card.creature-33.pal-1 { --p-leather: #064e3b; --p-gold: #ca8a04; --p-rune: #34d399; --p-paper: #ecfdf5; }
-.creature-card[data-id="33"].pal-2, #spotlight-card.creature-33.pal-2 { --p-leather: #172554; --p-gold: #e2e8f0; --p-rune: #ec4899; --p-paper: #f8fafc; }
-.creature-card[data-id="34"].pal-0, #spotlight-card.creature-34.pal-0 { --p-feathers: #0f172a; --p-moon: #facc15; --p-face: #e2e8f0; --p-stars: #38bdf8; }
-.creature-card[data-id="34"].pal-1, #spotlight-card.creature-34.pal-1 { --p-feathers: #06b6d4; --p-moon: #10b981; --p-face: #f8fafc; --p-stars: #ffe600; }
-.creature-card[data-id="34"].pal-2, #spotlight-card.creature-34.pal-2 { --p-feathers: #581c87; --p-moon: #fbbf24; --p-face: #f43f5e; --p-stars: #fde047; }
-.creature-card[data-id="35"].pal-0, #spotlight-card.creature-35.pal-0 { --p-body: #09090b; --p-mark: #ef4444; --p-eyes: #8b5cf6; --p-thread: #ffffff; }
-.creature-card[data-id="35"].pal-1, #spotlight-card.creature-35.pal-1 { --p-body: #334155; --p-mark: #22c55e; --p-eyes: #a855f7; --p-thread: #4ade80; }
-.creature-card[data-id="35"].pal-2, #spotlight-card.creature-35.pal-2 { --p-body: #f8fafc; --p-mark: #b91c1c; --p-eyes: #38bdf8; --p-thread: #94a3b8; }
-
-    
-    /* =========================================================================
-       BASE KEYFRAMES & UTILITIES
-       ========================================================================= */
-    .c-idle .head-node, .c-idle .body-base {
-      animation: base-breathe 2.5s ease-in-out infinite alternate;
-    }
-    @keyframes base-breathe {
-      0% { transform: translateY(0) scale(1); }
-      100% { transform: translateY(3px) scale(1.02, 0.98); }
-    }
-
-    /* Standard Limb Anchors */
-    .origin-l-arm { transform-origin: 26px 54px; }
-    .origin-r-arm { transform-origin: 74px 54px; }
-    .origin-hip-l { transform-origin: 38px 80px; }
-    .origin-hip-r { transform-origin: 62px 80px; }
-    .origin-tail { transform-origin: 22px 65px; }
-    .origin-head { transform-origin: 50px 50px; }
-    .origin-dial { transform-origin: 50px 54px; }
-
-    /* Facial Expression State Visibility */
-    .state-cheer .eye-happy { display: block !important; }
-    .state-cheer .eye-normal { display: none !important; }
-    .state-cheer .mouth-open { display: block !important; }
-    .state-cheer .mouth-normal { display: none !important; }
-
-    .state-sleep .eye-sleep { display: block !important; }
-    .state-sleep .eye-normal { display: none !important; }
-    .state-sleep .eye-happy { display: none !important; }
-    .state-sleep .mouth-sleep { display: block !important; }
-    .state-sleep .mouth-normal { display: none !important; }
-
-    .state-sad .eye-sad { display: block !important; }
-    .state-sad .eye-normal { display: none !important; }
-    .state-sad .mouth-sad { display: block !important; }
-    .state-sad .mouth-normal { display: none !important; }
-    .state-sad .sad-tears { display: block !important; animation: tear-drop-flow 1s ease-in-out infinite; }
-    @keyframes tear-drop-flow {
-      0% { transform: translateY(0); opacity: 0.4; }
-      50% { transform: translateY(4px); opacity: 1; }
-      100% { transform: translateY(8px); opacity: 0.1; }
-    }
-
-    /* Container Overflow Settings for High Jump Leaps out of the card */
-    .creature-card {
-      overflow: visible !important;
-    }
-    .creature-card .creature-stage {
-      overflow: visible !important;
-    }
-    .creature-svg {
-      overflow: visible !important;
-    }
-    .state-jump, [class*="jump-"] {
-      z-index: 50 !important;
-      position: relative !important;
-    }
-
-    /* =========================================================================
-       36 DYNAMISCHE WINK-BEWEGUNGEN (👋)
-       ========================================================================= */
-    .wave-0 .arm-r { animation: p-wave-arm 0.28s ease-in-out infinite alternate; }
-    @keyframes p-wave-arm { 0% { transform: rotate(-90deg); } 100% { transform: rotate(-20deg); } }
-    .wave-1 .arm-r { animation: s-wave-arm 0.26s ease-in-out infinite alternate; }
-    .wave-1 .tail-wiggle { animation: s-wave-tail 0.26s ease-in-out infinite alternate; }
-    @keyframes s-wave-arm { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-25deg); } }
-    @keyframes s-wave-tail { 0% { transform: rotate(-25deg); } 100% { transform: rotate(30deg); } }
-    .wave-2 .arm-r { animation: f-wave-arm 0.3s ease-in-out infinite alternate; }
-    @keyframes f-wave-arm { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-15deg); } }
-    .wave-3 .t-wave-1 { animation: b-tentacle 0.28s ease-in-out infinite alternate; }
-    @keyframes b-tentacle { 0% { transform: rotate(-30deg); } 100% { transform: rotate(40deg); } }
-    .wave-4 .arm-r { animation: bear-wave 0.35s ease-in-out infinite alternate; }
-    @keyframes bear-wave { 0% { transform: rotate(-85deg); } 100% { transform: rotate(-15deg); } }
-    .wave-5 .arm-r { animation: robo-wave 0.2s steps(2) infinite alternate; }
-    @keyframes robo-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-5deg); } }
-    .wave-6 .arm-r { animation: d-dragon-wave 0.3s ease-in-out infinite alternate; transform-origin: 66px 52px; }
-    .wave-6 .wing-r { animation: d-wing-flap 0.3s ease-in-out infinite alternate; transform-origin: 40px 42px; }
-    @keyframes d-dragon-wave { 0% { transform: rotate(-115deg); } 100% { transform: rotate(-30deg); } }
-    @keyframes d-wing-flap { 0% { transform: rotate(0); } 100% { transform: rotate(22deg); } }
-    .wave-7 .arm-r { animation: n-cloud-wave 0.3s ease-in-out infinite alternate; transform-origin: 74px 56px; }
-    .wave-7 .body-base { animation: n-float 0.9s ease-in-out infinite alternate; }
-    @keyframes n-cloud-wave { 0% { transform: rotate(-95deg) translateY(-8px); } 100% { transform: rotate(-25deg) translateY(0); } }
-    @keyframes n-float { 0% { transform: translateY(-8px); } 100% { transform: translateY(5px); } }
-    .wave-8 .arm-l { animation: z-wave-l 0.24s linear infinite alternate; transform-origin: 28px 54px; }
-    .wave-8 .arm-r { animation: z-wave-r 0.24s ease-in-out infinite alternate; transform-origin: 72px 54px; }
-    @keyframes z-wave-l { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
-    @keyframes z-wave-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-35deg); } }
-    .wave-9 .gills { animation: axo-gills-wave 0.28s ease-in-out infinite alternate; }
-    .wave-9 .arm-r { animation: axo-hand-wave 0.28s ease-in-out infinite alternate; transform-origin: 70px 52px; }
-    @keyframes axo-gills-wave { 0% { transform: rotate(-10deg) scaleY(1.15); } 100% { transform: rotate(10deg) scaleY(0.85); } }
-    @keyframes axo-hand-wave { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-30deg); } }
-    .wave-10 .arm-r { animation: gr-arm-wave 0.35s ease-in-out infinite alternate; }
-    @keyframes gr-arm-wave { 0% { transform: rotate(-75deg); } 100% { transform: rotate(-10deg); } }
-    .wave-11 .arm-r { animation: mo-arm-wave 0.26s ease-in-out infinite alternate; }
-    @keyframes mo-arm-wave { 0% { transform: rotate(-105deg); } 100% { transform: rotate(-25deg); } }
-    .wave-12 .arm-r { animation: sp-arm-wave 0.28s ease-in-out infinite alternate; }
-    .wave-12 .leaf-top { animation: sp-leaf-sway 0.28s ease-in-out infinite alternate; transform-origin: 50px 22px; }
-    @keyframes sp-arm-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-15deg); } }
-    @keyframes sp-leaf-sway { 0% { transform: rotate(-18deg); } 100% { transform: rotate(18deg); } }
-    .wave-13 .arm-r { animation: bz-arm-wave 0.22s ease-in-out infinite alternate; transform-origin: 72px 58px; }
-    .wave-13 .wing-l { animation: bz-wing-buzz-l 0.08s linear infinite alternate; transform-origin: 26px 30px; }
-    .wave-13 .wing-r { animation: bz-wing-buzz-r 0.08s linear infinite alternate; transform-origin: 74px 30px; }
-    @keyframes bz-arm-wave { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-35deg); } }
-    @keyframes bz-wing-buzz-l { 0% { transform: rotate(-35deg) scaleY(0.8); } 100% { transform: rotate(-15deg) scaleY(1.2); } }
-    @keyframes bz-wing-buzz-r { 0% { transform: rotate(35deg) scaleY(0.8); } 100% { transform: rotate(15deg) scaleY(1.2); } }
-    .wave-14 .arm-r { animation: cr-lever-bounce 0.26s ease-in-out infinite alternate; transform-origin: 76px 54px; }
-    @keyframes cr-lever-bounce { 0% { transform: rotate(-105deg); } 100% { transform: rotate(-30deg); } }
-    .wave-15 .arm-r { animation: tk-drum-tap 0.22s ease-in-out infinite alternate; }
-    @keyframes tk-drum-tap { 0% { transform: rotate(-90deg); } 100% { transform: rotate(-15deg); } }
-    .wave-16 .arm-r { animation: cl-pincer-wave 0.22s ease-in-out infinite alternate; }
-    @keyframes cl-pincer-wave { 0% { transform: rotate(-55deg) scale(1.15); } 100% { transform: rotate(15deg) scale(0.9); } }
-    .wave-17 .arm-r { animation: mm-fold-wave 0.28s ease-in-out infinite alternate; }
-    .wave-17 .tail-wiggle { animation: mm-tail-sway 0.28s ease-in-out infinite alternate; }
-    @keyframes mm-fold-wave { 0% { transform: rotate(-85deg); } 100% { transform: rotate(-10deg); } }
-    @keyframes mm-tail-sway { 0% { transform: rotate(-25deg); } 100% { transform: rotate(25deg); } }
-    .wave-18 .arm-r { animation: fz-fuzz-wave 0.25s ease-in-out infinite alternate; transform-origin: 76px 56px; }
-    @keyframes fz-fuzz-wave { 0% { transform: rotate(-105deg); } 100% { transform: rotate(-25deg); } }
-    .wave-19 .arm-r { animation: snp-claw-wave 0.28s ease-in-out infinite alternate; transform-origin: 66px 56px; }
-    .wave-19 .turret-eye-r { animation: snp-turret-roll 0.6s linear infinite; transform-origin: 64px 46px; }
-    @keyframes snp-claw-wave { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-30deg); } }
-    @keyframes snp-turret-roll { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
-    .wave-20 .arm-r { animation: bm-hand-wave 0.22s steps(3) infinite alternate; }
-    @keyframes bm-hand-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-5deg); } }
-    .wave-21 .arm-r { animation: pb-flipper-wave 0.28s ease-in-out infinite alternate; }
-    @keyframes pb-flipper-wave { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-20deg); } }
-    .wave-22 .arm-r { animation: gl-pixel-wave 0.18s steps(2) infinite alternate; }
-    @keyframes gl-pixel-wave { 0% { transform: translateY(-14px) rotate(-65deg); } 100% { transform: translateY(0) rotate(0deg); } }
-    .wave-23 .arm-r { animation: ct-branch-wave 0.32s ease-in-out infinite alternate; }
-    @keyframes ct-branch-wave { 0% { transform: rotate(-85deg); } 100% { transform: rotate(-10deg); } }
-    .wave-24 .arm-r { animation: nc-wing-wave 0.25s ease-in-out infinite alternate; }
-    @keyframes nc-wing-wave { 0% { transform: rotate(-75deg); } 100% { transform: rotate(15deg); } }
-    .wave-25 .arm-r { animation: pip-wand-wave 0.28s ease-in-out infinite alternate; }
-    @keyframes pip-wand-wave { 0% { transform: rotate(-55deg); } 100% { transform: rotate(20deg); } }
-    .wave-26 .arm-r { animation: wd-wing-wave 0.28s ease-in-out infinite alternate; }
-    @keyframes wd-wing-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-15deg); } }
-    .wave-27 .arm-r { animation: yo-paw-wave 0.28s ease-in-out infinite alternate; }
-    @keyframes yo-paw-wave { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-20deg); } }
-    .wave-28 .head-node { animation: tb-head-tilt 0.3s ease-in-out infinite alternate; }
-    @keyframes tb-head-tilt { 0% { transform: rotate(-12deg); } 100% { transform: rotate(12deg); } }
-    .wave-29 .arm-r { animation: lm-fin-wave 0.28s ease-in-out infinite alternate; }
-    .wave-29 .angler-lantern { animation: lm-lantern-bob 0.45s ease-in-out infinite alternate; transform-origin: 64px 16px; }
-    @keyframes lm-fin-wave { 0% { transform: rotate(-65deg); } 100% { transform: rotate(25deg); } }
-    @keyframes lm-lantern-bob { 0% { transform: scale(0.85); } 100% { transform: scale(1.3); } }
-    .wave-30 .arm-r { animation: um-lantern-wave 0.28s ease-in-out infinite alternate; }
-    @keyframes um-lantern-wave { 0% { transform: rotate(-75deg) translateY(-5px); } 100% { transform: rotate(-5deg); } }
-    .wave-31 .arm-r { animation: gj-handle-clatter 0.22s steps(3) infinite alternate; }
-    .wave-31 .mimic-tongue { animation: gj-tongue-flick 0.22s ease-in-out infinite alternate; }
-    @keyframes gj-handle-clatter { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
-    @keyframes gj-tongue-flick { 0% { transform: scaleY(0.7); } 100% { transform: scaleY(1.4); } }
-    .wave-32 .arm-r { animation: as-star-wave 0.28s ease-in-out infinite alternate; }
-    .wave-32 .saturn-rings { animation: as-rings-tilt 0.5s ease-in-out infinite alternate; transform-origin: 50px 22px; }
-    @keyframes as-star-wave { 0% { transform: rotate(-95deg); } 100% { transform: rotate(-15deg); } }
-    @keyframes as-rings-tilt { 0% { transform: rotate(-30deg) scale(0.9); } 100% { transform: rotate(0deg) scale(1.1); } }
-    .wave-33 .arm-r { animation: ar-page-flap 0.28s ease-in-out infinite alternate; }
-    .wave-33 .rune-orb-2 { animation: ar-orb-pulse 0.28s ease-in-out infinite alternate; }
-    @keyframes ar-page-flap { 0% { transform: rotate(-50deg); } 100% { transform: rotate(20deg); } }
-    @keyframes ar-orb-pulse { 0% { transform: translateY(-5px); } 100% { transform: translateY(5px); } }
-    .wave-34 .arm-r { animation: zp-feather-wave 0.28s ease-in-out infinite alternate; }
-    .wave-34 .moon-crown { animation: zp-moon-glow 0.35s ease-in-out infinite alternate; }
-    @keyframes zp-feather-wave { 0% { transform: rotate(-85deg); } 100% { transform: rotate(-10deg); } }
-    @keyframes zp-moon-glow { 0% { transform: scale(0.9); } 100% { transform: scale(1.25); } }
-    .wave-35 .arm-r { animation: sp-leg-tap 0.18s ease-in-out infinite alternate; }
-    @keyframes sp-leg-tap { 0% { transform: rotate(-45deg); } 100% { transform: rotate(25deg); } }
-
-    /* =========================================================================
-       36 EXPLOSIVE HIGH JUMPS (🚀) - SPRINGEN VOLLSTÄNDIG AUS DEM KASTEN HERAUS!
-       =========================================================================
-       Die Sprunghöhe steht in PROZENT und nicht in Pixeln. Im Showroom
-       war ein Wesen 200 Punkte groß, und -120px waren „gut die halbe
-       eigene Höhe". Im Quiz ist dasselbe Wesen in der Wesenwand 90
-       Punkte groß — dort sprang es mit derselben Zahl weit über den
-       Bildrand hinaus und war nur noch als Verschwinden zu sehen.
-       Prozent bei translateY rechnet gegen die EIGENE Höhe des
-       Elements, also springt jedes Wesen in jeder Größe gleich hoch
-       (feedback_limit_in_wrong_unit). Umgestellt am 26.09.2026,
-       -120px → -60%.
-
-       Damit der Sprung auch zu sehen ist, macht tool.js das Fenster
-       um das Wesen auf, solange er läuft (Klasse `ks-springt`).
-       ========================================================================= */
-    .jump-0 { animation: jump-blast-0 0.8s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
-    @keyframes jump-blast-0 {
-      0%, 100% { transform: translateY(0) scale(1.35, 0.65); }
-      18% { transform: translateY(4%) scale(1.5, 0.5); } /* Tiefes Einknicken */
-      45% { transform: translateY(-59%) scale(0.7, 1.45); } /* WEIT AUS DEM KASTEN! */
-      68% { transform: translateY(-54%) scale(1.05, 0.95); }
-      85% { transform: translateY(0) scale(1.4, 0.6); }
-    }
-
-    .jump-1 { animation: jump-blast-1 0.85s cubic-bezier(0.2, 0.8, 0.3, 1.2) infinite; }
-    @keyframes jump-blast-1 {
-      0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-      18% { transform: translateY(3%) scale(1.2, 0.8); }
-      48% { transform: translateY(-60%) rotate(180deg) scale(0.85, 1.25); }
-      75% { transform: translateY(-35%) rotate(300deg); }
-      92% { transform: translateY(0) rotate(360deg) scale(1.3, 0.7); }
-    }
-
-    .jump-2 { animation: jump-blast-2 0.8s cubic-bezier(0.18, 0.9, 0.25, 1.25) infinite; }
-    .jump-2 .leg-l { animation: f-leg-leap-l 0.8s ease-in-out infinite; transform-origin: 32px 70px; }
-    .jump-2 .leg-r { animation: f-leg-leap-r 0.8s ease-in-out infinite; transform-origin: 68px 70px; }
-    @keyframes jump-blast-2 {
-      0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
-      18% { transform: translateY(5%) scale(1.45, 0.6); }
-      48% { transform: translateY(-62.5%) scale(0.8, 1.35); }
-      72% { transform: translateY(-45%) scale(1, 1); }
-      88% { transform: translateY(0) scale(1.35, 0.7); }
-    }
-    @keyframes f-leg-leap-l { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(-26deg) scaleY(1.4) translateY(2%); } }
-    @keyframes f-leg-leap-r { 0%, 100% { transform: rotate(0); } 48% { transform: rotate(26deg) scaleY(1.4) translateY(2%); } }
-
-    .jump-3 { animation: jump-blast-3 0.8s cubic-bezier(0.15, 0.9, 0.25, 1.2) infinite; }
-    @keyframes jump-blast-3 {
-      0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
-      45% { transform: translateY(-61%) scale(0.7, 1.4) rotate(16deg); }
-      88% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-4 { animation: jump-blast-4 0.82s cubic-bezier(0.2, 0.8, 0.3, 1.2) infinite; }
-    @keyframes jump-blast-4 {
-      0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
-      20% { transform: translateY(5%) scale(1.5, 0.55); }
-      50% { transform: translateY(-52.5%) scale(0.85, 1.25); }
-      85% { transform: translateY(0) scale(1.4, 0.6); }
-    }
-
-    .jump-5 { animation: jump-blast-5 0.75s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
-    @keyframes jump-blast-5 {
-      0%, 100% { transform: translateY(0); }
-      15% { transform: translateY(3%); }
-      42% { transform: translateY(-60%) scale(0.8, 1.3); }
-      85% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-6 { animation: jump-blast-6 0.85s ease-in-out infinite; }
-    .jump-6 .wing-l { animation: d-wings-beat-l 0.2s ease-in-out infinite alternate; transform-origin: 28px 46px; }
-    .jump-6 .wing-r { animation: d-wings-beat-r 0.2s ease-in-out infinite alternate; transform-origin: 40px 42px; }
-    @keyframes jump-blast-6 {
-      0%, 100% { transform: translateY(0) scale(1); }
-      48% { transform: translateY(-62%) scale(0.9, 1.2); }
-      88% { transform: translateY(0) scale(1.2, 0.8); }
-    }
-    @keyframes d-wings-beat-l { 0% { transform: scale(0.7) rotate(-25deg); } 100% { transform: scale(1.35) rotate(25deg); } }
-    @keyframes d-wings-beat-r { 0% { transform: scale(0.7) rotate(-20deg); } 100% { transform: scale(1.35) rotate(22deg); } }
-
-    .jump-7 { animation: jump-blast-7 0.9s ease-in-out infinite; }
-    @keyframes jump-blast-7 {
-      0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
-      50% { transform: translateY(-65%) scale(1.4); opacity: 0.5; }
-    }
-
-    .jump-8 { animation: jump-blast-8 0.75s cubic-bezier(0.18, 0.9, 0.25, 1.2) infinite; }
-    @keyframes jump-blast-8 {
-      0%, 100% { transform: translateY(0) scaleX(1.3); }
-      48% { transform: translateY(-60%) scaleX(0.4) scaleY(1.4); }
-      88% { transform: translateY(0) scaleX(1.4) scaleY(0.6); }
-    }
-
-    .jump-9 { animation: jump-blast-9 0.85s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
-    @keyframes jump-blast-9 {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-61%) rotate(30deg) scale(0.9, 1.2); }
-      88% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-10 { animation: jump-blast-10 0.85s ease-in-out infinite; }
-    @keyframes jump-blast-10 {
-      0%, 100% { transform: translateY(0) scale(1.35, 0.65); }
-      20% { transform: translateY(6%) scale(1.5, 0.5); }
-      48% { transform: translateY(-55%) scale(0.8, 1.3); }
-      85% { transform: translateY(0) scale(1.45, 0.55); }
-    }
-
-    .jump-11 { animation: jump-blast-11 0.78s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
-    @keyframes jump-blast-11 {
-      0%, 100% { transform: translateY(0) scale(1.4, 0.6); }
-      18% { transform: translateY(4%) scale(1.6, 0.45); }
-      46% { transform: translateY(-61%) scale(0.65, 1.5); }
-      88% { transform: translateY(0) scale(1.45, 0.55); }
-    }
-
-    .jump-12 { animation: jump-blast-12 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
-    @keyframes jump-blast-12 {
-      0%, 100% { transform: translateY(0) scale(1); }
-      20% { transform: translateY(6%) scale(1.3, 0.7); }
-      48% { transform: translateY(-62.5%) scale(0.75, 1.35); }
-      85% { transform: translateY(0) scale(1.35, 0.65); }
-    }
-
-    .jump-13 { animation: jump-blast-13 0.85s ease-in-out infinite; }
-    @keyframes jump-blast-13 {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      30% { transform: translateY(-60%) rotate(-18deg) scale(1.1); }
-      70% { transform: translateY(-45%) rotate(18deg) scale(0.95); }
-      92% { transform: translateY(0) scale(1.2, 0.8); }
-    }
-
-    .jump-14 { animation: jump-blast-14 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
-    @keyframes jump-blast-14 {
-      0%, 100% { transform: translateY(0); }
-      15% { transform: translateY(4%) scale(1.2, 0.8); }
-      42% { transform: translateY(-60%) scale(0.75, 1.35); }
-      85% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-15 { animation: jump-blast-15 0.82s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
-    @keyframes jump-blast-15 {
-      0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
-      46% { transform: translateY(-59%) scale(0.8, 1.3) rotate(8deg); }
-      88% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-16 { animation: jump-blast-16 0.78s ease-in-out infinite; }
-    @keyframes jump-blast-16 {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      46% { transform: translateY(-57.5%) rotate(-18deg) scale(0.85, 1.25); }
-      88% { transform: translateY(0) scale(1.25, 0.75); }
-    }
-
-    .jump-17 { animation: jump-blast-17 0.88s ease-in-out infinite; }
-    @keyframes jump-blast-17 {
-      0%, 100% { transform: translateY(0) rotate(0deg); }
-      45% { transform: translateY(-63%) rotate(22deg) scale(0.9, 1.2); }
-      75% { transform: translateY(-37.5%) rotate(-12deg); }
-      92% { transform: translateY(0) scale(1.2, 0.8); }
-    }
-
-    .jump-18 { animation: jump-blast-18 0.75s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
-    @keyframes jump-blast-18 {
-      0%, 100% { transform: translateY(0) scale(1.4, 0.6); }
-      18% { transform: translateY(5%) scale(1.6, 0.45); }
-      44% { transform: translateY(-62.5%) scale(0.7, 1.45); }
-      88% { transform: translateY(0) scale(1.45, 0.55); }
-    }
-
-    .jump-19 { animation: jump-blast-19 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
-    @keyframes jump-blast-19 {
-      0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
-      45% { transform: translateY(-60%) scale(0.75, 1.35); }
-      88% { transform: translateY(0) scale(1.35, 0.65); }
-    }
-
-    .jump-20 { animation: jump-blast-20 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
-    @keyframes jump-blast-20 {
-      0%, 100% { transform: translateY(0); }
-      15% { transform: translateY(4%); }
-      42% { transform: translateY(-59%) rotate(10deg) scale(0.85, 1.25); }
-      88% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-21 { animation: jump-blast-21 0.85s ease-in-out infinite; }
-    @keyframes jump-blast-21 {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      48% { transform: translateY(-58%) rotate(28deg) scale(0.9, 1.2); }
-      88% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-22 { animation: jump-blast-22 0.75s steps(4) infinite; }
-    @keyframes jump-blast-22 {
-      0%, 100% { transform: translateY(0); }
-      42% { transform: translateY(-59%); }
-      85% { transform: translateY(0); }
-    }
-
-    .jump-23 { animation: jump-blast-23 0.8s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
-    @keyframes jump-blast-23 {
-      0%, 100% { transform: translateY(0) scale(1.2, 0.8); }
-      45% { transform: translateY(-57.5%) scale(0.8, 1.3); }
-      88% { transform: translateY(0) scale(1.35, 0.65); }
-    }
-
-    .jump-24 { animation: jump-blast-24 0.8s ease-in-out infinite; }
-    @keyframes jump-blast-24 {
-      0%, 100% { transform: translateY(0); }
-      46% { transform: translateY(-61%) rotate(-14deg) scale(0.85, 1.25); }
-      88% { transform: translateY(0) scale(1.25, 0.75); }
-    }
-
-    .jump-25 { animation: jump-blast-25 0.88s ease-in-out infinite; }
-    @keyframes jump-blast-25 {
-      0% { transform: translateY(0) rotate(0deg); }
-      50% { transform: translateY(-62.5%) rotate(180deg) scale(0.8, 1.3); }
-      100% { transform: translateY(0) rotate(360deg); }
-    }
-
-    .jump-26 { animation: jump-blast-26 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
-    @keyframes jump-blast-26 {
-      0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
-      45% { transform: translateY(-60%) scale(0.75, 1.35); }
-      88% { transform: translateY(0) scale(1.4, 0.6); }
-    }
-
-    .jump-27 { animation: jump-blast-27 0.78s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
-    @keyframes jump-blast-27 {
-      0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
-      45% { transform: translateY(-62%) scale(0.75, 1.4); }
-      88% { transform: translateY(0) scale(1.35, 0.65); }
-    }
-
-    .jump-28 { animation: jump-blast-28 0.78s cubic-bezier(0.1, 0.9, 0.2, 1) infinite; }
-    @keyframes jump-blast-28 {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      45% { transform: translateY(-59%) rotate(-26deg) scale(0.8, 1.3); }
-      88% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-29 { animation: jump-blast-29 0.88s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
-    @keyframes jump-blast-29 {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      48% { transform: translateY(-62%) rotate(24deg) scale(0.85, 1.25); }
-      88% { transform: translateY(0) scale(1.3, 0.7); }
-    }
-
-    .jump-30 { animation: jump-blast-30 0.82s ease-in-out infinite; }
-    @keyframes jump-blast-30 {
-      0%, 100% { transform: translateY(0); }
-      48% { transform: translateY(-63%) scale(0.8, 1.35); }
-      88% { transform: translateY(0) scale(1.2, 0.8); }
-    }
-
-    .jump-31 { animation: jump-blast-31 0.8s cubic-bezier(0.2, 0.9, 0.3, 1.2) infinite; }
-    @keyframes jump-blast-31 {
-      0%, 100% { transform: translateY(0) scale(1.25, 0.75); }
-      45% { transform: translateY(-59%) scale(0.8, 1.3); }
-      88% { transform: translateY(0) scale(1.35, 0.65); }
-    }
-
-    .jump-32 { animation: jump-blast-32 0.88s cubic-bezier(0.2, 0.8, 0.4, 1.2) infinite; }
-    @keyframes jump-blast-32 {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      48% { transform: translateY(-64%) rotate(18deg) scale(0.8, 1.3); }
-      88% { transform: translateY(0) scale(1.25, 0.75); }
-    }
-
-    .jump-33 { animation: jump-blast-33 0.82s ease-in-out infinite; }
-    @keyframes jump-blast-33 {
-      0%, 100% { transform: translateY(0) rotate(0); }
-      50% { transform: translateY(-61%) rotate(-16deg) scale(0.85, 1.25); }
-      88% { transform: translateY(0) scale(1.2, 0.8); }
-    }
-
-    .jump-34 { animation: jump-blast-34 0.88s ease-in-out infinite; }
-    @keyframes jump-blast-34 {
-      0%, 100% { transform: translateY(0); }
-      48% { transform: translateY(-64%) scale(0.85, 1.3); }
-      88% { transform: translateY(0) scale(1.25, 0.75); }
-    }
-
-    .jump-35 { animation: jump-blast-35 0.75s cubic-bezier(0.15, 0.9, 0.25, 1.3) infinite; }
-    @keyframes jump-blast-35 {
-      0%, 100% { transform: translateY(0) scale(1.3, 0.7); }
-      45% { transform: translateY(-63%) scale(0.75, 1.4); }
-      88% { transform: translateY(0) scale(1.35, 0.65); }
-    }
-
-    /* =========================================================================
-       36 INDIVIDUELLE KULT-TÄNZE (🕺)
-       ========================================================================= */
-    .c-dance-0 .body-base { animation: p-dance-jelly 0.38s ease-in-out infinite alternate; }
-    .c-dance-0 .arm-l { animation: p-dance-arm-l 0.38s ease-in-out infinite alternate; transform-origin: 30px 50px; }
-    .c-dance-0 .arm-r { animation: p-dance-arm-r 0.38s ease-in-out infinite alternate; transform-origin: 70px 50px; }
-    @keyframes p-dance-jelly { 0% { transform: skewX(-16deg) scaleY(1.08); } 100% { transform: skewX(16deg) scaleY(0.92); } }
-    @keyframes p-dance-arm-l { 0% { transform: rotate(-80deg); } 100% { transform: rotate(30deg); } }
-    @keyframes p-dance-arm-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-80deg); } }
-
-    .c-dance-1 .arm-l { animation: s-dance-paw-l 0.22s ease-in-out infinite alternate; transform-origin: 32px 50px; }
-    .c-dance-1 .arm-r { animation: s-dance-paw-r 0.22s ease-in-out infinite alternate; transform-origin: 68px 50px; }
-    .c-dance-1 .tail-wiggle { animation: s-dance-tail 0.22s ease-in-out infinite alternate; }
-    .c-dance-1 .body-base { animation: s-dance-bounce 0.22s ease-in-out infinite alternate; }
-    @keyframes s-dance-paw-l { 0% { transform: rotate(-60deg) translateY(-6px); } 100% { transform: rotate(20deg); } }
-    @keyframes s-dance-paw-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-60deg) translateY(-6px); } }
-    @keyframes s-dance-tail { 0% { transform: rotate(-35deg); } 100% { transform: rotate(45deg); } }
-    @keyframes s-dance-bounce { 0% { transform: translateY(-6px) rotate(-4deg); } 100% { transform: translateY(0) rotate(4deg); } }
-
-    .c-dance-2 .leg-l { animation: f-dance-kick-l 0.32s ease-in-out infinite alternate; transform-origin: 32px 70px; }
-    .c-dance-2 .leg-r { animation: f-dance-kick-r 0.32s ease-in-out infinite alternate; transform-origin: 68px 70px; }
-    .c-dance-2 .body-base { animation: f-dance-squat 0.32s ease-in-out infinite alternate; }
-    @keyframes f-dance-kick-l { 0% { transform: rotate(-45deg) scaleX(1.3); } 100% { transform: rotate(10deg); } }
-    @keyframes f-dance-kick-r { 0% { transform: rotate(10deg); } 100% { transform: rotate(45deg) scaleX(1.3); } }
-    @keyframes f-dance-squat { 0% { transform: translateY(6px); } 100% { transform: translateY(-6px); } }
-
-    .c-dance-3 .body-base { animation: b-dance-tornado 0.65s linear infinite; }
-    .c-dance-3 .t-wave-1 { animation: b-dance-t1 0.32s ease-in-out infinite alternate; }
-    .c-dance-3 .t-wave-2 { animation: b-dance-t2 0.32s ease-in-out infinite alternate; }
-    @keyframes b-dance-tornado { 0% { transform: rotate(0deg) scale(1.05); } 50% { transform: rotate(180deg) scale(0.95); } 100% { transform: rotate(360deg) scale(1.05); } }
-    @keyframes b-dance-t1 { 0% { transform: rotate(-40deg); } 100% { transform: rotate(40deg); } }
-    @keyframes b-dance-t2 { 0% { transform: rotate(40deg); } 100% { transform: rotate(-40deg); } }
-
-    .c-dance-4 .body-base { animation: sn-dance-belly 0.36s ease-in-out infinite alternate; }
-    .c-dance-4 .arm-l, .c-dance-4 .arm-r { animation: sn-dance-arms 0.36s ease-in-out infinite alternate; transform-origin: 50px 50px; }
-    @keyframes sn-dance-belly { 0% { transform: rotate(-12deg) translateX(-8px); } 100% { transform: rotate(12deg) translateX(8px); } }
-    @keyframes sn-dance-arms { 0% { transform: rotate(-40deg); } 100% { transform: rotate(40deg); } }
-
-    .c-dance-5 .arm-l { animation: bp-dance-arm-l 0.36s steps(3) infinite alternate; }
-    .c-dance-5 .arm-r { animation: bp-dance-arm-r 0.36s steps(3) infinite alternate; }
-    .c-dance-5 .body-base { animation: bp-dance-body 0.36s steps(2) infinite alternate; }
-    @keyframes bp-dance-arm-l { 0% { transform: rotate(0deg); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(-140deg); } }
-    @keyframes bp-dance-arm-r { 0% { transform: rotate(90deg); } 50% { transform: rotate(0deg); } 100% { transform: rotate(-90deg); } }
-    @keyframes bp-dance-body { 0% { transform: translateY(0); } 100% { transform: translateY(-7px) rotate(5deg); } }
-
-    .c-dance-6 .leg-l { animation: ch-stomp-l 0.28s ease-in-out infinite alternate; transform-origin: 34px 74px; }
-    .c-dance-6 .leg-r { animation: ch-stomp-r 0.28s ease-in-out infinite alternate; transform-origin: 58px 74px; }
-    .c-dance-6 .wing-l { animation: ch-wings-beat-l 0.14s ease-in-out infinite alternate; transform-origin: 28px 46px; }
-    .c-dance-6 .wing-r { animation: ch-wings-beat-r 0.14s ease-in-out infinite alternate; transform-origin: 40px 42px; }
-    .c-dance-6 .body-base { animation: ch-headbang 0.28s ease-in-out infinite alternate; }
-    .c-dance-6 .tail-wiggle { animation: ch-tail-thrash 0.28s ease-in-out infinite alternate; }
-    @keyframes ch-stomp-l { 0% { transform: translateY(-10px) rotate(-15deg); } 100% { transform: translateY(0); } }
-    @keyframes ch-stomp-r { 0% { transform: translateY(0); } 100% { transform: translateY(-10px) rotate(15deg); } }
-    @keyframes ch-wings-beat-l { 0% { transform: scale(0.9) rotate(-10deg); } 100% { transform: scale(1.2) rotate(15deg); } }
-    @keyframes ch-wings-beat-r { 0% { transform: scale(0.9) rotate(-10deg); } 100% { transform: scale(1.2) rotate(15deg); } }
-    @keyframes ch-headbang { 0% { transform: rotate(-6deg) translateY(-4px); } 100% { transform: rotate(6deg) translateY(2px); } }
-    @keyframes ch-tail-thrash { 0% { transform: rotate(-25deg); } 100% { transform: rotate(25deg); } }
-
-    .c-dance-7 .body-base { animation: nb-dance-waltz 0.55s ease-in-out infinite alternate; }
-    .c-dance-7 .arm-l, .c-dance-7 .arm-r { animation: nb-dance-paws 0.55s ease-in-out infinite alternate; }
-    @keyframes nb-dance-waltz { 0% { transform: rotate(-18deg) translateY(-12px); } 100% { transform: rotate(18deg) translateY(6px); } }
-    @keyframes nb-dance-paws { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
-
-    .c-dance-8 .arm-l { animation: zp-windmill-l 0.24s linear infinite; transform-origin: 26px 48px; }
-    .c-dance-8 .arm-r { animation: zp-windmill-r 0.24s linear infinite; transform-origin: 74px 48px; }
-    .c-dance-8 .body-base { animation: zp-jitter 0.24s linear infinite alternate; }
-    @keyframes zp-windmill-l { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    @keyframes zp-windmill-r { 0% { transform: rotate(360deg); } 100% { transform: rotate(0deg); } }
-    @keyframes zp-jitter { 0% { transform: skewX(-15deg) translateY(-4px); } 100% { transform: skewX(15deg) translateY(4px); } }
-
-    .c-dance-9 .body-base { animation: lt-wave-swim 0.6s ease-in-out infinite alternate; }
-    .c-dance-9 .arm-l { animation: lt-fin-l 0.3s ease-in-out infinite alternate; transform-origin: 30px 52px; }
-    .c-dance-9 .arm-r { animation: lt-fin-r 0.3s ease-in-out infinite alternate; transform-origin: 70px 52px; }
-    .c-dance-9 .gills { animation: lt-gills-flutter 0.3s ease-in-out infinite alternate; }
-    @keyframes lt-wave-swim { 0% { transform: rotate(-14deg) scaleX(1); } 100% { transform: rotate(14deg) scaleX(0.94); } }
-    @keyframes lt-fin-l { 0% { transform: rotate(-70deg); } 100% { transform: rotate(20deg); } }
-    @keyframes lt-fin-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-70deg); } }
-    @keyframes lt-gills-flutter { 0% { transform: scale(0.9); } 100% { transform: scale(1.15); } }
-
-    .c-dance-10 .body-base { animation: gr-rock-groove 0.35s ease-in-out infinite alternate; }
-    .c-dance-10 .arm-l { animation: gr-punch-l 0.35s ease-in-out infinite alternate; }
-    .c-dance-10 .arm-r { animation: gr-punch-r 0.35s ease-in-out infinite alternate; }
-    @keyframes gr-rock-groove { 0% { transform: rotate(-8deg) translateY(-4px); } 100% { transform: rotate(8deg) translateY(2px); } }
-    @keyframes gr-punch-l { 0% { transform: rotate(-40deg); } 100% { transform: rotate(40deg); } }
-    @keyframes gr-punch-r { 0% { transform: rotate(40deg); } 100% { transform: rotate(-40deg); } }
-
-    .c-dance-11 .body-base { animation: mo-roll-jiggle 0.3s ease-in-out infinite alternate; }
-    .c-dance-11 .arm-r { animation: mo-spoon-spin 0.3s linear infinite; }
-    @keyframes mo-roll-jiggle { 0% { transform: skewX(-14deg) scaleY(1.05); } 100% { transform: skewX(14deg) scaleY(0.95); } }
-    @keyframes mo-spoon-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
-
-    .c-dance-12 .body-base { animation: sp-salsa-hips 0.32s ease-in-out infinite alternate; }
-    .c-dance-12 .arm-l, .c-dance-12 .arm-r { animation: sp-salsa-arms 0.32s ease-in-out infinite alternate; }
-    @keyframes sp-salsa-hips { 0% { transform: rotate(-14deg) translateX(-5px); } 100% { transform: rotate(14deg) translateX(5px); } }
-    @keyframes sp-salsa-arms { 0% { transform: rotate(-60deg); } 100% { transform: rotate(60deg); } }
-
-    .c-dance-13 .body-base { animation: bz-waggle-shimmy 0.18s ease-in-out infinite alternate; }
-    .c-dance-13 .wing-pair { animation: bz-wing-buzz 0.1s linear infinite alternate; }
-    @keyframes bz-waggle-shimmy { 0% { transform: translateX(-8px) rotate(-10deg); } 100% { transform: translateX(8px) rotate(10deg); } }
-
-    .c-dance-14 .body-base { animation: cr-shuffle-click 0.35s steps(3) infinite alternate; }
-    .c-dance-14 .arm-r { animation: cr-lever-bounce 0.35s steps(2) infinite alternate; }
-    @keyframes cr-shuffle-click { 0% { transform: translateX(-6px) rotate(-5deg); } 100% { transform: translateX(6px) rotate(5deg); } }
-
-    .c-dance-15 .body-base { animation: tk-haka-stomp 0.28s ease-in-out infinite alternate; }
-    .c-dance-15 .tongue-tiki { display: block !important; animation: tk-tongue-wag 0.28s ease-in-out infinite alternate; }
-    .c-dance-15 .arm-l { animation: tk-drum-l 0.28s ease-in-out infinite alternate; }
-    .c-dance-15 .arm-r { animation: tk-drum-r 0.28s ease-in-out infinite alternate; }
-    @keyframes tk-haka-stomp { 0% { transform: translateY(-6px) rotate(-6deg); } 100% { transform: translateY(2px) rotate(6deg); } }
-    @keyframes tk-tongue-wag { 0% { transform: scaleY(0.8); } 100% { transform: scaleY(1.3); } }
-    @keyframes tk-drum-l { 0% { transform: rotate(-60deg); } 100% { transform: rotate(20deg); } }
-    @keyframes tk-drum-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-60deg); } }
-
-    .c-dance-16 .body-base { animation: cl-scuttle-body 0.26s ease-in-out infinite alternate; }
-    .c-dance-16 .arm-l { animation: cl-claw-snap-l 0.26s ease-in-out infinite alternate; }
-    .c-dance-16 .arm-r { animation: cl-claw-snap-r 0.26s ease-in-out infinite alternate; }
-    @keyframes cl-scuttle-body { 0% { transform: translateX(-8px) rotate(-8deg); } 100% { transform: translateX(8px) rotate(8deg); } }
-    @keyframes cl-claw-snap-l { 0% { transform: rotate(-30deg); } 100% { transform: rotate(30deg); } }
-    @keyframes cl-claw-snap-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-30deg); } }
-
-    .c-dance-17 .tail-wiggle { animation: mm-fan-tail 0.25s ease-in-out infinite alternate; }
-    .c-dance-17 .body-base { animation: mm-paper-waltz 0.5s ease-in-out infinite alternate; }
-    @keyframes mm-fan-tail { 0% { transform: rotate(-40deg) scale(1.1); } 100% { transform: rotate(35deg) scale(0.9); } }
-    @keyframes mm-paper-waltz { 0% { transform: rotate(-10deg) translateY(-4px); } 100% { transform: rotate(10deg) translateY(4px); } }
-
-    .c-dance-18 .body-base { animation: fz-boogie-shake 0.22s ease-in-out infinite alternate; }
-    .c-dance-18 .arm-l { animation: fz-hand-l 0.22s ease-in-out infinite alternate; }
-    .c-dance-18 .arm-r { animation: fz-hand-r 0.22s ease-in-out infinite alternate; }
-    @keyframes fz-boogie-shake { 0% { transform: rotate(-15deg) scale(1.08, 0.92); } 100% { transform: rotate(15deg) scale(0.92, 1.08); } }
-    @keyframes fz-hand-l { 0% { transform: rotate(-70deg); } 100% { transform: rotate(30deg); } }
-    @keyframes fz-hand-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-70deg); } }
-
-    .c-dance-19 .party-tongue { display: block !important; animation: snp-tongue-flick 0.3s ease-in-out infinite alternate; }
-    .c-dance-19 .tail-wiggle { animation: snp-tail-swirl 0.3s ease-in-out infinite alternate; }
-    .c-dance-19 .body-base { animation: snp-disco-bounce 0.3s ease-in-out infinite alternate; }
-    @keyframes snp-tongue-flick { 0% { transform: scaleX(0.7); } 100% { transform: scaleX(1.4); } }
-    @keyframes snp-tail-swirl { 0% { transform: rotate(-35deg); } 100% { transform: rotate(35deg); } }
-    @keyframes snp-disco-bounce { 0% { transform: translateY(-5px) rotate(-6deg); } 100% { transform: translateY(3px) rotate(6deg); } }
-
-    .c-dance-20 .clock-hands { animation: bm-hands-fast 0.6s linear infinite; }
-    .c-dance-20 .body-base { animation: bm-tick-body 0.3s steps(2) infinite alternate; }
-    .c-dance-20 .clock-bell-l { animation: bm-bell-vibe-l 0.15s ease-in-out infinite alternate; }
-    .c-dance-20 .clock-bell-r { animation: bm-bell-vibe-r 0.15s ease-in-out infinite alternate; }
-    @keyframes bm-hands-fast { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
-    @keyframes bm-tick-body { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
-    @keyframes bm-bell-vibe-l { 0% { transform: rotate(-35deg); } 100% { transform: rotate(-25deg); } }
-    @keyframes bm-bell-vibe-r { 0% { transform: rotate(25deg); } 100% { transform: rotate(35deg); } }
-
-    .c-dance-21 .body-base { animation: pb-waddle-dance 0.34s ease-in-out infinite alternate; }
-    .c-dance-21 .arm-l { animation: pb-flipper-l 0.34s ease-in-out infinite alternate; }
-    .c-dance-21 .arm-r { animation: pb-flipper-r 0.34s ease-in-out infinite alternate; }
-    @keyframes pb-waddle-dance { 0% { transform: rotate(-16deg) translateX(-6px); } 100% { transform: rotate(16deg) translateX(6px); } }
-    @keyframes pb-flipper-l { 0% { transform: rotate(-45deg); } 100% { transform: rotate(20deg); } }
-    @keyframes pb-flipper-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-45deg); } }
-
-    .c-dance-22 .body-base { animation: gl-glitch-hop 0.24s steps(3) infinite alternate; }
-    .c-dance-22 .arm-l { animation: gl-arm-glitch-l 0.24s steps(2) infinite alternate; }
-    .c-dance-22 .arm-r { animation: gl-arm-glitch-r 0.24s steps(2) infinite alternate; }
-    @keyframes gl-glitch-hop { 0% { transform: translateY(0) skewX(-12deg); } 50% { transform: translateY(-8px) skewX(12deg); } 100% { transform: translateY(2px) skewX(0); } }
-    @keyframes gl-arm-glitch-l { 0% { transform: rotate(0); } 100% { transform: rotate(-90deg); } }
-    @keyframes gl-arm-glitch-r { 0% { transform: rotate(0); } 100% { transform: rotate(-90deg); } }
-
-    .c-dance-23 .body-base { animation: ct-sway-groove 0.4s ease-in-out infinite alternate; }
-    .c-dance-23 .arm-l { animation: ct-arm-sway-l 0.4s ease-in-out infinite alternate; }
-    .c-dance-23 .arm-r { animation: ct-arm-sway-r 0.4s ease-in-out infinite alternate; }
-    @keyframes ct-sway-groove { 0% { transform: rotate(-12deg); } 100% { transform: rotate(12deg); } }
-    @keyframes ct-arm-sway-l { 0% { transform: rotate(-30deg); } 100% { transform: rotate(30deg); } }
-    @keyframes ct-arm-sway-r { 0% { transform: rotate(30deg); } 100% { transform: rotate(-30deg); } }
-
-    .c-dance-24 .body-base { animation: nc-cha-cha 0.3s ease-in-out infinite alternate; }
-    .c-dance-24 .arm-l { animation: nc-wing-flap-l 0.3s ease-in-out infinite alternate; }
-    .c-dance-24 .arm-r { animation: nc-wing-flap-r 0.3s ease-in-out infinite alternate; }
-    @keyframes nc-cha-cha { 0% { transform: rotate(-14deg) translateY(-4px); } 100% { transform: rotate(14deg) translateY(2px); } }
-    @keyframes nc-wing-flap-l { 0% { transform: rotate(-45deg); } 100% { transform: rotate(20deg); } }
-    @keyframes nc-wing-flap-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-45deg); } }
-
-    .c-dance-25 .leg-l { animation: pip-tap-l 0.28s ease-in-out infinite alternate; }
-    .c-dance-25 .leg-r { animation: pip-tap-r 0.28s ease-in-out infinite alternate; }
-    .c-dance-25 .arm-r { animation: pip-wand-flourish 0.28s ease-in-out infinite alternate; }
-    @keyframes pip-tap-l { 0% { transform: translateY(-8px) rotate(-15deg); } 100% { transform: translateY(0); } }
-    @keyframes pip-tap-r { 0% { transform: translateY(0); } 100% { transform: translateY(-8px) rotate(15deg); } }
-    @keyframes pip-wand-flourish { 0% { transform: rotate(-30deg); } 100% { transform: rotate(45deg); } }
-
-    .c-dance-26 .leg-l { animation: wd-stomp-boot-l 0.3s ease-in-out infinite alternate; }
-    .c-dance-26 .leg-r { animation: wd-stomp-boot-r 0.3s ease-in-out infinite alternate; }
-    .c-dance-26 .body-base { animation: wd-waddle-stomp 0.3s ease-in-out infinite alternate; }
-    @keyframes wd-stomp-boot-l { 0% { transform: translateY(-10px); } 100% { transform: translateY(0); } }
-    @keyframes wd-stomp-boot-r { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
-    @keyframes wd-waddle-stomp { 0% { transform: rotate(-10deg); } 100% { transform: rotate(10deg); } }
-
-    .c-dance-27 .body-base { animation: yo-tumble-spin 0.6s ease-in-out infinite alternate; }
-    .c-dance-27 .tail-wiggle { animation: yo-tail-whip 0.3s ease-in-out infinite alternate; }
-    @keyframes yo-tumble-spin { 0% { transform: rotate(-25deg) translateY(-6px); } 100% { transform: rotate(25deg) translateY(4px); } }
-    @keyframes yo-tail-whip { 0% { transform: scaleX(0.8) rotate(-20deg); } 100% { transform: scaleX(1.3) rotate(30deg); } }
-
-    .c-dance-28 .body-base { animation: tb-drift-donut 0.4s ease-in-out infinite alternate; }
-    .c-dance-28 .turbo-flame { display: block !important; animation: tb-flame-burst 0.2s ease-in-out infinite alternate; }
-    @keyframes tb-drift-donut { 0% { transform: rotate(-16deg) translateX(-8px); } 100% { transform: rotate(16deg) translateX(8px); } }
-    @keyframes tb-flame-burst { 0% { transform: scale(0.8); } 100% { transform: scale(1.5); } }
-
-    .c-dance-29 .body-base { animation: lm-abyss-waltz 0.5s ease-in-out infinite alternate; }
-    .c-dance-29 .angler-lantern { animation: lm-lantern-pulse 0.25s ease-in-out infinite alternate; }
-    @keyframes lm-abyss-waltz { 0% { transform: rotate(-15deg) translateY(-8px); } 100% { transform: rotate(15deg) translateY(4px); } }
-    @keyframes lm-lantern-pulse { 0% { transform: scale(0.9); } 100% { transform: scale(1.4); } }
-
-    .c-dance-30 .body-base { animation: um-glide-body 0.4s ease-in-out infinite alternate; }
-    .c-dance-30 .candle-flame { animation: um-flame-flare 0.2s ease-in-out infinite alternate; }
-    @keyframes um-glide-body { 0% { transform: rotate(-14deg) translateY(-6px); } 100% { transform: rotate(14deg) translateY(4px); } }
-    @keyframes um-flame-flare { 0% { transform: scale(0.8) rotate(-10deg); } 100% { transform: scale(1.4) rotate(10deg); } }
-
-    .c-dance-31 .chest-lid { animation: gj-lid-clack 0.24s steps(2) infinite alternate; transform-origin: 50px 44px; }
-    .c-dance-31 .mimic-tongue { animation: gj-tongue-wave 0.24s ease-in-out infinite alternate; }
-    .c-dance-31 .body-base { animation: gj-dance-body 0.24s ease-in-out infinite alternate; }
-    @keyframes gj-lid-clack { 0% { transform: rotate(0); } 100% { transform: rotate(-35deg); } }
-    @keyframes gj-tongue-wave { 0% { transform: scaleX(0.7) rotate(-20deg); } 100% { transform: scaleX(1.3) rotate(20deg); } }
-    @keyframes gj-dance-body { 0% { transform: translateY(-4px) rotate(-6deg); } 100% { transform: translateY(2px) rotate(6deg); } }
-
-    .c-dance-32 .saturn-rings { animation: as-orbit-spin 0.5s linear infinite; transform-origin: 50px 22px; }
-    .c-dance-32 .galaxy-spiral { animation: as-galaxy-spin 0.8s linear infinite; }
-    .c-dance-32 .body-base { animation: as-dance-fox 0.35s ease-in-out infinite alternate; }
-    @keyframes as-orbit-spin { 0% { transform: rotate(-15deg) scaleX(1); } 50% { transform: rotate(165deg) scaleX(0.8); } 100% { transform: rotate(345deg) scaleX(1); } }
-    @keyframes as-galaxy-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
-    @keyframes as-dance-fox { 0% { transform: translateY(-6px) rotate(-8deg); } 100% { transform: translateY(2px) rotate(8deg); } }
-
-    .c-dance-33 .arm-l { animation: ar-wing-l 0.28s ease-in-out infinite alternate; }
-    .c-dance-33 .arm-r { animation: ar-wing-r 0.28s ease-in-out infinite alternate; }
-    .c-dance-33 .body-base { animation: ar-tome-twist 0.28s ease-in-out infinite alternate; }
-    @keyframes ar-wing-l { 0% { transform: scaleX(0.8) rotate(-30deg); } 100% { transform: scaleX(1.2) rotate(20deg); } }
-    @keyframes ar-wing-r { 0% { transform: scaleX(0.8) rotate(30deg); } 100% { transform: scaleX(1.2) rotate(-20deg); } }
-    @keyframes ar-tome-twist { 0% { transform: rotate(-10deg) scale(0.96); } 100% { transform: rotate(10deg) scale(1.04); } }
-
-    .c-dance-34 .head-node { animation: zp-head-twist 0.6s steps(3) infinite alternate; }
-    .c-dance-34 .arm-l { animation: zp-wing-sway-l 0.3s ease-in-out infinite alternate; }
-    .c-dance-34 .arm-r { animation: zp-wing-sway-r 0.3s ease-in-out infinite alternate; }
-    @keyframes zp-head-twist { 0% { transform: rotate(0); } 50% { transform: rotate(-90deg); } 100% { transform: rotate(180deg); } }
-    @keyframes zp-wing-sway-l { 0% { transform: rotate(-40deg); } 100% { transform: rotate(20deg); } }
-    @keyframes zp-wing-sway-r { 0% { transform: rotate(20deg); } 100% { transform: rotate(-40deg); } }
-
-    .c-dance-35 .arm-l, .c-dance-35 .leg-l { animation: sp-skitter-l 0.14s ease-in-out infinite alternate; }
-    .c-dance-35 .arm-r, .c-dance-35 .leg-r { animation: sp-skitter-r 0.14s ease-in-out infinite alternate; }
-    .c-dance-35 .body-base { animation: sp-body-shimmy 0.14s ease-in-out infinite alternate; }
-    @keyframes sp-skitter-l { 0% { transform: translateY(-6px) rotate(-15deg); } 100% { transform: translateY(0); } }
-    @keyframes sp-skitter-r { 0% { transform: translateY(0); } 100% { transform: translateY(-6px) rotate(15deg); } }
-    @keyframes sp-body-shimmy { 0% { transform: rotate(-8deg) translateX(-4px); } 100% { transform: rotate(8deg) translateX(4px); } }
-
-    /* =========================================================================
-       36 LEBENDIGE SCHLAF-POSEN (💤) - KEINE STATISCHEN BILDER MEHR!
-       JEDES WESEN ATMET, BEWEGT SICH UND SCHLÄFT CHARAKTERTYPISCH
-       ========================================================================= */
-    .sleep-0 .body-base { animation: p-melt-flat 2.2s ease-in-out infinite; }
-    @keyframes p-melt-flat { 0%, 100% { transform: scale(1.4, 0.35) translateY(45px); } 50% { transform: scale(1.45, 0.3) translateY(48px); } }
-
-    .sleep-1 .body-base { animation: s-sleep-breathe 2.4s ease-in-out infinite; }
-    .sleep-1 .tail-wiggle { animation: s-tail-sleep 2.4s ease-in-out infinite; }
-    @keyframes s-sleep-breathe { 0%, 100% { transform: translateY(6px) scale(1, 0.96); } 50% { transform: translateY(11px) scale(1.03, 0.93); } }
-    @keyframes s-tail-sleep { 0%, 100% { transform: rotate(-30deg) translateY(4px); } 50% { transform: rotate(-20deg) translateY(2px); } }
-
-    .sleep-2 .body-base { animation: f-hide-under-cap 2.2s ease-in-out infinite; }
-    @keyframes f-hide-under-cap { 0%, 100% { transform: scaleY(0.6) translateY(24px); } 50% { transform: scaleY(0.55) translateY(26px); } }
-
-    .sleep-3 .body-base { animation: b-sink-deep 2.4s ease-in-out infinite; }
-    @keyframes b-sink-deep { 0%, 100% { transform: translateY(18px) scale(0.9); } 50% { transform: translateY(12px) scale(0.94); } }
-
-    .sleep-4 .snot-bubble-node { display: block !important; animation: snot-expand 2.5s ease-in-out infinite; transform-origin: 54px 54px; }
-    .sleep-4 .body-base { animation: bear-sleep-heave 2.5s ease-in-out infinite; }
-    @keyframes snot-expand { 0%, 100% { transform: scale(0.2); opacity: 0.2; } 50% { transform: scale(1.8); opacity: 0.95; } }
-    @keyframes bear-sleep-heave { 0%, 100% { transform: translateY(8px) scale(1, 0.96); } 50% { transform: translateY(13px) scale(1.04, 0.92); } }
-
-    .sleep-5 .screen-text { display: block !important; }
-    .sleep-5 .eye-normal { display: none !important; }
-    .sleep-5 .body-base { animation: bp-standby-vibe 2s ease-in-out infinite; }
-    @keyframes bp-standby-vibe { 0%, 100% { transform: translateY(6px); } 50% { transform: translateY(10px); } }
-
-    .sleep-6 .wing-l { animation: d-sleep-wing-l 2.4s ease-in-out infinite; }
-    .sleep-6 .wing-r { animation: d-sleep-wing-r 2.4s ease-in-out infinite; }
-    .sleep-6 .body-base { animation: d-sleep-breathe 2.4s ease-in-out infinite; }
-    @keyframes d-sleep-breathe { 0%, 100% { transform: translateY(8px) scale(0.96); } 50% { transform: translateY(13px) scale(0.94); } }
-    @keyframes d-sleep-wing-l { 0%, 100% { transform: rotate(35deg) scaleX(1.3) translateX(8px); } 50% { transform: rotate(28deg) scaleX(1.25) translateX(6px); } }
-    @keyframes d-sleep-wing-r { 0%, 100% { transform: rotate(20deg) scaleX(1.2) translateX(4px); } 50% { transform: rotate(15deg) scaleX(1.15) translateX(3px); } }
-
-    .sleep-7 .body-base { animation: n-cloud-nap 2.5s ease-in-out infinite; }
-    @keyframes n-cloud-nap { 0%, 100% { transform: translateY(14px) scale(0.85); opacity: 0.55; } 50% { transform: translateY(8px) scale(0.9); opacity: 0.75; } }
-
-    .sleep-8 .body-base { animation: z-sleep 2.2s ease-in-out infinite; }
-    @keyframes z-sleep { 0%, 100% { transform: scale(1.1, 0.6) translateY(24px); } 50% { transform: scale(1.15, 0.55) translateY(26px); } }
-
-    .sleep-9 .body-base { animation: axo-aquarium-float 2.8s ease-in-out infinite alternate; }
-    @keyframes axo-aquarium-float { 0% { transform: translateY(10px) rotate(4deg); } 100% { transform: translateY(18px) rotate(-4deg); } }
-
-    .sleep-10 .body-base { animation: gr-sleep-heave 2.6s ease-in-out infinite; }
-    @keyframes gr-sleep-heave { 0%, 100% { transform: translateY(16px) scale(1.05, 0.85); } 50% { transform: translateY(22px) scale(1.08, 0.8); } }
-
-    .sleep-11 .body-base { animation: mo-sleep-deflate 2.4s ease-in-out infinite; }
-    @keyframes mo-sleep-deflate { 0%, 100% { transform: scale(1.2, 0.6) translateY(22px); } 50% { transform: scale(1.26, 0.54) translateY(25px); } }
-
-    .sleep-12 .body-base { animation: sp-root-sleep 2.5s ease-in-out infinite; }
-    .sleep-12 .leaf-top { animation: sp-leaf-droop-sleep 2.5s ease-in-out infinite; }
-    @keyframes sp-root-sleep { 0%, 100% { transform: translateY(14px) scale(0.92); } 50% { transform: translateY(18px) scale(0.96); } }
-    @keyframes sp-leaf-droop-sleep { 0%, 100% { transform: rotate(-10deg) scale(0.9); } 50% { transform: rotate(10deg) scale(0.95); } }
-
-    .sleep-13 .body-base { animation: bz-sleep-bob 2.4s ease-in-out infinite; }
-    .sleep-13 .wing-pair { animation: bz-sleep-twitch 1.8s ease-in-out infinite; }
-    @keyframes bz-sleep-bob { 0%, 100% { transform: translateY(12px); } 50% { transform: translateY(20px); } }
-    @keyframes bz-sleep-twitch { 0%, 80%, 100% { transform: scaleY(0.5); } 85%, 95% { transform: scaleY(0.9); } }
-
-    .sleep-14 .body-base { animation: cr-sleep-hum 2.4s ease-in-out infinite; }
-    @keyframes cr-sleep-hum { 0%, 100% { transform: translateY(10px) scale(0.96); } 50% { transform: translateY(14px) scale(0.98); } }
-
-    .sleep-15 .body-base { animation: tk-sleep-rock 2.6s ease-in-out infinite alternate; }
-    @keyframes tk-sleep-rock { 0% { transform: translateY(12px) rotate(-6deg); } 100% { transform: translateY(16px) rotate(6deg); } }
-
-    .sleep-16 .body-base { animation: cl-cup-sleep 2.5s ease-in-out infinite; }
-    .sleep-16 .arm-l { animation: cl-claw-snooze-l 2.5s ease-in-out infinite; }
-    .sleep-16 .arm-r { animation: cl-claw-snooze-r 2.5s ease-in-out infinite; }
-    @keyframes cl-cup-sleep { 0%, 100% { transform: translateY(12px) scale(0.92); } 50% { transform: translateY(16px) scale(0.95); } }
-    @keyframes cl-claw-snooze-l { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(10deg); } }
-    @keyframes cl-claw-snooze-r { 0%, 100% { transform: rotate(10deg); } 50% { transform: rotate(-10deg); } }
-
-    .sleep-17 .body-base { animation: mm-origami-sleep 2.5s ease-in-out infinite; }
-    .sleep-17 .tail-wiggle { animation: mm-tail-sleep 2.5s ease-in-out infinite; }
-    @keyframes mm-origami-sleep { 0%, 100% { transform: translateY(10px) scaleY(0.85); } 50% { transform: translateY(15px) scaleY(0.8); } }
-    @keyframes mm-tail-sleep { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(35deg); } }
-
-    .sleep-18 .body-base { animation: fz-sleep-ball 2.2s ease-in-out infinite; }
-    @keyframes fz-sleep-ball { 0%, 100% { transform: translateY(12px) scale(0.9); } 50% { transform: translateY(18px) scale(0.94); } }
-
-    .sleep-19 .body-base { animation: snp-sleep-breathe 2.5s ease-in-out infinite; }
-    .sleep-19 .tail-wiggle { animation: snp-tail-sleep 2.5s ease-in-out infinite; }
-    @keyframes snp-sleep-breathe { 0%, 100% { transform: translateY(12px) scale(0.94); } 50% { transform: translateY(16px) scale(0.98); } }
-    @keyframes snp-tail-sleep { 0%, 100% { transform: rotate(15deg); } 50% { transform: rotate(35deg); } }
-
-    .sleep-20 .clock-hands { transform: rotate(180deg); }
-    .sleep-20 .body-base { animation: bm-sleep-tick 2s ease-in-out infinite; }
-    @keyframes bm-sleep-tick { 0%, 100% { transform: translateY(8px) scale(0.96); } 50% { transform: translateY(12px) scale(1); } }
-
-    .sleep-21 .body-base { animation: pb-sleep-sway 2.6s ease-in-out infinite alternate; }
-    @keyframes pb-sleep-sway { 0% { transform: translateY(10px) rotate(-4deg); } 100% { transform: translateY(15px) rotate(4deg); } }
-
-    .sleep-22 .body-base { animation: gl-sleep-crt 1.8s steps(3) infinite; }
-    @keyframes gl-sleep-crt { 0%, 100% { transform: translateY(10px) scaleY(0.7); } 50% { transform: translateY(14px) scaleY(0.65); } }
-
-    .sleep-23 .body-base { animation: ct-sleep-nod 2.5s ease-in-out infinite alternate; }
-    .sleep-23 .flower-crown { animation: ct-flower-sleep 2.5s ease-in-out infinite; }
-    @keyframes ct-sleep-nod { 0% { transform: translateY(8px) rotate(-4deg); } 100% { transform: translateY(12px) rotate(4deg); } }
-    @keyframes ct-flower-sleep { 0%, 100% { transform: scale(0.85); } 50% { transform: scale(0.7); } }
-
-    .sleep-24 .arm-l { transform: rotate(45deg); }
-    .sleep-24 .arm-r { transform: rotate(-45deg); }
-    .sleep-24 .body-base { animation: nc-sleep-snore 2.5s ease-in-out infinite; }
-    @keyframes nc-sleep-snore { 0%, 100% { transform: translateY(10px) scale(0.94); } 50% { transform: translateY(15px) scale(0.98); } }
-
-    .sleep-25 .top-hat { transform: translateY(14px); }
-    .sleep-25 .body-base { animation: pip-sleep-pulse 2.5s ease-in-out infinite; }
-    @keyframes pip-sleep-pulse { 0%, 100% { transform: translateY(8px) scale(0.95); } 50% { transform: translateY(13px) scale(1); } }
-
-    .sleep-26 .body-base { animation: wd-sleep-heave 2.5s ease-in-out infinite; }
-    @keyframes wd-sleep-heave { 0%, 100% { transform: translateY(12px) scale(0.94); } 50% { transform: translateY(16px) scale(0.98); } }
-
-    .sleep-27 .body-base { animation: yo-sleep-purr 2.2s ease-in-out infinite; }
-    .sleep-27 .tail-wiggle { animation: yo-thread-sleep 2.2s ease-in-out infinite; }
-    @keyframes yo-sleep-purr { 0%, 100% { transform: translateY(12px) scale(1.05, 0.9); } 50% { transform: translateY(16px) scale(1.08, 0.86); } }
-    @keyframes yo-thread-sleep { 0%, 100% { transform: scale(0.9); } 50% { transform: scale(1.1); } }
-
-    .sleep-28 .body-base { animation: tb-sleep-rumble 2s ease-in-out infinite; }
-    @keyframes tb-sleep-rumble { 0%, 100% { transform: translateY(6px); } 50% { transform: translateY(10px); } }
-
-    .sleep-29 .body-base { animation: lm-sleep-glow 2.5s ease-in-out infinite; }
-    .sleep-29 .angler-lantern { animation: lm-lantern-sleep 2.5s ease-in-out infinite; }
-    @keyframes lm-sleep-glow { 0%, 100% { transform: translateY(12px); opacity: 0.7; } 50% { transform: translateY(18px); opacity: 1; } }
-    @keyframes lm-lantern-sleep { 0%, 100% { transform: scale(0.65); opacity: 0.3; } 50% { transform: scale(1.1); opacity: 0.9; } }
-
-    .sleep-30 .body-base { animation: um-sleep-smoke 2.5s ease-in-out infinite; }
-    .sleep-30 .candle-flame { animation: um-sleep-flame 2.5s ease-in-out infinite; }
-    @keyframes um-sleep-smoke { 0%, 100% { transform: translateY(14px) scale(1.15, 0.65); } 50% { transform: translateY(19px) scale(1.2, 0.6); } }
-    @keyframes um-sleep-flame { 0%, 100% { transform: scale(0.3) translateY(4px); opacity: 0.3; } 50% { transform: scale(0.6) translateY(2px); opacity: 0.8; } }
-
-    .sleep-31 .mimic-tongue { display: none !important; }
-    .sleep-31 .body-base { animation: gj-sleep-creak 2.6s ease-in-out infinite; }
-    @keyframes gj-sleep-creak { 0%, 100% { transform: translateY(10px) scale(0.96); } 50% { transform: translateY(15px) scale(0.99); } }
-
-    .sleep-32 .saturn-rings { animation: as-sleep-rings 2.5s ease-in-out infinite; }
-    .sleep-32 .body-base { animation: as-sleep-breathe 2.5s ease-in-out infinite; }
-    @keyframes as-sleep-rings { 0%, 100% { transform: rotate(-5deg) scale(0.75) translateY(10px); } 50% { transform: rotate(5deg) scale(0.9) translateY(14px); } }
-    @keyframes as-sleep-breathe { 0%, 100% { transform: translateY(10px) scale(0.95); } 50% { transform: translateY(15px) scale(0.99); } }
-
-    .sleep-33 .body-base { animation: ar-sleep-levitate 2.5s ease-in-out infinite; }
-    @keyframes ar-sleep-levitate { 0%, 100% { transform: translateY(12px) scale(0.95); } 50% { transform: translateY(17px) scale(0.98); } }
-
-    .sleep-34 .arm-l { transform: rotate(45deg) translateX(8px); }
-    .sleep-34 .body-base { animation: zp-sleep-feather 2.6s ease-in-out infinite; }
-    @keyframes zp-sleep-feather { 0%, 100% { transform: translateY(10px) scale(0.95); } 50% { transform: translateY(15px) scale(0.99); } }
-
-    .sleep-35 .arm-l, .sleep-35 .leg-l { animation: sp-sleep-leg-l 2.4s ease-in-out infinite; }
-    .sleep-35 .arm-r, .sleep-35 .leg-r { animation: sp-sleep-leg-r 2.4s ease-in-out infinite; }
-    .sleep-35 .body-base { animation: sp-sleep-breathing 2.4s ease-in-out infinite; }
-    @keyframes sp-sleep-leg-l { 0%, 100% { transform: scale(0.7) rotate(20deg); } 50% { transform: scale(0.85) rotate(10deg); } }
-    @keyframes sp-sleep-leg-r { 0%, 100% { transform: scale(0.7) rotate(-20deg); } 50% { transform: scale(0.85) rotate(-10deg); } }
-    @keyframes sp-sleep-breathing { 0%, 100% { transform: translateY(12px) scale(0.9); } 50% { transform: translateY(16px) scale(0.96); } }
-
-    /* =========================================================================
-       36 DYNAMISCH PUMPENDE JUBEL-REAKTIONEN (🎉) - JEDES WESEN PUMPT & JUBELT!
-       ========================================================================= */
-    .cheer-0 .body-base { animation: p-cheer-pump 0.3s ease-in-out infinite alternate; }
-    .cheer-0 .arm-l { animation: p-cheer-arm-l 0.3s ease-in-out infinite alternate; }
-    .cheer-0 .arm-r { animation: p-cheer-arm-r 0.3s ease-in-out infinite alternate; }
-    @keyframes p-cheer-pump { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-14px); } }
-    @keyframes p-cheer-arm-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(150deg); } }
-    @keyframes p-cheer-arm-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-150deg); } }
-
-    .cheer-1 .arm-l { animation: s-paw-l 0.25s ease-in-out infinite alternate; }
-    .cheer-1 .arm-r { animation: s-paw-r 0.25s ease-in-out infinite alternate; }
-    .cheer-1 .body-base { animation: s-cheer-body 0.25s ease-in-out infinite alternate; }
-    @keyframes s-paw-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(155deg) translateY(-8px); } }
-    @keyframes s-paw-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-155deg) translateY(-8px); } }
-    @keyframes s-cheer-body { 0% { transform: translateY(0); } 100% { transform: translateY(-12px) scale(1.15); } }
-
-    .cheer-2 .frog-throat { display: block !important; }
-    .cheer-2 .arm-l { animation: f-cheer-arm-l 0.28s ease-in-out infinite alternate; }
-    .cheer-2 .arm-r { animation: f-cheer-arm-r 0.28s ease-in-out infinite alternate; }
-    .cheer-2 .body-base { animation: f-cheer-body 0.28s ease-in-out infinite alternate; }
-    @keyframes f-cheer-arm-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(145deg); } }
-    @keyframes f-cheer-arm-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-145deg); } }
-    @keyframes f-cheer-body { 0% { transform: translateY(0); } 100% { transform: translateY(-14px) scale(1.18); } }
-
-    .cheer-3 .bubbles-burst { display: block !important; }
-    .cheer-3 .body-base { animation: b-bounce 0.26s ease-in-out infinite alternate; }
-    @keyframes b-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
-
-    .cheer-4 .arm-l { animation: bear-clap-l 0.22s ease-in-out infinite alternate; transform-origin: 28px 52px; }
-    .cheer-4 .arm-r { animation: bear-clap-r 0.22s ease-in-out infinite alternate; transform-origin: 72px 52px; }
-    .cheer-4 .body-base { animation: bear-cheer-body 0.22s ease-in-out infinite alternate; }
-    @keyframes bear-clap-l { 0% { transform: rotate(20deg); } 100% { transform: rotate(70deg) translateX(12px); } }
-    @keyframes bear-clap-r { 0% { transform: rotate(-20deg); } 100% { transform: rotate(-70deg) translateX(-12px); } }
-    @keyframes bear-cheer-body { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
-
-    .cheer-5 .ears-spin { animation: prop-spin 0.2s linear infinite; transform-origin: 50px 20px; }
-    .cheer-5 .screen-win { display: block !important; }
-    .cheer-5 .eye-normal { display: none !important; }
-    .cheer-5 .body-base { animation: bp-cheer-hop 0.2s ease-in-out infinite alternate; }
-    @keyframes prop-spin { 0% { transform: rotateY(0); } 100% { transform: rotateY(360deg); } }
-    @keyframes bp-cheer-hop { 0% { transform: translateY(0); } 100% { transform: translateY(-12px) scale(1.15); } }
-
-    .cheer-6 .fire-blast { display: block !important; animation: fire-flicker 0.18s ease-in-out infinite alternate; }
-    .cheer-6 .arm-r { animation: ch-cheer-arm 0.22s ease-in-out infinite alternate; }
-    .cheer-6 .body-base { animation: ch-cheer-hop 0.22s ease-in-out infinite alternate; }
-    @keyframes fire-flicker { 0% { transform: scale(0.9); } 100% { transform: scale(1.4) translateY(-5px); } }
-    @keyframes ch-cheer-arm { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-140deg); } }
-    @keyframes ch-cheer-hop { 0% { transform: translateY(0); } 100% { transform: translateY(-12px); } }
-
-    .cheer-7 .sun-glow { transform: scale(1.8); }
-    .cheer-7 .body-base { animation: n-pop 0.3s ease-in-out infinite alternate; }
-    @keyframes n-pop { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-20px); } }
-
-    .cheer-8 .disco-eye { display: block !important; }
-    .cheer-8 .eye-normal { display: none !important; }
-    .cheer-8 .body-base { animation: z-cheer-bounce 0.28s ease-in-out infinite alternate; }
-    @keyframes z-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.22) translateY(-14px); } }
-
-    .cheer-9 .body-base { animation: axo-twirl-cheer 0.5s ease-in-out infinite alternate; }
-    .cheer-9 .star-sparkles { display: block !important; }
-    @keyframes axo-twirl-cheer { 0% { transform: rotateY(0) translateY(0); } 100% { transform: rotateY(180deg) translateY(-22px) scale(1.2); } }
-
-    .cheer-10 .arm-l { animation: gr-cheer-l 0.25s ease-in-out infinite alternate; }
-    .cheer-10 .arm-r { animation: gr-cheer-r 0.25s ease-in-out infinite alternate; }
-    .cheer-10 .body-base { animation: gr-cheer-bounce 0.25s ease-in-out infinite alternate; }
-    @keyframes gr-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(145deg); } }
-    @keyframes gr-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-145deg); } }
-    @keyframes gr-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-12px); } }
-
-    .cheer-11 .arm-r { animation: mo-cheer-arm 0.24s ease-in-out infinite alternate; }
-    .cheer-11 .body-base { animation: mo-cheer-puff 0.24s ease-in-out infinite alternate; }
-    @keyframes mo-cheer-arm { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-160deg); } }
-    @keyframes mo-cheer-puff { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-15px); } }
-
-    .cheer-12 .arm-l { animation: sp-cheer-l 0.26s ease-in-out infinite alternate; }
-    .cheer-12 .arm-r { animation: sp-cheer-r 0.26s ease-in-out infinite alternate; }
-    .cheer-12 .leaf-top { animation: sp-leaf-spin 0.22s linear infinite; }
-    .cheer-12 .body-base { animation: sp-cheer-bounce 0.26s ease-in-out infinite alternate; }
-    @keyframes sp-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(140deg); } }
-    @keyframes sp-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-140deg); } }
-    @keyframes sp-leaf-spin { 0% { transform: rotate(0); } 100% { transform: rotate(360deg); } }
-    @keyframes sp-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.22) translateY(-14px); } }
-
-    .cheer-13 .wing-pair { animation: bz-wing-buzz 0.06s linear infinite alternate; }
-    .cheer-13 .body-base { animation: bz-cheer-loop 0.35s ease-in-out infinite alternate; }
-    @keyframes bz-cheer-loop { 0% { transform: translateY(0); } 100% { transform: translateY(-18px) scale(1.25); } }
-
-    .cheer-14 .toast-popup { display: block !important; animation: cr-toast-pop 0.25s ease-in-out infinite alternate; }
-    .cheer-14 .body-base { animation: cr-cheer-jump 0.25s ease-in-out infinite alternate; }
-    @keyframes cr-toast-pop { 0% { transform: translateY(0); } 100% { transform: translateY(-14px); } }
-    @keyframes cr-cheer-jump { 0% { transform: scale(1); } 100% { transform: scale(1.15) translateY(-12px); } }
-
-    .cheer-15 .arm-l { animation: tk-cheer-l 0.24s ease-in-out infinite alternate; }
-    .cheer-15 .arm-r { animation: tk-cheer-r 0.24s ease-in-out infinite alternate; }
-    .cheer-15 .feather-mid { animation: tk-feather-puff 0.24s ease-in-out infinite alternate; }
-    .cheer-15 .body-base { animation: tk-cheer-hop 0.24s ease-in-out infinite alternate; }
-    @keyframes tk-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(145deg); } }
-    @keyframes tk-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-145deg); } }
-    @keyframes tk-feather-puff { 0% { transform: scale(1); } 100% { transform: scale(1.5) translateY(-8px); } }
-    @keyframes tk-cheer-hop { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-14px); } }
-
-    .cheer-16 .arm-l { animation: cl-claw-cheer-l 0.2s ease-in-out infinite alternate; }
-    .cheer-16 .arm-r { animation: cl-claw-cheer-r 0.2s ease-in-out infinite alternate; }
-    .cheer-16 .body-base { animation: cl-cheer-hop 0.2s ease-in-out infinite alternate; }
-    @keyframes cl-claw-cheer-l { 0% { transform: rotate(-40deg); } 100% { transform: rotate(30deg) translateY(-10px); } }
-    @keyframes cl-claw-cheer-r { 0% { transform: rotate(40deg); } 100% { transform: rotate(-30deg) translateY(-10px); } }
-    @keyframes cl-cheer-hop { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-12px); } }
-
-    .cheer-17 .tail-wiggle { animation: mm-fan-tail 0.16s ease-in-out infinite alternate; }
-    .cheer-17 .body-base { animation: mm-paper-spin 0.4s ease-in-out infinite alternate; }
-    @keyframes mm-paper-spin { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px) rotate(14deg); } }
-
-    .cheer-18 .arm-l { animation: fz-cheer-l 0.22s ease-in-out infinite alternate; }
-    .cheer-18 .arm-r { animation: fz-cheer-r 0.22s ease-in-out infinite alternate; }
-    .cheer-18 .body-base { animation: fz-cheer-pop 0.22s ease-in-out infinite alternate; }
-    @keyframes fz-cheer-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(155deg); } }
-    @keyframes fz-cheer-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-155deg); } }
-    @keyframes fz-cheer-pop { 0% { transform: scale(1); } 100% { transform: scale(1.35) translateY(-18px); } }
-
-    .cheer-19 .party-tongue { display: block !important; }
-    .cheer-19 .body-base { animation: snp-cheer-jump 0.26s ease-in-out infinite alternate; }
-    @keyframes snp-cheer-jump { 0% { transform: scale(1); } 100% { transform: scale(1.22) translateY(-14px); } }
-
-    .cheer-20 .alarm-rings { display: block !important; }
-    .cheer-20 .clock-bell-l { animation: bm-bell-vibe-l 0.08s ease-in-out infinite alternate; }
-    .cheer-20 .clock-bell-r { animation: bm-bell-vibe-r 0.08s ease-in-out infinite alternate; }
-    .cheer-20 .arm-l { animation: bm-cheer-l 0.22s ease-in-out infinite alternate; }
-    .cheer-20 .arm-r { animation: bm-cheer-r 0.22s ease-in-out infinite alternate; }
-    .cheer-20 .body-base { animation: bm-cheer-bounce 0.22s ease-in-out infinite alternate; }
-    @keyframes bm-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(145deg); } }
-    @keyframes bm-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-145deg); } }
-    @keyframes bm-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-14px); } }
-
-    .cheer-21 .arm-l { animation: pb-flipper-l 0.2s ease-in-out infinite alternate; }
-    .cheer-21 .arm-r { animation: pb-flipper-r 0.2s ease-in-out infinite alternate; }
-    .cheer-21 .body-base { animation: pb-cheer-belly 0.26s ease-in-out infinite alternate; }
-    @keyframes pb-cheer-belly { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
-
-    .cheer-22 .body-base { animation: gl-glitch-win 0.18s steps(2) infinite alternate; }
-    @keyframes gl-glitch-win { 0% { transform: scale(1) translateY(0); } 100% { transform: scale(1.3) translateY(-16px); } }
-
-    .cheer-23 .flower-crown { animation: ct-flower-bloom 0.25s ease-in-out infinite alternate; }
-    .cheer-23 .arm-l { animation: ct-cheer-l 0.25s ease-in-out infinite alternate; }
-    .cheer-23 .arm-r { animation: ct-cheer-r 0.25s ease-in-out infinite alternate; }
-    .cheer-23 .body-base { animation: ct-cheer-hop 0.25s ease-in-out infinite alternate; }
-    @keyframes ct-flower-bloom { 0% { transform: scale(1); } 100% { transform: scale(1.5) translateY(-6px); } }
-    @keyframes ct-cheer-l { 0% { transform: rotate(90deg); } 100% { transform: rotate(135deg); } }
-    @keyframes ct-cheer-r { 0% { transform: rotate(-90deg); } 100% { transform: rotate(-135deg); } }
-    @keyframes ct-cheer-hop { 0% { transform: scale(1); } 100% { transform: scale(1.2) translateY(-12px); } }
-
-    .cheer-24 .arm-l { animation: nc-cheer-l 0.25s ease-in-out infinite alternate; }
-    .cheer-24 .arm-r { animation: nc-cheer-r 0.25s ease-in-out infinite alternate; }
-    .cheer-24 .body-base { animation: nc-cheer-pump 0.25s ease-in-out infinite alternate; }
-    @keyframes nc-cheer-l { 0% { transform: rotate(20deg); } 100% { transform: rotate(60deg); } }
-    @keyframes nc-cheer-r { 0% { transform: rotate(-20deg); } 100% { transform: rotate(-60deg); } }
-    @keyframes nc-cheer-pump { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
-
-    .cheer-25 .arm-r { animation: pip-cheer-wand 0.26s ease-in-out infinite alternate; }
-    .cheer-25 .body-base { animation: pip-cheer-twist 0.35s ease-in-out infinite alternate; }
-    @keyframes pip-cheer-wand { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-160deg); } }
-    @keyframes pip-cheer-twist { 0% { transform: scale(1) rotate(0); } 100% { transform: scale(1.25) rotate(18deg) translateY(-15px); } }
-
-    .cheer-26 .arm-l { animation: wd-cheer-l 0.25s ease-in-out infinite alternate; }
-    .cheer-26 .arm-r { animation: wd-cheer-r 0.25s ease-in-out infinite alternate; }
-    .cheer-26 .body-base { animation: wd-cheer-hop 0.25s ease-in-out infinite alternate; }
-    @keyframes wd-cheer-l { 0% { transform: rotate(100deg); } 100% { transform: rotate(145deg); } }
-    @keyframes wd-cheer-r { 0% { transform: rotate(-100deg); } 100% { transform: rotate(-145deg); } }
-    @keyframes wd-cheer-hop { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-16px); } }
-
-    .cheer-27 .arm-l { animation: yo-cheer-l 0.25s ease-in-out infinite alternate; }
-    .cheer-27 .arm-r { animation: yo-cheer-r 0.25s ease-in-out infinite alternate; }
-    .cheer-27 .body-base { animation: yo-cheer-bounce 0.25s ease-in-out infinite alternate; }
-    @keyframes yo-cheer-l { 0% { transform: rotate(110deg); } 100% { transform: rotate(155deg); } }
-    @keyframes yo-cheer-r { 0% { transform: rotate(-110deg); } 100% { transform: rotate(-155deg); } }
-    @keyframes yo-cheer-bounce { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-16px); } }
-
-    .cheer-28 .turbo-flame { display: block !important; animation: tb-flame-burst 0.15s ease-in-out infinite alternate; }
-    .cheer-28 .body-base { animation: tb-cheer-rev 0.22s ease-in-out infinite alternate; }
-    @keyframes tb-cheer-rev { 0% { transform: scale(1); } 100% { transform: scale(1.22) translateY(-12px) rotate(-14deg); } }
-
-    .cheer-29 .angler-lantern { animation: lm-cheer-lantern 0.3s ease-in-out infinite alternate; }
-    .cheer-29 .body-base { animation: lm-cheer-twirl 0.35s ease-in-out infinite alternate; }
-    @keyframes lm-cheer-lantern { 0% { transform: scale(1.2); } 100% { transform: scale(2.2); } }
-    @keyframes lm-cheer-twirl { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-16px) rotate(12deg); } }
-
-    .cheer-30 .candle-flame { animation: um-cheer-flame 0.2s ease-in-out infinite alternate; }
-    .cheer-30 .body-base { animation: um-cheer-billow 0.26s ease-in-out infinite alternate; }
-    @keyframes um-cheer-flame { 0% { transform: scale(1.5) translateY(-4px); } 100% { transform: scale(2.8) translateY(-12px); } }
-    @keyframes um-cheer-billow { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-16px); } }
-
-    .cheer-31 .chest-lid { animation: gj-cheer-lid 0.22s ease-in-out infinite alternate; }
-    .cheer-31 .body-base { animation: gj-cheer-burst 0.22s ease-in-out infinite alternate; }
-    @keyframes gj-cheer-lid { 0% { transform: rotate(-30deg); } 100% { transform: rotate(-70deg) translateY(-10px); } }
-    @keyframes gj-cheer-burst { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-15px); } }
-
-    .cheer-32 .saturn-rings { animation: as-cheer-rings 0.25s ease-in-out infinite alternate; }
-    .cheer-32 .body-base { animation: as-cheer-burst 0.25s ease-in-out infinite alternate; }
-    @keyframes as-cheer-rings { 0% { transform: scale(1.2) rotate(15deg); } 100% { transform: scale(1.8) rotate(45deg); } }
-    @keyframes as-cheer-burst { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-18px); } }
-
-    .cheer-33 .rune-orb-1, .cheer-33 .rune-orb-2, .cheer-33 .rune-orb-3 { animation: ar-cheer-orbs 0.25s ease-in-out infinite alternate; }
-    .cheer-33 .body-base { animation: ar-cheer-levitate 0.25s ease-in-out infinite alternate; }
-    @keyframes ar-cheer-orbs { 0% { transform: scale(1.2); } 100% { transform: scale(2.2); } }
-    @keyframes ar-cheer-levitate { 0% { transform: scale(1); } 100% { transform: scale(1.3) translateY(-20px); } }
-
-    .cheer-34 .moon-crown { animation: zp-cheer-moon 0.25s ease-in-out infinite alternate; }
-    .cheer-34 .arm-l { animation: zp-cheer-wing-l 0.25s ease-in-out infinite alternate; }
-    .cheer-34 .arm-r { animation: zp-cheer-wing-r 0.25s ease-in-out infinite alternate; }
-    .cheer-34 .body-base { animation: zp-cheer-soar 0.25s ease-in-out infinite alternate; }
-    @keyframes zp-cheer-moon { 0% { transform: scale(1.4); } 100% { transform: scale(2.4) translateY(-8px); } }
-    @keyframes zp-cheer-wing-l { 0% { transform: rotate(-30deg) scale(1.1); } 100% { transform: rotate(-70deg) scale(1.35); } }
-    @keyframes zp-cheer-wing-r { 0% { transform: rotate(30deg) scale(1.1); } 100% { transform: rotate(70deg) scale(1.35); } }
-    @keyframes zp-cheer-soar { 0% { transform: scale(1); } 100% { transform: scale(1.25) translateY(-18px); } }
-
-    .cheer-35 .arm-l, .cheer-35 .arm-r { animation: sp-cheer-threat 0.2s ease-in-out infinite alternate; }
-    .cheer-35 .body-base { animation: sp-cheer-jump 0.2s ease-in-out infinite alternate; }
-    @keyframes sp-cheer-threat { 0% { transform: rotate(-30deg); } 100% { transform: rotate(30deg); } }
-    @keyframes sp-cheer-jump { 0% { transform: scale(1) translateY(0); } 100% { transform: scale(1.3) translateY(-22px); } }
-
-    /* =========================================================================
-       36 DYNAMISCH SCHLUCHZENDE & ZITTERNDE TRAUER-POSEN (💧)
-       JEDES WESEN WEINT, ZITTERT UND SCHLUCHZT RYTHMISCH
-       ========================================================================= */
-    .sad-0 .cap-group { transform: translateY(12px) rotate(-10deg); }
-    .sad-0 .body-base { animation: p-sad-sag 1.5s ease-in-out infinite; }
-    @keyframes p-sad-sag { 0%, 100% { transform: scale(1.3, 0.5) translateY(24px); } 50% { transform: scale(1.35, 0.45) translateY(26px); } }
-
-    .sad-1 .ear-l { transform: rotate(-35deg) translateY(6px); }
-    .sad-1 .ear-r { transform: rotate(35deg) translateY(6px); }
-    .sad-1 .tail-wiggle { transform: rotate(80deg) translateY(6px); }
-    .sad-1 .head-node { animation: s-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes s-sob { 0% { transform: translateY(6px); } 100% { transform: translateY(10px); } }
-
-    .sad-2 .body-base { animation: f-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes f-sob { 0% { transform: translateY(12px) scale(0.88); } 100% { transform: translateY(16px) scale(0.84); } }
-
-    .sad-3 .body-base { animation: b-sob 0.7s ease-in-out infinite alternate; }
-    @keyframes b-sob { 0% { transform: scale(0.82) translateY(14px); opacity: 0.7; } 100% { transform: scale(0.78) translateY(18px); opacity: 0.55; } }
-
-    .sad-4 .arm-l { transform: rotate(45deg) translate(8px, -12px); }
-    .sad-4 .arm-r { transform: rotate(-45deg) translate(-8px, -12px); }
-    .sad-4 .body-base { animation: bear-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes bear-sob { 0% { transform: translateY(6px); } 100% { transform: translateY(11px); } }
-
-    .sad-5 .screen-err { display: block !important; }
-    .sad-5 .eye-normal { display: none !important; }
-    .sad-5 .body-base { animation: bp-sad-shiver 0.3s steps(2) infinite; }
-    @keyframes bp-sad-shiver { 0%, 100% { transform: translateX(-2px) translateY(6px); } 50% { transform: translateX(2px) translateY(8px); } }
-
-    .sad-6 .wing-l { transform: rotate(40deg) translateY(12px); }
-    .sad-6 .wing-r { transform: rotate(35deg) translateY(10px); }
-    .sad-6 .body-base { animation: d-sad-droop 0.6s ease-in-out infinite alternate; }
-    @keyframes d-sad-droop { 0% { transform: translateY(5px); } 100% { transform: translateY(9px); } }
-
-    .sad-7 .cloud-mesh { fill: #64748b !important; }
-    .sad-7 .cloud-rain-drops { display: block !important; }
-    .sad-7 .body-base { animation: n-sad-rain 0.5s ease-in-out infinite alternate; }
-    @keyframes n-sad-rain { 0% { transform: translateY(6px); } 100% { transform: translateY(10px); } }
-
-    .sad-8 .antenna-stem { transform: rotate(45deg); }
-    .sad-8 .body-base { animation: z-sad-sag 0.6s ease-in-out infinite alternate; }
-    @keyframes z-sad-sag { 0% { transform: translateY(8px) scale(0.95); } 100% { transform: translateY(13px) scale(0.9); } }
-
-    .sad-9 .gills { transform: rotate(25deg) translateY(8px); }
-    .sad-9 .body-base { animation: axo-sad-shiver 0.5s ease-in-out infinite alternate; }
-    @keyframes axo-sad-shiver { 0% { transform: translateY(7px) rotate(-2deg); } 100% { transform: translateY(11px) rotate(2deg); } }
-
-    .sad-10 .body-base { animation: gr-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes gr-sob { 0% { transform: translateY(10px) scale(0.94); } 100% { transform: translateY(14px) scale(0.9); } }
-
-    .sad-11 .chef-hat { transform: rotate(-20deg) translateY(6px); }
-    .sad-11 .body-base { animation: mo-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes mo-sob { 0% { transform: translateY(8px) scale(0.94); } 100% { transform: translateY(13px) scale(0.88); } }
-
-    .sad-12 .leaf-top { transform: rotate(45deg) translateY(8px); }
-    .sad-12 .body-base { animation: sp-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes sp-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-13 .wing-pair { transform: scale(0.6) rotate(30deg); }
-    .sad-13 .body-base { animation: bz-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes bz-sob { 0% { transform: translateY(10px); } 100% { transform: translateY(14px); } }
-
-    .sad-14 .arm-r { transform: rotate(40deg); }
-    .sad-14 .body-base { animation: cr-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes cr-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-15 .feather-mid { transform: rotate(30deg); }
-    .sad-15 .body-base { animation: tk-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes tk-sob { 0% { transform: translateY(8px) scale(0.95); } 100% { transform: translateY(12px) scale(0.9); } }
-
-    .sad-16 .arm-l { transform: rotate(-20deg) translateY(8px); }
-    .sad-16 .arm-r { transform: rotate(20deg) translateY(8px); }
-    .sad-16 .body-base { animation: cl-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes cl-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-17 .tail-wiggle { transform: rotate(45deg) translateY(10px); }
-    .sad-17 .body-base { animation: mm-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes mm-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-18 .nerd-glasses { transform: translateY(8px) rotate(-8deg); }
-    .sad-18 .body-base { animation: fz-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes fz-sob { 0% { transform: translateY(8px) scale(0.92); } 100% { transform: translateY(12px) scale(0.86); } }
-
-    .sad-19 .tail-wiggle { transform: rotate(60deg) translateY(12px); }
-    .sad-19 .body-base { animation: snp-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes snp-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-20 .body-base { animation: bm-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes bm-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-21 .arm-l { transform: rotate(30deg); }
-    .sad-21 .arm-r { transform: rotate(-30deg); }
-    .sad-21 .body-base { animation: pb-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes pb-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-22 .body-base { animation: gl-sob 0.3s steps(2) infinite; }
-    @keyframes gl-sob { 0% { transform: translateY(8px) skewX(6deg); } 100% { transform: translateY(12px) skewX(-6deg); } }
-
-    .sad-23 .arm-l { transform: rotate(-60deg); }
-    .sad-23 .arm-r { transform: rotate(60deg); }
-    .sad-23 .body-base { animation: ct-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes ct-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-24 .arm-l { transform: rotate(30deg); }
-    .sad-24 .arm-r { transform: rotate(-30deg); }
-    .sad-24 .body-base { animation: nc-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes nc-sob { 0% { transform: translateY(9px); } 100% { transform: translateY(13px); } }
-
-    .sad-25 .top-hat { transform: rotate(-25deg) translateY(8px); }
-    .sad-25 .body-base { animation: pip-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes pip-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-26 .body-base { animation: wd-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes wd-sob { 0% { transform: translateY(9px) scale(0.93); } 100% { transform: translateY(13px) scale(0.89); } }
-
-    .sad-27 .tail-wiggle { transform: translateY(12px) scaleY(0.6); }
-    .sad-27 .body-base { animation: yo-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes yo-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-28 .body-base { animation: tb-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes tb-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-29 .angler-lantern { transform: translateY(8px) scale(0.7); }
-    .sad-29 .body-base { animation: lm-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes lm-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-30 .candle-flame { animation: um-sad-flicker 0.4s ease-in-out infinite alternate; }
-    .sad-30 .body-base { animation: um-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes um-sad-flicker { 0% { transform: scale(0.4) rotate(20deg); } 100% { transform: scale(0.2) rotate(35deg); } }
-    @keyframes um-sob { 0% { transform: translateY(10px) scale(0.93); } 100% { transform: translateY(15px) scale(0.88); } }
-
-    .sad-31 .mimic-tongue { animation: gj-sad-tongue 0.5s ease-in-out infinite alternate; }
-    .sad-31 .body-base { animation: gj-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes gj-sad-tongue { 0% { transform: translateY(6px) scaleY(0.6); } 100% { transform: translateY(10px) scaleY(0.4); } }
-    @keyframes gj-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-32 .saturn-rings { animation: as-sad-rings 0.6s ease-in-out infinite alternate; }
-    .sad-32 .body-base { animation: as-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes as-sad-rings { 0% { transform: rotate(20deg) translateY(4px); } 100% { transform: rotate(35deg) translateY(8px); } }
-    @keyframes as-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-33 .rune-orb-1, .sad-33 .rune-orb-2, .sad-33 .rune-orb-3 { animation: ar-sad-orbs 0.6s ease-in-out infinite alternate; }
-    .sad-33 .body-base { animation: ar-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes ar-sad-orbs { 0% { transform: translateY(10px) scale(0.7); } 100% { transform: translateY(16px) scale(0.5); } }
-    @keyframes ar-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-34 .moon-crown { animation: zp-sad-moon 0.6s ease-in-out infinite alternate; }
-    .sad-34 .body-base { animation: zp-sob 0.6s ease-in-out infinite alternate; }
-    @keyframes zp-sad-moon { 0% { transform: rotate(25deg) translateY(3px); } 100% { transform: rotate(40deg) translateY(6px); } }
-    @keyframes zp-sob { 0% { transform: translateY(8px); } 100% { transform: translateY(12px); } }
-
-    .sad-35 .arm-l, .sad-35 .leg-l { animation: sp-sad-leg-l 0.5s ease-in-out infinite alternate; }
-    .sad-35 .arm-r, .sad-35 .leg-r { animation: sp-sad-leg-r 0.5s ease-in-out infinite alternate; }
-    .sad-35 .body-base { animation: sp-sob 0.5s ease-in-out infinite alternate; }
-    @keyframes sp-sad-leg-l { 0% { transform: rotate(15deg); } 100% { transform: rotate(25deg); } }
-    @keyframes sp-sad-leg-r { 0% { transform: rotate(-15deg); } 100% { transform: rotate(-25deg); } }
-    @keyframes sp-sob { 0% { transform: translateY(9px) scale(0.93); } 100% { transform: translateY(14px) scale(0.88); } }
-
-  
+/* ══════════════════════════════════════════════════════════════
+   Knowledge Stack — Bewegungen der 36 Wesen (creatures.css)
+   ══════════════════════════════════════════════════════════════
+
+   Fassung 2 (Oktober 2026). Jedes Wesen hat dasselbe Skelett
+   (siehe Kopf von creatures.js): cr-root · leg-l/-r · body-base ·
+   head-node · face · arm-l/-r · cr-fx · cr-ov. Darum steht hier
+   jede Bewegung EINMAL für alle — und unten je Wesen nur noch, was
+   es besonders macht (Flügel schlagen, Schwanz wedeln, Magie).
+
+   Alle Maße stehen in Einheiten des viewBox (0…100). Ein translateY
+   von -60px ist damit immer 60 % der Wesenhöhe — egal ob die Karte
+   am Beamer 90 oder die Vorschau 250 Punkte groß ist
+   (feedback_limit_in_wrong_unit).
+
+   Die Klassen am <svg> (aus tool.js / KSCreatures.cls):
+     c-idle                       Ruhe: atmen, blinzeln, Kleinkram
+     wave-N   state-wave          👋
+     jump-N   state-jump          🚀  (darf aus dem Kasten, ks-springt)
+     cheer-N  state-cheer         🎉
+     c-dance-N state-dance        🕺
+     sleep-N  state-sleep         😴
+     sad-N    state-sad           💧
+   Neu, für später (noch nicht im Quiz):
+     walk-N   state-walk dir-left|dir-right|dir-front|dir-back
+     fall-N   state-fall          stolpert, kippt um, bleibt liegen
+     plop-N   state-plop          plumpst auf den Hintern, sitzt
+     getup-N  state-getup         steht wieder auf (nach fall);
+                                  mit from-sit: nach plop
+   fall, plop und getup laufen EINMAL und bleiben im Endbild stehen
+   (animation-fill-mode: forwards).
+   ══════════════════════════════════════════════════════════════ */
+
+/* Wird von tool.css für die fliegenden Emote-Zeichen benutzt. */
+@keyframes floatUpFade {
+  0% { transform: translateY(0) scale(0.8); opacity: 1; }
+  100% { transform: translateY(-55px) scale(1.4); opacity: 0; }
+}
+.float-particle {
+  position: absolute;
+  pointer-events: none;
+  animation: floatUpFade 1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  z-index: 60;
+  font-size: 1.6rem;
+}
+
+/* ── Grundlage ─────────────────────────────────────────────── */
+.creature-svg {
+  overflow: visible !important;
+  --ink: #1e1b2e;
+}
+.creature-svg .cr-root,
+.creature-svg .body-base { transform-origin: 50px 92px; }
+.creature-svg .cr-shadow { fill: #000; opacity: .16; transform-origin: 50px 92.4px; }
+.creature-svg .face { transition: transform .25s ease; }
+
+/* Kleine Teile drehen um ihre eigene Mitte */
+.creature-svg .e-open, .creature-svg .tw, .creature-svg .glow, .creature-svg .glow-soft,
+.creature-svg .led, .creature-svg .bubble, .creature-svg .zap, .creature-svg .tear,
+.creature-svg .z, .creature-svg .note, .creature-svg .cf, .creature-svg .puff,
+.creature-svg .bs, .creature-svg .dz, .creature-svg .rain, .creature-svg .flick,
+.creature-svg .m-sleep, .creature-svg .steam, .creature-svg .pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* ── Gesichter: was standardmäßig verborgen ist ──────────── */
+.creature-svg .e-happy, .creature-svg .e-sleep, .creature-svg .e-sad, .creature-svg .e-dizzy,
+.creature-svg .m-open, .creature-svg .m-sad, .creature-svg .m-sleep, .creature-svg .m-wow,
+.creature-svg .cr-tears, .creature-svg .backside,
+.creature-svg .cr-zzz, .creature-svg .cr-cloud, .creature-svg .cr-confetti, .creature-svg .cr-notes,
+.creature-svg .cr-stars, .creature-svg .cr-dust, .creature-svg .cr-burst { display: none; }
+
+.creature-svg .z { font-family: 'Fredoka', 'Nunito', system-ui, sans-serif; font-weight: 800; fill: #6d7cff; stroke: #fff; stroke-width: 2.2px; paint-order: stroke; }
+.creature-svg .note { font-family: system-ui, sans-serif; font-weight: 700; fill: #a855f7; stroke: #fff; stroke-width: 1.6px; paint-order: stroke; }
+
+/* ══════════════════════════════════════════════════════════════
+   RUHE — läuft immer, solange eine Bewegung es nicht übernimmt
+   ══════════════════════════════════════════════════════════════ */
+.creature-svg .body-base { animation: cr-breathe 2.6s ease-in-out infinite alternate; }
+@keyframes cr-breathe { from { transform: scale(1, 1); } to { transform: scale(1.025, .975); } }
+
+.creature-svg .arm-l { animation: cr-arm-idle-l 2.6s ease-in-out infinite alternate; }
+.creature-svg .arm-r { animation: cr-arm-idle-r 2.6s ease-in-out infinite alternate; animation-delay: -1.3s; }
+@keyframes cr-arm-idle-l { from { transform: rotate(-3deg); } to { transform: rotate(6deg); } }
+@keyframes cr-arm-idle-r { from { transform: rotate(3deg); } to { transform: rotate(-6deg); } }
+
+.creature-svg .e-open { animation: cr-blink 4.6s infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes cr-blink { 0%, 91%, 97%, 100% { transform: scaleY(1); } 94% { transform: scaleY(.1); } }
+
+.creature-svg .tail { animation: cr-tail 1.8s ease-in-out infinite alternate; }
+@keyframes cr-tail { from { transform: rotate(-7deg); } to { transform: rotate(9deg); } }
+
+.creature-svg .ear-l { animation: cr-ear-l 5.2s infinite; animation-delay: var(--cr-d, 0s); }
+.creature-svg .ear-r { animation: cr-ear-r 5.2s infinite; animation-delay: calc(var(--cr-d, 0s) - 1.9s); }
+@keyframes cr-ear-l { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(-14deg); } 92% { transform: rotate(4deg); } 95% { transform: rotate(-6deg); } }
+@keyframes cr-ear-r { 0%, 86%, 100% { transform: rotate(0); } 89% { transform: rotate(14deg); } 92% { transform: rotate(-4deg); } 95% { transform: rotate(6deg); } }
+
+.creature-svg .wing-l { animation: cr-wing-l 1.1s ease-in-out infinite alternate; }
+.creature-svg .wing-r { animation: cr-wing-r 1.1s ease-in-out infinite alternate; }
+@keyframes cr-wing-l { from { transform: rotate(4deg); } to { transform: rotate(-10deg); } }
+@keyframes cr-wing-r { from { transform: rotate(-4deg); } to { transform: rotate(10deg); } }
+
+.creature-svg .sway { animation: cr-sway 2.2s ease-in-out infinite alternate; }
+@keyframes cr-sway { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+.creature-svg .spin { animation: cr-spin 5s linear infinite; }
+@keyframes cr-spin { to { transform: rotate(360deg); } }
+.creature-svg .spin-y { animation: cr-spin-y 1.6s ease-in-out infinite; }
+@keyframes cr-spin-y { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(-1); } }
+.creature-svg .float { animation: cr-float 2s ease-in-out infinite alternate; }
+@keyframes cr-float { from { transform: translateY(1.5px); } to { transform: translateY(-1.5px); } }
+.creature-svg .glow { animation: cr-glow 1.4s ease-in-out infinite alternate; }
+@keyframes cr-glow { from { opacity: .55; transform: scale(.9); } to { opacity: 1; transform: scale(1.12); } }
+.creature-svg .glow-soft { animation: cr-glow-soft 1.8s ease-in-out infinite alternate; }
+@keyframes cr-glow-soft { from { filter: none; } to { filter: brightness(1.18); } }
+.creature-svg .pulse { animation: cr-pulse 1.6s ease-in-out infinite alternate; }
+@keyframes cr-pulse { from { opacity: .12; transform: scale(.94); } to { opacity: .34; transform: scale(1.06); } }
+.creature-svg .flick { animation: cr-flick .22s ease-in-out infinite alternate; }
+@keyframes cr-flick { from { transform: scale(1, 1) skewX(-4deg); } to { transform: scale(.86, 1.14) skewX(5deg); } }
+.creature-svg .led { animation: cr-led 1.2s steps(2) infinite; }
+@keyframes cr-led { 0% { opacity: 1; } 50% { opacity: .25; } }
+.creature-svg .zap { animation: cr-zap 1.3s steps(1) infinite; }
+@keyframes cr-zap { 0%, 60% { opacity: 0; } 62%, 78% { opacity: 1; } 80%, 100% { opacity: 0; } }
+.creature-svg .drip { animation: cr-drip 2.4s ease-in infinite; }
+@keyframes cr-drip { 0%, 40% { transform: scaleY(.4); } 80% { transform: scaleY(1.15); } 100% { transform: scaleY(.4); } }
+.creature-svg .bubble { animation: cr-bubble 2.6s ease-in infinite; }
+@keyframes cr-bubble { 0% { transform: translateY(8px) scale(.4); opacity: 0; } 25% { opacity: .95; } 100% { transform: translateY(-14px) scale(1.1); opacity: 0; } }
+.creature-svg .steam { animation: cr-steam 2.2s ease-out infinite; }
+@keyframes cr-steam { 0% { transform: translateY(4px) scale(.6); opacity: 0; } 30% { opacity: .8; } 100% { transform: translateY(-10px) scale(1.2); opacity: 0; } }
+.creature-svg .orbit { animation: cr-spin 6s linear infinite; }
+
+/* Funkeln: ein Stern geht auf, dreht sich, verlischt */
+.creature-svg .tw { animation: cr-tw 2.4s ease-in-out infinite; }
+@keyframes cr-tw {
+  0%, 100% { transform: scale(0) rotate(0); opacity: 0; }
+  45% { transform: scale(1.15) rotate(45deg); opacity: 1; }
+  60% { transform: scale(.9) rotate(60deg); opacity: 1; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   👋 WINKEN
+   ══════════════════════════════════════════════════════════════ */
+.state-wave .m-normal { display: none; }
+.state-wave .m-open { display: inline; }
+.state-wave .arm-r { animation: cr-wave .38s ease-in-out infinite alternate; }
+@keyframes cr-wave { from { transform: rotate(var(--wave-a, -128deg)); } to { transform: rotate(var(--wave-b, -78deg)); } }
+.state-wave .head-node { animation: cr-tilt .76s ease-in-out infinite alternate; }
+@keyframes cr-tilt { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+.state-wave .cr-root { animation: cr-lean 1.52s ease-in-out infinite alternate; }
+@keyframes cr-lean { from { transform: rotate(-2deg); } to { transform: rotate(3deg); } }
+
+/* ══════════════════════════════════════════════════════════════
+   🚀 SPRINGEN — hoch hinaus, Arme hoch, weich landen
+   ══════════════════════════════════════════════════════════════ */
+.state-jump .e-open { display: none; }
+.state-jump .e-happy { display: inline; }
+.state-jump .m-normal { display: none; }
+.state-jump .m-open { display: inline; }
+.state-jump .cr-root { animation: cr-jump 1s infinite; }
+@keyframes cr-jump {
+  0%   { transform: translateY(0) scale(1, 1); animation-timing-function: ease-out; }
+  14%  { transform: translateY(1px) scale(1.2, .78); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  34%  { transform: translateY(-50px) scale(.88, 1.14); animation-timing-function: ease-out; }
+  48%  { transform: translateY(-60px) scale(1, 1); animation-timing-function: ease-in; }
+  70%  { transform: translateY(-30px) scale(.94, 1.07); animation-timing-function: ease-in; }
+  82%  { transform: translateY(0) scale(1.22, .78); animation-timing-function: ease-out; }
+  92%  { transform: translateY(0) scale(.96, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.state-jump .cr-shadow { animation: cr-jump-shadow 1s infinite; }
+@keyframes cr-jump-shadow {
+  0%, 14%, 82%, 100% { transform: scale(1); opacity: .16; }
+  48% { transform: scale(.45); opacity: .07; }
+}
+.state-jump .arm-l { animation: cr-jump-arm-l 1s infinite; }
+.state-jump .arm-r { animation: cr-jump-arm-r 1s infinite; }
+@keyframes cr-jump-arm-l { 0%, 14%, 86%, 100% { transform: rotate(-8deg); } 34%, 66% { transform: rotate(calc(var(--cheer-r, -140deg) * -1)); } }
+@keyframes cr-jump-arm-r { 0%, 14%, 86%, 100% { transform: rotate(8deg); } 34%, 66% { transform: rotate(var(--cheer-r, -140deg)); } }
+.state-jump .leg-l { animation: cr-jump-leg-l 1s infinite; }
+.state-jump .leg-r { animation: cr-jump-leg-r 1s infinite; }
+@keyframes cr-jump-leg-l { 0%, 30%, 74%, 100% { transform: rotate(0) translateY(0); } 48% { transform: rotate(18deg) translateY(-2px); } }
+@keyframes cr-jump-leg-r { 0%, 30%, 74%, 100% { transform: rotate(0) translateY(0); } 48% { transform: rotate(-18deg) translateY(-2px); } }
+
+/* ══════════════════════════════════════════════════════════════
+   🎉 JUBELN — Arme hoch, hüpfen, Konfetti
+   ══════════════════════════════════════════════════════════════ */
+.state-cheer .e-open { display: none; }
+.state-cheer .e-happy { display: inline; }
+.state-cheer .m-normal { display: none; }
+.state-cheer .m-open { display: inline; }
+.state-cheer .cr-confetti { display: inline; }
+.state-cheer .cr-root { animation: cr-hop .6s infinite; }
+@keyframes cr-hop {
+  0%, 100% { transform: translateY(0) scale(1.08, .92); animation-timing-function: ease-out; }
+  40% { transform: translateY(-9px) scale(.96, 1.05); animation-timing-function: ease-in; }
+  75% { transform: translateY(-2px) scale(1, 1); animation-timing-function: ease-in; }
+}
+.state-cheer .cr-shadow { animation: cr-hop-shadow .6s infinite; }
+@keyframes cr-hop-shadow { 0%, 100% { transform: scale(1); } 40% { transform: scale(.78); } }
+.state-cheer .arm-l { animation: cr-cheer-l .3s ease-in-out infinite alternate; }
+.state-cheer .arm-r { animation: cr-cheer-r .3s ease-in-out infinite alternate; }
+@keyframes cr-cheer-l { from { transform: rotate(calc(var(--cheer-r, -140deg) * -1)); } to { transform: rotate(calc(var(--cheer-r, -140deg) * -1 - 28deg)); } }
+@keyframes cr-cheer-r { from { transform: rotate(var(--cheer-r, -140deg)); } to { transform: rotate(calc(var(--cheer-r, -140deg) + 28deg)); } }
+.state-cheer .cf { animation: cr-confetti 1.2s linear infinite; }
+.state-cheer .cf:nth-child(odd) { animation-duration: 1.5s; }
+@keyframes cr-confetti {
+  0% { transform: translateY(-6px) rotate(0); opacity: 0; }
+  10% { opacity: 1; }
+  100% { transform: translateY(46px) rotate(540deg); opacity: 0; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   🕺 TANZEN — Hüfte, Arme im Wechsel, Schritt, Noten
+   ══════════════════════════════════════════════════════════════ */
+.state-dance .e-open { display: none; }
+.state-dance .e-happy { display: inline; }
+.state-dance .m-normal { display: none; }
+.state-dance .m-open { display: inline; }
+.state-dance .cr-notes { display: inline; }
+.state-dance .cr-root { animation: cr-dance .9s ease-in-out infinite; }
+@keyframes cr-dance {
+  0%, 100% { transform: translate(-2px, 0) rotate(-7deg); }
+  25% { transform: translate(0, -4px) rotate(0); }
+  50% { transform: translate(2px, 0) rotate(7deg); }
+  75% { transform: translate(0, -4px) rotate(0); }
+}
+.state-dance .head-node { animation: cr-dance-head .9s ease-in-out infinite; }
+@keyframes cr-dance-head { 0%, 100% { transform: rotate(5deg); } 50% { transform: rotate(-5deg); } }
+.state-dance .arm-l { animation: cr-dance-l .9s ease-in-out infinite; }
+.state-dance .arm-r { animation: cr-dance-r .9s ease-in-out infinite; }
+@keyframes cr-dance-l { 0%, 100% { transform: rotate(20deg); } 50% { transform: rotate(calc(var(--cheer-r, -140deg) * -1 - 10deg)); } }
+@keyframes cr-dance-r { 0%, 100% { transform: rotate(calc(var(--cheer-r, -140deg) + 10deg)); } 50% { transform: rotate(-20deg); } }
+.state-dance .leg-l { animation: cr-step .9s ease-in-out infinite; }
+.state-dance .leg-r { animation: cr-step .9s ease-in-out infinite; animation-delay: -.45s; }
+@keyframes cr-step { 0%, 50%, 100% { transform: translateY(0); } 25% { transform: translateY(-4px); } }
+.state-dance .note { animation: cr-note 1.8s ease-out infinite; }
+.state-dance .n2 { animation-delay: -.9s; }
+@keyframes cr-note { 0% { transform: translateY(6px) scale(.5) rotate(-10deg); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(-14px) scale(1.1) rotate(12deg); opacity: 0; } }
+
+/* ══════════════════════════════════════════════════════════════
+   😴 SCHLAFEN — tief atmen, Kopf sinkt, Zzz
+   ══════════════════════════════════════════════════════════════ */
+.state-sleep .e-open { display: none; }
+.state-sleep .e-sleep { display: inline; }
+.state-sleep .m-normal { display: none; }
+.state-sleep .m-sleep { display: inline; animation: cr-snore 3.4s ease-in-out infinite; }
+@keyframes cr-snore { 0%, 100% { transform: scale(.7); } 50% { transform: scale(1.3); } }
+.state-sleep .cr-zzz { display: inline; }
+.state-sleep .cr-root { transform: rotate(3deg) translateY(1px); }
+.state-sleep .body-base { animation: cr-sleep-breathe 3.4s ease-in-out infinite; }
+@keyframes cr-sleep-breathe { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(1.045, .955); } }
+.state-sleep .head-node { animation: cr-nod 3.4s ease-in-out infinite; }
+@keyframes cr-nod { 0%, 100% { transform: rotate(4deg) translateY(1px); } 50% { transform: rotate(7deg) translateY(2.5px); } }
+.state-sleep .arm-l { animation: none; transform: rotate(-6deg); }
+.state-sleep .arm-r { animation: none; transform: rotate(6deg); }
+.state-sleep .tail, .state-sleep .wing-l, .state-sleep .wing-r { animation-duration: 4s; }
+.state-sleep .z { animation: cr-z 3s ease-out infinite; opacity: 0; }
+.state-sleep .z2 { animation-delay: 1s; }
+.state-sleep .z3 { animation-delay: 2s; }
+@keyframes cr-z { 0% { transform: translate(-4px, 6px) scale(.4); opacity: 0; } 25% { opacity: 1; } 100% { transform: translate(4px, -6px) scale(1.1); opacity: 0; } }
+
+/* ══════════════════════════════════════════════════════════════
+   💧 TRAURIG — sinkt zusammen, Tränen, Regenwölkchen
+   ══════════════════════════════════════════════════════════════ */
+.state-sad .e-open { display: none; }
+.state-sad .e-sad { display: inline; }
+.state-sad .m-normal { display: none; }
+.state-sad .m-sad { display: inline; }
+.state-sad .cr-tears, .state-sad .cr-cloud { display: inline; }
+.state-sad .cr-root { animation: cr-sad 2.6s ease-in-out infinite alternate; }
+@keyframes cr-sad { from { transform: translateY(2px) scale(1.02, .96) rotate(-2deg); } to { transform: translateY(2px) scale(1.02, .96) rotate(2deg); } }
+.state-sad .head-node { transform: translateY(2px) rotate(-3deg); animation: none; }
+.state-sad .arm-l { animation: none; transform: rotate(-12deg); }
+.state-sad .arm-r { animation: none; transform: rotate(12deg); }
+.state-sad .ear-l { animation: none; transform: rotate(-16deg); }
+.state-sad .ear-r { animation: none; transform: rotate(16deg); }
+.state-sad .tail { animation: none; transform: rotate(14deg); }
+.state-sad .tear { animation: cr-tear 1.1s ease-in infinite; }
+@keyframes cr-tear { 0% { transform: translateY(-1px) scale(.4); opacity: 0; } 20% { opacity: 1; transform: translateY(0) scale(1); } 100% { transform: translateY(9px) scale(.8); opacity: 0; } }
+.state-sad .cloud-bob { animation: cr-float 1.6s ease-in-out infinite alternate; }
+.state-sad .rain { animation: cr-rain .66s linear infinite; }
+@keyframes cr-rain { 0% { transform: translateY(-2px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(9px); opacity: 0; } }
+
+/* ══════════════════════════════════════════════════════════════
+   NEU: GEHEN in vier Richtungen
+   ══════════════════════════════════════════════════════════════
+   Das Wesen geht AUF DER STELLE. Wohin es sich bewegt, macht der,
+   der es benutzt (translate am Kasten) — so passt derselbe Schritt
+   zu jeder Strecke und jedem Tempo.
+     dir-left / dir-right   Gesicht schaut zur Seite, Körper lehnt
+                            sich hinein, Beine pendeln vor und zurück
+     dir-front              Beine heben sich im Wechsel, Wiegen
+     dir-back               wie front, aber von hinten: Gesicht weg,
+                            .backside sichtbar                       */
+.state-walk .cr-root { animation: cr-walk-fb .7s ease-in-out infinite; }
+.state-walk.dir-right .cr-root { animation-name: cr-walk-r; }
+.state-walk.dir-left .cr-root { animation-name: cr-walk-l; }
+@keyframes cr-walk-fb {
+  0%, 100% { transform: translateY(0) rotate(-2.5deg); }
+  25%, 75% { transform: translateY(-2.5px) rotate(0); }
+  50% { transform: translateY(0) rotate(2.5deg); }
+}
+@keyframes cr-walk-r { 0%, 50%, 100% { transform: translateY(0) rotate(4deg); } 25%, 75% { transform: translateY(-3px) rotate(5deg); } }
+@keyframes cr-walk-l { 0%, 50%, 100% { transform: translateY(0) rotate(-4deg); } 25%, 75% { transform: translateY(-3px) rotate(-5deg); } }
+
+.state-walk.dir-right .face { transform: translateX(5px); }
+.state-walk.dir-left .face { transform: translateX(-5px); }
+.state-walk.dir-right .head-node { animation: none; transform: translateX(1.5px); }
+.state-walk.dir-left .head-node { animation: none; transform: translateX(-1.5px); }
+
+.state-walk.dir-left .leg-l, .state-walk.dir-right .leg-l { animation: cr-walk-leg .7s ease-in-out infinite; }
+.state-walk.dir-left .leg-r, .state-walk.dir-right .leg-r { animation: cr-walk-leg .7s ease-in-out infinite; animation-delay: -.35s; }
+@keyframes cr-walk-leg { 0%, 100% { transform: rotate(24deg) translateY(-1px); } 50% { transform: rotate(-24deg) translateY(-1px); } }
+.state-walk.dir-front .leg-l, .state-walk.dir-back .leg-l { animation: cr-walk-lift .7s ease-in-out infinite; }
+.state-walk.dir-front .leg-r, .state-walk.dir-back .leg-r { animation: cr-walk-lift .7s ease-in-out infinite; animation-delay: -.35s; }
+@keyframes cr-walk-lift { 0%, 50%, 100% { transform: translateY(0) scale(1, 1); } 25% { transform: translateY(-4px) scale(1.05, .95); } }
+
+.state-walk .arm-l { animation: cr-walk-arm-l .7s ease-in-out infinite; }
+.state-walk .arm-r { animation: cr-walk-arm-r .7s ease-in-out infinite; }
+@keyframes cr-walk-arm-l { 0%, 100% { transform: rotate(-18deg); } 50% { transform: rotate(18deg); } }
+@keyframes cr-walk-arm-r { 0%, 100% { transform: rotate(-18deg); } 50% { transform: rotate(18deg); } }
+.state-walk .cr-shadow { animation: cr-walk-shadow .35s ease-in-out infinite alternate; }
+@keyframes cr-walk-shadow { from { transform: scale(1); } to { transform: scale(.92); } }
+
+/* Von hinten: kein Gesicht, keine Vorderseite */
+.state-walk.dir-back .face, .state-walk.dir-back .fo { display: none; }
+.state-walk.dir-back .backside { display: inline; }
+
+/* ══════════════════════════════════════════════════════════════
+   NEU: FALLEN — wackeln, stolpern, umkippen, liegen bleiben
+   ══════════════════════════════════════════════════════════════
+   Das Wesen kippt nach rechts auf die Seite. translate(-40px, -35px)
+   holt den liegenden Körper zurück in den Kasten: gedreht um den
+   Fußpunkt (50|92) läge er sonst rechts außerhalb und halb unter
+   dem Boden. Nachgerechnet für ein Wesen von etwa 85 × 70.        */
+.state-fall .cr-root { animation: cr-fall 1.3s forwards; }
+@keyframes cr-fall {
+  0%   { transform: translate(0, 0) rotate(0); }
+  10%  { transform: translate(0, 0) rotate(-8deg); }
+  22%  { transform: translate(0, 0) rotate(9deg); }
+  34%  { transform: translate(1px, -7px) rotate(-3deg); animation-timing-function: cubic-bezier(.5, 0, .9, .5); }
+  58%  { transform: translate(-40px, -33px) rotate(92deg); animation-timing-function: ease-out; }
+  67%  { transform: translate(-40px, -38px) rotate(86deg); animation-timing-function: ease-in; }
+  76%  { transform: translate(-40px, -34px) rotate(91deg); }
+  84%, 100% { transform: translate(-40px, -35px) rotate(90deg); }
+}
+.state-fall .cr-shadow { animation: cr-fall-shadow 1.3s forwards; }
+@keyframes cr-fall-shadow { 0%, 34% { transform: scale(1, 1); } 58%, 100% { transform: scale(1.7, 1.15); } }
+.state-fall .arm-l { animation: cr-flail-l 1.3s forwards; }
+.state-fall .arm-r { animation: cr-flail-r 1.3s forwards; }
+@keyframes cr-flail-l { 0%, 22% { transform: rotate(0); } 30% { transform: rotate(110deg); } 40% { transform: rotate(60deg); } 50% { transform: rotate(120deg); } 70%, 100% { transform: rotate(10deg); } }
+@keyframes cr-flail-r { 0%, 22% { transform: rotate(0); } 30% { transform: rotate(-120deg); } 40% { transform: rotate(-70deg); } 50% { transform: rotate(-110deg); } 70%, 100% { transform: rotate(-10deg); } }
+.state-fall .leg-l { animation: cr-kick-l 1.3s forwards; }
+.state-fall .leg-r { animation: cr-kick-r 1.3s forwards; }
+@keyframes cr-kick-l { 0%, 34% { transform: rotate(0); } 50% { transform: rotate(30deg); } 72% { transform: rotate(-10deg); } 100% { transform: rotate(6deg); } }
+@keyframes cr-kick-r { 0%, 34% { transform: rotate(0); } 50% { transform: rotate(-30deg); } 72% { transform: rotate(14deg); } 100% { transform: rotate(-4deg); } }
+.state-fall .m-normal { display: none; }
+.state-fall .m-wow { display: inline; }
+.state-fall .e-dizzy, .state-fall .cr-stars, .state-fall .cr-dust { display: inline; }
+.state-fall .e-open { animation: cr-out-60 1.3s forwards; }
+.state-fall .e-dizzy { animation: cr-in-60 1.3s forwards; }
+.state-fall .cr-stars { animation: cr-in-60 1.3s forwards; }
+@keyframes cr-out-60 { 0%, 56% { opacity: 1; } 60%, 100% { opacity: 0; } }
+@keyframes cr-in-60 { 0%, 56% { opacity: 0; } 60%, 100% { opacity: 1; } }
+.state-fall .puff { animation: cr-puff-fall 1.3s forwards; }
+@keyframes cr-puff-fall { 0%, 56% { transform: scale(.2); opacity: 0; } 64% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.6) translateY(-4px); opacity: 0; } }
+
+/* Schwindel-Sterne: kreisen über dem liegenden Kopf */
+.creature-svg .dz { transform-box: view-box; }
+.state-fall .dz, .state-getup .dz { animation: cr-dz 1.2s linear infinite; }
+.state-fall .dz1, .state-getup .dz1 { animation-delay: -.4s; }
+.state-fall .dz2, .state-getup .dz2 { animation-delay: -.8s; }
+@keyframes cr-dz {
+  0%   { transform: translate(-9px, 0) scale(.75); }
+  25%  { transform: translate(0, 3px) scale(1); }
+  50%  { transform: translate(9px, 0) scale(.75); }
+  75%  { transform: translate(0, -3px) scale(.55); }
+  100% { transform: translate(-9px, 0) scale(.75); }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   NEU: HINPLUMSEN — kurzer Hopser, Plumps, sitzt mit Beinen vorn
+   ══════════════════════════════════════════════════════════════ */
+.state-plop .cr-root { animation: cr-plop 1s forwards; }
+@keyframes cr-plop {
+  0%   { transform: translateY(0) scale(1, 1); animation-timing-function: ease-out; }
+  16%  { transform: translateY(-10px) scale(.94, 1.07); animation-timing-function: ease-in; }
+  38%  { transform: translateY(7px) scale(1.25, .74); animation-timing-function: ease-out; }
+  52%  { transform: translateY(4px) scale(.95, 1.06); }
+  66%  { transform: translateY(6.5px) scale(1.06, .95); }
+  80%, 100% { transform: translateY(6px) scale(1.02, .98); }
+}
+.state-plop .leg-l { animation: cr-sit-l 1s forwards; }
+.state-plop .leg-r { animation: cr-sit-r 1s forwards; }
+@keyframes cr-sit-l { 0%, 30% { transform: rotate(0); } 42% { transform: rotate(70deg); } 60%, 100% { transform: rotate(55deg); } }
+@keyframes cr-sit-r { 0%, 30% { transform: rotate(0); } 42% { transform: rotate(-70deg); } 60%, 100% { transform: rotate(-55deg); } }
+.state-plop .arm-l { animation: cr-plop-arm-l 1s forwards; }
+.state-plop .arm-r { animation: cr-plop-arm-r 1s forwards; }
+@keyframes cr-plop-arm-l { 0%, 16% { transform: rotate(0); } 36% { transform: rotate(80deg); } 60%, 100% { transform: rotate(-14deg); } }
+@keyframes cr-plop-arm-r { 0%, 16% { transform: rotate(0); } 36% { transform: rotate(-80deg); } 60%, 100% { transform: rotate(14deg); } }
+.state-plop .m-wow, .state-plop .cr-dust { display: inline; }
+.state-plop .m-wow { animation: cr-out-80 1s forwards; }
+.state-plop .m-normal { animation: cr-in-80 1s forwards; }
+@keyframes cr-out-80 { 0%, 78% { opacity: 1; } 82%, 100% { opacity: 0; } }
+@keyframes cr-in-80 { 0%, 78% { opacity: 0; } 82%, 100% { opacity: 1; } }
+.state-plop .cr-shadow { animation: cr-plop-shadow 1s forwards; }
+@keyframes cr-plop-shadow { 0% { transform: scale(1); } 16% { transform: scale(.8); } 38%, 100% { transform: scale(1.25, 1.1); } }
+.state-plop .puff { animation: cr-puff-plop 1s forwards; }
+@keyframes cr-puff-plop { 0%, 34% { transform: scale(.2); opacity: 0; } 44% { transform: scale(1); opacity: .9; } 100% { transform: scale(1.7) translateY(-5px); opacity: 0; } }
+
+/* ══════════════════════════════════════════════════════════════
+   NEU: AUFSTEHEN — aus dem Liegen (nach fall) oder, mit from-sit,
+   aus dem Sitzen (nach plop). Endet im Ruhebild.
+   ══════════════════════════════════════════════════════════════ */
+.state-getup .cr-root { animation: cr-getup 1.2s forwards; }
+@keyframes cr-getup {
+  0%   { transform: translate(-40px, -35px) rotate(90deg) scale(1, 1); }
+  12%  { transform: translate(-40px, -35px) rotate(87deg) scale(1, 1); }
+  22%  { transform: translate(-40px, -35px) rotate(92deg) scale(1, 1); animation-timing-function: ease-in-out; }
+  50%  { transform: translate(-20px, -15px) rotate(42deg) scale(1, 1); animation-timing-function: ease-out; }
+  68%  { transform: translate(0, -3px) rotate(-8deg) scale(1, 1); }
+  78%  { transform: translate(0, 0) rotate(3deg) scale(1.07, .93); }
+  88%  { transform: translate(0, 0) rotate(-2deg) scale(.98, 1.02); }
+  100% { transform: translate(0, 0) rotate(0) scale(1, 1); }
+}
+.state-getup .cr-shadow { animation: cr-getup-shadow 1.2s forwards; }
+@keyframes cr-getup-shadow { 0%, 22% { transform: scale(1.7, 1.15); } 68%, 100% { transform: scale(1, 1); } }
+.state-getup .arm-l { animation: cr-push-l 1.2s forwards; }
+.state-getup .arm-r { animation: cr-push-r 1.2s forwards; }
+@keyframes cr-push-l { 0% { transform: rotate(10deg); } 30% { transform: rotate(-40deg); } 55% { transform: rotate(30deg); } 80% { transform: rotate(-6deg); } 100% { transform: rotate(0); } }
+@keyframes cr-push-r { 0% { transform: rotate(-10deg); } 30% { transform: rotate(40deg); } 55% { transform: rotate(-30deg); } 80% { transform: rotate(6deg); } 100% { transform: rotate(0); } }
+.state-getup .head-node { animation: cr-shake 1.2s forwards; }
+@keyframes cr-shake { 0%, 78% { transform: rotate(0); } 82% { transform: rotate(-9deg); } 87% { transform: rotate(8deg); } 92% { transform: rotate(-5deg); } 100% { transform: rotate(0); } }
+.state-getup .e-dizzy, .state-getup .cr-stars, .state-getup .cr-dust { display: inline; }
+.state-getup .e-dizzy, .state-getup .cr-stars { animation: cr-out-45 1.2s forwards; }
+.state-getup .e-open { animation: cr-in-45 1.2s forwards; }
+@keyframes cr-out-45 { 0%, 42% { opacity: 1; } 46%, 100% { opacity: 0; } }
+@keyframes cr-in-45 { 0%, 42% { opacity: 0; } 46%, 100% { opacity: 1; } }
+.state-getup .puff { animation: cr-puff-up 1.2s forwards; }
+@keyframes cr-puff-up { 0%, 60% { transform: scale(.2); opacity: 0; } 72% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.6) translateY(-4px); opacity: 0; } }
+
+/* Aufstehen aus dem Sitzen */
+.state-getup.from-sit .cr-root { animation-name: cr-getup-sit; }
+@keyframes cr-getup-sit {
+  0%   { transform: translate(0, 6px) rotate(0) scale(1.02, .98); }
+  35%  { transform: translate(0, 8px) rotate(0) scale(1.12, .88); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  60%  { transform: translate(0, -7px) rotate(0) scale(.94, 1.08); animation-timing-function: ease-in; }
+  80%  { transform: translate(0, 0) rotate(0) scale(1.06, .94); }
+  100% { transform: translate(0, 0) rotate(0) scale(1, 1); }
+}
+.state-getup.from-sit .cr-shadow { animation-name: cr-getup-sit-shadow; }
+@keyframes cr-getup-sit-shadow { 0%, 35% { transform: scale(1.25, 1.1); } 60% { transform: scale(.85); } 100% { transform: scale(1); } }
+.state-getup.from-sit .leg-l { animation: cr-unsit-l 1.2s forwards; }
+.state-getup.from-sit .leg-r { animation: cr-unsit-r 1.2s forwards; }
+@keyframes cr-unsit-l { 0%, 35% { transform: rotate(55deg); } 60%, 100% { transform: rotate(0); } }
+@keyframes cr-unsit-r { 0%, 35% { transform: rotate(-55deg); } 60%, 100% { transform: rotate(0); } }
+.state-getup.from-sit .e-dizzy, .state-getup.from-sit .cr-stars { display: none; }
+.state-getup.from-sit .e-open { animation: cr-blink 4.6s infinite; }
+
+/* ══════════════════════════════════════════════════════════════
+   MAGIE-FUNKELN für die magischen Wesen beim Jubeln und Springen
+   ══════════════════════════════════════════════════════════════ */
+.creature-svg[data-g="magic"].state-cheer .cr-burst,
+.creature-svg[data-g="magic"].state-jump .cr-burst,
+.creature-svg[data-g="magic"].state-dance .cr-burst { display: inline; }
+.creature-svg .bs { animation: cr-burst 1.2s ease-out infinite; }
+@keyframes cr-burst {
+  0% { transform: translate(0, 0) scale(0) rotate(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translate(var(--bx), var(--by)) scale(1.1) rotate(180deg); opacity: 0; }
+}
+.creature-svg[data-g="magic"].state-cheer .tw,
+.creature-svg[data-g="magic"].state-dance .tw { animation-duration: 1.2s; }
+
+/* ══════════════════════════════════════════════════════════════
+   JE WESEN — was es besonders macht
+   ══════════════════════════════════════════════════════════════ */
+
+/* 0 Puddl: Glibber wackelt, Schlüssel dreht schneller beim Freuen */
+.c-idle[data-cid="0"] .head-node { animation: pu-jelly 2.2s ease-in-out infinite; }
+@keyframes pu-jelly { 0%, 100% { transform: skewX(0) scale(1, 1); } 30% { transform: skewX(2deg) scale(1.02, .98); } 60% { transform: skewX(-2deg) scale(.99, 1.01); } }
+.wave-0 .head-node { animation: pu-jelly .76s ease-in-out infinite; }
+.cheer-0 .spin-y { animation-duration: .4s; }
+.jump-0 .head-node { animation: pu-jelly .5s ease-in-out infinite; }
+.c-dance-0 .spin-y { animation-duration: .45s; }
+.sleep-0 .spin-y { animation-duration: 5s; }
+.sad-0 .spin-y { animation: none; }
+.sad-0 .drip { animation-duration: 1s; }
+
+/* 1 Spark: Blitze knistern, Schwanz peitscht */
+.wave-1 .tail { animation-duration: .38s; }
+.cheer-1 .zap, .jump-1 .zap, .c-dance-1 .zap { animation-duration: .4s; }
+.cheer-1 .tail, .c-dance-1 .tail { animation-duration: .3s; }
+.jump-1 .tail { animation: sp-tail-up 1s infinite; }
+@keyframes sp-tail-up { 0%, 14%, 86%, 100% { transform: rotate(0); } 48% { transform: rotate(-30deg); } }
+.sleep-1 .zap, .sad-1 .zap { animation: none; opacity: 0; }
+
+/* 2 Plop: Froschsprung mit gespreizten Beinen, Hut wippt */
+.jump-2 .leg-l { animation: pl-leap-l 1s infinite; }
+.jump-2 .leg-r { animation: pl-leap-r 1s infinite; }
+@keyframes pl-leap-l { 0%, 14%, 80%, 100% { transform: rotate(0); } 34%, 60% { transform: rotate(40deg) translateY(2px); } }
+@keyframes pl-leap-r { 0%, 14%, 80%, 100% { transform: rotate(0); } 34%, 60% { transform: rotate(-40deg) translateY(2px); } }
+.wave-2 .cap, .cheer-2 .cap, .c-dance-2 .cap { animation: pl-cap .3s ease-in-out infinite alternate; transform-origin: 50px 38px; }
+@keyframes pl-cap { from { transform: rotate(-4deg) translateY(0); } to { transform: rotate(4deg) translateY(-1.5px); } }
+.sleep-2 .cap { transform: rotate(-6deg); transform-origin: 50px 38px; }
+.sad-2 .cap { transform: translateY(2px); }
+
+/* 3 Bubbles: Flossen paddeln, Blasen steigen */
+.creature-svg[data-cid="3"] .fin { animation: bu-fin .5s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: 100% 50%; }
+.creature-svg[data-cid="3"] .arm-r .fin { transform-origin: 0 50%; }
+@keyframes bu-fin { from { transform: scaleX(1); } to { transform: scaleX(.8); } }
+.wave-3 { --wave-a: -110deg; --wave-b: -60deg; }
+.cheer-3 .bubble, .c-dance-3 .bubble { animation-duration: 1.2s; }
+.jump-3 { --cheer-r: -90deg; }
+.sleep-3 .bubble { animation-duration: 4s; }
+.sad-3 .bubble { animation: none; opacity: 0; }
+
+/* 4 Snooze: Mütze baumelt, schläft am liebsten */
+.creature-svg[data-cid="4"] .sway { animation-duration: 1.6s; }
+.wave-4 .sway, .cheer-4 .sway, .c-dance-4 .sway { animation-duration: .4s; }
+.jump-4 .sway { animation: sn-pom 1s infinite; }
+@keyframes sn-pom { 0%, 14%, 86%, 100% { transform: rotate(0); } 48% { transform: rotate(40deg); } }
+.sleep-4 .head-node { animation-duration: 4.2s; }
+.sleep-4 .body-base { animation-duration: 4.2s; }
+.sad-4 .sway { animation: none; transform: rotate(20deg); }
+
+/* 5 Beep: Roboter — ruckelt in Schritten, Antennen blinken */
+.wave-5 .arm-r { animation-timing-function: steps(3); }
+.cheer-5 .glow, .c-dance-5 .glow { animation-duration: .3s; }
+.c-dance-5 .cr-root { animation-timing-function: steps(4); }
+.jump-5 .antenna { animation: be-ant 1s infinite; }
+@keyframes be-ant { 0%, 14%, 86%, 100% { transform: rotate(0); } 48% { transform: rotate(12deg); } }
+.sleep-5 .glow, .sleep-5 .led { animation: none; opacity: .3; }
+.sad-5 .antenna { animation: none; transform: rotate(-10deg); }
+
+/* 6 Chompy: Flügel schlagen, Dampf aus der Nase */
+.wave-6 .wing-l, .wave-6 .wing-r { animation-duration: .4s; }
+.cheer-6 .wing-l, .cheer-6 .wing-r, .jump-6 .wing-l, .jump-6 .wing-r, .c-dance-6 .wing-l, .c-dance-6 .wing-r { animation-duration: .16s; }
+.cheer-6 .steam { animation-duration: .8s; }
+.sleep-6 .steam { animation-duration: 4.5s; }
+.sad-6 .wing-l { animation: none; transform: rotate(16deg); }
+.sad-6 .wing-r { animation: none; transform: rotate(-16deg); }
+.sad-6 .steam { animation: none; opacity: 0; }
+
+/* 7 Nubi: schwebt, Sonne dreht sich; traurig regnet es aus ihr selbst */
+.creature-svg[data-cid="7"] .rainfx { display: none; }
+.c-idle[data-cid="7"] .cr-root { animation: cr-float 2s ease-in-out infinite alternate; }
+.wave-7 .spin, .cheer-7 .spin, .c-dance-7 .spin { animation-duration: 1.4s; }
+.jump-7 .cr-root { animation-duration: 1.3s; }
+.sleep-7 .sunb { opacity: .35; }
+.sad-7 .rainfx { display: inline; }
+.sad-7 .cr-cloud { display: none; }
+.sad-7 .sunb { opacity: 0; }
+
+/* 8 Zorp: Antenne wippt, Aura pulsiert, Funken kreisen */
+.creature-svg .antenna { animation: cr-antenna 1.8s ease-in-out infinite alternate; }
+@keyframes cr-antenna { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+.wave-8 .antenna { animation-duration: .38s; }
+.cheer-8 .orbit, .c-dance-8 .orbit { animation-duration: 1.4s; }
+.cheer-8 .pulse, .jump-8 .pulse { animation-duration: .4s; }
+.jump-8 .antenna { animation: be-ant 1s infinite; }
+.sleep-8 .pulse { animation-duration: 4s; }
+.sad-8 .pulse, .sad-8 .tw { animation: none; opacity: 0; }
+
+/* 9 Lotti: Kiemen flattern, Schwanz schlängelt */
+.cheer-9 .ear-l, .c-dance-9 .ear-l, .wave-9 .ear-l { animation: lo-gill-l .3s ease-in-out infinite alternate; }
+.cheer-9 .ear-r, .c-dance-9 .ear-r, .wave-9 .ear-r { animation: lo-gill-r .3s ease-in-out infinite alternate; }
+@keyframes lo-gill-l { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+@keyframes lo-gill-r { from { transform: rotate(8deg); } to { transform: rotate(-8deg); } }
+.c-dance-9 .tail, .cheer-9 .tail { animation-duration: .45s; }
+.jump-9 .tail { animation: sp-tail-up 1s infinite; }
+.sleep-9 .tw { animation: none; opacity: 0; }
+.sad-9 .tiara { transform: rotate(-10deg) translateY(1px); transform-origin: 50px 28px; }
+
+/* 10 Grumbl: schwer — langsamer Sprung, Kristalle glühen auf */
+.jump-10 .cr-root, .jump-10 .cr-shadow, .jump-10 .arm-l, .jump-10 .arm-r, .jump-10 .leg-l, .jump-10 .leg-r { animation-duration: 1.2s; }
+.cheer-10 .pulse, .c-dance-10 .pulse { animation-duration: .35s; }
+.wave-10 .arm-r { animation-duration: .55s; }
+.c-dance-10 .cr-root { animation-duration: 1.2s; }
+.sleep-10 .pulse { animation-duration: 4s; }
+.sad-10 .pulse, .sad-10 .tw { animation: none; opacity: 0; }
+
+/* 11 Mochi: weich wie Teig */
+@keyframes mo-squish { from { transform: scale(1.06, .94); } to { transform: scale(.96, 1.04); } }
+.creature-svg[data-cid="11"] .head-node { transform-origin: 50px 88px; }
+.c-idle[data-cid="11"] .head-node { animation: pu-jelly 2.6s ease-in-out infinite; }
+.cheer-11 .head-node { animation: mo-squish .3s ease-in-out infinite alternate; }
+.c-dance-11 .head-node { animation: mo-squish .45s ease-in-out infinite alternate; }
+.wave-11 .whisk { animation: cr-sway .2s ease-in-out infinite alternate; transform-origin: 84px 72px; }
+.jump-11 .hat { animation: sn-pom 1s infinite; transform-origin: 50px 38px; }
+.sleep-11 .hat { transform: rotate(-8deg); transform-origin: 50px 38px; }
+.sad-11 .hat { transform: translateY(2px) rotate(5deg); transform-origin: 50px 38px; }
+
+/* 12 Sprout: Blätter wiegen sich, welken bei Trauer */
+.wave-12 .sway, .cheer-12 .sway, .c-dance-12 .sway { animation-duration: .35s; }
+.jump-12 .sway { animation: sn-pom 1s infinite; }
+.sleep-12 .sway { animation-duration: 4s; }
+.sad-12 .sway { animation: none; transform: rotate(-14deg) translateY(2px); }
+
+/* 13 Bzz: Flügel surren immer */
+.creature-svg[data-cid="13"] .wing-l, .creature-svg[data-cid="13"] .wing-r { animation-duration: .1s; }
+.wave-13 .antenna, .cheer-13 .antenna, .c-dance-13 .antenna { animation-duration: .3s; }
+.jump-13 .wing-l, .jump-13 .wing-r { animation-duration: .06s; }
+.sleep-13 .wing-l, .sleep-13 .wing-r { animation: none; }
+.sad-13 .wing-l, .sad-13 .wing-r { animation-duration: .9s; }
+
+/* 14 Crunch: der Toast springt heraus */
+.creature-svg[data-cid="14"] .toast { animation: cr-toast 4.5s infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes cr-toast { 0%, 82%, 100% { transform: translateY(0); } 87% { transform: translateY(-13px); } 92% { transform: translateY(-9px); } 96% { transform: translateY(-1px); } }
+.cheer-14 .toast, .c-dance-14 .toast { animation: cr-toast-pop .6s ease-in-out infinite; }
+@keyframes cr-toast-pop { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-12px); } }
+.jump-14 .toast { animation: cr-toast-pop 1s ease-in-out infinite; }
+.wave-14 .steam { animation-duration: 1s; }
+.sleep-14 .steam { animation: none; opacity: 0; }
+.sad-14 .toast { animation: none; transform: translateY(5px); }
+
+/* 15 Tiki: Fackelarm bleibt neben dem Gesicht, Federn wippen */
+.wave-15 { --wave-a: -72deg; --wave-b: -30deg; }
+.cheer-15, .jump-15, .c-dance-15 { --cheer-r: -70deg; }
+.cheer-15 .sway, .c-dance-15 .sway { animation-duration: .3s; }
+.jump-15 .sway { animation: sn-pom 1s infinite; }
+.sleep-15 .flick { animation-duration: .7s; opacity: .7; }
+.sad-15 .flick { animation: none; transform: scale(.55); }
+
+/* 16 Clawdy: Scheren schnappen */
+.creature-svg[data-cid="16"] .claw { transform-box: fill-box; transform-origin: 50% 95%; }
+.wave-16 .claw, .cheer-16 .claw, .c-dance-16 .claw { animation: cl-snap .18s ease-in-out infinite alternate; }
+.jump-16 .claw { animation: cl-snap .25s ease-in-out infinite alternate; }
+@keyframes cl-snap { from { transform: scaleX(1); } to { transform: scaleX(.72); } }
+/* Die Augen sitzen im Gesicht, die Stiele im Kopf — wackelten die
+   Stiele allein, löste sich das Auge vom Stiel. */
+.creature-svg[data-cid="16"] .antenna, .creature-svg[data-cid="28"] .antenna { animation: none; }
+.sleep-16 .claw { transform: scaleX(.8); }
+.sad-16 .claw { transform: scaleX(.85) translateY(2px); }
+.sad-16 .steam { animation: none; opacity: 0; }
+
+/* 17 Mimi: Papierfunkeln, Schwanz faltet */
+.cheer-17 .orbit, .c-dance-17 .orbit { animation-duration: 1.4s; }
+.wave-17 .tail, .c-dance-17 .tail { animation-duration: .4s; }
+.jump-17 .tail { animation: sp-tail-up 1s infinite; }
+.sleep-17 .tw { animation-duration: 5s; }
+.sad-17 .tw, .sad-17 .orbit { animation: none; opacity: 0; }
+
+/* 18 Fuzz: das Fell zittert, die Brille blitzt */
+.c-idle[data-cid="18"] .head-node { animation: fz-fuzz 1.6s ease-in-out infinite; }
+@keyframes fz-fuzz { 0%, 100% { transform: rotate(0) scale(1); } 25% { transform: rotate(1.5deg) scale(1.01); } 75% { transform: rotate(-1.5deg) scale(.99); } }
+.wave-18 .antenna, .cheer-18 .antenna, .c-dance-18 .antenna { animation-duration: .3s; }
+.cheer-18 .bubble, .c-dance-18 .bubble { animation-duration: 1.1s; }
+.jump-18 .antenna { animation: be-ant 1s infinite; }
+.sleep-18 .glow { animation: none; opacity: .3; }
+.sad-18 .antenna { animation: none; transform: rotate(-24deg); }
+
+/* 19 Snip: Augen drehen unabhängig, Zunge schnellt, Farbe wechselt */
+.creature-svg[data-cid="19"] .tongue { display: none; transform-origin: 50px 58px; }
+.creature-svg[data-cid="19"] .pupil { animation: sn-look 3.4s ease-in-out infinite; }
+.creature-svg[data-cid="19"] .pupil ~ .pupil { animation-delay: -1.7s; animation-direction: reverse; }
+@keyframes sn-look { 0%, 100% { transform: translate(0, 0); } 25% { transform: translate(1.8px, -1px); } 50% { transform: translate(-1.6px, .8px); } 75% { transform: translate(.6px, 1.6px); } }
+.wave-19 .tongue, .cheer-19 .tongue { display: inline; animation: sn-tongue .8s ease-out infinite; }
+@keyframes sn-tongue { 0%, 100% { transform: scale(.1); } 30%, 55% { transform: scale(1); } }
+.c-dance-19, .cheer-19 { animation: sn-hue 2.4s linear infinite; }
+@keyframes sn-hue { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+.jump-19 .tail { animation: sp-tail-up 1s infinite; }
+.c-dance-19 .tail { animation-duration: .4s; }
+.sleep-19 .pupil { animation: none; }
+.sad-19 .tail { transform: rotate(18deg); }
+
+/* 20 Boomer: der Zeiger läuft, beim Freuen klingelt es */
+.creature-svg[data-cid="20"] .ringfx { display: none; }
+.wave-20 .ringfx, .cheer-20 .ringfx, .jump-20 .ringfx { display: inline; }
+.wave-20 .bell-l, .cheer-20 .bell-l, .jump-20 .bell-l { animation: bo-ring .07s linear infinite alternate; }
+.wave-20 .bell-r, .cheer-20 .bell-r, .jump-20 .bell-r { animation: bo-ring .07s linear infinite alternate-reverse; }
+@keyframes bo-ring { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+.cheer-20 .body-base { animation: bo-shake .08s linear infinite alternate; }
+@keyframes bo-shake { from { transform: translateX(-.8px); } to { transform: translateX(.8px); } }
+.c-dance-20 .spin { animation-duration: 1s; }
+.sleep-20 .spin { animation-duration: 40s; }
+.sad-20 .spin { animation: none; transform: rotate(160deg); }
+
+/* 21 Pebbl: watschelt, Schal flattert */
+.c-idle[data-cid="21"] .cr-root { animation: pe-waddle 1.6s ease-in-out infinite alternate; }
+@keyframes pe-waddle { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+.wave-21 .sway, .cheer-21 .sway, .c-dance-21 .sway { animation-duration: .3s; }
+.jump-21 .sway { animation: sn-pom 1s infinite; }
+.walk-21 .cr-root { animation-duration: .5s; }
+.sleep-21 .sway { animation-duration: 4s; }
+.sad-21 .sway { animation: none; transform: rotate(-6deg); }
+
+/* 22 Glitch: Bildstörung, Zeilenstrahl, ruckelige Schritte */
+.creature-svg[data-cid="22"] .gl-a { animation: gl-a 3.2s steps(1) infinite; }
+.creature-svg[data-cid="22"] .gl-b { animation: gl-b 3.2s steps(1) infinite; }
+@keyframes gl-a { 0%, 86%, 100% { opacity: 0; transform: translate(0, 0); } 88% { opacity: .75; transform: translate(-3px, 1px); } 92% { opacity: .75; transform: translate(2px, -1px); } 95% { opacity: 0; } }
+@keyframes gl-b { 0%, 86%, 100% { opacity: 0; transform: translate(0, 0); } 88% { opacity: .75; transform: translate(3px, -1px); } 92% { opacity: .75; transform: translate(-2px, 1px); } 95% { opacity: 0; } }
+.creature-svg[data-cid="22"] .scan { animation: gl-scan 2s linear infinite; }
+@keyframes gl-scan { from { transform: translateY(0); } to { transform: translateY(24px); } }
+.cheer-22 .gl-a, .cheer-22 .gl-b, .c-dance-22 .gl-a, .c-dance-22 .gl-b { animation-duration: .7s; }
+.c-dance-22 .cr-root, .wave-22 .arm-r, .c-dance-22 .arm-l, .c-dance-22 .arm-r { animation-timing-function: steps(3); }
+.jump-22 .gl-a, .jump-22 .gl-b { animation-duration: 1s; }
+.sleep-22 .scan, .sleep-22 .led { animation: none; opacity: .2; }
+.sad-22 .gl-a, .sad-22 .gl-b { animation-duration: 1.4s; }
+
+/* 23 Cacti: Blüte wiegt sich und dreht beim Jubeln */
+.wave-23 .sway, .c-dance-23 .sway { animation-duration: .35s; }
+.cheer-23 .sway { animation: cr-spin 1.2s linear infinite; transform-origin: 50px 20px !important; }
+.jump-23 .sway { animation: sn-pom 1s infinite; }
+.sleep-23 .sway { animation: none; transform: scale(.8); transform-origin: 50px 24px !important; }
+.sad-23 .sway { animation: none; transform: rotate(-30deg) translateY(2px); }
+.sad-23 .arm-l { transform: rotate(-40deg); }
+.sad-23 .arm-r { transform: rotate(40deg); }
+
+/* 24 Nacho: Flügel schlagen, Chili wippt */
+.jump-24 .arm-l, .cheer-24 .arm-l { animation: na-flap-l .16s ease-in-out infinite alternate; }
+.jump-24 .arm-r, .cheer-24 .arm-r { animation: na-flap-r .16s ease-in-out infinite alternate; }
+@keyframes na-flap-l { from { transform: rotate(-10deg); } to { transform: rotate(28deg); } }
+@keyframes na-flap-r { from { transform: rotate(10deg); } to { transform: rotate(-28deg); } }
+.wave-24 .sway, .c-dance-24 .sway { animation-duration: .35s; }
+.sleep-24 .arm-l { transform: rotate(-28deg); }
+.sleep-24 .arm-r { transform: rotate(28deg); }
+.sad-24 .sway { animation: none; transform: rotate(-22deg); }
+
+/* 25 Pips: der Zauberstab sprüht */
+.wave-25 .tw, .cheer-25 .tw, .c-dance-25 .tw { animation-duration: 1s; }
+.cheer-25 .orbit, .jump-25 .orbit, .c-dance-25 .orbit { animation-duration: 1.6s; }
+.creature-svg[data-cid="25"] .hat { transform-origin: 52px 35px; }
+.jump-25 .hat { animation: sn-pom 1s infinite; }
+.sleep-25 .hat { transform: rotate(-12deg); }
+.sad-25 .pulse, .sad-25 .tw { animation: none; opacity: 0; }
+
+/* 26 Waddl: watschelt, vom Hut tropft der Regen */
+.c-idle[data-cid="26"] .cr-root { animation: pe-waddle 1.4s ease-in-out infinite alternate; }
+.walk-26 .cr-root { animation-duration: .5s; }
+.creature-svg[data-cid="26"] .hat { transform-origin: 50px 36px; }
+.wave-26 .hat, .cheer-26 .hat, .c-dance-26 .hat { animation: pl-cap .3s ease-in-out infinite alternate; }
+.jump-26 .hat { animation: sn-pom 1s infinite; }
+.sleep-26 .hat { transform: rotate(-7deg) translateY(2px); }
+.sad-26 .drip { animation-duration: .9s; }
+
+/* 27 Yoyo: das Knäuel rollt, der Faden zuckt */
+.creature-svg[data-cid="27"] .tail { animation-duration: .9s; }
+.c-dance-27 .head-node { animation: cr-spin 1.8s linear infinite; transform-origin: 50px 58px !important; }
+.cheer-27 .tail, .wave-27 .tail { animation-duration: .3s; }
+.jump-27 .head-node { animation: yo-roll 1s infinite; transform-origin: 50px 58px !important; }
+@keyframes yo-roll { 0%, 30% { transform: rotate(0); } 70%, 100% { transform: rotate(360deg); } }
+.sleep-27 .tail { animation-duration: 4s; }
+.sad-27 .tail { transform: rotate(20deg); }
+
+/* 28 Turbo: Rennschnecke — Fahrtwind, Auspuff, Wheelie */
+.creature-svg[data-cid="28"] .speed { animation: tb-speed .45s linear infinite; }
+@keyframes tb-speed { from { transform: translateX(5px); opacity: .9; } to { transform: translateX(-5px); opacity: 0; } }
+.cheer-28 .cr-root, .c-dance-28 .cr-root { animation: tb-wheelie .6s ease-in-out infinite alternate; transform-origin: 20px 90px; }
+@keyframes tb-wheelie { from { transform: rotate(0); } to { transform: rotate(-9deg); } }
+.wave-28 .head-node { animation-duration: .4s; }
+.jump-28 .steam { animation-duration: .5s; }
+.sleep-28 .speed, .sleep-28 .steam { animation: none; opacity: 0; }
+.sad-28 .speed { animation: none; opacity: 0; }
+/* Turbo ist breiter als hoch — umkippen sähe aus wie ein Brett.
+   Er schleudert, kippt aufs Schneckenhaus zurück und bleibt so. */
+.fall-28 .cr-root { animation-name: tb-fall; }
+@keyframes tb-fall {
+  0% { transform: translate(0, 0) rotate(0); }
+  20% { transform: translate(4px, 0) rotate(6deg); }
+  40% { transform: translate(-4px, -6px) rotate(-14deg); }
+  60%, 100% { transform: translate(0, 2px) rotate(-22deg); }
+}
+.getup-28 .cr-root { animation-name: tb-getup; }
+@keyframes tb-getup {
+  0%, 20% { transform: translate(0, 2px) rotate(-22deg) scale(1, 1); }
+  60% { transform: translate(0, -4px) rotate(4deg) scale(1, 1); }
+  80% { transform: translate(0, 0) rotate(-2deg) scale(1.04, .96); }
+  100% { transform: translate(0, 0) rotate(0) scale(1, 1); }
+}
+
+/* 29 Lumi: der Leuchtköder schaukelt */
+.creature-svg[data-cid="29"] .lure { animation: lu-lure 2s ease-in-out infinite alternate; }
+@keyframes lu-lure { from { transform: rotate(-6deg); } to { transform: rotate(8deg); } }
+.wave-29 .lure, .cheer-29 .lure, .c-dance-29 .lure { animation-duration: .35s; }
+.cheer-29 .glow, .jump-29 .glow { animation-duration: .3s; }
+.sleep-29 .glow, .sleep-29 .pulse { animation: none; opacity: .3; }
+.sad-29 .lure { animation: none; transform: rotate(28deg); }
+
+/* 30 Umbra: schwebt, die Flamme flackert, die Laterne glimmt */
+.c-idle[data-cid="30"] .cr-root, .wave-30 .body-base { animation: cr-float 2.2s ease-in-out infinite alternate; }
+.c-idle[data-cid="30"] .cr-shadow { animation: um-shadow 2.2s ease-in-out infinite alternate; }
+@keyframes um-shadow { from { transform: scale(1); opacity: .16; } to { transform: scale(.82); opacity: .1; } }
+.cheer-30 .flick, .c-dance-30 .flick { animation-duration: .1s; }
+.cheer-30 .pulse, .jump-30 .pulse { animation-duration: .45s; }
+.sleep-30 .glow, .sleep-30 .pulse { animation-duration: 4s; }
+.sad-30 .flick { animation: none; transform: scale(.6); }
+
+/* 31 Grimjaw: der Deckel schnappt */
+.creature-svg[data-cid="31"] .lid { animation: gj-chomp 3.6s infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes gj-chomp { 0%, 80%, 100% { transform: translateY(0); } 84% { transform: translateY(-4px); } 88% { transform: translateY(0); } 92% { transform: translateY(-3px); } 96% { transform: translateY(0); } }
+.wave-31 .lid, .cheer-31 .lid, .c-dance-31 .lid { animation: gj-chomp-fast .32s ease-in-out infinite alternate; }
+@keyframes gj-chomp-fast { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+.jump-31 .lid { animation: gj-chomp-fast .5s ease-in-out infinite alternate; }
+.sleep-31 .lid { animation: none; transform: translateY(1px); }
+.sad-31 .lid { animation: none; }
+
+/* 32 Astris: der Ring kippt, Sterne funkeln */
+.creature-svg[data-cid="32"] .ring { animation: as-ring 3s ease-in-out infinite alternate; }
+@keyframes as-ring { from { transform: rotate(-5deg); } to { transform: rotate(6deg); } }
+.cheer-32 .ring, .c-dance-32 .ring, .wave-32 .ring { animation-duration: .5s; }
+.jump-32 .orbit { animation-duration: 1.2s; }
+.sleep-32 .tw { animation-duration: 5s; }
+.sad-32 .tw, .sad-32 .orbit { animation: none; opacity: 0; }
+
+/* 33 Arcana: Runen kreisen, Seiten blättern */
+.creature-svg[data-cid="33"] .orbit { animation-duration: 9s; }
+.cheer-33 .orbit, .c-dance-33 .orbit { animation-duration: 2s; }
+.wave-33 .pulse, .jump-33 .pulse { animation-duration: .45s; }
+.sleep-33 .orbit { animation-duration: 30s; }
+.sad-33 .orbit, .sad-33 .pulse { animation: none; opacity: 0; }
+
+/* 34 Zephyr: dreht den Kopf wie eine Eule, der Mond leuchtet */
+.c-idle[data-cid="34"] .head-node { animation: zp-tilt 5.5s ease-in-out infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes zp-tilt { 0%, 70%, 100% { transform: rotate(0); } 76%, 82% { transform: rotate(-16deg); } 88%, 94% { transform: rotate(12deg); } }
+.wave-34 .ear-l, .cheer-34 .ear-l { animation: lo-gill-l .3s ease-in-out infinite alternate; }
+.wave-34 .ear-r, .cheer-34 .ear-r { animation: lo-gill-r .3s ease-in-out infinite alternate; }
+.c-dance-34 .head-node { animation: zp-tilt 1.8s ease-in-out infinite; }
+.jump-34 .arm-l { animation: na-flap-l .14s ease-in-out infinite alternate; }
+.jump-34 .arm-r { animation: na-flap-r .14s ease-in-out infinite alternate; }
+.sleep-34 .tw { animation-duration: 5s; }
+.sad-34 .tw { animation: none; opacity: 0; }
+
+/* 35 Spindle: acht Beine krabbeln, der Faden schwingt */
+.creature-svg[data-cid="35"] .thread { transform-origin: 50px 1px; animation: cr-sway 2.6s ease-in-out infinite alternate; }
+.creature-svg[data-cid="35"] .leg-l, .creature-svg[data-cid="35"] .leg-r { animation: sd-tap 1.8s ease-in-out infinite alternate; }
+.creature-svg[data-cid="35"] .leg-r { animation-delay: -.9s; }
+@keyframes sd-tap { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+.state-walk[data-cid="35"] .leg-l, .state-walk[data-cid="35"] .leg-r, .state-walk[data-cid="35"] .arm-l, .state-walk[data-cid="35"] .arm-r { animation: sd-scuttle .18s linear infinite alternate; }
+.state-walk[data-cid="35"] .leg-r, .state-walk[data-cid="35"] .arm-l { animation-direction: alternate-reverse; }
+@keyframes sd-scuttle { from { transform: rotate(-9deg); } to { transform: rotate(9deg); } }
+.wave-35 .arm-r { animation-duration: .2s; }
+.cheer-35 .leg-l, .cheer-35 .leg-r, .c-dance-35 .leg-l, .c-dance-35 .leg-r { animation: sd-scuttle .15s linear infinite alternate; }
+.jump-35 .thread, .fall-35 .thread, .getup-35 .thread, .plop-35 .thread, .state-walk[data-cid="35"] .thread { display: none; }
+.sleep-35 .leg-l, .sleep-35 .leg-r { animation: none; }
+.sad-35 .arm-l { transform: rotate(-20deg); }
+.sad-35 .arm-r { transform: rotate(20deg); }

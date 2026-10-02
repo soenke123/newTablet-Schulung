@@ -18,18 +18,64 @@ Die Frage steht **nicht** auf dem Schülergerät — weder in der Anzeige noch i
 der Serverantwort (`ks_view` gibt `question.text = null`, solange die Frage
 läuft). Sonst sehen 28 Köpfe nach unten statt nach vorn.
 
-## Die fünf Emotes
+## Die Wesen (Fassung 2, Oktober 2026)
+
+Alle 36 Wesen sind neu gezeichnet — gleiche Ids, Namen und Farbfassungen
+(die stehen als Zahl in der Datenbank), aber auf **einem gemeinsamen
+Skelett**:
+
+```
+svg.creature-svg
+  cr-shadow · cr-root ( cr-behind · leg-l/-r · body-base ( head-node ( face · backside ) )
+                        · arm-l/-r · cr-front · cr-fx ) · cr-ov
+```
+
+Vorher war jedes Wesen anders gebaut, und die Bewegungen in
+`creatures.css` suchten Teile, die es im Körper nicht gab — dann bewegte
+sich nichts. Jetzt stehen die Bewegungen **einmal für alle** in
+`creatures.css`, und je Wesen nur noch, was es besonders macht (Flügel
+schlagen, Schwanz wedeln, Toast springt, Runen kreisen …). Die Gesichter
+kommen alle aus `face()` in `creatures.js` — offen, fröhlich, schlafend,
+traurig, schwindlig.
+
+Zeichenregeln: alles im Kasten 0…100 (der Kasten schneidet ab, nur der
+Sprung darf hinaus), Boden bei y = 92, eine Linienfarbe (`--ink`),
+Glanz oben links, Schatten unten rechts. Die magischen Wesen (Zorp, Mimi,
+Pips, Lumi, Astris, Arcana) funkeln dauernd und sprühen beim Jubeln,
+Tanzen und Springen Sterne (`.cr-burst`).
+
+Zum Ansehen: **`showroom-wesen.html`** (läuft ohne Netz, benutzt genau
+`creatures.js`/`creatures.css`): alle Wesen × Farben × Bewegungen,
+hell/dunkel, und eine Bühne mit Rundgang.
+
+## Die Emotes
 
 👋 Winken · 🚀 Springen · 🎉 Jubeln · 🕺 Tanzen · 😴 Schlafen — dazu 💧 Trauer,
 die niemand drückt (die setzt der Server bei einer falschen Antwort).
 
-Jedes der 36 Wesen hat seine eigene Fassung davon; die Klassen heißen
-`wave-7 state-wave`, `c-dance-7 state-dance`, `jump-7 state-jump`. Der Sprung
-geht **über den Kasten hinaus** — dafür öffnet `setEmote` das Fenster um das
-Wesen (Klasse `ks-springt`) und nur für die Dauer des Sprungs. Seine Höhe steht
-in Prozent der eigenen Wesengröße und nicht in Pixeln: dieselbe Bewegung muss in
-einer 90 Punkte breiten Karte am Beamer und in einer 250 Punkte großen Vorschau
-auf dem Tablet gleich aussehen.
+Die Klassen heißen wie bisher `wave-7 state-wave`, `c-dance-7 state-dance`,
+`jump-7 state-jump` (tool.js `emoteClass`). `state-…` steuert das Gesicht
+und die gemeinsame Bewegung, `wave-7` die Besonderheit des Wesens. Der
+Sprung geht **über den Kasten hinaus** — dafür öffnet `setEmote` das
+Fenster um das Wesen (Klasse `ks-springt`) und nur für die Dauer des
+Sprungs. Alle Wege stehen in Einheiten des viewBox: dieselbe Bewegung sieht
+in einer 90 Punkte breiten Karte am Beamer und in einer 250 Punkte großen
+Vorschau gleich aus.
+
+## Neue Bewegungen für später (noch nicht im Quiz)
+
+`KSCreatures.cls(aktion, id, richtung)` baut die Klassen:
+
+| Aufruf | Was passiert |
+|---|---|
+| `cls('walk', id, 'left'\|'right'\|'front'\|'back')` | Gehen auf der Stelle, Schleife. Seitlich schaut das Gesicht in Laufrichtung, von hinten ist das Gesicht weg und `.backside` zu sehen. **Wohin** das Wesen läuft, macht der Aufrufer (translate am Kasten). |
+| `cls('fall', id)` | wackelt, stolpert, kippt um, bleibt liegen (Schwindel-Augen, Sterne). Einmal, bleibt stehen. |
+| `cls('plop', id)` | Hopser, Plumps auf den Hintern, sitzt mit Beinen nach vorn. Einmal. |
+| `cls('getup', id)` | steht aus dem Liegen auf (nach `fall`). |
+| `cls('getup', id, 'sit')` | steht aus dem Sitzen auf (nach `plop`). |
+
+Turbo (die Rennschnecke) ist breiter als hoch und kippt deshalb nicht um,
+sondern schleudert aufs Schneckenhaus zurück.
 
 ## Hell und dunkel
 
@@ -40,7 +86,7 @@ Tablet am Fenster auf hell. Gesetzt wird `data-theme` von `lib/theme.js`, und
 Fassungen die vier Antwortfarben — „die blaue B" muss dasselbe heißen, egal wer
 wie eingestellt ist.
 
-Zwei Fallen stecken darin, beide am 26.09.2026 gefunden:
+Drei Fallen stecken darin:
 
 * Wesen, die selbst fast weiß sind, verschwinden auf einer weißen Karte. Die
   Kästen, in denen ein Wesen steht (`--ks-karte`), sind im Hellen deshalb
@@ -49,6 +95,11 @@ Zwei Fallen stecken darin, beide am 26.09.2026 gefunden:
   abgeblendeten falschen Antworten waren damit im Hellen bei 1,9 : 1 — im
   Hellen treten sie über weniger Farbe zurück (`grayscale`), nicht über
   weniger Deckung.
+* Im Dunkeln verschwand die schwarze Kontur dunkler Wesen (Umbra, Spindle,
+  Pebbl, Fuzz) auf der fast schwarzen Karte. `.ks-wesen` trägt deshalb
+  eine feine Lichtkante (`--ks-wesenrand`, im Hellen durchsichtig) — am
+  Kasten und nicht am `<svg>`, weil creatures.css dort eigene Filter
+  setzt (Snips Farbwechsel).
 
 ## Wie der Ablauf läuft
 
@@ -122,9 +173,10 @@ sehen.
 |---|---|
 | `tool.js` | Beide Rollen, ein Modul. Takt, gemessene Höhe, Bild bauen und flicken. |
 | `tool.css` | Alles rechnet aus `--ks-h` (der gemessenen Rahmenhöhe), nichts aus `vh`. Alle Farben stehen in zwei Sätzen ganz oben. |
-| `creatures.js` | Die 36 Wesen: Liste, 108 Paletten, SVG-Körper. |
-| `creatures.css` | Ihre Bewegungen: `wave-7`, `cheer-7`, `c-dance-7`, `state-sad` … |
-| `showroom-*.html` | Entwurfsstand, **eingefroren** (siehe `feedback_showrooms_frozen`). Quelle der Wesen-Daten, wird nicht mitgezogen. |
+| `creatures.js` | Die 36 Wesen: Liste, Paletten, Skelett (`build`), Gesichter (`face`), Zeichnungen (`DEFS`). |
+| `creatures.css` | Ihre Bewegungen: erst alle gemeinsam (`state-…`), dann je Wesen (`wave-7`, `cheer-7` …). |
+| `showroom-wesen.html` | Showroom der Fassung 2 — ohne Netz, zeigt genau creatures.js/.css. |
+| `showroom-*-wesen.html`, `showroom-beamer-mobile.html` | Entwurfsstand der ersten Fassung, **eingefroren** (siehe `feedback_showrooms_frozen`). Zeigt die alten Wesen. |
 
 Die Wesen-Dateien hängen an `ASSET_V` in `tool.js` — dem einen Stempel für
 beide. Der Stempel von `tool.js`/`tool.css` selbst steht in `lib/tool.js`

@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wesen-Showroom</title>
+<!--
+  Showroom der Wesen, Fassung 2 (Oktober 2026).
+  Läuft ohne Netz und ohne Build: zieht nur creatures.js und
+  creatures.css aus diesem Ordner — also genau das, was auch das
+  Quiz benutzt. (Die alten showroom-*-wesen.html sind eingefroren
+  und zeigen noch die erste Fassung.)
+-->
+<link rel="stylesheet" href="creatures.css">
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #e8edf6; --panel: #ffffff; --ink: #0f172a; --soft: #55627a;
+    --line: #cdd6e4; --accent: #6d5dfc; --on: #ffffff; --rand: transparent;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0c0e15; --card: #131726; --panel: #171a26; --ink: #f1f5f9; --soft: #94a3b8;
+    --line: #2b3148; --accent: #8b7dff; --on: #ffffff; --rand: rgba(226, 232, 255, .6);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  header { position: sticky; top: 0; z-index: 30; background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 16px; }
+  h1 { margin: 0 0 8px; font-size: 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+  .row b { font-size: 12px; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; margin-right: 4px; min-width: 70px; }
+  button { font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 12px; cursor: pointer; min-height: 36px; }
+  button.on { background: var(--accent); border-color: var(--accent); color: var(--on); }
+  main { padding: 16px; max-width: 1400px; margin: 0 auto; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 10px; text-align: center; cursor: pointer; }
+  .card:focus-visible { outline: 3px solid var(--accent); }
+  .pic { position: relative; aspect-ratio: 1; }
+  .pic .w { position: absolute; inset: 0; filter: drop-shadow(0 0 .7px var(--rand)) drop-shadow(0 0 .7px var(--rand)); }
+  .pic svg { width: 100%; height: 100%; display: block; }
+  .name { font-weight: 700; margin-top: 4px; }
+  .meta { font-size: 12px; color: var(--soft); }
+
+  /* Bühne: das Wesen läuft im Viereck, fällt, steht auf, plumpst */
+  .stage-wrap { scroll-margin-top: 230px; margin: 0 0 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .stage { position: relative; height: 320px; border-radius: 12px; overflow: hidden;
+    background: linear-gradient(var(--card), var(--card)) padding-box; }
+  .stage::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40%;
+    background: repeating-linear-gradient(90deg, transparent 0 38px, rgba(127,127,127,.08) 38px 40px); pointer-events: none; }
+  .actor { position: absolute; width: 150px; height: 150px; left: 0; top: 0; z-index: 2; transition: transform linear; }
+  .actor .w { position: absolute; inset: 0; filter: drop-shadow(0 0 .7px var(--rand)) drop-shadow(0 0 .7px var(--rand)); }
+  .actor svg { width: 100%; height: 100%; display: block; }
+  .say { font-size: 13px; color: var(--soft); min-height: 1.4em; margin-top: 6px; }
+  @media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); } .stage { height: 260px; } .actor { width: 110px; height: 110px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Wesen-Showroom · 36 Wesen · 108 Farben</h1>
+  <div class="row" id="rowAct"><b>Bewegung</b></div>
+  <div class="row" id="rowSkin"><b>Farbe</b></div>
+  <div class="row"><b>Ansicht</b>
+    <button type="button" id="btnTheme">Dunkel</button>
+    <button type="button" id="btnGroup">Nach Gruppe</button>
+  </div>
+</header>
+<main>
+  <section class="stage-wrap">
+    <div class="stage" id="stage"><div class="actor" id="actor"></div></div>
+    <div class="row"><b>Bühne</b>
+      <button type="button" id="btnTour">▶ Rundgang</button>
+      <span class="say" id="say">Ein Wesen anklicken, dann „Rundgang“: gehen in alle vier Richtungen, hinfallen, aufstehen, hinplumsen, aufstehen.</span>
+    </div>
+  </section>
+  <div class="grid" id="grid"></div>
+</main>
+<script src="creatures.js"></script>
+<script>
+(function () {
+  'use strict';
+  const K = window.KSCreatures;
+  const ACTS = [
+    ['idle', 'Ruhe'], ['wave', '👋 Winken'], ['cheer', '🎉 Jubeln'], ['dance', '🕺 Tanzen'], ['jump', '🚀 Springen'],
+    ['sleep', '😴 Schlafen'], ['sad', '💧 Traurig'],
+    ['walk:left', '← Gehen'], ['walk:right', 'Gehen →'], ['walk:front', '↓ Gehen (vorn)'], ['walk:back', '↑ Gehen (hinten)'],
+    ['fall', 'Hinfallen'], ['getup', 'Aufstehen'], ['plop', 'Hinplumsen'], ['getup:sit', 'Aufstehen (Sitz)']
+  ];
+  let act = 'idle', skin = 0, byGroup = false, chosen = 7;
+
+  const $ = id => document.getElementById(id);
+  const classesFor = (a, id) => { const [n, d] = a.split(':'); return K.cls(n, id, d); };
+
+  ACTS.forEach(([a, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = label; b.dataset.act = a;
+    b.onclick = () => { act = a; paint(); };
+    $('rowAct').appendChild(b);
+  });
+  ['Farbe 1', 'Farbe 2', 'Farbe 3'].forEach((label, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = label; b.dataset.skin = i;
+    b.onclick = () => { skin = i; paint(); };
+    $('rowSkin').appendChild(b);
+  });
+
+  function paint() {
+    document.querySelectorAll('[data-act]').forEach(b => b.classList.toggle('on', b.dataset.act === act));
+    document.querySelectorAll('[data-skin]').forEach(b => b.classList.toggle('on', +b.dataset.skin === skin));
+    const order = K.list.slice();
+    if (byGroup) order.sort((a, b) => a.gruppe.localeCompare(b.gruppe) || a.id - b.id);
+    $('grid').innerHTML = order.map(c =>
+      '<div class="card" tabindex="0" data-id="' + c.id + '"><div class="pic"><span class="w">'
+      + K.svg(c.id, skin, classesFor(act, c.id)) + '</span></div>'
+      + '<div class="name">' + c.name + '</div><div class="meta">' + c.skins[skin] + ' · ' + c.gruppe + '</div></div>').join('');
+    if (!touring) setActor('idle');
+  }
+  $('grid').addEventListener('click', e => {
+    const c = e.target.closest('.card'); if (!c) return;
+    chosen = +c.dataset.id; setActor('idle'); $('say').textContent = K.list[chosen].name + ' steht auf der Bühne.';
+  });
+  $('grid').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.click(); });
+
+  $('btnTheme').onclick = () => {
+    const dark = document.documentElement.dataset.theme !== 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    $('btnTheme').classList.toggle('on', dark);
+  };
+  $('btnGroup').onclick = () => { byGroup = !byGroup; $('btnGroup').classList.toggle('on', byGroup); paint(); };
+
+  /* ── Bühne ───────────────────────────────────────────── */
+  const actor = $('actor');
+  let touring = false;
+  function setActor(a) {
+    actor.innerHTML = '<span class="w">' + K.svg(chosen, skin, classesFor(a, chosen)) + '</span>';
+  }
+  function moveTo(x, y, ms) {
+    actor.style.transitionDuration = ms + 'ms';
+    actor.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    return wait(ms);
+  }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  function place(x, y) { actor.style.transitionDuration = '0ms'; actor.style.transform = 'translate(' + x + 'px,' + y + 'px)'; }
+
+  $('btnTour').onclick = async () => {
+    if (touring) return;
+    touring = true; $('btnTour').disabled = true;
+    document.querySelector('.stage-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const st = $('stage'), size = actor.offsetWidth;
+    const W = st.clientWidth - size, H = st.clientHeight - size;
+    const x0 = W * 0.15, x1 = W * 0.85, yTop = H * 0.1, yBot = H * 0.95;
+    const say = t => { $('say').textContent = t; };
+    place(x0, yBot); setActor('idle'); await wait(500);
+    say('Gehen nach rechts'); setActor('walk:right'); await moveTo(x1, yBot, 2400);
+    say('Gehen nach hinten (weg vom Betrachter)'); setActor('walk:back'); await moveTo(x1, yTop, 1600);
+    say('Gehen nach links'); setActor('walk:left'); await moveTo(x0, yTop, 2400);
+    say('Gehen nach vorn'); setActor('walk:front'); await moveTo(x0, yBot, 1600);
+    say('Hinfallen …'); setActor('fall'); await wait(2000);
+    say('… und wieder aufstehen'); setActor('getup'); await wait(1500);
+    say('Hinplumsen …'); setActor('plop'); await wait(1800);
+    say('… und aus dem Sitzen aufstehen'); setActor('getup:sit'); await wait(1400);
+    say('Fertig — Jubel!'); setActor('cheer'); await wait(1600);
+    setActor('idle'); say(K.list[chosen].name + ' steht auf der Bühne.');
+    touring = false; $('btnTour').disabled = false;
+  };
+
+  paint();
+  place(20, 120);
+})();
+</script>
+</body>
+</html>
