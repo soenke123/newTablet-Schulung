@@ -862,7 +862,7 @@
           //  Switches, ohne dass es die Liste zuschüttet.
           + (r.mal > 1 ? ' <b class="tr-x" title="derselbe Rahmen ging über '
               + r.mal + ' Anschlüsse gleichzeitig hinaus">× ' + r.mal + '</b>' : '')
-          + (r.lost ? ' <em>— verloren</em>' : '') + '</span>'
+          + (r.lost ? ' <em>— ' + (r.fw ? 'von der Firewall verworfen: ' + esc(r.fw) : 'verloren') + '</em>' : '') + '</span>'
           + '</div>';
         if (open) h += renderLayers(r);
       }
@@ -911,7 +911,7 @@
             + '<span class="trs-b">' + (i === 0 ? marken(r) : '') + esc(l.details)
             + (i === 0 && r.mal > 1 ? ' <b class="tr-x" title="derselbe Rahmen ging über '
                 + r.mal + ' Anschlüsse gleichzeitig hinaus">× ' + r.mal + '</b>' : '')
-            + (i === 0 && r.lost ? ' <em>— verloren</em>' : '') + '</span>'
+            + (i === 0 && r.lost ? ' <em>— ' + (r.fw ? 'von der Firewall verworfen: ' + esc(r.fw) : 'verloren') + '</em>' : '') + '</span>'
             + '</div>';
         });
       }

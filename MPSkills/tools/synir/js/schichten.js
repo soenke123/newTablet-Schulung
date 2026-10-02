@@ -85,6 +85,11 @@
        mit ⟨NAT⟩ markiert. */
     const nat = window.Nat ? window.Nat.erzeugen(engine, netz) : null;
 
+    /* Und die Wand im Weg (js/firewall.js): sie entscheidet bei jedem
+       WEITERGELEITETEN Paket, ob es durch darf. Genau ein
+       Berührungspunkt, unten mit ⟨Firewall⟩ markiert. */
+    const fw = window.Firewall ? window.Firewall.erzeugen(engine, netz) : null;
+
     /* Und die verbindliche Hälfte von Schicht 4. Aus demselben
        Grund eine eigene Datei: UDP ist hier unten in dreißig
        Zeilen erledigt, TCP ist ein Zustandsautomat je Verbindung.
@@ -733,6 +738,25 @@
         return;
       }
 
+      /* ⟨Firewall⟩ Nach der Wegewahl, vor NAT — siehe js/firewall.js,
+         warum genau hier: die Regeln sehen beim Hinausgehen noch die
+         PRIVATE Adresse, und beim Hereinkommen hat NAT die Antwort
+         schon zurückübersetzt.
+
+         `verwerfen` sagt kein Wort; `ablehnen` meldet dem Absender
+         sofort „verboten" (ICMP Typ 3, Code 13). Der Unterschied
+         zwischen beiden ist im Mitschnitt der ganze Witz. */
+      if (fw && fw.aktiv(node)) {
+        const v = fw.pruefen(node, nicIndex, pkt, say, frame);
+        if (!v.ok) {
+          if (v.aktion === 'ablehnen' && !(pkt.proto === 'icmp' && pkt.payload
+              && (pkt.payload.type === 3 || pkt.payload.type === 11))) {
+            sendIcmp(node, pkt.src, 3, 13, { orig: origKopf(pkt) });
+          }
+          return;
+        }
+      }
+
       /* ⟨NAT⟩ Hinweg. Geht das Paket aus dem Heimnetz hinaus,
          bekommt es die eine Adresse, die der Anbieter vergeben
          hat. Hier und nicht früher: erst jetzt steht fest, dass es
@@ -872,7 +896,9 @@
 
       if (m.type === 3 || m.type === 11) {   // Unerreichbar / TTL abgelaufen
         const s = st(node);
-        const text = m.type === 3
+        const text = m.type === 3 && m.code === 13
+          ? 'Verboten — die Firewall von ' + pkt.src + ' lässt das nicht durch'
+          : m.type === 3
           ? 'Ziel nicht erreichbar (Meldung von ' + pkt.src + ')'
           : 'Zeit abgelaufen unterwegs (Meldung von ' + pkt.src + ')';
 
@@ -1148,6 +1174,11 @@
       natTabelle: (node) => (nat ? nat.tabelle(node) : []),
       natLeeren:  (node) => { if (nat) nat.leeren(node); },
       natAktiv:   (node) => !!(nat && nat.aktiv(node)),
+      fwAuskunft: (node) => (fw ? fw.auskunft(node) : null),
+      fwLeeren:   (node, auch) => { if (fw) fw.leeren(node, auch); },
+      fwEingaenge: (node) => (fw ? fw.eingaenge(node) : []),
+      fwAktiv:    (node) => !!(fw && fw.aktiv(node)),
+      fwKann:     (node) => !!(fw && fw.kann(node)),
 
       /* Das automatische Routing. `ripAn`/`ripAus` ruft
          `dienste.sync()`, alles andere fragt die Oberfläche. */

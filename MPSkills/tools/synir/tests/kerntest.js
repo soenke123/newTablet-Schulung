@@ -19,7 +19,7 @@ vm.createContext(sandbox);
    heraus. Ihn durch einen echten Browser zu prüfen wäre teurer
    und ungenauer. Das geht nur, weil die Datei beim LADEN kein
    DOM anfasst; wer das ändert, muss sie hier herausnehmen. */
-for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'tcp.js', 'rip.js', 'logos.js', 'dateien.js',
+for (const f of ['util.js', 'engine.js', 'netz.js', 'verlauf.js', 'nat.js', 'firewall.js', 'tcp.js', 'rip.js', 'logos.js', 'dateien.js',
                  'http.js', 'mail.js', 'filme.js', 'stream.js', 'tls.js', 'zs.js', 'schichten.js', 'dienste.js', 'internet.js', 'mitschnitt.js', 'terminal.js', 'subnetze.js',
                  'prog-dateien.js', 'szenarien.js']) {
   vm.runInContext(fs.readFileSync(path.join(BASE, f), 'utf8'), sandbox, { filename: f });
@@ -3837,6 +3837,228 @@ section('NAT');
   engine.runUntil(30 * SEC);
   ok('ohne NAT kommt nichts zurück', !!r && !r.ok, JSON.stringify(r));
   ok('und es steht auch keine Zeile in der Tabelle', stack.natTabelle(hr).length === 0);
+}
+
+/* ═══ Firewall ═══
+   Sie sitzt in `onIp`, nach der Wegewahl und vor NAT. Geprüft wird
+   (1) die Regel-Logik für sich, mit Paketen von Hand — Adressbereiche,
+   Ports, Reihenfolge, Standardaktion —, und (2) das Ganze am
+   laufenden Netz: ein Heimnetz, in dem ein Ping hinaus geht, und
+   die Frage, was die Wand daraus macht. */
+section('Firewall');
+{
+  const F = sandbox.Firewall;
+  ok('Netzangabe mit Präfix', (() => { const n = F.netz('203.0.113.77/24'); return n && n.net === U.ip2int('203.0.113.0') && n.mask === U.prefix2mask(24); })());
+  ok('Netzangabe mit Netzmaske', (() => { const n = F.netz('10.1.0.0 255.255.0.0'); return n && n.net === U.ip2int('10.1.0.0') && n.mask === U.prefix2mask(16); })());
+  ok('eine einzelne Adresse ist /32', (() => { const n = F.netz('84.12.5.1'); return n && n.mask === 0xFFFFFFFF; })());
+  ok('leer heißt beliebig', F.netz('').any === true && F.port('').any === true);
+  ok('krumme Angaben sind unfertig', F.netz('999.1.1.1/8') === null && F.netz('10.0.0.0/40') === null
+     && F.netz('10.0.0.0 255.0.255.0') === null && F.netz('banane') === null);
+  ok('Portbereich', (() => { const p = F.port('1000-2000'); return p && p.von === 1000 && p.bis === 2000; })());
+  ok('krumme Ports sind unfertig', F.port('0') === null && F.port('70000') === null && F.port('20-10') === null && F.port('abc') === null);
+  ok('eine Zeile mit krummem Netz fällt heraus', F.regel({ quelle: 'xx', aktion: 'verwerfen' }) === null);
+  ok('eine unbekannte Aktion fällt heraus', F.regel({ aktion: 'vielleicht' }) === null);
+
+  // Regel-Logik an einem Router mit drei Karten, Pakete von Hand.
+  const { engine, netz } = bau(5);
+  const r = netz.addNode('router', 100, 100);
+  const fw = F.erzeugen(engine, netz);
+  const ev = [];
+  const say = (k, n, d) => ev.push(Object.assign({ kind: k }, d));
+  const tcp = (src, dst, dport) => ({ src, dst, proto: 'tcp', ttl: 60, payload: { sport: 40000, dport } });
+  const echo = (src, dst, typ) => ({ src, dst, proto: 'icmp', ttl: 60, payload: { type: typ == null ? 8 : typ, id: 7, seq: 1 } });
+
+  ok('ohne Firewall geht alles', fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 80), say).ok === true);
+
+  const c = netz.fwConf(r);
+  c.on = true; c.standard = 'erlauben'; c.merken = false;
+  c.regeln = [{ ein: '*', quelle: '203.0.113.0/24', ziel: '', proto: '*', port: '', aktion: 'verwerfen' }];
+  ok('Blacklist: der gesperrte Bereich wird verworfen', fw.pruefen(r, 0, tcp('203.0.113.9', '10.0.0.5', 80), say).ok === false);
+  ok('Blacklist: alles andere geht durch', fw.pruefen(r, 0, tcp('203.0.114.9', '10.0.0.5', 80), say).ok === true);
+  ok('die Regelnummer steht im Ergebnis', fw.pruefen(r, 0, tcp('203.0.113.9', '10.0.0.5', 80), say).regel === 1);
+
+  c.standard = 'verwerfen';
+  c.regeln = [{ ein: '*', quelle: '10.1.0.0/16', ziel: '', proto: '*', port: '', aktion: 'erlauben' }];
+  ok('Whitelist: nur der erlaubte Bereich kommt durch', fw.pruefen(r, 0, tcp('10.1.5.5', '10.0.0.5', 80), say).ok === true
+     && fw.pruefen(r, 0, tcp('10.2.5.5', '10.0.0.5', 80), say).ok === false);
+  ok('Standard hat die Nummer 0', fw.pruefen(r, 0, tcp('10.2.5.5', '10.0.0.5', 80), say).regel === 0);
+
+  // Reihenfolge: die erste passende gewinnt.
+  c.standard = 'erlauben';
+  c.regeln = [
+    { ein: '*', quelle: '10.1.2.3', ziel: '', proto: '*', port: '', aktion: 'erlauben' },
+    { ein: '*', quelle: '10.1.0.0/16', ziel: '', proto: '*', port: '', aktion: 'verwerfen' }
+  ];
+  ok('Reihenfolge: die Ausnahme oben gewinnt', fw.pruefen(r, 0, tcp('10.1.2.3', '9.9.9.9', 80), say).ok === true
+     && fw.pruefen(r, 0, tcp('10.1.9.9', '9.9.9.9', 80), say).ok === false);
+  c.regeln.reverse();
+  ok('vertauscht gewinnt die allgemeine Regel', fw.pruefen(r, 0, tcp('10.1.2.3', '9.9.9.9', 80), say).ok === false);
+
+  // Port und Protokoll.
+  c.regeln = [{ ein: '*', quelle: '', ziel: '', proto: 'tcp', port: '80', aktion: 'verwerfen' }];
+  ok('TCP 80 wird verworfen', fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 80), say).ok === false);
+  ok('TCP 443 geht durch', fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 443), say).ok === true);
+  ok('UDP 80 geht durch (anderes Protokoll)', fw.pruefen(r, 0, { src: '1.1.1.1', dst: '2.2.2.2', proto: 'udp', ttl: 9, payload: { sport: 1, dport: 80 } }, say).ok === true);
+  ok('ein Ping geht durch (hat keinen Port)', fw.pruefen(r, 0, echo('1.1.1.1', '2.2.2.2'), say).ok === true);
+  c.regeln = [{ ein: '*', quelle: '', ziel: '', proto: '*', port: '1000-2000', aktion: 'verwerfen' }];
+  ok('Portbereich: Grenzen zählen mit', fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 1000), say).ok === false
+     && fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 2000), say).ok === false
+     && fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 2001), say).ok === true);
+  ok('eine Portregel trifft kein ICMP', fw.pruefen(r, 0, echo('1.1.1.1', '2.2.2.2'), say).ok === true);
+
+  // Eingang.
+  c.regeln = [{ ein: '1', quelle: '', ziel: '', proto: '*', port: '', aktion: 'verwerfen' }];
+  ok('Eingang: nur diese Schnittstelle', fw.pruefen(r, 1, tcp('1.1.1.1', '2.2.2.2', 80), say).ok === false
+     && fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 80), say).ok === true);
+
+  // Unfertige Zeilen tun nichts, zählen aber in der Nummerierung mit.
+  c.regeln = [
+    { ein: '*', quelle: 'kaputt', ziel: '', proto: '*', port: '', aktion: 'verwerfen' },
+    { ein: '*', quelle: '', ziel: '', proto: '*', port: '', aktion: 'verwerfen' }
+  ];
+  ok('eine unfertige Zeile tut nichts, die Nummer bleibt die der Zeile',
+     fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 80), say).regel === 2);
+
+  // Verbindungen merken.
+  c.standard = 'verwerfen'; c.merken = true;
+  c.regeln = [{ ein: '*', quelle: '10.0.0.0/8', ziel: '', proto: 'tcp', port: '', aktion: 'erlauben' }];
+  ok('hin geht', fw.pruefen(r, 0, tcp('10.0.0.5', '9.9.9.9', 80), say).ok === true);
+  const antwort = { src: '9.9.9.9', dst: '10.0.0.5', proto: 'tcp', ttl: 60, payload: { sport: 80, dport: 40000 } };
+  const ra = fw.pruefen(r, 1, antwort, say);
+  ok('die Antwort geht von allein durch', ra.ok === true && ra.antwort === true);
+  ok('eine Anfrage von dort geht NICHT durch', fw.pruefen(r, 1, { src: '9.9.9.9', dst: '10.0.0.5', proto: 'tcp', ttl: 60, payload: { sport: 80, dport: 22 } }, say).ok === false);
+  c.merken = false;
+  ok('ohne „merken" gilt die Antwort als eigene Frage', fw.pruefen(r, 1, antwort, say).ok === false);
+  c.merken = true;
+  engine.runUntil(engine.now + 400 * SEC);
+  ok('nach fünf Minuten Stille ist das Gespräch vergessen', fw.pruefen(r, 1, antwort, say).ok === false);
+
+  // Zähler und Meldung.
+  fw.leeren(r, true);
+  c.standard = 'verwerfen'; c.merken = false; c.regeln = [];
+  ev.length = 0;
+  fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 80), say);
+  fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 81), say);
+  const au = fw.auskunft(r);
+  ok('verworfene Pakete werden gezählt', au.verworfen === 2 && au.erlaubt === 0, JSON.stringify(au));
+  ok('jedes verworfene Paket meldet sich', ev.filter(e => e.kind === 'fw-drop').length === 2);
+  ok('die Meldung nennt Regel und Grund', /Standard/.test(ev[0].text) && ev[0].regel === 0);
+  c.on = false;
+  ok('ausgeschaltet geht alles durch und nichts wird gezählt', (() => {
+    const v = fw.pruefen(r, 0, tcp('1.1.1.1', '2.2.2.2', 80), say);
+    return v.ok && v.aus && fw.auskunft(r).verworfen === 2;
+  })());
+}
+
+/* Die Firewall am laufenden Netz: ein Ping aus dem Heimnetz hinaus. */
+{
+  const bauHeim = () => {
+    const w = heimBau(3);
+    const hr = heimNeu(w.netz, 100, 100);
+    w.netz.setDhcp(hr, 0, false);
+    hr.nics[0].ip = '84.12.5.9'; hr.nics[0].mask = '255.255.255.0';
+    const draussen = w.netz.addNode('server', 400, 50);
+    draussen.nics[0].ip = '84.12.5.1'; draussen.nics[0].mask = '255.255.255.0';
+    draussen.gateway = '84.12.5.9';
+    w.netz.addCable(hr.id, 0, draussen.id, 0);
+    const drinnen = w.netz.addNode('host', 50, 300);
+    drinnen.nics[0].ip = '192.168.1.10'; drinnen.nics[0].mask = '255.255.255.0';
+    drinnen.gateway = '192.168.1.1';
+    w.netz.addCable(drinnen.id, 0, hr.id, 2);
+    return Object.assign(w, { hr, draussen, drinnen });
+  };
+  const ping = (w, ziel) => {
+    let r = null;
+    w.stack.ping(w.drinnen, ziel || '84.12.5.1', 1, null, (x) => { r = x; });
+    w.engine.runUntil(w.engine.now + 30 * SEC);
+    return r;
+  };
+
+  {
+    const w = bauHeim();
+    const r = ping(w);
+    ok('Grundlage: ohne Firewall kommt der Ping zurück', !!r && r.ok, r && r.error);
+  }
+  {
+    const w = bauHeim();
+    const c = w.netz.fwConf(w.hr);
+    c.on = true; c.standard = 'verwerfen'; c.merken = true; c.regeln = [];
+    const r = ping(w);
+    ok('Whitelist ohne Regel: nichts geht hinaus', !!r && !r.ok, JSON.stringify(r));
+    ok('… und das Verwerfen steht im Zähler', w.stack.fwAuskunft(w.hr).verworfen >= 1);
+    const z = w.mit.view().filter(x => x.lost && x.fw);
+    ok('⭐ im Mitschnitt steht eine verlorene Zeile mit der Regel', z.length >= 1 && /Standard/.test(z[0].fw), JSON.stringify(z.map(x => x.fw)));
+    ok('und die NAT-Tabelle blieb leer (die Wand steht VOR NAT)', w.stack.natTabelle(w.hr).length === 0);
+  }
+  {
+    const w = bauHeim();
+    const c = w.netz.fwConf(w.hr);
+    c.on = true; c.standard = 'verwerfen'; c.merken = true;
+    c.regeln = [{ ein: String(w.netz.LAN), quelle: '192.168.1.0/24', ziel: '', proto: 'icmp', port: '', aktion: 'erlauben' }];
+    const r = ping(w);
+    ok('⭐ hin erlaubt + „merken": die Antwort kommt von allein zurück', !!r && r.ok, r && r.error);
+    ok('die Antwort zählt als solche', w.stack.fwAuskunft(w.hr).antworten >= 1);
+  }
+  {
+    const w = bauHeim();
+    const c = w.netz.fwConf(w.hr);
+    c.on = true; c.standard = 'verwerfen'; c.merken = false;
+    c.regeln = [{ ein: String(w.netz.LAN), quelle: '192.168.1.0/24', ziel: '', proto: 'icmp', port: '', aktion: 'erlauben' }];
+    const r = ping(w);
+    ok('⭐ ohne „merken" bleibt die Antwort an der Wand hängen', !!r && !r.ok, JSON.stringify(r));
+    // Mit einer Regel für den Rückweg geht es dann doch.
+    c.regeln.push({ ein: String(w.netz.WAN), quelle: '84.12.5.0/24', ziel: '', proto: 'icmp', port: '', aktion: 'erlauben' });
+    const r2 = ping(w);
+    ok('mit einer Regel für den Rückweg geht es', !!r2 && r2.ok, r2 && r2.error);
+  }
+  {
+    const w = bauHeim();
+    const c = w.netz.fwConf(w.hr);
+    c.on = true; c.standard = 'erlauben'; c.merken = true;
+    c.regeln = [{ ein: '*', quelle: '', ziel: '84.12.5.0/24', proto: '*', port: '', aktion: 'verwerfen' }];
+    const r = ping(w);
+    ok('Blacklist nach Ziel („Geoblocking"): der Ping hinaus geht nicht', !!r && !r.ok);
+  }
+  {
+    const w = bauHeim();
+    const c = w.netz.fwConf(w.hr);
+    c.on = true; c.standard = 'erlauben'; c.merken = true;
+    c.regeln = [{ ein: '*', quelle: '', ziel: '84.12.9.0/24', proto: '*', port: '', aktion: 'verwerfen' }];
+    const r = ping(w);
+    ok('eine Sperre für einen ANDEREN Bereich stört nicht', !!r && r.ok, r && r.error);
+  }
+  {
+    // verwerfen schweigt, ablehnen antwortet sofort.
+    const a = bauHeim();
+    let c = a.netz.fwConf(a.hr);
+    c.on = true; c.standard = 'erlauben'; c.regeln = [{ ein: '*', quelle: '', ziel: '84.12.5.0/24', proto: '*', port: '', aktion: 'verwerfen' }];
+    const ra = ping(a);
+    const b = bauHeim();
+    c = b.netz.fwConf(b.hr);
+    c.on = true; c.standard = 'erlauben'; c.regeln = [{ ein: '*', quelle: '', ziel: '84.12.5.0/24', proto: '*', port: '', aktion: 'ablehnen' }];
+    const rb = ping(b);
+    ok('⭐ verwerfen: Stille bis zur Zeitüberschreitung', !!ra && !ra.ok && !ra.from, JSON.stringify(ra));
+    ok('⭐ ablehnen: sofort eine Antwort „verboten" vom Router', !!rb && !rb.ok && rb.from === '192.168.1.1' && /Verboten/.test(rb.error), JSON.stringify(rb));
+    ok('abgelehnt wird gezählt', b.stack.fwAuskunft(b.hr).abgelehnt >= 1);
+  }
+  {
+    // Speichern und Laden.
+    const w = bauHeim();
+    const c = w.netz.fwConf(w.hr);
+    c.on = true; c.standard = 'verwerfen'; c.merken = false;
+    c.regeln = [{ ein: '1', quelle: '10.0.0.0/8', ziel: '', proto: 'tcp', port: '80', aktion: 'erlauben' }];
+    const j = JSON.parse(JSON.stringify(w.netz.toJSON()));
+    w.netz.fromJSON(j);
+    const hr2 = w.netz.list().find(n => n.kind === 'heimrouter');
+    ok('⭐ die Firewall übersteht Speichern und Laden', !!hr2.firewall && hr2.firewall.on === true
+       && hr2.firewall.standard === 'verwerfen' && hr2.firewall.merken === false
+       && hr2.firewall.regeln.length === 1 && hr2.firewall.regeln[0].port === '80', JSON.stringify(hr2.firewall));
+    const host = w.netz.list().find(n => n.kind === 'host');
+    ok('ein Rechner bekommt keine', !host.firewall);
+    ok('der Switch kann keine Firewall', !w.stack.fwKann(w.netz.addNode('switch', 1, 1)));
+    ok('der Router kann eine', w.stack.fwKann(w.netz.addNode('router', 1, 1)));
+    ok('das cww kann eine', w.stack.fwKann(w.netz.addNode('cww', 1, 1)));
+  }
 }
 
 /* ═══ WLAN ═══

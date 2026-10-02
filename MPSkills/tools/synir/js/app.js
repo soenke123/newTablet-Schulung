@@ -583,6 +583,9 @@
       else if (e.kind === 'ttl')
         term.write(e.node, '   ⚠ Zeit abgelaufen (TTL 0) — Paket an ' + e.dst
           + ' weggeworfen und Meldung zurückgeschickt.', 'warn');
+      else if (e.kind === 'fw-drop')
+        term.write(e.node, '   ⚠ Firewall: ' + (e.proto || 'ip').toUpperCase() + ' ' + e.src + ' → ' + e.dst
+          + ' verworfen — ' + e.text + '.', 'warn');
       else if (e.kind === 'arp-fail')
         term.write(e.node, '   ⚠ ' + e.why, 'warn');
       else if (e.kind === 'note' && e.level === 'warn')

@@ -595,6 +595,32 @@
       if (kindId === 'heimrouter') natConf(node).on = true;
     }
 
+    /* Die Firewall (js/firewall.js). Wie dhcpConf: der Block entsteht
+       erst, wenn jemand ihn braucht — ein Router ohne Firewall hat
+       kein leeres Regelwerk, sondern gar keines. Das Ausschalten
+       lässt die Regeln stehen: wer sie für einen Versuch abstellt,
+       will sie danach nicht neu schreiben.
+
+         on        läuft sie? (nur dann zeigt die Kachel das Zeichen)
+         standard  was gilt, wenn keine Regel passt
+         merken    Antworten auf erlaubte Gespräche gehen von allein durch
+         regeln    { ein, quelle, ziel, proto, port, aktion } von oben nach unten */
+    function fwConf(node) {
+      if (!node.firewall) node.firewall = { on: false, standard: 'erlauben', merken: true, regeln: [] };
+      if (!Array.isArray(node.firewall.regeln)) node.firewall.regeln = [];
+      return node.firewall;
+    }
+    /* Läuft sie? Eine Frage, eine Stelle — die Kachel, die Kompaktansicht
+       und der Knopf im Fenster fragen alle hier. */
+    const fwLaeuft = (node) => !!(node && node.firewall && node.firewall.on
+      && KIND[node.kind] && KIND[node.kind].routes);
+    function fwLaden(node, d) {
+      if (d && d.firewall && typeof d.firewall === 'object') {
+        node.firewall = U.deepCopy(d.firewall);
+        fwConf(node);
+      }
+    }
+
     /* Automatisches Routing. Wie oben: der Block entsteht erst,
        wenn jemand ihn braucht — ein Router ohne RIP hat kein
        leeres RIP-Feld, sondern gar keines.
@@ -1311,6 +1337,7 @@
             vertrauen: n.vertrauen && n.vertrauen.length ? U.deepCopy(n.vertrauen) : undefined,
             mailKonto:  n.mailKonto  ? U.deepCopy(n.mailKonto)  : undefined,
             nat:  n.nat  ? U.deepCopy(n.nat)  : undefined,
+            firewall: n.firewall ? U.deepCopy(n.firewall) : undefined,
             /* Nur der Schalter. Die gelernten Wege stehen in
                node.state und sind Laufzeitwissen wie die ARP- und
                die NAT-Tabelle. */
@@ -1397,6 +1424,7 @@
         if (Array.isArray(d.vertrauen)) node.vertrauen = U.deepCopy(d.vertrauen);
         if (d.mailKonto)  node.mailKonto  = U.deepCopy(d.mailKonto);
         natLaden(node, k.id, d);
+        fwLaden(node, d);
         if (d.rip)  node.rip  = { on: !!d.rip.on };
         if (d.wlan) node.wlan = U.deepCopy(d.wlan);
         if (d.dateien) node.dateien = U.deepCopy(d.dateien);
@@ -1528,6 +1556,7 @@
         if (Array.isArray(d.vertrauen)) node.vertrauen = U.deepCopy(d.vertrauen);
         if (d.mailKonto)  node.mailKonto  = U.deepCopy(d.mailKonto);
         natLaden(node, node.kind, d);
+        fwLaden(node, d);
         if (d.rip)  node.rip  = { on: !!d.rip.on };
         if (d.wlan) node.wlan = U.deepCopy(d.wlan);
         /* Die Dateien kommen MIT — anders als die MAC-Adresse.
@@ -1590,7 +1619,7 @@
       KIND, WAN, LAN,
       kurzName: (node) => kurzName(node, list()),
       addNode, removeNode, addCable, removeCable,
-      addNic, removeNic, freieNic, keinAnschlussSatz, dhcpConf, dnsConf, webConf, mailConf, streamConf, zsConf, zertConf, zertGueltig, vertrauen, mailKonto, natConf, ripConf, wlanConf,
+      addNic, removeNic, freieNic, keinAnschlussSatz, dhcpConf, dnsConf, webConf, mailConf, streamConf, zsConf, zertConf, zertGueltig, vertrauen, mailKonto, natConf, fwConf, fwLaeuft, ripConf, wlanConf,
       dhcpLeeren, setDhcp, setFunk,
       // „Hat dieses Gerät überhaupt eine Kabelbuchse?" — wie
       // `istWan` und `strahlt` eine Frage, die NUR hier

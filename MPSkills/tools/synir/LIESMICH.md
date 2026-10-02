@@ -722,10 +722,79 @@ es MSS und Fragmentierung gibt. Was die Laufzeit zeigt, ist die Entfernung:
 Kabel im Raum gegen Leitung über Land. Der Hilfetext am Kabel sagt das seit dem
 2026-09-28 selbst.
 
+## Die Firewall
+
+*(seit 2026-10-02 · `js/firewall.js`, Prüfstände `tests/kerntest.js` Abschnitt
+„Firewall" und `tests/fwuitest.js`)*
+
+Eine Firewall entscheidet bei jedem Paket, das ein Gerät **weiterleitet**:
+durchlassen oder nicht. Mehr ist sie nicht, und genau das ist der Unterricht —
+„Geoblocking" ist nichts anderes als eine Liste von Adressbereichen, die jemand
+einem Land zugeordnet hat.
+
+| | |
+|---|---|
+| **Wo** | **Router, Heimrouter, cww** — die drei Geräte, die Wege vermitteln. Der Switch sieht keine IP-Adressen, der Rechner ist ein Ziel und kein Weg. Vom Nutzer so gesetzt („das nur bei Routern bauen"). |
+| **Einstellen** | Im Entwurf, im Reiter *Allgemein* ganz unten: der Knopf **Firewall**. Er zeigt, ob sie läuft (grün, pulsierender Punkt · „läuft · 3 Regeln") oder nicht (grau · „läuft nicht"). Dahinter eine Seite wie beim DHCP-Server, mit **Zurück**: oben der Haken *Firewall aktivieren*, dann *Wenn keine Regel passt*, dann die Regeln. Nur in der großen Ansicht. |
+| **Auf der Fläche** | Ein laufendes Gerät trägt **unten links** ein Zeichen (Mauer mit Flamme). Es steht **nur**, wenn sie läuft — ausgeschaltet bleiben die Regeln stehen, das Zeichen verschwindet. Es ist keine Pille unter der Kachel: die Pillen sagen, was ein Gerät **tut** (Server-Dienste); die Firewall sagt, was auf dem **Weg** geschieht. Ist das Gerät aus, rückt das Zeichen neben das Aus-Zeichen; beim Heimrouter weicht es einem WAN/LAN-Schildchen in die nächste freie Ecke aus (`fwPlatz` in `flaeche.js`). |
+| **Aktionsmodus** | Die Kompaktansicht (nur lesen, wie alles dort) zeigt einen Block *Firewall*: läuft/läuft nicht, Standard, die Regeln als Tabelle, **Treffer je Regel** und die Zähler (erlaubt · verworfen · abgelehnt · Antworten), die beim Laufen mitzählen. |
+
+### Die Regeln
+
+Von oben nach unten, die **erste passende gewinnt**; passt keine, gilt der Standard.
+Standard *verwerfen* macht aus der Liste eine **Whitelist**, *durchlassen* eine
+**Blacklist** — dieselbe Tabelle, ein anderer Schalter.
+
+| Spalte | Bedeutung |
+|---|---|
+| **Aktion** | *erlauben* · *verwerfen* (schweigt — der Absender wartet) · *ablehnen* (antwortet sofort „verboten", ICMP Typ 3 Code 13) |
+| **Eingang** | eine Schnittstelle des Geräts (*WAN (von draußen)*, *LAN (von innen)*, *Internet*, *Netzwerkkarte 2* …) oder *beliebig*. Es heißt nicht „rein/raus": bei einem Router mit drei Karten gibt es kein Außen. |
+| **Quelle / Ziel** | eine Adresse, ein Bereich `203.0.113.0/24` oder `10.1.0.0 255.255.0.0`; leer = beliebig. Beide Schreibweisen gehen, weil der Unterricht beide schreibt. |
+| **Protokoll / Port** | alle · TCP · UDP · ICMP; ein Port `80` oder ein Bereich `1000-2000` (nur TCP/UDP; ein Ping hat keinen). |
+
+Eine Zeile mit krummer Angabe ist **unfertig**: das Feld wird rot, ein Satz sagt
+es, und die Zeile tut **nichts** — dieselbe Regel wie bei den Portfreigaben.
+Die Nummer bleibt die der Zeile.
+
+**Antworten auf erlaubte Verbindungen durchlassen** (Haken, vorgewählt): ein
+erlaubtes Paket wird notiert, die **Antwort** darauf geht ohne weitere Prüfung
+durch (5 Minuten Simulationszeit nach dem letzten Paket). Ohne ihn müsste man
+bei einer Whitelist jede Regel zweimal schreiben — hin **und** zurück —, und die
+Rückrichtung ist genau die, die man vergisst. Mit Haken AN lässt sich „zurück
+geht von allein" zeigen, mit AUS „jede Richtung ist eine eigene Frage".
+
+### Wo sie im Paketweg sitzt
+
+`schichten.js`, `onIp`, **eine** Stelle: nach der Wegewahl, **vor NAT**.
+Das hat eine Folge, die man im Unterricht gern vergisst: beim Hinausgehen sehen
+die Regeln noch die **private** Adresse (192.168.1.37), beim Hereinkommen hat NAT
+die Antwort schon zurückübersetzt. ⚠️ **Pakete an das Gerät selbst und Pakete, die
+es selbst losschickt, prüft die Firewall nicht** — sie schützt das Netz hinter dem
+Gerät, nicht das Gerät. Das lässt sich mit einem zweiten Router dahinter zeigen
+(und ist ein guter Auftrag).
+
+### Im Mitschnitt
+
+Ein verworfenes Paket steht als **verlorene Zeile** da: *„— von der Firewall
+verworfen: Regel 2 (verwerfen)"*, bei *ablehnen* mit dem Zusatz „Absender wird
+benachrichtigt". Der Unterschied zwischen beiden ist im Mitschnitt der schönste
+Beleg: einmal Stille bis zur Zeitüberschreitung, einmal sofort *„Verboten — die
+Firewall von 192.168.1.1 lässt das nicht durch"*. Diese Zeilen zeigt auch die
+Voreinstellung „nur raus" — sonst wäre es genau die eine, die verschwindet.
+Auf dem Router steht dasselbe im Terminal.
+
+### Länder
+
+Echte GeoIP-Datenbanken gibt es nicht und braucht es nicht: die Welt in SYNIR ist
+erfunden. „Länder" sind **benannte Adressbereiche im Szenario** (z. B. `10.1.0.0/16`
+= „Land A"); die Firewall kennt nur Bereiche. Das ist die Aussage — Geoblocking ist
+eine IP-Liste. Ein Szenario, das Bereichen Namen gibt, ist ein eigener nächster
+Schritt.
+
 ## Was noch fehlt
 
 **Echo-Server und Einfacher Client** (das Paar, das „Port" erklärt),
-**Firewall**, **Gnutella**, **NS-Einträge im DNS**, das
+**Gnutella**, **NS-Einträge im DNS**, das
 **Sequenzdiagramm** des Datenaustauschs, der **Dokumentationsmodus** und der
 Bildexport, pcap-Export. *(Das Modem gibt es seit dem 2026-09-28 — als Class
 Wide Web, siehe unten.)*

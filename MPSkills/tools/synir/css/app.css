@@ -133,6 +133,7 @@
   --raster:    rgba(23,27,36,.055);
 
   --warn:      #d9642a;
+  --fw:        #b8321f;      /* Firewall: Mauer mit Flamme */
   --bad:       #d2344b;
   --ok:        #0a8a69;
 
@@ -325,6 +326,7 @@
   --raster:    rgba(255,255,255,.05);
 
   --warn:      #e9944f;
+  --fw:        #d9503e;
   --bad:       #ef5f74;
   --ok:        #3ecf9a;
 
@@ -1318,6 +1320,11 @@ body.is-ziehen, body.is-ziehen * {
   fill: #fff; font-size: 13px; font-weight: 700;
   text-anchor: middle; font-family: var(--fs);
 }
+/* Die Firewall: eine eigene, warme Farbe, die weder „!" (--warn) noch
+   einer Marke noch einem Netz gleicht. Die Form unterscheidet sie
+   zusätzlich: Mauer mit Flamme, weiß auf dem Grund. */
+.nf-fw circle { fill: var(--fw); stroke: var(--surface); stroke-width: 1.5; }
+.nf-fw use { color: #fff; }
 .nf-off circle { fill: var(--ink-3); }
 .nf-off path   { stroke: var(--surface); stroke-width: 1.6; fill: none; stroke-linecap: round; }
 
@@ -2649,6 +2656,78 @@ textarea.f::placeholder { color: var(--ink-3); opacity: .45; font-weight: 400; }
 .k-frei select.f { flex: 0 0 62px; }
 .k-frei input.f[data-f="freiport"], .k-frei input.f[data-f="freilanport"] { flex: 0 0 52px; }
 .k-frei input.f[data-f="freiip"] { flex: 1 1 110px; min-width: 0; }
+
+/* ═══ Firewall ═══════════════════════════════════════════════
+   Der KNOPF im Reiter „Allgemein" zeigt, ob sie läuft: grün mit
+   pulsierendem Punkt, oder grau. Ein Haken im Fenster allein sähe
+   man erst nach dem Aufschlagen der Seite. */
+.k-fw {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  border-style: solid; text-align: left;
+}
+.k-fw .k-fw-ic { width: 18px; height: 18px; flex: none; }
+.k-fw .k-fw-n { font-weight: 600; color: var(--ink); }
+.k-fw .k-fw-s { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; }
+.k-fw .k-fw-punkt { width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); display: inline-block; }
+.k-fw.is-aus { color: var(--ink-3); }
+.k-fw.is-an {
+  border-color: var(--ok); color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 10%, var(--surface));
+}
+.k-fw.is-an:hover { border-color: var(--ok); color: var(--ok); }
+.k-fw.is-an .k-fw-punkt { background: var(--ok); animation: k-fw-puls 1.6s ease-in-out infinite; }
+@keyframes k-fw-puls { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 25%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .k-fw.is-an .k-fw-punkt { animation: none; } }
+
+/* Der Haken auf der Seite trägt dasselbe Wort. */
+.k-fw-an .k-fw-lauf { margin-left: auto; font-size: 11px; color: var(--ink-3); font-weight: 600; }
+.k-fw-an.is-an .k-fw-lauf { color: var(--ok); }
+
+/* Eine Regel: drei Etagen — Aktion mit Nummer und Griffen, dann
+   Eingang · Protokoll · Port, dann Quelle · Ziel. Die Aktion hat
+   die Farbe, weil sie das ist, wonach man die Liste überfliegt. */
+.k-fwrs { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.k-fwr {
+  --akt: var(--ink-3);
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 7px 8px 8px; border: 1px solid var(--line); border-left: 4px solid var(--akt);
+  border-radius: var(--r1); background: var(--surface);
+}
+.k-fwr[data-akt="erlauben"]  { --akt: var(--ok); }
+.k-fwr[data-akt="verwerfen"] { --akt: var(--bad); }
+.k-fwr[data-akt="ablehnen"]  { --akt: var(--warn); }
+.k-fwr-k { display: flex; align-items: center; gap: 5px; }
+.k-fwr-nr {
+  flex: none; min-width: 20px; height: 20px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 11px; font-weight: 700;
+  background: var(--akt); color: #fff;
+}
+.k-fwr-k select.f { flex: 0 0 auto; width: auto; margin-top: 0; padding: 4px 6px; font-size: 12px; font-weight: 600; color: var(--akt); }
+.k-fwr-t { flex: 1; font-size: 11px; text-align: right; padding-right: 2px; white-space: nowrap; }
+.k-fwr-k .k-x { width: 22px; height: 22px; font-size: 10px; }
+.k-fwr-k .k-x[disabled] { opacity: .35; cursor: default; }
+.k-fwr-k .k-x[disabled]:hover { border-color: var(--line); color: var(--ink-3); }
+.k-fwr-z { display: flex; gap: 6px; flex-wrap: wrap; }
+.k-fwr-l { display: flex; flex-direction: column; gap: 2px; flex: 1 1 80px; min-width: 0; }
+.k-fwr-l--ip { flex: 1 1 120px; }
+.k-fwr-l > span { font-size: 10px; color: var(--ink-3); }
+.k-fwr-l .f { margin-top: 0; padding: 5px 7px; font-size: 11.5px; width: 100%; min-width: 0; box-sizing: border-box; }
+.k-fwr .f.is-bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 8%, var(--surface)); }
+.k-fwr-u { display: none; font-size: 10.5px; color: var(--warn); }
+.k-fwr-u.is-da { display: block; }
+
+.k-fw-stat { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; margin-bottom: 6px; }
+.k-fw-stat b { font-variant-numeric: tabular-nums; }
+.k-fw-letzt { flex-basis: 100%; font-size: 11px; color: var(--ink-3); }
+.k-add--klein { width: auto; display: inline-block; padding: 4px 10px; font-size: 11px; }
+
+.tbl-fw { width: 100%; font-size: 11px; }
+.tbl-fw th { text-align: left; }
+.tbl-fw td { padding: 2px 4px; }
+.k-fw-a { font-weight: 700; }
+.k-fw-a--erlauben  { color: var(--ok); }
+.k-fw-a--verwerfen { color: var(--bad); }
+.k-fw-a--ablehnen  { color: var(--warn); }
 
 /* Ein abgelaufener RIP-Weg. Er steht noch da (das ist Absicht,
    siehe rip.js) und er soll als vergangen zu lesen sein — blass,

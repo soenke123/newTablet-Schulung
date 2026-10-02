@@ -659,6 +659,20 @@
 
        `ref` ist das Ende, das beschriftet wird; `weg` der Punkt am
        anderen Ende (er gibt die Richtung), `hier` der eigene.    */
+    /* Wo die Linie die Kachel verlässt — als Punkt AUF der Kante,
+       relativ zur Kachelmitte plus `hier`. Eine Stelle, damit das
+       Schildchen und alles, was ihm ausweichen muss (das
+       Firewall-Zeichen), dieselbe Zahl benutzen. */
+    function schildLage(weg, hier) {
+      let dx = weg.x - hier.x, dy = weg.y - hier.y;
+      const len = Math.hypot(dx, dy) || 1;
+      dx /= len; dy /= len;
+      const t = Math.min(
+        Math.abs(dx) > 1e-6 ? (W / 2) / Math.abs(dx) : Infinity,
+        Math.abs(dy) > 1e-6 ? (H / 2) / Math.abs(dy) : Infinity);
+      return { x: hier.x + dx * t, y: hier.y + dy * t };
+    }
+
     function anschlussSchild(ref, weg, hier) {
       const n = netz.get(ref.node);
       if (!n || !netz.istHeim(n)) return;
@@ -684,13 +698,8 @@
          ein fester Abstand vom Mittelpunkt läge bei einem schrägen
          Kabel in der Ecke und bei einem waagerechten weit daneben.
          Die Kachel ist 78 × 68 und nicht rund. */
-      let dx = weg.x - hier.x, dy = weg.y - hier.y;
-      const len = Math.hypot(dx, dy) || 1;
-      dx /= len; dy /= len;
-      const t = Math.min(
-        Math.abs(dx) > 1e-6 ? (W / 2) / Math.abs(dx) : Infinity,
-        Math.abs(dy) > 1e-6 ? (H / 2) / Math.abs(dy) : Infinity);
-      const x = hier.x + dx * t, y = hier.y + dy * t;
+      const lage = schildLage(weg, hier);
+      const x = lage.x, y = lage.y;
 
       const b = el('g', {
         class: 'nf-port' + (ref.nic === netz.WAN ? ' nf-port--wan' : ''),
@@ -1048,7 +1057,72 @@
         el('path', { d: 'M 0 -5 L 0 0 M -3.5 -3 A 5 5 0 1 0 3.5 -3' }, b);
       }
 
+      /* ─ Die Firewall ─ Unten links, wie das Aus-Zeichen, und aus
+         demselben Grund eine Ecke und keine Pille: sie ist keine
+         Aussage über einen DIENST („ich verteile Adressen"), sondern
+         über den WEG („was hier durchgeht, wird geprüft"). Ein Server
+         ist sie nicht, und unter der Kachel stünde sie zwischen
+         DHCP und DNS wie einer.
+
+         ⚠️ Das Zeichen steht NUR, wenn sie läuft — ausgeschaltet
+         bleibt sie unsichtbar, genau wie ein Dienst ohne Marke.
+         Ist das Gerät zugleich aus, rückt sie neben das Aus-Zeichen:
+         beides kann gleichzeitig zutreffen und darf sich nicht
+         decken (so wie DHCP und „!" früher — das hat nur das Bild
+         gezeigt). */
+      if (netz.fwLaeuft(n)) {
+        const c = n.firewall;
+        const nr = (c.regeln || []).length;
+        const p = fwPlatz(n);
+        const b = el('g', { class: 'nf-fw', transform: 'translate(' + p.x + ',' + p.y + ')' }, g);
+        el('circle', { r: FW_R }, b);
+        const ic = el('g', { transform: 'translate(-7.2,-7.2) scale(.6)' }, b);
+        el('use', { href: '#ic-firewall' }, ic);
+        const ttl = el('title', {}, b);
+        ttl.textContent = 'Auf diesem Gerät läuft eine Firewall: ' + nr + (nr === 1 ? ' Regel' : ' Regeln')
+          + ', Standard: ' + (c.standard === 'verwerfen' ? 'verwerfen' : 'durchlassen') + '.';
+      }
+
       g.addEventListener('pointerdown', (ev) => onNodeDown(ev, n));
+    }
+
+    /* ─── Wohin mit dem Firewall-Zeichen? ───────────────────────
+       Bevorzugt unten links (das hat der Nutzer so gewollt). Dort sitzt
+       aber manchmal etwas anderes: das Aus-Zeichen — dann daneben —
+       und beim Heimrouter das WAN/LAN-Schildchen, wenn ein Kabel
+       nach links unten geht. Das Bild hat es gezeigt: das Schild
+       „LAN 2" lag halb auf dem Zeichen. Also wird der Reihe nach
+       eine Ecke gesucht, in der nichts liegt: unten links, unten
+       rechts, oben links, oben rechts. Findet sich keine, bleibt es
+       unten links — ein überdecktes Zeichen ist besser als keines.
+
+       Koordinaten relativ zur Kachelmitte. */
+    const FW_R = 10;
+    function fwPlatz(n) {
+      const links = -W / 2 + FW_R, rechts = W / 2 - FW_R, unten = H / 2 - 9, oben = -H / 2 + 9;
+      const aus = n.on ? 0 : 2 * FW_R + 3;          // neben das Aus-Zeichen
+      const kand = [
+        { x: links + aus, y: unten }, { x: rechts, y: unten },
+        { x: links, y: oben },        { x: rechts, y: oben }
+      ];
+      // Die Schildchen dieses Geräts, als Rechtecke um ihre Mitte.
+      const sperren = [];
+      if (netz.istHeim(n)) {
+        const mitte = { x: n.x, y: n.y };
+        for (const c of netz.cableList()) {
+          for (const [ref, anderes] of [[c.a, c.b], [c.b, c.a]]) {
+            if (ref.node !== n.id || (n.nics[ref.nic] && n.nics[ref.nic].funkPort)) continue;
+            const o = netz.get(anderes.node);
+            if (!o) continue;
+            const l = schildLage({ x: o.x, y: o.y }, mitte);
+            const br = 6 + netz.portLabel(n, ref.nic).length * 4.6;
+            sperren.push({ x: l.x - n.x, y: l.y - n.y, bw: br / 2 + 2, bh: 8.5 });
+          }
+        }
+      }
+      const frei = (k) => sperren.every(sp =>
+        Math.abs(k.x - sp.x) > FW_R + sp.bw || Math.abs(k.y - sp.y) > FW_R + sp.bh);
+      return kand.find(frei) || kand[0];
     }
 
     /* Ein kleines Schloss hinter einen Text setzen. Die Breite des

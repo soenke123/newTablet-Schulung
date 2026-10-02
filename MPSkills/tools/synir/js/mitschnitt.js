@@ -98,6 +98,17 @@
       if (paused) return;
       if (e.kind === 'wire') add(e, false, e.dir === 'in' ? 'rein' : 'raus');
       else if (e.kind === 'drop') add(e, true, 'raus');
+      /* Die Firewall hat ein Paket verworfen. Es kam an (also „rein"),
+         und es ist verloren — mit dem Grund an der Zeile, damit man
+         lesen kann, WELCHE Regel es war. Der Rahmen ist der, mit dem
+         es ankam; aus der Wolke gibt es keinen. */
+      else if (e.kind === 'fw-drop') {
+        const f = e.frame || {};
+        add({ t: e.t, node: e.node, nic: e.nic, inet: netz.istInternet(netz.get(e.node), e.nic),
+              frame: { src: f.src || 'Wolke', dst: f.dst || 'Wolke', type: 'ip', payload: e.pkt },
+              fw: e.text + (e.aktion === 'ablehnen' ? ', Absender wird benachrichtigt' : '') },
+            true, 'rein');
+      }
       /* Durch die Internet-Karte des cww geht kein Rahmen über ein
          Kabel — aber ein Paket, und das gehört in den Mitschnitt
          wie jedes andere. Statt der MAC-Adressen steht „Wolke" da:
@@ -135,6 +146,7 @@
         proto: protoOf(e.frame),
         info: describe(e.frame),
         inet: !!e.inet,
+        fw: e.fw || '',
         zugang: zugangVon(e.frame, e.node)
       };
 
@@ -949,7 +961,11 @@
 
     function view() {
       const r = gefiltert();
-      return filter.dir === 'beide' ? r : r.filter(x => x.dir === 'raus');
+      /* Was die Firewall verworfen hat, steht IMMER da. Es kam an (also
+         „rein"), und mit der Voreinstellung „nur raus" wäre das die
+         eine Zeile, die verschwindet — dabei ist sie die, für die man
+         den Mitschnitt aufmacht. */
+      return filter.dir === 'beide' ? r : r.filter(x => x.dir === 'raus' || x.fw);
     }
 
     function setFilter(patch) { Object.assign(filter, patch); fire(); }

@@ -6,6 +6,38 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 000f · Firewall (2026-10-02)
+
+Berührt: neu `js/firewall.js`, `tests/fwuitest.js`, `tests/shot-firewall.png`; `js/netz.js` (`fwConf`, `fwLaeuft`,
+`fwLaden`, Speicherformat `firewall`), `js/schichten.js` (**eine** Prüfstelle in `onIp`, Auskunft `fw*`, Text zu ICMP 3/13),
+`js/konfig.js` (Knopf, Seite, `fwKompakt`, `data-live` `fwstat`/`fwtreffer`), `js/flaeche.js` (Zeichen `.nf-fw`, `fwPlatz`,
+`schildLage`), `js/mitschnitt.js` + `js/panels.js` (verworfene Zeile, immer sichtbar), `js/app.js` (Terminal),
+`css/app.css` (`--fw`, `.k-fw*`, `.k-fwr*`, `.nf-fw`), `index.html` (Skript, Symbol `firewall`, `?v=…b`), `tool.js` und
+`MPSkills/lib/tool.js` (Cache-Stempel), `tests/kerntest.js` (1195 grün), `FILIUS-ABGLEICH.md`, `LIESMICH.md` (Abschnitt *Die Firewall*).
+
+* ⭐ **Entscheidungen des Nutzers:** nur an **Router, Heimrouter, cww**; im **Entwurf** im Reiter *Allgemein* ganz
+  unten ein Knopf, der zeigt, ob sie läuft; dahinter eine Seite mit dem Haken *Firewall aktivieren* zuoberst; ein
+  Zeichen **unten links** an der Kachel, wenn sie läuft (keine Server-Pille — „eine Firewall ist kein Server").
+  Im **Aktionsmodus** bleibt es bei der Leseansicht.
+* ⭐ **Das Modell:** `node.firewall = { on, standard, merken, regeln[] }`; Regel = `{ ein, quelle, ziel, proto, port,
+  aktion }` (alles Text, wie die Felder). Erste passende gewinnt. `ein` ist eine **Schnittstelle** (`'*'` oder ihre
+  Nummer; die LAN-Buchsen des Heimrouters zählen als eine Karte) — nicht „rein/raus", denn ein Router mit drei Karten
+  hat kein Außen. Aktionen `erlauben` · `verwerfen` · `ablehnen` (ICMP 3/13). Laufzeitwissen (Zähler, gemerkte
+  Gespräche) liegt in `node.state.fw`, nicht in der Datei.
+* ⚠️ **Wo sie sitzt:** nach der Wegewahl, **vor NAT** (`schichten.js`, `onIp`). Pakete AN den Router und von ihm selbst
+  werden nicht geprüft. Das steht im Kopf von `firewall.js` und in `LIESMICH.md`; wer es ändert, ändert eine Aussage.
+* Unfertige Zeilen (krumme Adresse/Port/Protokoll) tun nichts, behalten aber ihre Nummer (`Firewall.regel` gibt `null`).
+  Das Fenster nutzt dieselbe Prüfung (`fwFeldOk`/`fwFertig`) für das rote Feld und den Satz „unfertig".
+* ⚠️ **Das Zeichen sucht sich eine freie Ecke** (`fwPlatz`): unten links, dann unten rechts, oben links, oben rechts.
+  Grund: beim Heimrouter lag das Schildchen „LAN 2" halb auf dem Zeichen — das hat nur der Screenshot gezeigt.
+* ⚠️ **Prüfstände:** `tests/uitest.js` bricht in diesem Container schon VOR dieser Runde bei „DNS-Server" ab (gleiche
+  drei FAIL vorher und nachher, Ausgabe identisch). Deshalb gibt es `tests/fwuitest.js` (54 Prüfungen, eigenständig):
+  `NODE_PATH=<playwright-core> CHROME_PATH=<chrome> node tests/fwuitest.js`.
+* Offen / nächster Schritt: **Länder als benannte Bereiche im Szenario** (Auswahl „Land sperren" statt Adressliste),
+  ein **Auftrag** dazu in `szenarien.js`, und ob Kinder im Aktionsmodus Regeln ändern dürfen (derzeit nein).
+
+---
+
 ## 000e · HTTPS und Zertifizierungsstelle — Schritt 4 des Sicherheitsplans (2026-10-01)
 
 Berührt: neu `js/tls.js`, `js/zs.js`, `js/prog-zert.js`; `js/http.js` (https://, 443, `holen` mit TLS und
@@ -2844,7 +2876,7 @@ des Heimrouters soll. Für einen Webserver im Schulnetz genügt Stufe 1.
 
 1. **DNS mit NS-Record.**
 2. **Sequenzdiagramm des Datenaustauschs** — die Beameransicht.
-3. **Firewall.**
+3. ~~**Firewall.**~~ Seit 2026-10-02 da; siehe den Nachtrag *Firewall* ganz oben.
 
 *(NAT, Heimrouter und WLAN standen bis zum 2026-09-25 auf dieser Liste; siehe
 den Nachtrag *Heimrouter, NAT und WLAN*. Die **Weiterleitungstabelle von Hand**
