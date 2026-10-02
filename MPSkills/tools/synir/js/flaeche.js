@@ -1076,10 +1076,9 @@
         const nr = (c.regeln || []).length;
         const p = fwPlatz(n);
         const b = el('g', { class: 'nf-fw', transform: 'translate(' + p.x + ',' + p.y + ')' }, g);
-        /* Ein heller Grund, damit die Mauer auch vor dem dunklen Gehäuse
-           eines Routers zu erkennen ist. */
-        el('circle', { r: FW_R }, b);
-        const ic = el('g', { transform: 'translate(-8.4,-8.4) scale(.7)' }, b);
+        /* Kein Grund hinter dem Zeichen (vom Nutzer: „ohne weiße Pille"):
+           die Figur hat ihre eigene dunkle Kontur. 24 × 24 · 0,84 ≈ 20 Punkte. */
+        const ic = el('g', { transform: 'translate(-10.1,-10.1) scale(.84)' }, b);
         el('use', { href: '#ic-firewall' }, ic);
         const ttl = el('title', {}, b);
         ttl.textContent = 'Auf diesem Gerät läuft eine Firewall (' + (c.typ === 'whitelist' ? 'Whitelist' : 'Blacklist')
@@ -1100,7 +1099,7 @@
        unten links — ein überdecktes Zeichen ist besser als keines.
 
        Koordinaten relativ zur Kachelmitte. */
-    const FW_R = 12;
+    const FW_R = 11;
     function fwPlatz(n) {
       const links = -W / 2 + FW_R, rechts = W / 2 - FW_R, unten = H / 2 - 9, oben = -H / 2 + 9;
       const aus = n.on ? 0 : 2 * FW_R + 3;          // neben das Aus-Zeichen

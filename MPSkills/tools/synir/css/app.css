@@ -1323,9 +1323,6 @@ body.is-ziehen, body.is-ziehen * {
   fill: #fff; font-size: 13px; font-weight: 700;
   text-anchor: middle; font-family: var(--fs);
 }
-/* Die Firewall: eine farbige Figur (Mauer mit Flamme) auf hellem Grund —
-   weder „!" (--warn) noch einer Marke noch einem Netz verwechselbar. */
-.nf-fw circle { fill: #fff; stroke: #3d4a52; stroke-width: 1.4; }
 .nf-off circle { fill: var(--ink-3); }
 .nf-off path   { stroke: var(--surface); stroke-width: 1.6; fill: none; stroke-linecap: round; }
 
