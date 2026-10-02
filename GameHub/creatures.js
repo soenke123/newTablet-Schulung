@@ -1839,7 +1839,7 @@ function showLevelUpBanner(isFinal) {
 /* ─── Shop-Hilfsfunktionen (in allen Spielen verfügbar) ─── */
 const SHOP_KEY = 'lernwelt_shop_v1';
 
-/* Netto-Ausgaben: spentCoins abzüglich erstatteter Coins (Migration 0184).
+/* Netto-Ausgaben: spentCoins abzüglich erstatteter Coins (Migration 0185).
    Überall statt shopData.spentCoins verwenden, wenn ein Guthaben berechnet wird. */
 function getSpentCoinsNet(sd) {
   return Math.max(0, (sd?.spentCoins ?? 0) - (sd?.refundedCoins ?? 0));
@@ -1852,7 +1852,7 @@ function loadShopData() {
     const toCount = (val, countField) => countField !== undefined ? countField : (val ? 1 : 0);
     return {
       spentCoins:            d.spentCoins            ?? 0,
-      // Migration 0184: Rückerstattungen (Ei abbrechen, Keks fehlgeschlagen).
+      // Migration 0185: Rückerstattungen (Ei abbrechen, Keks fehlgeschlagen).
       // spentCoins kann serverseitig nur wachsen (max-Merge) — ein lokales
       // Zurückrollen wird beim nächsten Sync verworfen, vorher aber schon
       // wieder ausgegeben. Deshalb wächst auch die Erstattung nur:

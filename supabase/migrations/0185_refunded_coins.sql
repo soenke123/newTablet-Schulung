@@ -1,5 +1,5 @@
 -- ═════════════════════════════════════════════════════════════
--- 0184 — Erstattungen als eigener Zähler (refundedCoins)
+-- 0185 — Erstattungen als eigener Zähler (refundedCoins)
 -- ═════════════════════════════════════════════════════════════
 -- Fehler: spentCoins wird beim Server-Merge per greatest() übernommen, kann
 -- also nie sinken. Der Client rollte bei „Ei abbrechen" und bei einem
@@ -89,7 +89,7 @@ declare
   v_spent_m      int;
   v_backing      int;
 
-  -- Erstattungen (0184)
+  -- Erstattungen (0185)
   v_ref_s        int;
   v_ref_m        int;
   v_ref_gain     int := 0;

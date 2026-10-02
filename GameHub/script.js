@@ -2503,7 +2503,7 @@ function buyItem(itemId) {
         showGiftSuccessModal(res.peer_display_name, 20, res.gifts_count, res.cap);
       } else {
         // Refund: als Erstattung buchen (spentCoins selbst wächst nur, sonst
-        // verwirft der Server-Merge das Zurückrollen — Migration 0184).
+        // verwirft der Server-Merge das Zurückrollen — Migration 0185).
         const sd = loadShopData();
         sd.refundedCoins = (sd.refundedCoins ?? 0) + item.price;
         saveShopData(sd);
@@ -3233,7 +3233,7 @@ function cancelPendingEgg() {
     const nest = sd.nests.find(n => n.nestId === nestId);
     if (nest) {
       const eggItem = SHOP_ITEMS.find(i => i.eggItem && i.eggType === nest.eggType);
-      // Erstattung statt Zurückrollen von spentCoins (Migration 0184).
+      // Erstattung statt Zurückrollen von spentCoins (Migration 0185).
       if (eggItem) sd.refundedCoins = (sd.refundedCoins ?? 0) + eggItem.price;
       // Migration 0059: Tombstone, sonst kehrt der Nest via Server-Merge zurück.
       if (!Array.isArray(sd.releasedNestIds)) sd.releasedNestIds = [];

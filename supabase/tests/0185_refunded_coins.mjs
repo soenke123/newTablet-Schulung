@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0184 — Erstattungen als eigener Zähler. Echt gerechnet in pglite.
+/* Prüfstand für Migration 0185 — Erstattungen als eigener Zähler. Echt gerechnet in pglite.
 
    Hintergrund: spentCoins wird per greatest() gemerged und kann nie sinken.
    Der Client rollte bei „Ei abbrechen" spentCoins lokal zurück; der Server
@@ -15,7 +15,7 @@
         und Items werden danach wieder nicht gekürzt.
      8. Die Migration ist wiederholbar (Umbenennung der Merge-Funktion).
 
-   Aufruf:  node supabase/tests/0184_refunded_coins.mjs  */
+   Aufruf:  node supabase/tests/0185_refunded_coins.mjs  */
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { readFileSync } from 'node:fs';
@@ -61,7 +61,7 @@ await run(mig('0016_cheat_hardening_light.sql'), '0016');
 await run(mig('0019_highscores.sql'), '0019');
 await run(mig('0059_released_nest_tombstones.sql'), '0059');
 await run(mig('0183_cheat_hardening_v2.sql'), '0183');
-await run(mig('0184_refunded_coins.sql'), '0184');
+await run(mig('0185_refunded_coins.sql'), '0185');
 console.log('— Migrationen laufen durch —\n');
 
 const SCHOOL  = 'd0000000-0000-4000-8000-000000000001';
@@ -172,7 +172,7 @@ const sync = async (uid, state) =>
 
 /* 8: Wiederholbarkeit */
 {
-  await run(mig('0184_refunded_coins.sql'), '0184 (2. Lauf)');
+  await run(mig('0185_refunded_coins.sql'), '0185 (2. Lauf)');
   const m = await one(`select shop_state_merge('{"refundedCoins":5}'::jsonb, '{"refundedCoins":9}'::jsonb) r`);
   ok('8  zweiter Lauf: Merge funktioniert weiter', m.r.refundedCoins === 9, JSON.stringify(m.r.refundedCoins));
   const old = await one(`select count(*) c from pg_proc where proname = '_shop_state_merge_v59'`);
