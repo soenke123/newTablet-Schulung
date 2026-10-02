@@ -1087,7 +1087,7 @@ function getAvailableKristalle(sd) {
 
 function renderCoinDisplay(allData) {
   const shopData  = loadShopData();
-  const available = getTotalCoins(allData) - shopData.spentCoins;
+  const available = getTotalCoins(allData) - getSpentCoinsNet(shopData);
   const el = document.getElementById('coinAmount');
   if (el) el.textContent = available;
 
@@ -1722,7 +1722,7 @@ function renderShop(allData, tab) {
   list.innerHTML = '';
 
   const shopData  = loadShopData();
-  const available = getTotalCoins(allData) - shopData.spentCoins;
+  const available = getTotalCoins(allData) - getSpentCoinsNet(shopData);
 
   _renderShopBadges(shopData, available, s2Open);
 
@@ -2384,7 +2384,7 @@ function buyItem(itemId) {
   if (!item) return;
   const shopData  = loadShopData();
   const allData   = loadAllData();
-  const available = getTotalCoins(allData) - shopData.spentCoins;
+  const available = getTotalCoins(allData) - getSpentCoinsNet(shopData);
   if (item.currency === 'kristall') {
     if (getAvailableKristalle(shopData) < item.price) return;
   } else {
@@ -2502,9 +2502,10 @@ function buyItem(itemId) {
         renderShop(loadAllData());
         showGiftSuccessModal(res.peer_display_name, 20, res.gifts_count, res.cap);
       } else {
-        // Refund: spentCoins zurückrollen
+        // Refund: als Erstattung buchen (spentCoins selbst wächst nur, sonst
+        // verwirft der Server-Merge das Zurückrollen — Migration 0185).
         const sd = loadShopData();
-        sd.spentCoins = Math.max(0, sd.spentCoins - item.price);
+        sd.refundedCoins = (sd.refundedCoins ?? 0) + item.price;
         saveShopData(sd);
         renderHub();
         renderShop(loadAllData());
@@ -3232,7 +3233,8 @@ function cancelPendingEgg() {
     const nest = sd.nests.find(n => n.nestId === nestId);
     if (nest) {
       const eggItem = SHOP_ITEMS.find(i => i.eggItem && i.eggType === nest.eggType);
-      if (eggItem) sd.spentCoins = Math.max(0, sd.spentCoins - eggItem.price);
+      // Erstattung statt Zurückrollen von spentCoins (Migration 0185).
+      if (eggItem) sd.refundedCoins = (sd.refundedCoins ?? 0) + eggItem.price;
       // Migration 0059: Tombstone, sonst kehrt der Nest via Server-Merge zurück.
       if (!Array.isArray(sd.releasedNestIds)) sd.releasedNestIds = [];
       if (!sd.releasedNestIds.includes(nestId)) sd.releasedNestIds.push(nestId);
@@ -4150,7 +4152,7 @@ async function openGiftFlow() {
   // Vor-Check: reichen die Coins? Sanity-UX, keine Sicherheitsprüfung.
   function coinBalance() {
     const sd = loadShopData();
-    return getTotalCoins(loadAllData()) - (sd.spentCoins ?? 0);
+    return getTotalCoins(loadAllData()) - getSpentCoinsNet(sd);
   }
 
   function giftFlowShellHTML(s) {
