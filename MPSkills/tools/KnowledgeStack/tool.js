@@ -313,10 +313,15 @@
         els.clock.classList.add('ks-clock--reading');
         els.clock.classList.remove('ks-clock--eilig');
       }
+      const rAnteil = Math.max(0, Math.min(1, (ms - (lim * 1000)) / (READ_TIME_SEC * 1000)));
       if (els.bar) {
-        const anteil = Math.max(0, Math.min(1, (ms - (lim * 1000)) / (READ_TIME_SEC * 1000)));
-        els.bar.style.width = (anteil * 100).toFixed(1) + '%';
+        els.bar.style.width = (rAnteil * 100).toFixed(1) + '%';
         els.bar.classList.remove('ks-bar--eilig');
+      }
+      if (els.uhr) {
+        els.uhr.style.setProperty('--uhr-p', (1 - rAnteil).toFixed(3));
+        els.uhr.classList.add('ks-uhr--lesen');
+        els.uhr.classList.remove('ks-uhr--eilig');
       }
       const rCounts = stage.querySelectorAll('[data-ks=reading-count]');
       rCounts.forEach(c => { c.textContent = String(rSek); });
@@ -334,6 +339,13 @@
       const anteil = Math.max(0, Math.min(1, ms / (lim * 1000)));
       els.bar.style.width = (anteil * 100).toFixed(1) + '%';
       els.bar.classList.toggle('ks-bar--eilig', sek <= 5);
+    }
+    // Die Scheibe füllt sich mit der VERSTRICHENEN Zeit — voll heißt: um.
+    if (els.uhr) {
+      const anteil = Math.max(0, Math.min(1, ms / (lim * 1000)));
+      els.uhr.style.setProperty('--uhr-p', (1 - anteil).toFixed(3));
+      els.uhr.classList.remove('ks-uhr--lesen');
+      els.uhr.classList.toggle('ks-uhr--eilig', sek <= 5);
     }
 
     // Wenn gerade von Vorlesezeit auf Antwortzeit umgeschaltet wurde: Kacheln aufdecken
@@ -478,6 +490,7 @@
   function sammle() {
     els.clock  = stage.querySelector('[data-ks=clock]');
     els.bar    = stage.querySelector('[data-ks=bar]');
+    els.uhr    = stage.querySelector('[data-ks=uhr]');
     els.wall   = stage.querySelector('[data-ks=wall]');
     els.count  = stage.querySelector('[data-ks=count]');
     els.total  = stage.querySelector('[data-ks=total]');
@@ -526,22 +539,45 @@
       </p>`;
   }
 
+  /* Die Frage am Beamer. Von oben nach unten: Frage · Mitte · Antworten.
+     Die Mitte ist das Foto, links daneben die drei Füllstände (Uhr,
+     Fragen, Antworten), rechts die zwei Knöpfe (Beenden, Auflösen).
+     Ohne Foto schrumpft die Mitte auf eine Zeile, und Frage und
+     Antworten bekommen den Platz. Die Antworten tragen hier KEIN
+     A/B/C/D — die Farbe sagt es, und der Platz geht an die Schrift. */
   function beamFrage(v) {
     const q = v.question || {};
     const opts = Array.isArray(q.options) ? q.options : [];
     const reading = isReadingPhase();
     const rSek = readingRestSec();
+    const nr = (v.current_q_idx | 0) + 1;
+    const n = v.question_count | 0;
     return `
-      <header class="ks-head ks-head--q">
-        <span class="ks-qnr">Frage ${(v.current_q_idx | 0) + 1} <i>/ ${v.question_count}</i></span>
-        <div class="ks-barwrap"><div class="ks-bar" data-ks="bar"></div></div>
-        <span class="ks-clock" data-ks="clock">–</span>
-        ${steuerHTML()}
-      </header>
       <div class="ks-qbox"><h2 class="ks-q">${esc(q.text)}</h2></div>
-      ${q.has_image ? '<div class="ks-bild" data-ks="bild">'
-        + (bild.qid === q.qid && bild.src ? '<img src="' + esc(bild.src) + '" alt="" />' : '')
-        + '</div>' : ''}
+      <div class="ks-mitte${q.has_image ? ' ks-mitte--bild' : ''}">
+        <div class="ks-status">
+          <div class="ks-stat ks-stat--uhr">
+            <span class="ks-uhr" data-ks="uhr"></span>
+            <span class="ks-stxt"><b class="ks-clock" data-ks="clock">–</b><i>s</i></span>
+          </div>
+          <div class="ks-stat">
+            <span class="ks-quad"><span class="ks-quadf" style="height:${n ? (nr / n * 100).toFixed(1) : 0}%"></span></span>
+            <span class="ks-stxt"><b>${nr}/${n}</b> Fragen</span>
+          </div>
+          <div class="ks-stat">
+            <span class="ks-eck" data-ks="eck"></span>
+            <span class="ks-stxt"><b><span data-ks="count">0</span>/<span data-ks="total">0</span></b> Antworten</span>
+          </div>
+        </div>
+        ${q.has_image ? '<div class="ks-bild" data-ks="bild">'
+          + (bild.qid === q.qid && bild.src ? '<img src="' + esc(bild.src) + '" alt="" />' : '')
+          + '</div>' : '<div class="ks-luecke"></div>'}
+        <div class="ks-knoepfe">
+          <button type="button" class="ks-ctl ks-ctl--stop" data-act="finish"
+                  title="Quiz beenden — direkt zur Siegerehrung">⏹ Beenden</button>
+          <button type="button" class="ks-now" data-act="now">Jetzt auflösen</button>
+        </div>
+      </div>
       <div class="ks-reading-banner" data-ks="reading" ${reading ? '' : 'hidden'}>
         <span class="ks-reading-icon">📖</span>
         <div class="ks-reading-info">
@@ -549,11 +585,45 @@
           <span class="ks-reading-sub">Antworten erscheinen in <b data-ks="reading-count">${rSek}</b> s</span>
         </div>
       </div>
-      <div class="ks-meta" ${reading ? 'hidden' : ''}>
-        <span class="ks-antz"><b data-ks="count">0</b> von <b data-ks="total">0</b> haben geantwortet</span>
-        <button type="button" class="ks-now" data-act="now">Jetzt auflösen</button>
-      </div>
-      ${kachelnHTML(opts, { modus: 'still', hidden: reading })}`;
+      ${kachelnHTML(opts, { modus: 'still', hidden: reading, ohneBuchstabe: true })}`;
+  }
+
+  /* Das n-Eck der Antworten: ein Dreieck je Kind, gefüllt, sobald es
+     geantwortet hat. Bei einem oder zwei Kindern ein Quadrat (eins:
+     ganz, zwei: zwei Hälften über die Diagonale). */
+  function eckSVG(n) {
+    const pt = (x, y) => x.toFixed(2) + ',' + y.toFixed(2);
+    let teile = [];
+    if (n <= 2) {
+      const a = [5, 5], b = [95, 5], c = [95, 95], d = [5, 95];
+      if (n <= 1) teile = [[a, b, c, d]];
+      else teile = [[a, b, c], [a, c, d]];
+    } else {
+      const ecken = [];
+      for (let i = 0; i < n; i++) {
+        const w = -Math.PI / 2 + i * 2 * Math.PI / n;
+        ecken.push([50 + 46 * Math.cos(w), 50 + 46 * Math.sin(w)]);
+      }
+      teile = ecken.map((e, i) => [[50, 50], e, ecken[(i + 1) % n]]);
+    }
+    const rand = n <= 2 ? [[5, 5], [95, 5], [95, 95], [5, 95]]
+      : teile.map(t => t[1]);
+    return '<svg viewBox="0 0 100 100" aria-hidden="true">'
+      + teile.map(t => '<polygon class="ks-seg" points="' + t.map(p => pt(p[0], p[1])).join(' ') + '"/>').join('')
+      + '<polygon class="ks-eckrand" points="' + rand.map(p => pt(p[0], p[1])).join(' ') + '"/>'
+      + '</svg>';
+  }
+
+  function flickeEck(antw, n) {
+    const host = stage.querySelector('[data-ks=eck]');
+    if (!host) return;
+    if (Number(host.dataset.n) !== n || !host.firstChild) {
+      host.dataset.n = String(n);
+      host.innerHTML = eckSVG(n);
+    }
+    const segs = host.querySelectorAll('.ks-seg');
+    const voll = n ? Math.min(segs.length, Math.round(antw / n * segs.length)) : 0;
+    segs.forEach((g, i) => g.classList.toggle('is-voll', i < voll));
   }
 
   function beamAufloesung(v) {
@@ -668,7 +738,7 @@
         return `
           <${o.modus === 'wahl' ? 'button type="button"' : 'div'} class="${cls.join(' ')}" data-idx="${i}">
             ${o.modus === 'fuell' ? '<span class="ks-fuell" data-fuell="' + i + '"></span>' : ''}
-            <span class="ks-kk ${richtig ? 'ks-kk--richtig' : ''}">${richtig ? '✓' : LABELS[i]}</span>
+            ${o.ohneBuchstabe ? '' : '<span class="ks-kk ' + (richtig ? 'ks-kk--richtig' : '') + '">' + (richtig ? '✓' : LABELS[i]) + '</span>'}
             <span class="ks-kt">${esc(t)}</span>
             ${o.modus === 'fuell' ? '<span class="ks-kn" data-kn="' + i + '">0</span>' : ''}
             ${gewaehlt ? '<span class="ks-kmein">deine Wahl</span>' : ''}
@@ -681,6 +751,7 @@
     if (v.phase === 'question' && v.question && v.question.has_image) holeBild(v.question);
     if (els.total) els.total.textContent = String((v.players || []).length);
     if (els.count) els.count.textContent = String(v.answers_total || 0);
+    if (v.phase === 'question') flickeEck(v.answers_total || 0, (v.players || []).length);
 
     if (v.phase === 'lobby') {
       flickeWall(v.players || [], false);

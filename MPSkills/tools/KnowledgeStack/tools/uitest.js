@@ -671,9 +671,21 @@ async function bereichBeam() {
   const q = await starte('presenter', beamFrage());
   ok('Frage: der Fragetext steht groß da',
      txt(q.root.querySelector('.ks-q')) === FRAGE, txt(q.root.querySelector('.ks-q')));
-  ok('Frage: Nummer und Anzahl',
-     txt(q.root.querySelector('.ks-qnr')).replace(/\s/g, '') === 'Frage3/12',
-     txt(q.root.querySelector('.ks-qnr')));
+  ok('Frage: Fortschritt „3/12 Fragen"',
+     txt(q.root.querySelector('.ks-quad').parentElement).replace(/\s/g, '') === '3/12Fragen',
+     txt(q.root.querySelector('.ks-quad').parentElement));
+  ok('Frage: das Quadrat ist zu 3/12 gefüllt',
+     q.root.querySelector('.ks-quadf').getAttribute('style').includes('25.0%'));
+  ok('Frage: Reihenfolge Frage → Mitte → Antworten',
+     (() => { const k = Array.from(q.root.querySelector('.ks-stage').children).map(c => klassen(c)[0]);
+              return k.indexOf('ks-qbox') < k.indexOf('ks-mitte') && k.indexOf('ks-mitte') < k.indexOf('ks-kacheln'); })());
+  ok('Frage: keine Buchstaben A–D auf den Beamer-Kacheln', q.root.querySelectorAll('.ks-kk').length === 0);
+  ok('Frage: kein Neustart-Knopf, nur Beenden und Auflösen',
+     !q.root.querySelector('[data-act=restart]') && !!q.root.querySelector('[data-act=finish]'));
+  const segs = q.root.querySelectorAll('[data-ks=eck] .ks-seg');
+  ok('Frage: n-Eck mit einem Dreieck je Kind (4)', segs.length === 4, String(segs.length));
+  ok('Frage: 4 Antworten → 4 von 4 Dreiecken gefüllt',
+     q.root.querySelectorAll('[data-ks=eck] .ks-seg.is-voll').length === 4);
   ok('Frage: vier Kacheln', q.root.querySelectorAll('.ks-k').length === 4);
   ok('Frage: KEINE Zahlen auf den Kacheln (das wäre gespoilert)',
      q.root.querySelectorAll('.ks-kn').length === 0);
@@ -690,11 +702,11 @@ async function bereichBeam() {
   ok('Frage: wer geantwortet hat, leuchtet',
      q.root.querySelectorAll('.ks-karte.is-fertig').length === 0,
      'in der Frage-Phase gibt es keine Wand');
-  ok('Frage: Uhr und Balken', !!q.root.querySelector('[data-ks=clock]')
-     && !!q.root.querySelector('[data-ks=bar]'));
-  const breite = q.root.querySelector('[data-ks=bar]').style.width;
-  ok('Frage: der Balken steht auf einem Anteil, nicht auf 100 %',
-     /^\d/.test(breite) && parseFloat(breite) > 80 && parseFloat(breite) <= 100, breite);
+  ok('Frage: Uhrscheibe und Sekunden', !!q.root.querySelector('[data-ks=clock]')
+     && !!q.root.querySelector('[data-ks=uhr]'));
+  const pAnteil = String(q.root.querySelector('[data-ks=uhr]').style['--uhr-p']);
+  ok('Frage: die Scheibe ist erst ein wenig gefüllt (verstrichene Zeit)',
+     /^\d/.test(pAnteil) && parseFloat(pAnteil) >= 0 && parseFloat(pAnteil) < .2, pAnteil);
 
   /* ─── 5s Vorlese-Phase Beamer ───────────────────────────── */
   const beamRead = await starte('presenter', Object.assign(beamFrage(), {
@@ -705,8 +717,8 @@ async function bereichBeam() {
      beamRead.root.querySelector('[data-ks=reading]') && !beamRead.root.querySelector('[data-ks=reading]').hidden);
   ok('Vorlese-Phase Beamer: Kacheln sind noch ausgeblendet',
      beamRead.root.querySelector('.ks-kacheln')?.hidden === true);
-  ok('Vorlese-Phase Beamer: Zwischenstand ist noch ausgeblendet',
-     beamRead.root.querySelector('.ks-meta')?.hidden === true);
+  ok('Vorlese-Phase Beamer: Scheibe läuft in der Vorlesefarbe',
+     klassen(beamRead.root.querySelector('[data-ks=uhr]')).includes('ks-uhr--lesen'));
   ok('Vorlese-Phase Beamer: Countdown zeigt Vorlese-Sekunden',
      Number(txt(beamRead.root.querySelector('[data-ks=reading-count]'))) > 0);
 
@@ -1122,7 +1134,7 @@ async function bereichFoto() {
 
   // 3) Beenden & Neustart am Beamer
   ok('Frage: Beenden-Knopf da', !!o.root.querySelector('[data-act=finish]'));
-  ok('Frage: Neustart-Knopf da', !!o.root.querySelector('[data-act=restart]'));
+  ok('Frage: KEIN Neustart-Knopf (nur Beenden + Auflösen)', !o.root.querySelector('[data-act=restart]'));
   click(o.root.querySelector('[data-act=finish]'), o.doc); await wait(20);
   ok('Beenden ruft ks_finish', o.rufe.some(r => r.fn === 'ks_finish'));
   ok('Beenden ruft NICHT ks_step', !o.rufe.some(r => r.fn === 'ks_step'));

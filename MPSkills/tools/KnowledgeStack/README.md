@@ -72,11 +72,21 @@ sich wie in `reveal`.
 
 ## Abbrechen und neu starten
 
-Am Beamer stehen während der Frage und in der Auflösung rechts oben zwei
-kleine Knöpfe: **↺** startet dasselbe Quiz von vorn (alle Punkte auf 0,
-`ks_restart`), **⏹** beendet es sofort und springt zur Siegerehrung
-(`ks_finish`; die Punkte bis dahin zählen). In der Siegerehrung gibt es
-dazu „↺ Nochmal". Beides fragt vorher nach.
+Während der Frage steht rechts neben dem Foto **⏹ Beenden** (sofort zur
+Siegerehrung, `ks_finish`; die Punkte bis dahin zählen) unter „Jetzt
+auflösen". In der Auflösung stehen oben rechts **↺** (dasselbe Quiz von
+vorn, alle Punkte auf 0, `ks_restart`) und **⏹**; in der Siegerehrung
+„↺ Nochmal". Alles fragt vorher nach.
+
+## Die Frage am Beamer
+
+Von oben nach unten: **Frage · Mitte · Antworten** (≈ 30 % der Höhe, ohne
+A/B/C/D — die Farbe reicht, der Platz geht an die Schrift). In der Mitte
+das Foto, links davon drei Füllstände — Uhrscheibe mit Sekunden (die
+größte Zahl), Quadrat „5/12 Fragen", n-Eck „7/24 Antworten" (ein Dreieck
+je Kind, bei 1–2 Kindern ein Quadrat) — und rechts Beenden/Auflösen.
+Ohne Foto schrumpft die Mitte auf eine Zeile und Frage und Antworten
+bekommen den Platz.
 
 ## Fotos
 
