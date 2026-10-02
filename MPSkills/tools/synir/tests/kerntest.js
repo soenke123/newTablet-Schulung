@@ -2320,6 +2320,14 @@ section('Sek I und II · neue Szenarien');
     }
     const draussen = seite('Laptop 3', 'mpsflix.de');
     ok('Großes Netz: außerhalb des Internats geht mpsflix.de weiter', draussen && draussen.ok, draussen && draussen.grund);
+    // Im Raum schickt das cww alles mit 50.… hinaus — kein Weg zwischen den eigenen Netzen darf hindurch.
+    for (const [von, ziel] of [['Laptop 5', '50.0.6.20'], ['Laptop 5', '50.0.5.53'], ['Laptop 1', '50.0.6.20'], ['Laptop 1', '50.0.7.1']]) {
+      z.term.submit(by(von).id, 'traceroute ' + ziel);
+      z.engine.runUntil(z.engine.now + 30 * SEC);
+      const t = zeilen(z.term, by(von)).split('traceroute ' + ziel).pop();
+      ok('Großes Netz: der Weg von ' + von + ' nach ' + ziel + ' führt nicht durch das cww',
+         /← Ziel/.test(t) && !/50\.0\.11[01]\./.test(t), t.slice(0, 400));
+    }
     let tun = 'offen';
     z.dienste.vpn.verbinden(l5, {}, (f) => tun = f);
     z.engine.runUntil(z.engine.now + 40 * SEC);

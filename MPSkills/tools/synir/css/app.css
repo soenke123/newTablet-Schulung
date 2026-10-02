@@ -4270,7 +4270,12 @@ body.bilder-an .rail .add--geraet:not(.add--kachel) .add-bild { width: 36px; mar
 .dt-win > .term.term--in { flex: 1 1 auto; min-height: 0; }
 .term.term--in .term-o,
 body.trace-open .term.term--in .term-o { flex: 1 1 auto; height: auto; min-height: 0; }
-.term.term--in > :not(.term-o) { flex: none; }
+/* ⚠️ Die Ausgabe steckt in `.term-body` (wegen des Befehle-Menüs darüber).
+   Stand hier `> :not(.term-o)`, galt `flex: none` für genau diesen Kasten:
+   er wuchs mit jeder Zeile, und die Eingabezeile rutschte unten aus dem
+   Fenster. Der Kasten ist das, was schrumpft — die Ausgabe darin rollt. */
+.term.term--in > .term-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.term.term--in > :not(.term-body) { flex: none; }
 /* Niedriger Bildschirm (Tablet quer mit Tastatur, ≤ 520 px): das
    Fenster nimmt die ganze Höhe des Bildschirms, das Dock macht Platz.
    Es kommt mit der Tastatur wieder. */

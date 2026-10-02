@@ -1357,7 +1357,14 @@
        Anbieter (R6)     50.0.6.0     DHCP für die zwei Heimrouter
        Heimnetz 1        192.168.1.0  Heimrouter 1, Webseite mit Portfreigabe
        Heimnetz 2        192.168.2.0  Heimrouter 2
-       Internat (FW)     50.0.7.0     hinter dem Firewall-Router (an Router 1, 50.0.108.0)
+       Internat (FW)     50.0.7.0     hinter dem Firewall-Router (an Router 4, 50.0.108.0)
+
+     ⚠️ Kein kürzester Weg zwischen zwei Netzen mit Geräten darf durch
+     das cww führen. Im Raum hat das cww einen eigenen Bereich und
+     schickt alles mit 50.… hinaus ins Klassen-Internet — dort kommt es
+     nie an. Am Anfang hing der Firewall-Router an Router 1; der Weg
+     zum VPN-Server lief dann über das cww, und im Raum ging kein
+     Tunnel (auch nicht ohne Firewall). Deshalb hängt er an Router 4.
 
      ── Sicherheit (seit 2026-10-02) ──────────────────────────────
        · ZS „MPS-Zertifizierungsstelle" im Serverraum. Zertifikate
@@ -1520,14 +1527,14 @@
         ports: 3, rip: true, nics: [{}, { ip: grPraefix + '110.1' }, { ip: grPraefix + '111.1' }]
       }),
       // Sechs Router, Teilgitter
-      dev('n1', 'router', 'Router 1', 780, 420, { ports: 4, rip: true,
-        nics: [{ ip: grPraefix + '110.2' }, { ip: grPraefix + '101.1' }, { ip: grPraefix + '103.1' }, { ip: grPraefix + '108.1' }] }),
+      dev('n1', 'router', 'Router 1', 780, 420, { ports: 3, rip: true,
+        nics: [{ ip: grPraefix + '110.2' }, { ip: grPraefix + '101.1' }, { ip: grPraefix + '103.1' }] }),
       dev('n2', 'router', 'Router 2', 1200, 560, { ports: 3, rip: true,
         nics: [{ ip: grPraefix + '101.2' }, { ip: grPraefix + '102.1' }, { ip: grPraefix + '104.1' }] }),
       dev('n3', 'router', 'Router 3', 1620, 420, { ports: 3, rip: true,
         nics: [{ ip: grPraefix + '111.2' }, { ip: grPraefix + '102.2' }, { ip: grPraefix + '105.1' }] }),
-      dev('n4', 'router', 'Router 4', 780, 800, { ports: 3, rip: true,
-        nics: [{ ip: grPraefix + '103.2' }, { ip: grPraefix + '106.1' }, { ip: grPraefix + '4.1' }] }),
+      dev('n4', 'router', 'Router 4', 780, 800, { ports: 4, rip: true,
+        nics: [{ ip: grPraefix + '103.2' }, { ip: grPraefix + '106.1' }, { ip: grPraefix + '4.1' }, { ip: grPraefix + '108.1' }] }),
       dev('n5', 'router', 'Router 5', 1200, 880, { ports: 4, rip: true,
         nics: [{ ip: grPraefix + '104.2' }, { ip: grPraefix + '106.2' }, { ip: grPraefix + '107.1' }, { ip: grPraefix + '5.1' }] }),
       dev('n6', 'router', 'Router 6', 1620, 800, { ports: 3, rip: true,
@@ -1719,7 +1726,7 @@
       cab('n6', 2, 'n20', 0), cab('n20', 1, 'n22', 0), cab('n20', 2, 'n21', 0), cab('n20', 3, 'n26', 0),
       cab('n15', 5, 'n30', 0), cab('n15', 6, 'n31', 0), cab('n20', 4, 'n32', 0),
       // Internat hinter dem Firewall-Router
-      cab('n1', 3, 'n33', 0), cab('n33', 1, 'n34', 0), cab('n34', 1, 'n35', 0),
+      cab('n4', 3, 'n33', 0), cab('n33', 1, 'n34', 0), cab('n34', 1, 'n35', 0),
       // Heimnetze (WAN = Buchse 0, LAN ab 1)
       cab('n21', 1, 'n23', 0), cab('n21', 2, 'n24', 0),
       cab('n26', 1, 'n27', 0)
@@ -1729,7 +1736,7 @@
   const grListen =
     '<p><strong>Was hier alles läuft</strong></p><ul>'
     + '<li><strong>6 Router</strong> im Teilgitter mit automatischem Routing (RIP); das <strong>cww</strong> hängt an Router 1 und Router 3. '
-    + 'Dazu der <strong>Firewall-Router</strong> vor dem <em>Internat</em> (an Router 1).</li>'
+    + 'Dazu der <strong>Firewall-Router</strong> vor dem <em>Internat</em> (an Router 4).</li>'
     + '<li><strong>2 Heimrouter</strong> mit NAT und WLAN, per DHCP vom Anbieter versorgt. Heimrouter 1 bekommt immer <code>50.0.6.10</code> (feste Zuweisung).</li>'
     + '<li><strong>DHCP</strong> im Büro (Bereich .100 bis .150, Laptop 1 hat eine Reservierung auf <code>50.0.4.50</code>), beim Anbieter und in beiden Heimnetzen. Statisch: der Lehrer-PC, alle Server.</li>'
     + '<li><strong>2 Webseiten</strong> mit festen Adressen und verschiedenem Aussehen: das Schulportal im Serverraum und die Heimseite von Familie Beispiel hinter Heimrouter 1 (Portfreigabe Port 80 auf <code>192.168.1.20</code>).</li>'
@@ -1784,7 +1791,7 @@
         { begriff: 'Adressplan', text: 'Alle öffentlichen Adressen beginnen mit <code>50.0.</code>:', liste: [
           'Verbindungen zwischen den Routern: <code>50.0.101.0</code> bis <code>50.0.107.0</code>; cww – Router: <code>50.0.110.0</code> und <code>50.0.111.0</code>',
           'Büro (Router 4): <code>50.0.4.0</code> · Serverraum (Router 5): <code>50.0.5.0</code> · Anbieter (Router 6): <code>50.0.6.0</code>',
-          'Internat (Firewall-Router): <code>50.0.7.0</code>, angebunden an Router 1 über <code>50.0.108.0</code>',
+          'Internat (Firewall-Router): <code>50.0.7.0</code>, angebunden an Router 4 über <code>50.0.108.0</code>',
           'Heimnetze: <code>192.168.1.0</code> (Heimrouter 1) und <code>192.168.2.0</code> (Heimrouter 2)'
         ] },
         { begriff: 'Auf dein cww umstellen', text: 'Im Raum hat dein cww einen eigenen Bereich (Fenster des cww, Reiter <em>Internet</em>). Ersetze in diesem Netz die erste Zahl <code>50</code> '

@@ -30,6 +30,17 @@ Cache-Stempel `20261002k` (`index.html`, `tool.js`, `MPSkills/lib/tool.js` und d
 * ⚠️ Der Name „Lauscher-Handy 5" trägt eine Zahl, damit das Kürzel H5 heißt — ohne Zahl zählt `kurzName` nach der
   Stelle in der Liste und ergab ein zweites „H2". (Der Lehrer-PC heißt aus demselben Grund „E1" wie Laptop 1 — älter, nicht angefasst.)
 * Prüfstände: `kerntest` 1254 grün, `fwuitest` 66 grün (`NODE_PATH=/opt/node-tools/node_modules`), `hilfetest` 90 grün.
+* **Nachtrag (gleicher Tag), zwei Fehler vom Nutzer gemeldet:**
+  * ⚠️ **VPN aus dem Internat ging nicht — auch ohne Firewall.** Der Firewall-Router hing an Router 1; RIP wählte
+    zum Anbieter-Netz den (gleich langen) Weg **durch das cww**. Im Raum hat das cww einen eigenen Bereich und
+    schickt alles mit `50.…` ins Klassen-Internet — dort kommt es nie an. Ohne Raum fiel es nicht auf. Jetzt hängt
+    der Firewall-Router an **Router 4** (`50.0.108.1`); kerntest prüft per `traceroute`, dass kein Weg zwischen den
+    eigenen Netzen über `50.0.110.x`/`50.0.111.x` läuft. **Regel für dieses Szenario:** neue Teile nie so anhängen,
+    dass ein kürzester Weg durch das cww führt.
+  * **Terminal im Gerätefenster:** die Eingabezeile rutschte nach vielen Befehlen unten heraus. `.term-o` steckt in
+    `.term-body`; die Regel `.term--in > :not(.term-o) { flex: none }` traf genau diesen Kasten, und er wuchs
+    unbegrenzt. Jetzt ist `.term-body` der schrumpfende Flex-Teil (`css/app.css`, Abschnitt „Das Terminal im
+    Gerätebildschirm passt sich der Höhe an"). Im Browser geprüft (1600×1000 und 1000×480). Cache-Stempel `20261002l`.
 
 ## 0011 · Hilfe für Lehrkräfte (2026-10-02)
 
