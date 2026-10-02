@@ -4497,7 +4497,27 @@ body.hgriff-drag .wlt, body.hgriff-drag .trace { transition: none; }
   font-size: 10.5px; font-weight: 700; letter-spacing: .02em; vertical-align: 1px;
   color: #04323b; background: var(--vpn);
 }
-.nf-ring { fill: none; stroke: var(--vpn); stroke-width: 2.4; }
+/* Das Paket im Tunnel: ein dicker Ring mit Hof und ein geschlossenes
+   Schloss — auf dem Beamer aus der letzten Reihe zu sehen. (Hieß früher
+   .nf-ring und überschrieb damit die Farbe der Subnetzringe.) */
+.nf-tunnel     { fill: none; stroke: var(--vpn); stroke-width: 4.5; }
+.nf-tunnel-hof { fill: var(--vpn); fill-opacity: .22; stroke: none; }
+/* Das Schloss: Körper gefüllt, Bügel als Strich. Offen = hinter dem
+   VPN-Server, das Paket ist ausgepackt. */
+.nf-schloss-koerper { fill: var(--vpn); stroke: var(--surface); stroke-width: 1.2; }
+.nf-schloss-buegel  { fill: none; stroke: var(--vpn); stroke-width: 2.2; stroke-linecap: round; }
+.nf-schloss.is-offen .nf-schloss-koerper { fill: var(--surface); stroke: var(--vpn); stroke-width: 1.8; }
+/* Hinter dem VPN-Server: kein Ring mehr, aber ein Schweif in der
+   Tunnelfarbe — dieselbe Nachricht, jetzt offen auf dem Weg zum Ziel. */
+.nf-vpn-schweif { stroke: var(--vpn); stroke-width: 6; stroke-linecap: round; opacity: .6; }
+/* Die Kabel: der Tunnel ein dickes Rohr, der Weg dahinter gepunktet. */
+.nf-cable.is-busy.is-tunnel .nf-cable-line {
+  stroke: var(--vpn); stroke-width: 9;
+  filter: drop-shadow(0 0 6px var(--vpn));
+}
+.nf-cable.is-busy.is-ausgang:not(.is-tunnel) .nf-cable-line {
+  stroke: var(--vpn); stroke-width: 5; stroke-dasharray: 1 9;
+}
 .vs-neu { display: flex; gap: 6px; margin: 6px 0; }
 .vs-neu .f { flex: 1; min-width: 0; }
 .ml-sp, .vc-sp { flex: 1; }

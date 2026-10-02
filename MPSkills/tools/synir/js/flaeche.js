@@ -360,6 +360,9 @@
     let drag = null;                    // laufendes Ziehen
     let dots = [];                      // fliegende Pakete
     const busy = new Map();             // Kabel-ID → wie viele Pakete gerade darauf
+    // Dasselbe für den VPN: welches Kabel trägt gerade den Tunnel,
+    // welches den Weg vom VPN-Server zum Ziel?
+    const vpnBusy = { tunnel: new Map(), ausgang: new Map() };
     /* Das Kabel, das gerade im Gerätefenster angefasst wird — wer
        bei „Netzwerkkarte 2" steht, soll draußen sehen, welches
        Kabel das ist. Nur EINS auf einmal: zwei hervorgehobene
@@ -593,6 +596,8 @@
       const g = el('g', {
         class: 'nf-cable' + (c.up ? '' : ' is-down')
           + (busy.get(c.id) ? ' is-busy' : '')
+          + (vpnBusy.tunnel.get(c.id) ? ' is-tunnel' : '')
+          + (vpnBusy.ausgang.get(c.id) ? ' is-ausgang' : '')
           + (c.id === betont ? ' is-betont' : '')
           + (c.id === selKabel ? ' is-sel' : '')
           + (malen ? ' is-sub' : '')
@@ -2038,9 +2043,9 @@
         dur: Math.max(ONE_FRAME, (c.delay / U.MS) / Math.max(engine.speed, 0.0001)),
         cable: c.id,
         cls: dotClass(e.frame),
-        ring: tunnelPaket(e.frame)
+        vpn: vpnArt(e.frame)
       });
-      setBusy(c.id, +1);
+      setBusy(c.id, +1, dots[dots.length - 1].vpn);
     });
 
     /* ─── Welches Kabel überträgt gerade? ─────────────────────
@@ -2049,21 +2054,42 @@
        Kabel aber sofort. Gezählt statt geschaltet, weil über ein
        Kabel zwei Rahmen gleichzeitig laufen können (Anfrage hin,
        Antwort schon zurück). */
-    function setBusy(id, d) {
+    function setBusy(id, d, vpn) {
       const n = (busy.get(id) || 0) + d;
       if (n > 0) busy.set(id, n); else busy.delete(id);
       const g = gCables.querySelector('[data-cable="' + id + '"]');
       if (g) g.classList.toggle('is-busy', n > 0);
+      if (vpn) {
+        const m = vpnBusy[vpn];
+        const k = (m.get(id) || 0) + d;
+        if (k > 0) m.set(id, k); else m.delete(id);
+        if (g) g.classList.toggle(vpn === 'tunnel' ? 'is-tunnel' : 'is-ausgang', k > 0);
+      }
+    }
+    /* Ein Paket des VPN-Tunnels (TCP von oder zu Port 1194) ist
+       'tunnel': dicker Ring und ein geschlossenes Schloss — außen sieht
+       man nur, DASS etwas durch den Tunnel geht. Der Weg dahinter, vom
+       VPN-Server zum Ziel und zurück, ist 'ausgang': kein Ring, ein
+       OFFENES Schloss und ein Schweif in derselben Farbe. Beides zusammen
+       ist die Lehre: bis zum Server verpackt, ab dem Server wieder offen
+       — und es geht danach noch weiter. Siehe Vpn.art. */
+    function vpnArt(f) {
+      return window.Vpn && window.Vpn.art ? window.Vpn.art(netz, f) : null;
     }
 
-    /* Ein Paket des VPN-Tunnels (TCP von oder zu Port 1194) trägt einen
-       Ring: außen sieht man nur, DASS etwas durch den Tunnel geht — der
-       Ring ist dasselbe Zeichen wie die Pille „VPN aktiv". */
-    function tunnelPaket(f) {
-      const p = f && f.type === 'ip' ? f.payload : null;
-      if (!p || p.proto !== 'tcp' || !window.Vpn) return false;
-      const s = p.payload || {};
-      return s.sport === window.Vpn.PORT || s.dport === window.Vpn.PORT;
+    /* Ein kleines Schloss, oben rechts am Paket. `offen` hebt den Bügel
+       an — das Zeichen für „ausgepackt". */
+    function schlossZeichen(x, y, offen, opacity) {
+      const g = el('g', {
+        class: 'nf-schloss' + (offen ? ' is-offen' : ''),
+        transform: 'translate(' + x + ' ' + y + ') scale(1.35)'
+      }, gDots);
+      el('path', {
+        class: 'nf-schloss-buegel',
+        d: offen ? 'M -3.5 -1 V -6 a 3.5 3.5 0 0 1 7 0 V -5' : 'M -3.5 -1 V -4.5 a 3.5 3.5 0 0 1 7 0 V -1'
+      }, g);
+      el('rect', { class: 'nf-schloss-koerper', x: -5.5, y: -1.5, width: 11, height: 8.5, rx: 1.8 }, g);
+      g.setAttribute('opacity', opacity);
     }
 
     function dotClass(f) {
@@ -2114,25 +2140,33 @@
       const keep = [];
       for (const d of dots) {
         const k = (now - d.born) / d.dur;
-        if (k >= 1) { setBusy(d.cable, -1); continue; }
+        if (k >= 1) { setBusy(d.cable, -1, d.vpn); continue; }
         keep.push(d);
-        const c = el('circle', {
-          class: d.cls, r: 7,
-          cx: d.x0 + (d.x1 - d.x0) * k,
-          cy: d.y0 + (d.y1 - d.y0) * k
-        }, gDots);
+        const x = d.x0 + (d.x1 - d.x0) * k;
+        const y = d.y0 + (d.y1 - d.y0) * k;
         // Am Anfang und Ende leicht ausblenden — sonst springt
         // der Punkt aus dem Gerät heraus und wieder hinein.
         const dunkel = String(Math.min(1, Math.min(k, 1 - k) * 6 + 0.25));
-        c.setAttribute('opacity', dunkel);
-        if (d.ring) {
-          const r = el('circle', {
-            class: 'nf-ring', r: 11,
-            cx: d.x0 + (d.x1 - d.x0) * k,
-            cy: d.y0 + (d.y1 - d.y0) * k
+        if (d.vpn === 'ausgang') {
+          // Der Schweif: ein Stück des Weges hinter dem Paket.
+          const z = Math.max(0, k - 0.22);
+          const s = el('line', {
+            class: 'nf-vpn-schweif',
+            x1: d.x0 + (d.x1 - d.x0) * z, y1: d.y0 + (d.y1 - d.y0) * z, x2: x, y2: y
           }, gDots);
+          s.setAttribute('opacity', dunkel);
+        }
+        if (d.vpn === 'tunnel') {
+          const h = el('circle', { class: 'nf-tunnel-hof', r: 17, cx: x, cy: y }, gDots);
+          h.setAttribute('opacity', dunkel);
+        }
+        const c = el('circle', { class: d.cls, r: 7, cx: x, cy: y }, gDots);
+        c.setAttribute('opacity', dunkel);
+        if (d.vpn === 'tunnel') {
+          const r = el('circle', { class: 'nf-tunnel', r: 12.5, cx: x, cy: y }, gDots);
           r.setAttribute('opacity', dunkel);
         }
+        if (d.vpn) schlossZeichen(x + 15, y - 16, d.vpn === 'ausgang', dunkel);
       }
       dots = keep;
     }
@@ -2259,6 +2293,10 @@
       clearDots() {
         dots = []; gDots.textContent = '';
         for (const id of [...busy.keys()]) setBusy(id, -busy.get(id));
+        for (const art of ['tunnel', 'ausgang']) {
+          vpnBusy[art].clear();
+          gCables.querySelectorAll('.is-' + art).forEach(g => g.classList.remove('is-' + art));
+        }
       },
       problemOf,
       /* Ein neues Gerät möglichst frei ablegen: der Platz, an dem
