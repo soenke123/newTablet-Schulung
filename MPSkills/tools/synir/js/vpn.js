@@ -388,38 +388,5 @@
     };
   }
 
-  /* Für die Fläche: gehört ein Rahmen auf dem Kabel zum VPN?
-     'tunnel'  — außen: TLS zu oder von Port 1194, verschlüsselt.
-     'ausgang' — der zweite Teil des Weges: ein VPN-Server hat das
-                 Paket ausgepackt und schickt es mit SEINER Adresse
-                 weiter zum Ziel (oder die Antwort kommt von dort
-                 zurück). Erkannt an der Zeile der Übersetzung: Absender
-                 bzw. Ziel ist der Server, und der Port ist einer, den er
-                 für einen Teilnehmer vergeben hat. Ohne diese Marke sähe
-                 der Weg Server → Ziel aus wie jeder andere Verkehr, und
-                 genau der Teil, in dem das Paket wieder offen ist, ginge
-                 auf der Fläche unter. */
-  function art(netz, frame) {
-    const pkt = frame && frame.type === 'ip' ? frame.payload : null;
-    if (!pkt) return null;
-    const p = pkt.payload || {};
-    if (pkt.proto === 'tcp' && (p.sport === PORT || p.dport === PORT)) return 'tunnel';
-    for (const n of netz.list()) {
-      const s = n.state && n.state.vpnSrv;
-      if (!s || !s.zur.size) continue;
-      const ips = n.nics.map(k => k.ip).filter(Boolean);
-      let port = null;
-      if (ips.indexOf(pkt.src) >= 0) {
-        if (pkt.proto === 'tcp' || pkt.proto === 'udp') port = p.sport;
-        else if (pkt.proto === 'icmp' && p.type === 8) port = p.id;
-      } else if (ips.indexOf(pkt.dst) >= 0) {
-        if (pkt.proto === 'tcp' || pkt.proto === 'udp') port = p.dport;
-        else if (pkt.proto === 'icmp' && p.type === 0) port = p.id;
-      }
-      if (port != null && s.zur.has(pkt.proto + '|' + port)) return 'ausgang';
-    }
-    return null;
-  }
-
-  window.Vpn = { erzeugen: erzeugen, PORT: PORT, SERVER_TUNNEL: SERVER_TUNNEL, art: art };
+  window.Vpn = { erzeugen: erzeugen, PORT: PORT, SERVER_TUNNEL: SERVER_TUNNEL };
 })();

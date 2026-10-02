@@ -701,10 +701,9 @@
           '<b>Client:</b> aufspielen, Server, Benutzer und Passwort eintragen, <em>Verbinden</em>.'
         ],
         wissen: [
-          'Verbunden: hinter dem Gerätenamen steht <em>◯ VPN aktiv</em>. Auf der Fläche ist der Tunnel ein dickes türkises Rohr, '
-            + 'seine Pakete tragen einen Ring und ein <b>geschlossenes Schloss</b>.',
-          'Am VPN-Server ist der Tunnel zu Ende, der Weg aber nicht: von dort geht das Paket <b>ausgepackt</b> weiter zum Ziel — '
-            + 'gepunktetes Kabel, <b>offenes Schloss</b>. Unverschlüsselt, außer die Seite hat selbst HTTPS.',
+          'Verbunden: hinter dem Gerätenamen steht <em>◯ VPN aktiv</em>. Tunnelpakete tragen einen Ring und ein <b>Schloss</b>.',
+          'Am VPN-Server ist der Tunnel zu Ende, der Weg aber nicht: von dort geht das Paket als ganz normales Paket weiter zum Ziel '
+            + '— unverschlüsselt, außer die Seite hat selbst HTTPS.',
           'Alles geht durch den Tunnel, auch DNS. Der Client bekommt eine Tunneladresse (10.8.0.x).',
           'Im Mitschnitt des <b>VPN-Servers</b> stehen die inneren Pakete im Klartext — das Vertrauen wandert dorthin.'
         ],

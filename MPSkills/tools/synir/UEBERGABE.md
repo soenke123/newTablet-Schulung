@@ -6,24 +6,17 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
-## 0014 · VPN: der Weg hinter dem Server und ein deutlicher Tunnel (2026-10-02)
+## 0014 · VPN: deutlicher Tunnelring (2026-10-02)
 
-Berührt: `js/vpn.js` (neu: `Vpn.art(netz, frame)` → `'tunnel'` | `'ausgang'` | `null`), `js/flaeche.js` (Pakete und
-Kabel), `css/app.css` (`.nf-tunnel`, `.nf-tunnel-hof`, `.nf-schloss…`, `.nf-vpn-schweif`, Kabel `is-tunnel` /
-`is-ausgang`), `js/hilfe-inhalt.js` (VPN-Wissen), `tests/kerntest.js` (1267 grün, 5 neue unter „Großes Netz"),
-Cache-Stempel `20261002n`.
+Berührt: `js/flaeche.js`, `css/app.css` (`.nf-tunnel`, `.nf-tunnel-hof`, `.nf-schloss…`), `js/hilfe-inhalt.js`,
+Cache-Stempel `20261002o`.
 
-* ⭐ **Vom Nutzer gemeldet:** „Man sieht die VPN-Pakete zwischen Client und Server, aber nicht, was zwischen Server und
-  Zieladresse passiert." Simuliert war der Weg schon immer (VPN-Server → … → MPSflix, mit der Adresse des Servers als
-  Absender) — er sah aber aus wie jeder andere TCP-Verkehr und ging auf der Fläche unter.
-* Jetzt: **Tunnel** = dickes türkises Kabel mit Leuchten, Paket mit dickem Ring, Hof und **geschlossenem Schloss**.
-  **Ausgang** (VPN-Server ↔ Ziel, auch die DNS-Frage des Servers) = gepunktetes türkises Kabel, Paket mit Schweif und
-  **offenem Schloss**. Erkannt wird der Ausgang an der Übersetzungstabelle des Servers (`vpnSrv.zur`): Absender bzw.
-  Ziel ist der Server und der Port ist einer, den er für einen Teilnehmer vergeben hat.
-* Nebenbei behoben: der Tunnelring hieß `.nf-ring` — wie die Subnetzringe. Die VPN-Regel stand weiter hinten in
-  `app.css` und färbte damit **alle Subnetzringe türkis**. Der Tunnelring heißt jetzt `.nf-tunnel`.
-* Wo Tunnel und Ausgang dasselbe Kabel benutzen (im großen Netz Router 6 ↔ Router 5), gewinnt am Kabel das Rohr; die
-  Pakete behalten ihr eigenes Zeichen.
+* Tunnelpakete (Port 1194) tragen jetzt einen dicken Ring mit Hof und ein **Schloss** — vorher war der Ring zu dünn.
+* ⚠️ **Bewusst NICHT:** besondere Kabel für den Tunnel und eine Sondermarke für den Weg VPN-Server → Ziel. Beides war
+  kurz drin und wurde vom Nutzer wieder herausgenommen: „Das Kabel muss nicht extra fancy aussehen, das Schloss reicht.
+  Die Nachricht vom Server zum Ziel muss ganz normal aussehen." Ab dem VPN-Server ist das Paket ein normales Paket.
+* Nebenbei behoben: der Tunnelring hieß `.nf-ring` — wie die Subnetzringe —, und die VPN-Regel weiter hinten in
+  `app.css` färbte damit **alle Subnetzringe türkis**. Er heißt jetzt `.nf-tunnel`.
 
 ## 0013 · Das cww folgt seiner Tabelle (2026-10-02)
 

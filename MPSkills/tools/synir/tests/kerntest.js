@@ -2336,29 +2336,6 @@ section('Sek I und II · neue Szenarien');
       const r = seite('Laptop 5', url);
       ok('⭐ Großes Netz: durch den Tunnel geht ' + url + ' trotz Firewall', r && r.ok, r && JSON.stringify(r.grund));
     }
-    // Die Fläche markiert beide Teile des Weges: den Tunnel und den Weg VPN-Server → Ziel.
-    const arten = new Map(), alle = new Set();
-    const kabelArt = (e) => {
-      if (e.kind !== 'wire' || e.dir !== 'out') return;
-      const a = sandbox.Vpn.art(z.netz, e.frame);
-      if (!a) return;
-      const c = z.netz.getCable(e.cable);
-      const ziel = z.netz.get(c.a.node === e.node ? c.b.node : c.a.node).name;
-      arten.set(z.netz.get(e.node).name + '→' + ziel, a);
-      alle.add(z.netz.get(e.node).name + '→' + ziel + '|' + a);
-    };
-    z.engine.on('event', kabelArt);
-    seite('Laptop 5', 'mpsflix.de');
-    ok('⭐ Fläche: Laptop 5 → Switch 4 ist Tunnel', arten.get('Laptop 5→Switch 4') === 'tunnel', JSON.stringify([...arten]));
-    ok('⭐ Fläche: am VPN-Server beginnt der zweite Teil des Weges (ausgepackt)', alle.has('VPN-Server→Switch 3|ausgang')
-       && alle.has('VPN-Server→Switch 3|tunnel'), JSON.stringify([...alle]));
-    ok('⭐ Fläche: Switch 2 → MPSflix und zurück sind „ausgang" (vom VPN-Server zum Ziel)',
-       arten.get('Switch 2→MPSflix') === 'ausgang' && arten.get('MPSflix→Switch 2') === 'ausgang', JSON.stringify([...arten]));
-    ok('⭐ Fläche: auch die Namensfrage des VPN-Servers ist „ausgang"', arten.get('Switch 2→DNS-Server') === 'ausgang');
-    const vorher = arten.size;
-    arten.clear();
-    seite('Laptop 3', 'mpsflix.de');
-    ok('Fläche: Verkehr ohne VPN trägt keine Marke', arten.size === 0 && vorher > 0, JSON.stringify([...arten]));
   }
 
   // ⭐ Das cww folgt seiner Tabelle, auch wenn die Netze innen nicht in seinem /8 liegen (Raum: Bereich 67).
