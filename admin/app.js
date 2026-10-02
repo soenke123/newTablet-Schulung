@@ -1116,7 +1116,7 @@ function aggregateDashboard(d) {
     const wc     = walletByUser.get(p.id) || 0;
     const shop   = shopByUser.get(p.id) || {};
     const banked = Number(shop.bankedCoins) || 0;
-    const spent  = Number(shop.spentCoins)  || 0;
+    const spent  = Math.max(0, (Number(shop.spentCoins) || 0) - (Number(shop.refundedCoins) || 0));
     totalCoins    += Math.max(0, wc + banked - spent);
     totalKristalle += Number(shop.kristalle) || 0;
   }
@@ -1431,7 +1431,7 @@ async function loadProgressData() {
     // In userCache mergen.
     // Verfügbare Coins = wallets.coins (Summe der game_state.coins)
     //                  + bankedCoins (aus geschlüpften Nestern eingezahlt)
-    //                  − spentCoins  (im Shop ausgegeben).
+    //                  − (spentCoins − refundedCoins)  (im Shop netto ausgegeben).
     // wallets.coins allein zeigt nur "je verdient" ohne Ausgaben — falsch für die Balance.
     for (const u of userCache) {
       const w  = wByUser[u.id];
@@ -1439,7 +1439,7 @@ async function loadProgressData() {
       const sc = scByUser[u.id] || {};
       const walletCoins = w?.coins ?? 0;
       const banked      = Number(sc.bankedCoins) || 0;
-      const spent       = Number(sc.spentCoins)  || 0;
+      const spent       = Math.max(0, (Number(sc.spentCoins) || 0) - (Number(sc.refundedCoins) || 0));
       const available   = Math.max(0, walletCoins + banked - spent);
       u._progress = {
         coins:        available,

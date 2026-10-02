@@ -1839,6 +1839,12 @@ function showLevelUpBanner(isFinal) {
 /* ─── Shop-Hilfsfunktionen (in allen Spielen verfügbar) ─── */
 const SHOP_KEY = 'lernwelt_shop_v1';
 
+/* Netto-Ausgaben: spentCoins abzüglich erstatteter Coins (Migration 0184).
+   Überall statt shopData.spentCoins verwenden, wenn ein Guthaben berechnet wird. */
+function getSpentCoinsNet(sd) {
+  return Math.max(0, (sd?.spentCoins ?? 0) - (sd?.refundedCoins ?? 0));
+}
+
 function loadShopData() {
   try {
     const d = loadStorage(SHOP_KEY);
@@ -1846,6 +1852,12 @@ function loadShopData() {
     const toCount = (val, countField) => countField !== undefined ? countField : (val ? 1 : 0);
     return {
       spentCoins:            d.spentCoins            ?? 0,
+      // Migration 0184: Rückerstattungen (Ei abbrechen, Keks fehlgeschlagen).
+      // spentCoins kann serverseitig nur wachsen (max-Merge) — ein lokales
+      // Zurückrollen wird beim nächsten Sync verworfen, vorher aber schon
+      // wieder ausgegeben. Deshalb wächst auch die Erstattung nur:
+      // verfügbar = Einnahmen − (spentCoins − refundedCoins).
+      refundedCoins:         d.refundedCoins         ?? 0,
       purchased:             d.purchased             ?? [],
       wachstumstrank:        d.wachstumstrank        ?? false,
       wachstumstrankCount:   d.wachstumstrankCount   ?? 0,
@@ -1911,7 +1923,7 @@ function loadShopData() {
       avatarUnlocks:         d.avatarUnlocks         ?? {},
     };
   } catch(e) {
-    return { spentCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], releasedNestIds: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {}, unlockedThemes: [], activeTheme: null, avatarUnlocks: {} };
+    return { spentCoins: 0, refundedCoins: 0, purchased: [], wachstumstrank: false, wachstumstrankCount: 0, wachstumstrankSpent: 0, wachstumsBooster: false, wachstumsBoosterCount: 0, wachstumsBoosterSpent: 0, coinsx3: false, coinsx3Count: 0, coinsx3Spent: 0, glucksklee: false, gluckskleeCount: 0, gluckskleeSpent: 0, lockmittel: false, lockmittelCount: 0, lockmittelSpent: 0, resetKarteCount: 0, resetKarteSpent: 0, freundschaftskeksCount: 0, freundschaftskeksSpent: 0, nests: [], releasedNestIds: [], pendingEggNestId: null, seenCreatures: {}, hackUnlocked: false, atariNumber: null, atariSolved: false, atariThemeShown: false, pfauEggGranted: false, bankedCoins: 0, kristalle: 0, spentKristalle: 0, lootboxDailyClaimed: {}, pendingBackup: null, sealedEggs: [], openedSealTypes: [], sealProgress: {}, unlockedThemes: [], activeTheme: null, avatarUnlocks: {} };
   }
 }
 
@@ -1960,7 +1972,7 @@ function renderCoinBank(containerId, coinsGained) {
   if (!el) return;
   el.innerHTML = '';
 
-  const spent      = loadShopData().spentCoins || 0;
+  const spent      = getSpentCoinsNet(loadShopData());
   const totalAfter = getTotalCoinsGlobal() - spent;
   const gained     = coinsGained || 0;
   const coinsBefore = Math.max(0, totalAfter - gained);
