@@ -44,6 +44,7 @@ const TOOL = path.join(DIR, 'tool.js');
 const CSS  = path.join(DIR, 'creatures.css');
 const CRE  = path.join(DIR, 'creatures.js');
 const ED   = path.join(DIR, 'editor.js');
+const PARSE = path.join(DIR, 'parse.js');
 
 let fails = 0;
 const ok = (label, cond, extra = '') => {
@@ -127,6 +128,7 @@ function makeEnv(hoehe = 700) {
   // Unterschied: die Wesen-Nummern 0…35 und ihre Namen kommen von
   // dort, und genau daran hängen die Emote-Klassen.
   vm.runInContext(fs.readFileSync(CRE, 'utf8'), sandbox, { filename: 'creatures.js' });
+  vm.runInContext(fs.readFileSync(PARSE, 'utf8'), sandbox, { filename: 'parse.js' });
   vm.runInContext(fs.readFileSync(ED, 'utf8'), sandbox, { filename: 'editor.js' });
   vm.runInContext(fs.readFileSync(TOOL, 'utf8'), sandbox, { filename: 'tool.js' });
 
@@ -1082,9 +1084,136 @@ async function bereichEditor() {
   ok('Editor geschlossen: zurück in der Beamer-Lobby', !!lob.root.querySelector('.ks-wall'));
 }
 
+/* ══════════════════════════════════════════════════════════
+   FOTO & STEUERUNG (Migration 0186)
+   ══════════════════════════════════════════════════════════ */
+async function bereichFoto() {
+  console.log('\n── Foto & Steuerung ────────────────────────────────\n');
+  const BILD = 'data:image/jpeg;base64,AAAA';
+
+  // 1) Beamer: Frage mit Foto → Foto wird über ks_room_image geholt
+  const mitBild = Object.assign(beamFrage(), {});
+  mitBild.question = Object.assign({}, mitBild.question, { qid: 'q-7', has_image: true });
+  const b = await starte('presenter', mitBild,
+    { antworten: { ks_room_image: { ok: true, qid: 'q-7', image: BILD } } });
+  await wait(30);
+  const bildBox = b.root.querySelector('[data-ks=bild]');
+  ok('Beamer: Fotokasten bei Frage mit Foto', !!bildBox);
+  ok('Beamer: Foto über ks_room_image geholt', b.rufe.some(r => r.fn === 'ks_room_image'));
+  ok('Beamer: Foto steht im Kasten', !!(bildBox && bildBox.querySelector('img')
+     && bildBox.querySelector('img').getAttribute('src') === BILD));
+  ok('Beamer: Bühne trägt ks-stage--mitbild', klassen(b.root.querySelector('.ks-stage')).includes('ks-stage--mitbild'));
+  const n1 = b.rufe.filter(r => r.fn === 'ks_room_image').length;
+  b.zustand.sig = 'b'; b.impl.update(); await wait(30);
+  ok('Beamer: Foto nur EINMAL je Frage geholt', b.rufe.filter(r => r.fn === 'ks_room_image').length === n1);
+
+  // ohne Foto: kein Kasten, kein Aufruf
+  const o = await starte('presenter', beamFrage());
+  ok('Beamer: ohne Foto kein Kasten', !o.root.querySelector('[data-ks=bild]'));
+  ok('Beamer: ohne Foto kein ks_room_image', !o.rufe.some(r => r.fn === 'ks_room_image'));
+
+  // 2) Tablet: niemals ein Foto
+  const tv = tabFrage();
+  tv.question = Object.assign({}, tv.question, { has_image: true, qid: 'q-7' });
+  const t = await starte('participant', tv);
+  ok('Tablet: kein Fotokasten', !t.root.querySelector('[data-ks=bild]') && !t.root.querySelector('img'));
+  ok('Tablet: kein ks_room_image', !t.rufe.some(r => r.fn === 'ks_room_image'));
+  ok('Tablet: keine Beenden/Neustart-Knöpfe', !t.root.querySelector('[data-act=finish],[data-act=restart]'));
+
+  // 3) Beenden & Neustart am Beamer
+  ok('Frage: Beenden-Knopf da', !!o.root.querySelector('[data-act=finish]'));
+  ok('Frage: Neustart-Knopf da', !!o.root.querySelector('[data-act=restart]'));
+  click(o.root.querySelector('[data-act=finish]'), o.doc); await wait(20);
+  ok('Beenden ruft ks_finish', o.rufe.some(r => r.fn === 'ks_finish'));
+  ok('Beenden ruft NICHT ks_step', !o.rufe.some(r => r.fn === 'ks_step'));
+
+  const a = await starte('presenter', beamAufl());
+  ok('Auflösung: Beenden-Knopf da', !!a.root.querySelector('[data-act=finish]'));
+  click(a.root.querySelector('[data-act=restart]'), a.doc); await wait(20);
+  ok('Neustart ruft ks_restart', a.rufe.some(r => r.fn === 'ks_restart'));
+
+  const e = await starte('presenter', beamEnde());
+  ok('Siegerehrung: Nochmal-Knopf da', !!e.root.querySelector('[data-act=restart]'));
+  ok('Siegerehrung: kein Beenden-Knopf', !e.root.querySelector('[data-act=finish]'));
+  ok('Siegerehrung: Zurück zur Lobby bleibt', !!e.root.querySelector('[data-act=reset]'));
+
+  // Abbrechen im Bestätigungsdialog: nichts passiert
+  const n = await starte('presenter', beamFrage());
+  n.ctx.confirm = () => Promise.resolve(false);
+  click(n.root.querySelector('[data-act=finish]'), n.doc); await wait(20);
+  ok('Beenden abgebrochen: kein Aufruf', !n.rufe.some(r => r.fn === 'ks_finish'));
+
+  // 4) Editor: Fotospalte, Name, Papierkorb, Speichern mit Foto
+  const ed = await starte('presenter', beamLobby(2), { antworten: {
+    ks_catalog_get: { ok: true, catalog_id: 'kat-2', title: 'Bruchrechnen', subject: 'Mathematik',
+      questions: [
+        { question_text: 'Mit Foto', options: ['a', 'b', 'c', 'd'], correct_idx: 0, correct_indices: [0],
+          time_limit_sec: 20, explanation: null, image: BILD, image_name: 'torte.jpg' },
+        { question_text: 'Ohne Foto', options: ['a', 'b', 'c', 'd'], correct_idx: 1, correct_indices: [1],
+          time_limit_sec: 20, explanation: null, image: null, image_name: null }
+      ] },
+    ks_catalog_save: { ok: true, catalog_id: 'kat-2', count: 2 }
+  } });
+  click(ed.root.querySelector('[data-act=editor]'), ed.doc); await wait(30);
+  click(ed.root.querySelector('[data-ed=edit][data-cat="kat-2"]'), ed.doc); await wait(30);
+  const z0 = ed.root.querySelector('[data-foto="0"]');
+  const z1 = ed.root.querySelector('[data-foto="1"]');
+  ok('Editor: Fotospalte an jeder Karte', !!z0 && !!z1);
+  ok('Editor: Foto da → Name sichtbar', txt(z0).includes('torte.jpg'));
+  ok('Editor: Foto da → Papierkorb', !!z0.querySelector('[data-ed=foto-del]'));
+  ok('Editor: kein Foto → Hochladen-Knopf', !!z1.querySelector('input[type=file][data-foto-file="1"]'));
+  ok('Editor: kein Foto → Hinweis aufs Ziehen', txt(z1).includes('ziehen'));
+
+  // Text tippen, dann Foto löschen: Getipptes bleibt
+  ed.root.querySelector('[data-qi="1"][data-field=question_text]').value = 'Neu getippt';
+  click(z0.querySelector('[data-ed=foto-del]'), ed.doc); await wait(20);
+  ok('Papierkorb: Fotospalte zeigt wieder Hochladen',
+     !!ed.root.querySelector('[data-foto="0"] input[type=file]'));
+  ok('Papierkorb: Getipptes bleibt stehen',
+     ed.root.querySelector('[data-qi="1"][data-field=question_text]').value === 'Neu getippt');
+
+  // Vorschau: leeres Feld zum Hochladen über den Kacheln
+  click(ed.root.querySelector('[data-ed=preview]'), ed.doc); await wait(30);
+  ok('Vorschau: Hochladefeld statt Foto (gelöscht)', !!ed.root.querySelector('.kse-pv-bildleer'));
+  click(ed.root.querySelector('[data-ed=back-edit]'), ed.doc); await wait(30);
+
+  click(ed.root.querySelector('[data-ed=save]'), ed.doc); await wait(30);
+  const save = ed.rufe.find(r => r.fn === 'ks_catalog_save');
+  ok('Speichern: Foto entfernt → image null', save && save.args.p_questions[0].image === null);
+
+  // Zweiter Durchgang: Foto bleibt beim Speichern erhalten, Vorschau zeigt es groß
+  const ed2 = await starte('presenter', beamLobby(2), { antworten: {
+    ks_catalog_get: { ok: true, catalog_id: 'kat-2', title: 'B', subject: 'Mathematik',
+      questions: [{ question_text: 'Mit Foto', options: ['a', 'b', 'c', 'd'], correct_idx: 0,
+        correct_indices: [0], time_limit_sec: 20, explanation: null, image: BILD, image_name: 'torte.jpg' }] },
+    ks_catalog_save: { ok: true, catalog_id: 'kat-2', count: 1 }
+  } });
+  click(ed2.root.querySelector('[data-act=editor]'), ed2.doc); await wait(30);
+  click(ed2.root.querySelector('[data-ed=edit][data-cat="kat-2"]'), ed2.doc); await wait(30);
+  click(ed2.root.querySelector('[data-ed=preview]'), ed2.doc); await wait(30);
+  const pv = ed2.root.querySelector('.kse-pv-bild');
+  ok('Vorschau: Foto groß über den Kacheln', !!pv && !!pv.querySelector('img'));
+  const reihen = Array.from(ed2.root.querySelector('.kse-wrap--preview').children).map(c => klassen(c)[0]);
+  ok('Vorschau: Reihenfolge Frage → Foto → Kacheln',
+     reihen.indexOf('kse-pv-qbox') < reihen.indexOf('kse-pv-bild')
+     && reihen.indexOf('kse-pv-bild') < reihen.indexOf('kse-pv-kacheln'), reihen.join(' '));
+  ok('Vorschau: Papierkorb am Foto', !!pv.querySelector('[data-ed=foto-del]'));
+  ok('Vorschau: Ersetzen-Knopf am Foto', !!pv.querySelector('input[type=file][data-foto-file=pv]'));
+  click(ed2.root.querySelector('[data-ed=back-edit]'), ed2.doc); await wait(30);
+  click(ed2.root.querySelector('[data-ed=save]'), ed2.doc); await wait(30);
+  const s2 = ed2.rufe.find(r => r.fn === 'ks_catalog_save');
+  ok('Speichern: Foto und Name gehen mit',
+     s2 && s2.args.p_questions[0].image === BILD && s2.args.p_questions[0].image_name === 'torte.jpg');
+
+  // Text-Import: keine Fotos
+  click(ed2.root.querySelector('[data-ed=imp-open-append]'), ed2.doc); await wait(30);
+  ok('Text-Import: kein Foto-Hochladen', !ed2.root.querySelector('input[type=file]'));
+}
+
 /* ══════════════════════════════════════════════════════════ */
 const BEREICHE = { emote: bereichEmote, tab: bereichTab, beam: bereichBeam,
-                   fluss: bereichFluss, editor: bereichEditor, theme: bereichTheme };
+                   fluss: bereichFluss, editor: bereichEditor, foto: bereichFoto,
+                   theme: bereichTheme };
 const wahl = process.argv[2];
 const lauf = wahl ? [wahl] : Object.keys(BEREICHE);
 

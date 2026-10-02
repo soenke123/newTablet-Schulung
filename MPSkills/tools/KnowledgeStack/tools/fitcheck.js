@@ -46,7 +46,7 @@ import { chromium } from 'playwright-core';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '../../../..');          // Repo-Wurzel
 const SHOTS = path.join(HERE, 'shots');
-const EXE = 'C:/Users/snke/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe';
+const EXE = process.env.CHROME || 'C:/Users/snke/AppData/Local/ms-playwright/chromium-1234/chrome-win64/chrome.exe';
 const MIT_BILDERN = process.argv.includes('--shots');
 
 let fails = 0;
@@ -127,6 +127,10 @@ window.__ctx = {
       if (fn === 'ks_sig' || fn === 'ks_room_sig') return Promise.resolve({ ok: true, sig: 'fest' });
       if (fn === 'ks_view' || fn === 'ks_room_get')
         return Promise.resolve(Object.assign({ ok: true }, window.__V));
+      if (fn === 'ks_room_image')
+        return Promise.resolve({ ok: true, qid: 'q-foto', image: 'data:image/svg+xml;utf8,'
+          + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000">'
+          + '<rect width="1600" height="1000" fill="#3b82f6"/><circle cx="800" cy="500" r="300" fill="#facc15"/></svg>') });
       return Promise.resolve({ ok: true });
     }
   }
@@ -232,6 +236,18 @@ const BILDER = {
       phase_ends_at: new Date(Date.now() + 14000).toISOString(),
       server_now: new Date().toISOString(), catalog_id: 'k1', catalogs: null,
       question: { text: FRAGE, options: OPTS, correct_idx: null, explanation: null, time_limit: 20 },
+      answers_dist: { 0: 4, 1: 9 }, answers_total: 13, leaderboard: [],
+      players: Array.from({ length: 28 }, (_, i) => spieler(i + 1, { answered: i < 13 }))
+    }),
+    /* Eine Frage MIT Foto (0186): das Foto steht zwischen Frage und
+       Kacheln und darf die Kacheln nicht unter das Fingermaß drücken
+       und nichts aus dem Rahmen schieben. */
+    foto: () => ({
+      phase: 'question', current_q_idx: 4, question_count: 12,
+      phase_ends_at: new Date(Date.now() + 14000).toISOString(),
+      server_now: new Date().toISOString(), catalog_id: 'k1', catalogs: null,
+      question: { qid: 'q-foto', has_image: true, text: FRAGE, options: OPTS,
+                  correct_idx: null, explanation: null, time_limit: 20 },
       answers_dist: { 0: 4, 1: 9 }, answers_total: 13, leaderboard: [],
       players: Array.from({ length: 28 }, (_, i) => spieler(i + 1, { answered: i < 13 }))
     }),

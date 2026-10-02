@@ -461,6 +461,50 @@
   line-clamp: 4;
 }
 
+/* Das Foto der Frage — nur am Beamer (das Tablet bekommt es gar
+   nicht, Migration 0186). Es teilt sich die Resthöhe mit den Kacheln:
+   drei Teile Foto, zwei Teile Antworten. In der Vorlesezeit sind die
+   Kacheln aus, dann hat das Foto alles. */
+.ks-bild {
+  flex: 3 1 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.ks-bild img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 3px solid var(--ks-kante);
+  box-shadow: 4px 4px 0 0 var(--ks-kante);
+  box-sizing: border-box;
+}
+.ks-stage--mitbild .ks-kacheln { flex: 2 1 0; }
+
+/* Neu starten · Beenden: klein, rechts außen im Kopf. */
+.ks-steuer { display: flex; gap: 6px; flex: 0 0 auto; }
+.ks-ctl {
+  font: inherit;
+  font-size: clamp(14px, calc(var(--ks-h) * .03), 20px);
+  font-weight: 800;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 .4em;
+  cursor: pointer;
+  background: var(--ks-erhoben);
+  color: var(--ks-ink);
+  border: 2px solid var(--ks-kante);
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 0 var(--ks-kante);
+  transition: transform .08s, box-shadow .08s;
+}
+.ks-ctl:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--ks-kante); }
+.ks-ctl:disabled { opacity: .45; cursor: not-allowed; }
+.ks-ctl--stop { background: var(--ks-rot); color: var(--ks-ink); }
+
 .ks-meta {
   flex: 0 0 auto;
   display: flex;
