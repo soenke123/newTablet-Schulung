@@ -70,6 +70,41 @@ und Rangliste stehen zusammen im Auflösungsbild. Im CHECK der Tabelle steht
 der Wert weiter (kein DROP), und ein Brett, das noch darin hängt, verhält
 sich wie in `reveal`.
 
+## Abbrechen und neu starten
+
+Während der Frage steht rechts neben dem Foto **⏹ Beenden** (sofort zur
+Siegerehrung, `ks_finish`; die Punkte bis dahin zählen) unter „Jetzt
+auflösen". In der Auflösung stehen oben rechts **↺** (dasselbe Quiz von
+vorn, alle Punkte auf 0, `ks_restart`) und **⏹**; in der Siegerehrung
+„↺ Nochmal". Alles fragt vorher nach.
+
+## Die Frage am Beamer
+
+Von oben nach unten: **Frage · Mitte · Antworten** (≈ 30 % der Höhe, ohne
+A/B/C/D — die Farbe reicht, der Platz geht an die Schrift). In der Mitte
+das Foto, links davon drei Füllstände — Uhrscheibe mit Sekunden (die
+größte Zahl), Quadrat „5/12 Fragen", n-Eck „7/24 Antworten" (ein Dreieck
+je Kind, bei 1–2 Kindern ein Quadrat) — und rechts Beenden/Auflösen.
+Ohne Foto schrumpft die Mitte auf eine Zeile und Frage und Antworten
+bekommen den Platz.
+
+## Fotos
+
+Jede Frage kann ein Foto haben (`ks_questions.image` als data:-URL plus
+`image_name`, Migration 0186). Der Editor verkleinert es im Browser auf
+höchstens 1600 Punkte (JPEG) — ein Handyfoto hätte sonst 5–10 MB.
+
+* **Tabellenansicht** (Fragenkarten): hinten an jeder Karte „📷 Foto"
+  bzw. Dateiname + 🗑. Ein Foto auf die Karte ziehen geht auch.
+* **Vorschau**: das Foto groß zwischen Frage und Kacheln, mit
+  „📷 Ersetzen" und 🗑; ohne Foto ein Feld zum Hochladen/Hineinziehen.
+* **Text-Import**: keine Fotos.
+* **Beamer**: das Foto steht zwischen Frage und Kacheln. Es hängt NICHT
+  an `ks_room_get` (das wird bei jeder Antwort neu geholt), sondern wird
+  über `ks_room_image` einmal je Frage geladen; `ks_room_get` sagt nur
+  `has_image` und `qid`.
+* **Tablet**: nie. `ks_view` gibt weder das Bild noch `has_image` heraus.
+
 ## Die Wesenwand
 
 Am Beamer stehen die Wesen **unten** in der Fläche, nicht mittig — darüber ist
@@ -99,10 +134,11 @@ und dessen eigener an vier weiteren Stellen (Kopf von `lib/tool.js`).
 
 ```
 node MPSkills/tools/KnowledgeStack/tools/uitest.js            # alle Bereiche
-node MPSkills/tools/KnowledgeStack/tools/uitest.js emote      # emote|tab|beam|fluss|theme
+node MPSkills/tools/KnowledgeStack/tools/uitest.js emote      # emote|tab|beam|fluss|editor|foto|theme
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js          # echter Browser
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js --shots  # …mit Bildern
 node supabase/tests/0175_knowledgestack_flow.mjs              # SQL in pglite
+node supabase/tests/0186_knowledgestack_photos_abort.mjs      # Fotos, Beenden, Neustart
 ```
 
 * **uitest.js** (linkedom, kein Browser) — *was* im Bild steht: die echten
@@ -110,7 +146,7 @@ node supabase/tests/0175_knowledgestack_flow.mjs              # SQL in pglite
   Takt ohne Phasenwechsel das Bild **nicht** neu baut. Der Bereich `theme`
   prüft dazu am Blatt selbst, dass **keine Farbe** außerhalb der beiden Sätze
   steht — genau daran lag es, dass der Umschalter am Quiz nichts tat.
-* **fitcheck.js** (Chromium) — ob es *hineinpasst*: kein Überlauf, der Rahmen
+* **fitcheck.js** (Chromium; Pfad mit `CHROME=…` überschreibbar) — ob es *hineinpasst*: kein Überlauf, der Rahmen
   endet an der Bildschirmkante, nichts ragt heraus, Tippflächen ≥ 44 px,
   Schrift lesbar. Über elf Bildschirmgrößen × beide Rollen × fünf Bilder
   (darunter die Lobby mit **einem** Kind — der Fall, in dem eine Karte sonst
@@ -123,7 +159,9 @@ node supabase/tests/0175_knowledgestack_flow.mjs              # SQL in pglite
 ## Migrationen
 
 `0174_knowledgestack_game.sql` legt die Tabellen an, `0175_knowledgestack_flow.sql`
-räumt den Ablauf auf. Beide spielt Sönke selbst im Supabase-Dashboard ein.
+räumt den Ablauf auf, `0186_knowledgestack_photos_abort.sql` bringt Fotos,
+Beenden und Neustart (und die Katalog-Aufrufe mit `p_code`, die der Beamer
+braucht). Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
 ## Was noch fehlt
 

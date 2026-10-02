@@ -9,6 +9,10 @@
      edit     Visueller Fragen-Editor mit Drag & Drop
      preview  Beamer-Vorschau einer einzelnen Frage
 
+   Fotos: eins je Frage (q.image als data:-URL, q.image_name). Im
+   Editor hinten an der Karte, in der Vorschau groß über den Kacheln.
+   Im Text-Import gibt es keine Fotos. Auf dem Tablet nie.
+
    Der Editor lebt INNERHALB des ks-stage und nutzt dieselben
    --ks-* Variablen. Er hat keinen eigenen Takt — die Lobby pollt
    weiter, und der Editor sperrt nur das Beamer-Bild.
@@ -201,7 +205,28 @@
             </label>
           </div>
         </div>
+        <div class="kse-foto${q.image ? ' has-bild' : ''}" data-foto="${idx}">${fotoZelle(q, idx)}</div>
       </div>`;
+  }
+
+  /* Die Fotospalte hinten an der Fragekarte. Ein Foto je Frage; es
+     steht nur am Beamer, nie auf dem Tablet. Hochladen per Knopf ODER
+     per Ziehen auf die Karte (tool.js, bindeEditorDnD). Das <input>
+     steckt im <label>: so öffnet ein Tipp die Auswahl auch auf dem
+     iPad, ohne dass ein Skript .click() rufen muss. */
+  function fotoZelle(q, idx) {
+    if (q.image) {
+      return `
+        <img class="kse-foto-mini" src="${esc(q.image)}" alt="" />
+        <span class="kse-foto-name" title="${esc(q.image_name || 'Foto')}">${esc(q.image_name || 'Foto')}</span>
+        <button type="button" class="kse-btn kse-btn--small kse-btn--rot" data-ed="foto-del"
+                data-qi="${idx}" title="Foto entfernen">🗑</button>`;
+    }
+    return `
+      <label class="kse-btn kse-btn--small kse-foto-btn" title="Foto zu dieser Frage hochladen">
+        <input type="file" accept="image/*" data-foto-file="${idx}" hidden />📷 Foto
+      </label>
+      <span class="kse-foto-tipp">oder hierher ziehen</span>`;
   }
 
 
@@ -231,6 +256,21 @@
         <div class="kse-pv-qbox">
           <h2 class="kse-pv-q" contenteditable="true" data-ed-pv="text">${esc(q.question_text || '(Kein Text)')}</h2>
         </div>
+        ${q.image ? `
+          <div class="kse-pv-bild" data-foto="pv">
+            <img src="${esc(q.image)}" alt="${esc(q.image_name || 'Foto')}" />
+            <div class="kse-pv-bildacts">
+              <label class="kse-btn kse-btn--small kse-btn--soft" title="Anderes Foto hochladen">
+                <input type="file" accept="image/*" data-foto-file="pv" hidden />📷 Ersetzen
+              </label>
+              <button type="button" class="kse-btn kse-btn--small kse-btn--rot" data-ed="foto-del"
+                      data-qi="pv" title="Foto entfernen">🗑</button>
+            </div>
+          </div>` : `
+          <label class="kse-pv-bildleer" data-foto="pv" title="Foto zu dieser Frage hochladen">
+            <input type="file" accept="image/*" data-foto-file="pv" hidden />
+            📷 Foto hochladen <span>oder hierher ziehen — erscheint nur am Beamer</span>
+          </label>`}
         <div class="kse-pv-kacheln">
           ${opts.map((o, i) => `
             <div class="kse-pv-k kse-pv-k--${i} ${ci.includes(i) ? 'is-richtig' : ''}">
@@ -364,6 +404,9 @@
   display: flex; flex-direction: column; gap: 16px;
   padding: 10px 0;
 }
+/* Die Bühne (.ks-stage) schneidet ab — rollen muss der Editor selbst. */
+.ks-stage > .kse-wrap { flex: 1 1 auto; overflow-y: auto; padding: 10px 4px; box-sizing: border-box; }
+.kse-wrap > * { flex-shrink: 0; }
 .kse-head {
   display: flex; align-items: center; justify-content: space-between;
   flex-wrap: wrap; gap: 10px; padding-bottom: 10px;
@@ -545,6 +588,51 @@
   font-size: 15px; font-weight: 600; color: var(--ks-gruent);
   background: var(--ks-gruenf); padding: 10px 16px; border-radius: 12px;
 }
+/* ── Foto je Frage ── */
+.kse-foto {
+  flex: 0 0 132px; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 6px; padding: 10px 8px; text-align: center;
+  background: var(--ks-tief); border-left: 1px solid var(--ks-linie);
+  font-size: 11px; color: var(--ks-soft);
+}
+.kse-foto-btn { cursor: pointer; }
+.kse-foto-tipp { font-size: 11px; line-height: 1.3; }
+.kse-foto-mini {
+  width: 100%; max-height: 84px; object-fit: contain; border-radius: 8px;
+  background: var(--ks-flaeche);
+}
+.kse-foto-name {
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 700; color: var(--ks-ink);
+}
+.kse-frage.is-fotoziel, .kse-wrap--preview.is-fotoziel .kse-pv-bild,
+.kse-wrap--preview.is-fotoziel .kse-pv-bildleer {
+  outline: 3px dashed var(--ks-cyan); outline-offset: 2px;
+}
+.kse-frage.is-fotoziel .kse-foto { background: rgba(34,211,238,.15); }
+.kse-foto.is-laedt::after { content: '⏳'; font-size: 18px; }
+@media (max-width: 600px) {
+  .kse-frage { flex-wrap: wrap; }
+  .kse-frage-body { flex-basis: calc(100% - 36px); }
+  .kse-foto { flex: 1 1 100%; flex-direction: row; flex-wrap: wrap; border-left: 0;
+              border-top: 1px solid var(--ks-linie); }
+  .kse-foto-mini { width: 72px; max-height: 54px; }
+}
+.kse-pv-bild {
+  position: relative; display: flex; justify-content: center; align-items: center;
+  background: var(--ks-tief); border: 2px solid var(--ks-linie); border-radius: 16px;
+  padding: 8px; min-height: 120px;
+}
+.kse-pv-bild img { max-width: 100%; max-height: 40vh; object-fit: contain; border-radius: 10px; }
+.kse-pv-bildacts { position: absolute; top: 10px; right: 10px; display: flex; gap: 6px; }
+.kse-pv-bildleer {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  padding: 18px; border: 2px dashed var(--ks-linie2); border-radius: 16px; cursor: pointer;
+  font-weight: 800; font-size: 15px; color: var(--ks-ink); background: var(--ks-tief);
+}
+.kse-pv-bildleer span { font-weight: 600; font-size: 12px; color: var(--ks-soft); }
+.kse-pv-bildleer:hover { border-color: var(--ks-cyan); }
+
 /* ── Text-Import ── */
 .kse-wrap--import { max-width: 1100px; }
 .kse-imp-info {
@@ -625,6 +713,7 @@
     importOverlay: importOverlay,
     importResult: importResult,
     frageKarte:   frageKarte,
+    fotoZelle:    fotoZelle,
     CSS:          CSS
   };
 })();

@@ -67,7 +67,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20261001a';
+  const ASSET_V = '20261002a';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -115,7 +115,8 @@
     already_answered:   'Du hast schon geantwortet.',
     reading_phase:      'Die Frage wird noch vorgelesen — gleich geht es los!',
     question_not_found: 'Diese Frage gibt es nicht mehr — der Katalog hat sich geändert.',
-    phase_locked:       'Das geht nur zwischen zwei Fragen.'
+    phase_locked:       'Das geht nur zwischen zwei Fragen.',
+    image_too_big:      'Ein Foto ist zu groß zum Speichern. Bitte ein kleineres nehmen.'
   };
   const fehlerText = code => EIGENE[code] || ctx.errText(code);
 
@@ -146,6 +147,10 @@
   let editorPreviewIdx = 0;   // welche Frage in der Vorschau
   let editorDirty = false;    // ungespeicherte Änderungen?
   let editorImport = null;    // Text-Import: { text, mode: 'new'|'append', title, subject }
+  /* Das Foto der laufenden Frage am Beamer. Es steht NICHT in der
+     Ansicht (die kommt bei jeder Antwort neu), sondern wird einmal je
+     Frage über ks_room_image geholt und hier gemerkt (Migration 0186). */
+  let bild = { qid: null, src: null, laedt: false };
 
   /* ══════════════════════════════════════════════════════════
      Bausteine
@@ -308,10 +313,15 @@
         els.clock.classList.add('ks-clock--reading');
         els.clock.classList.remove('ks-clock--eilig');
       }
+      const rAnteil = Math.max(0, Math.min(1, (ms - (lim * 1000)) / (READ_TIME_SEC * 1000)));
       if (els.bar) {
-        const anteil = Math.max(0, Math.min(1, (ms - (lim * 1000)) / (READ_TIME_SEC * 1000)));
-        els.bar.style.width = (anteil * 100).toFixed(1) + '%';
+        els.bar.style.width = (rAnteil * 100).toFixed(1) + '%';
         els.bar.classList.remove('ks-bar--eilig');
+      }
+      if (els.uhr) {
+        els.uhr.style.setProperty('--uhr-p', (1 - rAnteil).toFixed(3));
+        els.uhr.classList.add('ks-uhr--lesen');
+        els.uhr.classList.remove('ks-uhr--eilig');
       }
       const rCounts = stage.querySelectorAll('[data-ks=reading-count]');
       rCounts.forEach(c => { c.textContent = String(rSek); });
@@ -329,6 +339,13 @@
       const anteil = Math.max(0, Math.min(1, ms / (lim * 1000)));
       els.bar.style.width = (anteil * 100).toFixed(1) + '%';
       els.bar.classList.toggle('ks-bar--eilig', sek <= 5);
+    }
+    // Die Scheibe füllt sich mit der VERSTRICHENEN Zeit — voll heißt: um.
+    if (els.uhr) {
+      const anteil = Math.max(0, Math.min(1, ms / (lim * 1000)));
+      els.uhr.style.setProperty('--uhr-p', (1 - anteil).toFixed(3));
+      els.uhr.classList.remove('ks-uhr--lesen');
+      els.uhr.classList.toggle('ks-uhr--eilig', sek <= 5);
     }
 
     // Wenn gerade von Vorlesezeit auf Antwortzeit umgeschaltet wurde: Kacheln aufdecken
@@ -458,7 +475,9 @@
       answering = false;
       els = {};
       stage.className = 'ks-stage ks-stage--' + (role === 'presenter' ? 'beam' : 'tab')
-                     + ' ks-stage--' + view.phase;
+                     + ' ks-stage--' + view.phase
+                     + (role === 'presenter' && !editorMode && view.phase === 'question'
+                        && view.question && view.question.has_image ? ' ks-stage--mitbild' : '');
       stage.innerHTML = (role === 'presenter' ? baueBeam : baueTab)(view);
       sammle();
       binde();
@@ -471,6 +490,7 @@
   function sammle() {
     els.clock  = stage.querySelector('[data-ks=clock]');
     els.bar    = stage.querySelector('[data-ks=bar]');
+    els.uhr    = stage.querySelector('[data-ks=uhr]');
     els.wall   = stage.querySelector('[data-ks=wall]');
     els.count  = stage.querySelector('[data-ks=count]');
     els.total  = stage.querySelector('[data-ks=total]');
@@ -519,18 +539,45 @@
       </p>`;
   }
 
+  /* Die Frage am Beamer. Von oben nach unten: Frage · Mitte · Antworten.
+     Die Mitte ist das Foto, links daneben die drei Füllstände (Uhr,
+     Fragen, Antworten), rechts die zwei Knöpfe (Beenden, Auflösen).
+     Ohne Foto schrumpft die Mitte auf eine Zeile, und Frage und
+     Antworten bekommen den Platz. Die Antworten tragen hier KEIN
+     A/B/C/D — die Farbe sagt es, und der Platz geht an die Schrift. */
   function beamFrage(v) {
     const q = v.question || {};
     const opts = Array.isArray(q.options) ? q.options : [];
     const reading = isReadingPhase();
     const rSek = readingRestSec();
+    const nr = (v.current_q_idx | 0) + 1;
+    const n = v.question_count | 0;
     return `
-      <header class="ks-head ks-head--q">
-        <span class="ks-qnr">Frage ${(v.current_q_idx | 0) + 1} <i>/ ${v.question_count}</i></span>
-        <div class="ks-barwrap"><div class="ks-bar" data-ks="bar"></div></div>
-        <span class="ks-clock" data-ks="clock">–</span>
-      </header>
       <div class="ks-qbox"><h2 class="ks-q">${esc(q.text)}</h2></div>
+      <div class="ks-mitte${q.has_image ? ' ks-mitte--bild' : ''}">
+        <div class="ks-status">
+          <div class="ks-stat ks-stat--uhr">
+            <span class="ks-uhr" data-ks="uhr"></span>
+            <span class="ks-stxt"><b class="ks-clock" data-ks="clock">–</b><i>s</i></span>
+          </div>
+          <div class="ks-stat">
+            <span class="ks-quad"><span class="ks-quadf" style="height:${n ? (nr / n * 100).toFixed(1) : 0}%"></span></span>
+            <span class="ks-stxt"><b>${nr}/${n}</b> Fragen</span>
+          </div>
+          <div class="ks-stat">
+            <span class="ks-eck" data-ks="eck"></span>
+            <span class="ks-stxt"><b><span data-ks="count">0</span>/<span data-ks="total">0</span></b> Antworten</span>
+          </div>
+        </div>
+        ${q.has_image ? '<div class="ks-bild" data-ks="bild">'
+          + (bild.qid === q.qid && bild.src ? '<img src="' + esc(bild.src) + '" alt="" />' : '')
+          + '</div>' : '<div class="ks-luecke"></div>'}
+        <div class="ks-knoepfe">
+          <button type="button" class="ks-ctl ks-ctl--stop" data-act="finish"
+                  title="Quiz beenden — direkt zur Siegerehrung">⏹ Beenden</button>
+          <button type="button" class="ks-now" data-act="now">Jetzt auflösen</button>
+        </div>
+      </div>
       <div class="ks-reading-banner" data-ks="reading" ${reading ? '' : 'hidden'}>
         <span class="ks-reading-icon">📖</span>
         <div class="ks-reading-info">
@@ -538,11 +585,45 @@
           <span class="ks-reading-sub">Antworten erscheinen in <b data-ks="reading-count">${rSek}</b> s</span>
         </div>
       </div>
-      <div class="ks-meta" ${reading ? 'hidden' : ''}>
-        <span class="ks-antz"><b data-ks="count">0</b> von <b data-ks="total">0</b> haben geantwortet</span>
-        <button type="button" class="ks-now" data-act="now">Jetzt auflösen</button>
-      </div>
-      ${kachelnHTML(opts, { modus: 'still', hidden: reading })}`;
+      ${kachelnHTML(opts, { modus: 'still', hidden: reading, ohneBuchstabe: true })}`;
+  }
+
+  /* Das n-Eck der Antworten: ein Dreieck je Kind, gefüllt, sobald es
+     geantwortet hat. Bei einem oder zwei Kindern ein Quadrat (eins:
+     ganz, zwei: zwei Hälften über die Diagonale). */
+  function eckSVG(n) {
+    const pt = (x, y) => x.toFixed(2) + ',' + y.toFixed(2);
+    let teile = [];
+    if (n <= 2) {
+      const a = [5, 5], b = [95, 5], c = [95, 95], d = [5, 95];
+      if (n <= 1) teile = [[a, b, c, d]];
+      else teile = [[a, b, c], [a, c, d]];
+    } else {
+      const ecken = [];
+      for (let i = 0; i < n; i++) {
+        const w = -Math.PI / 2 + i * 2 * Math.PI / n;
+        ecken.push([50 + 46 * Math.cos(w), 50 + 46 * Math.sin(w)]);
+      }
+      teile = ecken.map((e, i) => [[50, 50], e, ecken[(i + 1) % n]]);
+    }
+    const rand = n <= 2 ? [[5, 5], [95, 5], [95, 95], [5, 95]]
+      : teile.map(t => t[1]);
+    return '<svg viewBox="0 0 100 100" aria-hidden="true">'
+      + teile.map(t => '<polygon class="ks-seg" points="' + t.map(p => pt(p[0], p[1])).join(' ') + '"/>').join('')
+      + '<polygon class="ks-eckrand" points="' + rand.map(p => pt(p[0], p[1])).join(' ') + '"/>'
+      + '</svg>';
+  }
+
+  function flickeEck(antw, n) {
+    const host = stage.querySelector('[data-ks=eck]');
+    if (!host) return;
+    if (Number(host.dataset.n) !== n || !host.firstChild) {
+      host.dataset.n = String(n);
+      host.innerHTML = eckSVG(n);
+    }
+    const segs = host.querySelectorAll('.ks-seg');
+    const voll = n ? Math.min(segs.length, Math.round(antw / n * segs.length)) : 0;
+    segs.forEach((g, i) => g.classList.toggle('is-voll', i < voll));
   }
 
   function beamAufloesung(v) {
@@ -555,6 +636,7 @@
         <h2 class="ks-qsmall">${esc(q.text)}</h2>
         <button type="button" class="ks-go" data-act="next">
           ${letzte ? 'Siegerehrung' : 'Nächste Frage'}</button>
+        ${steuerHTML(letzte)}
       </header>
       ${podestHTML(v.leaderboard || [], 'rv')}
       ${kachelnHTML(opts, { modus: 'fuell', correct: q.correct_idx, correct_indices: q.correct_indices })}
@@ -565,10 +647,46 @@
     return `
       <header class="ks-head ks-head--end">
         <h1 class="ks-title">Siegerehrung</h1>
-        <button type="button" class="ks-go" data-act="reset">Zurück zur Lobby</button>
+        <div class="ks-headr">
+          <button type="button" class="ks-go ks-go--edit" data-act="restart"
+                  title="Dasselbe Quiz noch einmal — alle Punkte auf 0">↺ Nochmal</button>
+          <button type="button" class="ks-go" data-act="reset">Zurück zur Lobby</button>
+        </div>
       </header>
       ${podestHTML(v.leaderboard || [], 'end')}
       <div class="ks-wall ks-wall--end" data-ks="wall"></div>`;
+  }
+
+  /* Abbrechen und Neustarten, während das Quiz läuft. Klein und
+     rechts außen: es sind Notknöpfe, nicht der nächste Schritt. In
+     der Auflösung der letzten Frage fehlt „Beenden" — dort führt
+     „Siegerehrung" ohnehin genau dahin. */
+  function steuerHTML(ohneEnde) {
+    return '<span class="ks-steuer">'
+      + '<button type="button" class="ks-ctl" data-act="restart" title="Quiz neu starten — alle Punkte auf 0"'
+      + ' aria-label="Quiz neu starten">↺</button>'
+      + (ohneEnde ? '' : '<button type="button" class="ks-ctl ks-ctl--stop" data-act="finish"'
+        + ' title="Quiz beenden — direkt zur Siegerehrung" aria-label="Quiz beenden">⏹</button>')
+      + '</span>';
+  }
+
+  /* Das Foto der Frage holen — einmal je Frage, nur am Beamer. */
+  async function holeBild(q) {
+    if (!q || !q.has_image || !q.qid) return;
+    if (bild.qid === q.qid && (bild.src || bild.laedt)) return;
+    bild = { qid: q.qid, src: null, laedt: true };
+    const r = await ctx.actions.call('ks_room_image', {});
+    if (destroyed || bild.qid !== q.qid) return;
+    bild.laedt = false;
+    if (!r || !r.ok || r.qid !== q.qid || !r.image) { bild.qid = null; return; }
+    bild.src = r.image;
+    const box = stage && stage.querySelector('[data-ks=bild]');
+    if (box && !box.querySelector('img')) {
+      const img = document.createElement('img');
+      img.alt = '';
+      img.src = r.image;
+      box.appendChild(img);
+    }
   }
 
   /* Die fünf Ersten — dort, wo während der Frage die Frage stand.
@@ -620,7 +738,7 @@
         return `
           <${o.modus === 'wahl' ? 'button type="button"' : 'div'} class="${cls.join(' ')}" data-idx="${i}">
             ${o.modus === 'fuell' ? '<span class="ks-fuell" data-fuell="' + i + '"></span>' : ''}
-            <span class="ks-kk ${richtig ? 'ks-kk--richtig' : ''}">${richtig ? '✓' : LABELS[i]}</span>
+            ${o.ohneBuchstabe ? '' : '<span class="ks-kk ' + (richtig ? 'ks-kk--richtig' : '') + '">' + (richtig ? '✓' : LABELS[i]) + '</span>'}
             <span class="ks-kt">${esc(t)}</span>
             ${o.modus === 'fuell' ? '<span class="ks-kn" data-kn="' + i + '">0</span>' : ''}
             ${gewaehlt ? '<span class="ks-kmein">deine Wahl</span>' : ''}
@@ -630,8 +748,10 @@
 
   /* ─── Beamer flicken ─────────────────────────────────────── */
   function flickeBeam(v) {
+    if (v.phase === 'question' && v.question && v.question.has_image) holeBild(v.question);
     if (els.total) els.total.textContent = String((v.players || []).length);
     if (els.count) els.count.textContent = String(v.answers_total || 0);
+    if (v.phase === 'question') flickeEck(v.answers_total || 0, (v.players || []).length);
 
     if (v.phase === 'lobby') {
       flickeWall(v.players || [], false);
@@ -1024,6 +1144,10 @@
     if (!list) return;
     let dragIdx = null;
 
+    // Eine Datei von außen (Foto) oder eine Karte von innen?
+    const istDatei = ev => !!(ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files'));
+    const ziel = ev => { const c = ev.target.closest && ev.target.closest('.kse-frage'); return c; };
+
     list.addEventListener('dragstart', ev => {
       const card = ev.target.closest('.kse-frage');
       if (!card) return;
@@ -1035,22 +1159,32 @@
 
     list.addEventListener('dragover', ev => {
       ev.preventDefault();
+      const card = ziel(ev);
+      if (istDatei(ev)) {
+        ev.dataTransfer.dropEffect = card ? 'copy' : 'none';
+        list.querySelectorAll('.kse-frage').forEach(c => c.classList.toggle('is-fotoziel', c === card));
+        return;
+      }
       ev.dataTransfer.dropEffect = 'move';
-      const card = ev.target.closest('.kse-frage');
       list.querySelectorAll('.kse-frage').forEach(c => c.classList.remove('is-over'));
       if (card) card.classList.add('is-over');
     });
 
     list.addEventListener('dragleave', ev => {
-      const card = ev.target.closest('.kse-frage');
-      if (card) card.classList.remove('is-over');
+      const card = ziel(ev);
+      if (card && !card.contains(ev.relatedTarget)) card.classList.remove('is-over', 'is-fotoziel');
     });
 
     list.addEventListener('drop', ev => {
       ev.preventDefault();
       list.querySelectorAll('.kse-frage').forEach(c =>
-        c.classList.remove('is-dragging', 'is-over'));
-      const card = ev.target.closest('.kse-frage');
+        c.classList.remove('is-dragging', 'is-over', 'is-fotoziel'));
+      const card = ziel(ev);
+      if (istDatei(ev)) {
+        const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
+        if (card && f) ladeFotoFuer(card.dataset.qi, f);
+        return;
+      }
       if (!card || dragIdx == null || !editorData) return;
       const dropIdx = parseInt(card.dataset.qi, 10);
       if (dragIdx === dropIdx) return;
@@ -1068,6 +1202,127 @@
       dragIdx = null;
       list.querySelectorAll('.kse-frage').forEach(c =>
         c.classList.remove('is-dragging', 'is-over'));
+    });
+  }
+
+  /* ─── Fotos je Frage ─────────────────────────────────────
+     Verkleinert im Browser, bevor es zum Server geht: ein Handyfoto
+     hat 4–12 MB, am Beamer reichen 1600 Punkte Kantenlänge. JPEG mit
+     weißem Grund (ein durchsichtiges PNG würde sonst schwarz). */
+  const FOTO_KANTE = 1600;
+  const FOTO_MAX = 1400000;     // Zeichen der data:-URL; Server: 1,5 Mio.
+
+  function bildAusDatei(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('unlesbar')); };
+      img.src = url;
+    });
+  }
+
+  async function verkleinere(file) {
+    const img = await bildAusDatei(file);
+    const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+    if (!w0 || !h0) throw new Error('unlesbar');
+    for (const [kante, q] of [[FOTO_KANTE, .85], [1280, .78], [1024, .7], [800, .65]]) {
+      const f = Math.min(1, kante / Math.max(w0, h0));
+      const c = document.createElement('canvas');
+      c.width = Math.round(w0 * f); c.height = Math.round(h0 * f);
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(img, 0, 0, c.width, c.height);
+      const data = c.toDataURL('image/jpeg', q);
+      if (data.length <= FOTO_MAX) return data;
+    }
+    throw new Error('zu_gross');
+  }
+
+  /* qi ist eine Fragennummer — oder 'pv' für die Frage, die gerade
+     in der Vorschau steht. */
+  function fotoFrage(qi) {
+    if (!editorData || !editorData.questions) return null;
+    const i = qi === 'pv' ? editorPreviewIdx : parseInt(qi, 10);
+    return editorData.questions[i] || null;
+  }
+
+  async function ladeFotoFuer(qi, file) {
+    if (!file || !/^image\//.test(file.type || '')) {
+      ctx.toast('Das ist kein Bild. Bitte ein Foto (JPG, PNG …) nehmen.', true); return;
+    }
+    const zelle = stage && stage.querySelector('[data-foto="' + qi + '"]');
+    if (zelle) zelle.classList.add('is-laedt');
+    let data;
+    try {
+      data = await verkleinere(file);
+    } catch (e) {
+      if (zelle) zelle.classList.remove('is-laedt');
+      ctx.toast(e && e.message === 'zu_gross'
+        ? 'Das Foto ist zu groß, auch verkleinert. Bitte ein anderes nehmen.'
+        : 'Dieses Bild kann der Browser nicht lesen. Bitte als JPG oder PNG speichern.', true);
+      return;
+    }
+    if (destroyed || !editorMode) return;
+    setzeFoto(qi, { image: data, image_name: file.name || 'Foto' });
+  }
+
+  /* Ein Foto setzen oder (foto = null) entfernen. Im Editor wird NUR
+     die Fotospalte der Karte neu geschrieben — sonst spränge die Liste
+     an den Anfang und alles Getippte müsste erst eingesammelt werden.
+     In der Vorschau wird neu gebaut (dort steht das Foto mitten im Bild). */
+  function setzeFoto(qi, foto) {
+    if (editorMode === 'preview') sammleVorschauAenderungen();
+    const q = fotoFrage(qi);
+    if (!q) return;
+    q.image = foto ? foto.image : null;
+    q.image_name = foto ? foto.image_name : null;
+    editorDirty = true;
+    if (editorMode === 'preview') { lastFrame = null; zeichne(); return; }
+    const zelle = stage && stage.querySelector('[data-foto="' + qi + '"]');
+    if (zelle && window.KSEditor) {
+      zelle.classList.remove('is-laedt');
+      zelle.classList.toggle('has-bild', !!q.image);
+      zelle.innerHTML = window.KSEditor.fotoZelle(q, parseInt(qi, 10));
+    }
+  }
+
+  function schluckeDatei(ev) {
+    if (editorMode && ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files')) {
+      ev.preventDefault();
+    }
+  }
+
+  function onFotoWahl(ev) {
+    const inp = ev.target && ev.target.closest && ev.target.closest('[data-foto-file]');
+    if (!inp || !editorMode) return;
+    const f = inp.files && inp.files[0];
+    if (f) ladeFotoFuer(inp.dataset.fotoFile, f);
+    inp.value = '';
+  }
+
+  /* In der Vorschau: ein Foto irgendwo auf das Bild ziehen setzt es
+     für die Frage, die gerade zu sehen ist. */
+  function bindeVorschauDnD() {
+    const wrap = stage.querySelector('.kse-wrap--preview');
+    if (!wrap) return;
+    const istDatei = ev => !!(ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files'));
+    wrap.addEventListener('dragover', ev => {
+      if (!istDatei(ev)) return;
+      ev.preventDefault();
+      ev.dataTransfer.dropEffect = 'copy';
+      wrap.classList.add('is-fotoziel');
+    });
+    wrap.addEventListener('dragleave', ev => {
+      if (!wrap.contains(ev.relatedTarget)) wrap.classList.remove('is-fotoziel');
+    });
+    wrap.addEventListener('drop', ev => {
+      if (!istDatei(ev)) return;
+      ev.preventDefault();
+      wrap.classList.remove('is-fotoziel');
+      const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
+      if (f) ladeFotoFuer('pv', f);
     });
   }
 
@@ -1147,8 +1402,14 @@
       lastSig = null;
       poll();
     });
+    stage.addEventListener('change', onFotoWahl);
+    // Ein Foto, das neben einer Karte landet, darf den Editor nicht
+    // verlassen — ohne das öffnet der Browser die Datei statt der Seite.
+    stage.addEventListener('dragover', schluckeDatei);
+    stage.addEventListener('drop', schluckeDatei);
     // Editor Drag & Drop
     if (editorMode === 'edit') bindeEditorDnD();
+    if (editorMode === 'preview') bindeVorschauDnD();
   }
 
   /* Ein Listener je Bild und fünf getrennte Fragen danach, WAS
@@ -1321,6 +1582,12 @@
         lastFrame = null; zeichne(); return;
       }
 
+      // Foto entfernen (Karte im Editor oder Vorschau)
+      if (a === 'foto-del') {
+        setzeFoto(ed.dataset.qi, null);
+        return;
+      }
+
       // Richtig-Haken umschalten
       if (a === 'toggle') {
         sammleEditorDaten();
@@ -1361,7 +1628,9 @@
                              ? q.correct_indices[0] : (q.correct_idx || 0),
           correct_indices: q.correct_indices || [q.correct_idx || 0],
           time_limit_sec:  q.time_limit_sec || 20,
-          explanation:     q.explanation || null
+          explanation:     q.explanation || null,
+          image:           q.image || null,
+          image_name:      q.image ? (q.image_name || 'Foto') : null
         }));
 
         ed.disabled = true; ed.textContent = '⏳ …';
@@ -1395,6 +1664,20 @@
         await ladeEditor();
         editorMode = 'list';
         lastFrame = null; zeichne();
+        return;
+      }
+
+      if (act.dataset.act === 'finish' || act.dataset.act === 'restart') {
+        const fertig = act.dataset.act === 'finish';
+        const ok = await ctx.confirm(fertig
+          ? 'Quiz jetzt beenden und direkt zur Siegerehrung?'
+          : 'Quiz von vorn starten? Alle Punkte werden auf 0 gesetzt.');
+        if (!ok) return;
+        act.disabled = true;
+        const r = await ctx.actions.call(fertig ? 'ks_finish' : 'ks_restart', {});
+        if (!r.ok) { act.disabled = false; ctx.toast(fehlerText(r.error), true); return; }
+        lastSig = null;
+        poll();
         return;
       }
 
@@ -1575,6 +1858,7 @@
       els = {}; catalogs = []; skew = 0;
       localEmote = null; answering = false; pickerOffen = false;
       editorMode = editorData = editorImport = null; editorDirty = false;
+      bild = { qid: null, src: null, laedt: false };
 
       root.innerHTML = '<div class="ks-frame"><div class="ks-stage">'
         + '<p class="ks-booting">Quiz wird geladen …</p></div></div>';
@@ -1623,6 +1907,7 @@
       lastSig = lastFrame = null;
       pickerOffen = false; localEmote = null;
       editorMode = editorData = editorImport = null; editorDirty = false;
+      bild = { qid: null, src: null, laedt: false };
       zeigeFehler.last = null;
     }
   });

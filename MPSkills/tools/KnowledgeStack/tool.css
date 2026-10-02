@@ -461,6 +461,164 @@
   line-clamp: 4;
 }
 
+/* ══════════════════════════════════════════════════════════
+   Die Frage am Beamer: Frage · Mitte · Antworten
+   ══════════════════════════════════════════════════════════
+   Die Mitte trägt das Foto (Migration 0186; das Tablet bekommt es
+   gar nicht), links daneben die drei Füllstände, rechts die zwei
+   Knöpfe. Die Antworten nehmen ein knappes Drittel der Höhe. Ohne
+   Foto ist die Mitte nur eine Zeile, und Frage und Antworten teilen
+   sich den Rest. */
+.ks-stage--beam.ks-stage--question { --stat-ic: clamp(26px, calc(var(--ks-h) * .075), 74px); }
+.ks-mitte {
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(8px, calc(var(--ks-h) * .025), 26px);
+}
+.ks-mitte:not(.ks-mitte--bild) { flex: 0 0 auto; }
+.ks-stage--beam.ks-stage--question .ks-kacheln { flex: 0 0 30%; }
+.ks-stage--beam.ks-stage--question:not(.ks-stage--mitbild) .ks-qbox { flex: 1 1 0; }
+.ks-stage--beam.ks-stage--question:not(.ks-stage--mitbild) .ks-kacheln { flex: 1.3 1 0; }
+.ks-stage--beam.ks-stage--question:not(.ks-stage--mitbild) .ks-q {
+  font-size: clamp(18px, calc(var(--ks-h) * .075), 60px);
+}
+
+.ks-bild {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.ks-bild img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 3px solid var(--ks-kante);
+  box-shadow: 4px 4px 0 0 var(--ks-kante);
+  box-sizing: border-box;
+}
+
+/* Die drei Füllstände: Uhr · Fragen · Antworten. Mit Foto
+   untereinander, ohne Foto nebeneinander (dann zählt jede Zeile). */
+.ks-status {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, calc(var(--ks-h) * .025), 22px);
+}
+.ks-mitte:not(.ks-mitte--bild) .ks-status { flex-direction: row; gap: clamp(14px, calc(var(--ks-h) * .04), 40px); }
+.ks-stat {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, calc(var(--ks-h) * .016), 14px);
+  white-space: nowrap;
+}
+.ks-stxt {
+  font-size: clamp(11px, calc(var(--ks-h) * .028), 22px);
+  font-weight: 700;
+  color: var(--ks-soft);
+}
+.ks-stxt b { color: var(--ks-ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+.ks-stxt i { font-style: normal; font-weight: 800; color: var(--ks-goldt); margin-left: 2px; }
+.ks-stxt .ks-clock {
+  font-size: clamp(22px, calc(var(--ks-h) * .085), 72px);
+  min-width: 0;
+  text-align: left;
+}
+
+/* Die Uhr: eine Scheibe, die sich wie ein Zeiger füllt — voll heißt: um. */
+.ks-uhr {
+  --uhr-p: 0;
+  flex: 0 0 auto;
+  width: var(--stat-ic);
+  height: var(--stat-ic);
+  border-radius: 50%;
+  border: 3px solid var(--ks-kante);
+  box-sizing: border-box;
+  background: conic-gradient(var(--ks-cyan) calc(var(--uhr-p) * 1turn), var(--ks-tief) 0);
+}
+.ks-uhr--lesen { background: conic-gradient(var(--ks-gold) calc(var(--uhr-p) * 1turn), var(--ks-tief) 0); }
+.ks-uhr--eilig { background: conic-gradient(var(--ks-rot) calc(var(--uhr-p) * 1turn), var(--ks-tief) 0); }
+
+/* Fragen: ein Quadrat, von unten gefüllt. */
+.ks-quad {
+  flex: 0 0 auto;
+  position: relative;
+  width: calc(var(--stat-ic) * .86);
+  height: calc(var(--stat-ic) * .86);
+  margin: 0 calc(var(--stat-ic) * .07);
+  border: 3px solid var(--ks-kante);
+  border-radius: 6px;
+  box-sizing: border-box;
+  background: var(--ks-tief);
+  overflow: hidden;
+}
+.ks-quadf { position: absolute; left: 0; right: 0; bottom: 0; background: var(--ks-gold); }
+
+/* Antworten: ein Dreieck je Kind. */
+.ks-eck { flex: 0 0 auto; width: var(--stat-ic); height: var(--stat-ic); display: block; }
+.ks-eck svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.ks-seg {
+  fill: var(--ks-tief);
+  stroke: var(--ks-linie2);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  transition: fill .25s;
+}
+.ks-eckrand { fill: none; stroke: var(--ks-kante); stroke-width: 4; stroke-linejoin: round; }
+.ks-seg.is-voll { fill: var(--ks-gruen); }
+
+/* Rechts: Beenden und Auflösen, untereinander. */
+.ks-knoepfe {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, calc(var(--ks-h) * .02), 16px);
+}
+.ks-mitte:not(.ks-mitte--bild) .ks-knoepfe { flex-direction: row; }
+.ks-knoepfe .ks-ctl,
+.ks-knoepfe .ks-now {
+  font-size: clamp(12px, calc(var(--ks-h) * .026), 20px);
+  padding: .4em .9em;
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+/* Die Antworten am Beamer: keine Buchstaben, große Schrift, mittig. */
+.ks-kacheln[data-modus="still"] .ks-k { justify-content: center; text-align: center; }
+.ks-kacheln[data-modus="still"] .ks-kt {
+  flex: 0 1 auto;
+  font-size: clamp(15px, calc(var(--ks-h) * .048), 44px);
+  font-weight: 800;
+  line-height: 1.18;
+}
+.ks-stage--beam.ks-stage--question .ks-reading-banner { margin: 0; }
+
+/* Neu starten · Beenden: klein, rechts außen im Kopf. */
+.ks-steuer { display: flex; gap: 6px; flex: 0 0 auto; }
+.ks-ctl {
+  font: inherit;
+  font-size: clamp(14px, calc(var(--ks-h) * .03), 20px);
+  font-weight: 800;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 .4em;
+  cursor: pointer;
+  background: var(--ks-erhoben);
+  color: var(--ks-ink);
+  border: 2px solid var(--ks-kante);
+  border-radius: 12px;
+  box-shadow: 3px 3px 0 0 var(--ks-kante);
+  transition: transform .08s, box-shadow .08s;
+}
+.ks-ctl:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 0 var(--ks-kante); }
+.ks-ctl:disabled { opacity: .45; cursor: not-allowed; }
+.ks-ctl--stop { background: var(--ks-rot); color: var(--ks-ink); }
+
 .ks-meta {
   flex: 0 0 auto;
   display: flex;
