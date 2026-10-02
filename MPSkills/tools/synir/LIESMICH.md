@@ -725,8 +725,8 @@ Kabel im Raum gegen Leitung über Land. Der Hilfetext am Kabel sagt das seit dem
 
 ## Die Firewall
 
-*(seit 2026-10-02 · `js/firewall.js`, Prüfstände `tests/kerntest.js` Abschnitt
-„Firewall" und `tests/fwuitest.js`)*
+*(seit 2026-10-02 · `js/firewall.js`, Prüfstände `tests/kerntest.js` Abschnitte
+„Firewall" und „Firewall: Namen" sowie `tests/fwuitest.js`)*
 
 Eine Firewall entscheidet bei jedem Paket, das ein Gerät **weiterleitet**:
 durchlassen oder nicht. Mehr ist sie nicht, und genau das ist der Unterricht —
@@ -736,33 +736,60 @@ einem Land zugeordnet hat.
 | | |
 |---|---|
 | **Wo** | **Router, Heimrouter, cww** — die drei Geräte, die Wege vermitteln. Der Switch sieht keine IP-Adressen, der Rechner ist ein Ziel und kein Weg. Vom Nutzer so gesetzt („das nur bei Routern bauen"). |
-| **Einstellen** | Im Entwurf, im Reiter *Allgemein* ganz unten: der Knopf **Firewall**. Er zeigt, ob sie läuft (grün, pulsierender Punkt · „läuft · 3 Regeln") oder nicht (grau · „läuft nicht"). Dahinter eine Seite wie beim DHCP-Server, mit **Zurück**: oben der Haken *Firewall aktivieren*, dann *Wenn keine Regel passt*, dann die Regeln. Nur in der großen Ansicht. |
-| **Auf der Fläche** | Ein laufendes Gerät trägt **unten links** ein Zeichen (Mauer mit Flamme). Es steht **nur**, wenn sie läuft — ausgeschaltet bleiben die Regeln stehen, das Zeichen verschwindet. Es ist keine Pille unter der Kachel: die Pillen sagen, was ein Gerät **tut** (Server-Dienste); die Firewall sagt, was auf dem **Weg** geschieht. Ist das Gerät aus, rückt das Zeichen neben das Aus-Zeichen; beim Heimrouter weicht es einem WAN/LAN-Schildchen in die nächste freie Ecke aus (`fwPlatz` in `flaeche.js`). |
-| **Aktionsmodus** | Die Kompaktansicht (nur lesen, wie alles dort) zeigt einen Block *Firewall*: läuft/läuft nicht, Standard, die Regeln als Tabelle, **Treffer je Regel** und die Zähler (erlaubt · verworfen · abgelehnt · Antworten), die beim Laufen mitzählen. |
+| **Einstellen** | Im Entwurf, im Reiter *Allgemein* ganz unten: der Knopf **Firewall**. Er zeigt, ob sie läuft (grün, pulsierender Punkt · „läuft · Blacklist · 3 Einträge") oder nicht (grau · „läuft nicht"). Dahinter eine Seite wie beim DHCP-Server, mit **Zurück**: oben der Haken *Firewall aktivieren*, dann der **Listentyp**, dann die Liste. Nur in der großen Ansicht. |
+| **Auf der Fläche** | Ein laufendes Gerät trägt **unten links** ein farbiges Zeichen (Ziegelmauer mit Flamme, nach dem Vorbild des Nutzers). Es steht **nur**, wenn sie läuft — ausgeschaltet bleibt die Liste stehen, das Zeichen verschwindet. Es ist keine Pille unter der Kachel: die Pillen sagen, was ein Gerät **tut** (Server-Dienste); die Firewall sagt, was auf dem **Weg** geschieht. Ist das Gerät aus, rückt das Zeichen neben das Aus-Zeichen; beim Heimrouter weicht es einem WAN/LAN-Schildchen in die nächste freie Ecke aus (`fwPlatz` in `flaeche.js`). |
+| **Aktionsmodus** | Die Kompaktansicht (nur lesen, wie alles dort) zeigt einen Block *Firewall*: läuft/läuft nicht, Listentyp, Art des Sperrens, die Liste mit ihrer Wirkung und **Treffern je Zeile**, dazu Zähler (durchgelassen · verworfen · abgelehnt), die beim Laufen mitzählen. |
 
-### Die Regeln
+### Eine Liste, ein Typ
 
-Von oben nach unten, die **erste passende gewinnt**; passt keine, gilt der Standard.
-Standard *verwerfen* macht aus der Liste eine **Whitelist**, *durchlassen* eine
-**Blacklist** — dieselbe Tabelle, ein anderer Schalter.
+Es gibt **eine** Liste und einen Schalter, was sie bedeutet — beides in einer
+Liste zu mischen ergäbe keinen Sinn:
 
-| Spalte | Bedeutung |
+* **Blacklist** — was auf der Liste steht, wird **gesperrt**; alles andere kommt durch.
+* **Whitelist** — **nur** was auf der Liste steht, kommt durch; alles andere wird gesperrt.
+
+Die Liste bleibt beim Umschalten stehen, nur ihre Bedeutung wechselt (und die
+Überschrift: *Gesperrt* / *Erlaubt*). Eine leere Blacklist sperrt nichts, eine leere
+Whitelist alles — das steht im Fenster.
+
+Eine Zeile trifft ein Paket, wenn ihre Adresse der **Absender oder das Ziel** ist
+(„alles von und zu diesem Bereich"). Damit gilt sie in beide Richtungen; ein „rein"
+oder „raus" gibt es nicht, und weil die **Antwort** auf ein erlaubtes Paket dieselbe
+Adresse trägt, braucht es auch kein „Verbindungen merken". Die Schnittstelle, das
+Protokoll und der Port spielen **keine** Rolle — vom Nutzer gestrichen („die
+Firewall soll einfach alles blockieren"). Damit entfallen auch Ausnahmen innerhalb
+einer Liste und die Reihenfolge („erste passende gewinnt").
+
+### Was eine Zeile sein kann
+
+| Eingabe | Bedeutung |
 |---|---|
-| **Aktion** | *erlauben* · *verwerfen* (schweigt — der Absender wartet) · *ablehnen* (antwortet sofort „verboten", ICMP Typ 3 Code 13) |
-| **Eingang** | eine Schnittstelle des Geräts (*WAN (von draußen)*, *LAN (von innen)*, *Internet*, *Netzwerkkarte 2* …) oder *beliebig*. Es heißt nicht „rein/raus": bei einem Router mit drei Karten gibt es kein Außen. |
-| **Quelle / Ziel** | eine Adresse, ein Bereich `203.0.113.0/24` oder `10.1.0.0 255.255.0.0`; leer = beliebig. Beide Schreibweisen gehen, weil der Unterricht beide schreibt. |
-| **Protokoll / Port** | alle · TCP · UDP · ICMP; ein Port `80` oder ein Bereich `1000-2000` (nur TCP/UDP; ein Ping hat keinen). |
+| **Adresse + Netzmaske** (`192.0.0.0` · `255.0.0.0`) | der ganze Bereich — hier alles von 192.0.0.0 bis 192.255.255.255 |
+| **Adresse allein** (`192.168.2.1`) | **genau dieses Gerät** |
+| **ein Name** (`www.beispiel.de`) | wird in eine Adresse aufgelöst, gesperrt wird DIESE |
 
-Eine Zeile mit krummer Angabe ist **unfertig**: das Feld wird rot, ein Satz sagt
-es, und die Zeile tut **nichts** — dieselbe Regel wie bei den Portfreigaben.
-Die Nummer bleibt die der Zeile.
+⚠️ Eine Adresse ohne Maske ist **ein Gerät**, nicht „das Netz, in dem sie liegt". Aus
+`192.0.0.0` das Netz 192.x.x.x zu erraten wäre Magie, und gerade die Zahlen mit den
+Nullen sind die, bei denen die Maske vergessen wird. Deshalb steht **unter jeder
+Zeile, was daraus folgt**: *„von 192.0.0.0 bis 192.255.255.255 · 16.777.216 Adressen"*
+oder *„genau dieses Gerät"*. Die Maske darf auch als Präfix kommen (`8`, `/8`). Eine
+leere Adresse ist **nicht** „beliebig", sondern *unfertig* — wie eine krumme Angabe
+(rotes Feld, ein Satz): die Zeile tut dann nichts, behält aber ihre Nummer.
 
-**Antworten auf erlaubte Verbindungen durchlassen** (Haken, vorgewählt): ein
-erlaubtes Paket wird notiert, die **Antwort** darauf geht ohne weitere Prüfung
-durch (5 Minuten Simulationszeit nach dem letzten Paket). Ohne ihn müsste man
-bei einer Whitelist jede Regel zweimal schreiben — hin **und** zurück —, und die
-Rückrichtung ist genau die, die man vergisst. Mit Haken AN lässt sich „zurück
-geht von allein" zeigen, mit AUS „jede Richtung ist eine eigene Frage".
+**Namen** — eine Firewall sieht nur Adressen. Der Router löst den Namen mit seinem
+eigenen DNS auf (das cww fragt 8.8.8.8), sobald die **Uhr läuft** und die Firewall an
+ist, und danach alle 60 s Simulationszeit neu. Das ist die Aussage dahinter: ändert
+der Name seine Adresse, greift die Sperre erst bei der nächsten Auflösung; teilen sich
+zwei Namen eine Adresse, ist der zweite mit gesperrt; ist der Name nicht aufzulösen,
+tut die Zeile nichts — und das Fenster sagt es mit Grund. Unter der Zeile steht live
+*noch nicht aufgelöst (die Uhr läuft nicht)* → *wird aufgelöst …* → *→ 84.12.5.1*.
+
+### Wie gesperrt wird
+
+Eine Einstellung der ganzen Firewall (nicht der Zeile):
+
+* **still verwerfen** — das Paket verschwindet, der Absender wartet bis zur Zeitüberschreitung (wie DROP);
+* **ablehnen** — es verschwindet, und der Absender bekommt **sofort** „Verboten — die Firewall von 192.168.1.1 lässt das nicht durch" (ICMP Typ 3, Code 13; wie REJECT).
 
 ### Wo sie im Paketweg sitzt
 
@@ -776,21 +803,19 @@ Gerät, nicht das Gerät. Das lässt sich mit einem zweiten Router dahinter zeig
 
 ### Im Mitschnitt
 
-Ein verworfenes Paket steht als **verlorene Zeile** da: *„— von der Firewall
-verworfen: Regel 2 (verwerfen)"*, bei *ablehnen* mit dem Zusatz „Absender wird
-benachrichtigt". Der Unterschied zwischen beiden ist im Mitschnitt der schönste
-Beleg: einmal Stille bis zur Zeitüberschreitung, einmal sofort *„Verboten — die
-Firewall von 192.168.1.1 lässt das nicht durch"*. Diese Zeilen zeigt auch die
-Voreinstellung „nur raus" — sonst wäre es genau die eine, die verschwindet.
-Auf dem Router steht dasselbe im Terminal.
+Ein gesperrtes Paket steht als **verlorene Zeile** da: *„— von der Firewall
+verworfen: Zeile 2 (Blacklist)"* bzw. *„nicht auf der Whitelist"*, bei *ablehnen* mit
+dem Zusatz „Absender wird benachrichtigt". Diese Zeilen zeigt auch die Voreinstellung
+„nur raus" — sonst wäre es genau die eine, die verschwindet. Auf dem Router steht
+dasselbe im Terminal.
 
 ### Länder
 
 Echte GeoIP-Datenbanken gibt es nicht und braucht es nicht: die Welt in SYNIR ist
-erfunden. „Länder" sind **benannte Adressbereiche im Szenario** (z. B. `10.1.0.0/16`
-= „Land A"); die Firewall kennt nur Bereiche. Das ist die Aussage — Geoblocking ist
-eine IP-Liste. Ein Szenario, das Bereichen Namen gibt, ist ein eigener nächster
-Schritt.
+erfunden. „Länder" sind **benannte Adressbereiche im Szenario** (z. B. `10.1.0.0` ·
+`255.255.0.0` = „Land A"); die Firewall kennt nur Bereiche. Das ist die Aussage —
+Geoblocking ist eine IP-Liste. Ein Szenario, das Bereichen Namen gibt, ist ein
+eigener nächster Schritt.
 
 ## Was noch fehlt
 

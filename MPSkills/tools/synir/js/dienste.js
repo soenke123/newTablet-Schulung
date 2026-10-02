@@ -124,6 +124,12 @@
            wäre die, die man beim nächsten Umbau vergisst. */
         if (!node.on || !laeuft) stack.tcpAufraeumen(node);
 
+        /* Die Firewall löst die Namen auf ihrer Liste auf, sobald die Uhr
+           läuft — `sync()` wird beim Start und nach jeder Änderung
+           gerufen, und `namenHolen` fragt nur, wenn nichts Frisches da
+           ist. Im Entwurf steht die Uhr, und dort wird nicht gefragt. */
+        if (laeuft && node.on && netz.fwLaeuft(node)) stack.fwNamen(node);
+
         /* ⚠️ Ob ein Dienst laufen SOLL, steht seit der Marke unter
            der Kachel an einer einzigen Stelle: `netz.dienstLaeuft`
            (installiert UND gestartet UND Gerät an). Hier bleibt nur
@@ -890,6 +896,15 @@
       ? window.Vpn.erzeugen(engine, netz, stack, { resolve: resolve, tls: tls, onDirty: geaendert })
       : null;
     if (vpn) stack.setVpn(vpn);
+
+
+    /* Die Firewall (firewall.js) kennt den Auflöser nicht; hier lebt er.
+       Das cww fragt 8.8.8.8 — es hat keinen eingetragenen DNS, es IST
+       das Gateway; alle anderen fragen den DNS, den sie eingetragen
+       haben. Ohne einen schlägt die Auflösung mit dem Satz fehl, der
+       auch im Fenster der Firewall steht. */
+    stack.fwAufloeser((node, name, cb) =>
+      resolve(node, name, cb, 'A', netz.istCww(node) ? ((window.Internet && window.Internet.DNS_IP) || '8.8.8.8') : undefined));
 
     return {
       start, stop, sync, reset, resolve, erneuern,

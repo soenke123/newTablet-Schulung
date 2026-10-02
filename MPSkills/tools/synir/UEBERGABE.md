@@ -6,63 +6,43 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
-## 000f · Firewall (2026-10-02)
+## 0010 · Firewall (2026-10-02)
 
 Berührt: neu `js/firewall.js`, `tests/fwuitest.js`, `tests/shot-firewall.png`; `js/netz.js` (`fwConf`, `fwLaeuft`,
-`fwLaden`, Speicherformat `firewall`), `js/schichten.js` (**eine** Prüfstelle in `onIp`, Auskunft `fw*`, Text zu ICMP 3/13),
-`js/konfig.js` (Knopf, Seite, `fwKompakt`, `data-live` `fwstat`/`fwtreffer`), `js/flaeche.js` (Zeichen `.nf-fw`, `fwPlatz`,
-`schildLage`), `js/mitschnitt.js` + `js/panels.js` (verworfene Zeile, immer sichtbar), `js/app.js` (Terminal),
-`css/app.css` (`--fw`, `.k-fw*`, `.k-fwr*`, `.nf-fw`), `index.html` (Skript, Symbol `firewall`, `?v=…b`), `tool.js` und
-`MPSkills/lib/tool.js` (Cache-Stempel), `tests/kerntest.js` (1195 grün), `FILIUS-ABGLEICH.md`, `LIESMICH.md` (Abschnitt *Die Firewall*).
+`fwLaden` mit Übernahme alter Stände, Speicherformat `firewall`), `js/schichten.js` (**eine** Prüfstelle in `onIp`,
+Auskunft `fw*`, Text zu ICMP 3/13), `js/dienste.js` (der Auflöser für Namen, `sync` ruft `fwNamen`), `js/konfig.js`
+(Knopf, Seite, `fwKompakt`, `data-live` `fwstat`/`fwzeile`), `js/flaeche.js` (Zeichen `.nf-fw`, `fwPlatz`,
+`schildLage`), `js/mitschnitt.js` + `js/panels.js` (gesperrte Zeile, immer sichtbar), `js/app.js` (Terminal),
+`css/app.css`, `index.html` (Skript, farbiges Symbol `firewall`), `tool.js` und `MPSkills/lib/tool.js` (Cache-Stempel),
+`tests/kerntest.js` (1239 grün), `FILIUS-ABGLEICH.md`, `LIESMICH.md` (Abschnitt *Die Firewall*).
 
 * ⭐ **Entscheidungen des Nutzers:** nur an **Router, Heimrouter, cww**; im **Entwurf** im Reiter *Allgemein* ganz
   unten ein Knopf, der zeigt, ob sie läuft; dahinter eine Seite mit dem Haken *Firewall aktivieren* zuoberst; ein
-  Zeichen **unten links** an der Kachel, wenn sie läuft (keine Server-Pille — „eine Firewall ist kein Server").
-  Im **Aktionsmodus** bleibt es bei der Leseansicht.
-* ⭐ **Das Modell:** `node.firewall = { on, standard, merken, regeln[] }`; Regel = `{ ein, quelle, ziel, proto, port,
-  aktion }` (alles Text, wie die Felder). Erste passende gewinnt. `ein` ist eine **Schnittstelle** (`'*'` oder ihre
-  Nummer; die LAN-Buchsen des Heimrouters zählen als eine Karte) — nicht „rein/raus", denn ein Router mit drei Karten
-  hat kein Außen. Aktionen `erlauben` · `verwerfen` · `ablehnen` (ICMP 3/13). Laufzeitwissen (Zähler, gemerkte
-  Gespräche) liegt in `node.state.fw`, nicht in der Datei.
+  Zeichen **unten links** an der Kachel, wenn sie läuft (keine Server-Pille — „eine Firewall ist kein Server"), farbig
+  nach seinem Vorbild (Mauer aus roten Ziegeln, Flamme rechts unten). Im **Aktionsmodus** bleibt es bei der Leseansicht.
+* ⭐ **Zweite Runde (gleicher Tag):** die erste Fassung (Aktion je Zeile, Standard, Eingang/Port, „Antworten merken")
+  ist **ersetzt** — „durchlassen" war als „Blacklist" beschriftet, und beides in einer Liste ergab keinen Sinn.
+  Jetzt: **eine Liste, ein Typ** (Blacklist | Whitelist), Zeile = Adresse + **Netzmaske** (leer = genau dieses Gerät)
+  oder ein **Name**, trifft **Absender ODER Ziel**; keine Ports/Protokolle/Schnittstellen, keine Reihenfolge, kein
+  „merken". „verwerfen" und „ablehnen" sind **eine** Einstellung der Firewall (nicht der Zeile).
+* ⭐ **Das Modell:** `node.firewall = { on, typ, ablehnen, regeln: [{ adresse, maske }] }` (Text, wie die Felder).
+  Laufzeitwissen (Zähler, aufgelöste Namen) liegt in `node.state.fw`, nicht in der Datei. Alte Stände (Aktion je
+  Zeile) werden in `fwLaden` mitgenommen: Standard „verwerfen/ablehnen" → Whitelist, behalten werden die Zeilen, die
+  zum Typ passen.
 * ⚠️ **Wo sie sitzt:** nach der Wegewahl, **vor NAT** (`schichten.js`, `onIp`). Pakete AN den Router und von ihm selbst
   werden nicht geprüft. Das steht im Kopf von `firewall.js` und in `LIESMICH.md`; wer es ändert, ändert eine Aussage.
-* Unfertige Zeilen (krumme Adresse/Port/Protokoll) tun nichts, behalten aber ihre Nummer (`Firewall.regel` gibt `null`).
-  Das Fenster nutzt dieselbe Prüfung (`fwFeldOk`/`fwFertig`) für das rote Feld und den Satz „unfertig".
+* ⚠️ **Namen:** aufgelöst wird mit dem eigenen DNS des Geräts (cww: 8.8.8.8) und nur, wenn die Uhr läuft
+  (`dienste.sync` → `fwNamen`); danach alle 60 s. Im Entwurf steht „noch nicht aufgelöst". Eine Zeile, deren Name nicht
+  aufzulösen ist, sperrt nichts (auch nicht in der Whitelist: dort erlaubt sie nichts) — und das Fenster nennt den Grund.
+* Unfertige Zeilen (leere oder krumme Adresse, krumme Maske) tun nichts, behalten aber ihre Nummer
+  (`Firewall.eintrag` gibt `null`). Das Fenster nutzt dieselbe Prüfung für das rote Feld und den Satz darunter.
 * ⚠️ **Das Zeichen sucht sich eine freie Ecke** (`fwPlatz`): unten links, dann unten rechts, oben links, oben rechts.
   Grund: beim Heimrouter lag das Schildchen „LAN 2" halb auf dem Zeichen — das hat nur der Screenshot gezeigt.
 * ⚠️ **Prüfstände:** `tests/uitest.js` bricht in diesem Container schon VOR dieser Runde bei „DNS-Server" ab (gleiche
-  drei FAIL vorher und nachher, Ausgabe identisch). Deshalb gibt es `tests/fwuitest.js` (54 Prüfungen, eigenständig):
+  drei FAIL vorher und nachher). Deshalb gibt es `tests/fwuitest.js` (66 Prüfungen, eigenständig):
   `NODE_PATH=<playwright-core> CHROME_PATH=<chrome> node tests/fwuitest.js`.
 * Offen / nächster Schritt: **Länder als benannte Bereiche im Szenario** (Auswahl „Land sperren" statt Adressliste),
-  ein **Auftrag** dazu in `szenarien.js`, und ob Kinder im Aktionsmodus Regeln ändern dürfen (derzeit nein).
-
-## 0010 · VPN — Schritt 5 des Sicherheitsplans (2026-10-01)
-
-Berührt: neu `js/vpn.js`, `js/prog-vpn.js`; `js/schichten.js` (⟨VPN⟩-Haken in `sendIp`/`onIp`, `setVpn`, `ipLokal`,
-`ipWeiter`, `ipKennung`), `js/dienste.js` (`vpn` erzeugen, `sync`), `js/netz.js` (`vpnServerConf`, `vpnClientConf`,
-Dienst `vpn`, Speicherformat), `js/geraet.js` (Programme `vpnserver`/`vpnclient`, Pille „VPN aktiv", Neuzeichnen bei
-`kind: 'vpn'`), `js/flaeche.js` (Ring um Tunnelpakete, Marke „VPN"), `js/mitschnitt.js` (Ereignis `tun`, Zeilen
-`◯ Tunnel`, Mitlesende am Server), `js/panels.js`, `js/prog-zert.js` (`ohneHaken`, `info`, `ohne`), `index.html`
-(Skripte, Symbole `vpnserver` `vpnclient`, `?v=…k`), `css/app.css` (`--vpn`, `.dt-vpn`, `.nf-ring`),
-`tests/kerntest.js` (1185 grün), `PLAN-SICHERHEIT.md` (Schritt 5 abgehakt, Entscheidungen dort), `LIESMICH.md`.
-
-* ⭐ **Modell (so vom Nutzer entschieden):** VPN-Server mit Konten und **Zertifikat von einer ZS**, VPN-Client mit
-  Server/Konto/Passwort. **Alles** geht durch den Tunnel, auch DNS. Mitleser an der Leitung sehen nur Client ↔
-  Server; der VPN-Server selbst sieht alles („das Vertrauen wandert"). Läuft auch durch das CWW.
-* ⭐ **Technik:** der Tunnel ist eine **TLS-Verbindung auf TCP 1194** (kein eigenes UDP-Protokoll) — Zertifikat,
-  Handschlag, Warnungen und Ausnahme kommen aus `tls.js`. Innere Pakete als JSON-Sätze `{vpn:'Paket', pkt}`.
-  Client: `vpn.umleiten` in `sendIp` (alles außer Gespräch mit dem Server, eigene Adressen, 127.*). Server:
-  `ausTunnel` → TTL → Weg suchen → eigene NAT-Tabelle (Außenports 40000–49000) → `ipWeiter`; Antworten fängt
-  `vpn.herein` in `onIp` VOR „für mich?" ab.
-* Zustand: `node.state.vpn` (Client, nicht gespeichert), `node.state.vpnSrv` (Server: Sitzungen, NAT). Gespeichert
-  werden nur `vpnServer` (Konten mit **Hash**) und `vpnClient` (Server, Benutzer, Passwort).
-* Mitschnitt: Ereignis `kind: 'tun'` → Zeile mit `tun: true`, Rahmen `Tunnel → Tunnel`. Am **Server** ist sie
-  „Unterwegs" (`mit: 'weg'`), am Client nicht. Außen steht normaler TLS-Verkehr auf Port 1194.
-* ⚠️ **`tests/uitest.js` ist für VPN nicht erweitert** und bricht in dieser Container-Umgebung schon vorher ab
-  (Zeile ~1625, auch am unveränderten Stand). Oberfläche geprüft mit einem Einmal-Skript (Server-/Client-Fenster,
-  Pille, Ring, Mitschnitt).
-* ⚠️ Während ein Tunnel steht, geht auch das, was ein Client **anbietet**, nicht mehr nach außen (Antworten gehen in
-  den Tunnel). Gewollt („Alles durch den Tunnel"), steht im Plan.
+  ein **Auftrag** dazu in `szenarien.js`, und ob Kinder im Aktionsmodus die Liste ändern dürfen (derzeit nein).
 
 ---
 

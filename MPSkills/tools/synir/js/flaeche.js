@@ -1076,12 +1076,14 @@
         const nr = (c.regeln || []).length;
         const p = fwPlatz(n);
         const b = el('g', { class: 'nf-fw', transform: 'translate(' + p.x + ',' + p.y + ')' }, g);
+        /* Ein heller Grund, damit die Mauer auch vor dem dunklen Gehäuse
+           eines Routers zu erkennen ist. */
         el('circle', { r: FW_R }, b);
-        const ic = el('g', { transform: 'translate(-7.2,-7.2) scale(.6)' }, b);
+        const ic = el('g', { transform: 'translate(-8.4,-8.4) scale(.7)' }, b);
         el('use', { href: '#ic-firewall' }, ic);
         const ttl = el('title', {}, b);
-        ttl.textContent = 'Auf diesem Gerät läuft eine Firewall: ' + nr + (nr === 1 ? ' Regel' : ' Regeln')
-          + ', Standard: ' + (c.standard === 'verwerfen' ? 'verwerfen' : 'durchlassen') + '.';
+        ttl.textContent = 'Auf diesem Gerät läuft eine Firewall (' + (c.typ === 'whitelist' ? 'Whitelist' : 'Blacklist')
+          + ', ' + nr + (nr === 1 ? ' Eintrag' : ' Einträge') + ').';
       }
 
       g.addEventListener('pointerdown', (ev) => onNodeDown(ev, n));
@@ -1098,7 +1100,7 @@
        unten links — ein überdecktes Zeichen ist besser als keines.
 
        Koordinaten relativ zur Kachelmitte. */
-    const FW_R = 10;
+    const FW_R = 12;
     function fwPlatz(n) {
       const links = -W / 2 + FW_R, rechts = W / 2 - FW_R, unten = H / 2 - 9, oben = -H / 2 + 9;
       const aus = n.on ? 0 : 2 * FW_R + 3;          // neben das Aus-Zeichen

@@ -80,15 +80,20 @@ async function waehlen(page, kind) {
     await waehlen(page, kind);
     await page.locator('#karteBody [data-k="fwseite"]').click();
     await page.waitForTimeout(200);
-    ok(kind + ': die Seite hat „Zurück", den Haken oben und noch keine Regel',
+    ok(kind + ': die Seite hat „Zurück", den Haken und noch keine Zeile',
        await page.locator('#karteBody [data-k="zurueck"]').count() === 1
        && await page.locator('#karteBody [data-k="fwan"]').count() === 1
-       && await page.locator('#karteBody .k-fwr').count() === 0);
+       && await page.locator('#karteBody .k-fwz').count() === 0);
     ok(kind + ': der Haken ist die ERSTE Einstellung auf der Seite',
        await page.evaluate(() => {
-         const f = document.querySelector('#karteBody input, #karteBody select');
+         const f = document.querySelector('#karteBody input, #karteBody select, #karteBody [data-k="fwtyp"]');
          return f && f.dataset.k === 'fwan';
        }));
+    ok(kind + ': es gibt keine Aktion je Zeile, keine Ports, keinen Eingang, keine Pfeile',
+       await page.locator('#karteBody [data-f="fwakt"], #karteBody [data-f="fwport"], #karteBody [data-f="fwein"], #karteBody [data-k="fwhoch"]').count() === 0);
+    ok(kind + ': Blacklist ist vorgewählt, mit dem Satz dazu',
+       await page.locator('#karteBody [data-k="fwtyp"].is-on').getAttribute('data-typ') === 'blacklist'
+       && /gesperrt/.test(await page.locator('#karteBody .k-fw-satz').textContent()));
     await page.locator('#karteBody [data-k="fwan"]').check();
     await page.waitForTimeout(200);
     ok(kind + ': Haken setzt „läuft" in Modell und Anzeige',
@@ -98,36 +103,53 @@ async function waehlen(page, kind) {
     await page.locator('#karteBody [data-k="fwneu"]').click();
     await page.locator('#karteBody [data-k="fwneu"]').click();
     await page.waitForTimeout(150);
-    ok(kind + ': „+ Regel" legt Zeilen an (verwerfen)',
-       await page.locator('#karteBody .k-fwr').count() === 2
-       && await page.locator('#karteBody .k-fwr[data-akt="verwerfen"]').count() === 2);
-    await page.locator('#karteBody [data-f="fwquelle"]').nth(0).fill('203.0.113.0/24');
-    await page.locator('#karteBody [data-f="fwquelle"]').nth(1).fill('banane');
+    ok(kind + ': „+ Adresse" legt LEERE Zeilen an, die „unfertig" sagen',
+       await page.locator('#karteBody .k-fwz').count() === 2
+       && /unfertig/.test(await page.locator('#karteBody .k-fwz-i').nth(0).textContent()));
+    await page.locator('#karteBody [data-f="fwadr"]').nth(0).fill('192.0.0.0');
+    await page.locator('#karteBody [data-f="fwmask"]').nth(0).fill('255.0.0.0');
     await page.waitForTimeout(100);
-    ok(kind + ': eine krumme Angabe ist rot und die Zeile „unfertig"',
-       await page.locator('#karteBody [data-f="fwquelle"]').nth(1).evaluate(e => e.classList.contains('is-bad'))
-       && await page.locator('#karteBody .k-fwr-u.is-da').count() === 1);
-    ok(kind + ': die gute Zeile ist es nicht',
-       !(await page.locator('#karteBody [data-f="fwquelle"]').nth(0).evaluate(e => e.classList.contains('is-bad'))));
-    await page.locator('#karteBody [data-f="fwakt"]').nth(0).selectOption('erlauben');
+    ok(kind + ': unter der Zeile steht, was daraus folgt',
+       /192\.0\.0\.0.*192\.255\.255\.255.*16\.777\.216/.test(await page.locator('#karteBody .k-fwz-i').nth(0).textContent()),
+       await page.locator('#karteBody .k-fwz-i').nth(0).textContent());
+    await page.locator('#karteBody [data-f="fwadr"]').nth(1).fill('192.168.2.1');
     await page.waitForTimeout(100);
-    ok(kind + ': die Aktion färbt die Zeile',
-       await page.locator('#karteBody .k-fwr').nth(0).getAttribute('data-akt') === 'erlauben');
-    await page.locator('#karteBody [data-k="fwrunter"]').nth(0).click();
-    await page.waitForTimeout(150);
-    ok(kind + ': ▼ vertauscht die Reihenfolge (die Aussage der Liste)',
+    ok(kind + ': eine Adresse ohne Maske ist „genau dieses Gerät"',
+       /genau dieses Gerät/.test(await page.locator('#karteBody .k-fwz-i').nth(1).textContent()));
+    await page.locator('#karteBody [data-f="fwmask"]').nth(1).fill('255.0.255.0');
+    await page.waitForTimeout(100);
+    ok(kind + ': eine krumme Maske ist rot und die Zeile „unfertig"',
+       await page.locator('#karteBody [data-f="fwmask"]').nth(1).evaluate(e => e.classList.contains('is-bad'))
+       && /Netzmaske stimmt nicht/.test(await page.locator('#karteBody .k-fwz-i').nth(1).textContent()));
+    await page.locator('#karteBody [data-f="fwmask"]').nth(1).fill('');
+    await page.locator('#karteBody [data-f="fwadr"]').nth(1).fill('www.beispiel.de');
+    await page.waitForTimeout(100);
+    ok(kind + ': ein Name hat keine Maske (Feld grau) und ist „noch nicht aufgelöst"',
+       await page.locator('#karteBody [data-f="fwmask"]').nth(1).isDisabled()
+       && /noch nicht aufgelöst/.test(await page.locator('#karteBody .k-fwz-i').nth(1).textContent()));
+    await page.locator('#karteBody [data-k="fwtyp"][data-typ="whitelist"]').click();
+    await page.waitForTimeout(200);
+    ok(kind + ': der Schalter macht aus der Liste eine Whitelist (Liste bleibt, Satz und Überschrift wechseln)',
        await page.evaluate((k) => {
-         const r = window.SIM.netz.list().find(n => n.kind === k).firewall.regeln;
-         return r[0].quelle === 'banane' && r[1].quelle === '203.0.113.0/24' && r[1].aktion === 'erlauben';
-       }, kind));
+         const f = window.SIM.netz.list().find(n => n.kind === k).firewall;
+         return f.typ === 'whitelist' && f.regeln.length === 2;
+       }, kind)
+       && /Nur was auf der Liste/.test(await page.locator('#karteBody .k-fw-satz').textContent())
+       && await page.locator('#karteBody .k-sec', { hasText: 'Erlaubt' }).count() === 1);
+    await page.locator('#karteBody [data-f="fwabl"]').selectOption('ablehnen');
+    ok(kind + ': „ablehnen" steht im Modell',
+       await page.evaluate((k) => window.SIM.netz.list().find(n => n.kind === k).firewall.ablehnen === true, kind));
+    await page.locator('#karteBody [data-k="fwtyp"][data-typ="blacklist"]').click();
+    await page.waitForTimeout(150);
     await page.locator('#karteBody [data-k="fwdel"]').nth(0).click();
     await page.waitForTimeout(150);
-    ok(kind + ': × entfernt eine Zeile', await page.locator('#karteBody .k-fwr').count() === 1);
+    ok(kind + ': × entfernt eine Zeile', await page.locator('#karteBody .k-fwz').count() === 1);
     await page.locator('#karteBody [data-k="zurueck"]').click();
     await page.waitForTimeout(200);
-    ok(kind + ': der Knopf zeigt „läuft · 1 Regel" und ist grün',
+    ok(kind + ': der Knopf zeigt „läuft · Blacklist · 1 Eintrag" und ist grün',
        await page.locator('#karteBody .k-fw.is-an').count() === 1
-       && /läuft · 1 Regel/.test(await page.locator('#karteBody .k-fw').textContent()));
+       && /läuft · Blacklist · 1 Eintrag/.test(await page.locator('#karteBody .k-fw').textContent()),
+       await page.locator('#karteBody .k-fw').textContent());
   }
 
   console.log('\n── Firewall: das Zeichen auf der Fläche ────────────');
@@ -147,7 +169,7 @@ async function waehlen(page, kind) {
     const r = window.SIM.netz.list().find(n => n.kind === 'router');
     r.firewall.on = false; window.SIM.flaeche.draw();
   });
-  ok('aus → das Zeichen verschwindet (die Regeln bleiben)',
+  ok('aus → das Zeichen verschwindet (die Liste bleibt)',
      await page.locator('.nf-fw').count() === 2
      && await page.evaluate(() => window.SIM.netz.list().find(n => n.kind === 'router').firewall.regeln.length === 1));
   await page.evaluate(() => {
@@ -180,8 +202,8 @@ async function waehlen(page, kind) {
     h.nics[0].ip = '192.168.1.10'; h.nics[0].mask = '255.255.255.0'; h.gateway = '192.168.1.1';
     N.addCable(h.id, 0, hr.id, 2);
     const c = N.fwConf(hr);
-    c.on = true; c.standard = 'erlauben'; c.merken = true;
-    c.regeln = [{ ein: '*', quelle: '', ziel: '84.12.5.0/24', proto: 'icmp', port: '', aktion: 'verwerfen' }];
+    c.on = true; c.typ = 'blacklist'; c.ablehnen = false;
+    c.regeln = [{ adresse: '84.12.5.0', maske: '255.255.255.0' }];
     S.flaeche.draw();
   });
   await page.evaluate(() => window.SIM.setModus('aktion'));
@@ -191,9 +213,11 @@ async function waehlen(page, kind) {
   ok('Kompaktansicht: ein Block „Firewall" mit „läuft"',
      await page.locator('#dtWin .k-sec', { hasText: 'Firewall' }).count() >= 1
      && /läuft/.test(await page.locator('#dtWin').textContent()));
-  ok('… und die Regel als Zeile mit Aktion „verwerfen"',
-     await page.locator('#dtWin .tbl-fw .k-fw-a--verwerfen').count() === 1);
-  ok('… nur lesen: keine Eingabefelder für Regeln',
+  ok('… mit dem Typ „Blacklist" und der Zeile samt Wirkung',
+     /Blacklist/.test(await page.locator('#dtWin').textContent())
+     && await page.locator('#dtWin .tbl-fw tr').count() === 2
+     && /84\.12\.5\.255/.test(await page.locator('#dtWin .tbl-fw').textContent()));
+  ok('… nur lesen: keine Eingabefelder für die Liste',
      await page.locator('#dtWin [data-f^="fw"]').count() === 0);
 
   await page.evaluate(() => {
@@ -211,14 +235,14 @@ async function waehlen(page, kind) {
        const z = document.querySelector('#dtWin .k-fw-stat');
        return !!z && /[1-9]\d* verworfen/.test(z.textContent);
      }), await page.locator('#dtWin .k-fw-stat').textContent());
-  ok('und die Regel zeigt ihre Treffer',
-     /Treffer/.test(await page.locator('#dtWin .tbl-fw [data-live="fwtreffer"]').first().textContent()));
+  ok('und die Zeile zeigt ihre Treffer',
+     /Treffer/.test(await page.locator('#dtWin .tbl-fw [data-live="fwzeile"]').first().textContent()));
 
   // Der Mitschnitt: Standardansicht („nur raus") zeigt die verworfene Zeile.
   await page.evaluate(() => { const b = document.querySelector('#traceBtn'); if (b) b.click(); });
   await page.waitForTimeout(300);
-  const wurde = await page.evaluate(() => window.SIM.mit.view().some(r => r.lost && /Regel 1/.test(r.fw || '')));
-  ok('⭐ der Mitschnitt zeigt die verworfene Zeile mit der Regelnummer — auch in der Voreinstellung', wurde);
+  const wurde = await page.evaluate(() => window.SIM.mit.view().some(r => r.lost && /Zeile 1/.test(r.fw || '')));
+  ok('⭐ der Mitschnitt zeigt die verworfene Zeile mit der Zeilennummer — auch in der Voreinstellung', wurde);
 
   // Terminal des Routers.
   await page.evaluate(() => window.SIM.setModus('entwurf'));

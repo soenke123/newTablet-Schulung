@@ -557,7 +557,7 @@
        sind. Gilt in beiden Modi, auch in der kompakten Ansicht. */
     const live = (art, inhalt) => '<div data-live="' + art + '">' + inhalt + '</div>';
     function liveHtml(art, el) {
-      if (art === 'fwstat' || art === 'fwtreffer') return fwLive(art, el);
+      if (art === 'fwstat' || art === 'fwzeile') return fwLive(art, el);
       if (art === 'bereiche') return bereicheListe();
       if (art === 'dns') return dnsListe();
       if (art === 'dnsn') { const n = inet ? inet.liste().length : 0; return n ? ' · <b>' + n + '</b>' : ''; }
@@ -1521,19 +1521,19 @@
 
     /* ═══ Die Firewall ═══════════════════════════════════════
        Eine Unterseite im selben Fenster, genau wie der DHCP-Server:
-       ein Knopf ganz unten in „Allgemein", dahinter die Regeln, oben
+       ein Knopf ganz unten in „Allgemein", dahinter die Liste, oben
        „Firewall aktivieren". Den Knopf gibt es bei Router, Heimrouter
        und cww; was sie tut und wo sie sitzt, steht in js/firewall.js.
 
        Der KNOPF zeigt, ob sie läuft — das ist der Zustand, den man
        beim Durchsehen eines Netzes wissen will, ohne die Seite
        aufzuschlagen. „läuft" ist grün und pulsiert, „läuft nicht"
-       ist grau; die Regeln bleiben im Aus stehen.                 */
-    const fwKann = (node) => !!(stack.fwKann && stack.fwKann(node));
-    const FW_AKTION = [['erlauben', 'erlauben'], ['verwerfen', 'verwerfen'], ['ablehnen', 'ablehnen']];
-    const FW_PROTO  = [['*', 'alle'], ['tcp', 'TCP'], ['udp', 'UDP'], ['icmp', 'ICMP']];
-    const FW_FELD = { fwein: 'ein', fwquelle: 'quelle', fwziel: 'ziel', fwproto: 'proto', fwport: 'port', fwakt: 'aktion' };
+       ist grau; die Liste bleibt im Aus stehen.
 
+       Auf der Seite: EINE Liste und ein Schalter, was sie bedeutet
+       (Blacklist: gesperrt · Whitelist: nur das kommt durch). Eine
+       Zeile ist eine Adresse mit Netzmaske — oder ein Name.        */
+    const fwKann = (node) => !!(stack.fwKann && stack.fwKann(node));
     const fwZahl = (n, eins, viele) => n + ' ' + (n === 1 ? eins : viele);
 
     function fwKnopf(node) {
@@ -1543,115 +1543,132 @@
         + U.icon('firewall', 'k-fw-ic')
         + '<span class="k-fw-n">Firewall</span>'
         + '<span class="k-fw-s"><i class="k-fw-punkt"></i>'
-        + (an ? 'läuft' : 'läuft nicht') + ' · ' + fwZahl(c.regeln.length, 'Regel', 'Regeln') + '</span>'
+        + (an ? 'läuft' : 'läuft nicht') + ' · ' + (c.typ === 'whitelist' ? 'Whitelist' : 'Blacklist')
+        + ' · ' + fwZahl(c.regeln.length, 'Eintrag', 'Einträge') + '</span>'
         + '</button>';
     }
 
+    /* Was zu einer Zeile zu sagen ist — und es steht LIVE da: bei einer
+       Adresse, was daraus folgt („von 192.0.0.0 bis 192.255.255.255"),
+       bei einem Namen die aufgelöste Adresse (oder warum nicht), dazu
+       die Treffer. Wer die Maske vergessen hat, sieht es hier. */
+    function fwZeile(node, i) {
+      const r = netz.fwConf(node).regeln[i];
+      const F = window.Firewall;
+      if (!r || !F) return '';
+      const a = String(r.adresse || '').trim();
+      const e = F.eintrag(r);
+      const t = (stack.fwAuskunft(node).treffer[i]) || 0;
+      const treffer = t ? ' <b class="k-fwz-t">' + fwZahl(t, 'Treffer', 'Treffer') + '</b>' : '';
+      if (!a) return '<span class="k-fwz-w">unfertig — es fehlt die Adresse</span>';
+      if (!e) {
+        return '<span class="k-fwz-w">unfertig — '
+          + (F.maske(r.maske) === null ? 'die Netzmaske stimmt nicht' : 'das ist weder eine Adresse noch ein Name') + '</span>';
+      }
+      if (e.art === 'netz') {
+        const b = F.bereich(e);
+        return (b.anzahl === 1 ? 'genau dieses Gerät'
+          : 'von <span class="mono">' + esc(b.von) + '</span> bis <span class="mono">' + esc(b.bis) + '</span> · '
+            + b.anzahl.toLocaleString('de-DE') + ' Adressen') + treffer;
+      }
+      const z = stack.fwAuskunft(node).namen[e.name];
+      if (!z) return 'noch nicht aufgelöst <span class="dim">(die Uhr läuft nicht)</span>' + treffer;
+      if (z.offen && !z.ip) return 'wird aufgelöst …' + treffer;
+      if (z.ip) return '→ <span class="mono">' + esc(z.ip) + '</span>' + treffer;
+      return '<span class="k-fwz-w">nicht aufgelöst — ' + esc(z.why) + '</span>' + treffer;
+    }
+
     /* Was sich beim Laufen verändert: die Zahlen unter der Liste und
-       die Treffer an jeder Zeile. `data-live`, damit `cwwAuffrischen`
+       der Satz an jeder Zeile. `data-live`, damit `cwwAuffrischen`
        sie mitnimmt — ohne dass die Felder dabei neu entstehen. */
     function fwLive(art, el) {
       const n = el && el.dataset.node ? netz.get(el.dataset.node) : null;
       if (!n || !stack.fwAuskunft) return '';
+      if (art === 'fwzeile') return fwZeile(n, +el.dataset.nr);
       const a = stack.fwAuskunft(n);
-      if (art === 'fwtreffer') {
-        const t = a.treffer[+el.dataset.nr] || 0;
-        return t ? fwZahl(t, 'Treffer', 'Treffer') : '';
-      }
       const z = (x, w) => '<span class="k-fw-z"><b>' + x + '</b> ' + w + '</span>';
-      return z(a.erlaubt, 'erlaubt') + z(a.verworfen, 'verworfen')
+      return z(a.erlaubt, 'durchgelassen') + z(a.verworfen, 'verworfen')
         + (a.abgelehnt ? z(a.abgelehnt, 'abgelehnt') : '')
-        + z(a.antworten, 'Antworten')
         + (a.zuletzt ? '<div class="k-fw-letzt">zuletzt: ' + esc(a.zuletzt.text) + '</div>' : '');
     }
 
-    /* Ist eine Zeile fertig? Dieselbe Prüfung wie in der Engine, damit
-       das Fenster genau das als unfertig zeigt, was auch nichts tut. */
-    function fwFertig(r) { return !!(window.Firewall && window.Firewall.regel(r)); }
-    function fwFeldOk(f, v) {
-      if (!window.Firewall) return true;
-      if (f === 'fwquelle' || f === 'fwziel') return window.Firewall.netz(v) !== null;
-      if (f === 'fwport') return window.Firewall.port(v) !== null;
-      return true;
+    function fwFeldOk(f, node, i) {
+      const F = window.Firewall;
+      const r = netz.fwConf(node).regeln[i];
+      if (!F || !r) return true;
+      if (f === 'fwmask') return F.maske(r.maske) !== null;
+      const a = String(r.adresse || '').trim();
+      return !a || F.eintrag(r) !== null;
     }
 
-    const FW_INFO = 'Prüft jedes Paket, das durch dieses Gerät <b>weitergeleitet</b> wird — von oben '
-      + 'nach unten, die <b>erste passende Regel</b> gilt, sonst der Standard. Standard „verwerfen" '
-      + 'ergibt eine <b>Whitelist</b>, „durchlassen" eine <b>Blacklist</b>. Pakete an das Gerät selbst '
-      + 'prüft sie nicht.';
-    const FW_INFO_REGEL = 'Quelle und Ziel: eine Adresse, ein Bereich wie <b>203.0.113.0/24</b> oder '
-      + '<b>10.1.0.0 255.255.0.0</b> — leer heißt beliebig. Ein Port gilt nur für TCP und UDP: '
-      + '<b>80</b> oder <b>1000-2000</b>. <b>verwerfen</b> schweigt (der Absender wartet), '
-      + '<b>ablehnen</b> antwortet sofort „verboten".';
+    const FW_SATZ = {
+      blacklist: 'Was auf der Liste steht, wird <b>gesperrt</b>. Alles andere kommt durch.',
+      whitelist: 'Nur was auf der Liste steht, kommt <b>durch</b>. Alles andere wird gesperrt.'
+    };
+    const FW_INFO = 'Prüft jedes Paket, das durch dieses Gerät <b>weitergeleitet</b> wird. Eine Zeile trifft, '
+      + 'wenn ihre Adresse der <b>Absender oder das Ziel</b> ist — sie gilt also in beide Richtungen. '
+      + 'Pakete an das Gerät selbst prüft sie nicht.';
+    const FW_INFO_LISTE = 'Eine Adresse allein sperrt <b>genau ein Gerät</b> (192.168.2.1). Mit Netzmaske '
+      + 'ein ganzer Bereich: <b>192.0.0.0</b> mit <b>255.0.0.0</b> ist alles von 192.0.0.0 bis 192.255.255.255. '
+      + 'Ein <b>Name</b> wird in eine Adresse aufgelöst — gesperrt wird die Adresse; ändert der Name sie, '
+      + 'greift die Sperre erst bei der nächsten Auflösung.';
+    const FW_INFO_ABL = '<b>verwerfen</b> schweigt — der Absender wartet. <b>ablehnen</b> antwortet sofort '
+      + '„verboten". Im Mitschnitt ist das der Unterschied zwischen Stille und einer Antwort.';
 
-    function fwRegelHtml(node, r, i, ro, eingaenge, n) {
+    function fwZeileHtml(node, r, i, ro) {
       const dis = ro ? ' disabled' : '';
-      const opt = (liste, sel) => liste.map(([w, t]) =>
-        '<option value="' + esc(w) + '"' + (String(sel) === w ? ' selected' : '') + '>' + esc(t) + '</option>').join('');
-      const feldHtml = (f, wert, ph, extra) =>
-        '<input class="f mono' + (fwFeldOk(f, wert) ? '' : ' is-bad') + '" data-f="' + f + '" data-fwi="' + i + '" '
-        + 'value="' + esc(wert || '') + '" placeholder="' + esc(ph) + '" spellcheck="false" inputmode="decimal"'
-        + (extra || '') + dis + '>';
-      const fertig = fwFertig(r);
-      return '<div class="k-fwr" data-akt="' + esc(r.aktion || 'verwerfen') + '" data-fwi="' + i + '">'
-        +   '<div class="k-fwr-k">'
-        +     '<span class="k-fwr-nr" title="Regel ' + (i + 1) + ' — von oben nach unten, die erste passende gilt">' + (i + 1) + '</span>'
-        +     '<select class="f" data-f="fwakt" data-fwi="' + i + '"' + dis + '>' + opt(FW_AKTION, r.aktion || 'verwerfen') + '</select>'
-        +     '<span class="k-fwr-t dim" data-live="fwtreffer" data-node="' + node.id + '" data-nr="' + i + '">' + fwLive('fwtreffer', { dataset: { node: node.id, nr: i } }) + '</span>'
-        +     (ro ? '' :
-                '<button class="k-x" data-k="fwhoch" data-fwi="' + i + '" title="Nach oben (früher geprüft)"' + (i === 0 ? ' disabled' : '') + '>▲</button>'
-              + '<button class="k-x" data-k="fwrunter" data-fwi="' + i + '" title="Nach unten (später geprüft)"' + (i === n - 1 ? ' disabled' : '') + '>▼</button>'
-              + '<button class="k-x" data-k="fwdel" data-fwi="' + i + '" title="Regel entfernen">×</button>')
+      const F = window.Firewall;
+      const name = F && F.istName(r.adresse);
+      const bad = (f) => fwFeldOk(f, node, i) ? '' : ' is-bad';
+      return '<div class="k-fwz" data-fwi="' + i + '">'
+        +   '<div class="k-fwz-f">'
+        +     '<span class="k-fwz-nr">' + (i + 1) + '</span>'
+        +     '<input class="f mono k-fwz-a' + bad('fwadr') + '" data-f="fwadr" data-fwi="' + i + '" value="' + esc(r.adresse || '') + '" '
+        +       'placeholder="192.0.0.0 oder Name" spellcheck="false" autocapitalize="off" autocomplete="off"' + dis + '>'
+        +     '<input class="f mono k-fwz-m' + bad('fwmask') + '" data-f="fwmask" data-fwi="' + i + '" value="' + esc(r.maske || '') + '" '
+        +       'placeholder="Netzmaske" inputmode="decimal" spellcheck="false"' + (ro || name ? ' disabled' : '') + '>'
+        +     (ro ? '' : '<button class="k-x" data-k="fwdel" data-fwi="' + i + '" title="Zeile entfernen">×</button>')
         +   '</div>'
-        +   '<div class="k-fwr-z">'
-        +     '<label class="k-fwr-l"><span>Eingang</span><select class="f" data-f="fwein" data-fwi="' + i + '"' + dis + '>'
-        +       opt(eingaenge.map(e => [e.wert, e.text]), r.ein == null || r.ein === '' ? '*' : r.ein) + '</select></label>'
-        +     '<label class="k-fwr-l"><span>Protokoll</span><select class="f" data-f="fwproto" data-fwi="' + i + '"' + dis + '>'
-        +       opt(FW_PROTO, r.proto || '*') + '</select></label>'
-        +     '<label class="k-fwr-l"><span>Port</span>' + feldHtml('fwport', r.port, 'beliebig') + '</label>'
-        +   '</div>'
-        +   '<div class="k-fwr-z">'
-        +     '<label class="k-fwr-l k-fwr-l--ip"><span>Quelle</span>' + feldHtml('fwquelle', r.quelle, 'beliebig') + '</label>'
-        +     '<label class="k-fwr-l k-fwr-l--ip"><span>Ziel</span>' + feldHtml('fwziel', r.ziel, 'beliebig') + '</label>'
-        +   '</div>'
-        +   '<div class="k-fwr-u' + (fertig ? '' : ' is-da') + '">unfertig — diese Zeile tut nichts</div>'
+        +   '<div class="k-fwz-i" data-live="fwzeile" data-node="' + node.id + '" data-nr="' + i + '">' + fwZeile(node, i) + '</div>'
         + '</div>';
     }
 
     function bauFirewallSeite(node, box, opts) {
       const ro = !!(opts && opts.ro);
       const c = netz.fwConf(node);
-      const eingaenge = stack.fwEingaenge ? stack.fwEingaenge(node) : [{ wert: '*', text: 'beliebig' }];
       const dis = ro ? ' disabled' : '';
+      const weiss = c.typ === 'whitelist';
 
       let h = '<button class="k-zurueck" data-k="zurueck">‹ Zurück</button>'
         + sec('Firewall', 'fw', FW_INFO);
 
-      /* Ganz oben, wie verlangt: der Haken. Darunter, was gilt, wenn
-         keine Regel passt — die eine Einstellung, die aus derselben
-         Liste eine Whitelist oder eine Blacklist macht. */
+      /* Ganz oben, wie verlangt: der Haken. Darunter der Typ — die
+         eine Einstellung, die sagt, was die Liste BEDEUTET. */
       h += '<label class="k-switch k-fw-an' + (c.on ? ' is-an' : '') + '">'
         +    '<input type="checkbox" data-k="fwan"' + (c.on ? ' checked' : '') + dis + '>'
         +    '<span>Firewall aktivieren</span>'
         +    '<b class="k-fw-lauf">' + (c.on ? 'läuft' : 'läuft nicht') + '</b></label>';
 
-      h += '<label class="k-f"><span class="k-f-l">Wenn keine Regel passt:</span>'
-        +  '<select class="f" data-f="fwstd"' + dis + '>'
-        +    '<option value="erlauben"' + (c.standard !== 'verwerfen' && c.standard !== 'ablehnen' ? ' selected' : '') + '>durchlassen (Blacklist)</option>'
-        +    '<option value="verwerfen"' + (c.standard === 'verwerfen' ? ' selected' : '') + '>verwerfen (Whitelist)</option>'
-        +    '<option value="ablehnen"' + (c.standard === 'ablehnen' ? ' selected' : '') + '>ablehnen (Whitelist, mit Antwort)</option>'
-        +  '</select></label>';
+      h += '<div class="k-reiter k-fw-typ" role="tablist">'
+        + [['blacklist', 'Blacklist'], ['whitelist', 'Whitelist']].map(([k, t]) =>
+            '<button class="k-reiter-b' + (c.typ === k ? ' is-on' : '') + '" data-k="fwtyp" data-typ="' + k + '"' + dis + '>' + t + '</button>').join('')
+        + '</div>'
+        + '<div class="k-fw-satz">' + FW_SATZ[weiss ? 'whitelist' : 'blacklist'] + '</div>';
 
-      h += '<label class="k-switch"><input type="checkbox" data-k="fwmerken"' + (c.merken !== false ? ' checked' : '') + dis + '>'
-        +  '<span>Antworten auf erlaubte Verbindungen durchlassen</span></label>';
+      h += sec('Gesperrte Pakete', 'fwabl', FW_INFO_ABL)
+        + '<select class="f" data-f="fwabl"' + dis + '>'
+        +   '<option value="verwerfen"' + (c.ablehnen ? '' : ' selected') + '>still verwerfen</option>'
+        +   '<option value="ablehnen"' + (c.ablehnen ? ' selected' : '') + '>ablehnen — mit Antwort „verboten"</option>'
+        + '</select>';
 
-      h += sec('Regeln', 'fwregeln', FW_INFO_REGEL);
+      h += sec(weiss ? 'Erlaubt' : 'Gesperrt', 'fwliste', FW_INFO_LISTE);
       if (c.regeln.length) {
-        h += '<div class="k-fwrs">' + c.regeln.map((r, i) => fwRegelHtml(node, r, i, ro, eingaenge, c.regeln.length)).join('') + '</div>';
+        h += '<div class="k-fwzs">' + c.regeln.map((r, i) => fwZeileHtml(node, r, i, ro)).join('') + '</div>';
       } else {
-        h += '<div class="k-hint dim">keine Regel — es gilt nur der Standard</div>';
+        h += '<div class="k-hint dim">' + (weiss ? 'Die Liste ist leer: es wird alles gesperrt.'
+          : 'Die Liste ist leer: es wird nichts gesperrt.') + '</div>';
       }
-      if (!ro) h += '<button class="k-add" data-k="fwneu">+ Regel</button>';
+      if (!ro) h += '<button class="k-add" data-k="fwneu">+ Adresse</button>';
 
       h += '<div class="k-sec">Was bisher passiert ist</div>'
         + '<div class="k-fw-stat" data-live="fwstat" data-node="' + node.id + '">'
@@ -1665,29 +1682,22 @@
     /* Die Zeilen im Aktionsmodus: dieselbe Auskunft, nur lesen. */
     function fwKompakt(node, z, anAus) {
       const c = netz.fwConf(node);
-      const eing = stack.fwEingaenge ? stack.fwEingaenge(node) : [];
-      const nameVon = (w) => (eing.find(e => e.wert === w) || { text: w }).text;
+      const weiss = c.typ === 'whitelist';
       let h = '<div class="k-sec">Firewall</div><div class="kk-g">'
         + z('Firewall', netz.fwLaeuft(node)
             ? '<b class="kk-an">läuft</b>' : '<span class="dim">läuft nicht</span>')
-        + z('Wenn keine Regel passt', c.standard === 'verwerfen' ? 'verwerfen (Whitelist)'
-            : c.standard === 'ablehnen' ? 'ablehnen (Whitelist)' : 'durchlassen (Blacklist)')
-        + z('Antworten durchlassen', anAus(c.merken !== false))
+        + z('Liste', weiss ? 'Whitelist — nur das kommt durch' : 'Blacklist — das wird gesperrt')
+        + z('Gesperrte Pakete', c.ablehnen ? 'ablehnen (mit Antwort)' : 'still verwerfen')
         + '</div>';
       if (c.regeln.length) {
-        h += '<table class="tbl tbl-fw"><tr><th>#</th><th>Aktion</th><th>Eingang</th><th>Quelle</th><th>Ziel</th><th>Proto</th><th>Port</th><th></th></tr>'
-          + c.regeln.map((r, i) => '<tr' + (fwFertig(r) ? '' : ' class="dim"') + '><td>' + (i + 1) + '</td>'
-            + '<td class="k-fw-a k-fw-a--' + esc(r.aktion) + '">' + esc(r.aktion) + '</td>'
-            + '<td>' + esc(nameVon(r.ein == null || r.ein === '' ? '*' : r.ein)) + '</td>'
-            + '<td class="mono">' + esc(r.quelle || 'beliebig') + '</td>'
-            + '<td class="mono">' + esc(r.ziel || 'beliebig') + '</td>'
-            + '<td>' + esc(r.proto === '*' || !r.proto ? 'alle' : String(r.proto).toUpperCase()) + '</td>'
-            + '<td class="mono">' + esc(r.port || '—') + '</td>'
-            + '<td class="dim" data-live="fwtreffer" data-node="' + node.id + '" data-nr="' + i + '">'
-            + fwLive('fwtreffer', { dataset: { node: node.id, nr: i } }) + '</td></tr>').join('')
+        h += '<table class="tbl tbl-fw"><tr><th>#</th><th>Adresse</th><th>Netzmaske</th><th>Wirkung</th></tr>'
+          + c.regeln.map((r, i) => '<tr><td>' + (i + 1) + '</td>'
+            + '<td class="mono">' + esc(r.adresse || '—') + '</td>'
+            + '<td class="mono">' + esc(r.maske || '') + '</td>'
+            + '<td data-live="fwzeile" data-node="' + node.id + '" data-nr="' + i + '">' + fwZeile(node, i) + '</td></tr>').join('')
           + '</table>';
       } else {
-        h += '<div class="k-hint dim">keine Regel</div>';
+        h += '<div class="k-hint dim">keine Zeile</div>';
       }
       h += '<div class="k-fw-stat" data-live="fwstat" data-node="' + node.id + '">'
         + fwLive('fwstat', { dataset: { node: node.id } }) + '</div>';
@@ -1924,25 +1934,34 @@
             if (e) e[f === 'festmac' ? 'mac' : 'ip'] =
               f === 'festmac' ? v.toLowerCase() : v;
           }
-          /* ─ Firewall ─ Eine Zeile oder der Standard. Die Treffer je Zeile
-             gehören zu dieser Zeile an dieser Stelle und fangen bei jeder
-             Änderung neu an — sonst stünde neben einer umgeschriebenen
-             Regel die Zahl der alten. */
-          else if (FW_FELD[f]) {
-            const r = netz.fwConf(node).regeln[+inp.dataset.fwi];
-            if (r) r[FW_FELD[f]] = (f === 'fwquelle' || f === 'fwziel' || f === 'fwport') ? v : inp.value;
-            if (f === 'fwakt') {
-              const k = inp.closest('.k-fwr');
-              if (k) k.dataset.akt = inp.value;
+          /* ─ Firewall ─ Eine Zeile (Adresse, Netzmaske) oder die Art des
+             Sperrens. Die Treffer je Zeile gehören zu dieser Zeile an
+             dieser Stelle und fangen bei jeder Änderung neu an — sonst
+             stünde neben einer umgeschriebenen Zeile die Zahl der alten.
+
+             KEIN rebuild(): das Feld, in dem getippt wird, dürfte dabei
+             nicht neu entstehen. Der Satz unter der Zeile und das rote
+             Feld werden an Ort und Stelle nachgezogen. */
+          else if (f === 'fwadr' || f === 'fwmask') {
+            const i = +inp.dataset.fwi;
+            const r = netz.fwConf(node).regeln[i];
+            if (r) r[f === 'fwadr' ? 'adresse' : 'maske'] = v;
+            const z = inp.closest('.k-fwz');
+            if (z && r) {
+              for (const [ff, sel] of [['fwadr', '.k-fwz-a'], ['fwmask', '.k-fwz-m']]) {
+                const el2 = z.querySelector(sel);
+                if (el2) el2.classList.toggle('is-bad', !fwFeldOk(ff, node, i));
+              }
+              /* Ein Name hat keine Netzmaske: das Feld wird grau. */
+              const m = z.querySelector('.k-fwz-m');
+              if (m) m.disabled = opts.ro || !!(window.Firewall && window.Firewall.istName(r.adresse));
             }
-            if (inp.tagName === 'INPUT') inp.classList.toggle('is-bad', !fwFeldOk(f, v));
-            const k = inp.closest('.k-fwr');
-            if (k && r) { const u = k.querySelector('.k-fwr-u'); if (u) u.classList.toggle('is-da', !fwFertig(r)); }
-            if (stack.fwLeeren) stack.fwLeeren(node);
+            if (stack.fwLeeren) stack.fwLeeren(node, true);
+            sync();                       // fragt nur, wenn die Uhr läuft
+            cwwAuffrischen(box);
           }
-          else if (f === 'fwstd') {
-            netz.fwConf(node).standard = inp.value;
-            if (stack.fwLeeren) stack.fwLeeren(node);
+          else if (f === 'fwabl') {
+            netz.fwConf(node).ablehnen = inp.value === 'ablehnen';
           }
           else if (f === 'dhcpnic')   { netz.dhcpConf(node).nic = +v; sync(); rebuild(); }
           else if (f === 'dhcpvon')   { netz.dhcpConf(node).von = v; }
@@ -2036,11 +2055,13 @@
           return;
         }
 
-        if (k === 'fwmerken') {
-          el.addEventListener('change', () => {
-            netz.fwConf(node).merken = el.checked;
-            if (stack.fwLeeren) stack.fwLeeren(node, true);
-            dirty(); redraw();
+        if (k === 'fwtyp') {
+          el.addEventListener('click', () => {
+            const c = netz.fwConf(node);
+            if (c.typ === el.dataset.typ) return;
+            c.typ = el.dataset.typ;
+            if (stack.fwLeeren) stack.fwLeeren(node);
+            dirty(); redraw(); rebuild();
           });
           return;
         }
@@ -2131,28 +2152,19 @@
             return;
           }
 
-          /* ─ Firewall-Regeln ─ Neu angelegt wird unten, als „verwerfen":
-             die Zeile, die man am häufigsten braucht, und eine Zeile
-             ohne Wirkung wäre die falsche Vorgabe — sie sähe fertig aus
-             und täte nichts. Die Reihenfolge ist die Aussage, deshalb
-             lassen sich Zeilen verschieben. */
+          /* ─ Firewall-Liste ─ Neu angelegt wird unten, LEER: eine Zeile
+             mit einer Vorgabe würde sperren, was niemand eingetragen
+             hat. Leer ist sie „unfertig" und tut nichts. */
           if (k === 'fwneu') {
-            netz.fwConf(node).regeln.push({ ein: '*', quelle: '', ziel: '', proto: '*', port: '', aktion: 'verwerfen' });
+            netz.fwConf(node).regeln.push({ adresse: '', maske: '' });
             if (stack.fwLeeren) stack.fwLeeren(node);
             dirty(); redraw(); rebuild();
-            const felder = box.querySelectorAll('[data-f="fwquelle"]');
+            const felder = box.querySelectorAll('[data-f="fwadr"]');
             if (felder.length) felder[felder.length - 1].focus();
             return;
           }
-          if (k === 'fwdel' || k === 'fwhoch' || k === 'fwrunter') {
-            const liste = netz.fwConf(node).regeln;
-            const i = +el.dataset.fwi;
-            if (k === 'fwdel') liste.splice(i, 1);
-            else {
-              const j = k === 'fwhoch' ? i - 1 : i + 1;
-              if (j < 0 || j >= liste.length) return;
-              const t = liste[i]; liste[i] = liste[j]; liste[j] = t;
-            }
+          if (k === 'fwdel') {
+            netz.fwConf(node).regeln.splice(+el.dataset.fwi, 1);
             if (stack.fwLeeren) stack.fwLeeren(node);
             dirty(); redraw(); rebuild();
             return;

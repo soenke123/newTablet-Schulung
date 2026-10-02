@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20261002c">
+<link rel="stylesheet" href="css/app.css?v=20261002d">
 </head>
 <body>
 
@@ -59,13 +59,26 @@
       <path d="M6.5 18.5h11a4 4 0 0 0 .6-7.95A5.5 5.5 0 0 0 7.4 9.2 4.7 4.7 0 0 0 6.5 18.5z"/>
       <text x="12" y="16.3" text-anchor="middle" font-size="5.2" font-weight="700" fill="currentColor" stroke="none" font-family="system-ui, sans-serif">cww</text>
     </g>
-    <!-- Die Firewall: eine Mauer mit einer Flamme darüber. Steht an zwei
-         Orten für dieselbe Aussage: als Zeichen unten links an einem
-         Router, der gerade filtert, und im Knopf „Firewall". -->
-    <g id="ic-firewall" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-      <rect x="3" y="13" width="18" height="8.5" rx="1"/>
-      <path d="M3 16.8h18M3 19.6h18M9 13v3.8M15 13v3.8M6 16.8v2.8M12 16.8v2.8M18 16.8v2.8M9 19.6v1.9M15 19.6v1.9"/>
-      <path d="M12 2.3c.5 2.2 3.4 3.4 3.4 6.2a3.4 3.4 0 0 1-6.8 0c0-1.2.6-2.1 1.3-2.7.2 1 .8 1.5 1.5 1.6-.4-1.6-.1-3.4.6-5.1z"/>
+    <!-- Die Firewall: Ziegelmauer mit Flamme, in Farbe (nach dem Vorbild des
+         Nutzers) — die einzige Figur in dieser Sammlung, die nicht mit
+         currentColor zeichnet: eine graue Flamme ist keine. Steht an
+         zwei Orten für dieselbe Aussage: als Zeichen unten links an
+         einem Gerät, das gerade filtert, und im Knopf „Firewall". -->
+    <g id="ic-firewall" stroke-linejoin="round">
+      <rect x="1.4" y="2.6" width="21.2" height="16.8" rx="1.6" fill="#3d4a52"/>
+      <g fill="#e2584d">
+        <rect x="2.9" y="4.1" width="5.4" height="3.6" rx=".5"/><rect x="9.5" y="4.1" width="5.4" height="3.6" rx=".5"/><rect x="16.1" y="4.1" width="5" height="3.6" rx=".5"/>
+        <rect x="2.9" y="8.9" width="2.4" height="3.6" rx=".5"/><rect x="6.5" y="8.9" width="5.4" height="3.6" rx=".5"/><rect x="13.1" y="8.9" width="5.4" height="3.6" rx=".5"/><rect x="19.7" y="8.9" width="1.4" height="3.6" rx=".5"/>
+        <rect x="2.9" y="13.7" width="5.4" height="3.6" rx=".5"/><rect x="9.5" y="13.7" width="5.4" height="3.6" rx=".5"/><rect x="16.1" y="13.7" width="5" height="3.6" rx=".5"/>
+      </g>
+      <g fill="#f0a39a">
+        <rect x="2.9" y="4.1" width="5.4" height="1" rx=".4"/><rect x="9.5" y="4.1" width="5.4" height="1" rx=".4"/><rect x="16.1" y="4.1" width="5" height="1" rx=".4"/>
+        <rect x="6.5" y="8.9" width="5.4" height="1" rx=".4"/><rect x="13.1" y="8.9" width="5.4" height="1" rx=".4"/>
+        <rect x="2.9" y="13.7" width="5.4" height="1" rx=".4"/><rect x="9.5" y="13.7" width="5.4" height="1" rx=".4"/><rect x="16.1" y="13.7" width="5" height="1" rx=".4"/>
+      </g>
+      <path d="M17.4 9.2c.7 2.5 4.2 4 4.2 7.7a4.2 4.2 0 0 1-8.4 0c0-1.5.8-2.6 1.6-3.3.2 1.2 1 1.8 1.8 1.9-.5-2-.2-4.2.8-6.3z"
+            fill="#f2a13b" stroke="#3d4a52" stroke-width="1.3"/>
+      <path d="M17.6 14c.4 1.3 2 2 2 3.8a2 2 0 0 1-4 0c0-.8.4-1.3.8-1.7.1.6.5.9.9 1-.3-1-.1-2 .3-3.1z" fill="#d8402f"/>
     </g>
     <!-- Funkwellen. Stehen an zwei Orten für dieselbe Aussage:
          am Gerät, das ausstrahlt, und vor dem Namen des Netzes. -->
@@ -910,10 +923,10 @@
 
 <script src="js/util.js?v=20260930e"></script>
 <script src="js/engine.js?v=20260930e"></script>
-<script src="js/netz.js?v=20261002c"></script>
+<script src="js/netz.js?v=20261002d"></script>
 <script src="js/verlauf.js?v=20260930e"></script>
 <script src="js/nat.js?v=20260930e"></script>
-<script src="js/firewall.js?v=20261002c"></script>
+<script src="js/firewall.js?v=20261002d"></script>
 <script src="js/tcp.js?v=20260930e"></script>
 <script src="js/rip.js?v=20260930e"></script>
 <script src="js/logos.js?v=20260930e"></script>
@@ -925,15 +938,15 @@
 <script src="js/tls.js?v=20261001g"></script>
 <script src="js/zs.js?v=20261001g"></script>
 <script src="js/vpn.js?v=20261001k"></script>
-<script src="js/schichten.js?v=20261002c"></script>
-<script src="js/dienste.js?v=20261001k"></script>
+<script src="js/schichten.js?v=20261002d"></script>
+<script src="js/dienste.js?v=20261002d"></script>
 <script src="js/internet.js?v=20260930e"></script>
-<script src="js/mitschnitt.js?v=20261002c"></script>
+<script src="js/mitschnitt.js?v=20261002d"></script>
 <script src="js/terminal.js?v=20260930e"></script>
 <script src="js/subnetze.js?v=20260930e"></script>
-<script src="js/flaeche.js?v=20261002c"></script>
-<script src="js/konfig.js?v=20261002c"></script>
-<script src="js/panels.js?v=20261002c"></script>
+<script src="js/flaeche.js?v=20261002d"></script>
+<script src="js/konfig.js?v=20261002d"></script>
+<script src="js/panels.js?v=20261002d"></script>
 <script src="js/weiterleitung.js?v=20260930e"></script>
 <script src="js/prog-dateien.js?v=20260930e"></script>
 <script src="js/prog-web.js?v=20261002a"></script>
@@ -945,7 +958,7 @@
 <script src="js/szmenue.js?v=20260930e"></script>
 <script src="js/menuleiste.js?v=20260930e"></script>
 <script src="js/aufgabe.js?v=20260930e"></script>
-<script src="js/app.js?v=20261002c"></script>
+<script src="js/app.js?v=20261002d"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
 <script src="js/bruecke.js?v=20260930e"></script>
 </body>

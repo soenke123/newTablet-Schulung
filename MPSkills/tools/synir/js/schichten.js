@@ -1210,7 +1210,8 @@
       natAktiv:   (node) => !!(nat && nat.aktiv(node)),
       fwAuskunft: (node) => (fw ? fw.auskunft(node) : null),
       fwLeeren:   (node, auch) => { if (fw) fw.leeren(node, auch); },
-      fwEingaenge: (node) => (fw ? fw.eingaenge(node) : []),
+      fwNamen:    (node) => { if (fw) fw.namenHolen(node); },
+      fwAufloeser: (fn) => { if (fw) fw.setAufloeser(fn); },
       fwAktiv:    (node) => !!(fw && fw.aktiv(node)),
       fwKann:     (node) => !!(fw && fw.kann(node)),
 

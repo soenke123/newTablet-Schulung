@@ -603,23 +603,46 @@
        will sie danach nicht neu schreiben.
 
          on        läuft sie? (nur dann zeigt die Kachel das Zeichen)
-         standard  was gilt, wenn keine Regel passt
-         merken    Antworten auf erlaubte Gespräche gehen von allein durch
-         regeln    { ein, quelle, ziel, proto, port, aktion } von oben nach unten */
+         typ       'blacklist' (die Liste wird gesperrt) | 'whitelist' (nur die Liste kommt durch)
+         ablehnen  gesperrte Pakete mit Meldung ablehnen (sonst still verwerfen)
+         regeln    { adresse, maske } — eine Adresse, ein Bereich oder ein Name */
     function fwConf(node) {
-      if (!node.firewall) node.firewall = { on: false, standard: 'erlauben', merken: true, regeln: [] };
-      if (!Array.isArray(node.firewall.regeln)) node.firewall.regeln = [];
-      return node.firewall;
+      if (!node.firewall) node.firewall = { on: false, typ: 'blacklist', ablehnen: false, regeln: [] };
+      const c = node.firewall;
+      if (c.typ !== 'whitelist') c.typ = 'blacklist';
+      c.ablehnen = !!c.ablehnen;
+      if (!Array.isArray(c.regeln)) c.regeln = [];
+      return c;
     }
     /* Läuft sie? Eine Frage, eine Stelle — die Kachel, die Kompaktansicht
        und der Knopf im Fenster fragen alle hier. */
     const fwLaeuft = (node) => !!(node && node.firewall && node.firewall.on
       && KIND[node.kind] && KIND[node.kind].routes);
+    /* ⚠️ Stände vom 2026-10-02 (erste Fassung: Aktion je Zeile, Standard,
+       Eingang/Port) werden mitgenommen, soweit es geht: der Standard
+       „verwerfen/ablehnen" war eine Whitelist, jede andere eine
+       Blacklist; behalten werden die Zeilen, die zu diesem Typ passen
+       (bei der Whitelist die erlaubenden, sonst die sperrenden), mit
+       der Adresse aus Ziel oder Quelle. Alles andere ist neu zu setzen. */
     function fwLaden(node, d) {
-      if (d && d.firewall && typeof d.firewall === 'object') {
-        node.firewall = U.deepCopy(d.firewall);
-        fwConf(node);
+      if (!d || !d.firewall || typeof d.firewall !== 'object') return;
+      const f = U.deepCopy(d.firewall);
+      if (f.typ === undefined && (f.standard !== undefined || (f.regeln || []).some(r => r && r.aktion !== undefined))) {
+        const weiss = f.standard === 'verwerfen' || f.standard === 'ablehnen';
+        const alt = Array.isArray(f.regeln) ? f.regeln : [];
+        const neu = [];
+        for (const r of alt) {
+          if (!r || (r.aktion === 'erlauben') !== weiss) continue;
+          const q = String(r.ziel || r.quelle || '').trim();
+          if (!q) continue;
+          const m = q.match(/^(\S+?)\s*(?:\/\s*(\d{1,2})|\s+(\d+\.\d+\.\d+\.\d+))$/);
+          neu.push(m ? { adresse: m[1], maske: m[2] || m[3] || '' } : { adresse: q, maske: '' });
+        }
+        node.firewall = { on: !!f.on, typ: weiss ? 'whitelist' : 'blacklist', ablehnen: f.standard === 'ablehnen', regeln: neu };
+      } else {
+        node.firewall = f;
       }
+      fwConf(node);
     }
 
     /* Automatisches Routing. Wie oben: der Block entsteht erst,
