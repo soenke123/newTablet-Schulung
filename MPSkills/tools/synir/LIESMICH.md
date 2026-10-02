@@ -438,6 +438,7 @@ js/
   prog-zert.js       ⭐ Zertifikate in der Oberfläche: der Kasten
                      „Verschlüsselung" in den Serverfenstern, das Fenster
                      der Zertifizierungsstelle, die Vertrauensliste im Browser
+  prog-vpn.js        ⭐ VPN-Server- und VPN-Client-Fenster (Logik: vpn.js)
   prog-mail.js       E-Mail-Programm und E-Mail-Server-Fenster
   szenarien.js       acht vorbereitete Netze mit Auftrag
   app.js             Zusammenbau, localStorage

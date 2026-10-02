@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
-<link rel="stylesheet" href="css/app.css?v=20261002b">
+<link rel="stylesheet" href="css/app.css?v=20261002c">
 </head>
 <body>
 
@@ -157,6 +157,17 @@
     <g id="ic-zertstelle" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
       <rect x="3" y="14" width="18" height="6.5" rx="1.8"/><path d="M6.5 17.2h.01M9.5 17.2h3"/>
       <circle cx="12" cy="7.4" r="3.9"/><path d="M10.3 7.5l1.3 1.3 2.3-2.6"/>
+    </g>
+    <!-- VPN: der Server ist ein Gehäuse mit einem Ring (der Tunnel), der
+         Client ein Bildschirm, durch dessen Mitte ein Ring führt. Der Ring
+         ist dasselbe Zeichen wie um die Pakete auf den Kabeln. -->
+    <g id="ic-vpnserver" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="14" width="18" height="6.5" rx="1.8"/><path d="M6.5 17.2h.01M9.5 17.2h3"/>
+      <circle cx="12" cy="7.4" r="4"/><circle cx="12" cy="7.4" r="1.3"/>
+    </g>
+    <g id="ic-vpnclient" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/>
+      <circle cx="12" cy="10" r="3.2"/>
     </g>
     <!-- Schloss (zu) und Schild: das Schloss steht vor https:// und
          hinter einer sicheren Seite; das Schild öffnet die Liste der
@@ -846,7 +857,7 @@
       <button class="chip" data-proto="POP3">POP3</button>
       <button class="chip" data-proto="TLS" title="Verschlüsselte Verbindungen: Handschlag mit Servername und Zertifikat, danach nur noch Salat">🔒 TLS</button>
       <button class="chip" data-proto="ZS" title="Gespräche mit einer Zertifizierungsstelle">ZS</button>
-      <button class="chip" data-proto="ZUGANG" title="Nur Zeilen mit Zugangsdaten im Klartext">🔑 Zugangsdaten</button>
+      <button class="chip" data-proto="MITLESER" title="Nur Pakete mit Inhalt, die dieses Gerät mitlesen konnte, obwohl sie nicht für es bestimmt waren: im Funknetz (📡) oder auf dem Weg durch einen Router (↔)">👁 Mitlesende</button>
     </span>
     <input class="trace-s" id="traceFilter" placeholder="suchen …" spellcheck="false">
     <span class="sp"></span>
@@ -899,10 +910,10 @@
 
 <script src="js/util.js?v=20260930e"></script>
 <script src="js/engine.js?v=20260930e"></script>
-<script src="js/netz.js?v=20261002b"></script>
+<script src="js/netz.js?v=20261002c"></script>
 <script src="js/verlauf.js?v=20260930e"></script>
 <script src="js/nat.js?v=20260930e"></script>
-<script src="js/firewall.js?v=20261002b"></script>
+<script src="js/firewall.js?v=20261002c"></script>
 <script src="js/tcp.js?v=20260930e"></script>
 <script src="js/rip.js?v=20260930e"></script>
 <script src="js/logos.js?v=20260930e"></script>
@@ -913,26 +924,28 @@
 <script src="js/stream.js?v=20261001g"></script>
 <script src="js/tls.js?v=20261001g"></script>
 <script src="js/zs.js?v=20261001g"></script>
-<script src="js/schichten.js?v=20261002b"></script>
-<script src="js/dienste.js?v=20261001g"></script>
+<script src="js/vpn.js?v=20261001k"></script>
+<script src="js/schichten.js?v=20261002c"></script>
+<script src="js/dienste.js?v=20261001k"></script>
 <script src="js/internet.js?v=20260930e"></script>
-<script src="js/mitschnitt.js?v=20261002b"></script>
+<script src="js/mitschnitt.js?v=20261002c"></script>
 <script src="js/terminal.js?v=20260930e"></script>
 <script src="js/subnetze.js?v=20260930e"></script>
-<script src="js/flaeche.js?v=20261002b"></script>
-<script src="js/konfig.js?v=20261002b"></script>
-<script src="js/panels.js?v=20261002b"></script>
+<script src="js/flaeche.js?v=20261002c"></script>
+<script src="js/konfig.js?v=20261002c"></script>
+<script src="js/panels.js?v=20261002c"></script>
 <script src="js/weiterleitung.js?v=20260930e"></script>
 <script src="js/prog-dateien.js?v=20260930e"></script>
-<script src="js/prog-web.js?v=20261001h"></script>
-<script src="js/prog-mail.js?v=20261001g"></script>
-<script src="js/prog-zert.js?v=20261001g"></script>
-<script src="js/geraet.js?v=20261001j"></script>
+<script src="js/prog-web.js?v=20261002a"></script>
+<script src="js/prog-mail.js?v=20261002a"></script>
+<script src="js/prog-zert.js?v=20261002a"></script>
+<script src="js/prog-vpn.js?v=20261002a"></script>
+<script src="js/geraet.js?v=20261001k"></script>
 <script src="js/szenarien.js?v=20261001a"></script>
 <script src="js/szmenue.js?v=20260930e"></script>
 <script src="js/menuleiste.js?v=20260930e"></script>
 <script src="js/aufgabe.js?v=20260930e"></script>
-<script src="js/app.js?v=20261002b"></script>
+<script src="js/app.js?v=20261002c"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
 <script src="js/bruecke.js?v=20260930e"></script>
 </body>

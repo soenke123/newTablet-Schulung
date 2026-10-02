@@ -114,6 +114,16 @@
          wie jedes andere. Statt der MAC-Adressen steht „Wolke" da:
          im 8er-Netz gibt es hier keine Leitung, die man zeigen
          könnte. */
+      /* Der Tunnel (vpn.js): das innere Paket, im Klartext — auf dem
+         Client, bevor es verschlüsselt wird bzw. nachdem es
+         ausgepackt ist, und auf dem VPN-Server, der es weiterträgt.
+         Über ein Kabel geht es so nie; deshalb steht „Tunnel" statt
+         der MAC-Adressen da. */
+      else if (e.kind === 'tun') {
+        add({ t: e.t, node: e.node, nic: 0, tun: true, tunServer: !!e.server,
+              frame: { src: 'Tunnel', dst: 'Tunnel', type: 'ip', payload: e.pkt } },
+            false, e.dir === 'rein' ? 'rein' : 'raus');
+      }
       else if (e.kind === 'inet-raus' || e.kind === 'inet-rein') {
         add({ t: e.t, node: e.node, nic: netz.INET, inet: true,
               frame: { src: 'Wolke', dst: 'Wolke', type: 'ip', payload: e.pkt } },
@@ -147,8 +157,11 @@
         info: describe(e.frame),
         inet: !!e.inet,
         fw: e.fw || '',
-        zugang: zugangVon(e.frame, e.node)
+        tun: !!e.tun,
+        zugang: zugangVon(e.frame, e.node),
+        mit: mitleserArt(e, node, dir)
       };
+      row.inhalt = row.mit ? hatInhalt(e.frame) : false;
 
       /* ─── Fluten zusammenfassen ───────────────────────────────
          Ein Switch schickt einen Rundruf an ALLE seine Anschlüsse.
@@ -256,6 +269,83 @@
       return { verfahren: (pw != null || post) ? 'HTTP-Formular' : 'HTTP-Cookie',
                benutzer: f.email || f.benutzer || f.user || f.name || null,
                passwort: pw, felder: felder };
+    }
+
+    /* ─── Mitlesende ──────────────────────────────────────────
+       PLAN-SICHERHEIT, Schritt 3. Wer außer dem Empfänger sieht
+       dieses Paket? Zwei Wege, und beide sind dieselbe Aussage:
+
+         funk    Das Gerät hängt im Funknetz und empfängt einen
+                 Rahmen, der nicht an seine Adresse ging. Luft ist
+                 ein Rundruf; die Karte wirft das Fremde danach weg,
+                 der Mitschnitt hat es vorher gesehen.
+         weg     Das Paket läuft durch dieses Gerät hindurch: Router,
+                 Heimrouter (nur was geroutet wird) und das cww. Wer
+                 eines davon betreibt, kann mitschneiden.
+
+       Ein Switch zählt nicht: er schaut nur auf die MAC-Adresse und
+       hat in diesem Unterricht keine eigene Rolle als Mitleser. */
+    function eigeneIp(node, ip) {
+      return node.nics.some(k => k.ip === ip);
+    }
+    function mitleserArt(e, node, dir) {
+      if (!node || !e.frame || e.frame.type !== 'ip') return null;
+      const ip = e.frame.payload;
+      if (!ip || !ip.dst) return null;
+      if (e.inet) return 'weg';
+      /* Der Tunnel: wer ihn WEITERTRÄGT (der VPN-Server), liest das
+         innere Paket im Klartext — das ist „unterwegs". Der Client
+         sieht nur seine eigenen Pakete. */
+      if (e.tun) return e.tunServer ? 'weg' : null;
+      if (dir !== 'rein') return null;
+      const nic = node.nics[e.nic];
+      if (!nic) return null;
+      if (nic.funk && e.frame.dst !== nic.mac && !U.isBroadcastMac(e.frame.dst)) return 'funk';
+      if (node.kind === 'router' || node.kind === 'heimrouter' || node.kind === 'cww') {
+        if (eigeneIp(node, ip.dst)) return null;
+        const bruecke = netz.istLan(node, e.nic) ? node.nics[netz.LAN] : nic;
+        // Was am LAN-Switch des Heimrouters nur vorbeigeht, wird nicht geroutet.
+        if (e.frame.dst !== bruecke.mac) return null;
+        return 'weg';
+      }
+      return null;
+    }
+    /* Trägt das Paket Nachricht oder Daten? Handschlag, Bestätigungen,
+       ARP und Ping sind kein Mitlesen wert. Auch Verschlüsseltes zählt:
+       man sieht, dass etwas fließt, und liest nur Salat. */
+    function hatInhalt(f) {
+      const ip = f && f.type === 'ip' ? f.payload : null;
+      if (!ip || (ip.proto !== 'tcp' && ip.proto !== 'udp')) return false;
+      const d = (ip.payload || {}).data;
+      return d != null && String(typeof d === 'string' ? d : JSON.stringify(d)).length > 0;
+    }
+    /* Das Paket ohne alles, was sich unterwegs ändert (MAC-Adressen,
+       TTL): so erkennt man dasselbe Paket bei verschiedenen Geräten. */
+    function paketSig(f) {
+      if (!f || f.type !== 'ip' || !f.payload) return null;
+      try { const p = Object.assign({}, f.payload); delete p.ttl; return JSON.stringify(p); }
+      catch (e) { return null; }
+    }
+    let mitIndex = null, mitIndexN = -1;
+    function mitlesende(r) {
+      if (!rows.some(x => x.mit)) return [];
+      const key = rows.length + ':' + (rows.length ? rows[rows.length - 1].n : 0);
+      if (mitIndexN !== key) {
+        mitIndex = new Map();
+        for (const x of rows) {
+          if (!x.mit || !x.inhalt) continue;
+          const k = paketSig(x.frame);
+          if (!k) continue;
+          if (!mitIndex.has(k)) mitIndex.set(k, []);
+          mitIndex.get(k).push(x);
+        }
+        mitIndexN = key;
+      }
+      const k = paketSig(r.frame);
+      const liste = (k && mitIndex.get(k)) || [];
+      const gesehen = new Map();
+      for (const x of liste) gesehen.set(x.node + ':' + x.mit, { node: x.node, name: x.nodeName, art: x.mit });
+      return [...gesehen.values()];
     }
 
     function zugangVon(f, nodeId) {
@@ -377,6 +467,7 @@
                          67: 'DHCP-Server', 68: 'DHCP-Client', 80: 'HTTP', 110: 'POP3',
                          443: 'HTTPS = HTTP mit TLS', 465: 'SMTPS = SMTP mit TLS',
                          995: 'POP3S = POP3 mit TLS', 8200: 'Zertifizierungsstelle',
+                         1194: 'VPN-Tunnel (TLS)',
                          520: 'RIP', 521: 'RIP-Absender' };
     const portWem = (p) => PORT_NAMEN[p] ? '  (' + PORT_NAMEN[p] + ')' : '';
 
@@ -644,6 +735,7 @@
           ['Empfänger (MAC)', rundruf ? f.dst + '  (an alle)' : f.dst],
           ['Inhalt', f.type === 'arp' ? 'ARP' : 'IP-Paket']
         ].concat(row.inet ? [['Ort', 'Ausgang ins Internet — alles, was dein Netz verlässt']] : [])
+         .concat(row.tun ? [['Ort', 'Im Tunnel (VPN) — auf der Leitung ist das verschlüsselt']] : [])
       });
 
       if (f.type === 'arp') {
@@ -950,7 +1042,7 @@
       /* „ZUGANG" ist kein Protokoll, sondern ein Fund — der Chip
          läuft durch denselben Schalter, damit es nur EINEN Filter
          für die Protokollleiste gibt. */
-      if (f.proto === 'ZUGANG') r = r.filter(x => x.zugang);
+      if (f.proto === 'MITLESER') r = r.filter(x => x.mit && x.inhalt);
       else if (f.proto) r = r.filter(x => x.proto === f.proto);
       if (f.text) {
         const q = f.text.toLowerCase();
@@ -1036,7 +1128,7 @@
       const i = watchers.indexOf(fn); if (i >= 0) watchers.splice(i, 1); }; };
 
     return {
-      view, layers, setFilter, setGeraet, setModus, clear, toText, onChange, setPaused,
+      view, layers, mitlesende, setFilter, setGeraet, setModus, clear, toText, onChange, setPaused,
       get filter() { return filter; },
       get modus()  { return modus; },
       get paused() { return paused; },

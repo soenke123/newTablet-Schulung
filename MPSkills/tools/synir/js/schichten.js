@@ -108,6 +108,14 @@
        kennt: „Ziel nicht erreichbar". */
     let internet = null;
 
+    /* Der VPN-Tunnel (js/vpn.js, PLAN-SICHERHEIT Schritt 5). Er wird
+       von `dienste.js` eingehängt, weil er TLS und den Auflöser
+       braucht. Zwei Berührungspunkte, beide mit ⟨VPN⟩ markiert: einer
+       beim Absenden (`sendIp`: geht alles durch den Tunnel?), einer
+       beim Ankommen (`onIp`: ist das die Antwort für einen Tunnel-
+       Teilnehmer?). */
+    let vpn = null;
+
     /* Und das automatische Routing. Es sitzt eine Etage HÖHER als
        die beiden darüber — RIP ist ein Anwendungsprotokoll über
        UDP, so wie DHCP und DNS — und steht trotzdem hier und nicht
@@ -322,7 +330,10 @@
             if (i === inNic) continue;
             netz.sendFrame(node.id, i, frame, deliver);
           }
-        } else {
+        } else if (entry.nic !== inNic) {
+          /* Dasselbe Ziel am selben Anschluss: bei Funk heißt das „der
+             Rahmen ging von Gast zu Gast", und der Empfänger hat ihn
+             schon aus der Luft. Ihn zurückzuschicken wäre ein Echo. */
           say('forward', node, { dst: frame.dst, nic: entry.nic });
           netz.sendFrame(node.id, entry.nic, frame, deliver);
         }
@@ -600,6 +611,13 @@
         return true;
       }
 
+      /* ⟨VPN⟩ Hinweg. Ein Gerät mit offenem Tunnel schickt ALLES
+         dort hinein (außer dem Gespräch mit dem VPN-Server selbst), und
+         der VPN-Server schickt Antworten an seine Teilnehmer in den
+         Tunnel statt auf ein Kabel. Vor der Wegsuche, denn der Tunnel
+         hat keine Karte, nach der `routeFor` suchen könnte. */
+      if (vpn && vpn.umleiten(node, dstIp, proto, payload, opts)) return true;
+
       const route = routeFor(node, dst);
       if (!route) {
         const why = node.gateway
@@ -658,6 +676,11 @@
     function onIp(node, nicIndex, frame) {
       const pkt = frame.payload;
       const nic = karte(node, nicIndex);
+
+      /* ⟨VPN⟩ Rückweg. Eine Antwort aus dem Netz, die ein VPN-Server
+         für einen Teilnehmer geholt hat, gehört in dessen Tunnel — und
+         das, bevor die Frage „für mich?" sie verschluckt. */
+      if (vpn && vpn.herein(node, pkt)) return;
 
       /* ⟨NAT⟩ Rückweg. Muss VOR „für mich?" stehen, und das ist
          der ganze Witz daran: die Antwort aus dem Internet trägt
@@ -1158,6 +1181,17 @@
 
       /* Das Internet der Klasse (js/internet.js). */
       setInternet: (a) => { internet = a || null; },
+
+      /* Der Tunnel und was er vom Netzstapel braucht: ein Paket
+         lokal zustellen (kommt aus dem Tunnel an), ein Paket auf den
+         Weg schicken (der VPN-Server leitet weiter), eine IP-Kennung
+         ziehen. */
+      setVpn: (a) => { vpn = a || null; },
+      ipLokal: (node, pkt) => handleIpLocal(node, 0, pkt),
+      ipWeiter: (node, route, pkt) => shipIp(node, route, pkt),
+      ipKennung: (node) => st(node).ipId++,
+      DEFAULT_TTL: DEFAULT_TTL,
+      sendIcmp: sendIcmp,
       vonInternet, internetUnzustellbar, fern, FERN_FAKTOR, INET_MS, INET_DECKEL,
 
       /* TCP nach außen. Die Namen sagen, dass es TCP ist — ein

@@ -106,11 +106,16 @@
     + '<br><strong>Ports sind fest:</strong> 110 holt Post ab (POP3), 25 schickt sie los (SMTP).'
     + '<br><strong>Verschlüsselt</strong> (SSL/TLS) sind es 995 und 465 — dafür braucht der Server ein '
     + 'Zertifikat, und dieses Gerät muss der ausstellenden Zertifizierungsstelle vertrauen '
-    + '(im Webbrowser unter „Zertifikate").';
+    + '(über das Schild oben rechts).';
 
   function bauProgramm(node, box, ctx) {
     if (st.node !== node.id) frisch(node.id);
     const k = ctx.netz.mailKonto(node);
+    // Das Schild oben rechts: dieselbe Zertifikatsseite wie im Browser.
+    if (st.zert) {
+      window.ProgZert.vertrauenAnsicht(node, box, ctx, () => { st.zert = false; ctx.render(); });
+      return;
+    }
     /* ⚠️ „Eingerichtet" heißt seit dem 2026-09-27
        ANGEMELDET. Vorher genügte es, drei Felder gefüllt zu
        haben — dann stand der Posteingang da und beim ersten
@@ -147,6 +152,7 @@
           ? '<button class="ml-i' + (st.info ? ' is-on' : '') + '" id="mlInfo" '
             + 'title="Was gehört hier hinein?" aria-label="Erklärung">i</button>'
           : '')
+      + '<span class="ml-sp"></span>' + window.ProgZert.schildKnopf(node, ctx, false, 'mlZert')
       + '</div>'
       + (st.seite === 'konto' && st.info ? '<div class="k-note">' + INFO_TEXT + '</div>' : '');
 
@@ -328,6 +334,8 @@
             + '</div>'
           : '');
 
+    const zk = box.querySelector('#mlZert');
+    if (zk) zk.addEventListener('click', () => { st.zert = true; ctx.render(); });
     box.querySelectorAll('[data-seite]').forEach(b => b.addEventListener('click', () => {
       st.seite = b.dataset.seite; st.offen = -1; st.meldung = '';
       ctx.render();

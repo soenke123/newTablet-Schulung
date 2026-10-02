@@ -183,12 +183,7 @@
          Zertifizierungsstelle glaubt: orange, solange die Vertrauensliste
          leer ist (dann zeigt jede HTTPS-Seite eine Warnung), grün, sobald
          mindestens eine drinsteht. */
-      +   '<button class="wb-zert ' + (vertraut ? 'wb-zert--ok' : 'wb-zert--leer')
-      +     (br.ansicht === 'zert' ? ' is-on' : '') + '" id="wbZert" '
-      +     'title="' + (vertraut ? 'Zertifikate — dieses Gerät vertraut ' + vertraut + ' Zertifizierungsstelle' + (vertraut === 1 ? '' : 'n')
-                                  : 'Zertifikate — noch keiner Zertifizierungsstelle vertraut: HTTPS-Seiten zeigen eine Warnung')
-      +     '" aria-label="Zertifikate">'
-      +     U.icon('schild') + '</button>'
+      +   window.ProgZert.schildKnopf(node, ctx, br.ansicht === 'zert', 'wbZert')
       + '</div>'
       + (sicher && br.infoOffen ? '<div class="wb-info wb-info--' + sicher + '">' + sicherheitsText(sicher) + '</div>' : '')
       + '<div class="wb-seite" id="wbSeite"></div>'
