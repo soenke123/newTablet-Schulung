@@ -4437,3 +4437,4 @@ body.hgriff-drag .wlt, body.hgriff-drag .trace { transition: none; }
 .nf-ring { fill: none; stroke: var(--vpn); stroke-width: 2.4; }
 .vs-neu { display: flex; gap: 6px; margin: 6px 0; }
 .vs-neu .f { flex: 1; min-width: 0; }
+.ml-sp, .vc-sp { flex: 1; }

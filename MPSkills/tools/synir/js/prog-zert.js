@@ -356,7 +356,21 @@
     }));
   }
 
+  /* ═══ 4 · Das Schild — in jedem Programm dasselbe ═══════════
+     Browser, E-Mail-Programm und VPN-Client haben oben rechts denselben
+     Knopf: er öffnet die Vertrauensliste des GERÄTS (`vertrauenAnsicht`).
+     Orange, solange sie leer ist; grün, sobald eine ZS drinsteht. */
+  function schildKnopf(node, ctx, an, id) {
+    const vertraut = ctx.netz.vertrauen(node).length;
+    return '<button class="wb-zert ' + (vertraut ? 'wb-zert--ok' : 'wb-zert--leer')
+      + (an ? ' is-on' : '') + '" id="' + id + '" '
+      + 'title="' + (vertraut ? 'Zertifikate — dieses Gerät vertraut ' + vertraut + ' Zertifizierungsstelle' + (vertraut === 1 ? '' : 'n')
+                             : 'Zertifikate — noch keiner Zertifizierungsstelle vertraut: verschlüsselte Verbindungen zeigen eine Warnung')
+      + '" aria-label="Zertifikate">' + U.icon('schild') + '</button>';
+  }
+
   window.ProgZert = {
+    schildKnopf: schildKnopf,
     abschnitt: abschnitt, bindAbschnitt: bindAbschnitt,
     bauZS: bauZS, vertrauenAnsicht: vertrauenAnsicht,
     vorbelegterName: vorbelegterName, vorbelegteZs: vorbelegteZs

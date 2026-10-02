@@ -351,6 +351,10 @@ Class Wide Web* in der LIESMICH).
 * **Oberfläche:** Pille **◯ VPN aktiv** hinter dem Gerätenamen im Desktop; **Ring um jedes Tunnelpaket** auf den
   Kabeln (TCP von/zu Port 1194, Klasse `nf-ring`, Farbe `--vpn`; **kein Schloss**); am Server die Marke **VPN**
   unter der Kachel; im Mitschnitt Zeilen `◯ Tunnel` (inneres Paket am Client und am Server).
+* **Das Schild (🛡) oben rechts ist in Browser, E-Mail-Programm und VPN-Client dasselbe** (`ProgZert.schildKnopf`):
+  es öffnet die Vertrauensliste des Geräts; orange, solange sie leer ist, grün mit mindestens einer ZS. Die Server
+  (Web, Streaming, Mail, VPN) nutzen alle denselben Kasten `ProgZert.abschnitt` — der VPN-Server ohne Haken, weil
+  er ohne Zertifikat nicht startet.
 * **Geht durch das CWW** (zwei Tablets: Tunnel zu Tablet B, Name und DNS über 8.8.8.8, dann Webseite aus B). In der
   Wolke von A stehen nur noch Pakete zu/von dem VPN-Server.
 * **Prüfen:** `tests/kerntest.js` (*VPN: Tunnel, Anmeldung, Übersetzung*, *VPN: durch das Class Wide Web*);

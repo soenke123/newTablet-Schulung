@@ -134,7 +134,7 @@
       +   '<span class="k-dot' + (an ? ' is-on' : '') + '"></span>'
       +   '<span class="dns-stand">' + (an ? 'Tunnel steht' : 'nicht verbunden') + '</span>'
       +   '<button class="ml-i' + (cUi.info ? ' is-on' : '') + '" id="vcInfo" title="Was tut der VPN-Client?" aria-label="Erklärung">i</button>'
-      +   '<button class="btn btn--ghost" id="vcZert" title="Welchen Zertifizierungsstellen glaubt dieses Gerät?">Zertifikate</button>'
+      +   '<span class="vc-sp"></span>' + window.ProgZert.schildKnopf(node, ctx, false, 'vcZert')
       + '</div>'
       + (cUi.info ? '<div class="k-note">' + INFO_CLIENT + '</div>' : '');
 
