@@ -6,6 +6,31 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 0012 · Das große Netz bekommt die Sicherheit (2026-10-02)
+
+Berührt: `js/szenarien.js` (Szenario `grossesnetz`, `dev()` übernimmt `firewall`, `zsServer`, `zertifikat`,
+`vertrauen`, `vpnServer`, `vpnClient`), `tests/kerntest.js` (1254 grün, 15 neue Prüfungen), `css/app.css`
+(Farbe und Schrift der Marke **VPN** — fehlte seit der VPN-Runde, die Marke war schwarz und die Schrift verrutscht),
+Cache-Stempel `20261002k` (`index.html`, `tool.js`, `MPSkills/lib/tool.js` und die vier Stellen dazu).
+
+* ⭐ **Wunsch des Nutzers:** „3. Das große Netz" soll alles enthalten, was SYNIR kann — es fehlten HTTPS, ZS, eine
+  Stelle zum Mitlesen, VPN und Firewall. Dazu ein Teil des Netzes hinter einem **Firewall-Router**, der die
+  Streaming-Dienste in beide Richtungen sperrt, und ein **VPN-Server** in einem erreichbaren Teil, über den man
+  trotzdem streamen kann.
+* Neu im Netz: **Internat** (`50.0.7.0`, Firewall-Router an Router 1 über `50.0.108.0`, DHCP am Router,
+  Internat-WLAN, Laptop 5 mit eingerichtetem VPN-Client, Handy 4). Firewall: Blacklist, *ablehnen*, Zeilen
+  `mpsflix.de` und `filmwelt.de` (Namen). **VPN-Server** `vpn.tunnelfix.de` (`50.0.6.20`) beim Anbieter, Konto
+  `lena`/`Tunnel2026`. **Filmwelt** (`50.0.5.91`, HTTPS, Filme 3 und 4). **Zertifizierungsstelle**
+  `zs.mps-schule.de` (`50.0.5.70`) mit vier freigegebenen Anträgen. HTTPS an Schulportal, Mailserver, Filmwelt,
+  VPN-Server. Vertrauen: Laptop 1, Lehrer-PC, Laptop 5 (alle anderen sehen die Warnung — gewollt). Anna holt Post
+  über 995/465. **Lauscher-Handy 5** ist Gast im MPS-WLAN neben Handy 1 (Carla, Mailkonto im Klartext).
+* ⚠️ Schlüssel und Zertifikate stehen als **feste Zahlen** im Szenario (ein Szenario ist reine Datei). Erzeugt mit
+  `Tls.Krypto.schluesselpaar` / `zertAusstellen`; kerntest prüft Unterschriften, Fingerabdruck und den Passwort-Hash.
+  Wer einen Namen ändert, muss das Zertifikat neu erzeugen — sonst warnt der Browser („name").
+* ⚠️ Der Name „Lauscher-Handy 5" trägt eine Zahl, damit das Kürzel H5 heißt — ohne Zahl zählt `kurzName` nach der
+  Stelle in der Liste und ergab ein zweites „H2". (Der Lehrer-PC heißt aus demselben Grund „E1" wie Laptop 1 — älter, nicht angefasst.)
+* Prüfstände: `kerntest` 1254 grün, `fwuitest` 66 grün (`NODE_PATH=/opt/node-tools/node_modules`), `hilfetest` 90 grün.
+
 ## 0011 · Hilfe für Lehrkräfte (2026-10-02)
 
 Berührt: neu `js/hilfe.js`, `js/hilfe-inhalt.js`, `css/hilfe.css`, `hilfe/*.webp` + `hilfe/masse.js`,

@@ -2236,7 +2236,7 @@ section('Sek I und II · neue Szenarien');
   {
     const z = lade('grossesnetz');
     const k = (art) => z.netz.list().filter(n => n.kind === art);
-    ok('Großes Netz: 6 Router, 2 Heimrouter, 1 cww', k('router').length === 6 && k('heimrouter').length === 2 && k('cww').length === 1);
+    ok('Großes Netz: 7 Router (einer mit Firewall), 2 Heimrouter, 1 cww', k('router').length === 7 && k('heimrouter').length === 2 && k('cww').length === 1);
     z.dienste.start(); z.dienste.sync();
     z.engine.runUntil(z.engine.now + 120 * SEC);
     const by = (n) => z.netz.byName(n);
@@ -2266,6 +2266,68 @@ section('Sek I und II · neue Szenarien');
     z.dienste.mail.abholen(ben, (f, n) => m = [f, n]);
     z.engine.runUntil(z.engine.now + 40 * SEC);
     ok('Großes Netz: Ben holt zwei Mails ab', m && !m[0] && m[1] === 2, JSON.stringify(m));
+  }
+
+  // 3. Das große Netz — die Sicherheit: HTTPS mit ZS, Mitlesen im WLAN, Firewall, VPN.
+  {
+    const z = lade('grossesnetz');
+    const mit = new sandbox.Mitschnitt(z.engine, z.netz);
+    const by = (n) => z.netz.byName(n);
+    const K = sandbox.Tls.Krypto;
+    const zsN = by('Zertifizierungsstelle');
+    ok('Großes Netz: die festen Schlüssel der ZS passen zu ihrem Fingerabdruck',
+       K.fingerabdruck(zsN.zsServer.schluessel) === by('Laptop 1').vertrauen[0].fp);
+    const zerts = ['Webserver Schule', 'Mailserver', 'Filmwelt', 'VPN-Server'].map(n => by(n).zertifikat);
+    ok('Großes Netz: vier Zertifikate, alle von der ZS unterschrieben und mit passendem Schlüssel',
+       zerts.every(c => c && c.zert && K.unterschriftPasst(K.zertText(c.zert), c.zert.signatur, zsN.zsServer.schluessel)
+                       && K.unterschriftPasst('probe', K.unterschreiben('probe', c.schluessel), c.zert.besitzer)));
+    ok('Großes Netz: der Hash von Lenas VPN-Passwort stimmt',
+       by('VPN-Server').vpnServer.konten[0].pwHash === U.pseudoHash(by('Laptop 5').vpnClient.passwort));
+    z.dienste.start(); z.dienste.sync();
+    z.engine.runUntil(z.engine.now + 120 * SEC);
+    const seite = (von, url) => { let r = null; z.dienste.http.seiteHolen(by(von), url, (x) => r = x);
+      z.engine.runUntil(z.engine.now + 40 * SEC); return r; };
+
+    const sicher = seite('Laptop 1', 'https://www.mps-schule.de');
+    ok('Großes Netz: Laptop 1 öffnet https://www.mps-schule.de ohne Warnung', sicher && sicher.ok && sicher.tls, sicher && sicher.grund);
+    const fremd = seite('Laptop 2', 'https://www.mps-schule.de');
+    ok('Großes Netz: Laptop 2 kennt die ZS nicht und bekommt die Warnung',
+       fremd && !fremd.ok && fremd.tls && fremd.tls.code === 'unbekannt', fremd && JSON.stringify(fremd.tls));
+    let post = null;
+    z.dienste.mail.abholen(by('Laptop 1'), (f, n) => post = [f, n]);
+    z.engine.runUntil(z.engine.now + 40 * SEC);
+    ok('Großes Netz: Anna holt ihre Post verschlüsselt ab (995)', post && !post[0], JSON.stringify(post));
+
+    // Mitlesen: Carla holt Post im WLAN, der Lauscher liest das Passwort.
+    z.dienste.mail.abholen(by('Handy 1'), () => {});
+    z.engine.runUntil(z.engine.now + 40 * SEC);
+    mit.setFilter({ dir: 'beide' });
+    const lauscher = by('Lauscher-Handy 5');
+    ok('⭐ Großes Netz: der Lauscher liest im MPS-WLAN Carlas Passwort mit',
+       mit.view().some(r => r.node === lauscher.id && r.mit === 'funk' && /PASS Blume2026/.test(r.info)));
+
+    // Firewall und VPN im Internat.
+    const l5 = by('Laptop 5');
+    ok('Großes Netz: Laptop 5 hat eine Adresse im Internat', /^50\.0\.7\.1\d\d$/.test(l5.nics[0].ip), l5.nics[0].ip);
+    const schule = seite('Laptop 5', 'www.mps-schule.de');
+    ok('Großes Netz: aus dem Internat geht das Schulportal', schule && schule.ok, schule && schule.grund);
+    for (const url of ['mpsflix.de', 'https://filmwelt.de']) {
+      const fw = by('Firewall-Router').state.fw, vorher = fw ? fw.treffer.slice() : [];
+      const r = seite('Laptop 5', url);
+      const nr = url === 'mpsflix.de' ? 0 : 1;
+      ok('⭐ Großes Netz: die Firewall sperrt ' + url + ' aus dem Internat (ihre Zeile ' + (nr + 1) + ' trifft)',
+         r && !r.ok && (fw.treffer[nr] || 0) > (vorher[nr] || 0), r && JSON.stringify(r.grund) + ' ' + JSON.stringify(fw && fw.treffer));
+    }
+    const draussen = seite('Laptop 3', 'mpsflix.de');
+    ok('Großes Netz: außerhalb des Internats geht mpsflix.de weiter', draussen && draussen.ok, draussen && draussen.grund);
+    let tun = 'offen';
+    z.dienste.vpn.verbinden(l5, {}, (f) => tun = f);
+    z.engine.runUntil(z.engine.now + 40 * SEC);
+    ok('⭐ Großes Netz: Laptop 5 baut den Tunnel zum VPN-Server auf', tun === null && z.dienste.vpn.aktiv(l5), String(tun));
+    for (const url of ['mpsflix.de', 'https://filmwelt.de']) {
+      const r = seite('Laptop 5', url);
+      ok('⭐ Großes Netz: durch den Tunnel geht ' + url + ' trotz Firewall', r && r.ok, r && JSON.stringify(r.grund));
+    }
   }
 
   // 2. Der Handschlag: genau EIN Handschlag vor der Seite, RST am Mailserver.

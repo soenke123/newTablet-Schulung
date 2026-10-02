@@ -1282,7 +1282,7 @@ body.is-ziehen, body.is-ziehen * {
 /* Die vier Dienstmarken teilen ihre Schrift: sie sind ein SATZ von
    Zeichen und sollen als solcher zu erkennen sein — die Farbe
    unterscheidet, die Form nicht. */
-.nf-dhcp text, .nf-dns text, .nf-web text, .nf-mail text, .nf-stream text, .nf-zs text {
+.nf-dhcp text, .nf-dns text, .nf-web text, .nf-mail text, .nf-stream text, .nf-zs text, .nf-vpn text {
   font-size: 8.5px; font-weight: 700; letter-spacing: .06em;
   text-anchor: middle;
 }
@@ -1292,6 +1292,7 @@ body.is-ziehen, body.is-ziehen * {
 .nf-mail rect { fill: var(--mail); }
 .nf-stream rect { fill: var(--stream); }
 .nf-zs rect { fill: var(--zs); }
+.nf-vpn rect { fill: var(--vpn); }
 
 .nf-wlan rect { fill: var(--wlan); }
 .nf-wlan text { font-size: 9.5px; font-weight: 650; text-anchor: start; }

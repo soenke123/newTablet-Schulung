@@ -71,6 +71,10 @@
     if (cfg.streamServer) d.streamServer = Object.assign({ on: true }, JSON.parse(JSON.stringify(cfg.streamServer)));
     if (cfg.mailKonto)  d.mailKonto  = JSON.parse(JSON.stringify(cfg.mailKonto));
     if (cfg.nat)        d.nat        = JSON.parse(JSON.stringify(cfg.nat));
+    // Sicherheit (Firewall, ZS, Zertifikat, Vertrauen, VPN): reine Daten, unverändert übernommen.
+    for (const f of ['firewall', 'zsServer', 'zertifikat', 'vertrauen', 'vpnServer', 'vpnClient']) {
+      if (cfg[f]) d[f] = JSON.parse(JSON.stringify(cfg[f]));
+    }
     /* ⭐ Der Ordner `/Bilder` auch hier. Ein Szenario geht durch
        `netz.fromJSON` und nicht durch `addNode` — der Grundbestand
        käme sonst NICHT mit, und ein Kind hätte im ersten Szenario
@@ -1353,6 +1357,26 @@
        Anbieter (R6)     50.0.6.0     DHCP für die zwei Heimrouter
        Heimnetz 1        192.168.1.0  Heimrouter 1, Webseite mit Portfreigabe
        Heimnetz 2        192.168.2.0  Heimrouter 2
+       Internat (FW)     50.0.7.0     hinter dem Firewall-Router (an Router 1, 50.0.108.0)
+
+     ── Sicherheit (seit 2026-10-02) ──────────────────────────────
+       · ZS „MPS-Zertifizierungsstelle" im Serverraum. Zertifikate
+         haben das Schulportal, der Mailserver, Filmwelt und der
+         VPN-Server. Ihr vertrauen Laptop 1, der Lehrer-PC und
+         Laptop 5 — alle anderen sehen die Warnung (gewollt).
+       · MPSflix bleibt bei HTTP (Klartext zum Mitlesen), Filmwelt
+         spricht HTTPS. Anna holt ihre Post verschlüsselt (995/465),
+         Ben, Carla und Frau Meier im Klartext.
+       · Mitlesen: das „Lauscher-Handy 5" ist Gast im MPS-WLAN, wie Handy 1
+         (Carla). Funk ist ein gemeinsames Medium.
+       · Der Firewall-Router sperrt mpsflix.de und filmwelt.de (Namen,
+         Blacklist, ablehnen) — in beide Richtungen. Der VPN-Server
+         steht beim Anbieter, also außerhalb: Laptop 5 kommt durch
+         den Tunnel trotzdem an die Filme.
+
+     ⚠️ Schlüssel und Zertifikate stehen als feste Zahlen da (gr.zs …):
+     ein Szenario ist reine Datei. Erzeugt mit Tls.Krypto.schluesselpaar
+     und zertAusstellen; kerntest prüft, dass die Unterschriften passen.
 
      ⚠️ Alle öffentlichen Adressen beginnen mit 50. — das ist der
      Bereich des Übungsnetzes (ohne Raum). Wer im Raum einen anderen
@@ -1370,6 +1394,34 @@
   const grMacHeim1 = '02:00:5e:77:00:01';
   const grMacAnna  = '02:00:5e:77:00:02';
   const grDns = grPraefix + '5.53';
+
+  /* Die Schlüssel der Zertifizierungsstelle und der vier Server (siehe
+     oben). `zert(…)` baut den Block `zertifikat` eines Servers, `zsAntrag`
+     den passenden, schon freigegebenen Antrag in der Liste der ZS. */
+  const grZsName = 'MPS-Zertifizierungsstelle';
+  const grZsFp = '05CB-B162-75D9-3CA6';
+  const grZsIp = grPraefix + '5.70';
+  const grZsSchluessel = { n: '288269120251829929', e: '65537', d: '90826083615466853' };
+  const grSrv = {
+    'www.mps-schule.de':  { nr: 1, ip: grPraefix + '5.80', n: '288258361567365841', d: '41279044100770133',  sig: '102708927624405023' },
+    'mail.mps-schule.de': { nr: 2, ip: grPraefix + '5.25', n: '288302475605153473', d: '138377445395057153', sig: '85570679175775247' },
+    'filmwelt.de':        { nr: 3, ip: grPraefix + '5.91', n: '288265354492591423', d: '127270976718075713', sig: '177034002708165979' },
+    'vpn.tunnelfix.de':   { nr: 4, ip: grPraefix + '6.20', n: '288305703685788193', d: '127442760649204553', sig: '193763399872954656' }
+  };
+  const grZertVon = (name) => {
+    const s = grSrv[name];
+    return { nr: s.nr, name: name, besitzer: { n: s.n, e: '65537' },
+             aussteller: grZsName, ausstellerFp: grZsFp, signatur: s.sig };
+  };
+  const grZert = (name) => ({
+    name: name, zs: grZsIp, schluessel: { n: grSrv[name].n, e: '65537', d: grSrv[name].d },
+    zert: grZertVon(name),
+    antrag: { nr: grSrv[name].nr, zs: grZsIp, name: name, status: 'ausgestellt', grund: '' }
+  });
+  /* = NetUtil.pseudoHash('Tunnel2026'); der VPN-Server speichert nur den Hash. */
+  const grPwLena = '7b11dd76a2c88b86';
+
+  const grVertrauen = [{ name: grZsName, n: grZsSchluessel.n, e: grZsSchluessel.e, fp: grZsFp }];
 
   const grStilSchule =
     'body { margin: 0; font-family: sans-serif; background: #eef3fb; color: #1e2536; }\n'
@@ -1455,8 +1507,8 @@
   });
   grHeim1.nics[0].mac = grMacHeim1;
   const grAnna = dev('n12', 'host', 'Laptop 1', 480, 1100, {
-    nics: [{ dhcp: true }], software: ['browser', 'mail'],
-    mailKonto: grKonto('Anna', 'anna', 'Sonne2026', grMailAnna)
+    nics: [{ dhcp: true }], software: ['browser', 'mail'], vertrauen: grVertrauen,
+    mailKonto: Object.assign(grKonto('Anna', 'anna', 'Sonne2026', grMailAnna), { tls: true, pop3Port: 995, smtpPort: 465 })
   });
   grAnna.nics[0].mac = grMacAnna;
 
@@ -1468,8 +1520,8 @@
         ports: 3, rip: true, nics: [{}, { ip: grPraefix + '110.1' }, { ip: grPraefix + '111.1' }]
       }),
       // Sechs Router, Teilgitter
-      dev('n1', 'router', 'Router 1', 780, 420, { ports: 3, rip: true,
-        nics: [{ ip: grPraefix + '110.2' }, { ip: grPraefix + '101.1' }, { ip: grPraefix + '103.1' }] }),
+      dev('n1', 'router', 'Router 1', 780, 420, { ports: 4, rip: true,
+        nics: [{ ip: grPraefix + '110.2' }, { ip: grPraefix + '101.1' }, { ip: grPraefix + '103.1' }, { ip: grPraefix + '108.1' }] }),
       dev('n2', 'router', 'Router 2', 1200, 560, { ports: 3, rip: true,
         nics: [{ ip: grPraefix + '101.2' }, { ip: grPraefix + '102.1' }, { ip: grPraefix + '104.1' }] }),
       dev('n3', 'router', 'Router 3', 1620, 420, { ports: 3, rip: true,
@@ -1491,7 +1543,8 @@
       }),
       dev('n9', 'host', 'Lehrer-PC', 300, 1000, {
         nics: [{ ip: grPraefix + '4.10' }], gateway: grPraefix + '4.1', dns: grDns,
-        software: ['browser', 'mail'], mailKonto: grKonto('Frau Meier', 'frau.meier', 'Komet2026')
+        software: ['browser', 'mail'], vertrauen: grVertrauen,
+        mailKonto: grKonto('Frau Meier', 'frau.meier', 'Komet2026')
       }),
       grAnna,
       dev('n13', 'host', 'Laptop 2', 680, 1100, {
@@ -1499,11 +1552,16 @@
         mailKonto: grKonto('Ben', 'ben', 'Mond2026')
       }),
       dev('n14', 'handy', 'Handy 1', 880, 1060, {
-        nics: [{ dhcp: true, funk: true, ssid: 'MPS-WLAN' }], software: ['browser', 'mail']
+        nics: [{ dhcp: true, funk: true, ssid: 'MPS-WLAN' }], software: ['browser', 'mail'],
+        mailKonto: grKonto('Carla', 'carla', 'Blume2026')
+      }),
+      // Die Stelle zum Mitlesen: ein Gast im selben Funknetz wie Carla
+      dev('n29', 'handy', 'Lauscher-Handy 5', 560, 1250, {
+        nics: [{ dhcp: true, funk: true, ssid: 'MPS-WLAN' }], software: ['browser']
       }),
 
       // Serverraum: alles feste Adressen
-      dev('n15', 'switch', 'Switch 2', 1200, 1080, { ports: 6 }),
+      dev('n15', 'switch', 'Switch 2', 1200, 1080, { ports: 8 }),
       dev('n16', 'server', 'DNS-Server', 880, 1280, {
         nics: [{ ip: grDns }], gateway: grPraefix + '5.1', dns: grDns, software: ['dns'],
         dnsServer: {
@@ -1513,14 +1571,17 @@
             { name: 'dns.mps-schule.de',  ip: grDns },
             { name: 'mpsflix.de',         ip: grPraefix + '5.90' },
             { name: 'www.mpsflix.de',     ip: grPraefix + '5.90' },
-            { name: 'www.heimseite.de',   ip: grPraefix + '6.10' }
+            { name: 'www.heimseite.de',   ip: grPraefix + '6.10' },
+            { name: 'filmwelt.de',        ip: grPraefix + '5.91' },
+            { name: 'zs.mps-schule.de',   ip: grZsIp },
+            { name: 'vpn.tunnelfix.de',   ip: grPraefix + '6.20' }
           ],
           mx: [{ domain: 'mps-schule.de', server: 'mail.mps-schule.de' }]
         }
       }),
       dev('n17', 'server', 'Webserver Schule', 1090, 1330, {
         nics: [{ ip: grPraefix + '5.80' }], gateway: grPraefix + '5.1', dns: grDns, software: ['webserver'],
-        webServer: { on: true },
+        webServer: { on: true, https: true }, zertifikat: grZert('www.mps-schule.de'),
         dateien: {
           '/webserver': { ordner: true },
           '/webserver/index.html': { text: grSeiteSchule },
@@ -1530,9 +1591,14 @@
       }),
       dev('n18', 'server', 'Mailserver', 1310, 1330, {
         nics: [{ ip: grPraefix + '5.25' }], gateway: grPraefix + '5.1', dns: grDns, software: ['mailserver'],
+        zertifikat: grZert('mail.mps-schule.de'),
         mailServer: {
-          domain: 'mps-schule.de',
+          domain: 'mps-schule.de', https: true,
           konten: [
+            { benutzer: 'carla', passwort: 'Blume2026', posteingang: [
+              { von: 'frau.meier@mps-schule.de', an: 'carla@mps-schule.de', betreff: 'Dein Schulkonto',
+                text: 'Hallo Carla,\ndein Postfach ist eingerichtet. Ruf es ruhig auch unterwegs über das WLAN ab.\nFrau Meier', zeit: 0 }
+            ] },
             { benutzer: 'anna', passwort: 'Sonne2026', posteingang: [] },
             { benutzer: 'ben', passwort: 'Mond2026', posteingang: [
               { von: 'anna@mps-schule.de', an: 'ben@mps-schule.de', betreff: 'Re: Hausaufgaben',
@@ -1552,7 +1618,30 @@
         streamServer: {
           name: 'MPSflix', mailserver: 'mail.mps-schule.de', filme: [1, 2],
           konten: [{ name: 'Anna', email: 'anna@mps-schule.de', iban: 'DE02 1203 0000 0000 2020 51',
-                     bic: 'BYLADEM1001', passwort: 'Fuchs42' }]
+                     bic: 'BYLADEM1001', passwort: 'Fuchs42' },
+                   { name: 'Lena', email: 'lena@mps-schule.de', iban: 'DE89 3704 0044 0532 0130 00',
+                     bic: 'COBADEFFXXX', passwort: 'Kino55' }]
+        }
+      }),
+      // Der zweite Streaming-Dienst: HTTPS mit Zertifikat
+      dev('n30', 'server', 'Filmwelt', 1430, 1470, {
+        nics: [{ ip: grPraefix + '5.91' }], gateway: grPraefix + '5.1', dns: grDns, software: ['streamingserver'],
+        zertifikat: grZert('filmwelt.de'),
+        streamServer: {
+          name: 'Filmwelt', mailserver: 'mail.mps-schule.de', filme: [3, 4], farbe: 'ozean', https: true,
+          konten: [{ name: 'Lena', email: 'lena@mps-schule.de', iban: 'DE89 3704 0044 0532 0130 00',
+                     bic: 'COBADEFFXXX', passwort: 'Popcorn9' }]
+        }
+      }),
+      // Die Zertifizierungsstelle: hat die vier Zertifikate oben schon ausgestellt
+      dev('n31', 'server', 'Zertifizierungsstelle', 980, 1470, {
+        nics: [{ ip: grZsIp }], gateway: grPraefix + '5.1', dns: grDns, software: ['zertstelle'],
+        zsServer: {
+          on: true, name: grZsName, dns: grDns, schluessel: grZsSchluessel, serial: 5,
+          antraege: Object.keys(grSrv).map(name => ({
+            nr: grSrv[name].nr, name: name, n: grSrv[name].n, e: '65537',
+            status: 'freigegeben', grund: '', ip: grSrv[name].ip, zert: grZertVon(name)
+          }))
         }
       }),
 
@@ -1563,6 +1652,12 @@
         dhcpServer: { von: grPraefix + '6.100', bis: grPraefix + '6.150', mask: '255.255.255.0',
                       gateway: grPraefix + '6.1', dns: grDns,
                       statisch: [{ mac: grMacHeim1, ip: grPraefix + '6.10' }] }
+      }),
+      // Der VPN-Server: steht außerhalb der Firewall, beim Anbieter
+      dev('n32', 'server', 'VPN-Server', 2120, 600, {
+        nics: [{ ip: grPraefix + '6.20' }], gateway: grPraefix + '6.1', dns: grDns, software: ['vpnserver'],
+        zertifikat: grZert('vpn.tunnelfix.de'),
+        vpnServer: { on: true, konten: [{ benutzer: 'lena', pwHash: grPwLena }] }
       }),
 
       // Heimnetz 1: Webseite hinter Portfreigabe
@@ -1590,6 +1685,24 @@
       dev('n27', 'host', 'Laptop 4', 2150, 1180, { nics: [{ dhcp: true }], software: ['browser', 'mail'] }),
       dev('n28', 'handy', 'Handy 3', 2330, 1080, {
         nics: [{ dhcp: true, funk: true, ssid: 'Familie-WLAN' }], software: ['browser']
+      }),
+
+      // Internat: hinter dem Firewall-Router, Streaming gesperrt
+      dev('n33', 'router', 'Firewall-Router', 560, 600, {
+        ports: 2, rip: true, dns: grDns,
+        nics: [{ ip: grPraefix + '108.2' }, { ip: grPraefix + '7.1' }],
+        dhcpServer: { nic: 1, von: grPraefix + '7.100', bis: grPraefix + '7.150', mask: '255.255.255.0',
+                      gateway: grPraefix + '7.1', dns: grDns },
+        firewall: { on: true, typ: 'blacklist', ablehnen: true,
+                    regeln: [{ adresse: 'mpsflix.de', maske: '' }, { adresse: 'filmwelt.de', maske: '' }] }
+      }),
+      dev('n34', 'switch', 'Switch 4', 330, 600, { ports: 5, wlan: { on: true, ssid: 'Internat-WLAN' } }),
+      dev('n35', 'host', 'Laptop 5', 110, 600, {
+        nics: [{ dhcp: true }], software: ['browser', 'vpnclient'], vertrauen: grVertrauen,
+        vpnClient: { server: 'vpn.tunnelfix.de', benutzer: 'lena', passwort: 'Tunnel2026' }
+      }),
+      dev('n36', 'handy', 'Handy 4', 170, 760, {
+        nics: [{ dhcp: true, funk: true, ssid: 'Internat-WLAN' }], software: ['browser']
       })
     ],
     cables: [
@@ -1604,6 +1717,9 @@
       cab('n5', 3, 'n15', 0), cab('n15', 1, 'n16', 0), cab('n15', 2, 'n17', 0),
       cab('n15', 3, 'n18', 0), cab('n15', 4, 'n19', 0),
       cab('n6', 2, 'n20', 0), cab('n20', 1, 'n22', 0), cab('n20', 2, 'n21', 0), cab('n20', 3, 'n26', 0),
+      cab('n15', 5, 'n30', 0), cab('n15', 6, 'n31', 0), cab('n20', 4, 'n32', 0),
+      // Internat hinter dem Firewall-Router
+      cab('n1', 3, 'n33', 0), cab('n33', 1, 'n34', 0), cab('n34', 1, 'n35', 0),
       // Heimnetze (WAN = Buchse 0, LAN ab 1)
       cab('n21', 1, 'n23', 0), cab('n21', 2, 'n24', 0),
       cab('n26', 1, 'n27', 0)
@@ -1612,39 +1728,63 @@
 
   const grListen =
     '<p><strong>Was hier alles läuft</strong></p><ul>'
-    + '<li><strong>6 Router</strong> im Teilgitter mit automatischem Routing (RIP); das <strong>cww</strong> hängt an Router 1 und Router 3.</li>'
+    + '<li><strong>6 Router</strong> im Teilgitter mit automatischem Routing (RIP); das <strong>cww</strong> hängt an Router 1 und Router 3. '
+    + 'Dazu der <strong>Firewall-Router</strong> vor dem <em>Internat</em> (an Router 1).</li>'
     + '<li><strong>2 Heimrouter</strong> mit NAT und WLAN, per DHCP vom Anbieter versorgt. Heimrouter 1 bekommt immer <code>50.0.6.10</code> (feste Zuweisung).</li>'
     + '<li><strong>DHCP</strong> im Büro (Bereich .100 bis .150, Laptop 1 hat eine Reservierung auf <code>50.0.4.50</code>), beim Anbieter und in beiden Heimnetzen. Statisch: der Lehrer-PC, alle Server.</li>'
     + '<li><strong>2 Webseiten</strong> mit festen Adressen und verschiedenem Aussehen: das Schulportal im Serverraum und die Heimseite von Familie Beispiel hinter Heimrouter 1 (Portfreigabe Port 80 auf <code>192.168.1.20</code>).</li>'
     + '<li><strong>DNS-Server</strong> mit allen Namen unten und einem MX-Eintrag für die Post.</li>'
     + '<li><strong>E-Mail:</strong> Mailserver mit drei Konten und Post darin; auf Laptop 1, Laptop 2 und dem Lehrer-PC ist das Mailprogramm eingerichtet.</li>'
-    + '<li><strong>MPSflix:</strong> der Streaming-Server, mit einem fertigen Konto.</li>'
-    + '<li>WLAN: <em>MPS-WLAN</em> (Büro), <em>Heim-WLAN</em> und <em>Familie-WLAN</em>.</li></ul>'
+    + '<li><strong>2 Streaming-Dienste:</strong> <em>MPSflix</em> (nur HTTP, alles im Klartext) und <em>Filmwelt</em> (HTTPS).</li>'
+    + '<li><strong>Zertifizierungsstelle</strong> im Serverraum (<code>zs.mps-schule.de</code>). Zertifikate haben Schulportal, Mailserver, Filmwelt und VPN-Server. '
+    + 'Ihr <strong>vertrauen</strong> nur Laptop 1, der Lehrer-PC und Laptop 5 — alle anderen Geräte zeigen bei <code>https://</code> eine Warnung.</li>'
+    + '<li><strong>Mitlesen:</strong> das <em>Lauscher-Handy 5</em> ist Gast im <em>MPS-WLAN</em>, genau wie Handy 1 (Carla). Funk hört jeder im selben WLAN.</li>'
+    + '<li><strong>Firewall:</strong> der Firewall-Router sperrt <code>mpsflix.de</code> und <code>filmwelt.de</code> (Blacklist, in beide Richtungen). '
+    + 'Im Internat kommt man an keinen der beiden Dienste.</li>'
+    + '<li><strong>VPN:</strong> der VPN-Server <code>vpn.tunnelfix.de</code> steht beim Anbieter, also <em>vor</em> der Firewall. '
+    + 'Auf Laptop 5 ist der VPN-Client schon eingerichtet.</li>'
+    + '<li>WLAN: <em>MPS-WLAN</em> (Büro), <em>Internat-WLAN</em>, <em>Heim-WLAN</em> und <em>Familie-WLAN</em>.</li></ul>'
     + '<p><strong>E-Mail-Konten</strong> (Mailserver <code>mail.mps-schule.de</code>)</p><ul>'
-    + '<li><code>anna@mps-schule.de</code> · Passwort <code>Sonne2026</code> (Laptop 1, drei Mails schon im Postfach)</li>'
+    + '<li><code>anna@mps-schule.de</code> · Passwort <code>Sonne2026</code> (Laptop 1, drei Mails schon im Postfach, <strong>verschlüsselt</strong> über 995/465)</li>'
+    + '<li><code>carla@mps-schule.de</code> · Passwort <code>Blume2026</code> (Handy 1 im WLAN, eine Mail wartet auf dem Server)</li>'
     + '<li><code>ben@mps-schule.de</code> · Passwort <code>Mond2026</code> (Laptop 2, zwei Mails warten auf dem Server)</li>'
     + '<li><code>frau.meier@mps-schule.de</code> · Passwort <code>Komet2026</code> (Lehrer-PC, eine Mail wartet auf dem Server)</li></ul>'
-    + '<p><strong>MPSflix-Konto:</strong> <code>anna@mps-schule.de</code> · Passwort <code>Fuchs42</code></p>'
+    + '<p><strong>Streaming-Konten</strong></p><ul>'
+    + '<li>MPSflix: <code>anna@mps-schule.de</code> · <code>Fuchs42</code> und <code>lena@mps-schule.de</code> · <code>Kino55</code></li>'
+    + '<li>Filmwelt: <code>lena@mps-schule.de</code> · <code>Popcorn9</code></li></ul>'
+    + '<p><strong>VPN-Konto</strong> (VPN-Server <code>vpn.tunnelfix.de</code>): <code>lena</code> · Passwort <code>Tunnel2026</code> (Laptop 5)</p>'
+    + '<p><strong>Zertifizierungsstelle:</strong> <em>MPS-Zertifizierungsstelle</em>, Fingerabdruck <code>' + grZsFp + '</code></p>'
     + '<p><strong>Namen im DNS</strong> (DNS-Server <code>50.0.5.53</code>)</p><ul>'
     + '<li><code>www.mps-schule.de</code> → <code>50.0.5.80</code> (Schulportal)</li>'
     + '<li><code>mail.mps-schule.de</code> → <code>50.0.5.25</code> (Mailserver, MX von <code>mps-schule.de</code>)</li>'
     + '<li><code>dns.mps-schule.de</code> → <code>50.0.5.53</code></li>'
     + '<li><code>mpsflix.de</code> und <code>www.mpsflix.de</code> → <code>50.0.5.90</code> (Streaming-Server)</li>'
-    + '<li><code>www.heimseite.de</code> → <code>50.0.6.10</code> (Heimrouter 1, weiter an <code>192.168.1.20</code>)</li></ul>';
+    + '<li><code>www.heimseite.de</code> → <code>50.0.6.10</code> (Heimrouter 1, weiter an <code>192.168.1.20</code>)</li>'
+    + '<li><code>filmwelt.de</code> → <code>50.0.5.91</code> (Streaming-Server, HTTPS)</li>'
+    + '<li><code>zs.mps-schule.de</code> → <code>50.0.5.70</code> (Zertifizierungsstelle)</li>'
+    + '<li><code>vpn.tunnelfix.de</code> → <code>50.0.6.20</code> (VPN-Server)</li></ul>';
 
   const grossesnetz = {
     titel: '3. Das große Netz', gruppe: ANDERE,
     aufgabe: auftrag({
-      kontext: 'Ein <strong>fertig eingerichtetes</strong> Netz, in dem alles läuft, was SYNIR kann — zum Ausprobieren und Testen, ohne dass du etwas einrichten musst. '
+      kontext: 'Ein <strong>fertig eingerichtetes</strong> Netz, in dem alles läuft, was SYNIR kann — auch HTTPS mit Zertifizierungsstelle, Mitlesen im WLAN, Firewall und VPN. '
+        + 'Zum Ausprobieren und Testen, ohne dass du etwas einrichten musst. '
         + 'Es hat keine Aufgabe außer: <strong>probier etwas aus</strong>. Unten steht, was wo läuft, mit allen Konten, Passwörtern und Namen zum Nachlesen.',
       aufgaben: [
         { typ: 'benutzen', text: 'Schalte auf <em>Aktion</em> und ruf auf <strong>Laptop 1</strong> im Browser <code>www.mps-schule.de</code>, '
-          + '<code>www.heimseite.de</code> und <code>mpsflix.de</code> auf. Hol dann im Mailprogramm die Post ab.' }
+          + '<code>www.heimseite.de</code> und <code>mpsflix.de</code> auf. Hol dann im Mailprogramm die Post ab.' },
+        { typ: 'benutzen', text: 'Ruf <code>https://www.mps-schule.de</code> einmal auf <strong>Laptop 1</strong> und einmal auf <strong>Laptop 2</strong> auf. '
+          + 'Warum warnt nur einer der beiden Browser?' },
+        { typ: 'benutzen', text: 'Hol auf <strong>Handy 1</strong> die Post ab. Öffne dann den Mitschnitt beim <strong>Lauscher-Handy 5</strong> und wähle <em>👁 Mitlesende</em>: '
+          + 'Was hat er mitbekommen?' },
+        { typ: 'benutzen', text: 'Versuch auf <strong>Laptop 5</strong> im Internat <code>mpsflix.de</code> und <code>https://filmwelt.de</code> zu öffnen. '
+          + 'Verbinde dann im <em>VPN-Client</em> und versuch es noch einmal.' }
       ],
       hilfe: [
         { begriff: 'Adressplan', text: 'Alle öffentlichen Adressen beginnen mit <code>50.0.</code>:', liste: [
           'Verbindungen zwischen den Routern: <code>50.0.101.0</code> bis <code>50.0.107.0</code>; cww – Router: <code>50.0.110.0</code> und <code>50.0.111.0</code>',
           'Büro (Router 4): <code>50.0.4.0</code> · Serverraum (Router 5): <code>50.0.5.0</code> · Anbieter (Router 6): <code>50.0.6.0</code>',
+          'Internat (Firewall-Router): <code>50.0.7.0</code>, angebunden an Router 1 über <code>50.0.108.0</code>',
           'Heimnetze: <code>192.168.1.0</code> (Heimrouter 1) und <code>192.168.2.0</code> (Heimrouter 2)'
         ] },
         { begriff: 'Auf dein cww umstellen', text: 'Im Raum hat dein cww einen eigenen Bereich (Fenster des cww, Reiter <em>Internet</em>). Ersetze in diesem Netz die erste Zahl <code>50</code> '
@@ -1652,6 +1792,9 @@
           + 'bei der festen Zuweisung für Heimrouter 1 und bei den Mail-Einstellungen (dort stehen nur Namen, die brauchen nichts).' },
         { begriff: 'Die Heimseite von innen', text: 'Aus <em>Heimnetz 1</em> selbst klappt <code>www.heimseite.de</code> nicht: Der Name führt zur öffentlichen Adresse des Heimrouters, '
           + 'und der übersetzt nur, was von <em>außen</em> hereinkommt. Wer im Heimnetz sitzt, ruft <code>192.168.1.20</code> auf.' },
+        { begriff: 'Firewall und VPN', text: 'Die Firewall sieht nur Absender und Ziel. Mit VPN geht von Laptop 5 alles als verschlüsselter Tunnel '
+          + 'zum VPN-Server — das Ziel <code>mpsflix.de</code> steht erst drinnen. Der VPN-Server holt den Film und schickt ihn durch den Tunnel zurück. '
+          + 'Dafür sieht jetzt der VPN-Server alles, was Laptop 5 tut.' },
         WERKZEUG_MITSCHNITT, WERKZEUG_LERN
       ]
     }).replace('<details>', grListen + '<details>'),
