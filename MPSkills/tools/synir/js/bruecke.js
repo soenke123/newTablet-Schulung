@@ -17,6 +17,8 @@
      blind:   true | false                       Schleier (Tablet)
      gespeichert: { id }                         „Als Szenario" ging durch
      toast:   '…'
+     hilfe:   '<abschnitt>'                     Pult gedrückt: die Hilfe springt
+                                                 hin, falls sie offen ist
      cwwNetz: { prefix, backbone }               Adressbereich vom Server
      cwwRein: { pakete, unzustellbar,            Antwort auf einen Tausch
                 verzeichnis, vergeben, bereiche }
@@ -338,6 +340,8 @@
         SIM.save();
       }
       if (m.toast) SIM.toast(m.toast);
+      // Die Lehrkraft drückt einen Knopf am Pult, während die Hilfe offen ist.
+      if (m.hilfe && window.SynirHilfe) window.SynirHilfe.zeigeWennOffen(String(m.hilfe));
       if (m.cwwNetz && INET) {
         cwwConf = { prefix: m.cwwNetz.prefix | 0, backbone: String(m.cwwNetz.backbone || '') };
         SIM.netz.setInternet(cwwConf);

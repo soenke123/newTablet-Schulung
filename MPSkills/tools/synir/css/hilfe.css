@@ -1,0 +1,323 @@
+/* ══════════════════════════════════════════════════════════════
+   SYNIR — hilfe.css  ·  Die Hilfe für Lehrkräfte (js/hilfe.js)
+   ══════════════════════════════════════════════════════════════
+   Ein Blatt über der rechten Hälfte, unter der Kopfzeile. Es trägt
+   die Farben der Anwendung (--surface, --ink …) und damit auch den
+   Dark Mode. Die Akzentfarbe ist die des Modus (--modus): die Hilfe
+   gehört zu dem, was man gerade tut.
+
+   Solange sie offen ist, rückt die Arbeitsfläche nach links
+   (body.hilfe-offen) — ein Gerätebildschirm, der rechts aufgeht,
+   läge sonst genau unter der Anleitung, die ihn erklärt.
+   ══════════════════════════════════════════════════════════════ */
+
+:root {
+  --hi-w: clamp(400px, 50vw, 860px);
+  --hi-top: 88px;   /* misst hilfe.js an der Kopfzeile */
+}
+
+/* ─── Der Knopf in der Kopfzeile ────────────────────────────── */
+.hilfe-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 44px; padding: 0 16px 0 10px;
+  font: inherit; font-size: 15px; font-weight: 650; color: var(--ink);
+  background: var(--surface); border: 1.5px solid var(--line-2);
+  border-radius: 12px; cursor: pointer; box-shadow: var(--e1);
+  transition: background .13s, border-color .13s, box-shadow .13s;
+}
+.hilfe-btn:hover { background: var(--surface-2); }
+.hilfe-btn:focus-visible { outline: 3px solid var(--modus); outline-offset: 2px; }
+.hilfe-btn-ic {
+  display: inline-grid; place-items: center;
+  width: 24px; height: 24px; border-radius: 50%;
+  font-size: 14px; font-weight: 800; line-height: 1;
+  color: var(--modus-in, #fff); background: var(--modus, var(--accent));
+}
+.hilfe-btn.is-on {
+  background: var(--surface-2); border-color: var(--modus);
+  box-shadow: 0 0 0 3px var(--modus-sh);
+}
+/* Die Klasse sieht die Hilfe nicht. */
+body[data-rolle="participant"] .hilfe-btn { display: none; }
+
+/* ─── Platz machen ──────────────────────────────────────────── */
+body.hilfe-offen:not(.hilfe-schmal) > .main,
+body.hilfe-offen:not(.hilfe-schmal) > .wlt,
+body.hilfe-offen:not(.hilfe-schmal) > .trace { margin-right: var(--hi-w); }
+body.hilfe-offen:not(.hilfe-schmal) .term { right: calc(var(--hi-w) + 16px); }
+body.hilfe-offen:not(.hilfe-schmal) .toast { left: calc((100vw - var(--hi-w)) / 2); }
+
+/* ─── Das Blatt ─────────────────────────────────────────────── */
+.hilfe {
+  position: fixed; z-index: 62;   /* über Kärtchen und Bildschirmen, unter den Menüs (65) und Dialogen */
+  top: var(--hi-top); right: 0; bottom: 0;
+  width: var(--hi-w); max-width: 100vw;
+  display: flex; flex-direction: column;
+  background: var(--surface); color: var(--ink);
+  border-left: 1px solid var(--line-2);
+  box-shadow: -18px 0 40px -24px rgba(23,27,36,.45);
+  animation: hi-rein .2s ease;
+}
+.hilfe[hidden] { display: none; }
+body.hilfe-schmal .hilfe { width: 100vw; border-left: 0; }
+@keyframes hi-rein { from { transform: translateX(24px); opacity: 0; } }
+
+.hi-kopf {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+}
+.hi-tag {
+  font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 6px;
+  color: var(--modus-in, #fff); background: var(--modus, var(--accent));
+}
+.hi-titel { font-size: 16px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hi-x, .hi-toc-auf {
+  font: inherit; cursor: pointer; color: var(--ink-2);
+  background: transparent; border: 1px solid transparent; border-radius: 10px;
+}
+.hi-x { width: 36px; height: 36px; font-size: 22px; line-height: 1; }
+.hi-x:hover, .hi-toc-auf:hover { background: var(--surface); border-color: var(--line); }
+.hi-toc-auf { display: none; height: 36px; padding: 0 12px; font-size: 14px; font-weight: 600; }
+
+/* Suche */
+.hi-such {
+  position: relative; display: flex; align-items: center;
+  margin: 12px 18px 0;
+}
+.hi-such-ic { position: absolute; left: 12px; width: 18px; height: 18px; color: var(--ink-3); pointer-events: none; }
+.hi-such-ic svg { width: 100%; height: 100%; display: block; }
+.hi-such-in {
+  flex: 1; min-width: 0; height: 44px;
+  padding: 0 92px 0 40px;
+  font: inherit; font-size: 15px; color: var(--ink);
+  background: var(--bg); border: 1.5px solid var(--line-2); border-radius: 12px;
+  outline: none;
+}
+.hi-such-in:focus { border-color: var(--modus); box-shadow: 0 0 0 3px var(--modus-sh); }
+.hi-such-in::-webkit-search-cancel-button { cursor: pointer; }
+.hi-treffer {
+  position: absolute; right: 36px; font-size: 12px; color: var(--ink-3); pointer-events: none;
+}
+.hi-hinweis {
+  margin: 8px 18px 10px; font-size: 12.5px; line-height: 1.4; color: var(--ink-3);
+}
+.hi-hinweis b { color: var(--ink-2); }
+
+/* Rumpf: Inhaltsverzeichnis links, Text rechts */
+.hi-rumpf {
+  flex: 1; min-height: 0;
+  display: grid; grid-template-columns: minmax(170px, 30%) 1fr;
+  border-top: 1px solid var(--line);
+}
+
+/* ─── Inhaltsverzeichnis ────────────────────────────────────── */
+.hi-toc {
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 10px 8px 24px;
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 13.5px;
+}
+.hi-toc ol { list-style: none; margin: 0; padding: 0; }
+.hi-toc-k + .hi-toc-k { margin-top: 2px; }
+.hi-toc-kb, .hi-toc-a {
+  display: flex; align-items: baseline; gap: 7px; width: 100%;
+  font: inherit; text-align: left; cursor: pointer;
+  color: var(--ink); background: none; border: 0; border-radius: 8px;
+}
+.hi-toc-kb { padding: 7px 8px; font-weight: 700; }
+.hi-toc-kb:hover, .hi-toc-a:hover { background: var(--surface); }
+.hi-toc-k > ol { display: none; margin: 0 0 6px 15px; padding-left: 8px; border-left: 2px solid var(--line); }
+.hi-toc-k.is-auf > ol { display: block; }
+.hi-toc-k.is-auf > .hi-toc-kb { color: var(--modus); }
+.hi-toc-a { padding: 4px 8px; color: var(--ink-2); font-size: 13px; line-height: 1.35; }
+.hi-toc-a.is-on { color: var(--ink); font-weight: 650; background: var(--surface); box-shadow: inset 3px 0 0 var(--modus); }
+.hi-nr {
+  font-family: var(--fm); font-size: .82em; font-weight: 600; color: var(--ink-3);
+  min-width: 1.2em; flex: none;
+}
+
+/* ─── Text ──────────────────────────────────────────────────── */
+.hi-text {
+  position: relative;   /* Bezug für offsetTop der Abschnitte */
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 4px 26px 40vh;   /* Luft unten: auch der letzte Abschnitt kommt nach oben */
+  font-size: 15px; line-height: 1.55;
+  outline: none;
+  scroll-padding-top: 8px;
+}
+.hi-kap-t {
+  display: flex; align-items: baseline; gap: 10px;
+  margin: 26px 0 4px; padding-bottom: 8px;
+  font-size: 21px; line-height: 1.25;
+  border-bottom: 2px solid var(--line);
+}
+.hi-kap:first-child .hi-kap-t { margin-top: 16px; }
+.hi-kap-t .hi-nr { font-size: 15px; color: var(--modus); }
+
+.hi-ab {
+  position: relative;
+  margin: 0 -12px; padding: 14px 12px 18px;
+  border-radius: 14px;
+  border-bottom: 1px dashed var(--line);
+}
+.hi-ab:last-child { border-bottom: 0; }
+.hi-ab.is-blitz { animation: hi-blitz 1.8s ease; }
+@keyframes hi-blitz {
+  0%, 25% { background: var(--modus-bg, rgba(15,179,137,.1)); box-shadow: inset 4px 0 0 var(--modus); }
+  100%    { background: transparent; box-shadow: inset 4px 0 0 transparent; }
+}
+.hi-ab-t {
+  display: flex; align-items: center; gap: 9px; flex-wrap: wrap;
+  margin: 0 0 6px; font-size: 17.5px; line-height: 1.3;
+}
+.hi-zeig {
+  margin-left: auto;
+  font: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer;
+  padding: 4px 10px; border-radius: 999px;
+  color: var(--modus); background: transparent; border: 1.5px solid var(--modus);
+}
+.hi-zeig:hover { background: var(--modus); color: var(--modus-in, #fff); }
+.hi-kurz { margin: 0 0 10px; color: var(--ink); }
+.hi-zw {
+  margin: 14px 0 4px;
+  font-size: 11.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.hi-ol, .hi-ul { margin: 0; padding-left: 22px; }
+.hi-ol li, .hi-ul li { margin: 3px 0; padding-left: 2px; }
+.hi-ol li::marker { font-weight: 700; color: var(--modus); }
+.hi-ul li::marker { color: var(--ink-3); }
+
+.hi-text em { font-style: normal; font-weight: 600; color: var(--ink); background: var(--surface-2);
+              padding: 0 4px; border-radius: 5px; border: 1px solid var(--line); white-space: nowrap; }
+.hi-text code { font-family: var(--fm); font-size: .88em; padding: 1px 5px; border-radius: 5px;
+                background: var(--surface-2); border: 1px solid var(--line); white-space: nowrap; }
+.hi-text kbd { font-family: var(--fm); font-size: .82em; padding: 1px 6px; border-radius: 6px;
+               background: var(--surface); border: 1px solid var(--line-2); border-bottom-width: 2.5px;
+               white-space: nowrap; }
+
+/* Bilder */
+.hi-bilder { margin: 10px 0 4px; display: grid; gap: 12px; }
+.hi-bilder--2 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: start; }
+.hi-fig { margin: 0; }
+.hi-fig-b {
+  display: block; width: 100%; padding: 0; cursor: zoom-in;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+}
+.hi-fig-b img {
+  display: block; max-width: 100%; height: auto; margin: 0 auto;   /* Breite und Verhältnis setzt hilfe.js */
+}
+.hi-fig-b:hover { border-color: var(--line-2); }
+.hi-fig figcaption { margin-top: 5px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
+
+/* Tabellen */
+.hi-tab-w { margin: 10px 0 2px; overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; }
+.hi-tab { width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.4; }
+.hi-tab th {
+  text-align: left; padding: 7px 10px;
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-3); background: var(--surface-2); border-bottom: 1px solid var(--line);
+}
+.hi-tab td { padding: 7px 10px; vertical-align: top; border-top: 1px solid var(--line); }
+.hi-tab tr:first-child td { border-top: 0; }
+.hi-tab td:first-child { width: 38%; }
+.hi-tab td em, .hi-tab td code { white-space: normal; }
+
+.hi-pille {
+  display: inline-block; padding: 0 7px; border-radius: 999px;
+  font-size: 11px; font-weight: 800; line-height: 18px; color: #fff; background: var(--c);
+}
+
+/* „Im Unterricht" */
+.hi-tipp {
+  margin: 14px 0 0; padding: 10px 14px 11px;
+  border-radius: 12px; font-size: 14.5px;
+  background: var(--auf-kopf); border: 1px solid var(--auf-line);
+}
+.hi-tipp b {
+  display: block; margin-bottom: 2px;
+  font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--auf-tag);
+}
+
+/* Das Pult der Lehrkraft als Bild aus Knöpfen */
+.hi-pult {
+  display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+  margin: 8px 0 4px; padding: 9px 10px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2);
+}
+.hi-pult span {
+  padding: 6px 11px; border-radius: 10px; font-size: 13px; font-weight: 600;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.hi-pult i { flex: 1; }
+.hi-pult .hi-pult-rot { color: #b42318; border-color: #f2b8b5; }
+
+.hi-ende { margin: 30px 0 0; font-size: 12px; color: var(--ink-3); text-align: center; }
+
+/* Suchergebnisse */
+.hi-ergebnisse { padding: 12px 0; display: flex; flex-direction: column; gap: 6px; }
+.hi-ergebnisse[hidden], .hi-alles[hidden] { display: none; }
+.hi-erg {
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  font: inherit; cursor: pointer; color: var(--ink);
+  padding: 10px 12px; border-radius: 12px;
+  background: var(--surface); border: 1px solid var(--line);
+}
+.hi-erg:hover, .hi-erg:focus-visible { border-color: var(--modus); outline: none; box-shadow: 0 0 0 3px var(--modus-sh); }
+.hi-erg-k { font-size: 11.5px; font-weight: 700; color: var(--ink-3); letter-spacing: .02em; }
+.hi-erg strong { font-size: 15.5px; }
+.hi-erg-s { font-size: 13.5px; color: var(--ink-2); line-height: 1.45; }
+.hi-erg mark, .hi-erg-s mark { background: rgba(250,204,21,.45); color: inherit; border-radius: 3px; padding: 0 1px; }
+.hi-leer { color: var(--ink-3); padding: 12px 0; }
+
+/* Großes Bild */
+.hi-lupe {
+  position: absolute; inset: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  padding: 24px; cursor: zoom-out;
+  background: rgba(10,13,24,.82); backdrop-filter: blur(4px);
+}
+.hi-lupe[hidden] { display: none; }
+.hi-lupe img { max-width: 100%; max-height: calc(100% - 40px); border-radius: 10px; box-shadow: 0 20px 60px rgba(0,0,0,.5); background: #fff; }
+.hi-lupe-t { color: #e9ecf1; font-size: 13px; }
+
+/* ─── Auf dem Bildschirm: Schild unter dem Zeiger, Ringe ────── */
+.hi-chip {
+  position: fixed; z-index: 9000; pointer-events: none;
+  padding: 3px 9px; border-radius: 999px;
+  font-size: 12.5px; font-weight: 650; white-space: nowrap;
+  color: var(--modus-in, #fff); background: var(--modus, var(--accent));
+  box-shadow: 0 4px 14px rgba(0,0,0,.2);
+}
+.hi-chip[hidden] { display: none; }
+.hi-ring {
+  position: fixed; z-index: 8999; pointer-events: none;
+  border: 3px solid var(--modus, var(--accent)); border-radius: 14px;
+  box-shadow: 0 0 0 4px var(--modus-sh);
+  animation: hi-puls .65s ease-in-out 4 alternate;
+}
+@keyframes hi-puls { from { transform: scale(1); opacity: 1; } to { transform: scale(1.06); opacity: .55; } }
+
+/* ─── Schmal: das Verzeichnis klappt über den Text ──────────── */
+@media (max-width: 1100px) {
+  .hi-rumpf { grid-template-columns: 1fr; position: relative; }
+  .hi-toc-auf { display: inline-flex; align-items: center; }
+  .hi-toc {
+    display: none; position: absolute; inset: 0 auto 0 0; z-index: 1;
+    width: min(320px, 85%);
+    box-shadow: 12px 0 30px -18px rgba(23,27,36,.5);
+  }
+  .hilfe.hi-toc-zeigen .hi-toc { display: block; }
+  .hi-text { padding-left: 20px; padding-right: 20px; }
+}
+@media (max-width: 520px) {
+  .hi-hinweis { display: none; }
+  .hi-titel { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hilfe, .hi-ab.is-blitz, .hi-ring { animation: none; }
+}

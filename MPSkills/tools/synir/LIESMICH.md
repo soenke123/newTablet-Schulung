@@ -60,6 +60,7 @@ npx serve .
 | **Szenarien** | sechs Aufgaben, von „zwei Endgeräte" über Fehlersuche bis DHCP und DNS |
 | **Speichern** | automatisch im localStorage, dazu Export/Import als JSON |
 | **Menüleiste** ⭐ | Oben rechts zwei Reiter wie in klassischen Programmen (`js/menuleiste.js`). **Datei**: Neu · Öffnen · Sichern (als Datei auf den PC) · darunter, getönt abgesetzt, **Szenarien** (Untermenü mit der Auswahl), *Als Szenario speichern* und *Aufgabentext* (beides nur Lehrkraft). **Ansicht & Tools**: *Dark Mode* (gilt für ganz MPSkills — derselbe Schlüssel `mpskills_theme`), *Subnetze* und *Mitschnitt* (im Entwurf grau; ist eines noch an, bleibt es abschaltbar). ↑ ↓ ← → Esc, Darüberfahren wechselt den Reiter. Das gelbe *Aufgabe*-Kärtchen steht daneben, unverändert. |
+| **Hilfe für Lehrkräfte** ⭐ | Knopf **Hilfe** ganz rechts in der Kopfzeile (auch **F1**), nur Lehrkraft und Einzelbetrieb — auf den Tablets der Klasse gibt es ihn nicht. Eine Anleitung über der **rechten Hälfte** (`js/hilfe.js`, Text in `js/hilfe-inhalt.js`): **Suchfeld** (Umlaute egal, mehrere Wörter), **Inhaltsverzeichnis** mit acht Kapiteln (Erste Schritte · Hardware · Einstellen im Entwurf · Software · Werkzeuge · Datei & Szenarien · Im Klassenraum · Wenn etwas nicht klappt), je Abschnitt Kurzsatz, **Bildschirmfoto der echten Oberfläche**, *So geht's*, *Gut zu wissen*, *Im Unterricht*. ⭐ **Solange sie offen ist, schlägt jeder Klick auf ein Ding in SYNIR dessen Abschnitt auf** — Gerät auf der Fläche, Reiter im Kärtchen, Programm auf dem Bildschirm, Menüpunkt, sogar die Knöpfe am Pult (über die Brücke). SYNIR bleibt dabei bedienbar, die Arbeitsfläche rückt nach links. Der Knopf **◎ Zeigen** umrandet umgekehrt das Ding auf dem Bildschirm. |
 | **Modus-Schalter** | Groß (52 px, Zeichen + Wort + Untertitel). Die **Geräteleiste folgt dem Modus**: Entwurf → ausgeklappt, Aktion → eingeklappt; von Hand umlegen geht, bis zum nächsten Wechsel. |
 | **Kontrast** | `--ink-2`/`--ink-3`, Linien und der helle Akzent sind dunkler (Mint `#0a8a69`); jeder Abschnitt in den Fenstern (`.k-sec`) ist ein getönter Balken mit Streifen in der Modusfarbe. |
 
@@ -441,6 +442,12 @@ js/
   prog-vpn.js        ⭐ VPN-Server- und VPN-Client-Fenster (Logik: vpn.js)
   prog-mail.js       E-Mail-Programm und E-Mail-Server-Fenster
   szenarien.js       acht vorbereitete Netze mit Auftrag
+  hilfe-inhalt.js    ⭐ der Text der Hilfe für Lehrkräfte (nur Inhalt)
+  hilfe.js           ⭐ die Hilfe: Blatt rechts, Suche, Verzeichnis, und
+                     `zielVon` — welches angeklickte Ding zu welchem
+                     Abschnitt gehört
+hilfe/*.webp         Bildschirmfotos der Hilfe, gemacht von
+                     tests/hilfe-bilder.js; hilfe/masse.js = ihre Maße
   app.js             Zusammenbau, localStorage
 ```
 
@@ -483,6 +490,28 @@ nächsten Umbau auseinander, und zwar lautlos: beide Zweige sähen plausibel aus
 Klassische `<script>`-Einbindung mit globalen Namen, kein Modulsystem — dieselbe
 Bauweise wie MPSkills, damit der Ordner später ohne Umbau nach
 `MPSkills/tools/…/` wandern kann.
+
+## Die Hilfe für Lehrkräfte
+
+*(seit 2026-10-02 · `js/hilfe.js`, `js/hilfe-inhalt.js`, `css/hilfe.css`, Bilder in `hilfe/`,
+Prüfstand `tests/hilfetest.js`)*
+
+* **Wer:** Lehrkraft im Raum und Einzelbetrieb (`body[data-rolle]` ≠ `participant`).
+* **Wo:** ein Blatt über der rechten Hälfte, unter der Kopfzeile. Damit Fenster, die rechts
+  aufgehen (Gerätebildschirm, großes Kärtchen), nicht darunter verschwinden, rücken `.main`,
+  Weiterleitungstabelle, Mitschnitt, Terminal und Kurzmeldung zur Seite (`body.hilfe-offen`).
+  Unter 900 px Breite liegt die Hilfe über allem (`hilfe-schmal`).
+* **Klick → Abschnitt:** `zielVon(el)` in `hilfe.js`, vom Speziellen zum Allgemeinen (Knöpfe
+  und Reiter, Felder `data-k`/`data-f`, Überschriften `.k-sec` im Kärtchen, Programm des
+  Bildschirms, Geräteart auf der Fläche). Gelesen wird pointerdown/-up im Einfangen, nie
+  angehalten — die Hilfe hört zu, sie greift nicht ein. Ziehen zählt nicht, der leere Tisch
+  auch nicht. Das Pult in `tool.js` schickt `{ hilfe: '<abschnitt>' }` in den Rahmen.
+* ⚠️ **Wer etwas Neues in die Oberfläche baut**, ergänzt einen Abschnitt in
+  `hilfe-inhalt.js`, eine Zeile in `zielVon` (falls es ein eigenes Fenster/Knopf ist) und
+  lässt die Bilder neu machen:
+  `NODE_PATH=<playwright-core> node tests/hilfe-bilder.js [name …]` (braucht ImageMagick).
+  Das Skript schreibt auch `hilfe/masse.js` — ohne die Maße verrutschen Sprünge, weil
+  nachladende Bilder den Text verschieben.
 
 ## Im Raum (MPSkills)
 

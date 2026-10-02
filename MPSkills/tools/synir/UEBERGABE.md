@@ -6,6 +6,32 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 0011 · Hilfe für Lehrkräfte (2026-10-02)
+
+Berührt: neu `js/hilfe.js`, `js/hilfe-inhalt.js`, `css/hilfe.css`, `hilfe/*.webp` + `hilfe/masse.js`,
+`tests/hilfe-bilder.js` (macht die Bilder), `tests/hilfetest.js` (74 Prüfungen); `index.html` (Knopf, Skripte,
+Stylesheet, `?v=…h`), `js/bruecke.js` (Befehl `hilfe`), `tool.js` (Pult schickt `hilfe`, `V`), Cache-Stempel in
+`MPSkills/lib/tool.js` und den vier Stellen dazu, `LIESMICH.md` (Abschnitt *Die Hilfe für Lehrkräfte*).
+
+* ⭐ **Wunsch des Nutzers:** oben rechts ein Knopf *Hilfe* für Lehrkräfte; darin Suchfeld, kleines
+  Inhaltsverzeichnis mit klickbaren Kapiteln, Anleitung über der rechten Hälfte des Bildschirms, mit
+  Bildschirmfotos und kurzen, gut gegliederten Erklärungen zu Hardware, Software und Funktionen. **Klickt man
+  bei offener Hilfe ein Objekt in SYNIR an, springt die Anleitung zu diesem Objekt.**
+* Acht Kapitel, 55 Abschnitte. Jeder Abschnitt: Kurzsatz · Bild · *So geht's* · Tabelle · *Gut zu wissen* ·
+  *Im Unterricht*. Sie-Form. Bilder sind echte Ausschnitte (Szenarien I.2, II.3, II.6, II.8), doppelt aufgelöst,
+  WebP, zusammen ≈ 1,3 MB, `loading="lazy"`.
+* ⚠️ **Maße:** Breite/Seitenverhältnis jedes Bildes stehen am `<img>` (aus `hilfe/masse.js`). Ohne sie landete ein
+  Sprung einige hundert Pixel daneben, weil nachladende Bilder den Text verschoben.
+* ⚠️ **Mitlesen des Verzeichnisses** per Scroll-Ereignis (letzter Abschnitt, dessen Anfang oben angekommen ist), nicht
+  per IntersectionObserver — der markierte beim Sprung den Abschnitt DAVOR. Während ein Sprung gleitet, schweigt es.
+* Zusatz: Knopf **◎ Zeigen** (umrandet das Ding auf dem Bildschirm), Schild unter dem Mauszeiger („? Router"),
+  Bild antippen = groß, **F1** öffnet/schließt.
+* Prüfstände: `kerntest` 1239 grün, `fwuitest` 66 grün, `hilfetest` 74 grün; `uitest` bricht wie zuvor bei
+  „DNS-Server" ab (dieselben drei FAIL, umgebungsbedingt).
+* Offen: die Bilder zeigen den hellen Modus — im Dark Mode stehen helle Bilder im dunklen Blatt (bewusst gelassen).
+
+---
+
 ## 0010 · Firewall (2026-10-02)
 
 Berührt: neu `js/firewall.js`, `tests/fwuitest.js`, `tests/shot-firewall.png`; `js/netz.js` (`fwConf`, `fwLaeuft`,

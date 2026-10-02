@@ -47,7 +47,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20261002f';
+  const V = '?v=20261002h';
   const TAKT_MS = 3000;          // Stand der Klasse / Spiegelung
   const GAP = 12;
   const MIN = 440;
@@ -1024,9 +1024,15 @@
     }).join('');
   }
 
+  /* Welcher Abschnitt der Hilfe (js/hilfe.js, im Rahmen) erklärt
+     diesen Knopf? Die Hilfe springt nur, wenn sie offen ist. */
+  const HILFE = { syList: 'klasse', syCww: 'internetklasse', syMap: 'internetklasse',
+                  syBlind: 'blind', syStop: 'klasse' };
+
   async function onDeskClick(e) {
     const b = e.target.closest('button');
     if (!b) return;
+    post({ hilfe: HILFE[b.id] || (b.dataset.pid ? 'klasse' : 'pult') });
     if (b.id === 'syList') {
       listOpen = !listOpen;
       paintDesk(); paintPeople();

@@ -6,6 +6,7 @@
 <title>SYNIR — Class Wide Web</title>
 <link rel="icon" href="bilder/synir-zeichen.png" type="image/png">
 <link rel="stylesheet" href="css/app.css?v=20261002e">
+<link rel="stylesheet" href="css/hilfe.css?v=20261002h">
 </head>
 <body>
 
@@ -406,6 +407,15 @@
         </div>
       </div>
     </nav>
+    <!-- Die Hilfe für Lehrkräfte (js/hilfe.js): eine Anleitung über
+         der rechten Hälfte, mit Suche und Inhaltsverzeichnis. Solange
+         sie offen ist, schlägt jeder Klick auf ein Ding in SYNIR
+         seinen Abschnitt auf. Auf den Tablets der Klasse gibt es den
+         Knopf nicht (css/hilfe.css). -->
+    <button type="button" class="hilfe-btn" id="hilfeBtn" aria-expanded="false" aria-controls="hilfe"
+            title="Hilfe für Lehrkräfte (F1)">
+      <span class="hilfe-btn-ic" aria-hidden="true">?</span><span class="hilfe-btn-t">Hilfe</span>
+    </button>
   </div>
 </header>
 
@@ -959,7 +969,10 @@
 <script src="js/menuleiste.js?v=20260930e"></script>
 <script src="js/aufgabe.js?v=20260930e"></script>
 <script src="js/app.js?v=20261002d"></script>
+<script src="hilfe/masse.js?v=20261002h"></script>
+<script src="js/hilfe-inhalt.js?v=20261002h"></script>
+<script src="js/hilfe.js?v=20261002h"></script>
 <!-- Die Brücke in den Raum. Tut ohne Rahmen nichts. -->
-<script src="js/bruecke.js?v=20260930e"></script>
+<script src="js/bruecke.js?v=20261002h"></script>
 </body>
 </html>
