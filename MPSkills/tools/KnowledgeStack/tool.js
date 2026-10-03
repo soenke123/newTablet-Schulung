@@ -67,7 +67,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20261003a';
+  const ASSET_V = '20261003b';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -139,14 +139,11 @@
      nächsten Takt wieder zu — und sie muss auch dann stehenbleiben,
      wenn nebenher noch Punkte und Emotes hereinkommen. */
   let pickerOffen = false;
-  /* ─── Editor-Zustand ────────────────────────────────────── */
-  // null = Editor zu, 'list' = Katalog-Übersicht, 'edit' = Fragen-Editor,
-  // 'preview' = Beamer-Vorschau einer Frage.
-  let editorMode = null;
-  let editorData = null;      // { catalog_id, title, subject, questions: [] }
-  let editorPreviewIdx = 0;   // welche Frage in der Vorschau
-  let editorDirty = false;    // ungespeicherte Änderungen?
-  let editorImport = null;    // Text-Import: { text, mode: 'new'|'append', title, subject }
+  /* ─── Editor ────────────────────────────────────────────── */
+  // KSEditor.create(…) aus editor.js — Zustand und Bedienung stehen
+  // dort, weil derselbe Editor auch ohne Raum läuft (quiz.html).
+  // Hier nur: wann er das Beamer-Bild übernimmt.
+  let editor = null;
   /* Das Foto der laufenden Frage am Beamer. Es steht NICHT in der
      Ansicht (die kommt bei jeder Antwort neu), sondern wird einmal je
      Frage über ks_room_image geholt und hier gemerkt (Migration 0186). */
@@ -465,8 +462,7 @@
      Zeichnen: einmal bauen je Bild, danach flicken
      ══════════════════════════════════════════════════════════ */
   function frameKey(v) {
-    if (editorMode) return 'editor|' + editorMode
-      + '|' + (editorMode === 'preview' ? editorPreviewIdx : '-');
+    if (editorAuf()) return 'editor|' + editor.key();
     const ph = v.phase || 'lobby';
     return role + '|' + ph
       + '|' + (ph === 'question' || ph === 'reveal' ? v.current_q_idx : '-')
@@ -483,14 +479,14 @@
       stopBewegung();
       stage.className = 'ks-stage ks-stage--' + (role === 'presenter' ? 'beam' : 'tab')
                      + ' ks-stage--' + view.phase
-                     + (role === 'presenter' && !editorMode && view.phase === 'question'
+                     + (role === 'presenter' && !editorAuf() && view.phase === 'question'
                         && view.question && view.question.has_image ? ' ks-stage--mitbild' : '');
       stage.innerHTML = (role === 'presenter' ? baueBeam : baueTab)(view);
       sammle();
       binde();
       fit();
       startClock();
-      if (role === 'presenter' && !editorMode) startBewegung(view);
+      if (role === 'presenter' && !editorAuf()) startBewegung(view);
     }
     (role === 'presenter' ? flickeBeam : flickeTab)(view);
   }
@@ -511,7 +507,7 @@
      BEAMER
      ══════════════════════════════════════════════════════════ */
   function baueBeam(v) {
-    if (editorMode && window.KSEditor) return baueEditor(v);
+    if (editorAuf()) return editor.html();
     if (v.phase === 'lobby')    return beamLobby(v);
     if (v.phase === 'question') return beamFrage(v);
     if (v.phase === 'reveal')   return beamAufloesung(v);
@@ -1588,310 +1584,27 @@
     }));
   }
 
-  function baueEditor() {
-    const E = window.KSEditor;
-    if (editorMode === 'list')    return E.buildList(catalogs);
-    if (editorMode === 'edit')    return E.buildEditor(editorData || { questions: [] });
-    if (editorMode === 'import')  return E.buildImport(editorImport, window.KSParse.parse(editorImport.text));
-    if (editorMode === 'preview') {
-      const qs = (editorData && editorData.questions) || [];
-      const q = qs[editorPreviewIdx] || { question_text: '', options: ['','','',''], correct_idx: 0 };
-      return E.buildPreview(q, editorPreviewIdx, qs.length);
-    }
-    return '<p>Editor wird geladen…</p>';
-  }
+  function editorAuf() { return !!(editor && editor.mode); }
 
-  /* Frageninhalte aus den DOM-Feldern sammeln */
-  function sammleEditorDaten() {
-    if (!editorData || !stage) return;
-    const el = stage;
-    // Titel & Fach
-    const tInp = el.querySelector('[data-ed-field=title]');
-    if (tInp) editorData.title = tInp.value;
-    const sInp = el.querySelector('[data-ed-field=subject]');
-    if (sInp) editorData.subject = sInp.value;
-    // Fragen
-    for (let i = 0; i < editorData.questions.length; i++) {
-      const q = editorData.questions[i];
-      const ft = el.querySelector('[data-qi="' + i + '"][data-field=question_text]');
-      if (ft) q.question_text = ft.value;
-      for (let oi = 0; oi < 4; oi++) {
-        const oinp = el.querySelector('[data-qi="' + i + '"][data-oi="' + oi + '"][data-field=option]');
-        if (oinp && Array.isArray(q.options)) q.options[oi] = oinp.value;
-      }
-      const tl = el.querySelector('[data-qi="' + i + '"][data-field=time_limit_sec]');
-      if (tl) q.time_limit_sec = Math.max(5, Math.min(120, parseInt(tl.value, 10) || 20));
-      const expl = el.querySelector('[data-qi="' + i + '"][data-field=explanation]');
-      if (expl) q.explanation = expl.value || null;
-    }
-  }
-
-  /* In der Vorschau editierte Texte (contenteditable) zurückschreiben */
-  function sammleVorschauAenderungen() {
-    if (!editorData || !editorData.questions || !stage) return;
-    const q = editorData.questions[editorPreviewIdx];
-    if (!q) return;
-    const qEl = stage.querySelector('[data-ed-pv=text]');
-    if (qEl) q.question_text = qEl.textContent.trim();
-    const optEls = stage.querySelectorAll('[data-ed-pv=opt]');
-    optEls.forEach(el => {
-      const oi = parseInt(el.dataset.oi, 10);
-      if (!isNaN(oi) && Array.isArray(q.options)) {
-        q.options[oi] = el.textContent.trim();
+  function holeEditor() {
+    if (editor) return editor;
+    editor = window.KSEditor.create({
+      call:           (fn, args) => ctx.actions.call(fn, args),
+      catalogs:       () => catalogs,
+      reloadCatalogs: () => { lastSig = null; return poll(); },
+      redraw:         () => { lastFrame = null; zeichne(); },
+      onClose:        () => { lastFrame = null; zeichne(); },
+      toast:          (m, e) => ctx.toast(m, e),
+      confirm:        m => ctx.confirm(m),
+      errText:        fehlerText,
+      // „▶ Spielen" in der Übersicht: den Katalog aufs Brett legen.
+      onPlay: async catId => {
+        const r = await ctx.actions.call('ks_room_setup', { p_catalog: catId });
+        if (r && r.ok) { lastSig = null; poll(); }
+        return r;
       }
     });
-    editorDirty = true;
-  }
-
-  /* Drag & Drop für Fragen-Reihenfolge */
-  function bindeEditorDnD() {
-    const list = stage.querySelector('[data-ed-list=questions]');
-    if (!list) return;
-    let dragIdx = null;
-
-    // Eine Datei von außen (Foto) oder eine Karte von innen?
-    const istDatei = ev => !!(ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files'));
-    const ziel = ev => { const c = ev.target.closest && ev.target.closest('.kse-frage'); return c; };
-
-    list.addEventListener('dragstart', ev => {
-      const card = ev.target.closest('.kse-frage');
-      if (!card) return;
-      dragIdx = parseInt(card.dataset.qi, 10);
-      card.classList.add('is-dragging');
-      ev.dataTransfer.effectAllowed = 'move';
-      ev.dataTransfer.setData('text/plain', String(dragIdx));
-    });
-
-    list.addEventListener('dragover', ev => {
-      ev.preventDefault();
-      const card = ziel(ev);
-      if (istDatei(ev)) {
-        ev.dataTransfer.dropEffect = card ? 'copy' : 'none';
-        list.querySelectorAll('.kse-frage').forEach(c => c.classList.toggle('is-fotoziel', c === card));
-        return;
-      }
-      ev.dataTransfer.dropEffect = 'move';
-      list.querySelectorAll('.kse-frage').forEach(c => c.classList.remove('is-over'));
-      if (card) card.classList.add('is-over');
-    });
-
-    list.addEventListener('dragleave', ev => {
-      const card = ziel(ev);
-      if (card && !card.contains(ev.relatedTarget)) card.classList.remove('is-over', 'is-fotoziel');
-    });
-
-    list.addEventListener('drop', ev => {
-      ev.preventDefault();
-      list.querySelectorAll('.kse-frage').forEach(c =>
-        c.classList.remove('is-dragging', 'is-over', 'is-fotoziel'));
-      const card = ziel(ev);
-      if (istDatei(ev)) {
-        const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
-        if (card && f) ladeFotoFuer(card.dataset.qi, f);
-        return;
-      }
-      if (!card || dragIdx == null || !editorData) return;
-      const dropIdx = parseInt(card.dataset.qi, 10);
-      if (dragIdx === dropIdx) return;
-      // Erst aus DOM-Feldern lesen, dann verschieben
-      sammleEditorDaten();
-      const qs = editorData.questions;
-      const [moved] = qs.splice(dragIdx, 1);
-      qs.splice(dropIdx, 0, moved);
-      editorDirty = true;
-      // Neu zeichnen
-      lastFrame = null; zeichne();
-    });
-
-    list.addEventListener('dragend', () => {
-      dragIdx = null;
-      list.querySelectorAll('.kse-frage').forEach(c =>
-        c.classList.remove('is-dragging', 'is-over'));
-    });
-  }
-
-  /* ─── Fotos je Frage ─────────────────────────────────────
-     Verkleinert im Browser, bevor es zum Server geht: ein Handyfoto
-     hat 4–12 MB, am Beamer reichen 1600 Punkte Kantenlänge. JPEG mit
-     weißem Grund (ein durchsichtiges PNG würde sonst schwarz). */
-  const FOTO_KANTE = 1600;
-  const FOTO_MAX = 1400000;     // Zeichen der data:-URL; Server: 1,5 Mio.
-
-  function bildAusDatei(file) {
-    return new Promise((resolve, reject) => {
-      const url = URL.createObjectURL(file);
-      const img = new Image();
-      img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('unlesbar')); };
-      img.src = url;
-    });
-  }
-
-  async function verkleinere(file) {
-    const img = await bildAusDatei(file);
-    const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
-    if (!w0 || !h0) throw new Error('unlesbar');
-    for (const [kante, q] of [[FOTO_KANTE, .85], [1280, .78], [1024, .7], [800, .65]]) {
-      const f = Math.min(1, kante / Math.max(w0, h0));
-      const c = document.createElement('canvas');
-      c.width = Math.round(w0 * f); c.height = Math.round(h0 * f);
-      const g = c.getContext('2d');
-      g.fillStyle = '#fff';
-      g.fillRect(0, 0, c.width, c.height);
-      g.drawImage(img, 0, 0, c.width, c.height);
-      const data = c.toDataURL('image/jpeg', q);
-      if (data.length <= FOTO_MAX) return data;
-    }
-    throw new Error('zu_gross');
-  }
-
-  /* qi ist eine Fragennummer — oder 'pv' für die Frage, die gerade
-     in der Vorschau steht. */
-  function fotoFrage(qi) {
-    if (!editorData || !editorData.questions) return null;
-    const i = qi === 'pv' ? editorPreviewIdx : parseInt(qi, 10);
-    return editorData.questions[i] || null;
-  }
-
-  async function ladeFotoFuer(qi, file) {
-    if (!file || !/^image\//.test(file.type || '')) {
-      ctx.toast('Das ist kein Bild. Bitte ein Foto (JPG, PNG …) nehmen.', true); return;
-    }
-    const zelle = stage && stage.querySelector('[data-foto="' + qi + '"]');
-    if (zelle) zelle.classList.add('is-laedt');
-    let data;
-    try {
-      data = await verkleinere(file);
-    } catch (e) {
-      if (zelle) zelle.classList.remove('is-laedt');
-      ctx.toast(e && e.message === 'zu_gross'
-        ? 'Das Foto ist zu groß, auch verkleinert. Bitte ein anderes nehmen.'
-        : 'Dieses Bild kann der Browser nicht lesen. Bitte als JPG oder PNG speichern.', true);
-      return;
-    }
-    if (destroyed || !editorMode) return;
-    setzeFoto(qi, { image: data, image_name: file.name || 'Foto' });
-  }
-
-  /* Ein Foto setzen oder (foto = null) entfernen. Im Editor wird NUR
-     die Fotospalte der Karte neu geschrieben — sonst spränge die Liste
-     an den Anfang und alles Getippte müsste erst eingesammelt werden.
-     In der Vorschau wird neu gebaut (dort steht das Foto mitten im Bild). */
-  function setzeFoto(qi, foto) {
-    if (editorMode === 'preview') sammleVorschauAenderungen();
-    const q = fotoFrage(qi);
-    if (!q) return;
-    q.image = foto ? foto.image : null;
-    q.image_name = foto ? foto.image_name : null;
-    editorDirty = true;
-    if (editorMode === 'preview') { lastFrame = null; zeichne(); return; }
-    const zelle = stage && stage.querySelector('[data-foto="' + qi + '"]');
-    if (zelle && window.KSEditor) {
-      zelle.classList.remove('is-laedt');
-      zelle.classList.toggle('has-bild', !!q.image);
-      zelle.innerHTML = window.KSEditor.fotoZelle(q, parseInt(qi, 10));
-    }
-  }
-
-  function schluckeDatei(ev) {
-    if (editorMode && ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files')) {
-      ev.preventDefault();
-    }
-  }
-
-  function onFotoWahl(ev) {
-    const inp = ev.target && ev.target.closest && ev.target.closest('[data-foto-file]');
-    if (!inp || !editorMode) return;
-    const f = inp.files && inp.files[0];
-    if (f) ladeFotoFuer(inp.dataset.fotoFile, f);
-    inp.value = '';
-  }
-
-  /* In der Vorschau: ein Foto irgendwo auf das Bild ziehen setzt es
-     für die Frage, die gerade zu sehen ist. */
-  function bindeVorschauDnD() {
-    const wrap = stage.querySelector('.kse-wrap--preview');
-    if (!wrap) return;
-    const istDatei = ev => !!(ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files'));
-    wrap.addEventListener('dragover', ev => {
-      if (!istDatei(ev)) return;
-      ev.preventDefault();
-      ev.dataTransfer.dropEffect = 'copy';
-      wrap.classList.add('is-fotoziel');
-    });
-    wrap.addEventListener('dragleave', ev => {
-      if (!wrap.contains(ev.relatedTarget)) wrap.classList.remove('is-fotoziel');
-    });
-    wrap.addEventListener('drop', ev => {
-      if (!istDatei(ev)) return;
-      ev.preventDefault();
-      wrap.classList.remove('is-fotoziel');
-      const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
-      if (f) ladeFotoFuer('pv', f);
-    });
-  }
-
-  /* Text-Import: bei jedem Tastendruck neu erkennen und NUR die
-     Einfärbung und die Ergebnisliste flicken — das Textfeld bleibt
-     unangetastet (Cursor, Auswahl, Tastatur). */
-  function onEditorInput(ev) {
-    if (editorMode !== 'import' || !editorImport) return;
-    const f = ev.target.closest('[data-imp]');
-    if (!f) return;
-    const k = f.dataset.imp;
-    if (k === 'title')   { editorImport.title = f.value; return; }
-    if (k === 'subject') { editorImport.subject = f.value; return; }
-    if (k !== 'text') return;
-    editorImport.text = f.value;
-    importAktualisieren();
-  }
-
-  function importAktualisieren() {
-    const E = window.KSEditor, P = window.KSParse;
-    if (!E || !P || !stage) return;
-    const parsed = P.parse(editorImport.text);
-    const ov = stage.querySelector('[data-imp=overlay]');
-    if (ov) ov.innerHTML = E.importOverlay(editorImport.text, parsed);
-    const res = stage.querySelector('[data-imp=result]');
-    if (res) res.innerHTML = E.importResult(parsed);
-    const ap = stage.querySelector('[data-imp=apply]');
-    if (ap) {
-      const n = parsed.stats.questions;
-      ap.disabled = !n;
-      ap.textContent = '✔ Übernehmen' + (n ? ' (' + n + ')' : '');
-    }
-  }
-
-  /* Erkanntes übernehmen: neu → Editor mit neuen Fragen,
-     ergänzen → hinten anhängen (eine leere Startfrage entfällt). */
-  function importUebernehmen() {
-    const P = window.KSParse;
-    const parsed = P.parse(editorImport.text);
-    if (!parsed.questions.length) { ctx.toast('Noch keine Fragen erkannt.', true); return; }
-    const qs = parsed.questions.map(q => ({
-      question_text: q.question_text, options: q.options,
-      correct_idx: q.correct_idx, correct_indices: q.correct_indices,
-      time_limit_sec: q.time_limit_sec, explanation: q.explanation
-    }));
-    if (editorImport.mode === 'append' && editorData) {
-      const leer = x => !x.question_text && !(x.options || []).some(Boolean);
-      editorData.questions = editorData.questions.filter(x => !leer(x)).concat(qs);
-      if (!editorData.title && parsed.title) editorData.title = parsed.title;
-    } else {
-      editorData = {
-        catalog_id: null,
-        title: (editorImport.title || '').trim() || parsed.title || '',
-        subject: editorImport.subject || 'Alles Mögliche',
-        questions: qs
-      };
-    }
-    editorDirty = true;
-    editorImport = null;
-    editorMode = 'edit';
-    lastFrame = null; zeichne();
-    const nur = parsed.stats.onlyQuestions;
-    ctx.toast('✅ ' + qs.length + (qs.length === 1 ? ' Frage' : ' Fragen') + ' übernommen'
-      + (nur ? ' — ' + nur + ' noch ohne Antworten.' : '.'));
+    return editor;
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1899,7 +1612,6 @@
      ══════════════════════════════════════════════════════════ */
   function binde() {
     stage.addEventListener('click', onClick);
-    stage.addEventListener('input', onEditorInput);
     const sel = stage.querySelector('[data-ks=cat]');
     if (sel) sel.addEventListener('change', async () => {
       const r = await ctx.actions.call('ks_room_setup', { p_catalog: sel.value });
@@ -1907,14 +1619,8 @@
       lastSig = null;
       poll();
     });
-    stage.addEventListener('change', onFotoWahl);
-    // Ein Foto, das neben einer Karte landet, darf den Editor nicht
-    // verlassen — ohne das öffnet der Browser die Datei statt der Seite.
-    stage.addEventListener('dragover', schluckeDatei);
-    stage.addEventListener('drop', schluckeDatei);
-    // Editor Drag & Drop
-    if (editorMode === 'edit') bindeEditorDnD();
-    if (editorMode === 'preview') bindeVorschauDnD();
+    // Editor: Klicks auf data-ed, Text-Import, Fotos, Ziehen.
+    if (editorAuf()) editor.bind(stage);
   }
 
   /* Ein Listener je Bild und fünf getrennte Fragen danach, WAS
@@ -1931,233 +1637,9 @@
     const pick = ev.target.closest('.ks-pick');
     const skin = ev.target.closest('.ks-skin');
 
-    /* ─── Editor-Aktionen (data-ed) ──────────────────────── */
-    if (ed) {
-      const a = ed.dataset.ed;
-
-      // Katalog-Übersicht → Editor schließen
-      if (a === 'close') {
-        editorMode = null; editorData = null; editorDirty = false; editorImport = null;
-        lastFrame = null; zeichne(); return;
-      }
-
-      // Text-Import öffnen (neues Quiz bzw. an das geöffnete anhängen)
-      if (a === 'imp-open' || a === 'imp-open-append') {
-        await ladeEditor();
-        const append = a === 'imp-open-append';
-        if (append) sammleEditorDaten();
-        if (!editorImport || editorImport.mode !== (append ? 'append' : 'new')) {
-          editorImport = { text: '', mode: append ? 'append' : 'new', title: '', subject: 'Alles Mögliche' };
-        }
-        editorMode = 'import';
-        lastFrame = null; zeichne(); return;
-      }
-      if (a === 'imp-example') {
-        editorImport.text = window.KSParse.EXAMPLE;
-        lastFrame = null; zeichne(); return;
-      }
-      if (a === 'imp-clear') {
-        editorImport.text = '';
-        lastFrame = null; zeichne(); return;
-      }
-      if (a === 'imp-back') {
-        if (editorImport.text.trim()) {
-          const ok = await ctx.confirm('Der eingefügte Text geht verloren. Trotzdem zurück?');
-          if (!ok) return;
-        }
-        const append = editorImport.mode === 'append' && editorData;
-        editorImport = null;
-        editorMode = append ? 'edit' : 'list';
-        lastFrame = null; zeichne(); return;
-      }
-      if (a === 'imp-apply') { importUebernehmen(); return; }
-
-      // Neues Quiz anlegen
-      if (a === 'new') {
-        editorData = {
-          catalog_id: null, title: '', subject: 'Alles Mögliche',
-          questions: [{ question_text: '', options: ['','','',''], correct_idx: 0,
-                        correct_indices: [0], time_limit_sec: 20, explanation: null }]
-        };
-        editorMode = 'edit'; editorDirty = true;
-        lastFrame = null; zeichne(); return;
-      }
-
-      // Katalog zum Bearbeiten laden
-      if (a === 'edit') {
-        const catId = ed.dataset.cat;
-        ed.disabled = true;
-        const r = await ctx.actions.call('ks_catalog_get', { p_catalog_id: catId });
-        ed.disabled = false;
-        if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
-        editorData = r; editorMode = 'edit'; editorDirty = false;
-        lastFrame = null; zeichne(); return;
-      }
-
-      // Katalog direkt zum Spielen auswählen
-      if (a === 'play') {
-        const catId = ed.dataset.cat;
-        ed.disabled = true;
-        const r = await ctx.actions.call('ks_room_setup', { p_catalog: catId });
-        ed.disabled = false;
-        if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
-        editorMode = null; editorData = null; editorDirty = false; editorImport = null;
-        lastSig = null; lastFrame = null; poll(); return;
-      }
-
-      // Katalog löschen
-      if (a === 'del') {
-        const title = ed.dataset.title || 'Quiz';
-        const ok = await ctx.confirm('„' + title + '" wirklich löschen?');
-        if (!ok) return;
-        ed.disabled = true;
-        const r = await ctx.actions.call('ks_catalog_delete', { p_catalog_id: ed.dataset.cat });
-        ed.disabled = false;
-        if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
-        ctx.toast('"' + title + '" gelöscht.');
-        // Katalogliste neu laden
-        lastSig = null; await poll();
-        lastFrame = null; zeichne(); return;
-      }
-
-      // Zurück zur Katalog-Liste (aus dem Editor)
-      if (a === 'back') {
-        if (editorDirty) {
-          const ok = await ctx.confirm('Ungespeicherte Änderungen gehen verloren. Trotzdem zurück?');
-          if (!ok) return;
-        }
-        editorMode = 'list'; editorData = null; editorDirty = false;
-        lastFrame = null; zeichne(); return;
-      }
-
-      // Vorschau öffnen
-      if (a === 'preview') {
-        if (!editorData || !editorData.questions.length) {
-          ctx.toast('Erst mindestens eine Frage eingeben.', true); return;
-        }
-        sammleEditorDaten();
-        editorPreviewIdx = 0; editorMode = 'preview';
-        lastFrame = null; zeichne(); return;
-      }
-
-      // Vorschau: Fragen blättern
-      if (a === 'prev-q') {
-        sammleVorschauAenderungen();
-        editorPreviewIdx = Math.max(0, editorPreviewIdx - 1);
-        lastFrame = null; zeichne(); return;
-      }
-      if (a === 'next-q') {
-        sammleVorschauAenderungen();
-        const max = (editorData && editorData.questions) ? editorData.questions.length - 1 : 0;
-        editorPreviewIdx = Math.min(max, editorPreviewIdx + 1);
-        lastFrame = null; zeichne(); return;
-      }
-
-      // Zurück zum Editor (aus der Vorschau)
-      if (a === 'back-edit') {
-        sammleVorschauAenderungen();
-        editorMode = 'edit'; lastFrame = null; zeichne(); return;
-      }
-
-      // Frage hinzufügen
-      if (a === 'addq') {
-        sammleEditorDaten();
-        editorData.questions.push({
-          question_text: '', options: ['','','',''], correct_idx: 0,
-          correct_indices: [0], time_limit_sec: 20, explanation: null
-        });
-        editorDirty = true;
-        lastFrame = null; zeichne();
-        // Ans Ende scrollen
-        setTimeout(() => {
-          const cards = stage ? stage.querySelectorAll('.kse-frage') : [];
-          if (cards.length && typeof cards[cards.length - 1].scrollIntoView === 'function') {
-            cards[cards.length - 1].scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 50);
-        return;
-      }
-
-      // Frage löschen
-      if (a === 'delq') {
-        sammleEditorDaten();
-        const qi = parseInt(ed.dataset.qi, 10);
-        editorData.questions.splice(qi, 1);
-        editorDirty = true;
-        lastFrame = null; zeichne(); return;
-      }
-
-      // Foto entfernen (Karte im Editor oder Vorschau)
-      if (a === 'foto-del') {
-        setzeFoto(ed.dataset.qi, null);
-        return;
-      }
-
-      // Richtig-Haken umschalten
-      if (a === 'toggle') {
-        sammleEditorDaten();
-        const qi = parseInt(ed.dataset.qi, 10);
-        const oi = parseInt(ed.dataset.oi, 10);
-        const q = editorData.questions[qi];
-        if (!q) return;
-        let ci = Array.isArray(q.correct_indices) ? [...q.correct_indices] : [q.correct_idx || 0];
-        if (ci.includes(oi)) {
-          ci = ci.filter(x => x !== oi);
-          if (ci.length === 0) ci = [oi]; // mindestens einer bleibt
-        } else {
-          ci.push(oi);
-        }
-        q.correct_indices = ci;
-        q.correct_idx = ci[0];
-        editorDirty = true;
-        // Nur den Haken-Button aktualisieren, nicht alles neu bauen
-        ed.classList.toggle('is-richtig', ci.includes(oi));
-        ed.textContent = ci.includes(oi) ? '✅' : '⬜';
-        return;
-      }
-
-      // Speichern
-      if (a === 'save') {
-        sammleEditorDaten();
-        if (!editorData.title || !editorData.title.trim()) {
-          ctx.toast('Bitte einen Titel eingeben.', true); return;
-        }
-        if (!editorData.questions.length) {
-          ctx.toast('Mindestens eine Frage ist nötig.', true); return;
-        }
-        // Fragen für den Server aufbereiten
-        const qs = editorData.questions.map((q, i) => ({
-          question_text:   q.question_text || '',
-          options:         q.options || ['','','',''],
-          correct_idx:     (Array.isArray(q.correct_indices) && q.correct_indices.length)
-                             ? q.correct_indices[0] : (q.correct_idx || 0),
-          correct_indices: q.correct_indices || [q.correct_idx || 0],
-          time_limit_sec:  q.time_limit_sec || 20,
-          explanation:     q.explanation || null,
-          image:           q.image || null,
-          image_name:      q.image ? (q.image_name || 'Foto') : null
-        }));
-
-        ed.disabled = true; ed.textContent = '⏳ …';
-        const r = await ctx.actions.call('ks_catalog_save', {
-          p_catalog_id: editorData.catalog_id || null,
-          p_title:      editorData.title.trim(),
-          p_subject:    editorData.subject || 'Alles Mögliche',
-          p_questions:  qs
-        });
-        ed.disabled = false; ed.textContent = '💾 Speichern';
-
-        if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
-        editorData.catalog_id = r.catalog_id;
-        editorDirty = false;
-        ctx.toast('✅ Quiz gespeichert! (' + r.count + ' Fragen)');
-        // Katalogliste im Hintergrund aktualisieren
-        lastSig = null; poll();
-        return;
-      }
-
-      return; // alle data-ed Aktionen sind abgehandelt
-    }
+    /* ─── Editor-Aktionen (data-ed) ─────────────────────────
+       Gehören editor.js — der hat seinen eigenen Listener. */
+    if (ed) return;
 
     /* ─── Pult: weiterschalten ───────────────────────────── */
     if (act) {
@@ -2166,9 +1648,10 @@
 
       // Editor öffnen (Lobby-Button)
       if (act.dataset.act === 'editor') {
-        await ladeEditor();
-        editorMode = 'list';
-        lastFrame = null; zeichne();
+        try { await ladeEditor(); }
+        catch (e) { ctx.toast(e.message, true); return; }
+        if (destroyed) return;
+        holeEditor().openList();
         return;
       }
 
@@ -2362,7 +1845,8 @@
       lastSig = null; lastFrame = null; view = null;
       els = {}; catalogs = []; skew = 0;
       localEmote = null; answering = false; pickerOffen = false;
-      editorMode = editorData = editorImport = null; editorDirty = false;
+      if (editor) editor.destroy();
+      editor = null;
       bild = { qid: null, src: null, laedt: false };
 
       root.innerHTML = '<div class="ks-frame"><div class="ks-stage">'
@@ -2413,7 +1897,8 @@
       role = null; view = null; els = {};
       lastSig = lastFrame = null;
       pickerOffen = false; localEmote = null;
-      editorMode = editorData = editorImport = null; editorDirty = false;
+      if (editor) editor.destroy();
+      editor = null;
       bild = { qid: null, src: null, laedt: false };
       zeigeFehler.last = null;
     }

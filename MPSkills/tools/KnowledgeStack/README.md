@@ -246,12 +246,24 @@ räumt den Ablauf auf, `0186_knowledgestack_photos_abort.sql` bringt Fotos,
 Beenden und Neustart (und die Katalog-Aufrufe mit `p_code`, die der Beamer
 braucht). Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
+## Der Fragen-Editor
+
+`editor.js` — an zwei Stellen, mit demselben Code (`KSEditor.create`):
+
+* **Im Raum:** Lobby → „📚 Editor". Dort gibt es zusätzlich „▶ Spielen"
+  (Katalog aufs Brett legen).
+* **Ohne Raum:** `MPSkills/quiz.html` (`quiz.js`), erreichbar über den Knopf
+  „Quiz-Editor" auf der Kachel neben „+ Raum öffnen" (`tools.js`:
+  `editor: 'quiz.html'`). Benutzt die Aufrufe ohne `p_code`
+  (`ks_catalogs_list`, `ks_catalog_get/_save/_delete`) — keine Migration nötig.
+
+In beiden: neue Quizze anlegen, **eigene laden und bearbeiten (✏️)**, löschen
+(🗑), Text-Import, Fotos, Vorschau. Eine Vorlage öffnet „⧉ Kopie" — Speichern
+legt dann einen eigenen Katalog an (eine Vorlage ändert `ks_catalog_save`
+nicht).
+
 ## Was noch fehlt
 
-* **Ein Fragen-Editor.** Die Lehrkraft kann in der Lobby einen Katalog
-  *wählen*, aber keinen anlegen. `ks_catalogs`/`ks_questions` und die Rechte
-  stehen dafür schon (`grant … to authenticated`), die Oberfläche fehlt.
-  Ohne sie ist das Quiz auf die 12 Seed-Fragen der Tablet-Schulung begrenzt.
 * **Ein Schaufenster** (`MPSkills/preview/knowledgestack.js`), damit die
   Kachel auf der Landing etwas zeigt.
 

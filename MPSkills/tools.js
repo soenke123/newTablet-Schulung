@@ -24,6 +24,11 @@
      beta   — Zeigt einen „Beta"-Sticker: der Skill läuft, ist aber
               noch nicht rund.
 
+     editor — Adresse einer Seite, auf der sich der Inhalt des Skills
+              OHNE Raum vorbereiten lässt. Die Kachel bekommt dann
+              neben „+ Raum öffnen" einen zweiten Knopf. Bisher nur
+              Knowledge Stack (quiz.html, der Quiz-Editor).
+
    Ein Tool, das hier nicht steht, gilt als ready:false. Ein Tool,
    das hier steht, aber nicht in der Datenbank, wird nicht
    angezeigt — die Registry entscheidet, was es gibt.
@@ -68,7 +73,7 @@ window.TOOLS_OVERLAY = {
   // beta: zeigt einen „Beta"-Sticker auf der Kachel (26.09.2026) — der
   // Skill läuft, ist aber noch nicht rund; das ist eine Auskunft über die
   // Auslieferung, nicht über die Datenbankzeile, gehört also hierher.
-  knowledgestack: { ready: true, beta: true },
+  knowledgestack: { ready: true, beta: true, editor: 'quiz.html' },
   // Achter Skill (Migration 0180) — Netzwerksimulator, dritter
   // eingerahmter nach NeuroLab und Wild Clusters. Die Lehrkraft gibt
   // Szenarien frei, holt Netze auf den Beamer und schaltet die

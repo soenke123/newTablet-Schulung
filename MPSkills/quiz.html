@@ -3,39 +3,50 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Raum · MPSkills</title>
+<title>Quiz-Editor · MPSkills</title>
 <meta name="robots" content="noindex" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css?v=20260930d" />
+<!-- Die Farben des Editors (--ks-*) stehen im tool.css des Quiz —
+     derselbe Editor läuft im Raum am Beamer, und dort kommen sie
+     von genau hier. -->
+<link rel="stylesheet" href="tools/KnowledgeStack/tool.css?v=20261003b" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
-     Browser zeichnet. Steht sie weiter unten, blitzt die helle
-     Seite auf. Siehe Kopf von lib/theme.js. -->
+     Browser zeichnet. Siehe Kopf von lib/theme.js. -->
 <script src="lib/theme.js?v=20260819d"></script>
 <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png" />
 <link rel="icon" type="image/png" sizes="256x256" href="icons/favicon-256.png" />
-
-<!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als
-     CSS-Variablen an <html>. Blockierend im <head>, damit ein Modal
-     nicht erst falsch gezeichnet und dann verschoben wird. -->
 <script src="../viewport.js?v=20260820"></script>
+<style>
+  /* Im Raum misst tool.js den Rahmen auf Bildschirmhöhe, und der
+     Editor rollt darin. Hier ist die Seite selbst die Bühne: der
+     Rahmen wächst mit, gerollt wird die Seite. */
+  .ks-frame.ks-frame--seite {
+    --ks-h: 720px;
+    height: auto;
+    min-height: calc(var(--vv-h, 100vh) - 190px);
+    overflow: visible;
+  }
+  .ks-frame--seite .ks-stage {
+    position: relative;
+    inset: auto;
+    overflow: visible;
+  }
+  .ks-frame--seite .ks-stage > .kse-wrap { overflow: visible; }
+  .quiz-wrap { max-width: 1040px; padding-top: 22px; }
+</style>
 </head>
 <body>
 
-<!-- Über der Raumseite steht nur noch die MPSkills-Kopfzeile. Alles
-     Weitere — Reiterleiste, die drei Fächer, die ausfahrende Tür —
-     baut lehrer.js, weil es davon abhängt, ob der Raum schon
-     existiert und wer davorsitzt. -->
 <header class="topbar" id="topbar">
   <a class="wordmark" href="index.html"><img class="wordmark-logo" src="../LogoMPSkills.png" alt="" /><span class="wordmark-text">MP<span>Skills</span></span></a>
   <div class="topbar-spacer"></div>
   <div id="userbarHost"></div>
 </header>
 
-<div id="lehrerHost">
-  <main class="wrap"><p class="booting">Lade …</p></main>
-</div>
+<main class="wrap quiz-wrap" id="quizHost"><p class="booting">Lade …</p></main>
 
 <footer class="foot" id="pagefoot">
   <a href="index.html">MPSkills</a>
@@ -50,11 +61,9 @@
 <script src="../session.js?v=20260817"></script>
 <script src="../avatars.js?v=20260709"></script>
 <script src="lib/userbar.js?v=20260927"></script>
-<script src="lib/qr.js?v=20260817"></script>
-<script src="lib/room.js?v=20260923"></script>
-<script src="lib/icons.js?v=20260928"></script>
 <script src="lib/tool.js?v=20261003b"></script>
-<script src="tools.js?v=20260928"></script>
-<script src="lehrer.js?v=20260930d"></script>
+<script src="tools/KnowledgeStack/parse.js?v=20261003b"></script>
+<script src="tools/KnowledgeStack/editor.js?v=20261003b"></script>
+<script src="quiz.js?v=20261003b"></script>
 </body>
 </html>

@@ -1,8 +1,14 @@
 /* ══════════════════════════════════════════════════════════════
    Knowledge Stack — editor.js   ·   Fragen-Editor für Lehrkräfte
    ══════════════════════════════════════════════════════════════
-   Wird von tool.js bei Bedarf nachgeladen (wie creatures.js).
-   Exportiert window.KSEditor = { build, css }.
+   Zwei Gastgeber, ein Editor:
+     tool.js     im Raum am Beamer, Lobby → „📚 Editor"; lädt diese
+                 Datei bei Bedarf nach (wie creatures.js).
+     quiz.js     eigene Seite MPSkills/quiz.html, ohne Raum — der
+                 Knopf „Quiz-Editor" auf der Knowledge-Stack-Kachel.
+   Exportiert window.KSEditor = { buildList, buildEditor, …,
+   create, CSS }. create(opts) (Abschnitt 5) hält Zustand und
+   Bedienung; der Gastgeber zeichnet nur und reicht Aufrufe durch.
 
    Drei Ansichten:
      list     Katalog-Übersicht, gruppiert nach Fach (subject)
@@ -13,9 +19,12 @@
    Editor hinten an der Karte, in der Vorschau groß über den Kacheln.
    Im Text-Import gibt es keine Fotos. Auf dem Tablet nie.
 
-   Der Editor lebt INNERHALB des ks-stage und nutzt dieselben
-   --ks-* Variablen. Er hat keinen eigenen Takt — die Lobby pollt
-   weiter, und der Editor sperrt nur das Beamer-Bild.
+   Der Editor lebt INNERHALB eines ks-stage und nutzt dieselben
+   --ks-* Variablen (tool.css). Er hat keinen eigenen Takt — im Raum
+   pollt die Lobby weiter, und der Editor sperrt nur das Beamer-Bild.
+
+   Vorlagen (fremde Kataloge) öffnet „⧉ Kopie": Speichern legt dann
+   einen eigenen Katalog an, die Vorlage bleibt unverändert.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -37,7 +46,12 @@
   /* ═══════════════════════════════════════════════════════════
      1) KATALOG-ÜBERSICHT (list)
      ═══════════════════════════════════════════════════════════ */
-  function buildList(catalogs) {
+  /* opts.play  — „▶ Spielen" anbieten (nur im Raum: dort gibt es ein
+                  Brett, in das der Katalog geladen werden kann).
+     opts.close — Aufschrift des Zurück-Knopfs. */
+  function buildList(catalogs, opts) {
+    opts = opts || {};
+    const play = opts.play !== false;
     // Nach Fach gruppieren
     const gruppen = new Map();
     for (const c of catalogs) {
@@ -59,7 +73,7 @@
               📋 Aus Text
             </button>
             <button type="button" class="kse-btn kse-btn--soft" data-ed="close">
-              ← Zurück
+              ${esc(opts.close || '← Zurück')}
             </button>
           </div>
         </header>
@@ -74,21 +88,30 @@
         <h2 class="kse-fach">${esc(fach)}</h2>
         <div class="kse-karten">`;
       for (const c of kats) {
+        // Sichtbar sind nur Vorlagen und Eigenes (ks_catalogs_list,
+        // ks_room_get) — was nicht meins ist, ist eine Vorlage. Die
+        // Raumansicht schickt is_template gar nicht mit.
+        const vorlage = c.is_template || !c.mine;
         h += `
-          <div class="kse-karte${c.is_template ? ' kse-karte--tmpl' : ''}">
+          <div class="kse-karte${vorlage ? ' kse-karte--tmpl' : ''}">
             <div class="kse-karte-body">
               <h3 class="kse-ktitel">${esc(c.title)}</h3>
               <span class="kse-kinfo">${c.count} ${c.count === 1 ? 'Frage' : 'Fragen'}</span>
-              ${c.is_template ? '<span class="kse-tag">Vorlage</span>' : ''}
+              ${vorlage ? '<span class="kse-tag">Vorlage</span>' : ''}
             </div>
             <div class="kse-karte-acts">
-              <button type="button" class="kse-btn kse-btn--small kse-btn--cyan"
-                      data-ed="play" data-cat="${esc(c.id)}"
-                      title="Diesen Katalog im Raum verwenden">▶ Spielen</button>
-              <button type="button" class="kse-btn kse-btn--small"
-                      data-ed="edit" data-cat="${esc(c.id)}"
-                      title="Bearbeiten">✏️</button>
-              ${!c.is_template && c.mine ? `
+              ${play ? `
+                <button type="button" class="kse-btn kse-btn--small kse-btn--cyan"
+                        data-ed="play" data-cat="${esc(c.id)}"
+                        title="Diesen Katalog im Raum verwenden">▶ Spielen</button>` : ''}
+              ${c.mine ? `
+                <button type="button" class="kse-btn kse-btn--small"
+                        data-ed="edit" data-cat="${esc(c.id)}"
+                        title="Bearbeiten">✏️</button>` : `
+                <button type="button" class="kse-btn kse-btn--small"
+                        data-ed="edit" data-cat="${esc(c.id)}"
+                        title="Als eigene Kopie bearbeiten — die Vorlage bleibt, wie sie ist">⧉ Kopie</button>`}
+              ${!vorlage ? `
                 <button type="button" class="kse-btn kse-btn--small kse-btn--rot"
                         data-ed="del" data-cat="${esc(c.id)}" data-title="${esc(c.title)}"
                         title="Löschen">🗑</button>` : ''}
@@ -703,6 +726,616 @@
 
 
   /* ═══════════════════════════════════════════════════════════
+     5) STEUERUNG — create(opts)
+     ═══════════════════════════════════════════════════════════
+     Zustand und Bedienung des Editors, ohne zu wissen, WO er steht.
+     Zwei Gastgeber:
+
+       tool.js       im Raum, am Beamer (Lobby → „📚 Editor")
+       quiz.js       eigene Seite MPSkills/quiz.html, ohne Raum —
+                     von der Knowledge-Stack-Kachel aus erreichbar
+
+     Der Gastgeber zeichnet (redraw: html() in seine Fläche, dann
+     bind()) und reicht die Serveraufrufe durch. opts:
+
+       call(fn, args)   → Promise<{ok, …}>  ks_catalog_get/_save/_delete
+       catalogs()       → die aktuelle Katalogliste
+       reloadCatalogs() → Promise, holt die Liste neu
+       redraw()         → html() neu einsetzen und bind() rufen
+       toast(msg, err) · confirm(msg) → Promise<bool> · errText(code)
+       onClose()        → „← Zurück" in der Übersicht
+       onPlay(catId)    → Promise<{ok, error}>; fehlt es, gibt es
+                          keinen „▶ Spielen"-Knopf
+       closeLabel       → Aufschrift des Zurück-Knopfs
+     ═══════════════════════════════════════════════════════════ */
+  function create(o) {
+    // null = zu, 'list' = Katalog-Übersicht, 'edit' = Fragen-Editor,
+    // 'import' = Text-Import, 'preview' = Beamer-Vorschau einer Frage.
+    let mode = null;
+    let data = null;       // { catalog_id, title, subject, questions: [] }
+    let pvIdx = 0;         // welche Frage in der Vorschau
+    let dirty = false;     // ungespeicherte Änderungen?
+    let imp = null;        // Text-Import: { text, mode: 'new'|'append', title, subject }
+    let el = null;         // die Fläche, in der der Editor gerade steht
+    let dead = false;
+
+    const toast = (m, e) => o.toast && o.toast(m, e);
+    const fehler = code => (o.errText ? o.errText(code) : 'Fehler (' + code + ')');
+    const redraw = () => { if (!dead) o.redraw(); };
+
+    function reset() { mode = null; data = null; dirty = false; imp = null; pvIdx = 0; }
+
+    function key() {
+      return mode ? mode + '|' + (mode === 'preview' ? pvIdx : '-') : null;
+    }
+
+    function html() {
+      if (mode === 'list')   return buildList(o.catalogs() || [], { play: !!o.onPlay, close: o.closeLabel });
+      if (mode === 'edit')   return buildEditor(data || { questions: [] });
+      if (mode === 'import') return buildImport(imp, window.KSParse.parse(imp.text));
+      if (mode === 'preview') {
+        const qs = (data && data.questions) || [];
+        const q = qs[pvIdx] || { question_text: '', options: ['', '', '', ''], correct_idx: 0 };
+        return buildPreview(q, pvIdx, qs.length);
+      }
+      return '';
+    }
+
+    /* Frageninhalte aus den DOM-Feldern sammeln */
+    function sammle() {
+      if (!data || !el) return;
+      const tInp = el.querySelector('[data-ed-field=title]');
+      if (tInp) data.title = tInp.value;
+      const sInp = el.querySelector('[data-ed-field=subject]');
+      if (sInp) data.subject = sInp.value;
+      for (let i = 0; i < data.questions.length; i++) {
+        const q = data.questions[i];
+        const ft = el.querySelector('[data-qi="' + i + '"][data-field=question_text]');
+        if (ft) q.question_text = ft.value;
+        for (let oi = 0; oi < 4; oi++) {
+          const oinp = el.querySelector('[data-qi="' + i + '"][data-oi="' + oi + '"][data-field=option]');
+          if (oinp && Array.isArray(q.options)) q.options[oi] = oinp.value;
+        }
+        const tl = el.querySelector('[data-qi="' + i + '"][data-field=time_limit_sec]');
+        if (tl) q.time_limit_sec = Math.max(5, Math.min(120, parseInt(tl.value, 10) || 20));
+        const expl = el.querySelector('[data-qi="' + i + '"][data-field=explanation]');
+        if (expl) q.explanation = expl.value || null;
+      }
+    }
+
+    /* In der Vorschau editierte Texte (contenteditable) zurückschreiben */
+    function sammleVorschau() {
+      if (!data || !data.questions || !el) return;
+      const q = data.questions[pvIdx];
+      if (!q) return;
+      const qEl = el.querySelector('[data-ed-pv=text]');
+      if (qEl) q.question_text = qEl.textContent.trim();
+      el.querySelectorAll('[data-ed-pv=opt]').forEach(x => {
+        const oi = parseInt(x.dataset.oi, 10);
+        if (!isNaN(oi) && Array.isArray(q.options)) q.options[oi] = x.textContent.trim();
+      });
+      dirty = true;
+    }
+
+    /* Drag & Drop für Fragen-Reihenfolge */
+    function bindeDnD() {
+      const list = el.querySelector('[data-ed-list=questions]');
+      if (!list) return;
+      let dragIdx = null;
+
+      // Eine Datei von außen (Foto) oder eine Karte von innen?
+      const istDatei = ev => !!(ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files'));
+      const ziel = ev => ev.target.closest && ev.target.closest('.kse-frage');
+
+      list.addEventListener('dragstart', ev => {
+        const card = ev.target.closest('.kse-frage');
+        if (!card) return;
+        dragIdx = parseInt(card.dataset.qi, 10);
+        card.classList.add('is-dragging');
+        ev.dataTransfer.effectAllowed = 'move';
+        ev.dataTransfer.setData('text/plain', String(dragIdx));
+      });
+
+      list.addEventListener('dragover', ev => {
+        ev.preventDefault();
+        const card = ziel(ev);
+        if (istDatei(ev)) {
+          ev.dataTransfer.dropEffect = card ? 'copy' : 'none';
+          list.querySelectorAll('.kse-frage').forEach(c => c.classList.toggle('is-fotoziel', c === card));
+          return;
+        }
+        ev.dataTransfer.dropEffect = 'move';
+        list.querySelectorAll('.kse-frage').forEach(c => c.classList.remove('is-over'));
+        if (card) card.classList.add('is-over');
+      });
+
+      list.addEventListener('dragleave', ev => {
+        const card = ziel(ev);
+        if (card && !card.contains(ev.relatedTarget)) card.classList.remove('is-over', 'is-fotoziel');
+      });
+
+      list.addEventListener('drop', ev => {
+        ev.preventDefault();
+        list.querySelectorAll('.kse-frage').forEach(c =>
+          c.classList.remove('is-dragging', 'is-over', 'is-fotoziel'));
+        const card = ziel(ev);
+        if (istDatei(ev)) {
+          const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
+          if (card && f) ladeFotoFuer(card.dataset.qi, f);
+          return;
+        }
+        if (!card || dragIdx == null || !data) return;
+        const dropIdx = parseInt(card.dataset.qi, 10);
+        if (dragIdx === dropIdx) return;
+        // Erst aus DOM-Feldern lesen, dann verschieben
+        sammle();
+        const qs = data.questions;
+        const [moved] = qs.splice(dragIdx, 1);
+        qs.splice(dropIdx, 0, moved);
+        dirty = true;
+        // Neu zeichnen
+        redraw();
+      });
+
+      list.addEventListener('dragend', () => {
+        dragIdx = null;
+        list.querySelectorAll('.kse-frage').forEach(c =>
+          c.classList.remove('is-dragging', 'is-over'));
+      });
+    }
+
+    /* ─── Fotos je Frage ─────────────────────────────────────
+       Verkleinert im Browser, bevor es zum Server geht: ein Handyfoto
+       hat 4–12 MB, am Beamer reichen 1600 Punkte Kantenlänge. JPEG mit
+       weißem Grund (ein durchsichtiges PNG würde sonst schwarz). */
+    const FOTO_KANTE = 1600;
+    const FOTO_MAX = 1400000;     // Zeichen der data:-URL; Server: 1,5 Mio.
+
+    function bildAusDatei(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('unlesbar')); };
+        img.src = url;
+      });
+    }
+
+    async function verkleinere(file) {
+      const img = await bildAusDatei(file);
+      const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+      if (!w0 || !h0) throw new Error('unlesbar');
+      for (const [kante, q] of [[FOTO_KANTE, .85], [1280, .78], [1024, .7], [800, .65]]) {
+        const f = Math.min(1, kante / Math.max(w0, h0));
+        const c = document.createElement('canvas');
+        c.width = Math.round(w0 * f); c.height = Math.round(h0 * f);
+        const g = c.getContext('2d');
+        g.fillStyle = '#fff';
+        g.fillRect(0, 0, c.width, c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        const data = c.toDataURL('image/jpeg', q);
+        if (data.length <= FOTO_MAX) return data;
+      }
+      throw new Error('zu_gross');
+    }
+
+    /* qi ist eine Fragennummer — oder 'pv' für die Frage, die gerade
+       in der Vorschau steht. */
+    function fotoFrage(qi) {
+      if (!data || !data.questions) return null;
+      const i = qi === 'pv' ? pvIdx : parseInt(qi, 10);
+      return data.questions[i] || null;
+    }
+
+    async function ladeFotoFuer(qi, file) {
+      if (!file || !/^image\//.test(file.type || '')) {
+        toast('Das ist kein Bild. Bitte ein Foto (JPG, PNG …) nehmen.', true); return;
+      }
+      const zelle = el && el.querySelector('[data-foto="' + qi + '"]');
+      if (zelle) zelle.classList.add('is-laedt');
+      let data;
+      try {
+        data = await verkleinere(file);
+      } catch (e) {
+        if (zelle) zelle.classList.remove('is-laedt');
+        toast(e && e.message === 'zu_gross'
+          ? 'Das Foto ist zu groß, auch verkleinert. Bitte ein anderes nehmen.'
+          : 'Dieses Bild kann der Browser nicht lesen. Bitte als JPG oder PNG speichern.', true);
+        return;
+      }
+      if (dead || !mode) return;
+      setzeFoto(qi, { image: data, image_name: file.name || 'Foto' });
+    }
+
+    /* Ein Foto setzen oder (foto = null) entfernen. Im Editor wird NUR
+       die Fotospalte der Karte neu geschrieben — sonst spränge die Liste
+       an den Anfang und alles Getippte müsste erst eingesammelt werden.
+       In der Vorschau wird neu gebaut (dort steht das Foto mitten im Bild). */
+    function setzeFoto(qi, foto) {
+      if (mode === 'preview') sammleVorschau();
+      const q = fotoFrage(qi);
+      if (!q) return;
+      q.image = foto ? foto.image : null;
+      q.image_name = foto ? foto.image_name : null;
+      dirty = true;
+      if (mode === 'preview') { redraw(); return; }
+      const zelle = el && el.querySelector('[data-foto="' + qi + '"]');
+      if (zelle) {
+        zelle.classList.remove('is-laedt');
+        zelle.classList.toggle('has-bild', !!q.image);
+        zelle.innerHTML = fotoZelle(q, parseInt(qi, 10));
+      }
+    }
+
+    function schluckeDatei(ev) {
+      if (mode && ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files')) {
+        ev.preventDefault();
+      }
+    }
+
+    function onFotoWahl(ev) {
+      const inp = ev.target && ev.target.closest && ev.target.closest('[data-foto-file]');
+      if (!inp || !mode) return;
+      const f = inp.files && inp.files[0];
+      if (f) ladeFotoFuer(inp.dataset.fotoFile, f);
+      inp.value = '';
+    }
+
+    /* In der Vorschau: ein Foto irgendwo auf das Bild ziehen setzt es
+       für die Frage, die gerade zu sehen ist. */
+    function bindeVorschau() {
+      const wrap = el.querySelector('.kse-wrap--preview');
+      if (!wrap) return;
+      const istDatei = ev => !!(ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files'));
+      wrap.addEventListener('dragover', ev => {
+        if (!istDatei(ev)) return;
+        ev.preventDefault();
+        ev.dataTransfer.dropEffect = 'copy';
+        wrap.classList.add('is-fotoziel');
+      });
+      wrap.addEventListener('dragleave', ev => {
+        if (!wrap.contains(ev.relatedTarget)) wrap.classList.remove('is-fotoziel');
+      });
+      wrap.addEventListener('drop', ev => {
+        if (!istDatei(ev)) return;
+        ev.preventDefault();
+        wrap.classList.remove('is-fotoziel');
+        const f = ev.dataTransfer.files && ev.dataTransfer.files[0];
+        if (f) ladeFotoFuer('pv', f);
+      });
+    }
+
+    /* Text-Import: bei jedem Tastendruck neu erkennen und NUR die
+       Einfärbung und die Ergebnisliste flicken — das Textfeld bleibt
+       unangetastet (Cursor, Auswahl, Tastatur). */
+    function onInput(ev) {
+      if (mode !== 'import' || !imp) return;
+      const f = ev.target.closest('[data-imp]');
+      if (!f) return;
+      const k = f.dataset.imp;
+      if (k === 'title')   { imp.title = f.value; return; }
+      if (k === 'subject') { imp.subject = f.value; return; }
+      if (k !== 'text') return;
+      imp.text = f.value;
+      importNeu();
+    }
+
+    function importNeu() {
+      const P = window.KSParse;
+      if (!P || !el) return;
+      const parsed = P.parse(imp.text);
+      const ov = el.querySelector('[data-imp=overlay]');
+      if (ov) ov.innerHTML = importOverlay(imp.text, parsed);
+      const res = el.querySelector('[data-imp=result]');
+      if (res) res.innerHTML = importResult(parsed);
+      const ap = el.querySelector('[data-imp=apply]');
+      if (ap) {
+        const n = parsed.stats.questions;
+        ap.disabled = !n;
+        ap.textContent = '✔ Übernehmen' + (n ? ' (' + n + ')' : '');
+      }
+    }
+
+    /* Erkanntes übernehmen: neu → Editor mit neuen Fragen,
+       ergänzen → hinten anhängen (eine leere Startfrage entfällt). */
+    function importUebernehmen() {
+      const P = window.KSParse;
+      const parsed = P.parse(imp.text);
+      if (!parsed.questions.length) { toast('Noch keine Fragen erkannt.', true); return; }
+      const qs = parsed.questions.map(q => ({
+        question_text: q.question_text, options: q.options,
+        correct_idx: q.correct_idx, correct_indices: q.correct_indices,
+        time_limit_sec: q.time_limit_sec, explanation: q.explanation
+      }));
+      if (imp.mode === 'append' && data) {
+        const leer = x => !x.question_text && !(x.options || []).some(Boolean);
+        data.questions = data.questions.filter(x => !leer(x)).concat(qs);
+        if (!data.title && parsed.title) data.title = parsed.title;
+      } else {
+        data = {
+          catalog_id: null,
+          title: (imp.title || '').trim() || parsed.title || '',
+          subject: imp.subject || 'Alles Mögliche',
+          questions: qs
+        };
+      }
+      dirty = true;
+      imp = null;
+      mode = 'edit';
+      redraw();
+      const nur = parsed.stats.onlyQuestions;
+      toast('✅ ' + qs.length + (qs.length === 1 ? ' Frage' : ' Fragen') + ' übernommen'
+        + (nur ? ' — ' + nur + ' noch ohne Antworten.' : '.'));
+    }
+
+    /* Ein Klick auf etwas mit data-ed. Gibt true zurück, wenn er
+       hierher gehörte — der Gastgeber fragt dann nicht weiter. */
+    function onClick(ev) {
+      const ed = ev.target.closest && ev.target.closest('[data-ed]');
+      if (!ed || !mode || dead) return false;
+      handle(ed);
+      return true;
+    }
+
+    async function handle(ed) {
+        const a = ed.dataset.ed;
+
+        // Katalog-Übersicht → Editor schließen
+        if (a === 'close') {
+          reset();
+          if (o.onClose) o.onClose(); else redraw();
+          return;
+        }
+
+        // Text-Import öffnen (neues Quiz bzw. an das geöffnete anhängen)
+        if (a === 'imp-open' || a === 'imp-open-append') {
+          const append = a === 'imp-open-append';
+          if (append) sammle();
+          if (!imp || imp.mode !== (append ? 'append' : 'new')) {
+            imp = { text: '', mode: append ? 'append' : 'new', title: '', subject: 'Alles Mögliche' };
+          }
+          mode = 'import';
+          redraw(); return;
+        }
+        if (a === 'imp-example') {
+          imp.text = window.KSParse.EXAMPLE;
+          redraw(); return;
+        }
+        if (a === 'imp-clear') {
+          imp.text = '';
+          redraw(); return;
+        }
+        if (a === 'imp-back') {
+          if (imp.text.trim()) {
+            const ok = await o.confirm('Der eingefügte Text geht verloren. Trotzdem zurück?');
+            if (!ok) return;
+          }
+          const append = imp.mode === 'append' && data;
+          imp = null;
+          mode = append ? 'edit' : 'list';
+          redraw(); return;
+        }
+        if (a === 'imp-apply') { importUebernehmen(); return; }
+
+        // Neues Quiz anlegen
+        if (a === 'new') {
+          data = {
+            catalog_id: null, title: '', subject: 'Alles Mögliche',
+            questions: [{ question_text: '', options: ['','','',''], correct_idx: 0,
+                          correct_indices: [0], time_limit_sec: 20, explanation: null }]
+          };
+          mode = 'edit'; dirty = true;
+          redraw(); return;
+        }
+
+        // Katalog zum Bearbeiten laden
+        if (a === 'edit') {
+          const catId = ed.dataset.cat;
+          ed.disabled = true;
+          const r = await o.call('ks_catalog_get', { p_catalog_id: catId });
+          ed.disabled = false;
+          if (!r.ok) { toast(fehler(r.error), true); return; }
+          data = r; mode = 'edit'; dirty = false;
+          /* Eine Vorlage gehört niemandem, ks_catalog_save ändert sie
+             nicht (not_found). Also wird sie als EIGENE Kopie geöffnet:
+             ohne catalog_id legt Speichern einen neuen Katalog an. */
+          if (!r.mine) {
+            data.catalog_id = null;
+            data.title = (r.title || 'Quiz') + ' (Kopie)';
+            dirty = true;
+            toast('Vorlage geöffnet — Speichern legt eine eigene Kopie an.');
+          }
+          redraw(); return;
+        }
+
+        // Katalog direkt zum Spielen auswählen
+        if (a === 'play') {
+          const catId = ed.dataset.cat;
+          ed.disabled = true;
+          const r = await o.onPlay(catId);
+          ed.disabled = false;
+          if (!r || !r.ok) { toast(fehler(r && r.error), true); return; }
+          reset();
+          redraw(); return;
+        }
+
+        // Katalog löschen
+        if (a === 'del') {
+          const title = ed.dataset.title || 'Quiz';
+          const ok = await o.confirm('„' + title + '" wirklich löschen?');
+          if (!ok) return;
+          ed.disabled = true;
+          const r = await o.call('ks_catalog_delete', { p_catalog_id: ed.dataset.cat });
+          ed.disabled = false;
+          if (!r.ok) { toast(fehler(r.error), true); return; }
+          toast('"' + title + '" gelöscht.');
+          // Katalogliste neu laden
+          await o.reloadCatalogs();
+          redraw(); return;
+        }
+
+        // Zurück zur Katalog-Liste (aus dem Editor)
+        if (a === 'back') {
+          if (dirty) {
+            const ok = await o.confirm('Ungespeicherte Änderungen gehen verloren. Trotzdem zurück?');
+            if (!ok) return;
+          }
+          mode = 'list'; data = null; dirty = false;
+          redraw(); return;
+        }
+
+        // Vorschau öffnen
+        if (a === 'preview') {
+          if (!data || !data.questions.length) {
+            toast('Erst mindestens eine Frage eingeben.', true); return;
+          }
+          sammle();
+          pvIdx = 0; mode = 'preview';
+          redraw(); return;
+        }
+
+        // Vorschau: Fragen blättern
+        if (a === 'prev-q') {
+          sammleVorschau();
+          pvIdx = Math.max(0, pvIdx - 1);
+          redraw(); return;
+        }
+        if (a === 'next-q') {
+          sammleVorschau();
+          const max = (data && data.questions) ? data.questions.length - 1 : 0;
+          pvIdx = Math.min(max, pvIdx + 1);
+          redraw(); return;
+        }
+
+        // Zurück zum Editor (aus der Vorschau)
+        if (a === 'back-edit') {
+          sammleVorschau();
+          mode = 'edit'; redraw(); return;
+        }
+
+        // Frage hinzufügen
+        if (a === 'addq') {
+          sammle();
+          data.questions.push({
+            question_text: '', options: ['','','',''], correct_idx: 0,
+            correct_indices: [0], time_limit_sec: 20, explanation: null
+          });
+          dirty = true;
+          redraw();
+          // Ans Ende scrollen
+          setTimeout(() => {
+            const cards = el ? el.querySelectorAll('.kse-frage') : [];
+            if (cards.length && typeof cards[cards.length - 1].scrollIntoView === 'function') {
+              cards[cards.length - 1].scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 50);
+          return;
+        }
+
+        // Frage löschen
+        if (a === 'delq') {
+          sammle();
+          const qi = parseInt(ed.dataset.qi, 10);
+          data.questions.splice(qi, 1);
+          dirty = true;
+          redraw(); return;
+        }
+
+        // Foto entfernen (Karte im Editor oder Vorschau)
+        if (a === 'foto-del') {
+          setzeFoto(ed.dataset.qi, null);
+          return;
+        }
+
+        // Richtig-Haken umschalten
+        if (a === 'toggle') {
+          sammle();
+          const qi = parseInt(ed.dataset.qi, 10);
+          const oi = parseInt(ed.dataset.oi, 10);
+          const q = data.questions[qi];
+          if (!q) return;
+          let ci = Array.isArray(q.correct_indices) ? [...q.correct_indices] : [q.correct_idx || 0];
+          if (ci.includes(oi)) {
+            ci = ci.filter(x => x !== oi);
+            if (ci.length === 0) ci = [oi]; // mindestens einer bleibt
+          } else {
+            ci.push(oi);
+          }
+          q.correct_indices = ci;
+          q.correct_idx = ci[0];
+          dirty = true;
+          // Nur den Haken-Button aktualisieren, nicht alles neu bauen
+          ed.classList.toggle('is-richtig', ci.includes(oi));
+          ed.textContent = ci.includes(oi) ? '✅' : '⬜';
+          return;
+        }
+
+        // Speichern
+        if (a === 'save') {
+          sammle();
+          if (!data.title || !data.title.trim()) {
+            toast('Bitte einen Titel eingeben.', true); return;
+          }
+          if (!data.questions.length) {
+            toast('Mindestens eine Frage ist nötig.', true); return;
+          }
+          // Fragen für den Server aufbereiten
+          const qs = data.questions.map((q, i) => ({
+            question_text:   q.question_text || '',
+            options:         q.options || ['','','',''],
+            correct_idx:     (Array.isArray(q.correct_indices) && q.correct_indices.length)
+                               ? q.correct_indices[0] : (q.correct_idx || 0),
+            correct_indices: q.correct_indices || [q.correct_idx || 0],
+            time_limit_sec:  q.time_limit_sec || 20,
+            explanation:     q.explanation || null,
+            image:           q.image || null,
+            image_name:      q.image ? (q.image_name || 'Foto') : null
+          }));
+
+          ed.disabled = true; ed.textContent = '⏳ …';
+          const r = await o.call('ks_catalog_save', {
+            p_catalog_id: data.catalog_id || null,
+            p_title:      data.title.trim(),
+            p_subject:    data.subject || 'Alles Mögliche',
+            p_questions:  qs
+          });
+          ed.disabled = false; ed.textContent = '💾 Speichern';
+
+          if (!r.ok) { toast(fehler(r.error), true); return; }
+          data.catalog_id = r.catalog_id;
+          dirty = false;
+          toast('✅ Quiz gespeichert! (' + r.count + ' Fragen)');
+          // Katalogliste im Hintergrund aktualisieren
+          o.reloadCatalogs();
+          return;
+        }
+
+    }
+
+    /* Nach jedem html(): die Fläche merken und anbinden. Dieselben
+       Funktionen an derselben Fläche zählen nur einmal
+       (addEventListener), also darf das je Bild gerufen werden. */
+    function bind(host) {
+      el = host;
+      host.addEventListener('click', onClick);
+      host.addEventListener('input', onInput);
+      host.addEventListener('change', onFotoWahl);
+      host.addEventListener('dragover', schluckeDatei);
+      host.addEventListener('drop', schluckeDatei);
+      if (mode === 'edit') bindeDnD();
+      if (mode === 'preview') bindeVorschau();
+    }
+
+    return {
+      get mode() { return mode; },
+      get dirty() { return !!(mode && dirty); },
+      key, html, bind, onClick, reset,
+      openList() { imp = null; data = null; dirty = false; mode = 'list'; redraw(); },
+      destroy() { dead = true; reset(); el = null; }
+    };
+  }
+
+  /* ═══════════════════════════════════════════════════════════
      EXPORT
      ═══════════════════════════════════════════════════════════ */
   window.KSEditor = {
@@ -714,6 +1347,7 @@
     importResult: importResult,
     frageKarte:   frageKarte,
     fotoZelle:    fotoZelle,
+    create:       create,
     CSS:          CSS
   };
 })();

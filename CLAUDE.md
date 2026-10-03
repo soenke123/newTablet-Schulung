@@ -19,6 +19,7 @@ Webauftrtitt/
 ├── api/                → Vercel Serverless Functions (signup, admin-Actions)
 ├── admin/              → Admin-Panel: Cluster/User/Fortschritts-/Lehrkraft-Verwaltung
 ├── MPSkills/           → Zweiter Anwendungsbereich: Tools für den Unterricht (eigene Landing, eigene Optik)
+│   ├── quiz.html/.js   → Quiz-Editor von Knowledge Stack ohne Raum (Kachel-Knopf „Quiz-Editor"); derselbe Editor wie im Raum (tools/KnowledgeStack/editor.js)
 │   ├── lib/            → room.js (Token, Poller) · qr.js (selbstgebaut) · tool.js (Werkzeug-Schnittstelle) · userbar.js (Ecke oben rechts)
 │   └── tools/          → ein Ordner je Werkzeug, je zwei Dateien: tool.js + tool.css
 └── GameHub/            → All game logic (see GameHub/CLAUDE.md for detailed docs)

@@ -867,6 +867,12 @@ function toolCard(t, guest) {
      Kein Fuß, wenn es nichts zu zeigen gibt: ein „in Vorbereitung"
      hat keine Vorschau, und eine leere Leiste unter dem Text wäre
      nur ein Strich. */
+  /* Ein zweiter Weg neben dem Raum: Inhalt vorbereiten, ohne dass
+     dafür ein Raum offen sein muss (tools.js, `editor`). Nur für
+     die Werkbank — ein Gast käme dort nur zur Anmeldung. Der
+     Editor im Raum bleibt daneben bestehen. */
+  const editorHref = ready ? window.TOOLS_OVERLAY?.[t.id]?.editor : null;
+
   const foot = guest
     ? (pv
         ? `<div class="tile-foot">
@@ -875,6 +881,7 @@ function toolCard(t, guest) {
         : '')
     : `<div class="tile-foot">
          <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>+ Raum öffnen</button>
+         ${editorHref ? `<a class="btn btn--sm" href="${esc(editorHref)}">Quiz-Editor</a>` : ''}
        </div>`;
 
   return `<article class="tile${ready ? '' : ' tile--soon'}${pv ? ' tile--peek' : ''}">
