@@ -245,6 +245,64 @@
       + '</g>';
   }
 
+  /* ── Eigene Emotes je Wesen ──────────────────────────────────
+     Je Emote gibt es in creatures.css sechs Körper-Bewegungen (r),
+     sechs Arm-Bewegungen (a) und vier Kopf-Bewegungen (h). Die
+     Verteilung: r = (id + Versatz) % 6 und a = (id / 6 + Schritt · r) % 6.
+     Weil r die Stelle innerhalb der Sechsergruppe festlegt und a dann
+     die Gruppe, bekommen alle 36 Wesen bei JEDEM Emote eine andere
+     Körper-und-Arm-Kombination. Versatz und Schritt sind je Emote
+     andere — wer beim Tanzen die Pirouette hat, hat beim Jubeln
+     nicht auch die „dritte" Bewegung. Dazu ein eigenes Tempo.
+     Die Namen braucht nur der Showroom.                            */
+  const MOVES = [
+    { k: 'D', v: 'da', off: 0, step: 1, name: 'Tanzen',
+      r: ['Hüftschwung', 'Abtauchen', 'Moonwalk', 'Pirouette', 'Pogo', 'Shimmy'],
+      a: ['Arme im Wechsel', 'Disco-Zeigen', 'Windmühle', 'Posen', 'Welle', 'Roboter'],
+      h: ['Kopf wiegen', 'Kopf nicken', 'Kopf schieben', 'Kopf kreisen'] },
+    { k: 'C', v: 'ch', off: 2, step: 2, name: 'Jubeln',
+      r: ['Hüpfen', 'Hampelmann', 'Ducken & Strecken', 'Drehhüpfer', 'Zappeln', 'Freudensprung'],
+      a: ['Arme hoch', 'Siegerfaust', 'Abwechselnd pumpen', 'Arme weit auf', 'Über Kopf schwenken', 'Propeller'],
+      h: ['', 'nickt', 'neigt den Kopf', 'wackelt mit dem Kopf'] },
+    { k: 'W', v: 'wv', off: 4, step: 3, name: 'Winken',
+      r: ['lehnt sich', 'Zehenspitzen', 'hüpft', 'tritt hin und her', 'schüchtern', 'Verbeugung'],
+      a: ['rechts', 'links', 'beidhändig', 'großer Bogen', 'klein & schüchtern', 'Rufen'],
+      h: ['Kopf wiegen', 'nickt', 'Kopf schief', 'Kopf schieben'] },
+    { k: 'J', v: 'ju', off: 1, step: 4, name: 'Springen',
+      r: ['Hochsprung', 'Salto', 'Doppelsprung', 'Schraube', 'Rakete', 'Trampolin'],
+      a: ['Arme hoch', 'flattert', 'Superheld', 'Stern', 'Windmühle', 'Kerze'],
+      h: ['', 'nickt', 'neigt den Kopf', 'wackelt mit dem Kopf'] },
+    { k: 'S', v: 'sa', off: 3, step: 5, name: 'Traurig',
+      r: ['wiegt sich', 'schluchzt', 'sackt zusammen', 'kickt ein Steinchen', 'seufzt', 'schaukelt'],
+      a: ['Arme hängen', 'Hände vors Gesicht', 'Tränen wischen', 'Arme baumeln', 'umarmt sich', 'Hand an die Stirn'],
+      h: ['Kopf hängt', 'schüttelt den Kopf', 'schnieft', 'schaut auf'] }
+  ];
+  const TEMPO = [0.86, 0.93, 1, 1.08, 1.16];
+
+  function moves(id) {
+    const q = Math.floor(id / 6);
+    return MOVES.map((m, e) => {
+      const r = (id + m.off) % 6;
+      return { emote: m.name, k: m.k, v: m.v, r: r, a: (q + m.step * r) % 6,
+        h: (q * 2 + id + e) % 4, tp: TEMPO[(id * 3 + e * 2) % 5] };
+    });
+  }
+  function movesAttr(id) {
+    const mv = moves(id);
+    return {
+      attr: mv.map(m => m.k + 'r' + m.r + ' ' + m.k + 'a' + m.a + ' ' + m.k + 'h' + m.h).join(' '),
+      vars: mv.map(m => '--tp-' + m.v + ':' + m.tp).join(';')
+    };
+  }
+  /* Für den Showroom: „Pirouette · Windmühle · Kopf kreisen" */
+  function moveNames(id, emote) {
+    const key = { dance: 'D', cheer: 'C', wave: 'W', jump: 'J', sad: 'S' }[emote];
+    const m = moves(id | 0).find(x => x.k === key);
+    if (!m) return '';
+    const d = MOVES.find(x => x.k === key);
+    return [d.r[m.r], d.a[m.a], d.h[m.h]].filter(Boolean).join(' · ');
+  }
+
   /* ── Das Skelett ───────────────────────────────────────────── */
   const ORIGIN = { al: [30, 60], ar: [70, 60], ll: [40, 84], lr: [60, 84], head: [50, 70] };
 
@@ -252,8 +310,10 @@
     const d = DEFS[id] || DEFS[0];
     const pal = d.pal[skinIdx] || d.pal[0];
     const o = Object.assign({}, ORIGIN, d.o || {});
+    const mv = movesAttr(id);
     const vars = pal.map((c, i) => '--c' + (i + 1) + ':' + c).join(';')
       + ';--cr-d:' + (-((id * 1.37) % 4)).toFixed(2) + 's'
+      + ';' + mv.vars
       + (d.vars ? ';' + d.vars : '')
       + (sizePx ? ';width:' + sizePx + 'px;height:' + sizePx + 'px' : '');
 
@@ -262,7 +322,7 @@
     head = head.indexOf('{FACE}') >= 0 ? head.replace('{FACE}', fc) : head + fc;
     head += '<g class="backside">' + (d.back || '') + '</g>' + (d.headTop || '');
 
-    return '<svg class="creature-svg ' + (emoteClass || 'c-idle') + '" viewBox="0 0 100 100" data-cid="' + id + '" data-g="' + CREATURES[id].gruppe + '" style="' + vars + '">'
+    return '<svg class="creature-svg ' + (emoteClass || 'c-idle') + '" viewBox="0 0 100 100" data-cid="' + id + '" data-g="' + CREATURES[id].gruppe + '" data-mv="' + mv.attr + '" style="' + vars + '">'
       + '<ellipse class="cr-shadow" cx="50" cy="92.4" rx="' + (d.shadow || 22) + '" ry="3.2"/>'
       + '<g class="cr-root">'
       +   '<g class="cr-behind">' + (d.behind || '') + '</g>'
@@ -1392,6 +1452,7 @@
     list: CREATURES,
     svg: getCreatureSVG,
     cls: cls,
+    moveNames: moveNames,
     actions: ACTIONS
   };
 })();

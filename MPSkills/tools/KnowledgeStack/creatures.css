@@ -17,6 +17,8 @@
      c-idle                       Ruhe: atmen, blinzeln, Kleinkram
      wave-N   state-wave          👋
      jump-N   state-jump          🚀  (darf aus dem Kasten, ks-springt)
+   Dazu je Wesen eine eigene Choreografie für die fünf Emotes
+   (Attribut data-mv, Abschnitt „EIGENE EMOTES JE WESEN").
      cheer-N  state-cheer         🎉
      c-dance-N state-dance        🕺
      sleep-N  state-sleep         😴
@@ -473,6 +475,445 @@
 @keyframes cr-unsit-r { 0%, 35% { transform: rotate(-55deg); } 60%, 100% { transform: rotate(0); } }
 .state-getup.from-sit .e-dizzy, .state-getup.from-sit .cr-stars { display: none; }
 .state-getup.from-sit .e-open { animation: cr-blink 4.6s infinite; }
+
+/* ══════════════════════════════════════════════════════════════
+   EIGENE EMOTES JE WESEN (Fassung 3, Oktober 2026)
+   ══════════════════════════════════════════════════════════════
+   Oben steht je Emote EINE Bewegung — damit tanzten, jubelten,
+   winkten, trauerten und sprangen alle 36 Wesen gleich. Jetzt gibt
+   es je Emote sechs Körper-Bewegungen (r0…r5), sechs Arm-Bewegungen
+   (a0…a5) und vier Kopf-Bewegungen (h0…h3). creatures.js verteilt
+   sie (Funktion moves) so, dass bei jedem Emote KEIN Wesenpaar
+   dieselbe Körper-und-Arm-Kombination hat, und gibt jedem Wesen
+   je Emote ein eigenes Tempo (--tp-da … --tp-sa).
+
+   Die Wahl steht im Attribut data-mv am <svg>, z. B.
+   data-mv="Dr3 Da1 Dh2 Cr0 …" (D Tanzen · C Jubeln · W Winken ·
+   J Springen · S Traurig). Es bleibt stehen, wenn tool.js die
+   Klasse umschaltet.
+
+   :where() hält die Spezifität bei (0,2,0) — genauso hoch wie
+   die Regeln „JE WESEN" weiter unten. Die stehen später und
+   gewinnen also: Turbo macht beim Jubeln weiter seinen Wheelie,
+   Yoyo rollt beim Tanzen weiter seinen Kopf.
+
+   Arm-Winkel als Anteil von --cheer-r („Arm ganz hoch" je Wesen):
+   so reißt ein Wesen mit kurzen Flossen den Arm nicht durch den
+   Kopf, nur weil ein anderes Wesen ihn so weit heben kann.        */
+.creature-svg {
+  --ur: var(--cheer-r, -140deg);
+  --ul: calc(var(--cheer-r, -140deg) * -1);
+  --Tda: calc(.9s * var(--tp-da, 1));
+  --Tch: calc(.6s * var(--tp-ch, 1));
+  --Twv: calc(.4s * var(--tp-wv, 1));
+  --Tju: calc(1.15s * var(--tp-ju, 1));
+  --Tsa: calc(2.6s * var(--tp-sa, 1));
+}
+
+/* ── 🕺 TANZEN ─────────────────────────────────────────────── */
+.state-dance .leg-l, .state-dance .leg-r { animation-duration: var(--Tda); }
+.state-dance .leg-r { animation-delay: calc(var(--Tda) * -.5); }
+
+/* Körper */
+.state-dance:where([data-mv~="Dr0"]) .cr-root { animation: cr-dance var(--Tda) ease-in-out infinite; }
+/* r1 Abtauchen: tief in die Knie, Hüfte schräg, wieder hoch */
+.state-dance:where([data-mv~="Dr1"]) .cr-root { animation: da-low calc(var(--Tda) * 2) ease-in-out infinite; }
+@keyframes da-low {
+  0%, 100% { transform: translateY(0) scale(1, 1) skewX(0); }
+  25% { transform: translateY(3px) scale(1.1, .88) skewX(-10deg); }
+  50% { transform: translateY(5px) scale(1.15, .83) skewX(0); }
+  75% { transform: translateY(3px) scale(1.1, .88) skewX(10deg); }
+}
+/* r2 Moonwalk: gleitet seitwärts, lehnt sich gegen die Richtung */
+.state-dance:where([data-mv~="Dr2"]) .cr-root { animation: da-glide calc(var(--Tda) * 2.4) linear infinite; }
+@keyframes da-glide {
+  0%   { transform: translateX(-9px) skewX(9deg); }
+  44%  { transform: translateX(9px) skewX(9deg); }
+  50%  { transform: translateX(9px) skewX(-9deg); }
+  94%  { transform: translateX(-9px) skewX(-9deg); }
+  100% { transform: translateX(-9px) skewX(9deg); }
+}
+.state-dance:where([data-mv~="Dr2"]) .leg-l,
+.state-dance:where([data-mv~="Dr2"]) .leg-r { animation: cr-walk-leg calc(var(--Tda) * .6) ease-in-out infinite; }
+/* r3 Pirouette: dreht sich einmal ganz um (Rückseite inklusive) */
+.state-dance:where([data-mv~="Dr3"]) .cr-root { animation: da-turn calc(var(--Tda) * 2) ease-in-out infinite; }
+@keyframes da-turn {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  25% { transform: translateY(-5px) scale(.06, 1.05); }
+  50% { transform: translateY(0) scale(-1, 1); }
+  75% { transform: translateY(-5px) scale(.06, 1.05); }
+}
+/* r4 Pogo: zwei Hüpfer pro Takt, einer hoch, einer klein */
+.state-dance:where([data-mv~="Dr4"]) .cr-root { animation: da-pogo var(--Tda) ease-in-out infinite; }
+@keyframes da-pogo {
+  0%, 50%, 100% { transform: translateY(0) scale(1.1, .9); }
+  25% { transform: translateY(-11px) scale(.94, 1.08); }
+  75% { transform: translateY(-5px) scale(.97, 1.04); }
+}
+.state-dance:where([data-mv~="Dr4"]) .cr-shadow { animation: da-pogo-sh var(--Tda) ease-in-out infinite; }
+@keyframes da-pogo-sh { 0%, 50%, 100% { transform: scale(1); } 25% { transform: scale(.72); } 75% { transform: scale(.86); } }
+/* r5 Shimmy: der ganze Körper schüttelt sich schnell hin und her */
+.state-dance:where([data-mv~="Dr5"]) .cr-root { animation: da-shimmy calc(var(--Tda) * .25) ease-in-out infinite alternate; }
+@keyframes da-shimmy { from { transform: skewX(8deg) scale(1.03, .97); } to { transform: skewX(-8deg) scale(.97, 1.03); } }
+
+/* Arme */
+.state-dance:where([data-mv~="Da0"]) .arm-l { animation: cr-dance-l var(--Tda) ease-in-out infinite; }
+.state-dance:where([data-mv~="Da0"]) .arm-r { animation: cr-dance-r var(--Tda) ease-in-out infinite; }
+/* a1 Disco: rechts nach oben zeigen, nach unten zeigen; links in die Hüfte */
+.state-dance:where([data-mv~="Da1"]) .arm-r { animation: da-point calc(var(--Tda) * 2) ease-in-out infinite; }
+@keyframes da-point {
+  0%, 40%, 100% { transform: rotate(calc(var(--ur) * .95)); }
+  50%, 90% { transform: rotate(38deg); }
+}
+.state-dance:where([data-mv~="Da1"]) .arm-l { animation: da-hip calc(var(--Tda) * .5) ease-in-out infinite alternate; }
+@keyframes da-hip { from { transform: rotate(-24deg); } to { transform: rotate(-14deg); } }
+/* a2 Windmühle: beide Arme kreisen ganz herum */
+.state-dance:where([data-mv~="Da2"]) .arm-r { animation: da-mill-r calc(var(--Tda) * 2) linear infinite; }
+.state-dance:where([data-mv~="Da2"]) .arm-l { animation: da-mill-l calc(var(--Tda) * 2) linear infinite; }
+@keyframes da-mill-r { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+@keyframes da-mill-l { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+/* a3 Posen: hoch — zur Seite — über Kreuz — runter, jede kurz gehalten */
+.state-dance:where([data-mv~="Da3"]) .arm-r { animation: da-pose-r calc(var(--Tda) * 2) ease-in-out infinite; }
+.state-dance:where([data-mv~="Da3"]) .arm-l { animation: da-pose-l calc(var(--Tda) * 2) ease-in-out infinite; }
+@keyframes da-pose-r {
+  0%, 18%, 100% { transform: rotate(calc(var(--ur) * .9)); }
+  25%, 43% { transform: rotate(calc(var(--ur) * .55)); }
+  50%, 68% { transform: rotate(calc(var(--ur) * 1.12)); }
+  75%, 93% { transform: rotate(12deg); }
+}
+@keyframes da-pose-l {
+  0%, 18%, 100% { transform: rotate(calc(var(--ul) * .9)); }
+  25%, 43% { transform: rotate(calc(var(--ul) * .55)); }
+  50%, 68% { transform: rotate(calc(var(--ul) * 1.12)); }
+  75%, 93% { transform: rotate(-12deg); }
+}
+/* a4 Welle: beide Arme seitlich hoch und schwingen GLEICH herum */
+.state-dance:where([data-mv~="Da4"]) .arm-l { animation: da-wave-l var(--Tda) ease-in-out infinite alternate; }
+.state-dance:where([data-mv~="Da4"]) .arm-r { animation: da-wave-r var(--Tda) ease-in-out infinite alternate; }
+@keyframes da-wave-l { from { transform: rotate(calc(var(--ul) * .55 + 28deg)); } to { transform: rotate(calc(var(--ul) * .55 - 28deg)); } }
+@keyframes da-wave-r { from { transform: rotate(calc(var(--ur) * .55 + 28deg)); } to { transform: rotate(calc(var(--ur) * .55 - 28deg)); } }
+/* a5 Roboter: die Arme springen zackig zwischen zwei Stellungen */
+.state-dance:where([data-mv~="Da5"]) .arm-r { animation: da-bot-r var(--Tda) step-end infinite; }
+.state-dance:where([data-mv~="Da5"]) .arm-l { animation: da-bot-l var(--Tda) step-end infinite; }
+@keyframes da-bot-r { 0%, 100% { transform: rotate(calc(var(--ur) * .6)); } 25% { transform: rotate(calc(var(--ur) * .9)); } 50% { transform: rotate(22deg); } 75% { transform: rotate(calc(var(--ur) * .3)); } }
+@keyframes da-bot-l { 0%, 100% { transform: rotate(-14deg); } 25% { transform: rotate(calc(var(--ul) * .3)); } 50% { transform: rotate(calc(var(--ul) * .6)); } 75% { transform: rotate(calc(var(--ul) * .9)); } }
+
+/* Kopf */
+.state-dance:where([data-mv~="Dh0"]) .head-node { animation: cr-dance-head var(--Tda) ease-in-out infinite; }
+.state-dance:where([data-mv~="Dh1"]) .head-node { animation: da-nod calc(var(--Tda) * .5) ease-in-out infinite; }
+.state-dance:where([data-mv~="Dh2"]) .head-node { animation: da-slide calc(var(--Tda) * .5) ease-in-out infinite alternate; }
+.state-dance:where([data-mv~="Dh3"]) .head-node { animation: da-circle var(--Tda) linear infinite; }
+@keyframes da-nod { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(2px) rotate(3deg); } }
+@keyframes da-slide { from { transform: translateX(-2.6px); } to { transform: translateX(2.6px); } }
+@keyframes da-circle {
+  0%, 100% { transform: translate(2px, 0) rotate(5deg); }
+  25% { transform: translate(0, 2px) rotate(0); }
+  50% { transform: translate(-2px, 0) rotate(-5deg); }
+  75% { transform: translate(0, -2px) rotate(0); }
+}
+
+/* ── 🎉 JUBELN ─────────────────────────────────────────────── */
+.state-cheer:where([data-mv~="Cr0"]) .cr-root { animation: cr-hop var(--Tch) infinite; }
+.state-cheer:where([data-mv~="Cr0"]) .cr-shadow { animation: cr-hop-shadow var(--Tch) infinite; }
+/* r1 Hampelmann: hüpft und grätscht die Beine */
+.state-cheer:where([data-mv~="Cr1"]) .cr-root { animation: ch-jack var(--Tch) ease-in-out infinite; }
+@keyframes ch-jack { 0%, 100% { transform: translateY(0) scale(1.06, .94); } 45% { transform: translateY(-12px) scale(1, 1.02); } }
+.state-cheer:where([data-mv~="Cr1"]) .leg-l { animation: ch-jack-l var(--Tch) ease-in-out infinite; }
+.state-cheer:where([data-mv~="Cr1"]) .leg-r { animation: ch-jack-r var(--Tch) ease-in-out infinite; }
+@keyframes ch-jack-l { 0%, 100% { transform: rotate(0); } 45% { transform: rotate(30deg); } }
+@keyframes ch-jack-r { 0%, 100% { transform: rotate(0); } 45% { transform: rotate(-30deg); } }
+.state-cheer:where([data-mv~="Cr1"]) .cr-shadow { animation: cr-hop-shadow var(--Tch) infinite; }
+/* r2 Ducken und Strecken: bleibt am Boden, macht sich klein und riesig */
+.state-cheer:where([data-mv~="Cr2"]) .cr-root { animation: ch-pump var(--Tch) ease-in-out infinite; }
+@keyframes ch-pump { 0%, 100% { transform: translateY(1px) scale(1.13, .85); } 50% { transform: translateY(0) scale(.92, 1.13); } }
+/* r3 Drehhüpfer: jeder Hüpfer eine halbe Drehung */
+.state-cheer:where([data-mv~="Cr3"]) .cr-root { animation: ch-spin calc(var(--Tch) * 2) ease-in-out infinite; }
+@keyframes ch-spin {
+  0%, 100% { transform: translateY(0) scale(1, 1); }
+  25% { transform: translateY(-13px) scale(.06, 1.05); }
+  50% { transform: translateY(0) scale(-1, 1); }
+  75% { transform: translateY(-13px) scale(.06, 1.05); }
+}
+.state-cheer:where([data-mv~="Cr3"]) .cr-shadow { animation: ch-spin-sh calc(var(--Tch) * 2) ease-in-out infinite; }
+@keyframes ch-spin-sh { 0%, 50%, 100% { transform: scale(1); } 25%, 75% { transform: scale(.74); } }
+/* r4 Zappeln: so aufgeregt, dass es nicht stillhalten kann */
+.state-cheer:where([data-mv~="Cr4"]) .cr-root { animation: ch-giddy calc(var(--Tch) * .3) linear infinite alternate; }
+@keyframes ch-giddy { from { transform: translate(-1.6px, -1px) rotate(-2.5deg); } to { transform: translate(1.6px, -3px) rotate(2.5deg); } }
+.state-cheer:where([data-mv~="Cr4"]) .leg-l { animation: cr-step calc(var(--Tch) * .6) linear infinite; }
+.state-cheer:where([data-mv~="Cr4"]) .leg-r { animation: cr-step calc(var(--Tch) * .6) linear infinite; animation-delay: calc(var(--Tch) * -.3); }
+/* r5 Freudensprung: großer Satz, in der Luft nach hinten gelehnt */
+.state-cheer:where([data-mv~="Cr5"]) .cr-root { animation: ch-leap calc(var(--Tch) * 2) infinite; }
+@keyframes ch-leap {
+  0%   { transform: translateY(0) rotate(0) scale(1, 1); animation-timing-function: ease-out; }
+  12%  { transform: translateY(1px) rotate(0) scale(1.16, .84); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  40%  { transform: translateY(-20px) rotate(-9deg) scale(.95, 1.06); animation-timing-function: ease-in-out; }
+  60%  { transform: translateY(-17px) rotate(7deg) scale(1, 1); animation-timing-function: ease-in; }
+  82%  { transform: translateY(0) rotate(0) scale(1.16, .84); }
+  92%  { transform: translateY(0) rotate(0) scale(.97, 1.03); }
+  100% { transform: translateY(0) rotate(0) scale(1, 1); }
+}
+.state-cheer:where([data-mv~="Cr5"]) .cr-shadow { animation: ch-leap-sh calc(var(--Tch) * 2) infinite; }
+@keyframes ch-leap-sh { 0%, 12%, 82%, 100% { transform: scale(1); } 40%, 60% { transform: scale(.6); } }
+
+.state-cheer:where([data-mv~="Ca0"]) .arm-l { animation: cr-cheer-l calc(var(--Tch) * .5) ease-in-out infinite alternate; }
+.state-cheer:where([data-mv~="Ca0"]) .arm-r { animation: cr-cheer-r calc(var(--Tch) * .5) ease-in-out infinite alternate; }
+/* a1 Siegerfaust: rechts pumpt, links in die Hüfte */
+.state-cheer:where([data-mv~="Ca1"]) .arm-r { animation: ch-fist var(--Tch) ease-in-out infinite; }
+@keyframes ch-fist { 0%, 100% { transform: rotate(calc(var(--ur) * .5)); } 50% { transform: rotate(calc(var(--ur) * 1.06)); } }
+.state-cheer:where([data-mv~="Ca1"]) .arm-l { animation: da-hip var(--Tch) ease-in-out infinite alternate; }
+/* a2 abwechselnd pumpen, links — rechts — links */
+.state-cheer:where([data-mv~="Ca2"]) .arm-r { animation: ch-alt-r var(--Tch) ease-in-out infinite; }
+.state-cheer:where([data-mv~="Ca2"]) .arm-l { animation: ch-alt-l var(--Tch) ease-in-out infinite; }
+@keyframes ch-alt-r { 0%, 100% { transform: rotate(calc(var(--ur) * 1.05)); } 50% { transform: rotate(calc(var(--ur) * .35)); } }
+@keyframes ch-alt-l { 0%, 100% { transform: rotate(calc(var(--ul) * .35)); } 50% { transform: rotate(calc(var(--ul) * 1.05)); } }
+/* a3 Arme weit auf: „Ich hab's geschafft!" */
+.state-cheer:where([data-mv~="Ca3"]) .arm-l { animation: ch-wide-l calc(var(--Tch) * .5) ease-in-out infinite alternate; }
+.state-cheer:where([data-mv~="Ca3"]) .arm-r { animation: ch-wide-r calc(var(--Tch) * .5) ease-in-out infinite alternate; }
+@keyframes ch-wide-l { from { transform: rotate(calc(var(--ul) * .48)); } to { transform: rotate(calc(var(--ul) * .72)); } }
+@keyframes ch-wide-r { from { transform: rotate(calc(var(--ur) * .48)); } to { transform: rotate(calc(var(--ur) * .72)); } }
+/* a4 über dem Kopf schwenken, beide Arme gleich herum */
+.state-cheer:where([data-mv~="Ca4"]) .arm-l { animation: ch-swing-l var(--Tch) ease-in-out infinite alternate; }
+.state-cheer:where([data-mv~="Ca4"]) .arm-r { animation: ch-swing-r var(--Tch) ease-in-out infinite alternate; }
+@keyframes ch-swing-l { from { transform: rotate(calc(var(--ul) * .92 - 24deg)); } to { transform: rotate(calc(var(--ul) * .92 + 24deg)); } }
+@keyframes ch-swing-r { from { transform: rotate(calc(var(--ur) * .92 - 24deg)); } to { transform: rotate(calc(var(--ur) * .92 + 24deg)); } }
+/* a5 Propeller: rechts kreist, links schüttelt oben */
+.state-cheer:where([data-mv~="Ca5"]) .arm-r { animation: da-mill-r calc(var(--Tch) * .8) linear infinite; }
+.state-cheer:where([data-mv~="Ca5"]) .arm-l { animation: cr-cheer-l calc(var(--Tch) * .4) ease-in-out infinite alternate; }
+
+.state-cheer:where([data-mv~="Ch1"]) .head-node { animation: da-nod calc(var(--Tch) * .5) ease-in-out infinite; }
+.state-cheer:where([data-mv~="Ch2"]) .head-node { animation: cr-tilt var(--Tch) ease-in-out infinite alternate; }
+.state-cheer:where([data-mv~="Ch3"]) .head-node { animation: da-slide calc(var(--Tch) * .4) ease-in-out infinite alternate; }
+
+/* ── 👋 WINKEN ─────────────────────────────────────────────── */
+.state-wave:where([data-mv~="Wr0"]) .cr-root { animation: cr-lean calc(var(--Twv) * 4) ease-in-out infinite alternate; }
+/* r1 auf Zehenspitzen, damit man es auch hinten sieht */
+.state-wave:where([data-mv~="Wr1"]) .cr-root { animation: wv-tip calc(var(--Twv) * 2) ease-in-out infinite alternate; }
+@keyframes wv-tip { from { transform: translateY(0) scale(1, 1); } to { transform: translateY(-4px) scale(.96, 1.06); } }
+/* r2 hüpft beim Winken */
+.state-wave:where([data-mv~="Wr2"]) .cr-root { animation: wv-hop calc(var(--Twv) * 2) ease-in-out infinite; }
+@keyframes wv-hop { 0%, 100% { transform: translateY(0) scale(1.05, .95); } 50% { transform: translateY(-7px) scale(.97, 1.03); } }
+.state-wave:where([data-mv~="Wr2"]) .cr-shadow { animation: cr-hop-shadow calc(var(--Twv) * 2) ease-in-out infinite; }
+/* r3 tritt von einem Fuß auf den anderen */
+.state-wave:where([data-mv~="Wr3"]) .cr-root { animation: wv-side calc(var(--Twv) * 3) ease-in-out infinite alternate; }
+@keyframes wv-side { from { transform: translateX(-4px) rotate(-4deg); } to { transform: translateX(4px) rotate(4deg); } }
+.state-wave:where([data-mv~="Wr3"]) .leg-l { animation: cr-walk-lift calc(var(--Twv) * 6) ease-in-out infinite; }
+.state-wave:where([data-mv~="Wr3"]) .leg-r { animation: cr-walk-lift calc(var(--Twv) * 6) ease-in-out infinite; animation-delay: calc(var(--Twv) * -3); }
+/* r4 schüchtern: dreht sich halb weg und wieder her */
+.state-wave:where([data-mv~="Wr4"]) .cr-root { animation: wv-shy calc(var(--Twv) * 4) ease-in-out infinite alternate; }
+@keyframes wv-shy { from { transform: rotate(-1deg) scale(1, 1); } to { transform: rotate(-6deg) scale(.9, 1.02); } }
+/* r5 Verbeugung zwischendurch */
+.state-wave:where([data-mv~="Wr5"]) .cr-root { animation: wv-bow calc(var(--Twv) * 6) ease-in-out infinite; }
+@keyframes wv-bow { 0%, 55%, 100% { transform: translateY(0) scale(1, 1); } 25% { transform: translateY(4px) scale(1.06, .9); } }
+
+.state-wave:where([data-mv~="Wa0"]) .arm-r { animation: cr-wave var(--Twv) ease-in-out infinite alternate; }
+/* a1 winkt mit links */
+.state-wave:where([data-mv~="Wa1"]) .arm-l { animation: wv-left var(--Twv) ease-in-out infinite alternate; }
+.state-wave:where([data-mv~="Wa1"]) .arm-r { animation: cr-arm-idle-r 2.6s ease-in-out infinite alternate; }
+@keyframes wv-left { from { transform: rotate(calc(var(--wave-a, -128deg) * -1)); } to { transform: rotate(calc(var(--wave-b, -78deg) * -1)); } }
+/* a2 mit beiden Händen über dem Kopf */
+.state-wave:where([data-mv~="Wa2"]) .arm-r { animation: cr-wave calc(var(--Twv) * 1.2) ease-in-out infinite alternate; }
+.state-wave:where([data-mv~="Wa2"]) .arm-l { animation: wv-left calc(var(--Twv) * 1.2) ease-in-out infinite alternate; }
+/* a3 großer langsamer Bogen */
+.state-wave:where([data-mv~="Wa3"]) .arm-r { animation: wv-arc calc(var(--Twv) * 2.6) ease-in-out infinite alternate; }
+@keyframes wv-arc { from { transform: rotate(calc(var(--wave-a, -128deg) - 22deg)); } to { transform: rotate(calc(var(--wave-b, -78deg) + 30deg)); } }
+/* a4 schüchtern: klein und schnell, die andere Hand vor dem Bauch */
+.state-wave:where([data-mv~="Wa4"]) .arm-r { animation: wv-tiny calc(var(--Twv) * .55) ease-in-out infinite alternate; }
+@keyframes wv-tiny { from { transform: rotate(calc(var(--wave-b, -78deg) * .6)); } to { transform: rotate(calc(var(--wave-b, -78deg) * .6 - 20deg)); } }
+.state-wave:where([data-mv~="Wa4"]) .arm-l { animation: none; transform: rotate(-26deg); }
+/* a5 Rufen: links die Hand am Mund, rechts winkt wild */
+.state-wave:where([data-mv~="Wa5"]) .arm-r { animation: cr-wave calc(var(--Twv) * .7) ease-in-out infinite alternate; }
+.state-wave:where([data-mv~="Wa5"]) .arm-l { animation: none; transform: rotate(calc(var(--ul) * .62)); }
+
+.state-wave:where([data-mv~="Wh0"]) .head-node { animation: cr-tilt calc(var(--Twv) * 2) ease-in-out infinite alternate; }
+.state-wave:where([data-mv~="Wh1"]) .head-node { animation: da-nod calc(var(--Twv) * 2) ease-in-out infinite; }
+.state-wave:where([data-mv~="Wh2"]) .head-node { animation: none; transform: rotate(9deg); }
+.state-wave:where([data-mv~="Wh3"]) .head-node { animation: da-slide var(--Twv) ease-in-out infinite alternate; }
+
+/* ── 🚀 SPRINGEN — jetzt deutlich höher ────────────────────── */
+.state-jump .leg-l, .state-jump .leg-r,
+.state-jump .arm-l, .state-jump .arm-r { animation-duration: var(--Tju); }
+/* r0 Hochsprung: gerade hinauf, so hoch wie keiner */
+.state-jump:where([data-mv~="Jr0"]) .cr-root { animation: ju-high var(--Tju) infinite; }
+.state-jump:where([data-mv~="Jr0"]) .cr-shadow { animation: cr-jump-shadow var(--Tju) infinite; }
+@keyframes ju-high {
+  0%   { transform: translateY(0) scale(1, 1); animation-timing-function: ease-out; }
+  14%  { transform: translateY(1px) scale(1.22, .76); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  34%  { transform: translateY(-72px) scale(.86, 1.16); animation-timing-function: ease-out; }
+  48%  { transform: translateY(-85px) scale(1, 1); animation-timing-function: ease-in; }
+  70%  { transform: translateY(-42px) scale(.94, 1.07); animation-timing-function: ease-in; }
+  82%  { transform: translateY(0) scale(1.24, .76); animation-timing-function: ease-out; }
+  92%  { transform: translateY(0) scale(.96, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+/* r1 Salto rückwärts: dreht sich in der Luft einmal ganz herum */
+.state-jump:where([data-mv~="Jr1"]) .cr-root { animation: ju-flip calc(var(--Tju) * 1.15) infinite; transform-origin: 50px 60px; }
+.state-jump:where([data-mv~="Jr1"]) .cr-shadow { animation: cr-jump-shadow calc(var(--Tju) * 1.15) infinite; }
+@keyframes ju-flip {
+  0%   { transform: translateY(0) rotate(0) scale(1, 1); animation-timing-function: ease-out; }
+  14%  { transform: translateY(7px) rotate(0) scale(1.2, .78); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  34%  { transform: translateY(-62px) rotate(-110deg) scale(.9, .9); animation-timing-function: linear; }
+  50%  { transform: translateY(-80px) rotate(-200deg) scale(.88, .88); animation-timing-function: linear; }
+  66%  { transform: translateY(-55px) rotate(-320deg) scale(.92, .92); animation-timing-function: ease-in; }
+  82%  { transform: translateY(7px) rotate(-360deg) scale(1.2, .78); animation-timing-function: ease-out; }
+  92%  { transform: translateY(-1px) rotate(-360deg) scale(.96, 1.04); }
+  100% { transform: translateY(0) rotate(-360deg) scale(1, 1); }
+}
+.state-jump:where([data-mv~="Jr1"]) .leg-l,
+.state-jump:where([data-mv~="Jr1"]) .leg-r { animation: ju-tuck calc(var(--Tju) * 1.15) infinite; }
+@keyframes ju-tuck { 0%, 22%, 74%, 100% { transform: translateY(0) scale(1, 1); } 40%, 60% { transform: translateY(-5px) scale(.9, .7); } }
+/* r2 Doppelsprung: kleiner Anlauf-Hüpfer, dann der große */
+.state-jump:where([data-mv~="Jr2"]) .cr-root { animation: ju-double calc(var(--Tju) * 1.5) infinite; }
+@keyframes ju-double {
+  0%   { transform: translateY(0) scale(1, 1); animation-timing-function: ease-out; }
+  8%   { transform: translateY(1px) scale(1.14, .86); animation-timing-function: ease-out; }
+  20%  { transform: translateY(-26px) scale(.95, 1.05); animation-timing-function: ease-in; }
+  32%  { transform: translateY(1px) scale(1.2, .78); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  48%  { transform: translateY(-74px) scale(.88, 1.12); animation-timing-function: ease-out; }
+  58%  { transform: translateY(-90px) scale(1, 1); animation-timing-function: ease-in; }
+  76%  { transform: translateY(-35px) scale(.95, 1.06); animation-timing-function: ease-in; }
+  86%  { transform: translateY(0) scale(1.22, .78); animation-timing-function: ease-out; }
+  94%  { transform: translateY(0) scale(.97, 1.03); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+.state-jump:where([data-mv~="Jr2"]) .cr-shadow { animation: ju-double-sh calc(var(--Tju) * 1.5) infinite; }
+@keyframes ju-double-sh { 0%, 8%, 32%, 86%, 100% { transform: scale(1); opacity: .16; } 20% { transform: scale(.75); } 58% { transform: scale(.42); opacity: .07; } }
+/* r3 Schraube: dreht sich im Flug einmal um die eigene Achse */
+.state-jump:where([data-mv~="Jr3"]) .cr-root { animation: ju-screw var(--Tju) infinite; }
+.state-jump:where([data-mv~="Jr3"]) .cr-shadow { animation: cr-jump-shadow var(--Tju) infinite; }
+@keyframes ju-screw {
+  0%   { transform: translateY(0) scale(1, 1); animation-timing-function: ease-out; }
+  14%  { transform: translateY(1px) scale(1.2, .78); animation-timing-function: cubic-bezier(.2, .9, .3, 1); }
+  30%  { transform: translateY(-62px) scale(.1, 1.12); animation-timing-function: linear; }
+  48%  { transform: translateY(-82px) scale(-1, 1); animation-timing-function: linear; }
+  64%  { transform: translateY(-55px) scale(.1, 1.06); animation-timing-function: ease-in; }
+  82%  { transform: translateY(0) scale(1.22, .78); animation-timing-function: ease-out; }
+  92%  { transform: translateY(0) scale(.96, 1.04); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+/* r4 Rakete: lange in die Hocke, zittert — und dann ab nach oben */
+.state-jump:where([data-mv~="Jr4"]) .cr-root { animation: ju-rocket calc(var(--Tju) * 1.5) infinite; }
+@keyframes ju-rocket {
+  0%   { transform: translate(0, 0) scale(1, 1); animation-timing-function: ease-out; }
+  16%  { transform: translate(0, 2px) scale(1.24, .72); }
+  20%  { transform: translate(-1px, 2px) scale(1.26, .71); }
+  24%  { transform: translate(1px, 2px) scale(1.24, .72); }
+  28%  { transform: translate(-1px, 2px) scale(1.27, .7); }
+  32%  { transform: translate(0, 2px) scale(1.26, .71); animation-timing-function: cubic-bezier(.1, .9, .3, 1); }
+  46%  { transform: translate(0, -96px) scale(.82, 1.25); animation-timing-function: ease-out; }
+  56%  { transform: translate(0, -100px) scale(1, 1); animation-timing-function: ease-in-out; }
+  76%  { transform: translate(0, -55px) scale(1, 1); animation-timing-function: ease-in; }
+  88%  { transform: translate(0, 0) scale(1.24, .76); animation-timing-function: ease-out; }
+  95%  { transform: translate(0, 0) scale(.96, 1.04); }
+  100% { transform: translate(0, 0) scale(1, 1); }
+}
+.state-jump:where([data-mv~="Jr4"]) .cr-shadow { animation: ju-rocket-sh calc(var(--Tju) * 1.5) infinite; }
+@keyframes ju-rocket-sh { 0%, 32%, 88%, 100% { transform: scale(1); opacity: .16; } 16% { transform: scale(1.2); } 56% { transform: scale(.38); opacity: .06; } }
+/* r5 Trampolin: drei Hüpfer, jeder höher als der davor */
+.state-jump:where([data-mv~="Jr5"]) .cr-root { animation: ju-pogo calc(var(--Tju) * 1.7) infinite; }
+@keyframes ju-pogo {
+  0%   { transform: translateY(0) scale(1.12, .88); animation-timing-function: ease-out; }
+  11%  { transform: translateY(-28px) scale(.95, 1.05); animation-timing-function: ease-in; }
+  22%  { transform: translateY(0) scale(1.16, .84); animation-timing-function: ease-out; }
+  37%  { transform: translateY(-52px) scale(.93, 1.08); animation-timing-function: ease-in; }
+  52%  { transform: translateY(0) scale(1.2, .8); animation-timing-function: ease-out; }
+  70%  { transform: translateY(-88px) scale(.9, 1.1); animation-timing-function: ease-in; }
+  88%  { transform: translateY(0) scale(1.24, .76); animation-timing-function: ease-out; }
+  100% { transform: translateY(0) scale(1.12, .88); }
+}
+.state-jump:where([data-mv~="Jr5"]) .cr-shadow { animation: ju-pogo-sh calc(var(--Tju) * 1.7) infinite; }
+@keyframes ju-pogo-sh { 0%, 22%, 52%, 88%, 100% { transform: scale(1); opacity: .16; } 11% { transform: scale(.78); } 37% { transform: scale(.6); } 70% { transform: scale(.42); opacity: .07; } }
+
+.state-jump:where([data-mv~="Ja0"]) .arm-l { animation: cr-jump-arm-l var(--Tju) infinite; }
+.state-jump:where([data-mv~="Ja0"]) .arm-r { animation: cr-jump-arm-r var(--Tju) infinite; }
+/* a1 flattert wie ein Vogel */
+.state-jump:where([data-mv~="Ja1"]) .arm-l { animation: ju-flap-l .15s ease-in-out infinite alternate; }
+.state-jump:where([data-mv~="Ja1"]) .arm-r { animation: ju-flap-r .15s ease-in-out infinite alternate; }
+@keyframes ju-flap-l { from { transform: rotate(calc(var(--ul) * .3)); } to { transform: rotate(calc(var(--ul) * .75)); } }
+@keyframes ju-flap-r { from { transform: rotate(calc(var(--ur) * .3)); } to { transform: rotate(calc(var(--ur) * .75)); } }
+/* a2 Superheld: eine Faust nach oben */
+.state-jump:where([data-mv~="Ja2"]) .arm-r { animation: ju-hero-r var(--Tju) infinite; }
+.state-jump:where([data-mv~="Ja2"]) .arm-l { animation: ju-hero-l var(--Tju) infinite; }
+@keyframes ju-hero-r { 0%, 12%, 90%, 100% { transform: rotate(10deg); } 28%, 76% { transform: rotate(calc(var(--ur) * 1.08)); } }
+@keyframes ju-hero-l { 0%, 12%, 90%, 100% { transform: rotate(-10deg); } 28%, 76% { transform: rotate(26deg); } }
+/* a3 Stern: Arme waagrecht zur Seite */
+.state-jump:where([data-mv~="Ja3"]) .arm-r { animation: ju-star-r var(--Tju) infinite; }
+.state-jump:where([data-mv~="Ja3"]) .arm-l { animation: ju-star-l var(--Tju) infinite; }
+@keyframes ju-star-r { 0%, 12%, 88%, 100% { transform: rotate(6deg); } 30%, 72% { transform: rotate(calc(var(--ur) * .58)); } }
+@keyframes ju-star-l { 0%, 12%, 88%, 100% { transform: rotate(-6deg); } 30%, 72% { transform: rotate(calc(var(--ul) * .58)); } }
+/* a4 Windmühle in der Luft */
+.state-jump:where([data-mv~="Ja4"]) .arm-r { animation: da-mill-r .5s linear infinite; }
+.state-jump:where([data-mv~="Ja4"]) .arm-l { animation: da-mill-l .5s linear infinite; }
+/* a5 Kerze: Arme eng am Körper */
+.state-jump:where([data-mv~="Ja5"]) .arm-r { animation: none; transform: rotate(14deg); }
+.state-jump:where([data-mv~="Ja5"]) .arm-l { animation: none; transform: rotate(-14deg); }
+
+.state-jump:where([data-mv~="Jh1"]) .head-node { animation: da-nod calc(var(--Tju) * .5) ease-in-out infinite; }
+.state-jump:where([data-mv~="Jh2"]) .head-node { animation: cr-tilt calc(var(--Tju) * .5) ease-in-out infinite alternate; }
+.state-jump:where([data-mv~="Jh3"]) .head-node { animation: da-slide calc(var(--Tju) * .25) ease-in-out infinite alternate; }
+
+/* ── 💧 TRAURIG ────────────────────────────────────────────── */
+.state-sad:where([data-mv~="Sr0"]) .cr-root { animation: cr-sad var(--Tsa) ease-in-out infinite alternate; }
+/* r1 Schluchzen: kurze Schluchzer, dann wieder still */
+.state-sad:where([data-mv~="Sr1"]) .cr-root { animation: sa-sob calc(var(--Tsa) * .8) ease-in-out infinite; }
+@keyframes sa-sob {
+  0%, 28%, 54%, 100% { transform: translateY(2px) scale(1.02, .96); }
+  32% { transform: translateY(0) scale(.98, 1.01); }
+  36% { transform: translateY(2px) scale(1.03, .95); }
+  40% { transform: translateY(0) scale(.98, 1.01); }
+  44% { transform: translateY(2px) scale(1.03, .95); }
+  48% { transform: translateY(.5px) scale(.99, 1); }
+}
+/* r2 sackt ganz in sich zusammen */
+.state-sad:where([data-mv~="Sr2"]) .cr-root { animation: sa-slump calc(var(--Tsa) * 1.4) ease-in-out infinite; }
+@keyframes sa-slump { 0%, 100% { transform: translateY(1px) scale(1, .98); } 50%, 72% { transform: translateY(4px) scale(1.13, .83); } }
+/* r3 kickt ein Steinchen weg */
+.state-sad:where([data-mv~="Sr3"]) .cr-root { animation: sa-kick-b var(--Tsa) ease-in-out infinite; }
+@keyframes sa-kick-b { 0%, 30%, 62%, 100% { transform: translateY(2px) rotate(0) scale(1.02, .96); } 42% { transform: translateY(2px) rotate(-4deg) scale(1.02, .96); } }
+.state-sad:where([data-mv~="Sr3"]) .leg-r { animation: sa-kick var(--Tsa) ease-in-out infinite; }
+@keyframes sa-kick { 0%, 30%, 62%, 100% { transform: rotate(0); } 40% { transform: rotate(-30deg) translateY(-2px); } 46% { transform: rotate(10deg); } 53% { transform: rotate(-5deg); } }
+/* r4 tiefer Seufzer: Luft holen — und alles fällt in sich zusammen */
+.state-sad:where([data-mv~="Sr4"]) .cr-root { animation: sa-sigh calc(var(--Tsa) * 1.3) ease-in-out infinite; }
+@keyframes sa-sigh { 0%, 100% { transform: translateY(2px) scale(1.02, .96); } 35%, 45% { transform: translateY(0) scale(1.05, 1.05); } 75% { transform: translateY(3px) scale(1.07, .89); } }
+/* r5 schaukelt sich selbst, um sich zu trösten */
+.state-sad:where([data-mv~="Sr5"]) .cr-root { animation: sa-rock calc(var(--Tsa) * .45) ease-in-out infinite alternate; }
+@keyframes sa-rock { from { transform: translateY(2px) scale(1.02, .96) rotate(-6deg); } to { transform: translateY(2px) scale(1.02, .96) rotate(6deg); } }
+
+/* a0 Arme hängen (siehe oben) */
+/* a1 Hände vors Gesicht, die Schultern zucken */
+.state-sad:where([data-mv~="Sa1"]) .arm-l { animation: sa-face-l .2s ease-in-out infinite alternate; }
+.state-sad:where([data-mv~="Sa1"]) .arm-r { animation: sa-face-r .2s ease-in-out infinite alternate; }
+@keyframes sa-face-l { from { transform: rotate(calc(var(--ul) * .58)); } to { transform: rotate(calc(var(--ul) * .64)); } }
+@keyframes sa-face-r { from { transform: rotate(calc(var(--ur) * .58)); } to { transform: rotate(calc(var(--ur) * .64)); } }
+/* a2 wischt sich die Tränen weg */
+.state-sad:where([data-mv~="Sa2"]) .arm-r { animation: sa-wipe var(--Tsa) ease-in-out infinite; }
+@keyframes sa-wipe {
+  0%, 15%, 85%, 100% { transform: rotate(12deg); }
+  30%, 70% { transform: rotate(calc(var(--ur) * .62)); }
+  38%, 54% { transform: rotate(calc(var(--ur) * .62 - 10deg)); }
+  46%, 62% { transform: rotate(calc(var(--ur) * .62 + 6deg)); }
+}
+/* a3 Arme baumeln schlaff hin und her */
+.state-sad:where([data-mv~="Sa3"]) .arm-l { animation: sa-dangle-l calc(var(--Tsa) * .5) ease-in-out infinite alternate; }
+.state-sad:where([data-mv~="Sa3"]) .arm-r { animation: sa-dangle-r calc(var(--Tsa) * .5) ease-in-out infinite alternate; }
+@keyframes sa-dangle-l { from { transform: rotate(-18deg); } to { transform: rotate(6deg); } }
+@keyframes sa-dangle-r { from { transform: rotate(-6deg); } to { transform: rotate(18deg); } }
+/* a4 umarmt sich selbst */
+.state-sad:where([data-mv~="Sa4"]) .arm-l { animation: sa-hug-l calc(var(--Tsa) * .5) ease-in-out infinite alternate; }
+.state-sad:where([data-mv~="Sa4"]) .arm-r { animation: sa-hug-r calc(var(--Tsa) * .5) ease-in-out infinite alternate; }
+@keyframes sa-hug-l { from { transform: rotate(-36deg); } to { transform: rotate(-46deg); } }
+@keyframes sa-hug-r { from { transform: rotate(36deg); } to { transform: rotate(46deg); } }
+/* a5 Drama: Hand an die Stirn */
+.state-sad:where([data-mv~="Sa5"]) .arm-r { animation: sa-drama calc(var(--Tsa) * .5) ease-in-out infinite alternate; }
+@keyframes sa-drama { from { transform: rotate(calc(var(--ur) * .8)); } to { transform: rotate(calc(var(--ur) * .9)); } }
+.state-sad:where([data-mv~="Sa5"]) .arm-l { animation: none; transform: rotate(24deg); }
+
+/* h0 Kopf hängt (siehe oben) */
+.state-sad:where([data-mv~="Sh1"]) .head-node { animation: sa-no calc(var(--Tsa) * .6) ease-in-out infinite; }
+@keyframes sa-no { 0%, 50%, 100% { transform: translate(0, 2px) rotate(-3deg); } 25% { transform: translate(-1.6px, 2px) rotate(-7deg); } 75% { transform: translate(1.6px, 2px) rotate(1deg); } }
+.state-sad:where([data-mv~="Sh2"]) .head-node { animation: sa-sniff var(--Tsa) ease-in-out infinite; }
+@keyframes sa-sniff { 0%, 78%, 100% { transform: translateY(3.5px) rotate(-5deg); } 83% { transform: translateY(1.2px) rotate(-2deg); } 89% { transform: translateY(3.5px) rotate(-5deg); } }
+.state-sad:where([data-mv~="Sh3"]) .head-node { animation: sa-look calc(var(--Tsa) * 1.4) ease-in-out infinite; }
+@keyframes sa-look { 0%, 100% { transform: translateY(2.5px) rotate(-4deg); } 45%, 60% { transform: translateY(-1px) rotate(3deg); } }
 
 /* ══════════════════════════════════════════════════════════════
    MAGIE-FUNKELN für die magischen Wesen beim Jubeln und Springen

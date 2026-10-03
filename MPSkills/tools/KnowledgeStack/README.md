@@ -93,6 +93,23 @@ das Endbild: die Wand im Raster, das Treppchen besetzt. `uitest.js`
 abgestellter Bewegung und hat dazu einen eigenen Abschnitt „Bewegung am
 Beamer", der wartet, bis alles gelandet ist.
 
+## Eigene Emotes je Wesen
+
+Winken, Jubeln, Tanzen, Springen und Traurig sehen bei jedem Wesen anders
+aus. Je Emote gibt es in `creatures.css` sechs Körper-Bewegungen, sechs
+Arm-Bewegungen und vier Kopf-Bewegungen (z. B. Tanzen: Hüftschwung,
+Abtauchen, Moonwalk, Pirouette, Pogo, Shimmy × Arme im Wechsel,
+Disco-Zeigen, Windmühle, Posen, Welle, Roboter). `moves()` in
+`creatures.js` verteilt sie so, dass bei jedem Emote keine zwei der 36
+Wesen dieselbe Körper-und-Arm-Kombination haben, und gibt jedem Wesen je
+Emote ein eigenes Tempo. Die Wahl steht im Attribut `data-mv` am `<svg>`
+und bleibt stehen, wenn `tool.js` die Klasse wechselt. Was ein Wesen
+sonst noch besonders macht (Flügel, Wheelie, Kopfrollen), steht wie
+bisher darüber. Der Sprung geht jetzt bis gut 80–100 % der Wesenhöhe
+hinauf (Hochsprung, Salto, Doppelsprung, Schraube, Rakete, Trampolin).
+`showroom-wesen.html` schreibt unter jedes Wesen, welche Bewegungen es
+gerade zeigt (`KSCreatures.moveNames(id, emote)`).
+
 ## Bewegungen der Wesen (KSCreatures.cls)
 
 `KSCreatures.cls(aktion, id, richtung)` baut die Klassen:
