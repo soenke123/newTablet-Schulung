@@ -2599,7 +2599,7 @@ body.tool-fill #pagefoot { display: none; }
 
 .modlist { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 6px; }
 .modrow {
-  display: flex; align-items: center; gap: 10px;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
   padding: 6px 4px; border-bottom: 1px solid var(--line-soft);
   font-size: .9rem;
 }
@@ -2617,6 +2617,11 @@ body.tool-fill #pagefoot { display: none; }
   background: var(--line); flex: none;
 }
 .modrow .dot--on { background: var(--ok); }
+/* Drei Zustände (0187). Nur „stillgelegt" ist eine Warnung — das hat
+   die Lehrkraft selbst getan; online und offline sind leise. */
+.modrow-tag--online  { color: var(--ok); background: transparent; border: 1px solid currentColor; }
+.modrow-tag--offline { color: var(--ink-faint); background: transparent; border: 1px solid var(--line); }
+.modrow--offline .modrow-name { color: var(--ink-faint); }
 
 /* Ein stillgelegtes Tablet bleibt in der Namensleiste stehen — es ist
    ja da. Durchgestrichen statt weg: verschwände es, sähe es aus wie

@@ -933,13 +933,17 @@ function renderOnboarding() {
     <details class="modbox" id="bMod">
       <summary>Teilnehmer verwalten <span class="card-h-note" id="bModCount"></span></summary>
       <ul class="modlist" id="bModList"></ul>
-      <p class="rule">Stilllegen nimmt einem Gerät Lesen, Schreiben und Zustimmen —
-      die schon geschriebenen Beiträge bleiben stehen. Jederzeit umkehrbar.</p>
+      <p class="rule"><strong>Stilllegen</strong>: das Kind bleibt im Raum, kann aber nichts
+      lesen, schreiben oder zustimmen und kommt in keine Teamaufteilung. Jederzeit umkehrbar.
+      <strong>Entfernen</strong>: das Kind ist raus aus dem Raum. Was es geschrieben oder
+      gespielt hat, bleibt stehen, und mit dem Code kommt es jederzeit wieder rein.</p>
     </details>`;
 
   // Delegiert und nicht je Zeile: die Liste wird bei jedem Poll neu
   // gezeichnet, und Listener an ihren Kindern wären damit jedes Mal weg.
   $('bModList').addEventListener('click', async (ev) => {
+    const rm = ev.target.closest('button[data-remove]');
+    if (rm) { removePerson(rm); return; }
     const b = ev.target.closest('button[data-block]');
     if (!b) return;
     const on = b.dataset.block === '1';
@@ -960,6 +964,34 @@ function renderOnboarding() {
 
   $('bToggle').addEventListener('click', (ev) => toggleJoin(ev.currentTarget));
 }
+
+/* Entfernen (0187). Mit Rückfrage, weil es — anders als Stilllegen —
+   das Gerät aus dem Raum wirft. Endgültig ist es trotzdem nicht: der
+   Code bringt das Kind zurück, auf denselben Platz. */
+async function removePerson(btn) {
+  if (!confirm(`${btn.dataset.name} aus dem Raum nehmen?\n\n`
+    + 'Was das Kind geschrieben oder gespielt hat, bleibt stehen. '
+    + 'Mit dem Code kommt es jederzeit wieder rein.')) return;
+  btn.disabled = true;
+  try {
+    const r = await trpc('skill_room_remove', { p_code: S.code, p_participant: btn.dataset.id });
+    if (!r.ok) { toast(errText(r.error, r), 'error'); btn.disabled = false; return; }
+    toast('Aus dem Raum genommen.');
+    poller && poller.invalidate();
+    poller && poller.refresh();
+  } catch (e) {
+    toast('Fehler: ' + e.message, 'error');
+    btn.disabled = false;
+  }
+}
+
+/* Drei Zustände, dieselbe Regel wie in den Lobbys (0187):
+   offline schlägt stillgelegt — wer nicht da ist, ist offline. */
+function personStatus(p) {
+  if (!p.online) return 'offline';
+  return p.blocked ? 'blocked' : 'online';
+}
+const STATUS_LABEL = { online: 'online', offline: 'offline', blocked: 'stillgelegt' };
 
 async function toggleJoin(btn) {
   const open = btn.dataset.open === '1';
@@ -1233,24 +1265,43 @@ function paintRoom(data) {
     tg.classList.toggle('btn--primary', !r.join_open);
   }
 
-  $('bNames').innerHTML = people.map(p => `
-    <li class="chip${p.online ? ' chip--on' : ''}${p.blocked ? ' chip--blocked' : ''}"
-        >${p.blocked ? '🔇 ' : ''}${esc(p.name)}</li>`).join('')
+  $('bNames').innerHTML = people.map(p => {
+    const st = personStatus(p);
+    return `
+    <li class="chip${st === 'online' ? ' chip--on' : ''}${st === 'blocked' ? ' chip--blocked' : ''}"
+        >${st === 'blocked' ? '🔇 ' : ''}${esc(p.name)}</li>`;
+  }).join('')
     || '<li class="chip chip--wait">Noch niemand da — der Code steht bereit.</li>';
 
-  const blocked = people.filter(p => p.blocked).length;
-  $('bModCount').textContent = blocked ? `${blocked} stillgelegt` : `${people.length}`;
+  /* Je Kind: Zustand, Stilllegen/Freigeben, Entfernen. Der Knopf
+     richtet sich nach der Sperre und nicht nach dem Zustand — ein
+     stillgelegtes Kind, das gerade offline ist, steht als „offline"
+     da, lässt sich aber trotzdem freigeben. */
+  const blocked = people.filter(p => personStatus(p) === 'blocked').length;
+  const off     = people.filter(p => personStatus(p) === 'offline').length;
+  $('bModCount').textContent = [
+    `${people.length}`,
+    off     ? `${off} offline` : '',
+    blocked ? `${blocked} stillgelegt` : ''
+  ].filter(Boolean).join(' · ');
   $('bModList').innerHTML = people.length
-    ? people.map(p => `
-        <li class="modrow${p.blocked ? ' modrow--blocked' : ''}">
-          <span class="dot${p.online ? ' dot--on' : ''}" aria-hidden="true"></span>
+    ? people.map(p => {
+        const st = personStatus(p);
+        return `
+        <li class="modrow modrow--${st}">
+          <span class="dot${st === 'online' ? ' dot--on' : ''}" aria-hidden="true"></span>
           <span class="modrow-name">${esc(p.name)}</span>
-          ${p.blocked ? '<span class="modrow-tag">stillgelegt</span>' : ''}
-          <button type="button" class="btn btn--sm${p.blocked ? '' : ' btn--danger'}"
+          <span class="modrow-tag modrow-tag--${st}">${STATUS_LABEL[st]}</span>
+          <button type="button" class="btn btn--sm"
                   data-id="${esc(p.id)}" data-block="${p.blocked ? '0' : '1'}">
             ${p.blocked ? 'Freigeben' : 'Stilllegen'}
           </button>
-        </li>`).join('')
+          <button type="button" class="btn btn--sm btn--danger"
+                  data-id="${esc(p.id)}" data-name="${esc(p.name)}" data-remove="1">
+            Entfernen
+          </button>
+        </li>`;
+      }).join('')
     : '<li class="modrow modrow--empty">Noch niemand da.</li>';
 
   // Beim ersten Durchlauf montieren (vorher kennen wir das Werkzeug

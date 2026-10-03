@@ -89,6 +89,7 @@ const ERRORS = {
   rate_limit:    'Zu viele Versuche von diesem Netz. Bitte warte einen Moment.',
   text_blocked:  'Solche Wörter bitte nicht. Schreib es anders.',
   blocked:       'Deine Lehrkraft hat dieses Tablet gerade stillgelegt.',
+  removed:       'Deine Lehrkraft hat dich aus dem Raum genommen.',
   server_misconfigured: 'Der Server ist nicht richtig eingerichtet. Bitte der Lehrkraft Bescheid sagen.'
 };
 const errText = (code) => ERRORS[code] || 'Etwas hat nicht geklappt. Bitte noch einmal versuchen.';
@@ -331,8 +332,13 @@ async function renderDoor(code) {
     return;
   }
 
-  const full   = info.full && info.join_open;
-  const closed = !info.join_open;
+  /* Aus dem Raum genommen (0187)? Dann kennt das Gerät seinen Token
+     noch und kommt damit zurück — derselbe Platz, dieselben Beiträge,
+     ohne Namen und auch bei geschlossenem Beitritt. */
+  const back   = MPRoom.get(code);
+  const coming = !!(back && back.removed && back.token);
+  const full   = !coming && info.full && info.join_open;
+  const closed = !coming && !info.join_open;
 
   host().innerHTML = `
     <div class="card card--join">
@@ -354,7 +360,9 @@ async function renderDoor(code) {
         <button type="button" class="btn btn--wide" id="againBtn">Noch einmal versuchen</button>
       ` : `
         <form id="joinForm" novalidate>
-          ${info.ask_names ? `
+          ${coming ? `
+            <p class="anon-note">Du kommst als ${esc(back.name || 'Tablet')} zurück —
+            alles, was du geschrieben hast, ist noch da.</p>` : info.ask_names ? `
             <label class="field">Dein Name
               <input type="text" id="joinName" maxlength="24" autocomplete="given-name"
                      enterkeyhint="go" required />
@@ -362,7 +370,7 @@ async function renderDoor(code) {
             </label>` : `
             <p class="anon-note">In diesem Raum bleibt ihr anonym — du brauchst keinen Namen
             einzutragen.</p>`}
-          <button type="submit" class="btn btn--primary btn--wide" id="joinGo">Mitmachen</button>
+          <button type="submit" class="btn btn--primary btn--wide" id="joinGo">${coming ? 'Wieder mitmachen' : 'Mitmachen'}</button>
         </form>
         <!-- Der Hinweis steht VOR dem Beitritt, nicht irgendwo im Fuß:
              wer gleich seinen Namen eintippt, soll in dem Moment wissen,
@@ -399,7 +407,7 @@ async function renderDoor(code) {
     errBox.hidden = true;
 
     const name = nameInput ? nameInput.value.trim() : '';
-    if (info.ask_names && !name) {
+    if (!coming && info.ask_names && !name) {
       errBox.textContent = ERRORS.name_required;
       errBox.hidden = false;
       return;
@@ -408,12 +416,14 @@ async function renderDoor(code) {
     btn.disabled = true;
     btn.textContent = 'Einen Moment …';
     try {
-      const res = await MPRoom.join(code, name);
+      const res = coming
+        ? await MPRoom.rpc('skill_room_return', { p_token: back.token })
+        : await MPRoom.join(code, name);
       if (!res.ok) {
         errBox.textContent = errText(res.error);
         errBox.hidden = false;
         btn.disabled = false;
-        btn.textContent = 'Mitmachen';
+        btn.textContent = coming ? 'Wieder mitmachen' : 'Mitmachen';
         return;
       }
       MPRoom.remember({
@@ -424,7 +434,7 @@ async function renderDoor(code) {
       errBox.textContent = 'Keine Verbindung: ' + (ex.message || ex);
       errBox.hidden = false;
       btn.disabled = false;
-      btn.textContent = 'Mitmachen';
+      btn.textContent = coming ? 'Wieder mitmachen' : 'Mitmachen';
     }
   });
 }
@@ -454,6 +464,28 @@ function showBlocked() {
       <p class="rule">Sobald sie es wieder freigibt, geht es hier von allein weiter —
       du musst nichts tun.</p>
     </div>`;
+}
+
+/* ─── Zustand: aus dem Raum genommen ──────────────────────────
+   Anders als bei der Stilllegung läuft hier kein Poller weiter: das
+   Kind ist draußen. Der Rückweg ist der Code — genau wie nach
+   „Raum verlassen". */
+function showRemoved() {
+  blockedShown = false;
+  unmountTool();
+  clearTabs();
+  host().innerHTML = `
+    <div class="card card--join">
+      <h1 class="join-h">Du bist nicht mehr im Raum</h1>
+      <p class="join-sub">${esc(ERRORS.removed)}</p>
+      <p class="rule">Was du geschrieben hast, bleibt stehen. Mit dem Code kommst du
+      jederzeit wieder rein.</p>
+      <button type="button" class="btn btn--primary btn--wide" id="backBtn">Code eingeben</button>
+    </div>`;
+  document.getElementById('backBtn').addEventListener('click', () => {
+    history.replaceState(null, '', location.pathname);
+    renderAsk('');
+  });
 }
 
 function renderRoom(code, token) {
@@ -548,6 +580,16 @@ function renderRoom(code, token) {
       // 'blocked' ist das Gegenteil eines Endes: der Poller läuft
       // weiter, damit das Aufheben von selbst ankommt.
       if (err === 'blocked') { showBlocked(); return; }
+      // 'removed' (0187): raus aus dem Raum. Der Eintrag bleibt im
+      // Gerät, nur als entfernt markiert — mit dem Code kommt das Kind
+      // über seinen alten Token auf denselben Platz zurück.
+      if (err === 'removed') {
+        if (poller) { poller.stop(); poller = null; }
+        const known = MPRoom.get(code);
+        if (known) MPRoom.remember(Object.assign({}, known, { removed: true }));
+        showRemoved();
+        return;
+      }
       // Alles andere ist mit hoher Wahrscheinlichkeit das WLAN.
       // Der Poller versucht es in drei Sekunden von selbst wieder und
       // meldet sich über onNet, wenn es länger dauert.
@@ -645,7 +687,8 @@ async function route() {
   if (!MPRoom.isCode(code)) { renderAsk(code, ERRORS.code_invalid); return; }
 
   const known = MPRoom.get(code);
-  if (known) { renderRoom(code, known.token); return; }
+  if (known && !known.removed) { renderRoom(code, known.token); return; }
+  if (known && known.removed) { renderDoor(code); return; }
 
   // Angemeldet und auf einem zweiten Gerät? Dann hängt der
   // Teilnehmer an der User-ID und wird wiedergefunden, statt einen

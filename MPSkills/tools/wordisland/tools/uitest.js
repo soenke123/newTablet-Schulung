@@ -1504,9 +1504,13 @@ async function testPult() {
      /sprites\/held\/0_1k\.png$/.test(wappenBild), wappenBild);
   ok('und der Daumennagel liegt da',
      fs.existsSync(path.join(HERE, '..', '..', '..', decodeURI(wappenBild))), wappenBild);
-  ok('Bo ist als abwesend markiert',
-     cols[1].querySelector('.wi-lteamoff') &&
-     cols[1].querySelector('.wi-lteamoff').textContent === 'Bo');
+  /* Seit 0187 wie in Kingdoms: wer offline ist, steht in keiner
+     Spalte, sondern unten unter „Offline" — er bekommt beim Start
+     kein Volk. */
+  ok('Bo steht als offline nicht in der Spalte', !/Bo/.test(cols[1].textContent), cols[1].textContent);
+  ok('… sondern unten unter „Offline"',
+     /Offline \(1\)[^]*Bo/.test(root.querySelector('[data-part="waiting"]').textContent),
+     root.querySelector('[data-part="waiting"]').textContent);
   ok('Cem wartet noch auf sein Volk',
      /Cem/.test(root.querySelector('[data-part="waiting"]').textContent) &&
      root.querySelector('[data-part="waiting"]').hidden === false);

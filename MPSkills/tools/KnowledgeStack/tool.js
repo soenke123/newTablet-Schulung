@@ -544,7 +544,26 @@
       <div class="ks-wall${bewegtSich() ? ' ks-wiese' : ''}" data-ks="wall"></div>
       <p class="ks-leer" data-ks="leer" ${n ? 'hidden' : ''}>
         Der Code steht oben in der Leiste — der QR-Code am Griff rechts am Rand.
-      </p>`;
+      </p>
+      <p class="ks-weg" data-ks="weg" ${wegHTML(v) ? '' : 'hidden'}>${wegHTML(v)}</p>`;
+  }
+
+  /* Wer im Raum ist, aber nicht auf der Wiese steht (0187): offline
+     (auch stillgelegt UND offline) und stillgelegt. Dieselbe Zeile wie
+     in Kingdoms und Wordisland. Leer, wenn niemand fehlt. */
+  function wegHTML(v) {
+    const off   = Array.isArray(v.offline_members) ? v.offline_members : [];
+    const still = Array.isArray(v.blocked_members) ? v.blocked_members : [];
+    let out = '';
+    if (off.length) {
+      out += '<span class="ks-weglabel">Offline (' + off.length + '):</span>'
+           + off.map(x => '<span class="ks-wegname">' + esc(x) + '</span>').join('');
+    }
+    if (still.length) {
+      out += '<span class="ks-weglabel">Stillgelegt (' + still.length + '):</span>'
+           + still.map(x => '<span class="ks-wegname ks-wegname--still">🔇 ' + esc(x) + '</span>').join('');
+    }
+    return out;
   }
 
   /* Die Frage am Beamer. Von oben nach unten: Frage · Mitte · Antworten.
@@ -789,6 +808,12 @@
       flickeWall(v.players || [], false);
       const leer = stage.querySelector('[data-ks=leer]');
       if (leer) leer.hidden = (v.players || []).length > 0;
+      const weg = stage.querySelector('[data-ks=weg]');
+      if (weg) {
+        const html = wegHTML(v);
+        if (weg.innerHTML !== html) weg.innerHTML = html;
+        weg.hidden = !html;
+      }
       const go = stage.querySelector('[data-act=start]');
       if (go) go.disabled = !(v.question_count > 0);
       const cat = stage.querySelector('[data-ks=cat]');

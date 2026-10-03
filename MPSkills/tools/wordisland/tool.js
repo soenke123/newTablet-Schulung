@@ -4083,18 +4083,16 @@ ${LEAVE_HTML}
       ' Der Nebel ist nach rund einem Drittel der Zeit weg; danach geht es um Land und Ruinen.';
   }
 
-  /* Wer in dieser Runde überhaupt vorkommt. Ein stillgelegtes Tablet
-     (skill_participants.blocked, 0081) bekommt seit Migration 0152
-     kein Volk mehr und zählt für nichts — es steht am Pult aber
-     weiter da, nur in einer eigenen Zeile. Ohne den Filter hier
-     stünde ein gesperrter Name in einer Volksspalte, die er nie
-     betritt.
+  /* Wer in dieser Runde überhaupt vorkommt. Seit Migration 0187
+     dieselbe Regel wie in Kingdoms: verteilt wird nur, wer ONLINE und
+     nicht stillgelegt ist (skill_participants.blocked, 0081/0152).
+     Offline- und stillgelegte Kinder stehen am Pult weiter da, nur in
+     der Zeile unter der Aufstellung.
 
      `p.blocked` fehlt, wenn 0152 nicht eingespielt ist: dann ist der
-     Wert undefined, der Filter lässt alle durch, und es bleibt beim
-     alten Verhalten. */
+     Wert undefined, und der Filter lässt die Stillgelegten durch. */
   function mitspieler(v) {
-    return (v.people || []).filter(p => !p.blocked);
+    return (v.people || []).filter(p => p.online !== false && !p.blocked);
   }
 
   /* Eine Spalte je Volk, nebeneinander. Ein Volk ohne Anwesende
@@ -4104,17 +4102,15 @@ ${LEAVE_HTML}
     let out = '';
     for (let slot = 0; slot < v.team_count; slot++) {
       const mine = people.filter(p => p.team === slot);
-      out += teamColHTML(slot, mine.map(p => ({ name: p.name, online: p.online !== false })));
+      out += teamColHTML(slot, mine.map(p => ({ name: p.name, online: true })));
     }
     els.lobbyTeams.innerHTML = out;
   }
 
-  /* Wer noch kein Volk hat, wer gerade nicht am Tablet ist — und wer
-     stillgelegt wurde. Drei Sätze, eine Zeile. Die ersten beiden
-     sagen ausdrücklich, dass niemand dadurch außen vor bleibt:
-     wi_room_start verteilt alle Teilnehmer des Raums, anders als in
-     Kingdoms. Der dritte sagt genauso ausdrücklich das Gegenteil —
-     das ist ja der Zweck des Knopfes.
+  /* Wer noch kein Volk hat, wer offline ist — und wer stillgelegt
+     wurde. Dieselbe Zeile wie in Kingdoms und Knowledge Stack (0187).
+     Offline schlägt stillgelegt: wer stillgelegt UND offline ist, steht
+     unter „Offline".
 
      Stillgelegte werden nicht einfach ausgeblendet: die Lehrkraft hat
      sie gerade selbst gesperrt, und eine Liste, aus der jemand
@@ -4125,8 +4121,8 @@ ${LEAVE_HTML}
   function renderWaiting(v) {
     const spielen = mitspieler(v);
     const ohne  = spielen.filter(p => p.team == null);
-    const off   = spielen.filter(p => p.team != null && p.online === false);
-    const still = (v.people || []).filter(p => p.blocked);
+    const off   = (v.people || []).filter(p => p.online === false);
+    const still = (v.people || []).filter(p => p.online !== false && p.blocked);
     if (!ohne.length && !off.length && !still.length) {
       els.waiting.hidden = true;
       els.waiting.innerHTML = '';
@@ -4139,7 +4135,7 @@ ${LEAVE_HTML}
            + namen(ohne);
     }
     if (off.length) {
-      out += `<span class="wi-waitlabel">Gerade nicht am Tablet (${off.length}) — sie spielen trotzdem mit:</span>`
+      out += `<span class="wi-waitlabel">Offline (${off.length}) — sie bekommen beim Start kein Volk:</span>`
            + namen(off);
     }
     if (still.length) {

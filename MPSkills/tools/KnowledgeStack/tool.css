@@ -1162,6 +1162,24 @@ button.ks-k:disabled { cursor: default; }
   font-size: clamp(11px, calc(var(--ks-h) * .022), 16px);
 }
 
+/* Offline und stillgelegt (0187): eine Zeile unter der Wiese. */
+.ks-weg {
+  flex: 0 0 auto;
+  margin: 0;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 6px 8px;
+  color: var(--ks-soft);
+  font-size: clamp(11px, calc(var(--ks-h) * .02), 15px);
+}
+.ks-weg[hidden] { display: none; }
+.ks-weglabel { font-weight: 700; }
+.ks-weglabel + .ks-wegname { margin-left: 0; }
+.ks-wegname {
+  padding: 2px 10px; border-radius: 999px;
+  border: 1px solid currentColor; opacity: .85;
+}
+.ks-wegname--still { text-decoration: line-through; }
+
 /* ══════════════════════════════════════════════════════════
    BEWEGUNG am Beamer (tool.js, Abschnitt „BEWEGUNG")
    ══════════════════════════════════════════════════════════ */
