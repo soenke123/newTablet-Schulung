@@ -1363,9 +1363,9 @@
     box.className = 'ks-konfetti';
     let html = '';
     for (let i = 0; i < 60; i++) {
-      html += '<i style="left:' + zufall(2, 98).toFixed(1) + '%;background:var(' + farben[i % 5] + ');'
+      html += '<i style="left:' + zufall(4, 94).toFixed(1) + '%;background:var(' + farben[i % 5] + ');'
         + 'animation-delay:' + zufall(0, .9).toFixed(2) + 's;animation-duration:' + zufall(2.2, 3.6).toFixed(2) + 's;'
-        + '--dreh:' + Math.round(zufall(-720, 720)) + 'deg;--weit:' + Math.round(zufall(-60, 60)) + 'px"></i>';
+        + '--dreh:' + Math.round(zufall(-720, 720)) + 'deg;--weit:' + Math.round(zufall(-40, 40)) + 'px"></i>';
     }
     box.innerHTML = html;
     feier.appendChild(box);

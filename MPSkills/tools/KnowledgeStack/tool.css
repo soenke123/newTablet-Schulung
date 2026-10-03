@@ -988,21 +988,33 @@ button.ks-k:disabled { cursor: default; }
   min-height: 0;
   min-width: 0;
   padding: clamp(4px, calc(var(--ks-h) * .012), 12px) 4px;
-  border-radius: 14px;
-  background: linear-gradient(180deg, var(--ks-schimmer), transparent);
-  border: 2px solid var(--ks-linie);
-  overflow: hidden;
+  /* Kein Kasten: die Wesen STEHEN auf ihrem Platz, wie auf einer
+     Bühne (Wunsch 03.10.2026: „nicht einfach in diesen Kästchen").
+     Der Platz zeigt sich an der Nummer unten und am Licht hinter
+     Platz 1. `overflow: visible`, damit ein Wesen beim Platztausch
+     und beim Springen hinaus darf — die Namen kürzt .ks-sname selbst. */
+  background: none;
+  border: 0;
+  overflow: visible;
 }
-/* Platz 1 hebt sich ab, ohne die Reihe zu verbiegen: derselbe
-   Kasten, nur Gold. Eine echte Treppe (verschiedene Höhen) kostet
-   bei fünf Plätzen genau die Höhe, die das Wesen bräuchte. */
-.ks-slot--1 { border-color: var(--ks-gold); background: var(--ks-goldf); }
+/* Der Boden, auf dem alle fünf stehen: ein Lichtstreifen in Fußhöhe. */
+.ks-podest:not(.ks-podest--leer)::before {
+  content: '';
+  position: absolute;
+  left: 2%; right: 2%;
+  bottom: calc(clamp(10px, calc(var(--ks-h) * .024), 19px) * 1.6 + 6px);
+  height: 18%;
+  background: radial-gradient(ellipse at 50% 60%, var(--ks-schimmer), transparent 72%);
+  pointer-events: none;
+}
+/* Platz 1 hebt sich ab: ein goldenes Licht hinter dem Wesen. */
+.ks-slot--1 .ks-spic {
+  background: radial-gradient(ellipse at 50% 62%, var(--ks-goldf), transparent 68%);
+}
 /* Die Krone sitzt im CSS und nicht im HTML: sie gehört zum PLATZ und
    nicht zum Kind, und beim Flicken wechseln die Kinder, die Plätze
    nicht. */
 .ks-slot--1 .ks-sname::before { content: '👑 '; }
-.ks-slot--2 { border-color: var(--ks-silber); }
-.ks-slot--3 { border-color: var(--ks-bronze); }
 
 .ks-sname {
   font-size: clamp(9px, calc(var(--ks-h) * .022), 17px);
@@ -1026,7 +1038,15 @@ button.ks-k:disabled { cursor: default; }
   font-weight: 800;
   color: var(--ks-soft);
 }
-.ks-slot--1 .ks-srank { color: var(--ks-goldt); }
+/* Die Platznummer als kleines Schild in der Farbe des Platzes. */
+.ks-slot .ks-srank {
+  padding: 0 .4em;
+  border-radius: 7px;
+  border: 2px solid var(--ks-linie);
+}
+.ks-slot--1 .ks-srank { color: var(--ks-goldt); border-color: var(--ks-gold); }
+.ks-slot--2 .ks-srank { border-color: var(--ks-silber); }
+.ks-slot--3 .ks-srank { border-color: var(--ks-bronze); }
 .ks-spkt {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: clamp(10px, calc(var(--ks-h) * .024), 19px);
@@ -1399,17 +1419,46 @@ button.ks-k:disabled { cursor: default; }
 
 /* Die Menge: klein, unten, alle. Wer aufs Treppchen gesprungen ist,
    hinterlässt eine Lücke — und genau so soll es aussehen. */
+/* Die Menge: keine Kacheln, sondern Wesen, die dicht beieinander
+   stehen — leicht überlappend und nicht alle auf einer Linie, wie
+   Leute vor einer Bühne. */
 .ks-wall.ks-wall--end {
+  position: relative;
   flex: 0 1 auto;
-  max-height: 32%;
-  grid-template-columns: repeat(auto-fit,
-    minmax(clamp(40px, calc(var(--ks-h) * .07), 62px),
-           clamp(48px, calc(var(--ks-h) * .08), 70px)));
-  gap: clamp(2px, calc(var(--ks-h) * .006), 6px);
+  max-height: 36%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  align-content: flex-end;
+  gap: 0;
+  padding: calc(var(--ks-h) * .018 + 6px) 10px 0;
+  background: radial-gradient(ellipse at 50% 100%, var(--ks-schimmer), transparent 75%);
 }
-.ks-wall--end .ks-karte { padding: 2px 1px; border-radius: 9px; border-width: 1px; }
-.ks-wall--end .ks-kname { font-size: clamp(9px, calc(var(--ks-h) * .015), 12px); }
-.ks-wall--end .ks-kpkt { font-size: clamp(8px, calc(var(--ks-h) * .013), 11px); }
+.ks-wall--end .ks-karte {
+  width: clamp(50px, calc(var(--ks-h) * .095), 84px);
+  margin: 0 1px;
+  padding: 0;
+  gap: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+/* Nicht alle auf einer Linie: jede dritte steht etwas weiter hinten. */
+.ks-wall--end .ks-karte:nth-child(3n + 2) { margin-bottom: 7px; }
+.ks-wall--end .ks-karte:nth-child(4n + 1) { margin-bottom: 3px; }
+.ks-wall--end .ks-kpic { overflow: visible; }
+.ks-wall--end .ks-kname { font-size: clamp(9px, calc(var(--ks-h) * .015), 12px); line-height: 1.1; }
+.ks-wall--end .ks-kpkt {
+  font-size: clamp(8px, calc(var(--ks-h) * .013), 11px);
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+/* Die zweite Reihe steht hinter der ersten: ein Stück nach oben in
+   sie hinein, damit es eine Menge ist und keine zwei Regale. */
+.ks-wall--end .ks-karte { margin-top: calc(var(--ks-h) * -.018); }
 .ks-karte.is-oben { visibility: hidden; }
 
 /* ══════════════════════════════════════════════════════════
