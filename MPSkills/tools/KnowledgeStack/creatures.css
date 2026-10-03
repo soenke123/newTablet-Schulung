@@ -21,6 +21,7 @@
      c-dance-N state-dance        🕺
      sleep-N  state-sleep         😴
      sad-N    state-sad           💧
+     state-clap                   👏  nur Siegerehrung, für alle gleich
    Neu, für später (noch nicht im Quiz):
      walk-N   state-walk dir-left|dir-right|dir-front|dir-back
      fall-N   state-fall          stolpert, kippt um, bleibt liegen
@@ -280,6 +281,22 @@
 .state-sad .cloud-bob { animation: cr-float 1.6s ease-in-out infinite alternate; }
 .state-sad .rain { animation: cr-rain .66s linear infinite; }
 @keyframes cr-rain { 0% { transform: translateY(-2px); opacity: 0; } 30% { opacity: 1; } 100% { transform: translateY(9px); opacity: 0; } }
+
+/* ══════════════════════════════════════════════════════════════
+   👏 KLATSCHEN — Hände vor der Brust zusammen, fröhlich wippen.
+   Kein Knopf: die Menge klatscht in der Siegerehrung (tool.js
+   endWunsch). Für alle Wesen gleich, deshalb nur `state-clap`.
+   ══════════════════════════════════════════════════════════════ */
+.state-clap .e-open { display: none; }
+.state-clap .e-happy { display: inline; }
+.state-clap .m-normal { display: none; }
+.state-clap .m-open { display: inline; }
+.state-clap .cr-root { animation: cr-clap-bob .44s ease-in-out infinite; }
+@keyframes cr-clap-bob { 0%, 100% { transform: translateY(0) scale(1, 1); } 50% { transform: translateY(-2.5px) scale(.98, 1.02); } }
+.state-clap .arm-l { animation: cr-clap-l .22s ease-in-out infinite alternate; }
+.state-clap .arm-r { animation: cr-clap-r .22s ease-in-out infinite alternate; }
+@keyframes cr-clap-l { from { transform: rotate(-30deg); } to { transform: rotate(-70deg); } }
+@keyframes cr-clap-r { from { transform: rotate(30deg); } to { transform: rotate(70deg); } }
 
 /* ══════════════════════════════════════════════════════════════
    NEU: GEHEN in vier Richtungen

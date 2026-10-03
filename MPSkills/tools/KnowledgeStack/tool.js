@@ -67,7 +67,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20261002b';
+  const ASSET_V = '20261003a';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -151,6 +151,9 @@
      Ansicht (die kommt bei jeder Antwort neu), sondern wird einmal je
      Frage über ks_room_image geholt und hier gemerkt (Migration 0186). */
   let bild = { qid: null, src: null, laedt: false };
+  /* Wer in der letzten Auflösung wo auf dem Podest stand — daraus
+     weiß die nächste, wer wohin laufen muss. pid → { rank, cid, skin } */
+  let podestVorher = new Map();
 
   /* ══════════════════════════════════════════════════════════
      Bausteine
@@ -166,6 +169,9 @@
   function emoteClass(emote, cid) {
     if (!emote || emote === 'idle') return 'c-idle';
     if (emote === 'dance') return 'c-dance-' + cid + ' state-dance';
+    // Klatschen gibt es nur als gemeinsame Bewegung (creatures.css),
+    // kein Wesen klatscht anders — also keine Klasse mit Nummer.
+    if (emote === 'clap') return 'state-clap';
     return emote + '-' + cid + ' state-' + emote;
   }
 
@@ -474,6 +480,7 @@
       lastFrame = key;
       answering = false;
       els = {};
+      stopBewegung();
       stage.className = 'ks-stage ks-stage--' + (role === 'presenter' ? 'beam' : 'tab')
                      + ' ks-stage--' + view.phase
                      + (role === 'presenter' && !editorMode && view.phase === 'question'
@@ -483,6 +490,7 @@
       binde();
       fit();
       startClock();
+      if (role === 'presenter' && !editorMode) startBewegung(view);
     }
     (role === 'presenter' ? flickeBeam : flickeTab)(view);
   }
@@ -533,7 +541,7 @@
                   ${v.question_count > 0 ? '' : 'disabled'}>Quiz starten</button>
         </div>
       </header>
-      <div class="ks-wall" data-ks="wall"></div>
+      <div class="ks-wall${bewegtSich() ? ' ks-wiese' : ''}" data-ks="wall"></div>
       <p class="ks-leer" data-ks="leer" ${n ? 'hidden' : ''}>
         Der Code steht oben in der Leiste — der QR-Code am Griff rechts am Rand.
       </p>`;
@@ -653,8 +661,32 @@
           <button type="button" class="ks-go" data-act="reset">Zurück zur Lobby</button>
         </div>
       </header>
-      ${podestHTML(v.leaderboard || [], 'end')}
+      <div class="ks-feier" data-ks="feier">
+        <p class="ks-ansage" data-ks="ansage" aria-live="polite"></p>
+        ${treppeHTML(v.leaderboard || [])}
+      </div>
       <div class="ks-wall ks-wall--end" data-ks="wall"></div>`;
+  }
+
+  /* Das Treppchen der Siegerehrung: in der Mitte und am höchsten
+     Platz 1, links Platz 2, rechts Platz 3 — so, wie man es von
+     jeder Siegerehrung kennt. Hier und nicht in der Auflösung: dort
+     zählen fünf Plätze in Leserichtung, hier die drei auf der Treppe.
+     Platz 4 und 5 stehen mit allen anderen unten in der Menge. */
+  function treppeHTML(lb) {
+    if (!lb.length) return '<div class="ks-treppe ks-treppe--leer">Noch keine Punkte.</div>';
+    return '<div class="ks-treppe">' + [2, 1, 3].map(r => {
+      const p = lb.find(q => q.rank === r);
+      if (!p) return '<div class="ks-stufe ks-stufe--' + r + ' is-frei"><div class="ks-sblock"></div></div>';
+      return `
+        <div class="ks-stufe ks-stufe--${r}" data-rank="${r}" data-cid="${p.creature_id | 0}"
+             data-pid="${esc(p.participant_id)}">
+          <span class="ks-kbubble" hidden></span>
+          <span class="ks-sname">${esc(p.nickname)}</span>
+          <div class="ks-spic">${wesen(p.creature_id, p.skin_idx, endWunsch(p, 'oben'))}</div>
+          <div class="ks-sblock"><span class="ks-srank">${r}</span><span class="ks-spkt">${pkt(p.score)}</span></div>
+        </div>`;
+    }).join('') + '</div>';
   }
 
   /* Abbrechen und Neustarten, während das Quiz läuft. Klein und
@@ -784,7 +816,15 @@
     }
   }
 
+  /* Was ein Wesen auf dem Podest tut, wenn es selbst nichts will.
+     In der Auflösung: der Erste jubelt, sonst je nach Antwort. */
+  function podestWunsch(p) {
+    return p.emote || (p.rank === 1 ? 'cheer'
+      : p.correct === true ? 'cheer' : p.correct === false ? 'sad' : 'idle');
+  }
+
   function flickePodest(lb) {
+    const ende = view && view.phase === 'ended';
     for (const p of lb) {
       const slot = stage.querySelector('[data-rank="' + p.rank + '"]');
       if (!slot) continue;
@@ -796,23 +836,52 @@
       // dann muss das SVG neu, sonst nur die Bewegung.
       const pic = slot.querySelector('.ks-spic');
       const cid = p.creature_id | 0;
-      const wanted = p.emote || (p.rank === 1 ? 'cheer'
-        : p.correct === true ? 'cheer' : p.correct === false ? 'sad' : 'idle');
+      const wanted = ende ? endWunsch(p, 'oben') : podestWunsch(p);
       if (pic && Number(slot.dataset.cid) !== cid) {
         slot.dataset.cid = String(cid);
         pic.innerHTML = wesen(cid, p.skin_idx, wanted);
       }
-      setEmote(pic, wanted, cid);
+      if (ende) flickeBubble(slot.querySelector('.ks-kbubble'), p.emote);
+      // Wer gerade läuft oder springt, behält seine Bewegung, bis er
+      // angekommen ist — sonst bliebe er mitten im Schritt stehen.
+      if (slot.dataset.laeuft || slot.classList.contains('is-leer')) continue;
+      zeigeWunsch(pic, wanted, cid);
+    }
+    if (!ende) podestVorher = new Map(lb.map(p => [String(p.participant_id),
+      { rank: p.rank, cid: p.creature_id | 0, skin: p.skin_idx | 0 }]));
+  }
+
+  /* Das Emote-Zeichen über einem Wesen. Nur neu angestoßen, wenn ein
+     ANDERES Emote kommt — sonst flackerte es bei jedem Takt. */
+  function flickeBubble(bub, emote) {
+    if (!bub) return;
+    if (emote) {
+      if (bub.dataset.e !== emote) {
+        bub.dataset.e = emote;
+        bub.textContent = EMOTE_ICON[emote] || '✨';
+        // Animation neu anstoßen: ohne den Neustart bliebe das
+        // Zeichen aus dem letzten Takt einfach unsichtbar stehen.
+        bub.hidden = true; void bub.offsetWidth; bub.hidden = false;
+      }
+    } else if (!bub.hidden) {
+      bub.hidden = true; bub.dataset.e = '';
     }
   }
 
   /* Die Wesen-Wand. Geflickt und nicht neu gebaut: 28 SVGs je Takt
      neu zu schreiben kostet nicht nur Rechenzeit, es setzt auch
-     jedes Atmen und jedes Winken zurück. */
+     jedes Atmen und jedes Winken zurück.
+
+     In der Lobby (mit Bewegung) ist die Wand eine Wiese: dort stehen
+     die Karten nicht im Raster, sondern laufen herum — WO und WIE,
+     macht wieseTakt. Hier wird nur angemeldet, was der Server sagt. */
   function flickeWall(players, mitPunkten) {
     if (!els.wall) return;
+    const wiese = bew.wiese && bew.wiese.el === els.wall ? bew.wiese : null;
+    const ende = view && view.phase === 'ended';
     const da = new Map();
     els.wall.querySelectorAll('[data-pid]').forEach(el => da.set(el.dataset.pid, el));
+    if (wiese) wiese.neu = 0;
 
     players.forEach(p => {
       const id = String(p.participant_id);
@@ -840,31 +909,467 @@
         card.dataset.skin = String(p.skin_idx | 0);
         card.querySelector('.ks-kpic').innerHTML = wesen(cid, p.skin_idx, p.emote || 'idle');
       }
-      setEmote(card.querySelector('.ks-kpic'), p.emote || 'idle', cid);
+      if (wiese) wieseMelde(wiese, card, p, cid);
+      else if (ende) {
+        card.classList.toggle('is-oben', istOben(p));
+        zeigeWunsch(card.querySelector('.ks-kpic'), endWunsch(p, 'unten'), cid);
+      } else setEmote(card.querySelector('.ks-kpic'), p.emote || 'idle', cid);
 
       const nm = card.querySelector('.ks-kname');
       if (nm.textContent !== p.nickname) nm.textContent = p.nickname;
       const pk = card.querySelector('.ks-kpkt');
       if (pk) pk.textContent = pkt(p.score) + ' Pkt';
 
-      const bub = card.querySelector('.ks-kbubble');
-      if (p.emote) {
-        if (bub.dataset.e !== p.emote) {
-          bub.dataset.e = p.emote;
-          bub.textContent = EMOTE_ICON[p.emote] || '✨';
-          // Animation neu anstoßen: ohne den Neustart bliebe das
-          // Zeichen aus dem letzten Takt einfach unsichtbar stehen.
-          bub.hidden = true; void bub.offsetWidth; bub.hidden = false;
-        }
-      } else if (!bub.hidden) {
-        bub.hidden = true; bub.dataset.e = '';
-      }
+      flickeBubble(card.querySelector('.ks-kbubble'), p.emote);
 
-      card.classList.toggle('is-fertig', !!p.answered);
+      // Grün heißt „hat geantwortet" — das gilt nur während einer Frage.
+      card.classList.toggle('is-fertig', !ende && !!p.answered);
     });
 
     // Wer nicht mehr in der Liste steht, hat den Raum verlassen.
     da.forEach(el => el.remove());
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     BEWEGUNG am Beamer (Oktober 2026)
+     ══════════════════════════════════════════════════════════
+     Drei Auftritte, alle nur am Beamer:
+
+       Lobby         Wer den Raum betritt, fällt von oben herein,
+                     plumpst auf den Hintern, steht auf und läuft
+                     herum — hin und her, nach vorn und nach hinten.
+                     Wer emotet, bleibt stehen, dreht sich nach vorn,
+                     emotet 3,5 bis 5 Sekunden und läuft weiter.
+       Auflösung     Die fünf Ersten laufen auf ihre Plätze: wer den
+                     Platz wechselt, läuft hinüber, wer neu dabei ist,
+                     kommt von rechts herein, wer herausfällt, geht
+                     rechts hinaus.
+       Siegerehrung  Alle stehen klein unten. Platz 3 springt aufs
+                     Treppchen, dann Platz 2, dann — mit Trommelwirbel
+                     — Platz 1. Danach klatschen alle, und oben wird
+                     gejubelt. Emotes gehen überall dazwischen.
+
+     Wer Bewegung abgestellt hat (prefers-reduced-motion), bekommt
+     sofort das Endbild: die Wand im Raster, das Treppchen besetzt.
+     Genauso der Prüfstand ohne Browser (uitest.js) — er prüft, WAS
+     im Bild steht, und das ist im Endbild dasselbe. */
+  function bewegtSich() {
+    return typeof window.requestAnimationFrame === 'function'
+      && typeof window.matchMedia === 'function'
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      && typeof Element !== 'undefined' && typeof Element.prototype.animate === 'function';
+  }
+
+  /* Alles, was eine Bewegung an Uhren hält. Es gehört zum BILD: wird
+     das Bild neu gebaut (frameKey), endet jede Bewegung darin. */
+  let bew = { timers: [], raf: 0, wiese: null, feier: null };
+
+  function spaeter(fn, ms) {
+    const t = setTimeout(() => {
+      bew.timers = bew.timers.filter(x => x !== t);
+      if (!destroyed) fn();
+    }, ms);
+    bew.timers.push(t);
+  }
+
+  function stopBewegung() {
+    bew.timers.forEach(clearTimeout);
+    if (bew.raf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(bew.raf);
+    bew = { timers: [], raf: 0, wiese: null, feier: null };
+  }
+
+  function startBewegung(v) {
+    if (v.phase === 'lobby' || (v.phase === 'question' && (v.current_q_idx | 0) === 0)) {
+      podestVorher = new Map();      // neue Runde, neues Podest
+    }
+    if (!bewegtSich()) return;
+    if (v.phase === 'lobby' && els.wall) wieseStart(els.wall);
+    if (v.phase === 'reveal') podestAuftritt(v.leaderboard || []);
+    if (v.phase === 'ended') feierStart(v);
+  }
+
+  /* Die Bewegungen, die keine Emotes sind (gehen, plumpsen, aufstehen),
+     kommen aus KSCreatures.cls. Wie setEmote: nur die Klasse am <svg>
+     wird getauscht, das Bild bleibt. */
+  function setAktion(host, action, cid, dir) {
+    if (!host) return;
+    const svg = host.querySelector('svg');
+    if (!svg) return;
+    host.classList.remove('ks-springt');
+    const C = window.KSCreatures;
+    const want = 'creature-svg ' + (C && C.cls ? C.cls(action, cid, dir) : 'c-idle');
+    if (svg.getAttribute('class') !== want) svg.setAttribute('class', want);
+  }
+
+  /* Ein Wunsch ist ein Emote — oder 'tippeln' (auf der Stelle gehen,
+     von vorn: die Menge beim Trommelwirbel). */
+  function zeigeWunsch(host, w, cid) {
+    if (w === 'tippeln') setAktion(host, 'walk', cid, 'front');
+    else setEmote(host, w, cid);
+  }
+
+  /* ─── Lobby: die Wiese ───────────────────────────────────────
+     Jede Figur hat eine Stelle auf der Wiese: x quer (0 links …
+     1 rechts) und y in die Tiefe (0 hinten … 1 vorn). Hinten ist
+     kleiner und weiter oben, vorn größer und weiter unten, und wer
+     vorn steht, verdeckt, wer hinten steht. Gezeichnet wird über
+     transform — die Karten liegen absolut auf der Wiese. */
+  function wieseStart(el) {
+    bew.wiese = { el, figs: new Map(), neu: 0, last: 0, s: 0 };
+    bew.raf = requestAnimationFrame(wieseTakt);
+  }
+
+  const zufall = (a, b) => a + Math.random() * (b - a);
+  const klemme = (x, a, b) => Math.max(a, Math.min(b, x));
+
+  function wieseMelde(W, card, p, cid) {
+    const id = card.dataset.pid;
+    const jetzt = performance.now();
+    let f = W.figs.get(id);
+    if (!f) {
+      f = {
+        card, pic: card.querySelector('.ks-kpic'), cid,
+        x: Math.random(), y: zufall(.1, 1),
+        // Wer gleichzeitig kommt (beim ersten Bild: alle), fällt
+        // nacheinander — ein Regen aus Wesen, kein Klumpen.
+        zustand: 'wartet', bis: jetzt + W.neu++ * 170 + zufall(0, 200),
+        off: 0, vy: 0, tx: 0, ty: 0, dir: 'front',
+        server: null, gesehen: null, emote: null, ab: 0, cls: ''
+      };
+      card.classList.add('ks-figur', 'is-wartet');
+      W.figs.set(id, f);
+    }
+    // Neues SVG (anderes Wesen, andere Farbe) → Bewegung neu setzen.
+    if (f.cid !== cid || f.svg !== f.pic.querySelector('svg')) { f.cid = cid; f.cls = ''; }
+    f.server = p.emote || null;
+    if (!f.server) f.gesehen = null;
+    // Ein Emote nimmt nur, wer schon steht: im Fallen und Plumpsen
+    // wartet es. Der Server hält es 3,5 s, der nächste Takt sieht es.
+    if (f.server && f.server !== f.gesehen && (f.zustand === 'geht' || f.zustand === 'ruht')) {
+      f.gesehen = f.server;
+      f.emote = f.server;
+      f.zustand = 'emote';
+      f.ab = jetzt;
+      f.bis = jetzt + EMOTE_MS;
+    }
+  }
+
+  function figurZeigt(f, action, dir) {
+    const key = action + '|' + (dir || '');
+    const svg = f.pic.querySelector('svg');
+    if (f.cls === key && f.svg === svg) return;
+    f.cls = key; f.svg = svg;
+    if (action === 'walk' || action === 'plop' || action === 'getup') setAktion(f.pic, action, f.cid, dir);
+    else setEmote(f.pic, action, f.cid);
+  }
+
+  function neuesZiel(f, w, tiefe) {
+    if (Math.random() < .55) {
+      // hin und her
+      const weit = zufall(.18, .45) * (Math.random() < .5 ? -1 : 1);
+      f.tx = klemme(f.x + weit, 0, 1);
+      if (Math.abs(f.tx - f.x) < .1) f.tx = klemme(f.x - weit, 0, 1);
+      f.ty = klemme(f.y + zufall(-.08, .08), 0, 1);
+    } else {
+      // nach vorn oder zurück
+      f.ty = f.y < .5 ? zufall(.65, 1) : zufall(0, .35);
+      f.tx = klemme(f.x + zufall(-.06, .06), 0, 1);
+    }
+    const dx = (f.tx - f.x) * w, dy = (f.ty - f.y) * tiefe;
+    f.dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'front' : 'back');
+  }
+
+  function plumps(f) {
+    const d = document.createElement('span');
+    d.className = 'ks-plums';
+    d.innerHTML = '<i></i><i></i><b>plumps!</b>';
+    f.card.appendChild(d);
+    setTimeout(() => d.remove(), 900);
+  }
+
+  function wieseTakt(now) {
+    const W = bew.wiese;
+    if (!W || destroyed) return;
+    if (!W.el.isConnected) { bew.wiese = null; bew.raf = 0; return; }
+    bew.raf = requestAnimationFrame(wieseTakt);
+    const dt = Math.min(.05, W.last ? (now - W.last) / 1000 : 0);
+    W.last = now;
+
+    W.figs.forEach((f, id) => { if (!f.card.isConnected) W.figs.delete(id); });
+    const w = W.el.clientWidth, h = W.el.clientHeight;
+    if (!w || !h) return;
+
+    // Figurgröße: so groß wie eine Karte am Beamer, und kleiner,
+    // wenn es so viele werden, dass sie sich sonst stapeln.
+    const n = Math.max(1, W.figs.size);
+    const s = Math.round(klemme(Math.sqrt(w * h * .45 / n) * .8, 40, Math.min(124, h * .3)));
+    if (s !== W.s) { W.s = s; W.el.style.setProperty('--fs', s + 'px'); }
+    const fussVorn = h - s * .3 - 4;                 // Platz für den Namen
+    const fussHinten = Math.min(fussVorn, Math.max(s * .8, h * .38));
+    const tiefe = fussVorn - fussHinten;
+    const breite = Math.max(1, w - s);
+    const schritt = s * 1.1;                         // Punkte je Sekunde
+
+    W.figs.forEach(f => {
+      switch (f.zustand) {
+        case 'wartet':
+          if (now < f.bis) break;
+          f.zustand = 'faellt';
+          f.off = -(fussHinten + (fussVorn - fussHinten) * f.y + s * 1.3);
+          f.vy = 0;
+          f.card.classList.remove('is-wartet');
+          f.card.classList.add('is-faellt');
+          figurZeigt(f, 'idle');
+          break;
+        case 'faellt':
+          f.vy += 2600 * dt;
+          f.off += f.vy * dt;
+          if (f.off >= 0) {
+            f.off = 0;
+            f.zustand = 'plumpst'; f.bis = now + 1000;
+            f.card.classList.remove('is-faellt');
+            figurZeigt(f, 'plop');
+            plumps(f);
+          }
+          break;
+        case 'plumpst':
+          if (now >= f.bis) { f.zustand = 'steht'; f.bis = now + 1200; figurZeigt(f, 'getup', 'sit'); }
+          break;
+        case 'steht':
+          if (now >= f.bis) { f.zustand = 'ruht'; f.bis = now + zufall(200, 1400); figurZeigt(f, 'idle'); }
+          break;
+        case 'ruht':
+          figurZeigt(f, 'idle');
+          if (now >= f.bis) { neuesZiel(f, breite, tiefe); f.zustand = 'geht'; }
+          break;
+        case 'geht': {
+          figurZeigt(f, 'walk', f.dir);
+          const dx = (f.tx - f.x) * breite, dy = (f.ty - f.y) * tiefe;
+          const weg = Math.hypot(dx, dy);
+          const kann = schritt * (.75 + .25 * f.y) * dt;  // hinten wirkt langsamer
+          if (weg <= kann || weg < .5) {
+            f.x = f.tx; f.y = f.ty;
+            f.zustand = 'ruht'; f.bis = now + zufall(700, 3200);
+          } else {
+            f.x += (f.tx - f.x) * kann / weg;
+            f.y += (f.ty - f.y) * kann / weg;
+          }
+          break;
+        }
+        case 'emote':
+          // Nach vorn gedreht ist jedes Emote von selbst. Es endet
+          // frühestens nach 3,5 s und spätestens nach 5 s.
+          figurZeigt(f, f.emote);
+          if (now >= f.bis && (f.server !== f.emote || now - f.ab >= 5000)) {
+            f.zustand = 'ruht'; f.bis = now + zufall(300, 900);
+          }
+          break;
+      }
+      const sk = .68 + .32 * f.y;
+      const fx = s / 2 + f.x * breite;
+      const fy = fussHinten + tiefe * f.y + f.off;
+      f.card.style.transform = 'translate(' + (fx - s / 2).toFixed(1) + 'px,'
+        + (fy - s).toFixed(1) + 'px) scale(' + sk.toFixed(3) + ')';
+      const z = String(10 + Math.round(f.y * 100) + (f.zustand === 'faellt' ? 200 : 0));
+      if (f.card.style.zIndex !== z) f.card.style.zIndex = z;
+    });
+  }
+
+  /* ─── Auflösung: Plätze tauschen ─────────────────────────────
+     FLIP: das neue Podest ist schon gebaut, jedes Wesen steht auf
+     seinem neuen Platz. Wer vorher woanders stand, wird dorthin
+     zurückversetzt und läuft herüber. */
+  function podestAuftritt(lb) {
+    const box = stage.querySelector('.ks-podest');
+    if (!box || !lb.length) return;
+    const slots = new Map();
+    box.querySelectorAll('[data-rank]').forEach(sl => slots.set(Number(sl.dataset.rank), sl));
+    const boxR = box.getBoundingClientRect();
+    if (!boxR.width) return;
+    const neu = new Set(lb.map(p => String(p.participant_id)));
+
+    // Wer herausfällt, geht rechts hinaus — als Doppelgänger, denn
+    // auf dem neuen Podest hat er keinen Platz mehr.
+    let raus = 0;
+    podestVorher.forEach((alt, pid) => {
+      if (neu.has(pid)) return;
+      const sl = slots.get(alt.rank);
+      if (!sl) return;
+      const r = sl.querySelector('.ks-spic').getBoundingClientRect();
+      const g = document.createElement('div');
+      g.className = 'ks-geist';
+      g.style.left = (r.left - boxR.left) + 'px';
+      g.style.top = (r.top - boxR.top) + 'px';
+      g.style.width = r.width + 'px';
+      g.style.height = r.height + 'px';
+      g.innerHTML = wesen(alt.cid, alt.skin, 'idle');
+      box.appendChild(g);
+      setAktion(g, 'walk', alt.cid, 'right');
+      const weit = boxR.right - r.left + 30;
+      const a = g.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + weit + 'px)' }],
+        { duration: 500 + weit / Math.max(40, r.width) * 420, delay: raus++ * 150, easing: 'linear', fill: 'forwards' });
+      a.onfinish = () => g.remove();
+    });
+
+    let rein = 0;
+    // Von hinten nach vorn: wer neu kommt, betritt zuerst die
+    // hinteren Plätze — sonst liefe Platz 1 durch alle anderen.
+    lb.slice().sort((a, b) => b.rank - a.rank).forEach(p => {
+      const sl = slots.get(p.rank);
+      if (!sl) return;
+      const alt = podestVorher.get(String(p.participant_id));
+      if (alt && alt.rank === p.rank) return;
+      const von = alt && slots.get(alt.rank);
+      const links = sl.getBoundingClientRect().left;
+      const dx = von ? von.getBoundingClientRect().left - links : boxR.right - links + 10;
+      const warte = von ? 350 : 600 + rein++ * 280;
+      laufeAufPlatz(sl, dx, warte, p.creature_id | 0);
+    });
+  }
+
+  function laufeAufPlatz(sl, dx, warte, cid) {
+    const pic = sl.querySelector('.ks-spic');
+    if (!pic) return;
+    sl.dataset.laeuft = '1';
+    sl.classList.add('is-laeuft');
+    pic.style.transform = 'translateX(' + dx + 'px)';
+    setEmote(pic, 'idle', cid);
+    const breit = pic.getBoundingClientRect().width || 80;
+    const dauer = 500 + Math.abs(dx) / breit * 400;
+    spaeter(() => {
+      pic.style.transform = '';
+      setAktion(pic, 'walk', cid, dx > 0 ? 'left' : 'right');
+      const a = pic.animate([{ transform: 'translateX(' + dx + 'px)' }, { transform: 'translateX(0)' }],
+        { duration: dauer, easing: 'linear' });
+      a.onfinish = () => {
+        delete sl.dataset.laeuft;
+        sl.classList.remove('is-laeuft');
+        if (view && view.phase === 'reveal') flickePodest(view.leaderboard || []);
+      };
+    }, warte);
+  }
+
+  /* ─── Siegerehrung: das Treppchen ────────────────────────────
+     bew.feier.stufe:  start → spannung (Trommelwirbel) → fertig
+     Ohne Bewegung gibt es kein bew.feier — dann gilt das Endbild. */
+  function istOben(p) {
+    if (!(p.rank >= 1 && p.rank <= 3)) return false;
+    const F = bew.feier;
+    return !F || F.oben.has(p.rank);
+  }
+
+  function endWunsch(p, ort) {
+    if (p.emote) return p.emote;
+    const F = bew.feier;
+    const klatscht = F ? F.stufe === 'fertig' && Date.now() < F.klatschBis : false;
+    if (ort === 'oben') {
+      if (p.rank === 1) return 'cheer';
+      if (!F) return 'clap';
+      return klatscht ? 'clap' : (F.stufe === 'fertig' ? 'idle' : 'wave');
+    }
+    if (!F) return 'idle';
+    if (F.stufe === 'spannung') return 'tippeln';
+    return klatscht ? 'clap' : 'idle';
+  }
+
+  function ansage(txt, art) {
+    const el = stage && stage.querySelector('[data-ks=ansage]');
+    if (!el) return;
+    el.textContent = txt;
+    el.className = 'ks-ansage' + (art ? ' ks-ansage--' + art : '');
+    // Die Ansage springt bei jedem neuen Satz neu herein.
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  }
+
+  function feierStart(v) {
+    const lb = v.leaderboard || [];
+    const feier = stage.querySelector('[data-ks=feier]');
+    if (!feier || !lb.length) return;
+    const F = bew.feier = { stufe: 'start', oben: new Set(), klatschBis: 0 };
+    stage.querySelectorAll('.ks-stufe[data-rank]').forEach(sl => sl.classList.add('is-leer'));
+    const plaetze = [3, 2, 1].filter(r => stage.querySelector('.ks-stufe[data-rank="' + r + '"]'));
+    const sieger = lb.find(p => p.rank === 1);
+
+    ansage('🏆 Siegerehrung');
+    let t = 1600;
+    plaetze.forEach(r => {
+      if (r === 1 && plaetze.length > 1) {
+        spaeter(() => {
+          F.stufe = 'spannung';
+          feier.classList.add('ist-spannung');
+          ansage('🥁 Und Platz 1 geht an …', 'spannung');
+          flickeBeam(view);
+        }, t);
+        t += 3400;
+      } else {
+        spaeter(() => ansage('Platz ' + r), t);
+        t += 700;
+      }
+      spaeter(() => springeAufsTreppchen(r), t);
+      t += r === 1 ? 1000 : 1900;
+    });
+    spaeter(() => {
+      F.stufe = 'fertig';
+      F.klatschBis = Date.now() + 8000;
+      feier.classList.remove('ist-spannung');
+      feier.classList.add('ist-fertig');
+      ansage(sieger ? '🏆 ' + sieger.nickname + ' gewinnt!' : '🏆', 'sieg');
+      konfetti(feier);
+      flickeBeam(view);
+      spaeter(() => flickeBeam(view), 8100);   // Klatschen hört auf
+    }, t);
+  }
+
+  function springeAufsTreppchen(rank) {
+    const F = bew.feier;
+    const sl = stage.querySelector('.ks-stufe[data-rank="' + rank + '"]');
+    if (!F || !sl) return;
+    const pic = sl.querySelector('.ks-spic');
+    const karte = els.wall && els.wall.querySelector('[data-pid="' + sl.dataset.pid + '"]');
+    const cid = Number(sl.dataset.cid) | 0;
+    const von = karte && karte.querySelector('.ks-kpic').getBoundingClientRect();
+    F.oben.add(rank);
+    sl.classList.remove('is-leer');
+    if (karte) karte.classList.add('is-oben');
+    const nach = pic.getBoundingClientRect();
+    if (!von || !von.width || !nach.width) { flickeBeam(view); return; }
+
+    // Vom Platz in der Menge in einem Bogen aufs Treppchen.
+    // transform-origin ist unten Mitte (tool.css) — also rechnen
+    // wir von Fuß zu Fuß.
+    const sk = von.width / nach.width;
+    const dx = (von.left + von.width / 2) - (nach.left + nach.width / 2);
+    const dy = von.bottom - nach.bottom;
+    const gipfel = Math.min(dy, 0) - nach.height * .7;
+    sl.dataset.laeuft = '1';
+    setEmote(pic, 'cheer', cid);
+    const a = pic.animate([
+      { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + sk + ')', offset: 0 },
+      { transform: 'translate(' + dx + 'px,' + (dy + nach.height * .06 * sk) + 'px) scale(' + (sk * 1.15) + ',' + (sk * .8) + ')', offset: .15 },
+      { transform: 'translate(' + (dx * .4) + 'px,' + gipfel + 'px) scale(' + ((sk + 1) / 2) + ')', offset: .6 },
+      { transform: 'translate(0,0) scale(1)', offset: 1 }
+    ], { duration: 1000, easing: 'ease-in-out' });
+    a.onfinish = () => {
+      delete sl.dataset.laeuft;
+      sl.classList.add('ks-landet');
+      setTimeout(() => sl.classList.remove('ks-landet'), 600);
+      flickeBeam(view);
+    };
+  }
+
+  function konfetti(feier) {
+    const farben = ['--ks-a0', '--ks-a1', '--ks-a2', '--ks-a3', '--ks-gold'];
+    const box = document.createElement('div');
+    box.className = 'ks-konfetti';
+    let html = '';
+    for (let i = 0; i < 60; i++) {
+      html += '<i style="left:' + zufall(2, 98).toFixed(1) + '%;background:var(' + farben[i % 5] + ');'
+        + 'animation-delay:' + zufall(0, .9).toFixed(2) + 's;animation-duration:' + zufall(2.2, 3.6).toFixed(2) + 's;'
+        + '--dreh:' + Math.round(zufall(-720, 720)) + 'deg;--weit:' + Math.round(zufall(-60, 60)) + 'px"></i>';
+    }
+    box.innerHTML = html;
+    feier.appendChild(box);
+    spaeter(() => box.remove(), 5000);
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -1899,6 +2404,8 @@
       if (profileT) clearTimeout(profileT);
       if (localEmoteT) clearTimeout(localEmoteT);
       pollTimer = profileT = localEmoteT = null;
+      stopBewegung();
+      podestVorher = new Map();
       if (onResize) window.removeEventListener('resize', onResize);
       onResize = null;
       document.body.classList.remove('tool-fill');

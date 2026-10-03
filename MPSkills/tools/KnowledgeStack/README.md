@@ -9,10 +9,10 @@ Das ist keine Geschmacksfrage, sondern die Spielregel:
 
 | | Beamer (`presenter`) | Tablet (`participant`) |
 |---|---|---|
-| **Lobby** | Katalogwahl · Startknopf · Wand mit allen Wesen | Wesenwahl (36 × 3 Farben) · Emote-Knöpfe |
+| **Lobby** | Katalogwahl · Startknopf · Wiese: die Wesen fallen herein und laufen herum | Wesenwahl (36 × 3 Farben) · Emote-Knöpfe |
 | **Frage** | Fragetext groß · Uhr · vier Antwortfelder · „x von y haben geantwortet" | Das **eigene Wesen** · vier Antwortfelder · **keine Frage** |
 | **Auflösung** | Die fünf Ersten dort, wo die Frage stand (1 links … 5 rechts) · dieselben vier Felder als **Füllstände** mit absoluten Zahlen · Erklärung | Richtig/Falsch · der Nachbar vor mir, ich, der Nachbar hinter mir · Emote-Knöpfe |
-| **Siegerehrung** | Podest der fünf Ersten · **alle** Wesen mit Punkten, alle emoten | Endplatz · Emotes · Wesen für die nächste Runde ändern |
+| **Siegerehrung** | Treppchen 2 · 1 · 3 (Platz 3, 2, dann mit Trommelwirbel 1 springen hinauf) · darunter klein **alle** Wesen mit Punkten, sie klatschen, alle emoten | Endplatz · Emotes · Wesen für die nächste Runde ändern |
 
 Die Frage steht **nicht** auf dem Schülergerät — weder in der Anzeige noch in
 der Serverantwort (`ks_view` gibt `question.text = null`, solange die Frage
@@ -62,7 +62,38 @@ Sprungs. Alle Wege stehen in Einheiten des viewBox: dieselbe Bewegung sieht
 in einer 90 Punkte breiten Karte am Beamer und in einer 250 Punkte großen
 Vorschau gleich aus.
 
-## Neue Bewegungen für später (noch nicht im Quiz)
+## Bewegung am Beamer (Oktober 2026)
+
+Nur am Beamer, alles in `tool.js` (Abschnitt „BEWEGUNG"):
+
+* **Lobby — die Wiese.** Wer den Raum betritt, fällt von oben herein,
+  plumpst auf den Hintern (`plop`, Staubwolken und ein „plumps!") und
+  steht auf (`getup` from-sit). Danach läuft jedes Wesen herum: hin und
+  her (`walk` left/right) und nach vorn und zurück (front/back). Hinten
+  ist kleiner und weiter oben, vorn verdeckt hinten. Wer **emotet**,
+  bleibt stehen, dreht sich nach vorn, emotet mindestens 3,5 und
+  höchstens 5 Sekunden und läuft weiter. Die Figurgröße rechnet
+  `wieseTakt` aus Fläche und Kinderzahl.
+* **Auflösung — Plätze tauschen.** Das neue Podest wird gebaut, dann
+  läuft jedes Wesen, das vorher woanders stand, von seinem alten Platz
+  herüber. Wer neu unter den fünf Ersten ist, kommt von rechts herein,
+  wer herausfällt, geht rechts hinaus. Name und Punkte erscheinen, wenn
+  es angekommen ist. Der alte Stand steht in `podestVorher`.
+* **Siegerehrung — das Treppchen.** Alle stehen klein unten in der
+  Menge. Nach der Ansage springt Platz 3 in einem Bogen aufs Treppchen,
+  dann Platz 2. Dann kommt der Trommelwirbel (die Menge tippelt, Platz 1
+  glüht), und Platz 1 springt hinauf. Danach gibt es Konfetti und einen
+  Lichtkegel, oben wird gejubelt, und alle anderen klatschen 8 Sekunden
+  lang (`state-clap`, neu in creatures.css). Emotes gehen überall
+  dazwischen. Wer oben steht, hinterlässt unten eine Lücke.
+
+Wer Bewegung abgestellt hat (`prefers-reduced-motion`), bekommt sofort
+das Endbild: die Wand im Raster, das Treppchen besetzt. `uitest.js`
+(ohne Browser) prüft dieses Endbild, `fitcheck.js` misst das Layout mit
+abgestellter Bewegung und hat dazu einen eigenen Abschnitt „Bewegung am
+Beamer", der wartet, bis alles gelandet ist.
+
+## Bewegungen der Wesen (KSCreatures.cls)
 
 `KSCreatures.cls(aktion, id, richtung)` baut die Klassen:
 

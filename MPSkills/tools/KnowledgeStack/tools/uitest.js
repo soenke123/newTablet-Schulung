@@ -777,8 +777,26 @@ async function bereichBeam() {
 
   /* ─── Siegerehrung ──────────────────────────────────────── */
   const end = await starte('presenter', beamEnde());
-  ok('Siegerehrung: das Podest der fünf Ersten steht',
-     end.root.querySelectorAll('.ks-slot').length === 5);
+  const stufen = Array.from(end.root.querySelectorAll('.ks-stufe[data-rank]'));
+  ok('Siegerehrung: das Treppchen der drei Ersten steht', stufen.length === 3,
+     String(stufen.length));
+  ok('Siegerehrung: Treppchen in der Reihenfolge 2 · 1 · 3',
+     stufen.map(s => s.dataset.rank).join(',') === '2,1,3',
+     stufen.map(s => s.dataset.rank).join(','));
+  // Ohne Bewegung (hier: kein Browser) gilt das Endbild: alle drei
+  // stehen oben, der Erste jubelt, die beiden anderen klatschen —
+  // und in der Menge fehlen genau diese drei.
+  ok('Siegerehrung: oben jubelt der Erste',
+     klassen(end.root.querySelector('.ks-stufe--1 svg')).includes('state-cheer'),
+     klassen(end.root.querySelector('.ks-stufe--1 svg')).join(' '));
+  ok('Siegerehrung: Platz 2 und 3 klatschen',
+     klassen(end.root.querySelector('.ks-stufe--2 svg')).includes('state-clap')
+     && klassen(end.root.querySelector('.ks-stufe--3 svg')).includes('state-clap'));
+  ok('Siegerehrung: wer oben steht, fehlt unten in der Menge',
+     end.root.querySelectorAll('.ks-karte.is-oben').length === 3,
+     String(end.root.querySelectorAll('.ks-karte.is-oben').length));
+  ok('Klatschen steht in creatures.css',
+     fs.readFileSync(CSS, 'utf8').includes('.state-clap .arm-l'));
   ok('Siegerehrung: ALLE Wesen sind zu sehen',
      end.root.querySelectorAll('.ks-karte').length === 8,
      String(end.root.querySelectorAll('.ks-karte').length));

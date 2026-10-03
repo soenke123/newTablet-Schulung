@@ -955,6 +955,7 @@ button.ks-k:disabled { cursor: default; }
    stehen auf einer Zeile, und ihre min-content-Breite würde die
    Spalte sonst aufziehen. */
 .ks-podest {
+  position: relative;
   flex: 1 1 auto;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -977,6 +978,7 @@ button.ks-k:disabled { cursor: default; }
 .ks-podest--end { flex: 0 0 clamp(110px, calc(var(--ks-h) * .34), 300px); }
 
 .ks-slot {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   grid-template-rows: auto 1fr auto;
@@ -1139,6 +1141,276 @@ button.ks-k:disabled { cursor: default; }
   color: var(--ks-soft);
   font-size: clamp(11px, calc(var(--ks-h) * .022), 16px);
 }
+
+/* ══════════════════════════════════════════════════════════
+   BEWEGUNG am Beamer (tool.js, Abschnitt „BEWEGUNG")
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Lobby: die Wiese ─────────────────────────────────────────
+   Die Karten stehen nicht im Raster, sondern liegen absolut auf der
+   Fläche — Ort und Größe setzt wieseTakt über transform und --fs.
+   Ohne Rahmen und Kasten: auf einer Wiese läuft ein Wesen, keine
+   Karteikarte. Der Name hängt als kleines Schild darunter. */
+.ks-wall.ks-wiese {
+  display: block;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+  --fs: 90px;
+}
+.ks-wall.ks-wiese::before {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 64%;
+  background: linear-gradient(180deg, transparent, var(--ks-schimmer) 30%, var(--ks-schimmer));
+  border-radius: 50% 50% 14px 14px / 14% 14% 14px 14px;
+  pointer-events: none;
+}
+.ks-wiese .ks-karte {
+  position: absolute;
+  left: 0; top: 0;
+  width: var(--fs);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  animation: none;
+  transform-origin: 50% var(--fs);
+  will-change: transform;
+}
+.ks-wiese .ks-karte.is-wartet { visibility: hidden; }
+.ks-wiese .ks-kpic {
+  flex: 0 0 auto;
+  width: var(--fs);
+  height: var(--fs);
+  aspect-ratio: auto;
+  overflow: visible;
+}
+.ks-wiese .ks-kname {
+  margin-top: -3px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--ks-karte);
+  border: 1px solid var(--ks-linie);
+  font-size: clamp(9px, calc(var(--fs) * .14), 14px);
+  max-width: calc(var(--fs) * 1.5);
+}
+.ks-wiese .ks-karte.is-faellt .ks-kname { opacity: 0; }
+
+/* Plumps: zwei Staubwolken nach links und rechts und ein kleines
+   „plumps!" — am Fuß des Wesens (92 % der Kastenhöhe). */
+.ks-plums {
+  position: absolute;
+  left: 50%;
+  top: calc(var(--fs) * .92);
+  width: 0; height: 0;
+  pointer-events: none;
+}
+.ks-plums i {
+  position: absolute;
+  bottom: 0;
+  width: calc(var(--fs) * .36);
+  height: calc(var(--fs) * .16);
+  margin-left: calc(var(--fs) * -.18);
+  border-radius: 50%;
+  background: var(--ks-soft);
+  opacity: 0;
+  animation: ks-staub .75s ease-out forwards;
+}
+.ks-plums i:nth-child(1) { --weg: -1; }
+.ks-plums i:nth-child(2) { --weg: 1; }
+@keyframes ks-staub {
+  0%   { opacity: .6; transform: translateX(0) scale(.4); }
+  100% { opacity: 0;  transform: translateX(calc(var(--weg) * var(--fs) * .5)) translateY(-4px) scale(1.3); }
+}
+.ks-plums b {
+  position: absolute;
+  left: 0;
+  bottom: calc(var(--fs) * .95);
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(10px, calc(var(--fs) * .18), 17px);
+  color: var(--ks-goldt);
+  white-space: nowrap;
+  opacity: 0;
+  animation: ks-plumps .9s ease-out forwards;
+}
+@keyframes ks-plumps {
+  0%   { opacity: 0; transform: translate(-50%, 6px) scale(.5) rotate(-8deg); }
+  20%  { opacity: 1; transform: translate(-50%, 0) scale(1.15) rotate(-8deg); }
+  100% { opacity: 0; transform: translate(-50%, -16px) scale(1) rotate(-8deg); }
+}
+
+/* ── Auflösung: Plätze tauschen ───────────────────────────────
+   Wer läuft, darf aus seinem Platz hinaus und liegt über den
+   anderen. Name und Punkte kommen erst, wenn er angekommen ist. */
+.ks-slot .ks-sname, .ks-slot .ks-sfoot { transition: opacity .35s; }
+.ks-slot.is-laeuft { overflow: visible; z-index: 5; }
+.ks-slot.is-laeuft .ks-sname, .ks-slot.is-laeuft .ks-sfoot { opacity: 0; }
+.ks-geist { position: absolute; pointer-events: none; z-index: 6; }
+.ks-geist > .ks-wesen { position: absolute; inset: 0; }
+
+/* ── Siegerehrung: Ansage, Treppchen, Menge ───────────────────
+   Von oben nach unten: die Ansage, das Treppchen (2 · 1 · 3), und
+   ganz unten klein die Menge mit allen Wesen. */
+.ks-feier {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: clamp(4px, calc(var(--ks-h) * .012), 12px);
+  min-height: 0;
+}
+.ks-ansage {
+  margin: 0;
+  min-height: 1.2em;
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(16px, calc(var(--ks-h) * .055), 46px);
+  line-height: 1.1;
+  text-align: center;
+  animation: ks-ansage .5s cubic-bezier(.2, .9, .3, 1.4);
+}
+.ks-ansage--spannung {
+  color: var(--ks-goldt);
+  animation: ks-ansage .5s cubic-bezier(.2, .9, .3, 1.4), ks-zittern .14s linear .5s infinite;
+}
+.ks-ansage--sieg { color: var(--ks-goldt); font-size: clamp(18px, calc(var(--ks-h) * .07), 58px); }
+@keyframes ks-ansage { from { transform: scale(.5); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes ks-zittern { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(2px) rotate(.6deg); } }
+
+/* Die Treppe misst sich an ihrer EIGENEN Höhe (container-type,
+   cqh) — sie bekommt, was Ansage und Menge übrig lassen, und Figur
+   plus Block müssen da hinein. Mit Maßen aus --ks-h stand der
+   Block bei einer vollen Klasse unter der Menge. */
+.ks-treppe {
+  flex: 1 1 0;
+  container-type: size;
+  width: min(100%, calc(var(--ks-h) * 1.15));
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+  gap: clamp(3px, calc(var(--ks-h) * .008), 8px);
+  min-height: 0;
+}
+.ks-treppe--leer {
+  display: grid; place-items: center;
+  color: var(--ks-soft); font-size: 15px;
+}
+.ks-stufe {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 0;
+  height: 100%;
+}
+.ks-stufe .ks-sname { transition: opacity .3s; }
+.ks-stufe--1 .ks-sname::before { content: '👑 '; }
+.ks-stufe .ks-spic {
+  flex: 0 0 auto;
+  width: min(84%, calc(var(--ks-h) * .2), 44cqh);
+  height: auto;
+  aspect-ratio: 1;
+  overflow: visible;
+  transform-origin: 50% 100%;
+}
+.ks-stufe .ks-kbubble { top: 8%; right: 6%; }
+.ks-sblock {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+  border: 3px solid var(--ks-linie2);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: var(--ks-karte);
+  transform-origin: 50% 100%;
+}
+.ks-stufe--1 .ks-sblock { height: min(calc(var(--ks-h) * .17), 36cqh); background: var(--ks-goldf); border-color: var(--ks-gold); }
+.ks-stufe--2 .ks-sblock { height: min(calc(var(--ks-h) * .12), 25cqh); border-color: var(--ks-silber); }
+.ks-stufe--3 .ks-sblock { height: min(calc(var(--ks-h) * .085), 17cqh); border-color: var(--ks-bronze); }
+.ks-stufe .ks-srank {
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-size: clamp(14px, min(calc(var(--ks-h) * .06), 10cqh), 52px);
+  line-height: 1;
+  color: var(--ks-ink);
+}
+.ks-stufe--1 .ks-srank { color: var(--ks-goldt); }
+.ks-stufe .ks-spkt { transition: opacity .3s; }
+
+/* Noch niemand oben: der Block steht, die Figur fehlt. */
+.ks-stufe.is-leer .ks-spic,
+.ks-stufe.is-leer .ks-sname,
+.ks-stufe.is-leer .ks-spkt,
+.ks-stufe.is-leer .ks-kbubble { visibility: hidden; opacity: 0; }
+
+/* Landen: die Stufe gibt kurz nach. */
+.ks-stufe.ks-landet .ks-sblock { animation: ks-wumms .45s ease-out; }
+@keyframes ks-wumms { 0% { transform: scaleY(.9); } 45% { transform: scaleY(1.04); } 100% { transform: none; } }
+
+/* Trommelwirbel: der leere Platz 1 glüht. */
+.ks-feier.ist-spannung .ks-stufe--1 .ks-sblock { animation: ks-glimm .55s ease-in-out infinite alternate; }
+@keyframes ks-glimm { from { box-shadow: 0 0 0 0 var(--ks-gold); } to { box-shadow: 0 0 30px 6px var(--ks-gold); } }
+
+/* Und dann: ein Lichtkegel auf Platz 1. */
+.ks-feier.ist-fertig .ks-stufe--1::before {
+  content: '';
+  position: absolute;
+  inset: -12% -25% 0;
+  z-index: -1;
+  background: radial-gradient(ellipse at 50% 35%, var(--ks-goldf), transparent 70%);
+  animation: ks-ansage .6s ease-out;
+  pointer-events: none;
+}
+
+.ks-konfetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 30;
+}
+.ks-konfetti i {
+  position: absolute;
+  top: -14px;
+  width: 8px;
+  height: 13px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: ks-konfetti 3s cubic-bezier(.3, .6, .5, 1) forwards;
+}
+@keyframes ks-konfetti {
+  0%   { opacity: 1; transform: translate(0, 0) rotate(0); }
+  85%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--weit), calc(var(--ks-h) * .8)) rotate(var(--dreh)); }
+}
+
+/* Die Menge: klein, unten, alle. Wer aufs Treppchen gesprungen ist,
+   hinterlässt eine Lücke — und genau so soll es aussehen. */
+.ks-wall.ks-wall--end {
+  flex: 0 1 auto;
+  max-height: 32%;
+  grid-template-columns: repeat(auto-fit,
+    minmax(clamp(40px, calc(var(--ks-h) * .07), 62px),
+           clamp(48px, calc(var(--ks-h) * .08), 70px)));
+  gap: clamp(2px, calc(var(--ks-h) * .006), 6px);
+}
+.ks-wall--end .ks-karte { padding: 2px 1px; border-radius: 9px; border-width: 1px; }
+.ks-wall--end .ks-kname { font-size: clamp(9px, calc(var(--ks-h) * .015), 12px); }
+.ks-wall--end .ks-kpkt { font-size: clamp(8px, calc(var(--ks-h) * .013), 11px); }
+.ks-karte.is-oben { visibility: hidden; }
 
 /* ══════════════════════════════════════════════════════════
    TABLET
@@ -1521,6 +1793,8 @@ button.ks-k:disabled { cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   .ks-karte { animation: none; }
   .ks-kbubble { animation: none; opacity: 1; }
+  .ks-ansage, .ks-sblock, .ks-stufe::before { animation: none !important; }
+  .ks-konfetti { display: none; }
   .ks-clock--eilig { animation: none; }
   .ks-k.is-richtig { animation: none; }
   .ks-fuell { transition: none; }

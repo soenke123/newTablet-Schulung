@@ -124,7 +124,7 @@ window.__ctx = {
     role: '${role}',
     call: (fn, args) => {
       window.__RUFE.push(fn);
-      if (fn === 'ks_sig' || fn === 'ks_room_sig') return Promise.resolve({ ok: true, sig: 'fest' });
+      if (fn === 'ks_sig' || fn === 'ks_room_sig') return Promise.resolve({ ok: true, sig: window.__SIG || 'fest' });
       if (fn === 'ks_view' || fn === 'ks_room_get')
         return Promise.resolve(Object.assign({ ok: true }, window.__V));
       if (fn === 'ks_room_image')
@@ -518,9 +518,14 @@ if (MIT_BILDERN) fs.mkdirSync(SHOTS, { recursive: true });
 
 for (const s of SCHIRME) {
   for (const role of s.rollen) {
+    /* `reducedMotion: 'reduce'`: gemessen wird das ENDBILD. Mit
+       Bewegung stehen die Wesen am Beamer mal hier, mal da (Wiese,
+       Plätze tauschen, Treppchen) — dafür gibt es unten einen
+       eigenen Abschnitt, der wartet, bis alles angekommen ist. */
     const ctxB = await browser.newContext({
       viewport: { width: s.w, height: s.h },
-      deviceScaleFactor: 1, hasTouch: s.touch, isMobile: false
+      deviceScaleFactor: 1, hasTouch: s.touch, isMobile: false,
+      reducedMotion: 'reduce'
     });
     const page = await ctxB.newPage();
     const kaputt = [];
@@ -602,7 +607,8 @@ console.log('\n── Hell und dunkel ──────────────
 for (const [role, s] of [['presenter', { name: 'beamer-720', w: 1280, h: 720, touch: false }],
                          ['participant', { name: 'iphone-14-hoch', w: 390, h: 844, touch: true }]]) {
   const ctxB = await browser.newContext({
-    viewport: { width: s.w, height: s.h }, deviceScaleFactor: 1, hasTouch: s.touch
+    viewport: { width: s.w, height: s.h }, deviceScaleFactor: 1, hasTouch: s.touch,
+    reducedMotion: 'reduce'
   });
   const page = await ctxB.newPage();
   await page.goto(`http://127.0.0.1:${port}/MPSkills/__fit_${role}.html`, { waitUntil: 'load' });
@@ -633,6 +639,113 @@ for (const [role, s] of [['presenter', { name: 'beamer-720', w: 1280, h: 720, to
       }
     }
   }
+  await ctxB.close();
+}
+
+/* ── Bewegung am Beamer ────────────────────────────────────────
+   Dieselben Bilder MIT Bewegung: die Wesen fallen in die Lobby und
+   laufen herum, tauschen in der Auflösung die Plätze, springen in
+   der Siegerehrung aufs Treppchen. Gemessen wird, wenn alles
+   angekommen ist — dann darf nichts aus dem Rahmen ragen, und keine
+   Figur steht außerhalb der Wiese. */
+console.log('\n── Bewegung am Beamer ──────────────────────────────\n');
+for (const s of [{ name: 'beamer-720', w: 1280, h: 720 }, { name: 'beamer-1080', w: 1920, h: 1080 }]) {
+  const ctxB = await browser.newContext({ viewport: { width: s.w, height: s.h }, deviceScaleFactor: 1 });
+  const page = await ctxB.newPage();
+  const kaputt = [];
+  page.on('pageerror', e => kaputt.push(e.message));
+  await page.goto(`http://127.0.0.1:${port}/MPSkills/__fit_presenter.html`, { waitUntil: 'load' });
+  const montiere = async (v) => {
+    await page.evaluate(v => { window.__V = v; window.__SIG = 'a'; }, v);
+    await page.evaluate(() => {
+      if (window.__impl) { try { window.__impl.unmount(); } catch (e) {} }
+      document.getElementById('host').innerHTML = '';
+    });
+    await page.evaluate(() => window.__mount());
+    await page.waitForSelector('.ks-stage > :not(.ks-booting)', { timeout: 5000 }).catch(() => {});
+  };
+  const bild = async (name) => {
+    if (MIT_BILDERN) await page.screenshot({ path: path.join(SHOTS, `bewegung-${name}-${s.name}.png`) });
+  };
+
+  // Lobby: 28 fallen herein. Nach 9 s steht jeder (28 × 170 ms
+  // Abstand + Fall + Plumps + Aufstehen).
+  for (const phase of ['lobby', 'lobby1']) {
+    await montiere(BILDER.presenter[phase]());
+    await page.waitForTimeout(9000);
+    const w = await page.evaluate(() => {
+      const wiese = document.querySelector('.ks-wiese');
+      if (!wiese) return null;
+      const r = wiese.getBoundingClientRect();
+      const figs = Array.from(wiese.querySelectorAll('.ks-karte'));
+      const raus = figs.filter(f => {
+        const b = f.querySelector('.ks-kpic').getBoundingClientRect();
+        return b.left < r.left - 1 || b.right > r.right + 1 || b.top < r.top - 1 || b.bottom > r.bottom + 1;
+      }).length;
+      return { n: figs.length, wartet: wiese.querySelectorAll('.is-wartet, .is-faellt').length, raus };
+    });
+    const wo = `${s.name} · Bewegung · ${phase}`;
+    ok(`${wo}: die Lobby ist eine Wiese`, !!w);
+    if (w) {
+      ok(`${wo}: alle sind heruntergefallen und gelandet`, w.wartet === 0, w.wartet + ' noch in der Luft');
+      ok(`${wo}: keine Figur steht neben der Wiese`, w.raus === 0, w.raus + ' von ' + w.n);
+    }
+    await bild(phase);
+  }
+
+  // Auflösung: erst Frage 5, dann Frage 6 mit neuer Reihenfolge —
+  // Platz 1 und 3 tauschen, Platz 5 fällt heraus, ein Neuer kommt.
+  await montiere(BILDER.presenter.reveal());
+  await page.waitForTimeout(4500);
+  await page.evaluate(() => {
+    const v = JSON.parse(JSON.stringify(window.__V));
+    v.current_q_idx = 5;
+    const lb = v.leaderboard;
+    const neu = Object.assign({}, lb[4], { participant_id: 'p9', nickname: 'Neu', creature_id: 9 });
+    v.leaderboard = [lb[2], lb[1], lb[0], lb[3], neu].map((p, i) => Object.assign({}, p, { rank: i + 1 }));
+    window.__V = v; window.__SIG = 'b';
+    window.__impl.update();
+  });
+  await page.waitForTimeout(400);
+  const mitten = await page.evaluate(() => ({
+    laeuft: document.querySelectorAll('.ks-slot.is-laeuft').length,
+    geist: document.querySelectorAll('.ks-geist').length
+  }));
+  ok(`${s.name} · Bewegung · reveal: wer den Platz wechselt, läuft`, mitten.laeuft === 3,
+     mitten.laeuft + ' laufen');
+  ok(`${s.name} · Bewegung · reveal: wer herausfällt, geht hinaus`, mitten.geist === 1,
+     mitten.geist + ' gehen');
+  await bild('reveal-unterwegs');
+  await page.waitForTimeout(4500);
+  let m = await page.evaluate(messe, false);
+  ok(`${s.name} · Bewegung · reveal: alle angekommen, nichts ragt heraus`, m.raus.length === 0,
+     m.raus.slice(0, 4).join(' | '));
+  ok(`${s.name} · Bewegung · reveal: keiner läuft mehr`,
+     await page.evaluate(() => !document.querySelector('.ks-slot.is-laeuft, .ks-geist')));
+  await bild('reveal');
+
+  // Siegerehrung: Platz 3 springt bei 2,3 s, Platz 2 bei 4,9 s, dann
+  // Trommelwirbel, Platz 1 bei 9,3 s, fertig bei 10,3 s (feierStart).
+  await montiere(BILDER.presenter.ended());
+  await page.waitForTimeout(7000);
+  const halb = await page.evaluate(() =>
+    Array.from(document.querySelectorAll('.ks-stufe.is-leer')).map(e => e.dataset.rank).join(','));
+  ok(`${s.name} · Bewegung · ended: erst 3 und 2, Platz 1 wartet`, halb === '1', 'leer: ' + halb);
+  await bild('ended-spannung');
+  await page.waitForTimeout(5500);
+  const fertig = await page.evaluate(() => ({
+    leer: document.querySelectorAll('.ks-stufe.is-leer').length,
+    oben: document.querySelectorAll('.ks-karte.is-oben').length,
+    fertig: !!document.querySelector('.ks-feier.ist-fertig')
+  }));
+  ok(`${s.name} · Bewegung · ended: alle drei stehen oben`, fertig.leer === 0 && fertig.oben === 3,
+     JSON.stringify(fertig));
+  ok(`${s.name} · Bewegung · ended: die Feier ist durch`, fertig.fertig);
+  m = await page.evaluate(messe, false);
+  ok(`${s.name} · Bewegung · ended: nichts ragt heraus`, m.raus.length === 0, m.raus.slice(0, 4).join(' | '));
+  ok(`${s.name} · Bewegung · ended: die Bühne scrollt nicht`, m.buehneUeber <= 1, m.buehneUeber + ' px');
+  await bild('ended');
+  ok(`${s.name} · Bewegung: keine Ausnahme im Browser`, kaputt.length === 0, kaputt.slice(0, 2).join(' | '));
   await ctxB.close();
 }
 
