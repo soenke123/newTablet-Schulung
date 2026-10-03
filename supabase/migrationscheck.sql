@@ -120,6 +120,10 @@ pruef(nr, was, treffer, merkmal) as (
      (select bool_or(src like '%? ''sets''%') from def where proname = 'wi_solo_chosen'),
      'ohne: alles abgewaehlt heisst am Server "alles" — der Topf fuellt sich von selbst'),
 
+    ('0187', 'skill_room_remove + nur Anwesende bekommen ein Volk',
+     (select count(*) > 0 from funk where proname = 'skill_room_remove'),
+     'ohne: "Entfernen" im Onboarding meldet einen Fehler, Offline-Kinder bekommen beim Start ein Volk'),
+
     -- ── Die eigene Insel ───────────────────────────────────────
     ('0136', 'wi_solo_learners',
      (select count(*) > 0 from spalte where tab = 'wi_solo_learners' and sp = 'token'),

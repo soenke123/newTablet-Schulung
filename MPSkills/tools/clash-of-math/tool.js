@@ -5038,20 +5038,30 @@
     els.lobbyTeams.innerHTML = out;
   }
 
-  /* Wer im Raum ist, aber gerade nicht online: eine eigene Reihe ganz
+  /* Wer im Raum ist, aber in keinem Team steht: eine eigene Reihe ganz
      unten, nebeneinander. Bewusst NICHT in die Völker-Spalten
      einsortiert — beim Start bekommen genau diese Kinder kein Team
      (clash_room_start), und was auf dem Beamer bei einem Volk steht,
-     soll auch dort mitspielen. Die Reihe verschwindet ganz, wenn alle
-     online sind: eine leere Überschrift wäre nur Lärm. */
+     soll auch dort mitspielen. Seit 0187 zwei Gruppen: offline (auch
+     wer stillgelegt UND offline ist) und stillgelegt — dieselbe Zeile
+     wie in Wordisland und Knowledge Stack. Die Reihe verschwindet ganz,
+     wenn niemand fehlt: eine leere Überschrift wäre nur Lärm. */
   function renderOffline(v) {
     if (!els.offline) return;
-    const names = Array.isArray(v.offline_members) ? v.offline_members : [];
-    if (!names.length) { els.offline.classList.add('cm-hide'); els.offline.innerHTML = ''; return; }
+    const off   = Array.isArray(v.offline_members) ? v.offline_members : [];
+    const still = Array.isArray(v.blocked_members) ? v.blocked_members : [];
+    if (!off.length && !still.length) { els.offline.classList.add('cm-hide'); els.offline.innerHTML = ''; return; }
     els.offline.classList.remove('cm-hide');
-    els.offline.innerHTML =
-      `<span class="cm-offlabel">Gerade nicht online (${names.length}) — sie bekommen beim Start kein Team:</span>` +
-      names.map(x => `<span class="cm-offname">${ctx.esc(x)}</span>`).join('');
+    let out = '';
+    if (off.length) {
+      out += `<span class="cm-offlabel">Offline (${off.length}) — sie bekommen beim Start kein Team:</span>` +
+        off.map(x => `<span class="cm-offname">${ctx.esc(x)}</span>`).join('');
+    }
+    if (still.length) {
+      out += `<span class="cm-offlabel cm-offlabel--still">Stillgelegt (${still.length}) — sie bekommen kein Team:</span>` +
+        still.map(x => `<span class="cm-offname cm-offname--still">🔇 ${ctx.esc(x)}</span>`).join('');
+    }
+    els.offline.innerHTML = out;
   }
 
   /* Das Siegerbild am Beamer: alle Völker, die ersten drei auf dem
