@@ -789,12 +789,26 @@
          bekommt es die eine Adresse, die der Anbieter vergeben
          hat. Hier und nicht früher: erst jetzt steht fest, dass es
          über die WAN-Karte geht. */
+      // Vor NAT festhalten: eine Fehlermeldung geht an den echten Absender im Haus.
+      const kopf = origKopf(pkt);
       if (nat && netz.istWan(node, route.nic)) {
         nat.hinaus(node, pkt, karte(node, route.nic), say);
       }
 
       say('route', node, { dst: pkt.dst, via: U.int2ip(route.nextHop), ttl: pkt.ttl });
-      engine.at(PROC, () => shipIp(node, route, pkt), 'weiterleiten', node.id);
+      /* Findet der Router den letzten Schritt nicht (niemand meldet
+         sich auf ARP), sagt er es dem Absender: ICMP 3, Code 1
+         „Gerät nicht erreichbar" — wie ein echter Router. Ohne das
+         wartet der Absender bis zur Zeitüberschreitung und liest
+         dort die falsche Ursache. Über eine Fehlermeldung selbst
+         gibt es keine Fehlermeldung (sonst ein Pingpong). */
+      const fehlerMelden = !(pkt.proto === 'icmp' && pkt.payload
+        && (pkt.payload.type === 3 || pkt.payload.type === 11));
+      engine.at(PROC, () => shipIp(node, route, pkt, {
+        onFail: (code) => {
+          if (code === 'arp' && fehlerMelden) sendIcmp(node, kopf.src, 3, 1, { orig: kopf });
+        }
+      }), 'weiterleiten', node.id);
     }
 
     /* ═══ ICMP ═══════════════════════════════════════════════ */
@@ -888,7 +902,13 @@
        Frage IST, welche Station auf welche geantwortet hat. */
     function origKopf(pkt) {
       const p = pkt.payload || {};
-      return { src: pkt.src, dst: pkt.dst, id: p.id, seq: p.seq };
+      const kopf = { src: pkt.src, dst: pkt.dst, proto: pkt.proto, id: p.id, seq: p.seq };
+      /* Die Ports gehören dazu, damit ein Heimrouter die Meldung
+         über ein TCP- oder UDP-Paket zurückübersetzen kann (nat.js,
+         `fehlerHerein`) — so wie ein echter NAT-Router den Kopf
+         liest, den jede ICMP-Fehlermeldung mitbringt. */
+      if (pkt.proto === 'tcp' || pkt.proto === 'udp') { kopf.sport = p.sport; kopf.dport = p.dport; }
+      return kopf;
     }
 
     function handleIpLocal(node, nicIndex, pkt) {
@@ -1095,7 +1115,7 @@
       const ev = engine.at(frist, () => {
         if (!s.pings.has(key)) return;
         s.pings.delete(key);
-        cb({ ok: false, error: 'Zeitüberschreitung — keine Antwort.', seq: seq });
+        cb({ ok: false, frist: true, error: 'Zeitüberschreitung — keine Antwort.', seq: seq });
       }, 'ping-frist', node.id);
 
       s.pings.set(key, { ev, cb, sent });

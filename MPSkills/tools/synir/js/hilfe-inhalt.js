@@ -226,7 +226,8 @@
           'In der Subnetz-Ansicht bleibt er ohne Farbe — er liegt in keinem Netz, seine Kabel schon.',
           'Was er gelernt hat: in der Aktion antippen, oder im Terminal eines Geräts <code>mactabelle</code> (nur am Switch).'
         ],
-        tipp: 'Ping in <em>Zeitlupe</em>: beim ersten Mal flutet der Switch, ab dem zweiten Paket geht es nur noch an eine Buchse.',
+        tipp: 'Ping in <em>Zeitlupe</em>: beim ersten Mal geht ein ARP-<b>Rundruf</b> („Wer hat …?“) an alle Buchsen — dabei lernt der Switch den Absender, '
+          + 'mit der Antwort den Empfänger. Danach geht jedes Paket nur noch an eine Buchse.',
         such: 'switch verteiler hub mac-tabelle schicht 2 fluten buchsen ports',
         zeigen: ['[data-add="switch"]', 'geraet:switch']
       }),
@@ -243,7 +244,7 @@
         wissen: [
           '<em>Schnittstelle hinzufügen</em> baut weitere Karten an (bis 8).',
           'Fährt man über eine Netzwerkkarte, leuchtet draußen ihr Kabel.',
-          'Ein Router hat keinen DHCP-Server — DHCP ist ein Dienst eines Endgeräts oder des Heimrouters.',
+          'In SYNIR hat ein Router keinen DHCP-Server (wie in Filius) — DHCP ist hier ein Dienst eines Endgeräts oder des Heimrouters. Echte Router können oft beides.',
           'Kürzel auf der Fläche: <b>R1, R2 …</b>'
         ],
         such: 'router vermittlung schicht 3 gateway netzwerkkarte schnittstelle',
@@ -434,7 +435,7 @@
         wissen: [
           'Übersetzt wird Adresse <b>und</b> Port — erst das macht den Rückweg eindeutig (NAPT).',
           'Die NAT-Tabelle füllt sich beim Hinausgehen; Freigaben stehen dort sofort (Spalte <em>woher</em>: Freigabe / Gespräch).',
-          'NAT lässt sich nicht abschalten — ein Heimrouter übersetzt immer, wie im echten Leben.',
+          'In SYNIR übersetzt der Heimrouter immer — so wie an einem üblichen Heimanschluss. (Echte Geräte lassen NAT teils abschalten.)',
           'Im Mitschnitt sieht man beide Seiten: innen die private Adresse, außen die WAN-Adresse des Heimrouters.'
         ],
         such: 'nat napt portfreigabe port forwarding weiterleitung übersetzung privat öffentlich wan-adresse',
@@ -450,7 +451,8 @@
         ],
         wissen: [
           'Funk belegt keine Buchse und ist auf der Fläche gestrichelt.',
-          'Funk ist ein gemeinsames Medium: jeder Gast im selben WLAN „hört“ die Pakete der anderen (Mitschnitt → <em>👁 Mitlesende</em>).',
+          'Das WLAN in SYNIR ist ein <b>offenes</b> WLAN (wie ein Hotspot ohne Passwort): Funk ist ein gemeinsames Medium, jeder Gast „hört“ die Pakete der anderen '
+            + '(Mitschnitt → <em>👁 Mitlesende</em>). Mit WPA2/WPA3 ist jede Verbindung einzeln verschlüsselt — dann liest nur noch der Zugangspunkt mit.',
           'Das WLAN eines Switch wird nur im Entwurf geschaltet.'
         ],
         such: 'wlan wifi funk drahtlos ssid accesspoint zugangspunkt',
@@ -537,6 +539,7 @@
         wissen: [
           'Ein laufender Befehl endet mit <kbd>Esc</kbd> oder <em>■ Abbrechen</em> (auf dem Tablet).',
           'Ein gescheiterter Ping sagt, <b>woran</b> es lag (z. B. „Niemand hat sich auf die ARP-Anfrage gemeldet“).',
+          '<code>traceroute</code>: Eine Station, die nicht antwortet, steht als <code>*</code> da, und es geht weiter — erst nach drei stummen Stationen hintereinander ist Schluss.',
           'Der erste Ping dauert länger — erst wird per ARP die MAC-Adresse gesucht.'
         ],
         such: 'terminal konsole kommandozeile befehl cmd ping traceroute tracert nslookup ipconfig arp route netstat',
@@ -686,7 +689,8 @@
         wissen: [
           'Ohne Vertrauen zeigt der Browser eine Warnseite mit „Trotzdem fortfahren“ — genau wie im echten Netz.',
           'Im Mitschnitt: Handschlag mit Servername im Klartext, danach nur noch 🔒 verschlüsselter „Salat“.',
-          'Die Verschlüsselung ist ein Lehrmodell (Spielzeug-Kryptografie), aber im Ablauf echt (TLS 1.3).'
+          'Die Verschlüsselung ist ein Lehrmodell (Spielzeug-Kryptografie), im Ablauf angelehnt an echtes TLS: Schlüsselaustausch, Zertifikat, Prüfung des Namens. '
+            + 'Eine Vereinfachung: das Zertifikat steht hier im Klartext (wie bei TLS 1.2) — bei TLS 1.3 ist es schon verschlüsselt.'
         ],
         such: 'zertifikat zertifizierungsstelle ca https tls ssl verschlüsselung schloss fingerabdruck vertrauen',
         zeigen: ['.dt.is-front']

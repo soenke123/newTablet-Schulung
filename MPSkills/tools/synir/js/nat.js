@@ -147,8 +147,8 @@
 
     /* Welche Nummer im Paket steht für „welches Gespräch"?
        Bei UDP und TCP der Port, bei ICMP die Kennung des Echos.
-       Alles andere (ICMP-Fehlermeldungen) hat hier nichts zu
-       suchen und geht unübersetzt durch.
+       ICMP-Fehlermeldungen haben keine eigene Nummer; sie werden
+       über den mitgebrachten Kopf übersetzt (`fehlerHerein`).
 
        ⚠️ TCP steht hier nicht der Vollständigkeit halber: ohne
        diese Zeile käme aus dem Internet keine einzige Antwort auf
@@ -203,8 +203,87 @@
        nach draußen und niemand sonst hält es mehr in der Hand.
        (Der Rahmen wurde beim Ankommen schon kopiert, siehe
        netz.sendFrame.)                                         */
+    /* ═══ ICMP-Fehlermeldungen ════════════════════════════════
+       „Zeit abgelaufen" (11) und „nicht erreichbar" (3) tragen
+       keine eigene Nummer, die in der Tabelle stünde — aber sie
+       bringen den Kopf des Pakets mit, um das es geht (`orig`).
+       Ein echter NAT-Router liest genau diesen Kopf und übersetzt
+       ihn mit. Ohne das endet `traceroute` aus dem Heimnetz nach
+       der ersten Station, obwohl der Ping durchkommt — und das Kind
+       liest eine falsche Ursache.
+
+       Herein: die Meldung ist an die WAN-Adresse gerichtet und
+       nennt im Kopf als ABSENDER die WAN-Adresse mit der äußeren
+       Nummer. Beides wird auf das Gerät im Haus zurückgedreht.
+       Hinaus: umgekehrt — ein Gerät im Haus meldet einen Fehler
+       über ein Paket, das von draußen hereinkam; dessen ZIEL war
+       vor der Übersetzung die WAN-Adresse. */
+    const istFehler = (pkt) => pkt.proto === 'icmp' && pkt.payload
+      && (pkt.payload.type === 3 || pkt.payload.type === 11)
+      && pkt.payload.orig && typeof pkt.payload.orig === 'object';
+
+    function origNummer(o, feld) {
+      if (o.proto === 'tcp' || o.proto === 'udp') return o[feld];
+      return o.id;                     // Echo (oder ein alter Kopf ohne proto)
+    }
+    function origSetzen(o, feld, wert) {
+      if (o.proto === 'tcp' || o.proto === 'udp') o[feld] = wert; else o.id = wert;
+    }
+    const origProto = (o) => o.proto || 'icmp';
+
+    function fehlerHerein(node, pkt, say) {
+      const o = pkt.payload.orig;
+      const nr = origNummer(o, 'sport');
+      if (nr == null) return false;
+      const proto = origProto(o);
+      const t = tb(node);
+      const z = t.zur.get('x|' + nr);
+      let innen = null, innenPort = null;
+      if (z && z.exp > engine.now && z.proto === proto && o.src === z.aussen && pkt.dst === z.aussen) {
+        innen = z.innen; innenPort = z.innenPort;
+      } else {
+        const wan = node.nics[netz.WAN];
+        if (!wan || !wan.ip || pkt.dst !== wan.ip || o.src !== wan.ip) return false;
+        const f = frei(node).find(x => x.proto === proto && x.port === nr);
+        if (!f) return false;
+        innen = f.lanIp; innenPort = f.lanPort;
+      }
+      say('nat', node, {
+        dir: 'herein', proto: 'icmp',
+        von: pkt.dst + ':' + nr, nach: innen + ':' + innenPort, src: pkt.src
+      });
+      pkt.dst = innen;
+      o.src = innen;
+      origSetzen(o, 'sport', innenPort);
+      return true;
+    }
+
+    function fehlerHinaus(node, pkt, wanNic, say) {
+      const o = pkt.payload.orig;
+      const nr = origNummer(o, 'dport');
+      if (nr == null || pkt.src === wanNic.ip) return false;
+      const proto = origProto(o);
+      let aussenPort = null;
+      const fh = frei(node).find(x => x.proto === proto && x.lanIp === o.dst && x.lanPort === nr);
+      if (fh) aussenPort = fh.port;
+      else {
+        const z = tb(node).hin.get(proto + '|' + o.dst + '|' + nr);
+        if (!z || z.exp <= engine.now) return false;
+        aussenPort = z.aussenPort;
+      }
+      say('nat', node, {
+        dir: 'hinaus', proto: 'icmp',
+        von: pkt.src + ':' + nr, nach: wanNic.ip + ':' + aussenPort, dst: pkt.dst
+      });
+      pkt.src = wanNic.ip;
+      o.dst = wanNic.ip;
+      origSetzen(o, 'dport', aussenPort);
+      return true;
+    }
+
     function hinaus(node, pkt, wanNic, say) {
       if (!aktiv(node) || !wanNic || !wanNic.ip) return false;
+      if (istFehler(pkt)) return fehlerHinaus(node, pkt, wanNic, say);
       const nr = kennung(pkt, 'hin');
       if (nr == null) return false;
 
@@ -267,6 +346,7 @@
        Antwort des DHCP-Servers beim Anbieter zum Beispiel). */
     function herein(node, pkt, say) {
       if (!aktiv(node)) return false;
+      if (istFehler(pkt)) return fehlerHerein(node, pkt, say);
       const nr = kennung(pkt, 'zur');
       if (nr == null) return false;
 

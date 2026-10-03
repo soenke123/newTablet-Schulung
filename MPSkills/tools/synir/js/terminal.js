@@ -110,7 +110,7 @@
         if (fertig || run.stop) return;
         fertig = true;
         run.still++;
-        cb({ ok: false, seq: seq, echt: true,
+        cb({ ok: false, seq: seq, echt: true, frist: true,
              error: 'Zeitüberschreitung — keine Antwort.' });
       });
       stack.ping(node, target, seq, stack.PING_FRIST, (r) => {
@@ -264,6 +264,15 @@
        nicht dreißig Zeilen lang zusehen. */
     const TRACE_MAX = 15;
 
+    /* Eine Station, die schweigt, ist nicht das Ende des Weges.
+       Wie das echte Werkzeug steht dann `*` in der Zeile, und es
+       geht mit der nächsten TTL weiter — sonst lernt die Klasse
+       „antwortet ein Router nicht, ist dahinter Schluss". Erst
+       nach drei stummen Stationen hintereinander hört es auf
+       (das Original zählt bis 30; hier soll niemand minutenlang
+       zusehen). */
+    const TRACE_STUMM = 3;
+
     CMDS.traceroute = {
       help: 'traceroute <adresse|name>  — die Stationen auf dem Weg',
       run(node, args) {
@@ -307,6 +316,7 @@
 
       let ttl = 1;
       let seq = 1;
+      let stumm = 0;
 
       const fertig = (satz, cls) => {
         endRun(node.id);
@@ -335,6 +345,21 @@
               + (meine === 1 ? ' Station.' : ' Stationen.'), 'ok');
             return;
           }
+          if (r.frist) {
+            write(node.id, '  ' + String(meine).padStart(2) + '  *   keine Antwort von dieser Station', 'dim');
+            if (++stumm >= TRACE_STUMM) {
+              fertig(TRACE_STUMM + ' Stationen hintereinander ohne Antwort — dahinter kommt das '
+                + 'Paket vermutlich nicht mehr an.', 'fail');
+              return;
+            }
+            ttl++;
+            /* Nach einer Frist in echter Zeit (Uhr steht) direkt
+               weiter, wie beim Ping — ein Ereignis käme nie. */
+            if (r.echt) stufe();
+            else engine.at(0, stufe, 'trace-takt', node.id);
+            return;
+          }
+          stumm = 0;
           if (r.icmp === 11 && r.from) {
             write(node.id, '  ' + String(meine).padStart(2) + '  ' + r.from
               + (r.rtt != null ? '   ' + U.fmtTime(r.rtt) : ''), 'dim');

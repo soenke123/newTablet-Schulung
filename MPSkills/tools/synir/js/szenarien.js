@@ -193,21 +193,23 @@
           + 'stören sich. Prüfe mit Pings, dass jedes Gerät jedes andere erreicht.' },
         { typ: 'benutzen', text: 'Schau dem Switch beim <strong>Lernen</strong> zu: Baue ein <strong>neues Gerät</strong> (E6) an den Switch, '
           + 'gib ihm eine freie Adresse, schalte auf <em>Aktion</em> und drehe unten das <strong>Tempo</strong> auf <em>Zeitlupe</em>. '
-          + 'Schick von E6 einen Ping an E1 und sieh dir an, wohin die Nachricht läuft. Beim ersten Mal kennt der Switch E6 noch nicht — '
-          + 'wohin schickt er die Nachricht? Schick den Ping gleich noch einmal: Was ist jetzt anders?' }
+          + 'Schick von E6 einen Ping an E1 und sieh dir an, wohin die Nachricht läuft. Beim ersten Mal weiß E6 noch nicht, an welcher '
+          + 'MAC-Adresse E1 zu finden ist, und ruft deshalb in den Raum: „Wer hat diese Adresse?“ Wohin schickt der Switch diesen '
+          + 'Rundruf — und was merkt er sich dabei über E6? Schick den Ping gleich noch einmal: Was ist jetzt anders?' }
       ],
       hilfe: [
         { begriff: 'IP-Adresse', text: 'Die „Hausnummer“ eines Geräts im Netz: vier Zahlen von 0 bis 255, durch Punkte '
           + 'getrennt. Zwei Geräte im selben Netz dürfen nie dieselbe haben.' },
-        { begriff: 'Selbes Netz?', text: 'Geräte können sich direkt erreichen, wenn die <strong>ersten drei Zahlen</strong> ihrer Adresse gleich sind: '
+        { begriff: 'Selbes Netz?', text: 'Bei der Netzmaske <code>255.255.255.0</code> (so ist sie hier eingetragen) gilt: Geräte können sich direkt erreichen, wenn die <strong>ersten drei Zahlen</strong> ihrer Adresse gleich sind: '
           + '<code>192.168.1.10</code> und <code>192.168.1.11</code> gehören zusammen, <code>192.168.2.11</code> nicht. Nur die letzte '
           + 'Zahl ist bei jedem Gerät anders.' },
         { begriff: 'Ping', text: 'Ein „Bist du da?“ an eine Adresse. Kommt die Antwort zurück, funktioniert die Verbindung. '
           + 'Im Modus <em>Aktion</em> tippst du das Gerät an und schreibst im Terminal <code>ping</code> und die Adresse.' },
         { begriff: 'Switch', text: 'Ein Verteiler mit vielen Buchsen. Alle Geräte stecken am Switch, und er leitet '
           + 'jede Nachricht an das Gerät weiter, für das sie gedacht ist. Ein Endgerät selbst hat nur eine Buchse. '
-          + 'Ein Switch <em>lernt</em>: Er merkt sich, an welcher Buchse welches Gerät hängt. Kennt er das Ziel noch nicht, '
-          + 'schickt er die Nachricht an alle — danach nur noch dorthin, wo das Ziel steckt.' },
+          + 'Ein Switch <em>lernt</em>: Bei jeder Nachricht merkt er sich, an welcher Buchse der Absender hängt. Kennt er das Ziel noch nicht, '
+          + 'schickt er die Nachricht an alle — danach nur noch dorthin, wo das Ziel steckt. Einen <em>Rundruf</em> („Wer hat …?“) '
+          + 'bekommen immer alle.' },
         { begriff: 'Tempo', text: 'Der Regler unten in der Mitte stellt ein, wie schnell die Nachrichten über die Kabel laufen. '
           + 'Auf <em>Zeitlupe</em> siehst du jede Nachricht einzeln wandern.' },
         { begriff: 'Was der Switch gelernt hat', text: 'Wer es genau sehen will: <em>Ansicht &amp; Tools → Geräte-Lerninformationen</em> einschalten und den Switch '
@@ -249,7 +251,7 @@
         { begriff: 'Router', text: 'Verbindet Netze miteinander. Er hat in jedem Netz, an dem er hängt, eine eigene Adresse.' },
         { begriff: 'Gateway', text: 'Ein Endgerät kennt nur sein eigenes Netz. Alles, was woanders hin soll, schickt es an das '
           + '<em>Gateway</em> — das ist die Adresse des Routers in seinem eigenen Netz.' },
-        { begriff: 'Selbes Netz?', text: 'Adressen gehören zusammen, wenn die ersten drei Zahlen gleich sind: '
+        { begriff: 'Selbes Netz?', text: 'Bei der Netzmaske <code>255.255.255.0</code> gehören Adressen zusammen, wenn die ersten drei Zahlen gleich sind: '
           + '<code>192.168.1.10</code> und <code>192.168.1.11</code> ja, <code>192.168.1.10</code> und <code>192.168.2.10</code> nein.' }
       ],
       stern: 'Lösche bei E1 das Gateway wieder. Was geht dann noch, was nicht mehr? Sag es vorher voraus.'

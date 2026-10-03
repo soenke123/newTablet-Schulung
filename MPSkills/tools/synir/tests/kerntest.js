@@ -567,6 +567,94 @@ section('traceroute');
   })());
 }
 
+/* ═══ 11b · traceroute: stumme Station und Heimrouter ═══════════
+   Zwei Fehler, die beide dieselbe falsche Lehre erzeugten:
+   „antwortet eine Station nicht, ist dahinter Schluss".
+
+   1. Eine Station, die schweigt, beendet den Befehl nicht mehr —
+      es steht `*` da, und es geht weiter (bis drei stumme
+      Stationen hintereinander).
+   2. Hinter einem Heimrouter kam „Zeit abgelaufen" nie beim
+      Laptop an: NAT übersetzte nur Echo, nicht die Fehlermeldung.
+      Der Ping ging, traceroute endete nach Station 1.          */
+section('traceroute: stumme Station');
+{
+  const { engine, netz, stack } = bau();
+  const term = new sandbox.Terminal(engine, netz, stack);
+  const a  = netz.addNode('host', 100, 100);
+  const r1 = netz.addNode('router', 200, 100);
+  const r2 = netz.addNode('router', 300, 100);
+  const b  = netz.addNode('host', 400, 100);
+  konf(a, 0, '192.168.1.10'); a.gateway = '192.168.1.1';
+  konf(r1, 0, '192.168.1.1'); konf(r1, 1, '10.0.0.1');
+  konf(r2, 0, '10.0.0.2');    konf(r2, 1, '192.168.2.1');
+  konf(b, 0, '192.168.2.20'); b.gateway = '192.168.2.1';
+  r1.routes = [{ net: '192.168.2.0', mask: '255.255.255.0', gateway: '10.0.0.2' }];
+  r2.routes = [{ net: '192.168.1.0', mask: '255.255.255.0', gateway: '10.0.0.1' }];
+  netz.addCable(a.id, 0, r1.id, 0);
+  netz.addCable(r1.id, 1, r2.id, 0);
+  netz.addCable(r2.id, 1, b.id, 0);
+  // R2 verwirft still alles von und zu E1 — aber erst NACH der TTL-Prüfung.
+  r2.firewall = { on: true, typ: 'blacklist', ablehnen: false,
+                  regeln: [{ adresse: '192.168.1.10', maske: '' }] };
+
+  term.submit(a.id, 'traceroute 192.168.2.20');
+  engine.runUntil(engine.now + 120 * SEC);
+  const txt = term.linesOf(a.id).map(l => l.text).join('\n');
+  ok('R2 meldet sich noch als Station 2', /\n\s+2\s+10\.0\.0\.2/.test(txt), txt.slice(-500));
+  ok('⭐ eine stumme Station steht als * da — und es geht weiter',
+     /\n\s+3\s+\*/.test(txt) && /\n\s+4\s+\*/.test(txt), txt.slice(-500));
+  ok('nach drei stummen Stationen ist Schluss',
+     /\n\s+5\s+\*/.test(txt) && !/\n\s+6\s+/.test(txt) && /3 Stationen hintereinander ohne Antwort/.test(txt),
+     txt.slice(-500));
+}
+
+section('traceroute durch den Heimrouter (NAT)');
+{
+  const { engine, netz, stack, mit } = bau();
+  const term = new sandbox.Terminal(engine, netz, stack);
+  const a  = netz.addNode('host', 100, 100);
+  const hr = netz.addNode('heimrouter', 300, 100);
+  const r  = netz.addNode('router', 500, 100);
+  const s  = netz.addNode('host', 700, 100);
+  konf(a, 0, '192.168.1.10'); a.gateway = '192.168.1.1';
+  konf(hr, 1, '192.168.1.1', '255.255.255.0');
+  konf(hr, 0, '84.12.5.2', '255.255.255.0'); hr.nics[0].dhcp = false; hr.gateway = '84.12.5.1';
+  konf(r, 0, '84.12.5.1'); konf(r, 1, '84.12.6.1');
+  konf(s, 0, '84.12.6.20'); s.gateway = '84.12.6.1';
+  netz.addCable(a.id, 0, hr.id, 1);
+  netz.addCable(hr.id, 0, r.id, 0);
+  netz.addCable(r.id, 1, s.id, 0);
+  ok('der Heimrouter übersetzt (NAT an)', !!(hr.nat && hr.nat.on));
+
+  term.submit(a.id, 'traceroute 84.12.6.20');
+  engine.runUntil(engine.now + 60 * SEC);
+  const txt = term.linesOf(a.id).map(l => l.text).join('\n');
+  ok('⭐ Station 2 hinter dem Heimrouter kommt beim Laptop an',
+     /\n\s+2\s+84\.12\.5\.1/.test(txt), txt.slice(-500));
+  ok('und das Ziel auch', /Angekommen nach 3 Stationen/.test(txt), txt.slice(-500));
+  ok('der Laptop selbst bleibt draußen unsichtbar',
+     !mit.view().some(x => x.node === r.id && /192\.168\.1\.10/.test(x.info || '')),
+     mit.view().filter(x => x.node === r.id).map(x => x.info).join(' | ').slice(0, 400));
+
+  // „Ziel nicht erreichbar" aus dem Internet: der Grund statt Zeitüberschreitung.
+  let res = null;
+  // Längere Frist: hier geht es um die Übersetzung, nicht um das Rennen ARP gegen Ping.
+  stack.ping(a, '84.12.6.99', 1, 10 * SEC, (x) => { res = x; });
+  engine.runUntil(engine.now + 30 * SEC);
+  ok('⭐ „Ziel nicht erreichbar" erreicht den Laptop hinter NAT',
+     !!res && !res.ok && res.icmp === 3, JSON.stringify(res));
+
+  // Und umgekehrt: eine Fehlermeldung aus dem Haus nennt draußen die WAN-Adresse.
+  hr.nat.frei = [{ proto: 'udp', port: 5000, lanIp: '192.168.1.10', lanPort: 5000 }];
+  stack.sendUdp(s, '84.12.5.2', 4000, 5000, 'hallo');
+  engine.runUntil(engine.now + 10 * SEC);
+  const raus = mit.view().filter(x => x.node === r.id && /nicht erreichbar|Port/i.test(x.info || ''));
+  ok('„Port nicht erreichbar" aus dem Haus geht mit der WAN-Adresse hinaus',
+     raus.length > 0 && !raus.some(x => /192\.168\.1\.10/.test(x.info || '')),
+     mit.view().filter(x => x.node === r.id).map(x => x.info).join(' | ').slice(-400));
+}
+
 /* ═══ 12 · Netzteil und Geräteteil ═══ */
 section('Adresse aufteilen');
 {
