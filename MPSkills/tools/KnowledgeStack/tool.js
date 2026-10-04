@@ -730,7 +730,7 @@
           <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
         </div>
       </div>
-      ${kachelnHTML(opts, { modus: 'still', seed: q.qid, hidden: reading, ohneBuchstabe: true })}`;
+      ${kachelnHTML(opts, { modus: 'still', seed: mischKey(v), hidden: reading, ohneBuchstabe: true })}`;
   }
 
   /* Das n-Eck der Antworten: ein Dreieck je Kind, gefüllt, sobald es
@@ -784,7 +784,7 @@
         ${steuerHTML(letzte)}
       </header>
       ${podestHTML(v.leaderboard || [], 'rv')}
-      ${kachelnHTML(opts, { modus: 'fuell', seed: q.qid, correct: q.correct_idx, correct_indices: q.correct_indices })}
+      ${kachelnHTML(opts, { modus: 'fuell', seed: mischKey(v), correct: q.correct_idx, correct_indices: q.correct_indices })}
       ${q.explanation ? '<p class="ks-expl">' + esc(q.explanation) + '</p>' : ''}`;
   }
 
@@ -891,11 +891,18 @@
 
      Die Reihenfolge ist je Frage gemischt (Oktober 2026), damit die
      richtige Antwort nicht immer an derselben Stelle steht. Gemischt
-     wird mit der qid als Startwert: Beamer und alle Tablets rechnen
-     daraus dieselbe Reihenfolge, und Frage und Auflösung auch — die
+     wird mit Fragennummer + Antworttexten als Startwert (mischKey) —
+     NICHT mit der qid, denn die bekommt nur der Beamer, das Tablet
+     nicht. So rechnen Beamer und alle Tablets dieselbe Reihenfolge,
+     und Frage und Auflösung auch — die
      Regel oben gilt weiter. Farbe und Buchstabe gehören zur STELLE
      (oben links ist immer A und rot), data-idx und Füllstand zur
      ursprünglichen Antwort, denn die kennt der Server.               */
+  function mischKey(v) {
+    const q = (v && v.question) || {};
+    return (v.current_q_idx | 0) + '|' + (Array.isArray(q.options) ? q.options : []).join('|');
+  }
+
   function mischung(opts, seed) {
     const voll = [], leer = [];
     opts.forEach((t, i) => (String(t || '').trim() ? voll : leer).push(i));
@@ -1617,7 +1624,7 @@
         <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
         <p class="ks-reading-sub">Lies die Frage. Die Antworten erscheinen bei allen gleichzeitig.</p>
       </div>
-      ${kachelnHTML(opts, { modus: 'wahl', seed: q.qid, chosen: my ? my.chosen_idx : null, hidden: reading })}
+      ${kachelnHTML(opts, { modus: 'wahl', seed: mischKey(v), chosen: my ? my.chosen_idx : null, hidden: reading })}
       <p class="ks-gesperrt" data-ks="lock" ${my && !reading ? '' : 'hidden'}>
         Antwort abgegeben — jetzt zum Beamer sehen.</p>`;
   }
