@@ -86,31 +86,51 @@
      lässt 'jump' durch (Migration 0175), und das Zeichen stand
      unten in EMOTE_ICON. Nur in dieser Liste fehlte er, also gab es
      keinen Knopf dafür. Nachgetragen am 26.09.2026. */
-  /* Die Knopfzeichen sind eigene SVGs und keine Emojis: kleine
-     Aufkleber-Figuren mit Gesicht. Umriss in currentColor, Flächen
-     in den Spielfarben (.a Gold, .b Cyan, .c Rosa, .s Silber), Augen
-     und Mund (.f / .m) in der harten Kante. */
-  const ICO = (inner) => '<svg class="ks-ico" viewBox="0 0 24 24" aria-hidden="true">' + inner + '</svg>';
+  /* Die Knopfzeichen sind eigene, geometrische SVGs und keine Emojis.
+     Jedes hat seine eigene Farbwelt: --c (kräftig) und --c2 (heller),
+     gesetzt am <svg> und am Knopf. Formen: .p/.q gefüllt, .l/.m
+     als Linie. */
+  const ICO = (c, c2, inner) => '<svg class="ks-ico" viewBox="0 0 24 24" aria-hidden="true" style="--c:'
+    + c + ';--c2:' + c2 + '">' + inner + '</svg>';
+  const STAR = (x, y, r, cls) => '<path class="' + cls + '" d="M' + x + ' ' + (y - r) + 'C' + (x + r * .15) + ' ' + (y - r * .3) + ' ' + (x + r * .3) + ' ' + (y - r * .15) + ' ' + (x + r) + ' ' + y
+    + 'C' + (x + r * .3) + ' ' + (y + r * .15) + ' ' + (x + r * .15) + ' ' + (y + r * .3) + ' ' + x + ' ' + (y + r)
+    + 'C' + (x - r * .15) + ' ' + (y + r * .3) + ' ' + (x - r * .3) + ' ' + (y + r * .15) + ' ' + (x - r) + ' ' + y
+    + 'C' + (x - r * .3) + ' ' + (y - r * .15) + ' ' + (x - r * .15) + ' ' + (y - r * .3) + ' ' + x + ' ' + (y - r) + 'z"/>';
   const ICONS = {
-    // zwinkerndes Gesicht mit Funken
-    wave:  ICO('<circle class="a" cx="11" cy="13" r="8"/><circle class="f" cx="8.2" cy="11.5" r="1.2"/><path class="m" d="M11.5 11.8q1.5-1.6 3 0"/><path class="m" d="M7 15.5q4 4.2 8 0"/><path d="M19 3.5l1.2 2.3M21.5 7.5l-2.4.6"/>'),
-    // Rakete mit Bullauge und Flamme
-    jump:  ICO('<path class="s" d="M12 1.5c3 2.5 4.2 6 4.2 9.5V16H7.8v-5c0-3.500 1.200-7 4.200-9.500z"/><circle class="b" cx="12" cy="9" r="2.2"/><path class="c" d="M7.8 12.5L4.5 17l3.300-1zM16.200 12.500l3.300 4.500-3.300-1z"/><path class="a" d="M9.800 17.500c0 2.500 1 4.500 2.200 4.500s2.200-2 2.200-4.500z"/>'),
-    // Gesicht mit Partyhut und Konfetti
-    cheer: ICO('<circle class="a" cx="12" cy="15" r="7"/><path class="c" d="M12 1.500L7.800 9.500h8.400z"/><circle class="b" cx="12" cy="1.800" r="1.100"/><path class="m" d="M8 14.500q1.200-1.800 2.400 0M13.600 14.500q1.200-1.800 2.400 0"/><path class="f" d="M9.200 17.500h5.600a2.800 2.800 0 0 1-5.600 0z"/><path class="b" d="M3 9l1.800 1M20 7l1.500-1.500M21 12.500h2"/>'),
-    // Disco-Kugel mit Glitzer
-    dance: ICO('<path d="M12 1.500v4"/><circle class="s" cx="12" cy="13" r="7.500"/><path class="m" d="M4.500 13h15M12 5.500c-3 3-3 12 0 15M12 5.500c3 3 3 12 0 15M6.200 8.500q5.800 2 11.600 0M6.200 17.500q5.800-2 11.600 0"/><path class="a" d="M3 3.500v3M1.500 5h3M21 2.500v3M19.500 4h3"/>'),
-    // Schläfriger Klecks mit Zz
-    sleep: ICO('<circle class="b" cx="10" cy="14.500" r="7.500"/><path class="m" d="M6 14q1.600 1.800 3.200 0M11 14q1.600 1.800 3.200 0"/><circle class="f" cx="10.500" cy="18" r="1.300"/><path class="a" d="M15 2.500h5l-5 5h5"/>'),
-    // Regenwolke mit Kummergesicht
-    sad:   ICO('<path class="s" d="M7 15.500a4 4 0 0 1 .5-7.900 5 5 0 0 1 9.500 1.400 3.300 3.300 0 0 1-.5 6.500z"/><circle class="f" cx="9.500" cy="10.800" r="1.100"/><circle class="f" cx="14.500" cy="10.800" r="1.100"/><path class="m" d="M9.500 14q2.500-2 5 0"/><path class="rain" d="M8 19v2.500M12 19.500V22M16 19v2.500"/>')
+    // Funkwellen: ein Punkt, der nach außen winkt
+    wave:  ICO('#22d3ee', '#a5f3fc',
+      '<circle class="p" cx="4.500" cy="19.500" r="2.600"/>'
+      + '<path class="l" d="M4.500 13.500a6 6 0 0 1 6 6"/>'
+      + '<path class="l" d="M4.500 8.500a11 11 0 0 1 11 11"/>'
+      + '<path class="m" d="M4.500 3.500a16 16 0 0 1 16 16"/>'),
+    // Doppelter Aufwärtsschub
+    jump:  ICO('#a3e635', '#d9f99d',
+      '<path class="l" d="M4.500 11.500L12 4l7.500 7.500"/>'
+      + '<path class="m" d="M4.500 19L12 11.500 19.500 19"/>'),
+    // Große Glitzersterne
+    cheer: ICO('#facc15', '#fde68a',
+      STAR(11, 13, 9.500, 'p') + STAR(20, 4.500, 3.500, 'q') + STAR(3.800, 4.800, 2.600, 'q')),
+    // Equalizer
+    dance: ICO('#f472b6', '#fbcfe8',
+      '<rect class="p" x="2.500" y="12" width="3.600" height="10" rx="1.800"/>'
+      + '<rect class="q" x="8.100" y="3" width="3.600" height="19" rx="1.800"/>'
+      + '<rect class="p" x="13.700" y="8" width="3.600" height="14" rx="1.800"/>'
+      + '<rect class="q" x="19.300" y="14.500" width="3.600" height="7.500" rx="1.800"/>'),
+    // Mond mit Stern
+    sleep: ICO('#a78bfa', '#ddd6fe',
+      '<path class="p" d="M19.500 15A9 9 0 1 1 9 4.500a7.200 7.200 0 0 0 10.500 10.500z"/>'
+      + STAR(18.500, 5.500, 3.600, 'q')),
+    // Tropfen mit Glanz
+    sad:   ICO('#60a5fa', '#bfdbfe',
+      '<path class="p" d="M12 2.500c4 5 6.500 8 6.500 11.500a6.500 6.500 0 0 1-13 0c0-3.500 2.500-6.500 6.500-11.500z"/>'
+      + '<path class="g" d="M9 14.500a3.200 3.200 0 0 0 2.400 3.100"/>')
   };
   const EMOTES  = [
-    { id: 'wave',  icon: ICONS.wave,  title: 'Winken' },
-    { id: 'jump',  icon: ICONS.jump,  title: 'Springen' },
-    { id: 'cheer', icon: ICONS.cheer, title: 'Jubeln' },
-    { id: 'dance', icon: ICONS.dance, title: 'Tanzen' },
-    { id: 'sleep', icon: ICONS.sleep, title: 'Schlafen' }
+    { id: 'wave',  icon: ICONS.wave,  title: 'Winken',   c: '#22d3ee' },
+    { id: 'jump',  icon: ICONS.jump,  title: 'Springen', c: '#a3e635' },
+    { id: 'cheer', icon: ICONS.cheer, title: 'Jubeln',   c: '#facc15' },
+    { id: 'dance', icon: ICONS.dance, title: 'Tanzen',   c: '#f472b6' },
+    { id: 'sleep', icon: ICONS.sleep, title: 'Schlafen', c: '#a78bfa' }
   ];
   const EMOTE_ICON = ICONS;
 
@@ -1540,7 +1560,7 @@
 
   function emoteBarHTML() {
     return EMOTES.map(e => '<button type="button" class="ks-emo" data-emote="' + e.id
-      + '" title="' + e.title + '" aria-label="' + e.title + '">' + e.icon + '</button>').join('');
+      + '" style="--c:' + e.c + '" title="' + e.title + '" aria-label="' + e.title + '">' + e.icon + '</button>').join('');
   }
 
   /* ─── Tablet flicken ────────────────────────────────────── */

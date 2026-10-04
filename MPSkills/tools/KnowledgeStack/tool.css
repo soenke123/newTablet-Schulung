@@ -1158,20 +1158,16 @@ button.ks-k:disabled { cursor: default; }
   display: block;
   width: 1em; height: 1em;
   fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
+  stroke: none;
   stroke-linecap: round;
   stroke-linejoin: round;
   overflow: visible;
 }
-.ks-ico .a { fill: var(--ks-gold); }
-.ks-ico .b { fill: var(--ks-cyan); }
-.ks-ico .c { fill: #f472b6; }
-.ks-ico .s { fill: var(--ks-silber); }
-.ks-ico .f { fill: var(--ks-kante); stroke: none; }
-.ks-ico .m { fill: none; stroke: var(--ks-kante); stroke-width: 1.4; }
-.ks-ico .f.m, .ks-ico path.f { fill: var(--ks-kante); }
-.ks-ico .rain { stroke: var(--ks-cyan); stroke-width: 2; }
+.ks-ico .p { fill: var(--c); }
+.ks-ico .q { fill: var(--c2); }
+.ks-ico .l { stroke: var(--c);  stroke-width: 3; }
+.ks-ico .m { stroke: var(--c2); stroke-width: 3; }
+.ks-ico .g { stroke: var(--c2); stroke-width: 1.8; }
 .ks-emo .ks-ico { margin: 0 auto; }
 .ks-kbubble .ks-ico { filter: drop-shadow(1px 1px 0 var(--ks-kante)); }
 
@@ -1716,7 +1712,7 @@ button.ks-k:disabled { cursor: default; }
   cursor: pointer;
   background: var(--ks-erhoben);
   color: var(--ks-ink);
-  border: 2px solid var(--ks-linie2);
+  border: 2px solid color-mix(in srgb, var(--c, var(--ks-gold)) 55%, var(--ks-linie2));
   border-radius: 14px;
   box-shadow: 3px 3px 0 0 var(--ks-kante);
   transition: transform .1s, box-shadow .1s, background-color .15s, border-color .15s;
@@ -1725,8 +1721,8 @@ button.ks-k:disabled { cursor: default; }
 .ks-emo.is-gedrueckt {
   transform: translate(2px, 2px);
   box-shadow: 1px 1px 0 0 var(--ks-kante);
-  background: var(--ks-gold);
-  border-color: var(--ks-gold);
+  background: color-mix(in srgb, var(--c, var(--ks-gold)) 30%, var(--ks-erhoben));
+  border-color: var(--c, var(--ks-gold));
 }
 
 /* ─── Wesenwahl ───────────────────────────────────────────── */
