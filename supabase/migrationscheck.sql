@@ -22,7 +22,8 @@ with def as (
    where n.nspname = 'public'
      and p.proname in ('wi_view', 'wi_answer', 'wi_teams_json',
                        'wi_solo_answer', 'wi_solo_create', 'wi_solo_chosen',
-                       'wi_normalize_factions', 'wi_build_island')
+                       'wi_normalize_factions', 'wi_build_island',
+                       'ks_step', 'ks_sig')
 ),
 spalte as (
   select c.relname as tab, a.attname as sp
@@ -127,6 +128,10 @@ pruef(nr, was, treffer, merkmal) as (
     ('0188', 'Knowledge Stack: nur Anwesende im ganzen Spiel',
      (select count(*) > 0 from funk where proname = 'ks_present'),
      'ohne: stillgelegte und Offline-Kinder stehen im laufenden Quiz auf Wand und Rangliste'),
+
+    ('0178/0190', 'Knowledge Stack: 5 Sekunden Vorlesezeit',
+     (select bool_or(src like '%+ 5)%') from def where proname = 'ks_step'),
+     'ohne: kein Countdown vor den Antworten, Beamer und Tablets zeigen die Antworten sofort'),
 
     ('0189', 'Knowledge Stack: Antworten ueberall gleichzeitig',
      (select bool_or(src like '%server_now%') from def where proname = 'ks_sig'),
