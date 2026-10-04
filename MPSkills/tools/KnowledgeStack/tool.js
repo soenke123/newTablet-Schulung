@@ -55,6 +55,19 @@
       Dazu wird die Uhr gegen `server_now` gestellt: ein iPad, das
       zwei Minuten falsch geht, zeigte sonst zwei Minuten falsch.
 
+   7. Die Antworten erscheinen auf ALLEN Geräten im selben Augenblick
+      (Oktober 2026). Die 5 Sekunden Vorlesezeit (0178) reichen dafür
+      nur, wenn jedes Gerät die Serveruhr genau kennt. Vorher wurde
+      `skew` aus einer einzigen Antwort gesetzt und die Laufzeit der
+      Antwort vergessen: ein Tablet im vollen WLAN, bei dem die
+      Antwort eine Sekunde unterwegs war, deckte eine Sekunde zu spät
+      auf. Jetzt wie bei NTP: jeder Aufruf misst Hin- und Rückweg,
+      der Server stand in der Mitte, und es gilt die Messung mit dem
+      kürzesten Weg (`uhrProbe`). Aufgedeckt wird nicht beim nächsten
+      250-ms-Schlag, sondern mit einem Wecker auf die Millisekunde
+      (`weckerAufdecken`). Die Zeit, die ein Tipp zum Server braucht,
+      rechnet ks_answer seit 0189 nicht mehr gegen das Kind.
+
    ── Cache ─────────────────────────────────────────────────────
    ASSET_V gilt für creatures.js UND creatures.css. Beides wird von
    hier geladen und nicht per @import aus dem tool.css: sonst gäbe
@@ -74,10 +87,12 @@
      Lobby reicht gemütlich. Das Tablet fragt etwas seltener: 28
      Geräte im Sekundentakt sind 28 Anfragen je Sekunde, und zu
      sehen gibt es dort während der Frage ohnehin nur die Uhr, und
-     die läuft lokal. */
+     die läuft lokal. In Lobby und Auflösung aber nicht zu selten:
+     von dort startet die nächste Frage, und das Tablet muss davon
+     wissen, bevor die 5 Sekunden Vorlesezeit um sind. */
   const TAKT = {
     presenter:   { lobby: 2500, question: 1000, reveal: 1500, ended: 2500 },
-    participant: { lobby: 3000, question: 1500, reveal: 1800, ended: 3000 }
+    participant: { lobby: 2000, question: 1500, reveal: 1500, ended: 3000 }
   };
 
   const LABELS  = ['A', 'B', 'C', 'D'];
@@ -172,6 +187,8 @@
   let destroyed = false, busy = false;
   let lastSig = null, lastFrame = null, view = null;
   let skew = 0;                  // Serveruhr minus Geräteuhr, in ms
+  let uhrProben = [];            // [{ off, rtt, at }] — siehe uhrProbe
+  let aufdeckT = null;           // Wecker fürs Aufdecken der Antworten
   let myCreature = 0, mySkin = 0;
   let profileT = null;           // Entprellung des Wesen-Speicherns
   let localEmote = null, localEmoteT = null;
@@ -326,9 +343,53 @@
      ══════════════════════════════════════════════════════════ */
   const READ_TIME_SEC = 5;
 
+  /* Zeitstempel vom Server lesen. Postgres schreibt Mikrosekunden
+     („…:05.123456+00:00"); darauf hat sich Safari früher verschluckt
+     und NaN geliefert — dann gab es keine Vorlesezeit, und das
+     iPad zeigte die Antworten sofort. Deshalb von Hand. */
+  function zeit(s) {
+    if (!s) return NaN;
+    const m = /^(\d{4})-(\d\d)-(\d\d)[T ](\d\d):(\d\d):(\d\d)(?:[.,](\d+))?\s*(Z|[+-]\d\d(?::?\d\d)?)?$/i
+      .exec(String(s).trim());
+    if (!m) return new Date(s).getTime();
+    const ms = m[7] ? Number((m[7] + '00').slice(0, 3)) : 0;
+    let t = Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5], +m[6], ms);
+    const z = m[8];
+    if (z && z.toUpperCase() !== 'Z') {
+      const sg = z[0] === '-' ? -1 : 1;
+      const d = z.slice(1).replace(':', '');
+      t -= sg * (Number(d.slice(0, 2)) * 60 + Number(d.slice(2, 4) || 0)) * 60000;
+    }
+    return t;
+  }
+
+  /* Uhrabgleich wie bei NTP. t0 = abgeschickt, t1 = angekommen; der
+     Server las seine Uhr irgendwo dazwischen, am wahrscheinlichsten
+     in der Mitte. Der Fehler ist höchstens der halbe Weg — also gilt
+     die Probe mit dem kürzesten Weg unter den letzten zwölf (ältere
+     als zehn Minuten fliegen raus: Geräteuhren laufen weg). */
+  function uhrProbe(t0, t1, serverNow) {
+    const s = zeit(serverNow);
+    if (isNaN(s) || !(t1 >= t0)) return;
+    uhrProben.push({ off: s - (t0 + t1) / 2, rtt: t1 - t0, at: t1 });
+    uhrProben = uhrProben.filter(p => t1 - p.at < 600000).slice(-12);
+    let best = uhrProben[0];
+    uhrProben.forEach(p => { if (p.rtt < best.rtt) best = p; });
+    skew = best.off;
+  }
+
+  async function gemessen(fn, args) {
+    const t0 = Date.now();
+    const r = await ctx.actions.call(fn, args);
+    if (r && r.server_now) uhrProbe(t0, Date.now(), r.server_now);
+    return r;
+  }
+
   function restMs() {
     if (!view || !view.phase_ends_at) return null;
-    return new Date(view.phase_ends_at).getTime() - (Date.now() + skew);
+    const ende = zeit(view.phase_ends_at);
+    if (isNaN(ende)) return null;
+    return ende - (Date.now() + skew);
   }
 
   function isReadingPhase() {
@@ -371,6 +432,10 @@
       }
       const rCounts = stage.querySelectorAll('[data-ks=reading-count]');
       rCounts.forEach(c => { c.textContent = String(rSek); });
+      stage.querySelectorAll('[data-ks=reading-bar]').forEach(b => {
+        b.style.transform = 'scaleX(' + rAnteil.toFixed(3) + ')';
+      });
+      weckerAufdecken(ms - lim * 1000);
       return;
     }
 
@@ -425,13 +490,24 @@
     }
   }
 
+  /* Der 250-ms-Schlag deckte bis zu einer Viertelsekunde zu spät auf
+     — und jedes Gerät anders spät. Kurz vor dem Augenblick wird
+     deshalb ein Wecker genau darauf gestellt. */
+  function weckerAufdecken(bisMs) {
+    if (aufdeckT || bisMs > 400) return;
+    aufdeckT = setTimeout(() => { aufdeckT = null; clockTick(); }, Math.max(0, bisMs) + 2);
+  }
+
   function startClock() {
     stopClock();
     if (restMs() == null) return;
     clockTick();
     clockTimer = setInterval(clockTick, 250);
   }
-  function stopClock() { if (clockTimer) clearInterval(clockTimer); clockTimer = null; }
+  function stopClock() {
+    if (clockTimer) clearInterval(clockTimer); clockTimer = null;
+    if (aufdeckT) clearTimeout(aufdeckT); aufdeckT = null;
+  }
 
   /* ══════════════════════════════════════════════════════════
      Takt
@@ -454,13 +530,13 @@
       const sigFn  = role === 'presenter' ? 'ks_room_sig' : 'ks_sig';
       const viewFn = role === 'presenter' ? 'ks_room_get' : 'ks_view';
 
-      const s = await ctx.actions.call(sigFn, {});
+      const s = await gemessen(sigFn, {});
       if (destroyed) return;
       if (!s || !s.ok) { zeigeFehler(s && s.error); return; }
 
       if (s.sig === lastSig && view) return;
 
-      const v = await ctx.actions.call(viewFn, {});
+      const v = await gemessen(viewFn, {});
       if (destroyed) return;
       if (!v || !v.ok) { zeigeFehler(v && v.error); return; }
 
@@ -485,8 +561,10 @@
 
   function uebernimm(v) {
     zeigeFehler.last = null;
-    if (v.server_now) {
-      const t = new Date(v.server_now).getTime();
+    // Die Uhr stellt gemessen() (mit Laufzeit). Nur wenn es noch
+    // gar keine Probe gibt, grob von hier.
+    if (v.server_now && !uhrProben.length) {
+      const t = zeit(v.server_now);
       if (!isNaN(t)) skew = t - Date.now();
     }
     if (Array.isArray(v.catalogs)) catalogs = v.catalogs;
@@ -645,10 +723,11 @@
         </div>
       </div>
       <div class="ks-reading-banner" data-ks="reading" ${reading ? '' : 'hidden'}>
-        <span class="ks-reading-icon">📖</span>
+        <b class="ks-reading-zahl" data-ks="reading-count">${rSek}</b>
         <div class="ks-reading-info">
-          <span class="ks-reading-title">Frage vorlesen …</span>
-          <span class="ks-reading-sub">Antworten erscheinen in <b data-ks="reading-count">${rSek}</b> s</span>
+          <span class="ks-reading-title">Frage lesen …</span>
+          <span class="ks-reading-sub">Die Antworten erscheinen gleich — überall gleichzeitig.</span>
+          <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
         </div>
       </div>
       ${kachelnHTML(opts, { modus: 'still', hidden: reading, ohneBuchstabe: true })}`;
@@ -1504,7 +1583,9 @@
       <div class="ks-reading-card" data-ks="reading" ${reading ? '' : 'hidden'}>
         <div class="ks-reading-pic">👀</div>
         <h3 class="ks-reading-title">Blick nach vorn zum Beamer!</h3>
-        <p class="ks-reading-sub">Die Frage wird vorgelesen. Die Antworten erscheinen in <b data-ks="reading-count">${rSek}</b> s …</p>
+        <b class="ks-reading-zahl" data-ks="reading-count">${rSek}</b>
+        <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
+        <p class="ks-reading-sub">Lies die Frage. Die Antworten erscheinen bei allen gleichzeitig.</p>
       </div>
       ${kachelnHTML(opts, { modus: 'wahl', chosen: my ? my.chosen_idx : null, hidden: reading })}
       <p class="ks-gesperrt" data-ks="lock" ${my && !reading ? '' : 'hidden'}>
@@ -1783,8 +1864,10 @@
       const r = await ctx.actions.call('ks_answer', {
         p_question_idx: view.current_q_idx | 0,
         p_chosen: idx,
-        // Der Server rechnet die Zeit selbst (0175). Mitgeschickt
-        // wird sie nur noch fürs Protokoll.
+        // Die Zeit seit dem Aufdecken, auf DIESEM Gerät gemessen.
+        // Der Server nimmt sie, solange sie zu seiner eigenen passt
+        // (höchstens 1,5 s darunter, 0189) — so kostet ein langsames
+        // WLAN keine Punkte.
         p_response_ms: Math.max(0, Math.round(
           ((view.question && view.question.time_limit) || 20) * 1000 - (restMs() || 0)))
       });
@@ -1917,7 +2000,7 @@
       root = el; ctx = context; role = context.role;
       destroyed = false; busy = false;
       lastSig = null; lastFrame = null; view = null;
-      els = {}; catalogs = []; skew = 0;
+      els = {}; catalogs = []; skew = 0; uhrProben = [];
       localEmote = null; answering = false; pickerOffen = false;
       if (editor) editor.destroy();
       editor = null;

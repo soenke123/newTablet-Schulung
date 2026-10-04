@@ -657,10 +657,6 @@
   box-shadow: 4px 4px 0 0 var(--ks-kante);
 }
 .ks-reading-banner[hidden] { display: none !important; }
-.ks-reading-icon {
-  font-size: clamp(24px, calc(var(--ks-h) * .055), 44px);
-  animation: ks-pulse-scale 1.6s ease-in-out infinite alternate;
-}
 .ks-reading-info {
   display: flex;
   flex-direction: column;
@@ -719,6 +715,35 @@
   color: var(--ks-goldt);
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 1.25em;
+}
+
+/* Der Countdown selbst: groß, damit der ganze Raum mitzählt. */
+.ks-reading-zahl {
+  flex: 0 0 auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ks-goldt);
+  font-size: clamp(40px, calc(var(--ks-h) * .13), 120px);
+  min-width: 1.2ch;
+  text-align: center;
+}
+.ks-reading-card .ks-reading-zahl { font-size: clamp(44px, calc(var(--ks-h) * .14), 96px); }
+.ks-reading-lauf {
+  display: block;
+  width: min(100%, 360px);
+  height: 8px;
+  border-radius: 99px;
+  background: var(--ks-linie2);
+  overflow: hidden;
+}
+.ks-reading-lauf > span {
+  display: block;
+  height: 100%;
+  background: var(--ks-goldt);
+  transform-origin: left center;
+  transform: scaleX(1);
+  transition: transform .25s linear;
 }
 
 .ks-popin {
