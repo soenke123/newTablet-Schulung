@@ -80,7 +80,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20261003c';
+  const ASSET_V = '20261004a';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -622,11 +622,13 @@
     return role + '|' + ph
       + '|' + (ph === 'question' || ph === 'reveal' ? v.current_q_idx : '-')
       + '|' + (pickerOffen ? 'pick' : '-')
-      + (introAn() ? '|intro' : '');
+      + (introAn() ? '|intro' : '')
+      + (role === 'participant' && ph === 'ended' ? (endeFertig() ? '|fertig' : '|feier') : '');
   }
 
   function zeichne() {
     if (!stage || !view) return;
+    if (view.phase !== 'ended') endeGesehen = 0;
     const key = frameKey(view);
     if (key !== lastFrame) {
       lastFrame = key;
@@ -647,8 +649,11 @@
       // Genau zum Ende des Auftritts umschalten, nicht erst beim
       // nächsten 250-ms-Schlag der Uhr.
       if (role === 'participant' && view.phase === 'ended' && bewegtSich()) {
-        const t = stage.querySelector('.ks-tende--sieg');
-        if (t) konfetti(t);
+        const t = stage.querySelector('.ks-tende--platz');
+        if (t) konfetti(t, (view.me && view.me.rank | 0) <= 3 ? 90 : 0);
+      }
+      if (role === 'participant' && view.phase === 'ended' && !endeFertig() && !pickerOffen) {
+        spaeter(zeichne, Math.max(0, feierDauerMs(view.leaderboard) - (Date.now() - endeGesehen)) + 50);
       }
       if (introAn()) {
         const lim = ((view.question && view.question.time_limit) || 20) * 1000;
@@ -1598,6 +1603,33 @@
     el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
   }
 
+  /* Zeiten der Siegerehrung am Beamer — das Tablet rechnet damit, wann
+     es seinen Platz zeigen darf (feierDauerMs). */
+  const FEIER_START = 1600, FEIER_SPANNUNG = 3400, FEIER_ANSAGE = 700,
+        FEIER_SPRUNG1 = 1000, FEIER_SPRUNG = 1900, FEIER_SCHLUSS = 2500,
+        FEIER_PUFFER = 3500;     // Takt des Beamers + Netz
+
+  function feierDauerMs(lb) {
+    const n = Array.isArray(lb) && lb.length
+      ? [3, 2, 1].filter(r => lb.some(p => p.rank === r)).length : 3;
+    let t = FEIER_START;
+    for (let i = 0; i < n; i++) {
+      const r = n - i;                       // 3, 2, 1 (oder weniger)
+      t += (r === 1 && n > 1 ? FEIER_SPANNUNG : FEIER_ANSAGE)
+         + (r === 1 ? FEIER_SPRUNG1 : FEIER_SPRUNG);
+    }
+    return t + FEIER_SCHLUSS + FEIER_PUFFER;
+  }
+
+  /* Tablet: ist die Siegerehrung vorn schon vorbei? Die Uhr startet,
+     sobald dieses Tablet das Ende zum ersten Mal sieht. */
+  let endeGesehen = 0;
+  function endeFertig() {
+    if (!view || view.phase !== 'ended') return false;
+    if (!endeGesehen) endeGesehen = Date.now();
+    return Date.now() - endeGesehen >= feierDauerMs(view.leaderboard);
+  }
+
   function feierStart(v) {
     const lb = v.leaderboard || [];
     const feier = stage.querySelector('[data-ks=feier]');
@@ -1608,7 +1640,7 @@
     const sieger = lb.find(p => p.rank === 1);
 
     ansage('🏆 Siegerehrung');
-    let t = 1600;
+    let t = FEIER_START;
     plaetze.forEach(r => {
       if (r === 1 && plaetze.length > 1) {
         spaeter(() => {
@@ -1617,13 +1649,13 @@
           ansage('🥁 Und Platz 1 geht an …', 'spannung');
           flickeBeam(view);
         }, t);
-        t += 3400;
+        t += FEIER_SPANNUNG;
       } else {
         spaeter(() => ansage('Platz ' + r), t);
-        t += 700;
+        t += FEIER_ANSAGE;
       }
       spaeter(() => springeAufsTreppchen(r), t);
-      t += r === 1 ? 1000 : 1900;
+      t += r === 1 ? FEIER_SPRUNG1 : FEIER_SPRUNG;
     });
     spaeter(() => {
       F.stufe = 'fertig';
@@ -1674,12 +1706,13 @@
     };
   }
 
-  function konfetti(feier) {
+  function konfetti(feier, anzahl) {
+    if (anzahl === 0) return;
     const farben = ['--ks-a0', '--ks-a1', '--ks-a2', '--ks-a3', '--ks-gold'];
     const box = document.createElement('div');
     box.className = 'ks-konfetti';
     let html = '';
-    for (let i = 0; i < 60; i++) {
+    for (let i = 0; i < (anzahl || 60); i++) {
       html += '<i style="left:' + zufall(4, 94).toFixed(1) + '%;background:var(' + farben[i % 5] + ');'
         + 'animation-delay:' + zufall(0, .9).toFixed(2) + 's;animation-duration:' + zufall(2.2, 3.6).toFixed(2) + 's;'
         + '--dreh:' + Math.round(zufall(-720, 720)) + 'deg;--weit:' + Math.round(zufall(-40, 40)) + 'px"></i>';
@@ -1756,7 +1789,7 @@
         <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
         <p class="ks-reading-sub">Lies die Frage. Die Antworten erscheinen bei allen gleichzeitig.</p>
       </div>
-      ${kachelnHTML(opts, { modus: 'wahl', seed: mischKey(v), chosen: my ? my.chosen_idx : null, hidden: reading })}
+      ${kachelnHTML(opts, { modus: 'wahl', seed: mischKey(v), chosen: my ? my.chosen_idx : null, hidden: reading, ohneBuchstabe: true })}
       <p class="ks-gesperrt" data-ks="lock" ${my && !reading ? '' : 'hidden'}>
         Antwort abgegeben — jetzt zum Beamer sehen.</p>`;
   }
@@ -1808,21 +1841,35 @@
       </div>`;
   }
 
-  /* Siegerehrung auf dem Tablet: nichts als die Emote-Leiste — was
-     passiert, passiert am Beamer. Der obere Teil bleibt leer. Nur wer
-     gewonnen hat (Platz 1, auch geteilt), sieht es sofort bei sich,
-     ohne auf das Treppchen zu warten. */
+  /* Siegerehrung auf dem Tablet: erst nur „Siegerehrung am Beamer".
+     Erst wenn die Ehrung vorn vorbei ist (endeFertig), steht hier der
+     eigene Platz — Platz 1–3 mit großem Auftritt, alle anderen
+     schlicht mit Platz und Punkten. */
   function tabEnde(v) {
     const me = v.me || {};
-    const sieger = (me.rank | 0) === 1;
-    return `
-      <div class="ks-tende${sieger ? ' ks-tende--sieg' : ''}" data-ks="tende">
-        ${sieger ? `
-          <div class="ks-tsieg-pic" data-slot="ich" data-cid="${me.creature_id | 0}">
-            <div class="ks-ipic">${wesen(me.creature_id, me.skin_idx, localEmote || me.emote || 'cheer')}</div>
+    if (!endeFertig()) {
+      return `
+        <div class="ks-tende ks-tende--warte" data-ks="tende">
+          <div class="ks-tsieg-pic" data-cid="${me.creature_id | 0}">
+            <div class="ks-ipic">${wesen(me.creature_id, me.skin_idx, localEmote || 'wave')}</div>
           </div>
-          <h2 class="ks-tsieg-titel">🏆 Du hast gewonnen!</h2>
-          <span class="ks-tsieg-pkt">${pkt(me.score)} Punkte</span>` : ''}
+          <h2 class="ks-tsieg-titel">🏆 Siegerehrung am Beamer</h2>
+        </div>
+        <div class="ks-emobar">${emoteBarHTML()}</div>`;
+    }
+    const rank = me.rank | 0;
+    const top = rank >= 1 && rank <= 3;
+    const medaille = ['', '🥇', '🥈', '🥉'][rank] || '';
+    const titel = rank === 1 ? 'Du hast gewonnen!' : top ? 'Du stehst auf dem Treppchen!' : 'Dein Platz';
+    return `
+      <div class="ks-tende ks-tende--platz${top ? ' ks-tende--top ks-tende--p' + rank : ''}" data-ks="tende">
+        <div class="ks-tsieg-pic" data-slot="ich" data-cid="${me.creature_id | 0}">
+          <div class="ks-ipic">${wesen(me.creature_id, me.skin_idx, localEmote || me.emote || (top ? 'cheer' : 'idle'))}</div>
+        </div>
+        ${top ? '<span class="ks-tmedaille" aria-hidden="true">' + medaille + '</span>' : ''}
+        <h2 class="ks-tsieg-titel">${top ? '🏆 ' : ''}${titel}</h2>
+        <span class="ks-tplatz">Platz ${rank || '?'}</span>
+        <span class="ks-tsieg-pkt">${pkt(me.score)} Punkte</span>
       </div>
       <div class="ks-emobar">${emoteBarHTML()}</div>`;
   }

@@ -2064,3 +2064,37 @@ button.ks-k:disabled { cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   .ks-intro-titel, .ks-tintro-text, .ks-tsieg-titel { animation: none; }
 }
+
+/* ─── Siegerehrung auf dem Tablet: Platz nach der Ehrung ───── */
+.ks-tplatz {
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(28px, calc(var(--ks-h) * .09), 64px);
+  color: var(--ks-goldt);
+  animation: ks-ansage .6s cubic-bezier(.2, .9, .3, 1.4);
+}
+.ks-tmedaille {
+  font-size: clamp(48px, calc(var(--ks-h) * .14), 110px);
+  line-height: 1;
+  animation: ks-medaille 1.1s cubic-bezier(.2, .9, .3, 1.3) both;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, .35));
+}
+@keyframes ks-medaille {
+  0%   { transform: translateY(-120%) scale(.2) rotate(-200deg); opacity: 0; }
+  60%  { transform: translateY(8%) scale(1.3) rotate(15deg); opacity: 1; }
+  100% { transform: none; }
+}
+.ks-tende--top .ks-tsieg-pic { animation: ks-tsprung 1.2s ease-out both; }
+.ks-tende--p1 { background: radial-gradient(circle at 50% 35%, rgba(255, 215, 90, .35), transparent 65%); }
+.ks-tende--p2 { background: radial-gradient(circle at 50% 35%, rgba(200, 210, 225, .3), transparent 65%); }
+.ks-tende--p3 { background: radial-gradient(circle at 50% 35%, rgba(205, 140, 80, .3), transparent 65%); }
+.ks-tende--p1 .ks-tplatz { animation: ks-tpuls 1.2s ease-in-out infinite; }
+@keyframes ks-tsprung {
+  0% { transform: translateY(40%) scale(.5); opacity: 0; }
+  55% { transform: translateY(-14%) scale(1.12); opacity: 1; }
+  100% { transform: none; }
+}
+@keyframes ks-tpuls { 50% { transform: scale(1.12); } }
+@media (prefers-reduced-motion: reduce) {
+  .ks-tplatz, .ks-tmedaille, .ks-tende--top .ks-tsieg-pic, .ks-tende--p1 .ks-tplatz { animation: none; }
+}
