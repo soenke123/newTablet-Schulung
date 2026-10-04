@@ -86,14 +86,27 @@
      lässt 'jump' durch (Migration 0175), und das Zeichen stand
      unten in EMOTE_ICON. Nur in dieser Liste fehlte er, also gab es
      keinen Knopf dafür. Nachgetragen am 26.09.2026. */
+  /* Die Knopfzeichen sind eigene SVGs und keine Emojis: dicke Linie,
+     runde Ecken, ein Farbtupfer in Gold (.a) oder Cyan (.b) — passend
+     zu den harten Kanten der Knöpfe. currentColor, damit sie in
+     hellem und dunklem Thema mitgehen. */
+  const ICO = (inner) => '<svg class="ks-ico" viewBox="0 0 24 24" aria-hidden="true">' + inner + '</svg>';
+  const ICONS = {
+    wave:  ICO('<path class="a" d="M7 13V7a1.5 1.5 0 0 1 3 0v4V5a1.5 1.5 0 0 1 3 0v6V6a1.5 1.5 0 0 1 3 0v6V9a1.5 1.5 0 0 1 3 0v6a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L4.6 15a1.5 1.5 0 0 1 2.4-1.8z"/>'),
+    jump:  ICO('<path class="a" d="M12 3l7 8h-4v5H9v-5H5z"/><path d="M6 21h12"/>'),
+    cheer: ICO('<path class="a" d="M4 20l4.5-12 7.5 7.5z"/><path class="b" d="M13 4v3M19 9h2M18 3l-1.5 2M20 14l1.5 1"/>'),
+    dance: ICO('<path d="M9 18V6l10-2v12"/><circle class="a" cx="6.5" cy="18" r="2.5"/><circle class="a" cx="16.5" cy="16" r="2.5"/>'),
+    sleep: ICO('<path d="M4 6h7l-7 8h7"/><path class="b" d="M14 12h6l-6 7h6"/>'),
+    sad:   ICO('<path class="b" d="M12 3c3.5 4.5 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 2.5-6.5 6-11z"/>')
+  };
   const EMOTES  = [
-    { id: 'wave',  icon: '👋', title: 'Winken' },
-    { id: 'jump',  icon: '🚀', title: 'Springen' },
-    { id: 'cheer', icon: '🎉', title: 'Jubeln' },
-    { id: 'dance', icon: '🕺', title: 'Tanzen' },
-    { id: 'sleep', icon: '😴', title: 'Schlafen' }
+    { id: 'wave',  icon: ICONS.wave,  title: 'Winken' },
+    { id: 'jump',  icon: ICONS.jump,  title: 'Springen' },
+    { id: 'cheer', icon: ICONS.cheer, title: 'Jubeln' },
+    { id: 'dance', icon: ICONS.dance, title: 'Tanzen' },
+    { id: 'sleep', icon: ICONS.sleep, title: 'Schlafen' }
   ];
-  const EMOTE_ICON = { wave: '👋', jump: '🚀', cheer: '🎉', dance: '🕺', sleep: '😴', sad: '💧' };
+  const EMOTE_ICON = ICONS;
 
   /* Wie lange ein Emote zu sehen ist. MUSS zu den 3,5 Sekunden in
      Migration 0175 passen: der Server gibt ein älteres Emote nicht
@@ -885,7 +898,7 @@
     if (emote) {
       if (bub.dataset.e !== emote) {
         bub.dataset.e = emote;
-        bub.textContent = EMOTE_ICON[emote] || '✨';
+        bub.innerHTML = EMOTE_ICON[emote] || ICONS.cheer;
         // Animation neu anstoßen: ohne den Neustart bliebe das
         // Zeichen aus dem letzten Takt einfach unsichtbar stehen.
         bub.hidden = true; void bub.offsetWidth; bub.hidden = false;

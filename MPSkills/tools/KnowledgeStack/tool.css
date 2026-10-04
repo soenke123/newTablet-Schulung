@@ -1154,6 +1154,22 @@ button.ks-k:disabled { cursor: default; }
   animation: floatUpFade 1.3s cubic-bezier(.2, .8, .3, 1) forwards;
 }
 
+.ks-ico {
+  display: block;
+  width: 1em; height: 1em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
+.ks-ico .a { fill: var(--ks-gold); }
+.ks-ico .b { stroke: var(--ks-cyan); }
+.ks-ico path.b[d*="3c3.5"] { fill: var(--ks-cyan); stroke: currentColor; }
+.ks-emo .ks-ico { margin: 0 auto; }
+.ks-kbubble .ks-ico { filter: drop-shadow(1px 1px 0 var(--ks-kante)); }
+
 .ks-leer {
   flex: 0 0 auto;
   margin: 0;
