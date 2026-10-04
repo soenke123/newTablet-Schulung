@@ -169,6 +169,33 @@ und Rangliste stehen zusammen im Auflösungsbild. Im CHECK der Tabelle steht
 der Wert weiter (kein DROP), und ein Brett, das noch darin hängt, verhält
 sich wie in `reveal`.
 
+## Fair: die Antworten erscheinen überall gleichzeitig
+
+Jede Frage beginnt mit **5 Sekunden Vorlesezeit** (0178): am Beamer die
+Frage und darunter ein großer Countdown, auf dem Tablet „Blick nach vorn"
+mit demselben Countdown. Danach decken Beamer und alle Tablets die
+Antworten **im selben Augenblick** auf. Die 5 Sekunden sind die Zeit, in
+der jedes Gerät von der neuen Frage erfährt.
+
+Damit das wirklich gleichzeitig ist (Oktober 2026, 0189):
+
+* **Uhrabgleich wie bei NTP** (`uhrProbe` in `tool.js`): jeder Aufruf
+  misst Hin- und Rückweg, die Serveruhr wird in der Mitte angesetzt, es
+  gilt die Probe mit dem kürzesten Weg. Vorher galt eine einzige Probe
+  ohne Laufzeit — ein Tablet im vollen WLAN deckte bis zu einer Sekunde
+  später auf. `ks_sig`/`ks_room_sig` liefern dafür `server_now` mit.
+* **Wecker auf die Millisekunde** (`weckerAufdecken`) statt des
+  250-ms-Schlags.
+* **Zeitstempel von Hand gelesen** (`zeit`): Postgres schreibt
+  Mikrosekunden, ältere Safaris machten daraus NaN — dann gab es auf dem
+  iPad gar keine Vorlesezeit.
+* **Die Netzlaufzeit zählt nicht als Denkzeit**: `ks_answer` nimmt die
+  auf dem Gerät gemessene Zeit, eingefasst in [Serverzeit − 1,5 s,
+  Serverzeit]. Ein Tipp bis 1 s vor dem Aufdecken (Uhr knapp daneben)
+  zählt als „sofort" statt abgewiesen zu werden.
+* Das Tablet fragt in Lobby und Auflösung alle 2 bzw. 1,5 s nach — es
+  muss die neue Frage kennen, bevor die 5 Sekunden um sind.
+
 ## Abbrechen und neu starten
 
 Während der Frage steht rechts neben dem Foto **⏹ Beenden** (sofort zur
@@ -239,6 +266,7 @@ node MPSkills/tools/KnowledgeStack/tools/fitcheck.js          # echter Browser
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js --shots  # …mit Bildern
 node supabase/tests/0175_knowledgestack_flow.mjs              # SQL in pglite
 node supabase/tests/0186_knowledgestack_photos_abort.mjs      # Fotos, Beenden, Neustart
+node supabase/tests/0189_knowledgestack_sync_reveal.mjs       # Uhrabgleich, faire Antwortzeit
 ```
 
 * **uitest.js** (linkedom, kein Browser) — *was* im Bild steht: die echten
@@ -261,7 +289,7 @@ node supabase/tests/0186_knowledgestack_photos_abort.mjs      # Fotos, Beenden, 
 `0174_knowledgestack_game.sql` legt die Tabellen an, `0175_knowledgestack_flow.sql`
 räumt den Ablauf auf, `0186_knowledgestack_photos_abort.sql` bringt Fotos,
 Beenden und Neustart (und die Katalog-Aufrufe mit `p_code`, die der Beamer
-braucht). Alle spielt Sönke selbst im Supabase-Dashboard ein.
+braucht), `0189_knowledgestack_sync_reveal.sql` die gleichzeitigen Antworten. Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
 ## Der Fragen-Editor
 

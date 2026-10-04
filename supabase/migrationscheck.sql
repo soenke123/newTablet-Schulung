@@ -128,6 +128,10 @@ pruef(nr, was, treffer, merkmal) as (
      (select count(*) > 0 from funk where proname = 'ks_present'),
      'ohne: stillgelegte und Offline-Kinder stehen im laufenden Quiz auf Wand und Rangliste'),
 
+    ('0189', 'Knowledge Stack: Antworten ueberall gleichzeitig',
+     (select bool_or(src like '%server_now%') from def where proname = 'ks_sig'),
+     'ohne: Tablets im vollen WLAN decken die Antworten spaeter auf, die Netzlaufzeit kostet Punkte'),
+
     -- ── Die eigene Insel ───────────────────────────────────────
     ('0136', 'wi_solo_learners',
      (select count(*) > 0 from spalte where tab = 'wi_solo_learners' and sp = 'token'),
