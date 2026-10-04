@@ -86,18 +86,24 @@
      lässt 'jump' durch (Migration 0175), und das Zeichen stand
      unten in EMOTE_ICON. Nur in dieser Liste fehlte er, also gab es
      keinen Knopf dafür. Nachgetragen am 26.09.2026. */
-  /* Die Knopfzeichen sind eigene SVGs und keine Emojis: dicke Linie,
-     runde Ecken, ein Farbtupfer in Gold (.a) oder Cyan (.b) — passend
-     zu den harten Kanten der Knöpfe. currentColor, damit sie in
-     hellem und dunklem Thema mitgehen. */
+  /* Die Knopfzeichen sind eigene SVGs und keine Emojis: kleine
+     Aufkleber-Figuren mit Gesicht. Umriss in currentColor, Flächen
+     in den Spielfarben (.a Gold, .b Cyan, .c Rosa, .s Silber), Augen
+     und Mund (.f / .m) in der harten Kante. */
   const ICO = (inner) => '<svg class="ks-ico" viewBox="0 0 24 24" aria-hidden="true">' + inner + '</svg>';
   const ICONS = {
-    wave:  ICO('<path class="a" d="M7 13V7a1.5 1.5 0 0 1 3 0v4V5a1.5 1.5 0 0 1 3 0v6V6a1.5 1.5 0 0 1 3 0v6V9a1.5 1.5 0 0 1 3 0v6a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L4.6 15a1.5 1.5 0 0 1 2.4-1.8z"/>'),
-    jump:  ICO('<path class="a" d="M12 3l7 8h-4v5H9v-5H5z"/><path d="M6 21h12"/>'),
-    cheer: ICO('<path class="a" d="M4 20l4.5-12 7.5 7.5z"/><path class="b" d="M13 4v3M19 9h2M18 3l-1.5 2M20 14l1.5 1"/>'),
-    dance: ICO('<path d="M9 18V6l10-2v12"/><circle class="a" cx="6.5" cy="18" r="2.5"/><circle class="a" cx="16.5" cy="16" r="2.5"/>'),
-    sleep: ICO('<path d="M4 6h7l-7 8h7"/><path class="b" d="M14 12h6l-6 7h6"/>'),
-    sad:   ICO('<path class="b" d="M12 3c3.5 4.5 6 7.5 6 11a6 6 0 0 1-12 0c0-3.5 2.5-6.5 6-11z"/>')
+    // zwinkerndes Gesicht mit Funken
+    wave:  ICO('<circle class="a" cx="11" cy="13" r="8"/><circle class="f" cx="8.2" cy="11.5" r="1.2"/><path class="m" d="M11.5 11.8q1.5-1.6 3 0"/><path class="m" d="M7 15.5q4 4.2 8 0"/><path d="M19 3.5l1.2 2.3M21.5 7.5l-2.4.6"/>'),
+    // Rakete mit Bullauge und Flamme
+    jump:  ICO('<path class="s" d="M12 1.5c3 2.5 4.2 6 4.2 9.5V16H7.8v-5c0-3.500 1.200-7 4.200-9.500z"/><circle class="b" cx="12" cy="9" r="2.2"/><path class="c" d="M7.8 12.5L4.5 17l3.300-1zM16.200 12.500l3.300 4.500-3.300-1z"/><path class="a" d="M9.800 17.500c0 2.500 1 4.500 2.200 4.500s2.200-2 2.200-4.500z"/>'),
+    // Gesicht mit Partyhut und Konfetti
+    cheer: ICO('<circle class="a" cx="12" cy="15" r="7"/><path class="c" d="M12 1.500L7.800 9.500h8.400z"/><circle class="b" cx="12" cy="1.800" r="1.100"/><path class="m" d="M8 14.500q1.200-1.800 2.400 0M13.600 14.500q1.200-1.800 2.400 0"/><path class="f" d="M9.200 17.500h5.600a2.800 2.800 0 0 1-5.600 0z"/><path class="b" d="M3 9l1.800 1M20 7l1.500-1.500M21 12.500h2"/>'),
+    // Disco-Kugel mit Glitzer
+    dance: ICO('<path d="M12 1.500v4"/><circle class="s" cx="12" cy="13" r="7.500"/><path class="m" d="M4.500 13h15M12 5.500c-3 3-3 12 0 15M12 5.500c3 3 3 12 0 15M6.200 8.500q5.800 2 11.600 0M6.200 17.500q5.800-2 11.600 0"/><path class="a" d="M3 3.500v3M1.500 5h3M21 2.500v3M19.500 4h3"/>'),
+    // Schläfriger Klecks mit Zz
+    sleep: ICO('<circle class="b" cx="10" cy="14.500" r="7.500"/><path class="m" d="M6 14q1.600 1.800 3.200 0M11 14q1.600 1.800 3.200 0"/><circle class="f" cx="10.500" cy="18" r="1.300"/><path class="a" d="M15 2.500h5l-5 5h5"/>'),
+    // Regenwolke mit Kummergesicht
+    sad:   ICO('<path class="s" d="M7 15.500a4 4 0 0 1 .5-7.900 5 5 0 0 1 9.500 1.400 3.300 3.300 0 0 1-.5 6.500z"/><circle class="f" cx="9.500" cy="10.800" r="1.100"/><circle class="f" cx="14.500" cy="10.800" r="1.100"/><path class="m" d="M9.500 14q2.500-2 5 0"/><path class="rain" d="M8 19v2.500M12 19.500V22M16 19v2.500"/>')
   };
   const EMOTES  = [
     { id: 'wave',  icon: ICONS.wave,  title: 'Winken' },
