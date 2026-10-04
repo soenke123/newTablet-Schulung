@@ -133,6 +133,10 @@ pruef(nr, was, treffer, merkmal) as (
      (select bool_or(src like '%+ 5)%') from def where proname = 'ks_step'),
      'ohne: kein Countdown vor den Antworten, Beamer und Tablets zeigen die Antworten sofort'),
 
+    ('0191', 'Knowledge Stack: Auftritt vor der ersten Frage',
+     (select bool_or(src like '%v_intro%') from def where proname = 'ks_step'),
+     'ohne: kein „Quiz startet" am Beamer, die erste Frage beginnt sofort'),
+
     ('0189', 'Knowledge Stack: Antworten ueberall gleichzeitig',
      (select bool_or(src like '%server_now%') from def where proname = 'ks_sig'),
      'ohne: Tablets im vollen WLAN decken die Antworten spaeter auf, die Netzlaufzeit kostet Punkte'),

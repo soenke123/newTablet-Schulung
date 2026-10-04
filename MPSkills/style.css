@@ -3443,3 +3443,10 @@ body.inselseite--voll { overflow: hidden; }
 .itile:hover .itile-go {
   transform: translateX(4px);
 }
+
+/* ── Knowledge Stack: das Standbild der Kachel ────────────────
+   Der Beamer in Kurzform. Das Werkzeug ist dunkel, und so bleibt auch
+   die Kachel — in beiden Kleidern, wie bei SYNIR. Der Bildausschnitt
+   füllt die Kachel (slice), damit kein Streifen bleibt. */
+.tprev--ks { background: #0c0e15; background-image: none; padding: 0; }
+.ksp { width: 100%; height: 100%; display: block; }

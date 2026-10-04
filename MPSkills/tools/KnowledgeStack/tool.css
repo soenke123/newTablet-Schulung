@@ -1908,3 +1908,159 @@ button.ks-k:disabled { cursor: default; }
   .ks-k.is-richtig { animation: none; }
   .ks-fuell { transition: none; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   Auftritt vor der ersten Frage (Oktober 2026)
+   ══════════════════════════════════════════════════════════
+   Beamer: „Quiz startet", der Katalogname, dahinter der Regen aus
+   Wesen. Tablet: das eigene Wesen und „Gleich geht's los". */
+.ks-intro {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+/* Die Bahn liegt hinter dem Titel. */
+.ks-intro-bahn {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ks-ifig {
+  position: absolute;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+.ks-ifp { position: relative; width: 100%; min-height: 0; }
+.ks-ifp > .ks-wesen { position: absolute; inset: 0; }
+.ks-ifname {
+  max-width: 140%;
+  margin-top: 1px;
+  font-size: clamp(10px, calc(var(--is, 80px) * .17), 20px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--ks-ink);
+  text-shadow: 0 0 4px var(--ks-bg), 0 0 4px var(--ks-bg), 0 0 2px var(--ks-bg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ks-intro-titel {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  max-width: 94%;
+  margin-top: clamp(6px, calc(var(--ks-h) * .04), 36px);
+  padding: clamp(10px, calc(var(--ks-h) * .035), 30px) clamp(18px, calc(var(--ks-h) * .06), 56px);
+  text-align: center;
+  background: var(--ks-flaeche);
+  border: 4px solid var(--ks-qrahmen);
+  border-radius: 22px;
+  box-shadow: 6px 6px 0 0 var(--ks-kante);
+  animation: ks-ansage .6s cubic-bezier(.2, .9, .3, 1.4);
+}
+.ks-intro-kicker {
+  margin: 0 0 .1em;
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(16px, calc(var(--ks-h) * .06), 52px);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--ks-goldt);
+}
+.ks-intro-name {
+  margin: 0;
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(26px, calc(var(--ks-h) * .12), 112px);
+  line-height: 1.08;
+  color: var(--ks-ink);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+.ks-tintro {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(8px, calc(var(--ks-h) * .025), 20px);
+  text-align: center;
+  min-height: 0;
+}
+.ks-tintro-pic {
+  position: relative;
+  flex: 0 1 auto;
+  width: clamp(110px, calc(var(--ks-h) * .42), 340px);
+  aspect-ratio: 1;
+  max-height: 46%;
+  min-height: 0;
+}
+.ks-tintro-pic > .ks-wesen { position: absolute; inset: 0; }
+.ks-tintro-name {
+  font-size: clamp(16px, calc(var(--ks-h) * .045), 34px);
+  font-weight: 800;
+  max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.ks-tintro-text {
+  margin: 0;
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(20px, calc(var(--ks-h) * .065), 48px);
+  line-height: 1.15;
+  color: var(--ks-goldt);
+  animation: ks-ansage .6s cubic-bezier(.2, .9, .3, 1.4);
+}
+
+/* ─── Siegerehrung auf dem Tablet ─────────────────────────────
+   Der obere Teil gehört dem Beamer und ist leer; nur der Sieger
+   bekommt hier sein Wesen und die Nachricht. */
+.ks-tende {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, calc(var(--ks-h) * .02), 16px);
+  min-height: 0;
+  overflow: hidden;
+  text-align: center;
+}
+.ks-tsieg-pic {
+  flex: 0 1 auto;
+  width: clamp(100px, calc(var(--ks-h) * .38), 320px);
+  aspect-ratio: 1;
+  max-height: 48%;
+  min-height: 0;
+}
+.ks-tsieg-pic > .ks-ipic { width: 100%; height: 100%; max-height: none; }
+.ks-tsieg-titel {
+  margin: 0;
+  font-family: 'Fredoka', 'Nunito', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(22px, calc(var(--ks-h) * .07), 52px);
+  line-height: 1.1;
+  color: var(--ks-goldt);
+  animation: ks-ansage .6s cubic-bezier(.2, .9, .3, 1.4);
+}
+.ks-tsieg-pkt {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-weight: 800;
+  font-size: clamp(14px, calc(var(--ks-h) * .035), 26px);
+  color: var(--ks-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ks-intro-titel, .ks-tintro-text, .ks-tsieg-titel { animation: none; }
+}

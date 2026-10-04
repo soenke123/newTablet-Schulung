@@ -596,34 +596,59 @@ async function bereichTab() {
   ok('nicht geantwortet: auch das steht da',
      txt(weg.root.querySelector('.ks-urteil')).includes('Keine Antwort'));
 
-  /* ─── Siegerehrung ──────────────────────────────────────── */
+  /* ─── Siegerehrung ──────────────────────────────────────────
+     Auf dem Tablet nur die Emote-Leiste; der obere Teil ist leer —
+     was passiert, passiert am Beamer. Nur der Sieger sieht sofort,
+     dass er gewonnen hat. */
   const end = await starte('participant', tabAufl({ phase: 'ended' }));
-  ok('Siegerehrung: der Endplatz steht da',
-     txt(end.root.querySelector('.ks-urteil')).includes('Platz 4')
-     && txt(end.root.querySelector('.ks-urteil')).includes('20'),
-     txt(end.root.querySelector('.ks-urteil')));
-  ok('Siegerehrung: emoten geht auch hier',
+  ok('Siegerehrung: nur die Emote-Leiste, fünf Knöpfe',
      end.root.querySelectorAll('.ks-emo').length === 5);
-  ok('Siegerehrung: alle jubeln',
-     klassen(end.root.querySelector('.ks-ipic svg')).includes('cheer-7'));
+  ok('Siegerehrung: der obere Teil ist leer',
+     txt(end.root.querySelector('[data-ks=tende]')) === ''
+     && !end.root.querySelector('.ks-trio') && !end.root.querySelector('.ks-urteil'),
+     txt(end.root.querySelector('[data-ks=tende]')));
+  ok('Siegerehrung: kein Wesen-Wechsel mehr', !end.root.querySelector('[data-act=wechsel]'));
 
-  const w = end.root.querySelector('[data-act=wechsel]');
-  ok('Siegerehrung: das Wesen lässt sich für die nächste Runde ändern', !!w);
-  click(w, end.doc);
-  await wait(20);
-  ok('… die Wesenwahl geht auf', end.root.querySelectorAll('.ks-pick').length === 36);
-  // Und bleibt offen: ein Takt (Emote eines anderen Kindes) darf sie
-  // nicht wegräumen.
-  end.zustand.sig = 'b';
-  end.zustand.view = tabAufl({ phase: 'ended', me: { score: 3700 } });
-  await end.impl.update();
-  await wait(40);
-  ok('… und ein Takt räumt sie NICHT weg',
-     end.root.querySelectorAll('.ks-pick').length === 36,
-     String(end.root.querySelectorAll('.ks-pick').length));
-  click(end.root.querySelector('[data-act=fertig]'), end.doc);
-  await wait(20);
-  ok('„Fertig" führt zurück zur Rangliste', !!end.root.querySelector('.ks-trio'));
+  const sieg = await starte('participant', tabAufl({ phase: 'ended', me: { rank: 1, score: 5100 } }));
+  ok('Siegerehrung: der Sieger sieht es sofort bei sich',
+     txt(sieg.root.querySelector('.ks-tsieg-titel')).includes('gewonnen'));
+  ok('Siegerehrung: … mit seinem jubelnden Wesen',
+     klassen(sieg.root.querySelector('.ks-ipic svg')).includes('cheer-7'));
+  ok('Siegerehrung: … und die Emote-Leiste bleibt',
+     sieg.root.querySelectorAll('.ks-emo').length === 5);
+}
+
+/* ─── Auftritt vor der ersten Frage ──────────────────────────
+   Die erste Frage trägt 10 Sekunden Auftritt über den 5 Sekunden
+   Vorlesezeit (Migration 0191). */
+async function bereichIntro() {
+  console.log('\n── Auftritt ────────────────────────────────────────\n');
+  const mitIntro = (v, rest) => Object.assign(v, {
+    phase: 'question', current_q_idx: 0,
+    phase_ends_at: new Date(Date.now() + (15 + rest) * 1000).toISOString(),
+    catalog_title: 'Netzwerke & Sicherheit'
+  });
+
+  const b = await starte('presenter', mitIntro(beamFrage(), 10));
+  ok('Beamer: „Quiz startet" steht da', txt(b.root.querySelector('.ks-intro-kicker')) === 'Quiz startet');
+  ok('Beamer: der Katalogname steht da',
+     txt(b.root.querySelector('.ks-intro-name')) === 'Netzwerke & Sicherheit');
+  ok('Beamer: noch keine Frage', !b.root.querySelector('.ks-q') && !b.root.querySelector('.ks-k'));
+
+  const t = await starte('participant', mitIntro(tabFrage(), 10));
+  ok('Tablet: das eigene Wesen und „Gleich geht’s los"',
+     !!t.root.querySelector('.ks-tintro-pic svg')
+     && txt(t.root.querySelector('.ks-tintro-text')).includes('Gleich'));
+  ok('Tablet: keine Kacheln und keine Emote-Leiste',
+     !t.root.querySelector('.ks-k') && !t.root.querySelector('.ks-emo'));
+
+  // Nur noch die Vorlesezeit übrig → die Frage kommt.
+  const f = await starte('presenter', mitIntro(beamFrage(), 0));
+  ok('Ohne Auftritt-Rest: sofort die Frage', !!f.root.querySelector('.ks-q') && !f.root.querySelector('.ks-intro'));
+
+  // Spätere Fragen haben nie einen Auftritt.
+  const s = await starte('presenter', Object.assign(mitIntro(beamFrage(), 10), { current_q_idx: 3 }));
+  ok('Zweite Frage: kein Auftritt', !s.root.querySelector('.ks-intro'));
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -1241,7 +1266,7 @@ async function bereichFoto() {
 }
 
 /* ══════════════════════════════════════════════════════════ */
-const BEREICHE = { emote: bereichEmote, tab: bereichTab, beam: bereichBeam,
+const BEREICHE = { emote: bereichEmote, tab: bereichTab, intro: bereichIntro, beam: bereichBeam,
                    fluss: bereichFluss, editor: bereichEditor, foto: bereichFoto,
                    theme: bereichTheme };
 const wahl = process.argv[2];

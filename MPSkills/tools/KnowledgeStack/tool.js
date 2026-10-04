@@ -343,6 +343,19 @@
      ══════════════════════════════════════════════════════════ */
   const READ_TIME_SEC = 5;
 
+  /* Der Auftritt vor der ersten Frage („Quiz startet", Oktober 2026).
+     Er steht NICHT in einer eigenen Phase, sondern in der Vorlesezeit
+     der ersten Frage: ks_step legt phase_ends_at dieser einen Frage
+     INTRO_SEC weiter nach hinten (Migration 0191), und was über den
+     5 Sekunden Vorlesezeit liegt, ist Auftritt. So kennt jedes Gerät
+     den Moment, in dem die Frage kommt, aus derselben Serveruhr —
+     und ein Tablet, das mittendrin neu lädt, steigt an der richtigen
+     Stelle ein. MUSS zu v_intro in Migration 0191 passen. Ohne die
+     Migration ist der Rest nie größer als 5 Sekunden: dann gibt es
+     keinen Auftritt, und alles läuft wie vorher. */
+  const INTRO_SEC = 10;
+  const INTRO_MS  = INTRO_SEC * 1000;
+
   /* Zeitstempel vom Server lesen. Postgres schreibt Mikrosekunden
      („…:05.123456+00:00"); darauf hat sich Safari früher verschluckt
      und NaN geliefert — dann gab es keine Vorlesezeit, und das
@@ -407,9 +420,30 @@
     return Math.max(0, Math.ceil((ms - lim) / 1000));
   }
 
+  /* Läuft gerade der Auftritt? Nur bei der ersten Frage, und nur,
+     solange mehr als die 5 Sekunden Vorlesezeit übrig sind. */
+  function introAn() {
+    if (!view || view.phase !== 'question' || (view.current_q_idx | 0) !== 0) return false;
+    if (!view.phase_ends_at) return false;
+    const ms = restMs();
+    if (ms == null) return false;
+    const lim = ((view.question && view.question.time_limit) || 20) * 1000;
+    return ms - lim > READ_TIME_SEC * 1000;
+  }
+
+  // Wie weit der Auftritt ist (0 … INTRO_MS) — für den Einstieg mittendrin.
+  function introVorbei() {
+    const ms = restMs();
+    if (ms == null) return 0;
+    const lim = ((view.question && view.question.time_limit) || 20) * 1000;
+    return klemme(INTRO_MS - (ms - lim - READ_TIME_SEC * 1000), 0, INTRO_MS);
+  }
+
   function clockTick() {
     const ms = restMs();
     if (ms == null) return;
+    // Der Auftritt ist zu Ende: das Bild wechselt zur Frage.
+    if (lastFrame && lastFrame.indexOf('|intro') >= 0 && !introAn()) { zeichne(); return; }
     const lim = (view.question && view.question.time_limit) || 20;
     const reading = view.phase === 'question' && ms > (lim * 1000);
 
@@ -587,7 +621,8 @@
     const ph = v.phase || 'lobby';
     return role + '|' + ph
       + '|' + (ph === 'question' || ph === 'reveal' ? v.current_q_idx : '-')
-      + '|' + (pickerOffen ? 'pick' : '-');
+      + '|' + (pickerOffen ? 'pick' : '-')
+      + (introAn() ? '|intro' : '');
   }
 
   function zeichne() {
@@ -600,6 +635,7 @@
       stopBewegung();
       stage.className = 'ks-stage ks-stage--' + (role === 'presenter' ? 'beam' : 'tab')
                      + ' ks-stage--' + view.phase
+                     + (introAn() ? ' ks-stage--intro' : '')
                      + (role === 'presenter' && !editorAuf() && view.phase === 'question'
                         && view.question && view.question.has_image ? ' ks-stage--mitbild' : '');
       stage.innerHTML = (role === 'presenter' ? baueBeam : baueTab)(view);
@@ -608,6 +644,16 @@
       fit();
       startClock();
       if (role === 'presenter' && !editorAuf()) startBewegung(view);
+      // Genau zum Ende des Auftritts umschalten, nicht erst beim
+      // nächsten 250-ms-Schlag der Uhr.
+      if (role === 'participant' && view.phase === 'ended' && bewegtSich()) {
+        const t = stage.querySelector('.ks-tende--sieg');
+        if (t) konfetti(t);
+      }
+      if (introAn()) {
+        const lim = ((view.question && view.question.time_limit) || 20) * 1000;
+        spaeter(zeichne, Math.max(0, restMs() - lim - READ_TIME_SEC * 1000) + 30);
+      }
     }
     (role === 'presenter' ? flickeBeam : flickeTab)(view);
   }
@@ -630,7 +676,7 @@
   function baueBeam(v) {
     if (editorAuf()) return editor.html();
     if (v.phase === 'lobby')    return beamLobby(v);
-    if (v.phase === 'question') return beamFrage(v);
+    if (v.phase === 'question') return introAn() ? beamIntro(v) : beamFrage(v);
     if (v.phase === 'reveal')   return beamAufloesung(v);
     return beamEnde(v);
   }
@@ -731,6 +777,89 @@
         </div>
       </div>
       ${kachelnHTML(opts, { modus: 'still', seed: mischKey(v), hidden: reading, ohneBuchstabe: true })}`;
+  }
+
+  /* ─── Der Auftritt vor der ersten Frage ───────────────────────
+     Oben „Quiz startet" und der Name des Fragenkatalogs, groß und auf
+     einem Kasten (er muss vom letzten Platz im Raum lesbar sein).
+     Dahinter regnen alle Wesen herein — leicht versetzt, jedes an
+     seiner eigenen Stelle —, landen auf dem Boden und laufen rechts
+     aus dem Bild. Danach kommt die Frage (der Wechsel steht in
+     zeichne). Die Bahn liegt HINTER dem Kasten: ein Wesen, das beim
+     Fallen den Titel kreuzt, verdeckt ihn nicht. */
+  function beamIntro(v) {
+    return `
+      <div class="ks-intro">
+        <div class="ks-intro-bahn" data-ks="bahn"></div>
+        <div class="ks-intro-titel">
+          <p class="ks-intro-kicker">Quiz startet</p>
+          <h1 class="ks-intro-name">${esc(v.catalog_title || 'Knowledge Stack')}</h1>
+        </div>
+      </div>`;
+  }
+
+  function introStart(v) {
+    const bahn = stage.querySelector('[data-ks=bahn]');
+    const spieler = (v.players || []).slice();
+    const n = spieler.length;
+    if (!bahn || !n) return;
+    const W = bahn.clientWidth, H = bahn.clientHeight;
+    if (!W || !H) return;
+
+    const s = Math.round(klemme(Math.min(H * .26, W / Math.max(4, n * .62)), 44, 130));
+    const reihen = n > 12 ? 3 : 2;
+    const stufe = s * .3;
+    bahn.style.setProperty('--is', s + 'px');
+
+    // Jedes Wesen bekommt einen eigenen Streifen quer (gemischt) und
+    // eine Reihe in der Tiefe. Der Regen fällt in einer anderen
+    // Reihenfolge als die Streifen — sonst fiele er von links nach rechts.
+    const mische = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+    const streifen = mische(spieler.map((_, i) => i));
+    const folge = mische(spieler.map((_, i) => i));
+    const breit = Math.max(1, W - s);
+    const lueck = Math.min(180, 2000 / n);
+    const speed = (W + s) / 3600;                      // Punkte je ms
+    const zeigt = bewegtSich();
+    const vorbei = introVorbei();
+
+    const figs = spieler.map((p, i) => {
+      const x = (streifen[i] + .5) / n * breit + zufall(-.3, .3) * breit / n;
+      return { p, x: klemme(x, 0, breit), reihe: i % reihen, fall: 700 + folge[i] * lueck + zufall(0, 150) };
+    });
+    // Wer rechts steht, geht zuerst — sonst liefe einer durch den anderen.
+    const nachX = figs.slice().sort((a, b) => b.x - a.x);
+    nachX.forEach((f, r) => { f.geht = 5000 + r * Math.min(60, 500 / n); });
+
+    figs.forEach(f => {
+      const cid = f.p.creature_id | 0;
+      const el = document.createElement('div');
+      el.className = 'ks-ifig';
+      el.style.width = s + 'px';
+      el.style.bottom = (f.reihe * stufe + 6) + 'px';
+      el.style.zIndex = String(10 + reihen - f.reihe);
+      el.innerHTML = '<div class="ks-ifp" style="height:' + s + 'px">' + wesen(cid, f.p.skin_idx, 'idle')
+        + '</div><span class="ks-ifname">' + esc(f.p.nickname) + '</span>';
+      bahn.appendChild(el);
+      if (!zeigt) { el.style.transform = 'translateX(' + f.x.toFixed(1) + 'px)'; return; }
+
+      const hoch = -(H + s * 1.6);
+      const dauer = Math.min(INTRO_MS - 400, f.geht + (W + s - f.x) / speed);
+      const t = ms => klemme(ms / INTRO_MS, 0, 1);
+      const pos = (y, sk) => 'translate(' + f.x.toFixed(1) + 'px,' + y + 'px)' + (sk ? ' scale(' + sk + ')' : '');
+      const a = el.animate([
+        { transform: pos(hoch), offset: 0 },
+        { transform: pos(hoch), offset: t(f.fall), easing: 'cubic-bezier(.5, 0, 1, .55)' },
+        { transform: pos(0), offset: t(f.fall + 750) },
+        { transform: pos(0, '1.16,.84'), offset: t(f.fall + 900), easing: 'ease-out' },
+        { transform: pos(0, '1,1'), offset: t(f.fall + 1100) },
+        { transform: pos(0), offset: t(f.geht), easing: 'linear' },
+        { transform: 'translate(' + (W + s) + 'px,0)', offset: t(dauer) },
+        { transform: 'translate(' + (W + s) + 'px,0)', offset: 1 }
+      ], { duration: INTRO_MS, fill: 'both', easing: 'linear' });
+      a.currentTime = vorbei;
+      spaeter(() => setAktion(el.querySelector('.ks-ifp'), 'walk', cid, 'right'), Math.max(0, f.geht - vorbei));
+    });
   }
 
   /* Das n-Eck der Antworten: ein Dreieck je Kind, gefüllt, sobald es
@@ -955,6 +1084,7 @@
   /* ─── Beamer flicken ─────────────────────────────────────── */
   function flickeBeam(v) {
     if (v.phase === 'question' && v.question && v.question.has_image) holeBild(v.question);
+    if (v.phase === 'question' && introAn()) return;     // Auftritt: nichts zu flicken
     if (els.total) els.total.textContent = String((v.players || []).length);
     if (els.count) els.count.textContent = String(v.answers_total || 0);
     if (v.phase === 'question') flickeEck(v.answers_total || 0, (v.players || []).length);
@@ -1170,6 +1300,7 @@
     }
     if (!bewegtSich()) return;
     if (v.phase === 'lobby' && els.wall) wieseStart(els.wall);
+    if (v.phase === 'question' && introAn()) introStart(v);
     if (v.phase === 'reveal') podestAuftritt(v.leaderboard || []);
     if (v.phase === 'ended') feierStart(v);
   }
@@ -1564,8 +1695,9 @@
   function baueTab(v) {
     if (v.phase === 'lobby')                 return tabLobby(v);
     if (v.phase === 'ended' && pickerOffen)  return tabLobby(v, true);
-    if (v.phase === 'question')              return tabFrage(v);
-    return tabRang(v);                       // reveal + ended
+    if (v.phase === 'question')              return introAn() ? tabIntro(v) : tabFrage(v);
+    if (v.phase === 'ended')                 return tabEnde(v);
+    return tabRang(v);                       // reveal
   }
 
   function tabLobby(v, nachher) {
@@ -1635,21 +1767,14 @@
   function tabRang(v) {
     const me = v.me || {};
     const my = v.my_answer;
-    const ende = v.phase === 'ended';
     const richtig = my && my.is_correct;
 
-    let urteil = '';
-    if (!ende) {
-      urteil = my
+    const urteil = my
         ? '<div class="ks-urteil ks-urteil--' + (richtig ? 'ok' : 'nein') + '">'
           + (richtig ? 'Richtig · +' + pkt(my.points_awarded) : 'Leider falsch')
           + ((me.streak > 1 && richtig) ? ' <i>🔥 ' + me.streak + 'er Serie</i>' : '')
           + '</div>'
         : '<div class="ks-urteil ks-urteil--weg">Keine Antwort abgegeben</div>';
-    } else {
-      urteil = '<div class="ks-urteil ks-urteil--end">Platz ' + (me.rank || '?')
-             + ' von ' + (v.player_count || '?') + '</div>';
-    }
 
     return `
       ${urteil}
@@ -1658,15 +1783,48 @@
         <div class="ks-ich" data-slot="ich" data-cid="${me.creature_id | 0}">
           <span class="ks-inr">#${me.rank || '?'}</span>
           <div class="ks-ipic">${wesen(me.creature_id, me.skin_idx,
-            localEmote || (ende ? 'cheer' : richtig ? 'cheer' : my ? 'sad' : 'idle'))}</div>
+            localEmote || (richtig ? 'cheer' : my ? 'sad' : 'idle'))}</div>
           <span class="ks-iname">${esc(me.nickname || 'Du')}</span>
           <span class="ks-ipkt" data-ks="mypkt">${pkt(me.score)}</span>
           ${deltaHTML(me.rank_change)}
         </div>
         ${nachbarHTML(v.neighbor_after, 'nach')}
       </div>
-      <div class="ks-emobar">${emoteBarHTML()}</div>
-      ${ende ? '<button type="button" class="ks-wechsel" data-act="wechsel">Wesen für die nächste Runde ändern</button>' : ''}`;
+      <div class="ks-emobar">${emoteBarHTML()}</div>`;
+  }
+
+  /* Auf dem Tablet steht während des Auftritts nur das eigene Wesen
+     und die Ansage — keine Antworten, keine Emote-Leiste. Die Augen
+     gehören nach vorn. */
+  function tabIntro(v) {
+    const me = v.me || {};
+    return `
+      <div class="ks-tintro">
+        <div class="ks-tintro-pic" data-cid="${me.creature_id | 0}">
+          ${wesen(me.creature_id, me.skin_idx, 'wave')}
+        </div>
+        <span class="ks-tintro-name">${esc(me.nickname || 'Du')}</span>
+        <p class="ks-tintro-text">Gleich geht’s los —<br>pass auf!</p>
+      </div>`;
+  }
+
+  /* Siegerehrung auf dem Tablet: nichts als die Emote-Leiste — was
+     passiert, passiert am Beamer. Der obere Teil bleibt leer. Nur wer
+     gewonnen hat (Platz 1, auch geteilt), sieht es sofort bei sich,
+     ohne auf das Treppchen zu warten. */
+  function tabEnde(v) {
+    const me = v.me || {};
+    const sieger = (me.rank | 0) === 1;
+    return `
+      <div class="ks-tende${sieger ? ' ks-tende--sieg' : ''}" data-ks="tende">
+        ${sieger ? `
+          <div class="ks-tsieg-pic" data-slot="ich" data-cid="${me.creature_id | 0}">
+            <div class="ks-ipic">${wesen(me.creature_id, me.skin_idx, localEmote || me.emote || 'cheer')}</div>
+          </div>
+          <h2 class="ks-tsieg-titel">🏆 Du hast gewonnen!</h2>
+          <span class="ks-tsieg-pkt">${pkt(me.score)} Punkte</span>` : ''}
+      </div>
+      <div class="ks-emobar">${emoteBarHTML()}</div>`;
   }
 
   function nachbarHTML(p, slot) {
@@ -1687,6 +1845,7 @@
 
   /* ─── Tablet flicken ────────────────────────────────────── */
   function flickeTab(v) {
+    if (v.phase === 'question' && introAn()) return;
     if (v.phase === 'question') {
       const reading = isReadingPhase();
       const lock = stage.querySelector('[data-ks=lock]');
