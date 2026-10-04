@@ -124,6 +124,10 @@ pruef(nr, was, treffer, merkmal) as (
      (select count(*) > 0 from funk where proname = 'skill_room_remove'),
      'ohne: "Entfernen" im Onboarding meldet einen Fehler, Offline-Kinder bekommen beim Start ein Volk'),
 
+    ('0188', 'Knowledge Stack: nur Anwesende im ganzen Spiel',
+     (select count(*) > 0 from funk where proname = 'ks_present'),
+     'ohne: stillgelegte und Offline-Kinder stehen im laufenden Quiz auf Wand und Rangliste'),
+
     -- ── Die eigene Insel ───────────────────────────────────────
     ('0136', 'wi_solo_learners',
      (select count(*) > 0 from spalte where tab = 'wi_solo_learners' and sp = 'token'),

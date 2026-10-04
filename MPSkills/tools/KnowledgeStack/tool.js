@@ -868,6 +868,12 @@
       if (slot.dataset.laeuft || slot.classList.contains('is-leer')) continue;
       zeigeWunsch(pic, wanted, cid);
     }
+    // Wer stillgelegt wird oder offline geht, fällt aus der Rangliste
+    // (0188). Sein Platz bleibt dann leer, statt das alte Wesen weiter
+    // zu zeigen — die Plätze werden nur einmal je Bild gebaut.
+    stage.querySelectorAll('.ks-slot[data-rank], .ks-stufe[data-rank]').forEach(sl => {
+      sl.style.visibility = lb.some(p => p.rank === Number(sl.dataset.rank)) ? '' : 'hidden';
+    });
     if (!ende) podestVorher = new Map(lb.map(p => [String(p.participant_id),
       { rank: p.rank, cid: p.creature_id | 0, skin: p.skin_idx | 0 }]));
   }
