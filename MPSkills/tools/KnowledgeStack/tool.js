@@ -730,7 +730,7 @@
           <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
         </div>
       </div>
-      ${kachelnHTML(opts, { modus: 'still', hidden: reading, ohneBuchstabe: true })}`;
+      ${kachelnHTML(opts, { modus: 'still', seed: q.qid, hidden: reading, ohneBuchstabe: true })}`;
   }
 
   /* Das n-Eck der Antworten: ein Dreieck je Kind, gefüllt, sobald es
@@ -784,7 +784,7 @@
         ${steuerHTML(letzte)}
       </header>
       ${podestHTML(v.leaderboard || [], 'rv')}
-      ${kachelnHTML(opts, { modus: 'fuell', correct: q.correct_idx, correct_indices: q.correct_indices })}
+      ${kachelnHTML(opts, { modus: 'fuell', seed: q.qid, correct: q.correct_idx, correct_indices: q.correct_indices })}
       ${q.explanation ? '<p class="ks-expl">' + esc(q.explanation) + '</p>' : ''}`;
   }
 
@@ -887,16 +887,46 @@
 
        still   Beamer während der Frage (nicht anklickbar)
        wahl    Tablet während der Frage (anklickbar)
-       fuell   Auflösung: Füllstand + absolute Zahl              */
+       fuell   Auflösung: Füllstand + absolute Zahl
+
+     Die Reihenfolge ist je Frage gemischt (Oktober 2026), damit die
+     richtige Antwort nicht immer an derselben Stelle steht. Gemischt
+     wird mit der qid als Startwert: Beamer und alle Tablets rechnen
+     daraus dieselbe Reihenfolge, und Frage und Auflösung auch — die
+     Regel oben gilt weiter. Farbe und Buchstabe gehören zur STELLE
+     (oben links ist immer A und rot), data-idx und Füllstand zur
+     ursprünglichen Antwort, denn die kennt der Server.               */
+  function mischung(opts, seed) {
+    const voll = [], leer = [];
+    opts.forEach((t, i) => (String(t || '').trim() ? voll : leer).push(i));
+    // FNV-1a über die qid, dann ein kleiner Zufallsgenerator (mulberry32)
+    let h = 2166136261;
+    const str = String(seed == null ? '' : seed);
+    for (let k = 0; k < str.length; k++) { h ^= str.charCodeAt(k); h = Math.imul(h, 16777619); }
+    const rnd = () => {
+      h = (h + 0x6D2B79F5) | 0;
+      let x = Math.imul(h ^ (h >>> 15), 1 | h);
+      x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+      return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+    };
+    for (let k = voll.length - 1; k > 0; k--) {
+      const j = Math.floor(rnd() * (k + 1));
+      [voll[k], voll[j]] = [voll[j], voll[k]];
+    }
+    // Leere Felder bleiben hinten, sonst stünde bei Ja/Nein ein Loch vorn
+    return voll.concat(leer);
+  }
+
   function kachelnHTML(opts, o) {
     const n = opts.length || 4;
     return '<div class="ks-kacheln"' + (o.hidden ? ' hidden' : '') + ' data-n="' + n + '" data-modus="' + o.modus + '">'
-      + opts.map((t, i) => {
+      + mischung(opts, o.seed).map((i, pos) => {
+        const t = opts[i];
         const richtig = (Array.isArray(o.correct_indices) && o.correct_indices.length > 0)
           ? o.correct_indices.includes(i)
           : (o.correct != null && i === o.correct);
         const gewaehlt = o.chosen != null && i === o.chosen;
-        const cls = ['ks-k', 'ks-k--' + i];
+        const cls = ['ks-k', 'ks-k--' + pos];
         /* Am Beamer bekommt die Kachel KEINE Abblendung. `is-still`
            heißt „du hast schon geantwortet" und gehört dem Tablet —
            am Beamer hieße dasselbe „aus der letzten Reihe schlechter
@@ -907,7 +937,7 @@
         return `
           <${o.modus === 'wahl' ? 'button type="button"' : 'div'} class="${cls.join(' ')}" data-idx="${i}">
             ${o.modus === 'fuell' ? '<span class="ks-fuell" data-fuell="' + i + '"></span>' : ''}
-            ${o.ohneBuchstabe ? '' : '<span class="ks-kk ' + (richtig ? 'ks-kk--richtig' : '') + '">' + (richtig ? '✓' : LABELS[i]) + '</span>'}
+            ${o.ohneBuchstabe ? '' : '<span class="ks-kk ' + (richtig ? 'ks-kk--richtig' : '') + '">' + (richtig ? '✓' : LABELS[pos]) + '</span>'}
             <span class="ks-kt">${esc(t)}</span>
             ${o.modus === 'fuell' ? '<span class="ks-kn" data-kn="' + i + '">0</span>' : ''}
             ${gewaehlt ? '<span class="ks-kmein">deine Wahl</span>' : ''}
@@ -1587,7 +1617,7 @@
         <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
         <p class="ks-reading-sub">Lies die Frage. Die Antworten erscheinen bei allen gleichzeitig.</p>
       </div>
-      ${kachelnHTML(opts, { modus: 'wahl', chosen: my ? my.chosen_idx : null, hidden: reading })}
+      ${kachelnHTML(opts, { modus: 'wahl', seed: q.qid, chosen: my ? my.chosen_idx : null, hidden: reading })}
       <p class="ks-gesperrt" data-ks="lock" ${my && !reading ? '' : 'hidden'}>
         Antwort abgegeben — jetzt zum Beamer sehen.</p>`;
   }
