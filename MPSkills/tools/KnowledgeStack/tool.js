@@ -97,12 +97,15 @@
     + 'C' + (x - r * .15) + ' ' + (y + r * .3) + ' ' + (x - r * .3) + ' ' + (y + r * .15) + ' ' + (x - r) + ' ' + y
     + 'C' + (x - r * .3) + ' ' + (y - r * .15) + ' ' + (x - r * .15) + ' ' + (y - r * .3) + ' ' + x + ' ' + (y - r) + 'z"/>';
   const ICONS = {
-    // Funkwellen: ein Punkt, der nach außen winkt
+    // Offene Hand, leicht gekippt, als würde sie winken
     wave:  ICO('#22d3ee', '#a5f3fc',
-      '<circle class="p" cx="4.500" cy="19.500" r="2.600"/>'
-      + '<path class="l" d="M4.500 13.500a6 6 0 0 1 6 6"/>'
-      + '<path class="l" d="M4.500 8.500a11 11 0 0 1 11 11"/>'
-      + '<path class="m" d="M4.500 3.500a16 16 0 0 1 16 16"/>'),
+      '<g transform="rotate(14 12 13)">'
+      + '<rect class="q" x="6.200" y="4.500" width="3.200" height="10" rx="1.600"/>'
+      + '<rect class="q" x="9.800" y="2.500" width="3.200" height="12" rx="1.600"/>'
+      + '<rect class="q" x="13.400" y="3" width="3.200" height="11.500" rx="1.600"/>'
+      + '<rect class="q" x="17" y="5.500" width="3.200" height="9" rx="1.600"/>'
+      + '<rect class="q" x="2.200" y="11.500" width="3.200" height="8" rx="1.600" transform="rotate(-38 3.800 15.500)"/>'
+      + '<rect class="p" x="5.600" y="11" width="14.600" height="10.500" rx="5"/></g>'),
     // Doppelter Aufwärtsschub
     jump:  ICO('#a3e635', '#d9f99d',
       '<path class="l" d="M4.500 11.500L12 4l7.500 7.500"/>'
@@ -110,20 +113,21 @@
     // Große Glitzersterne
     cheer: ICO('#facc15', '#fde68a',
       STAR(11, 13, 9.500, 'p') + STAR(20, 4.500, 3.500, 'q') + STAR(3.800, 4.800, 2.600, 'q')),
-    // Equalizer
+    // Zwei verbundene Noten
     dance: ICO('#f472b6', '#fbcfe8',
-      '<rect class="p" x="2.500" y="12" width="3.600" height="10" rx="1.800"/>'
-      + '<rect class="q" x="8.100" y="3" width="3.600" height="19" rx="1.800"/>'
-      + '<rect class="p" x="13.700" y="8" width="3.600" height="14" rx="1.800"/>'
-      + '<rect class="q" x="19.300" y="14.500" width="3.600" height="7.500" rx="1.800"/>'),
+      '<path class="q" d="M8.800 5.500l12.400-2.300v4.600L8.800 10.200z"/>'
+      + '<rect class="p" x="8.800" y="5" width="2.400" height="13" rx="1.200"/>'
+      + '<rect class="p" x="18.800" y="3" width="2.400" height="13" rx="1.200"/>'
+      + '<ellipse class="p" cx="7" cy="18.500" rx="3.800" ry="3.100" transform="rotate(-18 7 18.500)"/>'
+      + '<ellipse class="p" cx="17" cy="16.500" rx="3.800" ry="3.100" transform="rotate(-18 17 16.500)"/>'),
     // Mond mit Stern
     sleep: ICO('#a78bfa', '#ddd6fe',
       '<path class="p" d="M19.500 15A9 9 0 1 1 9 4.500a7.200 7.200 0 0 0 10.500 10.500z"/>'
       + STAR(18.500, 5.500, 3.600, 'q')),
-    // Tropfen mit Glanz
+    // Regenwolke
     sad:   ICO('#60a5fa', '#bfdbfe',
-      '<path class="p" d="M12 2.500c4 5 6.500 8 6.500 11.500a6.500 6.500 0 0 1-13 0c0-3.500 2.500-6.500 6.500-11.500z"/>'
-      + '<path class="g" d="M9 14.500a3.200 3.200 0 0 0 2.400 3.100"/>')
+      '<path class="p" d="M7 15a4.500 4.500 0 0 1-.4-9A6.200 6.200 0 0 1 18 7.400 3.800 3.800 0 0 1 17.500 15z"/>'
+      + '<path class="m" d="M8 18l-1.200 3M13 18l-1.200 3M18 18l-1.200 3"/>')
   };
   const EMOTES  = [
     { id: 'wave',  icon: ICONS.wave,  title: 'Winken',   c: '#22d3ee' },
