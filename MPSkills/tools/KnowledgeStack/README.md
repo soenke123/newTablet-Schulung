@@ -10,9 +10,10 @@ Das ist keine Geschmacksfrage, sondern die Spielregel:
 | | Beamer (`presenter`) | Tablet (`participant`) |
 |---|---|---|
 | **Lobby** | Katalogwahl · Startknopf · Wiese: die Wesen fallen herein und laufen herum | Wesenwahl (36 × 3 Farben) · Emote-Knöpfe |
+| **Start der Runde** (erste Frage, 10 s) | „**Quiz startet**“ + Name des Fragenkatalogs groß; alle Wesen regnen von oben herein, landen und laufen rechts aus dem Bild | Nur das eigene Wesen und „Gleich geht’s los — pass auf!“ |
 | **Frage** | Fragetext groß · Uhr · vier Antwortfelder · „x von y haben geantwortet" | Das **eigene Wesen** · vier Antwortfelder · **keine Frage** |
 | **Auflösung** | Die fünf Ersten dort, wo die Frage stand (1 links … 5 rechts) · dieselben vier Felder als **Füllstände** mit absoluten Zahlen · Erklärung | Richtig/Falsch · der Nachbar vor mir, ich, der Nachbar hinter mir · Emote-Knöpfe |
-| **Siegerehrung** | Treppchen 2 · 1 · 3 (Platz 3, 2, dann mit Trommelwirbel 1 springen hinauf) · darunter klein **alle** Wesen mit Punkten, sie klatschen, alle emoten | Endplatz · Emotes · Wesen für die nächste Runde ändern |
+| **Siegerehrung** | Treppchen 2 · 1 · 3 (Platz 3, 2, dann mit Trommelwirbel 1 springen hinauf) · darunter klein **alle** Wesen mit Punkten, sie klatschen, alle emoten | **Nur die Emote-Leiste**, der obere Teil ist leer (es passiert am Beamer). Wer **gewonnen** hat (Platz 1), sieht sofort „Du hast gewonnen!“ mit Konfetti |
 
 Die Frage steht **nicht** auf dem Schülergerät — weder in der Anzeige noch in
 der Serverantwort (`ks_view` gibt `question.text = null`, solange die Frage
@@ -196,6 +197,18 @@ Damit das wirklich gleichzeitig ist (Oktober 2026, 0189):
 * Das Tablet fragt in Lobby und Auflösung alle 2 bzw. 1,5 s nach — es
   muss die neue Frage kennen, bevor die 5 Sekunden um sind.
 
+## Der Auftritt vor der ersten Frage (0191)
+
+Der Auftritt hat keine eigene Phase: `ks_step` legt `phase_ends_at` der
+**ersten Frage einer Runde** um 10 Sekunden weiter nach hinten
+(`v_intro`, in `tool.js` `INTRO_SEC` — beide müssen übereinstimmen). Alles,
+was über den 5 Sekunden Vorlesezeit liegt, ist Auftritt (`introAn`). Dadurch
+kennt jedes Gerät den Moment, in dem die Frage kommt, aus derselben
+Serveruhr, ein neu geladenes Tablet steigt mittendrin ein
+(`introVorbei`), und `ks_answer` lässt vorher von allein niemanden
+antworten. **Ohne 0191** ist der Rest nie größer als 5 Sekunden — dann
+gibt es keinen Auftritt, und alles läuft wie vorher.
+
 ## Abbrechen und neu starten
 
 Während der Frage steht rechts neben dem Foto **⏹ Beenden** (sofort zur
@@ -289,7 +302,8 @@ node supabase/tests/0189_knowledgestack_sync_reveal.mjs       # Uhrabgleich, fai
 `0174_knowledgestack_game.sql` legt die Tabellen an, `0175_knowledgestack_flow.sql`
 räumt den Ablauf auf, `0186_knowledgestack_photos_abort.sql` bringt Fotos,
 Beenden und Neustart (und die Katalog-Aufrufe mit `p_code`, die der Beamer
-braucht), `0189_knowledgestack_sync_reveal.sql` die gleichzeitigen Antworten. Alle spielt Sönke selbst im Supabase-Dashboard ein.
+braucht), `0189_knowledgestack_sync_reveal.sql` die gleichzeitigen Antworten,
+`0191_knowledgestack_intro.sql` die 10 Sekunden Auftritt vor der ersten Frage. Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
 ## Der Fragen-Editor
 
