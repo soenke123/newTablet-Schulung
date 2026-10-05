@@ -493,7 +493,24 @@
   gap: clamp(8px, calc(var(--ks-h) * .025), 26px);
 }
 .ks-mitte:not(.ks-mitte--bild) { flex: 0 0 auto; }
+.ks-mitte--bild { display: block; }
 .ks-stage--beam.ks-stage--question .ks-kacheln { flex: 0 0 30%; }
+/* Mit Foto: das Bild nimmt den ganzen Rest, die Antworten werden
+   schmaler, Uhr und Knöpfe sind eine kleine Leiste ganz unten. */
+.ks-stage--mitbild .ks-kacheln { flex: 0 0 22%; }
+.ks-leiste {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(8px, calc(var(--ks-h) * .02), 20px);
+}
+.ks-leiste .ks-status { flex-direction: row; gap: clamp(10px, calc(var(--ks-h) * .03), 28px); }
+.ks-leiste .ks-knoepfe { flex-direction: row; }
+.ks-leiste .ks-stxt .ks-clock { font-size: clamp(14px, calc(var(--ks-h) * .035), 28px); }
+.ks-leiste { --stat-ic: clamp(16px, calc(var(--ks-h) * .035), 30px); }
+.ks-leiste .ks-knoepfe .ks-ctl,
+.ks-leiste .ks-knoepfe .ks-now { min-height: 36px; font-size: clamp(11px, calc(var(--ks-h) * .022), 16px); }
 .ks-stage--beam.ks-stage--question:not(.ks-stage--mitbild) .ks-qbox { flex: 1 1 0; }
 .ks-stage--beam.ks-stage--question:not(.ks-stage--mitbild) .ks-kacheln { flex: 1.3 1 0; }
 .ks-stage--beam.ks-stage--question:not(.ks-stage--mitbild) .ks-q {
