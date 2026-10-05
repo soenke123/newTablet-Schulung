@@ -701,19 +701,33 @@ function renderSettings() {
     if (!box || !key) return;
     ev.preventDefault();
     harvestGroups();
+    /* Die Kachel klebt am Zeiger (position:fixed), an ihrer Stelle
+       steht eine Lücke, die wandert und hervorgehoben ist: dort landet
+       die Frage beim Loslassen. */
+    const r0   = row.getBoundingClientRect();
+    const offY = ev.clientY - r0.top;
+    const gap  = document.createElement('div');
+    gap.className = 'listrow-gap';
+    gap.style.height = r0.height + 'px';
+    box.insertBefore(gap, row);
     row.classList.add('is-dragging');
+    Object.assign(row.style, { width: r0.width + 'px', left: r0.left + 'px', top: r0.top + 'px' });
     try { grip.setPointerCapture(ev.pointerId); } catch (e) {}
     const move = (e) => {
+      row.style.top = (e.clientY - offY) + 'px';
       const rows = [...box.querySelectorAll('.listrow')].filter(r => r !== row);
       const next = rows.find(r => e.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2);
-      if (next) { if (row.nextSibling !== next) box.insertBefore(row, next); }
-      else if (box.lastElementChild !== row) box.appendChild(row);
+      if (next) { if (gap.nextSibling !== next) box.insertBefore(gap, next); }
+      else if (box.lastElementChild !== gap) box.appendChild(gap);
     };
     const end = () => {
       grip.removeEventListener('pointermove', move);
       grip.removeEventListener('pointerup', end);
       grip.removeEventListener('pointercancel', end);
+      box.insertBefore(row, gap);
+      gap.remove();
       row.classList.remove('is-dragging');
+      row.removeAttribute('style');
       const order = [...box.querySelectorAll('[data-gid]')].map(el => el.dataset.gid);
       const items = S.groups[key] || [];
       S.groups[key] = order.map(id => items.find(it => it.id === id)).filter(Boolean);

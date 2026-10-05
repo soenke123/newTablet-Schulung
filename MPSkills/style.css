@@ -3191,7 +3191,15 @@ body.mpfs-body { overflow: hidden; }
   touch-action: none; letter-spacing: -2px; font-weight: 700;
 }
 .listrow-grip:hover { color: var(--ink); }
-.listrow.is-dragging { opacity: .75; box-shadow: 0 4px 14px rgba(0,0,0,.18); background: var(--surface); border-radius: 12px; }
+.listrow.is-dragging {
+  position: fixed; z-index: 1000; margin: 0; pointer-events: none;
+  background: var(--surface); border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0,0,0,.28); transform: scale(1.02);
+}
+.listrow-gap {
+  border: 2px dashed var(--accent); border-radius: 12px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
 .listrow.is-dragging .listrow-grip { cursor: grabbing; }
 .listrow-n {
   flex: 0 0 auto;
