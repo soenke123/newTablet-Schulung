@@ -3184,6 +3184,15 @@ body.mpfs-body { overflow: hidden; }
 }
 .listrows { display: grid; gap: 8px; }
 .listrow { display: flex; align-items: center; gap: 8px; }
+.listrow-grip {
+  flex: 0 0 auto; width: 28px; align-self: stretch;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--ink-faint); cursor: grab; user-select: none;
+  touch-action: none; letter-spacing: -2px; font-weight: 700;
+}
+.listrow-grip:hover { color: var(--ink); }
+.listrow.is-dragging { opacity: .75; box-shadow: 0 4px 14px rgba(0,0,0,.18); background: var(--surface); border-radius: 12px; }
+.listrow.is-dragging .listrow-grip { cursor: grabbing; }
 .listrow-n {
   flex: 0 0 auto;
   width: 22px; text-align: center;

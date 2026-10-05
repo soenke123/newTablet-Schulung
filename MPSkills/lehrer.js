@@ -227,8 +227,8 @@ const ERRORS = {
                    + 'Sonst antworten die Beiträge auf eine andere Frage als die, die oben steht.',
   // Die gruppenfeine Sperre aus 0086. Sie trifft genau eine Frage,
   // nicht das ganze Formular — deshalb sagt sie auch das.
-  group_has_entries: 'Darunter liegen schon Beiträge. Solange die dastehen, bleibt die Frage, '
-                   + 'wie sie ist — sonst antworten sie auf etwas anderes.',
+  group_has_entries: 'Darunter liegen schon Beiträge. Solange die dastehen, lässt sich die Frage '
+                   + 'umformulieren, aber nicht löschen.',
   groups_required:   'Mindestens eine Frage muss stehen bleiben.',
   groups_invalid:    'Mit den Fragen stimmt etwas nicht.',
   too_many_groups:   'Mehr Fragen gehen in einem Raum nicht.'
@@ -433,15 +433,16 @@ const newGroupId = () =>
 function listRowHTML(f, item, locked, n) {
   return `
     <div class="listrow${locked ? ' is-locked' : ''}" data-row="${esc(f.key)}">
+      <span class="listrow-grip" data-grip title="Ziehen zum Sortieren" aria-hidden="true">⋮⋮</span>
       <span class="listrow-n">${n}</span>
       <input type="text" data-setting-item="${esc(f.key)}" data-gid="${esc(item.id)}" data-req
              maxlength="${Number(f.maxlength) || 140}"
              placeholder="${esc(f.placeholder || '')}"
-             value="${esc(item.text || '')}" ${locked ? 'disabled' : ''}
+             value="${esc(item.text || '')}"
              aria-label="${esc(f.itemLabel || f.label)} ${n}" />
       <button type="button" class="listrow-del" data-del="${esc(item.id)}"
               ${locked ? 'disabled' : ''}
-              title="${locked ? 'Darunter liegen schon Beiträge.' : 'Entfernen'}"
+              title="${locked ? 'Darunter liegen schon Beiträge — löschen geht nicht mehr.' : 'Entfernen'}"
               aria-label="${esc(f.itemLabel || f.label)} ${n} entfernen">✕</button>
     </div>`;
 }
@@ -465,7 +466,7 @@ function listHTML(f) {
       ${items.length >= max
         ? `<p class="lockline">Mehr als ${max} ${esc(f.label)} gehen in einem Raum nicht.</p>` : ''}
       ${anyLocked
-        ? '<p class="lockline">Wo schon Zettel liegen, bleibt die Frage stehen.</p>' : ''}
+        ? '<p class="lockline">Wo schon Zettel liegen, lässt sich die Frage umformulieren, aber nicht löschen.</p>' : ''}
     </div>`;
 }
 
@@ -686,6 +687,41 @@ function renderSettings() {
     // in das man tippen könnte, und der Server nähme sie auch nicht.
     S.groups[key] = rest.length ? rest : [{ id: newGroupId(), text: '' }];
     redrawList(key);
+  });
+
+  /* Sortieren per Ziehen am Griff links. Pointer-Events statt HTML5-
+     Drag&Drop: das geht auf Tablets nicht. Die Zeilen werden direkt im
+     DOM verschoben; danach wandert die neue Reihenfolge in S.groups. */
+  form.addEventListener('pointerdown', (ev) => {
+    const grip = ev.target.closest('[data-grip]');
+    if (!grip || (ev.button != null && ev.button > 0)) return;
+    const row  = grip.closest('.listrow');
+    const box  = row?.parentElement;
+    const key  = row?.dataset.row;
+    if (!box || !key) return;
+    ev.preventDefault();
+    harvestGroups();
+    row.classList.add('is-dragging');
+    try { grip.setPointerCapture(ev.pointerId); } catch (e) {}
+    const move = (e) => {
+      const rows = [...box.querySelectorAll('.listrow')].filter(r => r !== row);
+      const next = rows.find(r => e.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2);
+      if (next) { if (row.nextSibling !== next) box.insertBefore(row, next); }
+      else if (box.lastElementChild !== row) box.appendChild(row);
+    };
+    const end = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', end);
+      grip.removeEventListener('pointercancel', end);
+      row.classList.remove('is-dragging');
+      const order = [...box.querySelectorAll('[data-gid]')].map(el => el.dataset.gid);
+      const items = S.groups[key] || [];
+      S.groups[key] = order.map(id => items.find(it => it.id === id)).filter(Boolean);
+      redrawList(key);
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', end);
+    grip.addEventListener('pointercancel', end);
   });
 
   if (creating) {
