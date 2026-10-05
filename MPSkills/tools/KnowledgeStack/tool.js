@@ -503,6 +503,7 @@
       const rBox = stage.querySelector('[data-ks=reading]');
       if (rBox && !rBox.hidden) {
         rBox.hidden = true;
+        stage.classList.remove('ks-stage--lesen');
         const kacheln = stage.querySelector('.ks-kacheln');
         if (kacheln && kacheln.hidden) {
           kacheln.hidden = false;
@@ -645,7 +646,8 @@
                      + ' ks-stage--' + view.phase
                      + (introAn() ? ' ks-stage--intro' : '')
                      + (role === 'presenter' && !editorAuf() && view.phase === 'question'
-                        && view.question && view.question.has_image ? ' ks-stage--mitbild' : '');
+                        && view.question && view.question.has_image
+                        ? ' ks-stage--mitbild' + (isReadingPhase() ? ' ks-stage--lesen' : '') : '');
       stage.innerHTML = (role === 'presenter' ? baueBeam : baueTab)(view);
       sammle();
       binde();
@@ -757,7 +759,9 @@
     const rSek = readingRestSec();
     const nr = (v.current_q_idx | 0) + 1;
     const n = v.question_count | 0;
-    const status = `
+    return `
+      <div class="ks-qbox"><h2 class="ks-q">${esc(q.text)}</h2></div>
+      <div class="ks-mitte${q.has_image ? ' ks-mitte--bild' : ''}">
         <div class="ks-status">
           <div class="ks-stat ks-stat--uhr">
             <span class="ks-uhr" data-ks="uhr"></span>
@@ -771,19 +775,16 @@
             <span class="ks-eck" data-ks="eck"></span>
             <span class="ks-stxt"><b><span data-ks="count">0</span>/<span data-ks="total">0</span></b> Antworten</span>
           </div>
-        </div>`;
-    const knoepfe = `
+        </div>
+        ${q.has_image ? '<div class="ks-bild" data-ks="bild">'
+          + (bild.qid === q.qid && bild.src ? '<img src="' + esc(bild.src) + '" alt="" />' : '')
+          + '</div>' : '<div class="ks-luecke"></div>'}
         <div class="ks-knoepfe">
           <button type="button" class="ks-ctl ks-ctl--stop" data-act="finish"
                   title="Quiz beenden — direkt zur Siegerehrung">⏹ Beenden</button>
           <button type="button" class="ks-now" data-act="now">Jetzt auflösen</button>
-        </div>`;
-    /* Mit Foto: das Bild nimmt die ganze Mitte, Uhr und Knöpfe sitzen
-       als schmale Leiste ganz unten am Rand (unter den Antworten). */
-    const bildHtml = '<div class="ks-bild" data-ks="bild">'
-      + (bild.qid === q.qid && bild.src ? '<img src="' + esc(bild.src) + '" alt="" />' : '')
-      + '</div>';
-    const leseUndKacheln = `
+        </div>
+      </div>
       <div class="ks-reading-banner" data-ks="reading" ${reading ? '' : 'hidden'}>
         <b class="ks-reading-zahl" data-ks="reading-count">${rSek}</b>
         <div class="ks-reading-info">
@@ -793,22 +794,6 @@
         </div>
       </div>
       ${kachelnHTML(opts, { modus: 'still', seed: mischKey(v), hidden: reading, ohneBuchstabe: true })}`;
-
-    if (q.has_image) {
-      return `
-      <div class="ks-qbox"><h2 class="ks-q">${esc(q.text)}</h2></div>
-      <div class="ks-mitte ks-mitte--bild">${bildHtml}</div>
-      ${leseUndKacheln}
-      <div class="ks-leiste">${status}${knoepfe}</div>`;
-    }
-    return `
-      <div class="ks-qbox"><h2 class="ks-q">${esc(q.text)}</h2></div>
-      <div class="ks-mitte">
-        ${status}
-        <div class="ks-luecke"></div>
-        ${knoepfe}
-      </div>
-      ${leseUndKacheln}`;
   }
 
   /* ─── Der Auftritt vor der ersten Frage ───────────────────────
