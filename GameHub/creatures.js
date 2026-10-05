@@ -2660,7 +2660,7 @@ async function loadGiftTasks() {
 }
 
 /* Boot-Sync für Task-3 „Gemeinsam siegen". Setzt window.__winTaskReady
-   auf true, wenn der Cluster alle 25 Monster hat und der User selbst
+   auf true, wenn der Cluster genug Monster vollendet hat (Ziel 15) und der User selbst
    noch nicht geclaimt hat — dann pulsiert die Legi-Kachel im Hub. */
 async function loadWinTaskStatus() {
   window.__winTaskReady = false;

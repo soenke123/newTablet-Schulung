@@ -2542,9 +2542,7 @@ function buyItem(itemId) {
       saveShopData(sd);
       renderHub();
       renderShop(loadAllData());
-      const stufe = res.used === 1
-        ? 'Ein Monster weniger nötig — 24 statt 25!'
-        : 'Zwei Monster weniger nötig — 23 statt 25!';
+      const stufe = `Ein Monster weniger nötig — ${Math.max(15 - res.used, 0)} statt 15!`;
       showGiftInfoModal('🃏 Joker gekauft!', stufe);
     })();
     return;
@@ -3792,7 +3790,7 @@ function showSealEggOpeningAnimation(def, creature, onClose) {
 const LEGI_TASKS = [
   { key: 'gift',     icon: '🎁', label: 'Andere beschenken',    status: 'active', hint: '50 🪙 – schenk eine Stufe', interactive: true },
   { key: 'friends',  icon: '🤝', label: 'Freunde finden',       status: 'active', hint: '3 mit gleichem Code', interactive: true },
-  { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: 'Alle Monster im Kurs vollenden', interactive: true },
+  { key: 'win',      icon: '🏆', label: 'Gemeinsam siegen',     status: 'active', hint: '15 Monster im Kurs vollenden', interactive: true },
   { key: 'path',     icon: '🌈', label: 'Deine Farbe finden',   status: 'active', hint: 'Der Regenbogen-Pfad', interactive: true },
   { key: 'virus',    icon: '🧩', label: 'Der Virus-Kodex',      status: 'active', hint: 'Löse das Rätsel und vollende deine Kreatur', interactive: true },
 ];
@@ -4738,9 +4736,9 @@ function friendsErrorMessage(code) {
 }
 
 // ─── Win-Flow („Gemeinsam siegen") ──────────────────────────
-// Cluster-weite Kreatur-Sammlung. Alle 25 non-Legi-Kreaturen müssen
-// von mind. 1 Cluster-Mitglied auf Stufe 5 (growth ≥ 100) gebracht
-// worden sein. Ist die Sammlung komplett, kann jeder aktive User
+// Cluster-weite Kreatur-Sammlung. 15 der 25 non-Legi-Kreaturen müssen
+// von mind. je 1 Cluster-Mitglied auf Stufe 5 (growth ≥ 100) gebracht
+// worden sein (Joker senken das Ziel, max. 5 → 10). Ist die Sammlung komplett, kann jeder aktive User
 // einmal seine eigene Einhornkatze eine Stufe weiter freischalten.
 // Aggregation liefert Server via get_cluster_creature_collection —
 // Refresh nur beim Öffnen des Flows (kein Realtime).
@@ -4764,7 +4762,7 @@ async function openWinFlow() {
     alreadyClaimed: false,
     total: 25,
     clusterJokers: 0,        // Migration 0047: Anzahl gekaufter Joker im Cluster
-    totalRequired: 25,       // = total − clusterJokers
+    totalRequired: 15,       // = 15 − clusterJokers
     jokerBuyers: [],         // [{display_name}]
     activeTab: 'all',        // 'all' | 1 | 2 | 3
     detailCreature: null,    // Kreatur-Key im detail-View
@@ -4832,7 +4830,7 @@ async function openWinFlow() {
     state.total = res.total || 25;
     // Migration 0047: Joker-Toleranz-Werte aus Server-Response.
     state.clusterJokers = res.cluster_jokers ?? 0;
-    state.totalRequired = res.total_required ?? state.total;
+    state.totalRequired = res.total_required ?? 15;
     // Käufer-Namen aus separater Joker-Status-RPC (parallel).
     const jokerStatus = await window.refreshClusterJokerStatus?.();
     state.jokerBuyers = jokerStatus?.buyers || [];
@@ -5595,12 +5593,12 @@ function renderWinGrid(s) {
   return `
     <div class="legi-win-body">
       <p class="legi-win-intro">
-        Der ganze Kurs muss jedes Monster einmal auf die höchste Stufe bringen.
+        Der ganze Kurs muss 15 Monster auf die höchste Stufe bringen — egal welche.
         Klicke auf ein Feld, um zu sehen, wer es schon vollendet hat.
       </p>
       ${jokerList}
       <div class="book-tabs legi-win-tabs">${tabs}</div>
-      <p class="book-modal__count">${foundAll} / ${s.total} vollendet${jokerSuffix}</p>
+      <p class="book-modal__count">${foundAll} / ${s.totalRequired} vollendet${jokerSuffix}</p>
       ${gridsHtml}
       <div class="legi-win-footer">${bottomButton}</div>
     </div>`;
