@@ -11,7 +11,8 @@
    Bedienung; der Gastgeber zeichnet nur und reicht Aufrufe durch.
 
    Drei Ansichten:
-     list     Katalog-Übersicht, gruppiert nach Fach (subject)
+     list     Fragenkatalog: alle sichtbaren Quizze nach Themenfeld, mit
+              Suche, Filtern, Status (Privat/Schule/Hub), Autor, Thumbnail
      edit     Visueller Fragen-Editor mit Drag & Drop
      preview  Beamer-Vorschau einer einzelnen Frage
 
@@ -30,13 +31,30 @@
 (function () {
   'use strict';
 
-  /* ─── Vorgabe-Fächer ─── */
-  const FAECHER = [
-    'Alles Mögliche', 'Mathematik', 'Deutsch', 'Englisch',
-    'Informatik', 'Biologie', 'Geschichte', 'Geografie',
-    'Physik', 'Chemie', 'Musik', 'Kunst', 'Sport',
-    'Politik', 'Religion', 'Tablet-Schulung'
+  /* ─── Themenfelder ───
+     Die Liste steht in ks_categories (Migration 0194); der Server
+     schickt sie mit ks_catalogs_list mit. Lehrkräfte legen keine neuen
+     an. Diese Liste ist nur der Notnagel, falls der Server noch keine
+     schickt (alte Datenbank). */
+  const THEMEN = [
+    'Mathematik', 'Deutsch', 'Englisch', 'Biologie', 'Physik', 'Chemie',
+    'Informatik', 'Geschichte', 'Geografie', 'Politik & Gesellschaft',
+    'Religion & Ethik', 'Musik', 'Kunst', 'Sport', 'Allgemeinwissen',
+    'Spaß & Rätsel', 'Kennenlernen & Klasse', 'Tablet & Medien',
+    'Natur & Umwelt', 'Alltag & Beruf', 'Andere'
   ];
+  const STANDARD_THEMA = 'Allgemeinwissen';
+
+  /* ─── Status: wer sieht das Quiz? Mehr Stufen gibt es nicht. ─── */
+  const STATUS = {
+    private: { ico: '🔒', label: 'Privat', hint: 'Nur du siehst dieses Quiz.' },
+    school:  { ico: '🏫', label: 'Schule', hint: 'Alle Lehrkräfte deiner Schule sehen es.' },
+    hub:     { ico: '🌍', label: 'Hub',    hint: 'Alle Lehrkräfte im ganzen Hub sehen es.' }
+  };
+  const statusVon = c => STATUS[c.visibility] ? c.visibility
+    : ((c.mine && !c.is_template) ? 'private' : 'hub');
+
+  const LOGO = '../LogoMPSkills.png';
 
   const esc = s => String(s || '').replace(/&/g, '&amp;')
     .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -46,104 +64,255 @@
   /* ═══════════════════════════════════════════════════════════
      1) KATALOG-ÜBERSICHT (list)
      ═══════════════════════════════════════════════════════════ */
-  /* opts.play  — „▶ Spielen" anbieten (nur im Raum: dort gibt es ein
-                  Brett, in das der Katalog geladen werden kann).
-     opts.close — Aufschrift des Zurück-Knopfs. */
-  function buildList(catalogs, opts) {
-    opts = opts || {};
-    const play = opts.play !== false;
-    // Nach Fach gruppieren
-    const gruppen = new Map();
-    for (const c of catalogs) {
-      const fach = c.subject || 'Alles Mögliche';
-      if (!gruppen.has(fach)) gruppen.set(fach, []);
-      gruppen.get(fach).push(c);
+  /* Text für die Suche: klein, ä → ae, ß → ss, sonst ohne Akzente. */
+  const norm = t => String(t || '').toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+  const neuFilter = () => ({
+    q: '', own: false, vis: 'all', cats: [], sort: 'new', closed: {}, peek: {}
+  });
+  const filterAktiv = lf => !!(lf.q.trim() || lf.own || lf.vis !== 'all' || lf.cats.length);
+
+  function filtere(catalogs, lf) {
+    const tokens = norm(lf.q).split(/\s+/).filter(Boolean);
+    const out = catalogs.filter(c => {
+      if (lf.own && !c.mine) return false;
+      if (lf.vis !== 'all' && statusVon(c) !== lf.vis) return false;
+      if (lf.cats.length && !lf.cats.includes(c.subject || 'Andere')) return false;
+      if (tokens.length) {
+        const hay = norm([c.title, c.author_name, c.subject, STATUS[statusVon(c)].label,
+                          c.search].join(' · '));
+        if (!tokens.every(t => hay.includes(t))) return false;
+      }
+      return true;
+    });
+    const zeit = c => String(c.updated_at || c.created_at || '');
+    if (lf.sort === 'az')         out.sort((x, y) => String(x.title).localeCompare(String(y.title), 'de'));
+    else if (lf.sort === 'count') out.sort((x, y) => (y.count | 0) - (x.count | 0));
+    else                          out.sort((x, y) => zeit(y).localeCompare(zeit(x)));
+    return out;
+  }
+
+  function thumbHtml(c, cache) {
+    const url = cache && cache[c.id];
+    if (url) return '<img class="kse-kk-img" src="' + esc(url) + '" alt="" loading="lazy" />';
+    return '<img class="kse-kk-img kse-kk-img--logo" src="' + LOGO + '" alt="" loading="lazy" />';
+  }
+
+  function karte(c, ctx) {
+    const st = statusVon(c);
+    const S = STATUS[st];
+    const eigen = !!c.mine && !c.is_template;
+    const n = c.count | 0;
+    const offen = !!ctx.lf.peek[c.id];
+    const aktiv = ctx.current && ctx.current === c.id;
+    const peek = ctx.peek[c.id];
+    const needThumb = c.has_thumb && !(ctx.thumbs && ctx.thumbs[c.id]);
+
+    let acts = '';
+    if (ctx.play) {
+      acts += `<button type="button" class="kse-btn kse-btn--small kse-btn--cyan"
+                data-ed="play" data-cat="${esc(c.id)}"
+                title="Dieses Quiz im Raum verwenden">▶ Spielen</button>`;
+    }
+    if (eigen) {
+      acts += `<button type="button" class="kse-btn kse-btn--small" data-ed="edit"
+                data-cat="${esc(c.id)}" title="Bearbeiten">✏️ Bearbeiten</button>`;
+    } else {
+      acts += `<button type="button" class="kse-btn kse-btn--small" data-ed="edit"
+                data-cat="${esc(c.id)}"
+                title="Als eigene Kopie öffnen — das Original bleibt, wie es ist">⧉ Kopie</button>`;
+    }
+    if (eigen) {
+      acts += `<button type="button" class="kse-btn kse-btn--small kse-btn--rot" data-ed="del"
+                data-cat="${esc(c.id)}" data-title="${esc(c.title)}" data-vis="${st}"
+                title="Löschen">🗑</button>`;
+    } else if (c.can_admin) {
+      acts += `<button type="button" class="kse-btn kse-btn--small kse-btn--soft" data-ed="kk-private"
+                data-cat="${esc(c.id)}" data-title="${esc(c.title)}"
+                title="Admin: wieder auf privat stellen (nur der Autor sieht es dann)">↩ Auf privat</button>
+               <button type="button" class="kse-btn kse-btn--small kse-btn--rot" data-ed="del"
+                data-cat="${esc(c.id)}" data-title="${esc(c.title)}" data-vis="${st}" data-admin="1"
+                title="Admin: löschen">🗑</button>`;
     }
 
-    let h = `
-      <div class="kse-wrap">
+    let veroeff = '';
+    if (eigen) {
+      veroeff = `<div class="kse-kk-vis" role="group" aria-label="Wer sieht dieses Quiz?">
+        <span class="kse-kk-vis-l">Sichtbar für</span>
+        ${['private', 'school', 'hub'].map(v => `
+          <button type="button" class="kse-seg kse-seg--${v}${v === st ? ' is-an' : ''}"
+                  data-ed="kk-vis" data-cat="${esc(c.id)}" data-v="${v}" data-title="${esc(c.title)}"
+                  aria-pressed="${v === st}" title="${esc(STATUS[v].hint)}">${STATUS[v].ico} ${STATUS[v].label}</button>`).join('')}
+      </div>`;
+    }
+
+    let peekHtml = '';
+    if (offen) {
+      peekHtml = '<div class="kse-kk-peek">'
+        + (peek === undefined ? '<p class="kse-kk-peekleer">Lädt …</p>'
+          : (peek && peek.length
+              ? '<ol>' + peek.map(t => '<li>' + esc(t || '(ohne Text)') + '</li>').join('') + '</ol>'
+              : '<p class="kse-kk-peekleer">Dieses Quiz hat noch keine Fragen.</p>'))
+        + '</div>';
+    }
+
+    return `
+      <article class="kse-kk kse-kk--${st}${aktiv ? ' is-aktiv' : ''}" data-kk="${esc(c.id)}">
+        <div class="kse-kk-top">
+          <div class="kse-kk-thumb"${needThumb ? ' data-th-need="' + esc(c.id) + '"' : ''}>${thumbHtml(c, ctx.thumbs)}</div>
+          <div class="kse-kk-main">
+            <h3 class="kse-kk-title">${esc(c.title)}</h3>
+            <div class="kse-kk-by">von <b>${esc(c.author_name || (c.is_template ? 'MPSkills' : 'Unbekannt'))}</b>${eigen ? ' (du)' : ''}</div>
+            <div class="kse-kk-chips">
+              <span class="kse-chip kse-chip--${st}" title="${esc(S.hint)}">${S.ico} ${S.label}</span>
+              ${eigen ? '<span class="kse-chip kse-chip--eigen">Eigenes</span>' : ''}
+              ${aktiv ? '<span class="kse-chip kse-chip--aktiv">✔ Läuft gerade</span>' : ''}
+              <span class="kse-chip kse-chip--info">${n} ${n === 1 ? 'Frage' : 'Fragen'}</span>
+            </div>
+          </div>
+          <button type="button" class="kse-kk-eye${offen ? ' is-an' : ''}" data-ed="kk-peek"
+                  data-cat="${esc(c.id)}" aria-expanded="${offen}"
+                  title="${offen ? 'Fragen zuklappen' : 'Fragen kurz ansehen'}"
+                  aria-label="${offen ? 'Fragen zuklappen' : 'Fragen kurz ansehen'}">${offen ? '▴' : '👁'}</button>
+        </div>
+        ${peekHtml}
+        <div class="kse-kk-acts">${acts}</div>
+        ${veroeff}
+      </article>`;
+  }
+
+  /* Filterleiste + Ergebnis. Wird beim Tippen und Filtern NEU gebaut —
+     das Suchfeld darüber bleibt unangetastet (Cursor, Tastatur). */
+  function listeBar(catalogs, lf, cats) {
+    const zahl = pred => catalogs.filter(pred).length;
+    const chip = (act, on, label, extra) => `<button type="button" class="kse-fchip${on ? ' is-an' : ''}"
+      data-ed="${act}" ${extra || ''} aria-pressed="${on}">${label}</button>`;
+    const vorhanden = {};
+    for (const c of catalogs) { const f = c.subject || 'Andere'; vorhanden[f] = (vorhanden[f] || 0) + 1; }
+    const themen = cats.filter(k => vorhanden[k]);
+
+    return `
+      <div class="kse-frow">
+        ${chip('lf-own', lf.own, '👤 Eigene <b>' + zahl(c => c.mine && !c.is_template) + '</b>')}
+        <span class="kse-fsep"></span>
+        ${chip('lf-vis', lf.vis === 'all', 'Alle', 'data-v="all"')}
+        ${['private', 'school', 'hub'].map(v => chip('lf-vis', lf.vis === v,
+            STATUS[v].ico + ' ' + STATUS[v].label + ' <b>' + zahl(c => statusVon(c) === v) + '</b>',
+            'data-v="' + v + '"')).join('')}
+        <span class="kse-fgrow"></span>
+        <label class="kse-fsort">Sortieren
+          <select class="kse-select" data-lf="sort">
+            <option value="new"${lf.sort === 'new' ? ' selected' : ''}>Neueste zuerst</option>
+            <option value="az"${lf.sort === 'az' ? ' selected' : ''}>A – Z</option>
+            <option value="count"${lf.sort === 'count' ? ' selected' : ''}>Meiste Fragen</option>
+          </select>
+        </label>
+      </div>
+      <div class="kse-frow kse-frow--themen" role="group" aria-label="Themenfeld">
+        ${themen.map(k => chip('lf-cat', lf.cats.includes(k), esc(k) + ' <b>' + vorhanden[k] + '</b>',
+            'data-c="' + esc(k) + '"')).join('')}
+      </div>`;
+  }
+
+  function listeErgebnis(catalogs, lf, cats, ctx) {
+    const treffer = filtere(catalogs, lf);
+    const aktiv = filterAktiv(lf);
+    const zaehler = `<p class="kse-fzahl" role="status">${treffer.length} von ${catalogs.length}
+      ${catalogs.length === 1 ? 'Quiz' : 'Quizzen'}${aktiv
+        ? ' · <button type="button" class="kse-link" data-ed="lf-reset">Filter zurücksetzen</button>' : ''}</p>`;
+
+    if (!catalogs.length) {
+      return '<p class="kse-leer">Noch keine Quizze. Erstelle dein erstes Quiz!</p>';
+    }
+    if (!treffer.length) {
+      return zaehler + '<p class="kse-leer">Kein Quiz passt dazu.<br>'
+        + '<button type="button" class="kse-btn kse-btn--small" data-ed="lf-reset">Filter zurücksetzen</button></p>';
+    }
+
+    const gruppen = new Map();
+    for (const c of treffer) {
+      const f = c.subject || 'Andere';
+      if (!gruppen.has(f)) gruppen.set(f, []);
+      gruppen.get(f).push(c);
+    }
+    const reihe = cats.filter(k => gruppen.has(k))
+      .concat(Array.from(gruppen.keys()).filter(k => !cats.includes(k)));
+    const suche = !!lf.q.trim();
+
+    let h = zaehler;
+    for (const fach of reihe) {
+      const kats = gruppen.get(fach);
+      const zu = !!lf.closed[fach] && !suche;
+      h += `<section class="kse-gruppe">
+        <h2 class="kse-fach"><button type="button" class="kse-fach-btn" data-ed="lf-group"
+            data-c="${esc(fach)}" aria-expanded="${!zu}">
+          <span class="kse-fach-pfeil">${zu ? '▸' : '▾'}</span> ${esc(fach)}
+          <span class="kse-fach-n">${kats.length}</span></button></h2>`;
+      if (!zu) h += '<div class="kse-karten">' + kats.map(c => karte(c, ctx)).join('') + '</div>';
+      h += '</section>';
+    }
+    return h;
+  }
+
+  /* opts.play    — „▶ Spielen" anbieten (nur im Raum: dort gibt es ein
+                    Brett, in das der Katalog geladen werden kann).
+     opts.close   — Aufschrift des Zurück-Knopfs.
+     opts.current — id des Katalogs, der im Raum gerade läuft. */
+  function buildList(catalogs, opts, lf, cats, caches) {
+    opts = opts || {};
+    lf = lf || neuFilter();
+    cats = (cats && cats.length) ? cats : THEMEN;
+    caches = caches || { thumbs: {}, peek: {} };
+    const ctx = { lf, play: opts.play !== false, current: opts.current,
+                  thumbs: caches.thumbs, peek: caches.peek };
+
+    return `
+      <div class="kse-wrap kse-wrap--katalog">
         <header class="kse-head">
-          <h1 class="kse-h1">📚 Quiz-Kataloge</h1>
+          <h1 class="kse-h1">📚 Quiz-Katalog</h1>
           <div class="kse-headr">
-            <button type="button" class="kse-btn kse-btn--gruen" data-ed="new">
-              + Neues Quiz
-            </button>
+            <button type="button" class="kse-btn kse-btn--gruen" data-ed="new">+ Neues Quiz</button>
             <button type="button" class="kse-btn kse-btn--cyan" data-ed="imp-open"
-                    title="Fragen aus Text einfügen — Copy &amp; Paste">
-              📋 Aus Text
-            </button>
+                    title="Fragen aus Text einfügen — Copy &amp; Paste">📋 Aus Text</button>
             <button type="button" class="kse-btn kse-btn--soft" data-ed="close">
-              ${esc(opts.close || '← Zurück')}
-            </button>
+              ${esc(opts.close || '← Zurück')}</button>
           </div>
         </header>
-        <div class="kse-list">`;
-
-    if (gruppen.size === 0) {
-      h += '<p class="kse-leer">Noch keine Kataloge. Erstelle dein erstes Quiz!</p>';
-    }
-
-    for (const [fach, kats] of gruppen) {
-      h += `<div class="kse-gruppe">
-        <h2 class="kse-fach">${esc(fach)}</h2>
-        <div class="kse-karten">`;
-      for (const c of kats) {
-        // Sichtbar sind nur Vorlagen und Eigenes (ks_catalogs_list,
-        // ks_room_get) — was nicht meins ist, ist eine Vorlage. Die
-        // Raumansicht schickt is_template gar nicht mit.
-        const vorlage = c.is_template || !c.mine;
-        h += `
-          <div class="kse-karte${vorlage ? ' kse-karte--tmpl' : ''}">
-            <div class="kse-karte-body">
-              <h3 class="kse-ktitel">${esc(c.title)}</h3>
-              <span class="kse-kinfo">${c.count} ${c.count === 1 ? 'Frage' : 'Fragen'}</span>
-              ${vorlage ? '<span class="kse-tag">Vorlage</span>' : ''}
-            </div>
-            <div class="kse-karte-acts">
-              ${play ? `
-                <button type="button" class="kse-btn kse-btn--small kse-btn--cyan"
-                        data-ed="play" data-cat="${esc(c.id)}"
-                        title="Diesen Katalog im Raum verwenden">▶ Spielen</button>` : ''}
-              ${c.mine ? `
-                <button type="button" class="kse-btn kse-btn--small"
-                        data-ed="edit" data-cat="${esc(c.id)}"
-                        title="Bearbeiten">✏️</button>` : `
-                <button type="button" class="kse-btn kse-btn--small"
-                        data-ed="edit" data-cat="${esc(c.id)}"
-                        title="Als eigene Kopie bearbeiten — die Vorlage bleibt, wie sie ist">⧉ Kopie</button>`}
-              ${!vorlage ? `
-                <button type="button" class="kse-btn kse-btn--small kse-btn--rot"
-                        data-ed="del" data-cat="${esc(c.id)}" data-title="${esc(c.title)}"
-                        title="Löschen">🗑</button>` : ''}
-            </div>
-          </div>`;
-      }
-      h += '</div></div>';
-    }
-
-    h += '</div></div>';
-    return h;
+        <div class="kse-suche">
+          <span class="kse-suche-ico" aria-hidden="true">🔍</span>
+          <input type="search" class="kse-input kse-suche-in" data-lf="q" value="${esc(lf.q)}"
+                 placeholder="Suchen: Titel, Autor, Themenfeld, Fragen …" autocomplete="off"
+                 aria-label="Quizze durchsuchen" />
+        </div>
+        <div class="kse-fbar" data-kl="bar">${listeBar(catalogs, lf, cats)}</div>
+        <div class="kse-list" data-kl="res">${listeErgebnis(catalogs, lf, cats, ctx)}</div>
+      </div>`;
   }
 
 
   /* ═══════════════════════════════════════════════════════════
      2) VISUELLER EDITOR (edit)
      ═══════════════════════════════════════════════════════════ */
-  function buildEditor(catalog) {
+  function themenOptionen(cats, gewaehlt) {
+    cats = (cats && cats.length) ? cats : THEMEN;
+    const liste = cats.includes(gewaehlt) || !gewaehlt ? cats : cats.concat([gewaehlt]);
+    return liste.map(f => '<option value="' + esc(f) + '"' + (f === gewaehlt ? ' selected' : '') + '>'
+      + esc(f) + '</option>').join('');
+  }
+
+  function buildEditor(catalog, cats) {
     const qs = catalog.questions || [];
     const title = catalog.title || '';
-    const subject = catalog.subject || 'Alles Mögliche';
+    const subject = catalog.subject || STANDARD_THEMA;
+    const vis = STATUS[catalog.visibility] ? catalog.visibility : 'private';
     const isNew = !catalog.catalog_id;
-
-    // Fach-Options
-    const fachOpts = FAECHER.map(f =>
-      '<option value="' + esc(f) + '"' + (f === subject ? ' selected' : '') + '>'
-      + esc(f) + '</option>'
-    ).join('');
-    // Falls das Fach nicht in der Liste ist
-    const customFach = !FAECHER.includes(subject) && subject
-      ? '<option value="' + esc(subject) + '" selected>' + esc(subject) + '</option>'
-      : '';
+    const eigenBild = catalog.thumb_custom && catalog.thumbnail ? catalog.thumbnail : null;
+    const foto = (qs.find(q => q.image) || {}).image || null;
+    const bild = eigenBild || foto || LOGO;
+    const bildArt = eigenBild ? 'Eigenes Bild' : (foto ? 'Foto aus Frage ' + (qs.findIndex(q => q.image) + 1)
+                                                      : 'MPSkills-Logo');
 
     let h = `
       <div class="kse-wrap">
@@ -151,9 +320,6 @@
           <div class="kse-headl">
             <input type="text" class="kse-input kse-input--titel" data-ed-field="title"
                    value="${esc(title)}" placeholder="Quiz-Titel eingeben…" />
-            <select class="kse-select" data-ed-field="subject">
-              ${customFach}${fachOpts}
-            </select>
           </div>
           <div class="kse-headr">
             <button type="button" class="kse-btn kse-btn--cyan" data-ed="imp-open-append"
@@ -166,6 +332,38 @@
                     title="Zurück zur Übersicht">← Zurück</button>
           </div>
         </header>
+        <section class="kse-meta" aria-label="Einstellungen des Quiz">
+          <div class="kse-meta-feld">
+            <label class="kse-meta-l" for="kseThema">Themenfeld</label>
+            <select class="kse-select" id="kseThema" data-ed-field="subject">
+              ${themenOptionen(cats, subject)}
+            </select>
+          </div>
+          <div class="kse-meta-feld">
+            <span class="kse-meta-l">Wer sieht das Quiz?</span>
+            <div class="kse-segs" role="group" aria-label="Wer sieht das Quiz?">
+              ${['private', 'school', 'hub'].map(v => `
+                <button type="button" class="kse-seg kse-seg--${v}${v === vis ? ' is-an' : ''}"
+                        data-ed="set-vis" data-v="${v}" aria-pressed="${v === vis}"
+                        title="${esc(STATUS[v].hint)}">${STATUS[v].ico} ${STATUS[v].label}</button>`).join('')}
+            </div>
+            <span class="kse-meta-hint">${esc(STATUS[vis].hint)}${isNew ? '' : ' Bearbeiten und Löschen kannst du es trotzdem jederzeit.'}</span>
+          </div>
+          <div class="kse-meta-feld kse-meta-feld--bild">
+            <span class="kse-meta-l">Vorschaubild</span>
+            <div class="kse-thumbbox">
+              <div class="kse-kk-thumb kse-kk-thumb--gross"><img class="kse-kk-img${bild === LOGO ? ' kse-kk-img--logo' : ''}" src="${esc(bild)}" alt="" /></div>
+              <div class="kse-thumbacts">
+                <span class="kse-meta-hint">${esc(bildArt)}</span>
+                <label class="kse-btn kse-btn--small kse-btn--soft kse-filebtn">🖼 Bild wählen
+                  <input type="file" accept="image/*" data-thumb-file hidden />
+                </label>
+                ${eigenBild ? '<button type="button" class="kse-btn kse-btn--small kse-btn--soft" data-ed="thumb-del">Entfernen</button>' : ''}
+                <span class="kse-meta-hint">Ohne Bild nehmen wir ein Foto aus den Fragen, sonst das MPSkills-Logo.</span>
+              </div>
+            </div>
+          </div>
+        </section>
         <div class="kse-fragen" data-ed-list="questions">`;
 
     for (let i = 0; i < qs.length; i++) {
@@ -357,11 +555,10 @@
     return h;
   }
 
-  function buildImport(state, parsed) {
+  function buildImport(state, parsed, cats) {
     const isNew = state.mode === 'new';
-    const subject = state.subject || 'Alles Mögliche';
-    const fachOpts = FAECHER.map(f =>
-      '<option value="' + esc(f) + '"' + (f === subject ? ' selected' : '') + '>' + esc(f) + '</option>').join('');
+    const subject = state.subject || STANDARD_THEMA;
+    const fachOpts = themenOptionen(cats, subject);
     const n = parsed.stats.questions;
 
     return `
@@ -482,34 +679,120 @@
   padding: 6px 10px; cursor: pointer;
 }
 
-/* ── Katalog-Liste ── */
-.kse-list { display: flex; flex-direction: column; gap: 20px; }
-.kse-leer { color: var(--ks-soft); text-align: center; padding: 40px 0; font-size: 16px; }
+/* ── Quiz-Katalog ── */
+.kse-wrap--katalog { max-width: 1240px; }
+.kse-suche { position: relative; }
+.kse-suche-ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
+.kse-suche-in { padding: 12px 14px 12px 42px; font-size: 16px; border-radius: 14px; min-height: 48px; }
+.kse-fbar { display: flex; flex-direction: column; gap: 8px; }
+.kse-frow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.kse-frow--themen { gap: 6px; }
+.kse-fsep { width: 1px; height: 22px; background: var(--ks-linie); margin: 0 2px; }
+.kse-fgrow { flex: 1 1 auto; }
+.kse-fsort { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; color: var(--ks-soft); }
+.kse-fchip {
+  font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+  color: var(--ks-ink); background: var(--ks-tief);
+  border: 2px solid var(--ks-linie); border-radius: 999px;
+  padding: 6px 12px; min-height: 36px;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.kse-fchip b { font-size: 11px; color: var(--ks-soft); font-weight: 800; }
+.kse-fchip:hover { border-color: var(--ks-soft); }
+.kse-fchip.is-an { background: var(--ks-gold); color: #1a1300; border-color: var(--ks-gold); }
+.kse-fchip.is-an b { color: inherit; }
+.kse-fzahl { margin: 0; font-size: 13px; font-weight: 700; color: var(--ks-soft); }
+.kse-link { font: inherit; font-weight: 800; background: none; border: 0; padding: 0; cursor: pointer; color: var(--ks-cyant); text-decoration: underline; }
+.kse-list { display: flex; flex-direction: column; gap: 22px; }
+.kse-leer { color: var(--ks-soft); text-align: center; padding: 40px 0; font-size: 16px; line-height: 2; }
 .kse-gruppe { }
-.kse-fach {
-  font-size: 15px; font-weight: 800; color: var(--ks-soft);
-  text-transform: uppercase; letter-spacing: .05em;
-  margin: 0 0 8px; padding-bottom: 4px;
-  border-bottom: 1px solid var(--ks-linie);
+.kse-fach { margin: 0 0 10px; padding-bottom: 4px; border-bottom: 2px solid var(--ks-linie); font-size: 15px; }
+.kse-fach-btn {
+  font: inherit; font-weight: 900; font-size: 15px; letter-spacing: .02em;
+  background: none; border: 0; cursor: pointer; color: var(--ks-ink);
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; padding: 4px 0; min-height: 36px;
 }
-.kse-karten { display: flex; flex-direction: column; gap: 8px; }
-.kse-karte {
-  background: var(--ks-flaeche); border: 2px solid var(--ks-linie);
-  border-radius: 14px; padding: 12px 16px;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: 12px; flex-wrap: wrap;
+.kse-fach-pfeil { color: var(--ks-soft); width: 14px; }
+.kse-fach-n { font-size: 12px; font-weight: 800; color: var(--ks-soft); background: var(--ks-tief); border-radius: 999px; padding: 1px 9px; }
+.kse-karten { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); gap: 12px; align-items: start; }
+
+/* Karte: Thumbnail links, Name · Autor · Status rechts */
+.kse-kk {
+  background: var(--ks-flaeche); border: 2px solid var(--ks-linie); border-left-width: 6px;
+  border-radius: 14px; padding: 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0;
 }
-.kse-karte--tmpl { border-left: 4px solid var(--ks-gold); }
-.kse-karte-body { flex: 1; min-width: 180px; }
-.kse-ktitel { font-size: 15px; font-weight: 800; margin: 0 0 2px; color: var(--ks-ink); }
-.kse-kinfo { font-size: 12px; color: var(--ks-soft); }
-.kse-tag {
-  display: inline-block; font-size: 10px; font-weight: 800;
-  background: var(--ks-goldf); color: var(--ks-goldt);
-  padding: 2px 8px; border-radius: 6px; margin-left: 6px;
-  text-transform: uppercase;
+.kse-kk--private { border-left-color: var(--ks-soft); }
+.kse-kk--school  { border-left-color: var(--ks-cyan); }
+.kse-kk--hub     { border-left-color: var(--ks-gruen); }
+.kse-kk.is-aktiv { box-shadow: 0 0 0 3px var(--ks-gold); }
+.kse-kk-top { display: flex; gap: 12px; align-items: flex-start; }
+.kse-kk-thumb {
+  flex: 0 0 auto; width: 112px; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden;
+  background: var(--ks-tief); border: 1px solid var(--ks-linie);
+  display: flex; align-items: center; justify-content: center;
 }
-.kse-karte-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.kse-kk-thumb--gross { width: 160px; }
+.kse-kk-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.kse-kk-img--logo { object-fit: contain; padding: 14%; box-sizing: border-box; opacity: .85; }
+.kse-kk-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.kse-kk-title { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.25; color: var(--ks-ink);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.kse-kk-by { font-size: 13px; color: var(--ks-soft); }
+.kse-kk-by b { color: var(--ks-ink); font-weight: 700; }
+.kse-kk-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 2px; }
+.kse-chip {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 800;
+  border-radius: 999px; padding: 3px 10px; border: 1.5px solid var(--ks-linie);
+  background: var(--ks-tief); color: var(--ks-ink); white-space: nowrap;
+}
+.kse-chip--private { border-color: var(--ks-soft); color: var(--ks-ink); }
+.kse-chip--school  { border-color: var(--ks-cyan); color: var(--ks-cyant); }
+.kse-chip--hub     { border-color: var(--ks-gruen); background: var(--ks-gruenf); color: var(--ks-gruent); }
+.kse-chip--eigen   { background: var(--ks-goldf); border-color: var(--ks-gold); color: var(--ks-goldt); }
+.kse-chip--aktiv   { background: var(--ks-gold); border-color: var(--ks-gold); color: #1a1300; }
+.kse-chip--info    { font-weight: 700; color: var(--ks-soft); }
+.kse-kk-eye {
+  flex: 0 0 auto; width: 44px; height: 44px; font-size: 18px; cursor: pointer; border-radius: 12px;
+  background: var(--ks-tief); color: var(--ks-ink); border: 2px solid var(--ks-linie);
+}
+.kse-kk-eye.is-an { background: var(--ks-gold); border-color: var(--ks-gold); color: #1a1300; }
+.kse-kk-peek { background: var(--ks-tief); border-radius: 10px; padding: 8px 12px; max-height: 220px; overflow-y: auto; }
+.kse-kk-peek ol { margin: 0; padding-left: 22px; font-size: 13px; line-height: 1.5; color: var(--ks-ink); }
+.kse-kk-peek li { padding: 2px 0; overflow-wrap: anywhere; }
+.kse-kk-peekleer { margin: 0; font-size: 13px; color: var(--ks-soft); }
+.kse-kk-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.kse-kk-vis { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 8px; border-top: 1px dashed var(--ks-linie); }
+.kse-kk-vis-l { font-size: 12px; font-weight: 700; color: var(--ks-soft); margin-right: 2px; }
+
+/* Segment-Knöpfe (Status wählen) */
+.kse-segs { display: flex; flex-wrap: wrap; gap: 6px; }
+.kse-segs .kse-seg { white-space: nowrap; }
+.kse-seg {
+  font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; min-height: 38px;
+  background: var(--ks-tief); color: var(--ks-ink); border: 2px solid var(--ks-linie);
+  border-radius: 10px; padding: 6px 12px;
+}
+.kse-kk-vis .kse-seg { min-height: 34px; padding: 4px 10px; font-size: 12px; }
+.kse-seg.is-an { color: #fff; border-color: transparent; }
+.kse-seg--private.is-an { background: #475569; }
+.kse-seg--school.is-an  { background: #0e7490; }
+.kse-seg--hub.is-an     { background: #047857; }
+
+/* Editor: Einstellungen unter der Kopfzeile */
+.kse-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;
+  background: var(--ks-flaeche); border: 2px solid var(--ks-linie); border-radius: 14px; padding: 12px 14px; }
+.kse-meta-feld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kse-meta-feld--bild { grid-column: 1 / -1; }
+.kse-meta-l { font-size: 12px; font-weight: 800; color: var(--ks-soft); text-transform: uppercase; letter-spacing: .05em; }
+.kse-meta-hint { font-size: 12px; color: var(--ks-soft); }
+.kse-thumbbox { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
+.kse-thumbacts { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.kse-filebtn { cursor: pointer; }
+
+@media (max-width: 560px) {
+  .kse-kk-thumb { width: 92px; }
+  .kse-kk-thumb--gross { width: 128px; }
+}
 
 /* ── Fragen-Editor ── */
 .kse-fragen { display: flex; flex-direction: column; gap: 12px; }
@@ -758,6 +1041,11 @@
     let imp = null;        // Text-Import: { text, mode: 'new'|'append', title, subject }
     let el = null;         // die Fläche, in der der Editor gerade steht
     let dead = false;
+    let lf = neuFilter();          // Suche und Filter der Übersicht (bleiben beim Zurückkehren)
+    const caches = { thumbs: {}, peek: {} };   // Thumbnails und Fragenlisten, je Katalog-id
+    const thumbBusy = new Set();
+    let thumbT = null, io = null;
+    const kategorien = () => (o.categories && o.categories()) || THEMEN;
 
     const toast = (m, e) => o.toast && o.toast(m, e);
     const fehler = code => (o.errText ? o.errText(code) : 'Fehler (' + code + ')');
@@ -770,9 +1058,11 @@
     }
 
     function html() {
-      if (mode === 'list')   return buildList(o.catalogs() || [], { play: !!o.onPlay, close: o.closeLabel });
-      if (mode === 'edit')   return buildEditor(data || { questions: [] });
-      if (mode === 'import') return buildImport(imp, window.KSParse.parse(imp.text));
+      if (mode === 'list')   return buildList(o.catalogs() || [],
+        { play: !!o.onPlay, close: o.closeLabel, current: o.current && o.current() },
+        lf, kategorien(), caches);
+      if (mode === 'edit')   return buildEditor(data || { questions: [] }, kategorien());
+      if (mode === 'import') return buildImport(imp, window.KSParse.parse(imp.text), kategorien());
       if (mode === 'preview') {
         const qs = (data && data.questions) || [];
         const q = qs[pvIdx] || { question_text: '', options: ['', '', '', ''], correct_idx: 0 };
@@ -974,6 +1264,15 @@
     }
 
     function onFotoWahl(ev) {
+      const sort = ev.target && ev.target.closest && ev.target.closest('[data-lf=sort]');
+      if (sort && mode === 'list') { lf.sort = sort.value; listeNeu(); return; }
+      const th = ev.target && ev.target.closest && ev.target.closest('[data-thumb-file]');
+      if (th && mode === 'edit') {
+        const f = th.files && th.files[0];
+        th.value = '';
+        if (f) ladeThumb(f);
+        return;
+      }
       const inp = ev.target && ev.target.closest && ev.target.closest('[data-foto-file]');
       if (!inp || !mode) return;
       const f = inp.files && inp.files[0];
@@ -1005,10 +1304,111 @@
       });
     }
 
+    /* ─── Übersicht: nur Leiste und Ergebnis neu bauen ───────── */
+    function listeNeu() {
+      if (!el || mode !== 'list') return;
+      const cats = kategorien();
+      const alle = o.catalogs() || [];
+      const ctx = { lf, play: !!o.onPlay, current: o.current && o.current(),
+                    thumbs: caches.thumbs, peek: caches.peek };
+      const bar = el.querySelector('[data-kl=bar]');
+      const res = el.querySelector('[data-kl=res]');
+      if (bar) bar.innerHTML = listeBar(alle, lf, cats);
+      if (res) res.innerHTML = listeErgebnis(alle, lf, cats, ctx);
+      thumbsNachladen();
+    }
+
+    /* Thumbnails kommen NICHT mit der Liste (40 KB je Quiz), sondern
+       je 24 nachgeladen — und nur die, die ins Bild kommen. */
+    function thumbsAnwenden(id) {
+      if (!el) return;
+      const url = caches.thumbs[id];
+      if (!url) return;
+      el.querySelectorAll('[data-th-need="' + id + '"]').forEach(box => {
+        const img = box.querySelector('img');
+        if (img) { img.setAttribute('src', url); img.classList.remove('kse-kk-img--logo'); }
+        box.removeAttribute('data-th-need');
+      });
+    }
+
+    const wartend = [];
+    async function thumbsHolen() {
+      thumbT = null;
+      while (wartend.length) {
+        const ids = wartend.splice(0, 24);
+        const r = await o.call('ks_catalog_thumbs', { p_ids: ids });
+        for (const id of ids) {
+          thumbBusy.delete(id);
+          caches.thumbs[id] = (r && r.ok && r.thumbs && r.thumbs[id]) || null;
+          thumbsAnwenden(id);
+        }
+        if (dead) return;
+      }
+    }
+    function thumbBraucht(id) {
+      if (id in caches.thumbs || thumbBusy.has(id)) return;
+      thumbBusy.add(id);
+      wartend.push(id);
+      if (!thumbT) thumbT = setTimeout(thumbsHolen, 60);
+    }
+    function thumbsNachladen() {
+      if (!el) return;
+      const boxen = Array.from(el.querySelectorAll('[data-th-need]'));
+      for (const box of boxen) {
+        const id = box.getAttribute('data-th-need');
+        if (caches.thumbs[id]) { thumbsAnwenden(id); continue; }
+        if (typeof IntersectionObserver === 'function') {
+          if (!io) io = new IntersectionObserver(es => es.forEach(e => {
+            if (e.isIntersecting) { io.unobserve(e.target); thumbBraucht(e.target.getAttribute('data-th-need')); }
+          }), { rootMargin: '300px' });
+          io.observe(box);
+        } else {
+          thumbBraucht(id);
+        }
+      }
+    }
+
+    /* ─── Vorschaubild des Quiz (Editor) ─────────────────────
+       4:3, 480 Punkte breit, JPEG: etwa 30–50 KB. Quelle ist eine
+       Datei oder eine data:-URL (das Foto der ersten Frage). */
+    async function thumbVon(quelle) {
+      const img = typeof quelle === 'string'
+        ? await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('unlesbar')); i.src = quelle; })
+        : await bildAusDatei(quelle);
+      const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+      if (!w0 || !h0) throw new Error('unlesbar');
+      const W = 480, H = 360;
+      const f = Math.max(W / w0, H / h0);
+      const c = document.createElement('canvas');
+      c.width = W; c.height = H;
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff'; g.fillRect(0, 0, W, H);
+      g.drawImage(img, (W - w0 * f) / 2, (H - h0 * f) / 2, w0 * f, h0 * f);
+      return c.toDataURL('image/jpeg', .75);
+    }
+
+    async function ladeThumb(file) {
+      if (!/^image\//.test(file.type || '')) { toast('Das ist kein Bild.', true); return; }
+      try {
+        sammle();
+        data.thumbnail = await thumbVon(file);
+        data.thumb_custom = true;
+        dirty = true;
+        redraw();
+      } catch (e) {
+        toast('Dieses Bild kann der Browser nicht lesen. Bitte als JPG oder PNG speichern.', true);
+      }
+    }
+
     /* Text-Import: bei jedem Tastendruck neu erkennen und NUR die
        Einfärbung und die Ergebnisliste flicken — das Textfeld bleibt
        unangetastet (Cursor, Auswahl, Tastatur). */
     function onInput(ev) {
+      if (mode === 'list') {
+        const q = ev.target.closest && ev.target.closest('[data-lf=q]');
+        if (q) { lf.q = q.value; listeNeu(); }
+        return;
+      }
       if (mode !== 'import' || !imp) return;
       const f = ev.target.closest('[data-imp]');
       if (!f) return;
@@ -1055,7 +1455,7 @@
         data = {
           catalog_id: null,
           title: (imp.title || '').trim() || parsed.title || '',
-          subject: imp.subject || 'Alles Mögliche',
+          subject: imp.subject || STANDARD_THEMA,
           questions: qs
         };
       }
@@ -1092,7 +1492,7 @@
           const append = a === 'imp-open-append';
           if (append) sammle();
           if (!imp || imp.mode !== (append ? 'append' : 'new')) {
-            imp = { text: '', mode: append ? 'append' : 'new', title: '', subject: 'Alles Mögliche' };
+            imp = { text: '', mode: append ? 'append' : 'new', title: '', subject: STANDARD_THEMA };
           }
           mode = 'import';
           redraw(); return;
@@ -1117,10 +1517,82 @@
         }
         if (a === 'imp-apply') { importUebernehmen(); return; }
 
+        // ── Übersicht: Filter ──
+        if (a === 'lf-own')   { lf.own = !lf.own; listeNeu(); return; }
+        if (a === 'lf-vis')   { lf.vis = ed.dataset.v || 'all'; listeNeu(); return; }
+        if (a === 'lf-cat')   {
+          const k = ed.dataset.c;
+          lf.cats = lf.cats.includes(k) ? lf.cats.filter(x => x !== k) : lf.cats.concat([k]);
+          listeNeu(); return;
+        }
+        if (a === 'lf-reset') {
+          const sort = lf.sort;
+          lf = neuFilter(); lf.sort = sort;
+          const inp = el && el.querySelector('[data-lf=q]');
+          if (inp) inp.value = '';
+          listeNeu(); return;
+        }
+        if (a === 'lf-group') { lf.closed[ed.dataset.c] = !lf.closed[ed.dataset.c]; listeNeu(); return; }
+
+        // Fragen kurz ansehen (nur die Texte)
+        if (a === 'kk-peek') {
+          const id = ed.dataset.cat;
+          if (lf.peek[id]) { delete lf.peek[id]; listeNeu(); return; }
+          lf.peek[id] = true;
+          if (!(id in caches.peek)) {
+            listeNeu();
+            const r = await o.call('ks_catalog_peek', { p_catalog_id: id });
+            caches.peek[id] = (r && r.ok) ? (r.questions || []) : [];
+            if (!(r && r.ok)) toast(fehler(r && r.error), true);
+          }
+          listeNeu(); return;
+        }
+
+        // Status eines eigenen Quiz in der Übersicht ändern
+        if (a === 'kk-vis') {
+          const id = ed.dataset.cat, v = ed.dataset.v;
+          const c = (o.catalogs() || []).find(x => x.id === id);
+          if (!c || statusVon(c) === v) return;
+          if (v === 'hub' && !(await o.confirm('„' + (ed.dataset.title || 'Quiz') + '" für ALLE Lehrkräfte im Hub veröffentlichen?'))) return;
+          if (v === 'school' && !(await o.confirm('„' + (ed.dataset.title || 'Quiz') + '" für alle Lehrkräfte deiner Schule veröffentlichen?'))) return;
+          const r = await o.call('ks_catalog_set_visibility', { p_catalog_id: id, p_visibility: v });
+          if (!r.ok) { toast(fehler(r.error), true); return; }
+          c.visibility = v;
+          toast(STATUS[v].ico + ' „' + (ed.dataset.title || 'Quiz') + '": ' + STATUS[v].label + '.');
+          await o.reloadCatalogs();
+          listeNeu(); return;
+        }
+
+        // Admin: ein veröffentlichtes Quiz wieder auf privat stellen
+        if (a === 'kk-private') {
+          const t = ed.dataset.title || 'Quiz';
+          if (!(await o.confirm('„' + t + '" auf privat stellen? Nur der Autor sieht es dann noch.'))) return;
+          const r = await o.call('ks_catalog_set_visibility', { p_catalog_id: ed.dataset.cat, p_visibility: 'private' });
+          if (!r.ok) { toast(fehler(r.error), true); return; }
+          toast('„' + t + '" ist jetzt privat.');
+          await o.reloadCatalogs();
+          listeNeu(); return;
+        }
+
+        // Editor: Status und Vorschaubild
+        if (a === 'set-vis') {
+          const v = ed.dataset.v;
+          sammle();
+          if (!data || data.visibility === v || (!data.visibility && v === 'private')) return;
+          if (v === 'hub' && !(await o.confirm('Im Hub sehen alle Lehrkräfte dieses Quiz. Trotzdem?'))) return;
+          data.visibility = v; dirty = true;
+          redraw(); return;
+        }
+        if (a === 'thumb-del') {
+          sammle();
+          data.thumbnail = null; data.thumb_custom = false; dirty = true;
+          redraw(); return;
+        }
+
         // Neues Quiz anlegen
         if (a === 'new') {
           data = {
-            catalog_id: null, title: '', subject: 'Alles Mögliche',
+            catalog_id: null, title: '', subject: STANDARD_THEMA, visibility: 'private',
             questions: [{ question_text: '', options: ['','','',''], correct_idx: 0,
                           correct_indices: [0], time_limit_sec: 20, explanation: null }]
           };
@@ -1141,6 +1613,7 @@
              ohne catalog_id legt Speichern einen neuen Katalog an. */
           if (!r.mine) {
             data.catalog_id = null;
+            data.visibility = 'private';
             data.title = (r.title || 'Quiz') + ' (Kopie)';
             dirty = true;
             toast('Vorlage geöffnet — Speichern legt eine eigene Kopie an.');
@@ -1162,13 +1635,16 @@
         // Katalog löschen
         if (a === 'del') {
           const title = ed.dataset.title || 'Quiz';
-          const ok = await o.confirm('„' + title + '" wirklich löschen?');
+          const veroeff = ed.dataset.vis && ed.dataset.vis !== 'private';
+          const ok = await o.confirm('„' + title + '" wirklich löschen?'
+            + (veroeff ? ' Es ist veröffentlicht — andere Lehrkräfte können es dann nicht mehr verwenden.' : ''));
           if (!ok) return;
           ed.disabled = true;
           const r = await o.call('ks_catalog_delete', { p_catalog_id: ed.dataset.cat });
           ed.disabled = false;
           if (!r.ok) { toast(fehler(r.error), true); return; }
-          toast('"' + title + '" gelöscht.');
+          toast('„' + title + '" gelöscht.');
+          delete caches.thumbs[ed.dataset.cat]; delete caches.peek[ed.dataset.cat];
           // Katalogliste neu laden
           await o.reloadCatalogs();
           redraw(); return;
@@ -1293,17 +1769,30 @@
           }));
 
           ed.disabled = true; ed.textContent = '⏳ …';
+          /* Vorschaubild: das eigene — sonst das Foto der ersten Frage,
+             die eines hat — sonst keins (dann zeigt der Katalog das Logo). */
+          let thumb = null, eigen = false;
+          if (data.thumb_custom && data.thumbnail) { thumb = data.thumbnail; eigen = true; }
+          else {
+            const q1 = data.questions.find(q => q.image);
+            if (q1) { try { thumb = await thumbVon(q1.image); } catch (e) { thumb = null; } }
+          }
           const r = await o.call('ks_catalog_save', {
-            p_catalog_id: data.catalog_id || null,
-            p_title:      data.title.trim(),
-            p_subject:    data.subject || 'Alles Mögliche',
-            p_questions:  qs
+            p_catalog_id:   data.catalog_id || null,
+            p_title:        data.title.trim(),
+            p_subject:      data.subject || STANDARD_THEMA,
+            p_questions:    qs,
+            p_visibility:   data.visibility || 'private',
+            p_thumbnail:    thumb,
+            p_thumb_custom: eigen
           });
           ed.disabled = false; ed.textContent = '💾 Speichern';
 
           if (!r.ok) { toast(fehler(r.error), true); return; }
           data.catalog_id = r.catalog_id;
+          data.mine = true;
           dirty = false;
+          delete caches.thumbs[r.catalog_id]; delete caches.peek[r.catalog_id];
           toast('✅ Quiz gespeichert! (' + r.count + ' Fragen)');
           // Katalogliste im Hintergrund aktualisieren
           o.reloadCatalogs();
@@ -1324,6 +1813,7 @@
       host.addEventListener('drop', schluckeDatei);
       if (mode === 'edit') bindeDnD();
       if (mode === 'preview') bindeVorschau();
+      if (mode === 'list') thumbsNachladen();
     }
 
     return {
@@ -1331,7 +1821,7 @@
       get dirty() { return !!(mode && dirty); },
       key, html, bind, onClick, reset,
       openList() { imp = null; data = null; dirty = false; mode = 'list'; redraw(); },
-      destroy() { dead = true; reset(); el = null; }
+      destroy() { dead = true; reset(); el = null; if (io) io.disconnect(); clearTimeout(thumbT); }
     };
   }
 

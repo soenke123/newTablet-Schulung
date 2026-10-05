@@ -12,9 +12,10 @@
    Kataloge liegen ohnehin unabhängig vom Raum (ks_catalogs, 0174);
    was hier gespeichert wird, steht im Raum in der Lobby zur Wahl.
 
-   Serveraufrufe: die Fassungen OHNE p_code (0176/0186) —
+   Serveraufrufe: die Fassungen OHNE p_code (0176/0186/0194) —
    ks_catalogs_list, ks_catalog_get, ks_catalog_save,
-   ks_catalog_delete. Alle prüfen selbst auf auth.uid(): ändern und
+   ks_catalog_delete, ks_catalog_set_visibility, ks_catalog_peek,
+   ks_catalog_thumbs. Alle prüfen selbst auf auth.uid(): ändern und
    löschen nur Eigenes, Vorlagen werden als Kopie gespeichert.
    ══════════════════════════════════════════════════════════════ */
 
@@ -26,7 +27,11 @@
   const EIGENE = {
     title_required: 'Bitte einen Titel eingeben.',
     not_found:      'Dieses Quiz gibt es nicht (mehr) — oder es gehört jemand anderem.',
-    image_too_big:  'Ein Foto ist zu groß zum Speichern. Bitte ein kleineres nehmen.'
+    image_too_big:  'Ein Foto ist zu groß zum Speichern. Bitte ein kleineres nehmen.',
+    thumb_too_big:  'Das Vorschaubild ist zu groß. Bitte ein anderes nehmen.',
+    not_allowed:    'Veröffentlichen dürfen nur freigeschaltete Lehrkräfte.',
+    no_school:      'Deinem Konto ist keine Schule zugeordnet — für „Schule" geht das nicht.',
+    bad_visibility: 'Unbekannte Sichtbarkeit.'
   };
   const errText = code => window.MPTool
     ? window.MPTool.errText(code, EIGENE)
@@ -74,6 +79,7 @@
 
   /* ─── Der Editor ─── */
   let catalogs = [];
+  let categories = [];
   let editor = null;
   let stage = null;
 
@@ -81,6 +87,7 @@
     const r = await call('ks_catalogs_list', {});
     if (!r.ok) { toast(errText(r.error), true); return; }
     catalogs = Array.isArray(r.catalogs) ? r.catalogs : [];
+    categories = (Array.isArray(r.categories) ? r.categories : []).map(k => k.name);
   }
 
   function zeichne() {
@@ -108,6 +115,7 @@
     editor = window.KSEditor.create({
       call,
       catalogs:       () => catalogs,
+      categories:     () => categories,
       reloadCatalogs: ladeKataloge,
       redraw:         zeichne,
       toast,

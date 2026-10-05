@@ -274,12 +274,13 @@ und dessen eigener an vier weiteren Stellen (Kopf von `lib/tool.js`).
 
 ```
 node MPSkills/tools/KnowledgeStack/tools/uitest.js            # alle Bereiche
-node MPSkills/tools/KnowledgeStack/tools/uitest.js emote      # emote|tab|beam|fluss|editor|foto|theme
+node MPSkills/tools/KnowledgeStack/tools/uitest.js emote      # emote|tab|beam|fluss|editor|foto|theme|katalog
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js          # echter Browser
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js --shots  # …mit Bildern
 node supabase/tests/0175_knowledgestack_flow.mjs              # SQL in pglite
 node supabase/tests/0186_knowledgestack_photos_abort.mjs      # Fotos, Beenden, Neustart
 node supabase/tests/0189_knowledgestack_sync_reveal.mjs       # Uhrabgleich, faire Antwortzeit
+node supabase/tests/0194_knowledgestack_catalog.mjs           # Katalog: Sichtbarkeit, Rechte, Admin
 ```
 
 * **uitest.js** (linkedom, kein Browser) — *was* im Bild steht: die echten
@@ -303,7 +304,8 @@ node supabase/tests/0189_knowledgestack_sync_reveal.mjs       # Uhrabgleich, fai
 räumt den Ablauf auf, `0186_knowledgestack_photos_abort.sql` bringt Fotos,
 Beenden und Neustart (und die Katalog-Aufrufe mit `p_code`, die der Beamer
 braucht), `0189_knowledgestack_sync_reveal.sql` die gleichzeitigen Antworten,
-`0191_knowledgestack_intro.sql` die 10 Sekunden Auftritt vor der ersten Frage. Alle spielt Sönke selbst im Supabase-Dashboard ein.
+`0191_knowledgestack_intro.sql` die 10 Sekunden Auftritt vor der ersten Frage,
+`0194_knowledgestack_catalog.sql` den Fragenkatalog (Themenfelder, Status, Autor, Thumbnails, Admin-Rechte). Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
 ## Der Fragen-Editor
 
@@ -320,6 +322,55 @@ In beiden: neue Quizze anlegen, **eigene laden und bearbeiten (✏️)**, lösch
 (🗑), Text-Import, Fotos, Vorschau. Eine Vorlage öffnet „⧉ Kopie" — Speichern
 legt dann einen eigenen Katalog an (eine Vorlage ändert `ks_catalog_save`
 nicht).
+
+## Der Quiz-Katalog (0194)
+
+Die Übersicht im Editor (`buildList`) ist ein **Katalog** mit allen Quizzen,
+die man sehen darf — nach Themenfeld sortiert, mit Suche und Filtern. Im Raum
+öffnet ihn der Knopf „📚 Ändern" neben dem Namen des gewählten Quiz (statt
+der alten Auswahlliste); dort steht an jeder Karte „▶ Spielen".
+
+**Status** — drei Stufen, mehr gibt es nicht:
+
+| | Wer sieht es |
+|---|---|
+| 🔒 Privat | nur der Autor |
+| 🏫 Schule | alle freigeschalteten Lehrkräfte derselben `school_id` |
+| 🌍 Hub | alle freigeschalteten Lehrkräfte |
+
+Das setzt **der Server** durch (`ks_catalog_can_see`), nicht der Browser.
+Der Autor bearbeitet, löscht und stuft zurück jederzeit — auch wenn das Quiz
+schon veröffentlicht ist (Schalter „Sichtbar für" an der Karte und im Editor).
+Fremde Quizze öffnet „⧉ Kopie" als eigenes, privates Quiz.
+
+**Admins** (`is_admin`: Hub + eigene Schule, `is_superadmin`: alles
+Veröffentlichte) sehen an fremden Karten „↩ Auf privat" und „🗑". Private
+Quizze anderer sehen und berühren sie nicht. Veröffentlichen können sie nicht.
+
+**Themenfelder** stehen fest in `ks_categories` (Fächer + Allgemeinwissen,
+Spaß & Rätsel, Kennenlernen & Klasse, Tablet & Medien, Natur & Umwelt,
+Alltag & Beruf, Andere). Lehrkräfte legen keine neuen an — sonst gibt es
+Mathe, Mathematik und Math. Ein neues Feld trägt ein Admin in der Tabelle ein;
+unbekannte Werte speichert `ks_catalog_save` als „Andere".
+
+**Karte:** links das Thumbnail, rechts Titel · „von Autor" · Chips (Status,
+Eigenes, Fragenzahl); am Rand 👁 klappt die **Fragentexte** auf (nur Texte,
+keine Antworten — `ks_catalog_peek`). Zwei Spalten auf breiten Bildschirmen.
+**Suche** (Titel, Autor, Themenfeld, Status, Fragentext; ä = ae, ß = ss, alle
+Wörter müssen passen) und **Filter** (Eigene · Status · Themenfelder, mehrere
+zugleich · Sortierung) bauen nur Leiste und Ergebnis neu — das Suchfeld bleibt
+unangetastet. Der Fragentext kommt als `search` (800 Zeichen je Quiz) mit der
+Liste.
+
+**Thumbnail:** eigenes Bild (Editor, 4:3, 480 px) → sonst das Foto der ersten
+Frage mit Foto → sonst das MPSkills-Logo. Der Browser berechnet es beim
+Speichern (`p_thumbnail`); die Liste liefert nur `has_thumb`, die Bilder holt
+`ks_catalog_thumbs` je 24 nach, wenn sie ins Bild kommen.
+
+Im Raum hängt `lib/tool.js` an jeden Aufruf `p_code` — darum haben
+`ks_catalog_save/_set_visibility/_peek/_thumbs` je eine Fassung mit `p_code`.
+`ks_room_get` ist seit 0194 ein Vorbau (`_ks_room_get_v188`) und schickt die
+Liste samt `categories` aus `ks_catalogs_list`.
 
 ## Was noch fehlt
 

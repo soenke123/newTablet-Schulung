@@ -365,7 +365,13 @@
   border-radius: 10px;
   padding: .35em .6em;
   max-width: min(46vw, 420px);
+  min-height: 44px;
+  display: inline-flex; align-items: center; gap: .6em;
+  cursor: pointer; text-align: left;
 }
+.ks-catname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
+.ks-catn { color: var(--ks-soft); white-space: nowrap; }
+.ks-catgo { white-space: nowrap; color: var(--ks-cyant); font-weight: 800; }
 
 /* Der Kopf der Frage: Nummer · Zeitbalken · Uhr. Der Balken nimmt,
    was übrig ist — er ist das, was aus der letzten Reihe noch zu

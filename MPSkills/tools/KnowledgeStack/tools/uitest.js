@@ -665,11 +665,14 @@ async function bereichBeam() {
   ok('Lobby: ein Startknopf', !!lob.root.querySelector('[data-act=start]'));
   ok('Lobby: der Startknopf ist frei (12 Fragen)',
      lob.root.querySelector('[data-act=start]').disabled === false);
-  ok('Lobby: der Katalog lässt sich wählen',
-     lob.root.querySelectorAll('[data-ks=cat] option').length === 2);
-  ok('Lobby: die Fragenzahl steht in der Auswahl',
-     txt(lob.root.querySelector('[data-ks=cat] option')).includes('12 Fragen'),
-     txt(lob.root.querySelector('[data-ks=cat] option')));
+  ok('Lobby: das gewählte Quiz steht mit Namen da',
+     txt(lob.root.querySelector('.ks-catname')) === 'Tablet-Schulung: Grundlagen',
+     txt(lob.root.querySelector('.ks-catname')));
+  ok('Lobby: die Fragenzahl steht daneben',
+     txt(lob.root.querySelector('.ks-catn')).includes('12 Fragen'),
+     txt(lob.root.querySelector('.ks-catn')));
+  ok('Lobby: ein Klick auf den Namen öffnet den Katalog',
+     !!lob.root.querySelector('[data-ks=cat][data-act=editor]'));
 
   /* KEIN zweiter PIN und KEIN zweiter QR-Code: beides steht auf der
      Lehrerseite (Reiterleiste, Griff am Rand). In der ersten Fassung
@@ -679,10 +682,12 @@ async function bereichBeam() {
   ok('Lobby: kein zweiter PIN im Werkzeug', !/PIN/i.test(roh));
   ok('Lobby: kein eigener QR-Kasten', !/qr/i.test(lob.root.innerHTML.replace(/QR-Code am Griff/g, '')));
 
-  waehle(lob.root.querySelector('[data-ks=cat]'), 'kat-2', lob.doc);
+  click(lob.root.querySelector('[data-ks=cat]'), lob.doc);
+  await wait(30);
+  click(lob.root.querySelector('[data-ed=play][data-cat="kat-2"]'), lob.doc);
   await wait(30);
   const setup = lob.rufe.find(r => r.fn === 'ks_room_setup');
-  ok('Katalog wechseln ruft ks_room_setup', setup && setup.args.p_catalog === 'kat-2',
+  ok('Quiz im Katalog wählen ruft ks_room_setup', setup && setup.args.p_catalog === 'kat-2',
      JSON.stringify(setup && setup.args));
 
   const leer = await starte('presenter', Object.assign(beamLobby(0), { question_count: 0 }));
@@ -1079,7 +1084,7 @@ async function bereichEditor() {
   await wait(30);
 
   ok('Editor geöffnet: Überschrift da', !!lob.root.querySelector('.kse-h1'));
-  ok('Kataloge nach Fächern gruppiert', lob.root.querySelectorAll('.kse-gruppe').length >= 1);
+  ok('Kataloge nach Themenfeldern gruppiert', lob.root.querySelectorAll('.kse-gruppe').length >= 1);
   ok('Neues Quiz Button vorhanden', !!lob.root.querySelector('[data-ed=new]'));
 
   // 3) Klick auf "Neues Quiz" öffnet den visuellen Fragen-Editor
@@ -1265,10 +1270,184 @@ async function bereichFoto() {
   ok('Text-Import: kein Foto-Hochladen', !ed2.root.querySelector('input[type=file]'));
 }
 
+
+/* ══════════════════════════════════════════════════════════
+   KATALOG (Migration 0194): Suche, Filter, Status, Autor, Peek
+   ══════════════════════════════════════════════════════════ */
+async function bereichKatalog() {
+  console.log('\n── Katalog ─────────────────────────────────────────\n');
+
+  const kat = (id, title, subject, vis, autor, n, extra = {}) => Object.assign({
+    id, title, subject, visibility: vis, author_name: autor, count: n,
+    mine: autor === 'Ich', is_template: false, has_thumb: false, can_admin: false,
+    created_at: '2026-10-0' + (1 + (id.length % 8)) + 'T10:00:00Z', search: ''
+  }, extra);
+  const KATS = [
+    kat('k1', 'Bruchrechnen', 'Mathematik', 'private', 'Ich', 8, { search: 'Was ist ein Zähler? · Kürzen' }),
+    kat('k2', 'Textaufgaben', 'Mathematik', 'school', 'Ich', 5, { has_thumb: true }),
+    kat('k3', 'Kommasetzung', 'Deutsch', 'hub', 'Frau Weiß', 12, { search: 'Wann setzt man ein Komma?' }),
+    kat('k4', 'Vokabeln Unit 3', 'Englisch', 'school', 'Herr Groß', 20),
+    kat('k5', 'Tablet-Schulung: Grundlagen', 'Tablet & Medien', 'hub', 'MPSkills', 12, { is_template: true, can_admin: true }),
+    kat('k6', 'Zum Aufwärmen', 'Spaß & Rätsel', 'hub', 'Herr Groß', 6, { can_admin: true })
+  ];
+  const CATS = ['Mathematik', 'Deutsch', 'Englisch', 'Tablet & Medien', 'Spaß & Rätsel', 'Allgemeinwissen', 'Andere'];
+  const lobby = Object.assign(beamLobby(2), { catalogs: KATS, categories: CATS.map(name => ({ name })) });
+  const THUMB = 'data:image/jpeg;base64,AAAA';
+
+  const lob = await starte('presenter', lobby, { antworten: {
+    ks_catalog_thumbs: { ok: true, thumbs: { k2: THUMB } },
+    ks_catalog_peek: { ok: true, questions: ['Was ist ein Zähler?', 'Wie kürzt man?'] },
+    ks_catalog_set_visibility: { ok: true }
+  } });
+  click(lob.root.querySelector('[data-act=editor]'), lob.doc); await wait(30);
+  const R = lob.root;
+  const karten = () => Array.from(R.querySelectorAll('.kse-kk'));
+  const titel = () => karten().map(k => txt(k.querySelector('.kse-kk-title'))).sort().join('|');
+  const tippe = async v => {
+    const i = R.querySelector('[data-lf=q]'); i.value = v;
+    i.dispatchEvent(new lob.doc.defaultView.Event('input', { bubbles: true })); await wait(20);
+  };
+
+  ok('Katalog: alle 6 Quizze als Karten', karten().length === 6, String(karten().length));
+  ok('Katalog: nach Themenfeld gruppiert (5 Gruppen)', R.querySelectorAll('.kse-gruppe').length === 5);
+  ok('Katalog: Reihenfolge der Gruppen wie die Themenfelder des Servers',
+     Array.from(R.querySelectorAll('.kse-fach-btn')).map(b => txt(b).replace(/\s*\d+$/, '').replace(/^[▸▾]\s*/, '')).join(',')
+       === 'Mathematik,Deutsch,Englisch,Tablet & Medien,Spaß & Rätsel');
+  ok('Katalog: Autor steht an jeder Karte', karten().every(k => /von /.test(txt(k.querySelector('.kse-kk-by')))));
+  ok('Katalog: eigener Autor trägt „(du)"', txt(R.querySelector('[data-kk=k1] .kse-kk-by')).includes('(du)'));
+  ok('Katalog: Status-Chips Privat/Schule/Hub',
+     txt(R.querySelector('[data-kk=k1] .kse-chip--private')).includes('Privat')
+     && txt(R.querySelector('[data-kk=k2] .kse-chip--school')).includes('Schule')
+     && txt(R.querySelector('[data-kk=k3] .kse-chip--hub')).includes('Hub'));
+  ok('Katalog: „Eigenes"-Chip nur bei eigenen',
+     !!R.querySelector('[data-kk=k1] .kse-chip--eigen') && !R.querySelector('[data-kk=k3] .kse-chip--eigen'));
+  ok('Katalog: Vorschaubild ist da, ohne Bild das Logo',
+     !!R.querySelector('[data-kk=k1] .kse-kk-img--logo'));
+  await wait(120);
+  ok('Katalog: Thumbnail wird nachgeladen (ks_catalog_thumbs)', lob.rufe.some(r => r.fn === 'ks_catalog_thumbs'
+     && r.args.p_ids.join() === 'k2'), JSON.stringify(lob.rufe.filter(r => r.fn === 'ks_catalog_thumbs')));
+  ok('Katalog: das geladene Thumbnail steht im Bild',
+     R.querySelector('[data-kk=k2] .kse-kk-img').getAttribute('src') === THUMB);
+  ok('Katalog: Eigene dürfen löschen, Fremde nicht',
+     !!R.querySelector('[data-kk=k1] [data-ed=del]') && !R.querySelector('[data-kk=k3] [data-ed=del]'));
+  ok('Katalog: Fremde öffnen als Kopie, eigene bearbeiten',
+     /Kopie/.test(txt(R.querySelector('[data-kk=k3] [data-ed=edit]'))) && /Bearbeiten/.test(txt(R.querySelector('[data-kk=k1] [data-ed=edit]'))));
+  ok('Katalog: Veröffentlichen-Schalter nur an eigenen',
+     R.querySelectorAll('[data-kk=k1] [data-ed=kk-vis]').length === 3 && !R.querySelector('[data-kk=k3] [data-ed=kk-vis]'));
+  ok('Katalog: Admin-Knöpfe nur wo can_admin',
+     !!R.querySelector('[data-kk=k6] [data-ed=kk-private]') && !R.querySelector('[data-kk=k4] [data-ed=kk-private]')
+     && !!R.querySelector('[data-kk=k6] [data-ed=del]'));
+
+  // Suche
+  await tippe('komma');
+  ok('Suche: findet im Titel („komma")', titel() === 'Kommasetzung', titel());
+  await tippe('zähler');
+  ok('Suche: findet im Fragentext, mit Umlaut', titel() === 'Bruchrechnen', titel());
+  await tippe('zaehler');
+  ok('Suche: ae = ä', titel() === 'Bruchrechnen', titel());
+  await tippe('gross');
+  ok('Suche: findet den Autor (Groß = gross)', titel() === 'Vokabeln Unit 3|Zum Aufwärmen', titel());
+  await tippe('hub');
+  ok('Suche: findet den Status', titel() === 'Kommasetzung|Tablet-Schulung: Grundlagen|Zum Aufwärmen', titel());
+  await tippe('mathe bruch');
+  ok('Suche: mehrere Wörter müssen alle passen', titel() === 'Bruchrechnen', titel());
+  await tippe('xyzxyz');
+  ok('Suche: kein Treffer → Hinweis mit Zurücksetzen', !!R.querySelector('[data-ed=lf-reset]') && karten().length === 0);
+  ok('Suche: das Suchfeld behält seinen Text (kein Neuzeichnen)', R.querySelector('[data-lf=q]').value === 'xyzxyz');
+  click(R.querySelector('[data-ed=lf-reset]'), lob.doc); await wait(20);
+  ok('Zurücksetzen: wieder alle 6', karten().length === 6 && R.querySelector('[data-lf=q]').value === '');
+
+  // Filter
+  click(R.querySelector('[data-ed=lf-own]'), lob.doc); await wait(20);
+  ok('Filter „Eigene": nur meine Quizze', titel() === 'Bruchrechnen|Textaufgaben', titel());
+  click(R.querySelector('[data-ed=lf-vis][data-v=school]'), lob.doc); await wait(20);
+  ok('Filter Eigene + Schule', titel() === 'Textaufgaben', titel());
+  click(R.querySelector('[data-ed=lf-own]'), lob.doc); await wait(20);
+  ok('Filter Schule ohne „Eigene": auch fremde', titel() === 'Textaufgaben|Vokabeln Unit 3', titel());
+  click(R.querySelector('[data-ed=lf-vis][data-v=all]'), lob.doc); await wait(20);
+  click(R.querySelector('[data-ed=lf-cat][data-c=Mathematik]'), lob.doc); await wait(20);
+  ok('Filter Themenfeld Mathematik', titel() === 'Bruchrechnen|Textaufgaben', titel());
+  click(R.querySelector('[data-ed=lf-cat][data-c=Deutsch]'), lob.doc); await wait(20);
+  ok('Mehrere Themenfelder zugleich', titel() === 'Bruchrechnen|Kommasetzung|Textaufgaben', titel());
+  ok('Zähler: „3 von 6 Quizzen"', /3 von 6/.test(txt(R.querySelector('.kse-fzahl'))), txt(R.querySelector('.kse-fzahl')));
+  click(R.querySelector('[data-ed=lf-reset]'), lob.doc); await wait(20);
+  ok('Alles zurückgesetzt', karten().length === 6);
+
+  // Sortierung
+  waehle(R.querySelector('[data-lf=sort]'), 'count', lob.doc); await wait(20);
+  const ersteZahl = txt(karten()[0].querySelector('.kse-chip--info'));
+  ok('Sortierung „Meiste Fragen" je Gruppe', R.querySelectorAll('.kse-karten').length === 5 && ersteZahl.length > 0);
+
+  // Gruppe zuklappen
+  click(R.querySelector('[data-ed=lf-group][data-c=Mathematik]'), lob.doc); await wait(20);
+  ok('Gruppe zugeklappt: ihre Karten fehlen', !R.querySelector('[data-kk=k1]') && !!R.querySelector('[data-kk=k3]'));
+  click(R.querySelector('[data-ed=lf-group][data-c=Mathematik]'), lob.doc); await wait(20);
+  ok('Gruppe wieder auf', !!R.querySelector('[data-kk=k1]'));
+
+  // Fragen kurz ansehen
+  click(R.querySelector('[data-kk=k1] [data-ed=kk-peek]'), lob.doc); await wait(40);
+  const pk = R.querySelectorAll('[data-kk=k1] .kse-kk-peek li');
+  ok('Peek: die Fragen stehen in der Karte', pk.length === 2 && txt(pk[0]) === 'Was ist ein Zähler?');
+  ok('Peek: nur Fragetexte (kein Antwort-Aufruf)', lob.rufe.filter(r => r.fn === 'ks_catalog_peek').length === 1
+     && !lob.rufe.some(r => r.fn === 'ks_catalog_get'));
+  click(R.querySelector('[data-kk=k1] [data-ed=kk-peek]'), lob.doc); await wait(20);
+  ok('Peek: zweiter Klick klappt zu', !R.querySelector('[data-kk=k1] .kse-kk-peek'));
+  click(R.querySelector('[data-kk=k1] [data-ed=kk-peek]'), lob.doc); await wait(20);
+  ok('Peek: zweites Öffnen aus dem Zwischenspeicher',
+     lob.rufe.filter(r => r.fn === 'ks_catalog_peek').length === 1 && !!R.querySelector('[data-kk=k1] .kse-kk-peek'));
+
+  // Veröffentlichen
+  click(R.querySelector('[data-kk=k1] [data-ed=kk-vis][data-v=hub]'), lob.doc); await wait(40);
+  const sv = lob.rufe.find(r => r.fn === 'ks_catalog_set_visibility');
+  ok('Veröffentlichen: ruft ks_catalog_set_visibility (Hub)', sv && sv.args.p_catalog_id === 'k1' && sv.args.p_visibility === 'hub',
+     JSON.stringify(sv && sv.args));
+  ok('Veröffentlichen: der Chip springt sofort auf Hub', !!R.querySelector('[data-kk=k1] .kse-chip--hub'));
+  const vor = lob.rufe.length;
+  lob.ctx.confirm = () => Promise.resolve(false);
+  click(R.querySelector('[data-kk=k2] [data-ed=kk-vis][data-v=hub]'), lob.doc); await wait(30);
+  ok('Veröffentlichen: abgebrochen → nichts passiert', lob.rufe.length === vor);
+  lob.ctx.confirm = () => Promise.resolve(true);
+  click(R.querySelector('[data-kk=k1] [data-ed=kk-vis][data-v=private]'), lob.doc); await wait(30);
+  ok('Zurückstufen auf privat ohne Rückfrage-Pflicht möglich',
+     lob.rufe.filter(r => r.fn === 'ks_catalog_set_visibility').length === 2);
+
+  // Admin: auf privat stellen
+  click(R.querySelector('[data-kk=k6] [data-ed=kk-private]'), lob.doc); await wait(30);
+  const ap = lob.rufe.filter(r => r.fn === 'ks_catalog_set_visibility').pop();
+  ok('Admin: „Auf privat" ruft den Server', ap.args.p_catalog_id === 'k6' && ap.args.p_visibility === 'private');
+
+  // Spielen markiert den laufenden Katalog
+  ok('Katalog im Raum: der laufende ist markiert', !!R.querySelector('[data-kk=k5]') === true
+     && !R.querySelector('[data-kk=k1] .kse-chip--aktiv'));
+
+  // Editor: Themenfeld fest, Status, Vorschaubild
+  click(R.querySelector('[data-ed=new]'), lob.doc); await wait(30);
+  const th = R.querySelector('[data-ed-field=subject]');
+  ok('Editor: Themenfelder vom Server in der Auswahl', th.querySelectorAll('option').length === CATS.length);
+  ok('Editor: keine Möglichkeit, ein Themenfeld anzulegen', !R.querySelector('[data-ed=new-cat]'));
+  ok('Editor: Status-Schalter (3) mit „Privat" voran', R.querySelectorAll('[data-ed=set-vis]').length === 3
+     && R.querySelector('[data-ed=set-vis][data-v=private]').classList.contains('is-an'));
+  ok('Editor: ohne Bild zeigt das Vorschaubild das Logo', !!R.querySelector('.kse-thumbbox .kse-kk-img--logo'));
+  ok('Editor: Bild wählen vorhanden', !!R.querySelector('input[type=file][data-thumb-file]'));
+  R.querySelector('[data-ed-field=title]').value = 'Neues Quiz';
+  R.querySelector('[data-qi="0"][data-field=question_text]').value = 'F?';
+  R.querySelector('[data-qi="0"][data-oi="0"][data-field=option]').value = 'a';
+  R.querySelector('[data-qi="0"][data-oi="1"][data-field=option]').value = 'b';
+  click(R.querySelector('[data-ed=set-vis][data-v=school]'), lob.doc); await wait(40);
+  ok('Editor: Status „Schule" gewählt', R.querySelector('[data-ed=set-vis][data-v=school]').classList.contains('is-an'));
+  ok('Editor: bereits Getipptes bleibt', R.querySelector('[data-ed-field=title]').value === 'Neues Quiz');
+  click(R.querySelector('[data-ed=save]'), lob.doc); await wait(60);
+  const sa = lob.rufe.find(r => r.fn === 'ks_catalog_save');
+  ok('Speichern schickt Status, Themenfeld und Vorschaubild mit',
+     sa && sa.args.p_visibility === 'school' && sa.args.p_subject === 'Allgemeinwissen',
+     JSON.stringify(sa && Object.assign({}, sa.args, { p_questions: '…' })));
+  ok('Speichern: ohne Foto/Bild kein Vorschaubild (→ Logo)', sa && sa.args.p_thumbnail === null && sa.args.p_thumb_custom === false);
+}
+
 /* ══════════════════════════════════════════════════════════ */
 const BEREICHE = { emote: bereichEmote, tab: bereichTab, intro: bereichIntro, beam: bereichBeam,
                    fluss: bereichFluss, editor: bereichEditor, foto: bereichFoto,
-                   theme: bereichTheme };
+                   theme: bereichTheme, katalog: bereichKatalog };
 const wahl = process.argv[2];
 const lauf = wahl ? [wahl] : Object.keys(BEREICHE);
 

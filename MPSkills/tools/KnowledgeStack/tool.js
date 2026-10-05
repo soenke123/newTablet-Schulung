@@ -174,7 +174,11 @@
     reading_phase:      'Die Frage wird noch vorgelesen — gleich geht es los!',
     question_not_found: 'Diese Frage gibt es nicht mehr — der Katalog hat sich geändert.',
     phase_locked:       'Das geht nur zwischen zwei Fragen.',
-    image_too_big:      'Ein Foto ist zu groß zum Speichern. Bitte ein kleineres nehmen.'
+    image_too_big:      'Ein Foto ist zu groß zum Speichern. Bitte ein kleineres nehmen.',
+    thumb_too_big:      'Das Vorschaubild ist zu groß. Bitte ein anderes nehmen.',
+    not_allowed:        'Veröffentlichen dürfen nur freigeschaltete Lehrkräfte.',
+    no_school:          'Deinem Konto ist keine Schule zugeordnet — für „Schule" geht das nicht.',
+    bad_visibility:     'Unbekannte Sichtbarkeit.'
   };
   const fehlerText = code => EIGENE[code] || ctx.errText(code);
 
@@ -194,6 +198,7 @@
   let localEmote = null, localEmoteT = null;
   let answering = false;         // gedrückt, Antwort noch unterwegs
   let catalogs = [];
+  let categories = [];
   /* Die Wesenwahl nach der Siegerehrung. Sie steckt im frameKey und
      nicht in einem <details>: ein aufgeklappter Kasten wäre beim
      nächsten Takt wieder zu — und sie muss auch dann stehenbleiben,
@@ -602,6 +607,7 @@
       if (!isNaN(t)) skew = t - Date.now();
     }
     if (Array.isArray(v.catalogs)) catalogs = v.catalogs;
+    if (Array.isArray(v.categories)) categories = v.categories.map(k => k.name);
     if (v.me) {
       // Wer sein Wesen gerade ausgewählt hat, soll es nicht durch
       // eine Serverantwort zurückgesetzt bekommen, die noch von
@@ -688,23 +694,27 @@
 
   function beamLobby(v) {
     const n = (v.players || []).length;
-    const opts = catalogs.map(c =>
-      '<option value="' + esc(c.id) + '"' + (c.id === v.catalog_id ? ' selected' : '') + '>'
-      + esc(c.title) + ' · ' + c.count + (c.count === 1 ? ' Frage' : ' Fragen')
-      + '</option>').join('');
+    const akt = catalogs.find(c => c.id === v.catalog_id);
+    const aktName = (akt && akt.title) || v.catalog_title || '';
+    const aktN = akt ? (akt.count | 0) : (v.question_count | 0);
 
     return `
       <header class="ks-head">
         <div class="ks-headl">
           <h1 class="ks-title">Knowledge Stack</h1>
-          <label class="ks-catwrap">Fragen
-            <select class="ks-cat" data-ks="cat">${opts || '<option>keine Kataloge</option>'}</select>
-          </label>
+          <div class="ks-catwrap">Fragen
+            <button type="button" class="ks-cat" data-act="editor" data-ks="cat"
+                    title="Quiz aus dem Katalog wählen">
+              <span class="ks-catname">${esc(aktName || 'Kein Quiz gewählt')}</span>
+              <span class="ks-catn">${aktN} ${aktN === 1 ? 'Frage' : 'Fragen'}</span>
+              <span class="ks-catgo">📚 Ändern</span>
+            </button>
+          </div>
         </div>
         <div class="ks-headr">
           <span class="ks-pill"><b data-ks="total">${n}</b> dabei</span>
           <button type="button" class="ks-go ks-go--edit" data-act="editor"
-                  title="Eigene Quizze erstellen und verwalten">📚 Editor</button>
+                  title="Quiz-Katalog: Quizze finden, erstellen und verwalten">📚 Katalog</button>
           <button type="button" class="ks-go" data-act="start"
                   ${v.question_count > 0 ? '' : 'disabled'}>Quiz starten</button>
         </div>
@@ -1106,9 +1116,15 @@
       }
       const go = stage.querySelector('[data-act=start]');
       if (go) go.disabled = !(v.question_count > 0);
-      const cat = stage.querySelector('[data-ks=cat]');
-      if (cat && cat.value !== v.catalog_id && document.activeElement !== cat) {
-        cat.value = v.catalog_id || '';
+      const cn = stage.querySelector('.ks-catname');
+      if (cn) {
+        const akt = catalogs.find(c => c.id === v.catalog_id);
+        const name = (akt && akt.title) || v.catalog_title || 'Kein Quiz gewählt';
+        if (cn.textContent !== name) cn.textContent = name;
+        const nn = stage.querySelector('.ks-catn');
+        const n = akt ? (akt.count | 0) : (v.question_count | 0);
+        const t = n + (n === 1 ? ' Frage' : ' Fragen');
+        if (nn && nn.textContent !== t) nn.textContent = t;
       }
       return;
     }
@@ -1989,6 +2005,8 @@
     editor = window.KSEditor.create({
       call:           (fn, args) => ctx.actions.call(fn, args),
       catalogs:       () => catalogs,
+      categories:     () => categories,
+      current:        () => view && view.catalog_id,
       reloadCatalogs: () => { lastSig = null; return poll(); },
       redraw:         () => { lastFrame = null; zeichne(); },
       onClose:        () => { lastFrame = null; zeichne(); },
@@ -2010,13 +2028,6 @@
      ══════════════════════════════════════════════════════════ */
   function binde() {
     stage.addEventListener('click', onClick);
-    const sel = stage.querySelector('[data-ks=cat]');
-    if (sel) sel.addEventListener('change', async () => {
-      const r = await ctx.actions.call('ks_room_setup', { p_catalog: sel.value });
-      if (!r.ok) { ctx.toast(fehlerText(r.error), true); return; }
-      lastSig = null;
-      poll();
-    });
     // Editor: Klicks auf data-ed, Text-Import, Fotos, Ziehen.
     if (editorAuf()) editor.bind(stage);
   }
@@ -2243,7 +2254,7 @@
       root = el; ctx = context; role = context.role;
       destroyed = false; busy = false;
       lastSig = null; lastFrame = null; view = null;
-      els = {}; catalogs = []; skew = 0; uhrProben = [];
+      els = {}; catalogs = []; categories = []; skew = 0; uhrProben = [];
       localEmote = null; answering = false; pickerOffen = false;
       if (editor) editor.destroy();
       editor = null;
