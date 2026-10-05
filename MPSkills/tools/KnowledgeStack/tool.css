@@ -371,6 +371,9 @@
 }
 .ks-catname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 800; }
 .ks-catn { color: var(--ks-soft); white-space: nowrap; }
+.ks-catinfo { display: inline-flex; align-items: center; gap: .7em; min-width: 0; max-width: min(40vw, 420px); font-size: clamp(11px, calc(var(--ks-h) * .021), 15px); color: var(--ks-ink); }
+.ks-catthema { color: var(--ks-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ks-go--wahl { font-size: 1.1em; padding-inline: 1.4em; }
 .ks-catgo { white-space: nowrap; color: var(--ks-cyant); font-weight: 800; }
 
 /* Der Kopf der Frage: Nummer · Zeitbalken · Uhr. Der Balken nimmt,

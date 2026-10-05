@@ -327,8 +327,8 @@ nicht).
 
 Die Übersicht im Editor (`buildList`) ist ein **Katalog** mit allen Quizzen,
 die man sehen darf — nach Themenfeld sortiert, mit Suche und Filtern. Im Raum
-öffnet ihn der Knopf „📚 Ändern" neben dem Namen des gewählten Quiz (statt
-der alten Auswahlliste); dort steht an jeder Karte „▶ Spielen".
+öffnet ihn ein einziger Knopf in der Lobby: erst „📚 Quiz wählen", danach
+steht Titel · Fragenzahl · Themenfeld davor und er heißt „📚 Quiz ändern"; dort steht an jeder Karte „▶ Spielen".
 
 **Status** — drei Stufen, mehr gibt es nicht:
 

@@ -694,29 +694,38 @@
     return beamEnde(v);
   }
 
+  /* Quiz-Wahl in der Lobby: ein Knopf. Ohne Quiz groß „Quiz wählen",
+     mit Quiz davor Titel · Fragenzahl · Themenfeld und der Knopf heißt
+     „Quiz ändern". */
+  function catWahlHTML(v) {
+    const akt = catalogs.find(c => c.id === v.catalog_id);
+    const name = (akt && akt.title) || v.catalog_title || '';
+    if (!name) {
+      return `<button type="button" class="ks-go ks-go--wahl" data-act="editor" data-ks="cat"
+                      title="Quiz aus dem Katalog wählen">📚 Quiz wählen</button>`;
+    }
+    const n = akt ? (akt.count | 0) : (v.question_count | 0);
+    const thema = (akt && akt.subject) || '';
+    return `<span class="ks-catinfo">
+              <span class="ks-catname">${esc(name)}</span>
+              <span class="ks-catn">${n} ${n === 1 ? 'Frage' : 'Fragen'}</span>
+              ${thema ? `<span class="ks-catthema">🏷 ${esc(thema)}</span>` : ''}
+            </span>
+            <button type="button" class="ks-go ks-go--edit" data-act="editor" data-ks="cat"
+                    title="Anderes Quiz aus dem Katalog wählen">📚 Quiz ändern</button>`;
+  }
+
   function beamLobby(v) {
     const n = (v.players || []).length;
-    const akt = catalogs.find(c => c.id === v.catalog_id);
-    const aktName = (akt && akt.title) || v.catalog_title || '';
-    const aktN = akt ? (akt.count | 0) : (v.question_count | 0);
 
     return `
       <header class="ks-head">
         <div class="ks-headl">
           <h1 class="ks-title">Knowledge Stack</h1>
-          <div class="ks-catwrap">Fragen
-            <button type="button" class="ks-cat" data-act="editor" data-ks="cat"
-                    title="Quiz aus dem Katalog wählen">
-              <span class="ks-catname">${esc(aktName || 'Kein Quiz gewählt')}</span>
-              <span class="ks-catn">${aktN} ${aktN === 1 ? 'Frage' : 'Fragen'}</span>
-              <span class="ks-catgo">📚 Ändern</span>
-            </button>
-          </div>
+          <div class="ks-catwrap" data-ks="catwrap">${catWahlHTML(v)}</div>
         </div>
         <div class="ks-headr">
           <span class="ks-pill"><b data-ks="total">${n}</b> dabei</span>
-          <button type="button" class="ks-go ks-go--edit" data-act="editor"
-                  title="Quiz-Katalog: Quizze finden, erstellen und verwalten">📚 Katalog</button>
           <button type="button" class="ks-go" data-act="start"
                   ${v.question_count > 0 ? '' : 'disabled'}>Quiz starten</button>
         </div>
@@ -1118,15 +1127,10 @@
       }
       const go = stage.querySelector('[data-act=start]');
       if (go) go.disabled = !(v.question_count > 0);
-      const cn = stage.querySelector('.ks-catname');
-      if (cn) {
-        const akt = catalogs.find(c => c.id === v.catalog_id);
-        const name = (akt && akt.title) || v.catalog_title || 'Kein Quiz gewählt';
-        if (cn.textContent !== name) cn.textContent = name;
-        const nn = stage.querySelector('.ks-catn');
-        const n = akt ? (akt.count | 0) : (v.question_count | 0);
-        const t = n + (n === 1 ? ' Frage' : ' Fragen');
-        if (nn && nn.textContent !== t) nn.textContent = t;
+      const cw = stage.querySelector('[data-ks=catwrap]');
+      if (cw) {
+        const html = catWahlHTML(v);
+        if (cw.dataset.sig !== html) { cw.innerHTML = html; cw.dataset.sig = html; }
       }
       return;
     }
