@@ -70,7 +70,7 @@
     .normalize('NFD').replace(/[̀-ͯ]/g, '');
 
   const neuFilter = () => ({
-    q: '', own: false, vis: 'all', cats: [], sort: 'new', closed: {}, peek: {}
+    q: '', own: false, vis: 'all', cats: [], catOpen: false, sort: 'new', closed: {}, peek: {}
   });
   const filterAktiv = lf => !!(lf.q.trim() || lf.own || lf.vis !== 'all' || lf.cats.length);
 
@@ -210,9 +210,23 @@
           </select>
         </label>
       </div>
-      <div class="kse-frow kse-frow--themen" role="group" aria-label="Themenfeld">
-        ${themen.map(k => chip('lf-cat', lf.cats.includes(k), esc(k) + ' <b>' + vorhanden[k] + '</b>',
-            'data-c="' + esc(k) + '"')).join('')}
+      <div class="kse-frow kse-frow--themen">
+        <div class="kse-dd" data-kl="cats">
+          <button type="button" class="kse-fchip kse-dd-btn${lf.cats.length ? ' is-an' : ''}" data-ed="lf-catmenu"
+                  aria-haspopup="true" aria-expanded="${lf.catOpen}">
+            🏷 Themenfeld${lf.cats.length ? ' <b>' + lf.cats.length + '</b>' : ''} <span aria-hidden="true">${lf.catOpen ? '▴' : '▾'}</span>
+          </button>
+          ${lf.catOpen ? `<div class="kse-dd-panel" role="group" aria-label="Themenfelder wählen">
+            ${themen.map(k => `<button type="button" class="kse-dd-item${lf.cats.includes(k) ? ' is-an' : ''}"
+                data-ed="lf-cat" data-c="${esc(k)}" role="checkbox" aria-checked="${lf.cats.includes(k)}">
+                <span class="kse-dd-box">${lf.cats.includes(k) ? '☑' : '☐'}</span>
+                <span class="kse-dd-name">${esc(k)}</span>
+                <span class="kse-dd-n">${vorhanden[k]}</span></button>`).join('')}
+            ${lf.cats.length ? '<button type="button" class="kse-link kse-dd-clear" data-ed="lf-catclear">Auswahl aufheben</button>' : ''}
+          </div>` : ''}
+        </div>
+        ${lf.cats.map(k => `<button type="button" class="kse-fchip is-an" data-ed="lf-cat" data-c="${esc(k)}"
+            title="Filter entfernen" aria-label="${esc(k)} entfernen">${esc(k)} <span aria-hidden="true">✕</span></button>`).join('')}
       </div>`;
   }
 
@@ -701,6 +715,24 @@
 .kse-fchip:hover { border-color: var(--ks-soft); }
 .kse-fchip.is-an { background: var(--ks-gold); color: #1a1300; border-color: var(--ks-gold); }
 .kse-fchip.is-an b { color: inherit; }
+.kse-dd { position: relative; }
+.kse-dd-panel {
+  position: absolute; z-index: 20; top: calc(100% + 6px); left: 0; min-width: 260px; max-width: 86vw;
+  max-height: min(60vh, 420px); overflow-y: auto; padding: 6px;
+  background: var(--ks-erhoben); border: 2px solid var(--ks-linie); border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .35); display: flex; flex-direction: column; gap: 2px;
+}
+.kse-dd-item {
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--ks-ink);
+  background: none; border: 0; border-radius: 8px; padding: 8px 10px; min-height: 44px;
+  display: flex; align-items: center; gap: 10px; text-align: left; width: 100%;
+}
+.kse-dd-item:hover { background: var(--ks-tief); }
+.kse-dd-item.is-an { background: var(--ks-goldf); }
+.kse-dd-box { font-size: 18px; width: 20px; text-align: center; }
+.kse-dd-name { flex: 1 1 auto; }
+.kse-dd-n { font-size: 12px; font-weight: 800; color: var(--ks-soft); background: var(--ks-tief); border-radius: 999px; padding: 1px 9px; }
+.kse-dd-clear { padding: 8px 10px; text-align: left; }
 .kse-fzahl { margin: 0; font-size: 13px; font-weight: 700; color: var(--ks-soft); }
 .kse-link { font: inherit; font-weight: 800; background: none; border: 0; padding: 0; cursor: pointer; color: var(--ks-cyant); text-decoration: underline; }
 .kse-list { display: flex; flex-direction: column; gap: 22px; }
@@ -1471,6 +1503,9 @@
     /* Ein Klick auf etwas mit data-ed. Gibt true zurück, wenn er
        hierher gehörte — der Gastgeber fragt dann nicht weiter. */
     function onClick(ev) {
+      if (mode === 'list' && lf.catOpen && !(ev.target.closest && ev.target.closest('[data-kl=cats]'))) {
+        lf.catOpen = false; listeNeu();
+      }
       const ed = ev.target.closest && ev.target.closest('[data-ed]');
       if (!ed || !mode || dead) return false;
       handle(ed);
@@ -1520,6 +1555,8 @@
         // ── Übersicht: Filter ──
         if (a === 'lf-own')   { lf.own = !lf.own; listeNeu(); return; }
         if (a === 'lf-vis')   { lf.vis = ed.dataset.v || 'all'; listeNeu(); return; }
+        if (a === 'lf-catmenu') { lf.catOpen = !lf.catOpen; listeNeu(); return; }
+        if (a === 'lf-catclear') { lf.cats = []; listeNeu(); return; }
         if (a === 'lf-cat')   {
           const k = ed.dataset.c;
           lf.cats = lf.cats.includes(k) ? lf.cats.filter(x => x !== k) : lf.cats.concat([k]);

@@ -1365,10 +1365,19 @@ async function bereichKatalog() {
   click(R.querySelector('[data-ed=lf-own]'), lob.doc); await wait(20);
   ok('Filter Schule ohne „Eigene": auch fremde', titel() === 'Textaufgaben|Vokabeln Unit 3', titel());
   click(R.querySelector('[data-ed=lf-vis][data-v=all]'), lob.doc); await wait(20);
+  ok('Themenfeld-Filter: Dropdown zu, Eintrag erst nach dem Öffnen', !R.querySelector('[data-ed=lf-cat]'));
+  click(R.querySelector('[data-ed=lf-catmenu]'), lob.doc); await wait(20);
+  ok('Themenfeld-Dropdown: ein Eintrag je Feld mit Zahl',
+     R.querySelectorAll('.kse-dd-item').length === 5
+     && txt(R.querySelector('.kse-dd-item[data-c=Mathematik] .kse-dd-n')) === '2');
   click(R.querySelector('[data-ed=lf-cat][data-c=Mathematik]'), lob.doc); await wait(20);
+  ok('Dropdown bleibt beim Anklicken offen', !!R.querySelector('.kse-dd-panel'));
   ok('Filter Themenfeld Mathematik', titel() === 'Bruchrechnen|Textaufgaben', titel());
-  click(R.querySelector('[data-ed=lf-cat][data-c=Deutsch]'), lob.doc); await wait(20);
+  click(R.querySelector('.kse-dd-panel [data-ed=lf-cat][data-c=Deutsch]'), lob.doc); await wait(20);
   ok('Mehrere Themenfelder zugleich', titel() === 'Bruchrechnen|Kommasetzung|Textaufgaben', titel());
+  click(R.querySelector('[data-kl=res]'), lob.doc); await wait(20);
+  ok('Klick daneben schließt das Dropdown', !R.querySelector('.kse-dd-panel'));
+  ok('Gewählte Themenfelder stehen als Chips da', R.querySelectorAll('.kse-frow--themen > [data-ed=lf-cat]').length === 2);
   ok('Zähler: „3 von 6 Quizzen"', /3 von 6/.test(txt(R.querySelector('.kse-fzahl'))), txt(R.querySelector('.kse-fzahl')));
   click(R.querySelector('[data-ed=lf-reset]'), lob.doc); await wait(20);
   ok('Alles zurückgesetzt', karten().length === 6);
