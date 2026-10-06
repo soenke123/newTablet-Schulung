@@ -1,12 +1,17 @@
 // ══════════════════════════════════════════════════════════════
 // POST /api/skill_join   — MPSkills Beitritt (Stufe 3)
 // ══════════════════════════════════════════════════════════════
-// Body: { code, mode: 'peek' | 'join', name?, access_token? }
+// Body: { code, mode: 'peek' | 'join' | 'recover', name?, access_token? }
 //
-// Zwei Modi, ein Endpunkt:
-//   'peek' — Was steht hinter diesem Code? Raumtitel, Werkzeug,
-//            ob der Beitritt offen ist. Legt nichts an.
-//   'join' — Teilnehmer anlegen und den Token zurückgeben.
+// Drei Modi, ein Endpunkt:
+//   'peek'    — Was steht hinter diesem Code? Raumtitel, Werkzeug,
+//               ob der Beitritt offen ist. Legt nichts an.
+//   'join'    — Teilnehmer anlegen und den Token zurückgeben.
+//   'recover' — (0196) code ist hier der PERSÖNLICHE Code eines
+//               Teilnehmers (8 Zeichen, Scrum Werkstatt). Gibt den
+//               Token seines alten Platzes zurück — auf jedem Gerät,
+//               auch bei geschlossener Tür. Ein zweiter Schlüssel zum
+//               Token, deshalb dieselbe IP-Grenze wie der Raum-Code.
 //
 // ── Warum das ein Endpunkt ist und keine Datenbank-Funktion ───
 // Der Raum-Code ist das einzige erratbare Geheimnis im System.
@@ -50,6 +55,8 @@ const RATE_LIMIT_PER_HOUR = 200;
 
 // Dasselbe Alphabet wie skill_gen_code() in Migration 0079.
 const CODE_RE = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$/;
+// Persönlicher Code (0196): dasselbe Alphabet, acht Zeichen.
+const KEY_RE  = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$/;
 
 // Wie der Anzeigename beim Signup (api/signup.js), nur kürzer: der
 // Name steht an der Wand und in der Wolke, nicht in einem Konto.
@@ -115,8 +122,30 @@ export default async function handler(req, res) {
 
   const mode = String(body.mode ?? 'peek').trim().toLowerCase();
   const code = String(body.code ?? '').trim().toUpperCase();
-  if (mode !== 'peek' && mode !== 'join') {
+  if (mode !== 'peek' && mode !== 'join' && mode !== 'recover') {
     return res.status(400).json({ ok: false, error: 'mode_invalid' });
+  }
+
+  // ── recover ──
+  // Vor der Formprüfung des Raum-Codes: der persönliche Code ist
+  // länger. Bindestrich und Leerzeichen (so steht er auf dem Zettel)
+  // fallen weg.
+  if (mode === 'recover') {
+    const key = code.replace(/[^0-9A-Z]/g, '');
+    if (!KEY_RE.test(key)) {
+      return fail(400, { error: 'key_invalid' });
+    }
+    const { data, error } = await admin.rpc('skill_room_recover', { p_key: key });
+    if (error) {
+      console.error('[skill_join] skill_room_recover:', error);
+      return res.status(500).json({ ok: false, error: 'lookup_failed' });
+    }
+    // Ein abgelaufener Raum ist kein Rateversuch — der Code stimmte.
+    if (!data?.ok && data?.error === 'room_expired') {
+      return res.status(409).json({ ok: false, error: 'room_expired' });
+    }
+    if (!data?.ok) return fail(404, { error: data?.error ?? 'not_found' });
+    return res.status(200).json(data);
   }
   // Ein Code, der nicht einmal die Form hat, ist ein Tippfehler
   // oder ein Versuch — beides zählt.

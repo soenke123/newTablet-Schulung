@@ -23,6 +23,7 @@ Webauftrtitt/
 │   ├── quiz.html/.js   → Quiz-Editor von Knowledge Stack ohne Raum (Kachel-Knopf „Quiz-Editor"); derselbe Editor wie im Raum (tools/KnowledgeStack/editor.js)
 │   ├── lib/            → room.js (Token, Poller) · qr.js (selbstgebaut) · tool.js (Werkzeug-Schnittstelle) · userbar.js (Ecke oben rechts)
 │   └── tools/          → ein Ordner je Werkzeug, je zwei Dateien: tool.js + tool.css
+│       └── ScrumWerkstatt/ → Scrum-Projektarbeit, ein Raum = ein Team (Migration 0196). index.html im iframe + bridge.js (Sync); Mitglied/Beobachter, persönlicher Wiedereinstiegscode (8 Zeichen, /api/skill_join mode 'recover')
 └── GameHub/            → All game logic (see GameHub/CLAUDE.md for detailed docs)
     ├── index.html      → Game selection hub with creature gallery
     ├── script.js       → Hub-only logic: GAMES_CONFIG, renderHub, shop modal, gallery

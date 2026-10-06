@@ -155,6 +155,15 @@
       '<rect x="7.4" y="15.4" width="9.2" height="4.8" rx="1.2"/>' +
       '<path d="M6.2 8.4v3.4h11.6V8.4M12 11.8v3.6"/>',
 
+    /* Scrum Werkstatt — das Board: drei Spalten, in den ersten
+       beiden je ein Zettel, die letzte mit einem Haken (fertig). */
+    scrum:
+      '<rect x="3" y="3.6" width="18" height="16.8" rx="2"/>' +
+      '<path d="M9 3.6v16.8M15 3.6v16.8"/>' +
+      '<rect x="4.6" y="6.4" width="2.8" height="2.8" rx=".5"/>' +
+      '<rect x="10.6" y="9.6" width="2.8" height="2.8" rx=".5"/>' +
+      '<path d="M16.4 8.2l1.2 1.2 2-2.2"/>',
+
     /* Abstimmung — Balken in Echtzeit, genau wie es im Text steht.
        Sie stehen auf einer Linie, sonst schwebten sie. */
     poll:
@@ -178,7 +187,8 @@
   const ALIAS = {
     'KnowledgeStack': 'knowledgestack',
     'Caesercode':     'caesar',
-    'NeuroLab':       'neurolab'
+    'NeuroLab':       'neurolab',
+    'ScrumWerkstatt': 'scrum'
   };
 
   function key(id) {

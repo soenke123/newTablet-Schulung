@@ -348,6 +348,12 @@
     access_token: window.__accessToken || null
   });
 
+  /* Zurück mit dem persönlichen Code (0196). Er ist ein zweiter
+     Schlüssel zum Token und läuft deshalb durch dieselbe Tür wie der
+     Raum-Code — mit Rate-Limit. Die Antwort trägt Token, Platz und
+     Raum, genau wie ein Beitritt. */
+  const recover = (key) => endpoint({ mode: 'recover', code: String(key || '').toUpperCase() });
+
   const view = (token) => rpc('skill_view', { p_token: token });
   const sig  = (token) => rpc('skill_sig',  { p_token: token });
 
@@ -543,7 +549,7 @@
     list, get, remember, snapshot, forget, touch, leave, uid,
     soloToken, rememberSolo, forgetSolo,
     goSolo, backRoom, forgetBack,
-    rpc, peek, join, view, sig, poll, showNet,
+    rpc, peek, join, recover, view, sig, poll, showNet,
     normalizeCode, isCode, joinUrl, untilText, agoText,
     CODE_RE, POLL_MS
   };

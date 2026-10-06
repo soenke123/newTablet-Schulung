@@ -87,6 +87,8 @@ const ERRORS = {
   name_blocked:  'Diesen Namen bitte nicht.',
   name_too_long: 'Der Name ist zu lang — höchstens 24 Zeichen.',
   rate_limit:    'Zu viele Versuche von diesem Netz. Bitte warte einen Moment.',
+  key_invalid:   'Der persönliche Code besteht aus 8 Zeichen — Buchstaben und Ziffern.',
+  key_unknown:   'Diesen persönlichen Code gibt es nicht. Frag deine Lehrkraft — sie sieht ihn.',
   text_blocked:  'Solche Wörter bitte nicht. Schreib es anders.',
   blocked:       'Deine Lehrkraft hat dieses Tablet gerade stillgelegt.',
   removed:       'Deine Lehrkraft hat dich aus dem Raum genommen.',
@@ -233,6 +235,7 @@ function renderAsk(prefill, errorMsg) {
         </div>
         <button type="submit" class="btn btn--primary btn--wide" id="codeGo">Weiter</button>
       </form>
+      <p class="join-foot"><button type="button" class="btn--link" id="keyLink">Ich habe einen persönlichen Code</button></p>
     </div>
     ${mine.length ? `
       <div class="card">
@@ -256,6 +259,8 @@ function renderAsk(prefill, errorMsg) {
         </ul>
       </div>` : ''}
   `;
+
+  document.getElementById('keyLink').addEventListener('click', () => renderRecover(''));
 
   const cells = [...document.querySelectorAll('.codecell')];
 
@@ -309,6 +314,64 @@ function renderAsk(prefill, errorMsg) {
     // das passiert genau dann, wenn ein Versuch fehlgeschlagen ist
     // und jemand es noch einmal probiert. Ohne diesen Zweig wäre
     // der „Weiter"-Knopf an der Stelle tot.
+    if (location.hash.replace(/^#/, '').toUpperCase() === code) route();
+    else location.hash = code;
+  });
+}
+
+/* ─── Zustand: persönlicher Code (0196) ───────────────────────
+   Für Skills mit Langzeitarbeit (bisher die Scrum Werkstatt): ein
+   Teammitglied bekommt beim ersten Mal einen eigenen Code aus 8
+   Zeichen und kommt damit auf JEDEM Gerät auf seinen Platz zurück —
+   ohne Konto und auch bei geschlossener Tür. Der Raum-Code ist dafür
+   nicht nötig; der persönliche Code weiß, zu welchem Raum er gehört.
+
+   Ein Feld statt acht Kästchen: der Code steht auf einem Zettel oder
+   Foto als „H7KQ-2M9X", und so wird er auch abgetippt. */
+function renderRecover(errorMsg, prefill) {
+  host().innerHTML = `
+    <div class="card card--join">
+      <h1 class="join-h">Persönlicher Code</h1>
+      <p class="join-sub">Den hast du beim ersten Betreten deines Teams bekommen —
+        8 Zeichen, z. B. <span style="font-family:'JetBrains Mono',monospace">H7KQ-2M9X</span>.</p>
+      ${errorMsg ? `<div class="msg msg--err">${esc(errorMsg)}</div>` : ''}
+      <form id="keyForm" novalidate>
+        <label class="field">Dein Code
+          <input type="text" id="keyIn" maxlength="12" inputmode="latin"
+                 autocapitalize="characters" autocomplete="off" spellcheck="false"
+                 enterkeyhint="go" value="${esc(prefill || '')}" />
+        </label>
+        <button type="submit" class="btn btn--primary btn--wide" id="keyGo">Zurück in mein Team</button>
+      </form>
+      <p class="join-foot"><button type="button" class="btn--link" id="keyBack">Doch den Code von der Tafel eingeben</button></p>
+    </div>`;
+
+  const input = document.getElementById('keyIn');
+  setTimeout(() => input.focus(), 60);
+  document.getElementById('keyBack').addEventListener('click', () => renderAsk(''));
+
+  document.getElementById('keyForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const key = MPRoom.normalizeCode(input.value);
+    if (key.length !== 8) { renderRecover(ERRORS.key_invalid, input.value); return; }
+    const btn = document.getElementById('keyGo');
+    btn.disabled = true;
+    btn.textContent = 'Einen Moment …';
+    let res;
+    try {
+      res = await MPRoom.recover(key);
+    } catch (ex) {
+      renderRecover('Keine Verbindung: ' + (ex.message || ex), input.value);
+      return;
+    }
+    if (!res.ok) {
+      renderRecover(errText(res.error === 'not_found' ? 'key_unknown' : res.error), input.value);
+      return;
+    }
+    const code = res.room.code;
+    MPRoom.remember({ code, token: res.token, name: res.name, seat: res.seat, room: res.room });
+    toast(`Willkommen zurück, ${res.name}!`);
+    // Steht der Code schon im Hash, feuert hashchange nicht.
     if (location.hash.replace(/^#/, '').toUpperCase() === code) route();
     else location.hash = code;
   });

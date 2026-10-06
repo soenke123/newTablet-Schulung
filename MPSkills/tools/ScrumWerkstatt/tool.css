@@ -1,0 +1,33 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „Scrum Werkstatt"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Nur der Rahmen. Alles, was man sieht, steht in index.html und
+   gehört der Werkstatt selbst (siehe Kopf von tool.js) — dieselbe
+   Aufteilung wie bei NeuroLab.
+   ══════════════════════════════════════════════════════════════ */
+
+.sw-host {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg, 18px);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.sw-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  height: 75vh;     /* Ausgangswert bis zur ersten Messung in tool.js */
+}
+
+/* Auf dem Handy bis an beide Kanten: die Werkstatt hat ihren eigenen
+   Seitenrand, ein zweiter darum herum kostet nur Breite. */
+@media (max-width: 640px) {
+  .sw-host {
+    margin: 0 -12px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+}

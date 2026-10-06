@@ -622,6 +622,44 @@ label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:upper
 .nothing h3{font-size:21px;margin-bottom:7px}
 .nothing p{font-size:13.5px;color:var(--ink-3);max-width:44ch;margin:0 auto 18px;line-height:1.55}
 
+/* ============================================================
+   IM RAUM (bridge.js)
+   ============================================================ */
+/* Lesemodus: Beobachter, Lehrkraft, stillgelegt. Was ändern würde,
+   ist weg; Felder sperrt lockRO() zusätzlich. */
+body.ro #btnSprintAction, body.ro #btnPlanFromEmpty, body.ro #btnNewStory,
+body.ro .pi-nav, body.ro [data-edit], body.ro .b-prio button, body.ro .rte-bar,
+body.ro #goalAdd, body.ro .ishell .x, body.ro #stDelete, body.ro #dEdit,
+body.ro .inline-add, body.ro .dodrow .rm{display:none!important}
+body.ro .postit{cursor:default}
+body.ro .avbtn{cursor:default}
+.robar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12.5px;color:var(--petrol);margin-bottom:16px}
+.robar[hidden]{display:none}
+.robar .btn{margin-left:auto}
+
+.choice{display:block;width:100%;text-align:left;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;box-shadow:var(--sh-1)}
+.choice:hover{border-color:var(--petrol);background:#fff}
+.choice b{display:block;font-size:16px;margin-bottom:4px;color:var(--petrol)}
+.choice span{display:block;font-size:12.5px;line-height:1.5;color:var(--ink-2)}
+#chObserver b{color:var(--ink-2)}
+
+.keybig{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:clamp(30px,9vw,42px);font-weight:700;letter-spacing:.08em;color:var(--petrol);background:var(--paper-up);border:2px dashed var(--line);border-radius:var(--r);padding:14px 8px}
+.keystrip{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--marker-wash);border:1px solid #f0c9a8;border-radius:var(--r);padding:12px 15px;margin:18px 0 0}
+.keystrip .btn{margin-left:auto}
+.teamnote{font-size:12.5px;color:var(--ink-3);margin:14px 0 0}
+.teamnote b{color:var(--ink-2)}
+.metag{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--marker-wash);color:var(--marker);padding:1px 6px;border-radius:99px;vertical-align:middle}
+.mcard.me{border-color:var(--marker);box-shadow:0 0 0 1px var(--marker-wash),var(--sh-1)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:99px;background:var(--line);vertical-align:middle;margin-left:4px}
+.dot.on{background:var(--st-done)}
+.mkey{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.05em;color:var(--petrol)}
+/* Im Raum keine Papierkörnung: sie läge als fixe Schicht
+   über dem ganzen Rahmen und kostet auf Tablets Zeichenzeit. */
+body.inroom::after{display:none}
+
+/* Spaltenwahl fürs Handy — auf breiten Schirmen unsichtbar */
+.colpick{display:none}
+
 /* ---------- responsive ---------- */
 @media (max-width:1180px){
   .board{grid-template-columns:repeat(5,minmax(214px,1fr))}
@@ -639,9 +677,55 @@ label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:upper
 @media (max-width:640px){
   .grid2{grid-template-columns:1fr}
   .imgs{grid-template-columns:1fr 1fr}
-  .tabbar{top:56px}
   .brand-name{max-width:60vw}
   .goalbar .meta{width:100%}
+
+  /* ── Handy-Ansicht ──
+     Kopf nicht mehr klebend (er wäre mit Sprint-Leiste halb so hoch
+     wie der Bildschirm), die Reiter dafür schon — ganz oben. */
+  header.top{position:static}
+  .top-row{gap:10px;min-height:0}
+  .brand{flex-basis:100%}
+  .sprint-pill{flex:1 1 100%;gap:9px;padding:6px 10px;flex-wrap:wrap}
+  .sprint-pill .ruler{width:80px}
+  .top-row > div:last-child{flex:1 1 100%;justify-content:flex-end}
+  #btnDaily span{display:none}
+  .tabbar{top:0}
+  .tab{padding:11px 11px 10px;font-size:12.5px}
+  main{padding:14px 0 60px}
+
+  /* Board: eine Spalte, darüber die Spaltenwahl */
+  .colpick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -2px 10px;padding:2px}
+  .colpick::-webkit-scrollbar{display:none}
+  .colpick button{display:flex;align-items:center;gap:6px;flex:none;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+  .colpick button b{font-weight:700;background:var(--paper-down);border-radius:99px;padding:0 6px;font-size:11px}
+  .colpick button[aria-pressed="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff}
+  .colpick button[aria-pressed="true"] b{background:rgba(255,255,255,.22)}
+  .board{display:block;padding:8px;overflow:visible}
+  .board .col{display:none;min-height:0}
+  .board .col.on{display:flex}
+  .postit:hover{transform:none}
+
+  /* Backlog: Kategorie, Zuständig und Sprint stehen in der Karte, die
+     Tabelle passt dann ohne Seitwärtsrollen. */
+  table{min-width:0}
+  thead th:nth-child(4), thead th:nth-child(6), thead th:nth-child(7),
+  tbody td:nth-child(4), tbody td:nth-child(6), tbody td:nth-child(7){display:none}
+  thead th:nth-child(2), tbody td:nth-child(2){display:none}
+  td{padding:9px 7px}
+  .b-sub{display:none}
+  .search{max-width:none;flex-basis:100%}
+  .toolbar select.auto{flex:1 1 30%}
+  #backlogSums{margin-left:0!important;width:100%}
+
+  /* Dialoge: ganze Fläche */
+  .scrim{padding:0;place-items:stretch}
+  .modal,.modal.wide,.modal.mid,.modal.narrow{max-width:none;max-height:none;height:100%;border-radius:0}
+  .m-b{padding:16px}
+  .retro{grid-template-columns:1fr}
+  .shead .sp{margin-left:0}
+  .resp{padding:13px}
+  .teamgrid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media print{body::after,header.top,.tabbar,.m-f,.pi-nav{display:none!important}}
@@ -676,6 +760,14 @@ label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:upper
           <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
         </button>
         <div class="menu-pop" id="menuPop" hidden>
+          <button id="miKey" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg>
+            Mein persönlicher Code
+          </button>
+          <button id="miJoin" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg>
+            Doch ins Team
+          </button>
           <button id="miExport">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
             Projekt exportieren (.json)
@@ -730,6 +822,7 @@ label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:upper
 </nav>
 
 <main class="wrap">
+  <div class="robar" id="roBar" hidden></div>
 
   <!-- ══════════ VIEW: AKTUELLER SPRINT ══════════ -->
   <section class="view" id="view-sprint">
@@ -753,6 +846,7 @@ label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:upper
         </div>
         <div class="meta" id="liveStats"></div>
       </div>
+      <div class="colpick" id="colPick" role="tablist" aria-label="Spalte"></div>
       <div class="board" id="board"></div>
     </div>
   </section>
@@ -875,6 +969,7 @@ label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:upper
       <span style="font-size:12.5px;color:var(--ink-3)">Alle, die das Produkt bauen – inklusive PO und SM.</span>
     </div>
     <div class="teamgrid" id="teamGrid"></div>
+    <div id="teamExtra"></div>
   </section>
 
   <!-- ══════════ VIEW: HISTORIE ══════════ -->
@@ -1237,13 +1332,60 @@ label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:upper
   </div>
 </div>
 
+<!-- Im Raum: Wie bist du dabei? (nur beim ersten Betreten, nicht wegklickbar) -->
+<div class="scrim" id="mChoose" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true" aria-labelledby="chTitle">
+    <div class="m-h"><div class="ttl" id="chTitle">Willkommen, <span id="chName"></span>!</div></div>
+    <div class="m-b">
+      <p style="margin:0 0 14px;font-size:13.5px;line-height:1.55;color:var(--ink-2)">Wie bist du in diesem Raum dabei?</p>
+      <button class="choice" id="chMember">
+        <b>Ich bin im Team</b>
+        <span>Du bekommst eine Kachel im Team und arbeitet am Board mit. Dazu gibt es einen persönlichen Code, mit dem du auf jedem Gerät zurückkommst.</span>
+      </button>
+      <button class="choice" id="chObserver">
+        <b>Ich schaue nur zu</b>
+        <span>Du siehst alles, kannst aber nichts ändern. Später kannst du immer noch ins Team wechseln.</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Der persönliche Code -->
+<div class="scrim" id="mKey" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h mark"><div class="ttl">Dein persönlicher Code</div>
+      <button class="m-x" data-close="mKey" aria-label="Schließen">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b" style="text-align:center">
+      <div class="keybig" id="keyBig">—</div>
+      <p style="margin:12px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink-2)">
+        <b>Schreib ihn dir auf oder mach ein Foto.</b> Damit kommst du auf jedem Gerät zurück in dein Team:
+        auf der Beitrittsseite „Ich habe einen persönlichen Code“ antippen.</p>
+      <p style="margin:10px 0 0;font-size:12px;color:var(--ink-3)">Gib ihn nicht weiter — wer ihn hat, arbeitet unter deinem Namen.
+        Vergessen? Deine Lehrkraft sieht ihn. Unter „Team“ findest du ihn auch wieder.</p>
+    </div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mKey">Hab ich notiert</button></div></div>
+  </div>
+</div>
+
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
+<script src="bridge.js?v=20261006"></script>
 <script>
 'use strict';
 /* ════════════════════════════════════════════════════════════
-   SCRUM WERKSTATT — Prototyp (Einzelgerät, localStorage)
+   SCRUM WERKSTATT
+   ════════════════════════════════════════════════════════════
+   Läuft auf zwei Arten:
+     · allein (Doppelklick): ein Gerät, Stand im localStorage —
+       so, wie der Prototyp entstanden ist.
+     · im MPSkills-Raum (im <iframe>): der Stand liegt auf dem
+       Server, das Team arbeitet gemeinsam. Alles, was dafür nötig
+       ist, steckt in bridge.js; hier hängen nur die Stellen daran,
+       an denen gespeichert wird (save) und die das Team betreffen.
    ════════════════════════════════════════════════════════════ */
 
 const KEY = 'scrum_werkstatt_v1';
@@ -1269,6 +1411,7 @@ let planReturn = false;
 let carryPlan = {};        // storyId -> 'backlog' | 'next'
 let archiveSprint = null;
 let confirmCb = null;
+let phoneCol = 'doing';     // welche Spalte das Handy zeigt
 
 /* ── helpers ─────────────────────────────────────────── */
 const $  = s => document.querySelector(s);
@@ -1295,11 +1438,15 @@ function ask(title,text,cb){
   $('#cfTitle').textContent=title; $('#cfText').textContent=text;
   confirmCb=cb; show('mConfirm');
 }
-function show(id){ $('#'+id).hidden=false; }
+function show(id){ $('#'+id).hidden=false; if(SW.on && SW.ready) lockRO(); }
 function hide(id){ $('#'+id).hidden=true; }
 
 /* ── state ───────────────────────────────────────────── */
 function save(){
+  // Im Raum schreibt die Brücke nur, was sich geändert hat. Im
+  // Schaufenster (demo) bleibt nichts hängen.
+  if(SW.on){ SW.save(); return; }
+  if(SW.demo) return;
   try { localStorage.setItem(KEY, JSON.stringify(S)); }
   catch(e){ toast('⚠ Speicher voll – evtl. zu viele Bilder im Product Goal'); }
 }
@@ -1389,6 +1536,17 @@ function seed(){
   };
 }
 
+/* Für bridge.js: `let S` ist keine Eigenschaft von window, also
+   reicht die Brücke den Stand über diese drei hinein und heraus. */
+window.swGetS = () => S;
+window.swSetS = next => { S = next; };
+window.swRender = function(){ renderAll(); renderRoom(); };
+
+// Neue Karten brauchen eine id, die auch auf dem Nachbartablet nicht
+// gerade entsteht. Die sichtbare Nummer (US-07) vergibt im Raum der
+// Server, allein zählt das Gerät weiter.
+const newId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
 /* ── lookups ─────────────────────────────────────────── */
 const member   = id => S.team.find(m=>m.id===id) || null;
 const sprint   = id => S.sprints.find(s=>s.id===id) || null;
@@ -1429,6 +1587,47 @@ function renderAll(){
   renderGoal();
   renderTeam();
   renderHistory();
+  if(SW.on && SW.ready) lockRO();
+}
+
+/* ── Raum: Wahl, Code, Lesemodus ─────────────────────────── */
+function renderRoom(){
+  if(!SW.on || !SW.ready) return;
+  const me=SW.me||{};
+  // Wahl beim ersten Betreten. Die Lehrkraft wählt nie.
+  if(SW.role==='participant' && !me.kind && !me.blocked){
+    $('#chName').textContent=me.name||'';
+    show('mChoose');
+  } else hide('mChoose');
+  $('#miKey').hidden = !(me.kind==='member' && me.key);
+  $('#miJoin').hidden = !(SW.role==='participant' && me.kind==='observer');
+  $('#roBar').hidden = !SW.ro;
+  $('#roBar').innerHTML = SW.role==='presenter'
+    ? '<b>Lehrkraft-Ansicht</b> · Ihr seht, was das Team eingetragen hat. Ändern kann nur das Team.'
+    : me.blocked ? '<b>Stillgelegt</b> · Deine Lehrkraft hat dieses Tablet gerade angehalten.'
+    : '<b>Du schaust zu</b> · Ändern können nur Teammitglieder. <button class="btn sm" id="roJoin">Doch ins Team</button>';
+  const rj=$('#roJoin'); if(rj) rj.onclick=joinAsMember;
+  lockRO();
+}
+
+/* Im Lesemodus alles Bearbeitbare sperren. Läuft nach jedem Zeichnen
+   und nach jedem geöffneten Dialog (show), weil der Story-Dialog seine
+   Felder erst beim Öffnen baut. Filter und Daily bleiben frei. */
+function lockRO(){
+  if(!SW.on) return;
+  const free=new Set(['fSearch','fStatus','fSprint','fWho']);
+  $$('main input, main select, main textarea, .modal input, .modal select, .modal textarea, #productName').forEach(el=>{
+    if(free.has(el.id) || el.closest('#mDaily')) return;
+    if(SW.ro){ el.dataset.roLock='1'; el.disabled=true; }
+    else if(el.dataset.roLock){ delete el.dataset.roLock; el.disabled=false; }
+  });
+  $('#goalRte').contentEditable = SW.ro ? 'false' : 'true';
+  $$('.postit').forEach(p=>p.draggable=!SW.ro);
+}
+
+async function joinAsMember(){
+  const r=await SW.enter('member');
+  if(r && r.key){ $('#keyBig').textContent=SW.fmtKey(r.key); show('mKey'); }
 }
 
 function renderCounts(){
@@ -1488,10 +1687,16 @@ function renderBoard(){
 
   const board=$('#board'); board.innerHTML='';
 
+  /* Auf dem Handy passt eine Spalte, nicht fünf. Darüber steht dann
+     eine Leiste zum Umschalten (nur dort sichtbar, siehe CSS). */
+  const cnt=k=>ss.filter(s=>k==='blocked'?s.blocked:(!s.blocked&&s.status===k)).length;
+  $('#colPick').innerHTML=COLS.map(c=>`<button data-col="${c.k}" aria-pressed="${phoneCol===c.k}">
+      <span class="col-dot" style="background:${c.c}"></span>${c.nm}<b>${cnt(c.k)}</b></button>`).join('');
+
   COLS.forEach(col=>{
     const inCol = ss.filter(s => col.k==='blocked' ? s.blocked : (!s.blocked && s.status===col.k));
     const el=document.createElement('div');
-    el.className='col'; el.dataset.k=col.k;
+    el.className='col'+(phoneCol===col.k?' on':''); el.dataset.k=col.k;
     el.innerHTML=`<div class="col-h">
         <span class="col-dot" style="background:${col.c}"></span>
         <span class="nm">${col.nm}</span><span class="n">${inCol.length}</span>
@@ -1721,6 +1926,8 @@ function renderTeam(){
     slot('po',po,'Priorisiert das Product Backlog und hält das Produktziel im Blick.')+
     slot('sm',sm,'Moderiert das Daily, räumt Blockaden weg, achtet auf die Spielregeln.');
 
+  if(SW.on) return renderTeamRoom();
+
   $('#teamGrid').innerHTML=S.team.map(m=>{
     const mine=S.stories.filter(s=>s.assignee===m.id);
     const dn=mine.filter(s=>s.status==='done').length;
@@ -1751,6 +1958,58 @@ function renderTeam(){
   + `<button class="mcard add" id="teamAdd">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
       <span style="font-size:13px;font-weight:600">Mitglied hinzufügen</span></button>`;
+}
+
+/* Das Team im Raum: die Kacheln entstehen beim Beitritt (wer „Ich bin
+   im Team" wählt), nicht über einen Knopf. Name kommt aus dem Raum.
+   Rolle, Label und Bild darf jedes Mitglied an jeder Karte ändern —
+   gespeichert wird sofort (scrum_member_update), nicht über save(). */
+function renderTeamRoom(){
+  const me=SW.me||{}, teacher=SW.role==='presenter';
+  const mykey = me.kind==='member' && me.key
+    ? `<div class="keystrip">
+        <div><div class="eyebrow">Dein persönlicher Code</div>
+        <div style="font-size:12.5px;color:var(--ink-3);margin-top:2px">Damit kommst du auf jedem Gerät zurück. Nicht weitergeben.</div></div>
+        <button class="btn" id="showKey">Code anzeigen</button></div>` : '';
+  $('#teamGrid').innerHTML = S.team.map(m=>{
+    const mine=S.stories.filter(s=>s.assignee===m.id);
+    const dn=mine.filter(s=>s.status==='done').length;
+    return `<div class="mcard${m.me?' me':''}" data-m="${m.id}">
+      <div class="mtop">
+        <button class="avbtn" data-avup="${m.id}" title="Bild wählen" style="background:none;border:0;padding:0;border-radius:14px" ${SW.ro?'disabled':''}>${avatar(m,52)}</button>
+        <div style="flex:1;min-width:0">
+          <div class="mname" style="border:0">${esc(m.name)}${m.me?' <span class="metag">du</span>':''}
+            <span class="dot${m.online?' on':''}" title="${m.online?'gerade da':'nicht da'}"></span></div>
+          <input class="mlabel" data-f="label" value="${esc(m.label||'')}" placeholder="+ eigenes Label" aria-label="Label" maxlength="40">
+        </div>
+      </div>
+      <select data-f="role" aria-label="Scrum-Rolle">
+        <option value="dev" ${m.role==='dev'?'selected':''}>Development Team</option>
+        <option value="po"  ${m.role==='po' ?'selected':''}>+ Product Owner</option>
+        <option value="sm"  ${m.role==='sm' ?'selected':''}>+ Scrum Master</option>
+      </select>
+      <div class="mstats">
+        <div class="mstat"><b>${mine.length}</b><span>Stories</span></div>
+        <div class="mstat"><b style="color:var(--st-done)">${dn}</b><span>fertig</span></div>
+        <div class="mstat"><b>${sum(mine.filter(s=>s.status==='done'),s=>s.points)}</b><span>SP fertig</span></div>
+      </div>
+      ${teacher?`<div class="mfoot">
+        <span style="font-size:11px;color:var(--ink-3)">Code</span>
+        <b class="mkey">${esc(SW.fmtKey(m.key))}</b>
+        <button class="btn ghost sm" data-rekey="${m.id}" style="margin-left:auto">neu</button>
+      </div>`:''}
+    </div>`;
+  }).join('')
+  + (S.team.length?'':`<div class="nothing" style="grid-column:1/-1;padding:28px">
+      <h3>Noch niemand im Team</h3>
+      <p>Wer den Raum betritt und „Ich bin im Team“ wählt, bekommt hier eine Kachel.</p></div>`);
+
+  const names=a=>a.map(o=>esc(typeof o==='string'?o:o.name)).join(', ');
+  $('#teamExtra').innerHTML = mykey
+    + (SW.observers.length?`<p class="teamnote"><b>Schauen zu:</b> ${names(SW.observers)}</p>`:'')
+    + (SW.undecided.length?`<p class="teamnote"><b>Haben noch nicht gewählt:</b> ${names(SW.undecided)}</p>`:'');
+  const sk=$('#showKey');
+  if(sk) sk.onclick=()=>{ $('#keyBig').textContent=SW.fmtKey(me.key); show('mKey'); };
 }
 
 /* ── HISTORY ─────────────────────────────────────────── */
@@ -1944,14 +2203,14 @@ function saveEdit(){
     toast('Story aktualisiert');
   } else {
     const n=++S.seq.story;
-    const maxOrder=S.stories.length?Math.max(...S.stories.map(s=>s.order)):0;
+    const maxOrder=S.stories.length?Math.max(...S.stories.map(s=>+s.order||0)):0;
     const ns=Object.assign({
-      id:'u'+n, key:'US-'+pad(n), status:'todo', blocked:false, note:'', order:maxOrder+1,
+      id:SW.on?newId('u'):'u'+n, key:SW.on?'US-…':'US-'+pad(n), status:'todo', blocked:false, note:'', order:maxOrder+1,
       dod:[{text:'Inhaltlich geprüft',done:false},{text:'Von zweiter Person gegengelesen',done:false}]
     },vals);
     S.stories.push(ns);
     if(planReturn){ planPick.add(ns.id); ns.sprint=null; }
-    toast(`${ns.key} angelegt`);
+    toast(SW.on?'Story angelegt':`${ns.key} angelegt`);
   }
   hide('mEdit');
   editingStory=null;
@@ -2014,7 +2273,8 @@ function startSprint(){
   if(dayDiff(start,end)<=0){ toast('⚠ Das Ende muss nach dem Start liegen'); return; }
   if(!planPick.size){ toast('⚠ Wählt mindestens eine Story aus'); return; }
 
-  const id='s'+(++S.seq.sprint);
+  const id=SW.on?newId('s'):'s'+(S.seq.sprint+1);
+  S.seq.sprint++;
   const sp={ id, no:S.seq.sprint, name, goal:$('#plGoal').value.trim(),
              start, end, status:'active', review:null, snapshot:null };
   S.sprints.push(sp);
@@ -2209,6 +2469,10 @@ function wire(){
   document.addEventListener('click',()=>{ pop.hidden=true; });
   pop.onclick=e=>e.stopPropagation();
   $('#miExport').onclick=()=>{ exportJson(); pop.hidden=true; };
+  $('#miKey').onclick=()=>{ pop.hidden=true; $('#keyBig').textContent=SW.fmtKey(SW.me&&SW.me.key); show('mKey'); };
+  $('#miJoin').onclick=()=>{ pop.hidden=true; joinAsMember(); };
+  $('#chMember').onclick=async()=>{ hide('mChoose'); await joinAsMember(); };
+  $('#chObserver').onclick=async()=>{ hide('mChoose'); await SW.enter('observer'); };
   $('#miImport').onclick=()=>{ $('#importFile').click(); pop.hidden=true; };
   $('#miPrint').onclick=()=>{ pop.hidden=true; go('sprint'); setTimeout(()=>window.print(),220); };
   $('#miReset').onclick=()=>{ pop.hidden=true;
@@ -2218,6 +2482,7 @@ function wire(){
 
   /* modals schließen */
   const closeM=id=>{
+    if(id==='mChoose') return;
     hide(id);
     if(id==='mEdit' && planReturn){ planReturn=false; renderPlan(); show('mPlan'); }
   };
@@ -2249,6 +2514,11 @@ function wire(){
     const t=e.target.closest('[data-dodrm]'); if(!t) return;
     const s=story(openStory); if(!s) return;
     s.dod.splice(+t.dataset.dodrm,1); renderAll(); openDetail(openStory);
+  });
+
+  $('#colPick').addEventListener('click',e=>{
+    const b=e.target.closest('[data-col]'); if(!b) return;
+    phoneCol=b.dataset.col; renderBoard(); lockRO();
   });
 
   /* backlog */
@@ -2290,7 +2560,7 @@ function wire(){
     const files=Array.from(e.target.files).slice(0,5-S.product.images.length);
     if(!files.length){ toast('⚠ Maximal 5 Bilder'); return; }
     let left=files.length;
-    files.forEach(f=>shrinkImg(f,1200,src=>{
+    files.forEach(f=>shrinkImg(f,SW.on?1000:1200,src=>{
       S.product.images.push(src);
       if(--left===0){ renderAll(); toast(`${files.length} Bild${files.length===1?'':'er'} hinzugefügt`); }
     }));
@@ -2301,6 +2571,11 @@ function wire(){
   $('#teamGrid').addEventListener('change',e=>{
     const card=e.target.closest('[data-m]'); if(!card) return;
     const m=member(card.dataset.m), f=e.target.dataset.f; if(!m||!f) return;
+    if(SW.on){
+      if(f==='label') SW.member(m.id,{label:e.target.value.trim()});
+      else if(f==='role') SW.member(m.id,{role:e.target.value});
+      return;
+    }
     if(f==='name'){ m.name=e.target.value.trim()||m.name; }
     else if(f==='label'){ m.label=e.target.value.trim(); }
     else if(f==='role'){
@@ -2311,6 +2586,13 @@ function wire(){
     renderAll();
   });
   $('#teamGrid').addEventListener('click',e=>{
+    const rk=e.target.closest('[data-rekey]');
+    if(rk){
+      const m=member(rk.dataset.rekey); if(!m) return;
+      ask('Neuen Code vergeben?',`${m.name} bekommt einen neuen persönlichen Code. Der alte funktioniert ab sofort nicht mehr — auf den Geräten, auf denen ${m.name} gerade drin ist, geht es aber weiter.`,
+        async()=>{ const k=await SW.rekey(m.id); if(k) toast(`Neuer Code für ${m.name}: ${SW.fmtKey(k)}`); });
+      return;
+    }
     if(e.target.closest('#teamAdd')){
       if(S.team.length>=8){ toast('⚠ Mehr als 8 Personen sind kein Scrum-Team mehr'); return; }
       S.team.push({ id:'m'+Date.now().toString(36), name:'Neues Mitglied', role:'dev', label:'', avatar:null });
@@ -2332,7 +2614,12 @@ function wire(){
   });
   $('#avFile').onchange=e=>{
     const f=e.target.files[0]; if(!f||!avatarTarget) return;
-    shrinkImg(f,240,src=>{ const m=member(avatarTarget); if(m){ m.avatar=src; renderAll(); } avatarTarget=null; });
+    shrinkImg(f,240,src=>{
+      const m=member(avatarTarget);
+      if(m && SW.on){ m.avatar=src; renderTeam(); SW.member(m.id,{avatar:src}); }
+      else if(m){ m.avatar=src; renderAll(); }
+      avatarTarget=null;
+    });
     e.target.value='';
   };
 
@@ -2417,7 +2704,24 @@ function exportJson(){
 
 /* ── boot ────────────────────────────────────────────── */
 (function boot(){
-  S=load()||seed();
+  if(SW.on){
+    // Im Raum: leer anfangen und auf die erste Ansicht warten. Import
+    // und Zurücksetzen gibt es hier nicht — sie ersetzten das Projekt
+    // des ganzen Teams auf einen Schlag.
+    S={ product:{name:'Unser Projekt',goal:'',images:[]}, team:[], stories:[], sprints:[], active:null, seq:{story:0,sprint:0} };
+    document.body.classList.add('inroom');
+    $('#miImport').hidden=true; $('#miReset').hidden=true;
+    const inp=document.createElement('input');
+    inp.type='file'; inp.accept='image/*'; inp.id='avFile'; inp.hidden=true;
+    document.body.appendChild(inp);
+    wire();
+    renderAll();
+    window.addEventListener('hashchange',()=>go(location.hash.slice(1),true));
+    go(location.hash.slice(1)||'sprint',true);
+    SW.start();
+    return;
+  }
+  S=SW.demo?seed():(load()||seed());
   S.product=S.product||{name:'Projekt',goal:'',images:[]};
   S.product.images=S.product.images||[];
   S.seq=S.seq||{story:S.stories.length,sprint:S.sprints.length};

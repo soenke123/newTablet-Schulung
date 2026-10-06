@@ -1,7 +1,27 @@
 # Scrum Werkstatt — offene Punkte
 
-Stand: 2026-10-04. Bezug: `scrum-werkstatt.html` (Einzelgerät-Prototyp, localStorage).
-Zeilennummern beziehen sich auf den Stand von heute und können verrutschen.
+Stand: 2026-10-06. Bezug: `index.html` (früher `scrum-werkstatt.html`). Seit Migration 0196
+läuft die Werkstatt im MPSkills-Raum (ein Raum = ein Team); allein geöffnet speichert sie
+weiter im localStorage. Zeilennummern unten stammen vom Prototyp und stimmen nicht mehr.
+
+## ✅ Erledigt mit 0196 (Überführung nach MPSkills)
+
+- [x] **Mehrgeräte-Sync** — Stand auf dem Server, eine Zeile je Objekt mit Versionsnummer
+      (`scrum_items`), Konflikte werden erkannt statt still überschrieben (`bridge.js`, `tool.js`)
+- [x] **Mehrere Gruppen** — jede Gruppe ist ein eigener Raum (bis zu 30 je Lehrkraft)
+- [x] Beitritt: Name → „Ich bin im Team" (Kachel + persönlicher Code) oder „Ich schaue nur zu"
+- [x] Persönlicher Wiedereinstiegscode (8 Zeichen) — jedes Gerät, ohne Konto, auch bei geschlossener Tür;
+      Lehrkraft sieht alle Codes und kann einen neu vergeben
+- [x] Burndown-**Log** (`scrum_burndown`, täglich, Europe/Berlin) — die Daten sammeln sich ab jetzt;
+      das Chart selbst steht noch aus (Punkt 3)
+- [x] Handy-Ansicht (Spaltenwahl auf dem Board, schlankes Backlog, Dialoge im Vollbild)
+
+## ❓ Offen zur Entscheidung: Rechte und Rollen
+
+Bisher darf jedes Teammitglied alles; Beobachter und Lehrkraft lesen nur.
+- Soll der Product Owner allein das Backlog sortieren?
+- Soll nur der Scrum Master Blockaden lösen / den Sprint abschließen?
+- Soll die Lehrkraft kommentieren können (pro Karte, pro Sprint)?
 
 **Vereinbarte Reihenfolge:** erst (1) Definition of Done, dann (2) Story-Tasks —
 die Tasks hängen am Datenmodell und werden später teurer.
@@ -35,8 +55,8 @@ ein Teamgespräch, das sonst nie stattfindet.
 
 ## 3 · Burndown / Sprint-Verlauf
 
-- [ ] Tägliches Mini-Log im State: Datum → offene SP (**früh einbauen,
-      nachträglich nicht rekonstruierbar**)
+- [x] Tägliches Mini-Log: Datum → offene SP — im Raum über `scrum_burndown` (0196),
+      in der Ansicht unter `SW.burndown`
 - [ ] Burndown-Chart in der Sprint-Ansicht: Ideallinie vs. Ist
 - [ ] Heutiger Fortschrittsbalken (`:1462`) ist rein kalendarisch — daneben stellen
 - [ ] Im Archiv den Verlauf des abgeschlossenen Sprints mitspeichern
@@ -68,9 +88,7 @@ ein Teamgespräch, das sonst nie stattfindet.
 
 ## Praktisch (kein Scrum-Inhalt)
 
-- [ ] **Mehrere Gruppen auf einem Gerät** — ein `localStorage`-Key = ein Projekt
-      (`:1249`); auf einem Lehrer-Tablet lässt sich nur eine Gruppe führen.
+- [x] **Mehrere Gruppen auf einem Gerät** — im Raum: ein Raum je Gruppe (0196)
 - [ ] **Undo** für versehentliche Statuswechsel und Löschungen
 - [ ] **Druckansicht prüfen** (`:647`) — taugt das Archiv als Anhang einer Facharbeit?
-- [ ] **Mehrgeräte-Sync** — bewusst Schritt 2: Überführung nach MPSkills
-      (`lib/room.js`, `lib/qr.js`, `lehrer.js`)
+- [x] **Mehrgeräte-Sync** — Überführung nach MPSkills (0196)

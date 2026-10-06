@@ -79,6 +79,10 @@ window.TOOLS_OVERLAY = {
   // Szenarien frei, holt Netze auf den Beamer und schaltet die
   // Tablets blind. beta: die Integration ist frisch (28.09.2026).
   synir: { ready: true, beta: true },
+  // Neunter Skill (Migration 0196) — Scrum Werkstatt, ein Raum je
+  // Team, eingerahmt wie NeuroLab (tools/ScrumWerkstatt/index.html).
+  // beta: frisch aus dem Prototyp in den Raum gezogen (06.10.2026).
+  scrum: { ready: true, beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet
