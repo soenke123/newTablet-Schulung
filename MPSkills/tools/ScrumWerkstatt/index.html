@@ -793,6 +793,9 @@ body.inroom::after{display:none}
   .board .col{display:none;min-height:0}
   .board .col.on{display:flex}
   .postit:hover{transform:none}
+  .postit{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  .colpick button.over{outline:2px solid var(--petrol);outline-offset:1px;background:var(--petrol-wash)}
+  body.swdrag{overscroll-behavior:contain}
 
   /* Backlog: Kategorie, Zuständig und Sprint stehen in der Karte, die
      Tabelle passt dann ohne Seitwärtsrollen. */
@@ -1902,7 +1905,7 @@ function lockRO(){
   const po=canEditPO();
   document.body.classList.toggle('nopo', !po);
   $('#goalRte').contentEditable = po ? 'true' : 'false';
-  $$('.postit, .mchip').forEach(p=>p.draggable=!SW.ro);
+  $$('.postit, .mchip').forEach(p=>p.draggable=!SW.ro && !(p.classList.contains('postit') && isPhone()));
 }
 
 /* Product Backlog und Product Goal bearbeitet nur der Product Owner (und der Raum-Besitzer).
@@ -2078,7 +2081,7 @@ function postit(s){
   const rot=((hash(s.id)%5)-2)*0.55;
   el.className=`postit pi-${s.color||'yellow'}`;
   el.style.transform=`rotate(${rot}deg)`;
-  el.draggable=true; el.dataset.id=s.id;
+  el.draggable=!isPhone(); el.dataset.id=s.id;
 
   const dod=s.tasks||[], dn=dod.filter(d=>d.done).length;
   const m=member(s.assignee);
@@ -2108,6 +2111,7 @@ function postit(s){
     el.classList.add('drag');
   });
   el.addEventListener('dragend',()=>el.classList.remove('drag'));
+  wirePhoneDrag(el,s);
   // Die ganze Karte öffnet die Story. Ziehen bleibt Ziehen: nach einem
   // Drag feuert der Browser kein click.
   el.addEventListener('click',e=>{
@@ -2120,27 +2124,114 @@ function postit(s){
 }
 
 function wireDrop(el,target){
+  el._dropTarget=target;
   el.addEventListener('dragover',e=>{ e.preventDefault(); el.classList.add('over'); });
   el.addEventListener('dragleave',()=>el.classList.remove('over'));
   el.addEventListener('drop',e=>{
     e.preventDefault(); el.classList.remove('over');
-    const data=e.dataTransfer.getData('text/plain');
-    if(data.startsWith('member:')){
-      if(SW.on && SW.ro) return;
-      if(target.member) return moveMember(data.slice(7), target.member);
-      if(target.split)  return moveMember(data.slice(7), null);
+    applyDrop(e.dataTransfer.getData('text/plain'),target);
+  });
+}
+
+function applyDrop(data,target){
+  if(data.startsWith('member:')){
+    if(SW.on && SW.ro) return;
+    if(target.member) return moveMember(data.slice(7), target.member);
+    if(target.split)  return moveMember(data.slice(7), null);
+    return;
+  }
+  const s=story(data); if(!s || target.split) return;
+  if(target.member){
+    const c=crewOf(target.member), b=busyWith(s,target.member);
+    if(b) return toastBusy(c,b);
+    s.status='doing'; s.blocked=false; setOwners(s,c);
+  }
+  else if(target.col==='blocked'){ s.blocked=true; }
+  else { s.blocked=false; s.status=target.col; }
+  renderAll();
+}
+
+/* Handy (schmaler Bildschirm): Karte gedrückt halten, mit dem Finger auf
+   eine Spalte in der Leiste oben fahren (die Ansicht wechselt), dann in
+   der Spalte loslassen. Die Karte selbst wird zum schwebenden Zettel, damit
+   die Touch-Ereignisse auch beim Neuzeichnen des Boards weiterlaufen. */
+const isPhone=()=>window.matchMedia('(max-width:640px)').matches;
+function wirePhoneDrag(el,s){
+  let timer=null, sx=0, sy=0, on=false, dwell=null, dwellCol=null, scrollRaf=0, lastY=0;
+  const clearHi=()=>document.querySelectorAll('.over').forEach(x=>x.classList.remove('over'));
+  const stop=()=>{ clearTimeout(timer); timer=null; };
+  const end=(drop)=>{
+    stop(); clearTimeout(dwell); dwell=null; dwellCol=null; cancelAnimationFrame(scrollRaf);
+    if(!on) return;
+    on=false; document.body.classList.remove('swdrag');
+    const tg=drop;
+    clearHi(); el.remove();
+    if(tg) applyDrop(s.id,tg); else renderAll();
+  };
+  const under=(x,y)=>{
+    const e=document.elementFromPoint(x,y); if(!e) return {};
+    const btn=e.closest('#colPick [data-col]');
+    if(btn) return {btn};
+    let n=e.closest('.lane, .drop, .lane-split');
+    while(n && !n._dropTarget) n=n.parentElement && n.parentElement.closest('.lane, .drop, .lane-split');
+    return {zone:n};
+  };
+  const autoscroll=()=>{
+    if(!on) return;
+    const h=window.innerHeight, edge=70;
+    if(lastY<edge+50) window.scrollBy(0,-10);
+    else if(lastY>h-edge) window.scrollBy(0,10);
+    scrollRaf=requestAnimationFrame(autoscroll);
+  };
+  const start=(t)=>{
+    const r=el.getBoundingClientRect();
+    on=true; document.body.classList.add('swdrag');
+    el.dataset.ox=t.clientX-r.left; el.dataset.oy=t.clientY-r.top;
+    document.body.appendChild(el);
+    Object.assign(el.style,{position:'fixed',left:'0',top:'0',width:r.width+'px',zIndex:'9999',
+      pointerEvents:'none',margin:'0',transition:'none',opacity:'.92',
+      transform:`translate(${r.left}px,${r.top}px) scale(1.04)`});
+    if(navigator.vibrate) try{ navigator.vibrate(25); }catch(_){}
+    lastY=t.clientY; scrollRaf=requestAnimationFrame(autoscroll);
+  };
+  el.addEventListener('touchstart',e=>{
+    if(!isPhone() || e.touches.length!==1 || (SW.on && SW.ro)) return;
+    const t=e.touches[0]; sx=t.clientX; sy=t.clientY;
+    stop(); timer=setTimeout(()=>{ timer=null; start(t); },380);
+  },{passive:true});
+  el.addEventListener('touchmove',e=>{
+    const t=e.touches[0];
+    if(!on){
+      if(Math.abs(t.clientX-sx)>10 || Math.abs(t.clientY-sy)>10) stop();
       return;
     }
-    const s=story(data); if(!s || target.split) return;
-    if(target.member){
-      const c=crewOf(target.member), b=busyWith(s,target.member);
-      if(b) return toastBusy(c,b);
-      s.status='doing'; s.blocked=false; setOwners(s,c);
+    e.preventDefault();
+    lastY=t.clientY;
+    el.style.transform=`translate(${t.clientX-el.dataset.ox}px,${t.clientY-el.dataset.oy}px) scale(1.04)`;
+    clearHi();
+    const u=under(t.clientX,t.clientY);
+    if(u.btn){
+      u.btn.classList.add('over');
+      const k=u.btn.dataset.col;
+      if(k!==phoneCol && dwellCol!==k){
+        clearTimeout(dwell); dwellCol=k;
+        dwell=setTimeout(()=>{ phoneCol=k; dwellCol=null; renderBoard(); if(SW.on && SW.ready) lockRO(); },250);
+      }
+    } else {
+      clearTimeout(dwell); dwell=null; dwellCol=null;
+      if(u.zone) u.zone.classList.add('over');
     }
-    else if(target.col==='blocked'){ s.blocked=true; }
-    else { s.blocked=false; s.status=target.col; }
-    renderAll();
-  });
+  },{passive:false});
+  const fin=e=>{
+    if(!on){ stop(); return; }
+    e.preventDefault();
+    const t=e.changedTouches[0];
+    const z=e.type==='touchend' ? under(t.clientX,t.clientY).zone : null;
+    end(z ? z._dropTarget : null);
+  };
+  el.addEventListener('touchend',fin);
+  el.addEventListener('touchcancel',fin);
+  el.addEventListener('contextmenu',e=>{ if(isPhone()) e.preventDefault(); });
 }
 
 /* ── BACKLOG ─────────────────────────────────────────── */
