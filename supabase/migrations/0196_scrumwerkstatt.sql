@@ -84,7 +84,7 @@ insert into skill_tools (id, title, blurb, icon, folder, subject, multi_room,
   ('scrum', 'Scrum Werkstatt',
    'Projektarbeit im Team nach Scrum: Product Goal, Backlog, Sprints und Board — '
    'jedes Team in seinem eigenen Raum, über Wochen.',
-   '🗂️', 'ScrumWerkstatt', 'Fächerübergreifend', true,
+   '🗂️', 'ScrumWerkstatt', 'Informatik', true,  -- 0197: vorher 'Fächerübergreifend'
    40, 30, '{}'::jsonb, true, 80)
 on conflict (id) do update set
   title      = excluded.title,

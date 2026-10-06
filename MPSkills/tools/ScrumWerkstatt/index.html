@@ -219,6 +219,17 @@ main{padding:22px 0 80px}
 .lane-h .n{margin-left:auto;font-size:11px;font-weight:700;color:var(--ink-3)}
 .lane-body{display:flex;flex-direction:column;gap:9px;padding:9px;min-height:54px}
 .lane-empty{font-size:10.5px;color:var(--ink-3);font-style:italic;text-align:center;padding:5px}
+.lane-h{flex-wrap:wrap}
+.lane.crew{border-color:var(--st-doing)}
+.lane.crew .lane-h{background:#e4eff7}
+.mchip{display:inline-flex;align-items:center;gap:6px;padding:2px 6px 2px 2px;border-radius:99px;cursor:grab;border:1px solid transparent}
+.mchip:hover{background:var(--paper-up);border-color:var(--line)}
+.mchip.picked{background:var(--petrol-wash);border-color:var(--petrol)}
+.lane-h .und{font-size:11px;color:var(--ink-3);font-style:italic}
+.lane-split{font-size:11px;color:var(--ink-3);font-style:italic;text-align:center;padding:12px 8px;border:1px dashed var(--line);border-radius:var(--r);cursor:pointer}
+.lane-split.over{background:var(--petrol-wash);border-color:var(--petrol);color:var(--petrol)}
+body.ro .mchip{cursor:default}
+body.ro .lane-split{display:none}
 
 /* avatar */
 .av{border-radius:99px;flex:none;display:grid;place-items:center;font-weight:700;color:#fff;overflow:hidden;background:var(--petrol);box-shadow:inset 0 -1px 0 rgba(0,0,0,.18)}
@@ -251,6 +262,11 @@ main{padding:22px 0 80px}
 .pi-green {background:#cdebd2;color:#153d23}
 .pi-pink  {background:#f8d4e0;color:#521630}
 .pi-lilac {background:#dfd8f3;color:#2d2359}
+/* Zettelfarbe im Story-Dialog: vier Kacheln statt einer Liste */
+.swatches{display:flex;gap:8px;padding-top:2px}
+.swatches button{width:34px;height:34px;border-radius:6px;border:1px solid rgba(0,0,0,.14);padding:0;cursor:pointer;box-shadow:var(--sh-1)}
+.swatches button[aria-checked="true"]{outline:3px solid var(--petrol);outline-offset:2px}
+.ed-hint{font-size:12px;color:var(--ink-3);font-style:italic;margin:-1px 0 6px}
 .pi-row{display:flex;align-items:center;gap:7px}
 .pi-id{font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.06em;opacity:.6}
 .pi-cat{font-size:8.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;background:rgba(0,0,0,.09);padding:2px 6px;border-radius:99px;margin-left:auto}
@@ -335,7 +351,7 @@ select{cursor:pointer;-webkit-appearance:none;appearance:none;padding-right:28px
   background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23837d6e' stroke-width='1.6'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
   background-repeat:no-repeat;background-position:right 10px center}
 select.auto,input.auto{width:auto}
-label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin-bottom:5px}
+label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin-bottom:5px}
 .field{margin-bottom:13px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
@@ -1106,14 +1122,10 @@ body.inroom::after{display:none}
         <input type="text" id="edT" placeholder="z. B. Messreihe zur Solarzelle durchführen">
       </div>
 
-      <div class="box calm">
-        <div class="bt">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 3.5 10.9V16h-7v-2.1A6 6 0 0 1 12 3z"/></svg>
-          Die User-Story-Formel
-        </div>
-        <div class="field"><label class="fl" for="edR">Als … (Rolle)</label><input type="text" id="edR" placeholder="Leserin der Facharbeit"></div>
-        <div class="field"><label class="fl" for="edW">möchte ich … (Ziel)</label><input type="text" id="edW" placeholder="ein übersichtliches Diagramm sehen"></div>
-        <div class="field" style="margin-bottom:0"><label class="fl" for="edS">damit … (Nutzen)</label><input type="text" id="edS" placeholder="ich die Messergebnisse sofort verstehe"></div>
+      <div class="field">
+        <label class="fl" for="edX">Die Story</label>
+        <div class="ed-hint">Nutzt die User-Story-Formel und ersetzt die Punkte – ihr dürft aber auch frei formulieren.</div>
+        <textarea id="edX" rows="3"></textarea>
       </div>
 
       <div class="grid3">
@@ -1135,15 +1147,17 @@ body.inroom::after{display:none}
           </select>
         </div>
         <div class="field">
-          <label class="fl" for="edCol">Zettelfarbe</label>
-          <select id="edCol">
-            <option value="yellow">Gelb</option><option value="blue">Blau</option>
-            <option value="green">Grün</option><option value="pink">Rosa</option><option value="lilac">Lila</option>
-          </select>
+          <span class="fl">Zettelfarbe</span>
+          <div class="swatches" id="edCol" role="radiogroup" aria-label="Zettelfarbe">
+            <button type="button" class="pi-yellow" data-col="yellow" role="radio" aria-label="Gelb"></button>
+            <button type="button" class="pi-blue"   data-col="blue"   role="radio" aria-label="Blau"></button>
+            <button type="button" class="pi-green"  data-col="green"  role="radio" aria-label="Grün"></button>
+            <button type="button" class="pi-pink"   data-col="pink"   role="radio" aria-label="Rosa"></button>
+          </div>
         </div>
       </div>
 
-      <div class="grid2">
+      <div class="grid2" id="edWhoRow">
         <div class="field"><label class="fl" for="edA">Zuständig</label><select id="edA"></select></div>
         <div class="field"><label class="fl" for="edSp">Sprint</label><select id="edSp"></select></div>
       </div>
@@ -1392,8 +1406,8 @@ const KEY = 'scrum_werkstatt_v1';
 
 const COLS = [
   { k:'todo',    nm:'Sprint Backlog', c:'var(--st-todo)',  hint:'Geplant, aber noch nicht angefangen.' },
-  { k:'doing',   nm:'In Arbeit',      c:'var(--st-doing)', hint:'Legt die Karte in euren eigenen Bereich.' },
   { k:'blocked', nm:'Blockiert',      c:'var(--st-block)', hint:'Hier hilft der Scrum Master weiter.' },
+  { k:'doing',   nm:'In Arbeit',      c:'var(--st-doing)', hint:'Eine Story je Bereich. Zieht eine Person auf eine andere, um zusammen zu arbeiten.' },
   { k:'check',   nm:'Prüfen',         c:'var(--st-check)', hint:'Zweite Person liest gegen.' },
   { k:'done',    nm:'Fertig',         c:'var(--st-done)',  hint:'Alle DoD-Häkchen gesetzt.' }
 ];
@@ -1406,12 +1420,14 @@ let S = null;              // state
 let view = 'sprint';
 let openStory = null;      // internal id
 let editingStory = null;
+let edColor = 'yellow';     // gewählte Zettelfarbe im Story-Dialog
 let planPick = new Set();
 let planReturn = false;
 let carryPlan = {};        // storyId -> 'backlog' | 'next'
 let archiveSprint = null;
 let confirmCb = null;
 let phoneCol = 'doing';     // welche Spalte das Handy zeigt
+let pickMember = null;      // angetippte Person in „In Arbeit" (Tablet ohne Ziehen)
 
 /* ── helpers ─────────────────────────────────────────── */
 const $  = s => document.querySelector(s);
@@ -1556,6 +1572,94 @@ const sprintStories = id => S.stories.filter(s=>s.sprint===id);
 const sorted   = () => S.stories.slice().sort((a,b)=>a.order-b.order);
 const whoName  = id => (member(id)?.name) || 'frei';
 
+/* Die Story selbst ist Freitext (s.text). Ältere Karten tragen noch
+   die drei Felder der Formel einzeln — daraus wird derselbe Satz. */
+const FORMULA = 'Als … möchte ich …, damit ….';
+/* Wer an einer Story sitzt: assignee plus, beim Zusammenarbeiten,
+   die anderen in s.mates. */
+const owners     = s => [s.assignee, ...(s.mates||[])].filter(Boolean);
+const ownsStory  = (s,id) => owners(s).includes(id);
+const ownersName = s => owners(s).map(id=>member(id)?.name).filter(Boolean).join(' + ') || 'frei';
+
+/* ── Zusammenarbeit in „In Arbeit" ───────────────────────
+   S.product.pairs hält die Gruppen, die gerade zusammen arbeiten
+   ([[id,id], …]); wer in keiner steht, arbeitet allein. Liegt im
+   Product, weil eine Gruppe auch ohne Story bestehen kann — und das
+   Product synchronisiert die Brücke ohnehin mit. Eine Gruppe (oder
+   ein Einzelner) macht immer nur EINE Story zur Zeit. */
+function crews(){
+  const ids=new Set(S.team.map(m=>m.id)), used=new Set(), groups=[];
+  (S.product.pairs||[]).forEach(g=>{
+    const ok=(g||[]).filter(id=>ids.has(id)&&!used.has(id));
+    if(ok.length>1){ ok.forEach(id=>used.add(id)); groups.push(ok); }
+  });
+  const out=[];
+  S.team.forEach(m=>{
+    if(!used.has(m.id)) out.push([m.id]);
+    else { const g=groups.find(g=>g[0]===m.id); if(g) out.push(g); }
+  });
+  return out;
+}
+const crewOf      = id => crews().find(c=>c.includes(id)) || [id];
+const crewName    = c => c.map(id=>member(id)?.name||'?').join(' und ');
+const crewStories = c => (active()?sprintStories(active().id):[])
+  .filter(s=>s.status==='doing' && !s.blocked && c.includes(s.assignee));
+function setOwners(s,c){
+  if(!c.includes(s.assignee)) s.assignee=c[0];
+  const m=c.filter(id=>id!==s.assignee);
+  if(m.length) s.mates=m; else delete s.mates;
+}
+/* Darf s jetzt in Arbeit gehen (bei der Gruppe von who)? Sonst die
+   Story, an der die Gruppe schon sitzt. */
+function busyWith(s,who){
+  if(!who) return null;
+  return crewStories(crewOf(who)).find(x=>x!==s) || null;
+}
+function toastBusy(c,b){
+  toast(`${crewName(c)} ${c.length>1?'arbeiten':'arbeitet'} schon an ${b.key} – erst die fertig machen.`);
+}
+
+/* Person mid zur Gruppe von target holen; target null = wieder allein.
+   Die Story einer Gruppe bleibt bei denen, die bleiben. Wer allein
+   war, bringt seine Story mit — hat die neue Gruppe schon eine, geht
+   die mitgebrachte zurück ins Sprint Backlog. */
+function moveMember(mid,target){
+  pickMember=null;
+  const all=crews();
+  const from=all.find(c=>c.includes(mid)); if(!from) return renderAll();
+  if(target ? from.includes(target) : from.length===1) return renderAll();
+  const rest=from.filter(id=>id!==mid);
+  const groups=all.filter(c=>c!==from);
+  if(rest.length) groups.push(rest);
+  let to=[mid], had=[];
+  if(target){
+    const old=groups.find(c=>c.includes(target));
+    had=crewStories(old);
+    to=[...old,mid];
+    groups.splice(groups.indexOf(old),1,to);
+  } else groups.push(to);
+
+  const fromStories=crewStories(from);
+  S.product.pairs=groups.filter(g=>g.length>1).map(g=>g.slice());
+  fromStories.forEach(s=>setOwners(s, rest.length?rest:to));
+  if(target){
+    const list=crewStories(to);
+    const keep=list.find(s=>had.includes(s)) || list[0];
+    list.forEach(s=>{
+      if(s===keep) return setOwners(s,to);
+      s.status='todo'; delete s.mates;
+      toast(`${s.key} geht zurück ins Sprint Backlog – ${crewName(to)} machen eine Story nach der anderen.`);
+    });
+  }
+  renderAll();
+}
+
+function storyText(s){
+  if(s.text) return s.text;
+  if(s.asA||s.want||s.soThat) return `Als ${s.asA||'…'} möchte ich ${s.want||'…'}, damit ${s.soThat||'…'}.`;
+  return '';
+}
+
 function avatar(m, size){
   const cls=`av s${size}`;
   if(!m) return `<span class="${cls}" style="background:var(--line);color:var(--ink-3)">?</span>`;
@@ -1622,7 +1726,7 @@ function lockRO(){
     else if(el.dataset.roLock){ delete el.dataset.roLock; el.disabled=false; }
   });
   $('#goalRte').contentEditable = SW.ro ? 'false' : 'true';
-  $$('.postit').forEach(p=>p.draggable=!SW.ro);
+  $$('.postit, .mchip').forEach(p=>p.draggable=!SW.ro);
 }
 
 async function joinAsMember(){
@@ -1705,18 +1809,32 @@ function renderBoard(){
 
     if(col.k==='doing'){
       const lanes=document.createElement('div'); lanes.className='lanes';
-      S.team.forEach(m=>{
-        const mine=inCol.filter(s=>s.assignee===m.id);
+      const cs=crews();
+      cs.forEach(c=>{
+        const mine=inCol.filter(s=>c.includes(s.assignee));
         const lane=document.createElement('div');
-        lane.className='lane'; lane.dataset.member=m.id;
-        lane.innerHTML=`<div class="lane-h">${avatar(m,22)}<span class="nm">${esc(m.name)}</span><span class="n">${mine.length}</span></div>`;
+        lane.className='lane'+(c.length>1?' crew':''); lane.dataset.member=c[0];
+        const chips=c.map(id=>{ const m=member(id);
+          return `<span class="mchip${pickMember===id?' picked':''}" data-mid="${id}" draggable="true" title="Ziehen oder antippen">${avatar(m,22)}<span class="nm">${esc(m.name)}</span></span>`;
+        }).join('<span class="und">und</span>');
+        lane.innerHTML=`<div class="lane-h">${chips}<span class="n">${mine.length}</span></div>`;
         const body=document.createElement('div'); body.className='lane-body';
         if(!mine.length) body.innerHTML='<div class="lane-empty">frei</div>';
         else mine.forEach(s=>body.appendChild(postit(s)));
         lane.appendChild(body);
-        wireDrop(lane, {member:m.id});
+        wireDrop(lane, {member:c[0]});
         lanes.appendChild(lane);
       });
+      const pickIn=pickMember && crewOf(pickMember).length>1;
+      if(cs.some(c=>c.length>1)){
+        const split=document.createElement('div');
+        split.className='lane-split'; split.dataset.split='1';
+        split.textContent=pickIn
+          ? `Hier antippen: ${member(pickMember)?.name||''} arbeitet wieder allein`
+          : 'Person aus einer Gruppe hierher ziehen = wieder allein arbeiten';
+        wireDrop(split, {split:true});
+        lanes.appendChild(split);
+      }
       const un=inCol.filter(s=>!s.assignee || !member(s.assignee));
       if(un.length){
         const lane=document.createElement('div');
@@ -1736,6 +1854,27 @@ function renderBoard(){
     }
     board.appendChild(el);
   });
+
+  /* Personen in „In Arbeit": ziehen (Maus, neuere Tablets) oder
+     antippen und dann das Ziel antippen. */
+  board.querySelectorAll('.mchip').forEach(ch=>{
+    ch.addEventListener('dragstart',e=>{
+      e.stopPropagation();
+      e.dataTransfer.setData('text/plain','member:'+ch.dataset.mid);
+      e.dataTransfer.effectAllowed='move';
+    });
+    ch.addEventListener('click',e=>{
+      e.stopPropagation();
+      if(SW.on && SW.ro) return;
+      const id=ch.dataset.mid;
+      if(pickMember && pickMember!==id) return moveMember(pickMember,id);
+      pickMember = pickMember===id ? null : id;
+      if(pickMember) toast(`${member(id)?.name}: andere Person antippen = zusammen arbeiten`);
+      renderBoard(); if(SW.on && SW.ready) lockRO();
+    });
+  });
+  const sp=board.querySelector('.lane-split');
+  if(sp) sp.addEventListener('click',()=>{ if(pickMember && !(SW.on && SW.ro)) moveMember(pickMember,null); });
 }
 
 function postit(s){
@@ -1748,6 +1887,7 @@ function postit(s){
   const dod=s.dod||[], dn=dod.filter(d=>d.done).length;
   const fi=FLOW.indexOf(s.status);
   const m=member(s.assignee);
+  const mates=(s.mates||[]).map(member).filter(Boolean);
 
   el.innerHTML=`
     ${s.blocked?`<span class="pi-flag" title="blockiert"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 8v5M12 16.5v.01"/></svg></span>`:''}
@@ -1757,7 +1897,7 @@ function postit(s){
     <div class="pi-foot">
       <span class="pi-sp">${s.points}</span>
       ${dod.length?`<span class="pi-dod">${dn}/${dod.length} DoD</span>`:''}
-      <span class="pi-who">${avatar(m,18)}${esc(m?m.name:'frei')}</span>
+      <span class="pi-who">${avatar(m,18)}${mates.map(x=>avatar(x,18)).join('')}${esc(m?ownersName(s):'frei')}</span>
     </div>
     <div class="pi-nav">
       <button data-act="back"  ${fi<=0?'disabled':''} title="zurück">◀</button>
@@ -1781,7 +1921,10 @@ function postit(s){
     if(i<0) return;
     const ni=i+(act==='fwd'?1:-1);
     if(ni<0||ni>=FLOW.length) return;
-    s.status=FLOW[ni];
+    if(FLOW[ni]==='doing' && s.assignee){
+      const b=busyWith(s,s.assignee); if(b) return toastBusy(crewOf(s.assignee),b);
+      s.status='doing'; setOwners(s,crewOf(s.assignee));
+    } else s.status=FLOW[ni];
     if(s.status==='doing' && !s.assignee) openDetail(s.id);
     renderAll();
   });
@@ -1793,8 +1936,19 @@ function wireDrop(el,target){
   el.addEventListener('dragleave',()=>el.classList.remove('over'));
   el.addEventListener('drop',e=>{
     e.preventDefault(); el.classList.remove('over');
-    const s=story(e.dataTransfer.getData('text/plain')); if(!s) return;
-    if(target.member){ s.status='doing'; s.blocked=false; s.assignee=target.member; }
+    const data=e.dataTransfer.getData('text/plain');
+    if(data.startsWith('member:')){
+      if(SW.on && SW.ro) return;
+      if(target.member) return moveMember(data.slice(7), target.member);
+      if(target.split)  return moveMember(data.slice(7), null);
+      return;
+    }
+    const s=story(data); if(!s || target.split) return;
+    if(target.member){
+      const c=crewOf(target.member), b=busyWith(s,target.member);
+      if(b) return toastBusy(c,b);
+      s.status='doing'; s.blocked=false; setOwners(s,c);
+    }
     else if(target.col==='blocked'){ s.blocked=true; }
     else { s.blocked=false; s.status=target.col; }
     renderAll();
@@ -1821,7 +1975,7 @@ function renderBacklog(){
     if(fS.value!=='all' && fS.value!=='none' && s.sprint!==fS.value) return false;
     if(fst==='blocked' ? !s.blocked : (fst!=='all' && s.status!==fst)) return false;
     if(fW.value==='none' && s.assignee) return false;
-    if(fW.value!=='all' && fW.value!=='none' && s.assignee!==fW.value) return false;
+    if(fW.value!=='all' && fW.value!=='none' && !ownsStory(s,fW.value)) return false;
     return true;
   });
 
@@ -1852,11 +2006,11 @@ function renderBacklog(){
       <td><span class="b-key">${esc(s.key)}</span></td>
       <td>
         <button class="b-title" data-open="${s.id}">${esc(s.title)}</button>
-        ${s.want?`<div class="b-sub">Als ${esc(s.asA||'…')} möchte ich ${esc(s.want)}.</div>`:''}
+        ${storyText(s)?`<div class="b-sub">${esc(storyText(s))}</div>`:''}
       </td>
       <td><span class="tag">${esc(s.category)}</span></td>
       <td><b style="font-family:var(--serif);color:var(--petrol)">${s.points}</b></td>
-      <td><span style="display:flex;align-items:center;gap:7px">${avatar(m,22)}<span style="${m?'':'color:var(--ink-3);font-style:italic'}">${esc(m?m.name:'frei')}</span></span></td>
+      <td><span style="display:flex;align-items:center;gap:7px">${avatar(m,22)}<span style="${m?'':'color:var(--ink-3);font-style:italic'}">${esc(m?ownersName(s):'frei')}</span></span></td>
       <td>${sp}</td>
       <td>${badge}</td>
       <td style="text-align:right">
@@ -1929,7 +2083,7 @@ function renderTeam(){
   if(SW.on) return renderTeamRoom();
 
   $('#teamGrid').innerHTML=S.team.map(m=>{
-    const mine=S.stories.filter(s=>s.assignee===m.id);
+    const mine=S.stories.filter(s=>ownsStory(s,m.id));
     const dn=mine.filter(s=>s.status==='done').length;
     return `<div class="mcard" data-m="${m.id}">
       <div class="mtop">
@@ -1972,7 +2126,7 @@ function renderTeamRoom(){
         <div style="font-size:12.5px;color:var(--ink-3);margin-top:2px">Damit kommst du auf jedem Gerät zurück. Nicht weitergeben.</div></div>
         <button class="btn" id="showKey">Code anzeigen</button></div>` : '';
   $('#teamGrid').innerHTML = S.team.map(m=>{
-    const mine=S.stories.filter(s=>s.assignee===m.id);
+    const mine=S.stories.filter(s=>ownsStory(s,m.id));
     const dn=mine.filter(s=>s.status==='done').length;
     return `<div class="mcard${m.me?' me':''}" data-m="${m.id}">
       <div class="mtop">
@@ -2087,9 +2241,11 @@ function openDetail(id){
   $('#stSub').textContent=`${s.key} · ${s.category} · ${s.points} Story Points`;
 
   const dod=s.dod||[], dn=dod.filter(d=>d.done).length;
-  const formula=(s.asA||s.want||s.soThat)
+  const formula=s.text
+    ? esc(s.text).replace(/\n/g,'<br>')
+    : (s.asA||s.want||s.soThat)
     ? `Als <b>${esc(s.asA||'…')}</b> möchte ich <b>${esc(s.want||'…')}</b>, damit <b>${esc(s.soThat||'…')}</b>.`
-    : `<span style="color:var(--ink-3)">Keine User-Story-Formel hinterlegt.</span>`;
+    : `<span style="color:var(--ink-3)">Noch keine Story formuliert.</span>`;
 
   $('#stBody').innerHTML=`
     <div class="quote" style="margin-bottom:16px">${formula}</div>
@@ -2145,12 +2301,27 @@ function openDetail(id){
 
     <button class="btn" id="dEdit" style="width:100%;justify-content:center">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
-      Story bearbeiten (Titel, Formel, Points …)
+      Story bearbeiten (Titel, Text, Points …)
     </button>`;
 
   const body=$('#stBody');
-  body.querySelector('#dStatus').onchange=e=>{ s.status=e.target.value; renderAll(); };
-  body.querySelector('#dWho').onchange=e=>{ s.assignee=e.target.value||null; renderAll(); };
+  body.querySelector('#dStatus').onchange=e=>{
+    if(e.target.value==='doing' && s.assignee){
+      const b=busyWith(s,s.assignee);
+      if(b){ e.target.value=s.status; return toastBusy(crewOf(s.assignee),b); }
+      setOwners(s,crewOf(s.assignee));
+    }
+    s.status=e.target.value; renderAll();
+  };
+  body.querySelector('#dWho').onchange=e=>{
+    const who=e.target.value||null;
+    if(s.status==='doing' && !s.blocked && who){
+      const b=busyWith(s,who);
+      if(b){ e.target.value=s.assignee||''; return toastBusy(crewOf(who),b); }
+      s.assignee=who; setOwners(s,crewOf(who));
+    } else { s.assignee=who; delete s.mates; }
+    renderAll();
+  };
   body.querySelector('#dSprint').onchange=e=>{ s.sprint=e.target.value||null; renderAll(); };
   body.querySelector('#dBlock').onchange=e=>{ s.blocked=e.target.checked; if(!s.blocked) s.note=''; renderAll(); openDetail(id); };
   body.querySelector('#dNote').onchange=e=>{ s.note=e.target.value.trim(); renderAll(); };
@@ -2178,26 +2349,35 @@ function openEdit(id){
       .map(x=>`<option value="${x.id}">${esc(x.name)}${x.id===S.active?' (aktuell)':''}${x.status==='closed'?' – Archiv':''}</option>`).join('');
 
   $('#edT').value  =s?s.title:'';
-  $('#edR').value  =s?s.asA:'';
-  $('#edW').value  =s?s.want:'';
-  $('#edS').value  =s?s.soThat:'';
+  $('#edX').value  =(s&&storyText(s))||FORMULA;
   $('#edP').value  =s?s.points:2;
   $('#edC').value  =s?s.category:'Text';
-  $('#edCol').value=s?(s.color||'yellow'):'yellow';
+  pickColor(s?(s.color||'yellow'):'yellow');
   $('#edA').value  =s?(s.assignee||''):'';
   $('#edSp').value =s?(s.sprint||''):'';
+  // Beim Anlegen nicht gefragt: wer und wann entscheidet sich in der
+  // Sprint-Planung und am Board, nicht beim Aufschreiben.
+  $('#edWhoRow').style.display=s?'':'none';
   show('mEdit');
   setTimeout(()=>$('#edT').focus(),60);
+}
+
+function pickColor(c){
+  edColor=c;
+  $$('#edCol button').forEach(b=>b.setAttribute('aria-checked', b.dataset.col===c?'true':'false'));
 }
 
 function saveEdit(){
   const t=$('#edT').value.trim();
   if(!t){ toast('⚠ Die Story braucht einen Titel'); $('#edT').focus(); return; }
+  // Unveränderte Vorlage zählt als leer. Die drei Felder der alten
+  // Formel gehen im Freitext auf und werden geleert.
+  const x=$('#edX').value.trim();
   const vals={
-    title:t, asA:$('#edR').value.trim(), want:$('#edW').value.trim(), soThat:$('#edS').value.trim(),
-    points:+$('#edP').value, category:$('#edC').value, color:$('#edCol').value,
-    assignee:$('#edA').value||null, sprint:$('#edSp').value||null
+    title:t, text:x===FORMULA?'':x, asA:'', want:'', soThat:'',
+    points:+$('#edP').value, category:$('#edC').value, color:edColor
   };
+  if(editingStory){ vals.assignee=$('#edA').value||null; vals.sprint=$('#edSp').value||null; }
   if(editingStory){
     Object.assign(story(editingStory),vals);
     toast('Story aktualisiert');
@@ -2206,6 +2386,7 @@ function saveEdit(){
     const maxOrder=S.stories.length?Math.max(...S.stories.map(s=>+s.order||0)):0;
     const ns=Object.assign({
       id:SW.on?newId('u'):'u'+n, key:SW.on?'US-…':'US-'+pad(n), status:'todo', blocked:false, note:'', order:maxOrder+1,
+      assignee:null, sprint:null,
       dod:[{text:'Inhaltlich geprüft',done:false},{text:'Von zweiter Person gegengelesen',done:false}]
     },vals);
     S.stories.push(ns);
@@ -2328,7 +2509,7 @@ function finishSprint(){
 
   a.snapshot=ss.map(s=>({
     key:s.key, title:s.title, points:s.points, category:s.category,
-    status:s.status, who:whoName(s.assignee), blocked:!!s.blocked
+    status:s.status, who:ownersName(s), blocked:!!s.blocked
   }));
   a.plannedPoints=sum(ss,s=>s.points);
   a.donePoints=sum(done,s=>s.points);
@@ -2462,6 +2643,7 @@ function wire(){
   $('#btnSprintAction').onclick=()=>{ active()?openReview():openPlan(); };
   $('#btnPlanFromEmpty').onclick=openPlan;
   $('#btnNewStory').onclick=()=>openEdit(null);
+  $('#edCol').onclick=e=>{ const b=e.target.closest('[data-col]'); if(b) pickColor(b.dataset.col); };
 
   /* menu */
   const pop=$('#menuPop');
@@ -2604,9 +2786,13 @@ function wire(){
     const rm=e.target.closest('[data-rm]');
     if(rm){
       const m=member(rm.dataset.rm); if(!m) return;
-      const n=S.stories.filter(s=>s.assignee===m.id).length;
+      const n=S.stories.filter(s=>ownsStory(s,m.id)).length;
       ask('Mitglied entfernen?',`${m.name} wird aus dem Team entfernt.`+(n?` ${n} Story${n===1?'':'s'} verliert die Zuständigkeit.`:''),()=>{
-        S.stories.forEach(s=>{ if(s.assignee===m.id) s.assignee=null; });
+        S.stories.forEach(s=>{
+          if(s.mates){ s.mates=s.mates.filter(id=>id!==m.id); if(!s.mates.length) delete s.mates; }
+          if(s.assignee===m.id){ s.assignee=(s.mates||[])[0]||null; if(s.mates){ s.mates=s.mates.slice(1); if(!s.mates.length) delete s.mates; } }
+        });
+        if(S.product.pairs) S.product.pairs=S.product.pairs.map(g=>g.filter(id=>id!==m.id)).filter(g=>g.length>1);
         S.team=S.team.filter(x=>x.id!==m.id);
         renderAll(); toast('Mitglied entfernt');
       });

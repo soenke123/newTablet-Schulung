@@ -16,6 +16,18 @@ weiter im localStorage. Zeilennummern unten stammen vom Prototyp und stimmen nic
       das Chart selbst steht noch aus (Punkt 3)
 - [x] Handy-Ansicht (Spaltenwahl auf dem Board, schlankes Backlog, Dialoge im Vollbild)
 
+## ✅ Erledigt 06.10.2026 (Wünsche Sönke)
+
+- [x] Kachel unter „Informatik" (Migration 0197)
+- [x] Neue Story: ohne Zuständig/Sprint; Freitext statt drei Formel-Feldern (`s.text`,
+      vorbelegt mit „Als … möchte ich …, damit …."; alte Karten zeigen ihre Formel weiter)
+- [x] Zettelfarbe als vier Farbkacheln (Gelb voreingestellt)
+- [x] Board: „Blockiert" steht vor „In Arbeit"
+- [x] Zusammenarbeit: Person auf Person ziehen (oder antippen) → gemeinsame Bahn
+      (`S.product.pairs`, Mitarbeitende einer Story in `s.mates`); wieder lösen über die
+      Fläche unter den Bahnen. Eine Bahn macht genau eine Story — überzählige gehen
+      beim Zusammenlegen zurück ins Sprint Backlog
+
 ## ❓ Offen zur Entscheidung: Rechte und Rollen
 
 Bisher darf jedes Teammitglied alles; Beobachter und Lehrkraft lesen nur.
