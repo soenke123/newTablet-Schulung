@@ -2582,6 +2582,7 @@ function openDetail(id){
 
   const body=$('#stBody');
   body.querySelector('#dStatus').onchange=e=>{
+    const s=story(id); if(!s) return;
     if(e.target.value==='doing' && s.assignee){
       const b=busyWith(s,s.assignee);
       if(b){ e.target.value=s.status; return toastBusy(crewOf(s.assignee),b); }
@@ -2590,6 +2591,7 @@ function openDetail(id){
     s.status=e.target.value; renderAll();
   };
   body.querySelector('#dWho').onchange=e=>{
+    const s=story(id); if(!s) return;
     const who=e.target.value||null;
     if(s.status==='doing' && !s.blocked && who){
       const b=busyWith(s,who);
@@ -2598,11 +2600,12 @@ function openDetail(id){
     } else { s.assignee=who; delete s.mates; }
     renderAll();
   };
-  body.querySelector('#dSprint').onchange=e=>{ s.sprint=e.target.value||null; renderAll(); };
-  body.querySelector('#dBlock').onchange=e=>{ s.blocked=e.target.checked; if(!s.blocked) s.note=''; renderAll(); openDetail(id); };
-  body.querySelector('#dNote').onchange=e=>{ s.note=e.target.value.trim(); renderAll(); };
+  body.querySelector('#dSprint').onchange=e=>{ const s=story(id); if(!s) return; s.sprint=e.target.value||null; renderAll(); };
+  body.querySelector('#dBlock').onchange=e=>{ const s=story(id); if(!s) return; s.blocked=e.target.checked; if(!s.blocked) s.note=''; renderAll(); openDetail(id); };
+  body.querySelector('#dNote').onchange=e=>{ const s=story(id); if(!s) return; s.note=e.target.value.trim(); renderAll(); };
   if(tedit){
     body.querySelector('#dAdd').onclick=()=>{
+      const s=story(id); if(!s) return;
       const i=body.querySelector('#dNew'), v=i.value.trim(); if(!v) return;
       (s.tasks=s.tasks||[]).push({text:v,done:false}); renderAll(); openDetail(id);
     };
