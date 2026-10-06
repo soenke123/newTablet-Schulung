@@ -200,7 +200,7 @@ Damit das wirklich gleichzeitig ist (Oktober 2026, 0189):
 ## Der Auftritt vor der ersten Frage (0191)
 
 Der Auftritt hat keine eigene Phase: `ks_step` legt `phase_ends_at` der
-**ersten Frage einer Runde** um 10 Sekunden weiter nach hinten
+**ersten Frage einer Runde** um 9 Sekunden weiter nach hinten
 (`v_intro`, in `tool.js` `INTRO_SEC` — beide müssen übereinstimmen). Alles,
 was über den 5 Sekunden Vorlesezeit liegt, ist Auftritt (`introAn`). Dadurch
 kennt jedes Gerät den Moment, in dem die Frage kommt, aus derselben
@@ -304,7 +304,7 @@ node supabase/tests/0194_knowledgestack_catalog.mjs           # Katalog: Sichtba
 räumt den Ablauf auf, `0186_knowledgestack_photos_abort.sql` bringt Fotos,
 Beenden und Neustart (und die Katalog-Aufrufe mit `p_code`, die der Beamer
 braucht), `0189_knowledgestack_sync_reveal.sql` die gleichzeitigen Antworten,
-`0191_knowledgestack_intro.sql` die 10 Sekunden Auftritt vor der ersten Frage,
+`0191_knowledgestack_intro.sql` die 10 Sekunden Auftritt vor der ersten Frage, (seit `0195_knowledgestack_intro_kuerzer.sql`: 9 Sekunden)
 `0194_knowledgestack_catalog.sql` den Fragenkatalog (Themenfelder, Status, Autor, Thumbnails, Admin-Rechte). Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
 ## Der Fragen-Editor

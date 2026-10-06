@@ -355,10 +355,10 @@
      5 Sekunden Vorlesezeit liegt, ist Auftritt. So kennt jedes Gerät
      den Moment, in dem die Frage kommt, aus derselben Serveruhr —
      und ein Tablet, das mittendrin neu lädt, steigt an der richtigen
-     Stelle ein. MUSS zu v_intro in Migration 0191 passen. Ohne die
+     Stelle ein. MUSS zu v_intro in Migration 0195 passen. Ohne die
      Migration ist der Rest nie größer als 5 Sekunden: dann gibt es
      keinen Auftritt, und alles läuft wie vorher. */
-  const INTRO_SEC = 10;
+  const INTRO_SEC = 9;
   const INTRO_MS  = INTRO_SEC * 1000;
 
   /* Zeitstempel vom Server lesen. Postgres schreibt Mikrosekunden
@@ -855,7 +855,7 @@
     });
     // Wer rechts steht, geht zuerst — sonst liefe einer durch den anderen.
     const nachX = figs.slice().sort((a, b) => b.x - a.x);
-    nachX.forEach((f, r) => { f.geht = 5000 + r * Math.min(60, 500 / n); });
+    nachX.forEach((f, r) => { f.geht = 4400 + r * Math.min(60, 500 / n); });
 
     figs.forEach(f => {
       const cid = f.p.creature_id | 0;
@@ -1628,8 +1628,8 @@
   /* Zeiten der Siegerehrung am Beamer — das Tablet rechnet damit, wann
      es seinen Platz zeigen darf (feierDauerMs). */
   const FEIER_START = 1600, FEIER_SPANNUNG = 3400, FEIER_ANSAGE = 700,
-        FEIER_SPRUNG1 = 1000, FEIER_SPRUNG = 1900, FEIER_SCHLUSS = 2500,
-        FEIER_PUFFER = 3500;     // Takt des Beamers + Netz
+        FEIER_SPRUNG1 = 1000, FEIER_SPRUNG = 1900, FEIER_SCHLUSS = 500,
+        FEIER_PUFFER = 1000;     // Takt des Beamers + Netz
 
   function feierDauerMs(lb) {
     const n = Array.isArray(lb) && lb.length
