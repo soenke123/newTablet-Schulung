@@ -188,7 +188,7 @@ main{padding:22px 0 80px}
 
 .board{
   display:grid; gap:11px; align-items:stretch;
-  grid-template-columns:repeat(5,minmax(228px,1fr));
+  grid-template-columns:repeat(4,minmax(0,1fr));
   overflow-x:auto; padding:13px; border-radius:var(--r-lg);
   background:
     linear-gradient(var(--line-soft) 1px,transparent 1px) 0 0/100% 26px,
@@ -288,7 +288,21 @@ body.ro .lane-split{display:none}
   padding:5px 7px;border-radius:0 var(--r-sm) var(--r-sm) 0;font-size:10.5px;
   font-weight:600;margin-bottom:9px;line-height:1.35
 }
-.pi-nav{display:flex;gap:4px;margin-top:8px;padding-top:7px;border-top:1px solid rgba(0,0,0,.13)}
+.pi-text{font-size:12px;line-height:1.4;opacity:.82;margin:-3px 0 9px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.pi-prog{display:flex;align-items:center;gap:7px;margin-bottom:6px;font-size:10.5px;font-weight:700}
+.pi-bar{flex:1;height:6px;border-radius:99px;background:rgba(0,0,0,.12);overflow:hidden}
+.pi-bar i{display:block;height:100%;background:currentColor;opacity:.55;border-radius:99px}
+.pi-tasks{list-style:none;margin:0 0 9px;padding:0;display:flex;flex-direction:column;gap:3px;font-size:11px;line-height:1.3}
+.pi-tasks li{display:flex;gap:6px;align-items:flex-start}
+.pi-tasks li::before{content:'';flex:none;width:11px;height:11px;margin-top:1px;border:1.6px solid currentColor;border-radius:3px;opacity:.55}
+.pi-tasks li.d{text-decoration:line-through;opacity:.55}
+.pi-tasks li.d::before{background:currentColor;opacity:.55}
+.pi-tasks li.more{font-style:italic;opacity:.6}
+.pi-tasks li.more::before{display:none}
+.pi-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.pi-meta span{font-size:10px;font-weight:700;background:rgba(0,0,0,.08);padding:2px 7px;border-radius:99px}
+.postit.blk{box-shadow:0 0 0 2px var(--st-block),var(--sh-paper)}
+.pi-nav{display:none}
 .pi-nav button{
   flex:1;background:rgba(255,255,255,.5);border:1px solid rgba(0,0,0,.1);color:inherit;
   border-radius:var(--r-sm);padding:5px 2px;font-size:11px;font-weight:700;line-height:1;
@@ -699,7 +713,7 @@ body.inroom::after{display:none}
 
 /* ---------- responsive ---------- */
 @media (max-width:1180px){
-  .board{grid-template-columns:repeat(5,minmax(214px,1fr))}
+  .board{grid-template-columns:repeat(4,minmax(190px,1fr))}
   .goalwrap{grid-template-columns:1fr}
   .imgs{grid-template-columns:repeat(4,1fr)}
 }
@@ -1987,24 +2001,25 @@ function postit(s){
   el.draggable=true; el.dataset.id=s.id;
 
   const dod=s.tasks||[], dn=dod.filter(d=>d.done).length;
-  const fi=FLOW.indexOf(s.status);
   const m=member(s.assignee);
   const mates=(s.mates||[]).map(member).filter(Boolean);
 
+  const txt=storyText(s);
+  const pct=dod.length?Math.round(dn/dod.length*100):0;
+  const open=dod.filter(d=>!d.done), shown=(open.length?open:dod).slice(0,3);
+  const left=dod.length-shown.length;
+  if(s.blocked) el.classList.add('blk');
   el.innerHTML=`
     ${s.blocked?`<span class="pi-flag" title="blockiert"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 8v5M12 16.5v.01"/></svg></span>`:''}
     <div class="pi-row"><span class="pi-id">${esc(s.key)}</span><span class="pi-cat">${esc(s.category)}</span></div>
     <button class="pi-title" data-act="open">${esc(s.title)}</button>
+    ${txt?`<div class="pi-text">${esc(txt)}</div>`:''}
     ${s.blocked&&s.note?`<div class="pi-note">${esc(s.note)}</div>`:''}
+    ${dod.length?`<div class="pi-prog"><span>${dn}/${dod.length}</span><span class="pi-bar"><i style="width:${pct}%"></i></span><span>${pct}%</span></div>
+      <ul class="pi-tasks">${shown.map(d=>`<li class="${d.done?'d':''}">${esc(d.text)}</li>`).join('')}${left>0?`<li class="more">+ ${left} weitere</li>`:''}</ul>`:''}
     <div class="pi-foot">
-      <span class="pi-sp">${s.points}</span>
-      ${dod.length?`<span class="pi-dod">${dn}/${dod.length} Tasks</span>`:''}
+      <span class="pi-sp" title="Story Points">${s.points} SP</span>
       <span class="pi-who">${avatar(m,18)}${mates.map(x=>avatar(x,18)).join('')}${esc(m?ownersName(s):'frei')}</span>
-    </div>
-    <div class="pi-nav">
-      <button data-act="back"  ${fi<=0?'disabled':''} title="zurück">◀</button>
-      <button data-act="block" class="warn" title="Blockade melden">${s.blocked?'✓ frei':'! Block'}</button>
-      <button data-act="fwd"   ${fi<0||fi>=FLOW.length-1?'disabled':''} title="weiter">▶</button>
     </div>`;
 
   el.addEventListener('dragstart',e=>{
@@ -2019,16 +2034,6 @@ function postit(s){
     const act=b.dataset.act;
     if(act==='open') return openDetail(s.id);
     if(act==='block'){ s.blocked=!s.blocked; if(!s.blocked) s.note=''; return renderAll(); }
-    const i=FLOW.indexOf(s.status);
-    if(i<0) return;
-    const ni=i+(act==='fwd'?1:-1);
-    if(ni<0||ni>=FLOW.length) return;
-    if(FLOW[ni]==='doing' && s.assignee){
-      const b=busyWith(s,s.assignee); if(b) return toastBusy(crewOf(s.assignee),b);
-      s.status='doing'; setOwners(s,crewOf(s.assignee));
-    } else s.status=FLOW[ni];
-    if(s.status==='doing' && !s.assignee) openDetail(s.id);
-    renderAll();
   });
   return el;
 }
