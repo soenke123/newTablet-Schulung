@@ -37,7 +37,8 @@
      da, damit ein Fehler im Rahmen nicht irgendeine RPC erreicht. */
   const ALLOWED = {
     participant: ['scrum_save', 'scrum_enter', 'scrum_member_update'],
-    presenter:   ['scrum_room_rekey']
+    presenter:   ['scrum_room_save', 'scrum_room_member_update', 'scrum_room_rekey',
+                  'scrum_room_restore', 'scrum_room_backups', 'scrum_room_backup_get']
   };
 
   const GAP = 12;
@@ -149,7 +150,7 @@
 
       // Im Schaufenster ohne Raum: das Beispielprojekt, und nichts
       // bleibt hängen (?demo=1, siehe bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261006';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007';
       root.innerHTML =
         '<div class="sw-host">' +
           '<iframe class="sw-frame" src="tools/ScrumWerkstatt/index.html' + q + '" ' +

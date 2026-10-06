@@ -609,6 +609,16 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 
 /* menu */
 .menu{position:relative}
+/* Kopf rechts: Name + Status in zwei Zeilen, dahinter die drei Punkte.
+   Beobachter haben kein Menü — dort steht der Chip nur als Anzeige. */
+.mechip{display:inline-flex;align-items:center;gap:11px;padding:6px 12px;text-align:right}
+.mechip .me-txt{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2;min-width:0;max-width:210px}
+.mechip .me-txt[hidden]{display:none}
+.mechip .me-txt b{font-size:13px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mechip .me-txt i{font-style:normal;font-size:11px;color:#a9c6c2;font-weight:600;white-space:nowrap}
+.mechip.static{cursor:default;pointer-events:none}
+.mechip.static .me-dots{display:none}
+
 .menu-pop{
   position:absolute;right:0;top:calc(100% + 7px);z-index:70;min-width:216px;
   background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);
@@ -663,6 +673,12 @@ body.ro .avbtn{cursor:default}
 .choice b{display:block;font-size:16px;margin-bottom:4px;color:var(--petrol)}
 .choice span{display:block;font-size:12.5px;line-height:1.5;color:var(--ink-2)}
 #chObserver b{color:var(--ink-2)}
+
+.rowline{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.rowline:last-child{border-bottom:0}
+.rowline .who{font-weight:700;font-size:13.5px;flex:1 1 140px;min-width:0}
+.rowline .who small{display:block;font-weight:500;color:var(--ink-3);font-size:11.5px}
+.rowline .acts{display:flex;gap:6px;margin-left:auto}
 
 .keybig{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:clamp(30px,9vw,42px);font-weight:700;letter-spacing:.08em;color:var(--petrol);background:var(--paper-up);border:2px dashed var(--line);border-radius:var(--r);padding:14px 8px}
 .keystrip{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--marker-wash);border:1px solid #f0c9a8;border-radius:var(--r);padding:12px 15px;margin:18px 0 0}
@@ -778,36 +794,39 @@ body.inroom::after{display:none}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
         <span id="btnSprintActionTxt">Sprint planen</span>
       </button>
-      <div class="menu">
-        <button class="btn onDark icon" id="btnMenu" aria-label="Mehr">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      <div class="menu" id="menuWrap">
+        <button class="btn onDark mechip" id="btnMenu" aria-label="Menü" aria-haspopup="true">
+          <span class="me-txt" id="meTxt" hidden><b id="meName"></b><i id="meRole"></i></span>
+          <svg class="me-dots" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
         </button>
         <div class="menu-pop" id="menuPop" hidden>
           <button id="miKey" hidden>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg>
-            Mein persönlicher Code
-          </button>
-          <button id="miJoin" hidden>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M19 8v6M16 11h6"/></svg>
-            Doch ins Team
+            <span id="miKeyTxt">Code zeigen</span>
           </button>
           <button id="miExport">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
-            Projekt exportieren (.json)
-          </button>
-          <button id="miImport">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 15V3m0 0L8 7m4-4l4 4M4 19h16"/></svg>
-            Projekt importieren
+            Export (.json)
           </button>
           <button id="miPrint">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg>
-            Board drucken
+            Drucken
           </button>
-          <hr>
-          <button class="dgr" id="miReset">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>
-            Alles zurücksetzen
-          </button>
+          <div id="menuOwner">
+            <hr>
+            <button id="miImport">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 15V3m0 0L8 7m4-4l4 4M4 19h16"/></svg>
+              Import (.json)
+            </button>
+            <button id="miBackups" hidden>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+              Backups
+            </button>
+            <button class="dgr" id="miReset">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>
+              Projekt zurücksetzen
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1365,7 +1384,7 @@ body.inroom::after{display:none}
       </button>
       <button class="choice" id="chObserver">
         <b>Ich schaue nur zu</b>
-        <span>Du siehst alles, kannst aber nichts ändern. Später kannst du immer noch ins Team wechseln.</span>
+        <span>Du siehst alles, kannst aber nichts ändern. Das gilt dann für diesen Raum — später ins Team wechseln geht nicht.</span>
       </button>
     </div>
   </div>
@@ -1391,10 +1410,45 @@ body.inroom::after{display:none}
   </div>
 </div>
 
+<!-- Raum-Besitzer: alle persönlichen Codes -->
+<div class="scrim" id="mCodes" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h mark"><div class="ttl">Codes des Teams</div>
+      <button class="m-x" data-close="mCodes" aria-label="Schließen">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b">
+      <p style="margin:0 0 12px;font-size:12.5px;color:var(--ink-3)">Wer seinen Code vergessen hat, bekommt ihn hier. „neu“ vergibt einen neuen — der alte gilt dann nicht mehr.</p>
+      <div id="codesList"></div>
+    </div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mCodes">Schließen</button></div></div>
+  </div>
+</div>
+
+<!-- Raum-Besitzer: Backups -->
+<div class="scrim" id="mBackup" hidden>
+  <div class="modal mid" role="dialog" aria-modal="true">
+    <div class="m-h"><div class="ttl">Backups</div>
+      <button class="m-x" data-close="mBackup" aria-label="Schließen">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b">
+      <p style="margin:0 0 14px;font-size:13px;line-height:1.55;color:var(--ink-2)">
+        Das Projekt wird <b>einmal pro Woche</b> automatisch gesichert — sobald jemand im Raum ist und das letzte Backup älter als 7 Tage ist.
+        Vor jedem Zurücksetzen oder Einspielen entsteht außerdem ein Backup „vor Änderung“.
+        Herunterladen kannst du jedes; die Datei lässt sich über <b>Import</b> auch in einem neuen Raum zum Ausprobieren einspielen.</p>
+      <div id="backupList"></div>
+    </div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mBackup">Schließen</button></div></div>
+  </div>
+</div>
+
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261006"></script>
+<script src="bridge.js?v=20261007"></script>
 <script>
 'use strict';
 /* ════════════════════════════════════════════════════════════
@@ -1717,15 +1771,37 @@ function renderRoom(){
     $('#chName').textContent=me.name||'';
     show('mChoose');
   } else hide('mChoose');
-  $('#miKey').hidden = !(me.kind==='member' && me.key);
-  $('#miJoin').hidden = !(SW.role==='participant' && me.kind==='observer');
+  renderMenu();
+  // Der Besitzer schreibt (SW.ro ist für ihn false); die Leiste braucht
+  // er nicht. Beobachter und Stillgelegte sehen den Hinweis.
   $('#roBar').hidden = !SW.ro;
-  $('#roBar').innerHTML = SW.role==='presenter'
-    ? '<b>Lehrkraft-Ansicht</b> · Ihr seht, was das Team eingetragen hat. Ändern kann nur das Team.'
-    : me.blocked ? '<b>Stillgelegt</b> · Deine Lehrkraft hat dieses Tablet gerade angehalten.'
-    : '<b>Du schaust zu</b> · Ändern können nur Teammitglieder. <button class="btn sm" id="roJoin">Doch ins Team</button>';
-  const rj=$('#roJoin'); if(rj) rj.onclick=joinAsMember;
+  $('#roBar').innerHTML = me.blocked
+    ? '<b>Stillgelegt</b> · Deine Lehrkraft hat dieses Tablet gerade angehalten.'
+    : '<b>Du beobachtest</b> · Du siehst alles, ändern können nur Teammitglieder.';
   lockRO();
+}
+
+/* Kopf rechts: Name + Status, und was das Menü je Rolle anbietet.
+     Raum-Besitzer  alles (Code-Liste, Export, Druck, Import, Backups, Zurücksetzen)
+     Teammitglied   Code zeigen, Export, Druck
+     Beobachter     nichts — der Chip ist nur eine Anzeige */
+const ROLE_TXT={ dev:'Entwickler-Team', po:'Product Owner', sm:'Scrum Master' };
+function renderMenu(){
+  const me=SW.me||{}, owner=SW.owner;
+  const mem=S.team.find(x=>x.me);
+  const member=SW.role==='participant' && me.kind==='member' && !me.blocked;
+  const observer=SW.role==='participant' && !member;
+  $('#meName').textContent = owner ? SW.ownerName() : (me.name||'');
+  $('#meRole').textContent = owner ? 'Raum-Besitzer'
+    : member ? (ROLE_TXT[mem&&mem.role]||ROLE_TXT.dev)
+    : me.blocked ? 'stillgelegt' : me.kind==='observer' ? 'beobachtet' : '';
+  $('#meTxt').hidden = !(me.name||owner);
+  $('#btnMenu').classList.toggle('static', observer);
+  $('#menuPop').hidden = observer ? true : $('#menuPop').hidden;
+  $('#miKey').hidden = !(owner || (member && me.key));
+  $('#miKeyTxt').textContent = owner ? 'Codes zeigen' : 'Code zeigen';
+  $('#menuOwner').hidden = !owner;
+  $('#miBackups').hidden = !owner;
 }
 
 /* Im Lesemodus alles Bearbeitbare sperren. Läuft nach jedem Zeichnen
@@ -1745,10 +1821,11 @@ function lockRO(){
   $$('.postit, .mchip').forEach(p=>p.draggable=!SW.ro);
 }
 
-/* Product Backlog und Product Goal bearbeitet nur der Product Owner.
+/* Product Backlog und Product Goal bearbeitet nur der Product Owner (und der Raum-Besitzer).
    Außerhalb eines Raums (Einzelnutzung) darf jeder. */
 function canEditPO(){
   if(!SW.on) return true;
+  if(SW.owner) return true;
   if(SW.ro) return false;
   const m=S.team.find(x=>x.me);
   return !!m && m.role==='po';
@@ -2678,13 +2755,31 @@ function wire(){
   document.addEventListener('click',()=>{ pop.hidden=true; });
   pop.onclick=e=>e.stopPropagation();
   $('#miExport').onclick=()=>{ exportJson(); pop.hidden=true; };
-  $('#miKey').onclick=()=>{ pop.hidden=true; $('#keyBig').textContent=SW.fmtKey(SW.me&&SW.me.key); show('mKey'); };
-  $('#miJoin').onclick=()=>{ pop.hidden=true; joinAsMember(); };
+  $('#miKey').onclick=()=>{ pop.hidden=true;
+    if(SW.owner){ renderCodes(); show('mCodes'); return; }
+    $('#keyBig').textContent=SW.fmtKey(SW.me&&SW.me.key); show('mKey'); };
   $('#chMember').onclick=async()=>{ hide('mChoose'); await joinAsMember(); };
   $('#chObserver').onclick=async()=>{ hide('mChoose'); await SW.enter('observer'); };
   $('#miImport').onclick=()=>{ $('#importFile').click(); pop.hidden=true; };
   $('#miPrint').onclick=()=>{ pop.hidden=true; go('sprint'); setTimeout(()=>window.print(),220); };
+  $('#miBackups').onclick=()=>{ pop.hidden=true; openBackups(); };
+  $('#codesList').onclick=async e=>{
+    const b=e.target.closest('[data-rekey]'); if(!b) return;
+    b.disabled=true; await SW.rekey(b.dataset.rekey); renderCodes();
+  };
+  $('#backupList').onclick=async e=>{
+    const b=e.target.closest('[data-bk]'); if(!b) return;
+    const r=await SW.backupGet(b.dataset.id);
+    if(!r){ toast('⚠ Backup konnte nicht geladen werden'); return; }
+    if(b.dataset.bk==='dl') downloadJson(r.data, 'scrum-backup-'+iso(new Date(r.at)));
+    else { hide('mBackup'); ask('Dieses Backup einspielen?','Das aktuelle Projekt wird durch den Stand vom '+fmtAt(r.at)+' ersetzt. Vorher entsteht ein Backup des jetzigen Stands.',()=>applyImport(r.data)); }
+  };
   $('#miReset').onclick=()=>{ pop.hidden=true;
+    if(SW.on){
+      ask('Projekt zurücksetzen?','Das Projekt des ganzen Teams wird geleert: Product Goal, Backlog, Sprints und Archiv. Die Team-Kacheln bleiben. Vorher legt die Werkstatt automatisch ein Backup an — du findest es unter „Backups“.',
+        async()=>{ if(await SW.restore([],{story:0,sprint:0})){ go('sprint'); toast('Projekt zurückgesetzt'); } });
+      return;
+    }
     ask('Alles zurücksetzen?','Das Projekt wird vollständig gelöscht und durch das Beispielprojekt ersetzt. Das lässt sich nicht widerrufen – exportiert vorher, wenn ihr die Daten behalten wollt.',
       ()=>{ S=seed(); renderAll(); go('sprint'); toast('Zurückgesetzt'); });
   };
@@ -2892,12 +2987,8 @@ function wire(){
     fr.onload=()=>{
       try{
         const d=JSON.parse(fr.result);
-        if(!d.stories||!d.team||!d.sprints) throw 0;
-        ask('Projekt ersetzen?','Die importierte Datei überschreibt das aktuelle Projekt vollständig.',()=>{
-          S=d; S.product=S.product||{name:'Projekt',goal:'',images:[]};
-          S.product.images=S.product.images||[];
-          renderAll(); go('sprint'); toast('Projekt importiert');
-        });
+        if(!Array.isArray(d.stories)||!Array.isArray(d.sprints)||(!SW.on&&!d.team)) throw 0;
+        ask('Projekt ersetzen?','Die importierte Datei überschreibt das aktuelle Projekt vollständig.'+(SW.on?' Vorher entsteht ein Backup des jetzigen Stands.':''),()=>applyImport(d));
       } catch(err){ toast('⚠ Datei konnte nicht gelesen werden'); }
     };
     fr.readAsText(f);
@@ -2905,28 +2996,95 @@ function wire(){
   };
 }
 
+/* Im Raum: Export/Backup → Liste von Objekten für den Server. Wer
+   in der Datei zugewiesen war, aber hier keine Kachel hat (anderer
+   Raum), wird zur freien Karte — sonst zeigte sie auf niemanden. */
+function itemsFromExport(d){
+  const ids=new Set(S.team.map(m=>m.id));
+  const keep=a=>(a||[]).filter(id=>ids.has(id));
+  const items=[{ kind:'product', id:'main', data:Object.assign({name:'Unser Projekt',goal:'',images:[]}, d.product||{}) }];
+  const p=items[0].data;
+  if(p.pairs) p.pairs=p.pairs.map(keep).filter(g=>g.length>1);
+  (d.stories||[]).forEach(st=>{
+    const c=Object.assign({},st);
+    if(c.assignee && !ids.has(c.assignee)) c.assignee=null;
+    if(c.mates) c.mates=keep(c.mates);
+    items.push({ kind:'story', id:String(c.id), data:c });
+  });
+  (d.sprints||[]).forEach(sp=>items.push({ kind:'sprint', id:String(sp.id), data:Object.assign({},sp) }));
+  return items;
+}
+
+async function applyImport(d){
+  if(SW.on){
+    if(!await SW.restore(itemsFromExport(d), d.seq)) return;
+    go('sprint'); toast('Projekt eingespielt');
+    return;
+  }
+  S=d; S.product=S.product||{name:'Projekt',goal:'',images:[]};
+  S.product.images=S.product.images||[];
+  renderAll(); go('sprint'); toast('Projekt importiert');
+}
+
+/* ── Raum-Besitzer: Codes und Backups ───────────────────── */
+function renderCodes(){
+  $('#codesList').innerHTML = S.team.length ? S.team.map(m=>`
+    <div class="rowline"><div class="who">${esc(m.name)}<small>${esc(ROLE_TXT[m.role]||'')}</small></div>
+      <b class="mkey">${esc(SW.fmtKey(m.key))}</b>
+      <div class="acts"><button class="btn ghost sm" data-rekey="${m.id}">neu</button></div></div>`).join('')
+    : '<p style="color:var(--ink-3);font-size:13px">Noch niemand im Team.</p>';
+}
+
+const fmtAt=t=>new Date(t).toLocaleString('de-DE',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+async function openBackups(){
+  $('#backupList').innerHTML='<p style="color:var(--ink-3);font-size:13px">Lädt …</p>';
+  show('mBackup');
+  const list=await SW.backups();
+  $('#backupList').innerHTML = list===null
+    ? '<p style="color:var(--ink-3);font-size:13px">⚠ Backups konnten nicht geladen werden.</p>'
+    : list.length ? list.map(b=>`
+      <div class="rowline"><div class="who">${esc(fmtAt(b.at))}
+          <small>${b.kind==='auto'?'automatisch (wöchentlich)':'vor Änderung'} · ${b.stories} Stories, ${b.sprints} Sprints</small></div>
+        <div class="acts">
+          <button class="btn sm" data-bk="dl" data-id="${b.id}">Herunterladen</button>
+          <button class="btn sm" data-bk="restore" data-id="${b.id}">Einspielen</button>
+        </div></div>`).join('')
+    : '<p style="color:var(--ink-3);font-size:13px">Noch kein Backup. Das erste entsteht, sobald das Projekt Inhalt hat und jemand im Raum ist.</p>';
+}
+
 let avatarTarget=null;
+
+function downloadJson(data, base){
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`${base}.json`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+}
 
 function exportJson(){
   const name=(S.product.name||'projekt').replace(/[^a-z0-9äöüß ]/gi,'').trim().replace(/\s+/g,'-').toLowerCase();
-  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`scrum-${name||'projekt'}-${iso(today())}.json`;
-  a.click();
-  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  // Im Raum stehen an den Kacheln die persönlichen Codes — die gehören
+  // nicht in eine Datei, die man weitergibt.
+  const out = SW.on
+    ? Object.assign({}, S, { format:'scrum-werkstatt', version:1,
+        team:S.team.map(m=>({ id:m.id, name:m.name, role:m.role, label:m.label })) })
+    : S;
+  downloadJson(out, `scrum-${name||'projekt'}-${iso(today())}`);
   toast('Projekt exportiert');
 }
 
 /* ── boot ────────────────────────────────────────────── */
 (function boot(){
   if(SW.on){
-    // Im Raum: leer anfangen und auf die erste Ansicht warten. Import
-    // und Zurücksetzen gibt es hier nicht — sie ersetzten das Projekt
-    // des ganzen Teams auf einen Schlag.
+    // Im Raum: leer anfangen und auf die erste Ansicht warten. Import,
+    // Backups und Zurücksetzen ersetzen das Projekt des ganzen Teams auf
+    // einen Schlag — sie zeigt renderMenu() nur dem Raum-Besitzer.
     S={ product:{name:'Unser Projekt',goal:'',images:[]}, team:[], stories:[], sprints:[], active:null, seq:{story:0,sprint:0} };
     document.body.classList.add('inroom');
-    $('#miImport').hidden=true; $('#miReset').hidden=true;
+    $('#menuOwner').hidden=true;   // zeigt renderMenu() nur dem Besitzer
     const inp=document.createElement('input');
     inp.type='file'; inp.accept='image/*'; inp.id='avFile'; inp.hidden=true;
     document.body.appendChild(inp);

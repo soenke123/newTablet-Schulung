@@ -4,7 +4,8 @@
    Die Kernzusagen:
      1. Wer noch nicht gewählt hat, ist „undecided" und darf nichts
         schreiben. Mitglied bekommt einen Code, Beobachter keinen.
-     2. Beobachter → Mitglied geht, Mitglied → Beobachter nicht.
+     2. Mitglied → Beobachter geht nicht; Beobachter → Mitglied seit 0198
+        auch nicht mehr (observer_locked).
      3. skill_room_recover: derselbe Token über den Code, auch bei
         geschlossener Tür und nach dem Entfernen; falsche Codes nicht.
         Nur service_role darf ihn aufrufen.
@@ -106,9 +107,9 @@ ok('1  der Beobachter sieht keinen Code', (await view('t3')).me.key === null);
 /* ══ 2. Wechsel ══════════════════════════════════════════════════ */
 ok('2  Mitglied → Beobachter geht nicht', (await call(`scrum_enter('t1', 'observer')`)).error === 'already_member');
 const e4 = await call(`scrum_enter('t4', 'observer')`);
-const e4b = await call(`scrum_enter('t4', 'member')`);
-ok('2  Beobachter → Mitglied geht und bringt einen Code', e4.ok && e4b.ok && e4b.key && e4b.kind === 'member');
-await call(`scrum_enter('t4', 'observer')`).then(r => ok('2  … und zurück nicht mehr', r.error === 'already_member'));
+ok('2  Beobachter → Mitglied geht seit 0198 nicht mehr', e4.ok && (await call(`scrum_enter('t4', 'member')`)).error === 'observer_locked');
+// t4 wird für die Prüfung unten (blockiert) ein Mitglied: direkt eintragen
+await db.exec(`update scrum_members set kind = 'member' where participant_id = (select id from skill_participants where token = 't4')`);
 
 /* ══ 3. Wiedereinstieg ═══════════════════════════════════════════ */
 await db.exec(`update skill_rooms set join_open = false where id = '${R}'`);

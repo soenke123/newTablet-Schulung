@@ -52,6 +52,7 @@
     ro: true,            // bis zur ersten Ansicht: nichts schreiben
     me: null,            // { id, name, kind, key }
     role: null,          // 'participant' | 'presenter'
+    owner: false,        // Raum-Besitzer (Lehrkraft, die den Raum angelegt hat)
     observers: [],
     undecided: [],
     burndown: [],
@@ -145,7 +146,11 @@
     SW.observers = view.observers || [];
     SW.undecided = view.undecided || [];
     SW.burndown = view.burndown || [];
-    SW.ro = view.role !== 'participant' || !view.me || view.me.kind !== 'member' || !!view.me.blocked;
+    // Der Raum-Besitzer (presenter) schreibt wie ein Mitglied (0198);
+    // alle anderen nur, wenn sie Mitglied und nicht stillgelegt sind.
+    SW.owner = view.role === 'presenter';
+    SW.ro = SW.owner ? false
+          : (view.role !== 'participant' || !view.me || view.me.kind !== 'member' || !!view.me.blocked);
     document.body.classList.toggle('ro', SW.ro);
     document.body.classList.toggle('is-teacher', view.role === 'presenter');
 
@@ -208,7 +213,10 @@
     team_full:       'Das Team ist voll — ein Scrum-Team hat höchstens 10 Mitglieder.',
     text_blocked:    'Solche Wörter bitte nicht.',
     network:         'Keine Verbindung — die Änderung ist noch nicht gespeichert.',
-    fn_missing:      'Auf dem Server fehlt die neueste Migration (0196). Bitte der Lehrkraft Bescheid sagen.'
+    observer_locked: 'Beobachter können dem Team nicht nachträglich beitreten.',
+    not_found:       'Das gibt es nicht (mehr).',
+    invalid_input:   'Die Datei passt nicht zu einem Scrum-Projekt.',
+    fn_missing:      'Auf dem Server fehlt die neueste Migration (0198). Bitte der Lehrkraft Bescheid sagen.'
   };
   SW.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
 
@@ -228,7 +236,7 @@
     if (inflight) { again = true; return; }
 
     inflight = true;
-    const res = await SW.call('scrum_save', { p_ops: ops });
+    const res = await SW.call(SW.owner ? 'scrum_room_save' : 'scrum_save', { p_ops: ops });
     inflight = false;
 
     if (res && res.ok) {
@@ -278,7 +286,8 @@
   /* ─── Team ──────────────────────────────────────────────── */
   SW.member = async function (id, patch) {
     if (SW.ro) { global.toast(SW.msg('read_only')); return false; }
-    const res = await SW.call('scrum_member_update', { p_participant: id, p_patch: patch });
+    const res = await SW.call(SW.owner ? 'scrum_room_member_update' : 'scrum_member_update',
+                              { p_participant: id, p_patch: patch });
     if (!res || !res.ok) { global.toast(SW.msg(res && res.error)); SW.refresh(); return false; }
     SW.refresh();
     return true;
@@ -300,6 +309,38 @@
     if (!res || !res.ok) { global.toast(SW.msg(res && res.error)); return null; }
     SW.refresh();
     return res.key;
+  };
+
+  /* ─── Raum-Besitzer: Projekt ersetzen, Backups ──────────── */
+  // items: [{kind,id,data}], seq: {story,sprint}. Eine leere Liste setzt
+  // das Projekt zurück. Der Server legt vorher selbst ein Backup an.
+  SW.restore = async function (items, seq) {
+    if (!SW.owner) return false;
+    const res = await SW.call('scrum_room_restore', {
+      p_items: items, p_seq_story: (seq && seq.story) || 0, p_seq_sprint: (seq && seq.sprint) || 0
+    });
+    if (!res || !res.ok) { global.toast(SW.msg(res && res.error)); return false; }
+    SW.refresh();
+    return true;
+  };
+
+  SW.backups = async function () {
+    const res = await SW.call('scrum_room_backups', {});
+    return res && res.ok ? res.backups : null;
+  };
+
+  SW.backupGet = async function (id) {
+    const res = await SW.call('scrum_room_backup_get', { p_id: id });
+    return res && res.ok ? res : null;
+  };
+
+  // Name des Besitzers für die Kopfzeile: der Anzeigename seines Kontos
+  // (die Seite drumherum kennt die Sitzung; derselbe Ursprung).
+  SW.ownerName = function () {
+    try {
+      const u = global.parent.getSessionUser && global.parent.getSessionUser();
+      return (u && (u.display_name || u.account_name)) || 'Lehrkraft';
+    } catch (e) { return 'Lehrkraft'; }
   };
 
   SW.fmtKey = k => k ? String(k).slice(0, 4) + '-' + String(k).slice(4) : '';

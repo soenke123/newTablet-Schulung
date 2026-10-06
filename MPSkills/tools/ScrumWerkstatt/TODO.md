@@ -35,6 +35,16 @@ weiter im localStorage. Zeilennummern unten stammen vom Prototyp und stimmen nic
       jede Person kann anlegen, abhaken (ausgegraut) und löschen
 - [x] Kopfzeile mit mehr Seitenabstand; Loop-Logo statt „S“
 
+## ✅ Erledigt 06.10.2026 (Runde 3: Rollen und Backup, Migration 0198)
+
+- [x] Kopf rechts: Name + Status in zwei Zeilen (Entwickler-Team / Scrum Master / Product Owner,
+      Raum-Besitzer, „beobachtet"); Beobachter haben kein Menü und können nicht mehr ins Team wechseln
+- [x] Mitglieder: Code zeigen · Export · Druck. Raum-Besitzer zusätzlich: alle Codes, Import,
+      Backups, Zurücksetzen — und er schreibt am Board wie ein Mitglied
+- [x] Wöchentliches Backup, nur wenn jemand im Raum ist und das letzte älter als 7 Tage ist
+      (letzte 8 bleiben); vor Zurücksetzen/Einspielen ein Backup „vor Änderung". Download und
+      Einspielen (auch in einem neuen Raum) über das Menü „Backups" bzw. „Import"
+
 ## ❓ Offen zur Entscheidung: Rechte und Rollen
 
 Bisher darf jedes Teammitglied alles; Beobachter und Lehrkraft lesen nur.
