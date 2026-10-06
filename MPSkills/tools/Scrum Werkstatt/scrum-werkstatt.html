@@ -1,0 +1,2437 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Scrum Werkstatt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   SCRUM WERKSTATT — Design Tokens
+   Papier / Tinte / Petrol / Marker
+   ============================================================ */
+:root{
+  --paper:      #f2eee5;
+  --paper-up:   #fbf9f4;
+  --paper-down: #e8e2d5;
+  --ink:        #1b1a16;
+  --ink-2:      #514d43;
+  --ink-3:      #837d6e;
+  --line:       #d9d2c2;
+  --line-soft:  #e6e0d2;
+
+  --petrol:     #1d5955;
+  --petrol-up:  #27736d;
+  --petrol-wash:#e4eeec;
+  --marker:     #ca5a1c;
+  --marker-wash:#fbeadc;
+
+  --st-todo:    #8a8373;
+  --st-doing:   #2b6694;
+  --st-block:   #ad352b;
+  --st-check:   #b5801a;
+  --st-done:    #2d7a4d;
+
+  --r-sm: 5px;
+  --r:    9px;
+  --r-lg: 16px;
+
+  --sans: 'Instrument Sans', ui-sans-serif, -apple-system, 'Segoe UI', sans-serif;
+  --serif: var(--sans);
+  --hand:  var(--sans);
+
+  --sh-1: 0 1px 2px rgba(27,26,22,.06), 0 1px 1px rgba(27,26,22,.04);
+  --sh-2: 0 2px 4px rgba(27,26,22,.07), 0 6px 14px -6px rgba(27,26,22,.12);
+  --sh-3: 0 10px 34px -10px rgba(27,26,22,.30), 0 2px 6px rgba(27,26,22,.10);
+  --sh-paper: 1px 2px 0 rgba(27,26,22,.055), 3px 7px 14px -6px rgba(27,26,22,.30);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+/* paper grain */
+body::after{
+  content:''; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+h1,h2,h3,h4{font-family:var(--serif); font-weight:600; margin:0; letter-spacing:-.012em; line-height:1.18}
+button,input,select,textarea{font:inherit; color:inherit}
+button{cursor:pointer}
+svg{display:block; flex:none}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ---------- shell ---------- */
+.wrap{max-width:1500px; margin:0 auto; padding:0 clamp(12px,2.2vw,28px)}
+
+header.top{
+  position:sticky; top:0; z-index:60;
+  background:linear-gradient(180deg,#17302e,#132826);
+  color:#eef3f1; border-bottom:2px solid #0c1e1d;
+}
+.top-row{display:flex; align-items:center; gap:18px; min-height:60px; padding:9px 0; flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:11px; margin-right:auto; min-width:0; flex:1 1 260px}
+.brand-mark{
+  width:36px;height:36px;border-radius:10px;flex:none;
+  background:var(--marker); color:#fff;
+  display:grid;place-items:center;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.22);
+  font-family:var(--serif); font-weight:700; font-size:19px;
+}
+.brand-txt{min-width:0; flex:1}
+.brand-eyebrow{
+  font-size:9.5px; letter-spacing:.17em; text-transform:uppercase;
+  color:#7fa8a2; font-weight:600;
+}
+.brand-name{
+  font-family:var(--serif); font-size:19px; font-weight:600; color:#fff;
+  background:none;border:0;padding:1px 4px;margin-left:-4px;border-radius:5px;
+  width:100%; max-width:440px; text-overflow:ellipsis;
+}
+.brand-name:hover{background:rgba(255,255,255,.08)}
+.brand-name:focus{outline:2px solid var(--marker); background:rgba(0,0,0,.25)}
+
+/* sprint pill in header */
+.sprint-pill{
+  display:flex; align-items:center; gap:13px;
+  background:rgba(0,0,0,.26); border:1px solid rgba(127,168,162,.3);
+  border-radius:12px; padding:7px 13px;
+}
+.sprint-pill .lbl{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:#7fa8a2;font-weight:600}
+.sprint-pill .val{font-family:var(--serif);font-size:15px;font-weight:600;color:#fff;white-space:nowrap}
+.pill-div{width:1px;align-self:stretch;background:rgba(127,168,162,.26)}
+.daysleft{font-size:12.5px;color:#cfe0dd;white-space:nowrap}
+.daysleft b{color:#ffc78a}
+.daysleft.urgent b{color:#ff9b7a}
+
+/* ruler */
+.ruler{height:5px;border-radius:99px;background:rgba(0,0,0,.34);overflow:hidden;width:120px;position:relative}
+.ruler i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--marker),#e8954f);border-radius:99px}
+
+/* buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--line); background:var(--paper-up); color:var(--ink);
+  padding:8px 13px; border-radius:var(--r); font-size:13.5px; font-weight:600;
+  box-shadow:var(--sh-1); transition:transform .12s, box-shadow .12s, background .12s;
+  white-space:nowrap;
+}
+.btn:hover{background:#fff;box-shadow:var(--sh-2)}
+.btn:active{transform:translateY(1px);box-shadow:var(--sh-1)}
+.btn.primary{background:var(--petrol);border-color:#143f3c;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),var(--sh-1)}
+.btn.primary:hover{background:var(--petrol-up)}
+.btn.mark{background:var(--marker);border-color:#a3430f;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),var(--sh-1)}
+.btn.mark:hover{background:#d96a2b}
+.btn.ghost{background:transparent;border-color:transparent;box-shadow:none;color:var(--ink-2)}
+.btn.ghost:hover{background:rgba(27,26,22,.06);box-shadow:none}
+.btn.onDark{background:rgba(255,255,255,.1);border-color:rgba(127,168,162,.34);color:#eef3f1;box-shadow:none}
+.btn.onDark:hover{background:rgba(255,255,255,.19)}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.btn.danger{color:var(--st-block);border-color:#e3c3bf;background:#fdf3f1}
+.btn.danger:hover{background:#fbe8e5}
+.btn:disabled{opacity:.34;cursor:not-allowed;transform:none}
+.btn.icon{padding:8px;border-radius:var(--r)}
+
+/* tabs */
+.tabbar{position:sticky;top:60px;z-index:55;background:var(--paper-up);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(255,255,255,.7) inset}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  position:relative;display:flex;align-items:center;gap:8px;
+  background:none;border:0;padding:13px 15px 12px;
+  font-size:13.5px;font-weight:600;color:var(--ink-3);white-space:nowrap;
+}
+.tab svg{opacity:.65}
+.tab:hover{color:var(--ink)}
+.tab::after{content:'';position:absolute;left:11px;right:11px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:transparent}
+.tab[aria-selected="true"]{color:var(--petrol)}
+.tab[aria-selected="true"] svg{opacity:1}
+.tab[aria-selected="true"]::after{background:var(--marker)}
+.tab .cnt{
+  font-size:10.5px;font-weight:700;background:var(--paper-down);color:var(--ink-2);
+  padding:1px 6px;border-radius:99px;min-width:19px;text-align:center
+}
+.tab[aria-selected="true"] .cnt{background:var(--petrol-wash);color:var(--petrol)}
+
+main{padding:22px 0 80px}
+.view[hidden]{display:none}
+
+/* section head */
+.shead{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.shead .t{font-size:clamp(22px,2.6vw,30px)}
+.shead .s{font-size:13.5px;color:var(--ink-3);max-width:58ch;margin-top:3px}
+.shead .sp{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.eyebrow{font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;color:var(--marker);font-weight:700}
+
+/* panel */
+.panel{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-1)}
+.panel.pad{padding:clamp(16px,2vw,26px)}
+
+/* ============================================================
+   BOARD
+   ============================================================ */
+.goalbar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:var(--paper-up);border:1px solid var(--line);border-left:5px solid var(--marker);
+  border-radius:var(--r);padding:11px 16px;margin-bottom:14px;box-shadow:var(--sh-1)
+}
+.goalbar .k{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-3);font-weight:700}
+.goalbar .v{font-family:var(--serif);font-size:16px;font-style:italic;color:var(--ink)}
+.goalbar .meta{margin-left:auto;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+.stat{background:var(--paper-down);border-radius:var(--r-sm);padding:5px 10px;font-size:12px;font-weight:600;color:var(--ink-2)}
+.stat b{font-family:var(--serif);font-size:14px;color:var(--ink)}
+
+.board{
+  display:grid; gap:11px; align-items:stretch;
+  grid-template-columns:repeat(5,minmax(228px,1fr));
+  overflow-x:auto; padding:13px; border-radius:var(--r-lg);
+  background:
+    linear-gradient(var(--line-soft) 1px,transparent 1px) 0 0/100% 26px,
+    linear-gradient(90deg,var(--line-soft) 1px,transparent 1px) 0 0/26px 100%,
+    var(--paper-down);
+  border:1px solid var(--line);
+  box-shadow:inset 0 2px 8px rgba(27,26,22,.055);
+}
+.col{display:flex;flex-direction:column;background:rgba(251,249,244,.78);border:1px solid var(--line);border-radius:var(--r);min-height:420px;backdrop-filter:blur(1px)}
+.col-h{display:flex;align-items:center;gap:8px;padding:10px 11px 9px;border-bottom:1px solid var(--line-soft)}
+.col-dot{width:9px;height:9px;border-radius:99px;flex:none}
+.col-h .nm{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.col-h .n{margin-left:auto;font-family:var(--serif);font-weight:700;font-size:13px;background:var(--paper-down);color:var(--ink-2);min-width:24px;text-align:center;border-radius:var(--r-sm);padding:1px 6px}
+.col-hint{font-size:11px;color:var(--ink-3);padding:7px 11px 0;font-style:italic;line-height:1.35}
+.drop{display:flex;flex-direction:column;gap:11px;padding:11px;flex:1;min-height:120px;border-radius:var(--r)}
+.drop.over{background:var(--petrol-wash);outline:2px dashed var(--petrol);outline-offset:-5px}
+.col[data-k="blocked"]{background:rgba(253,243,241,.85);border-color:#e6c8c3}
+.col[data-k="done"]{background:rgba(238,247,241,.85);border-color:#c6e0d0}
+.empty{font-size:11.5px;color:var(--ink-3);text-align:center;padding:16px 8px;border:1px dashed var(--line);border-radius:var(--r);font-style:italic}
+
+/* member lanes */
+.lanes{display:flex;flex-direction:column;gap:9px;padding:9px;flex:1}
+.lane{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.lane.over{background:var(--petrol-wash);border-color:var(--petrol);box-shadow:0 0 0 2px var(--petrol-wash)}
+.lane-h{display:flex;align-items:center;gap:7px;padding:6px 8px;background:var(--paper-down);border-bottom:1px solid var(--line-soft)}
+.lane-h .nm{font-size:12.5px;font-weight:700}
+.lane-h .n{margin-left:auto;font-size:11px;font-weight:700;color:var(--ink-3)}
+.lane-body{display:flex;flex-direction:column;gap:9px;padding:9px;min-height:54px}
+.lane-empty{font-size:10.5px;color:var(--ink-3);font-style:italic;text-align:center;padding:5px}
+
+/* avatar */
+.av{border-radius:99px;flex:none;display:grid;place-items:center;font-weight:700;color:#fff;overflow:hidden;background:var(--petrol);box-shadow:inset 0 -1px 0 rgba(0,0,0,.18)}
+.av img{width:100%;height:100%;object-fit:cover}
+.av.s18{width:18px;height:18px;font-size:8.5px}
+.av.s22{width:22px;height:22px;font-size:10px}
+.av.s30{width:30px;height:30px;font-size:12px}
+.av.s52{width:52px;height:52px;font-size:19px;border-radius:14px;font-family:var(--serif)}
+.av.s64{width:64px;height:64px;font-size:23px;border-radius:17px;font-family:var(--serif)}
+
+/* ---------- POST-IT ---------- */
+.postit{
+  position:relative; border-radius:2px; padding:12px 12px 9px;
+  box-shadow:var(--sh-paper); cursor:grab;
+  transition:transform .16s cubic-bezier(.2,.8,.3,1), box-shadow .16s;
+  background:#fdf3a8; color:#4a3a05;
+  --tape:rgba(255,255,255,.5);
+}
+.postit::before{
+  content:'';position:absolute;top:-6px;left:50%;width:46px;height:13px;
+  transform:translateX(-50%) rotate(-1.4deg);
+  background:var(--tape); border:1px solid rgba(255,255,255,.35);
+  box-shadow:0 1px 2px rgba(27,26,22,.09);
+}
+.postit:hover{transform:rotate(0deg) scale(1.025) translateY(-2px);box-shadow:3px 9px 22px -6px rgba(27,26,22,.4),1px 2px 0 rgba(27,26,22,.06);z-index:9}
+.postit:active{cursor:grabbing}
+.postit.drag{opacity:.4;outline:2px dashed var(--petrol)}
+.pi-yellow{background:#fdf3a8;color:#4a3a05}
+.pi-blue  {background:#cbe7f7;color:#123a52}
+.pi-green {background:#cdebd2;color:#153d23}
+.pi-pink  {background:#f8d4e0;color:#521630}
+.pi-lilac {background:#dfd8f3;color:#2d2359}
+.pi-row{display:flex;align-items:center;gap:7px}
+.pi-id{font-family:var(--sans);font-size:9.5px;font-weight:700;letter-spacing:.06em;opacity:.6}
+.pi-cat{font-size:8.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;background:rgba(0,0,0,.09);padding:2px 6px;border-radius:99px;margin-left:auto}
+.pi-title{
+  font-family:var(--hand); font-size:17px; font-weight:600; line-height:1.24;
+  margin:8px 0 10px; width:100%; text-align:left; background:none; border:0; padding:0; color:inherit;
+}
+.pi-title:hover{text-decoration:underline wavy rgba(0,0,0,.28);text-underline-offset:3px}
+.pi-foot{display:flex;align-items:center;gap:8px;padding-top:8px;border-top:1px solid rgba(0,0,0,.13);font-size:10.5px}
+.pi-sp{font-family:var(--serif);font-weight:700;font-size:12px;background:rgba(0,0,0,.1);padding:1px 7px;border-radius:99px}
+.pi-dod{opacity:.7;font-weight:600}
+.pi-who{margin-left:auto;display:flex;align-items:center;gap:5px;font-weight:700}
+.pi-flag{
+  position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:99px;
+  background:var(--st-block);color:#fff;display:grid;place-items:center;
+  box-shadow:0 2px 5px rgba(27,26,22,.3);border:2px solid #fdf3f1;
+}
+.pi-note{
+  background:rgba(173,53,43,.14);border-left:3px solid var(--st-block);
+  padding:5px 7px;border-radius:0 var(--r-sm) var(--r-sm) 0;font-size:10.5px;
+  font-weight:600;margin-bottom:9px;line-height:1.35
+}
+.pi-nav{display:flex;gap:4px;margin-top:8px;padding-top:7px;border-top:1px solid rgba(0,0,0,.13)}
+.pi-nav button{
+  flex:1;background:rgba(255,255,255,.5);border:1px solid rgba(0,0,0,.1);color:inherit;
+  border-radius:var(--r-sm);padding:5px 2px;font-size:11px;font-weight:700;line-height:1;
+  min-height:30px; display:grid; place-items:center;
+}
+.pi-nav button:hover:not(:disabled){background:#fff}
+.pi-nav button:disabled{opacity:.25;cursor:not-allowed}
+.pi-nav button.warn:hover{background:var(--st-block);color:#fff;border-color:var(--st-block)}
+
+/* ============================================================
+   TABLE (Backlog)
+   ============================================================ */
+.tablewrap{overflow-x:auto;border-radius:var(--r);border:1px solid var(--line);background:var(--paper-up)}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:860px}
+thead th{
+  text-align:left;padding:9px 11px;background:var(--paper-down);
+  font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-3);font-weight:700;
+  border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;white-space:nowrap
+}
+tbody tr{border-bottom:1px solid var(--line-soft)}
+tbody tr:last-child{border-bottom:0}
+tbody tr:hover{background:#fff}
+tbody tr.isdone{background:rgba(45,122,77,.045)}
+tbody tr.isdone .b-title{color:var(--ink-3)}
+td{padding:9px 11px;vertical-align:middle}
+.b-prio{display:flex;align-items:center;gap:3px}
+.b-prio .num{font-family:var(--serif);font-weight:700;font-size:13px;color:var(--ink-3);min-width:17px}
+.b-prio button{background:var(--paper-down);border:1px solid var(--line);border-radius:4px;width:21px;height:19px;display:grid;place-items:center;color:var(--ink-2)}
+.b-prio button:hover:not(:disabled){background:var(--petrol);color:#fff;border-color:var(--petrol)}
+.b-prio button:disabled{opacity:.25;cursor:not-allowed}
+.b-title{font-weight:600;text-align:left;background:none;border:0;padding:0;font-size:13px}
+.b-title:hover{color:var(--petrol);text-decoration:underline}
+.b-sub{font-size:11px;color:var(--ink-3);font-style:italic;margin-top:2px;max-width:46ch}
+.b-key{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--ink-3);letter-spacing:.04em;white-space:nowrap}
+
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.badge::before{content:'';width:6px;height:6px;border-radius:99px;background:currentColor;flex:none}
+.badge.nodot::before{display:none}
+.bg-todo {color:var(--st-todo); background:#efece4}
+.bg-doing{color:var(--st-doing);background:#e4eff7}
+.bg-block{color:var(--st-block);background:#fbe9e6}
+.bg-check{color:var(--st-check);background:#faf0d9}
+.bg-done {color:var(--st-done); background:#e3f2e8}
+.tag{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:var(--r-sm);background:var(--paper-down);color:var(--ink-2);white-space:nowrap}
+.tag.now{background:var(--marker-wash);color:var(--marker);font-weight:700}
+.tag.past{background:var(--petrol-wash);color:var(--petrol)}
+.tag.none{background:transparent;color:var(--ink-3);border:1px dashed var(--line);font-style:italic}
+
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.search{position:relative;flex:1;min-width:190px;max-width:330px}
+.search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--ink-3)}
+input[type=text],input[type=date],input[type=number],select,textarea{
+  width:100%;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:8px 11px;font-size:13.5px;box-shadow:inset 0 1px 2px rgba(27,26,22,.035)
+}
+.search input{padding-left:32px}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--petrol);outline-offset:-1px;background:#fff}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;padding-right:28px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23837d6e' stroke-width='1.6'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+select.auto,input.auto{width:auto}
+label.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin-bottom:5px}
+.field{margin-bottom:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+
+/* ============================================================
+   TEAM
+   ============================================================ */
+.resp-band{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+.resp{
+  position:relative;display:flex;gap:14px;align-items:center;
+  background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);
+  padding:17px;box-shadow:var(--sh-1);overflow:hidden
+}
+.resp::after{content:'';position:absolute;inset:0 auto 0 0;width:5px}
+.resp.po::after{background:var(--marker)}
+.resp.sm::after{background:var(--petrol)}
+.resp .role{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;font-weight:700}
+.resp.po .role{color:var(--marker)}
+.resp.sm .role{color:var(--petrol)}
+.resp .nmx{font-family:var(--serif);font-size:20px;font-weight:600;margin:2px 0 4px}
+.resp .duty{font-size:12px;color:var(--ink-3);line-height:1.4;max-width:34ch}
+.resp .vacant{font-family:var(--serif);font-size:19px;color:var(--ink-3);font-style:italic}
+
+.teamgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:14px}
+.mcard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:12px}
+.mcard.add{border-style:dashed;background:transparent;align-items:center;justify-content:center;min-height:170px;color:var(--ink-3);gap:8px}
+.mcard.add:hover{background:var(--paper-up);border-color:var(--petrol);color:var(--petrol)}
+.mtop{display:flex;gap:12px;align-items:center}
+.mname{font-family:var(--serif);font-size:16.5px;font-weight:600;background:none;border:0;border-bottom:1px dashed transparent;padding:1px 2px;width:100%;border-radius:3px}
+.mname:hover{border-bottom-color:var(--line)}
+.mname:focus{outline:0;border-bottom-color:var(--petrol);background:#fff}
+.mlabel{
+  font-size:11px;font-weight:600;background:var(--petrol-wash);color:var(--petrol);
+  border:1px dashed transparent;border-radius:99px;padding:2px 9px;max-width:100%;
+}
+.mlabel::placeholder{color:#9bb5b1;font-style:italic}
+.mlabel:hover{border-color:#b8d2ce}
+.mlabel:focus{outline:0;border-color:var(--petrol);background:#fff}
+.mstats{display:flex;gap:7px;font-size:11px}
+.mstat{flex:1;background:var(--paper-down);border-radius:var(--r-sm);padding:6px 8px;text-align:center}
+.mstat b{display:block;font-family:var(--serif);font-size:16px;font-weight:700}
+.mstat span{color:var(--ink-3);font-size:10px}
+.mfoot{display:flex;gap:6px;align-items:center;margin-top:auto;padding-top:10px;border-top:1px solid var(--line-soft)}
+
+/* ============================================================
+   PRODUCT GOAL
+   ============================================================ */
+.goalwrap{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start}
+.rte-bar{display:flex;gap:3px;flex-wrap:wrap;padding:7px;background:var(--paper-down);border:1px solid var(--line);border-bottom:0;border-radius:var(--r) var(--r) 0 0}
+.rte-bar button{
+  width:31px;height:29px;display:grid;place-items:center;border-radius:var(--r-sm);
+  background:var(--paper-up);border:1px solid var(--line);color:var(--ink-2);font-size:13px;font-weight:700
+}
+.rte-bar button:hover{background:#fff;color:var(--petrol);border-color:var(--petrol)}
+.rte-bar .sep{width:1px;background:var(--line);margin:2px 4px}
+.rte{
+  min-height:330px;background:var(--paper-up);border:1px solid var(--line);border-radius:0 0 var(--r) var(--r);
+  padding:20px 22px;font-size:15px;line-height:1.65;
+}
+.rte:focus{outline:2px solid var(--petrol);outline-offset:-1px}
+.rte:empty::before{content:attr(data-ph);color:var(--ink-3);font-style:italic}
+.rte h2{font-size:21px;margin:18px 0 7px}
+.rte h2:first-child{margin-top:0}
+.rte p{margin:0 0 11px}
+.rte ul,.rte ol{margin:0 0 11px;padding-left:22px}
+.rte li{margin-bottom:4px}
+.rte strong{font-weight:700}
+.imgs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ishell{position:relative;aspect-ratio:4/3;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--paper-down);box-shadow:var(--sh-1)}
+.ishell img{width:100%;height:100%;object-fit:cover}
+.ishell .x{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:99px;background:rgba(27,26,22,.72);color:#fff;border:0;display:grid;place-items:center}
+.ishell .x:hover{background:var(--st-block)}
+.iadd{
+  aspect-ratio:4/3;border:1px dashed var(--line);border-radius:var(--r);background:transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  color:var(--ink-3);font-size:11.5px;font-weight:600;text-align:center;padding:8px
+}
+.iadd:hover{border-color:var(--petrol);color:var(--petrol);background:var(--paper-up)}
+
+/* ============================================================
+   HISTORY
+   ============================================================ */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:15px}
+.tile{
+  position:relative;text-align:left;background:var(--paper-up);
+  border:1px solid var(--line);border-top:4px solid var(--st-done);
+  border-radius:var(--r-lg);padding:16px;box-shadow:var(--sh-1);
+  display:flex;flex-direction:column;gap:13px;transition:transform .14s, box-shadow .14s
+}
+.tile:hover{transform:translateY(-3px);box-shadow:var(--sh-2)}
+.tile.full{border-top-color:var(--st-done)}
+.tile.part{border-top-color:var(--st-check)}
+.tile.weak{border-top-color:var(--st-block)}
+.tile.live{border-top-color:var(--marker);background:linear-gradient(180deg,var(--marker-wash),var(--paper-up) 62px)}
+.tile-top{display:flex;align-items:flex-start;gap:12px}
+.tile .no{font-family:var(--serif);font-size:11px;font-weight:700;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3)}
+.tile .nm{font-family:var(--serif);font-size:18px;font-weight:600;margin:1px 0 3px}
+.tile .gl{font-size:12px;color:var(--ink-2);font-style:italic;line-height:1.4;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.tile .dt{font-size:11px;color:var(--ink-3);margin-top:5px}
+.ring{position:relative;width:54px;height:54px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring span{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--serif);font-size:13px;font-weight:700}
+.tile-foot{display:flex;gap:7px;flex-wrap:wrap;padding-top:11px;border-top:1px solid var(--line-soft);font-size:11px}
+
+/* ============================================================
+   SCRUM ERKLÄRT
+   ============================================================ */
+.ex-hero{
+  background:linear-gradient(135deg,#17302e,#1d5955 70%,#246b63);
+  color:#eef3f1;border-radius:var(--r-lg);padding:clamp(22px,3.4vw,40px);margin-bottom:20px;
+  position:relative;overflow:hidden
+}
+.ex-hero::before{
+  content:'';position:absolute;inset:0;opacity:.14;
+  background-image:radial-gradient(#fff 1.2px,transparent 1.2px);background-size:17px 17px
+}
+.ex-hero > *{position:relative}
+.ex-hero h2{font-size:clamp(25px,3.6vw,38px);color:#fff;max-width:22ch;line-height:1.1}
+.ex-hero p{font-size:14.5px;color:#cfe0dd;max-width:56ch;margin:11px 0 0}
+.cycle{display:flex;align-items:stretch;gap:0;margin:26px 0 0;flex-wrap:wrap}
+.cyc{
+  flex:1;min-width:132px;position:relative;background:rgba(0,0,0,.2);
+  border:1px solid rgba(127,168,162,.26);padding:14px 15px;
+}
+.cyc:first-child{border-radius:var(--r) 0 0 var(--r)}
+.cyc:last-child{border-radius:0 var(--r) var(--r) 0}
+.cyc + .cyc{border-left:0}
+.cyc .n{font-family:var(--serif);font-size:25px;font-weight:700;color:var(--marker);line-height:1}
+.cyc h4{font-size:14.5px;color:#fff;margin:5px 0 4px}
+.cyc p{font-size:11.5px;color:#a9c6c2;margin:0;line-height:1.45}
+.cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(262px,1fr));gap:15px}
+.excard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:19px;box-shadow:var(--sh-1)}
+.excard .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--petrol-wash);color:var(--petrol);margin-bottom:12px}
+.excard.alt .ic{background:var(--marker-wash);color:var(--marker)}
+.excard h3{font-size:17px;margin-bottom:7px}
+.excard p{font-size:13px;color:var(--ink-2);margin:0;line-height:1.55}
+.excard ul{font-size:13px;color:var(--ink-2);margin:9px 0 0;padding-left:19px;line-height:1.6}
+.spscale{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-top:4px}
+.spc{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:13px;text-align:center}
+.spc .v{font-family:var(--serif);font-size:30px;font-weight:700;color:var(--petrol);line-height:1}
+.spc .l{font-size:11.5px;font-weight:700;margin:4px 0 3px}
+.spc .d{font-size:10.5px;color:var(--ink-3);line-height:1.35}
+.spc.stop{background:#fdf3f1;border-color:#e6c8c3}
+.spc.stop .v{color:var(--st-block)}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+.scrim{
+  position:fixed;inset:0;z-index:100;background:rgba(19,27,26,.58);
+  backdrop-filter:blur(3px);display:grid;place-items:center;padding:16px;
+  animation:fade .18s ease
+}
+.scrim[hidden]{display:none}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.modal{
+  background:var(--paper);border-radius:var(--r-lg);width:100%;max-width:620px;
+  max-height:92vh;display:flex;flex-direction:column;overflow:hidden;
+  box-shadow:var(--sh-3);border:1px solid var(--line);animation:rise .22s cubic-bezier(.2,.8,.3,1)
+}
+.modal.wide{max-width:980px}
+.modal.mid{max-width:800px}
+.modal.narrow{max-width:430px}
+.m-h{display:flex;align-items:center;gap:12px;padding:15px 20px;background:linear-gradient(180deg,#17302e,#132826);color:#fff}
+.m-h.mark{background:linear-gradient(180deg,#c5551a,#ad4714)}
+.m-h .ttl{font-family:var(--serif);font-size:17.5px;font-weight:600;margin-right:auto}
+.m-h .sub{font-size:11.5px;color:#a9c6c2;margin-top:1px}
+.m-h.mark .sub{color:#fbdcc7}
+.m-x{width:32px;height:32px;border-radius:99px;background:rgba(255,255,255,.12);border:0;color:#fff;display:grid;place-items:center;flex:none}
+.m-x:hover{background:rgba(255,255,255,.26)}
+.m-b{padding:20px;overflow-y:auto;flex:1}
+.m-f{display:flex;align-items:center;gap:9px;padding:13px 20px;background:var(--paper-up);border-top:1px solid var(--line)}
+.m-f .sp{margin-left:auto;display:flex;gap:9px}
+
+.box{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:15px}
+.box.accent{border-left:4px solid var(--marker);background:var(--marker-wash)}
+.box.calm{border-left:4px solid var(--petrol);background:var(--petrol-wash)}
+.box .bt{font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin-bottom:9px;display:flex;align-items:center;gap:7px}
+.quote{font-family:var(--serif);font-size:15px;font-style:italic;line-height:1.55;border-left:3px solid var(--petrol);padding-left:13px;color:var(--ink-2)}
+.quote b{font-style:normal;color:var(--ink);font-weight:600}
+
+.dod{display:flex;flex-direction:column;gap:6px}
+.dodrow{display:flex;align-items:center;gap:10px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 11px}
+.dodrow input[type=checkbox]{width:19px;height:19px;accent-color:var(--st-done);flex:none;cursor:pointer}
+.dodrow label{flex:1;font-size:13px;cursor:pointer}
+.dodrow.ok label{text-decoration:line-through;color:var(--ink-3)}
+.dodrow .rm{background:none;border:0;color:var(--ink-3);padding:3px;border-radius:4px}
+.dodrow .rm:hover{color:var(--st-block);background:#fbe9e6}
+.inline-add{display:flex;gap:8px;margin-top:9px}
+
+/* transfer list (planning) */
+.xfer{display:grid;grid-template-columns:1fr 46px 1fr;gap:11px;align-items:stretch}
+.xcol{display:flex;flex-direction:column;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;min-height:250px}
+.xcol-h{padding:9px 11px;background:var(--paper-down);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.xcol-h .nm{font-size:10px;letter-spacing:.11em;text-transform:uppercase;font-weight:700;color:var(--ink-2)}
+.xcol-h .n{margin-left:auto;font-family:var(--serif);font-weight:700;font-size:12.5px;color:var(--ink-3)}
+.xcol.target{border-color:var(--marker);box-shadow:inset 0 0 0 1px var(--marker-wash)}
+.xcol.target .xcol-h{background:var(--marker-wash)}
+.xlist{flex:1;overflow-y:auto;max-height:290px;padding:8px;display:flex;flex-direction:column;gap:6px}
+.xrow{display:flex;align-items:center;gap:9px;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 9px;text-align:left;width:100%}
+.xrow:hover{border-color:var(--petrol);background:#fff}
+.xrow .k{font-size:10px;font-weight:700;color:var(--ink-3);flex:none}
+.xrow .t{flex:1;font-size:12.5px;font-weight:600;line-height:1.3}
+.xrow .p{font-family:var(--serif);font-weight:700;font-size:12px;color:var(--petrol);flex:none}
+.xmid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:var(--ink-3);font-size:10px;text-align:center}
+.capbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:13px;padding:11px 14px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r)}
+.capbar .big{font-family:var(--serif);font-size:25px;font-weight:700;color:var(--petrol);line-height:1}
+.capbar .hint{font-size:11.5px;color:var(--ink-3);line-height:1.4;max-width:40ch}
+
+/* review */
+.balance{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:10px;margin-bottom:17px}
+.bal{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:13px;text-align:center}
+.bal b{display:block;font-family:var(--serif);font-size:27px;font-weight:700;line-height:1.1}
+.bal span{font-size:10.5px;color:var(--ink-3);letter-spacing:.05em}
+.bal.good b{color:var(--st-done)}
+.bal.open b{color:var(--st-check)}
+.carry{display:flex;flex-direction:column;gap:7px}
+.crow{display:flex;align-items:center;gap:11px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);padding:9px 11px;flex-wrap:wrap}
+.crow .t{flex:1;min-width:140px;font-size:12.5px;font-weight:600}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r-sm);overflow:hidden;flex:none}
+.seg button{background:var(--paper);border:0;padding:5px 10px;font-size:11px;font-weight:600;color:var(--ink-2)}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--petrol);color:#fff}
+.retro{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.rt{border-radius:var(--r);padding:11px;border:1px solid var(--line);background:var(--paper-up)}
+.rt.g{border-top:3px solid var(--st-done)}
+.rt.b{border-top:3px solid var(--st-block)}
+.rt.n{border-top:3px solid var(--petrol)}
+.rt .h{font-size:11px;font-weight:700;margin-bottom:7px;display:flex;align-items:center;gap:6px}
+.rt textarea{min-height:92px;resize:vertical;font-size:12.5px}
+
+/* standup */
+.clock{
+  width:170px;height:170px;border-radius:99px;margin:0 auto;display:grid;place-items:center;
+  background:conic-gradient(var(--marker) var(--p,0%), var(--paper-down) 0);
+  position:relative
+}
+.clock::before{content:'';position:absolute;inset:11px;border-radius:99px;background:var(--paper-up);box-shadow:inset 0 2px 7px rgba(27,26,22,.1)}
+.clock .t{position:relative;font-family:var(--serif);font-size:40px;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.clock .l{position:relative;font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;color:var(--ink-3);font-weight:700;margin-top:-3px}
+.turns{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:17px 0}
+.turn{display:flex;align-items:center;gap:7px;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:4px 12px 4px 5px;font-size:12.5px;font-weight:600}
+.turn[aria-pressed="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff;box-shadow:var(--sh-2)}
+.turn.spoke{opacity:.5}
+.turn.spoke::after{content:'✓';color:var(--st-done);font-weight:700}
+.turn[aria-pressed="true"].spoke::after{color:#9ae0b6}
+.q3{text-align:left;display:flex;flex-direction:column;gap:7px}
+.q3 div{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--ink-2)}
+.q3 b{font-family:var(--serif);color:var(--marker);font-size:15px;line-height:1.3;flex:none}
+
+/* archive read-only */
+.ro-note{display:flex;align-items:center;gap:9px;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12px;color:var(--petrol);font-weight:600;margin-bottom:15px}
+
+/* menu */
+.menu{position:relative}
+.menu-pop{
+  position:absolute;right:0;top:calc(100% + 7px);z-index:70;min-width:216px;
+  background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--sh-3);padding:5px;animation:rise .14s ease
+}
+.menu-pop[hidden]{display:none}
+.menu-pop button{
+  display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;
+  padding:9px 11px;border-radius:var(--r-sm);font-size:13px;font-weight:600;text-align:left;color:var(--ink)
+}
+.menu-pop button:hover{background:var(--petrol-wash);color:var(--petrol)}
+.menu-pop button.dgr:hover{background:#fbe9e6;color:var(--st-block)}
+.menu-pop hr{border:0;border-top:1px solid var(--line-soft);margin:5px 3px}
+
+/* toast */
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(90px);
+  background:#17302e;color:#eef3f1;padding:11px 19px;border-radius:99px;
+  font-size:13px;font-weight:600;box-shadow:var(--sh-3);z-index:300;
+  transition:transform .28s cubic-bezier(.2,.9,.3,1);display:flex;align-items:center;gap:9px
+}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* empty state big */
+.nothing{text-align:center;padding:clamp(34px,6vw,72px) 20px;border:1px dashed var(--line);border-radius:var(--r-lg);background:var(--paper-up)}
+.nothing .ic{width:54px;height:54px;border-radius:15px;background:var(--petrol-wash);color:var(--petrol);display:grid;place-items:center;margin:0 auto 15px}
+.nothing h3{font-size:21px;margin-bottom:7px}
+.nothing p{font-size:13.5px;color:var(--ink-3);max-width:44ch;margin:0 auto 18px;line-height:1.55}
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){
+  .board{grid-template-columns:repeat(5,minmax(214px,1fr))}
+  .goalwrap{grid-template-columns:1fr}
+  .imgs{grid-template-columns:repeat(4,1fr)}
+}
+@media (max-width:880px){
+  .resp-band{grid-template-columns:1fr}
+  .retro{grid-template-columns:1fr}
+  .grid3{grid-template-columns:1fr}
+  .xfer{grid-template-columns:1fr}
+  .xmid{flex-direction:row;padding:4px 0}
+  .cyc{border-radius:var(--r)!important;border-left:1px solid rgba(127,168,162,.26)!important}
+}
+@media (max-width:640px){
+  .grid2{grid-template-columns:1fr}
+  .imgs{grid-template-columns:1fr 1fr}
+  .tabbar{top:56px}
+  .brand-name{max-width:60vw}
+  .goalbar .meta{width:100%}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media print{body::after,header.top,.tabbar,.m-f,.pi-nav{display:none!important}}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ HEADER ══════════════════════════ -->
+<header class="top">
+  <div class="wrap top-row">
+    <div class="brand">
+      <div class="brand-mark">S</div>
+      <div class="brand-txt">
+        <div class="brand-eyebrow">Scrum Werkstatt</div>
+        <input class="brand-name" id="productName" value="Projekt" aria-label="Projektname">
+      </div>
+    </div>
+
+    <div class="sprint-pill" id="sprintPill"></div>
+
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn onDark" id="btnDaily">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
+        <span>Daily</span>
+      </button>
+      <button class="btn mark" id="btnSprintAction">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
+        <span id="btnSprintActionTxt">Sprint planen</span>
+      </button>
+      <div class="menu">
+        <button class="btn onDark icon" id="btnMenu" aria-label="Mehr">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        </button>
+        <div class="menu-pop" id="menuPop" hidden>
+          <button id="miExport">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3v12m0 0l-4-4m4 4l4-4M4 19h16"/></svg>
+            Projekt exportieren (.json)
+          </button>
+          <button id="miImport">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 15V3m0 0L8 7m4-4l4 4M4 19h16"/></svg>
+            Projekt importieren
+          </button>
+          <button id="miPrint">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg>
+            Board drucken
+          </button>
+          <hr>
+          <button class="dgr" id="miReset">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/></svg>
+            Alles zurücksetzen
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════ TABS ══════════════════════════ -->
+<nav class="tabbar">
+  <div class="wrap tabs" role="tablist">
+    <button class="tab" role="tab" data-view="sprint" aria-selected="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/></svg>
+      Aktueller Sprint
+    </button>
+    <button class="tab" role="tab" data-view="backlog" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M8 6h13M8 12h13M8 18h13M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg>
+      Product Backlog <span class="cnt" id="cntBacklog">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="goal" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
+      Product Goal
+    </button>
+    <button class="tab" role="tab" data-view="team" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg>
+      Team <span class="cnt" id="cntTeam">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="history" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/><path d="M12 8v4.5l3 1.8"/></svg>
+      Sprint-Historie <span class="cnt" id="cntHistory">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="learn" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 16.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
+      Scrum erklärt
+    </button>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <!-- ══════════ VIEW: AKTUELLER SPRINT ══════════ -->
+  <section class="view" id="view-sprint">
+    <div id="sprintEmpty" hidden>
+      <div class="nothing">
+        <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg></div>
+        <h3>Noch kein Sprint gestartet</h3>
+        <p>Legt gemeinsam fest, woran ihr in den nächsten Wochen arbeitet: Zeitraum wählen, Sprint-Ziel formulieren und Stories aus dem Product Backlog herüberziehen.</p>
+        <button class="btn mark" id="btnPlanFromEmpty">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Ersten Sprint planen
+        </button>
+      </div>
+    </div>
+
+    <div id="sprintLive" hidden>
+      <div class="goalbar">
+        <div>
+          <div class="k">Sprint-Ziel</div>
+          <div class="v" id="liveGoal">—</div>
+        </div>
+        <div class="meta" id="liveStats"></div>
+      </div>
+      <div class="board" id="board"></div>
+    </div>
+  </section>
+
+  <!-- ══════════ VIEW: PRODUCT BACKLOG ══════════ -->
+  <section class="view" id="view-backlog" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Alles, was zum Produkt gehört</div>
+        <h2 class="t">Product Backlog</h2>
+        <p class="s">Die vollständige Liste aller User Stories – auch die aus abgeschlossenen Sprints. Oben steht, was als Nächstes dran ist: Der Product Owner priorisiert.</p>
+      </div>
+      <div class="sp">
+        <button class="btn primary" id="btnNewStory">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Neue Story
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+        <input type="text" id="fSearch" placeholder="Story oder ID suchen …">
+      </div>
+      <select class="auto" id="fSprint"><option value="all">Alle Sprints</option></select>
+      <select class="auto" id="fStatus">
+        <option value="all">Alle Status</option>
+        <option value="todo">Zu tun</option>
+        <option value="doing">In Arbeit</option>
+        <option value="check">Prüfen</option>
+        <option value="done">Fertig</option>
+        <option value="blocked">Blockiert</option>
+      </select>
+      <select class="auto" id="fWho"><option value="all">Alle Zuständigen</option></select>
+      <div style="margin-left:auto;display:flex;gap:9px;align-items:center" id="backlogSums"></div>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr>
+          <th style="width:76px">Prio</th>
+          <th style="width:58px">ID</th>
+          <th>User Story</th>
+          <th style="width:118px">Kategorie</th>
+          <th style="width:56px">SP</th>
+          <th style="width:130px">Zuständig</th>
+          <th style="width:120px">Sprint</th>
+          <th style="width:114px">Status</th>
+          <th style="width:52px"></th>
+        </tr></thead>
+        <tbody id="backlogBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════ VIEW: PRODUCT GOAL ══════════ -->
+  <section class="view" id="view-goal" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Warum machen wir das?</div>
+        <h2 class="t">Product Goal</h2>
+        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll – und für wen. Dieses Ziel ist euer Kompass: Jede User Story im Backlog muss darauf einzahlen.</p>
+      </div>
+      <div class="sp"><span class="stat" id="goalSaved">gespeichert</span></div>
+    </div>
+
+    <div class="goalwrap">
+      <div>
+        <div class="rte-bar">
+          <button data-cmd="bold" title="Fett" style="font-family:var(--serif)">B</button>
+          <button data-cmd="italic" title="Kursiv" style="font-family:var(--serif);font-style:italic">I</button>
+          <button data-cmd="underline" title="Unterstrichen" style="text-decoration:underline">U</button>
+          <div class="sep"></div>
+          <button data-cmd="formatBlock" data-val="h2" title="Überschrift">H</button>
+          <button data-cmd="formatBlock" data-val="p" title="Absatz">¶</button>
+          <div class="sep"></div>
+          <button data-cmd="insertUnorderedList" title="Liste">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+          </button>
+          <button data-cmd="insertOrderedList" title="Nummerierte Liste">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 6h11M10 12h11M10 18h11M3 5l1.5-.5V9M3 17.5h2.5L3 14.5h2.5"/></svg>
+          </button>
+          <div class="sep"></div>
+          <button data-cmd="removeFormat" title="Formatierung entfernen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 5h12M9 5l-2 14M15 5l1 7M14 17l6 4M20 17l-6 4"/></svg>
+          </button>
+        </div>
+        <div class="rte" id="goalRte" contenteditable="true" data-ph="Als Team wollen wir … damit …"></div>
+      </div>
+
+      <div class="panel pad">
+        <div class="box-head" style="margin-bottom:12px">
+          <div class="eyebrow">Visualisierung</div>
+          <h3 style="font-size:17px;margin-top:3px">Bilder & Skizzen</h3>
+          <p style="font-size:12.5px;color:var(--ink-3);margin:5px 0 0;line-height:1.5">
+            Bis zu <b>5 Bilder</b>: Handskizze, Mockup, Foto vom Versuchsaufbau. Bilder werden automatisch verkleinert.
+          </p>
+        </div>
+        <div class="imgs" id="goalImgs"></div>
+        <input type="file" id="goalImgInput" accept="image/*" multiple hidden>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ VIEW: TEAM ══════════ -->
+  <section class="view" id="view-team" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Wer macht was?</div>
+        <h2 class="t">Unser Scrum Team</h2>
+        <p class="s">Product Owner und Scrum Master übernehmen Zusatzverantwortung – inhaltlich arbeiten <b>alle</b> mit. Das eigene Label ist frei wählbar: Designerin, Tester, Recherche …</p>
+      </div>
+    </div>
+
+    <div class="resp-band" id="respBand"></div>
+
+    <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:13px">
+      <h3 style="font-size:19px">Development Team</h3>
+      <span style="font-size:12.5px;color:var(--ink-3)">Alle, die das Produkt bauen – inklusive PO und SM.</span>
+    </div>
+    <div class="teamgrid" id="teamGrid"></div>
+  </section>
+
+  <!-- ══════════ VIEW: HISTORIE ══════════ -->
+  <section class="view" id="view-history" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Was haben wir geschafft?</div>
+        <h2 class="t">Sprint-Historie</h2>
+        <p class="s">Jeder abgeschlossene Sprint bleibt als Archiv erhalten – unveränderbar. Die Randfarbe zeigt, wie viel vom Sprint-Backlog fertig geworden ist.</p>
+      </div>
+      <div class="sp" id="velocityBox"></div>
+    </div>
+    <div class="tiles" id="historyTiles"></div>
+  </section>
+
+  <!-- ══════════ VIEW: SCRUM ERKLÄRT ══════════ -->
+  <section class="view" id="view-learn" hidden>
+    <div class="ex-hero">
+      <div class="eyebrow" style="color:#ffc78a">Der Spickzettel</div>
+      <h2>Scrum in sechs Begriffen.</h2>
+      <p>Scrum teilt ein großes Vorhaben in kurze, gleich lange Abschnitte – die <b>Sprints</b>. Nach jedem Sprint liegt etwas Fertiges auf dem Tisch, und ihr entscheidet neu, was als Nächstes wichtig ist.</p>
+      <div class="cycle">
+        <div class="cyc"><div class="n">1</div><h4>Planung</h4><p>Was nehmen wir uns für diesen Sprint vor? Zeitraum und Sprint-Ziel festlegen.</p></div>
+        <div class="cyc"><div class="n">2</div><h4>Arbeiten</h4><p>Jeden Tag kurz abstimmen (Daily), Karten über das Board schieben.</p></div>
+        <div class="cyc"><div class="n">3</div><h4>Review</h4><p>Ergebnis zeigen, Feedback einsammeln. Was ist wirklich fertig?</p></div>
+        <div class="cyc"><div class="n">4</div><h4>Retro</h4><p>Wie war die Zusammenarbeit? Eine Sache, die wir nächstes Mal besser machen.</p></div>
+      </div>
+    </div>
+
+    <div class="cards3" style="margin-bottom:17px">
+      <div class="excard">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></div>
+        <h3>Product Owner</h3>
+        <p>Hält das Produktziel im Blick und <b>priorisiert</b> das Product Backlog. Entscheidet, <em>was</em> als Nächstes gebaut wird – nicht, wie.</p>
+      </div>
+      <div class="excard alt">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 3l2.4 5.2 5.6.7-4.1 3.9 1 5.6-4.9-2.7-4.9 2.7 1-5.6L4 8.9l5.6-.7z"/></svg></div>
+        <h3>Scrum Master</h3>
+        <p>Sorgt dafür, dass das Team arbeiten kann: moderiert das Daily, räumt <b>Blockaden</b> aus dem Weg, achtet auf die Spielregeln.</p>
+      </div>
+      <div class="excard">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg></div>
+        <h3>Development Team</h3>
+        <p>Baut das Produkt und schätzt den Aufwand selbst. Organisiert sich <b>eigenständig</b> – niemand verteilt Aufgaben von oben.</p>
+      </div>
+    </div>
+
+    <div class="cards3" style="margin-bottom:17px">
+      <div class="excard">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+        <h3>User Story</h3>
+        <p>Eine Aufgabe aus Sicht der Nutzenden – immer nach dieser Formel:</p>
+        <div class="quote" style="margin-top:11px;font-size:13.5px">
+          Als <b>⟨Rolle⟩</b> möchte ich <b>⟨Ziel⟩</b>, damit <b>⟨Nutzen⟩</b>.
+        </div>
+      </div>
+      <div class="excard alt">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 12.5l4.5 4.5L20 5.5"/><path d="M4 19h9"/></svg></div>
+        <h3>Definition of Done</h3>
+        <p>Die Qualitätsregeln, die für <b>jede</b> Karte gelten. Erst wenn alle Häkchen gesetzt sind, darf eine Story nach „Fertig“.</p>
+        <ul>
+          <li>Inhaltlich geprüft</li>
+          <li>Quellen angegeben</li>
+          <li>Von einer zweiten Person gegengelesen</li>
+        </ul>
+      </div>
+      <div class="excard">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 17l5-5 4 3 5-7 4 4"/><path d="M3 21h18"/></svg></div>
+        <h3>Velocity</h3>
+        <p>Die Summe der Story Points, die ihr in einem Sprint wirklich fertig bekommt. Nach zwei bis drei Sprints wisst ihr, wie viel realistisch ist – <b>das macht Planung ehrlich.</b></p>
+      </div>
+    </div>
+
+    <div class="panel pad">
+      <div class="eyebrow">Relative Schätzung</div>
+      <h3 style="font-size:19px;margin:3px 0 4px">Story Points statt Stunden</h3>
+      <p style="font-size:13px;color:var(--ink-2);max-width:70ch;margin:0 0 15px;line-height:1.55">
+        Ihr schätzt nicht in Minuten, sondern im Vergleich: Ist diese Karte doppelt so aufwendig wie jene? Die Fibonacci-Reihe erzwingt klare Entscheidungen.
+      </p>
+      <div class="spscale">
+        <div class="spc"><div class="v">1</div><div class="l">Winzig</div><div class="d">Quelle suchen, Tippfehler</div></div>
+        <div class="spc"><div class="v">2</div><div class="l">Klein</div><div class="d">Diagramm zeichnen, Formel herleiten</div></div>
+        <div class="spc"><div class="v">3</div><div class="l">Mittel</div><div class="d">Unterkapitel schreiben, Modul bauen</div></div>
+        <div class="spc"><div class="v">5</div><div class="l">Groß</div><div class="d">Versuch aufbauen & Messreihe</div></div>
+        <div class="spc stop"><div class="v">8</div><div class="l">Zu groß!</div><div class="d">In kleinere Stories aufteilen</div></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ══════════════════════════ MODALS ══════════════════════════ -->
+
+<!-- Story-Detail -->
+<div class="scrim" id="mStory" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="m-h">
+      <div>
+        <div class="ttl" id="stTitle">Story</div>
+        <div class="sub" id="stSub"></div>
+      </div>
+      <button class="m-x" data-close="mStory" aria-label="Schließen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b" id="stBody"></div>
+    <div class="m-f">
+      <button class="btn danger" id="stDelete">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>
+        Löschen
+      </button>
+      <div class="sp">
+        <button class="btn primary" data-close="mStory">Fertig</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Story anlegen / bearbeiten -->
+<div class="scrim" id="mEdit" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="m-h">
+      <div>
+        <div class="ttl" id="edTitle">Neue User Story</div>
+        <div class="sub">Was soll entstehen – und warum?</div>
+      </div>
+      <button class="m-x" data-close="mEdit" aria-label="Schließen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b">
+      <div class="field">
+        <label class="fl" for="edT">Kurztitel für das Post-it *</label>
+        <input type="text" id="edT" placeholder="z. B. Messreihe zur Solarzelle durchführen">
+      </div>
+
+      <div class="box calm">
+        <div class="bt">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 1 3.5 10.9V16h-7v-2.1A6 6 0 0 1 12 3z"/></svg>
+          Die User-Story-Formel
+        </div>
+        <div class="field"><label class="fl" for="edR">Als … (Rolle)</label><input type="text" id="edR" placeholder="Leserin der Facharbeit"></div>
+        <div class="field"><label class="fl" for="edW">möchte ich … (Ziel)</label><input type="text" id="edW" placeholder="ein übersichtliches Diagramm sehen"></div>
+        <div class="field" style="margin-bottom:0"><label class="fl" for="edS">damit … (Nutzen)</label><input type="text" id="edS" placeholder="ich die Messergebnisse sofort verstehe"></div>
+      </div>
+
+      <div class="grid3">
+        <div class="field">
+          <label class="fl" for="edP">Story Points</label>
+          <select id="edP">
+            <option value="1">1 – winzig</option>
+            <option value="2" selected>2 – klein</option>
+            <option value="3">3 – mittel</option>
+            <option value="5">5 – groß</option>
+            <option value="8">8 – zu groß!</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="fl" for="edC">Kategorie</label>
+          <select id="edC">
+            <option>Recherche</option><option>Text</option><option>Praxis / MINT</option>
+            <option>Design</option><option>Präsentation</option><option>Organisation</option>
+          </select>
+        </div>
+        <div class="field">
+          <label class="fl" for="edCol">Zettelfarbe</label>
+          <select id="edCol">
+            <option value="yellow">Gelb</option><option value="blue">Blau</option>
+            <option value="green">Grün</option><option value="pink">Rosa</option><option value="lilac">Lila</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="field"><label class="fl" for="edA">Zuständig</label><select id="edA"></select></div>
+        <div class="field"><label class="fl" for="edSp">Sprint</label><select id="edSp"></select></div>
+      </div>
+    </div>
+    <div class="m-f">
+      <button class="btn" data-close="mEdit">Abbrechen</button>
+      <div class="sp"><button class="btn primary" id="edSave">Story speichern</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Sprint-Planung -->
+<div class="scrim" id="mPlan" hidden>
+  <div class="modal wide" role="dialog" aria-modal="true">
+    <div class="m-h mark">
+      <div>
+        <div class="ttl" id="planTitle">Sprint planen</div>
+        <div class="sub">Gemeinsam als Team: Zeitraum, Ziel und Umfang festlegen.</div>
+      </div>
+      <button class="m-x" data-close="mPlan" aria-label="Schließen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b">
+      <div class="box accent">
+        <div class="grid3">
+          <div class="field" style="margin-bottom:0"><label class="fl" for="plName">Sprint</label><input type="text" id="plName" placeholder="Sprint 3"></div>
+          <div class="field" style="margin-bottom:0"><label class="fl" for="plStart">Start</label><input type="date" id="plStart"></div>
+          <div class="field" style="margin-bottom:0"><label class="fl" for="plEnd">Ende</label><input type="date" id="plEnd"></div>
+        </div>
+        <div class="field" style="margin:12px 0 0">
+          <label class="fl" for="plGoal">Sprint-Ziel – was zeigt ihr im Review?</label>
+          <input type="text" id="plGoal" placeholder="z. B. Messergebnisse ausgewertet und Kapitel 3 im Rohtext fertig">
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;flex-wrap:wrap">
+        <h4 style="font-size:15px">Sprint Backlog füllen</h4>
+        <span style="font-size:12px;color:var(--ink-3)">Antippen verschiebt die Story.</span>
+        <button class="btn sm" id="plNewStory" style="margin-left:auto">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Story hier anlegen
+        </button>
+      </div>
+
+      <div class="xfer">
+        <div class="xcol">
+          <div class="xcol-h">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            <span class="nm">Product Backlog</span><span class="n" id="plLeftN">0</span>
+          </div>
+          <div class="xlist" id="plLeft"></div>
+        </div>
+        <div class="xmid">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <span>rein /<br>raus</span>
+        </div>
+        <div class="xcol target">
+          <div class="xcol-h">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18"/></svg>
+            <span class="nm">Sprint Backlog</span><span class="n" id="plRightN">0</span>
+          </div>
+          <div class="xlist" id="plRight"></div>
+        </div>
+      </div>
+
+      <div class="capbar">
+        <div><div class="big" id="plSum">0</div><div style="font-size:10px;letter-spacing:.11em;text-transform:uppercase;color:var(--ink-3);font-weight:700">Story Points</div></div>
+        <div class="hint" id="plHint"></div>
+      </div>
+    </div>
+    <div class="m-f">
+      <button class="btn" data-close="mPlan">Abbrechen</button>
+      <div class="sp"><button class="btn mark" id="plStart2">Sprint starten</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Sprint Review -->
+<div class="scrim" id="mReview" hidden>
+  <div class="modal mid" role="dialog" aria-modal="true">
+    <div class="m-h">
+      <div>
+        <div class="ttl" id="rvTitle">Sprint Review & Retrospektive</div>
+        <div class="sub">Ergebnis zeigen, Feedback festhalten, besser werden.</div>
+      </div>
+      <button class="m-x" data-close="mReview" aria-label="Schließen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b">
+      <div class="eyebrow">1 · Bilanz</div>
+      <h4 style="font-size:16px;margin:3px 0 11px">Was ist wirklich fertig geworden?</h4>
+      <div class="balance" id="rvBalance"></div>
+
+      <div id="rvCarryWrap">
+        <div class="eyebrow">2 · Reste</div>
+        <h4 style="font-size:16px;margin:3px 0 5px">Was passiert mit dem Unfertigen?</h4>
+        <p style="font-size:12.5px;color:var(--ink-3);margin:0 0 11px">Nicht fertige Stories wandern zurück ins Product Backlog – oder direkt in den nächsten Sprint.</p>
+        <div class="carry" id="rvCarry"></div>
+      </div>
+
+      <div class="eyebrow" style="margin-top:19px">3 · Review</div>
+      <h4 style="font-size:16px;margin:3px 0 11px">Feedback von außen</h4>
+      <div class="grid2">
+        <div class="field"><label class="fl" for="rvShown">Das haben wir gezeigt</label><textarea id="rvShown" rows="3" placeholder="Prototyp, Kapitel, Diagramme …"></textarea></div>
+        <div class="field"><label class="fl" for="rvFeed">Rückmeldung (Lehrkraft, Kurs)</label><textarea id="rvFeed" rows="3" placeholder="Was kam gut an? Was fehlt noch?"></textarea></div>
+      </div>
+
+      <div class="eyebrow" style="margin-top:7px">4 · Retrospektive</div>
+      <h4 style="font-size:16px;margin:3px 0 11px">Wie war die Zusammenarbeit?</h4>
+      <div class="retro">
+        <div class="rt g"><div class="h">👍 Lief gut</div><textarea id="rvGood" placeholder="Das behalten wir bei …"></textarea></div>
+        <div class="rt b"><div class="h">👎 Lief schlecht</div><textarea id="rvBad" placeholder="Das hat gebremst …"></textarea></div>
+        <div class="rt n"><div class="h">🎯 Nehmen wir uns vor</div><textarea id="rvNext" placeholder="Eine konkrete Sache …"></textarea></div>
+      </div>
+    </div>
+    <div class="m-f">
+      <button class="btn" data-close="mReview">Später</button>
+      <div class="sp">
+        <button class="btn primary" id="rvFinish">
+          Sprint abschließen & archivieren
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Archiv (read-only) -->
+<div class="scrim" id="mArchive" hidden>
+  <div class="modal mid" role="dialog" aria-modal="true">
+    <div class="m-h">
+      <div>
+        <div class="ttl" id="arTitle">Sprint</div>
+        <div class="sub" id="arSub"></div>
+      </div>
+      <button class="m-x" data-close="mArchive" aria-label="Schließen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b" id="arBody"></div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mArchive">Schließen</button></div></div>
+  </div>
+</div>
+
+<!-- Daily Standup -->
+<div class="scrim" id="mDaily" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h">
+      <div>
+        <div class="ttl">Daily Standup</div>
+        <div class="sub">Im Stehen. Fünf Minuten. Reihum.</div>
+      </div>
+      <button class="m-x" data-close="mDaily" aria-label="Schließen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b" style="text-align:center">
+      <div class="clock" id="clock"><div class="t" id="clockT">05:00</div><div class="l">Blitz-Meeting</div></div>
+      <div class="turns" id="turns"></div>
+      <div class="box" style="margin-bottom:0">
+        <div class="q3">
+          <div><b>1</b><span>Was habe ich seit dem letzten Mal geschafft?</span></div>
+          <div><b>2</b><span>Was nehme ich mir für heute vor?</span></div>
+          <div><b>3</b><span>Wo komme ich nicht weiter?</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="m-f">
+      <button class="btn" id="dlReset">Zurücksetzen</button>
+      <div class="sp"><button class="btn mark" id="dlToggle" style="min-width:118px;justify-content:center">Starten</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bestätigung -->
+<div class="scrim" id="mConfirm" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h"><div class="ttl" id="cfTitle">Sicher?</div></div>
+    <div class="m-b"><p id="cfText" style="margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-2)"></p></div>
+    <div class="m-f">
+      <button class="btn" data-close="mConfirm">Abbrechen</button>
+      <div class="sp"><button class="btn danger" id="cfOk">Ja, machen</button></div>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="importFile" accept=".json,application/json" hidden>
+<div class="toast" id="toast"><span id="toastT"></span></div>
+
+<script>
+'use strict';
+/* ════════════════════════════════════════════════════════════
+   SCRUM WERKSTATT — Prototyp (Einzelgerät, localStorage)
+   ════════════════════════════════════════════════════════════ */
+
+const KEY = 'scrum_werkstatt_v1';
+
+const COLS = [
+  { k:'todo',    nm:'Sprint Backlog', c:'var(--st-todo)',  hint:'Geplant, aber noch nicht angefangen.' },
+  { k:'doing',   nm:'In Arbeit',      c:'var(--st-doing)', hint:'Legt die Karte in euren eigenen Bereich.' },
+  { k:'blocked', nm:'Blockiert',      c:'var(--st-block)', hint:'Hier hilft der Scrum Master weiter.' },
+  { k:'check',   nm:'Prüfen',         c:'var(--st-check)', hint:'Zweite Person liest gegen.' },
+  { k:'done',    nm:'Fertig',         c:'var(--st-done)',  hint:'Alle DoD-Häkchen gesetzt.' }
+];
+const FLOW = ['todo','doing','check','done'];
+const STL  = { todo:'Zu tun', doing:'In Arbeit', check:'Prüfen', done:'Fertig' };
+const STC  = { todo:'bg-todo', doing:'bg-doing', check:'bg-check', done:'bg-done' };
+const AVC  = ['#1d5955','#ca5a1c','#2b6694','#7a3f6d','#2d7a4d','#8a5a1a','#53407e','#a0442f'];
+
+let S = null;              // state
+let view = 'sprint';
+let openStory = null;      // internal id
+let editingStory = null;
+let planPick = new Set();
+let planReturn = false;
+let carryPlan = {};        // storyId -> 'backlog' | 'next'
+let archiveSprint = null;
+let confirmCb = null;
+
+/* ── helpers ─────────────────────────────────────────── */
+const $  = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const pad = n => String(n).padStart(2,'0');
+const sum = (a,f) => a.reduce((t,x)=>t+(+f(x)||0),0);
+
+function hash(s){ let h=0; for(let i=0;i<s.length;i++) h=(h*31+s.charCodeAt(i))|0; return Math.abs(h); }
+function today(){ const d=new Date(); d.setHours(12,0,0,0); return d; }
+function iso(d){ return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+function shift(days){ const d=today(); d.setDate(d.getDate()+days); return d; }
+function parseD(s){ if(!s) return null; const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d,12); }
+function deDate(s){ const d=parseD(s); return d ? `${pad(d.getDate())}.${pad(d.getMonth()+1)}.` : '—'; }
+function deDateY(s){ const d=parseD(s); return d ? `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}` : '—'; }
+function dayDiff(a,b){ return Math.round((parseD(b)-parseD(a))/864e5); }
+
+function toast(msg){
+  const t=$('#toast'); $('#toastT').textContent=msg;
+  t.classList.add('show'); clearTimeout(toast._t);
+  toast._t=setTimeout(()=>t.classList.remove('show'),2600);
+}
+function ask(title,text,cb){
+  $('#cfTitle').textContent=title; $('#cfText').textContent=text;
+  confirmCb=cb; show('mConfirm');
+}
+function show(id){ $('#'+id).hidden=false; }
+function hide(id){ $('#'+id).hidden=true; }
+
+/* ── state ───────────────────────────────────────────── */
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){ toast('⚠ Speicher voll – evtl. zu viele Bilder im Product Goal'); }
+}
+function load(){
+  try { const raw=localStorage.getItem(KEY); if(raw) return JSON.parse(raw); } catch(e){}
+  return null;
+}
+
+function seed(){
+  const T=[
+    { id:'m1', name:'Max',    role:'po',  label:'Struktur & Text',  avatar:null },
+    { id:'m2', name:'Sophie', role:'sm',  label:'Moderation',       avatar:null },
+    { id:'m3', name:'Leon',   role:'dev', label:'Technik & Messung',avatar:null },
+    { id:'m4', name:'Mia',    role:'dev', label:'Design',           avatar:null }
+  ];
+  const s1={ id:'s1', no:1, name:'Sprint 1', goal:'Gliederung steht und der Versuchsaufbau funktioniert.',
+    start:iso(shift(-28)), end:iso(shift(-15)), status:'closed', closedAt:iso(shift(-15)),
+    plannedPoints:11, donePoints:11,
+    review:{ shown:'Gliederung, erste Messwerte, Foto vom Aufbau.', feedback:'Gliederung überzeugt. Fehlerrechnung noch ergänzen.',
+             good:'Aufgaben waren klar verteilt.', bad:'Zu spät mit der Literatur angefangen.', next:'Quellen direkt beim Lesen notieren.' },
+    snapshot:[
+      { key:'US-01', title:'Inhaltsverzeichnis & Leitfragen formulieren', points:2, category:'Text',        status:'done', who:'Max',    blocked:false },
+      { key:'US-02', title:'Literaturrecherche: 5 Fachquellen sichern',   points:3, category:'Recherche',   status:'done', who:'Sophie', blocked:false },
+      { key:'US-03', title:'Versuchsaufbau Solarzelle montieren',         points:5, category:'Praxis / MINT',status:'done', who:'Leon',   blocked:false },
+      { key:'US-04', title:'Deckblatt & Layoutvorlage anlegen',           points:1, category:'Design',      status:'done', who:'Mia',    blocked:false }
+    ]
+  };
+  const s2={ id:'s2', no:2, name:'Sprint 2', goal:'Messreihe ausgewertet und Kapitel 3 im Rohtext fertig.',
+    start:iso(shift(-4)), end:iso(shift(10)), status:'active', review:null, snapshot:null };
+
+  const st=(n,o)=>Object.assign({
+    id:'u'+n, key:'US-'+pad(n), asA:'', want:'', soThat:'', points:2, category:'Text', color:'yellow',
+    assignee:null, sprint:null, status:'todo', blocked:false, note:'', dod:[], order:n
+  },o);
+
+  const stories=[
+    st(1,{ title:'Inhaltsverzeichnis & Leitfragen formulieren', asA:'Leserin der Facharbeit', want:'eine klare Kapiteleinteilung sehen', soThat:'ich das Thema sofort einordnen kann',
+      points:2, category:'Text', assignee:'m1', sprint:'s1', status:'done',
+      dod:[{text:'Mit der Lehrkraft abgestimmt',done:true},{text:'In der Layoutvorlage formatiert',done:true}] }),
+    st(2,{ title:'Literaturrecherche: 5 Fachquellen sichern', asA:'Korrektor', want:'belastbare Quellen vorfinden', soThat:'die Argumentation trägt',
+      points:3, category:'Recherche', color:'blue', assignee:'m2', sprint:'s1', status:'done',
+      dod:[{text:'Mindestens 5 Fachquellen',done:true},{text:'Zugriffsdatum notiert',done:true}] }),
+    st(3,{ title:'Versuchsaufbau Solarzelle montieren', asA:'MINT-Gruppe', want:'einen stabilen Messaufbau haben', soThat:'die Messwerte vergleichbar sind',
+      points:5, category:'Praxis / MINT', color:'green', assignee:'m3', sprint:'s1', status:'done',
+      dod:[{text:'Aufbau fotografiert',done:true},{text:'Messgeräte kalibriert',done:true}] }),
+    st(4,{ title:'Deckblatt & Layoutvorlage anlegen', asA:'Leser', want:'ein einheitliches Schriftbild sehen', soThat:'die Arbeit professionell wirkt',
+      points:1, category:'Design', color:'pink', assignee:'m4', sprint:'s1', status:'done',
+      dod:[{text:'Vorlage im Teamordner',done:true}] }),
+
+    st(5,{ title:'Messreihe bei 5 Lichtwinkeln durchführen', asA:'MINT-Gruppe', want:'Spannungswerte bei verschiedenen Winkeln messen', soThat:'wir die Abhängigkeit zeigen können',
+      points:5, category:'Praxis / MINT', color:'green', assignee:'m3', sprint:'s2', status:'doing',
+      dod:[{text:'Je Winkel 3 Messungen',done:true},{text:'Werte in Tabelle übertragen',done:false},{text:'Fehlerrechnung durchgeführt',done:false}] }),
+    st(6,{ title:'Diagramm Spannung–Winkel erstellen', asA:'Leserin', want:'den Zusammenhang auf einen Blick erkennen', soThat:'ich die Auswertung ohne Rechnen verstehe',
+      points:3, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'doing',
+      dod:[{text:'Achsen beschriftet, Einheiten korrekt',done:true},{text:'Bildunterschrift ergänzt',done:false}] }),
+    st(7,{ title:'Lötkolben für Sensorplatine beschaffen', asA:'Entwickler', want:'die Platine fertig löten', soThat:'der Prototyp funktioniert',
+      points:3, category:'Praxis / MINT', assignee:'m3', sprint:'s2', status:'doing', blocked:true,
+      note:'Lötkolben im Physikraum defekt. Sophie fragt Herrn K. nach Ersatz.',
+      dod:[{text:'Kontakte durchgemessen',done:false}] }),
+    st(8,{ title:'Kapitel 3 „Auswertung" im Rohtext schreiben', asA:'Leser', want:'die Ergebnisse erklärt bekommen', soThat:'die Messwerte eine Bedeutung haben',
+      points:5, category:'Text', assignee:'m1', sprint:'s2', status:'todo',
+      dod:[{text:'Rechtschreibprüfung gelaufen',done:false},{text:'Von zweiter Person gegengelesen',done:false}] }),
+    st(9,{ title:'Quellenverzeichnis nach Vorgabe prüfen', asA:'Korrektor', want:'vollständige Angaben vorfinden', soThat:'kein Plagiatsverdacht entsteht',
+      points:1, category:'Recherche', color:'blue', assignee:'m2', sprint:'s2', status:'check',
+      dod:[{text:'Alle Online-Quellen mit Datum',done:true},{text:'Einheitliches Format',done:true}] }),
+    st(10,{ title:'Fotos vom Aufbau freistellen', asA:'Leserin', want:'klare Abbildungen sehen', soThat:'der Aufbau nachvollziehbar ist',
+      points:2, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'done',
+      dod:[{text:'Mindestens 2 Fotos',done:true},{text:'Hintergrund entfernt',done:true}] }),
+
+    st(11,{ title:'Experten-Interview mit dem Umweltamt führen', asA:'Forscherin', want:'O-Töne zur Solarförderung aufnehmen', soThat:'der Praxisteil belegt ist',
+      points:5, category:'Recherche', color:'blue', dod:[{text:'Fragen vorab verschickt',done:false}] }),
+    st(12,{ title:'Präsentationsfolien für die Abschlussprüfung', asA:'Kursteilnehmer', want:'die Kernaussagen visuell sehen', soThat:'die Präsentation hängen bleibt',
+      points:3, category:'Präsentation', color:'lilac', dod:[{text:'Maximal 8 Folien',done:false}] }),
+    st(13,{ title:'Fazit & Ausblick formulieren', asA:'Leser', want:'am Ende eine klare Antwort bekommen', soThat:'die Leitfrage beantwortet ist',
+      points:3, category:'Text', dod:[] }),
+    st(14,{ title:'Energieertrag über eine Woche protokollieren', asA:'MINT-Gruppe', want:'Langzeitdaten erheben', soThat:'wir Schwankungen zeigen können',
+      points:8, category:'Praxis / MINT', color:'green', dod:[] })
+  ];
+
+  return {
+    product:{
+      name:'Smart Solar — MINT-Facharbeit',
+      goal:'<h2>Worum geht es?</h2><p>Wir untersuchen, <strong>wie stark der Einfallswinkel des Lichts den Energieertrag einer Solarzelle beeinflusst</strong> – und bauen dazu einen eigenen Messaufbau.</p><h2>Für wen?</h2><p>Für Mitschülerinnen und Mitschüler des Physikkurses: Am Ende soll jede Person in fünf Minuten verstehen, warum Solarmodule schräg montiert werden.</p><ul><li>Nachvollziehbare Messreihe mit Fehlerrechnung</li><li>Verständliche Diagramme statt Zahlenkolonnen</li><li>Ein funktionierender Prototyp zum Anfassen</li></ul>',
+      images:[]
+    },
+    team:T, stories, sprints:[s1,s2], active:'s2', seq:{ story:14, sprint:2 }
+  };
+}
+
+/* ── lookups ─────────────────────────────────────────── */
+const member   = id => S.team.find(m=>m.id===id) || null;
+const sprint   = id => S.sprints.find(s=>s.id===id) || null;
+const story    = id => S.stories.find(s=>s.id===id) || null;
+const active   = () => sprint(S.active);
+const sprintStories = id => S.stories.filter(s=>s.sprint===id);
+const sorted   = () => S.stories.slice().sort((a,b)=>a.order-b.order);
+const whoName  = id => (member(id)?.name) || 'frei';
+
+function avatar(m, size){
+  const cls=`av s${size}`;
+  if(!m) return `<span class="${cls}" style="background:var(--line);color:var(--ink-3)">?</span>`;
+  if(m.avatar) return `<span class="${cls}"><img src="${m.avatar}" alt=""></span>`;
+  const col=AVC[hash(m.id+m.name)%AVC.length];
+  const t=m.name.trim();
+  // immer zwei Zeichen – sonst sind Max und Mia beide nur "M"
+  const ini=(t.slice(0,1).toUpperCase()+t.slice(1,2).toLowerCase()).trim() || '?';
+  return `<span class="${cls}" style="background:${col}">${esc(ini)}</span>`;
+}
+function ringSvg(pct,col){
+  const r=23, c=2*Math.PI*r;
+  return `<div class="ring"><svg width="54" height="54" viewBox="0 0 54 54">
+    <circle cx="27" cy="27" r="${r}" fill="none" stroke="var(--line-soft)" stroke-width="5.5"/>
+    <circle cx="27" cy="27" r="${r}" fill="none" stroke="${col}" stroke-width="5.5" stroke-linecap="round"
+      stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c*(1-pct/100)).toFixed(1)}"/>
+  </svg><span>${pct}%</span></div>`;
+}
+
+/* ════════════════════════════════════════════════════════════
+   RENDER
+   ════════════════════════════════════════════════════════════ */
+function renderAll(){
+  save();
+  renderHeader();
+  renderCounts();
+  renderBoard();
+  renderBacklog();
+  renderGoal();
+  renderTeam();
+  renderHistory();
+}
+
+function renderCounts(){
+  $('#cntBacklog').textContent = S.stories.length;
+  $('#cntTeam').textContent    = S.team.length;
+  $('#cntHistory').textContent = S.sprints.filter(s=>s.status==='closed').length;
+}
+
+function renderHeader(){
+  const n=$('#productName');
+  if(document.activeElement!==n) n.value=S.product.name;
+
+  const a=active(), pill=$('#sprintPill'), btn=$('#btnSprintActionTxt');
+  if(!a){
+    pill.innerHTML=`<div><div class="lbl">Status</div><div class="val">Kein Sprint aktiv</div></div>`;
+    btn.textContent='Sprint planen';
+    return;
+  }
+  const total=Math.max(1,dayDiff(a.start,a.end));
+  const gone =Math.min(total,Math.max(0,dayDiff(a.start,iso(today()))));
+  const left =dayDiff(iso(today()),a.end);
+  const pct  =Math.round(gone/total*100);
+  const ss=sprintStories(a.id);
+  const dp=sum(ss.filter(s=>s.status==='done'),s=>s.points), tp=sum(ss,s=>s.points);
+
+  pill.innerHTML=`
+    <div><div class="lbl">Läuft</div><div class="val">${esc(a.name)}</div></div>
+    <div class="pill-div"></div>
+    <div>
+      <div class="lbl">Tag ${gone} von ${total}</div>
+      <div class="ruler" title="${deDate(a.start)} – ${deDate(a.end)}"><i style="width:${pct}%"></i></div>
+    </div>
+    <div class="pill-div"></div>
+    <div class="daysleft${left<=2?' urgent':''}">
+      ${left<0?'Zeitraum vorbei':left===0?'<b>Heute</b> endet er':`noch <b>${left} Tag${left===1?'':'e'}</b>`}
+      <br><span style="opacity:.75">${dp}/${tp} SP fertig</span>
+    </div>`;
+  btn.textContent='Sprint abschließen';
+}
+
+/* ── BOARD ───────────────────────────────────────────── */
+function renderBoard(){
+  const a=active();
+  $('#sprintEmpty').hidden=!!a;
+  $('#sprintLive').hidden=!a;
+  if(!a) return;
+
+  $('#liveGoal').textContent=a.goal || 'Noch kein Sprint-Ziel formuliert.';
+  const ss=sprintStories(a.id);
+  const dp=sum(ss.filter(s=>s.status==='done'),s=>s.points), tp=sum(ss,s=>s.points);
+  const bl=ss.filter(s=>s.blocked).length;
+  $('#liveStats').innerHTML=
+    `<span class="stat">Zeitraum <b>${deDate(a.start)}–${deDate(a.end)}</b></span>
+     <span class="stat">Stories <b>${ss.filter(s=>s.status==='done').length}/${ss.length}</b></span>
+     <span class="stat">Points <b>${dp}/${tp}</b></span>
+     ${bl?`<span class="badge bg-block">${bl} blockiert</span>`:''}`;
+
+  const board=$('#board'); board.innerHTML='';
+
+  COLS.forEach(col=>{
+    const inCol = ss.filter(s => col.k==='blocked' ? s.blocked : (!s.blocked && s.status===col.k));
+    const el=document.createElement('div');
+    el.className='col'; el.dataset.k=col.k;
+    el.innerHTML=`<div class="col-h">
+        <span class="col-dot" style="background:${col.c}"></span>
+        <span class="nm">${col.nm}</span><span class="n">${inCol.length}</span>
+      </div>
+      <div class="col-hint">${col.hint}</div>`;
+
+    if(col.k==='doing'){
+      const lanes=document.createElement('div'); lanes.className='lanes';
+      S.team.forEach(m=>{
+        const mine=inCol.filter(s=>s.assignee===m.id);
+        const lane=document.createElement('div');
+        lane.className='lane'; lane.dataset.member=m.id;
+        lane.innerHTML=`<div class="lane-h">${avatar(m,22)}<span class="nm">${esc(m.name)}</span><span class="n">${mine.length}</span></div>`;
+        const body=document.createElement('div'); body.className='lane-body';
+        if(!mine.length) body.innerHTML='<div class="lane-empty">frei</div>';
+        else mine.forEach(s=>body.appendChild(postit(s)));
+        lane.appendChild(body);
+        wireDrop(lane, {member:m.id});
+        lanes.appendChild(lane);
+      });
+      const un=inCol.filter(s=>!s.assignee || !member(s.assignee));
+      if(un.length){
+        const lane=document.createElement('div');
+        lane.className='lane'; lane.style.borderColor='var(--st-check)';
+        lane.innerHTML=`<div class="lane-h" style="background:#faf0d9"><span class="nm">Ohne Zuständige</span><span class="n">${un.length}</span></div>`;
+        const body=document.createElement('div'); body.className='lane-body';
+        un.forEach(s=>body.appendChild(postit(s)));
+        lane.appendChild(body); lanes.appendChild(lane);
+      }
+      el.appendChild(lanes);
+    } else {
+      const drop=document.createElement('div'); drop.className='drop';
+      if(!inCol.length) drop.innerHTML=`<div class="empty">${col.k==='blocked'?'Keine Blockaden – gut!':'leer'}</div>`;
+      else inCol.forEach(s=>drop.appendChild(postit(s)));
+      wireDrop(drop,{col:col.k});
+      el.appendChild(drop);
+    }
+    board.appendChild(el);
+  });
+}
+
+function postit(s){
+  const el=document.createElement('div');
+  const rot=((hash(s.id)%5)-2)*0.55;
+  el.className=`postit pi-${s.color||'yellow'}`;
+  el.style.transform=`rotate(${rot}deg)`;
+  el.draggable=true; el.dataset.id=s.id;
+
+  const dod=s.dod||[], dn=dod.filter(d=>d.done).length;
+  const fi=FLOW.indexOf(s.status);
+  const m=member(s.assignee);
+
+  el.innerHTML=`
+    ${s.blocked?`<span class="pi-flag" title="blockiert"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 8v5M12 16.5v.01"/></svg></span>`:''}
+    <div class="pi-row"><span class="pi-id">${esc(s.key)}</span><span class="pi-cat">${esc(s.category)}</span></div>
+    <button class="pi-title" data-act="open">${esc(s.title)}</button>
+    ${s.blocked&&s.note?`<div class="pi-note">${esc(s.note)}</div>`:''}
+    <div class="pi-foot">
+      <span class="pi-sp">${s.points}</span>
+      ${dod.length?`<span class="pi-dod">${dn}/${dod.length} DoD</span>`:''}
+      <span class="pi-who">${avatar(m,18)}${esc(m?m.name:'frei')}</span>
+    </div>
+    <div class="pi-nav">
+      <button data-act="back"  ${fi<=0?'disabled':''} title="zurück">◀</button>
+      <button data-act="block" class="warn" title="Blockade melden">${s.blocked?'✓ frei':'! Block'}</button>
+      <button data-act="fwd"   ${fi<0||fi>=FLOW.length-1?'disabled':''} title="weiter">▶</button>
+    </div>`;
+
+  el.addEventListener('dragstart',e=>{
+    e.dataTransfer.setData('text/plain',s.id);
+    e.dataTransfer.effectAllowed='move';
+    el.classList.add('drag');
+  });
+  el.addEventListener('dragend',()=>el.classList.remove('drag'));
+  el.addEventListener('click',e=>{
+    const b=e.target.closest('[data-act]'); if(!b) return;
+    e.stopPropagation();
+    const act=b.dataset.act;
+    if(act==='open') return openDetail(s.id);
+    if(act==='block'){ s.blocked=!s.blocked; if(!s.blocked) s.note=''; return renderAll(); }
+    const i=FLOW.indexOf(s.status);
+    if(i<0) return;
+    const ni=i+(act==='fwd'?1:-1);
+    if(ni<0||ni>=FLOW.length) return;
+    s.status=FLOW[ni];
+    if(s.status==='doing' && !s.assignee) openDetail(s.id);
+    renderAll();
+  });
+  return el;
+}
+
+function wireDrop(el,target){
+  el.addEventListener('dragover',e=>{ e.preventDefault(); el.classList.add('over'); });
+  el.addEventListener('dragleave',()=>el.classList.remove('over'));
+  el.addEventListener('drop',e=>{
+    e.preventDefault(); el.classList.remove('over');
+    const s=story(e.dataTransfer.getData('text/plain')); if(!s) return;
+    if(target.member){ s.status='doing'; s.blocked=false; s.assignee=target.member; }
+    else if(target.col==='blocked'){ s.blocked=true; }
+    else { s.blocked=false; s.status=target.col; }
+    renderAll();
+  });
+}
+
+/* ── BACKLOG ─────────────────────────────────────────── */
+function renderBacklog(){
+  const fS=$('#fSprint'), fW=$('#fWho');
+  const keepS=fS.value, keepW=fW.value;
+  fS.innerHTML='<option value="all">Alle Sprints</option><option value="none">Noch nicht zugewiesen</option>'+
+    S.sprints.slice().reverse().map(s=>`<option value="${s.id}">${esc(s.name)}${s.id===S.active?' (aktuell)':''}</option>`).join('');
+  fW.innerHTML='<option value="all">Alle Zuständigen</option><option value="none">Ohne Zuständige</option>'+
+    S.team.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  fS.value=[...fS.options].some(o=>o.value===keepS)?keepS:'all';
+  fW.value=[...fW.options].some(o=>o.value===keepW)?keepW:'all';
+
+  const q=$('#fSearch').value.trim().toLowerCase();
+  const fst=$('#fStatus').value;
+  const all=sorted();
+  const rows=all.filter(s=>{
+    if(q && !(s.title.toLowerCase().includes(q)||s.key.toLowerCase().includes(q))) return false;
+    if(fS.value==='none' && s.sprint) return false;
+    if(fS.value!=='all' && fS.value!=='none' && s.sprint!==fS.value) return false;
+    if(fst==='blocked' ? !s.blocked : (fst!=='all' && s.status!==fst)) return false;
+    if(fW.value==='none' && s.assignee) return false;
+    if(fW.value!=='all' && fW.value!=='none' && s.assignee!==fW.value) return false;
+    return true;
+  });
+
+  $('#backlogSums').innerHTML=
+    `<span class="stat">${rows.length} von ${all.length} Stories</span>
+     <span class="stat">Σ <b>${sum(rows,s=>s.points)}</b> SP</span>
+     <span class="stat">fertig <b>${sum(rows.filter(s=>s.status==='done'),s=>s.points)}</b> SP</span>`;
+
+  const tb=$('#backlogBody');
+  if(!rows.length){
+    tb.innerHTML=`<tr><td colspan="9" style="padding:34px;text-align:center;color:var(--ink-3);font-style:italic">Keine Story passt zu diesem Filter.</td></tr>`;
+    return;
+  }
+  tb.innerHTML=rows.map(s=>{
+    const gi=all.indexOf(s), m=member(s.assignee);
+    const sp=s.sprint===S.active ? `<span class="tag now">Aktueller Sprint</span>`
+           : s.sprint ? `<span class="tag past">${esc(sprint(s.sprint)?.name||s.sprint)}</span>`
+           : `<span class="tag none">noch nicht</span>`;
+    const badge=s.blocked?`<span class="badge bg-block">Blockiert</span>`:`<span class="badge ${STC[s.status]}">${STL[s.status]}</span>`;
+    return `<tr class="${s.status==='done'?'isdone':''}">
+      <td><div class="b-prio">
+        <span class="num">${gi+1}</span>
+        <button data-mv="up"   data-id="${s.id}" ${gi===0?'disabled':''} aria-label="höher">
+          <svg width="9" height="7" viewBox="0 0 10 7" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 6l4-4 4 4"/></svg></button>
+        <button data-mv="down" data-id="${s.id}" ${gi===all.length-1?'disabled':''} aria-label="tiefer">
+          <svg width="9" height="7" viewBox="0 0 10 7" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 1l4 4 4-4"/></svg></button>
+      </div></td>
+      <td><span class="b-key">${esc(s.key)}</span></td>
+      <td>
+        <button class="b-title" data-open="${s.id}">${esc(s.title)}</button>
+        ${s.want?`<div class="b-sub">Als ${esc(s.asA||'…')} möchte ich ${esc(s.want)}.</div>`:''}
+      </td>
+      <td><span class="tag">${esc(s.category)}</span></td>
+      <td><b style="font-family:var(--serif);color:var(--petrol)">${s.points}</b></td>
+      <td><span style="display:flex;align-items:center;gap:7px">${avatar(m,22)}<span style="${m?'':'color:var(--ink-3);font-style:italic'}">${esc(m?m.name:'frei')}</span></span></td>
+      <td>${sp}</td>
+      <td>${badge}</td>
+      <td style="text-align:right">
+        <button class="btn ghost sm" data-edit="${s.id}" aria-label="bearbeiten">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function movePrio(id,dir){
+  const all=sorted(), i=all.findIndex(s=>s.id===id), j=i+dir;
+  if(i<0||j<0||j>=all.length) return;
+  const a=all[i], b=all[j], t=a.order; a.order=b.order; b.order=t;
+  renderAll();
+}
+
+/* ── PRODUCT GOAL ────────────────────────────────────── */
+function renderGoal(){
+  const r=$('#goalRte');
+  if(document.activeElement!==r) r.innerHTML=S.product.goal||'';
+  const box=$('#goalImgs');
+  box.innerHTML=S.product.images.map((src,i)=>
+    `<div class="ishell"><img src="${src}" alt="Visualisierung ${i+1}">
+      <button class="x" data-img="${i}" aria-label="Bild entfernen">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button></div>`).join('')
+    + (S.product.images.length<5
+      ? `<button class="iadd" id="goalAdd">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-4 4 3 3-2 6 5"/><circle cx="8.5" cy="8.5" r="1.4"/></svg>
+          <span>Bild hinzufügen<br>${S.product.images.length}/5</span></button>`
+      : '');
+}
+
+function shrinkImg(file,max,cb){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      const sc=Math.min(1,max/Math.max(w,h));
+      w=Math.round(w*sc); h=Math.round(h*sc);
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      cb(cv.toDataURL('image/jpeg',0.72));
+    };
+    img.onerror=()=>toast('⚠ Bild konnte nicht gelesen werden');
+    img.src=fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+
+/* ── TEAM ────────────────────────────────────────────── */
+function renderTeam(){
+  const po=S.team.find(m=>m.role==='po'), sm=S.team.find(m=>m.role==='sm');
+  const slot=(r,m,duty)=>{
+    const t=r==='po'?'Product Owner':'Scrum Master';
+    if(!m) return `<div class="resp ${r}">
+        <span class="av s52" style="background:var(--line);color:var(--ink-3)">?</span>
+        <div><div class="role">${t}</div><div class="vacant">noch offen</div>
+        <div class="duty">Weist die Rolle unten auf einer Teamkarte zu.</div></div></div>`;
+    return `<div class="resp ${r}">${avatar(m,52)}
+      <div><div class="role">${t}</div><div class="nmx">${esc(m.name)}</div><div class="duty">${duty}</div></div></div>`;
+  };
+  $('#respBand').innerHTML=
+    slot('po',po,'Priorisiert das Product Backlog und hält das Produktziel im Blick.')+
+    slot('sm',sm,'Moderiert das Daily, räumt Blockaden weg, achtet auf die Spielregeln.');
+
+  $('#teamGrid').innerHTML=S.team.map(m=>{
+    const mine=S.stories.filter(s=>s.assignee===m.id);
+    const dn=mine.filter(s=>s.status==='done').length;
+    return `<div class="mcard" data-m="${m.id}">
+      <div class="mtop">
+        <button class="avbtn" data-avup="${m.id}" title="Avatar wählen" style="background:none;border:0;padding:0;border-radius:14px">${avatar(m,52)}</button>
+        <div style="flex:1;min-width:0">
+          <input class="mname" data-f="name" value="${esc(m.name)}" aria-label="Name">
+          <input class="mlabel" data-f="label" value="${esc(m.label||'')}" placeholder="+ eigenes Label" aria-label="Label">
+        </div>
+      </div>
+      <select data-f="role" aria-label="Scrum-Rolle">
+        <option value="dev" ${m.role==='dev'?'selected':''}>Development Team</option>
+        <option value="po"  ${m.role==='po' ?'selected':''}>+ Product Owner</option>
+        <option value="sm"  ${m.role==='sm' ?'selected':''}>+ Scrum Master</option>
+      </select>
+      <div class="mstats">
+        <div class="mstat"><b>${mine.length}</b><span>Stories</span></div>
+        <div class="mstat"><b style="color:var(--st-done)">${dn}</b><span>fertig</span></div>
+        <div class="mstat"><b>${sum(mine.filter(s=>s.status==='done'),s=>s.points)}</b><span>SP fertig</span></div>
+      </div>
+      <div class="mfoot">
+        <span style="font-size:11px;color:var(--ink-3)">${m.role==='po'?'Product Owner':m.role==='sm'?'Scrum Master':'Teammitglied'}</span>
+        <button class="btn ghost sm" data-rm="${m.id}" style="margin-left:auto;color:var(--ink-3)">entfernen</button>
+      </div>
+    </div>`;
+  }).join('')
+  + `<button class="mcard add" id="teamAdd">
+      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      <span style="font-size:13px;font-weight:600">Mitglied hinzufügen</span></button>`;
+}
+
+/* ── HISTORY ─────────────────────────────────────────── */
+function renderHistory(){
+  const closed=S.sprints.filter(s=>s.status==='closed').sort((a,b)=>b.no-a.no);
+  const a=active();
+
+  if(closed.length){
+    const v=closed.slice(0,3);
+    $('#velocityBox').innerHTML=
+      `<span class="stat">Velocity ⌀ <b>${Math.round(sum(v,s=>s.donePoints)/v.length)}</b> SP / Sprint</span>`;
+  } else $('#velocityBox').innerHTML='';
+
+  const tiles=[];
+  if(a){
+    const ss=sprintStories(a.id);
+    const dp=sum(ss.filter(s=>s.status==='done'),s=>s.points), tp=sum(ss,s=>s.points);
+    const pct=tp?Math.round(dp/tp*100):0;
+    tiles.push(`<button class="tile live" data-live="1">
+      <div class="tile-top">
+        <div style="flex:1">
+          <div class="no">Sprint ${a.no} · läuft</div>
+          <div class="nm">${esc(a.name)}</div>
+          <div class="gl">${esc(a.goal||'Kein Ziel formuliert')}</div>
+          <div class="dt">${deDateY(a.start)} – ${deDateY(a.end)}</div>
+        </div>
+        ${ringSvg(pct,'var(--marker)')}
+      </div>
+      <div class="tile-foot">
+        <span class="badge bg-doing nodot">${ss.length} Stories</span>
+        <span class="badge bg-done nodot">${dp}/${tp} SP</span>
+        <span style="margin-left:auto;color:var(--marker);font-weight:700">zum Board →</span>
+      </div></button>`);
+  }
+
+  closed.forEach(s=>{
+    const snap=s.snapshot||[];
+    const tp=s.plannedPoints ?? sum(snap,x=>x.points);
+    const dp=s.donePoints ?? sum(snap.filter(x=>x.status==='done'),x=>x.points);
+    const pct=tp?Math.round(dp/tp*100):0;
+    const cls=pct>=100?'full':pct>=60?'part':'weak';
+    const col=pct>=100?'var(--st-done)':pct>=60?'var(--st-check)':'var(--st-block)';
+    tiles.push(`<button class="tile ${cls}" data-arch="${s.id}">
+      <div class="tile-top">
+        <div style="flex:1">
+          <div class="no">Sprint ${s.no} · abgeschlossen</div>
+          <div class="nm">${esc(s.name)}</div>
+          <div class="gl">${esc(s.goal||'—')}</div>
+          <div class="dt">${deDateY(s.start)} – ${deDateY(s.end)}</div>
+        </div>
+        ${ringSvg(pct,col)}
+      </div>
+      <div class="tile-foot">
+        <span class="badge bg-todo nodot">${snap.length} Stories</span>
+        <span class="badge bg-done nodot">${dp}/${tp} SP</span>
+        ${s.review?.next?`<span class="badge bg-check nodot" title="${esc(s.review.next)}">Retro ✓</span>`:''}
+        <span style="margin-left:auto;color:var(--petrol);font-weight:700">Archiv →</span>
+      </div></button>`);
+  });
+
+  $('#historyTiles').innerHTML = tiles.length ? tiles.join('')
+    : `<div class="nothing" style="grid-column:1/-1">
+        <div class="ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 12a9 9 0 1 0 3-6.7M3 4v5h5"/><path d="M12 8v4.5l3 1.8"/></svg></div>
+        <h3>Noch keine Sprint-Historie</h3>
+        <p>Sobald ihr euren ersten Sprint abschließt, erscheint er hier als unveränderbares Archiv.</p></div>`;
+}
+
+/* ════════════════════════════════════════════════════════════
+   STORY DETAIL
+   ════════════════════════════════════════════════════════════ */
+function openDetail(id){
+  const s=story(id); if(!s) return;
+  openStory=id;
+  $('#stTitle').textContent=s.title;
+  $('#stSub').textContent=`${s.key} · ${s.category} · ${s.points} Story Points`;
+
+  const dod=s.dod||[], dn=dod.filter(d=>d.done).length;
+  const formula=(s.asA||s.want||s.soThat)
+    ? `Als <b>${esc(s.asA||'…')}</b> möchte ich <b>${esc(s.want||'…')}</b>, damit <b>${esc(s.soThat||'…')}</b>.`
+    : `<span style="color:var(--ink-3)">Keine User-Story-Formel hinterlegt.</span>`;
+
+  $('#stBody').innerHTML=`
+    <div class="quote" style="margin-bottom:16px">${formula}</div>
+
+    <div class="grid3" style="margin-bottom:15px">
+      <div><label class="fl">Status</label><select id="dStatus">
+        ${FLOW.map(k=>`<option value="${k}" ${s.status===k?'selected':''}>${STL[k]}</option>`).join('')}
+      </select></div>
+      <div><label class="fl">Zuständig</label><select id="dWho">
+        <option value="">— frei —</option>
+        ${S.team.map(m=>`<option value="${m.id}" ${s.assignee===m.id?'selected':''}>${esc(m.name)}</option>`).join('')}
+      </select></div>
+      <div><label class="fl">Sprint</label><select id="dSprint">
+        <option value="">Product Backlog</option>
+        ${S.sprints.filter(x=>x.status!=='closed'||x.id===s.sprint)
+          .map(x=>`<option value="${x.id}" ${s.sprint===x.id?'selected':''}>${esc(x.name)}${x.id===S.active?' (aktuell)':''}${x.status==='closed'?' – Archiv':''}</option>`).join('')}
+      </select></div>
+    </div>
+
+    <div class="box" style="${s.blocked?'border-left:4px solid var(--st-block);background:#fdf3f1':''}">
+      <div class="bt">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 8v5M12 16.5v.01"/><circle cx="12" cy="12" r="9"/></svg>
+        Blockade
+      </div>
+      <label style="display:flex;align-items:center;gap:9px;font-size:13px;font-weight:600;margin-bottom:9px;cursor:pointer">
+        <input type="checkbox" id="dBlock" ${s.blocked?'checked':''} style="width:19px;height:19px;accent-color:var(--st-block)">
+        Diese Story kommt gerade nicht weiter
+      </label>
+      <textarea id="dNote" rows="2" placeholder="Was blockiert? Wer kann helfen?" ${s.blocked?'':'disabled style="opacity:.5"'}>${esc(s.note||'')}</textarea>
+    </div>
+
+    <div class="box">
+      <div class="bt">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12.5l4.5 4.5L20 5.5"/></svg>
+        Definition of Done · ${dn}/${dod.length}
+      </div>
+      <div class="dod" id="dDod">
+        ${dod.length?dod.map((d,i)=>`
+          <div class="dodrow ${d.done?'ok':''}">
+            <input type="checkbox" id="dod${i}" data-dod="${i}" ${d.done?'checked':''}>
+            <label for="dod${i}">${esc(d.text)}</label>
+            <button class="rm" data-dodrm="${i}" aria-label="entfernen">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+            </button>
+          </div>`).join('')
+          :`<div style="font-size:12.5px;color:var(--ink-3);font-style:italic">Noch keine Kriterien – was muss stimmen, damit diese Karte wirklich fertig ist?</div>`}
+      </div>
+      <div class="inline-add">
+        <input type="text" id="dNew" placeholder="Weiteres Kriterium …">
+        <button class="btn" id="dAdd">+</button>
+      </div>
+    </div>
+
+    <button class="btn" id="dEdit" style="width:100%;justify-content:center">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>
+      Story bearbeiten (Titel, Formel, Points …)
+    </button>`;
+
+  const body=$('#stBody');
+  body.querySelector('#dStatus').onchange=e=>{ s.status=e.target.value; renderAll(); };
+  body.querySelector('#dWho').onchange=e=>{ s.assignee=e.target.value||null; renderAll(); };
+  body.querySelector('#dSprint').onchange=e=>{ s.sprint=e.target.value||null; renderAll(); };
+  body.querySelector('#dBlock').onchange=e=>{ s.blocked=e.target.checked; if(!s.blocked) s.note=''; renderAll(); openDetail(id); };
+  body.querySelector('#dNote').onchange=e=>{ s.note=e.target.value.trim(); renderAll(); };
+  body.querySelector('#dAdd').onclick=()=>{
+    const i=body.querySelector('#dNew'), v=i.value.trim(); if(!v) return;
+    (s.dod=s.dod||[]).push({text:v,done:false}); renderAll(); openDetail(id);
+  };
+  body.querySelector('#dNew').addEventListener('keydown',e=>{ if(e.key==='Enter') body.querySelector('#dAdd').click(); });
+  body.querySelector('#dEdit').onclick=()=>{ hide('mStory'); openEdit(id); };
+
+  show('mStory');
+}
+
+/* ════════════════════════════════════════════════════════════
+   STORY ANLEGEN / BEARBEITEN
+   ════════════════════════════════════════════════════════════ */
+function openEdit(id){
+  editingStory=id||null;
+  const s=id?story(id):null;
+  $('#edTitle').textContent=s?'Story bearbeiten':'Neue User Story';
+
+  $('#edA').innerHTML='<option value="">— frei —</option>'+S.team.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
+  $('#edSp').innerHTML='<option value="">Product Backlog (noch nicht zugewiesen)</option>'+
+    S.sprints.filter(x=>x.status!=='closed'||(s&&x.id===s.sprint))
+      .map(x=>`<option value="${x.id}">${esc(x.name)}${x.id===S.active?' (aktuell)':''}${x.status==='closed'?' – Archiv':''}</option>`).join('');
+
+  $('#edT').value  =s?s.title:'';
+  $('#edR').value  =s?s.asA:'';
+  $('#edW').value  =s?s.want:'';
+  $('#edS').value  =s?s.soThat:'';
+  $('#edP').value  =s?s.points:2;
+  $('#edC').value  =s?s.category:'Text';
+  $('#edCol').value=s?(s.color||'yellow'):'yellow';
+  $('#edA').value  =s?(s.assignee||''):'';
+  $('#edSp').value =s?(s.sprint||''):'';
+  show('mEdit');
+  setTimeout(()=>$('#edT').focus(),60);
+}
+
+function saveEdit(){
+  const t=$('#edT').value.trim();
+  if(!t){ toast('⚠ Die Story braucht einen Titel'); $('#edT').focus(); return; }
+  const vals={
+    title:t, asA:$('#edR').value.trim(), want:$('#edW').value.trim(), soThat:$('#edS').value.trim(),
+    points:+$('#edP').value, category:$('#edC').value, color:$('#edCol').value,
+    assignee:$('#edA').value||null, sprint:$('#edSp').value||null
+  };
+  if(editingStory){
+    Object.assign(story(editingStory),vals);
+    toast('Story aktualisiert');
+  } else {
+    const n=++S.seq.story;
+    const maxOrder=S.stories.length?Math.max(...S.stories.map(s=>s.order)):0;
+    const ns=Object.assign({
+      id:'u'+n, key:'US-'+pad(n), status:'todo', blocked:false, note:'', order:maxOrder+1,
+      dod:[{text:'Inhaltlich geprüft',done:false},{text:'Von zweiter Person gegengelesen',done:false}]
+    },vals);
+    S.stories.push(ns);
+    if(planReturn){ planPick.add(ns.id); ns.sprint=null; }
+    toast(`${ns.key} angelegt`);
+  }
+  hide('mEdit');
+  editingStory=null;
+  renderAll();
+  if(planReturn){ planReturn=false; renderPlan(); show('mPlan'); }
+}
+
+/* ════════════════════════════════════════════════════════════
+   SPRINT-PLANUNG
+   ════════════════════════════════════════════════════════════ */
+function openPlan(){
+  const no=S.seq.sprint+1;
+  $('#planTitle').textContent=`Sprint ${no} planen`;
+  $('#plName').value=`Sprint ${no}`;
+  $('#plStart').value=iso(today());
+  $('#plEnd').value=iso(shift(14));
+  $('#plGoal').value='';
+  planPick=new Set();
+  renderPlan();
+  show('mPlan');
+}
+
+function renderPlan(){
+  const pool=sorted().filter(s=>!s.sprint && s.status!=='done');
+  const left =pool.filter(s=>!planPick.has(s.id));
+  const right=pool.filter(s=> planPick.has(s.id));
+  const row=(s,dir)=>`<button class="xrow" data-pick="${s.id}">
+      <span class="k">${esc(s.key)}</span><span class="t">${esc(s.title)}</span>
+      <span class="p">${s.points}</span>
+      <span style="color:var(--ink-3);font-weight:700">${dir}</span></button>`;
+
+  $('#plLeft').innerHTML = left.length?left.map(s=>row(s,'→')).join('')
+    :`<div class="empty">Alles verplant – oder legt rechts eine neue Story an.</div>`;
+  $('#plRight').innerHTML= right.length?right.map(s=>row(s,'←')).join('')
+    :`<div class="empty">Noch nichts gewählt.<br>Links antippen.</div>`;
+  $('#plLeftN').textContent=left.length;
+  $('#plRightN').textContent=right.length;
+
+  const sp=sum(right,s=>s.points);
+  $('#plSum').textContent=sp;
+
+  const closed=S.sprints.filter(s=>s.status==='closed');
+  let hint;
+  if(!closed.length){
+    hint='Erster Sprint: Schätzt lieber zu wenig ein. Nach dem Review wisst ihr, was realistisch war.';
+  } else {
+    const v=closed.slice(-3), avg=Math.round(sum(v,s=>s.donePoints)/v.length);
+    hint=`Bisher habt ihr durchschnittlich <b>${avg} SP</b> pro Sprint wirklich fertig bekommen. `
+       + (sp>avg*1.25 ? '<span style="color:var(--st-block)">Das hier ist deutlich mehr – lieber etwas zurücklegen.</span>'
+       :  sp<avg*0.6 && sp>0 ? '<span style="color:var(--st-check)">Da ist noch Luft.</span>'
+       :  sp===0 ? '' : '<span style="color:var(--st-done)">Das passt gut.</span>');
+  }
+  $('#plHint').innerHTML=hint;
+}
+
+function startSprint(){
+  const name=$('#plName').value.trim()||`Sprint ${S.seq.sprint+1}`;
+  const start=$('#plStart').value, end=$('#plEnd').value;
+  if(!start||!end){ toast('⚠ Bitte Start und Ende festlegen'); return; }
+  if(dayDiff(start,end)<=0){ toast('⚠ Das Ende muss nach dem Start liegen'); return; }
+  if(!planPick.size){ toast('⚠ Wählt mindestens eine Story aus'); return; }
+
+  const id='s'+(++S.seq.sprint);
+  const sp={ id, no:S.seq.sprint, name, goal:$('#plGoal').value.trim(),
+             start, end, status:'active', review:null, snapshot:null };
+  S.sprints.push(sp);
+  S.active=id;
+  planPick.forEach(sid=>{ const s=story(sid); if(s){ s.sprint=id; s.status='todo'; } });
+  planPick=new Set();
+  hide('mPlan');
+  go('sprint');
+  renderAll();
+  toast(`${name} läuft – viel Erfolg!`);
+}
+
+/* ════════════════════════════════════════════════════════════
+   SPRINT REVIEW
+   ════════════════════════════════════════════════════════════ */
+function openReview(){
+  const a=active(); if(!a){ openPlan(); return; }
+  const ss=sprintStories(a.id);
+  const done=ss.filter(s=>s.status==='done'), open=ss.filter(s=>s.status!=='done');
+  const tp=sum(ss,s=>s.points), dp=sum(done,s=>s.points);
+
+  $('#rvTitle').textContent=`${a.name} · Review & Retro`;
+  $('#rvBalance').innerHTML=`
+    <div class="bal good"><b>${done.length}</b><span>von ${ss.length} Stories fertig</span></div>
+    <div class="bal good"><b>${dp}</b><span>von ${tp} Story Points</span></div>
+    <div class="bal open"><b>${open.length}</b><span>noch offen</span></div>
+    <div class="bal"><b>${tp?Math.round(dp/tp*100):0}%</b><span>Sprint-Ziel erreicht</span></div>`;
+
+  carryPlan={};
+  open.forEach(s=>carryPlan[s.id]='backlog');
+  $('#rvCarryWrap').hidden=!open.length;
+  $('#rvCarry').innerHTML=open.map(s=>`
+    <div class="crow">
+      <span class="b-key">${esc(s.key)}</span>
+      <span class="t">${esc(s.title)}</span>
+      <span class="badge ${s.blocked?'bg-block':STC[s.status]}">${s.blocked?'Blockiert':STL[s.status]}</span>
+      <div class="seg" data-carry="${s.id}">
+        <button data-v="backlog" aria-pressed="true">→ Backlog</button>
+        <button data-v="next" aria-pressed="false">→ nächster Sprint</button>
+      </div>
+    </div>`).join('');
+
+  ['rvShown','rvFeed','rvGood','rvBad','rvNext'].forEach(k=>$('#'+k).value='');
+  show('mReview');
+}
+
+function finishSprint(){
+  const a=active(); if(!a) return;
+  const ss=sprintStories(a.id);
+  const done=ss.filter(s=>s.status==='done');
+
+  a.snapshot=ss.map(s=>({
+    key:s.key, title:s.title, points:s.points, category:s.category,
+    status:s.status, who:whoName(s.assignee), blocked:!!s.blocked
+  }));
+  a.plannedPoints=sum(ss,s=>s.points);
+  a.donePoints=sum(done,s=>s.points);
+  a.status='closed';
+  a.closedAt=iso(today());
+  a.review={
+    shown:$('#rvShown').value.trim(), feedback:$('#rvFeed').value.trim(),
+    good:$('#rvGood').value.trim(),  bad:$('#rvBad').value.trim(), next:$('#rvNext').value.trim()
+  };
+
+  const carry=[];
+  ss.filter(s=>s.status!=='done').forEach(s=>{
+    s.sprint=null; s.status='todo';
+    if(carryPlan[s.id]==='next') carry.push(s.id);
+  });
+
+  S.active=null;
+  hide('mReview');
+  renderAll();
+  toast(`${a.name} archiviert · ${a.donePoints} SP geschafft`);
+
+  openPlan();
+  carry.forEach(id=>planPick.add(id));
+  renderPlan();
+}
+
+/* ════════════════════════════════════════════════════════════
+   ARCHIV
+   ════════════════════════════════════════════════════════════ */
+function openArchive(id){
+  const s=sprint(id); if(!s) return;
+  archiveSprint=id;
+  const snap=s.snapshot||[];
+  const tp=s.plannedPoints??sum(snap,x=>x.points);
+  const dp=s.donePoints??sum(snap.filter(x=>x.status==='done'),x=>x.points);
+
+  $('#arTitle').textContent=`${s.name} · Archiv`;
+  $('#arSub').textContent=`${deDateY(s.start)} – ${deDateY(s.end)}`;
+
+  const r=s.review||{};
+  const note=(t,v,cls)=>v?`<div class="rt ${cls}"><div class="h">${t}</div>
+      <div style="font-size:12.5px;line-height:1.55;color:var(--ink-2)">${esc(v)}</div></div>`:'';
+
+  $('#arBody').innerHTML=`
+    <div class="ro-note">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+      Abgeschlossener Sprint – dieses Archiv lässt sich nicht mehr verändern.
+    </div>
+
+    <div class="box calm"><div class="bt">Sprint-Ziel</div>
+      <div class="quote" style="border-color:var(--petrol)">${esc(s.goal||'—')}</div></div>
+
+    <div class="balance">
+      <div class="bal good"><b>${snap.filter(x=>x.status==='done').length}</b><span>von ${snap.length} Stories fertig</span></div>
+      <div class="bal good"><b>${dp}</b><span>von ${tp} Story Points</span></div>
+      <div class="bal"><b>${tp?Math.round(dp/tp*100):0}%</b><span>erreicht</span></div>
+    </div>
+
+    <div class="eyebrow">Sprint Backlog (eingefroren)</div>
+    <div class="tablewrap" style="margin:6px 0 17px">
+      <table style="min-width:520px">
+        <thead><tr><th style="width:56px">ID</th><th>Story</th><th style="width:108px">Kategorie</th><th style="width:46px">SP</th><th style="width:96px">Wer</th><th style="width:104px">Status</th></tr></thead>
+        <tbody>${snap.length?snap.map(x=>`<tr class="${x.status==='done'?'isdone':''}">
+          <td><span class="b-key">${esc(x.key)}</span></td>
+          <td style="font-weight:600">${esc(x.title)}</td>
+          <td><span class="tag">${esc(x.category)}</span></td>
+          <td><b style="font-family:var(--serif);color:var(--petrol)">${x.points}</b></td>
+          <td>${esc(x.who)}</td>
+          <td>${x.status==='done'?'<span class="badge bg-done">Fertig</span>':x.blocked?'<span class="badge bg-block">Blockiert</span>':`<span class="badge ${STC[x.status]||'bg-todo'}">${STL[x.status]||'offen'}</span>`}</td>
+        </tr>`).join(''):`<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--ink-3);font-style:italic">Kein Sprint Backlog gespeichert.</td></tr>`}</tbody>
+      </table>
+    </div>
+
+    ${(r.shown||r.feedback)?`<div class="eyebrow">Review</div>
+      <div class="grid2" style="margin:6px 0 17px">
+        ${r.shown?`<div class="box" style="margin:0"><div class="bt">Gezeigt</div>
+          <div style="font-size:12.5px;line-height:1.55;color:var(--ink-2)">${esc(r.shown)}</div></div>`:''}
+        ${r.feedback?`<div class="box" style="margin:0"><div class="bt">Rückmeldung</div>
+          <div style="font-size:12.5px;line-height:1.55;color:var(--ink-2)">${esc(r.feedback)}</div></div>`:''}
+      </div>`:''}
+
+    ${(r.good||r.bad||r.next)?`<div class="eyebrow">Retrospektive</div>
+      <div class="retro" style="margin-top:6px">
+        ${note('👍 Lief gut',r.good,'g')}${note('👎 Lief schlecht',r.bad,'b')}${note('🎯 Vorgenommen',r.next,'n')}
+      </div>`:''}`;
+  show('mArchive');
+}
+
+/* ════════════════════════════════════════════════════════════
+   DAILY STANDUP
+   ════════════════════════════════════════════════════════════ */
+let tSec=300, tRun=false, tInt=null, spoke=new Set(), turn=null;
+
+function renderDaily(){
+  $('#clockT').textContent=`${pad(Math.floor(tSec/60))}:${pad(tSec%60)}`;
+  $('#clock').style.setProperty('--p',`${((300-tSec)/300*100).toFixed(1)}%`);
+  $('#turns').innerHTML=S.team.map(m=>
+    `<button class="turn ${spoke.has(m.id)?'spoke':''}" data-turn="${m.id}" aria-pressed="${turn===m.id}">
+      ${avatar(m,22)}<span>${esc(m.name)}</span></button>`).join('');
+  $('#dlToggle').textContent = tRun?'Pause':(tSec<300?'Weiter':'Starten');
+}
+function tick(){
+  if(tSec>0){ tSec--; renderDaily(); }
+  else { stopTimer(); toast('⏱ Fünf Minuten sind um – zurück an die Arbeit!'); }
+}
+function startTimer(){ if(tRun) return; tRun=true; tInt=setInterval(tick,1000); renderDaily(); }
+function stopTimer(){ tRun=false; clearInterval(tInt); renderDaily(); }
+function resetTimer(){ stopTimer(); tSec=300; spoke=new Set(); turn=null; renderDaily(); }
+
+/* ════════════════════════════════════════════════════════════
+   NAV + EVENTS
+   ════════════════════════════════════════════════════════════ */
+const VIEWS=['sprint','backlog','goal','team','history','learn'];
+
+function go(v,fromHash){
+  if(!VIEWS.includes(v)) v='sprint';
+  view=v;
+  $$('.view').forEach(s=>s.hidden = s.id!=='view-'+v);
+  $$('.tab').forEach(t=>t.setAttribute('aria-selected', String(t.dataset.view===v)));
+  if(!fromHash && location.hash.slice(1)!==v) location.hash=v;
+  window.scrollTo({top:0,behavior:fromHash?'auto':'smooth'});
+}
+
+function wire(){
+  /* tabs */
+  $$('.tab').forEach(t=>t.onclick=()=>go(t.dataset.view));
+
+  /* header */
+  $('#productName').onchange=e=>{ S.product.name=e.target.value.trim()||'Unser Projekt'; renderAll(); };
+  $('#btnDaily').onclick=()=>{ renderDaily(); show('mDaily'); };
+  $('#btnSprintAction').onclick=()=>{ active()?openReview():openPlan(); };
+  $('#btnPlanFromEmpty').onclick=openPlan;
+  $('#btnNewStory').onclick=()=>openEdit(null);
+
+  /* menu */
+  const pop=$('#menuPop');
+  $('#btnMenu').onclick=e=>{ e.stopPropagation(); pop.hidden=!pop.hidden; };
+  document.addEventListener('click',()=>{ pop.hidden=true; });
+  pop.onclick=e=>e.stopPropagation();
+  $('#miExport').onclick=()=>{ exportJson(); pop.hidden=true; };
+  $('#miImport').onclick=()=>{ $('#importFile').click(); pop.hidden=true; };
+  $('#miPrint').onclick=()=>{ pop.hidden=true; go('sprint'); setTimeout(()=>window.print(),220); };
+  $('#miReset').onclick=()=>{ pop.hidden=true;
+    ask('Alles zurücksetzen?','Das Projekt wird vollständig gelöscht und durch das Beispielprojekt ersetzt. Das lässt sich nicht widerrufen – exportiert vorher, wenn ihr die Daten behalten wollt.',
+      ()=>{ S=seed(); renderAll(); go('sprint'); toast('Zurückgesetzt'); });
+  };
+
+  /* modals schließen */
+  const closeM=id=>{
+    hide(id);
+    if(id==='mEdit' && planReturn){ planReturn=false; renderPlan(); show('mPlan'); }
+  };
+  $$('[data-close]').forEach(b=>b.onclick=()=>closeM(b.dataset.close));
+  $$('.scrim').forEach(sc=>sc.addEventListener('mousedown',e=>{ if(e.target===sc) closeM(sc.id); }));
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){ const open=$$('.scrim').filter(s=>!s.hidden).pop(); if(open) closeM(open.id); }
+  });
+  $('#cfOk').onclick=()=>{ hide('mConfirm'); if(confirmCb) confirmCb(); confirmCb=null; };
+
+  /* story detail / edit */
+  $('#stDelete').onclick=()=>{
+    const s=story(openStory); if(!s) return;
+    ask('Story löschen?',`„${s.title}" wird endgültig gelöscht.`,()=>{
+      S.stories=S.stories.filter(x=>x.id!==openStory);
+      hide('mStory'); renderAll(); toast('Story gelöscht');
+    });
+  };
+  $('#edSave').onclick=saveEdit;
+  $('#edT').addEventListener('keydown',e=>{ if(e.key==='Enter') saveEdit(); });
+
+  /* DoD – einmalig delegiert, damit sich beim Wiederöffnen keine Listener stapeln */
+  $('#stBody').addEventListener('change',e=>{
+    const t=e.target.closest('[data-dod]'); if(!t) return;
+    const s=story(openStory); if(!s) return;
+    s.dod[+t.dataset.dod].done=t.checked; renderAll(); openDetail(openStory);
+  });
+  $('#stBody').addEventListener('click',e=>{
+    const t=e.target.closest('[data-dodrm]'); if(!t) return;
+    const s=story(openStory); if(!s) return;
+    s.dod.splice(+t.dataset.dodrm,1); renderAll(); openDetail(openStory);
+  });
+
+  /* backlog */
+  ['fSearch','fStatus','fSprint','fWho'].forEach(id=>{
+    const el=$('#'+id);
+    el.addEventListener(id==='fSearch'?'input':'change',renderBacklog);
+  });
+  $('#backlogBody').addEventListener('click',e=>{
+    const o=e.target.closest('[data-open]'); if(o) return openDetail(o.dataset.open);
+    const ed=e.target.closest('[data-edit]'); if(ed) return openEdit(ed.dataset.edit);
+    const mv=e.target.closest('[data-mv]'); if(mv) return movePrio(mv.dataset.id, mv.dataset.mv==='up'?-1:1);
+  });
+
+  /* product goal */
+  const rte=$('#goalRte');
+  $$('.rte-bar button').forEach(b=>b.onclick=()=>{
+    rte.focus();
+    const v=b.dataset.cmd==='formatBlock' ? '<'+b.dataset.val+'>' : (b.dataset.val||null);
+    document.execCommand(b.dataset.cmd, false, v);
+    S.product.goal=rte.innerHTML; save();
+  });
+  let gt=null;
+  rte.addEventListener('input',()=>{
+    clearTimeout(gt);
+    $('#goalSaved').textContent='…';
+    gt=setTimeout(()=>{ S.product.goal=rte.innerHTML; save(); $('#goalSaved').textContent='gespeichert'; },500);
+  });
+  rte.addEventListener('blur',()=>{ S.product.goal=rte.innerHTML; save(); });
+  rte.addEventListener('paste',e=>{
+    e.preventDefault();
+    document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'));
+  });
+  $('#goalImgs').addEventListener('click',e=>{
+    if(e.target.closest('#goalAdd')) return $('#goalImgInput').click();
+    const x=e.target.closest('[data-img]');
+    if(x){ S.product.images.splice(+x.dataset.img,1); renderAll(); }
+  });
+  $('#goalImgInput').onchange=e=>{
+    const files=Array.from(e.target.files).slice(0,5-S.product.images.length);
+    if(!files.length){ toast('⚠ Maximal 5 Bilder'); return; }
+    let left=files.length;
+    files.forEach(f=>shrinkImg(f,1200,src=>{
+      S.product.images.push(src);
+      if(--left===0){ renderAll(); toast(`${files.length} Bild${files.length===1?'':'er'} hinzugefügt`); }
+    }));
+    e.target.value='';
+  };
+
+  /* team */
+  $('#teamGrid').addEventListener('change',e=>{
+    const card=e.target.closest('[data-m]'); if(!card) return;
+    const m=member(card.dataset.m), f=e.target.dataset.f; if(!m||!f) return;
+    if(f==='name'){ m.name=e.target.value.trim()||m.name; }
+    else if(f==='label'){ m.label=e.target.value.trim(); }
+    else if(f==='role'){
+      const r=e.target.value;
+      if(r==='po'||r==='sm') S.team.forEach(o=>{ if(o!==m && o.role===r) o.role='dev'; });
+      m.role=r;
+    }
+    renderAll();
+  });
+  $('#teamGrid').addEventListener('click',e=>{
+    if(e.target.closest('#teamAdd')){
+      if(S.team.length>=8){ toast('⚠ Mehr als 8 Personen sind kein Scrum-Team mehr'); return; }
+      S.team.push({ id:'m'+Date.now().toString(36), name:'Neues Mitglied', role:'dev', label:'', avatar:null });
+      renderAll(); toast('Mitglied hinzugefügt');
+      return;
+    }
+    const up=e.target.closest('[data-avup]');
+    if(up){ avatarTarget=up.dataset.avup; $('#avFile').click(); return; }
+    const rm=e.target.closest('[data-rm]');
+    if(rm){
+      const m=member(rm.dataset.rm); if(!m) return;
+      const n=S.stories.filter(s=>s.assignee===m.id).length;
+      ask('Mitglied entfernen?',`${m.name} wird aus dem Team entfernt.`+(n?` ${n} Story${n===1?'':'s'} verliert die Zuständigkeit.`:''),()=>{
+        S.stories.forEach(s=>{ if(s.assignee===m.id) s.assignee=null; });
+        S.team=S.team.filter(x=>x.id!==m.id);
+        renderAll(); toast('Mitglied entfernt');
+      });
+    }
+  });
+  $('#avFile').onchange=e=>{
+    const f=e.target.files[0]; if(!f||!avatarTarget) return;
+    shrinkImg(f,240,src=>{ const m=member(avatarTarget); if(m){ m.avatar=src; renderAll(); } avatarTarget=null; });
+    e.target.value='';
+  };
+
+  /* history */
+  $('#historyTiles').addEventListener('click',e=>{
+    if(e.target.closest('[data-live]')) return go('sprint');
+    const a=e.target.closest('[data-arch]'); if(a) openArchive(a.dataset.arch);
+  });
+
+  /* planning */
+  $('#plStart2').onclick=startSprint;
+  $('#plNewStory').onclick=()=>{ planReturn=true; hide('mPlan'); openEdit(null); };
+  ['plLeft','plRight'].forEach(id=>$('#'+id).addEventListener('click',e=>{
+    const b=e.target.closest('[data-pick]'); if(!b) return;
+    const sid=b.dataset.pick;
+    planPick.has(sid)?planPick.delete(sid):planPick.add(sid);
+    renderPlan();
+  }));
+  $('#plStart').onchange=()=>{
+    if(!$('#plEnd').value || dayDiff($('#plStart').value,$('#plEnd').value)<=0)
+      $('#plEnd').value=iso(new Date(parseD($('#plStart').value).getTime()+14*864e5));
+  };
+
+  /* review */
+  $('#rvCarry').addEventListener('click',e=>{
+    const b=e.target.closest('[data-v]'); if(!b) return;
+    const seg=b.closest('[data-carry]');
+    carryPlan[seg.dataset.carry]=b.dataset.v;
+    Array.from(seg.children).forEach(c=>c.setAttribute('aria-pressed',String(c===b)));
+  });
+  $('#rvFinish').onclick=()=>{
+    const a=active(); if(!a) return;
+    const open=sprintStories(a.id).filter(s=>s.status!=='done').length;
+    ask('Sprint abschließen?',
+      `${a.name} wird eingefroren und wandert ins Archiv.`+(open?` ${open} offene Stor${open===1?'y':'ies'} werden wie gewählt verschoben.`:'')+' Danach planen wir direkt den nächsten Sprint.',
+      finishSprint);
+  };
+
+  /* daily */
+  $('#dlToggle').onclick=()=>tRun?stopTimer():startTimer();
+  $('#dlReset').onclick=resetTimer;
+  $('#turns').addEventListener('click',e=>{
+    const b=e.target.closest('[data-turn]'); if(!b) return;
+    const id=b.dataset.turn;
+    if(turn===id){ spoke.add(id); turn=null; } else { if(turn) spoke.add(turn); turn=id; }
+    renderDaily();
+  });
+  $('#mDaily').addEventListener('click',e=>{ if(e.target.id==='mDaily') stopTimer(); });
+
+  /* import / export */
+  $('#importFile').onchange=e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const fr=new FileReader();
+    fr.onload=()=>{
+      try{
+        const d=JSON.parse(fr.result);
+        if(!d.stories||!d.team||!d.sprints) throw 0;
+        ask('Projekt ersetzen?','Die importierte Datei überschreibt das aktuelle Projekt vollständig.',()=>{
+          S=d; S.product=S.product||{name:'Projekt',goal:'',images:[]};
+          S.product.images=S.product.images||[];
+          renderAll(); go('sprint'); toast('Projekt importiert');
+        });
+      } catch(err){ toast('⚠ Datei konnte nicht gelesen werden'); }
+    };
+    fr.readAsText(f);
+    e.target.value='';
+  };
+}
+
+let avatarTarget=null;
+
+function exportJson(){
+  const name=(S.product.name||'projekt').replace(/[^a-z0-9äöüß ]/gi,'').trim().replace(/\s+/g,'-').toLowerCase();
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`scrum-${name||'projekt'}-${iso(today())}.json`;
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1500);
+  toast('Projekt exportiert');
+}
+
+/* ── boot ────────────────────────────────────────────── */
+(function boot(){
+  S=load()||seed();
+  S.product=S.product||{name:'Projekt',goal:'',images:[]};
+  S.product.images=S.product.images||[];
+  S.seq=S.seq||{story:S.stories.length,sprint:S.sprints.length};
+
+  // Avatar-Datei-Input nachrüsten
+  const inp=document.createElement('input');
+  inp.type='file'; inp.accept='image/*'; inp.id='avFile'; inp.hidden=true;
+  document.body.appendChild(inp);
+
+  wire();
+  renderAll();
+  window.addEventListener('hashchange',()=>go(location.hash.slice(1),true));
+  go(location.hash.slice(1)||'sprint',true);
+})();
+</script>
+</body>
+</html>
