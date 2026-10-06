@@ -114,14 +114,22 @@ function wireJoinForm() {
   const form  = document.getElementById('hubCodeForm');
   if (!input || !form) return;
 
-  input.addEventListener('input', () => {
-    input.value = window.MPRoom.normalizeCode(input.value).slice(0, 6);
-  });
+  // Kein Abschneiden auf 6 Zeichen mehr: dasselbe Feld nimmt auch
+  // den persönlichen Code der Scrum Werkstatt (8 Zeichen, „H7KQ-2M9X").
+  // Bindestrich und Leerzeichen bleiben beim Tippen stehen, damit man
+  // ihn so abtippen kann, wie er auf dem Zettel steht.
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const code = window.MPRoom.normalizeCode(input.value);
+    if (code.length === 8) {
+      // Der persönliche Code gehört nicht in die Adresse (Verlauf,
+      // geteilte Links) — j.html holt ihn sich aus dem sessionStorage.
+      try { sessionStorage.setItem('mpskills.recoverKey', code); } catch (ex) { /* dann eben abtippen */ }
+      location.href = 'j.html#persoenlich';
+      return;
+    }
     if (!window.MPRoom.isCode(code)) {
-      toast('Der Code besteht aus 6 Zeichen — Buchstaben und Ziffern.', 'error');
+      toast('Der Code von der Tafel hat 6 Zeichen, ein persönlicher Code 8.', 'error');
       input.focus();
       return;
     }

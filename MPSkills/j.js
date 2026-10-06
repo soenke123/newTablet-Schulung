@@ -288,6 +288,9 @@ function renderAsk(prefill, errorMsg) {
   });
 
   function spread(text, from) {
+    // Acht Zeichen auf einmal (eingefügt oder vom Hash) sind kein
+    // Tafel-Code, sondern ein persönlicher — dann gleich dorthin.
+    if (from === 0 && text.length === 8) { renderRecover('', text, true); return; }
     for (let k = 0; k < text.length && from + k < 6; k++) cells[from + k].value = text[k];
     const next = Math.min(from + text.length, 5);
     cells[next].focus();
@@ -328,7 +331,7 @@ function renderAsk(prefill, errorMsg) {
 
    Ein Feld statt acht Kästchen: der Code steht auf einem Zettel oder
    Foto als „H7KQ-2M9X", und so wird er auch abgetippt. */
-function renderRecover(errorMsg, prefill) {
+function renderRecover(errorMsg, prefill, autoSubmit) {
   host().innerHTML = `
     <div class="card card--join">
       <h1 class="join-h">Persönlicher Code</h1>
@@ -347,7 +350,7 @@ function renderRecover(errorMsg, prefill) {
     </div>`;
 
   const input = document.getElementById('keyIn');
-  setTimeout(() => input.focus(), 60);
+  if (!autoSubmit) setTimeout(() => input.focus(), 60);
   document.getElementById('keyBack').addEventListener('click', () => renderAsk(''));
 
   document.getElementById('keyForm').addEventListener('submit', async (e) => {
@@ -375,6 +378,13 @@ function renderRecover(errorMsg, prefill) {
     if (location.hash.replace(/^#/, '').toUpperCase() === code) route();
     else location.hash = code;
   });
+
+  // Von der Startseite oder per Einfügen mitgebracht: gleich los.
+  if (autoSubmit && MPRoom.normalizeCode(prefill).length === 8) {
+    const form = document.getElementById('keyForm');
+    if (form.requestSubmit) form.requestSubmit();
+    else document.getElementById('keyGo').click();
+  }
 }
 
 /* ─── Zustand: die Tür ────────────────────────────────────── */
@@ -745,8 +755,20 @@ async function route() {
   unmountTool();
   clearTabs();
 
-  const code = MPRoom.normalizeCode(location.hash.replace(/^#/, ''));
+  const rawHash = location.hash.replace(/^#/, '');
+  // Persönlicher Code (0196) von der Startseite: steht im
+  // sessionStorage, nicht in der Adresse.
+  if (rawHash === 'persoenlich') {
+    let key = '';
+    try { key = sessionStorage.getItem('mpskills.recoverKey') || ''; sessionStorage.removeItem('mpskills.recoverKey'); } catch (e) { /* egal */ }
+    renderRecover('', key, !!key);
+    return;
+  }
+  const code = MPRoom.normalizeCode(rawHash);
   if (!code) { renderAsk(''); return; }
+  // Jemand hat den persönlichen Code direkt hinter die Adresse
+  // getippt — in das richtige Formular, nicht in die Fehlermeldung.
+  if (code.length === 8) { renderRecover('', code, true); return; }
   if (!MPRoom.isCode(code)) { renderAsk(code, ERRORS.code_invalid); return; }
 
   const known = MPRoom.get(code);
