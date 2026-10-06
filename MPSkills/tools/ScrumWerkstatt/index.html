@@ -647,6 +647,11 @@ body.ro #btnSprintAction, body.ro #btnPlanFromEmpty, body.ro #btnNewStory,
 body.ro .pi-nav, body.ro [data-edit], body.ro .b-prio button, body.ro .rte-bar,
 body.ro #goalAdd, body.ro .ishell .x, body.ro #stDelete, body.ro #dEdit,
 body.ro .inline-add, body.ro .dodrow .rm{display:none!important}
+/* Product Backlog und Product Goal: im Raum nur der Product Owner.
+   Alle anderen Mitglieder lesen nur (body.nopo, gesetzt von lockRO). */
+body.nopo #btnNewStory, body.nopo #view-backlog .b-prio button,
+body.nopo #view-backlog [data-edit], body.nopo #view-goal .rte-bar,
+body.nopo #goalAdd, body.nopo #goalImgs .x{display:none!important}
 body.ro .postit{cursor:default}
 body.ro .avbtn{cursor:default}
 .robar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12.5px;color:var(--petrol);margin-bottom:16px}
@@ -875,7 +880,7 @@ body.inroom::after{display:none}
       <div>
         <div class="eyebrow">Alles, was zum Produkt gehört</div>
         <h2 class="t">Product Backlog</h2>
-        <p class="s">Die vollständige Liste aller User Stories – auch die aus abgeschlossenen Sprints. Oben steht, was als Nächstes dran ist: Der Product Owner priorisiert.</p>
+        <p class="s">Die vollständige Liste aller User Stories – auch die aus abgeschlossenen Sprints. Oben steht, was als Nächstes dran ist: Der Product Owner priorisiert – nur er ändert das Backlog, alle anderen lesen mit.</p>
       </div>
       <div class="sp">
         <button class="btn primary" id="btnNewStory">
@@ -926,7 +931,7 @@ body.inroom::after{display:none}
       <div>
         <div class="eyebrow">Warum machen wir das?</div>
         <h2 class="t">Product Goal</h2>
-        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll – und für wen. Dieses Ziel ist euer Kompass: Jede User Story im Backlog muss darauf einzahlen.</p>
+        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll – und für wen. Dieses Ziel ist euer Kompass: Jede User Story im Backlog muss darauf einzahlen. Bearbeiten darf es nur der Product Owner.</p>
       </div>
       <div class="sp"><span class="stat" id="goalSaved">gespeichert</span></div>
     </div>
@@ -1734,8 +1739,19 @@ function lockRO(){
     if(SW.ro){ el.dataset.roLock='1'; el.disabled=true; }
     else if(el.dataset.roLock){ delete el.dataset.roLock; el.disabled=false; }
   });
-  $('#goalRte').contentEditable = SW.ro ? 'false' : 'true';
+  const po=canEditPO();
+  document.body.classList.toggle('nopo', !po);
+  $('#goalRte').contentEditable = po ? 'true' : 'false';
   $$('.postit, .mchip').forEach(p=>p.draggable=!SW.ro);
+}
+
+/* Product Backlog und Product Goal bearbeitet nur der Product Owner.
+   Außerhalb eines Raums (Einzelnutzung) darf jeder. */
+function canEditPO(){
+  if(!SW.on) return true;
+  if(SW.ro) return false;
+  const m=S.team.find(x=>x.me);
+  return !!m && m.role==='po';
 }
 
 async function joinAsMember(){
@@ -2032,6 +2048,7 @@ function renderBacklog(){
 }
 
 function movePrio(id,dir){
+  if(!canEditPO()) return;
   const all=sorted(), i=all.findIndex(s=>s.id===id), j=i+dir;
   if(i<0||j<0||j>=all.length) return;
   const a=all[i], b=all[j], t=a.order; a.order=b.order; b.order=t;
@@ -2348,6 +2365,7 @@ function openDetail(id){
    STORY ANLEGEN / BEARBEITEN
    ════════════════════════════════════════════════════════════ */
 function openEdit(id){
+  if(!id && !canEditPO() && !planReturn) return;
   editingStory=id||null;
   const s=id?story(id):null;
   $('#edTitle').textContent=s?'Story bearbeiten':'Neue User Story';
@@ -2728,11 +2746,13 @@ function wire(){
   $$('.rte-bar button').forEach(b=>b.onclick=()=>{
     rte.focus();
     const v=b.dataset.cmd==='formatBlock' ? '<'+b.dataset.val+'>' : (b.dataset.val||null);
+    if(!canEditPO()) return;
     document.execCommand(b.dataset.cmd, false, v);
     S.product.goal=rte.innerHTML; save();
   });
   let gt=null;
   rte.addEventListener('input',()=>{
+    if(!canEditPO()) return;
     clearTimeout(gt);
     $('#goalSaved').textContent='…';
     gt=setTimeout(()=>{ S.product.goal=rte.innerHTML; save(); $('#goalSaved').textContent='gespeichert'; },500);
@@ -2743,6 +2763,7 @@ function wire(){
     document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'));
   });
   $('#goalImgs').addEventListener('click',e=>{
+    if(!canEditPO()) return;
     if(e.target.closest('#goalAdd')) return $('#goalImgInput').click();
     const x=e.target.closest('[data-img]');
     if(x){ S.product.images.splice(+x.dataset.img,1); renderAll(); }
