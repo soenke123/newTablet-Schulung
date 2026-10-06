@@ -28,6 +28,13 @@ weiter im localStorage. Zeilennummern unten stammen vom Prototyp und stimmen nic
       Fläche unter den Bahnen. Eine Bahn macht genau eine Story — überzählige gehen
       beim Zusammenlegen zurück ins Sprint Backlog
 
+## ✅ Erledigt 06.10.2026 (Runde 2)
+
+- [x] Spalte „Prüfen“ entfällt (alte Karten → „In Arbeit“)
+- [x] Definition of Done entfällt; stattdessen **Tasks** je Story (`s.tasks`, alte `s.dod` wird migriert) —
+      jede Person kann anlegen, abhaken (ausgegraut) und löschen
+- [x] Kopfzeile mit mehr Seitenabstand; Loop-Logo statt „S“
+
 ## ❓ Offen zur Entscheidung: Rechte und Rollen
 
 Bisher darf jedes Teammitglied alles; Beobachter und Lehrkraft lesen nur.

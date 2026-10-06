@@ -75,14 +75,13 @@ header.top{
   background:linear-gradient(180deg,#17302e,#132826);
   color:#eef3f1; border-bottom:2px solid #0c1e1d;
 }
-.top-row{display:flex; align-items:center; gap:18px; min-height:60px; padding:9px 0; flex-wrap:wrap}
+.top-row{display:flex; align-items:center; gap:18px; min-height:60px; padding:9px clamp(14px,2.4vw,30px); flex-wrap:wrap}
 .brand{display:flex; align-items:center; gap:11px; margin-right:auto; min-width:0; flex:1 1 260px}
 .brand-mark{
   width:36px;height:36px;border-radius:10px;flex:none;
   background:var(--marker); color:#fff;
   display:grid;place-items:center;
   box-shadow:inset 0 -2px 0 rgba(0,0,0,.22);
-  font-family:var(--serif); font-weight:700; font-size:19px;
 }
 .brand-txt{min-width:0; flex:1}
 .brand-eyebrow{
@@ -542,6 +541,7 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 .dodrow.ok label{text-decoration:line-through;color:var(--ink-3)}
 .dodrow .rm{background:none;border:0;color:var(--ink-3);padding:3px;border-radius:4px}
 .dodrow .rm:hover{color:var(--st-block);background:#fbe9e6}
+.dodrow.ok{background:#eceae3;opacity:.75}
 .inline-add{display:flex;gap:8px;margin-top:9px}
 
 /* transfer list (planning) */
@@ -753,7 +753,9 @@ body.inroom::after{display:none}
 <header class="top">
   <div class="wrap top-row">
     <div class="brand">
-      <div class="brand-mark">S</div>
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 9A8 8 0 0 0 5.2 7.6"/><path d="M5.5 3.2v4.6h4.6"/><path d="M4.5 15a8 8 0 0 0 14.3 1.4"/><path d="M18.5 20.8v-4.6h-4.6"/></svg>
+      </div>
       <div class="brand-txt">
         <div class="brand-eyebrow">Scrum Werkstatt</div>
         <input class="brand-name" id="productName" value="Projekt" aria-label="Projektname">
@@ -893,7 +895,6 @@ body.inroom::after{display:none}
         <option value="all">Alle Status</option>
         <option value="todo">Zu tun</option>
         <option value="doing">In Arbeit</option>
-        <option value="check">Prüfen</option>
         <option value="done">Fertig</option>
         <option value="blocked">Blockiert</option>
       </select>
@@ -1044,14 +1045,15 @@ body.inroom::after{display:none}
       </div>
       <div class="excard alt">
         <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 12.5l4.5 4.5L20 5.5"/><path d="M4 19h9"/></svg></div>
-        <h3>Definition of Done</h3>
-        <p>Die Qualitätsregeln, die für <b>jede</b> Karte gelten. Erst wenn alle Häkchen gesetzt sind, darf eine Story nach „Fertig“.</p>
+        <h3>Tasks</h3>
+        <p>Kleine Schritte innerhalb einer User Story – jeder Task passt in <b>eine Unterrichtsstunde</b>. Jede Person im Team kann Tasks anlegen und abhaken.</p>
         <ul>
-          <li>Inhaltlich geprüft</li>
-          <li>Quellen angegeben</li>
-          <li>Von einer zweiten Person gegengelesen</li>
+          <li>Quellen suchen</li>
+          <li>Gliederung schreiben</li>
+          <li>Foto vom Aufbau machen</li>
         </ul>
       </div>
+
       <div class="excard">
         <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M3 17l5-5 4 3 5-7 4 4"/><path d="M3 21h18"/></svg></div>
         <h3>Velocity</h3>
@@ -1408,11 +1410,10 @@ const COLS = [
   { k:'todo',    nm:'Sprint Backlog', c:'var(--st-todo)',  hint:'Geplant, aber noch nicht angefangen.' },
   { k:'blocked', nm:'Blockiert',      c:'var(--st-block)', hint:'Hier hilft der Scrum Master weiter.' },
   { k:'doing',   nm:'In Arbeit',      c:'var(--st-doing)', hint:'Eine Story je Bereich. Zieht eine Person auf eine andere, um zusammen zu arbeiten.' },
-  { k:'check',   nm:'Prüfen',         c:'var(--st-check)', hint:'Zweite Person liest gegen.' },
-  { k:'done',    nm:'Fertig',         c:'var(--st-done)',  hint:'Alle DoD-Häkchen gesetzt.' }
+  { k:'done',    nm:'Fertig',         c:'var(--st-done)',  hint:'Geschafft und fertig.' }
 ];
-const FLOW = ['todo','doing','check','done'];
-const STL  = { todo:'Zu tun', doing:'In Arbeit', check:'Prüfen', done:'Fertig' };
+const FLOW = ['todo','doing','done'];
+const STL  = { todo:'Zu tun', doing:'In Arbeit', check:'In Arbeit', done:'Fertig' };
 const STC  = { todo:'bg-todo', doing:'bg-doing', check:'bg-check', done:'bg-done' };
 const AVC  = ['#1d5955','#ca5a1c','#2b6694','#7a3f6d','#2d7a4d','#8a5a1a','#53407e','#a0442f'];
 
@@ -1495,51 +1496,51 @@ function seed(){
 
   const st=(n,o)=>Object.assign({
     id:'u'+n, key:'US-'+pad(n), asA:'', want:'', soThat:'', points:2, category:'Text', color:'yellow',
-    assignee:null, sprint:null, status:'todo', blocked:false, note:'', dod:[], order:n
+    assignee:null, sprint:null, status:'todo', blocked:false, note:'', tasks:[], order:n
   },o);
 
   const stories=[
     st(1,{ title:'Inhaltsverzeichnis & Leitfragen formulieren', asA:'Leserin der Facharbeit', want:'eine klare Kapiteleinteilung sehen', soThat:'ich das Thema sofort einordnen kann',
       points:2, category:'Text', assignee:'m1', sprint:'s1', status:'done',
-      dod:[{text:'Mit der Lehrkraft abgestimmt',done:true},{text:'In der Layoutvorlage formatiert',done:true}] }),
+      tasks:[{text:'Mit der Lehrkraft abgestimmt',done:true},{text:'In der Layoutvorlage formatiert',done:true}] }),
     st(2,{ title:'Literaturrecherche: 5 Fachquellen sichern', asA:'Korrektor', want:'belastbare Quellen vorfinden', soThat:'die Argumentation trägt',
       points:3, category:'Recherche', color:'blue', assignee:'m2', sprint:'s1', status:'done',
-      dod:[{text:'Mindestens 5 Fachquellen',done:true},{text:'Zugriffsdatum notiert',done:true}] }),
+      tasks:[{text:'Mindestens 5 Fachquellen',done:true},{text:'Zugriffsdatum notiert',done:true}] }),
     st(3,{ title:'Versuchsaufbau Solarzelle montieren', asA:'MINT-Gruppe', want:'einen stabilen Messaufbau haben', soThat:'die Messwerte vergleichbar sind',
       points:5, category:'Praxis / MINT', color:'green', assignee:'m3', sprint:'s1', status:'done',
-      dod:[{text:'Aufbau fotografiert',done:true},{text:'Messgeräte kalibriert',done:true}] }),
+      tasks:[{text:'Aufbau fotografiert',done:true},{text:'Messgeräte kalibriert',done:true}] }),
     st(4,{ title:'Deckblatt & Layoutvorlage anlegen', asA:'Leser', want:'ein einheitliches Schriftbild sehen', soThat:'die Arbeit professionell wirkt',
       points:1, category:'Design', color:'pink', assignee:'m4', sprint:'s1', status:'done',
-      dod:[{text:'Vorlage im Teamordner',done:true}] }),
+      tasks:[{text:'Vorlage im Teamordner',done:true}] }),
 
     st(5,{ title:'Messreihe bei 5 Lichtwinkeln durchführen', asA:'MINT-Gruppe', want:'Spannungswerte bei verschiedenen Winkeln messen', soThat:'wir die Abhängigkeit zeigen können',
       points:5, category:'Praxis / MINT', color:'green', assignee:'m3', sprint:'s2', status:'doing',
-      dod:[{text:'Je Winkel 3 Messungen',done:true},{text:'Werte in Tabelle übertragen',done:false},{text:'Fehlerrechnung durchgeführt',done:false}] }),
+      tasks:[{text:'Je Winkel 3 Messungen',done:true},{text:'Werte in Tabelle übertragen',done:false},{text:'Fehlerrechnung durchgeführt',done:false}] }),
     st(6,{ title:'Diagramm Spannung–Winkel erstellen', asA:'Leserin', want:'den Zusammenhang auf einen Blick erkennen', soThat:'ich die Auswertung ohne Rechnen verstehe',
       points:3, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'doing',
-      dod:[{text:'Achsen beschriftet, Einheiten korrekt',done:true},{text:'Bildunterschrift ergänzt',done:false}] }),
+      tasks:[{text:'Achsen beschriftet, Einheiten korrekt',done:true},{text:'Bildunterschrift ergänzt',done:false}] }),
     st(7,{ title:'Lötkolben für Sensorplatine beschaffen', asA:'Entwickler', want:'die Platine fertig löten', soThat:'der Prototyp funktioniert',
       points:3, category:'Praxis / MINT', assignee:'m3', sprint:'s2', status:'doing', blocked:true,
       note:'Lötkolben im Physikraum defekt. Sophie fragt Herrn K. nach Ersatz.',
-      dod:[{text:'Kontakte durchgemessen',done:false}] }),
+      tasks:[{text:'Kontakte durchgemessen',done:false}] }),
     st(8,{ title:'Kapitel 3 „Auswertung" im Rohtext schreiben', asA:'Leser', want:'die Ergebnisse erklärt bekommen', soThat:'die Messwerte eine Bedeutung haben',
       points:5, category:'Text', assignee:'m1', sprint:'s2', status:'todo',
-      dod:[{text:'Rechtschreibprüfung gelaufen',done:false},{text:'Von zweiter Person gegengelesen',done:false}] }),
+      tasks:[{text:'Rechtschreibprüfung gelaufen',done:false},{text:'Von zweiter Person gegengelesen',done:false}] }),
     st(9,{ title:'Quellenverzeichnis nach Vorgabe prüfen', asA:'Korrektor', want:'vollständige Angaben vorfinden', soThat:'kein Plagiatsverdacht entsteht',
-      points:1, category:'Recherche', color:'blue', assignee:'m2', sprint:'s2', status:'check',
-      dod:[{text:'Alle Online-Quellen mit Datum',done:true},{text:'Einheitliches Format',done:true}] }),
+      points:1, category:'Recherche', color:'blue', assignee:'m2', sprint:'s2', status:'doing',
+      tasks:[{text:'Alle Online-Quellen mit Datum',done:true},{text:'Einheitliches Format',done:true}] }),
     st(10,{ title:'Fotos vom Aufbau freistellen', asA:'Leserin', want:'klare Abbildungen sehen', soThat:'der Aufbau nachvollziehbar ist',
       points:2, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'done',
-      dod:[{text:'Mindestens 2 Fotos',done:true},{text:'Hintergrund entfernt',done:true}] }),
+      tasks:[{text:'Mindestens 2 Fotos',done:true},{text:'Hintergrund entfernt',done:true}] }),
 
     st(11,{ title:'Experten-Interview mit dem Umweltamt führen', asA:'Forscherin', want:'O-Töne zur Solarförderung aufnehmen', soThat:'der Praxisteil belegt ist',
-      points:5, category:'Recherche', color:'blue', dod:[{text:'Fragen vorab verschickt',done:false}] }),
+      points:5, category:'Recherche', color:'blue', tasks:[{text:'Fragen vorab verschickt',done:false}] }),
     st(12,{ title:'Präsentationsfolien für die Abschlussprüfung', asA:'Kursteilnehmer', want:'die Kernaussagen visuell sehen', soThat:'die Präsentation hängen bleibt',
-      points:3, category:'Präsentation', color:'lilac', dod:[{text:'Maximal 8 Folien',done:false}] }),
+      points:3, category:'Präsentation', color:'lilac', tasks:[{text:'Maximal 8 Folien',done:false}] }),
     st(13,{ title:'Fazit & Ausblick formulieren', asA:'Leser', want:'am Ende eine klare Antwort bekommen', soThat:'die Leitfrage beantwortet ist',
-      points:3, category:'Text', dod:[] }),
+      points:3, category:'Text', tasks:[] }),
     st(14,{ title:'Energieertrag über eine Woche protokollieren', asA:'MINT-Gruppe', want:'Langzeitdaten erheben', soThat:'wir Schwankungen zeigen können',
-      points:8, category:'Praxis / MINT', color:'green', dod:[] })
+      points:8, category:'Praxis / MINT', color:'green', tasks:[] })
   ];
 
   return {
@@ -1682,7 +1683,15 @@ function ringSvg(pct,col){
 /* ════════════════════════════════════════════════════════════
    RENDER
    ════════════════════════════════════════════════════════════ */
+/* Altbestand: „Prüfen“ gibt es nicht mehr; DoD-Kriterien heißen jetzt Tasks. */
+function migrate(){
+  (S.stories||[]).forEach(s=>{
+    if(s.status==='check') s.status='doing';
+    if(s.dod){ if(!s.tasks) s.tasks=s.dod; delete s.dod; }
+  });
+}
 function renderAll(){
+  migrate();
   save();
   renderHeader();
   renderCounts();
@@ -1884,7 +1893,7 @@ function postit(s){
   el.style.transform=`rotate(${rot}deg)`;
   el.draggable=true; el.dataset.id=s.id;
 
-  const dod=s.dod||[], dn=dod.filter(d=>d.done).length;
+  const dod=s.tasks||[], dn=dod.filter(d=>d.done).length;
   const fi=FLOW.indexOf(s.status);
   const m=member(s.assignee);
   const mates=(s.mates||[]).map(member).filter(Boolean);
@@ -1896,7 +1905,7 @@ function postit(s){
     ${s.blocked&&s.note?`<div class="pi-note">${esc(s.note)}</div>`:''}
     <div class="pi-foot">
       <span class="pi-sp">${s.points}</span>
-      ${dod.length?`<span class="pi-dod">${dn}/${dod.length} DoD</span>`:''}
+      ${dod.length?`<span class="pi-dod">${dn}/${dod.length} Tasks</span>`:''}
       <span class="pi-who">${avatar(m,18)}${mates.map(x=>avatar(x,18)).join('')}${esc(m?ownersName(s):'frei')}</span>
     </div>
     <div class="pi-nav">
@@ -2240,7 +2249,7 @@ function openDetail(id){
   $('#stTitle').textContent=s.title;
   $('#stSub').textContent=`${s.key} · ${s.category} · ${s.points} Story Points`;
 
-  const dod=s.dod||[], dn=dod.filter(d=>d.done).length;
+  const dod=s.tasks||[], dn=dod.filter(d=>d.done).length;
   const formula=s.text
     ? esc(s.text).replace(/\n/g,'<br>')
     : (s.asA||s.want||s.soThat)
@@ -2280,7 +2289,7 @@ function openDetail(id){
     <div class="box">
       <div class="bt">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 12.5l4.5 4.5L20 5.5"/></svg>
-        Definition of Done · ${dn}/${dod.length}
+        Tasks · ${dn}/${dod.length} erledigt
       </div>
       <div class="dod" id="dDod">
         ${dod.length?dod.map((d,i)=>`
@@ -2291,10 +2300,10 @@ function openDetail(id){
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>`).join('')
-          :`<div style="font-size:12.5px;color:var(--ink-3);font-style:italic">Noch keine Kriterien – was muss stimmen, damit diese Karte wirklich fertig ist?</div>`}
+          :`<div style="font-size:12.5px;color:var(--ink-3);font-style:italic">Noch keine Tasks – unterteilt die User Story in kleinere Tasks: Aufgaben, die man in einer Unterrichtsstunde erledigen kann.</div>`}
       </div>
       <div class="inline-add">
-        <input type="text" id="dNew" placeholder="Weiteres Kriterium …">
+        <input type="text" id="dNew" placeholder="Neuer Task …">
         <button class="btn" id="dAdd">+</button>
       </div>
     </div>
@@ -2327,7 +2336,7 @@ function openDetail(id){
   body.querySelector('#dNote').onchange=e=>{ s.note=e.target.value.trim(); renderAll(); };
   body.querySelector('#dAdd').onclick=()=>{
     const i=body.querySelector('#dNew'), v=i.value.trim(); if(!v) return;
-    (s.dod=s.dod||[]).push({text:v,done:false}); renderAll(); openDetail(id);
+    (s.tasks=s.tasks||[]).push({text:v,done:false}); renderAll(); openDetail(id);
   };
   body.querySelector('#dNew').addEventListener('keydown',e=>{ if(e.key==='Enter') body.querySelector('#dAdd').click(); });
   body.querySelector('#dEdit').onclick=()=>{ hide('mStory'); openEdit(id); };
@@ -2387,7 +2396,7 @@ function saveEdit(){
     const ns=Object.assign({
       id:SW.on?newId('u'):'u'+n, key:SW.on?'US-…':'US-'+pad(n), status:'todo', blocked:false, note:'', order:maxOrder+1,
       assignee:null, sprint:null,
-      dod:[{text:'Inhaltlich geprüft',done:false},{text:'Von zweiter Person gegengelesen',done:false}]
+      tasks:[]
     },vals);
     S.stories.push(ns);
     if(planReturn){ planPick.add(ns.id); ns.sprint=null; }
@@ -2686,16 +2695,16 @@ function wire(){
   $('#edSave').onclick=saveEdit;
   $('#edT').addEventListener('keydown',e=>{ if(e.key==='Enter') saveEdit(); });
 
-  /* DoD – einmalig delegiert, damit sich beim Wiederöffnen keine Listener stapeln */
+  /* Tasks – einmalig delegiert, damit sich beim Wiederöffnen keine Listener stapeln */
   $('#stBody').addEventListener('change',e=>{
     const t=e.target.closest('[data-dod]'); if(!t) return;
     const s=story(openStory); if(!s) return;
-    s.dod[+t.dataset.dod].done=t.checked; renderAll(); openDetail(openStory);
+    s.tasks[+t.dataset.dod].done=t.checked; renderAll(); openDetail(openStory);
   });
   $('#stBody').addEventListener('click',e=>{
     const t=e.target.closest('[data-dodrm]'); if(!t) return;
     const s=story(openStory); if(!s) return;
-    s.dod.splice(+t.dataset.dodrm,1); renderAll(); openDetail(openStory);
+    s.tasks.splice(+t.dataset.dodrm,1); renderAll(); openDetail(openStory);
   });
 
   $('#colPick').addEventListener('click',e=>{
