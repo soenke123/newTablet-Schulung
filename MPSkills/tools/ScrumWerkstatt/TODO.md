@@ -45,6 +45,18 @@ weiter im localStorage. Zeilennummern unten stammen vom Prototyp und stimmen nic
       (letzte 8 bleiben); vor Zurücksetzen/Einspielen ein Backup „vor Änderung". Download und
       Einspielen (auch in einem neuen Raum) über das Menü „Backups" bzw. „Import"
 
+## ✅ Erledigt 06.10.2026 (Runde 4)
+
+- [x] Persönlicher Code steht nicht mehr im Team (nur noch Menü oben rechts)
+- [x] Product Owner / Scrum Master mit Icon statt Initialen
+- [x] Ganze Story-Karte (Board und Backlog-Zeile) öffnet die Story; Ziehen bleibt
+- [x] Prio: Nummern + Griff zum Ziehen (Zeiger, auch Touch); Fertige ohne Prio, bei „Prio“ ganz unten
+- [x] Backlog: alle Mitglieder filtern, Sortieren per Klick auf die Spaltenköpfe
+- [x] Sprint-Filter mit Mehrfachauswahl; Standard = aktueller Sprint + „noch nicht zugewiesen“
+- [x] Tasks im Story-Dialog (zweite Spalte, PO); Devs bei Stories im Sprint
+- [x] Keine Standard-Tasks mehr im Demo-Bestand
+- [x] Kategorien-Dialog im Backlog (`S.product.categories`, Standard: Entwickeln, Planen, Design)
+
 ## ❓ Offen zur Entscheidung: Rechte und Rollen
 
 Bisher darf jedes Teammitglied alles; Beobachter und Lehrkraft lesen nur.

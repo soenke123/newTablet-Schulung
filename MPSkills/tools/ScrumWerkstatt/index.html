@@ -328,11 +328,45 @@ tbody tr:hover{background:#fff}
 tbody tr.isdone{background:rgba(45,122,77,.045)}
 tbody tr.isdone .b-title{color:var(--ink-3)}
 td{padding:9px 11px;vertical-align:middle}
-.b-prio{display:flex;align-items:center;gap:3px}
-.b-prio .num{font-family:var(--serif);font-weight:700;font-size:13px;color:var(--ink-3);min-width:17px}
-.b-prio button{background:var(--paper-down);border:1px solid var(--line);border-radius:4px;width:21px;height:19px;display:grid;place-items:center;color:var(--ink-2)}
-.b-prio button:hover:not(:disabled){background:var(--petrol);color:#fff;border-color:var(--petrol)}
-.b-prio button:disabled{opacity:.25;cursor:not-allowed}
+.b-prio{display:flex;align-items:center;gap:7px}
+.b-prio .num{font-family:var(--serif);font-weight:700;font-size:14px;color:var(--petrol);min-width:20px;text-align:right}
+.b-prio .num.none{color:var(--ink-3);font-weight:400}
+.b-grip{width:24px;height:26px;border-radius:5px;border:1px solid var(--line);background:var(--paper-down);display:grid;place-items:center;color:var(--ink-3);cursor:grab;touch-action:none;flex:none}
+.b-grip:hover{background:var(--petrol-wash);color:var(--petrol);border-color:var(--petrol)}
+.b-grip.off{visibility:hidden;pointer-events:none}
+tbody tr[data-open]{cursor:pointer}
+tbody tr.dragging{opacity:.45}
+tbody tr.dropbefore td{box-shadow:inset 0 2px 0 var(--petrol)}
+tbody tr.dropafter td{box-shadow:inset 0 -2px 0 var(--petrol)}
+thead th[data-sort]{cursor:pointer;user-select:none}
+thead th[data-sort]:hover{color:var(--petrol)}
+thead th[data-sort]::after{content:'';display:inline-block;margin-left:5px;border:4px solid transparent;opacity:0;vertical-align:middle}
+thead th[data-sort].asc::after{border-bottom:5px solid currentColor;border-top:0;opacity:1;color:var(--petrol)}
+thead th[data-sort].desc::after{border-top:5px solid currentColor;border-bottom:0;opacity:1;color:var(--petrol)}
+thead th.asc,thead th.desc{color:var(--petrol)}
+.msel{position:relative}
+.msel-btn{display:flex;align-items:center;gap:8px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);padding:7px 11px;font-size:13px;color:var(--ink);min-height:36px}
+.msel-pop{position:absolute;top:calc(100% + 4px);left:0;z-index:30;min-width:220px;max-height:320px;overflow:auto;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-3);padding:6px}
+.msel-pop label{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:5px;font-size:13px;cursor:pointer;white-space:nowrap}
+.msel-pop label:hover{background:var(--paper-down)}
+.msel-pop input{width:17px;height:17px;accent-color:var(--petrol)}
+.msel-pop .past{color:var(--ink-3)}
+.msel-pop .sepl{height:1px;background:var(--line);margin:5px 4px}
+.msel-pop .lnk{display:flex;gap:8px;padding:4px 9px 6px}
+.msel-pop .lnk button{background:none;border:0;color:var(--petrol);font-size:12px;font-weight:600;padding:2px 0}
+.edgrid{display:grid;grid-template-columns:1fr;gap:22px}
+.modal.two{max-width:960px}
+.modal.two .edgrid{grid-template-columns:1.25fr 1fr}
+.edtasks{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:15px;align-self:start}
+.edtasks .th{font-family:var(--serif);font-weight:600;font-size:16px;margin-bottom:4px}
+.edtasks .tx{font-size:12.5px;color:var(--ink-3);line-height:1.5;margin:0 0 11px}
+.edtrow{display:flex;gap:7px;margin-bottom:7px}
+.edtrow input[type=text]{flex:1;min-width:0}
+.edtrow .rm{background:none;border:0;color:var(--ink-3);padding:3px 6px;border-radius:4px}
+.edtrow .rm:hover{color:var(--st-block);background:#fbe9e6}
+.catrow{display:flex;gap:8px;margin-bottom:8px}
+.catrow input{flex:1;min-width:0}
+.postit{cursor:pointer}
 .b-title{font-weight:600;text-align:left;background:none;border:0;padding:0;font-size:13px}
 .b-title:hover{color:var(--petrol);text-decoration:underline}
 .b-sub{font-size:11px;color:var(--ink-3);font-style:italic;margin-top:2px;max-width:46ch}
@@ -381,6 +415,10 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 .resp::after{content:'';position:absolute;inset:0 auto 0 0;width:5px}
 .resp.po::after{background:var(--marker)}
 .resp.sm::after{background:var(--petrol)}
+.roleic{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;flex:none;color:#fff}
+.roleic.po{background:var(--marker)}
+.roleic.sm{background:var(--petrol)}
+.roleic.vacant{background:var(--line);color:var(--ink-3)}
 .resp .role{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;font-weight:700}
 .resp.po .role{color:var(--marker)}
 .resp.sm .role{color:var(--petrol)}
@@ -670,10 +708,10 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 body.ro #btnSprintAction, body.ro #btnPlanFromEmpty, body.ro #btnNewStory,
 body.ro .pi-nav, body.ro [data-edit], body.ro .b-prio button, body.ro .rte-bar,
 body.ro #goalAdd, body.ro .ishell .x, body.ro #stDelete, body.ro #dEdit,
-body.ro .inline-add, body.ro .dodrow .rm{display:none!important}
+body.ro .inline-add, body.ro .dodrow .rm, body.ro #btnCats, body.ro .b-grip{display:none!important}
 /* Product Backlog und Product Goal: im Raum nur der Product Owner.
    Alle anderen Mitglieder lesen nur (body.nopo, gesetzt von lockRO). */
-body.nopo #btnNewStory, body.nopo #view-backlog .b-prio button,
+body.nopo #btnNewStory, body.nopo #btnCats, body.nopo .b-grip,
 body.nopo #view-backlog [data-edit], body.nopo #view-goal .rte-bar,
 body.nopo #goalAdd, body.nopo #goalImgs .x{display:none!important}
 body.ro .postit{cursor:default}
@@ -695,8 +733,6 @@ body.ro .avbtn{cursor:default}
 .rowline .acts{display:flex;gap:6px;margin-left:auto}
 
 .keybig{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:clamp(30px,9vw,42px);font-weight:700;letter-spacing:.08em;color:var(--petrol);background:var(--paper-up);border:2px dashed var(--line);border-radius:var(--r);padding:14px 8px}
-.keystrip{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--marker-wash);border:1px solid #f0c9a8;border-radius:var(--r);padding:12px 15px;margin:18px 0 0}
-.keystrip .btn{margin-left:auto}
 .teamnote{font-size:12.5px;color:var(--ink-3);margin:14px 0 0}
 .teamnote b{color:var(--ink-2)}
 .metag{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--marker-wash);color:var(--marker);padding:1px 6px;border-radius:99px;vertical-align:middle}
@@ -718,6 +754,7 @@ body.inroom::after{display:none}
   .imgs{grid-template-columns:repeat(4,1fr)}
 }
 @media (max-width:880px){
+  .modal.two .edgrid{grid-template-columns:1fr}
   .resp-band{grid-template-columns:1fr}
   .retro{grid-template-columns:1fr}
   .grid3{grid-template-columns:1fr}
@@ -920,6 +957,10 @@ body.inroom::after{display:none}
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
           Neue Story
         </button>
+        <button class="btn" id="btnCats">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.2"/></svg>
+          Kategorien
+        </button>
       </div>
     </div>
 
@@ -928,7 +969,12 @@ body.inroom::after{display:none}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
         <input type="text" id="fSearch" placeholder="Story oder ID suchen …">
       </div>
-      <select class="auto" id="fSprint"><option value="all">Alle Sprints</option></select>
+      <div class="msel" id="fSprint">
+        <button type="button" class="msel-btn" id="fSprintBtn" aria-haspopup="true" aria-expanded="false"><span id="fSprintTxt">Sprints</span>
+          <svg width="10" height="7" viewBox="0 0 10 7" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 1l4 4 4-4"/></svg></button>
+        <div class="msel-pop" id="fSprintPop" hidden></div>
+      </div>
+      <select class="auto" id="fCat"><option value="all">Alle Kategorien</option></select>
       <select class="auto" id="fStatus">
         <option value="all">Alle Status</option>
         <option value="todo">Zu tun</option>
@@ -943,14 +989,14 @@ body.inroom::after{display:none}
     <div class="tablewrap">
       <table>
         <thead><tr>
-          <th style="width:76px">Prio</th>
-          <th style="width:58px">ID</th>
-          <th>User Story</th>
-          <th style="width:118px">Kategorie</th>
-          <th style="width:56px">SP</th>
-          <th style="width:130px">Zuständig</th>
-          <th style="width:120px">Sprint</th>
-          <th style="width:114px">Status</th>
+          <th style="width:76px" data-sort="prio">Prio</th>
+          <th style="width:58px" data-sort="key">ID</th>
+          <th data-sort="title">User Story</th>
+          <th style="width:118px" data-sort="category">Kategorie</th>
+          <th style="width:56px" data-sort="points">SP</th>
+          <th style="width:130px" data-sort="who">Zuständig</th>
+          <th style="width:120px" data-sort="sprint">Sprint</th>
+          <th style="width:114px" data-sort="status">Status</th>
           <th style="width:52px"></th>
         </tr></thead>
         <tbody id="backlogBody"></tbody>
@@ -1146,7 +1192,7 @@ body.inroom::after{display:none}
 
 <!-- Story anlegen / bearbeiten -->
 <div class="scrim" id="mEdit" hidden>
-  <div class="modal" role="dialog" aria-modal="true">
+  <div class="modal" id="edModal" role="dialog" aria-modal="true">
     <div class="m-h">
       <div>
         <div class="ttl" id="edTitle">Neue User Story</div>
@@ -1156,7 +1202,7 @@ body.inroom::after{display:none}
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
       </button>
     </div>
-    <div class="m-b">
+    <div class="m-b"><div class="edgrid"><div class="edmain">
       <div class="field">
         <label class="fl" for="edT">Kurztitel für das Post-it *</label>
         <input type="text" id="edT" placeholder="z. B. Messreihe zur Solarzelle durchführen">
@@ -1181,10 +1227,7 @@ body.inroom::after{display:none}
         </div>
         <div class="field">
           <label class="fl" for="edC">Kategorie</label>
-          <select id="edC">
-            <option>Recherche</option><option>Text</option><option>Praxis / MINT</option>
-            <option>Design</option><option>Präsentation</option><option>Organisation</option>
-          </select>
+          <select id="edC"></select>
         </div>
         <div class="field">
           <span class="fl">Zettelfarbe</span>
@@ -1202,10 +1245,37 @@ body.inroom::after{display:none}
         <div class="field"><label class="fl" for="edSp">Sprint</label><select id="edSp"></select></div>
       </div>
     </div>
+    <div class="edtasks" id="edTasksCol">
+      <div class="th">Tasks</div>
+      <p class="tx">Unterteile die User Story in kleinere Tasks, die in einer Unterrichtsstunde machbar sind.</p>
+      <div id="edTaskList"></div>
+      <div class="inline-add">
+        <input type="text" id="edTaskNew" placeholder="Neuer Task …">
+        <button type="button" class="btn" id="edTaskAdd">+</button>
+      </div>
+    </div>
+    </div></div>
     <div class="m-f">
       <button class="btn" data-close="mEdit">Abbrechen</button>
       <div class="sp"><button class="btn primary" id="edSave">Story speichern</button></div>
     </div>
+  </div>
+</div>
+
+<!-- Kategorien -->
+<div class="scrim" id="mCats" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h">
+      <div><div class="ttl">Kategorien</div><div class="sub">Damit sortiert ihr eure User Stories.</div></div>
+      <button class="m-x" data-close="mCats" aria-label="Schließen">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="m-b">
+      <div id="catList"></div>
+      <div class="inline-add"><input type="text" id="catNew" placeholder="Neue Kategorie …" maxlength="30"><button type="button" class="btn" id="catAdd">+</button></div>
+    </div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mCats">Fertig</button></div></div>
   </div>
 </div>
 
@@ -1418,7 +1488,7 @@ body.inroom::after{display:none}
         <b>Schreib ihn dir auf oder mach ein Foto.</b> Damit kommst du auf jedem Gerät zurück in dein Team:
         auf der Beitrittsseite „Ich habe einen persönlichen Code“ antippen.</p>
       <p style="margin:10px 0 0;font-size:12px;color:var(--ink-3)">Gib ihn nicht weiter — wer ihn hat, arbeitet unter deinem Namen.
-        Vergessen? Deine Lehrkraft sieht ihn. Unter „Team“ findest du ihn auch wieder.</p>
+        Vergessen? Deine Lehrkraft sieht ihn. Oben rechts im Menü findest du ihn jederzeit wieder.</p>
     </div>
     <div class="m-f"><div class="sp"><button class="btn primary" data-close="mKey">Hab ich notiert</button></div></div>
   </div>
@@ -1488,6 +1558,7 @@ const COLS = [
 const FLOW = ['todo','doing','done'];
 const STL  = { todo:'Zu tun', doing:'In Arbeit', check:'In Arbeit', done:'Fertig' };
 const STC  = { todo:'bg-todo', doing:'bg-doing', check:'bg-check', done:'bg-done' };
+const DEFAULT_CATS = ['Entwickeln','Planen','Design'];
 const AVC  = ['#1d5955','#ca5a1c','#2b6694','#7a3f6d','#2d7a4d','#8a5a1a','#53407e','#a0442f'];
 
 let S = null;              // state
@@ -1501,6 +1572,9 @@ let carryPlan = {};        // storyId -> 'backlog' | 'next'
 let archiveSprint = null;
 let confirmCb = null;
 let phoneCol = 'doing';     // welche Spalte das Handy zeigt
+let bSort = { k:'prio', dir:1 };   // Sortierung des Backlogs
+let sprintSel = null;       // gewählte Sprints im Backlog (null = Standard)
+let edTasks = [];           // Tasks im Story-Dialog (Arbeitskopie)
 let pickMember = null;      // angetippte Person in „In Arbeit" (Tablet ohne Ziehen)
 
 /* ── helpers ─────────────────────────────────────────── */
@@ -1558,9 +1632,9 @@ function seed(){
     review:{ shown:'Gliederung, erste Messwerte, Foto vom Aufbau.', feedback:'Gliederung überzeugt. Fehlerrechnung noch ergänzen.',
              good:'Aufgaben waren klar verteilt.', bad:'Zu spät mit der Literatur angefangen.', next:'Quellen direkt beim Lesen notieren.' },
     snapshot:[
-      { key:'US-01', title:'Inhaltsverzeichnis & Leitfragen formulieren', points:2, category:'Text',        status:'done', who:'Max',    blocked:false },
-      { key:'US-02', title:'Literaturrecherche: 5 Fachquellen sichern',   points:3, category:'Recherche',   status:'done', who:'Sophie', blocked:false },
-      { key:'US-03', title:'Versuchsaufbau Solarzelle montieren',         points:5, category:'Praxis / MINT',status:'done', who:'Leon',   blocked:false },
+      { key:'US-01', title:'Inhaltsverzeichnis & Leitfragen formulieren', points:2, category:'Entwickeln',        status:'done', who:'Max',    blocked:false },
+      { key:'US-02', title:'Literaturrecherche: 5 Fachquellen sichern',   points:3, category:'Planen',   status:'done', who:'Sophie', blocked:false },
+      { key:'US-03', title:'Versuchsaufbau Solarzelle montieren',         points:5, category:'Entwickeln',status:'done', who:'Leon',   blocked:false },
       { key:'US-04', title:'Deckblatt & Layoutvorlage anlegen',           points:1, category:'Design',      status:'done', who:'Mia',    blocked:false }
     ]
   };
@@ -1568,59 +1642,49 @@ function seed(){
     start:iso(shift(-4)), end:iso(shift(10)), status:'active', review:null, snapshot:null };
 
   const st=(n,o)=>Object.assign({
-    id:'u'+n, key:'US-'+pad(n), asA:'', want:'', soThat:'', points:2, category:'Text', color:'yellow',
+    id:'u'+n, key:'US-'+pad(n), asA:'', want:'', soThat:'', points:2, category:'Entwickeln', color:'yellow',
     assignee:null, sprint:null, status:'todo', blocked:false, note:'', tasks:[], order:n
   },o);
 
   const stories=[
     st(1,{ title:'Inhaltsverzeichnis & Leitfragen formulieren', asA:'Leserin der Facharbeit', want:'eine klare Kapiteleinteilung sehen', soThat:'ich das Thema sofort einordnen kann',
-      points:2, category:'Text', assignee:'m1', sprint:'s1', status:'done',
-      tasks:[{text:'Mit der Lehrkraft abgestimmt',done:true},{text:'In der Layoutvorlage formatiert',done:true}] }),
+      points:2, category:'Entwickeln', assignee:'m1', sprint:'s1', status:'done' }),
     st(2,{ title:'Literaturrecherche: 5 Fachquellen sichern', asA:'Korrektor', want:'belastbare Quellen vorfinden', soThat:'die Argumentation trägt',
-      points:3, category:'Recherche', color:'blue', assignee:'m2', sprint:'s1', status:'done',
-      tasks:[{text:'Mindestens 5 Fachquellen',done:true},{text:'Zugriffsdatum notiert',done:true}] }),
+      points:3, category:'Planen', color:'blue', assignee:'m2', sprint:'s1', status:'done' }),
     st(3,{ title:'Versuchsaufbau Solarzelle montieren', asA:'MINT-Gruppe', want:'einen stabilen Messaufbau haben', soThat:'die Messwerte vergleichbar sind',
-      points:5, category:'Praxis / MINT', color:'green', assignee:'m3', sprint:'s1', status:'done',
-      tasks:[{text:'Aufbau fotografiert',done:true},{text:'Messgeräte kalibriert',done:true}] }),
+      points:5, category:'Entwickeln', color:'green', assignee:'m3', sprint:'s1', status:'done' }),
     st(4,{ title:'Deckblatt & Layoutvorlage anlegen', asA:'Leser', want:'ein einheitliches Schriftbild sehen', soThat:'die Arbeit professionell wirkt',
-      points:1, category:'Design', color:'pink', assignee:'m4', sprint:'s1', status:'done',
-      tasks:[{text:'Vorlage im Teamordner',done:true}] }),
+      points:1, category:'Design', color:'pink', assignee:'m4', sprint:'s1', status:'done' }),
 
     st(5,{ title:'Messreihe bei 5 Lichtwinkeln durchführen', asA:'MINT-Gruppe', want:'Spannungswerte bei verschiedenen Winkeln messen', soThat:'wir die Abhängigkeit zeigen können',
-      points:5, category:'Praxis / MINT', color:'green', assignee:'m3', sprint:'s2', status:'doing',
-      tasks:[{text:'Je Winkel 3 Messungen',done:true},{text:'Werte in Tabelle übertragen',done:false},{text:'Fehlerrechnung durchgeführt',done:false}] }),
+      points:5, category:'Entwickeln', color:'green', assignee:'m3', sprint:'s2', status:'doing' }),
     st(6,{ title:'Diagramm Spannung–Winkel erstellen', asA:'Leserin', want:'den Zusammenhang auf einen Blick erkennen', soThat:'ich die Auswertung ohne Rechnen verstehe',
-      points:3, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'doing',
-      tasks:[{text:'Achsen beschriftet, Einheiten korrekt',done:true},{text:'Bildunterschrift ergänzt',done:false}] }),
+      points:3, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'doing' }),
     st(7,{ title:'Lötkolben für Sensorplatine beschaffen', asA:'Entwickler', want:'die Platine fertig löten', soThat:'der Prototyp funktioniert',
-      points:3, category:'Praxis / MINT', assignee:'m3', sprint:'s2', status:'doing', blocked:true,
-      note:'Lötkolben im Physikraum defekt. Sophie fragt Herrn K. nach Ersatz.',
-      tasks:[{text:'Kontakte durchgemessen',done:false}] }),
+      points:3, category:'Entwickeln', assignee:'m3', sprint:'s2', status:'doing', blocked:true,
+      note:'Lötkolben im Physikraum defekt. Sophie fragt Herrn K. nach Ersatz.' }),
     st(8,{ title:'Kapitel 3 „Auswertung" im Rohtext schreiben', asA:'Leser', want:'die Ergebnisse erklärt bekommen', soThat:'die Messwerte eine Bedeutung haben',
-      points:5, category:'Text', assignee:'m1', sprint:'s2', status:'todo',
-      tasks:[{text:'Rechtschreibprüfung gelaufen',done:false},{text:'Von zweiter Person gegengelesen',done:false}] }),
+      points:5, category:'Entwickeln', assignee:'m1', sprint:'s2', status:'todo' }),
     st(9,{ title:'Quellenverzeichnis nach Vorgabe prüfen', asA:'Korrektor', want:'vollständige Angaben vorfinden', soThat:'kein Plagiatsverdacht entsteht',
-      points:1, category:'Recherche', color:'blue', assignee:'m2', sprint:'s2', status:'doing',
-      tasks:[{text:'Alle Online-Quellen mit Datum',done:true},{text:'Einheitliches Format',done:true}] }),
+      points:1, category:'Planen', color:'blue', assignee:'m2', sprint:'s2', status:'doing' }),
     st(10,{ title:'Fotos vom Aufbau freistellen', asA:'Leserin', want:'klare Abbildungen sehen', soThat:'der Aufbau nachvollziehbar ist',
-      points:2, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'done',
-      tasks:[{text:'Mindestens 2 Fotos',done:true},{text:'Hintergrund entfernt',done:true}] }),
+      points:2, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'done' }),
 
     st(11,{ title:'Experten-Interview mit dem Umweltamt führen', asA:'Forscherin', want:'O-Töne zur Solarförderung aufnehmen', soThat:'der Praxisteil belegt ist',
-      points:5, category:'Recherche', color:'blue', tasks:[{text:'Fragen vorab verschickt',done:false}] }),
+      points:5, category:'Planen', color:'blue' }),
     st(12,{ title:'Präsentationsfolien für die Abschlussprüfung', asA:'Kursteilnehmer', want:'die Kernaussagen visuell sehen', soThat:'die Präsentation hängen bleibt',
-      points:3, category:'Präsentation', color:'lilac', tasks:[{text:'Maximal 8 Folien',done:false}] }),
+      points:3, category:'Design', color:'lilac' }),
     st(13,{ title:'Fazit & Ausblick formulieren', asA:'Leser', want:'am Ende eine klare Antwort bekommen', soThat:'die Leitfrage beantwortet ist',
-      points:3, category:'Text', tasks:[] }),
+      points:3, category:'Entwickeln' }),
     st(14,{ title:'Energieertrag über eine Woche protokollieren', asA:'MINT-Gruppe', want:'Langzeitdaten erheben', soThat:'wir Schwankungen zeigen können',
-      points:8, category:'Praxis / MINT', color:'green', tasks:[] })
+      points:8, category:'Entwickeln', color:'green' })
   ];
 
   return {
     product:{
       name:'Smart Solar — MINT-Facharbeit',
       goal:'<h2>Worum geht es?</h2><p>Wir untersuchen, <strong>wie stark der Einfallswinkel des Lichts den Energieertrag einer Solarzelle beeinflusst</strong> – und bauen dazu einen eigenen Messaufbau.</p><h2>Für wen?</h2><p>Für Mitschülerinnen und Mitschüler des Physikkurses: Am Ende soll jede Person in fünf Minuten verstehen, warum Solarmodule schräg montiert werden.</p><ul><li>Nachvollziehbare Messreihe mit Fehlerrechnung</li><li>Verständliche Diagramme statt Zahlenkolonnen</li><li>Ein funktionierender Prototyp zum Anfassen</li></ul>',
-      images:[]
+      images:[], categories:DEFAULT_CATS.slice()
     },
     team:T, stories, sprints:[s1,s2], active:'s2', seq:{ story:14, sprint:2 }
   };
@@ -1644,6 +1708,7 @@ const story    = id => S.stories.find(s=>s.id===id) || null;
 const active   = () => sprint(S.active);
 const sprintStories = id => S.stories.filter(s=>s.sprint===id);
 const sorted   = () => S.stories.slice().sort((a,b)=>a.order-b.order);
+const cats = () => Array.isArray(S.product.categories) ? S.product.categories : DEFAULT_CATS;
 const whoName  = id => (member(id)?.name) || 'frei';
 
 /* Die Story selbst ist Freitext (s.text). Ältere Karten tragen noch
@@ -1744,6 +1809,11 @@ function avatar(m, size){
   const ini=(t.slice(0,1).toUpperCase()+t.slice(1,2).toLowerCase()).trim() || '?';
   return `<span class="${cls}" style="background:${col}">${esc(ini)}</span>`;
 }
+const ROLE_ICO = {
+  po:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.5 8.5l-2 5-5 2 2-5z"/></svg>',
+  sm:'<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 4.5-3 8.2-7 10-4-1.8-7-5.5-7-10V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg>'
+};
+const roleIcon = (r,vacant) => `<span class="roleic ${r}${vacant?' vacant':''}">${ROLE_ICO[r]}</span>`;
 function ringSvg(pct,col){
   const r=23, c=2*Math.PI*r;
   return `<div class="ring"><svg width="54" height="54" viewBox="0 0 54 54">
@@ -1823,9 +1893,9 @@ function renderMenu(){
    Felder erst beim Öffnen baut. Filter und Daily bleiben frei. */
 function lockRO(){
   if(!SW.on) return;
-  const free=new Set(['fSearch','fStatus','fSprint','fWho']);
+  const free=new Set(['fSearch','fStatus','fCat','fWho']);
   $$('main input, main select, main textarea, .modal input, .modal select, .modal textarea, #productName').forEach(el=>{
-    if(free.has(el.id) || el.closest('#mDaily')) return;
+    if(free.has(el.id) || el.closest('#mDaily') || el.closest('#fSprintPop')) return;
     if(SW.ro){ el.dataset.roLock='1'; el.disabled=true; }
     else if(el.dataset.roLock){ delete el.dataset.roLock; el.disabled=false; }
   });
@@ -1843,6 +1913,16 @@ function canEditPO(){
   if(SW.ro) return false;
   const m=S.team.find(x=>x.me);
   return !!m && m.role==='po';
+}
+
+/* Tasks anlegen/löschen: der Product Owner immer, alle anderen Mitglieder
+   bei Stories, die in einem laufenden Sprint liegen. */
+function canEditTasks(s){
+  if(!SW.on) return true;
+  if(SW.ro) return false;
+  if(canEditPO()) return true;
+  const sp=s&&sprint(s.sprint);
+  return !!sp && sp.status!=='closed';
 }
 
 async function joinAsMember(){
@@ -2011,7 +2091,7 @@ function postit(s){
   if(s.blocked) el.classList.add('blk');
   el.innerHTML=`
     ${s.blocked?`<span class="pi-flag" title="blockiert"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M12 8v5M12 16.5v.01"/></svg></span>`:''}
-    <div class="pi-row"><span class="pi-id">${esc(s.key)}</span><span class="pi-cat">${esc(s.category)}</span></div>
+    <div class="pi-row"><span class="pi-id">${esc(s.key)}</span>${s.category?`<span class="pi-cat">${esc(s.category)}</span>`:''}</div>
     <button class="pi-title" data-act="open">${esc(s.title)}</button>
     ${txt?`<div class="pi-text">${esc(txt)}</div>`:''}
     ${s.blocked&&s.note?`<div class="pi-note">${esc(s.note)}</div>`:''}
@@ -2028,12 +2108,13 @@ function postit(s){
     el.classList.add('drag');
   });
   el.addEventListener('dragend',()=>el.classList.remove('drag'));
+  // Die ganze Karte öffnet die Story. Ziehen bleibt Ziehen: nach einem
+  // Drag feuert der Browser kein click.
   el.addEventListener('click',e=>{
-    const b=e.target.closest('[data-act]'); if(!b) return;
     e.stopPropagation();
-    const act=b.dataset.act;
-    if(act==='open') return openDetail(s.id);
-    if(act==='block'){ s.blocked=!s.blocked; if(!s.blocked) s.note=''; return renderAll(); }
+    const b=e.target.closest('[data-act]');
+    if(b && b.dataset.act==='block'){ s.blocked=!s.blocked; if(!s.blocked) s.note=''; return renderAll(); }
+    openDetail(s.id);
   });
   return el;
 }
@@ -2063,27 +2144,82 @@ function wireDrop(el,target){
 }
 
 /* ── BACKLOG ─────────────────────────────────────────── */
+/* Welche Sprints das Backlog zeigt: Standard ist der aktuelle Sprint plus
+   „noch nicht zugewiesen“. Vergangene Sprints holt man über das Menü dazu. */
+function sprintChoice(){
+  const ids=new Set(['none',...S.sprints.map(s=>s.id)]);
+  if(sprintSel) return new Set([...sprintSel].filter(x=>ids.has(x)));
+  return new Set(['none',...(S.active?[S.active]:[])]);
+}
+function sprintLabel(sel){
+  if(sel.size===S.sprints.length+1) return 'Alle Sprints';
+  const names=[...sel].map(id=>id==='none'?'Nicht zugewiesen':(id===S.active?'Aktueller Sprint':(sprint(id)?.name||id)));
+  if(!names.length) return 'Kein Sprint gewählt';
+  return names.length>2 ? `${names.length} Bereiche gewählt` : names.join(' + ');
+}
+function renderSprintPop(){
+  const sel=sprintChoice();
+  const row=(id,txt,cls)=>`<label class="${cls||''}"><input type="checkbox" data-sp="${id}" ${sel.has(id)?'checked':''}>${txt}</label>`;
+  $('#fSprintPop').innerHTML=
+    row('none','Noch nicht zugewiesen')+
+    S.sprints.slice().reverse().map(s=>row(s.id,esc(s.name)+(s.id===S.active?' (aktuell)':s.status==='closed'?' – vorbei':''),s.status==='closed'?'past':'')).join('')+
+    `<div class="sepl"></div><div class="lnk"><button type="button" data-spall>Alle</button><button type="button" data-spdef>Standard</button></div>`;
+  $('#fSprintTxt').textContent=sprintLabel(sel);
+}
+
+const SORTERS={
+  key:   s=>+(s.key.replace(/\D/g,''))||0,
+  title: s=>s.title.toLowerCase(),
+  category:s=>(s.category||'').toLowerCase(),
+  points:s=>+s.points||0,
+  who:   s=>ownersName(s).toLowerCase(),
+  sprint:s=>s.sprint?(sprint(s.sprint)?.no||0):1e6,
+  status:s=>s.blocked?-1:['todo','doing','done'].indexOf(s.status)
+};
+/* Prio gibt es nur für Offenes: die Reihenfolge im Backlog (s.order).
+   Fertige Stories haben keine Prio mehr und stehen bei „Prio“ ganz unten. */
+const prioRank = () => { const m=new Map(); sorted().filter(s=>s.status!=='done').forEach((s,i)=>m.set(s.id,i+1)); return m; };
+
 function renderBacklog(){
-  const fS=$('#fSprint'), fW=$('#fWho');
-  const keepS=fS.value, keepW=fW.value;
-  fS.innerHTML='<option value="all">Alle Sprints</option><option value="none">Noch nicht zugewiesen</option>'+
-    S.sprints.slice().reverse().map(s=>`<option value="${s.id}">${esc(s.name)}${s.id===S.active?' (aktuell)':''}</option>`).join('');
+  const fW=$('#fWho'), fC=$('#fCat');
+  const keepW=fW.value, keepC=fC.value;
   fW.innerHTML='<option value="all">Alle Zuständigen</option><option value="none">Ohne Zuständige</option>'+
     S.team.map(m=>`<option value="${m.id}">${esc(m.name)}</option>`).join('');
-  fS.value=[...fS.options].some(o=>o.value===keepS)?keepS:'all';
+  const used=[...new Set(S.stories.map(s=>s.category).filter(c=>c&&!cats().includes(c)))];
+  fC.innerHTML='<option value="all">Alle Kategorien</option>'+cats().concat(used).map(c=>`<option>${esc(c)}</option>`).join('');
   fW.value=[...fW.options].some(o=>o.value===keepW)?keepW:'all';
+  fC.value=[...fC.options].some(o=>o.value===keepC)?keepC:'all';
+  renderSprintPop();
 
+  const sel=sprintChoice();
   const q=$('#fSearch').value.trim().toLowerCase();
   const fst=$('#fStatus').value;
-  const all=sorted();
+  const rank=prioRank();
+  const all=S.stories.slice();
   const rows=all.filter(s=>{
     if(q && !(s.title.toLowerCase().includes(q)||s.key.toLowerCase().includes(q))) return false;
-    if(fS.value==='none' && s.sprint) return false;
-    if(fS.value!=='all' && fS.value!=='none' && s.sprint!==fS.value) return false;
+    if(!sel.has(s.sprint||'none')) return false;
+    if(fC.value!=='all' && s.category!==fC.value) return false;
     if(fst==='blocked' ? !s.blocked : (fst!=='all' && s.status!==fst)) return false;
     if(fW.value==='none' && s.assignee) return false;
     if(fW.value!=='all' && fW.value!=='none' && !ownsStory(s,fW.value)) return false;
     return true;
+  });
+  const dirn=bSort.dir;
+  rows.sort((a,b)=>{
+    let r;
+    if(bSort.k==='prio'){
+      const da=a.status==='done', db=b.status==='done';
+      if(da!==db) return da?1:-1;          // Fertige immer ans Ende
+      return (a.order-b.order)*(da?1:dirn);
+    }
+    const f=SORTERS[bSort.k], x=f(a), y=f(b);
+    r = x<y?-1 : x>y?1 : 0;
+    return (r||a.order-b.order)*(r?dirn:1);
+  });
+  $$('#view-backlog thead th[data-sort]').forEach(th=>{
+    th.classList.toggle('asc', th.dataset.sort===bSort.k && bSort.dir===1);
+    th.classList.toggle('desc',th.dataset.sort===bSort.k && bSort.dir===-1);
   });
 
   $('#backlogSums').innerHTML=
@@ -2096,26 +2232,26 @@ function renderBacklog(){
     tb.innerHTML=`<tr><td colspan="9" style="padding:34px;text-align:center;color:var(--ink-3);font-style:italic">Keine Story passt zu diesem Filter.</td></tr>`;
     return;
   }
+  const canDrag=bSort.k==='prio' && bSort.dir===1;
   tb.innerHTML=rows.map(s=>{
-    const gi=all.indexOf(s), m=member(s.assignee);
+    const m=member(s.assignee), pr=rank.get(s.id);
     const sp=s.sprint===S.active ? `<span class="tag now">Aktueller Sprint</span>`
            : s.sprint ? `<span class="tag past">${esc(sprint(s.sprint)?.name||s.sprint)}</span>`
            : `<span class="tag none">noch nicht</span>`;
     const badge=s.blocked?`<span class="badge bg-block">Blockiert</span>`:`<span class="badge ${STC[s.status]}">${STL[s.status]}</span>`;
-    return `<tr class="${s.status==='done'?'isdone':''}">
-      <td><div class="b-prio">
-        <span class="num">${gi+1}</span>
-        <button data-mv="up"   data-id="${s.id}" ${gi===0?'disabled':''} aria-label="höher">
-          <svg width="9" height="7" viewBox="0 0 10 7" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 6l4-4 4 4"/></svg></button>
-        <button data-mv="down" data-id="${s.id}" ${gi===all.length-1?'disabled':''} aria-label="tiefer">
-          <svg width="9" height="7" viewBox="0 0 10 7" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 1l4 4 4-4"/></svg></button>
+    const grip=(pr&&canDrag)
+      ? `<span class="b-grip" data-grip="${s.id}" title="Festhalten und ziehen" aria-label="Priorität per Ziehen ändern"><svg width="12" height="14" viewBox="0 0 12 16" fill="currentColor"><circle cx="3.5" cy="3" r="1.4"/><circle cx="8.5" cy="3" r="1.4"/><circle cx="3.5" cy="8" r="1.4"/><circle cx="8.5" cy="8" r="1.4"/><circle cx="3.5" cy="13" r="1.4"/><circle cx="8.5" cy="13" r="1.4"/></svg></span>`
+      : `<span class="b-grip off"></span>`;
+    return `<tr class="${s.status==='done'?'isdone':''}" data-open="${s.id}" data-row="${s.id}">
+      <td><div class="b-prio">${grip}
+        <span class="num${pr?'':' none'}">${pr||'–'}</span>
       </div></td>
       <td><span class="b-key">${esc(s.key)}</span></td>
       <td>
-        <button class="b-title" data-open="${s.id}">${esc(s.title)}</button>
+        <span class="b-title">${esc(s.title)}</span>
         ${storyText(s)?`<div class="b-sub">${esc(storyText(s))}</div>`:''}
       </td>
-      <td><span class="tag">${esc(s.category)}</span></td>
+      <td>${s.category?`<span class="tag">${esc(s.category)}</span>`:''}</td>
       <td><b style="font-family:var(--serif);color:var(--petrol)">${s.points}</b></td>
       <td><span style="display:flex;align-items:center;gap:7px">${avatar(m,22)}<span style="${m?'':'color:var(--ink-3);font-style:italic'}">${esc(m?ownersName(s):'frei')}</span></span></td>
       <td>${sp}</td>
@@ -2129,12 +2265,51 @@ function renderBacklog(){
   }).join('');
 }
 
-function movePrio(id,dir){
-  if(!canEditPO()) return;
-  const all=sorted(), i=all.findIndex(s=>s.id===id), j=i+dir;
-  if(i<0||j<0||j>=all.length) return;
-  const a=all[i], b=all[j], t=a.order; a.order=b.order; b.order=t;
+/* Priorität per Ziehen am Griff (Zeiger-Ereignisse: Maus und Finger).
+   Die gezogene Story landet vor/hinter der Zielzeile; danach bekommen alle
+   offenen Stories wieder fortlaufende Nummern. */
+function reorderPrio(id,targetId,after){
+  if(!canEditPO() || id===targetId) return;
+  const open=sorted().filter(s=>s.status!=='done');
+  const from=open.findIndex(s=>s.id===id); if(from<0) return;
+  const [it]=open.splice(from,1);
+  let to=open.findIndex(s=>s.id===targetId);
+  if(to<0) return;
+  open.splice(to+(after?1:0),0,it);
+  const rest=sorted().filter(s=>s.status==='done');
+  open.concat(rest).forEach((s,i)=>s.order=i+1);
   renderAll();
+}
+function wireGrip(){
+  const tb=$('#backlogBody');
+  let drag=null;
+  const clear=()=>$$('#backlogBody tr').forEach(r=>r.classList.remove('dropbefore','dropafter','dragging'));
+  tb.addEventListener('pointerdown',e=>{
+    const g=e.target.closest('[data-grip]'); if(!g || !canEditPO()) return;
+    e.preventDefault();
+    drag={ id:g.dataset.grip, target:null, after:false };
+    g.setPointerCapture(e.pointerId);
+    g.closest('tr').classList.add('dragging');
+  });
+  tb.addEventListener('pointermove',e=>{
+    if(!drag) return;
+    const el=document.elementFromPoint(e.clientX,e.clientY);
+    const tr=el&&el.closest('#backlogBody tr[data-row]');
+    $$('#backlogBody tr').forEach(r=>r.classList.remove('dropbefore','dropafter'));
+    drag.target=null;
+    if(!tr || tr.dataset.row===drag.id || tr.classList.contains('isdone')) return;
+    const r=tr.getBoundingClientRect();
+    drag.after = e.clientY > r.top+r.height/2;
+    drag.target=tr.dataset.row;
+    tr.classList.add(drag.after?'dropafter':'dropbefore');
+  });
+  const end=e=>{
+    if(!drag) return;
+    const d=drag; drag=null; clear();
+    if(e.type==='pointerup' && d.target) reorderPrio(d.id,d.target,d.after);
+  };
+  tb.addEventListener('pointerup',end);
+  tb.addEventListener('pointercancel',end);
 }
 
 /* ── PRODUCT GOAL ────────────────────────────────────── */
@@ -2178,10 +2353,10 @@ function renderTeam(){
   const slot=(r,m,duty)=>{
     const t=r==='po'?'Product Owner':'Scrum Master';
     if(!m) return `<div class="resp ${r}">
-        <span class="av s52" style="background:var(--line);color:var(--ink-3)">?</span>
+        ${roleIcon(r,true)}
         <div><div class="role">${t}</div><div class="vacant">noch offen</div>
         <div class="duty">Weist die Rolle unten auf einer Teamkarte zu.</div></div></div>`;
-    return `<div class="resp ${r}">${avatar(m,52)}
+    return `<div class="resp ${r}">${roleIcon(r)}
       <div><div class="role">${t}</div><div class="nmx">${esc(m.name)}</div><div class="duty">${duty}</div></div></div>`;
   };
   $('#respBand').innerHTML=
@@ -2227,12 +2402,7 @@ function renderTeam(){
    Rolle, Label und Bild darf jedes Mitglied an jeder Karte ändern —
    gespeichert wird sofort (scrum_member_update), nicht über save(). */
 function renderTeamRoom(){
-  const me=SW.me||{}, teacher=SW.role==='presenter';
-  const mykey = me.kind==='member' && me.key
-    ? `<div class="keystrip">
-        <div><div class="eyebrow">Dein persönlicher Code</div>
-        <div style="font-size:12.5px;color:var(--ink-3);margin-top:2px">Damit kommst du auf jedem Gerät zurück. Nicht weitergeben.</div></div>
-        <button class="btn" id="showKey">Code anzeigen</button></div>` : '';
+  const teacher=SW.role==='presenter';
   $('#teamGrid').innerHTML = S.team.map(m=>{
     const mine=S.stories.filter(s=>ownsStory(s,m.id));
     const dn=mine.filter(s=>s.status==='done').length;
@@ -2267,11 +2437,8 @@ function renderTeamRoom(){
       <p>Wer den Raum betritt und „Ich bin im Team“ wählt, bekommt hier eine Kachel.</p></div>`);
 
   const names=a=>a.map(o=>esc(typeof o==='string'?o:o.name)).join(', ');
-  $('#teamExtra').innerHTML = mykey
-    + (SW.observers.length?`<p class="teamnote"><b>Schauen zu:</b> ${names(SW.observers)}</p>`:'')
+  $('#teamExtra').innerHTML = (SW.observers.length?`<p class="teamnote"><b>Schauen zu:</b> ${names(SW.observers)}</p>`:'')
     + (SW.undecided.length?`<p class="teamnote"><b>Haben noch nicht gewählt:</b> ${names(SW.undecided)}</p>`:'');
-  const sk=$('#showKey');
-  if(sk) sk.onclick=()=>{ $('#keyBig').textContent=SW.fmtKey(me.key); show('mKey'); };
 }
 
 /* ── HISTORY ─────────────────────────────────────────── */
@@ -2346,9 +2513,10 @@ function openDetail(id){
   const s=story(id); if(!s) return;
   openStory=id;
   $('#stTitle').textContent=s.title;
-  $('#stSub').textContent=`${s.key} · ${s.category} · ${s.points} Story Points`;
+  $('#stSub').textContent=[s.key,s.category,`${s.points} Story Points`].filter(Boolean).join(' · ');
 
   const dod=s.tasks||[], dn=dod.filter(d=>d.done).length;
+  const tedit=canEditTasks(s);
   const formula=s.text
     ? esc(s.text).replace(/\n/g,'<br>')
     : (s.asA||s.want||s.soThat)
@@ -2395,16 +2563,16 @@ function openDetail(id){
           <div class="dodrow ${d.done?'ok':''}">
             <input type="checkbox" id="dod${i}" data-dod="${i}" ${d.done?'checked':''}>
             <label for="dod${i}">${esc(d.text)}</label>
-            <button class="rm" data-dodrm="${i}" aria-label="entfernen">
+            ${tedit?`<button class="rm" data-dodrm="${i}" aria-label="entfernen">`:`<button class="rm" hidden>`}
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
             </button>
           </div>`).join('')
           :`<div style="font-size:12.5px;color:var(--ink-3);font-style:italic">Noch keine Tasks – unterteilt die User Story in kleinere Tasks: Aufgaben, die man in einer Unterrichtsstunde erledigen kann.</div>`}
       </div>
-      <div class="inline-add">
+      ${tedit?`<div class="inline-add">
         <input type="text" id="dNew" placeholder="Neuer Task …">
         <button class="btn" id="dAdd">+</button>
-      </div>
+      </div>`:''}
     </div>
 
     <button class="btn" id="dEdit" style="width:100%;justify-content:center">
@@ -2433,11 +2601,13 @@ function openDetail(id){
   body.querySelector('#dSprint').onchange=e=>{ s.sprint=e.target.value||null; renderAll(); };
   body.querySelector('#dBlock').onchange=e=>{ s.blocked=e.target.checked; if(!s.blocked) s.note=''; renderAll(); openDetail(id); };
   body.querySelector('#dNote').onchange=e=>{ s.note=e.target.value.trim(); renderAll(); };
-  body.querySelector('#dAdd').onclick=()=>{
-    const i=body.querySelector('#dNew'), v=i.value.trim(); if(!v) return;
-    (s.tasks=s.tasks||[]).push({text:v,done:false}); renderAll(); openDetail(id);
-  };
-  body.querySelector('#dNew').addEventListener('keydown',e=>{ if(e.key==='Enter') body.querySelector('#dAdd').click(); });
+  if(tedit){
+    body.querySelector('#dAdd').onclick=()=>{
+      const i=body.querySelector('#dNew'), v=i.value.trim(); if(!v) return;
+      (s.tasks=s.tasks||[]).push({text:v,done:false}); renderAll(); openDetail(id);
+    };
+    body.querySelector('#dNew').addEventListener('keydown',e=>{ if(e.key==='Enter') body.querySelector('#dAdd').click(); });
+  }
   body.querySelector('#dEdit').onclick=()=>{ hide('mStory'); openEdit(id); };
 
   show('mStory');
@@ -2460,7 +2630,16 @@ function openEdit(id){
   $('#edT').value  =s?s.title:'';
   $('#edX').value  =(s&&storyText(s))||FORMULA;
   $('#edP').value  =s?s.points:2;
-  $('#edC').value  =s?s.category:'Text';
+  const cl=cats().slice();
+  if(s && s.category && !cl.includes(s.category)) cl.push(s.category);
+  $('#edC').innerHTML=cl.map(c=>`<option>${esc(c)}</option>`).join('')+'<option value="">— keine —</option>';
+  $('#edC').value  =s?(s.category||''):(cl[0]||'');
+  // Tasks: Product Owner beim Anlegen und Bearbeiten; andere nur bei Stories im Sprint
+  edTasks=(s&&s.tasks||[]).map(x=>({text:x.text,done:!!x.done}));
+  const tk=!s || canEditTasks(s) || planReturn;
+  $('#edTasksCol').hidden=!tk;
+  $('#edModal').classList.toggle('two',tk);
+  renderEdTasks();
   pickColor(s?(s.color||'yellow'):'yellow');
   $('#edA').value  =s?(s.assignee||''):'';
   $('#edSp').value =s?(s.sprint||''):'';
@@ -2469,6 +2648,49 @@ function openEdit(id){
   $('#edWhoRow').style.display=s?'':'none';
   show('mEdit');
   setTimeout(()=>$('#edT').focus(),60);
+}
+
+function renderEdTasks(){
+  $('#edTaskList').innerHTML=edTasks.map((x,i)=>`<div class="edtrow">
+    <input type="text" data-etask="${i}" value="${esc(x.text)}" maxlength="120" aria-label="Task ${i+1}">
+    <button type="button" class="rm" data-etrm="${i}" aria-label="entfernen">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('');
+}
+function addEdTask(){
+  const i=$('#edTaskNew'), v=i.value.trim(); if(!v) return;
+  edTasks.push({text:v,done:false}); i.value=''; renderEdTasks(); i.focus();
+}
+
+/* Kategorien (Product Owner) */
+function renderCats(){
+  $('#catList').innerHTML=cats().map((c,i)=>`<div class="catrow">
+    <input type="text" data-cat="${i}" value="${esc(c)}" maxlength="30" aria-label="Kategorie ${i+1}">
+    <button type="button" class="btn ghost sm" data-catrm="${i}" aria-label="löschen" style="color:var(--ink-3)">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
+    || '<p style="font-size:12.5px;color:var(--ink-3);font-style:italic;margin:0 0 9px">Noch keine Kategorie.</p>';
+}
+function openCats(){ if(!canEditPO()) return; renderCats(); show('mCats'); }
+function renameCat(i,v){
+  v=v.trim(); const list=cats().slice(), old=list[i];
+  if(!v || v===old || list.includes(v)){ renderCats(); return; }
+  list[i]=v; S.product.categories=list;
+  S.stories.forEach(s=>{ if(s.category===old) s.category=v; });
+  renderAll(); renderCats();
+}
+function removeCat(i){
+  const list=cats().slice(), old=list.splice(i,1)[0];
+  const n=S.stories.filter(s=>s.category===old).length;
+  const go=()=>{
+    S.product.categories=list;
+    S.stories.forEach(s=>{ if(s.category===old) s.category=''; });
+    renderAll(); renderCats();
+  };
+  if(n) ask('Kategorie löschen?',`„${old}" wird von ${n} ${n===1?'Story':'Stories'} benutzt. Diese haben danach keine Kategorie.`,go); else go();
+}
+function addCat(){
+  const i=$('#catNew'), v=i.value.trim(); if(!v) return;
+  const list=cats().slice(); if(list.includes(v)){ i.value=''; return; }
+  list.push(v); S.product.categories=list; i.value=''; renderAll(); renderCats(); i.focus();
 }
 
 function pickColor(c){
@@ -2486,6 +2708,9 @@ function saveEdit(){
     title:t, text:x===FORMULA?'':x, asA:'', want:'', soThat:'',
     points:+$('#edP').value, category:$('#edC').value, color:edColor
   };
+  const pend=$('#edTaskNew').value.trim();
+  if(pend) edTasks.push({text:pend,done:false});
+  if(!$('#edTasksCol').hidden) vals.tasks=edTasks.map(x=>({text:x.text.trim(),done:x.done})).filter(x=>x.text);
   if(editingStory){ vals.assignee=$('#edA').value||null; vals.sprint=$('#edSp').value||null; }
   if(editingStory){
     Object.assign(story(editingStory),vals);
@@ -2811,6 +3036,15 @@ function wire(){
     });
   };
   $('#edSave').onclick=saveEdit;
+  $('#edTaskAdd').onclick=addEdTask;
+  $('#edTaskNew').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addEdTask(); } });
+  $('#edTaskList').addEventListener('input',e=>{ const i=e.target.closest('[data-etask]'); if(i) edTasks[+i.dataset.etask].text=i.value; });
+  $('#edTaskList').addEventListener('click',e=>{ const b=e.target.closest('[data-etrm]'); if(b){ edTasks.splice(+b.dataset.etrm,1); renderEdTasks(); } });
+  $('#btnCats').onclick=openCats;
+  $('#catAdd').onclick=addCat;
+  $('#catNew').addEventListener('keydown',e=>{ if(e.key==='Enter') addCat(); });
+  $('#catList').addEventListener('change',e=>{ const i=e.target.closest('[data-cat]'); if(i) renameCat(+i.dataset.cat,i.value); });
+  $('#catList').addEventListener('click',e=>{ const b=e.target.closest('[data-catrm]'); if(b) removeCat(+b.dataset.catrm); });
   $('#edT').addEventListener('keydown',e=>{ if(e.key==='Enter') saveEdit(); });
 
   /* Tasks – einmalig delegiert, damit sich beim Wiederöffnen keine Listener stapeln */
@@ -2821,7 +3055,7 @@ function wire(){
   });
   $('#stBody').addEventListener('click',e=>{
     const t=e.target.closest('[data-dodrm]'); if(!t) return;
-    const s=story(openStory); if(!s) return;
+    const s=story(openStory); if(!s || !canEditTasks(s)) return;
     s.tasks.splice(+t.dataset.dodrm,1); renderAll(); openDetail(openStory);
   });
 
@@ -2831,14 +3065,35 @@ function wire(){
   });
 
   /* backlog */
-  ['fSearch','fStatus','fSprint','fWho'].forEach(id=>{
+  ['fSearch','fStatus','fWho','fCat'].forEach(id=>{
     const el=$('#'+id);
     el.addEventListener(id==='fSearch'?'input':'change',renderBacklog);
   });
   $('#backlogBody').addEventListener('click',e=>{
-    const o=e.target.closest('[data-open]'); if(o) return openDetail(o.dataset.open);
+    if(e.target.closest('[data-grip]')) return;
     const ed=e.target.closest('[data-edit]'); if(ed) return openEdit(ed.dataset.edit);
-    const mv=e.target.closest('[data-mv]'); if(mv) return movePrio(mv.dataset.id, mv.dataset.mv==='up'?-1:1);
+    const o=e.target.closest('[data-open]'); if(o) return openDetail(o.dataset.open);
+  });
+  wireGrip();
+  $$('#view-backlog thead th[data-sort]').forEach(th=>th.addEventListener('click',()=>{
+    const k=th.dataset.sort;
+    bSort = bSort.k===k ? { k, dir:-bSort.dir } : { k, dir:1 };
+    renderBacklog();
+  }));
+  /* Sprint-Auswahl (Mehrfach) */
+  const spPop=$('#fSprintPop'), spBtn=$('#fSprintBtn');
+  const setSpPop=o=>{ spPop.hidden=!o; spBtn.setAttribute('aria-expanded',o?'true':'false'); };
+  spBtn.addEventListener('click',e=>{ e.stopPropagation(); setSpPop(spPop.hidden); });
+  document.addEventListener('click',e=>{ if(!e.target.closest('#fSprint')) setSpPop(false); });
+  spPop.addEventListener('change',e=>{
+    const c=e.target.closest('[data-sp]'); if(!c) return;
+    const sel=sprintChoice();
+    c.checked?sel.add(c.dataset.sp):sel.delete(c.dataset.sp);
+    sprintSel=sel; renderBacklog();
+  });
+  spPop.addEventListener('click',e=>{
+    if(e.target.closest('[data-spall]')){ sprintSel=new Set(['none',...S.sprints.map(s=>s.id)]); renderBacklog(); }
+    if(e.target.closest('[data-spdef]')){ sprintSel=null; renderBacklog(); }
   });
 
   /* product goal */
