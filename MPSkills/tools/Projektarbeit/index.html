@@ -150,6 +150,7 @@ main.wrap{padding-top:30px;padding-bottom:80px}
 .stat{background:var(--paper-down);border-radius:var(--r-sm);padding:5px 10px;font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap}
 .stat b{font-size:14px;color:var(--ink)}
 
+.robar svg{flex:none}
 .robar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12.5px;color:var(--petrol);margin-bottom:16px}
 
 /* ---------- Avatare, Personen ---------- */
@@ -378,10 +379,63 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 .ishell .x:hover{background:var(--st-block)}
 .iadd{aspect-ratio:4/3;border:1px dashed var(--line);border-radius:var(--r);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink-3);font-size:11.5px;font-weight:600;text-align:center;padding:8px}
 .iadd:hover{border-color:var(--petrol);color:var(--petrol);background:var(--paper-up)}
-.qlist{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
-.qlist li{display:flex;gap:9px;font-size:12.5px;color:var(--ink-2);line-height:1.45}
-.qlist b{color:var(--marker);flex:none}
+.qlist{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.qlist li{display:flex;gap:11px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);line-height:1.42}
+.qlist .qi{width:32px;height:32px;border-radius:9px;background:var(--marker-wash);color:var(--marker);display:grid;place-items:center;flex:none}
+.qlist b{display:block;color:var(--ink);font-size:13.5px}
+.goalhead{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:12px;align-items:start}
+.goalhead input[type=date]{font-size:16px;font-weight:600;padding:12px 12px}
+.duehint{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-3);margin:6px 0 12px;min-height:18px}
+.duehint.soon{color:#9a6a0c}
+.duehint.over{color:var(--st-block)}
 body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opacity:.3;pointer-events:none}
+
+/* ============================================================
+   ERKLÄRUNG IN KACHELN (To-dos, Dokumentation, Anträge)
+   ============================================================ */
+.guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0 0 18px}
+.gstep{display:flex;gap:11px;align-items:flex-start;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;box-shadow:var(--sh-1)}
+.gstep .gi{position:relative;width:36px;height:36px;border-radius:10px;background:var(--petrol-wash);color:var(--petrol);display:grid;place-items:center;flex:none}
+.gstep .gi i{position:absolute;top:-6px;left:-6px;width:18px;height:18px;border-radius:99px;background:var(--marker);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;display:grid;place-items:center;border:2px solid var(--paper-up)}
+.gstep > div > b{display:block;font-size:13.5px;margin-bottom:2px;line-height:1.25}
+.gstep > div > span{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.42}
+.gstep > div > span b{color:var(--ink)}
+.gstep.later{border-style:dashed;background:transparent;box-shadow:none}
+.gstep.later .gi{background:var(--paper-down);color:var(--ink-3)}
+.gstep.later > div > b,.gstep.later > div > span{color:var(--ink-3)}
+.soontag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--paper-down);color:var(--ink-2);border-radius:99px;padding:1px 7px;margin-left:5px;vertical-align:1px}
+
+/* Zeitschätzung am To-do */
+.estpick{display:flex;gap:6px;flex-wrap:wrap}
+.estpick button{min-width:44px;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.estpick button[aria-pressed="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff}
+.pi-est{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-weight:700;white-space:nowrap;background:rgba(255,255,255,.55);border-radius:99px;padding:2px 7px 2px 5px;flex:none}
+
+/* Anträge: Checkliste */
+.reqwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,370px);gap:20px;align-items:start}
+.reqwrap .reqs{max-width:none}
+.rcheck{position:sticky;top:118px;padding:18px}
+.rcheck h3{font-size:17px;margin:3px 0 4px}
+.rcheck .lead{font-size:12.5px;color:var(--ink-2);margin:0 0 12px;line-height:1.45}
+.rclist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rclist li{display:flex;gap:11px;align-items:flex-start;font-size:12.5px;line-height:1.4;color:var(--ink-2)}
+.rclist li b{display:block;color:var(--ink);font-size:13.5px}
+.rclist .gi{position:relative;width:32px;height:32px;border-radius:9px;background:var(--petrol-wash);color:var(--petrol);display:grid;place-items:center;flex:none}
+.rclist .gi i{position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:99px;background:var(--petrol);color:#fff;font-style:normal;font-size:10px;font-weight:700;display:grid;place-items:center;border:2px solid var(--paper-up)}
+.deadline{display:flex;gap:11px;align-items:flex-start;margin-top:14px;padding:12px 13px;border-radius:var(--r);background:var(--marker-wash);border:1px solid #f0c9ab;color:#7a3510;font-size:12.5px;line-height:1.45}
+.deadline .gi{width:32px;height:32px;border-radius:9px;background:var(--marker);color:#fff;display:grid;place-items:center;flex:none}
+.deadline b{display:block;font-size:13.5px;color:#5e270a;letter-spacing:.02em}
+
+/* Antrag-Dialog: nummerierte Fragen */
+.rq-step{display:flex;align-items:center;gap:9px;margin-bottom:7px}
+.rq-step i{width:22px;height:22px;border-radius:99px;background:var(--marker);color:#fff;font-style:normal;font-size:11.5px;font-weight:700;display:grid;place-items:center;flex:none}
+.rq-step b{font-size:14px}
+.rq-need{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 9px}
+.rq-need div{display:flex;gap:9px;align-items:flex-start;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:9px 10px;font-size:12px;line-height:1.38;color:var(--ink-2)}
+.rq-need b{display:block;font-size:12.5px;color:var(--ink);letter-spacing:.03em}
+.rq-need .gi{width:28px;height:28px;border-radius:8px;background:var(--marker-wash);color:var(--marker);display:grid;place-items:center;flex:none}
+.hint.warn{display:flex;gap:6px;align-items:flex-start;color:#8a5f08;font-weight:600}
+.hint.warn svg{margin-top:1px}
 
 /* ============================================================
    STUNDEN
@@ -412,6 +466,7 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .entry .avs .av+.av{margin-left:-9px}
 .entry .by{margin-top:6px;font-size:11px;color:var(--ink-3)}
 .dayh .present{font-size:11.5px;color:var(--ink-2)}
+.dayh .absent{font-size:11.5px;color:var(--st-block);font-weight:600}
 .sumrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
 .sumchip{display:flex;align-items:center;gap:8px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:6px 11px 6px 6px;font-size:12.5px}
 .sumchip b{font-size:15px}
@@ -441,11 +496,12 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .req-day{font-size:12px;font-weight:700;color:var(--petrol);letter-spacing:.01em;margin-bottom:2px}
 .req-b.rows{white-space:normal}
 .req-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:7px}
-.req-row .k{flex:none;width:34px;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-3);padding-top:4px}
+.req-row .k{flex:none;width:38px;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-3);padding-top:4px}
 .req-who{display:flex;gap:6px;flex-wrap:wrap}
 .req-who .mate{padding:2px 6px 2px 2px;font-size:12.5px;gap:6px}
 .req-who .cmark{min-width:22px;height:18px;font-size:10.5px}
-.req-warn{font-size:12px;font-weight:700;color:#8a5f08;background:#fbf0cf;border-radius:var(--r-sm);padding:5px 9px;display:inline-block}
+.req-warn{font-size:12px;font-weight:700;color:#8a5f08;background:#fbf0cf;border-radius:var(--r-sm);padding:5px 9px;display:inline-flex;align-items:center;gap:6px}
+.req-plan{white-space:pre-line}
 .req-d.prev{background:#fbf0cf;border-left:3px solid #c99a2e}
 .req-prev{background:#fbeeec;border-color:#e6c8c3;color:var(--st-block)}
 .nextreq{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:99px;white-space:nowrap}
@@ -465,10 +521,6 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .mcard.me{border-color:var(--marker);box-shadow:0 0 0 1px var(--marker-wash),var(--sh-1)}
 .mtop{display:flex;gap:12px;align-items:center}
 .mname{font-size:16.5px;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.mlabel{font-size:11px!important;font-weight:600;background:var(--petrol-wash)!important;color:var(--petrol);border:1px dashed transparent!important;border-radius:99px!important;padding:3px 10px!important;box-shadow:none!important;margin-top:4px}
-.mlabel::placeholder{color:#9bb5b1;font-style:italic}
-.mlabel:hover{border-color:#b8d2ce!important}
-.mlabel:focus{border-color:var(--petrol)!important;background:#fff!important;outline:0}
 .mstats{display:flex;gap:7px;font-size:11px}
 .mstat{flex:1;background:var(--paper-down);border-radius:var(--r-sm);padding:6px 8px;text-align:center}
 .mstat b{display:block;font-size:16px;font-weight:700}
@@ -568,6 +620,8 @@ body.ro .postit,body.ro .pchip{cursor:default}
   .board{grid-template-columns:repeat(4,minmax(190px,1fr));overflow-x:auto}
   .goalwrap{grid-template-columns:1fr}
   .imgs{grid-template-columns:repeat(4,1fr)}
+  .reqwrap{grid-template-columns:1fr}
+  .rcheck{position:static;order:-1}
 }
 @media (max-width:880px){
   .ov,.ov.withlist{grid-template-columns:1fr}
@@ -578,7 +632,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
   .cyc{border-radius:var(--r)!important;border-left:1px solid rgba(127,168,162,.26)!important}
 }
 @media (max-width:640px){
-  .grid2{grid-template-columns:1fr}
+  .grid2,.goalhead,.rq-need{grid-template-columns:1fr}
   .imgs{grid-template-columns:1fr 1fr}
   header.top{position:static}
   .top-row{gap:10px;min-height:0}
@@ -684,11 +738,11 @@ body.ro .postit,body.ro .pchip{cursor:default}
     </button>
     <button class="tab" role="tab" data-view="work" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/></svg>
-      Arbeit <span class="cnt" id="cntWork">0</span>
+      To-dos <span class="cnt" id="cntWork">0</span>
     </button>
     <button class="tab" role="tab" data-view="hours" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-      Stunden <span class="cnt" id="cntHours">0</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/></svg>
+      Dokumentation <span class="cnt" id="cntHours">0</span>
     </button>
     <button class="tab" role="tab" data-view="requests" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
@@ -749,16 +803,21 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div>
         <div class="eyebrow">Wohin wollen wir?</div>
         <h2 class="t">Projektziel</h2>
-        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll — und für wen. Das Ziel ist euer Kompass: Jede Aufgabe auf dem Board zahlt darauf ein. Alle in der Gruppe arbeiten daran, bis die Lehrkraft es fixiert.</p>
+        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll — und bis wann. Das Ziel ist euer Kompass: Jedes To-do zahlt darauf ein. Alle in der Gruppe arbeiten daran, bis die Lehrkraft es fixiert.</p>
       </div>
       <div class="sp"><span class="stat" id="goalSaved">gespeichert</span>
         <button class="btn" id="goalLockBtn" hidden></button></div>
     </div>
-    <div class="robar" id="goalNote" hidden>🔒 Das Projektziel ist fixiert — es gilt so. Änderungen bitte über einen <b>Antrag</b>.</div>
+    <div class="robar" id="goalNote" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Das Projektziel ist fixiert — es gilt so. Änderungen bitte mit eurer Lehrkraft besprechen.</span></div>
     <div class="goalwrap">
       <div>
-        <label class="fl" for="goalTitle">Projekttitel</label>
-        <input type="text" class="titlein" id="goalTitle" maxlength="80" placeholder="z. B. Unsere Schul-Wetterstation">
+        <div class="goalhead">
+          <div><label class="fl" for="goalTitle">Projekttitel</label>
+            <input type="text" class="titlein" id="goalTitle" maxlength="80" placeholder="z. B. Unsere Schul-Wetterstation"></div>
+          <div><label class="fl" for="goalDue">Wann soll das Projekt fertig sein?</label>
+            <input type="date" id="goalDue">
+            <div class="duehint" id="goalDueHint"></div></div>
+        </div>
         <span class="fl">Projektziel</span>
         <div class="rte-bar" id="rteBar">
           <button data-cmd="bold" title="Fett">B</button>
@@ -791,12 +850,16 @@ body.ro .postit,body.ro .pchip{cursor:default}
         </div>
         <div class="panel pad">
           <div class="eyebrow">Gutes Ziel?</div>
-          <h3 style="font-size:17px;margin-top:3px">Diese Fragen sollte es beantworten</h3>
+          <h3 style="font-size:17px;margin-top:3px">Diese Fragen solltet ihr beantworten</h3>
           <ul class="qlist">
-            <li><b>1</b>Was genau soll am Ende fertig sein (Produkt, Ergebnis)?</li>
-            <li><b>2</b>Für wen ist es gedacht — wer hat etwas davon?</li>
-            <li><b>3</b>Woran erkennt ihr, dass ihr es geschafft habt?</li>
-            <li><b>4</b>Bis wann, und was braucht ihr dafür?</li>
+            <li><span class="qi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></span>
+              <div><b>Konkretes Ziel des Projekts</b>Woran erkennt ihr, dass ihr euer Ziel erreicht habt?</div></li>
+            <li><span class="qi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span>
+              <div><b>Konkretes Produkt am Ende des Projekts</b>Was haltet ihr am Ende in der Hand? (abgleichen oder verbessern)</div></li>
+            <li><span class="qi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg></span>
+              <div><b>Für wen?</b>Wer hat etwas von eurem Ergebnis?</div></li>
+            <li><span class="qi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
+              <div><b>Bis wann?</b>Tragt oben ein, wann das Projekt fertig sein soll.</div></li>
           </ul>
         </div>
       </div>
@@ -807,12 +870,13 @@ body.ro .postit,body.ro .pchip{cursor:default}
   <section class="view" id="view-work" hidden>
     <div class="shead">
       <div>
-        <div class="eyebrow">Wer macht was?</div>
-        <h2 class="t">Arbeit</h2>
-        <p class="s">Zerlegt euer Projekt in Aufgaben, die in eine Stunde passen. Zieht die Karten von links nach rechts — so sieht jede:r sofort, wo ihr steht. Hängt etwas fest, kommt die Karte nach „Blockiert“.</p>
+        <div class="eyebrow">Was ist zu tun?</div>
+        <h2 class="t">To-do-Übersicht</h2>
+        <p class="s">Euer Weg vom Start bis zum Ende — in kleinen Schritten.</p>
       </div>
       <div class="sp" id="workStats"></div>
     </div>
+    <div class="guide" id="workGuide"></div>
     <div class="colpick" id="colPick" role="tablist" aria-label="Spalte"></div>
     <div class="board" id="board"></div>
   </section>
@@ -822,10 +886,11 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <div class="shead">
       <div>
         <div class="eyebrow">Was haben wir heute gemacht?</div>
-        <h2 class="t">Stundenprotokoll</h2>
-        <p class="s">Am Ende jeder Stunde haltet ihr fest, <b>wer woran gearbeitet hat</b> und was als Nächstes kommt. Ein Eintrag kann für mehrere gelten — tippt an, wer dabei war. Wer fehlt, wird einfach nicht ausgewählt. So bleibt sichtbar, wer was beigetragen hat.</p>
+        <h2 class="t">Dokumentation</h2>
+        <p class="s">Am Ende jedes Arbeitstags haltet ihr fest, wer was gemacht hat.</p>
       </div>
     </div>
+    <div class="guide" id="hoursGuide"></div>
     <div class="today" id="todayBar"></div>
     <div class="hgrid">
       <div class="panel hform needs-write" id="hForm">
@@ -842,7 +907,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
         </div>
         <div class="field"><span class="fl">Wer war dabei?</span><div class="whopick" id="hWho"></div>
           <p class="hint" id="hWhoHint">Tippt alle an, die das gemacht haben. Du kannst auch nur für andere eintragen.</p></div>
-        <div class="field"><label class="fl" for="hText">Das wurde gemacht</label>
+        <div class="field"><label class="fl" for="hText">Das wurde gemacht (Arbeitsschritt)</label>
           <textarea id="hText" maxlength="1500" placeholder="z. B. Drei Quellen zur Solarenergie gelesen und die wichtigsten Punkte notiert."></textarea></div>
         <div class="field"><label class="fl" for="hNext">Als Nächstes <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
           <textarea id="hNext" maxlength="600" style="min-height:56px" placeholder="z. B. Gliederung für die Präsentation entwerfen."></textarea></div>
@@ -866,14 +931,17 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div>
         <div class="eyebrow">Lernen am anderen Ort</div>
         <h2 class="t">Anträge</h2>
-        <p class="s">Ihr wollt an einem Tag <b>außerhalb des Schulgeländes</b> an eurem Projekt arbeiten? Stellt einen Antrag: an welchem Tag, wer mitkommt, wohin und was ihr dort macht. Bis die Lehrkraft entschieden hat, könnt ihr ihn noch ändern. Abgelehnt? Verbessern und neu abschicken. Genehmigt ist er fest.</p>
+        <p class="s">Ihr wollt an einem Tag <b>außerhalb der Schule</b> an eurem Projekt arbeiten? Dafür braucht ihr einen genehmigten Antrag. Bis die Lehrkraft entschieden hat, könnt ihr ihn noch ändern. Abgelehnt? Verbessern und neu abschicken.</p>
       </div>
       <div class="sp"><button class="btn mark needs-write" id="btnNewReq">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         Antrag stellen</button></div>
     </div>
-    <div class="filt" id="reqFilt"></div>
-    <div class="reqs" id="reqList"></div>
+    <div class="reqwrap">
+      <div><div class="filt" id="reqFilt"></div>
+        <div class="reqs" id="reqList"></div></div>
+      <aside class="panel rcheck" id="reqCheck"></aside>
+    </div>
   </section>
 
   <!-- ══════════ PLANUNGSRAUM: TEAM ══════════ -->
@@ -907,7 +975,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <!-- Aufgabe -->
 <div class="scrim" id="mTask" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tkTitle">
-    <div class="m-h"><div class="ttl" id="tkTitle">Aufgabe</div>
+    <div class="m-h"><div class="ttl" id="tkTitle">To-do</div>
       <button class="m-x" data-close="mTask" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="m-b">
@@ -915,6 +983,8 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <input type="text" id="tkName" maxlength="120" placeholder="z. B. Umfrage in der 7a durchführen"></div>
       <div class="field"><label class="fl" for="tkText">Beschreibung <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
         <textarea id="tkText" maxlength="1500" style="min-height:70px"></textarea></div>
+      <div class="field"><span class="fl">Geschätzte Zeit</span><div class="estpick" id="tkEst"></div>
+        <p class="hint">Wie viele Schulstunden braucht ihr ungefähr? Grob schätzen reicht.</p></div>
       <div class="field"><span class="fl">Wer kümmert sich?</span><div class="whopick" id="tkWho"></div></div>
       <div class="grid2">
         <div class="field"><label class="fl" for="tkCol">Spalte</label>
@@ -944,15 +1014,22 @@ body.ro .postit,body.ro .pchip{cursor:default}
     </div>
     <div class="m-b">
       <div class="robar req-prev" id="rqPrev" hidden></div>
-      <p class="hint" style="margin:0 0 14px">Ein Antrag heißt: Ihr wollt an diesem Tag <b>außerhalb des Schulgeländes</b> lernen.</p>
-      <div class="field"><label class="fl" for="rqDate">An welchem Tag?</label>
+      <p class="hint" style="margin:0 0 16px">Ein Antrag heißt: Ihr wollt an diesem Tag <b>außerhalb der Schule</b> an eurem Projekt arbeiten (Exkursion). Vier Dinge braucht die Lehrkraft:</p>
+      <div class="field"><label class="rq-step" for="rqDate"><i>1</i><b>Datum der Exkursion</b></label>
         <input type="date" id="rqDate" style="max-width:220px"></div>
-      <div class="field"><span class="fl">Wer ist dabei?</span><div class="whopick" id="rqWho"></div>
+      <div class="field"><div class="rq-step"><i>2</i><b>Wer fährt mit?</b></div><div class="whopick" id="rqWho"></div>
         <p class="hint" id="rqWhoHint"></p></div>
-      <div class="field"><label class="fl" for="rqPlace">Wohin?</label>
-        <input type="text" id="rqPlace" maxlength="120" placeholder="z. B. Stadtbibliothek · zu Hause bei Leon · Tischlerei Jansen"></div>
-      <div class="field"><label class="fl" for="rqAct">Was wollt ihr dort machen?</label>
-        <textarea id="rqAct" maxlength="2000" style="min-height:110px" placeholder="z. B. Interview mit dem Meister führen und Fotos für die Präsentation machen. Zurück um 11:30 Uhr."></textarea></div>
+      <div class="field"><label class="rq-step" for="rqPlace"><i>3</i><b>Ziel der Exkursion mit Adresse</b></label>
+        <input type="text" id="rqPlace" maxlength="120" placeholder="z. B. zu Leon nach Hause (Musterstraße 5, 24103 Kiel)">
+        <p class="hint">Nicht nur „bei Leon“ — immer mit <b>Straße, Hausnummer und Ort</b>.</p></div>
+      <div class="field"><label class="rq-step" for="rqAct"><i>4</i><b>Wie kommt ihr dahin — und warum?</b></label>
+        <div class="rq-need">
+          <div><span class="gi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2.5"/><circle cx="18" cy="5" r="2.5"/><path d="M8.5 19H17a3.5 3.5 0 0 0 0-7H7a3.5 3.5 0 0 1 0-7h8.5"/></svg></span>
+            <span><b>WEG und VERKEHRSMITTEL</b>Wie kommt ihr hin und zurück? Zu Fuß, Fahrrad, Bus (Linie)?</span></div>
+          <div><span class="gi"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></span>
+            <span><b>BEGRÜNDUNG</b>Warum ist die Exkursion für euer Projektziel notwendig?</span></div>
+        </div>
+        <textarea id="rqAct" maxlength="2000" style="min-height:150px"></textarea></div>
       <p class="hint">Bis die Lehrkraft entschieden hat, könnt ihr den Antrag ändern oder zurückziehen. Ein abgelehnter Antrag lässt sich verbessern und neu abschicken. Ein genehmigter ist fest.</p>
     </div>
     <div class="m-f"><div class="sp">
@@ -1067,7 +1144,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261007c"></script>
-<script src="app.js?v=20261007c"></script>
+<script src="bridge.js?v=20261007d"></script>
+<script src="app.js?v=20261007d"></script>
 </body>
 </html>

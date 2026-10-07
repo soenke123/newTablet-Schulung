@@ -17,13 +17,17 @@
      Schüler                ohne Planungsraum: Wartekarte (Lobby bzw.
                             die eigene Gruppe). Mit: der Planungsraum.
 
-   Der Planungsraum hat sechs Reiter: Projektziel, Arbeit (Board mit
-   vier Spalten), Stunden (Protokoll), Anträge, Team und
-   „Projektarbeit & Regeln".
+   Der Planungsraum hat sechs Reiter: Team, Projektziel (mit
+   Fertig-Datum due), To-dos (Board mit vier Spalten, je Karte eine
+   Zeitschätzung est in Schulstunden), Dokumentation (Protokoll,
+   intern „log"/„hours"), Anträge und „Projektarbeit & Regeln".
+   Die Erklärungen stehen als Kacheln mit Icons über den Reitern
+   (guide()), ohne Emojis.
 
    Anträge (0201) heißen immer: „wir wollen an diesem Tag außerhalb des
-   Schulgeländes lernen" — mit Datum, wer dabei ist, Ort und was dort
-   passiert. Offen und abgelehnt darf die Gruppe ändern (abgelehnt =
+   Schulgeländes lernen" — mit Datum, wer dabei ist, Ziel mit Adresse
+   (place) und einem Text (activity) mit WEG und VERKEHRSMITTEL und
+   BEGRÜNDUNG (neue Anträge starten mit diesen beiden Überschriften). Offen und abgelehnt darf die Gruppe ändern (abgelehnt =
    überarbeiten und neu abschicken), genehmigt ist fest. Am Reiter
    steht, wie es um den nächsten Antrag (heute oder später) steht.
    Im Team trägt die Lehrkraft die Einwilligungen ein (Stufe 1/2) —
@@ -110,7 +114,7 @@ const safeImg = s => typeof s === 'string' && /^data:image\/(jpeg|png|webp);base
 let tab = 'team';
 let picked = null;          // Übersicht: angetippte Person (Tablet ohne Ziehen)
 let editTask = null;        // Aufgabe im Dialog (id oder null = neu)
-let tkWho = [], tkColor = 'yellow';
+let tkWho = [], tkColor = 'yellow', tkEst = 0;
 let editReq = null;
 let rqWho = [];
 let showList = (() => { try { return localStorage.getItem('pa_clist') !== '0'; } catch (e) { return true; } })();
@@ -122,11 +126,17 @@ let goalTimer = null, goalDirty = false;
 let lastMode = null, lastGroup = null;
 
 const COLS = [
-  { k: 'todo',    nm: 'Zu erledigen', c: 'var(--st-todo)',  hint: 'Was ansteht. Kleine Schritte — eine Karte, eine Stunde.' },
+  { k: 'todo',    nm: 'Zu erledigen', c: 'var(--st-todo)',  hint: 'Was ansteht. Kleine Schritte, Zeit geschätzt.' },
   { k: 'blocked', nm: 'Blockiert',    c: 'var(--st-block)', hint: 'Hängt fest. Schreibt dazu, was fehlt.' },
   { k: 'doing',   nm: 'In Arbeit',    c: 'var(--st-doing)', hint: 'Daran arbeitet gerade jemand.' },
   { k: 'done',    nm: 'Fertig',       c: 'var(--st-done)',  hint: 'Geschafft!' }
 ];
+// Zeitschätzung eines To-dos in Schulstunden (0 = keine Schätzung).
+const ESTS = [0.5, 1, 2, 3, 4, 6, 8];
+const fmtEst = h => (h === 0.5 ? '½' : String(h)) + ' Std.';
+// Text eines Antrags: diese beiden Teile gehören hinein.
+const RQ_WAY = 'WEG und VERKEHRSMITTEL:', RQ_WHY = 'BEGRÜNDUNG:';
+const RQ_TEMPLATE = RQ_WAY + '\n\n\n' + RQ_WHY + '\n';
 const COLORS = { yellow: '#fdf3a8', blue: '#cbe7f7', green: '#cdebd2', pink: '#f8d4e0', lilac: '#dfd8f3' };
 // Einwilligung der Eltern, das Schulgelände zu verlassen (0201).
 const CONSENT = [
@@ -160,8 +170,34 @@ const ICO = {
   trash: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>',
   plus: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
   arrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
-  block: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/></svg>'
+  block: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/></svg>',
+  clock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  warn: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5h.01"/></svg>',
+  lock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  unlock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.8-1.2"/></svg>'
 };
+// Linien-Icons (24er Raster) für die Erklär-Kacheln.
+const GI = {
+  split: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
+  clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+  refresh: '<path d="M20 11a8 8 0 0 0-14.6-4.5L3 9"/><path d="M3 4v5h5M4 13a8 8 0 0 0 14.6 4.5L21 15"/><path d="M21 20v-5h-5"/>',
+  move: '<path d="M4 12h14M13 6l6 6-6 6"/>',
+  cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+  people: '<circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/>',
+  pen: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  camera: '<path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/>',
+  sign: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 17c1.5-2 2.5-2 3 0s1.5 2 3 0"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/>',
+  form: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+  mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
+  inbox: '<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/><path d="M9.5 9.5l2 2 3.5-3.5"/>',
+  plus: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/>',
+  alarm: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 3L2 6M19 3l3 3"/>'
+};
+const gIco = (k, n) => `<span class="gi">${n ? `<i>${n}</i>` : ''}<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${GI[k]}</svg></span>`;
+// Eine Erklärung als Reihe kurzer Kacheln: [Icon, Titel, Satz, später?]
+const guide = steps => steps.map(([k, t, txt, later], i) =>
+  `<div class="gstep${later ? ' later' : ''}">${gIco(k, later ? '' : i + 1)}<div><b>${t}${later ? '<span class="soontag">kommt später</span>' : ''}</b><span>${txt}</span></div></div>`).join('');
 
 // Stundeneintrag: wer war dabei. Einträge von vor 0202 kennen nur den Schreiber.
 const logWho = l => Array.isArray(l.who) ? l.who : (l.by ? [l.by] : []);
@@ -183,7 +219,7 @@ const members = () => (group() && group().members) || [];
 const meId    = () => (PA.me && PA.me.id) || null;
 const person  = id => members().find(m => m.id === id) || (V().people || []).find(p => p.id === id) || null;
 const gTitle  = (g, mem) => (g && g.name) || (mem && mem[0] && mem[0].name) || 'Einzelarbeit';
-const goalObj = () => Object.assign({ title: '', text: '', images: [], locked: false }, PA.get('goal', 'main') || {});
+const goalObj = () => Object.assign({ title: '', text: '', due: '', images: [], locked: false }, PA.get('goal', 'main') || {});
 const canWrite = () => !PA.ro;
 const canEditGoal = () => canWrite() && (PA.owner || !goalObj().locked);
 
@@ -224,12 +260,31 @@ function renderAll() {
     renderCounts();
     renderGoal(); renderWork(); renderHours(); renderRequests(); renderTeam();
     $('#rulesBox').innerHTML = rulesHtml();
+    renderGuides();
     go(tab);
   }
   firstKey();
 }
 
 const findG = id => (V().groups || []).find(g => g.id === id) || null;
+
+// Die Erklärungen über To-dos, Dokumentation und Anträgen ändern sich nie.
+function renderGuides() {
+  if ($('#workGuide').firstChild) return;
+  $('#workGuide').innerHTML = guide([
+    ['split', 'Zerlegen', 'Teilt euer Projekt vom Start bis zum Ende in kleine Arbeitsschritte — alle, die ihr erwartet.'],
+    ['clock', 'Zeit schätzen', 'Schätzt bei jedem To-do, wie viele Schulstunden ihr dafür braucht.'],
+    ['move', 'Weiterschieben', 'Angefangen → <b>In Arbeit</b>. Erledigt → <b>Fertig</b>. Hängt etwas? → <b>Blockiert</b>.'],
+    ['refresh', 'Anpassen', 'To-dos dürft ihr jederzeit ändern und in kleinere Aufgaben aufteilen.']
+  ]);
+  $('#hoursGuide').innerHTML = guide([
+    ['cal', 'Jeder Arbeitstag', 'Ein Eintrag mit dem Datum des Tages — gern mehrere.'],
+    ['people', 'Wer war da?', 'Antippen, wer dabei war. Wer krank ist oder fehlt, bleibt weg und steht beim Tag unter „fehlte“.'],
+    ['pen', 'Wer hat was gemacht?', 'Name + Arbeitsschritt. Tipp: Schaut in eure To-dos.'],
+    ['camera', 'Fotos bei Exkursionen', 'Diese Regel kommt später dazu.', true]
+  ]);
+  $('#reqCheck').innerHTML = reqCheckHtml();
+}
 
 function renderHeader(m) {
   const v = V();
@@ -247,8 +302,10 @@ function renderHeader(m) {
     $('#brandEyebrow').textContent = 'Planungsraum · ' + gTitle(g, gm);
     $('#brandName').textContent = goalObj().title || gTitle(g, gm);
     const tasks = PA.list('task');
-    pill.hidden = !tasks.length;
-    pill.innerHTML = `<div><div class="lbl">Fertig</div><div class="val">${tasks.filter(t => t.col === 'done').length} / ${tasks.length}</div></div>
+    const due = goalObj().due;
+    pill.hidden = !tasks.length && !due;
+    pill.innerHTML = `${due ? `<div><div class="lbl">Fertig bis</div><div class="val">${esc(deShort(due))}</div></div>
+      <div class="pill-div"></div>` : ''}<div><div class="lbl">To-dos fertig</div><div class="val">${tasks.filter(t => t.col === 'done').length} / ${tasks.length}</div></div>
       <div class="pill-div"></div>
       <div><div class="lbl">Team</div><div class="val" style="display:flex;gap:3px">${gm.map(p => avatar(p, 20)).join('')}</div></div>`;
   } else {
@@ -484,13 +541,17 @@ function renderGoal() {
   const ti = $('#goalTitle'), r = $('#goalRte');
   if (document.activeElement !== ti && !goalDirty) ti.value = g.title || '';
   if (document.activeElement !== r && !goalDirty) r.innerHTML = cleanHtml(g.text);
+  const du = $('#goalDue');
+  if (document.activeElement !== du && !goalDirty) du.value = /^\d{4}-\d{2}-\d{2}$/.test(g.due || '') ? g.due : '';
+  du.disabled = !ok;
+  renderDueHint(du.value);
   ti.disabled = !ok;
   r.contentEditable = ok ? 'true' : 'false';
   document.body.classList.toggle('goallock', !ok);
   $('#goalNote').hidden = !g.locked || PA.owner;
   const lb = $('#goalLockBtn');
   lb.hidden = !PA.owner;
-  lb.innerHTML = g.locked ? '🔓 Projektziel öffnen' : '🔒 Projektziel fixieren';
+  lb.innerHTML = g.locked ? ICO.unlock + ' Projektziel öffnen' : ICO.lock + ' Projektziel fixieren';
   if (!goalDirty) $('#goalSaved').textContent = g.locked ? 'fixiert' : 'gespeichert';
 
   const imgs = (g.images || []).filter(safeImg);
@@ -504,6 +565,16 @@ function renderGoal() {
       : (imgs.length ? '' : '<p class="hint" style="grid-column:1/-1">Noch keine Bilder.</p>'));
 }
 
+// Unter dem Fertig-Datum: wie viel Zeit noch bleibt.
+function renderDueHint(due) {
+  const el = $('#goalDueHint');
+  const d = parseD(due);
+  if (!d) { el.className = 'duehint'; el.textContent = 'Noch kein Datum'; return; }
+  const days = Math.round((d - parseD(todayIso())) / 864e5);
+  el.className = 'duehint' + (days < 0 ? ' over' : days <= 14 ? ' soon' : '');
+  el.innerHTML = ICO.clock + ' ' + esc(days < 0 ? `seit ${-days} ${-days === 1 ? 'Tag' : 'Tagen'} vorbei`
+    : days === 0 ? 'heute' : days < 14 ? `noch ${days} ${days === 1 ? 'Tag' : 'Tage'}` : `noch ${Math.round(days / 7)} Wochen`);
+}
 function goalChanged() {
   if (!canEditGoal()) return;
   goalDirty = true;
@@ -518,6 +589,7 @@ function saveGoal() {
   const g = goalObj();
   PA.put('goal', 'main', Object.assign({}, g, {
     title: $('#goalTitle').value.trim().slice(0, 80),
+    due: $('#goalDue').value || '',
     text: cleanHtml($('#goalRte').innerHTML)
   }));
   $('#goalSaved').textContent = 'gespeichert';
@@ -556,6 +628,7 @@ function postit(t) {
     <div class="pi-foot">
       <span class="pi-who">${who.length ? who.map(p => avatar(p, 22)).join('') : '<span class="pi-free">noch frei</span>'}</span>
       ${who.length ? `<span style="margin-left:4px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(who.map(p => p.name).join(' + '))}</span>` : ''}
+      ${+t.est ? `<span class="pi-est" title="geschätzte Zeit">${ICO.clock}${esc(fmtEst(+t.est))}</span>` : ''}
     </div>
   </div>`;
 }
@@ -564,10 +637,12 @@ function renderWork() {
   const tasks = PA.list('task').sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title)));
   const by = k => tasks.filter(t => (COLS.some(c => c.k === t.col) ? t.col : 'todo') === k);
   const done = by('done').length, blk = by('blocked').length;
+  // Was noch offen ist, in geschätzten Schulstunden.
+  const left = tasks.filter(t => t.col !== 'done').reduce((a, t) => a + (+t.est || 0), 0);
   $('#workStats').innerHTML = tasks.length
-    ? `<span class="stat">Fertig <b>${done}/${tasks.length}</b></span>${blk ? `<span class="badge bg-block">${blk} blockiert</span>` : ''}
-       <button class="btn primary needs-write" data-newtask="todo">${ICO.plus} Aufgabe</button>`
-    : `<button class="btn primary needs-write" data-newtask="todo">${ICO.plus} Erste Aufgabe</button>`;
+    ? `<span class="stat">Fertig <b>${done}/${tasks.length}</b></span>${left ? `<span class="stat" title="geschätzte Zeit aller offenen To-dos">noch ca. <b>${esc(fmtH(left))}</b></span>` : ''}${blk ? `<span class="badge bg-block">${blk} blockiert</span>` : ''}
+       <button class="btn primary needs-write" data-newtask="todo">${ICO.plus} To-do</button>`
+    : `<button class="btn primary needs-write" data-newtask="todo">${ICO.plus} Erstes To-do</button>`;
 
   $('#colPick').innerHTML = COLS.map(c => `<button data-pcol="${c.k}" data-drop="col:${c.k}" aria-pressed="${phoneCol === c.k}">
       <span class="col-dot" style="background:${c.c};width:8px;height:8px;border-radius:99px"></span>${c.nm} <b>${by(c.k).length}</b></button>`).join('');
@@ -579,7 +654,7 @@ function renderWork() {
       <div class="col-hint">${c.hint}</div>
       <div class="drop" data-drop="col:${c.k}">
         ${list.map(postit).join('')}
-        ${c.k === 'todo' ? `<button class="addcard needs-write" data-newtask="todo">${ICO.plus} Aufgabe hinzufügen</button>`
+        ${c.k === 'todo' ? `<button class="addcard needs-write" data-newtask="todo">${ICO.plus} To-do hinzufügen</button>`
           : (list.length ? '' : '<div class="empty">Hierher ziehen</div>')}
       </div>
     </div>`;
@@ -590,13 +665,14 @@ function openTask(id, col) {
   const t = id ? PA.get('task', id) : null;
   if (id && !t) return;
   editTask = id || null;
-  $('#tkTitle').textContent = t ? 'Aufgabe' : 'Neue Aufgabe';
+  $('#tkTitle').textContent = t ? 'To-do' : 'Neues To-do';
   $('#tkName').value = t ? t.title || '' : '';
   $('#tkText').value = t ? t.text || '' : '';
   $('#tkCol').value = t ? (t.col || 'todo') : (col || 'todo');
   $('#tkNote').value = t ? t.note || '' : '';
   tkWho = t ? (t.who || []).slice() : (meId() && members().some(m => m.id === meId()) ? [meId()] : []);
   tkColor = t && COLORS[t.color] ? t.color : 'yellow';
+  tkEst = t && ESTS.includes(+t.est) ? +t.est : 0;
   $('#tkDel').hidden = !t;
   renderTaskForm();
   const ro = !canWrite();
@@ -607,6 +683,8 @@ function openTask(id, col) {
 function renderTaskForm() {
   $('#tkWho').innerHTML = members().map(m => `<button type="button" data-who="${esc(m.id)}" aria-pressed="${tkWho.includes(m.id)}">${avatar(m, 22)}${esc(m.name)}</button>`).join('')
     || '<span class="hint">Noch niemand in der Gruppe.</span>';
+  $('#tkEst').innerHTML = ESTS.map(h => `<button type="button" data-est="${h}" aria-pressed="${tkEst === h}">${esc(fmtEst(h).replace(' Std.', ''))}</button>`).join('')
+    + '<span class="hint" style="align-self:center;margin:0 0 0 4px">Schulstunden</span>';
   $('#tkColor').innerHTML = Object.keys(COLORS).map(k => `<button type="button" data-color="${k}" aria-checked="${tkColor === k}" title="${k}" style="background:${COLORS[k]}"></button>`).join('');
   $('#tkNoteF').hidden = $('#tkCol').value !== 'blocked';
 }
@@ -619,7 +697,7 @@ function saveTask() {
   const data = Object.assign({}, old || {}, {
     title: title.slice(0, 120), text: $('#tkText').value.trim().slice(0, 1500),
     who: tkWho.filter(id => members().some(m => m.id === id)),
-    col, color: tkColor, note: col === 'blocked' ? $('#tkNote').value.trim().slice(0, 400) : (old && old.note) || '',
+    col, color: tkColor, est: tkEst, note: col === 'blocked' ? $('#tkNote').value.trim().slice(0, 400) : (old && old.note) || '',
     order: old && old.col === col ? old.order : Date.now()
   });
   PA.put('task', editTask || PA.newId('t'), data);
@@ -671,7 +749,7 @@ function renderHours() {
 
   if (!logs.length) {
     $('#hList').innerHTML = `<div class="nothing" style="padding:34px 20px"><h3>Noch keine Einträge</h3>
-      <p>Am Ende der Stunde haltet ihr fest, wer was gemacht hat.</p></div>`;
+      <p>Am Ende des Arbeitstags haltet ihr fest, wer was gemacht hat.</p></div>`;
     return;
   }
   const days = [];
@@ -680,8 +758,11 @@ function renderHours() {
     // Wer an dem Tag in mindestens einem Eintrag steht — wer fehlte, steht nicht da.
     const seen = new Map();
     d.list.slice().reverse().forEach(l => logPeople(l).forEach(p => { if (!seen.has(p.id)) seen.set(p.id, p.name); }));
+    // Wer aus der Gruppe in keinem Eintrag steht, hat gefehlt (oder ist noch nicht eingetragen).
+    const away = gm.filter(m => !seen.has(m.id)).map(m => m.name);
     return `
-    <div class="dayh"><h4>${esc(deDay(d.date))}</h4><span class="present">dabei: ${esc(andList([...seen.values()]))}</span></div>
+    <div class="dayh"><h4>${esc(deDay(d.date))}</h4><span class="present">dabei: ${esc(andList([...seen.values()]))}</span>${away.length
+      ? `<span class="absent" title="steht an diesem Tag in keinem Eintrag">fehlte: ${esc(andList(away))}</span>` : ''}</div>
     ${d.list.slice().reverse().map(l => {
       const ps = logPeople(l);
       const mine = !!meId() && logWho(l).includes(meId());
@@ -775,7 +856,7 @@ function renderRequests() {
       <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${PIN}</svg></div>
       <h3>${all.length ? 'Nichts in dieser Auswahl' : 'Noch keine Anträge'}</h3>
       <p>${PA.owner ? 'Wenn die Gruppe außerhalb der Schule lernen möchte, steht der Antrag hier — und in der Übersicht erscheint eine rote Zahl an der Gruppe.'
-        : 'Ihr wollt an einem Tag außerhalb des Schulgeländes lernen? Oben rechts „Antrag stellen“.'}</p></div>`;
+        : 'Ihr wollt an einem Tag außerhalb der Schule arbeiten? Geht die Checkliste durch, dann oben rechts „Antrag stellen“.'}</p></div>`;
     return;
   }
   $('#reqList').innerHTML = list.map(r => {
@@ -807,7 +888,7 @@ function renderRequests() {
         <button class="btn sm danger" data-reqdel="${esc(r.id)}">Löschen</button>
         <button class="btn sm mark" data-reqedit="${esc(r.id)}">${ICO.pen} Überarbeiten &amp; neu abschicken</button></div>`;
     } else if (st === 'approved') {
-      foot = `<div class="req-f"><span class="hint" style="margin:0">🔒 Genehmigt — der Antrag kann nicht mehr bearbeitet oder gelöscht werden.</span></div>`;
+      foot = `<div class="req-f"><span class="hint" style="margin:0;display:flex;gap:6px;align-items:center">${ICO.lock} Genehmigt — der Antrag kann nicht mehr bearbeitet oder gelöscht werden.</span></div>`;
     }
     const resent = r.sentAt && r.at && Math.abs(new Date(r.sentAt) - new Date(r.at)) > 60000;
     return `<div class="req${st === 'open' ? ' open' : ''}${past ? ' past' : ''}${nx && nx.id === r.id ? ' next' : ''}">
@@ -825,8 +906,8 @@ function renderRequests() {
       <div class="req-b rows">
         <div class="req-row"><span class="k">Wer</span><span class="req-who">${who.length ? who.map(p =>
           `<span class="mate">${avatar(p, 22)}${esc(p.name)}${PA.owner ? ' ' + cmark(p, false) : ''}</span>`).join('') : '—'}</span></div>
-        <div class="req-row"><span class="k">Was</span><span>${esc(r.activity || '—')}</span></div>
-        ${noConsent.length && st !== 'approved' ? `<div class="req-warn">⚠ Ohne Einwilligung: ${esc(noConsent.map(p => p.name).join(', '))}</div>` : ''}
+        <div class="req-row"><span class="k">Plan</span><span class="req-plan">${esc(r.activity || '—')}</span></div>
+        ${noConsent.length && st !== 'approved' ? `<div class="req-warn">${ICO.warn} Ohne Einwilligung: ${esc(noConsent.map(p => p.name).join(', '))}</div>` : ''}
       </div>`}
       ${st === 'open' && r.prevDecision ? `<div class="req-d prev"><span class="k">Vorher abgelehnt, weil</span>${esc(r.prevDecision)}</div>` : ''}
       ${st !== 'open' ? `<div class="req-d ${st === 'approved' ? 'ok' : 'no'}"><span class="k">Antwort der Lehrkraft${r.decidedAt ? ' · ' + esc(deAt(r.decidedAt)) : ''}</span>${esc(r.decision || (st === 'approved' ? 'Genehmigt.' : 'Abgelehnt.'))}</div>` : ''}
@@ -845,13 +926,13 @@ function openReq(id) {
   $('#rqDate').value = r && r.date && r.date >= todayIso() ? r.date : (r ? '' : todayIso());
   rqWho = r ? (r.who || []).slice() : (meId() ? [meId()] : []);
   $('#rqPlace').value = r ? r.place || '' : '';
-  $('#rqAct').value = r ? r.activity || r.text || '' : '';
+  $('#rqAct').value = r ? r.activity || r.text || '' : RQ_TEMPLATE;
   $('#rqPrev').hidden = !rejected;
   if (rejected) $('#rqPrev').innerHTML = `<b>Abgelehnt:</b> ${esc(r.decision || 'ohne Begründung')}`;
   $('#rqSave').textContent = !r ? 'Antrag abschicken' : rejected ? 'Neu abschicken' : 'Speichern';
   renderReqWho();
   show('mReq');
-  setTimeout(() => $(r ? '#rqPlace' : '#rqDate').focus(), 60);
+  setTimeout(() => $(r ? '#rqAct' : '#rqDate').focus(), 60);
 }
 function renderReqWho() {
   const gm = members();
@@ -859,9 +940,11 @@ function renderReqWho() {
   $('#rqWho').innerHTML = gm.map(m => `<button type="button" data-rqwho="${esc(m.id)}" aria-pressed="${rqWho.includes(m.id)}">${avatar(m, 22)}${esc(m.name)}</button>`).join('')
     || '<span class="hint">Noch niemand in der Gruppe.</span>';
   const miss = gm.filter(m => rqWho.includes(m.id) && !+(m.consent || 0));
-  $('#rqWhoHint').innerHTML = miss.length
-    ? `⚠ Für ${esc(miss.map(m => m.name).join(', '))} liegt noch <b>keine Einwilligung</b> vor.`
-    : 'Tippt alle an, die mitkommen.';
+  const hint = $('#rqWhoHint');
+  hint.classList.toggle('warn', miss.length > 0);
+  hint.innerHTML = miss.length
+    ? `${ICO.warn}<span>Für ${esc(miss.map(m => m.name).join(', '))} liegt noch <b>keine Einwilligung</b> vor.</span>`
+    : 'Tippt alle an, die mitfahren.';
 }
 function saveReq() {
   if (!canWrite()) return;
@@ -873,7 +956,11 @@ function saveReq() {
   const place = $('#rqPlace').value.trim();
   if (!place) { toast(PA.msg('place_missing')); $('#rqPlace').focus(); return; }
   const activity = $('#rqAct').value.trim();
-  if (!activity) { toast('Was wollt ihr dort machen? Ein, zwei Sätze reichen.'); $('#rqAct').focus(); return; }
+  // Stehen die beiden Überschriften noch drin, muss unter jeder etwas stehen.
+  const way = sectionOf(activity, RQ_WAY, RQ_WHY), why = sectionOf(activity, RQ_WHY, RQ_WAY);
+  if (!activity || activity === RQ_TEMPLATE.trim()) { toast('Wie kommt ihr dahin — und warum? Bitte ausfüllen.'); $('#rqAct').focus(); return; }
+  if (way === '') { toast('Bitte WEG und VERKEHRSMITTEL eintragen.'); $('#rqAct').focus(); return; }
+  if (why === '') { toast('Bitte die BEGRÜNDUNG eintragen: Warum ist die Exkursion nötig?'); $('#rqAct').focus(); return; }
   const old = editReq ? PA.get('request', editReq) : null;
   const data = Object.assign({}, old || {}, {
     date, who, place: place.slice(0, 120), activity: activity.slice(0, 2000), status: 'open',
@@ -888,6 +975,29 @@ function saveReq() {
   toast(!old ? 'Antrag ist bei der Lehrkraft' : old.status === 'rejected' ? 'Antrag neu abgeschickt' : 'Antrag geändert');
   reqFilter = 'all';
   renderAll();
+}
+// Text unter einer Überschrift im Antrag (bis zur anderen); null, wenn sie fehlt.
+function sectionOf(text, head, other) {
+  const i = text.toUpperCase().indexOf(head.toUpperCase());
+  if (i < 0) return null;
+  const rest = text.slice(i + head.length);
+  const j = rest.toUpperCase().indexOf(other.toUpperCase());
+  return (j < 0 ? rest : rest.slice(0, j)).trim();
+}
+function reqCheckHtml() {
+  const steps = [
+    ['sign', 'Einverständniserklärung', 'Die unterschriebene Erklärung ist abgegeben.'],
+    ['book', 'Logbuch aktuell', 'To-dos und Dokumentation sind auf dem neuesten Stand — sonst können wir nicht beurteilen, ob der Antrag für euer Projekt sinnvoll ist.'],
+    ['form', 'Antrag vollständig', 'Datum, wer mitfährt, Ziel mit Adresse, Weg und Verkehrsmittel, Begründung.'],
+    ['mail', 'Hinweismail schicken', 'An beide mPS-Lehrkräfte und alle Gruppenmitglieder.'],
+    ['inbox', 'Auf Antwort warten', 'Erst wenn unsere Mail sagt „genehmigt“, dürft ihr los.'],
+    ['plus', 'Jeder Termin = neuer Antrag', 'Für jeden Tag stellt ihr einen eigenen Antrag.']
+  ];
+  return `<div class="eyebrow">Checkliste</div>
+    <h3>Bevor ihr losdürft</h3>
+    <p class="lead">Wir genehmigen euren Antrag nur, wenn alle sechs Punkte erfüllt sind.</p>
+    <ol class="rclist">${steps.map(([k, t, txt], i) => `<li>${gIco(k, i + 1)}<div><b>${t}</b>${txt}</div></li>`).join('')}</ol>
+    <div class="deadline">${gIco('alarm')}<div><b>WICHTIG: Spätestens Donnerstag, 18 Uhr</b>Antrag und Hinweismail am besten schon am Ende der vorherigen mPS-Stunde abschicken — spätestens aber Donnerstagabend um 18 Uhr.</div></div>`;
 }
 function decide(id, status) {
   const r = PA.get('request', id); if (!r) return;
@@ -910,7 +1020,6 @@ function renderTeam() {
   if (document.activeElement !== nameIn) nameIn.value = (g && g.name) || '';
   nameIn.disabled = !canWrite();
   $('#teamGrid').innerHTML = gm.map(m => {
-    const focused = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.label === m.id;
     const c = consentOf(m);
     const consent = PA.owner
       ? `<div class="cseg" role="group" aria-label="Einwilligung von ${esc(m.name)}">${CONSENT.map(k =>
@@ -920,7 +1029,6 @@ function renderTeam() {
       <div class="mtop">${avatar(m, 52)}
         <div style="flex:1;min-width:0">
           <div class="mname">${esc(m.name)}${m.me ? ' <span class="metag">du</span>' : ''}<span class="dot${m.online ? ' on' : ''}" title="${m.online ? 'gerade da' : 'nicht da'}"></span></div>
-          <input type="text" class="mlabel" data-label="${esc(m.id)}" value="${esc(focused ? document.activeElement.value : (m.label || ''))}" maxlength="40" placeholder="+ Aufgabe im Team" aria-label="Label" ${canWrite() ? '' : 'disabled'}>
         </div>
       </div>
       <div class="mconsent"><span class="fl">Einwilligung: Schulgelände verlassen</span>${consent}</div>
@@ -945,8 +1053,8 @@ function rulesHtml() {
     <p>In der Projektarbeit plant ihr selbst: Ihr legt ein Ziel fest, zerlegt es in Aufgaben, arbeitet sie ab und haltet fest, wer was beigetragen hat. Die Lehrkraft begleitet euch — und entscheidet über eure Anträge.</p>
     <div class="cycle">
       <div class="cyc"><div class="n">1</div><h4>Ziel festlegen</h4><p>Was soll am Ende entstehen, für wen, bis wann? → Reiter <b>Projektziel</b>.</p></div>
-      <div class="cyc"><div class="n">2</div><h4>Planen</h4><p>Das Ziel in kleine Aufgaben zerlegen und verteilen. → <b>Arbeit</b>.</p></div>
-      <div class="cyc"><div class="n">3</div><h4>Arbeiten &amp; festhalten</h4><p>Karten weiterschieben, jede Stunde eintragen. → <b>Stunden</b>.</p></div>
+      <div class="cyc"><div class="n">2</div><h4>Planen</h4><p>Das Projekt in kleine To-dos zerlegen, Zeit schätzen, verteilen. → <b>To-dos</b>.</p></div>
+      <div class="cyc"><div class="n">3</div><h4>Arbeiten &amp; festhalten</h4><p>Karten weiterschieben, jeden Arbeitstag eintragen. → <b>Dokumentation</b>.</p></div>
       <div class="cyc"><div class="n">4</div><h4>Ergebnis zeigen</h4><p>Präsentieren, was ihr geschafft habt — und was ihr gelernt habt.</p></div>
     </div>
   </div>
@@ -962,16 +1070,16 @@ function rulesHtml() {
       <p>Das Projekt gehört der <b>ganzen Gruppe</b>. Jede Person arbeitet mit, niemand ruht sich aus — und niemand macht alles allein.</p>
       <ul><li>Aufgaben fair verteilen</li><li>Einander helfen, wenn jemand festhängt</li><li>Entscheidungen gemeinsam treffen</li></ul></div>
     <div class="excard alt">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}
-      <h3>Jede Stunde dokumentieren</h3>
-      <p>Am Ende <b>jeder Stunde</b> haltet ihr im Stundenprotokoll fest, wer was gemacht hat und was als Nächstes kommt. Ein Eintrag kann für mehrere gelten. Ehrlich und in eigenen Worten.</p></div>
+      <h3>Jeden Arbeitstag dokumentieren</h3>
+      <p>Am Ende <b>jedes Arbeitstags</b> haltet ihr in der Dokumentation fest, wer was gemacht hat und was als Nächstes kommt. Ein Eintrag kann für mehrere gelten. Ehrlich und in eigenen Worten.</p></div>
     <div class="excard">${ic('<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/>')}
-      <h3>Board aktuell halten</h3>
+      <h3>To-dos aktuell halten</h3>
       <p>Was ihr anfangt, kommt nach <b>In Arbeit</b>; was fertig ist, nach <b>Fertig</b>. Hängt etwas fest: nach <b>Blockiert</b> — mit einem Satz, was fehlt.</p></div>
   </div>
   <div class="cards3">
     <div class="excard alt">${ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}
       <h3>Lernen am anderen Ort</h3>
-      <p>Ihr wollt für euer Projekt das <b>Schulgelände verlassen</b> — in die Bibliothek, zu jemandem nach Hause, zu einem Betrieb? Das geht nur mit einem <b>genehmigten Antrag</b>: Tag, wer mitkommt, wohin, was ihr dort macht. Und nur, wenn eure Eltern eingewilligt haben (Stufe 1: in Kleingruppen, z. B. zu jemandem nach Hause · Stufe 2: auch an fremde Orte).</p></div>
+      <p>Ihr wollt für euer Projekt das <b>Schulgelände verlassen</b> — in die Bibliothek, zu jemandem nach Hause, zu einem Betrieb? Das geht nur mit einem <b>genehmigten Antrag</b>: Datum, wer mitfährt, Ziel mit Adresse, Weg und Verkehrsmittel, Begründung. Und nur, wenn eure Eltern eingewilligt haben (Stufe 1: in Kleingruppen, z. B. zu jemandem nach Hause · Stufe 2: auch an fremde Orte).</p></div>
     <div class="excard">${ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/>')}
       <h3>Quellen &amp; Urheberrecht</h3>
       <p>Was ihr aus Büchern, dem Internet oder von KI übernehmt, kennzeichnet ihr mit <b>Quelle</b>. Bilder nur, wenn ihr sie benutzen dürft — am besten eigene.</p></div>
@@ -983,10 +1091,10 @@ function rulesHtml() {
   <div class="checks">
     <div class="panel pad"><div class="eyebrow">Zu Beginn jeder Stunde</div>
       <h3 style="font-size:17px;margin-top:3px">Kurz abstimmen (5 Minuten)</h3>
-      <ol><li>Board anschauen: Wo stehen wir?</li><li>Wer macht heute was? Karten verteilen.</li><li>Hängt etwas? → Blockiert. Müsst ihr raus? → Antrag.</li></ol></div>
+      <ol><li>To-dos anschauen: Wo stehen wir?</li><li>Wer macht heute was? Karten verteilen.</li><li>Hängt etwas? → Blockiert. Müsst ihr raus? → Antrag.</li></ol></div>
     <div class="panel pad"><div class="eyebrow">Am Ende jeder Stunde</div>
       <h3 style="font-size:17px;margin-top:3px">Festhalten (5 Minuten)</h3>
-      <ol><li>Karten auf den richtigen Stand schieben.</li><li>Stundenprotokoll: Wer hat was gemacht?</li><li>Material wegräumen, Tablets laden.</li></ol></div>
+      <ol><li>Karten auf den richtigen Stand schieben.</li><li>Dokumentation: Wer hat was gemacht?</li><li>Material wegräumen, Tablets laden.</li></ol></div>
   </div>
   ${PA.owner ? `<p style="margin-top:16px"><button class="btn" data-editrules="1">${ICO.pen} Regeln für diesen Kurs ergänzen</button></p>` : ''}`;
 }
@@ -1001,7 +1109,7 @@ function renderCodes() {
   $('#codesTitle').textContent = inPlan ? 'Codes dieser Gruppe' : 'Persönliche Codes';
   const gname = p => { const g = findG(p.group); return g ? gTitle(g, (v.people || []).filter(x => x.group === g.id)) : 'Lobby'; };
   $('#codesList').innerHTML = list.length ? list.map(p => `
-    <div class="rowline"><div class="who">${esc(p.name)}<small>${esc(inPlan ? (p.label || '') : gname(p))}</small></div>
+    <div class="rowline"><div class="who">${esc(p.name)}${inPlan ? '' : `<small>${esc(gname(p))}</small>`}</div>
       <b class="mkey">${p.key ? esc(PA.fmtKey(p.key)) : '<span style="color:var(--ink-3);font-weight:500">noch keiner</span>'}</b>
       <div class="acts"><button class="btn ghost sm" data-rekey="${esc(p.id)}">neu</button></div></div>`).join('')
     : '<p style="color:var(--ink-3);font-size:13px">Noch niemand im Raum.</p>';
@@ -1194,7 +1302,7 @@ function wire() {
     if ((b = t.closest('[data-gdel]'))) {
       const g = findG(b.dataset.gdel); if (!g) return;
       ask('Gruppe auflösen?', g.plan_open
-        ? 'Alle kommen zurück in die Lobby. Der Planungsraum mit Projektziel, Board, Stunden und Anträgen wird gelöscht — das lässt sich nicht rückgängig machen.'
+        ? 'Alle kommen zurück in die Lobby. Der Planungsraum mit Projektziel, To-dos, Dokumentation und Anträgen wird gelöscht — das lässt sich nicht rückgängig machen.'
         : 'Alle kommen zurück in die Lobby.',
         () => PA.act('pa_room_group_delete', { p_group: g.id }), 'Auflösen');
       return;
@@ -1215,6 +1323,7 @@ function wire() {
       renderTaskForm(); return;
     }
     if ((b = t.closest('[data-color]'))) { if (!canWrite()) return; tkColor = b.dataset.color; renderTaskForm(); return; }
+    if ((b = t.closest('[data-est]'))) { if (!canWrite()) return; const h = +b.dataset.est; tkEst = tkEst === h ? 0 : h; renderTaskForm(); return; }
     // Antrag: wer ist dabei
     if ((b = t.closest('[data-rqwho]'))) {
       const id = b.dataset.rqwho;
@@ -1261,7 +1370,7 @@ function wire() {
     if ((b = t.closest('[data-logedit]'))) { editLogEntry(b.dataset.logedit); return; }
     if ((b = t.closest('[data-logdel]'))) {
       const id = b.dataset.logdel;
-      ask('Eintrag löschen?', 'Der Eintrag verschwindet aus dem Stundenprotokoll.', () => { PA.del('log', id); if (editLog === id) resetLogForm(); renderAll(); }, 'Löschen');
+      ask('Eintrag löschen?', 'Der Eintrag verschwindet aus der Dokumentation.', () => { PA.del('log', id); if (editLog === id) resetLogForm(); renderAll(); }, 'Löschen');
       return;
     }
     // Anträge
@@ -1295,6 +1404,7 @@ function wire() {
 
   // Projektziel
   $('#goalTitle').addEventListener('input', goalChanged);
+  $('#goalDue').addEventListener('change', () => { renderDueHint($('#goalDue').value); goalChanged(); saveGoal(); });
   $('#goalTitle').addEventListener('blur', saveGoal);
   $('#goalRte').addEventListener('input', goalChanged);
   $('#goalRte').addEventListener('blur', saveGoal);
@@ -1338,7 +1448,7 @@ function wire() {
   $('#tkCol').addEventListener('change', renderTaskForm);
   $('#tkDel').addEventListener('click', () => {
     const id = editTask; if (!id) return;
-    ask('Aufgabe löschen?', 'Die Karte verschwindet vom Board.', () => { hide('mTask'); PA.del('task', id); renderAll(); }, 'Löschen');
+    ask('To-do löschen?', 'Die Karte verschwindet aus der To-do-Übersicht.', () => { hide('mTask'); PA.del('task', id); renderAll(); }, 'Löschen');
   });
 
   // Stunden
@@ -1349,16 +1459,12 @@ function wire() {
   $('#btnNewReq').addEventListener('click', () => openReq(null));
   $('#rqSave').addEventListener('click', saveReq);
 
-  // Team: Name (nur Schüler) und Label
+  // Team: Name (nur Schüler)
   $('#teamNameIn').addEventListener('change', e => {
     if (PA.owner || !canWrite()) return;
     PA.act('pa_group_rename', { p_name: e.target.value.trim() });
   });
   $('#teamNameIn').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
-  document.addEventListener('change', e => {
-    const inp = e.target.closest('[data-label]'); if (!inp || !canWrite()) return;
-    PA.act(PA.owner ? 'pa_room_member_update' : 'pa_member_update', { p_participant: inp.dataset.label, p_label: inp.value.trim() });
-  });
 
   // Regeln
   $('#rulesSave').addEventListener('click', async () => {
@@ -1505,7 +1611,7 @@ function importData(d) {
     const p = projects.length === 1 ? projects[0] : projects.find(x => x.group === PA.focus);
     if (!p) { toast('Die Datei enthält mehrere Projekte — bitte in der Gruppen-Übersicht importieren.'); return; }
     const nm = gTitle(group(), members());
-    ask('Projekt ersetzen?', `Projektziel, Board, Stunden und Anträge von „${nm}“ werden durch die Datei${p.name ? ' („' + p.name + '“)' : ''} ersetzt. Die Mitglieder der Gruppe bleiben. Vorher entsteht ein Backup des jetzigen Stands.`,
+    ask('Projekt ersetzen?', `Projektziel, To-dos, Dokumentation und Anträge von „${nm}“ werden durch die Datei${p.name ? ' („' + p.name + '“)' : ''} ersetzt. Die Mitglieder der Gruppe bleiben. Vorher entsteht ein Backup des jetzigen Stands.`,
       () => runImport([p], PA.focus), 'Ersetzen');
     return;
   }
@@ -1557,7 +1663,7 @@ async function backupAction(act, id) {
   const inPlan = mode() === 'plan';
   hide('mBackup');
   ask('Dieses Backup einspielen?', inPlan
-    ? `Projektziel, Board, Stunden und Anträge von „${gTitle(group(), members())}“ werden durch den Stand aus dem Backup ersetzt. Vorher entsteht ein Backup des jetzigen Stands.`
+    ? `Projektziel, To-dos, Dokumentation und Anträge von „${gTitle(group(), members())}“ werden durch den Stand aus dem Backup ersetzt. Vorher entsteht ein Backup des jetzigen Stands.`
     : 'Alle Projekte aus dem Backup werden auf dessen Stand zurückgesetzt. Vorher entsteht ein Backup des jetzigen Stands.',
     async () => {
       const r = await PA.act('pa_room_backup_restore', { p_id: id, p_group: inPlan ? PA.focus : null });

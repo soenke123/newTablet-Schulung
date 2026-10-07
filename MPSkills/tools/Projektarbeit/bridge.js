@@ -315,20 +315,20 @@
     ];
     [['p1', 'g1'], ['p2', 'g1'], ['p3', 'g1'], ['p4', 'g2'], ['p5', 'g2'], ['p6', 'g3'], ['p7', 'g3']]
       .forEach(([p, g]) => { people.find(x => x.id === p).group = g; });
-    people[0].label = 'Technik'; people[1].label = 'Recherche'; people[2].label = 'Präsentation';
     let seq = 3, rev = 1, rules = 'Abgabe der Dokumentation: Freitag in drei Wochen.\nPro Stunde trägt jede Person ihren Eintrag ins Stundenprotokoll ein.';
     // Einwilligungen: Stufe 0 (keine) bis 2 (auch fremde Orte).
     [2, 1, 2, 0, 1, 1, 2, 0, 1, 2, 0, 1].forEach((c, i) => { people[i].consent = c; });
     const store = { g1: {}, g2: {}, g3: {} };
     const put = (g, kind, id, data) => { store[g][kind + ':' + id] = { kind, id, v: 1, data }; };
 
-    put('g1', 'goal', 'main', { title: 'Unsere Schul-Wetterstation', locked: false, images: [],
+    put('g1', 'goal', 'main', { title: 'Unsere Schul-Wetterstation', locked: false, images: [], due: day(45),
       text: '<h2>Was wollen wir erreichen?</h2><p>Wir bauen eine <strong>Wetterstation</strong> für den Schulhof, die Temperatur, Luftfeuchte und Luftdruck misst und die Werte auf einer Webseite zeigt.</p><h2>Für wen?</h2><p>Für alle Klassen der Schule — am Ende soll jede:r am Tablet sehen, wie das Wetter auf dem Schulhof ist.</p><ul><li>Funktionierende Messstation</li><li>Webseite mit Diagramm</li><li>Präsentation vor der Klasse</li></ul>' });
     [['t1', 'Sensoren recherchieren', 'done', ['p2']], ['t2', 'Gehäuse entwerfen', 'doing', ['p1']],
      ['t3', 'Webseite: Diagramm', 'todo', ['p3']], ['t4', 'Lötkolben besorgen', 'blocked', ['p1'], 'Lötstation im Technikraum defekt — Antrag gestellt.'],
      ['t5', 'Messwerte eine Woche sammeln', 'todo', []], ['t6', 'Präsentation gliedern', 'doing', ['p3', 'p2']]]
       .forEach(([id, title, col, who, note], i) => put('g1', 'task', id,
-        { title, col, who, note: note || '', text: '', color: ['yellow', 'blue', 'green', 'pink', 'lilac', 'yellow'][i], order: i }));
+        { title, col, who, note: note || '', text: '', color: ['yellow', 'blue', 'green', 'pink', 'lilac', 'yellow'][i], order: i,
+          est: [2, 3, 4, 0.5, 6, 2][i] }));
     // Stunden (0202): ein Eintrag kann für mehrere gelten. Emma fehlt
     // heute (krank) — sie steht einfach in keinem Eintrag.
     [[-2, 'p1', ['p1', 'p2'], 'Gehäuse skizziert, Maße vom Sensor genommen, drei Sensoren verglichen.', 'Skizze in Tinkercad übertragen.'],
@@ -339,11 +339,11 @@
       .forEach(([off, by, who, text, next], i) => put('g1', 'log', 'l' + i,
         { date: day(off), by, byName: people.find(p => p.id === by).name, who,
           whoNames: who.map(id => people.find(p => p.id === id).name), text, next, hours: 1, at: day(off) + 'T1' + i + ':00:00Z' }));
-    put('g1', 'request', 'r1', { date: day(2), who: ['p1', 'p2'], place: 'Wetterdienst-Station am Flugplatz',
-      activity: 'Wir wollen uns zeigen lassen, wie dort gemessen wird, und Fotos für die Präsentation machen.',
+    put('g1', 'request', 'r1', { date: day(2), who: ['p1', 'p2'], place: 'Wetterstation am Flugplatz (Flughafenstraße 1, 24159 Kiel)',
+      activity: 'WEG und VERKEHRSMITTEL:\nMit dem Bus (Linie 11) ab Schule bis Flughafen, dann 5 Minuten zu Fuß. Zurück um 12:30 Uhr.\n\nBEGRÜNDUNG:\nDort sehen wir, wie eine echte Station misst. Das brauchen wir, um unsere Sensoren richtig einzustellen.',
       status: 'open', by: 'p1', byName: 'Mia', at: day(0) + 'T09:12:00Z', sentAt: day(0) + 'T09:12:00Z', sentByName: 'Mia' });
-    put('g1', 'request', 'r0', { date: day(0), who: ['p1', 'p3'], place: 'Zuhause bei Mia',
-      activity: 'Das Gehäuse mit dem 3D-Drucker von Mias Vater drucken.',
+    put('g1', 'request', 'r0', { date: day(0), who: ['p1', 'p3'], place: 'zu Mia nach Hause (Musterstraße 5, 24103 Kiel)',
+      activity: 'WEG und VERKEHRSMITTEL:\nMit dem Fahrrad, 10 Minuten.\n\nBEGRÜNDUNG:\nMias Vater hat einen 3D-Drucker. Wir drucken das Gehäuse — in der Schule gibt es keinen.',
       status: 'approved', decision: 'Genehmigt. Um 11:30 Uhr seid ihr zurück.', by: 'p3', byName: 'Emma',
       at: day(-2) + 'T10:40:00Z', sentAt: day(-2) + 'T10:40:00Z', sentByName: 'Emma', decidedAt: day(-2) + 'T12:00:00Z' });
     put('g2', 'goal', 'main', { title: 'Schulgarten-App', locked: true, images: [], text: '<p>Eine App, die zeigt, welche Beete gegossen werden müssen.</p>' });

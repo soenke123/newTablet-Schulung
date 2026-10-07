@@ -78,8 +78,8 @@
          <strong>Lobby</strong>. Die Lehrkraft zieht sie per Drag &amp; Drop zu Gruppen
          zusammen und öffnet für jede Gruppe — oder Einzelperson — einen
          <strong>Planungsraum</strong>.</p>
-      <p>Darin: <strong>Projektziel</strong>, ein <strong>Board</strong> mit vier Spalten,
-         das <strong>Stundenprotokoll</strong>, <strong>Anträge</strong> für das Lernen außerhalb
+      <p>Darin: <strong>Projektziel</strong> mit Fertig-Datum, die <strong>To-dos</strong> mit Zeitschätzung,
+         die <strong>Dokumentation</strong>, <strong>Anträge</strong> für das Lernen außerhalb
          des Schulgeländes (eine rote Zahl in der Übersicht zeigt, wo einer wartet), das Team mit den
          Einwilligungen der Eltern und die Regeln. Eine Klassenliste zeigt, wer heute woanders lernt.
          Jede:r bekommt einen persönlichen Code und findet das Projekt damit auf jedem Gerät wieder.</p>`

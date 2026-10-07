@@ -3,7 +3,7 @@
    ══════════════════════════════════════════════════════════════
    Zehnter Skill (Migration 0200). Ein Raum ist eine ganze KLASSE:
    Lobby → Gruppen (per Drag & Drop durch die Lehrkraft) → je Gruppe
-   ein Planungsraum mit Projektziel, Board, Stunden, Anträgen, Team
+   ein Planungsraum mit Team, Projektziel, To-dos, Dokumentation, Anträgen
    und Regeln.
 
    Gebaut wie die Scrum Werkstatt: die Oberfläche ist eine eigene
@@ -225,7 +225,7 @@
       root = el; ctx = c; role = c.role; destroyed = false;
 
       // Im Schaufenster ohne Raum: die Beispielklasse (?demo=1, bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007c';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007d';
       root.innerHTML =
         '<div class="pa-host">' +
           '<iframe class="pa-frame" src="tools/Projektarbeit/index.html' + q + '" ' +
