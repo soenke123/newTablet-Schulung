@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════════
--- Migration 0202 — Projektarbeit: Mail an die Lehrkräfte bei neuen Anträgen
+-- Migration 0203 — Projektarbeit: Mail an die Lehrkräfte bei neuen Anträgen
 -- ══════════════════════════════════════════════════════════════
 -- Stellt eine Gruppe einen Antrag („Lernen am anderen Ort", 0201) —
 -- oder schickt sie einen abgelehnten überarbeitet neu ab —, bekommen
@@ -67,7 +67,7 @@ create table if not exists notify_email (
 );
 
 comment on table notify_email is
-  'Benachrichtigungs-Adresse je Lehrkraft (0202). Nur @mps-ki.de. Erst nach Klick auf den '
+  'Benachrichtigungs-Adresse je Lehrkraft (0203). Nur @mps-ki.de. Erst nach Klick auf den '
   'Bestätigungslink (verified_at) gehen Mails an sie. stop_token: Abmelde-Link in jeder Mail.';
 alter table notify_email enable row level security;
 
@@ -80,7 +80,7 @@ create table if not exists pa_room_notify (
 );
 
 comment on table pa_room_notify is
-  'Projektarbeit (0202): will diese Lehrkraft für diesen Raum Mails bei neuen Anträgen?';
+  'Projektarbeit (0203): will diese Lehrkraft für diesen Raum Mails bei neuen Anträgen?';
 alter table pa_room_notify enable row level security;
 
 
@@ -97,7 +97,7 @@ create table if not exists pa_mail_outbox (
 );
 
 comment on table pa_mail_outbox is
-  'Projektarbeit (0202): Anträge, über die noch eine Mail gehen soll. sent_at gesetzt = erledigt '
+  'Projektarbeit (0203): Anträge, über die noch eine Mail gehen soll. sent_at gesetzt = erledigt '
   '(note: gesendet / erledigt / kein_empfaenger / fehler: …). Erledigte bleiben 30 Tage stehen.';
 -- Je Antrag höchstens eine wartende Zeile: Ändern vor dem Versand
 -- erzeugt keine zweite Mail.
@@ -113,7 +113,7 @@ create table if not exists notify_mail_log (
 );
 
 comment on table notify_mail_log is
-  'Verschickte Antrags-Mails je Lehrkraft (0202) — nur für die Bremse „10 je Stunde". '
+  'Verschickte Antrags-Mails je Lehrkraft (0203) — nur für die Bremse „10 je Stunde". '
   'Wird nach 2 Tagen gelöscht.';
 create index if not exists notify_mail_log_idx on notify_mail_log (user_id, sent_at);
 alter table notify_mail_log enable row level security;
@@ -126,7 +126,7 @@ create table if not exists mail_settings (
 );
 
 comment on table mail_settings is
-  'Eine Zeile (0202): wohin mail_kick() ruft (…/api/mail_dispatch) und mit welchem Geheimnis. '
+  'Eine Zeile (0203): wohin mail_kick() ruft (…/api/mail_dispatch) und mit welchem Geheimnis. '
   'Kein Grant — nur Funktionen und der SQL-Editor lesen sie.';
 alter table mail_settings enable row level security;
 insert into mail_settings (id) values (true) on conflict (id) do nothing;

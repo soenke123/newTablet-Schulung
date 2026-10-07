@@ -408,6 +408,11 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .entry p{margin:0;font-size:13.5px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere}
 .entry .nx{margin-top:6px;font-size:12.5px;color:var(--ink-2)}
 .entry .nx b{color:var(--marker);font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-right:5px}
+.entry .avs{display:flex;flex:none;align-self:flex-start;max-width:92px;flex-wrap:wrap;row-gap:3px}
+.entry .avs .av{box-shadow:0 0 0 2px var(--paper-up)}
+.entry .avs .av+.av{margin-left:-9px}
+.entry .by{margin-top:6px;font-size:11px;color:var(--ink-3)}
+.dayh .present{font-size:11.5px;color:var(--ink-2)}
 .sumrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
 .sumchip{display:flex;align-items:center;gap:8px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:6px 11px 6px 6px;font-size:12.5px}
 .sumchip b{font-size:15px}
@@ -524,7 +529,7 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .m-b{padding:20px;overflow-y:auto;flex:1}
 .m-f{display:flex;align-items:center;gap:9px;padding:13px 20px;background:var(--paper-up);border-top:1px solid var(--line)}
 .m-f .sp{margin-left:auto;display:flex;gap:9px}
-/* Mail bei neuen Anträgen (0202) */
+/* Mail bei neuen Anträgen (0203) */
 .nt-state{margin:8px 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-3)}
 .nt-state.ok{color:var(--st-done)}
 .nt-state.wait{color:#9a6a0c}
@@ -641,6 +646,18 @@ body.ro .postit,body.ro .pchip{cursor:default}
           <button id="miRules" hidden>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
             Regeln ergänzen
+          </button>
+          <button id="miExport" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>
+            <span id="miExportTxt">Exportieren</span>
+          </button>
+          <button id="miImport" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 8l5-5 5 5M4 19h16"/></svg>
+            <span id="miImportTxt">Importieren</span>
+          </button>
+          <button id="miBackups" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+            Backups
           </button>
           <button id="miPrint">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg>
@@ -802,16 +819,16 @@ body.ro .postit,body.ro .pchip{cursor:default}
   <section class="view" id="view-hours" hidden>
     <div class="shead">
       <div>
-        <div class="eyebrow">Was habe ich heute gemacht?</div>
+        <div class="eyebrow">Was haben wir heute gemacht?</div>
         <h2 class="t">Stundenprotokoll</h2>
-        <p class="s">Am Ende jeder Stunde trägt <b>jede Person</b> ein, woran sie gearbeitet hat und was als Nächstes kommt. So bleibt sichtbar, wer was beigetragen hat — und ihr findet beim nächsten Mal sofort den Faden.</p>
+        <p class="s">Am Ende jeder Stunde haltet ihr fest, <b>wer woran gearbeitet hat</b> und was als Nächstes kommt. Ein Eintrag kann für mehrere gelten — tippt an, wer dabei war. Wer fehlt, wird einfach nicht ausgewählt. So bleibt sichtbar, wer was beigetragen hat.</p>
       </div>
     </div>
     <div class="today" id="todayBar"></div>
     <div class="hgrid">
       <div class="panel hform needs-write" id="hForm">
         <div class="eyebrow" id="hFormEyebrow">Neuer Eintrag</div>
-        <h3 id="hFormTitle">Meine Stunde</h3>
+        <h3 id="hFormTitle">Was wurde gemacht?</h3>
         <div class="grid2">
           <div class="field"><label class="fl" for="hDate">Datum</label><input type="date" id="hDate"></div>
           <div class="field"><label class="fl" for="hHours">Umfang</label>
@@ -821,9 +838,11 @@ body.ro .postit,body.ro .pchip{cursor:default}
               <option value="0.5">eine halbe</option>
             </select></div>
         </div>
-        <div class="field"><label class="fl" for="hText">Das habe ich gemacht</label>
+        <div class="field"><span class="fl">Wer war dabei?</span><div class="whopick" id="hWho"></div>
+          <p class="hint" id="hWhoHint">Tippt alle an, die das gemacht haben. Du kannst auch nur für andere eintragen.</p></div>
+        <div class="field"><label class="fl" for="hText">Das wurde gemacht</label>
           <textarea id="hText" maxlength="1500" placeholder="z. B. Drei Quellen zur Solarenergie gelesen und die wichtigsten Punkte notiert."></textarea></div>
-        <div class="field"><label class="fl" for="hNext">Das mache ich als Nächstes <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
+        <div class="field"><label class="fl" for="hNext">Als Nächstes <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
           <textarea id="hNext" maxlength="600" style="min-height:56px" placeholder="z. B. Gliederung für die Präsentation entwerfen."></textarea></div>
         <div style="display:flex;gap:8px">
           <button class="btn primary" id="hSave">
@@ -980,7 +999,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
   </div>
 </div>
 
-<!-- Lehrkraft: Mail bei neuen Anträgen (0202) -->
+<!-- Lehrkraft: Mail bei neuen Anträgen (0203) -->
 <div class="scrim" id="mNotify" hidden>
   <div class="modal narrow" role="dialog" aria-modal="true">
     <div class="m-h mark"><div class="ttl">Mail bei neuen Anträgen</div>
@@ -1034,6 +1053,24 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <div class="m-f"><div class="sp"><button class="btn primary" data-close="mCodes">Schließen</button></div></div>
   </div>
 </div>
+
+<!-- Lehrkraft: Backups -->
+<div class="scrim" id="mBackup" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="m-h mark"><div class="ttl">Backups</div>
+      <button class="m-x" data-close="mBackup" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <p style="margin:0 0 12px;font-size:12.5px;line-height:1.55;color:var(--ink-3)">
+        Die ganze Klasse wird <b>einmal pro Woche</b> automatisch gesichert — sobald im Raum gearbeitet wird und das letzte Backup älter als 7 Tage ist.
+        Vor jedem Import oder Einspielen entsteht außerdem ein Backup „vor Änderung“.</p>
+      <p style="margin:0 0 12px;font-size:12.5px;line-height:1.55;color:var(--ink-3)" id="backupScope"></p>
+      <div id="backupList"></div>
+    </div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mBackup">Schließen</button></div></div>
+  </div>
+</div>
+<input type="file" id="importFile" accept="application/json,.json" hidden>
 
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>

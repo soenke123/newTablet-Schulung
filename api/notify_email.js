@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// GET/POST /api/notify_email   — Links aus den Antrags-Mails (0202)
+// GET/POST /api/notify_email   — Links aus den Antrags-Mails (0203)
 // ══════════════════════════════════════════════════════════════
 //   ?verify=<token>   Adresse bestätigen
 //   ?stop=<token>     Adresse löschen (keine Mails mehr, alle Räume)
@@ -9,7 +9,7 @@
 // gern schon vorab — ein GET, der abmeldet, würde Lehrkräfte
 // abmelden, die nie geklickt haben.
 //
-// Der Token ist das einzige Geheimnis (48 Hex-Zeichen, 0202:
+// Der Token ist das einzige Geheimnis (48 Hex-Zeichen, 0203:
 // gen_random_bytes(24)). Kein Login nötig — die Mail kann auf einem
 // Gerät geöffnet werden, auf dem niemand angemeldet ist.
 //

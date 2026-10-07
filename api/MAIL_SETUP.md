@@ -1,4 +1,4 @@
-# Antrags-Mails einrichten (Migration 0202)
+# Antrags-Mails einrichten (Migration 0203)
 
 Stellt eine Gruppe in der **Projektarbeit** einen Antrag („Lernen am anderen Ort“), bekommen die Lehrkräfte des Raums eine Mail. Die Mail geht über einen eigenen IServ-Account raus und nur an `@mps-ki.de`-Adressen, bleibt also in IServ.
 
@@ -38,7 +38,7 @@ Unter Vercel → Project → Settings → Environment Variables eintragen:
 ## Schritt 3: Supabase
 
 1. Dashboard → Database → Extensions: **pg_cron** und **pg_net** aktivieren.
-2. Migration `supabase/migrations/0202_antrag_mail.sql` im SQL-Editor ausführen. Wurden die Erweiterungen erst danach aktiviert, die Migration noch einmal ausführen; sie ist wiederholbar.
+2. Migration `supabase/migrations/0203_antrag_mail.sql` im SQL-Editor ausführen. Wurden die Erweiterungen erst danach aktiviert, die Migration noch einmal ausführen; sie ist wiederholbar.
 3. Ziel und Geheimnis eintragen (dasselbe Geheimnis wie in Vercel):
 
 ```sql

@@ -1,5 +1,5 @@
-/* Prüfstand für Migration 0202 — Mail an die Lehrkräfte bei neuen Anträgen.
-   Echt gerechnet in pglite auf der ganzen Kette 0001…0202 (ohne pg_net
+/* Prüfstand für Migration 0203 — Mail an die Lehrkräfte bei neuen Anträgen.
+   Echt gerechnet in pglite auf der ganzen Kette 0001…0203 (ohne pg_net
    und pg_cron — die Migration muss trotzdem durchlaufen).
 
    Die Kernzusagen:
@@ -17,7 +17,7 @@
      8. Bestätigungsmail: wird geholt, Link bestätigt, Abmelde-Link löscht.
      9. mail_kick ohne pg_net: false, kein Fehler. Migration läuft zweimal.
 
-   Aufruf:  node supabase/tests/0202_antrag_mail.mjs */
+   Aufruf:  node supabase/tests/0203_antrag_mail.mjs */
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
@@ -221,7 +221,7 @@ ok('8  leere Adresse löscht', (await nset('')).email === null);
 /* ══ 9. Takt und Wiederholung ════════════════════════════════════ */
 ok('9  mail_kick ohne pg_net: false', (await call(`mail_kick()`)) === false);
 const before = (await one(`select count(*)::int n from pa_mail_outbox`)).n;
-try { await db.exec(mig('0202_antrag_mail.sql')); ok('9  Migration läuft zweimal', true); }
+try { await db.exec(mig('0203_antrag_mail.sql')); ok('9  Migration läuft zweimal', true); }
 catch (e) { ok('9  Migration läuft zweimal', false, e.message); }
 ok('9  Warteschlange überlebt die Wiederholung', (await one(`select count(*)::int n from pa_mail_outbox`)).n === before);
 ok('9  Haken überlebt die Wiederholung', (await one(`select enabled from pa_room_notify where room_id = $1`, [R])).enabled === true);

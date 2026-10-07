@@ -141,12 +141,14 @@
     blocked:         'Deine Lehrkraft hat dieses Tablet gerade stillgelegt.',
     no_plan:         'Euer Planungsraum ist (noch) nicht geöffnet.',
     goal_locked:     'Das Projektziel ist fixiert — nur die Lehrkraft kann es öffnen.',
-    not_yours:       'Das hat jemand anderes eingetragen — ändern kann es nur diese Person.',
+    not_yours:       'Das hat jemand anderes eingetragen — ändern kann es nur, wer es eingetragen hat oder darin steht.',
     decided:         'Dieser Antrag ist genehmigt — er lässt sich nicht mehr ändern oder löschen.',
     date_missing:    'Bitte ein gültiges Datum eintragen.',
     date_past:       'Das Datum liegt in der Vergangenheit.',
     place_missing:   'Wohin soll es gehen? Bitte einen Ort eintragen.',
     who_missing:     'Wer ist dabei? Bitte mindestens eine Person aus eurer Gruppe auswählen.',
+    not_in_backup:   'Dieses Projekt steht nicht in dem Backup.',
+    room_gone:       'Der Raum ist abgelaufen.',
     invalid_input:   'Damit stimmt etwas nicht.',
     payload_too_big: 'Das ist zu groß zum Speichern (zu viele oder zu große Bilder?).',
     quota_exceeded:  'Der Planungsraum ist voll.',
@@ -158,8 +160,8 @@
     email_domain:    'Bitte deine IServ-Adresse nehmen (…@mps-ki.de) — die Mails sollen in IServ bleiben.',
     email_invalid:   'Diese Adresse sieht nicht richtig aus.',
     too_soon:        'Gerade erst verschickt — bitte zwei Minuten warten.',
-    fn_missing_mail: 'Auf dem Server fehlt die Migration 0202 (Antrags-Mails).',
-    fn_missing:      'Auf dem Server fehlt die Migration 0200 (Projektarbeit). Bitte der Lehrkraft Bescheid sagen.'
+    fn_missing_mail: 'Auf dem Server fehlt die Migration 0203 (Antrags-Mails).',
+    fn_missing:      'Auf dem Server fehlt eine Migration der Projektarbeit (0200–0202). Bitte der Lehrkraft Bescheid sagen.'
   };
   PA.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
 
@@ -294,7 +296,7 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     DEMO — eine kleine Nachbildung des Servers (Migrationen 0200, 0201)
+     DEMO — eine kleine Nachbildung des Servers (Migrationen 0200–0202)
      ══════════════════════════════════════════════════════════
      Für das Schaufenster und das Öffnen ohne Raum. Spielt die
      Lehrkraft einer Beispielklasse; gerechnet wird wie auf dem
@@ -327,13 +329,16 @@
      ['t5', 'Messwerte eine Woche sammeln', 'todo', []], ['t6', 'Präsentation gliedern', 'doing', ['p3', 'p2']]]
       .forEach(([id, title, col, who, note], i) => put('g1', 'task', id,
         { title, col, who, note: note || '', text: '', color: ['yellow', 'blue', 'green', 'pink', 'lilac', 'yellow'][i], order: i }));
-    [[-2, 'p1', 'Gehäuse skizziert, Maße vom Sensor genommen.', 'Skizze in Tinkercad übertragen.'],
-     [-2, 'p2', 'Drei Sensoren verglichen und den BME280 ausgewählt.', 'Bestellung mit der Lehrkraft klären.'],
-     [-2, 'p3', 'Webseiten-Vorlage angelegt.', 'Diagramm-Bibliothek ausprobieren.'],
-     [0, 'p1', 'Gehäuse in Tinkercad modelliert.', 'Drucken lassen.'],
-     [0, 'p2', 'Gliederung der Präsentation mit Emma.', '']]
-      .forEach(([off, by, text, next], i) => put('g1', 'log', 'l' + i,
-        { date: day(off), by, byName: people.find(p => p.id === by).name, text, next, hours: 1, at: day(off) + 'T10:00:00Z' }));
+    // Stunden (0202): ein Eintrag kann für mehrere gelten. Emma fehlt
+    // heute (krank) — sie steht einfach in keinem Eintrag.
+    [[-2, 'p1', ['p1', 'p2'], 'Gehäuse skizziert, Maße vom Sensor genommen, drei Sensoren verglichen.', 'Skizze in Tinkercad übertragen.'],
+     [-2, 'p3', ['p3'], 'Webseiten-Vorlage angelegt.', 'Diagramm-Bibliothek ausprobieren.'],
+     [-1, 'p2', ['p1', 'p2', 'p3'], 'Waren unterwegs: Besuch der Wetterdienst-Station.', ''],
+     [0, 'p1', ['p1'], 'Gehäuse in Tinkercad modelliert.', 'Drucken lassen.'],
+     [0, 'p1', ['p2'], 'Gliederung der Präsentation angefangen.', 'Mit Emma abstimmen.']]
+      .forEach(([off, by, who, text, next], i) => put('g1', 'log', 'l' + i,
+        { date: day(off), by, byName: people.find(p => p.id === by).name, who,
+          whoNames: who.map(id => people.find(p => p.id === id).name), text, next, hours: 1, at: day(off) + 'T1' + i + ':00:00Z' }));
     put('g1', 'request', 'r1', { date: day(2), who: ['p1', 'p2'], place: 'Wetterdienst-Station am Flugplatz',
       activity: 'Wir wollen uns zeigen lassen, wie dort gemessen wird, und Fotos für die Präsentation machen.',
       status: 'open', by: 'p1', byName: 'Mia', at: day(0) + 'T09:12:00Z', sentAt: day(0) + 'T09:12:00Z', sentByName: 'Mia' });
@@ -439,7 +444,7 @@
         if (![0, 1, 2].includes(a.p_level)) return { ok: false, error: 'invalid_input' };
         p.consent = a.p_level; bump(); return { ok: true, consent: p.consent };
       }
-      // 0202: Mail bei neuen Anträgen. Im Schaufenster wird nichts
+      // 0203: Mail bei neuen Anträgen. Im Schaufenster wird nichts
       // verschickt — die Adresse bleibt „Bestätigung offen".
       if (fn === 'pa_room_notify_get') return R(Object.assign({ ok: true }, notify));
       if (fn === 'pa_room_notify_set') {
@@ -470,12 +475,41 @@
           const data = R(o.data);
           if ((o.kind === 'log' || o.kind === 'request') && !cur) { data.at = new Date().toISOString(); if (!('by' in data)) { data.by = null; data.byName = 'Lehrkraft'; } }
           if (o.kind === 'request' && ['approved', 'rejected'].includes(data.status) && (!cur || cur.data.status !== data.status)) data.decidedAt = new Date().toISOString();
+          if (o.kind === 'log' && Array.isArray(data.who)) {
+            const g = groups.find(x => x.id === a.p_group);
+            data.who = [...new Set(data.who)].filter(id => people.some(p => p.id === id && p.group === (g && g.id)));
+            data.whoNames = data.who.map(id => people.find(p => p.id === id).name);
+          }
           st[k] = { kind: o.kind, id: o.id, v: (cur ? cur.v : 0) + 1, data };
           out.push(R(st[k]));
         });
         bump();
         return { ok: true, items: out };
       }
+      // Export / Import (0202) — im Schaufenster ohne Backups.
+      if (fn === 'pa_room_export') {
+        const list = a.p_group ? groups.filter(g => g.id === a.p_group) : groups.filter(g => g.plan_open);
+        return { ok: true, data: { format: 'projektarbeit', version: 1, title: 'Klasse 8b · Projektwoche', at: new Date().toISOString(),
+          projects: list.map(g => ({ group: g.id, no: g.no, name: g.name, members: people.filter(p => p.group === g.id).map(p => p.name),
+            items: Object.values(store[g.id] || {}).map(i => R({ kind: i.kind, id: i.id, data: i.data })) })) } };
+      }
+      if (fn === 'pa_room_import') {
+        const pr = a.p_projects;
+        if (!Array.isArray(pr) || !pr.length || (a.p_target && pr.length !== 1)) return { ok: false, error: 'invalid_input' };
+        const out = []; let created = 0;
+        pr.forEach(p => {
+          let g = groups.find(x => x.id === (a.p_target || p.group));
+          if (!g) { g = newGroup('Gruppe', true); if (p.name) g.name = String(p.name).slice(0, 40); created++; }
+          g.plan_open = true;
+          const base = Math.max(0, ...Object.values(store[g.id] || {}).map(i => i.v)) + 1;
+          store[g.id] = {};
+          (p.items || []).forEach(i => { store[g.id][i.kind + ':' + i.id] = { kind: i.kind, id: i.id, v: base, data: R(i.data) }; });
+          out.push(g.id);
+        });
+        bump();
+        return { ok: true, groups: out, created };
+      }
+      if (fn === 'pa_room_backups') return { ok: true, backups: [] };
       return { ok: false, error: 'not_allowed' };
     }
 

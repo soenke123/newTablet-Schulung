@@ -1,5 +1,5 @@
 // ══════════════════════════════════════════════════════════════
-// POST /api/mail_dispatch   — Antrags-Mails verschicken (Migration 0202)
+// POST /api/mail_dispatch   — Antrags-Mails verschicken (Migration 0203)
 // ══════════════════════════════════════════════════════════════
 // Headers: Authorization: Bearer <MAIL_DISPATCH_SECRET>
 //
