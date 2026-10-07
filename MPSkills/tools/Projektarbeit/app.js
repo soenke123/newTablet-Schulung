@@ -26,7 +26,17 @@
    passiert. Offen und abgelehnt darf die Gruppe ändern (abgelehnt =
    überarbeiten und neu abschicken), genehmigt ist fest. Am Reiter
    steht, wie es um den nächsten Antrag (heute oder später) steht.
-   Im Team trägt die Lehrkraft die Einwilligungen ein (Stufe 1/2).
+   Im Team trägt die Lehrkraft die Einwilligungen ein (Stufe 1/2) —
+   die Haken (✓/✓✓) sehen Schüler nur dort, nicht bei den Anträgen.
+
+   Stunden (0202): Ein Eintrag sagt, WER dabei war (who) — eine oder
+   mehrere Personen der Gruppe; wer einträgt, muss nicht dabei sein.
+   Wer fehlt, wird nicht ausgewählt und taucht an dem Tag nicht auf.
+   Je Tag stehen die Einträge untereinander: „Mia und Leon: …".
+
+   Lehrkraft (0202): Exportieren / Importieren / Backups im Menü — in
+   der Übersicht für die ganze Klasse, im Planungsraum für dieses eine
+   Projekt (wie Scrum Werkstatt, 0198).
 
    Alles, was den Server betrifft, steckt in bridge.js (PA). Hier wird
    nur gezeichnet und PA.put / PA.del / PA.act aufgerufen.
@@ -110,6 +120,7 @@ let editReq = null;
 let rqWho = [];
 let showList = (() => { try { return localStorage.getItem('pa_clist') !== '0'; } catch (e) { return true; } })();
 let editLog = null;
+let hWho = null;            // Stundeneintrag: wer war dabei (null = noch nicht gewählt → ich)
 let reqFilter = 'all';
 let phoneCol = 'doing';
 let goalTimer = null, goalDirty = false;
@@ -156,6 +167,13 @@ const ICO = {
   arrow: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
   block: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M12 7v6M12 17h.01"/></svg>'
 };
+
+// Stundeneintrag: wer war dabei. Einträge von vor 0202 kennen nur den Schreiber.
+const logWho = l => Array.isArray(l.who) ? l.who : (l.by ? [l.by] : []);
+const logPeople = l => logWho(l).map((id, i) => person(id)
+  || { id, name: (Array.isArray(l.whoNames) && l.whoNames[i]) || (id === l.by && l.byName) || '?' });
+const andList = a => a.length < 2 ? (a[0] || '') : a.slice(0, -1).join(', ') + ' und ' + a[a.length - 1];
+const canEditLog = l => canWrite() && !PA.owner && !!meId() && (l.by === meId() || logWho(l).includes(meId()));
 
 /* ── Wer schaut, und worauf? ─────────────────────────────── */
 const V = () => PA.view() || {};
@@ -254,6 +272,12 @@ function renderMenu(m) {
   $('#miKeyTxt').textContent = PA.owner ? 'Codes zeigen' : 'Code zeigen';
   $('#miKey').hidden = !(PA.owner || me.key);
   $('#miRules').hidden = !PA.owner;
+  // Export / Import / Backups: nur die Lehrkraft (0202). In der Übersicht
+  // für die ganze Klasse, im Planungsraum für dieses Projekt.
+  const inPlan = m === 'plan';
+  $('#miExport').hidden = $('#miImport').hidden = $('#miBackups').hidden = !PA.owner || m === 'loading';
+  $('#miExportTxt').textContent = inPlan ? 'Projekt exportieren' : 'Ganze Klasse exportieren';
+  $('#miImportTxt').textContent = inPlan ? 'Projekt importieren' : 'Projekte importieren';
 }
 
 function renderCounts() {
@@ -624,13 +648,13 @@ function renderHours() {
   const logs = PA.list('log').sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.at || '').localeCompare(String(a.at || '')));
   const gm = members();
   const today = todayIso();
-  const doneToday = new Set(logs.filter(l => l.date === today).map(l => l.by));
+  const inToday = new Set(logs.filter(l => l.date === today).flatMap(logWho));
   const myIn = gm.some(m => m.id === meId());
 
   $('#todayBar').innerHTML = `<b style="font-size:13px">Heute, ${esc(deDay(today))}</b>
-    <span class="who">${gm.map(m => `<span class="${doneToday.has(m.id) ? '' : 'miss'}">${avatar(m, 26)}</span>`).join('')}</span>
-    <span style="font-size:12.5px;color:var(--ink-2)">${gm.filter(m => doneToday.has(m.id)).length} von ${gm.length} eingetragen</span>
-    ${myIn && !doneToday.has(meId()) && !PA.owner ? '<span class="badge bg-open" style="margin-left:auto">Dein Eintrag fehlt noch</span>' : ''}`;
+    <span class="who">${gm.map(m => `<span class="${inToday.has(m.id) ? '' : 'miss'}">${avatar(m, 26)}</span>`).join('')}</span>
+    <span style="font-size:12.5px;color:var(--ink-2)">${gm.filter(m => inToday.has(m.id)).length} von ${gm.length} in einem Eintrag</span>
+    ${myIn && !inToday.has(meId()) && !PA.owner ? '<span class="badge bg-open" style="margin-left:auto">Du stehst heute noch in keinem Eintrag</span>' : ''}`;
 
   // Formular: nur für Mitglieder der Gruppe
   $('#hForm').hidden = PA.owner || !myIn;
@@ -641,62 +665,85 @@ function renderHours() {
   $('#hFormEyebrow').textContent = editLog ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
   $('#hSave').lastChild.textContent = editLog ? ' Speichern' : ' Eintragen';
   $('#hCancel').hidden = !editLog;
+  if (!$('#hForm').hidden) renderLogWho();
 
+  // Summe je Person: jede Stunde zählt für alle, die dabei waren.
   const sums = {};
-  logs.forEach(l => { sums[l.by] = (sums[l.by] || 0) + (+l.hours || 0); });
+  logs.forEach(l => logWho(l).forEach(id => { sums[id] = (sums[id] || 0) + (+l.hours || 0); }));
   $('#hSums').innerHTML = gm.map(m => `<span class="sumchip">${avatar(m, 26)}<span>${esc(m.name)}</span><b>${esc(fmtH(sums[m.id] || 0))}</b></span>`).join('');
 
   if (!logs.length) {
     $('#hList').innerHTML = `<div class="nothing" style="padding:34px 20px"><h3>Noch keine Einträge</h3>
-      <p>Am Ende der Stunde trägt jede Person ein, was sie gemacht hat.</p></div>`;
+      <p>Am Ende der Stunde haltet ihr fest, wer was gemacht hat.</p></div>`;
     return;
   }
   const days = [];
   logs.forEach(l => { let d = days.find(x => x.date === l.date); if (!d) days.push(d = { date: l.date, list: [] }); d.list.push(l); });
-  $('#hList').innerHTML = days.map(d => `
-    <div class="dayh"><h4>${esc(deDay(d.date))}</h4><span>${d.list.length} ${d.list.length === 1 ? 'Eintrag' : 'Einträge'} · ${esc(fmtH(d.list.reduce((a, l) => a + (+l.hours || 0), 0)))}</span></div>
-    ${d.list.map(l => {
-      const p = person(l.by) || { id: l.by || 'x', name: l.byName || '?' };
-      const mine = l.by && l.by === meId();
+  $('#hList').innerHTML = days.map(d => {
+    // Wer an dem Tag in mindestens einem Eintrag steht — wer fehlte, steht nicht da.
+    const seen = new Map();
+    d.list.slice().reverse().forEach(l => logPeople(l).forEach(p => { if (!seen.has(p.id)) seen.set(p.id, p.name); }));
+    return `
+    <div class="dayh"><h4>${esc(deDay(d.date))}</h4><span class="present">dabei: ${esc(andList([...seen.values()]))}</span></div>
+    ${d.list.slice().reverse().map(l => {
+      const ps = logPeople(l);
+      const mine = !!meId() && logWho(l).includes(meId());
+      const edit = canEditLog(l);
+      const byOther = l.byName && !logWho(l).includes(l.by);
       return `<div class="entry${mine ? ' mine' : ''}">
-        ${avatar(p, 30)}
+        <span class="avs">${ps.map(p => avatar(p, 30)).join('')}</span>
         <div class="body">
-          <div class="top"><b>${esc(p.name || l.byName)}</b>${l.hours ? `<span class="h">${esc(fmtH(l.hours))}</span>` : ''}
-            ${(mine || PA.owner) && canWrite() ? `<span class="acts">
-              ${mine ? `<button class="btn ghost icon" data-logedit="${esc(l.id)}" title="Bearbeiten" aria-label="Bearbeiten">${ICO.pen}</button>` : ''}
+          <div class="top"><b>${esc(andList(ps.map(p => p.name)) || '?')}</b>${l.hours ? `<span class="h">${esc(fmtH(l.hours))}</span>` : ''}
+            ${edit || (PA.owner && canWrite()) ? `<span class="acts">
+              ${edit ? `<button class="btn ghost icon" data-logedit="${esc(l.id)}" title="Bearbeiten" aria-label="Bearbeiten">${ICO.pen}</button>` : ''}
               <button class="btn ghost icon" data-logdel="${esc(l.id)}" title="Löschen" aria-label="Löschen">${ICO.trash}</button></span>` : ''}
           </div>
           <p>${esc(l.text)}</p>
           ${l.next ? `<div class="nx"><b>Nächstes</b>${esc(l.next)}</div>` : ''}
+          ${byOther ? `<div class="by">eingetragen von ${esc(l.byName)}</div>` : ''}
         </div>
       </div>`;
-    }).join('')}`).join('');
+    }).join('')}`;
+  }).join('');
+}
+
+function renderLogWho() {
+  const gm = members();
+  if (hWho === null && meId()) hWho = [meId()];
+  $('#hWho').innerHTML = gm.map(m => `<button type="button" data-hwho="${esc(m.id)}" aria-pressed="${(hWho || []).includes(m.id)}">${avatar(m, 22)}${esc(m.name)}</button>`).join('')
+    || '<span class="hint">Noch niemand in der Gruppe.</span>';
 }
 
 function saveLog() {
   if (!canWrite()) return;
   const text = $('#hText').value.trim();
-  if (!text) { toast('Was hast du gemacht? Ein Satz reicht.'); $('#hText').focus(); return; }
+  if (!text) { toast('Was wurde gemacht? Ein Satz reicht.'); $('#hText').focus(); return; }
+  const who = (hWho || []).filter(id => members().some(m => m.id === id));
+  if (!who.length) { toast('Wer war dabei? Bitte mindestens eine Person antippen.'); return; }
   const old = editLog ? PA.get('log', editLog) : null;
-  PA.put('log', editLog || PA.newId('l'), Object.assign({}, old || {}, {
+  const data = Object.assign({}, old || {}, {
     date: $('#hDate').value || todayIso(),
     hours: +$('#hHours').value || 1,
     text: text.slice(0, 1500),
     next: $('#hNext').value.trim().slice(0, 600),
-    by: meId(), byName: (PA.me && PA.me.name) || ''
-  }));
+    who, whoNames: who.map(id => (person(id) || {}).name || '')
+  });
+  if (!old) { data.by = meId(); data.byName = (PA.me && PA.me.name) || ''; }
+  PA.put('log', editLog || PA.newId('l'), data);
   resetLogForm();
   toast(old ? 'Eintrag gespeichert' : 'Eingetragen — danke!');
   renderAll();
 }
 function resetLogForm() {
   editLog = null;
+  hWho = null;
   $('#hText').value = ''; $('#hNext').value = '';
   $('#hDate').value = todayIso(); $('#hHours').value = '1';
 }
 function editLogEntry(id) {
   const l = PA.get('log', id); if (!l) return;
   editLog = id;
+  hWho = logWho(l).slice();
   $('#hDate').value = l.date || todayIso();
   $('#hHours').value = String(l.hours || 1);
   $('#hText').value = l.text || '';
@@ -739,7 +786,8 @@ function renderRequests() {
     const rs = reqSt(r);
     const legacy = !r.date && !r.place;
     const who = (r.who || []).map(id => person(id) || { id, name: '?' });
-    const noConsent = who.filter(p => p.name !== '?' && !+(p.consent || 0));
+    // Die Haken der Einwilligung sehen Schüler im Team, nicht hier.
+    const noConsent = PA.owner ? who.filter(p => p.name !== '?' && !+(p.consent || 0)) : [];
     const past = r.date && r.date < today;
     let foot = '';
     if (st === 'open' && PA.owner) {
@@ -779,7 +827,7 @@ function renderRequests() {
       ${legacy ? (r.text ? `<div class="req-b">${esc(r.text)}</div>` : '') : `
       <div class="req-b rows">
         <div class="req-row"><span class="k">Wer</span><span class="req-who">${who.length ? who.map(p =>
-          `<span class="mate">${avatar(p, 22)}${esc(p.name)} ${cmark(p, false)}</span>`).join('') : '—'}</span></div>
+          `<span class="mate">${avatar(p, 22)}${esc(p.name)}${PA.owner ? ' ' + cmark(p, false) : ''}</span>`).join('') : '—'}</span></div>
         <div class="req-row"><span class="k">Was</span><span>${esc(r.activity || '—')}</span></div>
         ${noConsent.length && st !== 'approved' ? `<div class="req-warn">⚠ Ohne Einwilligung: ${esc(noConsent.map(p => p.name).join(', '))}</div>` : ''}
       </div>`}
@@ -810,12 +858,13 @@ function openReq(id) {
 }
 function renderReqWho() {
   const gm = members();
-  $('#rqWho').innerHTML = gm.map(m => `<button type="button" data-rqwho="${esc(m.id)}" aria-pressed="${rqWho.includes(m.id)}">${avatar(m, 22)}${esc(m.name)} ${cmark(m, false)}</button>`).join('')
+  // Ohne Haken: die Einwilligungen stehen im Reiter Team.
+  $('#rqWho').innerHTML = gm.map(m => `<button type="button" data-rqwho="${esc(m.id)}" aria-pressed="${rqWho.includes(m.id)}">${avatar(m, 22)}${esc(m.name)}</button>`).join('')
     || '<span class="hint">Noch niemand in der Gruppe.</span>';
   const miss = gm.filter(m => rqWho.includes(m.id) && !+(m.consent || 0));
   $('#rqWhoHint').innerHTML = miss.length
     ? `⚠ Für ${esc(miss.map(m => m.name).join(', '))} liegt noch <b>keine Einwilligung</b> vor.`
-    : 'Tippt alle an, die mitkommen. ✓ = Stufe 1 (Kleingruppe, z. B. zu jemandem nach Hause), ✓✓ = Stufe 2 (auch fremde Orte).';
+    : 'Tippt alle an, die mitkommen.';
 }
 function saveReq() {
   if (!canWrite()) return;
@@ -911,7 +960,7 @@ function rulesHtml() {
       <ul><li>Aufgaben fair verteilen</li><li>Einander helfen, wenn jemand festhängt</li><li>Entscheidungen gemeinsam treffen</li></ul></div>
     <div class="excard alt">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}
       <h3>Jede Stunde dokumentieren</h3>
-      <p>Am Ende <b>jeder Stunde</b> trägt jede Person im Stundenprotokoll ein, was sie gemacht hat und was als Nächstes kommt. Ehrlich und in eigenen Worten.</p></div>
+      <p>Am Ende <b>jeder Stunde</b> haltet ihr im Stundenprotokoll fest, wer was gemacht hat und was als Nächstes kommt. Ein Eintrag kann für mehrere gelten. Ehrlich und in eigenen Worten.</p></div>
     <div class="excard">${ic('<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/>')}
       <h3>Board aktuell halten</h3>
       <p>Was ihr anfangt, kommt nach <b>In Arbeit</b>; was fertig ist, nach <b>Fertig</b>. Hängt etwas fest: nach <b>Blockiert</b> — mit einem Satz, was fehlt.</p></div>
@@ -934,7 +983,7 @@ function rulesHtml() {
       <ol><li>Board anschauen: Wo stehen wir?</li><li>Wer macht heute was? Karten verteilen.</li><li>Hängt etwas? → Blockiert. Müsst ihr raus? → Antrag.</li></ol></div>
     <div class="panel pad"><div class="eyebrow">Am Ende jeder Stunde</div>
       <h3 style="font-size:17px;margin-top:3px">Festhalten (5 Minuten)</h3>
-      <ol><li>Karten auf den richtigen Stand schieben.</li><li>Jede Person: Eintrag im Stundenprotokoll.</li><li>Material wegräumen, Tablets laden.</li></ol></div>
+      <ol><li>Karten auf den richtigen Stand schieben.</li><li>Stundenprotokoll: Wer hat was gemacht?</li><li>Material wegräumen, Tablets laden.</li></ol></div>
   </div>
   ${PA.owner ? `<p style="margin-top:16px"><button class="btn" data-editrules="1">${ICO.pen} Regeln für diesen Kurs ergänzen</button></p>` : ''}`;
 }
@@ -1108,6 +1157,20 @@ function wire() {
   });
   $('#miRules').addEventListener('click', () => { $('#menuPop').hidden = true; openRules(); });
   $('#miPrint').addEventListener('click', () => { $('#menuPop').hidden = true; window.print(); });
+  $('#miExport').addEventListener('click', () => { $('#menuPop').hidden = true; exportFile(); });
+  $('#miImport').addEventListener('click', () => { $('#menuPop').hidden = true; $('#importFile').click(); });
+  $('#miBackups').addEventListener('click', () => { $('#menuPop').hidden = true; openBackups(); });
+  $('#importFile').addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = '';
+    if (!f) return;
+    const fr = new FileReader();
+    fr.onload = () => {
+      let d = null;
+      try { d = JSON.parse(fr.result); } catch (err) { /* unten */ }
+      importData(d);
+    };
+    fr.readAsText(f);
+  });
 
   // Dialoge schließen
   document.addEventListener('click', e => {
@@ -1163,6 +1226,15 @@ function wire() {
       rqWho = rqWho.includes(id) ? rqWho.filter(x => x !== id) : rqWho.concat(id);
       renderReqWho(); return;
     }
+    // Stunden: wer war dabei
+    if ((b = t.closest('[data-hwho]'))) {
+      const id = b.dataset.hwho;
+      const cur = hWho || [];
+      hWho = cur.includes(id) ? cur.filter(x => x !== id) : cur.concat(id);
+      renderLogWho(); return;
+    }
+    // Backups (Lehrkraft)
+    if ((b = t.closest('[data-bk]'))) { backupAction(b.dataset.bk, b.dataset.id); return; }
     // Einwilligung (nur Lehrkraft): im Team gezielt, in der Klassenliste reihum
     if ((b = t.closest('[data-consent]'))) {
       if (!PA.owner) return;
@@ -1311,7 +1383,106 @@ function openRules() {
   setTimeout(() => $('#rulesIn').focus(), 60);
 }
 
+/* ════════════════════════════════════════════════════════════
+   EXPORT · IMPORT · BACKUPS (Lehrkraft, 0202)
+   ════════════════════════════════════════════════════════════
+   Eine Datei: { format: 'projektarbeit', version: 1, projects: [ … ] }.
+   Im Planungsraum: dieses eine Projekt. In der Übersicht: alle. */
+const fileBase = s => String(s || 'projekt').replace(/[^a-z0-9äöüß ]/gi, '').trim().replace(/\s+/g, '-').toLowerCase() || 'projekt';
+const fmtAt = t => new Date(t).toLocaleString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+function downloadJson(data, base) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `${base}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+
+async function exportFile() {
+  if (!PA.owner) return;
+  const inPlan = mode() === 'plan';
+  const res = await PA.call('pa_room_export', { p_group: inPlan ? PA.focus : null });
+  if (!res || !res.ok) { toast(PA.msg(res && res.error)); return; }
+  const name = inPlan ? (goalObj().title || gTitle(group(), members())) : ((V().room && V().room.title) || 'klasse');
+  downloadJson(res.data, 'projektarbeit-' + fileBase(name) + '-' + todayIso());
+  toast(inPlan ? 'Projekt exportiert' : `${res.data.projects.length} Projekte exportiert`);
+}
+
+function importData(d) {
+  if (!PA.owner) return;
+  const projects = d && d.format === 'projektarbeit' && Array.isArray(d.projects)
+    ? d.projects.filter(p => p && Array.isArray(p.items)) : null;
+  if (!projects || !projects.length) { toast('⚠ Das ist keine Datei aus der Projektarbeit.'); return; }
+  if (mode() === 'plan') {
+    // In einen Planungsraum passt genau ein Projekt — bei einer Klassen-
+    // Datei das mit derselben Gruppe.
+    const p = projects.length === 1 ? projects[0] : projects.find(x => x.group === PA.focus);
+    if (!p) { toast('Die Datei enthält mehrere Projekte — bitte in der Gruppen-Übersicht importieren.'); return; }
+    const nm = gTitle(group(), members());
+    ask('Projekt ersetzen?', `Projektziel, Board, Stunden und Anträge von „${nm}“ werden durch die Datei${p.name ? ' („' + p.name + '“)' : ''} ersetzt. Die Mitglieder der Gruppe bleiben. Vorher entsteht ein Backup des jetzigen Stands.`,
+      () => runImport([p], PA.focus), 'Ersetzen');
+    return;
+  }
+  const known = new Set((V().groups || []).map(g => g.id));
+  const hit = projects.filter(p => known.has(p.group)).length;
+  ask(`${projects.length === 1 ? 'Projekt' : projects.length + ' Projekte'} importieren?`,
+    (hit ? `${hit} ${hit === 1 ? 'Gruppe bekommt' : 'Gruppen bekommen'} den Stand aus der Datei (ihr jetziger Inhalt wird ersetzt). ` : '')
+    + (projects.length - hit ? `${projects.length - hit} ${projects.length - hit === 1 ? 'Projekt wird eine neue Gruppe' : 'Projekte werden neue Gruppen'} — noch ohne Mitglieder; zieht die Personen dann hinein. ` : '')
+    + 'Alle anderen Gruppen bleiben, wie sie sind. Vorher entsteht ein Backup.',
+    () => runImport(projects, null), 'Importieren');
+}
+
+async function runImport(projects, target) {
+  const slim = projects.map(p => ({ group: p.group || null, name: p.name || '', items: p.items }));
+  const r = await PA.act('pa_room_import', { p_projects: slim, p_target: target });
+  if (r) toast(target ? 'Projekt eingespielt' : `Eingespielt${r.created ? ` · ${r.created} neue ${r.created === 1 ? 'Gruppe' : 'Gruppen'}` : ''}`);
+}
+
+async function openBackups() {
+  if (!PA.owner) return;
+  const inPlan = mode() === 'plan';
+  $('#backupScope').innerHTML = inPlan
+    ? `„Einspielen“ holt hier nur <b>dieses Projekt</b> (${esc(gTitle(group(), members()))}) aus dem Backup zurück.`
+    : '„Einspielen“ setzt <b>alle Projekte</b> aus dem Backup zurück. Eine inzwischen aufgelöste Gruppe kommt als neue Gruppe (ohne Mitglieder) wieder; Gruppen, die später entstanden sind, bleiben unberührt.';
+  $('#backupList').innerHTML = '<p style="color:var(--ink-3);font-size:13px">Lädt …</p>';
+  show('mBackup');
+  const res = await PA.call('pa_room_backups', {});
+  const list = res && res.ok ? res.backups : null;
+  $('#backupList').innerHTML = list === null
+    ? `<p style="color:var(--ink-3);font-size:13px">⚠ ${esc(PA.msg(res && res.error))}</p>`
+    : list.length ? list.map(b => `
+      <div class="rowline"><div class="who">${esc(fmtAt(b.at))}
+          <small>${b.kind === 'auto' ? 'automatisch (wöchentlich)' : 'vor Änderung'} · ${b.projects} ${b.projects === 1 ? 'Projekt' : 'Projekte'}, ${b.items} Einträge</small></div>
+        <div class="acts">
+          <button class="btn sm" data-bk="dl" data-id="${esc(b.id)}">Herunterladen</button>
+          <button class="btn sm" data-bk="restore" data-id="${esc(b.id)}">Einspielen</button>
+        </div></div>`).join('')
+    : '<p style="color:var(--ink-3);font-size:13px">Noch kein Backup. Das erste entsteht, sobald ein Planungsraum Inhalt hat und im Raum gearbeitet wird.</p>';
+}
+
+async function backupAction(act, id) {
+  if (!PA.owner) return;
+  if (act === 'dl') {
+    const r = await PA.call('pa_room_backup_get', { p_id: id });
+    if (!r || !r.ok) { toast(PA.msg(r && r.error)); return; }
+    downloadJson(r.data, 'projektarbeit-backup-' + isoOf(new Date(r.at)));
+    return;
+  }
+  const inPlan = mode() === 'plan';
+  hide('mBackup');
+  ask('Dieses Backup einspielen?', inPlan
+    ? `Projektziel, Board, Stunden und Anträge von „${gTitle(group(), members())}“ werden durch den Stand aus dem Backup ersetzt. Vorher entsteht ein Backup des jetzigen Stands.`
+    : 'Alle Projekte aus dem Backup werden auf dessen Stand zurückgesetzt. Vorher entsteht ein Backup des jetzigen Stands.',
+    async () => {
+      const r = await PA.act('pa_room_backup_restore', { p_id: id, p_group: inPlan ? PA.focus : null });
+      if (r) toast('Backup eingespielt');
+    }, 'Einspielen');
+}
+
 /* ── Start ───────────────────────────────────────────────── */
 wire();
 $('#hDate').value = todayIso();
+resetLogForm();
 PA.start();

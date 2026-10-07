@@ -28,6 +28,11 @@
    antwortet wie immer mit {type:'focus'}. Ohne ctx.tabs (Schaufenster)
    bleibt der Knopf „← Übersicht" im Rahmen.
 
+   Export, Import, Backups (0202): nur die Lehrkraft, über das Menü im
+   Rahmen (pa_room_export / _import / _backups / _backup_get /
+   _backup_restore). Ein Projektarbeit-Raum hält ein Jahr (Trigger auf
+   skill_rooms, Migration 0202) statt 30 Tage.
+
    Nur geänderte Objekte über das Netz: pa_view / pa_room_get nehmen
    p_have ({ "task:t3": 4, … }) und lassen bei allem, was das Gerät in
    dieser Version schon hat, die Daten weg. `cache` füllt sie wieder
@@ -41,7 +46,8 @@
     participant: ['pa_save', 'pa_member_update'],
     presenter:   ['pa_room_save', 'pa_room_member_update', 'pa_room_rekey', 'pa_room_assign',
                   'pa_room_plan', 'pa_room_group_rename', 'pa_room_group_delete', 'pa_room_rules',
-                  'pa_room_consent']
+                  'pa_room_consent', 'pa_room_export', 'pa_room_import', 'pa_room_backups',
+                  'pa_room_backup_get', 'pa_room_backup_restore']
   };
 
   const GAP = 12;
@@ -219,7 +225,7 @@
       root = el; ctx = c; role = c.role; destroyed = false;
 
       // Im Schaufenster ohne Raum: die Beispielklasse (?demo=1, bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007b';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007c';
       root.innerHTML =
         '<div class="pa-host">' +
           '<iframe class="pa-frame" src="tools/Projektarbeit/index.html' + q + '" ' +
