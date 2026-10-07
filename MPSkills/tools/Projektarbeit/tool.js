@@ -41,7 +41,7 @@
     participant: ['pa_save', 'pa_member_update'],
     presenter:   ['pa_room_save', 'pa_room_member_update', 'pa_room_rekey', 'pa_room_assign',
                   'pa_room_plan', 'pa_room_group_rename', 'pa_room_group_delete', 'pa_room_rules',
-                  'pa_room_consent']
+                  'pa_room_consent', 'pa_room_notify_get', 'pa_room_notify_set']
   };
 
   const GAP = 12;
@@ -219,7 +219,7 @@
       root = el; ctx = c; role = c.role; destroyed = false;
 
       // Im Schaufenster ohne Raum: die Beispielklasse (?demo=1, bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007b';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007c';
       root.innerHTML =
         '<div class="pa-host">' +
           '<iframe class="pa-frame" src="tools/Projektarbeit/index.html' + q + '" ' +

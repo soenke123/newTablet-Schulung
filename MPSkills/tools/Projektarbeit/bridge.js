@@ -155,6 +155,10 @@
     network:         'Keine Verbindung — die Änderung ist noch nicht gespeichert.',
     not_found:       'Das gibt es nicht (mehr).',
     removed:         'Du bist nicht mehr in diesem Raum.',
+    email_domain:    'Bitte deine IServ-Adresse nehmen (…@mps-ki.de) — die Mails sollen in IServ bleiben.',
+    email_invalid:   'Diese Adresse sieht nicht richtig aus.',
+    too_soon:        'Gerade erst verschickt — bitte zwei Minuten warten.',
+    fn_missing_mail: 'Auf dem Server fehlt die Migration 0202 (Antrags-Mails).',
     fn_missing:      'Auf dem Server fehlt die Migration 0200 (Projektarbeit). Bitte der Lehrkraft Bescheid sagen.'
   };
   PA.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
@@ -343,6 +347,7 @@
       activity: 'Wir möchten die Beete dort fotografieren und mit dem Gärtner sprechen.',
       status: 'open', by: 'p5', byName: 'Hannah', at: day(0) + 'T08:30:00Z', sentAt: day(0) + 'T08:30:00Z', sentByName: 'Hannah' });
 
+    const notify = { domain: 'mps-ki.de', email: null, verified: false, pending: false, enabled: false };
     const bump = () => { rev++; };
     const tidy = g => {
       const grp = groups.find(x => x.id === g); if (!grp || grp.plan_open) return;
@@ -433,6 +438,20 @@
         const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };
         if (![0, 1, 2].includes(a.p_level)) return { ok: false, error: 'invalid_input' };
         p.consent = a.p_level; bump(); return { ok: true, consent: p.consent };
+      }
+      // 0202: Mail bei neuen Anträgen. Im Schaufenster wird nichts
+      // verschickt — die Adresse bleibt „Bestätigung offen".
+      if (fn === 'pa_room_notify_get') return R(Object.assign({ ok: true }, notify));
+      if (fn === 'pa_room_notify_set') {
+        if (typeof a.p_email === 'string') {
+          const m = a.p_email.trim().toLowerCase();
+          if (!m) Object.assign(notify, { email: null, verified: false, pending: false });
+          else if (!/@mps-ki\.de$/.test(m)) return { ok: false, error: 'email_domain' };
+          else if (!/^[a-z0-9][a-z0-9._%+-]*@mps-ki\.de$/.test(m)) return { ok: false, error: 'email_invalid' };
+          else if (m !== notify.email) Object.assign(notify, { email: m, verified: false, pending: true });
+        }
+        if (typeof a.p_on === 'boolean') notify.enabled = a.p_on;
+        return R(Object.assign({ ok: true }, notify));
       }
       if (fn === 'pa_room_member_update') {
         const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };

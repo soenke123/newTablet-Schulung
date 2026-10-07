@@ -316,7 +316,9 @@ function renderOverview() {
      <span class="stat">Gruppen <b>${groups.filter(g => g.no !== 0).length}</b></span>
      <span class="stat">Einzelarbeiten <b>${groups.filter(g => g.no === 0).length}</b></span>
      ${openReq ? `<span class="badge bg-no">${openReq} offene${openReq === 1 ? 'r' : ''} Antrag${openReq === 1 ? '' : 'e'}</span>` : ''}
-     <button class="btn sm" data-clist aria-pressed="${showList}">${showList ? 'Klassenliste ausblenden' : 'Klassenliste zeigen'}</button>`;
+     <button class="btn sm" data-clist aria-pressed="${showList}">${showList ? 'Klassenliste ausblenden' : 'Klassenliste zeigen'}</button>
+     ${notifyBtn()}`;
+  if (!notify && !notifyTried) loadNotify();
 
   $('#groupGrid').innerHTML = groups.map(g => {
     const mem = people.filter(p => p.group === g.id);
@@ -1179,6 +1181,7 @@ function wire() {
       try { localStorage.setItem('pa_clist', showList ? '1' : '0'); } catch (e) { /* egal */ }
       renderOverview(); return;
     }
+    if ((b = t.closest('[data-notify]'))) { openNotify(); return; }
     // Projektziel
     if ((b = t.closest('#goalAdd'))) { $('#goalImgInput').click(); return; }
     if ((b = t.closest('[data-img]'))) {
@@ -1293,6 +1296,25 @@ function wire() {
     if (r) { hide('mRules'); toast('Regeln gespeichert'); }
   });
 
+  // Mail bei neuen Anträgen
+  $('#ntSave').addEventListener('click', async () => {
+    const mail = $('#ntMail').value.trim();
+    if (!mail) { toast('Bitte deine IServ-Adresse eintragen.'); return; }
+    const on = $('#ntOn').checked;
+    const changed = !notify || mail.toLowerCase() !== (notify.email || '');
+    if (await saveNotify({ p_email: mail, p_on: on }, changed ? null : (on ? 'Mails für diesen Raum sind an.' : 'Mails für diesen Raum sind aus.'))) {
+      hide('mNotify');
+    }
+  });
+  $('#ntMail').addEventListener('keydown', e => { if (e.key === 'Enter') $('#ntSave').click(); });
+  $('#ntResend').addEventListener('click', () => saveNotify({ p_resend: true }, 'Bestätigungsmail ist noch einmal unterwegs.'));
+  $('#ntDel').addEventListener('click', () => {
+    hide('mNotify');
+    ask('Adresse entfernen?', 'Danach kommen in keinem Raum mehr Mails über Anträge. Wieder eintragen geht jederzeit.', async () => {
+      await saveNotify({ p_email: '' }, 'Adresse entfernt — keine Mails mehr.');
+    }, 'Entfernen');
+  });
+
   // Ungespeichertes Projektziel nicht verlieren.
   window.addEventListener('pagehide', () => { if (goalDirty) saveGoal(); });
 }
@@ -1303,6 +1325,70 @@ async function setConsent(id, n, say) {
   renderAll();
   const r = await PA.act('pa_room_consent', { p_participant: id, p_level: n });
   if (r && say) { const p = person(id); toast(`${p ? p.name : 'Einwilligung'}: ${CONSENT[n].nm}`); }
+}
+
+/* ── Mail bei neuen Anträgen (0202) ──────────────────────────
+   Die Adresse gilt je Lehrkraft (einmal eintragen, per Link aus der
+   ersten Mail bestätigen), der Haken je Raum. Nur @mps-ki.de — die
+   Mails bleiben in IServ. Verschickt wird 5 Minuten gebündelt. */
+let notify = null, notifyLoading = false, notifyTried = false;
+
+function notifyBtn() {
+  const n = notify;
+  const on = n && n.enabled && n.email;
+  const lbl = !n ? 'Mail bei Anträgen'
+    : on && n.verified ? 'Mail bei Anträgen: an'
+    : on ? 'Mail: Bestätigung offen'
+    : 'Mail bei Anträgen: aus';
+  return `<button class="btn sm${on && n.verified ? ' primary' : ''}" data-notify title="Eine Mail bekommen, wenn eine Gruppe einen Antrag stellt">${on ? '🔔' : '🔕'} ${lbl}</button>`;
+}
+
+async function loadNotify() {
+  if (notifyLoading) return;
+  notifyLoading = notifyTried = true;
+  const r = await PA.call('pa_room_notify_get', {});
+  notifyLoading = false;
+  // Fehlt die Migration, bleibt der Knopf einfach neutral.
+  if (r && r.ok) { notify = r; if (mode() === 'overview') renderOverview(); }
+}
+
+function renderNotify() {
+  const n = notify || {};
+  const st = $('#ntState');
+  if (!n.email) {
+    st.className = 'nt-state';
+    st.textContent = 'Noch keine Adresse eingetragen.';
+  } else if (n.verified) {
+    st.className = 'nt-state ok';
+    st.textContent = `✓ ${n.email} ist bestätigt.`;
+  } else {
+    st.className = 'nt-state wait';
+    st.textContent = `Bestätigung offen: Wir haben an ${n.email} eine Mail mit einem Link geschickt. Erst nach dem Klick darauf kommen Mails.`;
+  }
+  $('#ntResend').hidden = !(n.email && !n.verified);
+  $('#ntDel').hidden = !n.email;
+}
+
+async function openNotify() {
+  if (!notify) await loadNotify();
+  if (!notify) { toast(PA.msg('fn_missing_mail')); return; }
+  $('#ntMail').value = notify.email || '';
+  $('#ntOn').checked = !!notify.enabled || !notify.email;
+  renderNotify();
+  show('mNotify');
+  if (!notify.email) setTimeout(() => $('#ntMail').focus(), 60);
+}
+
+async function saveNotify(args, say) {
+  const r = await PA.call('pa_room_notify_set', args);
+  if (!r || !r.ok) { toast(PA.msg(r && r.error)); return false; }
+  const wasMail = notify && notify.email;
+  notify = r;
+  renderNotify();
+  renderOverview();
+  if (say) toast(say);
+  else if (r.email && !r.verified && r.email !== wasMail) toast(`Bestätigungsmail an ${r.email} ist unterwegs.`);
+  return true;
 }
 
 function openRules() {

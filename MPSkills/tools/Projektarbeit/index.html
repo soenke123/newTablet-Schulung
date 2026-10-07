@@ -334,7 +334,7 @@ body.dragging{-webkit-user-select:none;user-select:none}
 /* ============================================================
    FORMULARE
    ============================================================ */
-input[type=text],input[type=date],input[type=number],select,textarea{
+input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
   width:100%;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);
   padding:8px 11px;font-size:13.5px;box-shadow:inset 0 1px 2px rgba(27,26,22,.035)
 }
@@ -524,6 +524,14 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .m-b{padding:20px;overflow-y:auto;flex:1}
 .m-f{display:flex;align-items:center;gap:9px;padding:13px 20px;background:var(--paper-up);border-top:1px solid var(--line)}
 .m-f .sp{margin-left:auto;display:flex;gap:9px}
+/* Mail bei neuen Anträgen (0202) */
+.nt-state{margin:8px 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-3)}
+.nt-state.ok{color:var(--st-done)}
+.nt-state.wait{color:#9a6a0c}
+.nt-on{display:flex;align-items:center;gap:8px;font-size:13.5px;cursor:pointer}
+.nt-on input{width:18px;height:18px;accent-color:var(--petrol);flex:none}
+#mNotify .m-f{flex-wrap:wrap}
+#mNotify .m-f .sp{flex-wrap:wrap;justify-content:flex-end}
 .keybig{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:clamp(30px,9vw,42px);font-weight:700;letter-spacing:.08em;color:var(--petrol);background:var(--paper-up);border:2px dashed var(--line);border-radius:var(--r);padding:14px 8px}
 .rowline{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
 .rowline:last-child{border-bottom:0}
@@ -972,6 +980,29 @@ body.ro .postit,body.ro .pchip{cursor:default}
   </div>
 </div>
 
+<!-- Lehrkraft: Mail bei neuen Anträgen (0202) -->
+<div class="scrim" id="mNotify" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h mark"><div class="ttl">Mail bei neuen Anträgen</div>
+      <button class="m-x" data-close="mNotify" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:var(--ink-2)">Stellt eine Gruppe einen Antrag, bekommst du eine Mail — gesammelt nach 5 Minuten, mit Gruppe und Datum, ohne Schülernamen. Die Adresse gilt für alle deine Räume, den Haken setzt du je Raum.</p>
+      <label for="ntMail" style="display:block;font-size:12.5px;font-weight:700;margin-bottom:5px">Deine IServ-Adresse</label>
+      <input type="email" id="ntMail" maxlength="120" placeholder="vorname.nachname@mps-ki.de" autocomplete="email" inputmode="email">
+      <div class="nt-state" id="ntState"></div>
+      <label class="nt-on"><input type="checkbox" id="ntOn"><span>Für <b>diesen Raum</b> Mails schicken</span></label>
+    </div>
+    <div class="m-f">
+      <button class="btn ghost" id="ntDel" hidden>Adresse entfernen</button>
+      <div class="sp">
+        <button class="btn" id="ntResend" hidden>Bestätigung neu senden</button>
+        <button class="btn primary" id="ntSave">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Der persönliche Code -->
 <div class="scrim" id="mKey" hidden>
   <div class="modal narrow" role="dialog" aria-modal="true">
@@ -1007,7 +1038,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261007b"></script>
-<script src="app.js?v=20261007b"></script>
+<script src="bridge.js?v=20261007c"></script>
+<script src="app.js?v=20261007c"></script>
 </body>
 </html>
