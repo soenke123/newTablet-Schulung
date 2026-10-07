@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Projektarbeit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PROJEKTARBEIT — Design Tokens
+   Dasselbe Kleid wie die Scrum Werkstatt: Papier / Tinte / Petrol / Marker
+   ============================================================ */
+:root{
+  --paper:      #f2eee5;
+  --paper-up:   #fbf9f4;
+  --paper-down: #e8e2d5;
+  --ink:        #1b1a16;
+  --ink-2:      #514d43;
+  --ink-3:      #837d6e;
+  --line:       #d9d2c2;
+  --line-soft:  #e6e0d2;
+
+  --petrol:     #1d5955;
+  --petrol-up:  #27736d;
+  --petrol-wash:#e4eeec;
+  --marker:     #ca5a1c;
+  --marker-wash:#fbeadc;
+
+  --st-todo:    #8a8373;
+  --st-doing:   #2b6694;
+  --st-block:   #ad352b;
+  --st-check:   #b5801a;
+  --st-done:    #2d7a4d;
+  --alarm:      #d23a2c;
+
+  --r-sm: 5px;
+  --r:    9px;
+  --r-lg: 16px;
+
+  --sans: 'Instrument Sans', ui-sans-serif, -apple-system, 'Segoe UI', sans-serif;
+
+  --sh-1: 0 1px 2px rgba(27,26,22,.06), 0 1px 1px rgba(27,26,22,.04);
+  --sh-2: 0 2px 4px rgba(27,26,22,.07), 0 6px 14px -6px rgba(27,26,22,.12);
+  --sh-3: 0 10px 34px -10px rgba(27,26,22,.30), 0 2px 6px rgba(27,26,22,.10);
+  --sh-paper: 1px 2px 0 rgba(27,26,22,.055), 3px 7px 14px -6px rgba(27,26,22,.30);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+h1,h2,h3,h4{font-weight:600; margin:0; letter-spacing:-.012em; line-height:1.18}
+button,input,select,textarea{font:inherit; color:inherit}
+button{cursor:pointer}
+svg{display:block; flex:none}
+[hidden]{display:none!important}
+
+.wrap{max-width:1500px; margin:0 auto; padding:0 clamp(12px,2.2vw,28px)}
+
+/* ---------- Kopf ---------- */
+header.top{
+  position:sticky; top:0; z-index:60;
+  background:linear-gradient(180deg,#17302e,#132826);
+  color:#eef3f1; border-bottom:2px solid #0c1e1d;
+}
+.top-row{display:flex; align-items:center; gap:18px; min-height:60px; padding:9px clamp(14px,2.4vw,30px); flex-wrap:wrap}
+.brand{display:flex; align-items:center; gap:11px; margin-right:auto; min-width:0; flex:1 1 260px}
+.brand-mark{
+  width:36px;height:36px;border-radius:10px;flex:none;
+  background:var(--marker); color:#fff; display:grid;place-items:center;
+  box-shadow:inset 0 -2px 0 rgba(0,0,0,.22);
+}
+.brand-txt{min-width:0; flex:1}
+.brand-eyebrow{font-size:9.5px; letter-spacing:.17em; text-transform:uppercase; color:#7fa8a2; font-weight:600}
+.brand-name{font-size:19px; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+
+.pill{
+  display:flex; align-items:center; gap:13px;
+  background:rgba(0,0,0,.26); border:1px solid rgba(127,168,162,.3);
+  border-radius:12px; padding:7px 13px;
+}
+.pill .lbl{font-size:9.5px;letter-spacing:.15em;text-transform:uppercase;color:#7fa8a2;font-weight:600}
+.pill .val{font-size:15px;font-weight:600;color:#fff;white-space:nowrap}
+.pill .val.alarm{color:#ff9b7a}
+.pill-div{width:1px;align-self:stretch;background:rgba(127,168,162,.26)}
+
+/* ---------- Knöpfe ---------- */
+.btn{
+  display:inline-flex;align-items:center;gap:7px;
+  border:1px solid var(--line); background:var(--paper-up); color:var(--ink);
+  padding:8px 13px; border-radius:var(--r); font-size:13.5px; font-weight:600;
+  box-shadow:var(--sh-1); transition:transform .12s, box-shadow .12s, background .12s;
+  white-space:nowrap;
+}
+.btn:hover{background:#fff;box-shadow:var(--sh-2)}
+.btn:active{transform:translateY(1px);box-shadow:var(--sh-1)}
+.btn.primary{background:var(--petrol);border-color:#143f3c;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),var(--sh-1)}
+.btn.primary:hover{background:var(--petrol-up)}
+.btn.mark{background:var(--marker);border-color:#a3430f;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),var(--sh-1)}
+.btn.mark:hover{background:#d96a2b}
+.btn.ok{background:var(--st-done);border-color:#205a38;color:#fff;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2),var(--sh-1)}
+.btn.ok:hover{background:#358c5a}
+.btn.ghost{background:transparent;border-color:transparent;box-shadow:none;color:var(--ink-2)}
+.btn.ghost:hover{background:rgba(27,26,22,.06);box-shadow:none}
+.btn.onDark{background:rgba(255,255,255,.1);border-color:rgba(127,168,162,.34);color:#eef3f1;box-shadow:none}
+.btn.onDark:hover{background:rgba(255,255,255,.19)}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.btn.danger{color:var(--st-block);border-color:#e3c3bf;background:#fdf3f1}
+.btn.danger:hover{background:#fbe8e5}
+.btn:disabled{opacity:.34;cursor:not-allowed;transform:none}
+.btn.icon{padding:7px;border-radius:var(--r)}
+
+/* ---------- Reiter ---------- */
+.tabbar{position:sticky;top:60px;z-index:55;background:var(--paper-up);border-bottom:1px solid var(--line);box-shadow:0 1px 0 rgba(255,255,255,.7) inset}
+.tabs{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  position:relative;display:flex;align-items:center;gap:8px;
+  background:none;border:0;padding:13px 15px 12px;
+  font-size:13.5px;font-weight:600;color:var(--ink-3);white-space:nowrap;
+}
+.tab svg{opacity:.65}
+.tab:hover{color:var(--ink)}
+.tab::after{content:'';position:absolute;left:11px;right:11px;bottom:0;height:3px;border-radius:3px 3px 0 0;background:transparent}
+.tab[aria-selected="true"]{color:var(--petrol)}
+.tab[aria-selected="true"] svg{opacity:1}
+.tab[aria-selected="true"]::after{background:var(--marker)}
+.cnt{
+  font-size:10.5px;font-weight:700;background:var(--paper-down);color:var(--ink-2);
+  padding:1px 6px;border-radius:99px;min-width:19px;text-align:center
+}
+.tab[aria-selected="true"] .cnt{background:var(--petrol-wash);color:var(--petrol)}
+.cnt.red,.tab[aria-selected="true"] .cnt.red{background:var(--alarm);color:#fff}
+
+main.wrap{padding-top:30px;padding-bottom:80px}
+
+.shead{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.shead .t{font-size:clamp(22px,2.6vw,30px)}
+.shead .s{font-size:13.5px;color:var(--ink-3);max-width:62ch;margin:3px 0 0}
+.shead .sp{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.eyebrow{font-size:9.5px;letter-spacing:.17em;text-transform:uppercase;color:var(--marker);font-weight:700}
+
+.panel{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-1)}
+.panel.pad{padding:clamp(16px,2vw,24px)}
+.stat{background:var(--paper-down);border-radius:var(--r-sm);padding:5px 10px;font-size:12px;font-weight:600;color:var(--ink-2);white-space:nowrap}
+.stat b{font-size:14px;color:var(--ink)}
+
+.robar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12.5px;color:var(--petrol);margin-bottom:16px}
+
+/* ---------- Avatare, Personen ---------- */
+.av{border-radius:99px;flex:none;display:grid;place-items:center;font-weight:700;color:#fff;overflow:hidden;background:var(--petrol);box-shadow:inset 0 -1px 0 rgba(0,0,0,.18)}
+.av.s20{width:20px;height:20px;font-size:9px}
+.av.s22{width:22px;height:22px;font-size:9.5px}
+.av.s26{width:26px;height:26px;font-size:10.5px}
+.av.s30{width:30px;height:30px;font-size:12px}
+.av.s52{width:52px;height:52px;font-size:19px;border-radius:14px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:99px;background:var(--line);flex:none}
+.dot.on{background:var(--st-done)}
+.metag{font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--marker-wash);color:var(--marker);padding:1px 6px;border-radius:99px;vertical-align:middle}
+
+/* ============================================================
+   ÜBERSICHT (Lehrkraft)
+   ============================================================ */
+.ov{display:grid;grid-template-columns:minmax(250px,320px) minmax(0,1fr);gap:18px;align-items:start}
+.lobby{position:sticky;top:76px;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:220px}
+.lobby-h{display:flex;align-items:center;gap:9px}
+.lobby-h h3{font-size:17px}
+.lobby-h .n{margin-left:auto}
+.lobby-hint{font-size:12px;color:var(--ink-3);line-height:1.45;margin:0}
+.lobby-list{display:flex;flex-direction:column;gap:6px;min-height:80px;border-radius:var(--r);padding:4px;margin:0 -4px}
+.lobby-empty{font-size:12px;color:var(--ink-3);font-style:italic;text-align:center;padding:18px 8px;border:1px dashed var(--line);border-radius:var(--r)}
+
+.pchip{
+  display:flex;align-items:center;gap:9px;background:var(--paper);border:1px solid var(--line);
+  border-radius:99px;padding:4px 5px 4px 4px;cursor:grab;user-select:none;-webkit-user-select:none;
+  -webkit-touch-callout:none;transition:background .12s,border-color .12s,box-shadow .12s
+}
+.pchip:hover{background:#fff;border-color:#c9c0ac;box-shadow:var(--sh-1)}
+.pchip .nm{font-size:13px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pchip.picked{background:var(--petrol-wash);border-color:var(--petrol);box-shadow:0 0 0 2px var(--petrol-wash)}
+.pchip.blk .nm{color:var(--ink-3);text-decoration:line-through}
+.pchip.drag{opacity:.35}
+.planbtn{
+  width:28px;height:28px;border-radius:99px;border:1px solid var(--line);background:var(--paper-up);
+  color:var(--petrol);display:grid;place-items:center;flex:none;padding:0
+}
+.planbtn:hover{background:var(--petrol);border-color:var(--petrol);color:#fff}
+.planbtn.open{background:var(--petrol);border-color:var(--petrol);color:#fff}
+
+.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.gcard{
+  position:relative;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:var(--sh-1);display:flex;flex-direction:column;overflow:visible;
+  transition:box-shadow .14s,border-color .14s
+}
+.gcard::before{content:'';position:absolute;inset:0 auto 0 0;width:5px;border-radius:var(--r-lg) 0 0 var(--r-lg);background:var(--line)}
+.gcard.plan::before{background:var(--petrol)}
+.gcard.hasreq::before{background:var(--alarm)}
+.gcard.solo{background:linear-gradient(180deg,#f6f3ec,var(--paper-up) 70px)}
+.g-head{display:flex;align-items:flex-start;gap:10px;padding:13px 13px 8px 18px}
+.g-name{font-size:17px;font-weight:600;background:none;border:0;padding:0;text-align:left;line-height:1.25;min-width:0;overflow-wrap:anywhere}
+.g-name:hover{color:var(--petrol);text-decoration:underline dotted;text-underline-offset:3px}
+.g-sub{font-size:11.5px;color:var(--ink-3);margin-top:2px;line-height:1.35}
+.g-sub i{font-style:italic}
+.g-acts{margin-left:auto;display:flex;gap:4px;align-items:center;flex:none}
+.gcard.hasreq .g-acts{margin-right:12px}
+.reqbadge{
+  position:absolute;top:-9px;right:-9px;min-width:26px;height:26px;border-radius:99px;padding:0 7px;
+  background:var(--alarm);color:#fff;font-weight:700;font-size:13.5px;display:grid;place-items:center;
+  box-shadow:0 2px 6px rgba(160,30,20,.35);border:2px solid #fff;z-index:3;
+  animation:pop .35s cubic-bezier(.2,1.6,.4,1)
+}
+@keyframes pop{from{transform:scale(.3)}to{transform:none}}
+.g-members{display:flex;flex-direction:column;gap:5px;padding:4px 13px 12px 18px;min-height:46px;border-radius:var(--r)}
+.g-empty{font-size:11.5px;color:var(--ink-3);font-style:italic;padding:6px 0}
+.g-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 13px 12px 18px;border-top:1px solid var(--line-soft);margin-top:auto}
+.minicols{display:flex;gap:3px}
+.minicols span{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:var(--ink-2);background:var(--paper-down);border-radius:var(--r-sm);padding:2px 6px}
+.minicols i{width:7px;height:7px;border-radius:99px;display:block}
+.g-foot .go{margin-left:auto}
+.ghint{
+  border:1px dashed var(--line);border-radius:var(--r-lg);padding:18px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;text-align:center;gap:8px;color:var(--ink-3);min-height:160px;font-size:12.5px;line-height:1.5
+}
+.ghint b{color:var(--ink-2)}
+
+/* Ziel beim Ziehen */
+.over{background:var(--petrol-wash)!important;outline:2px dashed var(--petrol);outline-offset:-3px}
+.gcard.over{outline-offset:2px;border-color:var(--petrol)}
+.pchip.over{outline-offset:1px}
+.dragghost{position:fixed;z-index:500;pointer-events:none;transform:rotate(-2deg);box-shadow:var(--sh-3);opacity:.96}
+body.dragging,body.dragging *{cursor:grabbing!important}
+body.dragging{-webkit-user-select:none;user-select:none}
+.pickbar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:80;background:#17302e;color:#eef3f1;
+  border-radius:99px;padding:9px 10px 9px 18px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:12px;box-shadow:var(--sh-3);max-width:calc(100vw - 24px)}
+
+/* ============================================================
+   WARTEN (Schüler ohne Planungsraum)
+   ============================================================ */
+.nothing{text-align:center;padding:clamp(30px,6vw,64px) 20px;border:1px dashed var(--line);border-radius:var(--r-lg);background:var(--paper-up)}
+.nothing .ic{width:54px;height:54px;border-radius:15px;background:var(--petrol-wash);color:var(--petrol);display:grid;place-items:center;margin:0 auto 15px}
+.nothing h3{font-size:22px;margin-bottom:7px}
+.nothing p{font-size:13.5px;color:var(--ink-3);max-width:48ch;margin:0 auto 14px;line-height:1.55}
+.mates{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+.mate{display:flex;align-items:center;gap:7px;background:var(--paper);border:1px solid var(--line);border-radius:99px;padding:3px 11px 3px 3px;font-size:13px;font-weight:600}
+
+/* ============================================================
+   BOARD
+   ============================================================ */
+.board{
+  display:grid; gap:11px; align-items:stretch; grid-template-columns:repeat(4,minmax(0,1fr));
+  padding:13px; border-radius:var(--r-lg);
+  background:
+    linear-gradient(var(--line-soft) 1px,transparent 1px) 0 0/100% 26px,
+    linear-gradient(90deg,var(--line-soft) 1px,transparent 1px) 0 0/26px 100%,
+    var(--paper-down);
+  border:1px solid var(--line); box-shadow:inset 0 2px 8px rgba(27,26,22,.055);
+}
+.col{display:flex;flex-direction:column;background:rgba(251,249,244,.8);border:1px solid var(--line);border-radius:var(--r);min-height:420px}
+.col-h{display:flex;align-items:center;gap:8px;padding:10px 11px 9px;border-bottom:1px solid var(--line-soft)}
+.col-dot{width:9px;height:9px;border-radius:99px;flex:none}
+.col-h .nm{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
+.col-h .n{margin-left:auto;font-weight:700;font-size:13px;background:var(--paper-down);color:var(--ink-2);min-width:24px;text-align:center;border-radius:var(--r-sm);padding:1px 6px}
+.col-hint{font-size:11px;color:var(--ink-3);padding:7px 11px 0;font-style:italic;line-height:1.35}
+.drop{display:flex;flex-direction:column;gap:12px;padding:12px 11px;flex:1;min-height:120px;border-radius:var(--r)}
+.col[data-k="blocked"]{background:rgba(253,243,241,.88);border-color:#e6c8c3}
+.col[data-k="done"]{background:rgba(238,247,241,.88);border-color:#c6e0d0}
+.empty{font-size:11.5px;color:var(--ink-3);text-align:center;padding:16px 8px;border:1px dashed var(--line);border-radius:var(--r);font-style:italic}
+.addcard{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1px dashed var(--line);background:transparent;border-radius:var(--r);padding:9px;font-size:12.5px;font-weight:600;color:var(--ink-3)}
+.addcard:hover{border-color:var(--petrol);color:var(--petrol);background:var(--paper-up)}
+
+.postit{
+  position:relative; border-radius:2px; padding:12px 12px 9px; box-shadow:var(--sh-paper); cursor:grab;
+  transition:transform .16s cubic-bezier(.2,.8,.3,1), box-shadow .16s;
+  background:#fdf3a8; color:#4a3a05; user-select:none;-webkit-user-select:none;-webkit-touch-callout:none
+}
+.postit::before{
+  content:'';position:absolute;top:-6px;left:50%;width:46px;height:13px;transform:translateX(-50%) rotate(-1.4deg);
+  background:rgba(255,255,255,.5); border:1px solid rgba(255,255,255,.35); box-shadow:0 1px 2px rgba(27,26,22,.09);
+}
+.postit:hover{transform:scale(1.02) translateY(-2px);box-shadow:3px 9px 22px -6px rgba(27,26,22,.4),1px 2px 0 rgba(27,26,22,.06);z-index:9}
+.postit.drag{opacity:.35;outline:2px dashed var(--petrol)}
+.pi-yellow{background:#fdf3a8;color:#4a3a05}
+.pi-blue  {background:#cbe7f7;color:#123a52}
+.pi-green {background:#cdebd2;color:#153d23}
+.pi-pink  {background:#f8d4e0;color:#521630}
+.pi-lilac {background:#dfd8f3;color:#2d2359}
+.pi-title{font-size:16px;font-weight:600;line-height:1.25;margin:2px 0 8px;overflow-wrap:anywhere}
+.pi-text{font-size:12px;line-height:1.4;opacity:.82;margin:-3px 0 9px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-line}
+.pi-note{background:rgba(173,53,43,.14);border-left:3px solid var(--st-block);padding:5px 7px;border-radius:0 var(--r-sm) var(--r-sm) 0;font-size:11px;font-weight:600;margin-bottom:9px;line-height:1.35}
+.pi-foot{display:flex;align-items:center;gap:6px;padding-top:8px;border-top:1px solid rgba(0,0,0,.13);font-size:11px;min-height:30px}
+.pi-who{display:flex;align-items:center;gap:3px}
+.pi-who .av{box-shadow:0 0 0 2px rgba(255,255,255,.7)}
+.pi-free{font-style:italic;opacity:.65}
+.pi-flag{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:99px;background:var(--st-block);color:#fff;display:grid;place-items:center;box-shadow:0 2px 5px rgba(27,26,22,.3);border:2px solid #fdf3f1}
+.swatches{display:flex;gap:8px;padding-top:2px}
+.swatches button{width:34px;height:34px;border-radius:6px;border:1px solid rgba(0,0,0,.14);padding:0;box-shadow:var(--sh-1)}
+.swatches button[aria-checked="true"]{outline:3px solid var(--petrol);outline-offset:2px}
+.whopick{display:flex;gap:7px;flex-wrap:wrap}
+.whopick button{display:flex;align-items:center;gap:7px;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:3px 11px 3px 3px;font-size:13px;font-weight:600}
+.whopick button[aria-pressed="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff}
+.colpick{display:none}
+
+/* ============================================================
+   FORMULARE
+   ============================================================ */
+input[type=text],input[type=date],input[type=number],select,textarea{
+  width:100%;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:8px 11px;font-size:13.5px;box-shadow:inset 0 1px 2px rgba(27,26,22,.035)
+}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--petrol);outline-offset:-1px;background:#fff}
+input:disabled,select:disabled,textarea:disabled{opacity:.6;cursor:not-allowed}
+select{cursor:pointer;-webkit-appearance:none;appearance:none;padding-right:28px;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none' stroke='%23837d6e' stroke-width='1.6'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center}
+label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin-bottom:5px}
+.field{margin-bottom:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hint{font-size:12px;color:var(--ink-3);margin:4px 0 0;line-height:1.45}
+
+.badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;white-space:nowrap}
+.badge::before{content:'';width:6px;height:6px;border-radius:99px;background:currentColor;flex:none}
+.bg-open {color:#9a6a0c;background:#faf0d9}
+.bg-ok   {color:var(--st-done);background:#e3f2e8}
+.bg-no   {color:var(--st-block);background:#fbe9e6}
+.bg-block{color:var(--st-block);background:#fbe9e6}
+
+/* ============================================================
+   PROJEKTZIEL
+   ============================================================ */
+.goalwrap{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start}
+.titlein{font-size:21px!important;font-weight:600;padding:11px 14px!important;margin-bottom:14px}
+.rte-bar{display:flex;gap:3px;flex-wrap:wrap;padding:7px;background:var(--paper-down);border:1px solid var(--line);border-bottom:0;border-radius:var(--r) var(--r) 0 0}
+.rte-bar button{width:31px;height:29px;display:grid;place-items:center;border-radius:var(--r-sm);background:var(--paper-up);border:1px solid var(--line);color:var(--ink-2);font-size:13px;font-weight:700}
+.rte-bar button:hover{background:#fff;color:var(--petrol);border-color:var(--petrol)}
+.rte-bar .sep{width:1px;background:var(--line);margin:2px 4px}
+.rte{min-height:320px;background:var(--paper-up);border:1px solid var(--line);border-radius:0 0 var(--r) var(--r);padding:20px 22px;font-size:15px;line-height:1.65}
+.rte:focus{outline:2px solid var(--petrol);outline-offset:-1px}
+.rte:empty::before{content:attr(data-ph);color:var(--ink-3);font-style:italic}
+.rte h2{font-size:21px;margin:18px 0 7px}
+.rte h2:first-child{margin-top:0}
+.rte p{margin:0 0 11px}
+.rte ul,.rte ol{margin:0 0 11px;padding-left:22px}
+.imgs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ishell{position:relative;aspect-ratio:4/3;border-radius:var(--r);overflow:hidden;border:1px solid var(--line);background:var(--paper-down);box-shadow:var(--sh-1)}
+.ishell img{width:100%;height:100%;object-fit:cover}
+.ishell .x{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:99px;background:rgba(27,26,22,.72);color:#fff;border:0;display:grid;place-items:center}
+.ishell .x:hover{background:var(--st-block)}
+.iadd{aspect-ratio:4/3;border:1px dashed var(--line);border-radius:var(--r);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink-3);font-size:11.5px;font-weight:600;text-align:center;padding:8px}
+.iadd:hover{border-color:var(--petrol);color:var(--petrol);background:var(--paper-up)}
+.qlist{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.qlist li{display:flex;gap:9px;font-size:12.5px;color:var(--ink-2);line-height:1.45}
+.qlist b{color:var(--marker);flex:none}
+body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opacity:.3;pointer-events:none}
+
+/* ============================================================
+   STUNDEN
+   ============================================================ */
+.hgrid{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:20px;align-items:start}
+.hgrid.noform{grid-template-columns:1fr}
+.hform{padding:18px;position:sticky;top:118px}
+.hform h3{font-size:18px;margin:2px 0 12px}
+.today{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:10px 13px;border-radius:var(--r);background:var(--paper-up);border:1px solid var(--line)}
+.today .who{display:flex;gap:5px;flex-wrap:wrap}
+.today .miss{opacity:.38}
+.dayh{display:flex;align-items:baseline;gap:10px;margin:20px 0 9px}
+.dayh:first-child{margin-top:0}
+.dayh h4{font-size:15px}
+.dayh span{font-size:11.5px;color:var(--ink-3)}
+.entry{display:flex;gap:12px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;box-shadow:var(--sh-1)}
+.entry.mine{border-left:4px solid var(--marker)}
+.entry .body{flex:1;min-width:0}
+.entry .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.entry .top b{font-size:13.5px}
+.entry .top .h{font-size:11px;font-weight:700;color:var(--petrol);background:var(--petrol-wash);border-radius:99px;padding:1px 8px}
+.entry .top .acts{margin-left:auto;display:flex;gap:4px}
+.entry p{margin:0;font-size:13.5px;line-height:1.5;white-space:pre-line;overflow-wrap:anywhere}
+.entry .nx{margin-top:6px;font-size:12.5px;color:var(--ink-2)}
+.entry .nx b{color:var(--marker);font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin-right:5px}
+.sumrow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.sumchip{display:flex;align-items:center;gap:8px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:6px 11px 6px 6px;font-size:12.5px}
+.sumchip b{font-size:15px}
+
+/* ============================================================
+   ANTRÄGE
+   ============================================================ */
+.reqs{display:flex;flex-direction:column;gap:12px;max-width:900px}
+.req{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);box-shadow:var(--sh-1);overflow:hidden}
+.req.open{border-color:#e8cf9b;box-shadow:0 0 0 1px #faf0d9,var(--sh-1)}
+.req-h{display:flex;align-items:flex-start;gap:12px;padding:14px 16px 6px;flex-wrap:wrap}
+.req-ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--petrol-wash);color:var(--petrol);flex:none}
+.req.open .req-ic{background:#faf0d9;color:#9a6a0c}
+.req-t{flex:1;min-width:180px}
+.req-t h4{font-size:16px;overflow-wrap:anywhere}
+.req-t .m{font-size:11.5px;color:var(--ink-3);margin-top:2px}
+.req-b{padding:2px 16px 14px 66px;font-size:13.5px;line-height:1.55;color:var(--ink-2);white-space:pre-line;overflow-wrap:anywhere}
+.req-d{margin:0 16px 14px 66px;padding:10px 13px;border-radius:var(--r);font-size:13px;line-height:1.5;white-space:pre-line}
+.req-d.ok{background:#e9f5ed;border-left:3px solid var(--st-done)}
+.req-d.no{background:#fbeeec;border-left:3px solid var(--st-block)}
+.req-d .k{display:block;font-size:9.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:700;color:var(--ink-3);margin-bottom:2px}
+.req-f{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;padding:12px 16px;background:var(--paper);border-top:1px solid var(--line-soft)}
+.req-f textarea{min-height:44px;flex:1 1 260px;width:auto}
+.filt{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.filt button{background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:6px 13px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
+.filt button[aria-pressed="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff}
+
+/* ============================================================
+   TEAM
+   ============================================================ */
+.teamgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
+.mcard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:12px}
+.mcard.me{border-color:var(--marker);box-shadow:0 0 0 1px var(--marker-wash),var(--sh-1)}
+.mtop{display:flex;gap:12px;align-items:center}
+.mname{font-size:16.5px;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.mlabel{font-size:11px!important;font-weight:600;background:var(--petrol-wash)!important;color:var(--petrol);border:1px dashed transparent!important;border-radius:99px!important;padding:3px 10px!important;box-shadow:none!important;margin-top:4px}
+.mlabel::placeholder{color:#9bb5b1;font-style:italic}
+.mlabel:hover{border-color:#b8d2ce!important}
+.mlabel:focus{border-color:var(--petrol)!important;background:#fff!important;outline:0}
+.mstats{display:flex;gap:7px;font-size:11px}
+.mstat{flex:1;background:var(--paper-down);border-radius:var(--r-sm);padding:6px 8px;text-align:center}
+.mstat b{display:block;font-size:16px;font-weight:700}
+.mstat span{color:var(--ink-3);font-size:10px}
+.mfoot{display:flex;gap:6px;align-items:center;padding-top:10px;border-top:1px solid var(--line-soft)}
+.mkey{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.05em;color:var(--petrol)}
+
+/* ============================================================
+   REGELN
+   ============================================================ */
+.ex-hero{background:linear-gradient(135deg,#17302e,#1d5955 70%,#246b63);color:#eef3f1;border-radius:var(--r-lg);padding:clamp(22px,3.4vw,40px);margin-bottom:20px;position:relative;overflow:hidden}
+.ex-hero::before{content:'';position:absolute;inset:0;opacity:.14;background-image:radial-gradient(#fff 1.2px,transparent 1.2px);background-size:17px 17px}
+.ex-hero > *{position:relative}
+.ex-hero h2{font-size:clamp(25px,3.6vw,38px);color:#fff;max-width:24ch;line-height:1.1}
+.ex-hero p{font-size:14.5px;color:#cfe0dd;max-width:60ch;margin:11px 0 0}
+.cycle{display:flex;align-items:stretch;margin:26px 0 0;flex-wrap:wrap}
+.cyc{flex:1;min-width:140px;background:rgba(0,0,0,.2);border:1px solid rgba(127,168,162,.26);padding:14px 15px}
+.cyc:first-child{border-radius:var(--r) 0 0 var(--r)}
+.cyc:last-child{border-radius:0 var(--r) var(--r) 0}
+.cyc + .cyc{border-left:0}
+.cyc .n{font-size:25px;font-weight:700;color:var(--marker);line-height:1}
+.cyc h4{font-size:14.5px;color:#fff;margin:5px 0 4px}
+.cyc p{font-size:11.5px;color:#a9c6c2;margin:0;line-height:1.45}
+.cards3{display:grid;grid-template-columns:repeat(auto-fit,minmax(262px,1fr));gap:15px;margin-bottom:17px}
+.excard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:19px;box-shadow:var(--sh-1)}
+.excard .ic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--petrol-wash);color:var(--petrol);margin-bottom:12px}
+.excard.alt .ic{background:var(--marker-wash);color:var(--marker)}
+.excard h3{font-size:17px;margin-bottom:7px}
+.excard p{font-size:13px;color:var(--ink-2);margin:0;line-height:1.55}
+.excard ul{font-size:13px;color:var(--ink-2);margin:9px 0 0;padding-left:19px;line-height:1.6}
+.teacherrules{border-left:5px solid var(--marker)}
+.teacherrules .txt{font-size:14px;line-height:1.65;white-space:pre-line;margin:8px 0 0;color:var(--ink)}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.checks ol{margin:8px 0 0;padding-left:20px;font-size:13px;line-height:1.7;color:var(--ink-2)}
+
+/* ============================================================
+   DIALOGE, MENÜ, TOAST
+   ============================================================ */
+.scrim{position:fixed;inset:0;z-index:100;background:rgba(19,27,26,.58);backdrop-filter:blur(3px);display:grid;place-items:center;padding:16px;animation:fade .18s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:none}}
+.modal{background:var(--paper);border-radius:var(--r-lg);width:100%;max-width:620px;max-height:92vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:var(--sh-3);border:1px solid var(--line);animation:rise .22s cubic-bezier(.2,.8,.3,1)}
+.modal.narrow{max-width:430px}
+.m-h{display:flex;align-items:center;gap:12px;padding:15px 20px;background:linear-gradient(180deg,#17302e,#132826);color:#fff}
+.m-h.mark{background:linear-gradient(180deg,#c5551a,#ad4714)}
+.m-h .ttl{font-size:17.5px;font-weight:600;margin-right:auto}
+.m-x{width:32px;height:32px;border-radius:99px;background:rgba(255,255,255,.12);border:0;color:#fff;display:grid;place-items:center;flex:none}
+.m-x:hover{background:rgba(255,255,255,.26)}
+.m-b{padding:20px;overflow-y:auto;flex:1}
+.m-f{display:flex;align-items:center;gap:9px;padding:13px 20px;background:var(--paper-up);border-top:1px solid var(--line)}
+.m-f .sp{margin-left:auto;display:flex;gap:9px}
+.keybig{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:clamp(30px,9vw,42px);font-weight:700;letter-spacing:.08em;color:var(--petrol);background:var(--paper-up);border:2px dashed var(--line);border-radius:var(--r);padding:14px 8px}
+.rowline{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.rowline:last-child{border-bottom:0}
+.rowline .who{font-weight:700;font-size:13.5px;flex:1 1 140px;min-width:0}
+.rowline .who small{display:block;font-weight:500;color:var(--ink-3);font-size:11.5px}
+
+.menu{position:relative}
+.mechip{display:inline-flex;align-items:center;gap:11px;padding:6px 12px;text-align:right}
+.mechip .me-txt{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2;min-width:0;max-width:210px}
+.mechip .me-txt b{font-size:13px;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mechip .me-txt i{font-style:normal;font-size:11px;color:#a9c6c2;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.menu-pop{position:absolute;right:0;top:calc(100% + 7px);z-index:70;min-width:216px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh-3);padding:5px;animation:rise .14s ease;color:var(--ink)}
+.menu-pop button{display:flex;align-items:center;gap:10px;width:100%;background:none;border:0;padding:9px 11px;border-radius:var(--r-sm);font-size:13px;font-weight:600;text-align:left;color:var(--ink)}
+.menu-pop button:hover{background:var(--petrol-wash);color:var(--petrol)}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(90px);background:#17302e;color:#eef3f1;padding:11px 19px;border-radius:99px;font-size:13px;font-weight:600;box-shadow:var(--sh-3);z-index:300;transition:transform .28s cubic-bezier(.2,.9,.3,1);max-width:calc(100vw - 24px);text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Lesemodus (stillgelegt) */
+body.ro .needs-write{display:none!important}
+body.ro .postit,body.ro .pchip{cursor:default}
+
+/* ---------- responsive ---------- */
+@media (max-width:1180px){
+  .board{grid-template-columns:repeat(4,minmax(190px,1fr));overflow-x:auto}
+  .goalwrap{grid-template-columns:1fr}
+  .imgs{grid-template-columns:repeat(4,1fr)}
+}
+@media (max-width:880px){
+  .ov{grid-template-columns:1fr}
+  .lobby{position:static}
+  .hgrid{grid-template-columns:1fr}
+  .hform{position:static}
+  .checks{grid-template-columns:1fr}
+  .cyc{border-radius:var(--r)!important;border-left:1px solid rgba(127,168,162,.26)!important}
+}
+@media (max-width:640px){
+  .grid2{grid-template-columns:1fr}
+  .imgs{grid-template-columns:1fr 1fr}
+  header.top{position:static}
+  .top-row{gap:10px;min-height:0}
+  .brand{flex-basis:100%}
+  .top-row > .right{flex:1 1 100%;justify-content:flex-end}
+  .pill{display:none}
+  .tabbar{top:0}
+  .tab{padding:11px 11px 10px;font-size:12.5px}
+  main.wrap{padding-top:22px;padding-bottom:60px}
+  .colpick{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -2px 10px;padding:2px}
+  .colpick button{display:flex;align-items:center;gap:6px;flex:none;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:7px 12px;font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+  .colpick button b{background:var(--paper-down);border-radius:99px;padding:0 6px;font-size:11px}
+  .colpick button[aria-pressed="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff}
+  .colpick button[aria-pressed="true"] b{background:rgba(255,255,255,.22)}
+  .board{display:block;padding:8px;overflow:visible}
+  .board .col{display:none;min-height:0}
+  .board .col.on{display:flex}
+  .postit:hover{transform:none}
+  .req-b,.req-d{padding-left:16px;margin-left:16px}
+  .req-b{margin-left:0}
+  .scrim{padding:0;place-items:stretch}
+  .modal,.modal.narrow{max-width:none;max-height:none;height:100%;border-radius:0}
+  .m-b{padding:16px}
+  .teamgrid,.ggrid{grid-template-columns:1fr}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@media print{
+  header.top,.tabbar,.m-f,.needs-write,.addcard,.hform,.toast,.pickbar{display:none!important}
+  body{background:#fff}
+  .view{display:block!important}
+  .view + .view{page-break-before:always}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ KOPF ══════════════════════════ -->
+<header class="top">
+  <div class="wrap top-row">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>
+      </div>
+      <div class="brand-txt">
+        <div class="brand-eyebrow" id="brandEyebrow">Projektarbeit</div>
+        <div class="brand-name" id="brandName">…</div>
+      </div>
+    </div>
+
+    <div class="pill" id="headPill" hidden></div>
+
+    <div class="right" style="display:flex;gap:8px;align-items:center">
+      <button class="btn onDark" id="btnBack" hidden>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        Übersicht
+      </button>
+      <div class="menu">
+        <button class="btn onDark mechip" id="btnMenu" aria-haspopup="true" aria-label="Menü">
+          <span class="me-txt"><b id="meName"></b><i id="meRole"></i></span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+        </button>
+        <div class="menu-pop" id="menuPop" hidden>
+          <button id="miKey">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg>
+            <span id="miKeyTxt">Code zeigen</span>
+          </button>
+          <button id="miRules" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+            Regeln ergänzen
+          </button>
+          <button id="miPrint">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M6 9V3h12v6M6 18H4v-6h16v6h-2M8 14h8v7H8z"/></svg>
+            Drucken
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════ REITER (Planungsraum) ══════════════════════════ -->
+<nav class="tabbar" id="tabbar" hidden>
+  <div class="wrap tabs" role="tablist">
+    <button class="tab" role="tab" data-view="goal" aria-selected="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
+      Projektziel
+    </button>
+    <button class="tab" role="tab" data-view="work" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/></svg>
+      Arbeit <span class="cnt" id="cntWork">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="hours" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+      Stunden <span class="cnt" id="cntHours">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="requests" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+      Anträge <span class="cnt" id="cntReq">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="team" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg>
+      Team <span class="cnt" id="cntTeam">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="rules" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 16.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
+      Projektarbeit &amp; Regeln
+    </button>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="robar" id="roBar" hidden><b>Stillgelegt</b> · Deine Lehrkraft hat dieses Tablet gerade angehalten. Du kannst lesen, aber nichts ändern.</div>
+
+  <!-- ══════════ LEHRKRAFT: ÜBERSICHT ══════════ -->
+  <section class="view" id="view-overview" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Übersicht</div>
+        <h2 class="t">Gruppen bilden</h2>
+        <p class="s">Wer beitritt, steht zuerst in der Lobby. Zieht eine Person <b>auf eine andere</b>, entsteht eine Gruppe; auf eine Gruppe gezogen, kommt sie dazu. Mit dem Kompass öffnet ihr den <b>Planungsraum</b> — für eine Gruppe oder eine Einzelperson.</p>
+      </div>
+      <div class="sp" id="ovStats"></div>
+    </div>
+    <div class="ov">
+      <div class="panel lobby" id="lobby" data-drop="lobby">
+        <div class="lobby-h">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" style="color:var(--petrol)"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-7h6v7"/></svg>
+          <h3>Lobby</h3><span class="cnt n" id="lobbyCnt">0</span>
+        </div>
+        <p class="lobby-hint">Noch ohne Gruppe. Zum Zurückholen eine Person hierher ziehen.</p>
+        <div class="lobby-list" id="lobbyList"></div>
+      </div>
+      <div class="ggrid" id="groupGrid"></div>
+    </div>
+  </section>
+
+  <!-- ══════════ SCHÜLER: WARTEN ══════════ -->
+  <section class="view" id="view-wait" hidden>
+    <div class="nothing" id="waitBox"></div>
+    <div id="waitRules" style="margin-top:26px"></div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: PROJEKTZIEL ══════════ -->
+  <section class="view" id="view-goal" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Wohin wollen wir?</div>
+        <h2 class="t">Projektziel</h2>
+        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll — und für wen. Das Ziel ist euer Kompass: Jede Aufgabe auf dem Board zahlt darauf ein. Alle in der Gruppe arbeiten daran, bis die Lehrkraft es fixiert.</p>
+      </div>
+      <div class="sp"><span class="stat" id="goalSaved">gespeichert</span>
+        <button class="btn" id="goalLockBtn" hidden></button></div>
+    </div>
+    <div class="robar" id="goalNote" hidden>🔒 Das Projektziel ist fixiert — es gilt so. Änderungen bitte über einen <b>Antrag</b>.</div>
+    <div class="goalwrap">
+      <div>
+        <label class="fl" for="goalTitle">Projekttitel</label>
+        <input type="text" class="titlein" id="goalTitle" maxlength="80" placeholder="z. B. Unsere Schul-Wetterstation">
+        <span class="fl">Projektziel</span>
+        <div class="rte-bar" id="rteBar">
+          <button data-cmd="bold" title="Fett">B</button>
+          <button data-cmd="italic" title="Kursiv" style="font-style:italic">I</button>
+          <button data-cmd="underline" title="Unterstrichen" style="text-decoration:underline">U</button>
+          <div class="sep"></div>
+          <button data-cmd="formatBlock" data-val="h2" title="Überschrift">H</button>
+          <button data-cmd="formatBlock" data-val="p" title="Absatz">¶</button>
+          <div class="sep"></div>
+          <button data-cmd="insertUnorderedList" title="Liste">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6h12M9 12h12M9 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>
+          </button>
+          <button data-cmd="insertOrderedList" title="Nummerierte Liste">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M10 6h11M10 12h11M10 18h11M3 5l1.5-.5V9M3 17.5h2.5L3 14.5h2.5"/></svg>
+          </button>
+          <div class="sep"></div>
+          <button data-cmd="removeFormat" title="Formatierung entfernen">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 5h12M9 5l-2 14M15 5l1 7M14 17l6 4M20 17l-6 4"/></svg>
+          </button>
+        </div>
+        <div class="rte" id="goalRte" contenteditable="true" data-ph="Wir wollen … damit …"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px">
+        <div class="panel pad">
+          <div class="eyebrow">Visualisierung</div>
+          <h3 style="font-size:17px;margin-top:3px">Bilder &amp; Skizzen</h3>
+          <p class="hint" style="margin-bottom:12px">Bis zu <b>5 Bilder</b>: Skizze, Mockup, Foto. Sie werden automatisch verkleinert.</p>
+          <div class="imgs" id="goalImgs"></div>
+          <input type="file" id="goalImgInput" accept="image/*" multiple hidden>
+        </div>
+        <div class="panel pad">
+          <div class="eyebrow">Gutes Ziel?</div>
+          <h3 style="font-size:17px;margin-top:3px">Diese Fragen sollte es beantworten</h3>
+          <ul class="qlist">
+            <li><b>1</b>Was genau soll am Ende fertig sein (Produkt, Ergebnis)?</li>
+            <li><b>2</b>Für wen ist es gedacht — wer hat etwas davon?</li>
+            <li><b>3</b>Woran erkennt ihr, dass ihr es geschafft habt?</li>
+            <li><b>4</b>Bis wann, und was braucht ihr dafür?</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: ARBEIT ══════════ -->
+  <section class="view" id="view-work" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Wer macht was?</div>
+        <h2 class="t">Arbeit</h2>
+        <p class="s">Zerlegt euer Projekt in Aufgaben, die in eine Stunde passen. Zieht die Karten von links nach rechts — so sieht jede:r sofort, wo ihr steht. Hängt etwas fest, kommt die Karte nach „Blockiert“.</p>
+      </div>
+      <div class="sp" id="workStats"></div>
+    </div>
+    <div class="colpick" id="colPick" role="tablist" aria-label="Spalte"></div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: STUNDEN ══════════ -->
+  <section class="view" id="view-hours" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Was habe ich heute gemacht?</div>
+        <h2 class="t">Stundenprotokoll</h2>
+        <p class="s">Am Ende jeder Stunde trägt <b>jede Person</b> ein, woran sie gearbeitet hat und was als Nächstes kommt. So bleibt sichtbar, wer was beigetragen hat — und ihr findet beim nächsten Mal sofort den Faden.</p>
+      </div>
+    </div>
+    <div class="today" id="todayBar"></div>
+    <div class="hgrid">
+      <div class="panel hform needs-write" id="hForm">
+        <div class="eyebrow" id="hFormEyebrow">Neuer Eintrag</div>
+        <h3 id="hFormTitle">Meine Stunde</h3>
+        <div class="grid2">
+          <div class="field"><label class="fl" for="hDate">Datum</label><input type="date" id="hDate"></div>
+          <div class="field"><label class="fl" for="hHours">Umfang</label>
+            <select id="hHours">
+              <option value="1">1 Schulstunde</option><option value="2">2 Schulstunden</option>
+              <option value="3">3 Schulstunden</option><option value="4">4 Schulstunden</option>
+              <option value="0.5">eine halbe</option>
+            </select></div>
+        </div>
+        <div class="field"><label class="fl" for="hText">Das habe ich gemacht</label>
+          <textarea id="hText" maxlength="1500" placeholder="z. B. Drei Quellen zur Solarenergie gelesen und die wichtigsten Punkte notiert."></textarea></div>
+        <div class="field"><label class="fl" for="hNext">Das mache ich als Nächstes <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
+          <textarea id="hNext" maxlength="600" style="min-height:56px" placeholder="z. B. Gliederung für die Präsentation entwerfen."></textarea></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn primary" id="hSave">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            Eintragen</button>
+          <button class="btn ghost" id="hCancel" hidden>Abbrechen</button>
+        </div>
+      </div>
+      <div>
+        <div class="sumrow" id="hSums"></div>
+        <div id="hList"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: ANTRÄGE ══════════ -->
+  <section class="view" id="view-requests" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Was müssen wir klären?</div>
+        <h2 class="t">Anträge</h2>
+        <p class="s">Ihr braucht Material, mehr Zeit, wollt den Raum verlassen oder das Projektziel ändern? Stellt einen Antrag — die Lehrkraft genehmigt oder lehnt ab und schreibt euch eine Antwort.</p>
+      </div>
+      <div class="sp"><button class="btn mark needs-write" id="btnNewReq">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Antrag stellen</button></div>
+    </div>
+    <div class="filt" id="reqFilt"></div>
+    <div class="reqs" id="reqList"></div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: TEAM ══════════ -->
+  <section class="view" id="view-team" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Wer ist dabei?</div>
+        <h2 class="t" id="teamTitle">Unser Team</h2>
+        <p class="s">Alle in der Gruppe sind gleich verantwortlich. Das Label ist frei: Recherche, Technik, Design, Präsentation … Es sagt den anderen, wofür ihr euch gerade zuständig fühlt.</p>
+      </div>
+    </div>
+    <div class="teamgrid" id="teamGrid"></div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: REGELN ══════════ -->
+  <section class="view" id="view-rules" hidden>
+    <div id="rulesBox"></div>
+  </section>
+</main>
+
+<!-- ══════════════════════════ DIALOGE ══════════════════════════ -->
+
+<!-- Aufgabe -->
+<div class="scrim" id="mTask" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tkTitle">
+    <div class="m-h"><div class="ttl" id="tkTitle">Aufgabe</div>
+      <button class="m-x" data-close="mTask" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <div class="field"><label class="fl" for="tkName">Was ist zu tun?</label>
+        <input type="text" id="tkName" maxlength="120" placeholder="z. B. Umfrage in der 7a durchführen"></div>
+      <div class="field"><label class="fl" for="tkText">Beschreibung <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
+        <textarea id="tkText" maxlength="1500" style="min-height:70px"></textarea></div>
+      <div class="field"><span class="fl">Wer kümmert sich?</span><div class="whopick" id="tkWho"></div></div>
+      <div class="grid2">
+        <div class="field"><label class="fl" for="tkCol">Spalte</label>
+          <select id="tkCol"><option value="todo">Zu erledigen</option><option value="blocked">Blockiert</option><option value="doing">In Arbeit</option><option value="done">Fertig</option></select></div>
+        <div class="field"><span class="fl">Farbe</span><div class="swatches" id="tkColor"></div></div>
+      </div>
+      <div class="field" id="tkNoteF"><label class="fl" for="tkNote">Was blockiert? Wer kann helfen?</label>
+        <textarea id="tkNote" maxlength="400" style="min-height:56px"></textarea></div>
+    </div>
+    <div class="m-f">
+      <button class="btn danger needs-write" id="tkDel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>
+        Löschen</button>
+      <div class="sp">
+        <button class="btn" data-close="mTask">Abbrechen</button>
+        <button class="btn primary needs-write" id="tkSave">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Antrag -->
+<div class="scrim" id="mReq" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="rqTitle">
+    <div class="m-h mark"><div class="ttl" id="rqTitle">Antrag stellen</div>
+      <button class="m-x" data-close="mReq" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <div class="field"><label class="fl" for="rqType">Worum geht es?</label><select id="rqType"></select></div>
+      <div class="field"><label class="fl" for="rqName">Betreff</label>
+        <input type="text" id="rqName" maxlength="120" placeholder="z. B. Lötstation aus der Physiksammlung ausleihen"></div>
+      <div class="field"><label class="fl" for="rqText">Begründung</label>
+        <textarea id="rqText" maxlength="2000" style="min-height:120px" placeholder="Was braucht ihr, warum, und bis wann?"></textarea></div>
+      <p class="hint">Solange die Lehrkraft nicht entschieden hat, kannst du deinen Antrag noch ändern oder zurückziehen.</p>
+    </div>
+    <div class="m-f"><div class="sp">
+      <button class="btn" data-close="mReq">Abbrechen</button>
+      <button class="btn mark" id="rqSave">Antrag abschicken</button>
+    </div></div>
+  </div>
+</div>
+
+<!-- Bestätigung -->
+<div class="scrim" id="mConfirm" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h"><div class="ttl" id="cfTitle">Sicher?</div></div>
+    <div class="m-b"><p id="cfText" style="margin:0;font-size:13.5px;line-height:1.6;color:var(--ink-2)"></p></div>
+    <div class="m-f">
+      <button class="btn" data-close="mConfirm">Abbrechen</button>
+      <div class="sp"><button class="btn danger" id="cfOk">Ja, machen</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Eingabe (Gruppe umbenennen) -->
+<div class="scrim" id="mPrompt" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h"><div class="ttl" id="prTitle">Name</div></div>
+    <div class="m-b"><input type="text" id="prIn" maxlength="40"></div>
+    <div class="m-f">
+      <button class="btn" data-close="mPrompt">Abbrechen</button>
+      <div class="sp"><button class="btn primary" id="prOk">Speichern</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- Regeln der Lehrkraft -->
+<div class="scrim" id="mRules" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="m-h mark"><div class="ttl">Regeln ergänzen</div>
+      <button class="m-x" data-close="mRules" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:var(--ink-2)">Was hier steht, sehen <b>alle Gruppen</b> im Reiter „Projektarbeit &amp; Regeln“ unter <b>Regeln eurer Lehrkraft</b> — z. B. Abgabetermine, Bewertung, Sonderregeln für diesen Kurs. Eine Regel je Zeile.</p>
+      <textarea id="rulesIn" maxlength="6000" style="min-height:220px"></textarea>
+    </div>
+    <div class="m-f"><div class="sp">
+      <button class="btn" data-close="mRules">Abbrechen</button>
+      <button class="btn primary" id="rulesSave">Speichern</button>
+    </div></div>
+  </div>
+</div>
+
+<!-- Der persönliche Code -->
+<div class="scrim" id="mKey" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h mark"><div class="ttl">Dein persönlicher Code</div>
+      <button class="m-x" data-close="mKey" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b" style="text-align:center">
+      <div class="keybig" id="keyBig">—</div>
+      <p style="margin:12px 0 0;font-size:13.5px;line-height:1.55;color:var(--ink-2)">
+        <b>Schreib ihn dir auf oder mach ein Foto.</b> Damit kommst du auf jedem Gerät zurück in dein Projekt:
+        auf der Beitrittsseite „Ich habe einen persönlichen Code“ antippen.</p>
+      <p style="margin:10px 0 0;font-size:12px;color:var(--ink-3)">Gib ihn nicht weiter — wer ihn hat, arbeitet unter deinem Namen.
+        Vergessen? Deine Lehrkraft sieht ihn. Oben rechts im Menü findest du ihn jederzeit wieder.</p>
+    </div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mKey">Hab ich notiert</button></div></div>
+  </div>
+</div>
+
+<!-- Lehrkraft: alle persönlichen Codes -->
+<div class="scrim" id="mCodes" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h mark"><div class="ttl" id="codesTitle">Persönliche Codes</div>
+      <button class="m-x" data-close="mCodes" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <p style="margin:0 0 12px;font-size:12.5px;color:var(--ink-3)">Wer seinen Code vergessen hat, bekommt ihn hier. „neu“ vergibt einen neuen — der alte gilt dann nicht mehr.</p>
+      <div id="codesList"></div>
+    </div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mCodes">Schließen</button></div></div>
+  </div>
+</div>
+
+<div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
+<div class="toast" id="toast"><span id="toastT"></span></div>
+
+<script src="bridge.js?v=20261007"></script>
+<script src="app.js?v=20261007"></script>
+</body>
+</html>

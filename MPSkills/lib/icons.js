@@ -164,6 +164,13 @@
       '<rect x="10.6" y="9.6" width="2.8" height="2.8" rx=".5"/>' +
       '<path d="M16.4 8.2l1.2 1.2 2-2.2"/>',
 
+    /* Projektarbeit — ein Kompass: das Projektziel gibt die Richtung,
+       die Nadel zeigt schräg nach oben (unterwegs, nicht am Ziel). */
+    projekt:
+      '<circle cx="12" cy="12" r="8.8"/>' +
+      '<path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/>' +
+      '<path d="M12 3.2v1.6M12 19.2v1.6M3.2 12h1.6M19.2 12h1.6"/>',
+
     /* Abstimmung — Balken in Echtzeit, genau wie es im Text steht.
        Sie stehen auf einer Linie, sonst schwebten sie. */
     poll:
@@ -188,7 +195,8 @@
     'KnowledgeStack': 'knowledgestack',
     'Caesercode':     'caesar',
     'NeuroLab':       'neurolab',
-    'ScrumWerkstatt': 'scrum'
+    'ScrumWerkstatt': 'scrum',
+    'Projektarbeit':  'projekt'
   };
 
   function key(id) {

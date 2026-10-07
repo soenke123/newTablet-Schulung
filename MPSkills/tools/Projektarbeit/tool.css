@@ -1,0 +1,31 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „Projektarbeit"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Nur der Rahmen. Alles, was man sieht, steht in index.html und
+   gehört der Projektarbeit selbst — dieselbe Aufteilung wie bei der
+   Scrum Werkstatt.
+   ══════════════════════════════════════════════════════════════ */
+
+.pa-host {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg, 18px);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.pa-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  height: 75vh;     /* Ausgangswert bis zur ersten Messung in tool.js */
+}
+
+@media (max-width: 640px) {
+  .pa-host {
+    margin: 0 -12px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+}

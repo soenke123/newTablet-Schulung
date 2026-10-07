@@ -83,6 +83,12 @@ window.TOOLS_OVERLAY = {
   // Team, eingerahmt wie NeuroLab (tools/ScrumWerkstatt/index.html).
   // beta: frisch aus dem Prototyp in den Raum gezogen (06.10.2026).
   scrum: { ready: true, beta: true },
+  // Zehnter Skill (Migration 0200) — Projektarbeit: ein Raum = eine
+  // Klasse. Lobby, Gruppen per Drag & Drop, je Gruppe ein Planungsraum
+  // (Projektziel, Board, Stunden, Anträge, Team, Regeln). Eingerahmt
+  // wie die Scrum Werkstatt (tools/Projektarbeit/index.html).
+  // beta: frisch gebaut (07.10.2026).
+  projekt: { ready: true, beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

@@ -323,7 +323,7 @@ function renderAsk(prefill, errorMsg) {
 }
 
 /* ─── Zustand: persönlicher Code (0196) ───────────────────────
-   Für Skills mit Langzeitarbeit (bisher die Scrum Werkstatt): ein
+   Für Skills mit Langzeitarbeit (Scrum Werkstatt, Projektarbeit): ein
    Teammitglied bekommt beim ersten Mal einen eigenen Code aus 8
    Zeichen und kommt damit auf JEDEM Gerät auf seinen Platz zurück —
    ohne Konto und auch bei geschlossener Tür. Der Raum-Code ist dafür
