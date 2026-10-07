@@ -3398,9 +3398,10 @@ function wire(){
 function itemsFromExport(d){
   const ids=new Set(S.team.map(m=>m.id));
   const keep=a=>(a||[]).filter(id=>ids.has(id));
-  const items=[{ kind:'product', id:'main', data:Object.assign({name:'Unser Projekt',goal:'',images:[]}, d.product||{}) }];
-  const p=items[0].data;
+  const p=Object.assign({name:'Unser Projekt',goal:'',images:[]}, d.product||{});
   if(p.pairs) p.pairs=p.pairs.map(keep).filter(g=>g.length>1);
+  const sp=SW.splitProduct(p);   // Goal ist ein eigenes Objekt im Raum (0199)
+  const items=[{ kind:'product', id:'main', data:sp.main }, { kind:'product', id:'goal', data:sp.goal }];
   (d.stories||[]).forEach(st=>{
     const c=Object.assign({},st);
     if(c.assignee && !ids.has(c.assignee)) c.assignee=null;

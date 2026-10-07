@@ -72,6 +72,12 @@ weiter im localStorage. Zeilennummern wurden entfernt (stammten vom Prototyp).
 - [x] Product Goal: das ganze Team arbeitet daran; die Lehrkraft (Raum-Besitzer) kann es mit
       „Product Goal fixieren" sperren (`S.product.goalLocked`) und mit „Product Goal öffnen" freigeben
 
+- [x] Product Goal ist im Raum ein eigenes Objekt (`product/goal`: Text, Bilder, Fixierung), der Rest
+      bleibt in `product/main` (Migration 0199, Trennung in `bridge.js`). Wer am Goal schreibt,
+      kollidiert nicht mehr mit Paarungen am Board; alte Räume wandern beim nächsten Speichern
+- [ ] Beim Goal: Konflikt-Rückfrage statt stillem Verwerfen („Dein Text liegt im Zwischenspeicher")
+      — erst angehen, wenn es im Unterricht auffällt
+
 ## ❓ Offen zur Entscheidung: Rechte und Rollen
 
 Bisher darf jedes Teammitglied Board, Blockaden und Sprint-Abschluss bedienen; Beobachter

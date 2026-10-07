@@ -38,6 +38,21 @@
 
   const DEFAULT_PRODUCT = { name: 'Unser Projekt', goal: '', images: [] };
 
+  /* Das Product Goal (Text, Bilder, Fixierung) liegt im Raum als eigenes
+     Objekt (product/goal, Migration 0199), der Rest des Projekts in
+     product/main. So kollidiert jemand, der am Goal schreibt, nicht mit
+     jemandem, der am Board zwei Leute zusammenzieht. Die Seite kennt
+     weiter nur EIN S.product; getrennt und zusammengefügt wird hier. */
+  const GOAL_KEYS = ['goal', 'images', 'goalLocked'];
+  function splitProduct(p) {
+    const main = {}, goal = {};
+    Object.keys(p || {}).forEach(k => { (GOAL_KEYS.includes(k) ? goal : main)[k] = p[k]; });
+    if (goal.goal === undefined) goal.goal = '';
+    if (!Array.isArray(goal.images)) goal.images = [];
+    return { main, goal };
+  }
+  const DEFAULT_SPLIT = splitProduct(DEFAULT_PRODUCT);
+
   let known = {};        // 'story:u3' → { v, json }
   let lastView = null;
   let inflight = false;  // ein scrum_save ist unterwegs
@@ -101,11 +116,14 @@
     const items = view.items || [];
     const byKind = k => items.filter(i => i.kind === k && i.data);
     const prod = items.find(i => i.kind === 'product' && i.id === 'main' && i.data);
+    const goal = items.find(i => i.kind === 'product' && i.id === 'goal' && i.data);
     const stories = byKind('story').map(i => Object.assign({}, i.data, { id: i.id }));
     const sprints = byKind('sprint').map(i => Object.assign({}, i.data, { id: i.id }));
     const act = sprints.find(s => s.status === 'active');
     return {
-      product: prod ? Object.assign({ images: [] }, prod.data) : JSON.parse(JSON.stringify(DEFAULT_PRODUCT)),
+      // Alte Räume haben das Goal noch in 'main'; das Goal-Objekt hat Vorrang.
+      product: prod ? Object.assign({ images: [] }, prod.data, goal ? goal.data : {})
+                    : JSON.parse(JSON.stringify(DEFAULT_PRODUCT)),
       team: (view.members || []).map(m => ({
         id: m.id, name: m.name, role: m.role, label: m.label || '',
         avatar: m.avatar || null, online: !!m.online, me: !!m.me, key: m.key || null
@@ -119,9 +137,15 @@
 
   function remember(state) {
     known = {};
-    known[keyOf('product', 'main')] = {
-      v: verOf('product', 'main'),
-      json: canon(state.product)
+    const sp = splitProduct(state.product);
+    known[keyOf('product', 'main')] = { v: verOf('product', 'main'), json: canon(sp.main) };
+    // Gibt es das Goal-Objekt noch nicht (alter Raum) und hat das Goal Inhalt,
+    // soll der nächste Speichervorgang es anlegen — und das Goal aus 'main'
+    // nimmt er dabei mit heraus.
+    const gv = verOf('product', 'goal');
+    known[keyOf('product', 'goal')] = {
+      v: gv,
+      json: (!gv && canon(sp.goal) !== canon(DEFAULT_SPLIT.goal)) ? '' : canon(sp.goal)
     };
     state.stories.forEach(s => { known[keyOf('story', s.id)] = { v: verOf('story', s.id), json: canon(s) }; });
     state.sprints.forEach(s => { known[keyOf('sprint', s.id)] = { v: verOf('sprint', s.id), json: canon(s) }; });
@@ -187,10 +211,12 @@
       const json = canon(obj);
       const was = known[k];
       if (was && was.json === json) return;
-      if (!was && kind === 'product' && json === canon(DEFAULT_PRODUCT)) return;
+      if (!was && kind === 'product' && (json === canon(DEFAULT_SPLIT.main) || json === canon(DEFAULT_SPLIT.goal))) return;
       ops.push({ op: 'put', kind, id, v: was ? was.v : 0, data: obj });
     };
-    put('product', 'main', S.product);
+    const sp = splitProduct(S.product);
+    put('product', 'main', sp.main);
+    put('product', 'goal', sp.goal);
     S.stories.forEach(s => put('story', s.id, s));
     S.sprints.forEach(s => put('sprint', s.id, s));
     Object.keys(known).forEach(k => {
@@ -218,6 +244,7 @@
     invalid_input:   'Die Datei passt nicht zu einem Scrum-Projekt.',
     fn_missing:      'Auf dem Server fehlt die neueste Migration (0198). Bitte der Lehrkraft Bescheid sagen.'
   };
+  SW.splitProduct = splitProduct;
   SW.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
 
   SW.save = async function () {
