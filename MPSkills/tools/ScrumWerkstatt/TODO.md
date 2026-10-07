@@ -1,8 +1,8 @@
 # Scrum Werkstatt — offene Punkte
 
-Stand: 2026-10-06. Bezug: `index.html` (früher `scrum-werkstatt.html`). Seit Migration 0196
+Stand: 2026-10-07. Bezug: `index.html` (früher `scrum-werkstatt.html`). Seit Migration 0196
 läuft die Werkstatt im MPSkills-Raum (ein Raum = ein Team); allein geöffnet speichert sie
-weiter im localStorage. Zeilennummern unten stammen vom Prototyp und stimmen nicht mehr.
+weiter im localStorage. Zeilennummern wurden entfernt (stammten vom Prototyp).
 
 ## ✅ Erledigt mit 0196 (Überführung nach MPSkills)
 
@@ -57,52 +57,40 @@ weiter im localStorage. Zeilennummern unten stammen vom Prototyp und stimmen nic
 - [x] Keine Standard-Tasks mehr im Demo-Bestand
 - [x] Kategorien-Dialog im Backlog (`S.product.categories`, Standard: Entwickeln, Planen, Design)
 
+## ✅ Bereits umgesetzt (stand hier noch als offen)
+
+- [x] Product Backlog und Product Goal bearbeitet im Raum nur der Product Owner (und der
+      Raum-Besitzer); alle anderen lesen nur (`canEditPO()`, `body.nopo`)
+- [x] Definition of Done entfällt, stattdessen Tasks je Story (siehe Runde 2); damit auch
+      kein „Tor vor Fertig" mehr
+- [x] Post-it zeigt die Tasks samt Häkchen (`.pi-tasks`)
+
 ## ❓ Offen zur Entscheidung: Rechte und Rollen
 
-Bisher darf jedes Teammitglied alles; Beobachter und Lehrkraft lesen nur.
-- Soll der Product Owner allein das Backlog sortieren?
+Bisher darf jedes Teammitglied Board, Blockaden und Sprint-Abschluss bedienen; Beobachter
+und Lehrkraft lesen nur (Raum-Besitzer schreibt am Board mit).
 - Soll nur der Scrum Master Blockaden lösen / den Sprint abschließen?
 - Soll die Lehrkraft kommentieren können (pro Karte, pro Sprint)?
 
-**Vereinbarte Reihenfolge:** erst (1) Definition of Done, dann (2) Story-Tasks —
-die Tasks hängen am Datenmodell und werden später teurer.
-
 ---
 
-## 1 · Team-weite Definition of Done + Tor vor „Fertig"
+## 1 · Tasks mit eigener Zuständigkeit
 
-- [ ] Ort schaffen, wo das Team **eine** DoD für alle Karten formuliert
-      (Vorschlag: eigener Block in der Team- oder Product-Goal-Ansicht; im State
-      z. B. `S.product.dod: [{text}]`)
-- [ ] Neue Stories erben die Team-DoD statt der zwei hartcodierten Defaults
-      (`scrum-werkstatt.html:1950`)
-- [ ] Story-eigene Zusatzkriterien weiter möglich (Team-DoD + Story-Kriterien getrennt zeigen)
-- [ ] **Tor:** Karte darf nur nach „Fertig", wenn alle Häkchen gesetzt sind
-      — Drop blockieren (`:1594`), Status-Dropdown im Detail blockieren (`:1893`),
-      mit erklärendem Toast statt stiller Ablehnung
-- [ ] Spaltenhinweis „Alle DoD-Häkchen gesetzt" (`:1256`) stimmt dann auch wirklich
+Tasks gibt es (`s.tasks: [{text, done}]`), aber ohne Zuständigkeit.
+- [ ] Task bekommt `assignee` (`tasks: [{id, text, assignee, done}]`), pro Task ziehbar —
+      Selbstorganisation wird erst dadurch sichtbar (heute: genau eine Person pro Story)
+- [ ] Post-it zeigt Task-Fortschritt als Zähler (z. B. `2/4`), nicht nur die Liste
+- [ ] Task-Ids vergeben, damit der Mehrgeräte-Sync einzelne Tasks sauber zusammenführt
 
-*Warum zuerst:* wenig Code, verändert das Verhalten am Board sofort und erzwingt
-ein Teamgespräch, das sonst nie stattfindet.
-
-## 2 · Tasks innerhalb einer Story
-
-- [ ] Story bekommt Unteraufgaben mit eigener Zuständigkeit
-      (`tasks: [{id, text, assignee, done}]`)
-- [ ] Post-it zeigt Task-Fortschritt (z. B. `2/4`) neben dem DoD-Zähler (`:1554`)
-- [ ] Zuständigkeit pro Task ziehbar — Selbstorganisation wird erst dadurch sichtbar
-      (heute: genau eine Person pro Story)
-- [ ] Modell so wählen, dass es eine späte Mehrgeräte-Sync in MPSkills nicht verbaut
-
-## 3 · Burndown / Sprint-Verlauf
+## 2 · Burndown / Sprint-Verlauf
 
 - [x] Tägliches Mini-Log: Datum → offene SP — im Raum über `scrum_burndown` (0196),
       in der Ansicht unter `SW.burndown`
 - [ ] Burndown-Chart in der Sprint-Ansicht: Ideallinie vs. Ist
-- [ ] Heutiger Fortschrittsbalken (`:1462`) ist rein kalendarisch — daneben stellen
+- [ ] Heutiger Fortschrittsbalken ist rein kalendarisch — daneben stellen
 - [ ] Im Archiv den Verlauf des abgeschlossenen Sprints mitspeichern
 
-## 4 · Retro-Kreis schließen
+## 3 · Retro-Kreis schließen
 
 - [ ] „🎯 Nehmen wir uns vor" (`#rvNext`) in der **nächsten** Sprint-Planung wieder einblenden
 - [ ] Abfrage: hat's geklappt? (ja / teilweise / nein) — Antwort ans Archiv hängen
@@ -113,13 +101,13 @@ ein Teamgespräch, das sonst nie stattfindet.
 ## Zweite Reihe
 
 - [ ] **Impediment-Liste für den Scrum Master** — Übersicht aller Blockaden:
-      was, seit wann, wer kümmert sich. Heute nur Flag + Notiz pro Karte (`:1853`),
+      was, seit wann, wer kümmert sich. Heute nur Flag + Notiz pro Karte,
       keine Sammelansicht; die SM-Rolle ist bisher nur ein Etikett.
 - [ ] **Schätzen als Ritual (Planning Poker)** — heute setzt eine Person die SP im
-      Dropdown (`:1026`). Der Witz relativer Schätzung ist gleichzeitiges Aufdecken
+      Dropdown. Der Witz relativer Schätzung ist gleichzeitiges Aufdecken
       und die Diskussion danach.
 - [ ] **Akzeptanzkriterien pro Story** — „wann ist *diese* Karte richtig?" fehlt;
-      die Story-Formel sagt nur *warum*. Aktuell macht das DoD-Feld beides.
+      die Story-Formel sagt nur *warum*; Tasks sind Arbeitsschritte, keine Kriterien.
 - [ ] **Definition of Ready / Refinement** — nichts verhindert, dass eine unklare
       8-SP-Story in den Sprint wandert.
 - [ ] **Termine der Scrum-Events** — Sprint hat Start/Ende, aber Planung, Daily und
@@ -131,5 +119,5 @@ ein Teamgespräch, das sonst nie stattfindet.
 
 - [x] **Mehrere Gruppen auf einem Gerät** — im Raum: ein Raum je Gruppe (0196)
 - [ ] **Undo** für versehentliche Statuswechsel und Löschungen
-- [ ] **Druckansicht prüfen** (`:647`) — taugt das Archiv als Anhang einer Facharbeit?
+- [ ] **Druckansicht prüfen** — taugt das Archiv als Anhang einer Facharbeit?
 - [x] **Mehrgeräte-Sync** — Überführung nach MPSkills (0196)
