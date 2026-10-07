@@ -59,11 +59,18 @@ weiter im localStorage. Zeilennummern wurden entfernt (stammten vom Prototyp).
 
 ## ✅ Bereits umgesetzt (stand hier noch als offen)
 
-- [x] Product Backlog und Product Goal bearbeitet im Raum nur der Product Owner (und der
-      Raum-Besitzer); alle anderen lesen nur (`canEditPO()`, `body.nopo`)
+- [x] Product Backlog bearbeitet im Raum nur der Product Owner (und der Raum-Besitzer);
+      alle anderen lesen nur (`canEditPO()`, `body.nopo`)
 - [x] Definition of Done entfällt, stattdessen Tasks je Story (siehe Runde 2); damit auch
       kein „Tor vor Fertig" mehr
 - [x] Post-it zeigt die Tasks samt Häkchen (`.pi-tasks`)
+
+## ✅ Erledigt 07.10.2026 (Runde 5)
+
+- [x] Product Backlog für Nicht-PO ausgegraut statt versteckt (Neue Story, Kategorien, Stift, Griff);
+      Story aus dem Backlog geöffnet ist für sie nur lesbar; Hinweis oben im Backlog
+- [x] Product Goal: das ganze Team arbeitet daran; die Lehrkraft (Raum-Besitzer) kann es mit
+      „Product Goal fixieren" sperren (`S.product.goalLocked`) und mit „Product Goal öffnen" freigeben
 
 ## ❓ Offen zur Entscheidung: Rechte und Rollen
 

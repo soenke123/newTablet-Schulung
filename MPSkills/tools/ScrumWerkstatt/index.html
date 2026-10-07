@@ -711,7 +711,8 @@ body.ro #goalAdd, body.ro .ishell .x, body.ro #stDelete, body.ro #dEdit,
 body.ro .inline-add, body.ro .dodrow .rm, body.ro #btnCats, body.ro .b-grip{display:none!important}
 /* Product Backlog und Product Goal: im Raum nur der Product Owner.
    Alle anderen Mitglieder lesen nur (body.nopo, gesetzt von lockRO). */
-body.nopo #view-goal .rte-bar, body.nopo #goalAdd, body.nopo #goalImgs .x{display:none!important}
+/* Product Goal: fixiert (Lehrkraft) → ausgegraut */
+body.goallock #view-goal .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opacity:.3;pointer-events:none}
 /* Im Product Backlog bleiben die Bedienelemente sichtbar, aber ausgegraut */
 body.nopo .b-grip, body.nopo #view-backlog [data-edit]{opacity:.3;pointer-events:none}
 body.ro .postit{cursor:default}
@@ -1015,10 +1016,13 @@ body.inroom::after{display:none}
       <div>
         <div class="eyebrow">Warum machen wir das?</div>
         <h2 class="t">Product Goal</h2>
-        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll – und für wen. Dieses Ziel ist euer Kompass: Jede User Story im Backlog muss darauf einzahlen. Bearbeiten darf es nur der Product Owner.</p>
+        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll – und für wen. Dieses Ziel ist euer Kompass: Jede User Story im Backlog muss darauf einzahlen. Das ganze Team arbeitet daran – bis die Lehrkraft es fixiert.</p>
       </div>
-      <div class="sp"><span class="stat" id="goalSaved">gespeichert</span></div>
+      <div class="sp"><span class="stat" id="goalSaved">gespeichert</span>
+        <button class="btn" id="goalLockBtn" hidden></button></div>
     </div>
+
+    <div class="robar" id="goalNote" hidden>🔒 Das Product Goal ist fixiert – das Scrum Team kann es gerade nicht bearbeiten.</div>
 
     <div class="goalwrap">
       <div>
@@ -1603,8 +1607,9 @@ function toast(msg){
   t.classList.add('show'); clearTimeout(toast._t);
   toast._t=setTimeout(()=>t.classList.remove('show'),2600);
 }
-function ask(title,text,cb){
+function ask(title,text,cb,okLabel){
   $('#cfTitle').textContent=title; $('#cfText').textContent=text;
+  $('#cfOk').textContent=okLabel||'Ja, machen';
   confirmCb=cb; show('mConfirm');
 }
 function show(id){ $('#'+id).hidden=false; if(SW.on && SW.ready) lockRO(); }
@@ -1911,7 +1916,13 @@ function lockRO(){
     b.title=po?'':'Das verwaltet nur der Product Owner';
   });
   $('#poNote').hidden=po;
-  $('#goalRte').contentEditable = po ? 'true' : 'false';
+  const goalOK=canEditGoal();
+  document.body.classList.toggle('goallock', !goalOK);
+  $('#goalRte').contentEditable = goalOK ? 'true' : 'false';
+  $('#goalNote').hidden=goalOK || !!SW.ro;
+  const gb=$('#goalLockBtn');
+  gb.hidden=!SW.owner;
+  gb.textContent=S.product.goalLocked ? 'Product Goal öffnen' : 'Product Goal fixieren';
   $$('.postit, .mchip').forEach(p=>p.draggable=!SW.ro && !(p.classList.contains('postit') && isPhone()));
 }
 
@@ -1923,6 +1934,14 @@ function canEditPO(){
   if(SW.ro) return false;
   const m=S.team.find(x=>x.me);
   return !!m && m.role==='po';
+}
+
+/* Product Goal: das ganze Team, solange die Lehrkraft es nicht fixiert hat.
+   Außerhalb eines Raums (Einzelnutzung) gibt es kein Fixieren. */
+function canEditGoal(){
+  if(!SW.on) return true;
+  if(SW.ro) return false;
+  return !S.product.goalLocked;
 }
 
 /* Tasks anlegen/löschen: der Product Owner immer, alle anderen Mitglieder
@@ -3208,24 +3227,34 @@ function wire(){
   $$('.rte-bar button').forEach(b=>b.onclick=()=>{
     rte.focus();
     const v=b.dataset.cmd==='formatBlock' ? '<'+b.dataset.val+'>' : (b.dataset.val||null);
-    if(!canEditPO()) return;
+    if(!canEditGoal()) return;
     document.execCommand(b.dataset.cmd, false, v);
     S.product.goal=rte.innerHTML; save();
   });
+  $('#goalLockBtn').onclick=()=>{
+    if(!SW.owner) return;
+    if(S.product.goalLocked){
+      delete S.product.goalLocked; save(); renderAll(); toast('Product Goal geöffnet – das Team kann wieder daran arbeiten');
+    } else {
+      ask('Product Goal fixieren?','Solange das Product Goal fixiert ist, kann das Scrum Team das Goal nicht mehr bearbeiten.',()=>{
+        S.product.goal=rte.innerHTML; S.product.goalLocked=true; save(); renderAll(); toast('Product Goal fixiert');
+      },'Fixieren');
+    }
+  };
   let gt=null;
   rte.addEventListener('input',()=>{
-    if(!canEditPO()) return;
+    if(!canEditGoal()) return;
     clearTimeout(gt);
     $('#goalSaved').textContent='…';
     gt=setTimeout(()=>{ S.product.goal=rte.innerHTML; save(); $('#goalSaved').textContent='gespeichert'; },500);
   });
-  rte.addEventListener('blur',()=>{ S.product.goal=rte.innerHTML; save(); });
+  rte.addEventListener('blur',()=>{ if(!canEditGoal()) return; S.product.goal=rte.innerHTML; save(); });
   rte.addEventListener('paste',e=>{
     e.preventDefault();
     document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'));
   });
   $('#goalImgs').addEventListener('click',e=>{
-    if(!canEditPO()) return;
+    if(!canEditGoal()) return;
     if(e.target.closest('#goalAdd')) return $('#goalImgInput').click();
     const x=e.target.closest('[data-img]');
     if(x){ S.product.images.splice(+x.dataset.img,1); renderAll(); }
