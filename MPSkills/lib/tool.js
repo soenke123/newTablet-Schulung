@@ -105,7 +105,7 @@
        neue Reliefkarte von Wordisland unter — der Umbau war fertig,
        auf dem Bildschirm stand die alte Karte, und es sah aus, als
        wäre nichts geschehen. */
-    const v = '?v=20261004d';
+    const v = '?v=20261007b';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf
@@ -328,6 +328,13 @@
       // Nach einer eigenen Änderung sofort nachladen, statt bis zum
       // nächsten Takt zu warten — ein Tipp muss wirken.
       refresh: opts.refresh || function () {},
+      /* Eigene Reiter in der Raumleiste (nur lehrer.html, sonst null).
+         Ein Werkzeug, dessen Bühne mehrere Ebenen hat, ersetzt damit
+         den einen Reiter „3 <Werkzeug>" durch mehrere:
+           ctx.tabs([{ key, label, disabled }], aktiverKey, beiWahl)
+         beiWahl(key) kommt, wenn die Lehrkraft einen davon antippt.
+         Projektarbeit: „Gruppen-Übersicht" und „<Gruppe> Projekt". */
+      tabs:    opts.tabs || null,
       errText: code => errText(code, own),
       esc:     (s) => (window.escapeHtml
         ? window.escapeHtml(s)

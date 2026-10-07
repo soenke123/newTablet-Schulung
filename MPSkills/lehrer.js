@@ -75,6 +75,11 @@ const S = {
   code:    null,   // null = der Raum wird gerade erst angelegt
   view:    null,   // letzte vollständige Antwort von skill_room_get
   pane:    'set',
+  /* Eigene Reiter des Werkzeugs (ctx.tabs, lib/tool.js): welcher davon
+     gerade gilt und wen es beim Antippen zu fragen gilt. Ohne sie steht
+     dort der eine Reiter „3 <Werkzeug>". */
+  toolSub:  null,
+  toolPick: null,
   tools:   {},     // nur im Anlege-Modus: was zur Auswahl steht
   toolId:  null,   // im Anlege-Modus das gewählte, sonst das des Raums
   fields:  [],     // settingsFields des Werkzeugs
@@ -271,11 +276,7 @@ function showPane(which) {
      Getippte. */
   if (which === 'set' && S.setStale) { S.setStale = false; renderSettings(); }
 
-  document.querySelectorAll('.rtab').forEach(b => {
-    const on = b.dataset.pane === which;
-    b.classList.toggle('on', on);
-    b.setAttribute('aria-selected', String(on));
-  });
+  markTabs();
   for (const [id, key] of [['paneSet', 'set'], ['paneOnb', 'onb'], ['paneTool', 'tool']]) {
     const el = $(id);
     if (el) el.hidden = (key !== which);
@@ -295,6 +296,47 @@ function showPane(which) {
      nachmessen, sobald es wieder sichtbar ist. Dasselbe Signal wie
      früher beim Ein- und Ausklappen der Tür. */
   if (which === 'tool') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+}
+
+function markTabs() {
+  document.querySelectorAll('.rtab').forEach(b => {
+    const on = b.dataset.pane === S.pane && (!b.dataset.sub || b.dataset.sub === S.toolSub);
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+}
+
+/* Die eigenen Reiter eines Werkzeugs (ctx.tabs). Sie ersetzen den
+   Reiter „3 <Werkzeug>" und zählen von 3 an weiter. Alle zeigen auf
+   dasselbe Fach — was darin zu sehen ist, entscheidet das Werkzeug,
+   wenn pick(key) es fragt. `active` schaltet nur die Markierung um und
+   nie das Fach: steht die Lehrkraft gerade im Onboarding, bleibt sie
+   dort. */
+function setToolTabs(list, active, pick) {
+  const bar = document.querySelector('.rtabs-tabs');
+  if (!bar || !Array.isArray(list) || !list.length) return;
+  S.toolPick = typeof pick === 'function' ? pick : null;
+  if (active !== undefined) S.toolSub = active;
+  bar.querySelectorAll('.rtab[data-pane="tool"]').forEach(b => b.remove());
+  list.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'rtab';
+    b.setAttribute('role', 'tab');
+    b.dataset.pane = 'tool';
+    b.dataset.sub = String(t.key);
+    b.disabled = !!t.disabled;
+    if (t.disabled && t.title) b.title = t.title;
+    b.innerHTML = `<span class="rtab-n">${3 + i}</span><span class="rtab-t">${esc(t.label)}</span>`;
+    b.addEventListener('click', () => {
+      if (b.disabled) return;
+      S.toolSub = b.dataset.sub;
+      showPane('tool');
+      if (S.toolPick) S.toolPick(b.dataset.sub);
+    });
+    bar.appendChild(b);
+  });
+  markTabs();
 }
 
 /* Das Gerüst. Steht für beide Fälle — bestehender Raum wie neuer —,
@@ -1189,7 +1231,8 @@ async function mountTool(view) {
     actions: MPTool.presenterActions(S.code, trpc),
     title:   view.room.title,
     toast:   (m, err) => toast(m, err ? 'error' : ''),
-    refresh: () => { poller && poller.invalidate(); poller && poller.refresh(); }
+    refresh: () => { poller && poller.invalidate(); poller && poller.refresh(); },
+    tabs:    setToolTabs
   });
 
   box.innerHTML = '';
@@ -1212,6 +1255,8 @@ function unmountTool() {
 async function renderRoom(code) {
   stop();
   S.code = code;
+  S.toolSub = null;
+  S.toolPick = null;
   S.view = null;
   S.qrDrawn = {};
 
@@ -1281,7 +1326,8 @@ function paintRoom(data) {
   if (box) box.hidden = true;
 
   document.title = r.title + ' · MPSkills';
-  $('rtToolName').innerHTML = MPIcons.label(r.tool_id, r.tool_title || 'Skill');
+  // Hat das Werkzeug eigene Reiter (setToolTabs), gibt es diesen nicht mehr.
+  if ($('rtToolName')) $('rtToolName').innerHTML = MPIcons.label(r.tool_id, r.tool_title || 'Skill');
 
   const url = MPRoom.joinUrl(S.code);
   $('bUrl').textContent  = url.replace(/^https?:\/\//, '');

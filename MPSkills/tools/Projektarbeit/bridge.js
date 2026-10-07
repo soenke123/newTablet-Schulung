@@ -51,6 +51,7 @@
     ro: true,
     me: null,
     focus: null,            // Lehrkraft: Gruppe, deren Planungsraum offen ist
+    hostTabs: false,        // die Raumseite hat eigene Reiter (Übersicht / Projekt)
     viewFor: null,          // für welche Gruppe die aktuelle Ansicht geholt wurde
     render: () => {}
   };
@@ -141,7 +142,12 @@
     no_plan:         'Euer Planungsraum ist (noch) nicht geöffnet.',
     goal_locked:     'Das Projektziel ist fixiert — nur die Lehrkraft kann es öffnen.',
     not_yours:       'Das hat jemand anderes eingetragen — ändern kann es nur diese Person.',
-    decided:         'Über diesen Antrag ist schon entschieden.',
+    decided:         'Dieser Antrag ist genehmigt — er lässt sich nicht mehr ändern oder löschen.',
+    date_missing:    'Bitte ein gültiges Datum eintragen.',
+    date_past:       'Das Datum liegt in der Vergangenheit.',
+    place_missing:   'Wohin soll es gehen? Bitte einen Ort eintragen.',
+    who_missing:     'Wer ist dabei? Bitte mindestens eine Person aus eurer Gruppe auswählen.',
+    invalid_input:   'Damit stimmt etwas nicht.',
     payload_too_big: 'Das ist zu groß zum Speichern (zu viele oder zu große Bilder?).',
     quota_exceeded:  'Der Planungsraum ist voll.',
     text_blocked:    'Solche Wörter bitte nicht.',
@@ -265,6 +271,13 @@
         // gehört nicht hierher.
         if (m.view.role === 'presenter' && (m.focus || null) !== PA.focus) return;
         offer(m.view, m.focus || null);
+      } else if (m.type === 'host') {
+        PA.hostTabs = !!m.tabs;
+        if (PA.ready) PA.render();
+      } else if (m.type === 'goto') {
+        // Reiter auf der Raumseite angetippt: Übersicht oder Planungsraum.
+        PA.setFocus(m.group || null);
+        PA.render();
       } else if (m.type === 'reply' && waiting[m.rid]) {
         const r = waiting[m.rid]; delete waiting[m.rid]; r(m.res);
       }
@@ -277,7 +290,7 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     DEMO — eine kleine Nachbildung des Servers (Migration 0200)
+     DEMO — eine kleine Nachbildung des Servers (Migrationen 0200, 0201)
      ══════════════════════════════════════════════════════════
      Für das Schaufenster und das Öffnen ohne Raum. Spielt die
      Lehrkraft einer Beispielklasse; gerechnet wird wie auf dem
@@ -298,6 +311,8 @@
       .forEach(([p, g]) => { people.find(x => x.id === p).group = g; });
     people[0].label = 'Technik'; people[1].label = 'Recherche'; people[2].label = 'Präsentation';
     let seq = 3, rev = 1, rules = 'Abgabe der Dokumentation: Freitag in drei Wochen.\nPro Stunde trägt jede Person ihren Eintrag ins Stundenprotokoll ein.';
+    // Einwilligungen: Stufe 0 (keine) bis 2 (auch fremde Orte).
+    [2, 1, 2, 0, 1, 1, 2, 0, 1, 2, 0, 1].forEach((c, i) => { people[i].consent = c; });
     const store = { g1: {}, g2: {}, g3: {} };
     const put = (g, kind, id, data) => { store[g][kind + ':' + id] = { kind, id, v: 1, data }; };
 
@@ -315,13 +330,18 @@
      [0, 'p2', 'Gliederung der Präsentation mit Emma.', '']]
       .forEach(([off, by, text, next], i) => put('g1', 'log', 'l' + i,
         { date: day(off), by, byName: people.find(p => p.id === by).name, text, next, hours: 1, at: day(off) + 'T10:00:00Z' }));
-    put('g1', 'request', 'r1', { type: 'material', title: 'Lötstation ausleihen', text: 'Die Lötstation im Technikraum ist defekt. Dürfen wir die aus der Physiksammlung ausleihen?',
-      status: 'open', by: 'p1', byName: 'Mia', at: day(0) + 'T09:12:00Z' });
-    put('g1', 'request', 'r0', { type: 'material', title: 'Sensor BME280 bestellen', text: 'Kostet ca. 8 €.',
-      status: 'approved', decision: 'Bestelle ich heute. Kommt bis Montag.', by: 'p2', byName: 'Leon', at: day(-2) + 'T10:40:00Z', decidedAt: day(-2) + 'T12:00:00Z' });
+    put('g1', 'request', 'r1', { date: day(2), who: ['p1', 'p2'], place: 'Wetterdienst-Station am Flugplatz',
+      activity: 'Wir wollen uns zeigen lassen, wie dort gemessen wird, und Fotos für die Präsentation machen.',
+      status: 'open', by: 'p1', byName: 'Mia', at: day(0) + 'T09:12:00Z', sentAt: day(0) + 'T09:12:00Z', sentByName: 'Mia' });
+    put('g1', 'request', 'r0', { date: day(0), who: ['p1', 'p3'], place: 'Zuhause bei Mia',
+      activity: 'Das Gehäuse mit dem 3D-Drucker von Mias Vater drucken.',
+      status: 'approved', decision: 'Genehmigt. Um 11:30 Uhr seid ihr zurück.', by: 'p3', byName: 'Emma',
+      at: day(-2) + 'T10:40:00Z', sentAt: day(-2) + 'T10:40:00Z', sentByName: 'Emma', decidedAt: day(-2) + 'T12:00:00Z' });
     put('g2', 'goal', 'main', { title: 'Schulgarten-App', locked: true, images: [], text: '<p>Eine App, die zeigt, welche Beete gegossen werden müssen.</p>' });
     put('g2', 'task', 'a1', { title: 'Beete kartieren', col: 'doing', who: ['p4'], note: '', text: '', color: 'green', order: 0 });
-    put('g2', 'request', 'q1', { type: 'place', title: 'In den Schulgarten gehen', text: 'Wir möchten die Beete fotografieren.', status: 'open', by: 'p5', byName: 'Hannah', at: day(0) + 'T08:30:00Z' });
+    put('g2', 'request', 'q1', { date: day(0), who: ['p4', 'p5'], place: 'Gemeinschaftsgarten am Stadtpark',
+      activity: 'Wir möchten die Beete dort fotografieren und mit dem Gärtner sprechen.',
+      status: 'open', by: 'p5', byName: 'Hannah', at: day(0) + 'T08:30:00Z', sentAt: day(0) + 'T08:30:00Z', sentByName: 'Hannah' });
 
     const bump = () => { rev++; };
     const tidy = g => {
@@ -343,16 +363,18 @@
         open_requests: it.filter(i => i.kind === 'request' && (i.data.status || 'open') === 'open').length,
         tasks: { todo: c('todo'), blocked: c('blocked'), doing: c('doing'), done: c('done') },
         logs_today: it.filter(i => i.kind === 'log' && i.data.date === day(0)).length,
+        today_requests: it.filter(i => i.kind === 'request' && i.data.date === day(0))
+          .map(i => ({ id: i.id, status: i.data.status || 'open', place: i.data.place || '', who: i.data.who || [] })),
         title: goal ? goal.data.title : null
       });
     };
     const membersOf = g => people.filter(p => p.group === g)
-      .map(p => ({ id: p.id, name: p.name, label: p.label, online: p.online, me: false, key: p.key }));
+      .map(p => ({ id: p.id, name: p.name, label: p.label, consent: p.consent, online: p.online, me: false, key: p.key }));
 
     function view(focus) {
       const g = focus && groups.find(x => x.id === focus);
       return JSON.parse(JSON.stringify({
-        ok: true, role: 'presenter', rev,
+        ok: true, role: 'presenter', rev, today: day(0),
         room: { title: 'Klasse 8b · Projektwoche', join_open: true, rules },
         me: { id: null, name: 'Lehrkraft' },
         people, groups: groups.map(stats),
@@ -406,6 +428,11 @@
         const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };
         p.key = Math.random().toString(36).slice(2, 10).toUpperCase().replace(/[01IO]/g, 'X');
         bump(); return { ok: true, key: p.key };
+      }
+      if (fn === 'pa_room_consent') {
+        const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };
+        if (![0, 1, 2].includes(a.p_level)) return { ok: false, error: 'invalid_input' };
+        p.consent = a.p_level; bump(); return { ok: true, consent: p.consent };
       }
       if (fn === 'pa_room_member_update') {
         const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };

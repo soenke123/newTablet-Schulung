@@ -18,6 +18,16 @@
    Planungsraum betreten hat — dessen Inhalt. Welcher das ist, sagt
    der Rahmen ({type:'focus'}); er geht als p_group an pa_room_get.
 
+   Reiter (0201): Auf der Raumseite ersetzt die Projektarbeit den
+   Reiter „3 Projektarbeit" durch zwei eigene (ctx.tabs, lib/tool.js):
+     3 Gruppen-Übersicht     Lobby, Gruppen bilden, Klassenliste
+     4 „<Gruppe> Projekt"    der Planungsraum der zuletzt geöffneten
+                             Gruppe (nach dem Neuladen: die Gruppe, in
+                             der zuletzt etwas geschah)
+   Ein Tipp darauf geht als {type:'goto'} in den Rahmen; der Rahmen
+   antwortet wie immer mit {type:'focus'}. Ohne ctx.tabs (Schaufenster)
+   bleibt der Knopf „← Übersicht" im Rahmen.
+
    Nur geänderte Objekte über das Netz: pa_view / pa_room_get nehmen
    p_have ({ "task:t3": 4, … }) und lassen bei allem, was das Gerät in
    dieser Version schon hat, die Daten weg. `cache` füllt sie wieder
@@ -30,7 +40,8 @@
   const ALLOWED = {
     participant: ['pa_save', 'pa_member_update'],
     presenter:   ['pa_room_save', 'pa_room_member_update', 'pa_room_rekey', 'pa_room_assign',
-                  'pa_room_plan', 'pa_room_group_rename', 'pa_room_group_delete', 'pa_room_rules']
+                  'pa_room_plan', 'pa_room_group_rename', 'pa_room_group_delete', 'pa_room_rules',
+                  'pa_room_consent']
   };
 
   const GAP = 12;
@@ -44,6 +55,48 @@
   let focus = null;        // Lehrkraft: Gruppe, deren Planungsraum offen ist
   let lastFocus = null;    // … und für welche die letzte Ansicht geholt wurde
   let ticks = 0;
+  let lastGroup = null;    // Lehrkraft: zuletzt geöffneter Planungsraum (Reiter 4)
+  let tabSig = null;       // was zuletzt an ctx.tabs ging
+
+  /* ─── Reiter auf der Raumseite ──────────────────────────── */
+  const hasTabs = () => role === 'presenter' && ctx && typeof ctx.tabs === 'function' && !ctx.preview;
+
+  function groupTitle(g, people) {
+    if (!g) return '';
+    if (g.name) return g.name;
+    const m = (people || []).find(p => p.group === g.id);
+    return (m && m.name) || 'Einzelarbeit';
+  }
+
+  function updateTabs() {
+    if (!hasTabs()) return;
+    const groups = (lastView && lastView.groups) || [];
+    const people = (lastView && lastView.people) || [];
+    // Aufgelöst? Dann gilt sie nicht mehr. Die gerade geöffnete bleibt —
+    // eine eben eröffnete Einzelarbeit steht noch in keiner Ansicht.
+    if (lastView && lastGroup && lastGroup !== focus && !groups.some(g => g.id === lastGroup)) lastGroup = null;
+    // Nach dem Neuladen: die Gruppe mit offenem Planungsraum, in der
+    // zuletzt etwas geschah.
+    if (!lastGroup) {
+      const cand = groups.filter(g => g.plan_open)
+        .sort((a, b) => String(b.last || '').localeCompare(String(a.last || '')))[0];
+      if (cand) lastGroup = cand.id;
+    }
+    const g = groups.find(x => x.id === lastGroup) || null;
+    const list = [
+      { key: 'groups', label: 'Gruppen-Übersicht' },
+      { key: 'plan', label: g ? groupTitle(g, people) + ' Projekt' : 'Projekt',
+        disabled: !lastGroup, title: 'Erst in der Gruppen-Übersicht einen Planungsraum öffnen.' }
+    ];
+    const active = focus ? 'plan' : 'groups';
+    const sig = JSON.stringify([list, active]);
+    if (sig === tabSig) return;
+    tabSig = sig;
+    ctx.tabs(list, active, key => {
+      if (key === 'groups') post({ type: 'goto', group: null });
+      else if (lastGroup) post({ type: 'goto', group: lastGroup });
+    });
+  }
 
   /* ─── Rahmenhöhe (wie Scrum Werkstatt / NeuroLab) ───────── */
   function spaceBelow(el) {
@@ -118,6 +171,7 @@
       cache = next;
       lastView = v; lastFocus = asked;
       post({ type: 'view', view: v, focus: asked });
+      updateTabs();
     } finally {
       busy = false;
     }
@@ -131,6 +185,7 @@
     if (m.type === 'ready') {
       ready = true;
       lastSig = null;
+      post({ type: 'host', tabs: hasTabs() });
       if (lastView) post({ type: 'view', view: lastView, focus: lastFocus });
       tick(true);
       return;
@@ -139,6 +194,8 @@
     if (m.type === 'focus') {
       if (role !== 'presenter') return;
       focus = m.group || null;
+      if (focus) lastGroup = focus;
+      updateTabs();
       cache = {}; lastView = null; lastSig = null;
       // Läuft gerade eine Abfrage, verwirft sie ihr Ergebnis (s. o.) —
       // dann kurz danach noch einmal.
@@ -162,7 +219,7 @@
       root = el; ctx = c; role = c.role; destroyed = false;
 
       // Im Schaufenster ohne Raum: die Beispielklasse (?demo=1, bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007b';
       root.innerHTML =
         '<div class="pa-host">' +
           '<iframe class="pa-frame" src="tools/Projektarbeit/index.html' + q + '" ' +
@@ -171,6 +228,7 @@
       frame = root.querySelector('.pa-frame');
 
       if (!ctx.preview) {
+        updateTabs();
         document.body.classList.add('tool-fill');
         onMsg = onMessage;
         window.addEventListener('message', onMsg);
@@ -196,6 +254,7 @@
       pollTimer = onResize = onMsg = null;
       frame = root = ctx = role = null;
       ready = false; busy = false; lastSig = null; cache = {}; lastView = null; focus = null; ticks = 0;
+      lastGroup = null; tabSig = null;
     }
   });
 })();

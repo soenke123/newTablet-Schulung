@@ -157,7 +157,7 @@ r = await save('t1', [{ op: 'put', kind: 'log', id: 'l1', v: 0, data: { date: '2
 ok('5  Stundeneintrag: Urheber setzt der Server', r.ok && r.items[0].data.by === P[1] && r.items[0].data.byName === 'Kind 1');
 r = await save('t2', [{ op: 'put', kind: 'log', id: 'l1', v: 1, data: { date: '2026-10-07', text: 'überschrieben' } }]);
 ok('5  fremden Stundeneintrag ändern: not_yours', r.error === 'not_yours');
-r = await save('t2', [{ op: 'put', kind: 'request', id: 'q1', v: 0, data: { title: 'Mehr Zeit', text: 'Bitte', status: 'approved' } }]);
+r = await save('t2', [{ op: 'put', kind: 'request', id: 'q1', v: 0, data: { date: '2099-01-05', place: 'Stadtbibliothek', who: [P[2]], activity: 'Recherche', status: 'approved' } }]);
 ok('5  Antrag stellen: Status ist immer offen', r.ok && r.items[0].data.status === 'open' && r.items[0].data.at);
 tv = await tget();
 ok('5  rote Zahl: ein offener Antrag an Gruppe 1', tv.groups.find(g => g.id === G1).open_requests === 1);
@@ -167,7 +167,7 @@ ok('5  Lehrkraft genehmigt', r.ok && r.items[0].data.status === 'approved' && r.
 tv = await tget(G1);
 ok('5  … danach keine rote Zahl mehr, Inhalt in der Gruppenansicht',
    tv.groups.find(g => g.id === G1).open_requests === 0 && tv.items.length === 4 && tv.group.members[0].key);
-r = await save('t2', [{ op: 'put', kind: 'request', id: 'q1', v: 2, data: { title: 'Mehr Zeit', status: 'open' } }]);
+r = await save('t2', [{ op: 'put', kind: 'request', id: 'q1', v: 2, data: { date: '2099-01-05', place: 'anders', who: [P[2]], status: 'open' } }]);
 ok('5  entschiedener Antrag ist fest', r.error === 'decided');
 
 /* ══ 6. Projektziel fixieren ═════════════════════════════════════ */
