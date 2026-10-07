@@ -711,9 +711,9 @@ body.ro #goalAdd, body.ro .ishell .x, body.ro #stDelete, body.ro #dEdit,
 body.ro .inline-add, body.ro .dodrow .rm, body.ro #btnCats, body.ro .b-grip{display:none!important}
 /* Product Backlog und Product Goal: im Raum nur der Product Owner.
    Alle anderen Mitglieder lesen nur (body.nopo, gesetzt von lockRO). */
-body.nopo #btnNewStory, body.nopo #btnCats, body.nopo .b-grip,
-body.nopo #view-backlog [data-edit], body.nopo #view-goal .rte-bar,
-body.nopo #goalAdd, body.nopo #goalImgs .x{display:none!important}
+body.nopo #view-goal .rte-bar, body.nopo #goalAdd, body.nopo #goalImgs .x{display:none!important}
+/* Im Product Backlog bleiben die Bedienelemente sichtbar, aber ausgegraut */
+body.nopo .b-grip, body.nopo #view-backlog [data-edit]{opacity:.3;pointer-events:none}
 body.ro .postit{cursor:default}
 body.ro .avbtn{cursor:default}
 .robar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12.5px;color:var(--petrol);margin-bottom:16px}
@@ -966,6 +966,8 @@ body.inroom::after{display:none}
         </button>
       </div>
     </div>
+
+    <div class="robar" id="poNote" hidden>🔒 Das Product Backlog verwaltet nur der Product Owner – du kannst hier lesen, aber nichts ändern.</div>
 
     <div class="toolbar">
       <div class="search">
@@ -1904,6 +1906,11 @@ function lockRO(){
   });
   const po=canEditPO();
   document.body.classList.toggle('nopo', !po);
+  ['btnNewStory','btnCats'].forEach(id=>{
+    const b=$('#'+id); b.disabled=!po;
+    b.title=po?'':'Das verwaltet nur der Product Owner';
+  });
+  $('#poNote').hidden=po;
   $('#goalRte').contentEditable = po ? 'true' : 'false';
   $$('.postit, .mchip').forEach(p=>p.draggable=!SW.ro && !(p.classList.contains('postit') && isPhone()));
 }
@@ -2600,14 +2607,16 @@ function renderHistory(){
 /* ════════════════════════════════════════════════════════════
    STORY DETAIL
    ════════════════════════════════════════════════════════════ */
-function openDetail(id){
+let detailRO=false;   // Story aus dem Backlog geöffnet, ohne Product Owner zu sein
+function openDetail(id,ro){
   const s=story(id); if(!s) return;
   openStory=id;
+  detailRO=!!ro;
   $('#stTitle').textContent=s.title;
   $('#stSub').textContent=[s.key,s.category,`${s.points} Story Points`].filter(Boolean).join(' · ');
 
   const dod=s.tasks||[], dn=dod.filter(d=>d.done).length;
-  const tedit=canEditTasks(s);
+  const tedit=canEditTasks(s) && !detailRO;
   const formula=s.text
     ? esc(s.text).replace(/\n/g,'<br>')
     : (s.asA||s.want||s.soThat)
@@ -2615,6 +2624,7 @@ function openDetail(id){
     : `<span style="color:var(--ink-3)">Noch keine Story formuliert.</span>`;
 
   $('#stBody').innerHTML=`
+    ${detailRO?`<div class="robar">🔒 Im Product Backlog ändert nur der Product Owner Stories. Am Board kannst du sie bearbeiten.</div>`:''}
     <div class="quote" style="margin-bottom:16px">${formula}</div>
 
     <div class="grid3" style="margin-bottom:15px">
@@ -2702,9 +2712,12 @@ function openDetail(id){
     };
     body.querySelector('#dNew').addEventListener('keydown',e=>{ if(e.key==='Enter') body.querySelector('#dAdd').click(); });
   }
-  body.querySelector('#dEdit').onclick=()=>{ hide('mStory'); openEdit(id); };
+  body.querySelector('#dEdit').onclick=()=>{ if(detailRO) return; hide('mStory'); openEdit(id); };
 
   show('mStory');
+  // Lesemodus: alles ausgegraut, nicht weg
+  if(detailRO) body.querySelectorAll('input,select,textarea,#dEdit').forEach(el=>{ el.disabled=true; });
+  $('#stDelete').disabled=detailRO;
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -3144,12 +3157,12 @@ function wire(){
   /* Tasks – einmalig delegiert, damit sich beim Wiederöffnen keine Listener stapeln */
   $('#stBody').addEventListener('change',e=>{
     const t=e.target.closest('[data-dod]'); if(!t) return;
-    const s=story(openStory); if(!s) return;
+    const s=story(openStory); if(!s || detailRO) return;
     s.tasks[+t.dataset.dod].done=t.checked; renderAll(); openDetail(openStory);
   });
   $('#stBody').addEventListener('click',e=>{
     const t=e.target.closest('[data-dodrm]'); if(!t) return;
-    const s=story(openStory); if(!s || !canEditTasks(s)) return;
+    const s=story(openStory); if(!s || detailRO || !canEditTasks(s)) return;
     s.tasks.splice(+t.dataset.dodrm,1); renderAll(); openDetail(openStory);
   });
 
@@ -3165,8 +3178,8 @@ function wire(){
   });
   $('#backlogBody').addEventListener('click',e=>{
     if(e.target.closest('[data-grip]')) return;
-    const ed=e.target.closest('[data-edit]'); if(ed) return openEdit(ed.dataset.edit);
-    const o=e.target.closest('[data-open]'); if(o) return openDetail(o.dataset.open);
+    const ed=e.target.closest('[data-edit]'); if(ed){ if(!canEditPO()) return; return openEdit(ed.dataset.edit); }
+    const o=e.target.closest('[data-open]'); if(o) return openDetail(o.dataset.open,!canEditPO());
   });
   wireGrip();
   $$('#view-backlog thead th[data-sort]').forEach(th=>th.addEventListener('click',()=>{
