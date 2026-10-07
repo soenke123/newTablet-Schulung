@@ -43,9 +43,9 @@
   'use strict';
 
   const ALLOWED = {
-    participant: ['pa_save', 'pa_member_update'],
+    participant: ['pa_save', 'pa_member_update', 'pa_group_rename'],
     presenter:   ['pa_room_save', 'pa_room_member_update', 'pa_room_rekey', 'pa_room_assign',
-                  'pa_room_plan', 'pa_room_group_rename', 'pa_room_group_delete', 'pa_room_rules',
+                  'pa_room_plan', 'pa_room_group_delete', 'pa_room_rules',
                   'pa_room_consent', 'pa_room_export', 'pa_room_import', 'pa_room_backups',
                   'pa_room_backup_get', 'pa_room_backup_restore', 'pa_room_notify_get', 'pa_room_notify_set']
   };

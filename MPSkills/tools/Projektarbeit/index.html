@@ -203,8 +203,7 @@ main.wrap{padding-top:30px;padding-bottom:80px}
 .gcard.hasreq::before{background:var(--alarm)}
 .gcard.solo{background:linear-gradient(180deg,#f6f3ec,var(--paper-up) 70px)}
 .g-head{display:flex;align-items:flex-start;gap:10px;padding:13px 13px 8px 18px}
-.g-name{font-size:17px;font-weight:600;background:none;border:0;padding:0;text-align:left;line-height:1.25;min-width:0;overflow-wrap:anywhere}
-.g-name:hover{color:var(--petrol);text-decoration:underline dotted;text-underline-offset:3px}
+.g-name{display:block;font-size:17px;font-weight:600;line-height:1.25;min-width:0;overflow-wrap:anywhere}
 .g-sub{font-size:11.5px;color:var(--ink-3);margin-top:2px;line-height:1.35}
 .g-sub i{font-style:italic}
 .g-acts{margin-left:auto;display:flex;gap:4px;align-items:center;flex:none}
@@ -459,6 +458,9 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 /* ============================================================
    TEAM
    ============================================================ */
+.tname{margin:8px 0 4px;max-width:420px}
+.tname input{font-size:17px;font-weight:600}
+.tname small{display:block;font-size:12px;color:var(--ink-3);margin-top:4px}
 .teamgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
 .mcard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:12px}
 .mcard.me{border-color:var(--marker);box-shadow:0 0 0 1px var(--marker-wash),var(--sh-1)}
@@ -672,7 +674,11 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <!-- ══════════════════════════ REITER (Planungsraum) ══════════════════════════ -->
 <nav class="tabbar" id="tabbar" hidden>
   <div class="wrap tabs" role="tablist">
-    <button class="tab" role="tab" data-view="goal" aria-selected="true">
+    <button class="tab" role="tab" data-view="team" aria-selected="true">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg>
+      Team <span class="cnt" id="cntTeam">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="goal" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
       Projektziel
     </button>
@@ -687,10 +693,6 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <button class="tab" role="tab" data-view="requests" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
       Anträge <span class="cnt" id="cntReq">0</span><span class="nextreq" id="reqNext" hidden></span>
-    </button>
-    <button class="tab" role="tab" data-view="team" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg>
-      Team <span class="cnt" id="cntTeam">0</span>
     </button>
     <button class="tab" role="tab" data-view="rules" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 16.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
@@ -880,6 +882,12 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div>
         <div class="eyebrow">Wer ist dabei?</div>
         <h2 class="t" id="teamTitle">Unser Team</h2>
+        <div class="tname" id="teamNameF" hidden>
+          <label class="fl" for="teamNameIn">Euer Teamname</label>
+          <input type="text" id="teamNameIn" maxlength="40" placeholder="z. B. Die Füchse" autocomplete="off">
+          <small>Den Namen gebt ihr euch selbst — so heißt eure Gruppe auch bei der Lehrkraft.</small>
+        </div>
+        <p class="s" id="teamNameNote" hidden>Den Teamnamen geben sich die Schülerinnen und Schüler hier selbst.</p>
         <p class="s">Alle in der Gruppe sind gleich verantwortlich. Das Label ist frei: Recherche, Technik, Design, Präsentation … Es sagt den anderen, wofür ihr euch gerade zuständig fühlt.</p>
       </div>
     </div>
@@ -966,18 +974,6 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <div class="m-f">
       <button class="btn" data-close="mConfirm">Abbrechen</button>
       <div class="sp"><button class="btn danger" id="cfOk">Ja, machen</button></div>
-    </div>
-  </div>
-</div>
-
-<!-- Eingabe (Gruppe umbenennen) -->
-<div class="scrim" id="mPrompt" hidden>
-  <div class="modal narrow" role="dialog" aria-modal="true">
-    <div class="m-h"><div class="ttl" id="prTitle">Name</div></div>
-    <div class="m-b"><input type="text" id="prIn" maxlength="40"></div>
-    <div class="m-f">
-      <button class="btn" data-close="mPrompt">Abbrechen</button>
-      <div class="sp"><button class="btn primary" id="prOk">Speichern</button></div>
     </div>
   </div>
 </div>

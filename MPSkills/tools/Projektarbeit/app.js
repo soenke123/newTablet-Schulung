@@ -75,16 +75,11 @@ function toast(msg) {
 }
 window.toast = toast;
 
-let confirmCb = null, promptCb = null;
+let confirmCb = null;
 function ask(title, text, cb, okLabel) {
   $('#cfTitle').textContent = title; $('#cfText').textContent = text;
   $('#cfOk').textContent = okLabel || 'Ja, machen';
   confirmCb = cb; show('mConfirm');
-}
-function promptText(title, value, cb) {
-  $('#prTitle').textContent = title; $('#prIn').value = value || '';
-  promptCb = cb; show('mPrompt');
-  setTimeout(() => $('#prIn').select(), 40);
 }
 function show(id) { $('#' + id).hidden = false; }
 function hide(id) { $('#' + id).hidden = true; }
@@ -112,7 +107,7 @@ function cleanHtml(html) {
 const safeImg = s => typeof s === 'string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s);
 
 /* ── Zustand der Oberfläche ──────────────────────────────── */
-let tab = 'goal';
+let tab = 'team';
 let picked = null;          // Übersicht: angetippte Person (Tablet ohne Ziehen)
 let editTask = null;        // Aufgabe im Dialog (id oder null = neu)
 let tkWho = [], tkColor = 'yellow';
@@ -208,7 +203,7 @@ function renderAll() {
   if (PA.owner && PA.focus && PA.viewFor === PA.focus && !v.group) { PA.setFocus(null); renderAll(); return; }
   const gid = group() ? group().id : null;
   if (m !== lastMode || (m === 'plan' && gid && gid !== lastGroup)) {
-    if (m === 'plan' && lastMode !== 'plan') tab = PA.owner && (findG(PA.focus) || {}).open_requests ? 'requests' : 'goal';
+    if (m === 'plan' && lastMode !== 'plan') tab = PA.owner && (findG(PA.focus) || {}).open_requests ? 'requests' : 'team';
     lastMode = m; lastGroup = gid; editLog = null;
   }
   document.body.classList.toggle('inplan', m === 'plan');
@@ -357,7 +352,7 @@ function renderOverview() {
       ${g.open_requests ? `<span class="reqbadge" title="${g.open_requests} offene${g.open_requests === 1 ? 'r' : ''} Antrag${g.open_requests === 1 ? '' : 'e'}">${g.open_requests}</span>` : ''}
       <div class="g-head">
         <div style="min-width:0">
-          <button class="g-name" data-rename="${esc(g.id)}" title="Umbenennen">${esc(title)}</button>
+          <div class="g-name"${solo ? '' : ' title="Den Teamnamen gibt sich die Gruppe selbst (Reiter Team)."'}>${esc(title)}</div>
           <div class="g-sub">${solo ? 'Einzelarbeit' : `${mem.length} ${mem.length === 1 ? 'Person' : 'Personen'}`}${g.title ? ` · <i>„${esc(g.title)}“</i>` : ''}</div>
           ${today ? `<div style="margin-top:5px">${today}</div>` : ''}
         </div>
@@ -455,7 +450,7 @@ async function assign(pid, target) {
 
 async function openPlan(args) {
   const r = await PA.act('pa_room_plan', args);
-  if (r && r.group) { tab = 'goal'; PA.setFocus(r.group); renderAll(); }
+  if (r && r.group) { tab = 'team'; PA.setFocus(r.group); renderAll(); }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -907,7 +902,14 @@ function decide(id, status) {
    ════════════════════════════════════════════════════════════ */
 function renderTeam() {
   const gm = members();
-  $('#teamTitle').textContent = gm.length === 1 ? 'Einzelarbeit' : gTitle(group(), gm);
+  const g = group();
+  $('#teamTitle').textContent = gm.length === 1 && !(g && g.name) ? 'Einzelarbeit' : gTitle(g, gm);
+  // Den Teamnamen geben sich die Schüler selbst; die Lehrkraft sieht ihn nur.
+  const nameIn = $('#teamNameIn');
+  $('#teamNameF').hidden = PA.owner || !g;
+  $('#teamNameNote').hidden = !PA.owner;
+  if (document.activeElement !== nameIn) nameIn.value = (g && g.name) || '';
+  nameIn.disabled = !canWrite();
   $('#teamGrid').innerHTML = gm.map(m => {
     const focused = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.label === m.id;
     const c = consentOf(m);
@@ -1181,8 +1183,6 @@ function wire() {
     if (e.target.classList && e.target.classList.contains('scrim') && e.target.id !== 'mKey') hide(e.target.id);
   });
   $('#cfOk').addEventListener('click', () => { hide('mConfirm'); const cb = confirmCb; confirmCb = null; if (cb) cb(); });
-  $('#prOk').addEventListener('click', () => { hide('mPrompt'); const cb = promptCb; promptCb = null; if (cb) cb($('#prIn').value); });
-  $('#prIn').addEventListener('keydown', e => { if (e.key === 'Enter') $('#prOk').click(); });
 
   // Klicks im Inhalt
   document.addEventListener('click', async e => {
@@ -1191,13 +1191,7 @@ function wire() {
     // Übersicht
     if ((b = t.closest('[data-plan-p]'))) { e.stopPropagation(); setPick(null); openPlan({ p_participant: b.dataset.planP }); return; }
     if ((b = t.closest('[data-plan-g]'))) { openPlan({ p_group: b.dataset.planG }); return; }
-    if ((b = t.closest('[data-open]'))) { tab = (findG(b.dataset.open) || {}).open_requests ? 'requests' : 'goal'; PA.setFocus(b.dataset.open); renderAll(); return; }
-    if ((b = t.closest('[data-rename]'))) {
-      const g = findG(b.dataset.rename); if (!g) return;
-      promptText('Gruppe umbenennen', g.name || gTitle(g, (V().people || []).filter(p => p.group === g.id)),
-        val => PA.act('pa_room_group_rename', { p_group: g.id, p_name: val }));
-      return;
-    }
+    if ((b = t.closest('[data-open]'))) { tab = (findG(b.dataset.open) || {}).open_requests ? 'requests' : 'team'; PA.setFocus(b.dataset.open); renderAll(); return; }
     if ((b = t.closest('[data-gdel]'))) {
       const g = findG(b.dataset.gdel); if (!g) return;
       ask('Gruppe auflösen?', g.plan_open
@@ -1356,7 +1350,12 @@ function wire() {
   $('#btnNewReq').addEventListener('click', () => openReq(null));
   $('#rqSave').addEventListener('click', saveReq);
 
-  // Team: Label
+  // Team: Name (nur Schüler) und Label
+  $('#teamNameIn').addEventListener('change', e => {
+    if (PA.owner || !canWrite()) return;
+    PA.act('pa_group_rename', { p_name: e.target.value.trim() });
+  });
+  $('#teamNameIn').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
   document.addEventListener('change', e => {
     const inp = e.target.closest('[data-label]'); if (!inp || !canWrite()) return;
     PA.act(PA.owner ? 'pa_room_member_update' : 'pa_member_update', { p_participant: inp.dataset.label, p_label: inp.value.trim() });

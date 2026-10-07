@@ -161,7 +161,7 @@
     email_invalid:   'Diese Adresse sieht nicht richtig aus.',
     too_soon:        'Gerade erst verschickt — bitte zwei Minuten warten.',
     fn_missing_mail: 'Auf dem Server fehlt die Migration 0203 (Antrags-Mails).',
-    fn_missing:      'Auf dem Server fehlt eine Migration der Projektarbeit (0200–0202). Bitte der Lehrkraft Bescheid sagen.'
+    fn_missing:      'Auf dem Server fehlt eine Migration der Projektarbeit (0200–0204). Bitte der Lehrkraft Bescheid sagen.'
   };
   PA.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
 
@@ -423,10 +423,6 @@
         const grp = groups.find(x => x.id === g); if (!grp) return { ok: false, error: 'not_found' };
         grp.plan_open = true; bump();
         return { ok: true, group: g };
-      }
-      if (fn === 'pa_room_group_rename') {
-        const g = groups.find(x => x.id === a.p_group); if (!g) return { ok: false, error: 'not_found' };
-        g.name = String(a.p_name || '').trim().slice(0, 40); bump(); return { ok: true };
       }
       if (fn === 'pa_room_group_delete') {
         const g = groups.find(x => x.id === a.p_group); if (!g) return { ok: false, error: 'not_found' };

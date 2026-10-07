@@ -94,7 +94,7 @@ const G1 = (await call(`pa_room_assign('PRJEKT', $1, null, $2)`, [P[2], P[1]])).
 await call(`pa_room_plan('PRJEKT', $1)`, [G1]);
 const G2 = (await call(`pa_room_assign('PRJEKT', $1, null, $2)`, [P[4], P[3]])).group;
 await call(`pa_room_plan('PRJEKT', $1)`, [G2]);
-await call(`pa_room_group_rename('PRJEKT', $1, 'Füchse')`, [G1]);
+await call(`pa_group_rename('t1', 'Füchse')`);   // seit 0204 benennt die Gruppe selbst
 
 /* ══ 1. Adresse ══════════════════════════════════════════════════ */
 let r = await nget();
