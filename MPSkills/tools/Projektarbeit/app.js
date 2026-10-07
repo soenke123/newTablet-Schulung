@@ -24,6 +24,15 @@
    Die Erklärungen stehen als Kacheln mit Icons über den Reitern
    (guide()), ohne Emojis.
 
+   Zeitbalken (To-dos): Die Gruppe trägt ein, wie viele Schulstunden
+   sie bis zum Ende hat. Das steht als eigenes Objekt task/„budget"
+   ({ budget: true, hours }) neben den Karten — als Teil des Ziels wäre
+   es nach dem Fixieren gesperrt. todos() lässt es weg. Der Balken
+   füllt sich mit den geschätzten Stunden der To-dos, gefärbt nach
+   Spalte (nicht nach Zettelfarbe).
+   Dokumentation: ohne Stundenumfang (es wird nicht erfasst, wer wie
+   viel gemacht hat), dafür „an welchem To-do" (log.task/taskTitle).
+
    Anträge (0201) heißen immer: „wir wollen an diesem Tag außerhalb des
    Schulgeländes lernen" — mit Datum, wer dabei ist, Ziel mit Adresse
    (place) und einem Text (activity) mit WEG und VERKEHRSMITTEL und
@@ -119,6 +128,8 @@ let editReq = null;
 let rqWho = [];
 let showList = (() => { try { return localStorage.getItem('pa_clist') !== '0'; } catch (e) { return true; } })();
 let editLog = null;
+let hTask = null;           // Dokumentation: gewähltes To-do (id, '' = etwas anderes, null = nichts gewählt)
+let tdOpen = false;         // … Auswahlliste offen?
 let hWho = null;            // Stundeneintrag: wer war dabei (null = noch nicht gewählt → ich)
 let reqFilter = 'all';
 let phoneCol = 'doing';
@@ -126,11 +137,15 @@ let goalTimer = null, goalDirty = false;
 let lastMode = null, lastGroup = null;
 
 const COLS = [
-  { k: 'todo',    nm: 'Zu erledigen', c: 'var(--st-todo)',  hint: 'Was ansteht. Kleine Schritte, Zeit geschätzt.' },
-  { k: 'blocked', nm: 'Blockiert',    c: 'var(--st-block)', hint: 'Hängt fest. Schreibt dazu, was fehlt.' },
-  { k: 'doing',   nm: 'In Arbeit',    c: 'var(--st-doing)', hint: 'Daran arbeitet gerade jemand.' },
-  { k: 'done',    nm: 'Fertig',       c: 'var(--st-done)',  hint: 'Geschafft!' }
+  { k: 'todo',    nm: 'Zu erledigen', c: 'var(--k-todo)',  hint: 'Was ansteht. Kleine Schritte, Zeit geschätzt.' },
+  { k: 'blocked', nm: 'Blockiert',    c: 'var(--k-block)', hint: 'Hängt fest. Schreibt dazu, was fehlt.' },
+  { k: 'doing',   nm: 'In Arbeit',    c: 'var(--k-doing)', hint: 'Daran arbeitet gerade jemand.' },
+  { k: 'done',    nm: 'Fertig',       c: 'var(--k-done)',  hint: 'Geschafft!' }
 ];
+const colOf = t => (COLS.some(c => c.k === t.col) ? t.col : 'todo');
+// Die Karten — ohne das Zeitbudget, das als task/budget daneben liegt.
+const todos = () => PA.list('task').filter(t => !t.budget);
+const budgetHours = () => { const b = PA.get('task', 'budget'); return b && b.budget ? Math.max(0, +b.hours || 0) : 0; };
 // Zeitschätzung eines To-dos in Schulstunden (0 = keine Schätzung).
 const ESTS = [0.5, 1, 2, 3, 4, 6, 8];
 const fmtEst = h => (h === 0.5 ? '½' : String(h)) + ' Std.';
@@ -273,14 +288,14 @@ function renderGuides() {
   if ($('#workGuide').firstChild) return;
   $('#workGuide').innerHTML = guide([
     ['split', 'Zerlegen', 'Teilt euer Projekt vom Start bis zum Ende in kleine Arbeitsschritte — alle, die ihr erwartet.'],
-    ['clock', 'Zeit schätzen', 'Schätzt bei jedem To-do, wie viele Schulstunden ihr dafür braucht.'],
+    ['clock', 'Zeit planen', 'Zählt, wie viele Schulstunden ihr bis zum Ende habt, und tragt sie unten ein. Schätzt bei jedem To-do die Stunden — der Balken zeigt, ob alles passt.'],
     ['move', 'Weiterschieben', 'Angefangen → <b>In Arbeit</b>. Erledigt → <b>Fertig</b>. Hängt etwas? → <b>Blockiert</b>.'],
     ['refresh', 'Anpassen', 'To-dos dürft ihr jederzeit ändern und in kleinere Aufgaben aufteilen.']
   ]);
   $('#hoursGuide').innerHTML = guide([
-    ['cal', 'Jeder Arbeitstag', 'Ein Eintrag mit dem Datum des Tages — gern mehrere.'],
+    ['cal', 'Jeder Arbeitstag', 'Ein Eintrag mit dem Datum des Tages — gern mehrere nebeneinander.'],
     ['people', 'Wer war da?', 'Antippen, wer dabei war. Wer krank ist oder fehlt, bleibt weg und steht beim Tag unter „fehlte“.'],
-    ['pen', 'Wer hat was gemacht?', 'Name + Arbeitsschritt. Tipp: Schaut in eure To-dos.'],
+    ['pen', 'Woran gearbeitet?', 'To-do auswählen und kurz schreiben, was ihr geschafft habt.'],
     ['camera', 'Fotos bei Exkursionen', 'Diese Regel kommt später dazu.', true]
   ]);
   $('#reqCheck').innerHTML = reqCheckHtml();
@@ -301,7 +316,7 @@ function renderHeader(m) {
     const g = group(), gm = members();
     $('#brandEyebrow').textContent = 'Planungsraum · ' + gTitle(g, gm);
     $('#brandName').textContent = goalObj().title || gTitle(g, gm);
-    const tasks = PA.list('task');
+    const tasks = todos();
     const due = goalObj().due;
     pill.hidden = !tasks.length && !due;
     pill.innerHTML = `${due ? `<div><div class="lbl">Fertig bis</div><div class="val">${esc(deShort(due))}</div></div>
@@ -333,7 +348,7 @@ function renderMenu(m) {
 }
 
 function renderCounts() {
-  const tasks = PA.list('task'), logs = PA.list('log'), reqs = PA.list('request');
+  const tasks = todos(), logs = PA.list('log'), reqs = PA.list('request');
   const open = reqs.filter(r => (r.status || 'open') === 'open').length;
   $('#cntWork').textContent = tasks.filter(t => t.col !== 'done').length;
   $('#cntHours').textContent = logs.length;
@@ -571,7 +586,7 @@ function renderDueHint(due) {
   const d = parseD(due);
   if (!d) { el.className = 'duehint'; el.textContent = 'Noch kein Datum'; return; }
   const days = Math.round((d - parseD(todayIso())) / 864e5);
-  el.className = 'duehint' + (days < 0 ? ' over' : days <= 14 ? ' soon' : '');
+  el.className = 'duehint' + (days < 0 ? ' late' : days <= 14 ? ' soon' : '');
   el.innerHTML = ICO.clock + ' ' + esc(days < 0 ? `seit ${-days} ${-days === 1 ? 'Tag' : 'Tagen'} vorbei`
     : days === 0 ? 'heute' : days < 14 ? `noch ${days} ${days === 1 ? 'Tag' : 'Tage'}` : `noch ${Math.round(days / 7)} Wochen`);
 }
@@ -634,13 +649,12 @@ function postit(t) {
 }
 
 function renderWork() {
-  const tasks = PA.list('task').sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title)));
-  const by = k => tasks.filter(t => (COLS.some(c => c.k === t.col) ? t.col : 'todo') === k);
+  const tasks = todos().sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title)));
+  const by = k => tasks.filter(t => colOf(t) === k);
   const done = by('done').length, blk = by('blocked').length;
-  // Was noch offen ist, in geschätzten Schulstunden.
-  const left = tasks.filter(t => t.col !== 'done').reduce((a, t) => a + (+t.est || 0), 0);
+  renderBudget(tasks);
   $('#workStats').innerHTML = tasks.length
-    ? `<span class="stat">Fertig <b>${done}/${tasks.length}</b></span>${left ? `<span class="stat" title="geschätzte Zeit aller offenen To-dos">noch ca. <b>${esc(fmtH(left))}</b></span>` : ''}${blk ? `<span class="badge bg-block">${blk} blockiert</span>` : ''}
+    ? `<span class="stat">Fertig <b>${done}/${tasks.length}</b></span>${blk ? `<span class="badge bg-block">${blk} blockiert</span>` : ''}
        <button class="btn primary needs-write" data-newtask="todo">${ICO.plus} To-do</button>`
     : `<button class="btn primary needs-write" data-newtask="todo">${ICO.plus} Erstes To-do</button>`;
 
@@ -659,6 +673,58 @@ function renderWork() {
       </div>
     </div>`;
   }).join('');
+}
+
+// Der Zeitbalken: Stunden bis zum Ende, gefüllt mit den Schätzungen der To-dos.
+function renderBudget(tasks) {
+  const box = $('#budget');
+  const inp = box.querySelector('#budIn');
+  const typing = inp && document.activeElement === inp;
+  const total = budgetHours();
+  const sum = k => tasks.filter(t => colOf(t) === k).reduce((a, t) => a + (+t.est || 0), 0);
+  const parts = [['done', 'fertig'], ['doing', 'in Arbeit'], ['blocked', 'blockiert'], ['todo', 'zu erledigen']].map(([k, nm]) => ({ k, nm, h: sum(k) }));
+  const planned = parts.reduce((a, p) => a + p.h, 0);
+  const noEst = tasks.filter(t => !+t.est).length;
+  const scale = Math.max(total, planned) || 1;
+  const due = goalObj().due;
+  const pct = h => (h / scale * 100).toFixed(2) + '%';
+  let msg = '';
+  if (!total) msg = `<div class="bud-msg info">${ICO.warn} Zählt im IServ-Kalender, wie viele Schulstunden ihr ${due ? 'bis zum ' + esc(deShort(due)) : 'bis zum Ende'} habt, und tragt sie oben ein.</div>`;
+  else if (planned > total) msg = `<div class="bud-msg bad">${ICO.warn} Ihr habt ${esc(fmtH(planned - total))} mehr verplant, als ihr Zeit habt. Streicht oder verkleinert To-dos.</div>`;
+  else if (noEst) msg = `<div class="bud-msg info">${ICO.clock} ${noEst === 1 ? 'Ein To-do hat' : noEst + ' To-dos haben'} noch keine Zeitschätzung.</div>`;
+  else if (tasks.length) msg = `<div class="bud-msg ok">${ICO.clock} Passt: ${esc(fmtH(total - planned))} sind noch frei — als Puffer oder für neue To-dos.</div>`;
+  const html = `
+    <div class="bud-top">
+      <div class="bud-in"><label for="budIn">Wie viele Schulstunden habt ihr bis zum Ende?</label>
+        <input type="number" id="budIn" min="0" max="400" step="1" inputmode="numeric" placeholder="?" ${canWrite() ? '' : 'disabled'}>
+        <small>${due ? 'Fertig bis ' + esc(deDay(due)) : 'Fertig-Datum steht im Reiter Projektziel'}</small></div>
+      <div class="bud-sum">verplant <b>${esc(fmtH(planned))}</b>${total ? ` von <b>${esc(fmtH(total))}</b>` : ''}</div>
+    </div>
+    <div class="bar${total && planned > total ? ' bad' : ''}" role="img" aria-label="${esc(`verplant ${fmtH(planned)} von ${fmtH(total)}`)}">
+      ${parts.filter(p => p.h).map(p => `<span class="b-${p.k}" style="width:${pct(p.h)}" title="${esc(p.nm + ': ' + fmtH(p.h))}">${p.h / scale > .07 ? esc(fmtH(p.h)) : ''}</span>`).join('')}
+      ${total && planned > total ? `<i class="b-mark" style="left:${pct(total)}" title="eure Zeit endet hier"></i>` : ''}
+    </div>
+    <div class="bud-leg">${parts.map(p => `<span><i class="k-${p.k}"></i>${p.nm} ${esc(fmtH(p.h))}</span>`).join('')}
+      ${total ? `<span><i class="free"></i>frei ${esc(fmtH(Math.max(0, total - planned)))}</span>` : ''}</div>
+    ${msg}`;
+  if (typing) {
+    // Beim Tippen nur den Balken neu zeichnen, nicht das Feld.
+    const tmp = document.createElement('div'); tmp.innerHTML = html;
+    ['.bud-sum', '.bar', '.bud-leg'].forEach(sel => { box.querySelector(sel).outerHTML = tmp.querySelector(sel).outerHTML; });
+    const m = box.querySelector('.bud-msg'), nm = tmp.querySelector('.bud-msg');
+    if (m) m.remove(); if (nm) box.appendChild(nm);
+    return;
+  }
+  box.innerHTML = html;
+  box.querySelector('#budIn').value = total || '';
+}
+function saveBudget() {
+  if (!canWrite()) return;
+  const v = $('#budIn').value.trim();
+  const hours = Math.max(0, Math.min(400, Math.round(+v || 0)));
+  if (hours === budgetHours()) return;
+  PA.put('task', 'budget', { budget: true, hours });
+  renderAll();
 }
 
 function openTask(id, col) {
@@ -740,12 +806,8 @@ function renderHours() {
   $('#hFormEyebrow').textContent = editLog ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
   $('#hSave').lastChild.textContent = editLog ? ' Speichern' : ' Eintragen';
   $('#hCancel').hidden = !editLog;
-  if (!$('#hForm').hidden) renderLogWho();
+  if (!$('#hForm').hidden) { renderLogWho(); renderTodoPick(); }
 
-  // Summe je Person: jede Stunde zählt für alle, die dabei waren.
-  const sums = {};
-  logs.forEach(l => logWho(l).forEach(id => { sums[id] = (sums[id] || 0) + (+l.hours || 0); }));
-  $('#hSums').innerHTML = gm.map(m => `<span class="sumchip">${avatar(m, 26)}<span>${esc(m.name)}</span><b>${esc(fmtH(sums[m.id] || 0))}</b></span>`).join('');
 
   if (!logs.length) {
     $('#hList').innerHTML = `<div class="nothing" style="padding:34px 20px"><h3>Noch keine Einträge</h3>
@@ -763,7 +825,7 @@ function renderHours() {
     return `
     <div class="dayh"><h4>${esc(deDay(d.date))}</h4><span class="present">dabei: ${esc(andList([...seen.values()]))}</span>${away.length
       ? `<span class="absent" title="steht an diesem Tag in keinem Eintrag">fehlte: ${esc(andList(away))}</span>` : ''}</div>
-    ${d.list.slice().reverse().map(l => {
+    <div class="daygrid">${d.list.slice().reverse().map(l => {
       const ps = logPeople(l);
       const mine = !!meId() && logWho(l).includes(meId());
       const edit = canEditLog(l);
@@ -771,18 +833,46 @@ function renderHours() {
       return `<div class="entry${mine ? ' mine' : ''}">
         <span class="avs">${ps.map(p => avatar(p, 30)).join('')}</span>
         <div class="body">
-          <div class="top"><b>${esc(andList(ps.map(p => p.name)) || '?')}</b>${l.hours ? `<span class="h">${esc(fmtH(l.hours))}</span>` : ''}
+          <div class="top"><b>${esc(andList(ps.map(p => p.name)) || '?')}</b>
             ${edit || (PA.owner && canWrite()) ? `<span class="acts">
               ${edit ? `<button class="btn ghost icon" data-logedit="${esc(l.id)}" title="Bearbeiten" aria-label="Bearbeiten">${ICO.pen}</button>` : ''}
               <button class="btn ghost icon" data-logdel="${esc(l.id)}" title="Löschen" aria-label="Löschen">${ICO.trash}</button></span>` : ''}
           </div>
+          ${todoChip(l)}
           <p>${esc(l.text)}</p>
           ${l.next ? `<div class="nx"><b>Nächstes</b>${esc(l.next)}</div>` : ''}
           ${byOther ? `<div class="by">eingetragen von ${esc(l.byName)}</div>` : ''}
         </div>
       </div>`;
-    }).join('')}`;
+    }).join('')}</div>`;
   }).join('');
+}
+
+// Am Eintrag: an welchem To-do — Farbe nach der Spalte, in der es jetzt steht.
+function todoChip(l) {
+  if (!l.task) return '';
+  const t = PA.get('task', l.task);
+  const k = t && !t.budget ? colOf(t) : 'none';
+  const nm = (t && t.title) || l.taskTitle || 'gelöschtes To-do';
+  return `<div class="etodo" title="${esc(t ? (COLS.find(c => c.k === k) || {}).nm || '' : 'nicht mehr auf dem Board')}"><i class="kdot k-${k}"></i><span>${esc(nm)}</span></div>`;
+}
+// Auswahl „An welchem To-do?": In Arbeit oben, dann der Rest, farbig nach Spalte.
+function renderTodoPick() {
+  const box = $('#hTodo');
+  const list = todos();
+  const order = ['doing', 'todo', 'blocked', 'done'];
+  const cur = hTask ? PA.get('task', hTask) : null;
+  const label = hTask === '' ? '<span class="nm">Etwas anderes (kein To-do)</span>'
+    : cur ? `<i class="kdot k-${colOf(cur)}"></i><span class="nm">${esc(cur.title || 'Ohne Titel')}</span>`
+    : `<span class="nm ph">${list.length ? 'To-do auswählen …' : 'Noch keine To-dos'}</span>`;
+  box.innerHTML = `<button type="button" class="tdbtn" data-tdopen aria-haspopup="listbox" aria-expanded="${tdOpen}">${label}
+      <svg width="12" height="8" viewBox="0 0 10 6" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 1l4 4 4-4"/></svg></button>
+    ${tdOpen ? `<div class="tdlist" role="listbox">${order.map(k => {
+      const its = list.filter(t => colOf(t) === k).sort((a, b) => (a.order || 0) - (b.order || 0));
+      if (!its.length) return '';
+      return `<div class="tdgrp">${esc(COLS.find(c => c.k === k).nm)}</div>` + its.map(t =>
+        `<button type="button" class="tdopt" role="option" data-k="${k}" data-tdopt="${esc(t.id)}" aria-selected="${hTask === t.id}"><i class="kdot k-${k}"></i>${esc(t.title || 'Ohne Titel')}${+t.est ? `<small>${esc(fmtEst(+t.est))}</small>` : ''}</button>`).join('');
+    }).join('')}<div class="tdgrp">Sonst</div><button type="button" class="tdopt" role="option" data-tdopt="" aria-selected="${hTask === ''}"><i class="kdot k-none"></i>Etwas anderes (kein To-do)</button></div>` : ''}`;
 }
 
 function renderLogWho() {
@@ -798,14 +888,17 @@ function saveLog() {
   if (!text) { toast('Was wurde gemacht? Ein Satz reicht.'); $('#hText').focus(); return; }
   const who = (hWho || []).filter(id => members().some(m => m.id === id));
   if (!who.length) { toast('Wer war dabei? Bitte mindestens eine Person antippen.'); return; }
+  if (hTask === null) { toast('An welchem To-do habt ihr gearbeitet? Bitte auswählen.'); tdOpen = true; renderTodoPick(); return; }
   const old = editLog ? PA.get('log', editLog) : null;
+  const tk = hTask ? PA.get('task', hTask) : null;
   const data = Object.assign({}, old || {}, {
     date: $('#hDate').value || todayIso(),
-    hours: +$('#hHours').value || 1,
+    task: tk ? hTask : '', taskTitle: tk ? String(tk.title || '').slice(0, 120) : '',
     text: text.slice(0, 1500),
     next: $('#hNext').value.trim().slice(0, 600),
     who, whoNames: who.map(id => (person(id) || {}).name || '')
   });
+  delete data.hours;   // wird nicht mehr erfasst
   if (!old) { data.by = meId(); data.byName = (PA.me && PA.me.name) || ''; }
   PA.put('log', editLog || PA.newId('l'), data);
   resetLogForm();
@@ -814,16 +907,17 @@ function saveLog() {
 }
 function resetLogForm() {
   editLog = null;
-  hWho = null;
+  hWho = null; hTask = null; tdOpen = false;
   $('#hText').value = ''; $('#hNext').value = '';
-  $('#hDate').value = todayIso(); $('#hHours').value = '1';
+  $('#hDate').value = todayIso();
 }
 function editLogEntry(id) {
   const l = PA.get('log', id); if (!l) return;
   editLog = id;
   hWho = logWho(l).slice();
   $('#hDate').value = l.date || todayIso();
-  $('#hHours').value = String(l.hours || 1);
+  hTask = l.task && PA.get('task', l.task) ? l.task : (l.task === '' ? '' : null);
+  tdOpen = false;
   $('#hText').value = l.text || '';
   $('#hNext').value = l.next || '';
   renderHours();
@@ -989,15 +1083,14 @@ function reqCheckHtml() {
     ['sign', 'Einverständniserklärung', 'Die unterschriebene Erklärung ist abgegeben.'],
     ['book', 'Logbuch aktuell', 'To-dos und Dokumentation sind auf dem neuesten Stand — sonst können wir nicht beurteilen, ob der Antrag für euer Projekt sinnvoll ist.'],
     ['form', 'Antrag vollständig', 'Datum, wer mitfährt, Ziel mit Adresse, Weg und Verkehrsmittel, Begründung.'],
-    ['mail', 'Hinweismail schicken', 'An beide mPS-Lehrkräfte und alle Gruppenmitglieder.'],
-    ['inbox', 'Auf Antwort warten', 'Erst wenn unsere Mail sagt „genehmigt“, dürft ihr los.'],
+    ['inbox', 'Genehmigung abwarten', 'Erst wenn der Antrag hier auf „genehmigt“ steht, dürft ihr los. Steht ein Kommentar der Lehrkraft dabei: unbedingt beachten.'],
     ['plus', 'Jeder Termin = neuer Antrag', 'Für jeden Tag stellt ihr einen eigenen Antrag.']
   ];
   return `<div class="eyebrow">Checkliste</div>
     <h3>Bevor ihr losdürft</h3>
-    <p class="lead">Wir genehmigen euren Antrag nur, wenn alle sechs Punkte erfüllt sind.</p>
+    <p class="lead">Wir genehmigen euren Antrag nur, wenn alle fünf Punkte erfüllt sind.</p>
     <ol class="rclist">${steps.map(([k, t, txt], i) => `<li>${gIco(k, i + 1)}<div><b>${t}</b>${txt}</div></li>`).join('')}</ol>
-    <div class="deadline">${gIco('alarm')}<div><b>WICHTIG: Spätestens Donnerstag, 18 Uhr</b>Antrag und Hinweismail am besten schon am Ende der vorherigen mPS-Stunde abschicken — spätestens aber Donnerstagabend um 18 Uhr.</div></div>`;
+    <div class="deadline">${gIco('alarm')}<div><b>WICHTIG: Spätestens am Vortag, 18 Uhr</b>Den vollständigen Antrag am besten schon am Ende der vorherigen mPS-Stunde abschicken — spätestens aber am Abend vor der Exkursion um 18 Uhr.</div></div>`;
 }
 function decide(id, status) {
   const r = PA.get('request', id); if (!r) return;
@@ -1323,6 +1416,9 @@ function wire() {
       renderTaskForm(); return;
     }
     if ((b = t.closest('[data-color]'))) { if (!canWrite()) return; tkColor = b.dataset.color; renderTaskForm(); return; }
+    if ((b = t.closest('[data-tdopen]'))) { tdOpen = !tdOpen; renderTodoPick(); return; }
+    if ((b = t.closest('[data-tdopt]'))) { hTask = b.dataset.tdopt; tdOpen = false; renderTodoPick(); return; }
+    if (tdOpen && !t.closest('#hTodo')) { tdOpen = false; renderTodoPick(); }
     if ((b = t.closest('[data-est]'))) { if (!canWrite()) return; const h = +b.dataset.est; tkEst = tkEst === h ? 0 : h; renderTaskForm(); return; }
     // Antrag: wer ist dabei
     if ((b = t.closest('[data-rqwho]'))) {
@@ -1404,6 +1500,9 @@ function wire() {
 
   // Projektziel
   $('#goalTitle').addEventListener('input', goalChanged);
+  // Zeitbalken: Stunden bis zum Ende
+  document.addEventListener('change', e => { if (e.target.id === 'budIn') saveBudget(); });
+  document.addEventListener('keydown', e => { if (e.target.id === 'budIn' && e.key === 'Enter') e.target.blur(); });
   $('#goalDue').addEventListener('change', () => { renderDueHint($('#goalDue').value); goalChanged(); saveGoal(); });
   $('#goalTitle').addEventListener('blur', saveGoal);
   $('#goalRte').addEventListener('input', goalChanged);

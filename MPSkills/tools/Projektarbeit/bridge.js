@@ -331,14 +331,16 @@
           est: [2, 3, 4, 0.5, 6, 2][i] }));
     // Stunden (0202): ein Eintrag kann für mehrere gelten. Emma fehlt
     // heute (krank) — sie steht einfach in keinem Eintrag.
-    [[-2, 'p1', ['p1', 'p2'], 'Gehäuse skizziert, Maße vom Sensor genommen, drei Sensoren verglichen.', 'Skizze in Tinkercad übertragen.'],
-     [-2, 'p3', ['p3'], 'Webseiten-Vorlage angelegt.', 'Diagramm-Bibliothek ausprobieren.'],
-     [-1, 'p2', ['p1', 'p2', 'p3'], 'Waren unterwegs: Besuch der Wetterdienst-Station.', ''],
-     [0, 'p1', ['p1'], 'Gehäuse in Tinkercad modelliert.', 'Drucken lassen.'],
-     [0, 'p1', ['p2'], 'Gliederung der Präsentation angefangen.', 'Mit Emma abstimmen.']]
-      .forEach(([off, by, who, text, next], i) => put('g1', 'log', 'l' + i,
+    put('g1', 'task', 'budget', { budget: true, hours: 24 });
+    const tt = { t1: 'Sensoren recherchieren', t2: 'Gehäuse entwerfen', t3: 'Webseite: Diagramm', t6: 'Präsentation gliedern' };
+    [[-2, 'p1', ['p1', 'p2'], 't2', 'Gehäuse skizziert, Maße vom Sensor genommen.', 'Skizze in Tinkercad übertragen.'],
+     [-2, 'p3', ['p3'], 't3', 'Webseiten-Vorlage angelegt.', 'Diagramm-Bibliothek ausprobieren.'],
+     [-1, 'p2', ['p1', 'p2', 'p3'], 't1', 'Waren unterwegs: Besuch der Wetterdienst-Station.', ''],
+     [0, 'p1', ['p1'], 't2', 'Gehäuse in Tinkercad modelliert.', 'Drucken lassen.'],
+     [0, 'p1', ['p2'], 't6', 'Gliederung der Präsentation angefangen.', 'Mit Emma abstimmen.']]
+      .forEach(([off, by, who, task, text, next], i) => put('g1', 'log', 'l' + i,
         { date: day(off), by, byName: people.find(p => p.id === by).name, who,
-          whoNames: who.map(id => people.find(p => p.id === id).name), text, next, hours: 1, at: day(off) + 'T1' + i + ':00:00Z' }));
+          whoNames: who.map(id => people.find(p => p.id === id).name), task, taskTitle: tt[task], text, next, at: day(off) + 'T1' + i + ':00:00Z' }));
     put('g1', 'request', 'r1', { date: day(2), who: ['p1', 'p2'], place: 'Wetterstation am Flugplatz (Flughafenstraße 1, 24159 Kiel)',
       activity: 'WEG und VERKEHRSMITTEL:\nMit dem Bus (Linie 11) ab Schule bis Flughafen, dann 5 Minuten zu Fuß. Zurück um 12:30 Uhr.\n\nBEGRÜNDUNG:\nDort sehen wir, wie eine echte Station misst. Das brauchen wir, um unsere Sensoren richtig einzustellen.',
       status: 'open', by: 'p1', byName: 'Mia', at: day(0) + 'T09:12:00Z', sentAt: day(0) + 'T09:12:00Z', sentByName: 'Mia' });
