@@ -460,7 +460,6 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
    ============================================================ */
 .tname{margin:8px 0 4px;max-width:420px}
 .tname input{font-size:17px;font-weight:600}
-.tname small{display:block;font-size:12px;color:var(--ink-3);margin-top:4px}
 .teamgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
 .mcard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:12px}
 .mcard.me{border-color:var(--marker);box-shadow:0 0 0 1px var(--marker-wash),var(--sh-1)}
@@ -483,8 +482,9 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .cseg button.c1[aria-pressed="true"]{background:#e3f2e8;border-color:var(--st-done);color:var(--st-done)}
 .cseg button.c2[aria-pressed="true"]{background:var(--st-done);border-color:#205a38;color:#fff}
 .cread{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
-.consentinfo{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center;font-size:12.5px;color:var(--ink-2);background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:10px 13px;margin-bottom:14px}
-.consentinfo > span{display:inline-flex;align-items:center;gap:6px}
+.consentinfo{margin-left:auto;display:flex;flex-direction:column;align-items:flex-start;gap:3px;font-size:11px;color:var(--ink-3)}
+.consentinfo > span{display:inline-flex;align-items:center;gap:5px}
+.consentinfo .cmark{min-width:20px;height:16px;font-size:9.5px;padding:0 4px}
 .mkey{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.05em;color:var(--petrol)}
 
 /* ============================================================
@@ -885,17 +885,13 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <div class="tname" id="teamNameF" hidden>
           <label class="fl" for="teamNameIn">Euer Teamname</label>
           <input type="text" id="teamNameIn" maxlength="40" placeholder="z. B. Die Füchse" autocomplete="off">
-          <small>Den Namen gebt ihr euch selbst — so heißt eure Gruppe auch bei der Lehrkraft.</small>
         </div>
-        <p class="s" id="teamNameNote" hidden>Den Teamnamen geben sich die Schülerinnen und Schüler hier selbst.</p>
-        <p class="s">Alle in der Gruppe sind gleich verantwortlich. Das Label ist frei: Recherche, Technik, Design, Präsentation … Es sagt den anderen, wofür ihr euch gerade zuständig fühlt.</p>
       </div>
-    </div>
-    <div class="consentinfo">
-      <b>Einwilligung der Eltern</b> — die Lehrkraft trägt ein, was vorliegt:
-      <span><span class="cmark c0">✗</span> keine</span>
-      <span><span class="cmark c1">✓</span> Stufe 1: das Schulgelände in Kleingruppen verlassen, z. B. zu jemandem nach Hause</span>
-      <span><span class="cmark c2">✓✓</span> Stufe 2: auch an fremde Orte</span>
+      <div class="consentinfo" title="Einwilligung der Eltern — die Lehrkraft trägt ein, was vorliegt">
+        <span><span class="cmark c0">✗</span> keine Einwilligung</span>
+        <span title="Schulgelände in Kleingruppen verlassen, z. B. zu jemandem nach Hause"><span class="cmark c1">✓</span> Stufe 1: Schulgelände verlassen</span>
+        <span><span class="cmark c2">✓✓</span> Stufe 2: auch fremde Orte</span>
+      </div>
     </div>
     <div class="teamgrid" id="teamGrid"></div>
   </section>

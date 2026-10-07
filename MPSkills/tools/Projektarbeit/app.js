@@ -907,7 +907,6 @@ function renderTeam() {
   // Den Teamnamen geben sich die Schüler selbst; die Lehrkraft sieht ihn nur.
   const nameIn = $('#teamNameIn');
   $('#teamNameF').hidden = PA.owner || !g;
-  $('#teamNameNote').hidden = !PA.owner;
   if (document.activeElement !== nameIn) nameIn.value = (g && g.name) || '';
   nameIn.disabled = !canWrite();
   $('#teamGrid').innerHTML = gm.map(m => {
