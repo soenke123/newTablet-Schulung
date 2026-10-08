@@ -1,0 +1,65 @@
+/* ══════════════════════════════════════════════════════════════
+   Savanne — Bewegungen der Tiere (tiere.css)
+   ══════════════════════════════════════════════════════════════
+   Ergänzt creatures.css (Knowledge Stack) um das, was die Wesen
+   nicht brauchen: Laufen, Fressen, Elefantenohren und -rüssel,
+   das Skelett zum Einblenden. Alles andere (Ruhe, Gehen in vier
+   Richtungen, Schlafen) kommt unverändert aus creatures.css.     */
+
+/* Skelett: Knochen liegen in den Gelenkgruppen und gehen mit */
+.creature-svg .sv-skel { display: none; }
+.sv-show-skel .sv-skel { display: inline; }
+.sv-show-skel .cr-root > *, .sv-show-skel .body-base > * { opacity: .45; }
+.sv-show-skel .cr-root > .body-base, .sv-show-skel .cr-root > [class*="leg-"],
+.sv-show-skel .cr-root > [class*="arm-"], .sv-show-skel .cr-root > .cr-behind,
+.sv-show-skel .body-base > .head-node { opacity: 1; }
+.sv-show-skel .sv-skel { opacity: 1 !important; }
+
+/* Futter und Herzchen nur beim Fressen */
+.creature-svg .sv-food, .creature-svg .sv-heart { display: none; }
+.state-eat .sv-food, .state-eat .sv-heart { display: inline; }
+
+/* ══ LAUFEN: Gehen, nur schneller und mit mehr Schwung ══ */
+.sv-run .cr-root { animation-duration: .36s !important; }
+.sv-run .arm-l, .sv-run .arm-r, .sv-run .leg-l, .sv-run .leg-r { animation-duration: .36s !important; }
+.sv-run .cr-shadow { animation-duration: .18s !important; }
+.sv-run.dir-right .cr-root { animation-name: sv-run-r !important; }
+.sv-run.dir-left .cr-root { animation-name: sv-run-l !important; }
+.sv-run.dir-front .cr-root, .sv-run.dir-back .cr-root { animation-name: sv-run-fb !important; }
+@keyframes sv-run-r { 0%, 50%, 100% { transform: translateY(0) rotate(6deg); } 25%, 75% { transform: translateY(-6px) rotate(8deg); } }
+@keyframes sv-run-l { 0%, 50%, 100% { transform: translateY(0) rotate(-6deg); } 25%, 75% { transform: translateY(-6px) rotate(-8deg); } }
+@keyframes sv-run-fb { 0%, 50%, 100% { transform: translateY(0) scale(1.03, .97); } 25%, 75% { transform: translateY(-6px) scale(.98, 1.02); } }
+.sv-run .tail { animation: cr-tail .36s ease-in-out infinite alternate; }
+
+/* ══ FRESSEN: Kopf nickt, glückliche Augen, Herzchen ══ */
+.state-eat .e-open { display: none; }
+.state-eat .e-happy { display: inline; }
+.state-eat .m-normal { display: none; }
+.state-eat .m-open { display: inline; animation: sv-chew .5s steps(1) infinite; }
+@keyframes sv-chew { 0% { opacity: 1; } 50% { opacity: 0; } }
+.state-eat .head-node { animation: sv-eat-nod 1s ease-in-out infinite; }
+@keyframes sv-eat-nod { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(3px) rotate(2deg); } }
+.sv-graze.state-eat .head-node { animation-name: sv-graze; }
+@keyframes sv-graze { 0%, 100% { transform: translateY(5px) rotate(-2deg); } 50% { transform: translateY(8px) rotate(2deg); } }
+.state-eat .sv-heart { transform-box: fill-box; transform-origin: center; animation: sv-heart 1.8s ease-out infinite; }
+@keyframes sv-heart { 0% { transform: translateY(4px) scale(.3); opacity: 0; } 25% { opacity: 1; } 100% { transform: translateY(-16px) scale(1.1); opacity: 0; } }
+.state-eat .tail { animation-duration: .5s; }
+
+/* ══ ELEFANT: Ohren fächeln, Rüssel schwingt ══ */
+.sv-elephant .ear-l { animation: sv-flap-l 1.7s ease-in-out infinite alternate; }
+.sv-elephant .ear-r { animation: sv-flap-r 1.7s ease-in-out infinite alternate; }
+@keyframes sv-flap-l { from { transform: rotate(4deg) scaleX(1); } to { transform: rotate(-6deg) scaleX(.86); } }
+@keyframes sv-flap-r { from { transform: rotate(-4deg) scaleX(1); } to { transform: rotate(6deg) scaleX(.86); } }
+.sv-elephant.state-sleep .ear-l, .sv-elephant.state-sleep .ear-r { animation-duration: 4s; }
+.sv-elephant .trunk { animation: sv-trunk 2.4s ease-in-out infinite alternate; }
+@keyframes sv-trunk { from { transform: rotate(-6deg); } to { transform: rotate(7deg); } }
+.sv-elephant.state-eat .trunk { animation: sv-trunk-eat 1.6s ease-in-out infinite; }
+@keyframes sv-trunk-eat { 0%, 100% { transform: rotate(4deg); } 55% { transform: rotate(-48deg) scale(.92); } }
+.sv-elephant.state-eat .head-node { animation-name: sv-eat-nod; }
+.sv-elephant.state-walk .trunk { animation-duration: .7s; }
+.sv-elephant.state-sleep .trunk { animation-duration: 4s; }
+
+/* ══ SCHLAFEN: hinlegen (die Beine verschwinden unter dem Bauch) ══ */
+.state-sleep.sv-lion .cr-root, .state-sleep.sv-zebra .cr-root, .state-sleep.sv-gnu .cr-root,
+.state-sleep.sv-croc .cr-root { transform: translateY(5px); }
+.state-sleep .arm-l, .state-sleep .arm-r { transform: scaleY(.7); }

@@ -307,7 +307,12 @@
   const ORIGIN = { al: [30, 60], ar: [70, 60], ll: [40, 84], lr: [60, 84], head: [50, 70] };
 
   function build(id, skinIdx, emoteClass, sizePx) {
-    const d = DEFS[id] || DEFS[0];
+    return buildDef(DEFS[id] || DEFS[0], skinIdx, emoteClass, sizePx, id, CREATURES[id].gruppe);
+  }
+  /* Baut eine Figur aus einer Beschreibung wie in DEFS — auch für
+     Figuren außerhalb dieser Datei (MPSkills/Savanne/tiere.js).    */
+  function buildDef(d, skinIdx, emoteClass, sizePx, id, gruppe) {
+    id = id || 0;
     const pal = d.pal[skinIdx] || d.pal[0];
     const o = Object.assign({}, ORIGIN, d.o || {});
     const mv = movesAttr(id);
@@ -322,7 +327,7 @@
     head = head.indexOf('{FACE}') >= 0 ? head.replace('{FACE}', fc) : head + fc;
     head += '<g class="backside">' + (d.back || '') + '</g>' + (d.headTop || '');
 
-    return '<svg class="creature-svg ' + (emoteClass || 'c-idle') + '" viewBox="0 0 100 100" data-cid="' + id + '" data-g="' + CREATURES[id].gruppe + '" data-mv="' + mv.attr + '" style="' + vars + '">'
+    return '<svg class="creature-svg ' + (emoteClass || 'c-idle') + '" viewBox="0 0 100 100" data-cid="' + id + '" data-g="' + (gruppe || '') + '" data-mv="' + mv.attr + '" style="' + vars + '">'
       + '<ellipse class="cr-shadow" cx="50" cy="92.4" rx="' + (d.shadow || 22) + '" ry="3.2"/>'
       + '<g class="cr-root">'
       +   '<g class="cr-behind">' + (d.behind || '') + '</g>'
@@ -1453,6 +1458,10 @@
     svg: getCreatureSVG,
     cls: cls,
     moveNames: moveNames,
-    actions: ACTIONS
+    actions: ACTIONS,
+    /* Für eigene Figuren im selben Stil (MPSkills/Savanne/tiere.js):
+       dasselbe Skelett, dasselbe Gesicht, dieselben Zeichenwerkzeuge. */
+    buildDef: buildDef,
+    kit: { INK, P, E, C, R, L, G, tube, shine, hl, shade, star, tw, mirror, face }
   };
 })();

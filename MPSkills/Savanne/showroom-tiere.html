@@ -4,12 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Savannen-Showroom</title>
+<link rel="stylesheet" href="../tools/KnowledgeStack/creatures.css">
+<link rel="stylesheet" href="tiere.css">
 <!--
-  Showroom der Savannentiere, Fassung 3 (Oktober 2026): von Hand gezeichnet wie die Wesen,
-  je Art drei Ansichten (Seite, vorn, hinten).
+  Showroom der Savannentiere, Fassung 4 (Oktober 2026).
   Löwen, Elefanten, Zebras, Gnus und Krokodile — je Papa, Mama, Kind.
-  Jedes Tier hat ein Skelett aus Gelenken (tiere.js): es geht und läuft in
-  jede Richtung, frisst und schläft. „Skelett“ blendet die Knochen ein.
+  Die Tiere sind gebaut wie die Wesen aus Knowledge Stack: tiere.js
+  beschreibt sie, gebaut werden sie mit creatures.js (KSCreatures.buildDef),
+  bewegt mit creatures.css + tiere.css. Gehen in vier Richtungen und
+  Schlafen sind die Wesen-Bewegungen; Laufen und Fressen kommen dazu.
+  „Skelett“ blendet die Knochen in den Gelenkgruppen ein.
   Oben die Savanne (alle 15 Tiere frei), darunter die Kästen mit den
   Knöpfen für Bewegung und Richtung.
   Läuft ohne Netz und ohne Build: zieht nur tiere.js aus diesem Ordner.
@@ -63,7 +67,9 @@
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 10px; text-align: center; cursor: pointer; }
   .card.sel { outline: 3px solid var(--accent); }
   .card:focus-visible { outline: 3px solid var(--accent); }
-  .card svg { width: 100%; aspect-ratio: 4 / 3; display: block; }
+  .pic { aspect-ratio: 1; display: flex; align-items: flex-end; justify-content: center; }
+  .pic svg { width: calc(var(--s) * 100%); height: auto; aspect-ratio: 1; display: block; }
+  .stage .creature-svg.sv-sel { filter: drop-shadow(0 0 2px #6d5dfc) drop-shadow(0 0 2px #6d5dfc); }
   .name { font-weight: 700; margin-top: 4px; }
   .meta { font-size: 12px; color: var(--soft); }
   @media (max-width: 640px) {
@@ -101,13 +107,14 @@
   </section>
   <div id="cards"></div>
 </main>
+<script src="../tools/KnowledgeStack/creatures.js"></script>
 <script src="tiere.js"></script>
 <script>
 (function () {
   'use strict';
   const T = window.SavanneTiere;
   const NS = 'http://www.w3.org/2000/svg';
-  const SP = Math.sin(T.PITCH);
+  const SP = Math.sin(0.42);   // Neigung der Savanne: z hinten → vorn
   const $ = id => document.getElementById(id);
 
   /* ── Bedienung der Kästen ─────────────────────────────── */
@@ -160,18 +167,13 @@
     const h2 = document.createElement('h2'); h2.textContent = sp.name;
     const grid = document.createElement('div'); grid.className = 'grid';
     T.ROLES.forEach(([role, label]) => {
-      const A = T.create(key, role);
       const card = document.createElement('div');
       card.className = 'card'; card.tabIndex = 0; card.dataset.key = key; card.dataset.role = role;
-      const svg = document.createElementNS(NS, 'svg');
-      svg.setAttribute('viewBox', '-64 -90 128 96');
-      svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
-      svg.setAttribute('aria-hidden', 'true');
-      T.mount(A, svg);
-      card.appendChild(svg);
-      card.insertAdjacentHTML('beforeend', '<div class="name">' + label + '</div><div class="meta">' + sp.roles[role].title + '</div>');
+      card.innerHTML = '<div class="pic" style="--s:' + sp.roles[role].s + '">' + T.svg(key, role, 'idle') + '</div>'
+        + '<div class="name">' + label + '</div><div class="meta">' + sp.roles[role].title + '</div>';
+      card.querySelector('svg').setAttribute('aria-hidden', 'true');
       grid.appendChild(card);
-      cards.push({ A, card, visible: true });
+      cards.push({ key, role, card, svg: card.querySelector('svg'), cls: '' });
     });
     $('cards').appendChild(h2); $('cards').appendChild(grid);
   });
@@ -188,7 +190,7 @@
     lion: { x: 380, z: 1050, r: 300 }, elephant: { x: 620, z: 420, r: 330 },
     zebra: { x: 1000, z: 900, r: 320 }, gnu: { x: 1250, z: 1150, r: 300 }, croc: { x: WATER.x, z: WATER.z, r: 190 }
   };
-  const scaleAt = z => (0.65 + 0.45 * (z / ZMAX)) * 1.45;
+  const scaleAt = z => (0.65 + 0.45 * (z / ZMAX)) * 1.9;
   (function background() {
     const bg = $('bg');
     let h = '<rect class="bg-sky" x="0" y="0" width="1600" height="' + HOR + '"/>'
@@ -221,13 +223,20 @@
 
   const actors = $('actors');
   const stageAnimals = [];
+  // Richtung am Bildschirm → Wesen-Richtung
+  const dirOf = h => Math.abs(Math.sin(h)) > 0.72 ? (Math.sin(h) > 0 ? 'front' : 'back') : (Math.cos(h) > 0 ? 'right' : 'left');
+  const SPEED = { walk: 60, run: 165 };
   T.ORDER.forEach(key => T.ROLES.forEach(([role], i) => {
-    const A = T.create(key, role), home = HOMES[key];
+    const sp = T.SPECIES[key], home = HOMES[key];
+    const A = { key, role, s: sp.k * sp.roles[role].s, mode: 'idle', v: 0, cls: '' };
     A.x = home.x + (i - 1) * 90 + (Math.random() - 0.5) * 40;
     A.z = home.z + (i === 2 ? 70 : 0) + (Math.random() - 0.5) * 40;
     A.h = Math.random() * Math.PI * 2;
     A.ai = { queue: [], step: null, stepT: 0 };
-    T.mount(A, actors);
+    A.g = document.createElementNS(NS, 'g');
+    A.g.innerHTML = T.svg(key, role, 'idle');
+    A.el = A.g.firstChild;
+    actors.appendChild(A.g);
     stageAnimals.push(A);
   }));
   const family = A => stageAnimals.filter(B => B.key === A.key);
@@ -235,7 +244,7 @@
 
   function select(A) {
     selected = A;
-    cards.forEach(c => c.card.classList.toggle('sel', c.A.key === A.key && c.A.role === A.role));
+    cards.forEach(c => c.card.classList.toggle('sel', c.key === A.key && c.role === A.role));
     say(T.SPECIES[A.key].roles[A.role].title + ' ist ausgewählt — in die Savanne tippen, dann geht es dorthin.');
   }
   const say = t => { $('say').textContent = t; };
@@ -287,7 +296,9 @@
       A.mode = s.do;
       if (st.stepT >= s.dur) { st.step = null; if (s.done) s.done(); }
     }
-    // bewegen (auch beim Auslaufen nach dem Ziel)
+    // bewegen: Tempo weich an- und auslaufen lassen
+    const want = (SPEED[A.mode] || 0) * Math.sqrt(T.SPECIES[A.key].roles[A.role].s);
+    A.v += (want - A.v) * Math.min(1, dt * 4);
     const S = A.s * scaleAt(A.z);
     A.x = Math.max(XMIN, Math.min(XMAX, A.x + Math.cos(A.h) * A.v * S * dt));
     A.z = Math.max(ZMIN, Math.min(ZMAX, A.z + Math.sin(A.h) * A.v * S * dt));
@@ -339,36 +350,49 @@
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver(es => es.forEach(e => {
       if (e.target.id === 'stage') stageVisible = e.isIntersecting;
-      const c = cards.find(c => c.card === e.target);
-      if (c) c.visible = e.isIntersecting;
     }), { rootMargin: '80px' });
     io.observe($('stage'));
-    cards.forEach(c => io.observe(c.card));
   }
 
   /* ── Takt ──────────────────────────────────────────────── */
+  // Zeitlupe: alle CSS-Bewegungen langsamer (auch neu gestartete)
+  let slowT = 0;
+  function applySlow() {
+    if (!document.getAnimations) return;
+    const r = slow ? 0.25 : 1;
+    document.getAnimations().forEach(a => { if (a.playbackRate !== r) a.playbackRate = r; });
+  }
   let last = performance.now();
   function frame(now) {
     let dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     if (slow) dt *= 0.25;
-    if (spin) heading += dt * 0.6;
+    if (spin) heading += dt * 1.2;
+    const extra = skel ? 'sv-show-skel' : '';
+    const dir = dirOf(heading);
     for (const c of cards) {
-      if (!c.visible) continue;
-      c.A.mode = act; c.A.h = heading;
-      T.update(c.A, dt);
-      T.draw(c.A, { ox: 0, oy: 0, S: c.A.cardS, skel, ground: true });
+      const cl = 'creature-svg ' + T.classes(c.key, act, dir, extra);
+      if (c.cls !== cl) { c.cls = cl; c.svg.setAttribute('class', cl); }
     }
     if (stageVisible) {
-      for (const A of stageAnimals) { aiStep(A, dt); T.update(A, dt); }
+      for (const A of stageAnimals) aiStep(A, dt);
       stageAnimals.sort((a, b) => a.z - b.z);
       stageAnimals.forEach((A, i) => {
         if (actors.children[i] !== A.g) actors.appendChild(A.g);
-        T.draw(A, { ox: A.x, oy: HOR + A.z * SP, S: A.s * scaleAt(A.z), skel, mark: A === selected });
+        const size = 100 * A.s * scaleAt(A.z), oy = HOR + A.z * SP;
+        A.el.setAttribute('x', (A.x - size / 2).toFixed(1));
+        A.el.setAttribute('y', (oy - size * 0.92).toFixed(1));
+        A.el.setAttribute('width', size.toFixed(1));
+        A.el.setAttribute('height', size.toFixed(1));
+        const cl = 'creature-svg ' + T.classes(A.key, A.mode, dirOf(A.h), extra + (A === selected ? ' sv-sel' : ''));
+        if (A.cls !== cl) { A.cls = cl; A.el.setAttribute('class', cl); }
       });
     }
+    slowT -= dt;
+    if (slowT < 0) { slowT = 0.3; applySlow(); }
     requestAnimationFrame(frame);
   }
+  $('btnSlow').addEventListener('click', applySlow);
   paintButtons();
   requestAnimationFrame(frame);
 })();
