@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Savannen-Showroom</title>
 <!--
-  Showroom der Savannentiere, Fassung 1 (Oktober 2026).
+  Showroom der Savannentiere, Fassung 2 (Oktober 2026): im Stil der Wesen.
   Löwen, Elefanten, Zebras, Gnus und Krokodile — je Papa, Mama, Kind.
   Jedes Tier ist ein Skelett im Raum (tiere.js): es geht und läuft in
   jede Richtung, frisst und schläft. „Skelett“ blendet die Knochen ein.
@@ -187,7 +187,7 @@
     lion: { x: 380, z: 1050, r: 300 }, elephant: { x: 620, z: 420, r: 330 },
     zebra: { x: 1000, z: 900, r: 320 }, gnu: { x: 1250, z: 1150, r: 300 }, croc: { x: WATER.x, z: WATER.z, r: 190 }
   };
-  const scaleAt = z => (0.62 + 0.42 * (z / ZMAX)) * 0.95;
+  const scaleAt = z => (0.62 + 0.42 * (z / ZMAX)) * 1.3;
   (function background() {
     const bg = $('bg');
     let h = '<rect class="bg-sky" x="0" y="0" width="1600" height="' + HOR + '"/>'
@@ -363,7 +363,7 @@
       stageAnimals.sort((a, b) => a.z - b.z);
       stageAnimals.forEach((A, i) => {
         if (actors.children[i] !== A.g) actors.appendChild(A.g);
-        T.draw(A, { ox: A.x, oy: HOR + A.z * SP, S: A.s * scaleAt(A.z), skel, mark: A === selected });
+        T.draw(A, { ox: A.x, oy: HOR + A.z * SP, S: A.s * scaleAt(A.z), lw: 3.2, skel, mark: A === selected });
       });
     }
     requestAnimationFrame(frame);
