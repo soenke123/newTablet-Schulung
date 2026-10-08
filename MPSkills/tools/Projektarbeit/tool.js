@@ -4,7 +4,7 @@
    Zehnter Skill (Migration 0200). Ein Raum ist eine ganze KLASSE:
    Lobby → Gruppen (per Drag & Drop durch die Lehrkraft) → je Gruppe
    ein Planungsraum mit Team, Projektziel, To-dos, Dokumentation, Anträgen
-   und Regeln.
+   und Experten.
 
    Gebaut wie die Scrum Werkstatt: die Oberfläche ist eine eigene
    Seite (index.html) im <iframe>, mit eigenem Kleid; bridge.js darin

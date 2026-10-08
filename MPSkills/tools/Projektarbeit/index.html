@@ -587,6 +587,44 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .mkey{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.05em;color:var(--petrol)}
 
 /* ============================================================
+   EXPERTEN
+   ============================================================ */
+.xgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:15px}
+.xcard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:16px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:11px;min-width:0}
+.xtop{display:flex;gap:12px;align-items:flex-start}
+.xav{width:44px;height:44px;border-radius:12px;background:var(--marker-wash);color:var(--marker);display:grid;place-items:center;flex:none}
+.xname{font-size:17px;font-weight:600;line-height:1.2;overflow-wrap:anywhere}
+.xtopic{font-size:12.5px;color:var(--ink-2);line-height:1.4;margin-top:3px;overflow-wrap:anywhere}
+.xtop .btn{margin-left:auto;flex:none}
+.xreach{display:flex;flex-direction:column;gap:5px}
+.xreach a,.xreach span{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--petrol);text-decoration:none;overflow-wrap:anywhere;min-width:0}
+.xreach span{color:var(--ink-3);font-weight:500;font-style:italic}
+.xreach svg{flex:none}
+.xsec{padding-top:10px;border-top:1px solid var(--line-soft)}
+.xsec > .fl{display:block;margin-bottom:6px}
+.xtodos{display:flex;flex-direction:column;gap:5px}
+.xtodo{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;background:var(--paper-down);border:0;border-radius:var(--r-sm);padding:6px 9px;text-align:left;color:var(--ink);width:100%}
+.xtodo small{margin-left:auto;font-weight:600;color:var(--ink-3);font-size:11px;white-space:nowrap}
+.xcons{display:flex;flex-direction:column;gap:8px}
+.xcon{border-left:3px solid var(--petrol);background:var(--paper-down);border-radius:0 var(--r-sm) var(--r-sm) 0;padding:7px 10px;cursor:pointer}
+.xcon .h{display:flex;gap:7px;align-items:center;font-size:11.5px;font-weight:700;color:var(--ink-2)}
+.xcon .h .by{margin-left:auto;font-weight:500;color:var(--ink-3)}
+.xcon p{font-size:13px;line-height:1.45;margin:4px 0 0;white-space:pre-line;overflow-wrap:anywhere}
+.xnone{font-size:12.5px;color:var(--ink-3);font-style:italic}
+.xacts{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.xstate{font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:99px;padding:2px 8px;background:var(--paper-down);color:var(--ink-3);display:inline-block;margin-top:6px}
+.xstate.on{background:var(--petrol-wash);color:var(--petrol)}
+.xppick{display:flex;gap:6px;flex-wrap:wrap}
+.xppick button{background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.xppick button[aria-pressed="true"]{background:var(--marker);border-color:var(--marker);color:#fff}
+.xpinfo{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:8px;font-size:12.5px}
+.xpinfo a{color:var(--petrol);font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.pi-xp{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;background:rgba(255,255,255,.55);border-radius:var(--r-sm);padding:4px 7px;margin:-3px 0 9px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.pi-xp svg{flex:none}
+.xadd{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:180px;border:1.5px dashed var(--line);background:transparent;border-radius:var(--r-lg);color:var(--ink-3);font-size:14px;font-weight:600}
+.xadd:hover{border-color:var(--petrol);color:var(--petrol);background:var(--paper-up)}
+
+/* ============================================================
    REGELN
    ============================================================ */
 .ex-hero{background:linear-gradient(135deg,#17302e,#1d5955 70%,#246b63);color:#eef3f1;border-radius:var(--r-lg);padding:clamp(22px,3.4vw,40px);margin-bottom:20px;position:relative;overflow:hidden}
@@ -748,7 +786,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media print{
-  header.top,.tabbar,.m-f,.needs-write,.addcard,.hform,.toast,.pickbar,.nform,.n-ask,.n-x,.rx,.nfilt{display:none!important}
+  header.top,.tabbar,.m-f,.needs-write,.addcard,.xadd,.xacts,.hform,.toast,.pickbar,.nform,.n-ask,.n-x,.rx,.nfilt{display:none!important}
   body{background:#fff}
   .view{display:block!important}
   .view + .view{page-break-before:always}
@@ -844,9 +882,9 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
       Anträge <span class="cnt" id="cntReq">0</span><span class="nextreq" id="reqNext" hidden></span>
     </button>
-    <button class="tab" role="tab" data-view="rules" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H10a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H5.5A1.5 1.5 0 0 1 4 16.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H14a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h4.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>
-      Projektarbeit &amp; Regeln
+    <button class="tab" role="tab" data-view="experts" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M17.5 13.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/></svg>
+      Experten <span class="cnt" id="cntExp">0</span>
     </button>
   </div>
 </nav>
@@ -1077,13 +1115,80 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <div class="ngrid" id="noteGrid"></div>
   </section>
 
-  <!-- ══════════ PLANUNGSRAUM: REGELN ══════════ -->
-  <section class="view" id="view-rules" hidden>
-    <div id="rulesBox"></div>
+  <!-- ══════════ PLANUNGSRAUM: EXPERTEN ══════════ -->
+  <section class="view" id="view-experts" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Wer kann uns helfen?</div>
+        <h2 class="t">Experten</h2>
+        <p class="s">Hier dokumentiert ihr, wie ihr Experten findet, mit ihnen Kontakt aufnehmt, mit ihnen sprecht und euch trefft — und was ihr von ihnen erfahrt.</p>
+      </div>
+      <div class="sp" id="expStats"></div>
+    </div>
+    <div class="guide" id="expGuide"></div>
+    <div class="xgrid" id="expGrid"></div>
   </section>
 </main>
 
 <!-- ══════════════════════════ DIALOGE ══════════════════════════ -->
+
+<!-- Experte -->
+<div class="scrim" id="mExpert" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="xpTitle">
+    <div class="m-h"><div class="ttl" id="xpTitle">Experte</div>
+      <button class="m-x" data-close="mExpert" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <div class="field"><label class="fl" for="xpName">Name</label>
+        <input type="text" id="xpName" maxlength="80" placeholder="z. B. Frau Petersen" autocomplete="off"></div>
+      <div class="field"><label class="fl" for="xpTopic">Wofür ist die Person Experte?</label>
+        <input type="text" id="xpTopic" maxlength="160" placeholder="z. B. Meteorologin beim Wetterdienst — kennt sich mit Messgeräten aus" autocomplete="off"></div>
+      <div class="grid2">
+        <div class="field"><label class="fl" for="xpPhone">Telefon</label>
+          <input type="tel" id="xpPhone" maxlength="40" placeholder="0431 123456" autocomplete="off"></div>
+        <div class="field"><label class="fl" for="xpMail">E-Mail</label>
+          <input type="email" id="xpMail" maxlength="120" placeholder="name@beispiel.de" autocomplete="off"></div>
+      </div>
+      <p class="hint">Telefon oder E-Mail — mindestens eins, damit ihr die Person erreicht. Woher kennt ihr sie? Das könnt ihr bei „Wofür“ dazuschreiben.</p>
+    </div>
+    <div class="m-f">
+      <button class="btn danger needs-write" id="xpDel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>
+        Löschen</button>
+      <div class="sp">
+        <button class="btn" data-close="mExpert">Abbrechen</button>
+        <button class="btn primary needs-write" id="xpSave">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Kontakt mit einem Experten -->
+<div class="scrim" id="mContact" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ctTitle">
+    <div class="m-h"><div class="ttl" id="ctTitle">Kontakt eintragen</div>
+      <button class="m-x" data-close="mContact" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <div class="grid2">
+        <div class="field"><label class="fl" for="ctDate">Datum</label><input type="date" id="ctDate"></div>
+        <div class="field"><span class="fl">Wie?</span><div class="estpick" id="ctKind"></div></div>
+      </div>
+      <div class="field"><label class="fl" for="ctText">Das Wichtigste, was ihr erfahren habt</label>
+        <textarea id="ctText" maxlength="2000" placeholder="z. B. Sensoren brauchen Schatten und Abstand zur Hauswand. Sie schickt uns eine Liste mit günstigen Bauteilen."></textarea>
+        <p class="hint">Noch keine Antwort? Schreibt auf, was ihr gefragt habt — und wann ihr nachhakt.</p></div>
+    </div>
+    <div class="m-f">
+      <button class="btn danger needs-write" id="ctDel">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg>
+        Löschen</button>
+      <div class="sp">
+        <button class="btn" data-close="mContact">Abbrechen</button>
+        <button class="btn primary needs-write" id="ctSave">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Aufgabe -->
 <div class="scrim" id="mTask" hidden>
@@ -1099,6 +1204,8 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div class="field"><span class="fl">Geschätzte Zeit</span><div class="estpick" id="tkEst"></div>
         <p class="hint">Wie viele Schulstunden braucht ihr ungefähr? Grob schätzen reicht.</p></div>
       <div class="field"><span class="fl">Wer kümmert sich?</span><div class="whopick" id="tkWho"></div></div>
+      <div class="field" id="tkXpF"><span class="fl">Experte kontaktieren <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></span>
+        <div class="xppick" id="tkXp"></div><div id="tkXpInfo"></div></div>
       <div class="grid2">
         <div class="field"><label class="fl" for="tkCol">Spalte</label>
           <select id="tkCol"><option value="todo">Zu erledigen</option><option value="blocked">Blockiert</option><option value="doing">In Arbeit</option><option value="done">Fertig</option></select></div>

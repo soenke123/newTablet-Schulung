@@ -335,6 +335,13 @@
     // Stunden (0202): ein Eintrag kann für mehrere gelten. Emma fehlt
     // heute (krank) — sie steht einfach in keinem Eintrag.
     put('g1', 'task', 'budget', { budget: true, hours: 24 });
+    // Experten: task-Objekte mit expert: true, ein To-do zeigt auf einen.
+    put('g1', 'task', 'x1', { expert: true, name: 'Frau Petersen', topic: 'Meteorologin beim Wetterdienst — Messgeräte und Standort',
+      phone: '0431 123456', mail: 'petersen@wetter-beispiel.de',
+      contacts: [{ id: 'c1', date: day(-3), how: 'mail', byName: 'Mia', text: 'Angefragt, ob wir die Station am Flugplatz besuchen dürfen. Antwort: ja, Termin in zwei Tagen.' }] });
+    put('g1', 'task', 'x2', { expert: true, name: 'Herr Yilmaz', topic: 'Elektroniker, baut als Hobby Mikrocontroller-Projekte', phone: '', mail: 'yilmaz@beispiel.de', contacts: [] });
+    put('g1', 'task', 't7', { title: 'Herr Yilmaz kontaktieren', col: 'todo', who: ['p2'], note: '', text: 'Fragen, welcher Sensor für draußen taugt.',
+      color: 'blue', order: 7, est: 0.5, xpId: 'x2', xpName: 'Herr Yilmaz' });
     const tt = { t1: 'Sensoren recherchieren', t2: 'Gehäuse entwerfen', t3: 'Webseite: Diagramm', t6: 'Präsentation gliedern' };
     [[-2, 'p1', ['p1', 'p2'], 't2', 'Gehäuse skizziert, Maße vom Sensor genommen.', 'Skizze in Tinkercad übertragen.'],
      [-2, 'p3', ['p3'], 't3', 'Webseiten-Vorlage angelegt.', 'Diagramm-Bibliothek ausprobieren.'],

@@ -17,10 +17,12 @@
      Schüler                ohne Planungsraum: Wartekarte (Lobby bzw.
                             die eigene Gruppe). Mit: der Planungsraum.
 
-   Der Planungsraum hat sechs Reiter: Team, Projektziel (mit
-   Fertig-Datum due), To-dos (Board mit vier Spalten, je Karte eine
-   Zeitschätzung est in Schulstunden), Dokumentation (Protokoll,
-   intern „log"/„hours"), Anträge und „Projektarbeit & Regeln".
+   Der Planungsraum hat die Reiter Team, Lehrkraft-Kommentare,
+   Projektziel (mit Fertig-Datum due), To-dos (Board mit vier Spalten,
+   je Karte eine Zeitschätzung est in Schulstunden), Dokumentation
+   (Protokoll, intern „log"/„hours"), Anträge und Experten. Den Reiter
+   „Projektarbeit & Regeln" gibt es nicht mehr — die Regeln stehen nur
+   noch auf der Wartekarte, bevor der Planungsraum aufgeht.
    Die Erklärungen stehen als Kacheln mit Icons über den Reitern
    (guide()), ohne Emojis.
 
@@ -30,6 +32,12 @@
    es nach dem Fixieren gesperrt. todos() lässt es weg. Der Balken
    füllt sich mit den geschätzten Stunden der To-dos, gefärbt nach
    Spalte (nicht nach Zettelfarbe).
+   Experten: ebenfalls task-Objekte, mit expert: true (Name, topic,
+   phone, mail und contacts = [{ id, date, how, text, byName }]) —
+   so braucht es keine neue Art auf dem Server, und die Übersicht
+   zählt sie nicht mit (sie haben keine Spalte). todos() lässt sie
+   weg. Ein To-do kann auf einen Experten zeigen (task.xpId/
+   xpName): „Frau Petersen kontaktieren".
    Dokumentation: ohne Stundenumfang (es wird nicht erfasst, wer wie
    viel gemacht hat), dafür „an welchem To-do" (log.task/taskTitle).
 
@@ -132,7 +140,9 @@ const safeImg = s => typeof s === 'string' && /^data:image\/(jpeg|png|webp);base
 let tab = 'team';
 let picked = null;          // Übersicht: angetippte Person (Tablet ohne Ziehen)
 let editTask = null;        // Aufgabe im Dialog (id oder null = neu)
-let tkWho = [], tkColor = 'yellow', tkEst = 0;
+let tkWho = [], tkColor = 'yellow', tkEst = 0, tkXp = '';
+let editXp = null;          // Experte im Dialog (id oder null = neu)
+let ctXp = null, ctId = null, ctHow = 'call';   // Kontakt im Dialog
 let editReq = null;
 let rqWho = [];
 let showList = (() => { try { return localStorage.getItem('pa_clist') !== '0'; } catch (e) { return true; } })();
@@ -156,7 +166,12 @@ const COLS = [
 ];
 const colOf = t => (COLS.some(c => c.k === t.col) ? t.col : 'todo');
 // Die Karten — ohne das Zeitbudget, das als task/budget daneben liegt.
-const todos = () => PA.list('task').filter(t => !t.budget);
+const todos = () => PA.list('task').filter(t => !t.budget && t.expert !== true);
+// Die Experten — task-Objekte mit expert: true (siehe oben).
+const experts = () => PA.list('task').filter(t => t.expert === true)
+  .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'de'));
+const expertOf = id => { const x = id ? PA.get('task', id) : null; return x && x.expert === true ? x : null; };
+const CONTACT = { call: 'Telefonat', mail: 'E-Mail', meet: 'Treffen', other: 'Sonstiges' };
 const budgetHours = () => { const b = PA.get('task', 'budget'); return b && b.budget ? Math.max(0, +b.hours || 0) : 0; };
 // Zeitschätzung eines To-dos in Schulstunden (0 = keine Schätzung).
 const ESTS = [0.5, 1, 2, 3, 4, 6, 8];
@@ -201,6 +216,9 @@ const ICO = {
   clock: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
   warn: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l9.5 17h-19z"/><path d="M12 10v4M12 17.5h.01"/></svg>',
   lock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  phone: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>',
+  mail: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
+  expert: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M17.5 13.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/></svg>',
   unlock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.8-1.2"/></svg>'
 };
 // Linien-Icons (24er Raster) für die Erklär-Kacheln.
@@ -219,6 +237,10 @@ const GI = {
   mail: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>',
   inbox: '<path d="M3 13h5l1.5 3h5L16 13h5"/><path d="M5.5 5h13L21 13v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-6z"/><path d="M9.5 9.5l2 2 3.5-3.5"/>',
   plus: '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/>',
+  expert: '<circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M17.5 13.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/>',
+  phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+  bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7L11.5 6.8"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/>',
   alarm: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 3L2 6M19 3l3 3"/>'
 };
 const gIco = (k, n) => `<span class="gi">${n ? `<i>${n}</i>` : ''}<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${GI[k]}</svg></span>`;
@@ -285,8 +307,7 @@ function renderAll() {
   else if (m === 'wait') renderWait();
   else if (m === 'plan') {
     renderCounts();
-    renderGoal(); renderWork(); renderHours(); renderRequests(); renderTeam(); renderNotes();
-    $('#rulesBox').innerHTML = rulesHtml();
+    renderGoal(); renderWork(); renderHours(); renderRequests(); renderTeam(); renderNotes(); renderExperts();
     renderGuides();
     go(tab);
   }
@@ -311,6 +332,12 @@ function renderGuides() {
     ['camera', 'Fotos bei Exkursionen', 'Diese Regel kommt später dazu.', true]
   ]);
   $('#reqCheck').innerHTML = reqCheckHtml();
+  $('#expGuide').innerHTML = guide([
+    ['bulb', 'Warum Experten?', 'Jedes Projekt sollte vom Rat eines oder mehrerer Experten profitieren: Menschen, die durch ihren <b>Beruf</b> oder ihr <b>Hobby</b> viel Erfahrung mit euren Arbeitsschritten haben. So vermeidet ihr Fehler und lernt von Profis.'],
+    ['expert', 'Experten notieren', 'Tragt mögliche Experten ein: Name, <b>Telefon</b> oder <b>E-Mail</b> und wofür sie Experten sind.'],
+    ['link', 'Als To-do planen', 'Kontakt aufnehmen ist ein Arbeitsschritt: „Als To-do“ antippen — oder beim To-do einen Experten wählen.'],
+    ['phone', 'Kontakt festhalten', 'Jedes <b>Telefonat</b>, jede <b>Mail</b>, jedes <b>Treffen</b> mit Datum eintragen — dazu die wichtigsten Infos, die ihr bekommen habt.']
+  ]);
 }
 
 function renderHeader(m) {
@@ -381,6 +408,7 @@ function renderCounts() {
     pill.title = `Nächster Antrag: ${deDay(nx.date)} — ${st.nm}`;
   }
   $('#cntTeam').textContent = members().length;
+  $('#cntExp').textContent = experts().length;
   const openNotes = notes().filter(n => !n.done).length;
   const cn = $('#cntNotes');
   cn.textContent = openNotes;
@@ -658,6 +686,7 @@ function postit(t) {
     <div class="pi-title">${esc(t.title || 'Ohne Titel')}</div>
     ${t.text ? `<div class="pi-text">${esc(t.text)}</div>` : ''}
     ${blk && t.note ? `<div class="pi-note">${esc(t.note)}</div>` : ''}
+    ${t.xpId ? `<div class="pi-xp" title="Experte">${ICO.phone}${esc((expertOf(t.xpId) || {}).name || t.xpName || 'Experte')}</div>` : ''}
     <div class="pi-foot">
       <span class="pi-who">${who.length ? who.map(p => avatar(p, 22)).join('') : '<span class="pi-free">noch frei</span>'}</span>
       ${who.length ? `<span style="margin-left:4px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(who.map(p => p.name).join(' + '))}</span>` : ''}
@@ -745,9 +774,9 @@ function saveBudget() {
   renderAll();
 }
 
-function openTask(id, col) {
+function openTask(id, col, xp) {
   const t = id ? PA.get('task', id) : null;
-  if (id && !t) return;
+  if (id && (!t || t.budget || t.expert === true)) return;
   editTask = id || null;
   $('#tkTitle').textContent = t ? 'To-do' : 'Neues To-do';
   $('#tkName').value = t ? t.title || '' : '';
@@ -757,6 +786,8 @@ function openTask(id, col) {
   tkWho = t ? (t.who || []).slice() : (meId() && members().some(m => m.id === meId()) ? [meId()] : []);
   tkColor = t && COLORS[t.color] ? t.color : 'yellow';
   tkEst = t && ESTS.includes(+t.est) ? +t.est : 0;
+  tkXp = t ? (expertOf(t.xpId) ? t.xpId : '') : (expertOf(xp) ? xp : '');
+  if (!t && tkXp) $('#tkName').value = (expertOf(tkXp).name || 'Experten') + ' kontaktieren';
   $('#tkDel').hidden = !t;
   renderTaskForm();
   const ro = !canWrite();
@@ -771,6 +802,19 @@ function renderTaskForm() {
     + '<span class="hint" style="align-self:center;margin:0 0 0 4px">Schulstunden</span>';
   $('#tkColor').innerHTML = Object.keys(COLORS).map(k => `<button type="button" data-color="${k}" aria-checked="${tkColor === k}" title="${k}" style="background:${COLORS[k]}"></button>`).join('');
   $('#tkNoteF').hidden = $('#tkCol').value !== 'blocked';
+  // Experte: nur, wenn die Gruppe schon welche eingetragen hat.
+  const xs = experts();
+  $('#tkXpF').hidden = !xs.length;
+  $('#tkXp').innerHTML = xs.length ? `<button type="button" data-tkxp="" aria-pressed="${!tkXp}">keiner</button>` + xs.map(x =>
+    `<button type="button" data-tkxp="${esc(x.id)}" aria-pressed="${tkXp === x.id}">${esc(x.name || 'Ohne Namen')}</button>`).join('') : '';
+  const x = expertOf(tkXp);
+  $('#tkXpInfo').innerHTML = x ? `<div class="xpinfo">${x.topic ? `<span>${esc(x.topic)}</span>` : ''}${xpReach(x)}</div>` : '';
+}
+// Telefon und Mail als Links (antippen = anrufen bzw. Mail schreiben).
+function xpReach(x) {
+  const tel = String(x.phone || '').replace(/[^\d+]/g, '');
+  return (x.phone ? `<a href="tel:${esc(tel)}">${ICO.phone}${esc(x.phone)}</a>` : '')
+    + (x.mail ? `<a href="mailto:${esc(x.mail)}">${ICO.mail}${esc(x.mail)}</a>` : '');
 }
 function saveTask() {
   if (!canWrite()) return;
@@ -784,6 +828,9 @@ function saveTask() {
     col, color: tkColor, est: tkEst, note: col === 'blocked' ? $('#tkNote').value.trim().slice(0, 400) : (old && old.note) || '',
     order: old && old.col === col ? old.order : Date.now()
   });
+  const xp = expertOf(tkXp);
+  data.xpId = xp ? tkXp : '';
+  data.xpName = xp ? String(xp.name || '').slice(0, 80) : '';
   PA.put('task', editTask || PA.newId('t'), data);
   hide('mTask');
   renderAll();
@@ -870,7 +917,7 @@ function renderHours() {
 function todoChip(l) {
   if (!l.task) return '';
   const t = PA.get('task', l.task);
-  const k = t && !t.budget ? colOf(t) : 'none';
+  const k = t && !t.budget && t.expert !== true ? colOf(t) : 'none';
   const nm = (t && t.title) || l.taskTitle || 'gelöschtes To-do';
   return `<div class="etodo" title="${esc(t ? (COLS.find(c => c.k === k) || {}).nm || '' : 'nicht mehr auf dem Board')}"><i class="kdot k-${k}"></i><span>${esc(nm)}</span></div>`;
 }
@@ -1284,7 +1331,112 @@ function removeTeacher(id) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   PROJEKTARBEIT & REGELN
+   EXPERTEN
+   ════════════════════════════════════════════════════════════ */
+function renderExperts() {
+  const xs = experts();
+  const met = xs.filter(x => (x.contacts || []).length).length;
+  $('#expStats').innerHTML = (xs.length ? `<span class="stat">Kontakt mit <b>${met}/${xs.length}</b></span>` : '')
+    + `<button class="btn primary needs-write" data-newxp="1">${ICO.plus} Experte</button>`;
+  const all = todos();
+  $('#expGrid').innerHTML = xs.map(x => {
+    const cons = (x.contacts || []).slice().sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')));
+    const linked = all.filter(t => t.xpId === x.id).sort((a, b) => (a.order || 0) - (b.order || 0));
+    return `<div class="xcard">
+      <div class="xtop"><span class="xav">${ICO.expert}</span>
+        <div style="min-width:0;flex:1"><div class="xname">${esc(x.name || 'Ohne Namen')}</div>
+          ${x.topic ? `<div class="xtopic">Experte für: ${esc(x.topic)}</div>` : ''}
+          <span class="xstate${cons.length ? ' on' : ''}">${cons.length ? `${cons.length} Kontakt${cons.length > 1 ? 'e' : ''}` : 'noch kein Kontakt'}</span></div>
+        <button class="btn ghost sm needs-write" data-editxp="${esc(x.id)}" aria-label="${esc(x.name)} bearbeiten">${ICO.pen}</button></div>
+      <div class="xreach">${xpReach(x) || '<span>Noch keine Telefonnummer oder Mail</span>'}</div>
+      ${linked.length ? `<div class="xsec"><span class="fl">To-dos</span><div class="xtodos">${linked.map(t =>
+        `<button type="button" class="xtodo" data-opentask="${esc(t.id)}"><i class="kdot k-${colOf(t)}"></i>${esc(t.title || 'Ohne Titel')}<small>${esc(COLS.find(c => c.k === colOf(t)).nm)}</small></button>`).join('')}</div></div>` : ''}
+      <div class="xsec"><span class="fl">Kontakte &amp; Infos</span>
+        ${cons.length ? `<div class="xcons">${cons.map(c => `<div class="xcon" data-editct="${esc(x.id)}:${esc(c.id)}" role="button" tabindex="0">
+          <div class="h">${esc(deDay(c.date))} · ${esc(CONTACT[c.how] || CONTACT.other)}${c.byName ? `<span class="by">${esc(c.byName)}</span>` : ''}</div>
+          ${c.text ? `<p>${esc(c.text)}</p>` : ''}</div>`).join('')}</div>`
+          : '<div class="xnone">Noch nichts notiert. Nach jedem Telefonat, jeder Mail, jedem Treffen hier eintragen.</div>'}</div>
+      <div class="xacts">
+        <button class="btn sm primary needs-write" data-newct="${esc(x.id)}">${ICO.plus} Kontakt eintragen</button>
+        ${linked.some(t => colOf(t) !== 'done') ? '' : `<button class="btn sm needs-write" data-xptask="${esc(x.id)}">${ICO.plus} Als To-do</button>`}
+      </div>
+    </div>`;
+  }).join('') + `<button class="xadd needs-write" data-newxp="1">${ICO.expert}${xs.length ? 'Weiteren Experten eintragen' : 'Ersten Experten eintragen'}</button>`;
+}
+
+function openExpert(id) {
+  const x = id ? expertOf(id) : null;
+  if (id && !x) return;
+  editXp = id || null;
+  $('#xpTitle').textContent = x ? 'Experte' : 'Neuer Experte';
+  $('#xpName').value = x ? x.name || '' : '';
+  $('#xpTopic').value = x ? x.topic || '' : '';
+  $('#xpPhone').value = x ? x.phone || '' : '';
+  $('#xpMail').value = x ? x.mail || '' : '';
+  $('#xpDel').hidden = !x;
+  const ro = !canWrite();
+  ['#xpName', '#xpTopic', '#xpPhone', '#xpMail'].forEach(s => { $(s).disabled = ro; });
+  show('mExpert');
+  if (!ro) setTimeout(() => $('#xpName').focus(), 60);
+}
+function saveExpert() {
+  if (!canWrite()) return;
+  const name = $('#xpName').value.trim();
+  if (!name) { toast('Wie heißt die Person?'); $('#xpName').focus(); return; }
+  const old = editXp ? expertOf(editXp) : null;
+  const data = Object.assign({ contacts: [] }, old || {}, {
+    expert: true, name: name.slice(0, 80), topic: $('#xpTopic').value.trim().slice(0, 160),
+    phone: $('#xpPhone').value.trim().slice(0, 40), mail: $('#xpMail').value.trim().slice(0, 120)
+  });
+  const id = editXp || PA.newId('x');
+  PA.put('task', id, data);
+  // Verknüpfte To-dos tragen den Namen mit (falls der Experte gelöscht wird).
+  if (old && old.name !== data.name) todos().filter(t => t.xpId === id)
+    .forEach(t => PA.put('task', t.id, Object.assign({}, t, { xpName: data.name })));
+  hide('mExpert');
+  toast(old ? 'Gespeichert' : `${data.name} ist eingetragen`);
+  renderAll();
+}
+
+function openContact(xid, cid) {
+  const x = expertOf(xid); if (!x) return;
+  const c = cid ? (x.contacts || []).find(k => k.id === cid) : null;
+  if (cid && !c) return;
+  ctXp = xid; ctId = c ? c.id : null;
+  ctHow = c && CONTACT[c.how] ? c.how : 'call';
+  $('#ctTitle').textContent = `${c ? 'Kontakt' : 'Kontakt eintragen'} · ${x.name || 'Experte'}`;
+  $('#ctDate').value = (c && c.date) || todayIso();
+  $('#ctText').value = c ? c.text || '' : '';
+  $('#ctDel').hidden = !c;
+  renderContactKind();
+  const ro = !canWrite();
+  ['#ctDate', '#ctText'].forEach(s => { $(s).disabled = ro; });
+  show('mContact');
+  if (!ro && !c) setTimeout(() => $('#ctText').focus(), 60);
+}
+function renderContactKind() {
+  $('#ctKind').innerHTML = Object.entries(CONTACT).map(([k, nm]) =>
+    `<button type="button" data-cthow="${k}" aria-pressed="${ctHow === k}">${nm}</button>`).join('');
+}
+function saveContact() {
+  if (!canWrite()) return;
+  const x = expertOf(ctXp); if (!x) { hide('mContact'); return; }
+  const text = $('#ctText').value.trim();
+  if (!text) { toast('Was habt ihr erfahren oder gefragt? Ein Satz reicht.'); $('#ctText').focus(); return; }
+  const list = (x.contacts || []).slice();
+  const i = ctId ? list.findIndex(k => k.id === ctId) : -1;
+  const c = Object.assign({}, i >= 0 ? list[i] : { id: PA.newId('c'), byName: PA.owner ? 'Lehrkraft' : ((PA.me && PA.me.name) || '') }, {
+    date: $('#ctDate').value || todayIso(), how: ctHow, text: text.slice(0, 2000)
+  });
+  if (i >= 0) list[i] = c; else list.push(c);
+  PA.put('task', ctXp, Object.assign({}, x, { contacts: list.slice(-60) }));
+  hide('mContact');
+  toast('Kontakt eingetragen');
+  renderAll();
+}
+
+/* ════════════════════════════════════════════════════════════
+   PROJEKTARBEIT & REGELN (nur noch auf der Wartekarte)
    ════════════════════════════════════════════════════════════ */
 function rulesHtml() {
   const extra = String((V().room && V().room.rules) || '').trim();
@@ -1481,6 +1633,9 @@ document.addEventListener('keydown', e => {
     if (DRAG) endDrag(true);
     if (picked) setPick(null);
   }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.xcon[data-editct]')) {
+    e.preventDefault(); const [xid, cid] = e.target.dataset.editct.split(':'); openContact(xid, cid);
+  }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.postit[data-drag]')) {
     e.preventDefault(); openTask(e.target.dataset.drag.slice(2));
   }
@@ -1493,7 +1648,7 @@ function go(v) {
   if (goalDirty && v !== 'goal') saveGoal();
   tab = v;
   $$('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view === v));
-  ['goal', 'work', 'hours', 'requests', 'team', 'notes', 'rules'].forEach(k => { const el = $('#view-' + k); if (el.hidden !== (k !== v)) el.hidden = k !== v; });
+  ['goal', 'work', 'hours', 'requests', 'team', 'notes', 'experts'].forEach(k => { const el = $('#view-' + k); if (el.hidden !== (k !== v)) el.hidden = k !== v; });
 }
 
 function wire() {
@@ -1572,6 +1727,24 @@ function wire() {
     }
     // Board
     if ((b = t.closest('[data-newtask]'))) { openTask(null, b.dataset.newtask); return; }
+    // Experten
+    if ((b = t.closest('[data-newxp]'))) { openExpert(null); return; }
+    if ((b = t.closest('[data-editxp]'))) { openExpert(b.dataset.editxp); return; }
+    if ((b = t.closest('[data-newct]'))) { openContact(b.dataset.newct, null); return; }
+    if ((b = t.closest('[data-editct]'))) { const [xid, cid] = b.dataset.editct.split(':'); openContact(xid, cid); return; }
+    if ((b = t.closest('[data-cthow]'))) { if (!canWrite()) return; ctHow = b.dataset.cthow; renderContactKind(); return; }
+    if ((b = t.closest('[data-xptask]'))) { openTask(null, 'todo', b.dataset.xptask); return; }
+    if ((b = t.closest('[data-opentask]'))) { openTask(b.dataset.opentask); return; }
+    if ((b = t.closest('[data-tkxp]'))) {
+      if (!canWrite()) return;
+      const prev = expertOf(tkXp), name = $('#tkName').value.trim();
+      tkXp = b.dataset.tkxp;
+      // „… kontaktieren" mitziehen, solange der Titel noch der vorgeschlagene ist.
+      const x = expertOf(tkXp);
+      if (!name || (prev && name === (prev.name || 'Experten') + ' kontaktieren'))
+        $('#tkName').value = x ? (x.name || 'Experten') + ' kontaktieren' : (prev ? '' : name);
+      renderTaskForm(); return;
+    }
     if ((b = t.closest('[data-pcol]'))) {
       phoneCol = b.dataset.pcol; renderWork(); return;
     }
@@ -1731,6 +1904,25 @@ function wire() {
   $('#tkDel').addEventListener('click', () => {
     const id = editTask; if (!id) return;
     ask('To-do löschen?', 'Die Karte verschwindet aus der To-do-Übersicht.', () => { hide('mTask'); PA.del('task', id); renderAll(); }, 'Löschen');
+  });
+
+  // Experten
+  $('#xpSave').addEventListener('click', saveExpert);
+  $('#xpName').addEventListener('keydown', e => { if (e.key === 'Enter') saveExpert(); });
+  $('#xpDel').addEventListener('click', () => {
+    const id = editXp, x = expertOf(id); if (!x) return;
+    ask(`${x.name || 'Experten'} löschen?`, 'Die Kontakte und Infos zu dieser Person gehen verloren. To-dos bleiben stehen.', () => {
+      hide('mExpert'); PA.del('task', id); renderAll();
+    }, 'Löschen');
+  });
+  $('#ctSave').addEventListener('click', saveContact);
+  $('#ctDel').addEventListener('click', () => {
+    const x = expertOf(ctXp), id = ctId; if (!x || !id) return;
+    ask('Kontakt löschen?', 'Der Eintrag mit den Infos verschwindet.', () => {
+      hide('mContact');
+      PA.put('task', x.id, Object.assign({}, x, { contacts: (x.contacts || []).filter(k => k.id !== id) }));
+      renderAll();
+    }, 'Löschen');
   });
 
   // Stunden
