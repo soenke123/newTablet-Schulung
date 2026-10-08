@@ -141,6 +141,11 @@ header.top{
 }
 .tab[aria-selected="true"] .cnt{background:var(--petrol-wash);color:var(--petrol)}
 .cnt.red,.tab[aria-selected="true"] .cnt.red{background:var(--alarm);color:#fff}
+/* Anträge: dezent gerahmt und getönt, mit dem Stand des nächsten Antrags */
+.tab.req{margin:6px 0 6px 6px;padding:6px 12px;border:1px solid #f0d6c2;background:#fdf5ee;border-radius:var(--r)}
+.tab.req:hover{border-color:#e6bd9c}
+.tab.req[aria-selected="true"]{border-color:#e2b48f;background:var(--marker-wash)}
+.tab.req::after{bottom:-1px}
 
 main.wrap{padding-top:30px;padding-bottom:80px}
 
@@ -384,10 +389,6 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 .ishell .x:hover{background:var(--st-block)}
 .iadd{aspect-ratio:4/3;border:1px dashed var(--line);border-radius:var(--r);background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;color:var(--ink-3);font-size:11.5px;font-weight:600;text-align:center;padding:8px}
 .iadd:hover{border-color:var(--petrol);color:var(--petrol);background:var(--paper-up)}
-.qlist{margin:12px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
-.qlist li{display:flex;gap:11px;align-items:flex-start;font-size:12.5px;color:var(--ink-2);line-height:1.42}
-.qlist .qi{width:32px;height:32px;border-radius:9px;background:var(--marker-wash);color:var(--marker);display:grid;place-items:center;flex:none}
-.qlist b{display:block;color:var(--ink);font-size:13.5px}
 .goalhead{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:12px;align-items:start}
 .goalhead input[type=date]{font-size:16px;font-weight:600;padding:12px 12px}
 .duehint{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--ink-3);margin:6px 0 12px;min-height:18px}
@@ -396,34 +397,55 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opacity:.3;pointer-events:none}
 
 /* ============================================================
-   ERKLÄRUNG IN KACHELN (To-dos, Dokumentation, Anträge)
+   ERKLÄRUNG IN KACHELN (in jedem Reiter, ein- und ausklappbar)
    ============================================================ */
-.guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:0 0 18px}
+.gbox{margin:0 0 18px}
+.gb-h{display:flex;align-items:center;gap:10px;margin:0 0 8px}
+.gb-h .gb-t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--ink-3);min-width:0}
+.gb-tg{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex:none;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:4px 11px 4px 9px;font-size:12px;font-weight:700;color:var(--petrol);box-shadow:var(--sh-1)}
+.gb-tg:hover{background:#fff;border-color:var(--petrol)}
+.gb-tg svg{transition:transform .2s}
+.gbox.min .gb-tg svg{transform:rotate(180deg)}
+.guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
 .gstep{display:flex;gap:11px;align-items:flex-start;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;box-shadow:var(--sh-1)}
 .gstep .gi{position:relative;width:36px;height:36px;border-radius:10px;background:var(--petrol-wash);color:var(--petrol);display:grid;place-items:center;flex:none}
 .gstep .gi i{position:absolute;top:-6px;left:-6px;width:18px;height:18px;border-radius:99px;background:var(--marker);color:#fff;font-style:normal;font-size:10.5px;font-weight:700;display:grid;place-items:center;border:2px solid var(--paper-up)}
 .gstep > div > b{display:block;font-size:13.5px;margin-bottom:2px;line-height:1.25}
 .gstep > div > span{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.42}
 .gstep > div > span b{color:var(--ink)}
-.gstep.later{border-style:dashed;background:transparent;box-shadow:none}
-.gstep.later .gi{background:var(--paper-down);color:var(--ink-3)}
-.gstep.later > div > b,.gstep.later > div > span{color:var(--ink-3)}
-.soontag{display:inline-block;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--paper-down);color:var(--ink-2);border-radius:99px;padding:1px 7px;margin-left:5px;vertical-align:1px}
+.gstep.alarm{grid-column:1/-1;background:var(--marker-wash);border-color:#f0c9ab;align-items:center}
+.gstep.alarm .gi{background:var(--marker);color:#fff}
+.gstep.alarm > div > b{color:#5e270a}
+.gstep.alarm > div > span{color:#7a3510}
+/* eingeklappt: nur Icon und Überschrift */
+.gbox.min .guide{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px}
+.gbox.min .gstep{align-items:center;padding:7px 10px;gap:9px;box-shadow:none;cursor:pointer}
+.gbox.min .gstep:hover{border-color:var(--petrol)}
+.gbox.min .gstep .gi{width:28px;height:28px;border-radius:8px}
+.gbox.min .gstep .gi svg{width:15px;height:15px}
+.gbox.min .gstep .gi i{width:15px;height:15px;font-size:9px;top:-5px;left:-5px}
+.gbox.min .gstep > div > b{margin:0;font-size:12.5px}
+.gbox.min .gstep > div > span{display:none}
 
 /* Zeitschätzung am To-do */
 .estpick{display:flex;gap:6px;flex-wrap:wrap}
+.estin{display:flex;align-items:center;gap:9px}
+.estin input{width:100px;font-size:16px;font-weight:700;text-align:center}
+.estin span{font-size:13px;color:var(--ink-2);font-weight:600}
 .estpick button{min-width:44px;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:5px 11px;font-size:13px;font-weight:600;color:var(--ink-2)}
 .estpick button[aria-pressed="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff}
 .pi-est{margin-left:auto;display:inline-flex;align-items:center;gap:4px;font-weight:700;white-space:nowrap;background:rgba(255,255,255,.55);border-radius:99px;padding:2px 7px 2px 5px;flex:none}
 
-/* Zeitbalken (To-dos) */
-.budget{padding:16px 18px;margin-bottom:18px}
-.bud-top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
-.bud-in{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.bud-in label{font-size:13.5px;font-weight:700}
-.bud-in input{width:90px;font-size:17px;font-weight:700;text-align:center;padding:6px 8px}
-.bud-in small{font-size:12px;color:var(--ink-3)}
-.bud-sum{margin-left:auto;font-size:13px;color:var(--ink-2);text-align:right}
+/* Zeitbalken (To-dos): links die Zeit, rechts der Balken */
+.budget{display:grid;grid-template-columns:minmax(220px,300px) minmax(0,1fr);gap:8px 22px;align-items:center;padding:14px 18px;margin-bottom:18px}
+.bud-in{display:flex;flex-direction:column;gap:5px;padding-right:20px;border-right:1px solid var(--line-soft)}
+.bud-in label{font-size:13px;font-weight:700;line-height:1.3}
+.bud-in .row{display:flex;align-items:center;gap:8px}
+.bud-in input{width:84px;font-size:17px;font-weight:700;text-align:center;padding:6px 8px}
+.bud-in .row span{font-size:13px;font-weight:600;color:var(--ink-2)}
+.bud-in small{font-size:11.5px;color:var(--ink-3)}
+.bud-main{min-width:0}
+.bud-sum{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);margin-bottom:7px}
 .bud-sum b{font-size:16px;color:var(--ink)}
 .bar{position:relative;display:flex;height:26px;border-radius:99px;overflow:hidden;background:repeating-linear-gradient(-45deg,var(--paper-down),var(--paper-down) 6px,#ebe5d8 6px,#ebe5d8 12px);border:1px solid var(--line);box-shadow:inset 0 1px 3px rgba(27,26,22,.08)}
 .bar span{height:100%;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;transition:width .4s cubic-bezier(.2,.8,.3,1)}
@@ -434,12 +456,12 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .bar .b-todo{background:var(--k-todo)}
 .bar.bad{border-color:var(--st-block);box-shadow:0 0 0 2px #fbe9e6}
 .bar .b-mark{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--ink);border-radius:2px;box-shadow:0 0 0 2px #fff}
-.bud-leg{display:flex;gap:14px;flex-wrap:wrap;margin-top:9px;font-size:12px;color:var(--ink-2)}
+.bud-leg{display:flex;gap:6px 14px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--ink-2)}
 .bud-leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .bud-leg .free{background:repeating-linear-gradient(-45deg,var(--paper-down),var(--paper-down) 3px,#d9d2c2 3px,#d9d2c2 6px)}
-.bud-msg{display:flex;gap:7px;align-items:center;margin-top:10px;font-size:12.5px;font-weight:600;padding:7px 11px;border-radius:var(--r-sm)}
+.bud-msg{display:inline-flex;gap:7px;align-items:center;margin-top:9px;font-size:12px;font-weight:600;padding:5px 10px;border-radius:var(--r-sm);max-width:100%}
+.bud-msg svg{flex:none}
 .bud-msg.bad{color:var(--st-block);background:#fbe9e6}
-.bud-msg.ok{color:var(--st-done);background:#e3f2e8}
 .bud-msg.info{color:#8a5f08;background:#fbf0cf}
 
 /* Dokumentation: To-do-Auswahl */
@@ -460,21 +482,17 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .etodo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .daygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;align-items:stretch}
 .daygrid .entry{margin-bottom:0}
-
-/* Anträge: Checkliste */
-.reqwrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(290px,370px);gap:20px;align-items:start}
-.reqwrap .reqs{max-width:none}
-.rcheck{position:sticky;top:118px;padding:18px}
-.rcheck h3{font-size:17px;margin:3px 0 4px}
-.rcheck .lead{font-size:12.5px;color:var(--ink-2);margin:0 0 12px;line-height:1.45}
-.rclist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
-.rclist li{display:flex;gap:11px;align-items:flex-start;font-size:12.5px;line-height:1.4;color:var(--ink-2)}
-.rclist li b{display:block;color:var(--ink);font-size:13.5px}
-.rclist .gi{position:relative;width:32px;height:32px;border-radius:9px;background:var(--petrol-wash);color:var(--petrol);display:grid;place-items:center;flex:none}
-.rclist .gi i{position:absolute;top:-6px;left:-6px;width:17px;height:17px;border-radius:99px;background:var(--petrol);color:#fff;font-style:normal;font-size:10px;font-weight:700;display:grid;place-items:center;border:2px solid var(--paper-up)}
-.deadline{display:flex;gap:11px;align-items:flex-start;margin-top:14px;padding:12px 13px;border-radius:var(--r);background:var(--marker-wash);border:1px solid #f0c9ab;color:#7a3510;font-size:12.5px;line-height:1.45}
-.deadline .gi{width:32px;height:32px;border-radius:9px;background:var(--marker);color:#fff;display:grid;place-items:center;flex:none}
-.deadline b{display:block;font-size:13.5px;color:#5e270a;letter-spacing:.02em}
+.hphotos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hphotos .ishell,.hphotos .iadd{aspect-ratio:1}
+.ephotos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin-top:9px;max-width:330px}
+.eph{position:relative;aspect-ratio:1;border-radius:var(--r-sm);overflow:hidden;border:1px solid var(--line);background:var(--paper-down)}
+.eph img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.eph .x{position:absolute;top:4px;right:4px;width:26px;height:26px;border-radius:99px;background:rgba(27,26,22,.75);color:#fff;border:0;display:grid;place-items:center}
+.eph .x:hover{background:var(--st-block)}
+.photonote{background:#fbf0cf;border-color:#ecd28e;color:#7a5506}
+.photobox{position:relative;max-width:min(1100px,100%);max-height:100%;display:flex}
+.photobox img{max-width:100%;max-height:calc(100vh - 32px);border-radius:var(--r);box-shadow:var(--sh-3);object-fit:contain;background:#000}
+.photobox .m-x{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55)}
 
 /* Antrag-Dialog: nummerierte Fragen */
 .rq-step{display:flex;align-items:center;gap:9px;margin-bottom:7px}
@@ -746,14 +764,14 @@ body.ro .postit,body.ro .pchip{cursor:default}
   .board{grid-template-columns:repeat(4,minmax(190px,1fr));overflow-x:auto}
   .goalwrap{grid-template-columns:1fr}
   .imgs{grid-template-columns:repeat(4,1fr)}
-  .reqwrap{grid-template-columns:1fr}
-  .rcheck{position:static;order:-1}
 }
 @media (max-width:880px){
   .ov,.ov.withlist{grid-template-columns:1fr}
   .lobby{position:static}
   .hgrid{grid-template-columns:1fr}
   .hform{position:static}
+  .budget{grid-template-columns:1fr}
+  .bud-in{padding:0 0 12px;border-right:0;border-bottom:1px solid var(--line-soft)}
   .checks{grid-template-columns:1fr}
   .cyc{border-radius:var(--r)!important;border-left:1px solid rgba(127,168,162,.26)!important}
 }
@@ -862,10 +880,6 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg>
       Team <span class="cnt" id="cntTeam">0</span>
     </button>
-    <button class="tab" role="tab" data-view="notes" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5M8 9h8M8 13h5"/></svg>
-      Lehrkraft-Kommentare <span class="cnt" id="cntNotes">0</span>
-    </button>
     <button class="tab" role="tab" data-view="goal" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
       Projektziel
@@ -878,13 +892,17 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/></svg>
       Dokumentation <span class="cnt" id="cntHours">0</span>
     </button>
-    <button class="tab" role="tab" data-view="requests" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
-      Anträge <span class="cnt" id="cntReq">0</span><span class="nextreq" id="reqNext" hidden></span>
-    </button>
     <button class="tab" role="tab" data-view="experts" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M17.5 13.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/></svg>
       Experten <span class="cnt" id="cntExp">0</span>
+    </button>
+    <button class="tab req" role="tab" data-view="requests" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+      Anträge <span class="cnt" id="cntReq">0</span><span class="nextreq" id="reqNext" hidden></span>
+    </button>
+    <button class="tab" role="tab" data-view="notes" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5M8 9h8M8 13h5"/></svg>
+      Lehrkraft-Kommentare <span class="cnt" id="cntNotes">0</span>
     </button>
   </div>
 </nav>
@@ -942,6 +960,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div class="sp"><span class="stat" id="goalSaved">gespeichert</span>
         <button class="btn" id="goalLockBtn" hidden></button></div>
     </div>
+    <div class="gbox" id="goalGuide"></div>
     <div class="robar" id="goalNote" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Das Projektziel ist fixiert — es gilt so. Änderungen bitte mit eurer Lehrkraft besprechen.</span></div>
     <div class="goalwrap">
       <div>
@@ -982,20 +1001,6 @@ body.ro .postit,body.ro .pchip{cursor:default}
           <div class="imgs" id="goalImgs"></div>
           <input type="file" id="goalImgInput" accept="image/*" multiple hidden>
         </div>
-        <div class="panel pad">
-          <div class="eyebrow">Gutes Ziel?</div>
-          <h3 style="font-size:17px;margin-top:3px">Diese Fragen solltet ihr beantworten</h3>
-          <ul class="qlist">
-            <li><span class="qi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg></span>
-              <div><b>Konkretes Ziel des Projekts</b>Woran erkennt ihr, dass ihr euer Ziel erreicht habt?</div></li>
-            <li><span class="qi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg></span>
-              <div><b>Konkretes Produkt am Ende des Projekts</b>Was haltet ihr am Ende in der Hand? (abgleichen oder verbessern)</div></li>
-            <li><span class="qi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg></span>
-              <div><b>Für wen?</b>Wer hat etwas von eurem Ergebnis?</div></li>
-            <li><span class="qi"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
-              <div><b>Bis wann?</b>Tragt oben ein, wann das Projekt fertig sein soll.</div></li>
-          </ul>
-        </div>
       </div>
     </div>
   </section>
@@ -1010,7 +1015,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       </div>
       <div class="sp" id="workStats"></div>
     </div>
-    <div class="guide" id="workGuide"></div>
+    <div class="gbox" id="workGuide"></div>
     <div class="panel budget" id="budget"></div>
     <div class="colpick" id="colPick" role="tablist" aria-label="Spalte"></div>
     <div class="board" id="board"></div>
@@ -1025,7 +1030,8 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <p class="s">Am Ende jedes Arbeitstags haltet ihr fest, wer was gemacht hat.</p>
       </div>
     </div>
-    <div class="guide" id="hoursGuide"></div>
+    <div class="gbox" id="hoursGuide"></div>
+    <div class="robar photonote" id="hPhotoNote" hidden></div>
     <div class="today" id="todayBar"></div>
     <div class="hgrid">
       <div class="panel hform needs-write" id="hForm">
@@ -1037,6 +1043,10 @@ body.ro .postit,body.ro .pchip{cursor:default}
           <p class="hint" id="hWhoHint">Tippt alle an, die das gemacht haben. Du kannst auch nur für andere eintragen.</p></div>
         <div class="field"><label class="fl" for="hText">Das wurde gemacht (Arbeitsschritt)</label>
           <textarea id="hText" maxlength="1500" placeholder="z. B. Drei Quellen zur Solarenergie gelesen und die wichtigsten Punkte notiert."></textarea></div>
+        <div class="field"><span class="fl">Fotos <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig, bis zu 3)</span></span>
+          <div class="hphotos" id="hPhotos"></div>
+          <input type="file" id="hPhotoIn" accept="image/*" multiple hidden>
+          <p class="hint">Werden automatisch verkleinert. Personen nur fotografieren, wenn sie einverstanden sind.</p></div>
         <div class="field"><label class="fl" for="hNext">Als Nächstes <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
           <textarea id="hNext" maxlength="600" style="min-height:56px" placeholder="z. B. Gliederung für die Präsentation entwerfen."></textarea></div>
         <div style="display:flex;gap:8px">
@@ -1064,11 +1074,9 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
         Antrag stellen</button></div>
     </div>
-    <div class="reqwrap">
-      <div><div class="filt" id="reqFilt"></div>
-        <div class="reqs" id="reqList"></div></div>
-      <aside class="panel rcheck" id="reqCheck"></aside>
-    </div>
+    <div class="gbox" id="reqGuide"></div>
+    <div class="filt" id="reqFilt"></div>
+    <div class="reqs" id="reqList"></div>
   </section>
 
   <!-- ══════════ PLANUNGSRAUM: TEAM ══════════ -->
@@ -1088,6 +1096,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <span><span class="cmark c2">✓✓</span> Stufe 2: auch fremde Orte</span>
       </div>
     </div>
+    <div class="gbox" id="teamGuide"></div>
     <div class="teamgrid" id="teamGrid"></div>
   </section>
 
@@ -1101,6 +1110,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       </div>
       <div class="sp" id="notesStats"></div>
     </div>
+    <div class="gbox" id="notesGuide"></div>
     <div class="panel pad nform" id="noteForm" hidden>
       <label class="fl" for="noteIn">Neuer Kommentar an diese Gruppe</label>
       <textarea id="noteIn" maxlength="1500" placeholder="z. B. Euer Projektziel ist noch zu allgemein — woran erkennt ihr am Ende, dass ihr es geschafft habt?"></textarea>
@@ -1125,7 +1135,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       </div>
       <div class="sp" id="expStats"></div>
     </div>
-    <div class="guide" id="expGuide"></div>
+    <div class="gbox" id="expGuide"></div>
     <div class="xgrid" id="expGrid"></div>
   </section>
 </main>
@@ -1201,7 +1211,8 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <input type="text" id="tkName" maxlength="120" placeholder="z. B. Umfrage in der 7a durchführen"></div>
       <div class="field"><label class="fl" for="tkText">Beschreibung <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
         <textarea id="tkText" maxlength="1500" style="min-height:70px"></textarea></div>
-      <div class="field"><span class="fl">Geschätzte Zeit</span><div class="estpick" id="tkEst"></div>
+      <div class="field"><label class="fl" for="tkEst">Geschätzte Zeit</label>
+        <div class="estin"><input type="number" id="tkEst" min="0" max="99" step="any" inputmode="decimal" placeholder="z. B. 2"><span>Schulstunden</span></div>
         <p class="hint">Wie viele Schulstunden braucht ihr ungefähr? Grob schätzen reicht.</p></div>
       <div class="field"><span class="fl">Wer kümmert sich?</span><div class="whopick" id="tkWho"></div></div>
       <div class="field" id="tkXpF"><span class="fl">Experte kontaktieren <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></span>
@@ -1371,19 +1382,25 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <div class="m-b">
       <p style="margin:0 0 12px;font-size:12.5px;line-height:1.55;color:var(--ink-3)">
         Die ganze Klasse wird <b>einmal pro Woche</b> automatisch gesichert — sobald im Raum gearbeitet wird und das letzte Backup älter als 7 Tage ist.
-        Vor jedem Import oder Einspielen entsteht außerdem ein Backup „vor Änderung“.</p>
+        Vor jedem Import oder Einspielen entsteht außerdem ein Backup „vor Änderung“.
+        Fotos aus der Dokumentation werden <b>nicht</b> gesichert und nicht exportiert.</p>
       <p style="margin:0 0 12px;font-size:12.5px;line-height:1.55;color:var(--ink-3)" id="backupScope"></p>
       <div id="backupList"></div>
     </div>
     <div class="m-f"><div class="sp"><button class="btn primary" data-close="mBackup">Schließen</button></div></div>
   </div>
 </div>
+<!-- Foto groß -->
+<div class="scrim" id="mPhoto" hidden>
+  <div class="photobox"><img id="phBig" alt="Foto">
+    <button class="m-x" data-close="mPhoto" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+</div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
 
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261008b"></script>
-<script src="app.js?v=20261008b"></script>
+<script src="bridge.js?v=20261008c"></script>
+<script src="app.js?v=20261008c"></script>
 </body>
 </html>

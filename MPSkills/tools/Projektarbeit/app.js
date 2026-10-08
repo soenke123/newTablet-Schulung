@@ -17,14 +17,16 @@
      Schüler                ohne Planungsraum: Wartekarte (Lobby bzw.
                             die eigene Gruppe). Mit: der Planungsraum.
 
-   Der Planungsraum hat die Reiter Team, Lehrkraft-Kommentare,
-   Projektziel (mit Fertig-Datum due), To-dos (Board mit vier Spalten,
-   je Karte eine Zeitschätzung est in Schulstunden), Dokumentation
-   (Protokoll, intern „log"/„hours"), Anträge und Experten. Den Reiter
-   „Projektarbeit & Regeln" gibt es nicht mehr — die Regeln stehen nur
-   noch auf der Wartekarte, bevor der Planungsraum aufgeht.
-   Die Erklärungen stehen als Kacheln mit Icons über den Reitern
-   (guide()), ohne Emojis.
+   Der Planungsraum hat die Reiter Team, Projektziel (mit Fertig-Datum
+   due), To-dos (Board mit vier Spalten, je Karte eine Zeitschätzung est
+   in Schulstunden, frei eingetippt), Dokumentation (Protokoll, intern
+   „log"/„hours"), Experten, Anträge (dezent gerahmt) und Lehrkraft-
+   Kommentare. Den Reiter „Projektarbeit & Regeln" gibt es nicht mehr —
+   die Regeln stehen nur noch auf der Wartekarte.
+   Jeder Reiter beginnt mit Erklär-Kacheln (guideBox(), Icons, keine
+   Emojis). Jede Person klappt sie je Reiter ein und aus (alle Kacheln
+   des Reiters gemeinsam; gemerkt im Gerät, pa_guide_<reiter>) —
+   eingeklappt bleiben Icon und Überschrift.
 
    Zeitbalken (To-dos): Die Gruppe trägt ein, wie viele Schulstunden
    sie bis zum Ende hat. Das steht als eigenes Objekt task/„budget"
@@ -40,6 +42,10 @@
    xpName): „Frau Petersen kontaktieren".
    Dokumentation: ohne Stundenumfang (es wird nicht erfasst, wer wie
    viel gemacht hat), dafür „an welchem To-do" (log.task/taskTitle).
+   Fotos (0206): bis zu drei je Eintrag (log.photos, data-URLs, im
+   Gerät verkleinert). Die Lehrkraft löscht sie direkt am Eintrag — und
+   soll es, sobald Personen darauf zu sehen sind. Export und Backups
+   enthalten keine Fotos.
 
    Anträge (0201) heißen immer: „wir wollen an diesem Tag außerhalb des
    Schulgeländes lernen" — mit Datum, wer dabei ist, Ziel mit Adresse
@@ -140,7 +146,7 @@ const safeImg = s => typeof s === 'string' && /^data:image\/(jpeg|png|webp);base
 let tab = 'team';
 let picked = null;          // Übersicht: angetippte Person (Tablet ohne Ziehen)
 let editTask = null;        // Aufgabe im Dialog (id oder null = neu)
-let tkWho = [], tkColor = 'yellow', tkEst = 0, tkXp = '';
+let tkWho = [], tkColor = 'yellow', tkXp = '';
 let editXp = null;          // Experte im Dialog (id oder null = neu)
 let ctXp = null, ctId = null, ctHow = 'call';   // Kontakt im Dialog
 let editReq = null;
@@ -150,6 +156,7 @@ let editLog = null;
 let hTask = null;           // Dokumentation: gewähltes To-do (id, '' = etwas anderes, null = nichts gewählt)
 let tdOpen = false;         // … Auswahlliste offen?
 let hWho = null;            // Stundeneintrag: wer war dabei (null = noch nicht gewählt → ich)
+let hPhotos = [];           // … Fotos (data-URLs, höchstens 3)
 let reqFilter = 'all';
 let phoneCol = 'doing';
 let goalTimer = null, goalDirty = false;
@@ -173,9 +180,9 @@ const experts = () => PA.list('task').filter(t => t.expert === true)
 const expertOf = id => { const x = id ? PA.get('task', id) : null; return x && x.expert === true ? x : null; };
 const CONTACT = { call: 'Telefonat', mail: 'E-Mail', meet: 'Treffen', other: 'Sonstiges' };
 const budgetHours = () => { const b = PA.get('task', 'budget'); return b && b.budget ? Math.max(0, +b.hours || 0) : 0; };
-// Zeitschätzung eines To-dos in Schulstunden (0 = keine Schätzung).
-const ESTS = [0.5, 1, 2, 3, 4, 6, 8];
-const fmtEst = h => (h === 0.5 ? '½' : String(h)) + ' Std.';
+// Zeitschätzung eines To-dos in Schulstunden (0 = keine Schätzung), frei eingetippt.
+const fmtEst = h => (h === 0.5 ? '½' : (Math.round(h * 10) / 10).toLocaleString('de-DE')) + ' Std.';
+const readEst = v => Math.max(0, Math.min(99, Math.round((parseFloat(String(v || '').replace(',', '.')) || 0) * 10) / 10));
 // Text eines Antrags: diese beiden Teile gehören hinein.
 const RQ_WAY = 'WEG und VERKEHRSMITTEL:', RQ_WHY = 'BEGRÜNDUNG:';
 const RQ_TEMPLATE = RQ_WAY + '\n\n\n' + RQ_WHY + '\n';
@@ -241,12 +248,41 @@ const GI = {
   phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
   bulb: '<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/>',
   link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7L11.5 6.8"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/>',
-  alarm: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 3L2 6M19 3l3 3"/>'
+  alarm: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M5 3L2 6M19 3l3 3"/>',
+  target: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/>',
+  box: '<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
+  check: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7.5 12.5l3 3 6-6.5"/>',
+  chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 9.5h8M8 12.5h5"/>'
 };
 const gIco = (k, n) => `<span class="gi">${n ? `<i>${n}</i>` : ''}<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${GI[k]}</svg></span>`;
-// Eine Erklärung als Reihe kurzer Kacheln: [Icon, Titel, Satz, später?]
-const guide = steps => steps.map(([k, t, txt, later], i) =>
-  `<div class="gstep${later ? ' later' : ''}">${gIco(k, later ? '' : i + 1)}<div><b>${t}${later ? '<span class="soontag">kommt später</span>' : ''}</b><span>${txt}</span></div></div>`).join('');
+// Eine Erklärung als Reihe kurzer Kacheln: [Icon, Titel, Satz, 'alarm'?]
+// Das Wichtigste im Satz steht fett. 'alarm' = hervorgehoben, ohne Nummer.
+const guide = steps => steps.map(([k, t, txt, cls], i) =>
+  `<div class="gstep${cls ? ' ' + cls : ''}">${gIco(k, cls ? '' : i + 1)}<div><b>${t}</b><span>${txt}</span></div></div>`).join('');
+// Ein- und ausklappbar, je Reiter gemerkt (Standard: ausgeklappt).
+const guideOpen = k => { try { return localStorage.getItem('pa_guide_' + k) !== '0'; } catch (e) { return true; } };
+function guideBox(id, k, title, steps) {
+  const el = $('#' + id);
+  el.dataset.g = k;
+  el.classList.toggle('min', !guideOpen(k));
+  el.innerHTML = `<div class="gb-h"><span class="gb-t">${title}</span>
+      <button type="button" class="gb-tg" data-gtoggle="${k}" aria-controls="${id}"></button></div>
+    <div class="guide">${guide(steps)}</div>`;
+  guideBtn(el);
+}
+function guideBtn(el) {
+  const open = !el.classList.contains('min');
+  const b = el.querySelector('.gb-tg');
+  b.setAttribute('aria-expanded', open);
+  b.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>${open ? 'Erklärung einklappen' : 'Erklärung ausklappen'}`;
+}
+function toggleGuide(k) {
+  const el = document.querySelector(`.gbox[data-g="${k}"]`); if (!el) return;
+  el.classList.toggle('min');
+  try { localStorage.setItem('pa_guide_' + k, el.classList.contains('min') ? '0' : '1'); } catch (e) { /* egal */ }
+  guideBtn(el);
+}
 
 // Stundeneintrag: wer war dabei. Einträge von vor 0202 kennen nur den Schreiber.
 const logWho = l => Array.isArray(l.who) ? l.who : (l.by ? [l.by] : []);
@@ -316,27 +352,60 @@ function renderAll() {
 
 const findG = id => (V().groups || []).find(g => g.id === id) || null;
 
-// Die Erklärungen über To-dos, Dokumentation und Anträgen ändern sich nie.
+// Die Erklärungen über den Reitern ändern sich nie (nur je nach Rolle).
 function renderGuides() {
   if ($('#workGuide').firstChild) return;
-  $('#workGuide').innerHTML = guide([
-    ['split', 'Zerlegen', 'Teilt euer Projekt vom Start bis zum Ende in kleine Arbeitsschritte — alle, die ihr erwartet.'],
-    ['clock', 'Zeit planen', 'Zählt, wie viele Schulstunden ihr bis zum Ende habt, und tragt sie unten ein. Schätzt bei jedem To-do die Stunden — der Balken zeigt, ob alles passt.'],
+  const T = PA.owner;
+  guideBox('teamGuide', 'team', 'Kurz erklärt', T ? [
+    ['pen', 'Teamname', 'Den <b>Teamnamen</b> gibt sich die Gruppe selbst — ihr seht ihn auch in der Übersicht.'],
+    ['sign', 'Einwilligung', 'Je Person die <b>Stufe</b> antippen, die vorliegt: Stufe 1 = in Kleingruppen, Stufe 2 = auch fremde Orte.'],
+    ['key', 'Codes', 'Vergessen? Hier steht der <b>persönliche Code</b> jeder Person. „neu“ vergibt einen neuen.']
+  ] : [
+    ['pen', 'Teamname', 'Gebt euch oben einen <b>Teamnamen</b> — so heißt ihr überall, auch bei der Lehrkraft.'],
+    ['sign', 'Einwilligung', 'Ob ihr das <b>Schulgelände verlassen</b> dürft, trägt die <b>Lehrkraft</b> ein.'],
+    ['key', 'Persönlicher Code', 'Damit kommt ihr auf <b>jedem Gerät</b> zurück (Menü oben rechts). <b>Nicht weitergeben.</b>']
+  ]);
+  guideBox('goalGuide', 'goal', 'Diese Fragen solltet ihr beantworten', [
+    ['target', 'Konkretes Ziel', 'Woran erkennt ihr, dass ihr euer <b>Ziel erreicht</b> habt?'],
+    ['box', 'Konkretes Produkt', 'Was haltet ihr <b>am Ende in der Hand</b>? (abgleichen oder verbessern)'],
+    ['people', 'Für wen?', 'Wer hat etwas von eurem <b>Ergebnis</b>?'],
+    ['cal', 'Bis wann?', 'Tragt unten ein, <b>wann</b> das Projekt <b>fertig</b> sein soll.']
+  ]);
+  guideBox('workGuide', 'work', 'So plant ihr', [
+    ['split', 'Zerlegen', 'Teilt euer Projekt vom Start bis zum Ende in <b>kleine Arbeitsschritte</b> — alle, die ihr erwartet.'],
+    ['clock', 'Zeit planen', 'Tragt ein, wie viele <b>Schulstunden</b> ihr bis zum Ende habt, und schätzt bei <b>jedem To-do</b> die Stunden. Der Balken zeigt, ob alles passt.'],
     ['move', 'Weiterschieben', 'Angefangen → <b>In Arbeit</b>. Erledigt → <b>Fertig</b>. Hängt etwas? → <b>Blockiert</b>.'],
-    ['refresh', 'Anpassen', 'To-dos dürft ihr jederzeit ändern und in kleinere Aufgaben aufteilen.']
+    ['refresh', 'Anpassen', 'To-dos dürft ihr <b>jederzeit ändern</b> und in kleinere Aufgaben aufteilen.']
   ]);
-  $('#hoursGuide').innerHTML = guide([
-    ['cal', 'Jeder Arbeitstag', 'Ein Eintrag mit dem Datum des Tages — gern mehrere nebeneinander.'],
-    ['people', 'Wer war da?', 'Antippen, wer dabei war. Wer krank ist oder fehlt, bleibt weg und steht beim Tag unter „fehlte“.'],
-    ['pen', 'Woran gearbeitet?', 'To-do auswählen und kurz schreiben, was ihr geschafft habt.'],
-    ['camera', 'Fotos bei Exkursionen', 'Diese Regel kommt später dazu.', true]
+  guideBox('hoursGuide', 'hours', 'So dokumentiert ihr', [
+    ['cal', 'Jeder Arbeitstag', '<b>Ein Eintrag</b> mit dem <b>Datum</b> des Tages — gern mehrere nebeneinander.'],
+    ['people', 'Wer war da?', 'Antippen, <b>wer dabei war</b>. Wer fehlt, bleibt weg und steht beim Tag unter „fehlte“.'],
+    ['pen', 'Woran gearbeitet?', '<b>To-do auswählen</b> und kurz schreiben, <b>was ihr geschafft</b> habt.'],
+    T ? ['camera', 'Fotos löschen', 'Fotos könnt ihr am Eintrag <b>löschen</b> — und solltet es, sobald <b>Personen</b> oder andere <b>personenbezogene Daten</b> darauf zu sehen sind.']
+      : ['camera', 'Fotos', 'Bis zu <b>3 Fotos</b> je Eintrag, z. B. von einer <b>Exkursion</b>. Personen nur <b>mit ihrer Erlaubnis</b>.']
   ]);
-  $('#reqCheck').innerHTML = reqCheckHtml();
-  $('#expGuide').innerHTML = guide([
-    ['bulb', 'Warum Experten?', 'Jedes Projekt sollte vom Rat eines oder mehrerer Experten profitieren: Menschen, die durch ihren <b>Beruf</b> oder ihr <b>Hobby</b> viel Erfahrung mit euren Arbeitsschritten haben. So vermeidet ihr Fehler und lernt von Profis.'],
-    ['expert', 'Experten notieren', 'Tragt mögliche Experten ein: Name, <b>Telefon</b> oder <b>E-Mail</b> und wofür sie Experten sind.'],
-    ['link', 'Als To-do planen', 'Kontakt aufnehmen ist ein Arbeitsschritt: „Als To-do“ antippen — oder beim To-do einen Experten wählen.'],
-    ['phone', 'Kontakt festhalten', 'Jedes <b>Telefonat</b>, jede <b>Mail</b>, jedes <b>Treffen</b> mit Datum eintragen — dazu die wichtigsten Infos, die ihr bekommen habt.']
+  guideBox('expGuide', 'experts', 'So arbeitet ihr mit Experten', [
+    ['bulb', 'Warum Experten?', 'Menschen, die durch ihren <b>Beruf</b> oder ihr <b>Hobby</b> viel Erfahrung mit euren Arbeitsschritten haben. So vermeidet ihr Fehler und <b>lernt von Profis</b>.'],
+    ['expert', 'Experten notieren', 'Tragt mögliche Experten ein: <b>Name</b>, <b>Telefon</b> oder <b>E-Mail</b> und <b>wofür</b> sie Experten sind.'],
+    ['link', 'Als To-do planen', 'Kontakt aufnehmen ist ein Arbeitsschritt: <b>„Als To-do“</b> antippen — oder beim To-do einen Experten wählen.'],
+    ['phone', 'Kontakt festhalten', 'Jedes <b>Telefonat</b>, jede <b>Mail</b>, jedes <b>Treffen</b> mit Datum eintragen — dazu die <b>wichtigsten Infos</b>.']
+  ]);
+  guideBox('reqGuide', 'requests', 'Checkliste: Wir genehmigen nur, wenn alle fünf Punkte erfüllt sind', [
+    ['sign', 'Einverständniserklärung', 'Die <b>unterschriebene Erklärung</b> ist abgegeben.'],
+    ['book', 'Logbuch aktuell', '<b>To-dos und Dokumentation</b> sind auf dem neuesten Stand — sonst können wir nicht beurteilen, ob der Antrag sinnvoll ist.'],
+    ['form', 'Antrag vollständig', '<b>Datum</b>, <b>wer mitfährt</b>, <b>Ziel mit Adresse</b>, <b>Weg und Verkehrsmittel</b>, <b>Begründung</b>.'],
+    ['inbox', 'Genehmigung abwarten', 'Erst wenn der Antrag auf <b>„genehmigt“</b> steht, dürft ihr los. Kommentar der Lehrkraft: <b>unbedingt beachten</b>.'],
+    ['plus', 'Jeder Termin = neuer Antrag', 'Für <b>jeden Tag</b> stellt ihr einen <b>eigenen Antrag</b>.'],
+    ['alarm', 'Spätestens Vortag, 18 Uhr', 'Am besten schon am <b>Ende der vorherigen mPS-Stunde</b> abschicken — spätestens am <b>Abend vor der Exkursion um 18 Uhr</b>.', 'alarm']
+  ]);
+  guideBox('notesGuide', 'notes', 'Kurz erklärt', T ? [
+    ['pen', 'Anheften', 'Hinweis schreiben, Farbe wählen, <b>anheften</b> — die Gruppe sieht ihn sofort.'],
+    ['check', 'Abhaken', 'Die Gruppe <b>hakt ab</b>, was erledigt ist.'],
+    ['chat', 'Antworten', 'Nachfragen stehen <b>unter dem Zettel</b> — dort antworten.']
+  ] : [
+    ['inbox', 'Lesen', 'Eure Lehrkräfte heften hier <b>Hinweise</b> zu eurem Projekt an.'],
+    ['check', 'Abhaken', 'Erledigt? <b>Abhaken</b> — die Lehrkraft sieht es.'],
+    ['chat', 'Nachfragen', 'Unklar? Direkt <b>unter dem Zettel</b> nachfragen.']
   ]);
 }
 
@@ -449,10 +518,7 @@ function renderOverview() {
     : `<div class="lobby-empty">${people.length ? 'Alle sind in einer Gruppe.' : 'Noch niemand da. Wer mit dem Raum-Code beitritt, erscheint hier.'}</div>`;
 
   $('#ovStats').innerHTML =
-    `<span class="stat">Personen <b>${people.length}</b></span>
-     <span class="stat">Gruppen <b>${groups.filter(g => g.no !== 0).length}</b></span>
-     <span class="stat">Einzelarbeiten <b>${groups.filter(g => g.no === 0).length}</b></span>
-     ${openReq ? `<span class="badge bg-no">${openReq} offene${openReq === 1 ? 'r' : ''} Antrag${openReq === 1 ? '' : 'e'}</span>` : ''}
+    `${openReq ? `<span class="badge bg-no">${openReq} offene${openReq === 1 ? 'r' : ''} Antrag${openReq === 1 ? '' : 'e'}</span>` : ''}
      <button class="btn sm" data-clist aria-pressed="${showList}">${showList ? 'Klassenliste ausblenden' : 'Klassenliste zeigen'}</button>
      ${notifyBtn()}`;
   if (!notify && !notifyTried) loadNotify();
@@ -739,27 +805,25 @@ function renderBudget(tasks) {
   if (!total) msg = `<div class="bud-msg info">${ICO.warn} Zählt im IServ-Kalender, wie viele Schulstunden ihr ${due ? 'bis zum ' + esc(deShort(due)) : 'bis zum Ende'} habt, und tragt sie oben ein.</div>`;
   else if (planned > total) msg = `<div class="bud-msg bad">${ICO.warn} Ihr habt ${esc(fmtH(planned - total))} mehr verplant, als ihr Zeit habt. Streicht oder verkleinert To-dos.</div>`;
   else if (noEst) msg = `<div class="bud-msg info">${ICO.clock} ${noEst === 1 ? 'Ein To-do hat' : noEst + ' To-dos haben'} noch keine Zeitschätzung.</div>`;
-  else if (tasks.length) msg = `<div class="bud-msg ok">${ICO.clock} Passt: ${esc(fmtH(total - planned))} sind noch frei — als Puffer oder für neue To-dos.</div>`;
   const html = `
-    <div class="bud-top">
-      <div class="bud-in"><label for="budIn">Wie viele Schulstunden habt ihr bis zum Ende?</label>
-        <input type="number" id="budIn" min="0" max="400" step="1" inputmode="numeric" placeholder="?" ${canWrite() ? '' : 'disabled'}>
-        <small>${due ? 'Fertig bis ' + esc(deDay(due)) : 'Fertig-Datum steht im Reiter Projektziel'}</small></div>
-      <div class="bud-sum">verplant <b>${esc(fmtH(planned))}</b>${total ? ` von <b>${esc(fmtH(total))}</b>` : ''}</div>
-    </div>
+    <div class="bud-in"><label for="budIn">Wie viele Schulstunden habt ihr bis zum Ende?</label>
+      <div class="row"><input type="number" id="budIn" min="0" max="400" step="1" inputmode="numeric" placeholder="?" ${canWrite() ? '' : 'disabled'}><span>Std.</span></div>
+      <small>${due ? 'Fertig bis ' + esc(deDay(due)) : 'Fertig-Datum steht im Reiter Projektziel'}</small></div>
+    <div class="bud-main">
+    <div class="bud-sum">verplant <b>${esc(fmtH(planned))}</b>${total ? ` von <b>${esc(fmtH(total))}</b>` : ''}</div>
     <div class="bar${total && planned > total ? ' bad' : ''}" role="img" aria-label="${esc(`verplant ${fmtH(planned)} von ${fmtH(total)}`)}">
       ${parts.filter(p => p.h).map(p => `<span class="b-${p.k}" style="width:${pct(p.h)}" title="${esc(p.nm + ': ' + fmtH(p.h))}">${p.h / scale > .07 ? esc(fmtH(p.h)) : ''}</span>`).join('')}
       ${total && planned > total ? `<i class="b-mark" style="left:${pct(total)}" title="eure Zeit endet hier"></i>` : ''}
     </div>
     <div class="bud-leg">${parts.map(p => `<span><i class="k-${p.k}"></i>${p.nm} ${esc(fmtH(p.h))}</span>`).join('')}
       ${total ? `<span><i class="free"></i>frei ${esc(fmtH(Math.max(0, total - planned)))}</span>` : ''}</div>
-    ${msg}`;
+    ${msg}</div>`;
   if (typing) {
     // Beim Tippen nur den Balken neu zeichnen, nicht das Feld.
     const tmp = document.createElement('div'); tmp.innerHTML = html;
     ['.bud-sum', '.bar', '.bud-leg'].forEach(sel => { box.querySelector(sel).outerHTML = tmp.querySelector(sel).outerHTML; });
     const m = box.querySelector('.bud-msg'), nm = tmp.querySelector('.bud-msg');
-    if (m) m.remove(); if (nm) box.appendChild(nm);
+    if (m) m.remove(); if (nm) box.querySelector('.bud-main').appendChild(nm);
     return;
   }
   box.innerHTML = html;
@@ -785,21 +849,19 @@ function openTask(id, col, xp) {
   $('#tkNote').value = t ? t.note || '' : '';
   tkWho = t ? (t.who || []).slice() : (meId() && members().some(m => m.id === meId()) ? [meId()] : []);
   tkColor = t && COLORS[t.color] ? t.color : 'yellow';
-  tkEst = t && ESTS.includes(+t.est) ? +t.est : 0;
+  $('#tkEst').value = t && +t.est ? +t.est : '';
   tkXp = t ? (expertOf(t.xpId) ? t.xpId : '') : (expertOf(xp) ? xp : '');
   if (!t && tkXp) $('#tkName').value = (expertOf(tkXp).name || 'Experten') + ' kontaktieren';
   $('#tkDel').hidden = !t;
   renderTaskForm();
   const ro = !canWrite();
-  ['#tkName', '#tkText', '#tkCol', '#tkNote'].forEach(s => { $(s).disabled = ro; });
+  ['#tkName', '#tkText', '#tkEst', '#tkCol', '#tkNote'].forEach(s => { $(s).disabled = ro; });
   show('mTask');
   if (!ro && !t) setTimeout(() => $('#tkName').focus(), 60);
 }
 function renderTaskForm() {
   $('#tkWho').innerHTML = members().map(m => `<button type="button" data-who="${esc(m.id)}" aria-pressed="${tkWho.includes(m.id)}">${avatar(m, 22)}${esc(m.name)}</button>`).join('')
     || '<span class="hint">Noch niemand in der Gruppe.</span>';
-  $('#tkEst').innerHTML = ESTS.map(h => `<button type="button" data-est="${h}" aria-pressed="${tkEst === h}">${esc(fmtEst(h).replace(' Std.', ''))}</button>`).join('')
-    + '<span class="hint" style="align-self:center;margin:0 0 0 4px">Schulstunden</span>';
   $('#tkColor').innerHTML = Object.keys(COLORS).map(k => `<button type="button" data-color="${k}" aria-checked="${tkColor === k}" title="${k}" style="background:${COLORS[k]}"></button>`).join('');
   $('#tkNoteF').hidden = $('#tkCol').value !== 'blocked';
   // Experte: nur, wenn die Gruppe schon welche eingetragen hat.
@@ -825,7 +887,7 @@ function saveTask() {
   const data = Object.assign({}, old || {}, {
     title: title.slice(0, 120), text: $('#tkText').value.trim().slice(0, 1500),
     who: tkWho.filter(id => members().some(m => m.id === id)),
-    col, color: tkColor, est: tkEst, note: col === 'blocked' ? $('#tkNote').value.trim().slice(0, 400) : (old && old.note) || '',
+    col, color: tkColor, est: readEst($('#tkEst').value), note: col === 'blocked' ? $('#tkNote').value.trim().slice(0, 400) : (old && old.note) || '',
     order: old && old.col === col ? old.order : Date.now()
   });
   const xp = expertOf(tkXp);
@@ -871,8 +933,13 @@ function renderHours() {
   $('#hFormEyebrow').textContent = editLog ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
   $('#hSave').lastChild.textContent = editLog ? ' Speichern' : ' Eintragen';
   $('#hCancel').hidden = !editLog;
-  if (!$('#hForm').hidden) { renderLogWho(); renderTodoPick(); }
+  if (!$('#hForm').hidden) { renderLogWho(); renderTodoPick(); renderLogPhotos(); }
 
+  // Lehrkraft: Hinweis, solange Fotos in der Dokumentation liegen.
+  const nPh = logs.reduce((a, l) => a + logPhotos(l).length, 0);
+  const pn = $('#hPhotoNote');
+  pn.hidden = !PA.owner || !nPh;
+  if (PA.owner && nPh) pn.innerHTML = `${ICO.warn}<span><b>${nPh} ${nPh === 1 ? 'Foto' : 'Fotos'}</b> in der Dokumentation. Sind Personen oder andere personenbezogene Daten darauf zu sehen, löscht die Fotos (× am Foto), sobald sie nicht mehr gebraucht werden.</span>`;
 
   if (!logs.length) {
     $('#hList').innerHTML = `<div class="nothing" style="padding:34px 20px"><h3>Noch keine Einträge</h3>
@@ -906,6 +973,7 @@ function renderHours() {
           ${todoChip(l)}
           <p>${esc(l.text)}</p>
           ${l.next ? `<div class="nx"><b>Nächstes</b>${esc(l.next)}</div>` : ''}
+          ${photosHtml(l)}
           ${byOther ? `<div class="by">eingetragen von ${esc(l.byName)}</div>` : ''}
         </div>
       </div>`;
@@ -940,6 +1008,46 @@ function renderTodoPick() {
     }).join('')}<div class="tdgrp">Sonst</div><button type="button" class="tdopt" role="option" data-tdopt="" aria-selected="${hTask === ''}"><i class="kdot k-none"></i>Etwas anderes (kein To-do)</button></div>` : ''}`;
 }
 
+// Fotos am Eintrag (0206): höchstens drei, nur sichere data-URLs.
+const logPhotos = l => (Array.isArray(l.photos) ? l.photos : []).filter(safeImg).slice(0, 3);
+function photosHtml(l) {
+  const ph = logPhotos(l);
+  if (!ph.length) return '';
+  const del = PA.owner && canWrite();
+  return `<div class="ephotos">${ph.map((src, i) => `<div class="eph"><img src="${src}" alt="Foto ${i + 1}" data-zoom="${esc(l.id)}:${i}" loading="lazy">
+    ${del ? `<button class="x" data-phdel="${esc(l.id)}:${i}" title="Foto löschen" aria-label="Foto löschen">${ICO.trash}</button>` : ''}</div>`).join('')}</div>`;
+}
+function renderLogPhotos() {
+  $('#hPhotos').innerHTML = hPhotos.map((src, i) => `<div class="ishell"><img src="${src}" alt="Foto ${i + 1}">
+      <button type="button" class="x" data-hpx="${i}" aria-label="Foto entfernen"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>`).join('')
+    + (hPhotos.length < 3 ? `<button type="button" class="iadd" data-hpadd>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${GI.camera}</svg>
+        <span>Foto<br>${hPhotos.length}/3</span></button>` : '');
+}
+// Fotos fürs Speichern verkleinern: lange Seite höchstens 1000 px, JPEG —
+// und kleiner, bis eins unter ~200 KB bleibt (drei passen in einen Eintrag).
+function shrinkPhoto(file, cb) {
+  const fr = new FileReader();
+  fr.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      let url = '';
+      for (const [max, q] of [[1000, 0.68], [860, 0.6], [720, 0.55], [600, 0.5]]) {
+        const sc = Math.min(1, max / Math.max(img.width, img.height));
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(img.width * sc); cv.height = Math.round(img.height * sc);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        url = cv.toDataURL('image/jpeg', q);
+        if (url.length <= 200000) break;
+      }
+      cb(url);
+    };
+    img.onerror = () => toast('⚠ Foto konnte nicht gelesen werden');
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+
 function renderLogWho() {
   const gm = members();
   if (hWho === null && meId()) hWho = [meId()];
@@ -964,6 +1072,8 @@ function saveLog() {
     who, whoNames: who.map(id => (person(id) || {}).name || '')
   });
   delete data.hours;   // wird nicht mehr erfasst
+  const ph = hPhotos.filter(safeImg).slice(0, 3);
+  if (ph.length) data.photos = ph; else delete data.photos;
   if (!old) { data.by = meId(); data.byName = (PA.me && PA.me.name) || ''; }
   PA.put('log', editLog || PA.newId('l'), data);
   resetLogForm();
@@ -972,7 +1082,7 @@ function saveLog() {
 }
 function resetLogForm() {
   editLog = null;
-  hWho = null; hTask = null; tdOpen = false;
+  hWho = null; hTask = null; tdOpen = false; hPhotos = [];
   $('#hText').value = ''; $('#hNext').value = '';
   $('#hDate').value = todayIso();
 }
@@ -980,6 +1090,7 @@ function editLogEntry(id) {
   const l = PA.get('log', id); if (!l) return;
   editLog = id;
   hWho = logWho(l).slice();
+  hPhotos = logPhotos(l);
   $('#hDate').value = l.date || todayIso();
   hTask = l.task && PA.get('task', l.task) ? l.task : (l.task === '' ? '' : null);
   tdOpen = false;
@@ -1143,20 +1254,6 @@ function sectionOf(text, head, other) {
   const j = rest.toUpperCase().indexOf(other.toUpperCase());
   return (j < 0 ? rest : rest.slice(0, j)).trim();
 }
-function reqCheckHtml() {
-  const steps = [
-    ['sign', 'Einverständniserklärung', 'Die unterschriebene Erklärung ist abgegeben.'],
-    ['book', 'Logbuch aktuell', 'To-dos und Dokumentation sind auf dem neuesten Stand — sonst können wir nicht beurteilen, ob der Antrag für euer Projekt sinnvoll ist.'],
-    ['form', 'Antrag vollständig', 'Datum, wer mitfährt, Ziel mit Adresse, Weg und Verkehrsmittel, Begründung.'],
-    ['inbox', 'Genehmigung abwarten', 'Erst wenn der Antrag hier auf „genehmigt“ steht, dürft ihr los. Steht ein Kommentar der Lehrkraft dabei: unbedingt beachten.'],
-    ['plus', 'Jeder Termin = neuer Antrag', 'Für jeden Tag stellt ihr einen eigenen Antrag.']
-  ];
-  return `<div class="eyebrow">Checkliste</div>
-    <h3>Bevor ihr losdürft</h3>
-    <p class="lead">Wir genehmigen euren Antrag nur, wenn alle fünf Punkte erfüllt sind.</p>
-    <ol class="rclist">${steps.map(([k, t, txt], i) => `<li>${gIco(k, i + 1)}<div><b>${t}</b>${txt}</div></li>`).join('')}</ol>
-    <div class="deadline">${gIco('alarm')}<div><b>WICHTIG: Spätestens am Vortag, 18 Uhr</b>Den vollständigen Antrag am besten schon am Ende der vorherigen mPS-Stunde abschicken — spätestens aber am Abend vor der Exkursion um 18 Uhr.</div></div>`;
-}
 function decide(id, status) {
   const r = PA.get('request', id); if (!r) return;
   const box = document.querySelector(`[data-answer="${CSS.escape(id)}"]`);
@@ -1210,8 +1307,8 @@ function renderNotes() {
   const open = all.filter(n => !n.done).length;
   $('#noteForm').hidden = !PA.owner;
   $('#notesSub').innerHTML = PA.owner
-    ? 'Kommentare und Hinweise an diese Gruppe — jede Lehrkraft des Raums sieht und schreibt hier. Die Gruppe hakt ab, was erledigt ist, und kann darunter nachfragen.'
-    : 'Hier hinterlassen eure Lehrkräfte Kommentare und Hinweise zu eurem Projekt. Erledigt? <b>Abhaken.</b> Unklar? Darunter <b>nachfragen</b>.';
+    ? 'Kommentare an diese Gruppe — jede Lehrkraft des Raums sieht und schreibt hier.'
+    : 'Hinweise eurer Lehrkräfte zu eurem Projekt.';
   $('#noteColors').innerHTML = Object.keys(COLORS).map(c =>
     `<button type="button" data-ncolor="${c}" style="background:${COLORS[c]}" aria-pressed="${noteColor === c}" aria-label="Farbe ${c}"></button>`).join('');
   $('#notesStats').innerHTML = all.length
@@ -1709,6 +1806,9 @@ function wire() {
   document.addEventListener('click', async e => {
     const t = e.target;
     let b;
+    // Erklär-Kacheln ein- und ausklappen (eingeklappt: Kachel antippen klappt aus)
+    if ((b = t.closest('[data-gtoggle]'))) { toggleGuide(b.dataset.gtoggle); return; }
+    if ((b = t.closest('.gbox.min .gstep'))) { toggleGuide(b.closest('.gbox').dataset.g); return; }
     // Übersicht
     if ((b = t.closest('[data-plan-p]'))) { e.stopPropagation(); setPick(null); openPlan({ p_participant: b.dataset.planP }); return; }
     if ((b = t.closest('[data-plan-g]'))) { openPlan({ p_group: b.dataset.planG }); return; }
@@ -1758,7 +1858,6 @@ function wire() {
     if ((b = t.closest('[data-tdopen]'))) { tdOpen = !tdOpen; renderTodoPick(); return; }
     if ((b = t.closest('[data-tdopt]'))) { hTask = b.dataset.tdopt; tdOpen = false; renderTodoPick(); return; }
     if (tdOpen && !t.closest('#hTodo')) { tdOpen = false; renderTodoPick(); }
-    if ((b = t.closest('[data-est]'))) { if (!canWrite()) return; const h = +b.dataset.est; tkEst = tkEst === h ? 0 : h; renderTaskForm(); return; }
     // Antrag: wer ist dabei
     if ((b = t.closest('[data-rqwho]'))) {
       const id = b.dataset.rqwho;
@@ -1803,6 +1902,27 @@ function wire() {
     }
     // Stunden
     if ((b = t.closest('[data-logedit]'))) { editLogEntry(b.dataset.logedit); return; }
+    if ((b = t.closest('[data-hpadd]'))) { $('#hPhotoIn').click(); return; }
+    if ((b = t.closest('[data-hpx]'))) { hPhotos.splice(+b.dataset.hpx, 1); renderLogPhotos(); return; }
+    if ((b = t.closest('[data-zoom]'))) {
+      const [lid, i] = b.dataset.zoom.split(':');
+      const src = logPhotos(PA.get('log', lid) || {})[+i];
+      if (src) { $('#phBig').src = src; show('mPhoto'); }
+      return;
+    }
+    if ((b = t.closest('[data-phdel]'))) {
+      if (!PA.owner) return;
+      const [lid, i] = b.dataset.phdel.split(':');
+      ask('Foto löschen?', 'Das Foto verschwindet aus der Dokumentation — für alle und auch auf dem Server. Der Eintrag selbst bleibt.', () => {
+        const l = PA.get('log', lid); if (!l) return;
+        const ph = logPhotos(l); ph.splice(+i, 1);
+        const d = Object.assign({}, l, { photos: ph });
+        if (!ph.length) delete d.photos;
+        PA.put('log', lid, d);
+        toast('Foto gelöscht'); renderAll();
+      }, 'Löschen');
+      return;
+    }
     if ((b = t.closest('[data-logdel]'))) {
       const id = b.dataset.logdel;
       ask('Eintrag löschen?', 'Der Eintrag verschwindet aus der Dokumentation.', () => { PA.del('log', id); if (editLog === id) resetLogForm(); renderAll(); }, 'Löschen');
@@ -1900,6 +2020,7 @@ function wire() {
   // Aufgabe
   $('#tkSave').addEventListener('click', saveTask);
   $('#tkName').addEventListener('keydown', e => { if (e.key === 'Enter') saveTask(); });
+  $('#tkEst').addEventListener('keydown', e => { if (e.key === 'Enter') saveTask(); });
   $('#tkCol').addEventListener('change', renderTaskForm);
   $('#tkDel').addEventListener('click', () => {
     const id = editTask; if (!id) return;
@@ -1927,6 +2048,16 @@ function wire() {
 
   // Stunden
   $('#hSave').addEventListener('click', saveLog);
+  $('#hPhotoIn').addEventListener('change', e => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (!canWrite()) return;
+    if (files.length > 3 - hPhotos.length) toast('Höchstens 3 Fotos je Eintrag');
+    files.slice(0, Math.max(0, 3 - hPhotos.length)).forEach(f => shrinkPhoto(f, url => {
+      if (hPhotos.length >= 3) return;
+      hPhotos.push(url); renderLogPhotos();
+    }));
+  });
   $('#hCancel').addEventListener('click', () => { resetLogForm(); renderHours(); });
 
   // Antrag
