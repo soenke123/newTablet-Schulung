@@ -243,6 +243,12 @@ main.wrap{padding-top:30px;padding-bottom:80px}
 .ov.withlist{grid-template-columns:minmax(230px,290px) minmax(0,1fr) minmax(240px,300px)}
 .clist{position:sticky;top:76px;padding:14px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 96px);overflow:auto}
 .clist-body{display:flex;flex-direction:column;gap:4px}
+.clist-t{border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+.clist-t:empty{display:none}
+.clist-th{display:flex;align-items:center;gap:8px;margin-bottom:2px}
+.clist-th h4{font-size:13px;margin:0}
+.clist-th .btn{margin-left:auto}
+.clist-t .crow{align-items:center}
 .crow{display:flex;align-items:flex-start;gap:9px;padding:6px 8px;border-radius:var(--r);border:1px solid transparent}
 .crow .cn{flex:1;min-width:0;line-height:1.25}
 .crow .cn b{font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -950,6 +956,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <div class="clist-body" id="clistBody"></div>
         <p class="clist-legend"><span class="cmark c0">✗</span> keine Einwilligung · <span class="cmark c1">✓</span> Stufe 1 · <span class="cmark c2">✓✓</span> Stufe 2<br>
           <span class="sw away"></span> heute genehmigt am anderen Ort · <span class="sw pend"></span> Antrag für heute offen oder abgelehnt</p>
+        <div class="clist-body clist-t" id="clistTeachers"></div>
       </aside>
     </div>
   </section>
@@ -1417,7 +1424,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261008d"></script>
-<script src="app.js?v=20261008d"></script>
+<script src="bridge.js?v=20261008e"></script>
+<script src="app.js?v=20261008e"></script>
 </body>
 </html>

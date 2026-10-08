@@ -557,7 +557,8 @@ function renderOverview() {
       <div class="g-head">
         <div style="min-width:0">
           <div class="g-name"${solo ? '' : ' title="Den Teamnamen gibt sich die Gruppe selbst (Reiter Team)."'}>${esc(title)}</div>
-          <div class="g-sub">${solo ? 'Einzelarbeit' : `${mem.length} ${mem.length === 1 ? 'Person' : 'Personen'}`}${g.title ? ` · <i>„${esc(g.title)}“</i>` : ''}</div>
+          ${solo ? (g.title ? `<div class="g-sub"><i>„${esc(g.title)}“</i></div>` : '')
+            : `<div class="g-sub">${mem.length} ${mem.length === 1 ? 'Person' : 'Personen'}${g.title ? ` · <i>„${esc(g.title)}“</i>` : ''}</div>`}
           ${today ? `<div style="margin-top:5px">${today}</div>` : ''}
         </div>
         <div class="g-acts">
@@ -570,7 +571,6 @@ function renderOverview() {
           <div class="minicols" title="Board: zu erledigen · blockiert · in Arbeit · fertig">
             ${COLS.map(c => `<span><i style="background:${c.c}"></i>${t[c.k] || 0}</span>`).join('')}
           </div>
-          <span class="stat" title="Stundeneinträge heute">heute ${g.logs_today || 0}/${mem.length}</span>
           <button class="btn primary sm go" data-open="${esc(g.id)}">Planungsraum ${ICO.arrow}</button>`
         : `<span style="font-size:11.5px;color:var(--ink-3)">Noch kein Planungsraum</span>
           <button class="btn sm go" data-plan-g="${esc(g.id)}">${ICO.compass} Planungsraum eröffnen</button>`}
@@ -628,6 +628,22 @@ function renderClassList(people, groups) {
         ${t ? `<span class="ctag">${esc(TODAY_LBL[t.status])}${t.status === 'approved' && t.place ? ' · ' + esc(t.place) : ''}</span>` : ''}</div>
     </div>`;
   }).join('') : '<div class="lobby-empty">Noch niemand da.</div>';
+  renderClassTeachers();
+}
+
+/* Ganz unten in der Klassenliste: wer als Lehrkraft im Raum ist (gleiche
+   Rechte, 0205). Der Besitzer kann Eingeladene hier austragen. */
+function renderClassTeachers() {
+  const box = $('#clistTeachers');
+  if (!teachers) { box.innerHTML = ''; if (!teachersTried) loadTeachers(); return; }
+  const list = teachers.teachers || [];
+  const kick = !!teachers.is_owner && canWrite();
+  box.innerHTML = `<div class="clist-th"><h4>Lehrkräfte im Raum</h4><span class="cnt n">${list.length}</span>
+      <button class="btn ghost sm" data-tinvite>${ICO.plus} Einladen</button></div>
+    ${list.map(t => `<div class="crow">${avatar({ id: t.id, name: t.name }, 26)}
+      <div class="cn"><b>${esc(t.name)}${t.me ? ' <span class="metag">du</span>' : ''}</b><small>${t.owner ? 'Raum-Besitzer' : 'eingeladen · gleiche Rechte'}</small></div>
+      ${kick && !t.owner ? `<button class="btn ghost icon" data-tdel="${esc(t.id)}" title="${esc(t.name)} austragen" aria-label="${esc(t.name)} austragen">${ICO.trash}</button>` : ''}
+    </div>`).join('')}`;
 }
 
 function setPick(id) {
@@ -1403,7 +1419,7 @@ let teachers = null, teachersTried = false, tSearchTimer = null, tSearchSeq = 0;
 async function loadTeachers() {
   teachersTried = true;
   const r = await PA.call('pa_room_teachers_get', {});
-  if (r && r.ok) { teachers = r; renderMenu(mode()); if (!$('#mTeachers').hidden) renderTeachers(); }
+  if (r && r.ok) { teachers = r; renderMenu(mode()); if (!$('#mTeachers').hidden) renderTeachers(); if (showList && mode() === 'overview') renderClassTeachers(); }
   return r;
 }
 
@@ -2011,6 +2027,7 @@ function wire() {
     // Lehrkräfte
     if ((b = t.closest('[data-tadd]'))) { addTeacher(b.dataset.tadd, b.dataset.name); return; }
     if ((b = t.closest('[data-tdel]'))) { removeTeacher(b.dataset.tdel); return; }
+    if ((b = t.closest('[data-tinvite]'))) { openTeachers(); return; }
   });
 
   $('#pickCancel').addEventListener('click', () => setPick(null));
