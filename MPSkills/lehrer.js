@@ -603,6 +603,32 @@ function redrawList(key) {
   updateGo();
 }
 
+/* Demo-Raum: kein Klassenraum, nur zum Ausprobieren — eine Beispielklasse,
+   in der man zwischen Lehrkraft und Schüler:in umschaltet. Läuft ganz im
+   Gerät (tools/Projektarbeit/bridge.js, ?demo=1&rollen=1), legt nichts
+   an und zählt nicht zum Kontingent. Bisher nur für die Projektarbeit. */
+const DEMO_TOOLS = {
+  projekt: 'tools/Projektarbeit/index.html?demo=1&rollen=1&v=20261008c'
+};
+
+function demoCardHTML() {
+  return `
+    <div class="card card--demo" id="demoCard"${DEMO_TOOLS[S.toolId] ? '' : ' hidden'}>
+      <span class="demo-tag">Nur zum Testen</span>
+      <h2 class="demo-h">Demo-Raum öffnen</h2>
+      <p class="demo-lead"><strong>Kein Klassenraum.</strong> Der Demo-Raum ist zum Ausprobieren und
+        Vorführen da — zum Beispiel für Kolleginnen und Kollegen, bevor sie selbst einen Raum eröffnen.</p>
+      <ul class="demo-list">
+        <li>Eine <strong>Beispielklasse</strong> mit Gruppen, To-dos, Dokumentation und Anträgen ist schon da.</li>
+        <li>Oben umschalten zwischen <strong>Lehrkraft</strong> und <strong>Schülerin Mia</strong>: Was Mia
+          macht, sieht die Lehrkraft — und umgekehrt.</li>
+        <li>Es kommen <strong>keine Schüler:innen</strong> hinein, es gibt keinen Code und keinen QR.</li>
+        <li><strong>Nichts wird gespeichert:</strong> Wer die Demo schließt, fängt beim nächsten Mal wieder von vorn an.</li>
+      </ul>
+      <button type="button" class="btn" id="demoGo">Demo-Raum öffnen →</button>
+    </div>`;
+}
+
 function renderSettings() {
   const pane = $('paneSet');
   const creating = !S.code;
@@ -695,7 +721,8 @@ function renderSettings() {
           ${creating ? '<a class="btn" href="index.html">Abbrechen</a>' : ''}
         </div>
       </form>
-    </div>`;
+    </div>
+    ${creating ? demoCardHTML() : ''}`;
 
   const form = $('setForm');
   form.addEventListener('submit', creating ? submitCreate : submitUpdate);
@@ -788,6 +815,12 @@ function renderSettings() {
       await loadFields();
       $('setToolFields').innerHTML = toolFieldsBlock(false);
       updateGo();
+      $('demoCard').hidden = !DEMO_TOOLS[S.toolId];
+    });
+    $('demoGo').addEventListener('click', () => {
+      // Jede Demo fängt frisch an (der Stand liegt nur im Tab, bridge.js).
+      try { sessionStorage.removeItem('pa_demo_rollen'); } catch (e) { /* egal */ }
+      location.href = DEMO_TOOLS[S.toolId];
     });
   }
   /* Sind alle Werkzeuge voll, sind alle Einträge gesperrt und der

@@ -23,6 +23,13 @@
    Ohne Rahmen (Doppelklick) oder mit ?demo=1 (Schaufenster) läuft
    eine kleine Nachbildung des Servers im Gerät (DEMO unten) — mit
    einer Beispielklasse, und nichts bleibt hängen.
+
+   Mit ?demo=1&rollen=1 ist es der Demo-Raum (lehrer.html, Kasten
+   „Demo-Raum öffnen“): oben eine Leiste zum Umschalten zwischen
+   Lehrkraft und Schülerin Mia (&als=mia). Beide sehen dieselbe
+   Beispielklasse; der Stand liegt in sessionStorage, übersteht
+   also das Umschalten (= Neuladen) und ist weg, sobald der Tab
+   zu ist oder „Demo beenden“ gedrückt wird.
    ══════════════════════════════════════════════════════════════ */
 
 (function (global) {
@@ -31,6 +38,8 @@
   const DEMO   = /[?&]demo=1\b/.test(global.location.search)
               || !(global.parent && global.parent !== global);
   const EMBED  = !DEMO;
+  const ROLES  = DEMO && /[?&]rollen=1\b/.test(global.location.search);
+  const AS_MIA = ROLES && /[?&]als=mia\b/.test(global.location.search);
   const ORIGIN = global.location.origin;
 
   let view = null;          // zuletzt übernommene Ansicht
@@ -302,8 +311,10 @@
      DEMO — eine kleine Nachbildung des Servers (Migrationen 0200–0205)
      ══════════════════════════════════════════════════════════
      Für das Schaufenster und das Öffnen ohne Raum. Spielt die
-     Lehrkraft einer Beispielklasse; gerechnet wird wie auf dem
-     Server, gespeichert wird nichts. */
+     Lehrkraft einer Beispielklasse — im Demo-Raum (ROLES) auch
+     Mia aus der Gruppe Wetterstation. Gerechnet wird wie auf dem
+     Server (Schülerregeln wie pa_apply_ops, 0206), gespeichert
+     wird nur im Demo-Raum, und dort nur im Tab (sessionStorage). */
   const DEMO_SERVER = (function () {
     const d0 = new Date(); d0.setHours(12, 0, 0, 0);
     const day = n => { const d = new Date(d0); d.setDate(d.getDate() + n);
@@ -358,8 +369,20 @@
       activity: 'WEG und VERKEHRSMITTEL:\nMit dem Fahrrad, 10 Minuten.\n\nBEGRÜNDUNG:\nMias Vater hat einen 3D-Drucker. Wir drucken das Gehäuse — in der Schule gibt es keinen.',
       status: 'approved', decision: 'Genehmigt. Um 11:30 Uhr seid ihr zurück.', by: 'p3', byName: 'Emma',
       at: day(-2) + 'T10:40:00Z', sentAt: day(-2) + 'T10:40:00Z', sentByName: 'Emma', decidedAt: day(-2) + 'T12:00:00Z' });
-    put('g2', 'goal', 'main', { title: 'Schulgarten-App', locked: true, images: [], text: '<p>Eine App, die zeigt, welche Beete gegossen werden müssen.</p>' });
-    put('g2', 'task', 'a1', { title: 'Beete kartieren', col: 'doing', who: ['p4'], note: '', text: '', color: 'green', order: 0 });
+    // Abgelehnt, mit Begründung: die Gruppe kann ihn ändern und neu abschicken.
+    put('g1', 'request', 'r2', { date: day(6), who: ['p2', 'p3'], place: 'Elektronikmarkt in der Innenstadt',
+      activity: 'WEG und VERKEHRSMITTEL:\nMit dem Bus.\n\nBEGRÜNDUNG:\nWir wollen dort den Sensor kaufen.',
+      status: 'rejected', decision: 'So noch nicht: Bitte die genaue Adresse, die Buslinie und die Rückkehrzeit ergänzen. Und klärt vorher, ob ihr den Sensor nicht auch online bestellen könnt.',
+      by: 'p2', byName: 'Leon', at: day(-1) + 'T09:30:00Z', sentAt: day(-1) + 'T09:30:00Z', sentByName: 'Leon', decidedAt: day(-1) + 'T13:10:00Z' });
+    put('g2', 'goal', 'main', { title: 'Schulgarten-App', locked: true, images: [], due: day(38),
+      text: '<p>Eine App, die zeigt, welche Beete <strong>gegossen</strong> werden müssen — mit Plan des Gartens und Gießdienst für die Klassen.</p>' });
+    [['a1', 'Beete kartieren', 'doing', ['p4'], 2], ['a2', 'Gießplan mit dem Hausmeister absprechen', 'todo', ['p5'], 1],
+     ['a3', 'App-Vorlage auswählen', 'done', ['p5'], 1], ['a4', 'Fotos der Beete machen', 'todo', ['p4', 'p5'], 1]]
+      .forEach(([id, title, col, who, est], i) => put('g2', 'task', id,
+        { title, col, who, note: '', text: '', color: ['green', 'yellow', 'blue', 'lilac'][i], order: i, est }));
+    put('g2', 'task', 'budget', { budget: true, hours: 16 });
+    put('g2', 'log', 'm0', { date: day(-1), by: 'p5', byName: 'Hannah', who: ['p4', 'p5'], whoNames: ['Noah', 'Hannah'],
+      task: 'a3', taskTitle: 'App-Vorlage auswählen', text: 'Drei Vorlagen verglichen, uns für die einfachste entschieden.', next: 'Beete ausmessen.', at: day(-1) + 'T10:00:00Z' });
     put('g2', 'request', 'q1', { date: day(0), who: ['p4', 'p5'], place: 'Gemeinschaftsgarten am Stadtpark',
       activity: 'Wir möchten die Beete dort fotografieren und mit dem Gärtner sprechen.',
       status: 'open', by: 'p5', byName: 'Hannah', at: day(0) + 'T08:30:00Z', sentAt: day(0) + 'T08:30:00Z', sentByName: 'Hannah' });
@@ -377,7 +400,15 @@
     const school = [{ id: 'u3', name: 'Frau Beispiel', account: 'beispiel' }, { id: 'u4', name: 'Herr Muster', account: 'muster' }];
     const noteOf = id => { for (const g in notes) { const n = notes[g].find(x => x.id === id); if (n) return n; } return null; };
     const notify = { domain: 'mps-ki.de', email: null, verified: false, pending: false, enabled: false };
-    const bump = () => { rev++; };
+    // Demo-Raum: der Stand der Beispielklasse, solange der Tab offen ist.
+    const KEEP = 'pa_demo_rollen';
+    const MIA = 'p1';
+    const keep = () => {
+      if (!ROLES) return;
+      try { sessionStorage.setItem(KEEP, JSON.stringify({ people, groups, seq, rev, rules, store, notes, staff })); }
+      catch (e) { /* voll (Fotos) oder gesperrt: dann eben nur bis zum nächsten Umschalten */ }
+    };
+    const bump = () => { rev++; keep(); };
     const tidy = g => {
       const grp = groups.find(x => x.id === g); if (!grp || grp.plan_open) return;
       const m = people.filter(p => p.group === g);
@@ -406,6 +437,19 @@
       .map(p => ({ id: p.id, name: p.name, label: p.label, consent: p.consent, online: p.online, me: false, key: p.key }));
 
     function view(focus) {
+      if (AS_MIA) {
+        const me = people.find(p => p.id === MIA);
+        const g = groups.find(x => x.id === me.group);
+        return R({
+          ok: true, role: 'participant', rev, today: day(0),
+          room: { title: 'Klasse 8b · Projektwoche', join_open: true, rules },
+          me: { id: me.id, name: me.name, key: me.key, blocked: !!me.blocked, group: me.group },
+          group: g ? Object.assign({}, g, {
+            members: membersOf(g.id).map(m => { const x = Object.assign({}, m, { me: m.id === MIA }); delete x.key; return x; }),
+            notes: g.plan_open ? (notes[g.id] || []) : [] }) : null,
+          items: g && g.plan_open ? Object.values(store[g.id]) : []
+        });
+      }
       const g = focus && groups.find(x => x.id === focus);
       return JSON.parse(JSON.stringify({
         ok: true, role: 'presenter', rev, today: day(0),
@@ -417,8 +461,106 @@
       }));
     }
 
+    const R = (x) => JSON.parse(JSON.stringify(x));
+
+    /* Schreiben wie pa_apply_ops (0206): actor = null ist die Lehrkraft,
+       sonst eine Person der Gruppe — mit den Regeln für Schüler. */
+    function applyOps(gid, actor, ops) {
+      const st = store[gid]; if (!st) return { ok: false, error: 'not_found' };
+      const inG = id => people.some(p => p.id === id && p.group === gid);
+      const me = actor && people.find(p => p.id === actor);
+      for (const o of ops) {
+        const cur = st[o.kind + ':' + o.id];
+        if ((cur ? cur.v : 0) !== o.v) return { ok: false, error: 'conflict' };
+        if (!actor) continue;
+        const d = o.data || {};
+        if (o.kind === 'goal' && o.op === 'del') return { ok: false, error: 'not_allowed' };
+        if (o.kind === 'goal' && cur && cur.data.locked) return { ok: false, error: 'goal_locked' };
+        if (o.kind === 'log' && cur && cur.data.by !== actor && !(cur.data.who || []).includes(actor)) return { ok: false, error: 'not_yours' };
+        if (o.kind === 'log' && o.op === 'put' && Array.isArray(d.who) && !d.who.some(inG)) return { ok: false, error: 'who_missing' };
+        if (o.kind === 'request' && cur && (cur.data.status || 'open') === 'approved') return { ok: false, error: 'decided' };
+        if (o.kind === 'request' && o.op === 'put') {
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date || '')) return { ok: false, error: 'date_missing' };
+          if (d.date < day(0)) return { ok: false, error: 'date_past' };
+          if (!String(d.place || '').trim()) return { ok: false, error: 'place_missing' };
+          if (!(Array.isArray(d.who) ? d.who : []).some(inG)) return { ok: false, error: 'who_missing' };
+        }
+      }
+      const out = [], now = new Date().toISOString();
+      ops.forEach(o => {
+        const k = o.kind + ':' + o.id, cur = st[k];
+        if (o.op === 'del') { delete st[k]; out.push({ kind: o.kind, id: o.id, deleted: true }); return; }
+        let data = R(o.data);
+        if (actor) {
+          if (o.kind === 'goal') data.locked = !!(cur && cur.data.locked);
+          else if (o.kind === 'log') {
+            if (!Array.isArray(data.who)) data.who = [actor];
+            Object.assign(data, cur ? { by: cur.data.by, byName: cur.data.byName } : { by: actor, byName: me.name });
+          } else if (o.kind === 'request') {
+            ['decision', 'decidedAt', 'prevDecision', 'by', 'byName', 'sentAt', 'sentBy', 'sentByName'].forEach(x => { delete data[x]; });
+            Object.assign(data, { status: 'open', who: [...new Set(data.who || [])].filter(inG), sentAt: now, sentBy: actor, sentByName: me.name },
+              cur ? { by: cur.data.by, byName: cur.data.byName } : { by: actor, byName: me.name });
+            if (cur && cur.data.status === 'rejected') data.prevDecision = String(cur.data.decision || '').trim() || 'Abgelehnt.';
+            else if (cur && cur.data.prevDecision) data.prevDecision = cur.data.prevDecision;
+          }
+        } else {
+          if ((o.kind === 'log' || o.kind === 'request') && !cur && !('by' in data)) { data.by = null; data.byName = 'Lehrkraft'; }
+          if (o.kind === 'request' && ['approved', 'rejected'].includes(data.status) && (!cur || cur.data.status !== data.status)) data.decidedAt = now;
+        }
+        if (o.kind === 'log' && Array.isArray(data.who)) {
+          data.who = [...new Set(data.who)].filter(inG);
+          data.whoNames = data.who.map(id => people.find(p => p.id === id).name);
+        }
+        if (o.kind === 'log' || o.kind === 'request') data.at = cur ? cur.data.at : now;
+        st[k] = { kind: o.kind, id: o.id, v: (cur ? cur.v : 0) + 1, data };
+        out.push(R(st[k]));
+      });
+      bump();
+      return { ok: true, items: out };
+    }
+
+    // Was Mia (Schülerin der Gruppe Wetterstation) darf — pa_save,
+    // pa_group_rename und die Zettel (0200, 0204, 0205).
+    function student(fn, a) {
+      const me = people.find(p => p.id === MIA);
+      const g = groups.find(x => x.id === me.group);
+      if (fn === 'pa_save') return g && g.plan_open ? applyOps(g.id, MIA, a.p_ops) : { ok: false, error: 'no_plan' };
+      if (fn === 'pa_group_rename') {
+        if (!g) return { ok: false, error: 'not_found' };
+        let nm = String(a.p_name || '').replace(/\s+/g, ' ').trim();
+        if (nm.length > 40) return { ok: false, error: 'too_long' };
+        if (!nm && g.no > 0) nm = 'Gruppe ' + g.no;
+        if (nm !== g.name) { g.name = nm; bump(); }
+        return { ok: true, name: nm };
+      }
+      if (fn === 'pa_member_update') {
+        const p = people.find(x => x.id === a.p_participant);
+        if (!p || !g || p.group !== g.id) return { ok: false, error: 'not_found' };
+        p.label = String(a.p_label || '').trim().slice(0, 40); bump(); return { ok: true };
+      }
+      if (fn.startsWith('pa_note_')) {
+        const n = g && g.plan_open && (notes[g.id] || []).find(x => x.id === a.p_note);
+        if (!n) return { ok: false, error: 'not_found' };
+        if (fn === 'pa_note_done') Object.assign(n, a.p_done === false
+          ? { done: false, doneBy: null, doneAt: null } : { done: true, doneBy: me.name, doneAt: new Date().toISOString() });
+        else if (fn === 'pa_note_reply') {
+          const txt = String(a.p_text || '').trim();
+          if (!txt) return { ok: false, error: 'invalid_input' };
+          if (txt.length > 600) return { ok: false, error: 'too_long' };
+          n.replies.push({ id: 'r' + Date.now().toString(36), by: MIA, teacher: false, name: me.name, text: txt, at: new Date().toISOString() });
+        } else if (fn === 'pa_note_reply_delete') {
+          const r = n.replies.find(x => x.id === a.p_reply);
+          if (!r) return { ok: false, error: 'not_found' };
+          if (r.by !== MIA) return { ok: false, error: 'not_yours' };
+          n.replies = n.replies.filter(x => x !== r);
+        } else return { ok: false, error: 'not_allowed' };
+        bump(); return { ok: true };
+      }
+      return { ok: false, error: 'not_allowed' };
+    }
+
     function call(fn, a) {
-      const R = (x) => JSON.parse(JSON.stringify(x));
+      if (AS_MIA) return student(fn, a);
       if (fn === 'pa_room_assign') {
         const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };
         const old = p.group; let target = a.p_group || null;
@@ -482,30 +624,7 @@
         const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };
         p.label = String(a.p_label || '').trim().slice(0, 40); bump(); return { ok: true };
       }
-      if (fn === 'pa_room_save') {
-        const st = store[a.p_group]; if (!st) return { ok: false, error: 'not_found' };
-        for (const o of a.p_ops) {
-          const cur = st[o.kind + ':' + o.id];
-          if ((cur ? cur.v : 0) !== o.v) return { ok: false, error: 'conflict' };
-        }
-        const out = [];
-        a.p_ops.forEach(o => {
-          const k = o.kind + ':' + o.id, cur = st[k];
-          if (o.op === 'del') { delete st[k]; out.push({ kind: o.kind, id: o.id, deleted: true }); return; }
-          const data = R(o.data);
-          if ((o.kind === 'log' || o.kind === 'request') && !cur) { data.at = new Date().toISOString(); if (!('by' in data)) { data.by = null; data.byName = 'Lehrkraft'; } }
-          if (o.kind === 'request' && ['approved', 'rejected'].includes(data.status) && (!cur || cur.data.status !== data.status)) data.decidedAt = new Date().toISOString();
-          if (o.kind === 'log' && Array.isArray(data.who)) {
-            const g = groups.find(x => x.id === a.p_group);
-            data.who = [...new Set(data.who)].filter(id => people.some(p => p.id === id && p.group === (g && g.id)));
-            data.whoNames = data.who.map(id => people.find(p => p.id === id).name);
-          }
-          st[k] = { kind: o.kind, id: o.id, v: (cur ? cur.v : 0) + 1, data };
-          out.push(R(st[k]));
-        });
-        bump();
-        return { ok: true, items: out };
-      }
+      if (fn === 'pa_room_save') return applyOps(a.p_group, null, a.p_ops);
       // Export / Import (0202) — im Schaufenster ohne Backups.
       if (fn === 'pa_room_export') {
         const list = a.p_group ? groups.filter(g => g.id === a.p_group) : groups.filter(g => g.plan_open);
@@ -575,8 +694,61 @@
       return { ok: false, error: 'not_allowed' };
     }
 
+    // Gespeicherten Stand übernehmen (Demo-Raum nach dem Umschalten).
+    if (ROLES) {
+      try {
+        const k = JSON.parse(sessionStorage.getItem(KEEP) || 'null');
+        if (k && Array.isArray(k.people) && Array.isArray(k.groups)) {
+          people.splice(0, people.length, ...k.people);
+          groups.splice(0, groups.length, ...k.groups);
+          seq = k.seq; rev = k.rev; rules = k.rules;
+          Object.keys(store).forEach(x => { delete store[x]; }); Object.assign(store, k.store);
+          Object.keys(notes).forEach(x => { delete notes[x]; }); Object.assign(notes, k.notes);
+          staff.splice(0, staff.length, ...k.staff);
+        }
+      } catch (e) { /* frisch anfangen */ }
+    }
+
     return { view, call };
   })();
+
+  /* ─── Demo-Raum: Leiste zum Umschalten ──────────────────── */
+  // Umschalten = neu laden mit &als=mia (oder ohne): so baut sich die
+  // Seite sauber für die andere Rolle auf, der Stand liegt in sessionStorage.
+  if (ROLES) {
+    const url = mia => {
+      const q = new URLSearchParams(global.location.search);
+      if (mia) q.set('als', 'mia'); else q.delete('als');
+      return global.location.pathname + '?' + q.toString();
+    };
+    const go = href => {
+      // Ein offenes Textfeld noch speichern lassen (blur → speichern).
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      setTimeout(() => global.location.replace(href), 120);
+    };
+    const bar = document.createElement('div');
+    bar.className = 'demobar';
+    bar.innerHTML =
+      '<span class="demobar-tag">Demo</span>' +
+      '<span class="demobar-txt"><b>Kein Klassenraum</b> — nur zum Ausprobieren. Alles verschwindet, wenn ihr die Demo schließt.</span>' +
+      '<span class="demobar-seg" role="group" aria-label="Ansicht">' +
+        '<span class="demobar-l">Ansicht:</span>' +
+        '<button type="button" data-as="t"' + (AS_MIA ? '' : ' class="on" aria-pressed="true"') + '>Lehrkraft</button>' +
+        '<button type="button" data-as="mia"' + (AS_MIA ? ' class="on" aria-pressed="true"' : '') + '>Schülerin Mia</button>' +
+      '</span>' +
+      '<button type="button" class="demobar-end" data-as="end">Demo beenden</button>';
+    bar.addEventListener('click', e => {
+      const b = e.target.closest('button[data-as]'); if (!b || b.classList.contains('on')) return;
+      if (b.dataset.as === 'end') {
+        try { sessionStorage.removeItem('pa_demo_rollen'); } catch (x) { /* egal */ }
+        global.location.href = '../../lehrer.html?new=projekt';
+        return;
+      }
+      go(url(b.dataset.as === 'mia'));
+    });
+    document.body.insertBefore(bar, document.body.firstChild);
+    document.body.classList.add('has-demobar');
+  }
 
   global.PA = PA;
 })(window);

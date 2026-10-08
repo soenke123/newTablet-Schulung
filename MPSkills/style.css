@@ -3084,6 +3084,17 @@ body.mpfs-body { overflow: hidden; }
    geblieben sind nur die Begründungen unter gesperrten Feldern
    (.lockline), und die stehen nur da, wenn etwas nicht mehr geht. */
 .card--form { padding: 26px 26px 22px; }
+/* Demo-Raum öffnen (lehrer.js, demoCardHTML): klar abgesetzt vom echten
+   Formular darüber — gestrichelt, eigene Farbe, „Nur zum Testen“. */
+.card--demo { border: 2px dashed var(--wait-edge); background: var(--wait-dim); box-shadow: none; padding: 22px 26px; }
+.card--demo[hidden] { display: none; }
+.demo-tag { display: inline-block; background: var(--wait); color: #fff; font-size: .72rem; font-weight: 800;
+  letter-spacing: .1em; text-transform: uppercase; border-radius: 6px; padding: 4px 9px; }
+.demo-h { margin: 10px 0 6px; font-size: 1.25rem; }
+.demo-lead { margin: 0 0 10px; color: var(--ink-soft); }
+.demo-lead strong { color: var(--wait-ink); }
+.demo-list { margin: 0 0 16px; padding-left: 1.2em; color: var(--ink-soft); line-height: 1.5; }
+.demo-list li + li { margin-top: 4px; }
 .pane-h  { margin: 0 0 18px; font-size: 1.35rem; letter-spacing: -0.02em; }
 .req { color: var(--accent-ink); font-weight: 700; }
 

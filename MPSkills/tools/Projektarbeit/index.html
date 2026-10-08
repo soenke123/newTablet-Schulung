@@ -162,6 +162,20 @@ main.wrap{padding-top:30px;padding-bottom:80px}
 
 .robar svg{flex:none}
 .robar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12.5px;color:var(--petrol);margin-bottom:16px}
+/* Demo-Raum (bridge.js, ?demo=1&rollen=1): Leiste über dem Kopf, mit Umschalter */
+.demobar{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;background:var(--marker-wash);border-bottom:2px solid var(--marker);padding:8px clamp(14px,2.4vw,30px);font-size:13px;color:var(--ink-2)}
+.demobar-tag{flex:none;background:var(--marker);color:#fff;font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;border-radius:6px;padding:4px 9px}
+.demobar-txt{flex:1 1 260px;min-width:0}
+.demobar-txt b{color:var(--marker)}
+.demobar-seg{display:inline-flex;align-items:center;gap:4px;flex:none;background:#fff;border:1px solid var(--line);border-radius:99px;padding:3px}
+.demobar-l{font-size:12px;font-weight:700;color:var(--ink-3);padding:0 6px 0 8px}
+.demobar-seg button{border:0;background:none;border-radius:99px;padding:7px 14px;font:inherit;font-weight:700;color:var(--ink-2);cursor:pointer}
+.demobar-seg button:hover{background:var(--paper)}
+.demobar-seg button.on{background:var(--petrol);color:#fff;cursor:default}
+.demobar-end{flex:none;border:1px solid var(--line);background:var(--paper-up);border-radius:99px;padding:7px 14px;font:inherit;font-weight:700;color:var(--ink-2);cursor:pointer}
+.demobar-end:hover{border-color:var(--marker);color:var(--marker)}
+@media (max-width:560px){ .demobar-seg{flex:1 1 auto;justify-content:center} .demobar-l{display:none} }
+@media print{ .demobar{display:none} }
 
 /* ---------- Avatare, Personen ---------- */
 .av{border-radius:99px;flex:none;display:grid;place-items:center;font-weight:700;color:#fff;overflow:hidden;background:var(--petrol);box-shadow:inset 0 -1px 0 rgba(0,0,0,.18)}
@@ -1424,7 +1438,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261008e"></script>
+<script src="bridge.js?v=20261008f"></script>
 <script src="app.js?v=20261008e"></script>
 </body>
 </html>
