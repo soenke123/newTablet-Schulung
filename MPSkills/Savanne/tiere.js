@@ -3,47 +3,47 @@
    ══════════════════════════════════════════════════════════════
 
    Löwen, Elefanten, Zebras, Gnus und Krokodile, jeweils Papa,
-   Mama und Kind. Fassung 2 (Oktober 2026), gebaut für den
+   Mama und Kind. Fassung 3 (Oktober 2026), gebaut für den
    Showroom showroom-tiere.html und für das neue Projekt.
 
-   ── Aussehen (Fassung 2) ──────────────────────────────────────
-   Im Stil der Wesen aus Knowledge Stack (creatures.js): großer
-   Kopf, runder Bauch, kurze Beine; eine Linienfarbe (INK) mit
-   dicken runden Umrissen; Glanzbogen oben links, Schattensichel
-   unten rechts; Knopfaugen mit zwei Lichtpunkten, rosa Bäckchen.
-   Mama hat Wimpern und ein Blümchen, Papa Mähne/Stoßzähne/Hörner,
-   die Kinder eigene Farben (Flecken, braune Streifen, Bänder).
-   Fressen = Herzchen und glückliche Augen, Schlafen = Zzz,
-   Stehen = ab und zu ein Funkelstern. Der Kopf schaut wie im
-   Zeichentrick meist schräg zum Betrachter.
+   ── Aussehen ──────────────────────────────────────────────────
+   Von Hand gezeichnet wie die Wesen aus Knowledge Stack
+   (tools/KnowledgeStack/creatures.js): eine Linienfarbe (INK),
+   dicke runde Umrisse, Glanz oben links, Schatten unten rechts,
+   Knopfaugen mit zwei Lichtpunkten, rosa Bäckchen. Kindchen-
+   schema: großer Kopf, runder Bauch, kurze Beine.
+   Fassung 2 (3D-Kugeln) sah gruselig aus — deshalb wieder echte
+   Zeichnungen, je Art drei Ansichten:
 
-   ── Wie ein Tier gebaut ist ───────────────────────────────────
-   Jedes Tier ist ein SKELETT IM RAUM (x = vorn, y = oben,
-   z = rechts) und kein fertiges Bild. Knochen sind Strecken
-   zwischen zwei Gelenken; um jeden Knochen liegt ein „Muskel“ —
-   eine Kapsel, die vom einen Ende zum anderen dünner oder dicker
-   wird. Eine Kapsel sieht aus jeder Richtung gleich aus (zwei
-   Kreise und ihre Tangenten), deshalb kann das Tier in JEDE
-   Richtung gehen: wir drehen das Skelett, projizieren es schräg
-   von oben (Kamera um PITCH geneigt) und sortieren die Teile
-   nach Tiefe — was näher ist, wird später gezeichnet.
+     side   von der Seite, Blick nach rechts (links = gespiegelt)
+     front  von vorn (läuft auf uns zu)
+     back   von hinten (läuft von uns weg)
 
-     Rumpf     Hüfte → Bauch → Brust, dazu Hals (2 Knochen) als
-               ein Umriss (blob), damit keine Nähte zu sehen sind
-     Beine     je 2 Knochen; das Knie rechnet eine kleine IK aus
-               (Hüftgelenk + Fußpunkt → Kniepunkt)
-     Gang      Schritt (Passgang-Folge), Trab, Galopp, Paßgang;
-               die Fußlänge kommt aus Tempo und Takt, darum
-               rutscht im Stehen kein Fuß über den Boden
-     Schwanz   Kette, schwingt mit Verzögerung nach
-     Krokodil  Wirbelsäule als Kette mit Seitwärts-Welle,
-               gespreizte Beine (Knie nach oben/außen)
-     Elefant   Rüssel als Kette (8 Glieder), Ohren als Scheiben
+   Jede Zeichnung liegt im Kasten 0…120 × 0…100, Boden y = 92,
+   Mitte x = 60 — wie die Wesen (dort 0…100).
+
+   ── Das Skelett ───────────────────────────────────────────────
+   Die Zeichnung ist in Gelenke zerlegt, die jedes Bild neu
+   gestellt werden:
+
+     Beine     Hüfte → Knie → Fuß. Der Fuß folgt dem Gangbild
+               (Schritt, Trab, Galopp, Paßgang), das Knie rechnet
+               eine kleine IK aus. Die Beine sind „Röhren“
+               (Umriss + Farbe), Pfote/Huf sitzt am Fußpunkt.
+     Rumpf     wippt und kippt (rootA/rootB), Hals als Röhre
+     Kopf      dreht um den Halsansatz (Grasen, Schlafen)
+     Schwanz   Kurve mit Quaste, schwingt
+     Rüssel    Kette aus Gliedern (Elefant), rollt sich ein
+     Kiefer    klappt (Krokodil), Ohren wackeln
+   „Skelett“ im Showroom blendet Knochen und Gelenke ein.
+
+   Streifen an Hals und Beinen sind gestrichelte Linien entlang
+   der Röhre (stroke-dasharray) — so wandern sie mit.
 
    ── Was ein Tier kann (A.mode) ────────────────────────────────
-     idle   stehen, atmen, blinzeln, schaut auch mal her
-     walk   gehen        run   laufen (Galopp, beim Elefanten Paß)
-     eat    fressen      sleep schlafen (Zzz)
+     idle   stehen, atmen, blinzeln, ab und zu ein Funkelstern
+     walk   gehen        run   laufen
+     eat    fressen (Herzchen)      sleep  schlafen (Zzz)
    Zwischen den Zuständen wird weich übergeblendet (A.w).
 
    ── Schnittstelle (window.SavanneTiere) ───────────────────────
@@ -51,7 +51,10 @@
      mount(tier, svgG)     → legt die Zeichengruppe an
      update(tier, dt)      → Uhr weiter (Sekunden)
      draw(tier, view)      → zeichnen; view = { ox, oy, S, skel,
-                              ground, mark }
+                              ground, mark }; (ox, oy) = Fußpunkt
+     A.h                   Laufrichtung am Bildschirm (0 = rechts,
+                           π/2 = auf uns zu); daraus folgt die Ansicht
+     A.s                   Größe in der Savanne, A.cardS im Kasten
      SPECIES, ORDER, ROLES, PITCH
    Läuft ohne Netz und ohne Build.
    ══════════════════════════════════════════════════════════════ */
@@ -59,1072 +62,660 @@
   'use strict';
 
   const TAU = Math.PI * 2, DEG = Math.PI / 180;
-  const PITCH = 0.42, SP = Math.sin(PITCH), CP = Math.cos(PITCH);
+  const PITCH = 0.42;
   const NS = 'http://www.w3.org/2000/svg';
+  const INK = '#1e1b2e';
+  const GROUND = 92;
 
-  /* ── Vektoren ──────────────────────────────────────────────── */
-  const v3 = (x, y, z) => ({ x, y, z });
-  const add = (a, b) => v3(a.x + b.x, a.y + b.y, a.z + b.z);
-  const sub = (a, b) => v3(a.x - b.x, a.y - b.y, a.z - b.z);
-  const mul = (a, k) => v3(a.x * k, a.y * k, a.z * k);
-  const dot = (a, b) => a.x * b.x + a.y * b.y + a.z * b.z;
-  const cross = (a, b) => v3(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
-  const len = a => Math.hypot(a.x, a.y, a.z);
-  const norm = a => { const l = len(a) || 1; return mul(a, 1 / l); };
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const lerpV = (a, b, t) => v3(lerp(a.x, b.x, t), lerp(a.y, b.y, t), lerp(a.z, b.z, t));
   const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const lerp = (a, b, t) => a + (b - a) * t;
   const smooth = u => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
-  const rotY = (p, piv, a) => {
-    const c = Math.cos(a), s = Math.sin(a), x = p.x - piv.x, z = p.z - piv.z;
-    return v3(piv.x + x * c - z * s, p.y, piv.z + x * s + z * c);
-  };
-  const ground = (p, r) => (p.y < r ? v3(p.x, r, p.z) : p);
-  const f1 = n => Math.round(n * 10) / 10;
+  const n1 = v => Math.round(v * 10) / 10;
+  let UID = 0;
 
-  /* ── Farben ────────────────────────────────────────────────── */
-  const shadeMemo = new Map();
-  function shade(hex, k) {
-    const key = hex + k;
-    if (shadeMemo.has(key)) return shadeMemo.get(key);
+  /* ── Zeichenwerkzeug (wie creatures.js) ────────────────────── */
+  const at = (w, x) => (w ? ' stroke="' + INK + '" stroke-width="' + w + '" stroke-linejoin="round" stroke-linecap="round"' : '') + (x ? ' ' + x : '');
+  const P = (d, fill, w, x) => '<path d="' + d + '" fill="' + fill + '"' + at(w === undefined ? 2.6 : w, x) + '/>';
+  const E = (cx, cy, rx, ry, fill, w, x) => '<ellipse cx="' + n1(cx) + '" cy="' + n1(cy) + '" rx="' + n1(rx) + '" ry="' + n1(ry) + '" fill="' + fill + '"' + at(w === undefined ? 2.6 : w, x) + '/>';
+  const C = (cx, cy, r, fill, w, x) => E(cx, cy, r, r, fill, w, x);
+  const L = (d, col, w, x) => '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"' + (x ? ' ' + x : '') + '/>';
+  const shine = (d, w, o) => L(d, '#fff', w || 2.4, 'opacity="' + (o || 0.6) + '"');
+  const hl = (cx, cy, r, o) => C(cx, cy, r, '#fff', 0, 'opacity="' + (o || 0.8) + '"');
+  const shade = (d, o) => P(d, INK, 0, 'opacity="' + (o || 0.12) + '"');
+  const G = (k, inner, x) => '<g data-k="' + k + '"' + (x ? ' ' + x : '') + '>' + inner + '</g>';
+  // Röhre (Bein, Hals, Schwanz, Rüssel): Umriss + Farbe, die Form setzt draw()
+  const tube = (k, col, w) => '<path data-k="' + k + 'O" fill="none" stroke="' + INK + '" stroke-width="' + n1(w + 3.2) + '" stroke-linecap="round" stroke-linejoin="round"/>'
+    + '<path data-k="' + k + 'F" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-linecap="round" stroke-linejoin="round"/>';
+  // Streifen entlang einer Röhre (gleiche Form, gestrichelt)
+  const bands = (k, col, w, dash, op) => '<path data-k="' + k + '" fill="none" stroke="' + col + '" stroke-width="' + w + '" stroke-dasharray="' + dash + '"' + (op ? ' opacity="' + op + '"' : '') + '/>';
+
+  function darker(hex, k) {
     const n = parseInt(hex.slice(1), 16);
-    let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
-    if (k <= 1) { r *= k; g *= k; b *= k; }
-    else { const t = k - 1; r += (255 - r) * t; g += (255 - g) * t; b += (255 - b) * t; }
-    const out = '#' + [r, g, b].map(x => Math.round(clamp(x, 0, 255)).toString(16).padStart(2, '0')).join('');
-    shadeMemo.set(key, out);
-    return out;
+    const f = c => Math.round(clamp(c * k, 0, 255)).toString(16).padStart(2, '0');
+    return '#' + f(n >> 16) + f((n >> 8) & 255) + f(n & 255);
   }
-
-  /* ── 2D-Formen ─────────────────────────────────────────────── */
-  function circleD(cx, cy, r) {
-    return 'M' + f1(cx - r) + ' ' + f1(cy) + 'A' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(cx + r) + ' ' + f1(cy)
-      + 'A' + f1(r) + ' ' + f1(r) + ' 0 1 0 ' + f1(cx - r) + ' ' + f1(cy) + 'Z';
-  }
-  /* Kapsel: zwei Kreise (ra, rb) und ihre äußeren Tangenten */
-  function capD(a, b, ra, rb) {
-    const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy);
-    if (d < Math.abs(ra - rb) + 0.05) return ra > rb ? circleD(a.x, a.y, ra) : circleD(b.x, b.y, rb);
-    const ang = Math.atan2(dy, dx), phi = Math.acos(clamp((ra - rb) / d, -1, 1));
-    const c1 = Math.cos(ang + phi), s1 = Math.sin(ang + phi), c2 = Math.cos(ang - phi), s2 = Math.sin(ang - phi);
-    return 'M' + f1(a.x + ra * c1) + ' ' + f1(a.y + ra * s1)
-      + 'L' + f1(b.x + rb * c1) + ' ' + f1(b.y + rb * s1)
-      + 'A' + f1(rb) + ' ' + f1(rb) + ' 0 ' + (phi > Math.PI / 2 ? 1 : 0) + ' 0 ' + f1(b.x + rb * c2) + ' ' + f1(b.y + rb * s2)
-      + 'L' + f1(a.x + ra * c2) + ' ' + f1(a.y + ra * s2)
-      + 'A' + f1(ra) + ' ' + f1(ra) + ' 0 ' + (phi < Math.PI / 2 ? 1 : 0) + ' 0 ' + f1(a.x + ra * c1) + ' ' + f1(a.y + ra * s1) + 'Z';
-  }
-  /* Wuschel (Mähne, Quaste): Kreis mit Bögen nach außen */
-  function fluffD(cx, cy, r, n, rot) {
-    const br = r * Math.sin(Math.PI / n) * 1.3;
+  function fluff(cx, cy, r, n, rot) {
+    const br = r * Math.sin(Math.PI / n) * 1.25;
     let d = '';
     for (let i = 0; i <= n; i++) {
-      const a = rot + i * TAU / n, x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
-      d += i === 0 ? 'M' + f1(x) + ' ' + f1(y) : 'A' + f1(br) + ' ' + f1(br) + ' 0 0 1 ' + f1(x) + ' ' + f1(y);
+      const a = (rot || 0) + i * TAU / n, x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+      d += (i ? 'A' + n1(br) + ' ' + n1(br) + ' 0 0 1 ' : 'M') + n1(x) + ' ' + n1(y) + ' ';
     }
     return d + 'Z';
   }
+  const star = (x, y, s) => {
+    const k = s * 0.22;
+    return 'M ' + n1(x) + ' ' + n1(y - s) + ' Q ' + n1(x + k) + ' ' + n1(y - k) + ' ' + n1(x + s) + ' ' + n1(y)
+      + ' Q ' + n1(x + k) + ' ' + n1(y + k) + ' ' + n1(x) + ' ' + n1(y + s)
+      + ' Q ' + n1(x - k) + ' ' + n1(y + k) + ' ' + n1(x - s) + ' ' + n1(y)
+      + ' Q ' + n1(x - k) + ' ' + n1(y - k) + ' ' + n1(x) + ' ' + n1(y - s) + ' Z';
+  };
+  const heart = (x, y, s) => 'M ' + n1(x) + ' ' + n1(y + s * 0.45) + ' C ' + n1(x - s * 1.15) + ' ' + n1(y - s * 0.3) + ' ' + n1(x - s * 0.45) + ' ' + n1(y - s * 1.1) + ' ' + n1(x) + ' ' + n1(y - s * 0.45)
+    + ' C ' + n1(x + s * 0.45) + ' ' + n1(y - s * 1.1) + ' ' + n1(x + s * 1.15) + ' ' + n1(y - s * 0.3) + ' ' + n1(x) + ' ' + n1(y + s * 0.45) + ' Z';
+  const dot = (x, y, r, fill, stroke, w) => '<circle cx="' + n1(x) + '" cy="' + n1(y) + '" r="' + r + '" fill="' + fill + '" stroke="' + stroke + '" stroke-width="' + w + '"/>';
 
-  /* ── Gangarten: Phase je Bein (LV, RV, LH, RH) ─────────────── */
+  /* Gesicht: Knopfaugen offen / zu / glücklich, Wimpern, Bäckchen */
+  function eyes(lx, rx, y, r, lashes) {
+    const xs = [lx, rx].filter(x => x != null);
+    const open = xs.map(x => E(x, y, r * 0.8, r, INK, 0) + hl(x - r * 0.26, y - r * 0.4, r * 0.34, 0.95) + hl(x + r * 0.26, y + r * 0.38, r * 0.15, 0.85)).join('');
+    const closed = xs.map(x => L('M ' + n1(x - r * 0.9) + ' ' + n1(y) + ' Q ' + n1(x) + ' ' + n1(y + r * 0.8) + ' ' + n1(x + r * 0.9) + ' ' + n1(y), INK, 2)).join('');
+    const happy = xs.map(x => L('M ' + n1(x - r * 0.9) + ' ' + n1(y + r * 0.3) + ' Q ' + n1(x) + ' ' + n1(y - r * 1.0) + ' ' + n1(x + r * 0.9) + ' ' + n1(y + r * 0.3), INK, 2)).join('');
+    let lash = '';
+    if (lashes) xs.forEach((x, i) => {
+      const s = xs.length === 1 ? 1 : (i === 0 ? -1 : 1);
+      lash += L('M ' + n1(x + s * r * 0.55) + ' ' + n1(y - r * 0.75) + ' l ' + n1(s * 1.5) + ' ' + n1(-1.5) + ' M ' + n1(x + s * r * 0.8) + ' ' + n1(y - r * 0.35) + ' l ' + n1(s * 1.8) + ' -0.5', INK, 1.2);
+    });
+    return G('eo', open + lash) + G('ec', closed, 'display="none"') + G('eh', happy + lash, 'display="none"');
+  }
+  const blush = (x, y, s) => E(x, y, 3.3 * (s || 1), 2 * (s || 1), '#ff6f9f', 0, 'opacity=".5"');
+  function flower(x, y, s) {
+    s = s || 1;
+    let o = '';
+    for (let k = 0; k < 5; k++) {
+      const a = k * TAU / 5 - Math.PI / 2;
+      o += C(x + Math.cos(a) * 2.1 * s, y + Math.sin(a) * 2.1 * s, 1.6 * s, '#ffffff', 0.9);
+    }
+    return o + C(x, y, 1.3 * s, '#ffd23f', 0.9);
+  }
+  const shadowEl = rx => '<g data-k="sh"><ellipse cx="60" cy="92.4" rx="' + rx + '" ry="3.4" fill="' + INK + '" opacity=".14"/></g>';
+
+  /* ── Gangbild ──────────────────────────────────────────────── */
+  // Phase je Bein: [links vorn, rechts vorn, links hinten, rechts hinten]
   const PAT = {
     walk:   [0.25, 0.75, 0, 0.5],
     trot:   [0, 0.5, 0.5, 0],
     gallop: [0.58, 0.45, 0, 0.12],
     amble:  [0.3, 0.8, 0, 0.5]
   };
-  const LEGS = [{ front: true, side: -1 }, { front: true, side: 1 }, { front: false, side: -1 }, { front: false, side: 1 }];
   function blendOff(a, wa, b, wb) {
     const x = wa * Math.cos(TAU * a) + wb * Math.cos(TAU * b), y = wa * Math.sin(TAU * a) + wb * Math.sin(TAU * b);
     return ((Math.atan2(y, x) / TAU) % 1 + 1) % 1;
   }
-  function gaitInfo(A) {
-    const G = A.D.gait, w = A.w, mw = w.walk + w.run, m = Math.min(1, mw);
-    const pw = PAT[G.walkPat || 'walk'], pr = PAT[G.run];
-    const beta = mw > 1e-4 ? (w.walk * G.walkB + w.run * G.runB) / mw : G.walkB;
-    const lift = mw > 1e-4 ? (w.walk * G.liftW + w.run * G.liftR) / mw * m : 0;
+  function gait(A) {
+    const Gt = A.D.gait, w = A.w, mw = w.walk + w.run, m = Math.min(1, mw);
+    const pw = PAT[Gt.walkPat || 'walk'], pr = PAT[Gt.run];
+    const beta = mw > 1e-4 ? (w.walk * Gt.walkB + w.run * Gt.runB) / mw : Gt.walkB;
+    const lift = mw > 1e-4 ? (w.walk * Gt.liftW + w.run * Gt.liftR) / mw * m : 0;
     const stride = A.freq > 0 ? A.v * beta / A.freq : 0;
-    return { beta, lift, stride, m, off: i => blendOff(pw[i], w.walk + 1e-4, pr[i], w.run) };
-  }
-  function footOffset(g, phase, i) {
-    const p = (phase + g.off(i)) % 1;
-    if (p < g.beta) return { x: g.stride * (0.5 - p / g.beta), y: 0 };
-    const u = (p - g.beta) / (1 - g.beta);
-    return { x: g.stride * (-0.5 + smooth(u)), y: g.lift * Math.sin(Math.PI * u) };
-  }
-
-  /* Zwei Knochen, ein Knie: wo liegt das Knie? hint zeigt, wohin es knickt. */
-  function ik(J, F, l1, l2, hint) {
-    let d = sub(F, J), dl = len(d);
-    const maxL = (l1 + l2) * 0.999, minL = Math.abs(l1 - l2) + 0.5;
-    if (dl > maxL) { F = add(J, mul(d, maxL / dl)); d = sub(F, J); dl = maxL; }
-    if (dl < minL) dl = minL;
-    const dir = norm(d);
-    const a = (l1 * l1 - l2 * l2 + dl * dl) / (2 * dl);
-    const h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
-    const pv = norm(sub(hint, mul(dir, dot(hint, dir))));
-    return { K: add(add(J, mul(dir, a)), mul(pv, h)), F };
-  }
-
-
-  /* ══════════════════════════════════════════════════════════════
-     Stil — wie die Wesen aus Knowledge Stack (creatures.js)
-     ══════════════════════════════════════════════════════════════
-     * eine Linienfarbe (INK), dicke runde Umrisse
-     * Glanz oben links (weißer Bogen), Schatten unten rechts
-       (Sichel aus einem Verlauf mit harter Kante, je Farbe einmal)
-     * Knopfaugen: dunkles Oval, großer und kleiner Lichtpunkt
-     * rosa Bäckchen, kleiner Mund, Funkelsterne, Herzchen, Zzz      */
-  const INK = '#1e1b2e';
-  const BLUSH = '#ff7aa2';
-  let defsEl = null;
-  const gradMade = new Set();
-  function gradFill(hex) {
-    if (typeof document === 'undefined' || !hex || hex[0] !== '#') return hex;
-    const id = 'sv' + hex.slice(1);
-    if (!gradMade.has(id)) {
-      if (!defsEl) {
-        const svg = document.createElementNS(NS, 'svg');
-        svg.setAttribute('width', '0'); svg.setAttribute('height', '0'); svg.setAttribute('aria-hidden', 'true');
-        svg.style.cssText = 'position:absolute;width:0;height:0;overflow:hidden';
-        defsEl = document.createElementNS(NS, 'defs');
-        svg.appendChild(defsEl);
-        (document.body || document.documentElement).appendChild(svg);
-      }
-      const g = document.createElementNS(NS, 'radialGradient');
-      g.setAttribute('id', id); g.setAttribute('cx', '.36'); g.setAttribute('cy', '.3'); g.setAttribute('r', '.8');
-      [[0, shade(hex, 1.12)], [0.42, hex], [0.78, hex], [0.79, shade(hex, 0.85)], [1, shade(hex, 0.8)]].forEach(([o, c]) => {
-        const s = document.createElementNS(NS, 'stop');
-        s.setAttribute('offset', o); s.setAttribute('stop-color', c);
-        g.appendChild(s);
-      });
-      defsEl.appendChild(g);
-      gradMade.add(id);
-    }
-    return 'url(#' + id + ')';
-  }
-  function ellD(cx, cy, rx, ry) {
-    return 'M' + f1(cx - rx) + ' ' + f1(cy) + 'A' + f1(rx) + ' ' + f1(ry) + ' 0 1 0 ' + f1(cx + rx) + ' ' + f1(cy)
-      + 'A' + f1(rx) + ' ' + f1(ry) + ' 0 1 0 ' + f1(cx - rx) + ' ' + f1(cy) + 'Z';
-  }
-  function starD(x, y, s) {
-    const k = s * 0.22;
-    return 'M' + f1(x) + ' ' + f1(y - s) + 'Q' + f1(x + k) + ' ' + f1(y - k) + ' ' + f1(x + s) + ' ' + f1(y)
-      + 'Q' + f1(x + k) + ' ' + f1(y + k) + ' ' + f1(x) + ' ' + f1(y + s)
-      + 'Q' + f1(x - k) + ' ' + f1(y + k) + ' ' + f1(x - s) + ' ' + f1(y)
-      + 'Q' + f1(x - k) + ' ' + f1(y - k) + ' ' + f1(x) + ' ' + f1(y - s) + 'Z';
-  }
-  function heartD(x, y, s) {
-    return 'M' + f1(x) + ' ' + f1(y + s * 0.45) + 'C' + f1(x - s * 1.15) + ' ' + f1(y - s * 0.3) + ' ' + f1(x - s * 0.45) + ' ' + f1(y - s * 1.1) + ' ' + f1(x) + ' ' + f1(y - s * 0.45)
-      + 'C' + f1(x + s * 0.45) + ' ' + f1(y - s * 1.1) + ' ' + f1(x + s * 1.15) + ' ' + f1(y - s * 0.3) + ' ' + f1(x) + ' ' + f1(y + s * 0.45) + 'Z';
-  }
-
-  /* ══════════════════════════════════════════════════════════════
-     Zeichenkontext: sammelt Formen, projiziert, sortiert nach Tiefe
-     ══════════════════════════════════════════════════════════════ */
-  function makeCtx(A, view) {
-    const ch = Math.cos(A.h), sh = Math.sin(A.h), S = view.S, ox = view.ox, oy = view.oy;
-    const SW = (view.lw || 2.6) * (0.55 + 0.45 * Math.min(1.2, S));
-    const prims = [], bones = [];
-    function pr(p) {
-      const wx = p.x * ch - p.z * sh, wz = p.x * sh + p.z * ch;
-      return { x: ox + S * wx, y: oy + S * (-p.y * CP + wz * SP), d: wz * CP + p.y * SP };
-    }
-    // > 0: die Fläche mit Normale n zeigt zur Kamera
-    const facing = n => n.y * SP + (n.x * sh + n.z * ch) * CP;
-    // die abgewandte Seite (z. B. das hintere Bein) etwas dunkler
-    function tone(fill, o) {
-      if (!o || !o.side) return fill;
-      const far = clamp(-o.side * ch, 0, 1);
-      return far > 0.02 ? shade(fill, 1 - 0.15 * far) : fill;
-    }
-    const paint = (f, o) => (o && o.flat ? f : gradFill(f));
-    const dep = (o, d) => (o && o.depth != null ? o.depth : d + ((o && o.bias) || 0));
-    function push(p, o) {
-      if (o && o.op != null) p.op = o.op;
-      prims.push(p); return p;
-    }
-    // Glanz: weißer Bogen oben links
-    function shineBall(P, r, d) {
-      const rr = r * 0.66, a1 = 200 * DEG, a2 = 248 * DEG;
-      prims.push({ d: 'M' + f1(P.x + rr * Math.cos(a1)) + ' ' + f1(P.y + rr * Math.sin(a1)) + 'A' + f1(rr) + ' ' + f1(rr) + ' 0 0 1 '
-        + f1(P.x + rr * Math.cos(a2)) + ' ' + f1(P.y + rr * Math.sin(a2)),
-        fill: 'none', stroke: '#ffffff', sw: Math.max(0.8, r * 0.17), op: 0.62, depth: d + 0.002 });
-    }
-    function shineCap(A2, B2, ra, rb, d) {
-      const dx = B2.x - A2.x, dy = B2.y - A2.y, L = Math.hypot(dx, dy);
-      if (L < Math.max(ra, rb) * 0.9) { shineBall(ra > rb ? A2 : B2, Math.max(ra, rb), d); return; }
-      let nx = dy / L, ny = -dx / L;
-      if (ny > 0 || (Math.abs(ny) < 0.25 && nx > 0)) { nx = -nx; ny = -ny; }
-      let s = '';
-      [0.18, 0.4, 0.62].forEach((t, i) => {
-        const r = lerp(ra, rb, t) * 0.6;
-        s += (i ? 'L' : 'M') + f1(A2.x + dx * t + nx * r) + ' ' + f1(A2.y + dy * t + ny * r);
-      });
-      prims.push({ d: s, fill: 'none', stroke: '#ffffff', sw: Math.max(0.8, Math.min(ra, rb) * 0.22), op: 0.55, depth: d + 0.002 });
-    }
-    const C = {
-      S, SW, pr, facing, prims, bones,
-      depth: p => pr(p).d,
-      cap(a, b, ra, rb, fill, o) {
-        const A2 = pr(a), B2 = pr(b), f = tone(fill, o), d = dep(o, (A2.d + B2.d) / 2);
-        const p = push({ d: capD(A2, B2, ra * S, rb * S), fill: paint(f, o), stroke: (o && o.stroke) || INK,
-          sw: o && o.sw != null ? o.sw : SW, depth: d }, o);
-        if (o && o.shine) shineCap(A2, B2, ra * S, rb * S, d);
-        return p;
-      },
-      ball(c, r, fill, o) {
-        const P = pr(c), f = tone(fill, o), d = dep(o, P.d);
-        const p = push({ d: circleD(P.x, P.y, r * S), fill: paint(f, o), stroke: (o && o.stroke) || INK,
-          sw: o && o.sw != null ? o.sw : SW, depth: d }, o);
-        if (o && o.shine) shineBall(P, r * S, d);
-        return p;
-      },
-      fluff(c, r, n, fill, o) {
-        const P = pr(c), f = tone(fill, o), d = dep(o, P.d);
-        return push({ d: fluffD(P.x, P.y, r * S, n, (o && o.rot) || 0), fill: paint(f, o), stroke: INK,
-          sw: SW * 0.9, depth: d }, o);
-      },
-      // Umriss aus mehreren Kapseln ohne innere Nähte: erst Rand, dann Füllung
-      blob(parts, fill, o) {
-        let d = '', dp = 0, n = 0;
-        const f = tone(fill, o);
-        const P2 = parts.map(([a, b, ra, rb]) => {
-          const A2 = pr(a), B2 = pr(b);
-          d += capD(A2, B2, ra * S, rb * S);
-          dp += A2.d + B2.d; n += 2;
-          return [A2, B2, ra * S, rb * S];
-        });
-        dp = dep(o, dp / n);
-        push({ d, fill: INK, stroke: INK, sw: SW * 2, depth: dp }, o);
-        const p = push({ d, fill: paint(f, o), stroke: 'none', sw: 0, depth: dp + 0.001 }, o);
-        if (o && o.shine != null) { const s = P2[o.shine] || P2[0]; shineCap(s[0], s[1], s[2], s[3], dp + 0.001); }
-        return p;
-      },
-      // Scheibe: Mittelpunkt + zwei Halbachsen im Raum (Ohr, Schatten)
-      disc(c, u, v, fill, o) {
-        let d = '';
-        const N = 30;
-        for (let i = 0; i < N; i++) {
-          const a = i / N * TAU, P = pr(add(c, add(mul(u, Math.cos(a)), mul(v, Math.sin(a)))));
-          d += (i ? 'L' : 'M') + f1(P.x) + ' ' + f1(P.y);
-        }
-        const f = tone(fill, o);
-        return push({ d: d + 'Z', fill: paint(f, o), stroke: o && o.stroke === 'none' ? 'none' : ((o && o.stroke) || INK),
-          sw: o && o.sw != null ? o.sw : SW, depth: dep(o, pr(c).d) }, o);
-      },
-      line(pts, color, w, o) {
-        let d = '', dp = 0;
-        pts.forEach((p, i) => { const P = pr(p); d += (i ? 'L' : 'M') + f1(P.x) + ' ' + f1(P.y); dp += P.d; });
-        return push({ d, fill: 'none', stroke: color, sw: w, depth: dep(o, dp / pts.length) }, o);
-      },
-      // gebogene Linie durch drei Punkte (Mund, Falten)
-      curve(a, m, b, color, w, o) {
-        const A2 = pr(a), M2 = pr(m), B2 = pr(b);
-        const cx = 2 * M2.x - (A2.x + B2.x) / 2, cy = 2 * M2.y - (A2.y + B2.y) / 2;
-        return push({ d: 'M' + f1(A2.x) + ' ' + f1(A2.y) + 'Q' + f1(cx) + ' ' + f1(cy) + ' ' + f1(B2.x) + ' ' + f1(B2.y),
-          fill: 'none', stroke: color, sw: w, depth: dep(o, (A2.d + B2.d) / 2) }, o);
-      },
-      // Ring um eine Achse (Streifen, Falten): nur das sichtbare Stück
-      ring(c, axis, upHint, r, th0, th1, color, w, depth, o) {
-        const ax = norm(axis), up = norm(sub(upHint, mul(ax, dot(upHint, ax)))), sd = cross(ax, up);
-        const steps = 12;
-        let run = [];
-        const flush = () => { if (run.length > 1) C.line(run, color, w * S, Object.assign({}, o, { depth })); run = []; };
-        for (let i = 0; i <= steps; i++) {
-          const th = (th0 + (th1 - th0) * i / steps) * DEG;
-          const n = add(mul(up, Math.cos(th)), mul(sd, Math.sin(th)));
-          if (facing(n) > -0.05) run.push(add(c, mul(n, r))); else flush();
-        }
-        flush();
-      },
-      // kleiner Fleck auf einer Oberfläche, nur wenn er zu sehen ist
-      spot(c, n, r, fill, o) {
-        if (facing(n) < 0.08) return null;
-        return C.ball(c, r, fill, Object.assign({ stroke: 'none', sw: 0, flat: true }, o));
-      },
-      // Oval in Bildschirmrichtung (Augen, Bäckchen)
-      oval(P, rx, ry, fill, o) {
-        return push({ d: ellD(P.x, P.y, rx, ry), fill, stroke: (o && o.stroke) || 'none', sw: (o && o.sw) || 0, depth: o.depth }, o);
-      },
-      raw(d, fill, stroke, sw, depth, op) { return push({ d, fill, stroke, sw, depth }, op != null ? { op } : null); },
-      bone(a, b) { if (view.skel) bones.push([pr(a), pr(b)]); },
-      // Schatten am Boden
-      shadow(a, b, r) {
-        const m = lerpV(a, b, 0.5), ax = v3(b.x - a.x, 0, b.z - a.z), half = len(ax) / 2;
-        const fwd = half > 0.1 ? norm(ax) : v3(1, 0, 0), side = v3(-fwd.z, 0, fwd.x);
-        return C.disc(v3(m.x, 0.5, m.z), mul(fwd, half + r * 1.05), mul(side, r * 1.05), '#000000',
-          { stroke: 'none', depth: -1e6, op: 0.14, flat: true });
+    return {
+      m,
+      foot(i) {
+        const p = (A.phase + blendOff(pw[i], w.walk + 1e-4, pr[i], w.run)) % 1;
+        if (p < beta) return { x: stride * (0.5 - p / beta), y: 0 };
+        const u = (p - beta) / (1 - beta);
+        return { x: stride * (-0.5 + smooth(u)), y: lift * Math.sin(Math.PI * u) };
       }
     };
-    return C;
   }
-
-  /* ── Gesicht ───────────────────────────────────────────────── */
-  // Reihenfolge am Kopf steht fest (Hinterkopf < Schädel < Gesicht), von hinten umgekehrt.
-  function headFrame(C, H, f, hr) {
-    const base = C.depth(H), toCam = C.facing(v3(f.x, 0, f.z)) * hr;
-    return { base, toCam, dFace: base + toCam + 0.3, dBack: base - toCam * 0.8 - 0.6, dEar: base - 0.2 - toCam * 0.3 };
+  /* Zwei Knochen, ein Knie. bend −1: Knie nach vorn (Vorderbein), +1: nach hinten */
+  function ik(H, F, l1, l2, bend) {
+    let dx = F.x - H.x, dy = F.y - H.y, d = Math.hypot(dx, dy);
+    const maxL = (l1 + l2) * 0.999;
+    if (d > maxL) { F = { x: H.x + dx / d * maxL, y: H.y + dy / d * maxL }; dx = F.x - H.x; dy = F.y - H.y; d = maxL; }
+    d = Math.max(d, Math.abs(l1 - l2) + 0.3);
+    const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d), h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+    const ux = dx / d, uy = dy / d;
+    return { K: { x: H.x + ux * a - uy * h * bend, y: H.y + uy * a + ux * h * bend }, F };
   }
-  function eyeState(A) {
-    if (A.w.sleep > 0.5) return 'closed';
-    if (A.blinking) return 'closed';
-    if (A.w.eat > 0.5 && Math.sin(A.t * 1.7) > 0.2) return 'happy';
-    return 'open';
+  // Punkt skalieren und drehen um piv (Grad), dann verschieben — wie das SVG-transform
+  function tf(p, piv, deg, dx, dy, sc) {
+    const c = Math.cos(deg * DEG), s = Math.sin(deg * DEG), k = sc || 1;
+    const x = (p[0] - piv[0]) * k, y = (p[1] - piv[1]) * k;
+    return { x: piv[0] + x * c - y * s + (dx || 0), y: piv[1] + x * s + y * c + (dy || 0) };
   }
-  function cuteEye(C, I, p, er, o) {
-    o = o || {};
-    const n = norm(sub(p, I.H)), vis = C.facing(n);
-    if (vis < 0.1) return;
-    const P = C.pr(p), sq = clamp(0.38 + vis * 0.8, 0.38, 1), e = er * C.S, d = I.dFace + 0.5;
-    const st = I.eye, lw = Math.max(1, C.SW * 0.95);
-    if (st === 'closed') {
-      C.raw('M' + f1(P.x - 0.85 * e * sq) + ' ' + f1(P.y - 0.05 * e) + 'Q' + f1(P.x) + ' ' + f1(P.y + 0.75 * e) + ' ' + f1(P.x + 0.85 * e * sq) + ' ' + f1(P.y - 0.05 * e), 'none', INK, lw, d);
-    } else if (st === 'happy') {
-      C.raw('M' + f1(P.x - 0.85 * e * sq) + ' ' + f1(P.y + 0.3 * e) + 'Q' + f1(P.x) + ' ' + f1(P.y - 0.95 * e) + ' ' + f1(P.x + 0.85 * e * sq) + ' ' + f1(P.y + 0.3 * e), 'none', INK, lw, d);
-    } else {
-      C.oval(P, 0.8 * e * sq, e, INK, { depth: d });
-      C.oval({ x: P.x - 0.26 * e * sq, y: P.y - 0.4 * e }, 0.34 * e * sq, 0.34 * e, '#ffffff', { depth: d + 0.01, op: 0.95 });
-      C.oval({ x: P.x + 0.26 * e * sq, y: P.y + 0.38 * e }, 0.15 * e * sq, 0.15 * e, '#ffffff', { depth: d + 0.01, op: 0.85 });
+  // glatte Kurve durch Punkte (Catmull-Rom)
+  function curve(pts) {
+    const n = pts.length;
+    if (n < 2) return '';
+    const g = i => pts[clamp(i, 0, n - 1)];
+    let d = 'M' + n1(pts[0].x) + ' ' + n1(pts[0].y);
+    for (let i = 0; i < n - 1; i++) {
+      const p0 = g(i - 1), p1 = g(i), p2 = g(i + 1), p3 = g(i + 2);
+      d += ' C' + n1(p1.x + (p2.x - p0.x) / 6) + ' ' + n1(p1.y + (p2.y - p0.y) / 6) + ' ' + n1(p2.x - (p3.x - p1.x) / 6) + ' ' + n1(p2.y - (p3.y - p1.y) / 6) + ' ' + n1(p2.x) + ' ' + n1(p2.y);
     }
-    if (o.lashes && st !== 'closed') {
-      const out = Math.sign(C.pr(add(p, mul(I.r, o.side))).x - P.x) || o.side;
-      const ly = st === 'happy' ? P.y - 0.5 * e : P.y - 0.72 * e;
-      C.raw('M' + f1(P.x + out * 0.5 * e * sq) + ' ' + f1(ly) + 'l' + f1(out * 0.45 * e) + ' ' + f1(-0.42 * e)
-        + 'M' + f1(P.x + out * 0.72 * e * sq) + ' ' + f1(ly + 0.3 * e) + 'l' + f1(out * 0.5 * e) + ' ' + f1(-0.18 * e), 'none', INK, lw * 0.75, d);
-    }
-  }
-  function cheek(C, I, p, b) {
-    const n = norm(sub(p, I.H)), vis = C.facing(n);
-    if (vis < 0.12) return;
-    const sq = clamp(0.38 + vis * 0.8, 0.38, 1);
-    C.oval(C.pr(p), 1.15 * b * C.S * sq, 0.62 * b * C.S, BLUSH, { depth: I.dFace + 0.45, op: 0.55 });
-  }
-  // Blümchen (Mama trägt eins): fünf Blätter, gelbe Mitte
-  function flower(C, p, s, d, col) {
-    const P = C.pr(p), r = s * C.S;
-    for (let k = 0; k < 5; k++) {
-      const a = k * TAU / 5 - Math.PI / 2;
-      C.oval({ x: P.x + Math.cos(a) * r * 0.9, y: P.y + Math.sin(a) * r * 0.9 }, r * 0.62, r * 0.62, col || '#ffffff', { depth: d, stroke: INK, sw: C.SW * 0.55 });
-    }
-    C.oval(P, r * 0.55, r * 0.55, '#ffd23f', { depth: d + 0.01, stroke: INK, sw: C.SW * 0.55 });
-  }
-  /* Zzz, Herzchen, Funkeln (bleiben in Bildrichtung) */
-  function effects(A, C, top) {
-    const P = C.pr(top), k = Math.max(0.65, C.S), w = A.w;
-    if (w.sleep > 0.6) {
-      for (let i = 0; i < 3; i++) {
-        const u = ((A.t * 0.33 + i / 3) % 1), s = (4 + u * 5) * k;
-        const x = P.x + 6 * k + u * 16 * k + Math.sin(u * 6) * 2, y = P.y - 4 - u * 30 * k;
-        const d = 'M' + f1(x) + ' ' + f1(y) + 'h' + f1(s) + 'l' + f1(-s) + ' ' + f1(s) + 'h' + f1(s);
-        const op = Math.sin(u * Math.PI) * (w.sleep - 0.6) * 2.5;
-        C.raw(d, 'none', INK, 3.6 * k, 1e5, op);
-        C.raw(d, 'none', '#c7d2fe', 1.6 * k, 1e5 + 0.1, op);
-      }
-    }
-    if (w.eat > 0.5) {
-      const u = (A.t * 0.45) % 1;
-      if (u < 0.8) {
-        const s = (3 + u * 2) * k, x = P.x + 10 * k + Math.sin(u * 7) * 3, y = P.y - u * 26 * k;
-        C.raw(heartD(x, y, s), '#ff6f91', INK, 1.1 * k, 1e5, Math.sin(u / 0.8 * Math.PI) * (w.eat - 0.5) * 2);
-      }
-    }
-    const idle = (1 - Math.min(1, w.walk + w.run)) * (1 - w.sleep) * (1 - w.eat);
-    if (idle > 0.5) {
-      const u = (A.t * 0.25 + A.seed) % 1;
-      if (u < 0.3) {
-        const s = Math.sin(u / 0.3 * Math.PI) * 3.6 * k;
-        const a = A.seed * 20;
-        C.raw(starD(P.x + Math.cos(a) * 20 * k, P.y - 6 * k + Math.sin(a) * 8 * k, s), '#ffd23f', INK, 0.8 * k, 1e5);
-        C.raw(starD(P.x - Math.cos(a) * 16 * k, P.y - 14 * k, s * 0.65), '#ffffff', INK, 0.7 * k, 1e5);
-      }
-    }
-  }
-  function grass(C, base, op, t, k) {
-    k = k || 1;
-    for (let i = 0; i < 5; i++) {
-      const a = i * 1.25, sw = Math.sin(t * 2 + i) * 1.2;
-      const b = add(base, v3(Math.cos(a) * 2.6 * k, 0, Math.sin(a) * 2.6 * k));
-      C.cap(b, add(b, v3(Math.cos(a) * 2.5 * k + sw, (8 + (i % 3) * 3) * k, Math.sin(a) * 1.6 * k)), 1.6 * k, 0.6 * k,
-        i % 2 ? '#7cc24a' : '#5aa33a', { op, sw: C.SW * 0.6 });
-    }
-    const P = C.pr(add(base, v3(0, 12 * k, 0)));
-    flower(C, add(base, v3(0.5 * k, 12.5 * k, 0)), 1.6 * k, P.d + 0.05, '#ff9cc2');
+    return d;
   }
 
   /* ══════════════════════════════════════════════════════════════
-     Vierbeiner (Löwe, Elefant, Zebra, Gnu)
-     ══════════════════════════════════════════════════════════════ */
-  function buildQuad(A, C) {
-    const D = A.D, R = A.R, w = A.w, t = A.t, G = D.gait, col = A.col;
-    const g = gaitInfo(A), ph = A.phase;
-    const sleepLie = R.sleepStand ? 0 : w.sleep;
-    const lie = clamp(sleepLie + (D.eatLie ? w.eat : 0), 0, 1);
-    const graze = D.graze ? w.eat : 0;
-    const fl = D.fl, hl = D.hl;
-    const standF = fl.fr + 0.96 * (fl.l1 + fl.l2) - fl.jy;
-    const standH = hl.fr + 0.96 * (hl.l1 + hl.l2) - hl.jy;
-
-    const bob = G.bob * w.walk * Math.cos(ph * TAU * 2);
-    const rock = G.rock * w.run * Math.sin(TAU * (ph + 0.15));
-    const hop = G.hop * w.run * (0.5 + 0.5 * Math.sin(TAU * ph + 1.2));
-    const slow = w.sleep > 0.5;
-    const breathe = Math.sin(t * TAU * (slow ? 0.22 : 0.32)) * (slow ? 1.4 : 0.6);
-    const sag = (R.sleepStand ? 3 * w.sleep : 0) + (D.eatDrop || 0) * graze;
-
-    const chestY = lerp(standF - sag, D.chest.r * 0.92, lie) + bob + hop + rock;
-    const hipY = lerp(standH - (R.sleepStand ? 2 * w.sleep : 0), D.hip.r * 0.92, lie) + bob + hop - rock;
-    const chest = v3(D.chest.x, chestY, 0), hip = v3(D.hip.x, hipY, 0);
-    const cr = D.chest.r + breathe * 0.35, hr0 = D.hip.r;
-    const mid = v3((chest.x + hip.x) / 2, Math.max((chestY + hipY) / 2 - D.belly.drop, D.belly.r * 0.88), 0);
-    const br = D.belly.r + breathe * 0.45;
-
-    /* Hals und Kopf */
-    const nk = D.neck, hd = D.head;
-    let na = nk.a + (G.nod || 0) * w.walk * Math.sin(ph * TAU * 2 + 0.6);
-    na = lerp(na, nk.runA, w.run);
-    na = lerp(na, nk.eatA, w.eat);
-    na = lerp(na, nk.sleepA, w.sleep);
-    let hp = lerp(lerp(lerp(hd.pitch, hd.runP != null ? hd.runP : hd.pitch, w.run), hd.eatP, w.eat), hd.sleepP, w.sleep);
-    hp += 4 * Math.sin(t * 0.9) * (1 - w.sleep) * (1 - Math.min(1, w.walk + w.run));
-    const N0 = v3(chest.x + nk.bx, chest.y + nk.by, 0);
-    const a1 = na * DEG, a2 = (na + nk.curve) * DEG, half = nk.len / 2;
-    let N1 = add(N0, v3(Math.cos(a1) * half, Math.sin(a1) * half, 0));
-    let H = add(N1, v3(Math.cos(a2) * half, Math.sin(a2) * half, 0));
-    const yaw = A.lookNow;
-    N1 = rotY(N1, N0, yaw); H = rotY(H, N0, yaw);
-    const hr = hd.r * R.head;
-    if (H.y < hr * 0.85) H = v3(H.x, hr * 0.85, H.z);
-    const mouth = (hd.snout || hr * 1.3) * R.head;
-    if (H.y + Math.sin(hp * DEG) * mouth < 2.5) hp = Math.asin(clamp((2.5 - H.y) / mouth, -1, 1)) / DEG;
-
-    const f = v3(Math.cos(hp * DEG) * Math.cos(yaw), Math.sin(hp * DEG), Math.cos(hp * DEG) * Math.sin(yaw));
-    const r = v3(-Math.sin(yaw), 0, Math.cos(yaw)), u = cross(r, f);
-    const F = (a, b, c) => v3(H.x + f.x * a + u.x * b + r.x * c, H.y + f.y * a + u.y * b + r.y * c, H.z + f.z * a + u.z * b + r.z * c);
-
-    /* Rumpf + Hals als ein Umriss */
-    const body = C.blob([[hip, mid, hr0, br], [mid, chest, br, cr], [N0, N1, nk.r1, (nk.r1 + nk.r2) / 2], [N1, H, (nk.r1 + nk.r2) / 2, nk.r2]], col.body, { shine: 1 });
-    C.bone(hip, mid); C.bone(mid, chest); C.bone(chest, N0); C.bone(N0, N1); C.bone(N1, H);
-    C.shadow(hip, chest, Math.max(cr, hr0) * (1 + lie * 0.3));
-
-    const I = Object.assign({ H, f, u, r, F, hr, yaw, hp, N0, N1, chest, hip, mid, cr, br, hr0, body, lie, graze,
-      neckR: nk.r1, eye: eyeState(A) }, headFrame(C, H, f, hr));
-
-    /* Beine */
-    LEGS.forEach((L, i) => {
-      const P = L.front ? fl : hl, base = L.front ? chest : hip, bx = L.front ? D.chest.x : D.hip.x;
-      const J = v3(base.x + P.jx, base.y + P.jy, L.side * P.w);
-      const fo = footOffset(g, ph, i);
-      let Fp = v3(bx + P.jx + P.home + fo.x + (L.front ? graze * 3 : 0), P.fr + fo.y, L.side * P.w);
-      let hint = v3(P.bend, 0, 0);
-      if (lie > 0) {
-        const sphinx = (R.sleepFront || D.sleepFront) === 'sphinx';
-        let Ft, Hn;
-        if (L.front) {
-          Ft = sphinx ? v3(J.x + (P.l1 + P.l2) * 0.8, P.fr, L.side * P.w * 0.85) : v3(J.x - P.l1 * 0.1, P.fr, L.side * P.w * 0.95);
-          Hn = sphinx ? v3(0.1, 1, 0) : v3(1, 0.3, 0);
-        } else {
-          Ft = v3(J.x + P.l1 * 0.6, P.fr, L.side * P.w * 1.3);
-          Hn = v3(-0.5, 1, 0);
-        }
-        Fp = lerpV(Fp, Ft, lie);
-        hint = norm(lerpV(hint, Hn, lie));
-      }
-      const leg = ik(J, Fp, P.l1, P.l2, hint);
-      let K = leg.K; Fp = leg.F;
-      if (K.y < P.r2) K = v3(K.x, P.r2, K.z);
-      const lp = C.blob([[J, K, P.r1, P.r2], [K, Fp, P.r2, P.r3]], col.leg || col.body, { side: L.side, shine: 0 });
-      C.bone(J, K); C.bone(K, Fp);
-      const sd = { side: L.side, bias: 0.05 };
-      if (P.foot === 'hoof') {
-        C.cap(add(Fp, v3(-1, -0.6, 0)), add(Fp, v3(2.2, -P.fr * 0.35, 0)), P.fr, P.fr * 0.9, col.hoof, Object.assign({ shine: true }, sd));
-      } else if (P.foot === 'paw') {
-        const pc = add(Fp, v3(P.fr * 0.3, -0.5, 0));
-        const paw = C.ball(pc, P.fr, col.paw || col.body, Object.assign({ shine: true }, sd));
-        if (C.facing(v3(1, 0.3, 0)) > 0.15) for (const k of [-1, 1]) {
-          const a0 = add(pc, v3(P.fr * 0.92, -P.fr * 0.05, k * P.fr * 0.28));
-          C.line([a0, add(a0, v3(-P.fr * 0.1, -P.fr * 0.45, 0))], INK, C.SW * 0.6, { depth: paw.depth + 0.01 });
-        }
-      } else {
-        const pad = C.ball(Fp, P.fr, col.foot || col.body, sd);
-        for (let k = -1; k <= 1; k++) C.spot(add(Fp, v3(P.fr * 0.88, -P.fr * 0.3, k * P.fr * 0.48)), norm(v3(1, -0.1, k * 0.5)), P.fr * 0.24, col.nail, { depth: pad.depth + 0.01, stroke: INK, sw: C.SW * 0.5 });
-      }
-      if (D.legRings) D.legRings(A, C, J, K, Fp, P, lp.depth);
-    });
-
-    /* Schwanz */
-    const tl = D.tail, tk = R.tailK || 1;
-    let T = v3(hip.x - hr0 * 0.88, hip.y + hr0 * 0.3, 0);
-    let th = lerp(lerp(tl.a, tl.a + tl.run, w.run), -12, lie * 0.9);
-    const tparts = [];
-    for (let k = 0; k < tl.n; k++) {
-      th += tl.curl * (1 - lie * 0.8);
-      const sw = tl.sway * Math.sin(t * 1.6 - k * 0.55) * (1 + w.walk * 0.6) + 0.25 * w.run * Math.sin(TAU * ph - k * 0.4);
-      const d = v3(-Math.cos(th * DEG) * Math.cos(sw), Math.sin(th * DEG), Math.cos(th * DEG) * Math.sin(sw));
-      const rr = lerp(tl.r1, tl.r2, k / (tl.n - 1)) * tk;
-      const nx = ground(add(T, mul(d, tl.seg * tk)), rr);
-      tparts.push([T, nx, lerp(tl.r1, tl.r2, k / tl.n) * tk, rr]);
-      C.bone(T, nx);
-      T = nx;
-    }
-    C.blob(tparts, col.tail || col.body);
-    if (tl.tuft) {
-      const last = tparts[tparts.length - 1], dir = norm(sub(last[1], last[0]));
-      const end = ground(add(T, mul(dir, 7 * tk)), 2.5 * tk);
-      C.cap(T, end, 2.4 * tk, 3.6 * tk, col.tuft || INK, { bias: 0.05, shine: true });
-    }
-    if (tl.ball) C.fluff(T, 5 * tk, 8, col.tuft, { bias: 0.05 });
-
-    /* Kopf (je Art) und Extras */
-    D.drawHead(A, C, I);
-    if (D.drawBody) D.drawBody(A, C, I);
-    effects(A, C, F(0, hr * 1.15, 0));
-  }
+     Die Zeichnungen
+     ══════════════════════════════════════════════════════════════
+     Jede Ansicht liefert:
+       body, head  Zeichnung (data-k für alles, was sich bewegt)
+       headPiv     Drehpunkt des Kopfes
+       legs        [links vorn, rechts vorn, links hinten, rechts
+                   hinten]: hip, l1, l2, w, bend, home, splay
+       tail        Wurzel, Ende in Ruhe, Dicke, Quaste
+       neck        Hals als Röhre (Zebra, Gnu)
+       trunk       Rüssel (Elefant)
+       graze       Kopfstellung beim Grasen
+       top         Punkt über dem Kopf (Zzz, Herzchen)          */
+  const LEGK = ['lf', 'ln', 'hf', 'hn'];
+  // Welche Beine sind weiter weg? Seite: die linken; vorn: die hinteren; hinten: die vorderen.
+  const FAR = { side: [0, 2], front: [2, 3], back: [0, 1] };
 
   /* ── Löwe ──────────────────────────────────────────────────── */
-  function lionHead(A, C, I) {
-    const { H, F, hr, f, u, r } = I, col = A.col, R = A.R, w = A.w;
-    if (R.mane) {
-      C.fluff(lerpV(I.N0, I.N1, 0.7), I.neckR * 1.3, 11, col.mane, { depth: I.dBack - 0.3, rot: 0.3 });
-      C.fluff(F(-hr * 0.22, hr * 0.02, 0), hr * 1.5, 14, col.mane, { depth: I.dBack });
-      C.fluff(F(-hr * 0.1, hr * 0.0, 0), hr * 1.24, 12, col.mane2, { depth: I.dBack + 0.2, rot: 0.25 });
-    }
-    const ek = R.ear || 1;
-    for (const s of [-1, 1]) {
-      const ep = F(-hr * 0.05, hr * 0.8, s * hr * 0.6);
-      const ear = C.ball(ep, hr * 0.28 * ek, col.body, { depth: (R.mane ? I.dBack + 0.4 : I.dEar) + s * 0.01, side: s });
-      if (C.facing(f) > -0.15) C.ball(add(ep, mul(f, hr * 0.1)), hr * 0.15 * ek, col.earIn, { depth: ear.depth + 0.01, flat: true, stroke: 'none' });
-      if (R.flower && s === -1) flower(C, add(ep, v3(0, hr * 0.15, 0)), hr * 0.17, ear.depth + 0.03, '#ffffff');
-    }
-    C.ball(H, hr, col.body, { shine: true });
-    if (R.tuft) {
-      for (const k of [-1, 0, 1]) {
-        const b0 = F(-hr * 0.05, hr * 0.9, k * hr * 0.12);
-        C.cap(b0, add(b0, add(mul(u, hr * 0.32), mul(f, hr * (0.18 - 0.08 * k)))), hr * 0.1, hr * 0.03, col.mane2, { depth: I.base + 0.05 - I.toCam * 0.02 });
-      }
-    }
-    C.bone(H, F(hr, -hr * 0.2, 0));
-    // Schnauze: zwei Bäckchen-Kugeln, Kinn, Nase, Katzenmund
-    C.ball(F(hr * 0.68, -hr * 0.52, 0), hr * 0.2, col.light, { depth: I.dFace - 0.05 });
-    for (const s of [-1, 1]) C.ball(F(hr * 0.78, -hr * 0.28, s * hr * 0.2), hr * 0.27, col.light, { depth: I.dFace + s * 0.001 * Math.sign(I.toCam || 1) });
-    if (C.facing(f) > -0.25) {
-      const nz = F(hr * 1.02, -hr * 0.08, 0);
-      C.blob([[F(hr * 0.98, -hr * 0.04, -hr * 0.11), F(hr * 0.98, -hr * 0.04, hr * 0.11), hr * 0.1, hr * 0.1], [nz, F(hr * 1.0, -hr * 0.17, 0), hr * 0.1, hr * 0.05]], col.nose, { depth: I.dFace + 0.2 });
-      C.spot(F(hr * 1.05, -hr * 0.0, -hr * 0.05), f, hr * 0.035, '#ffffff', { depth: I.dFace + 0.22, op: 0.8 });
-      const m0 = F(hr * 1.0, -hr * 0.2, 0), lw = C.SW * 0.8;
-      C.line([m0, F(hr * 1.0, -hr * 0.3, 0)], INK, lw, { depth: I.dFace + 0.21 });
-      for (const s of [-1, 1]) C.curve(F(hr * 1.0, -hr * 0.3, 0), F(hr * 0.98, -hr * 0.4, s * hr * 0.09), F(hr * 0.95, -hr * 0.32, s * hr * 0.18), INK, lw, { depth: I.dFace + 0.21 });
-      for (const s of [-1, 1]) for (let k = 0; k < 3; k++) C.spot(F(hr * 0.98, -hr * (0.22 + k * 0.08), s * hr * (0.3 + (k % 2) * 0.06)), norm(add(f, mul(r, s * 0.6))), hr * 0.025, INK, { depth: I.dFace + 0.21, op: 0.6 });
-    }
-    const er = hr * (R.head > 1 ? 0.23 : 0.2);
-    for (const s of [-1, 1]) {
-      cuteEye(C, I, F(hr * 0.64, hr * 0.16, s * hr * 0.38), er, { lashes: R.lashes, side: s });
-      cheek(C, I, F(hr * 0.6, -hr * 0.18, s * hr * 0.58), hr * 0.13);
-    }
-    if (R.brows && I.eye === 'open') for (const s of [-1, 1]) {
-      const b0 = F(hr * 0.66, hr * 0.42, s * hr * 0.24), b1 = F(hr * 0.6, hr * 0.48, s * hr * 0.5);
-      if (C.facing(norm(add(f, mul(r, s * 0.6)))) > 0.1) C.line([b0, b1], INK, C.SW * 1.1, { depth: I.dFace + 0.55 });
-    }
-    if (R.spots) {
-      const pts = [[0.2, 45], [0.38, 72], [0.52, 38], [0.66, 76], [0.8, 48], [0.3, 105], [0.7, 108]];
-      for (const s of [-1, 1]) for (const [tt, th] of pts) {
-        const c0 = lerpV(I.hip, I.chest, tt), rr = lerp(I.hr0, I.cr, tt);
-        const n = v3(0, Math.cos(th * DEG), s * Math.sin(th * DEG));
-        C.spot(add(c0, mul(n, rr * 0.98)), n, 2.2, shade(col.body, 0.83), { depth: I.body.depth + 0.02 });
-      }
-    }
-    if (A.food === 'meat' && w.eat > 0.02) {
-      // Keule mit Knochen vor den Pfoten
-      const fh = norm(v3(f.x, 0, f.z)), sd = v3(-fh.z, 0, fh.x);
-      const base = add(v3(H.x, 4.5, H.z), mul(fh, hr * 1.45));
-      const o = { op: w.eat };
-      const m1 = add(base, mul(sd, 5)), b1 = add(base, mul(sd, -7));
-      C.ball(m1, 6, '#d9614c', Object.assign({ bias: 0.1, shine: true }, o));
-      C.cap(add(base, mul(sd, 1)), b1, 1.7, 1.7, '#fff6e6', Object.assign({ bias: 0.08 }, o));
-      for (const k of [-1, 1]) C.ball(add(b1, add(mul(sd, -1.6), mul(fh, k * 1.7))), 1.9, '#fff6e6', Object.assign({ bias: 0.09 }, o));
-    }
-  }
+  const pawSide = col => E(1.6, 0.6, 5.4, 3.6, col, 2.4) + L('M 4.4 -0.6 L 4.6 1.8 M 1.8 -0.8 L 2 1.9', INK, 1.1);
+  const pawFront = col => E(0, 0.6, 4.6, 3.6, col, 2.4) + L('M -1.5 0.6 L -1.5 3 M 1.5 0.6 L 1.5 3', INK, 1.1);
 
-  /* ── Zebra ─────────────────────────────────────────────────── */
-  function zebraLeg(A, C, J, K, Fp, P, dep) {
-    const col = A.col.stripe;
-    const segs = [[J, K, P.r1, P.r2, 2], [K, Fp, P.r2, P.r3, 2]];
-    for (const [a, b, ra, rb, n] of segs) {
-      const ax = sub(b, a);
-      for (let k = 0; k < n; k++) {
-        const tt = (k + 0.7) / (n + 0.6);
-        C.ring(lerpV(a, b, tt), ax, v3(1, 0, 0), lerp(ra, rb, tt) * 1.0, -180, 180, col, 2.6, dep + 0.01);
-      }
-    }
+  function lionSide(R, c) {
+    const mane = R.mane ? P(fluff(85, 43, 25, 15, 0.2), c.mane, 2.6) + P(fluff(86, 43, 20.5, 13, 0.4), c.mane2, 2.2) : '';
+    const spots = R.spots ? [[45, 56], [52, 60], [60, 55], [67, 59], [48, 66]].map(([x, y]) => E(x, y, 2.4, 1.7, c.spot, 0)).join('') : '';
+    const tuft = R.tuft ? P('M 81 26.5 Q 81 20 86 20.5 Q 84 23 86.5 25.5 Q 88 21 91.5 23 Q 89 24 89.5 27 Z', c.mane2, 1.8) : '';
+    const body = P('M 33 63 C 33 51 45 47.5 58 47.5 C 72 47.5 82 53 82 63 C 82 73 73 77.5 58 77.5 C 43 77.5 33 74 33 63 Z', c.body, 2.8)
+      + E(58, 72.4, 14, 4.2, c.light, 0)
+      + spots
+      + shade('M 78 57 C 82.5 64 80 72 71 75.8 C 77 70 79.5 64 78 57 Z')
+      + shine('M 39.5 56 C 41 52 45 50 50 49.4');
+    const head = mane
+      + G('earL', C(74.5, 28, 5.6, c.body, 2.4) + C(75, 28.6, 3, c.earIn, 0), 'data-piv="75 32"')
+      + G('earR', C(96, 27, 5.2, c.body, 2.4) + C(95.6, 27.6, 2.8, c.earIn, 0), 'data-piv="95 31"')
+      + C(86, 42, 17.5, c.body, 2.8)
+      + tuft
+      + shade('M 99.5 33 C 105 41 102 52 92.5 57.5 C 99.5 50.5 101.5 42 99.5 33 Z')
+      + shine('M 73.5 38 C 74.5 32 78.5 28.5 83.5 27.5')
+      + P('M 83.5 49 C 83.5 45 87.5 44 91.5 45 C 95.5 44 99.5 45 99.5 49 C 99.5 54 95.5 56 91.5 55 C 87.5 56 83.5 54 83.5 49 Z', c.light, 2.2)
+      + C(87, 50, 0.6, INK, 0) + C(87.6, 48.2, 0.6, INK, 0) + C(96.6, 50, 0.6, INK, 0) + C(96, 48.2, 0.6, INK, 0)
+      + G('mN', L('M 91.5 48.8 L 91.5 50.6 M 88.6 50.4 Q 90 52.4 91.5 50.6 Q 93 52.4 94.4 50.4', INK, 1.5))
+      + G('mO', P('M 88.8 50.4 Q 91.5 56 94.2 50.4 Z', '#8a2f45', 1.5) + E(91.5, 53.2, 1.6, 1, '#ff7a93', 0), 'display="none"')
+      + P('M 88.5 45.2 Q 91.5 43.6 94.5 45.2 Q 94 48.2 91.5 48.8 Q 89 48.2 88.5 45.2 Z', c.nose, 1.8) + hl(90.4, 45.5, 0.8, 0.9)
+      + eyes(84, 97, 39.5, R.kid ? 3.9 : 3.5, R.lashes)
+      + blush(80.2, 46.5) + blush(102, 46, 0.8)
+      + (R.flower ? flower(73, 23.5, 1) : '');
+    return {
+      shadow: 26, body, head, headPiv: [78, 58],
+      tail: { root: [35, 61], end: [18, 47], w: 3.4, tuft: P(fluff(0, 0, 4.4, 7), c.tuft, 2) },
+      legs: [
+        { hip: [77, 68], l1: 9.5, l2: 9.5, w: 8.6, bend: -1, home: 1 },
+        { hip: [72, 70], l1: 9.5, l2: 9.5, w: 9, bend: -1, home: 1 },
+        { hip: [49, 68], l1: 9.5, l2: 9.5, w: 8.6, bend: 1, home: -1 },
+        { hip: [44, 70], l1: 9.5, l2: 9.5, w: 9, bend: 1, home: -1 }
+      ],
+      footY: 88, foot: pawSide, sphinx: true,
+      top: [88, 20]
+    };
   }
-  function zebraBody(A, C, I) {
-    const col = A.col.stripe, dep = I.body.depth + 0.02;
-    const ax = sub(I.chest, I.hip), Lb = len(ax), axn = norm(ax);
-    // Streifen über den ganzen Rumpf, auch über die runden Enden
-    const T = [-0.42, -0.12, 0.2, 0.5, 0.8, 1.12];
-    T.forEach((tt, k) => {
-      let c0, rr;
-      if (tt < 0) { c0 = add(I.hip, mul(axn, tt * Lb)); rr = Math.sqrt(Math.max(0, I.hr0 * I.hr0 - (tt * Lb) ** 2)); }
-      else if (tt > 1) { c0 = add(I.chest, mul(axn, (tt - 1) * Lb)); rr = Math.sqrt(Math.max(0, I.cr * I.cr - ((tt - 1) * Lb) ** 2)); }
-      else { c0 = tt < 0.5 ? lerpV(I.hip, I.mid, tt * 2) : lerpV(I.mid, I.chest, tt * 2 - 1); rr = tt < 0.5 ? lerp(I.hr0, I.br, tt * 2) : lerp(I.br, I.cr, tt * 2 - 1); }
-      if (rr < 3) return;
-      const tilt = tt < 0.3 ? (0.3 - tt) * 1.1 : 0;
-      const axk = norm(add(axn, v3(0, -tilt, 0)));
-      C.ring(c0, axk, v3(0, 1, 0), rr, -100, 100, col, k % 2 ? 2.4 : 3, dep);
-    });
-    const segs = [[I.N0, I.N1, I.neckR, (I.neckR + A.D.neck.r2) / 2], [I.N1, I.H, (I.neckR + A.D.neck.r2) / 2, A.D.neck.r2]];
-    for (const [a, b, ra, rb] of segs) {
-      C.ring(lerpV(a, b, 0.5), sub(b, a), v3(0, 1, 0), lerp(ra, rb, 0.5), -150, 150, col, 2.6, dep);
+  function lionFront(R, c, back) {
+    const maneF = R.mane ? P(fluff(60, 41, 27, 16), c.mane, 2.6) + P(fluff(60, 42, 22.5, 14, 0.2), c.mane2, 2.2) : '';
+    const body = back
+      ? P('M 39 64 C 39 54 48 50 60 50 C 72 50 81 54 81 64 C 81 74 72 79 60 79 C 48 79 39 74 39 64 Z', c.body, 2.8)
+        + shade('M 76 58 C 81 64 79 73 70 77 C 75 71 77 64 76 58 Z') + shine('M 44 59 C 45 55 48 53 52 52.4')
+        + L('M 60 68 L 60 77', INK, 1.2, 'opacity=".3"')
+      : P('M 40 66 C 40 56 49 52 60 52 C 71 52 80 56 80 66 C 80 75 71 79 60 79 C 49 79 40 75 40 66 Z', c.body, 2.8)
+        + E(60, 72, 10, 5, c.light, 0) + shade('M 75 60 C 80 66 78 74 70 77.5 C 75 72 77 66 75 60 Z');
+    let head;
+    if (!back) {
+      head = maneF
+        + G('earL', C(45, 27.5, 6, c.body, 2.4) + C(45.5, 28, 3.2, c.earIn, 0), 'data-piv="47 32"')
+        + G('earR', C(75, 27.5, 6, c.body, 2.4) + C(74.5, 28, 3.2, c.earIn, 0), 'data-piv="73 32"')
+        + C(60, 42, 18.5, c.body, 2.8)
+        + (R.tuft ? P('M 55 25 Q 56 18.5 60.5 19.5 Q 58.5 22 61 24 Q 63 20 66 22.5 Q 63.5 23.5 64 25.5 Z', c.mane2, 1.8) : '')
+        + shade('M 74 33 C 80 41 77 53 66 59 C 73.5 51.5 76.5 42 74 33 Z')
+        + shine('M 46.5 38 C 47.5 32 51.5 28.5 56.5 27.5')
+        + P('M 52 50 C 52 46 56 45 60 46 C 64 45 68 46 68 50 C 68 55 64 57 60 56 C 56 57 52 55 52 50 Z', c.light, 2.2)
+        + C(55, 50.6, 0.6, INK, 0) + C(55.6, 48.8, 0.6, INK, 0) + C(65, 50.6, 0.6, INK, 0) + C(64.4, 48.8, 0.6, INK, 0)
+        + G('mN', L('M 60 49.8 L 60 51.6 M 57.1 51.4 Q 58.5 53.4 60 51.6 Q 61.5 53.4 62.9 51.4', INK, 1.5))
+        + G('mO', P('M 57.3 51.4 Q 60 57 62.7 51.4 Z', '#8a2f45', 1.5) + E(60, 54.2, 1.6, 1, '#ff7a93', 0), 'display="none"')
+        + P('M 57 46.2 Q 60 44.6 63 46.2 Q 62.5 49.2 60 49.8 Q 57.5 49.2 57 46.2 Z', c.nose, 1.8) + hl(58.9, 46.5, 0.8, 0.9)
+        + eyes(52.5, 67.5, 40.5, R.kid ? 4 : 3.6, R.lashes)
+        + blush(48.5, 47) + blush(71.5, 47)
+        + (R.flower ? flower(44, 23, 1) : '');
+    } else {
+      head = C(60, 40, 18, c.body, 2.8)
+        + G('earL', C(45.5, 27, 6, c.body, 2.4), 'data-piv="47 31"') + G('earR', C(74.5, 27, 6, c.body, 2.4), 'data-piv="73 31"')
+        + shine('M 47 36 C 48 31 51 28 55 27')
+        + (R.mane ? P(fluff(60, 42, 25, 16), c.mane, 2.6) + P(fluff(60, 39, 15, 11, 0.3), c.mane2, 2) : '')
+        + (R.tuft ? P('M 56 23.5 Q 57 18 61 19 Q 59 21.5 61.5 23.5 Z', c.mane2, 1.6) : '')
+        + (R.flower ? flower(76, 23, 1) : '');
     }
-  }
-  // Bürstenmähne entlang des Halses (oben auf dem Hals)
-  function mane(A, C, I, color, alt, height, flowerAt) {
-    const nr2 = A.D.neck.r2, pts = [];
-    for (let k = 0; k <= 6; k++) {
-      const tt = k / 6;
-      const c0 = tt < 0.5 ? lerpV(I.N0, I.N1, tt * 2) : lerpV(I.N1, I.H, tt * 2 - 1);
-      const dir = norm(tt < 0.5 ? sub(I.N1, I.N0) : sub(I.H, I.N1));
-      const upN = norm(cross(I.r, dir));
-      const rr = lerp(I.neckR, nr2, tt);
-      pts.push(add(c0, mul(upN, rr * 0.82 + height * 0.45)));
-    }
-    pts[0] = lerpV(pts[0], pts[1], 0.4);
-    pts[6] = add(I.F(-I.hr * 0.25, I.hr * 0.8, 0), v3(0, 0, 0));
-    const d0 = I.body.depth + 0.3;
-    for (let k = 0; k < pts.length - 1; k++) {
-      C.cap(pts[k], pts[k + 1], height * 0.55, height * 0.55, alt && k % 2 ? alt : color, { depth: d0 + k * 0.001 });
-    }
-    if (flowerAt != null) flower(C, pts[flowerAt], height * 0.75, d0 + 0.05, '#ff9cc2');
-    return pts;
-  }
-  function zebraHead(A, C, I) {
-    const { H, F, hr, f, u, r } = I, col = A.col, R = A.R, w = A.w;
-    mane(A, C, I, col.stripe, col.body, R.foal ? 7.5 : 6.5, R.flower ? 3 : null);
-    for (const s of [-1, 1]) {
-      const e0 = F(-hr * 0.2, hr * 0.68, s * hr * 0.42), e1 = F(-hr * 0.38, hr * 1.55, s * hr * 0.62);
-      const ear = C.cap(e0, e1, hr * 0.27, hr * 0.08, col.body, { side: s, depth: I.dEar + s * 0.01 });
-      if (C.facing(f) > -0.1) C.cap(lerpV(e0, e1, 0.15), lerpV(e0, e1, 0.75), hr * 0.13, hr * 0.04, col.earIn, { depth: ear.depth + 0.01, flat: true, stroke: 'none' });
-      C.ring(lerpV(e0, e1, 0.3), sub(e1, e0), f, hr * 0.2, -70, 70, col.stripe, 2.2, ear.depth + 0.02);
-    }
-    // Stirnlocke
-    for (const k of [-1, 0, 1]) {
-      const b0 = F(hr * 0.05, hr * 0.88, k * hr * 0.12);
-      C.cap(b0, add(b0, add(mul(u, hr * 0.32), mul(f, hr * (0.22 - 0.06 * Math.abs(k))))), hr * 0.11, hr * 0.03, col.stripe, { depth: I.base + 0.25 + k * 0.001 });
-    }
-    const sk = C.ball(H, hr, col.body, { shine: true });
-    C.ring(F(-hr * 0.15, 0, 0), f, u, hr * 0.99, -70, 70, col.stripe, 3, sk.depth + 0.03);
-    C.ring(F(hr * 0.22, 0, 0), f, u, hr * 0.97, -55, 55, col.stripe, 2.6, sk.depth + 0.03);
-    // Schnauze
-    const m0 = F(hr * 0.45, -hr * 0.3, 0), m1 = F(hr * 1.05, -hr * 0.48, 0);
-    const mz = C.cap(m0, m1, hr * 0.62, hr * 0.6, col.body, { depth: I.dFace - 0.1 });
-    C.ring(lerpV(m0, m1, 0.35), sub(m1, m0), u, hr * 0.62, -75, 75, col.stripe, 2.6, mz.depth + 0.02);
-    const nose = C.ball(F(hr * 1.22, -hr * 0.55, 0), hr * 0.46, col.muzzle, { depth: I.dFace, shine: true });
-    for (const s of [-1, 1]) C.spot(F(hr * 1.6, -hr * 0.38, s * hr * 0.22), norm(add(f, mul(r, s * 0.4))), hr * 0.09, INK, { depth: nose.depth + 0.02 });
-    if (C.facing(f) > -0.2) C.curve(F(hr * 1.5, -hr * 0.78, -hr * 0.2), F(hr * 1.62, -hr * 0.9, 0), F(hr * 1.5, -hr * 0.78, hr * 0.2), '#ffffff', C.SW * 0.7, { depth: nose.depth + 0.02, op: 0.7 });
-    for (const s of [-1, 1]) {
-      cuteEye(C, I, F(hr * 0.5, hr * 0.22, s * hr * 0.52), hr * (R.head > 1 ? 0.25 : 0.22), { lashes: R.lashes, side: s });
-      cheek(C, I, F(hr * 0.75, -hr * 0.25, s * hr * 0.52), hr * 0.15);
-    }
-    if (w.eat > 0.02) grass(C, v3(H.x + f.x * hr * 1.4, 0, H.z + f.z * hr * 1.4), w.eat, A.t, 1);
-  }
-
-  /* ── Gnu ───────────────────────────────────────────────────── */
-  function gnuBody(A, C, I) {
-    if (!A.col.stripe) return;
-    const dep = I.body.depth + 0.02;
-    for (let k = 0; k < 5; k++) {
-      const tt = 0.5 + k * 0.1;
-      const c0 = lerpV(I.mid, I.chest, (tt - 0.5) * 2), rr = lerp(I.br, I.cr, (tt - 0.5) * 2);
-      C.ring(c0, sub(I.chest, I.hip), v3(0, 1, 0), rr, -75, 75, A.col.stripe, 2.4, dep, { op: 0.7 });
-    }
-  }
-  function gnuHead(A, C, I) {
-    const { H, F, hr, f, u, r } = I, col = A.col, R = A.R, w = A.w;
-    // Zottelmähne
-    const nr2 = A.D.neck.r2;
-    for (let k = 0; k <= 5; k++) {
-      const tt = k / 5;
-      const c0 = tt < 0.5 ? lerpV(I.N0, I.N1, tt * 2) : lerpV(I.N1, I.H, tt * 2 - 1);
-      const dir = norm(tt < 0.5 ? sub(I.N1, I.N0) : sub(I.H, I.N1));
-      const upN = norm(cross(r, dir));
-      C.fluff(add(c0, mul(upN, lerp(I.neckR, nr2, tt) * 0.85)), R.calf ? 3.6 : 4.6, 6, col.mane, { depth: I.body.depth + 0.3 + k * 0.001, rot: k });
-    }
-    if (R.beard) {
-      for (let k = 0; k < 4; k++) {
-        const tt = 0.3 + k * 0.2;
-        const c0 = tt < 0.5 ? lerpV(I.N0, I.N1, tt * 2) : lerpV(I.N1, I.H, tt * 2 - 1);
-        const dir = norm(tt < 0.5 ? sub(I.N1, I.N0) : sub(I.H, I.N1));
-        const dn = mul(norm(cross(r, dir)), -1);
-        const top = add(c0, mul(dn, lerp(I.neckR, nr2, tt) * 0.8));
-        const sw = Math.sin(A.t * 2 + k) * 1.2;
-        C.cap(top, add(top, v3(sw, -(6 + (k % 2) * 3) * R.beard, 0)), 3.2, 1.6, col.mane, { depth: I.body.depth + 0.25 });
-      }
-    }
-    for (const s of [-1, 1]) {
-      const e0 = F(-hr * 0.1, hr * 0.45, s * hr * 0.7), e1 = F(-hr * 0.35, hr * 0.62, s * hr * 1.45);
-      const ear = C.cap(e0, e1, hr * 0.26, hr * 0.12, col.body, { side: s, depth: I.dEar + s * 0.01 });
-      if (C.facing(u) > 0) C.cap(lerpV(e0, e1, 0.2), lerpV(e0, e1, 0.8), hr * 0.12, hr * 0.05, col.earIn, { depth: ear.depth + 0.01, flat: true, stroke: 'none' });
-    }
-    // Hörner: erst nach außen, dann nach unten, dann hoch
-    if (R.horn) {
-      const hk = R.horn;
-      for (const s of [-1, 1]) {
-        const p0 = F(-hr * 0.05, hr * 0.78, s * hr * 0.4);
-        const p1 = add(p0, add(mul(r, s * hr * 0.75 * hk), mul(u, hr * 0.15 * hk)));
-        const p2 = add(p1, add(mul(r, s * hr * 0.45 * hk), add(mul(u, -hr * 0.3 * hk), mul(f, -hr * 0.12 * hk))));
-        const p3 = add(p2, add(mul(r, s * hr * 0.05 * hk), add(mul(u, hr * 0.7 * hk), mul(f, hr * 0.05 * hk))));
-        const hw = Math.max(0.6, hk);
-        C.blob([[p0, p1, 4.2 * hw, 3.4 * hw], [p1, p2, 3.4 * hw, 2.6 * hw], [p2, p3, 2.6 * hw, 1]], col.horn, { side: s, depth: I.dEar + 0.05 + s * 0.01, shine: 0 });
-        if (R.flower && s === 1) flower(C, p1, 2.8, I.dEar + 0.1, '#ffffff');
-      }
-    }
-    C.ball(H, hr, col.body, { shine: true });
-    const m0 = F(hr * 0.55, -hr * 0.45, 0), m1 = F(hr * 1.1, -hr * 0.58, 0);
-    C.cap(m0, m1, hr * 0.52, hr * 0.56, col.muzzle, { depth: I.dFace - 0.1, shine: true });
-    const nose = C.ball(F(hr * 1.22, -hr * 0.62, 0), hr * 0.5, shade(col.muzzle, 0.92), { depth: I.dFace });
-    for (const s of [-1, 1]) C.spot(F(hr * 1.62, -hr * 0.5, s * hr * 0.24), norm(add(f, mul(r, s * 0.4))), hr * 0.1, INK, { depth: nose.depth + 0.02 });
-    if (C.facing(f) > -0.2) C.curve(F(hr * 1.5, -hr * 0.92, -hr * 0.2), F(hr * 1.6, -hr * 1.02, 0), F(hr * 1.5, -hr * 0.92, hr * 0.2), '#ffffff', C.SW * 0.7, { depth: nose.depth + 0.02, op: 0.6 });
-    if (R.beard) C.fluff(F(hr * 0.85, -hr * 1.08, 0), hr * 0.3 * R.beard, 6, col.mane, { depth: I.dFace - 0.15 });
-    for (const s of [-1, 1]) {
-      cuteEye(C, I, F(hr * 0.48, hr * 0.2, s * hr * 0.55), hr * (R.head > 1 ? 0.24 : 0.21), { lashes: R.lashes, side: s });
-      cheek(C, I, F(hr * 0.72, -hr * 0.25, s * hr * 0.56), hr * 0.14);
-    }
-    if (w.eat > 0.02) grass(C, v3(H.x + f.x * hr * 1.5, 0, H.z + f.z * hr * 1.5), w.eat, A.t, 1);
+    return {
+      shadow: 22, body, head, headPiv: [60, 58],
+      tail: back ? { root: [60, 62], end: [70, 44], w: 3.4, tuft: P(fluff(0, 0, 4.4, 7), c.tuft, 2) }
+        : { root: [74, 64], end: [86, 52], w: 3.2, tuft: P(fluff(0, 0, 4, 7), c.tuft, 2), behind: true },
+      legs: back ? [
+        { hip: [53, 70], l1: 8, l2: 8, w: 8.4 }, { hip: [67, 70], l1: 8, l2: 8, w: 8.4 },
+        { hip: [49, 72], l1: 8, l2: 8, w: 9.2 }, { hip: [71, 72], l1: 8, l2: 8, w: 9.2 }
+      ] : [
+        { hip: [51, 73], l1: 7.5, l2: 7.5, w: 9.2 }, { hip: [69, 73], l1: 7.5, l2: 7.5, w: 9.2 },
+        { hip: [47, 70], l1: 8, l2: 8, w: 8.4 }, { hip: [73, 70], l1: 8, l2: 8, w: 8.4 }
+      ],
+      footY: 88, foot: pawFront, top: [60, 18]
+    };
   }
 
   /* ── Elefant ───────────────────────────────────────────────── */
-  function eleLeg(A, C, J, K, Fp, P, dep) {
-    for (let k = 0; k < 2; k++) {
-      const tt = 0.45 + k * 0.2;
-      C.ring(lerpV(K, Fp, tt), sub(Fp, K), v3(1, 0, 0), lerp(P.r2, P.r3, tt), -60, 60, INK, 0.9, dep + 0.01, { op: 0.35 });
-    }
+  const eleFoot = (col, far, nail) => E(0, 0.6, 7.4, 3.7, col, 2.5) + (far ? '' : C(-3.4, 2.6, 1.3, nail, 1) + C(0, 3, 1.4, nail, 1) + C(3.4, 2.6, 1.3, nail, 1));
+  function eleSide(R, c) {
+    const tk = R.tusk || 0;
+    const tusk = tk ? P('M 92.5 50 Q ' + n1(95 + 3 * tk) + ' ' + n1(56 + 3 * tk) + ' ' + n1(98 + 9 * tk) + ' ' + n1(54 + 1.5 * tk) + ' Q ' + n1(97 + 4 * tk) + ' ' + n1(53 + 0.5 * tk) + ' 95.5 48.8 Z', c.tusk, 1.8) : '';
+    const body = P('M 24 58 C 24 43 37 35 53 35 C 69 35 81 42 81 58 C 81 72 71 79 53 79 C 36 79 24 72 24 58 Z', c.body, 2.8)
+      + shade('M 75 46 C 82 54 81 68 70 76 C 77 68 79 56 75 46 Z')
+      + shine('M 31 50 C 33 44 38 40 45 38.4')
+      + L('M 66 72 Q 68 75 66 77.5 M 40 72 Q 38 75 40 77.5', INK, 1.2, 'opacity=".25"');
+    const head = C(86, 40, 19, c.body, 2.8)
+      + L('M 84 21.4 Q 83 17 85.5 16 M 87 21.2 Q 88 16.5 91 16.8 M 81.5 22.5 Q 79 19 80.5 17', INK, 1.4)
+      + shade('M 100 30 C 106 38 104 50 96 56 C 101 48 102 39 100 30 Z')
+      + shine('M 74 34 C 76 29 80 25.5 85 24.5')
+      + tube('trA', c.body, 9.6) + tube('trB', c.body, 6.6)
+      + bands('trW', INK, 6.5, '0.7 3.2', 0.28)
+      + G('trTip', E(0, 0, 3.4, 2.3, darker(c.body, 0.9), 2) + E(0.4, 0.2, 1.4, 0.9, INK, 0, 'opacity=".55"'))
+      + tusk
+      + L('M 89.5 51 Q 92 53.6 94.6 52.2', INK, 1.6)
+      + eyes(88.5, 99.5, 37.5, R.kid ? 3.5 : 3.1, R.lashes)
+      + blush(85.5, 45) + blush(103, 44.5, 0.75)
+      + G('ear', P('M 80 29 C 69 22 58 30 60 43 C 61.5 54 71 59 79.5 52.5 C 84 48 84.5 35 80 29 Z', c.ear, 2.6)
+        + P('M 78 33.5 C 70.5 29.5 64.5 35 65.5 43 C 66.5 50 72.5 52.5 77.5 49 Z', c.earIn, 0)
+        + shine('M 63.5 38 C 64.5 33 67.5 30 71 29.4', 2, 0.5), 'data-piv="80 41"')
+      + (R.flower ? flower(83.5, 23, 1.05) : '');
+    return {
+      shadow: 30, body, head, headPiv: [79, 52],
+      trunk: { root: [96.5, 46.5], n: 6, len: R.trunkLen || 38, a0: 72 },
+      tail: { root: [25, 56], end: [19, 72], w: 2.4, tuft: E(0, 1.5, 2.3, 3.4, c.tuft, 1.6) },
+      legs: [
+        { hip: [72, 72], l1: 8, l2: 7.6, w: 12, bend: -1, home: 1 },
+        { hip: [67, 74], l1: 7.5, l2: 7.5, w: 13, bend: -1, home: 1 },
+        { hip: [43, 72], l1: 8, l2: 7.6, w: 12, bend: -1, home: -1 },
+        { hip: [38, 74], l1: 7.5, l2: 7.5, w: 13, bend: -1, home: -1 }
+      ],
+      footY: 87.8, foot: (col, far) => eleFoot(col, far, c.nail),
+      top: [88, 15]
+    };
   }
-  function eleHead(A, C, I) {
-    const { H, F, hr, f, u, r } = I, col = A.col, R = A.R, w = A.w, t = A.t;
-    const ek = R.ear || 1;
-    // Ohren fächeln; beim Rennen weit abgespreizt, im Schlaf angelegt
-    for (const s of [-1, 1]) {
-      const flap = lerp(lerp(0.72 + 0.2 * Math.sin(t * 1.5 + s * 0.8), 1.15, w.run), 0.4, w.sleep);
-      const attach = F(-hr * 0.28, hr * 0.12, s * hr * 0.68);
-      const vd = norm(add(mul(f, -Math.cos(flap)), mul(r, s * Math.sin(flap))));
-      const eu = mul(u, hr * 0.88 * ek), ev = mul(vd, hr * 0.64 * ek);
-      const c0 = add(add(attach, mul(ev, 0.9)), mul(u, -hr * 0.08 * ek));
-      const ear = C.disc(c0, eu, ev, col.ear, { side: s });
-      const nrm = norm(cross(ev, eu)), inner = s > 0 ? nrm : mul(nrm, -1);
-      if (C.facing(mul(inner, -1)) > 0) C.disc(add(c0, mul(ev, -0.05)), mul(eu, 0.74), mul(ev, 0.72), col.earIn, { stroke: 'none', depth: ear.depth + 0.01, side: s });
-      if (R.flower && s === -1) flower(C, add(attach, add(mul(u, hr * 0.75), mul(f, hr * 0.15))), hr * 0.13, Math.max(ear.depth, I.base) + 0.4, '#ffffff');
-      C.bone(attach, add(attach, mul(ev, 1.8)));
-    }
-    C.ball(H, hr, col.body, { shine: true });
-    // Haarbüschel: drei kleine Locken
-    for (let k = -1; k <= 1; k++) {
-      const b0 = F(-hr * 0.02, hr * 0.97, k * hr * 0.1), L = hr * (R.hair ? 0.2 : 0.13);
-      C.curve(b0, add(b0, add(mul(u, L * 0.7), mul(r, k * L * 0.35))), add(b0, add(mul(u, L), add(mul(r, k * L * 0.75), mul(f, L * 0.25)))), INK, C.SW * 0.7, { depth: I.base + 0.1 });
-    }
-    // Rüssel: Kette, Spitze nach oben eingerollt
-    const tr = A.D.trunk, n = tr.n, seg = tr.len * R.head / n;
-    const e = (t * 0.32) % 1;
-    const curlW = e < 0.42 ? 0 : e < 0.66 ? smooth((e - 0.42) / 0.24) : e < 0.84 ? 1 : 1 - smooth((e - 0.84) / 0.16);
-    const eatW = w.eat;
-    let th = lerp(-80 + 6 * Math.sin(t * 0.7) * (1 - w.walk) + 6 * w.walk * Math.sin(TAU * A.phase), lerp(-84, -100, curlW), eatW);
-    th = lerp(th, -84, w.sleep);
-    let p = F(hr * 0.82, -hr * 0.25, 0);
-    const tparts = [];
-    for (let k = 0; k < n; k++) {
-      const idle = (k >= n - 3 ? 15 : 0.5) + 4 * Math.sin(t * 1.1 - k * 0.5) * (1 - w.sleep);
-      const kap = lerp(lerp(idle, k >= n - 3 ? 6 : 1, w.sleep), lerp(1, k < 2 ? 8 : 34, curlW), eatW);
-      th += kap;
-      const lat = 0.12 * Math.sin(t * 1.2 - k * 0.35) * (1 - w.sleep);
-      const d = add(add(mul(f, Math.cos(th * DEG) * Math.cos(lat)), mul(u, Math.sin(th * DEG))), mul(r, Math.cos(th * DEG) * Math.sin(lat)));
-      const r1 = lerp(tr.r1, tr.r2, k / n) * R.head, r2 = lerp(tr.r1, tr.r2, (k + 1) / n) * R.head;
-      const nx = ground(add(p, mul(d, seg)), r2);
-      tparts.push([p, nx, r1, r2]);
-      C.bone(p, nx);
-      p = nx;
-    }
-    const tb = C.blob(tparts, col.body, { depth: I.dFace + 0.1, shine: 1 });
-    for (const [a, b, ra] of tparts.slice(1, -1)) C.ring(lerpV(a, b, 0.5), sub(b, a), f, ra * 1.0, -55, 55, INK, 0.9, tb.depth + 0.01, { op: 0.35 });
-    const tipR = tparts[n - 1][3];
-    const tip = C.ball(p, tipR * 1.15, col.body, { depth: tb.depth + 0.02 });
-    const last = norm(sub(tparts[n - 1][1], tparts[n - 1][0]));
-    if (C.facing(last) > 0.2) C.spot(add(p, mul(last, tipR * 0.6)), last, tipR * 0.42, INK, { depth: tip.depth + 0.01, op: 0.7 });
-    // Lächeln und Zunge unter dem Rüssel
-    if (C.facing(f) > -0.1) {
-      for (const s of [-1, 1]) C.curve(F(hr * 0.72, -hr * 0.48, s * hr * 0.32), F(hr * 0.78, -hr * 0.62, s * hr * 0.22), F(hr * 0.8, -hr * 0.6, s * hr * 0.12), INK, C.SW * 0.8, { depth: I.dFace + 0.05 });
-    }
-    // Stoßzähne
-    if (R.tusk) {
-      const L = 22 * R.tusk;
-      for (const s of [-1, 1]) {
-        const p0 = F(hr * 0.68, -hr * 0.45, s * hr * 0.32);
-        const p1 = add(p0, add(add(mul(f, L * 0.45), mul(u, -L * 0.35)), mul(r, s * L * 0.08)));
-        const p2 = add(p1, add(add(mul(f, L * 0.45), mul(u, L * 0.25)), mul(r, s * L * 0.02)));
-        const tw = 3.8 * Math.sqrt(R.tusk);
-        C.blob([[p0, p1, tw, tw * 0.8], [p1, p2, tw * 0.8, 1.2]], col.tusk, { depth: I.dFace + 0.15 + s * 0.01 * Math.sign(I.toCam || 1), side: s, shine: 0 });
-      }
-    }
-    for (const s of [-1, 1]) {
-      cuteEye(C, I, F(hr * 0.6, hr * 0.14, s * hr * 0.44), hr * (R.head > 1 ? 0.17 : 0.15), { lashes: R.lashes, side: s });
-      cheek(C, I, F(hr * 0.55, -hr * 0.14, s * hr * 0.62), hr * 0.12);
-    }
-    // Futter: Gras am Boden, später im Rüssel
-    if (eatW > 0.02) {
-      grass(C, v3(H.x + f.x * hr * 1.9, 0, H.z + f.z * hr * 1.9), eatW * (1 - curlW * 0.6), t, 1.3);
-      if (curlW > 0.15) C.fluff(p, 4.5 * R.head + 1, 7, '#7cc24a', { op: eatW * curlW, depth: tip.depth + 0.05 });
-    }
+  function eleFront(R, c, back) {
+    const ear = s => P('M 60 32 C ' + (60 + s * -14) + ' 20 ' + (60 + s * -38) + ' 26 ' + (60 + s * -36) + ' 44 C ' + (60 + s * -34) + ' 58 ' + (60 + s * -20) + ' 60 ' + (60 + s * -13) + ' 52 Z', c.ear, 2.6)
+      + (back ? '' : P('M ' + (60 + s * -14) + ' 33 C ' + (60 + s * -20) + ' 27 ' + (60 + s * -33) + ' 31 ' + (60 + s * -31) + ' 44 C ' + (60 + s * -30) + ' 53 ' + (60 + s * -21) + ' 54 ' + (60 + s * -16) + ' 49 Z', c.earIn, 0));
+    const body = back
+      ? P('M 35 60 C 35 46 46 40 60 40 C 74 40 85 46 85 60 C 85 73 74 79 60 79 C 46 79 35 73 35 60 Z', c.body, 2.8)
+        + shade('M 80 50 C 86 58 84 70 74 76 C 80 69 82 59 80 50 Z') + shine('M 41 52 C 42 47 46 44 51 42.5')
+        + L('M 60 64 L 60 76', INK, 1.2, 'opacity=".25"')
+      : P('M 36 62 C 36 51 46 46 60 46 C 74 46 84 51 84 62 C 84 74 74 79 60 79 C 46 79 36 74 36 62 Z', c.body, 2.8)
+        + shade('M 79 54 C 85 61 83 72 73 77 C 79 70 81 61 79 54 Z');
+    const tk = R.tusk || 0;
+    const tusk = s => tk ? P('M ' + (60 + s * 5.5) + ' 50 Q ' + n1(60 + s * (9 + 2 * tk)) + ' ' + n1(55 + 5 * tk) + ' ' + n1(60 + s * (6.5 + 2 * tk)) + ' ' + n1(58 + 6 * tk) + ' Q ' + (60 + s * 6) + ' ' + n1(55 + 3 * tk) + ' ' + (60 + s * 3.2) + ' 51 Z', c.tusk, 1.8) : '';
+    const head = back
+      ? G('earL', ear(1), 'data-piv="52 42"') + G('earR', ear(-1), 'data-piv="68 42"')
+        + C(60, 38, 18, c.body, 2.8) + shine('M 47 34 C 48.5 29 52 26 56.5 25')
+        + L('M 58.5 20.5 Q 58 17 60 16 M 61.5 20.5 Q 62.5 17 64.5 17', INK, 1.4)
+        + (R.flower ? flower(72, 24, 1.05) : '')
+      : G('earL', ear(1), 'data-piv="52 42"') + G('earR', ear(-1), 'data-piv="68 42"')
+        + C(60, 39, 18.5, c.body, 2.8)
+        + L('M 58.5 21 Q 57.5 17 60 16 M 61.5 21 Q 62.5 17 65 17.5 M 56 22 Q 54 18.5 55.5 17', INK, 1.4)
+        + shade('M 73 29 C 79 37 77 49 68 55 C 74 47 75.5 38 73 29 Z') + shine('M 46.5 35 C 48 29.5 51.5 26.5 56 25.5')
+        + tube('trA', c.body, 9.8) + tube('trB', c.body, 7)
+        + bands('trW', INK, 6.8, '0.7 3.2', 0.28)
+        + G('trTip', E(0, 0, 3.6, 2.6, darker(c.body, 0.9), 2) + E(0, 0.3, 1.6, 1, INK, 0, 'opacity=".55"'))
+        + tusk(-1) + tusk(1)
+        + L('M 52.5 50.5 Q 54.5 52.6 56 51.6 M 67.5 50.5 Q 65.5 52.6 64 51.6', INK, 1.5)
+        + eyes(53, 67, 37.5, R.kid ? 3.6 : 3.2, R.lashes)
+        + blush(48.5, 45) + blush(71.5, 45)
+        + (R.flower ? flower(48, 24, 1.05) : '');
+    return {
+      shadow: 27, body, head, headPiv: [60, 56],
+      trunk: back ? null : { root: [60, 47], n: 6, len: (R.trunkLen || 38) * 0.82, front: true },
+      tail: back ? { root: [60, 63], end: [61, 77], w: 2.4, tuft: E(0, 1.5, 2.3, 3.4, c.tuft, 1.6) } : null,
+      legs: back ? [
+        { hip: [49, 70], l1: 7, l2: 7, w: 12 }, { hip: [71, 70], l1: 7, l2: 7, w: 12 },
+        { hip: [47, 74], l1: 7, l2: 7, w: 13 }, { hip: [73, 74], l1: 7, l2: 7, w: 13 }
+      ] : [
+        { hip: [49, 74], l1: 7, l2: 7, w: 13 }, { hip: [71, 74], l1: 7, l2: 7, w: 13 },
+        { hip: [45, 71], l1: 7, l2: 7, w: 12 }, { hip: [75, 71], l1: 7, l2: 7, w: 12 }
+      ],
+      footY: 87.8, foot: (col, far) => eleFoot(col, far || back, c.nail),
+      top: [60, 14]
+    };
+  }
+
+  /* ── Zebra ─────────────────────────────────────────────────── */
+  const hoofSide = (far, hoof) => P('M -3.6 -0.6 L 3.8 -0.6 Q 4.4 2.2 4.6 3.6 Q 4.6 4.6 3.5 4.6 L -3.3 4.6 Q -4.3 4.6 -4.1 3.6 Z', far ? darker(hoof, 0.86) : hoof, 2.2);
+  const hoofFront = (far, hoof) => P('M -3.6 -0.6 L 3.6 -0.6 Q 4.2 2.4 4.2 3.6 Q 4.2 4.6 3.2 4.6 L -3.2 4.6 Q -4.2 4.6 -4.2 3.6 Q -4.2 2.4 -3.6 -0.6 Z', far ? darker(hoof, 0.86) : hoof, 2.2);
+
+  function zebraSide(R, c, uid) {
+    const clip = 'zc' + uid;
+    const bodyD = 'M 34 60.5 C 34 50.5 44 47.5 56 47.5 C 69 47.5 78 52 78 60.5 C 78 70 70 74 56 74 C 43 74 34 70 34 60.5 Z';
+    const stripes = [40, 47, 54, 61, 67.5, 73.5].map((x, i) => L('M ' + (x - 2) + ' 45 Q ' + (x + 2.5) + ' 58 ' + (x - 1) + ' 64', c.stripe, i % 2 ? 2.6 : 3.3)).join('')
+      + L('M 33 55 Q 41 56.5 44 63 M 33 62 Q 39 62.5 41 68', c.stripe, 2.8);
+    const body = '<clipPath id="' + clip + '"><path d="' + bodyD + '"/></clipPath>'
+      + P(bodyD, c.body, 0) + '<g clip-path="url(#' + clip + ')">' + stripes + '</g>' + P(bodyD, 'none', 2.8)
+      + shade('M 74 54 C 78.5 60 77 68 69 71.5 C 74 66.5 75.5 60 74 54 Z') + shine('M 40.5 53 C 42 50.5 45 49.4 48 49', 2.2, 0.5);
+    const head = G('earL', P('M 80.5 20 Q 75.5 8.5 82 9.5 Q 85.5 12.5 84.5 20 Z', c.body, 2.3) + P('M 81.5 18 Q 78.6 11.5 82 12 Q 83.6 14 83.2 18 Z', c.earIn, 0), 'data-piv="82.5 20"')
+      + G('earR', P('M 91.5 18 Q 93.5 6.5 98 9.5 Q 98 15 94.6 19.5 Z', c.body, 2.3) + P('M 92.8 16.8 Q 94.4 10.2 96.4 11.6 Q 96.2 15 94.4 17.6 Z', c.earIn, 0), 'data-piv="93 19"')
+      + E(88, 28.5, 12.5, 12, c.body, 2.6)
+      + L('M 79.6 22.5 Q 83.5 25 81.8 31 M 85 17.6 Q 88.5 21 86.4 26.2 M 91.5 17.5 Q 93.5 20 92.4 23.5', c.stripe, 2.3)
+      + P('M 97 17 Q 92 12 87.5 16.5 Q 89 11 84.5 12.5 Q 86 9 91 10.5 Q 96 11 97 17 Z', c.stripe, 1.4)
+      + E(96, 38, 8.6, 7.2, c.body, 2.4)
+      + L('M 91 33.5 Q 94 34.6 93 38.5 M 95.4 32 Q 98.4 33.5 97.6 36.2', c.stripe, 2)
+      + E(99.4, 41.4, 6.3, 5, c.muzzle, 2.4) + hl(97.4, 39.4, 1, 0.5)
+      + E(101.6, 40, 1, 1.4, INK, 0) + E(97.8, 40.6, 0.9, 1.3, INK, 0)
+      + L('M 96.4 44.2 Q 99 45.6 101.6 43.8', '#ffffff', 1.3, 'opacity=".8"')
+      + shade('M 98.5 20 C 101.5 25 101 32 97 36 C 99 31 99.5 25 98.5 20 Z')
+      + eyes(85, 95, 27, R.kid ? 3.4 : 3, R.lashes)
+      + blush(82.5, 33.5) + blush(103.5, 33.5, 0.7)
+      + (R.flower ? flower(81, 14.5, 1) : '');
+    return {
+      shadow: 24, body, head, headPiv: [82, 37],
+      neck: { base: [72.5, 55], w: 13, col: c.body, stripe: c.stripe, mane: 'zebra', maneCol: c.stripe },
+      graze: { dx: 8, dy: 30, rot: 42 },
+      tail: { root: [35, 57], end: [27, 71], w: 2.6, tuft: P('M -2.4 -1 Q -3.4 5 0 9 Q 3.4 5 2.4 -1 Z', c.tuft, 1.6) },
+      legs: [
+        { hip: [75, 68], l1: 9.2, l2: 9.2, w: 7, bend: -1, home: 1 },
+        { hip: [70, 70], l1: 9, l2: 9, w: 7.4, bend: -1, home: 1 },
+        { hip: [48, 68], l1: 9.2, l2: 9.2, w: 7, bend: 1, home: -1 },
+        { hip: [44, 70], l1: 9, l2: 9, w: 7.4, bend: 1, home: -1 }
+      ],
+      legBands: c.stripe,
+      footY: 87.4, foot: (col, far) => hoofSide(far, c.hoof),
+      top: [90, 6]
+    };
+  }
+  function zebraFront(R, c, uid, back) {
+    const clip = 'zf' + uid;
+    const bodyD = back ? 'M 42 63 C 42 54 50 50 60 50 C 70 50 78 54 78 63 C 78 72 70 76 60 76 C 50 76 42 72 42 63 Z'
+      : 'M 43 64 C 43 56 50 53 60 53 C 70 53 77 56 77 64 C 77 72 70 76 60 76 C 50 76 43 72 43 64 Z';
+    const stripes = back
+      ? L('M 44 58 Q 52 60 56 68 M 76 58 Q 68 60 64 68 M 45 66 Q 50 67 52 73 M 75 66 Q 70 67 68 73 M 60 51 L 60 56', c.stripe, 2.8)
+      : [46, 52, 58, 64, 70, 75].map((x, i) => L('M ' + x + ' 52 Q ' + (x + (x < 60 ? -2 : 2)) + ' 62 ' + x + ' 67', c.stripe, i % 2 ? 2.4 : 3)).join('');
+    const body = '<clipPath id="' + clip + '"><path d="' + bodyD + '"/></clipPath>'
+      + P(bodyD, c.body, 0) + '<g clip-path="url(#' + clip + ')">' + stripes + '</g>' + P(bodyD, 'none', 2.8)
+      + shade(back ? 'M 74 57 C 78 63 77 70 70 74 C 74 69 75.5 63 74 57 Z' : 'M 73 58 C 77 63 76 70 69 74 C 73 69 74.5 63 73 58 Z');
+    const earL = P('M 49 21 Q 44 9.5 50.5 10.5 Q 54 13.5 53 21 Z', c.body, 2.3) + (back ? '' : P('M 50 19 Q 47.2 12.5 50.5 13 Q 52.2 15 51.8 19 Z', c.earIn, 0));
+    const earR = P('M 71 21 Q 76 9.5 69.5 10.5 Q 66 13.5 67 21 Z', c.body, 2.3) + (back ? '' : P('M 70 19 Q 72.8 12.5 69.5 13 Q 67.8 15 68.2 19 Z', c.earIn, 0));
+    const head = back
+      ? G('earL', earL, 'data-piv="51 21"') + G('earR', earR, 'data-piv="69 21"')
+        + E(60, 31, 12.5, 12.5, c.body, 2.6)
+        + L('M 50 27 Q 60 23 70 27 M 51.5 33.5 Q 60 30 68.5 33.5 M 54 39 Q 60 37 66 39', c.stripe, 2.4)
+        + P('M 60 17 Q 56 19 57 25 L 63 25 Q 64 19 60 17 Z', c.stripe, 1.4)
+        + (R.flower ? flower(70, 16, 1) : '')
+      : G('earL', earL, 'data-piv="51 21"') + G('earR', earR, 'data-piv="69 21"')
+        + E(60, 30, 13, 12.5, c.body, 2.6)
+        + L('M 50 25 Q 60 20.5 70 25 M 52.5 20 Q 60 16.5 67.5 20', c.stripe, 2.4)
+        + P('M 55 18.5 Q 54 12.5 58 13.5 Q 60 10 62 13.5 Q 66 12.5 65 18.5 Z', c.stripe, 1.4)
+        + E(60, 43, 8.6, 7.6, c.body, 2.4)
+        + L('M 53.5 39 Q 60 37 66.5 39', c.stripe, 2.2)
+        + E(60, 47, 7, 5, c.muzzle, 2.4) + hl(57.4, 45.4, 1, 0.5)
+        + E(57, 46.6, 1, 1.4, INK, 0) + E(63, 46.6, 1, 1.4, INK, 0)
+        + L('M 57 50 Q 60 51.5 63 50', '#ffffff', 1.3, 'opacity=".8"')
+        + shade('M 70 22 C 74 27 73.5 35 69 39 C 71.5 33.5 72 27 70 22 Z')
+        + eyes(53.5, 66.5, 30.5, R.kid ? 3.4 : 3.1, R.lashes)
+        + blush(49.5, 36.5) + blush(70.5, 36.5)
+        + (R.flower ? flower(50, 16, 1) : '');
+    return {
+      shadow: 19, body, head, headPiv: [60, 44],
+      neck: { base: [60, back ? 54 : 57], w: 13, col: c.body, attach: [60, back ? 38 : 40] },
+      graze: { dx: 0, dy: 26, rot: 0, scale: 0.92 },
+      tail: back ? { root: [60, 58], end: [60, 74], w: 2.6, tuft: P('M -2.4 -1 Q -3.4 5 0 9 Q 3.4 5 2.4 -1 Z', c.tuft, 1.6) } : null,
+      legs: back ? [
+        { hip: [52, 70], l1: 8.5, l2: 8.5, w: 6.8 }, { hip: [68, 70], l1: 8.5, l2: 8.5, w: 6.8 },
+        { hip: [50, 72], l1: 7.8, l2: 7.8, w: 7.4 }, { hip: [70, 72], l1: 7.8, l2: 7.8, w: 7.4 }
+      ] : [
+        { hip: [53, 72], l1: 7.8, l2: 7.8, w: 7.4 }, { hip: [67, 72], l1: 7.8, l2: 7.8, w: 7.4 },
+        { hip: [50, 70], l1: 8.5, l2: 8.5, w: 6.8 }, { hip: [70, 70], l1: 8.5, l2: 8.5, w: 6.8 }
+      ],
+      legBands: c.stripe,
+      footY: 87.4, foot: (col, far) => hoofFront(far, c.hoof),
+      top: [60, 6]
+    };
+  }
+
+  /* ── Gnu ───────────────────────────────────────────────────── */
+  function horn(d, k, col) {
+    const w = 4.4 * Math.max(0.6, k);
+    return L(d, INK, n1(w + 3)) + L(d, col, n1(w)) + L(d, '#fff', 1, 'opacity=".35" stroke-dasharray="0.1 3"');
+  }
+  function gnuSide(R, c) {
+    const k = R.horn || 0;
+    const horns = k ? horn('M 83 21.5 C ' + n1(83 - 7 * k) + ' 21.5 ' + n1(83 - 11 * k) + ' ' + n1(20 - k) + ' ' + n1(83 - 10 * k) + ' ' + n1(21.5 - 8.5 * k), k, c.horn)
+      + horn('M 93 20.5 C ' + n1(93 + 7 * k) + ' 20.5 ' + n1(93 + 11 * k) + ' ' + n1(19 - k) + ' ' + n1(93 + 10 * k) + ' ' + n1(20.5 - 8.5 * k), k, c.horn) : '';
+    const body = P('M 34 62 C 34 54 42 50.5 52 49.5 C 64 47 76 47.5 80 56 C 83 64 78 72.5 64 73.8 C 50 75 34 72 34 62 Z', c.body, 2.8)
+      + (c.stripe ? L('M 63 49.5 Q 66 56 64 62 M 68 49 Q 71 55 69.5 61 M 73 50 Q 75.5 55 74.5 60', c.stripe, 2, 'opacity=".55"') : '')
+      + shade('M 76 55 C 80 61 78 69 70 72.6 C 75 67.5 77 61 76 55 Z') + shine('M 40.5 55.5 C 42 52.5 45 51 49 50.4', 2.2, 0.5);
+    const head = horns
+      + G('earL', P('M 81 27.5 Q 72.5 27 73.5 31 Q 77 32.5 81.5 30.5 Z', c.face, 2.2) + P('M 79.5 28.6 Q 75.6 28.6 76 30.2 Q 78 30.6 80 29.8 Z', c.earIn, 0), 'data-piv="81 29"')
+      + G('earR', P('M 95.5 26.5 Q 104 25.5 103.5 29.5 Q 100 31.4 95.5 30 Z', c.face, 2.2) + P('M 97 27.6 Q 101 27.2 101.2 28.8 Q 99.4 29.8 97 29.2 Z', c.earIn, 0), 'data-piv="95.5 28"')
+      + E(88, 30, 12.2, 11.6, c.face, 2.6)
+      + P('M 84 19.5 Q 86 15 89 18 Q 91 14.5 93 19 Q 89 21.5 84 19.5 Z', c.mane, 1.4)
+      + E(96, 39.6, 8.2, 7.6, c.muzzle, 2.4) + E(98.6, 43, 6.2, 4.8, darker(c.muzzle, 0.85), 2.2) + hl(95.6, 37, 1.2, 0.35)
+      + E(100.6, 41.8, 1, 1.4, INK, 0) + E(96.8, 42.4, 0.9, 1.3, INK, 0)
+      + L('M 95.6 45.8 Q 98.4 47.2 101 45.4', '#ffffff', 1.3, 'opacity=".7"')
+      + (R.beard ? P('M 91.5 46 Q 91 53 93.5 ' + n1(55 + 2 * R.beard) + ' Q 95 52 96.5 ' + n1(55.5 + 2 * R.beard) + ' Q 98 50.5 97.5 46.5 Z', c.mane, 1.8) : '')
+      + shade('M 98 22 C 101 27 100.5 33 97 36.5 C 99 31.5 99.4 26.5 98 22 Z')
+      + shine('M 78.5 28 C 79 24.5 81.5 21.6 85 20.6', 2, 0.55)
+      + eyes(84, 93.5, 29, R.kid ? 3.4 : 3, R.lashes)
+      + blush(81.2, 35.2)
+      + (R.flower ? flower(101.5, 13, 0.95) : '');
+    return {
+      shadow: 24, body, head, headPiv: [82, 38],
+      neck: { base: [73, 55], w: 14, col: c.body, mane: 'gnu', maneCol: c.mane, beard: R.beard ? c.mane : null },
+      graze: { dx: 8, dy: 29, rot: 40 },
+      tail: { root: [35, 59], end: [27, 74], w: 3, tuft: P('M -3 -1 Q -4.6 6 0 11 Q 4.6 6 3 -1 Z', c.tuft, 1.6) },
+      legs: [
+        { hip: [75, 69], l1: 9, l2: 9, w: 6.8, bend: -1, home: 1 },
+        { hip: [70, 71], l1: 8.8, l2: 8.8, w: 7.2, bend: -1, home: 1 },
+        { hip: [49, 68.5], l1: 9, l2: 9, w: 6.8, bend: 1, home: -1 },
+        { hip: [45, 70.5], l1: 8.8, l2: 8.8, w: 7.2, bend: 1, home: -1 }
+      ],
+      footY: 87.4, foot: (col, far) => hoofSide(far, c.hoof),
+      top: [90, 6]
+    };
+  }
+  function gnuFront(R, c, back) {
+    const k = R.horn || 0;
+    const horns = k ? [-1, 1].map(s => horn('M ' + (60 + s * 6) + ' 21 C ' + n1(60 + s * (6 + 9 * k)) + ' 21 ' + n1(60 + s * (6 + 14 * k)) + ' ' + n1(21 + k) + ' ' + n1(60 + s * (6 + 13 * k)) + ' ' + n1(21 - 9 * k), k, c.horn)).join('') : '';
+    const body = back
+      ? P('M 42 63 C 42 54 50 50 60 50 C 70 50 78 54 78 63 C 78 72 70 76 60 76 C 50 76 42 72 42 63 Z', c.body, 2.8)
+        + shade('M 74 57 C 78 63 77 70 70 74 C 74 69 75.5 63 74 57 Z') + shine('M 46 58 C 47 55 49.5 53 52.5 52.4', 2.2, 0.5)
+      : P('M 41 64 C 41 55 49 51 60 51 C 71 51 79 55 79 64 C 79 72 71 76 60 76 C 49 76 41 72 41 64 Z', c.body, 2.8)
+        + (c.stripe ? L('M 48 54 Q 47 60 49 65 M 53 52.5 Q 52 59 53.5 64 M 72 54 Q 73 60 71 65 M 67 52.5 Q 68 59 66.5 64', c.stripe, 2, 'opacity=".55"') : '')
+        + shade('M 74 58 C 78 63 77 70 70 74 C 74 69 75.5 63 74 58 Z');
+    const earL = P('M 50 27.5 Q 40 26.5 41 30.5 Q 45 32.5 50.5 30.5 Z', c.face, 2.2);
+    const earR = P('M 70 27.5 Q 80 26.5 79 30.5 Q 75 32.5 69.5 30.5 Z', c.face, 2.2);
+    const head = back
+      ? horns + G('earL', earL, 'data-piv="50 29"') + G('earR', earR, 'data-piv="70 29"')
+        + E(60, 31, 12, 12, c.face, 2.6) + P('M 55 20 Q 57 15.5 60 18.5 Q 63 15.5 65 20 Q 60 22.5 55 20 Z', c.mane, 1.4)
+        + L('M 60 24 L 60 42', c.mane, 4.2)
+        + (R.flower ? flower(46, 12.5, 0.95) : '')
+      : horns + G('earL', earL + P('M 48.6 28.4 Q 44 28.2 44.4 29.8 Q 46.6 30.6 49 29.6 Z', c.earIn, 0), 'data-piv="50 29"')
+        + G('earR', earR + P('M 71.4 28.4 Q 76 28.2 75.6 29.8 Q 73.4 30.6 71 29.6 Z', c.earIn, 0), 'data-piv="70 29"')
+        + E(60, 30, 12.6, 12, c.face, 2.6)
+        + P('M 54.5 19 Q 56.5 14.5 60 17.5 Q 63.5 14.5 65.5 19 Q 60 21.5 54.5 19 Z', c.mane, 1.4)
+        + E(60, 42, 8.6, 8, c.muzzle, 2.4) + E(60, 46, 7, 4.8, darker(c.muzzle, 0.85), 2.2) + hl(56.6, 39.4, 1.2, 0.35)
+        + E(57, 45.6, 1, 1.4, INK, 0) + E(63, 45.6, 1, 1.4, INK, 0)
+        + L('M 57 49 Q 60 50.5 63 49', '#ffffff', 1.3, 'opacity=".7"')
+        + (R.beard ? P('M 55.5 49.5 Q 55 56 58 ' + n1(58 + 2 * R.beard) + ' Q 60 55 62 ' + n1(58 + 2 * R.beard) + ' Q 65 56 64.5 49.5 Z', c.mane, 1.8) : '')
+        + shade('M 70 23 C 73.5 28 73 34 69 38 C 71.5 33 72 28 70 23 Z') + shine('M 50 28 C 50.5 24.5 53 22 56.5 21', 2, 0.55)
+        + eyes(54, 66, 29.5, R.kid ? 3.4 : 3, R.lashes)
+        + blush(50.5, 35.5) + blush(69.5, 35.5)
+        + (R.flower ? flower(74, 12.5, 0.95) : '');
+    return {
+      shadow: 19, body, head, headPiv: [60, 44],
+      neck: { base: [60, back ? 54 : 57], w: 14, col: c.body, attach: [60, back ? 38 : 40] },
+      graze: { dx: 0, dy: 26, rot: 0, scale: 0.92 },
+      tail: back ? { root: [60, 58], end: [60, 75], w: 3, tuft: P('M -3 -1 Q -4.6 6 0 11 Q 4.6 6 3 -1 Z', c.tuft, 1.6) } : null,
+      legs: back ? [
+        { hip: [52, 70], l1: 8.5, l2: 8.5, w: 6.6 }, { hip: [68, 70], l1: 8.5, l2: 8.5, w: 6.6 },
+        { hip: [50, 72], l1: 7.8, l2: 7.8, w: 7.2 }, { hip: [70, 72], l1: 7.8, l2: 7.8, w: 7.2 }
+      ] : [
+        { hip: [53, 72], l1: 7.8, l2: 7.8, w: 7.2 }, { hip: [67, 72], l1: 7.8, l2: 7.8, w: 7.2 },
+        { hip: [50, 70], l1: 8.5, l2: 8.5, w: 6.6 }, { hip: [70, 70], l1: 8.5, l2: 8.5, w: 6.6 }
+      ],
+      footY: 87.4, foot: (col, far) => hoofFront(far, c.hoof),
+      top: [60, 6]
+    };
+  }
+
+  /* ── Krokodil ──────────────────────────────────────────────── */
+  const crocFoot = col => E(1.4, 0.3, 4.4, 2.4, col, 2.2) + C(4.2, 1.6, 0.7, INK, 0) + C(1.8, 2.3, 0.7, INK, 0) + C(-0.8, 2.1, 0.7, INK, 0);
+  const crocFootF = col => E(0, 0.3, 4.4, 2.4, col, 2.2) + C(-2.4, 1.7, 0.7, INK, 0) + C(0, 2.3, 0.7, INK, 0) + C(2.4, 1.7, 0.7, INK, 0);
+  function crocSide(R, c) {
+    // Kopf; der Rumpf wird jedes Bild aus der Wirbelsäule gerechnet
+    const head = G('mouth', P('M 82 81 L 104 81 L 104 84.5 L 84 85.5 Z', c.mouth, 0), 'display="none"')
+      + G('jaw', P('M 82 80.5 C 79 87 85 88 92 87.2 L 105 86 C 108.5 85.4 108.5 81.2 105 81 Z', c.jaw, 2.4)
+        + P('M 87 84.6 L 88.2 82.6 L 89.4 84.5 L 90.6 82.4 L 91.8 84.4 L 93 82.3 L 94.2 84.3 L 95.4 82.2 L 96.6 84.2 L 97.8 82.2 L 99 84.1 Z', c.teeth, 1), 'data-piv="81 82"')
+      + P('M 73 74.5 C 74 66 84 65 90 68.5 C 96 70 103 70.5 107 72 C 112 73.5 112 80 107.5 81.4 C 99 82.8 88 83 79 82.6 C 74.5 82.4 72.5 79 73 74.5 Z', c.body, 2.6)
+      + P('M 85.5 81.6 L 87 84.2 L 88.5 81.6 L 90 84.2 L 91.5 81.6 L 93 84.2 L 94.5 81.5 L 96 84 L 97.5 81.4 L 99 83.8 L 100.5 81.3 L 102 83.5 L 103.5 81.2 Z', c.teeth, 1.1)
+      + C(106.5, 71.6, 2.6, c.body, 2) + C(107, 71, 0.7, INK, 0)
+      + shine('M 93 70.8 C 97 70.8 101 71.4 104 72.3', 1.8, 0.55)
+      + C(77, 68.8, 5, c.body, 2.4)
+      + C(83.5, 67.6, 6, c.body, 2.4) + shine('M 80 65.6 C 80.6 63.6 82 62.6 83.8 62.3', 1.6, 0.6)
+      + eyes(null, 84.6, 67.4, R.kid ? 3.4 : 3, R.lashes)
+      + '<g data-k="eye2">' + E(77.6, 68.6, 2, 2.6, INK, 0) + hl(77, 67.6, 0.8, 0.9) + '</g>'
+      + blush(94, 77.4, 0.95)
+      + (R.flower ? flower(73.5, 66, 0.95) : '');
+    return {
+      shadow: 40, croc: true, head, headPiv: [74, 80],
+      spine: [[8, 85.5, 1.2], [18, 84, 3], [29, 82.5, 5], [41, 80.5, 7.2], [53, 79.5, 8.8], [64, 79, 9.4], [75, 79, 9]],
+      legs: [
+        { hip: [67, 83], l1: 4.4, l2: 4.4, w: 6.4, bend: -1, home: 2 },
+        { hip: [63, 85], l1: 4.4, l2: 4.4, w: 6.8, bend: -1, home: 2 },
+        { hip: [41, 83], l1: 4.4, l2: 4.4, w: 6.4, bend: 1, home: -1 },
+        { hip: [37, 85], l1: 4.4, l2: 4.4, w: 6.8, bend: 1, home: -1 }
+      ],
+      footY: 89.4, foot: crocFoot, top: [84, 58]
+    };
+  }
+  function crocFront(R, c, back) {
+    const body = back
+      ? P('M 40 78 C 40 70 49 67 60 67 C 71 67 80 70 80 78 C 80 85 71 88 60 88 C 49 88 40 85 40 78 Z', c.body, 2.6)
+        + [52, 60, 68].map(x => C(x, 71.5, 2.2, c.scute, 1.3) + C(x, 77, 2.2, c.scute, 1.3)).join('')
+        + shine('M 45 74 C 46 71.5 48.5 70 51.5 69.4', 1.8, 0.55)
+      : P('M 45 76 C 45 70 51 66.5 60 66.5 C 69 66.5 75 70 75 76 C 75 83 69 86 60 86 C 51 86 45 83 45 76 Z', c.body, 2.6)
+        + [53, 60, 67].map(x => C(x, 68.2, 2, c.scute, 1.3)).join('');
+    const head = back
+      ? E(60, 68, 12, 6.4, c.body, 2.4) + C(51.5, 64.5, 4.4, c.body, 2.2) + C(68.5, 64.5, 4.4, c.body, 2.2)
+        + (R.flower ? flower(60, 62.5, 0.95) : '')
+      : G('mouth', P('M 51 82 L 69 82 L 68 90 L 52 90 Z', c.mouth, 0), 'display="none"')
+        + G('jaw', P('M 49.5 81 Q 48 96.5 60 97 Q 72 96.5 70.5 81 Z', c.jaw, 2.4), 'data-piv="60 84"')
+        + P('M 43 75.5 C 43 69.5 51 67.5 60 67.5 C 69 67.5 77 69.5 77 75.5 C 77 78.5 73 80 70.5 81 L 69.4 91 C 68.8 95.6 51.2 95.6 50.6 91 L 49.5 81 C 47 80 43 78.5 43 75.5 Z', c.body, 2.6)
+        + [82.5, 85.4, 88.3, 91.2].map(y => P('M 50.2 ' + y + ' l -1.8 1 l 1.9 1 Z', c.teeth, 0.9) + P('M 69.8 ' + y + ' l 1.8 1 l -1.9 1 Z', c.teeth, 0.9)).join('')
+        + C(57.4, 91.6, 0.9, INK, 0) + C(62.6, 91.6, 0.9, INK, 0)
+        + shine('M 56 72 C 58 71 61 71 63.5 71.6', 1.6, 0.5)
+        + C(51, 66.5, 6, c.body, 2.4) + C(69, 66.5, 6, c.body, 2.4)
+        + shine('M 47.4 64.6 C 48 62.6 49.4 61.6 51.2 61.3', 1.6, 0.6) + shine('M 65.4 64.6 C 66 62.6 67.4 61.6 69.2 61.3', 1.6, 0.6)
+        + eyes(51, 69, 66.4, R.kid ? 3.3 : 3, R.lashes)
+        + blush(47, 76) + blush(73, 76)
+        + (R.flower ? flower(60, 63, 0.95) : '');
+    return {
+      shadow: 24, croc: true, body, head, headPiv: [60, 80],
+      tail: back ? { root: [60, 84], end: [60, 97], w: 6.5, tuft: '' } : { root: [66, 74], end: [94, 79], w: 6, tuft: '', behind: true },
+      legs: back ? [
+        { hip: [47, 75], l1: 4.4, l2: 4.4, w: 6.4, splay: -1 }, { hip: [73, 75], l1: 4.4, l2: 4.4, w: 6.4, splay: 1 },
+        { hip: [45, 79], l1: 4.4, l2: 4.4, w: 6.8, splay: -1 }, { hip: [75, 79], l1: 4.4, l2: 4.4, w: 6.8, splay: 1 }
+      ] : [
+        { hip: [45, 79], l1: 4.4, l2: 4.4, w: 6.8, splay: -1 }, { hip: [75, 79], l1: 4.4, l2: 4.4, w: 6.8, splay: 1 },
+        { hip: [47, 75], l1: 4.4, l2: 4.4, w: 6.4, splay: -1 }, { hip: [73, 75], l1: 4.4, l2: 4.4, w: 6.4, splay: 1 }
+      ],
+      footY: 89.4, foot: crocFootF, top: [60, 56]
+    };
   }
 
   /* ══════════════════════════════════════════════════════════════
-     Krokodil: Wirbelsäule als Kette, gespreizte Beine
-     ══════════════════════════════════════════════════════════════ */
-  function buildCroc(A, C) {
-    const D = A.D, R = A.R, w = A.w, t = A.t, G = D.gait, col = A.col;
-    const g = gaitInfo(A), ph = A.phase, m = g.m;
-    const sp = D.spine, n = sp.length;
-    const high = lerp(lerp(D.lowY, D.highY, Math.min(1, w.walk * 1.2 + w.run)), D.lowY - 1.5, w.sleep);
-    const hop = G.hop * w.run * (0.5 + 0.5 * Math.sin(TAU * ph + 1.2));
-    const rock = G.rock * w.run * Math.sin(TAU * (ph + 0.15));
-    const und = G.undW * w.walk + G.undR * w.run;
-    const breathe = Math.sin(t * TAU * 0.2) * 0.5;
-    const nodes = sp.map(([x, rr], i) => {
-      const tail = Math.max(0, i - 3);
-      const y = i <= 3 ? high + hop + (i < 2 ? rock : -rock) : lerp(high, rr * 0.95, Math.min(1, tail / 5));
-      const lat = und * Math.sin(TAU * ph - i * 0.65) * (0.2 + i * 0.12)
-        + (1 - m) * (tail > 0 ? 2.2 * Math.sin(t * 0.9 - i * 0.5) * tail * 0.45 * (1 - w.sleep * 0.7) : 0);
-      const r = rr + (i >= 1 && i <= 3 ? breathe : 0);
-      return { p: v3(x, Math.max(y, r * 0.9), lat), r };
-    });
-    const parts = [];
-    for (let i = 0; i < n - 1; i++) { parts.push([nodes[i].p, nodes[i + 1].p, nodes[i].r, nodes[i + 1].r]); C.bone(nodes[i].p, nodes[i + 1].p); }
-    const body = C.blob(parts, col.body, { shine: 1 });
-    C.shadow(nodes[0].p, nodes[4].p, 15);
-    const up = v3(0, 1, 0);
-    for (let i = 0; i < n - 1; i++) {
-      const a = nodes[i], b = nodes[i + 1];
-      if (R.bands && i >= 1) C.ring(lerpV(a.p, b.p, 0.5), sub(b.p, a.p), up, lerp(a.r, b.r, 0.5), -80, 80, col.band, 3, body.depth + 0.01);
-      // Rückenhöcker: Kugeln mit Umriss
-      for (const tt of [0.3, 0.8]) {
-        const c0 = lerpV(a.p, b.p, tt), rr = lerp(a.r, b.r, tt);
-        const bs = Math.max(1.6, rr * 0.2);
-        if (i < 4) for (const s of [-1, 1]) {
-          const nn = norm(v3(0, 0.9, s * 0.42));
-          if (C.facing(nn) > 0.05) C.ball(add(c0, mul(nn, rr * 0.94)), bs, col.scute, { depth: body.depth + 0.02, sw: C.SW * 0.6 });
-        } else if (C.facing(up) > 0.05) C.ball(add(c0, v3(0, rr * 0.95, 0)), bs * 1.05, col.scute, { depth: body.depth + 0.02, sw: C.SW * 0.6 });
-      }
-    }
-    // Beine
-    const legs = [[1, true], [3, false]];
-    for (const [ni, front] of legs) for (const side of [-1, 1]) {
-      const nd = nodes[ni];
-      const J = add(nd.p, v3(front ? 2 : -2, -nd.r * 0.3, side * nd.r * 0.72));
-      const L = D.legs, l1 = front ? L.l1 : L.l1 * 1.12, l2 = front ? L.l2 : L.l2 * 1.08;
-      const fo = footOffset(g, ph, LEGS.findIndex(q => q.front === front && q.side === side));
-      const bx = sp[ni][0] + (front ? 5 : -1);
-      let Fp = v3(bx + fo.x, L.fr + fo.y, side * (sp[ni][1] * 0.72 + L.spread));
-      Fp = lerpV(Fp, v3(bx + (front ? 7 : -5), L.fr, side * (sp[ni][1] * 0.72 + L.spread + 3)), w.sleep);
-      const leg = ik(J, Fp, l1, l2, norm(v3(0, 1, side * 0.5)));
-      const K = leg.K; Fp = leg.F;
-      const lp = C.blob([[J, K, L.r1, L.r2], [K, Fp, L.r2, L.r3]], col.body, { side, shine: 0 });
-      C.bone(J, K); C.bone(K, Fp);
-      const foot = C.ball(add(Fp, v3(1.5, -0.6, side * 0.8)), L.r3 * 1.1, col.body, { side, depth: lp.depth + 0.01 });
-      for (const k of [-1, 0, 1]) {
-        const tp = add(Fp, v3(1.5 + L.r3 * 1.05, -0.8, side * 0.8 + k * L.r3 * 0.55));
-        if (C.facing(v3(0, 1, 0)) > 0) C.ball(tp, L.r3 * 0.32, '#fff6e6', { depth: foot.depth + 0.01, sw: C.SW * 0.5 });
-      }
-      if (R.bands) C.ring(lerpV(J, K, 0.5), sub(K, J), v3(0, 1, 0), lerp(L.r1, L.r2, 0.5), -90, 90, col.band, 2, lp.depth + 0.01);
-    }
-    // Kopf
-    const N = nodes[0].p, hk = R.head;
-    const e = (t * 0.42) % 1, eatW = w.eat;
-    const openE = e < 0.62 ? smooth(e / 0.62) : e < 0.68 ? 1 - smooth((e - 0.62) / 0.06) : 0;
-    const shake = e >= 0.68 && e < 0.95 ? Math.sin((e - 0.68) * 60) * 0.25 * (1 - (e - 0.68) / 0.27) : 0;
-    const hp = lerp(6, 6 + openE * 22, eatW) * DEG;
-    let jo = lerp(0.08 + 0.04 * Math.sin(t * 0.5), openE * 0.85, eatW);
-    jo = lerp(jo, 0.3, w.sleep);
-    const yaw = A.lookNow * 0.6 + shake * eatW;
-    const L = D.head.len * hk, hr = D.head.r * hk;
-    const H = add(N, rotY(v3(hr * 0.75, 1, 0), v3(0, 0, 0), yaw));
-    const f = v3(Math.cos(hp) * Math.cos(yaw), Math.sin(hp), Math.cos(hp) * Math.sin(yaw));
-    const r = v3(-Math.sin(yaw), 0, Math.cos(yaw)), u = cross(r, f);
-    const F = (a, b, c) => v3(H.x + f.x * a + u.x * b + r.x * c, H.y + f.y * a + u.y * b + r.y * c, H.z + f.z * a + u.z * b + r.z * c);
-    const I = Object.assign({ H, f, u, r, F, hr, eye: eyeState(A) }, headFrame(C, H, f, hr));
-    C.bone(N, H);
-    // Unterkiefer
-    const hinge = F(-hr * 0.2, -hr * 0.4, 0);
-    const jd = add(mul(f, Math.cos(jo)), mul(u, -Math.sin(jo)));
-    const jt = add(hinge, mul(jd, L * 0.95));
-    const lower = C.blob([[hinge, jt, hr * 0.7, hr * 0.42]], col.jaw, { depth: I.base - 0.2 });
-    C.bone(hinge, jt);
-    if (jo > 0.12) {
-      C.cap(F(0, -hr * 0.35, 0), lerpV(F(L * 0.6, -hr * 0.2, 0), add(hinge, mul(jd, L * 0.6)), 0.5), hr * 0.5, hr * 0.3, col.mouth, { depth: I.base - 0.25, flat: true });
-      for (let k = 0; k < 5; k++) for (const s of [-1, 1]) {
-        const tp = add(hinge, add(mul(jd, L * (0.3 + k * 0.13)), add(mul(u, hr * 0.32), mul(r, s * hr * 0.3 * (1 - k * 0.1)))));
-        C.cap(tp, add(tp, mul(u, 2.4 * hk)), 1.1 * hk, 0.35, col.teeth, { depth: lower.depth + 0.03, sw: C.SW * 0.45 });
-      }
-    }
-    // Oberkiefer: runder Schädel + Schnauze
-    const sk = C.blob([[F(0, 0, 0), F(L * 0.35, -hr * 0.08, 0), hr, hr * 0.78], [F(L * 0.35, -hr * 0.08, 0), F(L, -hr * 0.2, 0), hr * 0.68, hr * 0.56]], col.body, { depth: I.base, shine: 0 });
-    C.bone(H, F(L, -hr * 0.2, 0));
-    // Zähnchen: das Krokodil-Lächeln
-    for (let k = 0; k < 6; k++) for (const s of [-1, 1]) {
-      const tt = 0.3 + k * 0.12, rr = lerp(hr * 0.68, hr * 0.56, (tt - 0.3) / 0.7);
-      const tp = F(L * tt, -hr * 0.2 - rr * 0.62, s * rr * 0.72);
-      if (C.facing(mul(r, s)) > -0.1) C.cap(tp, add(tp, mul(u, -2.6 * hk)), 1.15 * hk, 0.35, col.teeth, { depth: sk.depth + 0.02, sw: C.SW * 0.45 });
-    }
-    const nb = C.ball(F(L * 0.96, hr * 0.15, 0), hr * 0.32, col.body, { depth: sk.depth + 0.03 });
-    for (const s of [-1, 1]) C.spot(F(L * 1.0, hr * 0.42, s * hr * 0.13), u, 1.1 * hk, INK, { depth: nb.depth + 0.01 });
-    for (const s of [-1, 1]) cheek(C, I, F(L * 0.45, -hr * 0.05, s * hr * 0.66), hr * 0.18);
-    // Augen auf Höckern
-    for (const s of [-1, 1]) {
-      const bump = F(hr * 0.2, hr * 0.85, s * hr * 0.48);
-      const bb = C.ball(bump, hr * 0.48, col.body, { depth: sk.depth + 0.1 + s * 0.001 * Math.sign(I.toCam || 1), side: s, shine: true });
-      const ep = add(bump, add(mul(f, hr * 0.26), add(mul(u, hr * 0.12), mul(r, s * hr * 0.26))));
-      const Ib = Object.assign({}, I, { H: bump, dFace: bb.depth });
-      cuteEye(C, Ib, ep, hr * (R.head > 1 ? 0.27 : 0.24), { lashes: R.lashes, side: s });
-    }
-    if (R.flower) flower(C, F(-hr * 0.45, hr * 0.95, 0), hr * 0.22, sk.depth + 0.3, '#ffffff');
-    // Fisch
-    if (eatW > 0.02) {
-      const inMouth = e >= 0.62;
-      const fc = inMouth ? F(L * 0.55, -hr * 0.3, 0) : v3(H.x + L * 1.45, 3.5, H.z);
-      const fd = inMouth ? r : f;
-      const wig = Math.sin(t * 14) * (inMouth ? 0.6 : 0.2);
-      const tailP = add(fc, add(mul(fd, -6 * hk), v3(0, 0, wig * 3)));
-      const fo = { op: eatW, bias: inMouth ? 0.6 : 0 };
-      C.cap(add(tailP, mul(fd, -2.5 * hk)), add(tailP, mul(fd, -4 * hk)), 1, 3 * hk, '#6aa8d8', fo);
-      const fb = C.cap(add(fc, mul(fd, 4.5 * hk)), tailP, 3.4 * hk, 2 * hk, '#8fd0f0', Object.assign({ shine: true }, fo));
-      if (C.facing(v3(0, 1, 0)) > 0) C.spot(add(fc, add(mul(fd, 4.5 * hk), v3(0, 1.2 * hk, 0))), v3(0, 1, 0), 0.8 * hk, INK, { depth: fb.depth + 0.01, op: eatW });
-    }
-    effects(A, C, F(hr * 0.2, hr * 1.4, 0));
-  }
-
-  /* ══════════════════════════════════════════════════════════════
-     Die Arten
+     Die Arten: Farben und Rollen
      ══════════════════════════════════════════════════════════════
-     Maße in „Einheiten" beim Papa; Mama und Kind skalieren mit s.
-     Kindchenschema: großer Kopf, runder Bauch, kurze Beine.
-     fl / hl = Vorder- / Hinterbein: l1 Ober-, l2 Unterschenkel,
-     r1…r3 Dicke oben, Knie, unten; w = halbe Spurbreite;
-     jx/jy = Hüftgelenk relativ zur Rumpfmitte; bend = Knick vorn(+)/hinten(−);
-     home = Fußpunkt vor(+)/hinter(−) dem Gelenk; fr = Fuß-/Hufgröße.
-     gait: walkV/runV Tempo, walkF/runF Takt (Schritte je s),
-     walkB/runB Anteil Bodenkontakt, liftW/liftR Fußhub.            */
+     k = Größe in der Savanne (Elefant groß, Löwe klein);
+     Rollen: s = Größe in der Familie, head = Kopf größer (Kind),
+     lashes/flower = Mama, mane/tusk/horn/beard = Papa.            */
   const SPECIES = {
     lion: {
-      name: 'Löwen', kind: 'quad', box: '-112 -118 224 168',
+      name: 'Löwen', k: 0.85,
       roles: {
         papa: { title: 'Löwe', s: 1, mane: 1 },
         mama: { title: 'Löwin', s: 0.88, lashes: 1, flower: 1 },
-        kind: { title: 'Löwenjunges', s: 0.55, head: 1.12, ear: 1.25, spots: 1, tuft: 1, tailK: 0.85 }
+        kind: { title: 'Löwenjunges', s: 0.58, kid: 1, spots: 1, tuft: 1, head: 1.14 }
       },
-      col: { body: '#f2b45a', light: '#fff1d6', mane: '#b5642a', mane2: '#d9843a', nose: '#e0607e', earIn: '#ffb3a7', tuft: '#a5561f', paw: '#f7c47a' },
-      kidCol: { body: '#f5c271', mane2: '#e6a04f' },
-      chest: { x: 15, r: 21 }, hip: { x: -17, r: 19 }, belly: { r: 22.5, drop: 2 },
-      fl: { l1: 14, l2: 13, r1: 8.5, r2: 7, r3: 7, w: 10.5, jx: 2, jy: -10, bend: 1, foot: 'paw', fr: 7.5, home: 2 },
-      hl: { l1: 15, l2: 13, r1: 11, r2: 7, r3: 7, w: 10.5, jx: -2, jy: -8, bend: -1, foot: 'paw', fr: 7.5, home: -1 },
-      neck: { bx: 9, by: 9, len: 12, a: 55, curve: -25, r1: 14, r2: 13, eatA: 15, sleepA: -25, runA: 25 },
-      head: { r: 24, pitch: -4, runP: -8, eatP: -24, sleepP: -10, snout: 26 },
-      tail: { n: 6, seg: 7, r1: 3.2, r2: 2.4, a: -60, curl: 15, sway: 0.25, run: 55, ball: 1 },
-      gait: { walkV: 30, walkF: 1.15, walkB: 0.62, run: 'gallop', runV: 120, runF: 2.5, runB: 0.4, liftW: 7, liftR: 12, bob: 1.4, rock: 4, hop: 4, nod: 2 },
-      eatLie: true, sleepFront: 'sphinx', food: 'meat',
-      drawHead: lionHead
+      col: { body: '#f6b950', light: '#ffeac2', mane: '#c4642a', mane2: '#e38b3b', nose: '#e8607a', earIn: '#ffb3a3', tuft: '#b55a24', spot: '#e3a046' },
+      kidCol: { body: '#f9c870', mane2: '#e9a050', tuft: '#d08a3c' },
+      views: { side: lionSide, front: (R, c) => lionFront(R, c, false), back: (R, c) => lionFront(R, c, true) },
+      gait: { walkV: 26, walkF: 1.25, walkB: 0.62, run: 'gallop', runV: 88, runF: 2.6, runB: 0.4, liftW: 4.5, liftR: 7, bob: 0.9, rock: 3.5, hop: 3 },
+      eatLie: true, food: 'meat'
     },
     elephant: {
-      name: 'Elefanten', kind: 'quad', box: '-140 -158 280 210',
+      name: 'Elefanten', k: 1.25,
       roles: {
         papa: { title: 'Elefantenbulle', s: 1, tusk: 1, sleepStand: 1 },
-        mama: { title: 'Elefantenkuh', s: 0.84, tusk: 0.55, sleepStand: 1, lashes: 1, flower: 1 },
-        kind: { title: 'Elefantenkalb', s: 0.52, head: 1.1, ear: 1.08, hair: 1, sleepFront: 'sphinx' }
+        mama: { title: 'Elefantenkuh', s: 0.86, tusk: 0.5, sleepStand: 1, lashes: 1, flower: 1 },
+        kind: { title: 'Elefantenkalb', s: 0.55, kid: 1, head: 1.12, trunkLen: 32 }
       },
-      col: { body: '#a9b4c6', ear: '#a1acbf', earIn: '#f5b3c4', tusk: '#fff8e8', nail: '#fff6e6', foot: '#b3bdcd', tuft: '#5d6577' },
-      kidCol: { body: '#b4bfd1', ear: '#acb7c9' },
-      chest: { x: 16, r: 32 }, hip: { x: -16, r: 30 }, belly: { r: 34, drop: 3 },
-      fl: { l1: 17, l2: 15, r1: 12.5, r2: 11.5, r3: 12, w: 16, jx: 3, jy: -15, bend: 1, foot: 'pad', fr: 12, home: 2 },
-      hl: { l1: 17, l2: 14, r1: 14.5, r2: 11.5, r3: 12, w: 16, jx: -3, jy: -13, bend: 1, foot: 'pad', fr: 12, home: -2 },
-      neck: { bx: 12, by: 12, len: 8, a: 20, curve: 0, r1: 23, r2: 22, eatA: 5, sleepA: -10, runA: 10 },
-      head: { r: 31, pitch: 0, eatP: -10, sleepP: -12, snout: 20 },
-      trunk: { n: 8, len: 62, r1: 10, r2: 5.5 },
-      tail: { n: 5, seg: 7, r1: 2.6, r2: 2, a: -82, curl: 3, sway: 0.35, run: 25, tuft: 1 },
-      gait: { walkV: 28, walkF: 0.85, walkB: 0.62, run: 'amble', runV: 85, runF: 1.6, runB: 0.5, liftW: 7, liftR: 11, bob: 1.6, rock: 1.2, hop: 1.6, nod: 1.5 },
-      sleepFront: 'tuck', legRings: eleLeg,
-      drawHead: eleHead
+      col: { body: '#aab7cd', ear: '#a1aec5', earIn: '#f7b6c8', tusk: '#fff6e3', nail: '#fff3dc', tuft: '#5d6577' },
+      kidCol: { body: '#b8c3d7', ear: '#aebbd0' },
+      views: { side: eleSide, front: (R, c) => eleFront(R, c, false), back: (R, c) => eleFront(R, c, true) },
+      gait: { walkV: 20, walkF: 1.0, walkB: 0.62, run: 'amble', runV: 56, runF: 1.9, runB: 0.5, liftW: 4, liftR: 6, bob: 0.9, rock: 1.2, hop: 1.4 },
+      food: 'grass'
     },
     zebra: {
-      name: 'Zebras', kind: 'quad', box: '-118 -132 236 177',
+      name: 'Zebras', k: 1,
       roles: {
         papa: { title: 'Zebrahengst', s: 1 },
         mama: { title: 'Zebrastute', s: 0.92, lashes: 1, flower: 1 },
-        kind: { title: 'Zebrafohlen', s: 0.6, head: 1.12, legK: 1.12, foal: 1 }
+        kind: { title: 'Zebrafohlen', s: 0.62, kid: 1, head: 1.12 }
       },
-      col: { body: '#fbfaf5', stripe: '#1e1b2e', muzzle: '#6e6886', hoof: '#3b3650', tuft: '#1e1b2e', earIn: '#ffc2cf' },
-      kidCol: { stripe: '#7a4b35', muzzle: '#6b4a3a', tuft: '#7a4b35' },
-      chest: { x: 16, r: 18.5 }, hip: { x: -16, r: 17.5 }, belly: { r: 19.5, drop: 2 },
-      fl: { l1: 17, l2: 16, r1: 7.5, r2: 6, r3: 6, w: 8.5, jx: 2, jy: -8, bend: 1, foot: 'hoof', fr: 5.5, home: 1 },
-      hl: { l1: 18, l2: 16, r1: 10, r2: 6, r3: 6, w: 8.5, jx: -2, jy: -6, bend: -1, foot: 'hoof', fr: 5.5, home: -2 },
-      neck: { bx: 9, by: 7, len: 22, a: 62, curve: -15, r1: 11.5, r2: 10.5, eatA: -55, sleepA: 25, runA: 35 },
-      head: { r: 19, pitch: -22, runP: -12, eatP: -70, sleepP: -35, snout: 30 },
-      tail: { n: 4, seg: 6.5, r1: 2.4, r2: 2, a: -70, curl: 4, sway: 0.2, run: 35, tuft: 1 },
-      gait: { walkV: 34, walkF: 1.1, walkB: 0.62, run: 'gallop', runV: 135, runF: 2.5, runB: 0.4, liftW: 8, liftR: 13, bob: 1.3, rock: 4, hop: 5, nod: 3 },
-      graze: true, eatDrop: 5, sleepFront: 'tuck', legRings: zebraLeg,
-      drawHead: zebraHead, drawBody: zebraBody
+      col: { body: '#fdfcf7', stripe: '#2a2638', muzzle: '#5e5973', hoof: '#3a3550', tuft: '#2a2638', earIn: '#ffc2cf' },
+      kidCol: { stripe: '#8b5c3d', muzzle: '#8a6a58', tuft: '#8b5c3d' },
+      views: { side: zebraSide, front: (R, c, u) => zebraFront(R, c, u, false), back: (R, c, u) => zebraFront(R, c, u, true) },
+      gait: { walkV: 26, walkF: 1.3, walkB: 0.62, run: 'gallop', runV: 92, runF: 2.7, runB: 0.4, liftW: 5, liftR: 8, bob: 0.9, rock: 3.5, hop: 3.5 },
+      graze: true, food: 'grass'
     },
     gnu: {
-      name: 'Gnus', kind: 'quad', box: '-118 -132 236 177',
+      name: 'Gnus', k: 0.98,
       roles: {
         papa: { title: 'Gnubulle', s: 1, horn: 1, beard: 1 },
-        mama: { title: 'Gnukuh', s: 0.92, horn: 0.72, beard: 0.75, lashes: 1, flower: 1 },
-        kind: { title: 'Gnukalb', s: 0.6, head: 1.12, legK: 1.1, horn: 0.25, calf: 1 }
+        mama: { title: 'Gnukuh', s: 0.92, horn: 0.72, beard: 0.6, lashes: 1, flower: 1 },
+        kind: { title: 'Gnukalb', s: 0.62, kid: 1, head: 1.12, horn: 0.28 }
       },
-      col: { body: '#7d8aa3', stripe: '#5b6680', mane: '#2e2b40', horn: '#4a4560', muzzle: '#3d3a52', hoof: '#2e2b40', tail: '#3d3a52', tuft: '#2e2b40', earIn: '#c9a7b8' },
-      kidCol: { body: '#d39a62', stripe: null, mane: '#8a5733', muzzle: '#6b4430', tail: '#b07a4a', tuft: '#8a5733', horn: '#6b4430' },
-      chest: { x: 15, r: 21 }, hip: { x: -16, r: 16.5 }, belly: { r: 19, drop: 2 },
-      fl: { l1: 17, l2: 16, r1: 8, r2: 6, r3: 6, w: 9, jx: 2, jy: -9, bend: 1, foot: 'hoof', fr: 5.5, home: 1 },
-      hl: { l1: 16, l2: 15, r1: 9.5, r2: 6, r3: 6, w: 8.5, jx: -2, jy: -5, bend: -1, foot: 'hoof', fr: 5.5, home: -2 },
-      neck: { bx: 9, by: 5, len: 18, a: 42, curve: -15, r1: 13, r2: 11.5, eatA: -55, sleepA: 10, runA: 22 },
-      head: { r: 17, pitch: -30, runP: -18, eatP: -72, sleepP: -45, snout: 28 },
-      tail: { n: 5, seg: 6.5, r1: 2.2, r2: 3, a: -75, curl: 3, sway: 0.3, run: 30, tuft: 1 },
-      gait: { walkV: 34, walkF: 1.15, walkB: 0.62, run: 'gallop', runV: 135, runF: 2.55, runB: 0.4, liftW: 8, liftR: 13, bob: 1.4, rock: 4, hop: 5, nod: 3 },
-      graze: true, eatDrop: 5, sleepFront: 'tuck',
-      drawHead: gnuHead, drawBody: gnuBody
+      col: { body: '#8794b0', face: '#a6b1c8', stripe: '#6b7895', mane: '#3b3752', horn: '#5b566f', muzzle: '#4d4864', hoof: '#3b3752', tail: '#3b3752', tuft: '#3b3752', earIn: '#d7b0c0' },
+      kidCol: { body: '#d9a26a', face: '#e6b884', stripe: null, mane: '#9a6438', horn: '#7a5236', muzzle: '#8a5c3c', tail: '#b07a4a', tuft: '#9a6438' },
+      views: { side: gnuSide, front: (R, c) => gnuFront(R, c, false), back: (R, c) => gnuFront(R, c, true) },
+      gait: { walkV: 26, walkF: 1.3, walkB: 0.62, run: 'gallop', runV: 92, runF: 2.7, runB: 0.4, liftW: 5, liftR: 8, bob: 0.9, rock: 3.5, hop: 3.5 },
+      graze: true, food: 'grass'
     },
     croc: {
-      name: 'Krokodile', kind: 'croc', box: '-118 -100 236 177',
+      name: 'Krokodile', k: 0.95,
       roles: {
         papa: { title: 'Krokodil-Männchen', s: 1 },
-        mama: { title: 'Krokodil-Weibchen', s: 0.84, lashes: 1, flower: 1 },
-        kind: { title: 'Jungtier', s: 0.5, head: 1.15, bands: 1 }
+        mama: { title: 'Krokodil-Weibchen', s: 0.86, lashes: 1, flower: 1 },
+        kind: { title: 'Jungtier', s: 0.55, kid: 1, head: 1.15, bands: 1 }
       },
-      col: { body: '#6fbf5a', jaw: '#c9e29a', scute: '#4f9a45', teeth: '#ffffff', mouth: '#ff8fa3' },
-      kidCol: { body: '#9ccf5e', jaw: '#e1eeb0', scute: '#6fae45', band: '#5a8f3a' },
-      spine: [[22, 12.5], [10, 15], [-4, 15.5], [-18, 14], [-31, 11], [-43, 8.5], [-54, 6.5], [-64, 4.8], [-73, 3.2]],
-      lowY: 14, highY: 18,
-      legs: { l1: 9, l2: 8.5, r1: 5.8, r2: 5, r3: 4.6, spread: 8, fr: 4.2 },
-      head: { len: 34, r: 14 },
-      gait: { walkV: 24, walkF: 0.95, walkB: 0.65, walkPat: 'trot', run: 'gallop', runV: 100, runF: 2.6, runB: 0.42, liftW: 5, liftR: 9, bob: 0.6, rock: 3, hop: 3.5, undW: 3.5, undR: 5 }
+      col: { body: '#72c45c', jaw: '#cde69c', belly: '#dff0a8', scute: '#5aa84d', teeth: '#ffffff', mouth: '#ff8fa3' },
+      kidCol: { body: '#a2d46c', jaw: '#e4f0b4', scute: '#79b34c', band: '#6a9e42' },
+      views: { side: crocSide, front: (R, c) => crocFront(R, c, false), back: (R, c) => crocFront(R, c, true) },
+      gait: { walkV: 18, walkF: 1.15, walkB: 0.65, walkPat: 'trot', run: 'gallop', runV: 62, runF: 2.8, runB: 0.42, liftW: 2.6, liftR: 4.5, bob: 0.4, rock: 2, hop: 2 },
+      food: 'fish'
     }
   };
   const ORDER = ['lion', 'elephant', 'zebra', 'gnu', 'croc'];
   const ROLES = [['papa', 'Papa'], ['mama', 'Mama'], ['kind', 'Kind']];
   const MODES = { idle: {}, walk: { walk: 1 }, run: { run: 1 }, eat: { eat: 1 }, sleep: { sleep: 1 } };
 
-
   /* ── Ein Tier anlegen ──────────────────────────────────────── */
   function create(key, role) {
     const sp = SPECIES[key];
-    const R = Object.assign({ head: 1, legK: 1, ear: 1, tailK: 1 }, sp.roles[role]);
-    // Maße kopieren; Kinder: längere Beine (Fohlen, Kälber)
-    const D = Object.assign({}, sp);
-    if (sp.kind === 'quad') {
-      D.fl = Object.assign({}, sp.fl, { l1: sp.fl.l1 * R.legK, l2: sp.fl.l2 * R.legK });
-      D.hl = Object.assign({}, sp.hl, { l1: sp.hl.l1 * R.legK, l2: sp.hl.l2 * R.legK });
-    }
+    const R = Object.assign({ head: 1 }, sp.roles[role]);
     const col = Object.assign({}, sp.col, role === 'kind' && sp.kidCol ? sp.kidCol : {});
     return {
-      key, role, D, R, col, s: R.s, food: sp.food,
+      key, role, D: sp, R, col, uid: ++UID,
+      s: R.s * sp.k, cardS: R.s,
       x: 0, z: 0, h: 0, mode: 'idle',
       w: { walk: 0, run: 0, eat: 0, sleep: 0 },
-      t: Math.random() * 20, phase: Math.random(), freq: sp.gait.walkF, v: 0,
-      look: 0, lookNow: 0, lookT: 1 + Math.random() * 3,
+      t: Math.random() * 20, phase: Math.random(), freq: sp.gait.walkF, v: 0, road: 0,
       blinkT: 1 + Math.random() * 3, blinking: false, seed: Math.random(),
-      g: null, pool: []
+      g: null, view: null, el: null
     };
   }
 
@@ -1132,88 +723,366 @@
     A.t += dt;
     const tg = MODES[A.mode] || MODES.idle;
     for (const k of ['walk', 'run', 'eat', 'sleep']) {
-      const rate = k === 'sleep' ? 1.6 : 3.2;
+      const rate = k === 'sleep' ? 1.8 : 3.4;
       A.w[k] += ((tg[k] || 0) - A.w[k]) * (1 - Math.exp(-rate * dt));
     }
-    const G = A.D.gait, w = A.w, mw = w.walk + w.run, fs = 1 / Math.sqrt(A.s);
-    A.freq = (mw > 1e-3 ? (w.walk * G.walkF + w.run * G.runF) / mw : G.walkF) * fs;
-    A.v = (w.walk * G.walkV + w.run * G.runV) * fs;
+    const Gt = A.D.gait, w = A.w, mw = w.walk + w.run, fs = 1 / Math.sqrt(A.R.s);
+    A.freq = (mw > 1e-3 ? (w.walk * Gt.walkF + w.run * Gt.runF) / mw : Gt.walkF) * fs;
+    A.v = (w.walk * Gt.walkV + w.run * Gt.runV) * fs;
     A.phase = (A.phase + dt * A.freq) % 1;
-    A.road = (A.road || 0) + A.v * dt;
-    // blinzeln
+    A.road += A.v * dt;
     A.blinkT -= dt;
-    if (A.blinkT < 0) { A.blinking = true; if (A.blinkT < -0.13) { A.blinking = false; A.blinkT = 2 + Math.random() * 4; } }
-    // Kopf zum Betrachter: wie im Zeichentrick schaut das Tier meist schräg nach vorn
-    A.lookT -= dt;
-    if (A.lookT < 0) {
-      A.lookT = 1.5 + Math.random() * 3;
-      A.look = Math.random() < 0.55 ? 0 : (Math.random() - 0.5) * 0.9;
-    }
-    const cam = Math.atan2(Math.cos(A.h), Math.sin(A.h));
-    const bias = Math.abs(cam) < 1.75 ? clamp(cam, -0.75, 0.75) * 0.85 : 0;
-    const free = (1 - Math.min(1, mw)) * (1 - w.eat) * (1 - w.sleep);
-    const target = bias * (1 - 0.4 * w.sleep) + A.look * free;
-    A.lookNow += (target - A.lookNow) * (1 - Math.exp(-3 * dt));
+    if (A.blinkT < 0) { A.blinking = true; if (A.blinkT < -0.14) { A.blinking = false; A.blinkT = 2 + Math.random() * 4; } }
   }
 
-  /* ── Zeichnen ──────────────────────────────────────────────── */
+  /* ── Ansicht wählen und aufbauen ───────────────────────────── */
+  function pickView(A) {
+    const vy = Math.sin(A.h), vx = Math.cos(A.h), cur = A.view, band = 0.06;
+    if (cur === 'front' && vy > 0.78 - band) return 'front';
+    if (cur === 'back' && vy < -0.78 + band) return 'back';
+    if (vy > 0.78 + (cur ? band : 0)) return 'front';
+    if (vy < -0.78 - (cur ? band : 0)) return 'back';
+    if (cur === 'side' && vx > -0.1) return 'side';
+    if (cur === 'sideL' && vx < 0.1) return 'sideL';
+    return vx >= 0 ? 'side' : 'sideL';
+  }
   function mount(A, parent) {
     A.g = document.createElementNS(NS, 'g');
     A.g.setAttribute('class', 'tier');
-    A.g.setAttribute('stroke-linejoin', 'round');
-    A.g.setAttribute('stroke-linecap', 'round');
     parent.appendChild(A.g);
-    A.pool = [];
     return A.g;
   }
-  function setA(e, k, v) { if (e['_' + k] !== v) { e['_' + k] = v; e.setAttribute(k, v); } }
-
-  function draw(A, view) {
-    const C = makeCtx(A, view);
-    (A.D.kind === 'croc' ? buildCroc : buildQuad)(A, C);
-    const prims = C.prims;
-    if (view.ground) groundDots(A, C, view);
-    if (view.mark) C.disc(v3(0, 0.3, 0), v3(A.D.kind === 'croc' ? 70 : 55, 0, 0), v3(0, 0, 32), '#6d5dfc',
-      { stroke: '#6d5dfc', depth: -9e5, op: 0.28 });
-    prims.sort((a, b) => a.depth - b.depth);
-    if (view.skel) {
-      for (const p of prims) if (p.depth > -5e5 && p.depth < 5e4) p.op = (p.op == null ? 1 : p.op) * 0.3;
-      const seen = new Set();
-      for (const [a, b] of C.bones) {
-        prims.push({ d: 'M' + f1(a.x) + ' ' + f1(a.y) + 'L' + f1(b.x) + ' ' + f1(b.y), fill: 'none', stroke: '#e11d48', sw: 2.2, line: true, depth: 2e5 });
-        for (const q of [a, b]) {
-          const k = Math.round(q.x) + ',' + Math.round(q.y);
-          if (seen.has(k)) continue;
-          seen.add(k);
-          prims.push({ d: circleD(q.x, q.y, 2.3), fill: '#ffffff', stroke: '#e11d48', sw: 1.2, depth: 2e5 + 1 });
-        }
+  function legEls(V, idx, base, col) {
+    return idx.map(i => {
+      const k = LEGK[i], lg = V.legs[i], far = FAR[base].indexOf(i) >= 0;
+      const c = far ? darker(col, 0.86) : col;
+      return '<g data-k="' + k + '">' + tube(k, c, lg.w)
+        + (V.legBands ? bands(k + 'S', V.legBands, lg.w, '2 2.6') : '')
+        + G(k + 'P', V.foot(c, far)) + '</g>';
+    }).join('');
+  }
+  function build(A, view) {
+    const base = view === 'sideL' ? 'side' : view;
+    const V = A.D.views[base](A.R, A.col, A.uid);
+    const c = A.col, far = FAR[base], near = [0, 1, 2, 3].filter(i => far.indexOf(i) < 0);
+    const farLegs = legEls(V, far, base, c.body), nearLegs = legEls(V, near, base, c.body);
+    const headG = '<g data-k="rootB"><g data-k="head">' + V.head + '</g></g>';
+    let s = '<g data-k="main">' + shadowEl(V.shadow) + '<g data-k="mark"></g>';
+    if (V.croc && base === 'side') {
+      s += farLegs
+        + '<g data-k="rootA"><path data-k="cbF" fill="' + c.body + '"/><path data-k="cbB" fill="' + c.belly + '"/>'
+        + (A.R.bands ? '<path data-k="cbN" fill="none" stroke="' + c.band + '" stroke-width="5" stroke-dasharray="3 5"/>' : '')
+        + '<g data-k="scutes"></g><path data-k="cbO" fill="none" stroke="' + INK + '" stroke-width="2.6" stroke-linejoin="round"/></g>'
+        + nearLegs + headG;
+    } else {
+      const tailT = V.tail ? '<g data-k="tail">' + tube('tl', c.tail || c.body, V.tail.w) + G('tlT', V.tail.tuft) + '</g>' : '';
+      let neck = '';
+      if (V.neck) {
+        const nk = V.neck;
+        neck = '<g data-k="neck">' + tube('nk', nk.col, nk.w)
+          + (nk.stripe ? bands('nkS', nk.stripe, nk.w - 1, '2.8 4.2') : '')
+          + (nk.mane === 'zebra' ? tube('mn', nk.maneCol, 4.6) + bands('mnS', c.body, 4.6, '2.4 2.6') : '')
+          + (nk.mane === 'gnu' ? '<path data-k="mnO" fill="none" stroke="' + INK + '" stroke-width="8.4" stroke-linecap="round" stroke-dasharray="0.1 4.2"/><path data-k="mnF" fill="none" stroke="' + nk.maneCol + '" stroke-width="5.4" stroke-linecap="round" stroke-dasharray="0.1 4.2"/>' : '')
+          + (nk.beard ? '<path data-k="bdO" fill="none" stroke="' + INK + '" stroke-width="7.4" stroke-linecap="round" stroke-dasharray="0.1 4"/><path data-k="bdF" fill="none" stroke="' + nk.beard + '" stroke-width="4.6" stroke-linecap="round" stroke-dasharray="0.1 4"/>' : '')
+          + '</g>';
+      }
+      // Reihenfolge: was weiter weg ist, zuerst
+      if (base === 'back') {
+        s += headG + farLegs + '<g data-k="rootA">' + neck + V.body + tailT + '</g>' + nearLegs;
+      } else if (base === 'front') {
+        s += '<g data-k="rootA">' + (V.tail ? tailT : '') + '</g>' + farLegs
+          + '<g data-k="rootA2">' + V.body + neck + '</g>' + nearLegs + headG;
+      } else {
+        s += farLegs + '<g data-k="rootA">' + tailT + neck + V.body + '</g>' + nearLegs + headG;
       }
     }
-    const pool = A.pool, g = A.g;
-    for (let i = 0; i < prims.length; i++) {
-      let e = pool[i];
-      if (!e) { e = document.createElementNS(NS, 'path'); g.appendChild(e); pool.push(e); }
-      const p = prims[i];
-      setA(e, 'd', p.d);
-      setA(e, 'fill', p.fill);
-      setA(e, 'stroke', p.stroke);
-      setA(e, 'stroke-width', String(f1(p.sw * 10) / 10));
-      setA(e, 'opacity', p.op == null ? '1' : String(Math.round(clamp(p.op, 0, 1) * 100) / 100));
-      setA(e, 'display', 'inline');
-    }
-    for (let i = prims.length; i < pool.length; i++) setA(pool[i], 'display', 'none');
+    s += '<g data-k="food"></g><g data-k="skel"></g></g><g data-k="fx"></g>';
+    A.g.innerHTML = s;
+    A.el = {};
+    A.g.querySelectorAll('[data-k]').forEach(e => { A.el[e.getAttribute('data-k')] = e; });
+    A.ears = ['earL', 'earR', 'ear'].filter(k => A.el[k]).map(k => ({ k, e: A.el[k], piv: A.el[k].getAttribute('data-piv') }));
+    A.V = V; A.view = view; A.base = base; A.skelOn = null;
   }
 
-  // Laufband im Kasten: Punkte am Boden ziehen vorbei
-  function groundDots(A, C, view) {
-    const gap = 46, ox = view.ox, oy = view.oy;
-    const dx = Math.cos(A.h) * A.road, dz = Math.sin(A.h) * A.road;
-    for (let i = -4; i <= 4; i++) for (let j = -3; j <= 3; j++) {
-      const X = i * gap - (((dx % gap) + gap) % gap), Z = j * gap - (((dz % gap) + gap) % gap);
-      if (Math.abs(X) > 150 || Math.abs(Z) > 110) continue;
-      const x = ox + X, y = oy + Z * SP;
-      C.prims.push({ d: 'M' + f1(x - 4) + ' ' + f1(y) + 'h8', fill: 'none', stroke: '#8a8f99', sw: 1.6, line: true, depth: -1e6 - 1, op: 0.45 });
+  /* ══════════════════════════════════════════════════════════════
+     Jedes Bild: Gelenke stellen
+     ══════════════════════════════════════════════════════════════ */
+  function setD(e, d) { if (e && e._d !== d) { e._d = d; e.setAttribute('d', d); } }
+  function setT(e, t) { if (e && e._t !== t) { e._t = t; e.setAttribute('transform', t); } }
+  function show(e, on) { if (e) { const v = on ? 'inline' : 'none'; if (e._v !== v) { e._v = v; e.setAttribute('display', v); } } }
+  function setHTML(e, s) { if (e && e._s !== s) { e._s = s; e.innerHTML = s; } }
+  const seg = (a, b) => 'M' + n1(a.x) + ' ' + n1(a.y) + ' L' + n1(b.x) + ' ' + n1(b.y);
+
+  function draw(A, view) {
+    const want = pickView(A);
+    if (want !== A.view) build(A, want);
+    const V = A.V, el = A.el, w = A.w, t = A.t, R = A.R, D = A.D;
+    const mir = A.view === 'sideL' ? -1 : 1, S = view.S;
+    setT(el.main, 'translate(' + n1(view.ox) + ' ' + n1(view.oy) + ') scale(' + Math.round(mir * S * 1000) / 1000 + ' ' + Math.round(S * 1000) / 1000 + ') translate(-60 -92)');
+    const side = A.base === 'side';
+    const gt = gait(A), ph = A.phase;
+
+    /* Grundstellung: liegen (Schlaf; Löwe auch beim Fressen), grasen */
+    const lie = clamp((R.sleepStand ? 0 : w.sleep) + (D.eatLie ? w.eat : 0), 0, 1);
+    const graze = D.graze ? w.eat : 0;
+    const legLen = V.legs[1].l1 + V.legs[1].l2;
+    const drop = lie * legLen * (V.croc ? 0.45 : 0.78) + (R.sleepStand ? w.sleep * 1.2 : 0);
+    const breathe = Math.sin(t * TAU * (w.sleep > 0.5 ? 0.22 : 0.3)) * (w.sleep > 0.5 ? 0.8 : 0.4);
+    const bob = D.gait.bob * w.walk * Math.cos(ph * TAU * 2) - D.gait.hop * w.run * (0.5 + 0.5 * Math.sin(TAU * ph + 1.2));
+    const rock = side ? D.gait.rock * w.run * Math.sin(TAU * (ph + 0.15)) : 0;
+    const sway = side ? 0 : (w.walk * 1.6 + w.run * 2.4) * Math.sin(TAU * ph);
+    const cx = side ? 58 : 60, cy = 64, rdy = drop + bob - breathe * 0.3, rr = -rock + sway;
+    const rootT = 'translate(0 ' + n1(rdy) + ') rotate(' + n1(rr) + ' ' + cx + ' ' + cy + ')';
+    setT(el.rootA, rootT); setT(el.rootA2, rootT); setT(el.rootB, rootT);
+    const rootP = p => tf(p, [cx, cy], rr, 0, rdy);         // Rumpf-Koordinaten → Zeichnung
+    const rootQ = q => rootP([q.x, q.y]);
+
+    /* Kopf */
+    const hp = V.headPiv;
+    let hRot = side ? (Math.sin(t * 0.9) * 3 * (1 - gt.m) + w.walk * 2.5 * Math.sin(ph * TAU * 2 + 0.6) - w.run * 6) : 0;
+    let hdx = 0, hdy = side ? 0 : w.walk * 0.8 * Math.sin(ph * TAU * 2);
+    let hsc = R.head || 1;
+    if (graze > 0 && V.graze) { hRot += V.graze.rot * graze; hdx += V.graze.dx * graze; hdy += V.graze.dy * graze; hsc *= lerp(1, V.graze.scale || 1, graze); }
+    if (lie > 0) { hRot += (side ? 10 : 0) * w.sleep; hdy += (V.croc ? 1 : 3) * w.sleep; }
+    if (R.sleepStand) { hRot += side ? 7 * w.sleep : 0; hdy += 2.5 * w.sleep; }
+    if (D.eatLie && w.eat > 0) { hRot += (side ? 14 : 0) * w.eat; hdy += 5 * w.eat * (side ? 0.4 : 1); }
+    let open = 0, snapE = 0;
+    if (V.croc && w.eat > 0) {
+      snapE = (t * 0.42) % 1;
+      open = (snapE < 0.62 ? smooth(snapE / 0.62) : snapE < 0.68 ? 1 - smooth((snapE - 0.62) / 0.06) : 0) * w.eat;
+      hRot += side ? -10 * open : 0;
+      hdy += side ? 0 : -2 * open;
     }
+    setT(el.head, 'translate(' + n1(hdx) + ' ' + n1(hdy) + ') rotate(' + n1(hRot) + ' ' + hp[0] + ' ' + hp[1] + ')'
+      + (hsc !== 1 ? ' translate(' + hp[0] + ' ' + hp[1] + ') scale(' + Math.round(hsc * 100) / 100 + ') translate(' + -hp[0] + ' ' + -hp[1] + ')' : ''));
+    const headP = p => tf(p, hp, hRot, hdx, hdy, hsc);      // Kopf-Koordinaten → Rumpf
+
+    /* Gesicht, Ohren */
+    const st = w.sleep > 0.5 || A.blinking ? 'c' : (w.eat > 0.5 && Math.sin(t * 1.7) > 0.2 ? 'h' : 'o');
+    show(el.eo, st === 'o'); show(el.ec, st === 'c'); show(el.eh, st === 'h');
+    show(el.eye2, st === 'o');
+    const chew = w.eat > 0.5 && Math.sin(t * 9) > 0;
+    show(el.mN, !chew); show(el.mO, chew);
+    const flick = Math.max(0, Math.sin(t * 1.3 + A.seed * 6) - 0.92) * 120;
+    const ele = A.key === 'elephant';
+    A.ears.forEach(({ k, e, piv }) => {
+      let a = (k === 'earR' ? -1 : 1) * flick * 0.25;
+      if (ele) a = k === 'ear' ? Math.sin(t * 1.5) * 6 * (1 - w.sleep) + w.run * 10
+        : (k === 'earL' ? 1 : -1) * (Math.sin(t * 1.5) * 5 * (1 - w.sleep) - w.run * 8);
+      setT(e, 'rotate(' + n1(a) + ' ' + piv + ')');
+    });
+
+    /* Beine */
+    const bones = [];
+    V.legs.forEach((lg, i) => {
+      const k = LEGK[i], H = rootP(lg.hip), fo = gt.foot(i);
+      let F;
+      if (side) {
+        F = { x: lg.hip[0] + (lg.home || 0) + fo.x + (graze && i < 2 ? 1.5 * graze : 0), y: V.footY - fo.y };
+        if (lie > 0) {
+          const tx = i < 2 ? (V.sphinx || V.croc ? H.x + 9 : H.x + 1.5) : H.x + 3;
+          F = { x: lerp(F.x, tx, lie), y: lerp(F.y, V.footY, lie) };
+        }
+      } else {
+        F = { x: lg.hip[0] + (lg.splay || 0) * 5, y: V.footY - Math.max(0, fo.y) * 0.9 };
+        if (lie > 0) F = { x: lerp(F.x, H.x + (lg.splay || 0) * 4, lie), y: lerp(F.y, Math.min(V.footY, H.y + 2), lie) };
+      }
+      const bend = side ? (lg.bend || 1) : (lg.splay ? -lg.splay * 0.6 : (lg.hip[0] < 60 ? 0.2 : -0.2));
+      const leg = ik(H, F, lg.l1, lg.l2, bend);
+      F = leg.F;
+      const d = seg(H, leg.K) + ' L' + n1(F.x) + ' ' + n1(F.y);
+      setD(el[k + 'O'], d); setD(el[k + 'F'], d); setD(el[k + 'S'], d);
+      show(el[k], side || V.croc || lie < 0.6);
+      setT(el[k + 'P'], 'translate(' + n1(F.x) + ' ' + n1(F.y) + ')');
+      bones.push([H, leg.K], [leg.K, F]);
+    });
+
+    /* Schwanz (in Rumpf-Koordinaten) */
+    if (V.tail && el.tlO) {
+      const tl = V.tail;
+      const swing = Math.sin(t * 1.8) * (1 + w.walk) * 4 + w.run * Math.sin(TAU * ph) * 4;
+      let ex = tl.end[0], ey = tl.end[1];
+      if (side) {
+        ex += swing * 0.4 - w.run * 6; ey += -w.run * 8;
+        if (lie > 0) { ex = lerp(ex, tl.root[0] - 16, lie); ey = lerp(ey, V.footY - drop - 1, lie); }
+      } else ex += V.croc ? swing * 0.4 : swing;
+      const r0 = { x: tl.root[0], y: tl.root[1] }, e2 = { x: ex, y: ey };
+      const ctrl = side ? { x: lerp(tl.root[0], ex, 0.25) - 2, y: lerp(tl.root[1], ey, 0.8) + 3 } : { x: lerp(tl.root[0], ex, 0.2) + swing * 0.3, y: lerp(tl.root[1], ey, 0.6) };
+      const d = 'M' + n1(r0.x) + ' ' + n1(r0.y) + ' Q' + n1(ctrl.x) + ' ' + n1(ctrl.y) + ' ' + n1(e2.x) + ' ' + n1(e2.y);
+      setD(el.tlO, d); setD(el.tlF, d);
+      setT(el.tlT, 'translate(' + n1(e2.x) + ' ' + n1(e2.y) + ') rotate(' + n1(Math.atan2(e2.y - ctrl.y, e2.x - ctrl.x) / DEG - 90) + ')');
+      bones.push([rootQ(r0), rootQ(ctrl)], [rootQ(ctrl), rootQ(e2)]);
+    }
+
+    /* Hals (Zebra, Gnu): vom Rumpf zum Kopfansatz */
+    if (V.neck && el.nkO) {
+      const nk = V.neck, b0 = { x: nk.base[0], y: nk.base[1] };
+      const a1 = headP(nk.attach || [hp[0] + 1, hp[1] - 2]);
+      const d = seg(b0, a1);
+      setD(el.nkO, d); setD(el.nkF, d); setD(el.nkS, d);
+      const dx = a1.x - b0.x, dy = a1.y - b0.y, ln = Math.hypot(dx, dy) || 1;
+      let nx = dy / ln, ny = -dx / ln;
+      if (ny > 0) { nx = -nx; ny = -ny; }
+      const off = nk.w / 2 + 0.4;
+      if (el.mnO) {
+        const md = seg({ x: b0.x + nx * off - dx * 0.05, y: b0.y + ny * off - dy * 0.05 }, { x: a1.x + nx * off * 0.8, y: a1.y + ny * off * 0.8 });
+        setD(el.mnO, md); setD(el.mnF, md); setD(el.mnS, md);
+      }
+      if (el.bdO) {
+        const bd = seg({ x: lerp(b0.x, a1.x, 0.35) - nx * off, y: lerp(b0.y, a1.y, 0.35) - ny * off }, { x: lerp(b0.x, a1.x, 0.92) - nx * off, y: lerp(b0.y, a1.y, 0.92) - ny * off });
+        setD(el.bdO, bd); setD(el.bdF, bd);
+      }
+      bones.push([rootQ(b0), rootQ(a1)]);
+    }
+
+    /* Rüssel (Elefant): Kette in Kopf-Koordinaten */
+    let trunkTip = null, trunkCurl = 0;
+    if (V.trunk && el.trAO) {
+      const tr = V.trunk, n = tr.n, sl = tr.len / n;
+      const e = (t * 0.32) % 1;
+      const curlW = e < 0.42 ? 0 : e < 0.66 ? smooth((e - 0.42) / 0.24) : e < 0.84 ? 1 : 1 - smooth((e - 0.84) / 0.16);
+      const eatW = w.eat;
+      const pts = [{ x: tr.root[0], y: tr.root[1] }];
+      if (tr.front) {
+        // von vorn: hängt herab, die Spitze rollt sich nach oben
+        const lift = eatW * curlW;
+        for (let k = 1; k <= n; k++) {
+          const u = k / n, sw = Math.sin(t * 1.2 - k * 0.4) * 1.6 * (1 - w.sleep) * u;
+          pts.push({ x: tr.root[0] + sw + lift * Math.sin(u * Math.PI) * 4, y: tr.root[1] + sl * k * lerp(1, 0.42, lift * u) - (u > 0.75 ? (u - 0.75) * 10 * (1 - lift) : 0) });
+        }
+      } else {
+        let th = (tr.a0 - 6 * Math.sin(t * 0.7) * (1 - gt.m) - 6 * w.walk * Math.sin(TAU * ph)) * DEG;
+        th = lerp(th, lerp(78, 100, curlW) * DEG, eatW);
+        th = lerp(th, 84 * DEG, w.sleep);
+        let p = pts[0];
+        for (let k = 0; k < n; k++) {
+          const idle = (k >= n - 2 ? -24 : -1) + 3 * Math.sin(t * 1.1 - k * 0.5) * (1 - w.sleep);
+          const kap = lerp(lerp(idle, k >= n - 2 ? -6 : 0, w.sleep), lerp(-1, k < 2 ? -8 : -40, curlW), eatW);
+          th += kap * DEG;
+          p = { x: p.x + Math.cos(th) * sl, y: Math.min(p.y + Math.sin(th) * sl, GROUND - 4 - hdy - rdy) };
+          pts.push(p);
+        }
+      }
+      const cut = Math.ceil(n * 0.55), a = curve(pts.slice(0, cut + 1)), all = curve(pts);
+      setD(el.trAO, a); setD(el.trAF, a); setD(el.trBO, all); setD(el.trBF, all); setD(el.trW, all);
+      const lp = pts[n], pp = pts[n - 1];
+      setT(el.trTip, 'translate(' + n1(lp.x) + ' ' + n1(lp.y) + ') rotate(' + n1(Math.atan2(lp.y - pp.y, lp.x - pp.x) / DEG - 90) + ')');
+      trunkTip = rootQ(headP([lp.x, lp.y])); trunkCurl = curlW * eatW;
+      for (let k = 0; k < n; k++) bones.push([rootQ(headP([pts[k].x, pts[k].y])), rootQ(headP([pts[k + 1].x, pts[k + 1].y]))]);
+    }
+
+    /* Krokodil: Rumpf aus der Wirbelsäule (Rumpf-Koordinaten) */
+    if (V.croc && side) {
+      const sp = V.spine, und = w.walk * 1.4 + w.run * 2.2;
+      const pts = sp.map(([x, y, r], i) => {
+        const tail = (sp.length - 1 - i) / (sp.length - 1);
+        const wave = und * Math.sin(TAU * ph + i * 0.9) * tail + Math.sin(t * 0.9 + i * 0.7) * 0.8 * tail * (1 - gt.m);
+        return { x, y: Math.min(y + wave, GROUND - rdy - r * 0.85), r: r + (i > 3 ? breathe * 0.3 : 0) };
+      });
+      const hd = headP([V.headPiv[0] + 2, V.headPiv[1] - 1]);
+      const top = pts.map(p => ({ x: p.x, y: p.y - p.r })), bot = pts.map(p => ({ x: p.x, y: p.y + p.r * 0.85 })).reverse();
+      top.push({ x: hd.x + 3, y: hd.y - 8.5 });
+      bot.unshift({ x: hd.x + 3, y: hd.y + 6.5 });
+      const outline = curve(top) + ' L' + curve(bot).slice(1) + ' Z';
+      setD(el.cbF, outline); setD(el.cbO, outline);
+      const bel = pts.map(p => ({ x: p.x, y: p.y + p.r * 0.35 })).concat([{ x: hd.x + 3, y: hd.y + 3 }]);
+      const belB = pts.map(p => ({ x: p.x, y: p.y + p.r * 0.84 })).concat([{ x: hd.x + 3, y: hd.y + 6.3 }]).reverse();
+      setD(el.cbB, curve(bel) + ' L' + curve(belB).slice(1) + ' Z');
+      if (el.cbN) setD(el.cbN, curve(pts.map(p => ({ x: p.x, y: p.y - p.r * 0.15 }))));
+      let sc = '';
+      for (let i = 1; i < pts.length; i++) for (const u of [0.25, 0.75]) {
+        const r = lerp(pts[i - 1].r, pts[i].r, u);
+        if (r > 2) sc += C(lerp(pts[i - 1].x, pts[i].x, u), lerp(top[i - 1].y, top[i].y, u) + 0.6, Math.max(1.4, r * 0.24), A.col.scute, 1.2);
+      }
+      setHTML(el.scutes, sc);
+      for (let i = 1; i < pts.length; i++) bones.push([rootQ(pts[i - 1]), rootQ(pts[i])]);
+      bones.push([rootQ(pts[pts.length - 1]), rootQ(hd)]);
+    }
+    if (V.croc && el.jaw) {
+      const o2 = open + (w.sleep > 0.5 ? 0.25 : 0);
+      setT(el.jaw, side ? 'rotate(' + n1(o2 * 26) + ' 81 82)' : 'translate(0 ' + n1(o2 * 4) + ')');
+      show(el.mouth, o2 > 0.08);
+    }
+
+    /* Futter */
+    let food = '';
+    if (w.eat > 0.03) {
+      const op = ' opacity="' + Math.round(w.eat * 100) / 100 + '"';
+      if (D.food === 'grass') {
+        const gx = side ? (ele ? 108 : 98) : 60, gy = side ? 92 : 95;
+        food = '<g' + op + '>' + [-3, 0, 3].map((k, i) => L('M ' + (gx + k) + ' ' + gy + ' Q ' + n1(gx + k * 1.4 + Math.sin(t * 2 + i)) + ' ' + (gy - 6) + ' ' + (gx + k * 2) + ' ' + (gy - 10 + (i % 2) * 2), i % 2 ? '#7cc24a' : '#5aa33a', 2.4)).join('')
+          + flower(gx + 1, gy - 10.5, 0.7) + '</g>';
+        if (trunkTip && trunkCurl > 0.2) food += '<g opacity="' + Math.round(trunkCurl * 100) / 100 + '">' + C(trunkTip.x, trunkTip.y, 2.6, '#7cc24a', 1.4) + '</g>';
+      } else if (D.food === 'meat') {
+        const mx = side ? 106 : 60, my = side ? 89 : 92;
+        food = '<g' + op + '>' + L('M ' + (mx - 7) + ' ' + my + ' L ' + (mx + 1) + ' ' + my, INK, 5.2) + L('M ' + (mx - 7) + ' ' + my + ' L ' + (mx + 1) + ' ' + my, '#fff6e6', 2.6)
+          + C(mx - 8.4, my - 1.3, 1.8, '#fff6e6', 1.2) + C(mx - 8.4, my + 1.3, 1.8, '#fff6e6', 1.2)
+          + E(mx + 4, my - 0.5, 6, 4.4, '#e0644f', 2.2) + hl(mx + 2, my - 2.4, 1.3, 0.6) + '</g>';
+      } else if (D.food === 'fish') {
+        const inMouth = snapE >= 0.62;
+        const fx0 = side ? (inMouth ? 98 : 116) : 60, fy0 = side ? (inMouth ? 82 : 89) : (inMouth ? 85 : 95);
+        const wig = Math.sin(t * 14) * (inMouth ? 8 : 3);
+        food = '<g' + op + ' transform="rotate(' + n1(wig) + ' ' + fx0 + ' ' + fy0 + ')">' + P('M ' + (fx0 - 5) + ' ' + fy0 + ' L ' + (fx0 - 9.5) + ' ' + (fy0 - 3) + ' L ' + (fx0 - 9.5) + ' ' + (fy0 + 3) + ' Z', '#6aa8d8', 1.4)
+          + E(fx0, fy0, 6, 3.4, '#8fd0f0', 1.8) + C(fx0 + 3, fy0 - 0.8, 0.7, INK, 0) + '</g>';
+      }
+    }
+    setHTML(el.food, food);
+
+    /* Markierung, Laufband */
+    let mk = '';
+    if (view.mark) mk += E(60, 92.6, V.shadow + 6, 6, 'none', 0, 'stroke="#6d5dfc" stroke-width="2.4" stroke-dasharray="4 3" opacity=".9"');
+    if (view.ground) {
+      const gap = 18, off = ((A.road % gap) + gap) % gap;
+      if (side) for (let k = -4; k <= 4; k++) mk += L('M ' + n1(60 + k * gap - off - 2) + ' 96 h4', '#8a8f99', 1.4, 'opacity=".5"');
+      else for (let k = 0; k < 4; k++) {
+        const u = ((k / 4 + (A.view === 'front' ? 1 : -1) * off / gap / 4) % 1 + 1) % 1, y = 93 + u * 9;
+        mk += L('M 20 ' + n1(y) + ' h6 M 94 ' + n1(y) + ' h6', '#8a8f99', 1.4, 'opacity="' + Math.round((1 - u) * 50) / 100 + '"');
+      }
+    }
+    setHTML(el.mark, mk);
+
+    /* Skelett: Knochen und Gelenke über der Zeichnung */
+    if (A.skelOn !== !!view.skel) {
+      A.skelOn = !!view.skel;
+      Array.prototype.forEach.call(el.main.children, ch => {
+        const k = ch.getAttribute('data-k');
+        if (k !== 'skel' && k !== 'mark' && k !== 'sh') { if (A.skelOn) ch.setAttribute('opacity', '0.35'); else ch.removeAttribute('opacity'); }
+      });
+    }
+    let sk = '';
+    if (view.skel) {
+      const s1 = rootP(side ? [38, 62] : [60, 66]), s2 = rootP(side ? [74, 58] : [60, 56]), h2 = rootQ(headP([hp[0], hp[1] - 8]));
+      bones.push([s1, s2], [s2, h2]);
+      bones.forEach(([a, b]) => { sk += L(seg(a, b), '#e11d48', 1.8); });
+      bones.forEach(([a, b]) => { sk += dot(a.x, a.y, 1.5, '#fff', '#e11d48', 1) + dot(b.x, b.y, 1.5, '#fff', '#e11d48', 1); });
+    }
+    setHTML(el.skel, sk);
+
+    /* Zzz, Herzchen, Funkeln (nicht gespiegelt) */
+    const tp = rootQ(headP(V.top));
+    const fxX = view.ox + (tp.x - 60) * mir * S, fxY = view.oy + (tp.y - 92) * S, k = Math.max(0.7, S);
+    let fx = '';
+    if (w.sleep > 0.6) {
+      for (let i = 0; i < 3; i++) {
+        const u = (t * 0.33 + i / 3) % 1, s = (3.4 + u * 4) * k;
+        const x = fxX + 4 * k + u * 12 * k + Math.sin(u * 6) * 2, y = fxY - 2 - u * 22 * k;
+        const d = 'M' + n1(x) + ' ' + n1(y) + 'h' + n1(s) + 'l' + n1(-s) + ' ' + n1(s) + 'h' + n1(s);
+        const op = Math.round(Math.sin(u * Math.PI) * (w.sleep - 0.6) * 250) / 100;
+        fx += L(d, INK, n1(3.4 * k), 'opacity="' + op + '"') + L(d, '#c7d2fe', n1(1.5 * k), 'opacity="' + op + '"');
+      }
+    }
+    if (w.eat > 0.5) {
+      const u = (t * 0.45) % 1;
+      if (u < 0.8) fx += P(heart(fxX + 8 * k + Math.sin(u * 7) * 2, fxY - u * 20 * k, (2.6 + u * 1.6) * k), '#ff6f91', n1(1.1 * k), 'opacity="' + Math.round(Math.sin(u / 0.8 * Math.PI) * (w.eat - 0.5) * 200) / 100 + '"');
+    }
+    if ((1 - gt.m) * (1 - w.sleep) * (1 - w.eat) > 0.5) {
+      const u = (t * 0.25 + A.seed) % 1;
+      if (u < 0.3) {
+        const s = Math.sin(u / 0.3 * Math.PI) * 3.2 * k, a = A.seed * 20;
+        fx += P(star(fxX + Math.cos(a) * 16 * k, fxY + 2 * k + Math.sin(a) * 5 * k, s), '#ffd23f', n1(0.8 * k)) + P(star(fxX - Math.cos(a) * 12 * k, fxY - 6 * k, s * 0.65), '#ffffff', n1(0.7 * k));
+      }
+    }
+    setHTML(el.fx, fx);
   }
 
   window.SavanneTiere = { SPECIES, ORDER, ROLES, PITCH, create, update, draw, mount };

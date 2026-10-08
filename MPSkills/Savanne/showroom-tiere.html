@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Savannen-Showroom</title>
 <!--
-  Showroom der Savannentiere, Fassung 2 (Oktober 2026): im Stil der Wesen.
+  Showroom der Savannentiere, Fassung 3 (Oktober 2026): von Hand gezeichnet wie die Wesen,
+  je Art drei Ansichten (Seite, vorn, hinten).
   Löwen, Elefanten, Zebras, Gnus und Krokodile — je Papa, Mama, Kind.
-  Jedes Tier ist ein Skelett im Raum (tiere.js): es geht und läuft in
+  Jedes Tier hat ein Skelett aus Gelenken (tiere.js): es geht und läuft in
   jede Richtung, frisst und schläft. „Skelett“ blendet die Knochen ein.
   Oben die Savanne (alle 15 Tiere frei), darunter die Kästen mit den
   Knöpfen für Bewegung und Richtung.
@@ -163,7 +164,7 @@
       const card = document.createElement('div');
       card.className = 'card'; card.tabIndex = 0; card.dataset.key = key; card.dataset.role = role;
       const svg = document.createElementNS(NS, 'svg');
-      svg.setAttribute('viewBox', sp.box);
+      svg.setAttribute('viewBox', '-64 -90 128 96');
       svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
       svg.setAttribute('aria-hidden', 'true');
       T.mount(A, svg);
@@ -187,7 +188,7 @@
     lion: { x: 380, z: 1050, r: 300 }, elephant: { x: 620, z: 420, r: 330 },
     zebra: { x: 1000, z: 900, r: 320 }, gnu: { x: 1250, z: 1150, r: 300 }, croc: { x: WATER.x, z: WATER.z, r: 190 }
   };
-  const scaleAt = z => (0.62 + 0.42 * (z / ZMAX)) * 1.3;
+  const scaleAt = z => (0.65 + 0.45 * (z / ZMAX)) * 1.45;
   (function background() {
     const bg = $('bg');
     let h = '<rect class="bg-sky" x="0" y="0" width="1600" height="' + HOR + '"/>'
@@ -356,14 +357,14 @@
       if (!c.visible) continue;
       c.A.mode = act; c.A.h = heading;
       T.update(c.A, dt);
-      T.draw(c.A, { ox: 0, oy: 0, S: c.A.s, skel, ground: true });
+      T.draw(c.A, { ox: 0, oy: 0, S: c.A.cardS, skel, ground: true });
     }
     if (stageVisible) {
       for (const A of stageAnimals) { aiStep(A, dt); T.update(A, dt); }
       stageAnimals.sort((a, b) => a.z - b.z);
       stageAnimals.forEach((A, i) => {
         if (actors.children[i] !== A.g) actors.appendChild(A.g);
-        T.draw(A, { ox: A.x, oy: HOR + A.z * SP, S: A.s * scaleAt(A.z), lw: 3.2, skel, mark: A === selected });
+        T.draw(A, { ox: A.x, oy: HOR + A.z * SP, S: A.s * scaleAt(A.z), skel, mark: A === selected });
       });
     }
     requestAnimationFrame(frame);
