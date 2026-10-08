@@ -829,14 +829,21 @@
       });
     });
 
+    /* Werkzeug setzen — Fläche, Knöpfe und Hinweis an EINER Stelle.
+       Vorher setzte der Moduswechsel nur die Fläche zurück; die
+       Knöpfe zeigten danach weiter „Kabel", obwohl der Zeiger galt. */
+    function werkzeug(t) {
+      flaeche.setTool(t);
+      document.querySelectorAll('[data-tool]').forEach(x => x.classList.toggle('is-on', x.dataset.tool === t));
+      $('toolHint').textContent = t === 'kabel'
+        ? 'Von einem Gerät zum anderen ziehen.'
+        : 'Geräte verschieben und auswählen.';
+    }
+
     document.querySelectorAll('[data-tool]').forEach(b => {
       b.addEventListener('click', () => {
         const t = b.dataset.tool;
-        flaeche.setTool(t);
-        document.querySelectorAll('[data-tool]').forEach(x => x.classList.toggle('is-on', x === b));
-        $('toolHint').textContent = t === 'kabel'
-          ? 'Von einem Gerät zum anderen ziehen.'
-          : 'Geräte verschieben und auswählen.';
+        werkzeug(t);
         /* Beim Verkabeln ist das Kärtchen im Weg — wortwörtlich:
            es liegt neben dem zuletzt angetippten Gerät, und man
            zieht mit der Maus quer über die Fläche. Beim Prüfen im
@@ -979,6 +986,9 @@
       document.querySelectorAll('[data-modus]').forEach(
         b => b.classList.toggle('is-on', b.dataset.modus === m));
       flaeche.setModus(m);
+      // Jeder Moduswechsel legt das Kabelwerkzeug weg — auch zurück
+      // im Entwurf ist wieder der Zeiger dran.
+      werkzeug('zeiger');
 
       /* Die Geräteleiste folgt dem Modus: im Entwurf ist sie draußen
          (dort wird gebaut), in der Aktion eingeklappt (dort stünde

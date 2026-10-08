@@ -726,9 +726,17 @@
          dessen fester Anschluss belegt ist, die FUNKBUCHSE. Aus
          `addCable` kam dann „… funkt": eine Auskunft über die Karte,
          wo die über das Gerät gebraucht wird. */
-      const frei = () => node.nics.findIndex(k => !k.cable && !k.funkPort && !istInternet(node, k.i));
+      const frei = () => node.nics.findIndex(k => !k.cable && !k.funkPort && !k.funk && !istInternet(node, k.i));
       const i = frei();
       if (i >= 0) return i;
+      /* ⭐ Erst danach eine Karte, deren WLAN zwar an ist, die aber
+         mit keinem Funknetz verbunden ist (kein Funkkabel). Vom
+         Nutzer verlangt: so ein Gerät soll sich verkabeln lassen —
+         das WLAN geht dabei aus (flaeche.js, `connect`). Eine Karte,
+         die WIRKLICH im WLAN hängt, trägt ihr Funkkabel und ist
+         damit oben schon ausgeschlossen. */
+      const lose = node.nics.findIndex(k => k.funk && !k.cable && !istInternet(node, k.i));
+      if (lose >= 0) return lose;
       if (!KIND[node.kind].waechst) return -1;
       return addNic(nodeId).ok ? frei() : -1;
     }
@@ -739,6 +747,15 @@
        selbst gewachsen ist, keine Auskunft, sondern ein Rätsel. */
     function keinAnschlussSatz(node) {
       const k = KIND[node.kind];
+      /* Die Buchse ist „belegt", weil das Gerät schon im WLAN hängt.
+         Dann ist „kein freier Anschluss" zwar wahr, aber kein Rat:
+         man sieht ja kein Kabel. Gesagt wird, woran es hängt und
+         wie man es löst. */
+      const imFunk = node.nics.find(n => n.funk && n.cable);
+      if (imFunk && !k.waechst)
+        return node.name + ' ist schon mit dem WLAN „' + imFunk.ssid + '" verbunden — '
+          + 'ein zweiter Anschluss geht nicht. Trenne erst das WLAN (am Gerät '
+          + '„Kabelgebunden (LAN)" wählen), dann passt das Kabel.';
       return k.waechst ? node.name + ': mehr als ' + k.maxPorts + ' Geräte gehen nicht.'
                        : node.name + ' hat keinen freien Anschluss mehr.';
     }

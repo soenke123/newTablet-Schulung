@@ -1914,8 +1914,18 @@
       const ib = netz.freieNic(bId);
       if (ia < 0) { toast(netz.keinAnschlussSatz(A)); return; }
       if (ib < 0) { toast(netz.keinAnschlussSatz(B)); return; }
+      /* WLAN an, aber mit keinem Funknetz verbunden: dann wird die
+         Karte auf Kabel umgestellt, statt das Kabel abzulehnen
+         (`freieNic` gibt so eine Karte nur her, wenn nichts anderes
+         frei ist). Erst hier, wenn beide Seiten eine Buchse haben —
+         sonst ginge das WLAN aus und das Kabel trotzdem nicht dran. */
+      const wlanAus = [];
+      for (const [n, i] of [[A, ia], [B, ib]]) {
+        if (n.nics[i] && n.nics[i].funk) { netz.setFunk(n, i, false); wlanAus.push(n.name); }
+      }
       const r = netz.addCable(aId, ia, bId, ib);
       if (!r.ok) { toast(r.error); return; }
+      if (wlanAus.length) toast('WLAN von ' + wlanAus.join(' und ') + ' ausgeschaltet — jetzt per Kabel verbunden.');
       /* ⚠️ Hier MUSS gezeichnet werden. Bis hierher stand das Kabel
          nach dem Loslassen im Modell — und auf der Fläche gar
          nichts: `pointerup` nimmt die Geisterlinie weg, `onMoved`
@@ -2236,7 +2246,10 @@
         modus = m;
         // Im Aktionsmodus gibt es kein Kabelwerkzeug — sonst
         // stünde es nach dem Zurückwechseln noch scharf.
-        if (m === 'aktion') { tool = 'zeiger'; svg.classList.remove('is-cable'); }
+        /* Und beim Zurückwechseln in den Entwurf ebenso: der Zeiger
+           ist dann wieder vorn, und die Knöpfe zeigen das auch
+           (app.js, `werkzeug`). */
+        tool = 'zeiger'; svg.classList.remove('is-cable');
         svg.classList.toggle('is-aktion', m === 'aktion');
         drag = null;
         ziehAus();

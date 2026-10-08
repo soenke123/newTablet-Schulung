@@ -823,6 +823,33 @@ section('Switch wächst');
   })());
 }
 
+/* ═══ 13c · Kabel an ein Gerät mit WLAN ═══
+   Vom Nutzer verlangt: WLAN an, aber nicht verbunden → Kabel geht,
+   das WLAN geht aus (das Ausschalten selbst macht die Fläche über
+   `setFunk`). WLAN verbunden → kein zweiter Anschluss, und der Satz
+   sagt, warum. */
+section('Kabel trotz WLAN');
+{
+  const { netz } = bau();
+  const sw = netz.addNode('switch', 300, 300);
+  const pc = netz.addNode('host', 100, 100);
+  netz.setFunk(pc, 0, true, 'Gibt es nicht');
+  ok('WLAN an, aber nicht verbunden', pc.nics[0].funk && !pc.nics[0].cable);
+  ok('freieNic gibt die lose Funkkarte her', netz.freieNic(pc.id) === 0);
+  netz.setFunk(pc, 0, false);
+  const r = netz.addCable(sw.id, netz.freieNic(sw.id), pc.id, 0);
+  ok('nach dem Abschalten steckt das Kabel', r.ok && !pc.nics[0].funk, r.error);
+
+  const pc2 = netz.addNode('host', 100, 300);
+  netz.wlanConf(sw); sw.wlan.on = true; sw.wlan.ssid = 'Klassenzimmer';
+  netz.setFunk(pc2, 0, true, 'Klassenzimmer');
+  ok('pc2 hängt im WLAN', !!pc2.nics[0].cable);
+  ok('dann gibt es keine freie Buchse', netz.freieNic(pc2.id) === -1);
+  ok('und der Satz nennt das WLAN',
+     /schon mit dem WLAN „Klassenzimmer" verbunden/.test(netz.keinAnschlussSatz(pc2)),
+     netz.keinAnschlussSatz(pc2));
+}
+
 /* ═══ 14 · UDP und Ports ═══ */
 section('UDP');
 {
