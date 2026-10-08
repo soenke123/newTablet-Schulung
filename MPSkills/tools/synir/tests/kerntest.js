@@ -491,6 +491,53 @@ section('Terminal');
   ok('Tipp nennt das fehlende Gateway', /Standardgateway/.test(txt.split('Tipp:').pop()));
 }
 
+/* Die Wache in echter Zeit (terminal.js, ECHT_FRIST) darf einen
+   Ping nur beenden, wenn die Uhr des Netzes STEHT. Vorher schlug
+   sie nach 6 echten Sekunden immer zu — bei Tempo 0,1 sind das
+   0,6 s im Netz, und ein Weg über drei Kabel braucht 600,5 ms hin
+   und zurück: das Terminal meldete Verluste, die es nicht gab.
+   Die echte Uhr wird hier von Hand weitergedreht (`klingeln`). */
+section('Terminal: Frist in echter Zeit');
+{
+  let wecker = [];
+  sandbox.setTimeout = (fn) => { const t = { fn }; wecker.push(t); return t; };
+  sandbox.clearTimeout = (t) => { wecker = wecker.filter(x => x !== t); };
+  const klingeln = () => { const w = wecker; wecker = []; w.forEach(t => t.fn()); };
+  try {
+    const { engine, netz, stack } = bau();
+    const term = new sandbox.Terminal(engine, netz, stack);
+    const r = netz.addNode('router', 300, 100);
+    netz.addNic(r.id);
+    const a = netz.addNode('host', 100, 100), sw = netz.addNode('switch', 200, 100);
+    const b = netz.addNode('host', 400, 100);
+    konf(a, 0, '192.168.1.10'); a.gateway = '192.168.1.1';
+    konf(r, 0, '192.168.1.1'); konf(r, 1, '192.168.2.1');
+    konf(b, 0, '192.168.2.20'); b.gateway = '192.168.2.1';
+    netz.addCable(a.id, 0, sw.id, 0);
+    netz.addCable(sw.id, 1, r.id, 0);
+    netz.addCable(r.id, 1, b.id, 0);
+
+    // Netz läuft, aber langsam: alle 0,5 s Netzzeit klingelt die echte Uhr.
+    term.submit(a.id, 'ping 192.168.2.20');
+    for (let i = 0; i < 60 && term.isBusy(a.id); i++) {
+      engine.runUntil(engine.now + 500 * U.MS);
+      klingeln();
+    }
+    let txt = term.linesOf(a.id).map(l => l.text).join('\n');
+    ok('langsames Netz: die echte Frist schneidet keine Antwort ab',
+       /4 von 4 angekommen/.test(txt), txt.slice(-400));
+
+    // Netz steht: die echte Frist beendet den Ping.
+    term.submit(a.id, 'ping 192.168.2.20');
+    klingeln(); klingeln();
+    txt = term.linesOf(a.id).map(l => l.text).join('\n');
+    ok('stehendes Netz: die echte Frist beendet den Ping',
+       !term.isBusy(a.id) && /0 von 2 angekommen/.test(txt), txt.slice(-300));
+  } finally {
+    delete sandbox.setTimeout; delete sandbox.clearTimeout;
+  }
+}
+
 /* ═══ 11a · traceroute ═════════════════════════════════════════
    Der Befehl, den Filius hat und der TTL erst zu etwas anderem
    macht als einer Notbremse gegen Schleifen. Geprüft wird an
@@ -3428,6 +3475,39 @@ section('Subnetze');
       return n;
     };
     return { engine, netz, setz };
+  }
+
+  /* ─ Doppelte Adresse: beide fallen aus dem Netz ─
+     Zwei Karten mit derselben Adresse im selben Draht tragen
+     keine Farbe; was übrig bleibt, ist weiter ein Netz. In zwei
+     getrennten Drähten ist dieselbe Adresse dagegen kein Fehler. */
+  {
+    const { netz, setz } = bauSN();
+    const sw = netz.addNode('switch', 200, 200);
+    const h = [0, 1, 2, 3].map(i => netz.addNode('host', 100 + i * 100, 100));
+    setz(h[0], 0, '192.168.1.10'); setz(h[1], 0, '192.168.1.10');
+    setz(h[2], 0, '192.168.1.20'); setz(h[3], 0, '192.168.1.30');
+    const k = h.map((n, i) => netz.addCable(n.id, 0, sw.id, i).cable);
+    const sn = SN.berechnen(netz);
+    ok('doppelte Adresse: gemeldet', sn.doppelt.length === 1 && sn.doppelt[0].ip === '192.168.1.10'
+       && sn.doppelt[0].nodes.length === 2, JSON.stringify(sn.doppelt.map(d => d.ip)));
+    ok('doppelte Adresse: beide ohne Farbe',
+       !sn.vonNode.has(h[0].id) && !sn.vonNode.has(h[1].id));
+    ok('doppelte Adresse: ihre Kabel bleiben grau',
+       !sn.vonKabel.has(k[0].id) && !sn.vonKabel.has(k[1].id));
+    ok('doppelte Adresse: der Rest bleibt ein Netz',
+       sn.liste.length === 1 && sn.liste[0].nodes.length === 2 && sn.vonKabel.has(k[2].id));
+
+    const { netz: n2, setz: s2 } = bauSN();
+    const sa = n2.addNode('switch', 200, 200), sb2 = n2.addNode('switch', 600, 200);
+    const g = [0, 1, 2, 3].map(i => n2.addNode('host', 100 + i * 100, 100));
+    s2(g[0], 0, '192.168.1.10'); s2(g[1], 0, '192.168.1.20');
+    s2(g[2], 0, '192.168.1.10'); s2(g[3], 0, '192.168.1.20');
+    n2.addCable(g[0].id, 0, sa.id, 0); n2.addCable(g[1].id, 0, sa.id, 1);
+    n2.addCable(g[2].id, 0, sb2.id, 0); n2.addCable(g[3].id, 0, sb2.id, 1);
+    const sn2 = SN.berechnen(n2);
+    ok('gleiche Adresse in getrennten Drähten: kein Fehler, zwei Netze',
+       sn2.doppelt.length === 0 && sn2.liste.length === 2);
   }
 
   /* ─ 1 · Zwei Rechner an einem Switch ─ */

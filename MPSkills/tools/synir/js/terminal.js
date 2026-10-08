@@ -28,20 +28,29 @@
   const PING_TAKT = 200 * U.MS;
 
   /* ⚠️ Die Frist des Netzes zählt in SIMULIERTER Zeit (3 s, bei
-     einem Ziel hinter der Wolke das Zehnfache). Bei Tempo 0,1
-     wartet ein Kind damit eine halbe Minute auf EINE Zeile, und
-     steht das Netz still, wartet es ewig. Deshalb gibt es zusätzlich
-     eine Frist in ECHTER Zeit: ist nach ECHT_FRIST (6 s) nichts
-     angekommen, gilt die Anfrage als verloren. Zwei verlorene
-     Anfragen hintereinander beenden den Befehl — vier weitere
-     wären nur eine Wiederholung der Antwort. Abbrechen geht
-     außerdem jederzeit (Esc oder Knopf, siehe abort). */
+     einem Ziel hinter der Wolke das Zehnfache). Steht das Netz
+     still (Pause, Tempo 0, Tab im Hintergrund), käme sie nie —
+     deshalb gibt es zusätzlich eine Wache in ECHTER Zeit: ist nach
+     ECHT_FRIST (6 s) nichts angekommen UND hat sich die Uhr des
+     Netzes in dieser Zeit nicht bewegt, gilt die Anfrage als
+     verloren.
+
+     Läuft die Uhr dagegen, entscheidet allein die Frist des Netzes.
+     Vorher endete die Anfrage nach 6 echten Sekunden auch dann —
+     und bei Tempo 0,1 sind das 0,6 s im Netz. Ein Weg über drei
+     Kabel braucht hin und zurück 600,5 ms: der Ping kam an, das
+     Terminal meldete „Zeitüberschreitung". Eine falsche Antwort ist
+     im Unterricht teurer als eine lange; wer nicht warten will,
+     bricht ab (Esc oder Knopf, siehe abort).
+
+     Zwei verlorene Anfragen hintereinander beenden den Befehl —
+     gleich, welche Frist sie beendet hat; vier weitere wären nur
+     eine Wiederholung der Antwort. */
   const ECHT_FRIST = 6000;
   const ECHT_STILL = 2;
   /* Der Kerntest läuft ohne Browser und ohne Uhr in echter Zeit
      (kein setTimeout) — dort gilt allein die simulierte Frist. */
-  const echtFrist = (fn) => typeof setTimeout === 'function' ? setTimeout(fn, ECHT_FRIST) : 0;
-  const echtEnde  = (t) => { if (t && typeof clearTimeout === 'function') clearTimeout(t); };
+  const echtEnde  = (w) => { if (w && w.t && typeof clearTimeout === 'function') clearTimeout(w.t); };
 
   /* `opts.onDirty` meldet, dass sich am Stand etwas geändert hat
      — seit es Dateibefehle gibt, kann das Terminal das nämlich.
@@ -103,7 +112,21 @@
     }
     const isBusy = (nodeId) => { const s = sessions.get(nodeId); return !!(s && s.busy); };
 
-    /* Ein Ping mit Frist in echter Zeit (siehe ECHT_FRIST). */
+    /* Die Wache in echter Zeit (siehe ECHT_FRIST): schlägt nur an,
+       wenn die Uhr des Netzes seit dem letzten Blick stand. Sonst
+       schaut sie nach ECHT_FRIST wieder nach. */
+    function echtFrist(fn) {
+      if (typeof setTimeout !== 'function') return null;
+      const w = { t: 0, stand: engine.now };
+      const schauen = () => {
+        if (engine.now !== w.stand) { w.stand = engine.now; w.t = setTimeout(schauen, ECHT_FRIST); return; }
+        fn();
+      };
+      w.t = setTimeout(schauen, ECHT_FRIST);
+      return w;
+    }
+
+    /* Ein Ping mit Wache in echter Zeit (siehe ECHT_FRIST). */
     function anfrage(node, run, target, seq, ttl, cb) {
       let fertig = false;
       const timer = echtFrist(() => {
@@ -117,7 +140,7 @@
         if (fertig) return;
         fertig = true; echtEnde(timer);
         if (run.stop) return;
-        run.still = 0;
+        run.still = r.frist ? run.still + 1 : 0;
         cb(r);
       }, ttl);
     }
@@ -424,7 +447,7 @@
           endRun(node.id);
           write(node.id, '', '');
           if (gesendet < N)
-            write(node.id, 'Nach ' + gesendet + ' Anfragen ohne Antwort beendet (Zeitlimit).', 'dim');
+            write(node.id, 'Zwei Anfragen in Folge ohne Antwort — beendet nach ' + gesendet + ' von ' + N + '.', 'dim');
           write(node.id, 'Ergebnis: ' + ok + ' von ' + gesendet + ' angekommen'
             + (ok ? ', im Schnitt ' + U.fmtTime(Math.round(sum / ok)) : ''),
             ok === gesendet ? 'ok' : ok ? 'warn' : 'fail');

@@ -179,6 +179,39 @@
       }
     }
 
+    /* ─ 2b · Doppelte Adressen fallen heraus ─────────────────
+       Zwei Karten mit DERSELBEN Adresse im selben Netz gehören zu
+       keinem Netz — beide nicht, denn welche von beiden „die
+       richtige" ist, kann niemand sagen, auch die anderen Geräte
+       nicht: auf eine ARP-Frage antworten beide, und wer zuletzt
+       antwortet, bekommt die Pakete. Genau das sieht im Terminal
+       aus wie „1 von 4 angekommen", und ohne Farbe hätte man die
+       Ursache nur im Mitschnitt gefunden.
+
+       Auf der Fläche heißt das: beide Geräte verlieren an dieser
+       Karte ihren Ring, ihre Kabel bleiben grau. Hinter
+       verschiedenen Heimroutern oder in getrennten Drähten ist
+       dieselbe Adresse dagegen kein Fehler — dort liegen sie gar
+       nicht in einer Gruppe. */
+    const doppelt = [];
+    for (const g of roh.values()) {
+      const proIp = new Map();
+      for (const x of g.nics) {
+        const l = proIp.get(x.nic.ip) || [];
+        l.push(x);
+        proIp.set(x.nic.ip, l);
+      }
+      const raus = new Set();
+      for (const [ip, l] of proIp) {
+        if (l.length < 2) continue;
+        doppelt.push({ ip: ip, nics: l, nodes: [...new Set(l.map(x => x.node))] });
+        for (const x of l) raus.add(x);
+      }
+      if (!raus.size) continue;
+      g.nics = g.nics.filter(x => !raus.has(x));
+      g.nodes = [...new Set(g.nics.map(x => x.node))];
+    }
+
     /* Ein Gerät allein ist kein Netz. Zwei Netzwerkkarten
        DESSELBEN Geräts im selben Draht übrigens auch nicht — das
        ist ein Kabel im Kreis und keine Verbindung zu jemandem. */
@@ -273,7 +306,7 @@
        sieht man nur, dass die Kabel dazwischen grau bleiben. */
     const gemischt = [...imDraht.values()].filter(l => l.length > 1);
 
-    return { liste, vonNic, vonNode, vonKabel, gemischt, SLOTS };
+    return { liste, vonNic, vonNode, vonKabel, gemischt, doppelt, SLOTS };
   }
 
   /* ═══ Wie schreibt man einen Adressraum auf? ══════════════════
@@ -375,13 +408,22 @@
     }
 
     function html(sn) {
+      /* Die doppelte Adresse zuerst: sie erklärt, warum zwei
+         Geräte auf der Fläche plötzlich ohne Farbe dastehen. */
+      const dopp = (sn.doppelt || []).map(d =>
+        '<div class="sn-warn"><b>Doppelte Adresse ' + esc(d.ip) + '</b>: '
+        + d.nodes.map(n => esc(netz.kurzName(n))).join(' und ')
+        + '. Auf eine ARP-Frage antworten beide, die Pakete landen mal hier, mal dort. '
+        + 'Deshalb gehören beide zu keinem Netz und tragen keine Farbe — '
+        + 'gib einem von ihnen eine andere Adresse.</div>').join('');
+
       if (!sn.liste.length) {
-        return '<div class="sn-leer">Noch kein Subnetz.<br><br>'
+        return dopp + '<div class="sn-leer">Noch kein Subnetz.<br><br>'
           + 'Ein Netz entsteht, wenn sich <b>zwei</b> Geräte über Kabel erreichen '
           + 'und denselben Netzanteil haben. Ein Gerät allein bekommt keine Farbe.</div>';
       }
 
-      let h = '';
+      let h = dopp;
       for (const s of sn.liste) {
         const b = bereich(s);
         const sel = opts.selected && opts.selected() &&
