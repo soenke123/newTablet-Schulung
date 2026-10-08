@@ -1,6 +1,6 @@
 # Scrum Werkstatt — offene Punkte
 
-Stand: 2026-10-07. Bezug: `index.html` (früher `scrum-werkstatt.html`). Seit Migration 0196
+Stand: 2026-10-08. Bezug: `index.html` (früher `scrum-werkstatt.html`). Seit Migration 0196
 läuft die Werkstatt im MPSkills-Raum (ein Raum = ein Team); allein geöffnet speichert sie
 weiter im localStorage. Zeilennummern wurden entfernt (stammten vom Prototyp).
 
@@ -103,11 +103,19 @@ Tasks gibt es (`s.tasks: [{text, done}]`), aber ohne Zuständigkeit.
 - [ ] Heutiger Fortschrittsbalken ist rein kalendarisch — daneben stellen
 - [ ] Im Archiv den Verlauf des abgeschlossenen Sprints mitspeichern
 
-## 3 · Retro-Kreis schließen
+## 3 · Retro-Kreis schließen ✅ (08.10.2026, ohne Migration)
 
-- [ ] „🎯 Nehmen wir uns vor" (`#rvNext`) in der **nächsten** Sprint-Planung wieder einblenden
-- [ ] Abfrage: hat's geklappt? (ja / teilweise / nein) — Antwort ans Archiv hängen
-- [ ] Offene Retro-Maßnahme ggf. in den neuen Sprint übernehmen
+- [x] Vorsatz (`#rvNext`) steht in der nächsten Planung vorbelegt (`#plFocus`), mit Vorsatz und
+      Rückmeldung des letzten Sprints darüber; gespeichert als `sprint.focus`, auf dem Board neben dem Sprint-Ziel
+- [x] Review fragt zuerst: Vorsatz geschafft / teilweise / nicht (`review.focusDone`) — im Archiv und in der Historie
+- [x] „Lief schlecht" mit einem Klick als Vorsatz übernehmen
+- [x] Rückmeldung → „+ Story" direkt ins Product Backlog (`fromSprint`, `reviewNew`; Abzeichen
+      „neu aus Review", fällt weg, sobald der PO sie bearbeitet oder einsortiert). Anlegen darf hier
+      jedes Mitglied — bewusste Ausnahme von „nur der PO ändert das Backlog"
+- [x] Unfertiges zählt mit (`s.carried`, „2× übertragen" in Review, Planung, Backlog)
+- [x] „→ nächster Sprint" steht an der Story (`s.nextSprint`) statt nur im Dialog — hält über Neuladen und Geräte
+- [x] „Später" verwirft nichts mehr: Entwurf am Sprint (`sprint.reviewDraft`, beim Tippen verzögert gespeichert)
+- [x] Planungshinweis: „Letztes Mal geplant X SP, fertig Y SP" vor dem Durchschnitt
 
 ---
 

@@ -150,7 +150,7 @@
 
       // Im Schaufenster ohne Raum: das Beispielprojekt, und nichts
       // bleibt hängen (?demo=1, siehe bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261007';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261008';
       root.innerHTML =
         '<div class="sw-host">' +
           '<iframe class="sw-frame" src="tools/ScrumWerkstatt/index.html' + q + '" ' +

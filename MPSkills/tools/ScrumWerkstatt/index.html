@@ -636,6 +636,22 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 .rt.n{border-top:3px solid var(--petrol)}
 .rt .h{font-size:11px;font-weight:700;margin-bottom:7px;display:flex;align-items:center;gap:6px}
 .rt textarea{min-height:92px;resize:vertical;font-size:12.5px}
+.rt .mv{margin-top:6px;background:none;border:0;padding:0;font-size:11px;font-weight:600;color:var(--petrol)}
+.rt .mv:hover{text-decoration:underline}
+/* Vorsatz aus der Retro: Planung, Board, Review */
+.focusbox{background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:11px 13px;margin-bottom:14px}
+.focusbox .fl{color:var(--petrol)}
+.focusbox .prev{font-size:12px;color:var(--ink-2);line-height:1.5;margin:0 0 8px}
+.focusbox .prev b{color:var(--ink)}
+.goalbar .focus{border-left:1px solid var(--line);padding-left:14px}
+.goalbar .focus .v{font-size:14px;color:var(--petrol)}
+.fcheck{display:flex;align-items:center;gap:11px;flex-wrap:wrap;background:var(--paper-up);border:1px solid var(--line);border-left:4px solid var(--petrol);border-radius:var(--r-sm);padding:10px 12px;margin-bottom:17px}
+.fcheck .t{flex:1;min-width:160px;font-family:var(--serif);font-style:italic;font-size:14px}
+.rvadd{display:flex;gap:7px;margin:-4px 0 8px}
+.rvadd input{flex:1}
+.rvnew{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}
+.carried{display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:var(--r-sm);background:#fdecd8;color:#a2560c;white-space:nowrap;flex:none}
+.tag.fresh{background:#fdecd8;color:#a2560c;font-weight:700}
 
 /* standup */
 .clock{
@@ -768,6 +784,7 @@ body.inroom::after{display:none}
   .imgs{grid-template-columns:1fr 1fr}
   .brand-name{max-width:60vw}
   .goalbar .meta{width:100%}
+  .goalbar .focus{border-left:0;padding-left:0}
 
   /* ── Handy-Ansicht ──
      Kopf nicht mehr klebend (er wäre mit Sprint-Leiste halb so hoch
@@ -940,6 +957,10 @@ body.inroom::after{display:none}
         <div>
           <div class="k">Sprint-Ziel</div>
           <div class="v" id="liveGoal">—</div>
+        </div>
+        <div class="focus" id="liveFocusWrap" hidden>
+          <div class="k">🎯 Vorsatz aus der Retro</div>
+          <div class="v" id="liveFocus"></div>
         </div>
         <div class="meta" id="liveStats"></div>
       </div>
@@ -1313,6 +1334,12 @@ body.inroom::after{display:none}
         </div>
       </div>
 
+      <div class="focusbox">
+        <p class="prev" id="plPrev" hidden></p>
+        <label class="fl" for="plFocus">🎯 Vorsatz aus der Retro – darauf achten wir in diesem Sprint</label>
+        <input type="text" id="plFocus" maxlength="300" placeholder="Eine konkrete Sache, z. B. „Quellen direkt beim Lesen notieren“">
+      </div>
+
       <div style="display:flex;align-items:center;gap:11px;margin-bottom:11px;flex-wrap:wrap">
         <h4 style="font-size:15px">Sprint Backlog füllen</h4>
         <span style="font-size:12px;color:var(--ink-3)">Antippen verschiebt die Story.</span>
@@ -1368,6 +1395,18 @@ body.inroom::after{display:none}
       </button>
     </div>
     <div class="m-b">
+      <div id="rvFocusWrap" hidden>
+        <div class="eyebrow">Vorsatz aus der letzten Retro</div>
+        <div class="fcheck">
+          <span class="t" id="rvFocus"></span>
+          <div class="seg" id="rvFocusSeg">
+            <button data-v="yes" aria-pressed="false">Geschafft</button>
+            <button data-v="part" aria-pressed="false">Teilweise</button>
+            <button data-v="no" aria-pressed="false">Nicht geschafft</button>
+          </div>
+        </div>
+      </div>
+
       <div class="eyebrow">1 · Bilanz</div>
       <h4 style="font-size:16px;margin:3px 0 11px">Was ist wirklich fertig geworden?</h4>
       <div class="balance" id="rvBalance"></div>
@@ -1382,16 +1421,22 @@ body.inroom::after{display:none}
       <div class="eyebrow" style="margin-top:19px">3 · Review</div>
       <h4 style="font-size:16px;margin:3px 0 11px">Feedback von außen</h4>
       <div class="grid2">
-        <div class="field"><label class="fl" for="rvShown">Das haben wir gezeigt</label><textarea id="rvShown" rows="3" placeholder="Prototyp, Kapitel, Diagramme …"></textarea></div>
-        <div class="field"><label class="fl" for="rvFeed">Rückmeldung (Lehrkraft, Kurs)</label><textarea id="rvFeed" rows="3" placeholder="Was kam gut an? Was fehlt noch?"></textarea></div>
+        <div class="field"><label class="fl" for="rvShown">Das haben wir gezeigt</label><textarea id="rvShown" rows="3" maxlength="2000" placeholder="Prototyp, Kapitel, Diagramme …"></textarea></div>
+        <div class="field"><label class="fl" for="rvFeed">Rückmeldung (Lehrkraft, Kurs)</label><textarea id="rvFeed" rows="3" maxlength="2000" placeholder="Was kam gut an? Was fehlt noch?"></textarea></div>
       </div>
+      <label class="fl" for="rvStoryT">Fehlt noch etwas? Direkt als Story ins Product Backlog</label>
+      <div class="rvadd">
+        <input type="text" id="rvStoryT" maxlength="160" placeholder="z. B. Fehlerrechnung ergänzen">
+        <button class="btn sm" id="rvStoryAdd">+ Story</button>
+      </div>
+      <div class="rvnew" id="rvStories"></div>
 
       <div class="eyebrow" style="margin-top:7px">4 · Retrospektive</div>
       <h4 style="font-size:16px;margin:3px 0 11px">Wie war die Zusammenarbeit?</h4>
       <div class="retro">
-        <div class="rt g"><div class="h">👍 Lief gut</div><textarea id="rvGood" placeholder="Das behalten wir bei …"></textarea></div>
-        <div class="rt b"><div class="h">👎 Lief schlecht</div><textarea id="rvBad" placeholder="Das hat gebremst …"></textarea></div>
-        <div class="rt n"><div class="h">🎯 Nehmen wir uns vor</div><textarea id="rvNext" placeholder="Eine konkrete Sache …"></textarea></div>
+        <div class="rt g"><div class="h">👍 Lief gut</div><textarea id="rvGood" maxlength="2000" placeholder="Das behalten wir bei …"></textarea></div>
+        <div class="rt b"><div class="h">👎 Lief schlecht</div><textarea id="rvBad" maxlength="2000" placeholder="Das hat gebremst …"></textarea><button type="button" class="mv" id="rvBadToNext">↳ als Vorsatz übernehmen</button></div>
+        <div class="rt n"><div class="h">🎯 Nehmen wir uns vor</div><textarea id="rvNext" maxlength="300" placeholder="Eine konkrete Sache …"></textarea><div style="font-size:11px;color:var(--ink-3);margin-top:5px">Steht im nächsten Sprint auf dem Board.</div></div>
       </div>
     </div>
     <div class="m-f">
@@ -1649,7 +1694,7 @@ function seed(){
     ]
   };
   const s2={ id:'s2', no:2, name:'Sprint 2', goal:'Messreihe ausgewertet und Kapitel 3 im Rohtext fertig.',
-    start:iso(shift(-4)), end:iso(shift(10)), status:'active', review:null, snapshot:null };
+    start:iso(shift(-4)), end:iso(shift(10)), status:'active', focus:'Quellen direkt beim Lesen notieren.', review:null, snapshot:null };
 
   const st=(n,o)=>Object.assign({
     id:'u'+n, key:'US-'+pad(n), asA:'', want:'', soThat:'', points:2, category:'Entwickeln', color:'yellow',
@@ -1671,7 +1716,7 @@ function seed(){
     st(6,{ title:'Diagramm Spannung–Winkel erstellen', asA:'Leserin', want:'den Zusammenhang auf einen Blick erkennen', soThat:'ich die Auswertung ohne Rechnen verstehe',
       points:3, category:'Design', color:'pink', assignee:'m4', sprint:'s2', status:'doing' }),
     st(7,{ title:'Lötkolben für Sensorplatine beschaffen', asA:'Entwickler', want:'die Platine fertig löten', soThat:'der Prototyp funktioniert',
-      points:3, category:'Entwickeln', assignee:'m3', sprint:'s2', status:'doing', blocked:true,
+      points:3, category:'Entwickeln', assignee:'m3', sprint:'s2', status:'doing', blocked:true, carried:1,
       note:'Lötkolben im Physikraum defekt. Sophie fragt Herrn K. nach Ersatz.' }),
     st(8,{ title:'Kapitel 3 „Auswertung" im Rohtext schreiben', asA:'Leser', want:'die Ergebnisse erklärt bekommen', soThat:'die Messwerte eine Bedeutung haben',
       points:5, category:'Entwickeln', assignee:'m1', sprint:'s2', status:'todo' }),
@@ -2005,6 +2050,8 @@ function renderBoard(){
   if(!a) return;
 
   $('#liveGoal').textContent=a.goal || 'Noch kein Sprint-Ziel formuliert.';
+  $('#liveFocusWrap').hidden=!a.focus;
+  $('#liveFocus').textContent=a.focus||'';
   const ss=sprintStories(a.id);
   const dp=sum(ss.filter(s=>s.status==='done'),s=>s.points), tp=sum(ss,s=>s.points);
   const bl=ss.filter(s=>s.blocked).length;
@@ -2366,6 +2413,8 @@ function renderBacklog(){
       <td><span class="b-key">${esc(s.key)}</span></td>
       <td>
         <span class="b-title">${esc(s.title)}</span>
+        ${s.reviewNew?`<span class="tag fresh" title="Aus der Rückmeldung im Review von ${esc(sprint(s.fromSprint)?.name||'einem Sprint')} – bitte einsortieren">neu aus Review</span>`:''}
+        ${s.carried&&s.status!=='done'?`<span class="carried">${s.carried}× übertragen</span>`:''}
         ${storyText(s)?`<div class="b-sub">${esc(storyText(s))}</div>`:''}
       </td>
       <td>${s.category?`<span class="tag">${esc(s.category)}</span>`:''}</td>
@@ -2390,6 +2439,7 @@ function reorderPrio(id,targetId,after){
   const open=sorted().filter(s=>s.status!=='done');
   const from=open.findIndex(s=>s.id===id); if(from<0) return;
   const [it]=open.splice(from,1);
+  delete it.reviewNew;
   let to=open.findIndex(s=>s.id===targetId);
   if(to<0) return;
   open.splice(to+(after?1:0),0,it);
@@ -2611,6 +2661,7 @@ function renderHistory(){
       <div class="tile-foot">
         <span class="badge bg-todo nodot">${snap.length} Stories</span>
         <span class="badge bg-done nodot">${dp}/${tp} SP</span>
+        ${s.focus&&s.review?.focusDone?`<span class="badge ${s.review.focusDone==='yes'?'bg-done':s.review.focusDone==='part'?'bg-check':'bg-block'} nodot" title="${esc(s.focus)}">Vorsatz ${FOCUS_TXT[s.review.focusDone]}</span>`:''}
         ${s.review?.next?`<span class="badge bg-check nodot" title="${esc(s.review.next)}">Retro ✓</span>`:''}
         <span style="margin-left:auto;color:var(--petrol);font-weight:700">Archiv →</span>
       </div></button>`);
@@ -2839,6 +2890,7 @@ function saveEdit(){
   if(!$('#edTasksCol').hidden) vals.tasks=edTasks.map(x=>({text:x.text.trim(),done:x.done})).filter(x=>x.text);
   if(editingStory){ vals.assignee=$('#edA').value||null; vals.sprint=$('#edSp').value||null; }
   if(editingStory){
+    if(canEditPO()) delete story(editingStory).reviewNew;
     Object.assign(story(editingStory),vals);
     toast('Story aktualisiert');
   } else {
@@ -2869,7 +2921,16 @@ function openPlan(){
   $('#plStart').value=iso(today());
   $('#plEnd').value=iso(shift(14));
   $('#plGoal').value='';
-  planPick=new Set();
+  // Die Retro wirkt weiter: Vorsatz, Rückmeldung und Bilanz des letzten Sprints
+  const last=lastClosed(), r=last?.review||{};
+  $('#plFocus').value=r.next||'';
+  const prev=[];
+  if(last && last.focus) prev.push(`Vorsatz in ${esc(last.name)}: <b>${esc(last.focus)}</b> – ${FOCUS_TXT[r.focusDone]||'nicht bewertet'}.`);
+  if(r.feedback) prev.push(`Rückmeldung im Review: <b>${esc(r.feedback)}</b>`);
+  $('#plPrev').innerHTML=prev.join('<br>');
+  $('#plPrev').hidden=!prev.length;
+  // „→ nächster Sprint“ aus dem Review steht an der Story selbst
+  planPick=new Set(S.stories.filter(s=>s.nextSprint && !s.sprint && s.status!=='done').map(s=>s.id));
   renderPlan();
   show('mPlan');
 }
@@ -2880,6 +2941,7 @@ function renderPlan(){
   const right=pool.filter(s=> planPick.has(s.id));
   const row=(s,dir)=>`<button class="xrow" data-pick="${s.id}">
       <span class="k">${esc(s.key)}</span><span class="t">${esc(s.title)}</span>
+      ${s.carried?`<span class="carried" title="So oft schon nicht fertig geworden – teilen oder neu schätzen?">${s.carried}× übertragen</span>`:''}
       <span class="p">${s.points}</span>
       <span style="color:var(--ink-3);font-weight:700">${dir}</span></button>`;
 
@@ -2899,7 +2961,9 @@ function renderPlan(){
     hint='Erster Sprint: Schätzt lieber zu wenig ein. Nach dem Review wisst ihr, was realistisch war.';
   } else {
     const v=closed.slice(-3), avg=Math.round(sum(v,s=>s.donePoints)/v.length);
-    hint=`Bisher habt ihr durchschnittlich <b>${avg} SP</b> pro Sprint wirklich fertig bekommen. `
+    const l=closed[closed.length-1];
+    hint=`Letztes Mal geplant: <b>${l.plannedPoints??0} SP</b>, fertig: <b>${l.donePoints??0} SP</b>. `
+       + (v.length>1?`Im Schnitt habt ihr <b>${avg} SP</b> pro Sprint wirklich fertig bekommen. `:'')
        + (sp>avg*1.25 ? '<span style="color:var(--st-block)">Das hier ist deutlich mehr – lieber etwas zurücklegen.</span>'
        :  sp<avg*0.6 && sp>0 ? '<span style="color:var(--st-check)">Da ist noch Luft.</span>'
        :  sp===0 ? '' : '<span style="color:var(--st-done)">Das passt gut.</span>');
@@ -2916,11 +2980,12 @@ function startSprint(){
 
   const id=SW.on?newId('s'):'s'+(S.seq.sprint+1);
   S.seq.sprint++;
-  const sp={ id, no:S.seq.sprint, name, goal:$('#plGoal').value.trim(),
+  const sp={ id, no:S.seq.sprint, name, goal:$('#plGoal').value.trim(), focus:$('#plFocus').value.trim(),
              start, end, status:'active', review:null, snapshot:null };
   S.sprints.push(sp);
   S.active=id;
   planPick.forEach(sid=>{ const s=story(sid); if(s){ s.sprint=id; s.status='todo'; } });
+  S.stories.forEach(s=>{ if(s.nextSprint) delete s.nextSprint; });
   planPick=new Set();
   hide('mPlan');
   go('sprint');
@@ -2931,13 +2996,27 @@ function startSprint(){
 /* ════════════════════════════════════════════════════════════
    SPRINT REVIEW
    ════════════════════════════════════════════════════════════ */
+const lastClosed = () => S.sprints.filter(s=>s.status==='closed').sort((a,b)=>b.no-a.no)[0] || null;
+const FOCUS_TXT = { yes:'geschafft', part:'teilweise geschafft', no:'nicht geschafft' };
+const RV_FIELDS = { rvShown:'shown', rvFeed:'feedback', rvGood:'good', rvBad:'bad', rvNext:'next' };
+let rvFocus = null;        // 'yes' | 'part' | 'no' – Vorsatz umgesetzt?
+let rvDraftT = null;
+
 function openReview(){
   const a=active(); if(!a){ openPlan(); return; }
   const ss=sprintStories(a.id);
   const done=ss.filter(s=>s.status==='done'), open=ss.filter(s=>s.status!=='done');
   const tp=sum(ss,s=>s.points), dp=sum(done,s=>s.points);
+  // Was beim letzten „Später“ stehen blieb, liegt als Entwurf am Sprint –
+  // im Raum also auch auf den anderen Tablets.
+  const d=a.reviewDraft||{};
 
   $('#rvTitle').textContent=`${a.name} · Review & Retro`;
+  $('#rvFocusWrap').hidden=!a.focus;
+  $('#rvFocus').textContent=a.focus||'';
+  rvFocus=d.focusDone||null;
+  $$('#rvFocusSeg button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===rvFocus)));
+
   $('#rvBalance').innerHTML=`
     <div class="bal good"><b>${done.length}</b><span>von ${ss.length} Stories fertig</span></div>
     <div class="bal good"><b>${dp}</b><span>von ${tp} Story Points</span></div>
@@ -2945,27 +3024,69 @@ function openReview(){
     <div class="bal"><b>${tp?Math.round(dp/tp*100):0}%</b><span>Sprint-Ziel erreicht</span></div>`;
 
   carryPlan={};
-  open.forEach(s=>carryPlan[s.id]='backlog');
+  open.forEach(s=>carryPlan[s.id]=(d.carry&&d.carry[s.id])||'backlog');
   $('#rvCarryWrap').hidden=!open.length;
   $('#rvCarry').innerHTML=open.map(s=>`
     <div class="crow">
       <span class="b-key">${esc(s.key)}</span>
       <span class="t">${esc(s.title)}</span>
+      ${s.carried?`<span class="carried">schon ${s.carried}× übertragen</span>`:''}
       <span class="badge ${s.blocked?'bg-block':STC[s.status]}">${s.blocked?'Blockiert':STL[s.status]}</span>
       <div class="seg" data-carry="${s.id}">
-        <button data-v="backlog" aria-pressed="true">→ Backlog</button>
-        <button data-v="next" aria-pressed="false">→ nächster Sprint</button>
+        <button data-v="backlog" aria-pressed="${carryPlan[s.id]==='backlog'}">→ Backlog</button>
+        <button data-v="next" aria-pressed="${carryPlan[s.id]==='next'}">→ nächster Sprint</button>
       </div>
     </div>`).join('');
 
-  ['rvShown','rvFeed','rvGood','rvBad','rvNext'].forEach(k=>$('#'+k).value='');
+  Object.entries(RV_FIELDS).forEach(([k,f])=>$('#'+k).value=d[f]||'');
+  $('#rvStoryT').value='';
+  renderReviewStories();
   show('mReview');
+}
+
+/* Stories, die in diesem Review aus der Rückmeldung entstanden sind */
+function renderReviewStories(){
+  const a=active(); if(!a) return;
+  const ns=S.stories.filter(s=>s.fromSprint===a.id);
+  $('#rvStories').innerHTML=ns.map(s=>`<span class="tag fresh">+ ${esc(s.title)}</span>`).join('');
+}
+function addReviewStory(){
+  const a=active(); if(!a) return;
+  const title=$('#rvStoryT').value.trim();
+  if(!title){ $('#rvStoryT').focus(); return; }
+  const n=++S.seq.story;
+  const maxOrder=S.stories.length?Math.max(...S.stories.map(s=>+s.order||0)):0;
+  S.stories.push({
+    id:SW.on?newId('u'):'u'+n, key:SW.on?'US-…':'US-'+pad(n), title, text:'', asA:'', want:'', soThat:'',
+    points:2, category:cats()[0]||'', color:'yellow', status:'todo', blocked:false, note:'', order:maxOrder+1,
+    assignee:null, sprint:null, tasks:[], fromSprint:a.id, reviewNew:true
+  });
+  $('#rvStoryT').value='';
+  renderAll();
+  renderReviewStories();
+  toast('Story liegt im Product Backlog – der Product Owner sortiert sie ein');
+}
+
+function reviewDraft(){
+  const d={ focusDone:rvFocus, carry:Object.assign({},carryPlan) };
+  Object.entries(RV_FIELDS).forEach(([k,f])=>d[f]=$('#'+k).value.trim());
+  return d;
+}
+/* Entwurf am Sprint ablegen (beim Tippen verzögert, beim Schließen sofort) */
+function saveReviewDraft(){
+  clearTimeout(rvDraftT);
+  const a=active(); if(!a || (SW.on && SW.ro)) return;
+  const d=reviewDraft();
+  if(JSON.stringify(d)===JSON.stringify(a.reviewDraft||null)) return;
+  a.reviewDraft=d;
+  save();
 }
 
 function finishSprint(){
   const a=active(); if(!a) return;
   const ss=sprintStories(a.id);
   const done=ss.filter(s=>s.status==='done');
+  clearTimeout(rvDraftT);
 
   a.snapshot=ss.map(s=>({
     key:s.key, title:s.title, points:s.points, category:s.category,
@@ -2975,15 +3096,15 @@ function finishSprint(){
   a.donePoints=sum(done,s=>s.points);
   a.status='closed';
   a.closedAt=iso(today());
-  a.review={
-    shown:$('#rvShown').value.trim(), feedback:$('#rvFeed').value.trim(),
-    good:$('#rvGood').value.trim(),  bad:$('#rvBad').value.trim(), next:$('#rvNext').value.trim()
-  };
+  const d=reviewDraft();
+  a.review={ shown:d.shown, feedback:d.feedback, good:d.good, bad:d.bad, next:d.next,
+             focusDone:a.focus?d.focusDone:null };
+  delete a.reviewDraft;
 
-  const carry=[];
   ss.filter(s=>s.status!=='done').forEach(s=>{
     s.sprint=null; s.status='todo';
-    if(carryPlan[s.id]==='next') carry.push(s.id);
+    s.carried=(s.carried||0)+1;
+    if(carryPlan[s.id]==='next') s.nextSprint=true; else delete s.nextSprint;
   });
 
   S.active=null;
@@ -2992,8 +3113,6 @@ function finishSprint(){
   toast(`${a.name} archiviert · ${a.donePoints} SP geschafft`);
 
   openPlan();
-  carry.forEach(id=>planPick.add(id));
-  renderPlan();
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -3021,6 +3140,9 @@ function openArchive(id){
 
     <div class="box calm"><div class="bt">Sprint-Ziel</div>
       <div class="quote" style="border-color:var(--petrol)">${esc(s.goal||'—')}</div></div>
+    ${s.focus?`<div class="box calm"><div class="bt">🎯 Vorsatz aus der Retro</div>
+      <div class="quote" style="border-color:var(--petrol)">${esc(s.focus)}</div>
+      <div style="font-size:12px;color:var(--ink-3);margin-top:6px">Im Review: <b>${FOCUS_TXT[r.focusDone]||'nicht bewertet'}</b></div></div>`:''}
 
     <div class="balance">
       <div class="bal good"><b>${snap.filter(x=>x.status==='done').length}</b><span>von ${snap.length} Stories fertig</span></div>
@@ -3143,6 +3265,7 @@ function wire(){
   /* modals schließen */
   const closeM=id=>{
     if(id==='mChoose') return;
+    if(id==='mReview') saveReviewDraft();
     hide(id);
     if(id==='mEdit' && planReturn){ planReturn=false; renderPlan(); show('mPlan'); }
   };
@@ -3356,7 +3479,23 @@ function wire(){
     const seg=b.closest('[data-carry]');
     carryPlan[seg.dataset.carry]=b.dataset.v;
     Array.from(seg.children).forEach(c=>c.setAttribute('aria-pressed',String(c===b)));
+    saveReviewDraft();
   });
+  $('#rvFocusSeg').addEventListener('click',e=>{
+    const b=e.target.closest('[data-v]'); if(!b || b.disabled) return;
+    rvFocus=b.dataset.v;
+    $$('#rvFocusSeg button').forEach(c=>c.setAttribute('aria-pressed',String(c===b)));
+    saveReviewDraft();
+  });
+  Object.keys(RV_FIELDS).forEach(k=>$('#'+k).addEventListener('input',()=>{
+    clearTimeout(rvDraftT); rvDraftT=setTimeout(saveReviewDraft,1200);
+  }));
+  $('#rvBadToNext').onclick=()=>{
+    const v=$('#rvBad').value.trim(); if(!v || $('#rvNext').disabled) return;
+    $('#rvNext').value=v.slice(0,300); saveReviewDraft(); $('#rvNext').focus();
+  };
+  $('#rvStoryAdd').onclick=addReviewStory;
+  $('#rvStoryT').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); addReviewStory(); } });
   $('#rvFinish').onclick=()=>{
     const a=active(); if(!a) return;
     const open=sprintStories(a.id).filter(s=>s.status!=='done').length;
