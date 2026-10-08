@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Savannen-Showroom</title>
+<link rel="stylesheet" href="../tools/KnowledgeStack/creatures.css">
+<link rel="stylesheet" href="tiere.css">
+<!--
+  Showroom der Savannentiere, Fassung 4 (Oktober 2026).
+  Löwen, Elefanten, Zebras, Gnus und Krokodile — je Papa, Mama, Kind.
+  Die Tiere sind gebaut wie die Wesen aus Knowledge Stack: tiere.js
+  beschreibt sie, gebaut werden sie mit creatures.js (KSCreatures.buildDef),
+  bewegt mit creatures.css + tiere.css. Gehen in vier Richtungen und
+  Schlafen sind die Wesen-Bewegungen; Laufen und Fressen kommen dazu.
+  „Skelett“ blendet die Knochen in den Gelenkgruppen ein.
+  Oben die Savanne (alle 15 Tiere frei), darunter die Kästen mit den
+  Knöpfen für Bewegung und Richtung.
+  Läuft ohne Netz und ohne Build: zieht nur tiere.js aus diesem Ordner.
+-->
+<style>
+  :root {
+    --bg: #f5f1e6; --card: #ece5d2; --panel: #fffdf7; --ink: #2a2418; --soft: #6f6553;
+    --line: #d9cfb6; --accent: #6d5dfc; --on: #ffffff;
+    --sky: #f3e6c4; --ground: #e2cf98; --ground2: #d6c085; --water: #8fc3d6; --water2: #6aaac2;
+    --tree: #6c7d3b; --trunk: #6b4b2e; --hill: #d9c48d; --tuft: #b9a565;
+    --rand: transparent;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #14120d; --card: #1f1b14; --panel: #191610; --ink: #f3ecdc; --soft: #b2a68c;
+      --line: #3a3326; --accent: #8b7dff;
+      --sky: #2a2417; --ground: #4a3f26; --ground2: #42381f; --water: #2f5868; --water2: #24495a;
+      --tree: #44512a; --trunk: #3d2b1b; --hill: #3c331f; --tuft: #5d5232;
+      --rand: rgba(255, 245, 220, .5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #14120d; --card: #1f1b14; --panel: #191610; --ink: #f3ecdc; --soft: #b2a68c;
+    --line: #3a3326; --accent: #8b7dff;
+    --sky: #2a2417; --ground: #4a3f26; --ground2: #42381f; --water: #2f5868; --water2: #24495a;
+    --tree: #44512a; --trunk: #3d2b1b; --hill: #3c331f; --tuft: #5d5232;
+    --rand: rgba(255, 245, 220, .5);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  header { position: sticky; top: 0; z-index: 30; background: var(--panel); border-bottom: 1px solid var(--line); padding: 10px 16px; }
+  h1 { margin: 0 0 4px; font-size: 18px; }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+  .row b { font-size: 12px; color: var(--soft); text-transform: uppercase; letter-spacing: .04em; margin-right: 4px; min-width: 76px; }
+  button { font: inherit; font-size: 14px; border: 1px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 12px; cursor: pointer; min-height: 36px; }
+  button.on { background: var(--accent); border-color: var(--accent); color: var(--on); }
+  button.dir { width: 40px; padding: 6px 0; font-size: 16px; }
+  main { padding: 16px; max-width: 1400px; margin: 0 auto; }
+
+  .stage-wrap { margin: 0 0 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
+  .stage { width: 100%; display: block; border-radius: 12px; touch-action: manipulation; cursor: crosshair; }
+  .say { font-size: 13px; color: var(--soft); min-height: 1.4em; }
+  .bg-sky { fill: var(--sky); } .bg-ground { fill: var(--ground); } .bg-ground2 { fill: var(--ground2); }
+  .bg-water { fill: var(--water); stroke: var(--water2); stroke-width: 6; } .bg-hill { fill: var(--hill); }
+  .bg-tree { fill: var(--tree); } .bg-trunk { stroke: var(--trunk); stroke-width: 7; stroke-linecap: round; fill: none; }
+  .bg-tuft { stroke: var(--tuft); stroke-width: 3; stroke-linecap: round; fill: none; }
+  .tier { filter: drop-shadow(0 0 .6px var(--rand)); }
+
+  h2 { font-size: 16px; margin: 18px 0 8px; }
+  .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 10px; text-align: center; cursor: pointer; }
+  .card.sel { outline: 3px solid var(--accent); }
+  .card:focus-visible { outline: 3px solid var(--accent); }
+  .pic { aspect-ratio: 1; display: flex; align-items: flex-end; justify-content: center; }
+  .pic svg { width: calc(var(--s) * 100%); height: auto; aspect-ratio: 1; display: block; }
+  .stage .creature-svg.sv-sel { filter: drop-shadow(0 0 2px #6d5dfc) drop-shadow(0 0 2px #6d5dfc); }
+  .name { font-weight: 700; margin-top: 4px; }
+  .meta { font-size: 12px; color: var(--soft); }
+  @media (max-width: 640px) {
+    main { padding: 12px; }
+    .grid { gap: 6px; }
+    .card { padding: 4px 4px 8px; }
+    .name { font-size: 13px; }
+    header { position: static; }
+    .row b { min-width: 0; width: 100%; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Savannen-Showroom · 5 Arten · Papa, Mama, Kind</h1>
+  <div class="row" id="rowAct"><b>Bewegung</b></div>
+  <div class="row" id="rowDir"><b>Richtung</b></div>
+  <div class="row"><b>Ansicht</b>
+    <button type="button" id="btnSkel">Skelett</button>
+    <button type="button" id="btnSlow">Zeitlupe</button>
+    <button type="button" id="btnTheme">Dunkel</button>
+  </div>
+</header>
+<main>
+  <section class="stage-wrap">
+    <svg class="stage" id="stage" viewBox="0 0 1600 800" preserveAspectRatio="xMidYMid meet" aria-label="Savanne mit allen Tieren">
+      <g id="bg"></g>
+      <g id="actors"></g>
+    </svg>
+    <div class="row"><b>Savanne</b>
+      <button type="button" id="btnTour">▶ Rundgang</button>
+      <button type="button" id="btnFree" class="on">Alle frei</button>
+      <span class="say" id="say">Ein Tier unten anklicken, dann in die Savanne tippen: es geht dorthin (weit weg: es rennt).</span>
+    </div>
+  </section>
+  <div id="cards"></div>
+</main>
+<script src="../tools/KnowledgeStack/creatures.js"></script>
+<script src="tiere.js"></script>
+<script>
+(function () {
+  'use strict';
+  const T = window.SavanneTiere;
+  const NS = 'http://www.w3.org/2000/svg';
+  const SP = Math.sin(0.42);   // Neigung der Savanne: z hinten → vorn
+  const $ = id => document.getElementById(id);
+
+  /* ── Bedienung der Kästen ─────────────────────────────── */
+  const ACTS = [['idle', 'Stehen'], ['walk', 'Gehen'], ['run', 'Laufen'], ['eat', 'Fressen'], ['sleep', 'Schlafen']];
+  // Richtung = Blickrichtung am Bildschirm; 0 = nach rechts, 90° = auf uns zu
+  const DIRS = [['↖', -135], ['↑', -90], ['↗', -45], ['←', 180], ['→', 0], ['↙', 135], ['↓', 90], ['↘', 45]];
+  let act = 'walk', heading = 20 * Math.PI / 180, spin = false, skel = false, slow = false;
+
+  ACTS.forEach(([a, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = label; b.dataset.act = a;
+    b.onclick = () => { act = a; paintButtons(); };
+    $('rowAct').appendChild(b);
+  });
+  DIRS.forEach(([label, deg]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'dir'; b.textContent = label; b.dataset.deg = deg;
+    b.title = 'Richtung ' + label;
+    b.onclick = () => { spin = false; heading = deg * Math.PI / 180; paintButtons(); };
+    $('rowDir').appendChild(b);
+  });
+  const bSpin = document.createElement('button');
+  bSpin.type = 'button'; bSpin.textContent = '⟳ Drehen'; bSpin.id = 'btnSpin';
+  bSpin.onclick = () => { spin = !spin; paintButtons(); };
+  $('rowDir').appendChild(bSpin);
+
+  function paintButtons() {
+    document.querySelectorAll('[data-act]').forEach(b => b.classList.toggle('on', b.dataset.act === act));
+    document.querySelectorAll('[data-deg]').forEach(b => b.classList.toggle('on', !spin && Math.abs(+b.dataset.deg * Math.PI / 180 - heading) < 1e-3));
+    bSpin.classList.toggle('on', spin);
+    $('btnSkel').classList.toggle('on', skel);
+    $('btnSlow').classList.toggle('on', slow);
+  }
+  $('btnSkel').onclick = () => { skel = !skel; paintButtons(); };
+  $('btnSlow').onclick = () => { slow = !slow; paintButtons(); };
+  if (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.dataset.theme = 'dark';
+    $('btnTheme').classList.add('on');
+  }
+  $('btnTheme').onclick = () => {
+    const dark = document.documentElement.dataset.theme !== 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    $('btnTheme').classList.toggle('on', dark);
+  };
+
+  /* ── Kästen: je Art Papa, Mama, Kind ───────────────────── */
+  const cards = [];
+  T.ORDER.forEach(key => {
+    const sp = T.SPECIES[key];
+    const h2 = document.createElement('h2'); h2.textContent = sp.name;
+    const grid = document.createElement('div'); grid.className = 'grid';
+    T.ROLES.forEach(([role, label]) => {
+      const card = document.createElement('div');
+      card.className = 'card'; card.tabIndex = 0; card.dataset.key = key; card.dataset.role = role;
+      card.innerHTML = '<div class="pic" style="--s:' + sp.roles[role].s + '">' + T.svg(key, role, 'idle') + '</div>'
+        + '<div class="name">' + label + '</div><div class="meta">' + sp.roles[role].title + '</div>';
+      card.querySelector('svg').setAttribute('aria-hidden', 'true');
+      grid.appendChild(card);
+      cards.push({ key, role, card, svg: card.querySelector('svg'), cls: '' });
+    });
+    $('cards').appendChild(h2); $('cards').appendChild(grid);
+  });
+  $('cards').addEventListener('click', e => {
+    const c = e.target.closest('.card'); if (!c) return;
+    select(stageAnimals.find(S => S.key === c.dataset.key && S.role === c.dataset.role));
+  });
+  $('cards').addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList.contains('card')) e.target.click(); });
+
+  /* ── Savanne ───────────────────────────────────────────── */
+  const HOR = 200, XMIN = 70, XMAX = 1530, ZMIN = 70, ZMAX = 1430;
+  const WATER = { x: 1250, z: 330, r: 230 };
+  const HOMES = {
+    lion: { x: 380, z: 1050, r: 300 }, elephant: { x: 620, z: 420, r: 330 },
+    zebra: { x: 1000, z: 900, r: 320 }, gnu: { x: 1250, z: 1150, r: 300 }, croc: { x: WATER.x, z: WATER.z, r: 190 }
+  };
+  const scaleAt = z => (0.65 + 0.45 * (z / ZMAX)) * 1.9;
+  (function background() {
+    const bg = $('bg');
+    let h = '<rect class="bg-sky" x="0" y="0" width="1600" height="' + HOR + '"/>'
+      + '<path class="bg-hill" d="M0 ' + HOR + ' Q 180 120 380 170 T 820 150 T 1260 165 T 1600 140 V ' + HOR + ' Z"/>'
+      + '<rect class="bg-ground" x="0" y="' + HOR + '" width="1600" height="' + (800 - HOR) + '"/>';
+    // Bodenwellen
+    for (let i = 0; i < 7; i++) {
+      const z = 120 + i * 200, y = HOR + z * SP;
+      h += '<ellipse class="bg-ground2" cx="' + (200 + (i * 433) % 1300) + '" cy="' + y.toFixed(0) + '" rx="' + (160 + i * 20) + '" ry="' + (22 + i * 4) + '" opacity=".6"/>';
+    }
+    h += '<ellipse class="bg-water" cx="' + WATER.x + '" cy="' + (HOR + WATER.z * SP).toFixed(0) + '" rx="' + WATER.r + '" ry="' + (WATER.r * SP).toFixed(0) + '"/>';
+    // Akazien am Horizont
+    [[140, 0.9], [520, 0.7], [930, 1.0], [1480, 0.8]].forEach(([x, k]) => {
+      const y = HOR + 6;
+      h += '<path class="bg-trunk" d="M' + x + ' ' + y + ' q ' + 4 * k + ' ' + (-40 * k) + ' ' + (-10 * k) + ' ' + (-80 * k) + ' M' + (x + 2 * k) + ' ' + (y - 40 * k) + ' q 14 -20 ' + 30 * k + ' ' + (-36 * k) + '"/>'
+        + '<ellipse class="bg-tree" cx="' + (x - 6 * k) + '" cy="' + (y - 92 * k) + '" rx="' + 70 * k + '" ry="' + 16 * k + '"/>'
+        + '<ellipse class="bg-tree" cx="' + (x + 30 * k) + '" cy="' + (y - 80 * k) + '" rx="' + 44 * k + '" ry="' + 12 * k + '"/>';
+    });
+    // Grasbüschel
+    let seed = 7;
+    const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+    for (let i = 0; i < 70; i++) {
+      const x = 30 + rnd() * 1540, z = 40 + rnd() * 1400, y = HOR + z * SP, k = scaleAt(z) * 1.1;
+      if (Math.hypot(x - WATER.x, (z - WATER.z)) < WATER.r + 10) continue;
+      h += '<path class="bg-tuft" d="M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' l ' + (-6 * k).toFixed(1) + ' ' + (-12 * k).toFixed(1)
+        + ' M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' l 0 ' + (-15 * k).toFixed(1) + ' M' + x.toFixed(0) + ' ' + y.toFixed(0) + ' l ' + (6 * k).toFixed(1) + ' ' + (-11 * k).toFixed(1) + '"/>';
+    }
+    bg.innerHTML = h;
+  })();
+
+  const actors = $('actors');
+  const stageAnimals = [];
+  // Richtung am Bildschirm → Wesen-Richtung
+  const dirOf = h => Math.abs(Math.sin(h)) > 0.72 ? (Math.sin(h) > 0 ? 'front' : 'back') : (Math.cos(h) > 0 ? 'right' : 'left');
+  const SPEED = { walk: 60, run: 165 };
+  T.ORDER.forEach(key => T.ROLES.forEach(([role], i) => {
+    const sp = T.SPECIES[key], home = HOMES[key];
+    const A = { key, role, s: sp.k * sp.roles[role].s, mode: 'idle', v: 0, cls: '' };
+    A.x = home.x + (i - 1) * 90 + (Math.random() - 0.5) * 40;
+    A.z = home.z + (i === 2 ? 70 : 0) + (Math.random() - 0.5) * 40;
+    A.h = Math.random() * Math.PI * 2;
+    A.ai = { queue: [], step: null, stepT: 0 };
+    A.g = document.createElementNS(NS, 'g');
+    A.g.innerHTML = T.svg(key, role, 'idle');
+    A.el = A.g.firstChild;
+    actors.appendChild(A.g);
+    stageAnimals.push(A);
+  }));
+  const family = A => stageAnimals.filter(B => B.key === A.key);
+  let selected = null, freeAll = true, touring = false;
+
+  function select(A) {
+    selected = A;
+    cards.forEach(c => c.card.classList.toggle('sel', c.key === A.key && c.role === A.role));
+    say(T.SPECIES[A.key].roles[A.role].title + ' ist ausgewählt — in die Savanne tippen, dann geht es dorthin.');
+  }
+  const say = t => { $('say').textContent = t; };
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  function pointNear(c, r) {
+    const a = Math.random() * Math.PI * 2, d = Math.sqrt(Math.random()) * r;
+    return { x: Math.max(XMIN, Math.min(XMAX, c.x + Math.cos(a) * d)), z: Math.max(ZMIN, Math.min(ZMAX, c.z + Math.sin(a) * d)) };
+  }
+  // Was macht ein Tier als Nächstes, wenn man es lässt?
+  function pickFree(A) {
+    const home = HOMES[A.key], mama = family(A).find(B => B.role === 'mama');
+    if (A.role === 'kind' && mama) {
+      const d = Math.hypot(mama.x - A.x, mama.z - A.z);
+      if (d > 150) {
+        const p = { x: mama.x - Math.cos(mama.h) * 60 + rand(-30, 30), z: mama.z - Math.sin(mama.h) * 60 + rand(-30, 30) };
+        return { go: p, run: d > 380 };
+      }
+      if (mama.mode === 'sleep' || mama.mode === 'eat') return { do: mama.mode, dur: rand(2, 4) };
+      if (mama.mode === 'walk' || mama.mode === 'run') return { go: { x: mama.x + rand(-60, 60), z: mama.z + rand(-60, 60) }, run: mama.mode === 'run' };
+    }
+    const r = Math.random();
+    if (r < 0.4) return { go: pointNear(home, home.r) };
+    if (r < 0.52) return { go: pointNear(home, home.r * 1.4), run: true };
+    if (r < 0.74) return { do: 'eat', dur: rand(5, 9) };
+    if (r < 0.88) return { do: 'sleep', dur: rand(8, 14) };
+    return { do: 'idle', dur: rand(2, 5) };
+  }
+  function angDiff(a, b) { let d = (b - a) % (Math.PI * 2); if (d > Math.PI) d -= Math.PI * 2; if (d < -Math.PI) d += Math.PI * 2; return d; }
+
+  function aiStep(A, dt) {
+    const st = A.ai;
+    if (!st.step) {
+      if (st.queue.length) st.step = st.queue.shift();
+      else if (freeAll || A.role === 'kind' && !touring) st.step = pickFree(A);
+      else st.step = { do: 'idle', dur: 0.5 };
+      st.stepT = 0;
+      if (st.step.say) say(st.step.say);
+    }
+    const s = st.step;
+    st.stepT += dt;
+    if (s.go) {
+      A.mode = s.run ? 'run' : 'walk';
+      const dx = s.go.x - A.x, dz = s.go.z - A.z, d = Math.hypot(dx, dz);
+      const want = Math.atan2(dz, dx), rate = (s.run ? 2.4 : 1.8) * dt;
+      A.h += Math.max(-rate, Math.min(rate, angDiff(A.h, want)));
+      if (d < (s.run ? 40 : 18) || st.stepT > 25) { st.step = null; A.mode = 'idle'; if (s.done) s.done(); }
+    } else {
+      A.mode = s.do;
+      if (st.stepT >= s.dur) { st.step = null; if (s.done) s.done(); }
+    }
+    // bewegen: Tempo weich an- und auslaufen lassen
+    const want = (SPEED[A.mode] || 0) * Math.sqrt(T.SPECIES[A.key].roles[A.role].s);
+    A.v += (want - A.v) * Math.min(1, dt * 4);
+    const S = A.s * scaleAt(A.z);
+    A.x = Math.max(XMIN, Math.min(XMAX, A.x + Math.cos(A.h) * A.v * S * dt));
+    A.z = Math.max(ZMIN, Math.min(ZMAX, A.z + Math.sin(A.h) * A.v * S * dt));
+  }
+
+  // In die Savanne tippen: das ausgewählte Tier geht hin
+  $('stage').addEventListener('click', e => {
+    if (!selected) { say('Erst unten ein Tier anklicken.'); return; }
+    const svg = $('stage'), pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const x = Math.max(XMIN, Math.min(XMAX, p.x)), z = Math.max(ZMIN, Math.min(ZMAX, (p.y - HOR) / SP));
+    const far = Math.hypot(x - selected.x, z - selected.z) > 450;
+    selected.ai.queue = [{ go: { x, z }, run: far }, { do: 'idle', dur: 4 }];
+    selected.ai.step = null;
+  });
+
+  // Rundgang: alle Richtungen, rennen, fressen, schlafen
+  $('btnTour').onclick = () => {
+    if (!selected) select(stageAnimals.find(A => A.key === 'lion' && A.role === 'papa'));
+    const A = selected, cx = 800, cz = 820;
+    touring = true; $('btnTour').disabled = true;
+    const ring = [];
+    for (let k = 0; k <= 8; k++) { const a = k / 8 * Math.PI * 2; ring.push({ go: { x: cx + Math.cos(a) * 330, z: cz + Math.sin(a) * 300 }, run: true }); }
+    ring[0].say = 'Laufen im Kreis — einmal in jede Richtung';
+    A.ai.queue = [
+      { go: { x: 450, z: 600 }, say: 'Zum Start …' },
+      { go: { x: 1150, z: 600 }, say: 'Gehen nach rechts →' },
+      { go: { x: 1150, z: 1150 }, say: 'Gehen auf uns zu ↓' },
+      { go: { x: 450, z: 1150 }, say: 'Gehen nach links ←' },
+      { go: { x: 450, z: 600 }, say: 'Gehen von uns weg ↑' },
+      { go: { x: 800, z: 900 }, say: 'Schräg ↘' },
+      ...ring,
+      { do: 'idle', dur: 1.5, say: 'Verschnaufen' },
+      { do: 'eat', dur: 6, say: 'Fressen' },
+      { do: 'sleep', dur: 7, say: 'Schlafen … Zzz' },
+      { do: 'idle', dur: 2, say: 'Aufwachen — fertig!', done: () => { touring = false; $('btnTour').disabled = false; } }
+    ];
+    A.ai.step = null;
+    document.querySelector('.stage-wrap').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+  $('btnFree').onclick = () => {
+    freeAll = !freeAll; $('btnFree').classList.toggle('on', freeAll);
+    say(freeAll ? 'Alle Tiere laufen frei.' : 'Die Großen bleiben stehen; die Kinder bleiben bei Mama.');
+  };
+
+  /* ── Nur zeichnen, was zu sehen ist ────────────────────── */
+  let stageVisible = true;
+  if ('IntersectionObserver' in window) {
+    const io = new IntersectionObserver(es => es.forEach(e => {
+      if (e.target.id === 'stage') stageVisible = e.isIntersecting;
+    }), { rootMargin: '80px' });
+    io.observe($('stage'));
+  }
+
+  /* ── Takt ──────────────────────────────────────────────── */
+  // Zeitlupe: alle CSS-Bewegungen langsamer (auch neu gestartete)
+  let slowT = 0;
+  function applySlow() {
+    if (!document.getAnimations) return;
+    const r = slow ? 0.25 : 1;
+    document.getAnimations().forEach(a => { if (a.playbackRate !== r) a.playbackRate = r; });
+  }
+  let last = performance.now();
+  function frame(now) {
+    let dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (slow) dt *= 0.25;
+    if (spin) heading += dt * 1.2;
+    const extra = skel ? 'sv-show-skel' : '';
+    const dir = dirOf(heading);
+    for (const c of cards) {
+      const cl = 'creature-svg ' + T.classes(c.key, act, dir, extra);
+      if (c.cls !== cl) { c.cls = cl; c.svg.setAttribute('class', cl); }
+    }
+    if (stageVisible) {
+      for (const A of stageAnimals) aiStep(A, dt);
+      stageAnimals.sort((a, b) => a.z - b.z);
+      stageAnimals.forEach((A, i) => {
+        if (actors.children[i] !== A.g) actors.appendChild(A.g);
+        const size = 100 * A.s * scaleAt(A.z), oy = HOR + A.z * SP;
+        A.el.setAttribute('x', (A.x - size / 2).toFixed(1));
+        A.el.setAttribute('y', (oy - size * 0.92).toFixed(1));
+        A.el.setAttribute('width', size.toFixed(1));
+        A.el.setAttribute('height', size.toFixed(1));
+        const cl = 'creature-svg ' + T.classes(A.key, A.mode, dirOf(A.h), extra + (A === selected ? ' sv-sel' : ''));
+        if (A.cls !== cl) { A.cls = cl; A.el.setAttribute('class', cl); }
+      });
+    }
+    slowT -= dt;
+    if (slowT < 0) { slowT = 0.3; applySlow(); }
+    requestAnimationFrame(frame);
+  }
+  $('btnSlow').addEventListener('click', applySlow);
+  paintButtons();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
