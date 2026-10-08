@@ -23,10 +23,14 @@
    „log"/„hours"), Experten, Anträge (dezent gerahmt) und Lehrkraft-
    Kommentare. Den Reiter „Projektarbeit & Regeln" gibt es nicht mehr —
    die Regeln stehen nur noch auf der Wartekarte.
-   Jeder Reiter beginnt mit Erklär-Kacheln (guideBox(), Icons, keine
-   Emojis). Jede Person klappt sie je Reiter ein und aus (alle Kacheln
-   des Reiters gemeinsam; gemerkt im Gerät, pa_guide_<reiter>) —
-   eingeklappt bleiben Icon und Überschrift.
+   Jeder Reiter hat oben EINEN Erklärsatz; der Rest steht in den
+   Erklär-Kacheln (guideBox(), Icons, keine Emojis). Jede Person klappt
+   sie je Reiter ein und aus (Knopf links; gemerkt im Gerät,
+   pa_guide_<reiter>). Eingeklappt stehen sie in der Kopfzeile neben der
+   Überschrift (Titel, darunter kleine Kacheln mit Icon und Überschrift),
+   ausgeklappt unter Überschrift und Satz (guidePlace()).
+   Dokumentation: neuer Eintrag über „+ Eintrag" oben rechts (wie
+   „+ To-do"), das Formular steht im Dialog mLog.
 
    Zeitbalken (To-dos): Die Gruppe trägt ein, wie viele Schulstunden
    sie bis zum Ende hat. Das steht als eigenes Objekt task/„budget"
@@ -262,26 +266,40 @@ const guide = steps => steps.map(([k, t, txt, cls], i) =>
   `<div class="gstep${cls ? ' ' + cls : ''}">${gIco(k, cls ? '' : i + 1)}<div><b>${t}</b><span>${txt}</span></div></div>`).join('');
 // Ein- und ausklappbar, je Reiter gemerkt (Standard: ausgeklappt).
 const guideOpen = k => { try { return localStorage.getItem('pa_guide_' + k) !== '0'; } catch (e) { return true; } };
+// Eingeklappt steht die Box IN der Kopfzeile neben der Überschrift
+// (Titel, darunter die kleinen Kacheln); ausgeklappt springt sie unter
+// Überschrift und Erklärsatz. Der Knopf zum Klappen steht links.
 function guideBox(id, k, title, steps) {
   const el = $('#' + id);
   el.dataset.g = k;
   el.classList.toggle('min', !guideOpen(k));
-  el.innerHTML = `<div class="gb-h"><span class="gb-t">${title}</span>
-      <button type="button" class="gb-tg" data-gtoggle="${k}" aria-controls="${id}"></button></div>
+  el.innerHTML = `<div class="gb-h"><button type="button" class="gb-tg" data-gtoggle="${k}" aria-controls="${id}"></button>
+      <span class="gb-t">${title}</span></div>
     <div class="guide">${guide(steps)}</div>`;
   guideBtn(el);
+  guidePlace(el);
+}
+function guidePlace(el) {
+  const head = el.closest('.view') && el.closest('.view').querySelector('.shead');
+  if (!head) return;
+  if (el.classList.contains('min')) {
+    const after = head.firstElementChild;          // Eyebrow, Überschrift, Satz
+    if (after.nextElementSibling !== el) head.insertBefore(el, after.nextElementSibling);
+  } else if (head.nextElementSibling !== el) head.after(el);
 }
 function guideBtn(el) {
   const open = !el.classList.contains('min');
   const b = el.querySelector('.gb-tg');
   b.setAttribute('aria-expanded', open);
-  b.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>${open ? 'Erklärung einklappen' : 'Erklärung ausklappen'}`;
+  b.title = open ? 'Erklärung einklappen' : 'Erklärung ausklappen';
+  b.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>${open ? 'einklappen' : 'ausklappen'}`;
 }
 function toggleGuide(k) {
   const el = document.querySelector(`.gbox[data-g="${k}"]`); if (!el) return;
   el.classList.toggle('min');
   try { localStorage.setItem('pa_guide_' + k, el.classList.contains('min') ? '0' : '1'); } catch (e) { /* egal */ }
   guideBtn(el);
+  guidePlace(el);
 }
 
 // Stundeneintrag: wer war dabei. Einträge von vor 0202 kennen nur den Schreiber.
@@ -325,7 +343,7 @@ function renderAll() {
   const gid = group() ? group().id : null;
   if (m !== lastMode || (m === 'plan' && gid && gid !== lastGroup)) {
     if (m === 'plan' && lastMode !== 'plan') tab = PA.owner && (findG(PA.focus) || {}).open_requests ? 'requests' : 'team';
-    lastMode = m; lastGroup = gid; editLog = null;
+    lastMode = m; lastGroup = gid; editLog = null; hide('mLog');
   }
   document.body.classList.toggle('inplan', m === 'plan');
 
@@ -390,7 +408,9 @@ function renderGuides() {
     ['link', 'Als To-do planen', 'Kontakt aufnehmen ist ein Arbeitsschritt: <b>„Als To-do“</b> antippen — oder beim To-do einen Experten wählen.'],
     ['phone', 'Kontakt festhalten', 'Jedes <b>Telefonat</b>, jede <b>Mail</b>, jedes <b>Treffen</b> mit Datum eintragen — dazu die <b>wichtigsten Infos</b>.']
   ]);
-  guideBox('reqGuide', 'requests', 'Checkliste: Wir genehmigen nur, wenn alle fünf Punkte erfüllt sind', [
+  guideBox('reqGuide', 'requests', '<span class="gb-big">'
+    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + GI.check + '</svg>Checkliste</span>'
+    + '<span class="gb-sub">Wir genehmigen nur, wenn alle fünf Punkte erfüllt sind.</span>', [
     ['sign', 'Einverständniserklärung', 'Die <b>unterschriebene Erklärung</b> ist abgegeben.'],
     ['book', 'Logbuch aktuell', '<b>To-dos und Dokumentation</b> sind auf dem neuesten Stand — sonst können wir nicht beurteilen, ob der Antrag sinnvoll ist.'],
     ['form', 'Antrag vollständig', '<b>Datum</b>, <b>wer mitfährt</b>, <b>Ziel mit Adresse</b>, <b>Weg und Verkehrsmittel</b>, <b>Begründung</b>.'],
@@ -924,16 +944,11 @@ function renderHours() {
     <span style="font-size:12.5px;color:var(--ink-2)">${gm.filter(m => inToday.has(m.id)).length} von ${gm.length} in einem Eintrag</span>
     ${myIn && !inToday.has(meId()) && !PA.owner ? '<span class="badge bg-open" style="margin-left:auto">Du stehst heute noch in keinem Eintrag</span>' : ''}`;
 
-  // Formular: nur für Mitglieder der Gruppe
-  $('#hForm').hidden = PA.owner || !myIn;
-  $('#view-hours .hgrid').classList.toggle('noform', $('#hForm').hidden);
-  if (!editLog && document.activeElement && !$('#hForm').contains(document.activeElement)) {
-    if (!$('#hDate').value) $('#hDate').value = today;
-  }
-  $('#hFormEyebrow').textContent = editLog ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
-  $('#hSave').lastChild.textContent = editLog ? ' Speichern' : ' Eintragen';
-  $('#hCancel').hidden = !editLog;
-  if (!$('#hForm').hidden) { renderLogWho(); renderTodoPick(); renderLogPhotos(); }
+  // „+ Eintrag" oben rechts wie „+ To-do" — nur für Mitglieder der Gruppe.
+  // Das Formular steht im Dialog mLog.
+  $('#hoursStats').innerHTML = (logs.length ? `<span class="stat">Einträge <b>${logs.length}</b></span>` : '')
+    + (!PA.owner && myIn ? `<button class="btn primary needs-write" data-newlog="1">${ICO.plus} Eintrag</button>` : '');
+  if (!$('#mLog').hidden) renderLogForm();
 
   // Lehrkraft: Hinweis, solange Fotos in der Dokumentation liegen.
   const nPh = logs.reduce((a, l) => a + logPhotos(l).length, 0);
@@ -1055,6 +1070,27 @@ function renderLogWho() {
     || '<span class="hint">Noch niemand in der Gruppe.</span>';
 }
 
+// Der Dialog: Kopf und Knopf nach „neu" oder „bearbeiten", dazu die Auswahlen.
+function renderLogForm() {
+  if (!editLog && !$('#hDate').value) $('#hDate').value = todayIso();
+  $('#hFormTitle').textContent = editLog ? 'Eintrag bearbeiten' : 'Neuer Eintrag';
+  $('#hSave').lastChild.textContent = editLog ? ' Speichern' : ' Eintragen';
+  renderLogWho(); renderTodoPick(); renderLogPhotos();
+}
+// Neuer Eintrag: ein angefangener Entwurf bleibt erhalten; kam man aus
+// „bearbeiten", fängt das Formular leer an.
+function openLog() {
+  if (!canWrite() || PA.owner) return;
+  if (editLog) resetLogForm();
+  renderLogForm();
+  show('mLog');
+  setTimeout(() => $('#hText').focus(), 60);
+}
+function closeLog() {
+  hide('mLog');
+  if (editLog) resetLogForm();
+}
+
 function saveLog() {
   if (!canWrite()) return;
   const text = $('#hText').value.trim();
@@ -1077,6 +1113,7 @@ function saveLog() {
   if (!old) { data.by = meId(); data.byName = (PA.me && PA.me.name) || ''; }
   PA.put('log', editLog || PA.newId('l'), data);
   resetLogForm();
+  hide('mLog');
   toast(old ? 'Eintrag gespeichert' : 'Eingetragen — danke!');
   renderAll();
 }
@@ -1096,8 +1133,9 @@ function editLogEntry(id) {
   tdOpen = false;
   $('#hText').value = l.text || '';
   $('#hNext').value = l.next || '';
-  renderHours();
-  $('#hText').focus();
+  renderLogForm();
+  show('mLog');
+  setTimeout(() => $('#hText').focus(), 60);
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -1797,8 +1835,10 @@ function wire() {
   // Dialoge schließen
   document.addEventListener('click', e => {
     const c = e.target.closest('[data-close]');
-    if (c) { hide(c.dataset.close); return; }
-    if (e.target.classList && e.target.classList.contains('scrim') && e.target.id !== 'mKey') hide(e.target.id);
+    if (c) { if (c.dataset.close === 'mLog') closeLog(); else hide(c.dataset.close); return; }
+    if (e.target.classList && e.target.classList.contains('scrim') && e.target.id !== 'mKey') {
+      if (e.target.id === 'mLog') closeLog(); else hide(e.target.id);
+    }
   });
   $('#cfOk').addEventListener('click', () => { hide('mConfirm'); const cb = confirmCb; confirmCb = null; if (cb) cb(); });
 
@@ -1901,6 +1941,7 @@ function wire() {
       renderGoal(); return;
     }
     // Stunden
+    if ((b = t.closest('[data-newlog]'))) { openLog(); return; }
     if ((b = t.closest('[data-logedit]'))) { editLogEntry(b.dataset.logedit); return; }
     if ((b = t.closest('[data-hpadd]'))) { $('#hPhotoIn').click(); return; }
     if ((b = t.closest('[data-hpx]'))) { hPhotos.splice(+b.dataset.hpx, 1); renderLogPhotos(); return; }
@@ -2058,7 +2099,7 @@ function wire() {
       hPhotos.push(url); renderLogPhotos();
     }));
   });
-  $('#hCancel').addEventListener('click', () => { resetLogForm(); renderHours(); });
+  $('#hCancel').addEventListener('click', closeLog);
 
   // Antrag
   $('#btnNewReq').addEventListener('click', () => openReq(null));

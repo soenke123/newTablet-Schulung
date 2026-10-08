@@ -401,8 +401,8 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
    ============================================================ */
 .gbox{margin:0 0 18px}
 .gb-h{display:flex;align-items:center;gap:10px;margin:0 0 8px}
-.gb-h .gb-t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--ink-3);min-width:0}
-.gb-tg{margin-left:auto;display:inline-flex;align-items:center;gap:6px;flex:none;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:4px 11px 4px 9px;font-size:12px;font-weight:700;color:var(--petrol);box-shadow:var(--sh-1)}
+.gb-h .gb-t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--ink-3);min-width:0;display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap}
+.gb-tg{display:inline-flex;align-items:center;gap:6px;flex:none;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:4px 11px 4px 9px;font-size:12px;font-weight:700;color:var(--petrol);box-shadow:var(--sh-1)}
 .gb-tg:hover{background:#fff;border-color:var(--petrol)}
 .gb-tg svg{transition:transform .2s}
 .gbox.min .gb-tg svg{transform:rotate(180deg)}
@@ -426,6 +426,23 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .gbox.min .gstep .gi i{width:15px;height:15px;font-size:9px;top:-5px;left:-5px}
 .gbox.min .gstep > div > b{margin:0;font-size:12.5px}
 .gbox.min .gstep > div > span{display:none}
+/* Eingeklappt: in der Kopfzeile neben der Überschrift, Titel über den Kacheln */
+.shead .gbox.min{flex:1 1 340px;min-width:0;margin:0;align-self:flex-end}
+.shead .gbox.min .gb-h{margin-bottom:6px}
+.shead .gbox.min .guide{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.gbox.min .gstep.alarm{grid-column:auto}
+.gbox.min .gstep > div{min-width:0}
+.gbox.min .gstep > div > b{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
+/* Checkliste der Anträge: das Wort deutlich, die Kacheln gleichmäßig */
+.gb-big{display:inline-flex;align-items:center;gap:7px;font-size:17px;letter-spacing:0;text-transform:none;color:var(--marker);font-weight:800}
+.gb-sub{font-size:12.5px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--ink-2)}
+.gbox.min .gb-big{font-size:14px}
+.gbox.min .gb-big svg{width:15px;height:15px}
+#reqGuide:not(.min) .guide{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+#reqGuide:not(.min) .gstep{flex-direction:column;gap:10px;padding:14px}
+#reqGuide:not(.min) .gstep.alarm{flex-direction:row}
+@media (max-width:1100px){ #reqGuide:not(.min) .guide{grid-template-columns:repeat(3,minmax(0,1fr))} }
+@media (max-width:700px){ #reqGuide:not(.min) .guide{grid-template-columns:1fr} #reqGuide:not(.min) .gstep{flex-direction:row} }
 
 /* Zeitschätzung am To-do */
 .estpick{display:flex;gap:6px;flex-wrap:wrap}
@@ -508,10 +525,6 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 /* ============================================================
    STUNDEN
    ============================================================ */
-.hgrid{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:20px;align-items:start}
-.hgrid.noform{grid-template-columns:1fr}
-.hform{padding:18px;position:sticky;top:118px}
-.hform h3{font-size:18px;margin:2px 0 12px}
 .today{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;padding:10px 13px;border-radius:var(--r);background:var(--paper-up);border:1px solid var(--line)}
 .today .who{display:flex;gap:5px;flex-wrap:wrap}
 .today .miss{opacity:.38}
@@ -768,8 +781,6 @@ body.ro .postit,body.ro .pchip{cursor:default}
 @media (max-width:880px){
   .ov,.ov.withlist{grid-template-columns:1fr}
   .lobby{position:static}
-  .hgrid{grid-template-columns:1fr}
-  .hform{position:static}
   .budget{grid-template-columns:1fr}
   .bud-in{padding:0 0 12px;border-right:0;border-bottom:1px solid var(--line-soft)}
   .checks{grid-template-columns:1fr}
@@ -955,7 +966,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div>
         <div class="eyebrow">Wohin wollen wir?</div>
         <h2 class="t">Projektziel</h2>
-        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll — und bis wann. Das Ziel ist euer Kompass: Jedes To-do zahlt darauf ein. Alle in der Gruppe arbeiten daran, bis die Lehrkraft es fixiert.</p>
+        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll — und bis wann.</p>
       </div>
       <div class="sp"><span class="stat" id="goalSaved">gespeichert</span>
         <button class="btn" id="goalLockBtn" hidden></button></div>
@@ -1029,37 +1040,12 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <h2 class="t">Dokumentation</h2>
         <p class="s">Am Ende jedes Arbeitstags haltet ihr fest, wer was gemacht hat.</p>
       </div>
+      <div class="sp" id="hoursStats"></div>
     </div>
     <div class="gbox" id="hoursGuide"></div>
     <div class="robar photonote" id="hPhotoNote" hidden></div>
     <div class="today" id="todayBar"></div>
-    <div class="hgrid">
-      <div class="panel hform needs-write" id="hForm">
-        <div class="eyebrow" id="hFormEyebrow">Neuer Eintrag</div>
-        <h3 id="hFormTitle">Was wurde gemacht?</h3>
-        <div class="field"><label class="fl" for="hDate">Datum</label><input type="date" id="hDate" style="max-width:220px"></div>
-        <div class="field"><span class="fl">An welchem To-do?</span><div class="tdpick" id="hTodo"></div></div>
-        <div class="field"><span class="fl">Wer war dabei?</span><div class="whopick" id="hWho"></div>
-          <p class="hint" id="hWhoHint">Tippt alle an, die das gemacht haben. Du kannst auch nur für andere eintragen.</p></div>
-        <div class="field"><label class="fl" for="hText">Das wurde gemacht (Arbeitsschritt)</label>
-          <textarea id="hText" maxlength="1500" placeholder="z. B. Drei Quellen zur Solarenergie gelesen und die wichtigsten Punkte notiert."></textarea></div>
-        <div class="field"><span class="fl">Fotos <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig, bis zu 3)</span></span>
-          <div class="hphotos" id="hPhotos"></div>
-          <input type="file" id="hPhotoIn" accept="image/*" multiple hidden>
-          <p class="hint">Werden automatisch verkleinert. Personen nur fotografieren, wenn sie einverstanden sind.</p></div>
-        <div class="field"><label class="fl" for="hNext">Als Nächstes <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
-          <textarea id="hNext" maxlength="600" style="min-height:56px" placeholder="z. B. Gliederung für die Präsentation entwerfen."></textarea></div>
-        <div style="display:flex;gap:8px">
-          <button class="btn primary" id="hSave">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
-            Eintragen</button>
-          <button class="btn ghost" id="hCancel" hidden>Abbrechen</button>
-        </div>
-      </div>
-      <div>
-        <div id="hList"></div>
-      </div>
-    </div>
+    <div id="hList"></div>
   </section>
 
   <!-- ══════════ PLANUNGSRAUM: ANTRÄGE ══════════ -->
@@ -1068,7 +1054,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div>
         <div class="eyebrow">Lernen am anderen Ort</div>
         <h2 class="t">Anträge</h2>
-        <p class="s">Ihr wollt an einem Tag <b>außerhalb der Schule</b> an eurem Projekt arbeiten? Dafür braucht ihr einen genehmigten Antrag. Bis die Lehrkraft entschieden hat, könnt ihr ihn noch ändern. Abgelehnt? Verbessern und neu abschicken.</p>
+        <p class="s">Wer einen Tag <b>außerhalb der Schule</b> am Projekt arbeiten will, braucht dafür einen genehmigten Antrag.</p>
       </div>
       <div class="sp"><button class="btn mark needs-write" id="btnNewReq">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
@@ -1106,7 +1092,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div>
         <div class="eyebrow">Hinweise eurer Lehrkräfte</div>
         <h2 class="t">Lehrkraft-Kommentare</h2>
-        <p class="s" id="notesSub">Hier hinterlassen eure Lehrkräfte Kommentare und Hinweise zu eurem Projekt. Erledigt? Abhaken. Unklar? Darunter nachfragen.</p>
+        <p class="s" id="notesSub">Hinweise eurer Lehrkräfte zu eurem Projekt.</p>
       </div>
       <div class="sp" id="notesStats"></div>
     </div>
@@ -1131,7 +1117,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div>
         <div class="eyebrow">Wer kann uns helfen?</div>
         <h2 class="t">Experten</h2>
-        <p class="s">Hier dokumentiert ihr, wie ihr Experten findet, mit ihnen Kontakt aufnehmt, mit ihnen sprecht und euch trefft — und was ihr von ihnen erfahrt.</p>
+        <p class="s">Wer kann euch helfen — und was habt ihr von ihnen erfahren?</p>
       </div>
       <div class="sp" id="expStats"></div>
     </div>
@@ -1232,6 +1218,37 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <div class="sp">
         <button class="btn" data-close="mTask">Abbrechen</button>
         <button class="btn primary needs-write" id="tkSave">Speichern</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dokumentationseintrag -->
+<div class="scrim" id="mLog" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="hFormTitle">
+    <div class="m-h"><div class="ttl" id="hFormTitle">Neuer Eintrag</div>
+      <button class="m-x" data-close="mLog" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b" id="hForm">
+        <div class="field"><label class="fl" for="hDate">Datum</label><input type="date" id="hDate" style="max-width:220px"></div>
+        <div class="field"><span class="fl">An welchem To-do?</span><div class="tdpick" id="hTodo"></div></div>
+        <div class="field"><span class="fl">Wer war dabei?</span><div class="whopick" id="hWho"></div>
+          <p class="hint" id="hWhoHint">Tippt alle an, die das gemacht haben. Du kannst auch nur für andere eintragen.</p></div>
+        <div class="field"><label class="fl" for="hText">Das wurde gemacht (Arbeitsschritt)</label>
+          <textarea id="hText" maxlength="1500" placeholder="z. B. Drei Quellen zur Solarenergie gelesen und die wichtigsten Punkte notiert."></textarea></div>
+        <div class="field"><span class="fl">Fotos <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig, bis zu 3)</span></span>
+          <div class="hphotos" id="hPhotos"></div>
+          <input type="file" id="hPhotoIn" accept="image/*" multiple hidden>
+          <p class="hint">Werden automatisch verkleinert. Personen nur fotografieren, wenn sie einverstanden sind.</p></div>
+        <div class="field"><label class="fl" for="hNext">Als Nächstes <span style="text-transform:none;letter-spacing:0;font-weight:500">(freiwillig)</span></label>
+          <textarea id="hNext" maxlength="600" style="min-height:56px" placeholder="z. B. Gliederung für die Präsentation entwerfen."></textarea></div>
+    </div>
+    <div class="m-f">
+      <div class="sp">
+        <button class="btn" id="hCancel">Abbrechen</button>
+        <button class="btn primary needs-write" id="hSave">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+          Eintragen</button>
       </div>
     </div>
   </div>
@@ -1400,7 +1417,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261008c"></script>
-<script src="app.js?v=20261008c"></script>
+<script src="bridge.js?v=20261008d"></script>
+<script src="app.js?v=20261008d"></script>
 </body>
 </html>
