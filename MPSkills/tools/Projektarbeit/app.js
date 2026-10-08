@@ -268,13 +268,14 @@ const guide = steps => steps.map(([k, t, txt, cls], i) =>
 const guideOpen = k => { try { return localStorage.getItem('pa_guide_' + k) !== '0'; } catch (e) { return true; } };
 // Eingeklappt steht die Box IN der Kopfzeile neben der Überschrift
 // (Titel, darunter die kleinen Kacheln); ausgeklappt springt sie unter
-// Überschrift und Erklärsatz. Der Knopf zum Klappen steht links.
+// Überschrift und Erklärsatz. Der Knopf zum Klappen (nur ein Pfeil)
+// steht hinter der kleinen Überschrift.
 function guideBox(id, k, title, steps) {
   const el = $('#' + id);
   el.dataset.g = k;
   el.classList.toggle('min', !guideOpen(k));
-  el.innerHTML = `<div class="gb-h"><button type="button" class="gb-tg" data-gtoggle="${k}" aria-controls="${id}"></button>
-      <span class="gb-t">${title}</span></div>
+  el.innerHTML = `<div class="gb-h"><span class="gb-t">${title}</span>
+      <button type="button" class="gb-tg" data-gtoggle="${k}" aria-controls="${id}"></button></div>
     <div class="guide">${guide(steps)}</div>`;
   guideBtn(el);
   guidePlace(el);
@@ -292,7 +293,8 @@ function guideBtn(el) {
   const b = el.querySelector('.gb-tg');
   b.setAttribute('aria-expanded', open);
   b.title = open ? 'Erklärung einklappen' : 'Erklärung ausklappen';
-  b.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>${open ? 'einklappen' : 'ausklappen'}`;
+  b.setAttribute('aria-label', b.title);
+  b.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
 }
 function toggleGuide(k) {
   const el = document.querySelector(`.gbox[data-g="${k}"]`); if (!el) return;
