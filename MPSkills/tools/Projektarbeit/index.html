@@ -339,7 +339,7 @@ body.dragging{-webkit-user-select:none;user-select:none}
 /* ============================================================
    FORMULARE
    ============================================================ */
-input[type=text],input[type=email],input[type=date],input[type=number],select,textarea{
+input[type=text],input[type=email],input[type=search],input[type=date],input[type=number],select,textarea{
   width:100%;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);
   padding:8px 11px;font-size:13.5px;box-shadow:inset 0 1px 2px rgba(27,26,22,.035)
 }
@@ -630,6 +630,47 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .m-b{padding:20px;overflow-y:auto;flex:1}
 .m-f{display:flex;align-items:center;gap:9px;padding:13px 20px;background:var(--paper-up);border-top:1px solid var(--line)}
 .m-f .sp{margin-left:auto;display:flex;gap:9px}
+/* Lehrkraft-Kommentare (0205): Zettel nebeneinander */
+.nform{display:flex;flex-direction:column;gap:10px;margin-bottom:22px}
+.nform textarea{min-height:70px}
+.nform-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.nform-row .sp{margin-left:auto}
+.ncolors{display:flex;gap:6px}
+.ncolors button{width:26px;height:26px;border-radius:7px;border:2px solid rgba(0,0,0,.12);padding:0}
+.ncolors button[aria-pressed="true"]{border-color:var(--petrol);box-shadow:0 0 0 2px var(--petrol-wash)}
+.nfilt{display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap;font-size:12.5px;color:var(--ink-3)}
+.ngrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:22px 18px;align-items:start}
+.note{position:relative;border-radius:2px;padding:14px 14px 10px;box-shadow:var(--sh-paper);display:flex;flex-direction:column;gap:9px}
+.note::before{content:'';position:absolute;top:-6px;left:50%;width:46px;height:13px;transform:translateX(-50%) rotate(-1.4deg);background:rgba(255,255,255,.5);border:1px solid rgba(255,255,255,.35);box-shadow:0 1px 2px rgba(27,26,22,.09)}
+.note.done{opacity:.72}
+.note.done .n-text{text-decoration:line-through;text-decoration-thickness:1px}
+.n-head{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700}
+.n-head .when{font-weight:500;opacity:.75;margin-left:auto;white-space:nowrap}
+.n-text{font-size:14.5px;line-height:1.45;white-space:pre-line;overflow-wrap:anywhere}
+.n-x{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:99px;border:0;background:rgba(255,255,255,.55);color:inherit;display:grid;place-items:center;opacity:.7}
+.n-x:hover{opacity:1;background:#fff;color:var(--st-block)}
+.note .n-head{padding-right:26px}
+.n-done{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700;cursor:pointer;padding-top:8px;border-top:1px solid rgba(0,0,0,.13)}
+.n-done input{width:18px;height:18px;accent-color:var(--st-done);flex:none}
+.n-done small{font-weight:500;opacity:.8}
+.n-reps{display:flex;flex-direction:column;gap:6px}
+.n-rep{background:rgba(255,255,255,.55);border-radius:8px;padding:6px 8px;font-size:12.5px;line-height:1.4;position:relative}
+.n-rep.t{background:rgba(29,89,85,.12)}
+.n-rep b{font-size:11px;display:block}
+.n-rep b i{font-style:normal;font-weight:500;opacity:.7}
+.n-rep span{white-space:pre-line;overflow-wrap:anywhere}
+.n-rep .rx{position:absolute;top:3px;right:3px;border:0;background:none;color:inherit;opacity:.5;padding:2px;line-height:0}
+.n-rep .rx:hover{opacity:1;color:var(--st-block)}
+.n-ask{display:flex;gap:6px}
+.n-ask input{flex:1;min-width:0;font-size:12.5px;padding:6px 9px;background:rgba(255,255,255,.75)}
+.n-ask .btn{padding:5px 9px}
+/* Lehrkräfte des Raums (0205) */
+.tline{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.tline:last-child{border-bottom:0}
+.tline .who{flex:1;min-width:0;font-weight:700;font-size:13.5px}
+.tline .who small{display:block;font-weight:500;color:var(--ink-3);font-size:11.5px}
+.tsearch{margin-top:16px}
+.tres{margin-top:8px}
 /* Mail bei neuen Anträgen (0203) */
 .nt-state{margin:8px 0 12px;font-size:12.5px;line-height:1.5;color:var(--ink-3)}
 .nt-state.ok{color:var(--st-done)}
@@ -707,7 +748,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media print{
-  header.top,.tabbar,.m-f,.needs-write,.addcard,.hform,.toast,.pickbar{display:none!important}
+  header.top,.tabbar,.m-f,.needs-write,.addcard,.hform,.toast,.pickbar,.nform,.n-ask,.n-x,.rx,.nfilt{display:none!important}
   body{background:#fff}
   .view{display:block!important}
   .view + .view{page-break-before:always}
@@ -750,6 +791,10 @@ body.ro .postit,body.ro .pchip{cursor:default}
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
             Regeln ergänzen
           </button>
+          <button id="miTeachers" hidden>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M19 8v6M16 11h6"/></svg>
+            Lehrkraft einladen
+          </button>
           <button id="miExport" hidden>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"/></svg>
             <span id="miExportTxt">Exportieren</span>
@@ -778,6 +823,10 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <button class="tab" role="tab" data-view="team" aria-selected="true">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg>
       Team <span class="cnt" id="cntTeam">0</span>
+    </button>
+    <button class="tab" role="tab" data-view="notes" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5M8 9h8M8 13h5"/></svg>
+      Lehrkraft-Kommentare <span class="cnt" id="cntNotes">0</span>
     </button>
     <button class="tab" role="tab" data-view="goal" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
@@ -1004,6 +1053,30 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <div class="teamgrid" id="teamGrid"></div>
   </section>
 
+  <!-- ══════════ PLANUNGSRAUM: LEHRKRAFT-KOMMENTARE ══════════ -->
+  <section class="view" id="view-notes" hidden>
+    <div class="shead">
+      <div>
+        <div class="eyebrow">Hinweise eurer Lehrkräfte</div>
+        <h2 class="t">Lehrkraft-Kommentare</h2>
+        <p class="s" id="notesSub">Hier hinterlassen eure Lehrkräfte Kommentare und Hinweise zu eurem Projekt. Erledigt? Abhaken. Unklar? Darunter nachfragen.</p>
+      </div>
+      <div class="sp" id="notesStats"></div>
+    </div>
+    <div class="panel pad nform" id="noteForm" hidden>
+      <label class="fl" for="noteIn">Neuer Kommentar an diese Gruppe</label>
+      <textarea id="noteIn" maxlength="1500" placeholder="z. B. Euer Projektziel ist noch zu allgemein — woran erkennt ihr am Ende, dass ihr es geschafft habt?"></textarea>
+      <div class="nform-row">
+        <div class="ncolors" id="noteColors"></div>
+        <div class="sp"><button class="btn primary" id="noteAdd">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Kommentar anheften</button></div>
+      </div>
+    </div>
+    <div class="nfilt" id="noteFilt"></div>
+    <div class="ngrid" id="noteGrid"></div>
+  </section>
+
   <!-- ══════════ PLANUNGSRAUM: REGELN ══════════ -->
   <section class="view" id="view-rules" hidden>
     <div id="rulesBox"></div>
@@ -1131,6 +1204,25 @@ body.ro .postit,body.ro .pchip{cursor:default}
   </div>
 </div>
 
+<!-- Lehrkraft: weitere Lehrkräfte (0205) -->
+<div class="scrim" id="mTeachers" hidden>
+  <div class="modal narrow" role="dialog" aria-modal="true">
+    <div class="m-h mark"><div class="ttl">Lehrkräfte in diesem Raum</div>
+      <button class="m-x" data-close="mTeachers" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <p style="margin:0 0 10px;font-size:12.5px;line-height:1.55;color:var(--ink-3)">Eingeladene Lehrkräfte haben <b>dieselben Rechte</b> wie du: Gruppen bilden, Anträge entscheiden, Kommentare schreiben, Export und Backups. Sie finden den Raum sofort unter „Meine Räume“. Löschen kann den Raum nur, wer ihn eröffnet hat.</p>
+      <div id="tList"></div>
+      <div class="tsearch">
+        <label class="fl" for="tSearch">Lehrkraft einladen</label>
+        <input type="search" id="tSearch" maxlength="60" placeholder="Name eintippen …" autocomplete="off">
+        <div class="tres" id="tRes"></div>
+      </div>
+    </div>
+    <div class="m-f"><div class="sp"><button class="btn primary" data-close="mTeachers">Fertig</button></div></div>
+  </div>
+</div>
+
 <!-- Der persönliche Code -->
 <div class="scrim" id="mKey" hidden>
   <div class="modal narrow" role="dialog" aria-modal="true">
@@ -1184,7 +1276,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261008a"></script>
-<script src="app.js?v=20261008a"></script>
+<script src="bridge.js?v=20261008b"></script>
+<script src="app.js?v=20261008b"></script>
 </body>
 </html>

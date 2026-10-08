@@ -47,6 +47,15 @@
    Wer fehlt, wird nicht ausgewählt und taucht an dem Tag nicht auf.
    Je Tag stehen die Einträge untereinander: „Mia und Leon: …".
 
+   Lehrkraft-Kommentare (0205): ein eigener Reiter mit Zetteln der
+   Lehrkräfte nebeneinander (Name der Lehrkraft dran). Schüler haken ab
+   und fragen darunter nach; Lehrkräfte heften an, antworten, löschen.
+   Die Zettel kommen mit der Gruppe (group.notes) und gehen nicht über
+   PA.put, sondern über einzelne Aufrufe (PA.act).
+
+   Weitere Lehrkräfte (0205): „Lehrkraft einladen" im Menü — gleiche
+   Rechte wie der Besitzer; nur löschen kann den Raum der Besitzer.
+
    Lehrkraft (0202): Exportieren / Importieren / Backups im Menü — in
    der Übersicht für die ganze Klasse, im Planungsraum für dieses eine
    Projekt (wie Scrum Werkstatt, 0198).
@@ -135,6 +144,9 @@ let reqFilter = 'all';
 let phoneCol = 'doing';
 let goalTimer = null, goalDirty = false;
 let lastMode = null, lastGroup = null;
+let noteColor = 'yellow';
+let noteFilter = 'all';     // Kommentare: 'all' | 'open' | 'done'
+const askDraft = {};        // Nachfrage, die gerade jemand tippt (je Zettel)
 
 const COLS = [
   { k: 'todo',    nm: 'Zu erledigen', c: 'var(--k-todo)',  hint: 'Was ansteht. Kleine Schritte, Zeit geschätzt.' },
@@ -273,7 +285,7 @@ function renderAll() {
   else if (m === 'wait') renderWait();
   else if (m === 'plan') {
     renderCounts();
-    renderGoal(); renderWork(); renderHours(); renderRequests(); renderTeam();
+    renderGoal(); renderWork(); renderHours(); renderRequests(); renderTeam(); renderNotes();
     $('#rulesBox').innerHTML = rulesHtml();
     renderGuides();
     go(tab);
@@ -333,12 +345,14 @@ function renderHeader(m) {
 function renderMenu(m) {
   const me = PA.me || {};
   $('#meName').textContent = PA.owner ? PA.ownerName() : (me.name || '');
-  $('#meRole').textContent = PA.owner ? 'Raum-Besitzer'
+  $('#meRole').textContent = PA.owner ? (teachers && !teachers.is_owner ? 'Lehrkraft · eingeladen' : 'Raum-Besitzer')
     : me.blocked ? 'stillgelegt'
     : group() ? gTitle(group(), members()) : 'in der Lobby';
   $('#miKeyTxt').textContent = PA.owner ? 'Codes zeigen' : 'Code zeigen';
   $('#miKey').hidden = !(PA.owner || me.key);
   $('#miRules').hidden = !PA.owner;
+  $('#miTeachers').hidden = !PA.owner || m === 'loading';
+  if (PA.owner && !teachers && !teachersTried) loadTeachers();
   // Export / Import / Backups: nur die Lehrkraft (0202). In der Übersicht
   // für die ganze Klasse, im Planungsraum für dieses Projekt.
   const inPlan = m === 'plan';
@@ -367,6 +381,10 @@ function renderCounts() {
     pill.title = `Nächster Antrag: ${deDay(nx.date)} — ${st.nm}`;
   }
   $('#cntTeam').textContent = members().length;
+  const openNotes = notes().filter(n => !n.done).length;
+  const cn = $('#cntNotes');
+  cn.textContent = openNotes;
+  cn.classList.toggle('red', openNotes > 0 && !PA.owner);
 }
 
 /* ── Erstes Öffnen: den persönlichen Code zeigen ─────────── */
@@ -1134,6 +1152,138 @@ function renderTeam() {
 }
 
 /* ════════════════════════════════════════════════════════════
+   LEHRKRAFT-KOMMENTARE (0205)
+   ════════════════════════════════════════════════════════════ */
+const notes = () => ((group() && group().notes) || []).slice()
+  .sort((a, b) => (a.done - b.done) || String(b.at || '').localeCompare(String(a.at || '')));
+const noteFn = fn => (PA.owner ? 'pa_room_note_' : 'pa_note_') + fn;
+
+function renderNotes() {
+  const all = notes();
+  const open = all.filter(n => !n.done).length;
+  $('#noteForm').hidden = !PA.owner;
+  $('#notesSub').innerHTML = PA.owner
+    ? 'Kommentare und Hinweise an diese Gruppe — jede Lehrkraft des Raums sieht und schreibt hier. Die Gruppe hakt ab, was erledigt ist, und kann darunter nachfragen.'
+    : 'Hier hinterlassen eure Lehrkräfte Kommentare und Hinweise zu eurem Projekt. Erledigt? <b>Abhaken.</b> Unklar? Darunter <b>nachfragen</b>.';
+  $('#noteColors').innerHTML = Object.keys(COLORS).map(c =>
+    `<button type="button" data-ncolor="${c}" style="background:${COLORS[c]}" aria-pressed="${noteColor === c}" aria-label="Farbe ${c}"></button>`).join('');
+  $('#notesStats').innerHTML = all.length
+    ? `<span class="stat">Offen <b>${open}</b> · erledigt <b>${all.length - open}</b></span>` : '';
+  $('#noteFilt').innerHTML = all.length > 1 ? [['all', 'Alle'], ['open', 'Offen'], ['done', 'Erledigt']].map(([k, nm]) =>
+    `<button class="btn sm${noteFilter === k ? ' primary' : ' ghost'}" data-nf="${k}">${nm}</button>`).join('') : '';
+  const list = all.filter(n => noteFilter === 'all' || (noteFilter === 'done') === !!n.done);
+  $('#noteGrid').innerHTML = list.map(noteHtml).join('') || (all.length
+    ? `<div class="nothing" style="grid-column:1/-1;padding:24px"><h3>${noteFilter === 'open' ? 'Alles abgehakt' : 'Noch nichts abgehakt'}</h3></div>`
+    : `<div class="nothing" style="grid-column:1/-1;padding:28px"><h3>Noch keine Kommentare</h3>
+        <p>${PA.owner ? 'Oben einen Hinweis schreiben und anheften — die Gruppe sieht ihn sofort.' : 'Sobald eure Lehrkraft euch einen Hinweis gibt, hängt er hier.'}</p></div>`);
+}
+
+function noteHtml(n) {
+  const col = COLORS[n.color] ? n.color : 'yellow';
+  const reps = (Array.isArray(n.replies) ? n.replies : []).map(r => {
+    const mine = PA.owner || (!r.teacher && r.by && r.by === meId());
+    return `<div class="n-rep${r.teacher ? ' t' : ''}"><b>${esc(r.name || '?')} <i>· ${esc(deAt(r.at))}</i></b><span>${esc(r.text)}</span>
+      ${mine && canWrite() ? `<button class="rx" data-nrdel="${esc(n.id)}:${esc(r.id)}" title="Löschen" aria-label="Löschen">${ICO.trash}</button>` : ''}</div>`;
+  }).join('');
+  return `<div class="note pi-${col}${n.done ? ' done' : ''}">
+    ${PA.owner ? `<button class="n-x" data-ndel="${esc(n.id)}" title="Kommentar löschen" aria-label="Kommentar löschen">${ICO.trash}</button>` : ''}
+    <div class="n-head">${avatar({ id: n.author || n.authorName, name: n.authorName }, 22)}<span>${esc(n.authorName || 'Lehrkraft')}</span><span class="when">${esc(deAt(n.at))}</span></div>
+    <div class="n-text">${esc(n.text)}</div>
+    ${reps ? `<div class="n-reps">${reps}</div>` : ''}
+    ${canWrite() ? `<form class="n-ask" data-nask="${esc(n.id)}"><input type="text" maxlength="600" data-naskin="${esc(n.id)}" value="${esc(askDraft[n.id] || '')}"
+        placeholder="${PA.owner ? 'Antworten …' : 'Nachfrage stellen …'}" aria-label="${PA.owner ? 'Antworten' : 'Nachfrage stellen'}">
+      <button class="btn sm" type="submit" aria-label="Senden">${ICO.arrow}</button></form>` : ''}
+    <label class="n-done"><input type="checkbox" data-ndone="${esc(n.id)}"${n.done ? ' checked' : ''}${canWrite() ? '' : ' disabled'}>
+      ${n.done ? 'Erledigt' : 'Abhaken, wenn erledigt'}${n.done && n.doneBy ? ` <small>· ${esc(n.doneBy)}, ${esc(deAt(n.doneAt))}</small>` : ''}</label>
+  </div>`;
+}
+
+async function addNote() {
+  const txt = $('#noteIn').value.trim();
+  if (!txt) { $('#noteIn').focus(); return; }
+  const r = await PA.act('pa_room_note_add', { p_group: PA.focus, p_text: txt, p_color: noteColor });
+  if (r) { $('#noteIn').value = ''; toast('Kommentar angeheftet'); }
+}
+
+async function sendAsk(id) {
+  const txt = String(askDraft[id] || '').trim();
+  if (!txt) return;
+  const r = await PA.act(noteFn('reply'), { p_note: id, p_text: txt });
+  if (r) { delete askDraft[id]; if (document.activeElement) document.activeElement.blur(); }
+}
+
+/* ── Weitere Lehrkräfte (0205) ───────────────────────────────
+   Gezielt einladen: Name suchen, antippen — die Lehrkraft ist sofort
+   mit denselben Rechten im Raum. Austragen kann jede Lehrkraft jede
+   eingeladene (auch sich selbst); den Besitzer niemand. */
+let teachers = null, teachersTried = false, tSearchTimer = null, tSearchSeq = 0;
+
+async function loadTeachers() {
+  teachersTried = true;
+  const r = await PA.call('pa_room_teachers_get', {});
+  if (r && r.ok) { teachers = r; renderMenu(mode()); if (!$('#mTeachers').hidden) renderTeachers(); }
+  return r;
+}
+
+function renderTeachers() {
+  const list = (teachers && teachers.teachers) || [];
+  $('#tList').innerHTML = list.map(t => `<div class="tline">${avatar({ id: t.id, name: t.name }, 30)}
+      <div class="who">${esc(t.name)}${t.me ? ' <span class="metag">du</span>' : ''}<small>${t.owner ? 'hat den Raum eröffnet' : 'eingeladen'}</small></div>
+      ${t.owner ? '' : `<button class="btn ghost sm" data-tdel="${esc(t.id)}">${t.me ? 'Raum verlassen' : 'Austragen'}</button>`}
+    </div>`).join('');
+}
+
+async function openTeachers() {
+  $('#tSearch').value = ''; $('#tRes').innerHTML = '';
+  renderTeachers();
+  show('mTeachers');
+  const r = await loadTeachers();
+  if (!r || !r.ok) { hide('mTeachers'); toast(PA.msg(r && r.error === 'fn_missing' ? 'fn_missing' : r && r.error)); return; }
+  setTimeout(() => $('#tSearch').focus(), 60);
+}
+
+async function searchTeachers() {
+  const q = $('#tSearch').value.trim();
+  const seq = ++tSearchSeq;
+  if (q.length < 2) { $('#tRes').innerHTML = q ? '<p class="hint">Mindestens zwei Buchstaben.</p>' : ''; return; }
+  const r = await PA.call('pa_room_teacher_search', { p_q: q });
+  if (seq !== tSearchSeq) return;
+  if (!r || !r.ok) { $('#tRes').innerHTML = `<p class="hint">${esc(PA.msg(r && r.error))}</p>`; return; }
+  $('#tRes').innerHTML = (r.teachers || []).map(t => `<div class="tline">${avatar({ id: t.id, name: t.name }, 30)}
+      <div class="who">${esc(t.name)}${t.account && t.account !== t.name ? `<small>${esc(t.account)}</small>` : ''}</div>
+      <button class="btn primary sm" data-tadd="${esc(t.id)}" data-name="${esc(t.name)}">Einladen</button></div>`).join('')
+    || '<p class="hint">Keine Lehrkraft gefunden — oder sie ist schon im Raum.</p>';
+}
+
+async function addTeacher(id, name) {
+  const r = await PA.act('pa_room_teacher_add', { p_user: id });
+  if (!r) return;
+  toast(`${name} ist jetzt Lehrkraft in diesem Raum.`);
+  $('#tSearch').value = ''; $('#tRes').innerHTML = '';
+  loadTeachers();
+}
+
+function removeTeacher(id) {
+  const t = ((teachers && teachers.teachers) || []).find(x => x.id === id);
+  if (!t) return;
+  hide('mTeachers');
+  ask(t.me ? 'Raum verlassen?' : `${t.name} austragen?`, t.me
+    ? 'Du bist dann keine Lehrkraft mehr in diesem Raum und siehst ihn nicht mehr. Eine andere Lehrkraft des Raums kann dich wieder einladen.'
+    : `${t.name} sieht den Raum danach nicht mehr. Kommentare und Entscheidungen bleiben stehen.`,
+    async () => {
+      const r = await PA.act('pa_room_teacher_remove', { p_user: t.me ? null : id });
+      if (!r) return;
+      if (t.me) {
+        toast('Du hast den Raum verlassen.');
+        if (!PA.demo) setTimeout(() => { try { window.parent.location.href = new URL('../../index.html', location.href).href; } catch (e) { /* bleibt */ } }, 900);
+        return;
+      }
+      toast(`${t.name} ist ausgetragen.`);
+      loadTeachers();
+    }, t.me ? 'Verlassen' : 'Austragen');
+}
+
+/* ════════════════════════════════════════════════════════════
    PROJEKTARBEIT & REGELN
    ════════════════════════════════════════════════════════════ */
 function rulesHtml() {
@@ -1343,7 +1493,7 @@ function go(v) {
   if (goalDirty && v !== 'goal') saveGoal();
   tab = v;
   $$('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view === v));
-  ['goal', 'work', 'hours', 'requests', 'team', 'rules'].forEach(k => { const el = $('#view-' + k); if (el.hidden !== (k !== v)) el.hidden = k !== v; });
+  ['goal', 'work', 'hours', 'requests', 'team', 'notes', 'rules'].forEach(k => { const el = $('#view-' + k); if (el.hidden !== (k !== v)) el.hidden = k !== v; });
 }
 
 function wire() {
@@ -1360,6 +1510,22 @@ function wire() {
     $('#keyBig').textContent = PA.fmtKey(PA.me && PA.me.key); show('mKey');
   });
   $('#miRules').addEventListener('click', () => { $('#menuPop').hidden = true; openRules(); });
+  $('#miTeachers').addEventListener('click', () => { $('#menuPop').hidden = true; openTeachers(); });
+  $('#tSearch').addEventListener('input', () => { clearTimeout(tSearchTimer); tSearchTimer = setTimeout(searchTeachers, 250); });
+  // Kommentare
+  $('#noteAdd').addEventListener('click', addNote);
+  document.addEventListener('input', e => { const id = e.target.dataset && e.target.dataset.naskin; if (id) askDraft[id] = e.target.value; });
+  document.addEventListener('submit', e => {
+    const f = e.target.closest && e.target.closest('[data-nask]');
+    if (!f) return;
+    e.preventDefault(); sendAsk(f.dataset.nask);
+  });
+  document.addEventListener('change', e => {
+    const id = e.target.dataset && e.target.dataset.ndone;
+    if (!id) return;
+    if (!canWrite()) { e.target.checked = !e.target.checked; return; }
+    PA.act(noteFn('done'), { p_note: id, p_done: e.target.checked });
+  });
   $('#miPrint').addEventListener('click', () => { $('#menuPop').hidden = true; window.print(); });
   $('#miExport').addEventListener('click', () => { $('#menuPop').hidden = true; exportFile(); });
   $('#miImport').addEventListener('click', () => { $('#menuPop').hidden = true; $('#importFile').click(); });
@@ -1494,6 +1660,23 @@ function wire() {
       return;
     }
     if ((b = t.closest('[data-editrules]'))) { openRules(); return; }
+    // Kommentare
+    if ((b = t.closest('[data-ncolor]'))) { noteColor = b.dataset.ncolor; renderNotes(); return; }
+    if ((b = t.closest('[data-nf]'))) { noteFilter = b.dataset.nf; renderNotes(); return; }
+    if ((b = t.closest('[data-ndel]'))) {
+      const id = b.dataset.ndel;
+      ask('Kommentar löschen?', 'Der Zettel verschwindet für die Gruppe und alle Lehrkräfte — mit den Nachfragen darunter.',
+        () => PA.act('pa_room_note_delete', { p_note: id }), 'Löschen');
+      return;
+    }
+    if ((b = t.closest('[data-nrdel]'))) {
+      const [nid, rid] = b.dataset.nrdel.split(':');
+      ask('Nachricht löschen?', 'Sie verschwindet unter dem Kommentar.', () => PA.act(noteFn('reply_delete'), { p_note: nid, p_reply: rid }), 'Löschen');
+      return;
+    }
+    // Lehrkräfte
+    if ((b = t.closest('[data-tadd]'))) { addTeacher(b.dataset.tadd, b.dataset.name); return; }
+    if ((b = t.closest('[data-tdel]'))) { removeTeacher(b.dataset.tdel); return; }
   });
 
   $('#pickCancel').addEventListener('click', () => setPick(null));

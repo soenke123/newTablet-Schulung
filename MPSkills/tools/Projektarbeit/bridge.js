@@ -161,7 +161,10 @@
     email_invalid:   'Diese Adresse sieht nicht richtig aus.',
     too_soon:        'Gerade erst verschickt — bitte zwei Minuten warten.',
     fn_missing_mail: 'Auf dem Server fehlt die Migration 0203 (Antrags-Mails).',
-    fn_missing:      'Auf dem Server fehlt eine Migration der Projektarbeit (0200–0204). Bitte der Lehrkraft Bescheid sagen.'
+    not_a_teacher:   'Diese Person ist keine freigeschaltete Lehrkraft dieser Schule.',
+    teacher_limit:   'Mehr als 10 weitere Lehrkräfte gehen in einen Raum nicht.',
+    is_owner:        'Wer den Raum eröffnet hat, bleibt immer drin.',
+    fn_missing:      'Auf dem Server fehlt eine Migration der Projektarbeit (0200–0205). Bitte der Lehrkraft Bescheid sagen.'
   };
   PA.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
 
@@ -296,7 +299,7 @@
   };
 
   /* ══════════════════════════════════════════════════════════
-     DEMO — eine kleine Nachbildung des Servers (Migrationen 0200–0202)
+     DEMO — eine kleine Nachbildung des Servers (Migrationen 0200–0205)
      ══════════════════════════════════════════════════════════
      Für das Schaufenster und das Öffnen ohne Raum. Spielt die
      Lehrkraft einer Beispielklasse; gerechnet wird wie auf dem
@@ -354,6 +357,18 @@
       activity: 'Wir möchten die Beete dort fotografieren und mit dem Gärtner sprechen.',
       status: 'open', by: 'p5', byName: 'Hannah', at: day(0) + 'T08:30:00Z', sentAt: day(0) + 'T08:30:00Z', sentByName: 'Hannah' });
 
+    // 0205: Lehrkraft-Kommentare je Gruppe und die Lehrkräfte des Raums.
+    const notes = { g1: [
+      { id: 'n2', text: 'Denkt an den Antrag für den Ausflug zum Flugplatz — bis Vortag 18 Uhr.', color: 'blue',
+        author: 'u2', authorName: 'Herr Kollege', at: day(0) + 'T08:05:00Z', done: false, doneBy: null, doneAt: null, replies: [] },
+      { id: 'n1', text: 'Euer Projektziel ist noch zu allgemein. Woran erkennt ihr am Ende, dass die Station funktioniert?', color: 'yellow',
+        author: 'u1', authorName: 'Frau Demo', at: day(-2) + 'T11:20:00Z', done: false, doneBy: null, doneAt: null,
+        replies: [{ id: 'r1', by: 'p2', teacher: false, name: 'Leon', text: 'Reicht es, wenn die Werte auf der Webseite stehen?', at: day(-1) + 'T09:00:00Z' },
+                  { id: 'r2', by: null, teacher: true, name: 'Frau Demo', text: 'Ja — und eine Woche lang ohne Ausfall. Schreibt das ins Ziel.', at: day(-1) + 'T10:15:00Z' }] }
+    ] };
+    const staff = [{ id: 'u1', name: 'Frau Demo', owner: true, me: true }, { id: 'u2', name: 'Herr Kollege', owner: false, me: false }];
+    const school = [{ id: 'u3', name: 'Frau Beispiel', account: 'beispiel' }, { id: 'u4', name: 'Herr Muster', account: 'muster' }];
+    const noteOf = id => { for (const g in notes) { const n = notes[g].find(x => x.id === id); if (n) return n; } return null; };
     const notify = { domain: 'mps-ki.de', email: null, verified: false, pending: false, enabled: false };
     const bump = () => { rev++; };
     const tidy = g => {
@@ -390,7 +405,7 @@
         room: { title: 'Klasse 8b · Projektwoche', join_open: true, rules },
         me: { id: null, name: 'Lehrkraft' },
         people, groups: groups.map(stats),
-        group: g ? Object.assign({}, g, { members: membersOf(g.id) }) : null,
+        group: g ? Object.assign({}, g, { members: membersOf(g.id), notes: g.plan_open ? (notes[g.id] || []) : [] }) : null,
         items: g ? Object.values(store[g.id]) : []
       }));
     }
@@ -508,6 +523,48 @@
         return { ok: true, groups: out, created };
       }
       if (fn === 'pa_room_backups') return { ok: true, backups: [] };
+      // 0205: Lehrkräfte und Kommentare.
+      if (fn === 'pa_room_teachers_get') return R({ ok: true, is_owner: true, teachers: staff });
+      if (fn === 'pa_room_teacher_search') {
+        const q = String(a.p_q || '').trim().toLowerCase();
+        return R({ ok: true, teachers: q.length < 2 ? [] : school.filter(t => !staff.some(s => s.id === t.id)
+          && (t.name.toLowerCase().includes(q) || t.account.includes(q))) });
+      }
+      if (fn === 'pa_room_teacher_add') {
+        const t = school.find(x => x.id === a.p_user); if (!t) return { ok: false, error: 'not_a_teacher' };
+        if (!staff.some(s => s.id === t.id)) staff.push({ id: t.id, name: t.name, owner: false, me: false });
+        bump(); return { ok: true };
+      }
+      if (fn === 'pa_room_teacher_remove') {
+        const id = a.p_user || 'u1';
+        if (id === 'u1') return { ok: false, error: 'is_owner' };
+        const i = staff.findIndex(s => s.id === id); if (i < 0) return { ok: false, error: 'not_found' };
+        staff.splice(i, 1); bump(); return { ok: true, self: false };
+      }
+      if (fn === 'pa_room_note_add') {
+        const g = groups.find(x => x.id === a.p_group);
+        const txt = String(a.p_text || '').trim();
+        if (!g || !g.plan_open) return { ok: false, error: 'not_found' };
+        if (!txt) return { ok: false, error: 'invalid_input' };
+        if (txt.length > 1500) return { ok: false, error: 'too_long' };
+        (notes[g.id] = notes[g.id] || []).unshift({ id: 'n' + Date.now().toString(36), text: txt,
+          color: ['yellow', 'blue', 'green', 'pink', 'lilac'].includes(a.p_color) ? a.p_color : 'yellow',
+          author: 'u1', authorName: 'Frau Demo', at: new Date().toISOString(), done: false, doneBy: null, doneAt: null, replies: [] });
+        bump(); return { ok: true };
+      }
+      if (fn.startsWith('pa_room_note_')) {
+        const n = noteOf(a.p_note); if (!n) return { ok: false, error: 'not_found' };
+        if (fn === 'pa_room_note_delete') { for (const g in notes) notes[g] = notes[g].filter(x => x !== n); }
+        else if (fn === 'pa_room_note_done') Object.assign(n, a.p_done === false
+          ? { done: false, doneBy: null, doneAt: null } : { done: true, doneBy: 'Frau Demo', doneAt: new Date().toISOString() });
+        else if (fn === 'pa_room_note_reply') {
+          const txt = String(a.p_text || '').trim();
+          if (!txt) return { ok: false, error: 'invalid_input' };
+          n.replies.push({ id: 'r' + Date.now().toString(36), by: null, teacher: true, name: 'Frau Demo', text: txt.slice(0, 600), at: new Date().toISOString() });
+        } else if (fn === 'pa_room_note_reply_delete') n.replies = n.replies.filter(r => r.id !== a.p_reply);
+        else return { ok: false, error: 'not_allowed' };
+        bump(); return { ok: true };
+      }
       return { ok: false, error: 'not_allowed' };
     }
 

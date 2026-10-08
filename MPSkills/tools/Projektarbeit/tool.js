@@ -28,6 +28,10 @@
    antwortet wie immer mit {type:'focus'}. Ohne ctx.tabs (Schaufenster)
    bleibt der Knopf „← Übersicht" im Rahmen.
 
+   Weitere Lehrkräfte (0205): über das Menü im Rahmen eingeladen,
+   gleiche Rechte wie der Besitzer (pa_room_teacher_*). Zettel im Reiter
+   „Lehrkraft-Kommentare" (pa_room_note_* / pa_note_*).
+
    Export, Import, Backups (0202): nur die Lehrkraft, über das Menü im
    Rahmen (pa_room_export / _import / _backups / _backup_get /
    _backup_restore). Ein Projektarbeit-Raum hält ein Jahr (Trigger auf
@@ -43,11 +47,15 @@
   'use strict';
 
   const ALLOWED = {
-    participant: ['pa_save', 'pa_member_update', 'pa_group_rename'],
+    participant: ['pa_save', 'pa_member_update', 'pa_group_rename',
+                  'pa_note_done', 'pa_note_reply', 'pa_note_reply_delete'],
     presenter:   ['pa_room_save', 'pa_room_member_update', 'pa_room_rekey', 'pa_room_assign',
                   'pa_room_plan', 'pa_room_group_delete', 'pa_room_rules',
                   'pa_room_consent', 'pa_room_export', 'pa_room_import', 'pa_room_backups',
-                  'pa_room_backup_get', 'pa_room_backup_restore', 'pa_room_notify_get', 'pa_room_notify_set']
+                  'pa_room_backup_get', 'pa_room_backup_restore', 'pa_room_notify_get', 'pa_room_notify_set',
+                  'pa_room_teachers_get', 'pa_room_teacher_search', 'pa_room_teacher_add', 'pa_room_teacher_remove',
+                  'pa_room_note_add', 'pa_room_note_delete', 'pa_room_note_done', 'pa_room_note_reply',
+                  'pa_room_note_reply_delete']
   };
 
   const GAP = 12;
@@ -225,7 +233,7 @@
       root = el; ctx = c; role = c.role; destroyed = false;
 
       // Im Schaufenster ohne Raum: die Beispielklasse (?demo=1, bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261008a';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261008b';
       root.innerHTML =
         '<div class="pa-host">' +
           '<iframe class="pa-frame" src="tools/Projektarbeit/index.html' + q + '" ' +

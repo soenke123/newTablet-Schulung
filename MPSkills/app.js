@@ -543,6 +543,8 @@ function roomRow(r) {
   // einziges eine eigene Auszeichnung tragen kann.
   const bits = [esc(r.tool_title || r.tool_id)];
   if (r.is_test) bits.push('Testraum');
+  // Eingeladen (Projektarbeit, Migration 0205): gehört jemand anderem.
+  if (r.co_teacher) bits.push('eingeladen von ' + esc(r.owner_name || 'einer Lehrkraft'));
 
   // Die Anwesenden gehören zur Personenzahl und stehen deshalb in
   // derselben Angabe — sonst schöbe sich die Restlaufzeit zwischen
@@ -582,7 +584,9 @@ function roomRow(r) {
                dem Fenster ist „den hätte ich doch noch gebraucht" der
                wahrscheinlichste Grund, hier zu klicken. -->
           <button type="button" data-act="extend">${r.expired ? 'Zurückholen' : 'Verlängern'}</button>
-          <button type="button" class="rowmenu-danger" data-act="delete">Löschen</button>
+          ${r.co_teacher
+            ? '<button type="button" class="rowmenu-danger" data-act="leave">Raum verlassen</button>'
+            : '<button type="button" class="rowmenu-danger" data-act="delete">Löschen</button>'}
         </div>
       </div>
     </li>`;
@@ -605,6 +609,10 @@ async function roomAction(code, act, btn) {
     if (!confirm(`Raum wirklich löschen?\n\nAlles darin ist weg — auch für die Klasse. `
                + `Der Code ${code} funktioniert danach nicht mehr.`)) return;
   }
+  if (act === 'leave') {
+    if (!confirm('Raum verlassen?\n\nDu bist dann keine Lehrkraft mehr in diesem Raum. '
+               + 'Eine andere Lehrkraft des Raums kann dich wieder einladen.')) return;
+  }
 
   closeRowMenus();
   btn.disabled = true;
@@ -614,6 +622,8 @@ async function roomAction(code, act, btn) {
       r = await rpc('skill_room_set_open', { p_code: code, p_open: btn.dataset.open === '1' });
     } else if (act === 'extend') {
       r = await rpc('skill_room_extend', { p_code: code });
+    } else if (act === 'leave') {
+      r = await rpc('pa_room_teacher_remove', { p_code: code });
     } else {
       r = await rpc('skill_room_delete', { p_code: code });
     }
@@ -625,6 +635,7 @@ async function roomAction(code, act, btn) {
     toast(act === 'toggle'  ? (btn.dataset.open === '1' ? 'Beitritt geöffnet.' : 'Beitritt geschlossen.')
         : act === 'extend'  ? (r.revived ? 'Raum zurückgeholt — er läuft wieder 30 Tage.'
                                          : 'Verlängert: ' + window.MPRoom.untilText(r.expires_at) + '.')
+        : act === 'leave'   ? 'Raum verlassen.'
         : 'Raum gelöscht.');
     renderRooms();
   } catch (e) {
