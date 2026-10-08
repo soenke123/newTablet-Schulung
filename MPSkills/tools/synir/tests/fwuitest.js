@@ -161,8 +161,8 @@ async function waehlen(page, kind) {
        const t = g.getAttribute('transform').match(/translate\(([-\d.]+),([-\d.]+)\)/);
        return +t[1] < 0 && +t[2] > 0;
      }));
-  ok('es hat einen Kurzhinweis', await page.evaluate(() =>
-    /Firewall/.test(document.querySelector('.nf-fw title').textContent)));
+  ok('es hat keinen eigenen Kurzhinweis (am Gerät stehen nur die IPs)', await page.evaluate(() =>
+    !document.querySelector('.nf-fw title')));
   ok('und es steht NICHT in der Reihe der Server-Pillen', await page.evaluate(() =>
     !document.querySelector('.nf-fw').classList.contains('nf-mark')));
   await page.evaluate(() => {

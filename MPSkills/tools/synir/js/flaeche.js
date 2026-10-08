@@ -851,8 +851,6 @@
           }
           const tx = el('text', { x: it.funk ? (-it.br / 2 + 17) : 0, y: 3.8 }, b);
           tx.textContent = it.text;
-          const ttl = el('title', {}, b);
-          ttl.textContent = it.ttl;
           x += it.br + MARK_LUECKE;
         }
       });
@@ -906,12 +904,19 @@
 
       el('rect', { class: 'nf-plate', x: -W / 2, y: -H / 2, width: W, height: H, rx: 16 }, g);
 
-      /* Der ausgeschriebene Name steht als Kurzhinweis am Gerät.
-         Sichtbar ist nur das Kürzel — aber wer mit dem Zeiger
-         darauf hält, liest „Endgerät 1", und im Fensterkopf steht
-         es ohnehin. */
-      const ttlN = el('title', {}, g);
-      ttlN.textContent = n.name + ' · ' + netz.KIND[n.kind].label;
+      /* Der Kurzhinweis am Gerät sind seine IP-Adressen — alle,
+         eine je Zeile, auch die, die unter der Kachel nicht stehen
+         (WAN beim Heimrouter, die übrigen Karten eines Routers).
+         Vom Nutzer so gewollt: „einfach nur die IPs". Darum tragen
+         die Marken, das „!", die Firewall und das Schloss keinen
+         eigenen Hinweis mehr — er läge über diesem. Name und
+         Probleme stehen im Fenster des Geräts. Ein Switch hat keine
+         Adresse und deshalb auch keinen Hinweis. */
+      if (n.kind !== 'switch') {
+        const ips = n.nics.filter(k => k.ip).map(k => k.ip);
+        const ttlN = el('title', {}, g);
+        ttlN.textContent = ips.length ? ips.join('\n') : 'keine IP';
+      }
 
       /* ─ Kurzname ÜBER dem Symbol ─
          E1, R1, S1, SW1. Er liegt in der Kachel, nicht darunter:
@@ -1045,8 +1050,6 @@
         el('circle', { r: 10 }, b);
         const tx = el('text', { y: 4 }, b);
         tx.textContent = '!';
-        const ttl = el('title', {}, b);
-        ttl.textContent = prob;
       }
 
       // Das Aus-Zeichen ist nach unten links gewandert: oben links
@@ -1072,17 +1075,12 @@
          decken (so wie DHCP und „!" früher — das hat nur das Bild
          gezeigt). */
       if (netz.fwLaeuft(n)) {
-        const c = n.firewall;
-        const nr = (c.regeln || []).length;
         const p = fwPlatz(n);
         const b = el('g', { class: 'nf-fw', transform: 'translate(' + p.x + ',' + p.y + ')' }, g);
         /* Kein Grund hinter dem Zeichen (vom Nutzer: „ohne weiße Pille"):
            die Figur hat ihre eigene dunkle Kontur. 24 × 24 · 1,0 ≈ 24 Punkte. */
         const ic = el('g', { transform: 'translate(-12.1,-12.1) scale(1.008)' }, b);
         el('use', { href: '#ic-firewall' }, ic);
-        const ttl = el('title', {}, b);
-        ttl.textContent = 'Auf diesem Gerät läuft eine Firewall (' + (c.typ === 'whitelist' ? 'Whitelist' : 'Blacklist')
-          + ', ' + nr + (nr === 1 ? ' Eintrag' : ' Einträge') + ').';
       }
 
       g.addEventListener('pointerdown', (ev) => onNodeDown(ev, n));
@@ -1141,8 +1139,6 @@
       const s = el('g', { class: 'nf-lock', transform: 'translate(' + x + ',' + (y - 4) + ')' }, g);
       el('rect', { x: -4, y: -1, width: 8, height: 7, rx: 1.5 }, s);
       el('path', { class: 'nf-lock-b', d: 'M -2.3 -1 L -2.3 -3.4 A 2.3 2.3 0 0 1 2.3 -3.4 L 2.3 -1' }, s);
-      const ttl = el('title', {}, s);
-      ttl.textContent = 'Diese Adresse kommt vom DHCP-Server und lässt sich hier nicht ändern.';
     }
 
     /* Eine Adresse in ein <text> schreiben, Stück für Stück, mit

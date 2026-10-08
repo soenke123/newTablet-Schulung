@@ -213,8 +213,15 @@ async function markenAn(page, name, art) {
      kuerzel.slice().sort().join(' ') === 'E1 E2 SW1', kuerzel.join(' '));
   ok('kein ausgeschriebener Name mehr auf der Fläche',
      await page.locator('.nf-name').count() === 0);
-  ok('der volle Name steht als Kurzhinweis am Gerät',
-     (await page.locator('.nf-node title').first().textContent()).includes('Endgerät 1'));
+  /* Der Kurzhinweis am Gerät sind nur seine IP-Adressen (vom Nutzer
+     so gewollt); ein Switch hat keine und keinen Hinweis. */
+  ok('der Kurzhinweis am Gerät zeigt nur seine IP-Adressen', await page.evaluate(() =>
+    window.SIM.netz.list().every(n => {
+      const t = document.querySelector('.nf-node[data-node="' + n.id + '"] > title');
+      if (n.kind === 'switch') return !t;
+      const ips = n.nics.filter(k => k.ip).map(k => k.ip);
+      return t && t.textContent === (ips.length ? ips.join('\n') : 'keine IP');
+    })));
   /* Beide groß genug für den Beamer. Der Gerätename stand früher
      mit 13 px da, die Adresse mit 12 — aus der letzten Reihe war
      das nichts. */
@@ -1662,10 +1669,10 @@ async function markenAn(page, name, art) {
      String(await page.locator('.nf .nf-dns').count()));
   ok('auf der Pille steht das Kurzwort',
      (await page.locator('.nf .nf-dns text').first().textContent()) === 'DNS');
-  /* Der ganze Satz steht im Kurzhinweis — die Pille muss schmal
-     bleiben, sonst deckt sie die Kabel der Nachbarn zu. */
-  ok('der Kurzhinweis sagt, was das Gerät tut',
-     /DNS-Server/.test(await page.locator('.nf .nf-dns title').first().textContent()));
+  /* Die Pille hat keinen eigenen Kurzhinweis — er läge über dem
+     des Geräts, und der zeigt nur die IP-Adressen. */
+  ok('die Pille hat keinen eigenen Kurzhinweis',
+     await page.locator('.nf .nf-dns title').count() === 0);
 
   await page.locator('#dtWin #dnsStart').click();
   await page.waitForTimeout(350);
