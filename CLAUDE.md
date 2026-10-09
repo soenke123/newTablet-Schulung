@@ -13,6 +13,7 @@ Webauftrtitt/
 ├── index.html          → Landing page: links to GameHub, PDF downloads, and workshop slides
 ├── viewport.js         → sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen
 ├── datenschutz.html  → Datenschutzerklärung (Art. 13), verlinkt im Fuß der Landing und in MPSkills „Was wird hier gespeichert?“; gelbe <mark class="todo"> = füllt die Schule aus; Fristen im Code (0208 skill_cleanup, 0209 account_lifecycle: Reset nach 1 Jahr ohne Login, Löschung nach 4 Jahren) hier mitändern
+├── DATENSCHUTZ.md    → Datenschutz: was erledigt ist, was bewusst so bleibt, Checkliste der nächsten Schritte (Technik, Schulleitung/DSB, Dokumente); bei Datenschutz-Fragen zuerst hier lesen und abhaken
 ├── vercel.json       → nur "regions": ["fra1"] — Functions laufen in Frankfurt (Datenschutz, api/SETUP.md)
 ├── fonts/            → Google Fonts lokal (latin + latin-ext, je CSS-Datei ein Satz Familien); NIE fonts.googleapis.com einbinden
 ├── vendor/           → fest gepinnte Bibliotheken statt CDN: supabase-js-2.116.0.min.js, feather-icons-4.29.2.min.js; kein jsDelivr/unpkg (Datenschutz)
