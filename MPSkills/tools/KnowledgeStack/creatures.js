@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Knowledge Stack — Die 36 Wesen (creatures.js)
+   Knowledge Stack — Die 40 Wesen (creatures.js)
    ══════════════════════════════════════════════════════════════
 
    Fassung 2 (Oktober 2026). Die erste Fassung kam als fertige
@@ -250,11 +250,16 @@
      sechs Arm-Bewegungen (a) und vier Kopf-Bewegungen (h). Die
      Verteilung: r = (id + Versatz) % 6 und a = (id / 6 + Schritt · r) % 6.
      Weil r die Stelle innerhalb der Sechsergruppe festlegt und a dann
-     die Gruppe, bekommen alle 36 Wesen bei JEDEM Emote eine andere
+     die Gruppe, bekommen die Wesen 0…35 bei JEDEM Emote eine andere
      Körper-und-Arm-Kombination. Versatz und Schritt sind je Emote
      andere — wer beim Tanzen die Pirouette hat, hat beim Jubeln
      nicht auch die „dritte" Bewegung. Dazu ein eigenes Tempo.
-     Die Namen braucht nur der Showroom.                            */
+     Die Namen braucht nur der Showroom.
+
+     Seit Oktober 2026 sind es 40 Wesen, aber es gibt nur 6 × 6
+     Körper-und-Arm-Kombinationen. Die Wesen 36…39 teilen sich ihre
+     Kombination mit 0…3 — sie unterscheiden sich in Kopf (+2) und
+     Tempo, also nie in allen drei.                                 */
   const MOVES = [
     { k: 'D', v: 'da', off: 0, step: 1, name: 'Tanzen',
       r: ['Hüftschwung', 'Abtauchen', 'Moonwalk', 'Pirouette', 'Pogo', 'Shimmy'],
@@ -284,7 +289,7 @@
     return MOVES.map((m, e) => {
       const r = (id + m.off) % 6;
       return { emote: m.name, k: m.k, v: m.v, r: r, a: (q + m.step * r) % 6,
-        h: (q * 2 + id + e) % 4, tp: TEMPO[(id * 3 + e * 2) % 5] };
+        h: (q * 2 + id + e + (id >= 36 ? 2 : 0)) % 4, tp: TEMPO[(id * 3 + e * 2) % 5] };
     });
   }
   function movesAttr(id) {
@@ -342,7 +347,7 @@
   }
 
   /* ══════════════════════════════════════════════════════════
-     Die 36 Wesen
+     Die 40 Wesen (0…35 seit Fassung 2, 36…39 neu im Oktober 2026)
      ══════════════════════════════════════════════════════════
      `skins` sind die Namen der drei Farbfassungen (stehen auf den
      Farbknöpfen). `pal` in derselben Reihenfolge: --c1 … --c6.    */
@@ -382,7 +387,11 @@
     { id: 32, name: "Astris", gruppe: "magic", skins: ["Deep Cosmos","Nebula Dream","Solar Eclipse"] },
     { id: 33, name: "Arcana", gruppe: "magic", skins: ["Mystic Violet","Emerald Chrono","Forbidden Shadow"] },
     { id: 34, name: "Zephyr", gruppe: "animal", skins: ["Midnight Starlight","Aurora Feather","Solar Twilight"] },
-    { id: 35, name: "Spindle", gruppe: "spooky", skins: ["Schwarze Witwe","Toxic Cave","Geister Albino"] }
+    { id: 35, name: "Spindle", gruppe: "spooky", skins: ["Schwarze Witwe","Toxic Cave","Geister Albino"] },
+    { id: 36, name: "Prisma", gruppe: "magic", skins: ["Wolkenweiß","Zuckerwatte","Sternennacht"] },
+    { id: 37, name: "Plato", gruppe: "animal", skins: ["Flussbraun","UV-Leuchten","Sandbank"] },
+    { id: 38, name: "Krümel", gruppe: "animal", skins: ["Kellergrau","Laborweiß","Schoko"] },
+    { id: 39, name: "Howl", gruppe: "magic", skins: ["Mitternacht","Blutmond","Geisterwolf"] }
   ];
 
   const DEFS = [];
@@ -1429,6 +1438,165 @@
     armL: sleg('M 32 54 C 22 50 16 56 12 68') + sleg('M 33 48 C 22 40 13 42 8 52'),
     armR: sleg('M 68 54 C 78 50 84 56 88 68') + sleg('M 67 48 C 78 40 87 42 92 52'),
     fx: tw(16, 22, 2.4, 'var(--c4)', 0.3) + tw(82, 18, 2, 'var(--c3)', 1.2)
+  };
+
+  /* ── 36 Prisma · Einhorn mit Regenbogenmähne ───────────── */
+  /* Der Regenbogen bleibt in allen drei Fassungen derselbe —
+     nur Fell, Horn und Hufe wechseln die Farbe. */
+  const RAINBOW = ['#ff4f6d', '#ff9f1c', '#ffd23f', '#34d399', '#38bdf8', '#a78bfa'];
+  const lock = (x, y, r, i) => C(x, y, r, RAINBOW[i], 2.4) + hl(x - r * 0.35, y - r * 0.4, r * 0.22, 0.6);
+  DEFS[36] = {
+    pal: [['#fbf8ff', '#ffc94d', '#c9b8ff', '#ffb3d1'],
+          ['#ffc4dc', '#fff1a8', '#ff7aa8', '#ff8fbf'],
+          ['#3b3f7a', '#ffd23f', '#8b9cff', '#c4a1ff']],
+    o: { al: [38, 70], ar: [62, 70], ll: [41, 86], lr: [59, 86], head: [50, 68], zz: [10, 46] },
+    vars: '--fx:var(--c2)',
+    behind: G('tail', [63, 82], tube('M 63 82 C 76 84 84 78 86 70', RAINBOW[5], 3)
+      + tube('M 63 81 C 75 81 81 74 84 64', RAINBOW[4], 3)
+      + tube('M 63 80 C 73 78 78 70 80 60', RAINBOW[2], 3)
+      + tube('M 63 79 C 71 75 74 66 75 57', RAINBOW[0], 3)),
+    legL: R(35, 82, 12, 8, 3.5, 'var(--c1)', 2.4) + R(35, 87, 12, 4.4, 2, 'var(--c3)', 2.2),
+    legR: R(53, 82, 12, 8, 3.5, 'var(--c1)', 2.4) + R(53, 87, 12, 4.4, 2, 'var(--c3)', 2.2),
+    body: E(50, 76, 16, 12.5, 'var(--c1)', 3)
+      + shade('M 62 70 C 67 76 65 84 57 87 C 62 82 64 76 62 70 Z', 0.1),
+    head: G('mane', [70, 30], lock(57, 22, 6.5, 0) + lock(68, 24, 7, 1) + lock(77, 32, 7, 2)
+        + lock(81, 43, 7, 3) + lock(81, 54, 6.5, 4) + lock(77, 64, 6, 5))
+      + G('ear-l', [32, 32], P('M 27 36 C 24 28 25 20 28 15 C 33 19 37 25 38 31 Z', 'var(--c1)', 2.8) + P('M 29 31 C 28 26 28.5 22 30 19 C 32.5 22 34 25.5 34.5 29 Z', 'var(--c4)', 0, 'opacity=".75"'))
+      + G('ear-r', [68, 32], P(mirror('M 27 36 C 24 28 25 20 28 15 C 33 19 37 25 38 31 Z'), 'var(--c1)', 2.8) + P(mirror('M 29 31 C 28 26 28.5 22 30 19 C 32.5 22 34 25.5 34.5 29 Z'), 'var(--c4)', 0, 'opacity=".75"'))
+      + E(50, 48, 26, 22, 'var(--c1)', 3.2)
+      + shade('M 70 36 C 78 46 77 60 66 67 C 72 59 74 48 70 36 Z', 0.1)
+      + shine('M 28 44 C 29 37 33 31 39 29', 2.6, 0.55)
+      + G('horn glow-soft', null, P('M 45.5 28 L 50 5 L 54.5 28 Z', 'var(--c2)', 2.4)
+        + L('M 46.5 23 L 53 20.5 M 47.5 17.5 L 52 15.5 M 48.6 12 L 51.2 11', INK, 1.2, 'opacity=".45"')
+        + shine('M 48 25 L 49.4 13', 1.4, 0.7))
+      + lock(41, 28, 4.6, 4) + lock(36, 33, 4.2, 5) + lock(46, 30, 3.6, 0)
+      + E(50, 61, 11, 7, '#fff', 0, 'opacity=".45" class="fo"')
+      + L('M 45 58.6 q 1 -1.2 2 0 M 53 58.6 q 1 -1.2 2 0', INK, 1.2, 'opacity=".5" class="fo"')
+      + '{FACE}',
+    face: { lx: 38, rx: 62, y: 46, r: 5.8, my: 64, mw: 3.6, glint: 'var(--c3)', bcol: '#ff6f9f',
+      extra: L('M 31.6 43 L 28.6 40.6 M 32.6 40 L 30.6 37 M 68.4 43 L 71.4 40.6 M 67.4 40 L 69.4 37', INK, 1.6) },
+    back: lock(50, 34, 5, 1) + lock(50, 44, 5, 3) + lock(50, 54, 5, 5),
+    armL: tube('M 38 70 Q 33 75 34 80', 'var(--c1)', 5) + R(29.6, 79, 9, 5.2, 2, 'var(--c3)', 2),
+    armR: tube('M 62 70 Q 67 75 66 80', 'var(--c1)', 5) + R(61.4, 79, 9, 5.2, 2, 'var(--c3)', 2),
+    fx: tw(14, 22, 3.2, 'var(--c2)', 0) + tw(88, 16, 2.6, '#fff', 0.8) + tw(12, 60, 2.4, RAINBOW[4], 1.4)
+      + tw(90, 84, 2.2, RAINBOW[0], 1.9) + tw(26, 6, 2, RAINBOW[2], 0.5)
+  };
+
+  /* ── 37 Plato · Schnabeltier, grimmig und niedlich ─────── */
+  /* Die Brauen stehen immer schräg — auch wenn er sich freut.
+     Bei Trauer und Schlaf blendet creatures.css sie aus (.brow). */
+  const pbill = k => {
+    const top = 'M 28 56 C 27 46 73 46 72 56 C 72 61 63 63 50 63 C 37 63 28 61 28 56 Z';
+    const holes = E(45.5, 51.6, 1.1, 0.8, INK, 0, 'opacity=".6"') + E(54.5, 51.6, 1.1, 0.8, INK, 0, 'opacity=".6"');
+    if (k === 'open' || k === 'wow') {
+      const low = k === 'wow' ? 'M 35 62 C 40 60 60 60 65 62 C 64 70 56 72 50 72 C 44 72 36 70 35 62 Z'
+                              : 'M 32 61 C 38 59.5 62 59.5 68 61 C 67 66.5 58 68 50 68 C 42 68 33 66.5 32 61 Z';
+      return P(low, 'var(--c2)', 2.2) + E(50, 63, k === 'wow' ? 9 : 12, k === 'wow' ? 3.6 : 2.2, '#9b1c31', 0)
+        + P(top, 'var(--c2)', 2.4) + holes;
+    }
+    const d = k === 'sad' ? 'M 28 57 C 27 48 73 48 72 57 C 72 63 63 64.5 50 62.5 C 37 64.5 28 63 28 57 Z' : top;
+    const lip = k === 'sad' ? 'M 35 60 C 42 62 58 62 65 60' : 'M 35 59.6 C 42 58 58 58 65 59.6';
+    return P(d, 'var(--c2)', 2.4) + holes + L(lip, INK, 1.3, 'opacity=".55"')
+      + shine('M 33 53 C 36 50.5 40 49.5 44 49.3', 1.8, 0.45);
+  };
+  const webFoot = x => P('M ' + (x - 7.5) + ' 91.5 C ' + (x - 7) + ' 87 ' + (x - 3) + ' 85 ' + x + ' 85 C ' + (x + 3) + ' 85 ' + (x + 7) + ' 87 ' + (x + 7.5) + ' 91.5 '
+    + 'L ' + (x + 4) + ' 90 L ' + x + ' 91.8 L ' + (x - 4) + ' 90 Z', 'var(--c2)', 2.2);
+  DEFS[37] = {
+    pal: [['#9a6036', '#5d6176', '#d9a679', '#7a4826'],
+          ['#3f6f78', '#35c6c0', '#9de7e0', '#2f565d'],
+          ['#d9a05b', '#7d6450', '#f6dcae', '#b97d3c']],
+    o: { al: [24, 62], ar: [76, 62], ll: [40, 84], lr: [60, 84], head: [50, 86], zz: [74, 26] },
+    vars: '--fx:var(--c3);--wave-a:-110deg;--wave-b:-62deg;--cheer-r:-115deg',
+    behind: G('tail', [62, 80], P('M 60 76 C 70 72 86 72 91 79 C 94 84 88 90 78 89 C 70 88 63 86 60 84 Z', 'var(--c4)', 2.6)
+      + L('M 70 77 L 74 87 M 77 75.5 L 80 88 M 84 76.5 L 85.5 87.5 M 66 80 L 89 81', INK, 1, 'opacity=".3"')),
+    legL: webFoot(40) + L('M 35 85.5 L 33 83', INK, 1.4),
+    legR: webFoot(60) + L('M 65 85.5 L 67 83', INK, 1.4),
+    head: P('M 50 26 C 69 26 79 41 79 59 C 79 77 69 87 50 87 C 31 87 21 77 21 59 C 21 41 31 26 50 26 Z', 'var(--c1)', 3.2)
+      + shade('M 72 44 C 79 56 78 76 64 84 C 73 73 75 58 72 44 Z')
+      + E(50, 75, 15, 9, 'var(--c3)', 0, 'opacity=".55" class="fo"')
+      + shine('M 27 52 C 27 46 30 40 34 36', 2.4, 0.5)
+      + L('M 42 31 C 45 29 48 28.5 51 28.5', '#fff', 1.4, 'opacity=".35"')
+      + '{FACE}',
+    face: { lx: 40, rx: 60, y: 43, r: 4.2, glint: 'var(--c3)', bcol: '#ff8fa3',
+      extra: L('M 33.5 35.4 L 43.5 38.6 M 66.5 35.4 L 56.5 38.6', INK, 2.8, 'class="brow"'),
+      mouths: { normal: pbill(), open: pbill('open'), sad: pbill('sad'), sleep: pbill(), wow: pbill('wow') } },
+    back: L('M 38 40 C 44 36 56 36 62 40 M 36 52 C 44 48 56 48 64 52', INK, 1.2, 'opacity=".25"'),
+    armL: tube('M 24 62 Q 17 66 17 72', 'var(--c1)', 4.5) + P('M 13 72 C 13 76 21 76 21 72 Z', 'var(--c2)', 1.8),
+    armR: tube('M 76 62 Q 83 66 83 72', 'var(--c1)', 4.5) + P('M 79 72 C 79 76 87 76 87 72 Z', 'var(--c2)', 1.8),
+    fx: C(14, 40, 1.8, '#bfe9ff', 1, 'class="bubble" stroke="#5ba7d6"') + C(86, 30, 1.5, '#bfe9ff', 1, 'class="bubble" style="animation-delay:-1.2s" stroke="#5ba7d6"')
+  };
+
+  /* ── 38 Krümel · Ratte mit Käse ─────────────────────────── */
+  /* Den Käse hält sie rechts. Beim Jubeln wirft sie ihn hoch:
+     dann ist der Käse in der Hand weg und .kaese-flug fliegt
+     (creatures.css, Abschnitt 38).                               */
+  const kaese = (x, y, cls) => '<g class="' + cls + '">'
+    + P('M ' + (x - 7) + ' ' + (y + 4) + ' L ' + (x + 7) + ' ' + (y + 4) + ' L ' + (x + 7) + ' ' + (y - 1) + ' L ' + (x - 6) + ' ' + (y - 5) + ' Z', '#ffd23f', 2)
+    + P('M ' + (x - 6) + ' ' + (y - 5) + ' L ' + (x + 7) + ' ' + (y - 1) + ' L ' + (x + 7) + ' ' + (y + 1) + ' L ' + (x - 6.6) + ' ' + (y - 2.6) + ' Z', '#ffe98a', 0)
+    + C(x - 2, y + 1, 1.3, '#e8a910', 0) + C(x + 3.6, y + 0.4, 1.7, '#e8a910', 0) + C(x + 1, y - 2.6, 0.9, '#e8a910', 0)
+    + '</g>';
+  DEFS[38] = {
+    pal: [['#a7adbd', '#7b8194', '#ffb3c7', '#e7e9f0'],
+          ['#f4f2f7', '#c9c4d6', '#ff8fb1', '#ffffff'],
+          ['#9a6a4a', '#6f4a33', '#ffb3a1', '#e8cdb5']],
+    o: { al: [37, 69], ar: [63, 69], ll: [42, 86], lr: [58, 86], head: [50, 68], zz: [44, 18] },
+    vars: '--fx:#ffd23f;--wave-a:-120deg;--wave-b:-70deg',
+    behind: G('tail', [60, 84], tube('M 60 84 C 74 90 88 88 89 78 C 90 70 82 66 80 72', 'var(--c3)', 2.4)),
+    legL: E(42, 88.6, 6, 3.4, 'var(--c3)', 2.2) + L('M 38.5 90.5 L 37.5 92 M 42 91.6 L 42 93 M 45.5 90.5 L 46.5 92', INK, 1, 'opacity=".5"'),
+    legR: E(58, 88.6, 6, 3.4, 'var(--c3)', 2.2) + L('M 54.5 90.5 L 53.5 92 M 58 91.6 L 58 93 M 61.5 90.5 L 62.5 92', INK, 1, 'opacity=".5"'),
+    body: P('M 50 62 C 62 62 67 72 66 80 C 65 87 59 89 50 89 C 41 89 35 87 34 80 C 33 72 38 62 50 62 Z', 'var(--c1)', 3)
+      + E(50, 79, 9.5, 8, 'var(--c4)', 0, 'opacity=".75" class="fo"'),
+    head: G('ear-l', [33, 34], C(27, 27, 12, 'var(--c1)', 2.8) + C(27.5, 27.5, 7.6, 'var(--c3)', 0, 'opacity=".8"'))
+      + G('ear-r', [67, 34], C(73, 27, 12, 'var(--c1)', 2.8) + C(72.5, 27.5, 7.6, 'var(--c3)', 0, 'opacity=".8"'))
+      + P('M 50 26 C 66 26 74 36 74 46 C 74 55 64 66 50 66 C 36 66 26 55 26 46 C 26 36 34 26 50 26 Z', 'var(--c1)', 3.2)
+      + shade('M 68 36 C 75 44 72 56 62 63 C 68 55 70 46 68 36 Z', 0.12)
+      + shine('M 31 42 C 32 36 36 31 41 29.5', 2.4, 0.55)
+      + E(50, 57, 9, 6.4, 'var(--c4)', 0, 'opacity=".85" class="fo"')
+      + '{FACE}'
+      + G('fo', null, R(47.6, 60.6, 4.8, 4.4, 1, '#fff', 1.4) + L('M 50 60.8 L 50 64.8', INK, 0.9))
+      + E(50, 54.6, 3, 2.3, 'var(--c3)', 1.8, 'class="fo"') + hl(49, 53.8, 0.8, 0.9),
+    face: { lx: 40.5, rx: 59.5, y: 45, r: 5, my: 59, mw: 3.4, mouth: 'cat', glint: 'var(--c3)',
+      extra: L('M 40 56 L 29 54 M 40 58.5 L 29 59.5 M 60 56 L 71 54 M 60 58.5 L 71 59.5', INK, 1.1, 'opacity=".5"') },
+    back: L('M 42 36 C 46 33 54 33 58 36', INK, 1.2, 'opacity=".3"'),
+    armL: tube('M 37 69 Q 31 73 31 78', 'var(--c1)', 4.2) + C(31, 79, 2.8, 'var(--c3)', 1.8),
+    armR: tube('M 63 69 Q 69 72 70 77', 'var(--c1)', 4.2) + kaese(72, 76, 'kaese') + C(70, 78, 2.8, 'var(--c3)', 1.8),
+    fx: kaese(72, 76, 'kaese-flug')
+  };
+
+  /* ── 39 Howl · Werwolf unterm Vollmond ─────────────────── */
+  /* Dunkle Magie: lila Aura, glühende Augen, der Mond hinter ihm. */
+  const fur = 'M 50 22 C 56 22 62 24 66 27 L 71 22 L 72 32 C 77 37 79 43 79 49 L 85 52 L 79 56 L 82 62 L 75 62 '
+    + 'C 71 69 61 72 50 72 C 39 72 29 69 25 62 L 18 62 L 21 56 L 15 52 L 21 49 C 21 43 23 37 28 32 L 29 22 L 34 27 C 38 24 44 22 50 22 Z';
+  const claw3 = (x, y, s) => L('M ' + (x - 2.4 * s) + ' ' + y + ' l ' + (-0.8 * s) + ' ' + (2.6) + ' M ' + x + ' ' + (y + 0.6) + ' l 0 2.8 M ' + (x + 2.4 * s) + ' ' + y + ' l ' + (0.8 * s) + ' 2.6', '#f1f0f7', 1.5);
+  DEFS[39] = {
+    pal: [['#4a4f6b', '#ffd23f', '#a78bfa', '#fff3c4', '#2f3247', '#b9bdd6'],
+          ['#5a3532', '#ff4d4d', '#ff8a5c', '#ffb0a0', '#3a201e', '#c9a39b'],
+          ['#b7c3d9', '#4ff0ff', '#7c8cff', '#e6f7ff', '#8592ad', '#eef2fa']],
+    o: { al: [31, 70], ar: [69, 70], ll: [40, 86], lr: [60, 86], head: [50, 72], zz: [8, 44], cl: [80, 10] },
+    vars: '--fx:var(--c3)',
+    behind: E(50, 52, 34, 36, 'var(--c3)', 0, 'class="pulse"')
+      + G('moon glow-soft', null, C(80, 16, 10, 'var(--c4)', 2) + C(77, 13, 2.2, INK, 0, 'opacity=".12"') + C(83.5, 19.5, 1.6, INK, 0, 'opacity=".12"') + C(78, 20, 1.2, INK, 0, 'opacity=".12"'))
+      + G('tail', [64, 80], P('M 63 80 C 72 82 80 78 84 70 L 88 72 L 86 66 L 90 64 C 88 76 78 88 64 86 Z', 'var(--c1)', 2.6)),
+    legL: P('M 33 84 C 33 81 47 81 47 84 L 47 89 C 47 91 33 91 33 89 Z', 'var(--c5)', 2.4) + claw3(40, 89.6, 1),
+    legR: P('M 53 84 C 53 81 67 81 67 84 L 67 89 C 67 91 53 91 53 89 Z', 'var(--c5)', 2.4) + claw3(60, 89.6, 1),
+    body: P('M 50 64 C 64 64 69 72 69 80 C 69 87 62 89 50 89 C 38 89 31 87 31 80 C 31 72 36 64 50 64 Z', 'var(--c1)', 3)
+      + P('M 41 70 L 44 75 L 47 70 L 50 76 L 53 70 L 56 75 L 59 70 C 58 80 55 85 50 85 C 45 85 42 80 41 70 Z', 'var(--c6)', 0, 'opacity=".55" class="fo"'),
+    head: G('ear-l', [32, 30], P('M 27 36 L 24 8 L 42 26 Z', 'var(--c1)', 2.8) + P('M 28.5 30 L 27 15 L 36.5 25 Z', 'var(--c3)', 0, 'opacity=".7"'))
+      + G('ear-r', [68, 30], P('M 73 36 L 76 8 L 58 26 Z', 'var(--c1)', 2.8) + P('M 71.5 30 L 73 15 L 63.5 25 Z', 'var(--c3)', 0, 'opacity=".7"'))
+      + P(fur, 'var(--c1)', 3.2)
+      + shade('M 72 38 C 78 46 77 58 70 64 C 73 56 74 46 72 38 Z', 0.15)
+      + shine('M 29 44 C 30 38 33 34 37 31', 2.4, 0.35)
+      + L('M 31 37 L 44 41.5 M 69 37 L 56 41.5', 'var(--c5)', 3.4, 'class="fo"')
+      + P('M 50 49 C 60 49 64 55 63 61 C 62 67 56 70 50 70 C 44 70 38 67 37 61 C 36 55 40 49 50 49 Z', 'var(--c6)', 2.4, 'class="fo"')
+      + E(50, 54, 4.2, 2.8, INK, 0, 'class="fo"') + hl(48.8, 53.2, 1, 0.8)
+      + '{FACE}',
+    face: { type: 'glow', col: 'var(--c2)', lx: 39, rx: 61, y: 45.5, r: 3.9, my: 61, mw: 5, mfill: '#2a0f1e', mcol: INK, blush: false,
+      extra: P('M 45 61.4 L 46.4 66 L 47.8 61.8 Z', '#fff', 1) + P('M 55 61.4 L 53.6 66 L 52.2 61.8 Z', '#fff', 1) },
+    back: L('M 36 40 L 42 46 M 50 36 L 50 46 M 64 40 L 58 46', 'var(--c5)', 2, 'opacity=".6"'),
+    armL: tube('M 31 70 Q 24 74 23 80', 'var(--c1)', 5.5) + C(23, 81.5, 4, 'var(--c5)', 2.2) + claw3(23, 84.6, 0.8),
+    armR: tube('M 69 70 Q 76 74 77 80', 'var(--c1)', 5.5) + C(77, 81.5, 4, 'var(--c5)', 2.2) + claw3(77, 84.6, 0.8),
+    fx: tw(12, 26, 3, 'var(--c3)', 0.2) + tw(90, 44, 2.4, 'var(--c3)', 1.1) + tw(14, 78, 2.2, 'var(--c2)', 1.7)
+      + C(18, 44, 1.6, 'var(--c3)', 0, 'class="bubble"') + C(84, 60, 1.4, 'var(--c3)', 0, 'class="bubble" style="animation-delay:-1.3s"')
   };
 
   /* ── Was nach außen geht ───────────────────────────────────

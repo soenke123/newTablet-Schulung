@@ -343,7 +343,7 @@ function messe(touch) {
     raus.push({ el, sel: label(el), unten: Math.max(0, unten), rechts: Math.max(0, rechts) });
   }
 
-  /* Tippflächen. Die Wesenwahl ist ein Raster aus 36 Feldern — dort
+  /* Tippflächen. Die Wesenwahl ist ein Raster aus 40 Feldern — dort
      gilt dieselbe Grenze, deshalb steht sie mit in der Liste. */
   const klein = [];
   if (touch) {

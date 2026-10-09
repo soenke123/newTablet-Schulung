@@ -125,7 +125,7 @@ function makeEnv(hoehe = 700) {
   vm.createContext(sandbox);
 
   // Die ECHTEN Wesen. Sie kosten eine Zehntelsekunde und machen den
-  // Unterschied: die Wesen-Nummern 0…35 und ihre Namen kommen von
+  // Unterschied: die Wesen-Nummern 0…39 und ihre Namen kommen von
   // dort, und genau daran hängen die Emote-Klassen.
   vm.runInContext(fs.readFileSync(CRE, 'utf8'), sandbox, { filename: 'creatures.js' });
   vm.runInContext(fs.readFileSync(PARSE, 'utf8'), sandbox, { filename: 'parse.js' });
@@ -307,11 +307,11 @@ async function bereichEmote() {
         möglich ist. */
   const familien = ['wave', 'cheer', 'sad', 'sleep', 'jump'];
   let fehlend = [];
-  for (let id = 0; id < 36; id++) {
+  for (let id = 0; id < 40; id++) {
     for (const f of familien) if (!css.includes('.' + f + '-' + id + ' ')) fehlend.push(f + '-' + id);
     if (!css.includes('.c-dance-' + id + ' ')) fehlend.push('c-dance-' + id);
   }
-  ok('creatures.css kennt alle 36 × 5 Bewegungen', fehlend.length === 0,
+  ok('creatures.css kennt alle 40 × 5 Bewegungen', fehlend.length === 0,
      fehlend.slice(0, 6).join(', '));
 
   /* 2) Und die Namen, die die erste Fassung benutzte, gibt es NICHT.
@@ -436,14 +436,14 @@ async function bereichTab() {
      aus wie eine fehlende Liste, sondern wie ein kaputtes Raster. */
   const env0 = makeEnv();
   const liste = env0.window.KSCreatures.list;
-  ok('creatures.js kennt 36 Wesen', liste.length === 36, String(liste.length));
+  ok('creatures.js kennt 40 Wesen', liste.length === 40, String(liste.length));
   ok('… jedes mit Namen und drei Farbnamen',
      liste.every(c => c.name && Array.isArray(c.skins) && c.skins.length === 3));
-  ok('… und die Nummern sind 0 … 35',
-     liste.map(c => c.id).join(',') === Array.from({ length: 36 }, (_, i) => i).join(','));
+  ok('… und die Nummern sind 0 … 39',
+     liste.map(c => c.id).join(',') === Array.from({ length: 40 }, (_, i) => i).join(','));
 
   const lob = await starte('participant', tabLobby());
-  ok('Lobby: 36 Wesen zur Wahl', lob.root.querySelectorAll('.ks-pick').length === 36,
+  ok('Lobby: 40 Wesen zur Wahl', lob.root.querySelectorAll('.ks-pick').length === 40,
      String(lob.root.querySelectorAll('.ks-pick').length));
   ok('Lobby: drei Farben', lob.root.querySelectorAll('.ks-skin').length === 3);
   ok('Lobby: der Name des Wesens steht da',

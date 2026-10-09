@@ -225,7 +225,7 @@
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   /* Die Klassen, mit denen creatures.css ein Wesen bewegt. Der Name
-     trägt die Wesen-Nummer, weil jedes der 36 Wesen sein eigenes
+     trägt die Wesen-Nummer, weil jedes der 40 Wesen sein eigenes
      Winken hat (ein Krebs winkt mit der Schere). `state-…` schaltet
      zusätzlich das Gesicht um. */
   function emoteClass(emote, cid) {
@@ -2156,7 +2156,7 @@
       mySkin = Number(skin.dataset.skin);
       stage.querySelectorAll('.ks-skin').forEach(b =>
         b.classList.toggle('is-on', Number(b.dataset.skin) === mySkin));
-      // Auch die Auswahl selbst umfärben — sonst zeigt sie 36 Wesen
+      // Auch die Auswahl selbst umfärben — sonst zeigt sie 40 Wesen
       // in der alten Farbe und die Vorschau in der neuen.
       stage.querySelectorAll('.ks-pick').forEach(b => {
         const cid = Number(b.dataset.cid);
@@ -2181,7 +2181,7 @@
     if (sk) sk.innerHTML = skinKnoepfe();
   }
 
-  /* Entprellt: wer sich durch die 36 Wesen tippt, soll nicht 36
+  /* Entprellt: wer sich durch die 40 Wesen tippt, soll nicht 40
      Aufrufe erzeugen. 500 ms sind lang genug, um das Durchtippen
      zusammenzufassen, und kurz genug, dass es vor dem Start da ist. */
   function speicherWesen() {

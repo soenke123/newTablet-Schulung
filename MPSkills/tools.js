@@ -69,7 +69,7 @@ window.TOOLS_OVERLAY = {
   // daneben, damit das Alleine-Lernen später auf denselben Listen
   // üben kann.
   wordisland: { ready: true },
-  // Siebter Skill (Migration 0174) — Live-Quiz mit 36 Wesen & Leaderboard.
+  // Siebter Skill (Migration 0174) — Live-Quiz mit 40 Wesen & Leaderboard.
   // beta: zeigt einen „Beta"-Sticker auf der Kachel (26.09.2026) — der
   // Skill läuft, ist aber noch nicht rund; das ist eine Auskunft über die
   // Auslieferung, nicht über die Datenbankzeile, gehört also hierher.

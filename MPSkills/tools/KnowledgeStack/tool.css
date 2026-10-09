@@ -1814,8 +1814,8 @@ button.ks-k:disabled { cursor: default; }
 }
 .ks-skin.is-on { background: var(--ks-gold); color: #1a1400; border-color: var(--ks-gold); }
 
-/* Das Raster der 36 Wesen. Es ist das EINZIGE, was hier scrollt —
-   und das mit Absicht: 36 Wesen auf einen Handybildschirm zu
+/* Das Raster der 40 Wesen. Es ist das EINZIGE, was hier scrollt —
+   und das mit Absicht: 40 Wesen auf einen Handybildschirm zu
    quetschen macht sie zu Punkten, die man nicht auseinanderhalten
    kann. Alles andere im Bild bleibt stehen. */
 .ks-picker {
