@@ -162,6 +162,7 @@
   window.pushLocalHighscoresToServer = pushLocalHighscoresToServer;
 
   const LAST_USER_KEY = 'lernwelt_last_user';
+  const RESET_SEEN_KEY = 'lernwelt_reset_seen';  // content_reset_at, den dieses Gerät schon geleert hat (0209)
 
   // bootPromise resolves nach dem ersten Auth-State-Event (INITIAL_SESSION oder SIGNED_IN),
   // damit waitForSession() zuverlässig darauf warten kann.
@@ -356,6 +357,18 @@
       localStorage.setItem(LAST_USER_KEY, data.id);
     } catch(e) {}
 
+    // Inhalte nach 1 Jahr Inaktivität zurückgesetzt (Migration 0209):
+    // der Server ist leer, aber dieses Tablet hat womöglich noch den alten
+    // Stand samt Dirty-Markern und würde ihn wieder hochschieben. Einmal
+    // je Reset lokal leeren.
+    try {
+      if (data.content_reset_at && localStorage.getItem(RESET_SEEN_KEY) !== data.content_reset_at) {
+        console.log('[SESSION] Inhalte am', data.content_reset_at, 'zurückgesetzt — cleare lokalen Stand.');
+        clearLocalGameState();
+        localStorage.setItem(RESET_SEEN_KEY, data.content_reset_at);
+      }
+    } catch(e) {}
+
     window.__session = data;
     // Season in localStorage cachen — Einzel-Spiele laden session.js nicht
     // und können so trotzdem den korrekten Season-Kontext (z.B. für S3-Drops
@@ -408,7 +421,10 @@
       return;
     }
     await applyAuthSession(authSession);
-    if (event === 'SIGNED_IN' && authSession?.access_token) {
+    // Auch INITIAL_SESSION: wer angemeldet bleibt, meldet sich nie neu an,
+    // ist aber online. Davon hängen Reset (1 Jahr) und Löschung (4 Jahre)
+    // ab (Migration 0209); der Server drosselt auf einmal je 10 Minuten.
+    if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && authSession?.access_token) {
       touchLogin(authSession.access_token);  // fire-and-forget
     }
     if (!bootResolved) {

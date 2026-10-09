@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Datenschutzerklärung</title>
+  <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png" />
+  <meta name="theme-color" content="#1a0e05" />
+  <link href="fonts/outfit-inter-59ea93.css" rel="stylesheet">
+  <!-- ══════════════════════════════════════════════════════════════
+       Datenschutzerklärung (Art. 13 DSGVO) für Tablet-Schulung,
+       Lernwelt (GameHub) und MPSkills.
+
+       Alles über Daten und Fristen steht so im Code und ist nachprüfbar:
+         IP-Protokolle 1 Tag, cheat_flags 180 Tage, Feedback 365 Tage
+           → skill_cleanup (Migration 0208)
+         Konto: Reset nach 1 Jahr, Löschung nach 4 Jahren
+           → account_lifecycle (Migration 0209)
+         Räume 30 Tage nach letzter Nutzung → 0085, Projektarbeit 1 Jahr → 0202
+         Fotos → 0206, Einwilligungsstufe → 0201, Antrags-Mails → 0203
+         Vercel in Frankfurt → vercel.json, Supabase in Frankfurt → supabase/SETUP.md
+
+       Was die SCHULE festlegen muss, steht in <mark class="todo">…</mark>
+       — Verantwortliche Stelle, Datenschutzbeauftragte/r, Rechtsgrundlage.
+       Das darf niemand erfinden. Wer eine Frist im Code ändert, ändert
+       sie hier mit.
+       ══════════════════════════════════════════════════════════════ -->
+  <style>
+    :root {
+      --bg: #f6f1ea;
+      --surface: #ffffff;
+      --text: #1f1f1f;
+      --muted: #5f5a54;
+      --border: rgba(0, 0, 0, 0.09);
+      --accent: #b56a3c;
+      --accent-soft: #f3e4d8;
+      --todo-bg: #fff3b0;
+      --todo-text: #5a4600;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 'Inter', system-ui, sans-serif;
+    }
+    .wrap { max-width: 820px; margin: 0 auto; padding: 32px 16px 64px; }
+    .back { display: inline-block; margin-bottom: 20px; color: var(--accent); text-decoration: none; font-weight: 600; }
+    .back:hover { text-decoration: underline; }
+    h1, h2, h3 { font-family: 'Outfit', system-ui, sans-serif; line-height: 1.25; }
+    h1 { font-size: clamp(28px, 6vw, 40px); margin: 0 0 6px; }
+    .stand { color: var(--muted); margin: 0 0 28px; }
+    h2 { font-size: 22px; margin: 40px 0 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+    h3 { font-size: 17px; margin: 22px 0 6px; }
+    p, li { max-width: 70ch; }
+    ul { padding-left: 1.2em; }
+    li { margin: 4px 0; }
+    a { color: var(--accent); }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      margin: 16px 0;
+    }
+    .kurz { background: var(--accent-soft); border-color: transparent; }
+    .kurz h2 { border: 0; margin-top: 0; padding-top: 0; }
+    .kurz ul { margin-bottom: 0; }
+    mark.todo {
+      background: var(--todo-bg);
+      color: var(--todo-text);
+      padding: 1px 6px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    .hinweis {
+      background: var(--todo-bg);
+      color: var(--todo-text);
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-size: 14px;
+      margin-bottom: 24px;
+    }
+    .tbl { width: 100%; overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 15px; min-width: 480px; }
+    th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+    th { font-family: 'Outfit', system-ui, sans-serif; font-weight: 600; background: var(--surface); }
+    td:first-child { font-weight: 600; width: 38%; }
+    address { font-style: normal; }
+    nav.toc ol { columns: 2 220px; padding-left: 1.2em; margin: 0; }
+    nav.toc li { break-inside: avoid; }
+    @media print {
+      body { background: #fff; }
+      .back, .hinweis { display: none; }
+      .card { border-color: #ccc; }
+    }
+  </style>
+</head>
+<body>
+<main class="wrap">
+  <a class="back" href="javascript:history.length > 1 ? history.back() : location.href='index.html'">← zurück</a>
+
+  <h1>Datenschutzerklärung</h1>
+  <p class="stand">für Tablet-Schulung, Lernwelt und MPSkills · Stand: 9. Oktober 2026</p>
+
+  <p class="hinweis" id="todoHinweis">
+    Gelb markierte Stellen muss die Schule noch ausfüllen bzw. mit der/dem
+    Datenschutzbeauftragten abstimmen.
+  </p>
+
+  <!-- ─── Kurzfassung ─────────────────────────────────────── -->
+  <section class="card kurz" aria-labelledby="kurzTitel">
+    <h2 id="kurzTitel">Das Wichtigste in Kürze</h2>
+    <ul>
+      <li>Für ein Konto brauchst du <strong>keine E-Mail-Adresse</strong>, nur einen Benutzernamen und ein Passwort.</li>
+      <li>In MPSkills machst du <strong>ohne Konto</strong> mit. Gespeichert wird der Name, den du eingibst, und was du im Raum schreibst.</li>
+      <li><strong>Keine Werbung, kein Tracking, keine Analyse-Werkzeuge.</strong> Schriften und Programmteile kommen von unserem eigenen Server, nicht von Google oder anderen.</li>
+      <li>Die Daten liegen auf Servern in <strong>Frankfurt am Main</strong>.</li>
+      <li>Bist du ein Jahr lang nicht online, werden deine Spielstände gelöscht. Nur dein Konto und deine Highscores bleiben. Nach vier Jahren ohne Nutzung wird das ganze Konto gelöscht.</li>
+      <li>Du kannst jederzeit fragen, was über dich gespeichert ist, und die Löschung verlangen.</li>
+    </ul>
+  </section>
+
+  <nav class="toc card" aria-label="Inhalt">
+    <ol>
+      <li><a href="#verantwortlich">Verantwortliche Stelle</a></li>
+      <li><a href="#dsb">Datenschutzbeauftragte/r</a></li>
+      <li><a href="#zwecke">Wofür die Plattform da ist</a></li>
+      <li><a href="#daten">Welche Daten wir verarbeiten</a></li>
+      <li><a href="#rechtsgrundlage">Rechtsgrundlage</a></li>
+      <li><a href="#sichtbar">Wer was sehen kann</a></li>
+      <li><a href="#empfaenger">Dienstleister und Serverstandort</a></li>
+      <li><a href="#fristen">Wie lange wir Daten speichern</a></li>
+      <li><a href="#geraet">Was auf deinem Gerät gespeichert wird</a></li>
+      <li><a href="#sicherheit">Sicherheit</a></li>
+      <li><a href="#rechte">Deine Rechte</a></li>
+      <li><a href="#beschwerde">Beschwerde</a></li>
+    </ol>
+  </nav>
+
+  <!-- ─── 1 ─────────────────────────────────────────────── -->
+  <h2 id="verantwortlich">1. Verantwortliche Stelle</h2>
+  <p>Verantwortlich für die Verarbeitung ist die Schule:</p>
+  <address class="card">
+    <strong>Max-Planck-Schule Kiel</strong><br>
+    <mark class="todo">Straße und Hausnummer</mark><br>
+    <mark class="todo">PLZ</mark> Kiel<br>
+    vertreten durch die Schulleitung: <mark class="todo">Name</mark><br>
+    E-Mail: <mark class="todo">E-Mail-Adresse der Schule</mark> · Telefon: <mark class="todo">Telefon</mark>
+  </address>
+
+  <!-- ─── 2 ─────────────────────────────────────────────── -->
+  <h2 id="dsb">2. Datenschutzbeauftragte/r</h2>
+  <p>Bei Fragen zum Datenschutz erreichst du die/den Datenschutzbeauftragte/n der Schule:</p>
+  <address class="card">
+    <mark class="todo">Name</mark><br>
+    E-Mail: <mark class="todo">E-Mail-Adresse</mark>
+  </address>
+
+  <!-- ─── 3 ─────────────────────────────────────────────── -->
+  <h2 id="zwecke">3. Wofür die Plattform da ist</h2>
+  <ul>
+    <li><strong>Tablet-Schulung:</strong> Einführung in die Arbeit mit dem Schul-Tablet, mit Handouts und Folien.</li>
+    <li><strong>Lernwelt:</strong> Lernspiele zur Schulung. Wer ein Spiel abschließt, sammelt virtuelle Wesen, Punkte und Highscores.</li>
+    <li><strong>MPSkills:</strong> Werkzeuge für den Unterricht, z. B. gemeinsame Pinnwände, Quiz, Vokabeltraining, Scrum-Werkstatt und Projektarbeit in Gruppen.</li>
+    <li><strong>Verwaltung:</strong> Kurse, Konten und Freischaltungen verwalten, Missbrauch verhindern, Fragen und Fehlermeldungen beantworten.</li>
+  </ul>
+  <p>Wir werten die Daten nicht für Werbung aus, erstellen keine Profile und geben sie nicht weiter, außer an die Dienstleister in Abschnitt 7.</p>
+
+  <!-- ─── 4 ─────────────────────────────────────────────── -->
+  <h2 id="daten">4. Welche Daten wir verarbeiten</h2>
+
+  <h3>Wenn du ein Konto hast</h3>
+  <ul>
+    <li><strong>Konto:</strong> Benutzername, Anzeigename, Passwort (nur verschlüsselt als Prüfwert gespeichert), Schule, Kurs, Rolle (Schüler/in, Lehrkraft, Admin), gewählter Avatar.</li>
+    <li><strong>Zeitpunkte:</strong> wann das Konto angelegt wurde und wann du zuletzt online warst.</li>
+    <li><strong>Lernwelt:</strong> Spielstände, Punkte, gesammelte Wesen, Münzen und Gegenstände, Highscores, Geschenke an andere im Kurs.</li>
+    <li><strong>Beiträge:</strong> was du auf gemeinsamen Pinnwänden schreibst oder likest (z. B. Zukunftsboard).</li>
+    <li><strong>Missbrauchsschutz:</strong> Hinweise auf unmögliche Ergebnisse, z. B. Punktzahlen, die man so nicht erreichen kann.</li>
+    <li><strong>Feedback:</strong> Fragen und Fehlermeldungen, die du über „Feedback &amp; Fragen“ schickst, mit deinem Anzeigenamen und der Seite, auf der du warst.</li>
+  </ul>
+  <p>Konten von Schülerinnen und Schülern bekommen <strong>keine echte E-Mail-Adresse</strong>. Intern wird eine Ersatzadresse gebildet, die niemand empfangen kann.</p>
+
+  <h3>Wenn du in MPSkills mitmachst (ohne Konto)</h3>
+  <ul>
+    <li>Der <strong>Name</strong>, den du beim Beitreten einträgst. Die Lehrkraft kann Namen auch ausschalten, dann heißt jedes Gerät nur „Tablet 1, 2, 3 …“.</li>
+    <li>Was du im Raum schreibst, beantwortest oder abstimmst.</li>
+    <li>In Scrum-Werkstatt und Projektarbeit ein <strong>persönlicher Code</strong> aus 8 Zeichen, mit dem du auf jedem Gerät auf deinen Platz zurückkommst.</li>
+  </ul>
+
+  <h3>Zusätzlich in der Projektarbeit</h3>
+  <ul>
+    <li>Teamname, Projektziel, To-dos mit Zeitschätzung, Experten-Kontakte (Name, Thema, Telefon, E-Mail und Notizen zu den Gesprächen).</li>
+    <li><strong>Dokumentation:</strong> Einträge mit Datum, wer dabei war, wer gefehlt hat, Text und bis zu <strong>drei Fotos</strong> je Eintrag.</li>
+    <li><strong>Anträge „Lernen am anderen Ort“:</strong> Datum, beteiligte Personen, Ort mit Adresse, Weg und Verkehrsmittel, Begründung, Entscheidung der Lehrkraft.</li>
+    <li><strong>Einwilligung der Eltern:</strong> Die Lehrkraft vermerkt je Schüler/in, ob eine Einwilligung der Stufe 1 oder 2 vorliegt. Die Einwilligung selbst liegt auf Papier bei der Schule.</li>
+    <li><strong>Kommentare der Lehrkräfte</strong> an die Gruppe und die Antworten darauf.</li>
+  </ul>
+  <p>
+    Bitte lade nur Fotos hoch, die für die Dokumentation nötig sind, und möglichst <strong>ohne erkennbare Personen</strong>.
+    Speichere Telefonnummern oder E-Mail-Adressen von Expertinnen und Experten nur, wenn diese damit einverstanden sind.
+  </p>
+
+  <h3>Für Lehrkräfte</h3>
+  <ul>
+    <li>Wer möchte, hinterlegt eine <strong>dienstliche E-Mail-Adresse</strong> (nur <code>@mps-ki.de</code>, per Link bestätigt), um über neue Anträge informiert zu werden. Abbestellen geht über den Link in jeder Mail.</li>
+  </ul>
+
+  <h3>Technisch nötige Daten</h3>
+  <ul>
+    <li><strong>IP-Adresse</strong> bei Fehlversuchen beim Registrieren und beim Betreten von MPSkills-Räumen, um massenhafte Versuche zu bremsen.</li>
+    <li>Beim Aufruf jeder Seite verarbeiten die Server technisch bedingt IP-Adresse, Zeitpunkt, aufgerufene Adresse und Browser-Kennung. Wir werten das nicht aus.</li>
+  </ul>
+  <p>Wir verwenden <strong>keine Analyse- oder Werbedienste</strong>. Wir binden keine Inhalte von Google, CDNs oder sozialen Netzwerken ein. Schriften und Programmbibliotheken liegen auf unserem eigenen Server.</p>
+
+  <!-- ─── 5 ─────────────────────────────────────────────── -->
+  <h2 id="rechtsgrundlage">5. Rechtsgrundlage</h2>
+  <p class="card">
+    <mark class="todo">Von der Schule mit der/dem Datenschutzbeauftragten festzulegen.</mark>
+    Vorschlag:
+    Für die Nutzung im Unterricht (Tablet-Schulung, MPSkills, Projektarbeit) Art. 6 Abs. 1 lit. e DSGVO
+    in Verbindung mit den Datenschutzvorschriften des Schulgesetzes Schleswig-Holstein und der
+    Schul-Datenschutzverordnung. Für freiwillige Teile (Lernwelt mit Highscores, Fotos in der Dokumentation)
+    die Einwilligung nach Art. 6 Abs. 1 lit. a DSGVO, bei Schülerinnen und Schülern unter 16 Jahren
+    durch die Erziehungsberechtigten. Für den Missbrauchsschutz (IP-Adressen, Auffälligkeiten)
+    Art. 6 Abs. 1 lit. e DSGVO, weil er den sicheren Betrieb gewährleistet.
+    <mark class="todo">Paragrafen prüfen und eintragen</mark>
+  </p>
+  <p>Eine Einwilligung kannst du jederzeit für die Zukunft widerrufen. Was bis dahin verarbeitet wurde, bleibt rechtmäßig.</p>
+
+  <!-- ─── 6 ─────────────────────────────────────────────── -->
+  <h2 id="sichtbar">6. Wer was sehen kann</h2>
+  <ul>
+    <li><strong>Highscores und Ranglisten</strong> mit deinem Anzeigenamen sehen nur angemeldete Teilnehmende, je nach Ansicht im eigenen Kurs oder an der eigenen Schule.</li>
+    <li><strong>Beiträge in einem Raum oder auf einer Pinnwand</strong> sehen die Lehrkraft und alle im selben Raum bzw. Kurs.</li>
+    <li><strong>Projektarbeit:</strong> Den Planungsraum einer Gruppe sehen nur die Gruppe und die Lehrkräfte des Raums. Die Einwilligungsstufe sehen Schülerinnen und Schüler nur in ihrem eigenen Team.</li>
+    <li><strong>Admins der Schule</strong> sehen Konten, Kurse und Spielfortschritt, um die Schulung zu betreuen. Feedback-Tickets sieht nur die Plattform-Administration.</li>
+  </ul>
+
+  <!-- ─── 7 ─────────────────────────────────────────────── -->
+  <h2 id="empfaenger">7. Dienstleister und Serverstandort</h2>
+  <p>Für den Betrieb nutzen wir Dienstleister, die die Daten nur in unserem Auftrag und nach unserer Weisung verarbeiten (Auftragsverarbeitung nach Art. 28 DSGVO):</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Dienstleister</th><th>Aufgabe · Standort</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Supabase Inc., USA</td>
+          <td>Datenbank und Anmeldung. Die Daten liegen in einem Rechenzentrum in <strong>Frankfurt am Main</strong> (Amazon Web Services, Unterauftragnehmer).</td>
+        </tr>
+        <tr>
+          <td>Vercel Inc., USA</td>
+          <td>Ausliefern der Webseiten und Serverfunktionen (Registrierung, Verwaltung, Mailversand). Die Serverfunktionen laufen in <strong>Frankfurt am Main</strong>. Die Seiten werden über das Netz von Vercel vom nächstgelegenen Standort ausgeliefert.</td>
+        </tr>
+        <tr>
+          <td>IServ (Schulserver)</td>
+          <td>Versand der Benachrichtigungs-Mails an Lehrkräfte über den Mailserver der Schule.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Supabase und Vercel haben ihren Sitz in den USA. Ein Zugriff aus den USA ist deshalb nicht völlig auszuschließen.
+    Mit beiden bestehen Verträge zur Auftragsverarbeitung, die die Standardvertragsklauseln der EU-Kommission
+    enthalten.
+    <mark class="todo">Abschluss der AV-Verträge und Zertifizierung nach dem EU-US Data Privacy Framework bestätigen</mark>
+  </p>
+
+  <!-- ─── 8 ─────────────────────────────────────────────── -->
+  <h2 id="fristen">8. Wie lange wir Daten speichern</h2>
+  <p>Die Fristen laufen automatisch: Ein Aufräum-Lauf prüft sie jede Nacht.</p>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>Daten</th><th>Gelöscht</th></tr></thead>
+      <tbody>
+        <tr><td>Spielstände, Münzen, Wesen, Beiträge, Feedback, Mail-Adresse für Benachrichtigungen</td><td>wenn das Konto <strong>1 Jahr</strong> nicht online war. Konto, Kurs und Highscores bleiben, die Handouts sind weiter erreichbar.</td></tr>
+        <tr><td>Das ganze Konto mit Highscores</td><td>wenn das Konto <strong>4 Jahre</strong> nicht online war</td></tr>
+        <tr><td>MPSkills-Räume mit allen Namen und Beiträgen</td><td><strong>30 Tage</strong> nach der letzten Nutzung. Die Lehrkraft kann früher löschen oder verlängern.</td></tr>
+        <tr><td>Projektarbeit-Räume mit Dokumentation, Fotos, Anträgen und Backups</td><td><strong>1 Jahr</strong> nach dem Anlegen bzw. der letzten Verlängerung. Die Lehrkraft kann Fotos und den Raum jederzeit früher löschen.</td></tr>
+        <tr><td>Eigene Vokabel-Insel ohne Konto (Myth of Wordisland)</td><td>läuft nicht ab. Sie trägt keinen Namen, nur ein zufälliges Kennzeichen auf deinem Gerät.</td></tr>
+        <tr><td>Feedback-Tickets</td><td><strong>365 Tage</strong> nach der letzten Bearbeitung</td></tr>
+        <tr><td>Hinweise auf unmögliche Ergebnisse</td><td>nach <strong>180 Tagen</strong></td></tr>
+        <tr><td>IP-Adressen (Registrierung, Raumbeitritt)</td><td>nach <strong>1 Tag</strong></td></tr>
+        <tr><td>Server-Protokolle der Dienstleister</td><td>nach den Fristen der Anbieter, in der Regel wenige Tage</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Auf Wunsch löschen Admins ein Konto oder einen Kurs jederzeit früher.</p>
+
+  <!-- ─── 9 ─────────────────────────────────────────────── -->
+  <h2 id="geraet">9. Was auf deinem Gerät gespeichert wird</h2>
+  <p>
+    Wir setzen <strong>keine Cookies zum Wiedererkennen oder Verfolgen</strong>. Damit du angemeldet bleibst
+    und Spiele ohne Verbindung weiterlaufen, speichert der Browser im lokalen Speicher deines Geräts deine
+    Anmeldung, einen Zwischenstand deiner Spiele und zufällige Kennzeichen für MPSkills-Räume. Beim Abmelden
+    werden Anmeldung und Spielstand vom Gerät gelöscht. Alles andere verschwindet, wenn du die Websitedaten
+    bzw. den Browserverlauf löschst.
+  </p>
+
+  <!-- ─── 10 ────────────────────────────────────────────── -->
+  <h2 id="sicherheit">10. Sicherheit</h2>
+  <ul>
+    <li>Alle Verbindungen sind verschlüsselt (HTTPS).</li>
+    <li>Datenbank und Sicherungen sind beim Anbieter verschlüsselt gespeichert.</li>
+    <li>Zugriffsregeln in der Datenbank sorgen dafür, dass jede Person nur ihre eigenen Daten und die ihres Kurses, Raums oder Teams sieht.</li>
+    <li>Passwörter werden nur als Prüfwert gespeichert und können von niemandem gelesen werden, auch nicht von Admins.</li>
+  </ul>
+
+  <!-- ─── 11 ────────────────────────────────────────────── -->
+  <h2 id="rechte">11. Deine Rechte</h2>
+  <p>Du hast das Recht,</p>
+  <ul>
+    <li>zu erfahren, welche Daten über dich gespeichert sind (Art. 15 DSGVO),</li>
+    <li>falsche Daten berichtigen zu lassen (Art. 16),</li>
+    <li>die Löschung deiner Daten zu verlangen (Art. 17),</li>
+    <li>die Verarbeitung einschränken zu lassen (Art. 18),</li>
+    <li>deine Daten in einem gängigen Format zu bekommen (Art. 20),</li>
+    <li>der Verarbeitung zu widersprechen (Art. 21) und</li>
+    <li>eine Einwilligung jederzeit zu widerrufen (Art. 7 Abs. 3).</li>
+  </ul>
+  <p>
+    Wende dich dafür an deine Lehrkraft, an die Schulleitung oder an die/den Datenschutzbeauftragte/n
+    (Abschnitt 1 und 2). Für Schülerinnen und Schüler unter 16 Jahren können auch die Erziehungsberechtigten
+    diese Rechte geltend machen.
+  </p>
+
+  <!-- ─── 12 ────────────────────────────────────────────── -->
+  <h2 id="beschwerde">12. Beschwerde</h2>
+  <p>Du kannst dich bei der Datenschutz-Aufsichtsbehörde beschweren:</p>
+  <address class="card">
+    <strong>Unabhängiges Landeszentrum für Datenschutz Schleswig-Holstein (ULD)</strong><br>
+    Holstenstraße 98, 24103 Kiel<br>
+    <a href="https://www.datenschutzzentrum.de" rel="noopener">www.datenschutzzentrum.de</a>
+  </address>
+</main>
+<script>
+  // Hinweiszeile verschwindet von selbst, sobald keine gelbe Stelle mehr übrig ist.
+  if (!document.querySelector('mark.todo')) document.getElementById('todoHinweis').remove();
+</script>
+</body>
+</html>

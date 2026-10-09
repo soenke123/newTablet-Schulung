@@ -2535,6 +2535,8 @@ body.tool-fill #pagefoot { display: none; }
   margin: 0 0 10px; font-size: .9rem; color: var(--ink-soft); max-width: 60ch;
 }
 .privacy-grid { display: grid; gap: 8px 38px; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+.privacy-more { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid var(--line); color: var(--ink-soft); }
+.privacy-more a { color: var(--accent-ink, var(--accent)); font-weight: 700; }
 
 /* ─── „Was kann diese Seite?" ─────────────────────────────── */
 .about-h {
