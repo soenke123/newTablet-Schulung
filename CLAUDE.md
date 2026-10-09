@@ -12,6 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Webauftrtitt/
 ├── index.html          → Landing page: links to GameHub, PDF downloads, and workshop slides
 ├── viewport.js         → sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen
+├── vercel.json       → nur "regions": ["fra1"] — Functions laufen in Frankfurt (Datenschutz, api/SETUP.md)
+├── fonts/            → Google Fonts lokal (latin + latin-ext, je CSS-Datei ein Satz Familien); NIE fonts.googleapis.com einbinden
+├── vendor/           → fest gepinnte Bibliotheken statt CDN: supabase-js-2.116.0.min.js, feather-icons-4.29.2.min.js; kein jsDelivr/unpkg (Datenschutz)
 ├── feedback.js         → Dialog „Feedback & Fragen“ (Profil-Menü) → RPC submit_feedback; Tickets im Admin-Reiter „Tickets“ (nur Volladmin, Migration 0179)
 ├── PROJEKTBRIEFING.md  → Migrationsplan Frontend-only → Supabase-Backend (v2, 2026-07-04)
 ├── Dokumente/          → PDF handouts for students (e.g. Handout_Tablet-Schulung.pdf)

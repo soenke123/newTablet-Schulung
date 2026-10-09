@@ -8081,7 +8081,7 @@ function _injectChinDracheThemeStyles() {
   const s = document.createElement('style');
   s.id = 'lw-chindrache-styles';
   s.textContent = `
-@import url('https://fonts.googleapis.com/css2?family=Zen+Old+Mincho:wght@400;500;600;700;900&display=swap');
+@import url('../fonts/zenoldmincho-959a84.css');
 
 /* ════════════════════════════════════════════════
    CHINESISCHER DRACHE — GOLDENE LATERNEN THEME
@@ -8520,7 +8520,7 @@ function _injectSchnabeltierThemeStyles() {
   const s = document.createElement('style');
   s.id = 'lw-schnabeltier-styles';
   s.textContent = `
-@import url('https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@300;400;600;700&display=swap');
+@import url('../fonts/josefinsans-9eea85.css');
 
 /* ════════════════════════════════════
    SCHNABELTIER — BIOLUMINESZENZ THEME
@@ -9039,7 +9039,7 @@ function _injectOvervoltThemeStyles() {
   const s = document.createElement('style');
   s.id = 'lw-overvolt-styles';
   s.textContent = `
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap');
+@import url('../fonts/orbitron-ibmplexmono-05be5a.css');
 
 /* ════════════════════════════════════════════════
    OVERVOLT — DARK EINHORNKATZE (Gewitter-Theme)
@@ -9456,7 +9456,7 @@ function _injectSolarisThemeStyles() {
   const s = document.createElement('style');
   s.id = 'lw-solaris-styles';
   s.textContent = `
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,700;1,700&family=Marcellus&display=swap');
+@import url('../fonts/cormorantgaramond-marcellus-f0bb83.css');
 
 /* ════════════════════════════════════════════════
    SOLARIS — LIGHT EINHORNKATZE (Sonnen-Theme)
@@ -9882,7 +9882,7 @@ function _injectBubblegumThemeStyles() {
   const s = document.createElement('style');
   s.id = 'lw-bubblegum-styles';
   s.textContent = `
-@import url('https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@500;700&family=Nunito:wght@700;800&display=swap');
+@import url('../fonts/bungee-fredoka-nunito-0a8e45.css');
 
 /* ════════════════════════════════════════════════
    BUBBLEGUM — RAINBOW EINHORNKATZE (Kirmes-Theme)

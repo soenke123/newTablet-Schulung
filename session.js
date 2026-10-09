@@ -2,7 +2,7 @@
    session.js — Lernwelt Frontend Session-Layer
    ══════════════════════════════════════════════════════════════
    Muss geladen werden NACH:
-     - https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2 (als window.supabase)
+     - vendor/supabase-js-2.116.0.min.js (als window.supabase, lokal statt CDN)
      - supabase-config.js (SUPABASE_URL, SUPABASE_ANON_KEY)
 
    Und VOR jedem Code, der getUserSeason() / isLoggedIn() nutzt.

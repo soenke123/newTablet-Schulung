@@ -18,7 +18,7 @@
       Unterschied muss vor dem Lesen sichtbar sein.
    ═══════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+@import url('../../../fonts/inter-41007c.css');
 
 :root {
   /* Raum und Flächen */

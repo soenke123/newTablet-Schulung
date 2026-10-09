@@ -54,3 +54,9 @@ Wenn stattdessen **404** kommt: Vercel hat die Function nicht deployed. Meist Ur
 ## Schritt 5 — Erster echter Signup
 
 Sobald die Registrieren-UI auf der Landing steht (kommt gleich), klickst Du drauf, füllst aus und siehst ob es klappt. Falls Fehler kommt → Logs in Vercel-Dashboard unter **Functions** → `signup`.
+
+## Serverstandort (Datenschutz)
+
+`vercel.json` setzt `"regions": ["fra1"]`: Die Functions laufen in Frankfurt, neben der Supabase-Datenbank. Ohne diese Zeile nimmt Vercel `iad1` (Washington) — dann liefen Passwörter und Namen beim Signup durch die USA. Prüfen: Vercel → Projekt → **Settings → Functions → Function Region** muss nach dem nächsten Deploy `Frankfurt, Germany (fra1)` zeigen.
+
+Vercel Web Analytics ist bewusst **nicht** eingebunden. Falls es im Dashboard (Tab **Analytics**) noch eingeschaltet ist: dort ausschalten.

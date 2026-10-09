@@ -25,7 +25,7 @@ const W = Number(process.argv[2] || 375);
 const NEEDLE = process.argv[3] || 'Projekt_FINAL';
 const browser = await chromium.launch({ executablePath: EXE });
 const ctx = await browser.newContext({ viewport: { width: W, height: 900 }, hasTouch: true });
-await ctx.route('**://cdn.jsdelivr.net/**', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange(){return{data:{subscription:{unsubscribe(){}}}}},signOut:async()=>({})},rpc:async()=>({data:null,error:null})})};' }));
+await ctx.route('**/vendor/supabase-js-*.js', r => r.fulfill({ status: 200, contentType: 'text/javascript', body: 'window.supabase={createClient:()=>({auth:{getSession:async()=>({data:{session:null}}),onAuthStateChange(){return{data:{subscription:{unsubscribe(){}}}}},signOut:async()=>({})},rpc:async()=>({data:null,error:null})})};' }));
 await ctx.route('**/_vercel/**', r => r.abort());
 await ctx.addInitScript({ path: path.join(HERE, '_stub.js') });
 
