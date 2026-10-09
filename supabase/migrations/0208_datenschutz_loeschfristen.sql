@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════════
--- Migration 0207 — Datenschutz: Löschfristen für Protokolle
+-- Migration 0208 — Datenschutz: Löschfristen für Protokolle
 -- ══════════════════════════════════════════════════════════════
 -- Was nur für eine Bremse oder eine Nachfrage gebraucht wird, darf
 -- nicht für immer liegen bleiben (Art. 5 Abs. 1 lit. e DSGVO,
@@ -71,5 +71,5 @@ grant execute on function skill_cleanup(int) to service_role;
 
 comment on function skill_cleanup(int) is
   'Löscht abgelaufene Räume samt allem, was daran hängt, und alte Protokolle: '
-  'IP-Logs nach 1 Tag, cheat_flags nach 180, feedback_tickets nach 365 Tagen (0207). '
+  'IP-Logs nach 1 Tag, cheat_flags nach 180, feedback_tickets nach 365 Tagen (0208). '
   'Zwei Auslöser: beiläufig beim Zugriff der Lehrkraft (gedrosselt) und täglich per pg_cron.';

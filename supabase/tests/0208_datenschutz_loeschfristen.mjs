@@ -1,5 +1,5 @@
-/* Prüfstand für Migration 0207 — Löschfristen für Protokolle.
-   Echt gerechnet in pglite auf der ganzen Kette 0001…0207.
+/* Prüfstand für Migration 0208 — Löschfristen für Protokolle.
+   Echt gerechnet in pglite auf der ganzen Kette 0001…0208.
 
    Die Kernzusagen:
      1. signup_attempts und skill_join_attempts: älter als 1 Tag weg,
@@ -9,7 +9,7 @@
      4. Abgelaufene Räume werden weiter gelöscht, offene bleiben.
      5. Migration läuft zweimal.
 
-   Aufruf:  node supabase/tests/0207_datenschutz_loeschfristen.mjs */
+   Aufruf:  node supabase/tests/0208_datenschutz_loeschfristen.mjs */
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
@@ -102,7 +102,7 @@ ok('3  feedback_tickets: nur der zuletzt geänderte bleibt', ft.rows.length === 
 ok('4  abgelaufener Raum weg', !(await one(`select 1 x from skill_rooms where id = $1`, [R_ALT])));
 ok('4  offener Raum bleibt',  !!(await one(`select 1 x from skill_rooms where id = $1`, [R_NEU])));
 
-try { await db.exec(mig('0207_datenschutz_loeschfristen.sql')); ok('5  Migration läuft zweimal', true); }
+try { await db.exec(mig('0208_datenschutz_loeschfristen.sql')); ok('5  Migration läuft zweimal', true); }
 catch (e) { ok('5  Migration läuft zweimal', false, e.message); }
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles grün');
