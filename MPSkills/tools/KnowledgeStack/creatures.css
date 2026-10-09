@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Knowledge Stack — Bewegungen der 36 Wesen (creatures.css)
+   Knowledge Stack — Bewegungen der 40 Wesen (creatures.css)
    ══════════════════════════════════════════════════════════════
 
    Fassung 2 (Oktober 2026). Jedes Wesen hat dasselbe Skelett
@@ -1293,3 +1293,62 @@
 .sleep-35 .leg-l, .sleep-35 .leg-r { animation: none; }
 .sad-35 .arm-l { transform: rotate(-20deg); }
 .sad-35 .arm-r { transform: rotate(20deg); }
+
+/* 36 Prisma: die Regenbogenmähne wippt, das Horn leuchtet auf */
+.creature-svg[data-cid="36"] .mane { animation: pr-mane 2.4s ease-in-out infinite alternate; }
+@keyframes pr-mane { from { transform: rotate(-3deg); } to { transform: rotate(4deg); } }
+.wave-36 .mane, .cheer-36 .mane, .c-dance-36 .mane { animation-duration: .3s; }
+.cheer-36 .horn, .jump-36 .horn, .c-dance-36 .horn { animation-duration: .35s; }
+.jump-36 .tail { animation: sp-tail-up 1s infinite; }
+.cheer-36 .tail, .c-dance-36 .tail { animation-duration: .4s; }
+.sleep-36 .mane { animation-duration: 5s; }
+.sleep-36 .horn { animation: none; filter: brightness(.85); }
+.sad-36 .mane { animation: none; transform: rotate(8deg) translateY(2px); }
+.sad-36 .tw { animation: none; opacity: 0; }
+
+/* 37 Plato: guckt grimmig, freut sich aber trotzdem — der
+   Biberschwanz klatscht; bei Trauer und Schlaf sind die Brauen weg */
+.creature-svg[data-cid="37"] .tail { animation: pt-tail 2.4s ease-in-out infinite; }
+@keyframes pt-tail { 0%, 80%, 100% { transform: rotate(0); } 86% { transform: rotate(-14deg); } 92% { transform: rotate(3deg); } }
+.cheer-37 .tail, .c-dance-37 .tail { animation: pt-slap .3s ease-in-out infinite alternate; }
+@keyframes pt-slap { from { transform: rotate(2deg); } to { transform: rotate(-16deg); } }
+.jump-37 .tail { animation: sp-tail-up 1s infinite; }
+.wave-37 .brow, .cheer-37 .brow { transform: translateY(-1px); }
+.sleep-37 .brow, .sad-37 .brow, .state-fall[data-cid="37"] .brow { display: none; }
+.sleep-37 .bubble { animation-duration: 4s; }
+.sad-37 .tail { animation: none; transform: rotate(10deg); }
+
+/* 38 Krümel: knabbert am Käse, beim Jubeln fliegt er hoch.
+   Der geworfene Käse liegt in cr-fx (springt mit, dreht sich aber
+   nicht mit dem Arm) — in der Hand ist er solange weg. */
+.creature-svg[data-cid="38"] .kaese-flug { display: none; }
+.creature-svg[data-cid="38"] .kaese, .creature-svg[data-cid="38"] .kaese-flug { transform-box: fill-box; transform-origin: center; }
+.c-idle[data-cid="38"] .head-node { animation: kr-nibble 3.2s ease-in-out infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes kr-nibble { 0%, 70%, 100% { transform: rotate(0); } 75%, 85% { transform: rotate(4deg) translateY(1px); } 80%, 90% { transform: rotate(3deg) translateY(.2px); } }
+.cheer-38 .kaese { display: none; }
+.creature-svg.cheer-38 .kaese-flug { display: inline; animation: kr-toss calc(var(--Tch) * 2) ease-in-out infinite; }
+@keyframes kr-toss {
+  0%   { transform: translate(0, 0) rotate(0); animation-timing-function: cubic-bezier(.2, .8, .4, 1); }
+  45%  { transform: translate(-8px, -64px) rotate(300deg); animation-timing-function: cubic-bezier(.6, 0, .8, .4); }
+  90%  { transform: translate(0, 0) rotate(720deg); }
+  100% { transform: translate(0, 0) rotate(720deg); }
+}
+.wave-38 .tail, .c-dance-38 .tail { animation-duration: .4s; }
+.jump-38 .tail { animation: sp-tail-up 1s infinite; }
+.sleep-38 .tail { animation-duration: 4s; }
+.sad-38 .tail { animation: none; transform: rotate(16deg); }
+.sad-38 .kaese { transform: rotate(40deg) translateY(2px); }
+
+/* 39 Howl: dunkle Magie — Aura pulsiert, beim Jubeln heult er den
+   Mond an (Kopf in den Nacken), der Mond glüht auf */
+.creature-svg[data-cid="39"] .moon { transform-box: fill-box; transform-origin: center; }
+.cheer-39 .head-node { animation: hw-howl calc(var(--Tch) * 3) ease-in-out infinite; }
+@keyframes hw-howl { 0%, 100% { transform: rotate(0); } 30%, 70% { transform: rotate(-14deg) translateY(-1px); } }
+.cheer-39 .moon, .c-dance-39 .moon { animation: cr-glow .5s ease-in-out infinite alternate; }
+.cheer-39 .pulse, .jump-39 .pulse, .c-dance-39 .pulse { animation-duration: .4s; }
+.wave-39 .tail, .cheer-39 .tail, .c-dance-39 .tail { animation-duration: .35s; }
+.jump-39 .tail { animation: sp-tail-up 1s infinite; }
+.sleep-39 .pulse { animation-duration: 4s; }
+.sleep-39 .moon { animation: none; opacity: .5; }
+.sad-39 .pulse, .sad-39 .tw { animation: none; opacity: 0; }
+.sad-39 .moon { animation: none; opacity: .35; }

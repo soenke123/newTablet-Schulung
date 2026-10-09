@@ -9,7 +9,7 @@ Das ist keine Geschmacksfrage, sondern die Spielregel:
 
 | | Beamer (`presenter`) | Tablet (`participant`) |
 |---|---|---|
-| **Lobby** | Katalogwahl · Startknopf · Wiese: die Wesen fallen herein und laufen herum | Wesenwahl (36 × 3 Farben) · Emote-Knöpfe |
+| **Lobby** | Katalogwahl · Startknopf · Wiese: die Wesen fallen herein und laufen herum | Wesenwahl (40 × 3 Farben) · Emote-Knöpfe |
 | **Start der Runde** (erste Frage, 10 s) | „**Quiz startet**“ + Name des Fragenkatalogs groß; alle Wesen regnen von oben herein, landen und laufen rechts aus dem Bild | Nur das eigene Wesen und „Gleich geht’s los — pass auf!“ |
 | **Frage** | Fragetext groß · Uhr · vier Antwortfelder · „x von y haben geantwortet" | Das **eigene Wesen** · vier Antwortfelder · **keine Frage** |
 | **Auflösung** | Die fünf Ersten dort, wo die Frage stand (1 links … 5 rechts) · dieselben vier Felder als **Füllstände** mit absoluten Zahlen · Erklärung | Richtig/Falsch · der Nachbar vor mir, ich, der Nachbar hinter mir · Emote-Knöpfe |
@@ -42,8 +42,25 @@ traurig, schwindlig.
 Zeichenregeln: alles im Kasten 0…100 (der Kasten schneidet ab, nur der
 Sprung darf hinaus), Boden bei y = 92, eine Linienfarbe (`--ink`),
 Glanz oben links, Schatten unten rechts. Die magischen Wesen (Zorp, Mimi,
-Pips, Lumi, Astris, Arcana) funkeln dauernd und sprühen beim Jubeln,
+Pips, Lumi, Astris, Arcana, Prisma, Howl) funkeln dauernd und sprühen beim Jubeln,
 Tanzen und Springen Sterne (`.cr-burst`).
+
+### Vier neue Wesen (Oktober 2026, Migration 0207)
+
+Damit das Raster voll ist, sind es jetzt **40** — im selben Stil, auf
+demselben Skelett:
+
+| Nr. | Name | Gruppe | Besonderes | Farbfassungen |
+|---|---|---|---|---|
+| 36 | **Prisma** · Einhorn | magic | Regenbogenmähne (in allen drei Fassungen derselbe Regenbogen), Horn leuchtet, Mähne wippt beim Jubeln | Wolkenweiß · Zuckerwatte · Sternennacht |
+| 37 | **Plato** · Schnabeltier | animal | grimmig und niedlich: die Brauen stehen immer schräg (bei Trauer und Schlaf weg), Biberschwanz klatscht beim Jubeln | Flussbraun · UV-Leuchten · Sandbank |
+| 38 | **Krümel** · Ratte | animal | hält Käse in der Hand und **wirft ihn beim Jubeln hoch** (`.kaese` in der Hand weg, `.kaese-flug` in cr-fx fliegt) | Kellergrau · Laborweiß · Schoko |
+| 39 | **Howl** · Werwolf | magic | dunkle Magie: lila Aura, glühende Augen, Vollmond dahinter; heult beim Jubeln den Mond an | Mitternacht · Blutmond · Geisterwolf |
+
+Die Datenbank kannte nur 0…35 (Prüfregel an `ks_players.creature_id`,
+Klemme in `ks_join`). **Migration 0207** hebt beides auf 39 — ohne sie
+wird ein neues Wesen still zu Spindle (35). Prüfstand:
+`supabase/tests/0207_knowledgestack_40_wesen.mjs`.
 
 Zum Ansehen: **`showroom-wesen.html`** (läuft ohne Netz, benutzt genau
 `creatures.js`/`creatures.css`): alle Wesen × Farben × Bewegungen,
@@ -101,9 +118,11 @@ aus. Je Emote gibt es in `creatures.css` sechs Körper-Bewegungen, sechs
 Arm-Bewegungen und vier Kopf-Bewegungen (z. B. Tanzen: Hüftschwung,
 Abtauchen, Moonwalk, Pirouette, Pogo, Shimmy × Arme im Wechsel,
 Disco-Zeigen, Windmühle, Posen, Welle, Roboter). `moves()` in
-`creatures.js` verteilt sie so, dass bei jedem Emote keine zwei der 36
-Wesen dieselbe Körper-und-Arm-Kombination haben, und gibt jedem Wesen je
-Emote ein eigenes Tempo. Die Wahl steht im Attribut `data-mv` am `<svg>`
+`creatures.js` verteilt sie so, dass bei jedem Emote keine zwei der
+Wesen 0…35 dieselbe Körper-und-Arm-Kombination haben, und gibt jedem
+Wesen je Emote ein eigenes Tempo. Mehr als 6 × 6 Kombinationen gibt es
+nicht: die Wesen 36…39 teilen sie mit 0…3 und unterscheiden sich dafür
+in der Kopfbewegung (+2) und im Tempo. Die Wahl steht im Attribut `data-mv` am `<svg>`
 und bleibt stehen, wenn `tool.js` die Klasse wechselt. Was ein Wesen
 sonst noch besonders macht (Flügel, Wheelie, Kopfrollen), steht wie
 bisher darüber. Der Sprung geht jetzt bis gut 80–100 % der Wesenhöhe
@@ -261,7 +280,7 @@ sehen.
 |---|---|
 | `tool.js` | Beide Rollen, ein Modul. Takt, gemessene Höhe, Bild bauen und flicken. |
 | `tool.css` | Alles rechnet aus `--ks-h` (der gemessenen Rahmenhöhe), nichts aus `vh`. Alle Farben stehen in zwei Sätzen ganz oben. |
-| `creatures.js` | Die 36 Wesen: Liste, Paletten, Skelett (`build`), Gesichter (`face`), Zeichnungen (`DEFS`). |
+| `creatures.js` | Die 40 Wesen: Liste, Paletten, Skelett (`build`), Gesichter (`face`), Zeichnungen (`DEFS`). |
 | `creatures.css` | Ihre Bewegungen: erst alle gemeinsam (`state-…`), dann je Wesen (`wave-7`, `cheer-7` …). |
 | `showroom-wesen.html` | Showroom der Fassung 2 — ohne Netz, zeigt genau creatures.js/.css. |
 | `showroom-*-wesen.html`, `showroom-beamer-mobile.html` | Entwurfsstand der ersten Fassung, **eingefroren** (siehe `feedback_showrooms_frozen`). Zeigt die alten Wesen. |

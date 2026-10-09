@@ -225,7 +225,7 @@
     blurb: `
       <p>Ein <strong>Live-Quiz für die ganze Klasse</strong>: Am Beamer steht die Frage, auf den
          Tablets stehen nur die Antworten — der Blick der Klasse geht nach vorn. Jedes Kind
-         ist ein <strong>Wesen</strong> aus 36, in drei Farben, und steht schon in der Lobby
+         ist ein <strong>Wesen</strong> aus 40, in drei Farben, und steht schon in der Lobby
          auf der Wiese.</p>
       <p>Eine Runde beginnt mit einem <strong>Auftritt</strong>: „Quiz startet", der Name des
          Fragenkatalogs, und alle Wesen regnen von oben herein, landen und laufen rechts aus
