@@ -1,11 +1,10 @@
 // Intro: „Worum geht's?" und „So spielst du" — HTML-Overlay über dem Canvas.
 //
 // Erscheint beim ersten Besuch automatisch (localStorage INTRO_KEY), danach
-// über den Knopf „? So geht's" im Menü. Acht Seiten, jede mit eigenem Bild
-// aus HTML/CSS/SVG — bewusst ohne Canvas, damit Text sauber umbricht und
-// vorgelesen werden kann.
+// über den Knopf „? So geht's" im Menü. Vier Seiten, jede mit Bild aus
+// HTML/CSS/SVG und höchstens zwei kurzen Sätzen — mehr liest keiner.
 //
-// Seite 4 ist eine kleine Mitmach-Simulation des Feed-Algorithmus. Sie
+// Seite 2 ist eine kleine Mitmach-Simulation des Feed-Algorithmus. Sie
 // rechnet mit derselben Formel wie js/algorithm.js (Gewicht = Treffer +
 // BASE_WEIGHT 2), damit das Gezeigte zum Spiel passt.
 (function(){
@@ -14,20 +13,6 @@
 
   const INTRO_KEY = 'bubbleBounceIntro_v1';
   const DEMO_BASE = 2;   // = BASE_WEIGHT in algorithm.js
-
-  // Kurz erklärt, was die Kategorie ausmacht — Daten bleiben in categories.js.
-  const WHY = {
-    source_ok:  'zeigt, woher die Info stammt',
-    factcheck:  'prüft eine Behauptung nach',
-    pubmedia:   'Redaktion, die Fakten prüfen muss',
-    science:    'beruht auf Studien',
-    ai_labeled: 'sagt offen: „Das ist KI“',
-    clickbait:  'übertreibt, damit du klickst',
-    no_source:  '„hab ich gehört“ – nicht prüfbar',
-    conspiracy: 'geheime Mächte sollen schuld sein',
-    urgency:    'macht Druck: „nur heute!“',
-    ai_hidden:  'wirkt echt, ist aber KI'
-  };
 
   // Gleiche Icon-Quelle wie render.js:preloadSprites — der Browser hat sie
   // dort schon geladen, es kommt kein neuer Server dazu.
@@ -51,125 +36,62 @@
   function post(cat, opts){
     opts = opts || {};
     const pts = cat.bonus > 0 ? '+' + cat.bonus : String(cat.bonus);
-    const handle = cat.handles[0].replace(/^@/, '');
     return '<div class="bbi-post bbi-post--' + cat.type + (opts.cls ? ' ' + opts.cls : '') + '">' +
       '<div class="bbi-post__head">' +
         '<img class="bbi-post__icon" src="' + iconURL(cat) + '" alt="" onerror="this.style.visibility=\'hidden\'">' +
         '<span class="bbi-post__label">' + cat.label + '</span>' +
         (opts.noPts ? '' : '<span class="bbi-post__pts">' + pts + '</span>') +
       '</div>' +
-      (opts.compact ? '' :
-        '<div class="bbi-post__why">' + WHY[cat.id] + '</div>') +
-      (opts.handle ? '<div class="bbi-post__handle">' + handle + '</div>' : '') +
     '</div>';
   }
 
   // ── Seiten ──────────────────────────────────────────────────────────
   function slides(){
-    const C = FE.categories;
-    const B = C.BY_ID;
+    const B = FE.categories.BY_ID;
+    const plain = { noPts: true };
     return [
       {
-        kicker: 'Worum geht\'s?',
-        title: 'Du kletterst durch einen Feed',
+        title: 'Spring durch deinen Feed',
         vis:
-          '<div class="bbi-scene">' +
-            '<div class="bbi-scene__stack">' +
-              post(B.science,   { compact: true, noPts: true, cls: 'bbi-scene__p1' }) +
-              post(B.clickbait, { compact: true, noPts: true, cls: 'bbi-scene__p2' }) +
-              post(B.pubmedia,  { compact: true, noPts: true, cls: 'bbi-scene__p3' }) +
+          '<div class="bbi-duo">' +
+            '<div class="bbi-duo__col">' +
+              '<div class="bbi-duo__head bbi-duo__head--good">Punkte</div>' +
+              post(B.factcheck) + post(B.science) + post(B.source_ok) +
             '</div>' +
-            '<div class="bbi-scene__jumper">' + MONSTER_SVG + '</div>' +
+            '<div class="bbi-duo__col">' +
+              '<div class="bbi-duo__head bbi-duo__head--bad">Abzug</div>' +
+              post(B.clickbait) + post(B.conspiracy) + post(B.ai_hidden) +
+            '</div>' +
           '</div>',
-        text:
-          '<p>Dein Monster springt einen endlosen <b>Social-Media-Feed</b> hinauf. ' +
-          'Jeder <b>Post</b> ist eine Plattform – auf jedem landest du und springst weiter.</p>' +
-          '<p>Entscheidend ist, <b>worauf</b> du landest. Denn wie in echten Apps merkt sich ' +
-          'dein Feed alles, was du anklickst – und zeigt dir mehr davon.</p>'
+        text: '<p>Jeder Post ist eine Plattform. <b>Seriöse Posts</b> bringen Punkte, ' +
+              '<b>Fake &amp; Klickbait</b> kosten Punkte.</p>'
       },
       {
-        kicker: 'Worum geht\'s?',
-        title: 'Diese Posts kannst du ernst nehmen',
-        vis: '<div class="bbi-grid">' + C.GOOD.map(c => post(c)).join('') + '</div>',
-        text:
-          '<p>Landest du auf einem <b>vertrauenswürdigen Post</b>, gibt es <b>Pluspunkte</b> ' +
-          'und deine <b>Serie</b> wächst.</p>' +
-          '<p class="bbi-hint"><span class="bbi-stripe bbi-stripe--good"></span> ' +
-          'Blauer Streifen oben = vertrauenswürdig.</p>'
-      },
-      {
-        kicker: 'Worum geht\'s?',
-        title: 'Und bei diesen Posts ist Vorsicht angesagt',
-        vis: '<div class="bbi-grid">' + C.BAD.map(c => post(c)).join('') + '</div>',
-        text:
-          '<p>Auch hier springst du weiter – aber es gibt <b>Minuspunkte</b> und deine Serie ' +
-          'ist weg. Der Streifen ist dunkler (Petrol) – schau lieber genau auf <b>Symbol und Text</b>.</p>' +
-          '<p class="bbi-hint"><span class="bbi-stripe bbi-stripe--bad"></span> ' +
-          'Petrol-Streifen oben = fragwürdig.</p>'
-      },
-      {
-        kicker: 'Probier\'s aus',
-        title: 'Der Feed lernt mit',
+        title: 'Dein Feed lernt mit',
         vis: '<div class="bbi-demo" id="bbi-demo"></div>',
-        text:
-          '<p><b>Tippe auf die Posts</b>, als würdest du darauf landen. Jede Landung ist für den ' +
-          'Algorithmus wie ein <b>Like</b>: Davon zeigt er dir ab jetzt <b>mehr</b>.</p>' +
-          '<p>Ob ein Post stimmt, ist dem Algorithmus <b>egal</b>. Er zählt nur, womit du ' +
-          'Zeit verbringst.</p>',
+        text: '<p><b>Tippe ein paar Posts an.</b> Was du anklickst, zeigt dir der Feed öfter – ' +
+              'egal, ob es stimmt.</p>',
         onShow: renderDemo
       },
       {
-        kicker: 'Worum geht\'s?',
-        title: 'So entsteht eine Filterblase',
+        title: 'Vorsicht, Filterblase!',
         vis:
           '<div class="bbi-bubble">' +
-            '<div class="bbi-bubble__out bbi-bubble__out--1">' + post(B.factcheck, { compact: true, noPts: true }) + '</div>' +
-            '<div class="bbi-bubble__out bbi-bubble__out--2">' + post(B.science,   { compact: true, noPts: true }) + '</div>' +
-            '<div class="bbi-bubble__out bbi-bubble__out--3">' + post(B.pubmedia,  { compact: true, noPts: true }) + '</div>' +
+            '<div class="bbi-bubble__out bbi-bubble__out--1">' + post(B.factcheck, plain) + '</div>' +
+            '<div class="bbi-bubble__out bbi-bubble__out--2">' + post(B.science,   plain) + '</div>' +
+            '<div class="bbi-bubble__out bbi-bubble__out--3">' + post(B.pubmedia,  plain) + '</div>' +
             '<div class="bbi-bubble__ball">' +
-              '<div class="bbi-bubble__in bbi-bubble__in--1">' + post(B.clickbait,  { compact: true, noPts: true }) + '</div>' +
-              '<div class="bbi-bubble__in bbi-bubble__in--2">' + post(B.conspiracy, { compact: true, noPts: true }) + '</div>' +
-              '<div class="bbi-bubble__in bbi-bubble__in--3">' + post(B.urgency,    { compact: true, noPts: true }) + '</div>' +
+              '<div class="bbi-bubble__in bbi-bubble__in--1">' + post(B.clickbait,  plain) + '</div>' +
+              '<div class="bbi-bubble__in bbi-bubble__in--2">' + post(B.conspiracy, plain) + '</div>' +
+              '<div class="bbi-bubble__in bbi-bubble__in--3">' + post(B.urgency,    plain) + '</div>' +
               '<div class="bbi-bubble__mon">' + MONSTER_SVG + '</div>' +
             '</div>' +
           '</div>',
-        text:
-          '<p>Du siehst immer mehr vom Gleichen – und alles andere verschwindet. ' +
-          'Das nennt man <b>Filterblase</b>.</p>' +
-          '<p><b>TikTok, Instagram und YouTube</b> arbeiten genauso: Sie messen Likes, Kommentare ' +
-          'und wie lange du hinschaust. <b>Aufreger und Klickbait</b> bekommen besonders viele ' +
-          'Reaktionen – darum rutschen sie schnell nach oben.</p>' +
-          '<p>Die gute Nachricht: Der Feed dreht sich mit. Springst du eine Weile gezielt auf ' +
-          'gute Quellen, <b>kippt die Blase zurück</b>. Mit <span class="bbi-key">📊</span> ' +
-          'siehst du im Spiel jederzeit, wie dein Feed gerade aussieht.</p>'
+        text: '<p>Bald siehst du nur noch das Gleiche – genau wie bei <b>TikTok &amp; Co.</b> ' +
+              'Spring auf gute Quellen, dann öffnet sich dein Feed wieder.</p>'
       },
       {
-        kicker: 'So spielst du',
-        title: 'Steuerung',
-        vis:
-          '<div class="bbi-ctrl">' +
-            '<div class="bbi-ctrl__swipe">' +
-              '<div class="bbi-ctrl__mon">' + MONSTER_SVG + '</div>' +
-              '<div class="bbi-ctrl__finger"></div>' +
-              '<div class="bbi-ctrl__arrows">‹ &nbsp; wischen &nbsp; ›</div>' +
-            '</div>' +
-            '<div class="bbi-ctrl__dash">' +
-              '<div class="bbi-dashbtn">⤒</div>' +
-              '<div class="bbi-ctrl__cap">Dash</div>' +
-            '</div>' +
-          '</div>',
-        text:
-          '<ul class="bbi-list">' +
-            '<li><b>Wischen nach links/rechts</b> lenkt dein Monster. Wo du den Finger aufsetzt, ist egal.</li>' +
-            '<li><b>Dash</b> <span class="bbi-key">⤒</span> unten rechts – oder schnell <b>nach oben wischen</b> – ' +
-              'gibt dir einen Extra-Sprung.</li>' +
-            '<li>Am PC: <span class="bbi-key">←</span> <span class="bbi-key">→</span> lenken, ' +
-              '<span class="bbi-key">Leertaste</span> Dash, <span class="bbi-key">P</span> Pause.</li>' +
-          '</ul>'
-      },
-      {
-        kicker: 'So spielst du',
-        title: 'Pass auf!',
+        title: 'So spielst du',
         vis:
           '<div class="bbi-danger">' +
             '<div class="bbi-danger__row">' +
@@ -178,39 +100,19 @@
             '</div>' +
             '<div class="bbi-bar">REALITÄTSCHECK</div>' +
             '<div class="bbi-danger__mon">' + MONSTER_SVG + '</div>' +
+            '<div class="bbi-dashbtn">⤒</div>' +
           '</div>',
         text:
           '<ul class="bbi-list">' +
-            '<li><b>Akku:</b> Er sinkt ständig, jeder Dash kostet extra. Sammle ' +
-              '<span class="bbi-key">⚡</span>-Kugeln (+20 %). Bei 0 % ist die Runde vorbei.</li>' +
-            '<li><b>Realitätscheck:</b> Der rote Balken fällt von oben. Nur mit einem ' +
-              '<b>Dash</b> kommst du hindurch – sonst ist die Runde vorbei.</li>' +
-            '<li><b>Nicht runterfallen!</b> Nach 30 Sekunden zieht der Feed von selbst nach oben – ' +
-              'wie beim Doomscrolling.</li>' +
-          '</ul>'
-      },
-      {
-        kicker: 'So spielst du',
-        title: 'Punkte & Auswertung',
-        vis:
-          '<div class="bbi-score">' +
-            '<div class="bbi-score__pill"><span class="bbi-score__num">1 240</span><span class="bbi-score__best">BEST 2 310</span></div>' +
-            '<div class="bbi-score__combo">SERIE x10</div>' +
-            '<div class="bbi-score__buffs"><span>⚡ DASH −50%</span><span>⤒ SPRUNG +8%</span></div>' +
-          '</div>',
-        text:
-          '<ul class="bbi-list">' +
-            '<li><b>Punkte</b> = wie hoch du kommst + Plus- und Minuspunkte der Posts.</li>' +
-            '<li><b>Serie:</b> Gute Posts hintereinander. Ab 10 kostet der Dash nur halb so viel Akku, ' +
-              'ab 20 springst du höher.</li>' +
-            '<li>Am Ende siehst du deine <b>Filterblase</b>: Wie hat sich dein Feed in dieser Runde verändert?</li>' +
-            '<li>15 000 Punkte = volle <b>10 Hub-Punkte</b> für dein Tier.</li>' +
+            '<li><b>Wischen</b> lenkt, <span class="bbi-key">⤒</span> ist der <b>Dash</b>.</li>' +
+            '<li>Sammle <span class="bbi-key">⚡</span>, sonst ist der <b>Akku</b> leer.</li>' +
+            '<li>Den <b>Realitätscheck</b> schaffst du nur per Dash.</li>' +
           '</ul>'
       }
     ];
   }
 
-  // ── Mitmach-Demo (Seite 4) ──────────────────────────────────────────
+  // ── Mitmach-Demo (Seite 2) ──────────────────────────────────────────
   const demo = { hits: {} };
 
   function renderDemo(){
@@ -336,7 +238,7 @@
       if (j === idx) s.querySelector('.bbi-body').scrollTop = 0;
     });
     dotsEl.querySelectorAll('.bbi-dot').forEach((d, j) => d.classList.toggle('is-active', j === idx));
-    kickerEl.textContent = pages[idx].kicker + ' · ' + (idx + 1) + '/' + pages.length;
+    kickerEl.textContent = 'So geht\'s · ' + (idx + 1) + '/' + pages.length;
     prevBtn.disabled = idx === 0;
     nextBtn.textContent = idx === pages.length - 1 ? 'Los geht\'s!' : 'Weiter ›';
     nextBtn.classList.toggle('bbi-next--go', idx === pages.length - 1);

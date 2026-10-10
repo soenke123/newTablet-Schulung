@@ -178,7 +178,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 }
 #bb-intro[hidden]{display:none;}
 .bbi-card{
-  width:100%;max-width:480px;height:100%;max-height:760px;
+  width:100%;max-width:480px;max-height:100%;
   display:flex;flex-direction:column;overflow:hidden;
   background:linear-gradient(180deg,#FFF6EC 0%,#FFE6EF 60%,#F5E4F4 100%);
   border-radius:22px;color:#2A2439;
@@ -188,19 +188,19 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 .bbi-kicker{font:600 12px 'Fredoka',system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#8B5CF6;}
 .bbi-skip{border:0;background:none;cursor:pointer;color:#6b6472;font:600 13px 'Fredoka',system-ui,sans-serif;padding:6px 4px;}
 
-.bbi-viewport{flex:1;min-height:0;overflow:hidden;touch-action:pan-y;}
-.bbi-track{display:flex;height:100%;transition:transform .35s cubic-bezier(.2,.8,.2,1);}
-.bbi-slide{flex:0 0 100%;height:100%;display:flex;flex-direction:column;min-height:0;padding:0 14px;}
+.bbi-viewport{flex:0 1 auto;min-height:0;overflow:hidden;touch-action:pan-y;display:flex;}
+.bbi-track{display:flex;width:100%;transition:transform .35s cubic-bezier(.2,.8,.2,1);}
+.bbi-slide{flex:0 0 100%;display:flex;flex-direction:column;min-height:0;padding:0 14px;}
 .bbi-vis{
-  flex:0 0 auto;height:clamp(150px,34%,250px);
+  flex:0 0 auto;height:clamp(150px,30vh,230px);
   position:relative;display:flex;align-items:center;justify-content:center;
   border-radius:16px;overflow:hidden;
   background:linear-gradient(180deg,#FFE1BE 0%,#FFC1CE 55%,#E7BEE4 100%);
   box-shadow:0 0 0 1px rgba(90,60,120,.10) inset;
 }
-.bbi-body{flex:1;min-height:0;overflow-y:auto;padding:12px 2px 6px;-webkit-overflow-scrolling:touch;}
-.bbi-title{font:700 21px/1.2 'Fredoka',system-ui,sans-serif;color:#5B3B7A;margin-bottom:8px;}
-.bbi-body p{font:400 15px/1.45 'Fredoka',system-ui,sans-serif;margin-bottom:8px;}
+.bbi-body{flex:0 1 auto;min-height:0;overflow-y:auto;padding:14px 2px 4px;-webkit-overflow-scrolling:touch;}
+.bbi-title{font:700 22px/1.2 'Fredoka',system-ui,sans-serif;color:#5B3B7A;margin-bottom:8px;}
+.bbi-body p{font:400 16px/1.45 'Fredoka',system-ui,sans-serif;margin-bottom:8px;}
 .bbi-body b{font-weight:600;}
 .bbi-hint{display:flex;align-items:center;gap:8px;color:#4A3B5E;font-size:14px !important;}
 .bbi-stripe{display:inline-block;width:28px;height:6px;border-radius:4px;flex:0 0 auto;}
@@ -251,39 +251,16 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 .bbi-post__pts{font:700 12px 'Fredoka',system-ui,sans-serif;padding:1px 6px;border-radius:999px;flex:0 0 auto;}
 .bbi-post--good .bbi-post__pts{background:#DBEAFE;color:#1E40AF;}
 .bbi-post--bad  .bbi-post__pts{background:#CFFAFE;color:#155E75;}
-.bbi-post__why{font:400 11.5px/1.25 'Fredoka',system-ui,sans-serif;color:#6b6472;margin-top:3px;}
 
-/* Seite 1: Szene mit springendem Monster */
-.bbi-scene{position:absolute;inset:0;}
-.bbi-scene__stack .bbi-post{position:absolute;width:42%;}
-.bbi-scene__p1{left:50%;top:26%;}
-.bbi-scene__p2{left:12%;top:52%;}
-.bbi-scene__p3{left:38%;top:78%;}
-/* Mitte der Posts: p1 71 %, p2 33 %, p3 59 % — Monster 40px, steht auf der Oberkante. */
-.bbi-scene__jumper{position:absolute;width:40px;height:40px;left:calc(59% - 20px);top:calc(78% - 40px);}
-.is-active .bbi-scene__jumper{animation:bbiHop 3.6s infinite;}
-@keyframes bbiHop{
-  0%   {left:calc(59% - 20px);top:calc(78% - 40px);opacity:1;animation-timing-function:ease-out;}
-  12%  {left:calc(46% - 20px);top:calc(36% - 40px);animation-timing-function:ease-in;}
-  24%  {left:calc(33% - 20px);top:calc(52% - 40px);animation-timing-function:ease-out;}
-  36%  {left:calc(52% - 20px);top:calc(10% - 40px);animation-timing-function:ease-in;}
-  48%  {left:calc(71% - 20px);top:calc(26% - 40px);animation-timing-function:ease-out;}
-  62%  {left:calc(76% - 20px);top:-46px;opacity:1;}
-  66%  {left:calc(78% - 20px);top:-60px;opacity:0;}
-  67%  {left:calc(59% - 20px);top:calc(78% - 40px);opacity:0;}
-  82%  {left:calc(59% - 20px);top:calc(78% - 40px);opacity:1;}
-  100% {left:calc(59% - 20px);top:calc(78% - 40px);opacity:1;}
-}
+/* Seite 1: Punkte | Abzug */
+.bbi-duo{position:absolute;inset:0;padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;align-content:center;}
+.bbi-duo__col{display:grid;gap:7px;align-content:start;}
+.bbi-duo__head{font:700 13px 'Fredoka',system-ui,sans-serif;text-align:center;letter-spacing:.04em;text-transform:uppercase;}
+.bbi-duo__head--good{color:#1E40AF;}
+.bbi-duo__head--bad{color:#155E75;}
 
-/* Seiten 2 + 3: Post-Raster */
-.bbi-grid{
-  position:absolute;inset:0;padding:12px;overflow-y:auto;
-  display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:center;
-}
-.bbi-grid .bbi-post:last-child:nth-child(odd){grid-column:1 / -1;justify-self:center;width:calc(50% - 4px);}
-
-/* Seite 4: Mitmach-Demo */
-.bbi-vis:has(.bbi-demo){height:auto;max-height:62%;flex:0 1 auto;}
+/* Seite 2: Mitmach-Demo */
+.bbi-vis:has(.bbi-demo){height:auto;flex:0 1 auto;min-height:120px;}
 .bbi-demo{width:100%;height:100%;padding:8px 10px;overflow-y:auto;}
 .bbi-demo__rows{display:grid;grid-template-columns:1fr 1fr;gap:4px 6px;}
 .bbi-demo__row{
@@ -314,7 +291,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
   background:rgba(255,255,255,.8);color:#5B3B7A;font:600 12px 'Fredoka',system-ui,sans-serif;
 }
 
-/* Seite 5: Filterblase */
+/* Seite 3: Filterblase */
 .bbi-bubble{position:absolute;inset:0;}
 .bbi-bubble__out{position:absolute;width:30%;max-width:150px;opacity:.45;filter:saturate(.6);}
 .bbi-bubble__out--1{left:3%;top:10%;}
@@ -337,29 +314,15 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 .bbi-bubble__in--3{top:66%;}
 .bbi-bubble__mon{position:absolute;right:7%;top:38%;width:22%;aspect-ratio:1;}
 
-/* Seite 6: Steuerung */
-.bbi-ctrl{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-around;padding:10px;}
-.bbi-ctrl__swipe{position:relative;width:58%;height:85%;}
-.bbi-ctrl__mon{position:absolute;left:50%;top:14%;width:58px;height:58px;margin-left:-29px;}
-.is-active .bbi-ctrl__mon{animation:bbiSteer 2.4s ease-in-out infinite;}
-.bbi-ctrl__finger{
-  position:absolute;left:50%;bottom:22%;width:34px;height:34px;margin-left:-17px;border-radius:50%;
-  background:rgba(255,255,255,.75);box-shadow:0 0 0 3px rgba(139,92,246,.6),0 4px 10px rgba(60,40,80,.25);
-}
-.is-active .bbi-ctrl__finger{animation:bbiSteer 2.4s ease-in-out infinite;}
-@keyframes bbiSteer{0%,100%{transform:translateX(-55%)}50%{transform:translateX(55%)}}
-.bbi-ctrl__arrows{position:absolute;left:0;right:0;bottom:4%;text-align:center;font:600 13px 'Fredoka',system-ui,sans-serif;color:#5B3B7A;}
-.bbi-ctrl__dash{display:flex;flex-direction:column;align-items:center;gap:6px;}
+/* Seite 4: So spielst du */
 .bbi-dashbtn{
-  width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  position:absolute;right:14px;bottom:10px;width:48px;height:48px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
   background:rgba(255,255,255,.92);border:3px solid #8B5CF6;color:#8B5CF6;
-  font:700 30px/1 'Fredoka',system-ui,sans-serif;box-shadow:0 6px 14px rgba(60,40,80,.25);
+  font:700 24px/1 'Fredoka',system-ui,sans-serif;box-shadow:0 6px 14px rgba(60,40,80,.25);
 }
-.is-active .bbi-dashbtn{animation:bbiTap 1.8s ease-in-out infinite;}
-@keyframes bbiTap{0%,70%,100%{transform:scale(1)}80%{transform:scale(.88)}}
-.bbi-ctrl__cap{font:700 13px 'Fredoka',system-ui,sans-serif;color:#5B3B7A;}
-
-/* Seite 7: Gefahren */
+.is-active .bbi-dashbtn{animation:bbiTap 3s ease-in-out infinite;}
+@keyframes bbiTap{0%,26%,40%,100%{transform:scale(1)}32%{transform:scale(.85)}}
 .bbi-danger{position:absolute;inset:0;}
 .bbi-danger__row{position:absolute;left:14px;right:14px;top:14px;display:flex;align-items:center;gap:14px;}
 .bbi-batt{
@@ -397,18 +360,6 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
   80%{transform:translateY(-190%);opacity:0}
   100%{transform:translateY(0);opacity:0}
 }
-
-/* Seite 8: Punkte */
-.bbi-score{display:flex;flex-direction:column;align-items:center;gap:10px;}
-.bbi-score__pill{
-  display:flex;flex-direction:column;padding:8px 22px;border-radius:14px;
-  background:rgba(255,255,255,.88);box-shadow:0 3px 8px rgba(60,40,80,.15);
-}
-.bbi-score__num{font:700 34px/1 'Fredoka',system-ui,sans-serif;}
-.bbi-score__best{font:600 12px 'Fredoka',system-ui,sans-serif;color:#8a3d20;margin-top:2px;}
-.bbi-score__combo{font:700 22px 'Fredoka',system-ui,sans-serif;color:#8B5CF6;}
-.bbi-score__buffs{display:flex;gap:10px;font:700 13px 'Fredoka',system-ui,sans-serif;color:#B45309;}
-.bbi-score__buffs span{background:rgba(255,255,255,.7);border-radius:999px;padding:3px 10px;}
 
 @media (prefers-reduced-motion: reduce){
   #bb-intro *{animation:none !important;transition:none !important;}
