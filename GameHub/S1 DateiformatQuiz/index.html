@@ -28,7 +28,10 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 .start-egg svg{width:100%;height:100%;}
 .start-egg .creature-img{width:100%;height:100%;object-fit:contain;display:block;}
 .start-title{font-family:'Outfit',sans-serif;font-weight:800;font-size:clamp(1.6rem,5vw,2.6rem);background:linear-gradient(135deg,var(--accent),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:14px;line-height:1.2;}
-.start-sub{color:var(--muted);font-size:.95rem;line-height:1.75;max-width:480px;margin-bottom:28px;}
+.start-sub{color:var(--muted);font-size:.95rem;line-height:1.75;max-width:480px;margin-bottom:16px;}
+.start-rules{list-style:none;padding:0;margin:0 0 22px;max-width:480px;display:grid;gap:6px;text-align:left;font-size:.9rem;line-height:1.45;color:var(--text);}
+.start-rules li{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:7px 12px;}
+.start-rules b{color:var(--accent);font-weight:600;}
 .feature-pills{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-bottom:32px;}
 .pill{background:var(--surf2);border:1px solid var(--border);border-radius:99px;padding:6px 14px;font-size:.8rem;color:var(--muted);}
 .start-btn{display:inline-flex;align-items:center;gap:10px;background:linear-gradient(135deg,var(--accent),#16a34a);border:none;border-radius:16px;padding:16px 40px;color:#000;font-family:'Outfit',sans-serif;font-weight:700;font-size:1.1rem;cursor:pointer;transition:transform .2s,box-shadow .2s;box-shadow:0 8px 32px rgba(74,222,128,.25);}
@@ -179,7 +182,12 @@ body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;bac
 <div id="start-screen" class="page active">
   <div class="start-egg" id="startEgg"></div>
   <h2 class="start-title">Daten-Quiz</h2>
-  <p class="start-sub">Zeig, was du drauf hast! Sammle Punkte, baue eine Streak auf und schlüpfe dein Begleiter-Tier – Frage für Frage.</p>
+  <p class="start-sub">Referat, Foto, Präsentation: Wer Dateiformate kennt, kann Dateien öffnen, teilen und wiederfinden – auf dem iPad und an jedem anderen Gerät.</p>
+  <ul class="start-rules">
+    <li>✅ Tippe die richtige Antwort an – manchmal sind <b>mehrere</b> richtig.</li>
+    <li>💡 Nach jeder Frage gibt es eine kurze <b>Erklärung</b>.</li>
+    <li>🥚 Je mehr du richtig hast, desto <b>besser</b> wird dein Tier.</li>
+  </ul>
   <div class="feature-pills">
     <span class="pill">16 Fragen</span>
     <span class="pill">4 Themenbereiche</span>
