@@ -183,7 +183,16 @@ body {
   color: var(--text-muted);
   font-size: clamp(1rem, 2.2vw, 1.25rem);
   max-width: 580px;
-  margin-bottom: 32px;
+  margin-bottom: 10px;
+}
+
+.hero-why {
+  color: var(--text-muted);
+  font-size: clamp(.9rem, 1.8vw, 1rem);
+  line-height: 1.5;
+  max-width: 540px;
+  margin-bottom: 28px;
+  opacity: .85;
 }
 
 .rules-carousel-wrap {
@@ -1093,8 +1102,14 @@ body {
 
   .hero-subtitle {
     font-size: 0.88rem;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
     line-height: 1.4;
+  }
+
+  .hero-why {
+    font-size: 0.8rem;
+    line-height: 1.4;
+    margin-bottom: 14px;
   }
 
   /* Wischbares Karussell für die 4 Infopunkte auf dem Handy */
