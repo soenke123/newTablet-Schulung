@@ -1,7 +1,7 @@
 // Intro: „Worum geht's?" und „So spielst du" — HTML-Overlay über dem Canvas.
 //
 // Erscheint beim ersten Besuch automatisch (localStorage INTRO_KEY), danach
-// über den Knopf „? So geht's" im Menü. Vier Seiten, jede mit Bild aus
+// über den Knopf „? So geht's" im Menü und auf dem Endscreen. Sechs Seiten, jede mit Bild aus
 // HTML/CSS/SVG und höchstens zwei kurzen Sätzen — mehr liest keiner.
 //
 // Seite 2 ist eine kleine Mitmach-Simulation des Feed-Algorithmus. Sie
@@ -91,7 +91,24 @@
               'Spring auf gute Quellen, dann öffnet sich dein Feed wieder.</p>'
       },
       {
-        title: 'So spielst du',
+        title: 'Steuerung',
+        vis:
+          '<div class="bbi-ctrl">' +
+            '<div class="bbi-ctrl__swipe">' +
+              '<div class="bbi-ctrl__mon">' + MONSTER_SVG + '</div>' +
+              '<div class="bbi-ctrl__finger"></div>' +
+              '<div class="bbi-ctrl__arrows">‹ &nbsp;wischen&nbsp; ›</div>' +
+            '</div>' +
+            '<div class="bbi-ctrl__dash">' +
+              '<div class="bbi-ctrl__btn">⤒</div>' +
+              '<div class="bbi-ctrl__cap">Dash</div>' +
+            '</div>' +
+          '</div>',
+        text: '<p><b>Wischen</b> lenkt dein Monster. Der <b>Dash</b> <span class="bbi-key">⤒</span> ' +
+              'gibt dir einen Extra-Sprung.</p>'
+      },
+      {
+        title: 'Pass auf!',
         vis:
           '<div class="bbi-danger">' +
             '<div class="bbi-danger__row">' +
@@ -104,10 +121,21 @@
           '</div>',
         text:
           '<ul class="bbi-list">' +
-            '<li><b>Wischen</b> lenkt, <span class="bbi-key">⤒</span> ist der <b>Dash</b>.</li>' +
             '<li>Sammle <span class="bbi-key">⚡</span>, sonst ist der <b>Akku</b> leer.</li>' +
             '<li>Den <b>Realitätscheck</b> schaffst du nur per Dash.</li>' +
           '</ul>'
+      },
+      {
+        title: 'Serie & Auswertung',
+        vis:
+          '<div class="bbi-score">' +
+            '<div class="bbi-score__mon">' + MONSTER_SVG + '</div>' +
+            '<div class="bbi-score__combo">SERIE x10</div>' +
+            '<div class="bbi-score__buffs"><span>⚡ DASH −50%</span><span>⤒ SPRUNG +8%</span></div>' +
+            '<div class="bbi-score__stats"><span class="bbi-key">📊</span> Dein Feed – live</div>' +
+          '</div>',
+        text: '<p>Viele gute Posts am Stück geben dir <b>Boni</b>. ' +
+              'Mit <span class="bbi-key">📊</span> und am Ende siehst du, wie dein Feed sich verändert hat.</p>'
       }
     ];
   }
@@ -259,7 +287,10 @@
     open = false;
     root.hidden = true;
     try { localStorage.setItem(INTRO_KEY, '1'); } catch(e){}
-    if (startNow && FE.main && FE.main.getState() === FE.main.ST.MENU){
+    const st = FE.main ? FE.main.getState() : -1;
+    // Vom Menü oder vom Endscreen aus: neue Runde (startGame blendet den
+    // Endscreen über hub.resetForNewRun aus).
+    if (startNow && (st === FE.main.ST.MENU || st === FE.main.ST.OVER)){
       FE.main.startGame();
     } else if (FE.main && FE.main.getState() === FE.main.ST.MENU){
       setHelpVisible(true);
@@ -276,6 +307,8 @@
   function boot(){
     const help = document.getElementById('bb-help');
     if (help) help.addEventListener('click', show);
+    const esHelp = document.getElementById('bb-es-help');
+    if (esHelp) esHelp.addEventListener('click', show);
     let seen = false;
     try { seen = localStorage.getItem(INTRO_KEY) === '1'; } catch(e){}
     if (seen) setHelpVisible(true);

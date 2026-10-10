@@ -138,7 +138,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 .bb-es-buttons{
   display:flex;flex-direction:column;gap:10px;margin-top:14px;
 }
-#bb-es-again,.bb-es-back{
+#bb-es-again,#bb-es-help,.bb-es-back{
   display:block;width:100%;padding:12px 16px;border:0;
   border-radius:999px;font:700 15px 'Fredoka',system-ui,sans-serif;
   cursor:pointer;text-decoration:none;text-align:center;
@@ -149,6 +149,8 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
   box-shadow:0 4px 14px rgba(90,63,184,.4);
 }
 #bb-es-again:hover,#bb-es-again:active{transform:translateY(-1px);box-shadow:0 6px 18px rgba(90,63,184,.5);}
+#bb-es-help{background:rgba(255,255,255,.7);color:#5B3B7A;border:1px solid rgba(91,59,122,.25);}
+#bb-es-help:hover,#bb-es-help:active{background:rgba(255,255,255,.9);}
 .bb-es-back{
   background:rgba(42,36,57,.08);color:#2A2439;border:1px solid rgba(42,36,57,.18);
 }
@@ -156,7 +158,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 
 
 /* ═══ Intro „So geht's" (js/intro.js) ═══════════════════════════════
-   Liegt in #stage über Canvas und Menü-Companion. Farben wie im Spiel:
+   Liegt auf Body-Ebene über Spiel und Endscreen. Farben wie im Spiel:
    Tinte #2A2439, Lila #8B5CF6, gut = Blau #2563EB, schlecht = Petrol #0E7490. */
 
 #bb-help{
@@ -170,7 +172,7 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 @media (max-width: 600px){ #bb-help{top:auto;bottom:calc(12px + env(safe-area-inset-bottom));right:12px;} }
 
 #bb-intro{
-  position:absolute;inset:0;z-index:55;
+  position:fixed;inset:0;z-index:65;  /* über #bb-endscreen (60) */
   display:flex;align-items:center;justify-content:center;
   padding:calc(10px + env(safe-area-inset-top)) 10px calc(10px + env(safe-area-inset-bottom));
   background:rgba(42,36,57,.35);
@@ -314,7 +316,38 @@ canvas{display:block;width:100%;height:100%;touch-action:none;}
 .bbi-bubble__in--3{top:66%;}
 .bbi-bubble__mon{position:absolute;right:7%;top:38%;width:22%;aspect-ratio:1;}
 
-/* Seite 4: So spielst du */
+/* Seite 4: Steuerung */
+.bbi-ctrl{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-around;padding:10px;}
+.bbi-ctrl__swipe{position:relative;width:58%;height:85%;}
+.bbi-ctrl__mon{position:absolute;left:50%;top:10%;width:54px;height:54px;margin-left:-27px;}
+.bbi-ctrl__finger{
+  position:absolute;left:50%;bottom:24%;width:34px;height:34px;margin-left:-17px;border-radius:50%;
+  background:rgba(255,255,255,.75);box-shadow:0 0 0 3px rgba(139,92,246,.6),0 4px 10px rgba(60,40,80,.25);
+}
+.is-active .bbi-ctrl__mon,.is-active .bbi-ctrl__finger{animation:bbiSteer 2.4s ease-in-out infinite;}
+@keyframes bbiSteer{0%,100%{transform:translateX(-55%)}50%{transform:translateX(55%)}}
+.bbi-ctrl__arrows{position:absolute;left:0;right:0;bottom:4%;text-align:center;font:600 13px 'Fredoka',system-ui,sans-serif;color:#5B3B7A;}
+.bbi-ctrl__dash{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.bbi-ctrl__btn{
+  width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.92);border:3px solid #8B5CF6;color:#8B5CF6;
+  font:700 30px/1 'Fredoka',system-ui,sans-serif;box-shadow:0 6px 14px rgba(60,40,80,.25);
+}
+.is-active .bbi-ctrl__btn{animation:bbiTap 1.8s ease-in-out infinite;}
+.bbi-ctrl__cap{font:700 13px 'Fredoka',system-ui,sans-serif;color:#5B3B7A;}
+
+/* Seite 6: Serie & Auswertung */
+.bbi-score{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.bbi-score__mon{width:54px;height:54px;border-radius:50%;
+  background:radial-gradient(circle,rgba(251,191,36,.55) 0 45%,rgba(251,191,36,0) 72%);padding:2px;}
+.is-active .bbi-score__mon{animation:bbiGlow 1.6s ease-in-out infinite;}
+@keyframes bbiGlow{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+.bbi-score__combo{font:700 24px/1 'Fredoka',system-ui,sans-serif;color:#8B5CF6;}
+.bbi-score__buffs{display:flex;gap:8px;font:700 13px 'Fredoka',system-ui,sans-serif;color:#B45309;}
+.bbi-score__buffs span{background:rgba(255,255,255,.75);border-radius:999px;padding:3px 10px;}
+.bbi-score__stats{font:600 13px 'Fredoka',system-ui,sans-serif;color:#5B3B7A;}
+
+/* Seite 5: Pass auf! */
 .bbi-dashbtn{
   position:absolute;right:14px;bottom:10px;width:48px;height:48px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
