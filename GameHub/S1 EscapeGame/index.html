@@ -303,7 +303,7 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-s
 const GAME_ID = new URLSearchParams(window.location.search).get('id') || 'game7';
 // 6 Regeln – jede mit eigenem Code
 const RULES=[
-  {short:'Akku vollständig laden',     text:'Das Geraet wird vollständig geladen zum Unterricht mitgebracht.',        code:'3564'},
+  {short:'Akku über 75 % geladen',     text:'Das Gerät wird ausreichend geladen (über 75 %) zum Unterricht mitgebracht.', code:'3564'},
   {short:'Erst nach Erlaubnis oeffnen', text:'Das Geraet bleibt bis zur ausdruecklichen Erlaubnis geschlossen.',        code:'1'},
   {short:'Vorbereitung checken',        text:'Analoge Materialien dabei und Fokus-Modus aktiviert.',                    code:'5'},
   {short:'Nur Lernapps aktiv',          text:'Nur unterrichtsbezogene Apps sind aktiv.',                                code:'6'},
@@ -311,7 +311,8 @@ const RULES=[
   {short:'Handy in die Tasche',         text:'Handys und Smartwatches bleiben in den Taschen.',                         code:'9'},
 ];
 
-// 9 iPads – 100%-Geräte in Lesereihenfolge: n=3,5,6,4 -> Code "3564"
+// 9 iPads – Geräte über 75 % in Lesereihenfolge: n=3,5,6,4 -> Code "3564"
+// (Nr. 2 zeigt genau 75 % und zählt bewusst NICHT mit — Regel heißt „über 75 %“.)
 const IPADS=[
   {n:7,p:23, bg:'#1a237e',icon:'&#x1F4D3;'},
   {n:3,p:100,bg:'#1b5e20',icon:'&#x1F310;'},
@@ -346,19 +347,19 @@ const STEPS=[
    type:'choice',
    q:'Was haettest du anders machen muessen, damit DAS in der Schule nicht passiert?',
    opts:[
-    {t:'Das iPad vor der Schule vollständig aufladen',ok:true},
+    {t:'Das iPad vor der Schule ausreichend laden (über 75 %)',ok:true},
     {t:'In der Schule einen Mitschueler nach dem Ladekabel fragen',ok:false},
     {t:'Das iPad zu Hause lassen',ok:false},
     {t:'Die Lehrkraft bitten, die Aufgabe zu überspringen',ok:false},
    ],
-   hint:'Regel 1: Wie vollständig muss das iPad geladen sein?'},
+   hint:'Regel 1: Wie weit muss das iPad mindestens geladen sein?'},
 
   // 1: Lehrerpult – visuelles Akku-Raetsel (START)
   {hs:'teacher',solves:0,unlock:[],
    title:'Das Lehrerpult',sub:'',
    scenario:'',
    type:'battery',q:'',opts:[],
-   hint:'Schau auf die Status-Anzeige jedes iPads. Wer macht es richtig?'},
+   hint:'Welche iPads sind über 75 % geladen? Lies ihre Nummern von links oben nach rechts unten.'},
 
   // 2: Fokus-Hotspot – wird nach Instagram-Loesung freigeschaltet
   {hs:'focus',solves:null,unlock:[4],
@@ -626,8 +627,8 @@ function showPreFinaleTeacher(){
 // ============ FINAL QUIZ ============
 function showFinalQuiz(){
   const qs=[
-    {q:'Wie soll der Akkustand deines Tablet am Anfang des Schultages sein?',
-     opts:['Mindestens 50\xA0%','Mindestens 80\xA0%','100\xA0% – vollst\xE4ndig geladen'],cor:2},
+    {q:'Wie soll der Akkustand deines Tablets am Anfang des Schultages sein?',
+     opts:['Mindestens 50\xA0%','\xDCber 75\xA0% – ausreichend geladen','Egal, ich lade in der Schule'],cor:1},
     {q:'Wann darf das iPad ge\xF6ffnet werden?',
      opts:['Sofort beim Betreten der Klasse','Nach ausdr\xFCcklicher Erlaubnis der Lehrkraft','Wenn die Lehrkraft nicht hinsieht'],cor:1},
     {q:'Welcher Modus muss aktiviert sein?',
@@ -943,7 +944,7 @@ function showTeacherCollecting(step){
     '<h2 style="color:var(--txt);font-size:16px;margin-bottom:14px">Die Lehrkraft geht herum …</h2>'+
     '<div style="background:var(--bg);border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:13px;color:var(--muted);line-height:1.8;text-align:left">'+
     '🎓&nbsp; Da es die <strong style="color:var(--txt)">erste Unterrichtsstunde mit iPads</strong> ist, sammelt die Lehrkraft die Ger\xE4te kurz ein.<br><br>'+
-    '👀&nbsp; Jetzt ist ein guter Moment innezuhalten: Was ist bereits gut gelaufen? Habt ihr auf die Aufforderung gewartet? War der Akku voll?<br><br>'+
+    '👀&nbsp; Jetzt ist ein guter Moment innezuhalten: Was ist bereits gut gelaufen? Habt ihr auf die Aufforderung gewartet? War der Akku ausreichend geladen?<br><br>'+
     '💻&nbsp; Die iPads werden auf dem <strong style="color:var(--txt)">Lehrerpult</strong> abgelegt &ndash; gemeinsam wird besprochen, was schon geklappt hat.'+
     '</div>'+
     '<p style="font-size:12px;color:var(--muted);margin-bottom:18px">Schau dir jetzt das Lehrerpult an &ndash; dort wartet das n\xE4chste R\xE4tsel!</p>';

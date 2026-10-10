@@ -76,7 +76,7 @@ A single `.mo` overlay element is reused for every puzzle. Content is rebuilt fr
 
 | Rule | Code |
 |---|---|
-| Akku vollständig laden | 3564 |
+| Akku über 75 % geladen (Bild: nur die 100-%-Geräte zählen, Nr. 2 mit genau 75 % nicht) | 3564 |
 | Erst nach Erlaubnis öffnen | 1 |
 | Vorbereitung checken | 5 |
 | Nur Lernapps aktiv | 6 |
