@@ -68,6 +68,10 @@ Dispatched inside `openModal()` by `step.type`:
 | Final quiz | `showFinalQuiz()` | 5 MC questions covering all rules |
 | Paper task | Step 9 inline | Sequential origami steps |
 
+### Start overlay / „Regeln & Hilfe“
+
+`#start-overlay` is the intro: short story, „So spielst du“ (3 steps), the **7 Hausregeln** (same wording as `Dokumente/handout.html`, rule 1 = „ausreichend geladen (über 75 %)“) with one short „why“ each, and an Akku-Tipp. After the start, the nav button `#navHelp` („? Regeln & Hilfe“) reopens it via `openHelp()`; the button then reads „Weiter spielen“ and the reading time is added to `S.t0`, so it does not count as play time. Note: the game itself still has 6 rule codes (rule „Vorbereitung checken“ covers house rules 3 + 4).
+
 ### Modal System
 
 A single `.mo` overlay element is reused for every puzzle. Content is rebuilt from scratch on each `openModal()` call. The overlay is closed by clicking outside or the × button.
