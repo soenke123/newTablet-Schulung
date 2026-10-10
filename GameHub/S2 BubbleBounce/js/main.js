@@ -56,6 +56,7 @@
       FE.hub.resetForNewRun();
       FE.hub.hideMenu();
     }
+    if (FE.intro) FE.intro.hideHelp();
 
     const { W, H } = view;
     game.camY = 0;

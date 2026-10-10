@@ -10,7 +10,7 @@ The live game lives in **`bubble-bounce/`** as static HTML/CSS/JS — no build s
 
 ## Architecture
 
-Standard canvas game loop (`requestAnimationFrame` → `update(dt)` → `render()`) split across small IIFE modules that all hang off a shared `window.FE` namespace. Load order is fixed by `index.html` (`util → categories → algorithm → player → platforms → render → screens → main`) and each module reads its dependencies from `FE.*`.
+Standard canvas game loop (`requestAnimationFrame` → `update(dt)` → `render()`) split across small IIFE modules that all hang off a shared `window.FE` namespace. Load order is fixed by `index.html` (`util → hub → categories → algorithm → player → platforms → render → screens → main → intro`) and each module reads its dependencies from `FE.*`.
 
 States in `FE.main.ST`: `MENU`, `PLAY`, `STATS` (post-run filter-bubble screen), `OVER`, `PAUSED` (mid-run filter-bubble screen). Flow: `MENU → PLAY → STATS → OVER → PLAY …`.
 
@@ -23,6 +23,7 @@ Key subsystems worth knowing before editing:
 - **Landing (`js/platforms.js:checkCollisions` / `onHit`).** Collision only checks when `mon.vy > 0` (falling) and uses `feetPrev`/`feet` to prevent tunneling. **Every category bounces** (the old "fake breaks away" mechanic is gone). Bad platforms differ only in score (negative `bonus`), combo reset, and a small shake + red particle puff. Combo/score effects are skipped when `p.id === lastPlatId` so re-touching the same platform doesn't stack.
 - **Controls are relative, not absolute (`js/player.js`).** `pointerdown` only records `lastPX` — it must *never* teleport the monster. `pointermove` applies `(x - lastPX) * SENS`. This was a deliberate design choice; keep it that way when editing input code. Top-right of the canvas hosts a mute button and a stats/pause button; bottom-right has the dash button. Keyboard: arrows to move, space/↑ to dash, P/Esc to pause, M to mute.
 - **Rendering (`js/render.js`, `js/screens.js`).** The sunset gradient lives on `#stage` in CSS; the canvas itself is transparent and gets cleared each frame. `render.js` handles in-world drawing (backdrop, cards, monster, FX, HUD, buttons); `screens.js` handles the overlays (menu, over screen, and the filter-bubble screen used both for the paused view and the post-run summary).
+- **Intro (`js/intro.js`).** HTML overlay `#bb-intro` inside `#stage`, 8 pages: „Worum geht's?" (Feed, gute/schlechte Posts, Mitmach-Demo des Algorithmus mit derselben Formel wie `algorithm.js`, Filterblase) and „So spielst du" (Steuerung, Akku/Realitätscheck, Punkte). Opens automatically on the first visit (localStorage `bubbleBounceIntro_v1`), later via `#bb-help` („? So geht's", only in MENU). „Los geht's!" starts the run. While it is open, `player.js` ignores keys (`FE.intro.isOpen()`). Category short texts live in `WHY` in `intro.js` — keep them in sync when adding categories. Styles at the end of `styles.css` (`.bbi-*`).
 - **Audio.** Muted by default; `AudioContext` is lazily created on first pointer/key event via `ensureAudio()` to comply with browser autoplay rules.
 
 ## Conventions

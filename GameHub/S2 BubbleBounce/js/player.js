@@ -221,6 +221,9 @@
 
     // Tastatur (Desktop)
     window.addEventListener('keydown', e => {
+      // Intro offen: Tasten gehören dem Intro (js/intro.js), sonst startet
+      // Leertaste/Enter die Runde unsichtbar dahinter.
+      if (FE.intro && FE.intro.isOpen()) return;
       if (e.key === 'm' || e.key === 'M'){ audio.muted = !audio.muted; ensureAudio(); return; }
       const st = FE.main.getState();
       // P oder Escape: Pause togglen (nur PLAY ↔ PAUSED)
