@@ -428,9 +428,11 @@ dialog p{font-size:.9rem; color:var(--muted); line-height:1.5;}
 
 /* ── Sandbox intro dialog ── */
 #sandbox-intro-dialog{max-width:480px;}
-#train-hint-dialog{max-width:420px; text-align:center;}
-#train-hint-dialog p{margin-top:6px; font-size:1rem;}
-#train-hint-dialog .dialog-btns{justify-content:center; margin-top:16px;}
+.train-hint{margin-top:14px; padding:12px 16px; border-radius:12px; text-align:center;
+  border:1px dashed var(--accent); background:var(--surface-active,rgba(59,130,246,.06));
+  font-size:.92rem; line-height:1.5; color:var(--text,inherit);}
+.train-hint[hidden]{display:none;}
+.train-hint b{color:var(--accent);}
 .sb-intro-features{display:flex; flex-direction:column; gap:12px; margin:18px 0;}
 .sb-intro-item{display:flex; gap:12px; align-items:flex-start; font-size:.88rem; line-height:1.45; color:var(--text);}
 .sb-intro-icon{font-size:1.4rem; flex-shrink:0; margin-top:1px;}
@@ -1018,6 +1020,11 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
       <button class="btn btn-secondary" id="p1-btn-new" onclick="startGame()">Neue Partie</button>
       <button class="btn btn-finish" id="p1-btn-finish">Training beenden</button>
     </div>
+    <!-- Ab der 2. Trainings-Partie sichtbar (updateP1Stats) -->
+    <div class="train-hint" id="p1-train-hint" hidden>
+      🤖 <b>Du hast keine Ahnung, was du gerade machst?</b> Richtig! Du bist eine KI und wirst gerade trainiert.
+      Mehr versteht die KI auch nicht. <b>Trainier weiter! Werde besser!</b>
+    </div>
   </div>
 </div>
 
@@ -1286,17 +1293,6 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 </dialog>
 
 <!-- ════════════════════════════════════════ SANDBOX INTRO DIALOG -->
-<!-- Hinweis nach den ersten zwei Trainings-Partien (siehe finish()) -->
-<dialog id="train-hint-dialog">
-  <h3>🤖 Du hast keine Ahnung, was du gerade machst?</h3>
-  <p><strong>Richtig!</strong> Du bist eine KI und wirst gerade trainiert.</p>
-  <p>Mehr versteht die KI auch nicht.</p>
-  <p><strong>Trainier weiter! Werde besser!</strong></p>
-  <div class="dialog-btns">
-    <button class="btn btn-primary" onclick="this.closest('dialog').close()">Weiter trainieren</button>
-  </div>
-</dialog>
-
 <dialog id="sandbox-intro-dialog">
   <h3>Sandbox — Freies Erkunden</h3>
   <p>In diesem Modus werden <strong>beide Spiele gleichzeitig</strong> gespielt.</p>
@@ -1946,14 +1942,6 @@ function finish(winner) {
     updateP1Stats();
     checkUnlockCondition();
   }
-  // Nach genau zwei Trainings-Partien einmal den Hinweis zeigen. stats ist
-  // gespeichert, deshalb erscheint er pro Spieler nur einmal.
-  if (isTraining() && stats.w + stats.l === 2) {
-    setTimeout(() => {
-      const d = document.getElementById('train-hint-dialog');
-      if (d && !d.open && isTraining()) d.showModal();
-    }, 900);
-  }
 
   setStatus(
     humanWon ? 'Du gewinnst! Züge werden verstärkt.' : 'Computer gewinnt. Züge werden geschwächt.',
@@ -2204,6 +2192,8 @@ function updateP1Stats() {
   const svl = document.getElementById('p1-sv-l');
   if (svw) svw.textContent = stats.w;
   if (svl) svl.textContent = stats.l;
+  const hint = document.getElementById('p1-train-hint');
+  if (hint) hint.hidden = stats.w + stats.l < 2;
   if (!simState.phase2Unlocked) {
     score.p1 = Math.round(Math.min(Object.keys(weights).length / totalHumanEdges / 0.8, 1) * 100);
     recalcScore();
