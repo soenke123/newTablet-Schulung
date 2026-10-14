@@ -134,7 +134,14 @@ function trainBudget(net, pairs, budgetMs) {
   }
   if (n) {
     net.lossHistory.push(lossSum / n);
-    if (net.lossHistory.length > 300) net.lossHistory.shift();
+    /* Nicht vorne abschneiden (dann sah man nach ein paar Sekunden den Abfall vom Anfang nicht
+       mehr), sondern die älteren Werte paarweise zusammenfassen: die ganze Lernkurve bleibt
+       sichtbar, nur gröber. Die jüngsten 50 Werte bleiben fein. */
+    if (net.lossHistory.length > 400) {
+      const h = net.lossHistory, keep = h.slice(-50), old = h.slice(0, -50), merged = [];
+      for (let i = 0; i < old.length; i += 2) merged.push(i + 1 < old.length ? (old[i] + old[i + 1]) / 2 : old[i]);
+      net.lossHistory = merged.concat(keep);
+    }
   }
   return { n, nanHit, avgLoss: n ? lossSum / n : null };
 }

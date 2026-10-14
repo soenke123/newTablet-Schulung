@@ -16,10 +16,14 @@ function createSession(sources) {
   return { sources, ctx: ['.'], steps: [], used: new Set(), sentences: 0 };
 }
 
-function pushCandidate(out, s, pos, used) {
+function pushCandidate(out, s, pos, used, atStart) {
   const nx = s.toks[pos];
   const rel = s.sentRel.get(nx.sent) || 0;
   let w = s.weight * (1 + 3 * rel);
+  /* Phase 2, neuer Satz: Sätze, in denen ein Fragewort steht, klar bevorzugen — sonst begann die
+     Antwort auf "Was frisst ein Welpe?" oft mit einem Satz über Katzen. In Phase 1 ist sentRel
+     leer, dann ändert das nur alle Gewichte gleich (also nichts). */
+  if (atStart && s.sentRel.size) w *= rel > 0 ? 3 : 0.3;
   const key = s.si + ':' + pos;
   const wasUsed = used.has(key);
   if (wasUsed) w *= 0.12;
@@ -44,7 +48,7 @@ function collectSentenceStart(sources, used) {
   sources.forEach(s => {
     const toks = s.toks;
     for (let i = 0; i < toks.length - 1; i++) {
-      if (toks[i].t === '.') pushCandidate(out, s, i + 1, used);
+      if (toks[i].t === '.') pushCandidate(out, s, i + 1, used, true);
     }
   });
   return out;

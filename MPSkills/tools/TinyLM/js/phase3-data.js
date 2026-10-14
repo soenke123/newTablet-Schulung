@@ -8,6 +8,20 @@ function buildPhase3Data(texts, opts) {
   const freq = new Map();
   docs.forEach(toks => toks.forEach(t => freq.set(t.t, (freq.get(t.t) || 0) + 1)));
 
+  /* Schreibweise für die Anzeige: das Netz rechnet mit kleingeschriebenen Wörtern, im Text soll
+     "Mars" aber groß stehen. Gezählt wird nur mitten im Satz (am Satzanfang ist alles groß). */
+  const caps = new Map();
+  docs.forEach(toks => toks.forEach(t => {
+    if (t.punct || t.start) return;
+    const c = caps.get(t.t) || [0, 0];
+    if (t.raw[0] !== t.raw[0].toLowerCase()) c[0]++; else c[1]++;
+    caps.set(t.t, c);
+  }));
+  function display(w) {
+    const c = caps.get(w);
+    return c && c[0] > c[1] ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+  }
+
   const sorted = [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([w]) => w);
   const kept = sorted.filter(w => w !== '.').slice(0, Math.max(0, o.vocabCap - 2));
   const vocab = [UNK, '.', ...kept];
@@ -25,5 +39,5 @@ function buildPhase3Data(texts, opts) {
     }
   });
 
-  return { vocab, id, toId, pairs, C: o.C, UNK, vocabSize: vocab.length };
+  return { vocab, id, toId, pairs, C: o.C, UNK, vocabSize: vocab.length, display };
 }

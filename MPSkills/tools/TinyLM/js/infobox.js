@@ -60,5 +60,49 @@ const Info = (() => {
     return wrap;
   }
 
-  return { box, note, key, steps, legend };
+  /* Regler mit Wert, optionalem ?-Knopf und Beschriftung der beiden Enden.
+     Info.slider({ label, min, max, step, value, fmt, help, spot, ends: [links, rechts], onInput })
+       -> { el, input, out } */
+  function slider(o) {
+    const wrap = el('div', 'slider');
+    if (o.spot) wrap.dataset.spot = o.spot;
+    const lab = el('div', 'slider-lab');
+    const name = el('label', null, o.label);
+    const out = el('output', null, o.fmt ? o.fmt(o.value) : String(o.value));
+    lab.append(name, out);
+    if (o.help) lab.appendChild(Help.btn(o.help, 'sm'));
+    const inp = el('input');
+    inp.type = 'range'; inp.min = String(o.min); inp.max = String(o.max); inp.step = String(o.step || 1);
+    inp.value = String(o.value);
+    /* Gefüllter Teil der Spur als Variable (CSS malt den Verlauf) — in allen Browsern gleich. */
+    const fill = () => inp.style.setProperty('--pct', ((parseFloat(inp.value) - o.min) / (o.max - o.min) * 100) + '%');
+    fill();
+    const id = 'sl-' + Math.random().toString(36).slice(2, 8);
+    inp.id = id; name.htmlFor = id;
+    inp.addEventListener('input', () => {
+      const v = parseFloat(inp.value);
+      fill();
+      out.textContent = o.fmt ? o.fmt(v) : String(v);
+      if (o.onInput) o.onInput(v);
+    });
+    wrap.append(lab, inp);
+    if (o.ends) {
+      const ends = el('div', 'slider-ends');
+      ends.append(el('span', null, o.ends[0]), el('span', null, o.ends[1]));
+      wrap.appendChild(ends);
+    }
+    return { el: wrap, input: inp, out };
+  }
+
+  /* Kopf einer Zentrum-Karte: kleine Phasenzeile, Titel, ?-Knopf zur Phase. */
+  function centerHead(kicker, title, helpKey) {
+    const h = el('div', 'mc-head');
+    const t = el('div', 'mc-title');
+    t.append(el('p', 'eyebrow', kicker), el('h2', null, title));
+    h.appendChild(t);
+    if (helpKey) h.appendChild(Help.btn(helpKey));
+    return h;
+  }
+
+  return { box, note, key, steps, legend, slider, centerHead };
 })();

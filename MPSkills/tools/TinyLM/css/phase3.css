@@ -1,23 +1,42 @@
-/* Netz-Visualisierung: Vektor-Swatches, Loss-Sparkline, Trainings-Banner, Trainings-Steuerung. */
-.swatchrow { display: flex; gap: 2px; flex-wrap: wrap; max-width: 260px; }
-.swatchcell { width: 14px; height: 14px; border-radius: 3px; display: inline-block; cursor: default; }
+/* Phase 3: Vektor-Swatches, Fehlerlinie, Trainings-Block im Zentrum, Banner. */
+.swatchrow { display: grid; grid-template-columns: repeat(var(--cols, 16), minmax(0, 1fr)); gap: 2px; max-width: 420px; }
+.swatchcell { min-width: 0; height: 18px; border-radius: 3px; display: inline-block; cursor: default; border: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
+.embrow { display: grid; grid-template-columns: minmax(0, 6.5rem) minmax(0, 1fr); gap: 8px; align-items: center; }
+.embrow-w { font-size: 0.86rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .net-banner {
-  background: var(--soft); border-radius: 10px; padding: 10px 14px;
-  display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; width: 100%;
+  background: var(--cat-origin-tint); border: 1px solid var(--cat-origin); border-radius: 12px; padding: 8px 8px 8px 14px;
+  display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap;
 }
-.sparkline { display: block; width: 100%; height: 60px; }
-.spark-host { width: 100%; }
+.sparkline { display: block; width: 100%; height: 100%; }
+.spark-host { width: 100%; height: 60px; }
+.spark-head { display: flex; align-items: center; gap: 8px; }
 .net-warn { color: var(--bad); font-weight: 700; }
 
-/* Trainings-Steuerung in der Zentrum-Karte: bleibt während des Trainings unangetastet,
-   damit "anhalten" jederzeit anklickbar ist (siehe Kopfkommentar in phase3.js). */
-.net-trainbar {
-  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center;
-  background: var(--soft); border-radius: 999px; padding: 8px 14px;
+.trainfacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.trainfact { background: var(--soft); border-radius: 10px; padding: 6px 8px; display: flex; flex-direction: column; }
+.trainfact b { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.trainfact span { font-size: 0.72rem; color: var(--muted); }
+
+/* Trainings-Block in der Zentrum-Karte: wird während des Trainings nie neu gebaut,
+   damit "anhalten" jederzeit antippbar ist (siehe Kopfkommentar in phase3.js). */
+.trainbox {
+  border: 1px solid color-mix(in srgb, var(--cat-random) 35%, var(--line)); border-radius: 14px;
+  background: color-mix(in srgb, var(--cat-random-tint) 22%, var(--surface)); padding: 10px 12px;
+  display: flex; flex-direction: column; gap: 8px;
 }
-.net-live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.trainbox-head { display: flex; align-items: center; gap: 8px; }
+.trainbox-head b { font-family: var(--font-display); font-weight: 700; }
+.trainbox-head .counter { margin-left: auto; }
+.trainbox-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.trainbox-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.train-btn { background: var(--cat-random); border-color: var(--cat-random); }
+.train-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--cat-random) 80%, var(--ink)); border-color: color-mix(in srgb, var(--cat-random) 80%, var(--ink)); }
+.trainbox-spark { flex: 1 1 180px; min-width: 150px; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; }
+.trainbox-spark .spark-host { height: 44px; }
+.trainbox-spark-lab { font-size: 0.72rem; color: var(--muted); font-weight: 600; writing-mode: vertical-rl; transform: rotate(180deg); }
+.net-live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
 .net-live-dot.on { background: var(--cat-random); animation: netpulse 1s ease-in-out infinite; }
 @keyframes netpulse { 50% { opacity: 0.25; transform: scale(0.7); } }
 
-.net-arch { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; }
-.net-arch > .small:first-child { font-family: var(--font-mono); font-weight: 500; }
+.net-arch { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: center; }
+.arch-num { font-family: var(--font-mono); font-size: 0.86rem; font-weight: 500; background: var(--soft); border-radius: 999px; padding: 2px 10px; }

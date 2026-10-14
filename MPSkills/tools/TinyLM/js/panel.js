@@ -9,14 +9,14 @@
                   bewusst neutral-graphit: diese Karte zeigt ALLE Schichten auf einmal, und darin
                   tragen die Schichten weiter ihre eigenen Rollenfarben (origin/context/candidates).
 
-   Jede Karte ist EINZELN auf- und zuklappbar; der Zustand wird je Phase in localStorage gemerkt.
-   Zusätzlich: "alle aufklappen/zuklappen" und pro Karte "nur dies" (= alle anderen zuklappen),
-   damit man sich wirklich ein Thema allein ansehen kann.
+   Jede Karte ist EINZELN auf- und zuklappbar (Tipp auf den Kopf); der Zustand wird je Phase in
+   localStorage gemerkt. Erklärt wird NICHT auf der Karte, sondern hinter dem ?-Knopf im Kopf
+   (help.js) — auf der Karte steht nur, was die Maschine gerade tut.
    Geschlossene Karten werden nicht gerendert (spart Arbeit beim Training in Phase 3) und
    rendern sich beim Aufklappen nach. Jede render()-Funktion zeigt selbst einen Platzhalter,
    solange es noch nichts zu erklären gibt.
 
-   Item-Felder: { id, label, cat, hint, info: {title, text, icon}, render(container),
+   Item-Felder: { id, label, cat, hint, help (Schlüssel in HELP), render(container),
                   open:   false -> standardmäßig zugeklappt,
                   wide:   true  -> breite Karte unter dem Zweispalter (z. B. die Wortkarte),
                   manual: true  -> von refreshAll() ausgenommen (teure Inhalte wie Canvas-Karten;
@@ -31,7 +31,7 @@ const CAT = {
 };
 
 const Panel = (() => {
-  const STORE = 'wortwelten-v2-panel-offen';
+  const STORE = 'tinylm-panel-offen';
   function loadOpen() {
     try { const v = JSON.parse(localStorage.getItem(STORE) || '{}'); return (v && typeof v === 'object') ? v : {}; }
     catch (e) { return {}; }
@@ -52,19 +52,8 @@ const Panel = (() => {
     centerWrap.appendChild(centerEl);
 
     const side = el('div', 'panel-side');
-    const bar = el('div', 'panel-bar');
-    const barTitle = el('div', 'panel-bar-title');
-    barTitle.append(el('b', null, 'Erklärungen'), el('span', 'panel-bar-sub', 'einzeln auf- und zuklappen'));
-    const barBtns = el('div', 'panel-bar-btns');
-    const openAllBtn = el('button', 'panel-bar-btn', 'alle aufklappen');
-    openAllBtn.type = 'button';
-    const shutAllBtn = el('button', 'panel-bar-btn', 'alle zuklappen');
-    shutAllBtn.type = 'button';
-    barBtns.append(openAllBtn, shutAllBtn);
-    bar.append(barTitle, barBtns);
-
     const list = el('div', 'panel-list');
-    side.append(bar, list);
+    side.appendChild(list);
     grid.append(centerWrap, side);
     const wideList = el('div', 'panel-wide');
     root.append(grid, wideList);
@@ -80,9 +69,6 @@ const Panel = (() => {
 
     function renderBody(e) {
       e.body.replaceChildren();
-      if (e.item.info) e.body.appendChild(
-        Info.box(e.item.info.title || 'Was passiert hier?', e.item.info.text, { icon: e.item.info.icon })
-      );
       const slot = el('div', 'panel-item-slot');
       e.body.appendChild(slot);
       e.slot = slot;
@@ -90,72 +76,51 @@ const Panel = (() => {
       e.rendered = true;
     }
 
-    function apply(e, on, doScroll) {
+    function apply(e, on) {
       e.open = on;
       openMap[ns + e.item.id] = on;
       e.card.classList.toggle('closed', !on);
       e.head.setAttribute('aria-expanded', on ? 'true' : 'false');
-      e.chev.textContent = on ? '▾' : '▸';
       e.body.hidden = !on;
-      e.soloBtn.hidden = !on;
       if (on && !e.rendered) renderBody(e);
       if (!on) { e.body.replaceChildren(); e.rendered = false; }
-      if (on && doScroll) {
-        e.card.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
-      }
     }
 
-    function setOpen(id, on, doScroll) {
+    function setOpen(id, on) {
       const e = entries[id];
       if (!e) return;
-      apply(e, on, doScroll);
+      apply(e, on);
       saveOpen(openMap);
+      if (on && typeof Guide !== 'undefined') Guide.did('card', { phase: opts.phase, id });
     }
-    function setAll(on) {
-      order.forEach(id => apply(entries[id], on, false));
-      saveOpen(openMap);
-    }
-    function solo(id) {
-      order.forEach(oid => apply(entries[oid], oid === id, false));
-      saveOpen(openMap);
-      const e = entries[id];
-      if (e) e.card.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
-    }
-    /* Vom Ablauf-Fließband aus: Karte aufklappen (andere bleiben, wie sie sind) und hinspringen. */
-    function reveal(id) {
+    /* Vom Ablauf-Fließband / Leitfaden aus: Karte aufklappen und hinspringen. */
+    function reveal(id, noScroll) {
       const e = entries[id];
       if (!e) return;
-      if (!e.open) setOpen(id, true, true);
-      else e.card.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
+      if (!e.open) setOpen(id, true);
+      if (!noScroll) e.card.scrollIntoView({ block: 'nearest', behavior: reduced() ? 'auto' : 'smooth' });
       e.card.classList.add('flash');
       setTimeout(() => e.card.classList.remove('flash'), 900);
     }
-
-    openAllBtn.addEventListener('click', () => setAll(true));
-    shutAllBtn.addEventListener('click', () => setAll(false));
 
     items.forEach(item => {
       const cat = CAT[item.cat] || CAT.context;
       const card = el('div', 'panel-item' + (item.wide ? ' wide' : ''));
       card.style.setProperty('--cat-color', cat.color);
       card.style.setProperty('--cat-tint', cat.tint);
+      card.dataset.card = item.id;
 
       const head = el('button', 'panel-item-head');
       head.type = 'button';
       head.id = 'ph-' + ns.replace(':', '') + '-' + item.id;
-      const chev = el('span', 'panel-chev', '▾');
+      const chev = el('span', 'panel-chev');
       chev.setAttribute('aria-hidden', 'true');
-      const h = el('h3', null, item.label);
-      head.append(chev, h);
       if (item.hint) head.appendChild(el('span', 'panel-item-hint', item.hint));
-
-      const soloBtn = el('button', 'panel-solo', 'nur dies');
-      soloBtn.type = 'button';
-      soloBtn.title = 'Nur diese Erklärung zeigen';
-      soloBtn.addEventListener('click', () => solo(item.id));
+      head.append(el('h3', null, item.label), chev);
 
       const headRow = el('div', 'panel-item-headrow');
-      headRow.append(head, soloBtn);
+      headRow.appendChild(head);
+      if (item.help) headRow.appendChild(Help.btn(item.help));
 
       const body = el('div', 'panel-item-body');
       body.setAttribute('role', 'region');
@@ -163,11 +128,11 @@ const Panel = (() => {
       card.append(headRow, body);
       (item.wide ? wideList : list).appendChild(card);
 
-      const e = { item, card, head, chev, body, soloBtn, rendered: false, open: true };
+      const e = { item, card, head, body, rendered: false, open: true };
       entries[item.id] = e;
       order.push(item.id);
-      head.addEventListener('click', () => setOpen(item.id, !e.open, false));
-      apply(e, isOpen(item), false);
+      head.addEventListener('click', () => setOpen(item.id, !e.open));
+      apply(e, isOpen(item));
     });
 
     function refresh(id) {
@@ -181,7 +146,7 @@ const Panel = (() => {
     function refreshAll() { order.forEach(id => { if (!entries[id].item.manual) refresh(id); }); }
 
     const isCardOpen = id => !!(entries[id] && entries[id].open);
-    return { refresh, refreshAll, setOpen, setAll, solo, reveal, isOpen: isCardOpen, root };
+    return { refresh, refreshAll, setOpen, reveal, isOpen: isCardOpen, root };
   }
   return { mount, CAT };
 })();

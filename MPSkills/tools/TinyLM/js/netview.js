@@ -113,8 +113,8 @@ const NetView = (() => {
       const ink = cssVar('--ink'), muted = cssVar('--muted'), surface = cssVar('--surface'), line = cssVar('--line');
       const pos = cssVar('--src-a'), neg = cssVar('--src-b');
       const cIn = cssVar('--cat-origin'), cHid = cssVar('--cat-context'), cOut = cssVar('--cat-candidates');
-      const fd = '"Bricolage Grotesque", system-ui, sans-serif';
-      const fb = '"Atkinson Hyperlegible", system-ui, sans-serif';
+      const fd = '"Outfit", system-ui, sans-serif';
+      const fb = '"Inter", system-ui, sans-serif';
       cx.clearRect(0, 0, cw, ch);
 
       /* ---- Kanten Eingang -> Hidden (net.W1), gebündelt nach Vorzeichen und Stärke ---- */
@@ -319,7 +319,7 @@ const NetView = (() => {
       const net = N(), data = D(), V = net.vocabSize, H = net.H, inDim = net.C * net.d;
       const nd = find(sel);
       if (!nd) {
-        detailEl.appendChild(Info.note('Klick (oder tipp) auf einen Punkt im Bild — dann siehst du genau dieses Neuron: seinen Wert und seine stärksten Kanten mit echten Gewichten.', '👆'));
+        detailEl.appendChild(el('p', 'card-empty', '👆 Tipp einen Punkt im Bild an – dann siehst du seine echten Zahlen.'));
         return;
       }
       const card = el('div', 'net-detail');
@@ -362,7 +362,7 @@ const NetView = (() => {
         const mx = Math.abs(f.h[ks[0]] * net.W2[ks[0] * V + v]);
         card.appendChild(sec('Welche Hidden-Neuronen dieses Wort gerade treiben',
           rows(ks.map(k => ({ label: 'Hidden-Neuron ' + (k + 1), v: f.h[k] * net.W2[k * V + v] })), mx)));
-        card.appendChild(Info.note('Jedes Wort im Vokabular hat genau ein eigenes Ausgabe-Neuron — ' + de(V) + ' Stück. Gezeichnet sind nur die ' + SHOW + ' stärksten.', '📊'));
+        card.appendChild(el('p', 'small muted', 'Jedes Wort hat ein eigenes Ausgabe-Neuron – ' + de(V) + ' Stück, gezeichnet sind die ' + SHOW + ' stärksten.'));
       } else {
         card.appendChild(el('p', 'eyebrow', 'Der Rest'));
         card.appendChild(el('p', 'net-title', de(restN.count) + ' weitere Ausgabe-Neuronen'));
@@ -449,24 +449,29 @@ const NetView = (() => {
       scroller.appendChild(cv);
       wrap.appendChild(scroller);
 
-      statusEl = el('p', 'small muted', 'Jeder Punkt ist ein Neuron, jede Linie eine echte Kante mit ihrem Gewicht aus dem Netz.');
+      statusEl = el('p', 'small muted', 'Punkt = Neuron · Linie = echtes Gewicht aus dem Netz');
       wrap.appendChild(statusEl);
       host.appendChild(wrap);
 
-      host.appendChild(Info.legend([
-        { color: 'var(--src-a)', label: 'positives Gewicht / positive Zahl', sub: 'je kräftiger, desto größer' },
-        { color: 'var(--src-b)', label: 'negatives Gewicht / negative Zahl', sub: 'bremst das nächste Neuron' },
-        { color: 'var(--cat-origin)', label: 'Eingang', sub: 'Embedding-Zahlen der Kontextwörter' },
-        { color: 'var(--cat-context)', label: 'Hidden-Schicht', sub: 'die eigentliche „Rechenmitte“' },
-        { color: 'var(--cat-candidates)', label: 'Ausgabe', sub: 'ein Neuron pro Wort' }
-      ]));
+      const lg = el('div', 'srcchips');
+      [['var(--src-a)', 'plus / schiebt an'], ['var(--src-b)', 'minus / bremst'], ['var(--cat-origin)', 'Eingang'],
+        ['var(--cat-context)', 'Hidden'], ['var(--cat-candidates)', 'Ausgabe']].forEach(([c, t]) => {
+        const chip = el('span', 'srcchip');
+        const d = el('i', 'dot'); d.style.background = c;
+        chip.append(d, el('span', 'srcchip-t', t));
+        lg.appendChild(chip);
+      });
+      host.appendChild(lg);
 
       detailEl = el('div', 'net-detail-host');
       host.appendChild(detailEl);
       renderDetail();
 
-      host.appendChild(factsBox());
-      host.appendChild(Info.note('Große Sprachmodelle sind genau so aufgebaut — nur mit Milliarden statt Tausenden Zahlen und mit viel mehr Schichten. Deshalb kann dort auch niemand mehr sagen, was ein einzelnes Neuron bedeutet.', '🌍'));
+      const factsWrap = el('details', 'net-facts-wrap');
+      factsWrap.appendChild(el('summary', null, '🔢 Wie viele Zahlen sind das?'));
+      factsWrap.appendChild(factsBox());
+      factsWrap.appendChild(el('p', 'small muted', '🌍 Große Sprachmodelle: gleiche Idee, aber Milliarden Zahlen und viel mehr Schichten.'));
+      host.appendChild(factsWrap);
 
       window.removeEventListener('resize', onResize);   /* mount() läuft beim Aufklappen erneut */
       window.addEventListener('resize', onResize);

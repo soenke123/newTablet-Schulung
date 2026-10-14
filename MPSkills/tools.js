@@ -89,6 +89,11 @@ window.TOOLS_OVERLAY = {
   // wie die Scrum Werkstatt (tools/Projektarbeit/index.html).
   // beta: frisch gebaut (07.10.2026).
   projekt: { ready: true, beta: true },
+  // Elfter Skill (Migration 0210) — Tiny LM, ein Mini-Sprachmodell
+  // zum Aufschrauben. Eingerahmt wie NeuroLab (tools/TinyLM/index.html),
+  // nichts geteilt. beta: noch eine einzige Ansicht für alle, die
+  // Trennung Lehrkraft/Schüler kommt später; keine Vorschau-Kachel.
+  tinylm: { ready: true, beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

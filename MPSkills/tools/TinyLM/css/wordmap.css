@@ -1,5 +1,5 @@
 /* Wortkarte (wordmap.js): Werkzeugleiste + Canvas + Legende + Detailkarte zum gewählten Wort. */
-.wm-box { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.wm-box { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--bg); }
 .wm-tools {
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
   padding: 9px 11px; border-bottom: 1px solid var(--line); background: var(--surface);
@@ -21,8 +21,8 @@
 
 .wm-card { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 14px 22px; align-items: start; }
 .wm-sec { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.wm-sec h4 { font-family: var(--font-display); font-weight: 800; font-size: 0.9rem; margin: 0; }
-.wm-title { font-family: var(--font-display); font-weight: 800; font-size: 1.8rem; letter-spacing: -0.02em; line-height: 1.05; }
+.wm-sec h4 { font-family: var(--font-display); font-weight: 700; font-size: 0.9rem; margin: 0; }
+.wm-title { font-family: var(--font-display); font-weight: 700; font-size: 1.8rem; letter-spacing: -0.02em; line-height: 1.05; }
 .wm-dist { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--soft); }
 .wm-dist i { display: block; height: 100%; }
 .wm-nb {

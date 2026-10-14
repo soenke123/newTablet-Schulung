@@ -77,6 +77,15 @@
       '<circle cx="15.2" cy="12" r="3.8"/>' +
       '<path d="M19 12h2.4M20.3 10.8 21.5 12l-1.2 1.2"/>',
 
+    /* Tiny LM — eine Sprechblase, die sich selbst schreibt: eine
+       volle Zeile Wörter, in der zweiten ein Wort und daneben der
+       Kasten für das NÄCHSTE Wort, das gerade vorhergesagt wird.
+       Genau das tut ein Sprachmodell, und nichts anderes. */
+    tinylm:
+      '<path d="M5.2 3.8h13.6a2.2 2.2 0 0 1 2.2 2.2v8.4a2.2 2.2 0 0 1-2.2 2.2H10l-4.2 3.6v-3.6h-.6A2.2 2.2 0 0 1 3 14.4V6a2.2 2.2 0 0 1 2.2-2.2z"/>' +
+      '<path d="M6.8 8.2h4.2M13 8.2h4.2M6.8 12.2h3.4"/>' +
+      '<rect x="12.4" y="10.6" width="4.8" height="3.2" rx=".8"/>',
+
     /* Cäsar-Scheibe — zwei Ringe übereinander: außen die Teilung,
        innen EINE Marke, und die steht zwischen zwei Zähnen. Genau
        das ist der Schlüssel: die beiden Räder stehen gegeneinander
@@ -196,7 +205,8 @@
     'Caesercode':     'caesar',
     'NeuroLab':       'neurolab',
     'ScrumWerkstatt': 'scrum',
-    'Projektarbeit':  'projekt'
+    'Projektarbeit':  'projekt',
+    'TinyLM':         'tinylm'
   };
 
   function key(id) {

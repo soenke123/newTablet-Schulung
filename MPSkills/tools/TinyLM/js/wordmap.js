@@ -179,7 +179,7 @@ const WordMap = (() => {
       }
 
       const placed = [];
-      const fontBody = '"Atkinson Hyperlegible", system-ui, sans-serif';
+      const fontBody = '"Inter", system-ui, sans-serif';
       function label(i, strong) {
         const txt = showWord(word(i));
         cx.font = (strong ? '700 14px ' : '12px ') + fontBody;
@@ -271,6 +271,11 @@ const WordMap = (() => {
       draw();
       renderCard();
     }
+    /* Auswahl durch die Person selbst (Tipp, Suche, Nachbar) — meldet sich beim Leitfaden. */
+    function pick(w) {
+      select(w);
+      if (sel === w && opts && opts.onSelect) opts.onSelect(w);
+    }
 
     function exampleSentence(w) {
       for (const d of M.docs) {
@@ -285,7 +290,7 @@ const WordMap = (() => {
     function renderCard() {
       if (!cardEl) return;
       cardEl.replaceChildren();
-      if (!sel) { cardEl.appendChild(el('p', 'small muted', 'Klick ein Wort auf der Karte an.')); return; }
+      if (!sel) { cardEl.appendChild(el('p', 'card-empty', 'Tipp ein Wort auf der Karte an.')); return; }
       const w = sel;
       const th = M.themeOf(w);
 
@@ -324,17 +329,19 @@ const WordMap = (() => {
         fill.style.background = 'var(--cat-meaning)';
         bar.appendChild(fill);
         b.append(name, bar, el('span', 'num', Math.round(s * 100) + ' %'));
-        b.addEventListener('click', () => select(x));
+        b.addEventListener('click', () => pick(x));
         sec.appendChild(b);
       });
       cardEl.appendChild(sec);
 
       if (nbs.length) {
         const shared = sharedContexts(M, w, nbs[0][0], 5).map(showWord);
-        cardEl.appendChild(Info.box('Warum ähnlich?', shared.length
-          ? '„' + showWord(w) + '“ und „' + showWord(nbs[0][0]) + '“ stehen in deinen Texten beide oft neben: '
-            + shared.join(', ') + '. Deshalb rutschen sie auf der Karte zusammen.'
-          : '„' + showWord(w) + '“ hat kaum gemeinsame Nachbarwörter mit anderen Wörtern.', { icon: '🔍' }));
+        const why = el('div', 'why');
+        why.appendChild(el('b', null, '🔍 Warum ähnlich?'));
+        why.appendChild(el('p', null, shared.length
+          ? '„' + showWord(w) + '“ und „' + showWord(nbs[0][0]) + '“ stehen beide oft neben: ' + shared.join(', ') + '.'
+          : '„' + showWord(w) + '“ hat kaum gemeinsame Nachbarn.'));
+        cardEl.appendChild(why);
       }
 
       const ctxs = topContexts(M, w, 8);
@@ -346,7 +353,7 @@ const WordMap = (() => {
           const isWord = posOf(x) >= 0;
           const chip = el(isWord ? 'button' : 'span', 'chip', showWord(x));
           chip.appendChild(el('span', 'small muted', ' ×' + c));
-          if (isWord) { chip.type = 'button'; chip.addEventListener('click', () => select(x)); }
+          if (isWord) { chip.type = 'button'; chip.addEventListener('click', () => pick(x)); }
           chips.appendChild(chip);
         });
         sec2.appendChild(chips);
@@ -388,7 +395,7 @@ const WordMap = (() => {
         if (!q) return;
         const hit = [M.words.find(w => w === q), M.words.find(w => w === M.lemma(q)), M.words.find(w => w.startsWith(q))]
           .find(w => w && posOf(w) >= 0);
-        if (hit) select(hit);
+        if (hit) pick(hit);
       });
       tools.append(again, sw, search);
       box.appendChild(tools);
@@ -402,13 +409,13 @@ const WordMap = (() => {
         if (h !== hover) { hover = h; cv.style.cursor = h != null ? 'pointer' : 'crosshair'; draw(); }
       });
       cv.addEventListener('pointerleave', () => { if (hover != null) { hover = null; draw(); } });
-      cv.addEventListener('click', ev => { const h = hitTest(ev); if (h != null) select(word(h)); });
+      cv.addEventListener('click', ev => { const h = hitTest(ev); if (h != null) pick(word(h)); });
       box.appendChild(cv);
 
       const st = el('div', 'wm-status');
       const prog = el('div', 'wm-prog'); prog.setAttribute('aria-hidden', 'true');
       progEl = el('i'); prog.appendChild(progEl);
-      statusEl = el('span', null, 'Gestrichelter Kreis: Wörter aus deiner Frage. Linien: die 6 ähnlichsten Wörter.');
+      statusEl = el('span', null, 'Gestrichelt = Wörter aus deiner Frage · Linien = die 6 ähnlichsten');
       statusEl.setAttribute('role', 'status');
       st.append(prog, statusEl);
       box.appendChild(st);

@@ -1,10 +1,13 @@
 /* Maschinen-Ablauf: das farbcodierte Fließband oben in jeder Phase.
    Zeigt in einem Bild, welche Schritte die KI gerade abarbeitet; die Farbe jedes Schrittes ist
-   dieselbe wie die der zugehörigen Erklärkarte rechts (panel.js CAT) — Klick springt dorthin.
+   dieselbe wie die der zugehörigen Karte rechts (panel.js CAT) — Tipp springt dorthin.
 
-   Flow.render(container, stages, { onPick })
+   Flow.render(container, stages, { onPick, help })
      stages: [{ id, label, sub, cat, active, done, target }]
-     target/id = Panel-Item-Id, die beim Klick aufgeklappt und angesprungen wird.
+     target/id = Panel-Item-Id, die beim Tipp aufgeklappt und angesprungen wird.
+     help      = Schlüssel in HELP: ein ?-Knopf am Ende des Bandes (statt eines Erklärsatzes).
+   Flow.pulse(container, ms) — lässt die Schritte einmal nacheinander aufleuchten
+     (bei jedem neuen Wort: "die Kette ist gerade einmal durchgelaufen").
 */
 const Flow = (() => {
   function render(container, stages, opts) {
@@ -13,7 +16,7 @@ const Flow = (() => {
     const wrap = el('div', 'flow');
     stages.forEach((s, i) => {
       if (i) {
-        const ar = el('span', 'flow-arrow', '→');
+        const ar = el('span', 'flow-arrow', '›');
         ar.setAttribute('aria-hidden', 'true');
         wrap.appendChild(ar);
       }
@@ -23,7 +26,7 @@ const Flow = (() => {
         + (s.active ? ' active' : '') + (s.done ? ' done' : ''));
       if (pickable) {
         node.type = 'button';
-        node.title = 'Erklärung „' + s.label + '“ zeigen';
+        node.title = '„' + s.label + '“ ansehen';
         node.addEventListener('click', () => opts.onPick(s.target || s.id));
       }
       if (cat) {
@@ -37,13 +40,26 @@ const Flow = (() => {
       node.appendChild(tx);
       wrap.appendChild(node);
     });
-    container.appendChild(wrap);
-    if (opts.loop) {
-      const lp = el('p', 'flow-loop');
-      lp.append(el('span', 'flow-loop-ico', '↻'), document.createTextNode(opts.loop));
-      container.appendChild(lp);
+    if (opts.help) {
+      const end = el('span', 'flow-end');
+      end.appendChild(el('span', 'flow-loop-ico', '↻'));
+      end.appendChild(Help.btn(opts.help, 'sm'));
+      wrap.appendChild(end);
     }
+    container.appendChild(wrap);
     return wrap;
   }
-  return { render };
+
+  function pulse(container, ms) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const steps = [...container.querySelectorAll('.flow-step')];
+    const each = Math.max(40, (ms || 400) / Math.max(1, steps.length));
+    steps.forEach((st, i) => {
+      setTimeout(() => {
+        st.classList.add('run');
+        setTimeout(() => st.classList.remove('run'), each * 1.4);
+      }, i * each);
+    });
+  }
+  return { render, pulse };
 })();

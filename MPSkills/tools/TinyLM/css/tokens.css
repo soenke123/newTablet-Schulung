@@ -1,83 +1,99 @@
-/* Farb- und Typografie-Variablen. "Leuchtende Kategorien": warmer, heller Grund + 4 feste Signalfarben,
-   die app-weit immer dieselbe Art von Erklärung markieren (siehe panel.js CAT). Hell/Dunkel per
-   prefers-color-scheme, überschreibbar via data-theme. */
+/* Farb- und Typografie-Variablen.
+   Grund und Schrift folgen MPSkills (Outfit/Inter, kühles Papier, grüner Akzent) — Tiny LM steckt
+   dort im Rahmen und soll wie ein Teil davon aussehen. Die Signalfarben --cat-* tragen Bedeutung
+   ("Leuchtende Kategorien", siehe panel.js CAT): dieselbe Rolle hat in jeder Phase dieselbe Farbe.
+   Hell/Dunkel per prefers-color-scheme, überschreibbar via data-theme (app.js übernimmt das
+   data-theme der umgebenden MPSkills-Seite). */
 :root {
-  --bg: #FBFAF6;
+  --bg: #eef2f1;
   --surface: #FFFFFF;
-  --soft: #F3ECDC;
-  --ink: #211D16;
-  --muted: #8D8470;
-  --line: #EAE3D2;
-  --focus: #E85D4E;
+  --soft: #f2f6f5;
+  --ink: #0d1a17;
+  --muted: #5f706b;
+  --line: #dfe7e5;
+  --focus: #00b37e;
   --on-ink: #FFFFFF;
 
+  --accent: #00b37e;
+  --accent-ink: #00714f;
+  --accent-dim: #d6f5e8;
+  --accent-edge: #a5e3cd;
+  --shadow: 0 2px 4px rgba(13,26,23,.04), 0 12px 28px -14px rgba(13,26,23,.22);
+  --shadow-pop: 0 10px 30px rgba(13,26,23,.18);
+
   /* Kategorie-Signalfarben: dieselbe Rolle hat in jeder Phase immer dieselbe Farbe. */
-  --cat-origin: #E8A33D;       /* Herkunft/Quellen/Embedding */
-  --cat-origin-tint: #F6D8A1;
-  --cat-context: #2BAF9E;      /* Kontextfenster/Nachschlagen/Hidden-Schicht */
-  --cat-context-tint: #A7E6DB;
-  --cat-candidates: #E85D4E;   /* Kandidaten/Wort für Wort/Ausgabe */
-  --cat-candidates-tint: #F9C6BD;
-  --cat-random: #8B5CF6;       /* Zufall/Training */
-  --cat-random-tint: #DCCCFB;
+  --cat-origin: #E39A2A;       /* Herkunft/Quellen/Embedding */
+  --cat-origin-tint: #F8DDAE;
+  --cat-context: #14A18F;      /* Kontextfenster/Nachschlagen/Hidden-Schicht */
+  --cat-context-tint: #B5EBE2;
+  --cat-candidates: #E5534A;   /* Kandidaten/Wort für Wort/Ausgabe */
+  --cat-candidates-tint: #FAD0CA;
+  --cat-random: #7C4DFF;       /* Zufall/Training */
+  --cat-random-tint: #DDD1FF;
   --cat-meaning: #3F6FD8;      /* Wortkarte/Bedeutung */
-  --cat-meaning-tint: #C3D3F7;
-  --cat-net: #5B5343;          /* Netz-Bild: Aufbau der Maschine selbst (neutral, damit die
-                                  Schichtfarben darin wirken können) */
-  --cat-net-tint: #DCD5C4;
+  --cat-meaning-tint: #C9D7F8;
+  --cat-net: #475853;          /* Netz-Bild: Aufbau der Maschine selbst (neutral) */
+  --cat-net-tint: #DCE4E1;
 
   /* Welche genaue Quelle (A/B/C) innerhalb der "Quellen"-Kategorie — eigene, feinere Farbebene. */
   --src-a: #D1603D;
   --src-b: #3B7B8C;
   --src-c: #C9A227;
 
-  /* Wortwelten-Themenfarben (Textauswahl-Drawer). */
-  --t-tiere: #E8A33D;
-  --t-meer: #2BAF9E;
-  --t-weltall: #8B5CF6;
+  /* Themenfarben der Textwelten (Drawer + Wortkarte). */
+  --t-tiere: #E39A2A;
+  --t-meer: #14A18F;
+  --t-weltall: #7C4DFF;
   --t-computer: #3B7B8C;
-  --t-eigen: #8D8470;
+  --t-eigen: #7b8a86;
 
   --mark-exact: #FBE2A6;
   --mark-sim: #F7C9D9;
   --mark-sim-line: #D1467F;
-  --good: #2BAF9E;
+  --good: #00996d;
   --bad: #D1483A;
 
-  --font-display: 'Bricolage Grotesque', 'Atkinson Hyperlegible', system-ui, sans-serif;
-  --font-body: 'Atkinson Hyperlegible', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-  --r: 14px;
+  --r: 18px;
+  --head-h: 120px;   /* Höhe der klebenden Kopfzeile; app.js misst nach */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #191511; --surface: #231E17; --soft: #2E271D; --ink: #F3ECDC; --muted: #B5AA92; --line: #3A3224; --focus: #FF8A72;
-    --on-ink: #191511;
-    --cat-origin: #F2B354; --cat-origin-tint: #5C4620;
-    --cat-context: #4FD6C3; --cat-context-tint: #1F4A43;
-    --cat-candidates: #FF7A68; --cat-candidates-tint: #5C2C24;
-    --cat-random: #B08BFF; --cat-random-tint: #3C2E5C;
-    --cat-meaning: #7FA8FF; --cat-meaning-tint: #23386B;
-    --cat-net: #CBC1A8; --cat-net-tint: #46402F;
+    --bg: #0a0b10; --surface: #12141b; --soft: #1a1d27; --ink: #edeff5; --muted: #a4a9bd; --line: #252836; --focus: #35d39a;
+    --on-ink: #0a0b10;
+    --accent: #35d39a; --accent-ink: #6fe6b9; --accent-dim: rgba(53,211,154,.14); --accent-edge: rgba(53,211,154,.42);
+    --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
+    --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
+    --cat-origin: #F2B354; --cat-origin-tint: #4A3A1E;
+    --cat-context: #4FD6C3; --cat-context-tint: #183D38;
+    --cat-candidates: #FF7A68; --cat-candidates-tint: #4D2620;
+    --cat-random: #A88BFF; --cat-random-tint: #2F2650;
+    --cat-meaning: #7FA8FF; --cat-meaning-tint: #1E2F5A;
+    --cat-net: #B9C3D6; --cat-net-tint: #2A2F3D;
     --src-a: #E08058; --src-b: #5FA3B0; --src-c: #E0C256;
-    --t-tiere: #F2B354; --t-meer: #4FD6C3; --t-weltall: #B08BFF; --t-computer: #5FA3B0; --t-eigen: #B5AA92;
+    --t-tiere: #F2B354; --t-meer: #4FD6C3; --t-weltall: #A88BFF; --t-computer: #5FA3B0; --t-eigen: #a4a9bd;
     --mark-exact: #5C4620; --mark-sim: #4A2436; --mark-sim-line: #FF8FB8;
-    --good: #4FD6C3; --bad: #FF6B5C;
+    --good: #35d39a; --bad: #FF6B5C;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #191511; --surface: #231E17; --soft: #2E271D; --ink: #F3ECDC; --muted: #B5AA92; --line: #3A3224; --focus: #FF8A72;
-  --on-ink: #191511;
-  --cat-origin: #F2B354; --cat-origin-tint: #5C4620;
-  --cat-context: #4FD6C3; --cat-context-tint: #1F4A43;
-  --cat-candidates: #FF7A68; --cat-candidates-tint: #5C2C24;
-  --cat-random: #B08BFF; --cat-random-tint: #3C2E5C;
-  --cat-meaning: #7FA8FF; --cat-meaning-tint: #23386B;
-  --cat-net: #CBC1A8; --cat-net-tint: #46402F;
+  --bg: #0a0b10; --surface: #12141b; --soft: #1a1d27; --ink: #edeff5; --muted: #a4a9bd; --line: #252836; --focus: #35d39a;
+  --on-ink: #0a0b10;
+  --accent: #35d39a; --accent-ink: #6fe6b9; --accent-dim: rgba(53,211,154,.14); --accent-edge: rgba(53,211,154,.42);
+  --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
+  --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
+  --cat-origin: #F2B354; --cat-origin-tint: #4A3A1E;
+  --cat-context: #4FD6C3; --cat-context-tint: #183D38;
+  --cat-candidates: #FF7A68; --cat-candidates-tint: #4D2620;
+  --cat-random: #A88BFF; --cat-random-tint: #2F2650;
+  --cat-meaning: #7FA8FF; --cat-meaning-tint: #1E2F5A;
+  --cat-net: #B9C3D6; --cat-net-tint: #2A2F3D;
   --src-a: #E08058; --src-b: #5FA3B0; --src-c: #E0C256;
-  --t-tiere: #F2B354; --t-meer: #4FD6C3; --t-weltall: #B08BFF; --t-computer: #5FA3B0; --t-eigen: #B5AA92;
+  --t-tiere: #F2B354; --t-meer: #4FD6C3; --t-weltall: #A88BFF; --t-computer: #5FA3B0; --t-eigen: #a4a9bd;
   --mark-exact: #5C4620; --mark-sim: #4A2436; --mark-sim-line: #FF8FB8;
-  --good: #4FD6C3; --bad: #FF6B5C;
+  --good: #35d39a; --bad: #FF6B5C;
   color-scheme: dark;
 }

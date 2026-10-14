@@ -1,6 +1,7 @@
 /* Phase 2: Frage/Antwort mit Retrieval.
    Zentrum = Ablauf-Fließband + Frage + wachsende Antwort (jedes Wort in der Farbe seines Quelltexts).
-   Rechts: Quellen, Nachschlagen, Wort für Wort, Zufall. Darunter breit: die Wortkarte. */
+   Rechts: Nachschlagen, Quellen, Wort für Wort, Zufall. Darunter breit: die Wortkarte.
+   Meldet Fragen (p2-ask) und Wortkarten-Auswahl (p2-map) an den Leitfaden. */
 const SRC = ['A', 'B', 'C'];
 const srcVar = i => 'var(--src-' + ['a', 'b', 'c'][i] + ')';
 const CANNED = 'Dazu finde ich nichts. Ich kenne nur Texte, die du gerade ausgewählt hast.';
@@ -34,13 +35,15 @@ Phases.register(2, {
   mount(host) {
     let M = null, R = null, session = null, canned = false, asked = false;
     let temp = 1, playing = false, timer = null, panelCtrl = null, mapCtl = null;
-    let textEl, cursor, playBtn, input, flowHost, legendHost, askedEl;
+    let textEl, cursor, playBtn, input, flowHost, legendHost, askedEl, placeholder;
+    let lastQ = '';
 
     function rebuildModel() {
       M = buildModel(State.activeTexts());
       if (mapCtl) mapCtl.destroy();
       mapCtl = WordMap.create(M, {
-        highlight: () => (R && !canned) ? R.ql.filter(x => x.inMap).map(x => x.lemma) : []
+        highlight: () => (R && !canned) ? R.ql.filter(x => x.inMap).map(x => x.lemma) : [],
+        onSelect: () => Guide.did('p2-map')
       });
     }
 
@@ -72,6 +75,7 @@ Phases.register(2, {
         prevSi = p.si;
       });
       textEl.appendChild(cursor);
+      if (placeholder) placeholder.hidden = asked;
     }
 
     function updateLegend() {
@@ -79,22 +83,20 @@ Phases.register(2, {
       if (!asked || canned || !session) return;
       const used = new Map();
       session.steps.forEach(st => { if (st.word !== '.' && st.word !== ',') used.set(st.si, (used.get(st.si) || 0) + 1); });
-      legendHost.appendChild(el('p', 'small muted', 'Farbe = aus welchem Text das Wort kommt:'));
-      legendHost.appendChild(Info.legend(session.sources.map((s, i) => ({
+      legendHost.appendChild(sourceChips(session.sources.map((s, i) => ({
         color: srcVar(i),
-        label: 'Text ' + SRC[i] + ' · ' + s.doc.title,
-        sub: used.get(i) ? used.get(i) + ' Wörter' : 'noch nicht benutzt'
+        label: SRC[i] + ' · ' + s.doc.title,
+        sub: String(used.get(i) || 0)
       }))));
     }
 
     function updateFlow() {
       const stage = !asked ? 0 : (canned ? 2 : (session && session.steps.length ? 3 : 2));
       Flow.render(flowHost, [
-        { id: 'q', label: 'Deine Frage', sub: asked ? '„' + R.question + '“' : 'noch keine', cat: 'context', active: stage === 0 },
-        { id: 'lookup', label: 'Wörter verstehen', sub: 'Grundform + Ähnliche', cat: 'context', active: stage === 1, done: stage > 1 },
+        { id: 'lookup', label: 'Frage zerlegen', sub: 'Schlüsselwörter', cat: 'context', active: stage === 0 || stage === 1, done: stage > 1 },
         { id: 'src', label: '3 Texte suchen', sub: 'die besten Treffer', cat: 'origin', active: stage === 2, done: stage > 2 },
         { id: 'word', label: 'Wort für Wort', sub: 'würfeln & anhängen', cat: 'candidates', active: stage === 3 },
-        { id: 'rand', label: 'Antwort', sub: 'der Zufall würfelt mit', cat: 'random' }
+        { id: 'rand', target: 'rand', label: 'Zufall', sub: 'würfelt mit', cat: 'random' }
       ], { onPick: id => panelCtrl.reveal(id) });
     }
 
@@ -112,12 +114,16 @@ Phases.register(2, {
         const sources = buildPhase2Sources(R, 3);
         session = createSession(sources);
       }
-      askedEl.textContent = 'Frage: „' + q + '“';
+      askedEl.replaceChildren(el('span', 'asked-ico', '❓'), document.createTextNode(q));
       askedEl.hidden = false;
       updateText();
       updateLegend();
       updateFlow();
       panelCtrl.refreshAll();
+      panelCtrl.refresh('rand');
+      const norm = x => x.toLowerCase().replace(/[^a-zäöüß0-9]+/g, ' ').trim();
+      Guide.did('p2-ask', { canned, unknown: R.ql.filter(x => !x.known).length, repeat: norm(q) === norm(lastQ) });
+      lastQ = q;
       /* Wortkarte nicht neu aufbauen (teuer) — nur auf ein Fragewort springen. */
       if (mapCtl && panelCtrl.isOpen('map')) {
         const start = R.ql.filter(x => x.inMap)[0];
@@ -134,13 +140,14 @@ Phases.register(2, {
       updateLegend();
       updateFlow();
       panelCtrl.refreshAll();
+      Flow.pulse(flowHost, 300);
       if (session.sentences >= 3 || session.steps.length >= 70) return false;
       return true;
     }
     function startPlay() {
-      if (playing || canned) return;
+      if (playing || canned || !session) return;
       playing = true;
-      playBtn.textContent = '⏸ Pause';
+      playBtn.textContent = '❚❚ Pause';
       timer = setInterval(() => { if (!doStep()) stopPlay(); }, 420);
     }
     function stopPlay() {
@@ -151,9 +158,8 @@ Phases.register(2, {
 
     function renderSourcesNode(container) {
       container.replaceChildren();
-      if (!asked) { container.appendChild(el('p', 'small muted', 'Stell zuerst eine Frage.')); return; }
-      if (canned) { container.appendChild(el('p', 'small muted', 'Kein Text enthält eines der Fragewörter — deshalb kam der feste Satz.')); return; }
-      container.appendChild(el('p', 'small', 'Die drei Texte, die am besten zu deiner Frage passen. Der Balken zeigt, wie stark ein Text mitreden darf:'));
+      if (!asked) { container.appendChild(el('p', 'card-empty', 'Stell zuerst eine Frage.')); return; }
+      if (canned) { container.appendChild(el('p', 'card-empty', 'Kein Text passt – deshalb kam ein fester Satz.')); return; }
       session.sources.forEach((s, i) => {
         const row = el('div', 'srcrow');
         const head = el('div', 'srcrow-head');
@@ -167,21 +173,23 @@ Phases.register(2, {
         head.append(letter, titleWrap);
         row.appendChild(head);
 
-        const toggle = el('button', 'btn', 'Fundstelle im Text zeigen');
+        const toggle = el('button', 'btn sm', 'Fundstelle zeigen');
         toggle.type = 'button';
         const snip = el('p', 'small snip');
         snip.hidden = true;
         snip.appendChild(renderMarkedTokens(s.r.doc.toks, s.r.marks));
         toggle.addEventListener('click', () => {
           snip.hidden = !snip.hidden;
-          toggle.textContent = snip.hidden ? 'Fundstelle im Text zeigen' : 'Fundstelle verbergen';
+          toggle.textContent = snip.hidden ? 'Fundstelle zeigen' : 'Fundstelle verbergen';
         });
         row.append(toggle, snip);
         const hl = s.r.hits.map(h => h.type === 'exact' ? '„' + showWord(h.w) + '“' : '„' + showWord(h.w) + '“ statt „' + showWord(h.q) + '“');
-        row.appendChild(el('p', 'small muted', 'Treffer: ' + hl.join(', ') + '.'));
+        row.appendChild(el('p', 'small muted', 'Treffer: ' + hl.join(', ')));
         container.appendChild(row);
       });
-      container.appendChild(Info.note('Gelb = genau dein Fragewort, rosa = ein ähnliches Wort.', '🖍️'));
+      const lg = el('p', 'mini-legend');
+      lg.append(el('span', 'mk exact', 'gelb'), document.createTextNode(' = genau dein Wort  '), el('span', 'mk sim', 'rosa'), document.createTextNode(' = ähnliches Wort'));
+      container.appendChild(lg);
     }
 
     function renderMarkedTokens(toks, marks) {
@@ -202,14 +210,15 @@ Phases.register(2, {
 
     function renderLookupNode(container) {
       container.replaceChildren();
-      if (!asked) { container.appendChild(el('p', 'small muted', 'Stell zuerst eine Frage.')); return; }
+      if (!asked) { container.appendChild(el('p', 'card-empty', 'Stell zuerst eine Frage.')); return; }
       const qw = el('div', 'chiprow');
       tokenize(R.question).filter(t => !t.punct).forEach(t => {
         const isStop = STOP.has(t.t) || /^\d+$/.test(t.t) || t.t.length < 2;
         const chip = el('div', 'chip');
         if (isStop) {
           chip.classList.add('off');
-          chip.append(document.createTextNode(t.raw), el('span', 'small muted', ' Füllwort'));
+          chip.append(document.createTextNode(t.raw));
+          chip.title = 'Füllwort – fliegt raus';
           qw.appendChild(chip);
           return;
         }
@@ -217,7 +226,7 @@ Phases.register(2, {
         if (!x) return;
         if (!x.known) {
           chip.classList.add('unknown');
-          chip.append(document.createTextNode(t.raw), el('span', 'small muted', ' unbekannt'));
+          chip.append(document.createTextNode(t.raw), el('span', 'chip-tag', 'unbekannt'));
           qw.appendChild(chip);
           return;
         }
@@ -227,23 +236,23 @@ Phases.register(2, {
         qw.appendChild(chip);
       });
       container.appendChild(qw);
-      container.appendChild(Info.legend([
-        { color: 'var(--soft)', label: 'Füllwort', sub: 'wird weggelassen' },
-        { color: 'var(--cat-context)', label: 'bekanntes Wort', sub: 'steht in deinen Texten' },
-        { color: 'var(--bad)', label: 'unbekannt', sub: 'kommt in keinem Text vor' }
-      ]));
+      const lg = el('p', 'mini-legend');
+      lg.append(el('span', 'chip off sm', 'grau'), document.createTextNode(' Füllwort  '),
+        el('span', 'chip known sm', 'grün'), document.createTextNode(' gefunden  '),
+        el('span', 'chip unknown sm', 'rot'), document.createTextNode(' unbekannt'));
+      container.appendChild(lg);
 
       const simRows = R.ql.filter(x => x.known && x.inMap).map(x => [x, neighbors(M, x.lemma, 4).filter(n => n[1] >= SIM_MIN)]).filter(p => p[1].length);
       if (simRows.length) {
         const sec = el('div');
-        sec.appendChild(el('p', 'small', 'Wörter, die die KI für ähnlich hält:'));
+        sec.appendChild(el('p', 'card-line', 'Hält die KI für ähnlich:'));
         simRows.forEach(([x, nbs]) => {
           const p = el('p', 'small muted');
           p.append('„' + showWord(x.lemma) + '“ ≈ ' + nbs.map(n => showWord(n[0]) + ' (' + Math.round(n[1] * 100) + ' %)').join(', '));
           sec.appendChild(p);
         });
         container.appendChild(sec);
-        const b = el('button', 'btn', '🗺️ Auf der Wortkarte ansehen');
+        const b = el('button', 'btn sm', '🗺️ Auf der Wortkarte');
         b.type = 'button';
         b.addEventListener('click', () => {
           panelCtrl.reveal('map');
@@ -255,10 +264,10 @@ Phases.register(2, {
 
     function renderWordByWordNode(container) {
       container.replaceChildren();
-      if (!asked) { container.appendChild(el('p', 'small muted', 'Stell zuerst eine Frage.')); return; }
-      if (canned) { container.appendChild(el('p', 'small muted', 'Ohne passenden Text gibt es nichts zum Zusammensetzen — die KI gibt stattdessen einen festen Satz aus.')); return; }
+      if (!asked) { container.appendChild(el('p', 'card-empty', 'Stell zuerst eine Frage.')); return; }
+      if (canned) { container.appendChild(el('p', 'card-empty', 'Nichts zum Zusammensetzen – fester Satz.')); return; }
       const st = session.steps[session.steps.length - 1];
-      if (!st) { container.appendChild(el('p', 'small muted', 'Noch kein Wort erzeugt.')); return; }
+      if (!st) { container.appendChild(el('p', 'card-empty', 'Noch kein Wort.')); return; }
       const C = st.cands;
 
       const strip = el('div', 'ctxstrip');
@@ -278,29 +287,20 @@ Phases.register(2, {
         word: a.word, label: showWord(a.word), p: a.p, chosen: a.word === st.chosen,
         breakdown: [...a.bySrc.entries()].map(([si, w]) => ({ share: w / a.w, color: srcVar(si), label: 'Text ' + SRC[si] }))
       }));
-      Heat.render(heatHost, cands, { maxRows: 7, compact: true });
-      container.appendChild(Info.note('Die Farben im Balken zeigen, aus welchem Text die Stimmen für ein Wort kommen. Die graue Zeile ist das Wort, das gewürfelt wurde.', '🎨'));
+      Heat.render(heatHost, cands, { maxRows: 6, compact: true });
+      container.appendChild(el('p', 'mini-legend', 'Balkenfarbe = Text A · B · C   ▸ umrandet = gewürfelt'));
     }
 
     function renderRandomNode(container) {
       container.replaceChildren();
-      const sl = el('div', 'slider');
-      const lab = el('label');
-      const out = el('output', null, de1(temp));
-      lab.append(document.createTextNode('Zufall'), out);
-      const inp = el('input');
-      inp.type = 'range'; inp.min = '0'; inp.max = '2'; inp.step = '0.1'; inp.value = String(temp);
-      inp.addEventListener('input', () => { temp = parseFloat(inp.value); out.textContent = de1(temp); });
-      sl.append(lab, inp);
-      container.appendChild(sl);
-      container.appendChild(Info.steps([
-        ['Zufall 0:', 'dieselbe Frage ergibt immer dieselbe Antwort.'],
-        ['Zufall 1:', 'die KI würfelt so, wie die Wörter in den Texten vorkommen.'],
-        ['Zufall 2:', 'auch seltene Wörter haben eine Chance — es wird wilder.']
-      ]));
-      container.appendChild(Info.note('Bei echten Sprachmodellen heißt dieser Regler Temperatur.', '🌡️'));
-      const rb = el('button', 'btn primary', 'Dieselbe Frage neu beantworten');
+      const sl = Info.slider({
+        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
+        onInput: v => { temp = Math.round(v * 10) / 10; }
+      });
+      container.appendChild(sl.el);
+      const rb = el('button', 'btn primary', '🔁 Dieselbe Frage nochmal');
       rb.type = 'button';
+      rb.dataset.spot = 'reask';
       rb.disabled = !asked;
       rb.addEventListener('click', () => { stopPlay(); ask(R.question); });
       container.appendChild(rb);
@@ -308,7 +308,7 @@ Phases.register(2, {
 
     function renderMapNode(container) {
       container.replaceChildren();
-      if (!M.words.length) { container.appendChild(el('p', 'small muted', 'Wähl ein paar Texte aus, dann entsteht die Karte.')); return; }
+      if (!M.words.length) { container.appendChild(el('p', 'card-empty', 'Wähl ein paar Texte aus, dann entsteht die Karte.')); return; }
       mapCtl.mount(container);
     }
 
@@ -317,39 +317,41 @@ Phases.register(2, {
       asked = false; canned = false; session = null; R = null;
 
       const center = el('div', 'box machine-center');
-      center.appendChild(el('p', 'eyebrow', 'Phase 2 · Frage & Antwort'));
-      center.appendChild(el('h2', null, 'Frag etwas aus deinen Textwelten'));
+      center.appendChild(Info.centerHead('Phase 2 · Frage & Antwort', 'Frag etwas aus deinen Textwelten', 'p2'));
 
       flowHost = el('div', 'flow-host');
       center.appendChild(flowHost);
 
       const form = el('form', 'qform');
+      form.dataset.spot = 'ask';
       input = el('input', 'textin');
       input.type = 'text'; input.placeholder = 'Frag mich etwas …'; input.setAttribute('aria-label', 'Frage');
-      const send = el('button', 'btn primary', 'Antwort erzeugen');
+      input.enterKeyHint = 'send';
+      const send = el('button', 'btn primary', 'Fragen');
       send.type = 'submit';
       form.append(input, send);
-      form.addEventListener('submit', e => { e.preventDefault(); ask(input.value); });
+      form.addEventListener('submit', e => { e.preventDefault(); stopPlay(); ask(input.value); input.blur(); });
       center.appendChild(form);
 
-      const sugg = el('div', 'machine-controls');
+      const sugg = el('div', 'sugg');
       SUGGEST2.forEach(q => {
         const b = el('button', 'chip', q);
         b.type = 'button';
-        b.addEventListener('click', () => { input.value = q; ask(q); });
+        b.addEventListener('click', () => { stopPlay(); input.value = q; ask(q); });
         sugg.appendChild(b);
       });
       center.appendChild(sugg);
 
+      const paper = el('div', 'paper');
       askedEl = el('p', 'asked');
       askedEl.hidden = true;
-      center.appendChild(askedEl);
-
+      placeholder = el('p', 'paper-ph', 'Hier erscheint die Antwort …');
       textEl = el('p', 'bot-text');
       cursor = el('span', 'cursor');
       textEl.appendChild(cursor);
       textEl.hidden = true;
-      center.appendChild(textEl);
+      paper.append(askedEl, placeholder, textEl);
+      center.appendChild(paper);
 
       legendHost = el('div', 'center-legend');
       center.appendChild(legendHost);
@@ -362,35 +364,13 @@ Phases.register(2, {
       controls.appendChild(playBtn);
       center.appendChild(controls);
 
-      center.appendChild(Info.box('Das ist kein fertiger Satz', 'Die KI sucht drei passende Texte und baut daraus Wort für Wort einen neuen Satz zusammen. Die Farben zeigen dir, aus welchem Text jedes Wort kommt.', { icon: '🧩' }));
-
       const items = [
-        {
-          id: 'src', label: 'Quellen', cat: 'origin', hint: 'Schritt 3', render: renderSourcesNode,
-          info: { title: 'Welche Texte darf die KI benutzen?', text: 'Nicht alle! Die KI nimmt nur die drei Texte, in denen deine Fragewörter am häufigsten und am seltensten woanders vorkommen. Diese drei heißen A, B und C — in diesen Farben siehst du die Antwort oben.', icon: '📑' }
-        },
-        {
-          id: 'lookup', label: 'Nachschlagen', cat: 'context', hint: 'Schritt 2', render: renderLookupNode,
-          info: { title: 'Wie versteht die KI die Frage?', text: 'Sie versteht sie gar nicht — sie zerlegt sie nur in Wörter. Füllwörter wie „der“ oder „wie“ fliegen raus, der Rest wird auf die Grundform gekürzt („Welpen“ → „Welpe“). Wörter, die in keinem Text stehen, kann sie nicht benutzen.', icon: '🔎' }
-        },
-        {
-          id: 'word', label: 'Wort für Wort', cat: 'candidates', hint: 'Schritt 4', render: renderWordByWordNode,
-          info: { title: 'Wie entsteht die Antwort?', text: 'Immer nur ein Wort: Die KI schaut, welche Wörter in den drei Texten hinter den letzten Wörtern stehen, zählt sie und würfelt eins davon. Dann schaut sie wieder — Wort für Wort, bis der Satz zu Ende ist.', icon: '🎲' }
-        },
-        {
-          id: 'rand', label: 'Zufall', cat: 'random', render: renderRandomNode,
-          info: { title: 'Warum kommt nicht immer dasselbe raus?', text: 'Weil die KI würfelt. Wie stark sie würfelt, stellst du hier ein.', icon: '🎚️' }
-        },
-        {
-          id: 'map', label: 'Wortkarte: Welche Wörter gehören zusammen?', cat: 'meaning', wide: true, open: false, manual: true,
-          render: renderMapNode,
-          info: {
-            title: 'Wie weiß die KI, dass „Katze“ und „Hund“ zusammengehören?',
-            text: ['Sie weiß nichts über Tiere. Sie zählt nur, welche Wörter in deinen Texten oft in der Nähe stehen. Zwei Wörter mit denselben Nachbarn landen auf dieser Karte nah beieinander.',
-              'Klick ein Wort an: Du siehst die ähnlichsten Wörter und darunter, warum die KI sie für ähnlich hält.'],
-            icon: '🗺️'
-          }
-        }
+        { id: 'lookup', label: 'Nachschlagen', cat: 'context', hint: '1', help: 'nachschlagen', render: renderLookupNode },
+        { id: 'src', label: 'Quellen', cat: 'origin', hint: '2', help: 'quellen', render: renderSourcesNode },
+        { id: 'word', label: 'Wort für Wort', cat: 'candidates', hint: '3', help: 'wortfuerwort', render: renderWordByWordNode },
+        { id: 'rand', label: 'Zufall', cat: 'random', hint: '4', help: 'zufall', manual: true, render: renderRandomNode },
+        { id: 'map', label: 'Wortkarte: Welche Wörter gehören zusammen?', cat: 'meaning', wide: true, open: false, manual: true,
+          help: 'wortkarte', render: renderMapNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 2 });
       updateFlow();
@@ -398,6 +378,11 @@ Phases.register(2, {
 
     rebuildModel();
     render();
-    State.on('corpus-changed', () => { if (host.isConnected) { rebuildModel(); render(); } });
+    State.on('corpus-changed', () => { rebuildModel(); render(); });
+
+    return {
+      reveal: id => panelCtrl.reveal(id, true),
+      onHide: stopPlay
+    };
   }
 });

@@ -7,8 +7,10 @@
    zwischen pointerdown und pointerup -> es kommt nie ein click an, das Training ließ sich nicht
    mehr anhalten). Darum: alle Karten sind manual:true, und jede Render-Funktion hinterlegt in
    live[id] eine Funktion, die NUR die Zahlen/Bilder auffrischt und die Bedienelemente stehen lässt.
-   Die Haupt-Trainingstaste sitzt zusätzlich in der Zentrum-Karte, die während des Trainings
-   überhaupt nicht neu gebaut wird. */
+   Die Trainingstasten sitzen nur in der Zentrum-Karte, die während des Trainings überhaupt nicht
+   neu gebaut wird; die Karte "Training" zeigt nur Zahlen und die Fehlerlinie.
+   Meldet Vorhersagen (p3-gen), den Fehler (p3-loss) und angetippte Neuronen (p3-neuron) an den
+   Leitfaden. */
 function deInt(n) { return n.toLocaleString('de-DE'); }
 function valueColor(v, scale) {
   const t = Math.max(-1, Math.min(1, v / scale));
@@ -18,6 +20,7 @@ function valueColor(v, scale) {
 }
 function renderSwatch(values, scale) {
   const row = el('div', 'swatchrow');
+  row.style.setProperty('--cols', String(Math.min(values.length, 20)));
   values.forEach(v => {
     const cell = el('span', 'swatchcell');
     cell.style.background = valueColor(v, scale);
@@ -33,14 +36,22 @@ function renderSparkline(history, w, h) {
   svg.setAttribute('class', 'sparkline');
   svg.setAttribute('preserveAspectRatio', 'none');
   if (history.length < 2) return svg;
+  /* Geglättet (gleitender Mittelwert): jeder Punkt ist der Schnitt über ein paar Millisekunden
+     zufälliger Beispiele und springt deshalb stark — die Richtung soll man aber sehen. */
+  const sm = [];
+  let acc = history[0];
+  history.forEach(v => { acc = acc * 0.85 + v * 0.15; sm.push(acc); });
+  history = sm;
   const mn = Math.min(...history), mx = Math.max(...history);
   const range = (mx - mn) || 1;
   const pts = history.map((v, i) => (i / (history.length - 1)) * w + ',' + (h - ((v - mn) / range) * (h - 6) - 3)).join(' ');
   const poly = document.createElementNS(ns, 'polyline');
   poly.setAttribute('points', pts);
   poly.setAttribute('fill', 'none');
-  poly.setAttribute('stroke', 'var(--focus)');
-  poly.setAttribute('stroke-width', '2');
+  poly.setAttribute('stroke', 'var(--cat-random)');
+  poly.setAttribute('stroke-width', '2.5');
+  poly.setAttribute('stroke-linejoin', 'round');
+  poly.setAttribute('vector-effect', 'non-scaling-stroke');
   svg.appendChild(poly);
   return svg;
 }
@@ -50,8 +61,9 @@ Phases.register(3, {
     let data, net, genSession, lastForward, netView = null;
     let temp = 1, training = false, trainRAF = null, lastUIRefresh = 0;
     let genPlaying = false, genTimer = null;
-    let textEl, cursor, genPlayBtn, bannerEl, panelCtrl, flowHost;
-    let centerToggle, centerStat, centerDot, netBtn;
+    let textEl, cursor, genPlayBtn, bannerEl, panelCtrl, flowHost, placeholder;
+    let centerToggle, centerStat, centerDot, netBtn, centerSpark;
+    let genRun = 0;   /* Vorhersagen seit "Von vorn"/Trainingsstart (für den Leitfaden) */
     let cardTrain = null;
     const live = {};  /* Karten-Id -> Auffrisch-Funktion; nur offene Karten tragen sich ein */
 
@@ -59,15 +71,11 @@ Phases.register(3, {
 
     function updateFlow() {
       Flow.render(flowHost, [
-        { id: 'embed', label: 'Kontextwörter', sub: 'die letzten ' + data.C + ' Wörter', cat: 'context', target: 'embed' },
-        { id: 'embed2', target: 'embed', label: 'Embedding', sub: 'Wort → Zahlenreihe', cat: 'origin' },
-        { id: 'hidden', label: 'Hidden-Schicht', sub: 'Zahlen verrechnen', cat: 'context' },
-        { id: 'output', label: 'Ausgabe', sub: 'Wahrscheinlichkeiten', cat: 'candidates' },
-        { id: 'train', label: 'Vergleichen & lernen', sub: 'Zahlen nachjustieren', cat: 'random' }
-      ], {
-        onPick: id => panelCtrl.reveal(id),
-        loop: 'Beim Training läuft diese Kette tausende Male — jedes Mal werden die Zahlen ein winziges Stück besser.'
-      });
+        { id: 'embed', label: data.C + ' Wörter', sub: '→ Zahlen', cat: 'origin' },
+        { id: 'hidden', label: 'Mischen', sub: 'Hidden-Schicht', cat: 'context' },
+        { id: 'output', label: 'Prozente', sub: 'für jedes Wort', cat: 'candidates' },
+        { id: 'train', label: 'Lernen', sub: 'Zahlen korrigieren', cat: 'random' }
+      ], { onPick: id => panelCtrl.reveal(id) });
     }
 
     function freshGenSession() {
@@ -79,10 +87,12 @@ Phases.register(3, {
 
     function updateGenText() {
       textEl.replaceChildren();
+      if (placeholder) placeholder.hidden = genSession.words.length > 0;
+      textEl.hidden = !genSession.words.length;
       let prev = '.';
       genSession.words.forEach((w, idx) => {
         const punct = (w === '.' || w === ',');
-        let txt = w === data.UNK ? '…' : w;
+        let txt = w === data.UNK ? '…' : data.display(w);
         if (!punct && prev === '.') txt = txt.charAt(0).toUpperCase() + txt.slice(1);
         if (idx > 0 && !punct) textEl.appendChild(document.createTextNode(' '));
         textEl.appendChild(document.createTextNode(txt));
@@ -106,10 +116,21 @@ Phases.register(3, {
       syncTrainUI();
     }
 
-    function lossTxt() { return net.lossHistory.length ? net.lossHistory[net.lossHistory.length - 1].toFixed(2).replace('.', ',') : '–'; }
+    /* Fehler als Mittel der letzten Messungen: ein einzelner Wert ist der Schnitt über ein paar
+       Millisekunden zufälliger Beispiele und springt stark (die Anzeige flackerte, und ein Ausreißer
+       hakte im Leitfaden "Fehler unter 3" ab, obwohl daneben 3,6 stand). */
+    function curLoss() {
+      const h = net.lossHistory;
+      if (!net.step || !h.length) return null;
+      const k = Math.min(25, h.length);
+      let sum = 0;
+      for (let i = h.length - k; i < h.length; i++) sum += h[i];
+      return sum / k;
+    }
+    function lossTxt() { const l = curLoss(); return l == null ? '–' : l.toFixed(2).replace('.', ','); }
     function epochTxt() { return data.pairs.length ? (net.step / data.pairs.length).toFixed(1).replace('.', ',') : '0'; }
-    function trainLabel() { return training ? '⏸ Training anhalten' : (net.step ? '▶ Weitertrainieren' : '▶ Training starten'); }
-    function statTxt() { return 'Schritt ' + deInt(net.step) + ' · Fehler ' + lossTxt(); }
+    function trainLabel() { return training ? '❚❚ Anhalten' : (net.step ? '▶ Weitertrainieren' : '▶ Training starten'); }
+    function statTxt() { return deInt(net.step) + ' Schritte · Fehler ' + lossTxt(); }
 
     /* Hält die beiden Trainings-Tasten (Zentrum + Karte) in Form, OHNE sie neu zu bauen. */
     function syncTrainUI() {
@@ -117,9 +138,10 @@ Phases.register(3, {
         centerToggle.textContent = net.diverged ? 'Netz entgleist — neu initialisieren' : trainLabel();
         centerToggle.disabled = !data.pairs.length;
       }
+      if (centerToggle) centerToggle.classList.toggle('playing', training);
       if (centerStat) centerStat.textContent = statTxt();
       if (centerDot) centerDot.classList.toggle('on', training);
-      if (cardTrain && cardTrain.toggle.isConnected) cardTrain.toggle.textContent = trainLabel();
+      if (centerSpark) centerSpark.replaceChildren(renderSparkline(net.lossHistory, 200, 44));
     }
 
     function doGenStep() {
@@ -139,19 +161,22 @@ Phases.register(3, {
       genSession.words.push(word);
       if (word === '.') genSession.sentences++;
       lastForward = forward(net, genSession.ctxIds);
+      genRun++;
       updateGenText();
       liveTick();
+      Guide.did('p3-gen', { loss: curLoss(), run: genRun });
       return genSession.sentences < 3 && genSession.words.length < 60;
     }
     function startGenPlay() {
       if (genPlaying) return;
       genPlaying = true;
-      genPlayBtn.textContent = '⏸ Pause';
+      genPlayBtn.textContent = '❚❚ Pause';
+      genPlayBtn.classList.add('playing');
       genTimer = setInterval(() => { if (!doGenStep()) stopGenPlay(); }, 500);
     }
     function stopGenPlay() {
       genPlaying = false;
-      if (genPlayBtn) genPlayBtn.textContent = '▶ Wort für Wort vorhersagen';
+      if (genPlayBtn) { genPlayBtn.textContent = '▶ Vorhersagen'; genPlayBtn.classList.remove('playing'); }
       if (genTimer) { clearInterval(genTimer); genTimer = null; }
     }
 
@@ -169,12 +194,14 @@ Phases.register(3, {
       if (now - lastUIRefresh > 180) {
         lastUIRefresh = now;
         liveTick();
+        Guide.did('p3-loss', { loss: curLoss() });
       }
       if (training) trainRAF = requestAnimationFrame(trainTick);
     }
     function startTraining() {
       if (training || !data.pairs.length || net.diverged) return;
       training = true;
+      genRun = 0;
       syncTrainUI();
       trainRAF = requestAnimationFrame(trainTick);
     }
@@ -189,6 +216,7 @@ Phases.register(3, {
       stopGenPlay();
       net = createNet(data.vocab.length, data.C);
       genSession = freshGenSession();
+      genRun = 0;
       lastForward = forward(net, genSession.ctxIds);
       updateGenText();
       rebuildCards();
@@ -201,78 +229,65 @@ Phases.register(3, {
       strip.appendChild(el('span', 'flow-arrow', '→'));
       strip.appendChild(el('span', 'ctxtok next', '?'));
       container.appendChild(strip);
-      container.appendChild(el('p', 'small', 'Jedes dieser Wörter ist für das Netz nur eine Reihe von ' + net.d + ' Zahlen:'));
       genSession.ctxIds.forEach(id => {
-        const row = el('div');
-        row.appendChild(el('p', 'small', wordLabel(data.vocab[id])));
+        const row = el('div', 'embrow');
+        row.appendChild(el('span', 'embrow-w', wordLabel(data.vocab[id])));
         const vals = [];
         for (let j = 0; j < net.d; j++) vals.push(net.embed[id * net.d + j]);
         row.appendChild(renderSwatch(vals, 1.5));
         container.appendChild(row);
       });
-      container.appendChild(Info.legend([
-        { color: 'var(--src-a)', label: 'positive Zahl', sub: 'je kräftiger, desto größer' },
-        { color: 'var(--src-b)', label: 'negative Zahl', sub: 'je kräftiger, desto kleiner' }
-      ]));
-      container.appendChild(Info.note('Tipp mit der Maus auf eine Zelle für den genauen Wert. Diese Zahlen entstehen allein durchs Training — niemand hat sie von Hand gesetzt.', '🔢'));
+      container.appendChild(el('p', 'mini-legend', 'je Wort ' + net.d + ' Zahlen · rot = plus · blau = minus'));
       live.embed = () => renderEmbedNode(container);
     }
 
     function renderHiddenNode(container) {
       container.replaceChildren();
-      container.appendChild(el('p', 'small', 'Aus den Zahlen der Kontextwörter rechnet das Netz diese ' + net.H + ' neuen Zahlen aus — eine pro Hidden-Neuron:'));
       container.appendChild(renderSwatch(Array.from(lastForward.h), 1));
-      container.appendChild(Info.note('Keine einzelne Zahl bedeutet für sich etwas — erst das Muster aller ' + net.H + ' zusammen. Niemand kann hineinschauen und sagen: "hier steht Hund". Genau das ist bei echten Sprachmodellen das Problem.', '🙈'));
-      container.appendChild(Info.note('Im Netz-Bild unten ist jede dieser Zahlen ein Punkt in der mittleren Spalte — mit allen Kanten, die hinein- und hinausführen.', '🕸'));
+      container.appendChild(el('p', 'mini-legend', net.H + ' Hidden-Neuronen · was bedeutet eins davon? Niemand weiß es 🙈'));
       live.hidden = () => renderHiddenNode(container);
     }
 
     function renderOutputNode(container) {
       container.replaceChildren();
-      const head = el('p', 'small');
+      const head = el('p', 'card-line');
       const heatHost = el('div');
       container.append(head, heatHost);
 
       function paint() {
         head.textContent = net.step === 0
-          ? 'Vor dem Training ist (fast) jedes Wort etwa gleich wahrscheinlich:'
-          : 'Wahrscheinlichkeit für das nächste Wort gerade jetzt:';
+          ? 'Untrainiert: alle Wörter fast gleich wahrscheinlich.'
+          : 'Nächstes Wort – gerade jetzt:';
         const probsT = softmaxTemp(lastForward.logits, temp);
         const arr = [];
         for (let i = 0; i < probsT.length; i++) arr.push([i, probsT[i]]);
         arr.sort((a, b) => b[1] - a[1]);
-        const K = 9;
+        const K = 7;
         const top = arr.slice(0, K);
         const restMass = arr.slice(K).reduce((s, x) => s + x[1], 0);
         const restCount = arr.length - K;
         const cands = top.map(([i, p]) => ({ word: data.vocab[i], label: wordLabel(data.vocab[i]), p }));
-        if (restCount > 0) cands.push({ word: '__rest__', label: '+ ' + restCount + ' weitere Wörter', p: restMass, tag: 'Rest' });
-        Heat.render(heatHost, cands, { maxRows: 10, accent: 'var(--cat-candidates)' });
+        if (restCount > 0) cands.push({ word: '__rest__', label: '+' + restCount + ' andere', p: restMass });
+        Heat.render(heatHost, cands, { maxRows: 8, accent: 'var(--cat-candidates)' });
       }
       paint();
 
-      const sl = el('div', 'slider');
-      const lab = el('label');
-      const out = el('output', null, de1(temp));
-      lab.append(document.createTextNode('Zufall beim Vorhersagen'), out);
-      const inp = el('input');
-      inp.type = 'range'; inp.min = '0'; inp.max = '2'; inp.step = '0.1'; inp.value = String(temp);
-      inp.addEventListener('input', () => {
-        temp = parseFloat(inp.value);
-        out.textContent = de1(temp);
-        paint();
-        if (live.net && panelCtrl.isOpen('net')) live.net();
+      const sl = Info.slider({
+        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, fmt: de1, help: 'zufall', ends: ['🎯 sicher', 'wild 🌪️'],
+        onInput: v => {
+          temp = Math.round(v * 10) / 10;
+          paint();
+          if (live.net && panelCtrl.isOpen('net')) live.net();
+        }
       });
-      sl.append(lab, inp);
-      container.appendChild(sl);
-      container.appendChild(Info.key('Diese Wahrscheinlichkeiten kommen aus einer Rechnung über die Zahlen des Netzes — nicht aus einer Tabelle mit gezählten Wörtern wie in Phase 1 und 2. Trotzdem sieht das Ergebnis am Ende gleich aus: eine Liste mit Prozenten.'));
+      container.appendChild(sl.el);
       live.output = paint;
     }
 
     function renderNetNode(container) {
       container.replaceChildren();
       if (!data.pairs.length) {
-        container.appendChild(el('p', 'small muted', 'Wähl zuerst in „📚 Textwelten“ Texte aus — dann gibt es ein Netz zu zeigen.'));
+        container.appendChild(el('p', 'card-empty', 'Wähl zuerst in „Textwelten“ Texte aus.'));
         live.net = null;
         return;
       }
@@ -280,11 +295,12 @@ Phases.register(3, {
       live.net = () => netView.update();
     }
 
+    /* Nur Anzeige — die Tasten sitzen im Zentrum (nie neu gebaut, siehe Kopfkommentar). */
     function renderTrainNode(container) {
       container.replaceChildren();
       cardTrain = null;
       if (net.diverged) {
-        container.appendChild(el('p', 'small net-warn', 'Die Lernrate war zu hoch — das Training ist entgleist.'));
+        container.appendChild(el('p', 'small net-warn', 'Das Training ist entgleist (Lernrate zu hoch).'));
         const rb = el('button', 'btn primary', 'Neu initialisieren');
         rb.type = 'button';
         rb.addEventListener('click', reinitNet);
@@ -292,45 +308,28 @@ Phases.register(3, {
         live.train = null;
         return;
       }
-      const info = el('p', 'small');
-      const stepB = el('b', null, deInt(net.step));
-      const lossB = el('b', null, lossTxt());
-      const epochS = el('span', null, epochTxt());
-      info.append('Schritt ', stepB, ' · Fehler ', lossB, ' · ', epochS, '× durch alle Beispiele');
-      container.appendChild(info);
+      const facts = el('div', 'trainfacts');
+      const fact = (k) => { const f = el('div', 'trainfact'); const v = el('b'); f.append(v, el('span', null, k)); facts.appendChild(f); return v; };
+      const stepB = fact('Schritte');
+      const lossB = fact('Fehler');
+      const epochS = fact('× alle Beispiele');
+      container.appendChild(facts);
 
+      const sparkHead = el('div', 'spark-head');
+      sparkHead.append(el('span', 'card-line', 'Fehlerlinie'), Help.btn('fehler', 'sm'));
+      container.appendChild(sparkHead);
       const sparkHost = el('div', 'spark-host');
-      sparkHost.appendChild(renderSparkline(net.lossHistory, 260, 60));
       container.appendChild(sparkHost);
-      container.appendChild(el('p', 'small muted', 'Die Linie ist der Fehler: Wie stark lag das Netz daneben? Sie soll fallen.'));
 
-      const ctl = el('div', 'machine-controls');
-      const toggle = el('button', 'btn primary', trainLabel());
-      toggle.type = 'button';
-      toggle.disabled = !data.pairs.length;
-      toggle.addEventListener('click', () => { if (training) pauseTraining(); else startTraining(); });
-      const resetBtn = el('button', 'btn', 'Neu initialisieren');
-      resetBtn.type = 'button';
-      resetBtn.addEventListener('click', reinitNet);
-      ctl.append(toggle, resetBtn);
-      container.appendChild(ctl);
-      container.appendChild(Info.steps([
-        ['Raten.', 'Das Netz sagt für ein Beispiel aus deinen Texten das nächste Wort voraus.'],
-        ['Vergleichen.', 'Es schaut nach, welches Wort wirklich dort stand.'],
-        ['Nachjustieren.', 'Alle Zahlen im Netz werden ein winziges Stück in die richtige Richtung geschoben.'],
-        ['Wiederholen.', 'Tausende Male — bis die Fehlerlinie oben unten bleibt.']
-      ]));
-      container.appendChild(Info.key('Gespeichert wird dabei kein einziger Satz, nur Zahlen. Trotzdem kann das Netz danach Sätze in deinem Stil vorhersagen.'));
-
-      cardTrain = { stepB, lossB, epochS, sparkHost, toggle };
+      cardTrain = { stepB, lossB, epochS, sparkHost };
       live.train = () => {
         if (!cardTrain || !cardTrain.stepB.isConnected) return;
         cardTrain.stepB.textContent = deInt(net.step);
         cardTrain.lossB.textContent = lossTxt();
         cardTrain.epochS.textContent = epochTxt();
         cardTrain.sparkHost.replaceChildren(renderSparkline(net.lossHistory, 260, 60));
-        cardTrain.toggle.textContent = trainLabel();
       };
+      live.train();
     }
 
     function render() {
@@ -345,9 +344,11 @@ Phases.register(3, {
       data = buildPhase3Data(texts, { vocabCap: 600, C: 3 });
       net = createNet(data.vocab.length, data.C);
       genSession = freshGenSession();
+      genRun = 0;
       lastForward = forward(net, genSession.ctxIds);
 
       netView = NetView.create({
+        onReveal: () => Guide.did('p3-neuron'),
         getNet: () => net,
         getData: () => data,
         getForward: () => lastForward,
@@ -357,106 +358,104 @@ Phases.register(3, {
       });
 
       const center = el('div', 'box machine-center');
-      center.appendChild(el('p', 'eyebrow', 'Phase 3 · Echtes neuronales Netz'));
-      center.appendChild(el('h2', null, 'Keine Texte gespeichert — nur Zahlen'));
+      center.appendChild(Info.centerHead('Phase 3 · Echtes Netz', 'Keine Texte gespeichert – nur Zahlen', 'p3'));
 
       bannerEl = el('div', 'net-banner');
       bannerEl.hidden = true;
       bannerEl.append(
-        el('span', 'small', 'Deine Textauswahl hat sich geändert.'),
-        (() => { const b = el('button', 'btn primary', 'Jetzt neu trainieren'); b.type = 'button'; b.addEventListener('click', render); return b; })()
+        el('span', 'small', '📚 Neue Textauswahl.'),
+        (() => { const b = el('button', 'btn sm primary', 'Netz neu bauen'); b.type = 'button'; b.addEventListener('click', render); return b; })()
       );
       center.appendChild(bannerEl);
 
       flowHost = el('div', 'flow-host');
       center.appendChild(flowHost);
 
-      /* Trainings-Steuerung im Zentrum: wird während des Trainings NIE neu gebaut,
-         damit "anhalten" immer anklickbar bleibt. */
-      const bar = el('div', 'net-trainbar');
-      centerDot = el('i', 'net-live-dot');
-      centerDot.setAttribute('aria-hidden', 'true');
-      centerToggle = el('button', 'btn primary', trainLabel());
-      centerToggle.type = 'button';
-      centerToggle.addEventListener('click', () => {
-        if (net.diverged) { reinitNet(); return; }
-        if (training) pauseTraining(); else startTraining();
-      });
-      const centerReset = el('button', 'btn', 'Neu initialisieren');
-      centerReset.type = 'button';
-      centerReset.addEventListener('click', reinitNet);
-      centerStat = el('span', 'counter', statTxt());
-      centerStat.setAttribute('role', 'status');
-      bar.append(centerDot, centerToggle, centerReset, centerStat);
-      center.appendChild(bar);
-
-      const inDim = net.C * net.d;
-      const paramCount = data.vocab.length * net.d + inDim * net.H + net.H + net.H * data.vocab.length + data.vocab.length;
-      const archRow = el('div', 'net-arch');
-      archRow.append(
-        el('span', 'small', inDim + ' → ' + net.H + ' → ' + deInt(data.vocab.length) + ' Neuronen'),
-        el('span', 'small muted', deInt(paramCount) + ' Zahlen (Gewichte)')
-      );
-      netBtn = el('button', 'btn', '🕸 Netz-Bild ansehen');
-      netBtn.type = 'button';
-      netBtn.addEventListener('click', () => panelCtrl.reveal('net'));
-      archRow.appendChild(netBtn);
-      center.appendChild(archRow);
-
-      center.appendChild(el('p', 'small muted', deInt(data.pairs.length) + ' Trainingsbeispiele aus ' + texts.length + ' Texten · Vokabular: ' + deInt(data.vocab.length) + ' Wörter'));
-
+      /* ① Vorhersagen */
+      const paper = el('div', 'paper');
+      placeholder = el('p', 'paper-ph', 'Hier sagt das Netz Wort für Wort vorher …');
       textEl = el('p', 'bot-text');
       cursor = el('span', 'cursor');
       textEl.appendChild(cursor);
-      center.appendChild(textEl);
+      paper.append(placeholder, textEl);
+      center.appendChild(paper);
 
       const controls = el('div', 'machine-controls');
-      genPlayBtn = el('button', 'btn', '▶ Wort für Wort vorhersagen');
+      genPlayBtn = el('button', 'btn primary', '▶ Vorhersagen');
       genPlayBtn.type = 'button';
+      genPlayBtn.dataset.spot = 'gen';
       genPlayBtn.disabled = !texts.length;
       genPlayBtn.addEventListener('click', () => { if (genPlaying) stopGenPlay(); else startGenPlay(); });
-      const stepBtn = el('button', 'btn', 'Ein Wort weiter');
+      const stepBtn = el('button', 'btn', '+1 Wort');
       stepBtn.type = 'button';
       stepBtn.disabled = !texts.length;
       stepBtn.addEventListener('click', () => { stopGenPlay(); doGenStep(); });
-      const resetGenBtn = el('button', 'btn', 'Von vorn');
+      const resetGenBtn = el('button', 'btn', '↺ Von vorn');
       resetGenBtn.type = 'button';
       resetGenBtn.addEventListener('click', () => {
         stopGenPlay();
         genSession = freshGenSession();
+        genRun = 0;
         lastForward = forward(net, genSession.ctxIds);
         updateGenText();
         liveTick();
       });
       controls.append(genPlayBtn, stepBtn, resetGenBtn);
       center.appendChild(controls);
-      center.appendChild(Info.box('Der Unterschied zu Phase 1 und 2', 'Hier wird nicht nachgeschlagen. Dieses Netz hat deine Texte nur ein einziges Mal gesehen und sich dabei Zahlen gemerkt — die Texte selbst sind weg. Vor dem Training rät es Unsinn; trainiere es und sieh zu, wie die Vorhersage besser wird.', { icon: '🧠' }));
+
+      /* ② Trainieren — wird während des Trainings NIE neu gebaut, damit "anhalten" immer
+         anklickbar bleibt (siehe Kopfkommentar). */
+      const trainBox = el('div', 'trainbox');
+      const tHead = el('div', 'trainbox-head');
+      centerDot = el('i', 'net-live-dot');
+      centerDot.setAttribute('aria-hidden', 'true');
+      tHead.append(centerDot, el('b', null, 'Training'), Help.btn('training', 'sm'));
+      centerStat = el('span', 'counter', statTxt());
+      centerStat.setAttribute('role', 'status');
+      tHead.appendChild(centerStat);
+      trainBox.appendChild(tHead);
+
+      const tRow = el('div', 'trainbox-row');
+      const tBtns = el('div', 'trainbox-btns');
+      centerToggle = el('button', 'btn primary train-btn', trainLabel());
+      centerToggle.type = 'button';
+      centerToggle.dataset.spot = 'train';
+      centerToggle.addEventListener('click', () => {
+        if (net.diverged) { reinitNet(); return; }
+        if (training) pauseTraining(); else startTraining();
+      });
+      const centerReset = el('button', 'btn sm', '↺ Netz zurücksetzen');
+      centerReset.type = 'button';
+      centerReset.addEventListener('click', reinitNet);
+      tBtns.append(centerToggle, centerReset);
+      const sparkWrap = el('div', 'trainbox-spark');
+      sparkWrap.appendChild(el('span', 'trainbox-spark-lab', 'Fehler'));
+      centerSpark = el('div', 'spark-host');
+      sparkWrap.appendChild(centerSpark);
+      tRow.append(tBtns, sparkWrap);
+      trainBox.appendChild(tRow);
+      center.appendChild(trainBox);
+
+      const inDim = net.C * net.d;
+      const paramCount = data.vocab.length * net.d + inDim * net.H + net.H + net.H * data.vocab.length + data.vocab.length;
+      const archRow = el('div', 'net-arch');
+      archRow.append(
+        el('span', 'arch-num', inDim + ' → ' + net.H + ' → ' + deInt(data.vocab.length)),
+        el('span', 'small muted', deInt(paramCount) + ' Zahlen · ' + deInt(data.pairs.length) + ' Beispiele')
+      );
+      netBtn = el('button', 'btn sm', '🕸 Netz-Bild');
+      netBtn.type = 'button';
+      netBtn.addEventListener('click', () => panelCtrl.reveal('net'));
+      archRow.appendChild(netBtn);
+      center.appendChild(archRow);
+      if (!texts.length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – öffne oben „Textwelten“.'));
 
       const items = [
-        {
-          id: 'embed', label: 'Embedding', cat: 'origin', hint: 'Schritt 1 + 2', manual: true, render: renderEmbedNode,
-          info: { title: 'Wie wird aus einem Wort eine Zahl?', text: 'Das Netz kennt keine Buchstaben. Jedes Wort hat eine eigene Zahlenreihe, die beim Training immer wieder angepasst wird. Ähnliche Wörter bekommen mit der Zeit ähnliche Zahlen.', icon: '🔢' }
-        },
-        {
-          id: 'hidden', label: 'Hidden-Schicht', cat: 'context', hint: 'Schritt 3', manual: true, render: renderHiddenNode,
-          info: { title: 'Was passiert in der Mitte?', text: 'Die Zahlen aller Kontextwörter werden zusammengerechnet und zu ' + net.H + ' neuen Zahlen vermischt. Das ist die "versteckte" Schicht — niemand kann ihr ansehen, was sie bedeutet.', icon: '📦' }
-        },
-        {
-          id: 'output', label: 'Ausgabe & Wahrscheinlichkeiten', cat: 'candidates', hint: 'Schritt 4', manual: true, render: renderOutputNode,
-          info: { title: 'Wie wird daraus ein Wort?', text: 'Aus den ' + net.H + ' Zahlen wird für jedes Wort im Vokabular ein Wert berechnet und in Prozent umgerechnet. Das Netz würfelt dann aus dieser Liste — genau wie in Phase 1 und 2.', icon: '📊' }
-        },
-        {
-          id: 'train', label: 'Training', cat: 'random', hint: 'Schritt 5', manual: true, render: renderTrainNode,
-          info: { title: 'Wie lernt das Netz?', text: 'Durch Raten und Korrigieren. Es sagt ein Wort voraus, vergleicht mit dem echten Wort und verschiebt danach alle seine Zahlen ein winziges Stück. Das ist alles, was "Lernen" bei einer KI bedeutet.', icon: '🏋️' }
-        },
-        {
-          id: 'net', label: 'Das Netz von innen', cat: 'net', hint: 'Neuronen & Kanten', wide: true, manual: true, render: renderNetNode,
-          info: {
-            title: 'Das hier IST das Netz — kein Schaubild',
-            text: 'Links ' + inDim + ' Eingangs-Zahlen (' + net.C + ' Kontextwörter × ' + net.d + '), in der Mitte die ' + net.H + ' Hidden-Neuronen, rechts ' + deInt(data.vocab.length) + ' Ausgabe-Neuronen — eins pro Wort (gezeichnet sind die stärksten). Jede Linie ist eine echte Kante mit ihrem Gewicht aus dem Netz: warm = positiv, kühl = negativ, kräftig = großer Betrag. Klick auf ein Neuron, um seine Zahlen zu sehen, und lass das Training laufen — dann siehst du die Gewichte sich verändern.',
-            icon: '🕸'
-          }
-        }
+        { id: 'embed', label: 'Embedding', cat: 'origin', hint: '1', help: 'embedding', manual: true, render: renderEmbedNode },
+        { id: 'hidden', label: 'Hidden-Schicht', cat: 'context', hint: '2', help: 'hidden', manual: true, render: renderHiddenNode },
+        { id: 'output', label: 'Ausgabe', cat: 'candidates', hint: '3', help: 'ausgabe', manual: true, render: renderOutputNode },
+        { id: 'train', label: 'Training', cat: 'random', hint: '4', help: 'training', manual: true, render: renderTrainNode },
+        { id: 'net', label: 'Das Netz von innen', cat: 'net', wide: true, manual: true, open: false, help: 'netz', render: renderNetNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 3 });
       updateGenText();
@@ -465,6 +464,11 @@ Phases.register(3, {
     }
 
     render();
-    State.on('corpus-changed', () => { if (host.isConnected && bannerEl) bannerEl.hidden = false; });
+    State.on('corpus-changed', () => { if (bannerEl) bannerEl.hidden = false; });
+
+    return {
+      reveal: id => panelCtrl.reveal(id, true),
+      onHide: () => { pauseTraining(); stopGenPlay(); }
+    };
   }
 });

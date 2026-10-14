@@ -1,20 +1,42 @@
 /* Phase 1: freies Schreiben ohne Frage.
    Zentrum = Ablauf-Fließband + wachsender Text (jedes Wort in der Farbe seines Quelltexts);
-   rechts erklären drei Karten die Mechanik. */
+   rechts zeigen drei Karten, was die Maschine gerade tut. Erklärt wird hinter den ?-Knöpfen.
+   Meldet jedes geschriebene Wort an den Leitfaden (p1-word). */
 function sourceColor(si) {
   const hue = Math.round((si * 137.508) % 360);
   return 'hsl(' + hue + ' 60% 45%)';
 }
 function de1(x) { return x.toFixed(1).replace('.', ','); }
 
+/* Kleine Farblegende als Chips: Punkt + Titel + Anzahl. */
+function sourceChips(rows, more) {
+  const box = el('div', 'srcchips');
+  rows.forEach(r => {
+    const c = el('span', 'srcchip');
+    const d = el('i', 'dot'); d.style.background = r.color;
+    c.append(d, el('span', 'srcchip-t', r.label));
+    if (r.sub) c.appendChild(el('span', 'srcchip-n', r.sub));
+    box.appendChild(c);
+  });
+  if (more) box.appendChild(el('span', 'srcchip more', more));
+  return box;
+}
+
 Phases.register(1, {
   mount(host) {
     let session, n = 3, temp = 1, playing = false, timer = null, panelCtrl = null;
-    let textEl, cursor, playBtn, stepBtn, flowHost, legendHost;
+    let run = 0;   /* Wörter seit der letzten Änderung an Kontext/Zufall (für den Leitfaden) */
+    let textEl, cursor, playBtn, stepBtn, flowHost, legendHost, placeholder;
 
     function freshSession() {
       const sources = buildSources(State.activeTexts(), () => 1, () => new Map());
       return createSession(sources);
+    }
+
+    function usedCounts() {
+      const used = new Map();
+      session.steps.forEach(st => { if (st.word !== '.' && st.word !== ',') used.set(st.si, (used.get(st.si) || 0) + 1); });
+      return used;
     }
 
     /* Jedes Wort bekommt die Farbe des Textes, aus dem es geholt wurde — so sieht man sofort,
@@ -37,135 +59,142 @@ Phases.register(1, {
         prevSi = p.si;
       });
       textEl.appendChild(cursor);
+      placeholder.hidden = session.steps.length > 0;
+      textEl.hidden = !session.steps.length;
     }
 
     function updateLegend() {
       legendHost.replaceChildren();
-      const used = new Map();
-      session.steps.forEach(st => { if (st.word !== '.' && st.word !== ',') used.set(st.si, (used.get(st.si) || 0) + 1); });
+      const used = usedCounts();
       if (!used.size) return;
       const top = [...used.entries()].sort((a, b) => b[1] - a[1]);
-      legendHost.appendChild(el('p', 'small muted', 'Farbe = aus welchem Text das Wort kommt (' + used.size + ' Texte beteiligt):'));
-      legendHost.appendChild(Info.legend(top.slice(0, 5).map(([si, c]) => ({
-        color: sourceColor(si), label: session.sources[si].doc.title, sub: c + ' Wörter'
-      }))));
-      if (top.length > 5) legendHost.appendChild(el('p', 'small muted', '… und ' + (top.length - 5) + ' weitere Texte.'));
+      legendHost.appendChild(sourceChips(
+        top.slice(0, 4).map(([si, c]) => ({ color: sourceColor(si), label: session.sources[si].doc.title, sub: String(c) })),
+        top.length > 4 ? '+ ' + (top.length - 4) + ' Texte' : ''
+      ));
     }
 
     function updateFlow() {
       const started = session.steps.length > 0;
       Flow.render(flowHost, [
-        { id: 'ctx', label: 'Letzte ' + n + ' Wörter', sub: 'das Kontextfenster', cat: 'context', active: started },
-        { id: 'cand', label: 'In Texten nachsehen', sub: 'was stand dahinter?', cat: 'candidates', active: started },
-        { id: 'cand2', target: 'cand', label: 'Würfeln', sub: 'je häufiger, desto wahrscheinlicher', cat: 'random', active: started },
-        { id: 'origin', label: 'Wort anhängen', sub: 'und von vorn', cat: 'origin', active: started }
-      ], { onPick: id => panelCtrl.reveal(id), loop: 'Diese vier Schritte laufen für jedes einzelne Wort neu.' });
+        { id: 'ctx', label: n + (n === 1 ? ' Wort' : ' Wörter'), sub: 'anschauen', cat: 'context', active: started },
+        { id: 'cand', label: 'Nachsehen', sub: 'was kam danach?', cat: 'candidates', active: started },
+        { id: 'cand2', target: 'cand', label: 'Würfeln', sub: 'nach Häufigkeit', cat: 'random', active: started },
+        { id: 'origin', label: 'Anhängen', sub: 'und von vorn', cat: 'origin', active: started }
+      ], { onPick: id => panelCtrl.reveal(id), help: 'ablauf' });
     }
 
     function doStep() {
       if (!State.activeTexts().length) return false;
       const C = step(session, n, temp);
       if (!C) { stopPlay(); return false; }
+      run++;
       updateText();
       updateLegend();
+      if (panelCtrl.isOpen('ctx') && live.ctx) live.ctx();
+      if (panelCtrl.isOpen('cand') && live.cand) live.cand();
       panelCtrl.refreshAll();
+      Flow.pulse(flowHost, 380);
+      Guide.did('p1-word', { n, temp, run });
       if (session.steps.length >= 400) stopPlay();
       return true;
     }
 
+    function syncPlay() {
+      if (!playBtn) return;
+      playBtn.textContent = playing ? '❚❚ Pause' : (session.steps.length ? '▶ Weiterschreiben' : '▶ Schreiben starten');
+      playBtn.classList.toggle('playing', playing);
+    }
     function startPlay() {
       if (playing || !State.activeTexts().length) return;
       playing = true;
-      playBtn.textContent = '⏸ Pause';
+      syncPlay();
       updateFlow();
       timer = setInterval(() => { if (!doStep()) stopPlay(); }, 550);
     }
     function stopPlay() {
       playing = false;
-      if (playBtn) playBtn.textContent = session.steps.length ? '▶ Weiter schreiben' : '▶ Schreiben starten';
       if (timer) { clearInterval(timer); timer = null; }
+      syncPlay();
     }
 
-    function renderCtxNode(container) {
-      container.replaceChildren();
-      /* Streifen: die letzten Tokens, das Kontextfenster farbig umrandet.
-         Satzzeichen zählen für das Fenster mit — deshalb hier nicht wegfiltern, nur lesbar beschriften. */
+    /* Kontext- und Kandidatenkarte tragen Regler. Würden sie bei jedem Wort neu gebaut, wäre der
+       Regler mitten im Ziehen weg (dasselbe Problem wie der Stopp-Knopf in Phase 3). Deshalb sind
+       beide manual und hinterlegen in live[id] eine Funktion, die nur die Anzeige auffrischt. */
+    const live = {};
+
+    function paintStrip(strip) {
+      strip.replaceChildren();
+      /* Die letzten Tokens, das Kontextfenster farbig umrandet. Satzzeichen zählen für das
+         Fenster mit — deshalb hier nicht wegfiltern, nur lesbar beschriften. */
       const tail = session.ctx.slice(-8);
       const k = Math.min(n, Math.max(0, session.ctx.length - 1));
-      const strip = el('div', 'ctxstrip');
       if (session.ctx.length <= 1) {
-        strip.appendChild(el('span', 'ctxtok inwin', '(Satzanfang)'));
+        strip.appendChild(el('span', 'ctxtok inwin', 'Satzanfang'));
       } else {
         tail.forEach((w, i) => {
           const inWin = i >= tail.length - k;
-          const label = w === '.' ? '(Satzende)' : (w === ',' ? ',' : showWord(w));
+          const label = w === '.' ? '·' : (w === ',' ? ',' : showWord(w));
           strip.appendChild(el('span', 'ctxtok' + (inWin ? ' inwin' : ''), label));
         });
       }
       strip.appendChild(el('span', 'flow-arrow', '→'));
       strip.appendChild(el('span', 'ctxtok next', '?'));
-      container.appendChild(strip);
-      container.appendChild(el('p', 'small muted', k
-        ? 'Nur die ' + k + ' farbig umrandeten Wörter zählen. Alles davor hat die KI schon vergessen.'
-        : 'Die KI startet an einem Satzanfang.'));
+    }
 
-      const sl = el('div', 'slider');
-      const lab = el('label');
-      const out = el('output', null, String(n));
-      lab.append(document.createTextNode('Kontextlänge (n-Gramm)'), out);
-      const inp = el('input');
-      inp.type = 'range'; inp.min = '1'; inp.max = '6'; inp.step = '1'; inp.value = String(n);
-      inp.addEventListener('input', () => {
-        n = parseInt(inp.value, 10);
-        out.textContent = String(n);
-        panelCtrl.refresh('ctx');
-        panelCtrl.refresh('cand');
-        updateFlow();
+    function renderCtxNode(container) {
+      container.replaceChildren();
+      const strip = el('div', 'ctxstrip');
+      container.appendChild(strip);
+      paintStrip(strip);
+      const sl = Info.slider({
+        label: 'Kontextfenster', min: 1, max: 6, step: 1, value: n, spot: 'nslider',
+        fmt: v => v + (v === 1 ? ' Wort' : ' Wörter'), ends: ['kurz', 'lang'],
+        onInput: v => {
+          n = v; run = 0;
+          paintStrip(strip);
+          if (live.cand) live.cand();
+          updateFlow();
+        }
       });
-      sl.append(lab, inp);
-      container.appendChild(sl);
-      container.appendChild(Info.note('Mehr Kontext = der Text klingt runder, aber die KI findet seltener eine Fortsetzung und fängt öfter einen neuen Satz an. Probier 1 gegen 6!', '🔬'));
+      container.appendChild(sl.el);
+      live.ctx = () => { if (strip.isConnected) paintStrip(strip); };
     }
 
     function renderCandNode(container) {
       container.replaceChildren();
-      const C = candidates(session, n, temp);
-      const info = el('p', 'small');
-      if (C.level === 0) {
-        info.textContent = 'Kein passender Anschluss gefunden — die KI beginnt einen neuen Satz.';
-      } else {
-        const words = session.ctx.slice(-C.level).filter(w => w !== '.').map(showWord).join(' ');
-        info.append('In deinen Texten steht hinter „');
-        info.appendChild(el('b', null, words || 'Satzanfang'));
-        info.append('“:');
-      }
-      container.appendChild(info);
+      const info = el('p', 'card-line');
       const heatHost = el('div');
-      container.appendChild(heatHost);
-      Heat.render(heatHost, C.list.map(a => ({ word: a.word, label: showWord(a.word), p: a.p })), { maxRows: 7, accent: 'var(--cat-candidates)' });
-
-      const sl = el('div', 'slider');
-      const lab = el('label');
-      const out = el('output', null, de1(temp));
-      lab.append(document.createTextNode('Zufall'), out);
-      const inp = el('input');
-      inp.type = 'range'; inp.min = '0'; inp.max = '2'; inp.step = '0.1'; inp.value = String(temp);
-      inp.addEventListener('input', () => { temp = parseFloat(inp.value); out.textContent = de1(temp); panelCtrl.refresh('cand'); });
-      sl.append(lab, inp);
-      container.appendChild(sl);
-      container.appendChild(Info.note('Zufall 0: Die KI nimmt immer das wahrscheinlichste Wort. Bei echten Sprachmodellen heißt dieser Regler Temperatur.', '🌡️'));
+      container.append(info, heatHost);
+      function paint() {
+        const C = candidates(session, n, temp);
+        info.replaceChildren();
+        if (C.level === 0) {
+          info.append(el('span', 'card-line-ico', '↩'), document.createTextNode('Kein Anschluss – neuer Satz.'));
+        } else {
+          const words = session.ctx.slice(-C.level).filter(w => w !== '.').map(showWord).join(' ');
+          info.append(document.createTextNode('Nach „'), el('b', null, words || 'Satzanfang'), document.createTextNode('“ kam in deinen Texten:'));
+        }
+        Heat.render(heatHost, C.list.map(a => ({ word: a.word, label: showWord(a.word), p: a.p })), { maxRows: 6, accent: 'var(--cat-candidates)' });
+      }
+      paint();
+      const sl = Info.slider({
+        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp', help: 'zufall',
+        fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
+        onInput: v => { temp = Math.round(v * 10) / 10; run = 0; paint(); }
+      });
+      container.appendChild(sl.el);
+      live.cand = () => { if (heatHost.isConnected) paint(); };
     }
 
     function renderOriginNode(container) {
       container.replaceChildren();
-      const used = new Map();
-      session.steps.forEach(st => { if (st.word !== '.' && st.word !== ',') used.set(st.si, (used.get(st.si) || 0) + 1); });
-      if (!used.size) { container.appendChild(el('p', 'small muted', 'Noch keine Wörter erzeugt. Starte das Schreiben.')); return; }
+      const used = usedCounts();
+      if (!used.size) { container.appendChild(el('p', 'card-empty', 'Noch keine Wörter.')); return; }
 
-      container.appendChild(el('p', 'small', 'So viele Wörter kamen aus welchem Text:'));
       const total = [...used.values()].reduce((a, b) => a + b, 0);
       const rows = el('div', 'originrows');
-      [...used.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).forEach(([si, count]) => {
+      [...used.entries()].sort((a, b) => b[1] - a[1]).slice(0, 6).forEach(([si, count]) => {
         const row = el('div', 'originrow');
         const name = el('span', 'small', session.sources[si].doc.title);
         const bar = el('div', 'bar');
@@ -177,57 +206,53 @@ Phases.register(1, {
         rows.appendChild(row);
       });
       container.appendChild(rows);
-      container.appendChild(Info.note(used.size + ' verschiedene Texte haben mitgeschrieben. Oben im Text siehst du dieselben Farben.', '🧵'));
+      container.appendChild(el('p', 'card-line muted', used.size + (used.size === 1 ? ' Text hat' : ' Texte haben') + ' mitgeschrieben.'));
     }
 
     function render() {
+      live.ctx = live.cand = null;
       session = freshSession();
       playing = false;
+      run = 0;
       if (timer) { clearInterval(timer); timer = null; }
 
       const center = el('div', 'box machine-center');
-      center.appendChild(el('p', 'eyebrow', 'Phase 1 · Frei schreiben'));
-      center.appendChild(el('h2', null, 'Die KI schreibt ohne Frage'));
+      center.appendChild(Info.centerHead('Phase 1 · Frei schreiben', 'Die KI schreibt ohne Frage', 'p1'));
 
       flowHost = el('div', 'flow-host');
       center.appendChild(flowHost);
 
+      const paper = el('div', 'paper');
+      placeholder = el('p', 'paper-ph', 'Hier schreibt gleich die KI …');
       textEl = el('p', 'bot-text');
       cursor = el('span', 'cursor');
       textEl.appendChild(cursor);
-      center.appendChild(textEl);
+      paper.append(placeholder, textEl);
+      center.appendChild(paper);
 
       legendHost = el('div', 'center-legend');
       center.appendChild(legendHost);
 
       const controls = el('div', 'machine-controls');
-      playBtn = el('button', 'btn primary', '▶ Schreiben starten');
+      playBtn = el('button', 'btn primary big', '▶ Schreiben starten');
       playBtn.type = 'button';
-      stepBtn = el('button', 'btn', 'Ein Wort weiter');
+      playBtn.dataset.spot = 'play';
+      stepBtn = el('button', 'btn', '+1 Wort');
       stepBtn.type = 'button';
-      const resetBtn = el('button', 'btn', 'Neu starten');
+      const resetBtn = el('button', 'btn', '↺ Neu starten');
       resetBtn.type = 'button';
       controls.append(playBtn, stepBtn, resetBtn);
       center.appendChild(controls);
-      center.appendChild(Info.box('Was passiert hier?', 'Keine Frage, kein Thema: Die KI hängt einfach immer das Wort an, das in deinen Texten oft nach den letzten Wörtern stand. Darum klingt es stellenweise richtig und ergibt trotzdem keinen Sinn.', { icon: '✍️' }));
+      if (!State.activeTexts().length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – öffne oben „Textwelten“.'));
 
       playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
       stepBtn.addEventListener('click', () => { stopPlay(); doStep(); updateFlow(); });
       resetBtn.addEventListener('click', () => render());
 
       const items = [
-        {
-          id: 'ctx', label: 'Kontextfenster', cat: 'context', hint: 'Schritt 1', render: renderCtxNode,
-          info: { title: 'Worauf schaut die KI gerade?', text: 'Nur auf die letzten paar Wörter — nicht auf den ganzen Text. Dieses kleine Guckloch heißt Kontextfenster. Wie groß es ist, stellst du mit dem Regler ein.', icon: '👀' }
-        },
-        {
-          id: 'cand', label: 'Kandidaten & Zufall', cat: 'candidates', hint: 'Schritt 2 + 3', render: renderCandNode,
-          info: { title: 'Wie wird das nächste Wort gewählt?', text: 'Die KI sucht alle Stellen in deinen Texten, an denen genau diese Wörter stehen, und sammelt, was dort dahinter kam. Je öfter ein Wort dabei ist, desto größer sein Balken — und desto wahrscheinlicher wird es gewürfelt.', icon: '🎲' }
-        },
-        {
-          id: 'origin', label: 'Herkunft', cat: 'origin', hint: 'Schritt 4', render: renderOriginNode,
-          info: { title: 'Wer hat das geschrieben?', text: 'Kein Wort ist von der KI erfunden. Jedes einzelne stammt aus einem deiner Texte — die KI klebt nur Bruchstücke zusammen.', icon: '🧩' }
-        }
+        { id: 'ctx', label: 'Kontextfenster', cat: 'context', hint: '1', help: 'kontext', manual: true, render: renderCtxNode },
+        { id: 'cand', label: 'Kandidaten & Zufall', cat: 'candidates', hint: '2·3', help: 'kandidaten', manual: true, render: renderCandNode },
+        { id: 'origin', label: 'Herkunft', cat: 'origin', hint: '4', help: 'herkunft', render: renderOriginNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 1 });
       updateText();
@@ -236,6 +261,11 @@ Phases.register(1, {
     }
 
     render();
-    State.on('corpus-changed', () => { if (host.isConnected) render(); });
+    State.on('corpus-changed', () => render());
+
+    return {
+      reveal: id => panelCtrl.reveal(id, true),
+      onHide: stopPlay
+    };
   }
 });
