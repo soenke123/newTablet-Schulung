@@ -187,7 +187,7 @@ const Help = (() => {
       box.innerHTML = '<svg viewBox="0 0 220 80" aria-hidden="true">'
         + '<circle cx="40" cy="30" r="5" fill="var(--t-tiere)"/><circle cx="58" cy="44" r="5" fill="var(--t-tiere)"/><circle cx="30" cy="52" r="5" fill="var(--t-tiere)"/>'
         + '<text x="48" y="22" font-size="11" fill="var(--ink)">Hund</text><text x="66" y="56" font-size="11" fill="var(--ink)">Katze</text>'
-        + '<circle cx="160" cy="26" r="5" fill="var(--t-weltall)"/><circle cx="178" cy="44" r="5" fill="var(--t-weltall)"/><circle cx="150" cy="50" r="5" fill="var(--t-weltall)"/>'
+        + '<circle cx="160" cy="26" r="5" fill="var(--t-sonne)"/><circle cx="178" cy="44" r="5" fill="var(--t-sonne)"/><circle cx="150" cy="50" r="5" fill="var(--t-sonne)"/>'
         + '<text x="120" y="20" font-size="11" fill="var(--ink)">Rakete</text><text x="132" y="68" font-size="11" fill="var(--ink)">Mond</text>'
         + '<path d="M80 40 Q110 30 140 38" fill="none" stroke="var(--muted)" stroke-dasharray="3 4"/><text x="92" y="30" font-size="10" fill="var(--muted)">weit weg</text>'
         + '</svg>';

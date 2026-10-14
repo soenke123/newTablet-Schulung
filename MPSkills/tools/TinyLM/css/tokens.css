@@ -41,10 +41,12 @@
   --src-c: #C9A227;
 
   /* Themenfarben der Textwelten (Drawer + Wortkarte). */
+  --t-sonne: #7C4DFF;
   --t-tiere: #E39A2A;
+  --t-ki: #3B7B8C;
+  --t-schule: #C2477E;
+  --t-berufe: #5F8F2E;
   --t-meer: #14A18F;
-  --t-weltall: #7C4DFF;
-  --t-computer: #3B7B8C;
   --t-eigen: #7b8a86;
 
   --mark-exact: #FBE2A6;
@@ -73,7 +75,7 @@
     --cat-meaning: #7FA8FF; --cat-meaning-tint: #1E2F5A;
     --cat-net: #B9C3D6; --cat-net-tint: #2A2F3D;
     --src-a: #E08058; --src-b: #5FA3B0; --src-c: #E0C256;
-    --t-tiere: #F2B354; --t-meer: #4FD6C3; --t-weltall: #A88BFF; --t-computer: #5FA3B0; --t-eigen: #a4a9bd;
+    --t-sonne: #A88BFF; --t-tiere: #F2B354; --t-ki: #5FA3B0; --t-schule: #E57AA8; --t-berufe: #93C45A; --t-meer: #4FD6C3; --t-eigen: #a4a9bd;
     --mark-exact: #5C4620; --mark-sim: #4A2436; --mark-sim-line: #FF8FB8;
     --good: #35d39a; --bad: #FF6B5C;
     color-scheme: dark;
@@ -92,7 +94,7 @@
   --cat-meaning: #7FA8FF; --cat-meaning-tint: #1E2F5A;
   --cat-net: #B9C3D6; --cat-net-tint: #2A2F3D;
   --src-a: #E08058; --src-b: #5FA3B0; --src-c: #E0C256;
-  --t-tiere: #F2B354; --t-meer: #4FD6C3; --t-weltall: #A88BFF; --t-computer: #5FA3B0; --t-eigen: #a4a9bd;
+  --t-sonne: #A88BFF; --t-tiere: #F2B354; --t-ki: #5FA3B0; --t-schule: #E57AA8; --t-berufe: #93C45A; --t-meer: #4FD6C3; --t-eigen: #a4a9bd;
   --mark-exact: #5C4620; --mark-sim: #4A2436; --mark-sim-line: #FF8FB8;
   --good: #35d39a; --bad: #FF6B5C;
   color-scheme: dark;

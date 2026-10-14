@@ -5,7 +5,7 @@
 const SRC = ['A', 'B', 'C'];
 const srcVar = i => 'var(--src-' + ['a', 'b', 'c'][i] + ')';
 const CANNED = 'Dazu finde ich nichts. Ich kenne nur Texte, die du gerade ausgewählt hast.';
-const SUGGEST2 = ['Was frisst ein Welpe?', 'Wie findet ein Schiff den Weg?', 'Was macht ein Astronaut im Weltall?', 'Wie lernt eine KI?'];
+const SUGGEST2 = ['Ist Pluto ein Planet?', 'Was frisst eine Kornnatter?', 'Wie lernt eine KI?', 'Was macht die Ärztin?'];
 
 function buildPhase2Sources(R, k) {
   const top = R.results.filter(r => r.score > 0).slice(0, k || 3);
