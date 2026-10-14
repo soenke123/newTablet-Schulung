@@ -1,0 +1,66 @@
+/* Textauswahl-Drawer: schlichtes Utility-Panel, klappt von oben herein. Kein Teil des Orbit-Dekonstruktionsmusters. */
+.corpus-btn { display: flex; align-items: center; gap: 8px; }
+.corpus-btn .count { font-family: var(--font-mono); font-size: 0.78rem; background: var(--soft); padding: 2px 7px; border-radius: 999px; }
+
+.drawer-backdrop {
+  position: fixed; inset: 0; background: color-mix(in srgb, var(--ink) 35%, transparent);
+  z-index: 29; opacity: 0; pointer-events: none; transition: opacity 0.18s ease;
+}
+.drawer-backdrop.open { opacity: 1; pointer-events: auto; }
+
+.drawer {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 30;
+  background: var(--surface); border-bottom: 1px solid var(--line);
+  border-radius: 0 0 var(--r) var(--r);
+  max-height: 0; overflow: hidden; transition: max-height 0.22s ease;
+  box-shadow: 0 16px 40px -20px color-mix(in srgb, var(--ink) 40%, transparent);
+}
+.drawer.open { max-height: 86vh; overflow-y: auto; }
+.drawer-inner { max-width: 1100px; margin: 0 auto; padding: 18px 20px 26px; }
+.drawer-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+.drawer-head p { max-width: 54ch; color: var(--muted); font-size: 0.92rem; margin-top: 4px; }
+
+.world-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 14px; }
+.world { border: 1px solid var(--line); border-radius: 10px; padding: 12px; background: var(--bg); }
+.world-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; margin-bottom: 8px; }
+.world-title { display: flex; align-items: center; gap: 8px; font-weight: 800; font-family: var(--font-display); }
+.world-toggle { font-size: 0.78rem; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 0; }
+.text-item { border-bottom: 1px solid var(--line); }
+.text-item:last-child { border-bottom: 0; }
+.text-row { display: flex; align-items: flex-start; gap: 8px; padding: 5px 2px; font-size: 0.9rem; }
+.text-row input[type=checkbox] { margin-top: 4px; accent-color: var(--ink); flex: none; }
+.text-row label { cursor: pointer; flex: 1; min-width: 0; }
+.text-tag {
+  font-size: 0.68rem; font-weight: 700; margin-left: 6px; padding: 1px 6px; border-radius: 999px;
+  background: var(--soft); color: var(--muted); white-space: nowrap;
+}
+.text-tag.edited { background: var(--cat-origin-tint); color: var(--ink); }
+.text-open {
+  font: inherit; font-size: 0.74rem; font-weight: 700; color: var(--muted); background: none;
+  border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; cursor: pointer; flex: none;
+}
+.text-open:hover { color: var(--ink); border-color: var(--ink); }
+.own-del { font: inherit; font-size: 0.78rem; color: var(--muted); background: none; border: 0; cursor: pointer; flex: none; }
+.own-del:hover { color: var(--bad); text-decoration: underline; }
+
+/* Lesen & bearbeiten */
+.text-edit { display: flex; flex-direction: column; gap: 8px; padding: 8px 2px 12px 26px; }
+.text-edit textarea {
+  font: inherit; font-size: 0.92rem; line-height: 1.6; padding: 0.6rem 0.8rem; border-radius: 10px;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical;
+}
+.text-edit .textin { font-weight: 700; }
+.text-edit-btns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.text-edit-btns .btn { font-size: 0.82rem; padding: 0.35rem 0.8rem; }
+
+.own-form { margin-top: 16px; border-top: 1px dashed var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.own-form .row { display: flex; gap: 8px; flex-wrap: wrap; }
+.own-form input[type=text], .own-form select {
+  padding: 0.45rem 0.75rem; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface);
+}
+.own-form input[type=text] { flex: 1 1 14rem; }
+.own-form textarea {
+  padding: 0.6rem 0.8rem; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface);
+  min-height: 5.5rem; resize: vertical;
+}
+.own-msg { font-size: 0.82rem; color: var(--muted); }

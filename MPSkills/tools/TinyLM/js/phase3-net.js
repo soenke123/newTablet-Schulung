@@ -1,0 +1,140 @@
+/* Handgebautes Mini-Netz: Embedding -> Concat -> Hidden (tanh) -> Softmax. Bengio-2003-Stil, bewusst ohne Attention.
+   Zeitgeschedultes Training (trainBudget) läuft in phase3.js über requestAnimationFrame. */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function clampG(g, clip) { return g > clip ? clip : (g < -clip ? -clip : g); }
+
+function createNet(vocabSize, C, opts) {
+  const o = Object.assign({ d: 16, H: 40, seed: 7, lr: 0.08, clip: 5 }, opts || {});
+  const rnd = mulberry32(o.seed);
+  function randInit(n, fanIn) {
+    const scale = 1 / Math.sqrt(fanIn);
+    const arr = new Float64Array(n);
+    for (let i = 0; i < n; i++) arr[i] = (rnd() * 2 - 1) * scale;
+    return arr;
+  }
+  const d = o.d, H = o.H, inDim = C * d;
+  return {
+    vocabSize, C, d, H, lr: o.lr, clip: o.clip,
+    embed: randInit(vocabSize * d, d),
+    W1: randInit(inDim * H, inDim),
+    b1: new Float64Array(H),
+    W2: randInit(H * vocabSize, H),
+    b2: new Float64Array(vocabSize),
+    step: 0, lossHistory: [], diverged: false
+  };
+}
+
+function forward(net, ctxIds) {
+  const { d, H, vocabSize, C } = net;
+  const inDim = C * d;
+  const x = new Float64Array(inDim);
+  for (let c = 0; c < C; c++) {
+    const id = ctxIds[c];
+    for (let j = 0; j < d; j++) x[c * d + j] = net.embed[id * d + j];
+  }
+  const h = new Float64Array(H);
+  for (let k = 0; k < H; k++) {
+    let s = net.b1[k];
+    for (let i = 0; i < inDim; i++) s += net.W1[i * H + k] * x[i];
+    h[k] = Math.tanh(s);
+  }
+  const logits = new Float64Array(vocabSize);
+  for (let v = 0; v < vocabSize; v++) {
+    let s = net.b2[v];
+    for (let k = 0; k < H; k++) s += net.W2[k * vocabSize + v] * h[k];
+    logits[v] = s;
+  }
+  return { x, h, logits };
+}
+
+function softmaxTemp(logits, temp) {
+  const t = Math.max(0.05, temp == null ? 1 : temp);
+  const n = logits.length;
+  let mx = -Infinity;
+  for (let i = 0; i < n; i++) if (logits[i] > mx) mx = logits[i];
+  const out = new Float64Array(n);
+  let sum = 0;
+  for (let i = 0; i < n; i++) { const e = Math.exp((logits[i] - mx) / t); out[i] = e; sum += e; }
+  for (let i = 0; i < n; i++) out[i] /= sum;
+  return out;
+}
+
+function trainStep(net, ctxIds, targetId) {
+  const { d, H, vocabSize, C, lr, clip } = net;
+  const inDim = C * d;
+  const { x, h, logits } = forward(net, ctxIds);
+
+  let mx = -Infinity;
+  for (let v = 0; v < vocabSize; v++) if (logits[v] > mx) mx = logits[v];
+  const probs = new Float64Array(vocabSize);
+  let sum = 0;
+  for (let v = 0; v < vocabSize; v++) { const e = Math.exp(logits[v] - mx); probs[v] = e; sum += e; }
+  for (let v = 0; v < vocabSize; v++) probs[v] /= sum;
+  const loss = -Math.log(Math.max(probs[targetId], 1e-9));
+  if (!isFinite(loss)) return loss;
+
+  const dLogits = probs;
+  dLogits[targetId] -= 1;
+
+  const dh = new Float64Array(H);
+  for (let k = 0; k < H; k++) {
+    let s = 0;
+    for (let v = 0; v < vocabSize; v++) s += net.W2[k * vocabSize + v] * dLogits[v];
+    dh[k] = s;
+  }
+  for (let k = 0; k < H; k++) {
+    for (let v = 0; v < vocabSize; v++) {
+      net.W2[k * vocabSize + v] -= lr * clampG(h[k] * dLogits[v], clip);
+    }
+  }
+  for (let v = 0; v < vocabSize; v++) net.b2[v] -= lr * clampG(dLogits[v], clip);
+
+  const dHPre = new Float64Array(H);
+  for (let k = 0; k < H; k++) dHPre[k] = dh[k] * (1 - h[k] * h[k]);
+
+  const dx = new Float64Array(inDim);
+  for (let i = 0; i < inDim; i++) {
+    let s = 0;
+    for (let k = 0; k < H; k++) s += net.W1[i * H + k] * dHPre[k];
+    dx[i] = s;
+  }
+  for (let i = 0; i < inDim; i++) {
+    for (let k = 0; k < H; k++) {
+      net.W1[i * H + k] -= lr * clampG(x[i] * dHPre[k], clip);
+    }
+  }
+  for (let k = 0; k < H; k++) net.b1[k] -= lr * clampG(dHPre[k], clip);
+
+  for (let c = 0; c < C; c++) {
+    const id = ctxIds[c];
+    for (let j = 0; j < d; j++) {
+      net.embed[id * d + j] -= lr * clampG(dx[c * d + j], clip);
+    }
+  }
+  return loss;
+}
+
+/* Trainiert, bis das Zeitbudget (ms) aufgebraucht ist. Bricht bei NaN/Inf sofort ab (net.diverged). */
+function trainBudget(net, pairs, budgetMs) {
+  if (!pairs.length) return { n: 0, nanHit: false, avgLoss: null };
+  const start = performance.now();
+  let n = 0, lossSum = 0, nanHit = false;
+  while (performance.now() - start < budgetMs) {
+    const p = pairs[Math.floor(Math.random() * pairs.length)];
+    const loss = trainStep(net, p.ctx, p.target);
+    if (!isFinite(loss)) { nanHit = true; net.diverged = true; break; }
+    lossSum += loss; n++; net.step++;
+  }
+  if (n) {
+    net.lossHistory.push(lossSum / n);
+    if (net.lossHistory.length > 300) net.lossHistory.shift();
+  }
+  return { n, nanHit, avgLoss: n ? lossSum / n : null };
+}

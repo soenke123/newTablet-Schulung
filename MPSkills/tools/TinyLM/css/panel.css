@@ -1,0 +1,53 @@
+/* Zweispaltiges Layout: Zentrum links/oben, farbcodierte Erklär-Liste rechts (einzeln klappbar).
+   Darunter die breiten Karten (wide: true), z. B. die Wortkarte — die braucht die ganze Breite. */
+.panel-wrap { display: flex; flex-direction: column; gap: 14px; }
+.panel-wide { display: flex; flex-direction: column; gap: 12px; }
+.panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 24px; align-items: start; }
+.panel-center { position: sticky; top: 84px; }
+.panel-side { display: flex; flex-direction: column; gap: 10px; }
+.panel-list { display: flex; flex-direction: column; gap: 12px; }
+
+/* Leiste über der Liste: Überschrift + alle auf/zu */
+.panel-bar { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 0 2px; }
+.panel-bar-title { display: flex; flex-direction: column; line-height: 1.2; }
+.panel-bar-title b { font-family: var(--font-display); font-weight: 800; font-size: 1rem; }
+.panel-bar-sub { font-size: 0.76rem; color: var(--muted); }
+.panel-bar-btns { display: flex; gap: 6px; }
+.panel-bar-btn {
+  font: inherit; font-size: 0.76rem; font-weight: 700; color: var(--muted); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px;
+}
+.panel-bar-btn:hover { color: var(--ink); border-color: var(--ink); }
+
+.panel-item {
+  background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--cat-color);
+  border-radius: 12px; min-width: 0; overflow: hidden;
+}
+.panel-item-headrow { display: flex; align-items: center; gap: 4px; padding-right: 10px; }
+.panel-item-head {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; text-align: left;
+  background: transparent; border: 0; cursor: pointer; padding: 12px 4px 12px 14px; font: inherit;
+}
+.panel-item-head:hover h3 { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.panel-item-head h3 { font-size: 0.95rem; color: var(--cat-color); min-width: 0; }
+.panel-chev { color: var(--cat-color); font-size: 0.8rem; width: 0.8rem; flex: none; }
+.panel-item-hint {
+  font-size: 0.72rem; font-weight: 700; color: var(--cat-color); background: var(--cat-tint);
+  border-radius: 999px; padding: 1px 8px; flex: none;
+}
+.panel-solo {
+  font: inherit; font-size: 0.7rem; font-weight: 700; color: var(--muted); cursor: pointer;
+  background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; flex: none;
+}
+.panel-solo:hover { color: var(--ink); border-color: var(--ink); }
+.panel-item.closed { background: color-mix(in srgb, var(--cat-tint) 22%, var(--surface)); }
+.panel-item.closed .panel-item-head { padding-bottom: 12px; }
+.panel-item.flash { box-shadow: 0 0 0 3px var(--cat-tint); }
+
+.panel-item-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 0 16px 14px; }
+.panel-item-slot { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+@media (max-width: 980px) {
+  .panel { grid-template-columns: 1fr; }
+  .panel-center { position: static; }
+}

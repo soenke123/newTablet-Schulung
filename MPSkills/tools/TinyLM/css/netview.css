@@ -1,0 +1,41 @@
+/* Netz-Bild (netview.js): Werkzeugleiste + Canvas + Detailkarte zum Neuron + Zahlen-Steckbrief. */
+.net-box { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.net-tools {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  padding: 9px 11px; border-bottom: 1px solid var(--line); background: var(--surface);
+}
+.net-tools-lab { font-size: 0.82rem; font-weight: 700; color: var(--muted); }
+.net-scroll { overflow-x: auto; }
+.net-canvas { display: block; width: 100%; min-width: 620px; height: 520px; touch-action: pan-y; }
+.net-box > .small { padding: 7px 11px; border-top: 1px solid var(--line); background: var(--surface); }
+
+.net-detail-host { display: flex; flex-direction: column; gap: 10px; }
+.net-detail {
+  display: flex; flex-direction: column; gap: 8px;
+  background: color-mix(in srgb, var(--cat-tint, var(--soft)) 28%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--cat-color, var(--line)) 25%, var(--line));
+  border-radius: 10px; padding: 12px 14px;
+}
+.net-title { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; line-height: 1.1; letter-spacing: -0.01em; }
+.net-sec { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.net-sec h4 { font-family: var(--font-display); font-weight: 800; font-size: 0.84rem; margin: 0; color: var(--muted); }
+.net-rows { display: flex; flex-direction: column; gap: 3px; }
+.net-row { display: grid; grid-template-columns: minmax(0, 11rem) minmax(0, 1fr) 3.4rem; gap: 10px; align-items: center; }
+.net-row-lab { font-size: 0.85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.net-row-bar { height: 7px; }
+.net-row-val { font-family: var(--font-mono); font-size: 0.78rem; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* Steckbrief: wie viele Neuronen, wie viele Kanten, wie viele Zahlen insgesamt */
+.net-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 8px; }
+.net-fact {
+  display: flex; flex-direction: column; gap: 1px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px;
+}
+.net-fact-k { font-size: 0.76rem; color: var(--muted); font-weight: 700; }
+.net-fact-v { font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.net-fact-s { font-size: 0.74rem; color: var(--muted); }
+
+@media (max-width: 700px) {
+  .net-canvas { height: 460px; }
+  .net-row { grid-template-columns: minmax(0, 8rem) minmax(0, 1fr) 3.2rem; }
+}

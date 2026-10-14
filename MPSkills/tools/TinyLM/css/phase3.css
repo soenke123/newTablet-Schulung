@@ -1,0 +1,23 @@
+/* Netz-Visualisierung: Vektor-Swatches, Loss-Sparkline, Trainings-Banner, Trainings-Steuerung. */
+.swatchrow { display: flex; gap: 2px; flex-wrap: wrap; max-width: 260px; }
+.swatchcell { width: 14px; height: 14px; border-radius: 3px; display: inline-block; cursor: default; }
+.net-banner {
+  background: var(--soft); border-radius: 10px; padding: 10px 14px;
+  display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap; width: 100%;
+}
+.sparkline { display: block; width: 100%; height: 60px; }
+.spark-host { width: 100%; }
+.net-warn { color: var(--bad); font-weight: 700; }
+
+/* Trainings-Steuerung in der Zentrum-Karte: bleibt während des Trainings unangetastet,
+   damit "anhalten" jederzeit anklickbar ist (siehe Kopfkommentar in phase3.js). */
+.net-trainbar {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center;
+  background: var(--soft); border-radius: 999px; padding: 8px 14px;
+}
+.net-live-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); flex: none; }
+.net-live-dot.on { background: var(--cat-random); animation: netpulse 1s ease-in-out infinite; }
+@keyframes netpulse { 50% { opacity: 0.25; transform: scale(0.7); } }
+
+.net-arch { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; }
+.net-arch > .small:first-child { font-family: var(--font-mono); font-weight: 500; }
