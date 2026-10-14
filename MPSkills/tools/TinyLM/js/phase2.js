@@ -43,7 +43,8 @@ Phases.register(2, {
       if (mapCtl) mapCtl.destroy();
       mapCtl = WordMap.create(M, {
         highlight: () => (R && !canned) ? R.ql.filter(x => x.inMap).map(x => x.lemma) : [],
-        onSelect: () => Guide.did('p2-map')
+        onSelect: () => Guide.did('p2-map'),
+        texts: () => State.activeTexts()
       });
     }
 

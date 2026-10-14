@@ -85,7 +85,7 @@ const HELP = {
   },
   wortkarte: {
     title: 'Wortkarte', icon: '🗺️', cat: 'meaning',
-    text: 'Wörter mit ähnlichen Nachbarn landen nah beieinander. Was sie bedeuten, weiß die KI trotzdem nicht.',
+    text: 'Wörter mit ähnlichen Nachbarn landen nah beieinander. Bei den Paaren ist jeder Pfeil ein Unterschied wie spielt → spielte: gleiche Pfeile = gleicher Unterschied.',
     vis: { type: 'dots' }
   },
 

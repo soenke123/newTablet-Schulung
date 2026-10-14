@@ -205,8 +205,53 @@ const App = (() => {
 
   /* Welche Text-Editoren im Drawer gerade offen sind (nur UI-Zustand, nichts Gespeichertes). */
   const openEditors = new Set();
+  /* Welcher Reiter in „Textwelten“ offen ist (pro Gerät gemerkt). */
+  const TAB_STORE = 'tinylm-textwelt-reiter';
+  let drawerTab = (() => {
+    try { const t = localStorage.getItem(TAB_STORE); if (THEME_ORDER.includes(t)) return t; } catch (e) { /* egal */ }
+    return THEME_ORDER[0];
+  })();
 
-  /* Text lesen + bearbeiten: Titel, voller Text, Speichern, Original wiederherstellen, Entfernen. */
+  /* Wort-Unterschied zwischen Original und geänderter Fassung (LCS über Wörter).
+     Liefert [{w, op}] mit op = 'same' | 'add' | 'del'. */
+  function wordDiff(a, b) {
+    const A = a.split(/\s+/).filter(Boolean), B = b.split(/\s+/).filter(Boolean);
+    const n = A.length, m = B.length;
+    const L = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+    for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+      L[i][j] = A[i] === B[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+    const out = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (A[i] === B[j]) { out.push({ w: B[j], op: 'same' }); i++; j++; }
+      else if (L[i + 1][j] >= L[i][j + 1]) out.push({ w: A[i++], op: 'del' });
+      else out.push({ w: B[j++], op: 'add' });
+    }
+    while (i < n) out.push({ w: A[i++], op: 'del' });
+    while (j < m) out.push({ w: B[j++], op: 'add' });
+    return out;
+  }
+
+  /* Text eines Kärtchens: bei geänderten mitgelieferten Texten mit markierten Änderungen. */
+  function textBody(t) {
+    const p = el('p', 'tw-body');
+    const orig = t.edited ? Corpus.originalOf(t.id) : null;
+    if (!orig) { p.textContent = t.body; return p; }
+    /* Gleiche Art hintereinander zu einem Stück zusammenfassen, sonst flackert jede Lücke. */
+    const runs = [];
+    wordDiff(orig.body, t.body).forEach(d => {
+      const last = runs[runs.length - 1];
+      if (last && last.op === d.op) last.w += ' ' + d.w; else runs.push({ op: d.op, w: d.w });
+    });
+    runs.forEach((r, k) => {
+      if (k) p.appendChild(document.createTextNode(' '));
+      if (r.op === 'same') p.appendChild(document.createTextNode(r.w));
+      else p.appendChild(el(r.op === 'add' ? 'mark' : 'del', 'tw-chg', r.w));
+    });
+    return p;
+  }
+
+  /* Text bearbeiten: Titel, voller Text, Speichern/Abbrechen (Entfernen bei eigenen Texten). */
   function buildEditor(t) {
     const box = el('div', 'text-edit');
     const titleIn = el('input', 'textin');
@@ -216,7 +261,7 @@ const App = (() => {
     const ta = el('textarea');
     ta.value = t.body;
     ta.setAttribute('aria-label', 'Text von „' + t.title + '“');
-    ta.rows = Math.min(14, Math.max(5, Math.ceil(t.body.length / 70) + 1));
+    ta.rows = Math.min(14, Math.max(5, Math.ceil(t.body.length / 45) + 1));
     box.appendChild(ta);
 
     const count = el('p', 'own-msg');
@@ -241,12 +286,6 @@ const App = (() => {
     cancel.addEventListener('click', () => { openEditors.delete(t.id); renderDrawer(); });
     btns.appendChild(cancel);
 
-    if (t.edited) {
-      const reset = el('button', 'btn', 'Original wiederherstellen');
-      reset.type = 'button';
-      reset.addEventListener('click', () => { State.resetText(t.id); renderDrawer(); });
-      btns.appendChild(reset);
-    }
     if (t.own) {
       const del = el('button', 'own-del', 'Text entfernen');
       del.type = 'button';
@@ -257,9 +296,72 @@ const App = (() => {
     return box;
   }
 
+  /* Ein Text als Kärtchen: Haken (drin/raus), Titel, Zurücksetzen, Bearbeiten, ganzer Text. */
+  function textCard(t) {
+    const on = State.selectedIds.has(t.id);
+    const card = el('article', 'tw-card' + (on ? '' : ' off') + (t.edited ? ' edited' : ''));
+    const head = el('div', 'tw-card-head');
+    const cb = el('input'); cb.type = 'checkbox'; cb.checked = on;
+    const cid = 'txt-' + t.id.replace(':', '-');
+    cb.id = cid;
+    cb.addEventListener('change', () => {
+      card.classList.toggle('off', !cb.checked);
+      State.toggleText(t.id, cb.checked);
+    });
+    const label = el('label', 'tw-title');
+    label.htmlFor = cid;
+    const orig = t.edited ? Corpus.originalOf(t.id) : null;
+    label.appendChild(orig && orig.title !== t.title ? el('mark', 'tw-chg', t.title) : document.createTextNode(t.title));
+    head.append(cb, label);
+    card.appendChild(head);
+    const tools = el('div', 'tw-tools');
+    if (t.edited) tools.appendChild(el('span', 'tw-badge', 'verändert'));
+    if (t.edited) {
+      const reset = el('button', 'tw-btn tw-reset', '↺ Zurücksetzen');
+      reset.type = 'button';
+      reset.title = 'Originaltext wiederherstellen';
+      reset.addEventListener('click', () => { State.resetText(t.id); renderDrawer(); });
+      tools.appendChild(reset);
+    }
+    if (!openEditors.has(t.id)) {
+      const edit = el('button', 'tw-btn', '✎ Bearbeiten');
+      edit.type = 'button';
+      edit.addEventListener('click', () => { openEditors.add(t.id); renderDrawer(); });
+      tools.appendChild(edit);
+    }
+    card.appendChild(tools);
+    card.appendChild(openEditors.has(t.id) ? buildEditor(t) : textBody(t));
+    return card;
+  }
+
+  function ownForm() {
+    const form = el('form', 'own-form');
+    form.appendChild(el('h3', null, 'Eigenen Text hinzufügen'));
+    const title = el('input', 'textin'); title.type = 'text'; title.placeholder = 'Titel, z. B. „Bello im Weltall“';
+    const ta = el('textarea');
+    ta.placeholder = 'Ein paar ganze Sätze auf Deutsch …';
+    const msg = el('span', 'own-msg');
+    const submit = el('button', 'btn primary', 'Hinzufügen');
+    submit.type = 'submit';
+    form.append(title, ta, submit, msg);
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      if (ta.value.trim().split(/\s+/).filter(Boolean).length < 8) {
+        msg.textContent = 'Der Text ist zu kurz. Schreib mindestens ein, zwei ganze Sätze.';
+        return;
+      }
+      State.addOwnText({ title: title.value.trim() || 'Eigener Text', body: ta.value.trim(), theme: 'eigen' });
+      renderDrawer();
+    });
+    return form;
+  }
+
+  /* „Textwelten“: oben ein Reiter je Welt (Schalter für die ganze Welt + x/y), darunter alle Texte
+     der gewählten Welt ausgeklappt nebeneinander. */
   function renderDrawer() {
     const drawer = $('drawer');
     if (!drawer) return;
+    const keepScroll = drawer.scrollTop;
     drawer.replaceChildren();
     const inner = el('div', 'drawer-inner');
     const head = el('div', 'drawer-head');
@@ -267,7 +369,7 @@ const App = (() => {
     h.appendChild(el('span', 'drawer-ico', '📚'));
     const ht = el('div');
     ht.appendChild(el('h2', null, 'Was soll die KI lernen?'));
-    ht.appendChild(el('p', null, 'Haken setzen = dieser Text füttert die KI. Gilt für alle drei Phasen.'));
+    ht.appendChild(el('p', null, 'Haken = dieser Text füttert die KI. Gilt für alle drei Phasen.'));
     h.append(ht, Help.btn('textwelten'));
     head.appendChild(h);
     const closeBtn = el('button', 'btn', 'Fertig');
@@ -277,82 +379,51 @@ const App = (() => {
     inner.appendChild(head);
 
     const texts = Corpus.allTexts();
-    const grid = el('div', 'world-grid');
+    const ofTheme = id => texts.filter(t => (t.own ? 'eigen' : t.theme) === id);
+
+    const tabs = el('div', 'tw-tabs');
+    tabs.setAttribute('role', 'tablist');
     THEME_ORDER.forEach(themeId => {
-      const items = texts.filter(t => (t.own ? 'eigen' : t.theme) === themeId);
-      if (!items.length) return;
-      const world = el('div', 'world');
-      const wh = el('div', 'world-head');
-      const title = el('div', 'world-title');
-      const dot = el('i', 'dot'); dot.style.background = 'var(--t-' + themeId + ')';
-      title.append(dot, document.createTextNode(THEME_NAME[themeId] + ' (' + items.length + ')'));
-      wh.appendChild(title);
-      const allOn = items.every(t => State.selectedIds.has(t.id));
-      const toggle = el('button', 'world-toggle', allOn ? 'alle abwählen' : 'alle auswählen');
-      toggle.type = 'button';
-      toggle.addEventListener('click', () => State.setWorld(themeId, !allOn));
-      wh.appendChild(toggle);
-      world.appendChild(wh);
-
-      items.forEach(t => {
-        const wrap = el('div', 'text-item');
-        const row = el('div', 'text-row');
-        const cb = el('input'); cb.type = 'checkbox'; cb.checked = State.selectedIds.has(t.id);
-        const cid = 'txt-' + t.id.replace(':', '-');
-        cb.id = cid;
-        cb.addEventListener('change', () => State.toggleText(t.id, cb.checked));
-        const label = el('label', null, t.title);
-        label.htmlFor = cid;
-        if (t.own) label.appendChild(el('span', 'text-tag', 'eigener Text'));
-        if (t.edited) label.appendChild(el('span', 'text-tag edited', 'bearbeitet'));
-        const openBtn = el('button', 'text-open', openEditors.has(t.id) ? 'zu' : 'lesen');
-        openBtn.type = 'button';
-        openBtn.setAttribute('aria-expanded', openEditors.has(t.id) ? 'true' : 'false');
-        row.append(cb, label, openBtn);
-        wrap.appendChild(row);
-        if (openEditors.has(t.id)) wrap.appendChild(buildEditor(t));
-        openBtn.addEventListener('click', () => {
-          if (openEditors.has(t.id)) openEditors.delete(t.id); else openEditors.add(t.id);
-          renderDrawer();
-        });
-        world.appendChild(wrap);
+      const items = ofTheme(themeId);
+      const nOn = items.filter(t => State.selectedIds.has(t.id)).length;
+      const tab = el('div', 'tw-tab' + (themeId === drawerTab ? ' active' : '') + (items.length && !nOn ? ' off' : ''));
+      tab.style.setProperty('--tc', 'var(--t-' + themeId + ')');
+      const pick = el('button', 'tw-tab-pick');
+      pick.type = 'button';
+      pick.setAttribute('role', 'tab');
+      pick.setAttribute('aria-selected', themeId === drawerTab ? 'true' : 'false');
+      pick.append(el('span', 'tw-tab-name', THEME_NAME[themeId]), el('span', 'tw-tab-count', nOn + '/' + items.length));
+      pick.addEventListener('click', () => {
+        drawerTab = themeId;
+        try { localStorage.setItem(TAB_STORE, themeId); } catch (e) { /* egal */ }
+        renderDrawer();
       });
-      grid.appendChild(world);
-    });
-    inner.appendChild(grid);
-
-    const form = el('form', 'own-form');
-    form.appendChild(el('h3', null, 'Eigenen Text hinzufügen'));
-    const row = el('div', 'row');
-    const title = el('input'); title.type = 'text'; title.placeholder = 'Titel, z. B. „Bello im Weltall“';
-    const sel = el('select');
-    THEME_ORDER.forEach(t => {
-      const o = el('option', null, t === 'eigen' ? 'Eigenes Thema' : THEME_NAME[t]);
-      o.value = t;
-      if (t === 'eigen') o.selected = true;
-      sel.appendChild(o);
-    });
-    row.append(title, sel);
-    const ta = el('textarea');
-    ta.placeholder = 'Ein paar ganze Sätze auf Deutsch …';
-    const msg = el('span', 'own-msg');
-    const submit = el('button', 'btn primary', 'Hinzufügen');
-    submit.type = 'submit';
-    form.append(row, ta, submit, msg);
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      if (ta.value.trim().split(/\s+/).filter(Boolean).length < 8) {
-        msg.textContent = 'Der Text ist zu kurz. Schreib mindestens ein, zwei ganze Sätze.';
-        return;
+      tab.appendChild(pick);
+      if (items.length) {
+        const sw = el('input', 'tw-switch');
+        sw.type = 'checkbox';
+        sw.checked = nOn > 0;
+        sw.indeterminate = nOn > 0 && nOn < items.length;
+        sw.setAttribute('aria-label', THEME_NAME[themeId] + (nOn ? ' ganz abwählen' : ' ganz auswählen'));
+        sw.title = nOn ? 'ganze Welt abwählen' : 'ganze Welt auswählen';
+        sw.addEventListener('change', () => State.setWorld(themeId, nOn === 0));
+        tab.appendChild(sw);
       }
-      State.addOwnText({ title: title.value.trim() || 'Eigener Text', body: ta.value.trim(), theme: sel.value });
-      title.value = ''; ta.value = '';
-      msg.textContent = 'Hinzugefügt und ausgewählt.';
-      renderDrawer();
+      tabs.appendChild(tab);
     });
-    inner.appendChild(form);
+    inner.appendChild(tabs);
+
+    const items = ofTheme(drawerTab);
+    const grid = el('div', 'tw-grid');
+    grid.style.setProperty('--tc', 'var(--t-' + drawerTab + ')');
+    items.forEach(t => grid.appendChild(textCard(t)));
+    if (!items.length) grid.appendChild(el('p', 'card-empty', drawerTab === 'eigen'
+      ? 'Noch keine eigenen Texte. Schreib unten einen!' : 'Keine Texte.'));
+    inner.appendChild(grid);
+    if (drawerTab === 'eigen') inner.appendChild(ownForm());
 
     drawer.appendChild(inner);
+    drawer.scrollTop = keepScroll;
   }
 
   return { renderShell, goPhase, spotlight, get activePhase() { return active; } };

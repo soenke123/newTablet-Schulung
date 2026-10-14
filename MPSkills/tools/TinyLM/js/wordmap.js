@@ -90,19 +90,52 @@ const WordMap = (() => {
     return L;
   }
 
-  function create(M, opts) {
+  /* Filter oben auf der Karte. 'nomen' = Phase-2-Modell (Grundformen, t-SNE); die anderen rechnen mit
+     wordkinds.js (Wörter wie im Text, Nachbar davor/danach). Bei den Paaren ist die Karte kein t-SNE,
+     sondern eine feste Ansicht: links → rechts = mittlere Richtung aller Paare. */
+  const MODES = [
+    { id: 'nomen', label: 'Nomen' },
+    { id: 'verben', label: 'Verben' },
+    { id: 'zeiten', label: 'spielt → spielte', pairs: 'tensePairs', left: '← Gegenwart', right: 'Vergangenheit →',
+      a: 'Gegenwart', b: 'Vergangenheit' },
+    { id: 'paare', label: 'Lehrer → Lehrerin', pairs: 'genderPairs', left: '← der …', right: 'die … →',
+      a: 'der …', b: 'die …' }
+  ];
+  const VERB_CAP = 120;
+
+  function create(M0, opts) {
     opts = opts || {};
-    /* Kartenwörter: die häufigsten Nomen des Modells. */
-    const ids = M.words.map((w, i) => i)
-      .sort((a, b) => M.lemFreq.get(M.words[b]) - M.lemFreq.get(M.words[a]))
-      .slice(0, MAP_CAP);
+    let M = M0, mode = MODES[0], ids = [], pairs = [], A = null;
     const word = k => M.words[ids[k]];
     const posOf = w => { const i = M.wIdx.get(w); return i === undefined ? -1 : ids.indexOf(i); };
+    const pairOf = w => pairs.find(p => p[0] === w || p[1] === w) || null;
+
+    function useMode(m) {
+      mode = m;
+      if (m.id === 'nomen') {
+        M = M0;
+        ids = M.words.map((w, i) => i)
+          .sort((a, b) => M.lemFreq.get(M.words[b]) - M.lemFreq.get(M.words[a]))
+          .slice(0, MAP_CAP);
+        pairs = [];
+        return;
+      }
+      if (!A) A = WordKinds.analyze(opts.texts ? opts.texts() : []);
+      if (m.pairs) {
+        pairs = A[m.pairs];
+        M = WordKinds.model(A, pairs.flat());
+      } else {
+        pairs = [];
+        M = WordKinds.model(A, A.verbs.slice(0, VERB_CAP));
+      }
+      ids = M.words.map((w, i) => i);
+    }
+    useMode(MODES[0]);
 
     let L = null, seed = 7;
     let cv = null, cx = null, cw = 0, ch = 0, view = null;
     let sel = null, hover = null, colors = true, anim = 0;
-    let statusEl = null, progEl = null, cardEl = null, container = null;
+    let statusEl = null, progEl = null, cardEl = null, container = null, legendEl = null;
     const onResize = () => requestAnimationFrame(resize);
 
     function targetView() {
@@ -113,6 +146,10 @@ const WordMap = (() => {
 
     function screenPos() {
       const v = view, pad = 30;
+      if (L.fixed) {
+        const sx = (cw - 2 * pad - 70) / Math.max(1e-6, v.x1 - v.x0), sy = (ch - 2 * pad - 30) / Math.max(1e-6, v.y1 - v.y0);
+        return L.Y.map(p => [pad + 35 + (p[0] - v.x0) * sx, pad + (p[1] - v.y0) * sy]);
+      }
       const rot = (ch > cw) !== ((v.y1 - v.y0) > (v.x1 - v.x0));
       const rx = rot ? v.y1 - v.y0 : v.x1 - v.x0;
       const ry = rot ? v.x1 - v.x0 : v.y1 - v.y0;
@@ -153,8 +190,40 @@ const WordMap = (() => {
       const tcol = {};
       THEME_ORDER.forEach(t => { tcol[t] = cssVar('--t-' + t); });
       const s = sel != null ? posOf(sel) : -1;
-      const nb = s >= 0 ? neighbors(M, sel, 6).map(x => posOf(x[0])).filter(k => k >= 0) : [];
-      const qSet = highlightSet();
+      const nb = s >= 0 && !L.fixed ? neighbors(M, sel, 6).map(x => posOf(x[0])).filter(k => k >= 0) : [];
+      const qSet = mode.id === 'nomen' ? highlightSet() : new Set();
+      const colA = cssVar('--src-b'), colB = cssVar('--src-a');
+      const dotColor = i => {
+        const w = word(i);
+        if (mode.pairs) { const p = pairOf(w); return p && p[1] === w ? colB : colA; }
+        if (!colors) return muted;
+        return tcol[M.themeOf(w).theme] || muted;
+      };
+
+      if (L.fixed) {
+        /* Achsen-Beschriftung + ein Pfeil je Paar */
+        cx.font = '600 12px "Inter", system-ui, sans-serif'; cx.fillStyle = muted;
+        cx.fillText(mode.left, 10, ch - 10);
+        cx.fillText(mode.right, cw - 10 - cx.measureText(mode.right).width, ch - 10);
+        pairs.forEach(([a, b]) => {
+          const i = posOf(a), j = posOf(b);
+          if (i < 0 || j < 0) return;
+          const on = sel === a || sel === b;
+          const [x0, y0] = P[i], [x1, y1] = P[j];
+          const ang = Math.atan2(y1 - y0, x1 - x0), len = Math.hypot(x1 - x0, y1 - y0);
+          const ex = x1 - Math.cos(ang) * 8, ey = y1 - Math.sin(ang) * 8;
+          cx.strokeStyle = on ? ink : muted; cx.fillStyle = on ? ink : muted;
+          cx.globalAlpha = on ? 0.95 : 0.45; cx.lineWidth = on ? 2.5 : 1.5;
+          cx.beginPath(); cx.moveTo(x0, y0); cx.lineTo(ex, ey); cx.stroke();
+          if (len > 14) {
+            cx.beginPath(); cx.moveTo(ex, ey);
+            cx.lineTo(ex - Math.cos(ang - 0.45) * 8, ey - Math.sin(ang - 0.45) * 8);
+            cx.lineTo(ex - Math.cos(ang + 0.45) * 8, ey - Math.sin(ang + 0.45) * 8);
+            cx.closePath(); cx.fill();
+          }
+          cx.globalAlpha = 1;
+        });
+      }
 
       if (s >= 0) {
         cx.strokeStyle = ink; cx.lineWidth = 1.5; cx.globalAlpha = 0.35;
@@ -166,7 +235,7 @@ const WordMap = (() => {
         const r = 3 + Math.min(4, Math.sqrt(f) * 0.7);
         cx.beginPath();
         cx.arc(P[i][0], P[i][1], r, 0, Math.PI * 2);
-        cx.fillStyle = colors ? (tcol[M.themeOf(word(i)).theme] || muted) : muted;
+        cx.fillStyle = dotColor(i);
         cx.fill();
         if (qSet.has(i)) {
           cx.lineWidth = 2; cx.strokeStyle = ink; cx.setLineDash([3, 3]);
@@ -220,6 +289,25 @@ const WordMap = (() => {
       for (let i = 0; i < P.length; i++) if (!forced.includes(i)) label(i, false);
     }
 
+    function renderLegend() {
+      if (!legendEl) return;
+      legendEl.replaceChildren();
+      const item = (color, txt) => {
+        const row = el('span', 'wm-legend-item');
+        const d = el('i', 'dot'); d.style.background = color;
+        row.append(d, document.createTextNode(txt));
+        legendEl.appendChild(row);
+      };
+      if (mode.pairs) {
+        item('var(--src-b)', mode.a); item('var(--src-a)', mode.b);
+        legendEl.appendChild(el('span', 'wm-legend-item', 'Pfeil = ein Wortpaar · Nachbarn: nur das Wort direkt davor und danach'));
+        return;
+      }
+      const shown = new Set(ids.map(i => M.themeOf(M.words[i]).theme));
+      THEME_ORDER.filter(t => shown.has(t)).forEach(t => item(tVar(t), THEME_NAME[t]));
+      if (mode.id === 'verben') legendEl.appendChild(el('span', 'wm-legend-item', '· Nachbarn: nur das Wort direkt davor und danach'));
+    }
+
     function status(txt) {
       if (statusEl) statusEl.textContent = txt;
     }
@@ -232,6 +320,15 @@ const WordMap = (() => {
     /* Layout von vorn rechnen und beim Rechnen zusehen. */
     function animate() {
       stopAnim();
+      if (mode.pairs) {
+        const pr = WordKinds.projection(M, pairs);
+        L = { n: pr.Y.length, ids, Y: pr.Y, iter: 1, total: 1, fixed: true };
+        view = targetView(); progress(1); draw();
+        status(pairs.length
+          ? 'Links → rechts: die mittlere Richtung von ' + pairs.length + ' Wortpaaren. Pfeil = ein Paar.'
+          : 'In den ausgewählten Texten gibt es keine solchen Wortpaare.');
+        return;
+      }
       L = makeLayout(M, ids, seed++);
       view = targetView();
       if (reduced()) {
@@ -313,6 +410,31 @@ const WordMap = (() => {
       head.appendChild(el('p', 'small muted', 'Kommt ' + tot + '-mal vor: ' + parts.join(', ') + '.'));
       cardEl.appendChild(head);
 
+      const pr = pairOf(w);
+      if (pr) {
+        const other = pr[0] === w ? pr[1] : pr[0];
+        const sec0 = el('div', 'wm-sec');
+        sec0.appendChild(el('h4', null, 'Wort-Rechnen'));
+        const guess = WordKinds.predict(M, pairs, w);
+        const fwd = pr[0] === w;
+        sec0.appendChild(el('p', 'small', showWord(w) + (fwd ? ' + Richtung „' + mode.a + ' → ' + mode.b + '“'
+          : ' + Richtung „' + mode.b + ' → ' + mode.a + '“') + ' ≈ …'));
+        const row = el('div', 'wm-chips');
+        guess.forEach(([x, sv], k) => {
+          const chip = el('button', 'chip' + (x === other ? ' wm-hit' : ''), showWord(x));
+          chip.type = 'button';
+          chip.appendChild(el('span', 'small muted', ' ' + Math.round(sv * 100) + ' %'));
+          chip.addEventListener('click', () => pick(x));
+          row.appendChild(chip);
+        });
+        sec0.appendChild(row);
+        const ok = guess.length && guess[0][0] === other;
+        sec0.appendChild(el('p', 'small ' + (ok ? 'wm-ok' : 'muted'), ok
+          ? '✓ Getroffen: „' + showWord(other) + '“.'
+          : 'Gesucht war „' + showWord(other) + '“ — dafür reichen die Texte hier nicht.'));
+        cardEl.appendChild(sec0);
+      }
+
       const nbs = neighbors(M, w, 6);
       const sec = el('div', 'wm-sec');
       sec.appendChild(el('h4', null, 'Am ähnlichsten'));
@@ -379,6 +501,30 @@ const WordMap = (() => {
       container = host;
       const box = el('div', 'wm-box');
 
+      const filter = el('div', 'wm-filter');
+      filter.setAttribute('role', 'radiogroup');
+      filter.setAttribute('aria-label', 'Welche Wörter zeigen?');
+      MODES.forEach(m => {
+        const b = el('button', 'wm-mode' + (m === mode ? ' on' : ''), m.label);
+        b.type = 'button';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', m === mode ? 'true' : 'false');
+        b.addEventListener('click', () => {
+          if (m === mode) return;
+          stopAnim();
+          useMode(m);
+          L = null; sel = null; hover = null;
+          [...filter.children].forEach(c => { const on = c === b; c.classList.toggle('on', on); c.setAttribute('aria-checked', on ? 'true' : 'false'); });
+          again.hidden = !!m.pairs; sw.hidden = !!m.pairs;
+          renderLegend();
+          sel = ids.length ? word(0) : null;
+          renderCard();
+          progress(0); animate();
+        });
+        filter.appendChild(b);
+      });
+      box.appendChild(filter);
+
       const tools = el('div', 'wm-tools');
       const again = el('button', 'btn', '▶ Karte neu ordnen');
       again.type = 'button';
@@ -397,6 +543,7 @@ const WordMap = (() => {
           .find(w => w && posOf(w) >= 0);
         if (hit) pick(hit);
       });
+      again.hidden = !!mode.pairs; sw.hidden = !!mode.pairs;
       tools.append(again, sw, search);
       box.appendChild(tools);
 
@@ -422,15 +569,9 @@ const WordMap = (() => {
 
       host.appendChild(box);
 
-      const legend = el('div', 'wm-legend');
-      const shown = new Set(ids.map(i => M.themeOf(M.words[i]).theme));
-      THEME_ORDER.filter(t => shown.has(t)).forEach(t => {
-        const row = el('span', 'wm-legend-item');
-        const d = el('i', 'dot'); d.style.background = tVar(t);
-        row.append(d, document.createTextNode(THEME_NAME[t]));
-        legend.appendChild(row);
-      });
-      host.appendChild(legend);
+      legendEl = el('div', 'wm-legend');
+      renderLegend();
+      host.appendChild(legendEl);
 
       cardEl = el('div', 'wm-card');
       host.appendChild(cardEl);
@@ -454,7 +595,7 @@ const WordMap = (() => {
     function destroy() {
       stopAnim();
       window.removeEventListener('resize', onResize);
-      cv = null; cx = null; cardEl = null; statusEl = null; progEl = null; container = null;
+      cv = null; cx = null; cardEl = null; statusEl = null; progEl = null; container = null; legendEl = null;
     }
 
     return { mount, destroy, select, redraw: draw, get selected() { return sel; }, size: ids.length };

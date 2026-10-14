@@ -1,5 +1,14 @@
 /* Wortkarte (wordmap.js): Werkzeugleiste + Canvas + Legende + Detailkarte zum gewählten Wort. */
 .wm-box { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--bg); }
+.wm-filter { display: flex; flex-wrap: wrap; gap: 6px; padding: 9px 11px 0; background: var(--surface); }
+.wm-mode {
+  font: inherit; font-size: 0.84rem; font-weight: 700; padding: 5px 12px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--soft); color: var(--muted);
+}
+.wm-mode:hover { color: var(--ink); }
+.wm-mode.on { background: var(--cat-meaning); border-color: var(--cat-meaning); color: var(--on-ink); }
+.chip.wm-hit { border-color: var(--good); box-shadow: inset 0 0 0 1px var(--good); }
+.wm-ok { color: var(--good); font-weight: 700; }
 .wm-tools {
   display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
   padding: 9px 11px; border-bottom: 1px solid var(--line); background: var(--surface);
