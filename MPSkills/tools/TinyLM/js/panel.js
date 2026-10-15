@@ -19,6 +19,7 @@
    Item-Felder: { id, label, cat, hint, help (Schlüssel in HELP), render(container),
                   open:   false -> standardmäßig zugeklappt,
                   wide:   true  -> breite Karte unter dem Zweispalter (z. B. die Wortkarte),
+                  onClose: fn   -> wird beim Zuklappen aufgerufen (z. B. Training anhalten),
                   manual: true  -> von refreshAll() ausgenommen (teure Inhalte wie Canvas-Karten;
                                    die Phase ruft dafür gezielt refresh(id) auf) } */
 const CAT = {
@@ -83,7 +84,7 @@ const Panel = (() => {
       e.head.setAttribute('aria-expanded', on ? 'true' : 'false');
       e.body.hidden = !on;
       if (on && !e.rendered) renderBody(e);
-      if (!on) { e.body.replaceChildren(); e.rendered = false; }
+      if (!on) { e.body.replaceChildren(); e.rendered = false; if (e.item.onClose) e.item.onClose(); }
     }
 
     function setOpen(id, on) {

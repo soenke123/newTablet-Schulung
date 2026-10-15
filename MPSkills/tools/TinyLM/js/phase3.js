@@ -7,12 +7,14 @@
    zwischen pointerdown und pointerup -> es kommt nie ein click an, das Training ließ sich nicht
    mehr anhalten). Darum: alle Karten sind manual:true, und jede Render-Funktion hinterlegt in
    live[id] eine Funktion, die NUR die Zahlen/Bilder auffrischt und die Bedienelemente stehen lässt.
-   Die Trainingstasten sitzen nur in der Zentrum-Karte, die während des Trainings überhaupt nicht
-   neu gebaut wird; die Karte "Training" zeigt nur Zahlen und die Fehlerlinie.
+   Die Trainingstasten sitzen nur in der rechten Karte "Training" (samt Aufbau-Zeile und Netz-Bild-Knopf);
+   sie wird während des Trainings nie neu gebaut. Schließt man die Karte, hält das Training an.
    Meldet Vorhersagen (p3-gen), den Fehler (p3-loss) und angetippte Neuronen (p3-neuron) an den
    Leitfaden.
    Wie viele Wörter das Netz zurückschaut (3, 4 oder 5), wählt man im Zentrum; ein anderes Fenster
-   ist ein anderes Netz, also wird es neu gebaut (Wahl gemerkt in localStorage tinylm-p3-kontext). */
+   ist ein anderes Netz. Die drei Netze bleiben aber nebeneinander bestehen (slots): man kann alle drei
+   trainieren und hin und her wechseln; erst eine neue Textauswahl ("Netz neu bauen") wirft sie weg.
+   Wahl gemerkt in localStorage tinylm-p3-kontext. */
 const P3_CTX = [3, 4, 5];
 const P3_CTX_KEY = 'tinylm-p3-kontext';
 function deInt(n) { return n.toLocaleString('de-DE'); }
@@ -66,11 +68,16 @@ Phases.register(3, {
     let temp = 1, training = false, trainRAF = null, lastUIRefresh = 0;
     let genPlaying = false, genTimer = null;
     let textEl, cursor, genPlayBtn, bannerEl, panelCtrl, flowHost, placeholder;
-    let centerToggle, centerStat, centerDot, netBtn, centerSpark;
+    let centerToggle, centerStat, centerDot;
+    const slots = {};   /* Kontextlänge -> { data, net, genSession, genRun, version }: je ein Netz pro Fenster */
+    let builtVersion = 0;
     let genRun = 0;   /* Vorhersagen seit "Von vorn"/Trainingsstart (für den Leitfaden) */
     let cardTrain = null;
     let ctxLen = 3;
     try { const v = Number(localStorage.getItem(P3_CTX_KEY)); if (P3_CTX.includes(v)) ctxLen = v; } catch (e) { /* ohne Speicher: 3 */ }
+    function saveSlot() {
+      if (data && net) slots[ctxLen] = { data, net, genSession, genRun, version: builtVersion };
+    }
     const live = {};  /* Karten-Id -> Auffrisch-Funktion; nur offene Karten tragen sich ein */
 
     const CARDS = ['embed', 'hidden', 'output', 'net', 'train'];
@@ -147,7 +154,6 @@ Phases.register(3, {
       if (centerToggle) centerToggle.classList.toggle('playing', training);
       if (centerStat) centerStat.textContent = statTxt();
       if (centerDot) centerDot.classList.toggle('on', training);
-      if (centerSpark) centerSpark.replaceChildren(renderSparkline(net.lossHistory, 200, 44));
     }
 
     function doGenStep() {
@@ -301,10 +307,12 @@ Phases.register(3, {
       live.net = () => netView.update();
     }
 
-    /* Nur Anzeige — die Tasten sitzen im Zentrum (nie neu gebaut, siehe Kopfkommentar). */
+    /* Alles zum Training an einer Stelle (rechts): Tasten, Zahlen, Fehlerlinie, Aufbau, Netz-Bild.
+       Diese Karte wird während des Trainings nie neu gebaut (siehe Kopfkommentar). */
     function renderTrainNode(container) {
       container.replaceChildren();
       cardTrain = null;
+      centerToggle = centerStat = centerDot = null;
       if (net.diverged) {
         container.appendChild(el('p', 'small net-warn', 'Das Training ist entgleist (Lernrate zu hoch).'));
         const rb = el('button', 'btn primary', 'Neu initialisieren');
@@ -314,6 +322,28 @@ Phases.register(3, {
         live.train = null;
         return;
       }
+      const tHead = el('div', 'trainbox-head');
+      centerDot = el('i', 'net-live-dot');
+      centerDot.setAttribute('aria-hidden', 'true');
+      centerStat = el('span', 'counter', statTxt());
+      centerStat.setAttribute('role', 'status');
+      tHead.append(centerDot, centerStat);
+      container.appendChild(tHead);
+
+      const tBtns = el('div', 'trainbox-btns');
+      centerToggle = el('button', 'btn primary train-btn', trainLabel());
+      centerToggle.type = 'button';
+      centerToggle.dataset.spot = 'train';
+      centerToggle.addEventListener('click', () => {
+        if (net.diverged) { reinitNet(); return; }
+        if (training) pauseTraining(); else startTraining();
+      });
+      const resetBtn = el('button', 'btn sm', '↺ Netz zurücksetzen');
+      resetBtn.type = 'button';
+      resetBtn.addEventListener('click', reinitNet);
+      tBtns.append(centerToggle, resetBtn);
+      container.appendChild(tBtns);
+
       const facts = el('div', 'trainfacts');
       const fact = (k) => { const f = el('div', 'trainfact'); const v = el('b'); f.append(v, el('span', null, k)); facts.appendChild(f); return v; };
       const stepB = fact('Schritte');
@@ -328,6 +358,21 @@ Phases.register(3, {
       const sparkHost = el('div', 'spark-host');
       container.appendChild(sparkHost);
 
+      /* Aufbau: 48 Zahlen rein → 40 Hidden-Neuronen → 600 Wörter raus */
+      const inDim = net.C * net.d;
+      const paramCount = data.vocab.length * net.d + inDim * net.H + net.H + net.H * data.vocab.length + data.vocab.length;
+      const archRow = el('div', 'net-arch');
+      const arch = el('span', 'arch-num', inDim + ' → ' + net.H + ' → ' + deInt(data.vocab.length));
+      arch.title = inDim + ' Eingabe-Zahlen (' + net.C + ' Wörter × ' + net.d + ') → ' + net.H + ' Hidden-Neuronen → ' + deInt(data.vocab.length) + ' Ausgabe-Neuronen (eins je Wort)';
+      const archLab = el('span', 'arch-lab', 'Eingabe → Hidden → Wörter');
+      archRow.append(arch, archLab,
+        el('span', 'small muted', deInt(paramCount) + ' Zahlen · ' + deInt(data.pairs.length) + ' Beispiele'));
+      const netBtn = el('button', 'btn sm', '🕸 Netz-Bild');
+      netBtn.type = 'button';
+      netBtn.addEventListener('click', () => panelCtrl.reveal('net'));
+      archRow.appendChild(netBtn);
+      container.appendChild(archRow);
+
       cardTrain = { stepB, lossB, epochS, lrB, sparkHost };
       live.train = () => {
         if (!cardTrain || !cardTrain.stepB.isConnected) return;
@@ -338,9 +383,10 @@ Phases.register(3, {
         cardTrain.sparkHost.replaceChildren(renderSparkline(net.lossHistory, 260, 60));
       };
       live.train();
+      syncTrainUI();
     }
 
-    function render() {
+    function render(fresh) {
       pauseTraining();
       stopGenPlay();
       temp = 1;
@@ -349,11 +395,19 @@ Phases.register(3, {
       if (netView) { netView.destroy(); netView = null; }
 
       const texts = State.activeTexts();
-      data = buildPhase3Data(texts, { vocabCap: 600, C: ctxLen });
-      net = createNet(data.vocab.length, data.C);
-      genSession = freshGenSession();
-      genRun = 0;
+      if (fresh === true) Object.keys(slots).forEach(k => delete slots[k]);
+      const slot = slots[ctxLen];
+      if (slot && slot.version === State.corpusVersion) {
+        data = slot.data; net = slot.net; genSession = slot.genSession; genRun = slot.genRun;
+      } else {
+        data = buildPhase3Data(texts, { vocabCap: 600, C: ctxLen });
+        net = createNet(data.vocab.length, data.C);
+        genSession = freshGenSession();
+        genRun = 0;
+      }
+      builtVersion = State.corpusVersion;
       lastForward = forward(net, genSession.ctxIds);
+      saveSlot();
 
       netView = NetView.create({
         onReveal: () => Guide.did('p3-neuron'),
@@ -372,7 +426,7 @@ Phases.register(3, {
       bannerEl.hidden = true;
       bannerEl.append(
         el('span', 'small', '📚 Neue Textauswahl.'),
-        (() => { const b = el('button', 'btn sm primary', 'Netz neu bauen'); b.type = 'button'; b.addEventListener('click', render); return b; })()
+        (() => { const b = el('button', 'btn sm primary', 'Netz neu bauen'); b.type = 'button'; b.addEventListener('click', () => render(true)); return b; })()
       );
       center.appendChild(bannerEl);
 
@@ -411,39 +465,6 @@ Phases.register(3, {
       controls.append(genPlayBtn, stepBtn, resetGenBtn);
       center.appendChild(controls);
 
-      /* ② Trainieren — wird während des Trainings NIE neu gebaut, damit "anhalten" immer
-         anklickbar bleibt (siehe Kopfkommentar). */
-      const trainBox = el('div', 'trainbox');
-      const tHead = el('div', 'trainbox-head');
-      centerDot = el('i', 'net-live-dot');
-      centerDot.setAttribute('aria-hidden', 'true');
-      tHead.append(centerDot, el('b', null, 'Training'), Help.btn('training', 'sm'));
-      centerStat = el('span', 'counter', statTxt());
-      centerStat.setAttribute('role', 'status');
-      tHead.appendChild(centerStat);
-      trainBox.appendChild(tHead);
-
-      const tRow = el('div', 'trainbox-row');
-      const tBtns = el('div', 'trainbox-btns');
-      centerToggle = el('button', 'btn primary train-btn', trainLabel());
-      centerToggle.type = 'button';
-      centerToggle.dataset.spot = 'train';
-      centerToggle.addEventListener('click', () => {
-        if (net.diverged) { reinitNet(); return; }
-        if (training) pauseTraining(); else startTraining();
-      });
-      const centerReset = el('button', 'btn sm', '↺ Netz zurücksetzen');
-      centerReset.type = 'button';
-      centerReset.addEventListener('click', reinitNet);
-      tBtns.append(centerToggle, centerReset);
-      const sparkWrap = el('div', 'trainbox-spark');
-      sparkWrap.appendChild(el('span', 'trainbox-spark-lab', 'Fehler'));
-      centerSpark = el('div', 'spark-host');
-      sparkWrap.appendChild(centerSpark);
-      tRow.append(tBtns, sparkWrap);
-      trainBox.appendChild(tRow);
-      center.appendChild(trainBox);
-
       /* Wie weit schaut das Netz zurück? Wechsel = neues Netz (render baut alles neu). */
       const ctxRow = el('div', 'ctxpick');
       ctxRow.dataset.spot = 'ctxlen';
@@ -452,12 +473,16 @@ Phases.register(3, {
       ctxBtns.setAttribute('role', 'radiogroup');
       ctxBtns.setAttribute('aria-label', 'Wie viele Wörter sieht das Netz?');
       P3_CTX.forEach(c => {
-        const b = el('button', 'chip' + (c === ctxLen ? ' active' : ''), String(c));
+        const sl = c === ctxLen ? { net } : slots[c];
+        const trained = !!(sl && sl.net.step);
+        const b = el('button', 'chip' + (c === ctxLen ? ' active' : '') + (trained ? ' trained' : ''), String(c) + (trained ? ' ✓' : ''));
+        if (trained) b.title = 'Für ' + c + ' Wörter schon trainiert – bleibt erhalten';
         b.type = 'button';
         b.setAttribute('role', 'radio');
         b.setAttribute('aria-checked', c === ctxLen ? 'true' : 'false');
         b.addEventListener('click', () => {
           if (c === ctxLen) return;
+          saveSlot();
           ctxLen = c;
           try { localStorage.setItem(P3_CTX_KEY, String(c)); } catch (e) { /* ohne Speicher geht es auch */ }
           render();
@@ -467,25 +492,13 @@ Phases.register(3, {
       ctxRow.append(ctxBtns, el('span', 'small', 'Wörter'), Help.btn('kontextnetz', 'sm'));
       center.appendChild(ctxRow);
 
-      const inDim = net.C * net.d;
-      const paramCount = data.vocab.length * net.d + inDim * net.H + net.H + net.H * data.vocab.length + data.vocab.length;
-      const archRow = el('div', 'net-arch');
-      archRow.append(
-        el('span', 'arch-num', inDim + ' → ' + net.H + ' → ' + deInt(data.vocab.length)),
-        el('span', 'small muted', deInt(paramCount) + ' Zahlen · ' + deInt(data.pairs.length) + ' Beispiele')
-      );
-      netBtn = el('button', 'btn sm', '🕸 Netz-Bild');
-      netBtn.type = 'button';
-      netBtn.addEventListener('click', () => panelCtrl.reveal('net'));
-      archRow.appendChild(netBtn);
-      center.appendChild(archRow);
       if (!texts.length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – öffne oben „Textwelten“.'));
 
       const items = [
         { id: 'embed', label: 'Embedding', cat: 'origin', hint: '1', help: 'embedding', manual: true, render: renderEmbedNode },
         { id: 'hidden', label: 'Hidden-Schicht', cat: 'context', hint: '2', help: 'hidden', manual: true, render: renderHiddenNode },
         { id: 'output', label: 'Ausgabe', cat: 'candidates', hint: '3', help: 'ausgabe', manual: true, render: renderOutputNode },
-        { id: 'train', label: 'Training', cat: 'random', hint: '4', help: 'training', manual: true, render: renderTrainNode },
+        { id: 'train', label: 'Training', cat: 'random', hint: '4', help: 'training', manual: true, onClose: pauseTraining, render: renderTrainNode },
         { id: 'net', label: 'Das Netz von innen', cat: 'net', wide: true, manual: true, open: false, help: 'netz', render: renderNetNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 3 });
@@ -494,8 +507,8 @@ Phases.register(3, {
       syncTrainUI();
     }
 
-    render();
-    State.on('corpus-changed', () => { if (bannerEl) bannerEl.hidden = false; });
+    render(true);
+    State.on('corpus-changed', () => { if (bannerEl && State.corpusVersion !== builtVersion) bannerEl.hidden = false; });
 
     return {
       reveal: id => panelCtrl.reveal(id, true),

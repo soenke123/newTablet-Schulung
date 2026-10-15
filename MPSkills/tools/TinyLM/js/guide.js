@@ -82,7 +82,7 @@ const Guide = (() => {
         check: e => e.type === 'p3-gen' && (e.loss == null || e.loss > 5.5) && e.run >= 4,
         nudge: { when: e => e.type === 'p3-gen' && e.loss != null && e.loss <= 5.5,
                  text: 'Das Netz ist schon trainiert – erst „↺ Netz zurücksetzen“, dann vorhersagen.' } },
-      { id: '3-training', icon: '🏋️', label: 'Trainieren', spot: 'train',
+      { id: '3-training', icon: '🏋️', label: 'Trainieren', spot: 'train', card: 'train',
         task: 'Starte das Training und warte, bis der Fehler unter ' + String(LOSS_OK).replace('.', ',') + ' fällt.',
         aha: 'Der Fehler sinkt – das Netz lernt aus seinen Fehlern.',
         check: e => e.type === 'p3-loss' && e.loss < LOSS_OK },
