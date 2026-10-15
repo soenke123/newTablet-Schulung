@@ -46,3 +46,13 @@
 .ctxpick-btns .chip { min-width: 2.2rem; justify-content: center; font-family: var(--font-mono); }
 
 .ctxpick-btns .chip.trained:not(.active) { border-color: var(--cat-random); }
+
+/* Phase 3: rechte Spalte (die Erklär-Karten) breit, Zentrum schmal — dort steht der meiste Text. */
+@media (min-width: 981px) {
+  .panel-wrap.phase-3 .panel { grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr); }
+}
+@media (min-width: 981px) {
+  /* schmales Zentrum: Ablaufband als 2×2, damit die Beschriftungen nicht abgeschnitten werden */
+  .panel-wrap.phase-3 .flow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
+  .panel-wrap.phase-3 .flow .flow-arrow { display: none; }
+}

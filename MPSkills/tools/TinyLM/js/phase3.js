@@ -68,7 +68,7 @@ Phases.register(3, {
     let temp = 1, training = false, trainRAF = null, lastUIRefresh = 0;
     let genPlaying = false, genTimer = null;
     let textEl, cursor, genPlayBtn, bannerEl, panelCtrl, flowHost, placeholder;
-    let centerToggle, centerStat, centerDot;
+    let centerToggle, centerDot;
     const slots = {};   /* Kontextlänge -> { data, net, genSession, genRun, version }: je ein Netz pro Fenster */
     let builtVersion = 0;
     let genRun = 0;   /* Vorhersagen seit "Von vorn"/Trainingsstart (für den Leitfaden) */
@@ -143,7 +143,6 @@ Phases.register(3, {
     function lossTxt() { const l = curLoss(); return l == null ? '–' : l.toFixed(2).replace('.', ','); }
     function epochTxt() { return data.pairs.length ? (net.step / data.pairs.length).toFixed(1).replace('.', ',') : '0'; }
     function trainLabel() { return training ? '❚❚ Anhalten' : (net.step ? '▶ Weitertrainieren' : '▶ Training starten'); }
-    function statTxt() { return deInt(net.step) + ' Schritte · Fehler ' + lossTxt(); }
 
     /* Hält die beiden Trainings-Tasten (Zentrum + Karte) in Form, OHNE sie neu zu bauen. */
     function syncTrainUI() {
@@ -152,7 +151,6 @@ Phases.register(3, {
         centerToggle.disabled = !data.pairs.length;
       }
       if (centerToggle) centerToggle.classList.toggle('playing', training);
-      if (centerStat) centerStat.textContent = statTxt();
       if (centerDot) centerDot.classList.toggle('on', training);
     }
 
@@ -312,7 +310,7 @@ Phases.register(3, {
     function renderTrainNode(container) {
       container.replaceChildren();
       cardTrain = null;
-      centerToggle = centerStat = centerDot = null;
+      centerToggle = centerDot = null;
       if (net.diverged) {
         container.appendChild(el('p', 'small net-warn', 'Das Training ist entgleist (Lernrate zu hoch).'));
         const rb = el('button', 'btn primary', 'Neu initialisieren');
@@ -322,13 +320,8 @@ Phases.register(3, {
         live.train = null;
         return;
       }
-      const tHead = el('div', 'trainbox-head');
       centerDot = el('i', 'net-live-dot');
       centerDot.setAttribute('aria-hidden', 'true');
-      centerStat = el('span', 'counter', statTxt());
-      centerStat.setAttribute('role', 'status');
-      tHead.append(centerDot, centerStat);
-      container.appendChild(tHead);
 
       const tBtns = el('div', 'trainbox-btns');
       centerToggle = el('button', 'btn primary train-btn', trainLabel());
@@ -341,7 +334,7 @@ Phases.register(3, {
       const resetBtn = el('button', 'btn sm', '↺ Netz zurücksetzen');
       resetBtn.type = 'button';
       resetBtn.addEventListener('click', reinitNet);
-      tBtns.append(centerToggle, resetBtn);
+      tBtns.append(centerDot, centerToggle, resetBtn);
       container.appendChild(tBtns);
 
       const facts = el('div', 'trainfacts');

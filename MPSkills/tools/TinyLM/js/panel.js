@@ -47,7 +47,7 @@ const Panel = (() => {
     const ns = 'p' + (opts.phase != null ? opts.phase : 'x') + ':';
     const openMap = loadOpen();
 
-    const root = el('div', 'panel-wrap');
+    const root = el('div', 'panel-wrap' + (opts.phase != null ? ' phase-' + opts.phase : ''));
     const grid = el('div', 'panel');
     const centerWrap = el('div', 'panel-center');
     centerWrap.appendChild(centerEl);
