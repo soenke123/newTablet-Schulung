@@ -122,7 +122,8 @@ const WordKinds = (() => {
 
   /* Vektoren nur aus „Wort direkt davor“ / „Wort direkt danach“ (PPMI), für die gewählten Zeilenwörter.
      Liefert dieselbe Form wie buildModel(), damit Wortkarte und neighbors() damit arbeiten können. */
-  function model(A, rows) {
+  function model(A, rows, opts) {
+    const win = (opts && opts.window) || 0;
     const words = [...new Set(rows)].filter(w => A.freq.has(w));
     const wIdx = new Map(words.map((w, i) => [w, i]));
     const cIdx = new Map(), ctxWords = [], cells = words.map(() => new Map());
@@ -134,6 +135,12 @@ const WordKinds = (() => {
       const add = k => { const j = feat(k); cells[wi].set(j, (cells[wi].get(j) || 0) + 1); };
       if (p && !p.punct) add('„' + p.t + '“ davor');
       if (n && !n.punct) add('„' + n.t + '“ danach');
+      /* Thema: Inhaltswörter im selben Satz (bis win Wörter weit) — Füllwörter zählen hier nicht. */
+      for (let k = Math.max(0, i - win); win && k <= Math.min(d.toks.length - 1, i + win); k++) {
+        const o = d.toks[k];
+        if (k === i || o.punct || o.sent !== t.sent || STOP.has(o.t) || o.t === t.t || o.t.length < 3) continue;
+        add(o.t);
+      }
     }));
     const W = words.length, Cn = ctxWords.length;
     const co = cells.map(m => { const r = new Float64Array(Cn); m.forEach((v, j) => { r[j] = v; }); return r; });

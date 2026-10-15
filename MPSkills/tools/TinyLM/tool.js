@@ -65,7 +65,7 @@
       /* Pfad relativ zur SEITE (j.html bzw. lehrer.html, beide in
          MPSkills/). Der Stempel gehört an die Rahmen-URL, sonst käme
          index.html aus dem Cache (siehe NeuroLab). */
-      const q = (ctx && ctx.preview ? '?demo=1&' : '?') + 'v=20261014d';
+      const q = (ctx && ctx.preview ? '?demo=1&' : '?') + 'v=20261015a';
       root.innerHTML =
         '<div class="tl-host">' +
           '<iframe class="tl-frame" src="tools/TinyLM/index.html' + q + '" ' +
