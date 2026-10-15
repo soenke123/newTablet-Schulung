@@ -171,39 +171,6 @@ const WordKinds = (() => {
     };
   }
 
-  /* Karte, auf der man Paare vergleichen kann: links → rechts = die mittlere Richtung aller Paare
-     (z. B. von „spielt“ zu „spielte“), oben ↔ unten = was sonst die Wörter am meisten unterscheidet. */
-  function projection(M, pairs) {
-    const Cn = M.ctxWords.length, n = M.words.length;
-    const dir = new Float64Array(Cn);
-    let used = 0;
-    pairs.forEach(([a, b]) => {
-      const ia = M.wIdx.get(a), ib = M.wIdx.get(b);
-      if (ia === undefined || ib === undefined) return;
-      for (let j = 0; j < Cn; j++) dir[j] += M.vec[ib][j] - M.vec[ia][j];
-      used++;
-    });
-    let dn = 0; for (let j = 0; j < Cn; j++) dn += dir[j] * dir[j];
-    dn = Math.sqrt(dn) || 1;
-    for (let j = 0; j < Cn; j++) dir[j] /= dn;
-    const xs = M.vec.map(v => { let s = 0; for (let j = 0; j < Cn; j++) s += v[j] * dir[j]; return s; });
-    /* Rest ohne die Richtung, zentriert; davon die Hauptachse (Potenzmethode auf der n×n-Gram-Matrix). */
-    const R = M.vec.map((v, i) => Float64Array.from(v, (x, j) => x - xs[i] * dir[j]));
-    const mean = new Float64Array(Cn);
-    R.forEach(r => { for (let j = 0; j < Cn; j++) mean[j] += r[j] / n; });
-    R.forEach(r => { for (let j = 0; j < Cn; j++) r[j] -= mean[j]; });
-    const G = R.map(a => R.map(b => { let s = 0; for (let j = 0; j < Cn; j++) s += a[j] * b[j]; return s; }));
-    let u = Array.from({ length: n }, (_, i) => Math.sin(i + 1));
-    let lam = 0;
-    for (let it = 0; it < 80; it++) {
-      const w = G.map(row => row.reduce((s, g, k) => s + g * u[k], 0));
-      lam = Math.sqrt(w.reduce((s, x) => s + x * x, 0)) || 1;
-      u = w.map(x => x / lam);
-    }
-    const ys = u.map(x => x * Math.sqrt(lam));
-    return { Y: xs.map((x, i) => [x, ys[i]]), pairs: used };
-  }
-
   /* Wort-Rechnen: Wort + mittlere Richtung der ANDEREN Paare → welches Kartenwort liegt am nächsten? */
   function predict(M, pairs, w) {
     const i = M.wIdx.get(w);
@@ -226,5 +193,5 @@ const WordKinds = (() => {
     }).sort((a, b) => b[1] - a[1]).slice(0, 3);
   }
 
-  return { analyze, model, projection, predict };
+  return { analyze, model, predict };
 })();

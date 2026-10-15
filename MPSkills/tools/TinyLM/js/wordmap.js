@@ -12,8 +12,9 @@
    - Filter (Nomen, Verben, spielt → spielte, Lehrer → Lehrerin) und die Wortwelten in der Legende
      lassen ihre Wörter leuchten und den Rest verblassen; die Karte bleibt, wie sie ist.
    - Bei den Paar-Filtern gibt es Pfeile von Wort zu Wort und den Knopf „Pfeile nebeneinander“:
-     die Paarwörter gleiten in die feste Ansicht (links → rechts = mittlere Richtung aller Paare,
-     WordKinds.projection), dort sieht man, dass die Pfeile fast parallel laufen.
+     die Paarwörter gleiten in die feste Ansicht (pairProj: Hauptrichtungen derselben Vektoren, mittlerer
+     Pfeil nach rechts gedreht), dort sieht man, dass die Pfeile fast parallel laufen. Auf der Karte selbst
+     zeigen sie kreuz und quer — t-SNE erhält Nachbarschaften, keine Richtungen.
 
    Nutzung:  const map = WordMap.create(M, { highlight: () => ['maus'], texts: () => [...] });
              map.mount(container);       // baut Werkzeugleiste + Canvas + Detailkarte
@@ -204,9 +205,44 @@ const WordMap = (() => {
       if (!pairModels[key]) {
         const pairs = A[key];
         const pm = WordKinds.model(A, pairs.flat(), { window: WIN });
-        pairModels[key] = { M: pm, proj: pairs.length ? WordKinds.projection(pm, pairs) : { Y: [] } };
+        pairModels[key] = { M: pm, proj: pairProj(pairs) };
       }
       return pairModels[key];
+    }
+    /* Pfeil-Ansicht ehrlich aus denselben Vektoren wie die Karte (M.emb, 20 Richtungen): die zwei
+       Hauptrichtungen der Paarwörter (PCA), danach nur so gedreht, dass der mittlere Pfeil nach rechts
+       zeigt. Nichts ist erzwungen — laufen die Pfeile parallel, dann steckt das in den Vektoren.
+       (Vorher: x = mittlere Paar-Richtung eines eigenen Modells, da liefen sie per Bauart parallel.)
+       Gemessen auf den Standardtexten: Pfeile zur mittleren Richtung im Schnitt cos 0,91 (Lehrer → Lehrerin)
+       — auf der t-SNE-Karte nur 0,09, denn t-SNE erhält Nachbarschaften, keine Richtungen. */
+    function pairProj(pairs) {
+      const words = [...new Set(pairs.flat())].filter(w => M.wIdx.has(w));
+      if (words.length < 3) return { words: [], Y: [] };
+      const X = words.map(w => M.emb[M.wIdx.get(w)]), d = X[0].length, n = X.length;
+      const mu = new Float64Array(d);
+      X.forEach(x => x.forEach((v, k) => { mu[k] += v / n; }));
+      const C = X.map(x => x.map((v, k) => v - mu[k]));
+      const comps = [];
+      for (let c = 0; c < 2; c++) {
+        let u = Array.from({ length: d }, (_, k) => Math.sin(k + 1 + c));
+        for (let it = 0; it < 100; it++) {
+          const w = new Array(d).fill(0);
+          C.forEach(x => { let s = 0; for (let k = 0; k < d; k++) s += x[k] * u[k]; for (let k = 0; k < d; k++) w[k] += s * x[k]; });
+          comps.forEach(q => { let s = 0; for (let k = 0; k < d; k++) s += w[k] * q[k]; for (let k = 0; k < d; k++) w[k] -= s * q[k]; });
+          const nn = Math.hypot(...w) || 1;
+          u = w.map(v => v / nn);
+        }
+        comps.push(u);
+      }
+      const Y = C.map(x => comps.map(q => x.reduce((s, v, k) => s + v * q[k], 0)));
+      const at = new Map(words.map((w, i) => [w, i]));
+      let mx = 0, my = 0;
+      pairs.forEach(([a, b]) => {
+        if (!at.has(a) || !at.has(b)) return;
+        mx += Y[at.get(b)][0] - Y[at.get(a)][0]; my += Y[at.get(b)][1] - Y[at.get(a)][1];
+      });
+      const ang = Math.atan2(my, mx), co = Math.cos(-ang), si = Math.sin(-ang);
+      return { words, Y: Y.map(([x, y]) => [x * co - y * si, x * si + y * co]) };
     }
     function pairInfo(w) {
       for (const f of FILTERS) {
@@ -259,7 +295,7 @@ const WordMap = (() => {
         return [ox + a * s, oy + b * s];
       });
     }
-    /* Feste Pfeil-Ansicht: x = mittlere Richtung der Paare, y = was die Wörter sonst trennt. */
+    /* Feste Pfeil-Ansicht: die zwei Hauptrichtungen der Paarwörter, mittlerer Pfeil zeigt nach rechts. */
     function alignedPos(base) {
       const pm = pairModel(filter.pairs);
       const Y = pm.proj.Y;
@@ -269,7 +305,7 @@ const WordMap = (() => {
       const pad = 30;
       const sx = (cw - 2 * pad - 70) / Math.max(1e-6, x1 - x0), sy = (ch - 2 * pad - 30) / Math.max(1e-6, y1 - y0);
       const out = base.map(p => p.slice());
-      pm.M.words.forEach((w, k) => {
+      pm.proj.words.forEach((w, k) => {
         const i = posOf(w);
         if (i >= 0) out[i] = [pad + 35 + (Y[k][0] - x0) * sx, pad + (Y[k][1] - y0) * sy];
       });

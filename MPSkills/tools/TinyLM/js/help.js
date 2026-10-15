@@ -85,7 +85,7 @@ const HELP = {
   },
   wortkarte: {
     title: 'Wortkarte', icon: '🗺️', cat: 'meaning',
-    text: 'Wörter mit ähnlichen Nachbarn landen nah beieinander, Linien verbinden die ähnlichsten. Filter und Wortwelten lassen eine Gruppe leuchten – bei Paaren zeigt jeder Pfeil einen Unterschied wie spielt → spielte.',
+    text: 'Wörter mit ähnlichen Nachbarn landen nah beieinander, Filter und Wortwelten lassen eine Gruppe leuchten. Paar-Pfeile wie spielt → spielte zeigen hier kreuz und quer – ob sie in dieselbe Richtung gehen, zeigt „Pfeile nebeneinander“.',
     vis: { type: 'dots' }
   },
 
