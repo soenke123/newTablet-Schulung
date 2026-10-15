@@ -10,7 +10,11 @@
    Die Trainingstasten sitzen nur in der Zentrum-Karte, die während des Trainings überhaupt nicht
    neu gebaut wird; die Karte "Training" zeigt nur Zahlen und die Fehlerlinie.
    Meldet Vorhersagen (p3-gen), den Fehler (p3-loss) und angetippte Neuronen (p3-neuron) an den
-   Leitfaden. */
+   Leitfaden.
+   Wie viele Wörter das Netz zurückschaut (3, 4 oder 5), wählt man im Zentrum; ein anderes Fenster
+   ist ein anderes Netz, also wird es neu gebaut (Wahl gemerkt in localStorage tinylm-p3-kontext). */
+const P3_CTX = [3, 4, 5];
+const P3_CTX_KEY = 'tinylm-p3-kontext';
 function deInt(n) { return n.toLocaleString('de-DE'); }
 function valueColor(v, scale) {
   const t = Math.max(-1, Math.min(1, v / scale));
@@ -65,6 +69,8 @@ Phases.register(3, {
     let centerToggle, centerStat, centerDot, netBtn, centerSpark;
     let genRun = 0;   /* Vorhersagen seit "Von vorn"/Trainingsstart (für den Leitfaden) */
     let cardTrain = null;
+    let ctxLen = 3;
+    try { const v = Number(localStorage.getItem(P3_CTX_KEY)); if (P3_CTX.includes(v)) ctxLen = v; } catch (e) { /* ohne Speicher: 3 */ }
     const live = {};  /* Karten-Id -> Auffrisch-Funktion; nur offene Karten tragen sich ein */
 
     const CARDS = ['embed', 'hidden', 'output', 'net', 'train'];
@@ -313,6 +319,7 @@ Phases.register(3, {
       const stepB = fact('Schritte');
       const lossB = fact('Fehler');
       const epochS = fact('× alle Beispiele');
+      const lrB = fact('Schrittgröße');
       container.appendChild(facts);
 
       const sparkHead = el('div', 'spark-head');
@@ -321,12 +328,13 @@ Phases.register(3, {
       const sparkHost = el('div', 'spark-host');
       container.appendChild(sparkHost);
 
-      cardTrain = { stepB, lossB, epochS, sparkHost };
+      cardTrain = { stepB, lossB, epochS, lrB, sparkHost };
       live.train = () => {
         if (!cardTrain || !cardTrain.stepB.isConnected) return;
         cardTrain.stepB.textContent = deInt(net.step);
         cardTrain.lossB.textContent = lossTxt();
         cardTrain.epochS.textContent = epochTxt();
+        cardTrain.lrB.textContent = net.lr.toFixed(3).replace('.', ',');
         cardTrain.sparkHost.replaceChildren(renderSparkline(net.lossHistory, 260, 60));
       };
       live.train();
@@ -341,7 +349,7 @@ Phases.register(3, {
       if (netView) { netView.destroy(); netView = null; }
 
       const texts = State.activeTexts();
-      data = buildPhase3Data(texts, { vocabCap: 600, C: 3 });
+      data = buildPhase3Data(texts, { vocabCap: 600, C: ctxLen });
       net = createNet(data.vocab.length, data.C);
       genSession = freshGenSession();
       genRun = 0;
@@ -435,6 +443,29 @@ Phases.register(3, {
       tRow.append(tBtns, sparkWrap);
       trainBox.appendChild(tRow);
       center.appendChild(trainBox);
+
+      /* Wie weit schaut das Netz zurück? Wechsel = neues Netz (render baut alles neu). */
+      const ctxRow = el('div', 'ctxpick');
+      ctxRow.dataset.spot = 'ctxlen';
+      ctxRow.appendChild(el('span', 'small', 'Das Netz sieht die letzten'));
+      const ctxBtns = el('div', 'ctxpick-btns');
+      ctxBtns.setAttribute('role', 'radiogroup');
+      ctxBtns.setAttribute('aria-label', 'Wie viele Wörter sieht das Netz?');
+      P3_CTX.forEach(c => {
+        const b = el('button', 'chip' + (c === ctxLen ? ' active' : ''), String(c));
+        b.type = 'button';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', c === ctxLen ? 'true' : 'false');
+        b.addEventListener('click', () => {
+          if (c === ctxLen) return;
+          ctxLen = c;
+          try { localStorage.setItem(P3_CTX_KEY, String(c)); } catch (e) { /* ohne Speicher geht es auch */ }
+          render();
+        });
+        ctxBtns.appendChild(b);
+      });
+      ctxRow.append(ctxBtns, el('span', 'small', 'Wörter'), Help.btn('kontextnetz', 'sm'));
+      center.appendChild(ctxRow);
 
       const inDim = net.C * net.d;
       const paramCount = data.vocab.length * net.d + inDim * net.H + net.H + net.H * data.vocab.length + data.vocab.length;

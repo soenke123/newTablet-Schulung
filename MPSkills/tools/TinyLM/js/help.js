@@ -110,9 +110,14 @@ const HELP = {
     text: 'Am Ende bekommt jedes Wort einen Prozentwert. Daraus wird gewürfelt – genau wie in Phase 1.',
     vis: { type: 'bars', items: [['Hund', 48], ['Katze', 31], ['Napf', 21]] }
   },
+  kontextnetz: {
+    title: 'Wie weit schaut das Netz zurück?', icon: '👀', cat: 'context',
+    text: 'Mehr Wörter im Blick = geradere Sätze. Aber das Netz muss neu lernen und schreibt die Texte eher wörtlich ab.',
+    vis: { type: 'tokens', items: [['Der', 'dim'], ['kleine', 'win'], ['Hund', 'win'], ['frisst', 'win'], ['?', 'next']] }
+  },
   training: {
     title: 'Training', icon: '🏋️', cat: 'random',
-    text: 'Raten, mit dem echten Wort vergleichen, alle Zahlen ein winziges Stück korrigieren. Tausende Male.',
+    text: 'Raten, mit dem echten Wort vergleichen, alle Zahlen ein Stück korrigieren. Erst grob, dann immer feiner – tausende Male.',
     vis: { type: 'cycle', items: [['🤔', 'raten'], ['✅', 'vergleichen'], ['🔧', 'korrigieren']], loop: true }
   },
   fehler: {

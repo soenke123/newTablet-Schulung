@@ -12,7 +12,7 @@
 .spark-head { display: flex; align-items: center; gap: 8px; }
 .net-warn { color: var(--bad); font-weight: 700; }
 
-.trainfacts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.trainfacts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
 .trainfact { background: var(--soft); border-radius: 10px; padding: 6px 8px; display: flex; flex-direction: column; }
 .trainfact b { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
 .trainfact span { font-size: 0.72rem; color: var(--muted); }
@@ -40,3 +40,6 @@
 
 .net-arch { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: center; }
 .arch-num { font-family: var(--font-mono); font-size: 0.86rem; font-weight: 500; background: var(--soft); border-radius: 999px; padding: 2px 10px; }
+.ctxpick { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; justify-content: center; }
+.ctxpick-btns { display: inline-flex; gap: 4px; }
+.ctxpick-btns .chip { min-width: 2.2rem; justify-content: center; font-family: var(--font-mono); }

@@ -1,5 +1,10 @@
 /* Handgebautes Mini-Netz: Embedding -> Concat -> Hidden (tanh) -> Softmax. Bengio-2003-Stil, bewusst ohne Attention.
-   Zeitgeschedultes Training (trainBudget) läuft in phase3.js über requestAnimationFrame. */
+   Zeitgeschedultes Training (trainBudget) läuft in phase3.js über requestAnimationFrame.
+   Lernrate: am Anfang groß (schnell bergab), dann immer kleiner (lrAt). Mit fester Lernrate 0,08
+   blieb der Fehler bei etwa 2,1 hängen und stieg danach sogar wieder — die Schritte waren zu grob,
+   um die feinen Unterschiede zwischen den Wortfolgen zu lernen. Jetzt 0,15 → nach 4 Durchgängen halb
+   so groß → mindestens 0,01: nach 10 Durchgängen Fehler etwa 1,3–1,5, nach 20 etwa 0,4–0,7
+   (3–5 Kontextwörter, Standard-Textwelten, gemessen 15.10.2026). */
 function mulberry32(a) {
   return function () {
     a |= 0; a = a + 0x6D2B79F5 | 0;
@@ -11,7 +16,7 @@ function mulberry32(a) {
 function clampG(g, clip) { return g > clip ? clip : (g < -clip ? -clip : g); }
 
 function createNet(vocabSize, C, opts) {
-  const o = Object.assign({ d: 16, H: 40, seed: 7, lr: 0.08, clip: 5 }, opts || {});
+  const o = Object.assign({ d: 16, H: 40, seed: 7, lr: 0.15, lrMin: 0.01, lrHalf: 4, clip: 5 }, opts || {});
   const rnd = mulberry32(o.seed);
   function randInit(n, fanIn) {
     const scale = 1 / Math.sqrt(fanIn);
@@ -21,7 +26,7 @@ function createNet(vocabSize, C, opts) {
   }
   const d = o.d, H = o.H, inDim = C * d;
   return {
-    vocabSize, C, d, H, lr: o.lr, clip: o.clip,
+    vocabSize, C, d, H, lr: o.lr, lr0: o.lr, lrMin: o.lrMin, lrHalf: o.lrHalf, clip: o.clip,
     embed: randInit(vocabSize * d, d),
     W1: randInit(inDim * H, inDim),
     b1: new Float64Array(H),
@@ -121,12 +126,17 @@ function trainStep(net, ctxIds, targetId) {
   return loss;
 }
 
+/* Lernrate nach so vielen Durchgängen durch alle Beispiele: nach lrHalf Durchgängen halb so groß,
+   nie kleiner als lrMin. */
+function lrAt(net, epoch) { return Math.max(net.lrMin, net.lr0 / (1 + epoch / net.lrHalf)); }
+
 /* Trainiert, bis das Zeitbudget (ms) aufgebraucht ist. Bricht bei NaN/Inf sofort ab (net.diverged). */
 function trainBudget(net, pairs, budgetMs) {
   if (!pairs.length) return { n: 0, nanHit: false, avgLoss: null };
   const start = performance.now();
   let n = 0, lossSum = 0, nanHit = false;
   while (performance.now() - start < budgetMs) {
+    if ((n & 63) === 0) net.lr = lrAt(net, net.step / pairs.length);
     const p = pairs[Math.floor(Math.random() * pairs.length)];
     const loss = trainStep(net, p.ctx, p.target);
     if (!isFinite(loss)) { nanHit = true; net.diverged = true; break; }
