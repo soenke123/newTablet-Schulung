@@ -82,29 +82,35 @@ test('Formen und Textmarker werden als Vektoren exportiert, Textmarker transpare
   ];
   const out = await PDFDocument.load(await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0, marks }], () => bytes));
   const page = out.getPage(0), content = pageContent(page);
-  assert.match(content, /10 10 m\s+60 10 l\s+60 40 l\s+10 40 l\s+h/);
-  assert.match(content, /200 125 m\s+[\d. ]+c/);
-  assert.ok(content.indexOf('/GS') < content.indexOf('10 10 m'), 'Textmarker zuerst');
+  assert.match(content, /11 11 m\s+59 11 l\s+59 39 l\s+11 39 l\s+h/, 'Rand innen an der Kante');
+  assert.match(content, /199 125 m\s+[\d. ]+c/);
+  assert.ok(content.indexOf('/GS') < content.indexOf('11 11 m'), 'Textmarker zuerst');
   const gs = page.node.Resources().lookup(PDFName.of('ExtGState'));
   const state = gs.lookup(gs.keys()[0]);
   assert.equal(state.get(PDFName.of('CA')).asNumber(), 0.4);
   assert.equal(state.get(PDFName.of('BM')).toString(), '/Multiply');
 });
 
-test('Deckkraft und Füllung von Formen landen im ExtGState (CA Linie, ca Füllung)', async () => {
+test('Gefüllte Formen werden Transparenzgruppen: Füllung unter dem deckenden Rand, Deckkraft für die ganze Gruppe', async () => {
   const bytes = await createBlankPdf(300, 300);
   const marks = [
-    { type: 'rect', color: '#dc2626', width: 2, points: [10, 10, 60, 40], fill: 'light' },
+    { type: 'rect', color: '#dc2626', width: 2, points: [10, 10, 60, 40], fill: 'light', opacity: 0.5 },
     { type: 'ellipse', color: '#1d4ed8', width: 2, points: [100, 100, 200, 150], fill: 'solid' },
     { type: 'ink', color: '#111827', width: 3, opacity: 0.5, points: [0, 0, 50, 50] },
   ];
   const out = await PDFDocument.load(await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0, marks }], () => bytes));
   const page = out.getPage(0), content = pageContent(page);
-  assert.match(content, / rg[\s\S]*10 10 m[\s\S]*h\s+B/, 'Rechteck gefüllt und umrandet');
-  assert.match(content, /200 125 m[\s\S]*h\s+B/, 'Ellipse gefüllt und umrandet');
+  assert.equal((content.match(/\/Fm[-\d]+ Do/g) || []).length, 2, 'zwei Gruppen');
+  assert.match(content, /\/GS[-\d]+ gs\s+\/Fm[-\d]+ Do/, 'Deckkraft der Gruppe außen');
+  const xobjects = page.node.Resources().lookup(PDFName.of('XObject'));
+  const [rect, ellipse] = xobjects.keys().map(k => out.context.lookup(xobjects.get(k)));
+  const rectOps = new TextDecoder().decode(decodePDFRawStream(rect).decode());
+  assert.match(rectOps, /\/G0 gs[\s\S]*11 11 m[\s\S]*h\s+f\s+Q[\s\S]*11 11 m\s+59 11 l\s+59 39 l\s+11 39 l\s+h\s+S/, 'Füllung (Anteil) unter dem Rand, Rand innen');
+  assert.equal(rect.dict.get(PDFName.of('Group')).get(PDFName.of('S')).toString(), '/Transparency');
+  assert.equal(rect.dict.get(PDFName.of('Resources')).get(PDFName.of('ExtGState')).get(PDFName.of('G0')).get(PDFName.of('ca')).asNumber(), 0.25);
+  assert.doesNotMatch(new TextDecoder().decode(decodePDFRawStream(ellipse).decode()), /\/G0 gs/, 'volle Füllung ohne eigenen Zustand');
   const gs = page.node.Resources().lookup(PDFName.of('ExtGState'));
-  const states = gs.keys().map(k => gs.lookup(k)).map(st => [st.get(PDFName.of('CA')).asNumber(), st.get(PDFName.of('ca')).asNumber(), !!st.get(PDFName.of('BM'))]);
-  assert.deepEqual(states.sort(), [[0.5, 0.5, false], [1, 0.25, false]], 'volle Füllung braucht keinen eigenen Zustand');
+  assert.deepEqual(gs.keys().map(k => gs.lookup(k).get(PDFName.of('CA')).asNumber()), [0.5], 'Rechteck und Strich teilen sich den Zustand 50 %');
 });
 
 // Comments stay real annotations: a source page with a highlight (+ popup), a note with a reply and a link.
@@ -186,4 +192,30 @@ test('Seiten ohne Kommentare behalten ihre Annotationen unverändert', async () 
   const { bytes } = await sourceWithComments();
   const out = await PDFDocument.load(await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0 }], () => bytes));
   assert.deepEqual(annotsOf(out.getPage(0)).map(subtype), ['Highlight', 'Popup', 'Text', 'Text', 'Link']);
+});
+
+test('Textfeld wird FreeText mit Helvetica-Darstellung, Status eine versteckte Antwort mit /State', async () => {
+  const { bytes, comments, owned } = await sourceWithComments();
+  const box = { id: 7, kind: 'freetext', color: '#dc2626', fontSize: 12, text: 'Super!\nWeiter so', author: 'Frau Meyer', date: null, rect: [20, 200, 100, 236], replies: [] };
+  const withStatus = { ...comments[1], status: { state: 'completed', author: 'Mia', date: null } };
+  const pages = [{ sourceId: 'a', pageIndex: 0, rotation: 0, comments: [comments[0], withStatus, box] }];
+  const out = await PDFDocument.load(await buildPdf(pages, () => bytes, undefined, { ownedAnnots: () => owned }));
+  const annots = annotsOf(out.getPage(0));
+  const ft = annots.find(a => subtype(a) === 'FreeText');
+  assert.equal(contents(ft), 'Super!\nWeiter so');
+  assert.equal(ft.dict.get(PDFName.of('DA')).decodeText(), '/Helv 12 Tf 0.863 0.149 0.149 rg');
+  assert.equal(ft.dict.get(PDFName.of('C')), undefined, 'ohne Hintergrund kein /C');
+  assert.equal(ft.dict.get(PDFName.of('F')).asNumber(), 4);
+  assert.ok(!annots.some(a => a.dict.get(PDFName.of('Parent')) === ft.ref), 'Textfeld ohne Popup');
+  const ap = out.context.lookup(ft.dict.get(PDFName.of('AP')).get(PDFName.of('N')));
+  const stream = new TextDecoder().decode(decodePDFRawStream(ap).decode());
+  assert.match(stream, /BT[\s\S]*\/Helv 12 Tf[\s\S]*Tj[\s\S]*Tj[\s\S]*ET/);
+  assert.ok(ap.dict.get(PDFName.of('Resources')).get(PDFName.of('Font')), 'Schrift in den Ressourcen');
+  const note = annots.find(a => contents(a) === 'Frage');
+  const state = annots.find(a => a.dict.get(PDFName.of('State')));
+  assert.equal(state.dict.get(PDFName.of('IRT')), note.ref, 'Status hängt am (unveränderten) Original');
+  assert.equal(state.dict.get(PDFName.of('State')).decodeText(), 'Completed');
+  assert.equal(state.dict.get(PDFName.of('StateModel')).decodeText(), 'Review');
+  assert.equal(state.dict.get(PDFName.of('F')).asNumber() & 2, 2, 'versteckt');
+  assert.equal(state.dict.get(PDFName.of('T')).decodeText(), 'Mia');
 });

@@ -6,6 +6,9 @@
  * - type 'ink': freehand stroke; with `opacity` + `blend: 'multiply'` it is a highlighter stroke.
  * - type 'line' | 'arrow' | 'rect' | 'ellipse': points are the start and end of the drag [x1, y1, x2, y2].
  * - optional `opacity` (0…1, all types) and, for rect/ellipse, `fill: 'light' | 'solid'` (filled with the line colour).
+ * Rectangles and ellipses keep their line inside the dragged box (the line runs half a width inside the edge). Line and
+ * fill of a filled shape are drawn as one group: the fill (FILL_OPACITY share) lies under the opaque line and the
+ * opacity applies to the whole group, so a transparent line never darkens where it covers the fill.
  */
 export const PEN_COLORS = [
   { color: '#111827', label: 'Schwarz' },
@@ -23,12 +26,12 @@ export const MARKER_OPACITY = 0.4;
 export const ERASER_SIZE = { min: 4, max: 60, step: 2, initial: 16 };
 export const SHAPE_TYPES = ['line', 'arrow', 'rect', 'ellipse'];
 export const FILLABLE = ['rect', 'ellipse'];
-/** Fill of rectangles and ellipses (`mark.fill`): light = the line colour at a quarter of the opacity, solid = full. */
+/** Fill of rectangles and ellipses (`mark.fill`): share of the line colour inside the shape (light = a quarter, solid = full). */
 export const FILL_OPACITY = { light: 0.25, solid: 1 };
 
 export const isHighlight = mark => mark.blend === 'multiply';
-/** Opacity of the fill of a mark, 0 when it has none. */
-export const fillOpacity = mark => FILLABLE.includes(mark.type) && FILL_OPACITY[mark.fill] ? FILL_OPACITY[mark.fill] * (mark.opacity ?? 1) : 0;
+/** Share of the line colour in the fill of a mark (inside its group, before the opacity), 0 when it has none. */
+export const fillShare = mark => FILLABLE.includes(mark.type) && FILL_OPACITY[mark.fill] || 0;
 
 /**
  * Maps between PDF user space and view pixels for a page box `{x, y, width, height}` (PDF points, the
@@ -87,10 +90,15 @@ export function arrowWings(x1, y1, x2, y2, length) {
 export function markSvg(mark, map) {
   const width = mark.width * map.scale;
   if (mark.type === 'ink') return { tag: 'path', attrs: { d: inkPath(mark.points, map.toView) }, width };
+  if (FILLABLE.includes(mark.type)) {
+    const fill = fillShare(mark) || null;
+    const line = strokeBox(mark), [ax, ay] = map.toView(line.x0, line.y0), [bx, by] = map.toView(line.x1, line.y1);
+    const box = { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(bx - ax), h: Math.abs(by - ay) };
+    if (mark.type === 'rect') return { tag: 'rect', attrs: { x: round(box.x), y: round(box.y), width: round(box.w), height: round(box.h) }, width: line.width * map.scale, fill };
+    return { tag: 'ellipse', attrs: { cx: round(box.x + box.w / 2), cy: round(box.y + box.h / 2), rx: round(box.w / 2), ry: round(box.h / 2) }, width: line.width * map.scale, fill };
+  }
   const [x1, y1] = map.toView(mark.points[0], mark.points[1]);
   const [x2, y2] = map.toView(mark.points[2], mark.points[3]);
-  if (mark.type === 'rect') return { tag: 'rect', attrs: { x: round(Math.min(x1, x2)), y: round(Math.min(y1, y2)), width: round(Math.abs(x2 - x1)), height: round(Math.abs(y2 - y1)) }, width };
-  if (mark.type === 'ellipse') return { tag: 'ellipse', attrs: { cx: round((x1 + x2) / 2), cy: round((y1 + y2) / 2), rx: round(Math.abs(x2 - x1) / 2), ry: round(Math.abs(y2 - y1) / 2) }, width };
   let d = `M${round(x1)} ${round(y1)}L${round(x2)} ${round(y2)}`;
   if (mark.type === 'arrow') {
     const [a, b] = arrowWings(x1, y1, x2, y2, arrowLength(mark.width) * map.scale);
@@ -109,18 +117,45 @@ export function markOutline(mark) {
     const [a, b] = arrowWings(x1, y1, x2, y2, arrowLength(mark.width));
     return [p, [a[0], a[1], x2, y2, b[0], b[1]]];
   }
-  if (mark.type === 'rect') return [[x1, y1, x2, y1, x2, y2, x1, y2, x1, y1]];
+  if (mark.type === 'rect') { const b = strokeBox(mark); return [[b.x0, b.y0, b.x1, b.y0, b.x1, b.y1, b.x0, b.y1, b.x0, b.y0]]; }
   if (mark.type === 'ellipse') {
-    const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, rx = Math.abs(x2 - x1) / 2, ry = Math.abs(y2 - y1) / 2, ring = [];
+    const b = strokeBox(mark), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, rx = (b.x1 - b.x0) / 2, ry = (b.y1 - b.y0) / 2, ring = [];
     for (let i = 0; i <= 48; i++) ring.push(cx + rx * Math.cos(i * Math.PI / 24), cy + ry * Math.sin(i * Math.PI / 24));
     return [ring];
   }
   return [];
 }
 
+/** Normalised box `{x0, y0, x1, y1}` (PDF space) of the points of a mark: the dragged box of shapes, the extent of strokes. */
+export function pointsBox(mark) {
+  const xs = mark.points.filter((_, i) => i % 2 === 0), ys = mark.points.filter((_, i) => i % 2 === 1);
+  return { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) };
+}
+
+/**
+ * Box along which the line of a rectangle or ellipse runs: the dragged box moved inwards by half the line width, so
+ * the line ends at the edge. Very small shapes collapse to their centre line; `width` is the line width that still fits.
+ */
+export function strokeBox(mark) {
+  const b = pointsBox(mark), w = mark.width || 0;
+  const inX = Math.min(w / 2, (b.x1 - b.x0) / 2), inY = Math.min(w / 2, (b.y1 - b.y0) / 2);
+  return { x0: b.x0 + inX, y0: b.y0 + inY, x1: b.x1 - inX, y1: b.y1 - inY, width: Math.max(Math.min(w, 2 * Math.min(inX, inY)), Math.min(w, 0.5)) };
+}
+
+/**
+ * A copy of the mark stretched so that the box with corners a, b (PDF space) becomes the box a2, b2, each axis on its
+ * own (a box that is flat on one axis is only moved along it). Line widths stay as they are.
+ */
+export function scaleMark(mark, [ax, ay], [bx, by], [cx, cy], [dx, dy]) {
+  const sx = bx - ax ? (dx - cx) / (bx - ax) : null, sy = by - ay ? (dy - cy) / (by - ay) : null;
+  return { ...mark, points: mark.points.map((v, i) => roundPoint(i % 2
+    ? (sy == null ? v + (cy - ay) : cy + (v - ay) * sy)
+    : (sx == null ? v + (cx - ax) : cx + (v - ax) * sx))) };
+}
+
 /** True if the point (PDF space) lies within `radius` of the drawn line, counting half its line width. */
 export function markHit(mark, x, y, radius) {
-  if (fillOpacity(mark) && insideShape(mark, x, y)) return true;
+  if (fillShare(mark) && insideShape(mark, x, y)) return true;
   const reach = radius + (mark.width || 0) / 2;
   for (const p of markOutline(mark)) {
     if (p.length === 2 && Math.hypot(x - p[0], y - p[1]) <= reach) return true;

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillOpacity } from '../js/annotations.js';
+import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillShare, strokeBox, scaleMark, pointsBox } from '../js/annotations.js';
 
 const box = { x: 10, y: 20, width: 200, height: 300 };
 const near = (actual, expected) => actual.forEach((v, i) => assert.ok(Math.abs(v - expected[i]) < 1e-9, `${actual} ≠ ${expected}`));
@@ -46,9 +46,9 @@ test('Farbumrechnung', () => {
 test('Formen werden in Ansichtskoordinaten beschrieben, auch auf gedrehten Seiten', () => {
   const map = pageTransform({ width: 100, height: 200 }, 90, 2);
   const rect = markSvg({ type: 'rect', width: 1, points: [10, 20, 30, 60] }, map);
-  assert.deepEqual(rect, { tag: 'rect', attrs: { x: 40, y: 20, width: 80, height: 40 }, width: 2 });
+  assert.deepEqual(rect, { tag: 'rect', attrs: { x: 41, y: 21, width: 78, height: 38 }, width: 2, fill: null }, 'Linie läuft innen an der Kante');
   const ellipse = markSvg({ type: 'ellipse', width: 1, points: [10, 20, 30, 60] }, map);
-  assert.deepEqual(ellipse.attrs, { cx: 80, cy: 40, rx: 40, ry: 20 });
+  assert.deepEqual(ellipse.attrs, { cx: 80, cy: 40, rx: 39, ry: 19 });
   const arrow = markSvg({ type: 'arrow', width: 1, points: [0, 0, 50, 0] }, pageTransform({ width: 100, height: 100 }, 0, 1));
   assert.match(arrow.attrs.d, /^M0 100L50 100M.+L50 100L.+$/);
 });
@@ -81,8 +81,8 @@ test('Gefüllte Formen treffen auch innen, ungefüllte nur am Rand', () => {
   const ellipse = { ...rect, type: 'ellipse', fill: 'solid' };
   assert.equal(markHit(ellipse, 50, 25, 0), true);
   assert.equal(markHit(ellipse, 8, 4, 0), false, 'Ecke liegt außerhalb der Ellipse');
-  assert.equal(fillOpacity({ ...rect, fill: 'light', opacity: 0.5 }), 0.125);
-  assert.equal(fillOpacity({ type: 'line', fill: 'solid', points: [] }), 0);
+  assert.equal(fillShare({ ...rect, fill: 'light', opacity: 0.5 }), 0.25, 'Anteil in der Gruppe, Deckkraft kommt obendrauf');
+  assert.equal(fillShare({ type: 'line', fill: 'solid', points: [] }), 0);
 });
 
 test('Radieren schneidet Striche an der Stelle auf und lässt den Rest unverändert', () => {
@@ -114,4 +114,23 @@ test('Radieren macht aus getroffenen Formen Striche ohne Füllung', () => {
   assert.equal(next[0].fill, undefined);
   assert.equal(next[0].color, '#dc2626');
   assert.equal(eraseMarks([rect], 50, 25, 5, () => 9)[0], rect, 'Radieren innen in der Füllung ändert nichts');
+});
+
+test('Rand von Rechteck und Ellipse liegt innen an der Kante', () => {
+  const rect = { type: 'rect', width: 4, points: [0, 0, 100, 50], fill: 'light' };
+  assert.deepEqual(strokeBox(rect), { x0: 2, y0: 2, x1: 98, y1: 48, width: 4 });
+  assert.deepEqual(markBounds(rect), { x0: 0, y0: 0, x1: 100, y1: 50 }, 'außen genau der gezogene Kasten');
+  assert.equal(strokeBox({ type: 'rect', width: 10, points: [0, 0, 4, 40] }).width, 4, 'Linie wird bei sehr schmalen Formen schmaler');
+  const svg = markSvg(rect, pageTransform({ width: 100, height: 100 }, 0, 1));
+  assert.deepEqual(svg.attrs, { x: 2, y: 52, width: 96, height: 46 });
+  assert.equal(svg.fill, 0.25);
+});
+
+test('Größe ändern streckt die Punkte je Achse, flache Elemente werden nur verschoben', () => {
+  const ink = { type: 'ink', width: 2, points: [0, 0, 10, 20, 20, 0] };
+  assert.deepEqual(scaleMark(ink, [0, 0], [20, 20], [10, 0], [50, 10]).points, [10, 0, 30, 10, 50, 0]);
+  const flat = { type: 'ink', width: 2, points: [0, 5, 20, 5] };
+  assert.deepEqual(scaleMark(flat, [0, 5], [20, 5], [0, 8], [40, 8]).points, [0, 8, 40, 8]);
+  assert.deepEqual(pointsBox({ type: 'rect', points: [50, 40, 10, 0] }), { x0: 10, y0: 0, x1: 50, y1: 40 });
+  assert.equal(scaleMark(ink, [0, 0], [20, 20], [10, 0], [50, 10]).width, 2, 'Strichstärke bleibt');
 });

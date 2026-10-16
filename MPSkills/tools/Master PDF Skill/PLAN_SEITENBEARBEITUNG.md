@@ -27,9 +27,11 @@ Nur Inhalte, die fest in der Seite stehen, werden garantiert gedruckt. Daher gil
    - Reiter „Zeichnen“ mit Stift (5 Farben, 3 Stärken) und Radierer (entfernt ganze Striche).
 2. **Zeichnen vervollständigen** ✅ erledigt: freier Textmarker (transparent, multipliziert, eigene Farben/Breiten), Linie, Pfeil, Rechteck, Ellipse (Shift rastet ein), Auswählen mit Verschieben, Umfärben, Stärke ändern und Löschen; Radierer für alle Elemente.
    - Nachgerüstet: je drei Standardfarben + bunter Kreis (eigene Farbe, `<input type=color>`), Regler für Strichstärke und Deckkraft (alle Elemente), Füllung hell/voll für Rechteck und Ellipse, Radierer mit zwei Arten „Ganze Elemente“ / „Radieren“ (schneidet Striche auf, `eraseMarks`; getroffene Formen werden Striche ohne Füllung).
-   - Noch offen: Größe ändern (Anfasser), Elemente kopieren/einfügen.
+   - Nachgerüstet (2): Größe ändern mit Anfassern (`scaleMark`, Linien/Pfeile an den Enden); Rand von Rechteck/Ellipse liegt innen (`strokeBox`), gefüllte Formen sind eine Transparenzgruppe (Füllung unter deckendem Rand, Deckkraft für die Gruppe) – keine Überlappung, keine Naht.
+   - Noch offen: Elemente kopieren/einfügen.
 3. **Kommentieren** ✅ erledigt: Markieren, Unterstreichen, Durchstreichen an Text gekoppelt (Textauswahl über PDF.js-Textinhalt, Buchstabenbreiten per Canvas gemessen), Notizen, Kommentarliste (bearbeiten, antworten, löschen, zur Stelle springen, Name für neue Kommentare). Export als echte PDF-Annotationen mit Darstellung (`/AP`) und Popup; Antworten als `/IRT`. Vorhandene Kommentare werden beim Öffnen eingelesen (auch Antworten) und unverändert als Original-Objekte exportiert. Geprüft mit PDF.js (erneut geöffnet) und Poppler.
-   - Noch offen: in Acrobat, Edge und Firefox prüfen; Freitext-Kommentar (Textfeld als Annotation), Status von Kommentaren, Kommentare filtern; Textfeld-Kommentare aus anderen Programmen bearbeiten.
+   - Nachgerüstet: Textfeld (FreeText mit Helvetica-Darstellung, Kasten wächst mit dem Text, Schriftgröße/Textfarbe), Status (Review-Antwort mit /State, wird eingelesen), Filter der Kommentarliste (Art, Status, Person); Textfelder aus anderen Programmen sind bearbeitbar (eigene Darstellung).
+   - Noch offen: Status/Textfeld in Acrobat, Edge und Firefox prüfen; Rahmen/Hintergrund für eigene Textfelder.
 4. **Einfügen**: Textfeld (Schrift, Größe, Farbe; mehrzeilig), Bild, **Unterschrift**: Feld zum Unterschreiben, optional Klarname darunter und Datum, danach frei auf der Seite verschieben und skalieren.
 
 Später (Master-Prompt, nicht eingeplant): Stempel, Wasserzeichen, Reiter „Bearbeiten“ (vorhandenen Text ändern, nur eingeschränkt zuverlässig möglich), OCR, Formulare, Schwärzen.

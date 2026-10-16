@@ -1,10 +1,11 @@
 import {
-  PDFDocument, PDFArray, PDFName, PDFRef, PDFDict, PDFHexString, PDFString, degrees, LineCapStyle, LineJoinStyle,
+  PDFDocument, PDFArray, PDFName, PDFRef, PDFDict, PDFHexString, PDFString, StandardFonts, degrees, LineCapStyle, LineJoinStyle,
+  beginText, endText, setFontAndSize, moveText, showText,
   pushGraphicsState, popGraphicsState, setGraphicsState, setStrokingRgbColor, setFillingRgbColor, setLineWidth, setLineCap, setLineJoin,
-  moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke,
+  moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject,
 } from '../lib/pdf-lib/pdf-lib.esm.min.js';
-import { hexToRgb, isHighlight, fillOpacity, arrowWings, arrowLength } from './annotations.js';
-import { COMMENT_KINDS, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, commentChanged, highlightPolygons, markupLines, pdfDate } from './comments.js';
+import { hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength } from './annotations.js';
+import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, FREETEXT_SIZE, commentChanged, highlightPolygons, markupLines, freeTextLines, pdfDate } from './comments.js';
 
 /**
  * Builds a new PDF from virtual page records `[{sourceId, pageIndex, rotation, marks?, comments?}]` (rotation is
@@ -35,11 +36,12 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
     done += positions.length;
   }
   const used = new Set();
+  const font = pages.some(p => p.comments?.some(c => c.kind === 'freetext')) ? await textFont(out) : null;
   copied.forEach((page, i) => {
     page.setRotation(degrees(pages[i].rotation));
     drawMarks(page, pages[i].marks);
     out.addPage(page);
-    if (annotRefs[i]) writeComments(page, pages[i].comments || [], annotRefs[i], ownedAnnots(pages[i].sourceId, pages[i].pageIndex) || new Set(), used);
+    if (annotRefs[i]) writeComments(page, pages[i].comments || [], annotRefs[i], ownedAnnots(pages[i].sourceId, pages[i].pageIndex) || new Set(), used, font);
   });
   await onProgress({ phase: 'save', done, total: pages.length });
   return out.save();
@@ -48,7 +50,8 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
 /**
  * Draws marks (PDF user space, see annotations.js) as vector graphics on top of the page content; highlighter
  * strokes first (transparent, multiplied, so text stays readable), then everything else in drawing order.
- * Opacity and the fill of shapes go into an ExtGState (CA for the line, ca for the fill).
+ * Opacity goes into an ExtGState. A filled rectangle or ellipse becomes a transparency group (form XObject): fill
+ * under the opaque line inside, the opacity applied to the whole group – no darker overlap and no seam.
  * Repeated pages share copied objects (copyPages caches even direct ones), so the page first gets its own
  * /Contents array – otherwise pdf-lib would append the marks to every copy of the page.
  */
@@ -65,12 +68,21 @@ export function drawMarks(page, marks) {
   };
   const ops = [];
   for (const mark of [...list.filter(isHighlight), ...list.filter(m => !isHighlight(m))]) {
-    const opacity = mark.opacity ?? 1, fillAlpha = fillOpacity(mark), color = hexToRgb(mark.color);
+    const opacity = mark.opacity ?? 1, share = fillShare(mark), color = hexToRgb(mark.color);
+    const width = mark.type === 'rect' || mark.type === 'ellipse' ? strokeBox(mark).width : mark.width;
+    const line = [setStrokingRgbColor(...color), setLineWidth(width), setLineCap(LineCapStyle.Round), setLineJoin(mark.type === 'rect' ? LineJoinStyle.Miter : LineJoinStyle.Round), ...markPath(mark), stroke()];
     ops.push(pushGraphicsState());
-    if (isHighlight(mark) || opacity < 1 || (fillAlpha && fillAlpha < 1)) ops.push(setGraphicsState(graphicsState(opacity, fillAlpha || opacity, isHighlight(mark))));
-    ops.push(setStrokingRgbColor(...color), setLineWidth(mark.width), setLineCap(LineCapStyle.Round), setLineJoin(LineJoinStyle.Round));
-    if (fillAlpha) ops.push(setFillingRgbColor(...color));
-    ops.push(...markPath(mark), fillAlpha ? fillAndStroke() : stroke(), popGraphicsState());
+    if (isHighlight(mark) || opacity < 1) ops.push(setGraphicsState(graphicsState(opacity, opacity, isHighlight(mark))));
+    if (share) {
+      const b = markBounds(mark);
+      const group = [pushGraphicsState(), ...(share < 1 ? [setGraphicsState('G0')] : []), setFillingRgbColor(...color), ...markPath(mark), fill(), popGraphicsState(), ...line];
+      const ref = node.context.register(node.context.formXObject(group, {
+        BBox: [b.x0 - 1, b.y0 - 1, b.x1 + 1, b.y1 + 1], Group: { S: 'Transparency', CS: 'DeviceRGB' },
+        Resources: { ExtGState: { G0: { Type: 'ExtGState', ca: share } } },
+      }));
+      ops.push(drawObject(node.newXObject('Fm', ref)));
+    } else ops.push(...line);
+    ops.push(popGraphicsState());
   }
   page.pushOperators(...ops);
 }
@@ -84,10 +96,10 @@ function markPath(mark) {
     for (let i = 2; i < p.length; i += 2) ops.push(lineTo(p[i], p[i + 1]));
     return ops;
   }
+  if (mark.type === 'rect') { const b = strokeBox(mark); return [moveTo(b.x0, b.y0), lineTo(b.x1, b.y0), lineTo(b.x1, b.y1), lineTo(b.x0, b.y1), closePath()]; }
   const [x1, y1, x2, y2] = p;
-  if (mark.type === 'rect') return [moveTo(x1, y1), lineTo(x2, y1), lineTo(x2, y2), lineTo(x1, y2), closePath()];
   if (mark.type === 'ellipse') {
-    const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, rx = Math.abs(x2 - x1) / 2, ry = Math.abs(y2 - y1) / 2, kx = rx * KAPPA, ky = ry * KAPPA;
+    const b = strokeBox(mark), cx = (b.x0 + b.x1) / 2, cy = (b.y0 + b.y1) / 2, rx = (b.x1 - b.x0) / 2, ry = (b.y1 - b.y0) / 2, kx = rx * KAPPA, ky = ry * KAPPA;
     return [moveTo(cx + rx, cy),
       appendBezierCurve(cx + rx, cy + ky, cx + kx, cy + ry, cx, cy + ry),
       appendBezierCurve(cx - kx, cy + ry, cx - rx, cy + ky, cx - rx, cy),
@@ -113,7 +125,24 @@ function copiedAnnotRefs(sourcePage, copiedPage) {
 }
 
 const text = value => PDFHexString.fromText(String(value ?? ''));
-const FLAG_PRINT = 4, FLAG_NO_ZOOM = 8, FLAG_NO_ROTATE = 16;
+
+/**
+ * Helvetica (standard font, WinAnsi) for text boxes: `ref` for the appearance resources, `widthOf(text, size)` in
+ * points and `encode(text)`, which replaces characters the font cannot show with "?".
+ */
+async function textFont(doc) {
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const known = new Set(font.getCharacterSet());
+  const clean = value => Array.from(String(value), ch => known.has(ch.codePointAt(0)) ? ch : '?').join('');
+  return { ref: font.ref, widthOf: (value, size) => font.widthOfTextAtSize(clean(value), size), encode: value => font.encodeText(clean(value)) };
+}
+
+/** Text measuring for the app (same Helvetica metrics as the exported text boxes). */
+export async function textMetrics() {
+  const { widthOf } = await textFont(await PDFDocument.create());
+  return widthOf;
+}
+const FLAG_HIDDEN = 2, FLAG_PRINT = 4, FLAG_NO_ZOOM = 8, FLAG_NO_ROTATE = 16;
 
 /**
  * Replaces the annotations the comments were read from (`owned`, PDF.js ids) by the page's comments. Unchanged
@@ -123,7 +152,7 @@ const FLAG_PRINT = 4, FLAG_NO_ZOOM = 8, FLAG_NO_ROTATE = 16;
  * PLAN_SEITENBEARBEITUNG.md). Other annotations (links, form fields …) stay as they are. `used` collects the
  * references already placed on earlier pages.
  */
-export function writeComments(page, comments, refs, owned, used) {
+export function writeComments(page, comments, refs, owned, used, font = null) {
   const node = page.node, context = node.context;
   const ownedRefs = new Set([...owned].map(id => refs.get(id)).filter(Boolean));
   const entries = (node.Annots()?.asArray() || []).filter(ref => !ownedRefs.has(ref));
@@ -158,9 +187,16 @@ export function writeComments(page, comments, refs, owned, used) {
       if (!origRef || commentChanged(c)) {
         dict.set(PDFName.of('Contents'), text(c.text));
         dict.set(PDFName.of('M'), PDFString.of(pdfDate(c.date || new Date())));
-        dict.set(PDFName.of('C'), context.obj(hexToRgb(c.color)));
         dict.set(PDFName.of('Rect'), context.obj(c.rect));
-        if (kind.redraw && (!origRef || c.color !== c.orig.color || !dict.has(PDFName.of('AP')))) dict.set(PDFName.of('AP'), context.obj({ N: appearance(context, c) }));
+        if (c.kind === 'freetext') {
+          // Text boxes: /C would be read as background by some readers, the text colour goes into /DA.
+          if (c.fill) dict.set(PDFName.of('C'), context.obj(hexToRgb(c.fill))); else dict.delete(PDFName.of('C'));
+          dict.set(PDFName.of('DA'), PDFString.of(`/Helv ${c.fontSize || FREETEXT_SIZE} Tf ${hexToRgb(c.color).map(v => Math.round(v * 1000) / 1000).join(' ')} rg`));
+          if (font) dict.set(PDFName.of('AP'), context.obj({ N: freeTextAppearance(context, c, font) }));
+        } else {
+          dict.set(PDFName.of('C'), context.obj(hexToRgb(c.color)));
+          if (kind.redraw && (!origRef || c.color !== c.orig.color || !dict.has(PDFName.of('AP')))) dict.set(PDFName.of('AP'), context.obj({ N: appearance(context, c) }));
+        }
       }
       ref = register(dict);
       entries.push(ref);
@@ -182,6 +218,26 @@ export function writeComments(page, comments, refs, owned, used) {
       entries.push(added);
       used.add(added);
     }
+    const status = c.status && COMMENT_STATES[c.status.state];
+    if (status) {
+      const statusRef = c.status.orig && refs.get(c.status.orig);
+      if (statusRef && ownedRefs.has(statusRef) && ref === origRef && !used.has(statusRef)) {
+        entries.push(statusRef);
+        used.add(statusRef);
+      } else {
+        // Hidden reply with the review state, as Acrobat writes it ("Status festlegen").
+        const dict = context.obj({
+          Type: 'Annot', Subtype: 'Text', Rect: c.rect, Contents: text(`${status.label}${c.status.author ? ` (${c.status.author})` : ''}`),
+          M: PDFString.of(pdfDate(c.status.date || new Date())), IRT: ref, Name: 'Comment', F: FLAG_HIDDEN | FLAG_NO_ZOOM | FLAG_NO_ROTATE, P: page.ref,
+        });
+        dict.set(PDFName.of('State'), PDFString.of(status.pdf));
+        dict.set(PDFName.of('StateModel'), PDFString.of('Review'));
+        if (c.status.author) dict.set(PDFName.of('T'), text(c.status.author));
+        const added = register(dict);
+        entries.push(added);
+        used.add(added);
+      }
+    }
   }
   if (entries.length) node.set(PDFName.of('Annots'), context.obj(entries));
   else node.delete(PDFName.of('Annots'));
@@ -198,6 +254,20 @@ function newCommentDict(context, c, kind) {
   if (c.quads) dict.set(PDFName.of('QuadPoints'), context.obj(c.quads));
   if (c.kind === 'highlight') dict.set(PDFName.of('CA'), context.obj(c.opacity ?? HIGHLIGHT_OPACITY));
   return dict;
+}
+
+/** Appearance stream of a text box: optional background, then the lines in Helvetica. */
+function freeTextAppearance(context, c, font) {
+  const size = c.fontSize || FREETEXT_SIZE, [x0, y0, x1, y1] = c.rect, ops = [];
+  if (c.fill) ops.push(setFillingRgbColor(...hexToRgb(c.fill)), moveTo(x0, y0), lineTo(x1, y0), lineTo(x1, y1), lineTo(x0, y1), closePath(), fill());
+  ops.push(beginText(), setFontAndSize('Helv', size), setFillingRgbColor(...hexToRgb(c.color)));
+  let last = [0, 0];
+  for (const line of freeTextLines(c)) {
+    ops.push(moveText(line.x - last[0], line.y - last[1]), showText(font.encode(line.text)));
+    last = [line.x, line.y];
+  }
+  ops.push(endText());
+  return context.register(context.formXObject(ops, { BBox: c.rect, Resources: { Font: { Helv: font.ref } } }));
 }
 
 /** Appearance stream (form XObject) of a note, highlight, underline, strike-out or squiggly comment. */

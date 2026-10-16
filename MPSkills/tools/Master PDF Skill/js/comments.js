@@ -7,7 +7,10 @@
  * share them), all coordinates in PDF user space of the unrotated source page:
  *   {id, kind, color, text, author, date (ISO string|null), rect [x0, y0, x1, y1], quads? [8 numbers per quad:
  *    upper-left, upper-right, lower-left, lower-right], opacity?, quote?, replies [{id, author, text, date, orig?}],
- *    orig? {id, text, color, rect}}
+ *    orig? {id, text, color, rect, fontSize?}, status? {state, author, date, orig?}, fontSize? + fill? (freetext)}
+ * Text boxes (`freetext`) use `color` for the text, `fontSize` in points and an optional background `fill`; their
+ * rect follows the text (freeTextRect). `status` is the review state (COMMENT_STATES) – in the PDF a hidden reply
+ * with /State and /StateModel /Review, as Acrobat writes it; `orig` is the id of that reply when it was read in.
  * `orig` marks a comment read from the source PDF (`id` = PDF.js annotation id, e.g. "12R") together with its values
  * at import time, so the export can keep the original annotation object when nothing changed.
  * Kinds with `redraw` are hidden in the PDF.js canvas and drawn by the app (so they can be recoloured, moved and
@@ -21,7 +24,7 @@ export const COMMENT_KINDS = {
   underline: { label: 'Unterstrichen', subtype: 'Underline', redraw: true, markup: true },
   strikeout: { label: 'Durchgestrichen', subtype: 'StrikeOut', redraw: true, markup: true },
   squiggly: { label: 'Wellenlinie', subtype: 'Squiggly', redraw: true, markup: true },
-  freetext: { label: 'Textfeld', subtype: 'FreeText', fixedText: true },
+  freetext: { label: 'Textfeld', subtype: 'FreeText', redraw: true },
   ink: { label: 'Freihand', subtype: 'Ink' },
   square: { label: 'Rechteck', subtype: 'Square' },
   circle: { label: 'Ellipse', subtype: 'Circle' },
@@ -40,7 +43,29 @@ export const COMMENT_COLORS = [
   { color: '#f472b6', label: 'Pink' },
   { color: '#ef4444', label: 'Rot' },
 ];
-export const DEFAULT_COMMENT_COLORS = { note: '#facc15', highlight: '#facc15', underline: '#60a5fa', strikeout: '#ef4444' };
+export const DEFAULT_COMMENT_COLORS = { note: '#facc15', highlight: '#facc15', underline: '#60a5fa', strikeout: '#ef4444', freetext: '#dc2626' };
+/** Text colours of text boxes (the pale comment colours would be hard to read as text). */
+export const FREETEXT_COLORS = [
+  { color: '#111827', label: 'Schwarz' },
+  { color: '#dc2626', label: 'Rot' },
+  { color: '#1d4ed8', label: 'Blau' },
+  { color: '#15803d', label: 'Grün' },
+  { color: '#ea580c', label: 'Orange' },
+];
+export const FREETEXT_SIZES = [8, 10, 12, 14, 18, 24];
+export const FREETEXT_SIZE = 12;
+/** Inner margin of a text box and line height (times the font size). */
+export const FREETEXT_PAD = 3;
+export const FREETEXT_LINE = 1.25;
+
+/** Review states of a comment (Acrobat: "Status festlegen"); `pdf` is the /State value. */
+export const COMMENT_STATES = {
+  accepted: { label: 'Angenommen', pdf: 'Accepted' },
+  rejected: { label: 'Abgelehnt', pdf: 'Rejected' },
+  cancelled: { label: 'Abgebrochen', pdf: 'Cancelled' },
+  completed: { label: 'Erledigt', pdf: 'Completed' },
+};
+const STATE_BY_PDF = Object.fromEntries(Object.entries(COMMENT_STATES).map(([key, s]) => [s.pdf.toLowerCase(), key]));
 /** Opacity of new highlights (drawn multiplied, like a text marker). */
 export const HIGHLIGHT_OPACITY = 0.5;
 /** Edge length of a note icon in points. */
@@ -89,19 +114,28 @@ export const noteRect = (x, y) => [x, y - NOTE_SIZE, x + NOTE_SIZE, y].map(round
  * comments. Hidden annotations, links, form fields etc. are not touched.
  */
 export function importAnnotations(annots, nextId) {
-  const comments = [], byId = new Map(), owned = new Set(), replies = [];
+  const comments = [], byId = new Map(), owned = new Set(), replies = [], states = [];
   for (const a of annots || []) {
     const kind = KIND_BY_SUBTYPE[a.subtype];
+    // Review states are hidden replies; "Marked" (private check marks) stays in the PDF untouched.
+    if (kind === 'note' && a.inReplyTo && a.state != null) { if (pdfName(a.stateModel) === 'Review') states.push(a); continue; }
     if (!kind || !a.id || !a.rect || (a.annotationFlags & (2 | 32))) continue; // Hidden, NoView
     if (a.inReplyTo) { if (a.replyType !== 'Group') replies.push(a); continue; }
     const rect = normRect(a.rect);
     const c = { id: nextId(), kind, color: colorHex(a.color) || DEFAULT_COMMENT_COLORS[kind] || '#facc15', text: a.contentsObj?.str || '', author: a.titleObj?.str || '', date: parsePdfDate(a.modificationDate || a.creationDate), rect, replies: [] };
     if (kind === 'note') c.rect = noteRect(rect[0], rect[3]);
+    if (kind === 'freetext') {
+      const da = a.defaultAppearanceData || {};
+      c.color = colorHex(da.fontColor) || '#000000';
+      c.fontSize = Math.round((da.fontSize || 10) * 10) / 10;
+      const fill = colorHex(a.color);
+      if (fill) c.fill = fill;
+    }
     if (COMMENT_KINDS[kind].markup) {
       c.quads = a.quadPoints?.length >= 8 ? Array.from(a.quadPoints, roundPoint) : [rect[0], rect[3], rect[2], rect[3], rect[0], rect[1], rect[2], rect[1]];
       if (typeof a.opacity === 'number' && a.opacity > 0) c.opacity = a.opacity;
     }
-    c.orig = { id: a.id, text: c.text, color: c.color, rect: c.rect };
+    c.orig = { id: a.id, text: c.text, color: c.color, rect: c.rect, ...(c.fontSize ? { fontSize: c.fontSize } : {}) };
     comments.push(c);
     byId.set(a.id, c);
     owned.add(a.id);
@@ -124,13 +158,45 @@ export function importAnnotations(annots, nextId) {
     pending = rest;
   }
   for (const c of comments) c.replies.sort((x, y) => String(x.date || '').localeCompare(String(y.date || '')));
+  // The newest review state of a thread wins; older ones are dropped on export (they are owned).
+  for (const a of states) {
+    const parent = byId.get(a.inReplyTo) || root.get(a.inReplyTo);
+    if (!parent) continue;
+    owned.add(a.id);
+    if (a.popupRef) owned.add(a.popupRef);
+    const date = parsePdfDate(a.modificationDate || a.creationDate), state = STATE_BY_PDF[String(pdfName(a.state) || '').toLowerCase()];
+    if (parent.status && String(parent.status.date || '') > String(date || '')) continue;
+    parent.status = state ? { state, author: a.titleObj?.str || '', date, orig: a.id } : null;
+  }
+  for (const c of comments) if (c.status === null) delete c.status;
   return { comments, owned };
 }
+
+/** Name or string value from PDF.js data (names arrive as `{name}` objects or plain strings). */
+const pdfName = v => typeof v === 'string' ? v : v?.name ?? null;
 
 /** True if a comment read from the PDF differs from its original (text, colour or position). */
 export function commentChanged(c) {
   const o = c.orig;
-  return !o || c.text !== o.text || c.color !== o.color || c.rect.some((v, i) => v !== o.rect[i]);
+  return !o || c.text !== o.text || c.color !== o.color || c.rect.some((v, i) => v !== o.rect[i]) || (c.fontSize ?? null) !== (o.fontSize ?? null);
+}
+
+// --- Text boxes ---
+// Lines break only where the text has line breaks. `widthOf(text, size)` measures a line in points (Helvetica, the
+// font of the exported box); the box grows with its text from the upper-left corner.
+
+/** Rect [x0, y0, x1, y1] of a text box with its upper-left corner at (x, top). Empty boxes get room for a few letters. */
+export function freeTextRect(x, top, text, fontSize, widthOf) {
+  const lines = String(text || '').split('\n');
+  const width = Math.max(fontSize * 4, ...lines.map(line => widthOf(line, fontSize)));
+  const height = lines.length * fontSize * FREETEXT_LINE;
+  return [x, top - height - 2 * FREETEXT_PAD, x + width + 2 * FREETEXT_PAD, top].map(roundPoint);
+}
+
+/** Lines of a text box with their baseline start (PDF space). */
+export function freeTextLines(c) {
+  const size = c.fontSize || FREETEXT_SIZE;
+  return String(c.text || '').split('\n').map((text, i) => ({ text, x: roundPoint(c.rect[0] + FREETEXT_PAD), y: roundPoint(c.rect[3] - FREETEXT_PAD - (i * FREETEXT_LINE + 0.95) * size) }));
 }
 
 // --- Text geometry (PDF.js text items, as in search.js) ---

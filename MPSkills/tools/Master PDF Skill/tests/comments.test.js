@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { importAnnotations, commentChanged, colorHex, parsePdfDate, pdfDate, charIndexAt, wordAt, selectionQuads, textInQuads, quadsBounds, commentHit, markupLines, highlightPolygons, noteRect } from '../js/comments.js';
+import { importAnnotations, commentChanged, colorHex, parsePdfDate, pdfDate, charIndexAt, wordAt, selectionQuads, textInQuads, quadsBounds, commentHit, markupLines, highlightPolygons, noteRect, freeTextRect, freeTextLines } from '../js/comments.js';
 import { buildPageText } from '../js/search.js';
 
 const counter = () => { let n = 1; return () => n++; };
@@ -99,4 +99,34 @@ test('Gemessene Buchstabenbreiten verschieben Auswahl und Quads', async () => {
   assert.equal(charIndexAt(narrow, built.spans, 20.5, 3), 4, 'die schmalen i enden bei 20 pt (4 von 16 Breiteneinheiten)');
   assert.deepEqual(selectionQuads(narrow, built.spans, 4, 8).slice(0, 4), [20, 9.5, 80, 9.5]);
   assert.equal(textInQuads(narrow, built.spans, built.text, [15, 9, 81, 9, 15, 0, 81, 0]), 'iiiiWWWW', '5 von 8 Buchstaben: das ganze Wort');
+});
+
+test('Status (Review) wird als Status gelesen, nicht als Antwort; der neueste gewinnt', () => {
+  const annots = [
+    { id: '20R', subtype: 'Highlight', rect: [10, 10, 100, 30], contentsObj: { str: 'Bitte prüfen' } },
+    { id: '21R', subtype: 'Text', rect: [10, 10, 30, 30], inReplyTo: '20R', replyType: 'R', state: { name: 'Accepted' }, stateModel: { name: 'Review' }, annotationFlags: 2 | 8 | 16, titleObj: { str: 'Ben' }, modificationDate: 'D:20240110' },
+    { id: '22R', subtype: 'Text', rect: [10, 10, 30, 30], inReplyTo: '20R', replyType: 'R', state: 'Completed', stateModel: 'Review', annotationFlags: 2, titleObj: { str: 'Mia' }, modificationDate: 'D:20240112' },
+    { id: '23R', subtype: 'Text', rect: [10, 10, 30, 30], inReplyTo: '20R', replyType: 'R', state: 'Marked', stateModel: 'Marked', annotationFlags: 2 },
+  ];
+  const { comments, owned } = importAnnotations(annots, counter());
+  assert.equal(comments.length, 1);
+  assert.deepEqual(comments[0].replies, []);
+  assert.deepEqual(comments[0].status, { state: 'completed', author: 'Mia', date: '2024-01-12T00:00:00.000Z', orig: '22R' });
+  assert.ok(owned.has('21R') && owned.has('22R'));
+  assert.ok(!owned.has('23R'), 'private Häkchen bleiben unangetastet');
+});
+
+test('Textfelder: Schrift und Farbe aus der Darstellung, Kasten wächst mit dem Text', () => {
+  const annots = [{ id: '30R', subtype: 'FreeText', rect: [10, 100, 120, 130], contentsObj: { str: 'Gut gemacht' }, defaultAppearanceData: { fontSize: 14, fontColor: rgb(255, 0, 0) } }];
+  const [c] = importAnnotations(annots, counter()).comments;
+  assert.equal(c.kind, 'freetext');
+  assert.equal(c.color, '#ff0000');
+  assert.equal(c.fontSize, 14);
+  assert.equal(c.fill, undefined);
+  assert.equal(commentChanged(c), false);
+  assert.equal(commentChanged({ ...c, fontSize: 18 }), true);
+  const widthOf = (text, size) => text.length * size / 2;
+  assert.deepEqual(freeTextRect(10, 200, 'abcdef\nab', 10, widthOf), [10, 169, 56, 200], 'Breite der längsten Zeile, zwei Zeilen hoch, plus Rand');
+  assert.deepEqual(freeTextRect(10, 200, '', 10, widthOf), [10, 181.5, 56, 200], 'leer: Platz für ein paar Buchstaben');
+  assert.deepEqual(freeTextLines({ rect: [10, 169, 56, 200], text: 'a\nb', fontSize: 10 }).map(l => [l.x, l.y]), [[13, 187.5], [13, 175]]);
 });
