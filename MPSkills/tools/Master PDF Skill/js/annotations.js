@@ -1,0 +1,178 @@
+/**
+ * Page marks drawn with the "Zeichnen" tools. Every mark has `{id, type, color, width, points}` with points as a
+ * flat array [x0, y0, x1, y1, …] in PDF user space of the unrotated source page, so marks follow rotation and zoom
+ * and are drawn into the page content on export unchanged. Mark arrays and marks are never mutated in place
+ * (undo snapshots share them).
+ * - type 'ink': freehand stroke; with `opacity` + `blend: 'multiply'` it is a highlighter stroke.
+ * - type 'line' | 'arrow' | 'rect' | 'ellipse': points are the start and end of the drag [x1, y1, x2, y2].
+ */
+export const PEN_COLORS = [
+  { color: '#111827', label: 'Schwarz' },
+  { color: '#1d4ed8', label: 'Blau' },
+  { color: '#dc2626', label: 'Rot' },
+  { color: '#15803d', label: 'Grün' },
+  { color: '#ea580c', label: 'Orange' },
+];
+export const PEN_WIDTHS = [
+  { width: 1, label: 'Fein' },
+  { width: 2, label: 'Mittel' },
+  { width: 4, label: 'Dick' },
+];
+export const MARKER_COLORS = [
+  { color: '#facc15', label: 'Gelb' },
+  { color: '#4ade80', label: 'Grün' },
+  { color: '#f472b6', label: 'Pink' },
+  { color: '#60a5fa', label: 'Blau' },
+  { color: '#fb923c', label: 'Orange' },
+];
+export const MARKER_WIDTHS = [
+  { width: 8, label: 'Schmal' },
+  { width: 14, label: 'Mittel' },
+  { width: 20, label: 'Breit' },
+];
+export const MARKER_OPACITY = 0.4;
+export const SHAPE_TYPES = ['line', 'arrow', 'rect', 'ellipse'];
+
+export const isHighlight = mark => mark.blend === 'multiply';
+
+/**
+ * Maps between PDF user space and view pixels for a page box `{x, y, width, height}` (PDF points, the
+ * PDF.js `page.view`), an absolute rotation and a scale (view px per point). Matches PDF.js getViewport.
+ */
+export function pageTransform(box, rotation, scale) {
+  const x0 = box.x || 0, y0 = box.y || 0, x1 = x0 + box.width, y1 = y0 + box.height;
+  const turn = ((rotation % 360) + 360) % 360;
+  const swap = turn % 180 !== 0;
+  const toView = {
+    0: (px, py) => [(px - x0) * scale, (y1 - py) * scale],
+    90: (px, py) => [(py - y0) * scale, (px - x0) * scale],
+    180: (px, py) => [(x1 - px) * scale, (py - y0) * scale],
+    270: (px, py) => [(y1 - py) * scale, (x1 - px) * scale],
+  }[turn];
+  const toPdf = {
+    0: (vx, vy) => [x0 + vx / scale, y1 - vy / scale],
+    90: (vx, vy) => [x0 + vy / scale, y0 + vx / scale],
+    180: (vx, vy) => [x1 - vx / scale, y0 + vy / scale],
+    270: (vx, vy) => [x1 - vy / scale, y1 - vx / scale],
+  }[turn];
+  if (!toView) throw new Error(`Drehung ${rotation} wird nicht unterstützt`);
+  return {
+    scale,
+    width: (swap ? box.height : box.width) * scale,
+    height: (swap ? box.width : box.height) * scale,
+    toView, toPdf,
+  };
+}
+
+/** SVG path data for a flat point list, mapped with `toView`. A single point becomes a dot (round caps). */
+export function inkPath(points, toView) {
+  if (points.length < 2) return '';
+  const parts = [];
+  for (let i = 0; i < points.length; i += 2) {
+    const [x, y] = toView(points[i], points[i + 1]);
+    parts.push(`${i ? 'L' : 'M'}${round(x)} ${round(y)}`);
+  }
+  if (points.length === 2) parts.push(parts[0].replace('M', 'L'));
+  return parts.join('');
+}
+
+/** Length of an arrow head for a line width (same unit as the width). */
+export const arrowLength = width => Math.max(8, width * 4);
+
+/** The two wing points of an arrow head at (x2, y2) pointing away from (x1, y1). */
+export function arrowWings(x1, y1, x2, y2, length) {
+  const angle = Math.atan2(y2 - y1, x2 - x1), spread = Math.PI / 7;
+  return [angle + Math.PI - spread, angle + Math.PI + spread].map(a => [x2 + Math.cos(a) * length, y2 + Math.sin(a) * length]);
+}
+
+/**
+ * SVG description `{tag, attrs}` of a mark in view pixels. Rectangles and ellipses stay axis-aligned
+ * because pages only rotate in steps of 90°.
+ */
+export function markSvg(mark, map) {
+  const width = mark.width * map.scale;
+  if (mark.type === 'ink') return { tag: 'path', attrs: { d: inkPath(mark.points, map.toView) }, width };
+  const [x1, y1] = map.toView(mark.points[0], mark.points[1]);
+  const [x2, y2] = map.toView(mark.points[2], mark.points[3]);
+  if (mark.type === 'rect') return { tag: 'rect', attrs: { x: round(Math.min(x1, x2)), y: round(Math.min(y1, y2)), width: round(Math.abs(x2 - x1)), height: round(Math.abs(y2 - y1)) }, width };
+  if (mark.type === 'ellipse') return { tag: 'ellipse', attrs: { cx: round((x1 + x2) / 2), cy: round((y1 + y2) / 2), rx: round(Math.abs(x2 - x1) / 2), ry: round(Math.abs(y2 - y1) / 2) }, width };
+  let d = `M${round(x1)} ${round(y1)}L${round(x2)} ${round(y2)}`;
+  if (mark.type === 'arrow') {
+    const [a, b] = arrowWings(x1, y1, x2, y2, arrowLength(mark.width) * map.scale);
+    d += `M${round(a[0])} ${round(a[1])}L${round(x2)} ${round(y2)}L${round(b[0])} ${round(b[1])}`;
+  }
+  return { tag: 'path', attrs: { d }, width };
+}
+
+/** Polylines (flat arrays, PDF space) along which a mark is drawn – used for hit tests. */
+export function markOutline(mark) {
+  const p = mark.points;
+  if (mark.type === 'ink') return [p];
+  const [x1, y1, x2, y2] = p;
+  if (mark.type === 'line') return [p];
+  if (mark.type === 'arrow') {
+    const [a, b] = arrowWings(x1, y1, x2, y2, arrowLength(mark.width));
+    return [p, [a[0], a[1], x2, y2, b[0], b[1]]];
+  }
+  if (mark.type === 'rect') return [[x1, y1, x2, y1, x2, y2, x1, y2, x1, y1]];
+  if (mark.type === 'ellipse') {
+    const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, rx = Math.abs(x2 - x1) / 2, ry = Math.abs(y2 - y1) / 2, ring = [];
+    for (let i = 0; i <= 48; i++) ring.push(cx + rx * Math.cos(i * Math.PI / 24), cy + ry * Math.sin(i * Math.PI / 24));
+    return [ring];
+  }
+  return [];
+}
+
+/** True if the point (PDF space) lies within `radius` of the drawn line, counting half its line width. */
+export function markHit(mark, x, y, radius) {
+  const reach = radius + (mark.width || 0) / 2;
+  for (const p of markOutline(mark)) {
+    if (p.length === 2 && Math.hypot(x - p[0], y - p[1]) <= reach) return true;
+    for (let i = 2; i < p.length; i += 2) {
+      if (segmentDistance(x, y, p[i - 2], p[i - 1], p[i], p[i + 1]) <= reach) return true;
+    }
+  }
+  return false;
+}
+
+/** Bounding box `{x0, y0, x1, y1}` in PDF space, including half the line width. */
+export function markBounds(mark) {
+  const xs = [], ys = [];
+  for (const p of markOutline(mark)) for (let i = 0; i < p.length; i += 2) { xs.push(p[i]); ys.push(p[i + 1]); }
+  const pad = (mark.width || 0) / 2;
+  return { x0: Math.min(...xs) - pad, y0: Math.min(...ys) - pad, x1: Math.max(...xs) + pad, y1: Math.max(...ys) + pad };
+}
+
+/** A copy of the mark shifted by (dx, dy) in PDF space. */
+export function moveMark(mark, dx, dy) {
+  return { ...mark, points: mark.points.map((v, i) => roundPoint(v + (i % 2 ? dy : dx))) };
+}
+
+/**
+ * End point of a shape drag with Shift held (view space): lines and arrows snap to 45° steps,
+ * rectangles and ellipses become squares and circles.
+ */
+export function constrainEnd(type, [x1, y1], [x2, y2]) {
+  const dx = x2 - x1, dy = y2 - y1;
+  if (type === 'rect' || type === 'ellipse') {
+    const size = Math.max(Math.abs(dx), Math.abs(dy));
+    return [x1 + Math.sign(dx || 1) * size, y1 + Math.sign(dy || 1) * size];
+  }
+  const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4), length = Math.hypot(dx, dy);
+  return [x1 + Math.cos(angle) * length, y1 + Math.sin(angle) * length];
+}
+
+/** '#rrggbb' → [r, g, b] in 0…1. */
+export function hexToRgb(hex) {
+  const value = /^#?([0-9a-f]{6})$/i.exec(hex)?.[1] ?? '000000';
+  return [0, 2, 4].map(i => parseInt(value.slice(i, i + 2), 16) / 255);
+}
+
+export const roundPoint = v => Math.round(v * 100) / 100;
+const round = v => Math.round(v * 10) / 10;
+
+function segmentDistance(x, y, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
+  const t = len ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / len)) : 0;
+  return Math.hypot(x - (ax + t * dx), y - (ay + t * dy));
+}
