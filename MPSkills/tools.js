@@ -100,11 +100,11 @@ window.TOOLS_OVERLAY = {
   // Trennung Lehrkraft/Schüler kommt später; keine Vorschau-Kachel.
   tinylm: { ready: true, beta: true },
   // Zwölfter Skill (Migration 0211) — Master PDF Skill: PDFs lesen und
-  // bearbeiten. KEIN Raum: die Kachel öffnet pdf.html direkt, ohne
-  // Anmeldung. Später kommt eine Download-Version dazu. beta: das
-  // Werkzeug ist noch in Arbeit (16.10.2026), die Seite zeigt bis dahin
-  // einen Platzhalter.
-  masterpdf: { ready: true, beta: true, standalone: 'pdf.html' },
+  // bearbeiten. KEIN Raum: die Kachel öffnet die eigenständige App unter
+  // tools/Master PDF Skill/ direkt, ohne Anmeldung (läuft lokal im
+  // Browser). Später kommt eine Download-Version dazu. beta: noch in
+  // Arbeit (16.10.2026).
+  masterpdf: { ready: true, beta: true, standalone: 'tools/Master%20PDF%20Skill/index.html' },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

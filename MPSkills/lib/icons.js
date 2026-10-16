@@ -215,7 +215,8 @@
     'ScrumWerkstatt': 'scrum',
     'Projektarbeit':  'projekt',
     'TinyLM':         'tinylm',
-    'MasterPDF':      'masterpdf'
+    'MasterPDF':      'masterpdf',
+    'Master PDF Skill': 'masterpdf'
   };
 
   function key(id) {

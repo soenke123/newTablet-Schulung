@@ -3,7 +3,7 @@
 -- ══════════════════════════════════════════════════════════════
 -- Zwölfter Skill: PDF lesen und bearbeiten. Anders als alle bisherigen
 -- Skills ist das KEIN Raum: es gibt nichts zu teilen und keine Tür
--- (Code/QR), die jemanden zusammenbringt. Die Seite (MPSkills/pdf.html)
+-- (Code/QR), die jemanden zusammenbringt. Die Seite (MPSkills/tools/Master PDF Skill/index.html)
 -- wird einfach geöffnet und läuft im Browser; später kommt eine
 -- Download-Version dazu.
 --
@@ -13,15 +13,14 @@
 -- im Frontend (tools.js, `standalone`) — es ist eine Eigenschaft der
 -- Auslieferung, keine der Datenbankzeile.
 --
--- sort_order 5: erster Eintrag im Fach „Werkzeuge" (neues Fach, damit
--- es nicht unter Informatik/Mathe steht).
+-- Fach „Fächerübergreifend" (Entscheidung 16.10.2026), sort_order 5.
 -- ══════════════════════════════════════════════════════════════
 
 insert into skill_tools (id, title, blurb, icon, folder, subject, multi_room, limits, active, sort_order) values
   ('masterpdf', 'Master PDF Skill',
    'PDFs lesen und bearbeiten — direkt im Browser, ohne Raum und ohne Anmeldung. '
    'Einfach öffnen und loslegen.',
-   '📄', 'MasterPDF', 'Werkzeuge', false,
+   '📄', 'Master PDF Skill', 'Fächerübergreifend', false,
    '{}'::jsonb, true, 5)
 on conflict (id) do update set
   title      = excluded.title,
