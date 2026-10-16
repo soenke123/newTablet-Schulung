@@ -143,3 +143,4 @@ body.focus-mode .comments-panel{display:none}
 .tool-pop .pen-options{flex-wrap:wrap}
 .tool-pop .ribbon-sep{display:none}
 .tool-pop .slider-control input[type=range]{width:auto;flex:1;min-width:110px}
+.comment-layer .mark-handle{fill:#fff;stroke:var(--blue);stroke-width:1.5;stroke-dasharray:none}
