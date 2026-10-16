@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb } from '../js/annotations.js';
+import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillOpacity } from '../js/annotations.js';
 
 const box = { x: 10, y: 20, width: 200, height: 300 };
 const near = (actual, expected) => actual.forEach((v, i) => assert.ok(Math.abs(v - expected[i]) < 1e-9, `${actual} ≠ ${expected}`));
@@ -72,4 +72,46 @@ test('Begrenzung, Verschieben und Shift-Einrasten', () => {
   assert.deepEqual(constrainEnd('rect', [0, 0], [10, -4]), [10, -10]);
   const [x, y] = constrainEnd('line', [0, 0], [10, 1]);
   assert.ok(Math.abs(x - Math.hypot(10, 1)) < 1e-9 && Math.abs(y) < 1e-9);
+});
+
+test('Gefüllte Formen treffen auch innen, ungefüllte nur am Rand', () => {
+  const rect = { type: 'rect', color: '#000000', width: 2, points: [0, 0, 100, 50] };
+  assert.equal(markHit(rect, 50, 25, 2), false);
+  assert.equal(markHit({ ...rect, fill: 'light' }, 50, 25, 2), true);
+  const ellipse = { ...rect, type: 'ellipse', fill: 'solid' };
+  assert.equal(markHit(ellipse, 50, 25, 0), true);
+  assert.equal(markHit(ellipse, 8, 4, 0), false, 'Ecke liegt außerhalb der Ellipse');
+  assert.equal(fillOpacity({ ...rect, fill: 'light', opacity: 0.5 }), 0.125);
+  assert.equal(fillOpacity({ type: 'line', fill: 'solid', points: [] }), 0);
+});
+
+test('Radieren schneidet Striche an der Stelle auf und lässt den Rest unverändert', () => {
+  let id = 100;
+  const nextId = () => id++;
+  const ink = { id: 1, type: 'ink', color: '#111827', width: 2, opacity: 0.5, points: [0, 0, 100, 0] };
+  const far = { id: 2, type: 'ink', color: '#111827', width: 2, points: [0, 50, 100, 50] };
+  const marks = [ink, far];
+  assert.equal(eraseMarks(marks, 50, 20, 5, nextId), marks, 'nichts getroffen → dasselbe Array');
+  const next = eraseMarks(marks, 50, 0, 5, nextId);
+  assert.notEqual(next, marks);
+  assert.equal(next.at(-1), far, 'nicht getroffene Elemente bleiben dieselben Objekte');
+  const pieces = next.filter(m => m !== far);
+  assert.equal(pieces.length, 2);
+  for (const piece of pieces) {
+    assert.equal(piece.type, 'ink');
+    assert.equal(piece.opacity, 0.5);
+    for (let i = 0; i < piece.points.length; i += 2) assert.ok(Math.abs(piece.points[i] - 50) > 6 - 1e-9, `Punkt ${piece.points[i]} liegt im radierten Bereich`);
+  }
+  assert.ok(pieces[0].points.at(-2) >= 42 && pieces[1].points[0] <= 58, 'Schnitt dicht am Radierer (höchstens ein Zwischenschritt)');
+  assert.deepEqual(eraseMarks([{ ...ink, points: [0, 0, 4, 0] }], 2, 0, 5, nextId), [], 'ganz überdeckt → weg');
+});
+
+test('Radieren macht aus getroffenen Formen Striche ohne Füllung', () => {
+  const rect = { id: 1, type: 'rect', color: '#dc2626', width: 2, points: [0, 0, 100, 50], fill: 'solid' };
+  const next = eraseMarks([rect], 50, 0, 5, () => 9);
+  assert.equal(next.length, 1, 'Rechteck an einer Seite aufgeschnitten = ein offener Linienzug');
+  assert.equal(next[0].type, 'ink');
+  assert.equal(next[0].fill, undefined);
+  assert.equal(next[0].color, '#dc2626');
+  assert.equal(eraseMarks([rect], 50, 25, 5, () => 9)[0], rect, 'Radieren innen in der Füllung ändert nichts');
 });

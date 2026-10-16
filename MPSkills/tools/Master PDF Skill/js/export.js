@@ -3,7 +3,7 @@ import {
   pushGraphicsState, popGraphicsState, setGraphicsState, setStrokingRgbColor, setFillingRgbColor, setLineWidth, setLineCap, setLineJoin,
   moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke,
 } from '../lib/pdf-lib/pdf-lib.esm.min.js';
-import { hexToRgb, isHighlight, arrowWings, arrowLength } from './annotations.js';
+import { hexToRgb, isHighlight, fillOpacity, arrowWings, arrowLength } from './annotations.js';
 import { COMMENT_KINDS, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, commentChanged, highlightPolygons, markupLines, pdfDate } from './comments.js';
 
 /**
@@ -48,6 +48,7 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
 /**
  * Draws marks (PDF user space, see annotations.js) as vector graphics on top of the page content; highlighter
  * strokes first (transparent, multiplied, so text stays readable), then everything else in drawing order.
+ * Opacity and the fill of shapes go into an ExtGState (CA for the line, ca for the fill).
  * Repeated pages share copied objects (copyPages caches even direct ones), so the page first gets its own
  * /Contents array – otherwise pdf-lib would append the marks to every copy of the page.
  */
@@ -57,16 +58,19 @@ export function drawMarks(page, marks) {
   const node = page.node, contents = node.context.lookup(node.get(PDFName.of('Contents')));
   if (contents instanceof PDFArray) node.set(PDFName.of('Contents'), node.context.obj(contents.asArray()));
   const states = new Map();
-  const blendState = opacity => {
-    if (!states.has(opacity)) states.set(opacity, node.newExtGState('GS', node.context.obj({ Type: 'ExtGState', CA: opacity, ca: opacity, BM: 'Multiply' })));
-    return states.get(opacity);
+  const graphicsState = (stroke, fillAlpha, multiply) => {
+    const key = `${stroke}|${fillAlpha}|${multiply}`;
+    if (!states.has(key)) states.set(key, node.newExtGState('GS', node.context.obj({ Type: 'ExtGState', CA: stroke, ca: fillAlpha, ...(multiply ? { BM: 'Multiply' } : {}) })));
+    return states.get(key);
   };
   const ops = [];
   for (const mark of [...list.filter(isHighlight), ...list.filter(m => !isHighlight(m))]) {
+    const opacity = mark.opacity ?? 1, fillAlpha = fillOpacity(mark), color = hexToRgb(mark.color);
     ops.push(pushGraphicsState());
-    if (isHighlight(mark)) ops.push(setGraphicsState(blendState(mark.opacity ?? 1)));
-    ops.push(setStrokingRgbColor(...hexToRgb(mark.color)), setLineWidth(mark.width), setLineCap(LineCapStyle.Round), setLineJoin(LineJoinStyle.Round));
-    ops.push(...markPath(mark), stroke(), popGraphicsState());
+    if (isHighlight(mark) || opacity < 1 || (fillAlpha && fillAlpha < 1)) ops.push(setGraphicsState(graphicsState(opacity, fillAlpha || opacity, isHighlight(mark))));
+    ops.push(setStrokingRgbColor(...color), setLineWidth(mark.width), setLineCap(LineCapStyle.Round), setLineJoin(LineJoinStyle.Round));
+    if (fillAlpha) ops.push(setFillingRgbColor(...color));
+    ops.push(...markPath(mark), fillAlpha ? fillAndStroke() : stroke(), popGraphicsState());
   }
   page.pushOperators(...ops);
 }

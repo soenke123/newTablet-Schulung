@@ -5,35 +5,30 @@
  * (undo snapshots share them).
  * - type 'ink': freehand stroke; with `opacity` + `blend: 'multiply'` it is a highlighter stroke.
  * - type 'line' | 'arrow' | 'rect' | 'ellipse': points are the start and end of the drag [x1, y1, x2, y2].
+ * - optional `opacity` (0…1, all types) and, for rect/ellipse, `fill: 'light' | 'solid'` (filled with the line colour).
  */
 export const PEN_COLORS = [
   { color: '#111827', label: 'Schwarz' },
   { color: '#1d4ed8', label: 'Blau' },
   { color: '#dc2626', label: 'Rot' },
-  { color: '#15803d', label: 'Grün' },
-  { color: '#ea580c', label: 'Orange' },
 ];
-export const PEN_WIDTHS = [
-  { width: 1, label: 'Fein' },
-  { width: 2, label: 'Mittel' },
-  { width: 4, label: 'Dick' },
-];
+export const PEN_WIDTH = { min: 0.5, max: 20, step: 0.5, initial: 2 };
 export const MARKER_COLORS = [
   { color: '#facc15', label: 'Gelb' },
   { color: '#4ade80', label: 'Grün' },
   { color: '#f472b6', label: 'Pink' },
-  { color: '#60a5fa', label: 'Blau' },
-  { color: '#fb923c', label: 'Orange' },
 ];
-export const MARKER_WIDTHS = [
-  { width: 8, label: 'Schmal' },
-  { width: 14, label: 'Mittel' },
-  { width: 20, label: 'Breit' },
-];
+export const MARKER_WIDTH = { min: 4, max: 40, step: 1, initial: 14 };
 export const MARKER_OPACITY = 0.4;
+export const ERASER_SIZE = { min: 4, max: 60, step: 2, initial: 16 };
 export const SHAPE_TYPES = ['line', 'arrow', 'rect', 'ellipse'];
+export const FILLABLE = ['rect', 'ellipse'];
+/** Fill of rectangles and ellipses (`mark.fill`): light = the line colour at a quarter of the opacity, solid = full. */
+export const FILL_OPACITY = { light: 0.25, solid: 1 };
 
 export const isHighlight = mark => mark.blend === 'multiply';
+/** Opacity of the fill of a mark, 0 when it has none. */
+export const fillOpacity = mark => FILLABLE.includes(mark.type) && FILL_OPACITY[mark.fill] ? FILL_OPACITY[mark.fill] * (mark.opacity ?? 1) : 0;
 
 /**
  * Maps between PDF user space and view pixels for a page box `{x, y, width, height}` (PDF points, the
@@ -125,6 +120,7 @@ export function markOutline(mark) {
 
 /** True if the point (PDF space) lies within `radius` of the drawn line, counting half its line width. */
 export function markHit(mark, x, y, radius) {
+  if (fillOpacity(mark) && insideShape(mark, x, y)) return true;
   const reach = radius + (mark.width || 0) / 2;
   for (const p of markOutline(mark)) {
     if (p.length === 2 && Math.hypot(x - p[0], y - p[1]) <= reach) return true;
@@ -160,6 +156,57 @@ export function constrainEnd(type, [x1, y1], [x2, y2]) {
   }
   const angle = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4), length = Math.hypot(dx, dy);
   return [x1 + Math.cos(angle) * length, y1 + Math.sin(angle) * length];
+}
+
+/**
+ * Real erasing ("Radieren"): removes everything within `radius` of the point (x, y) (PDF space) from the marks.
+ * Lines are cut there; the remaining pieces become ink strokes with the same style. Shapes that are touched turn
+ * into strokes as well (their fill is dropped, a filled area cannot be cut along the eraser). Returns the same array
+ * when nothing was touched, otherwise a new array; `nextId()` gives ids for the new pieces.
+ */
+export function eraseMarks(marks, x, y, radius, nextId) {
+  let changed = false;
+  const result = [];
+  for (const mark of marks) {
+    const reach = radius + (mark.width || 0) / 2, b = markBounds(mark);
+    if (x < b.x0 - radius || x > b.x1 + radius || y < b.y0 - radius || y > b.y1 + radius || !markHit({ ...mark, fill: undefined }, x, y, radius)) { result.push(mark); continue; }
+    changed = true;
+    const { id, type, points, fill, ...style } = mark;
+    for (const line of markOutline(mark)) {
+      const dense = densify(line, Math.max(0.25, reach / 3), x, y, reach), runs = [];
+      let run = [], cut = false;
+      for (let i = 0; i < dense.length; i += 2) {
+        if (Math.hypot(dense[i] - x, dense[i + 1] - y) <= reach) { cut = true; if (run.length) runs.push(run); run = []; }
+        else run.push(dense[i], dense[i + 1]);
+      }
+      if (run.length) runs.push(run);
+      // A closed outline (rectangle, ellipse) cut once stays one open line: its end continues into its start.
+      const kept = i => Math.hypot(dense[i] - x, dense[i + 1] - y) > reach;
+      const closed = line.length > 4 && Math.hypot(line[0] - line.at(-2), line[1] - line.at(-1)) < 1e-6;
+      if (closed && cut && runs.length > 1 && kept(0) && kept(dense.length - 2)) runs.unshift([...runs.pop(), ...runs.shift().slice(2)]);
+      for (const piece of runs) if (piece.length >= 4) result.push({ ...style, id: nextId(), type: 'ink', points: piece.map(roundPoint) });
+    }
+  }
+  return changed ? result : marks;
+}
+
+/** Adds points on the segments that pass near (x, y), so cuts there land at most `step` from the eraser edge. */
+function densify(line, step, x, y, reach) {
+  if (line.length < 4) return line.slice();
+  const out = [line[0], line[1]];
+  for (let i = 2; i < line.length; i += 2) {
+    const ax = line[i - 2], ay = line[i - 1], bx = line[i], by = line[i + 1];
+    const n = segmentDistance(x, y, ax, ay, bx, by) <= reach + step ? Math.ceil(Math.hypot(bx - ax, by - ay) / step) : 1;
+    for (let k = 1; k <= n; k++) out.push(ax + (bx - ax) * k / n, ay + (by - ay) * k / n);
+  }
+  return out;
+}
+
+function insideShape(mark, x, y) {
+  const [x1, y1, x2, y2] = mark.points;
+  const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2, rx = Math.abs(x2 - x1) / 2, ry = Math.abs(y2 - y1) / 2;
+  if (Math.abs(x - cx) > rx || Math.abs(y - cy) > ry) return false;
+  return mark.type === 'rect' || (rx > 0 && ry > 0 && ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1);
 }
 
 /** '#rrggbb' → [r, g, b] in 0…1. */

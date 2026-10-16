@@ -91,6 +91,22 @@ test('Formen und Textmarker werden als Vektoren exportiert, Textmarker transpare
   assert.equal(state.get(PDFName.of('BM')).toString(), '/Multiply');
 });
 
+test('Deckkraft und Füllung von Formen landen im ExtGState (CA Linie, ca Füllung)', async () => {
+  const bytes = await createBlankPdf(300, 300);
+  const marks = [
+    { type: 'rect', color: '#dc2626', width: 2, points: [10, 10, 60, 40], fill: 'light' },
+    { type: 'ellipse', color: '#1d4ed8', width: 2, points: [100, 100, 200, 150], fill: 'solid' },
+    { type: 'ink', color: '#111827', width: 3, opacity: 0.5, points: [0, 0, 50, 50] },
+  ];
+  const out = await PDFDocument.load(await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0, marks }], () => bytes));
+  const page = out.getPage(0), content = pageContent(page);
+  assert.match(content, / rg[\s\S]*10 10 m[\s\S]*h\s+B/, 'Rechteck gefüllt und umrandet');
+  assert.match(content, /200 125 m[\s\S]*h\s+B/, 'Ellipse gefüllt und umrandet');
+  const gs = page.node.Resources().lookup(PDFName.of('ExtGState'));
+  const states = gs.keys().map(k => gs.lookup(k)).map(st => [st.get(PDFName.of('CA')).asNumber(), st.get(PDFName.of('ca')).asNumber(), !!st.get(PDFName.of('BM'))]);
+  assert.deepEqual(states.sort(), [[0.5, 0.5, false], [1, 0.25, false]], 'volle Füllung braucht keinen eigenen Zustand');
+});
+
 // Comments stay real annotations: a source page with a highlight (+ popup), a note with a reply and a link.
 async function sourceWithComments() {
   const doc = await PDFDocument.create();
