@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PDFDocument, PDFArray, PDFName, PDFRawStream, StandardFonts, decodePDFRawStream } from '../lib/pdf-lib/pdf-lib.esm.min.js';
+import { PDFDocument, PDFArray, PDFName, PDFRawStream, PDFHexString, StandardFonts, decodePDFRawStream } from '../lib/pdf-lib/pdf-lib.esm.min.js';
 import { buildPdf, createBlankPdf } from '../js/export.js';
 
 async function sourceWithSharedFont(count) {
@@ -89,4 +89,85 @@ test('Formen und Textmarker werden als Vektoren exportiert, Textmarker transpare
   const state = gs.lookup(gs.keys()[0]);
   assert.equal(state.get(PDFName.of('CA')).asNumber(), 0.4);
   assert.equal(state.get(PDFName.of('BM')).toString(), '/Multiply');
+});
+
+// Comments stay real annotations: a source page with a highlight (+ popup), a note with a reply and a link.
+async function sourceWithComments() {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([300, 400]);
+  const ctx = doc.context;
+  const hl = ctx.register(ctx.obj({ Type: 'Annot', Subtype: 'Highlight', Rect: [10, 10, 100, 30], QuadPoints: [10, 30, 100, 30, 10, 10, 100, 10], C: [1, 1, 0], Contents: PDFHexString.fromText('Wichtig') }));
+  const popup = ctx.register(ctx.obj({ Type: 'Annot', Subtype: 'Popup', Rect: [100, 10, 200, 80], Parent: hl }));
+  ctx.lookup(hl).set(PDFName.of('Popup'), popup);
+  const note = ctx.register(ctx.obj({ Type: 'Annot', Subtype: 'Text', Rect: [50, 300, 70, 320], Contents: PDFHexString.fromText('Frage') }));
+  const reply = ctx.register(ctx.obj({ Type: 'Annot', Subtype: 'Text', Rect: [50, 300, 70, 320], Contents: PDFHexString.fromText('Antwort'), IRT: note, RT: 'R' }));
+  const link = ctx.register(ctx.obj({ Type: 'Annot', Subtype: 'Link', Rect: [0, 0, 10, 10] }));
+  page.node.set(PDFName.of('Annots'), ctx.obj([hl, popup, note, reply, link]));
+  const id = ref => `${ref.objectNumber}R`;
+  const comments = [
+    { id: 1, kind: 'highlight', color: '#ffff00', text: 'Wichtig', author: '', date: null, rect: [10, 10, 100, 30], quads: [10, 30, 100, 30, 10, 10, 100, 10], replies: [], orig: { id: id(hl), text: 'Wichtig', color: '#ffff00', rect: [10, 10, 100, 30] } },
+    { id: 2, kind: 'note', color: '#facc15', text: 'Frage', author: '', date: null, rect: [50, 300, 70, 320], replies: [{ id: 3, author: '', text: 'Antwort', date: null, orig: id(reply) }], orig: { id: id(note), text: 'Frage', color: '#facc15', rect: [50, 300, 70, 320] } },
+  ];
+  return { bytes: await doc.save(), comments, owned: new Set([hl, popup, note, reply].map(id)) };
+}
+const annotsOf = page => (page.node.Annots()?.asArray() || []).map(ref => ({ ref, dict: page.node.context.lookup(ref) }));
+const subtype = a => a.dict.get(PDFName.of('Subtype')).decodeText();
+const contents = a => a.dict.get(PDFName.of('Contents'))?.decodeText();
+
+test('Unveränderte Kommentare bleiben die Original-Annotationen, andere Annotationen bleiben stehen', async () => {
+  const { bytes, comments, owned } = await sourceWithComments();
+  const pages = [{ sourceId: 'a', pageIndex: 0, rotation: 0, comments }];
+  const out = await PDFDocument.load(await buildPdf(pages, () => bytes, undefined, { ownedAnnots: () => owned }));
+  const annots = annotsOf(out.getPage(0));
+  assert.deepEqual(annots.map(subtype), ['Link', 'Highlight', 'Popup', 'Text', 'Text']);
+  assert.deepEqual(annots.map(contents), [undefined, 'Wichtig', undefined, 'Frage', 'Antwort']);
+  assert.equal(annots[2].dict.get(PDFName.of('Parent')), annots[1].ref);
+  assert.equal(annots[4].dict.get(PDFName.of('IRT')), annots[3].ref);
+});
+
+test('Gelöschte, geänderte und neue Kommentare landen als Annotationen im Export', async () => {
+  const { bytes, comments, owned } = await sourceWithComments();
+  const changed = { ...comments[0], text: 'Sehr wichtig', color: '#4ade80' };
+  const added = { id: 9, kind: 'underline', color: '#60a5fa', text: 'Neu', author: 'Mia', date: '2026-10-16T10:00:00.000Z', rect: [10, 50, 80, 62], quads: [10, 62, 80, 62, 10, 50, 80, 50], replies: [{ id: 10, author: 'Ben', text: 'Ok', date: null }] };
+  const pages = [{ sourceId: 'a', pageIndex: 0, rotation: 0, comments: [changed, added] }];
+  const out = await PDFDocument.load(await buildPdf(pages, () => bytes, undefined, { ownedAnnots: () => owned }));
+  const page = out.getPage(0), annots = annotsOf(page);
+  assert.deepEqual(annots.map(subtype), ['Link', 'Highlight', 'Popup', 'Underline', 'Popup', 'Text'], 'Notiz samt Antwort gelöscht');
+  const [, hl, , ul, , reply] = annots;
+  assert.equal(contents(hl), 'Sehr wichtig');
+  assert.deepEqual(hl.dict.get(PDFName.of('C')).asArray().map(n => Math.round(n.asNumber() * 255)), [74, 222, 128]);
+  assert.ok(hl.dict.get(PDFName.of('AP')), 'neue Darstellung für die neue Farbe');
+  assert.equal(hl.dict.get(PDFName.of('P')), page.ref);
+  assert.equal(contents(ul), 'Neu');
+  assert.equal(ul.dict.get(PDFName.of('T')).decodeText(), 'Mia');
+  assert.equal(ul.dict.get(PDFName.of('F')).asNumber(), 4, 'Textkommentare werden mitgedruckt');
+  assert.equal(ul.dict.get(PDFName.of('QuadPoints')).size(), 8);
+  const appearance = out.context.lookup(ul.dict.get(PDFName.of('AP')).get(PDFName.of('N')));
+  assert.match(new TextDecoder().decode(decodePDFRawStream(appearance).decode()), /10 51\.2 m\s+80 51\.2 l\s+S/);
+  assert.equal(reply.dict.get(PDFName.of('IRT')), ul.ref);
+  assert.equal(contents(reply), 'Ok');
+});
+
+test('Neue Notiz ohne Druck-Flag; Kommentare auf wiederholten Seiten sind eigene Objekte', async () => {
+  const { bytes, comments, owned } = await sourceWithComments();
+  const note = { id: 5, kind: 'note', color: '#facc15', text: 'Hallo', author: '', date: null, rect: [20, 380, 40, 400], replies: [] };
+  const pages = [
+    { sourceId: 'a', pageIndex: 0, rotation: 0, comments },
+    { sourceId: 'a', pageIndex: 0, rotation: 90, comments: [...comments, note] },
+  ];
+  const out = await PDFDocument.load(await buildPdf(pages, () => bytes, undefined, { ownedAnnots: () => owned }));
+  const [first, second] = out.getPages().map(annotsOf);
+  assert.equal(first.length, 5);
+  assert.deepEqual(second.map(subtype), ['Link', 'Highlight', 'Popup', 'Text', 'Popup', 'Text', 'Text', 'Popup']);
+  const firstRefs = new Set(first.map(a => a.ref));
+  assert.ok(second.slice(1).every(a => !firstRefs.has(a.ref)), 'Kommentare der zweiten Kopie gehören nur ihr');
+  assert.equal(second[5].dict.get(PDFName.of('IRT')), second[3].ref);
+  assert.equal(second[6].dict.get(PDFName.of('F')).asNumber(), 24, 'Notiz: NoZoom + NoRotate, nicht drucken');
+  assert.equal(second[6].dict.get(PDFName.of('Name')).asString(), '/Comment');
+});
+
+test('Seiten ohne Kommentare behalten ihre Annotationen unverändert', async () => {
+  const { bytes } = await sourceWithComments();
+  const out = await PDFDocument.load(await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0 }], () => bytes));
+  assert.deepEqual(annotsOf(out.getPage(0)).map(subtype), ['Highlight', 'Popup', 'Text', 'Text', 'Link']);
 });

@@ -37,7 +37,14 @@ npm test
   - **Auswählen**: Element antippen (Formen am Rand), dann verschieben, über die Farb- und Stärkeknöpfe ändern oder mit Entf bzw. **Element löschen** entfernen
   - **Radierer** entfernt ganze Elemente beim Antippen oder Überstreichen
   - Zeichnungen erscheinen auch in den Miniaturen, wandern beim Sortieren, Drehen, Duplizieren und Kopieren mit der Seite mit und werden beim Export **fest in die Seite übernommen** (als Vektorlinien, druckt in jedem Programm). Esc beendet das Werkzeug; mit zwei Fingern kann weiter gezoomt werden
-- Undo/Redo für Seitenänderungen und Zeichnungen (bis zu 50 Schritte)
+- Reiter **„Kommentieren“** (nur im Modus Bearbeiten) – Kommentare bleiben beim Export **echte PDF-Kommentare**, die andere Programme (Acrobat, Edge, Firefox …) als Kommentare anzeigen:
+  - **Markieren**, **Unterstreichen**, **Durchstreichen**: über den Text ziehen oder ein Wort antippen (nur bei Text, der in der PDF als Text vorliegt); fünf Farben
+  - **Notiz**: auf die Seite tippen, Text in der Kommentarliste schreiben; mit **Auswählen** verschieben
+  - **Auswählen**: Kommentar antippen, Farbe ändern, mit Entf bzw. **Kommentar löschen** entfernen
+  - Markierungen werden mitgedruckt, Notizen nicht (wie in anderen Programmen)
+- **Kommentarliste** (Sprechblase oben rechts, in beiden Modi): alle Kommentare nach Seiten mit Autor, Datum, markiertem Text und Antworten; Klick springt zur Stelle. Beim Bearbeiten: Text ändern, antworten, löschen, eigener Name für neue Kommentare (bleibt im Browser gespeichert). Ein Klick auf einen Kommentar auf der Seite zeigt ihn in der Liste
+- **Kommentare aus anderen Programmen** werden beim Öffnen eingelesen: Notizen samt Antworten, Markierungen, Unterstreichungen, Durchstreichungen, Wellenlinien, dazu Textfelder, Freihand, Formen, Stempel. Sie lassen sich lesen, beantworten, löschen und (Notizen und Textkommentare) umfärben; unverändert bleiben sie beim Export die Original-Kommentare
+- Undo/Redo für Seitenänderungen, Zeichnungen und Kommentare (bis zu 50 Schritte)
 - Tastenkürzel: Strg/Cmd+Z rückgängig, Strg/Cmd+Y oder Strg/Cmd+Shift+Z wiederholen, Strg+A alle Seiten, Strg+C/X/V Seiten kopieren/ausschneiden/einfügen (hinter der Auswahl), Strg+D duplizieren, Entf löschen, Strg+S exportieren, Strg+Shift+S Auswahl exportieren, Strg+F suchen, Strg++/Strg+− zoomen, Strg+0 automatische Größe, Esc schließt Suche bzw. Fokusmodus
 - **PDF exportieren** mit drei Optionen: **Ganzes Dokument** (Standard), **Aktuelle Seite** oder **Auswahl** – Standard, wenn mehrere Seiten markiert sind; das Feld ist mit den markierten Seiten vorbelegt und nimmt Angaben wie `1-3, 4, 10-12` an. Danach folgt der Speichern-Dialog des Systems, wo der Browser ihn anbietet, sonst Dateiname im selben Dialog mit Download
 - Gemeinsam genutzte Schriften und Bilder werden beim Export nur einmal gespeichert
@@ -56,8 +63,9 @@ npm test
 - Bewusst nicht enthalten: PDF aufteilen. Seitenformat-Anzeige und Zuschneiden sind zurückgestellt.
 - Die Suche findet nur Text, der in der PDF als Text vorliegt (keine gescannten Seiten ohne Texterkennung). Treffermarkierungen sind auf das Zeichen genau geschätzt, nicht pixelgenau.
 - Zeichnungen sind nur bis zum Export bearbeitbar: In der exportierten PDF sind sie Teil des Seiteninhalts und lassen sich (auch in anderen Programmen) nicht mehr verschieben oder einzeln löschen. Gezeichnet wird bisher nur auf der Einzelseite im Modus Bearbeiten. Gezeichnete Elemente lassen sich verschieben, aber noch nicht in der Größe ändern, und nicht über Strg+C/V kopieren (das kopiert Seiten). Der Textmarker ist frei geführt; der an Text gekoppelte Textmarker kommt mit dem Reiter „Kommentieren“.
-- Noch keine Textauswahl in der Ansicht, Kommentare/Annotationen, Textbearbeitung, OCR, Formulare, sichere Schwärzung oder PWA-Offlinekonfiguration.
-- Export erstellt eine neue PDF aus kopierten Seiten. Vorhandene Annotationen, Formulare, Lesezeichen, Metadaten, Ebenen und eingebettete Dateien werden durch diesen Workflow nicht garantiert erhalten. Vor dem produktiven Einsatz müssen solche Fälle getestet werden.
+- Kommentare: Die Buchstabenbreiten für Markierungen werden mit der Schriftfamilie gemessen, die PDF.js meldet, und können bei ungewöhnlichen Schriften leicht danebenliegen. Bei Textfeld-Kommentaren aus anderen Programmen lässt sich der Text nicht ändern (er steckt in deren Darstellung); Freihand, Formen und Stempel aus anderen Programmen lassen sich nicht verschieben oder umfärben. Kommentarfelder wie Status („Erledigt“) oder Rich-Text-Formatierung werden nicht angezeigt.
+- Noch keine Textauswahl zum Kopieren in der Ansicht, Textbearbeitung, OCR, Formulare, sichere Schwärzung oder PWA-Offlinekonfiguration.
+- Export erstellt eine neue PDF aus kopierten Seiten. Kommentare werden übernommen (siehe oben); Formulare, Lesezeichen, Metadaten, Ebenen und eingebettete Dateien werden durch diesen Workflow nicht garantiert erhalten. Vor dem produktiven Einsatz müssen solche Fälle getestet werden.
 - Passwortgeschützte oder beschädigte PDFs können beim Öffnen scheitern.
 - Sehr große Dokumente können den verfügbaren Arbeitsspeicher des Browsers überschreiten.
 - Seitenidentitäten und Farbcodierungen gelten für die aktuelle Sitzung. Die Farbpalette wiederholt sich nach acht Quelldokumenten.

@@ -25,7 +25,7 @@ Webauftrtitt/
 ├── admin/              → Admin-Panel: Cluster/User/Fortschritts-/Lehrkraft-Verwaltung
 ├── MPSkills/           → Zweiter Anwendungsbereich: Tools für den Unterricht (eigene Landing, eigene Optik)
 │   ├── preview/        → Schaufenster-Drehbücher je Skill (Kachel-Standbild + Vorschau, u. a. knowledgestack.js)
-│   ├── tools/Master PDF Skill/ → PDF lesen/bearbeiten (Migration 0211, Beta): eigenständige App (pdf.js + pdf-lib lokal, eigenes CLAUDE.md), KEIN Raum — Kachel „Öffnen" (tools.js `standalone`, auch für Gäste), im Dropdown für neue Räume ausgeblendet; Download-Version später
+│   ├── tools/Master PDF Skill/ → PDF lesen/bearbeiten (Migration 0211, Beta): eigenständige App (pdf.js + pdf-lib lokal, eigenes CLAUDE.md), KEIN Raum — Kachel „Öffnen" (tools.js `standalone`, auch für Gäste), im Dropdown für neue Räume ausgeblendet; Reiter Zeichnen (fest eingebettet) und Kommentieren (echte PDF-Kommentare, vorhandene Kommentare anderer Programme werden eingelesen, Kommentarliste); Download-Version später
 │   ├── quiz.html/.js   → Quiz-Editor von Knowledge Stack ohne Raum (Kachel-Knopf „Quiz-Editor"); derselbe Editor wie im Raum (tools/KnowledgeStack/editor.js)
 │   ├── Savanne/        → Tiere für ein neues Projekt: tiere.js (Löwe, Elefant, Zebra, Gnu, Krokodil je Papa/Mama/Kind) beschreibt sie wie DEFS in creatures.js und baut sie mit KSCreatures.buildDef (gleiches Skelett, Gesicht, creatures.css); tiere.css = Laufen, Fressen, Elefantenohren/-rüssel, Skelett einblenden; showroom-tiere.html (Savanne mit allen 15 Tieren, Kästen mit Bewegung/Richtung/Skelett/Zeitlupe)
 │   ├── lib/            → room.js (Token, Poller) · qr.js (selbstgebaut) · tool.js (Werkzeug-Schnittstelle) · userbar.js (Ecke oben rechts)
