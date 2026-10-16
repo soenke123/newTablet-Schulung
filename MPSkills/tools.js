@@ -29,6 +29,11 @@
               neben „+ Raum öffnen" einen zweiten Knopf. Bisher nur
               Knowledge Stack (quiz.html, der Quiz-Editor).
 
+   standalone — Adresse einer Seite, die der Skill SELBST ist: kein Raum,
+              keine Tür, nichts Gemeinsames. Die Kachel zeigt „Öffnen"
+              statt „+ Raum öffnen" (für Gäste auch), und im Dropdown
+              für neue Räume fehlt der Skill. Bisher nur Master PDF.
+
    Ein Tool, das hier nicht steht, gilt als ready:false. Ein Tool,
    das hier steht, aber nicht in der Datenbank, wird nicht
    angezeigt — die Registry entscheidet, was es gibt.
@@ -94,6 +99,12 @@ window.TOOLS_OVERLAY = {
   // nichts geteilt. beta: noch eine einzige Ansicht für alle, die
   // Trennung Lehrkraft/Schüler kommt später; keine Vorschau-Kachel.
   tinylm: { ready: true, beta: true },
+  // Zwölfter Skill (Migration 0211) — Master PDF Skill: PDFs lesen und
+  // bearbeiten. KEIN Raum: die Kachel öffnet pdf.html direkt, ohne
+  // Anmeldung. Später kommt eine Download-Version dazu. beta: das
+  // Werkzeug ist noch in Arbeit (16.10.2026), die Seite zeigt bis dahin
+  // einen Platzhalter.
+  masterpdf: { ready: true, beta: true, standalone: 'pdf.html' },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

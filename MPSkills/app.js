@@ -892,7 +892,16 @@ function toolCard(t, guest) {
      Editor im Raum bleibt daneben bestehen. */
   const editorHref = ready ? window.TOOLS_OVERLAY?.[t.id]?.editor : null;
 
-  const foot = guest
+  /* Ein Skill ohne Raum (tools.js, `standalone`) hat für alle denselben
+     Weg: öffnen. Auch für Gäste — es gibt nichts, wofür man
+     freigeschaltet sein müsste. */
+  const standaloneHref = ready ? window.TOOLS_OVERLAY?.[t.id]?.standalone : null;
+
+  const foot = standaloneHref
+    ? `<div class="tile-foot">
+         <a class="btn btn--sm btn--primary" href="${esc(standaloneHref)}">Öffnen</a>
+       </div>`
+    : guest
     ? (pv
         ? `<div class="tile-foot">
              <button type="button" class="btn btn--sm" data-act="peek" data-tool="${esc(t.id)}">Vorschau ansehen</button>

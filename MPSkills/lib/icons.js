@@ -86,6 +86,14 @@
       '<path d="M6.8 8.2h4.2M13 8.2h4.2M6.8 12.2h3.4"/>' +
       '<rect x="12.4" y="10.6" width="4.8" height="3.2" rx=".8"/>',
 
+    /* Master PDF — ein Blatt mit umgeknickter Ecke und drei Textzeilen,
+       die letzte kurz. Kein „PDF"-Schriftzug: bei 20 Pixeln ist das
+       Blatt lesbar, Buchstaben darin nicht. */
+    masterpdf:
+      '<path d="M6 3.2h8.2L19 8v12.8H6z"/>' +
+      '<path d="M14 3.4V8.2h4.8"/>' +
+      '<path d="M9 12.4h7M9 15.4h7M9 18.2h4"/>',
+
     /* Cäsar-Scheibe — zwei Ringe übereinander: außen die Teilung,
        innen EINE Marke, und die steht zwischen zwei Zähnen. Genau
        das ist der Schlüssel: die beiden Räder stehen gegeneinander
@@ -206,7 +214,8 @@
     'NeuroLab':       'neurolab',
     'ScrumWerkstatt': 'scrum',
     'Projektarbeit':  'projekt',
-    'TinyLM':         'tinylm'
+    'TinyLM':         'tinylm',
+    'MasterPDF':      'masterpdf'
   };
 
   function key(id) {

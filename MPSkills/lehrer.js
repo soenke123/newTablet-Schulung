@@ -1484,9 +1484,11 @@ async function renderNew() {
   }
 
   // Ausgeblendete Skills (tools.js, `hidden`) tauchen auch im Dropdown
-  // für neue Räume nicht auf — wie auf der Landing.
+  // für neue Räume nicht auf — wie auf der Landing. Ebenso Skills ohne
+  // Raum (`standalone`).
   S.tools = Object.fromEntries(Object.entries(data.tools || {})
-    .filter(([id]) => !window.TOOLS_OVERLAY?.[id]?.hidden));
+    .filter(([id]) => !window.TOOLS_OVERLAY?.[id]?.hidden
+                   && !window.TOOLS_OVERLAY?.[id]?.standalone));
   const usable = Object.keys(S.tools).filter(id => S.tools[id].active);
   if (!usable.length) {
     host().innerHTML = `<main class="wrap"><div class="card"><div class="msg msg--warn">Es ist
