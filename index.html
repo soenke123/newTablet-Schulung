@@ -1060,7 +1060,7 @@
         <a id="profileLink" href="profil.html">Profil<span class="new-dot" id="menuNewDot" hidden></span></a>
         <button type="button" id="feedbackLink" hidden>Feedback &amp; Fragen</button>
         <a id="homeLink" href="index.html" class="is-active">Startseite</a>
-        <a id="gamehubLink" href="GameHub/index.html" hidden>GameHub</a>
+        <a id="gamehubMenuLink" href="GameHub/index.html" hidden>GameHub</a>
         <a id="mpskillsLink" href="MPSkills/index.html" hidden>MPSkills</a>
         <button id="logoutBtn">Ausloggen</button>
       </div>
@@ -1481,7 +1481,7 @@
         const hasMPSkills = Boolean(isAdmin || user.teacher_status === 'approved');
 
         document.getElementById('adminLink').hidden = !isAdmin;
-        const gamehubLink = document.getElementById('gamehubLink');
+        const gamehubLink = document.getElementById("gamehubMenuLink");
         if (gamehubLink) gamehubLink.hidden = !hasSeason;
         const mpskillsLink = document.getElementById('mpskillsLink');
         if (mpskillsLink) mpskillsLink.hidden = !hasMPSkills;
