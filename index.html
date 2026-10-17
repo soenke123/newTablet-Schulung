@@ -221,6 +221,22 @@
     }
     .season-label[hidden] { display: none; }
 
+    /* Hinweis für Konten ohne Kurs (pending / über MPSkills) */
+    .course-banner {
+      max-width: 40rem;
+      margin: 1.2rem auto 0;
+      padding: 0.9rem 1.2rem;
+      border-radius: var(--radius-medium);
+      border: 1px solid var(--border);
+      background: rgba(181, 106, 60, 0.12);
+      font-size: 1rem;
+      line-height: 1.45;
+      text-align: center;
+    }
+    .course-banner[hidden] { display: none; }
+    .course-banner .auth-btn { margin-top: 0.7rem; }
+    .course-banner .course-banner-err { margin-top: 0.5rem; color: #b3261e; font-size: 0.9rem; }
+
     /* Hauptlayout */
     .button-layout {
       display: flex;
@@ -1039,6 +1055,7 @@
         <h1 id="pageTitle">Tablet Schulung</h1>
       </div>
       <div class="season-label" id="seasonLabel" hidden></div>
+      <div class="course-banner" id="courseBanner" role="status" hidden></div>
     </header>
 
     <section
@@ -1797,6 +1814,72 @@
       }
     });
 
+    /* ─── Banner „Kurs beitreten“ (Konten ohne Kurs) ──────────
+       Für Konten mit Status pending / über MPSkills (Migration 0212).
+       Ob an der Schule gerade ein Kurs offen ist, sagt my_open_cluster();
+       der Knopf ruft join_open_cluster(). Rohes fetch wie in session.js,
+       damit kein SDK-Lock dazwischenkommt. */
+    async function courseRpc(name) {
+      const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/${name}`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${window.__accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: '{}'
+      });
+      if (!res.ok) throw new Error(`${name} ${res.status}`);
+      return res.json();
+    }
+
+    let bannerSeq = 0;
+    async function refreshCourseBanner() {
+      const el   = document.getElementById('courseBanner');
+      const user = getSessionUser();
+      const noCourse = !!(user && !user.cluster_id && !user.is_admin && !user.is_superadmin
+        && (user.status === 'pending' || user.status === 'mpskills'));
+      if (!noCourse) { el.hidden = true; return; }
+
+      const seq = ++bannerSeq;
+      let info = null;
+      try { info = await courseRpc('my_open_cluster'); } catch (e) { console.warn('[landing]', e.message); }
+      if (seq !== bannerSeq) return;
+
+      const intro = 'Für die Schulungsinhalte musst du einem Kurs beitreten.';
+      if (info && info.ok && info.open) {
+        el.innerHTML = '';
+        const p = document.createElement('div');
+        p.textContent = `${intro} Der Kurs „${info.name}“ ist offen.`;
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'auth-btn auth-btn--primary';
+        btn.textContent = 'Jetzt beitreten';
+        const err = document.createElement('div');
+        err.className = 'course-banner-err';
+        err.hidden = true;
+        btn.addEventListener('click', async () => {
+          btn.disabled = true;
+          err.hidden = true;
+          try {
+            const r = await courseRpc('join_open_cluster');
+            if (!r.ok) throw new Error(r.error === 'no_open_cluster'
+              ? 'Der Kurs ist gerade nicht mehr offen.' : (r.error || 'unbekannt'));
+            location.reload();
+          } catch (e) {
+            err.textContent = 'Beitritt nicht möglich: ' + e.message;
+            err.hidden = false;
+            btn.disabled = false;
+          }
+        });
+        el.append(p, btn, err);
+      } else {
+        el.textContent = `${intro} Gerade ist kein Kurs geöffnet — du musst von einem Admin zugeordnet werden.`;
+      }
+      el.hidden = false;
+    }
+
     /* ─── Initial + auf Session-Änderung ──────────────────── */
     async function bootLanding() {
       if (!window.supabaseClient) {
@@ -1805,11 +1888,13 @@
       await (window.waitForSession?.() ?? Promise.resolve());
       applySeasonUI();
       refreshAuthUI();
+      refreshCourseBanner();
     }
     bootLanding();
     window.addEventListener('lernwelt:session-changed', () => {
       applySeasonUI();
       refreshAuthUI();
+      refreshCourseBanner();
     });
     window.addEventListener('lernwelt:no-profile', e => {
       loginError.textContent = 'Anmeldung erfolgreich, aber Deinem Account fehlt ein Profil. Bitte an die Schulung wenden.';

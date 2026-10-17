@@ -445,6 +445,7 @@ async function renderDoor(code) {
             einzutragen.</p>`}
           <button type="submit" class="btn btn--primary btn--wide" id="joinGo">${coming ? 'Wieder mitmachen' : 'Mitmachen'}</button>
         </form>
+        ${loggedIn() ? '' : window.DoorLogin.html()}
         <!-- Der Hinweis steht VOR dem Beitritt, nicht irgendwo im Fuß:
              wer gleich seinen Namen eintippt, soll in dem Moment wissen,
              wer ihn sieht und wie lange er bleibt. Kurz, mit dem
@@ -466,6 +467,8 @@ async function renderDoor(code) {
   });
   const again = document.getElementById('againBtn');
   if (again) again.addEventListener('click', () => renderDoor(code));
+
+  if (!loggedIn()) window.DoorLogin.wire();
 
   const form = document.getElementById('joinForm');
   if (!form) return;
@@ -797,6 +800,26 @@ async function route() {
 
 window.addEventListener('hashchange', route);
 
+/* ─── Angemeldet? ─────────────────────────────────────────────
+   Gäste: offener Hell/Dunkel-Schalter, Anmeldefeld unter dem Namen.
+   Angemeldet: Avatar-Ecke (Schalter im Menü). Wechselt der Zustand
+   auf der Tür, wird sie neu gezeichnet — dann taucht auch ein Raum
+   auf, den das Konto schon auf einem anderen Gerät betreten hat. */
+function loggedIn() { return !!(window.getSessionUser && window.getSessionUser()); }
+
+let wasLoggedIn = null;
+function syncChrome() {
+  const now = loggedIn();
+  const open = document.getElementById('themeOpen');
+  if (open) open.hidden = now;
+  const changed = wasLoggedIn !== null && wasLoggedIn !== now;
+  wasLoggedIn = now;
+  return changed;
+}
+window.addEventListener('lernwelt:session-changed', () => {
+  if (syncChrome() && document.getElementById('doorLogin')) route();
+});
+
 /* ─── Start ───────────────────────────────────────────────── */
 (async function boot() {
   // Auf die Sitzung warten, aber nicht ewig: ein Teilnehmer
@@ -804,10 +827,7 @@ window.addEventListener('hashchange', route);
   // nach drei Sekunden von selbst auf.
   await (window.waitForSession?.() ?? Promise.resolve());
 
-  const s = window.getSessionUser?.();
-  if (s) {
-    document.getElementById('whoBar').hidden = false;
-    document.getElementById('whoName').textContent = s.display_name || s.account_name;
-  }
+  window.MPUserBar?.mount({ hideGuest: true, stayOnLogout: true });
+  syncChrome();
   route();
 })();

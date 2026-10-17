@@ -444,6 +444,7 @@ html, body {
   letter-spacing: 0.03em;
 }
 .badge.pending { background: rgba(201,75,75,0.15); color: #ff8c8c; }
+.badge.mpskills { background: rgba(110,150,230,0.15); color: #9db8f0; }
 .badge.active  { background: rgba(107,191,89,0.15); color: #8fd97e; }
 .badge.admin   { background: rgba(212,168,48,0.2); color: var(--a-gold); }
 .badge.schuladmin { background: rgba(212,168,48,0.2); color: var(--a-gold); }

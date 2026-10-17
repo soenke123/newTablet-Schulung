@@ -26,6 +26,7 @@
 //      Zeitfenster) für die Schule suchen
 //        → gefunden: status='active', cluster_id gesetzt
 //        → sonst:    status='pending', cluster_id=null
+//      Bei 'mpskills': immer status='mpskills' (Migration 0212), ohne Kurs.
 //      Bei 'mpskills' entfällt der Schritt komplett.
 //   5) auth.users mit Fake-Mail anlegen (email_confirm=true, damit sofort loginbar)
 //   6) profiles-Row mit passenden Werten anlegen
@@ -226,12 +227,19 @@ export default async function handler(req, res) {
     cluster = found ?? null;
   }
 
-  const status     = cluster ? 'active'    : 'pending';
+  // Ohne Kurs: 'mpskills' für Anmeldungen über MPSkills (Migration 0212),
+  // sonst 'pending'. Beide verhalten sich gleich; der Wert ist die
+  // Orientierung für das Admin-Panel.
+  const status     = cluster ? 'active'    : (context === 'mpskills' ? 'mpskills' : 'pending');
   const cluster_id = cluster ? cluster.id  : null;
 
   // MPSkills-Anmeldung = Antrag auf die Lehrkraft-Rolle (Migration 0077).
   // Den Zeitstempel setzt der Trigger profiles_teacher_stamp_trg.
-  const teacher_status = context === 'mpskills' ? 'pending' : 'none';
+  // teacher_request:false (Registrierung auf der Beitrittsseite j.html,
+  // meist Schüler) stellt keinen Antrag, das Konto steht trotzdem auf
+  // 'mpskills'.
+  const teacher_status = context === 'mpskills' && body.teacher_request !== false
+    ? 'pending' : 'none';
 
   // 5) Fake-Mail
   const email = `${account_name}@${school.slug}.${FAKE_EMAIL_DOMAIN}`;

@@ -1924,7 +1924,7 @@ function renderCell(u, col) {
       // sie hier zusätzlich zu zeigen hieß, dieselbe Auskunft zweimal
       // in dieselbe Zeile zu schreiben. Beide Spalten stehen ohnehin
       // immer zusammen (VIEW_COLUMNS.admin).
-      return `<td><span class="badge ${u.status}">${u.status}</span></td>`;
+      return `<td>${statusBadge(u.status)}</td>`;
     }
     case 'cluster': {
       const opts = ['<option value="">— kein Cluster —</option>']
@@ -2081,6 +2081,11 @@ function canResetTarget(u) {
 // Ein offener Antrag bekommt einen zweiten, gedämpften Marker: die Rolle
 // gilt noch nicht, aber wer im User-Tab steht, soll nicht erst im
 // Lehrkräfte-Tab nachsehen müssen, ob da jemand wartet.
+function statusBadge(st) {
+  const label = st === 'mpskills' ? 'über MPSkills' : st;
+  return `<span class="badge ${st}">${escapeHtml(label)}</span>`;
+}
+
 function roleBadge(u) {
   if (u.is_superadmin) return '<span class="badge volladmin">Volladmin</span>';
   if (u.is_admin)      return '<span class="badge schuladmin">Schuladmin</span>';
@@ -2146,13 +2151,20 @@ document.addEventListener('click', e => {
 
 /* ─── User-Aktionen (unverändert aus alter Version) ─── */
 
+// Status eines Kontos ohne Kurs: wer über MPSkills kam (Lehrkraft-Antrag
+// oder -Rolle) steht auf 'mpskills', alle anderen auf 'pending'. Beide
+// verhalten sich gleich, der Wert ist die Orientierung (Migration 0212).
+function noClusterStatus(u) {
+  return u && u.teacher_status && u.teacher_status !== 'none' ? 'mpskills' : 'pending';
+}
+
 async function setUserCluster(userId, clusterId) {
   const u = userCache.find(x => x.id === userId);
   const isAdminTarget = !!(u && (u.is_admin || u.is_superadmin));
   // Admin-Beobachter behalten ihren Status (typischerweise 'active').
   // Nur Schüler-Accounts wechseln zwischen 'pending' und 'active'.
   const patch = { cluster_id: clusterId };
-  if (!isAdminTarget) patch.status = clusterId ? 'active' : 'pending';
+  if (!isAdminTarget) patch.status = clusterId ? 'active' : noClusterStatus(u);
   try {
     await api('PATCH', `profiles?id=eq.${userId}`, patch);
     if (u) {
@@ -2420,19 +2432,30 @@ async function bulkAssignCluster() {
   const ids = Array.from(selectedIds);
   if (ids.length === 0) return;
   const clusterId = document.getElementById('bulkClusterSelect').value || null;
-  const nextStatus = clusterId ? 'active' : 'pending';
   const btn = document.getElementById('bulkAssignBtn');
   const fb  = document.getElementById('bulkFeedback');
   fb.className = 'form-feedback';
   fb.textContent = '';
   btn.disabled = true;
   try {
-    // PostgREST kann id=in.(uuid1,uuid2,...) → ein PATCH für alle
-    await api('PATCH',
-      `profiles?id=in.(${ids.join(',')})`,
-      { cluster_id: clusterId, status: nextStatus });
-    for (const u of userCache) {
-      if (selectedIds.has(u.id)) { u.cluster_id = clusterId; u.status = nextStatus; }
+    // PostgREST kann id=in.(uuid1,uuid2,...) → ein PATCH für alle.
+    // Ohne Kurs hängt der Status an der Herkunft (siehe noClusterStatus),
+    // deshalb dann ein PATCH je Gruppe.
+    if (clusterId) {
+      await api('PATCH', `profiles?id=in.(${ids.join(',')})`,
+        { cluster_id: clusterId, status: 'active' });
+      for (const u of userCache) {
+        if (selectedIds.has(u.id)) { u.cluster_id = clusterId; u.status = 'active'; }
+      }
+    } else {
+      const sel = userCache.filter(u => selectedIds.has(u.id));
+      for (const st of ['mpskills', 'pending']) {
+        const grp = sel.filter(u => noClusterStatus(u) === st);
+        if (!grp.length) continue;
+        await api('PATCH', `profiles?id=in.(${grp.map(u => u.id).join(',')})`,
+          { cluster_id: null, status: st });
+        for (const u of grp) { u.cluster_id = null; u.status = st; }
+      }
     }
     const label = clusterCache.find(c => c.id === clusterId)?.name || 'kein Cluster';
     showToast(`${ids.length} User → ${label}`);
@@ -3479,7 +3502,7 @@ function renderTeachers() {
     // Was auf der Schulungsseite gilt — bewusst mit angezeigt, damit
     // sichtbar bleibt, dass die beiden Rollen nichts miteinander zu tun
     // haben: eine freigeschaltete Lehrkraft ist dort weiter pending.
-    const schulung = `<span class="badge ${u.status}">${u.status}</span>`
+    const schulung = statusBadge(u.status)
                    + (u.is_admin || u.is_superadmin ? ' ' + roleBadge(u) : '');
 
     let actions = '';

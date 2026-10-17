@@ -107,6 +107,9 @@
        also steht er offen daneben. Ohne ihn wäre die Landing der
        einzige Ort mit Darkmode, an dem man ihn nicht bedienen kann. */
     if (role === 'guest') {
+      // Seiten mit eigenem Anmeldefeld (j.html) lassen die Ecke für
+      // Gäste leer; ihr Hell/Dunkel-Schalter steht dort im HTML.
+      if (opts.hideGuest) { host.innerHTML = ''; return; }
       host.innerHTML = `
         <div class="ub ub--guest">
           ${themeHTML('bar')}
@@ -220,7 +223,8 @@
     // Landing, auf der noch ein Name steht, ist die harmlosere
     // Auskunft als eine Raumseite, die niemandem mehr gehört.
     try { await window.supabaseClient?.auth?.signOut(); } catch (e) { /* egal */ }
-    if (!onLanding()) location.replace('index.html');
+    if (opts.stayOnLogout) location.reload();
+    else if (!onLanding()) location.replace('index.html');
   }
 
   function mount(options = {}) {

@@ -6,7 +6,7 @@
 <title>Mitmachen · MPSkills</title>
 <meta name="robots" content="noindex" />
 <link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20260930d" />
+<link rel="stylesheet" href="style.css?v=20261017" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -24,14 +24,13 @@
 <header class="topbar">
   <a class="wordmark" href="index.html"><img class="wordmark-logo" src="../LogoMPSkills.png" alt="" /><span class="wordmark-text">MP<span>Skills</span></span></a>
   <div class="topbar-spacer"></div>
-  <span class="userpill" id="whoBar" hidden><strong id="whoName"></strong></span>
-
-  <!-- Hell/Dunkel. Diese Seite hat als einzige keine Anmelde-Ecke
-       (bewusst — sie drängte zu einem Konto, das hier niemand
-       braucht), also gibt es kein Menü, in dem der Schalter sitzen
-       könnte. Er steht deshalb offen da; gefüllt wird der Kasten
-       von lib/theme.js über das data-Attribut. -->
-  <div data-theme-switch="bar"></div>
+  <!-- Hell/Dunkel für Gäste: offen in der Kopfzeile, ein Menü gibt es
+       nicht. Angemeldete haben stattdessen die Ecke mit Avatar
+       (lib/userbar.js, Schalter dann im Menü); j.js blendet den
+       offenen Schalter dann aus. Gefüllt wird der Kasten von
+       lib/theme.js über das data-Attribut. -->
+  <div data-theme-switch="bar" id="themeOpen"></div>
+  <div id="userbarHost"></div>
 </header>
 
 <!-- Im Raum stehen hier zwei Reiter: „Raum" (wer ist da, wie komme
@@ -67,12 +66,15 @@
 <script src="../vendor/supabase-js-2.116.0.min.js"></script>
 <script src="../supabase-config.js"></script>
 <script src="../session.js?v=20260817"></script>
+<script src="../avatars.js?v=20260709"></script>
+<script src="lib/userbar.js?v=20261017"></script>
 <!-- lib/qr.js wird hier NICHT mehr geladen (19.08.2026): auf der
      Schülerseite wird kein QR-Code mehr gezeichnet, seit „Jemanden
      dazuholen" raus ist. Die Tür gehört der Tafel. -->
 <script src="lib/room.js?v=20261006"></script>
 <script src="lib/icons.js?v=20261016b"></script>
 <script src="lib/tool.js?v=20261008a"></script>
-<script src="j.js?v=20261006"></script>
+<script src="door-login.js?v=20261017"></script>
+<script src="j.js?v=20261017"></script>
 </body>
 </html>

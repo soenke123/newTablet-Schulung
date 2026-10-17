@@ -727,7 +727,9 @@
       document.getElementById('infoSeason').textContent      = user.season ?? 0;
 
       const statusEl = document.getElementById('infoStatus');
-      statusEl.textContent = user.status === 'active' ? 'Aktiv' : 'Wartet auf Freischaltung';
+      statusEl.textContent = user.status === 'active' ? 'Aktiv'
+        : user.status === 'mpskills' ? 'Über MPSkills (kein Kurs)'
+        : 'Wartet auf Freischaltung';
       statusEl.className   = 'badge-status ' + (user.status === 'active' ? 'active' : 'pending');
 
       currentAvatarId = user.avatar_id || window.DEFAULT_AVATAR_ID;
