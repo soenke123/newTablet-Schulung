@@ -223,19 +223,39 @@
 
     /* Hinweis für Konten ohne Kurs (pending / über MPSkills) */
     .course-banner {
-      max-width: 40rem;
-      margin: 1.2rem auto 0;
+      max-width: 44rem;
+      margin: 1.4rem auto 0;
       padding: 0.9rem 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.8rem 1.2rem;
       border-radius: var(--radius-medium);
-      border: 1px solid var(--border);
-      background: rgba(181, 106, 60, 0.12);
-      font-size: 1rem;
-      line-height: 1.45;
-      text-align: center;
+      border: 1px solid rgba(232, 200, 130, 0.35);
+      background: rgba(0, 0, 0, 0.22);
+      font-size: 0.98rem;
+      line-height: 1.4;
+      text-align: left;
     }
     .course-banner[hidden] { display: none; }
-    .course-banner .auth-btn { margin-top: 0.7rem; }
-    .course-banner .course-banner-err { margin-top: 0.5rem; color: #b3261e; font-size: 0.9rem; }
+    .course-banner .cb-text { flex: 1 1 18rem; display: flex; flex-direction: column; gap: 0.15rem; }
+    .course-banner .cb-text strong { font-size: 1.05rem; color: #f0d9a0; }
+    .course-banner .cb-text span { opacity: 0.85; }
+    .course-banner .auth-btn { flex: 0 0 auto; white-space: nowrap; }
+    .course-banner .course-banner-err { flex: 1 0 100%; color: #ffb3a8; font-size: 0.9rem; }
+
+    /* Für Konten ohne Kurs gesperrte Knöpfe (Präsentationen) */
+    .card-button.course-locked {
+      opacity: 0.45;
+      filter: grayscale(0.6);
+      cursor: not-allowed;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .card-button.course-locked:hover { transform: none; }
+    .course-lock-hint { display: none; font-size: 0.8rem; font-weight: 400; }
+    .card-button.course-locked .course-lock-hint { display: block; }
 
     /* Hauptlayout */
     .button-layout {
@@ -1098,6 +1118,7 @@
           >
             <span class="pdf-icon" aria-hidden="true"></span>
             <span>Präsentationen</span>
+            <span class="course-lock-hint">Nur im Kurs möglich</span>
           </button>
 
         </div>
@@ -1368,8 +1389,16 @@
       // Hint-Text im Locked-Button je nach Kontext
       if (ghLockedHint) {
         ghLockedHint.textContent = isPending
-          ? 'Dein Account wartet auf Freischaltung durch einen Admin.'
+          ? 'Nur im Kurs möglich.'
           : 'Bitte melde dich an oder registriere dich, um den Game Hub zu öffnen.';
+      }
+
+      // Präsentationen nur im Kurs (wie der Game Hub).
+      const presBtn = document.getElementById('openModalButton');
+      if (presBtn) {
+        presBtn.classList.toggle('course-locked', isPending);
+        presBtn.setAttribute('aria-disabled', String(isPending));
+        presBtn.title = isPending ? 'Nur im Kurs möglich' : '';
       }
 
       document.querySelectorAll('.season2-only').forEach(el => {
@@ -1834,6 +1863,17 @@
       return res.json();
     }
 
+    function bannerText(text) {
+      const box = document.createElement('div');
+      box.className = 'cb-text';
+      const h = document.createElement('strong');
+      h.textContent = 'Noch in keinem Kurs';
+      const t = document.createElement('span');
+      t.textContent = text;
+      box.append(h, t);
+      return box;
+    }
+
     let bannerSeq = 0;
     async function refreshCourseBanner() {
       const el   = document.getElementById('courseBanner');
@@ -1850,8 +1890,7 @@
       const intro = 'Für die Schulungsinhalte musst du einem Kurs beitreten.';
       if (info && info.ok && info.open) {
         el.innerHTML = '';
-        const p = document.createElement('div');
-        p.textContent = `${intro} Der Kurs „${info.name}“ ist offen.`;
+        const p = bannerText(`${intro} Der Kurs „${info.name}“ ist offen.`);
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'auth-btn auth-btn--primary';
@@ -1875,7 +1914,8 @@
         });
         el.append(p, btn, err);
       } else {
-        el.textContent = `${intro} Gerade ist kein Kurs geöffnet — du musst von einem Admin zugeordnet werden.`;
+        el.innerHTML = '';
+        el.append(bannerText(`${intro} Gerade ist kein Kurs geöffnet — du musst von einem Admin zugeordnet werden.`));
       }
       el.hidden = false;
     }
@@ -1944,6 +1984,8 @@
     const handoutModal = wireModal("handoutModal", "closeHandoutModalButton");
 
     document.getElementById("openModalButton").addEventListener("click", () => {
+      const u = getSessionUser();
+      if (u && !u.cluster_id) return;   // ohne Kurs gesperrt
       openModal(presentationModal);
     });
 
