@@ -53,14 +53,19 @@
 
   function html() {
     return `
-      <section class="door-login" id="doorLogin">
-        <h2 class="door-login-h">Anmelden</h2>
+      <section class="card door-login" id="doorLogin">
+        <h2 class="door-login-h">Account?</h2>
         <p class="door-login-note"><strong>Du brauchst keinen Account.</strong>
           Wenn du dich anmeldest, wird der Raum mit deinem Account verknüpft —
           du findest ihn dann auf jedem Gerät wieder.</p>
         <div class="msg msg--err" id="dlError" hidden></div>
 
-        <form id="dlLoginForm" novalidate>
+        <div class="door-login-tabs" role="group" aria-label="Anmelden oder registrieren">
+          <button type="button" class="btn btn--wide" id="dlTabLogin" aria-expanded="false">Anmelden</button>
+          <button type="button" class="btn btn--wide" id="dlTabReg" aria-expanded="false">Registrieren</button>
+        </div>
+
+        <form id="dlLoginForm" novalidate hidden>
           <label class="field" data-dl-school hidden>Schule
             <select id="dlSchool"></select>
           </label>
@@ -97,9 +102,6 @@
           <button type="submit" class="btn btn--primary btn--wide" id="dlRegBtn">Konto anlegen</button>
         </form>
 
-        <p class="door-login-switch">
-          <button type="button" class="btn btn--ghost btn--wide" id="dlSwitch">Registrieren</button>
-        </p>
       </section>`;
   }
 
@@ -121,15 +123,21 @@
     // Bei nur einer Schule gibt es nichts zu wählen.
     if (list.length > 1) root.querySelectorAll('[data-dl-school]').forEach(l => { l.hidden = false; });
 
-    let registering = false;
-    $('dlSwitch').addEventListener('click', () => {
-      registering = !registering;
-      $('dlLoginForm').hidden = registering;
-      $('dlRegForm').hidden   = !registering;
-      $('dlSwitch').textContent = registering ? 'Zurück zum Anmelden' : 'Registrieren';
+    // Zwei Knöpfe, ein Formular klappt darunter auf; nochmal tippen klappt zu.
+    let open = null;
+    function setOpen(which) {
+      open = open === which ? null : which;
+      $('dlLoginForm').hidden = open !== 'login';
+      $('dlRegForm').hidden   = open !== 'reg';
+      $('dlTabLogin').setAttribute('aria-expanded', String(open === 'login'));
+      $('dlTabReg').setAttribute('aria-expanded', String(open === 'reg'));
+      $('dlTabLogin').classList.toggle('btn--primary', open === 'login');
+      $('dlTabReg').classList.toggle('btn--primary', open === 'reg');
       showErr('');
-      setTimeout(() => $(registering ? 'dlRegAccount' : 'dlAccount').focus(), 30);
-    });
+      if (open) setTimeout(() => $(open === 'login' ? 'dlAccount' : 'dlRegAccount').focus(), 30);
+    }
+    $('dlTabLogin').addEventListener('click', () => setOpen('login'));
+    $('dlTabReg').addEventListener('click', () => setOpen('reg'));
 
     $('dlLoginForm').addEventListener('submit', async (e) => {
       e.preventDefault();

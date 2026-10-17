@@ -445,7 +445,6 @@ async function renderDoor(code) {
             einzutragen.</p>`}
           <button type="submit" class="btn btn--primary btn--wide" id="joinGo">${coming ? 'Wieder mitmachen' : 'Mitmachen'}</button>
         </form>
-        ${loggedIn() ? '' : window.DoorLogin.html()}
         <!-- Der Hinweis steht VOR dem Beitritt, nicht irgendwo im Fuß:
              wer gleich seinen Namen eintippt, soll in dem Moment wissen,
              wer ihn sieht und wie lange er bleibt. Kurz, mit dem
@@ -459,7 +458,8 @@ async function renderDoor(code) {
         </p>
       `}
       <p class="join-foot"><button type="button" class="btn--link" id="otherCode">Anderen Code eingeben</button></p>
-    </div>`;
+    </div>
+    ${loggedIn() ? '' : window.DoorLogin.html()}`;
 
   document.getElementById('otherCode').addEventListener('click', () => {
     history.replaceState(null, '', location.pathname);
