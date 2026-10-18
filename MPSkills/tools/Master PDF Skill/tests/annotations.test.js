@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillShare, strokeBox, scaleMark, pointsBox, placeMark, imageMatrix, imageViewMatrix } from '../js/annotations.js';
+import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillShare, strokeBox, scaleMark, pointsBox, placeMark, imageMatrix, imageViewMatrix, layoutText, wrapText, textLines, textAnchor, localSize, frameRect } from '../js/annotations.js';
 
 const box = { x: 10, y: 20, width: 200, height: 300 };
 const near = (actual, expected) => actual.forEach((v, i) => assert.ok(Math.abs(v - expected[i]) < 1e-9, `${actual} ≠ ${expected}`));
@@ -174,4 +174,38 @@ test('Bild-Matrix für den Export und Treffer im ganzen Kasten', () => {
   assert.deepEqual(markBounds(img), { x0: 10, y0: 20, x1: 50, y1: 80 });
   assert.deepEqual(scaleMark(img, [10, 20], [50, 80], [10, 20], [90, 140]).points, [10, 20, 90, 140]);
   assert.equal(eraseMarks([img], 30, 50, 5, () => 9)[0], img, 'Radieren schneidet keine Bilder');
+});
+
+const charWidth = (t, size) => t.length * size / 2;
+
+test('Text: Kasten folgt der längsten Zeile, Ecke oben links bleibt stehen', () => {
+  const draft = { id: 1, type: 'text', text: 'Hallo\nWelt!!', font: 'sans', size: 10, color: '#000', rot: 0, points: [100, 500, 100, 500] };
+  const t = layoutText(draft, charWidth);
+  assert.deepEqual(t.lines, ['Hallo', 'Welt!!']);
+  assert.deepEqual(t.points, [100, 471, 134, 500], '6 Zeichen à 5 pt + Rand, zwei Zeilen hoch');
+  assert.deepEqual(textAnchor(t), [100, 500]);
+  assert.deepEqual(textLines(t).map(l => [l.x, l.y]), [[2, 11.5], [2, 24]]);
+  const longer = layoutText({ ...t, text: 'Hallo Welt, schön' }, charWidth);
+  assert.deepEqual(textAnchor(longer), [100, 500], 'wächst nach rechts unten');
+});
+
+test('Text: feste Breite bricht an Leerzeichen um, lange Wörter werden geteilt', () => {
+  assert.deepEqual(wrapText('eins zwei drei', 16, t => t.length * 2), ['eins', 'zwei', 'drei']);
+  assert.deepEqual(wrapText('eins zwei drei', 20, t => t.length * 2), ['eins zwei', 'drei']);
+  assert.deepEqual(wrapText('Donaudampfschiff', 10, t => t.length * 2), ['Donau', 'dampf', 'schif', 'f']);
+  assert.deepEqual(wrapText('a\n\nb', 100, t => t.length), ['a', '', 'b'], 'leere Zeilen bleiben');
+  const t = layoutText({ id: 1, type: 'text', text: 'eins zwei drei', font: 'mono', size: 10, rot: 0, boxWidth: 54, points: [0, 100, 0, 100] }, charWidth);
+  assert.deepEqual(t.lines, ['eins zwei', 'drei']);
+  assert.equal(localSize(t).w, 54);
+});
+
+test('Text auf gedrehten Seiten: Rahmen steht aufrecht, Breite entlang der Schrift', () => {
+  for (const rot of [0, 90, 180, 270]) {
+    const map = pageTransform({ x: 0, y: 0, width: 200, height: 300 }, rot, 1);
+    const anchor = map.toPdf(20, 30);
+    const t = layoutText({ id: 1, type: 'text', text: 'abcd', font: 'sans', size: 10, rot, points: [...anchor, ...anchor] }, charWidth);
+    const [a, b] = [map.toView(t.points[0], t.points[1]), map.toView(t.points[2], t.points[3])];
+    near([Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.abs(b[0] - a[0]), Math.abs(b[1] - a[1])], [20, 30, 24, 16.5]);
+    assert.deepEqual(frameRect(textAnchor(t), rot, 24, 16.5), t.points);
+  }
 });

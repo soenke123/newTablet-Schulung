@@ -131,11 +131,83 @@ export function imageViewMatrix(mark, map) {
   return [x[0] - o[0], x[1] - o[1], y[0] - o[0], y[1] - o[1], o[0], o[1]];
 }
 
+/**
+ * Text (tab "Einfügen", written into the page on export as real, searchable text): marks `{id, type:'text', text,
+ * font ('sans'|'serif'|'mono'), bold, size (pt), color, rot, boxWidth?, lines, points}`. Like pictures they are laid
+ * out in their own upright frame (`rot`, see imageMatrix) whose upper-left corner is the anchor. Without `boxWidth`
+ * the box follows the longest line; with it (pulled at an edge) lines wrap at that width. `lines` and `points` are
+ * computed by layoutText with the metrics of the PDF standard fonts, so view and export need no measuring.
+ */
+export const TEXT_FONTS = {
+  sans: { label: 'Serifenlos', pdf: ['Helvetica', 'Helvetica-Bold'], css: 'Helvetica, Arial, sans-serif' },
+  serif: { label: 'Serif', pdf: ['Times-Roman', 'Times-Bold'], css: '"Times New Roman", Times, serif' },
+  mono: { label: 'Schreibmaschine', pdf: ['Courier', 'Courier-Bold'], css: '"Courier New", Courier, monospace' },
+};
+export const TEXT_PAD = 2, TEXT_LINE = 1.25;
+export const textFontName = mark => (TEXT_FONTS[mark.font] || TEXT_FONTS.sans).pdf[mark.bold ? 1 : 0];
+const isBoxed = mark => mark.type === 'image' || mark.type === 'text';
+const turnOf = rot => (((rot || 0) % 360) + 360) % 360;
+
+/** Size of a box in its own upright frame (width along the text). */
+export function localSize(mark) {
+  const b = pointsBox(mark), w = b.x1 - b.x0, h = b.y1 - b.y0;
+  return turnOf(mark.rot) % 180 ? { w: h, h: w } : { w, h };
+}
+
+/** Upper-left corner of the upright frame in PDF space. */
+export function textAnchor(mark) {
+  const [, , c, d, e, f] = imageMatrix(mark);
+  return [c + e, d + f];
+}
+
+/** Box points of a frame w × h (upright size) whose upper-left corner is at `anchor`. */
+export function frameRect([x, y], rot, w, h) {
+  const dirs = { 0: [[1, 0], [0, -1]], 90: [[0, 1], [1, 0]], 180: [[-1, 0], [0, 1]], 270: [[0, -1], [-1, 0]] }[turnOf(rot)];
+  const [[rx, ry], [dx, dy]] = dirs, ox = x + rx * w + dx * h, oy = y + ry * w + dy * h;
+  return [Math.min(x, ox), Math.min(y, oy), Math.max(x, ox), Math.max(y, oy)].map(roundPoint);
+}
+
+/** Lines of a text: paragraphs at "\n", wrapped at spaces to `maxWidth` (long words are broken), `widthOf(text)` in pt. */
+export function wrapText(text, maxWidth, widthOf) {
+  const out = [];
+  for (const para of String(text ?? '').split('\n')) {
+    if (!(maxWidth < Infinity)) { out.push(para); continue; }
+    let line = '';
+    for (const word of para.split(/(?<= )/)) {
+      if (widthOf((line + word).trimEnd()) <= maxWidth) { line += word; continue; }
+      if (line) { out.push(line.trimEnd()); line = ''; }
+      let rest = word;
+      while (widthOf(rest.trimEnd()) > maxWidth && rest.length > 1) {
+        let n = rest.length - 1;
+        while (n > 1 && widthOf(rest.slice(0, n)) > maxWidth) n--;
+        out.push(rest.slice(0, n)); rest = rest.slice(n);
+      }
+      line = rest;
+    }
+    out.push(line.trimEnd());
+  }
+  return out;
+}
+
+/** The text mark with `lines` and `points` for its text, size and font, kept at its anchor; widthOf(text, size, pdfFont). */
+export function layoutText(mark, widthOf) {
+  const size = mark.size, font = textFontName(mark), measure = t => widthOf(t, size, font);
+  const lines = wrapText(mark.text, mark.boxWidth ? Math.max(size, mark.boxWidth - 2 * TEXT_PAD) : Infinity, measure);
+  const w = mark.boxWidth ?? Math.max(size * 2, ...lines.map(measure)) + 2 * TEXT_PAD;
+  const h = lines.length * size * TEXT_LINE + 2 * TEXT_PAD;
+  return { ...mark, lines, points: frameRect(textAnchor(mark), mark.rot, w, h) };
+}
+
+/** Baselines of the lines in the upright frame, measured from its top: `{text, x, y}` in pt. */
+export function textLines(mark) {
+  return (mark.lines || []).map((text, i) => ({ text, x: TEXT_PAD, y: roundPoint(TEXT_PAD + (i * TEXT_LINE + 0.95) * mark.size) }));
+}
+
 /** Polylines (flat arrays, PDF space) along which a mark is drawn – used for hit tests. */
 export function markOutline(mark) {
   const p = mark.points;
   if (mark.type === 'ink') return [p];
-  if (mark.type === 'image') { const b = pointsBox(mark); return [[b.x0, b.y0, b.x1, b.y0, b.x1, b.y1, b.x0, b.y1, b.x0, b.y0]]; }
+  if (isBoxed(mark)) { const b = pointsBox(mark); return [[b.x0, b.y0, b.x1, b.y0, b.x1, b.y1, b.x0, b.y1, b.x0, b.y0]]; }
   const [x1, y1, x2, y2] = p;
   if (mark.type === 'line') return [p];
   if (mark.type === 'arrow') {
@@ -180,7 +252,7 @@ export function scaleMark(mark, [ax, ay], [bx, by], [cx, cy], [dx, dy]) {
 
 /** True if the point (PDF space) lies within `radius` of the drawn line, counting half its line width. */
 export function markHit(mark, x, y, radius) {
-  if (mark.type === 'image') { const b = pointsBox(mark); return x >= b.x0 - radius && x <= b.x1 + radius && y >= b.y0 - radius && y <= b.y1 + radius; }
+  if (isBoxed(mark)) { const b = pointsBox(mark); return x >= b.x0 - radius && x <= b.x1 + radius && y >= b.y0 - radius && y <= b.y1 + radius; }
   if (fillShare(mark) && insideShape(mark, x, y)) return true;
   const reach = radius + (mark.width || 0) / 2;
   for (const p of markOutline(mark)) {
@@ -242,7 +314,7 @@ export function eraseMarks(marks, x, y, radius, nextId) {
   let changed = false;
   const result = [];
   for (const mark of marks) {
-    if (mark.type === 'image') { result.push(mark); continue; } // pictures cannot be cut; "Ganze Elemente" removes them
+    if (isBoxed(mark)) { result.push(mark); continue; } // pictures and text cannot be cut; "Ganze Elemente" removes them
     const reach = radius + (mark.width || 0) / 2, b = markBounds(mark);
     if (x < b.x0 - radius || x > b.x1 + radius || y < b.y0 - radius || y > b.y1 + radius || !markHit({ ...mark, fill: undefined }, x, y, radius)) { result.push(mark); continue; }
     changed = true;

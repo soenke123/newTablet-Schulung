@@ -160,3 +160,8 @@ body.focus-mode .comments-panel{display:none}
 .sign-saved-list{display:flex;flex-wrap:wrap;gap:8px}.sign-saved-item{position:relative}
 .sign-saved-use{display:grid;place-items:center;width:120px;height:52px;padding:4px;border:1px solid #d5dce8;border-radius:8px;background:#fff;cursor:pointer}.sign-saved-use[aria-pressed="true"]{border-color:var(--blue);box-shadow:0 0 0 2px #b8c8ef}.sign-saved-use img{max-width:100%;max-height:100%}
 .sign-saved-del{position:absolute;top:-7px;right:-7px;width:22px;height:22px;border-radius:50%;border:1px solid #d5dce8;background:#fff;color:#c4373a;font-size:14px;line-height:1;cursor:pointer;padding:0}
+body.mode-edit.tool-i-text .reader-page{cursor:text}
+.text-editor{position:absolute;z-index:3;margin:0;box-sizing:border-box;border:1px dashed var(--blue);border-radius:2px;background:#ffffffd9;outline:none;resize:none;overflow:hidden;font-kerning:normal;min-width:24px}
+.text-style-icon{font-weight:700;font-size:14px;line-height:1;border-bottom:3px solid var(--dot,#111827);padding-bottom:1px}
+.text-font{font-size:15px}
+.pop-note{font-size:11px;color:#7b879b;margin:0;line-height:1.4;max-width:240px}

@@ -247,3 +247,22 @@ test('Bilder und Unterschriften werden fest in die Seite gezeichnet, gleiche Bil
   const content = new TextDecoder().decode(decodePDFRawStream(out.context.lookup(out.getPage(0).node.Contents().asArray().at(-1))).decode());
   assert.match(content, /0 60 -40 0 50 20 cm\s*\/Im-?\d* Do/);
 });
+
+test('Text wird echter Text in der Grundschrift, gedreht wie angezeigt; Umlaute gehen, Unbekanntes wird ?', async () => {
+  const blank = await createBlankPdf(200, 300);
+  const { layoutText } = await import('../js/annotations.js');
+  const { fontMetrics } = await import('../js/export.js');
+  const metrics = await fontMetrics();
+  assert.deepEqual(metrics.unknown('Grüße, 5 € – „ok“ 😀 α', 'Helvetica'), ['😀', 'α']);
+  const t = layoutText({ id: 1, type: 'text', text: 'Grüße\nzweite Zeile 😀', font: 'serif', bold: true, size: 12, color: '#1d4ed8', rot: 90, points: [150, 20, 150, 20] }, metrics.widthOf);
+  const out = await PDFDocument.load(await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 90, marks: [t] }], () => blank));
+  const node = out.getPage(0).node;
+  const fontDict = node.Resources().get(PDFName.of('Font'));
+  const font = out.context.lookup(fontDict.values()[0]);
+  assert.equal(font.get(PDFName.of('BaseFont')).asString(), '/Times-Bold');
+  const content = new TextDecoder().decode(decodePDFRawStream(out.context.lookup(node.Contents().asArray().at(-1))).decode());
+  assert.match(content, /0 1 -1 0 [\d.]+ 20 cm/, 'Rahmen um 90° gedreht');
+  assert.match(content, /BT[\s\S]*Tf[\s\S]*Tj[\s\S]*Tj[\s\S]*ET/, 'zwei Zeilen echter Text');
+  assert.match(content, /<4772FC DF65>|<4772FCDF65>/i, 'Grüße in WinAnsi');
+  assert.match(content, /3F>/, 'Emoji wird zu ?');
+});

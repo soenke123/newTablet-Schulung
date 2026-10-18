@@ -4,7 +4,7 @@ import {
   pushGraphicsState, popGraphicsState, setGraphicsState, setStrokingRgbColor, setFillingRgbColor, setLineWidth, setLineCap, setLineJoin,
   moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject, concatTransformationMatrix,
 } from '../lib/pdf-lib/pdf-lib.esm.min.js';
-import { hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength, imageMatrix } from './annotations.js';
+import { hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength, imageMatrix, localSize, textLines, textFontName, TEXT_FONTS, TEXT_LINE } from './annotations.js';
 import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, FREETEXT_SIZE, FREETEXT_BORDER, commentChanged, highlightPolygons, markupLines, freeTextLines, pdfDate } from './comments.js';
 
 /**
@@ -37,10 +37,10 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
   }
   const used = new Set();
   const font = pages.some(p => p.comments?.some(c => c.kind === 'freetext')) ? await textFont(out) : null;
-  const images = await embedImages(out, pages);
+  const images = await embedImages(out, pages), fonts = await embedTextFonts(out, pages);
   copied.forEach((page, i) => {
     page.setRotation(degrees(pages[i].rotation));
-    drawMarks(page, pages[i].marks, images);
+    drawMarks(page, pages[i].marks, images, fonts);
     out.addPage(page);
     if (annotRefs[i]) writeComments(page, pages[i].comments || [], annotRefs[i], ownedAnnots(pages[i].sourceId, pages[i].pageIndex) || new Set(), used, font);
   });
@@ -68,16 +68,43 @@ async function embedImages(doc, pages) {
   return images;
 }
 
+/** A standard font (WinAnsi) with `ref`, `widthOf(text, size)` and `encode(text)`; characters it cannot show become "?". */
+async function standardFont(doc, name) {
+  const font = await doc.embedFont(name);
+  const known = new Set(font.getCharacterSet());
+  const clean = value => Array.from(String(value), ch => known.has(ch.codePointAt(0)) ? ch : '?').join('');
+  return { ref: font.ref, widthOf: (value, size) => font.widthOfTextAtSize(clean(value), size), encode: value => font.encodeText(clean(value)), unknown: value => [...new Set(Array.from(String(value)).filter(ch => ch !== '\n' && !known.has(ch.codePointAt(0))))] };
+}
+
+/** The standard fonts used by text marks, once per document: PDF font name → standardFont. */
+async function embedTextFonts(doc, pages) {
+  const fonts = new Map();
+  for (const page of pages) for (const mark of page.marks || []) {
+    const name = mark.type === 'text' && textFontName(mark);
+    if (name && !fonts.has(name)) fonts.set(name, await standardFont(doc, name));
+  }
+  return fonts;
+}
+
+/** Text measuring for text marks in the app (same metrics as the export): widthOf(text, size, pdfFont), unknown(text, pdfFont). */
+export async function fontMetrics() {
+  const doc = await PDFDocument.create(), fonts = new Map();
+  for (const font of Object.values(TEXT_FONTS)) for (const name of font.pdf) fonts.set(name, await standardFont(doc, name));
+  const get = name => fonts.get(name) || fonts.get('Helvetica');
+  return { widthOf: (text, size, name) => get(name).widthOf(text, size), unknown: (text, name) => get(name).unknown(text) };
+}
+
 /**
  * Draws marks (PDF user space, see annotations.js) as vector graphics on top of the page content; highlighter
  * strokes first (transparent, multiplied, so text stays readable), then everything else in drawing order.
  * Opacity goes into an ExtGState. A filled rectangle or ellipse becomes a transparency group (form XObject): fill
  * under the opaque line inside, the opacity applied to the whole group – no darker overlap and no seam.
- * Pictures (tab "Einfügen") are image XObjects placed with imageMatrix, in drawing order with the strokes.
+ * Pictures (tab "Einfügen") are image XObjects placed with imageMatrix, text marks real text in a standard font in
+ * the same upright frame (searchable, selectable), both in drawing order with the strokes.
  * Repeated pages share copied objects (copyPages caches even direct ones), so the page first gets its own
  * /Contents array – otherwise pdf-lib would append the marks to every copy of the page.
  */
-export function drawMarks(page, marks, images = new Map()) {
+export function drawMarks(page, marks, images = new Map(), fonts = new Map()) {
   const list = (marks || []).filter(m => m.points?.length >= 2);
   if (!list.length) return;
   const node = page.node, contents = node.context.lookup(node.get(PDFName.of('Contents')));
@@ -90,6 +117,18 @@ export function drawMarks(page, marks, images = new Map()) {
   };
   const ops = [];
   for (const mark of [...list.filter(isHighlight), ...list.filter(m => !isHighlight(m))]) {
+    if (mark.type === 'text') {
+      const font = fonts.get(textFontName(mark)), lines = textLines(mark);
+      if (!font || !lines.length) continue;
+      // Frame in pt with the origin at its lower-left corner, y up: the unit square of imageMatrix scaled by its size.
+      const [a, b, c, d, e, f] = imageMatrix(mark), { w, h } = localSize(mark);
+      const name = node.newFontDictionary('F', font.ref);
+      const text = [beginText(), setFontAndSize(name, mark.size), setFillingRgbColor(...hexToRgb(mark.color || '#000000'))];
+      let last = [0, 0];
+      for (const line of lines) { const pos = [line.x, h - line.y]; text.push(moveText(pos[0] - last[0], pos[1] - last[1]), showText(font.encode(line.text))); last = pos; }
+      ops.push(pushGraphicsState(), concatTransformationMatrix(a / w, b / w, c / h, d / h, e, f), ...text, endText(), popGraphicsState());
+      continue;
+    }
     if (mark.type === 'image') {
       const ref = images.get(mark.src);
       if (ref) ops.push(pushGraphicsState(), concatTransformationMatrix(...imageMatrix(mark)), drawObject(node.newXObject('Im', ref)), popGraphicsState());
