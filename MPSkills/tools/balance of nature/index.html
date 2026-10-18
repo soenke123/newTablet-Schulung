@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Balance of Nature – Insel</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="bar">
+    <h1>Balance of Nature</h1>
+    <label class="field">Seed
+      <input id="seed" type="text" inputmode="numeric" autocomplete="off" spellcheck="false">
+    </label>
+    <button id="newWorld" type="button">Neue Insel</button>
+    <label class="field">Größe
+      <select id="size">
+        <option value="klein">klein</option>
+        <option value="mittel" selected>mittel</option>
+        <option value="gross">groß</option>
+      </select>
+    </label>
+    <button id="resetView" type="button" title="Gesamtansicht (R)">Ansicht zurücksetzen</button>
+    <button id="toggleLegend" type="button" aria-pressed="false">Lebensräume</button>
+    <label class="field">Karte
+      <select id="mapMode">
+        <option value="weide" selected>Weidezustand</option>
+        <option value="aus">Landschaft</option>
+        <option value="alles">Nahrung (alles)</option>
+        <option value="gras">Gras und Kräuter</option>
+        <option value="laub">Triebe und Laub</option>
+        <option value="frucht">Früchte und Samen</option>
+        <option value="insekten">Insekten</option>
+      </select>
+    </label>
+    <span class="spacer"></span>
+    <span id="status" class="status"></span>
+    <button id="widen" type="button" class="widen" aria-pressed="false" title="Seitenleiste doppelt so breit: alle Bereiche in zwei Spalten">⇔ Leiste</button>
+  </header>
+
+  <div class="layout">
+    <main class="stage">
+      <canvas id="map"></canvas>
+      <div id="season" class="season-badge"></div>
+      <div id="highlight" class="highlight-badge" hidden></div>
+      <div id="follow" class="highlight-badge follow-badge" hidden></div>
+      <div id="aim" class="aim-badge" hidden></div>
+      <div id="tooltip" class="tooltip" hidden></div>
+      <aside id="legend" class="legend" hidden></aside>
+    </main>
+
+    <aside class="panel">
+      <div class="panel-grid">
+        <div class="col col-l">
+        <section class="fold time" data-fold="zeit">
+          <div class="fold-head">
+            <button type="button" class="fold-toggle" aria-expanded="true"><span class="chev">▾</span><span id="clock" class="clock">Jahr 1 · Frühling, Tag 1</span></button>
+            <button id="openRestart" type="button" class="restart-open" aria-haspopup="dialog" aria-expanded="false" aria-controls="restartBox" title="Startbestand einstellen und neu starten">↻ Neustarten</button>
+          </div>
+          <div class="fold-body">
+            <div id="weather" class="weather"></div>
+            <div class="row">
+              <button id="play" type="button" class="primary" title="Start/Pause (Leertaste)">▶ Start</button>
+              <button id="stepDay" type="button" title="Einen Tag weiter">+1 Tag</button>
+              <button id="skip" type="button" title="Ohne Zeichnen vorspulen">⏩ 5 Jahre</button>
+            </div>
+            <label class="speed">Tempo
+              <input id="speed" type="range" min="0" max="100" value="38">
+              <span id="speedLabel"></span>
+            </label>
+          </div>
+        </section>
+
+        <section class="fold" data-fold="bestand">
+          <button type="button" class="fold-head fold-toggle" aria-expanded="true"><span class="chev">▾</span><h2>Bestand <small>Art anklicken: auf der Karte zeigen</small></h2></button>
+          <div class="fold-body">
+            <div id="tiles" class="tiles"></div>
+          </div>
+        </section>
+
+        <section class="fold people" data-fold="menschen" data-closed="1">
+          <button type="button" class="fold-head fold-toggle" aria-expanded="false"><span class="chev">▾</span><h2>Menschen <small>+ spielen · − zurücknehmen · Karte antippen: Erklärung</small></h2></button>
+          <div class="fold-body">
+            <div id="cards" class="cards"></div>
+            <div class="card-rule">
+              <span id="nextCard" class="next-card"></span>
+              <label class="field">Pause
+                <select id="cardPause" title="So lange muss man nach einer Karte warten">
+                  <option value="0">keine</option>
+                  <option value="1">1 Jahr</option>
+                  <option value="2" selected>2 Jahre</option>
+                  <option value="3">3 Jahre</option>
+                </select>
+              </label>
+            </div>
+            <ol id="chronicle" class="chronicle"></ol>
+          </div>
+        </section>
+
+        </div>
+        <div class="col col-r">
+        <section class="fold" data-fold="verlauf">
+          <div class="fold-head">
+            <button type="button" class="fold-toggle" aria-expanded="true"><span class="chev">▾</span><h2>Verlauf und Todesursachen</h2></button>
+            <button id="openBig" type="button" class="big-btn" aria-expanded="false" aria-controls="bigView" title="Alle Diagramme groß untereinander">⤢ Groß</button>
+          </div>
+          <div class="fold-body">
+            <div class="chart-tools">
+              <div id="chartTools"></div>
+            </div>
+            <div id="charts"></div>
+            <p class="chart-note"><i class="mast"></i> Mastjahr (viele Früchte) <i class="winter"></i> harter Winter <i class="ev-card"></i> Karte gespielt <i class="ev-undo"></i> zurückgenommen <i class="ev-folge"></i> Folge, von selbst</p>
+            <h2>Todesursachen <small>seit Start</small></h2>
+            <div class="deaths-wrap"><table id="deaths" class="deaths"></table></div>
+          </div>
+        </section>
+
+        <section class="fold" data-fold="insel" data-closed="1">
+          <button type="button" class="fold-head fold-toggle" aria-expanded="false"><span class="chev">▾</span><h2>Menschen auf der Insel <small>Zahlen</small></h2></button>
+          <div class="fold-body">
+            <div id="peopleStats" class="people-stats"></div>
+          </div>
+        </section>
+
+        <section class="fold-plain">
+          <div class="row">
+            <button id="csv" type="button">Daten herunterladen (CSV)</button>
+          </div>
+        </section>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Neustart: Startbestand, links neben der Seitenleiste -->
+  <div id="restartBox" class="restart-box" role="dialog" aria-labelledby="restartTitle" hidden>
+    <div class="rb-head">
+      <h2 id="restartTitle">Startbestand <small>für diese Insel</small></h2>
+      <button id="restartClose" type="button" class="rb-close" title="Schließen (Esc)">✕</button>
+    </div>
+    <div id="startInputs" class="start-list"></div>
+    <div class="row">
+      <button id="restart" type="button" class="primary">↻ Neu starten</button>
+      <button id="defaults" type="button">Empfohlene Werte</button>
+    </div>
+  </div>
+
+  <!-- Grossansicht der Diagramme: volle Breite, untereinander -->
+  <div id="bigView" class="big-view" role="dialog" aria-modal="true" aria-label="Diagramme groß" hidden>
+    <div class="big-head">
+      <h2>Verlauf</h2>
+      <div id="bigTools"></div>
+      <p class="chart-note"><i class="mast"></i> Mastjahr (viele Früchte) <i class="winter"></i> harter Winter <i class="ev-card"></i> Karte gespielt <i class="ev-undo"></i> zurückgenommen <i class="ev-folge"></i> Folge, von selbst</p>
+      <span class="spacer"></span>
+      <button id="closeBig" type="button" title="Schließen (Esc)">✕ Schließen</button>
+    </div>
+    <div id="bigCharts" class="big-charts"></div>
+  </div>
+
+  <!-- Infofenster einer Karte: Bild, Erklaerung, was − bewirkt -->
+  <div id="cardInfo" class="card-info" role="dialog" aria-modal="true" aria-labelledby="ciTitle" hidden>
+    <div class="ci-box">
+      <button id="ciClose" class="ci-close" type="button" title="Schließen (Esc)">✕</button>
+      <canvas id="ciImage" class="ci-image" width="480" height="240"></canvas>
+      <h2 id="ciTitle"></h2>
+      <p id="ciText"></p>
+      <h3 id="ciUndoHead">Zurücknehmen (−)</h3>
+      <p id="ciUndo"></p>
+      <div class="ci-ctl">
+        <button id="ciMinus" type="button" title="Zurücknehmen">−</button>
+        <span id="ciCount" class="ci-count">0</span>
+        <button id="ciPlus" type="button" title="Spielen">+</button>
+        <span id="ciState" class="ci-state"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ladereihenfolge = Abhaengigkeitsaufloesung (kein Modulsystem, laeuft unter file://) -->
+  <script src="js/core/rng.js"></script>
+  <script src="js/core/dmath.js"></script>
+  <script src="js/core/noise.js"></script>
+  <script src="js/core/grid.js"></script>
+  <script src="js/core/geometry.js"></script>
+  <script src="js/core/contour.js"></script>
+  <script src="js/world/config.js"></script>
+  <script src="js/world/island.js"></script>
+  <script src="js/world/decor.js"></script>
+  <script src="js/world/world.js"></script>
+  <script src="js/eco/time.js"></script>
+  <script src="js/eco/species.js"></script>
+  <script src="js/eco/fields.js"></script>
+  <script src="js/eco/landuse.js"></script>
+  <script src="js/eco/movement.js"></script>
+  <script src="js/eco/weather.js"></script>
+  <script src="js/eco/rats.js"></script>
+  <script src="js/eco/cards.js"></script>
+  <script src="js/eco/humans.js"></script>
+  <script src="js/eco/behavior.js"></script>
+  <script src="js/eco/stats.js"></script>
+  <script src="js/eco/simulation.js"></script>
+  <script src="js/render/palette.js"></script>
+  <script src="js/render/shapes.js"></script>
+  <script src="js/render/camera.js"></script>
+  <script src="js/render/terrainRenderer.js"></script>
+  <script src="js/render/landuseRenderer.js"></script>
+  <script src="js/render/plantRenderer.js"></script>
+  <script src="js/render/seasonRenderer.js"></script>
+  <script src="js/render/sprites.js"></script>
+  <script src="js/render/foodOverlay.js"></script>
+  <script src="js/render/ratRenderer.js"></script>
+  <script src="js/render/agentRenderer.js"></script>
+  <script src="js/render/humanRenderer.js"></script>
+  <script src="js/ui/charts.js"></script>
+  <script src="js/ui/cardInfo.js"></script>
+  <script src="js/ui/app.js"></script>
+</body>
+</html>
