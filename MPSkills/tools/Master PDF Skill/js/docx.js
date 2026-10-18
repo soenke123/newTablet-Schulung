@@ -4,7 +4,9 @@ import { pageTransform } from './annotations.js';
  * PDF → Word (.docx), pure and DOM-free. app.js reads text items, font names and images with PDF.js and hands them
  * to `layoutPage()`, which rebuilds lines, paragraphs, headings, indents and alignment from the positions;
  * `buildDocx()` writes the pages as one Word section each (own page size and margins) into a ZIP.
- * No tables, columns side by side, colours or drawings – the goal is editable text, not a copy of the layout.
+ * That is the mode „Fließtext“ (editable text, not a copy of the layout). The mode „Wie im PDF“ (`layoutFixed()`) keeps
+ * the look instead: the page without its text is a picture behind the text, the text sits on top in text boxes at the
+ * places and with the line breaks of the PDF.
  */
 
 const PT_TWIP = 20, PT_EMU = 12700;
@@ -50,7 +52,7 @@ export function fontStyle(psName = '', fallback = {}) {
   const plain = base.replace(/(PSMT|PS|MT)$/, '').replace(/(Bold|Italic|Oblique|Regular|Black|Heavy|Medium|Light)+$/i, '');
   const known = FAMILIES.find(([pattern]) => pattern.test(plain));
   const anon = plain.length < 2 || /^(g_d\d+_f\d+|f\d+|t3font_\d+)$/i.test(plain);
-  const family = known ? known[1] : anon ? '' : plain.replace(/([a-z])([A-Z])/g, '$1 $2');
+  const family = known ? (known[1] === 'Arial' && /black/i.test(style) ? 'Arial Black' : known[1]) : anon ? '' : plain.replace(/([a-z])([A-Z])/g, '$1 $2');
   return { family, bold, italic, anon };
 }
 
@@ -135,6 +137,38 @@ export function layoutPage({ items = [], fonts = new Map(), box, rotation = 0, i
   return { width, height, margins, blocks, text: content.length > 0 };
 }
 
+/**
+ * „Wie im PDF“: one page → `{width, height, fixed:true, background, boxes, text}`. Lines that continue each other (same x,
+ * even spacing, same size) form one text box `{x, y, width, height, line, lines:[runs]}` in pt from the upper-left corner;
+ * every PDF line stays a line (paragraph) of its own, so the text lands where it was. `items` may carry `color` (hex).
+ */
+export function layoutFixed({ items = [], fonts = new Map(), box, rotation = 0, background = null }) {
+  const map = pageTransform(box, rotation, 1);
+  const turn = ((rotation % 360) + 360) % 360;
+  const width = turn % 180 ? box.height : box.width, height = turn % 180 ? box.width : box.height;
+  const segs = readSegments(items, fonts, map).filter(s => s.text.trim());
+  guessBold(segs);
+  const groups = [];
+  let cur = null;
+  for (const s of segs) {
+    const prev = cur?.lines[cur.lines.length - 1];
+    const gap = prev ? s.baseline - prev.baseline : 0;
+    const size = prev ? Math.max(s.size, prev.size) : s.size;
+    const follows = prev && !s.joined && Math.abs(s.x - cur.x) < Math.max(2, s.size * 0.3) && gap > size * 0.8 && gap < size * 1.7
+      && Math.abs(s.size - prev.size) < Math.min(s.size, prev.size) * 0.2 && (cur.gap == null || Math.abs(gap - cur.gap) < size * 0.15);
+    if (follows) { cur.lines.push(s); cur.gap ??= gap; } else groups.push(cur = { x: s.x, lines: [s], gap: null });
+  }
+  const boxes = groups.map(g => {
+    const size = Math.max(...g.lines.map(l => l.size));
+    const line = g.gap ?? size * 1.2;
+    const right = Math.max(...g.lines.map(l => l.right));
+    const lines = g.lines.map(l => l.runs.map((r, i) => ({ ...r, text: i === l.runs.length - 1 ? r.text.replace(/\s+$/, '') : r.text })).filter(r => r.text));
+    // Word puts the baseline of a line with exact spacing about one descent (≈ 0.22 em) above the bottom of the line.
+    return { x: g.x, y: g.lines[0].baseline - line + size * 0.22, width: (right - g.x) * 1.15 + size, height: line * g.lines.length + size * 0.2, line, lines };
+  });
+  return { width, height, fixed: true, background, boxes, margins: { top: 14, right: 14, bottom: 14, left: 14 }, text: segs.length > 0 };
+}
+
 const LIST_MARK = /^\s*([•●▪■◦○‣–\-*]|\d{1,3}[.)]|[a-z][.)])\s*$/i;
 
 /**
@@ -144,7 +178,8 @@ const LIST_MARK = /^\s*([•●▪■◦○‣–\-*]|\d{1,3}[.)]|[a-z][.)])\s*$
 function readSegments(items, fonts, map) {
   const segs = [];
   let seg = null;
-  for (const item of items) {
+  const tracking = letterSpacing(items);
+  for (const [index, item] of items.entries()) {
     if (typeof item.str !== 'string') continue;
     const t = item.transform;
     const size = Math.hypot(t[2], t[3]) || item.height || 10;
@@ -167,10 +202,10 @@ function readSegments(items, fonts, map) {
       let str = item.str.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '');
       const plain = str.replace(SYMBOL_RE, c => SYMBOLS[c]);
       if (plain !== str) { str = plain; style.family = ''; }
-      if (seg.text && (seg.space || x - seg.right > size * 0.18) && !/\s$/.test(seg.text) && !/^\s/.test(str)) str = ' ' + str;
+      if (seg.text && (seg.space || x - seg.right > size * 0.18 + (tracking.get(index) || 0)) && !/\s$/.test(seg.text) && !/^\s/.test(str)) str = ' ' + str;
       seg.space = false;
       if (str) {
-        const run = { text: str, size: Math.round(size * 2) / 2, bold: style.bold, italic: style.italic, family: style.family, font: item.fontName, anon: style.anon };
+        const run = { text: str, size: Math.round(size * 2) / 2, bold: style.bold, italic: style.italic, family: style.family, font: item.fontName, anon: style.anon, color: item.color || '', ink: item.ink, chars: str.length };
         const prev = seg.runs[seg.runs.length - 1];
         if (prev && sameStyle(prev, run) && prev.font === run.font) prev.text += str; else seg.runs.push(run);
         seg.text += str;
@@ -183,18 +218,50 @@ function readSegments(items, fonts, map) {
   return segs;
 }
 
-const sameStyle = (a, b) => a.bold === b.bold && a.italic === b.italic && a.family === b.family && Math.abs(a.size - b.size) < 0.6;
+/**
+ * Letter-spaced text (S P A C E D  titles) comes as single characters with small gaps; there a gap only means a space
+ * when it is clearly wider than the usual one between the letters. Returns Map item index → extra gap tolerance in pt.
+ */
+function letterSpacing(items) {
+  const extra = new Map();
+  let chain = [];
+  const flush = () => {
+    if (chain.length >= 4) {
+      const gaps = chain.slice(1).map((c, k) => c.x - chain[k].end).sort((a, b) => a - b);
+      const usual = gaps[Math.floor(gaps.length / 2)];
+      if (usual > 0) chain.forEach(c => extra.set(c.index, usual));
+    }
+    chain = [];
+  };
+  items.forEach((item, index) => {
+    const str = item.str?.trim() || '';
+    if (str.length !== 1 || item.str.length !== 1) { if (str) flush(); return; }
+    const t = item.transform, prev = chain[chain.length - 1];
+    if (prev && (Math.abs(t[5] - prev.y) > 0.5 || t[4] < prev.end)) flush();
+    chain.push({ index, x: t[4], end: t[4] + item.width, y: t[5] });
+  });
+  flush();
+  return extra;
+}
+
+const sameStyle = (a, b) => a.bold === b.bold && a.italic === b.italic && a.family === b.family && (a.color || '') === (b.color || '') && Math.abs(a.size - b.size) < 0.6;
 
 /**
  * Fonts without a usable name (Chrome/Skia print `CIDFont+F1`, `F2` …) give no hint at bold. On such pages the font with
  * most characters is the regular one; other unnamed fonts mixed into the same lines or used for larger text count as bold.
  */
 function guessBold(segs) {
-  const count = new Map();
-  for (const s of segs) for (const r of s.runs) if (r.anon) count.set(r.font, (count.get(r.font) || 0) + r.text.length);
+  const count = new Map(), ink = new Map();
+  for (const s of segs) for (const r of s.runs) if (r.anon) {
+    count.set(r.font, (count.get(r.font) || 0) + r.text.length);
+    if (r.ink > 0) { const [sum, n] = ink.get(r.font) || [0, 0]; ink.set(r.font, [sum + r.ink * r.chars, n + r.chars]); }
+  }
   if (count.size < 2) return;
   const regular = [...count].sort((a, b) => b[1] - a[1])[0][0];
-  for (const s of segs) for (const r of s.runs) if (r.anon && r.font !== regular && !r.italic) r.bold = true;
+  // With the rendered page (mode „Wie im PDF“) the share of dark pixels tells: bold fonts carry clearly more ink, italics do not.
+  const inkOf = font => { const v = ink.get(font); return v ? v[0] / v[1] : 0; };
+  const base = inkOf(regular);
+  for (const s of segs) for (const r of s.runs) if (r.anon && r.font !== regular && !r.italic) r.bold = base && inkOf(r.font) ? inkOf(r.font) > base * 1.35 : true;
 }
 
 /** Font size most of the characters have (the body text). */
@@ -322,7 +389,7 @@ function joinLines(lines) {
 
 // ---------- DOCX writing ----------
 
-const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"';
 const HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
 export const escapeXml = s => String(s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f￾￿]/g, '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const twip = pt => Math.round(pt * PT_TWIP);
@@ -331,6 +398,7 @@ function runXml(r, heading) {
   const props = [
     r.family ? `<w:rFonts w:ascii="${escapeXml(r.family)}" w:hAnsi="${escapeXml(r.family)}" w:cs="${escapeXml(r.family)}"/>` : '',
     r.bold ? '<w:b/><w:bCs/>' : heading ? '<w:b w:val="0"/><w:bCs w:val="0"/>' : '', r.italic ? '<w:i/><w:iCs/>' : '',
+    /^#?[0-9a-f]{6}$/i.test(r.color || '') ? `<w:color w:val="${r.color.replace('#', '').toUpperCase()}"/>` : '',
     r.size ? `<w:sz w:val="${Math.max(2, Math.round(r.size * 2))}"/><w:szCs w:val="${Math.max(2, Math.round(r.size * 2))}"/>` : '',
   ].join('');
   const parts = r.text.split('\t').map(t => t ? `<w:t xml:space="preserve">${escapeXml(t)}</w:t>` : '');
@@ -348,6 +416,24 @@ function imageXml(block, rel, id, maxW, maxH) {
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${id}" name="Bild ${id}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="bild${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rel}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
 }
 
+const emu = pt => Math.round(pt * PT_EMU);
+
+// A drawing at a fixed place on the page (not in the text flow); behind = under the text.
+function anchorXml(id, z, x, y, w, h, behind, graphic) {
+  return `<wp:anchor distT="0" distB="0" distL="0" distR="0" simplePos="0" relativeHeight="${z}" behindDoc="${behind ? 1 : 0}" locked="0" layoutInCell="1" allowOverlap="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="page"><wp:posOffset>${emu(x)}</wp:posOffset></wp:positionH><wp:positionV relativeFrom="page"><wp:posOffset>${emu(y)}</wp:posOffset></wp:positionV><wp:extent cx="${emu(w)}" cy="${emu(h)}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:wrapNone/><wp:docPr id="${id}" name="${behind ? 'Seitenbild' : 'Textfeld'} ${id}"/><wp:cNvGraphicFramePr/>${graphic}</wp:anchor>`;
+}
+
+function backgroundXml(page, rel, id) {
+  const pic = `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="seite${id}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rel}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emu(page.width)}" cy="${emu(page.height)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic>`;
+  return `<w:r><w:drawing>${anchorXml(id, 1, 0, 0, page.width, page.height, true, pic)}</w:drawing></w:r>`;
+}
+
+function textBoxXml(box, id, z) {
+  const lines = box.lines.map(runs => `<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="${Math.max(20, twip(box.line))}" w:lineRule="exact"/></w:pPr>${runs.map(r => runXml(r)).join('')}</w:p>`).join('');
+  const shape = `<a:graphic><a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"><wps:wsp><wps:cNvSpPr txBox="1"/><wps:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emu(box.width)}" cy="${emu(box.height)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent>${lines}</w:txbxContent></wps:txbx><wps:bodyPr rot="0" vert="horz" wrap="none" lIns="0" tIns="0" rIns="0" bIns="0" anchor="t" anchorCtr="0"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic>`;
+  return `<w:r><mc:AlternateContent><mc:Choice Requires="wps"><w:drawing>${anchorXml(id, z, box.x, box.y, box.width, box.height, false, shape)}</w:drawing></mc:Choice></mc:AlternateContent></w:r>`;
+}
+
 const BORDER = 'w:val="single" w:sz="4" w:space="0" w:color="9CA3AF"';
 
 function tableXml(block, maxW) {
@@ -361,7 +447,7 @@ function tableXml(block, maxW) {
 }
 
 /**
- * Pages from layoutPage → .docx bytes. `images`: Map ref → {data: Uint8Array, type: 'png'|'jpeg'}; image blocks whose ref
+ * Pages from layoutPage or layoutFixed → .docx bytes. `images`: Map ref → {data: Uint8Array, type: 'png'|'jpeg'}; image blocks whose ref
  * is missing are left out. Each page is its own section, so page size and margins follow the PDF and every PDF page
  * starts a new Word page.
  */
@@ -369,23 +455,36 @@ export function buildDocx(pages, images = new Map(), { title = '' } = {}) {
   const media = [], rels = new Map();
   let drawingId = 0;
   const body = [];
+  const relOf = ref => {
+    const img = images.get(ref);
+    if (!img) return null;
+    if (!rels.has(ref)) {
+      const name = `bild${media.length + 1}.${img.type === 'jpeg' ? 'jpeg' : 'png'}`;
+      media.push({ name, data: img.data });
+      rels.set(ref, { id: `rIdImg${media.length}`, name });
+    }
+    return rels.get(ref).id;
+  };
   pages.forEach((page, pi) => {
     const last = pi === pages.length - 1;
+    if (page.fixed) {
+      // One paragraph carries the page picture (behind) and the text boxes; the section break makes the next page.
+      const rel = page.background && relOf(page.background);
+      const drawings = [rel ? backgroundXml(page, rel, ++drawingId) : '', ...page.boxes.map((b, i) => textBoxXml(b, ++drawingId, 2 + i))];
+      body.push(`<w:p><w:pPr><w:spacing w:before="0" w:after="0" w:line="20" w:lineRule="exact"/>${last ? '' : sectionXml(page, false)}</w:pPr>${drawings.join('')}</w:p>`);
+      if (last) body.push(sectionXml(page, true));
+      return;
+    }
     const maxW = page.width - page.margins.left - page.margins.right, maxH = page.height - page.margins.top - page.margins.bottom - 4;
     const paras = [];
     for (const block of page.blocks) {
       const ppr = [];
       if (block.type === 'image') {
-        const img = images.get(block.ref);
-        if (!img) continue;
-        if (!rels.has(block.ref)) {
-          const name = `bild${media.length + 1}.${img.type === 'jpeg' ? 'jpeg' : 'png'}`;
-          media.push({ name, data: img.data });
-          rels.set(block.ref, { id: `rIdImg${media.length}`, name });
-        }
+        const rel = relOf(block.ref);
+        if (!rel) continue;
         if (block.align !== 'left') ppr.push(`<w:jc w:val="${block.align}"/>`);
         else if (block.indent > 1) ppr.push(`<w:ind w:left="${twip(Math.min(block.indent, Math.max(0, maxW - block.width)))}"/>`);
-        paras.push({ ppr: '<w:spacing w:before="0" w:after="120"/>' + ppr.join(''), content: imageXml(block, rels.get(block.ref).id, ++drawingId, maxW, maxH) });
+        paras.push({ ppr: '<w:spacing w:before="0" w:after="120"/>' + ppr.join(''), content: imageXml(block, rel, ++drawingId, maxW, maxH) });
         continue;
       }
       if (block.type === 'table') {

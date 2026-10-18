@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { layoutPage, buildDocx, fontStyle, uprightRotation, crc32, zip } from '../js/docx.js';
+import { layoutPage, layoutFixed, buildDocx, fontStyle, uprightRotation, crc32, zip } from '../js/docx.js';
 
 const A4 = { x: 0, y: 0, width: 595, height: 842 };
 // PDF.js-like text item: x/y = baseline start in PDF space, width from a rough 0.5 em per character.
@@ -135,4 +135,63 @@ test('buildDocx schreibt ein gültiges Word-Paket mit Seiten, Tabellen und Bilde
   assert.match(new TextDecoder().decode(files.get('word/_rels/document.xml.rels')), /Target="media\/bild1.png"/);
   assert.match(new TextDecoder().decode(files.get('docProps/core.xml')), /<dc:title>Probe<\/dc:title>/);
   assert.ok(doc.lastIndexOf('<w:sectPr>') > doc.lastIndexOf('</w:p>'), 'letzte Section steht am Ende des Body');
+});
+
+test('Wie im PDF: Zeilen bleiben an ihrem Platz, folgende Zeilen werden ein Textfeld', () => {
+  const items = [
+    item('Überschrift', 72, 760, { size: 20, eol: true }),
+    { ...item('Erste Zeile des Absatzes', 72, 720, { eol: true }), color: '1f4e79' },
+    item('zweite Zeile des Absatzes', 72, 706, { eol: true }),
+    item('dritte Zeile', 72, 692, { eol: true }),
+    item('Spalte rechts', 320, 692, { eol: true }),
+  ];
+  const page = layoutFixed({ items, fonts, box: A4, background: 'bg' });
+  assert.equal(page.fixed, true);
+  assert.equal(page.background, 'bg');
+  assert.equal(page.boxes.length, 3);
+  const [title, para, right] = page.boxes;
+  assert.equal(title.lines.length, 1);
+  assert.deepEqual(para.lines.map(l => l.map(r => r.text).join('')), ['Erste Zeile des Absatzes', 'zweite Zeile des Absatzes', 'dritte Zeile']);
+  assert.equal(para.line, 14);
+  assert.equal(para.x, 72);
+  assert.ok(Math.abs(para.y - (842 - 720 - 14 + 11 * 0.22)) < 0.01, 'Oberkante aus der ersten Grundlinie');
+  assert.equal(para.lines[0][0].color, '1f4e79');
+  assert.equal(right.x, 320);
+});
+
+test('Wie im PDF: Word-Paket mit Seitenbild hinter dem Text und Textfeldern', () => {
+  const page = layoutFixed({ items: [item('Hallo <Welt>', 72, 700, { eol: true })], fonts, box: A4, background: 'bg' });
+  const files = unzip(buildDocx([page, page], new Map([['bg', { data: new Uint8Array([255, 216, 255]), type: 'jpeg' }]])));
+  const doc = new TextDecoder().decode(files.get('word/document.xml'));
+  assert.equal([...files.keys()].filter(n => n.startsWith('word/media/')).length, 1, 'gleiches Seitenbild nur einmal');
+  assert.equal(doc.match(/behindDoc="1"/g).length, 2);
+  assert.equal(doc.match(/<wps:txbx>/g).length, 2);
+  assert.match(doc, /Hallo &lt;Welt&gt;/);
+  assert.match(doc, /<wp:positionH relativeFrom="page"><wp:posOffset>914400<\/wp:posOffset>/);
+  assert.match(doc, /w:lineRule="exact"/);
+  assert.match(doc, /xmlns:wps=/);
+  assert.equal(doc.match(/<w:sectPr>/g).length, 2);
+});
+
+test('gesperrte Einzelbuchstaben werden ohne Leerzeichen zusammengesetzt, Wortlücken bleiben', () => {
+  const letters = [];
+  let x = 72;
+  for (const c of 'ABC DEF') {
+    if (c === ' ') { x += 4; continue; }
+    letters.push(item(c, x, 700, { width: 6 }));
+    x += 8;
+  }
+  const page = layoutPage({ items: letters, fonts, box: A4 });
+  assert.equal(page.blocks[0].runs.map(r => r.text).join(''), 'ABC DEF');
+});
+
+test('namenlose Schriften mit Bildpunkten: viel Tinte = fett, kursiv bleibt normal', () => {
+  const anon = new Map([['a', { name: 'CIDFont+F1' }], ['b', { name: 'CIDFont+F2' }], ['c', { name: 'CIDFont+F3' }]]);
+  const items = [
+    { ...item('Ein ganz normaler Satz mit vielen Buchstaben. ', 72, 700, { font: 'a' }), ink: 0.13 },
+    { ...item('Fett', 326, 700, { font: 'b' }), ink: 0.24 },
+    { ...item(' schräg', 348, 700, { font: 'c', eol: true }), ink: 0.16 },
+  ];
+  const runs = layoutFixed({ items, fonts: anon, box: A4 }).boxes[0].lines[0];
+  assert.deepEqual(runs.map(r => [r.text.trim(), r.bold]), [['Ein ganz normaler Satz mit vielen Buchstaben.', false], ['Fett', true], ['schräg', false]]);
 });
