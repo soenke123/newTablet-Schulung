@@ -125,8 +125,20 @@ test('Textfelder: Schrift und Farbe aus der Darstellung, Kasten wächst mit dem 
   assert.equal(c.fill, undefined);
   assert.equal(commentChanged(c), false);
   assert.equal(commentChanged({ ...c, fontSize: 18 }), true);
+  assert.equal(commentChanged({ ...c, fill: '#ffffff' }), true, 'Hintergrund geändert');
+  assert.equal(commentChanged({ ...c, border: '#111827' }), true, 'Rahmen geändert');
   const widthOf = (text, size) => text.length * size / 2;
   assert.deepEqual(freeTextRect(10, 200, 'abcdef\nab', 10, widthOf), [10, 169, 56, 200], 'Breite der längsten Zeile, zwei Zeilen hoch, plus Rand');
   assert.deepEqual(freeTextRect(10, 200, '', 10, widthOf), [10, 181.5, 56, 200], 'leer: Platz für ein paar Buchstaben');
   assert.deepEqual(freeTextLines({ rect: [10, 169, 56, 200], text: 'a\nb', fontSize: 10 }).map(l => [l.x, l.y]), [[13, 187.5], [13, 175]]);
+});
+
+test('Textfelder: Hintergrund aus /C, Rahmen aus Breite und /MK /BC', () => {
+  const annots = [{ id: '31R', subtype: 'FreeText', rect: [10, 100, 120, 130], contentsObj: { str: 'Box' }, color: rgb(255, 255, 255), borderStyle: { width: 1 }, borderColor: rgb(17, 24, 39), defaultAppearanceData: { fontSize: 12, fontColor: rgb(0, 0, 0) } },
+    { id: '32R', subtype: 'FreeText', rect: [10, 100, 120, 130], contentsObj: { str: 'ohne' }, borderStyle: { width: 0 }, borderColor: rgb(17, 24, 39), defaultAppearanceData: { fontSize: 12 } }];
+  const [boxed, plain] = importAnnotations(annots, counter()).comments;
+  assert.equal(boxed.fill, '#ffffff');
+  assert.equal(boxed.border, '#111827');
+  assert.equal(commentChanged(boxed), false);
+  assert.equal(plain.border, undefined, 'Breite 0 = kein Rahmen');
 });

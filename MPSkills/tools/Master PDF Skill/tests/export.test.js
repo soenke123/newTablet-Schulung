@@ -219,3 +219,16 @@ test('Textfeld wird FreeText mit Helvetica-Darstellung, Status eine versteckte A
   assert.equal(state.dict.get(PDFName.of('F')).asNumber() & 2, 2, 'versteckt');
   assert.equal(state.dict.get(PDFName.of('T')).decodeText(), 'Mia');
 });
+
+test('Textfeld mit Hintergrund und Rahmen: /C, /BS, /MK und Darstellung', async () => {
+  const { bytes } = await sourceWithComments();
+  const box = { id: 8, kind: 'freetext', color: '#111827', fill: '#fef9c3', border: '#1d4ed8', fontSize: 12, text: 'Rahmen', author: '', date: null, rect: [20, 200, 100, 236], replies: [] };
+  const out = await PDFDocument.load(await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0, comments: [box] }], () => bytes, undefined, { ownedAnnots: () => new Set() }));
+  const ft = annotsOf(out.getPage(0)).find(a => subtype(a) === 'FreeText');
+  assert.equal(ft.dict.get(PDFName.of('BS')).get(PDFName.of('W')).asNumber(), 1);
+  assert.ok(ft.dict.get(PDFName.of('MK')).get(PDFName.of('BC')), 'Rahmenfarbe in /MK /BC');
+  const ap = out.context.lookup(ft.dict.get(PDFName.of('AP')).get(PDFName.of('N')));
+  const stream = new TextDecoder().decode(decodePDFRawStream(ap).decode());
+  assert.match(stream, /RG[\s\S]*\bS\b[\s\S]*BT/, 'Rahmen vor dem Text gezeichnet');
+  assert.deepEqual(ft.dict.get(PDFName.of('C')).asArray().map(n => Math.round(n.asNumber() * 255)), [254, 249, 195], 'Hintergrund in /C');
+});

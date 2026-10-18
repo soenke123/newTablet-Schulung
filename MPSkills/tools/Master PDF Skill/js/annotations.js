@@ -180,6 +180,19 @@ export function moveMark(mark, dx, dy) {
 }
 
 /**
+ * A pasted copy: shifted by (dx, dy) in PDF space, then pushed back inside the page box `{x, y, width, height}` so it
+ * stays reachable on a smaller page (a copy larger than the page keeps its upper-left corner on the page).
+ */
+export function placeMark(mark, box, dx = 0, dy = 0) {
+  const b = markBounds(mark);
+  const fit = (lo, hi, min, max) => hi - lo > max - min ? max - hi : lo < min ? min - lo : hi > max ? max - hi : 0;
+  const x0 = b.x0 + dx, x1 = b.x1 + dx, y0 = b.y0 + dy, y1 = b.y1 + dy;
+  const fx = x1 - x0 > box.width ? box.x - x0 : fit(x0, x1, box.x, box.x + box.width);
+  const fy = y1 - y0 > box.height ? box.y + box.height - y1 : fit(y0, y1, box.y, box.y + box.height);
+  return moveMark(mark, dx + fx, dy + fy);
+}
+
+/**
  * End point of a shape drag with Shift held (view space): lines and arrows snap to 45° steps,
  * rectangles and ellipses become squares and circles.
  */

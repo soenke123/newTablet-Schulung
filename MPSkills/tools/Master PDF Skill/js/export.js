@@ -5,7 +5,7 @@ import {
   moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject,
 } from '../lib/pdf-lib/pdf-lib.esm.min.js';
 import { hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength } from './annotations.js';
-import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, FREETEXT_SIZE, commentChanged, highlightPolygons, markupLines, freeTextLines, pdfDate } from './comments.js';
+import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, FREETEXT_SIZE, FREETEXT_BORDER, commentChanged, highlightPolygons, markupLines, freeTextLines, pdfDate } from './comments.js';
 
 /**
  * Builds a new PDF from virtual page records `[{sourceId, pageIndex, rotation, marks?, comments?}]` (rotation is
@@ -191,6 +191,9 @@ export function writeComments(page, comments, refs, owned, used, font = null) {
         if (c.kind === 'freetext') {
           // Text boxes: /C would be read as background by some readers, the text colour goes into /DA.
           if (c.fill) dict.set(PDFName.of('C'), context.obj(hexToRgb(c.fill))); else dict.delete(PDFName.of('C'));
+          // Frame: width in /BS, colour in /MK /BC (read back by PDF.js as borderColor); no frame = width 0.
+          dict.set(PDFName.of('BS'), context.obj({ W: c.border ? FREETEXT_BORDER : 0, S: 'S' }));
+          if (c.border) dict.set(PDFName.of('MK'), context.obj({ BC: hexToRgb(c.border) })); else dict.delete(PDFName.of('MK'));
           dict.set(PDFName.of('DA'), PDFString.of(`/Helv ${c.fontSize || FREETEXT_SIZE} Tf ${hexToRgb(c.color).map(v => Math.round(v * 1000) / 1000).join(' ')} rg`));
           if (font) dict.set(PDFName.of('AP'), context.obj({ N: freeTextAppearance(context, c, font) }));
         } else {
@@ -256,10 +259,14 @@ function newCommentDict(context, c, kind) {
   return dict;
 }
 
-/** Appearance stream of a text box: optional background, then the lines in Helvetica. */
+/** Appearance stream of a text box: optional background and frame (inside the rect), then the lines in Helvetica. */
 function freeTextAppearance(context, c, font) {
   const size = c.fontSize || FREETEXT_SIZE, [x0, y0, x1, y1] = c.rect, ops = [];
   if (c.fill) ops.push(setFillingRgbColor(...hexToRgb(c.fill)), moveTo(x0, y0), lineTo(x1, y0), lineTo(x1, y1), lineTo(x0, y1), closePath(), fill());
+  if (c.border) {
+    const w = FREETEXT_BORDER, h = w / 2;
+    ops.push(setStrokingRgbColor(...hexToRgb(c.border)), setLineWidth(w), moveTo(x0 + h, y0 + h), lineTo(x1 - h, y0 + h), lineTo(x1 - h, y1 - h), lineTo(x0 + h, y1 - h), closePath(), stroke());
+  }
   ops.push(beginText(), setFontAndSize('Helv', size), setFillingRgbColor(...hexToRgb(c.color)));
   let last = [0, 0];
   for (const line of freeTextLines(c)) {

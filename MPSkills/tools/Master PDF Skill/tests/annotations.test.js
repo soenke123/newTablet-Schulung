@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillShare, strokeBox, scaleMark, pointsBox } from '../js/annotations.js';
+import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillShare, strokeBox, scaleMark, pointsBox, placeMark } from '../js/annotations.js';
 
 const box = { x: 10, y: 20, width: 200, height: 300 };
 const near = (actual, expected) => actual.forEach((v, i) => assert.ok(Math.abs(v - expected[i]) < 1e-9, `${actual} ≠ ${expected}`));
@@ -133,4 +133,20 @@ test('Größe ändern streckt die Punkte je Achse, flache Elemente werden nur ve
   assert.deepEqual(scaleMark(flat, [0, 5], [20, 5], [0, 8], [40, 8]).points, [0, 8, 40, 8]);
   assert.deepEqual(pointsBox({ type: 'rect', points: [50, 40, 10, 0] }), { x0: 10, y0: 0, x1: 50, y1: 40 });
   assert.equal(scaleMark(ink, [0, 0], [20, 20], [10, 0], [50, 10]).width, 2, 'Strichstärke bleibt');
+});
+
+test('Eingefügte Kopie wird verschoben und bleibt auf der Seite', () => {
+  const page = { x: 0, y: 0, width: 100, height: 100 };
+  const line = { id: 1, type: 'line', color: '#000', width: 2, points: [10, 50, 30, 50] };
+  assert.deepEqual(placeMark(line, page, 12, -12).points, [22, 38, 42, 38]);
+  // Über den rechten Rand hinaus: zurück an den Rand (halbe Strichbreite eingerechnet).
+  assert.deepEqual(placeMark(line, page, 80, 0).points, [79, 50, 99, 50]);
+  // Unten heraus: zurück nach oben bis zur Kante.
+  assert.deepEqual(placeMark(line, page, 0, -60).points, [10, 1, 30, 1]);
+  // Größer als die Seite: linke obere Ecke bleibt auf der Seite.
+  const wide = { ...line, points: [0, 50, 300, 50] };
+  const placed = markBounds(placeMark(wide, page, 0, 0));
+  assert.equal(placed.x0, 0);
+  // Seiten mit versetztem Ursprung (MediaBox ab 10/20).
+  assert.deepEqual(placeMark(line, { x: 50, y: 20, width: 100, height: 100 }).points, [51, 50, 71, 50]);
 });

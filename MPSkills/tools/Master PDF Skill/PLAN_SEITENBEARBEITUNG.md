@@ -28,11 +28,14 @@ Nur Inhalte, die fest in der Seite stehen, werden garantiert gedruckt. Daher gil
 2. **Zeichnen vervollständigen** ✅ erledigt: freier Textmarker (transparent, multipliziert, eigene Farben/Breiten), Linie, Pfeil, Rechteck, Ellipse (Shift rastet ein), Auswählen mit Verschieben, Umfärben, Stärke ändern und Löschen; Radierer für alle Elemente.
    - Nachgerüstet: je drei Standardfarben + bunter Kreis (eigene Farbe, `<input type=color>`), Regler für Strichstärke und Deckkraft (alle Elemente), Füllung hell/voll für Rechteck und Ellipse, Radierer mit zwei Arten „Ganze Elemente“ / „Radieren“ (schneidet Striche auf, `eraseMarks`; getroffene Formen werden Striche ohne Füllung).
    - Nachgerüstet (2): Größe ändern mit Anfassern (`scaleMark`, Linien/Pfeile an den Enden); Rand von Rechteck/Ellipse liegt innen (`strokeBox`), gefüllte Formen sind eine Transparenzgruppe (Füllung unter deckendem Rand, Deckkraft für die Gruppe) – keine Überlappung, keine Naht.
-   - Noch offen: Elemente kopieren/einfügen.
+   - Nachgerüstet (3): Elemente kopieren/einfügen (Knöpfe in der Leiste, Strg+C/X/V/D; Kopie auf der aktuellen Seite, auf derselben Seite versetzt, auf kleineren Seiten an den Rand geschoben, `placeMark`).
 3. **Kommentieren** ✅ erledigt: Markieren, Unterstreichen, Durchstreichen an Text gekoppelt (Textauswahl über PDF.js-Textinhalt, Buchstabenbreiten per Canvas gemessen), Notizen, Kommentarliste (bearbeiten, antworten, löschen, zur Stelle springen, Name für neue Kommentare). Export als echte PDF-Annotationen mit Darstellung (`/AP`) und Popup; Antworten als `/IRT`. Vorhandene Kommentare werden beim Öffnen eingelesen (auch Antworten) und unverändert als Original-Objekte exportiert. Geprüft mit PDF.js (erneut geöffnet) und Poppler.
    - Nachgerüstet: Textfeld (FreeText mit Helvetica-Darstellung, Kasten wächst mit dem Text, Schriftgröße/Textfarbe), Status (Review-Antwort mit /State, wird eingelesen), Filter der Kommentarliste (Art, Status, Person); Textfelder aus anderen Programmen sind bearbeitbar (eigene Darstellung).
-   - Noch offen: Status/Textfeld in Acrobat, Edge und Firefox prüfen; Rahmen/Hintergrund für eigene Textfelder.
-4. **Einfügen**: Textfeld (Schrift, Größe, Farbe; mehrzeilig), Bild, **Unterschrift**: Feld zum Unterschreiben, optional Klarname darunter und Datum, danach frei auf der Seite verschieben und skalieren.
+   - Nachgerüstet (2): Rahmen und Hintergrund für Textfelder (je fünf Möglichkeiten inkl. „ohne“; Export /C, /BS, /MK /BC + Darstellung, Import über PDF.js `color`/`borderStyle`/`borderColor`; Rundreise im Browser geprüft).
+   - Noch offen: Status/Textfeld in Acrobat, Edge und Firefox prüfen (braucht die echten Programme, beim Nutzer).
+4. **Einfügen** (nächster Schritt): Textfeld (Schrift, Größe, Farbe; mehrzeilig), Bild, **Unterschrift**: Feld zum Unterschreiben, optional Klarname darunter und Datum, danach frei auf der Seite verschieben und skalieren.
+   - Entschieden (18.10.2026): Die Unterschrift darf **lokal im Browser gespeichert** werden (für spätere Dokumente), aber nur mit **sichtbarem Hinweis**, dass sie lokal auf diesem Gerät liegt (und wie man sie dort wieder löscht). Nichts wird hochgeladen.
+   - Vorschlag zur Reihenfolge: zuerst Bild + Unterschrift (gemeinsames Grundgerüst: Element verschieben/skalieren, Export als Bild), danach das fest eingebettete Textfeld.
 
 Später (Master-Prompt, nicht eingeplant): Stempel, Wasserzeichen, Reiter „Bearbeiten“ (vorhandenen Text ändern, nur eingeschränkt zuverlässig möglich), OCR, Formulare, Schwärzen.
 
@@ -40,8 +43,8 @@ Später (Master-Prompt, nicht eingeplant): Stempel, Wasserzeichen, Reiter „Bea
 
 - **Schwebende Werkzeugleiste wie in Acrobat** (senkrecht am rechten Rand, nur Symbole mit Hinweis beim Überfahren, kleine Box für Farbe/Größe, oben verschiebbar, Doppelklick dockt wieder rechts an). Vorerst verworfen: Zeichnen und Kommentieren sollen klar über die Reiter oben getrennt bleiben. Der Nutzer überlegt noch, wie die Leiste oben schlanker werden kann.
 
-## Offene Fragen für spätere Schritte
+## Entschiedene Fragen (18.10.2026)
 
-- Zeichnen bisher nur auf der Einzelseite im Modus Bearbeiten. Soll man dabei auch durch alle Seiten scrollen können?
-- Handflächenerkennung am Tablet: Sobald ein Stift erkannt ist, zeichnet nur noch der Stift und der Finger scrollt?
-- Unterschrift für spätere Dokumente merken (nur lokal im Browser)?
+- **Scrollen beim Zeichnen: ja.** ✅ umgesetzt: Solange die Leiste „Zeichnen“ oder „Kommentieren“ offen ist, zeigt „Bearbeiten“ alle Seiten untereinander (`singleView()` in app.js); ohne Leiste bleibt es bei der Einzelseite.
+- **Handflächenerkennung: ja.** ✅ umgesetzt: Sobald ein Stift mit einem Werkzeug benutzt wird, zeichnet nur noch der Stift; ein Finger blättert (mit Schwung), zwei Finger zoomen, die Hand beim Schreiben wird ignoriert. Pro Gerät gemerkt (localStorage `master-pdf-skill.pen-only`), Stift-Symbol in beiden Leisten schaltet um.
+- **Unterschrift lokal merken: ja, mit Hinweis**, dass sie nur lokal im Browser liegt – kommt mit dem Reiter „Einfügen“.

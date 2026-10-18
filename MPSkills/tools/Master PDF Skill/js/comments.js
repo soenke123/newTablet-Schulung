@@ -7,8 +7,9 @@
  * share them), all coordinates in PDF user space of the unrotated source page:
  *   {id, kind, color, text, author, date (ISO string|null), rect [x0, y0, x1, y1], quads? [8 numbers per quad:
  *    upper-left, upper-right, lower-left, lower-right], opacity?, quote?, replies [{id, author, text, date, orig?}],
- *    orig? {id, text, color, rect, fontSize?}, status? {state, author, date, orig?}, fontSize? + fill? (freetext)}
- * Text boxes (`freetext`) use `color` for the text, `fontSize` in points and an optional background `fill`; their
+ *    orig? {id, text, color, rect, fontSize?}, status? {state, author, date, orig?}, fontSize? + fill? + border? (freetext)}
+ * Text boxes (`freetext`) use `color` for the text, `fontSize` in points, an optional background `fill` and frame colour `border`
+ * (FREETEXT_BORDER pt wide, inside the rect); their
  * rect follows the text (freeTextRect). `status` is the review state (COMMENT_STATES) – in the PDF a hidden reply
  * with /State and /StateModel /Review, as Acrobat writes it; `orig` is the id of that reply when it was read in.
  * `orig` marks a comment read from the source PDF (`id` = PDF.js annotation id, e.g. "12R") together with its values
@@ -52,6 +53,22 @@ export const FREETEXT_COLORS = [
   { color: '#15803d', label: 'Grün' },
   { color: '#ea580c', label: 'Orange' },
 ];
+/** Background and frame of text boxes; '' = none. */
+export const FREETEXT_FILLS = [
+  { color: '', label: 'ohne' },
+  { color: '#ffffff', label: 'Weiß' },
+  { color: '#fef9c3', label: 'Hellgelb' },
+  { color: '#dbeafe', label: 'Hellblau' },
+  { color: '#dcfce7', label: 'Hellgrün' },
+];
+export const FREETEXT_BORDERS = [
+  { color: '', label: 'ohne' },
+  { color: '#111827', label: 'Schwarz' },
+  { color: '#6b7280', label: 'Grau' },
+  { color: '#dc2626', label: 'Rot' },
+  { color: '#1d4ed8', label: 'Blau' },
+];
+export const FREETEXT_BORDER = 1;
 export const FREETEXT_SIZES = [8, 10, 12, 14, 18, 24];
 export const FREETEXT_SIZE = 12;
 /** Inner margin of a text box and line height (times the font size). */
@@ -130,12 +147,14 @@ export function importAnnotations(annots, nextId) {
       c.fontSize = Math.round((da.fontSize || 10) * 10) / 10;
       const fill = colorHex(a.color);
       if (fill) c.fill = fill;
+      const border = a.borderStyle?.width > 0 && colorHex(a.borderColor);
+      if (border) c.border = border;
     }
     if (COMMENT_KINDS[kind].markup) {
       c.quads = a.quadPoints?.length >= 8 ? Array.from(a.quadPoints, roundPoint) : [rect[0], rect[3], rect[2], rect[3], rect[0], rect[1], rect[2], rect[1]];
       if (typeof a.opacity === 'number' && a.opacity > 0) c.opacity = a.opacity;
     }
-    c.orig = { id: a.id, text: c.text, color: c.color, rect: c.rect, ...(c.fontSize ? { fontSize: c.fontSize } : {}) };
+    c.orig = { id: a.id, text: c.text, color: c.color, rect: c.rect, ...(c.fontSize ? { fontSize: c.fontSize } : {}), ...(c.fill ? { fill: c.fill } : {}), ...(c.border ? { border: c.border } : {}) };
     comments.push(c);
     byId.set(a.id, c);
     owned.add(a.id);
@@ -178,7 +197,8 @@ const pdfName = v => typeof v === 'string' ? v : v?.name ?? null;
 /** True if a comment read from the PDF differs from its original (text, colour or position). */
 export function commentChanged(c) {
   const o = c.orig;
-  return !o || c.text !== o.text || c.color !== o.color || c.rect.some((v, i) => v !== o.rect[i]) || (c.fontSize ?? null) !== (o.fontSize ?? null);
+  return !o || c.text !== o.text || c.color !== o.color || c.rect.some((v, i) => v !== o.rect[i]) || (c.fontSize ?? null) !== (o.fontSize ?? null)
+    || (c.fill || '') !== (o.fill || '') || (c.border || '') !== (o.border || '');
 }
 
 // --- Text boxes ---
