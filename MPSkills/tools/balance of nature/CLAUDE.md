@@ -16,7 +16,14 @@ zurück in die Datei.
 Stufe 3 läuft: Der Mensch kommt mit Karten auf die Insel. **Plan, Karten und Stand in
 `docs/MENSCH.md`.** Ohne gespielte Karte muss die Simulation exakt wie vorher laufen. Die Diagramme „Nahrung“ und „Zustand der Pflanzen“ messen an der unberührten Insel (`Fields.startTotal`).
 
-Soll später ein Skill in MPSkills werden (wie Wild Clusters in `newTablet-Schulung`).
+Ist ein Skill in MPSkills (Migration 0213, id `balance`, Beta): `tool.js`/`tool.css` sind der Rahmen im Raum.
+Mit `?raum=lehrer|schueler` zeigt die Seite nur die Insel ohne Tiere und vier feste Szenarien
+(`js/ui/room.js`: 1 Wolf+Hirsch, 2 Adler+Laufvogel, 3 alle vier, 4 alle vier + Menschen). Die Lehrkraft
+sieht Kacheln (Bild `assets/szenario_<n>.jpg` + große Tierbilder, i = Infos für den Unterricht), startet für
+sich oder teilt/entzieht (postMessage `bon:share` → `skill_room_state.data.shared`); Schüler sehen nur die
+geteilten als Karten „Szenario n“. Mit `?demo=1` spielt `js/ui/demo.js` das Schaufenster (Wellen Wolf/Hirsch
+über 90 Jahre als Skizze, dann Landung, Schafweide, Ausbruch). Ohne Parameter läuft alles wie vorher.
+Wer an `index.html`, `js/` oder `css/` arbeitet, zieht `V` in `tool.js` und die `?v=` in `index.html` hoch.
 
 ## Regeln
 
@@ -65,14 +72,16 @@ js/eco/     time (Kalender), species (Artentabelle, Nahrungsschichten), fields (
 js/ui/      app.js (Karte, Kamera folgt einem angeklickten Tier, Zeitregler, Seitenleiste aus einklappbaren Bereichen (Zeit, Bestand, Menschen, Verlauf, Menschen auf der Insel; breit = zwei Spalten; Neustart-Fenster mit Startbestand), Kartenleiste mit + und −, Infofenster
             der Karten, Chronik, Bildpuffer, Großansicht der Diagramme), cardInfo.js (Bild im Infofenster:
             Kartenausschnitt assets/karte_<id>.png),
-            charts.js (LineChart; ChartView: gemeinsamer Zeitraum und Fadenkreuz)
+            charts.js (LineChart; ChartView: gemeinsamer Zeitraum und Fadenkreuz),
+            room.js (Raum-Modus ?raum=, Szenarien), demo.js (Schaufenster ?demo=1)
 data/       arten.md (fachliche Wahrheit für species.js)
 assets/     Tierbilder, schaf/, hund/, doerfler/ (Menschen), ratten.png (Kachel), Ratten/Ratte_1..10.png (Karte, zufällig verteilt), Schiff, Häuser, karte_<id>.png (Infofenster)
 tools/      load.js (Skripte in Node laden), smoketest.js, balance.js (Abstimmung),
             invasion.js (fassen Schafe und Hunde Fuß? was erlegen Jäger? wie breiten sich Ratten aus?
             Vergleich mit/ohne Karten, parallel),
             shot.js (Playwright-Screenshot, optional nach N simulierten Tagen),
-            kartenbilder.js (Bilder der Infofenster: Ausschnitte der echten Karte)
+            kartenbilder.js (Bilder der Infofenster: Ausschnitte der echten Karte),
+            szenariobilder.js (Bilder der Szenario-Kacheln im Raum: assets/szenario_<n>.jpg)
 ```
 
 Simulation: Pro Tick zuerst gespielte Karten und Menschen, dann die Tiere. Entschieden wird je **Gruppe** (Herde, Rudel …), die Tiere folgen dem Anker der

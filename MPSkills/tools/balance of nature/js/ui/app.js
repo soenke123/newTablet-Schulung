@@ -86,6 +86,8 @@
       buildLegend();
       restart();
       status.textContent = world.cols + ' × ' + world.rows + ' Zellen · ' + world.meta.generationMs + ' ms';
+      // Raum und Schaufenster (js/ui/room.js, js/ui/demo.js) setzen hier ihren Startbestand
+      if (BT.app.onWorld) BT.app.onWorld(world);
     }, 10);
   }
 
@@ -1090,6 +1092,7 @@
     get world() { return world; },
     get sim() { return sim; },
     get camera() { return camera; },
+    onWorld: null,
     redraw: function () { dirty = true; },
     highlight: setHighlight,
     runDays: function (n) { sim.runDays(n); updatePanel(true); dirty = true; },
@@ -1100,6 +1103,11 @@
       restart();
     },
     setRunning: setRunning,
+    get running() { return running; },
+    /** Tempo-Regler 0..100 setzen */
+    speed: function (v) { speedInput.value = v; updateSpeedLabel(); },
+    /** Pause zwischen zwei Karten in Jahren (wie die Auswahl „Pause“) */
+    cardPause: function (years) { $('cardPause').value = String(years); if (sim) sim.cardPause = BT.Time.years(years); },
     /** Bereich der Seitenleiste auf-/zuklappen: fold('menschen', true) */
     fold: function (name, open) { setFold(doc.querySelector('.fold[data-fold="' + name + '"]'), open !== false); },
     wide: setWide,

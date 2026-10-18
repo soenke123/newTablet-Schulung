@@ -105,6 +105,12 @@ window.TOOLS_OVERLAY = {
   // Browser). Später kommt eine Download-Version dazu. beta: noch in
   // Arbeit (16.10.2026).
   masterpdf: { ready: true, beta: true, standalone: 'tools/Master%20PDF%20Skill/index.html' },
+  // Dreizehnter Skill (Migration 0213) — Balance of Nature: Ökosystem
+  // auf einer Insel, eingerahmt wie SYNIR (tools/balance of nature/,
+  // Ordner mit Leerzeichen, weil er so aus seinem eigenen Repository
+  // kam). Vier feste Szenarien, die Lehrkraft teilt und entzieht sie
+  // (skill_room_state.data.shared). beta: frisch eingezogen (18.10.2026).
+  balance: { ready: true, beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet
