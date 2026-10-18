@@ -232,3 +232,18 @@ test('Textfeld mit Hintergrund und Rahmen: /C, /BS, /MK und Darstellung', async 
   assert.match(stream, /RG[\s\S]*\bS\b[\s\S]*BT/, 'Rahmen vor dem Text gezeichnet');
   assert.deepEqual(ft.dict.get(PDFName.of('C')).asArray().map(n => Math.round(n.asNumber() * 255)), [254, 249, 195], 'Hintergrund in /C');
 });
+
+// 1×1 Pixel, rot (PNG) – reicht, um Einbetten und Platzieren zu prüfen.
+const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAX8jx0gAAAABJRU5ErkJggg==';
+
+test('Bilder und Unterschriften werden fest in die Seite gezeichnet, gleiche Bilder nur einmal gespeichert', async () => {
+  const blank = await createBlankPdf(200, 300);
+  const img = { id: 1, type: 'image', src: PNG, points: [10, 20, 50, 80], rot: 90 };
+  const pages = [{ sourceId: 'a', pageIndex: 0, rotation: 90, marks: [img] }, { sourceId: 'a', pageIndex: 0, rotation: 0, marks: [{ ...img, id: 2 }] }];
+  const out = await PDFDocument.load(await buildPdf(pages, () => blank));
+  const xobjects = out.getPages().map(p => p.node.Resources().get(PDFName.of('XObject')));
+  const refs = xobjects.map(x => x.values()[0].toString());
+  assert.equal(refs[0], refs[1], 'beide Seiten zeigen auf dasselbe Bildobjekt');
+  const content = new TextDecoder().decode(decodePDFRawStream(out.context.lookup(out.getPage(0).node.Contents().asArray().at(-1))).decode());
+  assert.match(content, /0 60 -40 0 50 20 cm\s*\/Im-?\d* Do/);
+});

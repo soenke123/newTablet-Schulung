@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillShare, strokeBox, scaleMark, pointsBox, placeMark } from '../js/annotations.js';
+import { pageTransform, inkPath, markHit, markSvg, markBounds, moveMark, constrainEnd, hexToRgb, eraseMarks, fillShare, strokeBox, scaleMark, pointsBox, placeMark, imageMatrix, imageViewMatrix } from '../js/annotations.js';
 
 const box = { x: 10, y: 20, width: 200, height: 300 };
 const near = (actual, expected) => actual.forEach((v, i) => assert.ok(Math.abs(v - expected[i]) < 1e-9, `${actual} ≠ ${expected}`));
@@ -149,4 +149,29 @@ test('Eingefügte Kopie wird verschoben und bleibt auf der Seite', () => {
   assert.equal(placed.x0, 0);
   // Seiten mit versetztem Ursprung (MediaBox ab 10/20).
   assert.deepEqual(placeMark(line, { x: 50, y: 20, width: 100, height: 100 }).points, [51, 50, 71, 50]);
+});
+
+test('Bilder stehen aufrecht auf der Seite, so wie sie beim Einfügen angezeigt wurde', () => {
+  const page = { x: 0, y: 0, width: 200, height: 300 };
+  for (const rot of [0, 90, 180, 270]) {
+    const map = pageTransform(page, rot, 1);
+    // Kasten 40 × 20 in der Ansicht: in PDF-Koordinaten umrechnen wie beim Einfügen.
+    const a = map.toPdf(10, 10), b = map.toPdf(50, 30);
+    const img = { id: 1, type: 'image', src: 'data:', points: [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[0], b[0]), Math.max(a[1], b[1])], rot };
+    near(imageViewMatrix(img, map), [40, 0, 0, 20, 10, 10]);
+    // Wird die Seite danach um 90° gedreht, dreht sich das Bild mit (Oberkante zeigt nach rechts).
+    const [xa, xb, ya, yb] = imageViewMatrix(img, pageTransform(page, rot + 90, 1));
+    near([xa, xb, ya, yb], [0, 40, -20, 0]);
+  }
+});
+
+test('Bild-Matrix für den Export und Treffer im ganzen Kasten', () => {
+  const img = { id: 1, type: 'image', src: 'data:', points: [10, 20, 50, 80], rot: 90 };
+  assert.deepEqual(imageMatrix(img), [0, 60, -40, 0, 50, 20]);
+  assert.deepEqual(imageMatrix({ ...img, rot: 0 }), [40, 0, 0, 60, 10, 20]);
+  assert.ok(markHit(img, 30, 50, 0));
+  assert.ok(!markHit(img, 60, 50, 2));
+  assert.deepEqual(markBounds(img), { x0: 10, y0: 20, x1: 50, y1: 80 });
+  assert.deepEqual(scaleMark(img, [10, 20], [50, 80], [10, 20], [90, 140]).points, [10, 20, 90, 140]);
+  assert.equal(eraseMarks([img], 30, 50, 5, () => 9)[0], img, 'Radieren schneidet keine Bilder');
 });

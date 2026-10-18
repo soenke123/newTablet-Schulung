@@ -88,6 +88,7 @@ export function arrowWings(x1, y1, x2, y2, length) {
  * because pages only rotate in steps of 90°.
  */
 export function markSvg(mark, map) {
+  if (mark.type === 'image') return { tag: 'image', attrs: { href: mark.src, x: 0, y: 0, width: 1, height: 1, preserveAspectRatio: 'none', transform: `matrix(${imageViewMatrix(mark, map).map(round).join(' ')})` }, width: 0 };
   const width = mark.width * map.scale;
   if (mark.type === 'ink') return { tag: 'path', attrs: { d: inkPath(mark.points, map.toView) }, width };
   if (FILLABLE.includes(mark.type)) {
@@ -107,10 +108,34 @@ export function markSvg(mark, map) {
   return { tag: 'path', attrs: { d }, width };
 }
 
+/**
+ * Images (tab "Einfügen": pictures and signatures) are marks `{id, type:'image', src (data URL, PNG or JPEG),
+ * points [x0, y0, x1, y1] (box in PDF space), rot, label?}`. `rot` is the page rotation at the time of inserting:
+ * the picture is turned against it, so it stands upright on the page as it was shown (later page turns turn it along).
+ * imageMatrix maps the unit square of the picture (u right, v up) into PDF space – the `cm` operator of the export.
+ */
+export function imageMatrix(mark) {
+  const { x0: l, y0: b, x1: r, y1: t } = pointsBox(mark), w = r - l, h = t - b;
+  const turn = (((mark.rot || 0) % 360) + 360) % 360;
+  if (turn === 90) return [0, h, -w, 0, r, b];
+  if (turn === 180) return [-w, 0, 0, -h, r, t];
+  if (turn === 270) return [0, -h, w, 0, l, t];
+  return [w, 0, 0, h, l, b];
+}
+
+/** SVG matrix of an image in view px: maps the picture's unit square (y down, as SVG draws images) onto the page. */
+export function imageViewMatrix(mark, map) {
+  const [a, b, c, d, e, f] = imageMatrix(mark);
+  const at = (u, v) => map.toView(a * u + c * v + e, b * u + d * v + f);
+  const o = at(0, 1), x = at(1, 1), y = at(0, 0);
+  return [x[0] - o[0], x[1] - o[1], y[0] - o[0], y[1] - o[1], o[0], o[1]];
+}
+
 /** Polylines (flat arrays, PDF space) along which a mark is drawn – used for hit tests. */
 export function markOutline(mark) {
   const p = mark.points;
   if (mark.type === 'ink') return [p];
+  if (mark.type === 'image') { const b = pointsBox(mark); return [[b.x0, b.y0, b.x1, b.y0, b.x1, b.y1, b.x0, b.y1, b.x0, b.y0]]; }
   const [x1, y1, x2, y2] = p;
   if (mark.type === 'line') return [p];
   if (mark.type === 'arrow') {
@@ -155,6 +180,7 @@ export function scaleMark(mark, [ax, ay], [bx, by], [cx, cy], [dx, dy]) {
 
 /** True if the point (PDF space) lies within `radius` of the drawn line, counting half its line width. */
 export function markHit(mark, x, y, radius) {
+  if (mark.type === 'image') { const b = pointsBox(mark); return x >= b.x0 - radius && x <= b.x1 + radius && y >= b.y0 - radius && y <= b.y1 + radius; }
   if (fillShare(mark) && insideShape(mark, x, y)) return true;
   const reach = radius + (mark.width || 0) / 2;
   for (const p of markOutline(mark)) {
@@ -216,6 +242,7 @@ export function eraseMarks(marks, x, y, radius, nextId) {
   let changed = false;
   const result = [];
   for (const mark of marks) {
+    if (mark.type === 'image') { result.push(mark); continue; } // pictures cannot be cut; "Ganze Elemente" removes them
     const reach = radius + (mark.width || 0) / 2, b = markBounds(mark);
     if (x < b.x0 - radius || x > b.x1 + radius || y < b.y0 - radius || y > b.y1 + radius || !markHit({ ...mark, fill: undefined }, x, y, radius)) { result.push(mark); continue; }
     changed = true;

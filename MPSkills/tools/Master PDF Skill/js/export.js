@@ -2,9 +2,9 @@ import {
   PDFDocument, PDFArray, PDFName, PDFRef, PDFDict, PDFHexString, PDFString, StandardFonts, degrees, LineCapStyle, LineJoinStyle,
   beginText, endText, setFontAndSize, moveText, showText,
   pushGraphicsState, popGraphicsState, setGraphicsState, setStrokingRgbColor, setFillingRgbColor, setLineWidth, setLineCap, setLineJoin,
-  moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject,
+  moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject, concatTransformationMatrix,
 } from '../lib/pdf-lib/pdf-lib.esm.min.js';
-import { hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength } from './annotations.js';
+import { hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength, imageMatrix } from './annotations.js';
 import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, FREETEXT_SIZE, FREETEXT_BORDER, commentChanged, highlightPolygons, markupLines, freeTextLines, pdfDate } from './comments.js';
 
 /**
@@ -37,9 +37,10 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
   }
   const used = new Set();
   const font = pages.some(p => p.comments?.some(c => c.kind === 'freetext')) ? await textFont(out) : null;
+  const images = await embedImages(out, pages);
   copied.forEach((page, i) => {
     page.setRotation(degrees(pages[i].rotation));
-    drawMarks(page, pages[i].marks);
+    drawMarks(page, pages[i].marks, images);
     out.addPage(page);
     if (annotRefs[i]) writeComments(page, pages[i].comments || [], annotRefs[i], ownedAnnots(pages[i].sourceId, pages[i].pageIndex) || new Set(), used, font);
   });
@@ -47,15 +48,36 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
   return out.save();
 }
 
+/** Bytes of a base64 data URL. */
+export function dataUrlBytes(url) {
+  const bin = atob(String(url).slice(String(url).indexOf(',') + 1));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
+/** Every picture (image mark) once per document, also when it is used on several pages: data URL → image ref. */
+async function embedImages(doc, pages) {
+  const images = new Map();
+  for (const page of pages) for (const mark of page.marks || []) {
+    if (mark.type !== 'image' || images.has(mark.src)) continue;
+    const bytes = dataUrlBytes(mark.src);
+    const image = mark.src.startsWith('data:image/png') ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+    images.set(mark.src, image.ref);
+  }
+  return images;
+}
+
 /**
  * Draws marks (PDF user space, see annotations.js) as vector graphics on top of the page content; highlighter
  * strokes first (transparent, multiplied, so text stays readable), then everything else in drawing order.
  * Opacity goes into an ExtGState. A filled rectangle or ellipse becomes a transparency group (form XObject): fill
  * under the opaque line inside, the opacity applied to the whole group – no darker overlap and no seam.
+ * Pictures (tab "Einfügen") are image XObjects placed with imageMatrix, in drawing order with the strokes.
  * Repeated pages share copied objects (copyPages caches even direct ones), so the page first gets its own
  * /Contents array – otherwise pdf-lib would append the marks to every copy of the page.
  */
-export function drawMarks(page, marks) {
+export function drawMarks(page, marks, images = new Map()) {
   const list = (marks || []).filter(m => m.points?.length >= 2);
   if (!list.length) return;
   const node = page.node, contents = node.context.lookup(node.get(PDFName.of('Contents')));
@@ -68,6 +90,11 @@ export function drawMarks(page, marks) {
   };
   const ops = [];
   for (const mark of [...list.filter(isHighlight), ...list.filter(m => !isHighlight(m))]) {
+    if (mark.type === 'image') {
+      const ref = images.get(mark.src);
+      if (ref) ops.push(pushGraphicsState(), concatTransformationMatrix(...imageMatrix(mark)), drawObject(node.newXObject('Im', ref)), popGraphicsState());
+      continue;
+    }
     const opacity = mark.opacity ?? 1, share = fillShare(mark), color = hexToRgb(mark.color);
     const width = mark.type === 'rect' || mark.type === 'ellipse' ? strokeBox(mark).width : mark.width;
     const line = [setStrokingRgbColor(...color), setLineWidth(width), setLineCap(LineCapStyle.Round), setLineJoin(mark.type === 'rect' ? LineJoinStyle.Miter : LineJoinStyle.Round), ...markPath(mark), stroke()];

@@ -33,9 +33,10 @@ Nur Inhalte, die fest in der Seite stehen, werden garantiert gedruckt. Daher gil
    - Nachgerüstet: Textfeld (FreeText mit Helvetica-Darstellung, Kasten wächst mit dem Text, Schriftgröße/Textfarbe), Status (Review-Antwort mit /State, wird eingelesen), Filter der Kommentarliste (Art, Status, Person); Textfelder aus anderen Programmen sind bearbeitbar (eigene Darstellung).
    - Nachgerüstet (2): Rahmen und Hintergrund für Textfelder (je fünf Möglichkeiten inkl. „ohne“; Export /C, /BS, /MK /BC + Darstellung, Import über PDF.js `color`/`borderStyle`/`borderColor`; Rundreise im Browser geprüft).
    - Noch offen: Status/Textfeld in Acrobat, Edge und Firefox prüfen (braucht die echten Programme, beim Nutzer).
-4. **Einfügen** (nächster Schritt): Textfeld (Schrift, Größe, Farbe; mehrzeilig), Bild, **Unterschrift**: Feld zum Unterschreiben, optional Klarname darunter und Datum, danach frei auf der Seite verschieben und skalieren.
+4. **Einfügen**: Textfeld (Schrift, Größe, Farbe; mehrzeilig), Bild, **Unterschrift**: Feld zum Unterschreiben, optional Klarname darunter und Datum, danach frei auf der Seite verschieben und skalieren.
+   - ✅ Bild und Unterschrift (18.10.2026): eigene Werkzeugleiste „Einfügen“ mit dem Zeiger-Werkzeug „Auswählen“ (dasselbe wie beim Zeichnen), Bild, Unterschrift, Rückgängig/Wiederholen, Löschen. Beide sind Bild-Elemente in `p.marks` (`type:'image'`), Anfasser an Ecken (Seitenverhältnis bleibt) und Kanten, fest eingebettet als Bild-XObject (gleiches Bild nur einmal in der Datei). Name und Datum sind Teil des Unterschrift-Bildes.
+   - Noch offen: fest eingebettetes Textfeld (eigene Schrift im Export für Umlaute und Sonderzeichen).
    - Entschieden (18.10.2026): Die Unterschrift darf **lokal im Browser gespeichert** werden (für spätere Dokumente), aber nur mit **sichtbarem Hinweis**, dass sie lokal auf diesem Gerät liegt (und wie man sie dort wieder löscht). Nichts wird hochgeladen.
-   - Vorschlag zur Reihenfolge: zuerst Bild + Unterschrift (gemeinsames Grundgerüst: Element verschieben/skalieren, Export als Bild), danach das fest eingebettete Textfeld.
 
 Später (Master-Prompt, nicht eingeplant): Stempel, Wasserzeichen, Reiter „Bearbeiten“ (vorhandenen Text ändern, nur eingeschränkt zuverlässig möglich), OCR, Formulare, Schwärzen.
 
@@ -47,4 +48,4 @@ Später (Master-Prompt, nicht eingeplant): Stempel, Wasserzeichen, Reiter „Bea
 
 - **Scrollen beim Zeichnen: ja.** ✅ umgesetzt: Solange die Leiste „Zeichnen“ oder „Kommentieren“ offen ist, zeigt „Bearbeiten“ alle Seiten untereinander (`singleView()` in app.js); ohne Leiste bleibt es bei der Einzelseite.
 - **Handflächenerkennung: ja.** ✅ umgesetzt: Sobald ein Stift mit einem Werkzeug benutzt wird, zeichnet nur noch der Stift; ein Finger blättert (mit Schwung), zwei Finger zoomen, die Hand beim Schreiben wird ignoriert. Pro Gerät gemerkt (localStorage `master-pdf-skill.pen-only`), Stift-Symbol in beiden Leisten schaltet um.
-- **Unterschrift lokal merken: ja, mit Hinweis**, dass sie nur lokal im Browser liegt – kommt mit dem Reiter „Einfügen“.
+- **Unterschrift lokal merken: ja, mit Hinweis**, dass sie nur lokal im Browser liegt. ✅ umgesetzt: Haken „Auf diesem Gerät merken“ (standardmäßig aus), Hinweis im Dialog, Löschen mit ×, localStorage `master-pdf-skill.signatures` (höchstens fünf).
