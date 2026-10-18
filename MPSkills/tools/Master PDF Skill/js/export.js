@@ -1,11 +1,12 @@
 import {
   PDFDocument, PDFArray, PDFName, PDFRef, PDFDict, PDFHexString, PDFString, PDFBool, StandardFonts, degrees, LineCapStyle, LineJoinStyle,
-  PDFObjectCopier, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
+  PDFObjectCopier, rgb, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
   beginText, endText, setFontAndSize, moveText, showText,
   pushGraphicsState, popGraphicsState, setGraphicsState, setStrokingRgbColor, setFillingRgbColor, setLineWidth, setLineCap, setLineJoin,
   moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject, concatTransformationMatrix,
 } from '../lib/pdf-lib/pdf-lib.esm.min.js';
-import { hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength, imageMatrix, localSize, textLines, textFontName, TEXT_FONTS, TEXT_LINE } from './annotations.js';
+import { pointsBox, hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength, imageMatrix, localSize, textLines, textFontName, TEXT_FONTS, TEXT_LINE } from './annotations.js';
+import { isMultiline, MULTILINE_SIZE, CHECK_ON } from './forms.js';
 import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, FREETEXT_SIZE, FREETEXT_BORDER, commentChanged, highlightPolygons, markupLines, freeTextLines, pdfDate } from './comments.js';
 
 /**
@@ -13,11 +14,12 @@ import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON,
  * absolute; marks are drawn permanently into the page content, see drawMarks; comments stay annotations, see
  * writeComments). `ownedAnnots(sourceId, pageIndex)` returns the ids of the source annotations the comments were read
  * from (comments.js importAnnotations). `formValues(sourceId)` returns the changed form field values of a source as
- * Map fieldName → value (forms.js), see writeForms.
+ * Map fieldName → value (forms.js), see writeForms; `newFields` the values of the fields created in the app (field marks,
+ * see createFields) as Map name → value.
  * Uses one copyPages call per source so shared resources (fonts, images) are stored only once,
  * even when pages repeat. `onProgress({phase:'copy'|'save', done, total})` may be async (to let the UI repaint).
  */
-export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null } = {}) {
+export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null, newFields = null } = {}) {
   const out = await PDFDocument.create();
   const bySource = new Map();
   pages.forEach((page, i) => {
@@ -49,8 +51,9 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
     if (annotRefs[i]) writeComments(page, pages[i].comments || [], annotRefs[i], ownedAnnots(pages[i].sourceId, pages[i].pageIndex) || new Set(), used, font);
   });
   const withForm = forms.size && await writeForms(out, copied.map((page, i) => ({ page, sourceId: pages[i].sourceId })), forms);
+  const created = await createFields(out, copied.map((page, i) => ({ page, marks: pages[i].marks })), newFields);
   await onProgress({ phase: 'save', done, total: pages.length });
-  return out.save(withForm ? { updateFieldAppearances: false } : {});
+  return out.save(withForm || created ? { updateFieldAppearances: false } : {});
 }
 
 const FIELD_KEYS = ['FT', 'Parent', 'T', 'TU', 'TM', 'Ff', 'V', 'DV', 'Opt', 'TI', 'I', 'MaxLen'].map(key => PDFName.of(key));
@@ -166,6 +169,47 @@ async function writeForms(out, placed, forms) {
   return true;
 }
 
+/**
+ * Fields created in the app (field marks, forms.js) become real form fields with a thin grey frame and no background
+ * (pdf-lib would paint them white and hide what is printed below). A name that is
+ * already taken by a field of an opened file gets a suffix ("_2"); the same name on several pages (a repeated page)
+ * is one field with several widgets. pdf-lib turns a widget counter-clockwise around (x, y): the corner passed per
+ * rotation makes the widget cover the mark's box. Returns true when fields were created.
+ */
+async function createFields(out, placed, values) {
+  const list = placed.flatMap(({ page, marks }) => (marks || []).filter(m => m.type === 'field').map(mark => ({ page, mark })));
+  if (!list.length) return false;
+  const form = out.getForm(), font = await out.embedFont(StandardFonts.Helvetica), made = new Map();
+  for (const { page, mark } of list) {
+    let field = made.get(mark.name);
+    const fresh = !field;
+    if (fresh) {
+      let name = mark.name, n = 1;
+      while (form.getFieldMaybe(name)) name = `${mark.name}_${++n}`;
+      field = mark.kind === 'checkbox' ? form.createCheckBox(name) : form.createTextField(name);
+      if (mark.kind !== 'checkbox' && isMultiline(mark)) field.enableMultiline();
+      made.set(mark.name, field);
+    }
+    const b = pointsBox(mark), turn = (((mark.rot || 0) % 360) + 360) % 360, { w, h } = localSize(mark);
+    const [x, y] = { 0: [b.x0, b.y0], 90: [b.x1, b.y0], 180: [b.x1, b.y1], 270: [b.x0, b.y1] }[turn];
+    field.addToPage(page, { x, y, width: w, height: h, rotate: degrees(turn), font, borderWidth: 1, borderColor: rgb(0.55, 0.58, 0.65), backgroundColor: undefined });
+    // Fixed size for several lines (automatic size would fit one line into the height); /DA exists only after addToPage.
+    if (fresh && field instanceof PDFTextField && field.isMultiline()) field.setFontSize(MULTILINE_SIZE);
+  }
+  for (const [name, field] of made) {
+    const value = values?.get(name);
+    try {
+      if (field instanceof PDFCheckBox) { if (value === CHECK_ON) field.check(); }
+      else { if (value) field.setText(value); field.updateAppearances(font); }
+    } catch (error) {
+      console.warn('Formularfeld konnte nicht gezeichnet werden', name, error);
+      out.catalog.lookup(N_ACROFORM, PDFDict).set(N_NEED, PDFBool.True);
+    }
+    form.markFieldAsClean(field.ref);
+  }
+  return true;
+}
+
 /** A second widget of the same field for a repeated page (see writeForms); returns its reference. */
 function duplicateWidget(context, ref) {
   const dict = context.lookup(ref), clone = dict.clone(context);
@@ -268,7 +312,7 @@ export async function fontMetrics() {
  * /Contents array – otherwise pdf-lib would append the marks to every copy of the page.
  */
 export function drawMarks(page, marks, images = new Map(), fonts = new Map()) {
-  const list = (marks || []).filter(m => m.points?.length >= 2);
+  const list = (marks || []).filter(m => m.points?.length >= 2 && m.type !== 'field');
   if (!list.length) return;
   const node = page.node, contents = node.context.lookup(node.get(PDFName.of('Contents')));
   if (contents instanceof PDFArray) node.set(PDFName.of('Contents'), node.context.obj(contents.asArray()));

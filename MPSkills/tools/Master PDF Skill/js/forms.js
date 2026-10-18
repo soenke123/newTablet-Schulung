@@ -18,6 +18,10 @@ export const FIELD_KINDS = {
 
 const WIDGET = 20;
 
+/** Owner of the fields created in the app (tab "Einfügen"); fields read from a file have its source id as owner. */
+export const NEW_FIELDS = 'new';
+const turnOf = rot => (((rot || 0) % 360) + 360) % 360;
+
 /** Kind of a PDF.js widget, null for anything that cannot be filled in (push buttons, signatures, …). */
 export function fieldKind(data) {
   if (data.fieldType === 'Tx') return 'text';
@@ -108,4 +112,37 @@ export function fieldFontSize(field) {
 export function shownText(field, value) {
   if (field.kind !== 'choice') return String(value ?? '');
   return value.map(v => field.options.find(o => o.value === v)?.label ?? v).join(', ');
+}
+
+/**
+ * Fields created in the app are marks `{id, type:'field', kind:'text'|'checkbox', name, points [x0, y0, x1, y1], rot}`
+ * (box in PDF space, `rot` = page rotation when created, like pictures: the field stands upright as it was shown).
+ * A text field at least MULTILINE_HEIGHT pt high (upright) takes several lines.
+ */
+export const MULTILINE_HEIGHT = 30, MULTILINE_SIZE = 11, CHECK_ON = 'Yes';
+export const FIELD_DEFAULTS = { text: { w: 180, h: 22 }, checkbox: { w: 14, h: 14 } };
+
+export function isMultiline(mark) {
+  const [x0, y0, x1, y1] = mark.points;
+  return mark.kind === 'text' && Math.abs(turnOf(mark.rot) % 180 ? x1 - x0 : y1 - y0) >= MULTILINE_HEIGHT;
+}
+
+/** The field the app shows for a field mark (same shape as importFields, owner NEW_FIELDS). */
+export function createdField(mark) {
+  const [x0, y0, x1, y1] = mark.points;
+  const field = {
+    id: `m${mark.id}`, name: mark.name, kind: mark.kind, owner: NEW_FIELDS, created: true, readOnly: false,
+    rect: [Math.min(x0, x1), Math.min(y0, y1), Math.max(x0, x1), Math.max(y0, y1)], rotation: turnOf(mark.rot),
+  };
+  if (mark.kind === 'checkbox') return { ...field, value: 'Off', on: CHECK_ON };
+  const multiline = isMultiline(mark);
+  return { ...field, value: '', multiline, fontSize: multiline ? MULTILINE_SIZE : 0, align: 'left' };
+}
+
+/** Next free automatic name ("Textfeld 3", "Kontrollkästchen 1"); `used` = Set of names already taken. */
+export function nextFieldName(kind, used) {
+  const base = kind === 'checkbox' ? 'Kontrollkästchen' : 'Textfeld';
+  let n = 1;
+  while (used.has(`${base} ${n}`)) n++;
+  return `${base} ${n}`;
 }

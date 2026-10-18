@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PDFDocument, PDFName, PDFArray, decodePDFRawStream } from '../lib/pdf-lib/pdf-lib.esm.min.js';
 import { buildPdf, createBlankPdf } from '../js/export.js';
-import { importFields, normalValue, storageValue, tappedValue, sameValue, originalValues, shownText } from '../js/forms.js';
+import { importFields, normalValue, storageValue, tappedValue, sameValue, originalValues, shownText, createdField, nextFieldName, isMultiline } from '../js/forms.js';
 
 /** Two pages: "name" on both pages (two widgets), checkbox, radio group, drop-down on page 1, "notiz" on page 2. */
 async function formPdf(nameValue = 'Mia') {
@@ -129,4 +129,48 @@ test('Ohne Formular schreibt der Export kein /AcroForm', async () => {
   const bytes = await createBlankPdf(200, 200);
   const out = await PDFDocument.load(await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0 }], () => bytes));
   assert.equal(out.catalog.get(PDFName.of('AcroForm')), undefined);
+});
+
+const fieldMark = (id, kind, name, points, rot = 0) => ({ id, type: 'field', kind, name, points, rot });
+
+test('Angelegte Felder: Name, Art, mehrzeilig', () => {
+  assert.equal(nextFieldName('text', new Set(['Textfeld 1', 'Textfeld 3'])), 'Textfeld 2');
+  assert.equal(nextFieldName('checkbox', new Set()), 'Kontrollkästchen 1');
+  assert.ok(!isMultiline(fieldMark(1, 'text', 'a', [0, 0, 100, 22])));
+  assert.ok(isMultiline(fieldMark(1, 'text', 'a', [0, 0, 100, 60])));
+  assert.ok(isMultiline(fieldMark(1, 'text', 'a', [0, 0, 60, 100], 90)));
+  const box = createdField(fieldMark(7, 'checkbox', 'Kontrollkästchen 1', [10, 10, 24, 24], 90));
+  assert.deepEqual(box, { id: 'm7', name: 'Kontrollkästchen 1', kind: 'checkbox', owner: 'new', created: true, readOnly: false, rect: [10, 10, 24, 24], rotation: 90, value: 'Off', on: 'Yes' });
+});
+
+test('Angelegte Felder werden echte Formularfelder mit Werten', async () => {
+  const bytes = await createBlankPdf(400, 400);
+  const pages = [
+    { sourceId: 'a', pageIndex: 0, rotation: 0, marks: [fieldMark(1, 'text', 'Textfeld 1', [20, 300, 200, 322]), fieldMark(2, 'checkbox', 'Kontrollkästchen 1', [20, 250, 34, 264]), fieldMark(3, 'text', 'Textfeld 2', [20, 100, 300, 200])] },
+    { sourceId: 'a', pageIndex: 0, rotation: 90, marks: [fieldMark(4, 'text', 'Textfeld 3', [100, 100, 122, 280], 90)] },
+  ];
+  const values = new Map([['Textfeld 1', 'Mia'], ['Kontrollkästchen 1', 'Yes'], ['Textfeld 2', 'a\nb']]);
+  const out = await PDFDocument.load(await buildPdf(pages, () => bytes, () => {}, { newFields: values }));
+  const form = out.getForm();
+  assert.deepEqual(fieldNames(out), ['Kontrollkästchen 1', 'Textfeld 1', 'Textfeld 2', 'Textfeld 3']);
+  assert.equal(form.getTextField('Textfeld 1').getText(), 'Mia');
+  assert.equal(form.getCheckBox('Kontrollkästchen 1').isChecked(), true);
+  assert.equal(form.getTextField('Textfeld 2').isMultiline(), true);
+  assert.equal(form.getTextField('Textfeld 2').getText(), 'a\nb');
+  assert.equal(form.getTextField('Textfeld 3').getText(), undefined);
+  // The widget covers the drawn box (plus half the frame), also on a turned page.
+  const near = (r, box) => Math.abs(r.x - box[0]) <= 0.5 && Math.abs(r.y - box[1]) <= 0.5 && Math.abs(r.x + r.width - box[2]) <= 0.5 && Math.abs(r.y + r.height - box[3]) <= 0.5;
+  assert.ok(near(form.getTextField('Textfeld 1').acroField.getWidgets()[0].getRectangle(), [20, 300, 200, 322]));
+  assert.ok(near(form.getTextField('Textfeld 3').acroField.getWidgets()[0].getRectangle(), [100, 100, 122, 280]));
+  assert.deepEqual(widgetPages(out, form.getTextField('Textfeld 3')), [1]);
+  assert.equal(form.getTextField('Textfeld 1').acroField.getWidgets()[0].getAppearanceCharacteristics().getBackgroundColor(), undefined);
+});
+
+test('Angelegtes Feld auf doppelter Seite ist ein Feld; belegter Name bekommt einen Zusatz', async () => {
+  const bytes = await formPdf();
+  const mark = fieldMark(1, 'text', 'name', [20, 50, 200, 72]);
+  const pages = [0, 0].map(i => ({ sourceId: 'a', pageIndex: i, rotation: 0, marks: [mark] }));
+  const out = await PDFDocument.load(await buildPdf(pages, () => bytes));
+  assert.deepEqual(fieldNames(out), ['farbe', 'klasse', 'name', 'name_2', 'ok']);
+  assert.deepEqual(widgetPages(out, out.getForm().getTextField('name_2')), [0, 1]);
 });

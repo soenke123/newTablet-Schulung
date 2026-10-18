@@ -145,7 +145,7 @@ export const TEXT_FONTS = {
 };
 export const TEXT_PAD = 2, TEXT_LINE = 1.25;
 export const textFontName = mark => (TEXT_FONTS[mark.font] || TEXT_FONTS.sans).pdf[mark.bold ? 1 : 0];
-const isBoxed = mark => mark.type === 'image' || mark.type === 'text';
+const isBoxed = mark => mark.type === 'image' || mark.type === 'text' || mark.type === 'field';
 const turnOf = rot => (((rot || 0) % 360) + 360) % 360;
 
 /** Size of a box in its own upright frame (width along the text). */
@@ -314,7 +314,7 @@ export function eraseMarks(marks, x, y, radius, nextId) {
   let changed = false;
   const result = [];
   for (const mark of marks) {
-    if (isBoxed(mark)) { result.push(mark); continue; } // pictures and text cannot be cut; "Ganze Elemente" removes them
+    if (isBoxed(mark)) { result.push(mark); continue; } // pictures, text and form fields cannot be cut; "Ganze Elemente" removes them
     const reach = radius + (mark.width || 0) / 2, b = markBounds(mark);
     if (x < b.x0 - radius || x > b.x1 + radius || y < b.y0 - radius || y > b.y1 + radius || !markHit({ ...mark, fill: undefined }, x, y, radius)) { result.push(mark); continue; }
     changed = true;
