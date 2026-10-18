@@ -1,4 +1,4 @@
-/** Small bounded undo/redo history for page-layout operations and filled-in form values. */
+/** Small bounded undo/redo history for page-layout operations, filled-in form values and the watermark. */
 export function createSnapshot(state) {
   return {
     pages: state.pages.map(page => ({ ...page })),
@@ -6,6 +6,7 @@ export function createSnapshot(state) {
     anchor: state.anchor,
     activePageId: state.activePageId,
     forms: new Map(state.forms || []),
+    watermark: state.watermark ?? null,
   };
 }
 

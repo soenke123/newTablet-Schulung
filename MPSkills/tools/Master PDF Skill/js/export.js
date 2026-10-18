@@ -1,12 +1,14 @@
 import {
   PDFDocument, PDFArray, PDFName, PDFRef, PDFDict, PDFHexString, PDFString, PDFBool, StandardFonts, degrees, LineCapStyle, LineJoinStyle,
-  PDFObjectCopier, rgb, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
+  PDFObjectCopier, PDFPage, rgb, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
   beginText, endText, setFontAndSize, moveText, showText,
   pushGraphicsState, popGraphicsState, setGraphicsState, setStrokingRgbColor, setFillingRgbColor, setLineWidth, setLineCap, setLineJoin,
   moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject, concatTransformationMatrix,
 } from '../lib/pdf-lib/pdf-lib.esm.min.js';
 import { pointsBox, hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength, imageMatrix, localSize, textLines, textFontName, TEXT_FONTS, TEXT_LINE } from './annotations.js';
 import { isMultiline, MULTILINE_SIZE, CHECK_ON } from './forms.js';
+import { analyzePage, glyphsIn, removeGlyphs, textOps, coverOps } from './textedit.js';
+import { watermarkLayout } from './editing.js';
 import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, FREETEXT_SIZE, FREETEXT_BORDER, commentChanged, highlightPolygons, markupLines, freeTextLines, pdfDate } from './comments.js';
 
 /**
@@ -19,10 +21,11 @@ import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON,
  * Uses one copyPages call per source so shared resources (fonts, images) are stored only once,
  * even when pages repeat. `onProgress({phase:'copy'|'save', done, total})` may be async (to let the UI repaint).
  */
-export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null, newFields = null } = {}) {
+export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null, newFields = null, rasters = new Map(), invisibleText = new Map(), watermark = null } = {}) {
   const out = await PDFDocument.create();
   const bySource = new Map();
   pages.forEach((page, i) => {
+    if (rasters.has(page.id)) return;
     if (!bySource.has(page.sourceId)) bySource.set(page.sourceId, []);
     bySource.get(page.sourceId).push(i);
   });
@@ -44,16 +47,153 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
   const used = new Set();
   const font = pages.some(p => p.comments?.some(c => c.kind === 'freetext')) ? await textFont(out) : null;
   const images = await embedImages(out, pages), fonts = await embedTextFonts(out, pages);
-  copied.forEach((page, i) => {
+  const plain = rasters.size || invisibleText.size ? await standardFont(out, StandardFonts.Helvetica) : null;
+  const mark = watermark?.text?.trim() ? await standardFont(out, StandardFonts.HelveticaBold) : null;
+  const widths = pages.some(p => p.marks?.some(m => m.type === 'edit')) ? await standardWidths() : null;
+  const replaced = [], placed = new Array(pages.length);
+  for (let i = 0; i < pages.length; i++) {
+    const raster = rasters.get(pages[i].id);
+    const page = raster ? await rasterPage(out, raster, plain, pages[i].marks, fonts) : copied[i];
+    if (!raster) applyEdits(page, pages[i].marks, fonts, widths, replaced);
     page.setRotation(degrees(pages[i].rotation));
+    if (mark) drawWatermark(page, watermark, pages[i].rotation, mark);
     drawMarks(page, pages[i].marks, images, fonts);
+    if (!raster && invisibleText.get(pages[i].id)?.length) appendContent(page, invisibleOps(page.node, invisibleText.get(pages[i].id), plain));
     out.addPage(page);
-    if (annotRefs[i]) writeComments(page, pages[i].comments || [], annotRefs[i], ownedAnnots(pages[i].sourceId, pages[i].pageIndex) || new Set(), used, font);
-  });
-  const withForm = forms.size && await writeForms(out, copied.map((page, i) => ({ page, sourceId: pages[i].sourceId })), forms);
-  const created = await createFields(out, copied.map((page, i) => ({ page, marks: pages[i].marks })), newFields);
+    placed[i] = page;
+    if (raster) { if (pages[i].comments?.length) writeComments(page, pages[i].comments, new Map(), new Set(), used, font); }
+    else if (annotRefs[i]) writeComments(page, pages[i].comments || [], annotRefs[i], ownedAnnots(pages[i].sourceId, pages[i].pageIndex) || new Set(), used, font);
+  }
+  dropUnused(out, replaced);
+  const withForm = forms.size && await writeForms(out, placed.map((page, i) => ({ page, sourceId: pages[i].sourceId })), forms);
+  const created = await createFields(out, placed.map((page, i) => ({ page, marks: pages[i].marks })), newFields);
   await onProgress({ phase: 'save', done, total: pages.length });
   return out.save(withForm || created ? { updateFieldAppearances: false } : {});
+}
+
+/** Widths of the 14 standard fonts for fonts that come without /Widths (textedit.js): (baseFont, char) → width at size 1. */
+async function standardWidths() {
+  const doc = await PDFDocument.create(), fonts = new Map();
+  const names = Object.values(StandardFonts).filter(n => !['Symbol', 'ZapfDingbats'].includes(n));
+  for (const name of names) fonts.set(name, await doc.embedFont(name));
+  const pick = base => {
+    if (fonts.has(base)) return fonts.get(base);
+    const family = /^Times/.test(base) ? 'Times' : /^Courier/.test(base) ? 'Courier' : 'Helvetica';
+    const bold = /Bold/.test(base), italic = /Italic|Oblique/.test(base);
+    return fonts.get(family === 'Times' ? `Times-${bold && italic ? 'BoldItalic' : bold ? 'Bold' : italic ? 'Italic' : 'Roman'}` : `${family}${bold && italic ? '-BoldOblique' : bold ? '-Bold' : italic ? '-Oblique' : ''}`) || fonts.get('Helvetica');
+  };
+  return (base, ch) => { try { return pick(base).widthOfTextAtSize(ch, 1); } catch { return 0.5; } };
+}
+
+const N_CONTENTS = PDFName.of('Contents');
+/** Resource name without the slash (pdf-lib returns PDFName objects, raw operators add the slash themselves). */
+const bare = name => String(name).replace(/^\//, '');
+
+/** Appends raw content operators to a page (own /Contents array first: repeated pages share copied objects). */
+function appendContent(page, ops) {
+  ownContents(page.node);
+  page.node.addContentStream(page.node.context.register(page.node.context.flateStream(ops)));
+}
+
+/** Gives the page its own /Contents array (pdf-lib appends to it; a single stream set by applyEdits/rasterPage becomes an array). */
+function ownContents(node) {
+  const context = node.context, value = node.get(N_CONTENTS), contents = context.lookup(value);
+  if (contents instanceof PDFArray) node.set(N_CONTENTS, context.obj(contents.asArray()));
+  else if (value instanceof PDFRef) node.set(N_CONTENTS, context.obj([value]));
+  node.normalize();
+}
+
+/**
+ * "Text ändern" (edit marks, see textedit.js): the glyphs under each edit are taken out of the page content, the new
+ * text is written with the old text matrix – in the original font when it has every character, otherwise in a standard
+ * font of the same kind. Edits marked `cover` (scanned pages, text the content does not show) paint the background
+ * colour over the old place first. The old content streams are collected in `replaced` and dropped if unused.
+ */
+function applyEdits(page, marks, fonts, widths, replaced) {
+  const edits = (marks || []).filter(m => m.type === 'edit');
+  if (!edits.length) return;
+  const node = page.node, context = node.context;
+  const analysis = analyzePage(page, widths);
+  const gone = new Set(glyphsIn(analysis.glyphs, edits.map(m => m.points)));
+  let body = gone.size ? removeGlyphs(analysis, gone) : null;
+  if (!body) body = analysis.bytes;
+  let extra = '';
+  for (const m of edits) {
+    if (m.cover && m.bg) extra += coverOps(m.points, m.bg);
+    extra += editTextOps(node, m, analysis, fonts);
+  }
+  const old = node.get(N_CONTENTS);
+  const list = old instanceof PDFArray ? old.asArray() : context.lookup(old) instanceof PDFArray ? context.lookup(old).asArray() : [old];
+  replaced.push(...list.filter(ref => ref instanceof PDFRef));
+  const text = new TextEncoder().encode(`\n${extra}`), all = new Uint8Array(2 + body.length + 3 + text.length);
+  all.set([113, 10]); all.set(body, 2); all.set([10, 81, 10], 2 + body.length); all.set(text, 5 + body.length);
+  node.set(N_CONTENTS, context.register(context.flateStream(all)));
+}
+
+function editTextOps(node, m, analysis, fonts) {
+  if (!m.text) return '';
+  const original = m.style.res && analysis?.fontFor(m.style.res);
+  const codes = original?.encode(m.text);
+  if (codes?.length) return textOps(m.style, m.style.res, codes, m.color);
+  const font = fonts.get(textFontName(m));
+  if (!font) return '';
+  return textOps(m.style, bare(node.newFontDictionary('F', font.ref)), font.encode(m.text).toString(), m.color);
+}
+
+/** Old content streams no page uses any more are removed from the file (they would still hold the old text). */
+function dropUnused(out, refs) {
+  if (!refs.length) return;
+  const used = new Set();
+  for (const page of out.getPages()) {
+    const c = page.node.get(N_CONTENTS), list = c instanceof PDFArray ? c.asArray() : out.context.lookup(c) instanceof PDFArray ? out.context.lookup(c).asArray() : [c];
+    list.forEach(ref => used.add(ref));
+  }
+  for (const ref of refs) if (!used.has(ref)) out.context.delete(ref);
+}
+
+/**
+ * A redacted page (tab "Bearbeiten" → "Schwärzen"): rebuilt from a picture the app rendered with the black boxes
+ * burnt in (`raster = {data, png, box, text}`), plus the text that was outside the boxes as invisible, searchable text.
+ * Nothing of the original page is copied – no content, fonts, images or annotations – so nothing under a box survives.
+ * Edits on such a page are already painted over in the picture; their new text is written in a standard font.
+ */
+async function rasterPage(out, raster, plain, marks, fonts) {
+  const page = PDFPage.create(out), node = page.node, { x, y, width, height } = raster.box;
+  page.setMediaBox(x, y, width, height);
+  const image = raster.png ? await out.embedPng(raster.data) : await out.embedJpg(raster.data);
+  const name = bare(node.newXObject('Im', image.ref));
+  let ops = `q ${width} 0 0 ${height} ${x} ${y} cm /${name} Do Q\n` + invisibleOps(node, raster.text || [], plain);
+  for (const m of marks || []) if (m.type === 'edit') ops += editTextOps(node, m, null, fonts);
+  node.set(N_CONTENTS, out.context.register(out.context.flateStream(ops)));
+  return page;
+}
+
+/** Invisible text (render mode 3, inside q … Q: Tr belongs to the graphics state and would hide later text) in Helvetica, each item stretched to its width: searchable and selectable, not seen. */
+function invisibleOps(node, items, font) {
+  if (!items.length || !font) return '';
+  const name = bare(node.newFontDictionary('F', font.ref));
+  const r = v => Math.round(v * 1000) / 1000;
+  let ops = 'q BT 3 Tr\n';
+  for (const item of items) {
+    const str = item.str?.trim() ? item.str : null;
+    if (!str) continue;
+    const [a, b, c, d, e, f] = item.transform, size = Math.hypot(c, d) || Math.hypot(a, b);
+    if (!size) continue;
+    const natural = font.widthOf(str, size), scale = natural > 0 && item.width > 0 ? item.width / natural * 100 : 100;
+    const sx = Math.hypot(a, b) || size;
+    ops += `/${name} ${r(size)} Tf ${r(scale)} Tz ${r(a / sx)} ${r(b / sx)} ${r(c / size)} ${r(d / size)} ${r(e)} ${r(f)} Tm ${font.encode(str).toString()} Tj\n`;
+  }
+  return ops + 'ET Q\n';
+}
+
+/** Watermark (one text, see editing.js watermarkLayout) over the page content, under drawings and comments. */
+function drawWatermark(page, wm, rotation, font) {
+  const box = page.getCropBox(), L = watermarkLayout(box, rotation, wm, (t, s) => font.widthOf(t, s));
+  const node = page.node, opacity = Math.max(0.05, Math.min(1, wm.opacity ?? 0.3));
+  const gs = bare(node.newExtGState('GS', node.context.obj({ Type: 'ExtGState', ca: opacity, CA: opacity })));
+  const name = bare(node.newFontDictionary('F', font.ref));
+  const [cr, cg, cb] = hexToRgb(wm.color || '#9aa3b2'), r = v => Math.round(v * 1000) / 1000;
+  appendContent(page, `q /${gs} gs BT 0 Tr /${name} ${r(L.size)} Tf ${r(cr)} ${r(cg)} ${r(cb)} rg ${[L.dir[0], L.dir[1], L.up[0], L.up[1], L.origin[0], L.origin[1]].map(r).join(' ')} Tm ${font.encode(wm.text.trim()).toString()} Tj ET Q\n`);
 }
 
 const FIELD_KEYS = ['FT', 'Parent', 'T', 'TU', 'TM', 'Ff', 'V', 'DV', 'Opt', 'TI', 'I', 'MaxLen'].map(key => PDFName.of(key));
@@ -287,7 +427,7 @@ async function standardFont(doc, name) {
 async function embedTextFonts(doc, pages) {
   const fonts = new Map();
   for (const page of pages) for (const mark of page.marks || []) {
-    const name = mark.type === 'text' && textFontName(mark);
+    const name = (mark.type === 'text' || (mark.type === 'edit' && mark.text)) && textFontName(mark);
     if (name && !fonts.has(name)) fonts.set(name, await standardFont(doc, name));
   }
   return fonts;
@@ -312,10 +452,10 @@ export async function fontMetrics() {
  * /Contents array – otherwise pdf-lib would append the marks to every copy of the page.
  */
 export function drawMarks(page, marks, images = new Map(), fonts = new Map()) {
-  const list = (marks || []).filter(m => m.points?.length >= 2 && m.type !== 'field');
+  const list = (marks || []).filter(m => m.points?.length >= 2 && !['field', 'edit', 'redact'].includes(m.type));
   if (!list.length) return;
-  const node = page.node, contents = node.context.lookup(node.get(PDFName.of('Contents')));
-  if (contents instanceof PDFArray) node.set(PDFName.of('Contents'), node.context.obj(contents.asArray()));
+  const node = page.node;
+  ownContents(node);
   const states = new Map();
   const graphicsState = (stroke, fillAlpha, multiply) => {
     const key = `${stroke}|${fillAlpha}|${multiply}`;

@@ -46,7 +46,14 @@ Nur Inhalte, die fest in der Seite stehen, werden garantiert gedruckt. Daher gil
    - ✅ Erstellen, Teil 1 (18.10.2026, entschieden: Text und Kontrollkästchen zuerst, Name automatisch, sofort ausfüllbar): Werkzeuge „Formular-Textfeld“ und „Kontrollkästchen“ in der Leiste „Einfügen“; aufziehen oder antippen (Standardgröße), Textfeld ab etwa zwei Zeilen Höhe mehrzeilig. Namen „Textfeld 1“, „Kontrollkästchen 1“ …, Kopien bekommen einen neuen Namen. Verschieben/Größe/Kopieren/Löschen/Rückgängig wie Bilder. Ohne Werkzeug oder im Lesemodus sofort ausfüllbar. Export: echte AcroForm-Felder (dünner grauer Rahmen, kein Hintergrund), auch auf gedrehten Seiten aufrecht; erneut geöffnet erkennt die App sie als Formular.
    - Später: Optionsgruppe und Auswahlliste anlegen, Feldname/Pflichtfeld/Schriftgröße im Einstellungs-Fenster ändern.
 
-Später (Master-Prompt, nicht eingeplant): Stempel, Wasserzeichen, Reiter „Bearbeiten“ (vorhandenen Text ändern, nur eingeschränkt zuverlässig möglich), OCR, Formulare, Schwärzen.
+6. **Bearbeiten** ✅ (18.10.2026): eigener Reiter mit Werkzeugleiste.
+   - **Text ändern** (Modus B im Master-Prompt): `js/textedit.js` liest den Seiteninhalt (Operatoren, Schriftbreiten aus /Widths bzw. /W, ToUnicode), findet die Buchstaben unter der Auswahl und nimmt sie beim Export aus ihrem Tj/TJ (ihre Breite bleibt als Abstand, der Rest der Zeile bleibt stehen). Neuer Text mit derselben Textmatrix, Größe und Farbe, in der Originalschrift, wenn sie alle Zeichen hat, sonst Standardschrift. Nicht im Seiteninhalt gefunden (Scan, Form-XObject, senkrechte Schrift) → alte Stelle wird in der Hintergrundfarbe überdeckt, die App sagt es.
+   - **Schwärzen**: Seite wird beim Export aus einem Bild (200 dpi, Kästen eingebrannt) neu aufgebaut, Text außerhalb der Kästen unsichtbar darüber. Vorbild PDF24. Nach dem Export prüft die App die Datei mit PDF.js (kein Text, keine Annotation unter einem Kasten), sonst wird nichts gespeichert (Forderung im Master-Prompt, Abschnitt „Sichere Schwärzung“).
+   - **Wasserzeichen**: ein Text für alle Seiten, im Verlauf (Undo).
+   - **OCR** (Modus C): Tesseract.js lokal in `lib/tesseract/`, Deutsch; Ergebnis je Quellseite (`source.ocr`), fließt in Suche, Markieren, Text ändern und als unsichtbarer Text in den Export.
+   - Ideen für später: Text ändern mit Nachrücken der Zeile, Schwärzen nach Suchbegriff („alle Vorkommen von …“), Wasserzeichen nur auf bestimmten Seiten oder als Bild, weitere OCR-Sprachen.
+
+Später (Master-Prompt, nicht eingeplant): Stempel, Kopf-/Fußzeilen, Seitenzahlen.
 
 ## Zurückgestellte Ideen
 

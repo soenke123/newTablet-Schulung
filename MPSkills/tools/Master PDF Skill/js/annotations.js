@@ -145,7 +145,7 @@ export const TEXT_FONTS = {
 };
 export const TEXT_PAD = 2, TEXT_LINE = 1.25;
 export const textFontName = mark => (TEXT_FONTS[mark.font] || TEXT_FONTS.sans).pdf[mark.bold ? 1 : 0];
-const isBoxed = mark => mark.type === 'image' || mark.type === 'text' || mark.type === 'field';
+const isBoxed = mark => ['image', 'text', 'field', 'redact', 'edit'].includes(mark.type);
 const turnOf = rot => (((rot || 0) % 360) + 360) % 360;
 
 /** Size of a box in its own upright frame (width along the text). */

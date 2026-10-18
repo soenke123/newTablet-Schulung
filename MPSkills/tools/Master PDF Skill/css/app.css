@@ -187,3 +187,22 @@ body.mode-edit.tool-i-field-text .reader-page,body.mode-edit.tool-i-field-check 
 
 /* Text layer for selecting and copying (rules from PDF.js pdf_viewer.css, trimmed) */
 #viewer .textLayer{position:absolute;inset:0;overflow:clip;opacity:1;line-height:1;text-align:initial;-webkit-text-size-adjust:none;text-size-adjust:none;forced-color-adjust:none;transform-origin:0 0;caret-color:CanvasText;z-index:0;--min-font-size:1;--text-scale-factor:calc(var(--total-scale-factor) * var(--min-font-size));--min-font-size-inv:calc(1 / var(--min-font-size));--scale-round-x:1px;--scale-round-y:1px;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}#viewer .textLayer :is(span,br){color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}#viewer .textLayer>:not(.markedContent),#viewer .textLayer .markedContent span:not(.markedContent){z-index:1;--font-height:0;font-size:calc(var(--text-scale-factor) * var(--font-height));--scale-x:1;--rotate:0deg;transform:rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv))}#viewer .textLayer .markedContent{display:contents}#viewer .textLayer ::selection{background:rgb(0 70 255 / .28)}#viewer .textLayer br::selection{background:transparent}#viewer .textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:0;cursor:default;user-select:none;-webkit-user-select:none}#viewer .textLayer.selecting .endOfContent{top:0}#viewer .textLayer[data-main-rotation="90"]{transform:rotate(90deg) translateY(-100%)}#viewer .textLayer[data-main-rotation="180"]{transform:rotate(180deg) translate(-100%,-100%)}#viewer .textLayer[data-main-rotation="270"]{transform:rotate(270deg) translateX(-100%)}.hiddenCanvasElement{position:absolute;top:0;left:0;width:0;height:0;display:none}body.mode-edit[class*="tool-"] #viewer .textLayer{pointer-events:none;-webkit-user-select:none;user-select:none}
+/* Tab "Bearbeiten": redaction boxes, changed text, watermark, dialogs */
+.mark-layer .redact-box{fill:#000}
+.mark-layer .edit-cover{fill:var(--cover,#fff);stroke:none}
+.mark-layer .edit-sel{fill:#2f6fed2e;stroke:var(--blue);stroke-width:1;stroke-dasharray:3 2}
+.mark-layer .watermark{pointer-events:none}
+body.mode-edit.tool-e-text .reader-page{cursor:text}
+.edit-editor{position:absolute;z-index:3;margin:0;padding:0 3px;box-sizing:border-box;border:1px dashed var(--blue);border-radius:2px;background:#fffffff0;outline:none;transform-origin:0 0;line-height:1.2;min-width:24px;font-kerning:normal}
+#wm-dialog .pop-row{display:flex;align-items:center;gap:10px;margin-top:12px}
+#wm-dialog .pop-row-label{min-width:5.5em;font-size:12px;font-weight:650;color:#52627b}
+#wm-dialog .pen-options{display:flex;gap:6px;flex-wrap:wrap}
+#wm-dialog .slider-control{display:flex;margin:12px 0 0}
+#wm-dialog .slider-control .slider-label{display:inline;min-width:5.5em;font-size:12px;font-weight:650;color:#52627b}
+#wm-dialog .slider-control input[type=range]{flex:1;width:auto;padding:0;border:0}
+#wm-dialog .swatch[aria-pressed="true"]{box-shadow:0 0 0 2px var(--blue)}
+.dialog-spacer{flex:1}
+.button.danger-text{color:#b42318}
+.ocr-run{display:flex;flex-direction:column;gap:6px;margin-top:12px;font-size:13px;color:#44536c}
+.ocr-run progress{width:100%;height:8px;accent-color:var(--blue)}
+.ocr-run[hidden]{display:none}
