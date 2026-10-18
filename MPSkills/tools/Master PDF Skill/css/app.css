@@ -102,6 +102,8 @@ body.focus-mode .comments-panel{display:none}
 .ribbon-tab{display:inline-flex;align-items:center;gap:4px}
 .ribbon-tab[aria-pressed="true"],.ribbon-tab[aria-expanded="true"]{color:var(--blue);border-bottom-color:var(--blue)}
 .tab-chevron{opacity:.65;transition:transform .15s}
+.ribbon-tab{gap:6px}.tab-icon{flex:none}
+.topbar.tabs-compact .tab-label{display:none}.topbar.tabs-compact .ribbon-tab{padding:0 9px;gap:2px}
 .ribbon-tab[aria-expanded="true"] .tab-chevron{transform:rotate(180deg)}
 .tab-menu{position:fixed;z-index:15;min-width:220px;max-height:calc(100vh - 80px);overflow:auto;display:flex;flex-direction:column;gap:1px;padding:6px;background:#fff;border:1px solid #c9d2e2;border-radius:10px;box-shadow:0 8px 24px #172b4d33}
 .tab-menu[hidden]{display:none}
