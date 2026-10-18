@@ -3,7 +3,7 @@
    ══════════════════════════════════════════════════════════════
    Wie bei Scrum und Tiny LM läuft im Modal die ECHTE App im Rahmen,
    mit ?demo=1 — dann öffnet sie ein erfundenes Beispieldokument (ein
-   Elternbrief mit Markierung, Kreis, Pfeil und Kommentaren, siehe
+   Referat über Lemuren mit Markierung, Kreis, Pfeil und Kommentaren, siehe
    tools/Master PDF Skill/js/demo.js) und merkt sich nichts. Master PDF
    hat keinen Raum und keinen Server; das Drehbuch ruft deshalb keine
    einzige Handlung auf. Es zeigt: lesen → Bearbeiten → Zeichnen →
@@ -103,7 +103,7 @@
          Markierungen, Unterstreichen, Textfelder —, auch vorhandene Kommentare aus anderen
          Programmen werden eingelesen und stehen in der Kommentarliste.</p>
       <p>Am Ende exportierst du das ganze Dokument, die aktuelle Seite oder eine Auswahl
-         (z. B. <em>1-3, 5</em>) als neue PDF. Das Beispiel oben ist ein erfundener Elternbrief.
+         (z. B. <em>1-3, 5</em>) als neue PDF. Das Beispiel oben ist ein erfundenes Referat über Lemuren auf Madagaskar.
          Der Skill ist noch in der <strong>Beta</strong>.</p>`
   });
 })();
