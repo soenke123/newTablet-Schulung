@@ -500,7 +500,7 @@ const toolboxKey=name=>`master-pdf-skill.toolbox-${name}`,EDGE=8,SNAP=36;
 const toolboxPrefs={};
 for(const name of ['draw','comment','insert']){let p=null;try{p=JSON.parse(localStorage.getItem(toolboxKey(name)))}catch{}toolboxPrefs[name]={dock:['right','top','free'].includes(p?.dock)?p.dock:'right',x:Number(p?.x)||0,y:Number(p?.y)||0,grid:!!p?.grid}}
 function saveToolbox(name){try{localStorage.setItem(toolboxKey(name),JSON.stringify(toolboxPrefs[name]))}catch{}}
-// The bars sit in .viewer-area but stay inside the visible part of #viewer (without its scroll bar, right of a docked comment list).
+// The bars sit in .viewer-area but stay inside the visible part of #viewer (without its scroll bar, left of a docked comment list).
 function stageRect(){const v=$('viewer');return {left:v.offsetLeft,top:v.offsetTop,width:v.clientWidth,height:v.clientHeight}}
 function toolboxLayout(box,dock,grid){const row=dock==='top'&&!grid;box.classList.toggle('row',row);box.classList.toggle('grid',grid);box.dataset.dock=dock;box.setAttribute('aria-orientation',row?'horizontal':'vertical');box.style.setProperty('--cols',String(Math.ceil(Math.sqrt(box.querySelectorAll('.tb-button:not([hidden])').length))))}
 function clampBox(box,x,y){const s=stageRect();return [Math.max(s.left+EDGE,Math.min(x,s.left+s.width-box.offsetWidth-EDGE)),Math.max(s.top+EDGE,Math.min(y,s.top+s.height-box.offsetHeight-EDGE))]}
