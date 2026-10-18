@@ -10,6 +10,13 @@
   <link rel="stylesheet" href="css/app.css">
 </head>
 <body class="mode-read">
+<div id="old-browser" role="alert" hidden style="position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:24px;background:#f4f6fb;color:#1c2333;font:16px/1.5 system-ui,sans-serif;text-align:center"><div style="max-width:30em"><strong style="font-size:18px">Dieser Browser ist zu alt für den Master PDF Skill.</strong><br>Bitte den Browser bzw. das Betriebssystem (am iPad: iPadOS) aktualisieren oder ein anderes Gerät nehmen.</div></div>
+<script>
+// Zu alte Browser bekommen eine Meldung statt einer leeren Seite: ohne Modul-Skripte bzw. Array.at, oder wenn beim Laden von App oder PDF.js ein Fehler auftritt, bevor die App bereit ist (data-ready, letzte Zeile von js/app.js).
+(function(){var shown=false;function show(){if(shown||document.documentElement.getAttribute('data-ready'))return;shown=true;var el=document.getElementById('old-browser');if(el){el.hidden=false;el.style.display="flex"}}
+if(!('noModule' in HTMLScriptElement.prototype)||!Array.prototype.at){show();return}
+window.addEventListener('error',function(e){if(/\/(js|lib)\//.test(e.filename||''))show()})})();
+</script>
 <header class="topbar">
   <a class="brand" href="#" aria-label="Master PDF Skill"><img class="brand-mark" src="MasterPDFSkill%20Logo.png" alt="" width="36" height="36"><span>Master <strong>PDF Skill</strong></span></a>
   <div class="mode-switch" role="group" aria-label="Ansicht">

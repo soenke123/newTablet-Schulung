@@ -32,7 +32,7 @@ node --test tests/history.test.js          # single file
 npm test -- --test-name-pattern="Undo"     # single test by name
 ```
 
-There is no linter or formatter configured. Libraries are vendored in `lib/` (PDF.js 5.7.284 incl. worker, cmaps, standard_fonts, wasm, iccs; pdf-lib 1.17.1 ESM); versions and update procedure in `lib/README.md`. Import them by relative path, never by bare specifier or CDN.
+There is no linter or formatter configured. Libraries are vendored in `lib/` (PDF.js 5.7.284 incl. worker, cmaps, standard_fonts, wasm, iccs; pdf-lib 1.17.1 ESM); versions and update procedure in `lib/README.md`. Import them by relative path, never by bare specifier or CDN. Old browsers: `js/app.js` checks for the very new JavaScript PDF.js 5 relies on (`modernJs`: Map.getOrInsertComputed, Promise.withResolvers, Math.sumPrecise, Uint8Array.fromBase64/toHex) and otherwise imports the official legacy build of the same version from `lib/pdfjs-legacy/` (`pdfjsBuild`, top-level `await import`; worker from the same folder, cmaps/fonts/wasm/iccs always from `lib/pdfjs/`). A classic inline script in `index.html` shows `#old-browser` ("Dieser Browser ist zu alt …") when modules or `Array.prototype.at` are missing or a script under `js/`/`lib/` throws before `app.js` sets `data-ready` on `<html>` (its last line). The Playwright Chromium of the cloud sessions lacks these functions, so it exercises the legacy path.
 
 Browser verification: headless Edge `--dump-dom` returns before module scripts finish – drive it via the DevTools protocol (`--remote-debugging-port`, `DOM.setFileInputFiles` on `#pdf-input`) and poll the DOM instead.
 

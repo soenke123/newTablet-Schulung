@@ -68,6 +68,10 @@ npm test
 - **Suche** (Strg+F) im Text aller Seiten: Trefferzahl, Trefferliste mit Textausschnitt und Seitenzahl (Klick auf „x von y“ blendet die Liste ein und aus), Enter/Shift+Enter springt zum nächsten/vorigen Treffer, Treffer sind auf der Seite markiert
 - Responsive Layout-Grundlage und Datei-Drop im Browser
 
+## Ältere Tablets und Browser
+
+PDF.js 5 nutzt sehr neue JavaScript-Funktionen. Fehlt dem Browser eine davon, lädt die App automatisch die offizielle **Legacy-Fassung** derselben PDF.js-Version (`lib/pdfjs-legacy/`), die diese Funktionen mitbringt; neue Browser bekommen weiter die schlankere Fassung. Die App selbst braucht mindestens etwa **iPadOS/Safari 15.4, Chrome/Edge 92 oder Firefox 90**. Ist der Browser älter oder scheitert das Laden, erscheint statt einer leeren Seite der Hinweis „Dieser Browser ist zu alt für den Master PDF Skill“. Auf echten alten iPads ist das noch nicht geprüft.
+
 ## Bewusste Grenzen
 
 - Noch kein automatisches Speichern. Undo/Redo deckt Seitenreihenfolge, Drehung, Duplizieren, Einfügen, leere Seiten, Löschen, das Hinzufügen weiterer PDFs sowie alle Zeichenschritte ab; Exportaktionen sind keine Verlaufsschritte.

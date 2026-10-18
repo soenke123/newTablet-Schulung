@@ -1,4 +1,3 @@
-import * as pdfjsLib from '../lib/pdfjs/pdf.min.mjs';
 import { HistoryStack, createSnapshot } from './history.js';
 import { movePages, insertPages, sameOrder, nextActiveAfterRemoval } from './pages.js';
 import { parsePageRanges, formatPageRanges } from './ranges.js';
@@ -10,8 +9,14 @@ import { buildPageText, searchPattern, findMatches, matchPieces, snippet, pieceR
 import { PEN_COLORS, PEN_WIDTH, MARKER_COLORS, MARKER_WIDTH, MARKER_OPACITY, ERASER_SIZE, SHAPE_TYPES, FILLABLE, isHighlight, eraseMarks, pointsBox, scaleMark, pageTransform, markSvg, markHit, markBounds, moveMark, placeMark, constrainEnd, roundPoint, imageViewMatrix, layoutText, wrapText, textLines, localSize, textFontName, TEXT_FONTS, TEXT_PAD, TEXT_LINE } from './annotations.js';
 import { COMMENT_KINDS, COMMENT_COLORS, DEFAULT_COMMENT_COLORS, FREETEXT_COLORS, FREETEXT_FILLS, FREETEXT_BORDERS, FREETEXT_BORDER, FREETEXT_SIZE, COMMENT_STATES, freeTextRect, freeTextLines, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, isRedrawn, isMarkup, importAnnotations, noteRect, measureAdvances, charIndexAt, wordAt, selectionQuads, textInQuads, quadsBounds, commentHit, highlightPolygons, markupLines } from './comments.js';
 
+// PDF.js 5 uses very new JavaScript (Map.getOrInsertComputed, Promise.withResolvers, Math.sumPrecise, Uint8Array.fromBase64 …) without checking for it.
+// Browsers that lack any of it (older tablets) get the official legacy build of the same version, which brings these along (lib/pdfjs-legacy).
+// cmaps, fonts, wasm and iccs are shared and stay in lib/pdfjs.
+const modernJs = typeof Map.prototype.getOrInsertComputed === 'function' && typeof Promise.withResolvers === 'function' && typeof Math.sumPrecise === 'function' && typeof Uint8Array.fromBase64 === 'function' && typeof Uint8Array.prototype.toHex === 'function';
+const pdfjsBuild = new URL(modernJs ? '../lib/pdfjs/' : '../lib/pdfjs-legacy/', import.meta.url).href;
+const pdfjsLib = await import(pdfjsBuild + 'pdf.min.mjs');
 const pdfjsAssets = new URL('../lib/pdfjs/', import.meta.url).href;
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsAssets + 'pdf.worker.min.mjs';
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsBuild + 'pdf.worker.min.mjs';
 const pdfjsOptions = { cMapUrl: pdfjsAssets + 'cmaps/', cMapPacked: true, standardFontDataUrl: pdfjsAssets + 'standard_fonts/', wasmUrl: pdfjsAssets + 'wasm/', iccUrl: pdfjsAssets + 'iccs/' };
 const $ = id => document.getElementById(id);
 const state = { sources:new Map(), forms:new Map(), pages:[], selected:new Set(), anchor:null, activePageId:null, zoom:1, fit:'auto', spread:false, focus:false, nextId:1, dragId:null, toastTimer:null, dropTarget:null, clipboard:[], dirty:false, exporting:false, lastPointer:'mouse', suppressClick:false, mode:'read', tool:null, box:null, popAnchor:null, toolGroups:{shape:'rect',markup:'c-highlight'}, toolboxReady:false, pen:{color:PEN_COLORS[1].color,width:PEN_WIDTH.initial,opacity:1,fill:'',custom:null}, marker:{color:MARKER_COLORS[0].color,width:MARKER_WIDTH.initial,opacity:MARKER_OPACITY,custom:null}, eraser:{mode:'object',size:ERASER_SIZE.initial}, markSel:null, markClip:null, commentSel:null, cstyle:{...DEFAULT_COMMENT_COLORS}, ftstyle:{fill:'',border:''}, textStyle:{font:'sans',bold:false,size:14,color:'#111827'}, penOnly:false, penSeen:false };
@@ -530,3 +535,4 @@ function refreshField(owner,name){const viewer=$('viewer');const done=wrap=>wrap
 // ?demo=1 (Vorschau auf der MPSkills-Startseite): ein Beispieldokument mit Zeichnungen und Kommentaren, nichts wird gespeichert.
 async function startDemo(){const bytes=await createDemoPdf();await openFiles([new File([bytes],'Zahlensysteme im Tierreich.pdf',{type:'application/pdf'})],{replace:true});const decor=demoDecor();state.pages=state.pages.map((p,i)=>({...p,...(decor[i]?.marks.length?{marks:decor[i].marks}:{}),...(decor[i]?.comments.length?{comments:decor[i].comments}:{})}));await renderViewer();renderPageList();updateControls()}
 if(new URLSearchParams(location.search).has('demo'))startDemo().catch(e=>console.error('Demo konnte nicht gestartet werden',e));
+document.documentElement.dataset.ready='1';
