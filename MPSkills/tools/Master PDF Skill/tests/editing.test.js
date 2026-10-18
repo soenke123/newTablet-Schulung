@@ -100,8 +100,8 @@ test('Text ändern: alte Zeichen raus, neuer Text in der Originalschrift an ders
   assert.ok(hasText(all, '13.11.2026'));
   const again = analyzePage(out.getPage(0), widths);
   const moved = again.glyphs.filter(x => x.text && x.text !== ' ');
-  assert.equal(moved.map(x => x.text).join(''), 'Datum:Geheimnis13.11.2026');
-  assert.deepEqual(moved.at(-10).origin.map(v => Math.round(v * 100) / 100), g.origin.map(v => Math.round(v * 100) / 100));
+  assert.equal(moved.map(x => x.text).join(''), 'Datum:13.11.2026Geheimnis');
+  assert.deepEqual(moved[6].origin.map(v => Math.round(v * 100) / 100), g.origin.map(v => Math.round(v * 100) / 100));
 });
 
 test('Text ändern: fehlt ein Zeichen in der Schrift, wird eine Standardschrift genommen', async () => {
@@ -124,4 +124,26 @@ test('Wasserzeichen und OCR-Text landen auf jeder exportierten Seite', async () 
   assert.ok(hasText(page(1), 'Scan'));
   assert.match(page(1), /q BT 3 Tr[\s\S]*ET Q/);
   assert.match(page(0), /BT 0 Tr/);
+});
+
+test('Eigenschaften: Titel und Autor, auf Wunsch ohne Programm und Zeitpunkt', async () => {
+  const { bytes } = await letter();
+  const clean = await PDFDocument.load(await buildPdf([{ id: 1, sourceId: 's', pageIndex: 0, rotation: 0 }], () => bytes, () => {}, { meta: { title: 'Elternbrief', author: 'Frau Müller', keywords: 'Schule, Brief', clean: true } }), { updateMetadata: false });
+  assert.equal(clean.getTitle(), 'Elternbrief');
+  assert.equal(clean.getAuthor(), 'Frau Müller');
+  assert.equal(clean.getKeywords(), 'Schule Brief');
+  assert.equal(clean.getProducer(), undefined);
+  assert.equal(clean.getCreationDate(), undefined);
+  const normal = await PDFDocument.load(await buildPdf([{ id: 1, sourceId: 's', pageIndex: 0, rotation: 0 }], () => bytes, () => {}, { meta: { clean: false } }), { updateMetadata: false });
+  assert.equal(normal.getCreator(), 'Master PDF Skill');
+  assert.ok(normal.getCreationDate());
+});
+
+test('Bild als PDF-Seite: A4 hoch oder quer, eingepasst', async () => {
+  const { createImagePdf } = await import('../js/export.js');
+  const doc = await PDFDocument.load(await createImagePdf(PNG, true, 1, 1));
+  assert.equal(doc.getPageCount(), 1);
+  assert.deepEqual([doc.getPage(0).getWidth(), doc.getPage(0).getHeight()].map(Math.round), [595, 842]);
+  const across = await PDFDocument.load(await createImagePdf(PNG, true, 2, 1));
+  assert.deepEqual([across.getPage(0).getWidth(), across.getPage(0).getHeight()].map(Math.round), [842, 595]);
 });

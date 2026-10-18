@@ -245,12 +245,16 @@ const colorHex = c => {
  * invisible, vertical, shift (TJ number that replaces the glyph's advance)}`. `fontFor(name)` returns fontInfo or null.
  */
 export function readGlyphs(ops, fontFor) {
-  const glyphs = [];
+  const glyphs = [], opInfo = [];
+  let fresh = true;
   let gs = { ctm: ID, tc: 0, tw: 0, th: 1, tl: 0, font: null, name: null, size: 0, rise: 0, tr: 0, fill: [0] };
   const stack = [];
   let tm = ID, tlm = ID;
   const show = (opIndex, items) => {
     const font = gs.font;
+    const startTrm = mul([gs.size * gs.th, 0, 0, gs.size, 0, gs.rise], mul(tm, gs.ctm));
+    opInfo[opIndex] = { fresh, start: apply(startTrm, 0, 0), size: gs.size, th: gs.th, scale: Math.hypot(...mul(tm, gs.ctm).slice(0, 2)), font: gs.name };
+    fresh = false;
     items.forEach((item, part) => {
       if (typeof item === 'number') { tm = mul([1, 0, 0, 1, -item / 1000 * gs.size * gs.th, 0], tm); return; }
       if (!item?.bytes) return;
@@ -269,11 +273,13 @@ export function readGlyphs(ops, fontFor) {
           origin: apply(trm, 0, 0), center: apply(trm, w0 / 2, 0.3), corners: [apply(trm, 0, desc), apply(trm, w0, desc), apply(trm, w0, asc), apply(trm, 0, asc)],
           matrix: mul(tm, gs.ctm), size: gs.size, th: gs.th, tc: gs.tc, tw: gs.tw, rise: gs.rise, font: gs.name, color: colorHex(gs.fill),
           invisible: gs.tr === 3 || gs.tr === 7, vertical: !font || font.vertical, shift: gs.size * gs.th ? -tx * 1000 / (gs.size * gs.th) : null,
+          adv: tx * Math.hypot(...mul(tm, gs.ctm).slice(0, 2)), w0,
         });
         tm = mul([1, 0, 0, 1, tx, 0], tm);
         k += len;
       }
     });
+    opInfo[opIndex].end = apply(mul([gs.size * gs.th, 0, 0, gs.size, 0, gs.rise], mul(tm, gs.ctm)), 0, 0);
   };
   ops.forEach(({ op, args }, i) => {
     const a = args;
@@ -281,7 +287,7 @@ export function readGlyphs(ops, fontFor) {
       case 'q': stack.push({ ...gs }); break;
       case 'Q': if (stack.length) gs = stack.pop(); break;
       case 'cm': if (a.length === 6) gs.ctm = mul(a, gs.ctm); break;
-      case 'BT': tm = tlm = ID; break;
+      case 'BT': fresh = true; tm = tlm = ID; break;
       case 'Tc': gs.tc = a[0] ?? 0; break;
       case 'Tw': gs.tw = a[0] ?? 0; break;
       case 'Tz': gs.th = (a[0] ?? 100) / 100; break;
@@ -289,14 +295,14 @@ export function readGlyphs(ops, fontFor) {
       case 'Ts': gs.rise = a[0] ?? 0; break;
       case 'Tr': gs.tr = a[0] ?? 0; break;
       case 'Tf': gs.name = a[0]?.name ?? null; gs.font = gs.name ? fontFor(gs.name) : null; gs.size = a[1] ?? 0; break;
-      case 'Td': tlm = tm = mul([1, 0, 0, 1, a[0] ?? 0, a[1] ?? 0], tlm); break;
-      case 'TD': gs.tl = -(a[1] ?? 0); tlm = tm = mul([1, 0, 0, 1, a[0] ?? 0, a[1] ?? 0], tlm); break;
-      case 'Tm': if (a.length === 6) tlm = tm = a.slice(); break;
-      case 'T*': tlm = tm = mul([1, 0, 0, 1, 0, -gs.tl], tlm); break;
+      case 'Td': fresh = true; tlm = tm = mul([1, 0, 0, 1, a[0] ?? 0, a[1] ?? 0], tlm); break;
+      case 'TD': fresh = true; gs.tl = -(a[1] ?? 0); tlm = tm = mul([1, 0, 0, 1, a[0] ?? 0, a[1] ?? 0], tlm); break;
+      case 'Tm': fresh = true; if (a.length === 6) tlm = tm = a.slice(); break;
+      case 'T*': fresh = true; tlm = tm = mul([1, 0, 0, 1, 0, -gs.tl], tlm); break;
       case 'Tj': show(i, [a[0]]); break;
       case 'TJ': show(i, Array.isArray(a[0]) ? a[0] : []); break;
-      case "'": tlm = tm = mul([1, 0, 0, 1, 0, -gs.tl], tlm); show(i, [a[0]]); break;
-      case '"': gs.tw = a[0] ?? 0; gs.tc = a[1] ?? 0; tlm = tm = mul([1, 0, 0, 1, 0, -gs.tl], tlm); show(i, [a[2]]); break;
+      case "'": fresh = true; tlm = tm = mul([1, 0, 0, 1, 0, -gs.tl], tlm); show(i, [a[0]]); break;
+      case '"': fresh = true; gs.tw = a[0] ?? 0; gs.tc = a[1] ?? 0; tlm = tm = mul([1, 0, 0, 1, 0, -gs.tl], tlm); show(i, [a[2]]); break;
       case 'g': gs.fill = [a[0] ?? 0]; break;
       case 'rg': gs.fill = a.slice(0, 3); break;
       case 'k': gs.fill = a.slice(0, 4); break;
@@ -304,6 +310,7 @@ export function readGlyphs(ops, fontFor) {
       case 'sc': case 'scn': { const v = a.filter(x => typeof x === 'number'); gs.fill = [1, 3, 4].includes(v.length) ? v : [0]; break; }
     }
   });
+  glyphs.ops = opInfo;
   return glyphs;
 }
 
@@ -324,12 +331,19 @@ export function pageContent(page) {
 
 /** Content, operators, glyphs and fonts of a pdf-lib page (see readGlyphs). */
 export function analyzePage(page, stdWidth) {
-  const { bytes, fontDict, context } = pageContent(page);
+  return analyzeContent(page, null, stdWidth);
+}
+
+/** Like analyzePage, for other content bytes (null = the page's own) with the page's fonts; fonts added later are found too. */
+export function analyzeContent(page, content, stdWidth) {
+  const { bytes: own, context } = content ? { bytes: null, context: page.node.context } : pageContent(page);
+  const bytes = content || own;
+  const fontDict = () => { const r = page.node.Resources?.() ?? page.node.lookup(PDFName.of('Resources')); const f = r instanceof PDFDict ? r.lookup(PDFName.of('Font')) : null; return f instanceof PDFDict ? f : null; };
   const fonts = new Map();
   const fontFor = name => {
     if (!fonts.has(name)) {
       let info = null;
-      try { const dict = fontDict?.lookup(PDFName.of(name)); info = dict instanceof PDFDict ? fontInfo(dict, context, stdWidth) : null; } catch { info = null; }
+      try { const dict = fontDict()?.lookup(PDFName.of(name)); info = dict instanceof PDFDict ? fontInfo(dict, context, stdWidth) : null; } catch { info = null; }
       fonts.set(name, info);
     }
     return fonts.get(name);
@@ -409,3 +423,96 @@ export function coverOps([x0, y0, x1, y1], color) {
   return `q ${fmt(r)} ${fmt(g)} ${fmt(b)} rg ${fmt(Math.min(x0, x1))} ${fmt(Math.min(y0, y1))} ${fmt(Math.abs(x1 - x0))} ${fmt(Math.abs(y1 - y0))} re f Q\n`;
 }
 
+/**
+ * Replaces the glyphs under `rect` by `text` right inside the text operators, so the rest of the line moves along:
+ * the first operator gets the new codes (in the original font when it has every character, otherwise a switch to the
+ * standard font `std` = {res, widthOf(text, size), encode(text) → "<hex>"} and back), and every later glyph on the same
+ * line – up to a wide gap (another column) – is shifted by the difference in width. Kerning stays, because each kept
+ * glyph is placed at its old position (+ shift) with TJ offsets. Returns {bytes, original} or null when there is no
+ * visible glyph in the rectangle (scans, form XObjects, vertical fonts: the app covers the old text instead).
+ */
+export function replaceText(analysis, rect, text, std = null) {
+  const { bytes, ops, glyphs } = analysis, info = glyphs.ops || [];
+  const hit = glyphsIn(glyphs, [rect]).filter(i => !glyphs[i].vertical && glyphs[i].shift != null);
+  if (!hit.length || hit.every(i => glyphs[i].invisible)) return null;
+  const removed = new Set(hit);
+  const first = glyphs[hit.reduce((best, i) => projected(glyphs[i], glyphs[best]) < 0 ? i : best, hit[0])];
+  const m = first.matrix, ml = Math.hypot(m[0], m[1]) || 1, dir = [m[0] / ml, m[1] / ml], normal = [-dir[1], dir[0]];
+  const sOf = p => (p[0] - first.origin[0]) * dir[0] + (p[1] - first.origin[1]) * dir[1];
+  const dOf = p => (p[0] - first.origin[0]) * normal[0] + (p[1] - first.origin[1]) * normal[1];
+  const sizeUser = first.size * Math.hypot(m[2], m[3]);
+  const sameLine = g => Math.abs(dOf(g.origin) - (g.rise - first.rise) * Math.hypot(g.matrix[2], g.matrix[3])) < 0.35 * sizeUser
+    && Math.abs((g.matrix[0] * dir[0] + g.matrix[1] * dir[1]) / (Math.hypot(g.matrix[0], g.matrix[1]) || 1) - 1) < 0.01;
+  // New text: codes in the original font, or the standard font.
+  const font = analysis.fontFor(first.font), codes = font?.encode(text) ?? null, useStd = !codes && !!text;
+  if (useStd && !std) return null;
+  const k = first.size * first.th * ml;
+  let width = 0;
+  if (codes) for (let j = 0; j < codes.length;) { const len = font.read(codes, j); let code = 0; for (let n = 0; n < len; n++) code = code * 256 + codes[j + n]; width += (font.width(code) * first.size + first.tc + (len === 1 && code === 32 ? first.tw : 0)) * first.th * ml; j += len; }
+  else if (text) for (const ch of text) width += (std.widthOf(ch, first.size) + first.tc + (ch === ' ' ? first.tw : 0)) * first.th * ml;
+  const lastRemovedEnd = Math.max(...hit.map(i => sOf(glyphs[i].origin) + glyphs[i].adv));
+  const removedWidth = lastRemovedEnd - sOf(first.origin);
+  const delta = width - removedWidth;
+  // Glyphs after the replaced ones on the same line, up to a gap wider than three font sizes.
+  const after = glyphs.map((g, i) => ({ g, i, s: sOf(g.origin) })).filter(x => !removed.has(x.i) && sameLine(x.g) && x.s >= lastRemovedEnd - 0.01 * sizeUser).sort((a, b) => a.s - b.s);
+  const shifted = new Set();
+  let reach = lastRemovedEnd;
+  for (const x of after) { if (x.s - reach > 3 * sizeUser) break; shifted.add(x.i); reach = Math.max(reach, x.s + x.g.adv); }
+  const target = i => sOf(glyphs[i].origin) + (shifted.has(i) ? delta : 0);
+  // Operators to rewrite: those with removed or shifted glyphs, and those that simply continue after one of them.
+  const byOp = new Map();
+  glyphs.forEach((g, i) => { if (!byOp.has(g.op)) byOp.set(g.op, []); byOp.get(g.op).push(i); });
+  const showOps = [...byOp.keys()].sort((a, b) => a - b);
+  const rewrite = new Set(showOps.filter(o => byOp.get(o).some(i => removed.has(i) || shifted.has(i))));
+  for (let n = 1; n < showOps.length; n++) if (rewrite.has(showOps[n - 1]) && !info[showOps[n]]?.fresh && byOp.get(showOps[n]).some(i => sameLine(glyphs[i]))) rewrite.add(showOps[n]);
+  if (!rewrite.size) return null;
+  const pieces = [];
+  let last = 0, pen = null, original = !useStd;
+  for (const o of [...rewrite].sort((a, b) => a - b)) {
+    const op = ops[o], gi = byOp.get(o), opk = info[o].size * info[o].th * info[o].scale || k;
+    const before = showOps[showOps.indexOf(o) - 1];
+    // A continuing operator starts where the one before it now ends; otherwise at its own place.
+    pen = info[o].fresh || pen == null || !rewrite.has(before) ? sOf(info[o].start) : pen;
+    const parts = [];
+    let arr = [], run = [];
+    const flushRun = () => { if (run.length) { arr.push(hex(Uint8Array.from(run))); run = []; } };
+    const move = to => { if (Math.abs(to - pen) > 0.001) { flushRun(); arr.push(fmt(-(to - pen) / opk * 1000)); pen = to; } };
+    const close = () => { flushRun(); if (arr.length) parts.push(`[${arr.join(' ')}] TJ`); arr = []; };
+    const items = op.op === 'TJ' ? op.args[0] : op.op === '"' ? [op.args[2]] : [op.args[0]];
+    for (const i of gi) {
+      const g = glyphs[i];
+      if (g === first) {
+        move(sOf(first.origin));
+        if (codes?.length) { flushRun(); arr.push(hex(codes)); }
+        else if (useStd) { close(); parts.push(`/${std.res} ${fmt(first.size)} Tf ${std.encode(text)} Tj /${first.font} ${fmt(first.size)} Tf`); }
+        pen = sOf(first.origin) + width;
+        continue;
+      }
+      if (removed.has(i)) continue;
+      move(target(i));
+      const item = items[g.part];
+      run.push(...item.bytes.subarray(g.at, g.at + g.len));
+      pen = target(i) + g.adv;
+    }
+    const lastGlyph = gi.at(-1), endTarget = sOf(info[o].end) + (shifted.has(lastGlyph) || removed.has(lastGlyph) ? delta : 0);
+    move(endTarget);
+    close();
+    let textOut = parts.join(' ');
+    if (!textOut) textOut = '[] TJ';
+    if (op.op === "'") textOut = `T* ${textOut}`;
+    if (op.op === '"') textOut = `${fmt(op.args[0] ?? 0)} Tw ${fmt(op.args[1] ?? 0)} Tc T* ${textOut}`;
+    pieces.push(bytes.subarray(last, op.start), enc.encode(textOut));
+    last = op.end;
+  }
+  pieces.push(bytes.subarray(last));
+  const total = pieces.reduce((n, p) => n + p.length, 0), result = new Uint8Array(total);
+  let at = 0;
+  for (const p of pieces) { result.set(p, at); at += p.length; }
+  return { bytes: result, original, delta };
+}
+
+// Order along the line: negative when glyph a comes before b.
+function projected(a, b) {
+  const m = b.matrix, l = Math.hypot(m[0], m[1]) || 1;
+  return ((a.origin[0] - b.origin[0]) * m[0] + (a.origin[1] - b.origin[1]) * m[1]) / l;
+}

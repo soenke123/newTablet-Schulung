@@ -7,7 +7,7 @@ import {
 } from '../lib/pdf-lib/pdf-lib.esm.min.js';
 import { pointsBox, hexToRgb, isHighlight, fillShare, strokeBox, markBounds, arrowWings, arrowLength, imageMatrix, localSize, textLines, textFontName, TEXT_FONTS, TEXT_LINE } from './annotations.js';
 import { isMultiline, MULTILINE_SIZE, CHECK_ON } from './forms.js';
-import { analyzePage, glyphsIn, removeGlyphs, textOps, coverOps } from './textedit.js';
+import { analyzeContent, replaceText, textOps, coverOps } from './textedit.js';
 import { watermarkLayout } from './editing.js';
 import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON, FREETEXT_SIZE, FREETEXT_BORDER, commentChanged, highlightPolygons, markupLines, freeTextLines, pdfDate } from './comments.js';
 
@@ -18,11 +18,14 @@ import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON,
  * from (comments.js importAnnotations). `formValues(sourceId)` returns the changed form field values of a source as
  * Map fieldName → value (forms.js), see writeForms; `newFields` the values of the fields created in the app (field marks,
  * see createFields) as Map name → value.
+ * `meta` = {title, author, subject, keywords, clean}: the document properties; with `clean` no producer, creator or dates
+ * are written (the old file's information is never copied – the PDF is new).
  * Uses one copyPages call per source so shared resources (fonts, images) are stored only once,
  * even when pages repeat. `onProgress({phase:'copy'|'save', done, total})` may be async (to let the UI repaint).
  */
-export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null, newFields = null, rasters = new Map(), invisibleText = new Map(), watermark = null } = {}) {
-  const out = await PDFDocument.create();
+export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null, newFields = null, rasters = new Map(), invisibleText = new Map(), watermark = null, meta = null } = {}) {
+  const out = await PDFDocument.create({ updateMetadata: !meta?.clean });
+  setMetadata(out, meta);
   const bySource = new Map();
   pages.forEach((page, i) => {
     if (rasters.has(page.id)) return;
@@ -53,7 +56,7 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
   const replaced = [], placed = new Array(pages.length);
   for (let i = 0; i < pages.length; i++) {
     const raster = rasters.get(pages[i].id);
-    const page = raster ? await rasterPage(out, raster, plain, pages[i].marks, fonts) : copied[i];
+    const page = raster ? await rasterPage(out, raster, plain) : copied[i];
     if (!raster) applyEdits(page, pages[i].marks, fonts, widths, replaced);
     page.setRotation(degrees(pages[i].rotation));
     if (mark) drawWatermark(page, watermark, pages[i].rotation, mark);
@@ -104,40 +107,61 @@ function ownContents(node) {
 }
 
 /**
- * "Text ändern" (edit marks, see textedit.js): the glyphs under each edit are taken out of the page content, the new
- * text is written with the old text matrix – in the original font when it has every character, otherwise in a standard
- * font of the same kind. Edits marked `cover` (scanned pages, text the content does not show) paint the background
- * colour over the old place first. The old content streams are collected in `replaced` and dropped if unused.
+ * "Text ändern" (edit marks, see textedit.js), applied one after the other in the order they were made – each edit was
+ * made on the page as it looked after the earlier ones. The new text goes right into the text operators and the rest
+ * of the line moves along (replaceText); where that is not possible (scans, text the content does not show) the old
+ * place is painted in the background colour and the new text is written over it. The old content streams are collected
+ * in `replaced` and dropped if no other page uses them.
  */
 function applyEdits(page, marks, fonts, widths, replaced) {
   const edits = (marks || []).filter(m => m.type === 'edit');
   if (!edits.length) return;
-  const node = page.node, context = node.context;
-  const analysis = analyzePage(page, widths);
-  const gone = new Set(glyphsIn(analysis.glyphs, edits.map(m => m.points)));
-  let body = gone.size ? removeGlyphs(analysis, gone) : null;
-  if (!body) body = analysis.bytes;
-  let extra = '';
-  for (const m of edits) {
-    if (m.cover && m.bg) extra += coverOps(m.points, m.bg);
-    extra += editTextOps(node, m, analysis, fonts);
-  }
+  const node = page.node, context = node.context, encoder = new TextEncoder();
   const old = node.get(N_CONTENTS);
   const list = old instanceof PDFArray ? old.asArray() : context.lookup(old) instanceof PDFArray ? context.lookup(old).asArray() : [old];
   replaced.push(...list.filter(ref => ref instanceof PDFRef));
-  const text = new TextEncoder().encode(`\n${extra}`), all = new Uint8Array(2 + body.length + 3 + text.length);
-  all.set([113, 10]); all.set(body, 2); all.set([10, 81, 10], 2 + body.length); all.set(text, 5 + body.length);
-  node.set(N_CONTENTS, context.register(context.flateStream(all)));
+  const join = (...parts) => { const all = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let at = 0; for (const p of parts) { all.set(p, at); at += p.length; } return all; };
+  let body = join(encoder.encode('q\n'), analyzeContent(page, null, widths).bytes, encoder.encode('\nQ\n'));
+  for (const m of edits) {
+    const analysis = analyzeContent(page, body, widths);
+    const done = m.cover ? null : replaceText(analysis, m.points, m.text, standardFor(node, m, fonts));
+    if (done) { body = done.bytes; continue; }
+    const extra = (m.bg ? coverOps(m.points, m.bg) : '') + editTextOps(node, m, analysis, fonts);
+    body = join(body, encoder.encode(`\n${extra}`));
+  }
+  node.set(N_CONTENTS, context.register(context.flateStream(body)));
+}
+
+/** The standard font for an edit whose characters the original font lacks (resource added only when it is used). */
+function standardFor(node, m, fonts) {
+  const font = fonts.get(textFontName(m));
+  if (!font) return null;
+  let res = null;
+  return { get res() { return res ??= bare(node.newFontDictionary('F', font.ref)); }, widthOf: (t, size) => font.widthOf(t, size), encode: t => font.encode(t).toString() };
 }
 
 function editTextOps(node, m, analysis, fonts) {
-  if (!m.text) return '';
+  if (!m.text || !m.style) return '';
   const original = m.style.res && analysis?.fontFor(m.style.res);
   const codes = original?.encode(m.text);
   if (codes?.length) return textOps(m.style, m.style.res, codes, m.color);
   const font = fonts.get(textFontName(m));
   if (!font) return '';
   return textOps(m.style, bare(node.newFontDictionary('F', font.ref)), font.encode(m.text).toString(), m.color);
+}
+
+/**
+ * One page of `bytes` with its edit marks applied, as a PDF of its own – the app renders it instead of the original page,
+ * so the view shows exactly what the export will contain (moved text, original or standard font). Annotations stay.
+ */
+export async function editedPagePdf(bytes, pageIndex, marks) {
+  const out = await PDFDocument.create({ updateMetadata: false });
+  const source = await PDFDocument.load(bytes, { updateMetadata: false });
+  const [page] = await out.copyPages(source, [pageIndex]);
+  const pages = [{ marks }], fonts = await embedTextFonts(out, pages);
+  applyEdits(page, marks, fonts, await standardWidths(), []);
+  out.addPage(page);
+  return out.save({ updateFieldAppearances: false });
 }
 
 /** Old content streams no page uses any more are removed from the file (they would still hold the old text). */
@@ -155,15 +179,14 @@ function dropUnused(out, refs) {
  * A redacted page (tab "Bearbeiten" → "Schwärzen"): rebuilt from a picture the app rendered with the black boxes
  * burnt in (`raster = {data, png, box, text}`), plus the text that was outside the boxes as invisible, searchable text.
  * Nothing of the original page is copied – no content, fonts, images or annotations – so nothing under a box survives.
- * Edits on such a page are already painted over in the picture; their new text is written in a standard font.
+ * Edits on such a page are already part of the picture (the app renders the edited page).
  */
-async function rasterPage(out, raster, plain, marks, fonts) {
+async function rasterPage(out, raster, plain) {
   const page = PDFPage.create(out), node = page.node, { x, y, width, height } = raster.box;
   page.setMediaBox(x, y, width, height);
   const image = raster.png ? await out.embedPng(raster.data) : await out.embedJpg(raster.data);
   const name = bare(node.newXObject('Im', image.ref));
-  let ops = `q ${width} 0 0 ${height} ${x} ${y} cm /${name} Do Q\n` + invisibleOps(node, raster.text || [], plain);
-  for (const m of marks || []) if (m.type === 'edit') ops += editTextOps(node, m, null, fonts);
+  const ops = `q ${width} 0 0 ${height} ${x} ${y} cm /${name} Do Q\n` + invisibleOps(node, raster.text || [], plain);
   node.set(N_CONTENTS, out.context.register(out.context.flateStream(ops)));
   return page;
 }
@@ -418,6 +441,8 @@ async function embedImages(doc, pages) {
 /** A standard font (WinAnsi) with `ref`, `widthOf(text, size)` and `encode(text)`; characters it cannot show become "?". */
 async function standardFont(doc, name) {
   const font = await doc.embedFont(name);
+  // Written into the file right away, so a later edit can read the glyphs of an earlier one (textedit.js).
+  await font.embed();
   const known = new Set(font.getCharacterSet());
   const clean = value => Array.from(String(value), ch => known.has(ch.codePointAt(0)) ? ch : '?').join('');
   return { ref: font.ref, widthOf: (value, size) => font.widthOfTextAtSize(clean(value), size), encode: value => font.encodeText(clean(value)), unknown: value => [...new Set(Array.from(String(value)).filter(ch => ch !== '\n' && !known.has(ch.codePointAt(0))))] };
@@ -722,6 +747,30 @@ function appearance(context, c) {
     ops.push(stroke());
   }
   return context.register(context.formXObject(ops, { BBox: c.rect }));
+}
+
+/** Document information of the export (see buildPdf); empty fields are left out. */
+function setMetadata(doc, meta) {
+  if (!meta) return;
+  if (meta.title) doc.setTitle(meta.title, { showInWindowTitleBar: true });
+  if (meta.author) doc.setAuthor(meta.author);
+  if (meta.subject) doc.setSubject(meta.subject);
+  const keywords = String(meta.keywords || '').split(/[,;]/).map(k => k.trim()).filter(Boolean);
+  if (keywords.length) doc.setKeywords(keywords);
+  if (!meta.clean) { doc.setCreator('Master PDF Skill'); doc.setProducer('Master PDF Skill (pdf-lib)'); }
+}
+
+/**
+ * A picture (photo of the board, a worksheet …) as a one-page PDF: A4 upright or across like the picture, the picture
+ * fitted inside a margin of 20 pt and centred. `png` picks the embedding; width/height are the picture's pixels.
+ */
+export async function createImagePdf(bytes, png, width, height) {
+  const doc = await PDFDocument.create();
+  const across = width > height, [pw, ph] = across ? [841.89, 595.28] : [595.28, 841.89], margin = 20;
+  const image = png ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+  const k = Math.min((pw - 2 * margin) / width, (ph - 2 * margin) / height), w = width * k, h = height * k;
+  doc.addPage([pw, ph]).drawImage(image, { x: (pw - w) / 2, y: (ph - h) / 2, width: w, height: h });
+  return doc.save();
 }
 
 /** Creates a one-page PDF with an empty page of the given size (PDF points). */

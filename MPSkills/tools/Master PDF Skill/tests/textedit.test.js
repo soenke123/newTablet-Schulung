@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PDFDocument, PDFName, StandardFonts } from '../lib/pdf-lib/pdf-lib.esm.min.js';
-import { tokenize, readGlyphs, parseCMap, analyzePage, glyphsIn, removeGlyphs, textOps, mul } from '../js/textedit.js';
+import { tokenize, readGlyphs, parseCMap, analyzePage, glyphsIn, removeGlyphs, replaceText, textOps, mul } from '../js/textedit.js';
 
 const enc = s => new TextEncoder().encode(s);
 const dec = b => new TextDecoder('latin1').decode(b);
@@ -98,4 +98,41 @@ test('Standardschrift ohne /Widths: Breiten über stdWidth', async () => {
   const a = analyzePage(loaded.getPage(0), (base, ch) => base === 'Helvetica' ? font.widthOfTextAtSize(ch, 1) : 0);
   assert.equal(a.glyphs.length, 2);
   assert.ok(Math.abs(a.glyphs[1].origin[0] - (10 + font.widthOfTextAtSize('A', 10))) < 0.01);
+});
+
+const xs = (bytes, a) => readGlyphs(tokenize(bytes), a.fontFor).filter(g => g.text.trim()).map(g => [g.text, Math.round(g.origin[0] * 100) / 100]);
+
+test('Text ersetzen: kürzerer Text, der Rest der Zeile rückt nach', async () => {
+  const { page } = await samplePage('BT /F1 10 Tf 1 0 0 1 50 100 Tm (Am 12.10. um) Tj ET');
+  const a = analyzePage(page);
+  const out = replaceText(a, [64, 98, 96, 108], '1.1.');
+  assert.equal(out.original, true);
+  assert.equal(out.delta, -10);
+  assert.deepEqual(xs(out.bytes, a), [['A', 50], ['m', 55], ['1', 65], ['.', 70], ['1', 75], ['.', 80], ['u', 90], ['m', 95]]);
+});
+
+test('Text ersetzen: längerer Text schiebt auch eigene Operatoren auf der Zeile, nicht aber die nächste Spalte', async () => {
+  const { page } = await samplePage('BT /F1 10 Tf 1 0 0 1 50 100 Tm (Datum: ) Tj [(12.)-100(10.)] TJ ( Uhr) Tj ET BT /F1 10 Tf 1 0 0 1 126 100 Tm (weiter) Tj ET BT /F1 10 Tf 1 0 0 1 300 100 Tm (Spalte) Tj ET BT /F1 10 Tf 1 0 0 1 50 80 Tm (12.) Tj ET');
+  const a = analyzePage(page);
+  // "12.10." starts at 85 (kerning of 1 pt inside), ends at 116
+  const out = replaceText(a, [84, 98, 117, 108], '13.11.2026');
+  assert.equal(out.delta, 50 - 31);
+  const g = xs(out.bytes, a);
+  const at = s => g.filter(x => x[0] === s).map(x => x[1]);
+  assert.deepEqual(g.slice(0, 7).map(x => x[0]).join(''), 'Datum:1');
+  assert.equal(at('U')[0], 121 + 19);           // " Uhr" continues the same text object
+  assert.deepEqual(at('S'), [300]);             // other column stays
+  assert.equal(at('w')[0], 126 + 19);           // own operator on the same line moves along
+  assert.deepEqual(g.filter(x => x[1] === 50).map(x => x[0]), ['D', '1']); // next line untouched
+});
+
+test('Text ersetzen: fehlt ein Zeichen, kommt die Standardschrift dazwischen', async () => {
+  const { page } = await samplePage('BT /F2 20 Tf 100 50 Td <0011001200030013> Tj ET');
+  const a = analyzePage(page);
+  const std = { res: 'Std', widthOf: (t, size) => 0.5 * size * [...t].length, encode: t => '<' + [...t].map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('') + '>' };
+  const out = replaceText(a, [99, 45, 124, 70], 'xy', std);
+  assert.equal(out.original, false);
+  const text = dec(out.bytes);
+  assert.match(text, /\/Std 20 Tf <7879> Tj \/F2 20 Tf/);
+  assert.equal(replaceText(a, [99, 45, 124, 70], 'xy'), null);
 });

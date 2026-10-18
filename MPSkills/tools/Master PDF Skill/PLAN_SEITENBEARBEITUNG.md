@@ -51,7 +51,8 @@ Nur Inhalte, die fest in der Seite stehen, werden garantiert gedruckt. Daher gil
    - **Schwärzen**: Seite wird beim Export aus einem Bild (200 dpi, Kästen eingebrannt) neu aufgebaut, Text außerhalb der Kästen unsichtbar darüber. Vorbild PDF24. Nach dem Export prüft die App die Datei mit PDF.js (kein Text, keine Annotation unter einem Kasten), sonst wird nichts gespeichert (Forderung im Master-Prompt, Abschnitt „Sichere Schwärzung“).
    - **Wasserzeichen**: ein Text für alle Seiten, im Verlauf (Undo).
    - **OCR** (Modus C): Tesseract.js lokal in `lib/tesseract/`, Deutsch; Ergebnis je Quellseite (`source.ocr`), fließt in Suche, Markieren, Text ändern und als unsichtbarer Text in den Export.
-   - Ideen für später: Text ändern mit Nachrücken der Zeile, Schwärzen nach Suchbegriff („alle Vorkommen von …“), Wasserzeichen nur auf bestimmten Seiten oder als Bild, weitere OCR-Sprachen.
+   - ✅ Nachgerüstet (18.10.2026): **Nachrücken** – der neue Text kommt in den Textoperator selbst, der Rest der Zeile wird um den Breitenunterschied verschoben (`replaceText`); die App zeichnet geänderte Seiten aus einer Vorschau-PDF (`editedPagePdf`), also ohne Abdeckkasten und genau wie im Export.
+   - Ideen für später: Schwärzen nach Suchbegriff („alle Vorkommen von …“), Wasserzeichen nur auf bestimmten Seiten oder als Bild, weitere OCR-Sprachen.
 
 Später (Master-Prompt, nicht eingeplant): Stempel, Kopf-/Fußzeilen, Seitenzahlen.
 
