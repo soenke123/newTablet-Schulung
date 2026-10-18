@@ -39,6 +39,12 @@ Nur Inhalte, die fest in der Seite stehen, werden garantiert gedruckt. Daher gil
    - Damit ist der Reiter „Einfügen“ vollständig. Ideen für später: Text ausrichten (zentriert/rechts), Hintergrund/Rahmen für eingebetteten Text, Bild drehen.
    - Entschieden (18.10.2026): Die Unterschrift darf **lokal im Browser gespeichert** werden (für spätere Dokumente), aber nur mit **sichtbarem Hinweis**, dass sie lokal auf diesem Gerät liegt (und wie man sie dort wieder löscht). Nichts wird hochgeladen.
 
+5. **Formulare** (Phase 4 im Master-Prompt)
+   - ✅ Ausfüllen (18.10.2026): Felder werden beim Öffnen erkannt (Text ein-/mehrzeilig, Kontrollkästchen, Optionsfelder, Auswahllisten), in beiden Modi blau hinterlegt und direkt ausfüllbar, mit Rückgängig. Export als **echtes Formular** (neues /AcroForm mit den neuen Werten und neuem Aussehen), andere Programme erkennen es und können weiter ausfüllen. Doppelte Seiten: eigene Widgets desselben Felds. Teil-Export: nur Felder der exportierten Seiten. Gleiche Namen aus zwei Dateien → „Name_2“. Geprüft mit pdf-lib (Tests) und im Browser.
+   - Nicht dabei: Schaltflächen, Unterschriftsfelder, Formular-Skripte (Berechnungen, Formatierung), XFA. „Formular fest einbetten“ (Felder in die Seite drucken, nicht mehr änderbar) wäre eine spätere Export-Option.
+   - Noch offen: Rundreise in Acrobat, Edge und Firefox prüfen (beim Nutzer).
+   - **Als Nächstes: Formularfelder erstellen** im Reiter „Einfügen“: Werkzeug „Formularfeld“ mit Arten Textfeld (ein-/mehrzeilig), Kontrollkästchen, Optionsgruppe, Auswahlliste; Feld aufziehen wie ein Rechteck, Anfasser zum Verschieben/Größe ändern, Name (eindeutig, automatisch vorbelegt) und Optionen im Einstellungs-Fenster. Erzeugt beim Export echte AcroForm-Felder (pdf-lib `createTextField` usw.), die Acrobat, Edge, Firefox und Vorschau erkennen; in der App sofort ausfüllbar wie gelesene Felder.
+
 Später (Master-Prompt, nicht eingeplant): Stempel, Wasserzeichen, Reiter „Bearbeiten“ (vorhandenen Text ändern, nur eingeschränkt zuverlässig möglich), OCR, Formulare, Schwärzen.
 
 ## Zurückgestellte Ideen

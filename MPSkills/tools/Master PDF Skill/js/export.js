@@ -1,5 +1,6 @@
 import {
-  PDFDocument, PDFArray, PDFName, PDFRef, PDFDict, PDFHexString, PDFString, StandardFonts, degrees, LineCapStyle, LineJoinStyle,
+  PDFDocument, PDFArray, PDFName, PDFRef, PDFDict, PDFHexString, PDFString, PDFBool, StandardFonts, degrees, LineCapStyle, LineJoinStyle,
+  PDFObjectCopier, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
   beginText, endText, setFontAndSize, moveText, showText,
   pushGraphicsState, popGraphicsState, setGraphicsState, setStrokingRgbColor, setFillingRgbColor, setLineWidth, setLineCap, setLineJoin,
   moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject, concatTransformationMatrix,
@@ -11,18 +12,19 @@ import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON,
  * Builds a new PDF from virtual page records `[{sourceId, pageIndex, rotation, marks?, comments?}]` (rotation is
  * absolute; marks are drawn permanently into the page content, see drawMarks; comments stay annotations, see
  * writeComments). `ownedAnnots(sourceId, pageIndex)` returns the ids of the source annotations the comments were read
- * from (comments.js importAnnotations).
+ * from (comments.js importAnnotations). `formValues(sourceId)` returns the changed form field values of a source as
+ * Map fieldName → value (forms.js), see writeForms.
  * Uses one copyPages call per source so shared resources (fonts, images) are stored only once,
  * even when pages repeat. `onProgress({phase:'copy'|'save', done, total})` may be async (to let the UI repaint).
  */
-export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null } = {}) {
+export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null } = {}) {
   const out = await PDFDocument.create();
   const bySource = new Map();
   pages.forEach((page, i) => {
     if (!bySource.has(page.sourceId)) bySource.set(page.sourceId, []);
     bySource.get(page.sourceId).push(i);
   });
-  const copied = new Array(pages.length), annotRefs = new Array(pages.length);
+  const copied = new Array(pages.length), annotRefs = new Array(pages.length), forms = new Map();
   let done = 0;
   for (const [sourceId, positions] of bySource) {
     await onProgress({ phase: 'copy', done, total: pages.length });
@@ -33,6 +35,8 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
       copied[i] = page;
       if (pages[i].comments || ownedAnnots(sourceId, pages[i].pageIndex)?.size) annotRefs[i] = copiedAnnotRefs(source.getPage(pages[i].pageIndex), page);
     });
+    const form = sourceForm(source, out);
+    if (form) forms.set(sourceId, { ...form, values: formValues(sourceId) });
     done += positions.length;
   }
   const used = new Set();
@@ -44,8 +48,167 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
     out.addPage(page);
     if (annotRefs[i]) writeComments(page, pages[i].comments || [], annotRefs[i], ownedAnnots(pages[i].sourceId, pages[i].pageIndex) || new Set(), used, font);
   });
+  const withForm = forms.size && await writeForms(out, copied.map((page, i) => ({ page, sourceId: pages[i].sourceId })), forms);
   await onProgress({ phase: 'save', done, total: pages.length });
-  return out.save();
+  return out.save(withForm ? { updateFieldAppearances: false } : {});
+}
+
+const FIELD_KEYS = ['FT', 'Parent', 'T', 'TU', 'TM', 'Ff', 'V', 'DV', 'Opt', 'TI', 'I', 'MaxLen'].map(key => PDFName.of(key));
+const [N_ANNOTS, N_SUBTYPE, N_WIDGET, N_PARENT, N_KIDS, N_T, N_FT, N_P, N_V, N_I, N_AP, N_DR, N_DA, N_ACROFORM, N_NEED] =
+  ['Annots', 'Subtype', 'Widget', 'Parent', 'Kids', 'T', 'FT', 'P', 'V', 'I', 'AP', 'DR', 'DA', 'AcroForm', 'NeedAppearances'].map(key => PDFName.of(key));
+
+/** /DR, /DA and /NeedAppearances of a source's form, copied into `out`; null when the source has no form fields. */
+function sourceForm(source, out) {
+  const acro = source.catalog.lookupMaybe(N_ACROFORM, PDFDict);
+  if (!acro?.lookupMaybe(PDFName.of('Fields'), PDFArray)?.size()) return null;
+  const dr = acro.lookupMaybe(N_DR, PDFDict), da = acro.lookup(N_DA);
+  return {
+    dr: dr ? PDFObjectCopier.for(source.context, out.context).copy(dr) : null,
+    da: da instanceof PDFString || da instanceof PDFHexString ? da : null,
+    need: acro.lookup(N_NEED) === PDFBool.True,
+  };
+}
+
+/**
+ * Form fields: copyPages brings the widgets (and the field dictionaries above them) along, but not the catalog's
+ * /AcroForm, so other programs would no longer see a form. This collects the fields of the widgets that ended up on
+ * the exported pages into a new /AcroForm:
+ * - a page that is exported twice shares its widget objects (one copyPages per source): the second copy gets its own
+ *   widget of the same field (a widget that is the field itself is split into field + two widgets first);
+ * - widgets of pages that were not exported are dropped from /Kids;
+ * - fields of different files with the same name are renamed ("Name_2"), they hold different values in the app.
+ * Then the changed values (`forms.get(sourceId).values`, forms.js shapes) are set with new appearances (Helvetica);
+ * a field pdf-lib cannot draw keeps the value and the form gets /NeedAppearances. Returns true when a form was written.
+ */
+async function writeForms(out, placed, forms) {
+  const context = out.context, lookup = ref => context.lookup(ref);
+  const parentOf = dict => { const parent = dict.get(N_PARENT); return parent instanceof PDFRef ? parent : null; };
+  const isFieldWidget = dict => dict instanceof PDFDict && dict.get(N_SUBTYPE) === N_WIDGET && (dict.has(N_T) || dict.has(N_FT) || !!parentOf(dict));
+  const seen = new Set(), sourceOf = new Map();
+  for (const { page, sourceId } of placed) {
+    if (!forms.has(sourceId)) continue;
+    const annots = page.node.lookupMaybe(N_ANNOTS, PDFArray);
+    if (!annots) continue;
+    // Repeated pages share even direct objects (see drawMarks): every page gets its own /Annots array.
+    const own = annots.asArray().slice();
+    own.forEach((ref, k) => {
+      if (!(ref instanceof PDFRef) || !isFieldWidget(lookup(ref))) return;
+      if (seen.has(ref)) own[k] = ref = duplicateWidget(context, ref);
+      lookup(ref).set(N_P, page.ref);
+      seen.add(ref);
+      sourceOf.set(ref, sourceId);
+    });
+    page.node.set(N_ANNOTS, context.obj(own));
+  }
+  if (!seen.size) return false;
+  const fullName = ref => {
+    const parts = [];
+    for (let node = ref; node; node = parentOf(lookup(node))) {
+      const t = lookup(node).lookup(N_T);
+      if (t instanceof PDFString || t instanceof PDFHexString) parts.unshift(t.decodeText());
+    }
+    return parts.join('.');
+  };
+  const terminals = new Map(), roots = [], rootSource = new Map();
+  for (const ref of seen) {
+    const dict = lookup(ref);
+    const terminal = dict.has(N_T) || !parentOf(dict) ? ref : parentOf(dict);
+    if (!terminals.has(terminal)) terminals.set(terminal, { sourceId: sourceOf.get(ref), name: fullName(terminal) });
+    let root = terminal;
+    while (parentOf(lookup(root))) root = parentOf(lookup(root));
+    if (!rootSource.has(root)) { rootSource.set(root, sourceOf.get(ref)); roots.push(root); }
+  }
+  const prune = ref => {
+    const dict = lookup(ref), kids = dict.lookupMaybe(N_KIDS, PDFArray);
+    if (!kids) return seen.has(ref);
+    const left = kids.asArray().filter(kid => kid instanceof PDFRef && prune(kid));
+    if (left.length !== kids.size()) dict.set(N_KIDS, context.obj(left));
+    return left.length > 0 || seen.has(ref);
+  };
+  roots.forEach(prune);
+  const names = new Map();
+  for (const root of roots) {
+    const dict = lookup(root), t = dict.lookup(N_T);
+    if (!(t instanceof PDFString || t instanceof PDFHexString)) continue;
+    const base = t.decodeText(), sourceId = rootSource.get(root);
+    let name = base, n = 1;
+    while (names.has(name) && names.get(name) !== sourceId) name = `${base}_${++n}`;
+    if (name !== base) dict.set(N_T, text(name));
+    names.set(name, sourceId);
+  }
+  const acro = context.obj({ Fields: roots });
+  const dr = context.obj({});
+  for (const sourceId of new Set(rootSource.values())) {
+    const form = forms.get(sourceId);
+    for (const [key, value] of form.dr?.entries() || []) {
+      const into = dr.lookupMaybe(key, PDFDict), from = context.lookup(value);
+      if (into && from instanceof PDFDict) { for (const [k, v] of from.entries()) if (!into.has(k)) into.set(k, v); }
+      else if (!dr.has(key)) dr.set(key, from instanceof PDFDict ? from.clone(context) : value);
+    }
+    if (form.da && !acro.has(N_DA)) acro.set(N_DA, form.da);
+    if (form.need) acro.set(N_NEED, PDFBool.True);
+  }
+  if (dr.keys().length) acro.set(N_DR, dr);
+  out.catalog.set(N_ACROFORM, context.register(acro));
+  const changed = [...terminals].filter(([, info]) => forms.get(info.sourceId).values?.has(info.name));
+  if (!changed.length) return true;
+  const form = out.getForm(), font = await out.embedFont(StandardFonts.Helvetica);
+  const byRef = new Map(form.getFields().map(field => [field.ref, field]));
+  for (const [ref, info] of changed) {
+    const field = byRef.get(ref);
+    if (field && !setFieldValue(field, forms.get(info.sourceId).values.get(info.name), font)) {
+      // Readers then draw the value themselves; an old appearance would still show the old value.
+      acro.set(N_NEED, PDFBool.True);
+      if (!(field instanceof PDFCheckBox || field instanceof PDFRadioGroup)) for (const widget of field.acroField.getWidgets()) widget.dict.delete(N_AP);
+    }
+    if (field) form.markFieldAsClean(field.ref);
+  }
+  return true;
+}
+
+/** A second widget of the same field for a repeated page (see writeForms); returns its reference. */
+function duplicateWidget(context, ref) {
+  const dict = context.lookup(ref), clone = dict.clone(context);
+  let field = dict.get(N_PARENT);
+  if (dict.has(N_T)) {
+    // The widget is the field itself: move the field entries into a new parent with both widgets as kids.
+    const node = context.obj({});
+    for (const key of FIELD_KEYS) if (dict.has(key)) { node.set(key, dict.get(key)); dict.delete(key); clone.delete(key); }
+    const nodeRef = context.register(node), parent = node.get(N_PARENT);
+    const siblings = parent instanceof PDFRef ? context.lookup(parent).lookupMaybe(N_KIDS, PDFArray) : null;
+    if (siblings) siblings.asArray().forEach((kid, i) => { if (kid === ref) siblings.set(i, nodeRef); });
+    node.set(N_KIDS, context.obj([ref]));
+    dict.set(N_PARENT, nodeRef);
+    field = nodeRef;
+  }
+  clone.set(N_PARENT, field);
+  const cloneRef = context.register(clone);
+  context.lookup(field).lookup(N_KIDS, PDFArray).push(cloneRef);
+  return cloneRef;
+}
+
+/** Sets a value (forms.js shape) and draws the field anew; false when pdf-lib cannot draw it (value is set anyway). */
+function setFieldValue(field, value, font) {
+  try {
+    if (field instanceof PDFTextField) {
+      try { field.setText(value || undefined); } catch { field.acroField.dict.set(N_V, text(value)); }
+    } else if (field instanceof PDFCheckBox || field instanceof PDFRadioGroup) {
+      // Radio buttons with /Opt have numbered states; PDF.js may report the option text instead.
+      if (field instanceof PDFRadioGroup && value && value !== 'Off' && !field.acroField.getOnValues().some(on => on.decodeText() === value) && field.getOptions().includes(value)) field.select(value);
+      else field.acroField.setValue(PDFName.of(value || 'Off'));
+      return true;
+    } else if (field instanceof PDFDropdown || field instanceof PDFOptionList) {
+      const values = Array.isArray(value) ? value : [];
+      if (!values.length) field.acroField.dict.delete(N_V);
+      else field.acroField.dict.set(N_V, values.length === 1 ? text(values[0]) : field.acroField.dict.context.obj(values.map(v => text(v))));
+      field.acroField.dict.delete(N_I);
+    } else return true;
+    field.updateAppearances(font);
+    return true;
+  } catch (error) {
+    console.warn('Formularfeld konnte nicht neu gezeichnet werden', field.getName?.(), error);
+    return false;
+  }
 }
 
 /** Bytes of a base64 data URL. */

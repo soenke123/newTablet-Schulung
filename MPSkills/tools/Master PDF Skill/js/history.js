@@ -1,10 +1,11 @@
-/** Small bounded undo/redo history for page-layout operations. */
+/** Small bounded undo/redo history for page-layout operations and filled-in form values. */
 export function createSnapshot(state) {
   return {
     pages: state.pages.map(page => ({ ...page })),
     selected: [...state.selected],
     anchor: state.anchor,
     activePageId: state.activePageId,
+    forms: new Map(state.forms || []),
   };
 }
 
