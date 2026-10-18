@@ -954,7 +954,7 @@ function wireToolButtons(host) {
     btn.addEventListener('click', () => {
       const t = (toolsCache || []).find(x => x.id === btn.dataset.tool);
       if (!t) return;
-      syncPreviewCta();
+      syncPreviewCta(t);
       window.MPPreview?.open({ id: t.id, title: t.title, folder: t.folder });
     });
   });
@@ -974,9 +974,14 @@ function wireToolButtons(host) {
 
    Gesetzt beim Öffnen und nicht erst beim Klicken: die Aufschrift
    ist die Auskunft, der Klick nur ihre Einlösung. */
-function syncPreviewCta() {
+function syncPreviewCta(t) {
   const b = document.getElementById('pvOpen');
   if (!b) return;
+  /* Ein Skill ohne Raum (tools.js, `standalone`) hat für alle denselben
+     Weg: die App öffnen — auch für Gäste und ohne Freischaltung. */
+  const href = t && window.TOOLS_OVERLAY?.[t.id]?.standalone;
+  b.dataset.href = href || '';
+  if (href) { b.hidden = false; b.textContent = 'Skill öffnen'; return; }
   const role = roleOf(window.getSessionUser?.() ?? null);
   if (role === 'teacher' || role === 'admin') {
     b.hidden = false;
@@ -994,6 +999,7 @@ function syncPreviewCta() {
 document.addEventListener('click', ev => {
   const b = ev.target.closest('#pvOpen');
   if (!b) return;
+  if (b.dataset.href) { location.href = b.dataset.href; return; }
   if (roleOf(window.getSessionUser?.() ?? null) === 'guest') {
     /* Beide Fenster gehen zu, und zwar in dieser Reihenfolge: die
        Vorstellung liegt über der Liste, die Liste über der Seite,

@@ -3,6 +3,7 @@ import { HistoryStack, createSnapshot } from './history.js';
 import { movePages, insertPages, sameOrder, nextActiveAfterRemoval } from './pages.js';
 import { parsePageRanges, formatPageRanges } from './ranges.js';
 import { buildPdf, createBlankPdf, textMetrics } from './export.js';
+import { createDemoPdf, demoDecor } from './demo.js';
 import { CSS_UNITS, MIN_ZOOM, MAX_ZOOM, clampZoom, stepZoom, pageRows, fitZoom } from './view.js';
 import { buildPageText, searchPattern, findMatches, matchPieces, snippet, pieceRect } from './search.js';
 import { PEN_COLORS, PEN_WIDTH, MARKER_COLORS, MARKER_WIDTH, MARKER_OPACITY, ERASER_SIZE, SHAPE_TYPES, FILLABLE, isHighlight, eraseMarks, pointsBox, scaleMark, pageTransform, markSvg, markHit, markBounds, moveMark, constrainEnd, roundPoint } from './annotations.js';
@@ -412,3 +413,6 @@ window.addEventListener('resize',()=>{closeTabMenu();closeToolPop()});
 // Group buttons show the icon of the kind they would pick, the colour buttons the colour of the tool or the selected element.
 function renderToolbox(){if(!state.toolboxReady)return;const has=state.pages.length>0;for(const [group,id] of [['shape','tool-shapes'],['markup','tool-c-markup']]){const btn=$(id),kind=state.toolGroups[group];btn.setAttribute('aria-pressed',String(groupOf(state.tool)===group));if(btn.dataset.icon!==kind){const icon=document.querySelector(`#tool-pop [data-tool="${kind}"] svg`);if(icon){btn.dataset.icon=kind;btn.replaceChildren(icon.cloneNode(true))}}}const draw=styleContext();$('draw-color').disabled=!has||!!draw.eraser;if(!draw.eraser)$('draw-color').style.setProperty('--dot',draw.color);$('comment-color').disabled=!has;$('comment-color').style.setProperty('--dot',commentColorContext().color);if(state.popAnchor?.disabled)closeToolPop()}
 state.toolboxReady=true;renderToolbox();
+// ?demo=1 (Vorschau auf der MPSkills-Startseite): ein Beispieldokument mit Zeichnungen und Kommentaren, nichts wird gespeichert.
+async function startDemo(){const bytes=await createDemoPdf();await openFiles([new File([bytes],'Elternbrief Klassenfahrt.pdf',{type:'application/pdf'})],{replace:true});const decor=demoDecor();state.pages=state.pages.map((p,i)=>({...p,...(decor[i]?.marks.length?{marks:decor[i].marks}:{}),...(decor[i]?.comments.length?{comments:decor[i].comments}:{})}));await renderViewer();renderPageList();updateControls()}
+if(new URLSearchParams(location.search).has('demo'))startDemo().catch(e=>console.error('Demo konnte nicht gestartet werden',e));

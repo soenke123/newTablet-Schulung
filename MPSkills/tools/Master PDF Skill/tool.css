@@ -1,0 +1,32 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „Master PDF"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Nur der Rahmen, wie bei NeuroLab und Tiny LM: alles, was man sieht, steht in
+   css/ NEBENAN und gehört der Anwendung selbst. Der Rahmen nimmt die
+   MPSkills-Variablen und schreibt keine eigene Farbe hin.
+   ══════════════════════════════════════════════════════════════ */
+
+.mp-host {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg, 18px);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.mp-frame {
+  display: block;      /* sonst setzt die Zeilenbox einen Streifen darunter */
+  width: 100%;
+  border: 0;
+  height: 70vh;        /* Ausgangswert bis zur ersten Messung (tool.js fit) */
+}
+
+/* Auf schmalen Geräten bis an beide Bildschirmkanten. */
+@media (max-width: 640px) {
+  .mp-host {
+    margin: 0 -12px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+}
