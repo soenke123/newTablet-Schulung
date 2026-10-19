@@ -1755,8 +1755,8 @@ a.btn {
 
 /* ── Balance of Nature (preview/balance.js) ────────────────────
    Eine vereinfachte Insel mit laufenden Punkten und daneben das
-   Diagramm mit wandernden Kurven. Helles Kleid wie SYNIR, im
-   Darkmode nur gedämpft.
+   Diagramm mit wandernden Kurven. Eigenes, dunkles Kleid (tiefes
+   Meer, leuchtende Kurven) — in beiden Modi gleich.
 
    Anders als die übrigen Kacheln bewegt sie sich immer und nicht
    erst beim Darüberfahren — auf dem Tablet gibt es kein Darüber,
@@ -1767,15 +1767,10 @@ a.btn {
    T um eine Welle (66.67 = GW / 1.5 in balance.js), die Beute-Punkte
    der Gruppen a/b blenden im Takt der Beute-Kurve am rechten Rand
    ein und aus, die Räuber eine Viertelwelle später (−3 s). */
-.tprev--bn {
-  background-color: #9fd3e6;
+.tprev--bn, :root[data-theme="dark"] .tprev--bn {
+  background-color: #082c44;
   background-image: none;
   padding: 0;
-}
-:root[data-theme="dark"] .tprev--bn {
-  background-color: #9fd3e6;
-  background-image: none;
-  filter: brightness(.88);
 }
 .bnp { width: 100%; height: 100%; display: block; font-family: 'Segoe UI', system-ui, sans-serif; }
 

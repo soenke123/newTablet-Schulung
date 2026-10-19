@@ -33,15 +33,16 @@
      auf der Punkte herumlaufen (orange = Beute, violett = Räuber),
      rechts das Diagramm, in dem die beiden Kurven durchlaufen. Keine
      Grafik aus der App, nur Flächen und Punkte. Farben der Tiere aus
-     js/ui/app.js (Zwerghirsch orange, Inselwolf violett).
+     js/ui/app.js (Zwerghirsch orange, Inselwolf violett), etwas
+     aufgehellt, damit sie auf dem dunklen Meer leuchten.
 
      Alles läuft im selben Takt T = 4 s (style.css, .bnp-*): die
      Kurven rücken je T eine Welle nach links, am rechten Rand ist
      „jetzt". Dort hat die Beute ihren Gipfel bei T/4 — und genau
      dann sind auf der Insel die meisten orangen Punkte zu sehen.
      Die Räuber hinken eine Viertelwelle hinterher, Kurve wie Punkte. */
-  const PREY = '#d95926', PRED = '#7b6fe0';
-  const INK = '#1c2530', INK3 = '#6b7684';
+  const PREY = '#ff7a3d', PRED = '#a493ff';
+  const INK = '#e8f6fb', INK3 = '#9fc3d3';
 
   // Diagramm: Fenster rechts, anderthalb Wellen breit.
   const GX = 226, GW = 96, LAM = GW / 1.5, GY = 104;
@@ -92,7 +93,7 @@
     return list.map(([x, y, w, dur, g], i) =>
       `<g class="bnp-a bnp-w${w}" style="animation-duration:${dur}s;animation-delay:-${(i * 1.7) % dur}s">`
       + `<circle class="${g ? `bnp-${kind}${g}` : ''}" cx="${x}" cy="${y}" r="${r}" fill="${col}"`
-      + ` stroke="#fff" stroke-width="1"/></g>`).join('');
+      + ` stroke="#fff" stroke-opacity=".85" stroke-width=".9"/></g>`).join('');
   }
 
   function tile() {
@@ -100,38 +101,60 @@
     const inner = blob(108, 98, 74, 53, SHAPE);
     return `<div class="tprev tprev--bn" aria-hidden="true">
       <svg class="bnp" viewBox="0 0 340 190" preserveAspectRatio="xMidYMid meet">
-        <defs><clipPath id="bnpWin"><rect x="${GX}" y="52" width="${GW}" height="104"/></clipPath></defs>
-        <rect x="-80" y="-60" width="500" height="310" fill="#9fd3e6"/>
+        <defs>
+          <clipPath id="bnpWin"><rect x="${GX}" y="52" width="${GW}" height="104"/></clipPath>
+          <radialGradient id="bnpSea" cx="32%" cy="52%" r="80%">
+            <stop offset="0" stop-color="#0f6f8f"/><stop offset=".55" stop-color="#0a3f5e"/>
+            <stop offset="1" stop-color="#061f33"/>
+          </radialGradient>
+          <radialGradient id="bnpShallow" cx="50%" cy="50%" r="50%">
+            <stop offset=".7" stop-color="#3fd8d0" stop-opacity=".55"/>
+            <stop offset="1" stop-color="#3fd8d0" stop-opacity="0"/>
+          </radialGradient>
+          <linearGradient id="bnpGrass" x1="0" y1="0" x2=".4" y2="1">
+            <stop offset="0" stop-color="#8fe36b"/><stop offset="1" stop-color="#2f9e57"/>
+          </linearGradient>
+          <filter id="bnpGlow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2.2" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect x="-80" y="-60" width="500" height="310" fill="url(#bnpSea)"/>
         <path d="M14 30q6-4 12 0t12 0M250 172q6-4 12 0t12 0M30 170q6-4 12 0t12 0M196 22q6-4 12 0t12 0"
-              fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>
+              fill="none" stroke="#7fe9ff" stroke-opacity=".35" stroke-width="1.4" stroke-linecap="round"/>
 
-        <!-- Die Insel: Strand, Wiese, ein paar Büsche. -->
-        <path d="${blob(108, 98, 92, 70, SHAPE)}" fill="#c4e6f0"/>
-        <path d="${isl}" fill="#ecd9a6"/>
-        <path d="${inner}" fill="#8cc56a"/>
-        <circle cx="86" cy="76" r="9" fill="#6aa94e"/><circle cx="138" cy="116" r="11" fill="#6aa94e"/>
-        <circle cx="122" cy="62" r="7" fill="#6aa94e"/><circle cx="66" cy="112" r="7" fill="#6aa94e"/>
+        <!-- Die Insel: Flachwasser, Strand, Wiese, ein paar Büsche. -->
+        <path d="${blob(108, 98, 104, 82, SHAPE)}" fill="url(#bnpShallow)"/>
+        <path d="${isl}" fill="#f4dc9a"/>
+        <path d="${inner}" fill="url(#bnpGrass)"/>
+        <g fill="#1f7a45" fill-opacity=".75">
+          <circle cx="86" cy="76" r="9"/><circle cx="138" cy="116" r="11"/>
+          <circle cx="122" cy="62" r="7"/><circle cx="66" cy="112" r="7"/>
+        </g>
 
-        ${animals(DEER, PREY, 3.6, 'd')}
-        ${animals(WOLF, PRED, 4.8, 'v')}
+        <g filter="url(#bnpGlow)">
+          ${animals(DEER, PREY, 3.6, 'd')}
+          ${animals(WOLF, PRED, 4.8, 'v')}
+        </g>
 
-        <!-- Rechts: das Diagramm. -->
-        <rect x="${GX - 12}" y="26" width="${GW + 24}" height="142" rx="10" fill="#fff" fill-opacity=".93"/>
+        <!-- Rechts: das Diagramm, dunkles Glas. -->
+        <rect x="${GX - 12}" y="26" width="${GW + 24}" height="142" rx="10"
+              fill="#061a2b" fill-opacity=".72" stroke="#7fe9ff" stroke-opacity=".25"/>
         <text x="${GX}" y="42" font-size="9" font-weight="700" fill="${INK}">Bestand</text>
         <circle cx="${GX + 4}" cy="160" r="3" fill="${PREY}"/>
         <text x="${GX + 10}" y="163" font-size="7.5" fill="${INK3}">Beute</text>
         <circle cx="${GX + 48}" cy="160" r="3" fill="${PRED}"/>
         <text x="${GX + 54}" y="163" font-size="7.5" fill="${INK3}">Räuber</text>
-        <line x1="${GX}" x2="${GX + GW}" y1="148" y2="148" stroke="#d6dae2" stroke-width="1.2"/>
+        <line x1="${GX}" x2="${GX + GW}" y1="148" y2="148" stroke="#7fe9ff" stroke-opacity=".2" stroke-width="1.2"/>
         <g clip-path="url(#bnpWin)">
-          <g class="bnp-scroll">
+          <g class="bnp-scroll" filter="url(#bnpGlow)">
             <polyline points="${wave(36, 0)}" fill="none" stroke="${PREY}" stroke-width="2.6"
                       stroke-linecap="round" stroke-linejoin="round"/>
             <polyline points="${wave(22, Math.PI / 2)}" fill="none" stroke="${PRED}" stroke-width="2.6"
                       stroke-linecap="round" stroke-linejoin="round"/>
           </g>
         </g>
-        <line x1="${GX + GW}" x2="${GX + GW}" y1="54" y2="148" stroke="${INK}" stroke-opacity=".35"
+        <line x1="${GX + GW}" x2="${GX + GW}" y1="54" y2="148" stroke="#fff" stroke-opacity=".45"
               stroke-width="1.2" stroke-dasharray="3 3"/>
       </svg>
     </div>`;
