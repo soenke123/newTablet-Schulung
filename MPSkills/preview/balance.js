@@ -8,8 +8,8 @@
    landen Menschen, legen eine Schafweide an, und die Schafe brechen
    aus. Die Schleife steckt im Rahmen; das Drehbuch hier wartet nur.
 
-   Das Standbild für die Kachel ist bewusst abstrakt (siehe tile()):
-   Beute und Räuber als Punktgruppen und als zwei versetzte Wellen.
+   Das Standbild für die Kachel (siehe tile()): eine vereinfachte
+   Insel mit laufenden Punkten und daneben die wandernden Kurven.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -28,63 +28,111 @@
     await api.wait(60000);
   }
 
-  /* ── Das Standbild: abstrakt, nicht die Insel ─────────────────
-     Wie bei den anderen Kacheln zeigt sie nicht das Spiel, sondern
-     den einen Gedanken dahinter: Beute und Räuber schwanken, und der
-     Räuber hinkt eine Viertelwelle hinterher. Links zwei Gruppen aus
-     Punkten (viele Hirsche, wenige Wölfe), rechts ihre Kurven über
-     die Zeit. Farben aus der App (js/ui/app.js): Zwerghirsch orange,
-     Inselwolf violett.
+  /* ── Das Standbild ─────────────────────────────────────────────
+     Vereinfacht, aber erkennbar das Spiel: links eine Insel im Meer,
+     auf der Punkte herumlaufen (orange = Beute, violett = Räuber),
+     rechts das Diagramm, in dem die beiden Kurven durchlaufen. Keine
+     Grafik aus der App, nur Flächen und Punkte. Farben der Tiere aus
+     js/ui/app.js (Zwerghirsch orange, Inselwolf violett).
 
-     Beim Darüberfahren läuft ein Zeitstrich durch das Diagramm, und
-     die Gruppen links wachsen und schrumpfen im selben Takt wie ihre
-     Kurve (style.css, .bnp-*). Eine Welle = T = 3 s, zwei Wellen im
-     Bild, der Strich braucht also 6 s. */
-  const PREY = '#d95926', PRED = '#9085e9';
-  const INK = '#1c2530', INK3 = '#7a8594', LINE = '#d6dae2';
-  const CX0 = 132, CX1 = 326, CY = 98;          // Diagramm: x-Bereich, Mittellinie
+     Alles läuft im selben Takt T = 4 s (style.css, .bnp-*): die
+     Kurven rücken je T eine Welle nach links, am rechten Rand ist
+     „jetzt". Dort hat die Beute ihren Gipfel bei T/4 — und genau
+     dann sind auf der Insel die meisten orangen Punkte zu sehen.
+     Die Räuber hinken eine Viertelwelle hinterher, Kurve wie Punkte. */
+  const PREY = '#d95926', PRED = '#7b6fe0';
+  const INK = '#1c2530', INK3 = '#6b7684';
 
+  // Diagramm: Fenster rechts, anderthalb Wellen breit.
+  const GX = 226, GW = 96, LAM = GW / 1.5, GY = 104;
+
+  /* Eine Kurve als Band aus drei Wellen, das per CSS um eine Welle
+     nach links rückt. Phase so gewählt, dass am rechten Fensterrand
+     zur Zeit t gilt: Beute = sin(2πt/T), Räuber = sin(2πt/T − π/2). */
   function wave(amp, lag) {
     const pts = [];
-    for (let i = 0; i <= 80; i++) {
-      const u = i / 80;
-      const x = CX0 + (CX1 - CX0) * u;
-      const y = CY - amp * Math.sin(2 * Math.PI * 2 * u - lag);
-      pts.push(x.toFixed(1) + ',' + y.toFixed(1));
+    for (let i = 0; i <= 150; i++) {
+      const xl = 3 * LAM * i / 150;
+      const y = GY - amp * Math.sin(2 * Math.PI * xl / LAM + Math.PI - lag);
+      pts.push((GX + xl).toFixed(1) + ',' + y.toFixed(1));
     }
     return pts.join(' ');
   }
 
-  // Punkte in einem lockeren Kreis — fest gestreut, damit das Bild
-  // bei jedem Laden dasselbe ist.
-  function herd(cx, cy, n, r, col, spread) {
-    let out = '';
+  // Die Insel: eine unregelmäßige, geschlossene Kurve (Catmull-Rom).
+  function blob(cx, cy, rx, ry, rad) {
+    const P = rad.map((r, i) => {
+      const a = i / rad.length * 2 * Math.PI;
+      return [cx + rx * r * Math.cos(a), cy + ry * r * Math.sin(a)];
+    });
+    const n = P.length, f = v => v.toFixed(1);
+    let d = `M${f(P[0][0])} ${f(P[0][1])}`;
     for (let i = 0; i < n; i++) {
-      const a = i * 2.39996, d = spread * Math.sqrt((i + .5) / n);
-      out += `<circle cx="${(cx + d * Math.cos(a)).toFixed(1)}" cy="${(cy + d * Math.sin(a)).toFixed(1)}" r="${r}" fill="${col}"/>`;
+      const p0 = P[(i - 1 + n) % n], p1 = P[i], p2 = P[(i + 1) % n], p3 = P[(i + 2) % n];
+      d += `C${f(p1[0] + (p2[0] - p0[0]) / 6)} ${f(p1[1] + (p2[1] - p0[1]) / 6)} `
+         + `${f(p2[0] - (p3[0] - p1[0]) / 6)} ${f(p2[1] - (p3[1] - p1[1]) / 6)} ${f(p2[0])} ${f(p2[1])}`;
     }
-    return out;
+    return d + 'Z';
+  }
+  const SHAPE = [1, .9, 1.02, .86, .95, 1.06, .9, .97, 1.04, .88];
+
+  /* Die Tiere. [x, y, Laufweg 1–3, Dauer s, Gruppe]
+     Gruppe: '' = immer da, 'a' = in guten Zeiten, 'b' = nur am Gipfel. */
+  const DEER = [
+    [70, 72, 1, 7, ''], [96, 60, 2, 9, ''], [124, 70, 3, 8, ''], [58, 104, 2, 10, ''],
+    [142, 98, 1, 9, ''], [100, 128, 3, 7, ''],
+    [84, 92, 3, 8, 'a'], [118, 112, 1, 10, 'a'], [150, 124, 2, 8, 'a'], [76, 126, 1, 9, 'a'],
+    [108, 84, 2, 7, 'b'], [134, 84, 3, 9, 'b'], [62, 88, 1, 8, 'b'], [124, 136, 2, 10, 'b']
+  ];
+  const WOLF = [
+    [92, 108, 2, 11, ''], [128, 58, 3, 12, ''],
+    [154, 108, 1, 10, 'a'], [68, 120, 3, 11, 'b']
+  ];
+  function animals(list, col, r, kind) {
+    return list.map(([x, y, w, dur, g], i) =>
+      `<g class="bnp-a bnp-w${w}" style="animation-duration:${dur}s;animation-delay:-${(i * 1.7) % dur}s">`
+      + `<circle class="${g ? `bnp-${kind}${g}` : ''}" cx="${x}" cy="${y}" r="${r}" fill="${col}"`
+      + ` stroke="#fff" stroke-width="1"/></g>`).join('');
   }
 
   function tile() {
+    const isl = blob(108, 98, 84, 62, SHAPE);
+    const inner = blob(108, 98, 74, 53, SHAPE);
     return `<div class="tprev tprev--bn" aria-hidden="true">
       <svg class="bnp" viewBox="0 0 340 190" preserveAspectRatio="xMidYMid meet">
-        <!-- Links: die beiden Gruppen. -->
-        <g class="bnp-herd bnp-prey" style="transform-origin:62px 62px">${herd(62, 62, 14, 4.2, PREY, 26)}</g>
-        <text x="62" y="108" text-anchor="middle" font-size="9" font-weight="700" fill="${INK}">Beute</text>
-        <g class="bnp-herd bnp-pred" style="transform-origin:62px 140px">${herd(62, 140, 4, 5.4, PRED, 13)}</g>
-        <text x="62" y="174" text-anchor="middle" font-size="9" font-weight="700" fill="${INK}">Räuber</text>
+        <defs><clipPath id="bnpWin"><rect x="${GX}" y="52" width="${GW}" height="104"/></clipPath></defs>
+        <rect x="-80" y="-60" width="500" height="310" fill="#9fd3e6"/>
+        <path d="M14 30q6-4 12 0t12 0M250 172q6-4 12 0t12 0M30 170q6-4 12 0t12 0M196 22q6-4 12 0t12 0"
+              fill="none" stroke="#fff" stroke-opacity=".6" stroke-width="1.4" stroke-linecap="round"/>
 
-        <!-- Rechts: Bestand über die Zeit. -->
-        <line x1="${CX0}" x2="${CX1}" y1="160" y2="160" stroke="${LINE}" stroke-width="1.2"/>
-        <line x1="${CX0}" x2="${CX0}" y1="28" y2="160" stroke="${LINE}" stroke-width="1.2"/>
-        <text x="${CX0}" y="20" font-size="8" font-weight="700" fill="${INK3}">Bestand</text>
-        <text x="${CX1}" y="174" text-anchor="end" font-size="8" fill="${INK3}">Zeit →</text>
-        <polyline points="${wave(42, 0)}" fill="none" stroke="${PREY}" stroke-width="3"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-        <polyline points="${wave(26, Math.PI / 2)}" fill="none" stroke="${PRED}" stroke-width="3"
-                  stroke-linecap="round" stroke-linejoin="round"/>
-        <line class="bnp-now" x1="${CX0}" x2="${CX0}" y1="30" y2="160" stroke="${INK}" stroke-width="1.4" stroke-dasharray="3 3"/>
+        <!-- Die Insel: Strand, Wiese, ein paar Büsche. -->
+        <path d="${blob(108, 98, 92, 70, SHAPE)}" fill="#c4e6f0"/>
+        <path d="${isl}" fill="#ecd9a6"/>
+        <path d="${inner}" fill="#8cc56a"/>
+        <circle cx="86" cy="76" r="9" fill="#6aa94e"/><circle cx="138" cy="116" r="11" fill="#6aa94e"/>
+        <circle cx="122" cy="62" r="7" fill="#6aa94e"/><circle cx="66" cy="112" r="7" fill="#6aa94e"/>
+
+        ${animals(DEER, PREY, 3.6, 'd')}
+        ${animals(WOLF, PRED, 4.8, 'v')}
+
+        <!-- Rechts: das Diagramm. -->
+        <rect x="${GX - 12}" y="26" width="${GW + 24}" height="142" rx="10" fill="#fff" fill-opacity=".93"/>
+        <text x="${GX}" y="42" font-size="9" font-weight="700" fill="${INK}">Bestand</text>
+        <circle cx="${GX + 4}" cy="160" r="3" fill="${PREY}"/>
+        <text x="${GX + 10}" y="163" font-size="7.5" fill="${INK3}">Beute</text>
+        <circle cx="${GX + 48}" cy="160" r="3" fill="${PRED}"/>
+        <text x="${GX + 54}" y="163" font-size="7.5" fill="${INK3}">Räuber</text>
+        <line x1="${GX}" x2="${GX + GW}" y1="148" y2="148" stroke="#d6dae2" stroke-width="1.2"/>
+        <g clip-path="url(#bnpWin)">
+          <g class="bnp-scroll">
+            <polyline points="${wave(36, 0)}" fill="none" stroke="${PREY}" stroke-width="2.6"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+            <polyline points="${wave(22, Math.PI / 2)}" fill="none" stroke="${PRED}" stroke-width="2.6"
+                      stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+        </g>
+        <line x1="${GX + GW}" x2="${GX + GW}" y1="54" y2="148" stroke="${INK}" stroke-opacity=".35"
+              stroke-width="1.2" stroke-dasharray="3 3"/>
       </svg>
     </div>`;
   }
