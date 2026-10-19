@@ -2,7 +2,7 @@
  * Abstimmwerkzeug: rechnet mehrere Inseln ueber viele Jahre ohne Grafik und
  * meldet, ob das Oekosystem haelt.
  *
- *   node tools/balance.js [seeds=6] [jahre=30] [--verlauf] [--size=mittel] [--seed=1000]
+ *   node tools/balance.js [seeds=6] [jahre=30] [--verlauf] [--size=mittel] [--typ=gras|wald|fels] [--seed=1000]
  *                         [--ohne=inselwolf,inseladler] [--karten=schafe@1,hunde@3]
  *
  * --verlauf  zeigt fuer den ersten Seed die Bestaende am Ende jedes Jahres
@@ -22,6 +22,7 @@ const pos = args.filter((a) => !a.startsWith('--'));
 const SEEDS = +(pos[0] || 6);
 const YEARS = +(pos[1] || 30);
 const size = flags.size || 'mittel';
+const type = flags.typ || 'ausgewogen';
 const cards = flags.karten ? String(flags.karten).split(',').map((c) => { const [id, y] = c.split('@'); return { id, year: +(y || 0) }; }) : [];
 // Eingeschleppte Arten (Schafe, Hunde) nur, wenn Karten gespielt werden
 const ids = BT.SPECIES_ORDER.filter((id) => !BT.SPECIES[id].introduced || cards.length);
@@ -49,7 +50,7 @@ function coastPoint(world) {
 const summary = [];
 for (let s = 0; s < SEEDS; s++) {
   const seed = flags.seed ? +flags.seed + s * 7919 : 1000 + s * 7919;
-  const world = BT.World.generate(seed, { size });
+  const world = BT.World.generate(seed, { size, type });
   const t0 = Date.now();
   const sim = new BT.Simulation(world, cards.length ? { start, cardPause: 0 } : { start });
   if (cards.length) {
@@ -102,7 +103,7 @@ for (let s = 0; s < SEEDS; s++) {
   }
 }
 
-console.log(`${SEEDS} Inseln × ${YEARS} Jahre (${size})`);
+console.log(`${SEEDS} Inseln × ${YEARS} Jahre (${size}, ${type})`);
 for (const r of summary) {
   const ext = ids.filter((id) => r.sim.stats.extinct[id] != null).map((id) => short[id] + ' J' + BT.Time.calendar(r.sim.stats.extinct[id]).year);
   console.log(`  ${r.seed}: ` + ids.map((id) => `${short[id]} ${r.range[id][0]}–${r.range[id][1]}`).join(' · ') +

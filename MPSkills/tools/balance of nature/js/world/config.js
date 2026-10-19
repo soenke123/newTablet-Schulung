@@ -67,7 +67,21 @@
     gross:  { width: 3200, height: 2150 }
   };
 
+  /**
+   * Inseltypen: dieselbe Insel (gleicher Seed = gleiche Kueste, Berge, Fluesse),
+   * nur die Schwellen der Lebensraeume verschoben. Die Feuchte ist nach Rang
+   * verteilt, also verschieben scrub-/fernMoisture direkt die Flaechenanteile.
+   * Werte hier ueberschreiben BT.CONFIG. 'ausgewogen' ist die bisherige Insel.
+   */
+  BT.ISLAND_TYPES = {
+    ausgewogen: {},
+    gras: { biome: { scrubMoisture: 0.68, fernMoisture: 0.84 } },
+    wald: { biome: { scrubMoisture: 0.26, fernMoisture: 0.46 } },
+    fels: { biome: { rockHeight: 0.36, peakHeight: 0.68 }, relief: { ridges: [2, 3], ridgeHeight: [0.7, 0.9] } }
+  };
+
   BT.CONFIG = {
+    type: 'ausgewogen',
     size: 'mittel',
     cellSize: 6,
 

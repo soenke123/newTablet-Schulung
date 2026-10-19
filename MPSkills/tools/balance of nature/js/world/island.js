@@ -588,6 +588,18 @@
   }
 
   // ------------------------------------------------------------ Gesamt
+  /** CONFIG mit den Abweichungen des Inseltyps (eine Ebene tief: shape, relief, biome ...). */
+  function withType(cfg, over) {
+    var out = {};
+    for (var k in cfg) {
+      if (!over[k]) { out[k] = cfg[k]; continue; }
+      out[k] = {};
+      for (var j in cfg[k]) out[k][j] = cfg[k][j];
+      for (j in over[k]) out[k][j] = over[k][j];
+    }
+    return out;
+  }
+
   function generate(seed, options) {
     var opts = options || {};
     var cfg = BT.CONFIG;
@@ -596,6 +608,8 @@
     var cellSize = cfg.cellSize;
     var cols = Math.round(dims.width / cellSize);
     var rows = Math.round(dims.height / cellSize);
+    var typeKey = BT.ISLAND_TYPES[opts.type] ? opts.type : cfg.type;
+    cfg = withType(cfg, BT.ISLAND_TYPES[typeKey]);
     var ctx = {
       cfg: cfg, cellSize: cellSize, cols: cols, rows: rows,
       width: cols * cellSize, height: rows * cellSize
@@ -625,6 +639,7 @@
     return {
       seed: seed,
       size: sizeKey,
+      type: typeKey,
       width: ctx.width,
       height: ctx.height,
       cols: cols,
