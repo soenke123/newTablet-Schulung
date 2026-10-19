@@ -82,8 +82,10 @@
     // wald (mehr Busch statt nur hoher Wald, sonst verhungern die Adler: Deckung):
     // Vogel +17 %, Adler +13 %, Hirsch -20 %, Wolf -24 %; 12 von 16
     wald: { biome: { scrubMoisture: 0.24, fernMoisture: 0.58 } },
-    // fels: alle Arten kleiner, Adler stirbt oft aus (4-5 von 8 in drei Varianten) - nicht stabil
-    fels: { biome: { rockHeight: 0.40, peakHeight: 0.70, fernMoisture: 0.74 }, relief: { ridges: [2, 3], ridgeHeight: [0.7, 0.9] } }
+    // fels (Bergland und Gipfel sind der groesste Lebensraum, mehr und hoehere Bergruecken):
+    // weniger Futter fuer alle, Hirsch -8 %, Vogel -15 %, Wolf -18 %, Adler -33 %;
+    // Adler stirbt oefter aus (5 von 8) - gewollt: die schwierige Insel
+    fels: { biome: { rockHeight: 0.36, peakHeight: 0.68 }, relief: { ridges: [2, 3], ridgeHeight: [0.7, 0.9] } }
   };
 
   BT.CONFIG = {

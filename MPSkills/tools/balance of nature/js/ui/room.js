@@ -13,6 +13,12 @@
  * { type: 'bon:cmd', shared: [1, 3] } herein und bekommt { type: 'bon:share', id, on }
  * zurueck, wenn die Lehrkraft teilt oder entzieht. Jedes Geraet rechnet seine eigene
  * Insel; geteilt wird nur, WELCHES Szenario gespielt werden darf.
+ *
+ * Inseltypen (ausgewogen, Gras, Wald, Fels) sind kein Szenario: Die Lehrkraft schaltet
+ * in der Auswahl „Inseltypen zur Auswahl“ ein (data.types, { type: 'bon:cmd', types: true }
+ * hinein, { type: 'bon:types', on } heraus). Dann steht oben bei allen der Schalter „Typ“,
+ * sonst laufen alle auf der ausgewogenen Insel. Ein anderer Typ baut die Insel neu,
+ * das laufende Szenario beginnt dort von vorn.
  */
 (function (global) {
   'use strict';
@@ -134,6 +140,7 @@
   SCENARIOS.forEach(function (s) { BY_ID[s.id] = s; });
 
   var shared = [];          // vom Raum freigegeben
+  var typesOn = false;      // Inseltypen zur Auswahl (sonst nur die ausgewogene Insel)
   var known = null;         // Schueler: schon gesehene Freigaben (fuer „Neu“)
   var current = null;       // laufendes Szenario
   var worldReady = false;
@@ -163,11 +170,16 @@
     '<div class="scn-box" role="dialog" aria-label="Szenarien">' +
       '<div class="scn-head"><h2>Szenarien</h2>' +
         '<p class="scn-sub"></p><span class="spacer"></span>' +
+        (TEACHER ? '<button type="button" class="scn-types" aria-pressed="false" title="Ausgewogene, Gras-, Wald- und Felsinsel: Die Klasse wählt oben unter „Typ“">' +
+          '<span class="scn-switch" aria-hidden="true"></span>Inseltypen zur Auswahl</button>' : '') +
         '<button type="button" class="scn-close" title="Schließen (Esc)">✕</button></div>' +
       '<div class="scn-list"></div>' +
     '</div>';
   doc.querySelector('.layout').appendChild(layer);
   var list = layer.querySelector('.scn-list');
+  var typesBtn = layer.querySelector('.scn-types');
+  var typeField = doc.getElementById('type');
+  typeField.hidden = true;
 
   // Klasse, solange nichts freigegeben ist: ein Satz auf der leeren Insel
   var hint = doc.createElement('div');
@@ -254,6 +266,8 @@
         : '<p class="scn-wait">Deine Lehrkraft hat noch kein Szenario freigegeben.</p>';
     }
     layer.querySelector('.scn-close').hidden = !current;
+    if (typesBtn) typesBtn.setAttribute('aria-pressed', String(typesOn));
+    typeField.hidden = !typesOn;
     hint.hidden = TEACHER || !worldReady || !!current || shared.length > 0 || !layer.hidden;
     now.textContent = current ? (TEACHER ? current.id + ' · ' + current.title : 'Szenario ' + current.id) : '';
     btn.classList.toggle('has-new', !TEACHER && !!known && shared.some(function (id) { return known.indexOf(id) < 0; }));
@@ -290,16 +304,8 @@
     if (current) snaps[current.id] = BT.app.snapshot();
     current = s;
     BT.app.setRunning(false);
-    if (snaps[s.id]) {
-      BT.app.restore(snaps[s.id]);
-    } else {
-      var st = {};
-      NATIVE.forEach(function (id) { if (s.species.indexOf(id) < 0) st[id] = 0; });
-      BT.app.cardPause(2);
-      BT.app.restartWith(st);
-      BT.app.speed(DEFAULT_SPEED);
-      BT.app.camera.reset();
-    }
+    if (snaps[s.id]) BT.app.restore(snaps[s.id]);
+    else fresh(s);
     // Der Startbestand im Neustart-Fenster: nur die Arten des Szenarios
     doc.querySelectorAll('#startInputs input[data-id]').forEach(function (inp) {
       inp.closest('.sv').hidden = s.species.indexOf(inp.dataset.id) < 0;
@@ -310,6 +316,16 @@
     global.dispatchEvent(new Event('resize'));
     openChooser(false);
     render();
+  }
+
+  /** Szenario von vorn auf der aktuellen Insel */
+  function fresh(s) {
+    var st = {};
+    NATIVE.forEach(function (id) { if (s.species.indexOf(id) < 0) st[id] = 0; });
+    BT.app.cardPause(2);
+    BT.app.restartWith(st);
+    BT.app.speed(DEFAULT_SPEED);
+    BT.app.camera.reset();
   }
 
   // ---------------------------------------------------------------- Infos (Lehrkraft)
@@ -371,6 +387,21 @@
 
   // ---------------------------------------------------------------- Bedienung
   btn.addEventListener('click', function () { openChooser(layer.hidden); });
+  if (typesBtn) typesBtn.addEventListener('click', function () {
+    setTypes(!typesOn);
+    send({ type: 'bon:types', on: typesOn });
+  });
+
+  function setTypes(on) {
+    if (on === typesOn) return;
+    typesOn = on;
+    render();
+    // Ausgeschaltet: alle zurueck auf die ausgewogene Insel
+    if (!on && BT.app.world && BT.app.world.type !== BT.CONFIG.type) {
+      BT.app.setType(BT.CONFIG.type);
+      if (!TEACHER) toast('Deine Lehrkraft hat die Inseltypen ausgeschaltet.');
+    } else if (on && !TEACHER) toast('Neu: Oben unter „Typ“ kannst du die Insel wechseln.');
+  }
   layer.querySelector('.scn-close').addEventListener('click', function () { openChooser(false); });
   layer.addEventListener('click', function (e) {
     if (e.target === layer && current) { openChooser(false); return; }
@@ -406,6 +437,7 @@
 
   global.addEventListener('message', function (e) {
     if (e.origin !== global.location.origin || !e.data || e.data.type !== 'bon:cmd') return;
+    if (typeof e.data.types === 'boolean') setTypes(e.data.types);
     if (!Array.isArray(e.data.shared)) return;
     var next = e.data.shared.map(Number).filter(function (id) { return BY_ID[id]; });
     var added = next.filter(function (id) { return shared.indexOf(id) < 0; });
@@ -432,6 +464,12 @@
   BT.app.onWorld = function () {
     var first = !worldReady;
     worldReady = true;
+    if (!first) {
+      // Anderer Inseltyp: die Staende gehoeren zur alten Insel
+      snaps = {};
+      if (current) fresh(current); else idle();
+      return;
+    }
     if (first) {
       idle();
       // Lehrkraft: gleich die Auswahl. Klasse: erst, wenn etwas geteilt ist.

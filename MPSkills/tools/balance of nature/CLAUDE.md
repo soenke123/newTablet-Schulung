@@ -25,6 +25,11 @@ geteilten als Karten „Szenario n“ (vorher steht auf der leeren Insel „Wart
 steht das Diagramm von Anfang an auf Jahresmittel, mit Umschalter auch in der Seitenleiste. Mit `?demo=1` spielt `js/ui/demo.js` das Schaufenster: volle Oberfläche mit Seitenleiste, echte Kurven
 (90 Jahre Wolf/Hirsch im Zeitraffer, dann Landung, Schafweide, Ausbruch). Bestand, Diagramme und Todesursachen
 zeigen nur Arten des Szenarios (`present()` in app.js: Startbestand > 0 oder je gesehen; `LineChart.setSeries`). Ohne Parameter läuft alles wie vorher.
+Inseltypen (`BT.ISLAND_TYPES` in config.js, `#…&typ=`): ausgewogen (Standard), gras, wald, fels – gleicher Seed = gleiche
+Küste, Berge, Flüsse, nur die Schwellen der Lebensräume verschoben (fels zusätzlich mehr/höhere Bergrücken). Messung
+mit `tools/balance.js 8 30 --typ=…` steht als Kommentar an den Werten; Flächenanteile: `tools/inseltypen.js`. Kein
+Szenario: im Raum schaltet die Lehrkraft in der Auswahl „Inseltypen zur Auswahl“ (data.types, bon:types), dann steht
+oben bei allen „Typ“; ausgeschaltet laufen alle auf der ausgewogenen Insel. Typwechsel baut die Insel neu, das laufende Szenario beginnt von vorn.
 Wer an `index.html`, `js/` oder `css/` arbeitet, zieht `V` in `tool.js` und die `?v=` in `index.html` hoch.
 
 ## Regeln

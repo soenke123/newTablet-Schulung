@@ -17,7 +17,7 @@
   if (!/(^|[?&])demo=1(&|$)/.test(global.location.search.slice(1)) || !BT.app) return;
 
   doc.body.classList.add('demo');
-  ['seed', 'size'].forEach(function (id) { var el = doc.getElementById(id); if (el) el.closest('.field').hidden = true; });
+  ['seed', 'size', 'type'].forEach(function (id) { var el = doc.getElementById(id); if (el) el.closest('.field').hidden = true; });
   ['newWorld', 'status', 'defaults', 'csv'].forEach(function (id) { var el = doc.getElementById(id); if (el) el.hidden = true; });
 
   var LAND = { fx: 0.17, fy: 0.5 };

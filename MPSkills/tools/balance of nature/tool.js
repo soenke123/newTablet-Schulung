@@ -11,14 +11,17 @@
 
    Was der Raum tut: die Lehrkraft gibt Szenarien frei
    (skill_room_state.data.shared = [1, 3]), die Tablets sehen nur
-   die freigegebenen. Gerechnet wird auf jedem Gerät für sich —
+   die freigegebenen. Mit data.types = true dürfen alle oben den
+   Inseltyp wählen (ausgewogen, Gras, Wald, Fels), sonst nur die
+   ausgewogene Insel. Gerechnet wird auf jedem Gerät für sich —
    geteilt wird nur, WELCHES Szenario gespielt werden darf. Eigene
    Szenarien gibt es (noch) nicht.
 
    Botschaften (gleicher Ursprung):
-     hinein   { type: 'bon:cmd', shared: [1, 3] }
+     hinein   { type: 'bon:cmd', shared: [1, 3], types: false }
      heraus   { type: 'bon:ready' }            Rahmen steht
               { type: 'bon:share', id, on }    Lehrkraft teilt/entzieht
+              { type: 'bon:types', on }        Lehrkraft: Inseltypen an/aus
 
    Im Schaufenster (ctx.preview) läuft ?demo=1: die Insel spielt
    ihre Geschichte von selbst (js/ui/demo.js).
@@ -29,7 +32,7 @@
 (function () {
   'use strict';
 
-  const V = '20261019c';
+  const V = '20261019d';
   const DIR = 'tools/balance%20of%20nature/';
   const GAP = 12;
   const MIN = 460;
@@ -38,6 +41,7 @@
   let onMsg = null, onResize = null;
   let ready = false, lastSent = '';
   let shared = null;             // Lehrkraft: eigener Stand, bis der Server ihn bestätigt
+  let types = null;              // dasselbe für die Inseltypen
 
   const isPresenter = () => !!ctx && ctx.role === 'presenter';
 
@@ -47,14 +51,15 @@
     return Array.isArray(s) ? s.map(Number).filter(n => n >= 1 && n <= 4) : [];
   }
   const currentShared = () => shared || serverShared();
+  const currentTypes = () => types !== null ? types : data().types === true;
 
   function post() {
     if (!ready || !frame || !frame.contentWindow) return;
-    const list = currentShared().slice().sort();
-    const key = JSON.stringify(list);
+    const msg = { type: 'bon:cmd', shared: currentShared().slice().sort(), types: currentTypes() };
+    const key = JSON.stringify(msg);
     if (key === lastSent) return;
     lastSent = key;
-    try { frame.contentWindow.postMessage({ type: 'bon:cmd', shared: list }, location.origin); } catch (e) { /* zu */ }
+    try { frame.contentWindow.postMessage(msg, location.origin); } catch (e) { /* zu */ }
   }
 
   /* skill_room_set_state ersetzt `data` als GANZES — deshalb geht
@@ -64,12 +69,24 @@
     if (on) list.push(id);
     shared = list;
     post();
-    const next = Object.assign({}, data(), { shared: list });
+    await save({ shared: list });
+    shared = null;
+    ctx.refresh();
+  }
+
+  async function setTypes(on) {
+    types = on;
+    post();
+    await save({ types: on });
+    types = null;
+    ctx.refresh();
+  }
+
+  async function save(change) {
+    const next = Object.assign({}, data(), { shared: currentShared(), types: currentTypes() }, change);
     if (view) view.state = Object.assign({}, view.state || {}, { data: next });
     const res = await ctx.actions.setData(next);
     if (res && !res.ok && res.error !== 'network') ctx.toast(ctx.errText(res.error));
-    shared = null;
-    ctx.refresh();
   }
 
   /* Platz unter dem Rahmen — dieselbe Rechnung wie in
@@ -123,6 +140,7 @@
         const m = e.data || {};
         if (m.type === 'bon:ready') { ready = true; lastSent = ''; post(); }
         else if (m.type === 'bon:share' && isPresenter() && !ctx.preview) share(Number(m.id), !!m.on);
+        else if (m.type === 'bon:types' && isPresenter() && !ctx.preview) setTypes(!!m.on);
       };
       window.addEventListener('message', onMsg);
       onResize = () => fit();
@@ -142,7 +160,7 @@
       onMsg = onResize = null;
       document.body.classList.remove('tool-fill');
       frame = root = ctx = view = null;
-      shared = null;
+      shared = types = null;
     }
   });
 })();

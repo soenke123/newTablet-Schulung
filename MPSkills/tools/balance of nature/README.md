@@ -44,7 +44,7 @@ Dazu kommen Pflanzen und Insekten als Nahrungsschichten. Die Arten stehen in
   schnell die Simulation läuft. Dafür nutzt das Modell eigene, exakt festgelegte
   Mathe-Funktionen (`js/core/dmath.js`).
 
-Der Seed und die Größe stehen in der Adresszeile (`#seed=482917&size=mittel`; `mittel` heißt in der Oberfläche „klein“, `gross` „groß“, die frühere kleine Insel gibt es nicht mehr). Gleicher Seed
+Der Seed, die Größe und der Inseltyp stehen in der Adresszeile (`#seed=482917&size=mittel&typ=wald`; Typen: ausgewogen, gras, wald, fels; `mittel` heißt in der Oberfläche „klein“, `gross` „groß“, die frühere kleine Insel gibt es nicht mehr). Gleicher Seed
 bedeutet dieselbe Insel.
 
 ## Lebensräume

@@ -4,8 +4,8 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
   <title>Balance of Nature – Insel</title>
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/room.css?v=20261019c">
+  <link rel="stylesheet" href="css/style.css?v=20261019d">
+  <link rel="stylesheet" href="css/room.css?v=20261019d">
 </head>
 <body>
   <header class="bar">
@@ -18,6 +18,14 @@
       <span class="size-pick">
         <button type="button" data-size="mittel" role="radio" aria-checked="true" title="Kleine Insel" aria-label="klein"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.8c0-2.6 2.7-4.3 5.7-4.3 3.2 0 5.8 1.5 5.8 4.1 0 2.3-2.4 4.1-5.9 4.1-3.3 0-5.6-1.4-5.6-3.9z"/></svg></button>
         <button type="button" data-size="gross" role="radio" aria-checked="false" title="Große Insel" aria-label="groß"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12.5c0-4 4.6-6.5 9.3-6.5 5 0 9.7 2.2 9.7 6.2 0 3.4-3.6 6.3-9.4 6.3-5.4 0-9.6-2.2-9.6-6z"/></svg></button>
+      </span>
+    </div>
+    <div class="field" id="type" role="radiogroup" aria-label="Inseltyp">Typ
+      <span class="size-pick">
+        <button type="button" data-type="ausgewogen" role="radio" aria-checked="true" title="Ausgewogene Insel: von allem etwas" aria-label="ausgewogen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4 2.5 11h7z"/><rect x="5.3" y="11" width="1.4" height="3"/><path d="M13 14l3.5-6 3 4 1.5-2 2 4z"/><path d="M3 20c.6-2 1.2-3 1.6-3.4.2 1 .3 2 .3 3.4zm3.4 0c.3-2.2.9-3.6 1.6-4.4.1 1.4 0 3-.2 4.4zm3.4 0c.5-1.6 1.1-2.6 1.8-3-.1 1-.2 2-.5 3z"/></svg></button>
+        <button type="button" data-type="gras" role="radio" aria-checked="false" title="Grasinsel: viel offenes Grasland" aria-label="Gras"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 21c.8-4 2-7 3.5-9-.3 3.3-.4 6.3 0 9zm4.6 0c.3-5.5 1.6-10 4-14-.7 4.8-.9 9.4-.4 14zm5 0c.2-4.5 1.3-8.5 3.6-11.5-.5 4-.6 7.8-.1 11.5zm4.6 0c.7-3.4 2-6 3.8-7.6-.6 2.6-.8 5.1-.6 7.6z"/></svg></button>
+        <button type="button" data-type="wald" role="radio" aria-checked="false" title="Waldinsel: viel Wald und Busch" aria-label="Wald"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2 3 10h2.5L2.5 15h4.6v6h1.8v-6h4.6l-3-5H13z"/><path d="M17 6l-3.6 6h2L13 16h3.2v5h1.6v-5H21l-2.4-4h2z"/></svg></button>
+        <button type="button" data-type="fels" role="radio" aria-checked="false" title="Felsinsel: viel Bergland und Geröll" aria-label="Fels"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M1.5 20 9 6l3.4 6.3L15 8l7.5 12z"/><path d="M9 6l-2 3.8 2-1 1.6 1.2z" fill="#fff" fill-opacity=".7"/></svg></button>
       </span>
     </div>
     <button id="resetView" type="button" title="Gesamtansicht (R)">Ansicht zurücksetzen</button>
@@ -182,8 +190,8 @@
   <script src="js/core/grid.js"></script>
   <script src="js/core/geometry.js"></script>
   <script src="js/core/contour.js"></script>
-  <script src="js/world/config.js"></script>
-  <script src="js/world/island.js"></script>
+  <script src="js/world/config.js?v=20261019d"></script>
+  <script src="js/world/island.js?v=20261019d"></script>
   <script src="js/world/decor.js"></script>
   <script src="js/world/world.js"></script>
   <script src="js/eco/time.js"></script>
@@ -210,11 +218,11 @@
   <script src="js/render/ratRenderer.js"></script>
   <script src="js/render/agentRenderer.js"></script>
   <script src="js/render/humanRenderer.js"></script>
-  <script src="js/ui/charts.js?v=20261019c"></script>
+  <script src="js/ui/charts.js?v=20261019d"></script>
   <script src="js/ui/cardInfo.js"></script>
-  <script src="js/ui/app.js?v=20261019c"></script>
+  <script src="js/ui/app.js?v=20261019d"></script>
   <!-- nur mit ?raum= (MPSkills) bzw. ?demo=1 (Schaufenster), sonst tun sie nichts -->
-  <script src="js/ui/room.js?v=20261019c"></script>
-  <script src="js/ui/demo.js?v=20261019c"></script>
+  <script src="js/ui/room.js?v=20261019d"></script>
+  <script src="js/ui/demo.js?v=20261019d"></script>
 </body>
 </html>

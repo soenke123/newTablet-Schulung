@@ -19,15 +19,30 @@
   var canvas = $('map');
   var ctx = canvas.getContext('2d');
   var seedInput = $('seed');
-  // Groesse: zwei Knoepfe (klein = Inselgroesse 'mittel', gross = 'gross'); verhaelt sich wie ein Auswahlfeld
-  var sizeButtons = [].slice.call(doc.querySelectorAll('#size [data-size]'));
-  var sizeSelect = {
-    value: 'mittel',
-    set: function (v) {
-      this.value = v;
-      sizeButtons.forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.size === v)); });
-    }
-  };
+  // Groesse und Inseltyp: Knoepfe mit Symbolen, verhalten sich wie ein Auswahlfeld
+  // (Groesse: klein = Inselgroesse 'mittel', gross = 'gross')
+  function picker(id, attr, value) {
+    var buttons = [].slice.call(doc.querySelectorAll('#' + id + ' [data-' + attr + ']'));
+    var pick = {
+      value: value,
+      set: function (v) {
+        pick.value = v;
+        buttons.forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset[attr] === v)); });
+      },
+      onPick: function (fn) {
+        buttons.forEach(function (b) {
+          b.addEventListener('click', function () {
+            if (b.dataset[attr] === pick.value) return;
+            pick.set(b.dataset[attr]);
+            fn();
+          });
+        });
+      }
+    };
+    return pick;
+  }
+  var sizeSelect = picker('size', 'size', 'mittel');
+  var typeSelect = picker('type', 'type', 'ausgewogen');
   var tooltip = $('tooltip'), legend = $('legend'), legendBtn = $('toggleLegend');
   var status = $('status');
   var seasonBadge = $('season'), hlBadge = $('highlight');
@@ -73,20 +88,21 @@
     return out;
   }
 
-  function writeHash(seed, size) {
-    var hash = '#seed=' + seed + '&size=' + size;
+  function writeHash(seed, size, type) {
+    var hash = '#seed=' + seed + '&size=' + size + '&typ=' + type;
     if (global.history && global.history.replaceState) global.history.replaceState(null, '', hash);
     else global.location.hash = hash;
   }
 
-  function load(seed, size) {
+  function load(seed, size, type) {
     status.textContent = 'erzeuge Insel …';
     setRunning(false);
     global.setTimeout(function () {
-      world = BT.World.generate(seed, { size: size });
+      world = BT.World.generate(seed, { size: size, type: type });
       seedInput.value = seed;
       sizeSelect.set(world.size);
-      writeHash(seed, world.size);
+      typeSelect.set(world.type);
+      writeHash(seed, world.size, world.type);
       if (!camera) camera = new BT.Camera(world);
       else camera.setWorld(world);
       resize();
@@ -1018,15 +1034,11 @@
   }
 
   // ---------------------------------------------------------------- Bedienelemente
-  $('newWorld').addEventListener('click', function () { load(BT.randomSeed(), sizeSelect.value); });
-  seedInput.addEventListener('change', function () { load(BT.parseSeed(seedInput.value), sizeSelect.value); });
-  sizeButtons.forEach(function (b) {
-    b.addEventListener('click', function () {
-      if (b.dataset.size === sizeSelect.value) return;
-      sizeSelect.set(b.dataset.size);
-      load(world ? world.seed : BT.randomSeed(), sizeSelect.value);
-    });
-  });
+  function reload(seed) { load(seed, sizeSelect.value, typeSelect.value); }
+  $('newWorld').addEventListener('click', function () { reload(BT.randomSeed()); });
+  seedInput.addEventListener('change', function () { reload(BT.parseSeed(seedInput.value)); });
+  sizeSelect.onPick(function () { reload(world ? world.seed : BT.randomSeed()); });
+  typeSelect.onPick(function () { reload(world ? world.seed : BT.randomSeed()); });
   $('resetView').addEventListener('click', function () { if (camera) { setFollow(null); camera.reset(); interacted(); } });
   followBadge.addEventListener('click', function (e) { if (e.target.tagName === 'BUTTON') setFollow(null); });
   legendBtn.addEventListener('click', function () {
@@ -1118,7 +1130,7 @@
   BT.RatRenderer.image(drawTileImages);
   BT.HumanRenderer.preload();
   var h = readHash();
-  load(h.seed ? BT.parseSeed(h.seed) : BT.randomSeed(), h.size || BT.CONFIG.size);
+  load(h.seed ? BT.parseSeed(h.seed) : BT.randomSeed(), h.size || BT.CONFIG.size, h.typ || BT.CONFIG.type);
   global.requestAnimationFrame(frame);
 
   // Fuer Tests und Screenshots
@@ -1127,6 +1139,8 @@
     get sim() { return sim; },
     get camera() { return camera; },
     onWorld: null,
+    /** Inseltyp wechseln (gleicher Seed, gleiche Groesse); baut die Insel neu */
+    setType: function (type) { if (world && type !== world.type) load(world.seed, world.size, type); },
     redraw: function () { dirty = true; },
     highlight: setHighlight,
     runDays: function (n) { sim.runDays(n); updatePanel(true); dirty = true; },
