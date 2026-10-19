@@ -22,8 +22,9 @@ Mit `?raum=lehrer|schueler` zeigt die Seite nur die Insel ohne Tiere und vier fe
 sieht Kacheln (Bild `assets/szenario_<n>.jpg` + große Tierbilder, i = Infos für den Unterricht), startet für
 sich oder teilt/entzieht (postMessage `bon:share` → `skill_room_state.data.shared`); Schüler sehen nur die
 geteilten als Karten „Szenario n“ (vorher steht auf der leeren Insel „Warte auf deine Lehrkraft …“). Im Raum
-steht das Diagramm von Anfang an auf Jahresmittel, mit Umschalter auch in der Seitenleiste. Mit `?demo=1` spielt `js/ui/demo.js` das Schaufenster (Wellen Wolf/Hirsch
-über 90 Jahre als Skizze, dann Landung, Schafweide, Ausbruch). Ohne Parameter läuft alles wie vorher.
+steht das Diagramm von Anfang an auf Jahresmittel, mit Umschalter auch in der Seitenleiste. Mit `?demo=1` spielt `js/ui/demo.js` das Schaufenster: volle Oberfläche mit Seitenleiste, echte Kurven
+(90 Jahre Wolf/Hirsch im Zeitraffer, dann Landung, Schafweide, Ausbruch). Bestand, Diagramme und Todesursachen
+zeigen nur Arten des Szenarios (`present()` in app.js: Startbestand > 0 oder je gesehen; `LineChart.setSeries`). Ohne Parameter läuft alles wie vorher.
 Wer an `index.html`, `js/` oder `css/` arbeitet, zieht `V` in `tool.js` und die `?v=` in `index.html` hoch.
 
 ## Regeln

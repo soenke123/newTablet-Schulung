@@ -387,7 +387,7 @@
   };
   var charts = [], bigCharts = [], chartView = null;
   // Raum in MPSkills (js/ui/room.js)
-  var ROOM = /(^|[?&])raum=/.test(global.location.search.slice(1));
+  var ROOM = /(^|[?&])(raum|demo)=/.test(global.location.search.slice(1));
   // Schichten mit Pflanzenzustand (Gras, Laub, ... - je nach Artentabelle)
   var HEALTH_KEYS = BT.FOOD_ORDER.filter(function (k) { return BT.FOOD[k].damage; });
   var lastPanelUpdate = 0;
@@ -413,14 +413,14 @@
     // Im Raum gibt es das Jahresmittel auch in der Seitenleiste (und es ist am Anfang an)
     allowMean = allowMean || ROOM;
     function series(ids, get) {
-      return ids.map(function (id) { return { label: (BT.SPECIES[id] || BT.FOOD[id]).plural || BT.FOOD[id].name, color: SERIES_COLOR[id], get: get(id) }; });
+      return ids.map(function (id) { return { sp: id, label: (BT.SPECIES[id] || BT.FOOD[id]).plural || BT.FOOD[id].name, color: SERIES_COLOR[id], get: get(id) }; });
     }
     var count = function (id) { return function (r) { return r.count[id]; }; };
     return [
       // Ratten (eco/rats.js) sind viel zahlreicher: die Linie ist durch 20 geteilt, die Legende nennt die echte Zahl
       new BT.LineChart(box, { view: chartView, allowMean: allowMean, title: big ? 'Pflanzenfresser (Linie der Ratten durch 20 geteilt)' : 'Pflanzenfresser',
         series: series(['zwerghirsch', 'laufvogel', 'schaf'], count).concat([
-          { label: 'Ratten', color: SERIES_COLOR.ratten, scale: 20, get: function (r) { return (r.ratten || 0) / 20; } }]) }),
+          { sp: 'ratten', label: 'Ratten', color: SERIES_COLOR.ratten, scale: 20, get: function (r) { return (r.ratten || 0) / 20; } }]) }),
       new BT.LineChart(box, { view: chartView, allowMean: allowMean, title: 'Räuber', series: series(['inselwolf', 'inseladler', 'hund'], count) }),
       new BT.LineChart(box, {
         view: chartView, allowMean: allowMean, title: big ? 'Nahrung (100 % = unberührte Insel)' : 'Nahrung', percent: true,
@@ -452,11 +452,25 @@
     ];
   }
 
+  /** Eine Art gehoert zur Insel, wenn sie mit Startbestand begann oder je da war (Ratten: sobald das Feld laeuft). */
+  function present(id) {
+    if (id === 'ratten') return sim.rats.day != null;
+    return sim.startCounts[id] > 0 || !!sim.stats.seen[id];
+  }
+
   function updateCharts() {
     if (!sim) return;
     var h = sim.stats.history;
     var all = charts.concat(bigCharts);
-    for (var c = 0; c < all.length; c++) if (all[c].opts.when) all[c].root.hidden = !all[c].opts.when(sim);
+    for (var c = 0; c < all.length; c++) {
+      var ch = all[c];
+      if (!ch.allSeries) ch.allSeries = ch.opts.series;
+      if (ch.allSeries.some(function (x) { return x.sp; })) {
+        var cur = ch.allSeries.filter(function (x) { return !x.sp || present(x.sp); });
+        if (cur.length !== ch.opts.series.length) ch.setSeries(cur);
+      }
+      if (ch.opts.when) ch.root.hidden = !ch.opts.when(sim);
+    }
     for (var i = 0; i < charts.length; i++) charts[i].update(h);
     if (bigOpen()) for (i = 0; i < bigCharts.length; i++) bigCharts[i].update(h);
   }
@@ -760,7 +774,7 @@
     BT.SPECIES_ORDER.forEach(function (id) {
       // Eingeschleppte Arten erscheinen erst, wenn sie auf der Insel sind
       var tile = doc.querySelector('#tiles .tile[data-id="' + id + '"]');
-      tile.hidden = !!BT.SPECIES[id].introduced && !sim.stats.seen[id];
+      tile.hidden = !present(id);
       $('count-' + id).textContent = row.count[id];
       var g = row.groups[id];
       var kind = { herd: ['Herde', 'Herden'], flock: ['Gruppe', 'Gruppen'], pack: ['Rudel', 'Rudel'], pair: ['Paar/Revier', 'Paare/Reviere'] }[BT.SPECIES[id].group.kind];
@@ -785,7 +799,7 @@
     var causes = [['hunger', 'Hunger'], ['alter', 'Alter'], ['inselwolf', 'Wolf'], ['inseladler', 'Adler'], ['hund', 'Hund'], ['krankheit', 'Krankheit'], ['jagd', 'Jagd'], ['ratte', 'Ratte'], ['hofhund', 'Dorfhund']];
     var html = '<tr><th></th>' + causes.map(function (c) { return '<th>' + c[1] + '</th>'; }).join('') + '</tr>';
     BT.SPECIES_ORDER.forEach(function (id) {
-      if (BT.SPECIES[id].introduced && !sim.stats.seen[id]) return;
+      if (!present(id)) return;
       var d = sim.stats.deaths[id];
       html += '<tr><td>' + BT.SPECIES[id].plural + '</td>' + causes.map(function (c) {
         return '<td>' + (d[c[0]] || '·') + '</td>';

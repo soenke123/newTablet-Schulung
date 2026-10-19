@@ -176,6 +176,14 @@
     this.values = this.legend.querySelectorAll('b');
   };
 
+  /** Andere Reihen (z. B. nur die Arten des Szenarios); Legende und Jahresmittel werden neu aufgebaut. */
+  LineChart.prototype.setSeries = function (series) {
+    this.opts.series = series;
+    this._means = null;
+    this.buildLegend();
+    this.root.hidden = !series.length;
+  };
+
   LineChart.prototype.fmt = function (v, s) {
     if (this.opts.percent) return Math.round(v * 100) + ' %';
     var k = s && s.scale;

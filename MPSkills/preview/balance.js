@@ -3,8 +3,8 @@
    ══════════════════════════════════════════════════════════════
    Im Modal läuft die ECHTE Simulation im Rahmen, mit ?demo=1 — dann
    erzählt sie ihre Geschichte von selbst (tools/balance of nature/
-   js/ui/demo.js): die Insel mit Wölfen und Hirschen, daneben das
-   Diagramm der Jahresmittel über 90 Jahre (versetzte Wellen), dann
+   js/ui/demo.js): die Insel mit Wölfen und Hirschen samt Seitenleiste
+   und echten Diagrammen (Jahresmittel, 90 Jahre im Zeitraffer), dann
    landen Menschen, legen eine Schafweide an, und die Schafe brechen
    aus. Die Schleife steckt im Rahmen; das Drehbuch hier wartet nur.
 
@@ -27,7 +27,7 @@
   }
 
   async function play(api) {
-    if (!await api.waitFor('.demo-chart', 15000)) return;
+    if (!await api.waitFor('.chart canvas', 15000)) return;
     await api.wait(60000);
   }
 
