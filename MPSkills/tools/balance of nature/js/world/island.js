@@ -190,6 +190,49 @@
       });
     }
 
+    // Inseltyp: ein Gebiet auf einer Seite der Insel (Gebirge bzw. Urwald), nicht in der Mitte
+    var region = null;
+    if (cfg.region) {
+      var regRng = rng.fork('region');
+      var ra = regRng.range(0, Math.PI * 2);
+      var rcx = shape.cx * W, rcy = shape.cy * H, rp = null;
+      // vom Mittelpunkt in Richtung ra nach aussen, bis kurz vor die Kueste
+      for (var st = 0; st < 200; st++) {
+        var px = rcx + BT.M.cos(ra) * st * cell * 2, py = rcy + BT.M.sin(ra) * st * cell * 2;
+        var gx = Math.floor(px / cell), gy = Math.floor(py / cell);
+        if (gx < 0 || gy < 0 || gx >= cols || gy >= rows) break;
+        var gi = gy * cols + gx;
+        if (!land[gi]) break;
+        if (distSea[gi] >= maxDist * 0.4) rp = { x: px, y: py };
+      }
+      rp = rp || { x: rcx, y: rcy };
+      region = { x: rp.x, y: rp.y, radius: cfg.region * islandSpan };
+    }
+
+    // Gebirge: viele kurze Ruecken im Gebiet statt eines grossen Bergs
+    if (cfg.range && region) {
+      var rangeRng = rng.fork('range');
+      var nr = rangeRng.intIn(cfg.range.count);
+      for (r = 0; r < nr; r++) {
+        var rr = region.radius * Math.sqrt(rangeRng.next()) * 0.6, rang = rangeRng.range(0, Math.PI * 2);
+        var mx = region.x + BT.M.cos(rang) * rr, my = region.y + BT.M.sin(rang) * rr;
+        var ga = rangeRng.range(0, Math.PI), gl = rangeRng.rangeIn(cfg.range.length) * islandSpan;
+        ridges.push({
+          ax: mx - BT.M.cos(ga) * gl / 2, ay: my - BT.M.sin(ga) * gl / 2,
+          bx: mx + BT.M.cos(ga) * gl / 2, by: my + BT.M.sin(ga) * gl / 2,
+          width: rangeRng.rangeIn(cfg.range.width) * islandSpan,
+          height: rangeRng.rangeIn(cfg.range.height)
+        });
+      }
+    }
+
+    // Steilkueste: auf einer Seite steigt das Land direkt am Meer an (kein Strand, Fels)
+    var cliff = null;
+    if (cfg.cliffs) {
+      var clRng = rng.fork('cliffs');
+      cliff = { angle: region ? BT.M.atan2(region.y - shape.cy * H, region.x - shape.cx * W) + clRng.range(-0.6, 0.6) : clRng.range(0, Math.PI * 2) };
+    }
+
     // Vulkan: weit im Landesinneren, nicht direkt auf einem Bergruecken
     var volRng = rng.fork('volcano');
     var volcano = null;
@@ -242,6 +285,22 @@
             if (vd < cfg.craterRadius) h -= cfg.craterDepth * (1 - vd / cfg.craterRadius);
           }
         }
+        if (cfg.highland && region) {
+          // Hochland: das ganze Gebiet angehoben und zerklueftet, darauf die Ruecken
+          var hd = BT.M.hypot(wx - region.x, wy - region.y) / region.radius + hills.signed(wx * 0.006 + 30, wy * 0.006, 3) * 0.35;
+          var hw = smoothstep(1.1, 0.45, hd);
+          if (hw > 0) h += cfg.highland * hw * (0.55 + 0.45 * hills.fbm(wx * 0.009 + 70, wy * 0.009, 4)) * coastFade;
+        }
+        if (cliff) {
+          var ca = BT.M.atan2(wy - shape.cy * H, wx - shape.cx * W) - cliff.angle;
+          while (ca > Math.PI) ca -= Math.PI * 2;
+          while (ca < -Math.PI) ca += Math.PI * 2;
+          var cw = smoothstep(cfg.cliffs.arc, cfg.cliffs.arc * 0.55, Math.abs(ca));
+          if (cw > 0) {
+            var cn = 0.75 + 0.5 * hills.fbm(wx * 0.02 + 90, wy * 0.02, 3);
+            h += cfg.cliffs.height * cw * cn * smoothstep(cfg.cliffs.cells * 1.6, cfg.cliffs.cells * 0.4, distSea[idx]);
+          }
+        }
         for (var bi = 0; bi < basins.length; bi++) {
           var bs = basins[bi];
           var bd = BT.M.hypot(wx - bs.x, wy - bs.y) / bs.radius;
@@ -257,7 +316,7 @@
     for (i = 0; i < height.length; i++) if (land[i] && height[i] > maxH) maxH = height[i];
     for (i = 0; i < height.length; i++) if (land[i]) height[i] /= maxH;
 
-    return { height: height, distSea: distSea, ridges: ridges, volcano: volcano, basins: basins };
+    return { height: height, distSea: distSea, ridges: ridges, volcano: volcano, basins: basins, region: region };
   }
 
   function segDistT(px, py, s) {
@@ -492,6 +551,12 @@
         if (water.lake[i]) { g[i] = B.LAKE; continue; }
         var h = height[i];
         var m = moisture[i];
+        // Urwald (Inseltyp wald): im Gebiet feucht genug fuer Wald, oben Moosnebelwald
+        var fw = 0;
+        if (cfg.forest && relief.region) {
+          var fd = BT.M.hypot((x + 0.5) * cell - relief.region.x, (y + 0.5) * cell - relief.region.y) / relief.region.radius;
+          fw = smoothstep(1.05, 0.6, fd + en * 0.35);
+        }
         // Strand: breit an flachen Kuesten, schmal oder gar keiner an steilen
         var beachW = cfg.beachCells * (1 + 0.6 * en) * clamp(1.4 - h * 6, 0, 1.4);
         if (relief.distSea[i] <= beachW) { g[i] = B.BEACH; continue; }
@@ -499,7 +564,8 @@
         if (h >= cfg.rockHeight + en * 0.05) { g[i] = B.ROCK; continue; }
         var slope = slopeAt(height, cols, rows, x, y);
         if (m >= cfg.swampMoisture && h < cfg.swampMaxHeight && slope < cfg.swampMaxSlope && fresh[i] <= cfg.swampFreshCells) { g[i] = B.SWAMP; continue; }
-        if (m >= cfg.fernMoisture) { g[i] = h >= cfg.mossHeight + en * 0.04 ? B.MOSS : B.FERN; continue; }
+        if (fw > 0) m += fw * cfg.forest.moisture;
+        if (m >= cfg.fernMoisture) { g[i] = h >= cfg.mossHeight - (fw ? fw * cfg.forest.moss : 0) + en * 0.04 ? B.MOSS : B.FERN; continue; }
         g[i] = m >= cfg.scrubMoisture ? B.SCRUB : B.TUSSOCK;
       }
     }

@@ -1141,6 +1141,8 @@
     onWorld: null,
     /** Inseltyp wechseln (gleicher Seed, gleiche Groesse); baut die Insel neu */
     setType: function (type) { if (world && type !== world.type) load(world.seed, world.size, type); },
+    /** Andere Insel laden (Seed, Groesse, Typ) */
+    load: function (seed, size, type) { load(seed, size, type); },
     redraw: function () { dirty = true; },
     highlight: setHighlight,
     runDays: function (n) { sim.runDays(n); updatePanel(true); dirty = true; },
