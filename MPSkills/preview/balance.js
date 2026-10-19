@@ -8,10 +8,8 @@
    landen Menschen, legen eine Schafweide an, und die Schafe brechen
    aus. Die Schleife steckt im Rahmen; das Drehbuch hier wartet nur.
 
-   Das Standbild für die Kachel: ein Bild der Insel (aus der echten
-   Karte, assets/vorschau_insel.jpg) mit einem kleinen Diagramm der
-   zwei versetzten Wellen darüber. Feste Farben wie in der App, die
-   ihr eigenes Kleid hat und nicht in den Darkmode kippt.
+   Das Standbild für die Kachel ist bewusst abstrakt (siehe tile()):
+   Beute und Räuber als Punktgruppen und als zwei versetzte Wellen.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -19,7 +17,6 @@
   if (!window.MPPreview) return;
 
   const ROLE = 'presenter';
-  const IMG = 'tools/balance%20of%20nature/assets/vorschau_insel.jpg';
 
   function view() {
     return { role: ROLE, room: { title: 'Balance of Nature', settings: {} },
@@ -31,25 +28,63 @@
     await api.wait(60000);
   }
 
-  function wave(shift, amp, base) {
+  /* ── Das Standbild: abstrakt, nicht die Insel ─────────────────
+     Wie bei den anderen Kacheln zeigt sie nicht das Spiel, sondern
+     den einen Gedanken dahinter: Beute und Räuber schwanken, und der
+     Räuber hinkt eine Viertelwelle hinterher. Links zwei Gruppen aus
+     Punkten (viele Hirsche, wenige Wölfe), rechts ihre Kurven über
+     die Zeit. Farben aus der App (js/ui/app.js): Zwerghirsch orange,
+     Inselwolf violett.
+
+     Beim Darüberfahren läuft ein Zeitstrich durch das Diagramm, und
+     die Gruppen links wachsen und schrumpfen im selben Takt wie ihre
+     Kurve (style.css, .bnp-*). Eine Welle = T = 3 s, zwei Wellen im
+     Bild, der Strich braucht also 6 s. */
+  const PREY = '#d95926', PRED = '#9085e9';
+  const INK = '#1c2530', INK3 = '#7a8594', LINE = '#d6dae2';
+  const CX0 = 132, CX1 = 326, CY = 98;          // Diagramm: x-Bereich, Mittellinie
+
+  function wave(amp, lag) {
     const pts = [];
-    for (let i = 0; i <= 60; i++) {
-      const x = 8 + i * 2.4;
-      const y = base - amp * Math.sin(i / 60 * 2 * Math.PI * 3.2 - shift);
+    for (let i = 0; i <= 80; i++) {
+      const u = i / 80;
+      const x = CX0 + (CX1 - CX0) * u;
+      const y = CY - amp * Math.sin(2 * Math.PI * 2 * u - lag);
       pts.push(x.toFixed(1) + ',' + y.toFixed(1));
     }
     return pts.join(' ');
   }
 
+  // Punkte in einem lockeren Kreis — fest gestreut, damit das Bild
+  // bei jedem Laden dasselbe ist.
+  function herd(cx, cy, n, r, col, spread) {
+    let out = '';
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.39996, d = spread * Math.sqrt((i + .5) / n);
+      out += `<circle cx="${(cx + d * Math.cos(a)).toFixed(1)}" cy="${(cy + d * Math.sin(a)).toFixed(1)}" r="${r}" fill="${col}"/>`;
+    }
+    return out;
+  }
+
   function tile() {
-    return `<div class="tprev" aria-hidden="true" style="background:#14435f url(${IMG}) center/cover no-repeat">
-      <svg viewBox="0 0 160 70" style="position:absolute;left:8px;bottom:8px;width:52%;height:auto;
-           background:rgba(16,53,75,.88);border:1px solid #2d6684;border-radius:8px">
-        <text x="8" y="11" font-size="7" font-weight="700" fill="#e8f1f4">Bestand</text>
-        <text x="152" y="11" font-size="6" fill="#f2c94c" text-anchor="end">90 Jahre</text>
-        <line x1="8" x2="152" y1="62" y2="62" stroke="#e8f1f4" stroke-opacity=".25"/>
-        <polyline points="${wave(0, 14, 38)}" fill="none" stroke="#d95926" stroke-width="2" stroke-linejoin="round"/>
-        <polyline points="${wave(Math.PI / 2, 10, 46)}" fill="none" stroke="#9085e9" stroke-width="2" stroke-linejoin="round"/>
+    return `<div class="tprev tprev--bn" aria-hidden="true">
+      <svg class="bnp" viewBox="0 0 340 190" preserveAspectRatio="xMidYMid meet">
+        <!-- Links: die beiden Gruppen. -->
+        <g class="bnp-herd bnp-prey" style="transform-origin:62px 62px">${herd(62, 62, 14, 4.2, PREY, 26)}</g>
+        <text x="62" y="108" text-anchor="middle" font-size="9" font-weight="700" fill="${INK}">Beute</text>
+        <g class="bnp-herd bnp-pred" style="transform-origin:62px 140px">${herd(62, 140, 4, 5.4, PRED, 13)}</g>
+        <text x="62" y="174" text-anchor="middle" font-size="9" font-weight="700" fill="${INK}">Räuber</text>
+
+        <!-- Rechts: Bestand über die Zeit. -->
+        <line x1="${CX0}" x2="${CX1}" y1="160" y2="160" stroke="${LINE}" stroke-width="1.2"/>
+        <line x1="${CX0}" x2="${CX0}" y1="28" y2="160" stroke="${LINE}" stroke-width="1.2"/>
+        <text x="${CX0}" y="20" font-size="8" font-weight="700" fill="${INK3}">Bestand</text>
+        <text x="${CX1}" y="174" text-anchor="end" font-size="8" fill="${INK3}">Zeit →</text>
+        <polyline points="${wave(42, 0)}" fill="none" stroke="${PREY}" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="${wave(26, Math.PI / 2)}" fill="none" stroke="${PRED}" stroke-width="3"
+                  stroke-linecap="round" stroke-linejoin="round"/>
+        <line class="bnp-now" x1="${CX0}" x2="${CX0}" y1="30" y2="160" stroke="${INK}" stroke-width="1.4" stroke-dasharray="3 3"/>
       </svg>
     </div>`;
   }

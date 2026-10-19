@@ -172,6 +172,15 @@
       '<rect x="7.4" y="15.4" width="9.2" height="4.8" rx="1.2"/>' +
       '<path d="M6.2 8.4v3.4h11.6V8.4M12 11.8v3.6"/>',
 
+    /* Balance of Nature — zwei versetzte Wellen: Beute und Räuber.
+       Die zweite läuft der ersten eine Viertelwelle hinterher und
+       ist flacher — genau das, was die Diagramme auf der Insel
+       zeigen. Kein Tier und keine Insel: das Verhalten ist die
+       Sache, nicht die Landschaft. */
+    balance:
+      '<path d="M2.6 12.0L3.5 8.6 4.5 6.0 5.4 4.7 6.4 5.0 7.3 6.9 8.2 9.9 9.2 13.4 10.1 16.6 11.1 18.7 12.0 19.4 12.9 18.4 13.9 16.0 14.8 12.7 15.8 9.2 16.7 6.4 17.6 4.8 18.6 4.8 19.5 6.4 20.5 9.3 21.4 12.7"/>' +
+      '<path d="M2.6 16.6L3.5 16.1 4.5 14.7 5.4 12.7 6.4 10.5 7.3 8.7 8.2 7.6 9.2 7.5 10.1 8.4 11.1 10.1 12.0 12.2 12.9 14.3 13.9 15.9 14.8 16.6 15.8 16.3 16.7 15.0 17.6 13.1 18.6 10.9 19.5 9.0 20.5 7.7 21.4 7.4" opacity=".55"/>',
+
     /* Scrum Werkstatt — das Board: drei Spalten, in den ersten
        beiden je ein Zettel, die letzte mit einem Haken (fertig). */
     scrum:

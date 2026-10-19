@@ -1753,6 +1753,49 @@ a.btn {
   .kmp-hex, .kmp-ring, .kmp-s0, .kmp-s1 { transition: none; }
 }
 
+/* ── Balance of Nature (preview/balance.js) ────────────────────
+   Abstrakt statt Insel: Beute und Räuber als Punktgruppen und als
+   zwei versetzte Wellen. Helles Kleid wie SYNIR, im Darkmode nur
+   gedämpft.
+
+   Beim Darüberfahren läuft der Zeitstrich in 6 s durchs Diagramm
+   (zwei Wellen), und die Gruppen atmen im Takt ihrer Kurve: eine
+   Welle = 3 s. Der Räuber hinkt eine Viertelwelle hinterher — als
+   negative Verzögerung von drei Vierteln, damit er nicht erst
+   stillsteht. */
+.tprev--bn {
+  background-color: #f6f7f9;
+  background-image: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+:root[data-theme="dark"] .tprev--bn {
+  background-color: #f6f7f9;
+  background-image: none;
+  filter: brightness(.9);
+}
+.bnp { width: 100%; height: 100%; display: block; font-family: 'Segoe UI', system-ui, sans-serif; }
+.bnp-now { opacity: 0; }
+
+@keyframes bnp-wave {
+  0%, 100% { transform: scale(1); }
+  25%      { transform: scale(1.3); }
+  75%      { transform: scale(.65); }
+}
+@keyframes bnp-now { from { transform: translateX(0); } to { transform: translateX(194px); } }
+
+@media (hover: hover) {
+  .tile--peek:hover .bnp-now  { opacity: .55; animation: bnp-now 6s linear infinite; }
+  .tile--peek:hover .bnp-prey { animation: bnp-wave 3s ease-in-out infinite; }
+  .tile--peek:hover .bnp-pred { animation: bnp-wave 3s ease-in-out -2.25s infinite; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile--peek:hover .bnp-now, .tile--peek:hover .bnp-prey,
+  .tile--peek:hover .bnp-pred { animation: none; }
+}
+
 /* ── Das Beamerbild auf einem schmalen Gerät ───────────────────
    Bis hierher zeigte das Schaufenster Tafeln (die WordPool-Wolke
    fügt sich in jede Breite) oder Anwendungen, die umbrechen können.
