@@ -29,7 +29,7 @@
 (function () {
   'use strict';
 
-  const V = '20261019b';
+  const V = '20261019c';
   const DIR = 'tools/balance%20of%20nature/';
   const GAP = 12;
   const MIN = 460;

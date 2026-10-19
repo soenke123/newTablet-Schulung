@@ -281,13 +281,25 @@
     render();
   }
 
+  var snaps = {};           // Stand je Szenario: man wechselt, vergleicht und macht dort weiter (alles pausiert)
+  var DEFAULT_SPEED = 38;
+
   function start(s) {
     if (!worldReady) return;
+    if (current === s) { openChooser(false); return; }
+    if (current) snaps[current.id] = BT.app.snapshot();
     current = s;
-    var st = {};
-    NATIVE.forEach(function (id) { if (s.species.indexOf(id) < 0) st[id] = 0; });
-    BT.app.cardPause(2);
-    BT.app.restartWith(st);
+    BT.app.setRunning(false);
+    if (snaps[s.id]) {
+      BT.app.restore(snaps[s.id]);
+    } else {
+      var st = {};
+      NATIVE.forEach(function (id) { if (s.species.indexOf(id) < 0) st[id] = 0; });
+      BT.app.cardPause(2);
+      BT.app.restartWith(st);
+      BT.app.speed(DEFAULT_SPEED);
+      BT.app.camera.reset();
+    }
     // Der Startbestand im Neustart-Fenster: nur die Arten des Szenarios
     doc.querySelectorAll('#startInputs input[data-id]').forEach(function (inp) {
       inp.closest('.sv').hidden = s.species.indexOf(inp.dataset.id) < 0;
@@ -295,9 +307,7 @@
     doc.body.classList.remove('idle');
     doc.body.classList.toggle('humans', !!s.humans);
     BT.app.fold('menschen', !!s.humans);
-    BT.app.camera.reset();
     global.dispatchEvent(new Event('resize'));
-    BT.app.setRunning(true);
     openChooser(false);
     render();
   }
@@ -404,6 +414,7 @@
 
     if (known === null) known = current ? shared.slice() : [];
     // Entzogen, waehrend es laeuft: zurueck zur leeren Insel
+    Object.keys(snaps).forEach(function (id) { if (!isShared(+id)) delete snaps[id]; });
     if (current && !isShared(current.id)) {
       idle();
       openChooser(true);

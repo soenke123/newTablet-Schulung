@@ -467,7 +467,7 @@
       if (!ch.allSeries) ch.allSeries = ch.opts.series;
       if (ch.allSeries.some(function (x) { return x.sp; })) {
         var cur = ch.allSeries.filter(function (x) { return !x.sp || present(x.sp); });
-        if (cur.length !== ch.opts.series.length) ch.setSeries(cur);
+        if (cur.length !== ch.opts.series.length || cur.some(function (x, j) { return x !== ch.opts.series[j]; })) ch.setSeries(cur);
       }
       if (ch.opts.when) ch.root.hidden = !ch.opts.when(sim);
     }
@@ -1120,6 +1120,25 @@
       startValues = Object.assign({}, recommended, start);
       customStart = true;
       restart();
+    },
+    /** Stand der Insel festhalten (Simulation, Kamera, Tempo), um spaeter dorthin zurueckzukehren */
+    snapshot: function () {
+      return { sim: sim, startValues: startValues, customStart: customStart, speed: speedInput.value,
+        cam: { x: camera.x, y: camera.y, scale: camera.scale } };
+    },
+    /** Festgehaltenen Stand wieder zeigen (pausiert) */
+    restore: function (snap) {
+      sim = snap.sim; startValues = snap.startValues; customStart = snap.customStart;
+      speedInput.value = snap.speed; updateSpeedLabel();
+      if (chartView) chartView.events = sim.events;
+      setAim(null); setFollow(null);
+      tickAcc = 0;
+      setRunning(false);
+      camera.x = snap.cam.x; camera.y = snap.cam.y; camera.scale = snap.cam.scale;
+      camera.clampPosition();
+      syncStartSliders();
+      updatePanel(true);
+      dirty = true;
     },
     setRunning: setRunning,
     get running() { return running; },
