@@ -169,6 +169,13 @@
   doc.querySelector('.layout').appendChild(layer);
   var list = layer.querySelector('.scn-list');
 
+  // Klasse, solange nichts freigegeben ist: ein Satz auf der leeren Insel
+  var hint = doc.createElement('div');
+  hint.className = 'scn-hint';
+  hint.hidden = true;
+  hint.textContent = 'Warte auf deine Lehrkraft. Sie gibt gleich ein Szenario frei.';
+  doc.querySelector('.stage').appendChild(hint);
+
   var info = doc.createElement('div');
   info.className = 'scn-info';
   info.hidden = true;
@@ -247,6 +254,7 @@
         : '<p class="scn-wait">Deine Lehrkraft hat noch kein Szenario freigegeben.</p>';
     }
     layer.querySelector('.scn-close').hidden = !current;
+    hint.hidden = TEACHER || !worldReady || !!current || shared.length > 0 || !layer.hidden;
     now.textContent = current ? (TEACHER ? current.id + ' · ' + current.title : 'Szenario ' + current.id) : '';
     btn.classList.toggle('has-new', !TEACHER && !!known && shared.some(function (id) { return known.indexOf(id) < 0; }));
   }
@@ -254,8 +262,8 @@
   function openChooser(open) {
     layer.hidden = !open;
     btn.setAttribute('aria-expanded', String(open));
+    render();
     if (open) {
-      render();
       // Was man gesehen hat, ist nicht mehr neu
       if (!TEACHER) global.setTimeout(function () { known = shared.slice(); btn.classList.remove('has-new'); }, 1200);
     }

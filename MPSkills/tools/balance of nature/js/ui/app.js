@@ -386,6 +386,8 @@
     korn: '#c9a227', kornMoeglich: '#efe2a0', gefressen: '#d95926'
   };
   var charts = [], bigCharts = [], chartView = null;
+  // Raum in MPSkills (js/ui/room.js)
+  var ROOM = /(^|[?&])raum=/.test(global.location.search.slice(1));
   // Schichten mit Pflanzenzustand (Gras, Laub, ... - je nach Artentabelle)
   var HEALTH_KEYS = BT.FOOD_ORDER.filter(function (k) { return BT.FOOD[k].damage; });
   var lastPanelUpdate = 0;
@@ -408,6 +410,8 @@
   function makeCharts(box, allowMean) {
     // Die Erklaerung in Klammern steht nur in der Grossansicht (allowMean), die Seitenleiste bleibt knapp
     var big = !!allowMean;
+    // Im Raum gibt es das Jahresmittel auch in der Seitenleiste (und es ist am Anfang an)
+    allowMean = allowMean || ROOM;
     function series(ids, get) {
       return ids.map(function (id) { return { label: (BT.SPECIES[id] || BT.FOOD[id]).plural || BT.FOOD[id].name, color: SERIES_COLOR[id], get: get(id) }; });
     }
@@ -730,6 +734,7 @@
     charts = makeCharts($('charts'));
     bigCharts = makeCharts($('bigCharts'), true);
     chartView.meanButton($('bigTools'));
+    if (ROOM) { chartView.meanButton($('chartTools')); chartView.setMean(true); }
     // Bei geaendertem Zeitraum stehen die neuen Werte sofort in der Legende
     chartView.onRange(function () { updateCharts(); });
     buildCards();

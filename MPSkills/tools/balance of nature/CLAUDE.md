@@ -21,7 +21,8 @@ Mit `?raum=lehrer|schueler` zeigt die Seite nur die Insel ohne Tiere und vier fe
 (`js/ui/room.js`: 1 Wolf+Hirsch, 2 Adler+Laufvogel, 3 alle vier, 4 alle vier + Menschen). Die Lehrkraft
 sieht Kacheln (Bild `assets/szenario_<n>.jpg` + große Tierbilder, i = Infos für den Unterricht), startet für
 sich oder teilt/entzieht (postMessage `bon:share` → `skill_room_state.data.shared`); Schüler sehen nur die
-geteilten als Karten „Szenario n“. Mit `?demo=1` spielt `js/ui/demo.js` das Schaufenster (Wellen Wolf/Hirsch
+geteilten als Karten „Szenario n“ (vorher steht auf der leeren Insel „Warte auf deine Lehrkraft …“). Im Raum
+steht das Diagramm von Anfang an auf Jahresmittel, mit Umschalter auch in der Seitenleiste. Mit `?demo=1` spielt `js/ui/demo.js` das Schaufenster (Wellen Wolf/Hirsch
 über 90 Jahre als Skizze, dann Landung, Schafweide, Ausbruch). Ohne Parameter läuft alles wie vorher.
 Wer an `index.html`, `js/` oder `css/` arbeitet, zieht `V` in `tool.js` und die `?v=` in `index.html` hoch.
 

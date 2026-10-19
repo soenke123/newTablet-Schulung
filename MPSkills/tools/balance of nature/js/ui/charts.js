@@ -65,6 +65,9 @@
 
   ChartView.prototype.setMean = function (on) {
     this.mean = on;
+    // alle Umschalter gleich (Seitenleiste und Grossansicht)
+    var bs = doc.querySelectorAll('.mean-toggle');
+    for (var i = 0; i < bs.length; i++) bs[i].setAttribute('aria-pressed', String(on));
     this.drawAll();
   };
 
@@ -82,7 +85,6 @@
     b.setAttribute('aria-pressed', String(this.mean));
     b.addEventListener('click', function () {
       self.setMean(!self.mean);
-      b.setAttribute('aria-pressed', String(self.mean));
     });
     container.appendChild(b);
     return b;
