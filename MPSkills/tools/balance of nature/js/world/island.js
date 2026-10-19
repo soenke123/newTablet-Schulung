@@ -591,8 +591,8 @@
   function generate(seed, options) {
     var opts = options || {};
     var cfg = BT.CONFIG;
-    var sizeKey = opts.size || cfg.size;
-    var dims = BT.ISLAND_SIZES[sizeKey] || BT.ISLAND_SIZES.mittel;
+    var sizeKey = BT.ISLAND_SIZES[opts.size] ? opts.size : cfg.size;   // auch alte Links mit size=klein
+    var dims = BT.ISLAND_SIZES[sizeKey];
     var cellSize = cfg.cellSize;
     var cols = Math.round(dims.width / cellSize);
     var rows = Math.round(dims.height / cellSize);

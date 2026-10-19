@@ -60,9 +60,9 @@
     { key: 'acker',   name: 'Acker',           land: true, use: true }
   ];
 
-  /** Inselgroessen fuer Experimente: gleiche Insel-Logik, andere Flaeche. */
+  /** Inselgroessen: gleiche Insel-Logik, andere Flaeche. In der Oberflaeche heisst
+   *  'mittel' "klein" (die fruehere kleine Insel ist entfallen, dort starben die Wolfe meist aus). */
   BT.ISLAND_SIZES = {
-    klein:  { width: 1600, height: 1100 },
     mittel: { width: 2400, height: 1600 },
     gross:  { width: 3200, height: 2150 }
   };

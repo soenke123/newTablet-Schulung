@@ -35,6 +35,15 @@ html, body {
 
 .field { display: flex; align-items: center; gap: 6px; }
 
+/* Groesse: zwei Insel-Symbole nebeneinander */
+.size-pick { display: inline-flex; }
+.size-pick button { display: inline-flex; align-items: center; padding: 3px 7px; }
+.size-pick button:first-child { border-radius: 6px 0 0 6px; }
+.size-pick button:last-child { border-radius: 0 6px 6px 0; margin-left: -1px; }
+.size-pick svg { width: 22px; height: 22px; fill: currentColor; opacity: 0.55; }
+.size-pick button[aria-checked="true"] { background: #23607f; border-color: var(--accent); position: relative; }
+.size-pick button[aria-checked="true"] svg { opacity: 1; }
+
 input, select, button {
   font: inherit;
   color: var(--bar-fg);

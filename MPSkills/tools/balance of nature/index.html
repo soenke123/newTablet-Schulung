@@ -14,13 +14,12 @@
       <input id="seed" type="text" inputmode="numeric" autocomplete="off" spellcheck="false">
     </label>
     <button id="newWorld" type="button">Neue Insel</button>
-    <label class="field">Größe
-      <select id="size">
-        <option value="klein">klein</option>
-        <option value="mittel" selected>mittel</option>
-        <option value="gross">groß</option>
-      </select>
-    </label>
+    <div class="field" id="size" role="radiogroup" aria-label="Größe der Insel">Größe
+      <span class="size-pick">
+        <button type="button" data-size="mittel" role="radio" aria-checked="true" title="Kleine Insel" aria-label="klein"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 12.8c0-2.6 2.7-4.3 5.7-4.3 3.2 0 5.8 1.5 5.8 4.1 0 2.3-2.4 4.1-5.9 4.1-3.3 0-5.6-1.4-5.6-3.9z"/></svg></button>
+        <button type="button" data-size="gross" role="radio" aria-checked="false" title="Große Insel" aria-label="groß"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12.5c0-4 4.6-6.5 9.3-6.5 5 0 9.7 2.2 9.7 6.2 0 3.4-3.6 6.3-9.4 6.3-5.4 0-9.6-2.2-9.6-6z"/></svg></button>
+      </span>
+    </div>
     <button id="resetView" type="button" title="Gesamtansicht (R)">Ansicht zurücksetzen</button>
     <button id="toggleLegend" type="button" aria-pressed="false">Lebensräume</button>
     <label class="field">Karte

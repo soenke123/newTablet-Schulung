@@ -18,7 +18,16 @@
 
   var canvas = $('map');
   var ctx = canvas.getContext('2d');
-  var seedInput = $('seed'), sizeSelect = $('size');
+  var seedInput = $('seed');
+  // Groesse: zwei Knoepfe (klein = Inselgroesse 'mittel', gross = 'gross'); verhaelt sich wie ein Auswahlfeld
+  var sizeButtons = [].slice.call(doc.querySelectorAll('#size [data-size]'));
+  var sizeSelect = {
+    value: 'mittel',
+    set: function (v) {
+      this.value = v;
+      sizeButtons.forEach(function (b) { b.setAttribute('aria-checked', String(b.dataset.size === v)); });
+    }
+  };
   var tooltip = $('tooltip'), legend = $('legend'), legendBtn = $('toggleLegend');
   var status = $('status');
   var seasonBadge = $('season'), hlBadge = $('highlight');
@@ -76,7 +85,7 @@
     global.setTimeout(function () {
       world = BT.World.generate(seed, { size: size });
       seedInput.value = seed;
-      sizeSelect.value = world.size;
+      sizeSelect.set(world.size);
       writeHash(seed, world.size);
       if (!camera) camera = new BT.Camera(world);
       else camera.setWorld(world);
@@ -1011,7 +1020,13 @@
   // ---------------------------------------------------------------- Bedienelemente
   $('newWorld').addEventListener('click', function () { load(BT.randomSeed(), sizeSelect.value); });
   seedInput.addEventListener('change', function () { load(BT.parseSeed(seedInput.value), sizeSelect.value); });
-  sizeSelect.addEventListener('change', function () { load(world ? world.seed : BT.randomSeed(), sizeSelect.value); });
+  sizeButtons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (b.dataset.size === sizeSelect.value) return;
+      sizeSelect.set(b.dataset.size);
+      load(world ? world.seed : BT.randomSeed(), sizeSelect.value);
+    });
+  });
   $('resetView').addEventListener('click', function () { if (camera) { setFollow(null); camera.reset(); interacted(); } });
   followBadge.addEventListener('click', function (e) { if (e.target.tagName === 'BUTTON') setFollow(null); });
   legendBtn.addEventListener('click', function () {

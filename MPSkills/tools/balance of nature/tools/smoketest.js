@@ -18,7 +18,7 @@ const sums = {};
 
 function check(cond, msg) { if (!cond) failures.push(msg); }
 
-for (const size of ['klein', 'mittel', 'gross']) {
+for (const size of ['mittel', 'gross']) {
   for (let k = 0; k < (size === 'mittel' ? N : Math.ceil(N / 4)); k++) {
     const seed = 1000 + k * 7919;
     const t0 = Date.now();
@@ -48,7 +48,7 @@ for (const size of ['klein', 'mittel', 'gross']) {
 
 console.log('Mittlere Flaechenanteile (mittel, Anteil am Land):');
 for (const key of Object.keys(sums)) console.log('  ' + key.padEnd(9) + (sums[key] / N * 100).toFixed(1).padStart(6) + ' %');
-for (const size of ['klein', 'mittel', 'gross']) {
+for (const size of ['mittel', 'gross']) {
   const t = times.filter((x) => x.size === size).map((x) => x.ms);
   console.log(`Laufzeit ${size}: Mittel ${Math.round(t.reduce((a, b) => a + b, 0) / t.length)} ms, max ${Math.max(...t)} ms`);
 }
