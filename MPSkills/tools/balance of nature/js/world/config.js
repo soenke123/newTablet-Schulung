@@ -79,12 +79,13 @@
     // Vogel 343, Wolf 55, Adler 12, alle Arten überlebt 12 von 16):
     // gras: Hirsch +29 %, Wolf +47 %, Vogel -24 %, Adler gleich; 7 von 8
     gras: { biome: { scrubMoisture: 0.63, fernMoisture: 0.80 } },
-    // wald (mehr Busch statt nur hoher Wald, sonst verhungern die Adler: Deckung):
-    // Vogel +17 %, Adler +13 %, Hirsch -20 %, Wolf -24 %; 12 von 16
+    // wald: auf einer Seite ein zusammenhaengender Urwald (oben Moosnebelwald), sonst Busch und Wald gemischt
+    // (ueberall dichter Hochwald liess die Adler verhungern: Deckung). Vogel +17 %, Adler gleich,
+    // Hirsch -30 %, Wolf -38 %; 14 von 16
     wald: { relief: { region: 0.34 }, biome: { scrubMoisture: 0.30, fernMoisture: 0.62, forest: { moisture: 0.55, moss: 0.22 } } },
-    // fels (Bergland und Gipfel sind der groesste Lebensraum, mehr und hoehere Bergruecken):
-    // weniger Futter fuer alle, Hirsch -8 %, Vogel -15 %, Wolf -18 %, Adler -33 %;
-    // Adler stirbt oefter aus (5 von 8) - gewollt: die schwierige Insel
+    // fels: auf einer Seite ein Hochland mit vielen kurzen Ruecken (statt eines grossen Bergs), dazu eine
+    // Steilkueste; Schnee nur auf den Gipfeln. Weniger Futter: Hirsch -9 %, Vogel -15 %, Wolf -35 %,
+    // Adler -20 %; nur 10 von 16, Wolf oder Adler sterben oefter aus - gewollt: die schwierige Insel
     fels: {
       relief: { region: 0.34, highland: 0.42, ridges: [0, 1], cliffs: { arc: 0.75, cells: 12, height: 0.6 },
         range: { count: [6, 8], length: [0.1, 0.22], width: [0.03, 0.05], height: [0.35, 0.6] } },
