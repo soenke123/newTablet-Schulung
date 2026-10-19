@@ -75,9 +75,15 @@
    */
   BT.ISLAND_TYPES = {
     ausgewogen: {},
-    gras: { biome: { scrubMoisture: 0.68, fernMoisture: 0.84 } },
-    wald: { biome: { scrubMoisture: 0.26, fernMoisture: 0.46 } },
-    fels: { biome: { rockHeight: 0.36, peakHeight: 0.68 }, relief: { ridges: [2, 3], ridgeHeight: [0.7, 0.9] } }
+    // Gemessen mit tools/balance.js 8 30 (Mittel ab Jahr 10, ausgewogen: Hirsch 235,
+    // Vogel 343, Wolf 55, Adler 12, alle Arten überlebt 12 von 16):
+    // gras: Hirsch +29 %, Wolf +47 %, Vogel -24 %, Adler gleich; 7 von 8
+    gras: { biome: { scrubMoisture: 0.63, fernMoisture: 0.80 } },
+    // wald (mehr Busch statt nur hoher Wald, sonst verhungern die Adler: Deckung):
+    // Vogel +17 %, Adler +13 %, Hirsch -20 %, Wolf -24 %; 12 von 16
+    wald: { biome: { scrubMoisture: 0.24, fernMoisture: 0.58 } },
+    // fels: alle Arten kleiner, Adler stirbt oft aus (4-5 von 8 in drei Varianten) - nicht stabil
+    fels: { biome: { rockHeight: 0.40, peakHeight: 0.70, fernMoisture: 0.74 }, relief: { ridges: [2, 3], ridgeHeight: [0.7, 0.9] } }
   };
 
   BT.CONFIG = {
