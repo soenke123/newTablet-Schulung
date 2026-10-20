@@ -1039,7 +1039,6 @@
   seedInput.addEventListener('change', function () { reload(BT.parseSeed(seedInput.value)); });
   sizeSelect.onPick(function () { reload(world ? world.seed : BT.randomSeed()); });
   typeSelect.onPick(function () { reload(world ? world.seed : BT.randomSeed()); });
-  $('resetView').addEventListener('click', function () { if (camera) { setFollow(null); camera.reset(); interacted(); } });
   followBadge.addEventListener('click', function (e) { if (e.target.tagName === 'BUTTON') setFollow(null); });
   legendBtn.addEventListener('click', function () {
     legend.hidden = !legend.hidden;
