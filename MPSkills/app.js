@@ -897,9 +897,13 @@ function toolCard(t, guest) {
      freigeschaltet sein müsste. */
   const standaloneHref = ready ? window.TOOLS_OVERLAY?.[t.id]?.standalone : null;
 
+  /* Windows-Fassung (tools.js, `windows`): Knopf bleibt versteckt, bis
+     fillWindowsDownloads() dort eine version.json findet. */
+  const winDir = ready ? window.TOOLS_OVERLAY?.[t.id]?.windows : null;
   const foot = standaloneHref
     ? `<div class="tile-foot">
          <a class="btn btn--sm btn--primary" href="${esc(standaloneHref)}">Öffnen</a>
+         ${winDir ? `<a class="btn btn--sm" data-win-dir="${esc(winDir)}" href="${esc(winDir)}MasterPDFSkill-Setup.exe" download hidden>Download für Windows</a>` : ''}
        </div>`
     : guest
     ? (pv
@@ -1077,11 +1081,30 @@ async function renderTools(host, guest) {
     + `<div class="tile-grid">${s.items.map(t => toolCard(t, guest)).join('')}</div>`
   ).join('');
   wireToolButtons(host);
+  fillWindowsDownloads(host);
 
   // Nur der echte Lehrkraft-Reiter bricht aus .wrap aus (siehe
   // fitToolsWide) — die Kacheln im Gast-Fenster sitzen in einem Modal
   // mit eigener, bewusst engerer Breite (.modal--wide).
   if (host.id === 'paneTools') fitToolsWide();
+}
+
+/* Download-Knöpfe der Windows-Fassungen: zeigen, sobald der Installer
+   wirklich da ist, mit der Version, die dort liegt („V 1.0"). Ohne
+   version.json (noch nie gebaut, offline) bleibt der Knopf versteckt. */
+const winVersions = {};
+function fillWindowsDownloads(host) {
+  host.querySelectorAll('[data-win-dir]').forEach(a => {
+    const dir = a.dataset.winDir;
+    winVersions[dir] ??= fetch(dir + 'version.json', { cache: 'no-store' })
+      .then(r => r.ok ? r.json() : null).then(j => j?.version || null).catch(() => null);
+    winVersions[dir].then(v => {
+      if (!v) return;
+      a.textContent = `Download für Windows · V ${v}`;
+      a.title = `Master PDF Skill für Windows, Version ${v} – nach dem Installieren als Standard-PDF-Programm wählbar`;
+      a.hidden = false;
+    });
+  });
 }
 
 /* Der Reiter „Alle Skills" ist der einzige Ort auf der Seite, an dem

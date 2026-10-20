@@ -102,9 +102,11 @@ window.TOOLS_OVERLAY = {
   // Zwölfter Skill (Migration 0211) — Master PDF Skill: PDFs lesen und
   // bearbeiten. KEIN Raum: die Kachel öffnet die eigenständige App unter
   // tools/Master PDF Skill/ direkt, ohne Anmeldung (läuft lokal im
-  // Browser). Später kommt eine Download-Version dazu. beta: noch in
-  // Arbeit (16.10.2026).
-  masterpdf: { ready: true, beta: true, standalone: 'tools/Master%20PDF%20Skill/index.html' },
+  // Browser). beta: noch in Arbeit (16.10.2026). `windows`: Ordner mit
+  // dem Windows-Installer (gebaut von .github/workflows/master-pdf-windows.yml,
+  // ausgeliefert von Vercel): version.json + MasterPDFSkill-Setup.exe.
+  masterpdf: { ready: true, beta: true, standalone: 'tools/Master%20PDF%20Skill/index.html',
+               windows: '../downloads/master-pdf/' },
   // Dreizehnter Skill (Migration 0213) — Balance of Nature: Ökosystem
   // auf einer Insel, eingerahmt wie SYNIR (tools/balance of nature/,
   // Ordner mit Leerzeichen, weil er so aus seinem eigenen Repository

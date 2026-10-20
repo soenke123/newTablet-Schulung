@@ -1,0 +1,11 @@
+{
+  "name": "master-pdf-skill-desktop",
+  "private": true,
+  "scripts": {
+    "prepare-app": "node prepare.mjs",
+    "build": "node prepare.mjs && tauri build --bundles nsis"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.0"
+  }
+}

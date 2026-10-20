@@ -1,0 +1,73 @@
+# Baut den Windows-Installer von Master PDF Skill (Tauri, desktop/master-pdf)
+# und legt ihn nach downloads/master-pdf/ – von dort liefert Vercel ihn aus
+# (Knopf „Download für Windows“ auf der MPSkills-Kachel).
+# Läuft, wenn sich die Versionsnummer (version.json) oder die Hülle ändert,
+# oder von Hand (Actions → „Master PDF Skill für Windows“ → Run workflow).
+name: Master PDF Skill für Windows
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'MPSkills/tools/Master PDF Skill/version.json'
+      - 'desktop/master-pdf/**'
+      - '.github/workflows/master-pdf-windows.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: master-pdf-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: desktop/master-pdf
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/master-pdf/src-tauri
+
+      - run: npm install --no-audit --no-fund
+
+      - run: npm run build
+
+      - name: Installer nach downloads/master-pdf legen
+        shell: pwsh
+        run: |
+          $version = (Get-Content '../../MPSkills/tools/Master PDF Skill/version.json' -Raw | ConvertFrom-Json).version
+          $exe = Get-ChildItem 'src-tauri/target/release/bundle/nsis/*-setup.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'Kein Installer gebaut' }
+          $out = '../../downloads/master-pdf'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Copy-Item $exe.FullName "$out/MasterPDFSkill-Setup.exe" -Force
+          $info = [ordered]@{ version = $version; file = 'MasterPDFSkill-Setup.exe'; size = $exe.Length; built = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ') }
+          $info | ConvertTo-Json | Set-Content "$out/version.json" -Encoding utf8NoBOM
+          Write-Host "Master PDF Skill $version – $([math]::Round($exe.Length / 1MB, 1)) MB"
+
+      - name: Einchecken (Vercel veröffentlicht dann automatisch)
+        shell: bash
+        run: |
+          cd ../..
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/master-pdf
+          if git diff --cached --quiet; then echo "nichts Neues"; exit 0; fi
+          git commit -m "Master PDF Skill für Windows: Installer $(node -p "require('./downloads/master-pdf/version.json').version")"
+          for i in 1 2 3; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            sleep 5
+          done
+          exit 1
