@@ -56,6 +56,15 @@
   var aimBadge = $('aim');
   // Karte: Weidezustand (Standard), reine Landschaft oder eine Nahrungsschicht
   var mapMode = $('mapMode');
+  (function () {
+    var pop = $('islandPop'), open = $('openIsland');
+    function set(on) { pop.hidden = !on; open.setAttribute('aria-expanded', String(on)); }
+    open.addEventListener('click', function (e) { e.stopPropagation(); set(pop.hidden); });
+    document.addEventListener('pointerdown', function (e) {
+      if (!pop.hidden && !pop.contains(e.target) && e.target !== open) set(false);
+    });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+  })();
   function showPlants() { return mapMode.value === 'weide'; }
   var playBtn = $('play'), speedInput = $('speed'), speedLabel = $('speedLabel'), clock = $('clock');
 
