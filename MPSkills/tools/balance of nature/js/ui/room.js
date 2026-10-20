@@ -14,12 +14,12 @@
  * zurueck, wenn die Lehrkraft teilt oder entzieht. Jedes Geraet rechnet seine eigene
  * Insel; geteilt wird nur, WELCHES Szenario gespielt werden darf.
  *
- * Inseln zur Auswahl sind kein Szenario: Die Lehrkraft schaltet in der Auswahl
- * „Inseln zur Auswahl“ ein (data.types, { type: 'bon:cmd', types: true } hinein,
- * { type: 'bon:types', on } heraus). Dann stehen oben bei allen Seed, „Neue Insel“,
- * Größe und Typ (ausgewogen, Gras, Wald, Fels), sonst laufen alle auf der gemeinsamen
- * Insel der Klasse. Eine andere Insel wird neu gebaut, das laufende Szenario beginnt
- * dort von vorn.
+ * Seed, „Neue Insel“ und Größe stehen im Raum immer oben. Inseltypen (ausgewogen, Gras,
+ * Wald, Fels) sind kein Szenario: Die Lehrkraft schaltet in der Auswahl „Inseltypen zur
+ * Auswahl“ ein (data.types, { type: 'bon:cmd', types: true } hinein, { type: 'bon:types', on }
+ * heraus), das i daneben erklaert, wozu. Dann steht oben bei allen „Typ“, sonst laufen alle
+ * auf der ausgewogenen Insel. Eine andere Insel wird neu gebaut, das laufende Szenario
+ * beginnt dort von vorn.
  */
 (function (global) {
   'use strict';
@@ -141,7 +141,7 @@
   SCENARIOS.forEach(function (s) { BY_ID[s.id] = s; });
 
   var shared = [];          // vom Raum freigegeben
-  var typesOn = false;      // Inseln zur Auswahl (sonst nur die gemeinsame Insel der Klasse)
+  var typesOn = false;      // Inseltypen zur Auswahl (sonst nur die ausgewogene Insel)
   var known = null;         // Schueler: schon gesehene Freigaben (fuer „Neu“)
   var current = null;       // laufendes Szenario
   var worldReady = false;
@@ -150,10 +150,9 @@
   doc.body.classList.add('room', TEACHER ? 'room-teacher' : 'room-student', 'idle');
 
   // Was im Raum nicht gebraucht wird: eigene Inseln, Seed, Groesse, Empfehlung
-  // Seed, Groesse, Typ und „Neue Insel“ nur, wenn die Lehrkraft Inseln zur Auswahl stellt
-  var choice = ['seed', 'size', 'type', 'newWorld'].map(function (id) { var el = doc.getElementById(id); return el.closest('.field') || el; });
-  choice.forEach(function (el) { el.hidden = true; });
-  var home = null;          // die gemeinsame Insel der Klasse (aus der Adresse)
+  // Typ nur, wenn die Lehrkraft Inseltypen zur Auswahl stellt
+  var typeField = doc.getElementById('type');
+  typeField.hidden = true;
   ['status', 'defaults', 'csv'].forEach(function (id) { var el = doc.getElementById(id); if (el) el.hidden = true; });
 
   var bar = doc.querySelector('.bar');
@@ -174,8 +173,9 @@
     '<div class="scn-box" role="dialog" aria-label="Szenarien">' +
       '<div class="scn-head"><h2>Szenarien</h2>' +
         '<p class="scn-sub"></p><span class="spacer"></span>' +
-        (TEACHER ? '<button type="button" class="scn-types" aria-pressed="false" title="Seed, Größe und Inseltyp (ausgewogen, Gras, Wald, Fels): Die Klasse wählt oben selbst">' +
-          '<span class="scn-switch" aria-hidden="true"></span>Inseln zur Auswahl</button>' : '') +
+        (TEACHER ? '<span class="scn-types-wrap"><button type="button" class="scn-types" aria-pressed="false" title="Ausgewogene, Gras-, Wald- und Felsinsel: Die Klasse wählt oben unter „Typ“">' +
+          '<span class="scn-switch" aria-hidden="true"></span>Inseltypen zur Auswahl</button>' +
+          '<button type="button" class="scn-types-i" title="Wozu Inseltypen?" aria-label="Infos zu den Inseltypen">i</button></span>' : '') +
         '<button type="button" class="scn-close" title="Schließen (Esc)">✕</button></div>' +
       '<div class="scn-list"></div>' +
     '</div>';
@@ -269,7 +269,7 @@
     }
     layer.querySelector('.scn-close').hidden = !current;
     if (typesBtn) typesBtn.setAttribute('aria-pressed', String(typesOn));
-    choice.forEach(function (el) { el.hidden = !typesOn; });
+    typeField.hidden = !typesOn;
     hint.hidden = TEACHER || !worldReady || !!current || shared.length > 0 || !layer.hidden;
     now.textContent = current ? (TEACHER ? current.id + ' · ' + current.title : 'Szenario ' + current.id) : '';
     btn.classList.toggle('has-new', !TEACHER && !!known && shared.some(function (id) { return known.indexOf(id) < 0; }));
@@ -385,6 +385,37 @@
     info.querySelector('.scn-info-x').focus();
   }
 
+  /** Lehrkraft: Wozu Inseltypen? (Werte: Mittel vieler Laeufe, js/world/config.js) */
+  function openTypesInfo() {
+    var facts = [
+      ['⚖️', 'Ausgewogen:', 'von allem etwas. Die Standard-Insel, auf ihr laufen alle, solange der Schalter aus ist.'],
+      ['🌾', 'Gras:', 'viel offenes Grasland. Mehr Hirsche (+29 %) und noch mehr Wölfe (+47 %), weniger Laufvögel (−24 %).'],
+      ['🌳', 'Wald:', 'Urwald auf einer Seite. Mehr Laufvögel (+17 %), weniger Hirsche (−30 %) und Wölfe (−38 %). Die Adler bleiben gleich: Im dichten Wald finden sie die Vögel schlecht.'],
+      ['⛰️', 'Fels:', 'Gebirge auf einer Seite, dazu eine Steilküste. Weniger Futter für alle, am schwersten haben es die Räuber (Wolf −35 %, Adler −20 %). Wolf oder Adler sterben hier öfter aus.'],
+      ['🔁', 'Fairer Vergleich:', 'Gleicher Seed heißt gleiche Insel: Küste, Berge und Flüsse bleiben, nur der Bewuchs ändert sich.']
+    ];
+    info.innerHTML =
+      '<div class="scn-info-box">' +
+        '<button type="button" class="scn-info-x" title="Schließen (Esc)">✕</button>' +
+        '<p class="scn-kicker">Inseltypen zur Auswahl</p>' +
+        '<h2>Gleiche Insel, anderer Bewuchs</h2>' +
+        '<p class="scn-note">Ist der Schalter an, wählt jede und jeder oben unter „Typ“ die Insel. Der Lebensraum bestimmt, ' +
+          'welche Nahrung und wie viel Deckung es gibt, und damit, welche Art sich durchsetzt. Ein guter Anlass für das Gespräch: ' +
+          'Warum gewinnt hier der Wolf und dort der Laufvogel? Die Zahlen sind Mittelwerte vieler Läufe über 30 Jahre, ein einzelner Lauf weicht ab.</p>' +
+        '<ul class="scn-facts">' + facts.map(function (f) {
+          return '<li><span class="scn-ico" aria-hidden="true">' + f[0] + '</span><span><b>' + esc(f[1]) + '</b> ' + esc(f[2]) + '</span></li>';
+        }).join('') + '</ul>' +
+        '<div class="scn-info-foot">' +
+          '<div><h3>Hinschauen</h3><ul><li>Oben „Lebensräume“ einschalten: Wo ist Gras, Wald, Fels?</li>' +
+            '<li>Diagramm auf „Jahresmittel“, Bestände der Inseltypen vergleichen</li><li>Tabelle „Todesursachen“: Wer verhungert, wer wird gefressen?</li></ul></div>' +
+          '<div><h3>Ausprobieren</h3><p>Gruppen auf die vier Inseltypen verteilen, alle spielen dasselbe Szenario (z. B. 3) mit demselben Seed. ' +
+            'Nach 30 Jahren vergleichen: Wer setzt sich wo durch, und warum?</p></div>' +
+        '</div>' +
+      '</div>';
+    info.hidden = false;
+    info.querySelector('.scn-info-x').focus();
+  }
+
   function closeInfo() { info.hidden = true; }
 
   // ---------------------------------------------------------------- Bedienung
@@ -398,16 +429,16 @@
     if (on === typesOn) return;
     typesOn = on;
     render();
-    // Ausgeschaltet: alle zurueck auf die gemeinsame Insel
-    var w = BT.app.world;
-    if (!on && w && home && (w.seed !== home.seed || w.size !== home.size || w.type !== home.type)) {
-      BT.app.load(home.seed, home.size, home.type);
-      if (!TEACHER) toast('Deine Lehrkraft hat die Inselwahl ausgeschaltet.');
-    } else if (on && !TEACHER) toast('Neu: Oben kannst du Seed, Größe und Inseltyp wählen.');
+    // Ausgeschaltet: alle zurueck auf die ausgewogene Insel (Seed und Groesse bleiben)
+    if (!on && BT.app.world && BT.app.world.type !== BT.CONFIG.type) {
+      BT.app.setType(BT.CONFIG.type);
+      if (!TEACHER) toast('Deine Lehrkraft hat die Inseltypen ausgeschaltet.');
+    } else if (on && !TEACHER) toast('Neu: Oben unter „Typ“ kannst du die Insel wechseln.');
   }
   layer.querySelector('.scn-close').addEventListener('click', function () { openChooser(false); });
   layer.addEventListener('click', function (e) {
     if (e.target === layer && current) { openChooser(false); return; }
+    if (e.target.closest('.scn-types-i')) { openTypesInfo(); return; }
     var b = e.target.closest('[data-act]');
     if (!b) return;
     var s = BY_ID[+b.closest('[data-id]').dataset.id];
@@ -468,13 +499,12 @@
     var first = !worldReady;
     worldReady = true;
     if (!first) {
-      // Anderer Inseltyp: die Staende gehoeren zur alten Insel
+      // Andere Insel (Seed, Groesse, Typ): die Staende gehoeren zur alten Insel
       snaps = {};
       if (current) fresh(current); else idle();
       return;
     }
     if (first) {
-      home = { seed: BT.app.world.seed, size: BT.app.world.size, type: BT.app.world.type };
       idle();
       // Lehrkraft: gleich die Auswahl. Klasse: erst, wenn etwas geteilt ist.
       if (TEACHER || shared.length) openChooser(true);
