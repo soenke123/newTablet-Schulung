@@ -6,7 +6,7 @@
 <title>Profil · MPSkills</title>
 <meta name="robots" content="noindex" />
 <link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261020c" />
+<link rel="stylesheet" href="style.css?v=20261021" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -31,6 +31,12 @@
 </header>
 
 <main class="wrap">
+  <div class="page-head">
+    <div>
+      <h1>Profil</h1>
+      <p class="page-sub">Dein Konto gilt für MPSkills und die Tablet-Schulung gleichermaßen.</p>
+    </div>
+  </div>
   <div id="profHost">
     <p class="booting">Lade …</p>
   </div>
@@ -44,34 +50,21 @@
   Max-Planck-Schule
 </footer>
 
-<!-- ─── Profilbild wählen ───────────────────────────────────
-     Derselbe Katalog wie in der Schulung (../avatars.js). Links
-     die Welt: GameHub (hängt am Spielstand — wer nie gespielt hat,
-     hat die Eier; Reiter nur für Gruppen mit Inhalt) oder MPSkills
-     (ein Reiter je Skill, auch wenn dort noch nichts frei ist). -->
-<div class="overlay" id="pickerModal" hidden>
-  <div class="modal picker" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
-    <div class="picker-head">
-      <h2 id="pickerTitle">Profilbild wählen</h2>
-      <button type="button" class="modal-close" id="pickerClose" aria-label="Schließen">×</button>
-    </div>
-    <div class="picker-body">
-      <nav class="picker-worlds" id="pickerWorlds" aria-label="Bereich"></nav>
-      <div class="picker-main">
-        <div class="picker-tabs" id="pickerTabs"></div>
-        <div class="picker-grid" id="pickerGrid"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="../vendor/supabase-js-2.116.0.min.js"></script>
 <script src="../supabase-config.js"></script>
 <script src="../session.js?v=20260817"></script>
 <script src="../avatars.js?v=20261020c"></script>
-<script src="lib/userbar.js?v=20261020"></script>
-<script src="profil.js?v=20261020c"></script>
+<script src="lib/userbar.js?v=20261021"></script>
+<script src="lib/profilemodal.js?v=20261021"></script>
+<script>
+  /* Die Seite ist nur noch die Adresse — Inhalt und Verhalten stehen
+     in lib/profilemodal.js, dasselbe wie das Fenster im Menü. */
+  (async function () {
+    window.MPUserBar?.mount();
+    await (window.waitForSession?.() ?? Promise.resolve());
+    window.MPProfile.renderPage(document.getElementById('profHost'));
+  })();
+</script>
 </body>
 </html>

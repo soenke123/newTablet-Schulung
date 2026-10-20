@@ -21,7 +21,7 @@
 
    Wer was im Menü sieht:
      Hell / Dunkel   — alle Angemeldeten, ganz oben (lib/theme.js)
-     Profil          — alle Angemeldeten
+     Profil          — alle Angemeldeten (öffnet ein Fenster, lib/profilemodal.js)
      Feedback & Fragen — Admin, Lehrkraft, Kurs mit Schalter (../feedback.js)
      Admin-Bereich   — Admin
      Tablet-Schulung — alle (ein Konto, zwei Bereiche)
@@ -146,7 +146,7 @@
         <div class="ub-menu" data-ub-menu hidden>
           ${themeHTML()}
           ${isAdmin ? '<a class="ub-admin" href="../admin/index.html">Admin-Bereich</a>' : ''}
-          <a href="profil.html"${isProfilActive ? ' class="is-active"' : ''}>Profil<span class="ub-new" data-ub-new hidden></span></a>
+          <button type="button" data-ub="profile"${isProfilActive ? ' class="is-active"' : ''}>Profil<span class="ub-new" data-ub-new hidden></span></button>
           ${canFeedback(s) ? '<button type="button" data-ub="feedback">Feedback &amp; Fragen</button>' : ''}
           <a href="../index.html">Startseite</a>
           ${hasSeason ? '<a href="../GameHub/index.html">GameHub</a>' : ''}
@@ -280,6 +280,15 @@
         case 'feedback':
           closeMenu();
           openFeedback();
+          break;
+        /* Profil ist ein Fenster über der aktuellen Seite (lib/
+           profilemodal.js) — wer in einer Lobby steht, soll dort
+           Namen und Bild ändern können, ohne den Raum zu verlassen.
+           Fehlt das Skript auf einer Seite, bleibt der alte Weg. */
+        case 'profile':
+          closeMenu();
+          if (window.MPProfile) window.MPProfile.open();
+          else location.href = 'profil.html';
           break;
         case 'logout':
           closeMenu();

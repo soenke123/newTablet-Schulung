@@ -2736,7 +2736,7 @@ body.tool-fill #pagefoot { display: none; }
 .ub-av img { border-radius: 50%; }
 .ub-new.is-mps { background: #2b7bd6; }
 .ub-new[hidden] { display: none; }
-.ub-menu a .ub-new { position: static; display: inline-block; margin-left: 8px; vertical-align: middle; border-color: var(--surface); }
+.ub-menu a .ub-new, .ub-menu button .ub-new { position: static; display: inline-block; margin-left: 8px; vertical-align: middle; border-color: var(--surface); }
 .picker-tile { position: relative; }
 .picker-tile .tile-new {
   position: absolute; top: 2px; right: 2px;
@@ -2798,7 +2798,7 @@ body.tool-fill #pagefoot { display: none; }
 }
 .ub-menu a:hover,
 .ub-menu button:hover { background: var(--paper-2); }
-.ub-menu a.is-active {
+.ub-menu a.is-active, .ub-menu button.is-active {
   background: var(--paper-2);
   color: var(--accent-ink, #b56a3c);
   font-weight: 600;
@@ -2874,6 +2874,25 @@ body.tool-fill #pagefoot { display: none; }
   background: var(--chrome-dim);
   color: var(--chrome-accent);
   opacity: 1;
+}
+
+/* Profil-Fenster (lib/profilemodal.js): liegt über allem, was eine
+   Lobby schweben lässt (.qrfly 60, .toast 60); der Bild-Picker noch
+   eine Stufe darüber. Das Toast des Fensters liegt über beiden. */
+.prof-overlay { z-index: 80; }
+.prof-overlay--picker { z-index: 81; }
+.toast.prof-toast { z-index: 90; }
+.prof-modal { padding-top: 22px; }
+.prof-modal .card { box-shadow: none; }
+.prof-modal .prof-head { gap: 22px; }
+.prof-info dd .btn { margin-left: 8px; vertical-align: middle; }
+.prof-info dd[hidden] { display: none; }
+.prof-nameform { margin-top: 16px; }
+.prof-form[hidden] { display: none; }
+.prof-nameform .actions { display: flex; gap: 8px; }
+@media (max-width: 560px) {
+  .prof-modal .prof-head { grid-template-columns: 1fr; justify-items: center; }
+  .prof-modal .prof-info { width: 100%; }
 }
 
 /* ══════════════════════════════════════════════════════════════
