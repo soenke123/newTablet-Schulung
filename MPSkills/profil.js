@@ -183,6 +183,10 @@ let groupsWithContent = [];
 let currentWorld = 'gamehub';
 let currentGroup = 'egg';
 let currentAvatarId = 'default';
+// Neue Bilder als Schnappschuss beim Öffnen: die NEU-Sticker bleiben
+// stehen, solange der Picker offen ist, auch wenn „gesehen“ schon
+// gespeichert ist.
+let pickerNewSet = new Set();
 
 /* Reiter der gewählten Welt. GameHub: nur Gruppen mit Inhalt (siehe
    Kopf). MPSkills: immer alle Skills — der Reiter sagt hier, WO es
@@ -205,11 +209,36 @@ function openPicker() {
   const own = (window.AVATARS || []).find(a => a.id === currentAvatarId);
   currentWorld = own?.world || 'gamehub';
   if (own) currentGroup = own.group;
+  const s = window.getSessionUser?.();
+  pickerNewSet = window.getNewAvatarIds ? window.getNewAvatarIds(s?.avatars_seen_at) : new Set();
+  // Gibt es Neues, dort anfangen.
+  const firstNew = (window.AVATARS || []).find(a => pickerNewSet.has(a.id));
+  if (firstNew) { currentWorld = firstNew.world; currentGroup = firstNew.group; }
   recomputeUnlocks();
   renderWorlds();
   renderTabs();
   renderGrid();
   document.getElementById('pickerModal').hidden = false;
+  if (pickerNewSet.size) markSeen();
+}
+
+/* Wie profil.html der Schulung: Öffnen des Pickers = gesehen. Der
+   Punkt an der Ecke oben rechts verschwindet sofort, der Server
+   (mark_avatars_seen) merkt es sich für die anderen Seiten. */
+function markSeen() {
+  if (window.__session) window.__session.avatars_seen_at = new Date().toISOString();
+  window.dispatchEvent(new CustomEvent('lernwelt:avatars-seen'));
+  if (!window.__accessToken) return;
+  fetch(`${window.SUPABASE_URL}/rest/v1/rpc/mark_avatars_seen`, {
+    method: 'POST',
+    headers: {
+      apikey: window.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${window.__accessToken}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json'
+    },
+    body: '{}'
+  }).catch(e => console.warn('[mpskills] mark_avatars_seen:', e.message));
 }
 function closePicker() {
   document.getElementById('pickerModal').hidden = true;
@@ -268,7 +297,8 @@ function renderGrid() {
   }
 
   el.innerHTML = items.map(a => `
-    <button type="button" class="picker-tile${a.id === currentAvatarId ? ' on' : ''}" data-a="${esc(a.id)}">
+    <button type="button" class="picker-tile${a.id === currentAvatarId ? ' on' : ''}${a.world === 'mpskills' ? ' is-mps' : ''}" data-a="${esc(a.id)}">
+      ${pickerNewSet.has(a.id) ? '<span class="tile-new">NEU</span>' : ''}
       <img src="${esc(window.getAvatarUrl(a.id, '../'))}" alt="" />
       <span>${esc(a.label)}</span>
     </button>`).join('');

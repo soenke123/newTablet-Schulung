@@ -54,6 +54,9 @@
      window.refreshUnlockTimestamps(unlockedSet) — merged new unlocks in
      window.getNewAvatarIds(seenAtISO)  — Set<avatarId> (neu seit seenAtISO)
      window.hasAnyNewAvatars(seenAtISO) — bool
+     window.getNewAvatarWorlds(seenAtISO) — {gamehub, mpskills}
+     window.applyNewAvatarDot(el, seenAtISO) — .new-dot: rot GameHub, blau (.is-mps) nur MPSkills
+     Event 'lernwelt:avatars-loaded'    — MPSkills-Freischaltungen sind da
    ══════════════════════════════════════════════════════════════ */
 
 (() => {
@@ -298,33 +301,35 @@
       ['kruemel', '38_Krümel_avatar.png',  'Krümel'],
       ['howl',    '39_Howl_avatar.png',    'Howl']
     ],
+    // Namen der Völker wie TEAMS in tools/wordisland/tool.js, Stufe = Bildstufe der Figur
     mps_wordisland: [
-      ['blue_1',    'blue 1 crew_avatar.png',    'Blaue Crew 1'],
-      ['blue_4',    'blue 4 crew_avatar.png',    'Blaue Crew 4'],
-      ['green_1',   'green 1 crew_avatar.png',   'Grüne Crew 1'],
-      ['green_4',   'green 4 crew_avatar.png',   'Grüne Crew 4'],
-      ['lila_1',    'lila 1 crew_avatar.png',    'Lila Crew 1'],
-      ['lila_4',    'lila 4 crew_avatar.png',    'Lila Crew 4'],
-      ['magenta_1', 'magenta 1 crew_avatar.png', 'Magenta Crew 1'],
-      ['magenta_4', 'magenta 4 crew_avatar.png', 'Magenta Crew 4'],
-      ['red_1',     'red 1 crew_avatar.png',     'Rote Crew 1'],
-      ['red_4',     'red 4 crew_avatar.png',     'Rote Crew 4'],
-      ['rosa_1',    'rosa 1 crew_avatar.png',    'Rosa Crew 1'],
-      ['rosa_4',    'rosa 4 crew_avatar.png',    'Rosa Crew 4'],
-      ['tuerkis_1', 'türkis 1 crew_avatar.png',  'Türkise Crew 1'],
-      ['tuerkis_4', 'türkis 4 crew_avatar.png',  'Türkise Crew 4'],
-      ['yellow_1',  'yellow 1 crew_avatar.png',  'Gelbe Crew 1'],
-      ['yellow_4',  'yellow 4 crew_avatar.png',  'Gelbe Crew 4']
+      ['blue_1',    'blue 1 crew_avatar.png',    'Robo-Enten Stufe 1'],
+      ['blue_4',    'blue 4 crew_avatar.png',    'Robo-Enten Stufe 4'],
+      ['green_1',   'green 1 crew_avatar.png',   'Brokkoli-Giraffen Stufe 1'],
+      ['green_4',   'green 4 crew_avatar.png',   'Brokkoli-Giraffen Stufe 4'],
+      ['lila_1',    'lila 1 crew_avatar.png',    'Kosmische Katzen Stufe 1'],
+      ['lila_4',    'lila 4 crew_avatar.png',    'Kosmische Katzen Stufe 4'],
+      ['magenta_1', 'magenta 1 crew_avatar.png', 'Spuk-Einhorn Stufe 1'],
+      ['magenta_4', 'magenta 4 crew_avatar.png', 'Spuk-Einhorn Stufe 4'],
+      ['red_1',     'red 1 crew_avatar.png',     'Toast-Ritter Stufe 1'],
+      ['red_4',     'red 4 crew_avatar.png',     'Toast-Ritter Stufe 4'],
+      ['rosa_1',    'rosa 1 crew_avatar.png',    'Wolken-Piraten Stufe 1'],
+      ['rosa_4',    'rosa 4 crew_avatar.png',    'Wolken-Piraten Stufe 4'],
+      ['tuerkis_1', 'türkis 1 crew_avatar.png',  'Okto-Pferdchen Stufe 1'],
+      ['tuerkis_4', 'türkis 4 crew_avatar.png',  'Okto-Pferdchen Stufe 4'],
+      ['yellow_1',  'yellow 1 crew_avatar.png',  'Mal-Hasen Stufe 1'],
+      ['yellow_4',  'yellow 4 crew_avatar.png',  'Mal-Hasen Stufe 4']
     ],
+    // Namen der Völker wie FACTION_LABEL in tools/clash-of-math/tool.js
     'mps_clash-of-math': [
-      ['blue',    'blue units_avatar.png',    'Blaues Reich'],
-      ['green',   'green units_avatar.png',   'Grünes Reich'],
-      ['lila',    'lila units_avatar.png',    'Lila Reich'],
-      ['magenta', 'magenta units_avatar.png', 'Magenta Reich'],
-      ['red',     'red units_avatar.png',     'Rotes Reich'],
-      ['rosa',    'rosa units_avatar.png',    'Rosa Reich'],
-      ['tuerkis', 'türkis units_avatar.png',  'Türkises Reich'],
-      ['yellow',  'yellow units_avatar.png',  'Gelbes Reich']
+      ['blue',    'blue units_avatar.png',    'Robo-Enten'],
+      ['green',   'green units_avatar.png',   'Brokkoli-Giraffen'],
+      ['lila',    'lila units_avatar.png',    'Kosmische Katzen'],
+      ['magenta', 'magenta units_avatar.png', 'Spuk-Einhorn'],
+      ['red',     'red units_avatar.png',     'Toast-Ritter'],
+      ['rosa',    'rosa units_avatar.png',    'Wolkenvogel-Piraten'],
+      ['tuerkis', 'türkis units_avatar.png',  'Okto-Pferdchen'],
+      ['yellow',  'yellow units_avatar.png',  'Mal-Hasen']
     ],
     mps_wildclusters: [
       ['barsch',     'Barsch_avatar.png',     'Barsch'],
@@ -462,8 +467,18 @@
     const rule = MPS_UNLOCKERS[a.skill];
     try { return !!(rule && rule(a)); } catch { return false; }
   }
-  async function loadMpskillsUnlocks() {
-    if (!window.__accessToken || !window.SUPABASE_URL) return;
+  let _mpsLoading = null;
+  function loadMpskillsUnlocks() {
+    if (!_mpsLoading) {
+      _mpsLoading = _fetchMpskillsUnlocks().finally(() => {
+        _mpsLoading = null;
+        window.dispatchEvent(new CustomEvent('lernwelt:avatars-loaded'));
+      });
+    }
+    return _mpsLoading;
+  }
+  async function _fetchMpskillsUnlocks() {
+    if (!window.__accessToken || !window.SUPABASE_URL) { _mpsOwned.clear(); return; }
     try {
       const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/mps_my_avatars`, {
         method: 'POST',
@@ -591,6 +606,22 @@
   }
 
   function getNewAvatarIds(seenAtISO)  { return _computeNewAvatarSet(seenAtISO); }
+  // Für den Punkt am Profilbild: rot = GameHub, blau = nur MPSkills.
+  function getNewAvatarWorlds(seenAtISO) {
+    const out = { gamehub: false, mpskills: false };
+    for (const id of _computeNewAvatarSet(seenAtISO)) {
+      const a = _byId.get(id);
+      if (a) out[a.world] = true;
+    }
+    return out;
+  }
+  // Setzt einen .new-dot passend: versteckt, rot oder blau (.is-mps).
+  function applyNewAvatarDot(el, seenAtISO) {
+    if (!el) return;
+    const w = getNewAvatarWorlds(seenAtISO);
+    el.hidden = !(w.gamehub || w.mpskills);
+    el.classList.toggle('is-mps', !w.gamehub && w.mpskills);
+  }
   function hasAnyNewAvatars(seenAtISO) { return _computeNewAvatarSet(seenAtISO).size > 0; }
 
   // Export
@@ -607,4 +638,12 @@
   window.refreshUnlockTimestamps = refreshUnlockTimestamps;
   window.getNewAvatarIds         = getNewAvatarIds;
   window.hasAnyNewAvatars        = hasAnyNewAvatars;
+  window.getNewAvatarWorlds      = getNewAvatarWorlds;
+  window.applyNewAvatarDot       = applyNewAvatarDot;
+
+  // MPSkills-Freischaltungen von selbst laden, sobald die Anmeldung
+  // steht (und nach jedem Wechsel) — Seiten hören auf
+  // 'lernwelt:avatars-loaded' und zeichnen ihren Punkt neu.
+  Promise.resolve(window.waitForSession?.()).then(loadMpskillsUnlocks, () => {});
+  window.addEventListener('lernwelt:session-changed', () => { loadMpskillsUnlocks(); });
 })();

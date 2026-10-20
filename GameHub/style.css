@@ -3877,6 +3877,8 @@ input[type="password"]::-webkit-textfield-decoration-container {
   transform: translateY(-50%);
   border-color: var(--clr-surface);
 }
+.hub-auth-avatar .new-dot.is-mps,
+.hub-auth-menu .new-dot.is-mps { background: #2b7bd6; }
 .hub-auth-menu .new-dot[hidden],
 .hub-auth-avatar .new-dot[hidden] { display: none; }
 .hub-auth-name { font-weight: 600; letter-spacing: 0.02em; }

@@ -11,7 +11,7 @@
   <link rel="apple-touch-icon" href="../icons/icon-192.png" />
   <link rel="manifest" href="../site.webmanifest" />
   <!-- Atari2 · Enter 1-5-0-7 -->
-  <link rel="stylesheet" href="style.css?v=20260923" />
+  <link rel="stylesheet" href="style.css?v=20261020" />
 
 <!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als
      CSS-Variablen an <html>. Blockierend im <head>, damit ein Modal
@@ -310,7 +310,7 @@
   <script src="../vendor/supabase-js-2.116.0.min.js"></script>
   <script src="../supabase-config.js"></script>
   <script src="../session.js?v=20260811"></script>
-  <script src="../avatars.js?v=20261020b"></script>
+  <script src="../avatars.js?v=20261020c"></script>
   <script src="../feedback.js?v=20260927"></script>
 
   <script src="config.js?v=20260816b"></script>
@@ -555,14 +555,15 @@
         return;
       }
       window.refreshUnlockTimestamps?.();
-      const hasNew = window.hasAnyNewAvatars(user.avatars_seen_at);
-      if (pill) pill.hidden = !hasNew;
-      if (menu) menu.hidden = !hasNew;
+      // rot = neu aus dem GameHub, blau = nur neue aus MPSkills
+      window.applyNewAvatarDot(pill, user.avatars_seen_at);
+      window.applyNewAvatarDot(menu, user.avatars_seen_at);
     }
     window.refreshHubAvatarNewBadges = refreshHubAvatarNewBadges;
 
     // profil.html feuert dieses Event nach Picker-Öffnung — Badges sofort verstecken
     window.addEventListener('lernwelt:avatars-seen', refreshHubAvatarNewBadges);
+    window.addEventListener('lernwelt:avatars-loaded', refreshHubAvatarNewBadges);
 
     document.addEventListener('DOMContentLoaded', () => {
       const authBtn  = document.getElementById('hubAuthBtn');

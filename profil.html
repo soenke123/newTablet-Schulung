@@ -228,6 +228,10 @@
       letter-spacing: 0.06em;
       z-index: 2;
     }
+    .avatar-frame .new-dot.is-mps,
+    .picker-world.is-mps .tab-new-dot,
+    .picker-tab.is-mps .tab-new-dot,
+    .avatar-tile.is-mps .tile-new { background: #2b7bd6; }
     .avatar-frame .new-dot[hidden] { display: none; }
     .avatar-frame:hover {
       transform: scale(1.03);
@@ -706,7 +710,7 @@
   <script src="vendor/supabase-js-2.116.0.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="session.js?v=20260811"></script>
-  <script src="avatars.js?v=20261020b"></script>
+  <script src="avatars.js?v=20261020c"></script>
   <script src="feedback.js?v=20260927"></script>
   <script>
     'use strict';
@@ -752,10 +756,13 @@
       renderProfile(user);
       profileMain.hidden = false;
       if (user.cluster_id) hubBackLink.style.display = '';
-      // MPSkills-Freischaltungen kommen vom Server (0214) — danach
-      // Unlock-/NEU-Stand neu rechnen.
+      // MPSkills-Freischaltungen kommen vom Server (0214, avatars.js
+      // lädt sie von selbst) — danach Unlock-/NEU-Stand neu rechnen.
+      window.addEventListener('lernwelt:avatars-loaded', () => {
+        const u = window.getSessionUser?.();
+        if (u) recomputeAvatarState(u);
+      });
       await window.loadMpskillsUnlocks?.();
-      recomputeAvatarState(window.getSessionUser?.() || user);
     })();
 
     // Falls die Session in einem anderen Tab wechselt (Logout etc.)
@@ -771,7 +778,7 @@
       window.refreshUnlockTimestamps(unlockedSet);
       newSet = window.getNewAvatarIds(user?.avatars_seen_at);
       // Header-NEW-Dot: sichtbar wenn mind. 1 NEUES Avatar existiert
-      frameNewDot.hidden = newSet.size === 0;
+      window.applyNewAvatarDot(frameNewDot, user?.avatars_seen_at);
     }
 
     /* ─── Topbar-Auth ────────────────────────────────────────── */
@@ -906,7 +913,7 @@
       for (const w of (window.AVATAR_WORLDS || [{ id: 'gamehub', label: 'GameHub' }])) {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'picker-world' + (w.id === currentWorldId ? ' active' : '');
+        btn.className = 'picker-world' + (w.id === currentWorldId ? ' active' : '') + (w.id === 'mpskills' ? ' is-mps' : '');
         const hasNew = groupsOfWorld(w.id).some(g => groupHasNew(g.id));
         btn.innerHTML = `${hasNew ? '<span class="tab-new-dot"></span>' : ''}
           <img src="${WORLD_ICONS[w.id] || ''}" alt="" />${w.label}`;
@@ -927,7 +934,7 @@
       pickerTabs.style.display = '';
       for (const g of groupsOfWorld(currentWorldId)) {
         const btn = document.createElement('button');
-        btn.className = 'picker-tab' + (g.id === currentGroupId ? ' active' : '');
+        btn.className = 'picker-tab' + (g.id === currentGroupId ? ' active' : '') + (g.world === 'mpskills' ? ' is-mps' : '');
         btn.innerHTML = g.label + groupCount(g) + (groupHasNew(g.id) ? '<span class="tab-new-dot"></span>' : '');
         btn.addEventListener('click', () => {
           currentGroupId = g.id;
@@ -974,7 +981,7 @@
         const isNew = pickerSessionNewSet.has(a.id);
         const tile = document.createElement('button');
         tile.type = 'button';
-        tile.className = 'avatar-tile' + (a.id === currentAvatarId ? ' selected' : '');
+        tile.className = 'avatar-tile' + (a.id === currentAvatarId ? ' selected' : '') + (a.world === 'mpskills' ? ' is-mps' : '');
         tile.innerHTML = `
           ${isNew ? '<span class="tile-new">NEU</span>' : ''}
           <div class="avatar-tile-img">

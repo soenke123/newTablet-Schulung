@@ -138,7 +138,7 @@
       <div class="ub">
         <button type="button" class="ub-btn" data-ub="toggle"
                 aria-haspopup="true" aria-expanded="false">
-          <span class="ub-av">${avatarHTML(s)}</span>
+          <span class="ub-av">${avatarHTML(s)}<span class="ub-new" data-ub-new hidden></span></span>
           <span class="ub-name">${esc(s.display_name || s.account_name)}</span>
           ${pill}
           <span class="ub-caret" aria-hidden="true">▼</span>
@@ -146,7 +146,7 @@
         <div class="ub-menu" data-ub-menu hidden>
           ${themeHTML()}
           ${isAdmin ? '<a class="ub-admin" href="../admin/index.html">Admin-Bereich</a>' : ''}
-          <a href="profil.html"${isProfilActive ? ' class="is-active"' : ''}>Profil</a>
+          <a href="profil.html"${isProfilActive ? ' class="is-active"' : ''}>Profil<span class="ub-new" data-ub-new hidden></span></a>
           ${canFeedback(s) ? '<button type="button" data-ub="feedback">Feedback &amp; Fragen</button>' : ''}
           <a href="../index.html">Startseite</a>
           ${hasSeason ? '<a href="../GameHub/index.html">GameHub</a>' : ''}
@@ -154,6 +154,17 @@
           <button type="button" data-ub="logout">Ausloggen</button>
         </div>
       </div>`;
+    refreshNewDots();
+  }
+
+  /* Neues Profilbild freigeschaltet → Punkt am Avatar und an „Profil“,
+     wie in der Schulung: rot für GameHub, blau für MPSkills (avatars.js). */
+  function refreshNewDots() {
+    const s = window.getSessionUser?.();
+    document.querySelectorAll('[data-ub-new]').forEach(el => {
+      if (!s || !window.applyNewAvatarDot) { el.hidden = true; return; }
+      window.applyNewAvatarDot(el, s.avatars_seen_at);
+    });
   }
 
   /* ── Hell / Dunkel ──────────────────────────────────────────
@@ -230,6 +241,8 @@
   function mount(options = {}) {
     opts = options;
     render();
+    window.addEventListener('lernwelt:avatars-loaded', refreshNewDots);
+    window.addEventListener('lernwelt:avatars-seen', refreshNewDots);
 
     // Delegiert am document, nicht an den Knöpfen: render() ersetzt
     // das ganze Innere bei jedem Session-Wechsel, und Listener an

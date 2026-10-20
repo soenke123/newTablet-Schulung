@@ -785,6 +785,7 @@
       transform: translateY(-50%);
       border-color: white;
     }
+    .new-dot.is-mps { background: #2b7bd6; }
     .new-dot[hidden] { display: none; }
     .auth-user-name {
       font-weight: 600;
@@ -1342,7 +1343,7 @@
   <script src="vendor/supabase-js-2.116.0.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="session.js?v=20260811"></script>
-  <script src="avatars.js?v=20261020b"></script>
+  <script src="avatars.js?v=20261020c"></script>
   <script src="feedback.js?v=20260927"></script>
   <script src="account-name.js?v=20260930"></script>
   <script src="GameHub/config.js?v=20260623"></script>
@@ -1514,13 +1515,15 @@
       }
       // Timestamps für alle bereits freigeschalteten Avatare aktualisieren
       window.refreshUnlockTimestamps?.();
-      const hasNew = window.hasAnyNewAvatars(user.avatars_seen_at);
-      if (pillDot) pillDot.hidden = !hasNew;
-      if (menuDot) menuDot.hidden = !hasNew;
+      // rot = neu aus dem GameHub, blau = nur neue aus MPSkills
+      window.applyNewAvatarDot(pillDot, user.avatars_seen_at);
+      window.applyNewAvatarDot(menuDot, user.avatars_seen_at);
     }
 
     // profil.html feuert dieses Event nach Picker-Öffnung — sofort Badges verstecken
     window.addEventListener('lernwelt:avatars-seen', refreshAvatarNewBadges);
+    // MPSkills-Freischaltungen kommen nachträglich vom Server (avatars.js)
+    window.addEventListener('lernwelt:avatars-loaded', refreshAvatarNewBadges);
 
     // Schools-Cache — 1× laden, in beiden Dropdowns nutzen
     let _schoolsCache = null;

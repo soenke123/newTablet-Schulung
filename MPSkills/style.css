@@ -2723,6 +2723,28 @@ body.tool-fill #pagefoot { display: none; }
   overflow: hidden;
 }
 .ub-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Neues Profilbild: rot = GameHub, blau = MPSkills (avatars.js applyNewAvatarDot) */
+.ub-new {
+  position: absolute; top: -2px; right: -2px;
+  width: 11px; height: 11px; border-radius: 50%;
+  background: #c0392b; border: 2px solid var(--chrome);
+  box-sizing: border-box;
+}
+/* Der Punkt sitzt am Rand des Kreises — dafür darf .ub-av nicht
+   mehr abschneiden; das Bild rundet sich selbst. */
+.ub-av { position: relative; overflow: visible; }
+.ub-av img { border-radius: 50%; }
+.ub-new.is-mps { background: #2b7bd6; }
+.ub-new[hidden] { display: none; }
+.ub-menu a .ub-new { position: static; display: inline-block; margin-left: 8px; vertical-align: middle; border-color: var(--surface); }
+.picker-tile { position: relative; }
+.picker-tile .tile-new {
+  position: absolute; top: 2px; right: 2px;
+  background: #c0392b; color: #fff;
+  font-size: .6rem; font-weight: 700; letter-spacing: .05em;
+  padding: 1px 7px; border-radius: 999px;
+}
+.picker-tile.is-mps .tile-new { background: #2b7bd6; }
 .ub-initial { font-weight: 700; font-size: .9rem; color: var(--chrome-accent); }
 
 .ub-name {
