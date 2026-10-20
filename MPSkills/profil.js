@@ -180,33 +180,56 @@ function renderGuest() {
    Projekts (die SDK hatte cross-tab-Lock-Probleme). */
 let unlockedSet = new Set();
 let groupsWithContent = [];
+let currentWorld = 'gamehub';
 let currentGroup = 'egg';
 let currentAvatarId = 'default';
 
+/* Reiter der gewählten Welt. GameHub: nur Gruppen mit Inhalt (siehe
+   Kopf). MPSkills: immer alle Skills — der Reiter sagt hier, WO es
+   etwas zu holen gibt, auch wenn noch nichts frei ist. */
 function recomputeUnlocks() {
   unlockedSet = window.computeUnlockedAvatarIds
     ? window.computeUnlockedAvatarIds()
     : new Set(['default']);
-  groupsWithContent = (window.AVATAR_GROUPS || []).filter(
-    g => (window.AVATARS || []).some(a => a.group === g.id && unlockedSet.has(a.id))
-  );
+  groupsWithContent = (window.AVATAR_GROUPS || []).filter(g =>
+    (g.world || 'gamehub') === currentWorld && (currentWorld === 'mpskills' ||
+      (window.AVATARS || []).some(a => a.group === g.id && unlockedSet.has(a.id))));
   if (!groupsWithContent.some(g => g.id === currentGroup)) {
     currentGroup = groupsWithContent[0]?.id || 'egg';
   }
 }
 
 function openPicker() {
-  recomputeUnlocks();
   // Am eigenen Bild anfangen — wer nur die Stufe wechseln will,
   // sucht sonst erst die Gruppe, in der er schon steht.
   const own = (window.AVATARS || []).find(a => a.id === currentAvatarId);
-  if (own && groupsWithContent.some(g => g.id === own.group)) currentGroup = own.group;
+  currentWorld = own?.world || 'gamehub';
+  if (own) currentGroup = own.group;
+  recomputeUnlocks();
+  renderWorlds();
   renderTabs();
   renderGrid();
   document.getElementById('pickerModal').hidden = false;
 }
 function closePicker() {
   document.getElementById('pickerModal').hidden = true;
+}
+
+const WORLD_ICONS = { gamehub: '../avatare/ei_avatar%20default.png', mpskills: 'icons/favicon-64.png' };
+function renderWorlds() {
+  const el = document.getElementById('pickerWorlds');
+  el.innerHTML = (window.AVATAR_WORLDS || []).map(w => `
+    <button type="button" class="picker-world${w.id === currentWorld ? ' on' : ''}" data-w="${esc(w.id)}">
+      <img src="${esc(WORLD_ICONS[w.id] || '')}" alt="" /><span>${esc(w.label)}</span>
+    </button>`).join('');
+  el.querySelectorAll('[data-w]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.w === currentWorld) return;
+    currentWorld = b.dataset.w;
+    recomputeUnlocks();
+    renderWorlds();
+    renderTabs();
+    renderGrid();
+  }));
 }
 
 function renderTabs() {
@@ -230,7 +253,10 @@ function renderGrid() {
     .filter(a => a.group === currentGroup && unlockedSet.has(a.id));
 
   if (!items.length) {
-    el.innerHTML = `<p class="tools-empty">Hier ist noch nichts freigeschaltet.</p>`;
+    const g = (window.AVATAR_GROUPS || []).find(x => x.id === currentGroup);
+    el.innerHTML = currentWorld === 'mpskills'
+      ? `<p class="tools-empty">Noch nichts freigeschaltet. In <strong>${esc(g?.label || 'diesem Skill')}</strong> kannst du Avatare freischalten — sie erscheinen dann hier.</p>`
+      : `<p class="tools-empty">Hier ist noch nichts freigeschaltet.</p>`;
     return;
   }
 

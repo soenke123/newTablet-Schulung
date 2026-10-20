@@ -18,6 +18,7 @@ Webauftrtitt/
 ├── vercel.json       → nur "regions": ["fra1"] — Functions laufen in Frankfurt (Datenschutz, api/SETUP.md)
 ├── fonts/            → Google Fonts lokal (latin + latin-ext, je CSS-Datei ein Satz Familien); NIE fonts.googleapis.com einbinden
 ├── vendor/           → fest gepinnte Bibliotheken statt CDN: supabase-js-2.116.0.min.js, feather-icons-4.29.2.min.js; kein jsDelivr/unpkg (Datenschutz)
+├── avatars.js        → Profilbild-Katalog für alle Seiten. Zwei Welten (AVATAR_WORLDS), im Picker (profil.html, MPSkills/profil.html) links umschaltbar: GameHub (avatare/, Freischaltung über den Spielstand) und MPSkills („avatare MPSkills/<Skill>/“, eine Gruppe je Skill). NEUER SKILL MIT AVATAREN: Bilder in den Ordner, Gruppe in MPS_GROUPS, Bilder in MPS_CATALOG, Regel in MPS_UNLOCKERS (je Skill eigene Regel; noch leer = nichts frei); ids nie mehr ändern (stehen in profiles.avatar_id)
 ├── feedback.js         → Dialog „Feedback & Fragen“ (Profil-Menü) → RPC submit_feedback; Tickets im Admin-Reiter „Tickets“ (nur Volladmin, Migration 0179)
 ├── PROJEKTBRIEFING.md  → Migrationsplan Frontend-only → Supabase-Backend (v2, 2026-07-04)
 ├── Dokumente/          → PDF handouts for students (e.g. Handout_Tablet-Schulung.pdf)

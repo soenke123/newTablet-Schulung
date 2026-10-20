@@ -3,6 +3,18 @@
    ══════════════════════════════════════════════════════════════
    Wird auf Landing (index.html), GameHub und profil.html geladen.
 
+   Zwei Welten (AVATAR_WORLDS), im Picker links umschaltbar:
+     gamehub   → Eier + Kreaturen aus dem GameHub (Ordner avatare/)
+     mpskills  → Bilder aus einzelnen Skills (Ordner „avatare MPSkills/<Skill>/“),
+                 je Skill eine Gruppe. Wie man sie freischaltet, regelt jeder
+                 Skill selbst — siehe MPS_UNLOCKERS unten.
+
+   NEUER SKILL MIT AVATAREN:
+     1) Bilder nach „avatare MPSkills/<Ordner>/“ legen (256×256, *_avatar.png)
+     2) Gruppe in MPS_GROUPS eintragen (id 'mps_<skill-id>', folder, label)
+     3) Bilder in MPS_CATALOG eintragen
+     4) Freischalt-Regel in MPS_UNLOCKERS ergänzen
+
    Bild-Katalog:
      Eier              → group 'egg',  immer freigeschaltet
      Normal-Kreaturen  → group 'normal'
@@ -27,7 +39,8 @@
 
    Öffentliche API:
      window.AVATARS
-     window.AVATAR_GROUPS               — [{id, label}] in Tab-Reihenfolge
+     window.AVATAR_WORLDS               — [{id, label}] linke Leiste im Picker
+     window.AVATAR_GROUPS               — [{id, world, label}] in Tab-Reihenfolge
      window.DEFAULT_AVATAR_ID           — 'default'
      window.getAvatarById(id)
      window.getAvatarUrl(id, basePath)
@@ -47,12 +60,29 @@
   const GAME_STATE_KEY    = 'lernwelt_v3';        // muss zu creatures.js:STORAGE_KEY passen
   const UNLOCKS_KEY       = 'lernwelt_avatar_unlocks';
 
+  const AVATAR_WORLDS = [
+    { id: 'gamehub',  label: 'GameHub'  },
+    { id: 'mpskills', label: 'MPSkills' }
+  ];
+
+  /* MPSkills: eine Gruppe je Skill. id = 'mps_' + Skill-id aus
+     MPSkills/tools.js, folder = Unterordner von „avatare MPSkills/“
+     (so geschrieben, wie er auf der Platte heißt). */
+  const MPS_GROUPS = [
+    { id: 'mps_knowledgestack', skill: 'knowledgestack', folder: 'KnowlegeStack',        label: 'Knowledge Stack' },
+    { id: 'mps_wordisland',     skill: 'wordisland',     folder: 'Wordisland',           label: 'Wordisland' },
+    { id: 'mps_clash-of-math',  skill: 'clash-of-math',  folder: 'Kingdoms of Mathoria', label: 'Kingdoms of Mathoria' },
+    { id: 'mps_wildclusters',   skill: 'wildclusters',   folder: 'Wildclusters',         label: 'Wild Clusters' },
+    { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature' }
+  ];
+
   const AVATAR_GROUPS = [
-    { id: 'egg',    label: 'Eier'   },
-    { id: 'normal', label: 'Normal' },
-    { id: 'rar',    label: 'Rar'    },
-    { id: 'epic',   label: 'Epic'   },
-    { id: 'legi',   label: 'Legi'   }
+    { id: 'egg',    world: 'gamehub', label: 'Eier'   },
+    { id: 'normal', world: 'gamehub', label: 'Normal' },
+    { id: 'rar',    world: 'gamehub', label: 'Rar'    },
+    { id: 'epic',   world: 'gamehub', label: 'Epic'   },
+    { id: 'legi',   world: 'gamehub', label: 'Legi'   },
+    ...MPS_GROUPS.map(g => ({ id: g.id, world: 'mpskills', label: g.label }))
   ];
 
   /* ─── Katalog ─────────────────────────────────────────────────
@@ -216,6 +246,115 @@
     { id: 'ehk_6_dark',  group: 'legi', creature: 'einhornkatze', stage: 6, variant: 'dark',    file: 'Einhornkatze6Dark_avatar.png',  label: 'Einhornkatze Vollendet (Nacht)' }
   ];
 
+  /* ─── MPSkills-Katalog ────────────────────────────────────────
+     [id-Endung, Dateiname, Anzeigename] je Gruppe. Die volle id ist
+     '<gruppe>_<endung>' — darf sich nie mehr ändern, sie steht in
+     profiles.avatar_id. */
+  const MPS_CATALOG = {
+    mps_knowledgestack: [
+      ['puddl',   '00_Puddl_avatar.png',   'Puddl'],
+      ['spark',   '01_Spark_avatar.png',   'Spark'],
+      ['plop',    '02_Plop_avatar.png',    'Plop'],
+      ['bubbles', '03_Bubbles_avatar.png', 'Bubbles'],
+      ['snooze',  '04_Snooze_avatar.png',  'Snooze'],
+      ['beep',    '05_Beep_avatar.png',    'Beep'],
+      ['chompy',  '06_Chompy_avatar.png',  'Chompy'],
+      ['nubi',    '07_Nubi_avatar.png',    'Nubi'],
+      ['zorp',    '08_Zorp_avatar.png',    'Zorp'],
+      ['lotti',   '09_Lotti_avatar.png',   'Lotti'],
+      ['grumbl',  '10_Grumbl_avatar.png',  'Grumbl'],
+      ['mochi',   '11_Mochi_avatar.png',   'Mochi'],
+      ['sprout',  '12_Sprout_avatar.png',  'Sprout'],
+      ['bzz',     '13_Bzz_avatar.png',     'Bzz'],
+      ['crunch',  '14_Crunch_avatar.png',  'Crunch'],
+      ['tiki',    '15_Tiki_avatar.png',    'Tiki'],
+      ['clawdy',  '16_Clawdy_avatar.png',  'Clawdy'],
+      ['mimi',    '17_Mimi_avatar.png',    'Mimi'],
+      ['fuzz',    '18_Fuzz_avatar.png',    'Fuzz'],
+      ['snip',    '19_Snip_avatar.png',    'Snip'],
+      ['boomer',  '20_Boomer_avatar.png',  'Boomer'],
+      ['pebbl',   '21_Pebbl_avatar.png',   'Pebbl'],
+      ['glitch',  '22_Glitch_avatar.png',  'Glitch'],
+      ['cacti',   '23_Cacti_avatar.png',   'Cacti'],
+      ['nacho',   '24_Nacho_avatar.png',   'Nacho'],
+      ['pips',    '25_Pips_avatar.png',    'Pips'],
+      ['waddl',   '26_Waddl_avatar.png',   'Waddl'],
+      ['yoyo',    '27_Yoyo_avatar.png',    'Yoyo'],
+      ['turbo',   '28_Turbo_avatar.png',   'Turbo'],
+      ['lumi',    '29_Lumi_avatar.png',    'Lumi'],
+      ['umbra',   '30_Umbra_avatar.png',   'Umbra'],
+      ['grimjaw', '31_Grimjaw_avatar.png', 'Grimjaw'],
+      ['astris',  '32_Astris_avatar.png',  'Astris'],
+      ['arcana',  '33_Arcana_avatar.png',  'Arcana'],
+      ['zephyr',  '34_Zephyr_avatar.png',  'Zephyr'],
+      ['spindle', '35_Spindle_avatar.png', 'Spindle'],
+      ['prisma',  '36_Prisma_avatar.png',  'Prisma'],
+      ['plato',   '37_Plato_avatar.png',   'Plato'],
+      ['kruemel', '38_Krümel_avatar.png',  'Krümel'],
+      ['howl',    '39_Howl_avatar.png',    'Howl']
+    ],
+    mps_wordisland: [
+      ['blue_1',    'blue 1 crew_avatar.png',    'Blaue Crew 1'],
+      ['blue_4',    'blue 4 crew_avatar.png',    'Blaue Crew 4'],
+      ['green_1',   'green 1 crew_avatar.png',   'Grüne Crew 1'],
+      ['green_4',   'green 4 crew_avatar.png',   'Grüne Crew 4'],
+      ['lila_1',    'lila 1 crew_avatar.png',    'Lila Crew 1'],
+      ['lila_4',    'lila 4 crew_avatar.png',    'Lila Crew 4'],
+      ['magenta_1', 'magenta 1 crew_avatar.png', 'Magenta Crew 1'],
+      ['magenta_4', 'magenta 4 crew_avatar.png', 'Magenta Crew 4'],
+      ['red_1',     'red 1 crew_avatar.png',     'Rote Crew 1'],
+      ['red_4',     'red 4 crew_avatar.png',     'Rote Crew 4'],
+      ['rosa_1',    'rosa 1 crew_avatar.png',    'Rosa Crew 1'],
+      ['rosa_4',    'rosa 4 crew_avatar.png',    'Rosa Crew 4'],
+      ['tuerkis_1', 'türkis 1 crew_avatar.png',  'Türkise Crew 1'],
+      ['tuerkis_4', 'türkis 4 crew_avatar.png',  'Türkise Crew 4'],
+      ['yellow_1',  'yellow 1 crew_avatar.png',  'Gelbe Crew 1'],
+      ['yellow_4',  'yellow 4 crew_avatar.png',  'Gelbe Crew 4']
+    ],
+    'mps_clash-of-math': [
+      ['blue',    'blue units_avatar.png',    'Blaues Reich'],
+      ['green',   'green units_avatar.png',   'Grünes Reich'],
+      ['lila',    'lila units_avatar.png',    'Lila Reich'],
+      ['magenta', 'magenta units_avatar.png', 'Magenta Reich'],
+      ['red',     'red units_avatar.png',     'Rotes Reich'],
+      ['rosa',    'rosa units_avatar.png',    'Rosa Reich'],
+      ['tuerkis', 'türkis units_avatar.png',  'Türkises Reich'],
+      ['yellow',  'yellow units_avatar.png',  'Gelbes Reich']
+    ],
+    mps_wildclusters: [
+      ['barsch',     'Barsch_avatar.png',     'Barsch'],
+      ['bussard',    'Busard_avatar.png',     'Bussard'],
+      ['dachs',      'Dachs_avatar.png',      'Dachs'],
+      ['ente',       'Ente_avatar.png',       'Ente'],
+      ['fledermaus', 'Fledermaus_avatar.png', 'Fledermaus'],
+      ['fuchs',      'Fuchs_avatar.png',      'Fuchs'],
+      ['hecht',      'Hecht_avatar.png',      'Hecht'],
+      ['igel',       'Igel_avatar.png',       'Igel'],
+      ['kaninchen',  'Kaninchen_avatar.png',  'Kaninchen'],
+      ['reh',        'Reh_avatar.png',        'Reh']
+    ],
+    mps_balance: [
+      ['adler',      'adler_f_fliegend_avatar.png',   'Adler'],
+      ['hirsch',     'hirsch_m_stehend_avatar.png',   'Hirsch'],
+      ['wolf',       'wolf_m_stehend_avatar.png',     'Wolf'],
+      ['laufvogel',  'laufvogel_m_gehend_avatar.png', 'Laufvogel'],
+      ['jagdwild_1', 'jagdwild_1_avatar.png',         'Wildjägerin'],
+      ['jagdwild_4', 'jagdwild_4_avatar.png',         'Wildjägerin'],
+      ['jagdwild_6', 'jagdwild_6_avatar.png',         'Wildjägerin'],
+      ['jagdwolf_1', 'jagdwolf_1_avatar.png',         'Wolfsjäger'],
+      ['jagdwolf_3', 'jagdwolf_3_avatar.png',         'Wolfsjäger'],
+      ['jagdwolf_4', 'jagdwolf_4_avatar.png',         'Wolfsjägerin'],
+      ['sammeln_3',  'sammeln_3_avatar.png',          'Sammler'],
+      ['villager',   'villager_11_avatar.png',        'Dorfbewohner']
+    ]
+  };
+  for (const g of MPS_GROUPS) {
+    for (const [key, file, label] of (MPS_CATALOG[g.id] || [])) {
+      AVATARS.push({ id: `${g.id}_${key}`, group: g.id, world: 'mpskills', skill: g.skill, folder: g.folder, file, label });
+    }
+  }
+  for (const a of AVATARS) if (!a.world) a.world = 'gamehub';
+
   const _byId = new Map(AVATARS.map(a => [a.id, a]));
 
   function getAvatarById(id) {
@@ -223,7 +362,8 @@
   }
   function getAvatarUrl(id, basePath = '') {
     const entry = getAvatarById(id);
-    return `${basePath}avatare/${encodeURIComponent(entry.file)}`;
+    const parts = entry.folder ? ['avatare MPSkills', entry.folder, entry.file] : ['avatare', entry.file];
+    return basePath + parts.map(encodeURIComponent).join('/');
   }
 
   /* ─── shopData-Reader (base64 + Prüfsummen-Format) ────────────
@@ -302,11 +442,24 @@
      Einhornkatze Stage ≥5: variant-scoped. Nur der Avatar der eigenen
      Variante wird freigeschaltet — die anderen zwei nie. Wenn variant
      noch nicht gewählt ist (Task 4 nicht durch): kein Stage-≥5-Avatar. */
+  /* ─── MPSkills-Freischaltung ──────────────────────────────────
+     Je Skill eine eigene Regel: Funktion (avatar) → bool. Noch
+     leer — die Regeln kommen im nächsten Schritt. Ein Skill ohne
+     Eintrag schaltet nichts frei. */
+  const MPS_UNLOCKERS = {
+    // knowledgestack: (a) => …,
+  };
+  function isMpskillsUnlocked(a) {
+    const rule = MPS_UNLOCKERS[a.skill];
+    try { return !!(rule && rule(a)); } catch { return false; }
+  }
+
   function computeUnlockedAvatarIds() {
     const seen = getSeenCreatures();
     const variant = getKatzeVariant();
     const unlocked = new Set();
     for (const a of AVATARS) {
+      if (a.world === 'mpskills') { if (isMpskillsUnlocked(a)) unlocked.add(a.id); continue; }
       if (a.group === 'egg') { unlocked.add(a.id); continue; }
       const maxIdx = seen[a.creature];
       if (typeof maxIdx !== 'number' || maxIdx < (a.stage - 1)) continue;
@@ -410,6 +563,7 @@
 
   // Export
   window.DEFAULT_AVATAR_ID       = DEFAULT_AVATAR_ID;
+  window.AVATAR_WORLDS           = AVATAR_WORLDS;
   window.AVATAR_GROUPS           = AVATAR_GROUPS;
   window.AVATARS                 = AVATARS;
   window.getAvatarById           = getAvatarById;

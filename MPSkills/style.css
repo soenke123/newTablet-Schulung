@@ -2928,7 +2928,8 @@ body.tool-fill #pagefoot { display: none; }
    und dann steht auch nur EIN Reiter da statt fünf, von denen
    vier leer sind. Ein Reiter, hinter dem nichts liegt, ist keine
    Auskunft, sondern eine Sackgasse. */
-/* Kopf und Reiter bleiben stehen, gescrollt wird nur das Raster —
+/* Links die Welt (GameHub / MPSkills), rechts Reiter + Raster.
+   Kopf und Reiter bleiben stehen, gescrollt wird nur das Raster —
    sonst wandert beim Blättern durch 40 Bilder der Reiter aus dem
    Bild, an dem man gerade die Gruppe wechseln will. */
 .picker {
@@ -2944,6 +2945,30 @@ body.tool-fill #pagefoot { display: none; }
   border-bottom: 1px solid var(--line-soft);
 }
 .picker-head h2 { margin: 0; }
+.picker-body { display: flex; flex: 1; min-height: 0; }
+.picker-main { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.picker-worlds {
+  flex: none;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px 10px;
+  border-right: 1px solid var(--line-soft);
+  background: var(--paper);
+}
+.picker-world {
+  width: 80px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 9px 4px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: none;
+  font: inherit; font-size: .74rem; font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.picker-world img { width: 38px; height: 38px; object-fit: contain; display: block; }
+.picker-world:hover { border-color: var(--accent-dim); }
+.picker-world.on { border-color: var(--accent); background: var(--accent-dim); color: var(--ink); }
+.picker-grid .tools-empty { grid-column: 1 / -1; }
 .picker-head .modal-close { position: static; flex: none; }
 .picker-tabs {
   display: flex; gap: 7px; flex-wrap: wrap;
@@ -3406,6 +3431,9 @@ body.mpfs-body { overflow: hidden; }
   .prof-info dt { margin-top: 10px; }
   .picker-grid { grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); padding: 16px; }
   .picker-head, .picker-tabs { padding-left: 16px; padding-right: 16px; }
+  .picker-worlds { padding: 12px 6px; }
+  .picker-world { width: 62px; font-size: .68rem; }
+  .picker-world img { width: 30px; height: 30px; }
   .card { padding: 18px 17px; border-radius: 14px; }
   .card--join { padding: 20px 18px; }
   .codebox { gap: 5px; }

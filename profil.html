@@ -407,6 +407,73 @@
     }
     .picker-close:hover { color: var(--text); }
 
+    /* Links die Welt (GameHub / MPSkills), rechts Reiter + Raster.
+       Gescrollt wird nur das Raster. */
+    .picker-body {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+    .picker-main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .picker-worlds {
+      flex: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      padding: 0.9rem 0.6rem;
+      border-right: 1px solid var(--border);
+      background: var(--surface-soft);
+    }
+    .picker-world {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.3rem;
+      width: 84px;
+      padding: 0.6rem 0.3rem;
+      background: none;
+      border: 2px solid transparent;
+      border-radius: var(--radius-medium);
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color var(--transition), background var(--transition);
+    }
+    .picker-world img { width: 40px; height: 40px; object-fit: contain; border-radius: 50%; display: block; }
+    .picker-world:hover:not(.active) { border-color: rgba(181, 106, 60, 0.35); }
+    .picker-world.active {
+      border-color: var(--accent);
+      background: var(--surface);
+      color: var(--text);
+    }
+    .picker-world .tab-new-dot {
+      position: absolute;
+      top: 6px;
+      right: 10px;
+      width: 8px;
+      height: 8px;
+      background: var(--danger);
+      border-radius: 50%;
+    }
+    @media (max-width: 560px) {
+      .picker-worlds { padding: 0.7rem 0.35rem; }
+      .picker-world { width: 64px; font-size: 0.7rem; }
+      .picker-world img { width: 32px; height: 32px; }
+      .picker-main .picker-tabs,
+      .picker-main .picker-grid { padding-left: 0.8rem; padding-right: 0.8rem; }
+      .picker-main .picker-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 0.5rem; }
+      .picker-main .avatar-tile-img { width: 76px; height: 76px; }
+    }
+
     .picker-tabs {
       display: flex;
       gap: 0.4rem;
@@ -620,15 +687,20 @@
         <h3 id="pickerTitle">Profilbild wählen</h3>
         <button class="picker-close" id="pickerClose" aria-label="Schließen">×</button>
       </div>
-      <div class="picker-tabs" id="pickerTabs"></div>
-      <div class="picker-grid" id="pickerGrid"></div>
+      <div class="picker-body">
+        <nav class="picker-worlds" id="pickerWorlds" aria-label="Bereich"></nav>
+        <div class="picker-main">
+          <div class="picker-tabs" id="pickerTabs"></div>
+          <div class="picker-grid" id="pickerGrid"></div>
+        </div>
+      </div>
     </div>
   </div>
 
   <script src="vendor/supabase-js-2.116.0.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="session.js?v=20260811"></script>
-  <script src="avatars.js?v=20260709"></script>
+  <script src="avatars.js?v=20261020"></script>
   <script src="feedback.js?v=20260927"></script>
   <script>
     'use strict';
@@ -645,6 +717,7 @@
     const pickerOverlay = document.getElementById('pickerOverlay');
     const pickerClose   = document.getElementById('pickerClose');
     const pickerTabs    = document.getElementById('pickerTabs');
+    const pickerWorlds  = document.getElementById('pickerWorlds');
     const pickerGrid    = document.getElementById('pickerGrid');
 
     const pwForm    = document.getElementById('pwForm');
@@ -654,6 +727,7 @@
     const pwSubmit  = document.getElementById('pwSubmit');
 
     let currentAvatarId = window.DEFAULT_AVATAR_ID;
+    let currentWorldId  = 'gamehub';
     let currentGroupId  = window.AVATAR_GROUPS?.[0]?.id || 'egg';
     let unlockedSet     = new Set();
     let newSet          = new Set();
@@ -748,10 +822,15 @@
 
     async function openPicker() {
       pickerSessionNewSet = new Set(newSet);   // Snapshot fürs Rendering
+      // Start: Gruppe mit NEU, sonst die des eigenen Bildes.
+      const own = window.getAvatarById(currentAvatarId);
+      if (own) currentGroupId = own.group;
       if (pickerSessionNewSet.size > 0) {
         const firstNewGroup = firstGroupWithNew(pickerSessionNewSet);
         if (firstNewGroup) currentGroupId = firstNewGroup;
       }
+      currentWorldId = worldOfGroup(currentGroupId);
+      renderPickerWorlds();
       renderPickerTabs();
       renderPickerGrid();
       pickerOverlay.hidden = false;
@@ -796,11 +875,39 @@
     function groupHasNew(gId) {
       return window.AVATARS.some(a => a.group === gId && pickerSessionNewSet.has(a.id));
     }
+    function worldOfGroup(gId) {
+      return window.AVATAR_GROUPS.find(g => g.id === gId)?.world || 'gamehub';
+    }
+    function groupsOfWorld(wId) {
+      return window.AVATAR_GROUPS.filter(g => (g.world || 'gamehub') === wId);
+    }
+
+    const WORLD_ICONS = { gamehub: 'avatare/ei_avatar%20default.png', mpskills: 'MPSkills/icons/favicon-64.png' };
+    function renderPickerWorlds() {
+      pickerWorlds.innerHTML = '';
+      for (const w of (window.AVATAR_WORLDS || [{ id: 'gamehub', label: 'GameHub' }])) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'picker-world' + (w.id === currentWorldId ? ' active' : '');
+        const hasNew = groupsOfWorld(w.id).some(g => groupHasNew(g.id));
+        btn.innerHTML = `${hasNew ? '<span class="tab-new-dot"></span>' : ''}
+          <img src="${WORLD_ICONS[w.id] || ''}" alt="" />${w.label}`;
+        btn.addEventListener('click', () => {
+          if (w.id === currentWorldId) return;
+          currentWorldId = w.id;
+          currentGroupId = groupsOfWorld(w.id)[0]?.id;
+          renderPickerWorlds();
+          renderPickerTabs();
+          renderPickerGrid();
+        });
+        pickerWorlds.appendChild(btn);
+      }
+    }
 
     function renderPickerTabs() {
       pickerTabs.innerHTML = '';
       pickerTabs.style.display = '';
-      for (const g of window.AVATAR_GROUPS) {
+      for (const g of groupsOfWorld(currentWorldId)) {
         const btn = document.createElement('button');
         btn.className = 'picker-tab' + (g.id === currentGroupId ? ' active' : '');
         btn.innerHTML = g.label + (groupHasNew(g.id) ? '<span class="tab-new-dot"></span>' : '');
@@ -819,6 +926,19 @@
       const items = (window.AVATARS || [])
         .filter(a => a.group === currentGroupId && unlockedSet.has(a.id));
 
+      if (items.length === 0 && currentWorldId === 'mpskills') {
+        const g = window.AVATAR_GROUPS.find(x => x.id === currentGroupId);
+        const emptyMsg = document.createElement('div');
+        emptyMsg.className = 'picker-empty';
+        emptyMsg.innerHTML = `
+          <span class="picker-empty-icon">🔒</span>
+          Noch nichts freigeschaltet.<br>
+          In <strong>${g ? g.label : 'diesem Skill'}</strong> (MPSkills) kannst du
+          Avatare freischalten — sie erscheinen dann automatisch hier.
+        `;
+        pickerGrid.appendChild(emptyMsg);
+        return;
+      }
       if (items.length === 0) {
         const emptyMsg = document.createElement('div');
         emptyMsg.className = 'picker-empty';
