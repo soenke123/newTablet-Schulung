@@ -9,13 +9,19 @@
      · Richtig:  * ✓ ✔ ✅ [x]  (richtig)  **fett**  oder eine Zeile
                  „Lösung: b"  oder ein Schlüssel am Ende „1-b 2-c"
      · Erklärung: „Erklärung: …"  „Hinweis: …"
+     · Fragetyp (0217), als eigene Zeile UNTER der Frage:
+         Skala: 0 - 2000 km, Ziel: 1233    (auch „0 bis 2000", „Ziel 1233 km",
+                                             Ziel auch als eigene Zeile „Ziel: 1233")
+         Münzen                            (oder „Typ: Münzen", „[Münzen]" hinter der Frage)
+         Wahr/Falsch                       — nicht nötig: GENAU zwei Antworten werden
+                                             von selbst eine Wahr/Falsch-Frage.
      · Umbrüche mitten in Frage oder Antwort werden zusammengefügt.
      · Falsche Reihenfolge der Nummern/Buchstaben, doppelte Zeichen,
        Groß/Klein: alles egal — es zählt die Reihenfolge im Text.
 
    parse(text) → {
      title,                 // erkannter Titel oder ''
-     questions: [{ question_text, options[4], correct_indices,
+     questions: [{ kind, scale, question_text, options[4|2|0], correct_indices,
                    correct_idx, time_limit_sec, explanation,
                    status, notes[] }],
      lines: [{ kind, qi, oi }],   // je Rohzeile, für die Einfärbung
@@ -43,6 +49,45 @@
   const A_DASH   = /^([a-h])\s+[-–—]\s+(.*)$/i;
 
   const clean = s => String(s || '').replace(/\*\*|__/g, '').replace(/\s+/g, ' ').trim();
+
+  /* ─── Fragetypen (0217) ─── */
+  const NUM = '[-−]?\\d+(?:[.,]\\d+)*';
+  const ART_WORT = '(m(?:ü|ue|u)nzen(?:\\s*setzen)?|wette|setzen|coins?|wahr\\s*(?:\\/|oder)\\s*falsch|richtig\\s*(?:\\/|oder)\\s*falsch|skala|sch(?:ä|ae)tz(?:en|frage|ung)|regler)';
+  const ART_RE   = new RegExp('^(?:(?:typ|modus|art|fragetyp)\\s*[:=]\\s*)?[\\[(]?' + ART_WORT + '[\\])]?\\s*$', 'i');
+  const ART_TAG  = new RegExp('\\s*[\\[(]' + ART_WORT + '[\\])]\\s*$', 'i');
+  const SKALA_RE = /^(?:skala|sch(?:ä|ae)tz(?:en|frage|ung)|regler)\s*[:=]?\s*(.+)$/i;
+  const ZIEL_RE  = new RegExp('^(?:ziel(?:wert)?|richtiger\\s+wert)\\s*[:=]?\\s*(' + NUM + ')\\s*(.*)$', 'i');
+  const SOLNUM_RE = new RegExp('^(?:l[öo]sung|richtig(?:e\\s+antwort)?|antwort)\\s*[:=]\\s*(' + NUM + ')\\s*([^\\d\\s()]*)\\s*$', 'i');
+  const SKALA_SPAN = new RegExp('^(' + NUM + ')\\s*([^\\d\\s,;–—-][^,;]*?)?\\s*(?:-|–|—|bis|\\.\\.\\.?|…)\\s*(' + NUM + ')\\s*([^,;]*?)\\s*$', 'i');
+
+  /* „1.233" = 1233 (Tausenderpunkt), „2,5" = 2.5, „−3" = -3. */
+  function zahl(t) {
+    let x = String(t).replace('−', '-').trim();
+    if (/^-?\d{1,3}(\.\d{3})+(,\d+)?$/.test(x)) x = x.replace(/\./g, '');
+    const n = Number(x.replace(',', '.'));
+    return isFinite(n) ? n : null;
+  }
+  function artVon(wort) {
+    const w = String(wort).toLowerCase();
+    if (/^(skala|sch|regler)/.test(w)) return 'scale';
+    if (/falsch/.test(w)) return 'tf';
+    return 'bet';
+  }
+  /* „0 - 2000 km, Ziel: 1233" → { min, max, target, unit } (Teile dürfen fehlen) */
+  function skalaLesen(rest) {
+    const teile = String(rest).split(/\s*[,;]?\s*\b(?:ziel(?:wert)?|richtig|l[öo]sung|antwort)\b\s*[:=]?\s*/i);
+    const sk = { min: null, max: null, target: null, unit: '' };
+    const m = SKALA_SPAN.exec(clean(teile[0]));
+    if (m) {
+      sk.min = zahl(m[1]); sk.max = zahl(m[3]);
+      sk.unit = clean(m[4] || m[2] || '');
+    }
+    if (teile[1] != null) {
+      const z = new RegExp('^(' + NUM + ')\\s*(.*)$').exec(clean(teile[1]));
+      if (z) { sk.target = zahl(z[1]); if (!sk.unit) sk.unit = clean(z[2]); }
+    }
+    return sk;
+  }
 
   /* Antworten, die in derselben Zeile hintereinander stehen:
      „a) 3  b) 4  c) 5" — nur wenn a, b, … der Reihe nach folgen. */
@@ -93,6 +138,10 @@
     s = s.replace(/^[•·▪►→▸◦]\s*/, '').replace(/^[-–—]\s+/, '').replace(/^\*\s+(?=\S)/, '');
 
     let m;
+    if ((m = ART_RE.exec(s))) { a.art = artVon(m[1]); return a; }
+    if ((m = SKALA_RE.exec(s)) && new RegExp('^' + NUM).test(m[1].trim())) { a.skala = skalaLesen(m[1]); return a; }
+    if ((m = ZIEL_RE.exec(s))) { a.ziel = { n: zahl(m[1]), unit: clean(m[2]) }; return a; }
+    if ((m = SOLNUM_RE.exec(s))) a.solNum = { n: zahl(m[1]), unit: clean(m[2]) };
     if ((m = TITLE_RE.exec(s)) && !/^#\d/.test(s)) { a.title = clean(m[1]); return a; }
     if ((m = EXPL_RE.exec(s))) { a.expl = clean(m[1]); return a; }
     if ((m = SOL_RE.exec(s))) {
@@ -167,7 +216,7 @@
 
     const newQ = (text, num) => {
       cur = { num: num == null ? null : num, text: text || '', options: [], explanation: '',
-              sol: null, notes: [], _line: -1 };
+              sol: null, notes: [], _line: -1, kind: null, scale: null };
       questions.push(cur);
       return cur;
     };
@@ -204,6 +253,26 @@
       }
 
       if (a.key) { keys.push(a.key); mark(i, 'key', -1); continue; }
+
+      /* ── Fragetyp: gilt für die Frage darüber ── */
+      if (a.art || a.skala || a.ziel || (a.solNum && cur && cur.kind === 'scale')) {
+        if (!cur) continue;
+        if (a.art) cur.kind = a.art;
+        if (a.skala) {
+          cur.kind = 'scale';
+          const alt = cur.scale || {};
+          cur.scale = Object.assign({}, alt, a.skala, { target: a.skala.target != null ? a.skala.target : alt.target,
+                                                        unit: a.skala.unit || alt.unit || '' });
+        }
+        const z = a.ziel || (cur.kind === 'scale' ? a.solNum : null);
+        if (z) {
+          cur.kind = 'scale';
+          cur.scale = Object.assign({ min: null, max: null, unit: '' }, cur.scale || {}, { target: z.n });
+          if (!cur.scale.unit && z.unit) cur.scale.unit = z.unit;
+        }
+        mark(i, 'sol', questions.length - 1);
+        continue;
+      }
 
       if (a.sol) {
         if (cur) { cur.sol = (cur.sol || []).concat(a.sol); mark(i, 'sol', questions.length - 1); }
@@ -260,6 +329,14 @@
       // 1) Frage hat noch keinen Text („1." und darunter die Frage)
       if (cur && cur.text === '' && !cur.options.length) {
         cur.text = clean(t); last = 'q'; mark(i, 'q', qi); continue;
+      }
+
+      // 2) „Wahr" / „Falsch" ohne Buchstaben direkt unter der Frage (0217)
+      if (cur && cur.text && cur.options.length < 2 && (last === 'q' || last === 'a')
+          && /^(wahr|falsch|ja|nein|richtig|stimmt(\s+nicht)?|true|false)$/i.test(stripOk(t).text)) {
+        const oi = addAns(t, !!a.ok, null);
+        last = 'a';
+        mark(i, cur.options[oi].ok ? 'c' : 'a', qi, oi); continue;
       }
 
       if (hasAns) {
@@ -366,8 +443,42 @@
     const stats = { questions: 0, answers: 0, onlyQuestions: 0, noCorrect: 0, warnings: 0 };
 
     questions.forEach(q => {
+      const tag = ART_TAG.exec(q.text || '');
+      if (tag) { q.text = q.text.slice(0, tag.index).trim(); if (!q.kind) q.kind = artVon(tag[1]); }
       let opts = q.options.slice();
       const notes = q.notes.slice();
+
+      /* Skala: keine Antworten, sondern Start/Ende/Ziel */
+      if (q.kind === 'scale') {
+        const sk = Object.assign({ min: null, max: null, target: null, unit: '' }, q.scale || {});
+        let status = 'ok';
+        if (!q.text) { status = 'ohne-text'; notes.push('Der Fragetext fehlt.'); }
+        if (sk.min == null || sk.max == null) {
+          notes.push('Skala ohne Start und Ende — 0 bis 100 gilt vorerst. Schreib z. B. „Skala: 0 - 2000 km, Ziel: 1233".');
+          if (sk.min == null) sk.min = 0;
+          if (sk.max == null) sk.max = 100;
+          status = status === 'ok' ? 'keine-richtige' : status;
+        }
+        if (sk.min > sk.max) { const t = sk.min; sk.min = sk.max; sk.max = t; }
+        if (sk.target == null) {
+          notes.push('Kein Ziel angegeben — die Mitte gilt vorerst. Schreib „Ziel: …" dazu.');
+          sk.target = (sk.min + sk.max) / 2;
+          if (status === 'ok') status = 'keine-richtige';
+        } else if (sk.target < sk.min || sk.target > sk.max) {
+          notes.push('Das Ziel liegt außerhalb von Start und Ende — bitte im Editor anpassen.');
+          if (status === 'ok') status = 'keine-richtige';
+        }
+        if (opts.length) notes.push('Bei einer Skala gibt es keine Antworten — die Zeilen darunter fallen weg.');
+        if (status === 'keine-richtige') stats.noCorrect++;
+        if (status !== 'ok') stats.warnings++;
+        stats.questions++;
+        out.push({
+          kind: 'scale', scale: sk, question_text: q.text, options: [],
+          correct_idx: 0, correct_indices: [0], time_limit_sec: 20,
+          explanation: q.explanation || null, status, notes
+        });
+        return;
+      }
       let correct = [];
       opts.forEach((o, i) => { if (o.ok) correct.push(i); });
       if (q.sol) {
@@ -398,17 +509,30 @@
       if (status === 'keine-richtige') { notes.push('Keine richtige Antwort markiert — A gilt vorerst. Kannst du später ändern.'); stats.noCorrect++; }
       if (status === 'ohne-text') notes.push('Der Fragetext fehlt.');
 
-      const options = ['', '', '', ''];
-      opts.slice(0, 4).forEach((o, i) => { options[i] = o.text; });
+      /* Genau zwei Antworten = Wahr/Falsch (auch ohne Schlüsselwort).
+         „Münzen" gewinnt: das hat jemand ausdrücklich so gewollt. */
+      let kind = q.kind || (opts.length === 2 ? 'tf' : 'mc');
+      if (kind === 'tf' && opts.length > 2) {
+        notes.push('Wahr/Falsch hat zwei Antworten — nur die ersten zwei bleiben.');
+        opts = opts.slice(0, 2);
+        correct = correct.filter(i => i < 2);
+      }
+      const n = kind === 'tf' ? 2 : 4;
+      const options = Array.from({ length: n }, () => '');
+      if (kind === 'tf' && !opts.length) { options[0] = 'Wahr'; options[1] = 'Falsch'; }
+      opts.slice(0, n).forEach((o, i) => { options[i] = o.text; });
       if (!correct.length) correct = [0];
-      correct = correct.filter(i => i < 4).sort((x, y) => x - y);
+      correct = correct.filter(i => i < n).sort((x, y) => x - y);
       if (!correct.length) correct = [0];
+      if (kind === 'tf') correct = [correct[0]];
 
       if (status !== 'ok') stats.warnings++;
       stats.questions++;
       stats.answers += opts.length;
 
       out.push({
+        kind,
+        scale: null,
         question_text: q.text,
         options,
         correct_idx: correct[0],
@@ -438,7 +562,21 @@
     'b) Eine Zeitschrift',
     'c) Ein Ladekabel',
     '',
-    '3. Welche Apps dürfen im Unterricht geöffnet werden?'
+    '3. Ein Tablet darf im Unterricht immer laut sein.',
+    'a) Wahr',
+    'b) Falsch *',
+    '',
+    '4. Wie viele Minuten hat eine Schulstunde?',
+    'Skala: 0 - 90 Minuten, Ziel: 45',
+    '',
+    '5. Welche Dateiformate kann man drucken?',
+    'Münzen',
+    'a) PDF *',
+    'b) JPG *',
+    'c) MP3',
+    'd) EXE',
+    '',
+    '6. Welche Apps dürfen im Unterricht geöffnet werden?'
   ].join('\n');
 
   const api = { parse, EXAMPLE };

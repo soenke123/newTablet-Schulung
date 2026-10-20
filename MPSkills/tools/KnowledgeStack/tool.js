@@ -80,7 +80,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20261020k';
+  const ASSET_V = '20261020m';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der

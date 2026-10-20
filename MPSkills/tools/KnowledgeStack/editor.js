@@ -619,9 +619,17 @@
     h += '</div>';
     h += parsed.questions.map((q, i) => {
       const filled = q.options.map((o, oi) => ({ o, oi })).filter(x => x.o);
+      const art = artVon(q);
+      const sk = q.scale;
       return '<div class="kse-imp-q' + (q.status === 'ok' ? '' : ' is-hinweis') + '">'
         + '<div class="kse-imp-qt"><b>' + (i + 1) + '.</b> '
+        + (art !== 'mc' ? '<span class="kse-chip kse-chip--art">' + ARTEN[art].ico + ' ' + ARTEN[art].label + '</span> ' : '')
         + (q.question_text ? esc(q.question_text) : '<i>(Fragetext fehlt)</i>') + '</div>'
+        + (art === 'scale' && sk
+          ? '<div class="kse-imp-ex">📏 ' + esc(String(sk.min).replace('.', ',')) + ' bis ' + esc(String(sk.max).replace('.', ','))
+            + (sk.unit ? ' ' + esc(sk.unit) : '') + ' · Ziel ✅ ' + esc(String(sk.target).replace('.', ','))
+            + (sk.unit ? ' ' + esc(sk.unit) : '') + '</div>'
+          : '')
         + (filled.length
           ? '<ul class="kse-imp-ans">' + filled.map(x =>
               '<li class="' + (q.correct_indices.includes(x.oi) && q.status !== 'keine-richtige' ? 'is-richtig' : '') + '">'
@@ -662,6 +670,9 @@
           dahinter, oder als Zeile <code>Lösung: b</code>.
           Eine Erklärung (wird nach der Antwort am Beamer gezeigt) kommt als eigene Zeile
           darunter: <code>Erklärung: …</code>.
+          <b>Fragetypen:</b> genau zwei Antworten werden von selbst <b>Wahr/Falsch</b>.
+          Eine Zeile <code>Skala: 0 - 2000 km, Ziel: 1233</code> unter der Frage macht eine <b>Skala</b>,
+          eine Zeile <code>Münzen</code> (oder <code>[Münzen]</code> hinter der Frage) macht <b>Münzen setzen</b>.
           <span class="kse-imp-offen">Aber nichts davon ist Pflicht: Der Text wird großzügig gelesen —
           fehlende Nummern, andere Zeichen, Zeilenumbrüche oder nur Fragen ohne Antworten gehen auch.
           Nach dem Übernehmen kannst du alles noch Feld für Feld anpassen.</span>
@@ -962,6 +973,7 @@
 .kse-seg--art.is-an { background: var(--ks-gold); color: #1a1400; }
 .kse-art-hint { margin-top: -4px; }
 .kse-optionen--tf { grid-template-columns: 1fr 1fr; }
+.kse-chip--art { font-size: 11px; vertical-align: middle; }
 .kse-skala { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 @media (max-width: 600px) { .kse-skala { grid-template-columns: 1fr 1fr; } }
 .kse-skala-f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--ks-soft); }
@@ -1565,23 +1577,14 @@
       const P = window.KSParse;
       const parsed = P.parse(imp.text);
       if (!parsed.questions.length) { toast('Noch keine Fragen erkannt.', true); return; }
-      // Genau zwei Antworten „Wahr"/„Falsch" (oder richtig/falsch,
-      // ja/nein) werden eine Wahr/Falsch-Frage.
-      const WAHR = /^(wahr|richtig|ja|stimmt|true)$/i, FALSCH = /^(falsch|nein|stimmt nicht|false)$/i;
-      const istTf = q => {
-        const v = (q.options || []).map(o => String(o || '').trim()).filter(Boolean);
-        return v.length === 2 && WAHR.test(v[0]) && FALSCH.test(v[1]);
-      };
-      const qs = parsed.questions.map(q => istTf(q) ? {
-        kind: 'tf', question_text: q.question_text, options: (q.options || []).filter(o => String(o || '').trim()).slice(0, 2),
-        correct_idx: (q.correct_indices || [q.correct_idx])[0] === 1 ? 1 : 0,
-        correct_indices: [(q.correct_indices || [q.correct_idx])[0] === 1 ? 1 : 0],
-        time_limit_sec: q.time_limit_sec, explanation: q.explanation
-      } : {
+      // Den Fragetyp erkennt parse.js (Skala:/Münzen-Zeile, genau zwei
+      // Antworten = Wahr/Falsch).
+      const qs = parsed.questions.map(q => ({
+        kind: q.kind || 'mc', scale: q.scale ? Object.assign({}, q.scale) : null,
         question_text: q.question_text, options: q.options,
         correct_idx: q.correct_idx, correct_indices: q.correct_indices,
         time_limit_sec: q.time_limit_sec, explanation: q.explanation
-      });
+      }));
       if (imp.mode === 'append' && data) {
         const leer = x => !x.question_text && !(x.options || []).some(Boolean);
         data.questions = data.questions.filter(x => !leer(x)).concat(qs);

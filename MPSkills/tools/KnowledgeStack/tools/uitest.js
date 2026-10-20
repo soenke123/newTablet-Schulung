@@ -1611,6 +1611,50 @@ async function bereichTypen() {
      && lob.ctx.toasts.some(t => /zwischen Start und Ende/.test(t)));
   click(R.querySelector('[data-ed=preview]'), lob.doc); await wait(30);
   ok('Editor Vorschau Skala: Strecke mit Ziel', !!R.querySelector('.kse-pv-skala') && !R.querySelector('.kse-pv-k'));
+
+  /* ─── Text-Import: Schlüsselwörter ──────────────────────── */
+  const P = makeEnv().window.KSParse;
+  const r = P.parse([
+    '1. Wie lang ist der Rhein?', 'Skala: 0 - 2.000 km, Ziel: 1.233', '',
+    '2. Wale sind Fische.', 'a) Stimmt', 'b) Stimmt nicht *', '',
+    '3. Hauptstadt von Frankreich? [Münzen]', 'a) Paris *', 'b) Rom', 'c) Berlin', '',
+    '4. Wie warm wird es?', 'Skala: -10 bis 40 °C', 'Ziel: 22,5', '',
+    '5. Welche Planeten haben Ringe?', 'Münzen', 'a) Saturn *', 'b) Mars', 'c) Uranus *', '',
+    '6. Wie viele Beine hat eine Spinne?', 'Skala: 0 bis 20', 'Lösung: 8', '',
+    '7. Ist Berlin die Hauptstadt?', 'Wahr *', 'Falsch', '',
+    '8. Was ist 2+2?', 'a) 4 *', 'b) 5', 'c) 3'
+  ].join('\n'));
+  const k = r.questions.map(q => q.kind).join(',');
+  ok('Import: Typen erkannt', k === 'scale,tf,bet,scale,bet,scale,tf,mc', k);
+  const s0 = r.questions[0].scale;
+  ok('Import Skala: Start/Ende/Ziel/Einheit (Tausenderpunkt)', s0.min === 0 && s0.max === 2000 && s0.target === 1233 && s0.unit === 'km',
+     JSON.stringify(s0));
+  const s3 = r.questions[3].scale;
+  ok('Import Skala: negativ, „bis", Ziel als eigene Zeile, Komma', s3.min === -10 && s3.max === 40 && s3.target === 22.5 && s3.unit === '°C',
+     JSON.stringify(s3));
+  ok('Import Skala: „Lösung: 8" ist das Ziel', r.questions[5].scale.target === 8);
+  ok('Import: zwei Antworten = Wahr/Falsch mit genau zwei Feldern', r.questions[1].options.length === 2
+     && r.questions[1].correct_indices.join() === '1');
+  ok('Import: „[Münzen]" wird aus dem Fragetext entfernt', r.questions[2].question_text === 'Hauptstadt von Frankreich?');
+  ok('Import Münzen: mehrere richtige bleiben', r.questions[4].correct_indices.join() === '0,2');
+  ok('Import: „Wahr"/„Falsch" ohne Buchstaben', r.questions[6].options.join('/') === 'Wahr/Falsch');
+  ok('Import: alles ohne Warnung', r.stats.warnings === 0, String(r.stats.warnings));
+  const ohneZiel = P.parse('1. Wie hoch ist die Zugspitze?\nSkala: 0 - 4000 m').questions[0];
+  ok('Import Skala ohne Ziel: Hinweis', ohneZiel.kind === 'scale' && ohneZiel.notes.some(n => /Ziel/.test(n)));
+
+  click(R.querySelector('[data-ed=back-edit]'), lob.doc); await wait(30);
+  click(R.querySelector('[data-ed=imp-open-append]'), lob.doc); await wait(30);
+  ok('Import-Hilfe nennt die Schlüsselwörter', /Skala: 0 - 2000 km, Ziel: 1233/.test(txt(R)) && /Münzen/.test(txt(R)));
+  const feld = R.querySelector('[data-imp=text]');
+  feld.value = '1. Wie lang ist der Rhein?\nSkala: 0 - 2000 km, Ziel: 1233\n\n2. Wale sind Fische.\na) Wahr\nb) Falsch *';
+  feld.dispatchEvent(new lob.doc.defaultView.Event('input', { bubbles: true })); await wait(20);
+  ok('Import-Vorschau zeigt den Typ', /Skala/.test(txt(R.querySelector('.kse-imp-q'))) && /Ziel ✅ 1233/.test(txt(R)));
+  click(R.querySelector('[data-ed=imp-apply]'), lob.doc); await wait(30);
+  const karten = R.querySelectorAll('.kse-frage');
+  const an = Array.from(karten).map(c => (c.querySelector('[data-ed=set-kind].is-an') || {}).dataset?.v).join(',');
+  ok('Import übernommen: Typen im Editor', an.endsWith('scale,tf'), an);
+  ok('Import übernommen: Skala-Felder gefüllt',
+     Array.from(R.querySelectorAll('[data-field="scale-target"]')).some(f => f.getAttribute('value') === '1233'));
 }
 
 /* ══════════════════════════════════════════════════════════ */

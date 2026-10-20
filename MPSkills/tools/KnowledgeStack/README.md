@@ -444,7 +444,26 @@ Zusätzlich zum Fragen-Editor: Im Katalog (📋 „Aus Text") oder im Editor
 Antworten, Richtig-Markierungen (`*` `✓` `(richtig)` `**fett**`, `Lösung: b`,
 Schlüssel `1-b`), Erklärungen und einen Titel; Nummern/Buchstaben dürfen
 fehlen oder falsch sein, Zeilenumbrüche werden zusammengefügt. Fragen ohne
-Antworten bleiben „nur Frage". Das Textfeld liegt über einer deckungsgleichen
+Antworten bleiben „nur Frage".
+
+**Fragetypen im Text (0217)** — jeweils als eigene Zeile unter der Frage:
+
+```
+1. Wie lang ist der Rhein?
+Skala: 0 - 2000 km, Ziel: 1233      ← Skala („0 bis 2000", Ziel auch als eigene Zeile
+                                       „Ziel: 1233" oder „Lösung: 1233"; 1.233 = 1233, 2,5 = 2.5)
+2. Welche Planeten haben Ringe?
+Münzen                              ← Münzen setzen (oder „[Münzen]" hinter der Frage, „Typ: Münzen")
+a) Saturn *
+b) Mars
+3. Wale sind Fische.                ← genau zwei Antworten = von selbst Wahr/Falsch
+a) Wahr
+b) Falsch *
+```
+
+„Wahr"/„Falsch" (ja/nein, stimmt/stimmt nicht) gehen auch ohne Buchstaben
+direkt unter der Frage. Fehlt bei einer Skala Start/Ende oder das Ziel, gibt
+es einen Hinweis und vorläufige Werte (0–100, Mitte). Das Textfeld liegt über einer deckungsgleichen
 Zweitschicht (`.kse-imp-back`), die Zeilen einfärbt — dafür darf die
 Rückseite keine Schriftbreite ändern (kein Padding, kein Fettdruck). „Übernehmen"
 öffnet den normalen Editor mit dem Erkannten.
