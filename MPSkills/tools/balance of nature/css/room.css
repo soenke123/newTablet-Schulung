@@ -5,6 +5,8 @@
 /* .field ist display:flex und schlüge sonst das hidden-Attribut */
 body.room [hidden], body.demo [hidden] { display: none !important; }
 body.room .bar h1, body.demo .bar h1 { font-size: 16px; }
+/* Legende der Karten im Diagramm nur, wenn Menschen mitspielen (Szenario 4) */
+body.room:not(.humans) .note-cards { display: none; }
 .scn-open {
   display: inline-flex; align-items: center; gap: 8px;
   font-weight: 600; background: #2a7f86; border-color: #52c2c0;

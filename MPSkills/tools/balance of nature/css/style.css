@@ -329,6 +329,8 @@ button:disabled { opacity: 0.5; cursor: default; }
 .chart-note .ev-card { width: 3px; height: 11px; border-radius: 0; background: rgb(255, 170, 90); }
 .chart-note .ev-undo { width: 3px; height: 11px; border-radius: 0; background: repeating-linear-gradient(180deg, rgb(150, 195, 235) 0 6px, transparent 6px 8px); }
 .chart-note .ev-folge { width: 3px; height: 11px; border-radius: 0; background: repeating-linear-gradient(180deg, rgb(240, 110, 110) 0 3px, transparent 3px 5px); }
+.chart-note .note-cards { display: contents; }
+.chart-note .note-cards i:first-child { margin-left: 6px; }
 .ps-empty { grid-column: 1 / -1; margin: 0; font-size: 12px; opacity: 0.8; }
 
 /* Seitenleiste: Bereiche zum Einklappen, optional zweispaltig */
