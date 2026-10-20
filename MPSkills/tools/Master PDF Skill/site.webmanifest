@@ -1,0 +1,19 @@
+{
+  "id": "/MPSkills/tools/Master%20PDF%20Skill/",
+  "name": "Master PDF Skill",
+  "short_name": "Master PDF",
+  "description": "PDFs lesen, bearbeiten, kommentieren und ausfüllen – alles lokal im Browser.",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#172b4d",
+  "theme_color": "#172b4d",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
