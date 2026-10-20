@@ -30,7 +30,7 @@
  * den Bildschirm PASST, prüft dagegen responsivecheck.js.
  *
  * Aufruf:  node MPSkills/tools/KnowledgeStack/tools/uitest.js
- *          … uitest.js emote|tab|beam|fluss     nur einen Bereich
+ *          … uitest.js emote|tab|beam|fluss|typen     nur einen Bereich
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -1453,10 +1453,170 @@ async function bereichKatalog() {
   ok('Speichern: ohne Foto/Bild kein Vorschaubild (→ Logo)', sa && sa.args.p_thumbnail === null && sa.args.p_thumb_custom === false);
 }
 
+/* ══════════════════════════════════════════════════════════
+   FRAGETYPEN (Migration 0217): Wahr/Falsch, Skala, Münzen
+   ══════════════════════════════════════════════════════════ */
+async function bereichTypen() {
+  console.log('\n── Fragetypen ──────────────────────────────────────\n');
+  const mitFrage = (v, q) => Object.assign(v, { question: Object.assign({}, v.question, q) });
+
+  /* ─── Wahr/Falsch ───────────────────────────────────────── */
+  const tf = await starte('participant', mitFrage(tabFrage(), { kind: 'tf', options: ['Wahr', 'Falsch'] }));
+  const tfK = Array.from(tf.root.querySelectorAll('.ks-k'));
+  ok('tf Tablet: zwei Knöpfe', tfK.length === 2 && tfK.every(k => k.tagName.toLowerCase() === 'button'));
+  ok('tf Tablet: nicht gemischt — Wahr links', tfK.map(k => k.dataset.idx).join('') === '01'
+     && txt(tfK[0]).includes('Wahr'));
+  ok('tf Tablet: nebeneinander (data-art=tf)', tf.root.querySelector('.ks-kacheln').dataset.art === 'tf');
+  click(tfK[1], tf.doc); await wait(30);
+  const tfA = tf.rufe.find(r => r.fn === 'ks_answer');
+  ok('tf Tablet: Antwort über ks_answer', tfA && tfA.args.p_chosen === 1);
+
+  const tfB = await starte('presenter', mitFrage(beamFrage(), { kind: 'tf', options: ['Stimmt', 'Stimmt nicht'] }));
+  ok('tf Beamer: zwei Kacheln in fester Reihenfolge',
+     Array.from(tfB.root.querySelectorAll('.ks-k')).map(k => k.dataset.idx).join('') === '01');
+  ok('tf Beamer: Typ steht über der Frage', txt(tfB.root.querySelector('.ks-qart')).includes('Wahr oder falsch'));
+
+  /* ─── Skala ─────────────────────────────────────────────── */
+  const SK = { kind: 'scale', options: [], scale: { min: 0, max: 20, step: 1, unit: 'Beine' } };
+  const sk = await starte('participant', mitFrage(tabFrage(), SK));
+  const regler = sk.root.querySelector('[data-ks=regler]');
+  ok('Skala Tablet: ein Regler', !!regler && regler.getAttribute('min') === '0' && regler.getAttribute('max') === '20');
+  ok('Skala Tablet: startet in der Mitte', regler.getAttribute('value') === '10'
+     && txt(sk.root.querySelector('[data-ks=swert]')) === '10 Beine', txt(sk.root.querySelector('[data-ks=swert]')));
+  ok('Skala Tablet: keine Kacheln', sk.root.querySelectorAll('.ks-k').length === 0);
+  ok('Skala Tablet: kein Fragetext', !txt(sk.root).includes('Was ist das Tablet'));
+  let v = '7';
+  Object.defineProperty(regler, 'value', { configurable: true, get: () => v, set: n => { v = String(n); } });
+  regler.dispatchEvent(new sk.doc.defaultView.Event('input', { bubbles: true }));
+  ok('Skala Tablet: Zahl folgt dem Regler', txt(sk.root.querySelector('[data-ks=swert]')) === '7 Beine');
+  click(sk.root.querySelector('[data-tab=skala]'), sk.doc); await wait(30);
+  const skA = sk.rufe.find(r => r.fn === 'ks_answer_scale');
+  ok('Skala Tablet: Abgeben ruft ks_answer_scale', skA && skA.args.p_value === 7 && skA.args.p_question_idx === 2,
+     JSON.stringify(skA && skA.args));
+  ok('Skala Tablet: kein ks_answer', !sk.rufe.some(r => r.fn === 'ks_answer'));
+
+  const skFertig = await starte('participant', mitFrage(tabFrage({ chosen_idx: 0, value: 12, is_correct: null, points_awarded: null }), SK));
+  ok('Skala Tablet: nach dem Abgeben gesperrt, eigener Wert steht',
+     skFertig.root.querySelector('[data-ks=regler]').disabled === true
+     && txt(skFertig.root.querySelector('[data-ks=swert]')) === '12 Beine');
+
+  const skB = await starte('presenter', mitFrage(beamFrage(), SK));
+  ok('Skala Beamer: Strecke statt Kacheln', !!skB.root.querySelector('.ks-skala') && !skB.root.querySelector('.ks-k'));
+  ok('Skala Beamer: Start und Ende', Array.from(skB.root.querySelectorAll('.ks-skala-enden span')).map(txt).join('|') === '0 Beine|20 Beine');
+  ok('Skala Beamer: kein Ziel während der Frage', !skB.root.querySelector('.ks-skala-ziel'));
+
+  const skR = await starte('presenter', Object.assign(beamAufl(), {
+    question: Object.assign({}, beamAufl().question, SK, { scale: Object.assign({}, SK.scale, { target: 8 }) }),
+    scale_values: [7, 8, 8, 15]
+  }));
+  ok('Skala Auflösung: das Ziel steht da', txt(skR.root.querySelector('.ks-skala-ziel')) === '8 Beine');
+  ok('Skala Auflösung: ein Punkt je Antwort', skR.root.querySelectorAll('.ks-skala-punkt').length === 4);
+  ok('Skala Auflösung: nah dran ist markiert', skR.root.querySelectorAll('.ks-skala-punkt.is-nah').length === 3);
+  ok('Skala Auflösung: das Band', !!skR.root.querySelector('.ks-skala-band'));
+
+  const skT = await starte('participant', Object.assign(tabAufl({ my: { chosen_idx: 0, value: 9, is_correct: true, points_awarded: 586 } }), {
+    question: Object.assign({ text: FRAGE, time_limit: 15 }, SK, { scale: Object.assign({}, SK.scale, { target: 8 }) })
+  }));
+  ok('Skala Tablet Auflösung: Ziel, eigener Wert, Punkte',
+     /Nah dran/.test(txt(skT.root.querySelector('.ks-urteil'))) && /Ziel 8 Beine/.test(txt(skT.root.querySelector('.ks-urteil')))
+     && /du 9 Beine/.test(txt(skT.root.querySelector('.ks-urteil'))), txt(skT.root.querySelector('.ks-urteil')));
+
+  /* ─── Münzen ────────────────────────────────────────────── */
+  const BET = { kind: 'bet' };
+  const bt = await starte('participant', mitFrage(tabFrage(), BET));
+  const muenzen = () => bt.root.querySelectorAll('[data-ks=bank] .ks-muenze').length;
+  const auf = i => bt.root.querySelectorAll('[data-stapel="' + i + '"] .ks-muenze').length;
+  ok('Münzen Tablet: 5 Münzen in der Bank', muenzen() === 5, String(muenzen()));
+  ok('Münzen Tablet: vier Antwortfelder als Ziele', bt.root.querySelectorAll('.ks-k[data-ziel]').length === 4);
+  ok('Münzen Tablet: kein Fragetext', !txt(bt.root).includes('Was ist das Tablet'));
+  const feld2 = bt.root.querySelector('.ks-k[data-ziel="2"]');
+  click(feld2, bt.doc); click(feld2, bt.doc); click(bt.root.querySelector('.ks-k[data-ziel="0"]'), bt.doc);
+  ok('Münzen Tablet: Antippen setzt je eine Münze', auf(2) === 2 && auf(0) === 1 && muenzen() === 2);
+  ok('Münzen Tablet: noch nichts gesendet (gebündelt)', !bt.rufe.some(r => r.fn === 'ks_bet'));
+  await wait(320);
+  const b1 = bt.rufe.filter(r => r.fn === 'ks_bet');
+  ok('Münzen Tablet: EIN ks_bet mit dem ganzen Stand', b1.length === 1 && JSON.stringify(b1[0].args.p_bets) === '[1,0,2,0]',
+     JSON.stringify(b1.map(b => b.args)));
+  for (let i = 0; i < 4; i++) click(feld2, bt.doc);
+  ok('Münzen Tablet: mehr als 5 geht nicht', auf(2) === 4 && muenzen() === 0 && auf(0) === 1);
+  ok('Münzen Tablet: kein ks_answer', !bt.rufe.some(r => r.fn === 'ks_answer'));
+
+  const btNeu = await starte('participant', mitFrage(tabFrage({ chosen_idx: 1, bets: [0, 3, 1, 0], is_correct: null, points_awarded: null }), BET));
+  ok('Münzen Tablet: nach Neuladen stehen die Münzen wieder',
+     btNeu.root.querySelectorAll('[data-stapel="1"] .ks-muenze').length === 3
+     && btNeu.root.querySelectorAll('[data-ks=bank] .ks-muenze').length === 1);
+
+  const btLesen = await starte('participant', Object.assign(mitFrage(tabFrage(), BET), {
+    phase_ends_at: new Date(Date.now() + 20000).toISOString() }));
+  ok('Münzen Tablet: in der Vorlesezeit verborgen', btLesen.root.querySelector('.ks-wette').hidden === true);
+  click(btLesen.root.querySelector('.ks-k[data-ziel="1"]'), btLesen.doc); await wait(320);
+  ok('Münzen Tablet: in der Vorlesezeit kein Setzen', !btLesen.rufe.some(r => r.fn === 'ks_bet'));
+
+  const btR = await starte('presenter', Object.assign(beamAufl(), {
+    question: Object.assign({}, beamAufl().question, BET),
+    answers_dist: { 0: 2, 1: 9, 2: 1, 3: 0 }, bet_coins: 12, answers_total: 4
+  }));
+  await wait(20);
+  ok('Münzen Auflösung: Münzen statt Köpfe', txt(btR.root.querySelector('[data-kn="1"]')) === '9 🪙',
+     txt(btR.root.querySelector('[data-kn="1"]')));
+  ok('Münzen Auflösung: Füllstand nach Münzen', btR.root.querySelector('[data-fuell="1"]').style.width === '75.0%',
+     btR.root.querySelector('[data-fuell="1"]').style.width);
+
+  const btT = await starte('participant', Object.assign(tabAufl({ my: { chosen_idx: 1, bets: [0, 3, 2, 0], is_correct: true, points_awarded: 600 } }), {
+    question: { text: FRAGE, options: OPTS, time_limit: 15, correct_idx: 1, kind: 'bet' }
+  }));
+  ok('Münzen Tablet Auflösung: „3 von 5 Münzen richtig"', /3 von 5 Münzen richtig · \+600/.test(txt(btT.root.querySelector('.ks-urteil'))),
+     txt(btT.root.querySelector('.ks-urteil')));
+
+  /* ─── Editor ────────────────────────────────────────────── */
+  const lob = await starte('presenter', beamLobby(2));
+  click(lob.root.querySelector('[data-act=editor]'), lob.doc); await wait(30);
+  click(lob.root.querySelector('[data-ed=new]'), lob.doc); await wait(30);
+  const R = lob.root;
+  ok('Editor: vier Fragetypen zur Wahl', R.querySelectorAll('[data-ed=set-kind]').length === 4
+     && R.querySelector('[data-ed=set-kind][data-v=mc]').classList.contains('is-an'));
+  R.querySelector('[data-qi="0"][data-oi="0"][data-field=option]').value = 'Hund';
+  click(R.querySelector('[data-ed=set-kind][data-v=tf]'), lob.doc); await wait(30);
+  const tfIn = Array.from(R.querySelectorAll('.kse-oinput'));
+  ok('Editor tf: zwei Antworten, vorbelegt Wahr/Falsch', tfIn.length === 2
+     && tfIn[0].getAttribute('value') === 'Wahr' && tfIn[1].getAttribute('value') === 'Falsch');
+  click(R.querySelector('[data-ed=toggle][data-oi="1"]'), lob.doc); await wait(30);
+  ok('Editor tf: der Haken springt (genau eine richtig)',
+     R.querySelectorAll('.kse-haken.is-richtig').length === 1
+     && R.querySelector('[data-ed=toggle][data-oi="1"]').classList.contains('is-richtig'));
+  click(R.querySelector('[data-ed=set-kind][data-v=mc]'), lob.doc); await wait(30);
+  ok('Editor: zurück zu Auswahl — das Getippte ist wieder da',
+     R.querySelectorAll('.kse-oinput').length === 4
+     && R.querySelector('[data-qi="0"][data-oi="0"][data-field=option]').getAttribute('value') === 'Hund');
+  click(R.querySelector('[data-ed=set-kind][data-v=scale]'), lob.doc); await wait(30);
+  ok('Editor Skala: Start, Ende, Ziel, Einheit', ['min', 'max', 'target', 'unit']
+     .every(k => !!R.querySelector('[data-field="scale-' + k + '"]')) && !R.querySelector('.kse-oinput'));
+  R.querySelector('[data-ed-field=title]').value = 'Typen';
+  R.querySelector('[data-qi="0"][data-field=question_text]').value = 'Wie viele Beine?';
+  R.querySelector('[data-field="scale-min"]').value = '0';
+  R.querySelector('[data-field="scale-max"]').value = '2,5';
+  R.querySelector('[data-field="scale-target"]').value = '0,75';
+  R.querySelector('[data-field="scale-unit"]').value = 'm';
+  click(R.querySelector('[data-ed=save]'), lob.doc); await wait(60);
+  const sv = lob.rufe.find(r => r.fn === 'ks_catalog_save');
+  const sq = sv && sv.args.p_questions[0];
+  ok('Editor Skala: Speichern schickt Typ und Skala (Komma als Dezimalzeichen)',
+     sq && sq.kind === 'scale' && sq.scale.min === 0 && sq.scale.max === 2.5 && sq.scale.target === 0.75
+     && sq.scale.unit === 'm' && sq.scale.step === 0.01 && sq.options.length === 0, JSON.stringify(sq && sq.scale));
+  R.querySelector('[data-field="scale-target"]').value = '9';
+  const vorher = lob.rufe.filter(r => r.fn === 'ks_catalog_save').length;
+  click(R.querySelector('[data-ed=save]'), lob.doc); await wait(60);
+  ok('Editor Skala: Ziel außerhalb wird nicht gespeichert',
+     lob.rufe.filter(r => r.fn === 'ks_catalog_save').length === vorher
+     && lob.ctx.toasts.some(t => /zwischen Start und Ende/.test(t)));
+  click(R.querySelector('[data-ed=preview]'), lob.doc); await wait(30);
+  ok('Editor Vorschau Skala: Strecke mit Ziel', !!R.querySelector('.kse-pv-skala') && !R.querySelector('.kse-pv-k'));
+}
+
 /* ══════════════════════════════════════════════════════════ */
 const BEREICHE = { emote: bereichEmote, tab: bereichTab, intro: bereichIntro, beam: bereichBeam,
                    fluss: bereichFluss, editor: bereichEditor, foto: bereichFoto,
-                   theme: bereichTheme, katalog: bereichKatalog };
+                   theme: bereichTheme, katalog: bereichKatalog, typen: bereichTypen };
 const wahl = process.argv[2];
 const lauf = wahl ? [wahl] : Object.keys(BEREICHE);
 

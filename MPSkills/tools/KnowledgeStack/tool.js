@@ -80,7 +80,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20261004a';
+  const ASSET_V = '20261020k';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -178,7 +178,9 @@
     thumb_too_big:      'Das Vorschaubild ist zu groß. Bitte ein anderes nehmen.',
     not_allowed:        'Veröffentlichen dürfen nur freigeschaltete Lehrkräfte.',
     no_school:          'Deinem Konto ist keine Schule zugeordnet — für „Schule" geht das nicht.',
-    bad_visibility:     'Unbekannte Sichtbarkeit.'
+    bad_visibility:     'Unbekannte Sichtbarkeit.',
+    wrong_kind:         'Diese Frage wird anders beantwortet — lade die Seite neu.',
+    bad_scale:          'Bei einer Skala muss der Start kleiner als das Ende sein und das Ziel dazwischen liegen.'
   };
   const fehlerText = code => EIGENE[code] || ctx.errText(code);
 
@@ -216,6 +218,12 @@
   /* Wer in der letzten Auflösung wo auf dem Podest stand — daraus
      weiß die nächste, wer wohin laufen muss. pid → { rank, cid, skin } */
   let podestVorher = new Map();
+  /* Münzen setzen (0217): der Stand auf DIESEM Tablet. Er gilt, bis er
+     beim Server ist — ein Takt, der den alten Stand mitbringt, darf
+     eine gerade gezogene Münze nicht zurückspringen lassen. */
+  let wette = { key: null, bets: [0, 0, 0, 0], sendT: null, unterwegs: 0 };
+  let drag = null;               // die Münze, die gerade am Finger hängt
+  let klickSperre = 0;           // Ende des letzten Ziehens (der Klick danach zählt nicht)
 
   /* ══════════════════════════════════════════════════════════
      Bausteine
@@ -504,15 +512,17 @@
       if (rBox && !rBox.hidden) {
         rBox.hidden = true;
         stage.classList.remove('ks-stage--lesen');
-        const kacheln = stage.querySelector('.ks-kacheln');
+        const kacheln = stage.querySelector('[data-ks=antworten]');
         if (kacheln && kacheln.hidden) {
           kacheln.hidden = false;
           kacheln.classList.add('ks-popin');
         }
         const meta = stage.querySelector('.ks-meta');
         if (meta && meta.hidden) meta.hidden = false;
-        // Auf dem Tablet: Kacheln entsperren (sofern noch nicht geantwortet)
-        if (role === 'participant') {
+        if (role === 'participant' && artVon(view.question) !== 'mc' && artVon(view.question) !== 'tf') {
+          tabSperre();
+        } else if (role === 'participant') {
+          // Auf dem Tablet: Kacheln entsperren (sofern noch nicht geantwortet)
           const gesperrt = !!view.my_answer || answering;
           els.tiles.forEach(t => {
             t.disabled = gesperrt;
@@ -521,6 +531,9 @@
         }
       }
     }
+
+    // Münzen: mit der Uhr ist das Umsetzen vorbei.
+    if (role === 'participant' && view.phase === 'question' && artVon(view.question) === 'bet') tabSperre();
 
     // Bei 0 einmal nachfragen: geschlossen hat die Frage der Server
     // (ks_ensure_board), hier wird es nur sichtbar gemacht.
@@ -769,7 +782,7 @@
     const nr = (v.current_q_idx | 0) + 1;
     const n = v.question_count | 0;
     return `
-      <div class="ks-qbox"><h2 class="ks-q">${esc(q.text)}</h2></div>
+      <div class="ks-qbox">${artChip(q)}<h2 class="ks-q">${esc(q.text)}</h2></div>
       <div class="ks-mitte${q.has_image ? ' ks-mitte--bild' : ''}">
         <div class="ks-status">
           <div class="ks-stat ks-stat--uhr">
@@ -802,7 +815,9 @@
           <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
         </div>
       </div>
-      ${kachelnHTML(opts, { modus: 'still', seed: mischKey(v), hidden: reading, ohneBuchstabe: true })}`;
+      ${artVon(q) === 'scale'
+        ? skalaHTML(q, { hidden: reading })
+        : kachelnHTML(opts, { modus: 'still', art: artVon(q), seed: mischKey(v), hidden: reading, ohneBuchstabe: true })}`;
   }
 
   /* ─── Der Auftritt vor der ersten Frage ───────────────────────
@@ -939,7 +954,9 @@
         ${steuerHTML(letzte)}
       </header>
       ${podestHTML(v.leaderboard || [], 'rv')}
-      ${kachelnHTML(opts, { modus: 'fuell', seed: mischKey(v), correct: q.correct_idx, correct_indices: q.correct_indices })}
+      ${artVon(q) === 'scale'
+        ? skalaHTML(q, { aufgeloest: true, werte: v.scale_values || [] })
+        : kachelnHTML(opts, { modus: 'fuell', art: artVon(q), seed: mischKey(v), correct: q.correct_idx, correct_indices: q.correct_indices })}
       ${q.explanation ? '<p class="ks-expl">' + esc(q.explanation) + '</p>' : ''}`;
   }
 
@@ -1081,8 +1098,12 @@
 
   function kachelnHTML(opts, o) {
     const n = opts.length || 4;
-    return '<div class="ks-kacheln"' + (o.hidden ? ' hidden' : '') + ' data-n="' + n + '" data-modus="' + o.modus + '">'
-      + mischung(opts, o.seed).map((i, pos) => {
+    const art = o.art || 'mc';
+    // Wahr/Falsch wird nicht gemischt: „Wahr" steht immer links.
+    const folge = art === 'tf' ? opts.map((_, i) => i) : mischung(opts, o.seed);
+    return '<div class="ks-kacheln"' + (o.hidden ? ' hidden' : '') + ' data-n="' + n + '" data-modus="' + o.modus
+      + '" data-art="' + art + '"' + (o.modus === 'wette' ? '' : ' data-ks="antworten"') + '>'
+      + folge.map((i, pos) => {
         const t = opts[i];
         const richtig = (Array.isArray(o.correct_indices) && o.correct_indices.length > 0)
           ? o.correct_indices.includes(i)
@@ -1096,6 +1117,13 @@
            anklickbar ist sie dort ohnehin: sie ist ein <div>. */
         if (o.modus === 'fuell') cls.push(richtig ? 'is-richtig' : 'is-blass');
         if (gewaehlt) cls.push('is-meine');
+        if (o.modus === 'wette') {
+          return `
+          <div class="${cls.join(' ')} ks-k--wette" data-idx="${i}" data-ziel="${i}">
+            <span class="ks-kt">${esc(t)}</span>
+            <span class="ks-stapel" data-stapel="${i}"></span>
+          </div>`;
+        }
         return `
           <${o.modus === 'wahl' ? 'button type="button"' : 'div'} class="${cls.join(' ')}" data-idx="${i}">
             ${o.modus === 'fuell' ? '<span class="ks-fuell" data-fuell="' + i + '"></span>' : ''}
@@ -1105,6 +1133,319 @@
             ${gewaehlt ? '<span class="ks-kmein">deine Wahl</span>' : ''}
           </${o.modus === 'wahl' ? 'button' : 'div'}>`;
       }).join('') + '</div>';
+  }
+
+  /* ══════════════════════════════════════════════════════════
+     Die drei weiteren Fragetypen (Oktober 2026, Migration 0217)
+     ══════════════════════════════════════════════════════════
+       tf     Wahr oder falsch: zwei Kacheln nebeneinander, NICHT
+              gemischt (Wahr steht links), gewertet wie Auswahl.
+       scale  Skala: am Beamer die Strecke Start … Ende, auf dem
+              Tablet ein Regler und „Abgeben". Punkte nach der Nähe
+              zum Ziel, nicht nach Tempo (ks_answer_scale). In der
+              Auflösung das Ziel, das Band, in dem es Punkte gibt
+              (± 30 % der Spanne), und ein Punkt je Kind.
+       bet    Münzen setzen: 5 Münzen à 200 Punkte, auf dem Tablet auf
+              die Antworten ziehen (oder antippen) und umsetzen, bis
+              die Uhr abläuft (ks_bet). Am Beamer zählt der Füllstand
+              in der Auflösung Münzen statt Köpfe.
+     Die Frage selbst steht weiter nur am Beamer.                   */
+  const MUENZEN = 5, MUENZWERT = 200;
+  const artVon = q => (q && q.kind) || 'mc';
+
+  function artChip(q) {
+    const a = artVon(q);
+    if (a === 'scale') return '<span class="ks-qart">📏 Schätzen</span>';
+    if (a === 'bet')   return '<span class="ks-qart">🪙 Münzen setzen</span>';
+    if (a === 'tf')    return '<span class="ks-qart">Wahr oder falsch?</span>';
+    return '';
+  }
+
+  const nachkomma = x => { const m = /\.(\d+)$/.exec(String(x == null ? '' : x)); return m ? m[1].length : 0; };
+  const zahl = n => (Number(n) || 0).toLocaleString('de-DE', { maximumFractionDigits: 6 });
+
+  /* Start, Ende, Raster und Einheit einer Skala. Das Raster schreibt
+     der Editor mit (step); fehlt es, folgt es den Nachkommastellen von
+     Start und Ende. Das Ziel kennt das Tablet erst in der Auflösung. */
+  function skalaDaten(q) {
+    const s = (q && q.scale) || {};
+    let min = Number(s.min), max = Number(s.max);
+    if (!isFinite(min) || !isFinite(max) || max <= min) { min = 0; max = 100; }
+    let step = Number(s.step);
+    if (!(step > 0)) step = Math.pow(10, -Math.max(nachkomma(s.min), nachkomma(s.max)));
+    const target = s.target == null || s.target === '' ? null : Number(s.target);
+    return { min, max, step, unit: s.unit ? String(s.unit) : '', target };
+  }
+  function rastere(x, d) {
+    const n = Math.round((x - d.min) / d.step);
+    return klemme(Number((d.min + n * d.step).toFixed(Math.min(10, nachkomma(d.step)))), d.min, d.max);
+  }
+  const mitEinheit = (n, d) => zahl(n) + (d.unit ? ' ' + esc(d.unit) : '');
+
+  /* Die Strecke am Beamer — während der Frage leer, in der Auflösung
+     mit Band, Ziel und den Punkten der Klasse. Liegen Punkte dicht
+     beieinander, stapeln sie sich nach oben. */
+  function skalaHTML(q, o) {
+    const d = skalaDaten(q);
+    const pos = x => klemme((x - d.min) / (d.max - d.min) * 100, 0, 100);
+    let innen = '', info = 'Schieb den Regler auf deinem Tablet — je näher am Ziel, desto mehr Punkte.';
+    if (o.aufgeloest && d.target != null) {
+      const lim = (d.max - d.min) * .3;
+      const l = pos(d.target - lim), r = pos(d.target + lim);
+      innen += '<span class="ks-skala-band" style="left:' + l.toFixed(2) + '%;width:' + (r - l).toFixed(2) + '%"></span>';
+      const werte = (o.werte || []).map(Number).filter(isFinite).sort((a, b) => a - b);
+      const reihen = [];
+      werte.forEach(w => {
+        const x = pos(w);
+        let r2 = 0;
+        while (reihen[r2] != null && x - reihen[r2] < 2.2) r2++;
+        reihen[r2] = x;
+        innen += '<span class="ks-skala-punkt' + (Math.abs(w - d.target) < lim ? ' is-nah' : '')
+               + '" style="left:' + x.toFixed(2) + '%;--r:' + Math.min(r2, 6) + '"></span>';
+      });
+      innen += '<span class="ks-skala-ziel" style="left:' + pos(d.target).toFixed(2) + '%"><b>'
+             + mitEinheit(d.target, d) + '</b></span>';
+      const schnitt = werte.length ? werte.reduce((a, b) => a + b, 0) / werte.length : null;
+      info = 'Ziel: <b>' + mitEinheit(d.target, d) + '</b>'
+           + (schnitt != null ? ' · Durchschnitt der Klasse: ' + mitEinheit(rastere(schnitt, d), d) : '')
+           + ' · Punkte gibt es bis ± ' + mitEinheit(Number(lim.toFixed(6)), d) + ' daneben.';
+    }
+    return '<div class="ks-skala' + (o.aufgeloest ? ' ks-skala--auf' : '') + '" data-ks="antworten"'
+      + (o.hidden ? ' hidden' : '') + '>'
+      + '<div class="ks-skala-bahn">' + innen + '</div>'
+      + '<div class="ks-skala-enden"><span>' + mitEinheit(d.min, d) + '</span><span>' + mitEinheit(d.max, d) + '</span></div>'
+      + '<p class="ks-skala-info">' + info + '</p></div>';
+  }
+
+  // Der Regler auf dem Tablet. Startet in der Mitte.
+  function tabSkalaHTML(q, my, hidden) {
+    const d = skalaDaten(q);
+    const wert = my && my.value != null ? Number(my.value) : rastere((d.min + d.max) / 2, d);
+    const fertig = !!my;
+    return `
+      <div class="ks-tskala" data-ks="antworten"${hidden ? ' hidden' : ''}>
+        <output class="ks-tskala-wert" data-ks="swert">${mitEinheit(wert, d)}</output>
+        <input type="range" class="ks-regler" data-ks="regler" aria-label="Deine Schätzung"
+               min="${d.min}" max="${d.max}" step="${d.step}" value="${wert}" ${fertig ? 'disabled' : ''} />
+        <div class="ks-skala-enden"><span>${mitEinheit(d.min, d)}</span><span>${mitEinheit(d.max, d)}</span></div>
+        <button type="button" class="ks-go ks-tskala-ok" data-tab="skala" ${fertig ? 'disabled' : ''}>
+          ${fertig ? 'Abgegeben' : 'Abgeben'}</button>
+      </div>`;
+  }
+
+  function onRegler(ev) {
+    const r = ev.target.closest && ev.target.closest('[data-ks=regler]');
+    if (!r || !view) return;
+    const out = stage.querySelector('[data-ks=swert]');
+    if (out) out.innerHTML = mitEinheit(Number(r.value), skalaDaten(view.question));
+  }
+
+  async function gibSkalaAb() {
+    if (answering || view.my_answer || isReadingPhase()) return;
+    const r = stage.querySelector('[data-ks=regler]');
+    if (!r) return;
+    answering = true;
+    tabSperre();
+    const res = await ctx.actions.call('ks_answer_scale', {
+      p_question_idx: view.current_q_idx | 0,
+      p_value: Number(r.value)
+    });
+    if (!res.ok) {
+      answering = false;
+      if (res.error !== 'already_answered') ctx.toast(fehlerText(res.error), true);
+      tabSperre();
+    }
+    lastSig = null;
+    poll();
+  }
+
+  /* ─── Münzen ─────────────────────────────────────────────── */
+  function tabWetteHTML(v, hidden) {
+    const q = v.question || {};
+    const opts = Array.isArray(q.options) ? q.options : [];
+    const key = (v.current_q_idx | 0) + '|' + mischKey(v);
+    if (wette.key !== key) {
+      clearTimeout(wette.sendT);
+      const b = (v.my_answer && Array.isArray(v.my_answer.bets)) ? v.my_answer.bets : [];
+      wette = { key, bets: [0, 1, 2, 3].map(i => Math.max(0, Number(b[i]) || 0)), sendT: null, unterwegs: 0 };
+    }
+    return `
+      <div class="ks-wette" data-ks="antworten"${hidden ? ' hidden' : ''}>
+        <div class="ks-bank" data-ziel="bank">
+          <span class="ks-bank-l">Deine Münzen <i>je ${MUENZWERT} Punkte</i></span>
+          <span class="ks-bank-m" data-ks="bank"></span>
+        </div>
+        ${kachelnHTML(opts, { modus: 'wette', art: 'bet', seed: mischKey(v), ohneBuchstabe: true })}
+      </div>`;
+  }
+
+  const muenzeHTML = von => '<span class="ks-muenze" data-von="' + von + '" role="img" aria-label="Münze">'
+    + MUENZWERT + '</span>';
+
+  function rest() { return MUENZEN - wette.bets.reduce((a, b) => a + b, 0); }
+
+  function malWette() {
+    const bank = stage && stage.querySelector('[data-ks=bank]');
+    if (!bank) return;
+    bank.innerHTML = Array.from({ length: rest() }, () => muenzeHTML('bank')).join('')
+      || '<span class="ks-bank-leer">alle gesetzt</span>';
+    stage.querySelectorAll('[data-stapel]').forEach(st => {
+      const i = Number(st.dataset.stapel);
+      const n = wette.bets[i] || 0;
+      st.innerHTML = Array.from({ length: n }, () => muenzeHTML(i)).join('');
+      const k = st.closest('.ks-k');
+      if (k) k.classList.toggle('is-meine', n > 0);
+    });
+  }
+
+  function wetteZu() {
+    if (!view || view.phase !== 'question' || isReadingPhase()) return true;
+    const ms = restMs();
+    return ms != null && ms <= 0;
+  }
+
+  function setzeMuenze(von, nach) {
+    if (wetteZu() || String(von) === String(nach)) return;
+    if (von === 'bank') { if (rest() <= 0) return; }
+    else { const i = Number(von); if (!(wette.bets[i] > 0)) return; wette.bets[i]--; }
+    if (nach !== 'bank') wette.bets[Number(nach)]++;
+    malWette();
+    clearTimeout(wette.sendT);
+    wette.sendT = setTimeout(sendeWette, 250);
+  }
+
+  async function sendeWette() {
+    wette.sendT = null;
+    if (!view || view.phase !== 'question') return;
+    const n = Math.min(4, (view.question && view.question.options || []).length || 4);
+    const key = wette.key;
+    wette.unterwegs++;
+    const r = await ctx.actions.call('ks_bet', {
+      p_question_idx: view.current_q_idx | 0,
+      p_bets: wette.bets.slice(0, n)
+    });
+    if (wette.key === key) wette.unterwegs--;
+    if (!r.ok && !['time_up', 'not_active', 'reading_phase'].includes(r.error)) ctx.toast(fehlerText(r.error), true);
+    lastSig = null;
+  }
+
+  /* Ziehen mit Zeigerereignissen: Finger, Stift und Maus gleich. Die
+     Münze, die am Finger hängt, ist eine Kopie im Rahmen; das Ziel ist
+     das, was unter dem Finger liegt (eine Antwort oder die Bank).
+     Antippen ohne Ziehen: eine gesetzte Münze geht zurück in die Bank,
+     eine Antwort antippen setzt eine Münze aus der Bank (onClick). */
+  function onZiehStart(ev) {
+    const m = ev.target.closest && ev.target.closest('.ks-muenze');
+    if (!m || drag || role !== 'participant' || !view || artVon(view.question) !== 'bet' || wetteZu()) return;
+    ev.preventDefault();
+    const r = m.getBoundingClientRect(), fr = frame.getBoundingClientRect();
+    const geist = m.cloneNode(true);
+    geist.classList.add('ks-muenze--geist');
+    geist.style.width = r.width + 'px';
+    geist.style.height = r.height + 'px';
+    frame.appendChild(geist);
+    drag = { von: m.dataset.von, el: m, geist, id: ev.pointerId, x0: ev.clientX, y0: ev.clientY,
+             dx: ev.clientX - r.left, dy: ev.clientY - r.top, fr, bewegt: false, ziel: null };
+    zieheGeist(ev);
+    window.addEventListener('pointermove', onZiehen);
+    window.addEventListener('pointerup', onZiehEnde);
+    window.addEventListener('pointercancel', onZiehEnde);
+  }
+
+  function zieheGeist(ev) {
+    drag.geist.style.transform = 'translate(' + (ev.clientX - drag.fr.left - drag.dx).toFixed(1) + 'px,'
+      + (ev.clientY - drag.fr.top - drag.dy).toFixed(1) + 'px) scale(1.15)';
+  }
+
+  function zielUnter(ev) {
+    const el = document.elementFromPoint(ev.clientX, ev.clientY);
+    const z = el && el.closest && el.closest('[data-ziel]');
+    return z && stage.contains(z) ? z : null;
+  }
+
+  function onZiehen(ev) {
+    if (!drag || ev.pointerId !== drag.id) return;
+    if (!drag.bewegt && Math.hypot(ev.clientX - drag.x0, ev.clientY - drag.y0) > 6) {
+      drag.bewegt = true;
+      drag.el.classList.add('is-weg');
+    }
+    zieheGeist(ev);
+    const z = drag.bewegt ? zielUnter(ev) : null;
+    if (z !== drag.ziel) {
+      if (drag.ziel) drag.ziel.classList.remove('is-ziel');
+      if (z) z.classList.add('is-ziel');
+      drag.ziel = z;
+    }
+  }
+
+  function onZiehEnde(ev) {
+    if (!drag || ev.pointerId !== drag.id) return;
+    window.removeEventListener('pointermove', onZiehen);
+    window.removeEventListener('pointerup', onZiehEnde);
+    window.removeEventListener('pointercancel', onZiehEnde);
+    const d = drag;
+    drag = null;
+    d.geist.remove();
+    d.el.classList.remove('is-weg');
+    if (d.ziel) d.ziel.classList.remove('is-ziel');
+    klickSperre = Date.now();
+    if (ev.type === 'pointercancel') return;
+    if (d.bewegt) {
+      const z = zielUnter(ev);
+      if (z) setzeMuenze(d.von, z.dataset.ziel);
+    } else if (d.von !== 'bank') {
+      setzeMuenze(d.von, 'bank');
+    } else {
+      // Antippen in der Bank: auf die erste Antwort ohne Münze? Nein —
+      // wohin, entscheidet das Kind. Ein kurzer Hinweis genügt.
+      const tipp = stage.querySelector('.ks-wette-tipp');
+      if (tipp) { tipp.classList.remove('ks-wackel'); void tipp.offsetWidth; tipp.classList.add('ks-wackel'); }
+    }
+  }
+
+  /* Was auf dem Tablet gerade bedienbar ist — je Fragetyp. Gerufen
+     beim Flicken, beim Aufdecken und (Münzen) mit jedem Uhrschlag. */
+  function tabSperre() {
+    if (role !== 'participant' || !view || view.phase !== 'question' || !stage) return;
+    const art = artVon(view.question);
+    const reading = isReadingPhase();
+    const lock = stage.querySelector('[data-ks=lock]');
+    if (art === 'bet') {
+      const w = stage.querySelector('.ks-wette');
+      const zu = wetteZu();
+      if (w) w.classList.toggle('is-zu', zu && !reading);
+      if (w && !drag && !w.dataset.gemalt) { w.dataset.gemalt = '1'; malWette(); }
+      if (lock) {
+        lock.hidden = reading;
+        lock.textContent = zu && !reading ? 'Die Zeit ist um — jetzt zum Beamer sehen.'
+          : 'Zieh deine Münzen auf die Antworten — umsetzen geht, bis die Zeit um ist.';
+      }
+      return;
+    }
+    if (art === 'scale') {
+      const fertig = !!view.my_answer || answering;
+      const r = stage.querySelector('[data-ks=regler]');
+      const b = stage.querySelector('[data-tab=skala]');
+      if (r) r.disabled = fertig || reading;
+      if (b) { b.disabled = fertig || reading; b.textContent = fertig ? 'Abgegeben' : 'Abgeben'; }
+      if (lock) lock.hidden = !fertig || reading;
+    }
+  }
+
+  // Die Zeile oben in der Auflösung, für Skala und Münzen.
+  function urteilText(v, my) {
+    const q = v.question || {};
+    const p = Number(my.points_awarded) || 0;
+    if (artVon(q) === 'scale') {
+      const d = skalaDaten(q);
+      const wo = d.target != null ? '<i>Ziel ' + mitEinheit(d.target, d) + ' · du ' + mitEinheit(my.value, d) + '</i>' : '';
+      return (p > 0 ? (p >= 900 ? 'Volltreffer' : 'Nah dran') + ' · +' + pkt(p) : 'Zu weit weg') + ' ' + wo;
+    }
+    const gesetzt = (Array.isArray(my.bets) ? my.bets : []).reduce((a, b) => a + (Number(b) || 0), 0);
+    const richtigM = Math.round(p / MUENZWERT);
+    return p > 0
+      ? richtigM + ' von ' + gesetzt + ' Münzen richtig · +' + pkt(p)
+      : 'Keine Münze auf der richtigen Antwort';
   }
 
   /* ─── Beamer flicken ─────────────────────────────────────── */
@@ -1141,14 +1482,16 @@
     if (v.phase === 'ended') flickeWall(v.players || [], true);
 
     if (v.phase === 'reveal') {
+      // Münzen: der Füllstand zählt Münzen, nicht Köpfe (0217).
+      const muenzen = artVon(v.question) === 'bet';
       const dist = v.answers_dist || {};
-      const tot = v.answers_total || 0;
+      const tot = muenzen ? (v.bet_coins || 0) : (v.answers_total || 0);
       for (let i = 0; i < 4; i++) {
         const f = stage.querySelector('[data-fuell="' + i + '"]');
         const nEl = stage.querySelector('[data-kn="' + i + '"]');
         const n = Number(dist[i] || dist[String(i)] || 0);
         if (f) f.style.width = (tot > 0 ? (n / tot * 100) : 0).toFixed(1) + '%';
-        if (nEl) nEl.textContent = String(n);
+        if (nEl) nEl.textContent = muenzen ? n + ' 🪙' : String(n);
       }
     }
   }
@@ -1792,6 +2135,7 @@
     const my = v.my_answer;
     const reading = isReadingPhase();
     const rSek = readingRestSec();
+    const art = artVon(q);
     return `
       <header class="ks-thead ks-thead--q">
         <div class="ks-tme" data-ks="tme" data-cid="${me.creature_id | 0}">
@@ -1811,9 +2155,14 @@
         <span class="ks-reading-lauf"><span data-ks="reading-bar"></span></span>
         <p class="ks-reading-sub">Lies die Frage. Die Antworten erscheinen bei allen gleichzeitig.</p>
       </div>
-      ${kachelnHTML(opts, { modus: 'wahl', seed: mischKey(v), chosen: my ? my.chosen_idx : null, hidden: reading, ohneBuchstabe: true })}
-      <p class="ks-gesperrt" data-ks="lock" ${my && !reading ? '' : 'hidden'}>
-        Antwort abgegeben — jetzt zum Beamer sehen.</p>`;
+      ${art === 'scale' ? tabSkalaHTML(q, my, reading)
+        : art === 'bet' ? tabWetteHTML(v, reading)
+        : kachelnHTML(opts, { modus: 'wahl', art, seed: mischKey(v), chosen: my ? my.chosen_idx : null, hidden: reading, ohneBuchstabe: true })}
+      ${art === 'bet'
+        ? `<p class="ks-gesperrt ks-wette-tipp" data-ks="lock" ${reading ? 'hidden' : ''}>
+             Zieh deine Münzen auf die Antworten — umsetzen geht, bis die Zeit um ist.</p>`
+        : `<p class="ks-gesperrt" data-ks="lock" ${my && !reading ? '' : 'hidden'}>
+             Antwort abgegeben — jetzt zum Beamer sehen.</p>`}`;
   }
 
   /* Auflösung und Siegerehrung auf dem Tablet: links der Nachbar
@@ -1824,10 +2173,12 @@
     const my = v.my_answer;
     const richtig = my && my.is_correct;
 
+    const art = artVon(v.question);
     const urteil = my
         ? '<div class="ks-urteil ks-urteil--' + (richtig ? 'ok' : 'nein') + '">'
-          + (richtig ? 'Richtig · +' + pkt(my.points_awarded) : 'Leider falsch')
-          + ((me.streak > 1 && richtig) ? ' <i>🔥 ' + me.streak + 'er Serie</i>' : '')
+          + (art === 'scale' || art === 'bet' ? urteilText(v, my)
+            : (richtig ? 'Richtig · +' + pkt(my.points_awarded) : 'Leider falsch')
+              + ((me.streak > 1 && richtig) ? ' <i>🔥 ' + me.streak + 'er Serie</i>' : ''))
           + '</div>'
         : '<div class="ks-urteil ks-urteil--weg">Keine Antwort abgegeben</div>';
 
@@ -1915,6 +2266,13 @@
   /* ─── Tablet flicken ────────────────────────────────────── */
   function flickeTab(v) {
     if (v.phase === 'question' && introAn()) return;
+    if (v.phase === 'question' && (artVon(v.question) === 'scale' || artVon(v.question) === 'bet')) {
+      tabSperre();
+      const tme = stage.querySelector('[data-ks=tme]');
+      const fertig = artVon(v.question) === 'scale' && (!!v.my_answer || answering) && !isReadingPhase();
+      if (tme) setEmote(tme, localEmote || (fertig ? 'sleep' : 'idle'), v.me.creature_id | 0);
+      return;
+    }
     if (v.phase === 'question') {
       const reading = isReadingPhase();
       const lock = stage.querySelector('[data-ks=lock]');
@@ -2034,6 +2392,8 @@
      ══════════════════════════════════════════════════════════ */
   function binde() {
     stage.addEventListener('click', onClick);
+    stage.addEventListener('input', onRegler);
+    stage.addEventListener('pointerdown', onZiehStart);
     // Editor: Klicks auf data-ed, Text-Import, Fotos, Ziehen.
     if (editorAuf()) editor.bind(stage);
   }
@@ -2106,6 +2466,19 @@
       zeigeLokalesEmote(e);
       const r = await ctx.actions.call('ks_emote', { p_emote: e });
       if (!r.ok && r.error !== 'invalid_input') ctx.toast(fehlerText(r.error), true);
+      return;
+    }
+
+    /* ─── Skala abgeben / Münze antippen (0217) ─────────── */
+    if (role === 'participant' && view.phase === 'question' && artVon(view.question) === 'scale') {
+      if (ev.target.closest('[data-tab=skala]')) gibSkalaAb();
+      return;
+    }
+    if (role === 'participant' && view.phase === 'question' && artVon(view.question) === 'bet') {
+      // Ein Ziehen endet auch mit einem Klick — der zählt nicht noch einmal.
+      if (Date.now() - klickSperre < 400 || wetteZu()) return;
+      const ziel = ev.target.closest('[data-ziel]');
+      if (ziel && ziel.dataset.ziel !== 'bank') setzeMuenze('bank', ziel.dataset.ziel);
       return;
     }
 

@@ -246,6 +246,44 @@ je Kind, bei 1–2 Kindern ein Quadrat) — und rechts Beenden/Auflösen.
 Ohne Foto schrumpft die Mitte auf eine Zeile und Frage und Antworten
 bekommen den Platz.
 
+## Fragetypen (Oktober 2026, Migration 0217)
+
+Neben **Auswahl** (A–D, Tempo zählt) gibt es drei weitere Typen. Gewählt
+wird je Frage im Editor (Knopfreihe über dem Fragetext, `ks_questions.kind`):
+
+| Typ | `kind` | Beamer | Tablet | Punkte |
+|---|---|---|---|---|
+| **Wahr/Falsch** | `tf` | zwei Kacheln nebeneinander, **nicht gemischt** (Wahr links) | zwei Knöpfe | wie Auswahl (`ks_answer`, Tempo + Serie) |
+| **Skala** | `scale` | Strecke Start … Ende; Auflösung: Ziel, grünes Band, ein Punkt je Kind (dicht beieinander gestapelt), Durchschnitt | Regler + „Abgeben“ (einmal) | `ks_answer_scale`: genau = 1000, fällt exponentiell, ab ± 30 % der Spanne (Ende − Start) **0**. Tempo zählt nicht, Serie bleibt unverändert |
+| **Münzen setzen** | `bet` | wie Auswahl; Auflösung: Füllstand und Zahl zählen **Münzen** (`9 🪙`) statt Köpfe | Bank mit 5 Münzen à 200 Punkte, auf die Antworten **ziehen** (Zeigerereignisse, Finger/Stift/Maus) oder Antwort antippen; gesetzte Münze antippen = zurück in die Bank; umsetzen bis die Uhr abläuft | `ks_bet`: 200 je Münze auf einer richtigen Antwort, Serie bleibt unverändert |
+
+* **Wahr/Falsch** ist im Editor mit „Wahr“/„Falsch“ vorbelegt, die Texte sind
+  änderbar (Ja/Nein …); genau eine ist richtig (der Haken springt). Der
+  Text-Import macht aus genau zwei Antworten „Wahr/Falsch“ (richtig/falsch,
+  ja/nein) eine Wahr/Falsch-Frage.
+* **Skala**: `ks_questions.scale = {min, max, target, step, unit}`. `step`
+  rechnet der Editor aus den Nachkommastellen von Start/Ende/Ziel (0 … 2,5,
+  Ziel 0,75 → 0,01); Komma geht als Dezimalzeichen. Das **Ziel** schickt der
+  Server erst in der Auflösung — weder Beamer noch Tablet kennen es vorher.
+  Punkteformel `ks_scale_points`: `1000 · (e^(−3x) − e^(−3)) / (1 − e^(−3))`,
+  `x = Abstand / (0,3 · Spanne)` — kein Sprung am Rand (x = 0,1 → 727,
+  0,5 → 183, 1 → 0).
+* **Münzen**: Wer umsetzen darf, darf nicht sehen, was eine Münze gerade wert
+  ist. Darum bucht `ks_bet` keine Punkte, sondern schreibt nur
+  `points_awarded` in die Antwort; `ks_players.score` wächst erst nach der
+  Frage über `ks_settle` (bucht `points_awarded − settled_pts`, gerufen von
+  `ks_view`, `ks_room_get`, `ks_step`). Während der Frage verschweigt
+  `ks_view` `is_correct`/`points_awarded`, und der Beamer bekommt die
+  Münzverteilung erst in der Auflösung. Alle Münzen zurück = keine Antwort.
+  Das Tablet hält seinen Stand selbst (`wette` in tool.js) und schickt ihn
+  250 ms nach dem letzten Zug als Ganzes.
+* `ks_answer` lehnt Skala- und Münzfragen ab (`wrong_kind`).
+
+Die Migration baut **Vorbauten** wie 0194: `ks_catalog_save`,
+`ks_answer`, `ks_room_get`, `ks_view`, `ks_step` heißen intern
+`_…_v194/_v189/_v194/_v188/_v195` und bekommen einen Mantel, der nur
+ergänzt. **Ohne 0217** speichert der Editor die neuen Typen als Auswahl.
+
 ## Fotos
 
 Jede Frage kann ein Foto haben (`ks_questions.image` als data:-URL plus
@@ -293,13 +331,14 @@ und dessen eigener an vier weiteren Stellen (Kopf von `lib/tool.js`).
 
 ```
 node MPSkills/tools/KnowledgeStack/tools/uitest.js            # alle Bereiche
-node MPSkills/tools/KnowledgeStack/tools/uitest.js emote      # emote|tab|beam|fluss|editor|foto|theme|katalog
+node MPSkills/tools/KnowledgeStack/tools/uitest.js emote      # emote|tab|beam|fluss|editor|foto|theme|katalog|typen
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js          # echter Browser
 node MPSkills/tools/KnowledgeStack/tools/fitcheck.js --shots  # …mit Bildern
 node supabase/tests/0175_knowledgestack_flow.mjs              # SQL in pglite
 node supabase/tests/0186_knowledgestack_photos_abort.mjs      # Fotos, Beenden, Neustart
 node supabase/tests/0189_knowledgestack_sync_reveal.mjs       # Uhrabgleich, faire Antwortzeit
 node supabase/tests/0194_knowledgestack_catalog.mjs           # Katalog: Sichtbarkeit, Rechte, Admin
+node supabase/tests/0217_knowledgestack_fragetypen.mjs        # Wahr/Falsch, Skala, Münzen
 ```
 
 * **uitest.js** (linkedom, kein Browser) — *was* im Bild steht: die echten
@@ -324,7 +363,8 @@ räumt den Ablauf auf, `0186_knowledgestack_photos_abort.sql` bringt Fotos,
 Beenden und Neustart (und die Katalog-Aufrufe mit `p_code`, die der Beamer
 braucht), `0189_knowledgestack_sync_reveal.sql` die gleichzeitigen Antworten,
 `0191_knowledgestack_intro.sql` die 10 Sekunden Auftritt vor der ersten Frage, (seit `0195_knowledgestack_intro_kuerzer.sql`: 9 Sekunden)
-`0194_knowledgestack_catalog.sql` den Fragenkatalog (Themenfelder, Status, Autor, Thumbnails, Admin-Rechte). Alle spielt Sönke selbst im Supabase-Dashboard ein.
+`0194_knowledgestack_catalog.sql` den Fragenkatalog (Themenfelder, Status, Autor, Thumbnails, Admin-Rechte),
+`0217_knowledgestack_fragetypen.sql` die Fragetypen Wahr/Falsch, Skala und Münzen setzen. Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
 ## Der Fragen-Editor
 

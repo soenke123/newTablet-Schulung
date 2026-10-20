@@ -84,6 +84,9 @@
   --ks-bronze: #d97706;    /* Platz 3                              */
   --ks-ichbg:  #1b1d3a;    /* der eigene Kasten in der Auflösung   */
   --ks-wesenrand: rgba(226, 232, 255, .6);  /* Lichtkante um ein Wesen */
+  --ks-muenze:  #fbbf24;   /* Münzen setzen (0217): die Münze …    */
+  --ks-muenzrand: #92400e; /* … ihr Rand                          */
+  --ks-muenzink: #451a03;  /* … und die Zahl darauf               */
 
   /* Die vier Antwortfarben. Bewusst nicht die Ampel: „richtig" darf
      nicht an der Farbe der Kachel hängen, sonst rät die Klasse nach
@@ -129,6 +132,9 @@
   --ks-ink:     #0b1020;
   --ks-soft:    #4b5a72;
   --ks-wesenrand: transparent;
+  --ks-muenze:  #fbbf24;
+  --ks-muenzrand: #92400e;
+  --ks-muenzink: #451a03;
 
   /* Dunkler als es „golden" aussieht, und das mit Grund: dieselbe
      Farbe trägt die Punktzahl unter einem Wesen (10 px, fett) auf
@@ -455,6 +461,7 @@
 .ks-qbox {
   flex: 0 1 auto;
   display: flex;
+  flex-direction: column;     /* darüber ggf. der Fragetyp (.ks-qart) */
   align-items: center;
   justify-content: center;
   padding: clamp(8px, calc(var(--ks-h) * .025), 26px) clamp(12px, calc(var(--ks-h) * .03), 34px);
@@ -2125,4 +2132,221 @@ button.ks-k:disabled { cursor: default; }
 @keyframes ks-tpuls { 50% { transform: scale(1.12); } }
 @media (prefers-reduced-motion: reduce) {
   .ks-tplatz, .ks-tmedaille, .ks-tende--top .ks-tsieg-pic, .ks-tende--p1 .ks-tplatz { animation: none; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   Die drei weiteren Fragetypen (Oktober 2026, Migration 0217)
+   ══════════════════════════════════════════════════════════
+   Wahr/Falsch: zwei Kacheln nebeneinander. Skala: eine Strecke
+   (Beamer) bzw. ein Regler (Tablet). Münzen: eine Bank und vier
+   Kacheln, auf die man Münzen zieht. */
+.ks-qart {
+  flex: 0 0 auto;
+  margin-bottom: .35em;
+  padding: .15em .7em;
+  border: 2px solid var(--ks-linie2);
+  border-radius: 999px;
+  background: var(--ks-erhoben);
+  color: var(--ks-goldt);
+  font-size: clamp(11px, calc(var(--ks-h) * .026), 20px);
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.ks-kacheln[data-art="tf"] { grid-template-columns: 1fr 1fr; }
+.ks-kacheln[data-art="tf"] .ks-k { justify-content: center; text-align: center; }
+.ks-kacheln[data-art="tf"] .ks-kt { flex: 0 1 auto; font-size: clamp(16px, calc(var(--ks-h) * .05), 40px); }
+
+/* ─── Skala am Beamer ─────────────────────────────────────── */
+.ks-skala, .ks-tskala, .ks-wette {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(6px, calc(var(--ks-h) * .018), 16px);
+  min-height: 0;
+}
+.ks-skala[hidden], .ks-tskala[hidden], .ks-wette[hidden] { display: none !important; }
+.ks-stage--beam.ks-stage--question .ks-skala { flex: 0 0 30%; }
+.ks-skala-bahn {
+  position: relative;
+  height: clamp(18px, calc(var(--ks-h) * .05), 42px);
+  margin: clamp(30px, calc(var(--ks-h) * .1), 90px) clamp(10px, 3%, 40px) 0;
+  background: var(--ks-tief);
+  border: 3px solid var(--ks-kante);
+  border-radius: 999px;
+  box-shadow: 4px 4px 0 0 var(--ks-kante);
+}
+.ks-skala-band {
+  position: absolute; top: 0; bottom: 0;
+  background: var(--ks-gruenf);
+  border-left: 2px dashed var(--ks-gruen);
+  border-right: 2px dashed var(--ks-gruen);
+}
+.ks-skala-punkt {
+  position: absolute;
+  bottom: calc(100% + 4px + var(--r, 0) * clamp(9px, calc(var(--ks-h) * .022), 18px));
+  width: clamp(8px, calc(var(--ks-h) * .02), 16px);
+  height: clamp(8px, calc(var(--ks-h) * .02), 16px);
+  margin-left: calc(clamp(8px, calc(var(--ks-h) * .02), 16px) / -2);
+  border-radius: 50%;
+  background: var(--ks-soft);
+  border: 2px solid var(--ks-kante);
+  box-sizing: border-box;
+}
+.ks-skala-punkt.is-nah { background: var(--ks-cyan); }
+.ks-skala-ziel {
+  position: absolute;
+  top: -6px; bottom: -6px;
+  width: 4px;
+  margin-left: -2px;
+  background: var(--ks-gruen);
+  border-radius: 2px;
+}
+.ks-skala-ziel b {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: .1em .5em;
+  border-radius: 8px;
+  background: var(--ks-gruen);
+  color: var(--ks-ink);
+  font-size: clamp(13px, calc(var(--ks-h) * .035), 28px);
+  font-weight: 800;
+}
+.ks-skala--auf .ks-skala-enden { margin-top: clamp(20px, calc(var(--ks-h) * .06), 50px); }
+.ks-skala-enden {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 clamp(4px, 2%, 30px);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(12px, calc(var(--ks-h) * .032), 26px);
+  font-weight: 800;
+  color: var(--ks-soft);
+}
+.ks-skala-info {
+  margin: 0;
+  text-align: center;
+  font-size: clamp(12px, calc(var(--ks-h) * .03), 24px);
+  font-weight: 600;
+  color: var(--ks-soft);
+}
+.ks-skala-info b { color: var(--ks-ink); }
+
+/* ─── Skala auf dem Tablet: der Regler ────────────────────── */
+.ks-tskala { align-items: stretch; padding: 0 clamp(4px, 2%, 24px); }
+.ks-tskala-wert {
+  align-self: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: clamp(26px, calc(var(--ks-h) * .1), 72px);
+  font-weight: 800;
+  color: var(--ks-goldt);
+  font-variant-numeric: tabular-nums;
+}
+.ks-regler {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 48px;               /* Fingermaß, auch für die Spur */
+  margin: 0;
+  background: transparent;
+  touch-action: pan-y;
+  cursor: pointer;
+}
+.ks-regler::-webkit-slider-runnable-track {
+  height: 16px;
+  border-radius: 999px;
+  background: var(--ks-tief);
+  border: 3px solid var(--ks-kante);
+}
+.ks-regler::-moz-range-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--ks-tief);
+  border: 3px solid var(--ks-kante);
+}
+.ks-regler::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 44px; height: 44px;
+  margin-top: -17px;
+  border-radius: 50%;
+  background: var(--ks-gold);
+  border: 3px solid var(--ks-kante);
+  box-shadow: 3px 3px 0 0 var(--ks-kante);
+}
+.ks-regler::-moz-range-thumb {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--ks-gold);
+  border: 3px solid var(--ks-kante);
+  box-shadow: 3px 3px 0 0 var(--ks-kante);
+}
+.ks-regler:disabled { cursor: default; opacity: .55; }
+.ks-tskala-ok { align-self: center; min-height: 48px; min-width: 50%; }
+
+/* ─── Münzen setzen auf dem Tablet ────────────────────────── */
+.ks-bank {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 12px;
+  min-height: 56px;
+  box-sizing: border-box;
+  background: var(--ks-karte);
+  border: 2px dashed var(--ks-linie2);
+  border-radius: 14px;
+}
+.ks-bank.is-ziel { border-color: var(--ks-gold); background: var(--ks-goldf); }
+.ks-bank-l { font-weight: 800; font-size: clamp(12px, calc(var(--ks-h) * .026), 17px); }
+.ks-bank-l i { display: block; font-style: normal; font-weight: 600; font-size: .8em; color: var(--ks-soft); }
+.ks-bank-m { display: flex; flex-wrap: wrap; gap: 6px; margin-left: auto; }
+.ks-bank-leer { color: var(--ks-soft); font-size: 13px; font-weight: 700; }
+.ks-wette .ks-kacheln { flex: 1 1 auto; }
+/* Text und Münzen in EINER Zeile, die umbricht: auf dem Handy sind
+   die Kacheln flach, und ein eigener Münzstreifen darunter schob den
+   Antworttext aus der Kachel. */
+.ks-k--wette { flex-wrap: wrap; align-content: center; cursor: pointer; gap: 6px 10px; }
+.ks-k--wette .ks-kt { flex: 1 1 7em; min-width: 0; }
+.ks-k--wette.is-ziel { outline: 5px dashed #fff; outline-offset: -8px; }
+.ks-stapel { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.ks-stapel:empty { display: none; }
+.ks-muenze {
+  display: inline-grid;
+  place-items: center;
+  width: 40px; height: 40px;        /* Fingermaß fürs Greifen */
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--ks-muenze);
+  border: 3px solid var(--ks-muenzrand);
+  box-shadow: inset 0 -3px 0 0 var(--ks-muenzrand);
+  color: var(--ks-muenzink);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 800;
+  box-sizing: border-box;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+.ks-muenze.is-weg { opacity: .25; }
+.ks-muenze--geist {
+  position: absolute;
+  left: 0; top: 0;
+  z-index: 50;
+  pointer-events: none;
+  cursor: grabbing;
+}
+.ks-wette.is-zu .ks-muenze, .ks-wette.is-zu .ks-k--wette { cursor: default; }
+.ks-wette.is-zu .ks-bank { opacity: .5; }
+.ks-wackel { animation: ks-wackel .4s; }
+@keyframes ks-wackel {
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ks-wackel { animation: none; }
 }

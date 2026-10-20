@@ -263,6 +263,26 @@ const BILDER = {
       leaderboard: [1, 2, 3, 4, 5].map(r => spieler(r, { rank: r })),
       players: Array.from({ length: 28 }, (_, i) => spieler(i + 1))
     }),
+    /* Die Fragetypen aus 0217: Skala (Frage und Auflösung), Münzen
+       in der Auflösung (Münzen statt Köpfe), Wahr/Falsch. */
+    skala: () => Object.assign(BILDER.presenter.question(), {
+      question: { text: 'Wie viele Kilometer ist der Rhein lang?', options: [], kind: 'scale',
+                  scale: { min: 0, max: 2000, step: 1, unit: 'km' }, correct_idx: null, explanation: null, time_limit: 20 }
+    }),
+    skalaAuf: () => Object.assign(BILDER.presenter.reveal(), {
+      question: { text: 'Wie viele Kilometer ist der Rhein lang?', options: [], kind: 'scale',
+                  scale: { min: 0, max: 2000, step: 1, unit: 'km', target: 1233 }, correct_idx: 0, time_limit: 20,
+                  explanation: 'Der Rhein ist 1233 km lang.' },
+      scale_values: [400, 900, 1000, 1100, 1180, 1200, 1200, 1210, 1250, 1300, 1300, 1500, 1800, 1233]
+    }),
+    wette: () => Object.assign(BILDER.presenter.reveal(), {
+      question: Object.assign(BILDER.presenter.reveal().question, { kind: 'bet' }),
+      answers_dist: { 0: 61, 1: 30, 2: 9, 3: 40 }, bet_coins: 140
+    }),
+    tf: () => Object.assign(BILDER.presenter.question(), {
+      question: { text: 'Wale sind Fische.', options: ['Wahr', 'Falsch'], kind: 'tf',
+                  correct_idx: null, explanation: null, time_limit: 20 }
+    }),
     ended: () => ({
       phase: 'ended', current_q_idx: 11, question_count: 12, phase_ends_at: null,
       server_now: new Date().toISOString(), catalog_id: 'k1', catalogs: null,
@@ -285,6 +305,17 @@ const BILDER = {
       my_answer: null,
       question: { text: null, options: OPTS, time_limit: 20, correct_idx: null, explanation: null },
       neighbor_before: null, neighbor_after: null
+    }),
+    skala: () => Object.assign(BILDER.participant.question(), {
+      question: { text: null, options: [], kind: 'scale', time_limit: 20,
+                  scale: { min: 0, max: 2000, step: 1, unit: 'km' }, correct_idx: null, explanation: null }
+    }),
+    wette: () => Object.assign(BILDER.participant.question(), {
+      my_answer: { chosen_idx: 0, bets: [3, 1, 0, 0], is_correct: null, points_awarded: null },
+      question: { text: null, options: OPTS, kind: 'bet', time_limit: 20, correct_idx: null, explanation: null }
+    }),
+    tf: () => Object.assign(BILDER.participant.question(), {
+      question: { text: null, options: ['Wahr', 'Falsch'], kind: 'tf', time_limit: 20, correct_idx: null, explanation: null }
     }),
     reveal: () => ({
       phase: 'reveal', current_q_idx: 4, question_count: 12, phase_ends_at: null,

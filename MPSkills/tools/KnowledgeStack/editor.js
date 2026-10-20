@@ -61,6 +61,25 @@
 
   const LABELS = ['A', 'B', 'C', 'D'];
 
+  /* ─── Fragetypen (Migration 0217) ───
+     mc    Auswahl A–D, schnell sein lohnt sich
+     tf    Wahr oder falsch: zwei Antworten, vorbelegt „Wahr"/„Falsch"
+     scale Skala: Start, Ende, Ziel — Punkte nach Nähe zum Ziel
+     bet   Münzen setzen: 5 Münzen à 200 Punkte auf die Antworten  */
+  const ARTEN = {
+    mc:    { ico: '🔤', label: 'Auswahl',      hint: 'Vier Antworten, mindestens eine richtig. Wer schneller richtig tippt, bekommt mehr Punkte.' },
+    tf:    { ico: '⚖️', label: 'Wahr/Falsch',  hint: 'Zwei Antworten. Die Texte kannst du ändern (z. B. Ja/Nein). Wer schneller richtig tippt, bekommt mehr Punkte.' },
+    scale: { ico: '📏', label: 'Skala',        hint: 'Die Klasse schiebt einen Regler zwischen Start und Ende. Genau getroffen = 1000 Punkte, dann fällt es schnell ab; ab 30 % der Spanne daneben gibt es 0. Tempo zählt nicht.' },
+    bet:   { ico: '🪙', label: 'Münzen setzen', hint: 'Jedes Kind verteilt 5 Münzen à 200 Punkte auf die Antworten und darf umsetzen, bis die Zeit um ist. Es zählen nur Münzen auf richtigen Antworten — Sicherheit statt Tempo.' }
+  };
+  const artVon = q => (q && ARTEN[q.kind]) ? q.kind : 'mc';
+  const nachkomma = x => { const m = /\.(\d+)$/.exec(String(x == null ? '' : x).trim()); return m ? m[1].length : 0; };
+  /* Das Raster des Reglers: so fein wie die feinste der drei Zahlen
+     (0 … 100, Ziel 42 → 1; 0 … 1, Ziel 0,35 → 0,01). */
+  const skalaSchritt = s => Math.pow(10, -Math.max(nachkomma(s.min), nachkomma(s.max), nachkomma(s.target)));
+  const neueSkala = () => ({ min: 0, max: 100, target: 50, unit: '' });
+  const zahlLesen = v => { const t = String(v == null ? '' : v).trim().replace(',', '.'); return t === '' ? NaN : Number(t); };
+
   /* ═══════════════════════════════════════════════════════════
      1) KATALOG-ÜBERSICHT (list)
      ═══════════════════════════════════════════════════════════ */
@@ -395,7 +414,41 @@
     return h;
   }
 
+  function artWahl(q, idx) {
+    const a = artVon(q);
+    return `
+          <div class="kse-segs kse-arten" role="group" aria-label="Fragetyp">
+            ${Object.keys(ARTEN).map(k => `
+              <button type="button" class="kse-seg kse-seg--art${k === a ? ' is-an' : ''}" data-ed="set-kind"
+                      data-qi="${idx}" data-v="${k}" aria-pressed="${k === a}"
+                      title="${esc(ARTEN[k].hint)}">${ARTEN[k].ico} ${ARTEN[k].label}</button>`).join('')}
+          </div>
+          <span class="kse-meta-hint kse-art-hint">${esc(ARTEN[a].hint)}</span>`;
+  }
+
+  /* Start, Ende, Ziel und Einheit einer Skala. Darunter, wie weit
+     daneben es noch Punkte gibt — das ist die Zahl, an der eine
+     Lehrkraft merkt, ob Start und Ende sinnvoll gewählt sind. */
+  function skalaFelder(q, idx) {
+    const s = q.scale || neueSkala();
+    const feld = (k, label, typ) => `
+              <label class="kse-skala-f">${label}
+                <input type="${typ || 'text'}" inputmode="decimal" class="kse-input" data-qi="${idx}"
+                       data-field="scale-${k}" value="${esc(s[k] == null ? '' : String(s[k]))}" />
+              </label>`;
+    const min = Number(s.min), max = Number(s.max);
+    const lim = isFinite(min) && isFinite(max) && max > min ? (max - min) * .3 : null;
+    return `
+          <div class="kse-skala">
+            ${feld('min', 'Start')}${feld('max', 'Ende')}${feld('target', 'Ziel (richtig)')}${feld('unit', 'Einheit (optional)')}
+          </div>
+          <span class="kse-meta-hint" data-skala-hint="${idx}">${lim != null
+            ? 'Punkte gibt es bis ± ' + esc(String(Number(lim.toFixed(6))).replace('.', ',')) + (s.unit ? ' ' + esc(s.unit) : '') + ' neben dem Ziel.'
+            : 'Der Start muss kleiner als das Ende sein.'}</span>`;
+  }
+
   function frageKarte(q, idx) {
+    const art = artVon(q);
     const opts = Array.isArray(q.options) ? q.options : ['', '', '', ''];
     // correct_indices hat Vorrang, Fallback auf correct_idx
     const ci = Array.isArray(q.correct_indices) && q.correct_indices.length > 0
@@ -411,10 +464,12 @@
             <button type="button" class="kse-btn kse-btn--del" data-ed="delq" data-qi="${idx}"
                     title="Frage löschen">−</button>
           </div>
+          ${artWahl(q, idx)}
           <textarea class="kse-input kse-ftext" data-qi="${idx}" data-field="question_text"
-                    placeholder="Fragetext eingeben…" rows="2">${esc(q.question_text || '')}</textarea>
-          <div class="kse-optionen">
-            ${opts.map((o, oi) => `
+                    placeholder="${art === 'tf' ? 'Behauptung eingeben… (z. B. „Wale sind Fische.")' : 'Fragetext eingeben…'}" rows="2">${esc(q.question_text || '')}</textarea>
+          ${art === 'scale' ? skalaFelder(q, idx) : `
+          <div class="kse-optionen${art === 'tf' ? ' kse-optionen--tf' : ''}">
+            ${opts.slice(0, art === 'tf' ? 2 : 4).map((o, oi) => `
               <div class="kse-opt kse-opt--${oi}">
                 <span class="kse-olabel">${LABELS[oi]}</span>
                 <input type="text" class="kse-input kse-oinput" data-qi="${idx}" data-oi="${oi}"
@@ -426,7 +481,7 @@
                 </button>
               </div>
             `).join('')}
-          </div>
+          </div>`}
           <div class="kse-frage-meta">
             <label class="kse-meta-label">⏱
               <input type="number" class="kse-input kse-input--mini" data-qi="${idx}"
@@ -469,7 +524,8 @@
      3) BEAMER-VORSCHAU (preview)
      ═══════════════════════════════════════════════════════════ */
   function buildPreview(q, idx, total) {
-    const opts = Array.isArray(q.options) ? q.options : ['', '', '', ''];
+    const art = artVon(q);
+    const opts = (Array.isArray(q.options) ? q.options : ['', '', '', '']).slice(0, art === 'tf' ? 2 : 4);
     const ci = Array.isArray(q.correct_indices) && q.correct_indices.length > 0
       ? q.correct_indices
       : (q.correct_idx != null ? [q.correct_idx] : [0]);
@@ -506,7 +562,18 @@
             <input type="file" accept="image/*" data-foto-file="pv" hidden />
             📷 Foto hochladen <span>oder hierher ziehen — erscheint nur am Beamer</span>
           </label>`}
-        <div class="kse-pv-kacheln">
+        ${art === 'scale' ? (() => {
+          const s = q.scale || neueSkala();
+          const pos = Math.max(0, Math.min(100, (Number(s.target) - Number(s.min)) / ((Number(s.max) - Number(s.min)) || 1) * 100));
+          const u = s.unit ? ' ' + esc(s.unit) : '';
+          return `
+        <div class="kse-pv-skala">
+          <div class="kse-pv-bahn"><span class="kse-pv-ziel" style="left:${pos.toFixed(1)}%">✅ ${esc(String(s.target))}${u}</span></div>
+          <div class="kse-pv-enden"><span>${esc(String(s.min))}${u}</span><span>${esc(String(s.max))}${u}</span></div>
+          <p class="kse-meta-hint">Auf den Tablets: ein Regler von Start bis Ende. Das Ziel sieht die Klasse erst in der Auflösung.</p>
+        </div>`; })() : `
+        ${art === 'bet' ? '<p class="kse-meta-hint">🪙 Auf den Tablets: 5 Münzen à 200 Punkte, frei auf die Antworten verteilen.</p>' : ''}
+        <div class="kse-pv-kacheln${art === 'tf' ? ' kse-pv-kacheln--tf' : ''}">
           ${opts.map((o, i) => `
             <div class="kse-pv-k kse-pv-k--${i} ${ci.includes(i) ? 'is-richtig' : ''}">
               <span class="kse-pv-kk">${ci.includes(i) ? '✅' : LABELS[i]}</span>
@@ -514,7 +581,7 @@
                     data-ed-pv="opt" data-oi="${i}">${esc(o || '…')}</span>
             </div>
           `).join('')}
-        </div>
+        </div>`}
         ${q.explanation ? '<p class="kse-pv-expl">💡 ' + esc(q.explanation) + '</p>' : ''}
       </div>`;
   }
@@ -890,6 +957,23 @@
 }
 .kse-add-wrap { padding: 4px 0; }
 
+/* ── Fragetypen (0217) ── */
+.kse-arten .kse-seg { min-height: 34px; padding: 4px 10px; font-size: 12px; }
+.kse-seg--art.is-an { background: var(--ks-gold); color: #1a1400; }
+.kse-art-hint { margin-top: -4px; }
+.kse-optionen--tf { grid-template-columns: 1fr 1fr; }
+.kse-skala { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+@media (max-width: 600px) { .kse-skala { grid-template-columns: 1fr 1fr; } }
+.kse-skala-f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--ks-soft); }
+.kse-pv-kacheln--tf { grid-template-columns: 1fr 1fr; }
+.kse-pv-skala { display: flex; flex-direction: column; gap: 10px; padding: 40px 10px 0; }
+.kse-pv-bahn { position: relative; height: 22px; background: var(--ks-tief);
+  border: 3px solid var(--ks-kante); border-radius: 999px; }
+.kse-pv-ziel { position: absolute; bottom: calc(100% + 6px); transform: translateX(-50%); white-space: nowrap;
+  font-weight: 800; padding: 2px 8px; border-radius: 8px; background: var(--ks-gruenf); color: var(--ks-ink); }
+.kse-pv-enden { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace;
+  font-weight: 800; color: var(--ks-soft); }
+
 /* ── Vorschau ── */
 .kse-wrap--preview { max-width: 960px; }
 .kse-pv-qbox {
@@ -1117,6 +1201,13 @@
         for (let oi = 0; oi < 4; oi++) {
           const oinp = el.querySelector('[data-qi="' + i + '"][data-oi="' + oi + '"][data-field=option]');
           if (oinp && Array.isArray(q.options)) q.options[oi] = oinp.value;
+        }
+        if (artVon(q) === 'scale') {
+          q.scale = Object.assign(neueSkala(), q.scale || {});
+          ['min', 'max', 'target', 'unit'].forEach(k => {
+            const f = el.querySelector('[data-qi="' + i + '"][data-field="scale-' + k + '"]');
+            if (f) q.scale[k] = k === 'unit' ? f.value.trim() : f.value.trim().replace(',', '.');
+          });
         }
         const tl = el.querySelector('[data-qi="' + i + '"][data-field=time_limit_sec]');
         if (tl) q.time_limit_sec = Math.max(5, Math.min(120, parseInt(tl.value, 10) || 20));
@@ -1474,11 +1565,23 @@
       const P = window.KSParse;
       const parsed = P.parse(imp.text);
       if (!parsed.questions.length) { toast('Noch keine Fragen erkannt.', true); return; }
-      const qs = parsed.questions.map(q => ({
+      // Genau zwei Antworten „Wahr"/„Falsch" (oder richtig/falsch,
+      // ja/nein) werden eine Wahr/Falsch-Frage.
+      const WAHR = /^(wahr|richtig|ja|stimmt|true)$/i, FALSCH = /^(falsch|nein|stimmt nicht|false)$/i;
+      const istTf = q => {
+        const v = (q.options || []).map(o => String(o || '').trim()).filter(Boolean);
+        return v.length === 2 && WAHR.test(v[0]) && FALSCH.test(v[1]);
+      };
+      const qs = parsed.questions.map(q => istTf(q) ? {
+        kind: 'tf', question_text: q.question_text, options: (q.options || []).filter(o => String(o || '').trim()).slice(0, 2),
+        correct_idx: (q.correct_indices || [q.correct_idx])[0] === 1 ? 1 : 0,
+        correct_indices: [(q.correct_indices || [q.correct_idx])[0] === 1 ? 1 : 0],
+        time_limit_sec: q.time_limit_sec, explanation: q.explanation
+      } : {
         question_text: q.question_text, options: q.options,
         correct_idx: q.correct_idx, correct_indices: q.correct_indices,
         time_limit_sec: q.time_limit_sec, explanation: q.explanation
-      }));
+      });
       if (imp.mode === 'append' && data) {
         const leer = x => !x.question_text && !(x.options || []).some(Boolean);
         data.questions = data.questions.filter(x => !leer(x)).concat(qs);
@@ -1760,6 +1863,30 @@
           return;
         }
 
+        // Fragetyp wechseln. Was man bei Auswahl eingetippt hat, bleibt
+        // gemerkt (q._vier) und kommt beim Zurückwechseln wieder.
+        if (a === 'set-kind') {
+          sammle();
+          const q = data.questions[parseInt(ed.dataset.qi, 10)];
+          const neu = ed.dataset.v;
+          if (!q || !ARTEN[neu] || artVon(q) === neu) return;
+          const alt = artVon(q);
+          if (alt === 'mc' || alt === 'bet') q._vier = (q.options || []).slice(0, 4);
+          if (neu === 'tf') {
+            q.options = ['Wahr', 'Falsch'];
+            q.correct_indices = [0]; q.correct_idx = 0;
+          } else if (neu === 'mc' || neu === 'bet') {
+            const v = (alt === 'mc' || alt === 'bet') ? (q.options || []) : (q._vier || []);
+            q.options = [0, 1, 2, 3].map(i => v[i] || '');
+            if (alt === 'tf' || alt === 'scale') { q.correct_indices = [0]; q.correct_idx = 0; }
+          } else if (neu === 'scale') {
+            q.scale = Object.assign(neueSkala(), q.scale || {});
+          }
+          q.kind = neu;
+          dirty = true;
+          redraw(); return;
+        }
+
         // Richtig-Haken umschalten
         if (a === 'toggle') {
           sammle();
@@ -1767,6 +1894,12 @@
           const oi = parseInt(ed.dataset.oi, 10);
           const q = data.questions[qi];
           if (!q) return;
+          // Wahr/Falsch: genau eine ist richtig — der Haken springt.
+          if (artVon(q) === 'tf') {
+            q.correct_indices = [oi]; q.correct_idx = oi;
+            dirty = true;
+            redraw(); return;
+          }
           let ci = Array.isArray(q.correct_indices) ? [...q.correct_indices] : [q.correct_idx || 0];
           if (ci.includes(oi)) {
             ci = ci.filter(x => x !== oi);
@@ -1792,10 +1925,30 @@
           if (!data.questions.length) {
             toast('Mindestens eine Frage ist nötig.', true); return;
           }
+          // Skalen prüfen, bevor etwas zum Server geht
+          for (let i = 0; i < data.questions.length; i++) {
+            const q = data.questions[i];
+            if (artVon(q) !== 'scale') continue;
+            const s = q.scale || {};
+            const mn = zahlLesen(s.min), mx = zahlLesen(s.max), zi = zahlLesen(s.target);
+            if (!isFinite(mn) || !isFinite(mx) || !isFinite(zi)) {
+              toast('Frage ' + (i + 1) + ': Start, Ende und Ziel müssen Zahlen sein.', true); return;
+            }
+            if (mn >= mx) { toast('Frage ' + (i + 1) + ': Der Start muss kleiner als das Ende sein.', true); return; }
+            if (zi < mn || zi > mx) { toast('Frage ' + (i + 1) + ': Das Ziel muss zwischen Start und Ende liegen.', true); return; }
+          }
           // Fragen für den Server aufbereiten
           const qs = data.questions.map((q, i) => ({
+            kind:            artVon(q),
+            scale:           artVon(q) === 'scale' ? {
+                               min: zahlLesen(q.scale.min), max: zahlLesen(q.scale.max),
+                               target: zahlLesen(q.scale.target), unit: q.scale.unit || '',
+                               step: skalaSchritt({ min: q.scale.min, max: q.scale.max, target: q.scale.target })
+                             } : null,
             question_text:   q.question_text || '',
-            options:         q.options || ['','','',''],
+            options:         artVon(q) === 'scale' ? []
+                           : artVon(q) === 'tf' ? (q.options || ['Wahr', 'Falsch']).slice(0, 2)
+                           : (q.options || ['','','','']),
             correct_idx:     (Array.isArray(q.correct_indices) && q.correct_indices.length)
                                ? q.correct_indices[0] : (q.correct_idx || 0),
             correct_indices: q.correct_indices || [q.correct_idx || 0],
