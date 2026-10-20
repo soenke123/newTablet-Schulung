@@ -2969,6 +2969,7 @@ body.tool-fill #pagefoot { display: none; }
 .picker-world:hover { border-color: var(--accent-dim); }
 .picker-world.on { border-color: var(--accent); background: var(--accent-dim); color: var(--ink); }
 .picker-grid .tools-empty { grid-column: 1 / -1; }
+.picker-tab .tab-count { font-weight: 500; opacity: .7; margin-left: 3px; font-variant-numeric: tabular-nums; }
 .picker-head .modal-close { position: static; flex: none; }
 .picker-tabs {
   display: flex; gap: 7px; flex-wrap: wrap;

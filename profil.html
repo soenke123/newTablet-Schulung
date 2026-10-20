@@ -504,6 +504,12 @@
     .picker-tab:hover:not(.active) {
       border-color: var(--accent);
     }
+    .picker-tab .tab-count {
+      font-size: 0.78rem;
+      opacity: 0.7;
+      margin-left: 4px;
+      font-variant-numeric: tabular-nums;
+    }
     .picker-tab .tab-new-dot {
       display: inline-block;
       width: 8px;
@@ -700,7 +706,7 @@
   <script src="vendor/supabase-js-2.116.0.min.js"></script>
   <script src="supabase-config.js"></script>
   <script src="session.js?v=20260811"></script>
-  <script src="avatars.js?v=20261020"></script>
+  <script src="avatars.js?v=20261020b"></script>
   <script src="feedback.js?v=20260927"></script>
   <script>
     'use strict';
@@ -746,6 +752,10 @@
       renderProfile(user);
       profileMain.hidden = false;
       if (user.cluster_id) hubBackLink.style.display = '';
+      // MPSkills-Freischaltungen kommen vom Server (0214) — danach
+      // Unlock-/NEU-Stand neu rechnen.
+      await window.loadMpskillsUnlocks?.();
+      recomputeAvatarState(window.getSessionUser?.() || user);
     })();
 
     // Falls die Session in einem anderen Tab wechselt (Logout etc.)
@@ -875,6 +885,14 @@
     function groupHasNew(gId) {
       return window.AVATARS.some(a => a.group === gId && pickerSessionNewSet.has(a.id));
     }
+    // „x/alle“ hinter jedem Skill-Reiter (nur MPSkills — im GameHub
+    // würde die Gesamtzahl die noch geheimen Kreaturen verraten).
+    function groupCount(g) {
+      if (g.world !== 'mpskills') return '';
+      const all = window.AVATARS.filter(a => a.group === g.id);
+      const have = all.filter(a => unlockedSet.has(a.id)).length;
+      return ` <span class="tab-count">${have}/${all.length}</span>`;
+    }
     function worldOfGroup(gId) {
       return window.AVATAR_GROUPS.find(g => g.id === gId)?.world || 'gamehub';
     }
@@ -910,7 +928,7 @@
       for (const g of groupsOfWorld(currentWorldId)) {
         const btn = document.createElement('button');
         btn.className = 'picker-tab' + (g.id === currentGroupId ? ' active' : '');
-        btn.innerHTML = g.label + (groupHasNew(g.id) ? '<span class="tab-new-dot"></span>' : '');
+        btn.innerHTML = g.label + groupCount(g) + (groupHasNew(g.id) ? '<span class="tab-new-dot"></span>' : '');
         btn.addEventListener('click', () => {
           currentGroupId = g.id;
           renderPickerTabs();
@@ -933,8 +951,8 @@
         emptyMsg.innerHTML = `
           <span class="picker-empty-icon">🔒</span>
           Noch nichts freigeschaltet.<br>
-          In <strong>${g ? g.label : 'diesem Skill'}</strong> (MPSkills) kannst du
-          Avatare freischalten — sie erscheinen dann automatisch hier.
+          ${g && g.hint ? g.hint : `In <strong>${g ? g.label : 'diesem Skill'}</strong> (MPSkills) kannst du
+          Avatare freischalten — sie erscheinen dann automatisch hier.`}
         `;
         pickerGrid.appendChild(emptyMsg);
         return;

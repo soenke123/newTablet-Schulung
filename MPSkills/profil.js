@@ -237,8 +237,15 @@ function renderTabs() {
   // Ein einzelner Reiter ist keine Wahl, sondern eine Überschrift —
   // dann lieber keiner.
   el.hidden = groupsWithContent.length < 2;
+  // „x/alle“ nur bei MPSkills — im GameHub verriete die Gesamtzahl
+  // die noch geheimen Kreaturen.
+  const count = (g) => {
+    if (g.world !== 'mpskills') return '';
+    const all = (window.AVATARS || []).filter(a => a.group === g.id);
+    return ` <span class="tab-count">${all.filter(a => unlockedSet.has(a.id)).length}/${all.length}</span>`;
+  };
   el.innerHTML = groupsWithContent.map(g =>
-    `<button type="button" class="picker-tab${g.id === currentGroup ? ' on' : ''}" data-g="${esc(g.id)}">${esc(g.label)}</button>`
+    `<button type="button" class="picker-tab${g.id === currentGroup ? ' on' : ''}" data-g="${esc(g.id)}">${esc(g.label)}${count(g)}</button>`
   ).join('');
   el.querySelectorAll('[data-g]').forEach(b => b.addEventListener('click', () => {
     currentGroup = b.dataset.g;
@@ -255,7 +262,7 @@ function renderGrid() {
   if (!items.length) {
     const g = (window.AVATAR_GROUPS || []).find(x => x.id === currentGroup);
     el.innerHTML = currentWorld === 'mpskills'
-      ? `<p class="tools-empty">Noch nichts freigeschaltet. In <strong>${esc(g?.label || 'diesem Skill')}</strong> kannst du Avatare freischalten — sie erscheinen dann hier.</p>`
+      ? `<p class="tools-empty">Noch nichts freigeschaltet. ${g?.hint ? esc(g.hint) : `In <strong>${esc(g?.label || 'diesem Skill')}</strong> kannst du Avatare freischalten — sie erscheinen dann hier.`}</p>`
       : `<p class="tools-empty">Hier ist noch nichts freigeschaltet.</p>`;
     return;
   }
@@ -379,4 +386,6 @@ window.addEventListener('lernwelt:session-changed', () => {
   if (!s) { renderGuest(); return; }
   currentAvatarId = s.avatar_id || window.DEFAULT_AVATAR_ID;
   render(s);
+  // MPSkills-Freischaltungen (0214); der Picker rechnet beim Öffnen neu.
+  window.loadMpskillsUnlocks?.();
 })();

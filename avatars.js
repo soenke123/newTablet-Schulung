@@ -13,7 +13,10 @@
      1) Bilder nach „avatare MPSkills/<Ordner>/“ legen (256×256, *_avatar.png)
      2) Gruppe in MPS_GROUPS eintragen (id 'mps_<skill-id>', folder, label)
      3) Bilder in MPS_CATALOG eintragen
-     4) Freischalt-Regel in MPS_UNLOCKERS ergänzen
+     4) Freischalt-Regel: entscheidet der Server (Sieg o. Ä.), schreibt er
+        in mps_avatar_unlocks (Migration 0214, Beispiel Kingdoms of Mathoria)
+        — der Client lädt das mit loadMpskillsUnlocks(). Reine Client-Regeln
+        gehen in MPS_UNLOCKERS. Den Satz für den Picker in MPS_GROUPS.hint.
 
    Bild-Katalog:
      Eier              → group 'egg',  immer freigeschaltet
@@ -42,6 +45,7 @@
      window.AVATAR_WORLDS               — [{id, label}] linke Leiste im Picker
      window.AVATAR_GROUPS               — [{id, world, label}] in Tab-Reihenfolge
      window.DEFAULT_AVATAR_ID           — 'default'
+     window.loadMpskillsUnlocks()       — Promise; holt mps_my_avatars() vom Server
      window.getAvatarById(id)
      window.getAvatarUrl(id, basePath)
      window.getSeenCreatures()          — {creatureId: maxStageIdx}
@@ -71,7 +75,8 @@
   const MPS_GROUPS = [
     { id: 'mps_knowledgestack', skill: 'knowledgestack', folder: 'KnowlegeStack',        label: 'Knowledge Stack' },
     { id: 'mps_wordisland',     skill: 'wordisland',     folder: 'Wordisland',           label: 'Wordisland' },
-    { id: 'mps_clash-of-math',  skill: 'clash-of-math',  folder: 'Kingdoms of Mathoria', label: 'Kingdoms of Mathoria' },
+    { id: 'mps_clash-of-math',  skill: 'clash-of-math',  folder: 'Kingdoms of Mathoria', label: 'Kingdoms of Mathoria',
+      hint: 'Gewinne mit deinem Team eine Partie — dann bekommst du das Bild deines Volkes. Das klappt nur, wenn du beim Spielen angemeldet bist.' },
     { id: 'mps_wildclusters',   skill: 'wildclusters',   folder: 'Wildclusters',         label: 'Wild Clusters' },
     { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature' }
   ];
@@ -82,7 +87,7 @@
     { id: 'rar',    world: 'gamehub', label: 'Rar'    },
     { id: 'epic',   world: 'gamehub', label: 'Epic'   },
     { id: 'legi',   world: 'gamehub', label: 'Legi'   },
-    ...MPS_GROUPS.map(g => ({ id: g.id, world: 'mpskills', label: g.label }))
+    ...MPS_GROUPS.map(g => ({ id: g.id, world: 'mpskills', label: g.label, hint: g.hint || '' }))
   ];
 
   /* ─── Katalog ─────────────────────────────────────────────────
@@ -443,15 +448,40 @@
      Variante wird freigeschaltet — die anderen zwei nie. Wenn variant
      noch nicht gewählt ist (Task 4 nicht durch): kein Stage-≥5-Avatar. */
   /* ─── MPSkills-Freischaltung ──────────────────────────────────
-     Je Skill eine eigene Regel: Funktion (avatar) → bool. Noch
-     leer — die Regeln kommen im nächsten Schritt. Ein Skill ohne
-     Eintrag schaltet nichts frei. */
+     Zwei Quellen:
+       1) Server: mps_avatar_unlocks (0214), z. B. Sieg in Kingdoms of
+          Mathoria. Kommt über loadMpskillsUnlocks() in _mpsOwned
+          (id → Zeitpunkt in ms). Bis das geladen ist, ist dort nichts frei.
+       2) Client-Regeln je Skill: MPS_UNLOCKERS[skill](avatar) → bool. */
+  const _mpsOwned = new Map();
   const MPS_UNLOCKERS = {
     // knowledgestack: (a) => …,
   };
   function isMpskillsUnlocked(a) {
+    if (_mpsOwned.has(a.id)) return true;
     const rule = MPS_UNLOCKERS[a.skill];
     try { return !!(rule && rule(a)); } catch { return false; }
+  }
+  async function loadMpskillsUnlocks() {
+    if (!window.__accessToken || !window.SUPABASE_URL) return;
+    try {
+      const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/mps_my_avatars`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${window.__accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: '{}'
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body?.ok) return;
+      _mpsOwned.clear();
+      for (const x of body.avatars || []) {
+        if (_byId.has(x.id)) _mpsOwned.set(x.id, new Date(x.at).getTime() || 0);
+      }
+    } catch (e) { console.warn('[avatars] mps_my_avatars:', e.message); }
   }
 
   function computeUnlockedAvatarIds() {
@@ -503,7 +533,9 @@
       const raw = localStorage.getItem(UNLOCKS_KEY);
       legacy = raw ? JSON.parse(raw) : {};
     } catch {}
-    return { ...legacy, ...shopStamps };
+    const mps = {};
+    for (const [id, ts] of _mpsOwned) mps[id] = ts;
+    return { ...legacy, ...shopStamps, ...mps };
   }
   function saveUnlockTimestamps(obj) {
     // Mirror in Legacy-Key — Landing/profil.html sollen dieselbe
@@ -567,6 +599,7 @@
   window.AVATAR_GROUPS           = AVATAR_GROUPS;
   window.AVATARS                 = AVATARS;
   window.getAvatarById           = getAvatarById;
+  window.loadMpskillsUnlocks     = loadMpskillsUnlocks;
   window.getAvatarUrl            = getAvatarUrl;
   window.getSeenCreatures        = getSeenCreatures;
   window.computeUnlockedAvatarIds = computeUnlockedAvatarIds;
