@@ -35,6 +35,19 @@ Solange wir kein CI-Deployment haben, läuft das manuell:
 - `0002_rls.sql` darf nur einmal laufen (Policies erhalten Fehler bei doppeltem Anlegen).
 - `0003_blacklist.sql` und `0004_rpcs.sql` sind bewusst idempotent (`create or replace function`, `on conflict do nothing`) — dürfen mehrfach laufen. Nach dem Editieren einfach die ganze Datei nochmal ausführen.
 
+## Neue Tabellen: Grants nicht vergessen
+
+Seit dem 30.10.2026 gibt Supabase neuen Tabellen in `public` **keine** Data-API-Rechte mehr automatisch (gilt auch beim Neuaufbau aus den Migrationen: neues Projekt, Preview-Branch, `db reset`).
+
+- Nutzer greifen nur über RPCs mit `security definer` zu → **keine** Grants an `anon`/`authenticated` nötig (und auch nicht geben).
+- Liest oder schreibt eine Function in `api/` die Tabelle direkt (`.from(...)` mit service_role-Key), gehört in **dieselbe Migration**:
+  ```sql
+  grant select, insert, update, delete on <tabelle> to service_role;
+  -- bei identity/serial zusätzlich:
+  grant usage, select on sequence <tabelle>_id_seq to service_role;
+  ```
+- Die Tabellen, die `api/` heute direkt nutzt, sind in `0215_api_grants.sql` festgeschrieben. Neue direkte Zugriffe dort mit eintragen.
+
 ## Wenn was schiefgeht
 
 - Alle Tabellen wieder plattmachen: im SQL-Editor `drop schema public cascade; create schema public;` und dann Migration+Seed neu laufen. **Zerstört alle Daten.**

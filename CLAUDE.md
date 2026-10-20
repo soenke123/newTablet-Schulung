@@ -22,7 +22,7 @@ Webauftrtitt/
 ├── feedback.js         → Dialog „Feedback & Fragen“ (Profil-Menü) → RPC submit_feedback; Tickets im Admin-Reiter „Tickets“ (nur Volladmin, Migration 0179)
 ├── PROJEKTBRIEFING.md  → Migrationsplan Frontend-only → Supabase-Backend (v2, 2026-07-04)
 ├── Dokumente/          → PDF handouts for students (e.g. Handout_Tablet-Schulung.pdf)
-├── supabase/           → Datenbank-Schema, Seed, Blacklist, Setup-Doku
+├── supabase/           → Datenbank-Schema, Seed, Blacklist, Setup-Doku. NEUE TABELLE: Supabase vergibt seit 30.10.2026 keine Data-API-Rechte mehr automatisch. Zugriff für Nutzer nur über RPCs (security definer) → keine Grants an anon/authenticated; liest/schreibt api/ die Tabelle direkt (.from), gehört in dieselbe Migration `grant select, insert, update, delete on <tabelle> to service_role;` (+ Sequence bei identity/serial). Bestand festgeschrieben in Migration 0215
 ├── api/                → Vercel Serverless Functions (signup, admin-Actions, mail_dispatch + notify_email = Antrags-Mails über IServ-SMTP, Einrichtung: api/MAIL_SETUP.md)
 ├── admin/              → Admin-Panel: Cluster/User/Fortschritts-/Lehrkraft-Verwaltung
 ├── MPSkills/           → Zweiter Anwendungsbereich: Tools für den Unterricht (eigene Landing, eigene Optik)
