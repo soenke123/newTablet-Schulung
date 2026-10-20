@@ -244,6 +244,7 @@ function wireTabs() {
       }
       if (target === 'skillrooms') {
         loadSkillRooms();
+        loadSkillUsage();
       }
       if (target === 'tickets') {
         loadTickets();
@@ -2307,9 +2308,12 @@ async function resetUserProgress(userId) {
 async function resetPassword(userId) {
   const u = userCache.find(x => x.id === userId);
   if (!u) return;
-  const pw = prompt(`Neues Passwort für "${u.account_name}" (mind. 8 Zeichen):`);
+  const pw = prompt(`Neues Passwort für "${u.account_name}" (mind. 8 Zeichen, Buchstaben und Zahl):`);
   if (pw === null) return;
-  if (pw.length < 8) { alert('Passwort zu kurz (mind. 8 Zeichen).'); return; }
+  // Dieselbe Regel wie bei der Registrierung — der Server prüft sie auch.
+  if (pw.length < 8)        { alert('Passwort zu kurz (mind. 8 Zeichen).'); return; }
+  if (!/[a-zA-Z]/.test(pw)) { alert('Passwort braucht mindestens einen Buchstaben.'); return; }
+  if (!/[0-9]/.test(pw))    { alert('Passwort braucht mindestens eine Zahl.'); return; }
   try {
     const token = window.__accessToken;
     const res = await fetch('/api/admin_reset_password', {
@@ -2318,7 +2322,11 @@ async function resetPassword(userId) {
       body: JSON.stringify({ user_id: userId, new_password: pw })
     });
     const body = await res.json().catch(() => ({}));
-    if (!res.ok || !body?.ok) throw new Error(body?.error || `HTTP ${res.status}`);
+    if (!res.ok || !body?.ok) throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
+    if (body.warning_message) {
+      alert(body.warning_message);
+      return;
+    }
     showToast(`Passwort für ${u.account_name} gesetzt.`);
   } catch (err) {
     showToast('Passwort-Reset fehlgeschlagen: ' + err.message, 'error');
@@ -3015,7 +3023,13 @@ async function switchSchool(newSchoolId) {
 
   await loadClusters();
   await loadUsers();
-  if (!document.getElementById('panel-skillrooms')?.hidden) loadSkillRooms();
+  // Der Schulfilter der Nutzungs-Statistik folgt dem Umschalter.
+  const usageSchool = document.getElementById('skillUsageSchool');
+  if (usageSchool) usageSchool.dataset.synced = '';
+  if (!document.getElementById('panel-skillrooms')?.hidden) {
+    loadSkillRooms();
+    loadSkillUsage();
+  }
   loadDashboard(currentSchoolId);  // fire-and-forget
   showToast(`Kontext: ${document.getElementById('schoolSwitcherLabel').textContent}`);
 }
@@ -3605,7 +3619,12 @@ let skillRoomCache = [];
 function wireSkillRoomsTab() {
   document.getElementById('skillRoomFilter')?.addEventListener('change', renderSkillRooms);
   document.getElementById('skillRoomSearch')?.addEventListener('input', renderSkillRooms);
-  document.getElementById('skillRoomReload')?.addEventListener('click', loadSkillRooms);
+  document.getElementById('skillRoomReload')?.addEventListener('click', () => {
+    loadSkillRooms();
+    loadSkillUsage();
+  });
+  ['skillUsageDays', 'skillUsageSchool', 'skillUsageTests'].forEach(id =>
+    document.getElementById(id)?.addEventListener('change', loadSkillUsage));
 }
 
 async function loadSkillRooms() {
@@ -3714,6 +3733,112 @@ function renderSkillRooms() {
     sum.textContent = `${live} laufende ${live === 1 ? 'Raum' : 'Räume'} · `
       + `${ppl} ${ppl === 1 ? 'Teilnehmer' : 'Teilnehmer'} · `
       + `${skillRoomCache.length} insgesamt (mit Testräumen und abgelaufenen).`;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   Nutzung je Skill (Migration 0216)
+   ══════════════════════════════════════════════════════════════
+   „Wie wird das System angenommen?“ — eine Zeile je Skill: Räume im
+   Zeitraum, davon neu angelegt, Beitritte, zuletzt genutzt und die
+   Schule mit den meisten Räumen. Anonym: der RPC kennt weder
+   Lehrkräfte noch Raumtitel. Die Zahlen kommen aus skill_usage, das
+   das Löschen der Räume nach 60 Tagen überlebt.
+   ══════════════════════════════════════════════════════════════ */
+
+async function loadSkillUsage() {
+  const tbody = document.getElementById('skillUsageTbody');
+  if (!tbody) return;
+
+  const daysSel   = document.getElementById('skillUsageDays');
+  const schoolSel = document.getElementById('skillUsageSchool');
+  const tests     = !!document.getElementById('skillUsageTests')?.checked;
+
+  // Beim ersten Laden (und nach einem Schulwechsel oben) steht der
+  // Filter auf der Schule des Umschalters; danach wählt der Admin selbst.
+  if (schoolSel && !schoolSel.dataset.synced && isVolladmin) {
+    schoolSel.dataset.want = currentSchoolId || '';
+  }
+  const school = isVolladmin
+    ? (schoolSel?.dataset.want ?? schoolSel?.value ?? '') || null
+    : null;
+  const days = daysSel?.value ? Number(daysSel.value) : null;
+
+  tbody.innerHTML = '<tr><td colspan="6" class="empty">Lade …</td></tr>';
+  try {
+    const res = await api('POST', 'rpc/skill_usage_stats',
+      { p_school: school, p_days: days, p_tests: tests });
+    if (!res || res.ok !== true) {
+      tbody.innerHTML = `<tr><td colspan="6" class="empty">Nicht verfügbar`
+        + `${res?.error ? ' (' + escapeHtml(res.error) + ')' : ''}.</td></tr>`;
+      return;
+    }
+    if (schoolSel && isVolladmin) {
+      const want = schoolSel.dataset.want ?? schoolSel.value;
+      schoolSel.innerHTML = '<option value="">Alle Schulen</option>'
+        + (res.schools || []).map(s =>
+            `<option value="${escapeHtml(s.id)}">${escapeHtml(s.name)}</option>`).join('');
+      schoolSel.value = want || '';
+      delete schoolSel.dataset.want;
+      schoolSel.dataset.synced = '1';
+      document.getElementById('skillUsageSchoolWrap').hidden = false;
+    }
+    renderSkillUsage(res, !school && isVolladmin);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler: ${escapeHtml(err.message)}`
+      + `<br><span class="hint">Läuft Migration 0216 schon?</span></td></tr>`;
+  }
+}
+
+function renderSkillUsage(res, allSchools) {
+  const thead = document.getElementById('skillUsageThead');
+  const tbody = document.getElementById('skillUsageTbody');
+  const sum   = document.getElementById('skillUsageSummary');
+
+  // Skills ohne Räume, die es nicht mehr gibt, sind nur Rauschen.
+  // Master PDF hat keine Räume (eigene App) — er stünde immer bei 0.
+  const tools = (res.tools || []).filter(t => (t.rooms > 0 || t.active) && t.tool_id !== 'masterpdf');
+  const max   = Math.max(1, ...tools.map(t => t.rooms));
+  // „Meiste Nutzung“ nur, wenn mehrere Schulen im Spiel sind — bei
+  // einer gefilterten Schule stünde dort überall dieselbe.
+  const cols  = allSchools ? 6 : 5;
+
+  thead.innerHTML = `<tr>
+      <th>Skill</th>
+      <th>Räume</th>
+      <th>davon neu</th>
+      <th>Beitritte</th>
+      <th>Zuletzt genutzt</th>
+      ${allSchools ? '<th>Am meisten genutzt an</th>' : ''}
+    </tr>`;
+
+  if (!tools.length) {
+    tbody.innerHTML = `<tr><td colspan="${cols}" class="empty">Keine Skills.</td></tr>`;
+  } else {
+    tbody.innerHTML = tools.map(t => {
+      const w = Math.round(120 * t.rooms / max);
+      return `<tr class="${t.rooms ? '' : 'usage-none'}">
+        <td><span class="skillcell">${window.MPIcons.label(t.tool_id, t.title || t.tool_id)}</span>
+            ${t.active ? '' : ' <span class="badge closed">abgeschaltet</span>'}</td>
+        <td><strong>${t.rooms}</strong>${t.rooms ? `<span class="usage-bar" style="width:${w}px"></span>` : ''}</td>
+        <td>${t.new_rooms}</td>
+        <td>${t.people}</td>
+        <td>${t.last_at ? escapeHtml(fmtRelative(t.last_at)) : '—'}</td>
+        ${allSchools ? `<td>${t.top_school
+          ? `${escapeHtml(t.top_school)} <span class="hint">(${t.top_count} von ${t.rooms}`
+            + `${t.schools > 1 ? `, ${t.schools} Schulen` : ''})</span>`
+          : '—'}</td>` : ''}
+      </tr>`;
+    }).join('');
+  }
+
+  if (sum) {
+    const tot  = res.total || {};
+    const used = tools.filter(t => t.rooms > 0).length;
+    sum.textContent = `${tot.rooms || 0} ${tot.rooms === 1 ? 'Raum' : 'Räume'} · `
+      + `${tot.people || 0} Beitritte · ${used} von ${tools.length} Skills genutzt`
+      + (allSchools ? ` · ${tot.schools || 0} ${tot.schools === 1 ? 'Schule' : 'Schulen'}` : '')
+      + '.';
   }
 }
 

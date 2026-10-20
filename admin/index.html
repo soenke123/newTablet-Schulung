@@ -374,7 +374,48 @@
         </p>
       </div>
 
+      <!-- Nutzung je Skill (Migration 0216): anonym, überlebt das
+           Löschen der Räume — darum auch „6 Monate“ und „gesamt“. -->
       <div class="card">
+        <h3>Nutzung je Skill</h3>
+        <p class="panel-sub">
+          Wie oft jeder Skill in Räumen genutzt wurde — ohne Namen, ohne Lehrkräfte.
+          Gezählt wird ein Raum, wenn er im Zeitraum aktiv war. Erfasst seit Migration 0216;
+          Räume, die davor schon gelöscht waren, fehlen.
+        </p>
+        <div class="filter-row">
+          <label>Zeitraum
+            <select id="skillUsageDays">
+              <option value="14">Letzte 2 Wochen</option>
+              <option value="90">Letzte 3 Monate</option>
+              <option value="182">Letzte 6 Monate</option>
+              <option value="" selected>Gesamt</option>
+            </select>
+          </label>
+          <label id="skillUsageSchoolWrap" hidden>Schule
+            <select id="skillUsageSchool">
+              <option value="">Alle Schulen</option>
+            </select>
+          </label>
+          <label class="check-inline">
+            <input type="checkbox" id="skillUsageTests" /> Testräume mitzählen
+          </label>
+        </div>
+
+        <p class="panel-sub" id="skillUsageSummary"></p>
+
+        <div class="table-wrap">
+          <table class="dtable" id="skillUsageTable">
+            <thead id="skillUsageThead"></thead>
+            <tbody id="skillUsageTbody">
+              <tr><td colspan="6" class="empty">Lade …</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Räume</h3>
         <div class="filter-row">
           <label>Zeigen
             <select id="skillRoomFilter">

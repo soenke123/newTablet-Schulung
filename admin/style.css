@@ -526,6 +526,20 @@ html, body {
   font-family: inherit;
 }
 
+.filter-row label.check-inline {
+  flex-direction: row; align-items: center; gap: 6px;
+  text-transform: none; letter-spacing: 0; font-size: 13px;
+  padding-bottom: 7px;
+}
+
+/* Nutzung je Skill (MPSkills-Räume): Balken hinter der Raumzahl */
+.usage-bar {
+  display: inline-block; vertical-align: middle;
+  height: 8px; min-width: 2px; margin-left: 8px;
+  border-radius: 4px; background: var(--a-gold);
+}
+.dtable tr.usage-none td { color: var(--a-muted); }
+
 /* ─── View-Umschalter (Verwaltung / Fortschritt / Account) ─── */
 .view-switch {
   display: inline-flex;

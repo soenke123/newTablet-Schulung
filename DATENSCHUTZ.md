@@ -17,6 +17,7 @@ Stand: 9. Oktober 2026. Technische Einschätzung, keine Rechtsberatung. Freigebe
 
 - Anonyme Vokabel-Inseln (Wordisland ohne Konto) laufen nicht ab.
 - Kurse werden nicht automatisch gelöscht.
+- Nutzungsstatistik MPSkills (Migration 0216, Tabelle skill_usage): je Raum nur Skill, Schule, Testraum ja/nein, angelegt/zuletzt aktiv, Zahl der Beitritte — keine Lehrkraft, kein Raumtitel, keine Namen. Bleibt nach dem Löschen des Raums (60 Tage) stehen, ohne Frist, weil nicht personenbezogen; nur Admins sehen sie im Admin-Panel.
 - Master PDF Skill sichert nicht exportierte Arbeit automatisch, aber nur im Browser auf dem Gerät (IndexedDB, nichts auf dem Server). Standard ist „aus“; wer es unter Datei einschaltet, dessen Gerät merkt sich das (in datenschutz.html Abschnitt 9). Auf geteilten Schul-Tablets aus lassen.
 - Fotos in der Projektarbeit: Wird noch geklärt (Einwilligungsstufe, Hinweis, Frist).
 
