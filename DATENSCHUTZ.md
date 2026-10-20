@@ -17,7 +17,7 @@ Stand: 9. Oktober 2026. Technische Einschätzung, keine Rechtsberatung. Freigebe
 
 - Anonyme Vokabel-Inseln (Wordisland ohne Konto) laufen nicht ab.
 - Kurse werden nicht automatisch gelöscht.
-- Master PDF Skill sichert nicht exportierte Arbeit automatisch, aber nur im Browser auf dem Gerät (IndexedDB, nichts auf dem Server). Standard ist „an“, unter Datei kann man es ausschalten (in datenschutz.html Abschnitt 9). Auf geteilten Schul-Tablets beim Unterricht ansagen oder ausschalten.
+- Master PDF Skill sichert nicht exportierte Arbeit automatisch, aber nur im Browser auf dem Gerät (IndexedDB, nichts auf dem Server). Standard ist „aus“; wer es unter Datei einschaltet, dessen Gerät merkt sich das (in datenschutz.html Abschnitt 9). Auf geteilten Schul-Tablets aus lassen.
 - Fotos in der Projektarbeit: Wird noch geklärt (Einwilligungsstufe, Hinweis, Frist).
 
 ## Schritt 1 – Technik einstellen (Betreiber, ca. 1 Stunde)
