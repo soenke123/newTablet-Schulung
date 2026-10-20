@@ -79,6 +79,7 @@ npm test
 - **Text markieren und kopieren** (in beiden Modi, solange kein Werkzeug gewählt ist): mit der Maus über den Text ziehen und **Strg+C** oder **Rechtsklick → Kopieren**; am Tablet und Handy auf ein Wort **gedrückt halten**, mit den Anfassern erweitern und **Kopieren** wählen. Geht über Seitengrenzen hinweg und auf gedrehten Seiten. Strg+C kopiert dann den Text, nicht die Seite. Nur bei Text, der in der PDF als Text vorliegt (nicht bei Scans)
 - **Suche** (Strg+F) im Text aller Seiten: Trefferzahl, Trefferliste mit Textausschnitt und Seitenzahl (Klick auf „x von y“ blendet die Liste ein und aus), Enter/Shift+Enter springt zum nächsten/vorigen Treffer, Treffer sind auf der Seite markiert
 - Responsive Layout-Grundlage und Datei-Drop im Browser
+- **Automatisch sichern**: Solange etwas noch nicht exportiert ist, sichert die App das Dokument (Dateien, Seitenreihenfolge, Zeichnungen, Eingefügtes, Kommentare, Formulareinträge, Textänderungen, Wasserzeichen, Texterkennung, Eigenschaften) laufend **nur im Browser auf diesem Gerät** (IndexedDB), es wird nichts hochgeladen. Lädt die Seite neu, stürzt der Tab ab oder wird er am Tablet geschlossen, fragt die App beim nächsten Öffnen: **Wiederherstellen** oder **Verwerfen**. Nach dem Export des ganzen Dokuments, nach „Neu“ und „PDF öffnen“ wird die Sicherung gelöscht. Schalter unter **Datei → „Automatisch sichern: an/aus“** (pro Gerät gemerkt; Ausschalten löscht die Sicherung sofort) – auf Geräten, die mehrere Personen benutzen, besser ausschalten. Im Schaufenster (`?demo=1`) wird nichts gesichert
 
 ## Ältere Tablets und Browser
 
@@ -86,7 +87,7 @@ PDF.js 5 nutzt sehr neue JavaScript-Funktionen. Fehlt dem Browser eine davon, l�
 
 ## Bewusste Grenzen
 
-- Noch kein automatisches Speichern. Undo/Redo deckt Seitenänderungen, das Hinzufügen weiterer PDFs, Zeichnungen, Eingefügtes, Kommentare und Formulareinträge ab; Exportaktionen sind keine Verlaufsschritte.
+- Automatisch sichern ersetzt nicht den Export: Die Sicherung liegt nur in diesem Browser, verschwindet beim Löschen der Websitedaten und ist keine PDF-Datei. Der Verlauf (Rückgängig) wird nicht mitgesichert, nach dem Wiederherstellen beginnt er leer. Sind zwei Tabs mit der App offen, gilt die Sicherung des zuletzt geänderten. Undo/Redo deckt Seitenänderungen, das Hinzufügen weiterer PDFs, Zeichnungen, Eingefügtes, Kommentare und Formulareinträge ab; Exportaktionen sind keine Verlaufsschritte.
 - Der Hinweis „Nicht gespeichert“ verschwindet nur nach dem Export des kompletten Dokuments in der aktuellen Reihenfolge, nicht nach einem Teil-Export.
 - Bewusst nicht enthalten: PDF aufteilen. Seitenformat-Anzeige und Zuschneiden sind zurückgestellt.
 - Die Suche findet nur Text, der in der PDF als Text vorliegt (keine gescannten Seiten ohne Texterkennung). Treffermarkierungen sind auf das Zeichen genau geschätzt, nicht pixelgenau.
