@@ -40,7 +40,7 @@ jobs:
         with:
           workspaces: desktop/master-pdf/src-tauri
 
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
 
       - run: npm run build
 
@@ -63,11 +63,12 @@ jobs:
           cd ../..
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git status --short
           git add downloads/master-pdf
           if git diff --cached --quiet; then echo "nichts Neues"; exit 0; fi
           git commit -m "Master PDF Skill für Windows: Installer $(node -p "require('./downloads/master-pdf/version.json').version")"
           for i in 1 2 3; do
-            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            git pull --rebase --autostash origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
             sleep 5
           done
           exit 1
