@@ -1,6 +1,7 @@
 /* Phase 2: Frage/Antwort mit Retrieval.
    Zentrum = Ablauf-Fließband + Frage + wachsende Antwort (jedes Wort in der Farbe seines Quelltexts).
-   Rechts: Nachschlagen, Quellen, Wort für Wort, Zufall. Darunter breit: die Wortkarte.
+   Rechts dieselben vier Schritte wie in jeder Phase: Frage zerlegen, Quellen, Kandidaten, Zufall.
+   Darunter breit: die Wortkarte.
    Meldet Fragen (p2-ask) und Wortkarten-Auswahl (p2-map) an den Leitfaden. */
 const SRC = ['A', 'B', 'C'];
 const srcVar = i => 'var(--src-' + ['a', 'b', 'c'][i] + ')';
@@ -94,11 +95,11 @@ Phases.register(2, {
     function updateFlow() {
       const stage = !asked ? 0 : (canned ? 2 : (session && session.steps.length ? 3 : 2));
       Flow.render(flowHost, [
-        { id: 'lookup', label: 'Frage zerlegen', sub: 'Schlüsselwörter', cat: 'context', active: stage === 0 || stage === 1, done: stage > 1 },
-        { id: 'src', label: '3 Texte suchen', sub: 'die besten Treffer', cat: 'origin', active: stage === 2, done: stage > 2 },
-        { id: 'word', label: 'Wort für Wort', sub: 'würfeln & anhängen', cat: 'candidates', active: stage === 3 },
-        { id: 'rand', target: 'rand', label: 'Zufall', sub: 'würfelt mit', cat: 'random' }
-      ], { onPick: id => panelCtrl.reveal(id) });
+        { id: 'lookup', label: 'Frage zerlegen', sub: 'Schlüsselwörter', cat: 'ask', active: stage === 0 || stage === 1, done: stage > 1 },
+        { id: 'src', label: 'Quellen', sub: '3 Texte suchen', cat: 'origin', active: stage === 2, done: stage > 2 },
+        { id: 'word', label: 'Kandidaten', sub: 'aus den 3 Quellen', cat: 'candidates', active: stage === 3 },
+        { id: 'rand', label: 'Zufall', sub: 'würfeln & anhängen', cat: 'random', active: stage === 3 }
+      ], { onPick: id => panelCtrl.reveal(id), help: 'ablauf' });
     }
 
     function ask(q) {
@@ -239,7 +240,7 @@ Phases.register(2, {
       container.appendChild(qw);
       const lg = el('p', 'mini-legend');
       lg.append(el('span', 'chip off sm', 'grau'), document.createTextNode(' Füllwort  '),
-        el('span', 'chip known sm', 'grün'), document.createTextNode(' gefunden  '),
+        el('span', 'chip known sm', 'blau'), document.createTextNode(' gefunden  '),
         el('span', 'chip unknown sm', 'rot'), document.createTextNode(' unbekannt'));
       container.appendChild(lg);
 
@@ -366,9 +367,9 @@ Phases.register(2, {
       center.appendChild(controls);
 
       const items = [
-        { id: 'lookup', label: 'Nachschlagen', cat: 'context', hint: '1', help: 'nachschlagen', render: renderLookupNode },
+        { id: 'lookup', label: 'Frage zerlegen', cat: 'ask', hint: '1', help: 'nachschlagen', render: renderLookupNode },
         { id: 'src', label: 'Quellen', cat: 'origin', hint: '2', help: 'quellen', render: renderSourcesNode },
-        { id: 'word', label: 'Wort für Wort', cat: 'candidates', hint: '3', help: 'wortfuerwort', render: renderWordByWordNode },
+        { id: 'word', label: 'Kandidaten', cat: 'candidates', hint: '3', help: 'wortfuerwort', render: renderWordByWordNode },
         { id: 'rand', label: 'Zufall', cat: 'random', hint: '4', help: 'zufall', manual: true, render: renderRandomNode },
         { id: 'map', label: 'Wortkarte: Welche Wörter gehören zusammen?', cat: 'meaning', wide: true, open: false, manual: true,
           help: 'wortkarte', render: renderMapNode }

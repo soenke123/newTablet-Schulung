@@ -1,13 +1,17 @@
 /* Rechte Erklär-Liste ("Leuchtende Kategorien") — ersetzt das verworfene Orbit-Muster.
-   Jede Erklär-Rolle hat eine feste Signalfarbe, die in allen drei Phasen gleich bleibt:
-     origin     = Herkunft/Quellen/Embedding         (woher kommt das Wort/die Zahl)
-     context    = Kontextfenster/Nachschlagen/Hidden  (was wird gerade angeschaut)
-     candidates = Kandidaten/Wort für Wort/Ausgabe    (was könnte als Nächstes kommen)
-     random     = Zufall/Training                     (was steuert den Zufall/das Lernen)
-     meaning    = Wortkarte/Bedeutung                 (welche Wörter gehören zusammen)
-     net        = Netz-Bild (Neuronen & Kanten)       (der Aufbau der Maschine selbst)
-                  bewusst neutral-graphit: diese Karte zeigt ALLE Schichten auf einmal, und darin
-                  tragen die Schichten weiter ihre eigenen Rollenfarben (origin/context/candidates).
+   Alle drei Phasen haben dieselben vier Schritte an derselben Stelle, mit derselben Nummer und
+   derselben Farbfamilie — so findet man sich in jeder neuen Phase sofort wieder:
+     ① worauf schaut die KI?   Türkis-Familie   context = Kontextfenster (P1)
+                                                ask     = Frage zerlegen (P2)
+                                                embed   = Embedding (P3: das Kontextfenster als Zahlen)
+     ② woher nimmt sie es?     Bernstein-Fam.   origin  = Quellen (P1, P2)
+                                                hidden  = Hidden-Schicht (P3: keine Texte mehr, nur Zahlen)
+     ③ candidates = Kandidaten (alle Phasen)    ④ random = Zufall (alle Phasen)
+   Was zu keinem der vier Schritte gehört, hat eine eigene Farbe ohne Nummer:
+     meaning = Wortkarte (P2) · train = Training (P3, läuft neben dem Schreiben)
+     net     = Netz-Bild, bewusst neutral-graphit: diese Karte zeigt ALLE Schichten auf einmal, und
+               darin tragen die Schichten weiter ihre eigenen Farben (embed/hidden/candidates).
+   Das Ablauf-Band (flow.js) nutzt dieselben Namen und Farben wie die Karten.
 
    Jede Karte ist EINZELN auf- und zuklappbar (Tipp auf den Kopf); der Zustand wird je Phase in
    localStorage gemerkt. Erklärt wird NICHT auf der Karte, sondern hinter dem ?-Knopf im Kopf
@@ -27,7 +31,11 @@ const CAT = {
   context: { color: 'var(--cat-context)', tint: 'var(--cat-context-tint)' },
   candidates: { color: 'var(--cat-candidates)', tint: 'var(--cat-candidates-tint)' },
   random: { color: 'var(--cat-random)', tint: 'var(--cat-random-tint)' },
+  ask: { color: 'var(--cat-ask)', tint: 'var(--cat-ask-tint)' },
+  embed: { color: 'var(--cat-embed)', tint: 'var(--cat-embed-tint)' },
+  hidden: { color: 'var(--cat-hidden)', tint: 'var(--cat-hidden-tint)' },
   meaning: { color: 'var(--cat-meaning)', tint: 'var(--cat-meaning-tint)' },
+  train: { color: 'var(--cat-train)', tint: 'var(--cat-train-tint)' },
   net: { color: 'var(--cat-net)', tint: 'var(--cat-net-tint)' }
 };
 

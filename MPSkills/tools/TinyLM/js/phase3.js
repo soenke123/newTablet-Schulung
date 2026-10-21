@@ -1,5 +1,7 @@
-/* Phase 3: echtes neuronales Netz. Zentrum = Kontext -> Vorhersage + Trainings-Steuerung;
-   rechts die Erklärkarten zu den Schichten, unten breit das echte Netz-Bild (netview.js).
+/* Phase 3: echtes neuronales Netz. Zentrum = Vorhersage + Wahl des Kontextfensters;
+   rechts dieselben vier Schritte wie in Phase 1/2 (① Embedding · ② Hidden-Schicht · ③ Kandidaten ·
+   ④ Zufall, siehe panel.js) und darunter, ohne Nummer, das Training; unten breit das echte
+   Netz-Bild (netview.js).
 
    WICHTIG — warum hier nicht panelCtrl.refreshAll() läuft:
    Der Trainings-Tick aktualisiert die Anzeige mehrmals pro Sekunde. Würde er dabei die Karten
@@ -54,7 +56,7 @@ function renderSparkline(history, w, h) {
   const poly = document.createElementNS(ns, 'polyline');
   poly.setAttribute('points', pts);
   poly.setAttribute('fill', 'none');
-  poly.setAttribute('stroke', 'var(--cat-random)');
+  poly.setAttribute('stroke', 'var(--cat-train)');
   poly.setAttribute('stroke-width', '2.5');
   poly.setAttribute('stroke-linejoin', 'round');
   poly.setAttribute('vector-effect', 'non-scaling-stroke');
@@ -84,11 +86,11 @@ Phases.register(3, {
 
     function updateFlow() {
       Flow.render(flowHost, [
-        { id: 'embed', label: data.C + ' Wörter', sub: '→ Zahlen', cat: 'origin' },
-        { id: 'hidden', label: 'Mischen', sub: 'Hidden-Schicht', cat: 'context' },
-        { id: 'output', label: 'Prozente', sub: 'für jedes Wort', cat: 'candidates' },
-        { id: 'train', label: 'Lernen', sub: 'Zahlen korrigieren', cat: 'random' }
-      ], { onPick: id => panelCtrl.reveal(id) });
+        { id: 'embed', label: 'Embedding', sub: data.C + ' Wörter → Zahlen', cat: 'embed' },
+        { id: 'hidden', label: 'Hidden-Schicht', sub: 'Zahlen mischen', cat: 'hidden' },
+        { id: 'output', label: 'Kandidaten', sub: 'Prozente vom Netz', cat: 'candidates' },
+        { id: 'rand', label: 'Zufall', sub: 'würfeln & anhängen', cat: 'random' }
+      ], { onPick: id => panelCtrl.reveal(id), help: 'ablauf' });
     }
 
     function freshGenSession() {
@@ -124,7 +126,7 @@ Phases.register(3, {
     }
     /* Vollständiges Neuaufbauen — nur erlaubt, wenn gerade keine Schleife läuft. */
     function rebuildCards() {
-      ['embed', 'hidden', 'output', 'train'].forEach(id => panelCtrl.refresh(id));
+      ['embed', 'hidden', 'output', 'rand', 'train'].forEach(id => panelCtrl.refresh(id));
       if (live.net && panelCtrl.isOpen('net')) live.net();
       syncTrainUI();
     }
@@ -281,17 +283,22 @@ Phases.register(3, {
         Heat.render(heatHost, cands, { maxRows: 8, accent: 'var(--cat-candidates)' });
       }
       paint();
+      live.output = paint;
+    }
 
+    /* Zufall als eigene Karte wie in Phase 1/2. Ohne live-Funktion: hier ändert sich beim Training
+       nichts, und der Regler darf beim Ziehen nicht neu gebaut werden. */
+    function renderRandNode(container) {
+      container.replaceChildren();
       const sl = Info.slider({
-        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, fmt: de1, help: 'zufall', ends: ['🎯 sicher', 'wild 🌪️'],
+        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
         onInput: v => {
           temp = Math.round(v * 10) / 10;
-          paint();
+          if (live.output && panelCtrl.isOpen('output')) live.output();
           if (live.net && panelCtrl.isOpen('net')) live.net();
         }
       });
       container.appendChild(sl.el);
-      live.output = paint;
     }
 
     function renderNetNode(container) {
@@ -461,7 +468,7 @@ Phases.register(3, {
       /* Wie weit schaut das Netz zurück? Wechsel = neues Netz (render baut alles neu). */
       const ctxRow = el('div', 'ctxpick');
       ctxRow.dataset.spot = 'ctxlen';
-      ctxRow.appendChild(el('span', 'small', 'Das Netz sieht die letzten'));
+      ctxRow.appendChild(el('span', 'small', 'Kontextfenster: die letzten'));
       const ctxBtns = el('div', 'ctxpick-btns');
       ctxBtns.setAttribute('role', 'radiogroup');
       ctxBtns.setAttribute('aria-label', 'Wie viele Wörter sieht das Netz?');
@@ -488,10 +495,11 @@ Phases.register(3, {
       if (!texts.length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – öffne oben „Textwelten“.'));
 
       const items = [
-        { id: 'embed', label: 'Embedding', cat: 'origin', hint: '1', help: 'embedding', manual: true, render: renderEmbedNode },
-        { id: 'hidden', label: 'Hidden-Schicht', cat: 'context', hint: '2', help: 'hidden', manual: true, render: renderHiddenNode },
-        { id: 'output', label: 'Ausgabe', cat: 'candidates', hint: '3', help: 'ausgabe', manual: true, render: renderOutputNode },
-        { id: 'train', label: 'Training', cat: 'random', hint: '4', help: 'training', manual: true, onClose: pauseTraining, render: renderTrainNode },
+        { id: 'embed', label: 'Embedding', cat: 'embed', hint: '1', help: 'embedding', manual: true, render: renderEmbedNode },
+        { id: 'hidden', label: 'Hidden-Schicht', cat: 'hidden', hint: '2', help: 'hidden', manual: true, render: renderHiddenNode },
+        { id: 'output', label: 'Kandidaten', cat: 'candidates', hint: '3', help: 'ausgabe', manual: true, render: renderOutputNode },
+        { id: 'rand', label: 'Zufall', cat: 'random', hint: '4', help: 'zufall', manual: true, render: renderRandNode },
+        { id: 'train', label: 'Training', cat: 'train', help: 'training', manual: true, onClose: pauseTraining, render: renderTrainNode },
         { id: 'net', label: 'Das Netz von innen', cat: 'net', wide: true, manual: true, open: false, help: 'netz', render: renderNetNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 3 });

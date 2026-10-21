@@ -9,7 +9,7 @@
    Help.close()
 
    Ein HELP-Eintrag: { title, icon, text, cat, vis }
-     cat  = Kategoriefarbe (origin/context/candidates/random/meaning/net), sonst Akzent
+     cat  = Kategoriefarbe (Schlüssel aus panel.js CAT), sonst Akzent
      vis  = Mini-Bild, eins von:
        { type: 'tokens', items: [[wort, art]] }  art: '' | 'dim' | 'win' | 'next' | 's0'…'s2'
        { type: 'bars',   items: [[wort, prozent]] }
@@ -38,8 +38,8 @@ const HELP = {
   },
   ablauf: {
     title: 'Der Ablauf', icon: '🔁',
-    text: 'Diese Schritte laufen für jedes einzelne Wort neu – immer und immer wieder.',
-    vis: { type: 'cycle', items: [['👀', 'schauen'], ['🔎', 'suchen'], ['🎲', 'würfeln'], ['➕', 'anhängen']], loop: true }
+    text: 'Diese 4 Schritte laufen für jedes Wort neu – in jeder Phase, mit denselben Farben. Von Phase zu Phase wird nur anders geschaut und nachgesehen.',
+    vis: { type: 'cycle', items: [['👀', 'schauen'], ['📑', 'nachsehen'], ['📊', 'Kandidaten'], ['🎲', 'würfeln']], loop: true }
   },
   kontext: {
     title: 'Kontextfenster', icon: '👀', cat: 'context',
@@ -47,18 +47,18 @@ const HELP = {
     vis: { type: 'tokens', items: [['Gestern', 'dim'], ['ging', 'dim'], ['der', 'dim'], ['Hund', 'win'], ['schnell', 'win'], ['?', 'next']] }
   },
   kandidaten: {
-    title: 'Kandidaten', icon: '🎲', cat: 'candidates',
+    title: 'Kandidaten', icon: '📊', cat: 'candidates',
     text: 'Was stand in deinen Texten hinter diesen Wörtern? Je öfter, desto länger der Balken – und desto eher wird es gewürfelt.',
     vis: { type: 'bars', items: [['Futter', 55], ['Fleisch', 30], ['Gras', 15]] }
   },
   zufall: {
-    title: 'Zufall (Temperatur)', icon: '🌡️', cat: 'random',
+    title: 'Zufall', icon: '🌡️', cat: 'random',
     text: 'Wie mutig würfelt die KI? Bei 0 nimmt sie immer den längsten Balken, bei 2 hat auch Seltenes eine Chance.',
     vis: { type: 'scale', items: [['🎯', '0', 'sicher'], ['🎲', '1', 'normal'], ['🌪️', '2', 'wild']] }
   },
   herkunft: {
-    title: 'Herkunft', icon: '🧩', cat: 'origin',
-    text: 'Kein Wort ist erfunden. Jedes stammt aus einem deiner Texte – die Farbe zeigt, aus welchem.',
+    title: 'Quellen', icon: '📑', cat: 'origin',
+    text: 'Hier sieht die KI nach: in allen deinen Texten. Kein Wort ist erfunden – die Farbe zeigt, aus welchem Text es stammt.',
     vis: { type: 'tokens', items: [['Der', 's0'], ['Hund', 's0'], ['frisst', 's1'], ['Fisch', 's1'], ['im', 's2'], ['Meer', 's2']] }
   },
 
@@ -69,18 +69,18 @@ const HELP = {
     vis: { type: 'cycle', items: [['❓', 'Frage'], ['🔎', 'suchen'], ['📑', '3 Texte'], ['💬', 'Antwort']] }
   },
   nachschlagen: {
-    title: 'Nachschlagen', icon: '🔎', cat: 'context',
+    title: 'Frage zerlegen', icon: '🔎', cat: 'ask',
     text: 'Füllwörter fliegen raus. Der Rest wird auf die Grundform gekürzt und in den Texten gesucht.',
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
   },
   quellen: {
-    title: 'Quellen A · B · C', icon: '📑', cat: 'origin',
-    text: 'Die 3 Texte, die am besten zu deiner Frage passen. Nur aus ihnen wird die Antwort gebaut.',
+    title: 'Quellen', icon: '📑', cat: 'origin',
+    text: 'Anders als in Phase 1 sieht die KI nur in 3 Texten nach: denen, die am besten zu deiner Frage passen (A · B · C).',
     vis: { type: 'abc' }
   },
   wortfuerwort: {
-    title: 'Wort für Wort', icon: '✏️', cat: 'candidates',
-    text: 'Immer nur ein Wort: Kandidaten sammeln, würfeln, anhängen – und wieder von vorn.',
+    title: 'Kandidaten', icon: '📊', cat: 'candidates',
+    text: 'Was stand in den 3 Quellen hinter diesen Wörtern? Die Balkenfarbe zeigt, aus welcher Quelle.',
     vis: { type: 'bars', items: [['Napf', 60], ['Park', 25], ['Wasser', 15]] }
   },
   wortkarte: {
@@ -96,32 +96,32 @@ const HELP = {
     vis: { type: 'cycle', items: [['📚', 'Texte'], ['🔢', 'Zahlen'], ['🧠', 'Netz'], ['💬', 'Wort']] }
   },
   embedding: {
-    title: 'Embedding', icon: '🔢', cat: 'origin',
-    text: 'Für das Netz ist jedes Wort nur eine Reihe Zahlen. Rot heißt plus, blau heißt minus.',
+    title: 'Embedding', icon: '🔢', cat: 'embed',
+    text: 'Die Wörter im Kontextfenster werden zu Zahlen – jedes Wort eine feste Reihe. Rot heißt plus, blau heißt minus.',
     vis: { type: 'swatch', label: 'Hund', values: [0.9, -0.4, 0.2, -0.9, 0.6, 0.1, -0.2, 0.8, -0.6, 0.3, 0, -0.8] }
   },
   hidden: {
-    title: 'Hidden-Schicht', icon: '📦', cat: 'context',
-    text: 'Hier werden die Zahlen aller Wörter gemischt. Keine einzelne Zahl bedeutet etwas – nur alle zusammen.',
+    title: 'Hidden-Schicht', icon: '📦', cat: 'hidden',
+    text: 'Statt in Quellen nachzusehen, mischt das Netz hier die Zahlen mit dem, was es gelernt hat. Keine einzelne Zahl bedeutet etwas – nur alle zusammen.',
     vis: { type: 'swatch', label: '?', values: [0.3, -0.7, 0.9, 0.1, -0.2, 0.5, -0.9, 0.4, 0.7, -0.3, 0.2, -0.5] }
   },
   ausgabe: {
-    title: 'Ausgabe', icon: '📊', cat: 'candidates',
-    text: 'Am Ende bekommt jedes Wort einen Prozentwert. Daraus wird gewürfelt – genau wie in Phase 1.',
+    title: 'Kandidaten', icon: '📊', cat: 'candidates',
+    text: 'Die Ausgabe des Netzes: jedes Wort bekommt einen Prozentwert, ganz ohne Texte. Daraus wird gewürfelt – genau wie in Phase 1.',
     vis: { type: 'bars', items: [['Hund', 48], ['Katze', 31], ['Napf', 21]] }
   },
   kontextnetz: {
-    title: 'Wie weit schaut das Netz zurück?', icon: '👀', cat: 'context',
+    title: 'Kontextfenster', icon: '👀', cat: 'context',
     text: 'Mehr Wörter im Blick = geradere Sätze. Aber das Netz muss neu lernen und schreibt die Texte eher wörtlich ab.',
     vis: { type: 'tokens', items: [['Der', 'dim'], ['kleine', 'win'], ['Hund', 'win'], ['frisst', 'win'], ['?', 'next']] }
   },
   training: {
-    title: 'Training', icon: '🏋️', cat: 'random',
+    title: 'Training', icon: '🏋️', cat: 'train',
     text: 'Raten, mit dem echten Wort vergleichen, alle Zahlen ein Stück korrigieren. Erst grob, dann immer feiner – tausende Male.',
     vis: { type: 'cycle', items: [['🤔', 'raten'], ['✅', 'vergleichen'], ['🔧', 'korrigieren']], loop: true }
   },
   fehler: {
-    title: 'Fehlerlinie', icon: '📉', cat: 'random',
+    title: 'Fehlerlinie', icon: '📉', cat: 'train',
     text: 'Wie sehr lag das Netz daneben? Fällt die Linie, dann lernt es.',
     vis: { type: 'line' }
   },
@@ -187,7 +187,7 @@ const Help = (() => {
       box.appendChild(el('span', 'hv-arrow', '→'));
       box.appendChild(el('span', 'hv-ico', '💬'));
     } else if (v.type === 'line') {
-      box.innerHTML = '<svg viewBox="0 0 200 60" aria-hidden="true"><polyline points="4,8 30,20 55,30 80,36 110,44 140,48 170,51 196,52" fill="none" stroke="var(--cat-random)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="6" y="58" font-size="10" fill="var(--muted)">Start</text><text x="160" y="40" font-size="10" fill="var(--muted)">gelernt</text></svg>';
+      box.innerHTML = '<svg viewBox="0 0 200 60" aria-hidden="true"><polyline points="4,8 30,20 55,30 80,36 110,44 140,48 170,51 196,52" fill="none" stroke="var(--cat-train)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><text x="6" y="58" font-size="10" fill="var(--muted)">Start</text><text x="160" y="40" font-size="10" fill="var(--muted)">gelernt</text></svg>';
     } else if (v.type === 'dots') {
       box.innerHTML = '<svg viewBox="0 0 220 80" aria-hidden="true">'
         + '<circle cx="40" cy="30" r="5" fill="var(--t-tiere)"/><circle cx="58" cy="44" r="5" fill="var(--t-tiere)"/><circle cx="30" cy="52" r="5" fill="var(--t-tiere)"/>'
@@ -203,7 +203,7 @@ const Help = (() => {
       for (let a = 0; a < 2; a++) L[a][1].forEach((y1, i) => L[a + 1][1].forEach((y2, j) => {
         s += '<line x1="' + L[a][0] + '" y1="' + y1 + '" x2="' + L[a + 1][0] + '" y2="' + y2 + '" stroke="' + col(i, j) + '" stroke-width="' + (1 + ((i + j) % 3)) + '" opacity=".55"/>';
       }));
-      const ring = ['var(--cat-origin)', 'var(--cat-context)', 'var(--cat-candidates)'];
+      const ring = ['var(--cat-embed)', 'var(--cat-hidden)', 'var(--cat-candidates)'];
       L.forEach(([x, ys], a) => ys.forEach(y => { s += '<circle cx="' + x + '" cy="' + y + '" r="6" fill="var(--surface)" stroke="' + ring[a] + '" stroke-width="2"/>'; }));
       box.innerHTML = s + '</svg>';
     }

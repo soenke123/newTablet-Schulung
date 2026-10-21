@@ -1,7 +1,7 @@
 /* Farb- und Typografie-Variablen.
    Grund und Schrift folgen MPSkills (Outfit/Inter, kühles Papier, grüner Akzent) — Tiny LM steckt
    dort im Rahmen und soll wie ein Teil davon aussehen. Die Signalfarben --cat-* tragen Bedeutung
-   ("Leuchtende Kategorien", siehe panel.js CAT): dieselbe Rolle hat in jeder Phase dieselbe Farbe.
+   ("Leuchtende Kategorien", siehe panel.js CAT): derselbe Schritt hat in jeder Phase dieselbe Farbfamilie.
    Hell/Dunkel per prefers-color-scheme, überschreibbar via data-theme (app.js übernimmt das
    data-theme der umgebenden MPSkills-Seite). */
 :root {
@@ -21,17 +21,29 @@
   --shadow: 0 2px 4px rgba(13,26,23,.04), 0 12px 28px -14px rgba(13,26,23,.22);
   --shadow-pop: 0 10px 30px rgba(13,26,23,.18);
 
-  /* Kategorie-Signalfarben: dieselbe Rolle hat in jeder Phase immer dieselbe Farbe. */
-  --cat-origin: #E39A2A;       /* Herkunft/Quellen/Embedding */
-  --cat-origin-tint: #F8DDAE;
-  --cat-context: #14A18F;      /* Kontextfenster/Nachschlagen/Hidden-Schicht */
+  /* Kategorie-Signalfarben. Jede Phase hat dieselben vier Schritte an derselben Stelle:
+       ① worauf die KI schaut (Türkis-Familie)  ② woher sie das Wort nimmt (Bernstein-Familie)
+       ③ Kandidaten (Koralle)                   ④ Zufall (Violett)
+     Was im selben Schritt steht, aber etwas anderes ist, bekommt einen Ton derselben Familie.
+     Was zu keinem Schritt gehört (Wortkarte, Training, Netz-Bild), hat eine eigene Farbe. */
+  --cat-context: #14A18F;      /* ① Kontextfenster (P1, P3-Wahl) */
   --cat-context-tint: #B5EBE2;
-  --cat-candidates: #E5534A;   /* Kandidaten/Wort für Wort/Ausgabe */
+  --cat-ask: #1590B5;          /* ① Frage zerlegen (P2) — Türkis, ins Blaue */
+  --cat-ask-tint: #BFE6F2;
+  --cat-embed: #2E7491;        /* ① Embedding (P3) — Türkis, ins Petrol */
+  --cat-embed-tint: #C6DDE7;
+  --cat-origin: #E39A2A;       /* ② Quellen (P1, P2) */
+  --cat-origin-tint: #F8DDAE;
+  --cat-hidden: #A86A1E;       /* ② Hidden-Schicht (P3) — Bernstein, ins Bronze: das Wissen steckt jetzt in Zahlen */
+  --cat-hidden-tint: #EED7B8;
+  --cat-candidates: #E5534A;   /* ③ Kandidaten (alle Phasen) */
   --cat-candidates-tint: #FAD0CA;
-  --cat-random: #7C4DFF;       /* Zufall/Training */
+  --cat-random: #7C4DFF;       /* ④ Zufall (alle Phasen) */
   --cat-random-tint: #DDD1FF;
-  --cat-meaning: #3F6FD8;      /* Wortkarte/Bedeutung */
+  --cat-meaning: #3F6FD8;      /* Wortkarte (P2, kein Schritt) */
   --cat-meaning-tint: #C9D7F8;
+  --cat-train: #C2398A;        /* Training (P3, kein Schritt: läuft neben dem Schreiben) */
+  --cat-train-tint: #F5CDE3;
   --cat-net: #475853;          /* Netz-Bild: Aufbau der Maschine selbst (neutral) */
   --cat-net-tint: #DCE4E1;
 
@@ -68,11 +80,15 @@
     --accent: #35d39a; --accent-ink: #6fe6b9; --accent-dim: rgba(53,211,154,.14); --accent-edge: rgba(53,211,154,.42);
     --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
     --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
-    --cat-origin: #F2B354; --cat-origin-tint: #4A3A1E;
     --cat-context: #4FD6C3; --cat-context-tint: #183D38;
+    --cat-ask: #4CC3E8; --cat-ask-tint: #16384A;
+    --cat-embed: #6BB3D1; --cat-embed-tint: #1A3240;
+    --cat-origin: #F2B354; --cat-origin-tint: #4A3A1E;
+    --cat-hidden: #D49452; --cat-hidden-tint: #46301A;
     --cat-candidates: #FF7A68; --cat-candidates-tint: #4D2620;
     --cat-random: #A88BFF; --cat-random-tint: #2F2650;
     --cat-meaning: #7FA8FF; --cat-meaning-tint: #1E2F5A;
+    --cat-train: #F07ABF; --cat-train-tint: #4A1F38;
     --cat-net: #B9C3D6; --cat-net-tint: #2A2F3D;
     --src-a: #E08058; --src-b: #5FA3B0; --src-c: #E0C256;
     --t-sonne: #A88BFF; --t-tiere: #F2B354; --t-ki: #5FA3B0; --t-schule: #E57AA8; --t-berufe: #93C45A; --t-meer: #4FD6C3; --t-eigen: #a4a9bd;
@@ -87,11 +103,15 @@
   --accent: #35d39a; --accent-ink: #6fe6b9; --accent-dim: rgba(53,211,154,.14); --accent-edge: rgba(53,211,154,.42);
   --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
   --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
-  --cat-origin: #F2B354; --cat-origin-tint: #4A3A1E;
   --cat-context: #4FD6C3; --cat-context-tint: #183D38;
+  --cat-ask: #4CC3E8; --cat-ask-tint: #16384A;
+  --cat-embed: #6BB3D1; --cat-embed-tint: #1A3240;
+  --cat-origin: #F2B354; --cat-origin-tint: #4A3A1E;
+  --cat-hidden: #D49452; --cat-hidden-tint: #46301A;
   --cat-candidates: #FF7A68; --cat-candidates-tint: #4D2620;
   --cat-random: #A88BFF; --cat-random-tint: #2F2650;
   --cat-meaning: #7FA8FF; --cat-meaning-tint: #1E2F5A;
+  --cat-train: #F07ABF; --cat-train-tint: #4A1F38;
   --cat-net: #B9C3D6; --cat-net-tint: #2A2F3D;
   --src-a: #E08058; --src-b: #5FA3B0; --src-c: #E0C256;
   --t-sonne: #A88BFF; --t-tiere: #F2B354; --t-ki: #5FA3B0; --t-schule: #E57AA8; --t-berufe: #93C45A; --t-meer: #4FD6C3; --t-eigen: #a4a9bd;

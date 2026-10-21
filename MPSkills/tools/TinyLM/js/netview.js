@@ -1,9 +1,9 @@
 /* NetView — eine ECHTE Darstellung des Mini-Netzes aus phase3-net.js.
    Jeder gezeichnete Punkt ist ein Neuron, jede Linie eine echte Kante mit ihrem echten Gewicht
    aus net.W1 / net.W2 (nichts ist Deko oder Zufallsgrafik):
-     Eingang  = C × d Zahlen (die Embeddings der Kontextwörter)  -> Farbe der Kategorie "origin"
-     Hidden   = net.H Neuronen mit tanh                          -> Kategorie "context"
-     Ausgabe  = ein Neuron pro Wort im Vokabular                 -> Kategorie "candidates"
+     Eingang  = C × d Zahlen (die Embeddings der Kontextwörter)  -> Kategorie "embed"   (Schritt ①)
+     Hidden   = net.H Neuronen mit tanh                          -> Kategorie "hidden"  (Schritt ②)
+     Ausgabe  = ein Neuron pro Wort im Vokabular                 -> Kategorie "candidates" (③)
                 (gezeichnet werden die SHOW stärksten + ein Sammelpunkt für den Rest)
    Kantenfarbe = Vorzeichen des Gewichts (--src-a positiv / --src-b negativ),
    Deckkraft/Dicke = Betrag; Füllung eines Neurons = sein aktueller Wert.
@@ -112,7 +112,7 @@ const NetView = (() => {
       const net = N(), data = D();
       const ink = cssVar('--ink'), muted = cssVar('--muted'), surface = cssVar('--surface'), line = cssVar('--line');
       const pos = cssVar('--src-a'), neg = cssVar('--src-b');
-      const cIn = cssVar('--cat-origin'), cHid = cssVar('--cat-context'), cOut = cssVar('--cat-candidates');
+      const cIn = cssVar('--cat-embed'), cHid = cssVar('--cat-hidden'), cOut = cssVar('--cat-candidates');
       const fd = '"Outfit", system-ui, sans-serif';
       const fb = '"Inter", system-ui, sans-serif';
       cx.clearRect(0, 0, cw, ch);
@@ -454,8 +454,8 @@ const NetView = (() => {
       host.appendChild(wrap);
 
       const lg = el('div', 'srcchips');
-      [['var(--src-a)', 'plus / schiebt an'], ['var(--src-b)', 'minus / bremst'], ['var(--cat-origin)', 'Eingang'],
-        ['var(--cat-context)', 'Hidden'], ['var(--cat-candidates)', 'Ausgabe']].forEach(([c, t]) => {
+      [['var(--src-a)', 'plus / schiebt an'], ['var(--src-b)', 'minus / bremst'], ['var(--cat-embed)', 'Eingang'],
+        ['var(--cat-hidden)', 'Hidden'], ['var(--cat-candidates)', 'Ausgabe']].forEach(([c, t]) => {
         const chip = el('span', 'srcchip');
         const d = el('i', 'dot'); d.style.background = c;
         chip.append(d, el('span', 'srcchip-t', t));

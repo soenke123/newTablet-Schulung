@@ -48,7 +48,7 @@ const Guide = (() => {
         task: 'Jetzt das Gegenteil: Kontextfenster auf 6 und weiterschreiben.',
         aha: 'Mit 6 Wörtern Rückblick schreibt die KI ganze Sätze einfach ab.',
         check: e => e.type === 'p1-word' && e.n === 6 && e.run >= 8 },
-      { id: '1-zufall', icon: '🎯', label: 'Zufall 0', spot: 'temp', card: 'cand',
+      { id: '1-zufall', icon: '🎯', label: 'Zufall 0', spot: 'temp', card: 'rand',
         task: 'Dreh den Zufall auf 0 und lass weiterschreiben.',
         aha: 'Ohne Zufall nimmt die KI immer das häufigste Wort.',
         check: e => e.type === 'p1-word' && e.temp === 0 && e.run >= 6 }

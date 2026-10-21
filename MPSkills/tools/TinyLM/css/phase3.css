@@ -20,8 +20,8 @@
 /* Trainings-Block in der rechten Karte "Training": wird während des Trainings nie neu gebaut,
    damit "anhalten" jederzeit antippbar ist (siehe Kopfkommentar in phase3.js). */
 .trainbox {
-  border: 1px solid color-mix(in srgb, var(--cat-random) 35%, var(--line)); border-radius: 14px;
-  background: color-mix(in srgb, var(--cat-random-tint) 22%, var(--surface)); padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--cat-train) 35%, var(--line)); border-radius: 14px;
+  background: color-mix(in srgb, var(--cat-train-tint) 22%, var(--surface)); padding: 10px 12px;
   display: flex; flex-direction: column; gap: 8px;
 }
 .trainbox-head { display: flex; align-items: center; gap: 8px; }
@@ -29,13 +29,13 @@
 .trainbox-head .counter { margin-left: auto; }
 .trainbox-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .trainbox-btns { margin: 8px 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.train-btn { background: var(--cat-random); border-color: var(--cat-random); }
-.train-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--cat-random) 80%, var(--ink)); border-color: color-mix(in srgb, var(--cat-random) 80%, var(--ink)); }
+.train-btn { background: var(--cat-train); border-color: var(--cat-train); }
+.train-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--cat-train) 80%, var(--ink)); border-color: color-mix(in srgb, var(--cat-train) 80%, var(--ink)); }
 .trainbox-spark { flex: 1 1 180px; min-width: 150px; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; }
 .trainbox-spark .spark-host { height: 44px; }
 .trainbox-spark-lab { font-size: 0.72rem; color: var(--muted); font-weight: 600; writing-mode: vertical-rl; transform: rotate(180deg); }
 .net-live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
-.net-live-dot.on { background: var(--cat-random); animation: netpulse 1s ease-in-out infinite; }
+.net-live-dot.on { background: var(--cat-train); animation: netpulse 1s ease-in-out infinite; }
 @keyframes netpulse { 50% { opacity: 0.25; transform: scale(0.7); } }
 
 .net-arch { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; }
@@ -45,7 +45,7 @@
 .ctxpick-btns { display: inline-flex; gap: 4px; }
 .ctxpick-btns .chip { min-width: 2.2rem; justify-content: center; font-family: var(--font-mono); }
 
-.ctxpick-btns .chip.trained:not(.active) { border-color: var(--cat-random); }
+.ctxpick-btns .chip.trained:not(.active) { border-color: var(--cat-train); }
 
 /* Phase 3: rechte Spalte (die Erklär-Karten) breit, Zentrum schmal — dort steht der meiste Text. */
 @media (min-width: 981px) {

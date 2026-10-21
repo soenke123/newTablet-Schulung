@@ -1,6 +1,7 @@
 /* Phase 1: freies Schreiben ohne Frage.
    Zentrum = Ablauf-Fließband + wachsender Text (jedes Wort in der Farbe seines Quelltexts);
-   rechts zeigen drei Karten, was die Maschine gerade tut. Erklärt wird hinter den ?-Knöpfen.
+   rechts zeigen die vier Schritte (Kontextfenster · Quellen · Kandidaten · Zufall — in jeder Phase
+   gleich, siehe panel.js), was die Maschine gerade tut. Erklärt wird hinter den ?-Knöpfen.
    Meldet jedes geschriebene Wort an den Leitfaden (p1-word). */
 function sourceColor(si) {
   const hue = Math.round((si * 137.508) % 360);
@@ -77,10 +78,10 @@ Phases.register(1, {
     function updateFlow() {
       const started = session.steps.length > 0;
       Flow.render(flowHost, [
-        { id: 'ctx', label: n + (n === 1 ? ' Wort' : ' Wörter'), sub: 'anschauen', cat: 'context', active: started },
-        { id: 'cand', label: 'Nachsehen', sub: 'was kam danach?', cat: 'candidates', active: started },
-        { id: 'cand2', target: 'cand', label: 'Würfeln', sub: 'nach Häufigkeit', cat: 'random', active: started },
-        { id: 'origin', label: 'Anhängen', sub: 'und von vorn', cat: 'origin', active: started }
+        { id: 'ctx', label: 'Kontextfenster', sub: n + (n === 1 ? ' Wort anschauen' : ' Wörter anschauen'), cat: 'context', active: started },
+        { id: 'origin', label: 'Quellen', sub: 'was kam danach?', cat: 'origin', active: started },
+        { id: 'cand', label: 'Kandidaten', sub: 'nach Häufigkeit', cat: 'candidates', active: started },
+        { id: 'rand', label: 'Zufall', sub: 'würfeln & anhängen', cat: 'random', active: started }
       ], { onPick: id => panelCtrl.reveal(id), help: 'ablauf' });
     }
 
@@ -118,9 +119,10 @@ Phases.register(1, {
       syncPlay();
     }
 
-    /* Kontext- und Kandidatenkarte tragen Regler. Würden sie bei jedem Wort neu gebaut, wäre der
+    /* Kontext- und Zufallskarte tragen Regler. Würden sie bei jedem Wort neu gebaut, wäre der
        Regler mitten im Ziehen weg (dasselbe Problem wie der Stopp-Knopf in Phase 3). Deshalb sind
-       beide manual und hinterlegen in live[id] eine Funktion, die nur die Anzeige auffrischt. */
+       sie manual (die Kandidatenkarte auch: sie hängt am Zufall) und hinterlegen in live[id] eine
+       Funktion, die nur die Anzeige auffrischt; die Zufallskarte braucht keine. */
     const live = {};
 
     function paintStrip(strip) {
@@ -178,13 +180,17 @@ Phases.register(1, {
         Heat.render(heatHost, C.list.map(a => ({ word: a.word, label: showWord(a.word), p: a.p })), { maxRows: 6, accent: 'var(--cat-candidates)' });
       }
       paint();
+      live.cand = () => { if (heatHost.isConnected) paint(); };
+    }
+
+    function renderRandNode(container) {
+      container.replaceChildren();
       const sl = Info.slider({
-        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp', help: 'zufall',
+        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp',
         fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
-        onInput: v => { temp = Math.round(v * 10) / 10; run = 0; paint(); }
+        onInput: v => { temp = Math.round(v * 10) / 10; run = 0; if (live.cand) live.cand(); }
       });
       container.appendChild(sl.el);
-      live.cand = () => { if (heatHost.isConnected) paint(); };
     }
 
     function renderOriginNode(container) {
@@ -251,8 +257,9 @@ Phases.register(1, {
 
       const items = [
         { id: 'ctx', label: 'Kontextfenster', cat: 'context', hint: '1', help: 'kontext', manual: true, render: renderCtxNode },
-        { id: 'cand', label: 'Kandidaten & Zufall', cat: 'candidates', hint: '2·3', help: 'kandidaten', manual: true, render: renderCandNode },
-        { id: 'origin', label: 'Herkunft', cat: 'origin', hint: '4', help: 'herkunft', render: renderOriginNode }
+        { id: 'origin', label: 'Quellen', cat: 'origin', hint: '2', help: 'herkunft', render: renderOriginNode },
+        { id: 'cand', label: 'Kandidaten', cat: 'candidates', hint: '3', help: 'kandidaten', manual: true, render: renderCandNode },
+        { id: 'rand', label: 'Zufall', cat: 'random', hint: '4', help: 'zufall', manual: true, render: renderRandNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 1 });
       updateText();

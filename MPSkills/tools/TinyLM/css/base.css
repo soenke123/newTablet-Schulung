@@ -46,7 +46,7 @@ button.chip:hover:not(:disabled) { border-color: var(--accent); background: var(
 .chip.active { border-color: var(--accent); background: var(--accent-dim); font-weight: 600; }
 .chip.sm { font-size: 0.74rem; padding: 0 0.5rem; cursor: default; }
 .chip.off { background: var(--soft); color: var(--muted); border-style: dashed; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
-.chip.known { border-color: var(--cat-context); background: color-mix(in srgb, var(--cat-context-tint) 55%, var(--surface)); }
+.chip.known { border-color: var(--cat-ask); background: color-mix(in srgb, var(--cat-ask-tint) 55%, var(--surface)); }
 .chip.unknown { border-color: var(--bad); border-style: dashed; color: var(--bad); }
 .chip-tag { font-size: 0.68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; opacity: .8; }
 .chiprow { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -189,12 +189,12 @@ button.chip:hover:not(:disabled) { border-color: var(--accent); background: var(
 .srcrow .btn { align-self: flex-start; }
 .snip { line-height: 1.8; background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
 
-/* Herkunft-Karte (Phase 1): Balkenliste "so viele Wörter kamen aus Text X" */
+/* Quellen-Karte (Phase 1): Balkenliste "so viele Wörter kamen aus Text X" */
 .originrows { display: flex; flex-direction: column; gap: 6px; }
 .originrow { display: grid; grid-template-columns: minmax(0, 9rem) minmax(0, 1fr) 2.2rem; gap: 8px; align-items: center; }
 .originrow .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* ---- Text-Hervorhebung & Buchstaben-Badge (Phase 2: Quellen/Nachschlagen) ---- */
+/* ---- Text-Hervorhebung & Buchstaben-Badge (Phase 2: Quellen/Frage zerlegen) ---- */
 .mk { padding: 0 3px; border-radius: 3px; }
 .mk.exact { background: var(--mark-exact); }
 .mk.sim { background: var(--mark-sim); box-shadow: inset 0 -2px 0 var(--mark-sim-line); }
