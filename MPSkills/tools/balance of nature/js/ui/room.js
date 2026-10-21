@@ -318,6 +318,7 @@
     global.dispatchEvent(new Event('resize'));
     openChooser(false);
     render();
+    if (BT.room.onStart) BT.room.onStart(s);
   }
 
   /** Szenario von vorn auf der aktuellen Insel */
@@ -509,8 +510,15 @@
       // Lehrkraft: gleich die Auswahl. Klasse: erst, wenn etwas geteilt ist.
       if (TEACHER || shared.length) openChooser(true);
       send({ type: 'bon:ready' });
+      if (BT.room.onReady) BT.room.onReady();
     }
   };
 
-  BT.room = { scenarios: SCENARIOS, start: function (id) { start(BY_ID[id]); }, idle: idle, open: openChooser };
+  // onReady / onStart setzt die Tour (js/ui/tour.js)
+  BT.room = {
+    scenarios: SCENARIOS, teacher: TEACHER,
+    get current() { return current; },
+    start: function (id) { start(BY_ID[id]); }, idle: idle, open: openChooser,
+    onReady: null, onStart: null
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

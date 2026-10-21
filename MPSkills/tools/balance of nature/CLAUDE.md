@@ -30,6 +30,12 @@ Küste, Berge, Flüsse, nur die Schwellen der Lebensräume verschoben (fels zus�
 mit `tools/balance.js 8 30 --typ=…` steht als Kommentar an den Werten; Flächenanteile: `tools/inseltypen.js`. Kein
 Szenario: Seed, „Neue Insel“ und Größe stehen im Raum immer oben; die Lehrkraft schaltet in der Auswahl „Inseltypen zur
 Auswahl“ (data.types, bon:types, i daneben = Erklärung mit Messwerten), dann steht oben bei allen „Typ“; ausgeschaltet laufen alle auf der ausgewogenen Insel. Typwechsel baut die Insel neu, das laufende Szenario beginnt von vorn.
+Tour im Raum (`js/ui/tour.js`, Stil in `css/room.css`, nur mit `?raum=`): Kästen direkt neben dem erklärten Stück, Rest abgedunkelt.
+Lehrkraft beim Öffnen: Szenarien · Teilen · Inseltypen, dann Pause bis ein Szenario läuft (`BT.room.onReady`/`onStart`). Im
+Szenario (alle): Insel · Zeit/Neustart · Bestand · Diagramme Tiere · Pflanzen · Todesursachen · Groß · [Menschen: Karten · Zahlen;
+Schritt „Tiere“ nennt dann Schafe/Ratten/Hunde] · Insel einstellen · Szenarien. Gesehene Schritt-ids werden gemerkt (Lehrkraft
+localStorage, Klasse sessionStorage `bon.tour.*`), ein weiteres Szenario zeigt nur neue Schritte; „Überspringen“ = gesehen; `?` oben
+rechts zeigt die Tour zum aktuellen Stand ganz. Neue Bedienelemente → Schritt in `scenarioSteps` ergänzen.
 Wer an `index.html`, `js/` oder `css/` arbeitet, zieht `V` in `tool.js` und die `?v=` in `index.html` hoch.
 
 ## Regeln
@@ -80,7 +86,7 @@ js/ui/      app.js (Karte, Kamera folgt einem angeklickten Tier, Zeitregler, Sei
             der Karten, Chronik, Bildpuffer, Großansicht der Diagramme), cardInfo.js (Bild im Infofenster:
             Kartenausschnitt assets/karte_<id>.png),
             charts.js (LineChart; ChartView: gemeinsamer Zeitraum und Fadenkreuz),
-            room.js (Raum-Modus ?raum=, Szenarien), demo.js (Schaufenster ?demo=1)
+            room.js (Raum-Modus ?raum=, Szenarien), tour.js (Tour im Raum), demo.js (Schaufenster ?demo=1)
 data/       arten.md (fachliche Wahrheit für species.js)
 assets/     Tierbilder, schaf/, hund/, doerfler/ (Menschen), ratten.png (Kachel), Ratten/Ratte_1..10.png (Karte, zufällig verteilt), Schiff, Häuser, karte_<id>.png (Infofenster)
 tools/      load.js (Skripte in Node laden), smoketest.js, balance.js (Abstimmung),
