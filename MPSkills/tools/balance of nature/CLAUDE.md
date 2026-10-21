@@ -30,7 +30,7 @@ Küste, Berge, Flüsse, nur die Schwellen der Lebensräume verschoben (fels zus�
 mit `tools/balance.js 8 30 --typ=…` steht als Kommentar an den Werten; Flächenanteile: `tools/inseltypen.js`. Kein
 Szenario: Seed, „Neue Insel“ und Größe stehen im Raum immer oben; die Lehrkraft schaltet in der Auswahl „Inseltypen zur
 Auswahl“ (data.types, bon:types, i daneben = Erklärung mit Messwerten), dann steht oben bei allen „Typ“; ausgeschaltet laufen alle auf der ausgewogenen Insel. Typwechsel baut die Insel neu, das laufende Szenario beginnt von vorn.
-Tour im Raum (`js/ui/tour.js`, Stil in `css/room.css`, nur mit `?raum=`): Kästen direkt neben dem erklärten Stück, Rest abgedunkelt.
+Tour im Raum (`js/ui/tour.js`, Stil in `css/room.css`, nur mit `?raum=`): Kästen direkt neben dem erklärten Stück, Rest abgedunkelt; je Kasten SVG-Skizze (`ART`), ein Satz „was ist das“ (`lead`) und Knöpfe mit Erklärung (`items`).
 Lehrkraft beim Öffnen: Szenarien · Teilen · Inseltypen, dann Pause bis ein Szenario läuft (`BT.room.onReady`/`onStart`). Im
 Szenario (alle): Insel · Zeit/Neustart · Bestand · Diagramme Tiere · Pflanzen · Todesursachen · Groß · [Menschen: Karten · Zahlen;
 Schritt „Tiere“ nennt dann Schafe/Ratten/Hunde] · Insel einstellen · Szenarien. Gesehene Schritt-ids werden gemerkt (Lehrkraft

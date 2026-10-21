@@ -245,9 +245,10 @@ body.room:not(.humans) .fold[data-fold="insel"] { display: none; }
 }
 .tour-pop {
   position: fixed; z-index: 82;
-  width: min(330px, calc(100vw - 16px));
+  width: min(380px, calc(100vw - 16px));
+  max-height: calc(100vh - 16px); overflow-y: auto;
   background: #f7f4ec; color: #1d2b33;
-  border-radius: 14px; padding: 14px 14px 12px;
+  border-radius: 14px; padding: 12px 14px 12px;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
   animation: tour-in .2s ease-out;
 }
@@ -262,16 +263,19 @@ body.room:not(.humans) .fold[data-fold="insel"] { display: none; }
 .tour-pop[data-side="bottom"]::before { top: -7px; left: calc(var(--arrow, 50%) - 7px); }
 .tour-pop[data-side="top"]::before { bottom: -7px; left: calc(var(--arrow, 50%) - 7px); }
 .tour-pop[data-side="inside"]::before, .tour-pop[data-side="none"]::before { display: none; }
-.tour-row { display: flex; gap: 12px; align-items: flex-start; }
-.tour-ico {
-  flex: none; width: 46px; height: 46px; border-radius: 50%;
-  display: grid; place-items: center; font-size: 25px;
-  background: #e3f2ef; border: 2px solid #52c2c0;
+.tour-pic { margin: 0 0 8px; }
+.tour-art { display: block; width: 100%; height: auto; font-family: var(--font); }
+.tour-pop h3 { margin: 0 0 3px; font-size: 16px; }
+.tour-lead { margin: 0; font-size: 13.5px; line-height: 1.4; }
+.tour-items {
+  list-style: none; margin: 9px 0 0; padding: 0;
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: baseline;
+  font-size: 13px; line-height: 1.35;
 }
-.tour-txt { min-width: 0; }
-.tour-txt h3 { margin: 1px 0 4px; font-size: 16px; }
-.tour-txt p { margin: 0; font-size: 13.5px; line-height: 1.45; }
-.tour-txt .tour-note { margin-top: 8px; padding: 6px 9px; border-radius: 8px; background: #e3f2ef; font-weight: 600; }
+.tour-items li { display: contents; }
+.tour-btns { display: flex; flex-wrap: wrap; gap: 3px; max-width: 150px; justify-self: end; justify-content: flex-end; }
+.tour-warn { margin: 8px 0 0; padding: 6px 9px; border-radius: 8px; background: #fbe9c4; font-size: 12.5px; }
+.tour-note { margin: 8px 0 0; padding: 6px 9px; border-radius: 8px; background: #e3f2ef; font-weight: 600; font-size: 13px; }
 /* Nachbau eines Knopfs im Text */
 .tour-k {
   display: inline-block; padding: 0 6px; border-radius: 5px;
