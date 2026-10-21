@@ -186,7 +186,7 @@ Phases.register(1, {
     function renderRandNode(container) {
       container.replaceChildren();
       const sl = Info.slider({
-        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp',
+        label: 'Temperatur', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp',
         fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
         onInput: v => { temp = Math.round(v * 10) / 10; run = 0; if (live.cand) live.cand(); }
       });

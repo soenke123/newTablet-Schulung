@@ -52,8 +52,8 @@ const HELP = {
     vis: { type: 'bars', items: [['Futter', 55], ['Fleisch', 30], ['Gras', 15]] }
   },
   zufall: {
-    title: 'Zufall', icon: '🌡️', cat: 'random',
-    text: 'Wie mutig würfelt die KI? Bei 0 nimmt sie immer den längsten Balken, bei 2 hat auch Seltenes eine Chance.',
+    title: 'Zufall (Temperatur)', icon: '🌡️', cat: 'random',
+    text: 'Wie mutig würfelt die KI? In echten KIs heißt dieser Regler Temperatur: bei 0 immer der längste Balken, bei 2 hat auch Seltenes eine Chance.',
     vis: { type: 'scale', items: [['🎯', '0', 'sicher'], ['🎲', '1', 'normal'], ['🌪️', '2', 'wild']] }
   },
   herkunft: {

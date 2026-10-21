@@ -291,7 +291,7 @@ Phases.register(3, {
     function renderRandNode(container) {
       container.replaceChildren();
       const sl = Info.slider({
-        label: 'Zufall', min: 0, max: 2, step: 0.1, value: temp, fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
+        label: 'Temperatur', min: 0, max: 2, step: 0.1, value: temp, fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
         onInput: v => {
           temp = Math.round(v * 10) / 10;
           if (live.output && panelCtrl.isOpen('output')) live.output();
