@@ -18,6 +18,18 @@
    dem Aufdecken — kein Zufall, die Auslage soll bei jedem Aufruf
    dasselbe zeigen.
 
+   ── Vier Fragen, vier Fragenarten (Oktober 2026) ──────────────
+   Wer die Vorschau öffnet, soll in den ersten Sekunden sehen: das
+   ist ein QUIZ. Deshalb keine Wiese vorweg und ein kurzer Auftritt,
+   und dann je eine Frage jeder Art aus Migration 0217 — Auswahl,
+   Wahr/Falsch, Skala, Münzen setzen. Welche gerade läuft, steht
+   oben im Kopf des Schaufensters als Leiste (api.caption), denn
+   „Auswahl" trägt am Beamer keinen eigenen Hinweis.
+
+   Die Vorlesezeit ist hier kürzer als im Raum (READ_SEC): das
+   Werkzeug liest sie aus phase_ends_at, nicht aus einer Konstante,
+   und am Schaufenster liest niemand zwanzig Sekunden lang Fragen.
+
    ── Was das Drehbuch NICHT zeigt ──────────────────────────────
    Die Tablet-Seite. Die Auslage steht auf der Beamer-Rolle; was die
    Kinder in der Hand haben, steht im Text darunter.
@@ -29,16 +41,30 @@
 
   const ROLE = 'presenter';
 
-  // Muss zu v_intro in Migration 0191 und INTRO_SEC in tool.js passen.
-  const INTRO_SEC = 10, READ_SEC = 5, LIMIT = 15;
+  /* INTRO_SEC muss zu tool.js passen (dort 9): was über der Vorlesezeit
+     liegt, ist Auftritt. Hier steigt das Schaufenster nach INTRO_SKIP
+     Sekunden ein — die Wesen sind dann schon gelandet, der Titel steht. */
+  const INTRO_SEC = 9, INTRO_SKIP = 4, READ_SEC = 2.5, LIMIT = 15;
 
+  // Je eine Frage jeder Art (tool.js artVon, editor.js ARTEN).
   const FRAGEN = [
-    { text: 'Wie viele Bit hat ein Byte?',
-      options: ['4', '8', '16', '32'], correct: 1,
+    { kind: 'mc', art: '🔤 Auswahl',
+      text: 'Wie viele Bit hat ein Byte?',
+      options: ['4', '8', '16', '32'], correct: 1, dist: [1, 5, 1, 0],
       why: 'Ein Byte sind acht Bit — die Grundeinheit der Speichergrößen.' },
-    { text: 'Welches Gerät verbindet dein Netz mit dem Internet?',
-      options: ['Switch', 'Drucker', 'Router', 'Monitor'], correct: 2,
-      why: 'Der Router leitet Pakete zwischen Netzen weiter.' }
+    { kind: 'tf', art: '⚖️ Wahr/Falsch',
+      text: 'Wale sind Fische.',
+      options: ['Wahr', 'Falsch'], correct: 1, dist: [2, 5],
+      why: 'Wale sind Säugetiere: Sie atmen Luft und säugen ihre Jungen.' },
+    { kind: 'scale', art: '📏 Skala',
+      text: 'Wie hoch ist der Eiffelturm?',
+      scale: { min: 0, max: 600, step: 10, unit: 'm', target: 330 },
+      werte: [300, 320, 340, 250, 400, 330, 180],
+      why: 'Mit Antenne gut 330 Meter — gebaut für die Weltausstellung 1889.' },
+    { kind: 'bet', art: '🪙 Münzen setzen',
+      text: 'Welcher Planet ist der größte?',
+      options: ['Saturn', 'Jupiter', 'Erde', 'Mars'], correct: 1, dist: [11, 21, 1, 2],
+      why: 'Jupiter — in ihn passen über 1.300 Erden.' }
   ];
 
   const KIDS = [
@@ -47,13 +73,20 @@
     { n: 'Emma',  c: 30, s: 0 }, { n: 'Noah', c: 16, s: 2 },
     { n: 'Lina',  c: 25, s: 1 }
   ];
-  const PUNKTE = [2860, 2410, 2120, 1740, 1200, 980, 540];
-  const TITEL = 'Netzwerke: Grundlagen';
+  /* Punkte nach jeder Frage (Spalte = Kind wie in KIDS). Die Reihen
+     sind so gewählt, dass auf dem Podest jedes Mal jemand überholt. */
+  const PUNKTE = [
+    [ 860,  940,  620,  410,  980,  300,  150],
+    [1700, 1820, 1480,  820, 1650,  640,  540],
+    [2560, 2410, 2440, 1700, 2120,  980,  760],
+    [3560, 3210, 2840, 2500, 2320, 1380,  960]
+  ];
+  const TITEL = 'Allgemeinwissen';
 
   /* ─── Der Stand des erfundenen Raums ─────────────────────────── */
   let G = null;
   function neu() {
-    G = { rev: 1, phase: 'lobby', idx: 0, ends: null, open: null, still: false };
+    G = { rev: 1, phase: 'lobby', idx: 0, ends: null, open: null };
   }
   neu();
 
@@ -64,12 +97,37 @@
   }, o);
 
   function antworten() {
-    // Wie viele schon getippt haben: in sechs Sekunden nach dem
+    // Wie viele schon getippt haben: in vier Sekunden nach dem
     // Aufdecken füllt sich die Reihe.
     if (G.phase === 'reveal' || G.phase === 'ended') return KIDS.length;
     if (G.phase !== 'question' || !G.open) return 0;
-    const f = Math.max(0, Math.min(1, (Date.now() - G.open) / 6000));
+    const f = Math.max(0, Math.min(1, (Date.now() - G.open) / 4000));
     return Math.round(f * KIDS.length);
+  }
+
+  // Die Rangliste nach Frage idx — mit Pfeilen gegen den Stand davor.
+  function rangliste(idx) {
+    const nach = s => KIDS.map((_, i) => i).sort((a, b) => s[b] - s[a]);
+    const jetzt = nach(PUNKTE[idx]);
+    const vorher = idx > 0 ? nach(PUNKTE[idx - 1]) : jetzt;
+    return jetzt.map((i, r) => spieler(i, {
+      score: PUNKTE[idx][i], rank: r + 1,
+      rank_change: vorher.indexOf(i) - r,
+      delta: PUNKTE[idx][i] - (idx > 0 ? PUNKTE[idx - 1][i] : 0)
+    }));
+  }
+
+  function frageFuer(q, auf) {
+    const out = {
+      qid: 'pv-q' + G.idx, kind: q.kind, text: q.text,
+      options: q.options ? q.options.slice() : [],
+      correct_idx: auf && q.correct != null ? q.correct : null,
+      correct_indices: auf && q.correct != null ? [q.correct] : null,
+      explanation: auf ? q.why : null, time_limit: LIMIT, has_image: false
+    };
+    // Das Ziel kennt das Gerät erst in der Auflösung (wie ks_view).
+    if (q.scale) out.scale = Object.assign({}, q.scale, { target: auf ? q.scale.target : null });
+    return out;
   }
 
   function view() {
@@ -86,34 +144,34 @@
     if (G.phase === 'lobby') return base;
 
     const q = FRAGEN[G.idx];
-    const rang = KIDS.map((_, i) => spieler(i, { score: PUNKTE[i] })).slice(0, 5);
 
     if (G.phase === 'question') {
       const n = antworten();
-      base.question = { qid: 'pv-q' + G.idx, text: q.text, options: q.options,
-        correct_idx: null, explanation: null, time_limit: LIMIT, has_image: false };
+      base.question = frageFuer(q, false);
       base.answers_total = n;
-      base.answers_dist = { 1: Math.ceil(n / 2) };
       base.players = KIDS.map((_, i) => spieler(i, { answered: i < n }));
       return base;
     }
 
+    const rang = rangliste(G.idx);
     if (G.phase === 'reveal') {
-      base.question = { qid: 'pv-q' + G.idx, text: q.text, options: q.options,
-        correct_idx: q.correct, explanation: q.why, time_limit: LIMIT, has_image: false };
-      const dist = {}; dist[q.correct] = 4; dist[(q.correct + 1) % 4] = 2; dist[(q.correct + 2) % 4] = 1;
-      base.answers_dist = dist;
+      base.question = frageFuer(q, true);
       base.answers_total = KIDS.length;
-      base.leaderboard = rang.map((p, i) => Object.assign(p, {
-        rank_change: i === 0 ? 1 : i === 4 ? -1 : 0, delta: 900 - i * 120, correct: i < 4 }));
-      base.players = KIDS.map((_, i) => spieler(i, { score: PUNKTE[i], answered: true, correct: i < 4 }));
+      if (q.dist) {
+        q.dist.forEach((n, i) => { base.answers_dist[i] = n; });
+        if (q.kind === 'bet') base.bet_coins = q.dist.reduce((a, b) => a + b, 0);
+      }
+      if (q.werte) base.scale_values = q.werte.slice();
+      const richtig = p => p.delta >= 600;
+      base.leaderboard = rang.slice(0, 5).map(p => Object.assign(p, { correct: richtig(p) }));
+      base.players = rang.map(p => Object.assign(p, { answered: true, correct: richtig(p) }));
       return base;
     }
 
     // ended
-    base.leaderboard = rang;
+    base.leaderboard = rang.slice(0, 5);
     base.player_count = KIDS.length;
-    base.players = KIDS.map((_, i) => spieler(i, { score: PUNKTE[i] }));
+    base.players = rang;
     return base;
   }
 
@@ -124,7 +182,7 @@
     G.idx = idx;
     if (phase === 'question') {
       // Die erste Frage trägt den Auftritt — wie ks_step (0191).
-      const extra = idx === 0 ? INTRO_SEC : 0;
+      const extra = idx === 0 ? INTRO_SEC - INTRO_SKIP : 0;
       G.ends = new Date(Date.now() + (LIMIT + READ_SEC + extra) * 1000).toISOString();
       G.open = Date.now() + (READ_SEC + extra) * 1000;
     } else {
@@ -153,63 +211,86 @@
     return { ok: false, error: 'unknown_fn' };
   }
 
-  /* ─── Das Drehbuch ────────────────────────────────────────────
-     Fünf Bilder, jedes beantwortet eine eigene Frage:
+  /* ─── Die Leiste im Kopf: welche Fragenart gerade läuft ─────── */
+  function leiste(api, jetzt) {
+    api.caption('<span class="pv-steps" aria-label="Fragenarten">'
+      + FRAGEN.map((f, i) => '<span class="pv-step'
+        + (i === jetzt ? ' is-an' : i < jetzt ? ' is-fertig' : '') + '">' + f.art + '</span>').join('')
+      + '</span>');
+  }
 
-       1. Die Wiese.            Wer ist im Raum?
-       2. „Quiz startet".       Wie fängt eine Runde an?
-       3. Frage und Antworten.  Was sehen 28 Köpfe am Beamer?
-       4. Die Auflösung.        Wer ist vorn, wie hat die Klasse getippt?
-       5. Die Siegerehrung.     Wie endet es?                        */
+  /* ─── Das Drehbuch ────────────────────────────────────────────
+       1. „Quiz startet".       Sofort klar: hier wird gequizzt.
+       2. Vier Fragen, jede eine andere Art — Frage, Antworten laufen
+          ein, Auflösung mit Podest. Oben wandert die Leiste mit.
+       3. Die Siegerehrung.     Wie endet es?                        */
   async function play(api) {
     neu();
+    leiste(api, -1);
     api.refresh();
     if (!await api.waitFor('[data-act=start]', 20000)) return;
-    if (!await api.wait(3600)) return;               // die Wesen fallen auf die Wiese
+    if (!await api.wait(700)) return;
 
-    api.click('[data-act=start]');                   // 2 · Auftritt
-    if (!await api.wait((INTRO_SEC + READ_SEC) * 1000 + 600)) return;
+    api.click('[data-act=start]');
+    for (let i = 0; i < FRAGEN.length; i++) {
+      leiste(api, i);
+      const extra = i === 0 ? INTRO_SEC - INTRO_SKIP : 0;
+      if (!await api.wait((extra + READ_SEC) * 1000 + 300)) return;
+      if (!await api.wait(4600)) return;             // die Antworten laufen ein
+      api.click('[data-act=now]');                   // Auflösung
+      if (!await api.wait(i === 0 ? 6500 : 5500)) return;
+      // „Nächste Frage" — nach der letzten heißt derselbe Knopf „Siegerehrung".
+      api.click('[data-act=next]');
+    }
 
-    if (!await api.wait(6800)) return;               // 3 · die Antworten laufen ein
-    api.click('[data-act=now]');                     // 4 · Auflösung
-    if (!await api.wait(7000)) return;
-
-    api.click('[data-act=finish]');                  // 5 · Siegerehrung
-    if (!await api.wait(17000)) return;
+    leiste(api, FRAGEN.length);                      // Siegerehrung
+    if (!await api.wait(15000)) return;
   }
 
   /* ─── Das Standbild der Kachel ───────────────────────────────
      Ein leichter Nachbau und nicht das Werkzeug (Begründung im Kopf
-     von lib/preview.js): der Beamer in Kurzform — die Frage oben, die
-     vier Antwortfelder in den Farben des Werkzeugs, unten die Wesen
-     am Treppchen. Das Werkzeug ist dunkel; so steht auch die
+     von lib/preview.js). Auf einen Blick soll es QUIZ sagen: oben eine
+     echte, lesbare Frage mit Fragezeichen und Uhr, darunter die vier
+     bunten Antwortfelder, eines als richtig aufgelöst — und unten die
+     vier Fragenarten. Das Werkzeug ist dunkel; so steht auch die
      Kachel da, in beiden Kleidern. */
   function tileHTML() {
     const A = ['#e11d48', '#2563eb', '#eab308', '#059669'];
-    const felder = [[16, 62], [176, 62], [16, 96], [176, 96]].map(([x, y], i) =>
-      `<rect x="${x}" y="${y}" width="148" height="28" rx="8" fill="${A[i]}"/>
-       <rect x="${x + 12}" y="${y + 11}" width="${i === 1 ? 92 : 64 + i * 10}" height="6" rx="3" fill="#fff" opacity=".85"/>`).join('');
-    // Das Treppchen: Platz 2 · 1 · 3, und auf jeder Stufe steht ein Wesen.
-    const stufen = [[92, 46, 140, '#2a3145', '#22d3ee', 12], [138, 58, 124, '#facc15', '#f472b6', 14],
-                    [196, 46, 148, '#d97706', '#a3e635', 12]];
-    const podest = stufen.map(([x, w, y, f]) =>
-      `<rect x="${x}" y="${y}" width="${w}" height="${190 - y}" rx="4" fill="${f}"/>`).join('');
-    const wesen = stufen.map(([x, w, y, , c, r]) => {
-      const cx = x + w / 2, cy = y - r * .85;
-      return `<g><ellipse cx="${cx}" cy="${cy}" rx="${r}" ry="${r * .9}" fill="${c}" stroke="#0c0e15" stroke-width="2"/>
-         <circle cx="${cx - r * .35}" cy="${cy - r * .15}" r="${r * .18}" fill="#0c0e15"/>
-         <circle cx="${cx + r * .35}" cy="${cy - r * .15}" r="${r * .18}" fill="#0c0e15"/></g>`;
+    const T = ['4', '8', '16', '32'];
+    const OK = 1;
+    const felder = [[16, 66], [174, 66], [16, 100], [174, 100]].map(([x, y], i) => {
+      const ok = i === OK;
+      return `<g opacity="${ok ? 1 : .5}">
+        <rect x="${x}" y="${y}" width="150" height="28" rx="8" fill="${ok ? '#059669' : A[i]}"
+              ${ok ? 'stroke="#6ee7b7" stroke-width="2.5"' : ''}/>
+        <text x="${x + 75}" y="${y + 19}" text-anchor="middle" font-size="14" font-weight="800"
+              fill="${i === 2 ? '#1c1917' : '#fff'}">${T[i]}</text>
+        ${ok ? `<circle cx="${x + 18}" cy="${y + 14}" r="9" fill="#fff"/>
+          <path d="M${x + 13.5} ${y + 14.5} l3 3 l6 -7" fill="none" stroke="#059669" stroke-width="2.6"
+                stroke-linecap="round" stroke-linejoin="round"/>` : ''}
+      </g>`;
+    }).join('');
+    const arten = ['🔤 Auswahl', '⚖️ Wahr/Falsch', '📏 Skala', '🪙 Münzen'];
+    const breit = [62, 84, 54, 64];
+    let x = 16;
+    const chips = arten.map((a, i) => {
+      const w = breit[i] + 8;
+      const g = `<rect x="${x}" y="142" width="${w}" height="22" rx="11" fill="#171a26" stroke="#2a3145"/>
+        <text x="${x + w / 2}" y="157" text-anchor="middle" font-size="10.5" font-weight="700" fill="#cbd5e1">${a}</text>`;
+      x += w + 6;
+      return g;
     }).join('');
     return `<div class="tprev tprev--ks" aria-hidden="true">
       <svg class="ksp" viewBox="0 0 340 190" preserveAspectRatio="xMidYMid slice">
         <rect width="340" height="190" fill="#0c0e15"/>
-        <rect x="16" y="14" width="308" height="40" rx="10" fill="#171a26" stroke="#fff" stroke-width="2"/>
-        <rect x="34" y="30" width="190" height="8" rx="4" fill="#fff"/>
-        <rect x="34" y="42" width="120" height="5" rx="2.500" fill="#94a3b8"/>
-        <circle cx="296" cy="34" r="12" fill="none" stroke="#facc15" stroke-width="4"/>
+        <rect x="16" y="12" width="308" height="44" rx="10" fill="#fff"/>
+        <circle cx="38" cy="34" r="13" fill="#facc15"/>
+        <text x="38" y="40" text-anchor="middle" font-size="17" font-weight="900" fill="#0c0e15">?</text>
+        <text x="60" y="39" font-size="15" font-weight="800" fill="#0c0e15">Wie viele Bit hat ein Byte?</text>
+        <circle cx="302" cy="34" r="10" fill="none" stroke="#e2e8f0" stroke-width="4"/>
+        <path d="M302 24 a10 10 0 0 1 9.5 13" fill="none" stroke="#22d3ee" stroke-width="4" stroke-linecap="round"/>
         ${felder}
-        ${podest}
-        ${wesen}
+        ${chips}
       </svg>
     </div>`;
   }
@@ -225,16 +306,17 @@
     blurb: `
       <p>Ein <strong>Live-Quiz für die ganze Klasse</strong>: Am Beamer steht die Frage, auf den
          Tablets stehen nur die Antworten — der Blick der Klasse geht nach vorn. Jedes Kind
-         ist ein <strong>Wesen</strong> aus 40, in drei Farben, und steht schon in der Lobby
-         auf der Wiese.</p>
-      <p>Eine Runde beginnt mit einem <strong>Auftritt</strong>: „Quiz startet", der Name des
-         Fragenkatalogs, und alle Wesen regnen von oben herein, landen und laufen rechts aus
-         dem Bild. Danach kommt die erste Frage — erst fünf Sekunden zum Lesen, dann erscheinen
-         die Antworten auf allen Geräten im selben Augenblick.</p>
-      <p>Schnell und richtig bringt Punkte. In der Auflösung laufen die <strong>fünf Ersten</strong> auf
-         ihre Plätze, und zum Schluss gibt es eine <strong>Siegerehrung</strong> mit Treppchen,
-         Trommelwirbel und Konfetti: Wer gewonnen hat, sieht es sofort auf dem eigenen Gerät,
-         alle anderen jubeln über die Emote-Tasten mit.</p>
+         spielt als <strong>Wesen</strong> mit, eines aus 40, in drei Farben.</p>
+      <p><strong>Vier Fragenarten</strong>, frei gemischt in einem Quiz:</p>
+      <ul>
+        <li><strong>🔤 Auswahl</strong> — vier Antworten, eine oder mehrere richtig; wer schneller richtig tippt, bekommt mehr Punkte.</li>
+        <li><strong>⚖️ Wahr/Falsch</strong> — eine Behauptung, zwei Felder.</li>
+        <li><strong>📏 Skala</strong> — schätzen mit dem Regler; Punkte nach der Nähe zum Ziel, Tempo zählt nicht.</li>
+        <li><strong>🪙 Münzen setzen</strong> — fünf Münzen auf die Antworten verteilen und umsetzen, bis die Zeit um ist: Sicherheit statt Tempo.</li>
+      </ul>
+      <p>Nach jeder Frage zeigt die <strong>Auflösung</strong>, wie die Klasse getippt hat, und die
+         fünf Ersten laufen auf ihre Plätze. Zum Schluss gibt es eine <strong>Siegerehrung</strong>
+         mit Treppchen und Konfetti.</p>
       <p>Die Fragen kommen aus <strong>mitgelieferten Katalogen</strong> oder aus dem eigenen
          Quiz-Editor — auch ohne Raum vorzubereiten.</p>`
   });
