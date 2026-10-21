@@ -342,6 +342,16 @@
         return true;
       },
 
+      /* Eine Zeile im Kopf des Schaufensters, neben „Vorschau" — für
+         das, was das Werkzeug selbst nicht anzeigt, aber zum Zusehen
+         gehört (Knowledge Stack: welche Fragenart gerade läuft). Steht
+         außerhalb der Bühne, also nie im Weg des Werkzeugs; leer = weg. */
+      caption(html) {
+        if (!alive()) return false;
+        setCaption(html);
+        return true;
+      },
+
       // Für Drehbücher, die eine Karte suchen wollen, ohne die
       // Zettel-IDs fest zu verdrahten.
       noteIds() {
@@ -412,6 +422,15 @@
     });
   }
 
+  function setCaption(html) {
+    const head = document.querySelector('#previewModal .pv-head');
+    if (!head) return;
+    let el = head.querySelector('.pv-cap');
+    if (!html) { el?.remove(); return; }
+    if (!el) { el = document.createElement('div'); el.className = 'pv-cap'; head.appendChild(el); }
+    el.innerHTML = html;
+  }
+
   function setBusy(on, text) {
     const el = document.getElementById('pvBusy');
     if (!el) return;
@@ -430,6 +449,7 @@
 
     document.getElementById('pvTitle').textContent = meta.title || '';
     document.getElementById('pvBlurb').innerHTML   = show.blurb || '';
+    setCaption('');
 
     /* Ein Werkzeug füllt den Kasten, eine ganze Anwendung braucht mehr
        (NeuroLab: Kopfleiste, fünf Spalten). Die Breite steht deshalb am
@@ -588,6 +608,7 @@
     const overlay = document.getElementById('previewModal');
     if (overlay) overlay.hidden = true;
     document.body.classList.remove('pv-lock');
+    setCaption('');
 
     if (!cur) return;
     for (const t of cur.timers) clearTimeout(t);

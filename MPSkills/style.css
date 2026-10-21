@@ -2099,6 +2099,26 @@ label.field .rule.is-invalid {
   padding: 1px 9px;
 }
 
+/* Die Zeile, die ein Drehbuch über api.caption setzt (lib/preview.js),
+   z. B. die Fragenarten von Knowledge Stack: die laufende ist farbig,
+   die gespielten sind abgehakt. */
+.pv-cap { margin-left: auto; min-width: 0; }
+.pv-steps { display: flex; flex-wrap: wrap; gap: 6px; }
+.pv-step {
+  font-size: .78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--ink-faint);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 2px 10px;
+  transition: background .25s ease, color .25s ease, border-color .25s ease;
+}
+.pv-step.is-fertig { color: var(--ink-soft); }
+.pv-step.is-fertig::after { content: ' ✓'; color: var(--accent-ink); }
+.pv-step.is-an { background: var(--accent-dim); border-color: var(--accent); color: var(--accent-ink); }
+@media (max-width: 700px) { .pv-head { flex-wrap: wrap; } .pv-cap { margin-left: 0; flex-basis: 100%; } }
+
 .pv-host { transition: opacity .25s ease; }
 .pv-host.pv-fade { opacity: 0; }
 
@@ -2128,6 +2148,8 @@ label.field .rule.is-invalid {
 .pv-blurb { margin: 10px 0 0; }
 .pv-blurb p { margin: 0 0 7px; font-size: .9rem; color: var(--ink-soft); }
 .pv-blurb p:last-child { margin-bottom: 0; }
+.pv-blurb ul { margin: 0 0 7px; padding-left: 1.2em; font-size: .9rem; color: var(--ink-soft); }
+.pv-blurb li { margin: 0 0 3px; }
 
 /* Die Seite steht still, solange die Vorstellung läuft. */
 body.pv-lock { overflow: hidden; }
