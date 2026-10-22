@@ -3289,6 +3289,9 @@ body.mpfs-body { overflow: hidden; }
 
 .setfield { font-size: .82rem; font-weight: 600; color: var(--ink-soft); }
 .setfield-l { display: block; margin-bottom: 5px; }
+/* Der Satz unter einem Auswahlfeld (choiceFieldsHTML in lehrer.js). */
+.setfield-hint { margin: 6px 0 0; font-size: .8rem; font-weight: 400; color: var(--ink-soft); }
+#setToolChoice:empty { display: none; }
 
 /* Zwei Antworten auf eine Frage, nebeneinander in einer Schiene.
    Die geltende ist gefüllt — man muss nicht erst lesen, um zu

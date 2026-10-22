@@ -2350,3 +2350,47 @@ button.ks-k:disabled { cursor: default; }
 @media (prefers-reduced-motion: reduce) {
   .ks-wackel { animation: none; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   „Gemeinsam erstellen" am Beamer (Migration 0219)
+   ══════════════════════════════════════════════════════════
+   Ein Überblick statt des Quiz: wer schreibt, was ist angekommen.
+   Rollt selbst — die Bühne schneidet ab. */
+.ks-werk {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px;
+  color: var(--ks-ink);
+}
+.ks-werk-tag {
+  font-size: 14px; font-weight: 800; padding: 3px 12px; border-radius: 999px;
+  background: var(--ks-goldf); color: var(--ks-goldt); white-space: nowrap;
+}
+.ks-werk-hint, .ks-werk-fuss { margin: 0; font-size: 15px; line-height: 1.45; color: var(--ks-soft); }
+.ks-werk-hint b { color: var(--ks-ink); }
+.ks-werk-fuss { font-size: 13px; }
+.ks-werk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.ks-werk-box {
+  background: var(--ks-flaeche); border: 2px solid var(--ks-linie2); border-radius: 16px;
+  padding: 12px 14px; min-width: 0;
+}
+.ks-werk-h { margin: 0 0 8px; font-size: 17px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.ks-werk-n {
+  font-size: 13px; font-weight: 800; padding: 1px 9px; border-radius: 999px;
+  background: var(--ks-neutral); color: var(--ks-ink);
+}
+.ks-werk-liste { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.ks-werk-zeile {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 7px 10px; border-radius: 10px; background: var(--ks-tief);
+}
+.ks-werk-name { font-weight: 800; flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.ks-werk-info { font-size: 13px; color: var(--ks-soft); white-space: nowrap; }
+.ks-werk-info b { color: var(--ks-gruent); }
+.ks-werk-leer { margin: 0; font-size: 14px; color: var(--ks-soft); }
+.ks-werk-btn {
+  font: inherit; font-size: 13px; font-weight: 800; cursor: pointer; min-height: 44px;
+  padding: 6px 12px; border-radius: 10px;
+  border: 2px solid var(--ks-kante); box-shadow: 2px 2px 0 0 var(--ks-kante);
+  background: var(--ks-erhoben); color: var(--ks-ink);
+}
+.ks-werk-btn:disabled { opacity: .5; cursor: progress; }

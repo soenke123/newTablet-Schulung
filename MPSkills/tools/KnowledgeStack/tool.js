@@ -80,7 +80,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20261020m';
+  const ASSET_V = '20261022b';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -180,6 +180,12 @@
     no_school:          'Deinem Konto ist keine Schule zugeordnet — für „Schule" geht das nicht.',
     bad_visibility:     'Unbekannte Sichtbarkeit.',
     wrong_kind:         'Diese Frage wird anders beantwortet — lade die Seite neu.',
+    // Raum „gemeinsam erstellen" (0219)
+    not_create_mode:    'Der Raum ist gerade auf „gemeinsam quizzen" gestellt — hier wird nichts geschrieben.',
+    draft_too_big:      'Das Quiz ist zu groß zum Sichern. Nimm weniger oder kleinere Fotos.',
+    too_many_drafts:    'Mehr als 30 Quizze gehen in einem Raum nicht. Lösche eins, das du nicht mehr brauchst.',
+    too_many_questions: 'Mehr als 100 Fragen gehen in einem Quiz nicht.',
+    title_required:     'Bitte einen Titel eingeben.',
     bad_scale:          'Bei einer Skala muss der Start kleiner als das Ende sein und das Ziel dazwischen liegen.'
   };
   const fehlerText = code => EIGENE[code] || ctx.errText(code);
@@ -223,6 +229,13 @@
      eine gerade gezogene Münze nicht zurückspringen lassen. */
   let wette = { key: null, bets: [0, 0, 0, 0], sendT: null, unterwegs: 0 };
   let drag = null;               // die Münze, die gerade am Finger hängt
+  /* Zwei Modi je Raum (Migration 0219, skill_rooms.settings.mode):
+     'play' das Live-Quiz, 'create' „gemeinsam erstellen" — die Kinder
+     schreiben eigene Quizze im Editor und senden sie der Lehrkraft.
+     Den Modus bringt die Raum-Ansicht mit (update(view) → view.room). */
+  let modus = 'play';
+  let werk = { data: null, sig: null, timer: null, busy: false };   // Beamer im Modus 'create'
+  let onPagehide = null;
   let klickSperre = 0;           // Ende des letzten Ziehens (der Klick danach zählt nicht)
 
   /* ══════════════════════════════════════════════════════════
@@ -2371,14 +2384,18 @@
       catalogs:       () => catalogs,
       categories:     () => categories,
       current:        () => view && view.catalog_id,
-      reloadCatalogs: () => { lastSig = null; return poll(); },
-      redraw:         () => { lastFrame = null; zeichne(); },
-      onClose:        () => { lastFrame = null; zeichne(); },
+      reloadCatalogs: () => {
+        if (modus === 'create') return ladeKatalog();
+        lastSig = null; return poll();
+      },
+      redraw:         neuZeichnen,
+      onClose:        neuZeichnen,
       toast:          (m, e) => ctx.toast(m, e),
       confirm:        m => ctx.confirm(m),
       errText:        fehlerText,
       // „▶ Spielen" in der Übersicht: den Katalog aufs Brett legen.
-      onPlay: async catId => {
+      // Im Modus „gemeinsam erstellen" gibt es kein Brett.
+      onPlay: modus === 'create' ? null : async catId => {
         const r = await ctx.actions.call('ks_room_setup', { p_catalog: catId });
         if (r && r.ok) { lastSig = null; poll(); }
         return r;
@@ -2599,6 +2616,195 @@
   }
 
   /* ══════════════════════════════════════════════════════════
+     „Gemeinsam erstellen" (Migration 0219)
+     ══════════════════════════════════════════════════════════
+     Tablet  der Quiz-Editor der Lehrkraft in der Schüler-Fassung
+             (KSEditor.create({ student: true })): eigene Entwürfe in
+             diesem Raum, sichern von selbst, „An Lehrkraft senden".
+     Beamer  ein Überblick: wer schreibt, was ist angekommen. Was
+             ankommt, liegt als privates Quiz im Katalog der Lehrkraft,
+             in einer Gruppe mit dem Namen des Raums. „📚 Meine Quizze"
+             öffnet den Katalog (ohne „▶ Spielen" — gespielt wird im
+             Modus „gemeinsam quizzen").
+     Kein Live-Quiz, keine Wesen, kein ks_view-Takt. */
+  function raumModus(v) {
+    const st = v && v.room && v.room.settings;
+    if (!st || typeof st !== 'object') return null;
+    return st.mode === 'create' ? 'create' : 'play';
+  }
+
+  // Alles anhalten, was der eine Modus laufen hat — vor dem Wechsel.
+  function halteAn() {
+    if (pollTimer) clearTimeout(pollTimer);
+    if (werk.timer) clearTimeout(werk.timer);
+    pollTimer = null; werk = { data: null, sig: null, timer: null, busy: false };
+    stopClock();
+    stopBewegung();
+    if (editor) editor.destroy();
+    editor = null;
+    lastSig = lastFrame = null; view = null; els = {};
+    pickerOffen = false;
+    if (stage) {
+      stage.className = 'ks-stage';
+      stage.innerHTML = '<p class="ks-booting">Wird geladen …</p>';
+    }
+  }
+
+  function starte() {
+    if (destroyed) return;
+    if (modus === 'create') werkStart(); else poll();
+  }
+
+  // Das Bild neu, egal in welchem Modus (Rückruf des Editors).
+  function neuZeichnen() {
+    if (modus === 'create') { werkZeichne(); return; }
+    lastFrame = null; zeichne();
+  }
+
+  async function werkStart() {
+    stage.className = 'ks-stage ks-stage--' + (role === 'presenter' ? 'beam' : 'tab') + ' ks-stage--werk';
+    try { await ladeEditor(); }
+    catch (e) {
+      stage.innerHTML = '<div class="ks-booting">Der Editor ließ sich nicht laden. Lade die Seite neu.</div>';
+      return;
+    }
+    if (destroyed || modus !== 'create') return;
+
+    if (role !== 'presenter') {
+      editor = window.KSEditor.create({
+        student:    true,
+        call:       (fn, args) => ctx.actions.call(fn, args),
+        categories: () => categories,
+        redraw:     werkZeichne,
+        toast:      (m, e) => ctx.toast(m, e),
+        confirm:    m => ctx.confirm(m),
+        errText:    fehlerText
+      });
+      editor.openList();
+      // Wer das Tablet zuklappt oder die Seite verlässt: Letztes sichern.
+      if (!onPagehide) {
+        onPagehide = () => { if (editor) editor.flush(); };
+        window.addEventListener('pagehide', onPagehide);
+        document.addEventListener('visibilitychange', onPagehide);
+      }
+      return;
+    }
+    stage.innerHTML = '<p class="ks-booting">Wird geladen …</p>';
+    stage.addEventListener('click', onWerkKlick);
+    werkPoll();
+  }
+
+  function werkZeichne() {
+    if (!stage || destroyed) return;
+    if (editorAuf()) {
+      stage.innerHTML = editor.html();
+      editor.bind(stage);
+      return;
+    }
+    if (role === 'presenter') stage.innerHTML = beamWerk(werk.data);
+  }
+
+  async function werkPoll() {
+    if (destroyed || modus !== 'create' || role !== 'presenter') return;
+    if (werk.timer) clearTimeout(werk.timer);
+    werk.timer = null;
+    if (!werk.busy) {
+      werk.busy = true;
+      try {
+        const r = await ctx.actions.call('ks_room_drafts', {});
+        if (destroyed || modus !== 'create') return;
+        if (!r || !r.ok) zeigeFehler(r && r.error);
+        else {
+          zeigeFehler.last = null;
+          const neu = r.sig !== werk.sig || !werk.data;
+          werk.data = r; werk.sig = r.sig;
+          if (neu && !editorAuf()) werkZeichne();
+        }
+      } finally {
+        werk.busy = false;
+      }
+    }
+    if (!destroyed && modus === 'create') werk.timer = setTimeout(werkPoll, 4000);
+  }
+
+  // Die Liste des Katalogs holt der Beamer über ks_room_get (dort
+  // kommt sie seit 0194 mit) — eine Fassung von ks_catalogs_list mit
+  // p_code gibt es nicht.
+  async function ladeKatalog() {
+    const r = await ctx.actions.call('ks_room_get', {});
+    if (r && r.ok) {
+      if (Array.isArray(r.catalogs)) catalogs = r.catalogs;
+      if (Array.isArray(r.categories)) categories = r.categories.map(k => k.name);
+    }
+    return r;
+  }
+
+  async function onWerkKlick(ev) {
+    if (modus !== 'create' || !ctx) return;
+    const b = ev.target.closest('[data-werk]');
+    if (!b) return;
+    b.disabled = true;
+    await ladeKatalog();
+    b.disabled = false;
+    if (destroyed || modus !== 'create') return;
+    if (b.dataset.werk === 'katalog') holeEditor().openList();
+    if (b.dataset.werk === 'open') holeEditor().openCatalog(b.dataset.cat);
+  }
+
+  function beamWerk(d) {
+    if (!d) return '<p class="ks-booting">Wird geladen …</p>';
+    const leute = d.people || [];
+    const da = d.sent || [];
+    const zeit = t => {
+      const x = t ? new Date(t) : null;
+      return x && !isNaN(x) ? x.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '';
+    };
+    const raum = (ctx && ctx.title) || 'diesem Raum';
+    return `
+      <div class="ks-werk">
+        <header class="ks-head">
+          <div class="ks-headl">
+            <h1 class="ks-title">Knowledge Stack</h1>
+            <span class="ks-werk-tag">✏️ gemeinsam erstellen</span>
+          </div>
+          <div class="ks-headr">
+            <button type="button" class="ks-go ks-go--edit" data-werk="katalog"
+                    title="Deinen Quiz-Katalog öffnen">📚 Meine Quizze</button>
+          </div>
+        </header>
+        <p class="ks-werk-hint">Die Klasse schreibt auf den Tablets eigene Quizze — mit denselben
+          Werkzeugen wie du. Was ein Kind mit <b>„✉️ An Lehrkraft senden"</b> schickt, steht in deinem
+          Katalog unter <b>„📥 ${esc(raum)}"</b>, privat, nur für dich.</p>
+        <div class="ks-werk-grid">
+          <section class="ks-werk-box" aria-label="Wer schreibt">
+            <h2 class="ks-werk-h">In der Klasse <span class="ks-werk-n">${leute.length}</span></h2>
+            ${leute.length ? `<ul class="ks-werk-liste">${leute.map(p => `
+              <li class="ks-werk-zeile">
+                <span class="ks-werk-name">${esc(p.name)}</span>
+                <span class="ks-werk-info">${(p.drafts | 0)
+                  ? `${p.drafts | 0} ${(p.drafts | 0) === 1 ? 'Quiz' : 'Quizze'}${(p.sent | 0) ? ` · <b>${p.sent | 0} gesendet</b>` : ''}`
+                  : 'noch nichts'}</span>
+              </li>`).join('')}</ul>`
+              : '<p class="ks-werk-leer">Noch niemand im Raum. Der Code steht oben.</p>'}
+          </section>
+          <section class="ks-werk-box" aria-label="Angekommen">
+            <h2 class="ks-werk-h">Angekommen <span class="ks-werk-n">${da.length}</span></h2>
+            ${da.length ? `<ul class="ks-werk-liste">${da.map(c => `
+              <li class="ks-werk-zeile">
+                <span class="ks-werk-name">${esc(c.title)}</span>
+                <span class="ks-werk-info">${c.count | 0} ${(c.count | 0) === 1 ? 'Frage' : 'Fragen'} · ${esc(zeit(c.updated_at))}</span>
+                ${c.mine ? `<button type="button" class="ks-werk-btn" data-werk="open" data-cat="${esc(c.catalog_id)}"
+                        title="Im Editor öffnen">✏️ Ansehen</button>` : ''}
+              </li>`).join('')}</ul>`
+              : '<p class="ks-werk-leer">Noch nichts gesendet.</p>'}
+          </section>
+        </div>
+        <p class="ks-werk-fuss">Zum Spielen: in den Einstellungen des Raums auf „gemeinsam Quizzen"
+          stellen und das Quiz in der Lobby wählen.</p>
+      </div>`;
+  }
+
+  /* ══════════════════════════════════════════════════════════
      Anmeldung
      ══════════════════════════════════════════════════════════ */
   /* Wesen = creatures.js UND creatures.css. Beides wird abgewartet:
@@ -2640,13 +2846,21 @@
 
   window.MPTool.register('knowledgestack', {
 
-    /* Nichts abzufragen, und das ist eine Angabe: lehrer.js
-       unterscheidet daran „dieser Skill hat keine Einstellungen"
-       von „die Einstellungen sind noch nicht geladen". Der Katalog
-       wird nicht hier gewählt, sondern in der Lobby — dort sieht
-       die Lehrkraft, wie viele Fragen darin stehen, und kann ihn
-       vor dem Start noch tauschen. */
-    settingsFields: [],
+    /* Eine Frage beim Anlegen, neben dem Titel (lehrer.js,
+       choiceFieldsHTML): wie die Klasse den Raum nutzt. Der Katalog
+       wird nicht hier gewählt, sondern in der Lobby — dort sieht die
+       Lehrkraft, wie viele Fragen darin stehen, und kann ihn vor dem
+       Start noch tauschen. */
+    settingsFields: [{
+      key: 'mode', type: 'choice', label: 'Wie nutzt ihr den Raum?', default: 'play',
+      options: [
+        { value: 'play',   label: 'gemeinsam Quizzen',
+          hint: 'Das Live-Quiz: Fragen am Beamer, Antworten auf den Tablets.' },
+        { value: 'create', label: 'gemeinsam erstellen',
+          hint: 'Die Kinder schreiben im Quiz-Editor eigene Quizze und senden sie dir. '
+              + 'Sie landen privat in deinem Katalog, in einer Gruppe mit dem Namen des Raums.' }
+      ]
+    }],
 
     async mount(el, context) {
       root = el; ctx = context; role = context.role;
@@ -2683,7 +2897,7 @@
       }
       if (destroyed) return;
       wesenDa = true;
-      poll();
+      starte();
     },
 
     // Der Seiten-Poller hat etwas gesehen. Für uns meist
@@ -2691,7 +2905,19 @@
     // billiger zusätzlicher Anstoß. Aber erst, wenn die Wesen da
     // sind — die Vorschau ruft update gleich nach mount, und sonst
     // stünde die Lobby schon vor ihrem Stylesheet.
-    update() { if (!destroyed && wesenDa) poll(); },
+    // Den Modus des Raums bringt die Ansicht mit — er kann sich
+    // ändern, während der Raum offen ist (Einstellungen).
+    update(v) {
+      const m = raumModus(v);
+      if (m && m !== modus) {
+        modus = m;
+        if (!destroyed && wesenDa) { halteAn(); starte(); }
+        return;
+      }
+      if (destroyed || !wesenDa) return;
+      if (modus === 'create') { if (role === 'presenter') werkPoll(); }
+      else poll();
+    },
 
     unmount() {
       destroyed = true;
@@ -2713,6 +2939,14 @@
       editor = null;
       bild = { qid: null, src: null, laedt: false };
       zeigeFehler.last = null;
+      if (werk.timer) clearTimeout(werk.timer);
+      werk = { data: null, sig: null, timer: null, busy: false };
+      modus = 'play';
+      if (onPagehide) {
+        window.removeEventListener('pagehide', onPagehide);
+        document.removeEventListener('visibilitychange', onPagehide);
+        onPagehide = null;
+      }
     }
   });
 

@@ -55,6 +55,7 @@
     : ((c.mine && !c.is_template) ? 'private' : 'hub');
 
   const LOGO = '../LogoMPSkills.png';
+  const ORDNER = '\u0001';   // Schlüssel-Vorsatz der Raum-Ordner in der Übersicht
 
   const esc = s => String(s || '').replace(/&/g, '&amp;')
     .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -101,7 +102,7 @@
       if (lf.cats.length && !lf.cats.includes(c.subject || 'Andere')) return false;
       if (tokens.length) {
         const hay = norm([c.title, c.author_name, c.subject, STATUS[statusVon(c)].label,
-                          c.search].join(' · '));
+                          c.folder, c.search].join(' · '));
         if (!tokens.every(t => hay.includes(t))) return false;
       }
       return true;
@@ -186,7 +187,8 @@
             <div class="kse-kk-by">von <b>${esc(c.author_name || (c.is_template ? 'MPSkills' : 'Unbekannt'))}</b>${eigen ? ' (du)' : ''}</div>
             <div class="kse-kk-chips">
               <span class="kse-chip kse-chip--${st}" title="${esc(S.hint)}">${S.ico} ${S.label}</span>
-              ${eigen ? '<span class="kse-chip kse-chip--eigen">Eigenes</span>' : ''}
+              ${c.folder ? '<span class="kse-chip kse-chip--eigen">📥 Eingesandt</span>'
+                : (eigen ? '<span class="kse-chip kse-chip--eigen">Eigenes</span>' : '')}
               ${aktiv ? '<span class="kse-chip kse-chip--aktiv">✔ Läuft gerade</span>' : ''}
               <span class="kse-chip kse-chip--info">${n} ${n === 1 ? 'Frage' : 'Fragen'}</span>
             </div>
@@ -264,14 +266,20 @@
         + '<button type="button" class="kse-btn kse-btn--small" data-ed="lf-reset">Filter zurücksetzen</button></p>';
     }
 
+    /* Eingesandtes aus einem Raum „gemeinsam erstellen" (0219) steht in
+       einer eigenen Gruppe mit dem Namen des Raums — vor den
+       Themenfeldern. Der Schlüssel trägt ein Steuerzeichen davor, damit
+       ein Raum „Mathematik" nicht in das Themenfeld fällt. */
     const gruppen = new Map();
     for (const c of treffer) {
-      const f = c.subject || 'Andere';
+      const f = c.folder ? ORDNER + c.folder : (c.subject || 'Andere');
       if (!gruppen.has(f)) gruppen.set(f, []);
       gruppen.get(f).push(c);
     }
-    const reihe = cats.filter(k => gruppen.has(k))
-      .concat(Array.from(gruppen.keys()).filter(k => !cats.includes(k)));
+    const ordner = Array.from(gruppen.keys()).filter(k => k.startsWith(ORDNER))
+      .sort((x, y) => x.localeCompare(y, 'de'));
+    const reihe = ordner.concat(cats.filter(k => gruppen.has(k)))
+      .concat(Array.from(gruppen.keys()).filter(k => !cats.includes(k) && !k.startsWith(ORDNER)));
     const suche = !!lf.q.trim();
 
     let h = zaehler;
@@ -281,7 +289,9 @@
       h += `<section class="kse-gruppe">
         <h2 class="kse-fach"><button type="button" class="kse-fach-btn" data-ed="lf-group"
             data-c="${esc(fach)}" aria-expanded="${!zu}">
-          <span class="kse-fach-pfeil">${zu ? '▸' : '▾'}</span> ${esc(fach)}
+          <span class="kse-fach-pfeil">${zu ? '▸' : '▾'}</span> ${fach.startsWith(ORDNER)
+            ? '📥 ' + esc(fach.slice(1)) + ' <span class="kse-fach-hint">von der Klasse gesendet</span>'
+            : esc(fach)}
           <span class="kse-fach-n">${kats.length}</span></button></h2>`;
       if (!zu) h += '<div class="kse-karten">' + kats.map(c => karte(c, ctx)).join('') + '</div>';
       h += '</section>';
@@ -325,6 +335,61 @@
   }
 
 
+  /* ─── Übersicht der Schüler (Raum „gemeinsam erstellen", 0219) ───
+     Statt des Katalogs: die eigenen Entwürfe in DIESEM Raum. Keine
+     fremden Quizze, kein Status, kein Zurück (das Tablet hat nichts
+     dahinter). */
+  function buildDrafts(drafts, laedt) {
+    const zeit = t => {
+      const d = t ? new Date(t) : null;
+      return d && !isNaN(d) ? d.toLocaleString('de-DE', { day: 'numeric', month: 'numeric',
+        hour: '2-digit', minute: '2-digit' }) : '';
+    };
+    const karten = (drafts || []).map(d => {
+      const n = d.count | 0;
+      const chip = d.sent_at
+        ? (d.changed ? '<span class="kse-chip kse-chip--warn">✉️ gesendet · seitdem geändert</span>'
+                     : '<span class="kse-chip">✉️ an Lehrkraft gesendet</span>')
+        : '<span class="kse-chip kse-chip--info">Entwurf</span>';
+      return `
+        <article class="kse-kk kse-kk--private kse-kk--entwurf">
+          <div class="kse-kk-top">
+            <div class="kse-kk-main">
+              <h3 class="kse-kk-title">${esc(d.title || 'Ohne Titel')}</h3>
+              <div class="kse-kk-by">zuletzt ${esc(zeit(d.updated_at))}</div>
+              <div class="kse-kk-chips">${chip}
+                <span class="kse-chip kse-chip--info">${n} ${n === 1 ? 'Frage' : 'Fragen'}</span></div>
+            </div>
+          </div>
+          <div class="kse-kk-acts">
+            <button type="button" class="kse-btn kse-btn--small" data-ed="edit" data-cat="${esc(d.id)}"
+                    title="Weiterschreiben">✏️ Bearbeiten</button>
+            <button type="button" class="kse-btn kse-btn--small kse-btn--rot" data-ed="del"
+                    data-cat="${esc(d.id)}" data-title="${esc(d.title || 'Ohne Titel')}" title="Löschen">🗑</button>
+          </div>
+        </article>`;
+    }).join('');
+
+    return `
+      <div class="kse-wrap kse-wrap--katalog kse-wrap--entwuerfe">
+        <header class="kse-head">
+          <h1 class="kse-h1">✏️ Meine Quizze</h1>
+          <div class="kse-headr">
+            <button type="button" class="kse-btn kse-btn--gruen" data-ed="new">+ Neues Quiz</button>
+            <button type="button" class="kse-btn kse-btn--cyan" data-ed="imp-open"
+                    title="Fragen aus Text einfügen — Copy &amp; Paste">📋 Aus Text</button>
+          </div>
+        </header>
+        <p class="kse-stu-hint">Schreib dein eigenes Quiz — mit allen Fragetypen, Fotos und Vorschau.
+          Alles wird <b>automatisch gesichert</b>. Wenn du fertig bist, tippe im Quiz auf
+          <b>„✉️ An Lehrkraft senden"</b>.</p>
+        ${laedt ? '<p class="kse-leer">Lädt …</p>'
+          : (karten ? '<div class="kse-karten">' + karten + '</div>'
+                    : '<p class="kse-leer">Noch kein Quiz. Fang mit „+ Neues Quiz" an!</p>')}
+      </div>`;
+  }
+
+
   /* ═══════════════════════════════════════════════════════════
      2) VISUELLER EDITOR (edit)
      ═══════════════════════════════════════════════════════════ */
@@ -335,7 +400,12 @@
       + esc(f) + '</option>').join('');
   }
 
-  function buildEditor(catalog, cats) {
+  /* stu — Schüler-Fassung (Raum „gemeinsam erstellen", 0219): kein
+     „Wer sieht das Quiz?", statt „💾 Speichern" „✉️ An Lehrkraft
+     senden" und daneben, ob schon gesichert ist (das geschieht von
+     selbst). Alles andere — Fragetypen, Fotos, Vorschau, Text-Import —
+     ist dasselbe wie bei der Lehrkraft. */
+  function buildEditor(catalog, cats, stu) {
     const qs = catalog.questions || [];
     const title = catalog.title || '';
     const subject = catalog.subject || STANDARD_THEMA;
@@ -359,12 +429,19 @@
                     title="Weitere Fragen aus Text einfügen">📋 Aus Text</button>
             <button type="button" class="kse-btn kse-btn--soft" data-ed="preview"
                     title="Vorschau">👁️ Vorschau</button>
-            <button type="button" class="kse-btn kse-btn--gruen" data-ed="save"
+            ${stu ? `<span class="kse-auto" data-ed-auto aria-live="polite">${esc(stu.status || '')}</span>
+            <button type="button" class="kse-btn kse-btn--gruen" data-ed="send"
+                    title="Das Quiz an deine Lehrkraft schicken">✉️ An Lehrkraft senden</button>
+            <button type="button" class="kse-btn kse-btn--soft" data-ed="back"
+                    title="Zurück zu deinen Quizzen">← Meine Quizze</button>`
+            : `<button type="button" class="kse-btn kse-btn--gruen" data-ed="save"
                     title="Speichern">💾 Speichern</button>
             <button type="button" class="kse-btn kse-btn--soft" data-ed="back"
-                    title="Zurück zur Übersicht">← Zurück</button>
+                    title="Zurück zur Übersicht">← Zurück</button>`}
           </div>
         </header>
+        ${stu && catalog.sent_at ? `<p class="kse-gesendet">✉️ Schon an deine Lehrkraft gesendet. Du kannst weiter
+          daran arbeiten — erneut senden ersetzt die Fassung bei deiner Lehrkraft.</p>` : ''}
         <section class="kse-meta" aria-label="Einstellungen des Quiz">
           <div class="kse-meta-feld">
             <label class="kse-meta-l" for="kseThema">Themenfeld</label>
@@ -372,7 +449,7 @@
               ${themenOptionen(cats, subject)}
             </select>
           </div>
-          <div class="kse-meta-feld">
+          ${stu ? '' : `<div class="kse-meta-feld">
             <span class="kse-meta-l">Wer sieht das Quiz?</span>
             <div class="kse-segs" role="group" aria-label="Wer sieht das Quiz?">
               ${['private', 'school', 'hub'].map(v => `
@@ -381,7 +458,7 @@
                         title="${esc(STATUS[v].hint)}">${STATUS[v].ico} ${STATUS[v].label}</button>`).join('')}
             </div>
             <span class="kse-meta-hint">${esc(STATUS[vis].hint)}${isNew ? '' : ' Bearbeiten und Löschen kannst du es trotzdem jederzeit.'}</span>
-          </div>
+          </div>`}
           <div class="kse-meta-feld kse-meta-feld--bild">
             <span class="kse-meta-l">Vorschaubild</span>
             <div class="kse-thumbbox">
@@ -1133,6 +1210,18 @@
 .kse-imp-ans .kse-olabel { width: 22px; height: 22px; font-size: 12px; }
 .kse-imp-ex { margin-top: 4px; font-size: 12px; color: var(--ks-gruent); }
 .kse-imp-note { margin-top: 4px; font-size: 12px; color: var(--ks-soft); }
+
+/* ── Schüler-Fassung (0219) ── */
+.kse-fach-hint { font-size: 12px; font-weight: 600; color: var(--ks-soft); margin-left: 4px; }
+.kse-stu-hint { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ks-soft); }
+.kse-stu-hint b { color: var(--ks-ink); }
+.kse-auto { font-size: 12px; font-weight: 700; color: var(--ks-soft); min-width: 9em; text-align: right; }
+.kse-auto.is-fehler { color: var(--ks-rot); }
+.kse-gesendet {
+  margin: 0; padding: 8px 12px; border-radius: 12px; font-size: 13px; font-weight: 600;
+  background: var(--ks-gruenf); color: var(--ks-gruent);
+}
+.kse-kk--entwurf .kse-kk-main { padding-left: 2px; }
 `;
 
 
@@ -1158,6 +1247,13 @@
        onPlay(catId)    → Promise<{ok, error}>; fehlt es, gibt es
                           keinen „▶ Spielen"-Knopf
        closeLabel       → Aufschrift des Zurück-Knopfs
+       student          → true: Schüler-Fassung im Raum „gemeinsam
+                          erstellen" (0219). Statt des Katalogs die
+                          eigenen Entwürfe (ks_drafts_list/_get/_save/
+                          _delete), gesichert wird von selbst, statt
+                          Speichern gibt es „An Lehrkraft senden"
+                          (ks_draft_send). catalogs/reloadCatalogs/
+                          onPlay braucht es dann nicht.
      ═══════════════════════════════════════════════════════════ */
   function create(o) {
     // null = zu, 'list' = Katalog-Übersicht, 'edit' = Fragen-Editor,
@@ -1174,6 +1270,14 @@
     const thumbBusy = new Set();
     let thumbT = null, io = null;
     const kategorien = () => (o.categories && o.categories()) || THEMEN;
+    /* Schüler-Fassung (0219): Entwürfe statt Katalog, Sichern von selbst. */
+    const stu = !!o.student;
+    let entwuerfe = null;          // null = wird geladen
+    let sichernT = null;           // Entprellung des Sicherns
+    let sichert = null;            // Promise des laufenden Sicherns
+    let nochmal = false;           // während des Sicherns weiter getippt
+    let autoStatus = '';           // „✓ Gesichert" …
+    let autoFehler = false;
 
     const toast = (m, e) => o.toast && o.toast(m, e);
     const fehler = code => (o.errText ? o.errText(code) : 'Fehler (' + code + ')');
@@ -1186,10 +1290,12 @@
     }
 
     function html() {
+      if (mode === 'list' && stu) return buildDrafts(entwuerfe, entwuerfe === null);
       if (mode === 'list')   return buildList(o.catalogs() || [],
         { play: !!o.onPlay, close: o.closeLabel, current: o.current && o.current() },
         lf, kategorien(), caches);
-      if (mode === 'edit')   return buildEditor(data || { questions: [] }, kategorien());
+      if (mode === 'edit')   return buildEditor(data || { questions: [] }, kategorien(),
+        stu ? { status: autoStatus } : null);
       if (mode === 'import') return buildImport(imp, window.KSParse.parse(imp.text), kategorien());
       if (mode === 'preview') {
         const qs = (data && data.questions) || [];
@@ -1240,6 +1346,106 @@
         if (!isNaN(oi) && Array.isArray(q.options)) q.options[oi] = x.textContent.trim();
       });
       dirty = true;
+    }
+
+    /* ─── Schüler: Entwürfe laden und von selbst sichern (0219) ───
+       Gesichert wird 1,2 s nach der letzten Änderung, beim Verlassen
+       des Quiz und vor dem Senden. Es läuft immer nur EIN Aufruf; wer
+       währenddessen weitertippt, bekommt danach einen zweiten. */
+    async function ladeEntwuerfe() {
+      const r = await o.call('ks_drafts_list', {});
+      if (dead) return;
+      if (!r || !r.ok) { entwuerfe = entwuerfe || []; toast(fehler(r && r.error), true); }
+      else entwuerfe = Array.isArray(r.drafts) ? r.drafts : [];
+      if (mode === 'list') redraw();
+    }
+
+    function zeigeAuto(text, err) {
+      autoStatus = text; autoFehler = !!err;
+      const s = el && el.querySelector('[data-ed-auto]');
+      if (s) { s.textContent = text; s.classList.toggle('is-fehler', !!err); }
+    }
+
+    function planeSichern() {
+      if (!stu || !data || dead) return;
+      zeigeAuto('… wird gesichert');
+      clearTimeout(sichernT);
+      sichernT = setTimeout(() => { sichernT = null; sichere(); }, 1200);
+    }
+
+    function sichere() {
+      clearTimeout(sichernT); sichernT = null;
+      if (!stu || !data) return Promise.resolve(true);
+      if (sichert) { nochmal = true; return sichert; }
+      if (mode === 'edit') sammle();
+      if (mode === 'preview') sammleVorschau();
+      const d = data;
+      const inhalt = { subject: d.subject || STANDARD_THEMA, questions: d.questions || [],
+                       thumbnail: d.thumbnail || null, thumb_custom: !!d.thumb_custom };
+      sichert = o.call('ks_draft_save', { p_id: d.draft_id || null, p_title: d.title || '', p_content: inhalt })
+        .then(r => {
+          sichert = null;
+          if (r && r.ok) {
+            d.draft_id = r.id;
+            zeigeAuto.letzter = null;
+            if (data === d) { dirty = false; zeigeAuto('✓ Gesichert'); }
+          } else if (data === d) {
+            zeigeAuto('⚠ Nicht gesichert', true);
+            if (!autoFehler || r.error !== zeigeAuto.letzter) toast(fehler(r && r.error), true);
+            zeigeAuto.letzter = r && r.error;
+          }
+          if (nochmal) { nochmal = false; return sichere(); }
+          return !!(r && r.ok);
+        });
+      return sichert;
+    }
+
+    /* Was zum Server geht, wenn gespeichert (Lehrkraft) oder gesendet
+       (Schüler) wird — dieselbe Form an beiden Stellen. */
+    function pruefe() {
+      if (!data.title || !data.title.trim()) return 'Bitte einen Titel eingeben.';
+      if (!data.questions.length) return 'Mindestens eine Frage ist nötig.';
+      for (let i = 0; i < data.questions.length; i++) {
+        const q = data.questions[i];
+        if (artVon(q) !== 'scale') continue;
+        const s = q.scale || {};
+        const mn = zahlLesen(s.min), mx = zahlLesen(s.max), zi = zahlLesen(s.target);
+        if (!isFinite(mn) || !isFinite(mx) || !isFinite(zi)) return 'Frage ' + (i + 1) + ': Start, Ende und Ziel müssen Zahlen sein.';
+        if (mn >= mx) return 'Frage ' + (i + 1) + ': Der Start muss kleiner als das Ende sein.';
+        if (zi < mn || zi > mx) return 'Frage ' + (i + 1) + ': Das Ziel muss zwischen Start und Ende liegen.';
+      }
+      return null;
+    }
+
+    function fuerServer() {
+      return data.questions.map(q => ({
+        kind:            artVon(q),
+        scale:           artVon(q) === 'scale' ? {
+                           min: zahlLesen(q.scale.min), max: zahlLesen(q.scale.max),
+                           target: zahlLesen(q.scale.target), unit: q.scale.unit || '',
+                           step: skalaSchritt({ min: q.scale.min, max: q.scale.max, target: q.scale.target })
+                         } : null,
+        question_text:   q.question_text || '',
+        options:         artVon(q) === 'scale' ? []
+                       : artVon(q) === 'tf' ? (q.options || ['Wahr', 'Falsch']).slice(0, 2)
+                       : (q.options || ['','','','']),
+        correct_idx:     (Array.isArray(q.correct_indices) && q.correct_indices.length)
+                           ? q.correct_indices[0] : (q.correct_idx || 0),
+        correct_indices: q.correct_indices || [q.correct_idx || 0],
+        time_limit_sec:  q.time_limit_sec || 20,
+        explanation:     q.explanation || null,
+        image:           q.image || null,
+        image_name:      q.image ? (q.image_name || 'Foto') : null
+      }));
+    }
+
+    /* Vorschaubild: das eigene — sonst das Foto der ersten Frage, die
+       eines hat — sonst keins (dann zeigt der Katalog das Logo). */
+    async function vorschaubild() {
+      if (data.thumb_custom && data.thumbnail) return { thumb: data.thumbnail, eigen: true };
+      const q1 = data.questions.find(q => q.image);
+      if (q1) { try { return { thumb: await thumbVon(q1.image), eigen: false }; } catch (e) { /* ohne */ } }
+      return { thumb: null, eigen: false };
     }
 
     /* Drag & Drop für Fragen-Reihenfolge */
@@ -1383,6 +1589,7 @@
       q.image = foto ? foto.image : null;
       q.image_name = foto ? foto.image_name : null;
       dirty = true;
+      planeSichern();
       if (mode === 'preview') { redraw(); return; }
       const zelle = el && el.querySelector('[data-foto="' + qi + '"]');
       if (zelle) {
@@ -1529,6 +1736,7 @@
         data.thumbnail = await thumbVon(file);
         data.thumb_custom = true;
         dirty = true;
+        planeSichern();
         redraw();
       } catch (e) {
         toast('Dieses Bild kann der Browser nicht lesen. Bitte als JPG oder PNG speichern.', true);
@@ -1544,6 +1752,7 @@
         if (q) { lf.q = q.value; listeNeu(); }
         return;
       }
+      if (stu && (mode === 'edit' || mode === 'preview')) { dirty = true; planeSichern(); return; }
       if (mode !== 'import' || !imp) return;
       const f = ev.target.closest('[data-imp]');
       if (!f) return;
@@ -1618,8 +1827,47 @@
       return true;
     }
 
+    /* Nach jeder Aktion, die etwas geändert hat: sichern (Schüler). */
     async function handle(ed) {
+      await aktion(ed);
+      if (stu && dirty && data && (mode === 'edit' || mode === 'preview')) planeSichern();
+    }
+
+    async function aktion(ed) {
         const a = ed.dataset.ed;
+
+        // ── Schüler: An Lehrkraft senden ──
+        if (a === 'send' && stu) {
+          sammle();
+          const fehlt = pruefe();
+          if (fehlt) { toast(fehlt, true); return; }
+          const ok = await o.confirm(data.sent_at
+            ? 'Erneut an deine Lehrkraft senden? Die Fassung, die sie schon hat, wird ersetzt.'
+            : 'Quiz „' + data.title.trim() + '" an deine Lehrkraft senden? Du kannst danach weiter daran arbeiten.');
+          if (!ok) return;
+          ed.disabled = true; ed.textContent = '⏳ …';
+          const gesichert = await sichere();
+          if (!gesichert || !data.draft_id) {
+            ed.disabled = false; ed.textContent = '✉️ An Lehrkraft senden'; return;
+          }
+          const bild = await vorschaubild();
+          const r = await o.call('ks_draft_send', {
+            p_id:           data.draft_id,
+            p_title:        data.title.trim(),
+            p_subject:      data.subject || STANDARD_THEMA,
+            p_questions:    fuerServer(),
+            p_thumbnail:    bild.thumb,
+            p_thumb_custom: bild.eigen
+          });
+          ed.disabled = false; ed.textContent = '✉️ An Lehrkraft senden';
+          if (!r || !r.ok) { toast(fehler(r && r.error), true); return; }
+          const neu = !data.sent_at;
+          data.sent_at = new Date().toISOString();
+          dirty = false;
+          toast(neu ? '✉️ Gesendet! Deine Lehrkraft hat dein Quiz jetzt.'
+                    : '✉️ Neu gesendet — deine Lehrkraft hat jetzt die neue Fassung.');
+          redraw(); return;
+        }
 
         // Katalog-Übersicht → Editor schließen
         if (a === 'close') {
@@ -1744,6 +1992,16 @@
         }
 
         // Katalog zum Bearbeiten laden
+        if (a === 'edit' && stu) {
+          ed.disabled = true;
+          const r = await o.call('ks_draft_get', { p_id: ed.dataset.cat });
+          ed.disabled = false;
+          if (!r || !r.ok) { toast(fehler(r && r.error), true); return; }
+          data = Object.assign({ subject: STANDARD_THEMA }, r.draft, { draft_id: r.draft.id });
+          if (!Array.isArray(data.questions)) data.questions = [];
+          mode = 'edit'; dirty = false; zeigeAuto('✓ Gesichert');
+          redraw(); return;
+        }
         if (a === 'edit') {
           const catId = ed.dataset.cat;
           ed.disabled = true;
@@ -1776,6 +2034,17 @@
         }
 
         // Katalog löschen
+        if (a === 'del' && stu) {
+          const title = ed.dataset.title || 'Quiz';
+          if (!(await o.confirm('„' + title + '" wirklich löschen? Was du schon an deine Lehrkraft gesendet hast, bleibt bei ihr.'))) return;
+          ed.disabled = true;
+          const r = await o.call('ks_draft_delete', { p_id: ed.dataset.cat });
+          ed.disabled = false;
+          if (!r || !r.ok) { toast(fehler(r && r.error), true); return; }
+          toast('„' + title + '" gelöscht.');
+          await ladeEntwuerfe();
+          redraw(); return;
+        }
         if (a === 'del') {
           const title = ed.dataset.title || 'Quiz';
           const veroeff = ed.dataset.vis && ed.dataset.vis !== 'private';
@@ -1794,6 +2063,16 @@
         }
 
         // Zurück zur Katalog-Liste (aus dem Editor)
+        if (a === 'back' && stu) {
+          ed.disabled = true;
+          const ok = await sichere();
+          ed.disabled = false;
+          if (!ok && !(await o.confirm('Das Quiz ließ sich gerade nicht sichern. Trotzdem zurück? Die letzten Änderungen fehlen dann.'))) return;
+          mode = 'list'; data = null; dirty = false;
+          redraw();
+          ladeEntwuerfe();
+          return;
+        }
         if (a === 'back') {
           if (dirty) {
             const ok = await o.confirm('Ungespeicherte Änderungen gehen verloren. Trotzdem zurück?');
@@ -1922,62 +2201,20 @@
         // Speichern
         if (a === 'save') {
           sammle();
-          if (!data.title || !data.title.trim()) {
-            toast('Bitte einen Titel eingeben.', true); return;
-          }
-          if (!data.questions.length) {
-            toast('Mindestens eine Frage ist nötig.', true); return;
-          }
-          // Skalen prüfen, bevor etwas zum Server geht
-          for (let i = 0; i < data.questions.length; i++) {
-            const q = data.questions[i];
-            if (artVon(q) !== 'scale') continue;
-            const s = q.scale || {};
-            const mn = zahlLesen(s.min), mx = zahlLesen(s.max), zi = zahlLesen(s.target);
-            if (!isFinite(mn) || !isFinite(mx) || !isFinite(zi)) {
-              toast('Frage ' + (i + 1) + ': Start, Ende und Ziel müssen Zahlen sein.', true); return;
-            }
-            if (mn >= mx) { toast('Frage ' + (i + 1) + ': Der Start muss kleiner als das Ende sein.', true); return; }
-            if (zi < mn || zi > mx) { toast('Frage ' + (i + 1) + ': Das Ziel muss zwischen Start und Ende liegen.', true); return; }
-          }
-          // Fragen für den Server aufbereiten
-          const qs = data.questions.map((q, i) => ({
-            kind:            artVon(q),
-            scale:           artVon(q) === 'scale' ? {
-                               min: zahlLesen(q.scale.min), max: zahlLesen(q.scale.max),
-                               target: zahlLesen(q.scale.target), unit: q.scale.unit || '',
-                               step: skalaSchritt({ min: q.scale.min, max: q.scale.max, target: q.scale.target })
-                             } : null,
-            question_text:   q.question_text || '',
-            options:         artVon(q) === 'scale' ? []
-                           : artVon(q) === 'tf' ? (q.options || ['Wahr', 'Falsch']).slice(0, 2)
-                           : (q.options || ['','','','']),
-            correct_idx:     (Array.isArray(q.correct_indices) && q.correct_indices.length)
-                               ? q.correct_indices[0] : (q.correct_idx || 0),
-            correct_indices: q.correct_indices || [q.correct_idx || 0],
-            time_limit_sec:  q.time_limit_sec || 20,
-            explanation:     q.explanation || null,
-            image:           q.image || null,
-            image_name:      q.image ? (q.image_name || 'Foto') : null
-          }));
+          const fehlt = pruefe();
+          if (fehlt) { toast(fehlt, true); return; }
+          const qs = fuerServer();
 
           ed.disabled = true; ed.textContent = '⏳ …';
-          /* Vorschaubild: das eigene — sonst das Foto der ersten Frage,
-             die eines hat — sonst keins (dann zeigt der Katalog das Logo). */
-          let thumb = null, eigen = false;
-          if (data.thumb_custom && data.thumbnail) { thumb = data.thumbnail; eigen = true; }
-          else {
-            const q1 = data.questions.find(q => q.image);
-            if (q1) { try { thumb = await thumbVon(q1.image); } catch (e) { thumb = null; } }
-          }
+          const bild = await vorschaubild();
           const r = await o.call('ks_catalog_save', {
             p_catalog_id:   data.catalog_id || null,
             p_title:        data.title.trim(),
             p_subject:      data.subject || STANDARD_THEMA,
             p_questions:    qs,
             p_visibility:   data.visibility || 'private',
-            p_thumbnail:    thumb,
-            p_thumb_custom: eigen
+            p_thumbnail:    bild.thumb,
+            p_thumb_custom: bild.eigen
           });
           ed.disabled = false; ed.textContent = '💾 Speichern';
 
@@ -2013,8 +2250,23 @@
       get mode() { return mode; },
       get dirty() { return !!(mode && dirty); },
       key, html, bind, onClick, reset,
-      openList() { imp = null; data = null; dirty = false; mode = 'list'; redraw(); },
-      destroy() { dead = true; reset(); el = null; if (io) io.disconnect(); clearTimeout(thumbT); }
+      openList() {
+        imp = null; data = null; dirty = false; mode = 'list';
+        if (stu) { entwuerfe = null; ladeEntwuerfe(); }
+        redraw();
+      },
+      /* Ein bestimmtes eigenes Quiz gleich im Editor öffnen (der Beamer
+         im Raum „gemeinsam erstellen": „✏️ Ansehen" an einem Eingesandten). */
+      openCatalog(id) {
+        imp = null; data = null; dirty = false; mode = 'list';
+        handle({ dataset: { ed: 'edit', cat: id } });
+      },
+      /* Sofort sichern, was noch aussteht (Schüler; Seite wird verlassen). */
+      flush() { return (stu && sichernT) ? sichere() : Promise.resolve(true); },
+      destroy() {
+        if (stu && sichernT) sichere();   // Letztes noch losschicken, nicht abwarten
+        dead = true; reset(); el = null; if (io) io.disconnect(); clearTimeout(thumbT); clearTimeout(sichernT);
+      }
     };
   }
 

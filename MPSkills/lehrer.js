@@ -538,6 +538,8 @@ function toolFieldsHTML(locked) {
 
   return S.fields.map(f => {
     if (f.type === 'list') return listHTML(f);
+    // Auswahlfelder stehen oben neben dem Titel (choiceFieldsHTML).
+    if (f.type === 'choice') return '';
 
     if (f.type === 'quota') {
       const v = Number(cur[f.key]) || 0;
@@ -559,6 +561,34 @@ function toolFieldsHTML(locked) {
              value="${esc(val)}"
              ${locked ? 'disabled' : ''} />
     </label>`;
+  }).join('');
+}
+
+/* Auswahlfelder (type 'choice') — eine Frage mit zwei, drei festen
+   Antworten, z. B. bei Knowledge Stack „gemeinsam quizzen" oder
+   „gemeinsam erstellen". Sie gehören zur Grundform des Raums und
+   stehen deshalb oben im Kasten beim Titel, nicht unten bei den
+   Zusatzangaben. Dieselbe Schiene wie „Sollen User Namen angeben?",
+   darunter ein Satz zur gerade gewählten Antwort. */
+function choiceFieldsHTML() {
+  if (S.fieldsFor !== S.toolId) return '';
+  const cur = S.view?.room?.settings || {};
+  return S.fields.filter(f => f.type === 'choice' && Array.isArray(f.options)).map(f => {
+    const val = f.options.some(o => o.value === cur[f.key]) ? cur[f.key]
+              : (f.default || f.options[0]?.value);
+    const sel = f.options.find(o => o.value === val) || {};
+    return `
+          <div class="setfield" data-choice="${esc(f.key)}">
+            <span class="setfield-l" id="choiceL_${esc(f.key)}">${esc(f.label)}</span>
+            <div class="seg2" role="radiogroup" aria-labelledby="choiceL_${esc(f.key)}">
+              ${f.options.map((o, i) => `
+              <input type="radio" name="choice_${esc(f.key)}" id="choice_${esc(f.key)}_${i}"
+                     value="${esc(o.value)}" data-setting-choice="${esc(f.key)}"
+                     ${o.value === val ? 'checked' : ''} />
+              <label for="choice_${esc(f.key)}_${i}">${esc(o.label)}</label>`).join('')}
+            </div>
+            <p class="setfield-hint" data-choice-hint>${esc(sel.hint || '')}</p>
+          </div>`;
   }).join('');
 }
 
@@ -700,6 +730,8 @@ function renderSettings() {
             ${toolBlock}
           </div>
 
+          <div id="setToolChoice">${choiceFieldsHTML()}</div>
+
           <div class="setfield${lockNames ? ' is-locked' : ''}">
             <span class="setfield-l" id="askNamesL">Sollen User Namen angeben?</span>
             <div class="seg2" role="radiogroup" aria-labelledby="askNamesL">
@@ -727,6 +759,14 @@ function renderSettings() {
   const form = $('setForm');
   form.addEventListener('submit', creating ? submitCreate : submitUpdate);
   form.addEventListener('input',  updateGo);
+  // Der Satz unter einem Auswahlfeld folgt der gewählten Antwort.
+  form.addEventListener('change', (ev) => {
+    const r = ev.target.closest('input[data-setting-choice]');
+    if (!r) return;
+    const f = S.fields.find(x => x.key === r.dataset.settingChoice);
+    const hint = r.closest('[data-choice]')?.querySelector('[data-choice-hint]');
+    if (hint) hint.textContent = (f?.options || []).find(o => o.value === r.value)?.hint || '';
+  });
 
   /* Delegiert am Formular und nicht an den Knöpfen: redrawList
      ersetzt den ganzen Kasten, Listener an seinen Kindern wären
@@ -813,6 +853,7 @@ function renderSettings() {
       $('rtToolName').innerHTML =
         MPIcons.label(S.toolId, S.tools[S.toolId]?.title || 'Skill');
       await loadFields();
+      $('setToolChoice').innerHTML = choiceFieldsHTML();
       $('setToolFields').innerHTML = toolFieldsBlock(false);
       updateGo();
       $('demoCard').hidden = !DEMO_TOOLS[S.toolId];
@@ -864,6 +905,10 @@ function readSettings() {
     out[el.dataset.settingNum] = (isFinite(n) && n > 0)
       ? Math.min(Number(f.max) || 100, Math.max(Number(f.min) || 1, n))
       : 0;
+  });
+
+  document.querySelectorAll('#setToolChoice input[data-setting-choice]:checked').forEach(el => {
+    out[el.dataset.settingChoice] = el.value;
   });
 
   harvestGroups();

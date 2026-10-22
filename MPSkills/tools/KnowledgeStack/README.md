@@ -339,6 +339,7 @@ node supabase/tests/0186_knowledgestack_photos_abort.mjs      # Fotos, Beenden, 
 node supabase/tests/0189_knowledgestack_sync_reveal.mjs       # Uhrabgleich, faire Antwortzeit
 node supabase/tests/0194_knowledgestack_catalog.mjs           # Katalog: Sichtbarkeit, Rechte, Admin
 node supabase/tests/0217_knowledgestack_fragetypen.mjs        # Wahr/Falsch, Skala, Münzen
+node supabase/tests/0219_knowledgestack_gemeinsam_erstellen.mjs  # Entwürfe, An Lehrkraft senden
 ```
 
 * **uitest.js** (linkedom, kein Browser) — *was* im Bild steht: die echten
@@ -364,7 +365,8 @@ Beenden und Neustart (und die Katalog-Aufrufe mit `p_code`, die der Beamer
 braucht), `0189_knowledgestack_sync_reveal.sql` die gleichzeitigen Antworten,
 `0191_knowledgestack_intro.sql` die 10 Sekunden Auftritt vor der ersten Frage, (seit `0195_knowledgestack_intro_kuerzer.sql`: 9 Sekunden)
 `0194_knowledgestack_catalog.sql` den Fragenkatalog (Themenfelder, Status, Autor, Thumbnails, Admin-Rechte),
-`0217_knowledgestack_fragetypen.sql` die Fragetypen Wahr/Falsch, Skala und Münzen setzen. Alle spielt Sönke selbst im Supabase-Dashboard ein.
+`0217_knowledgestack_fragetypen.sql` die Fragetypen Wahr/Falsch, Skala und Münzen setzen,
+`0219_knowledgestack_gemeinsam_erstellen.sql` den Raum-Modus „gemeinsam erstellen" (Entwürfe, An Lehrkraft senden, Ordner im Katalog). Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
 ## Der Fragen-Editor
 
@@ -430,6 +432,46 @@ Im Raum hängt `lib/tool.js` an jeden Aufruf `p_code` — darum haben
 `ks_catalog_save/_set_visibility/_peek/_thumbs` je eine Fassung mit `p_code`.
 `ks_room_get` ist seit 0194 ein Vorbau (`_ks_room_get_v188`) und schickt die
 Liste samt `categories` aus `ks_catalogs_list`.
+
+## Zwei Modi: gemeinsam Quizzen · gemeinsam erstellen (Migration 0219)
+
+Beim Anlegen des Raums steht neben dem Titel die Frage **„Wie nutzt ihr den
+Raum?"** (`settingsFields` mit `type: 'choice'` → `lehrer.js`
+`choiceFieldsHTML`, landet in `skill_rooms.settings.mode`). Änderbar in den
+Einstellungen, auch wenn der Raum offen ist — `update(view)` merkt den
+Wechsel (`raumModus`) und baut um (`halteAn` → `starte`).
+
+| | `play` — gemeinsam Quizzen (Vorgabe) | `create` — gemeinsam erstellen |
+|---|---|---|
+| **Tablet** | das Live-Quiz wie oben | der Quiz-Editor in der **Schüler-Fassung** (`KSEditor.create({ student: true })`) |
+| **Beamer** | Lobby, Fragen, Siegerehrung | Überblick: wer schreibt (Entwürfe/gesendet je Kind), was angekommen ist (`ks_room_drafts`, alle 4 s), „📚 Meine Quizze", „✏️ Ansehen" |
+
+**Schüler-Fassung des Editors** — dieselben Werkzeuge wie bei der Lehrkraft
+(Fragetypen, Fotos, Vorschau, Text-Import), aber:
+
+* Statt des Katalogs „✏️ Meine Quizze": die eigenen **Entwürfe** in diesem Raum
+  (`ks_drafts`, je `skill_participants`-Platz — also je Gerät bzw. je Konto,
+  wer angemeldet beitritt, hat auf jedem Gerät dieselben). Wechseln zwischen
+  mehreren Quizzen, löschen. Höchstens 30 je Kind, 8 Mio. Zeichen je Entwurf.
+* **Kein Speichern, kein „Wer sieht das Quiz?"** — gesichert wird von selbst
+  (1,2 s nach der letzten Änderung, beim Zurück, vor dem Senden, bei
+  `pagehide`). Der Entwurf hält den Editor-Stand, wie er ist (auch eine halbe
+  Skala); geprüft wird erst beim Senden.
+* **„✉️ An Lehrkraft senden"** (`ks_draft_send`): legt das Quiz als **privaten
+  Katalog der Raum-Besitzerin** an — Titel „<Titel> von <Name>" (Name im Raum,
+  sonst Anzeigename, sonst „Tablet n"), `folder` = Raumtitel, `from_room`.
+  Erneut senden **ersetzt** die Fassung bei der Lehrkraft (`sent_catalog_id`),
+  solange sie sie nicht gelöscht hat.
+* Die Entwürfe hängen am Raum (`on delete cascade`) — das Gesendete bleibt bei
+  der Lehrkraft.
+
+**Im Katalog der Lehrkraft** stehen Eingesandte in einer eigenen Gruppe
+**„📥 <Raum>"** vor den Themenfeldern (`ks_catalogs_list` liefert `folder`,
+Vorbau `_ks_catalogs_list_v194`; wird der Raum umbenannt, zieht der Ordner
+per Trigger mit). Im Raum „gemeinsam erstellen" gibt es kein „▶ Spielen" —
+gespielt wird, nachdem der Raum auf „gemeinsam Quizzen" gestellt ist.
+
+Prüfstand: `node supabase/tests/0219_knowledgestack_gemeinsam_erstellen.mjs`.
 
 ## Was noch fehlt
 
