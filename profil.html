@@ -598,6 +598,34 @@
       color: var(--muted);
       text-align: center;
     }
+    /* Gold-Fassung: Dreieck unten an der Kachel schaltet um (avatars.js
+       getPickerTiles). Zeigt die Kachel Gold, ist es grau = zurück. */
+    .avatar-tile .tile-flip {
+      position: absolute;
+      top: calc(0.6rem + 78px);
+      left: calc(50% + 24px);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--surface, #fff);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .avatar-tile .tile-flip::before {
+      content: '';
+      width: 13px;
+      height: 11px;
+      margin-top: 2px;
+      clip-path: polygon(50% 100%, 0 0, 100% 0);
+      background: linear-gradient(135deg, #fff1b8, #e0a92a 55%, #a8700f);
+      filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
+    }
+    .avatar-tile.is-gold .tile-flip::before { background: linear-gradient(135deg, #f4f4f4, #a9a9a9 60%, #7a7a7a); }
+    .avatar-tile .tile-flip:hover,
+    .avatar-tile .tile-flip:focus-visible { background: var(--surface-soft); outline: none; transform: scale(1.12); }
+    .avatar-tile.is-gold .avatar-tile-img { box-shadow: 0 0 0 3px #e0a92a; }
 
     /* ─── Ladeanzeige (bevor Session da ist) ─────────────────── */
     .loading, .not-logged-in {
@@ -847,6 +875,7 @@
         if (firstNewGroup) currentGroupId = firstNewGroup;
       }
       currentWorldId = worldOfGroup(currentGroupId);
+      tileShow.clear();
       renderPickerWorlds();
       renderPickerTabs();
       renderPickerGrid();
@@ -896,8 +925,9 @@
     // würde die Gesamtzahl die noch geheimen Kreaturen verraten).
     function groupCount(g) {
       if (g.world !== 'mpskills') return '';
-      const all = window.AVATARS.filter(a => a.group === g.id);
-      const have = all.filter(a => unlockedSet.has(a.id)).length;
+      // Gold-Fassungen zählen nicht extra — sie hängen am Grundbild.
+      const all = window.AVATARS.filter(a => a.group === g.id && !a.goldOf);
+      const have = all.filter(a => unlockedSet.has(a.id) || unlockedSet.has(a.goldId)).length;
       return ` <span class="tab-count">${have}/${all.length}</span>`;
     }
     function worldOfGroup(gId) {
@@ -948,8 +978,8 @@
     function renderPickerGrid() {
       pickerGrid.innerHTML = '';
       // Nur freigeschaltete zeigen — sonst spoilert der Picker alle Kreaturen.
-      const items = (window.AVATARS || [])
-        .filter(a => a.group === currentGroupId && unlockedSet.has(a.id));
+      // Gold-Fassungen haben keine eigene Kachel (getPickerTiles).
+      const items = window.getPickerTiles(currentGroupId, unlockedSet, currentAvatarId, pickerSessionNewSet);
 
       if (items.length === 0 && currentWorldId === 'mpskills') {
         const g = window.AVATAR_GROUPS.find(x => x.id === currentGroupId);
@@ -977,21 +1007,46 @@
         return;
       }
 
-      for (const a of items) {
-        const isNew = pickerSessionNewSet.has(a.id);
+      for (const t of items) {
+        const a = shownOf(t);
+        const isNew = pickerSessionNewSet.has(t.base.id) || (t.gold && pickerSessionNewSet.has(t.gold.id));
+        const on = currentAvatarId === t.base.id || (t.gold && currentAvatarId === t.gold.id);
+        const flipLabel = a.goldOf ? 'Normal zeigen' : 'Gold zeigen';
         const tile = document.createElement('button');
         tile.type = 'button';
-        tile.className = 'avatar-tile' + (a.id === currentAvatarId ? ' selected' : '') + (a.world === 'mpskills' ? ' is-mps' : '');
+        tile.className = 'avatar-tile' + (on ? ' selected' : '') + (a.goldOf ? ' is-gold' : '') + (a.world === 'mpskills' ? ' is-mps' : '');
         tile.innerHTML = `
           ${isNew ? '<span class="tile-new">NEU</span>' : ''}
           <div class="avatar-tile-img">
             <img src="${window.getAvatarUrl(a.id, '')}" alt="" />
           </div>
           <div class="avatar-tile-label">${a.label}</div>
+          ${t.both ? `<span class="tile-flip" role="button" tabindex="0" title="${flipLabel}" aria-label="${flipLabel}"></span>` : ''}
         `;
         tile.addEventListener('click', () => selectAvatar(a.id));
+        // Dreieck: zwischen normal und Gold umschalten, ohne zu wählen.
+        const flip = tile.querySelector('.tile-flip');
+        if (flip) {
+          const doFlip = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            tileShow.set(t.base.id, a.goldOf ? t.base.id : t.gold.id);
+            renderPickerGrid();
+          };
+          flip.addEventListener('click', doFlip);
+          flip.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') doFlip(e); });
+        }
         pickerGrid.appendChild(tile);
       }
+    }
+
+    // Was eine Kachel mit Gold-Fassung gerade zeigt (umgeschaltet per Dreieck).
+    const tileShow = new Map();
+    function shownOf(t) {
+      const id = tileShow.get(t.base.id);
+      if (id === t.base.id && t.both) return t.base;
+      if (t.gold && id === t.gold.id) return t.gold;
+      return t.show;
     }
 
     async function selectAvatar(id) {

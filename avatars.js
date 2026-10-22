@@ -47,6 +47,8 @@
      window.DEFAULT_AVATAR_ID           — 'default'
      window.loadMpskillsUnlocks()       — Promise; holt mps_my_avatars() vom Server
      window.getAvatarById(id)
+     window.getPickerTiles(group, unlockedSet) — Kacheln für den Picker:
+                                          [{base, gold|null, both, show}] (Gold ohne eigene Kachel)
      window.getAvatarUrl(id, basePath)
      window.getSeenCreatures()          — {creatureId: maxStageIdx}
      window.computeUnlockedAvatarIds()  — Set<avatarId>
@@ -76,12 +78,15 @@
      MPSkills/tools.js, folder = Unterordner von „avatare MPSkills/“
      (so geschrieben, wie er auf der Platte heißt). */
   const MPS_GROUPS = [
-    { id: 'mps_knowledgestack', skill: 'knowledgestack', folder: 'KnowlegeStack',        label: 'Knowledge Stack' },
+    { id: 'mps_knowledgestack', skill: 'knowledgestack', folder: 'KnowlegeStack',        label: 'Knowledge Stack', gold: true,
+      hint: 'Spiel ein Quiz bis zum Ende — dann bekommst du das Wesen, mit dem du gespielt hast. Wer Platz 1 holt, bekommt es zusätzlich in Gold. Das klappt nur, wenn du beim Spielen angemeldet bist.' },
     { id: 'mps_wordisland',     skill: 'wordisland',     folder: 'Wordisland',           label: 'Wordisland' },
     { id: 'mps_clash-of-math',  skill: 'clash-of-math',  folder: 'Kingdoms of Mathoria', label: 'Kingdoms of Mathoria',
       hint: 'Gewinne mit deinem Team eine Partie — dann bekommst du das Bild deines Volkes. Das klappt nur, wenn du beim Spielen angemeldet bist.' },
-    { id: 'mps_wildclusters',   skill: 'wildclusters',   folder: 'Wildclusters',         label: 'Wild Clusters' },
-    { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature' }
+    { id: 'mps_wildclusters',   skill: 'wildclusters',   folder: 'Wildclusters',         label: 'Wild Clusters',
+      hint: 'Sobald eure Lehrkraft die Auflösung (Phase 3) startet, bekommst du alle Tiere. Das klappt nur, wenn du angemeldet bist.' },
+    { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature',
+      hint: 'Spiel ein Szenario, das deine Lehrkraft mit der Klasse teilt — dann bekommst du die Figuren, die darin vorkommen. Das klappt nur, wenn du angemeldet bist.' }
   ];
 
   const AVATAR_GROUPS = [
@@ -358,9 +363,18 @@
       ['villager',   'villager_11_avatar.png',        'Dorfbewohner']
     ]
   };
+  /* Gruppen mit gold: true haben zu jedem Bild eine goldene Fassung
+     (<id>_gold, Datei *_gold_avatar.png). Sie ist ein eigener Eintrag
+     (goldOf → Grundbild, Grundbild.goldId → Gold), im Picker aber keine
+     eigene Kachel: das Dreieck an der Kachel schaltet um. */
   for (const g of MPS_GROUPS) {
     for (const [key, file, label] of (MPS_CATALOG[g.id] || [])) {
-      AVATARS.push({ id: `${g.id}_${key}`, group: g.id, world: 'mpskills', skill: g.skill, folder: g.folder, file, label });
+      const base = { id: `${g.id}_${key}`, group: g.id, world: 'mpskills', skill: g.skill, folder: g.folder, file, label };
+      AVATARS.push(base);
+      if (!g.gold) continue;
+      base.goldId = `${base.id}_gold`;
+      AVATARS.push({ ...base, id: base.goldId, goldId: undefined, goldOf: base.id,
+                     file: file.replace(/_avatar\.png$/, '_gold_avatar.png'), label: `${label} Gold` });
     }
   }
   for (const a of AVATARS) if (!a.world) a.world = 'gamehub';
@@ -369,6 +383,23 @@
 
   function getAvatarById(id) {
     return _byId.get(id) || _byId.get(DEFAULT_AVATAR_ID);
+  }
+  /* Kacheln einer Gruppe: je Grundbild eine, wenn das Grundbild oder
+     seine Gold-Fassung frei ist. show = was die Kachel zuerst zeigt:
+     Gold, wenn es gerade gewählt ist (current), neu ist (newSet) oder
+     nur Gold frei ist. */
+  function getPickerTiles(group, unlockedSet, current, newSet) {
+    const tiles = [];
+    for (const a of AVATARS) {
+      if (a.group !== group || a.goldOf) continue;
+      const hasBase = unlockedSet.has(a.id);
+      const gold = a.goldId && unlockedSet.has(a.goldId) ? _byId.get(a.goldId) : null;
+      if (!hasBase && !gold) continue;
+      const showGold = !!gold && (!hasBase || current === gold.id ||
+        (current !== a.id && !!newSet && newSet.has(gold.id)));
+      tiles.push({ base: a, gold, both: hasBase && !!gold, show: showGold ? gold : a });
+    }
+    return tiles;
   }
   function getAvatarUrl(id, basePath = '') {
     const entry = getAvatarById(id);
@@ -630,6 +661,7 @@
   window.AVATAR_GROUPS           = AVATAR_GROUPS;
   window.AVATARS                 = AVATARS;
   window.getAvatarById           = getAvatarById;
+  window.getPickerTiles          = getPickerTiles;
   window.loadMpskillsUnlocks     = loadMpskillsUnlocks;
   window.getAvatarUrl            = getAvatarUrl;
   window.getSeenCreatures        = getSeenCreatures;

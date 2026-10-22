@@ -391,6 +391,7 @@
     // Gibt es Neues, dort anfangen.
     const firstNew = (window.AVATARS || []).find(a => pickerNewSet.has(a.id));
     if (firstNew) { currentWorld = firstNew.world; currentGroup = firstNew.group; }
+    tileShow.clear();
     recomputeUnlocks();
     renderWorlds();
     renderTabs();
@@ -448,8 +449,10 @@
     // die noch geheimen Kreaturen.
     const count = (g) => {
       if (g.world !== 'mpskills') return '';
-      const all = (window.AVATARS || []).filter(a => a.group === g.id);
-      return ` <span class="tab-count">${all.filter(a => unlockedSet.has(a.id)).length}/${all.length}</span>`;
+      // Gold-Fassungen zählen nicht extra — sie hängen am Grundbild.
+      const all = (window.AVATARS || []).filter(a => a.group === g.id && !a.goldOf);
+      const have = all.filter(a => unlockedSet.has(a.id) || unlockedSet.has(a.goldId)).length;
+      return ` <span class="tab-count">${have}/${all.length}</span>`;
     };
     el.innerHTML = groupsWithContent.map(g =>
       `<button type="button" class="picker-tab${g.id === currentGroup ? ' on' : ''}" data-g="${esc(g.id)}">${esc(g.label)}${count(g)}</button>`
@@ -463,10 +466,11 @@
 
   function renderGrid() {
     const el = $('pickerGrid');
-    const items = (window.AVATARS || [])
-      .filter(a => a.group === currentGroup && unlockedSet.has(a.id));
+    const tiles = window.getPickerTiles
+      ? window.getPickerTiles(currentGroup, unlockedSet, currentAvatarId, pickerNewSet)
+      : [];
 
-    if (!items.length) {
+    if (!tiles.length) {
       const g = (window.AVATAR_GROUPS || []).find(x => x.id === currentGroup);
       el.innerHTML = currentWorld === 'mpskills'
         ? `<p class="tools-empty">Noch nichts freigeschaltet. ${g?.hint ? esc(g.hint) : `In <strong>${esc(g?.label || 'diesem Skill')}</strong> kannst du Avatare freischalten — sie erscheinen dann hier.`}</p>`
@@ -474,15 +478,44 @@
       return;
     }
 
-    el.innerHTML = items.map(a => `
-      <button type="button" class="picker-tile${a.id === currentAvatarId ? ' on' : ''}${a.world === 'mpskills' ? ' is-mps' : ''}" data-a="${esc(a.id)}">
-        ${pickerNewSet.has(a.id) ? '<span class="tile-new">NEU</span>' : ''}
+    // Gibt es ein Bild auch in Gold, schaltet das Dreieck unten an der
+    // Kachel zwischen beiden um; angetippt wird, was die Kachel zeigt.
+    el.innerHTML = tiles.map(t => {
+      const a = shownOf(t);
+      const isNew = pickerNewSet.has(t.base.id) || (t.gold && pickerNewSet.has(t.gold.id));
+      const on = currentAvatarId === t.base.id || (t.gold && currentAvatarId === t.gold.id);
+      return `
+      <button type="button" class="picker-tile${on ? ' on' : ''}${a.goldOf ? ' is-gold' : ''}${a.world === 'mpskills' ? ' is-mps' : ''}" data-a="${esc(a.id)}">
+        ${isNew ? '<span class="tile-new">NEU</span>' : ''}
         <img src="${esc(window.getAvatarUrl(a.id, '../'))}" alt="" />
         <span>${esc(a.label)}</span>
-      </button>`).join('');
+        ${t.both ? `<span class="tile-flip" role="button" tabindex="0" data-flip="${esc(t.base.id)}"
+          title="${a.goldOf ? 'Normal zeigen' : 'Gold zeigen'}" aria-label="${a.goldOf ? 'Normal zeigen' : 'Gold zeigen'}"></span>` : ''}
+      </button>`;
+    }).join('');
 
     el.querySelectorAll('[data-a]').forEach(b =>
       b.addEventListener('click', () => selectAvatar(b.dataset.a)));
+    el.querySelectorAll('[data-flip]').forEach(f => {
+      const flip = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const t = tiles.find(x => x.base.id === f.dataset.flip);
+        tileShow.set(t.base.id, shownOf(t).goldOf ? t.base.id : t.gold.id);
+        renderGrid();
+      };
+      f.addEventListener('click', flip);
+      f.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') flip(e); });
+    });
+  }
+
+  // Was eine Kachel mit Gold-Fassung gerade zeigt (umgeschaltet per Dreieck).
+  const tileShow = new Map();
+  function shownOf(t) {
+    const id = tileShow.get(t.base.id);
+    if (id === t.base.id && t.both) return t.base;
+    if (t.gold && id === t.gold.id) return t.gold;
+    return t.show;
   }
 
   async function selectAvatar(id) {

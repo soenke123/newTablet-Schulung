@@ -2767,6 +2767,23 @@ body.tool-fill #pagefoot { display: none; }
   padding: 1px 7px; border-radius: 999px;
 }
 .picker-tile.is-mps .tile-new { background: #2b7bd6; }
+/* Gold-Fassung: kleines Dreieck unten an der Kachel schaltet um
+   (avatars.js getPickerTiles). Gold zeigt es grau = „zurück zu normal“. */
+.picker-tile .tile-flip {
+  position: absolute; top: 62px; left: calc(50% + 18px);
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface, #fff); box-shadow: 0 1px 4px rgba(0,0,0,.25);
+  display: grid; place-items: center; cursor: pointer;
+}
+.picker-tile .tile-flip::before {
+  content: ''; width: 12px; height: 10px; margin-top: 2px;
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+  background: linear-gradient(135deg, #fff1b8, #e0a92a 55%, #a8700f);
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.35));
+}
+.picker-tile.is-gold .tile-flip::before { background: linear-gradient(135deg, #f4f4f4, #a9a9a9 60%, #7a7a7a); }
+.picker-tile .tile-flip:hover, .picker-tile .tile-flip:focus-visible { background: var(--paper-2); outline: none; transform: scale(1.12); }
+.picker-tile.is-gold img { box-shadow: 0 0 0 2px #e0a92a; }
 .ub-initial { font-weight: 700; font-size: .9rem; color: var(--chrome-accent); }
 
 .ub-name {
