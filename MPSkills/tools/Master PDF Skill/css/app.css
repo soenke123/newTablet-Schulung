@@ -132,6 +132,7 @@ body.focus-mode .comments-panel{display:none}
 .tb-button[aria-pressed="true"],.tb-button[aria-pressed="true"]:hover:not(:disabled){background:var(--blue);border-color:var(--blue);color:#fff}
 .tb-button.danger:hover:not(:disabled){background:#fdf3f3;border-color:#e7b4b5;color:#c4373a}
 .tb-button:disabled{opacity:.35;cursor:not-allowed}
+#view-open{position:relative}#view-open::after{content:"";position:absolute;right:2px;bottom:2px;border:3px solid transparent;border-right-color:currentColor;border-bottom-color:currentColor;opacity:.7}
 .tb-button.has-options::after{content:"";position:absolute;right:3px;bottom:3px;border:3px solid transparent;border-right-color:currentColor;border-bottom-color:currentColor;opacity:.7}
 .tb-button[aria-expanded="true"]{outline:2px solid #b8c8ef;outline-offset:1px}
 .color-dot{width:20px;height:20px;border-radius:50%;background:var(--dot,#172b4d);box-shadow:0 0 0 2px #fff,0 0 0 3px #c9d2e2}
