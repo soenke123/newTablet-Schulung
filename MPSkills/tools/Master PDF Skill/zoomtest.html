@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zoom-Test</title>
+<style>body{margin:0;font:15px system-ui,sans-serif;display:flex;flex-direction:column;height:100vh}header{padding:10px 14px;background:#fff;border-bottom:1px solid #ccd}#pad{flex:1;display:grid;place-items:center;background:#e9edf4;touch-action:pan-x pan-y pinch-zoom;overflow:auto;text-align:center;padding:20px}#log{height:38vh;overflow:auto;margin:0;padding:8px 14px;background:#111;color:#9f9;font:12px/1.35 monospace;white-space:pre-wrap}select{font:inherit}</style></head>
+<body><header><b>Zoom-Test:</b> Mit zwei Fingern am Touchpad ins graue Feld zoomen (auseinander/zusammen) und scrollen. Unten erscheint, was ankommt.
+<label>touch-action: <select id="ta"><option value="pan-x pan-y pinch-zoom">pan + pinch-zoom</option><option value="pan-x pan-y">pan-x pan-y</option><option value="auto">auto</option><option value="none">none</option></select></label>
+Zoom-Stand: <b id="z">100 %</b></header>
+<div id="pad"><div>Hier zoomen<br>(Strg + Mausrad geht auch)</div></div><pre id="log"></pre>
+<script>
+const log=document.getElementById('log'),pad=document.getElementById('pad');let n=0,zoom=1;
+const out=t=>{log.textContent+=t+'\n';if(++n>400){log.textContent=log.textContent.split('\n').slice(-200).join('\n');n=200}log.scrollTop=log.scrollHeight};
+document.getElementById('ta').onchange=e=>{pad.style.touchAction=e.target.value;out('touch-action = '+e.target.value)};
+out('Browser: '+navigator.userAgent+(window.__TAURI__?'  [Tauri-App]':''));
+let last='';const once=(k,t)=>{if(k!==last){last=k;out(t)}};
+pad.addEventListener('wheel',e=>{e.preventDefault();out('wheel ctrl='+e.ctrlKey+' dY='+e.deltaY.toFixed(2)+' mode='+e.deltaMode);if(e.ctrlKey){zoom=Math.min(5,Math.max(.2,zoom*Math.exp(-e.deltaY/60)));pad.firstElementChild.style.transform='scale('+zoom+')';document.getElementById('z').textContent=Math.round(zoom*100)+' %'}},{passive:false});
+for(const t of ['gesturestart','gesturechange','gestureend'])pad.addEventListener(t,e=>{e.preventDefault();once(t,t+' scale='+e.scale)});
+for(const t of ['touchstart','touchend'])pad.addEventListener(t,e=>out(t+' touches='+e.touches.length),{passive:true});
+pad.addEventListener('pointerdown',e=>out('pointerdown '+e.pointerType));
+pad.addEventListener('pointermove',e=>once('pm'+e.pointerType,'pointermove '+e.pointerType+' (…)'));
+document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.key.length===1||e.key==='+'||e.key==='-')out('keydown '+e.key+' ctrl')});
+</script></body></html>
