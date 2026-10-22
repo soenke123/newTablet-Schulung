@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const app = join(here, '../../MPSkills/tools/Master PDF Skill');
 const dist = join(here, 'dist');
-const KEEP = ['index.html', 'version.json', 'site.webmanifest', 'css', 'js', 'lib', 'icons'];
+const KEEP = ['index.html', 'version.json', 'site.webmanifest', 'MasterPDFSkill Logo.png', 'css', 'js', 'lib', 'icons'];
 
 rmSync(dist, { recursive: true, force: true });
 mkdirSync(dist);
