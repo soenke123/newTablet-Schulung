@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { speechChunks, spokenWordAt } from '../js/speak.js';
+import { speechChunks, spokenWordAt, paragraphStarts } from '../js/speak.js';
 
 test('Kurzer Text ist ein Stück, Leerraum am Anfang fällt weg', () => {
   assert.deepEqual(speechChunks('  Hallo Welt.'), [{ start: 2, end: 13 }]);
@@ -34,4 +34,12 @@ test('Wort ohne Satzzeichen, auch mitten im Wort und vor Leerraum', () => {
   assert.deepEqual(spokenWordAt(text, 6), { start: 8, end: 12 });
   assert.equal(spokenWordAt('Ende   ', 4), null);
   assert.deepEqual(spokenWordAt('...', 0), { start: 0, end: 3 });
+});
+
+test('Absatzanfänge: größerer Zeilenabstand beginnt einen neuen Absatz', () => {
+  const line = (str, y) => ({ str, transform: [10, 0, 0, 10, 0, y], width: str.length * 5, height: 10 });
+  const items = [line('Eins ', 100), line('zwei. ', 88), line('Drei ', 60), line('vier ', 48), line('Fünf', 20)];
+  let pos = 0;
+  const spans = items.map((it, i) => { const s = { start: pos, end: pos + it.str.length, item: i }; pos = s.end; return s; });
+  assert.deepEqual(paragraphStarts(items, spans), [0, 11, 21]);
 });

@@ -43,3 +43,16 @@ export function spokenWordAt(text, index, limit = text.length) {
   const trail = raw.match(/[^\p{L}\p{N}]*$/u)[0].length;
   return lead + trail >= raw.length ? { start, end } : { start: start + lead, end: end - trail };
 }
+
+// Absatzanfänge (Zeichenstellen im Seitentext): immer 0, dazu jede Zeile, die deutlich weiter unter der vorigen beginnt als der normale Zeilenabstand.
+export function paragraphStarts(items, spans) {
+  const starts = [0];
+  for (let k = 1; k < spans.length; k++) {
+    const prev = items[spans[k - 1].item], cur = items[spans[k].item];
+    if (!prev?.transform || !cur?.transform) continue;
+    const line = Math.max(prev.height || 0, cur.height || 0) || Math.abs(cur.transform[3]) || 10;
+    const gap = Math.abs(prev.transform[5] - cur.transform[5]);
+    if (gap > 1.75 * line && spans[k].start > starts.at(-1)) starts.push(spans[k].start);
+  }
+  return starts;
+}
