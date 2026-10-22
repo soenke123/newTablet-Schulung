@@ -415,11 +415,23 @@
     if (window.MPTool) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'lib/tool.js?v=20261021b';
+      s.src = 'lib/tool.js?v=20261022a';
       s.onload  = () => window.MPTool ? resolve() : reject(new Error('MPTool fehlt'));
       s.onerror = () => reject(new Error('lib/tool.js nicht gefunden'));
       document.head.appendChild(s);
     });
+  }
+
+  /* Vorladen, sobald jemand auf eine Kachel zeigt (Maus darüber,
+     Finger drauf, Tab-Fokus): bis zum Klick sind Lader, Werkzeug und
+     dessen Beiwerk (bei Knowledge Stack die Wesen) meist schon da,
+     und die Vorschau beginnt nicht mit leeren Plätzen. Wer nur die
+     Liste anschaut, lädt weiterhin nichts. */
+  function warm(meta) {
+    if (!meta || !shows[meta.id]) return;
+    ensureLoader()
+      .then(() => window.MPTool.load(meta.id, meta.folder || meta.id))
+      .catch(() => {});                 // open() meldet den Fehler selbst
   }
 
   function setCaption(html) {
@@ -645,5 +657,5 @@
     close();
   });
 
-  window.MPPreview = { register, has, tileHTML, open, close };
+  window.MPPreview = { register, has, tileHTML, open, close, warm };
 })();

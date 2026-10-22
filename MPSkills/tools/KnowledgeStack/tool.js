@@ -2601,23 +2601,42 @@
   /* ══════════════════════════════════════════════════════════
      Anmeldung
      ══════════════════════════════════════════════════════════ */
+  /* Wesen = creatures.js UND creatures.css. Beides wird abgewartet:
+     vorher kam nur das Skript zurück, das Stylesheet lief noch — und
+     die ersten Wesen standen ohne ihre Regeln da, in der Vorschau
+     zum Auftakt gar nicht zu sehen. Ein Versprechen für alle: der
+     Ladevorgang beginnt schon, wenn diese Datei ankommt (unten), und
+     mount wartet nur noch auf das, was dann schon unterwegs ist. */
+  let assetsP = null, wesenDa = false;
   function ladeAssets() {
-    if (!document.querySelector('link[data-ks-creatures]')) {
+    if (assetsP) return assetsP;
+    const css = new Promise((res, rej) => {
+      const da = document.querySelector('link[data-ks-creatures]');
+      if (da) {
+        if (da.sheet) return res();
+        da.addEventListener('load', res, { once: true });
+        da.addEventListener('error', () => rej(new Error('creatures.css nicht gefunden')), { once: true });
+        return;
+      }
       const l = document.createElement('link');
       l.rel = 'stylesheet';
       l.href = 'tools/KnowledgeStack/creatures.css?v=' + ASSET_V;
       l.setAttribute('data-ks-creatures', '1');
+      l.onload = res;
+      l.onerror = () => { l.remove(); rej(new Error('creatures.css nicht gefunden')); };
       document.head.appendChild(l);
-    }
-    if (window.KSCreatures) return Promise.resolve();
-    return new Promise((res, rej) => {
+    });
+    const js = window.KSCreatures ? Promise.resolve() : new Promise((res, rej) => {
       const s = document.createElement('script');
       s.src = 'tools/KnowledgeStack/creatures.js?v=' + ASSET_V;
       s.onload = res;
       s.onerror = () => rej(new Error('creatures.js nicht gefunden'));
       document.head.appendChild(s);
     });
+    assetsP = Promise.all([js, css]).then(() => {}, e => { assetsP = null; throw e; });
+    return assetsP;
   }
+  ladeAssets().catch(() => {});   // vorladen; mount meldet den Fehler
 
   window.MPTool.register('knowledgestack', {
 
@@ -2631,7 +2650,7 @@
 
     async mount(el, context) {
       root = el; ctx = context; role = context.role;
-      destroyed = false; busy = false;
+      destroyed = false; busy = false; wesenDa = false;
       lastSig = null; lastFrame = null; view = null;
       els = {}; catalogs = []; categories = []; skew = 0; uhrProben = [];
       localEmote = null; answering = false; pickerOffen = false;
@@ -2663,13 +2682,16 @@
         return;
       }
       if (destroyed) return;
+      wesenDa = true;
       poll();
     },
 
     // Der Seiten-Poller hat etwas gesehen. Für uns meist
     // bedeutungslos (wir haben unseren eigenen Takt), aber ein
-    // billiger zusätzlicher Anstoß.
-    update() { if (!destroyed) poll(); },
+    // billiger zusätzlicher Anstoß. Aber erst, wenn die Wesen da
+    // sind — die Vorschau ruft update gleich nach mount, und sonst
+    // stünde die Lobby schon vor ihrem Stylesheet.
+    update() { if (!destroyed && wesenDa) poll(); },
 
     unmount() {
       destroyed = true;

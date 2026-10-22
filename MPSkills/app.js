@@ -955,6 +955,12 @@ function wireToolButtons(host) {
   // entscheidet die Datenbank (0078), nicht das ausgelieferte
   // Frontend.
   host.querySelectorAll('button[data-act="peek"]').forEach(btn => {
+    const warm = () => {
+      const t = (toolsCache || []).find(x => x.id === btn.dataset.tool);
+      if (t) window.MPPreview?.warm?.({ id: t.id, folder: t.folder });
+    };
+    ['pointerenter', 'touchstart', 'focus'].forEach(ev =>
+      btn.addEventListener(ev, warm, { once: true, passive: true }));
     btn.addEventListener('click', () => {
       const t = (toolsCache || []).find(x => x.id === btn.dataset.tool);
       if (!t) return;
