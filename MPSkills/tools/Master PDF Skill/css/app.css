@@ -211,3 +211,5 @@ body.mode-edit.tool-e-text .reader-page{cursor:text}
 .props-original dt{color:#52627b;font-weight:600}
 .props-original dd{margin:0;overflow-wrap:anywhere}
 #props-dialog input[type=text]{margin-bottom:10px}
+
+body.pad-mode .viewer,body.pad-mode .viewer *{touch-action:pan-x pan-y pinch-zoom!important}
