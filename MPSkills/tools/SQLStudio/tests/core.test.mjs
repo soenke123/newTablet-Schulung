@@ -101,6 +101,27 @@ t('Rechte: create getrennt vom Recht an der Datenbank, nur ansehen', () => {
   assert.match(r.results[0].message, /nur ansehen/);
 });
 
+t('UUID: Datentyp, DEFAULT gen_random_uuid() und (UUID())', () => {
+  const db = C.open(SQL);
+  ok(run(db, `CREATE TABLE a (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), name TEXT);
+              CREATE TABLE b (id CHAR(36) NOT NULL DEFAULT (UUID()) PRIMARY KEY, a_id UUID REFERENCES a(id));
+              INSERT INTO a (name) VALUES ('x'), ('y');`));
+  const ids = rows(db, 'SELECT id FROM a').map(r => r[0]);
+  assert.equal(ids.length, 2);
+  assert.notEqual(ids[0], ids[1]);
+  ids.forEach(i => assert.match(i, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/));
+  C.exportBytes(db);   // öffnet in sql.js neu — Funktionen müssen bleiben
+  ok(run(db, `INSERT INTO b (a_id) VALUES ('${ids[0]}')`));
+  assert.deepEqual(rows(db, "SELECT YEAR('2024-05-03'), LEFT('abc', 1)"), [[2024, 'a']]);
+  assert.match(rows(db, 'SELECT id FROM b')[0][0], /^[0-9a-f-]{36}$/);
+  assert.equal(C.schema(db).tables.find(t => t.name === 'a').columns[0].type, 'UUID');
+  assert.match(rows(db, 'SELECT UUID()')[0][0], /^[0-9a-f-]{36}$/);
+  // Umbau behält den Standardwert
+  ok(run(db, 'ALTER TABLE a ADD COLUMN extra INT FIRST'));
+  ok(run(db, "INSERT INTO a (name) VALUES ('z')"));
+  assert.match(rows(db, "SELECT id FROM a WHERE name = 'z'")[0][0], /^[0-9a-f-]{36}$/);
+});
+
 t('ALTER TABLE MODIFY / CHANGE / ADD FOREIGN KEY / DROP COLUMN', () => {
   const db = C.open(SQL);
   ok(run(db, `CREATE TABLE ort (id INTEGER PRIMARY KEY, name TEXT);
@@ -127,6 +148,12 @@ t('ALTER TABLE MODIFY / CHANGE / ADD FOREIGN KEY / DROP COLUMN', () => {
   const r = run(db, 'ALTER TABLE t2 ADD FOREIGN KEY (p) REFERENCES person(id)');
   assert.equal(r.results[0].kind, 'error');
   assert.equal(C.schema(db).tables.find(x => x.name === 't2').fks.length, 0);
+  // Elterntabelle umbauen, während Kinder auf sie zeigen
+  ok(run(db, 'ALTER TABLE ort MODIFY name VARCHAR(60) NOT NULL'));
+  assert.deepEqual(rows(db, 'SELECT count(*) FROM person WHERE ort_id = 1'), [[1]]);
+  assert.equal(run(db, "INSERT INTO person (name, ort_id) VALUES ('D', 9)").results[0].kind, 'error', 'FK greift weiter');
+  assert.equal(run(db, 'ALTER TABLE ort DROP COLUMN id').results[0].kind, 'error', 'Ziel des FK weg → abgelehnt');
+  assert.deepEqual(rows(db, 'SELECT id, name FROM ort'), [[1, 'Kiel']]);
   ok(run(db, 'ALTER TABLE person DROP FOREIGN KEY fk_ort'));
   assert.equal(C.schema(db).tables.find(x => x.name === 'person').fks.length, 0);
   ok(run(db, 'ALTER TABLE person RENAME TO leute'));

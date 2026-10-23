@@ -324,6 +324,9 @@ code { font-size: .92em; background: var(--soft2); padding: .05em .35em; border-
 .g-name { display: flex; align-items: center; gap: 5px; }
 .g-name .ic { width: 14px; height: 14px; }
 .k-pk { color: var(--key); } .k-fk { color: var(--fk); }
+.fk-up { color: var(--fk); font-weight: 800; margin-left: 2px; font-family: var(--font-body); }
+.st-name { display: flex; align-items: center; gap: 4px; }
+.st-name .fk-up { font-size: 15px; }
 .g-type { display: block; font: 500 10.5px var(--font-mono); color: var(--muted); }
 .g-sort .ic { width: 13px; height: 13px; color: var(--accent); }
 .grid td { cursor: cell; }

@@ -64,7 +64,7 @@
       let w = textW(t.name, fh) + 48;
       for (const c of t.columns) {
         const tw = showTypes ? textW(typeLabel(c), ft) + 18 : 0;
-        w = Math.max(w, 34 + textW(c.name, fr) + tw + 16);
+        w = Math.max(w, 34 + textW(c.name, fr) + (c.fk ? 14 : 0) + tw + 16);
       }
       return { w: Math.ceil(Math.max(MINW, w)), h: HEAD + t.columns.length * ROW + PADB };
     }
@@ -200,8 +200,13 @@
           const nm = el('text', { x: 32, y: y + 16, 'font-family': FONT, 'font-size': 13, fill: C.ink,
             'font-weight': c.pk ? 700 : 400, 'text-decoration': c.pk ? 'underline' : null }, g);
           nm.textContent = c.name;
-          if (c.fk && c.pk) {
-            el('path', { d: LINK_PATH, fill: 'none', stroke: C.fk, 'stroke-width': 1.4, 'stroke-linecap': 'round', transform: 'translate(' + (36 + textW(c.name, '700 13px ' + FONT)) + ',' + (y + 6) + ') scale(.8)' }, g);
+          if (c.fk) {
+            // ↑ hinter dem Attribut — die Schreibweise aus dem Unterricht
+            // (relationales Schema: schueler(id, name, klasse_id↑))
+            const up = el('text', { x: 34 + textW(c.name, (c.pk ? '700 ' : '') + '13px ' + FONT), y: y + 16, 'font-family': FONT,
+              'font-size': 13, 'font-weight': 700, fill: C.fk }, g);
+            up.textContent = '↑';
+            up.appendChild(document.createElementNS(NS, 'title')).textContent = 'Fremdschlüssel → ' + c.fk.table + '.' + c.fk.col;
           }
           if (showTypes) {
             const ty = el('text', { x: w - 12, y: y + 16, 'font-family': MONO, 'font-size': 11.5, fill: C.muted, 'text-anchor': 'end' }, g);

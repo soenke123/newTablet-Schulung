@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20261023b';
+  const V = '?v=20261024b';
   const LIMIT_MS = 8000;
 
   /* ─── Worker ─────────────────────────────────────────────── */

@@ -324,7 +324,13 @@
         else {
           const t = r.next();
           if (t.t === 'str') col.dflt = lit(t.x);
-          else if (t.t === 'id' && /^(CURRENT_TIMESTAMP|NOW|LOCALTIMESTAMP|LOCALTIME)$/i.test(t.v)) {
+          else if (t.t === 'id' && r.isOp('(') && !/^(CURRENT_TIMESTAMP|NOW|LOCALTIMESTAMP|LOCALTIME)$/i.test(t.v)) {
+            // DEFAULT gen_random_uuid() / UUID() wie in PostgreSQL bzw. MySQL —
+            // SQLite will eine Funktion als Standardwert in Klammern.
+            r.next();
+            col.dflt = '(' + t.v + '(' + raw(r.group()) + '))';
+            mysql.push('FUNC_DEFAULT');
+          } else if (t.t === 'id' && /^(CURRENT_TIMESTAMP|NOW|LOCALTIMESTAMP|LOCALTIME)$/i.test(t.v)) {
             if (r.isOp('(')) { r.next(); r.group(); mysql.push('NOW()'); }
             col.dflt = 'CURRENT_TIMESTAMP';
           } else col.dflt = t.v;
@@ -1171,6 +1177,19 @@
     f('sqls_mod', (a, b) => (a === null || b === null || b === 0) ? null : a % b);
     f('LOCATE', (sub, s, pos) => s === null || sub === null ? null : String(s).indexOf(String(sub), (pos || 1) - 1) + 1);
     f('RAND', () => Math.random());
+    // UUID: zufällige Kennung (Version 4) — MySQL UUID(), PostgreSQL gen_random_uuid()
+    const uuid = () => {
+      const c = (typeof crypto !== 'undefined') ? crypto : null;
+      if (c && c.randomUUID) return c.randomUUID();
+      const b = new Uint8Array(16);
+      if (c && c.getRandomValues) c.getRandomValues(b); else for (let i = 0; i < 16; i++) b[i] = Math.floor(Math.random() * 256);
+      b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+      const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+      return h.slice(0, 8) + '-' + h.slice(8, 12) + '-' + h.slice(12, 16) + '-' + h.slice(16, 20) + '-' + h.slice(20);
+    };
+    f('UUID', uuid);
+    f('gen_random_uuid', uuid);
+    f('uuid_generate_v4', uuid);
     f('REVERSE', v => v === null ? null : [...String(v)].reverse().join(''));
     f('LPAD', (v, n, p) => v === null ? null : String(v).padStart(n, p === null || p === undefined ? ' ' : String(p)).slice(0, n));
     f('RPAD', (v, n, p) => v === null ? null : String(v).padEnd(n, p === null || p === undefined ? ' ' : String(p)).slice(0, n));
@@ -1450,19 +1469,37 @@
           const plan = planAlter(db, st.sig);
           const warn = [];
           const done = [];
-          db.run('SAVEPOINT sqls_alter');
+          // PRAGMA foreign_keys wirkt in einer offenen Transaktion nicht.
+          // Für den Umbau muss es also VOR dem Savepoint aus sein —
+          // sonst scheitert jede Tabelle, auf die andere verweisen
+          // (DROP der alten Tabelle). Geprüft wird danach hier.
+          const fkOn = plan.steps.some(x => x.rebuild) && one(db, 'PRAGMA foreign_keys').foreign_keys;
+          if (fkOn) db.run('PRAGMA foreign_keys = OFF');
           try {
-            for (const step of plan.steps) {
-              if (step.native) { db.run(step.native); done.push(step.native); }
-              else if (step.rebuild) {
-                const m = step.rebuild.model;
-                warn.push(...rebuild(db, step.rebuild.table, m, step.rebuild.post));
-                done.push(createSql(m).sql);
-                done.push(...step.rebuild.post);
+            db.run('SAVEPOINT sqls_alter');
+            try {
+              for (const step of plan.steps) {
+                if (step.native) { db.run(step.native); done.push(step.native); }
+                else if (step.rebuild) {
+                  const m = step.rebuild.model;
+                  warn.push(...rebuild(db, step.rebuild.table, m, step.rebuild.post));
+                  done.push(createSql(m).sql);
+                  done.push(...step.rebuild.post);
+                }
               }
-            }
-            db.run('RELEASE sqls_alter');
-          } catch (e) { try { db.run('ROLLBACK TO sqls_alter'); db.run('RELEASE sqls_alter'); } catch (e2) { /* weg */ } throw e; }
+              if (fkOn) {
+                const bad = all(db, 'PRAGMA foreign_key_check');
+                if (bad.length) {
+                  const err = new Error('FOREIGN KEY constraint failed');
+                  err.fkCheck = { table: bad[0].table, parent: bad[0].parent, n: bad.length };
+                  throw err;
+                }
+              }
+              db.run('RELEASE sqls_alter');
+            } catch (e) { try { db.run('ROLLBACK TO sqls_alter'); db.run('RELEASE sqls_alter'); } catch (e2) { /* weg */ } throw e; }
+          } finally {
+            if (fkOn) db.run('PRAGMA foreign_keys = ON');
+          }
           res = { kind: 'done', message: 'Tabelle »' + plan.table + '« geändert.', warn,
                   translated: plan.steps.some(s => s.rebuild) ? '-- neu gebaut als:\n' + done.join(';\n') + ';' : null };
           schemaChanged = changed = true;
@@ -1617,11 +1654,14 @@
     return out.join('\n');
   }
 
-  /* sql.js schaltet bei export() die Fremdschlüssel ab — wieder an. */
+  /* sql.js schließt und öffnet die Datenbank bei export() neu: danach
+     sind die Fremdschlüssel aus UND alle selbst eingebauten Funktionen
+     weg (NOW, YEAR, UUID …). Beides wieder herstellen. */
   function exportBytes(db) {
     const fk = one(db, 'PRAGMA foreign_keys').foreign_keys;
     const bytes = db.export();
     if (fk) db.run('PRAGMA foreign_keys = ON');
+    installFunctions(db);
     return bytes;
   }
 

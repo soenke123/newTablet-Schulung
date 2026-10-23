@@ -45,7 +45,13 @@ Cache-Stempel `?v=20261023a` steht in index.html, worker.js, client.js, app.js (
 - Inhalte gehen als Base64 (SQLite-Datei) über `ctx.actions.call`, Deckel 1,5 MB je Datenbank, 50 je Lehrkraft, 30 Kopien je Schüler. Editor-Text, Verlauf, Reiter, Editorhöhe, Diagramm-Lage (außer Gerät/Konto) in localStorage (`sqls.<schlüssel>.<scope>`).
 - Grenze: Teilen schreibt `skill_room_set_state` — das darf (Stand 0080) nur der Raumbesitzer; eingeladene Lehrkräfte (0205) sehen die Kopien, können aber nicht teilen.
 
-**Achtung sql.js:** `db.export()` schaltet `PRAGMA foreign_keys` ab — immer `SQLCore.exportBytes(db)` nehmen.
+**Achtung sql.js:** `db.export()` schließt und öffnet die Datenbank neu — danach sind `PRAGMA foreign_keys` aus UND alle eigenen Funktionen (NOW, YEAR, UUID …) weg. Immer `SQLCore.exportBytes(db)` nehmen, das stellt beides wieder her.
+
+**Umbau einer Tabelle** (ALTER … MODIFY usw.): `PRAGMA foreign_keys` wirkt in einer offenen Transaktion nicht. Deshalb schaltet `run` die Fremdschlüssel VOR dem Savepoint ab und prüft danach selbst mit `foreign_key_check` — sonst scheitert jede Tabelle, auf die andere verweisen.
+
+**Fremdschlüssel** heißen in der Oberfläche überall so und tragen ein ↑ hinter dem Attribut (Daten-Kopf, Struktur, Diagramm), wie im relationalen Schema im Unterricht.
+
+**UUID**: Datentyp `UUID` (SQLite: Affinität NUMERIC, der Wert bleibt Text). Funktionen `UUID()`, `gen_random_uuid()`, `uuid_generate_v4()` (Version 4). `DEFAULT gen_random_uuid()` ohne Klammern wird zu `DEFAULT (gen_random_uuid())`. Im Struktur-Formular bekommt ein UUID-Primärschlüssel von selbst `DEFAULT (UUID())`.
 
 ## Nur für Admins
 

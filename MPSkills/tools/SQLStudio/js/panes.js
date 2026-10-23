@@ -203,6 +203,7 @@
       }
       if (A().can('modify')) {
         groups.push(['Struktur', 'Neue Tabelle anlegen', 'CREATE TABLE beispiel (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  name VARCHAR(50) NOT NULL,\n  erstellt_am DATE\n);']);
+        groups.push(['Struktur', 'Tabelle mit UUID als Schlüssel', 'CREATE TABLE geraet (\n  id UUID PRIMARY KEY DEFAULT (UUID()),\n  name VARCHAR(50) NOT NULL\n);\nINSERT INTO geraet (name) VALUES (\'Tablet 1\'), (\'Tablet 2\');\nSELECT * FROM geraet;']);
         if (t) groups.push(['Struktur', 'Tabelle mit Fremdschlüssel', 'CREATE TABLE notiz (\n  id INT AUTO_INCREMENT PRIMARY KEY,\n  text VARCHAR(200) NOT NULL,\n  ' + q(t.name + '_id') + ' INT,\n  FOREIGN KEY (' + q(t.name + '_id') + ') REFERENCES ' + q(t.name) + '(' + q((t.columns.find(c => c.pk) || t.columns[0]).name) + ')\n);']);
       }
       if (A().can('create')) groups.push(['Datenbank', 'Neue Datenbank anlegen', 'CREATE DATABASE meine_db;\nUSE meine_db;']);
@@ -435,8 +436,8 @@
         const ci = colInfo(c);
         const keys = ci ? (ci.pk ? icon('key', 'k-pk') : '') + (ci.fk ? icon('link', 'k-fk') : '') : '';
         const sort = D.orderBy === c ? '<span class="g-sort">' + icon(D.desc ? 'down' : 'up') + '</span>' : '';
-        h += '<th data-c="' + i + '" title="' + esc(ci && ci.fk ? 'verweist auf ' + ci.fk.table + '.' + ci.fk.col : 'Sortieren') + '">' +
-          '<span class="g-name">' + keys + esc(c) + sort + '</span>' +
+        h += '<th data-c="' + i + '" title="' + esc(ci && ci.fk ? 'Fremdschlüssel → ' + ci.fk.table + '.' + ci.fk.col : 'Sortieren') + '">' +
+          '<span class="g-name">' + keys + esc(c) + (ci && ci.fk ? '<span class="fk-up" aria-label="Fremdschlüssel">↑</span>' : '') + sort + '</span>' +
           '<span class="g-type">' + esc(ci ? (ci.enumValues ? 'ENUM' : ci.type || '') : '') + '</span></th>';
       });
       h += '</tr></thead><tbody>';
@@ -575,7 +576,9 @@
           inp = '<select name="' + name + '"><option value="">(leer)</option><option value="1">1 – wahr</option><option value="0">0 – falsch</option></select>';
         }
         if (!inp) {
-          const ph = /DATETIME|TIMESTAMP/i.test(c.type) ? 'JJJJ-MM-TT hh:mm:ss' : (c.dflt !== null && c.dflt !== undefined ? 'Standard: ' + c.dflt : '');
+          const ph = c.dflt && /uuid/i.test(c.dflt) ? 'automatisch (UUID)'
+            : /DATETIME|TIMESTAMP/i.test(c.type) ? 'JJJJ-MM-TT hh:mm:ss'
+            : (c.dflt !== null && c.dflt !== undefined ? 'Standard: ' + c.dflt : /^UUID$/i.test(c.type) ? 'z. B. ' + crypto.randomUUID() : '');
           inp = '<input name="' + name + '"' + (isNumType(c.type) ? ' inputmode="decimal"' : '') + (ph ? ' placeholder="' + esc(ph) + '"' : '') + ' autocomplete="off">';
         }
         fields.push({ c, name, req });
@@ -638,7 +641,7 @@
      Struktur
      ════════════════════════════════════════════════════════════ */
   const struct = (function () {
-    const TYPES = ['INT', 'VARCHAR', 'CHAR', 'TEXT', 'DECIMAL', 'FLOAT', 'DOUBLE', 'BOOLEAN', 'DATE', 'DATETIME', 'TIME', 'ENUM', 'BLOB'];
+    const TYPES = ['INT', 'VARCHAR', 'CHAR', 'TEXT', 'DECIMAL', 'FLOAT', 'DOUBLE', 'BOOLEAN', 'DATE', 'DATETIME', 'TIME', 'ENUM', 'UUID', 'BLOB'];
     const ARG = { VARCHAR: '50', CHAR: '1', DECIMAL: '8,2', ENUM: "'a','b'" };
     const T = { table: null, mode: 'view', rows: [], orig: [], name: '', err: null };
 
@@ -670,6 +673,8 @@
       const s = v.trim();
       if (/^-?\d+(\.\d+)?$/.test(s) || /^(NULL|CURRENT_TIMESTAMP|CURRENT_DATE|CURRENT_TIME|TRUE|FALSE)$/i.test(s)) return s.toUpperCase() === s.toLowerCase() ? s : s.toUpperCase();
       if (/^'.*'$/s.test(s) || /^\(.*\)$/s.test(s)) return s;
+      // UUID(), gen_random_uuid() … → als Ausdruck in Klammern
+      if (/^[A-Za-z_][A-Za-z0-9_]*\(\s*\)$/.test(s)) return '(' + s + ')';
       return lit(s);
     };
     const coldef = (r, pkInline) => {
@@ -846,14 +851,15 @@
       h += '<div class="st-cols-wrap"><table class="st-cols"><thead><tr>' +
         '<th></th><th>Name</th><th>Datentyp</th><th>Länge / Werte</th>' +
         '<th title="Primärschlüssel">PK</th><th title="AUTO_INCREMENT: zählt von selbst hoch">AI</th><th title="Darf nicht leer sein">NOT NULL</th><th title="Jeder Wert nur einmal">UNIQUE</th>' +
-        '<th>Standard</th><th>Verweist auf</th><th></th></tr></thead><tbody>';
+        '<th>Standard</th><th title="Fremdschlüssel: Die Spalte zeigt auf den Schlüssel einer anderen Tabelle">Fremdschlüssel ↑</th><th></th></tr></thead><tbody>';
       T.rows.forEach((r, i) => {
         const needsArg = ['VARCHAR', 'CHAR', 'DECIMAL', 'ENUM'].includes(r.base);
         const known = TYPES.includes(r.base);
         h += '<tr data-i="' + i + '"' + (r.orig ? '' : ' class="new"') + '>' +
           '<td class="st-move">' + (ro ? '' : '<button type="button" class="mv" data-act="up" ' + (i === 0 ? 'disabled' : '') + ' aria-label="nach oben">' + icon('up') + '</button>' +
             '<button type="button" class="mv" data-act="down" ' + (i === T.rows.length - 1 ? 'disabled' : '') + ' aria-label="nach unten">' + icon('down') + '</button>') + '</td>' +
-          '<td><input data-f="name" value="' + esc(r.name) + '" placeholder="spalte" autocomplete="off" autocapitalize="off" spellcheck="false"' + dis + '></td>' +
+          '<td><div class="st-name"><input data-f="name" value="' + esc(r.name) + '" placeholder="spalte" autocomplete="off" autocapitalize="off" spellcheck="false"' + dis + '>' +
+            (r.fk ? '<span class="fk-up" title="Fremdschlüssel → ' + esc(r.fk) + '">↑</span>' : '') + '</div></td>' +
           '<td><select data-f="base"' + dis + '>' + (known ? '' : '<option selected>' + esc(r.base) + '</option>') +
             TYPES.map(x => '<option' + (x === r.base ? ' selected' : '') + '>' + x + '</option>').join('') + '</select></td>' +
           '<td>' + (needsArg ? '<input data-f="arg" value="' + esc(r.arg) + '" class="st-arg" placeholder="' + esc(ARG[r.base] || '') + '"' + dis + '>' : '<span class="st-na">—</span>') + '</td>' +
@@ -862,9 +868,9 @@
           '<td class="cb"><input type="checkbox" data-f="notnull"' + (r.notnull || r.pk ? ' checked' : '') + (ro || r.pk ? ' disabled' : '') + ' aria-label="NOT NULL"></td>' +
           '<td class="cb"><input type="checkbox" data-f="unique"' + (r.unique || r.pk ? ' checked' : '') + (ro || r.pk ? ' disabled' : '') + ' aria-label="UNIQUE"></td>' +
           '<td><input data-f="dflt" value="' + esc(r.dflt) + '" placeholder="—" class="st-dflt"' + dis + '></td>' +
-          '<td><select data-f="fk"' + dis + '><option value="">—</option>' +
-            fks.filter(x => !(T.mode !== 'new' && x.startsWith(T.table + '.') && x.endsWith('.' + r.name))).map(x => '<option' + (x === r.fk ? ' selected' : '') + '>' + esc(x) + '</option>').join('') +
-            (r.fk && !fks.includes(r.fk) ? '<option selected>' + esc(r.fk) + '</option>' : '') + '</select></td>' +
+          '<td><select data-f="fk" aria-label="Fremdschlüssel"' + dis + '><option value="">kein Fremdschlüssel</option>' +
+            fks.filter(x => !(T.mode !== 'new' && x.startsWith(T.table + '.') && x.endsWith('.' + r.name))).map(x => '<option value="' + esc(x) + '"' + (x === r.fk ? ' selected' : '') + '>→ ' + esc(x) + '</option>').join('') +
+            (r.fk && !fks.includes(r.fk) ? '<option value="' + esc(r.fk) + '" selected>→ ' + esc(r.fk) + '</option>' : '') + '</select></td>' +
           '<td>' + (ro ? '' : '<button type="button" class="st-del" data-act="delcol" aria-label="Spalte entfernen" title="Spalte entfernen">' + icon('x') + '</button>') + '</td>' +
           '</tr>';
       });
@@ -882,14 +888,14 @@
       const multi = t.fks.filter(f => f.cols.length > 1);
       const inc = [];
       A().S.schema.tables.forEach(o => o.fks.forEach(f => { if (f.ref === t.name) inc.push(o.name + '.' + f.cols.join(',')); }));
-      h += '<div class="st-box"><h3>' + icon('link') + 'Beziehungen</h3>';
+      h += '<div class="st-box"><h3>' + icon('link') + 'Fremdschlüssel ↑</h3>';
       if (!t.fks.length && !inc.length) h += '<p class="muted">Keine Fremdschlüssel.</p>';
       t.fks.forEach(f => {
-        h += '<div class="rel">' + '<code>' + esc(f.cols.join(', ')) + '</code> → <code>' + esc(f.ref + '.' + f.refCols.join(', ')) + '</code>' +
+        h += '<div class="rel">' + '<code>' + esc(f.cols.join(', ')) + '<span class="fk-up">↑</span></code> → <code>' + esc(f.ref + '.' + f.refCols.join(', ')) + '</code>' +
           (f.name ? ' <small class="muted">' + esc(f.name) + '</small>' : '') +
           (f.onDelete && f.onDelete !== 'NO ACTION' ? ' <small class="muted">ON DELETE ' + esc(f.onDelete) + '</small>' : '') + '</div>';
       });
-      inc.forEach(x => { h += '<div class="rel muted">' + '<code>' + esc(x) + '</code> verweist hierher</div>'; });
+      inc.forEach(x => { h += '<div class="rel muted">' + '<code>' + esc(x) + '↑</code> ist ein Fremdschlüssel auf diese Tabelle</div>'; });
       if (multi.length) h += '<p class="muted">Fremdschlüssel über mehrere Spalten ändert man per SQL.</p>';
       h += '</div>';
       const idx = t.indexes.filter(i => i.origin === 'c');
@@ -950,12 +956,14 @@
         r[f] = el.checked;
         if (f === 'ai' && el.checked) { r.pk = true; T.rows.forEach((x, k) => { if (k !== i) { x.ai = false; x.pk = false; } }); }
         if (f === 'pk' && !el.checked) r.ai = false;
-        if (f === 'pk' && el.checked) { r.notnull = false; r.unique = false; }
+        if (f === 'pk' && el.checked) { r.notnull = false; r.unique = false; if (r.base === 'UUID' && !r.dflt.trim()) r.dflt = 'UUID()'; }
       } else if (el.tagName === 'SELECT') {
         r[f] = el.value;
         if (f === 'base') {
           r.arg = ARG[r.base] || '';
           if (r.base !== 'INT') r.ai = false;
+          // Ein UUID-Schlüssel bekommt seinen Wert von selbst, wie AUTO_INCREMENT
+          if (r.base === 'UUID' && r.pk && !r.dflt.trim()) r.dflt = 'UUID()';
         }
         if (f === 'fk' && r.fk) {
           // Typ angleichen: ein Fremdschlüssel hat den Typ seines Ziels
@@ -1068,7 +1076,7 @@
           '<button type="button" class="btn" id="dgPng">' + icon('image') + '<span class="hide-s">Als Bild</span></button>' +
         '</div>' +
         '<div class="dg-host" id="dgHost"></div>' +
-        '<div class="dg-legend">' + icon('key', 'k-pk') + '<span>Primärschlüssel</span>' + icon('link', 'k-fk') + '<span>Fremdschlüssel</span>' +
+        '<div class="dg-legend">' + icon('key', 'k-pk') + '<span>Primärschlüssel</span>' + icon('link', 'k-fk') + '<span>Fremdschlüssel ↑</span>' +
           '<span class="lg-line"></span><span>1 : n — eine Zeile dort, viele hier</span><span class="lg-tip">Kästen verschieben · antippen hebt hervor · doppelt tippen öffnet die Daten</span></div>';
       dg = window.SQLDiagram.create($('#dgHost'), {
         onLayout: (lay) => { clearTimeout(saveTimer); saveTimer = setTimeout(() => A().saveLayout(lay), 300); },

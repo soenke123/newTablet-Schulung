@@ -12,7 +12,7 @@
    ══════════════════════════════════════════════════════════════ */
 
 /* global initSqlJs, SQLCore */
-const V = '?v=20261023b';
+const V = '?v=20261024b';
 importScripts('../lib/sql-wasm.js' + V, 'core.js' + V);
 
 let SQL = null;
