@@ -15,7 +15,7 @@ Wie phpMyAdmin, nur entschlackt für die Schule: SQL schreiben und ausführen, T
 | Datei | Rolle |
 |---|---|
 | `tool.js` / `tool.css` | Rahmen in MPSkills, nur Brücke: Rahmen entsteht im ersten `update()` (`index.html?raum=CODE&rolle=presenter|participant`), reicht `skill_room_state.data` hinein (`sqls:state`) und Aufrufe hinaus (`sqls:call` → `ctx.actions.call`, nur `sql_*`; `sqls:setData` nur Lehrkraft). postMessage nur gleicher Ursprung und nur dieser Rahmen |
-| `index.html` | die Anwendung; geht auch allein (`?rechte=use|modify|create` zum Ausprobieren) |
+| `index.html` | die Anwendung; geht auch allein (`?rechte=use|modify|create` zum Ausprobieren); `?demo=1` = Schaufenster (`MPSkills/preview/sqlstudio.js`): Betriebsart local, Datenbanken nur im Arbeitsspeicher (`SQLStore.init({memory})`), kein localStorage, keine Brücke. Das Drehbuch klickt `#btnRun`, `.ed-ta`, `.tab[data-tab]`, `[data-open="sample:…"]` |
 | `js/core.js` | Kern ohne DOM: Tokenizer, Anweisungen trennen (Trigger-Rumpf!), `classify` (Rechte + Übersetzung), `parseCreate`/`createSql` (Modell ↔ SQL), `planAlter` + `rebuild`, `schema`, `page`, `dump`, deutsche Fehlertexte mit „Meintest du …?" (`german`) |
 | `js/worker.js` | sql.js + Kern im Worker, genau eine Datenbank offen |
 | `js/client.js` | `SQLWorker` (Aufträge, Zeitlimit, Neustart) · `SQLStore` (IndexedDB `sqlstudio`, Store `dbs`, Index `scope`; ohne IndexedDB im Speicher mit Hinweis) |
@@ -27,7 +27,7 @@ Wie phpMyAdmin, nur entschlackt für die Schule: SQL schreiben und ausführen, T
 | `data/*.sql` | System-Datenbanken (MySQL-Stil): haustiere (Einstieg), schule, bibliothek (n:m buch_autor), shop. Erzeugt von `data/erzeugen.cjs` (deterministisch) |
 | `tests/core.test.mjs` | Prüfstand für den Kern unter Node: `node MPSkills/tools/SQLStudio/tests/core.test.mjs` |
 
-Cache-Stempel `?v=20261023a` steht in index.html, worker.js, client.js, app.js (Vorlagen) und tool.js — bei Änderungen alle drehen.
+Cache-Stempel `?v=20261023c` steht in index.html, worker.js, client.js, app.js (Vorlagen) und tool.js — bei Änderungen alle drehen.
 
 ## Betriebsarten und Speicher
 

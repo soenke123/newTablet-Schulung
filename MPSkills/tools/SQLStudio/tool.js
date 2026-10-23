@@ -25,7 +25,7 @@
 (function () {
   'use strict';
 
-  const V = '20261023b';
+  const V = '20261023c';
   let root = null;
   let ctx = null;
   let view = null;
@@ -109,9 +109,13 @@
 
   function build() {
     if (frame || !root) return;
-    const code = (view && view.room && view.room.code) || (ctx && ctx.preview ? 'VORSCHAU' : 'RAUM');
-    const src = 'tools/SQLStudio/index.html?v=' + V +
-      '&raum=' + encodeURIComponent(code) + '&rolle=' + (isPresenter() ? 'presenter' : 'participant');
+    /* Im Schaufenster (preview/sqlstudio.js) läuft die App allein und
+       ohne Raum, mit ?demo=1: nichts landet im Gerät. */
+    const code = (view && view.room && view.room.code) || 'RAUM';
+    const src = ctx && ctx.preview
+      ? 'tools/SQLStudio/index.html?demo=1&v=' + V
+      : 'tools/SQLStudio/index.html?v=' + V +
+        '&raum=' + encodeURIComponent(code) + '&rolle=' + (isPresenter() ? 'presenter' : 'participant');
     root.querySelector('.sqls-host').innerHTML =
       '<iframe class="sqls-frame" src="' + src + '" title="SQL Studio" loading="eager"></iframe>';
     frame = root.querySelector('.sqls-frame');

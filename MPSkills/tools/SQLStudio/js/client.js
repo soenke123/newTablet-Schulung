@@ -115,8 +115,9 @@
 
   window.SQLStore = {
     get persistent() { return !!idb; },
-    async init() {
-      idb = await openIdb();
+    // memory: nichts ins Gerät schreiben (Schaufenster, ?demo=1)
+    async init(opts) {
+      idb = opts && opts.memory ? null : await openIdb();
       if (!idb) memory = new Map();
       return !!idb;
     },
