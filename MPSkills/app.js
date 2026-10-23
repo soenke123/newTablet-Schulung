@@ -861,7 +861,11 @@ function toolCard(t, guest) {
     // Neutral und nicht tag--soon/tag--off: „Beta" ist keine Warnung
     // und kein „noch nicht da" — der Skill läuft, ist nur noch nicht
     // rund. Die unveränderte .tag-Grundfarbe sagt genau das.
-    isBeta(t.id) ? '<span class="tag">Beta</span>' : ''
+    isBeta(t.id) ? '<span class="tag">Beta</span>' : '',
+    // Nur Admins sehen die Kachel überhaupt (skill_tools.admin_only,
+    // Migration 0220) — das Schild erinnert sie daran, dass die
+    // Lehrkräfte sie noch nicht haben.
+    window.TOOLS_OVERLAY?.[t.id]?.adminOnly ? '<span class="tag tag--soon">Nur Admins</span>' : ''
   ].filter(Boolean).join('');
 
   // Ein abgeschalteter Skill bekommt keine neuen Räume mehr

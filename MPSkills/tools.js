@@ -113,6 +113,12 @@ window.TOOLS_OVERLAY = {
   // kam). Vier feste Szenarien, die Lehrkraft teilt und entzieht sie
   // (skill_room_state.data.shared). beta: frisch eingezogen (18.10.2026).
   balance: { ready: true, beta: true },
+  // Vierzehnter Skill (Migration 0220) — SQL Studio: Datenbanken wie
+  // mit phpMyAdmin, SQLite im Browser (tools/SQLStudio/, sql.js im
+  // Worker). Nur für Admins sichtbar — das entscheidet die Datenbank
+  // (skill_tools.admin_only), `adminOnly` hier setzt nur das Schild auf
+  // die Kachel. beta: Etappe 1, noch ohne Teilen (23.10.2026).
+  sqlstudio: { ready: true, beta: true, adminOnly: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

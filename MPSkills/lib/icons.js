@@ -181,6 +181,15 @@
       '<path d="M2.6 12.0L3.5 8.6 4.5 6.0 5.4 4.7 6.4 5.0 7.3 6.9 8.2 9.9 9.2 13.4 10.1 16.6 11.1 18.7 12.0 19.4 12.9 18.4 13.9 16.0 14.8 12.7 15.8 9.2 16.7 6.4 17.6 4.8 18.6 4.8 19.5 6.4 20.5 9.3 21.4 12.7"/>' +
       '<path d="M2.6 16.6L3.5 16.1 4.5 14.7 5.4 12.7 6.4 10.5 7.3 8.7 8.2 7.6 9.2 7.5 10.1 8.4 11.1 10.1 12.0 12.2 12.9 14.3 13.9 15.9 14.8 16.6 15.8 16.3 16.7 15.0 17.6 13.1 18.6 10.9 19.5 9.0 20.5 7.7 21.4 7.4" opacity=".55"/>',
 
+    /* SQL Studio — die Tonne, das Zeichen für Datenbank seit
+       jeher: oben der Deckel, zwei Ringe, und rechts unten ein
+       Schlüssel — der Primärschlüssel, um den sich alles dreht. */
+    sqlstudio:
+      '<ellipse cx="10.5" cy="5.6" rx="7" ry="2.6"/>' +
+      '<path d="M3.5 5.6v12.2c0 1.4 3.1 2.6 7 2.6.7 0 1.3 0 1.9-.1"/>' +
+      '<path d="M17.5 5.6v4.6M3.5 11.7c0 1.4 3.1 2.6 7 2.6 1 0 2-.1 2.8-.2"/>' +
+      '<circle cx="16.6" cy="15.4" r="2.3"/><path d="M18.3 17l2.4 2.4M19.8 18.5l-1 1"/>',
+
     /* Scrum Werkstatt — das Board: drei Spalten, in den ersten
        beiden je ein Zettel, die letzte mit einem Haken (fertig). */
     scrum:
@@ -224,6 +233,7 @@
     'ScrumWerkstatt': 'scrum',
     'Projektarbeit':  'projekt',
     'TinyLM':         'tinylm',
+    'SQLStudio':      'sqlstudio',
     'MasterPDF':      'masterpdf',
     'Master PDF Skill': 'masterpdf'
   };
