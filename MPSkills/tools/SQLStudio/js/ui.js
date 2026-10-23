@@ -49,7 +49,8 @@
     chevr: '<path d="M9.5 6l6 6-6 6"/>',
     sort: '<path d="M8 5v14M5 16l3 3 3-3M16 19V5M13 8l3-3 3 3"/>',
     up: '<path d="M6 14l6-6 6 6"/>',
-    down: '<path d="M6 10l6 6 6-6"/>'
+    down: '<path d="M6 10l6 6 6-6"/>',
+    share: '<circle cx="17.5" cy="6" r="2.5"/><circle cx="6.5" cy="12" r="2.5"/><circle cx="17.5" cy="18" r="2.5"/><path d="M8.7 10.8l6.6-3.6M8.7 13.2l6.6 3.6"/>'
   };
   const icon = (n, cls) => '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true">' + (P[n] || '') + '</svg>';
 

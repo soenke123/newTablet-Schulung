@@ -424,7 +424,7 @@
     function render() {
       const p = D.page;
       const t = table(D.table);
-      const ro = p.isView;
+      const ro = p.isView || !A().can('use');
       $('#dAdd').disabled = ro;
       const from = p.total ? p.offset + 1 : 0, to = Math.min(p.total, p.offset + p.limit);
       $('#dCount').textContent = p.total ? from + '–' + to + ' von ' + p.total : (D.filter ? 'keine Treffer' : 'leer');
@@ -489,6 +489,7 @@
 
     function edit(td) {
       if (D.page.isView) { toast('Eine Sicht (VIEW) lässt sich nicht direkt bearbeiten.'); return; }
+      if (!A().can('use')) { toast('Diese Datenbank kannst du hier nur ansehen.'); return; }
       const ri = +td.dataset.r, ci = +td.dataset.c;
       const col = D.page.columns[ci];
       const info = colInfo(col);
@@ -626,7 +627,7 @@
 
     return {
       init, select,
-      show() { if (!D.page || D.page.table !== A().S.table) { if (A().S.table) D.table = A().S.table; fillSelect(); load(); } },
+      show(force) { if (force || !D.page || D.page.table !== A().S.table) { if (A().S.table) D.table = A().S.table; fillSelect(); load(); } },
       onDb() { D.table = null; D.page = null; D.offset = 0; D.orderBy = null; D.filter = ''; $('#dFilter').value = ''; $('#dLog').hidden = true; if (tab === 'data') { fillSelect(); load(); } },
       onSchema() { fillSelect(); if (tab === 'data') load(); else D.page = null; },
       onRights() {}
@@ -824,11 +825,13 @@
       if (!ro) h += '<button type="button" class="btn" data-act="new">' + icon('plus') + '<span>Neue Tabelle</span></button>';
       h += '<span class="spacer"></span>';
       if (t && T.mode !== 'new') {
-        h += '<button type="button" class="btn btn--ghost" data-act="truncate" title="Alle Zeilen löschen (TRUNCATE)">' + icon('reset') + '<span class="hide-s">Leeren</span></button>';
+        if (A().can('use')) h += '<button type="button" class="btn btn--ghost" data-act="truncate" title="Alle Zeilen löschen (TRUNCATE)">' + icon('reset') + '<span class="hide-s">Leeren</span></button>';
         if (!ro) h += '<button type="button" class="btn btn--ghost danger" data-act="drop" title="Tabelle löschen (DROP TABLE)">' + icon('trash') + '<span class="hide-s">Löschen</span></button>';
       }
       h += '</div><div class="st-scroll">';
-      if (ro) h += '<div class="note">' + icon('shield') + '<span>Nur ansehen: die Struktur dieser Datenbank darfst du nicht verändern. Abfragen und Daten ändern geht.</span></div>';
+      if (ro) h += '<div class="note">' + icon('shield') + '<span>' + (A().isReadOnly()
+        ? 'Nur ansehen: Diese Datenbank kannst du hier nicht verändern.'
+        : 'Nur ansehen: die Struktur dieser Datenbank darfst du nicht verändern. Abfragen und Daten ändern geht.') + '</span></div>';
       if (T.mode !== 'new' && !t) {
         h += '<div class="pane-empty">' + icon('table') + '<p>' + (sc.tables.length ? 'Wähle oben eine Tabelle.' : 'Diese Datenbank hat noch keine Tabellen.') + '</p>' +
           (!ro ? '<button type="button" class="btn btn--primary" data-act="new">' + icon('plus') + '<span>Erste Tabelle anlegen</span></button>' : '') + '</div></div>';
@@ -1141,7 +1144,7 @@
       if (S.table && !table(S.table) && !viewOf(S.table)) S.table = null;
       sql.onSchema(); data.onSchema(); struct.onSchema(); diagram.onSchema();
     },
-    onRights() { struct.onRights(); data.onRights(); },
+    onRights() { struct.onRights(); data.onRights(); if (tab === 'data') data.show(true); },
     onTable() {
       // Auswahl in der Seitenleiste nachziehen
       $$('#side .tbl').forEach(b => b.classList.toggle('on', b.dataset.table === A().S.table));

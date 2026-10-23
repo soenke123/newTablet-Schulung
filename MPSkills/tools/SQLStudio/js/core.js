@@ -1354,6 +1354,12 @@
      (Datenbank anlegen/wechseln) und dann `rest` weiterlaufen lassen. */
   function run(db, text, opts = {}) {
     const rights = LEVEL[opts.rights || 'create'] || 3;
+    // Eigene Datenbanken sind ein eigener Schalter im Raum („create"),
+    // unabhängig vom Recht an der offenen Datenbank: wer in einer
+    // geteilten nur abfragen darf, darf trotzdem eine eigene anlegen.
+    const canDb = opts.createDb !== undefined ? !!opts.createDb : rights >= 3;
+    // Nur ansehen (die Lehrkraft schaut in die Kopie eines Kindes).
+    const readOnly = !!opts.readOnly;
     const maxRows = opts.maxRows || 1000;
     const offset = opts.offset || 0;
     const stmts = split(text);
@@ -1369,13 +1375,24 @@
         results.push(Object.assign(base, { kind: 'error' }, german(e.message, db, st)));
         break;
       }
-      if (c.level > rights) {
+      const looks = c.level === 1 && (c.verb === 'SELECT' || c.verb === 'TX' || c.verb === 'PRAGMA' ||
+        c.kind === 'show' || c.kind === 'noop' || (c.kind === 'app' && (c.cmd === 'use' || c.cmd === 'show_databases')));
+      if (readOnly && !looks && c.level !== NEVER) {
+        results.push(Object.assign(base, {
+          kind: 'error', denied: true,
+          message: 'Diese Datenbank kannst du hier nur ansehen.',
+          hint: 'Abfragen (SELECT) gehen. Zum Ändern: über ⋯ als eigene Datenbank kopieren.'
+        }));
+        break;
+      }
+      const allowed = c.level === NEVER ? false : c.level === 3 ? canDb : c.level <= rights;
+      if (!allowed) {
         const need = c.level === NEVER ? null : LEVEL_NAME[c.level];
         results.push(Object.assign(base, {
           kind: 'error', denied: true,
           message: c.kind === 'deny' ? c.message
             : need === 'modify' ? 'Die Struktur dieser Datenbank darfst du nicht verändern.'
-            : need === 'create' ? 'Eigene Datenbanken anlegen oder löschen darfst du hier nicht.'
+            : need === 'create' ? 'Eigene Datenbanken anlegen oder löschen ist hier nicht freigegeben.'
             : 'Das ist hier nicht erlaubt.',
           hint: c.kind === 'deny' ? null
             : need === 'modify' ? 'Dein Recht hier: Daten abfragen und ändern (SELECT, INSERT, UPDATE, DELETE).'

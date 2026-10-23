@@ -85,6 +85,22 @@ t('Rechte: use darf nicht CREATE, modify nicht CREATE DATABASE', () => {
   assert.equal(r.results[0].kind, 'rows');
 });
 
+t('Rechte: create getrennt vom Recht an der Datenbank, nur ansehen', () => {
+  const db = C.open(SQL);
+  ok(run(db, 'CREATE TABLE a (x INT); INSERT INTO a VALUES (1)'));
+  let r = C.run(db, 'CREATE DATABASE neu', { rights: 'use', createDb: true });
+  assert.equal(r.stop && r.stop.cmd, 'create_database');
+  r = C.run(db, 'CREATE TABLE b (y INT)', { rights: 'use', createDb: true });
+  assert.equal(r.results[0].denied, true);
+  r = C.run(db, 'CREATE DATABASE neu', { rights: 'modify', createDb: false });
+  assert.equal(r.results[0].denied, true);
+  r = C.run(db, 'SELECT * FROM a; SHOW TABLES; DESCRIBE a', { rights: 'use', readOnly: true });
+  assert.ok(r.results.every(x => x.kind !== 'error'));
+  r = C.run(db, 'UPDATE a SET x = 2', { rights: 'create', readOnly: true });
+  assert.equal(r.results[0].denied, true);
+  assert.match(r.results[0].message, /nur ansehen/);
+});
+
 t('ALTER TABLE MODIFY / CHANGE / ADD FOREIGN KEY / DROP COLUMN', () => {
   const db = C.open(SQL);
   ok(run(db, `CREATE TABLE ort (id INTEGER PRIMARY KEY, name TEXT);

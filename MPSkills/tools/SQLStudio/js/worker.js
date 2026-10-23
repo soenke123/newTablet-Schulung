@@ -12,7 +12,7 @@
    ══════════════════════════════════════════════════════════════ */
 
 /* global initSqlJs, SQLCore */
-const V = '?v=20261023a';
+const V = '?v=20261023b';
 importScripts('../lib/sql-wasm.js' + V, 'core.js' + V);
 
 let SQL = null;
@@ -39,7 +39,7 @@ const OPS = {
     return { schema: SQLCore.schema(db), bytes: out };
   },
   run(a) {
-    const r = SQLCore.run(db, a.sql, { rights: a.rights, maxRows: a.maxRows || 1000, offset: a.offset || 0 });
+    const r = SQLCore.run(db, a.sql, { rights: a.rights, createDb: a.createDb, readOnly: a.readOnly, maxRows: a.maxRows || 1000, offset: a.offset || 0 });
     if (r.changed) r.bytes = bytes();
     r.schema = SQLCore.schema(db);
     return r;
