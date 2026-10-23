@@ -244,10 +244,13 @@
       const it = acItems[i];
       if (!it) return;
       const pos = ta.selectionStart;
+      // Das schon getippte Stück merken, BEVOR closeAc() es leert —
+      // sonst ersetzt der Vorschlag nichts und hängt sich nur an („SeSELECT").
+      const word = acWord || '';
       let text = it.label;
-      if (it.kind === 'kw' && acWord && acWord === acWord.toLowerCase() && /[a-z]/.test(acWord)) text = text.toLowerCase();
+      if (it.kind === 'kw' && word && word === word.toLowerCase() && /[a-z]/.test(word)) text = text.toLowerCase();
       closeAc();
-      insertText(text, pos - (acWord || '').length, pos);
+      insertText(text, pos - word.length, pos);
     }
 
     function moveSel(d) {
