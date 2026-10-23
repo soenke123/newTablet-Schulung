@@ -13,7 +13,7 @@
 (function () {
   'use strict';
 
-  const V = '?v=20261023b';
+  const V = '?v=20261023c';
   const LIMIT_MS = 8000;
 
   /* ─── Worker ─────────────────────────────────────────────── */
@@ -115,8 +115,9 @@
 
   window.SQLStore = {
     get persistent() { return !!idb; },
-    async init() {
-      idb = await openIdb();
+    // memory: nichts ins Gerät schreiben (Schaufenster, ?demo=1)
+    async init(opts) {
+      idb = opts && opts.memory ? null : await openIdb();
       if (!idb) memory = new Map();
       return !!idb;
     },

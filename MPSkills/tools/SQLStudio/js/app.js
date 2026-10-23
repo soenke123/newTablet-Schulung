@@ -30,7 +30,7 @@
 
   const { $, esc, icon, toast, dialog, confirm, download } = window.SQLUI;
 
-  const V = '20261023b';
+  const V = '20261023c';
   const SAMPLES = [
     { key: 'haustiere',  title: 'Haustiere',   blurb: 'Einstieg: zwei Tabellen, ein Fremdschlüssel' },
     { key: 'schule',     title: 'Schule',      blurb: 'Klassen, Schüler, Lehrkräfte, Noten' },
@@ -67,8 +67,11 @@
 
   /* ─── Zustand ────────────────────────────────────────────── */
   const qs = new URLSearchParams(location.search);
+  /* Schaufenster (MPSkills/preview/sqlstudio.js, ?demo=1): wie allein,
+     aber nichts bleibt im Gerät — kein IndexedDB, kein localStorage. */
+  const DEMO = qs.get('demo') === '1';
   const S = {
-    scope: (qs.get('raum') || 'solo').slice(0, 20),
+    scope: DEMO ? 'demo' : (qs.get('raum') || 'solo').slice(0, 20),
     role: qs.get('rolle') || 'solo',
     mode: 'local',
     rights: RIGHTS[qs.get('rechte')] ? qs.get('rechte') : 'create',
@@ -91,8 +94,8 @@
 
   const LV = { use: 1, modify: 2, create: 3 };
   const ls = {
-    get(k) { try { return localStorage.getItem('sqls.' + k + '.' + S.scope); } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem('sqls.' + k + '.' + S.scope, v); } catch (e) { /* egal */ } }
+    get(k) { if (DEMO) return null; try { return localStorage.getItem('sqls.' + k + '.' + S.scope); } catch (e) { return null; } },
+    set(k, v) { if (DEMO) return; try { localStorage.setItem('sqls.' + k + '.' + S.scope, v); } catch (e) { /* egal */ } }
   };
 
   const toB64 = (u8) => {
@@ -115,7 +118,7 @@
   /* ─── Brücke zum Rahmen (tool.js) ────────────────────────── */
   const Bridge = (function () {
     const inFrame = window.parent !== window;
-    const active = inFrame && !!qs.get('raum') && (S.role === 'presenter' || S.role === 'participant');
+    const active = inFrame && !DEMO && !!qs.get('raum') && (S.role === 'presenter' || S.role === 'participant');
     let seq = 0;
     const wait = new Map();
     let cb = null, data = null, got = false;
@@ -904,7 +907,8 @@
       if (S.mode === 'teacher') h += classGroup();
     }
     h += '</div>';
-    const foot = S.mode === 'local'
+    const foot = DEMO ? 'Vorschau — hier wird nichts gespeichert.'
+      : S.mode === 'local'
       ? (window.SQLStore.persistent ? 'Alles bleibt auf diesem Gerät.' : 'Dieser Browser speichert nichts — beim Schließen ist alles weg. Exportiere, was du behalten willst.')
       : S.mode === 'teacher' ? 'Vorlagen-Kopien bleiben auf diesem Gerät, eigene Datenbanken liegen in deinem Konto.'
       : 'Deine Änderungen werden im Raum gespeichert und mit dem Raum gelöscht.';
@@ -1097,7 +1101,7 @@
     bind();
     document.body.classList.add('mode-' + S.mode);
     window.SQLPanes.init();
-    await window.SQLStore.init();
+    await window.SQLStore.init({ memory: DEMO });
     if (Bridge.active) {
       Bridge.onState(onRoomState);
       Bridge.hello();

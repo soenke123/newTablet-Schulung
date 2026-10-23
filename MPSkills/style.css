@@ -1797,6 +1797,116 @@ a.btn {
   .bnp-a, .bnp-scroll, .bnp-da, .bnp-db, .bnp-va, .bnp-vb { animation: none; }
 }
 
+/* ═══════════════════════════════════════════════════════
+   Standbild Tiny LM  (preview/tinylm.js)
+   ═══════════════════════════════════════════════════════
+   Kippt mit dem Kleid der Seite wie die App selbst (die übernimmt
+   data-theme vom Rahmen). Farben aus tools/TinyLM/css/tokens.css:
+   ① Kontext teal, ② Quellen bernstein, ③ Kandidaten koralle,
+   ④ Zufall violett, Unterstriche = --src-a/b/c.
+   Beim Darüberfahren gewinnt „Garten" und rückt in den Satz. */
+.tprev--tl {
+  --tl-bg: #eef2f1; --tl-card: #ffffff; --tl-line: #dfe7e5; --tl-ink: #0d1a17; --tl-muted: #5f706b;
+  --tl-ctx: #14A18F; --tl-org: #E39A2A; --tl-cand: #E5534A; --tl-rnd: #7C4DFF;
+  --tl-a: #D1603D; --tl-b: #3B7B8C; --tl-c: #C9A227; --tl-track: #e6ecea;
+  background: var(--tl-bg);
+  padding: 0;
+}
+:root[data-theme="dark"] .tprev--tl {
+  --tl-bg: #0a0b10; --tl-card: #12141b; --tl-line: #262b36; --tl-ink: #e8ecef; --tl-muted: #8e99a3;
+  --tl-ctx: #3fd0bd; --tl-org: #f0b453; --tl-cand: #ff7d73; --tl-rnd: #a78bff;
+  --tl-a: #f08a66; --tl-b: #6fb6c8; --tl-c: #e6c45a; --tl-track: #222733;
+  background: var(--tl-bg);
+}
+.tlp { width: 100%; height: 100%; display: block; font-family: 'Outfit', system-ui, sans-serif; }
+.tlp-card { fill: var(--tl-card); stroke: var(--tl-line); }
+.tlp-pill { fill: var(--tl-card); stroke-width: 1.3; }
+.tlp-pill--ctx { stroke: var(--tl-ctx); } .tlp-pt--ctx { fill: var(--tl-ctx); }
+.tlp-pill--org { stroke: var(--tl-org); } .tlp-pt--org { fill: var(--tl-org); }
+.tlp-pill--cand { stroke: var(--tl-cand); } .tlp-pt--cand { fill: var(--tl-cand); }
+.tlp-pill--rnd { stroke: var(--tl-rnd); } .tlp-pt--rnd { fill: var(--tl-rnd); }
+.tlp-pt { font-size: 9px; font-weight: 700; }
+.tlp-mono { font-family: var(--mono); font-size: 12px; fill: var(--tl-ink); }
+.tlp-src-a { fill: var(--tl-a); } .tlp-src-b { fill: var(--tl-b); } .tlp-src-c { fill: var(--tl-c); }
+.tlp-ctx { fill: none; stroke: var(--tl-ctx); stroke-width: 1.6; stroke-dasharray: 4 3; }
+.tlp-cursor { fill: var(--tl-ink); animation: tlp-blink 1.1s steps(1) infinite; }
+.tlp-cur1 { opacity: 0; animation: none; }
+.tlp-small { font-size: 8.5px; fill: var(--tl-muted); }
+.tlp-small--ctx { fill: var(--tl-ctx); font-weight: 700; }
+.tlp-small--rnd { fill: var(--tl-rnd); font-weight: 700; }
+.tlp-head { font-size: 10px; font-weight: 700; fill: var(--tl-cand); }
+.tlp-cw { font-size: 10px; fill: var(--tl-ink); }
+.tlp-cp { font-size: 9px; fill: var(--tl-muted); font-family: var(--mono); }
+.tlp-track { fill: var(--tl-track); }
+.tlp-bar { fill: var(--tl-cand); opacity: .55; transition: opacity .35s ease; }
+.tlp-win .tlp-bar { opacity: .85; }
+.tlp-win .tlp-cw { font-weight: 700; }
+.tlp-knob { fill: var(--tl-rnd); stroke: var(--tl-card); stroke-width: 1.5; }
+.tlp-new { opacity: 0; transition: opacity .35s ease .25s; }
+@keyframes tlp-blink { 50% { opacity: 0; } }
+@media (hover: hover) {
+  .tile--peek:hover .tlp-new { opacity: 1; }
+  .tile--peek:hover .tlp-win .tlp-bar { opacity: 1; }
+  .tile--peek:hover .tlp-row:not(.tlp-win) .tlp-bar { opacity: .25; }
+  .tile--peek:hover .tlp-cur0 { opacity: 0; animation: none; }
+  .tile--peek:hover .tlp-cur1 { opacity: 1; animation: tlp-blink 1.1s steps(1) .6s infinite; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tlp-cursor, .tile--peek:hover .tlp-cur1 { animation: none; }
+  .tlp-new, .tlp-bar { transition: none; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   Standbild SQL Studio  (preview/sqlstudio.js)
+   ═══════════════════════════════════════════════════════
+   Kippt mit dem Kleid der Seite wie die App. Farben aus
+   tools/SQLStudio/css/app.css (Grün-Akzent wie MPSkills).
+   Beim Darüberfahren läuft die Abfrage noch einmal: der Knopf
+   leuchtet, die Ergebniszeilen kommen nacheinander. */
+.tprev--sq {
+  --sq-bg: #eef2f1; --sq-card: #ffffff; --sq-head: #e9efed; --sq-line: #dfe7e5;
+  --sq-ink: #0d1a17; --sq-muted: #5f706b; --sq-acc: #00b37e; --sq-acc-ink: #00714f;
+  --sq-kw: #6d4ad8; --sq-str: #c2581f; --sq-pk: #e3a21a; --sq-fk: #3f6fd8;
+  background: var(--sq-bg);
+  padding: 0;
+}
+:root[data-theme="dark"] .tprev--sq {
+  --sq-bg: #0a0b10; --sq-card: #12141b; --sq-head: #1d212c; --sq-line: #262b36;
+  --sq-ink: #e8ecef; --sq-muted: #8e99a3; --sq-acc: #35d39a; --sq-acc-ink: #6fe6b9;
+  --sq-kw: #a993ff; --sq-str: #f2a46b; --sq-pk: #f0c04f; --sq-fk: #7fa2ff;
+  background: var(--sq-bg);
+}
+.sqp { width: 100%; height: 100%; display: block; font-family: 'Outfit', system-ui, sans-serif; }
+.sqp-card { fill: var(--sq-card); stroke: var(--sq-line); }
+.sqp-run { fill: var(--sq-acc); transition: filter .2s ease; }
+.sqp-run-ic, .sqp-run-t { fill: #fff; }
+:root[data-theme="dark"] .sqp-run-ic, :root[data-theme="dark"] .sqp-run-t { fill: #0a0b10; }
+.sqp-run-t { font-size: 8.5px; font-weight: 700; }
+.sqp-ln { font-family: var(--mono); font-size: 8.5px; fill: var(--sq-muted); opacity: .7; }
+.sqp-code { font-family: var(--mono); font-size: 9.5px; fill: var(--sq-ink); }
+.sqp-kw { fill: var(--sq-kw); font-weight: 700; }
+.sqp-str { fill: var(--sq-str); }
+.sqp-ok { font-size: 8.5px; font-weight: 700; fill: var(--sq-acc-ink); }
+.sqp-grid { stroke: var(--sq-line); }
+.sqp-th { font-size: 8.5px; font-weight: 700; fill: var(--sq-muted); }
+.sqp-td { font-family: var(--mono); font-size: 9px; fill: var(--sq-ink); }
+.sqp-bh { fill: var(--sq-head); }
+.sqp-bt { font-size: 9px; font-weight: 700; fill: var(--sq-ink); }
+.sqp-col { font-family: var(--mono); font-size: 8.5px; fill: var(--sq-ink); }
+.sqp-pk { fill: var(--sq-pk); } .sqp-fk { fill: none; stroke: var(--sq-fk); stroke-width: 1.6; stroke-dasharray: 4 3; }
+rect.sqp-fk { fill: var(--sq-fk); stroke: none; }
+.sqp-kt { font-size: 6px; font-weight: 800; fill: #fff; }
+.sqp-mult { font-size: 9px; font-weight: 700; fill: var(--sq-fk); }
+@media (hover: hover) {
+  .tile--peek:hover .sqp-run { filter: brightness(1.12) drop-shadow(0 0 4px var(--sq-acc)); }
+  .tile--peek:hover .sqp-row { animation: sqp-in .5s ease both; animation-delay: calc(.25s + var(--i) * .18s); }
+  .tile--peek:hover path.sqp-fk { stroke-dasharray: none; stroke-width: 2; }
+}
+@keyframes sqp-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+  .tile--peek:hover .sqp-row { animation: none; }
+}
+
 /* ── Das Beamerbild auf einem schmalen Gerät ───────────────────
    Bis hierher zeigte das Schaufenster Tafeln (die WordPool-Wolke
    fügt sich in jede Breite) oder Anwendungen, die umbrechen können.

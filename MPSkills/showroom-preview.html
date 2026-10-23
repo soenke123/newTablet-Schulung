@@ -6,7 +6,7 @@
 <title>MPSkills — Schaufenster ansehen</title>
 <meta name="robots" content="noindex" />
 <link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261022b" />
+<link rel="stylesheet" href="style.css?v=20261023a" />
 <script src="lib/theme.js?v=20260819d"></script>
 </head>
 <body>
@@ -73,7 +73,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="lib/preview.js?v=20261023b"></script>
+<script src="lib/preview.js?v=20261023c"></script>
 <script src="preview/wordcloud.js?v=20260819d"></script>
 <script src="preview/neurolab.js?v=20260819b"></script>
 <script src="preview/caesar.js?v=20260820"></script>
@@ -81,6 +81,8 @@
 <script src="preview/wildclusters.js?v=20260923"></script>
 <script src="preview/wordisland.js?v=20260909"></script>
 <script src="preview/knowledgestack.js?v=20261021k"></script>
+<script src="preview/tinylm.js?v=20261023a"></script>
+<script src="preview/sqlstudio.js?v=20261023a"></script>
 <script>
 /* Der Ersatz für app.js: die Registry als Konstante und die zwei
    Klicks, die die Kachel kennt. Bewusst keine Kopie von toolCard —
@@ -112,7 +114,11 @@ const TOOLS = [
   { id: 'wordisland', title: 'Myth of Wordisland', folder: 'wordisland', icon: '🏝️',
     blurb: 'Vokabeln lüften den Nebel — Völker erkunden eine Insel.' },
   { id: 'knowledgestack', title: 'Knowledge Stack', folder: 'KnowledgeStack', icon: '📚',
-    blurb: 'Live-Quiz mit Wesen & Leaderboard — Frage am Beamer, Antworten am Tablet.' }
+    blurb: 'Live-Quiz mit Wesen & Leaderboard — Frage am Beamer, Antworten am Tablet.' },
+  { id: 'tinylm', title: 'Tiny LM', folder: 'TinyLM', icon: '💬',
+    blurb: 'Ein Mini-Sprachmodell zum Aufschrauben — drei Phasen, ein Textkorpus.' },
+  { id: 'sqlstudio', title: 'SQL Studio', folder: 'SQLStudio', icon: '🗄️',
+    blurb: 'Datenbanken wie mit phpMyAdmin — SQLite im Browser.' }
 ];
 
 // Minimaler Toast, damit die Rückmeldungen des Werkzeugs

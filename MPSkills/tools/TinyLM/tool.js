@@ -14,6 +14,9 @@
    Modul keine einzige Handlung aus ctx.actions auf, und update()
    hat nichts zu tun.
 
+   Im Schaufenster (preview/tinylm.js) bekommt der Rahmen ?demo=1:
+   dann merkt sich die App nichts (js/demo.js).
+
    Noch EINE Ansicht für alle (Beta) — Lehrkraft und Schüler sehen
    dasselbe. Die Trennung kommt, wenn die eine Ansicht sitzt.
    ══════════════════════════════════════════════════════════════ */
@@ -65,7 +68,7 @@
       /* Pfad relativ zur SEITE (j.html bzw. lehrer.html, beide in
          MPSkills/). Der Stempel gehört an die Rahmen-URL, sonst käme
          index.html aus dem Cache (siehe NeuroLab). */
-      const q = (ctx && ctx.preview ? '?demo=1&' : '?') + 'v=20261021c';
+      const q = (ctx && ctx.preview ? '?demo=1&' : '?') + 'v=20261023a';
       root.innerHTML =
         '<div class="tl-host">' +
           '<iframe class="tl-frame" src="tools/TinyLM/index.html' + q + '" ' +
