@@ -122,9 +122,16 @@ Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank
 
 ### Prio 5 – Raum-Codes und QR-Code
 
-- [ ] QR-Code und Link tragen zusätzlich ein langes Geheimnis im `#`-Teil (geht nicht an den Server, nicht in Logs). Damit klappt der Beitritt auch bei geschlossener Tür.
-- [ ] Der 6-stellige Code gilt nur, solange die Tür offen ist; die Tür schließt nach z. B. 15 Minuten von selbst, die Lehrkraft öffnet sie mit einem Klick wieder.
-- [ ] Globales Limit für Fehlversuche (alle IPs zusammen). Das Limit je IP hilft nicht gegen viele IPv6-Adressen.
+Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
+
+- [x] Migration 0226: Jeder Raum hat ein Geheimnis (`join_secret`, 32 Hex-Zeichen, 122 Zufallsbits). QR-Code und kopierter Link sind `j.html#CODE-GEHEIMNIS` und gelten, solange die Tür offen ist (`join_open`).
+- [x] Der Code allein gilt 90 Minuten ab Anlegen bzw. ab „Tür öffnen“ (`code_open_until`), danach `code_expired`. Wer schon drin ist (Token, angemeldet, persönlicher Code), ist nie betroffen. Bestehende Räume: Code gilt ab dem Einspielen noch 90 Minuten, jeder Raum bekommt ein eigenes Geheimnis.
+- [x] Lehrkraft-Seite: unter dem Code „Code gilt noch … Min.“ bzw. „Code abgelaufen“ mit Knopf „Code wieder öffnen“ (auch in der Tür am Rand). Angezeigte Adresse = kurz (zum Abtippen), QR und Kopieren-Knopf mit Geheimnis. Das Geheimnis sehen nur Lehrkräfte des Raums (`skill_room_get`), nie Schüler.
+- [x] Beitrittsseite: Geheimnis aus der Adresse in den sessionStorage, Adresse danach nur noch `#CODE` (nicht im Verlauf). Eigene Meldungen für „Code abgelaufen“ und „zu viele Versuche“.
+- [x] `api/skill_join.js`: Fehlversuche aller IPs zusammen; ab 1000 in 10 Minuten ist der Weg „nur Code“ zu (`busy`), mit QR-Geheimnis geht es weiter.
+- [x] Prüfstand `supabase/tests/0226_raum_tuer_code_qr.mjs` (24 Prüfungen), alle 30 Prüfstände der Kette grün; im Browser geprüft (QR-Adresse, abgelaufener Code, „Code wieder öffnen“), QR-Code mit langer Adresse per jsQR gelesen.
+- [ ] Migration 0226 im Supabase-SQL-Editor ausführen. Erst danach `main` deployen lassen. Sonst schickt die Seite `p_secret` an eine Funktion, die es noch nicht kennt, und der Beitritt schlägt fehl.
+- Bleibt: Ein Foto vom QR-Code gilt, solange die Tür offen ist. Dagegen hilft „Beitritt schließen“, wenn alle drin sind.
 
 ### Prio 6 – Löschen
 

@@ -1,7 +1,7 @@
 // ══════════════════════════════════════════════════════════════
 // POST /api/skill_join   — MPSkills Beitritt (Stufe 3)
 // ══════════════════════════════════════════════════════════════
-// Body: { code, mode: 'peek' | 'join' | 'recover', name?, access_token? }
+// Body: { code, mode: 'peek' | 'join' | 'recover', name?, access_token?, secret? }
 //
 // Drei Modi, ein Endpunkt:
 //   'peek'    — Was steht hinter diesem Code? Raumtitel, Werkzeug,
@@ -36,6 +36,14 @@
 //   dem geprüften JWT — sonst könnte sich jedes Gerät als
 //   beliebiger Account ausgeben und dessen Platz übernehmen.
 //
+// ── Tür seit 0226: Code mit Ablauf, QR mit Geheimnis ─────────
+// secret ist das Geheimnis aus dem QR-Code/Link (j.html#CODE-GEHEIMNIS).
+// Ohne secret reicht der Code nur 90 Minuten nach „Tür öffnen“
+// ('code_expired'). Zusätzlich zählt GLOBAL_FAILS über alle IPs: Probiert
+// jemand von vielen Adressen aus Codes durch, ist der Weg „nur Code“ ein
+// paar Minuten zu ('busy') — mit secret kommt man weiter hinein, ein
+// 122-Bit-Geheimnis lässt sich nicht durchprobieren.
+//
 // Env-Vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // ══════════════════════════════════════════════════════════════
 
@@ -52,6 +60,15 @@ import { readJsonBody } from './_utils.js';
 // Versuch bei ungefähr 1:5.000.000; 200 Versuche pro Stunde sind
 // dagegen nichts, für eine Klasse mit Tippfehlern aber reichlich.
 const RATE_LIMIT_PER_HOUR = 200;
+
+// Fehlversuche aller IPs zusammen in GLOBAL_WINDOW_MIN Minuten. Im
+// Schulbetrieb sind es eine Handvoll; die Grenze greift erst bei einer
+// Welle von vielen Adressen (IPv6 macht das Limit je IP sonst zahnlos).
+const GLOBAL_FAILS     = 1000;
+const GLOBAL_WINDOW_MIN = 10;
+
+// Geheimnis aus dem QR-Code (Migration 0226): 32 Hex-Zeichen.
+const SECRET_RE = /^[0-9a-f]{32}$/;
 
 // Dasselbe Alphabet wie skill_gen_code() in Migration 0079.
 const CODE_RE = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{6}$/;
@@ -125,6 +142,30 @@ export default async function handler(req, res) {
   if (mode !== 'peek' && mode !== 'join' && mode !== 'recover') {
     return res.status(400).json({ ok: false, error: 'mode_invalid' });
   }
+  // Falsch geformtes Geheimnis = keines (dann gelten die Code-Regeln).
+  const rawSecret = String(body.secret ?? '').trim().toLowerCase();
+  const secret = SECRET_RE.test(rawSecret) ? rawSecret : null;
+
+  // ── Globale Grenze (0226) ──
+  // Nur für den Weg ohne Geheimnis, und nicht für recover (eigener,
+  // 8-stelliger Schlüssel). Fail-open wie das Limit je IP.
+  if (!secret && mode !== 'recover') {
+    try {
+      const since = new Date(Date.now() - GLOBAL_WINDOW_MIN * 60 * 1000).toISOString();
+      const { count, error: gErr } = await admin
+        .from('skill_join_attempts')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', since);
+      if (gErr) {
+        console.warn('[skill_join] global limit check failed (fail-open):', gErr.message);
+      } else if ((count ?? 0) >= GLOBAL_FAILS) {
+        console.warn('[skill_join] global limit erreicht:', count);
+        return res.status(429).json({ ok: false, error: 'busy' });
+      }
+    } catch (e) {
+      console.warn('[skill_join] global limit block failed (fail-open):', e.message);
+    }
+  }
 
   // ── recover ──
   // Vor der Formprüfung des Raum-Codes: der persönliche Code ist
@@ -155,7 +196,7 @@ export default async function handler(req, res) {
 
   // ── peek ──
   if (mode === 'peek') {
-    const { data, error } = await admin.rpc('skill_room_peek', { p_code: code });
+    const { data, error } = await admin.rpc('skill_room_peek', { p_code: code, p_secret: secret });
     if (error) {
       console.error('[skill_join] skill_room_peek:', error);
       return res.status(500).json({ ok: false, error: 'lookup_failed' });
@@ -210,7 +251,8 @@ export default async function handler(req, res) {
   const { data, error } = await admin.rpc('skill_room_join', {
     p_code:    code,
     p_name:    rawName || null,
-    p_user_id: userId
+    p_user_id: userId,
+    p_secret:  secret
   });
   if (error) {
     console.error('[skill_join] skill_room_join:', error);

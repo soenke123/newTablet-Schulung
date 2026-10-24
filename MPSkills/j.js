@@ -81,6 +81,8 @@ const ERRORS = {
   room_gone:     'Diesen Raum gibt es nicht mehr.',
   unknown_token: 'Dieser Raum gehört nicht mehr zu diesem Gerät.',
   join_closed:   'Die Lehrkraft hat den Beitritt geschlossen.',
+  code_expired:  'Dieser Code gilt nicht mehr. Scanne den QR-Code an der Tafel — oder bitte deine Lehrkraft, den Code wieder zu öffnen.',
+  busy:          'Gerade probieren sehr viele Geräte Codes aus. Bitte scanne den QR-Code an der Tafel, der funktioniert weiter.',
   room_full:     'Dieser Raum ist voll.',
   name_required: 'Bitte trag deinen Namen ein.',
   name_invalid:  'Der Name geht so nicht. Buchstaben, Ziffern und Leerzeichen, höchstens 24 Zeichen.',
@@ -393,7 +395,7 @@ async function renderDoor(code) {
 
   let info;
   try {
-    info = await MPRoom.peek(code);
+    info = await MPRoom.peek(code, doorSecret(code));
   } catch (e) {
     host().innerHTML = `<div class="card"><div class="msg msg--err">Keine Verbindung. ${esc(e.message)}</div>
       <button type="button" class="btn" onclick="location.reload()">Noch einmal</button></div>`;
@@ -494,7 +496,7 @@ async function renderDoor(code) {
     try {
       const res = coming
         ? await MPRoom.rpc('skill_room_return', { p_token: back.token })
-        : await MPRoom.join(code, name);
+        : await MPRoom.join(code, name, doorSecret(code));
       if (!res.ok) {
         errBox.textContent = errText(res.error);
         errBox.hidden = false;
@@ -745,6 +747,19 @@ function renderGone(reason) {
   });
 }
 
+/* ─── Geheimnis aus dem QR-Code (0226) ────────────────────────
+   j.html#CODE-GEHEIMNIS: Mit dem Geheimnis gilt der Beitritt, solange
+   die Tür offen ist; der Code allein nur 90 Minuten. Es wandert aus der
+   Adresse in den sessionStorage (je Code), damit es nicht im Verlauf
+   stehen bleibt und ein Neuladen auf der Tür es trotzdem noch kennt. */
+const SECRET_KEY = 'mpskills.joinSecret.';
+function keepSecret(code, secret) {
+  try { sessionStorage.setItem(SECRET_KEY + code, secret); } catch (e) { /* egal */ }
+}
+function doorSecret(code) {
+  try { return sessionStorage.getItem(SECRET_KEY + code) || null; } catch (e) { return null; }
+}
+
 /* ─── Weiche ──────────────────────────────────────────────── */
 // Der Hash entscheidet: kein Code → Eingabefeld. Code, den dieses
 // Gerät schon kennt → direkt hinein (kein zweiter Beitritt, kein
@@ -758,7 +773,15 @@ async function route() {
   unmountTool();
   clearTabs();
 
-  const rawHash = location.hash.replace(/^#/, '');
+  let rawHash = location.hash.replace(/^#/, '');
+  // QR-Code mit Geheimnis (0226): merken, Adresse auf den Code kürzen.
+  // replaceState löst kein hashchange aus — es geht hier einfach weiter.
+  const qr = MPRoom.splitJoinHash(rawHash);
+  if (qr.code) {
+    keepSecret(qr.code, qr.secret);
+    history.replaceState(null, '', location.pathname + '#' + qr.code);
+    rawHash = qr.code;
+  }
   // Persönlicher Code (0196) von der Startseite: steht im
   // sessionStorage, nicht in der Adresse.
   if (rawHash === 'persoenlich') {

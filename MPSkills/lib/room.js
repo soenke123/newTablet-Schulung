@@ -336,12 +336,16 @@
     return body;
   }
 
-  const peek = (code) => endpoint({ mode: 'peek', code: String(code || '').toUpperCase() });
+  // secret: das Geheimnis aus dem QR-Code (0226). Ohne reicht der
+  // Code nur 90 Minuten nach „Tür öffnen“.
+  const peek = (code, secret) => endpoint({ mode: 'peek', code: String(code || '').toUpperCase(),
+                                            secret: secret || null });
 
-  const join = (code, name) => endpoint({
+  const join = (code, name, secret) => endpoint({
     mode: 'join',
     code: String(code || '').toUpperCase(),
     name: name || '',
+    secret: secret || null,
     // Nur mitgeschickt, wenn jemand angemeldet ist. Der Server
     // prüft das JWT selbst und leitet die User-ID daraus ab — er
     // übernimmt sie nie aus dem Rumpf.
@@ -507,9 +511,18 @@
 
   // Die Adresse, die im QR-Code steht. Der Code steht im Hash und
   // nicht im Query-String: so landet er nicht in Server-Logs.
-  function joinUrl(code) {
+  // Mit secret (0226): j.html#CODE-GEHEIMNIS — gilt, solange die Tür
+  // offen ist. Ohne: nur der Code, der nach 90 Minuten abläuft.
+  function joinUrl(code, secret) {
     const base = location.origin + location.pathname.replace(/[^/]*$/, '');
-    return base + 'j.html#' + String(code).toUpperCase();
+    return base + 'j.html#' + String(code).toUpperCase() + (secret ? '-' + secret : '');
+  }
+
+  // Hash der Beitrittsseite zerlegen: 'K7F2QM-0f3a…' → { code, secret }.
+  const SECRET_RE = /^([0-9A-Za-z]{6})-([0-9a-f]{32})$/;
+  function splitJoinHash(raw) {
+    const m = SECRET_RE.exec(String(raw || ''));
+    return m ? { code: m[1].toUpperCase(), secret: m[2] } : { code: null, secret: null };
   }
 
   // „läuft ab in 43 Tagen" — Restlaufzeit für die Raumliste.
@@ -550,7 +563,7 @@
     soloToken, rememberSolo, forgetSolo,
     goSolo, backRoom, forgetBack,
     rpc, peek, join, recover, view, sig, poll, showNet,
-    normalizeCode, isCode, joinUrl, untilText, agoText,
+    normalizeCode, isCode, joinUrl, splitJoinHash, untilText, agoText,
     CODE_RE, POLL_MS
   };
 })();

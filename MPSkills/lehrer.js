@@ -93,7 +93,9 @@ const S = {
   groups:  {},     // Feldschlüssel → [{id, text}] für Listenfelder
   counts:  { people: 0, entries: 0 },   // woran die Sperren hängen
   setStale: false, // Sperren haben sich geändert, Fach 1 muss neu gezeichnet werden
-  qrDrawn: {}      // Ziel-Element-ID → Code, für den dort schon ein QR steht
+  qrDrawn: {},     // Ziel-Element-ID → Adresse, für die dort schon ein QR steht
+  secret:  null,   // Geheimnis für QR/Link (0226), aus skill_room_get
+  codeUntil: null  // bis wann der Code allein reicht (0226)
 };
 
 /* ─── Toast ───────────────────────────────────────────────── */
@@ -172,7 +174,9 @@ document.addEventListener('click', async (ev) => {
   // Dass der Knopf in der Tür den Kasten nicht zufahren lässt, regelt
   // deren eigener Listener (er lässt jedes <button> durch) — hier wäre
   // es zu spät, das Ereignis ist dort längst vorbei.
-  const ok = await copyText(MPRoom.joinUrl(S.code));
+  // Mit Geheimnis (0226): der kopierte Link gilt auch nach den 90 Minuten
+  // des Codes, solange die Tür offen ist.
+  const ok = await copyText(MPRoom.joinUrl(S.code, S.secret));
   if (!ok) { toast('Kopieren geht auf diesem Gerät nicht — bitte von Hand markieren.', 'error'); return; }
   toast('Adresse kopiert.');
   // Kurz ein Haken statt des Blattes: der Toast sagt, DASS etwas
@@ -1090,6 +1094,7 @@ function renderOnboarding() {
       <div class="beam-code">
         <p class="beam-label">Code von der Tafel</p>
         <div class="bigcode" id="bCode">${esc(S.code)}</div>
+        <p class="codestate" id="bCodeState" hidden></p>
         ${urlLineHTML('bUrl', 'beam-url')}
         <p class="beam-hint">Scannen — oder auf <strong>mpskills</strong> den Code eintippen.</p>
         <ul class="namestrip" id="bNames"></ul>
@@ -1163,6 +1168,48 @@ function personStatus(p) {
 }
 const STATUS_LABEL = { online: 'online', offline: 'offline', blocked: 'stillgelegt' };
 
+/* Code-Ablauf (0226): „Code gilt noch 73 Min.“ oder „abgelaufen“ mit
+   Knopf. Läuft auch ohne neuen Poll weiter (Takt unten), damit die
+   Minuten am Beamer stimmen. */
+function paintCodeState() {
+  const open = !!S.view?.room?.join_open;
+  const left = S.codeUntil ? new Date(S.codeUntil).getTime() - Date.now() : 0;
+  for (const id of ['bCodeState', 'flyCodeState']) {
+    const el = $(id);
+    if (!el) continue;
+    if (!open) { el.hidden = true; continue; }
+    el.hidden = false;
+    if (left > 0) {
+      el.classList.remove('codestate--off');
+      el.innerHTML = `Code gilt noch ${Math.max(1, Math.ceil(left / 60000))} Min. · QR-Code ohne Ablauf`;
+    } else {
+      el.classList.add('codestate--off');
+      el.innerHTML = `Code abgelaufen — Beitritt per QR-Code.
+        <button type="button" class="btn btn--sm" data-code-reopen>Code wieder öffnen</button>`;
+    }
+  }
+  $('bCode')?.classList.toggle('bigcode--off', open && left <= 0);
+}
+setInterval(() => { if (S.code && S.view) paintCodeState(); }, 30000);
+
+document.addEventListener('click', async (ev) => {
+  const btn = ev.target.closest('[data-code-reopen]');
+  if (!btn || !S.code) return;
+  btn.disabled = true;
+  try {
+    const r = await trpc('skill_room_set_open', { p_code: S.code, p_open: true });
+    if (!r.ok) { toast(errText(r.error, r), 'error'); btn.disabled = false; return; }
+    S.codeUntil = r.code_open_until || S.codeUntil;
+    paintCodeState();
+    toast('Code gilt wieder 90 Minuten.');
+    poller && poller.invalidate();
+    poller && poller.refresh();
+  } catch (e) {
+    toast('Fehler: ' + e.message, 'error');
+    btn.disabled = false;
+  }
+});
+
 async function toggleJoin(btn) {
   const open = btn.dataset.open === '1';
   btn.disabled = true;
@@ -1189,10 +1236,10 @@ async function toggleJoin(btn) {
    nicht". */
 function drawQr(targetId, url) {
   const el = $(targetId);
-  if (!el || S.qrDrawn[targetId] === S.code) return;
+  if (!el || S.qrDrawn[targetId] === url) return;
   try {
     el.innerHTML = MPQR.svg(url, { title: 'Code ' + S.code });
-    S.qrDrawn[targetId] = S.code;
+    S.qrDrawn[targetId] = url;
   } catch (e) {
     el.innerHTML = `<div class="qr-wait">QR-Code ließ sich nicht erzeugen.<br>Der Code
       funktioniert trotzdem.</div>`;
@@ -1230,6 +1277,7 @@ function flyHTML() {
       <div class="qrfly-body" id="qrFlyBody" title="Zum Einfahren klicken">
         <div class="qrfly-qr" id="flyQr"></div>
         <div class="qrfly-code">${esc(S.code)}</div>
+        <p class="codestate" id="flyCodeState" hidden></p>
         ${urlLineHTML('flyUrl', 'qrfly-url')}
         <button type="button" class="btn btn--sm" id="flyToggle">…</button>
       </div>
@@ -1252,7 +1300,7 @@ function wireFly() {
     $('qrFlyGrip').setAttribute('aria-expanded', String(on));
     // Erst beim ersten Ausfahren zeichnen: ein QR-Code, den niemand
     // sieht, muss auch nicht gebaut werden.
-    if (on) drawQr('flyQr', MPRoom.joinUrl(S.code));
+    if (on) drawQr('flyQr', MPRoom.joinUrl(S.code, S.secret));
   });
   // Ein Klick auf den ausgefahrenen Kasten fährt ihn wieder ein —
   // zwei Ausnahmen, beide aus demselben Grund: dort ist der Klick
@@ -1407,11 +1455,17 @@ function paintRoom(data) {
   // Hat das Werkzeug eigene Reiter (setToolTabs), gibt es diesen nicht mehr.
   if ($('rtToolName')) $('rtToolName').innerHTML = MPIcons.label(r.tool_id, r.tool_title || 'Skill');
 
+  // Angezeigt wird die kurze Adresse (zum Abtippen, Code-Regeln); der
+  // QR-Code trägt das Geheimnis (0226) und gilt, solange die Tür offen ist.
+  S.secret    = r.join_secret || null;
+  S.codeUntil = r.code_open_until || null;
   const url = MPRoom.joinUrl(S.code);
   $('bUrl').textContent  = url.replace(/^https?:\/\//, '');
   const flyUrl = $('flyUrl');
   if (flyUrl) flyUrl.textContent = url.replace(/^https?:\/\//, '');
-  drawQr('bQr', url);
+  drawQr('bQr', MPRoom.joinUrl(S.code, S.secret));
+  if (flyOpen()) drawQr('flyQr', MPRoom.joinUrl(S.code, S.secret));
+  paintCodeState();
 
   const people = data.people || [];
   const online = people.filter(p => p.online).length;
