@@ -59,3 +59,70 @@ Claude kann für Verarbeitungsverzeichnis, TOM, Pannenplan und Einwilligungsform
 ## Technisch noch offen
 
 - [ ] Tailwind: Knowledge Stack (`MPSkills/tools/KnowledgeStack/*.html`) und Fokusflow (`GameHub/S1 Fokusflow`) laden noch von `cdn.tailwindcss.com`. Die Datei unter `vendor/` ablegen oder eine feste CSS-Datei daraus bauen.
+
+## Sicherheit
+
+Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank freilegen.
+
+### So ist es gebaut
+
+- RLS auf allen Tabellen. Das Frontend nutzt nur RPCs (security definer), keine Tabellen direkt.
+- Raum-Codes (6 Zeichen) prüft nur `api/skill_join.js`, mit Rate-Limit je IP. `skill_room_peek`/`skill_room_join` darf nur service_role ausführen.
+- Teilnehmer-Token: 48 Hex-Zeichen (192 Bit). Persönlicher Code: 8 Zeichen.
+- `service_role`-Key nur in Vercel. Admin-Functions prüfen das JWT und das Profil.
+
+### Die vier Wege zum großen Leak
+
+1. **`service_role`-Key** wird bekannt → alles offen. Schutz: nur in Vercel, Push Protection auf GitHub, neu erzeugen bei Verdacht.
+2. **Admin-Konto** wird übernommen → alle Schulen und Schüler. Schutz: 2FA (unten).
+3. **XSS** (Name oder Quiztext wird als HTML ausgeführt) → Sitzung wird geklaut, schlimmstenfalls die einer Admin. Schutz: CSP-Header, Texte immer escapen.
+4. **Zu offene Migration** (Grant oder Funktion) → je nach Tabelle. Schutz: Prüfstand für Rechte.
+
+### Entschieden
+
+- Der 6-stellige Raum-Code bleibt.
+- 2FA nur für Admins. Lehrkräfte bekommen keine 2FA.
+
+### Prio 1 – Lücken schließen
+
+- [x] `games.password_hash` war für anon lesbar (0002 gab das Tabellenrecht, die Policy filtert nur Zeilen). Migration 0222: Spaltenrechte ohne den Hash, Prüfstand `supabase/tests/0222_games_hash_verbergen.mjs`.
+- [ ] Migration 0222 im Supabase-SQL-Editor ausführen.
+- [ ] Supabase → Authentication → Sign In / Providers: **„Allow new users to sign up“ aus.** Sonst legt jeder mit dem öffentlichen anon-Key Konten an, an `api/signup.js` vorbei (ohne Blacklist und ohne Rate-Limit). Konten entstehen nur über `/api/signup` (service_role), das läuft weiter.
+- [ ] Supabase → Authentication → Rate Limits: Anmeldeversuche begrenzen (Kontonamen sind leicht zu raten, Passwort ab 8 Zeichen).
+- [ ] Supabase → Authentication → Sessions: Ablauf des JWT bei 1 Stunde lassen.
+
+### Prio 2 – 2FA für Admins
+
+- [ ] Supabase-MFA (TOTP, Authenticator-App) einschalten.
+- [ ] `is_admin()`, `is_any_admin()`, `is_superadmin()` verlangen zusätzlich `auth.jwt()->>'aal' = 'aal2'`. Weil fast alle Policies darüber laufen, wirkt 2FA damit überall in der Datenbank.
+- [ ] Dieselbe Prüfung in den `api/admin_*.js`.
+- [ ] Admin-Panel: 2FA einrichten (QR für die App) und beim Anmelden den Code abfragen. Ohne 2FA sieht eine Admin nur „2FA einrichten“.
+- [ ] Notfall-Weg: Wer das Handy verliert, dem setzt ein Volladmin oder der Betreiber im Supabase-Dashboard den Faktor zurück.
+
+### Prio 3 – Sicherheits-Header (`vercel.json`)
+
+- [ ] Content-Security-Policy: Skripte nur von der eigenen Seite (setzt voraus, dass Tailwind nicht mehr vom CDN kommt, siehe „Technisch noch offen“), `connect-src` nur Supabase.
+- [ ] `Referrer-Policy: strict-origin` (Links mit Raum-Codes gehen nicht an fremde Seiten).
+- [ ] `frame-ancestors 'self'` (niemand bettet die Seite fremd ein), `Permissions-Policy`, `X-Content-Type-Options: nosniff`.
+
+### Prio 4 – Rechte automatisch prüfen
+
+- [ ] Prüfstand, der meldet: Tabellen oder Spalten, die anon/authenticated direkt lesen dürfen; security-definer-Funktionen, die anon ausführen darf (Abgleich mit einer Erlaubt-Liste); Tabellen ohne RLS.
+- [ ] `alter default privileges in schema public revoke execute on functions from public, anon, authenticated;` — neue Funktionen sind dann erst nach `grant` aufrufbar. Heute ohne `revoke`: `ks_ensure_player`, `ks_ensure_board`, `ks_owned_room` (0174/0175), geringes Risiko, weil UUIDs nötig sind.
+
+### Prio 5 – Raum-Codes und QR-Code
+
+- [ ] QR-Code und Link tragen zusätzlich ein langes Geheimnis im `#`-Teil (geht nicht an den Server, nicht in Logs). Damit klappt der Beitritt auch bei geschlossener Tür.
+- [ ] Der 6-stellige Code gilt nur, solange die Tür offen ist; die Tür schließt nach z. B. 15 Minuten von selbst, die Lehrkraft öffnet sie mit einem Klick wieder.
+- [ ] Globales Limit für Fehlversuche (alle IPs zusammen). Das Limit je IP hilft nicht gegen viele IPv6-Adressen.
+
+### Prio 6 – Löschen
+
+- [ ] Fotos der Projektarbeit: Frist festlegen (z. B. 30 Tage nach Projektende).
+- [ ] Supabase-Sicherungen behalten Gelöschtes bis zu ihrem Ablauf (je nach Tarif 7–30 Tage). In `datenschutz.html` nennen.
+- [ ] Prüfstand: Backup-Tabellen (Scrum, `pa_backups`) und Mail-Ausgang gehen mit dem Raum.
+- [ ] Admin-Panel: wann `skill_cleanup` und der Konto-Ablauf zuletzt liefen.
+
+### Prio 7 – Geteilte Tablets
+
+- [ ] Tokens der Gast-Teilnahmen liegen in `localStorage['mpskills_rooms']` (bis 40 Räume). Knopf „Dieses Gerät abmelden“ oder kürzere Haltezeit.
