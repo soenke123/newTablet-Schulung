@@ -114,8 +114,11 @@ Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank
 
 ### Prio 4 – Rechte automatisch prüfen
 
-- [ ] Prüfstand, der meldet: Tabellen oder Spalten, die anon/authenticated direkt lesen dürfen; security-definer-Funktionen, die anon ausführen darf (Abgleich mit einer Erlaubt-Liste); Tabellen ohne RLS.
-- [ ] `alter default privileges in schema public revoke execute on functions from public, anon, authenticated;` — neue Funktionen sind dann erst nach `grant` aufrufbar. Heute ohne `revoke`: `ks_ensure_player`, `ks_ensure_board`, `ks_owned_room` (0174/0175), geringes Risiko, weil UUIDs nötig sind.
+- [x] Migration 0225: neue Funktionen sind standardmäßig für niemanden ausführbar (Standardrechte global für PUBLIC und in `public` für anon/authenticated). Jede neue RPC braucht ein ausdrückliches `grant execute`.
+- [x] Interne Helfer zu: `ks_ensure_board`, `ks_ensure_player`, `ks_owned_room`, `clash_fire_teams`. Alle Aufrufer sind security definer; geprüft als anon mit echtem Raum-Token (ks_view/ks_sig/clash_view/clash_sig laufen weiter).
+- [x] Wächter `supabase/tests/0225_rechte_waechter.mjs` + Liste `0225_rechte_freigaben.json`: was anon und authenticated heute erreichen (69 bzw. 268 security-definer-Funktionen, 5 bzw. 39 Tabellen/Views, 10 Spalten von `games`). Neue Freigabe → rot, bis sie bewusst in der Liste steht. Außerdem: jede Tabelle mit RLS, jede security-definer-Funktion mit `search_path`, Views für Nutzer mit `security_invoker`. Gegenprobe mit absichtlich offener Tabelle/Funktion: alle vier Prüfungen schlagen an.
+- [ ] Migration 0225 im Supabase-SQL-Editor ausführen.
+- Gut zu wissen: `ks_catalogs`/`ks_questions` haben Rechte für anon, aber keine Policy → RLS gibt keine Zeile heraus. Kann so bleiben (Zugriff läuft über RPCs).
 
 ### Prio 5 – Raum-Codes und QR-Code
 
