@@ -248,13 +248,14 @@
 
   /* ─── Anzeigename ───────────────────────────────────────────
      Gespeichert wird über update_display_name (0004): Länge 2–24,
-     keine Steuerzeichen, Schimpfwort-Blacklist, und eine Sperre
+     nur Buchstaben, Ziffern, Leerzeichen und . _ - (seit 0229, wie bei
+     der Registrierung), Schimpfwort-Blacklist, und eine Sperre
      (display_name_locked), die ein Admin setzen kann. Die
      Fehlercodes des RPC sind keine Sätze — hier stehen die Sätze. */
   const NAME_ERRORS = {
     not_authenticated: 'Du bist nicht angemeldet. Bitte melde dich neu an.',
     invalid_length:    'Der Name braucht 2 bis 24 Zeichen.',
-    invalid_chars:     'Im Namen sind Sonderzeichen, die nicht erlaubt sind.',
+    invalid_chars:     'Erlaubt sind Buchstaben, Ziffern, Leerzeichen und . _ -',
     blacklisted:       'Dieser Name ist nicht erlaubt. Bitte wähle einen anderen.',
     name_locked:       'Dein Name wurde gesperrt und kann nicht geändert werden. Sprich mit deiner Lehrkraft.',
     no_profile:        'Zu deinem Zugang fehlt das Profil.'

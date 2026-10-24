@@ -159,3 +159,32 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 - [x] Migration 0228: `scrum_product_ok` in `scrum_apply_ops` und `scrum_room_restore`, Avatar mit Ende-Anker, Bestand bereinigt. Prüfstand `supabase/tests/0228_scrum_xss.mjs`; im Browser mit eingespielten Angriffsdaten geprüft (kein Skript lief).
 - [ ] Migration 0228 im Supabase-SQL-Editor ausführen.
 
+### Prüfung Injection/XSS, 24.10.2026 — Ergebnis
+
+**Methode.** (1) *SQL-Injection:* alle 807 Funktionen im Endstand der Migrationen (pglite) nach dynamischem SQL (`execute`) und `LIKE` durchsucht. (2) *Quellen:* alle 85 Funktionen, die anon/authenticated aufrufen dürfen und freien Text oder JSON annehmen, dazu `api/signup`/`api/skill_join`. (3) *Senken:* alle 409 JS/HTML-Dateien mit einem JavaScript-Parser (acorn) gelesen; jede Stelle, an der eines der Datenfelder (Name, Titel, Text, Notiz, Frage, Antwort, Bild, Link …) in einen HTML-Baustein (`${…}` oder `+`) oder in `innerHTML`/`insertAdjacentHTML` geht — 650 Stellen, 370 maskiert, die übrigen 280 von Hand gesichtet; dazu alle `src`/`href` aus Daten und alle 159 `innerHTML = variable`. (4) *Gegenprobe im Browser* für die gefundene Lücke. Nicht abgedeckt: Werte, die über mehrere Variablen weitergereicht werden, ohne dass das Feld beim Einsetzen noch erkennbar ist; geprüft wurden dort die Hilfsfunktionen, die das HTML bauen.
+
+**Ergebnis.**
+
+| Bereich | Quelle (wer schreibt) | Ergebnis |
+|---|---|---|
+| Datenbank (alle Funktionen) | alle | **keine SQL-Injection**; dynamisches SQL nur 3× mit festem Text/Parametern, `LIKE` maskiert |
+| `api/` | anon, Lehrkräfte, Admins | Parameter statt SQL-Text; Mail-Function mit Geheimnis (zeitkonstant), Mails als Text |
+| Scrum Werkstatt | Teilnehmer | **Lücke: XSS über Product Goal, Avatar, Bilder → behoben (0228)** |
+| Anzeigename | jedes Konto | alle Anzeigen maskiert; beim Ändern aber beliebige Zeichen → **gehärtet (0229)** |
+| Landing (Schulauswahl) | Volladmin | Schulname unmaskiert → **behoben** (escapeHtml) |
+| Projektarbeit | Teilnehmer, Lehrkräfte | maskiert; Projektziel per `cleanHtml`; Bilder vollständig geprüft (Server + Browser) |
+| Knowledge Stack (Quiz, Entwürfe, Kataloge, Spitznamen, Emotes) | Teilnehmer, Lehrkräfte | maskiert bzw. `textContent`; Emotes auf feste Liste (Server) |
+| Wortwolke, Pinnwände (MPSkills, Zukunftsboard, Wieso weshalb warum) | Teilnehmer, Schüler | maskiert; Quellen-Link nur `https?://` und maskiert |
+| SQL Studio (Schülerdatenbanken, Tabellen, Zellen, Fehlermeldungen) | Teilnehmer | maskiert |
+| SYNIR (Aufgaben, Netze, Szenarien) | Lehrkräfte, Teilnehmer | Aufgaben-HTML per Erlaubt-Liste neu aufgebaut, Rest maskiert |
+| Kingdoms of Mathoria, Wordisland, Wild Clusters, Balance of Nature, NeuroLab, TinyLM | Teilnehmer, Lehrkräfte | maskiert bzw. nur feste Inhalte/Zahlen |
+| Admin-Panel (Nutzer, Tickets, Räume) | alle | maskiert |
+| Bestenlisten, Freundesräume, GameHub | Schüler | maskiert; übrige Treffer feste Spieltexte |
+| postMessage (12 Empfänger) | iframes | Herkunft und Absender geprüft |
+
+**Aussage.** Nach dieser Prüfung gibt es im Projekt keine SQL-Injection. Die eine gefundene XSS-Lücke (Scrum Werkstatt) ist geschlossen; alle anderen Stellen, an denen Eingaben anderer Personen angezeigt werden, maskieren oder bereinigen. Restrisiko: Code, der ab jetzt neu dazukommt, und Wege über mehrere Variablen (siehe Methode).
+
+**Damit es so bleibt (Vorschläge):** Werkzeug-iframes mit `sandbox` (ohne `allow-same-origin`) — dann kommt ein XSS dort nicht mehr an die Sitzung; `'unsafe-inline'` schrittweise aus der CSP; der Scanner aus dieser Prüfung als Prüfstand.
+
+- [ ] Migrationen 0228 und 0229 im Supabase-SQL-Editor ausführen.
+
