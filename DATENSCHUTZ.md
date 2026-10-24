@@ -151,3 +151,11 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
   - In `datenschutz.html` Abschnitt 9 erklärt. Im Browser geprüft: Speicherort je Wahl, zweiter Tab, Wechsel, Ablauf nach 3 Stunden, angemeldet.
 - Bleibt: Die eigene Vokabel-Insel ohne Konto (Wordisland, `mpskills_solo`) liegt weiter dauerhaft im Gerät; sie läuft bewusst nicht ab.
 - Bleibt: Wer auf einem Schulgerät angemeldet bleibt, ist für die nächste Person angemeldet. Am Stundenende abmelden.
+
+### Fund 24.10.2026 – XSS in der Scrum Werkstatt (behoben)
+
+- [x] Product Goal wurde roh per `innerHTML` gezeigt, Avatar und Bilder unmaskiert in `src="…"`; der Server prüfte den Avatar nur am Anfang. Wer seinen Teilnehmer-Token hat, konnte über `scrum_save` Skript bei Team und Lehrkraft ausführen (gleiche Domain → Sitzung der Lehrkraft).
+- [x] Oberfläche: `cleanHtml` (wie Projektarbeit) für das Goal, `safeImg` (vollständige data-URL) für Avatar und Bilder.
+- [x] Migration 0228: `scrum_product_ok` in `scrum_apply_ops` und `scrum_room_restore`, Avatar mit Ende-Anker, Bestand bereinigt. Prüfstand `supabase/tests/0228_scrum_xss.mjs`; im Browser mit eingespielten Angriffsdaten geprüft (kein Skript lief).
+- [ ] Migration 0228 im Supabase-SQL-Editor ausführen.
+
