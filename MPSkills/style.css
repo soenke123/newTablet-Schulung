@@ -2732,6 +2732,18 @@ body.tool-fill #pagefoot { display: none; }
 }
 
 /* Am Beitritt: kurz, direkt über dem Knopf, der den Namen abschickt. */
+/* Eigenes Gerät oder Schulgerät (j.js devicePickHTML) */
+.device-pick { border: 0; padding: 0; margin: 4px 0 14px; min-width: 0; }
+.device-pick legend { padding: 0; margin-bottom: 6px; font-weight: 600; font-size: .9rem; color: var(--ink); }
+.device-opt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 12px; margin-bottom: 6px;
+  border: 1px solid var(--line, rgba(0,0,0,.12)); border-radius: 10px;
+  font-size: .9rem; color: var(--ink-soft); cursor: pointer;
+}
+.device-opt:has(input:checked) { border-color: var(--accent); background: var(--accent-dim); color: var(--ink); }
+.device-opt input { accent-color: var(--accent); width: 18px; height: 18px; flex: none; margin: 0; }
+.device-pick .rule { margin: 2px 0 0; font-size: .76rem; line-height: 1.45; color: var(--ink-faint); }
 .privacy-note {
   margin-top: 14px; font-size: .78rem; line-height: 1.5;
   color: var(--ink-faint);

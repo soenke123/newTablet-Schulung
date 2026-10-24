@@ -15,6 +15,20 @@
    findet seine Räume über skill_my_rooms auch auf einem anderen
    Gerät wieder.
 
+   ── Eigenes Gerät oder Schulgerät (24.10.2026) ────────────────
+   Ohne Anmeldung fragt die Tür, wem das Gerät gehört, und das
+   Gerät merkt sich die Antwort (localStorage['mpskills.device']):
+     own    — wie bisher: Räume in localStorage, der Raum von gestern
+              ist morgen noch da.
+     school — Räume nur in sessionStorage dieses Tabs: weg, wenn der
+              Tab zu ist, und spätestens nach SCHOOL_IDLE_MS ohne
+              Besuch. Das nächste Kind am Klassensatz-Tablet kommt
+              nicht in die Räume des vorigen.
+   Erste Wahl ist 'school' (datenschutzfreundliche Voreinstellung);
+   wer einmal „eigenes Gerät“ nimmt, hat es danach vorausgewählt.
+   Angemeldete betrifft das nicht: ihre Einträge liegen wie immer
+   in localStorage (ihr Konto findet sie ohnehin wieder).
+
    ── Jeder Eintrag gehört jemandem ─────────────────────────────
    Ein Klassensatz-Tablet wird geteilt, und die Ablage ist eine
    pro Gerät. Deshalb steht an jedem Eintrag, WER ihn angelegt hat:
@@ -44,13 +58,30 @@
 (function () {
   'use strict';
 
-  const STORE_KEY = 'mpskills_rooms';
+  const STORE_KEY   = 'mpskills_rooms';
+  const SESSION_KEY = 'mpskills_rooms_tab';     // Schulgerät: nur dieser Tab
+  const DEVICE_KEY  = 'mpskills.device';        // 'own' | 'school'
+  const SCHOOL_IDLE_MS = 3 * 3600 * 1000;       // Schulgerät: so lange ohne Besuch
   const POLL_MS   = 3000;
 
+  /* ─── Eigenes Gerät oder Schulgerät ─────────────────────── */
+  function deviceKind() {
+    try { return localStorage.getItem(DEVICE_KEY) === 'own' ? 'own' : 'school'; }
+    catch (e) { return 'school'; }
+  }
+  // Hat das Gerät schon einmal gewählt? (Dann steht die Wahl nur noch klein da.)
+  function deviceChosen() {
+    try { return !!localStorage.getItem(DEVICE_KEY); } catch (e) { return false; }
+  }
+
   /* ─── Token-Ablage ──────────────────────────────────────── */
-  function readStore() {
+  // Zwei Schichten, eine Liste: Einträge aus sessionStorage tragen
+  // tab: true und gehen beim Schreiben dorthin zurück.
+  // Schon der Zugriff auf window.sessionStorage kann werfen (gesperrte
+  // Website-Daten) — deshalb über den Namen und innerhalb von try.
+  function readRaw(name, key) {
     try {
-      const raw = localStorage.getItem(STORE_KEY);
+      const raw = window[name].getItem(key);
       const arr = raw ? JSON.parse(raw) : [];
       return Array.isArray(arr) ? arr.filter(e => e && e.code && e.token) : [];
     } catch (e) {
@@ -59,9 +90,24 @@
     }
   }
 
+  function readStore() {
+    const now = Date.now();
+    const tab = readRaw('sessionStorage', SESSION_KEY)
+      .filter(e => now - (e.seen_at || e.saved_at || 0) < SCHOOL_IDLE_MS)
+      .map(e => Object.assign(e, { tab: true }));
+    const local = readRaw('localStorage', STORE_KEY).map(e => { delete e.tab; return e; });
+    // Neueste zuerst, wie die Liste immer war.
+    return tab.concat(local).sort((a, b) => (b.saved_at || 0) - (a.saved_at || 0));
+  }
+
   function writeStore(list) {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(list.slice(0, 40)));
+      localStorage.setItem(STORE_KEY, JSON.stringify(list.filter(e => !e.tab).slice(0, 40)));
+    } catch (e) {
+      console.warn('[mpskills] Raumliste konnte nicht gespeichert werden:', e.message);
+    }
+    try {
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify(list.filter(e => e.tab).slice(0, 40)));
     } catch (e) {
       // Voller oder gesperrter Speicher (privater Modus): der
       // laufende Raum funktioniert weiter, nur das Wiederfinden
@@ -69,6 +115,26 @@
       console.warn('[mpskills] Raumliste konnte nicht gespeichert werden:', e.message);
     }
   }
+
+  /* Die Wahl an der Tür. Wechsel auf 'school' vergisst, was sich das
+     Gerät bisher ohne Anmeldung dauerhaft gemerkt hat — auf einem
+     geteilten Tablet sind das die Räume anderer Kinder. Wechsel auf
+     'own' holt die Räume dieses Tabs in die dauerhafte Ablage. Einträge
+     Angemeldeter bleiben in beiden Fällen, wo sie sind. */
+  function setDeviceKind(kind) {
+    const k = kind === 'own' ? 'own' : 'school';
+    try { localStorage.setItem(DEVICE_KEY, k); } catch (e) { /* privater Modus */ }
+    const all = readStore();
+    if (k === 'school') {
+      writeStore(all.filter(e => e.tab || (e.uid ?? null) !== null));
+    } else {
+      writeStore(all.map(e => { if ((e.uid ?? null) === null) delete e.tab; return e; }));
+    }
+  }
+
+  // Wie viele Räume sich das Gerät ohne Anmeldung dauerhaft gemerkt hat
+  // (für den Hinweis an der Tür, bevor sie mit „Schulgerät“ weg sind).
+  const keptAnon = () => readRaw('localStorage', STORE_KEY).filter(e => (e.uid ?? null) === null).length;
 
   /* Wer sitzt gerade davor? null heißt „niemand angemeldet" — und
      ist damit selbst eine Identität, nämlich die des Geräts.
@@ -98,9 +164,13 @@
     const up   = String(entry.code).toUpperCase();
     const rest = readStore().filter(e => e.code !== up);
     const now  = Date.now();
-    rest.unshift(Object.assign({}, entry, {
+    const entryNew = Object.assign({}, entry, {
       code: up, uid: uid(), saved_at: now, seen_at: now
-    }));
+    });
+    // Ohne Anmeldung auf einem Schulgerät: nur in diesem Tab.
+    if (entryNew.uid === null && deviceKind() === 'school') entryNew.tab = true;
+    else delete entryNew.tab;
+    rest.unshift(entryNew);
     writeStore(rest);
   }
 
@@ -560,6 +630,7 @@
 
   window.MPRoom = {
     list, get, remember, snapshot, forget, touch, leave, uid,
+    deviceKind, deviceChosen, setDeviceKind, keptAnon,
     soloToken, rememberSolo, forgetSolo,
     goSolo, backRoom, forgetBack,
     rpc, peek, join, recover, view, sig, poll, showNet,

@@ -144,4 +144,10 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 
 ### Prio 7 – Geteilte Tablets
 
-- [ ] Tokens der Gast-Teilnahmen liegen in `localStorage['mpskills_rooms']` (bis 40 Räume). Knopf „Dieses Gerät abmelden“ oder kürzere Haltezeit.
+- [x] Beim Beitritt ohne Anmeldung fragt die Tür „Wessen Gerät ist das?“, und das Gerät merkt sich die Wahl (`localStorage['mpskills.device']`). Beim ersten Mal ist „Schulgerät“ vorausgewählt; auf den Klassensatz-Tablets bleibt das so, auf dem eigenen Handy wählt man einmal „Eigenes Gerät“.
+  - **Eigenes Gerät:** Raum-Token in `localStorage`, wie bisher.
+  - **Schulgerät:** Raum-Token nur in `sessionStorage` dieses Tabs, weg beim Schließen, spätestens nach 3 Stunden ohne Besuch. Der Wechsel auf „Schulgerät“ vergisst die Räume, die sich das Gerät ohne Anmeldung dauerhaft gemerkt hatte, und sagt vorher, wie viele es sind.
+  - Angemeldete betrifft das nicht (keine Auswahl, ihr Konto findet die Räume).
+  - In `datenschutz.html` Abschnitt 9 erklärt. Im Browser geprüft: Speicherort je Wahl, zweiter Tab, Wechsel, Ablauf nach 3 Stunden, angemeldet.
+- Bleibt: Die eigene Vokabel-Insel ohne Konto (Wordisland, `mpskills_solo`) liegt weiter dauerhaft im Gerät; sie läuft bewusst nicht ab.
+- Bleibt: Wer auf einem Schulgerät angemeldet bleibt, ist für die nächste Person angemeldet. Am Stundenende abmelden.

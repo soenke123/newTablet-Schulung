@@ -445,6 +445,7 @@ async function renderDoor(code) {
             </label>` : `
             <p class="anon-note">In diesem Raum bleibt ihr anonym — du brauchst keinen Namen
             einzutragen.</p>`}
+          ${coming || loggedIn() ? '' : devicePickHTML()}
           <button type="submit" class="btn btn--primary btn--wide" id="joinGo">${coming ? 'Wieder mitmachen' : 'Mitmachen'}</button>
         </form>
         <!-- Der Hinweis steht VOR dem Beitritt, nicht irgendwo im Fuß:
@@ -477,6 +478,7 @@ async function renderDoor(code) {
 
   const nameInput = document.getElementById('joinName');
   if (nameInput) setTimeout(() => nameInput.focus(), 60);
+  wireDevicePick();
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -504,6 +506,10 @@ async function renderDoor(code) {
         btn.textContent = coming ? 'Wieder mitmachen' : 'Mitmachen';
         return;
       }
+      // Die Wahl an der Tür gilt ab jetzt für dieses Gerät — vor dem
+      // Merken, damit der Raum gleich in der richtigen Ablage landet.
+      const pick = form.querySelector('input[name="device"]:checked');
+      if (pick) MPRoom.setDeviceKind(pick.value);
       MPRoom.remember({
         code, token: res.token, name: res.name, seat: res.seat, room: res.room
       });
@@ -515,6 +521,40 @@ async function renderDoor(code) {
       btn.textContent = coming ? 'Wieder mitmachen' : 'Mitmachen';
     }
   });
+}
+
+/* ─── Eigenes Gerät oder Schulgerät (24.10.2026) ──────────────
+   Nur ohne Anmeldung. Vorausgewählt ist, was dieses Gerät zuletzt
+   gewählt hat — beim ersten Mal „Schulgerät“. So wird es auf den
+   Klassensatz-Tablets von selbst zur Regel und auf dem eigenen Handy
+   nach dem ersten Mal auch. Was die Wahl bewirkt: lib/room.js. */
+function devicePickHTML() {
+  const k = MPRoom.deviceKind();
+  return `
+    <fieldset class="device-pick" id="devicePick">
+      <legend>Wessen Gerät ist das?</legend>
+      <label class="device-opt"><input type="radio" name="device" value="school"${k === 'school' ? ' checked' : ''}>
+        <span><strong>Schulgerät</strong> — Räume werden nicht gemerkt</span></label>
+      <label class="device-opt"><input type="radio" name="device" value="own"${k === 'own' ? ' checked' : ''}>
+        <span><strong>Eigenes Gerät</strong> — Räume werden gemerkt</span></label>
+      <p class="rule" id="deviceNote"></p>
+    </fieldset>`;
+}
+
+function wireDevicePick() {
+  const box = document.getElementById('devicePick');
+  if (!box) return;
+  const note = document.getElementById('deviceNote');
+  const kept = MPRoom.keptAnon();
+  const paint = () => {
+    const v = box.querySelector('input[name="device"]:checked')?.value;
+    note.textContent = v === 'own'
+      ? 'Du findest den Raum auch morgen auf diesem Gerät wieder.'
+      : 'Schließt du den Tab (oder nach 3 Stunden), vergisst das Gerät den Raum. Das nächste Kind kommt nicht hinein.'
+        + (kept ? ` ${kept === 1 ? 'Der eine Raum, den' : 'Die ' + kept + ' Räume, die'} sich dieses Gerät bisher gemerkt hat, ${kept === 1 ? 'wird' : 'werden'} dabei vergessen.` : '');
+  };
+  box.addEventListener('change', paint);
+  paint();
 }
 
 /* ─── Zustand: im Raum ────────────────────────────────────── */
