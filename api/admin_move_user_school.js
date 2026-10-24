@@ -12,7 +12,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
-import { readJsonBody } from './_utils.js';
+import { readJsonBody, requireAal2 } from './_utils.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const FAKE_EMAIL_DOMAIN = process.env.FAKE_EMAIL_DOMAIN ?? 'tablet-schulung.fake';
@@ -55,6 +55,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'invalid_token' });
   }
   const callerId = userData.user.id;
+  if (!requireAal2(jwt, res)) return;
 
   // Caller muss Volladmin sein
   const { data: caller, error: callerErr } = await admin

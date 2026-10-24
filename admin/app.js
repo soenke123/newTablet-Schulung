@@ -141,6 +141,9 @@ function validateClusterWindow(opensAt, closesAt) {
     return;
   }
 
+  // Admin-Rechte gelten nur mit 2FA (Migration 0223) — vorher nichts laden.
+  await window.AdminMFA.ensure(bootMask);
+
   isVolladmin      = !!s.is_superadmin;
   ownSchoolId      = s.school_id;
   currentSchoolId  = s.school_id;

@@ -14,7 +14,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
-import { readJsonBody } from './_utils.js';
+import { readJsonBody, requireAal2 } from './_utils.js';
 
 const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const MAX_NAME_LEN = 60;
@@ -61,6 +61,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'invalid_token' });
   }
   const callerId = userData.user.id;
+  if (!requireAal2(jwt, res)) return;
 
   const { data: caller, error: callerErr } = await admin
     .from('profiles').select('is_superadmin').eq('id', callerId).maybeSingle();

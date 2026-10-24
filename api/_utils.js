@@ -46,3 +46,28 @@ export async function wipeUserProgress(admin, userId) {
     }
   }
 }
+
+// ── 2FA für Admins (Migration 0223) ──────────────────────────
+// Admin-Aktionen nur mit einer Sitzung, die per Authenticator-App
+// bestätigt ist (aal2). Das JWT ist zu diesem Zeitpunkt schon über
+// auth.getUser geprüft — hier wird nur noch die Stufe gelesen.
+export function jwtAal(jwt) {
+  try {
+    const part = String(jwt).split('.')[1] || '';
+    const json = Buffer.from(part.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8');
+    return JSON.parse(json).aal ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// true = weiter. false = Antwort ist schon geschrieben (403).
+export function requireAal2(jwt, res) {
+  if (jwtAal(jwt) === 'aal2') return true;
+  res.status(403).json({
+    ok: false,
+    error: 'mfa_required',
+    message: 'Für Admin-Aktionen bitte zuerst mit dem Code aus der Authenticator-App bestätigen (Admin-Panel neu laden).',
+  });
+  return false;
+}

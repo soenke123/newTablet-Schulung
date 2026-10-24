@@ -28,7 +28,7 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
-import { readJsonBody, wipeUserProgress } from './_utils.js';
+import { readJsonBody, wipeUserProgress, requireAal2 } from './_utils.js';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -66,6 +66,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ ok: false, error: 'invalid_token' });
   }
   const callerId = userData.user.id;
+  if (!requireAal2(jwt, res)) return;
 
   const { data: caller, error: callerErr } = await admin
     .from('profiles').select('is_admin, is_superadmin, school_id').eq('id', callerId).maybeSingle();

@@ -93,11 +93,13 @@ Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank
 
 ### Prio 2 – 2FA für Admins
 
-- [ ] Supabase-MFA (TOTP, Authenticator-App) einschalten.
-- [ ] `is_admin()`, `is_any_admin()`, `is_superadmin()` verlangen zusätzlich `auth.jwt()->>'aal' = 'aal2'`. Weil fast alle Policies darüber laufen, wirkt 2FA damit überall in der Datenbank.
-- [ ] Dieselbe Prüfung in den `api/admin_*.js`.
-- [ ] Admin-Panel: 2FA einrichten (QR für die App) und beim Anmelden den Code abfragen. Ohne 2FA sieht eine Admin nur „2FA einrichten“.
-- [ ] Notfall-Weg: Wer das Handy verliert, dem setzt ein Volladmin oder der Betreiber im Supabase-Dashboard den Faktor zurück.
+- [x] Migration 0223: `is_admin()`, `is_superadmin()`, `is_any_admin()` verlangen zusätzlich `admin_mfa_ok()` (`auth.jwt()->>'aal' = 'aal2'`). Mitgezogen: `apply_cluster_bonus`, `board_target_cluster`, Policies auf `cluster_bonus`/`cluster_bonus_grants`. Lehrkraft-Rechte (`can_teach` …) bleiben ohne 2FA. Prüfstand `supabase/tests/0223_admin_2fa.mjs` mit Wächter: eine neue Funktion oder Policy, die das Admin-Flag selbst liest, fällt auf.
+- [x] `api/admin_*.js` prüfen dasselbe (`requireAal2` in `api/_utils.js`, sonst 403 `mfa_required`).
+- [x] Admin-Panel (`admin/mfa.js`): ohne Faktor „2FA einrichten“ (QR-Code + Schlüssel), mit Faktor Code-Abfrage; erst danach lädt das Panel. Die bestätigte Sitzung gilt auf der ganzen Seite, also auch für SQL Studio in MPSkills.
+- [ ] Supabase → Authentication → Multi-Factor: TOTP muss an sein (Standard).
+- [ ] Migration 0223 ausführen und **sofort danach** alle Admins einrichten lassen. Bis zur Einrichtung kann ein Faktor mit dem Passwort allein angelegt werden.
+- [ ] Notfall (Handy weg): Supabase-Dashboard → Authentication → Users → Konto → MFA-Faktor löschen, dann neu einrichten.
+- Gut zu wissen: Eine Admin, die sich in MPSkills oder auf der Landing anmeldet, hat dort nur Lehrkraft-Rechte, bis sie einmal im Admin-Panel den Code eingegeben hat (dann gilt es für die ganze Sitzung).
 
 ### Prio 3 – Sicherheits-Header (`vercel.json`)
 

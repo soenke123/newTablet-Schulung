@@ -29,7 +29,7 @@ set search_path = public, extensions;
 create table if not exists auth.users (id uuid primary key default gen_random_uuid(), email text);
 create table if not exists _who (uid uuid);
 create or replace function auth.uid() returns uuid language sql stable as $$ select uid from _who limit 1 $$;
-create or replace function auth.jwt() returns jsonb language sql stable as $$ select '{}'::jsonb $$;
+create or replace function auth.jwt() returns jsonb language sql stable as $$ select '{"aal":"aal2"}'::jsonb $$;  -- 0223: Admins nur mit 2FA
 create or replace function auth.role() returns text language sql stable as $$ select 'authenticated' $$;
 create role service_role; create role authenticated; create role anon;
 create publication supabase_realtime;
