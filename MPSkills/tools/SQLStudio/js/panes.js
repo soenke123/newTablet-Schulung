@@ -375,8 +375,9 @@
       });
       $('#dLog').addEventListener('click', (e) => {
         if (e.target.closest('[data-toed]')) {
-          sql.insert($('#dLog code').textContent);
+          const s = $('#dLog code').textContent;
           switchTab('sql');
+          sql.insert(s);
         }
       });
     }
@@ -994,8 +995,8 @@
       else if (act === 'discard') {
         if (T.mode === 'new') { T.mode = 'view'; T.table = A().S.table && table(A().S.table) ? A().S.table : (A().S.schema.tables[0] || {}).name || null; }
         load();
-      } else if (act === 'toed') { sql.insert(generate()); switchTab('sql'); }
-      else if (act === 'sql2ed') { const t = table(T.table); if (t) { sql.insert(t.sql + ';'); switchTab('sql'); } }
+      } else if (act === 'toed') { const s = generate(); switchTab('sql'); sql.insert(s); }
+      else if (act === 'sql2ed') { const t = table(T.table); if (t) { switchTab('sql'); sql.insert(t.sql + ';'); } }
       else if (act === 'apply') {
         const s = generate();
         if (!s) return;
