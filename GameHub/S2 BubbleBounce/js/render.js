@@ -40,19 +40,18 @@
     sprites.monster.jump = jump;
     sprites.monster.dash = dash;
     // Kategorie-Icons: entweder lokales PNG (falls Custom-Art existiert)
-    // oder MDI-Icon aus Iconify-CDN. Farbe dunkel-neutral (#2A2439),
+    // oder MDI-Icon aus assets/icons (lokal, nicht mehr vom Iconify-CDN).
+    // Farbe dunkel-neutral (#2A2439, fest in der SVG-Datei),
     // damit der Blau/Petrol-Streifen oben die Kategorie signalisiert
     // und das Icon nur beschreibt, WAS die Kategorie ist.
-    const ICON_COLOR = '%232A2439'; // URL-encoded #2A2439
     await Promise.all(FE.categories.ALL.map(async c => {
       const local = await tryLoad('assets/posts/' + c.id + '.png');
       if (local){ sprites.categories[c.id] = local; return; }
-      const url = 'https://api.iconify.design/' + c.icon + '.svg?color=' + ICON_COLOR;
-      sprites.categories[c.id] = await tryLoad(url);
+      sprites.categories[c.id] = await tryLoad(FE.categories.iconURL(c));
     }));
 
     // 2b: Blitz-Icon in Akku-Kugeln (dunkles Gelb, kontrastiert auf hellem Kern)
-    sprites.orb = await tryLoad('https://api.iconify.design/mdi:flash.svg?color=%23713F12');
+    sprites.orb = await tryLoad('assets/icons/mdi-flash.svg');
   }
 
   // ── Primitives ──────────────────────────────────────────────────────

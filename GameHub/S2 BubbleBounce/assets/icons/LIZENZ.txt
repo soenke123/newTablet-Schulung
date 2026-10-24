@@ -1,0 +1,4 @@
+Material Design Icons (@mdi/svg 7.4.47), Apache License 2.0
+https://github.com/Templarian/MaterialDesign — lokal abgelegt statt
+über api.iconify.design (Datenschutz, Content-Security-Policy).
+Farbe fest eingetragen: #2A2439 (Kategorien), #713F12 (mdi-flash).

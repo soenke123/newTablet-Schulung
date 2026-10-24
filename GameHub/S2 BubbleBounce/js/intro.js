@@ -14,10 +14,9 @@
   const INTRO_KEY = 'bubbleBounceIntro_v1';
   const DEMO_BASE = 2;   // = BASE_WEIGHT in algorithm.js
 
-  // Gleiche Icon-Quelle wie render.js:preloadSprites — der Browser hat sie
-  // dort schon geladen, es kommt kein neuer Server dazu.
+  // Gleiche Icon-Quelle wie render.js:preloadSprites (lokal, assets/icons).
   function iconURL(cat){
-    return 'https://api.iconify.design/' + cat.icon + '.svg?color=%232A2439';
+    return FE.categories.iconURL(cat);
   }
 
   const MONSTER_SVG =

@@ -3287,7 +3287,7 @@ const SEALED_EGG_DEFS = {
         hasInput: true,
         verifyAsync: async function(val) {
           try {
-            const r = await fetch('https://api.ipify.org?format=json');
+            const r = await fetch('/api/my_ip');  // eigene Function statt ipify (Datenschutz, CSP)
             const d = await r.json();
             const h = async s => Array.from(new Uint8Array(
               await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s.trim()))

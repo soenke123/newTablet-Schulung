@@ -58,7 +58,8 @@ Claude kann für Verarbeitungsverzeichnis, TOM, Pannenplan und Einwilligungsform
 
 ## Technisch noch offen
 
-- [ ] Tailwind: Knowledge Stack (`MPSkills/tools/KnowledgeStack/*.html`) und Fokusflow (`GameHub/S1 Fokusflow`) laden noch von `cdn.tailwindcss.com`. Die Datei unter `vendor/` ablegen oder eine feste CSS-Datei daraus bauen.
+- [ ] Quellen-Tinder (`GameHub/S2 Quellen Tinder/index.html`) lädt 34 Fotos von `images.unsplash.com` (in der CSP unter `img-src` erlaubt). Bilder herunterladen, unter `GameHub/S2 Quellen Tinder/img/` ablegen, Adressen umstellen, danach `https://images.unsplash.com` aus der CSP in `vercel.json` streichen.
+- [ ] Tailwind: Knowledge Stack (`MPSkills/tools/KnowledgeStack/*.html`) und Fokusflow (`GameHub/S1 Fokusflow`) laden noch von `cdn.tailwindcss.com`. Die Datei unter `vendor/` ablegen oder eine feste CSS-Datei daraus bauen; danach `https://cdn.tailwindcss.com` aus der CSP in `vercel.json` streichen.
 
 ## Sicherheit
 
@@ -104,9 +105,12 @@ Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank
 
 ### Prio 3 – Sicherheits-Header (`vercel.json`)
 
-- [ ] Content-Security-Policy: Skripte nur von der eigenen Seite (setzt voraus, dass Tailwind nicht mehr vom CDN kommt, siehe „Technisch noch offen“), `connect-src` nur Supabase.
-- [ ] `Referrer-Policy: strict-origin` (Links mit Raum-Codes gehen nicht an fremde Seiten).
-- [ ] `frame-ancestors 'self'` (niemand bettet die Seite fremd ein), `Permissions-Policy`, `X-Content-Type-Options: nosniff`.
+- [x] Content-Security-Policy für alle Seiten: Skripte nur von der eigenen Seite (+ `cdn.tailwindcss.com`, solange Tailwind dort liegt), `connect-src` nur eigene Seite + Supabase (https/wss), Bilder/Fonts/Worker/Frames nur eigene Seite, `data:` und `blob:`; `object-src 'none'`, `base-uri`/`form-action 'self'`, `frame-ancestors 'self'`. Ein eingeschleustes Skript kann damit nichts mehr an fremde Server schicken (fetch, Bild-URL, Formular).
+- [x] `Referrer-Policy: strict-origin-when-cross-origin`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Permissions-Policy` (Kamera, Mikrofon, Standort aus), HSTS.
+- [x] Geprüft: alle 66 HTML-Seiten mit diesen Headern geladen (Playwright), ohne Verstoß. Seiten, die erst nach dem Spielstart etwas laden, sind damit nicht abgedeckt; die externen Adressen im Code sind aber alle gesucht und behandelt.
+- [x] Mitgefunden und behoben: Siegel I im GameHub schickte die IP an `api.ipify.org` (USA) → eigene Function `api/my_ip.js`. Bubble Bounce lud Icons von `api.iconify.design` → lokal unter `assets/icons/` (MDI, Apache 2.0).
+- Noch drin: `'unsafe-inline'` bei Skripten, weil viele Seiten `onclick="…"` und Inline-`<script>` nutzen. Ohne den Zusatz müsste jede Seite umgebaut werden. Gegen eingeschleuste Skripte hilft deshalb vor allem, dass sie nichts mehr nach außen schicken können.
+- Falls die Seite je in IServ oder einer anderen Seite als iframe eingebettet werden soll: `frame-ancestors`/`X-Frame-Options` verbieten das; dann die Adresse dort eintragen.
 
 ### Prio 4 – Rechte automatisch prüfen
 

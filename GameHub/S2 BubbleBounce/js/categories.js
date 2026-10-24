@@ -7,8 +7,9 @@
   // sampleTexts: kurze Fake-Post-Zeilen (max ~26 Zeichen), die zufällig
   // als "Vorschaubereich" der Karte angezeigt werden. Bewusst plakativ.
   //
-  // `icon` ist eine Iconify-ID (Material Design Icons, filled) — geladen
-  // in render.js via https://api.iconify.design/<id>.svg
+  // `icon` ist eine MDI-ID (Material Design Icons, filled). Die SVGs
+  // liegen lokal in assets/icons/mdi-<name>.svg (iconURL unten) — kein
+  // Iconify-CDN mehr (Datenschutz, CSP in vercel.json).
   const CATS = [
     // ─── GUT ───────────────────────────────────────────────────────────
     {
@@ -84,6 +85,7 @@
 
   FE.categories = {
     ALL: CATS,
+    iconURL: cat => 'assets/icons/' + cat.icon.replace('mdi:', 'mdi-') + '.svg',
     GOOD, BAD,
     BY_ID,
     STARTER_GOOD, STARTER_BAD,
