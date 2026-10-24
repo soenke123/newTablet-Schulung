@@ -86,7 +86,8 @@ Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank
 ### Prio 1 – Lücken schließen
 
 - [x] `games.password_hash` war für anon lesbar (0002 gab das Tabellenrecht, die Policy filtert nur Zeilen). Migration 0222: Spaltenrechte ohne den Hash, Prüfstand `supabase/tests/0222_games_hash_verbergen.mjs`.
-- [ ] Migration 0222 im Supabase-SQL-Editor ausführen.
+- [x] Migration 0224: Spalte `password_hash` und `unlock_game` ganz entfernt (Spiel-Passwörter gibt es seit 0070 nicht mehr; `unlock_game` hätte mit einem Hash ein Spiel an der Kurs-Freischaltung vorbei geöffnet). `seed.sql` ohne Hashes. Prüfstand `0224_spielpasswort_entfernen.mjs`.
+- [ ] Migrationen 0222 und 0224 im Supabase-SQL-Editor ausführen.
 - [ ] Supabase → Authentication → Sign In / Providers: **„Allow new users to sign up“ aus.** Sonst legt jeder mit dem öffentlichen anon-Key Konten an, an `api/signup.js` vorbei (ohne Blacklist und ohne Rate-Limit). Konten entstehen nur über `/api/signup` (service_role), das läuft weiter.
 - [ ] Supabase → Authentication → Rate Limits: Anmeldeversuche begrenzen (Kontonamen sind leicht zu raten, Passwort ab 8 Zeichen).
 - [ ] Supabase → Authentication → Sessions: Ablauf des JWT bei 1 Stunde lassen.

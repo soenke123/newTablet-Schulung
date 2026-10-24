@@ -1591,7 +1591,7 @@ function getUnlocked() {
 }
 
 function setUnlocked(gameId) {
-  // Server-Modus: nur Cache updaten (die eigentliche Persistenz macht unlock_game-RPC)
+  // Server-Modus: nur Cache updaten (freigeschaltet wird serverseitig über cluster_unlocked_games)
   if (_serverUnlocked !== null) {
     if (!_serverUnlocked.includes(gameId)) _serverUnlocked = [..._serverUnlocked, gameId];
     return;

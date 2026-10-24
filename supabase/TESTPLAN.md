@@ -99,25 +99,7 @@ commit;
 ```
 Erwartet: `{"ok": false, "error": "invalid_length"}`
 
-**C4 — unlock_game (falsches Passwort)**
-```sql
-begin;
-  set local role authenticated;
-  set local "request.jwt.claims" = '{"sub":"dd78bbb7-d83c-4c4f-88fa-3041de1ce03b","role":"authenticated"}';
-  select unlock_game('game3', 'falsches-passwort');
-commit;
-```
-Erwartet: `{"ok": false, "error": "wrong_password"}`
-
-**C5 — unlock_game (Game ohne Passwort)**
-```sql
-begin;
-  set local role authenticated;
-  set local "request.jwt.claims" = '{"sub":"dd78bbb7-d83c-4c4f-88fa-3041de1ce03b","role":"authenticated"}';
-  select unlock_game('game7', 'egal');
-commit;
-```
-Erwartet: `{"ok": false, "error": "no_password"}`
+**C4/C5 — unlock_game** entfallen: Spiel-Passwörter sind mit Migration 0224 entfernt (Freischaltung per Kurs-Schalter, 0070).
 
 **C6 — submit_game_result (Season 1, gültig)**
 ```sql

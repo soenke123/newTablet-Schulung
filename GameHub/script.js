@@ -2915,10 +2915,9 @@ function showEvolutionModal(creature) {
 
 /* showPasswordPrompt() ist mit Migration 0070 entfallen. Freigeschaltet
    wird nicht mehr per Passwort durch den Schüler, sondern per Schalter
-   durch die Lehrkraft — siehe buildAdminToggleHTML(). Die DB-Seite
-   (games.password_hash, unlock_game, user_unlocked_games) steht noch,
-   wird aber nicht mehr aufgerufen; user_unlocked_games ist die
-   Grundlage des Backfills in 0070.                                  */
+   durch die Lehrkraft — siehe buildAdminToggleHTML(). games.password_hash
+   und unlock_game sind mit Migration 0224 entfernt; user_unlocked_games
+   bleibt als Grundlage des Backfills in 0070.                       */
 
 /* ─────────────────────────────────────────────────
    8. NEST-SEKTION (zwischen Spielen und Shop)

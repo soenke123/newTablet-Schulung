@@ -1,5 +1,6 @@
 /* Prüfstand für Migration 0222 — games.password_hash nicht öffentlich.
-   Echt gerechnet in pglite auf der ganzen Kette 0001…0222.
+   Echt gerechnet in pglite auf der Kette 0001…0222 (0224 entfernt die
+   Spalte und unlock_game ganz — dafür 0224_spielpasswort_entfernen.mjs).
 
    Die Kernzusagen:
      1. anon/authenticated dürfen password_hash NICHT lesen.
@@ -41,7 +42,7 @@ const mig = f => readFileSync(`${REPO}/supabase/migrations/${f}`, 'utf8');
 const BEKANNT = new Set(['0087']);
 
 await db.exec(STUBS);
-const FILES = readdirSync(`${REPO}/supabase/migrations`).filter(f => f.endsWith('.sql')).sort();
+const FILES = readdirSync(`${REPO}/supabase/migrations`).filter(f => f.endsWith('.sql') && f.slice(0, 4) <= '0222').sort();  // ab 0224 ist die Spalte weg
 for (const f of FILES) {
   try { await db.exec(mig(f)); }
   catch (e) {

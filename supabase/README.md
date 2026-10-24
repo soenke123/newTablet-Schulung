@@ -12,7 +12,7 @@ supabase/
 │   ├── 0001_init.sql     → Schema (Tabellen + View)
 │   ├── 0002_rls.sql      → Row-Level-Security-Policies + GRANTs
 │   ├── 0003_blacklist.sql→ blacklist_words-Tabelle + contains_blacklisted_word()
-│   └── 0004_rpcs.sql     → unlock_game, update_display_name, submit_game_result
+│   └── 0004_rpcs.sql     → update_display_name, submit_game_result (unlock_game entfällt mit 0224)
 ├── seed.sql              → MPS-Schule + Games. Idempotent, kann öfter laufen.
 ├── blacklist_de.txt      → Referenz-Liste für Blacklist (Sync per Hand in 0003)
 └── README.md             → diese Datei
