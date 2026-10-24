@@ -79,6 +79,19 @@ const KEY_RE  = /^[23456789ABCDEFGHJKLMNPQRSTUVWXYZ]{8}$/;
 // Name steht an der Wand und in der Wolke, nicht in einem Konto.
 const NAME_RE = /^[A-Za-zÄÖÜäöüß0-9 ._-]{1,24}$/;
 
+// Übergang (0226): Ist die Migration noch nicht eingespielt, kennt die
+// Datenbank p_secret nicht (PostgREST PGRST202 = keine Funktion mit diesen
+// Parametern). Dann derselbe Aufruf ohne — die alte Tür ohne Code-Ablauf.
+// So ist egal, ob zuerst Vercel oder zuerst Supabase aktualisiert wird.
+async function rpcWithSecret(admin, fn, args, secret) {
+  const res = await admin.rpc(fn, { ...args, p_secret: secret });
+  if (res.error && res.error.code === 'PGRST202') {
+    console.warn(`[skill_join] ${fn} ohne p_secret (Migration 0226 fehlt?)`);
+    return admin.rpc(fn, args);
+  }
+  return res;
+}
+
 function extractClientIp(req) {
   const xff = req.headers['x-forwarded-for'];
   if (typeof xff === 'string' && xff.length > 0) return xff.split(',')[0].trim();
@@ -196,7 +209,7 @@ export default async function handler(req, res) {
 
   // ── peek ──
   if (mode === 'peek') {
-    const { data, error } = await admin.rpc('skill_room_peek', { p_code: code, p_secret: secret });
+    const { data, error } = await rpcWithSecret(admin, 'skill_room_peek', { p_code: code }, secret);
     if (error) {
       console.error('[skill_join] skill_room_peek:', error);
       return res.status(500).json({ ok: false, error: 'lookup_failed' });
@@ -248,12 +261,11 @@ export default async function handler(req, res) {
     }
   }
 
-  const { data, error } = await admin.rpc('skill_room_join', {
+  const { data, error } = await rpcWithSecret(admin, 'skill_room_join', {
     p_code:    code,
     p_name:    rawName || null,
-    p_user_id: userId,
-    p_secret:  secret
-  });
+    p_user_id: userId
+  }, secret);
   if (error) {
     console.error('[skill_join] skill_room_join:', error);
     return res.status(500).json({ ok: false, error: 'join_failed' });

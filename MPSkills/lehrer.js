@@ -1172,7 +1172,9 @@ const STATUS_LABEL = { online: 'online', offline: 'offline', blocked: 'stillgele
    Knopf. Läuft auch ohne neuen Poll weiter (Takt unten), damit die
    Minuten am Beamer stimmen. */
 function paintCodeState() {
-  const open = !!S.view?.room?.join_open;
+  // Ohne Migration 0226 kommt kein code_open_until mit — dann gibt es
+  // keinen Ablauf, und es steht auch keiner da.
+  const open = !!S.view?.room?.join_open && !!S.view?.room && ('code_open_until' in S.view.room);
   const left = S.codeUntil ? new Date(S.codeUntil).getTime() - Date.now() : 0;
   for (const id of ['bCodeState', 'flyCodeState']) {
     const el = $(id);

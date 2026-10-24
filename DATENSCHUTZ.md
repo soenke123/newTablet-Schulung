@@ -130,7 +130,7 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 - [x] Beitrittsseite: Geheimnis aus der Adresse in den sessionStorage, Adresse danach nur noch `#CODE` (nicht im Verlauf). Eigene Meldungen für „Code abgelaufen“ und „zu viele Versuche“.
 - [x] `api/skill_join.js`: Fehlversuche aller IPs zusammen; ab 1000 in 10 Minuten ist der Weg „nur Code“ zu (`busy`), mit QR-Geheimnis geht es weiter.
 - [x] Prüfstand `supabase/tests/0226_raum_tuer_code_qr.mjs` (24 Prüfungen), alle 30 Prüfstände der Kette grün; im Browser geprüft (QR-Adresse, abgelaufener Code, „Code wieder öffnen“), QR-Code mit langer Adresse per jsQR gelesen.
-- [ ] Migration 0226 im Supabase-SQL-Editor ausführen. Erst danach `main` deployen lassen. Sonst schickt die Seite `p_secret` an eine Funktion, die es noch nicht kennt, und der Beitritt schlägt fehl.
+- [ ] Migration 0226 im Supabase-SQL-Editor ausführen. Die Reihenfolge zu Vercel ist egal: Ohne Migration ruft `api/skill_join.js` die alte Funktion ohne Geheimnis (PGRST202 → zweiter Aufruf), und die Lehrkraft-Seite zeigt keinen Code-Ablauf an. Erst mit der Migration gilt die 90-Minuten-Regel.
 - Bleibt: Ein Foto vom QR-Code gilt, solange die Tür offen ist. Dagegen hilft „Beitritt schließen“, wenn alle drin sind.
 
 ### Prio 6 – Löschen
