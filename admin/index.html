@@ -6,7 +6,7 @@
   <title>Admin · Lernwelt</title>
   <link rel="icon" type="image/png" sizes="64x64" href="../icons/favicon-64.png" />
   <link rel="icon" type="image/png" sizes="256x256" href="../icons/favicon-256.png" />
-  <link rel="stylesheet" href="style.css?v=20261024" />
+  <link rel="stylesheet" href="style.css?v=20261024b" />
 
 <!-- Schreibt den sichtbaren Bereich (Tastatur, Adressleiste) als
      CSS-Variablen an <html>. Blockierend im <head>, damit ein Modal
@@ -75,6 +75,9 @@
       <div id="dashboardContent">
         <p class="empty">Lade …</p>
       </div>
+
+      <!-- Löschläufe (Migration 0227): wann zuletzt aufgeräumt wurde -->
+      <div id="cleanupStatus"></div>
     </section>
 
     <!-- ─── Cluster-Tab ───────────────────────────────────── -->
@@ -714,6 +717,6 @@
        in der Raumtabelle sollen dort dasselbe tragen wie drüben. -->
   <script src="../MPSkills/lib/icons.js?v=20261023a"></script>
   <script src="mfa.js?v=20261024"></script>
-  <script src="app.js?v=20261024"></script>
+  <script src="app.js?v=20261024b"></script>
 </body>
 </html>

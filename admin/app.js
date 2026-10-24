@@ -1055,7 +1055,72 @@ function wireDashboard() {
   });
 }
 
+/* ─── Löschläufe (Migration 0227) ──────────────────────────────
+   Ob die Löschfristen wirklich greifen: skill_cleanup schreibt jeden
+   Lauf in cleanup_runs (Räume, Fotos, Konten, Protokolle). Läuft der
+   tägliche Auftrag (pg_cron) nicht, sieht man es hier — sonst merkt es
+   niemand, weil der beiläufige Lauf nur kommt, wenn jemand MPSkills
+   benutzt. */
+const CLEANUP_LATE_HOURS = 36;
+
+async function loadCleanupStatus() {
+  const box = document.getElementById('cleanupStatus');
+  if (!box) return;
+  try {
+    const r = await api('POST', 'rpc/admin_cleanup_status', {});
+    box.innerHTML = r && r.ok ? renderCleanupStatus(r) : '';
+  } catch (err) {
+    // Ohne Migration 0227 gibt es die Funktion nicht — dann bleibt der Kasten leer.
+    console.warn('[cleanup]', err.message);
+    box.innerHTML = '';
+  }
+}
+
+function renderCleanupStatus(r) {
+  const runs  = r.runs || [];
+  const daily = runs.find(x => x.source === 'täglich');
+  const lateMs = CLEANUP_LATE_HOURS * 3600 * 1000;
+  const late  = !daily || (Date.now() - new Date(daily.ran_at).getTime()) > lateMs;
+  const n = (v) => (typeof v === 'number' ? v : 0);
+  const sumAcc = (a) => a ? `${n(a.reset)} / ${n(a.deleted)}` : '—';
+
+  const warn = late
+    ? `<p class="cleanup-warn">⚠ Kein täglicher Lauf in den letzten ${CLEANUP_LATE_HOURS} Stunden${daily ? ` (zuletzt ${escapeHtml(fmtDT(daily.ran_at))})` : ''}.
+       Prüfen: Supabase → Integrations → Cron, Auftrag <code>mpskills_cleanup</code>. Ohne ihn wird nur aufgeräumt, wenn jemand MPSkills öffnet.</p>`
+    : `<p class="cleanup-ok">✓ Täglicher Lauf zuletzt ${escapeHtml(fmtDT(daily.ran_at))}.</p>`;
+
+  const cron = Array.isArray(r.cron)
+    ? `<p class="panel-sub">Aufträge: ${r.cron.map(j =>
+        `<code>${escapeHtml(j.jobname)}</code> ${escapeHtml(j.schedule)}${j.active ? '' : ' (aus)'}${
+          j.last_status ? ` · zuletzt ${escapeHtml(fmtDT(j.last_start))} ${escapeHtml(j.last_status)}` : ''}`).join(' · ')}</p>`
+    : '<p class="panel-sub">pg_cron ist nicht aktiv — es gibt nur den beiläufigen Lauf.</p>';
+
+  const rows = runs.slice(0, 12).map(x => {
+    const s = x.result || {};
+    return `<tr><td>${escapeHtml(fmtDT(x.ran_at))}</td><td>${escapeHtml(x.source)}</td>
+      <td>${n(s.rooms)}</td><td>${n(s.photos)}</td><td>${sumAcc(s.accounts)}</td>
+      <td>${n(s.attempts) + n(s.signups)}</td><td>${n(s.cheat_flags)}</td><td>${n(s.tickets)}</td></tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty">Noch kein Lauf protokolliert.</td></tr>';
+
+  return `
+    <div class="card">
+      <h3>Löschläufe</h3>
+      ${warn}
+      ${cron}
+      <div class="table-wrap">
+        <table class="dtable">
+          <thead><tr><th>Wann</th><th>Art</th><th>Räume</th><th>Fotos</th>
+            <th title="zurückgesetzt / gelöscht">Konten</th><th>IP-Protokolle</th><th>Cheat-Flags</th><th>Tickets</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <p class="panel-sub">Fristen: Räume 30 Tage nach letzter Nutzung (Projektarbeit 1 Jahr), Fotos 30 Tage nach Projektende,
+        Konten Reset nach 1 Jahr / Löschung nach 4 Jahren, IP-Protokolle 1 Tag, Cheat-Flags 180 Tage, Tickets 365 Tage.</p>
+    </div>`;
+}
+
 async function loadDashboard(schoolId) {
+  loadCleanupStatus();  // fire-and-forget, eigener Kasten unter dem Dashboard
   const container = document.getElementById('dashboardContent');
   container.innerHTML = '<p class="empty">Lade …</p>';
   try {

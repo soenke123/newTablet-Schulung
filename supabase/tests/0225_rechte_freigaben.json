@@ -101,6 +101,7 @@
   "fn": [
    "accept_gift(p_task_key text)",
    "add_bonbons(p_amount integer)",
+   "admin_cleanup_status()",
    "admin_cluster_bonbon_totals()",
    "apply_cluster_bonus(p_user_id uuid)",
    "award_game_bonbons(p_game_id text, p_correct integer, p_max_rounds integer)",

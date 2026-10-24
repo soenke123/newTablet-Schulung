@@ -1146,3 +1146,9 @@ html, body {
 .mfa-msg { min-height: 1.5em; margin-top: 8px !important; color: var(--a-danger); }
 .mfa-hint, .mfa-foot { color: var(--a-muted); font-size: 13px; }
 .mfa-foot a { color: var(--a-gold); }
+
+/* ─── Löschläufe (Migration 0227) ──────────────────────────── */
+.cleanup-ok   { margin: 0 0 8px; color: var(--a-success); }
+.cleanup-warn { margin: 0 0 8px; color: #ffb347; }
+.cleanup-warn code, #cleanupStatus .panel-sub code { color: var(--a-text); }
+#cleanupStatus .panel-sub { margin: 8px 0; }

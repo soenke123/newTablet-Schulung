@@ -401,7 +401,7 @@ function renderGuides() {
     ['cal', 'Jeder Arbeitstag', '<b>Ein Eintrag</b> mit dem <b>Datum</b> des Tages — gern mehrere nebeneinander.'],
     ['people', 'Wer war da?', 'Antippen, <b>wer dabei war</b>. Wer fehlt, bleibt weg und steht beim Tag unter „fehlte“.'],
     ['pen', 'Woran gearbeitet?', '<b>To-do auswählen</b> und kurz schreiben, <b>was ihr geschafft</b> habt.'],
-    T ? ['camera', 'Fotos löschen', 'Fotos könnt ihr am Eintrag <b>löschen</b> — und solltet es, sobald <b>Personen</b> oder andere <b>personenbezogene Daten</b> darauf zu sehen sind.']
+    T ? ['camera', 'Fotos löschen', 'Fotos könnt ihr am Eintrag <b>löschen</b> — und solltet es, sobald <b>Personen</b> oder andere <b>personenbezogene Daten</b> darauf zu sehen sind. Spätestens <b>30 Tage nach dem Fertig-Datum</b> löscht der Server sie von selbst.']
       : ['camera', 'Fotos', 'Bis zu <b>3 Fotos</b> je Eintrag, z. B. von einer <b>Exkursion</b>. Personen nur <b>mit ihrer Erlaubnis</b>.']
   ]);
   guideBox('expGuide', 'experts', 'So arbeitet ihr mit Experten', [
@@ -1045,7 +1045,9 @@ function renderTodoPick() {
 const logPhotos = l => (Array.isArray(l.photos) ? l.photos : []).filter(safeImg).slice(0, 3);
 function photosHtml(l) {
   const ph = logPhotos(l);
-  if (!ph.length) return '';
+  // 0227: 30 Tage nach Projektende räumt der Server die Fotos ab.
+  if (!ph.length) return +l.photos_expired > 0
+    ? `<p class="ephotos-gone">${+l.photos_expired === 1 ? 'Foto' : 'Fotos'} nach 30 Tagen gelöscht (Datenschutz).</p>` : '';
   const del = PA.owner && canWrite();
   return `<div class="ephotos">${ph.map((src, i) => `<div class="eph"><img src="${src}" alt="Foto ${i + 1}" data-zoom="${esc(l.id)}:${i}" loading="lazy">
     ${del ? `<button class="x" data-phdel="${esc(l.id)}:${i}" title="Foto löschen" aria-label="Foto löschen">${ICO.trash}</button>` : ''}</div>`).join('')}</div>`;

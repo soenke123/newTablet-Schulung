@@ -17,7 +17,9 @@
          Konto: Reset nach 1 Jahr, Löschung nach 4 Jahren
            → account_lifecycle (Migration 0209)
          Räume 30 Tage nach letzter Nutzung → 0085, Projektarbeit 1 Jahr → 0202
-         Fotos → 0206, Einwilligungsstufe → 0201, Antrags-Mails → 0203
+         Fotos → 0206, 30 Tage nach Projektende gelöscht → 0227 (pa_photo_cleanup),
+         Einwilligungsstufe → 0201, Antrags-Mails → 0203
+         Jeder Lauf protokolliert (nur Zahlen) → cleanup_runs (0227), Admin-Panel „Löschläufe“
          Vercel in Frankfurt → vercel.json, Supabase in Frankfurt → supabase/SETUP.md
 
        Was die SCHULE festlegen muss, steht in <mark class="todo">…</mark>
@@ -205,6 +207,8 @@
   </ul>
   <p>
     Bitte lade nur Fotos hoch, die für die Dokumentation nötig sind, und möglichst <strong>ohne erkennbare Personen</strong>.
+    Die Fotos werden <strong>30 Tage nach Projektende</strong> automatisch gelöscht (Projektende = das Fertig-Datum im
+    Projektziel, ohne Datum die letzte Nutzung des Raums); der Eintrag selbst bleibt.
     Speichere Telefonnummern oder E-Mail-Adressen von Expertinnen und Experten nur, wenn diese damit einverstanden sind.
   </p>
 
@@ -285,7 +289,8 @@
         <tr><td>Spielstände, Münzen, Wesen, Beiträge, Feedback, Mail-Adresse für Benachrichtigungen</td><td>wenn das Konto <strong>1 Jahr</strong> nicht online war. Konto, Kurs und Highscores bleiben, die Handouts sind weiter erreichbar.</td></tr>
         <tr><td>Das ganze Konto mit Highscores</td><td>wenn das Konto <strong>4 Jahre</strong> nicht online war</td></tr>
         <tr><td>MPSkills-Räume mit allen Namen und Beiträgen</td><td><strong>30 Tage</strong> nach der letzten Nutzung. Die Lehrkraft kann früher löschen oder verlängern.</td></tr>
-        <tr><td>Projektarbeit-Räume mit Dokumentation, Fotos, Anträgen und Backups</td><td><strong>1 Jahr</strong> nach dem Anlegen bzw. der letzten Verlängerung. Die Lehrkraft kann Fotos und den Raum jederzeit früher löschen.</td></tr>
+        <tr><td>Projektarbeit-Räume mit Dokumentation, Anträgen und Backups</td><td><strong>1 Jahr</strong> nach dem Anlegen bzw. der letzten Verlängerung. Die Lehrkraft kann den Raum jederzeit früher löschen.</td></tr>
+        <tr><td>Fotos in der Dokumentation der Projektarbeit</td><td><strong>30 Tage</strong> nach Projektende (Fertig-Datum im Projektziel, sonst letzte Nutzung des Raums). Die Lehrkraft kann Fotos jederzeit früher löschen.</td></tr>
         <tr><td>Eigene Vokabel-Insel ohne Konto (Myth of Wordisland)</td><td>läuft nicht ab. Sie trägt keinen Namen, nur ein zufälliges Kennzeichen auf deinem Gerät.</td></tr>
         <tr><td>Feedback-Tickets</td><td><strong>365 Tage</strong> nach der letzten Bearbeitung</td></tr>
         <tr><td>Hinweise auf unmögliche Ergebnisse</td><td>nach <strong>180 Tagen</strong></td></tr>
@@ -295,6 +300,11 @@
     </table>
   </div>
   <p>Auf Wunsch löschen Admins ein Konto oder einen Kurs jederzeit früher.</p>
+  <p>
+    <strong>Sicherungen:</strong> Der Datenbank-Anbieter legt automatisch Sicherungskopien an. Was hier gelöscht wird,
+    steckt noch so lange in diesen Kopien, bis sie überschrieben werden: nach höchstens
+    <mark class="todo">7</mark> Tagen. Aus den Sicherungen wird nur nach einer Panne zurückgespielt, nicht für den Alltag.
+  </p>
 
   <!-- ─── 9 ─────────────────────────────────────────────── -->
   <h2 id="geraet">9. Was auf deinem Gerät gespeichert wird</h2>

@@ -20,7 +20,7 @@ Stand: 9. Oktober 2026. Technische Einschätzung, keine Rechtsberatung. Freigebe
 - Nutzungsstatistik MPSkills (Migration 0216, Tabelle skill_usage): je Raum nur Skill, Schule, Testraum ja/nein, angelegt/zuletzt aktiv, Zahl der Beitritte — keine Lehrkraft, kein Raumtitel, keine Namen. Bleibt nach dem Löschen des Raums (60 Tage) stehen, ohne Frist, weil nicht personenbezogen; nur Admins sehen sie im Admin-Panel.
 - Master PDF Skill sichert nicht exportierte Arbeit automatisch, aber nur im Browser auf dem Gerät (IndexedDB, nichts auf dem Server). Standard ist „aus“; wer es unter Datei einschaltet, dessen Gerät merkt sich das (in datenschutz.html Abschnitt 9). Auf geteilten Schul-Tablets aus lassen.
 - SQL Studio (Migrationen 0220/0221): SQL läuft nur im Browser (sql.js). Auf dem Server: eigene Datenbanken der Lehrkraft (sql_databases, bleiben im Konto bis sie sie löscht, gehen mit dem Konto) und die Kopien der Schüler je Raum (sql_work, ON DELETE CASCADE an Raum und Teilnehmer → gehen mit dem Raum nach 30 Tagen). Vorlagen-Kopien der Lehrkraft nur im Gerät (IndexedDB). In datenschutz.html bei „Wenn du in MPSkills mitmachst" und in Abschnitt 9.
-- Fotos in der Projektarbeit: Wird noch geklärt (Einwilligungsstufe, Hinweis, Frist).
+- Fotos in der Projektarbeit: Frist **30 Tage nach Projektende** (Entscheidung 24.10.2026, Migration 0227). Projektende = Fertig-Datum im Projektziel, sonst letzte Nutzung des Raums. Einwilligungsstufe und Hinweis klärt die Schule noch.
 
 ## Schritt 1 – Technik einstellen (Betreiber, ca. 1 Stunde)
 
@@ -135,10 +135,12 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 
 ### Prio 6 – Löschen
 
-- [ ] Fotos der Projektarbeit: Frist festlegen (z. B. 30 Tage nach Projektende).
-- [ ] Supabase-Sicherungen behalten Gelöschtes bis zu ihrem Ablauf (je nach Tarif 7–30 Tage). In `datenschutz.html` nennen.
-- [ ] Prüfstand: Backup-Tabellen (Scrum, `pa_backups`) und Mail-Ausgang gehen mit dem Raum.
-- [ ] Admin-Panel: wann `skill_cleanup` und der Konto-Ablauf zuletzt liefen.
+- [x] Fotos der Projektarbeit-Dokumentation 30 Tage nach Projektende (Migration 0227, `pa_photo_cleanup` im täglichen Lauf). Der Eintrag bleibt und zeigt „Fotos nach 30 Tagen gelöscht“; Hinweis beim Hochladen und in den Erklärkacheln der Lehrkraft. Bilder im Projektziel (`goal.images`) sind nicht betroffen. Falls dort auch Fotos von Personen landen, braucht es dafür eine eigene Regel.
+- [x] `datenschutz.html`: Fotos-Frist in Abschnitt 7 und in der Fristen-Tabelle; Absatz „Sicherungen“: Gelöschtes steckt noch in den Sicherungskopien des Anbieters, bis sie überschrieben werden. **Gelb:** die Zahl der Tage. Sie hängt am Supabase-Tarif (Pro: 7 Tage, mit Point-in-Time-Recovery je nach Einstellung). Im Dashboard unter Database → Backups nachsehen und eintragen.
+- [x] Wächter „geht mit dem Raum“ (im Prüfstand 0227): alle 53 Fremdschlüssel auf `skill_rooms`/`skill_participants` sind CASCADE oder SET NULL. Ohne Fremdschlüssel nur `skill_usage.room_id` (anonym, gewollt) und `notify_mail_log.user_id` (2 Tage). Gegenprobe: ein abgelaufener Projektarbeit-Raum mit Backup und Mail-Ausgang hinterlässt nach `skill_cleanup` in keiner der 36 Tabellen mit `room_id` eine Zeile.
+- [x] Admin-Panel, Dashboard, Kasten „Löschläufe“: jeder Lauf von `skill_cleanup` steht in `cleanup_runs` (nur Zahlen, 90 Tage), dazu die pg_cron-Aufträge mit letztem Ergebnis. Warnung, wenn 36 Stunden kein täglicher Lauf kam.
+- [ ] Migration 0227 im Supabase-SQL-Editor ausführen.
+- [ ] Nach dem nächsten nächtlichen Lauf (03:30 UTC) im Admin-Panel nachsehen, ob „Täglicher Lauf“ grün ist. Wenn nicht: pg_cron aktivieren und Migration 0081 erneut ausführen (legt den Auftrag an).
 
 ### Prio 7 – Geteilte Tablets
 
