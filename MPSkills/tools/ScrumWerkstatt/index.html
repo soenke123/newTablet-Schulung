@@ -1633,6 +1633,33 @@ let pickMember = null;      // angetippte Person in „In Arbeit" (Tablet ohne Z
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+
+/* Das Product Goal ist HTML aus dem Editor — und es stammt von
+   Mitschülern bzw. kommt über den Server, den jeder mit Token direkt
+   beschreiben kann. Vor dem Anzeigen bleibt nur, was der Editor selbst
+   erzeugt: ein paar Auszeichnungen, keine Attribute. Dieselbe Regel wie
+   in der Projektarbeit (Projektarbeit/app.js cleanHtml); der Server
+   prüft seit Migration 0228 zusätzlich (scrum_product_ok). */
+const SAFE_TAGS = new Set(['B','STRONG','I','EM','U','H2','H3','P','UL','OL','LI','BR','DIV','SPAN']);
+const DROP_TAGS = new Set(['SCRIPT','STYLE','IFRAME','OBJECT','EMBED','IMG','SVG','MATH','LINK','META','FORM','INPUT','TEXTAREA','BUTTON','SELECT','VIDEO','AUDIO']);
+function cleanHtml(html){
+  const doc=new DOMParser().parseFromString('<body>'+String(html||'')+'</body>','text/html');
+  (function walk(n){
+    Array.from(n.childNodes).forEach(c=>{
+      if(c.nodeType===3) return;
+      if(c.nodeType!==1){ c.remove(); return; }
+      const tag=c.tagName.toUpperCase();
+      if(DROP_TAGS.has(tag)){ c.remove(); return; }
+      walk(c);
+      if(!SAFE_TAGS.has(tag)){ c.replaceWith(...Array.from(c.childNodes)); return; }
+      Array.from(c.attributes).forEach(a=>c.removeAttribute(a.name));
+    });
+  })(doc.body);
+  return doc.body.innerHTML;
+}
+// Bilder und Avatare nur als vollständige data-URL — sonst bricht ein "
+// aus dem src-Attribut aus (Migration 0228).
+const safeImg = s => typeof s==='string' && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(s);
 const pad = n => String(n).padStart(2,'0');
 const sum = (a,f) => a.reduce((t,x)=>t+(+f(x)||0),0);
 
@@ -1855,7 +1882,7 @@ function storyText(s){
 function avatar(m, size){
   const cls=`av s${size}`;
   if(!m) return `<span class="${cls}" style="background:var(--line);color:var(--ink-3)">?</span>`;
-  if(m.avatar) return `<span class="${cls}"><img src="${m.avatar}" alt=""></span>`;
+  if(safeImg(m.avatar)) return `<span class="${cls}"><img src="${m.avatar}" alt=""></span>`;
   const col=AVC[hash(m.id+m.name)%AVC.length];
   const t=m.name.trim();
   // immer zwei Zeichen – sonst sind Max und Mia beide nur "M"
@@ -2480,7 +2507,10 @@ function wireGrip(){
 /* ── PRODUCT GOAL ────────────────────────────────────── */
 function renderGoal(){
   const r=$('#goalRte');
-  if(document.activeElement!==r) r.innerHTML=S.product.goal||'';
+  if(document.activeElement!==r) r.innerHTML=cleanHtml(S.product.goal||'');
+  // Unpassende Einträge fallen hier aus dem Zustand (nicht nur aus der
+  // Anzeige), damit die Indizes der ×-Knöpfe stimmen.
+  S.product.images=(S.product.images||[]).filter(safeImg);
   const box=$('#goalImgs');
   box.innerHTML=S.product.images.map((src,i)=>
     `<div class="ishell"><img src="${src}" alt="Visualisierung ${i+1}">
