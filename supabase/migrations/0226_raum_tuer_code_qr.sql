@@ -259,32 +259,42 @@ declare
 begin
   -- skill_room_get: nur Lehrkräfte des Raums kommen bis hierher.
   v_src := pg_get_functiondef('skill_room_get(text)'::regprocedure);
-  v_new := replace(v_src,
-    $a$'expired',        (v_room.expires_at <= now())$a$,
-    $b$'expired',        (v_room.expires_at <= now()),
-                 'join_secret',     v_room.join_secret,
-                 'code_open_until', v_room.code_open_until$b$);
-  if v_new = v_src then
-    raise exception '0226: Stelle in skill_room_get nicht gefunden';
+  -- Schon eingespielt? Dann nichts tun (zweiter Lauf der Migration).
+  if position('''join_secret''' in v_src) > 0 then
+    raise notice '0226: skill_room_get schon umgestellt, übersprungen';
+  else
+    v_new := replace(v_src,
+      $a$'expired',        (v_room.expires_at <= now())$a$,
+      $b$'expired',        (v_room.expires_at <= now()),
+                   'join_secret',     v_room.join_secret,
+                   'code_open_until', v_room.code_open_until$b$);
+    if v_new = v_src then
+      raise exception '0226: Stelle in skill_room_get nicht gefunden';
+    end if;
+    execute v_new;
   end if;
-  execute v_new;
 
   -- skill_room_set_open: „Tür öffnen“ gibt dem Code wieder 90 Minuten.
   v_src := pg_get_functiondef('skill_room_set_open(text, boolean)'::regprocedure);
-  v_new := replace(v_src,
-    $a$set join_open      = coalesce(p_open, true),$a$,
-    $b$set join_open      = coalesce(p_open, true),
-         code_open_until = case when coalesce(p_open, true)
-                                then now() + interval '90 minutes'
-                                else code_open_until end,$b$);
-  v_new := replace(v_new,
-    $a$return jsonb_build_object('ok', true, 'join_open', coalesce(p_open, true));$a$,
-    $b$return jsonb_build_object('ok', true, 'join_open', coalesce(p_open, true),
-    'code_open_until', (select code_open_until from skill_rooms where id = v_room.id));$b$);
-  if v_new = v_src or position('code_open_until' in v_new) = 0
-     or position($c$'code_open_until', (select$c$ in v_new) = 0 then
-    raise exception '0226: Stelle in skill_room_set_open nicht gefunden';
+  -- Schon eingespielt? Dann nichts tun (zweiter Lauf der Migration).
+  if position('code_open_until' in v_src) > 0 then
+    raise notice '0226: skill_room_set_open schon umgestellt, übersprungen';
+  else
+    v_new := replace(v_src,
+      $a$set join_open      = coalesce(p_open, true),$a$,
+      $b$set join_open      = coalesce(p_open, true),
+           code_open_until = case when coalesce(p_open, true)
+                                  then now() + interval '90 minutes'
+                                  else code_open_until end,$b$);
+    v_new := replace(v_new,
+      $a$return jsonb_build_object('ok', true, 'join_open', coalesce(p_open, true));$a$,
+      $b$return jsonb_build_object('ok', true, 'join_open', coalesce(p_open, true),
+      'code_open_until', (select code_open_until from skill_rooms where id = v_room.id));$b$);
+    if v_new = v_src or position('code_open_until' in v_new) = 0
+       or position($c$'code_open_until', (select$c$ in v_new) = 0 then
+      raise exception '0226: Stelle in skill_room_set_open nicht gefunden';
+    end if;
+    execute v_new;
   end if;
-  execute v_new;
 end
 $mig$;

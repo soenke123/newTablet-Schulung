@@ -84,33 +84,48 @@ declare
 begin
   -- Avatar: Ende-Anker
   v_src := pg_get_functiondef('scrum_apply_member_patch(uuid, uuid, jsonb)'::regprocedure);
-  v_new := replace(v_src,
-    $a$(p_patch->>'avatar') !~ '^data:image/(jpeg|png|webp);base64,'$a$,
-    $b$not scrum_img_ok(p_patch->>'avatar')$b$);
-  if v_new = v_src then raise exception '0228: Stelle in scrum_apply_member_patch nicht gefunden'; end if;
-  execute v_new;
+  -- Schon eingespielt? Dann nichts tun (zweiter Lauf der Migration).
+  if position('scrum_img_ok(' in v_src) > 0 then
+    raise notice '0228: scrum_apply_member_patch schon umgestellt, übersprungen';
+  else
+    v_new := replace(v_src,
+      $a$(p_patch->>'avatar') !~ '^data:image/(jpeg|png|webp);base64,'$a$,
+      $b$not scrum_img_ok(p_patch->>'avatar')$b$);
+    if v_new = v_src then raise exception '0228: Stelle in scrum_apply_member_patch nicht gefunden'; end if;
+    execute v_new;
+  end if;
 
   -- Speichern (Team und Lehrkraft)
   v_src := pg_get_functiondef('scrum_apply_ops(uuid, uuid, jsonb)'::regprocedure);
-  v_new := replace(v_src,
-    $a$      if octet_length(v_data::text) > v_no then$a$,
-    $b$      if v_kind = 'product' and not scrum_product_ok(v_data) then
-        return jsonb_build_object('ok', false, 'error', 'invalid_input', 'kind', v_kind, 'id', v_id);
-      end if;
-      if octet_length(v_data::text) > v_no then$b$);
-  if v_new = v_src then raise exception '0228: Stelle in scrum_apply_ops nicht gefunden'; end if;
-  execute v_new;
+  -- Schon eingespielt? Dann nichts tun (zweiter Lauf der Migration).
+  if position('scrum_product_ok(' in v_src) > 0 then
+    raise notice '0228: scrum_apply_ops schon umgestellt, übersprungen';
+  else
+    v_new := replace(v_src,
+      $a$      if octet_length(v_data::text) > v_no then$a$,
+      $b$      if v_kind = 'product' and not scrum_product_ok(v_data) then
+          return jsonb_build_object('ok', false, 'error', 'invalid_input', 'kind', v_kind, 'id', v_id);
+        end if;
+        if octet_length(v_data::text) > v_no then$b$);
+    if v_new = v_src then raise exception '0228: Stelle in scrum_apply_ops nicht gefunden'; end if;
+    execute v_new;
+  end if;
 
   -- Import / Backup einspielen (Lehrkraft)
   v_src := pg_get_functiondef('scrum_room_restore(text, jsonb, integer, integer)'::regprocedure);
-  v_new := replace(v_src,
-    $a$    if octet_length((v_it->'data')::text) > v_lim then$a$,
-    $b$    if v_kind = 'product' and not scrum_product_ok(v_it->'data') then
-      return jsonb_build_object('ok', false, 'error', 'invalid_input', 'kind', v_kind, 'id', v_id);
-    end if;
-    if octet_length((v_it->'data')::text) > v_lim then$b$);
-  if v_new = v_src then raise exception '0228: Stelle in scrum_room_restore nicht gefunden'; end if;
-  execute v_new;
+  -- Schon eingespielt? Dann nichts tun (zweiter Lauf der Migration).
+  if position('scrum_product_ok(' in v_src) > 0 then
+    raise notice '0228: scrum_room_restore schon umgestellt, übersprungen';
+  else
+    v_new := replace(v_src,
+      $a$    if octet_length((v_it->'data')::text) > v_lim then$a$,
+      $b$    if v_kind = 'product' and not scrum_product_ok(v_it->'data') then
+        return jsonb_build_object('ok', false, 'error', 'invalid_input', 'kind', v_kind, 'id', v_id);
+      end if;
+      if octet_length((v_it->'data')::text) > v_lim then$b$);
+    if v_new = v_src then raise exception '0228: Stelle in scrum_room_restore nicht gefunden'; end if;
+    execute v_new;
+  end if;
 end
 $mig$;
 

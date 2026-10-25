@@ -108,24 +108,34 @@ declare
 begin
   -- apply_cluster_bonus (0076): Admin wendet den Cluster-Bonus an.
   v_src := pg_get_functiondef('apply_cluster_bonus(uuid)'::regprocedure);
-  v_new := replace(v_src,
-    'select is_admin or is_superadmin into v_is_admin',
-    'select (is_admin or is_superadmin) and admin_mfa_ok() into v_is_admin');
-  if v_new = v_src then
-    raise exception '0223: Prüfzeile in apply_cluster_bonus nicht gefunden';
+  -- Schon eingespielt? Dann nichts tun (zweiter Lauf der Migration).
+  if position('admin_mfa_ok()' in v_src) > 0 then
+    raise notice '0223: apply_cluster_bonus schon umgestellt, übersprungen';
+  else
+    v_new := replace(v_src,
+      'select is_admin or is_superadmin into v_is_admin',
+      'select (is_admin or is_superadmin) and admin_mfa_ok() into v_is_admin');
+    if v_new = v_src then
+      raise exception '0223: Prüfzeile in apply_cluster_bonus nicht gefunden';
+    end if;
+    execute v_new;
   end if;
-  execute v_new;
 
   -- board_target_cluster (0062): Admin öffnet die Pinnwand eines
   -- anderen Kurses.
   v_src := pg_get_functiondef('board_target_cluster(uuid)'::regprocedure);
-  v_new := replace(v_src,
-    'select cluster_id, (is_admin or is_superadmin), is_superadmin, school_id',
-    'select cluster_id, (is_admin or is_superadmin) and admin_mfa_ok(), is_superadmin and admin_mfa_ok(), school_id');
-  if v_new = v_src then
-    raise exception '0223: Prüfzeile in board_target_cluster nicht gefunden';
+  -- Schon eingespielt? Dann nichts tun (zweiter Lauf der Migration).
+  if position('admin_mfa_ok()' in v_src) > 0 then
+    raise notice '0223: board_target_cluster schon umgestellt, übersprungen';
+  else
+    v_new := replace(v_src,
+      'select cluster_id, (is_admin or is_superadmin), is_superadmin, school_id',
+      'select cluster_id, (is_admin or is_superadmin) and admin_mfa_ok(), is_superadmin and admin_mfa_ok(), school_id');
+    if v_new = v_src then
+      raise exception '0223: Prüfzeile in board_target_cluster nicht gefunden';
+    end if;
+    execute v_new;
   end if;
-  execute v_new;
 end
 $mig$;
 
