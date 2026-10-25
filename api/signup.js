@@ -51,6 +51,12 @@ const FAKE_EMAIL_DOMAIN = process.env.FAKE_EMAIL_DOMAIN ?? 'tablet-schulung.fake
 // Siehe Migration 0018.
 const RATE_LIMIT_PER_HOUR = 500;
 
+// Max ERFOLGREICHE Registrierungen pro IP pro Stunde (Migration 0231).
+// Ohne diese Grenze ließen sich mit gültigen Eingaben beliebig viele
+// Konten anlegen. 140 reicht für einen ganzen Jahrgang hinter einer
+// Schul-IP.
+const SUCCESS_LIMIT_PER_HOUR = 140;
+
 // Client-IP aus Vercel-Headern extrahieren. x-forwarded-for kann
 // eine Kommaliste sein (Client, Proxy1, Proxy2, ...) — der erste
 // Eintrag ist die echte Client-IP.
@@ -93,34 +99,51 @@ export default async function handler(req, res) {
   const admin = createClient(url, serviceRole, { auth: { persistSession: false } });
 
   // ── Rate-Limit-Check ──
-  // Nur User-Fehler zählen (4xx-Antworten): Enumeration, Blacklist-
-  // Bruteforce, Bot-Loops mit invalid input. Erfolgreiche Signups
-  // und Server-Fehler (5xx) werden NICHT geloggt.
+  // Zwei Grenzen je IP: User-Fehler (4xx: Enumeration, Blacklist-
+  // Bruteforce, Bot-Loops mit invalid input) und — seit 0231 —
+  // erfolgreiche Signups. Server-Fehler (5xx) werden NICHT geloggt.
   const clientIp = extractClientIp(req);
   const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  try {
-    const { count, error: rlErr } = await admin
-      .from('signup_attempts')
-      .select('id', { count: 'exact', head: true })
-      .eq('ip', clientIp)
-      .gte('created_at', oneHourAgo);
-    if (rlErr) {
-      console.warn('[signup] rate-limit check failed (fail-open):', rlErr.message);
-    } else if ((count ?? 0) >= RATE_LIMIT_PER_HOUR) {
-      return res.status(429).json({
-        ok: false,
-        error: 'rate_limit',
-        message: 'Zu viele fehlgeschlagene Versuche von dieser IP. Bitte in einer Stunde erneut probieren.'
-      });
+  // Zählt die Zeilen dieser IP in der letzten Stunde, getrennt nach
+  // Erfolg (0231). null = Zählung kaputt → fail-open.
+  const countAttempts = async (ok) => {
+    try {
+      const { count, error } = await admin
+        .from('signup_attempts')
+        .select('id', { count: 'exact', head: true })
+        .eq('ip', clientIp)
+        .eq('ok', ok)
+        .gte('created_at', oneHourAgo);
+      if (error) {
+        console.warn('[signup] rate-limit check failed (fail-open):', error.message);
+        return null;
+      }
+      return count ?? 0;
+    } catch (e) {
+      console.warn('[signup] rate-limit block failed (fail-open):', e.message);
+      return null;
     }
-  } catch (e) {
-    console.warn('[signup] rate-limit block failed (fail-open):', e.message);
+  };
+  const [fails, successes] = await Promise.all([countAttempts(false), countAttempts(true)]);
+  if (fails !== null && fails >= RATE_LIMIT_PER_HOUR) {
+    return res.status(429).json({
+      ok: false,
+      error: 'rate_limit',
+      message: 'Zu viele fehlgeschlagene Versuche von dieser IP. Bitte in einer Stunde erneut probieren.'
+    });
+  }
+  if (successes !== null && successes >= SUCCESS_LIMIT_PER_HOUR) {
+    return res.status(429).json({
+      ok: false,
+      error: 'rate_limit',
+      message: 'Aus diesem Netz wurden in der letzten Stunde schon sehr viele Konten angelegt. Bitte in einer Stunde erneut probieren.'
+    });
   }
 
   // Helper: fehlgeschlagenen Versuch (4xx) loggen und Response zurückgeben.
   // Fire-and-forget-Log — verzögert die User-Antwort nicht.
   const fail = (status, payload) => {
-    admin.from('signup_attempts').insert({ ip: clientIp })
+    admin.from('signup_attempts').insert({ ip: clientIp, ok: false })
       .then(({ error }) => {
         if (error) console.warn('[signup] attempt log failed:', error.message);
       });
@@ -166,13 +189,9 @@ export default async function handler(req, res) {
   for (const [field, val] of [['account_name', account_name], ['display_name', display_name]]) {
     const { data, error } = await admin.rpc('contains_blacklisted_word', { input: val });
     if (error) {
+      // Details nur ins Log, nicht in die Antwort (0231).
       console.error('[signup] blacklist RPC error on', field, '=', val, ':', error);
-      return res.status(500).json({
-        ok: false,
-        error: 'blacklist_check_failed',
-        message: `RPC-Fehler: ${error.message || error.code || 'unbekannt'}`,
-        _debug: { field, code: error.code, hint: error.hint, details: error.details }
-      });
+      return res.status(500).json({ ok: false, error: 'blacklist_check_failed' });
     }
     if (data === true) {
       return fail(400, { error: `${field}_blocked`,
@@ -274,17 +293,13 @@ export default async function handler(req, res) {
   if (profileErr) {
     console.error('[signup] profile insert:', profileErr);
     await admin.auth.admin.deleteUser(user_id).catch(() => {});
-    return res.status(500).json({
-      ok: false,
-      error: 'profile_create_failed',
-      message: profileErr.message
-    });
+    return res.status(500).json({ ok: false, error: 'profile_create_failed' });
   }
 
   // 8) Cluster-Starthilfe (Bonus) ausschütten — best-effort.
   //    Wenn dieser Aufruf scheitert, ist der Account trotzdem
-  //    nutzbar; der Bonus bleibt nur aus. Fehler wird zur besseren
-  //    Diagnose in die Response mitgegeben.
+  //    nutzbar; der Bonus bleibt nur aus. Die Antwort sagt nur
+  //    bonus_error:'bonus_failed', die Details stehen im Log.
   let bonus = null;
   let bonus_error = null;
   if (cluster_id) {
@@ -295,18 +310,22 @@ export default async function handler(req, res) {
     if (bonusErr) {
       console.warn('[signup] apply_cluster_bonus failed:',
         bonusErr.message, bonusErr.code, bonusErr.details, bonusErr.hint);
-      bonus_error = {
-        message: bonusErr.message,
-        code:    bonusErr.code,
-        details: bonusErr.details,
-        hint:    bonusErr.hint
-      };
+      bonus_error = 'bonus_failed';  // Details stehen im Log
     } else {
       console.log('[signup] apply_cluster_bonus result:', bonusRes);
       bonus = bonusRes;
     }
   } else {
     console.log('[signup] no cluster → skip bonus');
+  }
+
+  // Erfolg protokollieren (0231, Grenze SUCCESS_LIMIT_PER_HOUR).
+  // Abgewartet statt fire-and-forget: ginge der Eintrag nach der
+  // Antwort verloren, zählte die Grenze nicht. Ein Fehler hier hält
+  // die Registrierung aber nicht auf.
+  {
+    const { error: logErr } = await admin.from('signup_attempts').insert({ ip: clientIp, ok: true });
+    if (logErr) console.warn('[signup] success log failed:', logErr.message);
   }
 
   return res.status(200).json({

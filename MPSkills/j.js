@@ -91,6 +91,7 @@ const ERRORS = {
   rate_limit:    'Zu viele Versuche von diesem Netz. Bitte warte einen Moment.',
   key_invalid:   'Der persönliche Code besteht aus 8 Zeichen — Buchstaben und Ziffern.',
   key_unknown:   'Diesen persönlichen Code gibt es nicht. Frag deine Lehrkraft — sie sieht ihn.',
+  key_busy:      'Gerade probieren sehr viele Geräte Codes aus. Bitte in ein paar Minuten noch einmal versuchen.',
   text_blocked:  'Solche Wörter bitte nicht. Schreib es anders.',
   blocked:       'Deine Lehrkraft hat dieses Tablet gerade stillgelegt.',
   removed:       'Deine Lehrkraft hat dich aus dem Raum genommen.',
@@ -370,7 +371,8 @@ function renderRecover(errorMsg, prefill, autoSubmit) {
       return;
     }
     if (!res.ok) {
-      renderRecover(errText(res.error === 'not_found' ? 'key_unknown' : res.error), input.value);
+      const why = res.error === 'not_found' ? 'key_unknown' : res.error === 'busy' ? 'key_busy' : res.error;
+      renderRecover(errText(why), input.value);
       return;
     }
     const code = res.room.code;

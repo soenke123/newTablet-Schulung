@@ -42,7 +42,10 @@
 // ('code_expired'). Zusätzlich zählt GLOBAL_FAILS über alle IPs: Probiert
 // jemand von vielen Adressen aus Codes durch, ist der Weg „nur Code“ ein
 // paar Minuten zu ('busy') — mit secret kommt man weiter hinein, ein
-// 122-Bit-Geheimnis lässt sich nicht durchprobieren.
+// 122-Bit-Geheimnis lässt sich nicht durchprobieren. Seit 25.10.2026 gilt
+// dieselbe Grenze auch für den persönlichen Code (recover): der öffnet
+// auch bei geschlossener Tür und ließe sich sonst über viele Adressen
+// (IPv6) ohne Bremse durchprobieren.
 //
 // Env-Vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // ══════════════════════════════════════════════════════════════
@@ -160,9 +163,9 @@ export default async function handler(req, res) {
   const secret = SECRET_RE.test(rawSecret) ? rawSecret : null;
 
   // ── Globale Grenze (0226) ──
-  // Nur für den Weg ohne Geheimnis, und nicht für recover (eigener,
-  // 8-stelliger Schlüssel). Fail-open wie das Limit je IP.
-  if (!secret && mode !== 'recover') {
+  // Für den Weg ohne Geheimnis, auch für recover (persönlicher Code,
+  // seit 25.10.2026). Fail-open wie das Limit je IP.
+  if (!secret || mode === 'recover') {
     try {
       const since = new Date(Date.now() - GLOBAL_WINDOW_MIN * 60 * 1000).toISOString();
       const { count, error: gErr } = await admin

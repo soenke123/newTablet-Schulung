@@ -24,7 +24,7 @@ Stand: 9. Oktober 2026. Technische Einschätzung, keine Rechtsberatung. Freigebe
 
 ## Schritt 1 – Technik einstellen (Betreiber, ca. 1 Stunde)
 
-- [ ] Im Supabase-SQL-Editor `0208_datenschutz_loeschfristen.sql` und danach `0209_konto_lebenszyklus.sql` ausführen.
+- [x] Im Supabase-SQL-Editor `0208_datenschutz_loeschfristen.sql` und danach `0209_konto_lebenszyklus.sql` ausführen.
 - [ ] Vercel → Settings → Functions: Die Region muss „Frankfurt (fra1)“ sein. Im Tab Analytics die Analyse ausschalten.
 - [ ] Supabase → Auth-Einstellungen: Audit-Log nicht mehr in die Datenbank schreiben (speichert sonst die IP bei jedem Login).
 - [ ] Zwei-Faktor-Anmeldung für die Konten bei Supabase, Vercel und GitHub.
@@ -88,9 +88,9 @@ Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank
 
 - [x] `games.password_hash` war für anon lesbar (0002 gab das Tabellenrecht, die Policy filtert nur Zeilen). Migration 0222: Spaltenrechte ohne den Hash, Prüfstand `supabase/tests/0222_games_hash_verbergen.mjs`.
 - [x] Migration 0224: Spalte `password_hash` und `unlock_game` ganz entfernt (Spiel-Passwörter gibt es seit 0070 nicht mehr; `unlock_game` hätte mit einem Hash ein Spiel an der Kurs-Freischaltung vorbei geöffnet). `seed.sql` ohne Hashes. Prüfstand `0224_spielpasswort_entfernen.mjs`.
-- [ ] Migrationen 0222 und 0224 im Supabase-SQL-Editor ausführen.
-- [ ] Supabase → Authentication → Sign In / Providers: **„Allow new users to sign up“ aus.** Sonst legt jeder mit dem öffentlichen anon-Key Konten an, an `api/signup.js` vorbei (ohne Blacklist und ohne Rate-Limit). Konten entstehen nur über `/api/signup` (service_role), das läuft weiter.
-- [ ] Supabase → Authentication → Rate Limits: Anmeldeversuche begrenzen (Kontonamen sind leicht zu raten, Passwort ab 8 Zeichen).
+- [x] Migrationen 0222 und 0224 im Supabase-SQL-Editor ausführen.
+- [x] Supabase → Authentication → Sign In / Providers: **„Allow new users to sign up“ aus.** Sonst legt jeder mit dem öffentlichen anon-Key Konten an, an `api/signup.js` vorbei (ohne Blacklist und ohne Rate-Limit). Konten entstehen nur über `/api/signup` (service_role), das läuft weiter.
+- [x] Supabase → Authentication → Rate Limits: Anmeldeversuche begrenzen (Kontonamen sind leicht zu raten, Passwort ab 8 Zeichen).
 - [ ] Supabase → Authentication → Sessions: Ablauf des JWT bei 1 Stunde lassen.
 
 ### Prio 2 – 2FA für Admins
@@ -98,8 +98,8 @@ Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank
 - [x] Migration 0223: `is_admin()`, `is_superadmin()`, `is_any_admin()` verlangen zusätzlich `admin_mfa_ok()` (`auth.jwt()->>'aal' = 'aal2'`). Mitgezogen: `apply_cluster_bonus`, `board_target_cluster`, Policies auf `cluster_bonus`/`cluster_bonus_grants`. Lehrkraft-Rechte (`can_teach` …) bleiben ohne 2FA. Prüfstand `supabase/tests/0223_admin_2fa.mjs` mit Wächter: eine neue Funktion oder Policy, die das Admin-Flag selbst liest, fällt auf.
 - [x] `api/admin_*.js` prüfen dasselbe (`requireAal2` in `api/_utils.js`, sonst 403 `mfa_required`).
 - [x] Admin-Panel (`admin/mfa.js`): ohne Faktor „2FA einrichten“ (QR-Code + Schlüssel), mit Faktor Code-Abfrage; erst danach lädt das Panel. Die bestätigte Sitzung gilt auf der ganzen Seite, also auch für SQL Studio in MPSkills.
-- [ ] Supabase → Authentication → Multi-Factor: TOTP muss an sein (Standard).
-- [ ] Migration 0223 ausführen und **sofort danach** alle Admins einrichten lassen. Bis zur Einrichtung kann ein Faktor mit dem Passwort allein angelegt werden.
+- [x] Supabase → Authentication → Multi-Factor: TOTP muss an sein (Standard).
+- [x] Migration 0223 ausführen und **sofort danach** alle Admins einrichten lassen. Bis zur Einrichtung kann ein Faktor mit dem Passwort allein angelegt werden.
 - [ ] Notfall (Handy weg): Supabase-Dashboard → Authentication → Users → Konto → MFA-Faktor löschen, dann neu einrichten.
 - Gut zu wissen: Eine Admin, die sich in MPSkills oder auf der Landing anmeldet, hat dort nur Lehrkraft-Rechte, bis sie einmal im Admin-Panel den Code eingegeben hat (dann gilt es für die ganze Sitzung).
 
@@ -117,7 +117,7 @@ Stand: 24. Oktober 2026. Ziel: Ein einzelner Fehler soll nie die ganze Datenbank
 - [x] Migration 0225: neue Funktionen sind standardmäßig für niemanden ausführbar (Standardrechte global für PUBLIC und in `public` für anon/authenticated). Jede neue RPC braucht ein ausdrückliches `grant execute`.
 - [x] Interne Helfer zu: `ks_ensure_board`, `ks_ensure_player`, `ks_owned_room`, `clash_fire_teams`. Alle Aufrufer sind security definer; geprüft als anon mit echtem Raum-Token (ks_view/ks_sig/clash_view/clash_sig laufen weiter).
 - [x] Wächter `supabase/tests/0225_rechte_waechter.mjs` + Liste `0225_rechte_freigaben.json`: was anon und authenticated heute erreichen (69 bzw. 268 security-definer-Funktionen, 5 bzw. 39 Tabellen/Views, 10 Spalten von `games`). Neue Freigabe → rot, bis sie bewusst in der Liste steht. Außerdem: jede Tabelle mit RLS, jede security-definer-Funktion mit `search_path`, Views für Nutzer mit `security_invoker`. Gegenprobe mit absichtlich offener Tabelle/Funktion: alle vier Prüfungen schlagen an.
-- [ ] Migration 0225 im Supabase-SQL-Editor ausführen.
+- [x] Migration 0225 im Supabase-SQL-Editor ausführen.
 - Gut zu wissen: `ks_catalogs`/`ks_questions` haben Rechte für anon, aber keine Policy → RLS gibt keine Zeile heraus. Kann so bleiben (Zugriff läuft über RPCs).
 
 ### Prio 5 – Raum-Codes und QR-Code
@@ -130,7 +130,7 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 - [x] Beitrittsseite: Geheimnis aus der Adresse in den sessionStorage, Adresse danach nur noch `#CODE` (nicht im Verlauf). Eigene Meldungen für „Code abgelaufen“ und „zu viele Versuche“.
 - [x] `api/skill_join.js`: Fehlversuche aller IPs zusammen; ab 1000 in 10 Minuten ist der Weg „nur Code“ zu (`busy`), mit QR-Geheimnis geht es weiter.
 - [x] Prüfstand `supabase/tests/0226_raum_tuer_code_qr.mjs` (24 Prüfungen), alle 30 Prüfstände der Kette grün; im Browser geprüft (QR-Adresse, abgelaufener Code, „Code wieder öffnen“), QR-Code mit langer Adresse per jsQR gelesen.
-- [ ] Migration 0226 im Supabase-SQL-Editor ausführen. Die Reihenfolge zu Vercel ist egal: Ohne Migration ruft `api/skill_join.js` die alte Funktion ohne Geheimnis (PGRST202 → zweiter Aufruf), und die Lehrkraft-Seite zeigt keinen Code-Ablauf an. Erst mit der Migration gilt die 90-Minuten-Regel.
+- [x] Migration 0226 im Supabase-SQL-Editor ausführen. Die Reihenfolge zu Vercel ist egal: Ohne Migration ruft `api/skill_join.js` die alte Funktion ohne Geheimnis (PGRST202 → zweiter Aufruf), und die Lehrkraft-Seite zeigt keinen Code-Ablauf an. Erst mit der Migration gilt die 90-Minuten-Regel.
 - Bleibt: Ein Foto vom QR-Code gilt, solange die Tür offen ist. Dagegen hilft „Beitritt schließen“, wenn alle drin sind.
 
 ### Prio 6 – Löschen
@@ -139,7 +139,7 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 - [x] `datenschutz.html`: Fotos-Frist in Abschnitt 7 und in der Fristen-Tabelle; Absatz „Sicherungen“: Gelöschtes steckt noch in den Sicherungskopien des Anbieters, bis sie überschrieben werden. **Gelb:** die Zahl der Tage. Sie hängt am Supabase-Tarif (Pro: 7 Tage, mit Point-in-Time-Recovery je nach Einstellung). Im Dashboard unter Database → Backups nachsehen und eintragen.
 - [x] Wächter „geht mit dem Raum“ (im Prüfstand 0227): alle 53 Fremdschlüssel auf `skill_rooms`/`skill_participants` sind CASCADE oder SET NULL. Ohne Fremdschlüssel nur `skill_usage.room_id` (anonym, gewollt) und `notify_mail_log.user_id` (2 Tage). Gegenprobe: ein abgelaufener Projektarbeit-Raum mit Backup und Mail-Ausgang hinterlässt nach `skill_cleanup` in keiner der 36 Tabellen mit `room_id` eine Zeile.
 - [x] Admin-Panel, Dashboard, Kasten „Löschläufe“: jeder Lauf von `skill_cleanup` steht in `cleanup_runs` (nur Zahlen, 90 Tage), dazu die pg_cron-Aufträge mit letztem Ergebnis. Warnung, wenn 36 Stunden kein täglicher Lauf kam.
-- [ ] Migration 0227 im Supabase-SQL-Editor ausführen.
+- [x] Migration 0227 im Supabase-SQL-Editor ausführen.
 - [ ] Nach dem nächsten nächtlichen Lauf (03:30 UTC) im Admin-Panel nachsehen, ob „Täglicher Lauf“ grün ist. Wenn nicht: pg_cron aktivieren und Migration 0081 erneut ausführen (legt den Auftrag an).
 
 ### Prio 7 – Geteilte Tablets
@@ -157,7 +157,23 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 - [x] Product Goal wurde roh per `innerHTML` gezeigt, Avatar und Bilder unmaskiert in `src="…"`; der Server prüfte den Avatar nur am Anfang. Wer seinen Teilnehmer-Token hat, konnte über `scrum_save` Skript bei Team und Lehrkraft ausführen (gleiche Domain → Sitzung der Lehrkraft).
 - [x] Oberfläche: `cleanHtml` (wie Projektarbeit) für das Goal, `safeImg` (vollständige data-URL) für Avatar und Bilder.
 - [x] Migration 0228: `scrum_product_ok` in `scrum_apply_ops` und `scrum_room_restore`, Avatar mit Ende-Anker, Bestand bereinigt. Prüfstand `supabase/tests/0228_scrum_xss.mjs`; im Browser mit eingespielten Angriffsdaten geprüft (kein Skript lief).
-- [ ] Migration 0228 im Supabase-SQL-Editor ausführen.
+- [x] Migration 0228 im Supabase-SQL-Editor ausführen.
+
+### Prüfung 25.10.2026 — Schul-Trennung, Registrierung, persönlicher Code
+
+Stand: Migrationen bis 0229 eingespielt, 2FA für alle Admins eingerichtet, „Allow new users to sign up“ aus, Rate Limits gesetzt.
+
+- [x] **Schul-Trennung für Schuladmins** (Migration 0230): 15 Admin-Lese-Policies auf Spieldaten (`game_state`, `wallets`, `user_game_saves`, `user_collectibles`, `cheat_flags`, `friends_room_presence`, `user_legi_*` …) prüften nur `is_admin()` — ein Schuladmin sah die Spielstände aller Schulen (ohne Namen). `cluster_bonus` ließ sich für Kurse fremder Schulen ändern/löschen, `apply_cluster_bonus` nahm jeden Nutzer an. Jetzt: Volladmin alles, Schuladmin nur eigene Schule (`cross_school_forbidden`). Prüfstand `supabase/tests/0230_schuladmin_schultrennung.mjs`.
+- [x] **Registrierung** (Migration 0231, `api/signup.js`): erfolgreiche Konten zählen jetzt auch, höchstens **140 je IP und Stunde** (ein Jahrgang hinter einer Schul-IP); Fehlversuche weiter 500. Interne Fehlertexte (`_debug`, Datenbankmeldungen) nur noch ins Log. `datenschutz.html`: IP auch bei erfolgreicher Registrierung (1 Tag).
+- [x] **Persönlicher Code** (`api/skill_join.js`, ohne Migration): `recover` fällt jetzt unter dieselbe globale Grenze wie der Raum-Code (1000 Fehlversuche aller IPs in 10 Minuten → `busy`). Vorher bremste nur die Grenze je IP, und die lässt sich mit vielen IPv6-Adressen umgehen.
+- [ ] Migrationen 0230 und 0231 im Supabase-SQL-Editor ausführen. Reihenfolge zu Vercel egal (ohne 0231 läuft die Zählung fail-open wie bisher).
+
+### Merkliste (größer, später)
+
+- [ ] **Werkzeug-iframes mit `sandbox`** (ohne `allow-same-origin`): Ein übersehenes XSS in einem Werkzeug käme dann nicht mehr an die Sitzung der Lehrkraft. Werkzeug für Werkzeug umstellen, Brücken (`postMessage`, Speicher) anpassen.
+- [ ] **`'unsafe-inline'` aus der CSP** schrittweise (Inline-`onclick` und Inline-`<script>` auslagern).
+- [ ] **Tailwind und Unsplash lokal** (siehe oben unter „Technisch noch offen“), danach beide aus der CSP streichen.
+- [ ] **`add_bonbons`**: Menge kommt vom Browser (bis 500 je Aufruf, beliebig oft bis Legi frei) — serverseitig deckeln. Nur Fairness im Spiel, keine Daten.
 
 ### Prüfung Injection/XSS, 24.10.2026 — Ergebnis
 
@@ -186,6 +202,6 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 
 **Damit es so bleibt (Vorschläge):** Werkzeug-iframes mit `sandbox` (ohne `allow-same-origin`) — dann kommt ein XSS dort nicht mehr an die Sitzung; `'unsafe-inline'` schrittweise aus der CSP; der Scanner aus dieser Prüfung als Prüfstand.
 
-- [ ] Migrationen 0228 und 0229 im Supabase-SQL-Editor ausführen.
+- [x] Migrationen 0228 und 0229 im Supabase-SQL-Editor ausführen.
 - [x] Suchmaschinen: `X-Robots-Tag: noindex, nofollow` für `admin/`, `MPSkills/j.html`, `MPSkills/lehrer.html` (`vercel.json`). Bewusst keine `robots.txt` — die würde öffentlich auflisten, wo diese Seiten liegen. Kein Sicherheitsschutz (Angreifer ignorieren das), nur Ordnung in den Suchergebnissen; geschützt sind die Seiten durch Anmeldung, 2FA und das Geheimnis im QR-Link.
 
