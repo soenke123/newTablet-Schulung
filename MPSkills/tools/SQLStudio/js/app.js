@@ -849,8 +849,17 @@
       '</ul>';
   }
 
+  // Einklappbare Gruppen links, Zustand pro Gerät gemerkt
+  const COLL = (() => { try { return JSON.parse(localStorage.getItem('sqls.collapsed') || '{}') || {}; } catch (e) { return {}; } })();
+  function grpHead(title, extraHead, count) {
+    const c = !!COLL[title];
+    return '<div class="grp' + (c ? ' is-collapsed' : '') + '"><div class="grp-h"><button type="button" class="grp-tog" data-grp="' + esc(title) + '" aria-expanded="' + !c + '">' +
+      '<span class="grp-chev">' + icon('down') + '</span><span>' + esc(title) + '</span>' + (count ? '<span class="grp-n">' + count + '</span>' : '') + '</button>' + (extraHead || '') + '</div>';
+  }
+
   function group(title, list, extraHead, empty) {
-    let h = '<div class="grp"><div class="grp-h"><span>' + esc(title) + '</span>' + (extraHead || '') + '</div>';
+    let h = grpHead(title, extraHead, list.length);
+    if (COLL[title]) return h + '</div>';
     if (!list.length && empty) h += '<div class="grp-empty">' + empty + '</div>';
     for (const it of list) {
       const active = S.cur && S.cur.id === it.id;
@@ -861,8 +870,8 @@
   }
 
   function classGroup() {
-    let h = '<div class="grp"><div class="grp-h"><span>Arbeiten der Klasse</span>' +
-      '<button type="button" class="grp-add" id="btnKlass" title="Neu laden" aria-label="Neu laden">' + icon('refresh') + '</button></div>';
+    let h = grpHead('Arbeiten der Klasse', '<button type="button" class="grp-add" id="btnKlass" title="Neu laden" aria-label="Neu laden">' + icon('refresh') + '</button>', S.klass ? S.klass.length : 0);
+    if (COLL['Arbeiten der Klasse']) return h + '</div>';
     if (S.klass === null) return h + '<div class="grp-empty">Wird geladen …</div></div>';
     if (!S.klass.length) return h + '<div class="grp-empty">Noch hat niemand etwas geändert. Kopien erscheinen hier, sobald jemand in einer geteilten Datenbank arbeitet.</div></div>';
     let lastP = null;
@@ -1052,6 +1061,13 @@
   /* ─── Start ──────────────────────────────────────────────── */
   function bind() {
     $('#side').addEventListener('click', (e) => {
+      const tg = e.target.closest('[data-grp]');
+      if (tg) {
+        COLL[tg.dataset.grp] = !COLL[tg.dataset.grp];
+        try { localStorage.setItem('sqls.collapsed', JSON.stringify(COLL)); } catch (err) {}
+        renderSide();
+        return;
+      }
       const sh = e.target.closest('[data-share]');
       if (sh) {
         e.stopPropagation();

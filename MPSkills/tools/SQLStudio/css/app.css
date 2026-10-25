@@ -145,6 +145,11 @@ code { font-size: .92em; background: var(--soft2); padding: .05em .35em; border-
   font: 700 11.5px var(--font-body); text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
   padding: 6px 8px;
 }
+.grp-tog { display: flex; align-items: center; gap: 6px; flex: 1; min-height: 32px; border: 0; background: transparent; cursor: pointer; font: inherit; text-transform: inherit; letter-spacing: inherit; color: inherit; text-align: left; padding: 0; }
+.grp-chev { display: grid; place-items: center; transition: transform .15s; }
+.grp-chev .ic { width: 16px; height: 16px; }
+.grp.is-collapsed .grp-chev { transform: rotate(-90deg); }
+.grp-n { font-weight: 600; background: var(--soft2); border-radius: 999px; padding: 0 7px; font-size: 11px; }
 .grp-add { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid var(--line2); background: var(--surface); border-radius: 8px; cursor: pointer; color: var(--accent-ink); }
 .grp-add:hover { background: var(--accent-dim); }
 .grp-empty { font-size: 12.5px; color: var(--muted); padding: 4px 8px 6px; }
@@ -301,12 +306,17 @@ code { font-size: .92em; background: var(--soft2); padding: .05em .35em; border-
 .res-scroll { margin-top: 10px; overflow: auto; max-height: 60vh; border: 1px solid var(--line); border-radius: 8px; }
 .res-table, .grid { border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 100%; }
 .res-table th, .grid th {
-  position: sticky; top: 0; z-index: 1; background: var(--soft2); text-align: left; font-weight: 650;
+  position: sticky; top: 0; z-index: 1; background: var(--soft2); text-align: right; font-weight: 650;
   padding: 7px 10px; border-bottom: 1px solid var(--line2); white-space: nowrap;
 }
 .res-table td, .grid td { padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; max-width: 420px; overflow: hidden; text-overflow: ellipsis; vertical-align: top; }
 .res-table tr:hover td, .grid tr:hover td { background: var(--soft); }
 .c-rn { color: var(--muted); font-size: 11.5px; text-align: right; width: 1%; }
+.res-table td, .grid td { text-align: right; }
+.res-table th, .grid th, .res-table td, .grid td { border-right: 1px solid var(--line); }
+.res-table th:last-child, .grid th:last-child, .res-table td:last-child, .grid td:last-child { border-right: 0; }
+.g-name { justify-content: flex-end; }
+.grid td.g-none { text-align: center; }
 .c-num { text-align: right; font-variant-numeric: tabular-nums; }
 .c-null { color: var(--muted); font-style: italic; font-size: 12px; }
 .c-blob { color: var(--muted); }
