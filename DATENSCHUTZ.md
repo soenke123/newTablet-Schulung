@@ -187,4 +187,5 @@ Entschieden: Der Code gilt 90 Minuten, der QR-Code, solange die Tür offen ist.
 **Damit es so bleibt (Vorschläge):** Werkzeug-iframes mit `sandbox` (ohne `allow-same-origin`) — dann kommt ein XSS dort nicht mehr an die Sitzung; `'unsafe-inline'` schrittweise aus der CSP; der Scanner aus dieser Prüfung als Prüfstand.
 
 - [ ] Migrationen 0228 und 0229 im Supabase-SQL-Editor ausführen.
+- [x] Suchmaschinen: `X-Robots-Tag: noindex, nofollow` für `admin/`, `MPSkills/j.html`, `MPSkills/lehrer.html` (`vercel.json`). Bewusst keine `robots.txt` — die würde öffentlich auflisten, wo diese Seiten liegen. Kein Sicherheitsschutz (Angreifer ignorieren das), nur Ordnung in den Suchergebnissen; geschützt sind die Seiten durch Anmeldung, 2FA und das Geheimnis im QR-Link.
 

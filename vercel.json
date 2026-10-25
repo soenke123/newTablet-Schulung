@@ -34,6 +34,15 @@
       ]
     },
     {
+      "source": "/(admin|admin/.*|MPSkills/j\\.html|MPSkills/lehrer\\.html)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
       "source": "/downloads/(.*)",
       "headers": [
         {
