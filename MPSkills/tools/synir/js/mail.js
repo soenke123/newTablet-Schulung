@@ -1,47 +1,75 @@
 /* ══════════════════════════════════════════════════════════════
-   Netzwerk-Prototyp — mail.js   ·   E-Mail-Server und das Senden
-   und Abholen
+   Netzwerk-Prototyp — mail.js   ·   E-Mail-Server, Senden und
+   Lesen
    ══════════════════════════════════════════════════════════════
-   Zwei Protokolle, zwei Ports, zwei völlig verschiedene Aufgaben —
-   und genau deshalb ist E-Mail das Beispiel, an dem „ein Port
-   gehört zu einem PROGRAMM" endgültig sitzt:
+   Zwei Aufgaben, zwei Protokolle, zwei Ports — und genau deshalb
+   ist E-Mail das Beispiel, an dem „ein Port gehört zu einem
+   PROGRAMM" endgültig sitzt:
 
      **SMTP (25)** bringt eine Nachricht HIN. Von meinem Rechner
      zu meinem Server, und von dort zum Server des Empfängers.
-     **POP3 (110)** holt sie AB. Nur der Empfänger, nur von
-     seinem eigenen Server, nur mit Benutzername und Passwort.
+     **IMAP (143)** zeigt das Postfach, das AUF DEM SERVER liegt.
+     Nur der Empfänger, nur mit Benutzername und Passwort.
 
    Zwischen den beiden liegt die Aussage, die im Unterricht am
-   meisten überrascht: **eine E-Mail wird nicht zugestellt, sie
-   wird abgeholt.** Sie liegt so lange auf dem Server, bis jemand
-   danach fragt.
+   meisten überrascht: **eine E-Mail wird nicht zugestellt.** Sie
+   liegt auf dem Server, und das Programm schaut dort nach. Bei
+   IMAP bleibt sie dort auch liegen — deshalb sehen Laptop und
+   Handy dieselbe Post, und was man auf dem einen löscht, ist auf
+   dem anderen auch weg.
+
+   ── POP3 (110): das ältere Verfahren, nur auf Wunsch ──────────
+   ⭐ Vom Nutzer verlangt (2026-10-25): „IMAP ist der Standard.
+   POP3 nur eine Option, die man am Anfang, wenn E-Mail in Sek II
+   neu ist, einmal testen kann. Für Sek I ist das nichts, da soll
+   EIN Weg gehen."
+
+   Deshalb hört ein Mailserver auf 110 nur, wenn in seinem Fenster
+   der Haken „Auch POP3 anbieten" sitzt (`mailServer.pop3`), und
+   das E-Mail-Programm zeigt die Wahl IMAP/POP3 nur, wenn im Netz
+   ein solcher Server steht. Vorbelegt ist das allein in II.3. POP3
+   HOLT die Post AB und löscht sie danach auf dem Server — genau
+   der Unterschied, den man einmal gesehen haben soll.
 
    ── Zeilendialog, und das ist der halbe Grund ─────────────────
-   Beide Protokolle sind lesbarer Text, Zeile für Zeile. Im
+   Alle drei Protokolle sind lesbarer Text, Zeile für Zeile. Im
    Mitschnitt steht `MAIL FROM: <anna@schule.de>` und darunter
    `250 OK` — man liest das Gespräch mit, ohne dass jemand es
    übersetzen muss. Deshalb geht jede Zeile als eigenes Segment
    hinaus und nicht alles in einem Rutsch.
 
-   ⭐ Und deshalb steht `PASS geheim` im Klartext im Mitschnitt.
-   Das ist kein Mangel der Nachbildung — das IST POP3, und es ist
+   ⭐ Und deshalb steht `a1 LOGIN anna geheim` im Klartext im
+   Mitschnitt (bei POP3 `PASS geheim`). Das ist kein Mangel der
+   Nachbildung — so sind beide Protokolle ohne TLS, und es ist
    eine der wenigen Stellen, an denen Sicherheit ohne Zusatzstoff
    vorkommt.
 
    ── Was bewusst fehlt ─────────────────────────────────────────
    Adressbuch, CC und BCC, Anhänge, APOP, STARTTLS (TLS gibt es nur
-   „implizit": Port 465 und 995, siehe `tls.js`), TLS zwischen zwei
-   Mailservern, mehrere Konten je Gerät (Filius hat auch nur eines), `TOP`, `NOOP`, `RSET`.
+   „implizit": Port 465, 993 und 995, siehe `tls.js`), TLS zwischen
+   zwei Mailservern, mehrere Konten je Gerät (Filius hat auch nur
+   eines), bei POP3 `TOP`, `NOOP`, `RSET`. Bei IMAP nur der eine
+   Ordner INBOX, kein „gelesen" (`\Seen`), kein IDLE, keine
+   UIDVALIDITY; die Befehle sind LOGIN, SELECT, UID SEARCH,
+   UID FETCH, UID STORE, EXPUNGE und LOGOUT — genau die, die das
+   Programm braucht, und jeder davon steht im Mitschnitt.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
   'use strict';
 
-  const SMTP = 25, POP3 = 110;
+  const SMTP = 25, IMAP = 143, POP3 = 110;
   /* Dieselben Dienste mit TLS von der ersten Zeile an („implizites
-     TLS", wie es SMTPS und POP3S heißen): 465 und 995. Die Zeilen
-     darin sind die alten — nur dass sie verschlüsselt gehen. */
-  const SMTPS = 465, POP3S = 995;
+     TLS", wie es SMTPS, IMAPS und POP3S heißen): 465, 993 und 995.
+     Die Zeilen darin sind die alten — nur dass sie verschlüsselt
+     gehen. */
+  const SMTPS = 465, IMAPS = 993, POP3S = 995;
+
+  /* Der Port, der zu einer Art und einer Verschlüsselung gehört.
+     Eine Stelle, damit Programm, Umschalter und Prüfstand nicht
+     jeder ihre eigene Tabelle führen. */
+  const eingangsPort = (art, mitTls) => art === 'pop3'
+    ? (mitTls ? POP3S : POP3) : (mitTls ? IMAPS : IMAP);
   const EOL = '\r\n';
 
   /* Eine Nachricht als Text — das Format, das auch durch die
@@ -189,6 +217,7 @@
       if (!k) return false;
       k.posteingang = k.posteingang || [];
       k.posteingang.push({ von: m.von, an: an, betreff: m.betreff, text: m.text, zeit: engine.now });
+      uidsSicher(k);
       if (api && api.onDirty) api.onDirty();
       return true;
     }
@@ -220,7 +249,163 @@
       kind: 'note', node: node.id, nodeName: node.name, text: text, level: 'warn', t: engine.now
     });
 
-    /* ═══ Der POP3-Server (Port 110) ═════════════════════════ */
+    /* ═══ Der IMAP-Server (Port 143) ═════════════════════════
+       Jede Nachricht im Postfach hat eine feste Nummer, die UID.
+       Sie ändert sich nicht, wenn davor etwas gelöscht wird — die
+       laufende Nummer (1, 2, 3 …) schon. Mit der UID merkt sich das
+       Programm, was es schon kennt, und holt beim nächsten Abrufen
+       nur das Neue.
+
+       ⚠️ Nachrichten aus Szenarien und älteren Ständen haben noch
+       keine UID. Sie bekommen sie hier, beim ersten Hinsehen —
+       und `uidNext` zählt nur weiter, nie zurück: eine UID, die
+       einmal vergeben war, darf nicht für eine ANDERE Nachricht
+       wiederkommen, sonst hielte ein Programm die neue für die
+       alte und zeigte sie nie. */
+    function uidsSicher(k) {
+      k.posteingang = k.posteingang || [];
+      let naechste = k.uidNext || 1;
+      for (const m of k.posteingang) if (m.uid >= naechste) naechste = m.uid + 1;
+      for (const m of k.posteingang) if (!m.uid) m.uid = naechste++;
+      k.uidNext = naechste;
+    }
+
+    /* Wörter einer IMAP-Zeile: einfache Wörter oder "in Anführungs-
+       zeichen" (ein Passwort mit Leerzeichen). Andersherum, beim
+       Senden, setzt `imapWort` die Anführungszeichen nur, wo nötig —
+       `LOGIN anna apfel` liest sich im Mitschnitt besser als
+       `LOGIN "anna" "apfel"`. */
+    function imapWorte(zeile) {
+      const out = [];
+      const re = /"((?:[^"\\]|\\.)*)"|(\S+)/g;
+      let m;
+      while ((m = re.exec(zeile))) out.push(m[1] != null ? m[1].replace(/\\(.)/g, '$1') : m[2]);
+      return out;
+    }
+    const imapWort = (s) => /^[A-Za-z0-9._@+-]+$/.test(String(s))
+      ? String(s) : '"' + String(s).replace(/(["\\])/g, '\\$1') + '"';
+
+    /* „1,4,7" oder „3:*" — welche UIDs gemeint sind. */
+    function uidMenge(text, uids) {
+      const max = uids.length ? Math.max.apply(null, uids) : 0;
+      const raus = new Set();
+      for (const teil of String(text || '').split(',')) {
+        const [a, b] = teil.split(':');
+        const von = a === '*' ? max : parseInt(a, 10);
+        const bis = b == null ? von : (b === '*' ? max : parseInt(b, 10));
+        if (!(von > 0) || !(bis > 0)) continue;
+        for (const u of uids) if (u >= Math.min(von, bis) && u <= Math.max(von, bis)) raus.add(u);
+      }
+      return raus;
+    }
+
+    function imapHandler(node) {
+      return (conn) => {
+        const z = { benutzer: null, gewaehlt: false };
+        const sag = (s) => conn.senden(s + EOL);
+        sag('* OK IMAP bereit');
+
+        /* Jede Zeile des Programms beginnt mit einer Marke (a1, a2 …),
+           und die letzte Antwort darauf trägt dieselbe Marke: „a1 OK"
+           oder „a1 NO …". Was dazwischen kommt, beginnt mit „*" —
+           das sind die eigentlichen Auskünfte. So weiß das Programm
+           genau, wann eine Antwort fertig ist. */
+        zeilen(conn, (zeile) => {
+          const w = imapWorte(zeile);
+          const tag = w[0] || '*';
+          const bef = (w[1] || '').toUpperCase();
+
+          if (bef === 'LOGOUT') {
+            sag('* BYE Tschüss');
+            sag(tag + ' OK LOGOUT fertig');
+            conn.schliessen();
+            return;
+          }
+          if (bef === 'LOGIN') {
+            const k = konto(node, w[2] || '');
+            /* ⭐ Benutzer UND Passwort stehen hier in EINER Zeile im
+               Klartext — und damit im Mitschnitt. */
+            if (k && String(k.passwort || '') === (w[3] || '')) {
+              z.benutzer = k.benutzer;
+              sag(tag + ' OK Angemeldet');
+            } else sag(tag + ' NO Benutzer oder Passwort falsch');
+            return;
+          }
+          if (!z.benutzer) { sag(tag + ' NO Erst anmelden'); return; }
+          // Das Konto kann inzwischen gelöscht sein — jedes Mal neu suchen.
+          const k = konto(node, z.benutzer);
+          if (!k) { sag(tag + ' NO Dieses Postfach gibt es nicht mehr'); return; }
+          uidsSicher(k);
+          const post = k.posteingang;
+
+          if (bef === 'SELECT') {
+            if (String(w[2] || '').toUpperCase() !== 'INBOX') {
+              sag(tag + ' NO Diesen Ordner gibt es nicht'); return;
+            }
+            z.gewaehlt = true;
+            sag('* ' + post.length + ' EXISTS');
+            sag('* OK [UIDNEXT ' + k.uidNext + ']');
+            sag(tag + ' OK [READ-WRITE] Posteingang gewählt');
+            return;
+          }
+          if (!z.gewaehlt) { sag(tag + ' NO Erst den Posteingang wählen (SELECT INBOX)'); return; }
+
+          const unter = bef === 'UID' ? String(w[2] || '').toUpperCase() : bef;
+          const arg = bef === 'UID' ? w.slice(3) : w.slice(2);
+          const uids = post.map(m => m.uid);
+
+          if (bef === 'UID' && unter === 'SEARCH') {
+            sag('* SEARCH' + (uids.length ? ' ' + uids.join(' ') : ''));
+            sag(tag + ' OK SEARCH fertig');
+            return;
+          }
+          if (bef === 'UID' && unter === 'FETCH') {
+            /* ⭐ Die Nachricht kommt als „Literal": `{312}` sagt, wie
+               viele Zeichen jetzt folgen. Dann weiß das Programm,
+               wo der Brief aufhört — ein Punkt am Ende wie bei SMTP
+               und POP3 braucht es dafür nicht. */
+            const welche = uidMenge(arg[0], uids);
+            post.forEach((m, i) => {
+              if (!welche.has(m.uid)) return;
+              const text = alsText(m);
+              sag('* ' + (i + 1) + ' FETCH (UID ' + m.uid + ' BODY[] {' + (text.length + EOL.length) + '}');
+              for (const zeileText of text.split(EOL)) sag(zeileText);
+              sag(')');
+            });
+            sag(tag + ' OK FETCH fertig');
+            return;
+          }
+          if (bef === 'UID' && unter === 'STORE') {
+            /* Löschen geht bei IMAP in zwei Schritten: markieren
+               (\Deleted) und dann aufräumen (EXPUNGE). */
+            const welche = uidMenge(arg[0], uids);
+            const loeschen = /\\Deleted/i.test(arg.slice(2).join(' '));
+            const plus = String(arg[1] || '').charAt(0) !== '-';
+            post.forEach((m, i) => {
+              if (!welche.has(m.uid)) return;
+              if (loeschen) m.weg = plus;
+              sag('* ' + (i + 1) + ' FETCH (UID ' + m.uid + ' FLAGS (' + (m.weg ? '\\Deleted' : '') + '))');
+            });
+            sag(tag + ' OK STORE fertig');
+            return;
+          }
+          if (bef === 'EXPUNGE') {
+            /* Von hinten nach vorn gemeldet: jede Zeile nennt die
+               laufende Nummer, die vor DIESEM Löschen galt. */
+            for (let i = post.length - 1; i >= 0; i--) if (post[i].weg) sag('* ' + (i + 1) + ' EXPUNGE');
+            const vorher = post.length;
+            k.posteingang = post.filter(m => !m.weg);
+            if (k.posteingang.length !== vorher && api && api.onDirty) api.onDirty();
+            sag(tag + ' OK EXPUNGE fertig');
+            return;
+          }
+          sag(tag + ' BAD Kenne ich nicht');
+        });
+      };
+    }
+
+    /* ═══ Der POP3-Server (Port 110) ═════════════════════════
+       Nur, wenn der Haken „Auch POP3 anbieten" sitzt (siehe Kopf). */
 
     function popHandler(node) {
       return (conn) => {
@@ -287,21 +472,26 @@
       };
     }
 
-    /* Vier Ports, zwei Sorten: 25 und 110 immer; 465 und 995 nur mit
-       Haken UND Zertifikat — wie bei den Webservern (`http.httpsSchalten`). */
+    /* Bis zu sechs Ports, zwei Sorten: 25 und 143 immer, 110 nur mit
+       dem POP3-Haken; 465, 993 (und 995) nur mit Haken UND Zertifikat
+       — wie bei den Webservern (`http.httpsSchalten`). */
     function serverAn(node) {
+      const c = netz.mailConf(node);
       stack.tcpHoeren(node, SMTP, smtpHandler(node), 'E-Mail-Server');
-      stack.tcpHoeren(node, POP3, popHandler(node), 'E-Mail-Server');
-      if (tls && netz.mailConf(node).https && netz.zertGueltig(node)) {
+      stack.tcpHoeren(node, IMAP, imapHandler(node), 'E-Mail-Server');
+      if (c.pop3) stack.tcpHoeren(node, POP3, popHandler(node), 'E-Mail-Server');
+      else stack.tcpNichtHoeren(node, POP3);
+      if (tls && c.https && netz.zertGueltig(node)) {
         tls.hoeren(node, SMTPS, smtpHandler(node), 'E-Mail-Server (TLS)');
-        tls.hoeren(node, POP3S, popHandler(node), 'E-Mail-Server (TLS)');
+        tls.hoeren(node, IMAPS, imapHandler(node), 'E-Mail-Server (TLS)');
+        if (c.pop3) tls.hoeren(node, POP3S, popHandler(node), 'E-Mail-Server (TLS)');
+        else stack.tcpNichtHoeren(node, POP3S);
       } else {
-        stack.tcpNichtHoeren(node, SMTPS);
-        stack.tcpNichtHoeren(node, POP3S);
+        for (const p of [SMTPS, IMAPS, POP3S]) stack.tcpNichtHoeren(node, p);
       }
     }
     function serverAus(node) {
-      for (const p of [SMTP, POP3, SMTPS, POP3S]) stack.tcpNichtHoeren(node, p);
+      for (const p of [SMTP, IMAP, POP3, SMTPS, IMAPS, POP3S]) stack.tcpNichtHoeren(node, p);
     }
 
     /* ═══ Die Client-Seite ═══════════════════════════════════
@@ -376,7 +566,100 @@
     /* Wie spricht dieses Konto — und mit wem (Servername für TLS)? */
     const tlsOpt = (k, wirt) => k.tls ? { tls: true, sni: wirt } : null;
     const portSmtp = (k) => k.smtpPort || (k.tls ? SMTPS : SMTP);
-    const portPop  = (k) => k.pop3Port || (k.tls ? POP3S : POP3);
+    const portEin  = (k) => k.eingangPort || eingangsPort(k.art, k.tls);
+    const istPop   = (k) => k.art === 'pop3';
+
+    /* ═══ Ein IMAP-Gespräch ══════════════════════════════════
+       Anders als bei SMTP und POP3 ist das keine feste Liste aus
+       „auf diese Antwort jene Zeile": eine Antwort sind hier
+       BELIEBIG viele Zeilen mit „*" und am Ende eine mit der Marke
+       des Befehls. Dazu kommt das Literal (`{312}`), das sagt, wie
+       viele Zeichen Brief jetzt folgen.
+
+       `plan(befehl)` stellt die ersten Befehle in die Schlange;
+       `befehl(text, danach)` ruft `danach(zeilen, briefe)`, sobald
+       das OK da ist — und `danach` darf weitere Befehle anhängen
+       (erst nach dem SEARCH steht fest, was zu holen ist). Am Ende
+       kommt von selbst ein LOGOUT. Ein NO oder BAD beendet das
+       Gespräch, und der Grund ist die Zeile des Servers. */
+    function imapSitzung(node, ip, port, plan, cb, opt) {
+      let fertig = false, nr = 0, offen = null, gruss = false, literal = null;
+      const schlange = [];
+      const ende = (fehler) => {
+        if (fertig) return;
+        fertig = true;
+        cb(fehler || null);
+      };
+      const befehl = (text, danach) => { schlange.push({ text: text, danach: danach }); };
+
+      const verbunden = (err, c) => {
+        if (err) { ende(err); return; }
+        const naechster = () => {
+          const b = schlange.shift() || { text: 'LOGOUT', logout: true };
+          offen = { tag: 'a' + (++nr), b: b, zeilen: [], briefe: [] };
+          c.senden(offen.tag + ' ' + b.text + EOL);
+        };
+        zeilen(c, (zeile) => {
+          if (fertig) return;
+          // Mitten im Brief: sammeln, bis die angesagte Länge erreicht ist.
+          if (literal) {
+            literal.zeilen.push(zeile);
+            literal.rest -= zeile.length + EOL.length;
+            if (literal.rest <= 0) {
+              if (offen) offen.briefe.push({ kopf: literal.kopf, text: literal.zeilen.join(EOL) });
+              literal = null;
+            }
+            return;
+          }
+          if (!gruss) {
+            gruss = true;
+            if (!/^\* OK/.test(zeile)) { ende(zeile); return; }
+            plan(befehl);
+            naechster();
+            return;
+          }
+          if (!offen) return;
+          const lit = /^\*.*\{(\d+)\}$/.exec(zeile);
+          if (lit) { literal = { kopf: zeile, rest: +lit[1], zeilen: [] }; return; }
+          if (zeile.indexOf(offen.tag + ' ') !== 0) { offen.zeilen.push(zeile); return; }
+
+          const o = offen;
+          offen = null;
+          if (!/^\S+ OK\b/.test(zeile)) {
+            // NO oder BAD: Gespräch vorbei, Verbindung zu (sonst stünde sie in netstat weiter offen).
+            ende(zeile);
+            c.schliessen();
+            return;
+          }
+          if (o.b.logout) { ende(null); return; }
+          if (o.b.danach) o.b.danach(o.zeilen, o.briefe);
+          if (!fertig) naechster();
+        });
+      };
+      const conn = opt && opt.tls && tls
+        ? tls.verbinde(node, ip, port, 'E-Mail-Programm', { sni: opt.sni },
+            (err, c, info) => verbunden(err && tlsFehler(err, info), c))
+        : stack.tcpVerbinde(node, ip, port, 'E-Mail-Programm', verbunden);
+      if (conn) conn.onZu(() => ende(fertig ? null : 'Die Verbindung ging zu.'));
+      return conn;
+    }
+
+    const imapLogin = (k) => 'LOGIN ' + imapWort(k.benutzer || '') + ' ' + imapWort(k.passwort || '');
+
+    /* ─── Der Spiegel ─────────────────────────────────────────
+       Bei IMAP ist der Posteingang des Programms ein SPIEGEL des
+       Postfachs auf dem Server: jede Nachricht darin trägt ihre
+       UID. Nachrichten OHNE UID hat früher POP3 abgeholt — die gibt
+       es nur noch auf diesem Gerät, und sie bleiben stehen.
+
+       ⚠️ Der Spiegel gehört zu EINEM Postfach. Wer Server oder
+       Benutzer wechselt, darf die UIDs des alten nicht behalten:
+       UID 3 auf dem neuen Server ist eine ganz andere Nachricht. */
+    const spiegelVon = (k) => (String(k.eingang || '') + '|' + String(k.benutzer || '')).toLowerCase();
+    function spiegelLeeren(k) {
+      k.posteingang = (k.posteingang || []).filter(m => !m.uid);
+      k.spiegel = '';
+    }
 
     /* ─── Was die Oberfläche ruft ─────────────────────────────*/
 
@@ -411,9 +694,10 @@
 
        Zwei Gespräche, und beide sagen etwas Eigenes:
 
-         POP3   USER/PASS — die einzige echte Anmeldung, die es
-                hier gibt. Falsches Passwort → „-ERR Benutzer
-                oder Passwort falsch".
+         IMAP   LOGIN (bei POP3: USER/PASS) — die einzige echte
+                Anmeldung, die es hier gibt. Falsches Passwort →
+                „a1 NO Benutzer oder Passwort falsch" (bei POP3
+                „-ERR …").
          SMTP   HELO/MAIL FROM/RCPT TO auf die EIGENE Adresse.
                 SMTP kennt kein AUTH (auch im echten Leben erst
                 seit RFC 2554); was es beantwortet, ist „bedient
@@ -421,8 +705,11 @@
                 Konto" — mit „550 Empfänger unbekannt", wenn
                 nicht.
 
-       ⚠️ Der Grund für die zweite Hälfte: POP3 allein prüft nur
-       das Abholen. Wer sich anmeldet und dann nicht senden kann,
+       (Damals hieß der erste Teil noch POP3; seit 2026-10-25 ist
+       es IMAP, POP3 nur noch, wenn das Konto darauf steht.)
+
+       ⚠️ Der Grund für die zweite Hälfte: IMAP allein prüft nur
+       das Lesen. Wer sich anmeldet und dann nicht senden kann,
        hätte einen grünen Haken und ein Programm, das nicht tut,
        wofür man es aufgemacht hat.
 
@@ -434,20 +721,26 @@
       const fehlt = !k.benutzer ? 'der Benutzername'
         : !k.passwort ? 'das Passwort'
         : !k.domain ? 'die Maildomain'
-        : !k.pop3 ? 'der POP3-Server'
+        : !k.eingang ? (istPop(k) ? 'der POP3-Server' : 'der IMAP-Server')
         : !k.smtp ? 'der SMTP-Server' : null;
       if (fehlt) { cb('Es fehlt noch ' + fehlt + '.'); return; }
 
       const adresse = adresseVon(k);
 
-      zumServer(node, k.pop3, portPop(k), (f1, ip1, port1, wirt1) => {
+      /* Der erste Teil: bei IMAP `LOGIN` (und gleich wieder
+         `LOGOUT`), bei POP3 `USER`/`PASS`/`QUIT`. */
+      const eingangPruefen = (ip, port, opt, fertig) => istPop(k)
+        ? gespraech(node, ip, port, 'E-Mail-Programm', [
+            { erwartet: /^\+OK/, sende: () => 'USER ' + k.benutzer },
+            { erwartet: /^\+OK/, sende: () => 'PASS ' + k.passwort },
+            { erwartet: /^\+OK/, sende: () => 'QUIT' },
+            { erwartet: /^\+OK/, ende: true }
+          ], fertig, opt)
+        : imapSitzung(node, ip, port, (befehl) => befehl(imapLogin(k)), fertig, opt);
+
+      zumServer(node, k.eingang, portEin(k), (f1, ip1, port1, wirt1) => {
         if (f1) { cb(f1); return; }
-        gespraech(node, ip1, port1, 'E-Mail-Programm', [
-          { erwartet: /^\+OK/, sende: () => 'USER ' + k.benutzer },
-          { erwartet: /^\+OK/, sende: () => 'PASS ' + k.passwort },
-          { erwartet: /^\+OK/, sende: () => 'QUIT' },
-          { erwartet: /^\+OK/, ende: true }
-        ], (f2) => {
+        eingangPruefen(ip1, port1, tlsOpt(k, wirt1), (f2) => {
           if (f2) { cb(f2); return; }
           zumServer(node, k.smtp, portSmtp(k), (f3, ip2, port2, wirt2) => {
             if (f3) { cb(f3); return; }
@@ -478,7 +771,7 @@
               cb(null, adresse);
             }, tlsOpt(k, wirt2));
           });
-        }, tlsOpt(k, wirt1));
+        });
       });
     }
 
@@ -507,16 +800,79 @@
       k.angemeldet = false;
     }
 
+    /* „E-Mails abrufen". Bei IMAP: nachsehen, was auf dem Server
+       liegt, das Neue holen, das dort Gelöschte hier wegnehmen —
+       auf dem Server bleibt alles. Bei POP3: alles holen und dort
+       löschen. */
     function abholen(node, cb) {
       const k = netz.mailKonto(node);
-      if (!k.adresse || !k.pop3) { cb('Es ist noch kein Konto eingerichtet.'); return; }
-      zumServer(node, k.pop3, portPop(k), (fehler, ip, port, wirt) => {
+      if (!k.adresse || !k.eingang) { cb('Es ist noch kein Konto eingerichtet.'); return; }
+      zumServer(node, k.eingang, portEin(k), (fehler, ip, port, wirt) => {
         if (fehler) { cb(fehler); return; }
+        if (!istPop(k)) { imapAbholen(node, ip, port, k, cb, tlsOpt(k, wirt)); return; }
+        // POP3 kennt keine UIDs: ein alter IMAP-Spiegel würde doppelt dastehen.
+        spiegelLeeren(k);
         holeSchleife(node, ip, port, k, (f, neue) => {
           if (!f && neue && neue.length) {
             k.posteingang = (k.posteingang || []).concat(neue);
           }
           cb(f, neue ? neue.length : 0);
+        }, tlsOpt(k, wirt));
+      });
+    }
+
+    function imapAbholen(node, ip, port, k, cb, opt) {
+      if (k.spiegel !== spiegelVon(k)) { spiegelLeeren(k); k.spiegel = spiegelVon(k); }
+      let aufServer = null;
+      const geholt = new Map();
+      imapSitzung(node, ip, port, (befehl) => {
+        befehl(imapLogin(k));
+        befehl('SELECT INBOX');
+        befehl('UID SEARCH ALL', (antwort) => {
+          const z = antwort.find(x => /^\* SEARCH\b/.test(x)) || '* SEARCH';
+          aufServer = z.split(/\s+/).slice(2).map(Number).filter(n => n > 0);
+          const bekannt = new Set((k.posteingang || []).filter(m => m.uid).map(m => m.uid));
+          const neu = aufServer.filter(u => !bekannt.has(u));
+          /* ⭐ Nur das Neue wird geholt. Beim zweiten Abrufen steht
+             im Mitschnitt deshalb kein Brief mehr — nur die Frage
+             „was liegt da?" und die Antwort. */
+          if (neu.length) befehl('UID FETCH ' + neu.join(',') + ' (BODY[])', (z2, briefe) => {
+            for (const b of briefe) {
+              const u = /UID (\d+)/.exec(b.kopf);
+              if (u) geholt.set(+u[1], Object.assign({ uid: +u[1], zeit: engine.now }, ausText(b.text)));
+            }
+          });
+        });
+      }, (f) => {
+        if (f || !aufServer) { cb(f || 'Der Server hat das Postfach nicht gezeigt.', 0); return; }
+        const alt = new Map((k.posteingang || []).filter(m => m.uid).map(m => [m.uid, m]));
+        const lokal = (k.posteingang || []).filter(m => !m.uid);
+        /* Reihenfolge wie auf dem Server. Was dort fehlt, ist woanders
+           gelöscht worden — und fehlt jetzt auch hier. */
+        const spiegel = aufServer.map(u => alt.get(u) || geholt.get(u)).filter(Boolean);
+        k.posteingang = lokal.concat(spiegel);
+        cb(null, geholt.size);
+      }, opt);
+    }
+
+    /* Eine Nachricht löschen. Bei IMAP auf dem SERVER (markieren,
+       aufräumen) — und damit auf jedem Gerät, das dieses Postfach
+       zeigt. Was POP3 schon abgeholt hat, liegt nur noch hier; das
+       wird nur hier gelöscht, ohne Gespräch. */
+    function loeschen(node, m, cb) {
+      const k = netz.mailKonto(node);
+      const weg = () => { k.posteingang = (k.posteingang || []).filter(x => x !== m); };
+      if (!m || !m.uid || istPop(k)) { weg(); cb(null, false); return; }
+      zumServer(node, k.eingang, portEin(k), (fehler, ip, port, wirt) => {
+        if (fehler) { cb(fehler); return; }
+        imapSitzung(node, ip, port, (befehl) => {
+          befehl(imapLogin(k));
+          befehl('SELECT INBOX');
+          befehl('UID STORE ' + m.uid + ' +FLAGS (\\Deleted)');
+          befehl('EXPUNGE');
+        }, (f) => {
+          if (!f) weg();
+          cb(f, true);
         }, tlsOpt(k, wirt));
       });
     }
@@ -598,11 +954,13 @@
     }
 
     return {
-      SMTP, POP3, SMTPS, POP3S, laeuft, serverAn, serverAus, senden, abholen,
+      SMTP, IMAP, POP3, SMTPS, IMAPS, POP3S, eingangsPort,
+      laeuft, serverAn, serverAus, senden, abholen, loeschen, spiegelLeeren,
       anmelden, abmelden, adresseVon, smtpSenden, zumServer,
       alsText, ausText, konten, konto, domainVon, benutzerVon
     };
   }
 
-  window.Mail = { erzeugen: erzeugen, SMTP: SMTP, POP3: POP3, SMTPS: SMTPS, POP3S: POP3S };
+  window.Mail = { erzeugen: erzeugen, SMTP: SMTP, IMAP: IMAP, POP3: POP3,
+                  SMTPS: SMTPS, IMAPS: IMAPS, POP3S: POP3S, eingangsPort: eingangsPort };
 })();

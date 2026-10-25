@@ -167,9 +167,9 @@
           else http.serverAus(node);
         }
 
-        // Der E-Mail-Server ist zwei Dienste auf zwei Ports (25
-        // und 110, mit TLS 465 und 995) und wird trotzdem mit EINEM
-        // Schalter geschaltet.
+        // Der E-Mail-Server ist mehrere Dienste auf mehreren Ports
+        // (25 und 143, auf Wunsch 110; mit TLS 465, 993, 995) und
+        // wird trotzdem mit EINEM Schalter geschaltet.
         if (mail) {
           if (laeuft && mail.laeuft(node)) mail.serverAn(node);
           else mail.serverAus(node);

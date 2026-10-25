@@ -2,7 +2,7 @@
    Netzwerk-Prototyp — tls.js   ·   Die TLS-Schale
    ══════════════════════════════════════════════════════════════
    PLAN-SICHERHEIT, Schritt 4. TLS sitzt ZWISCHEN TCP und dem
-   Programm: HTTP, SMTP und POP3 wissen nichts davon. Sie bekommen
+   Programm: HTTP, SMTP, IMAP und POP3 wissen nichts davon. Sie bekommen
    dasselbe Verbindungsobjekt wie sonst (`senden`, `onDaten`,
    `onZu`, `schliessen`) — nur dass dahinter ein Handschlag lief
    und alles verschlüsselt über die Leitung geht.

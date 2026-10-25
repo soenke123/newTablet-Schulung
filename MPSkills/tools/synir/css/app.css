@@ -2459,6 +2459,12 @@ textarea.f::placeholder { color: var(--ink-3); opacity: .45; font-weight: 400; }
    keine Anordnung — dieselbe Lehre wie bei den Netzwerkkarten des
    Routers, die alle in EINEN Reiter gehören. */
 .ml-paar { display: grid; grid-template-columns: 1fr 86px; gap: 0 8px; }
+/* IMAP oder POP3 — nur zu sehen, wo ein Server im Netz POP3 anbietet
+   (siehe prog-mail.js). Dieselben Knöpfe wie die Reiter oben. */
+.ml-art { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: 2px 0 8px; }
+.ml-art > span { font-size: 10.5px; color: var(--ink-3); }
+.ml-art > small { flex: 1 1 100%; font-size: 11px; color: var(--ink-2); }
+.ml-art.is-zu .ml-reg { cursor: default; opacity: .7; }
 
 .ml-text {
   min-height: 90px; resize: vertical; font-family: var(--fs); line-height: 1.45;

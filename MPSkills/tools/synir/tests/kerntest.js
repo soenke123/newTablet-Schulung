@@ -1725,10 +1725,10 @@ function mailNetz(seed) {
     { benutzer: 'bernd', name: 'Bernd', passwort: 'birne', posteingang: [] }
   ];
   const ka = b.netz.mailKonto(a);
-  Object.assign(ka, { name: 'Anna', adresse: 'anna@schule.de', pop3: '192.168.1.20',
+  Object.assign(ka, { name: 'Anna', adresse: 'anna@schule.de', eingang: '192.168.1.20',
                       smtp: '192.168.1.20', benutzer: 'anna', passwort: 'apfel' });
   const kb = b.netz.mailKonto(c);
-  Object.assign(kb, { name: 'Bernd', adresse: 'bernd@schule.de', pop3: '192.168.1.20',
+  Object.assign(kb, { name: 'Bernd', adresse: 'bernd@schule.de', eingang: '192.168.1.20',
                       smtp: '192.168.1.20', benutzer: 'bernd', passwort: 'birne' });
   a.software = ['mail']; c.software = ['mail'];
   dienste.start();
@@ -1738,10 +1738,17 @@ function mailNetz(seed) {
 {
   const { engine, netz, stack, mit, a, c, ms, mail } = mailNetz();
 
-  ok('der Server hört auf 25 UND auf 110', (() => {
+  ok('der Server hört auf 25 UND auf 143', (() => {
     const z = stack.sockets(ms).filter(r => r.proto === 'TCP');
-    return z.some(r => /:25$/.test(r.lokal)) && z.some(r => /:110$/.test(r.lokal));
+    return z.some(r => /:25$/.test(r.lokal)) && z.some(r => /:143$/.test(r.lokal));
   })(), JSON.stringify(stack.sockets(ms)));
+  ok('⭐ aber NICHT auf 110 — POP3 gibt es nur mit Haken', (() => {
+    const z = stack.sockets(ms).filter(r => r.proto === 'TCP');
+    return !z.some(r => /:110$/.test(r.lokal));
+  })(), JSON.stringify(stack.sockets(ms)));
+  ok('ein neues Konto steht auf IMAP mit Port 143',
+     netz.mailKonto(c).art === 'imap' && netz.mailKonto(c).eingangPort === 143,
+     JSON.stringify(netz.mailKonto(c)));
 
   let fehler = 'nichts';
   mail.senden(a, { an: 'bernd@schule.de', betreff: 'Hallo', text: 'Kommst du mit?' },
@@ -1756,13 +1763,14 @@ function mailNetz(seed) {
               return m.von === 'anna@schule.de' && m.betreff === 'Hallo'
                 && /Kommst du mit/.test(m.text); })(),
      JSON.stringify(netz.mailConf(ms).konten[1].posteingang[0]));
+  ok('und hat auf dem Server eine UID', netz.mailConf(ms).konten[1].posteingang[0].uid === 1);
   ok('die Absenderin hat sie unter „Gesendete"',
      (netz.mailKonto(a).gesendet || []).length === 1);
 
   /* ⭐ Die Aussage, die im Unterricht am meisten überrascht: bei
      Bernd ist noch NICHTS. Eine E-Mail wird nicht zugestellt —
-     sie liegt auf dem Server, bis jemand sie abholt. */
-  ok('beim Empfänger ist noch nichts — Post wird ABGEHOLT',
+     sie liegt auf dem Server, bis jemand nachsieht. */
+  ok('beim Empfänger ist noch nichts — die Post liegt auf dem SERVER',
      (netz.mailKonto(c).posteingang || []).length === 0);
 
   const smtp = mit.view().filter(r => r.proto === 'SMTP');
@@ -1779,25 +1787,45 @@ function mailNetz(seed) {
      smtp.every(r => !/\[SYN|\[ACK\]|\[ACK, FIN\]/.test(r.info)),
      smtp.map(r => r.info).join(' | ').slice(0, 200));
 
-  // Jetzt holt Bernd ab.
+  // Jetzt ruft Bernd ab.
   let f2 = 'nichts', anzahl = -1;
   mail.abholen(c, (f, n) => { f2 = f; anzahl = n; });
   engine.runUntil(engine.now + 30 * SEC);
-  ok('abholen meldet eine neue Nachricht', !f2 && anzahl === 1, String(f2) + '/' + anzahl);
-  ok('sie liegt jetzt im Posteingang des Programms',
+  ok('abrufen meldet eine neue Nachricht', !f2 && anzahl === 1, String(f2) + '/' + anzahl);
+  ok('sie steht jetzt im Posteingang des Programms',
      (netz.mailKonto(c).posteingang || []).length === 1);
-  ok('und ist vom Server verschwunden',
-     netz.mailConf(ms).konten[1].posteingang.length === 0);
+  ok('mit Betreff und Text — und ohne Zeilen des Protokolls darin',
+     (() => { const m = netz.mailKonto(c).posteingang[0];
+              return m.betreff === 'Hallo' && m.text === 'Kommst du mit?' && m.uid === 1; })(),
+     JSON.stringify(netz.mailKonto(c).posteingang[0]));
+  ok('⭐ und liegt WEITER auf dem Server — das ist IMAP',
+     netz.mailConf(ms).konten[1].posteingang.length === 1);
 
-  const pop = mit.view().filter(r => r.proto === 'POP3');
-  ok('der Mitschnitt nennt POP3 beim Namen', pop.length > 6, String(pop.length));
-  ok('⭐ und das Passwort steht im KLARTEXT darin',
-     pop.some(r => /PASS birne/.test(r.info)),
-     pop.map(r => r.info).join(' | ').slice(0, 200));
-  ok('die Ports sind 25 und 110, nicht irgendwas',
-     smtp.every(r => /:/.test(r.info) || true)
-     && mit.view().some(r => r.frame && r.frame.payload && r.frame.payload.payload
-          && r.frame.payload.payload.dport === 110));
+  const imap = mit.view().filter(r => r.proto === 'IMAP');
+  ok('der Mitschnitt nennt IMAP beim Namen', imap.length > 6, String(imap.length));
+  ok('⭐ und Benutzer und Passwort stehen im KLARTEXT darin',
+     imap.some(r => /LOGIN bernd birne/.test(r.info)),
+     imap.map(r => r.info).join(' | ').slice(0, 300));
+  ok('man liest SELECT, SEARCH und FETCH mit',
+     imap.some(r => /SELECT INBOX/.test(r.info)) && imap.some(r => /UID SEARCH ALL/.test(r.info))
+     && imap.some(r => /UID FETCH 1 \(BODY\[\]\)/.test(r.info))
+     && imap.some(r => /\* 1 FETCH \(UID 1 BODY\[\] \{\d+\}/.test(r.info)),
+     imap.map(r => r.info).join(' | ').slice(0, 400));
+  ok('die Ports sind 25 und 143, nicht irgendwas',
+     mit.view().some(r => r.frame && r.frame.payload && r.frame.payload.payload
+          && r.frame.payload.payload.dport === 143));
+
+  /* ⭐ Zweites Abrufen: nichts Neues — und es wird auch nichts
+     geholt. Im Mitschnitt steht kein FETCH mehr. */
+  const m0 = mit.view().length;
+  let f4 = 'nichts', n4 = -1;
+  mail.abholen(c, (f, n) => { f4 = f; n4 = n; });
+  engine.runUntil(engine.now + 30 * SEC);
+  ok('zweites Abrufen: keine neue Post', !f4 && n4 === 0, String(f4) + '/' + n4);
+  ok('der Posteingang bleibt bei einer Nachricht', netz.mailKonto(c).posteingang.length === 1);
+  ok('⭐ und es wurde nichts noch einmal geholt',
+     !mit.view().slice(m0).some(r => r.proto === 'IMAP' && /FETCH/.test(r.info)),
+     mit.view().slice(m0).filter(r => r.proto === 'IMAP').map(r => r.info).join(' | ').slice(0, 300));
 
   // Ein falsches Passwort kommt nicht durch.
   const k = netz.mailKonto(c);
@@ -1806,7 +1834,104 @@ function mailNetz(seed) {
   mail.abholen(c, (f) => f3 = f);
   engine.runUntil(engine.now + 30 * SEC);
   ok('mit falschem Passwort gibt der Server nichts heraus',
-     f3 && /-ERR/.test(String(f3)), String(f3));
+     f3 && /NO Benutzer oder Passwort falsch/.test(String(f3)), String(f3));
+  ok('und der Posteingang bleibt, wie er war', netz.mailKonto(c).posteingang.length === 1);
+}
+
+/* ⭐ IMAP: zwei Geräte, ein Postfach. Was auf dem einen gelöscht
+   wird, ist auf dem anderen nach dem Abrufen auch weg — der Grund,
+   aus dem IMAP heute der Standard ist. */
+{
+  const { engine, netz, a, c, ms, mail } = mailNetz(31);
+  // Anna (Gerät a) und Gerät c lesen BEIDE Bernds Postfach.
+  Object.assign(netz.mailKonto(a), { benutzer: 'bernd', passwort: 'birne', adresse: 'bernd@schule.de' });
+  const post = netz.mailConf(ms).konten[1].posteingang;
+  post.push({ von: 'x@schule.de', an: 'bernd@schule.de', betreff: 'Eins', text: '1' },
+            { von: 'x@schule.de', an: 'bernd@schule.de', betreff: 'Zwei', text: '2' });
+  let r1 = null, r2 = null;
+  mail.abholen(a, (f, n) => r1 = [f, n]);
+  mail.abholen(c, (f, n) => r2 = [f, n]);
+  engine.runUntil(engine.now + 40 * SEC);
+  ok('beide Geräte sehen dieselben zwei Nachrichten',
+     r1 && r2 && r1[1] === 2 && r2[1] === 2
+     && netz.mailKonto(a).posteingang.length === 2 && netz.mailKonto(c).posteingang.length === 2,
+     JSON.stringify([r1, r2]));
+  ok('Nachrichten aus einem Szenario bekommen ihre UID beim ersten Hinsehen',
+     post[0].uid === 1 && post[1].uid === 2, JSON.stringify(post.map(m => m.uid)));
+
+  let fl = 'nichts', aufServer = null;
+  mail.loeschen(a, netz.mailKonto(a).posteingang[0], (f, s) => { fl = f; aufServer = s; });
+  engine.runUntil(engine.now + 40 * SEC);
+  ok('⭐ Löschen auf Gerät a löscht auf dem Server', !fl && aufServer === true
+     && netz.mailConf(ms).konten[1].posteingang.length === 1
+     && netz.mailConf(ms).konten[1].posteingang[0].betreff === 'Zwei',
+     String(fl) + ' ' + JSON.stringify(netz.mailConf(ms).konten[1].posteingang));
+  ok('und auf Gerät a selbst', netz.mailKonto(a).posteingang.length === 1);
+  ok('Gerät c hat sie noch — bis es nachsieht', netz.mailKonto(c).posteingang.length === 2);
+  let r3 = null;
+  mail.abholen(c, (f, n) => r3 = [f, n]);
+  engine.runUntil(engine.now + 40 * SEC);
+  ok('⭐ nach dem Abrufen ist sie auch auf Gerät c weg',
+     r3 && !r3[0] && r3[1] === 0 && netz.mailKonto(c).posteingang.length === 1
+     && netz.mailKonto(c).posteingang[0].betreff === 'Zwei',
+     JSON.stringify(r3) + ' ' + JSON.stringify(netz.mailKonto(c).posteingang.map(m => m.betreff)));
+
+  /* ⚠️ Eine UID, die einmal vergeben war, kommt nicht wieder: die
+     nächste Nachricht bekommt 3, auch wenn 1 gelöscht ist. */
+  mail.senden(a, { an: 'bernd@schule.de', betreff: 'Drei', text: '3' }, () => {});
+  engine.runUntil(engine.now + 40 * SEC);
+  const uids = netz.mailConf(ms).konten[1].posteingang.map(m => m.uid);
+  ok('UIDs werden nicht wiederverwendet', JSON.stringify(uids) === '[2,3]', JSON.stringify(uids));
+}
+
+/* ⭐ POP3: nur mit Haken am Server, und dann holt es die Post AB. */
+{
+  const { engine, netz, stack, mit, a, c, ms, mail, dienste } = mailNetz(32);
+  const kb = netz.mailKonto(c);
+  kb.art = 'pop3'; kb.eingangPort = 110;
+  netz.mailConf(ms).konten[1].posteingang.push({ von: 'anna@schule.de', an: 'bernd@schule.de', betreff: 'Hi', text: 'Na?' });
+
+  let f0 = null;
+  mail.abholen(c, (f) => f0 = f);
+  engine.runUntil(engine.now + 30 * SEC);
+  ok('⭐ ohne Haken am Server geht POP3 nicht', !!f0, String(f0));
+  ok('und die Post bleibt auf dem Server', netz.mailConf(ms).konten[1].posteingang.length === 1);
+
+  netz.mailConf(ms).pop3 = true;
+  dienste.sync();
+  ok('mit Haken hört der Server auch auf 110',
+     stack.sockets(ms).some(r => r.proto === 'TCP' && /:110$/.test(r.lokal)),
+     JSON.stringify(stack.sockets(ms)));
+
+  let f1 = 'nichts', n1 = -1;
+  mail.abholen(c, (f, n) => { f1 = f; n1 = n; });
+  engine.runUntil(engine.now + 30 * SEC);
+  ok('POP3 holt die Nachricht ab', !f1 && n1 === 1 && kb.posteingang.length === 1, String(f1) + '/' + n1);
+  ok('⭐ und sie ist vom Server verschwunden — das ist POP3',
+     netz.mailConf(ms).konten[1].posteingang.length === 0);
+  ok('sie liegt nur noch hier (ohne UID)', !kb.posteingang[0].uid);
+
+  const pop = mit.view().filter(r => r.proto === 'POP3');
+  ok('der Mitschnitt nennt POP3 beim Namen', pop.length > 6, String(pop.length));
+  ok('und das Passwort steht im Klartext darin (PASS)',
+     pop.some(r => /PASS birne/.test(r.info)), pop.map(r => r.info).join(' | ').slice(0, 200));
+
+  let fl = 'nichts', aufServer = null;
+  mail.loeschen(c, kb.posteingang[0], (f, s) => { fl = f; aufServer = s; });
+  ok('Löschen einer abgeholten Nachricht geht ohne Server', !fl && aufServer === false && kb.posteingang.length === 0);
+
+  /* Zurück auf IMAP: abgeholte Post bleibt stehen, der Spiegel
+     kommt dazu. */
+  kb.posteingang.push({ von: 'alt@schule.de', an: 'bernd@schule.de', betreff: 'Alt', text: 'abgeholt' });
+  netz.mailConf(ms).konten[1].posteingang.push({ von: 'anna@schule.de', an: 'bernd@schule.de', betreff: 'Neu', text: '!' });
+  kb.art = 'imap'; kb.eingangPort = 143;
+  mail.spiegelLeeren(kb);
+  let f2 = 'nichts';
+  mail.abholen(c, (f) => f2 = f);
+  engine.runUntil(engine.now + 30 * SEC);
+  ok('nach dem Wechsel auf IMAP: alte Post bleibt, neue kommt dazu',
+     !f2 && JSON.stringify(kb.posteingang.map(m => m.betreff)) === '["Alt","Neu"]',
+     String(f2) + ' ' + JSON.stringify(kb.posteingang.map(m => m.betreff)));
 }
 
 /* Ein unbekannter Empfänger in der eigenen Domain: der Server
@@ -1854,7 +1979,7 @@ function mailNetz(seed) {
     mx: [{ domain: 'verein.de', server: 'mail.verein.de' }]
   });
 
-  Object.assign(netz.mailKonto(a), { adresse: 'anna@schule.de', pop3: '192.168.1.20',
+  Object.assign(netz.mailKonto(a), { adresse: 'anna@schule.de', eingang: '192.168.1.20',
     smtp: '192.168.1.20', benutzer: 'anna', passwort: 'a' });
   a.software = ['mail'];
   dienste.start(); dienste.sync();
@@ -1884,7 +2009,8 @@ function mailNetz(seed) {
 
 /* ═══ 14g · Anmelden am E-Mail-Konto ═══════════════════════════
    Vom Nutzer verlangt: ein Knopf, der die Zugangsdaten EINMAL
-   prüft — „dabei sollen auch SMTP und POP3 geprüft werden".
+   prüft — „dabei sollen auch SMTP und POP3 geprüft werden" (seit
+   2026-10-25 IMAP statt POP3).
 
    Filius hat das nicht; dort merkt man beim ersten Senden, ob
    die Angaben stimmen. Das ist die teuerste Stelle des ganzen
@@ -1913,7 +2039,7 @@ section('E-Mail: anmelden');
   ok('Abmelden nimmt sie zurück', k.angemeldet === false);
 }
 {
-  // Falsches Passwort: die Zeile des POP3-Servers ist die Meldung.
+  // Falsches Passwort: die Zeile des IMAP-Servers ist die Meldung.
   const { engine, netz, a, mail } = mailNetz(22);
   const k = netz.mailKonto(a);
   k.domain = 'schule.de'; k.passwort = 'falsch';
@@ -1922,11 +2048,11 @@ section('E-Mail: anmelden');
   engine.runUntil(60 * SEC);
   ok('mit falschem Passwort scheitert sie', !!r, String(r));
   ok('und der Grund ist die Antwort des Servers',
-     /-ERR/.test(String(r)) && /Passwort/.test(String(r)), String(r));
+     /^a1 NO/.test(String(r)) && /Passwort/.test(String(r)), String(r));
   ok('angemeldet ist danach niemand', k.angemeldet !== true);
 }
 {
-  /* ⭐ Und die zweite Hälfte: POP3 stimmt, aber die Domain nicht.
+  /* ⭐ Und die zweite Hälfte: IMAP stimmt, aber die Domain nicht.
      Ohne die SMTP-Prüfung hätte man einen grünen Haken und ein
      Programm, das nicht senden kann. */
   const { engine, netz, a, mail } = mailNetz(23);
@@ -1984,6 +2110,17 @@ section('E-Mail: anmelden');
   ok('⭐ ein alter Stand bekommt Maildomain und Benutzername aus der Adresse',
      k.domain === 'schule.de' && k.benutzer === 'anna',
      k.domain + ' / ' + k.benutzer);
+  /* ⭐ Und er steht danach auf IMAP: derselbe Server, Port 143 statt
+     110, die alten Felder sind weg. */
+  ok('⭐ ein alter POP3-Stand wird auf IMAP umgestellt',
+     k.art === 'imap' && k.eingang === 'x' && k.eingangPort === 143 && !('pop3' in k) && !('pop3Port' in k),
+     JSON.stringify(k));
+  const h2 = netz.addNode('host', 20, 20);
+  h2.mailKonto = { adresse: 'a@b.de', pop3: 'y', pop3Port: 995, tls: true, smtp: 'y', smtpPort: 465 };
+  ok('995 wird zu 993', netz.mailKonto(h2).eingangPort === 993, JSON.stringify(netz.mailKonto(h2)));
+  const h3 = netz.addNode('host', 30, 30);
+  h3.mailKonto = { adresse: 'a@b.de', pop3: 'y', pop3Port: 2110, smtp: 'y', smtpPort: 25 };
+  ok('ein eigener Port bleibt', netz.mailKonto(h3).eingangPort === 2110, JSON.stringify(netz.mailKonto(h3)));
 }
 
 /* ═══ 14h · Eine Kennung, ein Element ══════════════════════════
@@ -2031,6 +2168,17 @@ section('Sek I und II · neue Szenarien');
        S[k].netz.nodes.every(n => !(n.x < 430 && n.y < 280)));
     ok(k + ': Auftrag hat Kontext, Aufgaben und Hilfe',
        /class="kontext"/.test(S[k].aufgabe) && /class="aufg-/.test(S[k].aufgabe) && /<details>/.test(S[k].aufgabe));
+  }
+
+  /* ⭐ IMAP ist der Standard, POP3 eine Option NUR in II.3 (vom
+     Nutzer verlangt, 2026-10-25). In Sek I gibt es EINEN Weg. */
+  for (const k of Object.keys(S)) {
+    const pop = S[k].netz.nodes.some(n => n.mailServer && n.mailServer.pop3);
+    ok(k + (k === 'ii3' ? ': der Mailserver bietet POP3 zum Ausprobieren an' : ': kein Mailserver mit POP3'),
+       k === 'ii3' ? pop : !pop);
+    ok(k + ': jedes vorbereitete Mailkonto steht auf IMAP',
+       S[k].netz.nodes.every(n => !n.mailKonto || (n.mailKonto.art === 'imap' && n.mailKonto.eingang && !('pop3' in n.mailKonto))));
+    if (/^i\d/.test(k)) ok(k + ': im Auftrag kommt POP3 nicht vor', !/POP3/.test(S[k].aufgabe));
   }
 
   // I.1: nichts ist verbunden — und ein Endgerät hat nur eine Buchse.
@@ -2458,7 +2606,7 @@ section('Sek I und II · neue Szenarien');
     let post = null;
     z.dienste.mail.abholen(by('Laptop 1'), (f, n) => post = [f, n]);
     z.engine.runUntil(z.engine.now + 40 * SEC);
-    ok('Großes Netz: Anna holt ihre Post verschlüsselt ab (995)', post && !post[0], JSON.stringify(post));
+    ok('Großes Netz: Anna liest ihre Post verschlüsselt (993) — drei Mails vom Server', post && !post[0] && post[1] === 3, JSON.stringify(post));
 
     // Mitlesen: Carla holt Post im WLAN, der Lauscher liest das Passwort.
     z.dienste.mail.abholen(by('Handy 1'), () => {});
@@ -2466,7 +2614,7 @@ section('Sek I und II · neue Szenarien');
     mit.setFilter({ dir: 'beide' });
     const lauscher = by('Lauscher-Handy 5');
     ok('⭐ Großes Netz: der Lauscher liest im MPS-WLAN Carlas Passwort mit',
-       mit.view().some(r => r.node === lauscher.id && r.mit === 'funk' && /PASS Blume2026/.test(r.info)));
+       mit.view().some(r => r.node === lauscher.id && r.mit === 'funk' && /LOGIN carla Blume2026/.test(r.info)));
 
     // Firewall und VPN im Internat.
     const l5 = by('Laptop 5');
@@ -5861,7 +6009,7 @@ section('Class Wide Web: Szenario 8 auf zwei Tablets');
 
 section('Mitlesende: Funk ist ein Rundruf');
 {
-  /* PLAN-SICHERHEIT, Schritt 3. Anna holt per POP3 Post; Ben sitzt im
+  /* PLAN-SICHERHEIT, Schritt 3. Anna liest per IMAP Post; Ben sitzt im
      selben WLAN und tut nichts. Carl hängt per Kabel am Switch. */
   const b = bau(21);
   const dienste = new sandbox.Dienste(b.engine, b.netz, b.stack, {});
@@ -5877,7 +6025,7 @@ section('Mitlesende: Funk ist ein Rundruf');
   const s = b.netz.mailConf(ms); s.on = true; s.domain = 'schule.de';
   s.konten = [{ benutzer: 'anna', name: 'Anna', passwort: 'apfel', posteingang: [] }];
   Object.assign(b.netz.mailKonto(a), { name: 'Anna', adresse: 'anna@schule.de',
-    pop3: '192.168.1.20', smtp: '192.168.1.20', benutzer: 'anna', passwort: 'apfel' });
+    eingang: '192.168.1.20', smtp: '192.168.1.20', benutzer: 'anna', passwort: 'apfel' });
   a.software = ['mail'];
   dienste.start(); dienste.sync();
   dienste.mail.abholen(a, () => {});
@@ -5887,7 +6035,7 @@ section('Mitlesende: Funk ist ein Rundruf');
   const vonBen = b.mit.view().filter(r => r.node === ben.id && r.mit === 'funk' && r.inhalt);
   ok('⭐ Ben liest im Funknetz mit: sein Mitschnitt hat Zeilen „funk" mit Inhalt', vonBen.length >= 1, String(vonBen.length));
   ok('⭐ und darunter Annas Passwort im Klartext',
-     vonBen.some(r => /PASS apfel/.test(r.info)), vonBen.map(r => r.info).join(' | ').slice(0, 200));
+     vonBen.some(r => /LOGIN anna apfel/.test(r.info)), vonBen.map(r => r.info).join(' | ').slice(0, 200));
   ok('der Fund trägt Benutzer und Passwort',
      vonBen.some(r => r.zugang && r.zugang.passwort === 'apfel'));
   ok('Ben hat NICHT an seiner Karte ausgewertet: kein Echo, keine Antwort von Ben',
@@ -5897,7 +6045,7 @@ section('Mitlesende: Funk ist ein Rundruf');
      (b.mit.setFilter({ proto: 'MITLESER' }), b.mit.view().every(r => r.mit && r.inhalt)));
   b.mit.setFilter({ proto: null });
 
-  const pass = b.mit.view().find(r => r.node === a.id && r.dir === 'raus' && /PASS apfel/.test(r.info));
+  const pass = b.mit.view().find(r => r.node === a.id && r.dir === 'raus' && /LOGIN anna apfel/.test(r.info));
   const wer = pass ? b.mit.mitlesende(pass) : [];
   ok('⭐ Annas eigene Zeile nennt, wer mitgelesen hat: Ben (Funk)',
      wer.some(m => m.node === ben.id && m.art === 'funk'), JSON.stringify(wer));
@@ -5908,8 +6056,8 @@ section('Mitlesende: Funk ist ein Rundruf');
 section('Fund-Filter: Zugangsdaten im Mitschnitt');
 {
   /* PLAN-SICHERHEIT, Schritt 1. Über Kabel: das Passwort aus
-     `PASS birne` wird als Fund erkannt, mit dem Benutzer aus dem
-     Segment davor. */
+     `a1 LOGIN bernd birne` wird als Fund erkannt — Benutzer und
+     Passwort stehen bei IMAP in derselben Zeile. */
   const { engine, mit, c, mail } = mailNetz(5);
   mail.abholen(c, () => {});
   engine.runUntil(30 * SEC);
@@ -5919,12 +6067,15 @@ section('Fund-Filter: Zugangsdaten im Mitschnitt');
   ok('⭐ mit Benutzer UND Passwort',
      fund.some(r => r.zugang.benutzer === 'bernd' && r.zugang.passwort === 'birne'),
      JSON.stringify(fund.map(r => r.zugang)));
-  ok('der Fund ist POP3', fund.every(r => r.proto === 'POP3'), fund.map(r => r.proto).join(','));
-  ok('andere Zeilen (USER, +OK, Handschlag) sind keine Funde',
-     mit.view().filter(r => !r.zugang).every(r => !/PASS /.test(r.info)));
+  ok('der Fund ist IMAP', fund.every(r => r.proto === 'IMAP' && /IMAP/.test(r.zugang.verfahren)),
+     fund.map(r => r.proto).join(','));
+  ok('jeder Fund ist die LOGIN-Zeile (beim Absender und beim Server)',
+     fund.every(r => /LOGIN bernd birne/.test(r.info)), fund.map(r => r.info).join(' | '));
+  ok('andere Zeilen (OK, SELECT, Handschlag) sind keine Funde',
+     mit.view().filter(r => !r.zugang).every(r => !/LOGIN /.test(r.info)));
 
-  mit.setFilter({ proto: 'POP3' });
-  ok('der Chip POP3 zeigt das ganze Gespräch', mit.view().length > fund.length);
+  mit.setFilter({ proto: 'IMAP' });
+  ok('der Chip IMAP zeigt das ganze Gespräch', mit.view().length > fund.length);
   mit.setFilter({ proto: null });
 
   // Nichts gefunden, wo nichts Geheimes läuft.
@@ -5944,7 +6095,7 @@ section('Fund-Filter: Zugangsdaten im Mitschnitt');
   s.on = true; s.domain = 'ben.de';
   s.konten = [{ benutzer: 'anna', name: 'Anna', passwort: 'geheim', posteingang: [] }];
   Object.assign(A.netz.mailKonto(a1), { name: 'Anna', adresse: 'anna@ben.de',
-    pop3: '67.0.0.10', smtp: '67.0.0.10', benutzer: 'anna', passwort: 'geheim' });
+    eingang: '67.0.0.10', smtp: '67.0.0.10', benutzer: 'anna', passwort: 'geheim' });
   a1.software = (a1.software || []).concat(['mail']);
   A.dienste.sync(); B.dienste.sync();
   A.dienste.mail.abholen(a1, () => {});
@@ -6434,7 +6585,11 @@ section('HTTPS: Streaming-Server und E-Mail (TLS-Ports)');
   dienste.sync();
   ok('Streaming-Server: 80 UND 443', lauscht(s, 80) && lauscht(s, 443)
      && stack.sockets(s).some(q => /:443$/.test(q.lokal) && q.programm === 'Streaming-Server (HTTPS)'));
-  ok('Mailserver: 25, 110 UND 465, 995', [25, 110, 465, 995].every(p => lauscht(s, p)));
+  ok('Mailserver: 25, 143 UND 465, 993', [25, 143, 465, 993].every(p => lauscht(s, p)));
+  ok('ohne POP3-Haken weder 110 noch 995', !lauscht(s, 110) && !lauscht(s, 995));
+  ms.pop3 = true; dienste.sync();
+  ok('mit POP3-Haken auch 110 und 995', lauscht(s, 110) && lauscht(s, 995));
+  ms.pop3 = false; dienste.sync();
 
   const mitStart = mit.view().length;
   const hol = (adr, opt) => { let q = null; http.seiteHolen(c, adr, (v) => q = v, opt); laufe(40); return q; };
@@ -6464,21 +6619,26 @@ section('HTTPS: Streaming-Server und E-Mail (TLS-Ports)');
   // Mail über TLS
   const k = netz.mailKonto(c);
   Object.assign(k, { name: 'Bernd', domain: 'schule.de', benutzer: 'bernd', passwort: 'birne',
-                     pop3: 'mail.schule.de', smtp: 'mail.schule.de', tls: false });
+                     eingang: 'mail.schule.de', smtp: 'mail.schule.de', tls: false });
   // (der Mailserver hat sein Zertifikat für flix.schule.de — also passt mail.schule.de NICHT)
   let rn = null;
   const m0 = mit.view().length;
-  k.tls = true; k.pop3Port = 995; k.smtpPort = 465;
+  k.tls = true; k.eingangPort = 993; k.smtpPort = 465;
   dienste.mail.anmelden(c, (f, adr) => rn = f || adr); laufe(60);
   ok('⭐ Mail über TLS mit falschem Namen (mail.schule.de, Zertifikat für flix.schule.de): „gilt für"',
      /gilt für „flix\.schule\.de"/.test(String(rn)), String(rn));
-  k.pop3 = 'flix.schule.de'; k.smtp = 'flix.schule.de';
+  k.eingang = 'flix.schule.de'; k.smtp = 'flix.schule.de';
   rn = null; dienste.mail.anmelden(c, (f, adr) => rn = f || adr); laufe(60);
-  ok('⭐ Mail über TLS (995 und 465) mit dem richtigen Namen: Anmeldung gelingt', rn === 'bernd@schule.de', String(rn));
-  ok('der Fund-Filter findet kein PASS — es ist verschlüsselt',
-     !mit.view().slice(m0).some(r => r.zugang && /POP3/.test(r.zugang.verfahren)));
+  ok('⭐ Mail über TLS (993 und 465) mit dem richtigen Namen: Anmeldung gelingt', rn === 'bernd@schule.de', String(rn));
+  ok('der Fund-Filter findet kein LOGIN — es ist verschlüsselt',
+     !mit.view().slice(m0).some(r => r.zugang && /IMAP/.test(r.zugang.verfahren)));
   const klar = mit.view().slice(m0).map(r => { const t = r.frame && r.frame.payload && r.frame.payload.payload; return (t && t.data) || ''; }).join('\n');
-  ok('„PASS birne" steht nirgends im Mitschnitt', !/PASS birne|USER bernd/.test(klar));
+  ok('„LOGIN bernd birne" steht nirgends im Mitschnitt', !/LOGIN bernd|birne/.test(klar));
+
+  // Abrufen über 993: die Passwort-Mail von vorhin, verschlüsselt.
+  let abr = null;
+  dienste.mail.abholen(c, (f, n) => abr = [f, n]); laufe(60);
+  ok('Abrufen über 993 (IMAPS)', abr && !abr[0], JSON.stringify(abr));
 
   let ab = null;
   dienste.mail.senden(c, { an: 'anna@schule.de', betreff: 'Hallo', text: 'Streng geheim' }, (f) => ab = f); laufe(60);
@@ -6493,9 +6653,9 @@ section('HTTPS: Streaming-Server und E-Mail (TLS-Ports)');
   ok('Mail ohne Vertrauen: „Aussteller" und der Weg dorthin (Webbrowser → Zertifikate)',
      /Zertifizierungsstelle/.test(String(rn)) && /Webbrowser/.test(String(rn)) && /Zertifikate/.test(String(rn)), String(rn));
 
-  // Mailserver: Haken raus → 465/995 zu
+  // Mailserver: Haken raus → 465/993 zu
   ms.https = false; dienste.sync();
-  ok('Mailserver ohne Haken: 465 und 995 sind zu', !lauscht(s, 465) && !lauscht(s, 995) && lauscht(s, 25) && lauscht(s, 110));
+  ok('Mailserver ohne Haken: 465 und 993 sind zu', !lauscht(s, 465) && !lauscht(s, 993) && lauscht(s, 25) && lauscht(s, 143));
 }
 
 section('HTTPS: durch das Class Wide Web (zwei Tablets)');

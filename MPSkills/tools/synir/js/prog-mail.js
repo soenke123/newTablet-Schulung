@@ -23,9 +23,17 @@
 
    ⭐ Die Portfelder im Konto sind die EINZIGE Stelle im ganzen
    Programm, an der ein Kind eine Portnummer eintippt — vorbelegt
-   mit 110 und 25, weil das Eigenschaften der Protokolle sind und
+   mit 143 und 25, weil das Eigenschaften der Protokolle sind und
    keine Entscheidung. Wer sie vertauscht, sieht im Mitschnitt
-   genau, was passiert. Filius führt sie ebenso als Feld.
+   genau, was passiert. Filius führt sie ebenso als Feld (dort
+   POP3 mit 110).
+
+   ── IMAP und, nur auf Wunsch, POP3 ───────────────────────────
+   Seit 2026-10-25 liest das Programm per IMAP. Die Wahl
+   „IMAP / POP3" steht nur da, wenn im Netz ein Mailserver POP3
+   anbietet (Haken im Serverfenster) oder das Konto schon auf POP3
+   steht — in Sek I und überall sonst gibt es EINEN Weg. Siehe den
+   Kopf von mail.js.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -76,6 +84,12 @@
      zeichnet, hat keinen zweiten Namensraum, der das abfängt.
      Deshalb heißen sie jetzt nach ihrer Tätigkeit, und die
      Empfänger unten hängen nur an der Seite, zu der sie gehören. */
+  const artName = (k) => k.art === 'pop3' ? 'POP3' : 'IMAP';
+
+  /* Gibt es in diesem Netz einen Mailserver, der POP3 anbietet?
+     Nur dann steht die Wahl im Konto. */
+  const pop3ImNetz = (ctx) => ctx.netz.list().some(n => n.mailServer && n.mailServer.pop3);
+
   function anmeldeBlock(k) {
     if (k.angemeldet) {
       return '<div class="ml-an ml-an--ok">'
@@ -87,7 +101,7 @@
     return '<div class="ml-an">'
       + '<button class="sw-ok" id="mlAnmelden">Anmelden</button>'
       + '<span class="k-hint">Prüft die Angaben bei beiden Servern — '
-      +   'POP3 zum Abholen, SMTP zum Senden.</span>'
+      +   (k.art === 'pop3' ? 'POP3 zum Abholen' : 'IMAP zum Lesen') + ', SMTP zum Senden.</span>'
       + '</div>';
   }
 
@@ -96,17 +110,20 @@
      ist 330 px breit. Also der einfachste Weg, der hier trägt —
      ein Umschalter, der einen `.k-note`-Kasten auf- und zuklappt
      (das etablierte Muster für Hinweise). */
-  const INFO_TEXT =
+  /* ⚠️ POP3 kommt im Text nur vor, wenn auch die Wahl dasteht —
+     sonst erklärte das „i" einen Weg, den es hier nicht gibt. */
+  const infoText = (mitPop) =>
     '<strong>So kommst du zu einem Konto:</strong> Ein E-Mail-Konto liegt nicht auf '
     + 'diesem Gerät, sondern auf dem <em>Server</em>. Leg es dort zuerst an — im '
     + 'Programm <em>E-Mail-Server</em>, unter <em>Neues Konto</em>. Dort stehen auch '
     + 'die <em>Maildomain</em> und der Benutzername, die du hier brauchst. '
-    + 'Der <em>POP3-Server</em> und der <em>SMTP-Server</em> sind der Name oder die '
-    + 'Adresse des Geräts, auf dem der Server läuft — beides dasselbe Gerät. '
-    + '<br><strong>Ports sind fest:</strong> 110 holt Post ab (POP3), 25 schickt sie los (SMTP).'
-    + '<br><strong>Verschlüsselt</strong> (SSL/TLS) sind es 995 und 465 — dafür braucht der Server ein '
-    + 'Zertifikat, und dieses Gerät muss der ausstellenden Zertifizierungsstelle vertrauen '
-    + '(über das Schild oben rechts).';
+    + 'Der <em>' + (mitPop ? 'IMAP- oder POP3-Server' : 'IMAP-Server') + '</em> und der <em>SMTP-Server</em> '
+    + 'sind der Name oder die Adresse des Geräts, auf dem der Server läuft — beides dasselbe Gerät. '
+    + '<br><strong>Ports sind fest:</strong> 143 zeigt die Post auf dem Server (IMAP), 25 schickt sie los (SMTP).'
+    + (mitPop ? ' 110 holt sie ab und löscht sie dort (POP3).' : '')
+    + '<br><strong>Verschlüsselt</strong> (SSL/TLS) sind es 993' + (mitPop ? ' (POP3: 995)' : '') + ' und 465 — '
+    + 'dafür braucht der Server ein Zertifikat, und dieses Gerät muss der ausstellenden '
+    + 'Zertifizierungsstelle vertrauen (über das Schild oben rechts).';
 
   function bauProgramm(node, box, ctx) {
     if (st.node !== node.id) frisch(node.id);
@@ -122,6 +139,7 @@
        Abrufen kam ein Serverfehler, den niemand einordnen
        konnte. Jetzt führt der Weg über den Knopf. */
     if (!k.angemeldet && st.seite !== 'konto') st.seite = 'konto';
+    const mitPop = k.art === 'pop3' || pop3ImNetz(ctx);
 
     const leiste =
       '<div class="ml-leiste">'
@@ -154,7 +172,7 @@
           : '')
       + '<span class="ml-sp"></span>' + window.ProgZert.schildKnopf(node, ctx, false, 'mlZert')
       + '</div>'
-      + (st.seite === 'konto' && st.info ? '<div class="k-note">' + INFO_TEXT + '</div>' : '');
+      + (st.seite === 'konto' && st.info ? '<div class="k-note">' + infoText(mitPop) + '</div>' : '');
 
     let inhalt = '';
 
@@ -217,9 +235,20 @@
         + f('passwort', 'Passwort:', k.passwort, '')
         + f('domain', 'Maildomain:', k.domain, 'schule.de')
         + '</div>'
+        /* ⭐ Die Wahl der Art steht direkt über dem Feld, das sie
+           umbenennt — und nur, wenn es im Netz überhaupt einen
+           Server gibt, der POP3 spricht. */
+        + (mitPop
+            ? '<div class="ml-art' + (zu ? ' is-zu' : '') + '"><span>Posteingang über:</span>'
+              + ['imap', 'pop3'].map(a => '<button class="ml-reg' + ((k.art || 'imap') === a ? ' is-on' : '')
+                  + '" data-art="' + a + '"' + (zu ? ' disabled' : '') + '>' + a.toUpperCase() + '</button>').join('')
+              + '<small>' + (k.art === 'pop3'
+                  ? 'holt die Post ab und löscht sie auf dem Server'
+                  : 'die Post bleibt auf dem Server, jedes Gerät sieht dasselbe') + '</small></div>'
+            : '')
         + '<div class="ml-paar">'
-        + f('pop3', 'POP3-Server:', k.pop3, 'mail.schule.de')
-        + f('pop3Port', 'POP3-Port:', k.pop3Port, '', 'zahl')
+        + f('eingang', artName(k) + '-Server:', k.eingang, 'mail.schule.de')
+        + f('eingangPort', artName(k) + '-Port:', k.eingangPort, '', 'zahl')
         + f('smtp', 'SMTP-Server:', k.smtp, 'mail.schule.de')
         + f('smtpPort', 'SMTP-Port:', k.smtpPort, '', 'zahl')
         + '</div>'
@@ -230,7 +259,8 @@
         + '<label class="zt-haken ml-tls' + (zu ? ' is-zu' : '') + '">'
         +   '<input type="checkbox" data-tls' + (k.tls ? ' checked' : '') + (zu ? ' disabled' : '') + '>'
         +   '<span><strong>Verschlüsselte Verbindung (SSL/TLS)</strong>'
-        +   '<small>POP3S 995 und SMTPS 465 statt 110 und 25. Der Server braucht dafür ein Zertifikat.</small></span></label>'
+        +   '<small>' + artName(k) + 'S ' + ctx.mail.eingangsPort(k.art, true) + ' und SMTPS 465 statt '
+        +   ctx.mail.eingangsPort(k.art, false) + ' und 25. Der Server braucht dafür ein Zertifikat.</small></span></label>'
         /* ⚠️ Die abgeleitete Adresse steht nur, solange man NICHT
            angemeldet ist. Danach sagt der grüne Balken darunter
            dasselbe („Angemeldet als anna@schule.de") — und zwei
@@ -286,7 +316,10 @@
              ist neu, das Wort nicht. */
           + '<div class="ml-knoepfe">'
           +   (st.seite === 'gesendet' ? ''
-               : '<button class="sw-ok" data-antwort="1">E-Mail beantworten</button>')
+               : '<button class="sw-ok" data-antwort="1">E-Mail beantworten</button>'
+                 + '<button class="sw-nein" data-loeschen="1" title="'
+                 + (m.uid ? 'Löscht sie auf dem Server — und damit auf jedem Gerät mit diesem Konto'
+                          : 'Liegt nur noch auf diesem Gerät') + '">Löschen</button>')
           +   '<button class="fx-zurueck" data-zurueck="1">‹ Zurück</button>'
           + '</div>'
           + '</div>'
@@ -305,8 +338,9 @@
           + '</div>'
         : '<div class="k-hint">' + (st.seite === 'gesendet'
             ? 'Noch nichts gesendet.'
-            : 'Der Posteingang ist leer. <strong>E-Mails abrufen</strong> holt sie vom Server — '
-              + 'eine Nachricht kommt nicht von selbst, sie liegt dort und wartet.') + '</div>';
+            : 'Der Posteingang ist leer. <strong>E-Mails abrufen</strong> '
+              + (k.art === 'pop3' ? 'holt sie vom Server' : 'schaut auf dem Server nach')
+              + ' — eine Nachricht kommt nicht von selbst, sie liegt dort und wartet.') + '</div>';
     }
 
     box.innerHTML = leiste
@@ -374,15 +408,51 @@
          Einstellung sind. Wer 2525 getippt hat, behält 2525. */
       const alt = !!k.tls;
       k.tls = tlsBox.checked;
-      if (k.pop3Port === (alt ? 995 : 110) || !k.pop3Port) k.pop3Port = k.tls ? 995 : 110;
+      if (k.eingangPort === ctx.mail.eingangsPort(k.art, alt) || !k.eingangPort) {
+        k.eingangPort = ctx.mail.eingangsPort(k.art, k.tls);
+      }
       if (k.smtpPort === (alt ? 465 : 25) || !k.smtpPort) k.smtpPort = k.tls ? 465 : 25;
       if (ctx.onDirty) ctx.onDirty();
       ctx.render();
     });
 
+    /* IMAP ↔ POP3. Der Port geht mit wie beim TLS-Haken. Der Spiegel
+       des IMAP-Postfachs fällt weg — POP3 holt dieselben Briefe
+       sonst ein zweites Mal; was POP3 schon abgeholt hat, bleibt. */
+    box.querySelectorAll('[data-art]').forEach(b => b.addEventListener('click', () => {
+      const neu = b.dataset.art;
+      if (neu === (k.art || 'imap')) return;
+      if (k.eingangPort === ctx.mail.eingangsPort(k.art, !!k.tls) || !k.eingangPort) {
+        k.eingangPort = ctx.mail.eingangsPort(neu, !!k.tls);
+      }
+      k.art = neu;
+      ctx.mail.spiegelLeeren(k);
+      if (ctx.onDirty) ctx.onDirty();
+      ctx.render();
+    }));
+
+    box.querySelectorAll('[data-loeschen]').forEach(b => b.addEventListener('click', () => {
+      const m = (k.posteingang || [])[st.offen];
+      if (!m) return;
+      const aufServer = !!m.uid && k.art !== 'pop3';
+      st.meldung = aufServer ? 'Wird gelöscht …' : '';
+      ctx.render();
+      ctx.mail.loeschen(node, m, (fehler) => {
+        if (fehler) {
+          st.meldung = String(fehler);
+        } else {
+          st.offen = -1;
+          st.meldung = aufServer ? 'Gelöscht — auch auf dem Server.' : 'Gelöscht (nur auf diesem Gerät).';
+        }
+        if (ctx.onDirty) ctx.onDirty();
+        ctx.render();
+      });
+    }));
+
     box.querySelectorAll('[data-k]').forEach(inp => inp.addEventListener('input', () => {
       const feld = inp.dataset.k;
       k[feld] = /Port$/.test(feld) ? (parseInt(inp.value, 10) || 0) : inp.value.trim();
+      // Anderer Server, anderes Postfach: siehe `spiegelLeeren` in mail.js.
       /* Die Adresse ergibt sich aus Benutzername und Maildomain —
          und zwar beim Tippen, damit die Zeile darunter
          mitgeht. `mail.adresseVon` ist die eine Stelle, an der
@@ -496,13 +566,17 @@
   let srvMeldung = '';
   let srvNode = null;
 
-  const ZERT_MAIL = { titel: 'Verschlüsselung (SSL/TLS)', haken: 'Verschlüsselte Ports anbieten (465 und 995)',
-                      hakenHinweis: 'Die Ports 25 und 110 bleiben daneben offen.' };
+  const zertMail = (c) => c.pop3
+    ? { titel: 'Verschlüsselung (SSL/TLS)', haken: 'Verschlüsselte Ports anbieten (465, 993 und 995)',
+        hakenHinweis: 'Die Ports 25, 143 und 110 bleiben daneben offen.' }
+    : { titel: 'Verschlüsselung (SSL/TLS)', haken: 'Verschlüsselte Ports anbieten (465 und 993)',
+        hakenHinweis: 'Die Ports 25 und 143 bleiben daneben offen.' };
 
   function bauServer(node, box, ctx) {
     const c = ctx.netz.mailConf(node);
     const konten = c.konten || [];
     if (srvNode !== node.id) { srvNode = node.id; srvMeldung = ''; }
+    const ZERT_MAIL = zertMail(c);
 
     box.innerHTML =
       '<div class="dns-kopf">'
@@ -539,12 +613,26 @@
                 + '</div>').join('')
             + '</div>'
           : '<div class="k-hint">Noch kein Konto. Ohne Konto kann niemand Post bekommen.</div>')
+      /* ⭐ POP3 ist ein Haken und kein Standard (siehe Kopf von
+         mail.js). Er steht unten, nach dem, was jeder Server
+         braucht — wer ihn nicht sucht, braucht ihn auch nicht. */
+      + '<div class="dt-sec">Älteres Verfahren</div>'
+      + '<label class="zt-haken"><input type="checkbox" id="msPop3"' + (c.pop3 ? ' checked' : '') + '>'
+      +   '<span><strong>Auch POP3 anbieten (Port 110)</strong>'
+      +   '<small>Mit POP3 holt das E-Mail-Programm die Post ab, danach ist sie auf dem Server gelöscht. '
+      +   'Standard ist IMAP (Port 143): die Post bleibt auf dem Server.</small></span></label>'
       + window.ProgZert.abschnitt(node, ctx, c, ZERT_MAIL);
 
     window.ProgZert.bindAbschnitt(box, node, ctx, c, ZERT_MAIL);
 
     box.querySelector('#msStart').addEventListener('click', () => {
       c.on = !c.on;
+      ctx.sync();
+      if (ctx.onDirty) ctx.onDirty();
+      ctx.render();
+    });
+    box.querySelector('#msPop3').addEventListener('change', (ev) => {
+      c.pop3 = ev.target.checked;
       ctx.sync();
       if (ctx.onDirty) ctx.onDirty();
       ctx.render();

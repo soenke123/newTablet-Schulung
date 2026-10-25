@@ -24,7 +24,7 @@
    ── Das Passwort kommt per E-Mail ─────────────────────────────
    Der Server wählt es selbst und schickt es über den Mailserver,
    den der Betreiber im Fenster einträgt (SMTP, `mail.smtpSenden`).
-   Abgeholt wird es im E-Mail-Programm des Kunden (POP3). Ist kein
+   Gelesen wird es im E-Mail-Programm des Kunden (IMAP). Ist kein
    Mailserver eingetragen oder nimmt der die Post nicht an, sagt die
    Seite es in Klartext — der Kunde sieht WARUM, und das Konto
    entsteht nicht.

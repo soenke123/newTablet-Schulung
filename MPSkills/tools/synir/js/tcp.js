@@ -75,7 +75,7 @@
      dieselbe Spanne wie in Filius (`TransportProtokoll`) und im
      echten Netz. Über 49151, damit im Mitschnitt auf einen Blick
      zu unterscheiden ist, welche der beiden Nummern jemandem
-     GEHÖRT (80, 25, 110) und welche nur vergeben wurde. */
+     GEHÖRT (80, 25, 143) und welche nur vergeben wurde. */
   const FLUECHTIG_VON = 49152, FLUECHTIG_BIS = 65535;
 
   /* Wie ein Zustand heißt, wenn ihn jemand liest (`netstat`).

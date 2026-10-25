@@ -430,6 +430,13 @@ const SCHRITTE = [
       await S.foto('dns', '.dt.is-front');
       await app(page, 'webserver');
       await S.foto('webserver', '.dt.is-front');
+      /* II.3 bietet als einziges Szenario POP3 an. Die Hilfe zeigt
+         den Standard: nur IMAP, Haken aus, keine Wahl im Programm. */
+      await page.evaluate(() => {
+        const srv = window.SIM.netz.list().find(n => n.name === 'Heimserver');
+        srv.mailServer.pop3 = false;
+        window.SIM.dienste.sync();
+      });
       await app(page, 'mailserver');
       await S.foto('mailserver', '.dt.is-front');
       await app(page, 'dateien');

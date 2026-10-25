@@ -6,6 +6,31 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 0015 · E-Mail: IMAP ist der Standard, POP3 nur auf Wunsch (2026-10-25)
+
+Berührt: `js/mail.js` (IMAP-Server und -Gespräch, UIDs, Löschen), `js/netz.js` (`mailKonto`: `art`, `eingang`,
+`eingangPort`; alte Stände mit `pop3`/`pop3Port` werden umgestellt), `js/prog-mail.js` (Wahl IMAP/POP3, Löschen,
+POP3-Haken im Serverfenster), `js/mitschnitt.js` (IMAP 143/993, Fund bei `LOGIN`), `js/panels.js` + `index.html`
+(Chip IMAP, Chip POP3 nur mit POP3-Server im Netz), `js/szenarien.js`, `js/hilfe-inhalt.js`, `js/geraet.js`, Texte in
+`tcp.js`/`tls.js`/`stream.js`/`zs.js`/`dienste.js`, `css/app.css` (`.ml-art`), `tests/kerntest.js` (1360 grün),
+`tests/uitest.js`, Cache-Stempel `20261025a` (synir `index.html` + `tool.js`, `MPSkills/lib/tool.js` und die Stellen dazu).
+
+* ⭐ **Vom Nutzer verlangt:** „IMAP ist der Standard. POP3 nur eine Option, die man am Anfang, wenn E-Mail in Sek II neu
+  ist, einmal testen kann. Für Sek I ist das nichts, da soll ein Weg gehen."
+* **IMAP (143, mit TLS 993):** `LOGIN`, `SELECT INBOX`, `UID SEARCH ALL`, `UID FETCH … (BODY[])` (Brief als Literal
+  `{n}`), `UID STORE … +FLAGS (\Deleted)`, `EXPUNGE`, `LOGOUT`. Der Posteingang im Programm ist ein **Spiegel**:
+  Nachrichten mit `uid`; beim Abrufen wird nur Neues geholt, auf dem Server Gelöschtes fällt weg. Nachrichten ohne
+  `uid` hat POP3 abgeholt — die bleiben stehen. Wechsel von Server oder Benutzer leert den Spiegel (`k.spiegel`).
+* **POP3 nur mit Haken** *Auch POP3 anbieten* (`mailServer.pop3`, ab Werk aus). Vorbelegt **nur in II.3** (dort
+  Hilfe „IMAP oder POP3" und im ★ der Auftrag, einmal umzustellen und *Anzahl Mails* zu vergleichen). Die Wahl im
+  Konto steht nur, wenn ein Server im Netz POP3 anbietet oder das Konto schon darauf steht.
+* Großes Netz: Annas drei Mails liegen jetzt auf dem **Server** (vorher im Programm) — bei IMAP gehören sie dorthin.
+* ⚠️ `uitest.js` ist auf IMAP umgestellt, bricht aber schon vor dieser Runde im Abschnitt DNS ab
+  (`#dnsAdd` wird nicht gefunden) und erreicht den Mail-Teil nicht. Die Oberfläche wurde mit einem eigenen
+  Playwright-Lauf geprüft (II.3: IMAP, Löschen, POP3 ausprobieren; großes Netz: nur IMAP, 3 Mails über 993; I.6: kein
+  POP3-Chip). Die Hilfebilder `hilfe/mail.webp` und `hilfe/mailserver.webp` sind neu gemacht (`hilfe-bilder.js` schaltet
+  dafür POP3 am Heimserver aus, die Hilfe zeigt den Standard).
+
 ## 0014 · VPN: deutlicher Tunnelring (2026-10-02)
 
 Berührt: `js/flaeche.js`, `css/app.css` (`.nf-tunnel`, `.nf-tunnel-hof`, `.nf-schloss…`), `js/hilfe-inhalt.js`,

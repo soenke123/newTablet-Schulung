@@ -928,13 +928,18 @@
     }
 
     /* Genau EIN Konto je Gerät, wie in Filius. Die Ports stehen
-       darin, weil Filius sie als Feld führt (110 und 25,
+       darin, weil Filius sie als Feld führt (dort 110 und 25,
        vorbelegt) — es ist die einzige Stelle im ganzen Programm,
-       an der ein Kind eine Portnummer eintippt. */
+       an der ein Kind eine Portnummer eintippt.
+
+       `art` ist 'imap' (Standard, Port 143) oder 'pop3' (110, nur
+       wo ein Server es anbietet, siehe Kopf von mail.js); `eingang`
+       ist der Server dazu — EIN Feld für beide Arten, weil es auch
+       dieselbe Angabe ist: der Rechner, auf dem das Postfach liegt. */
     function mailKonto(node) {
       if (!node.mailKonto) node.mailKonto = {
         name: '', adresse: '', domain: '',
-        pop3: '', pop3Port: 110, smtp: '', smtpPort: 25,
+        art: 'imap', eingang: '', eingangPort: 143, smtp: '', smtpPort: 25,
         benutzer: '', passwort: '', angemeldet: false,
         posteingang: [], gesendet: []
       };
@@ -946,8 +951,21 @@
          damit das Konto nach dem Laden nicht halb leer aussieht. */
       const k = node.mailKonto;
       if (k.domain == null) k.domain = '';
-      // Verschlüsselte Verbindung (SSL/TLS, Ports 995 und 465) — seit 2026-10-01.
+      // Verschlüsselte Verbindung (SSL/TLS) — seit 2026-10-01.
       if (k.tls == null) k.tls = false;
+      /* ⚠️ Bis zum 2026-10-25 gab es nur POP3 (`pop3`, `pop3Port`).
+         Ein alter Stand wird auf IMAP umgestellt — IMAP ist jetzt der
+         Standard, und jeder Mailserver spricht es. Der Port geht mit,
+         wenn er der vorbelegte war (110 → 143, 995 → 993); wer einen
+         eigenen getippt hatte, behält ihn. Die schon abgeholte Post
+         bleibt im Posteingang stehen (ohne UID, also nur hier). */
+      if (k.art == null) {
+        const alt = k.pop3Port;
+        k.art = 'imap';
+        if (k.eingang == null) k.eingang = k.pop3 || '';
+        k.eingangPort = alt === 995 ? 993 : (!alt || alt === 110) ? (k.tls ? 993 : 143) : alt;
+        delete k.pop3; delete k.pop3Port;
+      }
       if (!k.domain && k.adresse && k.adresse.indexOf('@') > 0) {
         k.domain = k.adresse.split('@').pop().toLowerCase();
         if (!k.benutzer) k.benutzer = k.adresse.split('@')[0];

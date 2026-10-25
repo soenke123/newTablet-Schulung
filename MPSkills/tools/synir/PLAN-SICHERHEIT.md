@@ -87,8 +87,9 @@ Mit E-Mail geht es sofort, weil `PASS geheim` schon im Klartext durchläuft.
   Protokollfilter `filter.proto`).
 * **CWW:** Zeilen der Internet-Karte tragen die Pille **☁ Internet** (Kurzhinweis: *Ausgang ins
   Internet — alles, was dein Netz verlässt*) und in der Ethernet-Schale die Zeile *Ort*.
-* Erkennung: `zugangVon()` in `js/mitschnitt.js` — heute nur POP3 `PASS`; der Benutzer wird aus
-  dem `USER`-Segment davor derselben Verbindung geholt. SMTP kennt kein AUTH. Neue Verfahren
+* Erkennung: `zugangVon()` in `js/mitschnitt.js` — seit 2026-10-25 IMAP `a1 LOGIN anna geheim`
+  (Benutzer und Passwort in einer Zeile, Port 143), daneben weiter POP3 `PASS`; dort wird der
+  Benutzer aus dem `USER`-Segment davor derselben Verbindung geholt. SMTP kennt kein AUTH. Neue Verfahren
   (Basic, Formular, Cookie) kommen in Schritt 2 **an derselben Stelle** dazu.
 * Nicht gebaut: Base64-Dekodierung (es gibt noch kein Base64-Verfahren).
 
@@ -235,6 +236,8 @@ später; wie zeigt der Mitschnitt „das Schloss" (Pille, Schale).
   **Zertifizierungsstelle (ZS)** ein Zertifikat ausgestellt hat. Vorher ist der Haken „HTTPS" im
   Serverfenster ausgegraut („Zertifikat fehlt"). Das gilt für **Webserver, Streaming-Server und
   E-Mail-Server** (Mail: SMTPS 465, POP3S 995, im Mail-Konto der Haken „Verschlüsselte Verbindung").
+  *(Seit 2026-10-25 liest das Programm per IMAP, verschlüsselt IMAPS 993; POP3S 995 nur mit dem
+  POP3-Haken am Server.)*
   Ist HTTPS an, laufen **beide** Ports (80 und 443) — HTTP geht weiter, damit man es vergleichen kann.
 * **Die ZS ist ein Programm** (Appstore, Kennung `zertstelle`), das auf **jedem** Gerät laufen kann
   (lokal im Schulnetz, im Internet-Bereich, auf dem Tablet des Nachbarn). Es gibt **keine

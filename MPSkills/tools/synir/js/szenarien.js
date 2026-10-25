@@ -792,7 +792,13 @@
      den Namen im DNS einträgt, merkt: geht nicht. Erst mit der
      statischen Adresse klappt er. Das E-Mail-System ist die
      Sprinter-Aufgabe (★). Danach nach draußen: die Portfreigabe ist
-     der Schritt, an dem ein privates Netz öffentlich wird. */
+     der Schritt, an dem ein privates Netz öffentlich wird.
+
+     ⭐ E-Mail ist in Sek II hier neu — und nur HIER bietet der
+     Mailserver zusätzlich POP3 an (`mailServer.pop3`). Vom Nutzer so
+     verlangt (2026-10-25): IMAP ist der Standard, POP3 eine Option,
+     die man einmal ausprobiert, um den Unterschied zu sehen. In
+     allen anderen Szenarien gibt es nur IMAP. */
   macN = 1700; cabN = 1700;
   const ii3 = {
     titel: 'II.3 · Webseiten und E-Mail', gruppe: SEK2,
@@ -827,12 +833,18 @@
           + 'erreichbar ist, sagt eine Portfreigabe am Heimrouter: „Was auf Port 80 hereinkommt, geht an <code>192.168.1.20</code>.“ '
           + 'Sie steht im Fenster des Heimrouters.' },
         WERKZEUG_MITSCHNITT,
-        { begriff: 'E-Mail', text: 'Zwei Protokolle mit zwei Aufgaben: <em>SMTP</em> (Port 25) bringt eine Nachricht zum Server, <em>POP3</em> (Port 110) holt sie '
-          + 'ab. Eine Mail wird nicht zugestellt, sie wird <em>abgeholt</em>: sie liegt auf dem Server, bis der Empfänger fragt.' }
+        { begriff: 'E-Mail', text: 'Zwei Protokolle mit zwei Aufgaben: <em>SMTP</em> (Port 25) bringt eine Nachricht zum Server, <em>IMAP</em> (Port 143) zeigt '
+          + 'dir dein Postfach. Eine Mail wird nicht zugestellt: sie liegt auf dem Server, und dein Programm schaut dort nach. Sie <em>bleibt</em> dort — '
+          + 'deshalb sieht jedes Gerät mit deinem Konto dieselbe Post.' },
+        { begriff: 'IMAP oder POP3', text: 'Der Heimserver kann zusätzlich das ältere <em>POP3</em> (Port 110). Dann steht im E-Mail-Programm unter '
+          + '<em>Konto einrichten</em> die Wahl <em>IMAP / POP3</em>. POP3 <em>holt</em> die Post ab und löscht sie danach auf dem Server: '
+          + 'sie liegt dann nur noch auf dem einen Gerät.' }
       ],
       stern: '<strong>E-Mail:</strong> Lege im Mailserver zwei Konten an (<code>anna@heim.de</code>, <code>ben@heim.de</code>), richte auf den Laptops die '
-        + 'E-Mail-Programme ein und schick eine Mail von Anna an Ben. Und dann: Was muss außer dem Konto noch stimmen, damit auch eine Mail '
-        + 'von einem Mitschüler bei dir ankommt?'
+        + 'E-Mail-Programme ein und schick eine Mail von Anna an Ben. Ruf sie bei Ben ab und sieh im Mailserver unter <em>Anzahl Mails</em> nach. '
+        + 'Dann <strong>einmal POP3 ausprobieren:</strong> Schick noch eine Mail, melde Ben ab, stell ihn auf <em>POP3</em> um, melde ihn wieder an und ruf ab. '
+        + 'Was steht jetzt unter <em>Anzahl Mails</em> — und warum ist IMAP heute der Standard? '
+        + 'Und zum Schluss: Was muss außer dem Konto noch stimmen, damit auch eine Mail von einem Mitschüler bei dir ankommt?'
     }),
     netz: {
       v: 2,
@@ -848,7 +860,7 @@
         dev('j4', 'server', 'Heimserver', 930, 610, {
           nics: [{ dhcp: true }],
           software: ['dns', 'webserver', 'mailserver'], webServer: { on: true },
-          dnsServer: { records: [] }, mailServer: { on: true, domain: 'heim.de', konten: [] },
+          dnsServer: { records: [] }, mailServer: { on: true, domain: 'heim.de', konten: [], pop3: true },
           dateien: {
             '/webserver': { ordner: true },
             '/webserver/index.html': { text: window.Http ? window.Http.SEITE : '' },
@@ -885,7 +897,7 @@
         { begriff: 'Mailadresse', text: 'Eine Adresse besteht aus Name und Domain: <code>anna@deinname.de</code>. Die Domain muss im DNS stehen, sonst '
           + 'findet niemand deinen Mailserver.' },
         { begriff: 'Ein Server, viele Dienste', text: 'Ein Gerät kann mehrere Dienste anbieten. Unterschieden werden sie über den <em>Port</em>: 80 für '
-          + 'Web, 25 und 110 für E-Mail, 53 für DNS.' },
+          + 'Web, 25 und 143 für E-Mail, 53 für DNS.' },
         WERKZEUG_MITSCHNITT
       ],
       stern: 'Wie viele Mitschüler kommen an deine Seite — und wie viele von ihnen kommen auch an deine Mail? Was fehlt bei den anderen?'
@@ -1085,7 +1097,7 @@
       ],
       hilfe: [
         { begriff: 'Die Schichten', text: 'Von oben nach unten:', liste: [
-          '<strong>Anwendung</strong> — HTTP, DNS, DHCP, SMTP: was Programme miteinander besprechen',
+          '<strong>Anwendung</strong> — HTTP, DNS, DHCP, SMTP, IMAP: was Programme miteinander besprechen',
           '<strong>Transport</strong> — TCP und UDP: Ports, Verbindung, Reihenfolge',
           '<strong>Vermittlung</strong> — IP, ICMP: Adressen und der Weg durch mehrere Netze (Router)',
           '<strong>Sicherung</strong> — Ethernet, ARP, MAC-Adressen: der Weg im selben Netz (Switch)',
@@ -1374,7 +1386,7 @@
          VPN-Server. Ihr vertrauen Laptop 1, der Lehrer-PC und
          Laptop 5 — alle anderen sehen die Warnung (gewollt).
        · MPSflix bleibt bei HTTP (Klartext zum Mitlesen), Filmwelt
-         spricht HTTPS. Anna holt ihre Post verschlüsselt (995/465),
+         spricht HTTPS. Anna liest ihre Post verschlüsselt (993/465),
          Ben, Carla und Frau Meier im Klartext.
        · Mitlesen: das „Lauscher-Handy 5" ist Gast im MPS-WLAN, wie Handy 1
          (Carla). Funk ist ein gemeinsames Medium.
@@ -1502,7 +1514,7 @@
   ];
   const grKonto = (name, benutzer, passwort, posteingang) => ({
     name: name, adresse: benutzer + '@mps-schule.de', domain: 'mps-schule.de',
-    pop3: 'mail.mps-schule.de', pop3Port: 110, smtp: 'mail.mps-schule.de', smtpPort: 25,
+    art: 'imap', eingang: 'mail.mps-schule.de', eingangPort: 143, smtp: 'mail.mps-schule.de', smtpPort: 25,
     benutzer: benutzer, passwort: passwort, angemeldet: false,
     posteingang: posteingang || [], gesendet: []
   });
@@ -1517,7 +1529,7 @@
   grHeim1.nics[0].mac = grMacHeim1;
   const grAnna = dev('n12', 'host', 'Laptop 1', 480, 1100, {
     nics: [{ dhcp: true }], software: ['browser', 'mail'], vertrauen: grVertrauen,
-    mailKonto: Object.assign(grKonto('Anna', 'anna', 'Sonne2026', grMailAnna), { tls: true, pop3Port: 995, smtpPort: 465 })
+    mailKonto: Object.assign(grKonto('Anna', 'anna', 'Sonne2026'), { tls: true, eingangPort: 993, smtpPort: 465 })
   });
   grAnna.nics[0].mac = grMacAnna;
 
@@ -1608,7 +1620,9 @@
               { von: 'frau.meier@mps-schule.de', an: 'carla@mps-schule.de', betreff: 'Dein Schulkonto',
                 text: 'Hallo Carla,\ndein Postfach ist eingerichtet. Ruf es ruhig auch unterwegs über das WLAN ab.\nFrau Meier', zeit: 0 }
             ] },
-            { benutzer: 'anna', passwort: 'Sonne2026', posteingang: [] },
+            /* Annas drei Mails liegen auf dem Server (IMAP) und nicht
+               im Programm — dort stehen sie erst nach dem Abrufen. */
+            { benutzer: 'anna', passwort: 'Sonne2026', posteingang: grMailAnna },
             { benutzer: 'ben', passwort: 'Mond2026', posteingang: [
               { von: 'anna@mps-schule.de', an: 'ben@mps-schule.de', betreff: 'Re: Hausaufgaben',
                 text: 'Hi Ben,\nFreitag, glaube ich. Frag Frau Meier lieber noch einmal.\nAnna', zeit: 0 },
@@ -1754,7 +1768,7 @@
     + 'Auf Laptop 5 ist der VPN-Client schon eingerichtet.</li>'
     + '<li>WLAN: <em>MPS-WLAN</em> (Büro), <em>Internat-WLAN</em>, <em>Heim-WLAN</em> und <em>Familie-WLAN</em>.</li></ul>'
     + '<p><strong>E-Mail-Konten</strong> (Mailserver <code>mail.mps-schule.de</code>)</p><ul>'
-    + '<li><code>anna@mps-schule.de</code> · Passwort <code>Sonne2026</code> (Laptop 1, drei Mails schon im Postfach, <strong>verschlüsselt</strong> über 995/465)</li>'
+    + '<li><code>anna@mps-schule.de</code> · Passwort <code>Sonne2026</code> (Laptop 1, drei Mails warten auf dem Server, <strong>verschlüsselt</strong> über 993/465)</li>'
     + '<li><code>carla@mps-schule.de</code> · Passwort <code>Blume2026</code> (Handy 1 im WLAN, eine Mail wartet auf dem Server)</li>'
     + '<li><code>ben@mps-schule.de</code> · Passwort <code>Mond2026</code> (Laptop 2, zwei Mails warten auf dem Server)</li>'
     + '<li><code>frau.meier@mps-schule.de</code> · Passwort <code>Komet2026</code> (Lehrer-PC, eine Mail wartet auf dem Server)</li></ul>'
@@ -1781,10 +1795,10 @@
         + 'Es hat keine Aufgabe außer: <strong>probier etwas aus</strong>. Unten steht, was wo läuft, mit allen Konten, Passwörtern und Namen zum Nachlesen.',
       aufgaben: [
         { typ: 'benutzen', text: 'Schalte auf <em>Aktion</em> und ruf auf <strong>Laptop 1</strong> im Browser <code>www.mps-schule.de</code>, '
-          + '<code>www.heimseite.de</code> und <code>mpsflix.de</code> auf. Hol dann im Mailprogramm die Post ab.' },
+          + '<code>www.heimseite.de</code> und <code>mpsflix.de</code> auf. Ruf dann im Mailprogramm die Post ab.' },
         { typ: 'benutzen', text: 'Ruf <code>https://www.mps-schule.de</code> einmal auf <strong>Laptop 1</strong> und einmal auf <strong>Laptop 2</strong> auf. '
           + 'Warum warnt nur einer der beiden Browser?' },
-        { typ: 'benutzen', text: 'Hol auf <strong>Handy 1</strong> die Post ab. Öffne dann den Mitschnitt beim <strong>Lauscher-Handy 5</strong> und wähle <em>👁 Mitlesende</em>: '
+        { typ: 'benutzen', text: 'Ruf auf <strong>Handy 1</strong> die Post ab. Öffne dann den Mitschnitt beim <strong>Lauscher-Handy 5</strong> und wähle <em>👁 Mitlesende</em>: '
           + 'Was hat er mitbekommen?' },
         { typ: 'benutzen', text: 'Versuch auf <strong>Laptop 5</strong> im Internat <code>mpsflix.de</code> und <code>https://filmwelt.de</code> zu öffnen. '
           + 'Verbinde dann im <em>VPN-Client</em> und versuch es noch einmal.' }

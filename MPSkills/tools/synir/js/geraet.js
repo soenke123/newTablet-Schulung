@@ -157,13 +157,13 @@
       {
         id: 'mail', name: 'E-Mail-Programm', kurz: 'E-Mail', ic: 'mail',
         fuer: ['host', 'server', 'handy'], install: true,
-        hint: 'Post senden (SMTP) und abholen (POP3)',
+        hint: 'Post senden (SMTP) und auf dem Server lesen (IMAP)',
         bauen: (n, box) => window.ProgMail.bauProgramm(n, box, webCtx())
       },
       {
         id: 'mailserver', name: 'E-Mail-Server', kurz: 'Mailserver', ic: 'mailserver',
         fuer: ['host', 'server', 'handy'], install: true,
-        hint: 'nimmt Post an (25) und gibt sie heraus (110)',
+        hint: 'nimmt Post an (25) und zeigt die Postfächer (143)',
         bauen: (n, box) => window.ProgMail.bauServer(n, box, webCtx())
       },
       {

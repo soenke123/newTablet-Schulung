@@ -813,6 +813,15 @@
         ? rows.length + (mit.total > rows.length ? ' von ' + mit.total : '')
         : (mit.total ? '0 von ' + mit.total : 'nichts aufgezeichnet');
 
+      /* Den POP3-Chip gibt es nur, wo POP3 auch vorkommen kann: ein
+         Mailserver im Netz bietet es an, oder es steht schon etwas
+         davon im Mitschnitt. Sonst ist IMAP der eine Weg (mail.js). */
+      const popChip = document.querySelector('[data-proto="POP3"]');
+      if (popChip) {
+        const da = f.proto === 'POP3' || netz.list().some(n => n.mailServer && n.mailServer.pop3);
+        popChip.hidden = !da;
+      }
+
       if (refs.traceGeraet) {
         const n = f.node && netz.get(f.node);
         refs.traceGeraet.hidden = !n;

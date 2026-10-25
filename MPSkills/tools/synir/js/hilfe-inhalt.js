@@ -644,20 +644,24 @@
         zeigen: ['.dt.is-front']
       }),
       A('mail', 'E-Mail-Programm', {
-        kurz: 'Ein Konto je Gerät. <b>SMTP</b> (Port 25) bringt die Post zum Server, <b>POP3</b> (Port 110) holt sie ab — '
-          + 'eine E-Mail wird nicht zugestellt, sie wird <b>abgeholt</b>.',
+        kurz: 'Ein Konto je Gerät. <b>SMTP</b> (Port 25) bringt die Post zum Server, <b>IMAP</b> (Port 143) zeigt das Postfach '
+          + 'auf dem Server — eine E-Mail wird nicht zugestellt, sie <b>liegt auf dem Server</b> und bleibt dort.',
         bild: 'mail', unter: 'Reiter Konto einrichten',
         schritte: [
-          'Reiter <em>Konto einrichten</em>: Name, Benutzername, Passwort, Maildomain, POP3- und SMTP-Server.',
+          'Reiter <em>Konto einrichten</em>: Name, Benutzername, Passwort, Maildomain, IMAP- und SMTP-Server.',
           '<em>Anmelden</em> prüft alles bei beiden Servern; danach ist die Adresse fest (<em>benutzer@domain</em>).',
-          'Verfassen ✎ und senden; beim Empfänger <em>E-Mails abrufen</em> drücken.'
+          'Verfassen ✎ und senden; beim Empfänger <em>E-Mails abrufen</em> drücken.',
+          'Unter einer Nachricht: <em>Löschen</em> löscht sie auf dem Server — und damit auf jedem Gerät mit diesem Konto.'
         ],
         wissen: [
           'Das Konto muss vorher im E-Mail-Server angelegt sein.',
-          '<em>Verschlüsselte Verbindung (SSL/TLS)</em> nutzt 995/465 — der Server braucht dafür ein Zertifikat.',
-          'Im Mitschnitt steht jede Zeile des Gesprächs, auch <code>PASS geheim</code> — so ist POP3.'
+          '<em>Verschlüsselte Verbindung (SSL/TLS)</em> nutzt 993/465 — der Server braucht dafür ein Zertifikat.',
+          'Im Mitschnitt steht jede Zeile des Gesprächs, auch <code>a1 LOGIN anna geheim</code> — ohne TLS ist IMAP Klartext.',
+          'Bietet ein Mailserver im Netz auch <b>POP3</b> an (Haken im Serverfenster), steht im Konto die Wahl '
+            + '<em>IMAP / POP3</em>. POP3 (Port 110) holt die Post ab und löscht sie auf dem Server.'
         ],
-        such: 'email e-mail mail programm client smtp pop3 posteingang senden abrufen konto',
+        tipp: 'POP3 ist ab Werk aus und nur in II.3 vorbereitet: Lassen Sie die Klasse dort einmal beide Wege vergleichen. Sonst gibt es nur IMAP.',
+        such: 'email e-mail mail programm client smtp imap pop3 posteingang senden abrufen löschen konto',
         zeigen: ['.dt.is-front']
       }),
       A('mailserver', 'E-Mail-Server', {
@@ -670,9 +674,10 @@
         ],
         wissen: [
           'Post an eine <b>fremde</b> Domain reicht er weiter — dazu fragt er im DNS nach dem <b>MX-Eintrag</b>.',
-          'Mit Zertifikat bietet er verschlüsselte Ports (465/995) an.'
+          'Er spricht SMTP (25) und IMAP (143); mit Zertifikat zusätzlich verschlüsselt (465/993).',
+          '<em>Auch POP3 anbieten</em> (unten im Fenster) öffnet zusätzlich Port 110 — das ältere Verfahren, ab Werk aus.'
         ],
-        such: 'mailserver e-mail-server postfach domain konto mx smtp pop3',
+        such: 'mailserver e-mail-server postfach domain konto mx smtp imap pop3',
         zeigen: ['.dt.is-front']
       }),
       A('zertstelle', 'Zertifizierungsstelle und HTTPS', {

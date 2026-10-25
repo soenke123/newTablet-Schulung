@@ -219,11 +219,13 @@
     /* ─── Zugangsdaten finden ─────────────────────────────────
        Der Fund-Filter (PLAN-SICHERHEIT, Schritt 1). Erkannt wird am
        INHALT, nicht an der Schicht darüber: was als Zeile
-       `PASS …` auf Port 110 läuft, ist ein Passwort im Klartext —
-       gleich, wer mitliest. Heute gibt es nur POP3 (SMTP kennt hier
-       kein AUTH, siehe mail.js); neue Verfahren (HTTP Basic,
-       Formularfelder, Cookies) kommen HIER dazu, und Chip, Marke und
-       Schale ziehen von selbst mit.
+       `a1 LOGIN anna geheim` auf Port 143 oder `PASS …` auf Port 110
+       läuft, ist ein Passwort im Klartext — gleich, wer mitliest.
+       (SMTP kennt hier kein AUTH, siehe mail.js.) Neue Verfahren
+       kommen HIER dazu, und Chip, Marke und Schale ziehen von selbst
+       mit.
+
+       Bei IMAP stehen Benutzer und Passwort in EINER Zeile.
 
        Der Benutzer steht in einem ANDEREN Segment davor (`USER anna`
        und `PASS geheim` gehen einzeln hinaus). Er wird in den
@@ -351,6 +353,16 @@
     function zugangVon(f, nodeId) {
       const t = tcpVon(f);
       if (t && t.s.data && (t.s.sport === 80 || t.s.dport === 80)) return httpZugang(t.s.data);
+      if (t && t.s.data && t.s.dport === 143) {
+        for (const z of String(t.s.data).split('\r\n')) {
+          const m = /^\S+ LOGIN\s+("(?:[^"\\]|\\.)*"|\S+)\s+("(?:[^"\\]|\\.)*"|\S+)/i.exec(z);
+          if (m) {
+            const ohne = (w) => /^"/.test(w) ? w.slice(1, -1).replace(/\\(.)/g, '$1') : w;
+            return { verfahren: 'IMAP (Port 143)', benutzer: ohne(m[1]), passwort: ohne(m[2]) };
+          }
+        }
+        return null;
+      }
       if (!t || !t.s.data || !(t.s.sport === 110 || t.s.dport === 110)) return null;
       const pw = zeileMit(t.s.data, 'PASS');
       if (pw == null) return null;
@@ -464,9 +476,10 @@
        — und genau das soll man an einem flüchtigen Port über
        49151 auch sehen. */
     const PORT_NAMEN = { 20: 'FTP-Daten', 21: 'FTP', 25: 'SMTP', 53: 'DNS',
-                         67: 'DHCP-Server', 68: 'DHCP-Client', 80: 'HTTP', 110: 'POP3',
+                         67: 'DHCP-Server', 68: 'DHCP-Client', 80: 'HTTP', 110: 'POP3', 143: 'IMAP',
                          443: 'HTTPS = HTTP mit TLS', 465: 'SMTPS = SMTP mit TLS',
-                         995: 'POP3S = POP3 mit TLS', 8200: 'Zertifizierungsstelle',
+                         993: 'IMAPS = IMAP mit TLS', 995: 'POP3S = POP3 mit TLS',
+                         8200: 'Zertifizierungsstelle',
                          1194: 'VPN-Tunnel (TLS)',
                          520: 'RIP', 521: 'RIP-Absender' };
     const portWem = (p) => PORT_NAMEN[p] ? '  (' + PORT_NAMEN[p] + ')' : '';
@@ -560,6 +573,8 @@
          auch im Klartext). */
       if (s.data && (s.sport === 25 || s.dport === 25))
         return 'SMTP  ' + String(s.data).split('\r\n')[0];
+      if (s.data && (s.sport === 143 || s.dport === 143))
+        return 'IMAP  ' + String(s.data).split('\r\n')[0];
       if (s.data && (s.sport === 110 || s.dport === 110))
         return 'POP3  ' + String(s.data).split('\r\n')[0];
       return 'TCP  ' + s.sport + ' → ' + s.dport
@@ -625,6 +640,7 @@
              und das Gespräch, um das es geht, steht verdünnt
              dazwischen. */
           if (s.data && (s.sport === 25  || s.dport === 25))  return 'SMTP';
+          if (s.data && (s.sport === 143 || s.dport === 143)) return 'IMAP';
           if (s.data && (s.sport === 110 || s.dport === 110)) return 'POP3';
           return 'TCP';
         }
@@ -882,6 +898,7 @@
               fields: zeilen.slice(0, 4).map((z, i) => [i === 0 ? 'Gesagt' : '', kurz(z, 90)])
             });
           } else if (s.data && (s.sport === 25 || s.dport === 25 ||
+                                s.sport === 143 || s.dport === 143 ||
                                 s.sport === 110 || s.dport === 110)) {
             /* ⚠️ SMTP und POP3 hatten bisher gar keine Schale —
                aufgeklappt endete ein Mailsegment bei TCP, und der
@@ -895,11 +912,12 @@
                — und zwar ganz, auch `PASS geheim`. Das ist der
                Grund, warum SMTP und POP3 im Unterricht etwas
                taugen. */
-            const smtp = (s.sport === 25 || s.dport === 25);
+            const proto = (s.sport === 25 || s.dport === 25) ? 'SMTP'
+              : (s.sport === 143 || s.dport === 143) ? 'IMAP' : 'POP3';
             const zeilen = String(s.data).split('\r\n').filter(z => z !== '');
             out.push({
-              n: 7, name: smtp ? 'SMTP' : 'POP3', schicht: ANWENDUNG,
-              proto: smtp ? 'SMTP' : 'POP3',
+              n: 7, name: proto, schicht: ANWENDUNG,
+              proto: proto,
               quelle: vonPort, ziel: nachPort,
               details: zeilen[0] + (zeilen.length > 1 ? '   (+ ' + (zeilen.length - 1) + ' weitere)' : ''),
               fields: zeilen.slice(0, 6).map((z, i) =>

@@ -2276,7 +2276,7 @@ async function markenAn(page, name, art) {
     a.software = (a.software || []).concat(['mail']);
     c.software = (c.software || []).concat(['mail']);
     Object.assign(S.netz.mailKonto(c), { name: 'Bernd', adresse: 'bernd@schule.de',
-      domain: 'schule.de', pop3: ip, smtp: ip, benutzer: 'bernd', passwort: 'birne' });
+      domain: 'schule.de', eingang: ip, smtp: ip, benutzer: 'bernd', passwort: 'birne' });
     S.dienste.sync();
     return ip;
   });
@@ -2299,9 +2299,15 @@ async function markenAn(page, name, art) {
   /* ⭐ Die einzige Stelle im ganzen Programm, an der eine
      Portnummer im Feld steht — und sie ist vorbelegt, weil sie
      eine Eigenschaft des Protokolls ist. */
-  ok('POP3-Port und SMTP-Port sind vorbelegt',
-     (await page.locator('#dtWin [data-k="pop3Port"]').inputValue()) === '110'
+  ok('IMAP-Port und SMTP-Port sind vorbelegt',
+     (await page.locator('#dtWin [data-k="eingangPort"]').inputValue()) === '143'
      && (await page.locator('#dtWin [data-k="smtpPort"]').inputValue()) === '25');
+  /* ⭐ Kein Server im Netz bietet POP3 an — also gibt es EINEN Weg
+     und keine Wahl (vom Nutzer verlangt, 2026-10-25). */
+  ok('⭐ ohne POP3 im Netz steht keine Wahl IMAP/POP3 da',
+     await page.locator('#dtWin [data-art]').count() === 0
+     && /IMAP-Server/.test(await page.locator('#dtWin').textContent())
+     && !/POP3/.test(await page.locator('#dtWin').textContent()));
 
   /* Das Info-Symbol: es gab im ganzen Programm keines. */
   ok('neben „Konto einrichten" steht ein (i)',
@@ -2318,7 +2324,7 @@ async function markenAn(page, name, art) {
      await page.locator('#dtWin .k-note').count() === 0);
 
   for (const [feld, wert] of [['name', 'Anna'], ['domain', 'schule.de'],
-                              ['pop3', mlIp], ['smtp', mlIp],
+                              ['eingang', mlIp], ['smtp', mlIp],
                               ['benutzer', 'anna'], ['passwort', 'apfel']]) {
     await page.locator('#dtWin [data-k="' + feld + '"]').fill(wert);
   }
@@ -2380,7 +2386,7 @@ async function markenAn(page, name, art) {
       return { x: Math.round(b.left), y: Math.round(b.top), w: Math.round(b.width) };
     };
     return { name: r('name'), ben: r('benutzer'), pw: r('passwort'), dom: r('domain'),
-             pop3: r('pop3'), pop3P: r('pop3Port'), smtp: r('smtp'), smtpP: r('smtpPort') };
+             pop3: r('eingang'), pop3P: r('eingangPort'), smtp: r('smtp'), smtpP: r('smtpPort') };
   });
   /* ⚠️ Das hat erst das BILD gezeigt, nachdem die Serverzeilen
      schon stimmten: `auto-fit` ergab bei dieser Fensterbreite DREI
@@ -2395,14 +2401,14 @@ async function markenAn(page, name, art) {
      JSON.stringify(srvZeilen));
   ok('„Maildomain" steht also nicht allein in seiner Zeile',
      srvZeilen.dom.x > srvZeilen.pw.x, JSON.stringify(srvZeilen));
-  ok('POP3-Server und POP3-Port stehen in EINER Zeile',
+  ok('IMAP-Server und IMAP-Port stehen in EINER Zeile',
      srvZeilen.pop3 && Math.abs(srvZeilen.pop3.y - srvZeilen.pop3P.y) < 3,
      JSON.stringify(srvZeilen));
-  ok('⭐ SMTP-Server steht UNTER POP3-Server, genau darunter',
+  ok('⭐ SMTP-Server steht UNTER IMAP-Server, genau darunter',
      srvZeilen.smtp.y > srvZeilen.pop3.y + 10
      && srvZeilen.smtp.x === srvZeilen.pop3.x && srvZeilen.smtp.w === srvZeilen.pop3.w,
      JSON.stringify(srvZeilen));
-  ok('und SMTP-Port unter POP3-Port',
+  ok('und SMTP-Port unter IMAP-Port',
      srvZeilen.smtpP.x === srvZeilen.pop3P.x && srvZeilen.smtpP.y > srvZeilen.pop3P.y + 10,
      JSON.stringify(srvZeilen));
   /* Das Portfeld ist das schmale von beiden — es nimmt vier
@@ -2551,15 +2557,15 @@ async function markenAn(page, name, art) {
   ok('nach dem Abrufen ist sie da',
      await page.locator('#dtWin .ml-zeile[data-mail]').count() === 1,
      await page.locator('#dtWin .ml-meldung').textContent());
-  ok('und der Server hat sie herausgegeben', await page.evaluate(() => {
+  ok('⭐ und sie liegt WEITER auf dem Server — das ist IMAP', await page.evaluate(() => {
     const S = window.SIM;
     const srv = S.netz.byName('Webserver') || S.netz.list().find(n => n.kind === 'server');
-    return srv.mailServer.konten[1].posteingang.length === 0;
+    return srv.mailServer.konten[1].posteingang.length === 1;
   }));
 
   /* ─── Fund-Filter: Zugangsdaten im Mitschnitt ───────────────
-     PLAN-SICHERHEIT, Schritt 1. Bernd hat eben per POP3 abgeholt —
-     sein Passwort lief im Klartext über die Leitung. */
+     PLAN-SICHERHEIT, Schritt 1. Bernd hat eben per IMAP abgerufen —
+     sein Passwort lief im Klartext über die Leitung (LOGIN). */
   await mitschnitt(page, true);
   await page.waitForTimeout(300);
   ok('⭐ der Chip „Mitlesende" steht in der Leiste (und „Zugangsdaten" nicht mehr)',
@@ -2580,6 +2586,9 @@ async function markenAn(page, name, art) {
   ok('der Brief steht mit Absender, Betreff und Text da',
      /anna@schule\.de/.test(brief) && /Treffen um vier/.test(brief) && /Kommst du mit/.test(brief),
      brief.slice(0, 160));
+  ok('⭐ unter der Nachricht steht „Löschen" — und sagt, dass es auf dem Server löscht',
+     await page.locator('#dtWin [data-loeschen]').count() === 1
+     && /Server/.test(await page.locator('#dtWin [data-loeschen]').getAttribute('title')));
 
   /* ─── „E-Mail beantworten" ───────────────────────────────────
      Filius' Wortlaut (emailanwendung_msg9); dort ein Symbol in
@@ -2640,18 +2649,18 @@ async function markenAn(page, name, art) {
      anzeigen" an einem Gerät), nur ohne Rechtsklick.
 
      Die Prüfung nimmt beides mit, denn beides ist eine Aussage:
-     erst der eingeschränkte Blick (Bernd holt ab, also POP3 und
+     erst der eingeschränkte Blick (Bernd ruft ab, also IMAP und
      KEIN SMTP — das Senden war Annas Sache), dann der ganze. */
   const mlBernd = await page.evaluate(() => ({
     node: window.SIM.mit.filter.node,
     dir: window.SIM.mit.filter.dir,
     zeilen: window.SIM.mit.view()
-      .filter(r => r.proto === 'SMTP' || r.proto === 'POP3').map(r => r.proto + ' ' + r.info)
+      .filter(r => r.proto === 'SMTP' || r.proto === 'IMAP').map(r => r.proto + ' ' + r.info)
   }));
   ok('das offene Gerätefenster schränkt den Mitschnitt ein',
      !!mlBernd.node && mlBernd.dir === 'beide', JSON.stringify(mlBernd.node) + '/' + mlBernd.dir);
-  ok('bei Bernd steht POP3 — er HOLT die Post ab',
-     mlBernd.zeilen.some(t => /^POP3/.test(t)) && mlBernd.zeilen.some(t => /RETR 1/.test(t)),
+  ok('bei Bernd steht IMAP — er schaut auf dem Server nach',
+     mlBernd.zeilen.some(t => /^IMAP/.test(t)) && mlBernd.zeilen.some(t => /UID FETCH 1/.test(t)),
      mlBernd.zeilen.slice(0, 3).join(' | '));
   ok('und kein SMTP, denn geschickt hat sie Anna',
      !mlBernd.zeilen.some(t => /^SMTP/.test(t)),
@@ -2667,18 +2676,20 @@ async function markenAn(page, name, art) {
      && await page.locator('#traceGeraet').isHidden());
 
   const mlZeilen = await page.evaluate(() => window.SIM.mit.view()
-    .filter(r => r.proto === 'SMTP' || r.proto === 'POP3').map(r => r.proto + ' ' + r.info));
-  ok('der Mitschnitt nennt SMTP und POP3 beim Namen',
-     mlZeilen.some(t => /^SMTP/.test(t)) && mlZeilen.some(t => /^POP3/.test(t)),
+    .filter(r => r.proto === 'SMTP' || r.proto === 'IMAP').map(r => r.proto + ' ' + r.info));
+  ok('der Mitschnitt nennt SMTP und IMAP beim Namen',
+     mlZeilen.some(t => /^SMTP/.test(t)) && mlZeilen.some(t => /^IMAP/.test(t)),
      String(mlZeilen.length));
   ok('man liest das Gespräch mit',
      mlZeilen.some(t => /MAIL FROM: <anna@schule\.de>/.test(t))
-     && mlZeilen.some(t => /RETR 1/.test(t)), mlZeilen.slice(0, 3).join(' | '));
+     && mlZeilen.some(t => /UID FETCH 1/.test(t)), mlZeilen.slice(0, 3).join(' | '));
   ok('⭐ und das Passwort steht im Klartext darin',
-     mlZeilen.some(t => /PASS birne/.test(t)));
+     mlZeilen.some(t => /LOGIN bernd birne/.test(t)));
   ok('für beide gibt es einen Filterchip',
      await page.locator('[data-proto="SMTP"]').count() === 1
-     && await page.locator('[data-proto="POP3"]').count() === 1);
+     && await page.locator('[data-proto="IMAP"]').count() === 1);
+  ok('⭐ den POP3-Chip gibt es nur, wenn ein Server POP3 anbietet — hier nicht',
+     await page.locator('[data-proto="POP3"]').isHidden());
 
   /* ─── Die Marke „Mail" — und zwei Marken an einem Gerät ───────
      Auf diesem Server läuft jetzt BEIDES: Webserver und
@@ -2708,6 +2719,53 @@ async function markenAn(page, name, art) {
      await markenAn(page, mlSrv, 'mail') === 1, String(await markenAn(page, mlSrv, 'mail')));
   ok('auf der Pille steht „Mail"',
      (await page.locator('.nf .nf-mail text').first().textContent()) === 'Mail');
+
+  /* ─── POP3: nur mit Haken am Server ────────────────────────────
+     Vom Nutzer verlangt (2026-10-25): IMAP ist der Standard, POP3
+     eine Option. Der Haken steht unten im Serverfenster; erst mit
+     ihm hört der Server auf 110, und erst dann steht im Programm
+     die Wahl. */
+  ok('der Server hat einen Haken „Auch POP3 anbieten", ab Werk aus',
+     await page.locator('#dtWin #msPop3').count() === 1 && !(await page.locator('#dtWin #msPop3').isChecked()));
+  await page.locator('#dtWin #msPop3').check();
+  await page.waitForTimeout(300);
+  ok('⭐ mit Haken hört der Server auch auf 110', await page.evaluate(() => {
+    const S = window.SIM;
+    const srv = S.netz.byName('Webserver') || S.netz.list().find(n => n.kind === 'server');
+    return srv.mailServer.pop3 === true && S.stack.sockets(srv).some(r => /:110$/.test(r.lokal));
+  }));
+  await page.evaluate(() => window.SIM.geraet.open(window.SIM.netz.byName('Endgerät 2').id));
+  await page.waitForTimeout(350);
+  await programmAuf(page, 'mail');
+  await page.waitForTimeout(300);
+  await page.locator('#dtWin .ml-reg[data-seite="konto"]').click();
+  await page.waitForTimeout(250);
+  ok('⭐ jetzt steht im Konto die Wahl IMAP / POP3 — gesperrt, solange angemeldet',
+     await page.locator('#dtWin [data-art]').count() === 2
+     && await page.locator('#dtWin [data-art="pop3"]').isDisabled());
+  if (await page.locator('#dtWin #mlAbmelden').count()) await page.locator('#dtWin #mlAbmelden').click();
+  await page.waitForTimeout(250);
+  await page.locator('#dtWin [data-art="pop3"]').click();
+  await page.waitForTimeout(250);
+  ok('auf POP3 umgestellt: das Feld heißt POP3-Port und steht auf 110',
+     /POP3-Server/.test(await page.locator('#dtWin').textContent())
+     && (await page.locator('#dtWin [data-k="eingangPort"]').inputValue()) === '110');
+  await page.locator('#dtWin [data-art="imap"]').click();
+  await page.waitForTimeout(250);
+  ok('und zurück auf IMAP: 143',
+     (await page.locator('#dtWin [data-k="eingangPort"]').inputValue()) === '143');
+  // Wieder wie vorher: Bernd angemeldet, Server ohne POP3.
+  await page.evaluate(() => {
+    const S = window.SIM;
+    const srv = S.netz.byName('Webserver') || S.netz.list().find(n => n.kind === 'server');
+    srv.mailServer.pop3 = false;
+    S.dienste.sync();
+    S.netz.byName('Endgerät 2').mailKonto.angemeldet = true;
+    S.geraet.open(srv.id);
+  });
+  await page.waitForTimeout(350);
+  await programmAuf(page, 'mailserver');
+  await page.waitForTimeout(350);
 
   /* ─── Konten anlegen: die vier Fälle ─────────────────────────
      Drei davon liefen vorher STUMM ins Leere — der Knopf tat
@@ -4518,7 +4576,7 @@ async function markenAn(page, name, art) {
     n.software = (n.software || []).concat(['mail']);
     const k = S.netz.mailKonto(n);
     k.benutzer = 'anna'; k.domain = 'schule.de'; k.adresse = 'anna@schule.de';
-    k.pop3 = 'mail.schule.de'; k.smtp = 'mail.schule.de';
+    k.eingang = 'mail.schule.de'; k.smtp = 'mail.schule.de';
     S.setModus('aktion');
     S.geraet.open(n.id);
   });
@@ -4923,17 +4981,17 @@ async function markenAn(page, name, art) {
   await oeffne(hn.c, 'mail');
   await page.locator('#dtWin [data-seite="konto"]').click().catch(() => {});
   await page.waitForTimeout(200);
-  ok('Mail-Konto: „Verschlüsselte Verbindung (SSL/TLS)" ist da, aus, und die Ports 110/25',
+  ok('Mail-Konto: „Verschlüsselte Verbindung (SSL/TLS)" ist da, aus, und die Ports 143/25',
      await page.locator('#dtWin [data-tls]').count() === 1 && !(await page.locator('#dtWin [data-tls]').isChecked())
-     && (await page.locator('#dtWin [data-k="pop3Port"]').inputValue()) === '110');
+     && (await page.locator('#dtWin [data-k="eingangPort"]').inputValue()) === '143');
   await page.locator('#dtWin [data-tls]').check();
   await page.waitForTimeout(200);
-  ok('⭐ der Haken schaltet die Ports auf 995 und 465',
-     (await page.locator('#dtWin [data-k="pop3Port"]').inputValue()) === '995'
+  ok('⭐ der Haken schaltet die Ports auf 993 und 465',
+     (await page.locator('#dtWin [data-k="eingangPort"]').inputValue()) === '993'
      && (await page.locator('#dtWin [data-k="smtpPort"]').inputValue()) === '465');
   await page.locator('#dtWin [data-tls]').uncheck();
   await page.waitForTimeout(200);
-  ok('und wieder zurück auf 110 und 25', (await page.locator('#dtWin [data-k="pop3Port"]').inputValue()) === '110'
+  ok('und wieder zurück auf 143 und 25', (await page.locator('#dtWin [data-k="eingangPort"]').inputValue()) === '143'
      && (await page.locator('#dtWin [data-k="smtpPort"]').inputValue()) === '25');
 
   ok('keine Konsolenfehler bei HTTPS', errs.length === e0, errs.slice(e0, e0 + 3).join(' | '));

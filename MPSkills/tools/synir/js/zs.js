@@ -34,7 +34,7 @@
      glaubt.
    · Das Einmalwort kann nur liefern, wer die Maschine hinter der
      IP des Namens kontrolliert. Das ist der ganze Beweis.
-   · Zertifikat ABHOLEN, nicht zustellen — wie Post bei POP3.
+   · Zertifikat ABHOLEN, nicht zustellen — wie Post beim Mailserver.
    · Freigeben ist ein MENSCHENKLICK: sonst wäre die ZS ein
      Automat, und die Frage „wer entscheidet?" hätte keine Antwort.
 
