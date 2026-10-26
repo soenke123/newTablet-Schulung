@@ -427,7 +427,21 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .helpq{display:inline-flex;align-items:center;gap:7px;flex:none;position:relative;background:var(--paper-up);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:7px 12px 7px 9px;font-size:12.5px;font-weight:700;color:var(--petrol);box-shadow:var(--sh-1);cursor:pointer}
 .helpq:hover{border-color:var(--petrol);background:#fff}
 .helpq[aria-expanded="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff}
-@media (max-width:640px){ .helpq span{display:none} .helpq{padding:7px} }
+.helpq{touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.helpq *{pointer-events:none}
+@media (hover:none){ .helpq:hover{background:var(--paper-up);border-color:var(--line)} .helpq[aria-expanded="true"]:hover{background:var(--petrol);border-color:var(--petrol)} }
+.helpq .hs{display:none}
+/* Handy: kurzer Text statt nur Icon, Kacheln kompakt untereinander */
+@media (max-width:640px){
+  .helpq .hl{display:none} .helpq .hs{display:inline}
+  .helpq{padding:7px 11px 7px 8px}
+  .gbox .guide{grid-template-columns:1fr;gap:6px}
+  .gbox .gstep{padding:9px 10px;gap:10px;box-shadow:none}
+  .gbox .gstep .gi{width:30px;height:30px;border-radius:8px}
+  .gbox .gstep .gi svg{width:15px;height:15px}
+  .gbox .gstep > div > b{font-size:13px}
+  .gbox .gstep > div > span{font-size:12px}
+}
 .gbox{margin:0 0 18px}
 .gbox[hidden]{display:none}
 .guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
@@ -983,7 +997,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
   <section class="view" id="view-work" hidden>
     <div class="shead">
       <h2 class="t">Projektplanung</h2>
-      <div class="sp"><span class="spi" id="workStats"></span><button class="helpq" data-help="work" aria-expanded="false" aria-controls="workHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+      <div class="sp"><span class="spi" id="workStats"></span><button class="helpq" data-help="work" aria-expanded="false" aria-controls="workHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span class="hl">Was muss ich hier machen?</span><span class="hs">Hilfe</span></button></div>
     </div>
     <div class="gbox" id="workHelp" hidden></div>
     <div class="panel budget" id="budget"></div>
@@ -995,7 +1009,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
   <section class="view diary" id="view-hours" hidden>
     <div class="shead">
       <h2 class="t">Tagebuch</h2>
-      <div class="sp"><span class="spi" id="hoursStats"></span><button class="helpq" data-help="hours" aria-expanded="false" aria-controls="hoursHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+      <div class="sp"><span class="spi" id="hoursStats"></span><button class="helpq" data-help="hours" aria-expanded="false" aria-controls="hoursHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span class="hl">Was muss ich hier machen?</span><span class="hs">Hilfe</span></button></div>
     </div>
     <div class="gbox" id="hoursHelp" hidden></div>
     <div class="robar photonote" id="hPhotoNote" hidden></div>
@@ -1009,7 +1023,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <h2 class="t">Anträge</h2>
       <div class="sp"><button class="btn mark needs-write" id="btnNewReq">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        Antrag stellen</button><button class="helpq" data-help="requests" aria-expanded="false" aria-controls="requestsHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+        Antrag stellen</button><button class="helpq" data-help="requests" aria-expanded="false" aria-controls="requestsHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span class="hl">Was muss ich hier machen?</span><span class="hs">Hilfe</span></button></div>
     </div>
     <div class="gbox" id="requestsHelp" hidden></div>
     <div class="reqwrap">
@@ -1025,7 +1039,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
   <section class="view" id="view-team" hidden>
     <div class="shead">
       <h2 class="t">Team und Projektziel</h2>
-      <div class="sp"><button class="helpq" data-help="team" aria-expanded="false" aria-controls="teamHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+      <div class="sp"><button class="helpq" data-help="team" aria-expanded="false" aria-controls="teamHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span class="hl">Was muss ich hier machen?</span><span class="hs">Hilfe</span></button></div>
     </div>
     <div class="gbox" id="teamHelp"></div>
     <div class="subh">
@@ -1087,7 +1101,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
   <section class="view side" id="view-notes" hidden>
     <div class="shead">
       <h2 class="t">Lehrkräfte-Kommentare</h2>
-      <div class="sp"><span class="spi" id="notesStats"></span><button class="helpq" data-help="notes" aria-expanded="false" aria-controls="notesHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+      <div class="sp"><span class="spi" id="notesStats"></span><button class="helpq" data-help="notes" aria-expanded="false" aria-controls="notesHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span class="hl">Was muss ich hier machen?</span><span class="hs">Hilfe</span></button></div>
     </div>
     <div class="gbox" id="notesHelp" hidden></div>
     <div class="panel pad nform" id="noteForm" hidden>
@@ -1108,7 +1122,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
   <section class="view side" id="view-experts" hidden>
     <div class="shead">
       <h2 class="t">Experten</h2>
-      <div class="sp"><span class="spi" id="expStats"></span><button class="helpq" data-help="experts" aria-expanded="false" aria-controls="expertsHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+      <div class="sp"><span class="spi" id="expStats"></span><button class="helpq" data-help="experts" aria-expanded="false" aria-controls="expertsHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span class="hl">Was muss ich hier machen?</span><span class="hs">Hilfe</span></button></div>
     </div>
     <div class="gbox" id="expertsHelp" hidden></div>
     <div class="xgrid" id="expGrid"></div>
@@ -1405,6 +1419,6 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
 <script src="bridge.js?v=20261026"></script>
-<script src="app.js?v=20261026"></script>
+<script src="app.js?v=20261026b"></script>
 </body>
 </html>

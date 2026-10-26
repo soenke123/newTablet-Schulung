@@ -29,8 +29,8 @@
    Erklärungen: Jede Ansicht hat nur eine Überschrift. Oben rechts steht
    die Sprechblase „Was muss ich hier machen?" (data-help) — sie blendet
    die Erklär-Kacheln ein und aus (helpBox(), Icons, keine Emojis; gemerkt
-   im Gerät, pa_help_<reiter>). Nur bei Team und Projektziel stehen die
-   (höchstens vier) Kacheln von Anfang an da, sonst sind sie versteckt.
+   im Gerät, pa_help_<reiter>). Von Anfang an sind sie überall zu; bei
+   Team und Projektziel sind es höchstens vier.
    Ausnahme: die Checkliste der Anträge steht immer rechts in einem
    eigenen Kasten — kurze Punkte, ausklappbar mit Details (pa_chk_open).
    Tagebuch: neuer Eintrag über „+ Eintrag" oben rechts (wie
@@ -269,9 +269,9 @@ const gIco = (k, n) => `<span class="gi">${n ? `<i>${n}</i>` : ''}<svg width="17
 const guide = steps => steps.map(([k, t, txt, cls], i) =>
   `<div class="gstep${cls ? ' ' + cls : ''}">${gIco(k, cls ? '' : i + 1)}<div><b>${t}</b><span>${txt}</span></div></div>`).join('');
 // Hilfe je Reiter: Sprechblase „Was muss ich hier machen?" oben rechts
-// blendet die Kacheln ein und aus. Gemerkt im Gerät; von Anfang an
-// offen ist nur Team und Projektziel.
-const helpOpen = k => { try { const v = localStorage.getItem('pa_help_' + k); return v === null ? k === 'team' : v === '1'; } catch (e) { return k === 'team'; } };
+// blendet die Kacheln ein und aus. Gemerkt im Gerät; überall von
+// Anfang an zu.
+const helpOpen = k => { try { return localStorage.getItem('pa_help_' + k) === '1'; } catch (e) { return false; } };
 function helpBox(k, steps) {
   const el = $('#' + k + 'Help');
   el.innerHTML = `<div class="guide">${guide(steps)}</div>`;
