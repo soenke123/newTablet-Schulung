@@ -1330,12 +1330,14 @@ function renderTeam() {
           `<button type="button" class="c${k.n}" data-consent="${esc(m.id)}:${k.n}" aria-pressed="${c.n === k.n}" title="${esc(k.nm)}">${k.mark}</button>`).join('')}</div>`
       : cmark(m, false);
     return `<div class="mcard${m.me ? ' me' : ''}">
-      ${avatar(m, 34)}
-      <div class="mname">${esc(m.name)}${m.me ? ' <span class="metag">du</span>' : ''}<span class="dot${m.online ? ' on' : ''}" title="${m.online ? 'gerade da' : 'nicht da'}"></span></div>
-      <div class="mconsent" title="Einwilligung: Schulgelände verlassen — ${esc(c.nm)}">${consent}</div>
-      ${PA.owner ? `<div class="mfoot"><b class="mkey">${esc(PA.fmtKey(m.key))}</b>
-        <button class="btn ghost sm" data-rekey="${esc(m.id)}">neu</button></div>`
-        : m.me && PA.me && PA.me.key ? `<div class="mfoot" title="Dein persönlicher Code — nicht weitergeben"><span class="mk-l">Dein Code</span><b class="mkey">${esc(PA.fmtKey(PA.me.key))}</b></div>` : ''}
+      ${avatar(m, 44)}
+      <div class="mtxt">
+        <div class="mname">${esc(m.name)}${m.me ? ' <span class="metag">du</span>' : ''}<span class="dot${m.online ? ' on' : ''}" title="${m.online ? 'gerade da' : 'nicht da'}"></span></div>
+        <div class="mconsent" title="${esc(c.nm)}">Einwilligung: ${consent}</div>
+        ${PA.owner ? `<div class="mcode">Code <b class="mkey">${esc(PA.fmtKey(m.key))}</b>
+          <button class="btn ghost sm" data-rekey="${esc(m.id)}">neu</button></div>`
+          : m.me && PA.me && PA.me.key ? `<div class="mcode" title="Dein persönlicher Code — nicht weitergeben">Dein Code <b class="mkey">${esc(PA.fmtKey(PA.me.key))}</b></div>` : ''}
+      </div>
     </div>`;
   }).join('') || `<div class="nothing" style="grid-column:1/-1;padding:28px"><h3>Gerade niemand in dieser Gruppe</h3>
       <p>In der Übersicht Personen auf die Gruppe ziehen.</p></div>`;
