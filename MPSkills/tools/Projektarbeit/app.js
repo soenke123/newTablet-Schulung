@@ -1324,20 +1324,18 @@ function renderTeam() {
   nameIn.disabled = !canWrite();
   $('#teamGrid').innerHTML = gm.map(m => {
     const c = consentOf(m);
+    // Nur das Zeichen — die Bedeutung steht im Tooltip (title).
     const consent = PA.owner
       ? `<div class="cseg" role="group" aria-label="Einwilligung von ${esc(m.name)}">${CONSENT.map(k =>
-          `<button type="button" class="c${k.n}" data-consent="${esc(m.id)}:${k.n}" aria-pressed="${c.n === k.n}" title="${esc(k.nm)}">${k.mark} ${k.short}</button>`).join('')}</div>`
-      : `<div class="cread c${c.n}">${cmark(m, false)}<span>${esc(c.nm)}</span></div>`;
+          `<button type="button" class="c${k.n}" data-consent="${esc(m.id)}:${k.n}" aria-pressed="${c.n === k.n}" title="${esc(k.nm)}">${k.mark}</button>`).join('')}</div>`
+      : cmark(m, false);
     return `<div class="mcard${m.me ? ' me' : ''}">
-      <div class="mtop">${avatar(m, 52)}
-        <div style="flex:1;min-width:0">
-          <div class="mname">${esc(m.name)}${m.me ? ' <span class="metag">du</span>' : ''}<span class="dot${m.online ? ' on' : ''}" title="${m.online ? 'gerade da' : 'nicht da'}"></span></div>
-        </div>
-      </div>
-      <div class="mconsent"><span class="fl">Einwilligung: Schulgelände verlassen</span>${consent}</div>
-      ${PA.owner ? `<div class="mfoot"><span style="font-size:11px;color:var(--ink-3)">Code</span>
-        <b class="mkey">${esc(PA.fmtKey(m.key))}</b>
-        <button class="btn ghost sm" data-rekey="${esc(m.id)}" style="margin-left:auto">neu</button></div>` : ''}
+      ${avatar(m, 34)}
+      <div class="mname">${esc(m.name)}${m.me ? ' <span class="metag">du</span>' : ''}<span class="dot${m.online ? ' on' : ''}" title="${m.online ? 'gerade da' : 'nicht da'}"></span></div>
+      <div class="mconsent" title="Einwilligung: Schulgelände verlassen — ${esc(c.nm)}">${consent}</div>
+      ${PA.owner ? `<div class="mfoot"><b class="mkey">${esc(PA.fmtKey(m.key))}</b>
+        <button class="btn ghost sm" data-rekey="${esc(m.id)}">neu</button></div>`
+        : m.me && PA.me && PA.me.key ? `<div class="mfoot" title="Dein persönlicher Code — nicht weitergeben"><span class="mk-l">Dein Code</span><b class="mkey">${esc(PA.fmtKey(PA.me.key))}</b></div>` : ''}
     </div>`;
   }).join('') || `<div class="nothing" style="grid-column:1/-1;padding:28px"><h3>Gerade niemand in dieser Gruppe</h3>
       <p>In der Übersicht Personen auf die Gruppe ziehen.</p></div>`;

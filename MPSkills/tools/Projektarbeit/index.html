@@ -188,6 +188,7 @@ main.wrap{padding-top:30px;padding-bottom:80px}
 .av.s22{width:22px;height:22px;font-size:9.5px}
 .av.s26{width:26px;height:26px;font-size:10.5px}
 .av.s30{width:30px;height:30px;font-size:12px}
+.av.s34{width:34px;height:34px;font-size:13px}
 .av.s52{width:52px;height:52px;font-size:19px;border-radius:14px}
 .dot{display:inline-block;width:8px;height:8px;border-radius:99px;background:var(--line);flex:none}
 .dot.on{background:var(--st-done)}
@@ -630,19 +631,16 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
    ============================================================ */
 .tname{max-width:340px;flex:1 1 240px}
 .tname input{font-size:17px;font-weight:600}
-.teamgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
-.mcard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:12px}
+.teamgrid{display:flex;flex-wrap:wrap;gap:10px}
+.mcard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:8px 12px;box-shadow:var(--sh-1);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .mcard.me{border-color:var(--marker);box-shadow:0 0 0 1px var(--marker-wash),var(--sh-1)}
-.mtop{display:flex;gap:12px;align-items:center}
-.mname{font-size:16.5px;font-weight:600;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
-.mstats{display:flex;gap:7px;font-size:11px}
-.mstat{flex:1;background:var(--paper-down);border-radius:var(--r-sm);padding:6px 8px;text-align:center}
-.mstat b{display:block;font-size:16px;font-weight:700}
-.mstat span{color:var(--ink-3);font-size:10px}
-.mfoot{display:flex;gap:6px;align-items:center;padding-top:10px;border-top:1px solid var(--line-soft)}
-.mconsent{padding-top:10px;border-top:1px solid var(--line-soft)}
-.cseg{display:flex;gap:4px;flex-wrap:wrap}
-.cseg button{flex:1;display:flex;align-items:center;justify-content:center;gap:4px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 6px;font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+.mcard .av{flex:none}
+.mname{font-size:15px;font-weight:600;display:flex;align-items:center;gap:7px}
+.mconsent{display:flex;align-items:center}
+.mfoot{display:flex;gap:4px;align-items:center;padding-left:10px;border-left:1px solid var(--line-soft)}
+.mk-l{font-size:11px;color:var(--ink-3)}
+.cseg{display:flex;gap:3px}
+.cseg button{display:flex;align-items:center;justify-content:center;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);min-width:34px;padding:4px 7px;font-size:12px;font-weight:700;color:var(--ink-2);white-space:nowrap}
 .cseg button:hover{background:#fff}
 .cseg button.c0[aria-pressed="true"]{background:#fbe9e6;border-color:var(--st-block);color:var(--st-block)}
 .cseg button.c1[aria-pressed="true"]{background:#e3f2e8;border-color:var(--st-done);color:var(--st-done)}
@@ -844,7 +842,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
   .scrim{padding:0;place-items:stretch}
   .modal,.modal.narrow{max-width:none;max-height:none;height:100%;border-radius:0}
   .m-b{padding:16px}
-  .teamgrid,.ggrid{grid-template-columns:1fr}
+  .ggrid{grid-template-columns:1fr}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media print{
@@ -1419,6 +1417,6 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
 <script src="bridge.js?v=20261026"></script>
-<script src="app.js?v=20261026b"></script>
+<script src="app.js?v=20261026c"></script>
 </body>
 </html>
