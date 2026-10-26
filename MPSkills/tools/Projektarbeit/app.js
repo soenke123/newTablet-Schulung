@@ -164,6 +164,7 @@ const safeImg = s => typeof s === 'string' && /^data:image\/(jpeg|png|webp);base
 
 /* ── Zustand der Oberfläche ──────────────────────────────── */
 let tab = 'team';
+let consentEdit = false;    // Übersicht: Einwilligungen aufgeschlossen? (nie gemerkt)
 let picked = null;          // Übersicht: angetippte Person (Tablet ohne Ziehen)
 let editTask = null;        // Aufgabe im Dialog (id oder null = neu)
 let tkWho = [], tkColor = 'yellow', tkXp = '';
@@ -213,10 +214,12 @@ const CONSENT = [
   { n: 2, mark: '✓✓', short: 'Stufe 2', nm: 'Stufe 2 · auch an fremde Orte' }
 ];
 const consentOf = p => { const n = +((p && p.consent) || 0); return CONSENT[n] || CONSENT[0]; };
-const cmark = (p, cyc) => {
+// ov = in der Klassenübersicht: dort nur änderbar, solange oben
+// „Einwilligungen ändern“ aufgeschlossen ist (consentEdit).
+const cmark = (p, cyc, ov) => {
   const c = consentOf(p);
   return cyc
-    ? `<button class="cmark c${c.n}" data-cyc="${esc(p.id)}" title="${esc(c.nm)} — antippen zum Ändern" aria-label="Einwilligung von ${esc(p.name)}: ${esc(c.nm)}">${c.mark}</button>`
+    ? `<button class="cmark c${c.n}${ov && !consentEdit ? ' locked' : ''}" data-cyc="${esc(p.id)}"${ov ? ' data-ov="1"' : ''} title="${esc(c.nm)}${ov && !consentEdit ? '' : ' — antippen zum Ändern'}" aria-label="Einwilligung von ${esc(p.name)}: ${esc(c.nm)}">${c.mark}</button>`
     : `<span class="cmark c${c.n}" title="${esc(c.nm)}">${c.mark}</span>`;
 };
 const REQ_ST = {
@@ -534,7 +537,7 @@ function firstKey() {
 function pchip(p, withPlan) {
   return `<div class="pchip${picked === p.id ? ' picked' : ''}${p.blocked ? ' blk' : ''}" data-drag="p:${esc(p.id)}" data-drop="p:${esc(p.id)}">
     ${avatar(p, 26)}<span class="nm">${esc(p.name)}</span>
-    ${cmark(p, canWrite())}
+    ${cmark(p, canWrite(), true)}
     ${withPlan ? `<button class="planbtn" data-plan-p="${esc(p.id)}" title="Planungsraum für ${esc(p.name)} eröffnen (Einzelarbeit)" aria-label="Planungsraum für ${esc(p.name)} eröffnen">${ICO.compass}</button>` : ''}
   </div>`;
 }
@@ -580,7 +583,7 @@ function renderOverview() {
     helpBox('ov', [
       ['people', 'Gruppen bilden', 'Eine Person aus <b>„Schüler ohne Gruppe“</b> auf eine andere ziehen = neue Gruppe, auf eine Gruppe = dazu. Am Tablet: antippen, dann das Ziel antippen.'],
       ['target', 'Planungsraum', 'Mit dem <b>Kompass</b> eröffnet ihr den Planungsraum — für eine Gruppe oder eine Einzelperson.'],
-      ['check', 'Einwilligungen', '<b>✗ / ✓ / ✓✓</b> am Namen antippen schaltet die Stufe weiter.'],
+      ['check', 'Einwilligungen', 'Oben <b>„Einwilligungen ändern“</b> aufschließen, dann <b>✗ / ✓ / ✓✓</b> am Namen antippen = nächste Stufe.'],
       ['cal', 'Wer ist heute weg?', 'Wer heute einen Antrag hat, steht im <b>Rahmen</b>: <b>gelb</b> = nicht genehmigt, <b>grün</b> = genehmigt. Die rote Zahl = offene Anträge.'],
       ['book', 'Tätigkeitsbuch', 'Rechts haltet ihr fest, <b>was in der Stunde los war</b> — „Neu“, dann je Gruppe schreiben. So setzt die nächste Lehrkraft an. Schüler sehen es nicht.']
     ]);
@@ -595,7 +598,8 @@ function renderOverview() {
 
   $('#ovStats').innerHTML =
     `${openReq ? `<span class="badge bg-no">${openReq} offene${openReq === 1 ? 'r' : ''} Antrag${openReq === 1 ? '' : 'e'}</span>` : ''}
-     ${notifyBtn()}`;
+     ${notifyBtn()}
+     <button class="btn sm${consentEdit ? ' on' : ''}" data-clock aria-pressed="${consentEdit}" title="${consentEdit ? 'Einwilligungen wieder sperren' : 'Einwilligungen zum Ändern aufschließen'}">${consentEdit ? ICO.unlock : ICO.lock} ${consentEdit ? 'Einwilligungen sperren' : 'Einwilligungen ändern'}</button>`;
   if (!notify && !notifyTried) loadNotify();
 
   $('#groupGrid').innerHTML = groups.map(g => {
@@ -2119,8 +2123,14 @@ function wire() {
     }
     if ((b = t.closest('[data-cyc]'))) {
       if (!PA.owner) return;
+      if (b.dataset.ov && !consentEdit) { toast('Zum Ändern der Einwilligungen oben „Einwilligungen ändern“ antippen.'); return; }
       const p = person(b.dataset.cyc); if (!p) return;
       setConsent(p.id, ((+p.consent || 0) + 1) % 3, true); return;
+    }
+    if ((b = t.closest('[data-clock]'))) {
+      consentEdit = !consentEdit;
+      toast(consentEdit ? 'Einwilligungen lassen sich jetzt ändern (antippen = nächste Stufe).' : 'Einwilligungen gesperrt.');
+      renderOverview(); return;
     }
     // Tätigkeitsbuch
     if ((b = t.closest('[data-tlog]'))) { openTlog(b.dataset.tlog); return; }

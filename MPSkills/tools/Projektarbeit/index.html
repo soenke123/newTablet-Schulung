@@ -199,7 +199,7 @@ main.wrap{padding-top:30px;padding-bottom:80px}
    ÜBERSICHT (Lehrkraft)
    ============================================================ */
 /* Links Schüler ohne Gruppe + Gruppen, rechts das Tätigkeitsbuch. */
-.ov{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:18px;align-items:start}
+.ov{display:grid;grid-template-columns:minmax(0,3fr) minmax(300px,2fr);gap:18px;align-items:start}
 .ov-main{display:flex;flex-direction:column;gap:14px;min-width:0}
 /* Schüler ohne Gruppe: ein Wartebereich über den Gruppen. Sind alle
    eingeteilt, ist er weg — nur beim Ziehen/Antippen steht er als Ziel da. */
@@ -230,7 +230,7 @@ body.dragging .lobby.empty,body.picking .lobby.empty{display:flex}
 .planbtn:hover{background:var(--petrol);border-color:var(--petrol);color:#fff}
 .planbtn.open{background:var(--petrol);border-color:var(--petrol);color:#fff}
 
-.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+.ggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:14px}
 .gcard{
   position:relative;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);
   box-shadow:var(--sh-1);display:flex;flex-direction:column;overflow:visible;
@@ -277,6 +277,8 @@ body.dragging .lobby.empty,body.picking .lobby.empty{display:flex}
 .rqbox.approved .rq-l{color:#1f6a3d}
 .rqbox.rejected{border-color:#e3b2ab;background:#fbedeb}
 .rqbox.rejected .rq-l{color:var(--st-block)}
+.cmark.locked{cursor:default}
+[data-clock].on{background:var(--marker-wash);border-color:var(--marker);color:var(--marker)}
 .ov-legend{font-size:11px;color:var(--ink-3);line-height:2;margin:0}
 .ov-legend .cmark{min-width:22px;height:18px;font-size:10.5px}
 .ov-legend .sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;border:2px solid;margin-left:10px}
@@ -843,7 +845,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 
 /* ---------- responsive ---------- */
 @media (max-width:1180px){
-  .ov{grid-template-columns:minmax(0,1fr) minmax(270px,320px)}
+  .ov{grid-template-columns:minmax(0,3fr) minmax(270px,2fr)}
   .board{grid-template-columns:repeat(3,minmax(190px,1fr));overflow-x:auto}
   .goalwrap{grid-template-columns:1fr}
   .imgs{grid-template-columns:repeat(4,1fr)}
@@ -1010,7 +1012,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
           <div class="lobby-list" id="lobbyList"></div>
         </div>
         <div class="ggrid" id="groupGrid"></div>
-        <p class="ov-legend"><span class="cmark c0">✗</span> keine Einwilligung · <span class="cmark c1">✓</span> Stufe 1 · <span class="cmark c2">✓✓</span> Stufe 2 <span class="ov-l2">(antippen = ändern)</span>
+        <p class="ov-legend"><span class="cmark c0">✗</span> keine Einwilligung · <span class="cmark c1">✓</span> Stufe 1 · <span class="cmark c2">✓✓</span> Stufe 2
           <span class="sw open"></span> Antrag für heute, nicht genehmigt · <span class="sw ok"></span> genehmigt</p>
       </div>
       <aside class="panel tbook" id="tbook">
