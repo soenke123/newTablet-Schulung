@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Stapel-Editor · MPSkills</title>
+<meta name="robots" content="noindex" />
+<link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20261024b" />
+<!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
+     Browser zeichnet. Siehe Kopf von lib/theme.js. -->
+<script src="lib/theme.js?v=20260819d"></script>
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png" />
+<link rel="icon" type="image/png" sizes="256x256" href="icons/favicon-256.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<link rel="manifest" href="site.webmanifest" />
+<meta name="apple-mobile-web-app-title" content="MPSkills" />
+<script src="../viewport.js?v=20260820"></script>
+<style>
+  .derby-wrap { max-width: 1040px; padding-top: 22px; }
+</style>
+</head>
+<body>
+
+<header class="topbar" id="topbar">
+  <a class="wordmark" href="index.html"><img class="wordmark-logo" src="../LogoMPSkills.png" alt="" /><span class="wordmark-text">MP<span>Skills</span></span></a>
+  <div class="topbar-spacer"></div>
+  <div id="userbarHost"></div>
+</header>
+
+<main class="wrap derby-wrap" id="derbyHost"><p class="booting">Lade …</p></main>
+
+<footer class="foot" id="pagefoot">
+  <a href="index.html">MPSkills</a>
+  <span class="sep">·</span>
+  <a href="../index.html">Tablet-Schulung</a>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="../vendor/supabase-js-2.116.0.min.js"></script>
+<script src="../supabase-config.js"></script>
+<script src="../session.js?v=20260817"></script>
+<script src="../avatars.js?v=20261020c"></script>
+<script src="lib/userbar.js?v=20261021"></script>
+<script src="lib/profilemodal.js?v=20261024"></script>
+<script src="lib/tool.js?v=20261026a"></script>
+<script src="derby.js?v=20261026b"></script>
+</body>
+</html>

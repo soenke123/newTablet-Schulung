@@ -917,7 +917,7 @@ function toolCard(t, guest) {
         : '')
     : `<div class="tile-foot">
          <button type="button" class="btn btn--sm btn--primary" data-act="open" data-tool="${esc(t.id)}"${off}>+ Raum öffnen</button>
-         ${editorHref ? `<a class="btn btn--sm" href="${esc(editorHref)}">Quiz-Editor</a>` : ''}
+         ${editorHref ? `<a class="btn btn--sm" href="${esc(editorHref)}">${esc(window.TOOLS_OVERLAY?.[t.id]?.editorLabel || 'Quiz-Editor')}</a>` : ''}
        </div>`;
 
   return `<article class="tile${ready ? '' : ' tile--soon'}${pv ? ' tile--peek' : ''}">

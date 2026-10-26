@@ -230,3 +230,7 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
   .dd-flip__in { transition: none; }
   #ddCard.dd-in { animation: none; }
 }
+
+/* Hinweis zum Lernstand (Konto oder nur dieses Gerät) */
+.dd-acct { margin: 16px 0 0; text-align: center; font-size: .82rem; color: var(--ink-faint); }
+.dd-acct--on { color: var(--accent-ink); }

@@ -18,11 +18,23 @@
 
    ── Lernstand ────────────────────────────────────────────────
    Je Karte unsicher · teilweise · sicher (oder neu), gesetzt von
-   der Person selbst NACH dem Umdrehen. Er liegt im localStorage
-   des Geräts (dd.p.<stapel>), nicht auf dem Server — keine
-   personenbezogenen Daten, nichts Neues für die Datenschutz-
-   erklärung. Er bestimmt, wie oft eine Karte wiederkommt
-   (weight()) und wie die Übersicht ordnet.
+   der Person selbst NACH dem Umdrehen. Er bestimmt, wie oft eine
+   Karte wiederkommt (weight()) und wie die Übersicht ordnet.
+
+   Die Arbeitskopie liegt immer im localStorage des Geräts
+   (dd.p.<stapel>) — schnell und auch ohne Netz. MIT KONTO wird sie
+   zusätzlich in dd_progress gespiegelt (Migration 0234): beim
+   Öffnen eines Stapels holen + je Karte zusammenführen (die neuere
+   Zeit t gewinnt), nach jeder Bewertung gedrosselt zurückschreiben.
+   Ohne Konto (Gast im Raum) antwortet der Server 'no_account', und
+   alles bleibt beim Gerät. „Zurück auf neu“ ist ein Grabstein
+   (l = 0), kein Löschen — sonst weckt ein älterer Stand auf einem
+   anderen Gerät die Karte wieder auf.
+
+   ── Ohne Raum (derby.html) ───────────────────────────────────
+   ctx.standalone: dieselbe Lehrkraft-Ansicht, aber ohne Teilen —
+   Stapel vorbereiten, selbst üben. Die Seite baut ctx.actions
+   selbst (Aufrufe ohne Raum-Code).
 
    ── Aufbau dieser Datei ──────────────────────────────────────
    Eine Zustandsmaschine: screen = home | stack | edit. render()
@@ -56,7 +68,10 @@
 
   /* ─── Zustand ─── */
   let root = null, ctx = null, view = null;
-  let isTeacher = false, demo = false;
+  let isTeacher = false, demo = false, standalone = false;
+  let acct = null;               // null = unbekannt · true = Lernstand im Konto · false = nur im Gerät
+  let remoteSum = {};            // id → { sum, t } aus dd_prog_list
+  let pushTimer = null;
   let screen = 'home';
   let list = null;               // Stapelliste der Lehrkraft (null = lädt)
   let listErr = '';
@@ -104,8 +119,65 @@
     const ids = new Set(opened.stack.cards.map(k => k.id));
     for (const k of Object.keys(prog)) if (!ids.has(k)) delete prog[k];
     jset('dd.p.' + id, prog);
-    jset('dd.sum.' + id, { n: opened.stack.cards.length, c: counts(opened.stack, prog) });
+    jset('dd.sum.' + id, { n: opened.stack.cards.length, c: counts(opened.stack, prog), t: Date.now() });
+    schedulePush();
   }
+
+  /* ─── Lernstand im Konto ─── */
+  const progFn = n => (isTeacher ? 'dd_prog_' : 'dd_mprog_') + n;
+  const syncOn = () => !demo && acct !== false && !!ctx;
+  function noAccount(code) {
+    if (code === 'no_account' || code === 'not_authenticated') { acct = false; return true; }
+    return false;
+  }
+  function mergeProg(a, b) {
+    const out = Object.assign({}, a);
+    for (const k of Object.keys(b || {})) {
+      const x = out[k], y = b[k];
+      if (!y || typeof y !== 'object') continue;
+      if (!x || (y.t || 0) > (x.t || 0)) out[k] = y;
+    }
+    return out;
+  }
+  async function pullProg(id) {
+    if (!syncOn()) return;
+    const res = await ctx.actions.call(progFn('get'), { p_stack: id });
+    if (!root || !opened || opened.stack.id !== id) return;
+    if (!res.ok) { noAccount(res.error); if (screen === 'stack') renderPane(); return; }
+    acct = true;
+    const merged = mergeProg(prog, res.data);
+    const changed = JSON.stringify(merged) !== JSON.stringify(prog);
+    prog = merged;
+    if (changed) { saveProg(); }
+    if (screen === 'stack' && (changed || !learn.flipped) && !(learn && learn.flipped)) renderPane();
+  }
+  function schedulePush() {
+    if (!syncOn() || !opened) return;
+    clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushProg, 1500);
+  }
+  async function pushProg() {
+    clearTimeout(pushTimer); pushTimer = null;
+    if (!syncOn() || !opened) return;
+    const id = opened.stack.id, data = prog, sum = { n: opened.stack.cards.length, c: counts(opened.stack, prog) };
+    const res = await ctx.actions.call(progFn('put'), { p_stack: id, p_data: data, p_sum: sum });
+    if (!res.ok && !noAccount(res.error)) console.warn('[derby] Lernstand nicht gespeichert:', res.error);
+    else if (res.ok) acct = true;
+  }
+  async function pullSums() {
+    if (!syncOn()) return;
+    const res = await ctx.actions.call(progFn('list'), {});
+    if (!root) return;
+    if (!res.ok) { noAccount(res.error); if (screen === 'home') renderHome(); return; }
+    acct = true;
+    remoteSum = {};
+    for (const it of res.items || []) remoteSum[it.id] = { sum: it.sum, t: Number(it.t) || 0 };
+    if (screen === 'home') renderHome();
+  }
+  const acctNote = () => demo ? '' : acct === true
+    ? '<p class="dd-acct dd-acct--on">Dein Lernstand wird in deinem Konto gespeichert und ist auf jedem Gerät da.</p>'
+    : acct === false
+      ? '<p class="dd-acct">Ohne Anmeldung bleibt dein Lernstand auf diesem Gerät.</p>' : '';
 
   /* ─── Helfer ─── */
   const okImg = s => typeof s === 'string' && /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(s);
@@ -262,6 +334,7 @@
     ov = { q: '', f: 'alle', sort: 'stand', mode: 'liste', hide: false, open: {} };
     saveProg();
     go('stack');
+    pullProg(id);
   }
   function busy(on) { if (root) root.classList.toggle('dd-busy', !!on); }
 
@@ -269,7 +342,9 @@
      STAPELLISTE
      ══════════════════════════════════════════════════════════════ */
   function sumOf(id, n) {
-    const s = jget('dd.sum.' + id, null);
+    let s = jget('dd.sum.' + id, null);
+    const r = remoteSum[id];
+    if (r && r.sum && Array.isArray(r.sum.c) && (!s || !Array.isArray(s.c) || r.t > (s.t || 0))) s = r.sum;
     if (!s || !Array.isArray(s.c)) return null;
     const tot = s.c.reduce((a, b) => a + b, 0);
     if (!tot) return null;
@@ -288,7 +363,9 @@
     if (!root) return;
     const items = list;
     let html = '<div class="dd-top"><div><h2 class="dd-h">' + (isTeacher ? 'Meine Stapel' : 'Stapel in diesem Raum') + '</h2>' +
-      '<p class="dd-sub">' + (isTeacher
+      '<p class="dd-sub">' + (standalone
+        ? 'Hier bereitest du Stapel vor, ohne dass ein Raum offen sein muss. Sie stehen später in jedem deiner Räume, und dort teilst du sie mit der Klasse.'
+        : isTeacher
         ? 'Stapel gehören dir und stehen in jedem deiner Räume. Mit „Teilen“ siehst du sie hier, und die Klasse bekommt sie.'
         : 'Such dir einen Stapel aus und lerne die Begriffe mit Karteikarten.') + '</p></div>' +
       (isTeacher ? '<button type="button" class="btn btn--primary dd-new" data-act="new">' + ico.plus + 'Neuer Stapel</button>' : '') + '</div>';
@@ -314,13 +391,14 @@
         (!q || sortKey([i.title, i.subject, i.topic, i.grade].join(' ')).includes(q)));
       html += '<div class="dd-grid">' + shown.map(stackCard).join('') + '</div>';
       if (!shown.length) html += '<p class="dd-empty">Nichts gefunden.</p>';
+      html += acctNote();
     }
     root.querySelector('.dd-main').innerHTML = html;
   }
 
   function stackCard(s) {
     const c = sumOf(s.id, s.n);
-    const shared = isTeacher && isShared(s.id);
+    const shared = isTeacher && !standalone && isShared(s.id);
     return '<article class="dd-stack" data-id="' + E(s.id) + '">' +
       '<div class="dd-stack__head"><h3>' + E(s.title) + '</h3>' +
       (isTeacher && shared ? '<span class="dd-badge" title="Die Klasse sieht diesen Stapel">geteilt</span>' : '') + '</div>' +
@@ -331,8 +409,8 @@
         '<button type="button" class="btn btn--sm" data-act="overview">Übersicht</button>' +
         (isTeacher
           ? '<button type="button" class="btn btn--sm dd-ic" data-act="edit" title="Bearbeiten" aria-label="Bearbeiten">' + ico.edit + '</button>' +
-            '<button type="button" class="btn btn--sm dd-ic' + (shared ? ' is-on' : '') + '" data-act="share" aria-pressed="' + shared + '" title="' +
-            (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '" aria-label="Teilen">' + ico.share + '</button>'
+            (standalone ? '' : '<button type="button" class="btn btn--sm dd-ic' + (shared ? ' is-on' : '') + '" data-act="share" aria-pressed="' + shared + '" title="' +
+            (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '" aria-label="Teilen">' + ico.share + '</button>')
           : '') +
       '</div></article>';
   }
@@ -371,7 +449,7 @@
 
   function weight(id) {
     const e = prog[id];
-    if (!e) return 5;                           // neu
+    if (!e || !e.l) return 5;                   // neu (auch: zurückgesetzt)
     if (e.l === 1) return 8;                    // unsicher kommt am häufigsten
     if (e.l === 2) return 3;
     return e.s >= 2 ? 0.4 : 1;                  // zweimal hintereinander sicher: fast Ruhe
@@ -465,7 +543,7 @@
           '<button type="button" class="dd-r dd-r--2" data-act="rate" data-v="2"' + (learn.flipped ? '' : ' disabled') + '><b>Teilweise</b><span>noch etwas üben</span></button>' +
           '<button type="button" class="dd-r dd-r--3" data-act="rate" data-v="3"' + (learn.flipped ? '' : ' disabled') + '><b>Sicher</b><span>seltener</span></button>' +
         '</div></div>' +
-      '<p class="dd-count">' + learn.done + ' Karten geübt' + (learn.row >= 3 ? ' · ' + learn.row + ' in Folge sicher' : '') + '</p>';
+      '<p class="dd-count">' + learn.done + ' Karten geübt' + (learn.row >= 3 ? ' · ' + learn.row + ' in Folge sicher' : '') + '</p>' + acctNote();
   }
 
   function flip() {
@@ -560,7 +638,7 @@
 
   function cycle(id) {
     const next = { 0: 1, 1: 2, 2: 3, 3: 0 }[lvl(id)];
-    if (next === 0) delete prog[id]; else prog[id] = { l: next, s: next === 3 ? 1 : 0, t: Date.now() };
+    prog[id] = { l: next, s: next === 3 ? 1 : 0, t: Date.now() };   // l 0 = Grabstein „wieder neu“
     saveProg();
     if (learn && learn.cur && learn.cur.id === id) { /* die Karte im Lerner zeigt den neuen Stand beim nächsten Zeichnen */ }
     renderOverview();
@@ -762,7 +840,7 @@
     const id = res.id || ed.id;
     delete cache[id];
     // Geteilt? Dann bekommt die Klasse mit dem neuen Titel/Kartenzahl auch einen neuen Stempel (u) und holt den Stapel neu.
-    if (isTeacher && isShared(id)) {
+    if (isTeacher && !standalone && isShared(id)) {
       const cur = sharedRaw();
       await writeShared(cur.map(e => e.id === id
         ? entryOf({ id, title, n: cards.length, subject: ed.subject.trim(), topic: ed.topic.trim(), grade: ed.grade.trim() }) : e));
@@ -793,7 +871,7 @@
     if (!res.ok) { toast(errMsg(res.error)); return; }
     const id = ed.id;
     delete cache[id];
-    if (isShared(id)) await writeShared(sharedRaw().filter(e => e.id !== id));
+    if (!standalone && isShared(id)) await writeShared(sharedRaw().filter(e => e.id !== id));
     try { localStorage.removeItem('dd.p.' + id); localStorage.removeItem('dd.sum.' + id); } catch (e) { /* egal */ }
     ed = null; opened = null;
     toast('Stapel gelöscht.');
@@ -815,7 +893,7 @@
       switch (act) {
         case 'new': openEditor(null); break;
         case 'reload': loadList(); break;
-        case 'home': opened = null; go('home'); break;
+        case 'home': if (pushTimer) pushProg(); opened = null; go('home'); pullSums(); break;
         case 'learn': openStack(sid, 'learn'); break;
         case 'overview': openStack(sid, 'overview'); break;
         case 'edit': {
@@ -965,7 +1043,9 @@
       ctx = context;
       view = null;
       demo = !!(ctx && ctx.preview);
+      standalone = !!(ctx && ctx.standalone);
       isTeacher = demo ? true : ctx.role === 'presenter';
+      acct = null; remoteSum = {}; pushTimer = null;
       screen = 'home'; list = null; listErr = ''; cache = {}; opened = null; ed = null; learn = null; ov = null;
       homeFilter = { q: '', fach: '' };
       lastSharedKey = '';
@@ -973,6 +1053,7 @@
       bind();
       // Die Klasse bekommt ihre Liste aus dem Raumzustand (update); erst die Lehrkraft fragt den Server.
       if (isTeacher) loadList(); else renderHome();
+      pullSums();
     },
 
     update(v) {
@@ -998,6 +1079,7 @@
         root.removeEventListener('change', onChange);
       }
       if (onKey) document.removeEventListener('keydown', onKey);
+      if (pushTimer) pushProg();          // letzter Stand noch zum Konto, bevor alles abgeräumt wird
       onKey = onClick = onInput = onChange = null;
       root = null; ctx = null; view = null; opened = null; ed = null; learn = null; ov = null; list = null; cache = {};
     }

@@ -9,8 +9,9 @@ Fünfzehnter MPSkills-Skill (Migration `0233_definitionsderby.sql`, `derby` in `
 - **Integration**: direkt im Raum gebaut (kein iframe): `tool.js` + `tool.css` (Klassen `dd-…`), `parse.js` wird von `tool.js` bei Bedarf nachgeladen (Editor). Icon `derby` in `lib/icons.js`, Alias `DefinitionsDerby`.
 - **Speicher**: Tabelle `dd_stacks` am **Konto** (nicht am Raum), Karten als jsonb (`[{id,t,d,i?}]`, `i` = data-URL, im Gerät auf ≤ 520 px/JPEG verkleinert, ≤ 150 000 Zeichen). Grenzen: 500 Karten, 1,5 MB je Stapel, 100 Stapel je Person. Zugriff nur über RPCs: Lehrkraft `dd_stacks_list/get/save/delete` (`p_code` wird von `presenterActions.call` angehängt), Tablet `dd_shared_get(p_token, p_id)`.
 - **Teilen**: `skill_room_state.data = { shared: [{id,t,n,s,p,g,u}] }` (t Titel, n Kartenzahl, s Fach, p Thema, g Klasse, u Stempel). `dd_shared_get` liefert nur, wenn die id in `shared` DIESES Raums steht UND der Stapel einer Lehrkraft DIESES Raums gehört (Besitzer oder eingeladen). Höchstens 20 geteilte Stapel (8-KB-Grenze von `skill_room_set_state`). Beim Speichern eines geteilten Stapels bekommt der Eintrag einen neuen Stempel `u` → Tablets holen ihn neu.
-- **Lernstand** (unsicher/teilweise/sicher je Karte): **nur im Gerät** (`localStorage` `dd.p.<stapel>` = `{kartenId:{l,s,t}}`, `dd.sum.<stapel>` = Zählung für den Balken auf der Kachel, `dd.dir` = Richtung). Keine personenbezogenen Daten auf dem Server, nichts Neues in `datenschutz.html`. Im Schaufenster (`ctx.preview`) bleibt alles im Arbeitsspeicher.
-- **Prüfstände**: `supabase/tests/0233_definitionsderby.mjs` (Rechte, Teilen, admin_only, Migration zweimal), `MPSkills/tools/DefinitionsDerby/tests/parse.test.mjs` (Text → Karten). Neue RPCs für `anon`/`authenticated` gehören in `supabase/tests/0225_rechte_freigaben.json`.
+- **Lernstand** (unsicher/teilweise/sicher je Karte): Arbeitskopie immer im Gerät (`localStorage` `dd.p.<stapel>` = `{kartenId:{l,s,t}}`, `dd.sum.<stapel>` = Zählung für den Balken, `dd.dir` = Richtung). **Mit Konto** zusätzlich in `dd_progress` (Migration 0234, Entscheidung Sönke 26.10.2026): beim Öffnen holen und je Karte zusammenführen (neuere Zeit `t` gewinnt), nach jeder Bewertung 1,5 s gedrosselt zurückschreiben, beim Verlassen/Abräumen sofort. Lehrkraft: `dd_prog_get/put/list(p_code, …)` (→ `auth.uid()`), Tablet: `dd_mprog_get/put/list(p_token, …)`; Gast ohne Konto → `no_account`, bleibt beim Gerät (Hinweis unter der Stapelliste/Karte). „Zurück auf neu“ ist ein Grabstein (`l: 0`), kein Löschen. Der Stand geht beim 1-Jahres-Reset des Kontos mit (FK auf profiles, `account_reset_content`), `dd_stacks` bleiben (Ausnahmeliste, wie `vocab_sets`). Im Schaufenster (`ctx.preview`) bleibt alles im Arbeitsspeicher, kein Sync. Datenschutz: `datenschutz.html` (Abschnitte 4, 8, 9) und das Hinweisfenster in `MPSkills/index.html` nennen es.
+- **Ohne Raum** (Entscheidung Sönke 26.10.2026): `MPSkills/derby.html` + `derby.js` (Kachel-Knopf „Stapel-Editor“ über `tools.js` `editor` + `editorLabel`) mountet dasselbe Tool mit `ctx.standalone = true` — Stapel anlegen/ändern/löschen und selbst lernen, kein Teilen (das passiert im Raum). Aufrufe mit `p_code: null`.
+- **Prüfstände**: `supabase/tests/0233_definitionsderby.mjs` (Rechte, Teilen, admin_only, Migration zweimal), `0234_definitionsderby_lernstand.mjs` (Lernstand, Konto/Gast, Reset), `MPSkills/tools/DefinitionsDerby/tests/parse.test.mjs` (Text → Karten). Neue RPCs für `anon`/`authenticated` gehören in `supabase/tests/0225_rechte_freigaben.json`.
 
 ## Etappe 1 (gebaut)
 
@@ -42,9 +43,8 @@ Gewünscht, in dieser Reihenfolge der Begeisterung:
 ## Offene Fragen
 
 1. Figuren frei wählbar (wie Knowledge Stack) oder je Thema eine feste Figur?
-2. Lernstand dauerhaft **im Konto** (RPC, geräteübergreifend, Datenschutz-Abschnitt nötig) oder weiter nur im Gerät? Für Gäste ohne Konto bleibt es im Gerät.
-3. Stapel auch **ohne Raum** bearbeiten (eigene Seite wie `quiz.html`)? Aktuell nur im Raum der Lehrkraft.
-4. Wann `admin_only` aufheben und das Schaufenster (`preview/derby.js`) bauen?
+2. ~~Lernstand im Konto~~ — erledigt (0234). ~~Stapel ohne Raum~~ — erledigt (`derby.html`).
+3. Wann `admin_only` aufheben und das Schaufenster (`preview/derby.js`) bauen?
 
 ## Verifizieren
 
