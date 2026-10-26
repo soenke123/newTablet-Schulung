@@ -86,6 +86,15 @@
       '<path d="M6.8 8.2h4.2M13 8.2h4.2M6.8 12.2h3.4"/>' +
       '<rect x="12.4" y="10.6" width="4.8" height="3.2" rx=".8"/>',
 
+    /* Definitions Derby — zwei übereinanderliegende Karten (die hintere nur
+       als Rand, der von der vorderen verdeckt wird), die vordere mit
+       drei Textzeilen. Keine
+       Schrift im Zeichen: bei 20 Pixeln wäre sie nicht lesbar. */
+    derby:
+      '<path d="M7.2 8.4V5.6a2.2 2.2 0 0 1 2.2-2.2h9a2.2 2.2 0 0 1 2.2 2.2v5.8a2.2 2.2 0 0 1-2.2 2.2h-1.6"/>' +
+      '<rect x="3.4" y="8.4" width="13.4" height="10.2" rx="2.2"/>' +
+      '<path d="M6.6 12.2h5.2M6.6 14.6h7M6.6 16.8h4.4"/>',
+
     /* Master PDF — ein Blatt mit umgeknickter Ecke und drei Textzeilen,
        die letzte kurz. Kein „PDF"-Schriftzug: bei 20 Pixeln ist das
        Blatt lesbar, Buchstaben darin nicht. */
@@ -233,6 +242,7 @@
     'ScrumWerkstatt': 'scrum',
     'Projektarbeit':  'projekt',
     'TinyLM':         'tinylm',
+    'DefinitionsDerby': 'derby',
     'SQLStudio':      'sqlstudio',
     'MasterPDF':      'masterpdf',
     'Master PDF Skill': 'masterpdf'

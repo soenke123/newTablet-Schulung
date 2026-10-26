@@ -1,0 +1,51 @@
+# CLAUDE.md — Definitions Derby (MPSkills skill, Beta, nur für Admins)
+
+Guidance for Claude Code when working in `MPSkills/tools/DefinitionsDerby/`.
+
+## Was es ist
+
+Fünfzehnter MPSkills-Skill (Migration `0233_definitionsderby.sql`, `derby` in `MPSkills/tools.js`, `admin_only` bis er rund ist: `update skill_tools set admin_only = false where id = 'derby';`). Lehrkräfte legen **Stapel** an (Titel, Fach, Thema, Klassenstufe; Karten = Begriff · Definition · optional Bild), teilen sie mit einem Raum, die Klasse lernt sie. Aus denselben Karten sollen später mehrere Spiele werden (Plan unten).
+
+- **Integration**: direkt im Raum gebaut (kein iframe): `tool.js` + `tool.css` (Klassen `dd-…`), `parse.js` wird von `tool.js` bei Bedarf nachgeladen (Editor). Icon `derby` in `lib/icons.js`, Alias `DefinitionsDerby`.
+- **Speicher**: Tabelle `dd_stacks` am **Konto** (nicht am Raum), Karten als jsonb (`[{id,t,d,i?}]`, `i` = data-URL, im Gerät auf ≤ 520 px/JPEG verkleinert, ≤ 150 000 Zeichen). Grenzen: 500 Karten, 1,5 MB je Stapel, 100 Stapel je Person. Zugriff nur über RPCs: Lehrkraft `dd_stacks_list/get/save/delete` (`p_code` wird von `presenterActions.call` angehängt), Tablet `dd_shared_get(p_token, p_id)`.
+- **Teilen**: `skill_room_state.data = { shared: [{id,t,n,s,p,g,u}] }` (t Titel, n Kartenzahl, s Fach, p Thema, g Klasse, u Stempel). `dd_shared_get` liefert nur, wenn die id in `shared` DIESES Raums steht UND der Stapel einer Lehrkraft DIESES Raums gehört (Besitzer oder eingeladen). Höchstens 20 geteilte Stapel (8-KB-Grenze von `skill_room_set_state`). Beim Speichern eines geteilten Stapels bekommt der Eintrag einen neuen Stempel `u` → Tablets holen ihn neu.
+- **Lernstand** (unsicher/teilweise/sicher je Karte): **nur im Gerät** (`localStorage` `dd.p.<stapel>` = `{kartenId:{l,s,t}}`, `dd.sum.<stapel>` = Zählung für den Balken auf der Kachel, `dd.dir` = Richtung). Keine personenbezogenen Daten auf dem Server, nichts Neues in `datenschutz.html`. Im Schaufenster (`ctx.preview`) bleibt alles im Arbeitsspeicher.
+- **Prüfstände**: `supabase/tests/0233_definitionsderby.mjs` (Rechte, Teilen, admin_only, Migration zweimal), `MPSkills/tools/DefinitionsDerby/tests/parse.test.mjs` (Text → Karten). Neue RPCs für `anon`/`authenticated` gehören in `supabase/tests/0225_rechte_freigaben.json`.
+
+## Etappe 1 (gebaut)
+
+1. **Stapelliste** (Lehrkraft: „Meine Stapel“ mit Neu/Bearbeiten/Teilen; Tablet: nur geteilte), Suche + Fachfilter ab 6 Stapeln, Fortschrittsbalken je Kachel.
+2. **Karteikarten**: Karte antippen = umdrehen, **erst danach** Unsicher/Teilweise/Sicher (Tasten Leertaste, 1/2/3). Gewichtung `weight()` in `tool.js`: neu 5 · unsicher 8 · teilweise 3 · sicher 1 (zweimal in Folge sicher 0,4); die letzten zwei Karten kommen nicht sofort wieder. Filter „Alle / Noch nicht sicher / Nur unsichere“, Richtung Begriff→Definition / Definition→Begriff / gemischt. Das Bild gehört zum Begriff und steht auf der Seite, die den Begriff zeigt.
+3. **Übersicht/Glossar**: Suche über Begriff + Definition, Filter nach Lernstand, Sortierung „Nach Lernstand“ (Unsicher → Teilweise → Neu → Sicher, mit Gruppenköpfen), A–Z oder Stapelreihenfolge, Liste oder Kacheln, „Definitionen verdecken“ zum Selbsttest, Lernstand direkt per Antippen ändern.
+4. **Editor** (nur Lehrkraft): „Karte für Karte“ (Begriff, Definition, Bild, nach oben/unten, Strg+Enter = nächste Karte) und „Text einfügen“ mit Live-Vorschau („So habe ich es verstanden“, gelb bei fehlender Definition/doppeltem Begriff). `parse.js` erkennt Kopfzeilen (Titel/Fach/Thema/Klasse), eine Karte pro Zeile (`: – - = → ;` oder Tab), Blöcke mit Leerzeile, abwechselnde Zeilen, Umbrüche in Definitionen. Der Wechsel zwischen den Modi ist verlustfrei (`toText`/`applyText`; Bilder und Karten-ids bleiben bei gleichem Begriff).
+
+## Plan / Entscheidungen von Sönke (26.10.2026)
+
+Gewünscht, in dieser Reihenfolge der Begeisterung:
+
+- **Karteikarten gamifiziert**, ähnlich der Insel in Wordisland (Fortschritt sichtbar als Landschaft).
+- **Memory**: Einzelspieler und Mehrspieler an EINEM Gerät.
+- **Übersichten**: Glossar mit Suche, Filter (Etappe 1 erledigt).
+- **Activity / Erklär-Bär**: Mehrspieler an einem Gerät (Begriff erklären ohne verbotene Wörter, die aus der Definition kommen).
+- **Rennen oder Team einnehmen** wie Kingdoms of Mathoria (Raum-Spiel, Beamer).
+- **Spielfigur** (Figuren wie bei Knowledge Stack, `KSCreatures`), die mit den Definitionen etwas macht. Ideen:
+  1. Figur füttern/aufziehen (Tamagotchi): gelernte Karten sind Nahrung, vergessene machen sie hungrig; Leitner-Fach = Wachstum.
+  2. **Figur baut ihre Insel** (je Thema eine Insel; jeder gelernte Begriff schaltet ein Teil frei; vergessene lassen verwittern).
+  3. Dungeon/Wanderung: Türen öffnen mit der richtigen Definition, Truhen = Ausrüstung (Avatar-System), Boss mischt das Thema.
+  4. Detektivin/Forscherin: Begriff in einer Szene mit Bildern „fangen“.
+  5. Begriffe sammeln wie Pokémon (Gold-Fassung für sicher Gewusstes, wie bei den Gold-Avataren).
+  6. Mehrere Figuren an einem Gerät auf einer Bahn/Insel (Derby-Rennen).
+  **Empfehlung:** 2 + 1 verbinden — Figur lebt auf der Insel eines Themas, Karteikarten füttern sie und schalten die Insel frei, vergessene Begriffe lassen sie verwittern; Rennen/Team-Modus zeigen dieselben Figuren.
+- **Teilen/Katalog** (später): Sammlung mit Name, Fach, Thema, Klassenstufe; `dd_stacks.visibility` (`private|school|hub`) ist schon da. Beim Teilen **Kopie statt Verweis**, mit Herkunftsvermerk. Bilder: freie Bilder / keine Personenfotos klären.
+- **Einheitliches Spielformat**: jedes Spiel bekommt dieselbe Karte als Eingabe und meldet nur „richtig/falsch je Karte“ zurück → Lernstand je Begriff ohne Zusatzaufwand pro Spiel. Etappe 1 hat dafür `rate(v)` / `prog`; neue Spiele sollen darüber schreiben, nicht eigene Stände führen.
+
+## Offene Fragen
+
+1. Figuren frei wählbar (wie Knowledge Stack) oder je Thema eine feste Figur?
+2. Lernstand dauerhaft **im Konto** (RPC, geräteübergreifend, Datenschutz-Abschnitt nötig) oder weiter nur im Gerät? Für Gäste ohne Konto bleibt es im Gerät.
+3. Stapel auch **ohne Raum** bearbeiten (eigene Seite wie `quiz.html`)? Aktuell nur im Raum der Lehrkraft.
+4. Wann `admin_only` aufheben und das Schaufenster (`preview/derby.js`) bauen?
+
+## Verifizieren
+
+Kein Build. Im Browser (Playwright mit dem vorinstallierten Chromium) prüfen: Lehrkraft legt per Text und per Karte einen Stapel an, speichert, teilt; Tablet sieht ihn und lernt; Umdrehen per Tippen/Leertaste, Bewerten per Knopf/1-2-3; Übersicht Suche/Filter/Sortierung/Verdecken; 390 px und 1000 px, hell und dunkel, kein horizontaler Scroll. Beim Ausliefern `V` in `tool.js` und den Stempel in `lib/tool.js` (siehe dortige Warnung) drehen.
