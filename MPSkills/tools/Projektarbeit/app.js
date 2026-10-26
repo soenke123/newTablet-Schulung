@@ -17,19 +17,23 @@
      Schüler                ohne Planungsraum: Wartekarte (Lobby bzw.
                             die eigene Gruppe). Mit: der Planungsraum.
 
-   Der Planungsraum hat die Reiter Team, Projektziel (mit Fertig-Datum
-   due), To-dos (Board mit vier Spalten, je Karte eine Zeitschätzung est
-   in Schulstunden, frei eingetippt), Dokumentation (Protokoll, intern
-   „log"/„hours"), Experten, Anträge (dezent gerahmt) und Lehrkraft-
-   Kommentare. Den Reiter „Projektarbeit & Regeln" gibt es nicht mehr —
-   die Regeln stehen nur noch auf der Wartekarte.
-   Jeder Reiter hat oben EINEN Erklärsatz; der Rest steht in den
-   Erklär-Kacheln (guideBox(), Icons, keine Emojis). Jede Person klappt
-   sie je Reiter ein und aus (Knopf links; gemerkt im Gerät,
-   pa_guide_<reiter>). Eingeklappt stehen sie in der Kopfzeile neben der
-   Überschrift (Titel, darunter kleine Kacheln mit Icon und Überschrift),
-   ausgeklappt unter Überschrift und Satz (guidePlace()).
-   Dokumentation: neuer Eintrag über „+ Eintrag" oben rechts (wie
+   Der Planungsraum hat die Reiter „Team und Projektziel" (ein Reiter:
+   Mitglieder, Teamname, Projektziel mit Fertig-Datum due), „Projekt-
+   planung" (Board mit drei Spalten Zu erledigen · In Arbeit · Fertig,
+   je Karte eine Zeitschätzung est in Schulstunden), „Tagebuch" (intern
+   „log"/„hours" — das Hauptding, in der Reiterleiste hervorgehoben),
+   und rechts abgesetzt, weil sie nicht direkt das Projekt sind:
+   Experten, Anträge, Lehrkräfte-Kommentare. Die Spalte „Blockiert" gibt
+   es nicht mehr; alte Karten mit col 'blocked' stehen unter In Arbeit
+   (colOf). Die Regeln stehen nur auf der Wartekarte.
+   Erklärungen: Jede Ansicht hat nur eine Überschrift. Oben rechts steht
+   die Sprechblase „Was muss ich hier machen?" (data-help) — sie blendet
+   die Erklär-Kacheln ein und aus (helpBox(), Icons, keine Emojis; gemerkt
+   im Gerät, pa_help_<reiter>). Nur bei Team und Projektziel stehen die
+   (höchstens vier) Kacheln von Anfang an da, sonst sind sie versteckt.
+   Ausnahme: die Checkliste der Anträge steht immer rechts in einem
+   eigenen Kasten — kurze Punkte, ausklappbar mit Details (pa_chk_open).
+   Tagebuch: neuer Eintrag über „+ Eintrag" oben rechts (wie
    „+ To-do"), das Formular steht im Dialog mLog.
 
    Zeitbalken (To-dos): Die Gruppe trägt ein, wie viele Schulstunden
@@ -164,18 +168,18 @@ let hPhotos = [];           // … Fotos (data-URLs, höchstens 3)
 let reqFilter = 'all';
 let phoneCol = 'doing';
 let goalTimer = null, goalDirty = false;
-let lastMode = null, lastGroup = null;
+let lastMode = null, lastGroup = null, pickTab = false;
 let noteColor = 'yellow';
 let noteFilter = 'all';     // Kommentare: 'all' | 'open' | 'done'
 const askDraft = {};        // Nachfrage, die gerade jemand tippt (je Zettel)
 
 const COLS = [
-  { k: 'todo',    nm: 'Zu erledigen', c: 'var(--k-todo)',  hint: 'Was ansteht. Kleine Schritte, Zeit geschätzt.' },
-  { k: 'blocked', nm: 'Blockiert',    c: 'var(--k-block)', hint: 'Hängt fest. Schreibt dazu, was fehlt.' },
-  { k: 'doing',   nm: 'In Arbeit',    c: 'var(--k-doing)', hint: 'Daran arbeitet gerade jemand.' },
-  { k: 'done',    nm: 'Fertig',       c: 'var(--k-done)',  hint: 'Geschafft!' }
+  { k: 'todo',  nm: 'Zu erledigen', c: 'var(--k-todo)' },
+  { k: 'doing', nm: 'In Arbeit',    c: 'var(--k-doing)' },
+  { k: 'done',  nm: 'Fertig',       c: 'var(--k-done)' }
 ];
-const colOf = t => (COLS.some(c => c.k === t.col) ? t.col : 'todo');
+// Die Spalte „Blockiert" gibt es nicht mehr — solche Karten stehen unter In Arbeit.
+const colOf = t => (t.col === 'blocked' ? 'doing' : COLS.some(c => c.k === t.col) ? t.col : 'todo');
 // Die Karten — ohne das Zeitbudget, das als task/budget daneben liegt.
 const todos = () => PA.list('task').filter(t => !t.budget && t.expert !== true);
 // Die Experten — task-Objekte mit expert: true (siehe oben).
@@ -264,44 +268,24 @@ const gIco = (k, n) => `<span class="gi">${n ? `<i>${n}</i>` : ''}<svg width="17
 // Das Wichtigste im Satz steht fett. 'alarm' = hervorgehoben, ohne Nummer.
 const guide = steps => steps.map(([k, t, txt, cls], i) =>
   `<div class="gstep${cls ? ' ' + cls : ''}">${gIco(k, cls ? '' : i + 1)}<div><b>${t}</b><span>${txt}</span></div></div>`).join('');
-// Ein- und ausklappbar, je Reiter gemerkt (Standard: ausgeklappt).
-const guideOpen = k => { try { return localStorage.getItem('pa_guide_' + k) !== '0'; } catch (e) { return true; } };
-// Eingeklappt steht die Box IN der Kopfzeile neben der Überschrift
-// (Titel, darunter die kleinen Kacheln); ausgeklappt springt sie unter
-// Überschrift und Erklärsatz. Der Knopf zum Klappen (nur ein Pfeil)
-// steht hinter der kleinen Überschrift.
-function guideBox(id, k, title, steps) {
-  const el = $('#' + id);
-  el.dataset.g = k;
-  el.classList.toggle('min', !guideOpen(k));
-  el.innerHTML = `<div class="gb-h"><span class="gb-t">${title}</span>
-      <button type="button" class="gb-tg" data-gtoggle="${k}" aria-controls="${id}"></button></div>
-    <div class="guide">${guide(steps)}</div>`;
-  guideBtn(el);
-  guidePlace(el);
+// Hilfe je Reiter: Sprechblase „Was muss ich hier machen?" oben rechts
+// blendet die Kacheln ein und aus. Gemerkt im Gerät; von Anfang an
+// offen ist nur Team und Projektziel.
+const helpOpen = k => { try { const v = localStorage.getItem('pa_help_' + k); return v === null ? k === 'team' : v === '1'; } catch (e) { return k === 'team'; } };
+function helpBox(k, steps) {
+  const el = $('#' + k + 'Help');
+  el.innerHTML = `<div class="guide">${guide(steps)}</div>`;
+  helpShow(k, helpOpen(k));
 }
-function guidePlace(el) {
-  const head = el.closest('.view') && el.closest('.view').querySelector('.shead');
-  if (!head) return;
-  if (el.classList.contains('min')) {
-    const after = head.firstElementChild;          // Eyebrow, Überschrift, Satz
-    if (after.nextElementSibling !== el) head.insertBefore(el, after.nextElementSibling);
-  } else if (head.nextElementSibling !== el) head.after(el);
+function helpShow(k, on) {
+  $('#' + k + 'Help').hidden = !on;
+  const b = document.querySelector(`[data-help="${k}"]`);
+  if (b) b.setAttribute('aria-expanded', on);
 }
-function guideBtn(el) {
-  const open = !el.classList.contains('min');
-  const b = el.querySelector('.gb-tg');
-  b.setAttribute('aria-expanded', open);
-  b.title = open ? 'Erklärung einklappen' : 'Erklärung ausklappen';
-  b.setAttribute('aria-label', b.title);
-  b.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
-}
-function toggleGuide(k) {
-  const el = document.querySelector(`.gbox[data-g="${k}"]`); if (!el) return;
-  el.classList.toggle('min');
-  try { localStorage.setItem('pa_guide_' + k, el.classList.contains('min') ? '0' : '1'); } catch (e) { /* egal */ }
-  guideBtn(el);
-  guidePlace(el);
+function toggleHelp(k) {
+  const on = $('#' + k + 'Help').hidden;
+  try { localStorage.setItem('pa_help_' + k, on ? '1' : '0'); } catch (e) { /* egal */ }
+  helpShow(k, on);
 }
 
 // Stundeneintrag: wer war dabei. Einträge von vor 0202 kennen nur den Schreiber.
@@ -344,9 +328,11 @@ function renderAll() {
   if (PA.owner && PA.focus && PA.viewFor === PA.focus && !v.group) { PA.setFocus(null); renderAll(); return; }
   const gid = group() ? group().id : null;
   if (m !== lastMode || (m === 'plan' && gid && gid !== lastGroup)) {
-    if (m === 'plan' && lastMode !== 'plan') tab = PA.owner && (findG(PA.focus) || {}).open_requests ? 'requests' : 'team';
+    // Startreiter erst wählen, wenn die Daten der Gruppe da sind.
+    if (m === 'plan' && lastMode !== 'plan') { tab = 'team'; pickTab = true; }
     lastMode = m; lastGroup = gid; editLog = null; hide('mLog');
   }
+  if (pickTab && m === 'plan' && (!PA.owner || PA.viewFor === PA.focus)) { pickTab = false; tab = startTab(); }
   document.body.classList.toggle('inplan', m === 'plan');
 
   $('#roBar').hidden = !PA.ro;
@@ -371,64 +357,80 @@ function renderAll() {
 }
 
 const findG = id => (V().groups || []).find(g => g.id === id) || null;
+// Beim Öffnen: offene Anträge (Lehrkraft) → Anträge; solange Teamname
+// oder Projektziel fehlen → Team und Projektziel; sonst das Tagebuch.
+function startTab() {
+  if (PA.owner && (findG(PA.focus) || {}).open_requests) return 'requests';
+  const g = group();
+  return (!PA.owner && !(g && g.name)) || !goalObj().title ? 'team' : 'hours';
+}
 
-// Die Erklärungen über den Reitern ändern sich nie (nur je nach Rolle).
+// Die Erklärungen ändern sich nie (nur je nach Rolle).
 function renderGuides() {
-  if ($('#workGuide').firstChild) return;
+  if ($('#workHelp').firstChild) return;
   const T = PA.owner;
-  guideBox('teamGuide', 'team', 'Kurz erklärt', T ? [
-    ['pen', 'Teamname', 'Den <b>Teamnamen</b> gibt sich die Gruppe selbst — ihr seht ihn auch in der Übersicht.'],
-    ['sign', 'Einwilligung', 'Je Person die <b>Stufe</b> antippen, die vorliegt: Stufe 1 = in Kleingruppen, Stufe 2 = auch fremde Orte.'],
-    ['key', 'Codes', 'Vergessen? Hier steht der <b>persönliche Code</b> jeder Person. „neu“ vergibt einen neuen.']
+  helpBox('team', [
+    ['pen', 'Teamname', T ? 'Den <b>Teamnamen</b> gibt sich die Gruppe selbst.' : 'Gebt euch einen <b>Teamnamen</b>.'],
+    ['target', 'Ziel', 'Woran erkennt ihr, dass ihr euer <b>Ziel erreicht</b> habt?'],
+    ['box', 'Produkt', 'Was haltet ihr <b>am Ende in der Hand</b> — und <b>wer</b> hat etwas davon?'],
+    ['cal', 'Bis wann?', 'Tragt ein, <b>wann</b> das Projekt <b>fertig</b> sein soll.']
+  ]);
+  helpBox('work', [
+    ['split', 'Zerlegen', 'Teilt das Projekt in <b>kleine Arbeitsschritte</b> — vom Start bis zum Ende.'],
+    ['clock', 'Zeit planen', 'Tragt eure <b>Schulstunden bis zum Ende</b> ein und schätzt <b>jedes To-do</b>. Der Balken zeigt, ob alles passt.'],
+    ['move', 'Weiterschieben', 'Angefangen → <b>In Arbeit</b>, erledigt → <b>Fertig</b>. Ändern und aufteilen geht jederzeit.']
+  ]);
+  helpBox('hours', [
+    ['cal', 'Jeder Arbeitstag', 'Am Ende jedes Arbeitstags <b>ein Eintrag</b> — über „+ Eintrag“ oben.'],
+    ['people', 'Wer war da?', 'Antippen, <b>wer dabei war</b>. Wer fehlt, steht beim Tag unter „fehlte“.'],
+    ['pen', 'Woran gearbeitet?', '<b>To-do wählen</b> und kurz schreiben, <b>was ihr geschafft</b> habt.'],
+    T ? ['camera', 'Fotos löschen', 'Fotos mit <b>Personen</b> am Eintrag löschen. Spätestens <b>30 Tage nach dem Fertig-Datum</b> löscht der Server sie.']
+      : ['camera', 'Fotos', 'Bis zu <b>3 Fotos</b> je Eintrag. Personen nur <b>mit ihrer Erlaubnis</b>.']
+  ]);
+  helpBox('experts', [
+    ['bulb', 'Warum?', 'Menschen mit <b>Erfahrung</b> aus Beruf oder Hobby helfen euch, Fehler zu vermeiden.'],
+    ['expert', 'Eintragen', '<b>Name</b>, <b>Telefon</b> oder <b>Mail</b> und <b>wofür</b> die Person Experte ist.'],
+    ['link', 'Als To-do', 'Kontakt aufnehmen ist ein Arbeitsschritt: <b>„Als To-do“</b> antippen.'],
+    ['phone', 'Festhalten', 'Jedes Telefonat, jede Mail, jedes Treffen mit <b>Datum</b> und den <b>wichtigsten Infos</b>.']
+  ]);
+  helpBox('requests', T ? [
+    ['form', 'Prüfen', 'Antrag lesen, <b>Einwilligungen</b> beachten (Warnung am Antrag).'],
+    ['check', 'Entscheiden', '<b>Genehmigen</b> oder <b>ablehnen</b> — gern mit einer Antwort an die Gruppe.'],
+    ['mail', 'Mail', 'In der Gruppen-Übersicht: <b>Mail bei Anträgen</b> einschalten.']
   ] : [
-    ['pen', 'Teamname', 'Gebt euch oben einen <b>Teamnamen</b> — so heißt ihr überall, auch bei der Lehrkraft.'],
-    ['sign', 'Einwilligung', 'Ob ihr das <b>Schulgelände verlassen</b> dürft, trägt die <b>Lehrkraft</b> ein.'],
-    ['key', 'Persönlicher Code', 'Damit kommt ihr auf <b>jedem Gerät</b> zurück (Menü oben rechts). <b>Nicht weitergeben.</b>']
+    ['check', 'Checkliste', 'Erst alle Punkte der <b>Checkliste</b> rechts erfüllen.'],
+    ['form', 'Antrag stellen', 'Oben <b>„Antrag stellen“</b> — für jeden Tag einen eigenen.'],
+    ['inbox', 'Abwarten', 'Los geht es erst bei <b>„genehmigt“</b>. Abgelehnt? Überarbeiten und neu abschicken.']
   ]);
-  guideBox('goalGuide', 'goal', 'Diese Fragen solltet ihr beantworten', [
-    ['target', 'Konkretes Ziel', 'Woran erkennt ihr, dass ihr euer <b>Ziel erreicht</b> habt?'],
-    ['box', 'Konkretes Produkt', 'Was haltet ihr <b>am Ende in der Hand</b>? (abgleichen oder verbessern)'],
-    ['people', 'Für wen?', 'Wer hat etwas von eurem <b>Ergebnis</b>?'],
-    ['cal', 'Bis wann?', 'Tragt unten ein, <b>wann</b> das Projekt <b>fertig</b> sein soll.']
-  ]);
-  guideBox('workGuide', 'work', 'So plant ihr', [
-    ['split', 'Zerlegen', 'Teilt euer Projekt vom Start bis zum Ende in <b>kleine Arbeitsschritte</b> — alle, die ihr erwartet.'],
-    ['clock', 'Zeit planen', 'Tragt ein, wie viele <b>Schulstunden</b> ihr bis zum Ende habt, und schätzt bei <b>jedem To-do</b> die Stunden. Der Balken zeigt, ob alles passt.'],
-    ['move', 'Weiterschieben', 'Angefangen → <b>In Arbeit</b>. Erledigt → <b>Fertig</b>. Hängt etwas? → <b>Blockiert</b>.'],
-    ['refresh', 'Anpassen', 'To-dos dürft ihr <b>jederzeit ändern</b> und in kleinere Aufgaben aufteilen.']
-  ]);
-  guideBox('hoursGuide', 'hours', 'So dokumentiert ihr', [
-    ['cal', 'Jeder Arbeitstag', '<b>Ein Eintrag</b> mit dem <b>Datum</b> des Tages — gern mehrere nebeneinander.'],
-    ['people', 'Wer war da?', 'Antippen, <b>wer dabei war</b>. Wer fehlt, bleibt weg und steht beim Tag unter „fehlte“.'],
-    ['pen', 'Woran gearbeitet?', '<b>To-do auswählen</b> und kurz schreiben, <b>was ihr geschafft</b> habt.'],
-    T ? ['camera', 'Fotos löschen', 'Fotos könnt ihr am Eintrag <b>löschen</b> — und solltet es, sobald <b>Personen</b> oder andere <b>personenbezogene Daten</b> darauf zu sehen sind. Spätestens <b>30 Tage nach dem Fertig-Datum</b> löscht der Server sie von selbst.']
-      : ['camera', 'Fotos', 'Bis zu <b>3 Fotos</b> je Eintrag, z. B. von einer <b>Exkursion</b>. Personen nur <b>mit ihrer Erlaubnis</b>.']
-  ]);
-  guideBox('expGuide', 'experts', 'So arbeitet ihr mit Experten', [
-    ['bulb', 'Warum Experten?', 'Menschen, die durch ihren <b>Beruf</b> oder ihr <b>Hobby</b> viel Erfahrung mit euren Arbeitsschritten haben. So vermeidet ihr Fehler und <b>lernt von Profis</b>.'],
-    ['expert', 'Experten notieren', 'Tragt mögliche Experten ein: <b>Name</b>, <b>Telefon</b> oder <b>E-Mail</b> und <b>wofür</b> sie Experten sind.'],
-    ['link', 'Als To-do planen', 'Kontakt aufnehmen ist ein Arbeitsschritt: <b>„Als To-do“</b> antippen — oder beim To-do einen Experten wählen.'],
-    ['phone', 'Kontakt festhalten', 'Jedes <b>Telefonat</b>, jede <b>Mail</b>, jedes <b>Treffen</b> mit Datum eintragen — dazu die <b>wichtigsten Infos</b>.']
-  ]);
-  guideBox('reqGuide', 'requests', '<span class="gb-big">'
-    + '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' + GI.check + '</svg>Checkliste</span>'
-    + '<span class="gb-sub">Wir genehmigen nur, wenn alle fünf Punkte erfüllt sind.</span>', [
-    ['sign', 'Einverständniserklärung', 'Die <b>unterschriebene Erklärung</b> ist abgegeben.'],
-    ['book', 'Logbuch aktuell', '<b>To-dos und Dokumentation</b> sind auf dem neuesten Stand — sonst können wir nicht beurteilen, ob der Antrag sinnvoll ist.'],
-    ['form', 'Antrag vollständig', '<b>Datum</b>, <b>wer mitfährt</b>, <b>Ziel mit Adresse</b>, <b>Weg und Verkehrsmittel</b>, <b>Begründung</b>.'],
-    ['inbox', 'Genehmigung abwarten', 'Erst wenn der Antrag auf <b>„genehmigt“</b> steht, dürft ihr los. Kommentar der Lehrkraft: <b>unbedingt beachten</b>.'],
-    ['plus', 'Jeder Termin = neuer Antrag', 'Für <b>jeden Tag</b> stellt ihr einen <b>eigenen Antrag</b>.'],
-    ['alarm', 'Spätestens Vortag, 18 Uhr', 'Am besten schon am <b>Ende der vorherigen mPS-Stunde</b> abschicken — spätestens am <b>Abend vor der Exkursion um 18 Uhr</b>.', 'alarm']
-  ]);
-  guideBox('notesGuide', 'notes', 'Kurz erklärt', T ? [
+  helpBox('notes', T ? [
     ['pen', 'Anheften', 'Hinweis schreiben, Farbe wählen, <b>anheften</b> — die Gruppe sieht ihn sofort.'],
     ['check', 'Abhaken', 'Die Gruppe <b>hakt ab</b>, was erledigt ist.'],
-    ['chat', 'Antworten', 'Nachfragen stehen <b>unter dem Zettel</b> — dort antworten.']
+    ['chat', 'Antworten', 'Nachfragen stehen <b>unter dem Zettel</b>.']
   ] : [
     ['inbox', 'Lesen', 'Eure Lehrkräfte heften hier <b>Hinweise</b> zu eurem Projekt an.'],
     ['check', 'Abhaken', 'Erledigt? <b>Abhaken</b> — die Lehrkraft sieht es.'],
     ['chat', 'Nachfragen', 'Unklar? Direkt <b>unter dem Zettel</b> nachfragen.']
   ]);
+  renderCheck();
+}
+
+// Checkliste der Anträge: immer rechts im eigenen Kasten. Kurz die Punkte,
+// ausgeklappt mit Details (gemerkt im Gerät).
+const CHECK = [
+  ['Einverständniserklärung abgegeben', 'Die <b>unterschriebene Erklärung</b> liegt der Lehrkraft vor.'],
+  ['Projektplanung und Tagebuch aktuell', 'Sonst kann die Lehrkraft nicht beurteilen, ob der Antrag sinnvoll ist.'],
+  ['Antrag vollständig', '<b>Datum</b>, <b>wer mitfährt</b>, <b>Ziel mit Adresse</b>, <b>Weg und Verkehrsmittel</b>, <b>Begründung</b>.'],
+  ['Jeder Termin = eigener Antrag', 'Für <b>jeden Tag</b> stellt ihr einen neuen Antrag.'],
+  ['Spätestens Vortag, 18 Uhr', 'Am besten schon am <b>Ende der vorherigen mPS-Stunde</b> abschicken.', 'alarm'],
+  ['Erst los, wenn genehmigt', 'Steht der Antrag auf <b>„genehmigt“</b>, dürft ihr los. Den Kommentar der Lehrkraft <b>unbedingt beachten</b>.']
+];
+const chkOpen = () => { try { return localStorage.getItem('pa_chk_open') === '1'; } catch (e) { return false; } };
+function renderCheck() {
+  const open = chkOpen();
+  $('#reqCheck').innerHTML = `<div class="chk-h"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${GI.check}</svg>Checkliste</div>
+    <div class="chk-sub">Genehmigt wird nur, wenn alles erfüllt ist.</div>
+    <ol>${CHECK.map(([t, d, cls], i) => `<li${cls ? ` class="${cls}"` : ''}><span class="n">${i + 1}</span><span>${t}${open ? `<small>${d}</small>` : ''}</span></li>`).join('')}</ol>
+    <button type="button" class="btn sm ghost chk-tg" data-chk aria-expanded="${open}">${open ? 'Kürzer' : 'Genauer erklärt'}</button>`;
 }
 
 function renderHeader(m) {
@@ -450,7 +452,7 @@ function renderHeader(m) {
     const due = goalObj().due;
     pill.hidden = !tasks.length && !due;
     pill.innerHTML = `${due ? `<div><div class="lbl">Fertig bis</div><div class="val">${esc(deShort(due))}</div></div>
-      <div class="pill-div"></div>` : ''}<div><div class="lbl">To-dos fertig</div><div class="val">${tasks.filter(t => t.col === 'done').length} / ${tasks.length}</div></div>
+      <div class="pill-div"></div>` : ''}<div><div class="lbl">To-dos fertig</div><div class="val">${tasks.filter(t => colOf(t) === 'done').length} / ${tasks.length}</div></div>
       <div class="pill-div"></div>
       <div><div class="lbl">Team</div><div class="val" style="display:flex;gap:3px">${gm.map(p => avatar(p, 20)).join('')}</div></div>`;
   } else {
@@ -482,7 +484,7 @@ function renderMenu(m) {
 function renderCounts() {
   const tasks = todos(), logs = PA.list('log'), reqs = PA.list('request');
   const open = reqs.filter(r => (r.status || 'open') === 'open').length;
-  $('#cntWork').textContent = tasks.filter(t => t.col !== 'done').length;
+  $('#cntWork').textContent = tasks.filter(t => colOf(t) !== 'done').length;
   $('#cntHours').textContent = logs.length;
   const c = $('#cntReq');
   c.textContent = open;
@@ -498,7 +500,6 @@ function renderCounts() {
     pill.textContent = `${nx.date === todayIso() ? 'heute' : deShort(nx.date)} · ${st.nm}`;
     pill.title = `Nächster Antrag: ${deDay(nx.date)} — ${st.nm}`;
   }
-  $('#cntTeam').textContent = members().length;
   $('#cntExp').textContent = experts().length;
   const openNotes = notes().filter(n => !n.done).length;
   const cn = $('#cntNotes');
@@ -558,7 +559,7 @@ function renderOverview() {
       ${g.open_requests ? `<span class="reqbadge" title="${g.open_requests} offene${g.open_requests === 1 ? 'r' : ''} Antrag${g.open_requests === 1 ? '' : 'e'}">${g.open_requests}</span>` : ''}
       <div class="g-head">
         <div style="min-width:0">
-          <div class="g-name"${solo ? '' : ' title="Den Teamnamen gibt sich die Gruppe selbst (Reiter Team)."'}>${esc(title)}</div>
+          <div class="g-name"${solo ? '' : ' title="Den Teamnamen gibt sich die Gruppe selbst."'}>${esc(title)}</div>
           ${solo ? (g.title ? `<div class="g-sub"><i>„${esc(g.title)}“</i></div>` : '')
             : `<div class="g-sub">${mem.length} ${mem.length === 1 ? 'Person' : 'Personen'}${g.title ? ` · <i>„${esc(g.title)}“</i>` : ''}</div>`}
           ${today ? `<div style="margin-top:5px">${today}</div>` : ''}
@@ -570,8 +571,8 @@ function renderOverview() {
       <div class="g-members">${mem.length ? mem.map(p => pchip(p, false)).join('') : '<div class="g-empty">Gerade niemand drin — Personen hierher ziehen.</div>'}</div>
       <div class="g-foot">
         ${g.plan_open ? `
-          <div class="minicols" title="Board: zu erledigen · blockiert · in Arbeit · fertig">
-            ${COLS.map(c => `<span><i style="background:${c.c}"></i>${t[c.k] || 0}</span>`).join('')}
+          <div class="minicols" title="Projektplanung: zu erledigen · in Arbeit · fertig">
+            ${COLS.map(c => `<span><i style="background:${c.c}"></i>${(t[c.k] || 0) + (c.k === 'doing' ? t.blocked || 0 : 0)}</span>`).join('')}
           </div>
           <button class="btn primary sm go" data-open="${esc(g.id)}">Planungsraum ${ICO.arrow}</button>`
         : `<span style="font-size:11.5px;color:var(--ink-3)">Noch kein Planungsraum</span>
@@ -784,12 +785,9 @@ function shrinkImg(file, max, cb) {
    ════════════════════════════════════════════════════════════ */
 function postit(t) {
   const who = (t.who || []).map(person).filter(Boolean);
-  const blk = t.col === 'blocked';
   return `<div class="postit pi-${esc(COLORS[t.color] ? t.color : 'yellow')}" data-drag="t:${esc(t.id)}" tabindex="0" role="button" aria-label="${esc(t.title)}">
-    ${blk ? `<span class="pi-flag" title="blockiert">${ICO.block}</span>` : ''}
     <div class="pi-title">${esc(t.title || 'Ohne Titel')}</div>
     ${t.text ? `<div class="pi-text">${esc(t.text)}</div>` : ''}
-    ${blk && t.note ? `<div class="pi-note">${esc(t.note)}</div>` : ''}
     ${t.xpId ? `<div class="pi-xp" title="Experte">${ICO.phone}${esc((expertOf(t.xpId) || {}).name || t.xpName || 'Experte')}</div>` : ''}
     <div class="pi-foot">
       <span class="pi-who">${who.length ? who.map(p => avatar(p, 22)).join('') : '<span class="pi-free">noch frei</span>'}</span>
@@ -802,10 +800,10 @@ function postit(t) {
 function renderWork() {
   const tasks = todos().sort((a, b) => (a.order || 0) - (b.order || 0) || String(a.title).localeCompare(String(b.title)));
   const by = k => tasks.filter(t => colOf(t) === k);
-  const done = by('done').length, blk = by('blocked').length;
+  const done = by('done').length;
   renderBudget(tasks);
   $('#workStats').innerHTML = tasks.length
-    ? `<span class="stat">Fertig <b>${done}/${tasks.length}</b></span>${blk ? `<span class="badge bg-block">${blk} blockiert</span>` : ''}
+    ? `<span class="stat">Fertig <b>${done}/${tasks.length}</b></span>
        <button class="btn primary needs-write" data-newtask="todo">${ICO.plus} To-do</button>`
     : `<button class="btn primary needs-write" data-newtask="todo">${ICO.plus} Erstes To-do</button>`;
 
@@ -816,7 +814,6 @@ function renderWork() {
     const list = by(c.k);
     return `<div class="col${phoneCol === c.k ? ' on' : ''}" data-k="${c.k}">
       <div class="col-h"><span class="col-dot" style="background:${c.c}"></span><span class="nm">${c.nm}</span><span class="n">${list.length}</span></div>
-      <div class="col-hint">${c.hint}</div>
       <div class="drop" data-drop="col:${c.k}">
         ${list.map(postit).join('')}
         ${c.k === 'todo' ? `<button class="addcard needs-write" data-newtask="todo">${ICO.plus} To-do hinzufügen</button>`
@@ -833,7 +830,7 @@ function renderBudget(tasks) {
   const typing = inp && document.activeElement === inp;
   const total = budgetHours();
   const sum = k => tasks.filter(t => colOf(t) === k).reduce((a, t) => a + (+t.est || 0), 0);
-  const parts = [['done', 'fertig'], ['doing', 'in Arbeit'], ['blocked', 'blockiert'], ['todo', 'zu erledigen']].map(([k, nm]) => ({ k, nm, h: sum(k) }));
+  const parts = [['done', 'fertig'], ['doing', 'in Arbeit'], ['todo', 'zu erledigen']].map(([k, nm]) => ({ k, nm, h: sum(k) }));
   const planned = parts.reduce((a, p) => a + p.h, 0);
   const noEst = tasks.filter(t => !+t.est).length;
   const scale = Math.max(total, planned) || 1;
@@ -846,7 +843,7 @@ function renderBudget(tasks) {
   const html = `
     <div class="bud-in"><label for="budIn">Wie viele Schulstunden habt ihr bis zum Ende?</label>
       <div class="row"><input type="number" id="budIn" min="0" max="400" step="1" inputmode="numeric" placeholder="?" ${canWrite() ? '' : 'disabled'}><span>Std.</span></div>
-      <small>${due ? 'Fertig bis ' + esc(deDay(due)) : 'Fertig-Datum steht im Reiter Projektziel'}</small></div>
+      <small>${due ? 'Fertig bis ' + esc(deDay(due)) : 'Fertig-Datum: Reiter Team und Projektziel'}</small></div>
     <div class="bud-main">
     <div class="bud-sum">verplant <b>${esc(fmtH(planned))}</b>${total ? ` von <b>${esc(fmtH(total))}</b>` : ''}</div>
     <div class="bar${total && planned > total ? ' bad' : ''}" role="img" aria-label="${esc(`verplant ${fmtH(planned)} von ${fmtH(total)}`)}">
@@ -883,8 +880,7 @@ function openTask(id, col, xp) {
   $('#tkTitle').textContent = t ? 'To-do' : 'Neues To-do';
   $('#tkName').value = t ? t.title || '' : '';
   $('#tkText').value = t ? t.text || '' : '';
-  $('#tkCol').value = t ? (t.col || 'todo') : (col || 'todo');
-  $('#tkNote').value = t ? t.note || '' : '';
+  $('#tkCol').value = t ? colOf(t) : (col || 'todo');
   tkWho = t ? (t.who || []).slice() : (meId() && members().some(m => m.id === meId()) ? [meId()] : []);
   tkColor = t && COLORS[t.color] ? t.color : 'yellow';
   $('#tkEst').value = t && +t.est ? +t.est : '';
@@ -893,7 +889,7 @@ function openTask(id, col, xp) {
   $('#tkDel').hidden = !t;
   renderTaskForm();
   const ro = !canWrite();
-  ['#tkName', '#tkText', '#tkEst', '#tkCol', '#tkNote'].forEach(s => { $(s).disabled = ro; });
+  ['#tkName', '#tkText', '#tkEst', '#tkCol'].forEach(s => { $(s).disabled = ro; });
   show('mTask');
   if (!ro && !t) setTimeout(() => $('#tkName').focus(), 60);
 }
@@ -901,7 +897,6 @@ function renderTaskForm() {
   $('#tkWho').innerHTML = members().map(m => `<button type="button" data-who="${esc(m.id)}" aria-pressed="${tkWho.includes(m.id)}">${avatar(m, 22)}${esc(m.name)}</button>`).join('')
     || '<span class="hint">Noch niemand in der Gruppe.</span>';
   $('#tkColor').innerHTML = Object.keys(COLORS).map(k => `<button type="button" data-color="${k}" aria-checked="${tkColor === k}" title="${k}" style="background:${COLORS[k]}"></button>`).join('');
-  $('#tkNoteF').hidden = $('#tkCol').value !== 'blocked';
   // Experte: nur, wenn die Gruppe schon welche eingetragen hat.
   const xs = experts();
   $('#tkXpF').hidden = !xs.length;
@@ -925,8 +920,8 @@ function saveTask() {
   const data = Object.assign({}, old || {}, {
     title: title.slice(0, 120), text: $('#tkText').value.trim().slice(0, 1500),
     who: tkWho.filter(id => members().some(m => m.id === id)),
-    col, color: tkColor, est: readEst($('#tkEst').value), note: col === 'blocked' ? $('#tkNote').value.trim().slice(0, 400) : (old && old.note) || '',
-    order: old && old.col === col ? old.order : Date.now()
+    col, color: tkColor, est: readEst($('#tkEst').value),
+    order: old && colOf(old) === col ? old.order : Date.now()
   });
   const xp = expertOf(tkXp);
   data.xpId = xp ? tkXp : '';
@@ -937,14 +932,9 @@ function saveTask() {
 }
 function moveTask(id, col) {
   const t = PA.get('task', id);
-  if (!t || t.col === col || !canWrite()) return;
+  if (!t || colOf(t) === col || !canWrite()) return;
   PA.put('task', id, Object.assign({}, t, { col, order: Date.now() }));
   renderAll();
-  if (col === 'blocked' && !t.note) {
-    openTask(id);
-    setTimeout(() => $('#tkNote').focus(), 80);
-    toast('Schreibt kurz dazu, was blockiert.');
-  }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -965,18 +955,17 @@ function renderHours() {
   // „+ Eintrag" oben rechts wie „+ To-do" — nur für Mitglieder der Gruppe.
   // Das Formular steht im Dialog mLog.
   $('#hoursStats').innerHTML = (logs.length ? `<span class="stat">Einträge <b>${logs.length}</b></span>` : '')
-    + (!PA.owner && myIn ? `<button class="btn primary needs-write" data-newlog="1">${ICO.plus} Eintrag</button>` : '');
+    + (!PA.owner && myIn ? `<button class="btn mark needs-write" data-newlog="1">${ICO.plus} Eintrag</button>` : '');
   if (!$('#mLog').hidden) renderLogForm();
 
-  // Lehrkraft: Hinweis, solange Fotos in der Dokumentation liegen.
+  // Lehrkraft: Hinweis, solange Fotos im Tagebuch liegen.
   const nPh = logs.reduce((a, l) => a + logPhotos(l).length, 0);
   const pn = $('#hPhotoNote');
   pn.hidden = !PA.owner || !nPh;
-  if (PA.owner && nPh) pn.innerHTML = `${ICO.warn}<span><b>${nPh} ${nPh === 1 ? 'Foto' : 'Fotos'}</b> in der Dokumentation. Sind Personen oder andere personenbezogene Daten darauf zu sehen, löscht die Fotos (× am Foto), sobald sie nicht mehr gebraucht werden.</span>`;
+  if (PA.owner && nPh) pn.innerHTML = `${ICO.warn}<span><b>${nPh} ${nPh === 1 ? 'Foto' : 'Fotos'}</b> im Tagebuch. Sind Personen oder andere personenbezogene Daten darauf zu sehen, löscht die Fotos (× am Foto), sobald sie nicht mehr gebraucht werden.</span>`;
 
   if (!logs.length) {
-    $('#hList').innerHTML = `<div class="nothing" style="padding:34px 20px"><h3>Noch keine Einträge</h3>
-      <p>Am Ende des Arbeitstags haltet ihr fest, wer was gemacht hat.</p></div>`;
+    $('#hList').innerHTML = '<div class="nothing" style="padding:34px 20px"><h3>Noch keine Einträge</h3></div>';
     return;
   }
   const days = [];
@@ -1026,7 +1015,7 @@ function todoChip(l) {
 function renderTodoPick() {
   const box = $('#hTodo');
   const list = todos();
-  const order = ['doing', 'todo', 'blocked', 'done'];
+  const order = ['doing', 'todo', 'done'];
   const cur = hTask ? PA.get('task', hTask) : null;
   const label = hTask === '' ? '<span class="nm">Etwas anderes (kein To-do)</span>'
     : cur ? `<i class="kdot k-${colOf(cur)}"></i><span class="nm">${esc(cur.title || 'Ohne Titel')}</span>`
@@ -1183,8 +1172,7 @@ function renderRequests() {
     $('#reqList').innerHTML = `<div class="nothing" style="padding:36px 20px">
       <div class="ic"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${PIN}</svg></div>
       <h3>${all.length ? 'Nichts in dieser Auswahl' : 'Noch keine Anträge'}</h3>
-      <p>${PA.owner ? 'Wenn die Gruppe außerhalb der Schule lernen möchte, steht der Antrag hier — und in der Übersicht erscheint eine rote Zahl an der Gruppe.'
-        : 'Ihr wollt an einem Tag außerhalb der Schule arbeiten? Geht die Checkliste durch, dann oben rechts „Antrag stellen“.'}</p></div>`;
+      </div>`;
     return;
   }
   $('#reqList').innerHTML = list.map(r => {
@@ -1326,10 +1314,12 @@ function decide(id, status) {
 function renderTeam() {
   const gm = members();
   const g = group();
-  $('#teamTitle').textContent = gm.length === 1 && !(g && g.name) ? 'Einzelarbeit' : gTitle(g, gm);
+  $('#teamTitle').textContent = gm.length === 1 && !(g && g.name) ? 'Einzelarbeit' : (g && g.name) || 'Unser Team';
   // Den Teamnamen geben sich die Schüler selbst; die Lehrkraft sieht ihn nur.
   const nameIn = $('#teamNameIn');
   $('#teamNameF').hidden = PA.owner || !g;
+  // Wer den Namen selbst eintippt, braucht ihn nicht noch als Überschrift.
+  $('#teamTitle').hidden = !$('#teamNameF').hidden;
   if (document.activeElement !== nameIn) nameIn.value = (g && g.name) || '';
   nameIn.disabled = !canWrite();
   $('#teamGrid').innerHTML = gm.map(m => {
@@ -1364,9 +1354,6 @@ function renderNotes() {
   const all = notes();
   const open = all.filter(n => !n.done).length;
   $('#noteForm').hidden = !PA.owner;
-  $('#notesSub').innerHTML = PA.owner
-    ? 'Kommentare an diese Gruppe — jede Lehrkraft des Raums sieht und schreibt hier.'
-    : 'Hinweise eurer Lehrkräfte zu eurem Projekt.';
   $('#noteColors').innerHTML = Object.keys(COLORS).map(c =>
     `<button type="button" data-ncolor="${c}" style="background:${COLORS[c]}" aria-pressed="${noteColor === c}" aria-label="Farbe ${c}"></button>`).join('');
   $('#notesStats').innerHTML = all.length
@@ -1376,8 +1363,7 @@ function renderNotes() {
   const list = all.filter(n => noteFilter === 'all' || (noteFilter === 'done') === !!n.done);
   $('#noteGrid').innerHTML = list.map(noteHtml).join('') || (all.length
     ? `<div class="nothing" style="grid-column:1/-1;padding:24px"><h3>${noteFilter === 'open' ? 'Alles abgehakt' : 'Noch nichts abgehakt'}</h3></div>`
-    : `<div class="nothing" style="grid-column:1/-1;padding:28px"><h3>Noch keine Kommentare</h3>
-        <p>${PA.owner ? 'Oben einen Hinweis schreiben und anheften — die Gruppe sieht ihn sofort.' : 'Sobald eure Lehrkraft euch einen Hinweis gibt, hängt er hier.'}</p></div>`);
+    : '<div class="nothing" style="grid-column:1/-1;padding:28px"><h3>Noch keine Kommentare</h3></div>');
 }
 
 function noteHtml(n) {
@@ -1506,17 +1492,16 @@ function renderExperts() {
       <div class="xreach">${xpReach(x) || '<span>Noch keine Telefonnummer oder Mail</span>'}</div>
       ${linked.length ? `<div class="xsec"><span class="fl">To-dos</span><div class="xtodos">${linked.map(t =>
         `<button type="button" class="xtodo" data-opentask="${esc(t.id)}"><i class="kdot k-${colOf(t)}"></i>${esc(t.title || 'Ohne Titel')}<small>${esc(COLS.find(c => c.k === colOf(t)).nm)}</small></button>`).join('')}</div></div>` : ''}
-      <div class="xsec"><span class="fl">Kontakte &amp; Infos</span>
-        ${cons.length ? `<div class="xcons">${cons.map(c => `<div class="xcon" data-editct="${esc(x.id)}:${esc(c.id)}" role="button" tabindex="0">
+      ${cons.length ? `<div class="xsec"><span class="fl">Kontakte &amp; Infos</span>
+        <div class="xcons">${cons.map(c => `<div class="xcon" data-editct="${esc(x.id)}:${esc(c.id)}" role="button" tabindex="0">
           <div class="h">${esc(deDay(c.date))} · ${esc(CONTACT[c.how] || CONTACT.other)}${c.byName ? `<span class="by">${esc(c.byName)}</span>` : ''}</div>
-          ${c.text ? `<p>${esc(c.text)}</p>` : ''}</div>`).join('')}</div>`
-          : '<div class="xnone">Noch nichts notiert. Nach jedem Telefonat, jeder Mail, jedem Treffen hier eintragen.</div>'}</div>
+          ${c.text ? `<p>${esc(c.text)}</p>` : ''}</div>`).join('')}</div></div>` : ''}
       <div class="xacts">
         <button class="btn sm primary needs-write" data-newct="${esc(x.id)}">${ICO.plus} Kontakt eintragen</button>
         ${linked.some(t => colOf(t) !== 'done') ? '' : `<button class="btn sm needs-write" data-xptask="${esc(x.id)}">${ICO.plus} Als To-do</button>`}
       </div>
     </div>`;
-  }).join('') + `<button class="xadd needs-write" data-newxp="1">${ICO.expert}${xs.length ? 'Weiteren Experten eintragen' : 'Ersten Experten eintragen'}</button>`;
+  }).join('') + (xs.length ? '' : `<button class="xadd needs-write" data-newxp="1">${ICO.expert}Ersten Experten eintragen</button>`);
 }
 
 function openExpert(id) {
@@ -1602,9 +1587,9 @@ function rulesHtml() {
     <h2>Gemeinsam ein Ziel erreichen — Schritt für Schritt.</h2>
     <p>In der Projektarbeit plant ihr selbst: Ihr legt ein Ziel fest, zerlegt es in Aufgaben, arbeitet sie ab und haltet fest, wer was beigetragen hat. Die Lehrkraft begleitet euch — und entscheidet über eure Anträge.</p>
     <div class="cycle">
-      <div class="cyc"><div class="n">1</div><h4>Ziel festlegen</h4><p>Was soll am Ende entstehen, für wen, bis wann? → Reiter <b>Projektziel</b>.</p></div>
-      <div class="cyc"><div class="n">2</div><h4>Planen</h4><p>Das Projekt in kleine To-dos zerlegen, Zeit schätzen, verteilen. → <b>To-dos</b>.</p></div>
-      <div class="cyc"><div class="n">3</div><h4>Arbeiten &amp; festhalten</h4><p>Karten weiterschieben, jeden Arbeitstag eintragen. → <b>Dokumentation</b>.</p></div>
+      <div class="cyc"><div class="n">1</div><h4>Ziel festlegen</h4><p>Was soll am Ende entstehen, für wen, bis wann? → <b>Team und Projektziel</b>.</p></div>
+      <div class="cyc"><div class="n">2</div><h4>Planen</h4><p>Das Projekt in kleine To-dos zerlegen, Zeit schätzen, verteilen. → <b>Projektplanung</b>.</p></div>
+      <div class="cyc"><div class="n">3</div><h4>Arbeiten &amp; festhalten</h4><p>Karten weiterschieben, jeden Arbeitstag eintragen. → <b>Tagebuch</b>.</p></div>
       <div class="cyc"><div class="n">4</div><h4>Ergebnis zeigen</h4><p>Präsentieren, was ihr geschafft habt — und was ihr gelernt habt.</p></div>
     </div>
   </div>
@@ -1621,10 +1606,10 @@ function rulesHtml() {
       <ul><li>Aufgaben fair verteilen</li><li>Einander helfen, wenn jemand festhängt</li><li>Entscheidungen gemeinsam treffen</li></ul></div>
     <div class="excard alt">${ic('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}
       <h3>Jeden Arbeitstag dokumentieren</h3>
-      <p>Am Ende <b>jedes Arbeitstags</b> haltet ihr in der Dokumentation fest, wer was gemacht hat und was als Nächstes kommt. Ein Eintrag kann für mehrere gelten. Ehrlich und in eigenen Worten.</p></div>
+      <p>Am Ende <b>jedes Arbeitstags</b> haltet ihr im Tagebuch fest, wer was gemacht hat und was als Nächstes kommt. Ein Eintrag kann für mehrere gelten. Ehrlich und in eigenen Worten.</p></div>
     <div class="excard">${ic('<rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/>')}
-      <h3>To-dos aktuell halten</h3>
-      <p>Was ihr anfangt, kommt nach <b>In Arbeit</b>; was fertig ist, nach <b>Fertig</b>. Hängt etwas fest: nach <b>Blockiert</b> — mit einem Satz, was fehlt.</p></div>
+      <h3>Projektplanung aktuell halten</h3>
+      <p>Was ihr anfangt, kommt nach <b>In Arbeit</b>; was fertig ist, nach <b>Fertig</b>. Hängt etwas fest: in der Gruppe besprechen oder die Lehrkraft fragen.</p></div>
   </div>
   <div class="cards3">
     <div class="excard alt">${ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}
@@ -1641,10 +1626,10 @@ function rulesHtml() {
   <div class="checks">
     <div class="panel pad"><div class="eyebrow">Zu Beginn jeder Stunde</div>
       <h3 style="font-size:17px;margin-top:3px">Kurz abstimmen (5 Minuten)</h3>
-      <ol><li>To-dos anschauen: Wo stehen wir?</li><li>Wer macht heute was? Karten verteilen.</li><li>Hängt etwas? → Blockiert. Müsst ihr raus? → Antrag.</li></ol></div>
+      <ol><li>To-dos anschauen: Wo stehen wir?</li><li>Wer macht heute was? Karten verteilen.</li><li>Hängt etwas? → Lehrkraft fragen. Müsst ihr raus? → Antrag.</li></ol></div>
     <div class="panel pad"><div class="eyebrow">Am Ende jeder Stunde</div>
       <h3 style="font-size:17px;margin-top:3px">Festhalten (5 Minuten)</h3>
-      <ol><li>Karten auf den richtigen Stand schieben.</li><li>Dokumentation: Wer hat was gemacht?</li><li>Material wegräumen, Tablets laden.</li></ol></div>
+      <ol><li>Karten auf den richtigen Stand schieben.</li><li>Tagebuch: Wer hat was gemacht?</li><li>Material wegräumen, Tablets laden.</li></ol></div>
   </div>
   ${PA.owner ? `<p style="margin-top:16px"><button class="btn" data-editrules="1">${ICO.pen} Regeln für diesen Kurs ergänzen</button></p>` : ''}`;
 }
@@ -1800,10 +1785,10 @@ document.addEventListener('keydown', e => {
    NAVIGATION + EREIGNISSE
    ════════════════════════════════════════════════════════════ */
 function go(v) {
-  if (goalDirty && v !== 'goal') saveGoal();
+  if (goalDirty && v !== 'team') saveGoal();
   tab = v;
   $$('.tab').forEach(t => t.setAttribute('aria-selected', t.dataset.view === v));
-  ['goal', 'work', 'hours', 'requests', 'team', 'notes', 'experts'].forEach(k => { const el = $('#view-' + k); if (el.hidden !== (k !== v)) el.hidden = k !== v; });
+  ['work', 'hours', 'requests', 'team', 'notes', 'experts'].forEach(k => { const el = $('#view-' + k); if (el.hidden !== (k !== v)) el.hidden = k !== v; });
 }
 
 function wire() {
@@ -1866,17 +1851,20 @@ function wire() {
   document.addEventListener('click', async e => {
     const t = e.target;
     let b;
-    // Erklär-Kacheln ein- und ausklappen (eingeklappt: Kachel antippen klappt aus)
-    if ((b = t.closest('[data-gtoggle]'))) { toggleGuide(b.dataset.gtoggle); return; }
-    if ((b = t.closest('.gbox.min .gstep'))) { toggleGuide(b.closest('.gbox').dataset.g); return; }
+    // Hilfe ein- und ausblenden, Checkliste genauer/kürzer
+    if ((b = t.closest('[data-help]'))) { toggleHelp(b.dataset.help); return; }
+    if ((b = t.closest('[data-chk]'))) {
+      try { localStorage.setItem('pa_chk_open', chkOpen() ? '0' : '1'); } catch (e) { /* egal */ }
+      renderCheck(); return;
+    }
     // Übersicht
     if ((b = t.closest('[data-plan-p]'))) { e.stopPropagation(); setPick(null); openPlan({ p_participant: b.dataset.planP }); return; }
     if ((b = t.closest('[data-plan-g]'))) { openPlan({ p_group: b.dataset.planG }); return; }
-    if ((b = t.closest('[data-open]'))) { tab = (findG(b.dataset.open) || {}).open_requests ? 'requests' : 'team'; PA.setFocus(b.dataset.open); renderAll(); return; }
+    if ((b = t.closest('[data-open]'))) { PA.setFocus(b.dataset.open); renderAll(); return; }
     if ((b = t.closest('[data-gdel]'))) {
       const g = findG(b.dataset.gdel); if (!g) return;
       ask('Gruppe auflösen?', g.plan_open
-        ? 'Alle kommen zurück in die Lobby. Der Planungsraum mit Projektziel, To-dos, Dokumentation und Anträgen wird gelöscht — das lässt sich nicht rückgängig machen.'
+        ? 'Alle kommen zurück in die Lobby. Der Planungsraum mit Projektziel, Projektplanung, Tagebuch und Anträgen wird gelöscht — das lässt sich nicht rückgängig machen.'
         : 'Alle kommen zurück in die Lobby.',
         () => PA.act('pa_room_group_delete', { p_group: g.id }), 'Auflösen');
       return;
@@ -1974,7 +1962,7 @@ function wire() {
     if ((b = t.closest('[data-phdel]'))) {
       if (!PA.owner) return;
       const [lid, i] = b.dataset.phdel.split(':');
-      ask('Foto löschen?', 'Das Foto verschwindet aus der Dokumentation — für alle und auch auf dem Server. Der Eintrag selbst bleibt.', () => {
+      ask('Foto löschen?', 'Das Foto verschwindet aus dem Tagebuch — für alle und auch auf dem Server. Der Eintrag selbst bleibt.', () => {
         const l = PA.get('log', lid); if (!l) return;
         const ph = logPhotos(l); ph.splice(+i, 1);
         const d = Object.assign({}, l, { photos: ph });
@@ -1986,7 +1974,7 @@ function wire() {
     }
     if ((b = t.closest('[data-logdel]'))) {
       const id = b.dataset.logdel;
-      ask('Eintrag löschen?', 'Der Eintrag verschwindet aus der Dokumentation.', () => { PA.del('log', id); if (editLog === id) resetLogForm(); renderAll(); }, 'Löschen');
+      ask('Eintrag löschen?', 'Der Eintrag verschwindet aus dem Tagebuch.', () => { PA.del('log', id); if (editLog === id) resetLogForm(); renderAll(); }, 'Löschen');
       return;
     }
     // Anträge
@@ -2086,7 +2074,7 @@ function wire() {
   $('#tkCol').addEventListener('change', renderTaskForm);
   $('#tkDel').addEventListener('click', () => {
     const id = editTask; if (!id) return;
-    ask('To-do löschen?', 'Die Karte verschwindet aus der To-do-Übersicht.', () => { hide('mTask'); PA.del('task', id); renderAll(); }, 'Löschen');
+    ask('To-do löschen?', 'Die Karte verschwindet aus der Projektplanung.', () => { hide('mTask'); PA.del('task', id); renderAll(); }, 'Löschen');
   });
 
   // Experten
@@ -2278,7 +2266,7 @@ function importData(d) {
     const p = projects.length === 1 ? projects[0] : projects.find(x => x.group === PA.focus);
     if (!p) { toast('Die Datei enthält mehrere Projekte — bitte in der Gruppen-Übersicht importieren.'); return; }
     const nm = gTitle(group(), members());
-    ask('Projekt ersetzen?', `Projektziel, To-dos, Dokumentation und Anträge von „${nm}“ werden durch die Datei${p.name ? ' („' + p.name + '“)' : ''} ersetzt. Die Mitglieder der Gruppe bleiben. Vorher entsteht ein Backup des jetzigen Stands.`,
+    ask('Projekt ersetzen?', `Projektziel, Projektplanung, Tagebuch und Anträge von „${nm}“ werden durch die Datei${p.name ? ' („' + p.name + '“)' : ''} ersetzt. Die Mitglieder der Gruppe bleiben. Vorher entsteht ein Backup des jetzigen Stands.`,
       () => runImport([p], PA.focus), 'Ersetzen');
     return;
   }
@@ -2330,7 +2318,7 @@ async function backupAction(act, id) {
   const inPlan = mode() === 'plan';
   hide('mBackup');
   ask('Dieses Backup einspielen?', inPlan
-    ? `Projektziel, To-dos, Dokumentation und Anträge von „${gTitle(group(), members())}“ werden durch den Stand aus dem Backup ersetzt. Vorher entsteht ein Backup des jetzigen Stands.`
+    ? `Projektziel, Projektplanung, Tagebuch und Anträge von „${gTitle(group(), members())}“ werden durch den Stand aus dem Backup ersetzt. Vorher entsteht ein Backup des jetzigen Stands.`
     : 'Alle Projekte aus dem Backup werden auf dessen Stand zurückgesetzt. Vorher entsteht ein Backup des jetzigen Stands.',
     async () => {
       const r = await PA.act('pa_room_backup_restore', { p_id: id, p_group: inPlan ? PA.focus : null });

@@ -27,7 +27,7 @@
   --marker-wash:#fbeadc;
 
   --st-todo:    #8a8373;
-  /* Farben der vier Spalten — im Board, im Zeitbalken und in der Dokumentation */
+  /* Farben der Spalten — im Board, im Zeitbalken und im Tagebuch */
   --k-todo:     #2f6fb0;
   --k-doing:    #d39b12;
   --k-block:    #c0392b;
@@ -139,11 +139,18 @@ header.top{
 }
 .tab[aria-selected="true"] .cnt{background:var(--petrol-wash);color:var(--petrol)}
 .cnt.red,.tab[aria-selected="true"] .cnt.red{background:var(--alarm);color:#fff}
-/* Anträge: dezent gerahmt und getönt, mit dem Stand des nächsten Antrags */
-.tab.req{margin:6px 0 6px 6px;padding:6px 12px;border:1px solid #f0d6c2;background:#fdf5ee;border-radius:var(--r)}
-.tab.req:hover{border-color:#e6bd9c}
-.tab.req[aria-selected="true"]{border-color:#e2b48f;background:var(--marker-wash)}
-.tab.req::after{bottom:-1px}
+/* Tagebuch ist das Hauptding: hervorgehoben */
+.tab.main{color:var(--marker);font-size:14.5px;font-weight:800;margin:6px 4px;padding:7px 16px;background:var(--marker-wash);border:1px solid #f0c9ab;border-radius:var(--r)}
+.tab.main svg{opacity:1}
+.tab.main:hover{color:#a3430f;border-color:var(--marker)}
+.tab.main[aria-selected="true"]{background:var(--marker);border-color:#a3430f;color:#fff}
+.tab.main[aria-selected="true"] .cnt{background:rgba(255,255,255,.25);color:#fff}
+.tab.main::after{content:none}
+/* Experten, Anträge, Kommentare: rund ums Projekt — rechts abgesetzt */
+.tabside{display:flex;gap:2px;margin-left:auto;padding-left:14px;border-left:1px solid var(--line);flex:none}
+.tabside .tab{font-size:12.5px;font-weight:600;padding:13px 11px 12px}
+.tabside .tab svg{width:14px;height:14px}
+@media (max-width:900px){ .tabside{margin-left:10px} }
 
 main.wrap{padding-top:30px;padding-bottom:80px}
 
@@ -306,7 +313,7 @@ body.dragging{-webkit-user-select:none;user-select:none}
    BOARD
    ============================================================ */
 .board{
-  display:grid; gap:11px; align-items:stretch; grid-template-columns:repeat(4,minmax(0,1fr));
+  display:grid; gap:11px; align-items:stretch; grid-template-columns:repeat(3,minmax(0,1fr));
   padding:13px; border-radius:var(--r-lg);
   background:
     linear-gradient(var(--line-soft) 1px,transparent 1px) 0 0/100% 26px,
@@ -319,9 +326,7 @@ body.dragging{-webkit-user-select:none;user-select:none}
 .col-dot{width:9px;height:9px;border-radius:99px;flex:none}
 .col-h .nm{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-2)}
 .col-h .n{margin-left:auto;font-weight:700;font-size:13px;background:var(--paper-down);color:var(--ink-2);min-width:24px;text-align:center;border-radius:var(--r-sm);padding:1px 6px}
-.col-hint{font-size:11px;color:var(--ink-3);padding:7px 11px 0;font-style:italic;line-height:1.35}
 .drop{display:flex;flex-direction:column;gap:12px;padding:12px 11px;flex:1;min-height:120px;border-radius:var(--r)}
-.col[data-k="blocked"]{background:rgba(253,243,241,.88);border-color:#e6c8c3}
 .col[data-k="done"]{background:rgba(238,247,241,.88);border-color:#c6e0d0}
 .empty{font-size:11.5px;color:var(--ink-3);text-align:center;padding:16px 8px;border:1px dashed var(--line);border-radius:var(--r);font-style:italic}
 .addcard{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border:1px dashed var(--line);background:transparent;border-radius:var(--r);padding:9px;font-size:12.5px;font-weight:600;color:var(--ink-3)}
@@ -415,15 +420,16 @@ label.fl,span.fl{display:block;font-size:9.5px;letter-spacing:.13em;text-transfo
 body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opacity:.3;pointer-events:none}
 
 /* ============================================================
-   ERKLÄRUNG IN KACHELN (in jedem Reiter, ein- und ausklappbar)
+   HILFE: „Was muss ich hier machen?" (Sprechblase oben rechts)
+   Kacheln erscheinen erst auf Klick — nur bei Team und Projektziel
+   stehen sie von Anfang an da (höchstens vier).
    ============================================================ */
+.helpq{display:inline-flex;align-items:center;gap:7px;flex:none;position:relative;background:var(--paper-up);border:1px solid var(--line);border-radius:14px 14px 14px 4px;padding:7px 12px 7px 9px;font-size:12.5px;font-weight:700;color:var(--petrol);box-shadow:var(--sh-1);cursor:pointer}
+.helpq:hover{border-color:var(--petrol);background:#fff}
+.helpq[aria-expanded="true"]{background:var(--petrol);border-color:var(--petrol);color:#fff}
+@media (max-width:640px){ .helpq span{display:none} .helpq{padding:7px} }
 .gbox{margin:0 0 18px}
-.gb-h{display:flex;align-items:center;gap:10px;margin:0 0 8px}
-.gb-h .gb-t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;color:var(--ink-3);min-width:0;display:flex;align-items:baseline;gap:4px 10px;flex-wrap:wrap}
-.gb-tg{display:inline-flex;align-items:center;justify-content:center;flex:none;width:26px;height:26px;padding:0;background:var(--paper-up);border:1px solid var(--line);border-radius:50%;color:var(--petrol);box-shadow:var(--sh-1);cursor:pointer}
-.gb-tg:hover{background:#fff;border-color:var(--petrol)}
-.gb-tg svg{transition:transform .2s}
-.gbox.min .gb-tg svg{transform:rotate(180deg)}
+.gbox[hidden]{display:none}
 .guide{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
 .gstep{display:flex;gap:11px;align-items:flex-start;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:12px 13px;box-shadow:var(--sh-1)}
 .gstep .gi{position:relative;width:36px;height:36px;border-radius:10px;background:var(--petrol-wash);color:var(--petrol);display:grid;place-items:center;flex:none}
@@ -431,36 +437,34 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .gstep > div > b{display:block;font-size:13.5px;margin-bottom:2px;line-height:1.25}
 .gstep > div > span{display:block;font-size:12.5px;color:var(--ink-2);line-height:1.42}
 .gstep > div > span b{color:var(--ink)}
-.gstep.alarm{grid-column:1/-1;background:var(--marker-wash);border-color:#f0c9ab;align-items:center}
-.gstep.alarm .gi{background:var(--marker);color:#fff}
-.gstep.alarm > div > b{color:#5e270a}
-.gstep.alarm > div > span{color:#7a3510}
-/* eingeklappt: nur Icon und Überschrift */
-.gbox.min .guide{grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:7px}
-.gbox.min .gstep{align-items:center;padding:7px 10px;gap:9px;box-shadow:none;cursor:pointer}
-.gbox.min .gstep:hover{border-color:var(--petrol)}
-.gbox.min .gstep .gi{width:28px;height:28px;border-radius:8px}
-.gbox.min .gstep .gi svg{width:15px;height:15px}
-.gbox.min .gstep .gi i{width:15px;height:15px;font-size:9px;top:-5px;left:-5px}
-.gbox.min .gstep > div > b{margin:0;font-size:12.5px}
-.gbox.min .gstep > div > span{display:none}
-/* Eingeklappt: in der Kopfzeile neben der Überschrift, Titel über den Kacheln */
-.shead .gbox.min{flex:1 1 340px;min-width:0;margin:0;align-self:flex-end}
-.shead .gbox.min .gb-h{margin-bottom:6px}
-.shead .gbox.min .guide{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
-.gbox.min .gstep.alarm{grid-column:auto}
-.gbox.min .gstep > div{min-width:0}
-.gbox.min .gstep > div > b{hyphens:auto;-webkit-hyphens:auto;overflow-wrap:anywhere}
-/* Checkliste der Anträge: das Wort deutlich, die Kacheln gleichmäßig */
-.gb-big{display:inline-flex;align-items:center;gap:7px;font-size:17px;letter-spacing:0;text-transform:none;color:var(--marker);font-weight:800}
-.gb-sub{font-size:12.5px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--ink-2)}
-.gbox.min .gb-big{font-size:14px}
-.gbox.min .gb-big svg{width:15px;height:15px}
-#reqGuide:not(.min) .guide{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
-#reqGuide:not(.min) .gstep{flex-direction:column;gap:10px;padding:14px}
-#reqGuide:not(.min) .gstep.alarm{flex-direction:row}
-@media (max-width:1100px){ #reqGuide:not(.min) .guide{grid-template-columns:repeat(3,minmax(0,1fr))} }
-@media (max-width:700px){ #reqGuide:not(.min) .guide{grid-template-columns:1fr} #reqGuide:not(.min) .gstep{flex-direction:row} }
+
+/* Zwischenüberschriften (Team und Projektziel) */
+.subh{display:flex;align-items:flex-end;gap:10px 16px;flex-wrap:wrap;margin:6px 0 12px}
+.subh h3{font-size:19px}
+.subh .sp{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.teamgrid + .subh{margin-top:30px;padding-top:22px;border-top:1px solid var(--line)}
+.spi{display:contents}
+
+/* Tagebuch: das Hauptding, deutlich als eigenes Heft */
+.diary .shead .t{color:var(--marker)}
+.diary .shead{padding-bottom:12px;border-bottom:3px solid var(--marker)}
+/* Rund ums Projekt: Überschrift ruhiger */
+.side .shead .t{font-size:clamp(19px,2.2vw,24px);color:var(--ink-2)}
+
+/* Anträge: Liste links, Checkliste rechts */
+.reqwrap{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:20px;align-items:start}
+.chk{padding:16px;position:sticky;top:120px;border-color:#f0c9ab;background:#fffaf5}
+.chk-h{display:flex;align-items:center;gap:8px;color:var(--marker);font-size:16px;font-weight:800}
+.chk-sub{font-size:12px;color:var(--ink-2);margin:3px 0 10px}
+.chk ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px}
+.chk li{display:flex;gap:9px;align-items:flex-start;font-size:13px;font-weight:600;line-height:1.35}
+.chk li .n{flex:none;width:20px;height:20px;border-radius:99px;background:var(--marker-wash);color:var(--marker);font-size:11px;font-weight:800;display:grid;place-items:center;margin-top:-1px}
+.chk li small{display:block;font-weight:500;color:var(--ink-2);font-size:12px;margin-top:2px}
+.chk li small b{color:var(--ink)}
+.chk li.alarm .n{background:var(--marker);color:#fff}
+.chk li.alarm{color:#7a3510}
+.chk-tg{margin-top:12px;width:100%;justify-content:center}
+@media (max-width:980px){ .reqwrap{grid-template-columns:1fr} .reqwrap .chk{order:-1;position:static} }
 
 /* Zeitschätzung am To-do */
 .estpick{display:flex;gap:6px;flex-wrap:wrap}
@@ -487,7 +491,6 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .bar span + span{box-shadow:inset 1px 0 0 rgba(255,255,255,.55)}
 .bar .b-done{background:var(--k-done)}
 .bar .b-doing{background:var(--k-doing)}
-.bar .b-blocked{background:var(--k-block)}
 .bar .b-todo{background:var(--k-todo)}
 .bar.bad{border-color:var(--st-block);box-shadow:0 0 0 2px #fbe9e6}
 .bar .b-mark{position:absolute;top:-3px;bottom:-3px;width:3px;background:var(--ink);border-radius:2px;box-shadow:0 0 0 2px #fff}
@@ -499,7 +502,7 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .bud-msg.bad{color:var(--st-block);background:#fbe9e6}
 .bud-msg.info{color:#8a5f08;background:#fbf0cf}
 
-/* Dokumentation: To-do-Auswahl */
+/* Tagebuch: To-do-Auswahl */
 .tdpick{position:relative}
 .tdbtn{width:100%;display:flex;align-items:center;gap:9px;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-sm);padding:8px 11px;font-size:13.5px;text-align:left;box-shadow:inset 0 1px 2px rgba(27,26,22,.035)}
 .tdbtn .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -510,9 +513,9 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .tdopt:hover,.tdopt[aria-selected="true"]{background:var(--petrol-wash)}
 .tdopt small{margin-left:auto;color:var(--ink-3);font-size:11px;white-space:nowrap}
 .kdot{width:10px;height:10px;border-radius:99px;flex:none;display:inline-block}
-.k-todo{background:var(--k-todo)} .k-doing{background:var(--k-doing)} .k-blocked{background:var(--k-block)} .k-done{background:var(--k-done)} .k-none{background:var(--line)}
+.k-todo{background:var(--k-todo)} .k-doing{background:var(--k-doing)} .k-done{background:var(--k-done)} .k-none{background:var(--line)}
 .tdopt[data-k="todo"]{border-left-color:var(--k-todo)} .tdopt[data-k="doing"]{border-left-color:var(--k-doing)}
-.tdopt[data-k="blocked"]{border-left-color:var(--k-block)} .tdopt[data-k="done"]{border-left-color:var(--k-done)}
+.tdopt[data-k="done"]{border-left-color:var(--k-done)}
 .etodo{display:inline-flex;align-items:center;gap:6px;max-width:100%;font-size:11.5px;font-weight:700;color:var(--ink-2);background:var(--paper);border:1px solid var(--line-soft);border-radius:99px;padding:2px 9px 2px 7px;margin-bottom:6px}
 .etodo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .daygrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:10px;align-items:stretch}
@@ -611,7 +614,7 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 /* ============================================================
    TEAM
    ============================================================ */
-.tname{margin:8px 0 4px;max-width:420px}
+.tname{max-width:340px;flex:1 1 240px}
 .tname input{font-size:17px;font-weight:600}
 .teamgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px}
 .mcard{background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r-lg);padding:15px;box-shadow:var(--sh-1);display:flex;flex-direction:column;gap:12px}
@@ -631,9 +634,6 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .cseg button.c1[aria-pressed="true"]{background:#e3f2e8;border-color:var(--st-done);color:var(--st-done)}
 .cseg button.c2[aria-pressed="true"]{background:var(--st-done);border-color:#205a38;color:#fff}
 .cread{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
-.consentinfo{margin-left:auto;display:flex;flex-direction:column;align-items:flex-start;gap:3px;font-size:11px;color:var(--ink-3)}
-.consentinfo > span{display:inline-flex;align-items:center;gap:5px}
-.consentinfo .cmark{min-width:20px;height:16px;font-size:9.5px;padding:0 4px}
 .mkey{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.05em;color:var(--petrol)}
 
 /* ============================================================
@@ -793,7 +793,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 @media (max-width:1180px){
   .ov.withlist{grid-template-columns:minmax(230px,290px) minmax(0,1fr)}
   .clist{grid-column:1/-1;position:static;max-height:none}
-  .board{grid-template-columns:repeat(4,minmax(190px,1fr));overflow-x:auto}
+  .board{grid-template-columns:repeat(3,minmax(190px,1fr));overflow-x:auto}
   .goalwrap{grid-template-columns:1fr}
   .imgs{grid-template-columns:repeat(4,1fr)}
 }
@@ -834,7 +834,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 }
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 @media print{
-  header.top,.tabbar,.m-f,.needs-write,.addcard,.xadd,.xacts,.hform,.toast,.pickbar,.nform,.n-ask,.n-x,.rx,.nfilt{display:none!important}
+  header.top,.tabbar,.m-f,.needs-write,.addcard,.xadd,.xacts,.hform,.toast,.pickbar,.nform,.n-ask,.n-x,.rx,.nfilt,.helpq,.chk-tg{display:none!important}
   body{background:#fff}
   .view{display:block!important}
   .view + .view{page-break-before:always}
@@ -907,33 +907,32 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <nav class="tabbar" id="tabbar" hidden>
   <div class="wrap tabs" role="tablist">
     <button class="tab" role="tab" data-view="team" aria-selected="true">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17.5" cy="9.5" r="2.6"/><path d="M16 15.2A5.6 5.6 0 0 1 21.5 20"/></svg>
-      Team <span class="cnt" id="cntTeam">0</span>
-    </button>
-    <button class="tab" role="tab" data-view="goal" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1"/></svg>
-      Projektziel
+      Team und Projektziel
     </button>
     <button class="tab" role="tab" data-view="work" aria-selected="false">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4" width="7" height="16" rx="1.5"/><rect x="14" y="4" width="7" height="10" rx="1.5"/></svg>
-      To-dos <span class="cnt" id="cntWork">0</span>
+      Projektplanung <span class="cnt" id="cntWork">0</span>
     </button>
-    <button class="tab" role="tab" data-view="hours" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/></svg>
-      Dokumentation <span class="cnt" id="cntHours">0</span>
+    <button class="tab main" role="tab" data-view="hours" aria-selected="false">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/></svg>
+      Tagebuch <span class="cnt" id="cntHours">0</span>
     </button>
-    <button class="tab" role="tab" data-view="experts" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M17.5 13.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/></svg>
-      Experten <span class="cnt" id="cntExp">0</span>
-    </button>
-    <button class="tab req" role="tab" data-view="requests" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
-      Anträge <span class="cnt" id="cntReq">0</span><span class="nextreq" id="reqNext" hidden></span>
-    </button>
-    <button class="tab" role="tab" data-view="notes" aria-selected="false">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5M8 9h8M8 13h5"/></svg>
-      Lehrkraft-Kommentare <span class="cnt" id="cntNotes">0</span>
-    </button>
+    <!-- Rund ums Projekt: abgesetzt, weil es nicht direkt das Projekt ist -->
+    <div class="tabside" role="presentation">
+      <button class="tab" role="tab" data-view="experts" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M17.5 13.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/></svg>
+        Experten <span class="cnt" id="cntExp">0</span>
+      </button>
+      <button class="tab" role="tab" data-view="requests" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/></svg>
+        Anträge <span class="cnt" id="cntReq">0</span><span class="nextreq" id="reqNext" hidden></span>
+      </button>
+      <button class="tab" role="tab" data-view="notes" aria-selected="false">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v11l-5 5H4z"/><path d="M15 20v-5h5M8 9h8M8 13h5"/></svg>
+        Lehrkräfte-Kommentare <span class="cnt" id="cntNotes">0</span>
+      </button>
+    </div>
   </div>
 </nav>
 
@@ -980,18 +979,68 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <div id="waitRules" style="margin-top:26px"></div>
   </section>
 
-  <!-- ══════════ PLANUNGSRAUM: PROJEKTZIEL ══════════ -->
-  <section class="view" id="view-goal" hidden>
+  <!-- ══════════ PLANUNGSRAUM: PROJEKTPLANUNG ══════════ -->
+  <section class="view" id="view-work" hidden>
     <div class="shead">
+      <h2 class="t">Projektplanung</h2>
+      <div class="sp"><span class="spi" id="workStats"></span><button class="helpq" data-help="work" aria-expanded="false" aria-controls="workHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+    </div>
+    <div class="gbox" id="workHelp" hidden></div>
+    <div class="panel budget" id="budget"></div>
+    <div class="colpick" id="colPick" role="tablist" aria-label="Spalte"></div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: TAGEBUCH (intern log/hours) ══════════ -->
+  <section class="view diary" id="view-hours" hidden>
+    <div class="shead">
+      <h2 class="t">Tagebuch</h2>
+      <div class="sp"><span class="spi" id="hoursStats"></span><button class="helpq" data-help="hours" aria-expanded="false" aria-controls="hoursHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+    </div>
+    <div class="gbox" id="hoursHelp" hidden></div>
+    <div class="robar photonote" id="hPhotoNote" hidden></div>
+    <div class="today" id="todayBar"></div>
+    <div id="hList"></div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: ANTRÄGE ══════════ -->
+  <section class="view side" id="view-requests" hidden>
+    <div class="shead">
+      <h2 class="t">Anträge</h2>
+      <div class="sp"><button class="btn mark needs-write" id="btnNewReq">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Antrag stellen</button><button class="helpq" data-help="requests" aria-expanded="false" aria-controls="requestsHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+    </div>
+    <div class="gbox" id="requestsHelp" hidden></div>
+    <div class="reqwrap">
       <div>
-        <div class="eyebrow">Wohin wollen wir?</div>
-        <h2 class="t">Projektziel</h2>
-        <p class="s">Beschreibt in eigenen Worten, was am Ende entstehen soll — und bis wann.</p>
+        <div class="filt" id="reqFilt"></div>
+        <div class="reqs" id="reqList"></div>
       </div>
+      <aside class="panel chk" id="reqCheck"></aside>
+    </div>
+  </section>
+
+  <!-- ══════════ PLANUNGSRAUM: TEAM UND PROJEKTZIEL ══════════ -->
+  <section class="view" id="view-team" hidden>
+    <div class="shead">
+      <h2 class="t">Team und Projektziel</h2>
+      <div class="sp"><button class="helpq" data-help="team" aria-expanded="false" aria-controls="teamHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
+    </div>
+    <div class="gbox" id="teamHelp"></div>
+    <div class="subh">
+      <h3 id="teamTitle">Unser Team</h3>
+      <div class="tname" id="teamNameF" hidden>
+        <label class="fl" for="teamNameIn">Euer Teamname</label>
+        <input type="text" id="teamNameIn" maxlength="40" placeholder="z. B. Die Füchse" autocomplete="off">
+      </div>
+    </div>
+    <div class="teamgrid" id="teamGrid"></div>
+    <div class="subh">
+      <h3>Projektziel</h3>
       <div class="sp"><span class="stat" id="goalSaved">gespeichert</span>
         <button class="btn" id="goalLockBtn" hidden></button></div>
     </div>
-    <div class="gbox" id="goalGuide"></div>
     <div class="robar" id="goalNote" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Das Projektziel ist fixiert — es gilt so. Änderungen bitte mit eurer Lehrkraft besprechen.</span></div>
     <div class="goalwrap">
       <div>
@@ -1026,9 +1075,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       </div>
       <div style="display:flex;flex-direction:column;gap:16px">
         <div class="panel pad">
-          <div class="eyebrow">Visualisierung</div>
-          <h3 style="font-size:17px;margin-top:3px">Bilder &amp; Skizzen</h3>
-          <p class="hint" style="margin-bottom:12px">Bis zu <b>5 Bilder</b>: Skizze, Mockup, Foto. Sie werden automatisch verkleinert.</p>
+          <h3 style="font-size:17px;margin-bottom:12px">Bilder &amp; Skizzen</h3>
           <div class="imgs" id="goalImgs"></div>
           <input type="file" id="goalImgInput" accept="image/*" multiple hidden>
         </div>
@@ -1036,87 +1083,13 @@ body.ro .postit,body.ro .pchip{cursor:default}
     </div>
   </section>
 
-  <!-- ══════════ PLANUNGSRAUM: ARBEIT ══════════ -->
-  <section class="view" id="view-work" hidden>
+  <!-- ══════════ PLANUNGSRAUM: LEHRKRÄFTE-KOMMENTARE ══════════ -->
+  <section class="view side" id="view-notes" hidden>
     <div class="shead">
-      <div>
-        <div class="eyebrow">Was ist zu tun?</div>
-        <h2 class="t">To-do-Übersicht</h2>
-        <p class="s">Euer Weg vom Start bis zum Ende — in kleinen Schritten.</p>
-      </div>
-      <div class="sp" id="workStats"></div>
+      <h2 class="t">Lehrkräfte-Kommentare</h2>
+      <div class="sp"><span class="spi" id="notesStats"></span><button class="helpq" data-help="notes" aria-expanded="false" aria-controls="notesHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
     </div>
-    <div class="gbox" id="workGuide"></div>
-    <div class="panel budget" id="budget"></div>
-    <div class="colpick" id="colPick" role="tablist" aria-label="Spalte"></div>
-    <div class="board" id="board"></div>
-  </section>
-
-  <!-- ══════════ PLANUNGSRAUM: STUNDEN ══════════ -->
-  <section class="view" id="view-hours" hidden>
-    <div class="shead">
-      <div>
-        <div class="eyebrow">Was haben wir heute gemacht?</div>
-        <h2 class="t">Dokumentation</h2>
-        <p class="s">Am Ende jedes Arbeitstags haltet ihr fest, wer was gemacht hat.</p>
-      </div>
-      <div class="sp" id="hoursStats"></div>
-    </div>
-    <div class="gbox" id="hoursGuide"></div>
-    <div class="robar photonote" id="hPhotoNote" hidden></div>
-    <div class="today" id="todayBar"></div>
-    <div id="hList"></div>
-  </section>
-
-  <!-- ══════════ PLANUNGSRAUM: ANTRÄGE ══════════ -->
-  <section class="view" id="view-requests" hidden>
-    <div class="shead">
-      <div>
-        <div class="eyebrow">Lernen am anderen Ort</div>
-        <h2 class="t">Anträge</h2>
-        <p class="s">Wer einen Tag <b>außerhalb der Schule</b> am Projekt arbeiten will, braucht dafür einen genehmigten Antrag.</p>
-      </div>
-      <div class="sp"><button class="btn mark needs-write" id="btnNewReq">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-        Antrag stellen</button></div>
-    </div>
-    <div class="gbox" id="reqGuide"></div>
-    <div class="filt" id="reqFilt"></div>
-    <div class="reqs" id="reqList"></div>
-  </section>
-
-  <!-- ══════════ PLANUNGSRAUM: TEAM ══════════ -->
-  <section class="view" id="view-team" hidden>
-    <div class="shead">
-      <div>
-        <div class="eyebrow">Wer ist dabei?</div>
-        <h2 class="t" id="teamTitle">Unser Team</h2>
-        <div class="tname" id="teamNameF" hidden>
-          <label class="fl" for="teamNameIn">Euer Teamname</label>
-          <input type="text" id="teamNameIn" maxlength="40" placeholder="z. B. Die Füchse" autocomplete="off">
-        </div>
-      </div>
-      <div class="consentinfo" title="Einwilligung der Eltern — die Lehrkraft trägt ein, was vorliegt">
-        <span><span class="cmark c0">✗</span> keine Einwilligung</span>
-        <span title="Schulgelände in Kleingruppen verlassen, z. B. zu jemandem nach Hause"><span class="cmark c1">✓</span> Stufe 1: Schulgelände verlassen</span>
-        <span><span class="cmark c2">✓✓</span> Stufe 2: auch fremde Orte</span>
-      </div>
-    </div>
-    <div class="gbox" id="teamGuide"></div>
-    <div class="teamgrid" id="teamGrid"></div>
-  </section>
-
-  <!-- ══════════ PLANUNGSRAUM: LEHRKRAFT-KOMMENTARE ══════════ -->
-  <section class="view" id="view-notes" hidden>
-    <div class="shead">
-      <div>
-        <div class="eyebrow">Hinweise eurer Lehrkräfte</div>
-        <h2 class="t">Lehrkraft-Kommentare</h2>
-        <p class="s" id="notesSub">Hinweise eurer Lehrkräfte zu eurem Projekt.</p>
-      </div>
-      <div class="sp" id="notesStats"></div>
-    </div>
-    <div class="gbox" id="notesGuide"></div>
+    <div class="gbox" id="notesHelp" hidden></div>
     <div class="panel pad nform" id="noteForm" hidden>
       <label class="fl" for="noteIn">Neuer Kommentar an diese Gruppe</label>
       <textarea id="noteIn" maxlength="1500" placeholder="z. B. Euer Projektziel ist noch zu allgemein — woran erkennt ihr am Ende, dass ihr es geschafft habt?"></textarea>
@@ -1132,16 +1105,12 @@ body.ro .postit,body.ro .pchip{cursor:default}
   </section>
 
   <!-- ══════════ PLANUNGSRAUM: EXPERTEN ══════════ -->
-  <section class="view" id="view-experts" hidden>
+  <section class="view side" id="view-experts" hidden>
     <div class="shead">
-      <div>
-        <div class="eyebrow">Wer kann uns helfen?</div>
-        <h2 class="t">Experten</h2>
-        <p class="s">Wer kann euch helfen — und was habt ihr von ihnen erfahren?</p>
-      </div>
-      <div class="sp" id="expStats"></div>
+      <h2 class="t">Experten</h2>
+      <div class="sp"><span class="spi" id="expStats"></span><button class="helpq" data-help="experts" aria-expanded="false" aria-controls="expertsHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span>Was muss ich hier machen?</span></button></div>
     </div>
-    <div class="gbox" id="expGuide"></div>
+    <div class="gbox" id="expertsHelp" hidden></div>
     <div class="xgrid" id="expGrid"></div>
   </section>
 </main>
@@ -1225,11 +1194,9 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <div class="xppick" id="tkXp"></div><div id="tkXpInfo"></div></div>
       <div class="grid2">
         <div class="field"><label class="fl" for="tkCol">Spalte</label>
-          <select id="tkCol"><option value="todo">Zu erledigen</option><option value="blocked">Blockiert</option><option value="doing">In Arbeit</option><option value="done">Fertig</option></select></div>
+          <select id="tkCol"><option value="todo">Zu erledigen</option><option value="doing">In Arbeit</option><option value="done">Fertig</option></select></div>
         <div class="field"><span class="fl">Farbe</span><div class="swatches" id="tkColor"></div></div>
       </div>
-      <div class="field" id="tkNoteF"><label class="fl" for="tkNote">Was blockiert? Wer kann helfen?</label>
-        <textarea id="tkNote" maxlength="400" style="min-height:56px"></textarea></div>
     </div>
     <div class="m-f">
       <button class="btn danger needs-write" id="tkDel">
@@ -1420,7 +1387,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <p style="margin:0 0 12px;font-size:12.5px;line-height:1.55;color:var(--ink-3)">
         Die ganze Klasse wird <b>einmal pro Woche</b> automatisch gesichert — sobald im Raum gearbeitet wird und das letzte Backup älter als 7 Tage ist.
         Vor jedem Import oder Einspielen entsteht außerdem ein Backup „vor Änderung“.
-        Fotos aus der Dokumentation werden <b>nicht</b> gesichert und nicht exportiert.</p>
+        Fotos aus dem Tagebuch werden <b>nicht</b> gesichert und nicht exportiert.</p>
       <p style="margin:0 0 12px;font-size:12.5px;line-height:1.55;color:var(--ink-3)" id="backupScope"></p>
       <div id="backupList"></div>
     </div>
@@ -1437,7 +1404,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261008f"></script>
-<script src="app.js?v=20261024"></script>
+<script src="bridge.js?v=20261026"></script>
+<script src="app.js?v=20261026"></script>
 </body>
 </html>

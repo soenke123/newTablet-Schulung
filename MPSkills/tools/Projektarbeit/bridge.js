@@ -338,7 +338,7 @@
     put('g1', 'goal', 'main', { title: 'Unsere Schul-Wetterstation', locked: false, images: [], due: day(45),
       text: '<h2>Was wollen wir erreichen?</h2><p>Wir bauen eine <strong>Wetterstation</strong> für den Schulhof, die Temperatur, Luftfeuchte und Luftdruck misst und die Werte auf einer Webseite zeigt.</p><h2>Für wen?</h2><p>Für alle Klassen der Schule — am Ende soll jede:r am Tablet sehen, wie das Wetter auf dem Schulhof ist.</p><ul><li>Funktionierende Messstation</li><li>Webseite mit Diagramm</li><li>Präsentation vor der Klasse</li></ul>' });
     [['t1', 'Sensoren recherchieren', 'done', ['p2']], ['t2', 'Gehäuse entwerfen', 'doing', ['p1']],
-     ['t3', 'Webseite: Diagramm', 'todo', ['p3']], ['t4', 'Lötkolben besorgen', 'blocked', ['p1'], 'Lötstation im Technikraum defekt — Antrag gestellt.'],
+     ['t3', 'Webseite: Diagramm', 'todo', ['p3']], ['t4', 'Lötkolben besorgen', 'doing', ['p1']],
      ['t5', 'Messwerte eine Woche sammeln', 'todo', []], ['t6', 'Präsentation gliedern', 'doing', ['p3', 'p2']]]
       .forEach(([id, title, col, who, note], i) => put('g1', 'task', id,
         { title, col, who, note: note || '', text: '', color: ['yellow', 'blue', 'green', 'pink', 'lilac', 'yellow'][i], order: i,
