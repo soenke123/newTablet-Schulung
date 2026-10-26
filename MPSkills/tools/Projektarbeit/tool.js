@@ -20,7 +20,7 @@
 
    Reiter (0201): Auf der Raumseite ersetzt die Projektarbeit den
    Reiter „3 Projektarbeit" durch zwei eigene (ctx.tabs, lib/tool.js):
-     3 Gruppen-Übersicht     Lobby, Gruppen bilden, Klassenliste
+     3 Klassenübersicht      Schüler ohne Gruppe, Gruppen, Tätigkeitsbuch
      4 „<Gruppe> Projekt"    der Planungsraum der zuletzt geöffneten
                              Gruppe (nach dem Neuladen: die Gruppe, in
                              der zuletzt etwas geschah)
@@ -55,7 +55,8 @@
                   'pa_room_backup_get', 'pa_room_backup_restore', 'pa_room_notify_get', 'pa_room_notify_set',
                   'pa_room_teachers_get', 'pa_room_teacher_search', 'pa_room_teacher_add', 'pa_room_teacher_remove',
                   'pa_room_note_add', 'pa_room_note_delete', 'pa_room_note_done', 'pa_room_note_reply',
-                  'pa_room_note_reply_delete']
+                  'pa_room_note_reply_delete',
+                  'pa_room_tlog_get', 'pa_room_tlog_add', 'pa_room_tlog_set', 'pa_room_tlog_delete']
   };
 
   const GAP = 12;
@@ -98,9 +99,9 @@
     }
     const g = groups.find(x => x.id === lastGroup) || null;
     const list = [
-      { key: 'groups', label: 'Gruppen-Übersicht' },
+      { key: 'groups', label: 'Klassenübersicht' },
       { key: 'plan', label: g ? groupTitle(g, people) + ' Projekt' : 'Projekt',
-        disabled: !lastGroup, title: 'Erst in der Gruppen-Übersicht einen Planungsraum öffnen.' }
+        disabled: !lastGroup, title: 'Erst in der Klassenübersicht einen Planungsraum öffnen.' }
     ];
     const active = focus ? 'plan' : 'groups';
     const sig = JSON.stringify([list, active]);
@@ -233,7 +234,7 @@
       root = el; ctx = c; role = c.role; destroyed = false;
 
       // Im Schaufenster ohne Raum: die Beispielklasse (?demo=1, bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261008c';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261026a';
       root.innerHTML =
         '<div class="pa-host">' +
           '<iframe class="pa-frame" src="tools/Projektarbeit/index.html' + q + '" ' +

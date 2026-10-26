@@ -333,7 +333,7 @@
          den einen Reiter „3 <Werkzeug>" durch mehrere:
            ctx.tabs([{ key, label, disabled }], aktiverKey, beiWahl)
          beiWahl(key) kommt, wenn die Lehrkraft einen davon antippt.
-         Projektarbeit: „Gruppen-Übersicht" und „<Gruppe> Projekt". */
+         Projektarbeit: „Klassenübersicht" und „<Gruppe> Projekt". */
       tabs:    opts.tabs || null,
       errText: code => errText(code, own),
       esc:     (s) => (window.escapeHtml

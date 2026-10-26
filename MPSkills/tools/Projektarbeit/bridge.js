@@ -173,7 +173,7 @@
     not_a_teacher:   'Diese Person ist keine freigeschaltete Lehrkraft dieser Schule.',
     teacher_limit:   'Mehr als 10 weitere Lehrkräfte gehen in einen Raum nicht.',
     is_owner:        'Wer den Raum eröffnet hat, bleibt immer drin.',
-    fn_missing:      'Auf dem Server fehlt eine Migration der Projektarbeit (0200–0205). Bitte der Lehrkraft Bescheid sagen.'
+    fn_missing:      'Auf dem Server fehlt eine Migration der Projektarbeit (0200–0235). Bitte der Lehrkraft Bescheid sagen.'
   };
   PA.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
 
@@ -398,6 +398,13 @@
     ] };
     const staff = [{ id: 'u1', name: 'Frau Demo', owner: true, me: true }, { id: 'u2', name: 'Herr Kollege', owner: false, me: false }];
     const school = [{ id: 'u3', name: 'Frau Beispiel', account: 'beispiel' }, { id: 'u4', name: 'Herr Muster', account: 'muster' }];
+    // 0235: Tätigkeitsbuch der Lehrkräfte — je Tag eine Kachel, Texte je Feld.
+    const tlog = [
+      { id: 'tl1', day: day(-1), by: 'Herr Kollege', at: day(-1) + 'T12:40:00Z', texts: {
+        general: { t: 'Emma war krank. Die Anträge für morgen bitte bis 18 Uhr prüfen.', by: 'Herr Kollege', at: day(-1) + 'T12:40:00Z' },
+        g1: { t: 'Gehäuse fast fertig, Webseite hängt. Nächste Stunde nach dem Diagramm fragen.', by: 'Herr Kollege', at: day(-1) + 'T12:42:00Z', l: 'Wetterstation (Mia, Leon, Emma)' },
+        g2: { t: 'Projektziel fixiert. Hannah braucht noch die Einverständniserklärung.', by: 'Herr Kollege', at: day(-1) + 'T12:45:00Z', l: 'Schulgarten-App (Noah, Hannah)' } } }
+    ];
     const noteOf = id => { for (const g in notes) { const n = notes[g].find(x => x.id === id); if (n) return n; } return null; };
     const notify = { domain: 'mps-ki.de', email: null, verified: false, pending: false, enabled: false };
     // Demo-Raum: der Stand der Beispielklasse, solange der Tab offen ist.
@@ -405,7 +412,7 @@
     const MIA = 'p1';
     const keep = () => {
       if (!ROLES) return;
-      try { sessionStorage.setItem(KEEP, JSON.stringify({ people, groups, seq, rev, rules, store, notes, staff })); }
+      try { sessionStorage.setItem(KEEP, JSON.stringify({ people, groups, seq, rev, rules, store, notes, staff, tlog })); }
       catch (e) { /* voll (Fotos) oder gesperrt: dann eben nur bis zum nächsten Umschalten */ }
     };
     const bump = () => { rev++; keep(); };
@@ -595,6 +602,29 @@
         people.forEach(p => { if (p.group === g.id) p.group = null; });
         groups.splice(groups.indexOf(g), 1); delete store[g.id]; bump(); return { ok: true };
       }
+      if (fn === 'pa_room_tlog_get') {
+        return R({ ok: true, entries: tlog.slice().sort((x, y) => y.day.localeCompare(x.day) || y.at.localeCompare(x.at)) });
+      }
+      if (fn === 'pa_room_tlog_add') {
+        const e = { id: 'tl' + Date.now().toString(36), day: a.p_day || day(0), by: 'Frau Demo', at: new Date().toISOString(), texts: {} };
+        tlog.push(e); keep(); return R({ ok: true, entry: e });
+      }
+      if (fn === 'pa_room_tlog_set') {
+        const e = tlog.find(x => x.id === a.p_entry); if (!e) return { ok: false, error: 'not_found' };
+        if (a.p_day) e.day = a.p_day;
+        if (a.p_key) {
+          const t = String(a.p_text || '').trim();
+          if (t.length > 4000) return { ok: false, error: 'too_long' };
+          if (!t) delete e.texts[a.p_key];
+          else e.texts[a.p_key] = Object.assign({ t, by: 'Frau Demo', at: new Date().toISOString() },
+            a.p_key === 'general' ? {} : { l: a.p_label || (e.texts[a.p_key] || {}).l || 'Gruppe' });
+        }
+        keep(); return R({ ok: true, entry: e });
+      }
+      if (fn === 'pa_room_tlog_delete') {
+        const i = tlog.findIndex(x => x.id === a.p_entry); if (i < 0) return { ok: false, error: 'not_found' };
+        tlog.splice(i, 1); keep(); return { ok: true };
+      }
       if (fn === 'pa_room_rules') { rules = String(a.p_rules || '').trim(); bump(); return { ok: true }; }
       if (fn === 'pa_room_rekey') {
         const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };
@@ -705,6 +735,7 @@
           Object.keys(store).forEach(x => { delete store[x]; }); Object.assign(store, k.store);
           Object.keys(notes).forEach(x => { delete notes[x]; }); Object.assign(notes, k.notes);
           staff.splice(0, staff.length, ...k.staff);
+          if (Array.isArray(k.tlog)) tlog.splice(0, tlog.length, ...k.tlog);
         }
       } catch (e) { /* frisch anfangen */ }
     }

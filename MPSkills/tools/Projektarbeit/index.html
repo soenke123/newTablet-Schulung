@@ -198,14 +198,20 @@ main.wrap{padding-top:30px;padding-bottom:80px}
 /* ============================================================
    ÜBERSICHT (Lehrkraft)
    ============================================================ */
-.ov{display:grid;grid-template-columns:minmax(250px,320px) minmax(0,1fr);gap:18px;align-items:start}
-.lobby{position:sticky;top:76px;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:220px}
+/* Links Schüler ohne Gruppe + Gruppen, rechts das Tätigkeitsbuch. */
+.ov{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:18px;align-items:start}
+.ov-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+/* Schüler ohne Gruppe: ein Wartebereich über den Gruppen. Sind alle
+   eingeteilt, ist er weg — nur beim Ziehen/Antippen steht er als Ziel da. */
+.lobby{padding:12px 14px;display:flex;flex-direction:column;gap:9px;border-color:#e2c48a;background:#fdf8ec}
+.lobby.empty{display:none}
+body.dragging .lobby.empty,body.picking .lobby.empty{display:flex}
+.lobby.empty .lobby-list::after{content:'Hierher ziehen = zurück zu „Schüler ohne Gruppe“';font-size:12px;color:var(--ink-3);font-style:italic}
 .lobby-h{display:flex;align-items:center;gap:9px}
-.lobby-h h3{font-size:17px}
-.lobby-h .n{margin-left:auto}
-.lobby-hint{font-size:12px;color:var(--ink-3);line-height:1.45;margin:0}
-.lobby-list{display:flex;flex-direction:column;gap:6px;min-height:80px;border-radius:var(--r);padding:4px;margin:0 -4px}
-.lobby-empty{font-size:12px;color:var(--ink-3);font-style:italic;text-align:center;padding:18px 8px;border:1px dashed var(--line);border-radius:var(--r)}
+.lobby-h h3{font-size:16px}
+.lobby-list{display:flex;flex-wrap:wrap;gap:6px;min-height:34px;border-radius:var(--r);padding:2px}
+.lobby-list .pchip{flex:0 1 200px;min-width:150px}
+.lobby-empty{font-size:12px;color:var(--ink-3);font-style:italic;padding:6px 2px}
 
 .pchip{
   display:flex;align-items:center;gap:9px;background:var(--paper);border:1px solid var(--line);
@@ -260,30 +266,59 @@ main.wrap{padding-top:30px;padding-bottom:80px}
 }
 .ghint b{color:var(--ink-2)}
 
-/* Klassenliste (rechts, ein- und ausblendbar) */
-.ov.withlist{grid-template-columns:minmax(230px,290px) minmax(0,1fr) minmax(240px,300px)}
-.clist{position:sticky;top:76px;padding:14px;display:flex;flex-direction:column;gap:8px;max-height:calc(100vh - 96px);overflow:auto}
-.clist-body{display:flex;flex-direction:column;gap:4px}
-.clist-t{border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
-.clist-t:empty{display:none}
-.clist-th{display:flex;align-items:center;gap:8px;margin-bottom:2px}
-.clist-th h4{font-size:13px;margin:0}
-.clist-th .btn{margin-left:auto}
-.clist-t .crow{align-items:center}
-.crow{display:flex;align-items:flex-start;gap:9px;padding:6px 8px;border-radius:var(--r);border:1px solid transparent}
-.crow .cn{flex:1;min-width:0;line-height:1.25}
-.crow .cn b{font-size:13px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.crow .cn small{font-size:11px;color:var(--ink-3)}
-.crow .ctag{display:block;font-size:11px;font-weight:700;margin-top:3px;line-height:1.3}
-.crow.away{background:#e7e5e0;border-color:#d3d0c8}
-.crow.away .cn b{color:var(--ink-2)}
-.crow.away .ctag{color:#5f5b52}
-.crow.pend{background:#fbf0cf;border-color:#ecd28e}
-.crow.pend .ctag{color:#8a5f08}
-.clist-legend{font-size:11px;color:var(--ink-3);line-height:1.8;margin:6px 0 0;border-top:1px solid var(--line-soft);padding-top:8px}
-.clist-legend .sw{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;border:1px solid}
-.clist-legend .sw.away{background:#e7e5e0;border-color:#c9c5bb}
-.clist-legend .sw.pend{background:#fbf0cf;border-color:#ecd28e}
+/* Anträge für heute: wer auf einem Antrag steht, hat einen gemeinsamen
+   Rahmen — gelb = noch nicht genehmigt, grün = genehmigt, rot = abgelehnt. */
+.rqbox{display:flex;flex-direction:column;gap:5px;border:2px solid;border-radius:14px;padding:5px 5px 6px}
+.rqbox .rq-l{font-size:11.5px;font-weight:700;line-height:1.3;padding:1px 6px 0}
+.rqbox .rq-l small{display:block;font-size:10.5px;font-weight:500;opacity:.85;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rqbox.open{border-color:#e6c25e;background:#fdf3d2}
+.rqbox.open .rq-l{color:#86600a}
+.rqbox.approved{border-color:#7cc196;background:#e4f3e9}
+.rqbox.approved .rq-l{color:#1f6a3d}
+.rqbox.rejected{border-color:#e3b2ab;background:#fbedeb}
+.rqbox.rejected .rq-l{color:var(--st-block)}
+.ov-legend{font-size:11px;color:var(--ink-3);line-height:2;margin:0}
+.ov-legend .cmark{min-width:22px;height:18px;font-size:10.5px}
+.ov-legend .sw{display:inline-block;width:12px;height:12px;border-radius:4px;vertical-align:-2px;border:2px solid;margin-left:10px}
+.ov-legend .sw.open{background:#fdf3d2;border-color:#e6c25e}
+.ov-legend .sw.ok{background:#e4f3e9;border-color:#7cc196}
+
+/* Tätigkeitsbuch (nur Lehrkräfte, 0235): rechts kurz zum Lesen,
+   zum Schreiben groß in der Mitte (Dialog mTlog). */
+.tbook{position:sticky;top:76px;padding:14px;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 96px);overflow:auto}
+.tb-h{display:flex;align-items:center;gap:9px}
+.tb-h h3{font-size:16px}
+.tb-h .btn{margin-left:auto}
+.tb-sub{font-size:11.5px;color:var(--ink-3);margin:-4px 0 0;line-height:1.4}
+.tb-list{display:flex;flex-direction:column;gap:10px}
+.tb-empty{font-size:12px;color:var(--ink-3);font-style:italic;text-align:center;padding:18px 8px;border:1px dashed var(--line);border-radius:var(--r)}
+.tbcard{display:block;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;cursor:pointer;box-shadow:var(--sh-1);transition:border-color .12s,box-shadow .12s}
+.tbcard:hover{border-color:var(--petrol)}
+.tbcard.tb-today{border-left:4px solid var(--marker)}
+.tbc-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.tbc-h b{font-size:13.5px}
+.tbc-h .metag{margin-left:2px}
+.tbc-h small{margin-left:auto;font-size:10.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:50%}
+.tbc-sec{margin-top:6px;font-size:12.5px;line-height:1.45}
+.tbc-sec > b{display:block;font-size:11px;letter-spacing:.04em;color:var(--petrol)}
+.tbc-sec > b span{color:var(--ink-3);font-weight:500;letter-spacing:0}
+.tbc-sec p{margin:1px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;color:var(--ink-2)}
+.tbc-none{font-size:12px;color:var(--ink-3);font-style:italic}
+.tb-staff{border-top:1px solid var(--line-soft);padding-top:9px;font-size:11.5px;color:var(--ink-3);display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.tb-staff:empty{display:none}
+.tb-staff .tstaff{display:inline-flex;align-items:center;gap:5px;color:var(--ink-2);font-weight:600}
+.tb-staff .btn{margin-left:auto}
+.modal.wide{max-width:900px}
+.tl-top{display:flex;align-items:flex-end;gap:14px;flex-wrap:wrap}
+.tl-save{margin-left:auto;font-size:11.5px;color:var(--ink-3);padding-bottom:16px}
+.tl-sec{margin-top:14px;padding-top:14px;border-top:1px solid var(--line-soft)}
+.tl-sec:first-child{margin-top:0;padding-top:0;border-top:0}
+.tl-sec .tl-h{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.tl-sec .tl-h b{font-size:15px}
+.tl-sec .tl-h span{font-size:12.5px;color:var(--ink-3)}
+.tl-sec .tl-h small{margin-left:auto;font-size:11px;color:var(--ink-3)}
+.tl-sec.gen .tl-h b{color:var(--petrol)}
+.tl-sec textarea{width:100%;min-height:64px;resize:none;overflow:hidden;line-height:1.5}
 .cmark{display:inline-grid;place-items:center;min-width:26px;height:22px;padding:0 5px;border-radius:99px;font-size:12px;font-weight:800;line-height:1;flex:none;border:1px solid;letter-spacing:-.05em}
 button.cmark{cursor:pointer}
 .cmark.c0{color:var(--st-block);background:#fbe9e6;border-color:#eac3bd}
@@ -808,15 +843,14 @@ body.ro .postit,body.ro .pchip{cursor:default}
 
 /* ---------- responsive ---------- */
 @media (max-width:1180px){
-  .ov.withlist{grid-template-columns:minmax(230px,290px) minmax(0,1fr)}
-  .clist{grid-column:1/-1;position:static;max-height:none}
+  .ov{grid-template-columns:minmax(0,1fr) minmax(270px,320px)}
   .board{grid-template-columns:repeat(3,minmax(190px,1fr));overflow-x:auto}
   .goalwrap{grid-template-columns:1fr}
   .imgs{grid-template-columns:repeat(4,1fr)}
 }
 @media (max-width:880px){
-  .ov,.ov.withlist{grid-template-columns:1fr}
-  .lobby{position:static}
+  .ov{grid-template-columns:1fr}
+  .tbook{position:static;max-height:none}
   .budget{grid-template-columns:1fr}
   .bud-in{padding:0 0 12px;border-right:0;border-bottom:1px solid var(--line-soft)}
   .checks{grid-template-columns:1fr}
@@ -960,32 +994,34 @@ body.ro .postit,body.ro .pchip{cursor:default}
   <section class="view" id="view-overview" hidden>
     <div class="shead">
       <div>
-        <div class="eyebrow">Übersicht</div>
-        <h2 class="t">Gruppen bilden</h2>
-        <p class="s">Wer beitritt, steht zuerst in der Lobby. Zieht eine Person <b>auf eine andere</b>, entsteht eine Gruppe; auf eine Gruppe gezogen, kommt sie dazu. Mit dem Kompass öffnet ihr den <b>Planungsraum</b> — für eine Gruppe oder eine Einzelperson.</p>
+        <h2 class="t">Klassenübersicht</h2>
+        <p class="s">Diese Seite sehen nur Lehrkräfte.</p>
       </div>
-      <div class="sp" id="ovStats"></div>
+      <div class="sp"><span class="spi" id="ovStats"></span><button class="helpq" data-help="ov" aria-expanded="false" aria-controls="ovHelp"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M10 8.6a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/></svg><span class="hl">Was muss ich hier machen?</span><span class="hs">Hilfe</span></button></div>
     </div>
+    <div class="gbox" id="ovHelp" hidden></div>
     <div class="ov">
-      <div class="panel lobby" id="lobby" data-drop="lobby">
-        <div class="lobby-h">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" style="color:var(--petrol)"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-7h6v7"/></svg>
-          <h3>Lobby</h3><span class="cnt n" id="lobbyCnt">0</span>
+      <div class="ov-main">
+        <div class="panel lobby" id="lobby" data-drop="lobby">
+          <div class="lobby-h">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" style="color:var(--petrol)"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M17 8v6M14 11h6"/></svg>
+            <h3>Schüler ohne Gruppe</h3><span class="cnt n" id="lobbyCnt">0</span>
+          </div>
+          <div class="lobby-list" id="lobbyList"></div>
         </div>
-        <p class="lobby-hint">Noch ohne Gruppe. Zum Zurückholen eine Person hierher ziehen.</p>
-        <div class="lobby-list" id="lobbyList"></div>
+        <div class="ggrid" id="groupGrid"></div>
+        <p class="ov-legend"><span class="cmark c0">✗</span> keine Einwilligung · <span class="cmark c1">✓</span> Stufe 1 · <span class="cmark c2">✓✓</span> Stufe 2 <span class="ov-l2">(antippen = ändern)</span>
+          <span class="sw open"></span> Antrag für heute, nicht genehmigt · <span class="sw ok"></span> genehmigt</p>
       </div>
-      <div class="ggrid" id="groupGrid"></div>
-      <aside class="panel clist" id="classList" hidden>
-        <div class="lobby-h">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="color:var(--petrol)"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></svg>
-          <h3>Klassenliste</h3><span class="cnt n" id="clistCnt">0</span>
+      <aside class="panel tbook" id="tbook">
+        <div class="tb-h">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="color:var(--petrol)"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/></svg>
+          <h3>Tätigkeitsbuch</h3>
+          <button class="btn primary sm" id="tbAdd" title="Neue Kachel für heute"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Neu</button>
         </div>
-        <p class="lobby-hint" id="clistSum"></p>
-        <div class="clist-body" id="clistBody"></div>
-        <p class="clist-legend"><span class="cmark c0">✗</span> keine Einwilligung · <span class="cmark c1">✓</span> Stufe 1 · <span class="cmark c2">✓✓</span> Stufe 2<br>
-          <span class="sw away"></span> heute genehmigt am anderen Ort · <span class="sw pend"></span> Antrag für heute offen oder abgelehnt</p>
-        <div class="clist-body clist-t" id="clistTeachers"></div>
+        <p class="tb-sub">Was war los, wo setzt die nächste Lehrkraft an? Nur für Lehrkräfte.</p>
+        <div class="tb-list" id="tbList"></div>
+        <div class="tb-staff" id="tbStaff"></div>
       </aside>
     </div>
   </section>
@@ -1294,6 +1330,26 @@ body.ro .postit,body.ro .pchip{cursor:default}
 </div>
 
 <!-- Bestätigung -->
+<!-- Tätigkeitsbuch: eine Kachel groß zum Schreiben (nur Lehrkräfte, 0235) -->
+<div class="scrim" id="mTlog" hidden>
+  <div class="modal wide" role="dialog" aria-modal="true" aria-labelledby="tlTitle">
+    <div class="m-h"><div class="ttl" id="tlTitle">Tätigkeitsbuch</div>
+      <button class="m-x" data-close="mTlog" aria-label="Schließen"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="m-b">
+      <div class="tl-top">
+        <div class="field"><label class="fl" for="tlDay">Datum</label><input type="date" id="tlDay" style="max-width:220px"></div>
+        <span class="tl-save" id="tlSave" aria-live="polite"></span>
+      </div>
+      <div id="tlFields"></div>
+    </div>
+    <div class="m-f">
+      <button class="btn ghost" id="tlDel"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 14h10l1-14"/></svg> Kachel löschen</button>
+      <div class="sp"><button class="btn primary" data-close="mTlog">Fertig</button></div>
+    </div>
+  </div>
+</div>
+
 <div class="scrim" id="mConfirm" hidden>
   <div class="modal narrow" role="dialog" aria-modal="true">
     <div class="m-h"><div class="ttl" id="cfTitle">Sicher?</div></div>

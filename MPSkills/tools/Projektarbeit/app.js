@@ -4,14 +4,20 @@
    ════════════════════════════════════════════════════════════
    Drei Ansichten, je nachdem, wer schaut:
 
-     Lehrkraft, Übersicht   Lobby + Gruppen. Personen per Drag & Drop
-                            (oder Antippen → Ziel antippen) zu Gruppen
-                            ziehen, Planungsräume eröffnen, rote Zahl
-                            = offene Anträge. Rechts die Klassenliste
-                            (ein- und ausblendbar): Einwilligungen und
-                            wer heute woanders lernt.
+     Lehrkraft, Übersicht   „Klassenübersicht" (nur Lehrkräfte). Links
+                            oben „Schüler ohne Gruppe" (Wartebereich,
+                            weg, sobald alle eingeteilt sind), darunter
+                            die Gruppen. Personen per Drag & Drop (oder
+                            Antippen → Ziel antippen) zu Gruppen ziehen,
+                            Planungsräume eröffnen, rote Zahl = offene
+                            Anträge. Am Namen die Einwilligung (✗/✓/✓✓,
+                            antippen = weiter); wer auf einem Antrag für
+                            heute steht, hat mit den anderen dieses
+                            Antrags einen Rahmen (gelb = nicht genehmigt,
+                            grün = genehmigt). Rechts das Tätigkeitsbuch
+                            der Lehrkräfte (0235, siehe dort).
      Lehrkraft, im Raum     der Planungsraum einer Gruppe. Zurück über
-                            den Reiter „Gruppen-Übersicht" der Raumseite
+                            den Reiter „Klassenübersicht" der Raumseite
                             (PA.hostTabs) — im Schaufenster über
                             „← Übersicht".
      Schüler                ohne Planungsraum: Wartekarte (Lobby bzw.
@@ -126,6 +132,12 @@ function ask(title, text, cb, okLabel) {
   confirmCb = cb; show('mConfirm');
 }
 function show(id) { $('#' + id).hidden = false; }
+// Dialog schließen — mit dem, was vorher noch passieren muss.
+function closeModal(id) {
+  if (id === 'mLog') { closeLog(); return; }
+  if (id === 'mTlog') { tlFlush(); tlOpen = null; }
+  hide(id);
+}
 function hide(id) { $('#' + id).hidden = true; }
 
 /* Das Projektziel ist HTML aus dem Editor — und es stammt von
@@ -159,7 +171,6 @@ let editXp = null;          // Experte im Dialog (id oder null = neu)
 let ctXp = null, ctId = null, ctHow = 'call';   // Kontakt im Dialog
 let editReq = null;
 let rqWho = [];
-let showList = (() => { try { return localStorage.getItem('pa_clist') !== '0'; } catch (e) { return true; } })();
 let editLog = null;
 let hTask = null;           // Dokumentation: gewähltes To-do (id, '' = etwas anderes, null = nichts gewählt)
 let tdOpen = false;         // … Auswahlliste offen?
@@ -396,7 +407,7 @@ function renderGuides() {
   helpBox('requests', T ? [
     ['form', 'Prüfen', 'Antrag lesen, <b>Einwilligungen</b> beachten (Warnung am Antrag).'],
     ['check', 'Entscheiden', '<b>Genehmigen</b> oder <b>ablehnen</b> — gern mit einer Antwort an die Gruppe.'],
-    ['mail', 'Mail', 'In der Gruppen-Übersicht: <b>Mail bei Anträgen</b> einschalten.']
+    ['mail', 'Mail', 'In der Klassenübersicht: <b>Mail bei Anträgen</b> einschalten.']
   ] : [
     ['check', 'Checkliste', 'Erst alle Punkte der <b>Checkliste</b> rechts erfüllen.'],
     ['form', 'Antrag stellen', 'Oben <b>„Antrag stellen“</b> — für jeden Tag einen eigenen.'],
@@ -437,7 +448,7 @@ function renderHeader(m) {
   const v = V();
   const pill = $('#headPill');
   if (m === 'overview') {
-    $('#brandEyebrow').textContent = 'Projektarbeit · Übersicht';
+    $('#brandEyebrow').textContent = 'Projektarbeit · Klassenübersicht';
     $('#brandName').textContent = (v.room && v.room.title) || 'Projektarbeit';
     const open = (v.groups || []).reduce((a, g) => a + (g.open_requests || 0), 0);
     pill.hidden = false;
@@ -523,9 +534,37 @@ function firstKey() {
 function pchip(p, withPlan) {
   return `<div class="pchip${picked === p.id ? ' picked' : ''}${p.blocked ? ' blk' : ''}" data-drag="p:${esc(p.id)}" data-drop="p:${esc(p.id)}">
     ${avatar(p, 26)}<span class="nm">${esc(p.name)}</span>
-    <span class="dot${p.online ? ' on' : ''}" title="${p.online ? 'gerade da' : 'nicht da'}"></span>
+    ${cmark(p, canWrite())}
     ${withPlan ? `<button class="planbtn" data-plan-p="${esc(p.id)}" title="Planungsraum für ${esc(p.name)} eröffnen (Einzelarbeit)" aria-label="Planungsraum für ${esc(p.name)} eröffnen">${ICO.compass}</button>` : ''}
   </div>`;
+}
+
+const RQ_BOX = {
+  open:     'Antrag für heute · nicht genehmigt',
+  approved: 'Antrag für heute · genehmigt',
+  rejected: 'Antrag für heute · abgelehnt'
+};
+
+/* Mitglieder einer Gruppe: wer auf einem Antrag für heute steht, kommt
+   mit den anderen dieses Antrags in einen gemeinsamen Rahmen (auch zwei
+   Anträge für zwei Teile einer Gruppe). Steht jemand auf mehreren,
+   zählt der beste (todayStatus). */
+function groupMembersHtml(g, mem, st) {
+  if (!mem.length) return '<div class="g-empty">Gerade niemand drin — Personen hierher ziehen.</div>';
+  const boxes = {};
+  const free = [];
+  mem.forEach(p => {
+    const t = st[p.id];
+    if (!t) { free.push(p); return; }
+    (boxes[t.rid] = boxes[t.rid] || { t, list: [] }).list.push(p);
+  });
+  const rank = { approved: 0, open: 1, rejected: 2 };
+  return free.map(p => pchip(p, false)).join('') + Object.values(boxes)
+    .sort((x, y) => rank[x.t.status] - rank[y.t.status])
+    .map(({ t, list }) => `<div class="rqbox ${esc(t.status)}" title="${esc(RQ_BOX[t.status] + (t.place ? ' — ' + t.place : ''))}">
+      ${list.map(p => pchip(p, false)).join('')}
+      <div class="rq-l">${esc(RQ_BOX[t.status])}${t.place ? `<small>${esc(t.place)}</small>` : ''}</div>
+    </div>`).join('');
 }
 
 function renderOverview() {
@@ -535,56 +574,60 @@ function renderOverview() {
     (a.no === 0) - (b.no === 0) || (a.no - b.no) || gTitle(a, []).localeCompare(gTitle(b, [])));
   const lobby = people.filter(p => !p.group);
   const openReq = groups.reduce((a, g) => a + (g.open_requests || 0), 0);
+  const st = todayStatus(people, groups);
 
+  if (!$('#ovHelp').firstChild) {
+    helpBox('ov', [
+      ['people', 'Gruppen bilden', 'Eine Person aus <b>„Schüler ohne Gruppe“</b> auf eine andere ziehen = neue Gruppe, auf eine Gruppe = dazu. Am Tablet: antippen, dann das Ziel antippen.'],
+      ['target', 'Planungsraum', 'Mit dem <b>Kompass</b> eröffnet ihr den Planungsraum — für eine Gruppe oder eine Einzelperson.'],
+      ['check', 'Einwilligungen', '<b>✗ / ✓ / ✓✓</b> am Namen antippen schaltet die Stufe weiter.'],
+      ['cal', 'Wer ist heute weg?', 'Wer heute einen Antrag hat, steht im <b>Rahmen</b>: <b>gelb</b> = nicht genehmigt, <b>grün</b> = genehmigt. Die rote Zahl = offene Anträge.'],
+      ['book', 'Tätigkeitsbuch', 'Rechts haltet ihr fest, <b>was in der Stunde los war</b> — „Neu“, dann je Gruppe schreiben. So setzt die nächste Lehrkraft an. Schüler sehen es nicht.']
+    ]);
+  }
+
+  // Schüler ohne Gruppe: oben, nebeneinander. Sind alle eingeteilt, ist der
+  // Bereich weg (nur beim Ziehen steht er als Ziel da, siehe CSS).
+  $('#lobby').classList.toggle('empty', people.length > 0 && !lobby.length);
   $('#lobbyCnt').textContent = lobby.length;
   $('#lobbyList').innerHTML = lobby.length ? lobby.map(p => pchip(p, true)).join('')
-    : `<div class="lobby-empty">${people.length ? 'Alle sind in einer Gruppe.' : 'Noch niemand da. Wer mit dem Raum-Code beitritt, erscheint hier.'}</div>`;
+    : people.length ? '' : '<div class="lobby-empty">Noch niemand da. Wer mit dem Raum-Code beitritt, erscheint hier.</div>';
 
   $('#ovStats').innerHTML =
     `${openReq ? `<span class="badge bg-no">${openReq} offene${openReq === 1 ? 'r' : ''} Antrag${openReq === 1 ? '' : 'e'}</span>` : ''}
-     <button class="btn sm" data-clist aria-pressed="${showList}">${showList ? 'Klassenliste ausblenden' : 'Klassenliste zeigen'}</button>
      ${notifyBtn()}`;
   if (!notify && !notifyTried) loadNotify();
 
   $('#groupGrid').innerHTML = groups.map(g => {
     const mem = people.filter(p => p.group === g.id);
     const solo = g.no === 0;
-    const t = g.tasks || {};
     const title = gTitle(g, mem);
-    const tr = g.today_requests || [];
-    const today = tr.some(r => r.status === 'approved') ? '<span class="badge bg-grey">heute am anderen Ort</span>'
-      : tr.some(r => r.status === 'open') ? '<span class="badge bg-open">Antrag für heute</span>'
-      : tr.length ? '<span class="badge bg-no">Antrag für heute abgelehnt</span>' : '';
     return `<div class="gcard${g.plan_open ? ' plan' : ''}${g.open_requests ? ' hasreq' : ''}${solo ? ' solo' : ''}" data-drop="g:${esc(g.id)}">
       ${g.open_requests ? `<span class="reqbadge" title="${g.open_requests} offene${g.open_requests === 1 ? 'r' : ''} Antrag${g.open_requests === 1 ? '' : 'e'}">${g.open_requests}</span>` : ''}
       <div class="g-head">
         <div style="min-width:0">
           <div class="g-name"${solo ? '' : ' title="Den Teamnamen gibt sich die Gruppe selbst."'}>${esc(title)}</div>
-          ${solo ? (g.title ? `<div class="g-sub"><i>„${esc(g.title)}“</i></div>` : '')
-            : `<div class="g-sub">${mem.length} ${mem.length === 1 ? 'Person' : 'Personen'}${g.title ? ` · <i>„${esc(g.title)}“</i>` : ''}</div>`}
-          ${today ? `<div style="margin-top:5px">${today}</div>` : ''}
+          ${g.title ? `<div class="g-sub"><i>„${esc(g.title)}“</i></div>` : ''}
         </div>
         <div class="g-acts">
           <button class="btn ghost icon" data-gdel="${esc(g.id)}" title="Gruppe auflösen" aria-label="Gruppe auflösen">${ICO.trash}</button>
         </div>
       </div>
-      <div class="g-members">${mem.length ? mem.map(p => pchip(p, false)).join('') : '<div class="g-empty">Gerade niemand drin — Personen hierher ziehen.</div>'}</div>
+      <div class="g-members">${groupMembersHtml(g, mem, st)}</div>
       <div class="g-foot">
-        ${g.plan_open ? `
-          <div class="minicols" title="Projektplanung: zu erledigen · in Arbeit · fertig">
-            ${COLS.map(c => `<span><i style="background:${c.c}"></i>${(t[c.k] || 0) + (c.k === 'doing' ? t.blocked || 0 : 0)}</span>`).join('')}
-          </div>
-          <button class="btn primary sm go" data-open="${esc(g.id)}">Planungsraum ${ICO.arrow}</button>`
+        ${g.plan_open ? `<button class="btn primary sm go" data-open="${esc(g.id)}">Planungsraum ${ICO.arrow}</button>`
         : `<span style="font-size:11.5px;color:var(--ink-3)">Noch kein Planungsraum</span>
           <button class="btn sm go" data-plan-g="${esc(g.id)}">${ICO.compass} Planungsraum eröffnen</button>`}
       </div>
     </div>`;
-  }).join('') + `<div class="ghint">
+  }).join('') + (groups.length ? '' : `<div class="ghint">
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="8" cy="9" r="3"/><circle cx="16" cy="9" r="3"/><path d="M2.5 19a5.5 5.5 0 0 1 11 0M10.5 19a5.5 5.5 0 0 1 11 0"/></svg>
-      <span><b>Neue Gruppe:</b> eine Person aus der Lobby auf eine andere ziehen.<br>Am Tablet: Person antippen, dann das Ziel antippen.</span>
-    </div>`;
+      <span><b>Neue Gruppe:</b> eine Person aus „Schüler ohne Gruppe“ auf eine andere ziehen.<br>Am Tablet: Person antippen, dann das Ziel antippen.</span>
+    </div>`);
 
-  renderClassList(people, groups);
+  renderStaff();
+  renderTlog();
+  if (!tlogBusy && Date.now() - tlogAt > 8000) loadTlog();
 
   // Ausgewählte Person verschwunden? Dann Auswahl weg.
   if (picked && !people.some(p => p.id === picked)) setPick(null);
@@ -597,63 +640,206 @@ function renderOverview() {
 function todayStatus(people, groups) {
   const rank = { approved: 3, open: 2, rejected: 1 };
   const out = {};
-  groups.forEach(g => (g.today_requests || []).forEach(r => {
+  groups.forEach(g => (g.today_requests || []).forEach((r, i) => {
     const ids = r.who && r.who.length ? r.who : people.filter(p => p.group === g.id).map(p => p.id);
     ids.forEach(id => {
-      if (!out[id] || rank[r.status] > rank[out[id].status]) out[id] = { status: r.status, place: r.place || '' };
+      if (!out[id] || rank[r.status] > rank[out[id].status])
+        out[id] = { status: rank[r.status] ? r.status : 'open', place: r.place || '', rid: g.id + ':' + (r.id || i) };
     });
   }));
   return out;
 }
 
-const TODAY_LBL = {
-  approved: 'Lernen heute am anderen Ort',
-  open:     'Antrag (für heute) wurde gestellt',
-  rejected: 'Gestellter Antrag (für heute) wurde abgelehnt'
-};
-
-function renderClassList(people, groups) {
-  $('#view-overview .ov').classList.toggle('withlist', showList);
-  $('#classList').hidden = !showList;
-  if (!showList) return;
-  const st = todayStatus(people, groups);
-  const list = people.slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'de'));
-  const away = list.filter(p => st[p.id] && st[p.id].status === 'approved').length;
-  $('#clistCnt').textContent = people.length;
-  $('#clistSum').innerHTML = `Heute, ${esc(deDay(todayIso()))}` + (away ? ` · <b>${away}</b> am anderen Ort` : '');
-  $('#clistBody').innerHTML = list.length ? list.map(p => {
-    const t = st[p.id];
-    const g = findG(p.group);
-    const cls = !t ? '' : t.status === 'approved' ? ' away' : ' pend';
-    return `<div class="crow${cls}">
-      ${cmark(p, true)}
-      <div class="cn"><b>${esc(p.name)}</b><small>${g ? esc(gTitle(g, people.filter(x => x.group === g.id))) : 'Lobby'}</small>
-        ${t ? `<span class="ctag">${esc(TODAY_LBL[t.status])}${t.status === 'approved' && t.place ? ' · ' + esc(t.place) : ''}</span>` : ''}</div>
-    </div>`;
-  }).join('') : '<div class="lobby-empty">Noch niemand da.</div>';
-  renderClassTeachers();
-}
-
-/* Ganz unten in der Klassenliste: wer als Lehrkraft im Raum ist (gleiche
-   Rechte, 0205). Der Besitzer kann Eingeladene hier austragen. */
-function renderClassTeachers() {
-  const box = $('#clistTeachers');
+/* Unten im Tätigkeitsbuch: wer als Lehrkraft im Raum ist (gleiche
+   Rechte, 0205). Austragen geht über das Menü „Lehrkraft einladen“. */
+function renderStaff() {
+  const box = $('#tbStaff');
   if (!teachers) { box.innerHTML = ''; if (!teachersTried) loadTeachers(); return; }
   const list = teachers.teachers || [];
-  const kick = !!teachers.is_owner && canWrite();
-  box.innerHTML = `<div class="clist-th"><h4>Lehrkräfte im Raum</h4><span class="cnt n">${list.length}</span>
-      <button class="btn ghost sm" data-tinvite>${ICO.plus} Einladen</button></div>
-    ${list.map(t => `<div class="crow">${avatar({ id: t.id, name: t.name }, 26)}
-      <div class="cn"><b>${esc(t.name)}${t.me ? ' <span class="metag">du</span>' : ''}</b><small>${t.owner ? 'Raum-Besitzer' : 'eingeladen · gleiche Rechte'}</small></div>
-      ${kick && !t.owner ? `<button class="btn ghost icon" data-tdel="${esc(t.id)}" title="${esc(t.name)} austragen" aria-label="${esc(t.name)} austragen">${ICO.trash}</button>` : ''}
-    </div>`).join('')}`;
+  box.innerHTML = `<span>Lehrkräfte im Raum:</span>
+    ${list.map(t => `<span class="tstaff">${avatar({ id: t.id, name: t.name }, 20)}${esc(t.name)}${t.me ? ' <span class="metag">du</span>' : ''}</span>`).join('')}
+    <button class="btn ghost sm" data-tinvite>${ICO.plus} Einladen</button>`;
+}
+
+/* ════════════════════════════════════════════════════════════
+   TÄTIGKEITSBUCH (nur Lehrkräfte, 0235)
+   ════════════════════════════════════════════════════════════
+   Je Tag eine Kachel: „Allgemeines" und je Gruppe ein Text. Rechts
+   in der Klassenübersicht kurz zum Lesen (neueste oben), angetippt
+   groß im Dialog mTlog zum Schreiben. Gespeichert wird je Feld
+   (pa_room_tlog_set) — schreiben zwei Lehrkräfte an verschiedenen
+   Gruppen, geht nichts verloren. Nicht über PA.put: das Buch hängt am
+   Raum, nicht an einem Planungsraum, und kommt nicht mit der Ansicht —
+   es wird selbst geholt (beim Zeichnen der Übersicht, höchstens alle 8 s). */
+let tlog = null;            // { entries: [...] } oder { error }
+let tlogAt = 0, tlogBusy = false;
+let tlOpen = null;          // id der Kachel im Dialog
+const tlTimers = {};        // Feld → Timer fürs Speichern
+const tlDirty = {};         // Feld → ungespeicherter Text
+
+async function loadTlog() {
+  tlogBusy = true; tlogAt = Date.now();
+  const r = await PA.call('pa_room_tlog_get', {});
+  tlogBusy = false;
+  if (r && r.ok) tlog = { entries: r.entries || [] };
+  else if (!tlog) tlog = { error: (r && r.error) || 'network' };
+  if (mode() === 'overview') renderTlog();
+  if (tlOpen && !$('#mTlog').hidden) renderTlogForm(false);
+}
+
+const tlEntry = id => ((tlog && tlog.entries) || []).find(e => e.id === id) || null;
+function tlPut(e) {
+  if (!tlog || !tlog.entries) tlog = { entries: [] };
+  const i = tlog.entries.findIndex(x => x.id === e.id);
+  if (i >= 0) tlog.entries[i] = e; else tlog.entries.push(e);
+  tlog.entries.sort((a, b) => String(b.day).localeCompare(String(a.day)) || String(b.at).localeCompare(String(a.at)));
+}
+
+// Gruppen der Übersicht in ihrer Reihenfolge, mit Namen der Kinder.
+function tlGroups() {
+  const v = V(), people = v.people || [];
+  return (v.groups || []).slice().sort((a, b) =>
+    (a.no === 0) - (b.no === 0) || (a.no - b.no) || gTitle(a, []).localeCompare(gTitle(b, [])))
+    .map(g => { const mem = people.filter(p => p.group === g.id);
+      return { id: g.id, name: gTitle(g, mem), kids: mem.map(p => p.name) }; })
+    .filter(g => g.kids.length);
+}
+const tlLabel = g => g.name + (g.kids.length && !(g.kids.length === 1 && g.kids[0] === g.name) ? ` (${g.kids.join(', ')})` : '');
+
+function renderTlog() {
+  const box = $('#tbList');
+  $('#tbAdd').hidden = !canWrite();
+  if (!tlog) { box.innerHTML = '<div class="tb-empty">Wird geladen …</div>'; return; }
+  if (tlog.error) {
+    box.innerHTML = `<div class="tb-empty">${tlog.error === 'fn_missing' || tlog.error === 'not_allowed'
+      ? 'Auf dem Server fehlt die Migration 0235 (Tätigkeitsbuch).' : esc(PA.msg(tlog.error))}</div>`;
+    return;
+  }
+  const list = tlog.entries;
+  if (!list.length) { box.innerHTML = '<div class="tb-empty">Noch keine Einträge. Mit „Neu“ legt ihr die Kachel für heute an.</div>'; return; }
+  const gs = tlGroups();
+  const known = new Set(gs.map(g => g.id));
+  box.innerHTML = list.map(e => {
+    const tx = e.texts || {};
+    const secs = [];
+    if (tx.general && tx.general.t) secs.push(['Allgemeines', '', tx.general.t]);
+    gs.forEach(g => { const f = tx[g.id]; if (f && f.t) secs.push([g.name, g.kids.join(', '), f.t]); });
+    Object.keys(tx).filter(k => k !== 'general' && !known.has(k) && tx[k] && tx[k].t)
+      .forEach(k => secs.push([tx[k].l || 'Gruppe', 'aufgelöst', tx[k].t]));
+    const isToday = e.day === todayIso();
+    return `<button type="button" class="tbcard${isToday ? ' tb-today' : ''}" data-tlog="${esc(e.id)}">
+      <div class="tbc-h"><b>${esc(deDay(e.day))}</b>${isToday ? '<span class="metag">heute</span>' : ''}<small>${esc(e.by || '')}</small></div>
+      ${secs.length ? secs.map(([h, sub, t]) => `<div class="tbc-sec"><b>${esc(h)}${sub ? ` <span>${esc(sub)}</span>` : ''}</b><p>${esc(t)}</p></div>`).join('')
+        : '<div class="tbc-none">Noch leer — antippen zum Schreiben.</div>'}
+    </button>`;
+  }).join('');
+}
+
+async function addTlog() {
+  const r = await PA.call('pa_room_tlog_add', { p_day: todayIso() });
+  if (!r || !r.ok) { toast(PA.msg(r && r.error)); return; }
+  tlPut(r.entry); renderTlog(); openTlog(r.entry.id);
+}
+
+function openTlog(id) {
+  if (!tlEntry(id)) return;
+  tlOpen = id;
+  renderTlogForm(true);
+  show('mTlog');
+  $$('#tlFields textarea').forEach(growTa);
+}
+
+const growTa = ta => { ta.style.height = 'auto'; ta.style.height = ta.scrollHeight + 2 + 'px'; };
+const tlStamp = f => f && f.by ? `${esc(f.by)}${f.at ? ', ' + esc(deAt(f.at)) : ''}` : '';
+
+/* Den Dialog zeichnen. full = neu aufbauen; sonst nur Felder auffrischen,
+   in denen gerade niemand schreibt (Stand der anderen Lehrkraft). */
+function renderTlogForm(full) {
+  const e = tlEntry(tlOpen);
+  if (!e) { hide('mTlog'); tlOpen = null; return; }
+  const tx = e.texts || {};
+  const gs = tlGroups();
+  const known = new Set(gs.map(g => g.id));
+  const secs = [{ k: 'general', h: 'Allgemeines', sub: '', ph: 'Was betrifft die ganze Klasse? z. B. Absprachen, Termine, wer heute gefehlt hat.' }]
+    .concat(gs.map(g => ({ k: g.id, h: g.name, sub: g.kids.join(', '), label: tlLabel(g), ph: 'Was war los? Wo setzt die nächste Lehrkraft an?' })))
+    .concat(Object.keys(tx).filter(k => k !== 'general' && !known.has(k))
+      .map(k => ({ k, h: tx[k].l || 'Gruppe', sub: 'aufgelöst', ph: '' })));
+  const sig = secs.map(s => s.k + '|' + s.h + '|' + s.sub).join('§');
+  const dayIn = $('#tlDay');
+  if (document.activeElement !== dayIn) dayIn.value = e.day || todayIso();
+  $('#tlTitle').textContent = 'Tätigkeitsbuch · ' + deDay(e.day);
+  const box = $('#tlFields');
+  if (full || box.dataset.sig !== sig || box.dataset.entry !== e.id) {
+    box.dataset.sig = sig; box.dataset.entry = e.id;
+    box.innerHTML = secs.map(s => `<div class="tl-sec${s.k === 'general' ? ' gen' : ''}">
+      <label class="tl-h" for="tl_${esc(s.k)}"><b>${esc(s.h)}</b>${s.sub ? `<span>${esc(s.sub)}</span>` : ''}<small data-tlstamp="${esc(s.k)}">${tlStamp(tx[s.k])}</small></label>
+      <textarea id="tl_${esc(s.k)}" data-tlkey="${esc(s.k)}" data-tllabel="${esc(s.label || '')}" maxlength="4000" placeholder="${esc(s.ph)}"${canWrite() ? '' : ' readonly'}>${esc((tx[s.k] && tx[s.k].t) || '')}</textarea>
+    </div>`).join('');
+    $$('#tlFields textarea').forEach(growTa);
+    return;
+  }
+  $$('#tlFields textarea').forEach(ta => {
+    const k = ta.dataset.tlkey;
+    const st = box.querySelector(`[data-tlstamp="${CSS.escape(k)}"]`);
+    if (st) st.innerHTML = tlStamp(tx[k]);
+    if (document.activeElement === ta || k in tlDirty) return;
+    const t = (tx[k] && tx[k].t) || '';
+    if (ta.value !== t) { ta.value = t; growTa(ta); }
+  });
+}
+
+function tlSaveSoon(ta) {
+  const k = ta.dataset.tlkey, id = tlOpen;
+  tlDirty[k] = ta.value;
+  $('#tlSave').textContent = 'Ungespeichert …';
+  clearTimeout(tlTimers[k]);
+  tlTimers[k] = setTimeout(() => tlSave(id, k, ta.dataset.tllabel), 900);
+}
+
+async function tlSave(id, k, label) {
+  clearTimeout(tlTimers[k]); delete tlTimers[k];
+  if (!(k in tlDirty)) return;
+  const text = tlDirty[k];
+  const r = await PA.call('pa_room_tlog_set', { p_entry: id, p_key: k, p_text: text, p_label: label || null });
+  if (tlDirty[k] === text) delete tlDirty[k];
+  if (!r || !r.ok) { toast(PA.msg(r && r.error)); $('#tlSave').textContent = 'Nicht gespeichert'; return; }
+  tlPut(r.entry);
+  if (!Object.keys(tlDirty).length) $('#tlSave').textContent = 'Gespeichert';
+  if (mode() === 'overview') renderTlog();
+  if (tlOpen === id && !$('#mTlog').hidden) renderTlogForm(false);
+}
+
+// Beim Schließen: was noch aussteht, sofort speichern.
+function tlFlush() {
+  Object.keys(tlDirty).forEach(k => {
+    const ta = document.querySelector(`#tlFields [data-tlkey="${CSS.escape(k)}"]`);
+    tlSave(tlOpen, k, ta && ta.dataset.tllabel);
+  });
+}
+
+async function tlSetDay(v) {
+  if (!v || !tlOpen) return;
+  const r = await PA.call('pa_room_tlog_set', { p_entry: tlOpen, p_day: v });
+  if (!r || !r.ok) { toast(PA.msg(r && r.error)); return; }
+  tlPut(r.entry); renderTlog(); renderTlogForm(false);
+}
+
+function tlDelete() {
+  const e = tlEntry(tlOpen); if (!e) return;
+  ask('Kachel löschen?', `Die Kachel vom ${deDay(e.day)} mit allen Texten wird gelöscht — das lässt sich nicht rückgängig machen.`, async () => {
+    const r = await PA.call('pa_room_tlog_delete', { p_entry: e.id });
+    if (!r || !r.ok) { toast(PA.msg(r && r.error)); return; }
+    tlog.entries = tlog.entries.filter(x => x.id !== e.id);
+    tlOpen = null; hide('mTlog'); renderTlog();
+  }, 'Löschen');
 }
 
 function setPick(id) {
   picked = id;
   const p = id && person(id);
   $('#pickBar').hidden = !p;
-  if (p) $('#pickTxt').textContent = `${p.name} ausgewählt — jetzt Gruppe, Person oder Lobby antippen.`;
+  document.body.classList.toggle('picking', !!p);
+  if (p) $('#pickTxt').textContent = `${p.name} ausgewählt — jetzt Gruppe, Person oder „Schüler ohne Gruppe“ antippen.`;
   $$('.pchip').forEach(c => c.classList.toggle('picked', c.dataset.drag === 'p:' + id));
 }
 
@@ -1409,7 +1595,7 @@ let teachers = null, teachersTried = false, tSearchTimer = null, tSearchSeq = 0;
 async function loadTeachers() {
   teachersTried = true;
   const r = await PA.call('pa_room_teachers_get', {});
-  if (r && r.ok) { teachers = r; renderMenu(mode()); if (!$('#mTeachers').hidden) renderTeachers(); if (showList && mode() === 'overview') renderClassTeachers(); }
+  if (r && r.ok) { teachers = r; renderMenu(mode()); if (!$('#mTeachers').hidden) renderTeachers(); if (mode() === 'overview') renderStaff(); }
   return r;
 }
 
@@ -1642,7 +1828,7 @@ function renderCodes() {
   const inPlan = mode() === 'plan';
   const list = inPlan ? members() : (v.people || []);
   $('#codesTitle').textContent = inPlan ? 'Codes dieser Gruppe' : 'Persönliche Codes';
-  const gname = p => { const g = findG(p.group); return g ? gTitle(g, (v.people || []).filter(x => x.group === g.id)) : 'Lobby'; };
+  const gname = p => { const g = findG(p.group); return g ? gTitle(g, (v.people || []).filter(x => x.group === g.id)) : 'ohne Gruppe'; };
   $('#codesList').innerHTML = list.length ? list.map(p => `
     <div class="rowline"><div class="who">${esc(p.name)}${inPlan ? '' : `<small>${esc(gname(p))}</small>`}</div>
       <b class="mkey">${p.key ? esc(PA.fmtKey(p.key)) : '<span style="color:var(--ink-3);font-weight:500">noch keiner</span>'}</b>
@@ -1840,11 +2026,15 @@ function wire() {
   // Dialoge schließen
   document.addEventListener('click', e => {
     const c = e.target.closest('[data-close]');
-    if (c) { if (c.dataset.close === 'mLog') closeLog(); else hide(c.dataset.close); return; }
-    if (e.target.classList && e.target.classList.contains('scrim') && e.target.id !== 'mKey') {
-      if (e.target.id === 'mLog') closeLog(); else hide(e.target.id);
-    }
+    if (c) { closeModal(c.dataset.close); return; }
+    if (e.target.classList && e.target.classList.contains('scrim') && e.target.id !== 'mKey') closeModal(e.target.id);
   });
+  // Tätigkeitsbuch
+  $('#tbAdd').addEventListener('click', addTlog);
+  $('#tlDel').addEventListener('click', tlDelete);
+  $('#tlDay').addEventListener('change', e => tlSetDay(e.target.value));
+  $('#tlFields').addEventListener('input', e => { const ta = e.target.closest('[data-tlkey]'); if (ta) { growTa(ta); tlSaveSoon(ta); } });
+  $('#tlFields').addEventListener('focusout', e => { const ta = e.target.closest('[data-tlkey]'); if (ta && ta.dataset.tlkey in tlDirty) tlSave(tlOpen, ta.dataset.tlkey, ta.dataset.tllabel); });
   $('#cfOk').addEventListener('click', () => { hide('mConfirm'); const cb = confirmCb; confirmCb = null; if (cb) cb(); });
 
   // Klicks im Inhalt
@@ -1864,8 +2054,8 @@ function wire() {
     if ((b = t.closest('[data-gdel]'))) {
       const g = findG(b.dataset.gdel); if (!g) return;
       ask('Gruppe auflösen?', g.plan_open
-        ? 'Alle kommen zurück in die Lobby. Der Planungsraum mit Projektziel, Projektplanung, Tagebuch und Anträgen wird gelöscht — das lässt sich nicht rückgängig machen.'
-        : 'Alle kommen zurück in die Lobby.',
+        ? 'Alle kommen zurück zu „Schüler ohne Gruppe“. Der Planungsraum mit Projektziel, Projektplanung, Tagebuch und Anträgen wird gelöscht — das lässt sich nicht rückgängig machen.'
+        : 'Alle kommen zurück zu „Schüler ohne Gruppe“.',
         () => PA.act('pa_room_group_delete', { p_group: g.id }), 'Auflösen');
       return;
     }
@@ -1932,11 +2122,8 @@ function wire() {
       const p = person(b.dataset.cyc); if (!p) return;
       setConsent(p.id, ((+p.consent || 0) + 1) % 3, true); return;
     }
-    if ((b = t.closest('[data-clist]'))) {
-      showList = !showList;
-      try { localStorage.setItem('pa_clist', showList ? '1' : '0'); } catch (e) { /* egal */ }
-      renderOverview(); return;
-    }
+    // Tätigkeitsbuch
+    if ((b = t.closest('[data-tlog]'))) { openTlog(b.dataset.tlog); return; }
     if ((b = t.closest('[data-notify]'))) { openNotify(); return; }
     // Projektziel
     if ((b = t.closest('#goalAdd'))) { $('#goalImgInput').click(); return; }
@@ -2264,7 +2451,7 @@ function importData(d) {
     // In einen Planungsraum passt genau ein Projekt — bei einer Klassen-
     // Datei das mit derselben Gruppe.
     const p = projects.length === 1 ? projects[0] : projects.find(x => x.group === PA.focus);
-    if (!p) { toast('Die Datei enthält mehrere Projekte — bitte in der Gruppen-Übersicht importieren.'); return; }
+    if (!p) { toast('Die Datei enthält mehrere Projekte — bitte in der Klassenübersicht importieren.'); return; }
     const nm = gTitle(group(), members());
     ask('Projekt ersetzen?', `Projektziel, Projektplanung, Tagebuch und Anträge von „${nm}“ werden durch die Datei${p.name ? ' („' + p.name + '“)' : ''} ersetzt. Die Mitglieder der Gruppe bleiben. Vorher entsteht ein Backup des jetzigen Stands.`,
       () => runImport([p], PA.focus), 'Ersetzen');
