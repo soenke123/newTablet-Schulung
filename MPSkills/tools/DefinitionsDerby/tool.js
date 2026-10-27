@@ -68,7 +68,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027b';
+  const V = '20261027c';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -926,8 +926,35 @@
      ist dran. Allein: es zählen Paare und Züge.
      Der Text der Karten steht erst nach dem Aufdecken im DOM (kein
      Spicken) und wird mit fitText() in die Karte eingepasst. Jeder
-     Takt prüft, ob sein Spiel (m) noch läuft. */
-  const FLY_MS = 650, FLIP_MS = 450, HOLD_MS = 500;
+     Takt prüft, ob sein Spiel (m) noch läuft.
+     Tippen irgendwo, während etwas läuft, überspringt die Bewegungen
+     bis zur nächsten Entscheidung (mmWait/mmSkip). */
+  const FLY_MS = 420, FLIP_MS = 280, HOLD_MS = 250;
+  const SAY_OK_MS = 650, SAY_NO_MS = 1000;   // Ergebnis lesen, dann fliegen die Karten
+
+  /* Nächster Takt des Memorys. Im Überspring-Lauf (m.fast) sofort. */
+  function mmWait(m, ms, fn) {
+    if (m.fast) { fn(); return; }
+    clearTimeout(m.timer);
+    m.wait = fn;
+    m.timer = setTimeout(() => { m.wait = null; if (mm === m && root) fn(); }, ms);
+  }
+  /* Alle Takte bis zur nächsten Entscheidung ohne Bewegung ablaufen lassen. */
+  function mmSkip() {
+    const m = mm, sec = root && root.querySelector('#ddMem');
+    if (!m || !m.wait || !sec) return false;
+    clearTimeout(m.timer);
+    const fn = m.wait;
+    m.wait = null;
+    m.fast = true;
+    sec.classList.add('is-fast');
+    try { fn(); } finally {
+      sec.getBoundingClientRect();                     // Endstand ohne Übergang festschreiben
+      sec.classList.remove('is-fast');
+      m.fast = false;
+    }
+    return true;
+  }
   const MM_MAX = 24;
 
   /* Karten mit gleichem Begriff zählen nur einmal (zwei Stapel mit „Zelle“). */
@@ -1073,7 +1100,7 @@
     }
     if (m.picked.length === 2) {
       m.busy = true;
-      setTimeout(() => { if (mm === m && root) startReview(m); }, FLIP_MS + HOLD_MS);
+      mmWait(m, FLIP_MS + HOLD_MS, () => startReview(m));
     }
   }
 
@@ -1095,7 +1122,7 @@
     const fontOrigin = measure(origin, 20);
     wrap.getBoundingClientRect();                       // Startzustand festschreiben
     const ease = FLY_MS + 'ms cubic-bezier(.2,.8,.2,1)';
-    wrap.style.transition = 'left ' + ease + ',top ' + ease + ',width ' + ease + ',height ' + ease + ',opacity 400ms,transform ' + ease;
+    wrap.style.transition = 'left ' + ease + ',top ' + ease + ',width ' + ease + ',height ' + ease + ',opacity 300ms,transform ' + ease;
     face.style.transition = 'padding ' + ease;
     p.style.transition = 'font-size ' + ease;
     return { wrap, face, p, fontOrigin, fontTarget, padOrigin: pad(origin), padTarget: pad(target) };
@@ -1126,16 +1153,16 @@
       el.style.visibility = 'hidden';
       return Object.assign(f, { origin, target: targets[side], el, side });
     });
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    const go = () => {
       if (mm !== m) return;
       layer.classList.add('is-open');
       m.fly.forEach(f => { setRect(f.wrap, f.target); f.p.style.fontSize = f.fontTarget + 'px'; f.face.style.padding = f.padTarget + 'px'; });
-      setTimeout(() => {
-        if (mm !== m) return;
+      mmWait(m, FLY_MS - 100, () => {
         layer.classList.add('is-ask');
         const y = layer.querySelector('.dd-yes'); if (y) y.focus({ preventScroll: true });
-      }, FLY_MS - 100);
-    }));
+      });
+    };
+    if (m.fast) go(); else requestAnimationFrame(() => requestAnimationFrame(go));
   }
   function hideReview(m) {
     (m.fly || []).forEach(f => f.wrap.remove());
@@ -1164,7 +1191,7 @@
       : yes ? 'Leider falsch – das war kein Paar.'
       : match ? 'Schade, das war ein Paar!' : 'Stimmt, kein Paar.';
     msg.className = 'dd-review__msg' + (ok ? ' is-ok' : ' is-no');
-    setTimeout(() => { if (mm === m && root) (ok ? flyToPlayer : flyBack)(m); }, ok ? 900 : 1500);
+    mmWait(m, ok ? SAY_OK_MS : SAY_NO_MS, () => (ok ? flyToPlayer : flyBack)(m));
   }
 
   function flyToPlayer(m) {
@@ -1175,8 +1202,7 @@
     const target = { left: r.left + r.width / 2 - w / 2, top: r.top + r.height / 2 - h / 2, width: w, height: h };
     layer.classList.remove('is-open', 'is-ask');
     m.fly.forEach(f => { setRect(f.wrap, target); f.p.style.fontSize = '3px'; f.face.style.padding = '1px'; f.wrap.style.opacity = '0.2'; });
-    setTimeout(() => {
-      if (mm !== m || !root) return;
+    mmWait(m, FLY_MS + 50, () => {
       m.picked.forEach(x => { x.card.done = true; x.card.up = false; });
       m.scores[m.active]++;
       m.matched++;
@@ -1185,10 +1211,10 @@
       paintBoards();
       paintPlayers();
       const s = root.querySelector('#ddS' + (m.players === 1 ? 1 : m.active));
-      if (s && s.animate && !still()) s.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.8)' }, { transform: 'scale(1)' }], { duration: 450 });
+      if (s && s.animate && !still()) s.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.8)' }, { transform: 'scale(1)' }], { duration: 350 });
       m.busy = false;
-      if (m.matched === m.pairs) setTimeout(() => { if (mm === m) memWin(m); }, 600);
-    }, FLY_MS + 50);
+      if (m.matched === m.pairs) mmWait(m, 500, () => memWin(m));
+    });
   }
 
   function flyBack(m) {
@@ -1197,24 +1223,21 @@
     m.fly.forEach(f => { setRect(f.wrap, f.origin); f.p.style.fontSize = f.fontOrigin + 'px'; f.face.style.padding = f.padOrigin + 'px'; });
     const els = m.fly.map(f => f.el);
     // Die Karten landen offen auf ihrem Platz, liegen kurz und drehen sich dann um.
-    setTimeout(() => {
-      if (mm !== m || !root) return;
+    mmWait(m, FLY_MS + 50, () => {
       els.forEach(el => { el.style.visibility = ''; });
       hideReview(m);
-      setTimeout(() => {
-        if (mm !== m || !root) return;
+      mmWait(m, HOLD_MS, () => {
         els.forEach(el => el.classList.remove('is-up'));
-        setTimeout(() => {
-          if (mm !== m || !root) return;
+        mmWait(m, FLIP_MS + 50, () => {
           m.picked.forEach(x => { x.card.up = false; });
           els.forEach(el => { const p = el.querySelector('.dd-mc__p'); if (p) p.textContent = ''; });
           m.picked = [];
           if (m.players === 2) m.active = m.active === 1 ? 2 : 1;
           paintPlayers();
           m.busy = false;
-        }, FLIP_MS + 50);
-      }, HOLD_MS);
-    }, FLY_MS + 50);
+        });
+      });
+    });
   }
 
   function memWin(m) {
@@ -1492,6 +1515,8 @@
      ══════════════════════════════════════════════════════════════ */
   function bind() {
     onClick = async (ev) => {
+      // Memory: Tippen, während Karten drehen oder fliegen, überspringt das.
+      if (mm && mm.wait && ev.target.closest('#ddMem') && !ev.target.closest('.dd-membar') && mmSkip()) return;
       const b = ev.target.closest('[data-act]');
       if (!b || !root.contains(b)) return;
       const act = b.dataset.act;
