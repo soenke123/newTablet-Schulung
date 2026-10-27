@@ -450,17 +450,6 @@ async function renderDoor(code) {
           ${coming || loggedIn() ? '' : devicePickHTML()}
           <button type="submit" class="btn btn--primary btn--wide" id="joinGo">${coming ? 'Wieder mitmachen' : 'Mitmachen'}</button>
         </form>
-        <!-- Der Hinweis steht VOR dem Beitritt, nicht irgendwo im Fuß:
-             wer gleich seinen Namen eintippt, soll in dem Moment wissen,
-             wer ihn sieht und wie lange er bleibt. Kurz, mit dem
-             Ausführlichen einen Klick entfernt. -->
-        <p class="privacy-note">
-          ${info.ask_names
-            ? 'Dein Name und was du schreibst sind für alle im Raum sichtbar.'
-            : 'Dieser Raum ist anonym — du heißt hier nur „Tablet …".'}
-          Nach 30 Tagen ohne Aktivität wird alles automatisch gelöscht.
-          <a href="index.html#privacy">Mehr dazu</a>
-        </p>
       `}
       <p class="join-foot"><button type="button" class="btn--link" id="otherCode">Anderen Code eingeben</button></p>
     </div>
@@ -480,7 +469,6 @@ async function renderDoor(code) {
 
   const nameInput = document.getElementById('joinName');
   if (nameInput) setTimeout(() => nameInput.focus(), 60);
-  wireDevicePick();
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -539,24 +527,7 @@ function devicePickHTML() {
         <span><strong>Schulgerät</strong> — Räume werden nicht gemerkt</span></label>
       <label class="device-opt"><input type="radio" name="device" value="own"${k === 'own' ? ' checked' : ''}>
         <span><strong>Eigenes Gerät</strong> — Räume werden gemerkt</span></label>
-      <p class="rule" id="deviceNote"></p>
     </fieldset>`;
-}
-
-function wireDevicePick() {
-  const box = document.getElementById('devicePick');
-  if (!box) return;
-  const note = document.getElementById('deviceNote');
-  const kept = MPRoom.keptAnon();
-  const paint = () => {
-    const v = box.querySelector('input[name="device"]:checked')?.value;
-    note.textContent = v === 'own'
-      ? 'Du findest den Raum auch morgen auf diesem Gerät wieder.'
-      : 'Schließt du den Tab (oder nach 3 Stunden), vergisst das Gerät den Raum. Das nächste Kind kommt nicht hinein.'
-        + (kept ? ` ${kept === 1 ? 'Der eine Raum, den' : 'Die ' + kept + ' Räume, die'} sich dieses Gerät bisher gemerkt hat, ${kept === 1 ? 'wird' : 'werden'} dabei vergessen.` : '');
-  };
-  box.addEventListener('change', paint);
-  paint();
 }
 
 /* ─── Zustand: im Raum ────────────────────────────────────── */

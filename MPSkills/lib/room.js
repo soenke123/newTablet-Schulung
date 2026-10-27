@@ -132,10 +132,6 @@
     }
   }
 
-  // Wie viele Räume sich das Gerät ohne Anmeldung dauerhaft gemerkt hat
-  // (für den Hinweis an der Tür, bevor sie mit „Schulgerät“ weg sind).
-  const keptAnon = () => readRaw('localStorage', STORE_KEY).filter(e => (e.uid ?? null) === null).length;
-
   /* Wer sitzt gerade davor? null heißt „niemand angemeldet" — und
      ist damit selbst eine Identität, nämlich die des Geräts.
 
@@ -630,7 +626,7 @@
 
   window.MPRoom = {
     list, get, remember, snapshot, forget, touch, leave, uid,
-    deviceKind, deviceChosen, setDeviceKind, keptAnon,
+    deviceKind, deviceChosen, setDeviceKind,
     soloToken, rememberSolo, forgetSolo,
     goSolo, backRoom, forgetBack,
     rpc, peek, join, recover, view, sig, poll, showNet,

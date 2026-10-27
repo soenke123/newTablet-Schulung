@@ -2743,12 +2743,6 @@ body.tool-fill #pagefoot { display: none; }
 }
 .device-opt:has(input:checked) { border-color: var(--accent); background: var(--accent-dim); color: var(--ink); }
 .device-opt input { accent-color: var(--accent); width: 18px; height: 18px; flex: none; margin: 0; }
-.device-pick .rule { margin: 2px 0 0; font-size: .76rem; line-height: 1.45; color: var(--ink-faint); }
-.privacy-note {
-  margin-top: 14px; font-size: .78rem; line-height: 1.5;
-  color: var(--ink-faint);
-}
-.privacy-note a { color: var(--ink-soft); }
 
 /* ─── Verbindungs-Leiste (Stufe 7) ────────────────────────────
    Fällt das Netz aus, bleibt die Seite stehen und sagt es. Oben
