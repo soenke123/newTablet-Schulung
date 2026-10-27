@@ -1457,11 +1457,13 @@ function paintRoom(data) {
   // Hat das Werkzeug eigene Reiter (setToolTabs), gibt es diesen nicht mehr.
   if ($('rtToolName')) $('rtToolName').innerHTML = MPIcons.label(r.tool_id, r.tool_title || 'Skill');
 
-  // Angezeigt wird die kurze Adresse (zum Abtippen, Code-Regeln); der
-  // QR-Code trägt das Geheimnis (0226) und gilt, solange die Tür offen ist.
+  // Angezeigt wird dieselbe Adresse, die der Knopf kopiert und der
+  // QR-Code trägt: mit Geheimnis (0226), gilt, solange die Tür offen
+  // ist. Eine kürzere Anzeige daneben sah gleich aus und lief nach
+  // 90 Minuten ab — zum Abtippen gibt es den Code.
   S.secret    = r.join_secret || null;
   S.codeUntil = r.code_open_until || null;
-  const url = MPRoom.joinUrl(S.code);
+  const url = MPRoom.joinUrl(S.code, S.secret);
   $('bUrl').textContent  = url.replace(/^https?:\/\//, '');
   const flyUrl = $('flyUrl');
   if (flyUrl) flyUrl.textContent = url.replace(/^https?:\/\//, '');
