@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027a';
+  const V = '20261027b';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -149,7 +149,7 @@
     const changed = JSON.stringify(merged) !== JSON.stringify(prog);
     prog = merged;
     if (changed) { saveProg(); }
-    if (screen === 'stack' && (changed || !learn.flipped) && !(learn && learn.flipped)) renderPane();
+    if (screen === 'stack' && !(learn && learn.seen)) renderPane();     // mitten in einer Karte nichts neu zeichnen
   }
   function schedulePush() {
     if (!syncOn() || !opened) return;
@@ -477,6 +477,7 @@
     const c = pick();
     learn.cur = c;
     learn.flipped = false;
+    learn.seen = false;           // beide Seiten gesehen? erst dann darf bewertet werden
     if (c) {
       learn.recent.push(c.id);
       if (learn.recent.length > 6) learn.recent.shift();
@@ -537,12 +538,12 @@
         '<span class="dd-flip__hint">' + ico.flip + (learn.flipped ? 'Tippen: zurück' : 'Tippen zum Umdrehen') + '</span>' +
         '<span class="dd-lvl dd-s' + lv + '">' + LEVELS[lv] + '</span>' +
       '</button>' +
-      '<div class="dd-rate' + (learn.flipped ? ' is-open' : '') + '" role="group" aria-label="Wie gut kanntest du das?">' +
+      '<div class="dd-rate' + (learn.seen ? ' is-open' : '') + '" role="group" aria-label="Wie gut kanntest du das?">' +
         '<p class="dd-rate__q">Wie gut kanntest du das?</p>' +
         '<div class="dd-rate__b">' +
-          '<button type="button" class="dd-r dd-r--1" data-act="rate" data-v="1"' + (learn.flipped ? '' : ' disabled') + '><b>Unsicher</b><span>kommt bald wieder</span></button>' +
-          '<button type="button" class="dd-r dd-r--2" data-act="rate" data-v="2"' + (learn.flipped ? '' : ' disabled') + '><b>Teilweise</b><span>noch etwas üben</span></button>' +
-          '<button type="button" class="dd-r dd-r--3" data-act="rate" data-v="3"' + (learn.flipped ? '' : ' disabled') + '><b>Sicher</b><span>seltener</span></button>' +
+          '<button type="button" class="dd-r dd-r--1" data-act="rate" data-v="1"' + (learn.seen ? '' : ' disabled') + '><b>Unsicher</b><span>kommt bald wieder</span></button>' +
+          '<button type="button" class="dd-r dd-r--2" data-act="rate" data-v="2"' + (learn.seen ? '' : ' disabled') + '><b>Teilweise</b><span>noch etwas üben</span></button>' +
+          '<button type="button" class="dd-r dd-r--3" data-act="rate" data-v="3"' + (learn.seen ? '' : ' disabled') + '><b>Sicher</b><span>seltener</span></button>' +
         '</div></div>' +
       '<p class="dd-count">' + learn.done + ' Karten geübt' + (learn.row >= 3 ? ' · ' + learn.row + ' in Folge sicher' : '') + '</p>' + acctNote();
   }
@@ -550,6 +551,7 @@
   function flip() {
     if (!learn || !learn.cur || learn.stamping) return;
     learn.flipped = !learn.flipped;
+    learn.seen = true;            // einmal umgedreht = beide Seiten gesehen, ab jetzt auf jeder Seite bewertbar
     const f = root.querySelector('.dd-flip');
     if (!f) return;
     f.classList.toggle('is-flipped', learn.flipped);
@@ -557,15 +559,15 @@
     const h = f.querySelector('.dd-flip__hint');
     if (h) h.lastChild.textContent = learn.flipped ? 'Tippen: zurück' : 'Tippen zum Umdrehen';
     const r = root.querySelector('.dd-rate');
-    if (r) r.classList.toggle('is-open', learn.flipped);
-    root.querySelectorAll('.dd-r').forEach(b => { b.disabled = !learn.flipped; });
+    if (r) r.classList.toggle('is-open', learn.seen);
+    root.querySelectorAll('.dd-r').forEach(b => { b.disabled = !learn.seen; });
   }
 
   /* Bewerten: der Stempel landet erst auf der Karte, dann kommt die nächste.
      Während der kurzen Pause (learn.stamping) zählt kein weiteres Tippen. */
   const STAMPS = ['', 'Unsicher', 'Teilweise', 'Sicher'];
   function rate(v) {
-    if (!learn || !learn.cur || !learn.flipped || learn.stamping) return;
+    if (!learn || !learn.cur || !learn.seen || learn.stamping) return;
     const cur = learn.cur, id = cur.id, p = prog[id];
     prog[id] = { l: v, s: v === 3 ? (p && p.l === 3 ? (p.s || 1) + 1 : 1) : 0, t: Date.now() };
     saveProg();
@@ -1028,7 +1030,7 @@
       if (ev.key === ' ' || ev.key === 'Enter') {
         if (tag === 'button') return;     // ein fokussierter Knopf behält sein eigenes Verhalten
         ev.preventDefault(); flip();
-      } else if (learn.flipped && ['1', '2', '3'].includes(ev.key)) {
+      } else if (learn.seen && ['1', '2', '3'].includes(ev.key)) {
         ev.preventDefault(); rate(Number(ev.key));
       }
     };

@@ -23,9 +23,9 @@
 .dd {
   /* Wand */
   --dd-bg:
-    radial-gradient(circle, rgba(90,55,25,.35) 0 1px, transparent 1.5px) 0 0 / 6px 6px,
-    radial-gradient(circle, rgba(255,230,190,.25) 0 1px, transparent 1.5px) 3px 3px / 9px 9px,
-    #c79a63;
+    radial-gradient(circle, rgba(90,55,25,.12) 0 1px, transparent 1.5px) 0 0 / 7px 7px,
+    radial-gradient(circle, rgba(255,235,200,.10) 0 1px, transparent 1.5px) 3px 4px / 11px 11px,
+    #c9a06c;
   --dd-frame: #8a5a33;
   --dd-on: #2b2620;            /* Schrift direkt auf der Wand */
   --dd-on-soft: #4a3826;
@@ -105,12 +105,20 @@
   background: var(--dd-label); color: var(--dd-ink); transform: rotate(-1deg); box-shadow: 0 3px 6px var(--dd-shadow);
   overflow-wrap: anywhere;
 }
-.dd-sub { margin: 12px 0 0; color: var(--dd-on); max-width: 60ch; font-size: .95rem; font-weight: 500; }
+.dd-sub { margin: 12px 0 0; max-width: 60ch; width: fit-content; font-size: .92rem; font-weight: 500; }
 .dd-empty { background: var(--dd-paper); color: var(--dd-ink-soft); border: 1.5px dashed var(--dd-pappe3); border-radius: 3px; padding: 22px; text-align: center; box-shadow: 0 6px 14px var(--dd-shadow); }
 .dd-empty strong { color: var(--dd-ink); }
 .dd-empty .btn { margin-top: 12px; }
 .dd-empty--s { padding: 14px; font-size: .9rem; }
 .dd-empty--err { border-color: var(--dd-k1); background: #fbe7e0; color: #7a2a1c; }
+
+/* Schrift steht NIE direkt auf Kork/Holz (schlecht lesbar, Rückmeldung
+   Sönke 27.10.2026), sondern auf einem Papierstreifen wie ein Etikett. */
+.dd-sub, .dd-rate__q, .dd-count, .dd-acct, .dd-grp, .dd-check, .dd-fld > span,
+.dd-tip, .dd-pvh, .dd-pvmode {
+  background: var(--dd-label); color: var(--dd-ink); padding: 5px 10px; box-shadow: 0 2px 5px var(--dd-shadow);
+}
+.dd-tip, .dd-sub { padding: 7px 12px; }
 
 /* Knöpfe: Pappe; Hauptknopf grün wie der Sicher-Stempel */
 .dd .btn {
@@ -270,9 +278,9 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 @keyframes dd-stamp { from { opacity: 0; transform: rotate(-9deg) scale(1.7); } to { opacity: .85; transform: rotate(-9deg) scale(1); } }
 
 /* Bewertung: drei Stempel */
-.dd-rate { margin-top: 26px; opacity: .55; transition: opacity .2s; }
-.dd-rate.is-open { opacity: 1; }
-.dd-rate__q { margin: 0 0 12px; text-align: center; font-size: .92rem; font-weight: 600; color: var(--dd-on); }
+.dd-rate { margin-top: 26px; }
+.dd-rate:not(.is-open) .dd-r { opacity: .6; filter: grayscale(.85); }
+.dd-rate__q { display: table; margin: 0 auto 14px; font-size: .92rem; font-weight: 700; }
 .dd-rate__b { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .dd-r {
   appearance: none; cursor: pointer; padding: 12px 8px; min-height: 68px;
@@ -288,19 +296,19 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-r:not([disabled]):hover { filter: brightness(1.05); }
 .dd-r:not([disabled]):active { transform: translateY(3px) scale(.97); box-shadow: 0 1px 3px var(--dd-shadow); }
 .dd-r[disabled] { cursor: not-allowed; }
-.dd-count { text-align: center; color: var(--dd-on-soft); font-family: var(--mono); font-size: .78rem; margin: 18px 0 0; }
+.dd-count { display: table; margin: 20px auto 0; font-family: var(--mono); font-size: .78rem; }
 
 /* ─── Übersicht ─── */
 .dd-ovbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
 .dd-ovbar .dd-input[type="search"] { flex: 1 1 220px; width: auto; }
 .dd-ovbar select.dd-input { flex: 0 1 200px; width: auto; }
 .dd-ovbar--f { justify-content: space-between; }
-.dd-check { font-size: .88rem; font-weight: 600; color: var(--dd-on); display: inline-flex; align-items: center; gap: 8px; min-height: 40px; cursor: pointer; }
+.dd-check { font-size: .88rem; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; cursor: pointer; }
 .dd-check input { width: 18px; height: 18px; accent-color: var(--dd-prim); color-scheme: light; }
 
-.dd-grp { display: flex; align-items: center; gap: 9px; margin: 26px 0 12px; font-family: var(--mono); font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dd-on); }
+.dd-grp { display: flex; width: fit-content; align-items: center; gap: 9px; margin: 26px 0 14px; font-family: var(--mono); font-size: .8rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
 .dd-grp i { width: 12px; height: 12px; border-radius: 50%; }
-.dd-grp span { font-weight: 500; color: var(--dd-on-soft); }
+.dd-grp span { font-weight: 500; color: var(--dd-ink-soft); }
 .dd-ovlist { list-style: none; margin: 0; padding: 0; }
 .dd-ovlist--liste { display: flex; flex-direction: column; gap: 10px; }
 .dd-ovlist--kacheln { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 26px 18px; padding-top: 12px; }
@@ -323,7 +331,7 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 /* ─── Editor ─── */
 .dd-meta { display: grid; grid-template-columns: 2fr 1.2fr 1.6fr .8fr; gap: 10px; margin-bottom: 22px; }
 .dd-fld { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.dd-fld > span { font-family: var(--mono); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--dd-on); }
+.dd-fld > span { align-self: flex-start; font-family: var(--mono); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; }
 .dd-tabs--ed { margin-top: 4px; }
 
 .dd-cards { display: flex; flex-direction: column; gap: 14px; }
@@ -339,7 +347,7 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-imgx { position: absolute; top: -8px; right: -8px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: var(--dd-k1); color: #fff; font-size: 1.1rem; line-height: 1; cursor: pointer; }
 .dd-addrow { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 18px; }
 .dd .dd-addbtn { border-style: dashed; }
-.dd-tip { font-size: .82rem; color: var(--dd-on); margin: 0; }
+.dd-tip { font-size: .82rem; margin: 0; }
 .dd-tip kbd { font-family: var(--mono); font-size: .74rem; padding: 1px 6px; color: var(--dd-ink); background: var(--dd-paper); border: 1px solid var(--dd-pappe3); border-bottom-width: 2px; border-radius: 4px; }
 
 .dd-textmode { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -347,9 +355,9 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-ta::placeholder { color: var(--dd-faint); }
 .dd-ta:focus { outline: none; border-color: var(--dd-prim); box-shadow: 0 0 0 3px rgba(63,133,88,.3); }
 .dd-textmode .dd-tip { margin-top: 10px; }
-.dd-pvh { margin: 0 0 10px; font-size: .95rem; color: var(--dd-on); }
-.dd-pvh span { color: var(--dd-on-soft); font-weight: 500; }
-.dd-pvmode { margin: 0 0 8px; font-size: .82rem; font-weight: 600; color: var(--dd-on); }
+.dd-pvh { width: fit-content; margin: 0 0 10px; font-size: .95rem; }
+.dd-pvh span { color: var(--dd-ink-soft); font-weight: 500; }
+.dd-pvmode { width: fit-content; margin: 0 0 8px; font-size: .82rem; font-weight: 600; }
 .dd-pvlist { margin: 0; padding: 0; list-style: none; counter-reset: pv; display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow: auto; }
 .dd-pvlist li { counter-increment: pv; display: grid; grid-template-columns: 1fr; gap: 1px; background: var(--dd-paper); color: var(--dd-ink); border-radius: 2px; padding: 8px 10px 8px 34px; position: relative; font-size: .9rem; box-shadow: 0 2px 5px var(--dd-shadow); }
 .dd-pvlist li::before { content: counter(pv); position: absolute; left: 10px; top: 8px; color: var(--dd-faint); font-family: var(--mono); font-size: .74rem; }
@@ -389,5 +397,5 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 }
 
 /* Hinweis zum Lernstand (Konto oder nur dieses Gerät) */
-.dd-acct { margin: 18px 0 0; text-align: center; font-size: .82rem; color: var(--dd-on-soft); }
-.dd-acct--on { color: var(--dd-on); }
+.dd-acct { display: table; margin: 18px auto 0; font-size: .82rem; color: var(--dd-ink-soft); }
+.dd-acct--on { color: var(--dd-ink); }
