@@ -85,23 +85,65 @@
   const Q1 = 0.6, Q2 = 0.7, PT = 0.74;   // Schwellen: Tafelberg 1/2, Teich
   const EDGE = 0.0012;                   // Kantenbreite der Schwellen
 
-  /* ─── Felder ─── */
-  function fields(seed, W, H) {
+  /* ─── Drei Inselvorlagen (Sönke 27.10.2026) ───
+     Feste Formen mit festem Seed: jede Klasse mit derselben Vorlage
+     sieht dieselbe Landschaft. shape(u, v) ist ~1 im Kern und fällt
+     zur äußersten Küste hin ab (u, v = Ort / rx, ry). Eine Insel
+     WÄCHST, indem die Küstenschwelle sinkt: gleiche Landschaft, nur
+     mehr Land drumherum (Stufe je 10 Begriffe, bis 5 = 50+).
+       Mondsichel  dicker Bauch zuerst, die Hörner wachsen nach, innen
+                   eine geschützte Bucht
+       Kraterring  beginnt als Bogen auf einer Seite und wächst um eine
+                   Lagune herum, bis der Ring sich schließt
+       Kleeblatt   drei Lappen, wächst gleichmäßig nach außen        */
+  const TEMPLATES = [
+    { id: 'sichel', name: 'Mondsichel', seed: 0x51c4e1, rx: 2050, ry: 1550,
+      shape: (u, v) => { const L = Math.hypot(u, v), bite = Math.hypot(u - 0.48, v + 0.22) / 0.68;
+        const belly = 0.45 + 0.55 * ((1 - Math.cos(Math.atan2(v, u))) / 2);     // links dick, die Hörner später
+        return Math.min(1 - L, bite - 1) / 0.4 * belly; } },
+    { id: 'ring', name: 'Kraterring', seed: 0x7a11e3, rx: 2250, ry: 1780,
+      shape: (u, v) => { const L = Math.hypot(u, v), a = Math.atan2(v, u);
+        const side = ((Math.cos(a + 0.7) + 1) / 2) ** 2, w = 0.2 + 0.1 * side;   // beginnt oben rechts
+        return (1 - Math.abs(L - 0.62) / w) * (0.2 + 0.8 * side * side); } },
+    { id: 'klee', name: 'Kleeblatt', seed: 0x3c1ee5, rx: 2450, ry: 1980,
+      shape: (u, v) => { const L = Math.hypot(u, v), a = Math.atan2(v, u);
+        return 1 - L / (0.6 + 0.3 * Math.cos(3 * (a + Math.PI / 2))); } }
+  ];
+  const STAGES = 5;                       // 10 · 20 · 30 · 40 · 50+ Begriffe
+  const AREA = [1.2e6, 2.2e6, 3.3e6, 4.4e6, 5.5e6];   // Landfläche je Stufe (≈ 110 000 je Wesen)
+  const stageFor = n => clamp(Math.ceil((n || 1) / 10), 1, STAGES);
+
+  /* ─── Felder einer Insel (lokale Koordinaten, Mitte = 0,0) ─── */
+  function fields(T, stage) {
+    const X0 = -T.rx * 1.15, Y0 = -T.ry * 1.15, W = T.rx * 2.3, H = T.ry * 2.3;
     const cols = Math.ceil(W / CELL) + 1, rows = Math.ceil(H / CELL) + 1;
+    const seed = T.seed;
     const nE = fbm(seed ^ 0x9e37, 4), nQ = fbm(seed ^ 0x51ed, 3), nP = fbm(seed ^ 0x2b7f, 3), nM = fbm(seed ^ 0x7a11, 3);
-    const e = new Float32Array(cols * rows), q = new Float32Array(cols * rows), p = new Float32Array(cols * rows), m = new Float32Array(cols * rows);
-    const cx = W / 2, cy = H / 2, rx = W * 0.39, ry = H * 0.37;
+    const N = cols * rows;
+    const ea = new Float32Array(N), e = new Float32Array(N), q = new Float32Array(N), p = new Float32Array(N), m = new Float32Array(N);
     const fE = 1 / 520, fQ = 1 / 430, fP = 1 / 300, fM = 1 / 380;
+    // Rauschen mit Versatz: lokale Koordinaten sind auch negativ
+    const OFF = 5000;
     for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
-      const x = i * CELL, y = j * CELL, k = j * cols + i;
-      const d = Math.sqrt(((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2);
-      const ev = (1 - d) * 0.9 + (nE(x * fE, y * fE) - 0.5) * 0.75;
+      const x = X0 + i * CELL, y = Y0 + j * CELL;
+      ea[j * cols + i] = T.shape(x / T.rx, y / T.ry) + (nE((x + OFF) * fE, (y + OFF) * fE) - 0.5) * 0.35;
+    }
+    // Küstenschwelle so, dass die Landfläche der Stufe stimmt
+    const sorted = Float32Array.from(ea).sort();
+    const cells = Math.round(AREA[stage - 1] / (CELL * CELL));
+    const t = Math.max(0.05, sorted[Math.max(0, N - cells)]);
+    let lx0 = Infinity, ly0 = Infinity, lx1 = -Infinity, ly1 = -Infinity;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
+      const k = j * cols + i, x = X0 + i * CELL, y = Y0 + j * CELL;
+      const ev = ea[k] - t;
       e[k] = ev;
-      // Tafelberge nur im Inneren, nicht an der Küste
-      q[k] = nQ(x * fQ, y * fQ) * sstep(0.18, 0.4, ev);
-      // Teiche nicht an Tafelbergen (sonst liegt Wasser vor der Felswand)
-      p[k] = (1 - nP(x * fP, y * fP)) * sstep(0.22, 0.4, ev) * (1 - sstep(0.5, 0.57, q[k]));
-      m[k] = nM(x * fM, y * fM);
+      if (ev > -0.04) { lx0 = Math.min(lx0, x); ly0 = Math.min(ly0, y); lx1 = Math.max(lx1, x); ly1 = Math.max(ly1, y); }
+      // Tafelberge und Teiche hängen an der FESTEN Landschaft (ea), nicht an der
+      // Stufe: beim Wachsen bleiben sie, wo sie sind — nur nicht direkt an der Küste.
+      const nx = x + OFF, ny = y + OFF;
+      q[k] = nQ(nx * fQ, ny * fQ) * sstep(0.42, 0.62, ea[k]) * sstep(0.1, 0.25, ev);
+      p[k] = (1 - nP(nx * fP, ny * fP)) * sstep(0.48, 0.66, ea[k]) * sstep(0.12, 0.28, ev) * (1 - sstep(0.5, 0.57, q[k]));
+      m[k] = nM(nx * fM, ny * fM);
     }
     // Winzige Tafelberge weg (sähen aus wie Stümpfe): zu kleine Flächen über der Schwelle absenken.
     const prune = (thr, minCells, to) => {
@@ -123,16 +165,17 @@
     prune(Q2 - 0.01, 260, Q2 - 0.03);     // obere Stufe: mindestens ~1,6 × 1,6 Wesen-Breiten
     prune(Q1 - 0.01, 320, Q1 - 0.03);     // untere Stufe
     const at = arr => (x, y) => {
-      const fx = clamp(x / CELL, 0, cols - 1.001), fy = clamp(y / CELL, 0, rows - 1.001);
+      const fx = clamp((x - X0) / CELL, 0, cols - 1.001), fy = clamp((y - Y0) / CELL, 0, rows - 1.001);
       const i = Math.floor(fx), j = Math.floor(fy), tx = fx - i, ty = fy - j, k = j * cols + i;
       const a = arr[k], b = arr[k + 1], c = arr[k + cols], d = arr[k + cols + 1];
       return a + (b - a) * tx + (c - a) * ty + (a - b - c + d) * tx * ty;
     };
-    return { cols, rows, e: at(e), q: at(q), p: at(p), m: at(m) };
+    return { e: at(e), q: at(q), p: at(p), m: at(m), t, land: { x0: lx0, y0: ly0, x1: lx1, y1: ly1 } };
   }
 
   /* ─── Gelände Pixel für Pixel ─── */
-  function paint(F, W, H, seed) {
+  function paint(F, R, seed) {
+    const W = R.w, H = R.h;
     const k = Math.min(1, MAX_PX / W, MAX_PX / H);
     const cw = Math.ceil(W * k), ch = Math.ceil(H * k);
     const cv = document.createElement('canvas');
@@ -142,16 +185,16 @@
     const nFine = noise2(seed ^ 0x3333), nMid = noise2(seed ^ 0x3a3a), nWave = noise2(seed ^ 0x5151), nRock = noise2(seed ^ 0x6161);
     const col = [0, 0, 0], tmp = [0, 0, 0];
     for (let py = 0; py < ch; py++) {
-      const y = (py + 0.5) / k;
+      const y = R.y + (py + 0.5) / k;
       for (let px = 0; px < cw; px++) {
-        const x = (px + 0.5) / k;
+        const x = R.x + (px + 0.5) / k;
         const e = F.e(x, y);
         /* Meer: tief → Lagune, mit sanften Wellenstreifen */
         set3(col, C.deepFar);
         lerp3(col, C.deep, sstep(-0.55, -0.25, e));
         lerp3(col, C.lagoon, sstep(-0.2, -0.05, e));
         lerp3(col, C.lagoonLight, sstep(-0.06, -0.005, e) * 0.7);
-        const rim = Math.min(x, W - x, y, H - y);
+        const rim = Math.min(x - R.x, R.x + W - x, y - R.y, R.y + H - y);
         if (rim < 260) lerp3(col, C.deepFar, 1 - sstep(0, 260, rim));
         if (e > -0.25 && e < 0) {
           const wv = nWave(x / 46 + nMid(x / 90, y / 90) * 2, y / 13);
@@ -249,15 +292,17 @@
   }
 
   /* ─── Kleinkram direkt ins Gelände: Gräser, Blüten in Tupfen, Seerosen ─── */
-  function sprinkle(g, k, W, H, F, ok, r, seed) {
+  function sprinkle(g, k, R, F, ok, r, seed) {
+    const W = R.w, H = R.h;
     g.save();
     g.scale(k, k);
+    g.translate(-R.x, -R.y);
     g.lineCap = 'round';
     const patch = noise2(seed ^ 0x7777);
     const n = Math.round(W * H / 2600);
     const bloom = ['#f3ead2', '#e9b7c4', '#e8cf72', '#b9a9df', '#f0f0ea'];
     for (let i = 0; i < n; i++) {
-      const x0 = r() * W, y0 = r() * H;
+      const x0 = R.x + r() * W, y0 = R.y + r() * H;
       const lift = ok(x0, y0);
       if (lift === false) continue;
       const x = x0, y = y0 - lift;
@@ -286,7 +331,7 @@
     }
     // Seerosen auf den Teichen
     for (let i = 0; i < n / 6; i++) {
-      const x = r() * W, y = r() * H;
+      const x = R.x + r() * W, y = R.y + r() * H;
       if (F.p(x, y) < PT + 0.02 || F.e(x, y) < 0.2) continue;
       const rr = 6 + r() * 6, a = r() * Math.PI * 2;
       g.fillStyle = 'rgba(20,50,50,.25)'; g.beginPath(); g.ellipse(x + 2, y + 2, rr, rr * 0.6, 0, 0, Math.PI * 2); g.fill();
@@ -572,71 +617,121 @@
     return { canvas: cv, w: P.w, h: P.h };
   }
 
-  /* ─── Welt bauen ─── */
-  function build(seed, nWesen) {
-    const land = Math.max(1.3e6, (nWesen || 1) * 1.1e5);
-    const W = Math.round(Math.min(6000, Math.sqrt(land / 0.42 * 1.5)));
-    const H = Math.round(W / 1.5);
-    const F = fields(seed, W, H);
-    const r = rngOf(seed ^ 0xa5a5);
-    const t0 = Date.now();
-    const terr = paint(F, W, H, seed);
+  /* ─── Eine Insel bauen (lokale Koordinaten) ─── */
+  const TYPES = ['pilz', 'moosbaum', 'kristall', 'laterne', 'busch', 'schirm', 'farn', 'fels'];
+  const sprites = {};
+  const sprite = (t, v) => sprites[t + v] || (sprites[t + v] = plantSprite(t, v));
+
+  function islandPart(T, n) {
+    const stage = stageFor(n);
+    const F = fields(T, stage);
+    const r = rngOf(T.seed ^ 0xa5a5);
+    const L = F.land, M = 320;                        // Rand: Lagune und Übergang ins tiefe Meer
+    const R = { x: L.x0 - M, y: L.y0 - M - WALL * 2, w: L.x1 - L.x0 + 2 * M, h: L.y1 - L.y0 + 2 * M + WALL * 2 };
+    const terr = paint(F, R, T.seed);
 
     const isPlateau = (x, y) => F.q(x, y) > Q1 - 0.02;
     const ground = (x, y) => F.e(x, y) > 0.07 && F.p(x, y) < PT - 0.02 && !isPlateau(x, y);
     // Wesen: auf dem Boden, nicht dicht unter einer Felswand (wo ihr Bild über den Deckel ragt)
     const walk = (x, y) => {
-      if (x < 0 || y < 0 || x > W || y > H) return false;
+      if (x < R.x || y < R.y || x > R.x + R.w || y > R.y + R.h) return false;
       if (!ground(x, y) || F.e(x, y) < 0.09) return false;
       for (let t = 0; t <= WALL * 2 + 30; t += 20) if (isPlateau(x, y + t) || isPlateau(x - 30, y + t) || isPlateau(x + 30, y + t)) return false;
-      return isPlateau(x, y - 16) ? false : true;
+      return !isPlateau(x, y - 16);
     };
     // Gräser/Blüten: Boden (Hub 0), Deckel der Tafelberge (Hub WALL bzw. 2 × WALL), sonst nichts
     const place = (x, y) => {
       const q = F.q(x, y);
       if (q > Q2 + 0.004) return WALL * 2;
       if (q > Q1 + 0.004 && q < Q2 - 0.004) return WALL;
-      return ground(x, y) && F.e(x, y) > 0.08 && F.q(x, y) < Q1 - 0.03 ? 0 : false;
+      return ground(x, y) && F.e(x, y) > 0.08 && q < Q1 - 0.03 ? 0 : false;
     };
-    sprinkle(terr.canvas.getContext('2d'), terr.k, W, H, F, place, rngOf(seed ^ 0x1234), seed);
+    sprinkle(terr.canvas.getContext('2d'), terr.k, R, F, place, rngOf(T.seed ^ 0x1234), T.seed);
 
-    // Pflanzen in Hainen: welche Art, entscheidet ein grobes Rauschen
-    const zone = noise2(seed ^ 0x4444);
-    const TYPES = ['pilz', 'moosbaum', 'kristall', 'laterne', 'busch', 'schirm', 'farn', 'fels'];
-    const sprites = {};
-    const sprite = (t, v) => sprites[t + v] || (sprites[t + v] = plantSprite(t, v));
+    // Pflanzen in Hainen: welche Art, entscheidet ein grobes Rauschen. Gesät wird
+    // auf dem GANZEN Vorlagengebiet in fester Reihenfolge — so steht eine Pflanze
+    // nach dem Wachsen der Insel noch am selben Fleck.
+    const zone = noise2(T.seed ^ 0x4444);
     const plants = [];
-    const tries = Math.round(W * H / 6000);
+    const span = { x: -T.rx * 1.1, y: -T.ry * 1.1, w: T.rx * 2.2, h: T.ry * 2.2 };
+    const tries = Math.round(span.w * span.h / 6000);
     for (let i = 0; i < tries; i++) {
-      const x = 60 + r() * (W - 120), y = 60 + r() * (H - 120);
+      const x = span.x + r() * span.w, y = span.y + r() * span.h;
+      const v = Math.floor(r() * VARIANTS), sc = 0.6 + r() * 0.3, flip = r() < 0.5;
       const onTop = F.q(x, y) > Q1 + 0.03 && F.q(x, y) < Q2 - 0.01;   // auf dem unteren Tafelberg
       if (!onTop && !(ground(x, y) && F.e(x, y) > 0.1)) continue;
       if (!onTop && F.q(x, y + 40) > Q1 - 0.03) continue;              // nicht an die Felswand kleben
       if (plants.some(p => (p.x - x) ** 2 + ((p.y - y) * 1.5) ** 2 < 190 * 190)) continue;
       // Rauschen liegt meist um 0,5: gestreckt und umgebrochen, damit alle Arten vorkommen, in Hainen
-      const z = zone(x / 650, y / 650);
-      const t = TYPES[Math.floor(z * 15) % TYPES.length];
-      const v = Math.floor(r() * VARIANTS);
-      const s = 0.6 + r() * 0.3;
-      plants.push({ x, y, lift: onTop ? WALL : 0, sp: sprite(t, v), s, flip: r() < 0.5, type: t });
+      const z = zone((x + 5000) / 650, (y + 5000) / 650);
+      plants.push({ x, y, onTop, t: TYPES[Math.floor(z * 15) % TYPES.length], v, s: sc, flip });
     }
-    plants.sort((a, b) => a.y - b.y);
     // Wohnplätze der Familien: begehbar und eher im Inneren
     const homes = [];
-    for (let i = 0; i < 4000 && homes.length < 400; i++) {
-      const x = r() * W, y = r() * H;
-      if (F.e(x, y) > 0.25 && walk(x, y)) homes.push({ x, y });
+    for (let i = 0; i < 6000 && homes.length < 400; i++) {
+      const x = R.x + r() * R.w, y = R.y + r() * R.h;
+      if (F.e(x, y) > 0.18 && walk(x, y)) homes.push({ x, y });
     }
-    // Rahmen der Insel (für „ganze Insel“)
-    let x0 = W, y0 = H, x1 = 0, y1 = 0;
-    for (let y = 0; y < H; y += 20) for (let x = 0; x < W; x += 20) if (F.e(x, y) > -0.03) { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); }
-    const pad = 60;
+    return { T, stage, n, F, R, land: L, canvas: terr.canvas, walk, plants, homes };
+  }
+
+  const GAP = 700;                        // Wasser zwischen zwei Inseln (für Schwimmer)
+  const PAD = 500;
+
+  /* ─── Welt bauen: eine bis drei Inseln ───
+     spec = { tpl: Vorlage der ersten Insel (0…2), ns: [Begriffe je Insel] }.
+     Insel 2 liegt rechts neben Insel 1, Insel 3 darunter in der Mitte;
+     die weiteren Inseln nehmen die nächsten Vorlagen. */
+  function build(spec) {
+    const t0 = Date.now();
+    const ns = (spec.ns && spec.ns.length ? spec.ns : [1]).slice(0, 3);
+    const tpl = ((spec.tpl | 0) % TEMPLATES.length + TEMPLATES.length) % TEMPLATES.length;
+    const parts = ns.map((n, i) => islandPart(TEMPLATES[(tpl + i) % TEMPLATES.length], n));
+    // Lage: Ursprung jeder Insel (lokal 0,0) in Weltkoordinaten
+    const a = parts[0];
+    a.ox = 0; a.oy = 0;
+    if (parts[1]) {
+      const b = parts[1];
+      b.ox = a.land.x1 + GAP - b.land.x0;
+      b.oy = (a.land.y0 + a.land.y1) / 2 - (b.land.y0 + b.land.y1) / 2;
+    }
+    if (parts[2]) {
+      const c = parts[2], b = parts[1];
+      const bottom = Math.max(a.oy + a.land.y1, b.oy + b.land.y1);
+      c.oy = bottom + GAP - c.land.y0;
+      c.ox = (a.land.x0 + b.ox + b.land.x1) / 2 - (c.land.x0 + c.land.x1) / 2;
+    }
+    // alles ins Positive schieben
+    const minX = Math.min(...parts.map(p => p.ox + p.R.x)), minY = Math.min(...parts.map(p => p.oy + p.R.y));
+    parts.forEach(p => { p.ox += PAD - minX; p.oy += PAD - minY; });
+    const W = Math.max(...parts.map(p => p.ox + p.R.x + p.R.w)) + PAD;
+    const H = Math.max(...parts.map(p => p.oy + p.R.y + p.R.h)) + PAD;
+
+    const pieces = parts.map(p => ({ canvas: p.canvas, x: p.ox + p.R.x, y: p.oy + p.R.y, w: p.R.w, h: p.R.h }));
+    const plants = [];
+    for (const p of parts) for (const pl of p.plants) {
+      plants.push({ x: pl.x + p.ox, y: pl.y + p.oy, lift: pl.onTop ? WALL : 0, sp: sprite(pl.t, pl.v), s: pl.s, flip: pl.flip, type: pl.t });
+    }
+    plants.sort((u, v) => u.y - v.y);
+    const walk = (x, y) => parts.some(p => p.walk(x - p.ox, y - p.oy));
+    const islands = parts.map(p => ({
+      id: p.T.id, name: p.T.name, stage: p.stage, n: p.n, area: AREA[p.stage - 1],
+      homes: p.homes.map(h => ({ x: h.x + p.ox, y: h.y + p.oy })),
+      box: { x: p.ox + p.land.x0, y: p.oy + p.land.y0, w: p.land.x1 - p.land.x0, h: p.land.y1 - p.land.y0 }
+    }));
+    const x0 = Math.min(...islands.map(i => i.box.x)), y0 = Math.min(...islands.map(i => i.box.y));
+    const x1 = Math.max(...islands.map(i => i.box.x + i.box.w)), y1 = Math.max(...islands.map(i => i.box.y + i.box.h));
+    const pad = 80;
     return {
-      width: W, height: H, S, terrain: terr.canvas, walk, homes, plants,
+      width: W, height: H, S, pieces, walk, islands, plants,
       sea: 'rgb(' + C.deepFar.join(',') + ')', ms: Date.now() - t0,
       bbox: { x: x0 - pad, y: y0 - pad - WALL * 2, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad + WALL * 2 }
     };
   }
 
-  global.DDWelt = { build, S, PLANTS, plantSprite };
+  /* Wie viele Inseln bei wie vielen Begriffen (Sönke: ab 81 eine zweite,
+     ab 151 eine dritte — mehr nicht, dann wird es eben voll). */
+  const islandCount = n => (n > 150 ? 3 : n > 80 ? 2 : 1);
+
+  global.DDWelt = { build, S, PLANTS, plantSprite, TEMPLATES, islandCount, stageFor, _fields: fields };
 })(typeof window !== 'undefined' ? window : globalThis);

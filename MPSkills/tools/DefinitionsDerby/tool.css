@@ -857,3 +857,8 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 @media (prefers-reduced-motion: reduce) {
   .dd-task__pic.is-grow, .dd-task__pic.is-grow img, .dd-task__pic.is-shrink img, .dd-grown img, .dd-task__sheet, .dd-task__bg { animation: none; }
 }
+.dd-isl__grow { list-style: none; margin: 0 0 6px; padding: 0; font-size: .9rem; display: flex; flex-direction: column; gap: 3px; }
+.dd-isl__grow small { color: var(--dd-ink-soft); }
+.dd-isl__tip--l { text-align: left; margin: 4px 0 10px; }
+.dd-isl__tpls { display: flex; flex-wrap: wrap; }
+.dd-isl__tpls .dd-seg { flex: 1 1 auto; }

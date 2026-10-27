@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027g';
+  const V = '20261027h';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1387,12 +1387,35 @@
   }
 
   /* ─── Die Insel bauen (einmal je Seed und Größe) ─── */
-  function buildWorld(seed, n) {
-    const key = seed + ':' + Math.ceil(n / 10);         // Größe in Zehnerschritten, sonst baut jede neue Karte neu
+  /* spec = { tpl, ns } — Vorlage und Begriffe je Insel. Neu gebaut wird nur,
+     wenn sich Vorlage, Zahl der Inseln oder eine Wachstumsstufe ändert. */
+  function buildWorld(spec) {
+    const W = window.DDWelt;
+    const key = spec.tpl + ':' + spec.ns.map(W.stageFor).join(',');
     if (worldCache && worldCache.key === key) return worldCache.wc;
-    const wc = window.DDWelt.build(seed, Math.ceil(n / 10) * 10);
+    const wc = W.build(spec);
     worldCache = { key, wc };
     return wc;
+  }
+
+  /* Welche Vorlage: im Raum aus data.isl (die Lehrkraft wählt; beim ersten
+     Öffnen schreibt sie den Vorschlag aus dem Raumtitel fest, damit Umbenennen
+     die Insel nicht tauscht), ohne Raum aus dem Gerät. */
+  function islTpl() {
+    const d = roomData().isl;
+    if (Number.isInteger(d) && d >= 0 && d < 3) return d;
+    if (standalone || demo) { const v = Number(store.get('dd.isl')); return v >= 0 && v < 3 ? v : 0; }
+    return hashStr('derby:' + ((ctx && ctx.title) || 'raum')) % 3;
+  }
+  async function setTpl(v) {
+    if (!(v >= 0 && v < 3) || v === islTpl()) return;
+    if (isl && isl.round) return;
+    if (standalone || demo) store.set('dd.isl', String(v));
+    if (!standalone) {
+      const res = await writeData({ isl: v });
+      if (!res.ok) { toast(errMsg(res.error)); return; }
+    }
+    if (screen === 'play' && opened && opened.game === 'island') renderIsland();
   }
 
   /* ─── Wesen (vorläufige Zeichnungen) ─── */
@@ -1505,44 +1528,59 @@
   }
 
   function islBuild() {
-    const seed = hashStr(standalone ? 'derby-eigene-insel' : 'derby:' + (ctx.title || 'raum')) % 1000000;
+    const cards = opened.cards;
+    const tpl = islTpl();
+    // Ab 81 Begriffen eine zweite Insel, ab 151 eine dritte. Ganze Familien
+    // (Stapel) wandern auf die Insel, die gerade am wenigsten Begriffe hat.
+    const nIsl = window.DDWelt.islandCount(cards.length);
+    const load = new Array(nIsl).fill(0), famIsl = [];
+    opened.stacks.forEach((s, f) => {
+      let best = 0;
+      for (let i = 1; i < nIsl; i++) if (load[i] < load[best]) best = i;
+      famIsl[f] = best; load[best] += s.cards.length;
+    });
     let wc;
-    try { wc = buildWorld(seed, opened.cards.length); } catch (e) {
+    try { wc = buildWorld({ tpl, ns: load }); } catch (e) {
       console.warn('[derby] Insel:', e);
       const w = root.querySelector('#ddIslWait'); if (w) w.textContent = 'Die Insel konnte nicht gebaut werden.';
       return;
     }
     isl.wc = wc;
-    const cards = opened.cards;
+    isl.tpl = tpl;
+    if (isTeacher && !standalone && !demo && !Number.isInteger(roomData().isl)) writeData({ isl: tpl });
     const famOf = new Map(opened.stacks.map((s, i) => [s.id, i]));
-    const nFam = opened.stacks.length;
-    // Heimat je Familie: möglichst weit auseinander (farthest point) unter den Wohnplätzen der Welt
-    const r = rngOf(seed ^ 0x5bd1e995);
-    const cand = wc.homes.length ? wc.homes : [{ x: wc.width / 2, y: wc.height / 2 }];
-    const homes = [cand[Math.floor(r() * cand.length)]];
-    while (homes.length < nFam) {
-      let best = null, bd = -1;
-      for (let k = 0; k < 60; k++) {
-        const p = cand[Math.floor(r() * cand.length)];
-        const dd = Math.min(...homes.map(h => (h.x - p.x) ** 2 + (h.y - p.y) ** 2));
-        if (dd > bd) { bd = dd; best = p; }
+    // Heimat je Familie: auf ihrer Insel möglichst weit von den anderen (farthest point)
+    const r = rngOf(hashStr('derby-heimat') ^ tpl);
+    const homes = [], roams = [];
+    wc.islands.forEach((I, ii) => {
+      const fams = opened.stacks.map((_, f) => f).filter(f => famIsl[f] === ii);
+      const cand = I.homes.length ? I.homes : [{ x: I.box.x + I.box.w / 2, y: I.box.y + I.box.h / 2 }];
+      const roam = Math.max(260, Math.sqrt(I.area / Math.max(1, fams.length)) * 0.45);
+      const mine = [];
+      for (const f of fams) {
+        let best = cand[Math.floor(r() * cand.length)], bd = -1;
+        if (mine.length) for (let k = 0; k < 60; k++) {
+          const p = cand[Math.floor(r() * cand.length)];
+          const dd = Math.min(...mine.map(h => (h.x - p.x) ** 2 + (h.y - p.y) ** 2));
+          if (dd > bd) { bd = dd; best = p; }
+        }
+        mine.push(best); homes[f] = best; roams[f] = roam;
       }
-      homes.push(best);
-    }
+    });
     isl.size = wc.S;
-    isl.roam = Math.max(260, Math.sqrt(wc.width * wc.height * 0.4 / Math.max(1, nFam)) * 0.45);
     isl.creatures = cards.map(c => {
       const fam = famOf.get(c.sid) || 0;
-      const home = homes[fam % homes.length];
+      const home = homes[fam] || wc.islands[0].homes[0] || { x: wc.width / 2, y: wc.height / 2 };
+      const roam = roams[fam] || 300;
       const cr = rngOf(hashStr(c.id));
       let p = null;
       for (let k = 0; k < 40 && !p; k++) {
-        const a = cr() * Math.PI * 2, d = Math.sqrt(cr()) * isl.roam;
+        const a = cr() * Math.PI * 2, d = Math.sqrt(cr()) * roam;
         const q = { x: home.x + Math.cos(a) * d, y: home.y + Math.sin(a) * d };
         if (wc.walk(q.x, q.y)) p = q;
       }
-      if (!p) p = cand[Math.floor(cr() * cand.length)];
-      const w = { id: c.id, card: c, fam, home, x: p.x, y: p.y, tx: p.x, ty: p.y, walking: false,
+      if (!p) p = { x: home.x, y: home.y };
+      const w = { id: c.id, card: c, fam, home, roam, x: p.x, y: p.y, tx: p.x, ty: p.y, walking: false,
                   until: performance.now() + cr() * 3000, phase: cr() * 6, dir: cr() < 0.5 ? -1 : 1, burst: 0, rnd: cr };
       isl.byId.set(c.id, w);
       return w;
@@ -1758,7 +1796,7 @@
     g.fillRect(0, 0, cv.width, cv.height);
     g.setTransform(dpr * c.s, 0, 0, dpr * c.s, dpr * c.tx, dpr * c.ty);
     g.imageSmoothingEnabled = true;
-    g.drawImage(isl.wc.terrain, 0, 0, isl.wc.width, isl.wc.height);
+    for (const pc of isl.wc.pieces) g.drawImage(pc.canvas, pc.x, pc.y, pc.w, pc.h);
     // Pflanzen und Wesen, von hinten nach vorn
     const list = isl.creatures.slice().sort((a, b) => a.y - b.y);
     const plants = isl.wc.plants;
@@ -1851,10 +1889,10 @@
       if (!w.walking) {
         if (now < w.until) continue;
         for (let k = 0; k < 8; k++) {
-          const a = w.rnd() * Math.PI * 2, d = Math.sqrt(w.rnd()) * isl.roam;
+          const a = w.rnd() * Math.PI * 2, d = Math.sqrt(w.rnd()) * w.roam;
           const tx = w.home.x + Math.cos(a) * d, ty = w.home.y + Math.sin(a) * d;
           const step = Math.hypot(tx - w.x, ty - w.y);
-          if (step > isl.roam * 0.7 || step < 20) continue;
+          if (step > w.roam * 0.7 || step < 20) continue;
           if (wc.walk(tx, ty) && wc.walk((tx + w.x) / 2, (ty + w.y) / 2)) { w.tx = tx; w.ty = ty; w.walking = true; break; }
         }
         if (!w.walking) { w.until = now + 1500; continue; }
@@ -1908,7 +1946,23 @@
             '<small>' + cs[5] + ' von ' + s.cards.length + ' leuchten</small></span></button></li>';
         }).join('') + '</ul>' +
         (opened.stacks.length > 1 ? '<p class="dd-isl__tip">Familie antippen hebt sie auf der Insel hervor.</p>' : '') +
-      '</div>' + acctNote();
+      '</div>' + tplCard() + acctNote();
+  }
+  /* Welche Insel, wie weit gewachsen — und für die Lehrkraft (bzw. ohne Raum) die Auswahl der Vorlage. */
+  function tplCard() {
+    const W = window.DDWelt;
+    if (!W || !isl || !isl.wc) return '';
+    const isls = isl.wc.islands;
+    const canPick = isTeacher || standalone;
+    const grow = isls.map(I => '<li><b>' + E(I.name) + '</b> · Stufe ' + I.stage + ' von 5 <small>(' + I.n + (I.n === 1 ? ' Begriff' : ' Begriffe') + ')</small></li>').join('');
+    return '<div class="dd-isl__card">' +
+      '<h3 class="dd-isl__h">' + (isls.length > 1 ? isls.length + ' Inseln' : 'Die Insel') + '</h3>' +
+      '<ul class="dd-isl__grow">' + grow + '</ul>' +
+      '<p class="dd-isl__tip dd-isl__tip--l">Jede Insel wächst mit je 10 Begriffen bis Stufe 5. Ab 81 Begriffen kommt eine zweite dazu, ab 151 eine dritte.</p>' +
+      (canPick ? '<div class="dd-segs dd-isl__tpls" role="group" aria-label="Insel wählen">' + W.TEMPLATES.map((T, i) =>
+        '<button type="button" class="dd-seg' + (i === isl.tpl ? ' is-on' : '') + '" data-act="isl-tpl" data-v="' + i + '" aria-pressed="' + (i === isl.tpl) + '">' + E(T.name) + '</button>').join('') + '</div>' +
+        '<p class="dd-isl__tip dd-isl__tip--l">' + (standalone ? 'Gilt für dieses Gerät.' : 'Gilt für die ganze Klasse. Die Wesen behalten ihre Stufen.') + '</p>' : '') +
+      '</div>';
   }
   /* Die Stufen-Legende zeigt die Wesen ohne Familienfarbe. */
   const neutralUrls = {};
@@ -2493,6 +2547,7 @@
         case 'isl-train': if (isl && isl.selId) islRound(isl.selId); break;
         case 'isl-unsel': islSelect(null); break;
         case 'isl-fam': islFamily(Number(b.dataset.f)); break;
+        case 'isl-tpl': setTpl(Number(b.dataset.v)); break;
         case 'isl-fit': islFit(true); break;
         case 'isl-zoom': islZoomBy(Number(b.dataset.v)); break;
         case 'isl-opt': islPick(b.dataset.id); break;
@@ -2662,9 +2717,11 @@
     update(v) {
       view = v;
       if (!root) return;
-      const key = JSON.stringify([roomData().shared || [], roomData().games || null]);
+      const key = JSON.stringify([roomData().shared || [], roomData().games || null, roomData().isl]);
       if (key === lastSharedKey) return;
       lastSharedKey = key;
+      // Die Lehrkraft hat eine andere Insel gewählt: neu bauen (nicht mitten in einer Aufgabe).
+      if (screen === 'play' && opened && opened.game === 'island' && isl && isl.wc && !isl.round && isl.tpl !== islTpl()) renderIsland();
       // Die Liste der Klasse ist die geteilte Liste — neu holen und zeichnen,
       // aber nur auf der Startseite (mitten im Spiel oder Tippen bleibt alles stehen).
       if (!isTeacher) list = sharedList();
