@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027e';
+  const V = '20261027f';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1320,12 +1320,13 @@
      Stufen, Aufgaben, nachsichtiges Prüfen — stehen in insel.js
      (DDInsel); hier steht nur, was man sieht und antippt.
 
-     Die Insel selbst ist die von Balance of Nature: deren Generator
-     und Geländezeichnung werden aus tools/balance of nature/js/
-     nachgeladen (BON_FILES), EINMAL auf eine Leinwand gemalt
-     (isl.terrain) und dann nur noch verschoben. Darüber eine zweite
-     Zeichnung je Bild mit den Wesen (islFrame). Der Seed kommt aus
-     dem Raumtitel: dieselbe Klasse sieht dieselbe Insel.
+     Die Insel selbst baut welt.js (DDWelt): eigenes Gelände im
+     Maßstab der Wesen, Tafelberge statt Gipfeln, Fantasie-Pflanzen.
+     Das Gelände ist EINE Leinwand, die nur verschoben wird; Pflanzen
+     und Wesen werden je Bild gemeinsam nach y sortiert gezeichnet
+     (islFrame), damit ein Wesen auch hinter einem Pilz steht. Der
+     Seed kommt aus dem Raumtitel: dieselbe Klasse sieht dieselbe
+     Insel, und sie wächst mit der Zahl der Wesen.
 
      Die Wesen sind VORLÄUFIGE Zeichnungen (wesenSVG) — Sönke liefert
      Sprites nach. Wer sie einsetzt, ersetzt nur spriteURL(fam, e):
@@ -1340,14 +1341,11 @@
   const ROUND = 8;
   const FAM = ['#e0604c', '#3d84c6', '#3fa35d', '#e3a72f', '#8b5fc8', '#e2739f', '#2ea4a4', '#d57a2e',
                '#6f9426', '#5569d6', '#b85450', '#4aa3db'];
-  const BON = 'tools/balance of nature/js/';
-  const BON_FILES = ['core/rng', 'core/dmath', 'core/noise', 'core/grid', 'core/geometry', 'core/contour',
-    'world/config', 'world/island', 'world/decor', 'world/world', 'render/palette', 'render/shapes', 'render/terrainRenderer'];
   const STAGE_TXT = ['ist geschlüpft!', 'ist gewachsen und jetzt klein.', 'ist gewachsen: jetzt mittelgroß.',
                      'ist groß geworden!', 'leuchtet!'];
   let isl = null;                 // Zustand der Insel (nur solange sie offen ist)
-  let worldCache = null;          // { seed, world, terrain, land, bbox } — bleibt über mehrere Öffnungen
-  let inselReady = null, bonReady = null;
+  let worldCache = null;          // { key, wc } — bleibt über mehrere Öffnungen
+  let inselReady = null, weltReady = null;
 
   /* Welche Stapel auf die Insel kommen: Tablet alle geteilten, Lehrkraft
      im Raum die geteilten (sonst die gewählten), ohne Raum alle eigenen. */
@@ -1372,13 +1370,9 @@
     if (window.DDInsel) return Promise.resolve();
     return inselReady || (inselReady = loadScript(BASE + 'insel.js?v=' + V).catch(e => { inselReady = null; throw e; }));
   }
-  function ladeBon() {
-    if (window.BT && window.BT.TerrainRenderer && window.BT.World) return Promise.resolve();
-    if (bonReady) return bonReady;
-    // async=false hält die Reihenfolge ein, auch wenn alle gleichzeitig laden.
-    bonReady = Promise.all(BON_FILES.map(f => loadScript(encodeURI(BON + f + '.js') + '?v=' + V)))
-      .catch(e => { bonReady = null; throw e; });
-    return bonReady;
+  function ladeWelt() {
+    if (window.DDWelt) return Promise.resolve();
+    return weltReady || (weltReady = loadScript(BASE + 'welt.js?v=' + V).catch(e => { weltReady = null; throw e; }));
   }
 
   /* ─── Zufall mit Seed (Insel, Heimat der Familien, Platz der Wesen) ─── */
@@ -1392,43 +1386,13 @@
     return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   }
 
-  /* ─── Die Insel bauen (einmal je Seed) ─── */
-  function buildWorld(seed) {
-    if (worldCache && worldCache.seed === seed) return worldCache;
-    const BT = window.BT;
-    const world = BT.World.generate(seed, { size: 'mittel' });
-    const B = BT.BIOME;
-    const WALK = new Set([B.BEACH, B.TUSSOCK, B.SCRUB, B.FERN, B.MOSS, B.SWAMP, B.ROCK, B.THERMAL]);
-    // Begehbare Zellen, mit ein wenig Abstand zum Wasser (Nachbarn auch Land)
-    const { cols, rows, cellSize } = world;
-    const d = world.biome.data;
-    const land = [];
-    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-    for (let y = 2; y < rows - 2; y++) for (let x = 2; x < cols - 2; x++) {
-      const i = y * cols + x;
-      if (d[i] === B.DEEP || d[i] === B.SHALLOW) continue;
-      x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
-      if (!WALK.has(d[i]) || !WALK.has(d[i - 2]) || !WALK.has(d[i + 2]) || !WALK.has(d[i - 2 * cols]) || !WALK.has(d[i + 2 * cols])) continue;
-      land.push(i);
-    }
-    const walk = (wx, wy) => {
-      const cx = Math.floor(wx / cellSize), cy = Math.floor(wy / cellSize);
-      if (cx < 1 || cy < 1 || cx >= cols - 1 || cy >= rows - 1) return false;
-      return WALK.has(d[cy * cols + cx]);
-    };
-    // Gelände einmal auf eine Leinwand (wie Balance of Nature buildCache)
-    const k = Math.min(1, 2000 / world.width, 2000 / world.height);
-    const c = document.createElement('canvas');
-    c.width = Math.ceil(world.width * k); c.height = Math.ceil(world.height * k);
-    const cc = c.getContext('2d');
-    cc.setTransform(k, 0, 0, k, 0, 0);
-    BT.TerrainRenderer.draw(cc, world, { x: 0, y: 0, width: world.width, height: world.height }, k);
-    const pad = 4 * cellSize;
-    worldCache = {
-      seed, world, terrain: c, land, walk, sea: (BT.PALETTE && BT.PALETTE.deep && BT.PALETTE.deep.base) || '#1b5a7e',
-      bbox: { x: x0 * cellSize - pad, y: y0 * cellSize - pad, w: (x1 - x0 + 1) * cellSize + 2 * pad, h: (y1 - y0 + 1) * cellSize + 2 * pad }
-    };
-    return worldCache;
+  /* ─── Die Insel bauen (einmal je Seed und Größe) ─── */
+  function buildWorld(seed, n) {
+    const key = seed + ':' + Math.ceil(n / 10);         // Größe in Zehnerschritten, sonst baut jede neue Karte neu
+    if (worldCache && worldCache.key === key) return worldCache.wc;
+    const wc = window.DDWelt.build(seed, Math.ceil(n / 10) * 10);
+    worldCache = { key, wc };
+    return wc;
   }
 
   /* ─── Wesen (vorläufige Zeichnungen) ─── */
@@ -1530,7 +1494,7 @@
       '</section>';
     paintSide();
     const me = isl;
-    Promise.all([ladeInsel(), ladeBon()]).then(() => {
+    Promise.all([ladeInsel(), ladeWelt()]).then(() => {
       if (isl !== me || !root) return;
       // Erst zeichnen lassen („entsteht …“), dann rechnen (blockiert ~½ s).
       setTimeout(() => { if (isl === me && root) islBuild(); }, 30);
@@ -1543,7 +1507,7 @@
   function islBuild() {
     const seed = hashStr(standalone ? 'derby-eigene-insel' : 'derby:' + (ctx.title || 'raum')) % 1000000;
     let wc;
-    try { wc = buildWorld(seed); } catch (e) {
+    try { wc = buildWorld(seed, opened.cards.length); } catch (e) {
       console.warn('[derby] Insel:', e);
       const w = root.querySelector('#ddIslWait'); if (w) w.textContent = 'Die Insel konnte nicht gebaut werden.';
       return;
@@ -1552,32 +1516,24 @@
     const cards = opened.cards;
     const famOf = new Map(opened.stacks.map((s, i) => [s.id, i]));
     const nFam = opened.stacks.length;
-    // Heimat je Familie: möglichst weit auseinander (farthest point), aber im Inneren der Insel
+    // Heimat je Familie: möglichst weit auseinander (farthest point) unter den Wohnplätzen der Welt
     const r = rngOf(seed ^ 0x5bd1e995);
-    const ds = wc.world.fields && wc.world.fields.distSea;
-    const inner = ds ? wc.land.filter(i => ds[i] >= 20) : [];
-    const homeCells = inner.length > 50 ? inner : wc.land;
-    const ptc = c => ({ x: (c % wc.world.cols + 0.5) * wc.world.cellSize, y: (Math.floor(c / wc.world.cols) + 0.5) * wc.world.cellSize });
-    const pt = i => { const c = wc.land[i]; return { x: (c % wc.world.cols + 0.5) * wc.world.cellSize, y: (Math.floor(c / wc.world.cols) + 0.5) * wc.world.cellSize }; };
-    const homes = [];
-    if (wc.land.length) {
-      homes.push(ptc(homeCells[Math.floor(r() * homeCells.length)]));
-      while (homes.length < nFam) {
-        let best = null, bd = -1;
-        for (let k = 0; k < 60; k++) {
-          const p = ptc(homeCells[Math.floor(r() * homeCells.length)]);
-          const dd = Math.min(...homes.map(h => (h.x - p.x) ** 2 + (h.y - p.y) ** 2));
-          if (dd > bd) { bd = dd; best = p; }
-        }
-        homes.push(best);
+    const cand = wc.homes.length ? wc.homes : [{ x: wc.width / 2, y: wc.height / 2 }];
+    const homes = [cand[Math.floor(r() * cand.length)]];
+    while (homes.length < nFam) {
+      let best = null, bd = -1;
+      for (let k = 0; k < 60; k++) {
+        const p = cand[Math.floor(r() * cand.length)];
+        const dd = Math.min(...homes.map(h => (h.x - p.x) ** 2 + (h.y - p.y) ** 2));
+        if (dd > bd) { bd = dd; best = p; }
       }
+      homes.push(best);
     }
-    const landArea = wc.land.length * wc.world.cellSize ** 2;
-    isl.size = Math.max(56, Math.min(170, Math.sqrt(landArea / Math.max(1, cards.length)) * 0.6));
-    isl.roam = Math.max(220, Math.sqrt(landArea / Math.max(1, nFam)) * 0.45);
+    isl.size = wc.S;
+    isl.roam = Math.max(260, Math.sqrt(wc.width * wc.height * 0.4 / Math.max(1, nFam)) * 0.45);
     isl.creatures = cards.map(c => {
       const fam = famOf.get(c.sid) || 0;
-      const home = homes[fam] || { x: wc.world.width / 2, y: wc.world.height / 2 };
+      const home = homes[fam % homes.length];
       const cr = rngOf(hashStr(c.id));
       let p = null;
       for (let k = 0; k < 40 && !p; k++) {
@@ -1585,7 +1541,7 @@
         const q = { x: home.x + Math.cos(a) * d, y: home.y + Math.sin(a) * d };
         if (wc.walk(q.x, q.y)) p = q;
       }
-      if (!p) p = wc.land.length ? pt(Math.floor(cr() * wc.land.length)) : home;
+      if (!p) p = cand[Math.floor(cr() * cand.length)];
       const w = { id: c.id, card: c, fam, home, x: p.x, y: p.y, tx: p.x, ty: p.y, walking: false,
                   until: performance.now() + cr() * 3000, phase: cr() * 6, dir: cr() < 0.5 ? -1 : 1, burst: 0, rnd: cr };
       isl.byId.set(c.id, w);
@@ -1802,11 +1758,26 @@
     g.fillRect(0, 0, cv.width, cv.height);
     g.setTransform(dpr * c.s, 0, 0, dpr * c.s, dpr * c.tx, dpr * c.ty);
     g.imageSmoothingEnabled = true;
-    g.drawImage(isl.wc.terrain, 0, 0, isl.wc.world.width, isl.wc.world.height);
-    // Wesen, von hinten nach vorn
+    g.drawImage(isl.wc.terrain, 0, 0, isl.wc.width, isl.wc.height);
+    // Pflanzen und Wesen, von hinten nach vorn
     const list = isl.creatures.slice().sort((a, b) => a.y - b.y);
+    const plants = isl.wc.plants;
+    let pi = 0;
+    const plantsUpTo = y => {
+      g.globalAlpha = 1;
+      for (; pi < plants.length && plants[pi].y <= y; pi++) {
+        const p = plants[pi], sp = p.sp, w = sp.w * p.s, h = sp.h * p.s;
+        if (p.x + w < vx0 || p.x - w > vx1 || p.y < vy0 || p.y - h > vy1) continue;
+        g.save();
+        g.translate(p.x, p.y - p.lift);
+        if (p.flip) g.scale(-1, 1);
+        g.drawImage(sp.canvas, -w / 2, -h, w, h);
+        g.restore();
+      }
+    };
     const vx0 = -c.tx / c.s - S, vy0 = -c.ty / c.s - S, vx1 = (isl.W - c.tx) / c.s + S, vy1 = (isl.H - c.ty) / c.s + S * 2;
     for (const w of list) {
+      plantsUpTo(w.y);
       if (w.x < vx0 || w.x > vx1 || w.y < vy0 || w.y > vy1) continue;
       const e = stageOfId(w.id);
       const dim = isl.fam >= 0 && w.fam !== isl.fam;
@@ -1850,6 +1821,7 @@
       }
     }
     g.globalAlpha = 1;
+    plantsUpTo(Infinity);
     // Namen, wenn man nah genug dran ist
     if (S * c.s > 70) {
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
