@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027j';
+  const V = '20261027k';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1707,7 +1707,7 @@
       }
       if (!p) p = { x: home.x, y: home.y };
       const w = { id: c.id, card: c, fam, home, roam, x: p.x, y: p.y, tx: p.x, ty: p.y, walking: false,
-                  until: performance.now() + cr() * 3000, phase: cr() * 6, dir: cr() < 0.5 ? -1 : 1, burst: 0, rnd: cr };
+                  until: performance.now() + cr() * 3000, phase: cr() * 6, seed: cr() * 100, dir: cr() < 0.5 ? -1 : 1, burst: 0, rnd: cr };
       isl.byId.set(c.id, w);
       return w;
     });
@@ -2048,7 +2048,7 @@
         g.beginPath(); g.ellipse(w.x, w.y, S * (e ? 0.22 : 0.18), S * 0.06, 0, 0, Math.PI * 2); g.fill();
       }
       if (e >= 4 && !dim) {
-        const pulse = e === 5 ? 0.6 + 0.25 * Math.sin(now / 420 + w.phase) : 0.32;
+        const pulse = e === 5 ? 0.62 + 0.18 * Math.sin(now / 1100 + w.seed) : 0.32;
         const R = S * (e === 5 ? 0.75 : 0.55), cy = w.y - S * 0.45;
         g.globalAlpha = pulse * (1 - sky.night * 0.4);
         g.drawImage(glowSprite(famGlow(w.fam)), w.x - R, cy - R, R * 2, R * 2);
@@ -2107,16 +2107,21 @@
         g.globalAlpha = Math.min(1, L.a * sky.night * (L.w ? 0.9 : 0.7));
         g.drawImage(glowSprite(L.col), L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
       }
-      if (L.w && !calm) {                      // Funken steigen auf
-        const n = L.e === 5 ? 10 : 5, life = L.e === 5 ? 2.6 : 3.4, w = L.w;
-        g.fillStyle = L.col;
+      if (L.w && !calm) {                      // Funken: steigen sanft auf und verglimmen
+        const n = L.e === 5 ? 8 : 4, life = L.e === 5 ? 4.6 : 5.6, w = L.w;
+        const sprk = glowSprite(L.col);
         for (let i = 0; i < n; i++) {
-          const t = ((now / 1000) / life + i / n + w.phase) % 1;
-          const ang = i * 2.399 + w.phase;
-          const px = w.x + Math.sin(ang) * S * 0.32 + Math.sin(t * 7 + i) * S * 0.05;
-          const py = w.y - S * 0.12 - t * S * (L.e === 5 ? 1.05 : 0.8);
-          g.globalAlpha = Math.sin(t * Math.PI) * (0.55 + sky.night * 0.45);
-          g.beginPath(); g.arc(px, py, S * (0.014 + (i % 3) * 0.007) * (1 + sky.night * 0.4), 0, Math.PI * 2); g.fill();
+          // fester Takt je Funke (w.seed, NICHT w.phase — die läuft beim Laufen mit und ließ es flackern)
+          const age = (now / 1000) / life + i / n + w.seed;
+          const t = age % 1, cyc = Math.floor(age);
+          const h = Math.sin((cyc * 12.9898 + i * 78.233 + w.seed) * 43758.5453) % 1;   // neuer Startpunkt je Durchgang
+          const sx = (h < 0 ? h + 1 : h) * 2 - 1;
+          const px = w.x + sx * S * 0.3 + Math.sin(t * 2.4 + i * 1.7 + w.seed) * S * 0.04;
+          const py = w.y - S * 0.15 - (1 - (1 - t) * (1 - t)) * S * (L.e === 5 ? 0.95 : 0.7);
+          const a = Math.min(1, t / 0.18) * Math.pow(1 - t, 1.6) * (0.6 + sky.night * 0.4);
+          const r = S * (0.05 + (i % 3) * 0.012) * (1 - t * 0.45) * (1 + sky.night * 0.3);
+          g.globalAlpha = a;
+          g.drawImage(sprk, px - r, py - r, r * 2, r * 2);
         }
       }
     }
