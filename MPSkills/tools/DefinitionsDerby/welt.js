@@ -4,21 +4,26 @@
    Die Insel, auf der die Wesen leben — eigene Welt, nicht mehr die
    von Balance of Nature (Sönke 27.10.2026: „vom Maßstab besser zu
    den Monstern, besondere Pflanzen, Plateaus statt richtiger
-   Berge“). Alles ist in WESEN-GRÖSSEN gedacht: ein Wesen ist S = 100
-   Einheiten hoch, eine Pflanze 0,6–1,8 S, ein Tafelberg 3–6 S breit,
-   seine Felswand ½ S hoch. Die Insel wächst mit der Zahl der Wesen
+   Berge“; danach: „wirkt noch lieblos und etwas kindisch“ → gemalt
+   statt Clipart: Licht von links oben, keine schwarzen Umrisse,
+   gedämpfte Farben, jede Pflanze etwas anders).
+
+   Alles ist in WESEN-GRÖSSEN gedacht: ein Wesen ist S = 100
+   Einheiten hoch, eine Pflanze ~0,7–2 S, ein Tafelberg 3–6 S breit,
+   seine Felswand ⅔ S hoch. Die Insel wächst mit der Zahl der Wesen
    (build(seed, n)), damit Maßstab und Gedränge gleich bleiben.
 
    Aufbau:
      Felder auf einem Raster (CELL Einheiten): Höhe e (Küste bei 0),
-     Tafelberge q1/q2 (zwei Stufen), Teiche, Wiesenfarbe. Daraus wird
-     das Gelände EINMAL Pixel für Pixel auf eine Leinwand gerechnet
-     (Kanten weich, Tafelberge 2,5-D: Deckfläche um die Wandhöhe
-     nach oben versetzt, darunter die gestreifte Felswand).
-     Pflanzen sind kleine Leinwände (plantSprite) und werden NICHT
-     ins Gelände gemalt, sondern von tool.js zusammen mit den Wesen
-     nach y sortiert gezeichnet — so steht ein Wesen auch mal hinter
-     einem Riesenpilz.
+     Tafelberge q (zwei Stufen), Teiche, Wiesenfarbe. Daraus wird das
+     Gelände EINMAL Pixel für Pixel auf eine Leinwand gerechnet:
+     Licht aus der Neigung von e, Tafelberge 2,5-D (Deckfläche um die
+     Wandhöhe nach oben versetzt, darunter die Felswand mit Schichten
+     und Rissen, seitlich beleuchtet, Schatten am Fuß).
+     Pflanzen sind kleine Leinwände (plantSprite, je Art 6 Varianten
+     mit eigenem Zufall) und werden NICHT ins Gelände gemalt, sondern
+     von tool.js zusammen mit den Wesen nach y sortiert gezeichnet —
+     so steht ein Wesen auch mal hinter einem Riesenpilz.
      walk(x, y): darf ein Wesen hier stehen (Land, kein Teich, nicht
      auf/hinter einem Tafelberg).
 
@@ -30,7 +35,7 @@
   const S = 100;              // Wesen-Höhe in Welteinheiten
   const CELL = 10;
   const WALL = 64;            // Höhe einer Tafelberg-Stufe
-  const MAX_PX = 2000;        // längste Seite der Gelände-Leinwand
+  const MAX_PX = 1500;        // längste Seite der Gelände-Leinwand
 
   /* ─── Zufall und Rauschen ─── */
   function rngOf(seed) {
@@ -62,17 +67,23 @@
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const sstep = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
-  /* ─── Farben ─── */
+  /* ─── Farben (gedämpft, warm) ─── */
   const hex = h => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
   const C = {
-    deep: hex('#1f6f9a'), deep2: hex('#185c84'), lagoon: hex('#45c3c4'), foam: hex('#e9fbf6'),
-    sand: hex('#f1dfa6'), sandWet: hex('#d9c27e'),
-    grass1: hex('#79c35a'), grass2: hex('#4fa65a'), grass3: hex('#a6cf55'),
-    top1: hex('#c3df72'), top2: hex('#dfe48a'), rim: hex('#f1f5b8'),
-    wall1: hex('#d0855a'), wall2: hex('#b4643f'), wallDark: hex('#8a4a32'),
-    pond: hex('#4bb7d6'), pondEdge: hex('#2e8fb3'), shade: hex('#2c5a2e')
+    deep: hex('#1d5f7f'), deepFar: hex('#174d69'), lagoon: hex('#3fa9a8'), lagoonLight: hex('#7cc9bb'), foam: hex('#eef8f0'),
+    sand: hex('#e8d4a2'), sandDark: hex('#d4bb82'), sandWet: hex('#bfa776'),
+    grass1: hex('#78a84f'), grass2: hex('#5a9147'), grass3: hex('#9bb75a'), grassDry: hex('#b4b964'),
+    top1: hex('#86b04c'), top2: hex('#97bb55'), lip: hex('#c9b48a'), topRim: hex('#4f7f3a'),
+    wallLight: hex('#cf9a6b'), wall: hex('#b07650'), wallDark: hex('#7e4f37'), crack: hex('#5e3a2a'),
+    pond: hex('#3e93a6'), pondDeep: hex('#2c6f86'), pondEdge: hex('#7fb7a3'),
+    shade: hex('#2d4a2a'), sun: hex('#fff3c8')
   };
   const lerp3 = (o, a, t) => { o[0] += (a[0] - o[0]) * t; o[1] += (a[1] - o[1]) * t; o[2] += (a[2] - o[2]) * t; };
+  const mul3 = (o, f) => { o[0] *= f; o[1] *= f; o[2] *= f; };
+  const set3 = (o, a) => { o[0] = a[0]; o[1] = a[1]; o[2] = a[2]; };
+
+  const Q1 = 0.6, Q2 = 0.7, PT = 0.74;   // Schwellen: Tafelberg 1/2, Teich
+  const EDGE = 0.0012;                   // Kantenbreite der Schwellen
 
   /* ─── Felder ─── */
   function fields(seed, W, H) {
@@ -92,6 +103,25 @@
       p[k] = (1 - nP(x * fP, y * fP)) * sstep(0.22, 0.4, ev) * (1 - sstep(0.5, 0.57, q[k]));
       m[k] = nM(x * fM, y * fM);
     }
+    // Winzige Tafelberge weg (sähen aus wie Stümpfe): zu kleine Flächen über der Schwelle absenken.
+    const prune = (thr, minCells, to) => {
+      const seen = new Uint8Array(cols * rows);
+      for (let s0 = 0; s0 < q.length; s0++) {
+        if (seen[s0] || q[s0] <= thr) continue;
+        const comp = [s0]; seen[s0] = 1;
+        for (let h = 0; h < comp.length; h++) {
+          const c = comp[h], ci = c % cols;
+          for (const nb of [c - 1, c + 1, c - cols, c + cols]) {
+            if (nb < 0 || nb >= q.length || seen[nb] || q[nb] <= thr) continue;
+            if ((nb === c - 1 && ci === 0) || (nb === c + 1 && ci === cols - 1)) continue;
+            seen[nb] = 1; comp.push(nb);
+          }
+        }
+        if (comp.length < minCells) for (const c of comp) q[c] = Math.min(q[c], to);
+      }
+    };
+    prune(Q2 - 0.01, 260, Q2 - 0.03);     // obere Stufe: mindestens ~1,6 × 1,6 Wesen-Breiten
+    prune(Q1 - 0.01, 320, Q1 - 0.03);     // untere Stufe
     const at = arr => (x, y) => {
       const fx = clamp(x / CELL, 0, cols - 1.001), fy = clamp(y / CELL, 0, rows - 1.001);
       const i = Math.floor(fx), j = Math.floor(fy), tx = fx - i, ty = fy - j, k = j * cols + i;
@@ -100,7 +130,6 @@
     };
     return { cols, rows, e: at(e), q: at(q), p: at(p), m: at(m) };
   }
-  const Q1 = 0.6, Q2 = 0.7, PT = 0.74;   // Schwellen: Tafelberg 1/2, Teich
 
   /* ─── Gelände Pixel für Pixel ─── */
   function paint(F, W, H, seed) {
@@ -110,50 +139,65 @@
     cv.width = cw; cv.height = ch;
     const g = cv.getContext('2d');
     const img = g.createImageData(cw, ch), D = img.data;
-    const speck = noise2(seed ^ 0x3333);
-    const aa = 1.4 / k;               // Kantenbreite in Welteinheiten (~1,4 Pixel)
-    const col = [0, 0, 0];
+    const nFine = noise2(seed ^ 0x3333), nMid = noise2(seed ^ 0x3a3a), nWave = noise2(seed ^ 0x5151), nRock = noise2(seed ^ 0x6161);
+    const col = [0, 0, 0], tmp = [0, 0, 0];
     for (let py = 0; py < ch; py++) {
       const y = (py + 0.5) / k;
       for (let px = 0; px < cw; px++) {
         const x = (px + 0.5) / k;
         const e = F.e(x, y);
-        // Meer
-        col[0] = C.deep[0]; col[1] = C.deep[1]; col[2] = C.deep[2];
-        const deepT = sstep(-0.2, -0.05, e);
-        lerp3(col, C.lagoon, deepT);
-        if (e > -0.1) {
-          // Wellenkranz vor dem Strand
-          const ring = Math.abs(e + 0.035);
-          if (ring < 0.006) lerp3(col, C.foam, (1 - ring / 0.006) * 0.8);
+        /* Meer: tief → Lagune, mit sanften Wellenstreifen */
+        set3(col, C.deepFar);
+        lerp3(col, C.deep, sstep(-0.55, -0.25, e));
+        lerp3(col, C.lagoon, sstep(-0.2, -0.05, e));
+        lerp3(col, C.lagoonLight, sstep(-0.06, -0.005, e) * 0.7);
+        const rim = Math.min(x, W - x, y, H - y);
+        if (rim < 260) lerp3(col, C.deepFar, 1 - sstep(0, 260, rim));
+        if (e > -0.25 && e < 0) {
+          const wv = nWave(x / 46 + nMid(x / 90, y / 90) * 2, y / 13);
+          if (wv > 0.62) lerp3(col, C.foam, (wv - 0.62) * 0.9 * (1 + e * 3));
+          // Brandungssaum: unterbrochen, nicht wie mit dem Lineal
+          const ring = Math.abs(e + 0.03 + (nFine(x / 30, y / 30) - 0.5) * 0.012);
+          if (ring < 0.005) lerp3(col, C.foam, (1 - ring / 0.005) * 0.65);
         }
         if (e > -0.02) {
-          const sand = sstep(-0.0012, 0.0012, e);
-          const s = [C.sand[0], C.sand[1], C.sand[2]];
-          lerp3(s, C.sandWet, 1 - sstep(0, 0.03, e));
-          lerp3(col, s, sand);
-          // Gras
+          /* Strand mit Körnung, nass am Wasser */
+          set3(tmp, C.sand);
+          lerp3(tmp, C.sandDark, nFine(x / 9, y / 9) * 0.5);
+          lerp3(tmp, C.sandWet, 1 - sstep(0, 0.025, e));
+          lerp3(col, tmp, sstep(-EDGE, EDGE, e));
           if (e > 0.04) {
-            const gt = sstep(0.058, 0.062, e);
+            /* Wiese: zwei Grüntöne, trockene Flecken, feine Struktur, Licht aus der Neigung */
             const m = F.m(x, y);
-            const gr = [C.grass1[0], C.grass1[1], C.grass1[2]];
-            lerp3(gr, C.grass2, sstep(0.45, 0.62, m));
-            lerp3(gr, C.grass3, sstep(0.6, 0.35, m) * 0.6);
-            const sp = speck(x / 22, y / 22);
-            gr[0] *= 0.94 + sp * 0.1; gr[1] *= 0.94 + sp * 0.1; gr[2] *= 0.94 + sp * 0.1;
-            lerp3(col, gr, gt);
-            // Teich
+            set3(tmp, C.grass1);
+            lerp3(tmp, C.grass2, sstep(0.45, 0.65, m));
+            lerp3(tmp, C.grass3, sstep(0.55, 0.3, m) * 0.7);
+            lerp3(tmp, C.grassDry, sstep(0.62, 0.78, nMid(x / 140, y / 140)) * 0.25);
+            mul3(tmp, 0.93 + nFine(x / 7, y / 7) * 0.07 + nMid(x / 35, y / 35) * 0.07);
+            const slope = (F.e(x - 14, y - 14) - F.e(x + 14, y + 14)) * 5;
+            mul3(tmp, clamp(1 + slope, 0.93, 1.06));
+            // Übergang Sand → Gras mit ausgefranster Kante
+            lerp3(col, tmp, sstep(0.056, 0.064, e + (nFine(x / 11, y / 11) - 0.5) * 0.012));
+            /* Teich: tief in der Mitte, heller Uferrand */
             const pv = F.p(x, y);
             if (pv > PT - 0.03) {
-              const pond = [C.pond[0], C.pond[1], C.pond[2]];
-              lerp3(pond, C.pondEdge, 1 - sstep(PT, PT + 0.05, pv));
-              lerp3(col, pond, sstep(PT - 0.0015, PT + 0.0015, pv));
+              set3(tmp, C.pond);
+              lerp3(tmp, C.pondDeep, sstep(PT + 0.01, PT + 0.08, pv));
+              const glint = nWave(x / 30, y / 9);
+              if (glint > 0.7) lerp3(tmp, C.foam, (glint - 0.7) * 1.2);
+              lerp3(col, C.pondEdge, sstep(PT - 0.008, PT - 0.002, pv) * 0.8);
+              lerp3(col, tmp, sstep(PT - EDGE, PT + EDGE, pv));
             }
-            // Tafelberge (2,5-D): Schatten · Wand 1 · Deckel 1 · Wand 2 · Deckel 2
+            /* Tafelberge (2,5-D) */
             if (e > 0.15) {
               const q0 = F.q(x, y);
-              const qs = F.q(x - 22, y - 10);
-              if (qs > Q1 && q0 < Q1) lerp3(col, C.shade, 0.25);
+              // Schatten nach rechts unten und Dunkel am Wandfuß
+              if (q0 < Q1) {
+                const qs = F.q(x - 26, y - 14);
+                if (qs > Q1) lerp3(col, C.shade, 0.28);
+                const qa = F.q(x, y - 10);
+                if (qa > Q1) lerp3(col, C.shade, 0.22);
+              }
               level(x, y, 0, Q1, C.top1);
               level(x, y, WALL, Q2, C.top2);
             }
@@ -166,154 +210,364 @@
     // Eine Stufe: Fußfläche = q > thr, um base nach oben versetzt; darüber die Wand bis zum Deckel.
     function level(x, y, base, thr, top) {
       const yb = y + base;
-      const qa = F.q(x, yb), qb = F.q(x, yb + WALL * 0.5), qc = F.q(x, yb + WALL), qt = F.q(x, yb + WALL);
-      // Wand: Fuß unter mir (bis WALL tiefer) liegt im Berg
-      const E2 = 0.0012;
-      const wallA = Math.max(sstep(thr - E2, thr + E2, qa), sstep(thr - E2, thr + E2, qb), sstep(thr - E2, thr + E2, qc));
+      const qa = F.q(x, yb), qb = F.q(x, yb + WALL * 0.5), qt = F.q(x, yb + WALL);
+      const wallA = Math.max(sstep(thr - EDGE, thr + EDGE, qa), sstep(thr - EDGE, thr + EDGE, qb), sstep(thr - EDGE, thr + EDGE, qt));
       if (wallA > 0) {
-        // Gesteinsschichten: waagerechte Streifen, unten dunkler
-        const band = ((y / 13) % 2 + 2) % 2 < 1;
-        const wcol = [band ? C.wall1[0] : C.wall2[0], band ? C.wall1[1] : C.wall2[1], band ? C.wall1[2] : C.wall2[2]];
         // wie weit unten in der Wand? 0 oben … 1 unten
         let depth = 0;
-        for (let t = 0; t <= 1; t += 0.25) if (F.q(x, yb + WALL * t) > thr) { depth = 1 - t; break; }
-        lerp3(wcol, C.wallDark, depth * 0.45);
-        lerp3(col, wcol, wallA);
+        for (let t = 0; t <= 1.001; t += 0.125) if (F.q(x, yb + WALL * t) > thr) { depth = 1 - t; break; }
+        // Gesteinsschichten mit welliger Dicke, Risse, seitliches Licht
+        const strata = (y + nRock(x / 60, 0) * 10) / 11;
+        const band = strata - Math.floor(strata);
+        set3(tmp, band < 0.55 ? C.wallLight : C.wall);
+        if (band > 0.92 || band < 0.04) lerp3(tmp, C.wallDark, 0.5);
+        const crack = nRock(x / 7, y / 38);
+        if (crack > 0.78) lerp3(tmp, C.crack, (crack - 0.78) * 3);
+        mul3(tmp, 0.94 + nRock(x / 4, y / 4) * 0.1);
+        lerp3(tmp, C.wallDark, depth * 0.55);
+        // Wand zeigt nach links (Licht) oder rechts (Schatten)?
+        const foot = yb + WALL * (1 - depth);
+        const gx = F.q(x + 8, foot) - F.q(x - 8, foot);
+        mul3(tmp, clamp(1 + gx * 18, 0.78, 1.14));
+        lerp3(col, tmp, wallA);
       }
-      // Deckel: Fußfläche um WALL nach oben verschoben
-      const topA = sstep(thr - E2, thr + E2, qt);
+      // Deckel: Fußfläche um WALL nach oben verschoben, mit Felskante
+      const topA = sstep(thr - EDGE, thr + EDGE, qt);
       if (topA > 0) {
-        const tc = [top[0], top[1], top[2]];
-        const sp = speck(x / 18 + 7, y / 18);
-        tc[0] *= 0.95 + sp * 0.08; tc[1] *= 0.95 + sp * 0.08; tc[2] *= 0.95 + sp * 0.08;
-        lerp3(tc, C.rim, 1 - sstep(thr, thr + 0.009, qt));     // heller Rand an der Kante
-        lerp3(tc, C.wallDark, 1 - sstep(thr + 0.0012, thr + 0.0035, qt));   // dunkle Kantenlinie
-        lerp3(col, tc, topA);
+        set3(tmp, top);
+        mul3(tmp, 0.9 + nFine(x / 6 + 3, y / 6) * 0.1 + nMid(x / 26, y / 26) * 0.1);
+        lerp3(tmp, C.grass3, sstep(0.55, 0.75, nMid(x / 90 + 5, y / 90)) * 0.4);
+        // dunklerer Grasrand kurz vor der Kante, dann die helle Felskante
+        lerp3(tmp, C.topRim, (1 - sstep(thr + 0.004, thr + 0.012, qt)) * 0.45);
+        const lip = 1 - sstep(thr + 0.001, thr + 0.006, qt + (nRock(x / 9, y / 9) - 0.5) * 0.004);
+        lerp3(tmp, C.lip, lip * 0.85);
+        lerp3(col, tmp, topA);
       }
     }
     g.putImageData(img, 0, 0);
     return { canvas: cv, k };
   }
 
-  /* ─── Blümchen und Gräser direkt ins Gelände (klein, viele) ─── */
-  function sprinkle(g, k, W, H, F, ok, r) {
+  /* ─── Kleinkram direkt ins Gelände: Gräser, Blüten in Tupfen, Seerosen ─── */
+  function sprinkle(g, k, W, H, F, ok, r, seed) {
     g.save();
     g.scale(k, k);
-    const n = Math.round(W * H / 5200);
-    const cols = ['#fff6d8', '#ffd1e3', '#ffe27a', '#c9b7ff', '#ffffff'];
+    g.lineCap = 'round';
+    const patch = noise2(seed ^ 0x7777);
+    const n = Math.round(W * H / 2600);
+    const bloom = ['#f3ead2', '#e9b7c4', '#e8cf72', '#b9a9df', '#f0f0ea'];
     for (let i = 0; i < n; i++) {
-      const x = r() * W, y = r() * H;
-      if (!ok(x, y)) continue;
-      if (r() < 0.55) {
-        // Grasbüschel
-        g.strokeStyle = 'rgba(40,110,45,.55)'; g.lineWidth = 2.2; g.lineCap = 'round';
+      const x0 = r() * W, y0 = r() * H;
+      const lift = ok(x0, y0);
+      if (lift === false) continue;
+      const x = x0, y = y0 - lift;
+      const pz = patch(x0 / 160, y0 / 160);
+      if (r() < 0.7) {
+        // Grashalme, mal heller, mal dunkler
+        const hue = r();
+        g.strokeStyle = hue < 0.5 ? 'rgba(52,96,40,.5)' : 'rgba(140,168,80,.55)';
+        g.lineWidth = 1.3;
+        const h = 8 + r() * 8, nb = 3 + Math.floor(r() * 3);
         g.beginPath();
-        g.moveTo(x - 5, y); g.quadraticCurveTo(x - 6, y - 8, x - 9, y - 12);
-        g.moveTo(x, y); g.lineTo(x + 1, y - 14);
-        g.moveTo(x + 5, y); g.quadraticCurveTo(x + 6, y - 8, x + 10, y - 11);
+        for (let b = 0; b < nb; b++) {
+          const dx = (b - nb / 2) * 2.2, lean = (r() - 0.5) * 8;
+          g.moveTo(x + dx, y); g.quadraticCurveTo(x + dx + lean * 0.3, y - h * 0.6, x + dx + lean, y - h * (0.7 + r() * 0.4));
+        }
         g.stroke();
-      } else {
-        const c = cols[Math.floor(r() * cols.length)];
-        g.fillStyle = c;
-        for (let j = 0; j < 5; j++) { const a = j / 5 * Math.PI * 2; g.beginPath(); g.arc(x + Math.cos(a) * 3.6, y + Math.sin(a) * 3.6, 3, 0, Math.PI * 2); g.fill(); }
-        g.fillStyle = '#f4b33a'; g.beginPath(); g.arc(x, y, 2.4, 0, Math.PI * 2); g.fill();
+      } else if (pz > 0.55) {
+        // Blüten nur in Tupfen, klein
+        const c = bloom[Math.floor(pz * 37) % bloom.length];
+        for (let j = 0; j < 3; j++) {
+          const fx = x + (r() - 0.5) * 18, fy = y + (r() - 0.5) * 10;
+          g.fillStyle = 'rgba(40,70,30,.25)'; g.beginPath(); g.arc(fx + 1, fy + 1.5, 2.4, 0, Math.PI * 2); g.fill();
+          g.fillStyle = c; g.beginPath(); g.arc(fx, fy, 2.2, 0, Math.PI * 2); g.fill();
+        }
       }
+    }
+    // Seerosen auf den Teichen
+    for (let i = 0; i < n / 6; i++) {
+      const x = r() * W, y = r() * H;
+      if (F.p(x, y) < PT + 0.02 || F.e(x, y) < 0.2) continue;
+      const rr = 6 + r() * 6, a = r() * Math.PI * 2;
+      g.fillStyle = 'rgba(20,50,50,.25)'; g.beginPath(); g.ellipse(x + 2, y + 2, rr, rr * 0.6, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = r() < 0.5 ? '#6f9a4f' : '#5c8a45';
+      g.beginPath(); g.ellipse(x, y, rr, rr * 0.6, 0, a, a + Math.PI * 1.8); g.lineTo(x, y); g.closePath(); g.fill();
+      if (r() < 0.3) { g.fillStyle = '#efd7e0'; g.beginPath(); g.arc(x + rr * 0.2, y - 1, 2.6, 0, Math.PI * 2); g.fill(); }
     }
     g.restore();
   }
 
-  /* ─── Besondere Pflanzen (je eine kleine Leinwand) ───
-     Anker unten Mitte; Maße in Welteinheiten (S = 100). */
+  /* ══════ Pflanzen ══════
+     Gemalt: Licht von links oben, Schatten unten rechts, dunkler
+     Rand in derselben Farbe statt schwarzer Linie, weicher Schatten
+     am Boden. Anker unten Mitte; Maße in Welteinheiten (S = 100). */
   const PLANTS = {
-    pilz:     { w: 120, h: 130 },
-    spirale:  { w: 130, h: 190 },
-    kristall: { w: 90,  h: 90 },
-    kolben:   { w: 80,  h: 120 },
-    kugel:    { w: 90,  h: 72 },
-    schirm:   { w: 190, h: 175 },
-    blatt:    { w: 120, h: 95 }
+    pilz:     { w: 140, h: 150 },
+    moosbaum: { w: 250, h: 240 },
+    kristall: { w: 120, h: 110 },
+    laterne:  { w: 110, h: 140 },
+    busch:    { w: 160, h: 100 },
+    schirm:   { w: 280, h: 210 },
+    farn:     { w: 170, h: 170 },
+    fels:     { w: 140, h: 85 }
   };
-  const RES = 1.6;            // Pixel je Welteinheit in der Pflanzen-Leinwand
+  const VARIANTS = 6;
+  const RES = 1.8;            // Pixel je Welteinheit in der Pflanzen-Leinwand
+
+  function rgb(a) { return 'rgb(' + (a[0] | 0) + ',' + (a[1] | 0) + ',' + (a[2] | 0) + ')'; }
+  function shadeHex(h, f) { const c = hex(h); return rgb([Math.min(255, c[0] * f), Math.min(255, c[1] * f), Math.min(255, c[2] * f)]); }
+  function darkerHex(h, f) { return '#' + hex(h).map(c => Math.round(c * f).toString(16).padStart(2, '0')).join(''); }
+  /* Kugel mit Licht von links oben */
+  function ball(g, x, y, r, base, hi, lo) {
+    const gr = g.createRadialGradient(x - r * 0.4, y - r * 0.45, r * 0.1, x, y, r * 1.05);
+    gr.addColorStop(0, hi); gr.addColorStop(0.55, base); gr.addColorStop(1, lo);
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+  /* Laubkrone: wenige große, weich ineinanderlaufende Ballen (hinten
+     dunkel, vorn/links oben hell), darüber Blattstruktur aus kleinen
+     Tupfen — sonst sieht sie aus wie Trauben. */
+  function foliage(g, r, cx, cy, rx, ry, n, base) {
+    const blobs = [];
+    for (let i = 0; i < n; i++) {
+      const a = r() * Math.PI * 2, d = Math.sqrt(r()) * 0.75;
+      blobs.push({ x: cx + Math.cos(a) * d * rx, y: cy + Math.sin(a) * d * ry, rr: (0.32 + r() * 0.16) * Math.min(rx, ry * 1.4) });
+    }
+    // 1. dunkle Grundform (Schattenseite)
+    g.fillStyle = darkerHex(base, 0.62);
+    for (const b of blobs) { g.beginPath(); g.arc(b.x + 3, b.y + 4, b.rr, 0, Math.PI * 2); g.fill(); }
+    // 2. Ballen mit weichem Licht von links oben, ohne dunklen Rand
+    blobs.sort((a, b) => (a.y + a.x * 0.4) - (b.y + b.x * 0.4));
+    for (const b of blobs) {
+      const lit = clamp(1 - ((b.x - cx) / rx + (b.y - cy) / ry + 1.2) / 2.4, 0, 1);
+      const gr = g.createRadialGradient(b.x - b.rr * 0.35, b.y - b.rr * 0.4, b.rr * 0.1, b.x, b.y, b.rr);
+      gr.addColorStop(0, shadeHex(base, 1.12 + lit * 0.3));
+      gr.addColorStop(0.7, shadeHex(base, 0.9 + lit * 0.15));
+      gr.addColorStop(1, shadeHex(base, 0.82 + lit * 0.1));
+      g.fillStyle = gr;
+      g.beginPath(); g.arc(b.x, b.y, b.rr * 0.92, 0, Math.PI * 2); g.fill();
+    }
+    // 3. Blattstruktur: kleine Tupfen hell oben links, dunkel unten rechts
+    for (let i = 0; i < n * 22; i++) {
+      const b = blobs[Math.floor(r() * blobs.length)];
+      const a = r() * Math.PI * 2, d = Math.sqrt(r()) * b.rr * 0.9;
+      const x = b.x + Math.cos(a) * d, y = b.y + Math.sin(a) * d;
+      const up = (Math.cos(a) + Math.sin(a)) < -0.3;
+      g.fillStyle = up ? 'rgba(255,250,220,' + (0.08 + r() * 0.12) + ')' : 'rgba(20,35,20,' + (0.06 + r() * 0.1) + ')';
+      g.beginPath(); g.ellipse(x, y, 2.2 + r() * 2, 1.4 + r() * 1.2, r() * Math.PI, 0, Math.PI * 2); g.fill();
+    }
+    return blobs;
+  }
+  function groundShadow(g, cx, by, rx, ry) {
+    const gr = g.createRadialGradient(cx + rx * 0.12, by, 1, cx + rx * 0.12, by, rx);
+    gr.addColorStop(0, 'rgba(25,45,20,.38)'); gr.addColorStop(1, 'rgba(25,45,20,0)');
+    g.save(); g.translate(cx + rx * 0.12, by); g.scale(1, ry / rx); g.translate(-(cx + rx * 0.12), -by);
+    g.fillStyle = gr; g.beginPath(); g.arc(cx + rx * 0.12, by, rx, 0, Math.PI * 2); g.fill(); g.restore();
+  }
+  function trunk(g, x0, y0, x1, y1, w0, w1, bend, col) {
+    const mx = (x0 + x1) / 2 + bend, my = (y0 + y1) / 2;
+    const nx = (y1 - y0), ny = -(x1 - x0), nl = Math.hypot(nx, ny) || 1;
+    const ux = nx / nl, uy = ny / nl;
+    g.beginPath();
+    g.moveTo(x0 + ux * w0, y0 + uy * w0);
+    g.quadraticCurveTo(mx + ux * (w0 + w1) / 2, my + uy * (w0 + w1) / 2, x1 + ux * w1, y1 + uy * w1);
+    g.lineTo(x1 - ux * w1, y1 - uy * w1);
+    g.quadraticCurveTo(mx - ux * (w0 + w1) / 2, my - uy * (w0 + w1) / 2, x0 - ux * w0, y0 - uy * w0);
+    g.closePath();
+    const gr = g.createLinearGradient(x0 - w0, 0, x0 + w0, 0);
+    gr.addColorStop(0, shadeHex(col, 1.2)); gr.addColorStop(0.5, col); gr.addColorStop(1, shadeHex(col, 0.62));
+    g.fillStyle = gr; g.fill();
+  }
+
   function plantSprite(type, v) {
     const P = PLANTS[type];
+    const r = rngOf(0x51ab + v * 7919 + type.length * 104729 + type.charCodeAt(0) * 31);
     const cv = document.createElement('canvas');
     cv.width = Math.ceil(P.w * RES); cv.height = Math.ceil(P.h * RES);
     const g = cv.getContext('2d');
     g.scale(RES, RES);
     g.lineJoin = 'round'; g.lineCap = 'round';
-    const W = P.w, H = P.h, cx = W / 2, by = H - 4;
-    const line = '#3a2a2a';
-    const out = (w) => { g.strokeStyle = line; g.lineWidth = w || 2.6; g.stroke(); };
+    const W = P.w, H = P.h, cx = W / 2, by = H - 8;
+    const pick = a => a[Math.floor(r() * a.length)];
+
     if (type === 'pilz') {
-      const caps = ['#ec5f7c', '#f2973a', '#8f72e0', '#3fb6b0'];
+      groundShadow(g, cx, by, 54, 11);
+      const caps = ['#a8503a', '#7a4b6e', '#3f7f7c', '#b78435', '#8c5a3a', '#6a6fa0'];
       const cap = caps[v % caps.length];
-      // zwei kleine dahinter, einer groß davor
-      const one = (x, h, r, c) => {
-        g.beginPath(); g.moveTo(x - r * 0.28, by); g.quadraticCurveTo(x - r * 0.2, by - h * 0.6, x - r * 0.22, by - h + r * 0.15);
-        g.lineTo(x + r * 0.22, by - h + r * 0.15); g.quadraticCurveTo(x + r * 0.2, by - h * 0.6, x + r * 0.28, by); g.closePath();
-        g.fillStyle = '#f6ecd6'; g.fill(); out(2.2);
-        g.beginPath(); g.ellipse(x, by - h + r * 0.2, r, r * 0.72, 0, Math.PI, 0); g.quadraticCurveTo(x, by - h + r * 0.55, x - r, by - h + r * 0.2);
-        g.fillStyle = c; g.fill(); out(2.4);
-        g.fillStyle = 'rgba(255,255,255,.9)';
-        [[-0.45, -0.3, 0.16], [0.1, -0.5, 0.13], [0.5, -0.2, 0.12], [-0.05, -0.12, 0.1]].forEach(([a, b, s]) => { g.beginPath(); g.arc(x + a * r, by - h + r * 0.2 + b * r * 0.72, s * r, 0, Math.PI * 2); g.fill(); });
+      const one = (x, h, rw, lean) => {
+        const top = by - h, tx = x + lean;
+        // Stiel mit leichtem Schwung und Manschette
+        trunk(g, x, by, tx, top + rw * 0.2, rw * 0.3, rw * 0.22, lean * 0.4, '#e6dcc6');
+        g.fillStyle = 'rgba(120,100,80,.35)';
+        g.beginPath(); g.ellipse(tx + (x - tx) * 0.35, top + h * 0.35, rw * 0.24, rw * 0.07, 0, 0, Math.PI * 2); g.fill();
+        // Lamellen (Unterseite)
+        g.fillStyle = shadeHex(cap, 0.55);
+        g.beginPath(); g.ellipse(tx, top + rw * 0.18, rw * 0.92, rw * 0.2, 0, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = 'rgba(255,240,220,.18)'; g.lineWidth = 0.8;
+        for (let i = -6; i <= 6; i++) { g.beginPath(); g.moveTo(tx, top + rw * 0.18); g.lineTo(tx + i * rw * 0.14, top + rw * 0.18 + rw * 0.17 * Math.cos(i / 7)); g.stroke(); }
+        // Hut
+        g.beginPath();
+        g.moveTo(tx - rw, top + rw * 0.16);
+        g.bezierCurveTo(tx - rw * 0.98, top - rw * 0.62, tx + rw * 0.98, top - rw * 0.62, tx + rw, top + rw * 0.16);
+        g.quadraticCurveTo(tx, top + rw * 0.32, tx - rw, top + rw * 0.16);
+        const gr = g.createRadialGradient(tx - rw * 0.35, top - rw * 0.35, rw * 0.05, tx, top, rw * 1.1);
+        gr.addColorStop(0, shadeHex(cap, 1.55)); gr.addColorStop(0.45, cap); gr.addColorStop(1, shadeHex(cap, 0.55));
+        g.fillStyle = gr; g.fill();
+        // wenige blasse Flecken, unregelmäßig
+        g.fillStyle = 'rgba(245,235,215,.55)';
+        for (let i = 0; i < 5; i++) {
+          const a = -Math.PI * (0.15 + r() * 0.7), d = rw * (0.3 + r() * 0.55);
+          g.beginPath(); g.ellipse(tx + Math.cos(a) * d, top + rw * 0.05 + Math.sin(a) * d * 0.5, rw * (0.06 + r() * 0.07), rw * (0.04 + r() * 0.04), a, 0, Math.PI * 2); g.fill();
+        }
       };
-      one(cx - 30, 62, 20, cap);
-      one(cx + 34, 48, 16, caps[(v + 1) % caps.length]);
-      one(cx, 118, 44, cap);
-    } else if (type === 'spirale') {
-      const leaf = ['#2fa58a', '#5bbd4e', '#3f8fd0'][v % 3];
-      g.beginPath(); g.moveTo(cx - 9, by); g.bezierCurveTo(cx - 14, by - 50, cx + 16, by - 70, cx + 2, by - 108);
-      g.lineTo(cx + 12, by - 108); g.bezierCurveTo(cx + 28, by - 70, cx, by - 50, cx + 9, by); g.closePath();
-      g.fillStyle = '#9a6a45'; g.fill(); out(2.4);
-      const ky = by - 128;
-      g.beginPath(); g.arc(cx + 6, ky, 54, 0, Math.PI * 2); g.fillStyle = leaf; g.fill(); out(2.8);
-      // Spirale
-      g.beginPath();
-      for (let t = 0; t < 4.2 * Math.PI; t += 0.15) { const r = 4 + t * 3.6; const x = cx + 6 + Math.cos(t) * r, y = ky + Math.sin(t) * r; if (!t) g.moveTo(x, y); else g.lineTo(x, y); }
-      g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 5; g.stroke();
+      const n = 1 + Math.floor(r() * 3);
+      if (n > 1) one(cx - 30 - r() * 8, 50 + r() * 20, 18 + r() * 6, -6 - r() * 6);
+      if (n > 2) one(cx + 30 + r() * 8, 40 + r() * 16, 15 + r() * 5, 6 + r() * 6);
+      one(cx + (r() - 0.5) * 10, 84 + r() * 30, 44 + r() * 8, (r() - 0.5) * 16);
+    } else if (type === 'moosbaum') {
+      groundShadow(g, cx, by, 78, 16);
+      const leaves = ['#4f8a5a', '#5f8d45', '#3f7a6a', '#7f8a3e', '#5a7f78', '#8a6a3e'];
+      const leaf = leaves[v % leaves.length];
+      // Wurzeln
+      for (let i = 0; i < 4; i++) trunk(g, cx + (i - 1.5) * 6, by - 10, cx + (i - 1.5) * 13, by + 1, 5, 2.5, 0, '#6f5240');
+      const tx = cx + (r() - 0.5) * 16, ty = by - 120;
+      trunk(g, cx, by, tx, ty, 13, 7, (r() - 0.5) * 30, '#7a5a44');
+      trunk(g, tx, ty + 30, tx - 40, ty - 10, 5, 2.5, -8, '#7a5a44');
+      trunk(g, tx, ty + 20, tx + 42, ty - 4, 5, 2.5, 8, '#7a5a44');
+      const blobs = foliage(g, r, tx, ty - 26, 86, 60, 13, leaf);
+      // hängendes Moos
+      g.strokeStyle = 'rgba(150,170,110,.55)'; g.lineWidth = 1.3;
+      for (let i = 0; i < 16; i++) {
+        const b = blobs[Math.floor(r() * blobs.length)];
+        if (b.y < ty - 30) continue;
+        const L = 14 + r() * 26;
+        g.beginPath(); g.moveTo(b.x, b.y + b.rr * 0.6); g.quadraticCurveTo(b.x + 3, b.y + b.rr * 0.6 + L * 0.5, b.x - 1, b.y + b.rr * 0.6 + L); g.stroke();
+      }
     } else if (type === 'kristall') {
-      const cols = [['#9fe8ff', '#4fb3e8'], ['#e2b8ff', '#9a64e0'], ['#b8ffd8', '#3fbf8a']][v % 3];
-      const cr = (x, h, w, tilt) => {
-        g.save(); g.translate(x, by); g.rotate(tilt);
-        g.beginPath(); g.moveTo(-w, 0); g.lineTo(-w, -h + w); g.lineTo(0, -h); g.lineTo(w, -h + w); g.lineTo(w, 0); g.closePath();
-        const gr = g.createLinearGradient(-w, 0, w, 0); gr.addColorStop(0, cols[0]); gr.addColorStop(1, cols[1]);
-        g.fillStyle = gr; g.fill(); out(2.2);
-        g.beginPath(); g.moveTo(0, -h); g.lineTo(0, -2); g.strokeStyle = 'rgba(255,255,255,.6)'; g.lineWidth = 2; g.stroke();
+      groundShadow(g, cx, by, 50, 10);
+      const sets = [['#bfe9ee', '#6fb7c8', '#3f7f96'], ['#d8c4ef', '#9a7cc8', '#5f4a8a'], ['#f0cfd4', '#c88a98', '#8a5464'],
+                    ['#cfeedd', '#79bf9a', '#3f7f62'], ['#f2e3b8', '#c9a95e', '#8a6c34'], ['#c8d8f2', '#7f9ad0', '#475f96']];
+      const [lt, md, dk] = sets[v % sets.length];
+      // Steinsockel
+      for (let i = 0; i < 4; i++) ball(g, cx + (i - 1.5) * 18, by - 6, 12 + r() * 4, '#8d8a80', '#b9b5a8', '#5c5a52');
+      const prisms = [];
+      const n = 4 + Math.floor(r() * 3);
+      for (let i = 0; i < n; i++) prisms.push({ x: cx + (r() - 0.5) * 60, h: 30 + r() * 55, w: 7 + r() * 7, t: (r() - 0.5) * 0.7 });
+      prisms.sort((a, b) => a.h - b.h).reverse();
+      for (const p of prisms) {
+        g.save(); g.translate(p.x, by - 8); g.rotate(p.t);
+        const w = p.w, h = p.h;
+        // linke (helle) und rechte (dunkle) Fläche, Spitze
+        g.beginPath(); g.moveTo(-w, 0); g.lineTo(-w, -h + w * 1.2); g.lineTo(0, -h); g.lineTo(0, 0); g.closePath();
+        let gr = g.createLinearGradient(0, 0, 0, -h); gr.addColorStop(0, md); gr.addColorStop(1, lt); g.fillStyle = gr; g.fill();
+        g.beginPath(); g.moveTo(w, 0); g.lineTo(w, -h + w * 1.2); g.lineTo(0, -h); g.lineTo(0, 0); g.closePath();
+        gr = g.createLinearGradient(0, 0, 0, -h); gr.addColorStop(0, dk); gr.addColorStop(1, md); g.fillStyle = gr; g.fill();
+        g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1;
+        g.beginPath(); g.moveTo(-w * 0.55, -h * 0.15); g.lineTo(-w * 0.55, -h + w * 1.6); g.stroke();
         g.restore();
-      };
-      cr(cx - 20, 46, 10, -0.35); cr(cx + 22, 52, 11, 0.3); cr(cx, 80, 14, 0.02);
-    } else if (type === 'kolben') {
-      const glow = ['#ffe45c', '#ff9fd0', '#9ff0ff'][v % 3];
-      [[-22, 70, -0.25], [20, 84, 0.2], [0, 104, 0]].forEach(([dx, h, a]) => {
-        const tx = cx + dx + Math.sin(a) * h, ty = by - h;
-        g.beginPath(); g.moveTo(cx + dx * 0.3, by); g.quadraticCurveTo(cx + dx, by - h * 0.5, tx, ty);
-        g.strokeStyle = '#3f7d3a'; g.lineWidth = 4; g.stroke();
-        const rg = g.createRadialGradient(tx, ty, 2, tx, ty, 20); rg.addColorStop(0, 'rgba(255,255,220,.9)'); rg.addColorStop(1, 'rgba(255,240,150,0)');
-        g.fillStyle = rg; g.beginPath(); g.arc(tx, ty, 20, 0, Math.PI * 2); g.fill();
-        g.beginPath(); g.ellipse(tx, ty, 9, 12, 0, 0, Math.PI * 2); g.fillStyle = glow; g.fill(); out(2);
-      });
-      g.beginPath(); g.ellipse(cx, by - 4, 22, 8, 0, 0, Math.PI * 2); g.fillStyle = '#3f8f45'; g.fill(); out(2);
-    } else if (type === 'kugel') {
-      const bush = ['#3e9a52', '#2f8d6c', '#6aa83e'][v % 3], berry = ['#e84a5f', '#4a7be8', '#f5a623'][v % 3];
-      [[-22, 30, 26], [22, 32, 24], [0, 44, 32]].forEach(([dx, h, r]) => { g.beginPath(); g.arc(cx + dx, by - h + 6, r, 0, Math.PI * 2); g.fillStyle = bush; g.fill(); out(2.4); });
-      g.fillStyle = berry;
-      [[-26, -30], [-8, -52], [12, -40], [28, -24], [-2, -26], [18, -58]].forEach(([dx, dy]) => { g.beginPath(); g.arc(cx + dx, by + dy, 4.5, 0, Math.PI * 2); g.fill(); });
+      }
+      const glow = g.createRadialGradient(cx, by - 45, 4, cx, by - 45, 50);
+      glow.addColorStop(0, 'rgba(255,255,255,.18)'); glow.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = glow; g.beginPath(); g.arc(cx, by - 45, 50, 0, Math.PI * 2); g.fill();
+    } else if (type === 'laterne') {
+      groundShadow(g, cx, by, 40, 9);
+      const lights = ['#f3d679', '#f0b7a0', '#bfe3d2', '#e7c2e8', '#f6e2a6', '#c9dcf0'];
+      const lc = lights[v % lights.length];
+      // Blätter am Grund
+      for (let i = 0; i < 6; i++) {
+        const a = -Math.PI / 2 + (i - 2.5) * 0.42 + (r() - 0.5) * 0.2, L = 26 + r() * 16;
+        g.save(); g.translate(cx, by); g.rotate(a + Math.PI / 2);
+        g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-7, -L * 0.5, 0, -L); g.quadraticCurveTo(7, -L * 0.5, 0, 0);
+        const gr = g.createLinearGradient(-6, 0, 6, 0); gr.addColorStop(0, '#7fa35a'); gr.addColorStop(1, '#3f6a3a'); g.fillStyle = gr; g.fill();
+        g.restore();
+      }
+      const n = 3 + Math.floor(r() * 3);
+      for (let i = 0; i < n; i++) {
+        const h = 60 + r() * 60, sx = cx + (i - (n - 1) / 2) * 8, ex = cx + (i - (n - 1) / 2) * 16 + (r() - 0.5) * 12;
+        const ey = by - h;
+        g.strokeStyle = '#4f7040'; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(sx, by - 4); g.quadraticCurveTo(sx + (ex - sx) * 0.2, by - h * 0.7, ex, ey); g.quadraticCurveTo(ex + 6, ey - 6, ex + 7, ey + 2); g.stroke();
+        // hängende Laterne mit Licht von innen
+        const lx = ex + 7, ly = ey + 12;
+        const halo = g.createRadialGradient(lx, ly, 2, lx, ly, 22);
+        halo.addColorStop(0, 'rgba(255,245,210,.55)'); halo.addColorStop(1, 'rgba(255,240,190,0)');
+        g.fillStyle = halo; g.beginPath(); g.arc(lx, ly, 22, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.moveTo(lx, ly - 9); g.bezierCurveTo(lx + 9, ly - 6, lx + 8, ly + 8, lx, ly + 10); g.bezierCurveTo(lx - 8, ly + 8, lx - 9, ly - 6, lx, ly - 9);
+        const gr = g.createRadialGradient(lx - 2, ly + 1, 1, lx, ly, 11);
+        gr.addColorStop(0, '#fffdf2'); gr.addColorStop(0.5, lc); gr.addColorStop(1, shadeHex(lc, 0.7)); g.fillStyle = gr; g.fill();
+        g.strokeStyle = 'rgba(80,60,30,.35)'; g.lineWidth = 0.8;
+        g.beginPath(); g.moveTo(lx, ly - 9); g.lineTo(lx, ly + 10); g.stroke();
+      }
+    } else if (type === 'busch') {
+      groundShadow(g, cx, by, 60, 12);
+      const leaves = ['#4f7f4a', '#5a7a3e', '#3f6f5a', '#6a7f3e', '#4a6f62', '#7a6a3a'];
+      const berries = ['#b4413f', '#5a5fa8', '#c98a2e', '#8a3f6a', '#d0d0c0', '#3f7fa0'];
+      const blobs = foliage(g, r, cx, by - 36, 58, 30, 8, leaves[v % leaves.length]);
+      const bc = berries[v % berries.length];
+      for (let i = 0; i < 9; i++) {
+        const b = blobs[Math.floor(r() * blobs.length)];
+        const x = b.x + (r() - 0.5) * b.rr, y = b.y + (r() - 0.3) * b.rr * 0.8;
+        ball(g, x, y, 3.2, bc, shadeHex(bc, 1.6), shadeHex(bc, 0.55));
+      }
     } else if (type === 'schirm') {
-      const crown = ['#9b6fd6', '#e0709e', '#4fb0a0'][v % 3];
-      g.beginPath(); g.moveTo(cx - 8, by); g.quadraticCurveTo(cx - 4, by - 70, cx - 18, by - 120); g.lineTo(cx - 6, by - 122);
-      g.quadraticCurveTo(cx + 8, by - 70, cx + 8, by); g.closePath(); g.fillStyle = '#8a5a3c'; g.fill(); out(2.4);
-      g.beginPath(); g.moveTo(cx - 4, by - 100); g.quadraticCurveTo(cx + 20, by - 112, cx + 34, by - 126); g.strokeStyle = '#8a5a3c'; g.lineWidth = 6; g.stroke();
-      g.beginPath(); g.ellipse(cx, by - 132, 86, 26, 0, 0, Math.PI * 2); g.fillStyle = crown; g.fill(); out(2.8);
-      g.beginPath(); g.ellipse(cx - 10, by - 140, 54, 12, 0, 0, Math.PI * 2); g.fillStyle = 'rgba(255,255,255,.22)'; g.fill();
-    } else if (type === 'blatt') {
-      const lc = ['#4fb84a', '#2f9e7a', '#7ab83a'][v % 3];
-      [[-0.9, 70], [-0.45, 84], [0, 90], [0.45, 84], [0.9, 70]].forEach(([a, l]) => {
-        g.save(); g.translate(cx, by); g.rotate(a);
-        g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-22, -l * 0.55, 0, -l); g.quadraticCurveTo(22, -l * 0.55, 0, 0);
-        g.fillStyle = lc; g.fill(); out(2.2);
-        g.beginPath(); g.moveTo(0, -4); g.lineTo(0, -l + 8); g.strokeStyle = 'rgba(255,255,255,.45)'; g.lineWidth = 2; g.stroke();
+      groundShadow(g, cx, by, 96, 16);
+      const crowns = ['#6f8f4f', '#8a6f8f', '#b07a5f', '#5f8a7a', '#9a8f4a', '#7a6a9a'];
+      const crown = crowns[v % crowns.length];
+      const tx = cx + (r() - 0.5) * 16, ty = by - 150;
+      trunk(g, cx, by, tx, ty + 30, 9, 6, (r() - 0.5) * 24, '#806048');
+      // Astgabeln zur flachen Krone
+      for (let i = 0; i < 4; i++) {
+        const ex = tx + (i - 1.5) * 34 + (r() - 0.5) * 10;
+        trunk(g, tx, ty + 34, ex, ty + 2, 4, 1.8, (i - 1.5) * 6, '#806048');
+      }
+      // zwei Lagen: dunkle Unterseite, helle Oberseite
+      // flaches Dach aus drei breiten Laubpolstern nebeneinander
+      for (const dx of [-62, 62, 0]) foliage(g, r, tx + dx, ty - 4 + Math.abs(dx) * 0.08, 58, 26, 5, dx ? darkerHex(crown, 0.9) : crown);
+    } else if (type === 'farn') {
+      groundShadow(g, cx, by, 64, 12);
+      const greens = ['#5f8f4a', '#4f8a62', '#7a9a4a', '#4a7f6f', '#6f8f3f', '#5a7f4f'];
+      const gc = greens[v % greens.length];
+      const tall = r() < 0.6;
+      const top = tall ? by - 60 - r() * 30 : by - 6;
+      if (tall) trunk(g, cx, by, cx + (r() - 0.5) * 10, top, 7, 5, (r() - 0.5) * 12, '#6a5240');
+      const fronds = 9 + Math.floor(r() * 4);
+      const list = [];
+      for (let i = 0; i < fronds; i++) list.push({ a: -Math.PI / 2 + (i / (fronds - 1) - 0.5) * 2.9 + (r() - 0.5) * 0.2, L: 55 + r() * 30 });
+      list.sort((a, b) => Math.abs(b.a + Math.PI / 2) - Math.abs(a.a + Math.PI / 2));     // äußere zuerst (hinten)
+      for (const f of list) {
+        const ex = cx + Math.cos(f.a) * f.L, ey = top + Math.sin(f.a) * f.L * 0.75 + 18;
+        const mx = cx + Math.cos(f.a) * f.L * 0.5, my = top + Math.sin(f.a) * f.L * 0.5 - 12;
+        const steps = 14;
+        for (let s = 1; s < steps; s++) {
+          const t = s / steps;
+          const px = (1 - t) * (1 - t) * cx + 2 * (1 - t) * t * mx + t * t * ex;
+          const py = (1 - t) * (1 - t) * top + 2 * (1 - t) * t * my + t * t * ey;
+          const dx = 2 * (1 - t) * (mx - cx) + 2 * t * (ex - mx), dy = 2 * (1 - t) * (my - top) + 2 * t * (ey - my);
+          const dl = Math.hypot(dx, dy) || 1, nx = -dy / dl, ny = dx / dl;
+          const len = 11 * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 2;
+          for (const sgn of [-1, 1]) {
+            g.beginPath(); g.moveTo(px, py);
+            g.quadraticCurveTo(px + nx * sgn * len * 0.6 + dx / dl * 3, py + ny * sgn * len * 0.6 + dy / dl * 3, px + nx * sgn * len + dx / dl * 5, py + ny * sgn * len + dy / dl * 5 + 2);
+            g.strokeStyle = shadeHex(gc, sgn < 0 ? 1.15 : 0.85); g.lineWidth = 2.6; g.stroke();
+          }
+        }
+        g.beginPath(); g.moveTo(cx, top); g.quadraticCurveTo(mx, my, ex, ey);
+        g.strokeStyle = shadeHex(gc, 0.7); g.lineWidth = 1.6; g.stroke();
+      }
+    } else if (type === 'fels') {
+      groundShadow(g, cx, by, 62, 12);
+      const tones = [['#9a958a', '#c4bfb2', '#625e56'], ['#a08a72', '#c9b49a', '#66523f'], ['#8a8f94', '#b8bec4', '#565b60']];
+      const [md, lt, dk] = tones[v % tones.length];
+      const rocks = [[-28, 18, 22], [22, 14, 20], [-2, 28, 32]].map(([dx, h, rr]) => ({ x: cx + dx + (r() - 0.5) * 8, y: by - h, rr: rr * (0.85 + r() * 0.3) }));
+      for (const rk of rocks) {
+        g.save(); g.translate(rk.x, rk.y); g.scale(1.25, 0.85);
+        ball(g, 0, 0, rk.rr, md, lt, dk);
+        // Moos oben
+        const mg = g.createRadialGradient(-rk.rr * 0.2, -rk.rr * 0.7, 2, -rk.rr * 0.2, -rk.rr * 0.5, rk.rr * 0.8);
+        mg.addColorStop(0, 'rgba(120,150,70,.9)'); mg.addColorStop(1, 'rgba(110,140,60,0)');
+        g.fillStyle = mg; g.beginPath(); g.arc(0, 0, rk.rr, 0, Math.PI * 2); g.fill();
         g.restore();
-      });
+      }
     }
     return { canvas: cv, w: P.w, h: P.h };
   }
@@ -337,11 +591,18 @@
       for (let t = 0; t <= WALL * 2 + 30; t += 20) if (isPlateau(x, y + t) || isPlateau(x - 30, y + t) || isPlateau(x + 30, y + t)) return false;
       return isPlateau(x, y - 16) ? false : true;
     };
-    sprinkle(terr.canvas.getContext('2d'), terr.k, W, H, F, (x, y) => ground(x, y) && F.e(x, y) > 0.09, rngOf(seed ^ 0x1234));
+    // Gräser/Blüten: Boden (Hub 0), Deckel der Tafelberge (Hub WALL bzw. 2 × WALL), sonst nichts
+    const place = (x, y) => {
+      const q = F.q(x, y);
+      if (q > Q2 + 0.004) return WALL * 2;
+      if (q > Q1 + 0.004 && q < Q2 - 0.004) return WALL;
+      return ground(x, y) && F.e(x, y) > 0.08 && F.q(x, y) < Q1 - 0.03 ? 0 : false;
+    };
+    sprinkle(terr.canvas.getContext('2d'), terr.k, W, H, F, place, rngOf(seed ^ 0x1234), seed);
 
     // Pflanzen in Hainen: welche Art, entscheidet ein grobes Rauschen
     const zone = noise2(seed ^ 0x4444);
-    const TYPES = ['pilz', 'spirale', 'kristall', 'kolben', 'kugel', 'schirm', 'blatt'];
+    const TYPES = ['pilz', 'moosbaum', 'kristall', 'laterne', 'busch', 'schirm', 'farn', 'fels'];
     const sprites = {};
     const sprite = (t, v) => sprites[t + v] || (sprites[t + v] = plantSprite(t, v));
     const plants = [];
@@ -354,9 +615,9 @@
       if (plants.some(p => (p.x - x) ** 2 + ((p.y - y) * 1.5) ** 2 < 190 * 190)) continue;
       // Rauschen liegt meist um 0,5: gestreckt und umgebrochen, damit alle Arten vorkommen, in Hainen
       const z = zone(x / 650, y / 650);
-      const t = TYPES[Math.floor(z * 13) % TYPES.length];
-      const v = Math.floor(r() * 3);
-      const s = 0.65 + r() * 0.35;
+      const t = TYPES[Math.floor(z * 15) % TYPES.length];
+      const v = Math.floor(r() * VARIANTS);
+      const s = 0.6 + r() * 0.3;
       plants.push({ x, y, lift: onTop ? WALL : 0, sp: sprite(t, v), s, flip: r() < 0.5, type: t });
     }
     plants.sort((a, b) => a.y - b.y);
@@ -372,10 +633,10 @@
     const pad = 60;
     return {
       width: W, height: H, S, terrain: terr.canvas, walk, homes, plants,
-      sea: 'rgb(' + C.deep.join(',') + ')', ms: Date.now() - t0,
+      sea: 'rgb(' + C.deepFar.join(',') + ')', ms: Date.now() - t0,
       bbox: { x: x0 - pad, y: y0 - pad - WALL * 2, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad + WALL * 2 }
     };
   }
 
-  global.DDWelt = { build, S, PLANTS };
+  global.DDWelt = { build, S, PLANTS, plantSprite };
 })(typeof window !== 'undefined' ? window : globalThis);
