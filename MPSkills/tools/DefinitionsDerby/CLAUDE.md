@@ -13,6 +13,10 @@ Fünfzehnter MPSkills-Skill (Migration `0233_definitionsderby.sql`, `derby` in `
 - **Ohne Raum** (Entscheidung Sönke 26.10.2026): `MPSkills/derby.html` + `derby.js` (Kachel-Knopf „Stapel-Editor“ über `tools.js` `editor` + `editorLabel`) mountet dasselbe Tool mit `ctx.standalone = true` — Stapel anlegen/ändern/löschen und selbst lernen, kein Teilen (das passiert im Raum). Aufrufe mit `p_code: null`.
 - **Prüfstände**: `supabase/tests/0233_definitionsderby.mjs` (Rechte, Teilen, admin_only, Migration zweimal), `0234_definitionsderby_lernstand.mjs` (Lernstand, Konto/Gast, Reset), `MPSkills/tools/DefinitionsDerby/tests/parse.test.mjs` (Text → Karten). Neue RPCs für `anon`/`authenticated` gehören in `supabase/tests/0225_rechte_freigaben.json`.
 
+## Design (Entscheidung Sönke 27.10.2026)
+
+Eigenes Kleid statt MPSkills-Optik, „Pappe und Papier zum Anfassen“, nur in `tool.css` (Farben als `--dd-…` oben, zweimal: `.dd` hell, `:root[data-theme="dark"] .dd` dunkel). Hell = **Korkwand** mit Holzrahmen, dunkel = **dunkles Holz unter einer Schreibtischlampe** (warmer Lichtkegel, wo die Karte liegt); Papier und Pappe bleiben in beiden hell. Stapel = Pappstapel mit Klebeband, Kartenzahl als Stempel-Kreis (`.dd-stack__n`), „geteilt“ als kleiner Stempel. Karteikarte weiß mit Büroklammer (`.dd-flip::before/::after`), Begriff mit Textmarker (`.dd-hl`), Bild als Polaroid. Bewertung = drei **Stempel** (Unsicher rot, Teilweise ocker, Sicher grün); `rate()` setzt den Stempel `.dd-stamp` auf die Karte und zeigt erst nach ~0,55 s die nächste (`learn.stamping` sperrt solange Umdrehen und weiteres Bewerten). Schrift nur Outfit + `var(--mono)` (JetBrains Mono), keine Handschrift. Entwürfe zur Auswahl lagen als HTML im Chat (Varianten Karteikasten/Pappe/Pinnwand → Kork & Karton).
+
 ## Etappe 1 (gebaut)
 
 1. **Stapelliste** (Lehrkraft: „Meine Stapel“ mit Neu/Bearbeiten/Teilen; Tablet: nur geteilte), Suche + Fachfilter ab 6 Stapeln, Fortschrittsbalken je Kachel.

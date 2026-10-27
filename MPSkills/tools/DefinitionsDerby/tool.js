@@ -49,7 +49,7 @@
 (function () {
   'use strict';
 
-  const V = '20261026a';
+  const V = '20261027a';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -401,8 +401,9 @@
     const shared = isTeacher && !standalone && isShared(s.id);
     return '<article class="dd-stack" data-id="' + E(s.id) + '">' +
       '<div class="dd-stack__head"><h3>' + E(s.title) + '</h3>' +
-      (isTeacher && shared ? '<span class="dd-badge" title="Die Klasse sieht diesen Stapel">geteilt</span>' : '') + '</div>' +
-      '<div class="dd-chips">' + metaChips(s) + '<span class="dd-chip dd-chip--n">' + s.n + ' Karten</span></div>' +
+        '<span class="dd-stack__n" role="img" aria-label="' + s.n + ' Karten"><b>' + s.n + '</b><small>Karten</small></span></div>' +
+      '<div class="dd-chips">' + metaChips(s) +
+        (isTeacher && shared ? '<span class="dd-badge" title="Die Klasse sieht diesen Stapel">geteilt</span>' : '') + '</div>' +
       (c ? barHTML(c) : '<span class="dd-bar dd-bar--leer"></span>') +
       '<div class="dd-stack__act">' +
         '<button type="button" class="btn btn--primary btn--sm" data-act="learn">Lernen</button>' +
@@ -513,7 +514,7 @@
     const t = which === 'term';
     return '<span class="dd-face dd-face--' + (t ? 'term' : 'def') + '"><span class="dd-face__l">' + label + '</span>' +
       (t && okImg(c.i) ? '<img class="dd-face__img" src="' + c.i + '" alt="">' : '') +
-      '<span class="dd-face__t' + ((t ? c.t : c.d).length > 90 ? ' is-long' : '') + '">' + E(t ? c.t : c.d) + '</span></span>';
+      '<span class="dd-face__t' + ((t ? c.t : c.d).length > 90 ? ' is-long' : '') + '"><span class="dd-hl">' + E(t ? c.t : c.d) + '</span></span></span>';
   }
 
   function paintCard() {
@@ -547,7 +548,7 @@
   }
 
   function flip() {
-    if (!learn || !learn.cur) return;
+    if (!learn || !learn.cur || learn.stamping) return;
     learn.flipped = !learn.flipped;
     const f = root.querySelector('.dd-flip');
     if (!f) return;
@@ -560,17 +561,34 @@
     root.querySelectorAll('.dd-r').forEach(b => { b.disabled = !learn.flipped; });
   }
 
+  /* Bewerten: der Stempel landet erst auf der Karte, dann kommt die nächste.
+     Während der kurzen Pause (learn.stamping) zählt kein weiteres Tippen. */
+  const STAMPS = ['', 'Unsicher', 'Teilweise', 'Sicher'];
   function rate(v) {
-    if (!learn || !learn.cur || !learn.flipped) return;
-    const id = learn.cur.id, p = prog[id];
+    if (!learn || !learn.cur || !learn.flipped || learn.stamping) return;
+    const cur = learn.cur, id = cur.id, p = prog[id];
     prog[id] = { l: v, s: v === 3 ? (p && p.l === 3 ? (p.s || 1) + 1 : 1) : 0, t: Date.now() };
     saveProg();
     learn.done++;
     learn.row = v === 3 ? learn.row + 1 : 0;
-    nextCard();
-    renderLearn();
-    const nb = root.querySelector('#ddCard');
-    if (nb) nb.classList.add('dd-in');
+    learn.stamping = true;
+    const f = root.querySelector('.dd-flip');
+    if (f) {
+      f.classList.add('is-stamped');
+      f.insertAdjacentHTML('beforeend', '<span class="dd-stamp dd-stamp--' + v + '" aria-hidden="true">' + STAMPS[v] + '</span>');
+    }
+    root.querySelectorAll('.dd-r').forEach(b => { b.disabled = true; });
+    const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const l = learn;
+    setTimeout(() => {
+      l.stamping = false;
+      if (!root || learn !== l || l.cur !== cur) return;     // inzwischen woanders hin
+      nextCard();
+      if (screen !== 'stack' || !opened || opened.tab !== 'learn') return;
+      renderLearn();
+      const nb = root.querySelector('#ddCard');
+      if (nb) nb.classList.add('dd-in');
+    }, still ? 150 : 560);
   }
 
   /* ─── Übersicht / Glossar ─── */
