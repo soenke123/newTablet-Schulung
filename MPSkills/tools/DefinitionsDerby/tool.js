@@ -68,7 +68,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027c';
+  const V = '20261027d';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -107,7 +107,8 @@
       text: 'Links liegen die Begriffe, rechts die Definitionen, alle verdeckt. Wer dran ist, deckt einen Begriff und eine Definition auf. Beide Karten kommen groß in die Mitte, und dann wird entschieden: Passen sie zusammen?',
       how: ['Je Zug eine Karte links und eine rechts aufdecken.',
             '„Ja, Paar!“ – stimmt es, gibt es einen Punkt, und man ist noch einmal dran.',
-            'Stimmt es nicht (oder „Nein“), ist die andere Person dran.',
+            '„Ja, Paar!“, aber es ist keins: ein Minuspunkt, die andere Person ist dran.',
+            '„Nein“: die andere Person ist dran. Ob es doch ein Paar war, wird nicht verraten.',
             'Zu zweit oder allein (dann zählen die Züge), 6 bis 24 Paare.'] }
   ];
   const DEFAULT_GAMES = ['cards', 'overview'];
@@ -920,10 +921,14 @@
      die Begriffe, rechts die Definitionen, beide Bretter gleich
      gebaut (gleiche Kartengröße). Wer dran ist, deckt je eine Karte
      links und rechts auf; beide fliegen groß in die Mitte, und die
-     Spielenden entscheiden „Ja, Paar!“ / „Nein“. Richtig = Punkt,
-     die Karten fliegen zum Punktestand, und man ist nochmal dran;
-     sonst fliegen sie zurück, drehen sich um, und die andere Person
-     ist dran. Allein: es zählen Paare und Züge.
+     Spielenden entscheiden „Ja, Paar!“ / „Nein“. Vier Fälle:
+       Paar + „Ja“    → Punkt, Karten fliegen zum Punktestand, nochmal dran
+       Paar + „Nein“  → zurück, umdrehen, Wechsel
+       kein Paar + „Nein“ → zurück, umdrehen, Wechsel
+       kein Paar + „Ja“   → Minuspunkt (zu zweit), zurück, Wechsel
+     Nach „Nein“ verrät das Spiel NICHT, ob es doch ein Paar war:
+     beide Nein-Fälle sehen gleich aus. Allein: es zählen Paare und
+     Züge (kein Minuspunkt).
      Der Text der Karten steht erst nach dem Aufdecken im DOM (kein
      Spicken) und wird mit fitText() in die Karte eingepasst. Jeder
      Takt prüft, ob sein Spiel (m) noch läuft.
@@ -1187,11 +1192,20 @@
     const ok = yes && match;
     m.moves++;
     const msg = layer.querySelector('.dd-review__msg');
+    // Bei „Nein“ immer derselbe Satz: kein Hinweis, ob es doch ein Paar war.
     msg.textContent = ok ? (m.players === 2 ? 'Richtig! Punkt für Spieler ' + m.active + '.' : 'Richtig!')
-      : yes ? 'Leider falsch – das war kein Paar.'
-      : match ? 'Schade, das war ein Paar!' : 'Stimmt, kein Paar.';
-    msg.className = 'dd-review__msg' + (ok ? ' is-ok' : ' is-no');
-    mmWait(m, ok ? SAY_OK_MS : SAY_NO_MS, () => (ok ? flyToPlayer : flyBack)(m));
+      : yes ? (m.players === 2 ? 'Leider falsch – kein Paar. Minuspunkt für Spieler ' + m.active + '.' : 'Leider falsch – das war kein Paar.')
+      : 'Kein Paar – die Karten werden wieder umgedreht.';
+    msg.className = 'dd-review__msg' + (ok ? ' is-ok' : yes ? ' is-no' : '');
+    if (yes && !match && m.players === 2) {
+      m.scores[m.active]--;
+      const sc = root.querySelector('#ddS' + m.active);
+      if (sc) {
+        sc.textContent = m.scores[m.active];
+        if (sc.animate && !still()) sc.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(0)' }], { duration: 300, iterations: 2 });
+      }
+    }
+    mmWait(m, ok ? SAY_OK_MS : yes ? SAY_NO_MS : SAY_OK_MS, () => (ok ? flyToPlayer : flyBack)(m));
   }
 
   function flyToPlayer(m) {
@@ -1248,10 +1262,10 @@
       h = 'Alle Paare gefunden!';
       t = m.pairs + ' Paare in ' + m.moves + ' Zügen' + (m.moves === m.pairs ? ' – ohne einen Fehler!' : '.');
     } else if (m.scores[1] === m.scores[2]) {
-      h = 'Unentschieden!'; t = 'Beide haben ' + m.scores[1] + ' Paare gefunden.';
+      h = 'Unentschieden!'; t = 'Beide haben ' + m.scores[1] + ' Punkte.';
     } else {
       const w = m.scores[1] > m.scores[2] ? 1 : 2;
-      h = 'Spieler ' + w + ' gewinnt!'; t = m.scores[w] + ' zu ' + m.scores[w === 1 ? 2 : 1] + ' Paaren.';
+      h = 'Spieler ' + w + ' gewinnt!'; t = m.scores[w] + ' zu ' + m.scores[w === 1 ? 2 : 1] + ' Punkten.';
     }
     box.innerHTML = '<div class="dd-memwin__bg"></div><div class="dd-memwin__sheet" role="dialog" aria-modal="true" aria-labelledby="ddWinH">' +
       '<span class="dd-memwin__stamp">Fertig</span>' +
