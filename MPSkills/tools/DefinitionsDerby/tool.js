@@ -48,6 +48,10 @@
    (l = 0), kein Löschen — sonst weckt ein älterer Stand auf einem
    anderen Gerät die Karte wieder auf. Memory schreibt KEINEN
    Lernstand: zwei spielen an einem Gerät, das Konto gehört einer.
+   Die Insel (Etappe 3) führt ihre Stufe im SELBEN Eintrag: e (0…5)
+   und x (Fehler in Folge) neben l/s — wer einen Eintrag schreibt,
+   behält die Felder der anderen (Object.assign), sonst löscht eine
+   Karteikarten-Bewertung das gewachsene Wesen.
 
    ── Ohne Raum (derby.html) ───────────────────────────────────
    ctx.standalone: dieselbe Lehrkraft-Ansicht, aber ohne Teilen —
@@ -68,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027d';
+  const V = '20261027e';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -109,7 +113,16 @@
             '„Ja, Paar!“ – stimmt es, gibt es einen Punkt, und man ist noch einmal dran.',
             '„Ja, Paar!“, aber es ist keins: ein Minuspunkt, die andere Person ist dran.',
             '„Nein“: die andere Person ist dran. Ob es doch ein Paar war, wird nicht verraten.',
-            'Zu zweit oder allein (dann zählen die Züge), 6 bis 24 Paare.'] }
+            'Zu zweit oder allein (dann zählen die Züge), 6 bis 24 Paare.'] },
+    { id: 'island', g: 'solo', name: 'Insel', min: 2, room: true, shot: 'spiel-insel.jpg',
+      short: 'Jeder Begriff ist ein Wesen: vom Ei bis zum Leuchten.',
+      text: 'Alle Begriffe des Raums leben als Wesen auf einer Insel, jeder Stapel ist eine Familie in eigener Farbe. Wer Aufgaben löst, lässt die Eier schlüpfen und die Wesen wachsen – bis sie leuchten. Die Aufgaben werden mit jeder Stufe schwerer.',
+      how: ['„Runde starten“: 8 Aufgaben, die Wesen mit den niedrigsten Stufen zuerst.',
+            'Ein Wesen auf der Insel antippen, um genau dieses zu trainieren.',
+            'Ei → Baby: zur Definition den Begriff wählen. Baby → Klein: zum Begriff die Definition wählen.',
+            'Klein → Mittel: die Definition aus Bausteinen bauen. Mittel → Groß: den Begriff eintippen.',
+            'Groß → Leuchtend: Lücken in der Definition füllen. Kleine Tippfehler sind kein Problem.',
+            'Einmal richtig = eine Stufe hoch, zweimal hintereinander falsch = eine Stufe zurück.'] }
   ];
   const DEFAULT_GAMES = ['cards', 'overview'];
   const gameOf = id => GAMES.find(g => g.id === id) || null;
@@ -231,7 +244,9 @@
       }
     } else noAccount(res.error);
     // Neu zeichnen nur, wo es nichts kaputt macht: nicht mitten im Memory, nicht bei umgedrehter Karte.
-    if (screen === 'play' && opened.game !== 'memory' && !(learn && learn.flipped)) renderPane();
+    if (screen !== 'play') return;
+    if (opened.game === 'island') islRefresh();
+    else if (opened.game !== 'memory' && !(learn && learn.flipped)) renderPane();
   }
   function schedulePush() {
     if (!syncOn() || !opened) return;
@@ -306,7 +321,9 @@
            [1, 2, 3, 0].map(l => '<i><em class="dd-s' + l + '"></em><b></b><u></u></i>').join('') + '</span>',
     memory: '<span class="dd-mini dd-mini--mem" aria-hidden="true">' +
            ['t', 'd'].map(s => '<span class="dd-mini__side dd-mini__side--' + s + '">' +
-             [0, 1, 2, 3, 4, 5].map(i => '<i' + (i === (s === 't' ? 1 : 4) ? ' class="is-up"' : '') + '></i>').join('') + '</span>').join('') + '</span>'
+             [0, 1, 2, 3, 4, 5].map(i => '<i' + (i === (s === 't' ? 1 : 4) ? ' class="is-up"' : '') + '></i>').join('') + '</span>').join('') + '</span>',
+    island: '<span class="dd-mini dd-mini--isl" aria-hidden="true"><span class="dd-mini__land"></span>' +
+           [1, 2, 3, 4, 5, 6].map(i => '<i class="dd-mini__w dd-mini__w--' + i + '"></i>').join('') + '</span>'
   };
 
   /* ─── Quelle der Stapel: Lehrkraft (Konto) · Teilnehmer (geteilt) · Schaufenster ─── */
@@ -439,6 +456,7 @@
     if (!opened) return;
     if (pushTimer) pushProg();
     if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* egal */ } }
+    islStop();
     opened = null; mm = null; learn = null; ov = null;
   }
 
@@ -469,8 +487,12 @@
   async function startGame(gid) {
     const G = gameOf(gid);
     if (!G) return;
-    const ids = sel.filter(id => (list || []).some(x => x.id === id));
-    if (!ids.length) { toast('Wähle zuerst mindestens einen Stapel aus.'); return; }
+    const ids = G.room ? islandIds() : sel.filter(id => (list || []).some(x => x.id === id));
+    if (!ids.length) {
+      toast(!G.room ? 'Wähle zuerst mindestens einen Stapel aus.'
+        : isTeacher && !standalone ? 'Teile zuerst Stapel mit der Klasse – oder wähle welche aus.' : 'Noch ist kein Stapel da.');
+      return;
+    }
     busy(true);
     const got = await Promise.all(ids.map(getStack));
     busy(false);
@@ -478,7 +500,7 @@
     const cards = [];
     for (const s of got) for (const c of s.cards) cards.push({ id: s.id + ':' + c.id, sid: s.id, t: c.t, d: c.d, i: c.i });
     if (cards.length < G.min) {
-      toast(G.name + ' braucht mindestens ' + G.min + ' Karten. Wähle mehr Stapel aus.');
+      toast(G.name + ' braucht mindestens ' + G.min + ' Karten.' + (G.room ? '' : ' Wähle mehr Stapel aus.'));
       return;
     }
     info = null; renderInfo();
@@ -635,7 +657,7 @@
     const grp = GROUPS.find(g => g.id === G.g);
     const canShare = isTeacher && !standalone;
     const shared = canShare && gameShared(G.id);
-    const it = selItems();
+    const it = G.room ? islandIds().map(id => (list || []).find(x => x.id === id)).filter(Boolean) : selItems();
     const nCards = it.reduce((a, s) => a + (s.n || 0), 0);
     const hadFocus = layer.contains(document.activeElement);
     layer.innerHTML =
@@ -656,7 +678,7 @@
               (it.length ? 'Starten mit ' + (it.length === 1 ? E(it[0].title) : it.length + ' Stapeln') + ' (' + kart(nCards) + ')' : 'Starten') + '</button>' +
             (canShare ? '<button type="button" class="btn' + (shared ? ' is-on' : '') + '" data-act="info-share" aria-pressed="' + shared + '">' + ico.share +
               (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '</button>' : '') +
-            (it.length ? '' : '<p class="dd-sheet__hint">Zum Starten erst einen oder mehrere Stapel auswählen.</p>') +
+            (it.length ? '' : '<p class="dd-sheet__hint">' + (G.room ? 'Die Insel zeigt die geteilten Stapel des Raums – teile zuerst einen (oder wähle welche aus).' : 'Zum Starten erst einen oder mehrere Stapel auswählen.') + '</p>') +
           '</div>' +
         '</div>' +
       '</div>';
@@ -684,6 +706,7 @@
     if (opened.game === 'cards') renderLearn();
     else if (opened.game === 'overview') renderOverview();
     else if (opened.game === 'memory') renderMemory();
+    else if (opened.game === 'island') renderIsland();
   }
   const multi = () => opened && opened.stacks.length > 1;
   const stackTitle = sid => { const s = opened && opened.stacks.find(x => x.id === sid); return s ? s.title : ''; };
@@ -819,7 +842,7 @@
   function rate(v) {
     if (!learn || !learn.cur || !learn.flipped || learn.stamping) return;
     const cur = learn.cur, id = cur.id, p = prog[id];
-    prog[id] = { l: v, s: v === 3 ? (p && p.l === 3 ? (p.s || 1) + 1 : 1) : 0, t: Date.now() };
+    prog[id] = Object.assign({}, p, { l: v, s: v === 3 ? (p && p.l === 3 ? (p.s || 1) + 1 : 1) : 0, t: Date.now() });
     saveProg(sidOf(id));
     learn.done++;
     learn.row = v === 3 ? learn.row + 1 : 0;
@@ -909,7 +932,7 @@
 
   function cycle(id) {
     const next = { 0: 1, 1: 2, 2: 3, 3: 0 }[lvl(id)];
-    prog[id] = { l: next, s: next === 3 ? 1 : 0, t: Date.now() };   // l 0 = Grabstein „wieder neu“
+    prog[id] = Object.assign({}, prog[id], { l: next, s: next === 3 ? 1 : 0, t: Date.now() });   // l 0 = Grabstein „wieder neu“
     saveProg(sidOf(id));
     renderOverview();
   }
@@ -1290,6 +1313,914 @@
 
 
   /* ══════════════════════════════════════════════════════════════
+     INSEL (allein): jeder Begriff ein Wesen  ·  Etappe 3
+     ══════════════════════════════════════════════════════════════
+     Alle Begriffe des Raums leben auf EINER Insel (islandIds), jeder
+     Stapel ist eine Familie in eigener Farbe (FAM). Die Regeln —
+     Stufen, Aufgaben, nachsichtiges Prüfen — stehen in insel.js
+     (DDInsel); hier steht nur, was man sieht und antippt.
+
+     Die Insel selbst ist die von Balance of Nature: deren Generator
+     und Geländezeichnung werden aus tools/balance of nature/js/
+     nachgeladen (BON_FILES), EINMAL auf eine Leinwand gemalt
+     (isl.terrain) und dann nur noch verschoben. Darüber eine zweite
+     Zeichnung je Bild mit den Wesen (islFrame). Der Seed kommt aus
+     dem Raumtitel: dieselbe Klasse sieht dieselbe Insel.
+
+     Die Wesen sind VORLÄUFIGE Zeichnungen (wesenSVG) — Sönke liefert
+     Sprites nach. Wer sie einsetzt, ersetzt nur spriteURL(fam, e):
+     Familie = Farbe, e = Stufe 0…5.
+
+     Eine Runde (islRound) sind 8 Aufgaben aus DDInsel.session, ein
+     angetipptes Wesen „Trainieren“ ist eine Runde aus einer Aufgabe.
+     Nach jeder Antwort wandert der neue Stand sofort in prog (e, x)
+     und über saveProg zum Gerät/Konto. Der Stufensprung bekommt
+     seinen eigenen Moment: das Bild im Aufgabenblatt wächst, ein Satz
+     sagt, was passiert ist, und auf der Insel funkelt das Wesen. */
+  const ROUND = 8;
+  const FAM = ['#e0604c', '#3d84c6', '#3fa35d', '#e3a72f', '#8b5fc8', '#e2739f', '#2ea4a4', '#d57a2e',
+               '#6f9426', '#5569d6', '#b85450', '#4aa3db'];
+  const BON = 'tools/balance of nature/js/';
+  const BON_FILES = ['core/rng', 'core/dmath', 'core/noise', 'core/grid', 'core/geometry', 'core/contour',
+    'world/config', 'world/island', 'world/decor', 'world/world', 'render/palette', 'render/shapes', 'render/terrainRenderer'];
+  const STAGE_TXT = ['ist geschlüpft!', 'ist gewachsen und jetzt klein.', 'ist gewachsen: jetzt mittelgroß.',
+                     'ist groß geworden!', 'leuchtet!'];
+  let isl = null;                 // Zustand der Insel (nur solange sie offen ist)
+  let worldCache = null;          // { seed, world, terrain, land, bbox } — bleibt über mehrere Öffnungen
+  let inselReady = null, bonReady = null;
+
+  /* Welche Stapel auf die Insel kommen: Tablet alle geteilten, Lehrkraft
+     im Raum die geteilten (sonst die gewählten), ohne Raum alle eigenen. */
+  function islandIds() {
+    const have = (list || []).map(x => x.id);
+    if (!isTeacher || standalone) return have;
+    const sh = sharedRaw().map(e => e.id).filter(id => have.includes(id));
+    return sh.length ? sh : sel.filter(id => have.includes(id));
+  }
+
+  /* ─── Nachladen ─── */
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = src; s.async = false;
+      s.onload = () => resolve();
+      s.onerror = () => reject(new Error(src));
+      document.head.appendChild(s);
+    });
+  }
+  function ladeInsel() {
+    if (window.DDInsel) return Promise.resolve();
+    return inselReady || (inselReady = loadScript(BASE + 'insel.js?v=' + V).catch(e => { inselReady = null; throw e; }));
+  }
+  function ladeBon() {
+    if (window.BT && window.BT.TerrainRenderer && window.BT.World) return Promise.resolve();
+    if (bonReady) return bonReady;
+    // async=false hält die Reihenfolge ein, auch wenn alle gleichzeitig laden.
+    bonReady = Promise.all(BON_FILES.map(f => loadScript(encodeURI(BON + f + '.js') + '?v=' + V)))
+      .catch(e => { bonReady = null; throw e; });
+    return bonReady;
+  }
+
+  /* ─── Zufall mit Seed (Insel, Heimat der Familien, Platz der Wesen) ─── */
+  function hashStr(s) {
+    let h = 2166136261;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function rngOf(seed) {
+    let a = seed >>> 0;
+    return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
+
+  /* ─── Die Insel bauen (einmal je Seed) ─── */
+  function buildWorld(seed) {
+    if (worldCache && worldCache.seed === seed) return worldCache;
+    const BT = window.BT;
+    const world = BT.World.generate(seed, { size: 'mittel' });
+    const B = BT.BIOME;
+    const WALK = new Set([B.BEACH, B.TUSSOCK, B.SCRUB, B.FERN, B.MOSS, B.SWAMP, B.ROCK, B.THERMAL]);
+    // Begehbare Zellen, mit ein wenig Abstand zum Wasser (Nachbarn auch Land)
+    const { cols, rows, cellSize } = world;
+    const d = world.biome.data;
+    const land = [];
+    let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+    for (let y = 2; y < rows - 2; y++) for (let x = 2; x < cols - 2; x++) {
+      const i = y * cols + x;
+      if (d[i] === B.DEEP || d[i] === B.SHALLOW) continue;
+      x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y);
+      if (!WALK.has(d[i]) || !WALK.has(d[i - 2]) || !WALK.has(d[i + 2]) || !WALK.has(d[i - 2 * cols]) || !WALK.has(d[i + 2 * cols])) continue;
+      land.push(i);
+    }
+    const walk = (wx, wy) => {
+      const cx = Math.floor(wx / cellSize), cy = Math.floor(wy / cellSize);
+      if (cx < 1 || cy < 1 || cx >= cols - 1 || cy >= rows - 1) return false;
+      return WALK.has(d[cy * cols + cx]);
+    };
+    // Gelände einmal auf eine Leinwand (wie Balance of Nature buildCache)
+    const k = Math.min(1, 2000 / world.width, 2000 / world.height);
+    const c = document.createElement('canvas');
+    c.width = Math.ceil(world.width * k); c.height = Math.ceil(world.height * k);
+    const cc = c.getContext('2d');
+    cc.setTransform(k, 0, 0, k, 0, 0);
+    BT.TerrainRenderer.draw(cc, world, { x: 0, y: 0, width: world.width, height: world.height }, k);
+    const pad = 4 * cellSize;
+    worldCache = {
+      seed, world, terrain: c, land, walk, sea: (BT.PALETTE && BT.PALETTE.deep && BT.PALETTE.deep.base) || '#1b5a7e',
+      bbox: { x: x0 * cellSize - pad, y: y0 * cellSize - pad, w: (x1 - x0 + 1) * cellSize + 2 * pad, h: (y1 - y0 + 1) * cellSize + 2 * pad }
+    };
+    return worldCache;
+  }
+
+  /* ─── Wesen (vorläufige Zeichnungen) ─── */
+  function mix(hex, to, k) {
+    const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16);
+    const ch = (v, s) => (v >> s) & 255;
+    const m = s => Math.round(ch(a, s) + (ch(b, s) - ch(a, s)) * k);
+    return '#' + ((1 << 24) | (m(16) << 16) | (m(8) << 8) | m(0)).toString(16).slice(1);
+  }
+  function wesenSVG(col, e) {
+    const C = col, D = mix(col, '#1d1408', 0.45), L = mix(col, '#ffffff', 0.62), W = '#ffffff', K = '#1f1a17';
+    const o = ' stroke="' + D + '" stroke-width="2.4" stroke-linejoin="round"';
+    const eyes = (y, r, gap) => '<circle cx="' + (50 - gap) + '" cy="' + y + '" r="' + r + '" fill="' + W + '"' + o + '/>' +
+      '<circle cx="' + (50 + gap) + '" cy="' + y + '" r="' + r + '" fill="' + W + '"' + o + '/>' +
+      '<circle cx="' + (51.5 - gap) + '" cy="' + (y + 0.8) + '" r="' + (r * 0.5) + '" fill="' + K + '"/>' +
+      '<circle cx="' + (51.5 + gap) + '" cy="' + (y + 0.8) + '" r="' + (r * 0.5) + '" fill="' + K + '"/>' +
+      '<circle cx="' + (52.5 - gap) + '" cy="' + (y - 0.6) + '" r="' + (r * 0.18) + '" fill="' + W + '"/>' +
+      '<circle cx="' + (52.5 + gap) + '" cy="' + (y - 0.6) + '" r="' + (r * 0.18) + '" fill="' + W + '"/>';
+    const feet = (y, rx, gap) => '<ellipse cx="' + (50 - gap) + '" cy="' + y + '" rx="' + rx + '" ry="' + (rx * 0.5) + '" fill="' + D + '"/>' +
+      '<ellipse cx="' + (50 + gap) + '" cy="' + y + '" rx="' + rx + '" ry="' + (rx * 0.5) + '" fill="' + D + '"/>';
+    let g = '';
+    if (e === 0) {
+      g = '<path d="M50 52C62 52 66 70 65.5 80C65 90 59 96 50 96C41 96 35 90 34.5 80C34 70 38 52 50 52Z" fill="' + L + '"' + o + '/>' +
+        '<circle cx="44" cy="67" r="3.4" fill="' + C + '"/><circle cx="56" cy="76" r="4" fill="' + C + '"/>' +
+        '<circle cx="45" cy="86" r="2.6" fill="' + C + '"/><circle cx="56" cy="61" r="2.2" fill="' + C + '"/><circle cx="57" cy="89" r="1.8" fill="' + C + '"/>' +
+        '<path d="M40 63Q42 58 46 56.5" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".7"/>';
+    } else if (e === 1) {
+      g = feet(95, 5, 8) +
+        '<circle cx="50" cy="78" r="18" fill="' + C + '"' + o + '/>' +
+        '<ellipse cx="50" cy="85" rx="10" ry="7.5" fill="' + L + '"/>' + eyes(74, 6, 7) +
+        '<path d="M46 83Q50 86 54 83" fill="none" stroke="' + K + '" stroke-width="1.8" stroke-linecap="round"/>' +
+        '<path d="M35 66L39 59L43 64L47 57L51 63L55 57L59 63L63 59L65 66Q50 58 35 66Z" fill="' + mix(col, '#ffffff', 0.8) + '"' + o + '/>';
+    } else if (e === 2) {
+      g = feet(95, 6, 9) +
+        '<path d="M33 62L35 44L46 56Z" fill="' + C + '"' + o + '/><path d="M67 62L65 44L54 56Z" fill="' + C + '"' + o + '/>' +
+        '<ellipse cx="50" cy="74" rx="22" ry="21" fill="' + C + '"' + o + '/>' +
+        '<ellipse cx="50" cy="82" rx="12" ry="10" fill="' + L + '"/>' + eyes(70, 6.5, 8) +
+        '<path d="M44 80Q50 85 56 80" fill="none" stroke="' + K + '" stroke-width="2" stroke-linecap="round"/>';
+    } else {
+      const big = e >= 4;
+      const cy = big ? 60 : 66, rx = big ? 30 : 25, ry = big ? 34 : 29;
+      const top = cy - ry;
+      g = feet(95, big ? 9 : 7, big ? 13 : 11) +
+        (big ? '<path d="M78 74Q94 72 92 56Q88 66 76 64Z" fill="' + C + '"' + o + '/>' : '') +
+        (big
+          ? '<path d="M36 ' + (top + 8) + 'Q26 ' + (top - 8) + ' 34 ' + (top - 14) + 'Q34 ' + (top - 4) + ' 43 ' + (top + 3) + 'Z" fill="' + L + '"' + o + '/>' +
+            '<path d="M64 ' + (top + 8) + 'Q74 ' + (top - 8) + ' 66 ' + (top - 14) + 'Q66 ' + (top - 4) + ' 57 ' + (top + 3) + 'Z" fill="' + L + '"' + o + '/>'
+          : '<path d="M31 ' + (top + 14) + 'L31 ' + (top - 6) + 'L45 ' + (top + 6) + 'Z" fill="' + C + '"' + o + '/>' +
+            '<path d="M69 ' + (top + 14) + 'L69 ' + (top - 6) + 'L55 ' + (top + 6) + 'Z" fill="' + C + '"' + o + '/>') +
+        '<ellipse cx="' + (50 - rx + 2) + '" cy="' + (cy + 6) + '" rx="6" ry="11" fill="' + C + '"' + o + ' transform="rotate(18 ' + (50 - rx + 2) + ' ' + (cy + 6) + ')"/>' +
+        '<ellipse cx="' + (50 + rx - 2) + '" cy="' + (cy + 6) + '" rx="6" ry="11" fill="' + C + '"' + o + ' transform="rotate(-18 ' + (50 + rx - 2) + ' ' + (cy + 6) + ')"/>' +
+        '<ellipse cx="50" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="' + C + '"' + o + '/>' +
+        '<ellipse cx="50" cy="' + (cy + ry * 0.35) + '" rx="' + (rx * 0.55) + '" ry="' + (ry * 0.5) + '" fill="' + L + '"/>' +
+        eyes(cy - ry * 0.25, big ? 7.5 : 7, big ? 10 : 9) +
+        (big ? '<path d="M' + 36 + ' ' + (cy - ry * 0.25 - 11) + 'L46 ' + (cy - ry * 0.25 - 8) + 'M64 ' + (cy - ry * 0.25 - 11) + 'L54 ' + (cy - ry * 0.25 - 8) + '" stroke="' + D + '" stroke-width="2.6" stroke-linecap="round"/>' : '') +
+        '<path d="M42 ' + (cy + 4) + 'Q50 ' + (cy + 11) + ' 58 ' + (cy + 4) + '" fill="' + mix(col, '#3a0d0d', 0.6) + '" stroke="' + K + '" stroke-width="2" stroke-linecap="round"/>' +
+        '<path d="M53 ' + (cy + 5.5) + 'l2 3.5l2 -3.5z" fill="#fff"/>';
+      if (e === 5) {
+        g += '<path d="M50 ' + (top - 22) + 'l3.2 7l7.6 .8l-5.7 5.1l1.6 7.5l-6.7 -3.9l-6.7 3.9l1.6 -7.5l-5.7 -5.1l7.6 -.8z" fill="#ffd84a" stroke="#c79a12" stroke-width="1.6" stroke-linejoin="round"/>' +
+          '<circle cx="' + (50 - rx * 0.55) + '" cy="' + (cy + 3) + '" r="3" fill="#ffe680" opacity=".9"/><circle cx="' + (50 + rx * 0.55) + '" cy="' + (cy + 3) + '" r="3" fill="#ffe680" opacity=".9"/>';
+      }
+    }
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' + g + '</svg>';
+  }
+  const spriteUrls = {};
+  /* Bild eines Wesens: Familie (Farbe) × Stufe. HIER kommen später die Sprites hin. */
+  function spriteURL(fam, e) {
+    const k = fam + ':' + e;
+    return spriteUrls[k] || (spriteUrls[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(wesenSVG(FAM[fam % FAM.length], e)));
+  }
+  const spriteImgs = {};
+  function spriteImg(fam, e) {
+    const k = fam + ':' + e;
+    if (!spriteImgs[k]) { const im = new Image(); im.src = spriteURL(fam, e); spriteImgs[k] = im; }
+    return spriteImgs[k];
+  }
+
+  /* ─── Öffnen ─── */
+  function renderIsland() {
+    const pane = root.querySelector('#ddPane');
+    if (!pane) return;
+    islStop();
+    isl = { creatures: [], byId: new Map(), selId: null, fam: -1, cam: null, raf: 0, last: 0, task: null, round: null,
+            ptr: new Map(), drag: null, ready: false };
+    pane.innerHTML =
+      '<section class="dd-isl" id="ddIsl">' +
+        '<div class="dd-isl__map">' +
+          '<canvas class="dd-isl__cv" id="ddIslCv" aria-label="Die Insel mit allen Wesen"></canvas>' +
+          '<p class="dd-isl__wait" id="ddIslWait">Die Insel entsteht …</p>' +
+          '<div class="dd-isl__zoom">' +
+            '<button type="button" class="btn btn--sm dd-ic" data-act="isl-zoom" data-v="1.4" aria-label="Näher heran">+</button>' +
+            '<button type="button" class="btn btn--sm dd-ic" data-act="isl-zoom" data-v="0.7" aria-label="Weiter weg">−</button>' +
+            '<button type="button" class="btn btn--sm dd-ic" data-act="isl-fit" aria-label="Ganze Insel">' + ico.full + '</button>' +
+          '</div>' +
+          '<div class="dd-isl__pop" id="ddIslPop" hidden></div>' +
+        '</div>' +
+        '<aside class="dd-isl__side" id="ddIslSide"></aside>' +
+        '<div class="dd-task" id="ddTask" hidden></div>' +
+      '</section>';
+    paintSide();
+    const me = isl;
+    Promise.all([ladeInsel(), ladeBon()]).then(() => {
+      if (isl !== me || !root) return;
+      // Erst zeichnen lassen („entsteht …“), dann rechnen (blockiert ~½ s).
+      setTimeout(() => { if (isl === me && root) islBuild(); }, 30);
+    }).catch(() => {
+      const w = root && root.querySelector('#ddIslWait');
+      if (w) w.textContent = 'Die Insel konnte nicht geladen werden. Bitte die Seite neu laden.';
+    });
+  }
+
+  function islBuild() {
+    const seed = hashStr(standalone ? 'derby-eigene-insel' : 'derby:' + (ctx.title || 'raum')) % 1000000;
+    let wc;
+    try { wc = buildWorld(seed); } catch (e) {
+      console.warn('[derby] Insel:', e);
+      const w = root.querySelector('#ddIslWait'); if (w) w.textContent = 'Die Insel konnte nicht gebaut werden.';
+      return;
+    }
+    isl.wc = wc;
+    const cards = opened.cards;
+    const famOf = new Map(opened.stacks.map((s, i) => [s.id, i]));
+    const nFam = opened.stacks.length;
+    // Heimat je Familie: möglichst weit auseinander (farthest point), aber im Inneren der Insel
+    const r = rngOf(seed ^ 0x5bd1e995);
+    const ds = wc.world.fields && wc.world.fields.distSea;
+    const inner = ds ? wc.land.filter(i => ds[i] >= 20) : [];
+    const homeCells = inner.length > 50 ? inner : wc.land;
+    const ptc = c => ({ x: (c % wc.world.cols + 0.5) * wc.world.cellSize, y: (Math.floor(c / wc.world.cols) + 0.5) * wc.world.cellSize });
+    const pt = i => { const c = wc.land[i]; return { x: (c % wc.world.cols + 0.5) * wc.world.cellSize, y: (Math.floor(c / wc.world.cols) + 0.5) * wc.world.cellSize }; };
+    const homes = [];
+    if (wc.land.length) {
+      homes.push(ptc(homeCells[Math.floor(r() * homeCells.length)]));
+      while (homes.length < nFam) {
+        let best = null, bd = -1;
+        for (let k = 0; k < 60; k++) {
+          const p = ptc(homeCells[Math.floor(r() * homeCells.length)]);
+          const dd = Math.min(...homes.map(h => (h.x - p.x) ** 2 + (h.y - p.y) ** 2));
+          if (dd > bd) { bd = dd; best = p; }
+        }
+        homes.push(best);
+      }
+    }
+    const landArea = wc.land.length * wc.world.cellSize ** 2;
+    isl.size = Math.max(56, Math.min(170, Math.sqrt(landArea / Math.max(1, cards.length)) * 0.6));
+    isl.roam = Math.max(220, Math.sqrt(landArea / Math.max(1, nFam)) * 0.45);
+    isl.creatures = cards.map(c => {
+      const fam = famOf.get(c.sid) || 0;
+      const home = homes[fam] || { x: wc.world.width / 2, y: wc.world.height / 2 };
+      const cr = rngOf(hashStr(c.id));
+      let p = null;
+      for (let k = 0; k < 40 && !p; k++) {
+        const a = cr() * Math.PI * 2, d = Math.sqrt(cr()) * isl.roam;
+        const q = { x: home.x + Math.cos(a) * d, y: home.y + Math.sin(a) * d };
+        if (wc.walk(q.x, q.y)) p = q;
+      }
+      if (!p) p = wc.land.length ? pt(Math.floor(cr() * wc.land.length)) : home;
+      const w = { id: c.id, card: c, fam, home, x: p.x, y: p.y, tx: p.x, ty: p.y, walking: false,
+                  until: performance.now() + cr() * 3000, phase: cr() * 6, dir: cr() < 0.5 ? -1 : 1, burst: 0, rnd: cr };
+      isl.byId.set(c.id, w);
+      return w;
+    });
+    const wait = root.querySelector('#ddIslWait'); if (wait) wait.remove();
+    isl.ready = true;
+    islBindCanvas();
+    islResize();
+    islFit(false);
+    paintSide();
+    isl.last = performance.now();
+    isl.raf = requestAnimationFrame(islFrame);
+  }
+
+  function islStop() {
+    if (!isl) return;
+    cancelAnimationFrame(isl.raf);
+    isl.raf = 0;
+    if (isl.unbind) isl.unbind();
+    isl = null;
+  }
+
+  /* ─── Kamera ─── */
+  function islResize() {
+    if (!isl || !isl.ready) return;
+    const cv = root.querySelector('#ddIslCv');
+    if (!cv) return;
+    // Schmal (eine Spalte): Karte so hoch wie die Insel, statt viel Meer oben und unten.
+    const map = cv.parentNode, b = isl.wc.bbox;
+    if (window.matchMedia('(max-width: 900px)').matches) {
+      map.style.height = Math.round(Math.max(260, Math.min(window.innerHeight * 0.62, map.clientWidth * b.h / b.w * 1.1))) + 'px';
+    } else map.style.height = '';
+    const r = cv.getBoundingClientRect();
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    isl.W = r.width; isl.H = r.height; isl.dpr = dpr;
+    cv.width = Math.max(1, Math.round(r.width * dpr));
+    cv.height = Math.max(1, Math.round(r.height * dpr));
+    // Auf kleinen Bildschirmen die Wesen etwas größer, damit man sie antippen kann.
+    isl.S = Math.min(isl.size * 1.8, Math.max(isl.size, 34 / islFitScale()));
+    if (isl.cam) islClamp();
+  }
+  function islFitScale() { const b = isl.wc.bbox; return Math.min(isl.W / b.w, isl.H / b.h); }
+  function islFit(anim) {
+    if (!isl || !isl.ready) return;
+    const b = isl.wc.bbox, s = islFitScale();
+    const to = { s, tx: isl.W / 2 - (b.x + b.w / 2) * s, ty: isl.H / 2 - (b.y + b.h / 2) * s };
+    if (anim && isl.cam && !still()) isl.anim = { from: Object.assign({}, isl.cam), to, t0: performance.now() };
+    else isl.cam = to;
+  }
+  function islClamp() {
+    const c = isl.cam, f = islFitScale();
+    c.s = Math.max(f * 0.85, Math.min(f * 6, c.s));
+    const b = isl.wc.bbox;
+    // Die Insel darf nicht ganz aus dem Bild rutschen.
+    const minTx = isl.W * 0.5 - (b.x + b.w) * c.s, maxTx = isl.W * 0.5 - b.x * c.s;
+    const minTy = isl.H * 0.5 - (b.y + b.h) * c.s, maxTy = isl.H * 0.5 - b.y * c.s;
+    c.tx = Math.max(minTx, Math.min(maxTx, c.tx));
+    c.ty = Math.max(minTy, Math.min(maxTy, c.ty));
+  }
+  function islZoomAt(k, sx, sy) {
+    const c = isl.cam;
+    const wx = (sx - c.tx) / c.s, wy = (sy - c.ty) / c.s;
+    c.s *= k;
+    islClamp();
+    c.tx = sx - wx * c.s; c.ty = sy - wy * c.s;
+    islClamp();
+  }
+  function islZoomBy(k) { if (isl && isl.ready) { isl.anim = null; islZoomAt(k, isl.W / 2, isl.H / 2); } }
+
+  function islBindCanvas() {
+    const cv = root.querySelector('#ddIslCv');
+    const pos = ev => { const r = cv.getBoundingClientRect(); return { x: ev.clientX - r.left, y: ev.clientY - r.top }; };
+    const down = ev => {
+      if (!isl) return;
+      cv.setPointerCapture && cv.setPointerCapture(ev.pointerId);
+      isl.ptr.set(ev.pointerId, pos(ev));
+      isl.anim = null;
+      if (isl.ptr.size === 1) isl.drag = { start: pos(ev), moved: 0, cam: Object.assign({}, isl.cam) };
+      else isl.drag = Object.assign(isl.drag || {}, { moved: 99 });
+      if (isl.ptr.size === 2) {
+        const [a, b] = [...isl.ptr.values()];
+        isl.pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), m: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+      }
+    };
+    const move = ev => {
+      if (!isl || !isl.ptr.has(ev.pointerId)) return;
+      const p = pos(ev);
+      const prev = isl.ptr.get(ev.pointerId);
+      isl.ptr.set(ev.pointerId, p);
+      if (isl.ptr.size === 2 && isl.pinch) {
+        const [a, b] = [...isl.ptr.values()];
+        const d = Math.hypot(a.x - b.x, a.y - b.y), m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        if (isl.pinch.d > 0) islZoomAt(d / isl.pinch.d, m.x, m.y);
+        isl.cam.tx += m.x - isl.pinch.m.x; isl.cam.ty += m.y - isl.pinch.m.y;
+        islClamp();
+        isl.pinch = { d, m };
+        return;
+      }
+      if (isl.drag) {
+        isl.drag.moved += Math.abs(p.x - prev.x) + Math.abs(p.y - prev.y);
+        if (isl.drag.moved > 6) {
+          isl.cam.tx = isl.drag.cam.tx + (p.x - isl.drag.start.x);
+          isl.cam.ty = isl.drag.cam.ty + (p.y - isl.drag.start.y);
+          islClamp();
+          cv.classList.add('is-drag');
+        }
+      }
+    };
+    const up = ev => {
+      if (!isl || !isl.ptr.has(ev.pointerId)) return;
+      const p = pos(ev);
+      isl.ptr.delete(ev.pointerId);
+      if (isl.ptr.size < 2) isl.pinch = null;
+      if (!isl.ptr.size) {
+        const tap = isl.drag && isl.drag.moved <= 6 && ev.type === 'pointerup';
+        isl.drag = null;
+        cv.classList.remove('is-drag');
+        if (tap) islTap(p.x, p.y);
+      }
+    };
+    const wheel = ev => {
+      if (!isl || !isl.ready) return;
+      ev.preventDefault();
+      isl.anim = null;
+      const p = pos(ev);
+      islZoomAt(Math.exp(-ev.deltaY * 0.0015), p.x, p.y);
+    };
+    cv.addEventListener('pointerdown', down);
+    cv.addEventListener('pointermove', move);
+    cv.addEventListener('pointerup', up);
+    cv.addEventListener('pointercancel', up);
+    cv.addEventListener('wheel', wheel, { passive: false });
+    isl.unbind = () => {
+      cv.removeEventListener('pointerdown', down); cv.removeEventListener('pointermove', move);
+      cv.removeEventListener('pointerup', up); cv.removeEventListener('pointercancel', up);
+      cv.removeEventListener('wheel', wheel);
+    };
+  }
+
+  const stageOfId = id => window.DDInsel ? window.DDInsel.stageOf(prog[id]) : 0;
+
+  /* Antippen: das oberste Wesen unter dem Finger (größere Trefferfläche als das Bild). */
+  function islTap(sx, sy) {
+    const c = isl.cam, S = isl.S;
+    let best = null, bd = Infinity;
+    for (const w of isl.creatures) {
+      const px = w.x * c.s + c.tx, py = w.y * c.s + c.ty, h = S * c.s;
+      const dx = sx - px, dy = sy - (py - h * 0.4);
+      const rad = Math.max(22, h * 0.45);
+      const d = dx * dx + dy * dy;
+      if (d < rad * rad && (d < bd || (best && w.y > best.y && d < bd * 1.5))) { best = w; bd = d; }
+    }
+    islSelect(best ? best.id : null);
+  }
+  function islSelect(id) {
+    if (!isl) return;
+    isl.selId = id;
+    const pop = root.querySelector('#ddIslPop');
+    if (!pop) return;
+    const w = id && isl.byId.get(id);
+    if (!w) { pop.hidden = true; pop.innerHTML = ''; return; }
+    const e = stageOfId(id), I = window.DDInsel;
+    pop.innerHTML =
+      '<button type="button" class="dd-x dd-x--s" data-act="isl-unsel" aria-label="Schließen">×</button>' +
+      '<span class="dd-isl__popfam" style="--f:' + FAM[w.fam % FAM.length] + '">' + E(stackTitle(w.card.sid)) + '</span>' +
+      '<strong class="dd-isl__popt">' + E(w.card.t) + '</strong>' +
+      stageDots(e) +
+      '<span class="dd-isl__popst">Stufe ' + (e + 1) + ' von 6 · ' + I.STAGES[e] + '</span>' +
+      '<button type="button" class="btn btn--primary btn--sm" data-act="isl-train">' + ico.play + (e >= I.MAX ? 'Wiederholen' : 'Trainieren') + '</button>';
+    pop.hidden = false;
+    islPlacePop();
+  }
+  function stageDots(e) {
+    return '<span class="dd-sdots" aria-hidden="true">' + [0, 1, 2, 3, 4, 5].map(i => '<i' + (i <= e ? ' class="is-on' + (i === 5 ? ' is-glow' : '') + '"' : '') + '></i>').join('') + '</span>';
+  }
+  function islPlacePop() {
+    const pop = root && root.querySelector('#ddIslPop');
+    const w = isl && isl.selId && isl.byId.get(isl.selId);
+    if (!pop || !w || pop.hidden) return;
+    const c = isl.cam;
+    const px = w.x * c.s + c.tx, py = w.y * c.s + c.ty - isl.S * c.s;
+    const pw = pop.offsetWidth, ph = pop.offsetHeight;
+    let left = px - pw / 2, top = py - ph - 10;
+    if (top < 6) top = w.y * c.s + c.ty + 12;
+    left = Math.max(6, Math.min(isl.W - pw - 6, left));
+    top = Math.max(6, Math.min(isl.H - ph - 6, top));
+    pop.style.transform = 'translate(' + Math.round(left) + 'px,' + Math.round(top) + 'px)';
+  }
+  function islFamily(f) {
+    if (!isl) return;
+    isl.fam = isl.fam === f ? -1 : f;
+    paintSide();
+  }
+
+  /* ─── Jedes Bild ─── */
+  function islFrame(now) {
+    if (!isl || !root) return;
+    isl.raf = requestAnimationFrame(islFrame);
+    const dt = Math.min(0.1, (now - isl.last) / 1000);
+    isl.last = now;
+    if (document.hidden) return;
+    const cv = root.querySelector('#ddIslCv');
+    if (!cv) return;
+    if (isl.anim) {
+      const a = isl.anim, k = Math.min(1, (now - a.t0) / 350), q = 1 - (1 - k) ** 3;
+      isl.cam = { s: a.from.s + (a.to.s - a.from.s) * q, tx: a.from.tx + (a.to.tx - a.from.tx) * q, ty: a.from.ty + (a.to.ty - a.from.ty) * q };
+      if (k >= 1) isl.anim = null;
+    }
+    islStep(now, dt);
+    const g = cv.getContext('2d'), c = isl.cam, dpr = isl.dpr, S = isl.S;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.fillStyle = isl.wc.sea;
+    g.fillRect(0, 0, cv.width, cv.height);
+    g.setTransform(dpr * c.s, 0, 0, dpr * c.s, dpr * c.tx, dpr * c.ty);
+    g.imageSmoothingEnabled = true;
+    g.drawImage(isl.wc.terrain, 0, 0, isl.wc.world.width, isl.wc.world.height);
+    // Wesen, von hinten nach vorn
+    const list = isl.creatures.slice().sort((a, b) => a.y - b.y);
+    const vx0 = -c.tx / c.s - S, vy0 = -c.ty / c.s - S, vx1 = (isl.W - c.tx) / c.s + S, vy1 = (isl.H - c.ty) / c.s + S * 2;
+    for (const w of list) {
+      if (w.x < vx0 || w.x > vx1 || w.y < vy0 || w.y > vy1) continue;
+      const e = stageOfId(w.id);
+      const dim = isl.fam >= 0 && w.fam !== isl.fam;
+      g.globalAlpha = dim ? 0.28 : 1;
+      const bob = w.walking ? Math.abs(Math.sin(w.phase)) * S * 0.07 : 0;
+      // Schatten
+      g.fillStyle = 'rgba(20,30,10,.28)';
+      g.beginPath(); g.ellipse(w.x, w.y, S * (e ? 0.22 : 0.18), S * 0.06, 0, 0, Math.PI * 2); g.fill();
+      if (e === 5 && !dim) {
+        const pulse = 0.55 + 0.25 * Math.sin(now / 420 + w.phase);
+        const gr = g.createRadialGradient(w.x, w.y - S * 0.45, S * 0.08, w.x, w.y - S * 0.45, S * 0.7);
+        gr.addColorStop(0, 'rgba(255,236,140,' + pulse + ')');
+        gr.addColorStop(1, 'rgba(255,220,90,0)');
+        g.fillStyle = gr;
+        g.beginPath(); g.arc(w.x, w.y - S * 0.45, S * 0.7, 0, Math.PI * 2); g.fill();
+      }
+      if (w.id === isl.selId) {
+        g.strokeStyle = '#fff'; g.lineWidth = Math.max(2 / c.s, S * 0.03);
+        g.beginPath(); g.ellipse(w.x, w.y, S * 0.34, S * 0.11, 0, 0, Math.PI * 2); g.stroke();
+      }
+      const im = spriteImg(w.fam, e);
+      if (im.complete && im.naturalWidth) {
+        g.save();
+        g.translate(w.x, w.y - bob);
+        if (e === 0) g.rotate(Math.sin(now / 260 + w.phase) * (Math.sin(now / 1700 + w.phase) > 0.6 ? 0.12 : 0.02));
+        if (w.dir < 0) g.scale(-1, 1);
+        g.drawImage(im, -S / 2, -S * 0.96, S, S);
+        g.restore();
+      }
+      if (w.burst) {
+        const k = (now - w.burst) / 1300;
+        if (k >= 1) w.burst = 0;
+        else {
+          g.fillStyle = 'rgba(255,230,120,' + (1 - k) + ')';
+          for (let i = 0; i < 10; i++) {
+            const a = i / 10 * Math.PI * 2 + w.phase;
+            const rr = S * (0.25 + k * 0.6);
+            g.beginPath(); g.arc(w.x + Math.cos(a) * rr, w.y - S * 0.45 + Math.sin(a) * rr, S * 0.035 * (1 - k * 0.5), 0, Math.PI * 2); g.fill();
+          }
+        }
+      }
+    }
+    g.globalAlpha = 1;
+    // Namen, wenn man nah genug dran ist
+    if (S * c.s > 70) {
+      g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      g.font = '600 12px Outfit, system-ui, sans-serif';
+      g.textAlign = 'center';
+      for (const w of list) {
+        const px = w.x * c.s + c.tx, py = w.y * c.s + c.ty;
+        if (px < -60 || px > isl.W + 60 || py < -20 || py > isl.H + 30) continue;
+        if (isl.fam >= 0 && w.fam !== isl.fam) continue;
+        const t = w.card.t.length > 22 ? w.card.t.slice(0, 21) + '…' : w.card.t;
+        const tw = g.measureText(t).width;
+        g.fillStyle = 'rgba(255,255,255,.85)';
+        g.fillRect(px - tw / 2 - 4, py + 4, tw + 8, 17);
+        g.fillStyle = '#2b2620';
+        g.fillText(t, px, py + 17);
+      }
+    }
+    islPlacePop();
+  }
+
+  /* Bewegung: laufen zu einem Ziel nahe der Heimat, dort eine Weile stehen. */
+  function islStep(now, dt) {
+    const wc = isl.wc;
+    for (const w of isl.creatures) {
+      const e = stageOfId(w.id);
+      if (e === 0 || still()) { w.walking = false; continue; }
+      if (!w.walking) {
+        if (now < w.until) continue;
+        for (let k = 0; k < 8; k++) {
+          const a = w.rnd() * Math.PI * 2, d = Math.sqrt(w.rnd()) * isl.roam;
+          const tx = w.home.x + Math.cos(a) * d, ty = w.home.y + Math.sin(a) * d;
+          const step = Math.hypot(tx - w.x, ty - w.y);
+          if (step > isl.roam * 0.7 || step < 20) continue;
+          if (wc.walk(tx, ty) && wc.walk((tx + w.x) / 2, (ty + w.y) / 2)) { w.tx = tx; w.ty = ty; w.walking = true; break; }
+        }
+        if (!w.walking) { w.until = now + 1500; continue; }
+      }
+      const sp = [0, 30, 34, 38, 42, 42][e] * (isl.size / 100);
+      const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy);
+      if (d < sp * dt + 1) {
+        w.x = w.tx; w.y = w.ty; w.walking = false;
+        w.until = now + 1200 + w.rnd() * 4000;
+        continue;
+      }
+      w.x += dx / d * sp * dt; w.y += dy / d * sp * dt;
+      if (Math.abs(dx) > 2) w.dir = dx < 0 ? -1 : 1;
+      w.phase += dt * (e === 1 ? 11 : 8);
+    }
+  }
+
+  /* ─── Seitenleiste: Stufen, Familien, Runde ─── */
+  function islCounts(cards) {
+    const c = [0, 0, 0, 0, 0, 0];
+    for (const k of cards) c[stageOfId(k.id)]++;
+    return c;
+  }
+  function paintSide() {
+    const box = root && root.querySelector('#ddIslSide');
+    if (!box || !opened) return;
+    const I = window.DDInsel;
+    const names = I ? I.STAGES : ['Ei', 'Baby', 'Klein', 'Mittel', 'Groß', 'Leuchtend'];
+    const c = islCounts(opened.cards);
+    const n = opened.cards.length;
+    const done = c[5] === n;
+    box.innerHTML =
+      '<div class="dd-isl__card">' +
+        '<h3 class="dd-isl__h">' + n + ' Wesen' + (c[5] ? ' · <span>' + c[5] + ' leuchten</span>' : '') + '</h3>' +
+        '<ul class="dd-isl__stages">' + names.map((nm, e) =>
+          '<li' + (c[e] ? '' : ' class="is-zero"') + '><img src="' + neutralURL(e) + '" alt=""><b>' + c[e] + '</b><small>' + nm + '</small></li>').join('') + '</ul>' +
+        '<button type="button" class="btn btn--primary dd-isl__go" data-act="isl-round"' + (isl && isl.ready ? '' : ' disabled') + '>' + ico.play +
+          (done ? 'Wiederholen (' + ROUND + ' Aufgaben)' : 'Runde starten (' + ROUND + ' Aufgaben)') + '</button>' +
+        '<p class="dd-isl__tip">Oder tippe ein Wesen auf der Insel an.</p>' +
+      '</div>' +
+      '<div class="dd-isl__card">' +
+        '<h3 class="dd-isl__h">Familien</h3>' +
+        '<ul class="dd-isl__fams">' + opened.stacks.map((s, f) => {
+          const cs = islCounts(opened.cards.filter(k => k.sid === s.id));
+          const tot = cs.reduce((a, b) => a + b, 0) || 1;
+          const pts = cs.reduce((a, b, e) => a + b * e, 0);
+          return '<li><button type="button" class="dd-isl__fam' + (isl && isl.fam === f ? ' is-on' : '') + '" data-act="isl-fam" data-f="' + f + '" aria-pressed="' + (isl && isl.fam === f) + '" style="--f:' + FAM[f % FAM.length] + '">' +
+            '<img src="' + spriteURL(f, Math.min(4, Math.round(pts / tot))) + '" alt="">' +
+            '<span class="dd-isl__famt"><b>' + E(s.title) + '</b><span class="dd-isl__fambar">' +
+              cs.map((x, e) => x ? '<i class="dd-st' + e + '" style="width:' + (x / tot * 100) + '%"></i>' : '').join('') + '</span>' +
+            '<small>' + cs[5] + ' von ' + s.cards.length + ' leuchten</small></span></button></li>';
+        }).join('') + '</ul>' +
+        (opened.stacks.length > 1 ? '<p class="dd-isl__tip">Familie antippen hebt sie auf der Insel hervor.</p>' : '') +
+      '</div>' + acctNote();
+  }
+  /* Die Stufen-Legende zeigt die Wesen ohne Familienfarbe. */
+  const neutralUrls = {};
+  function neutralURL(e) {
+    return neutralUrls[e] || (neutralUrls[e] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(wesenSVG('#9a948c', e)));
+  }
+  /* Neuer Stand von außen (anderes Gerät) oder nach einer Antwort. */
+  function islRefresh() { if (isl) { paintSide(); if (isl.selId) islSelect(isl.selId); } }
+
+  /* ══════ Aufgaben ══════ */
+  async function islRound(onlyId) {
+    if (!isl || !isl.ready) return;
+    try { await ladeInsel(); } catch (e) { toast('Die Aufgaben konnten nicht geladen werden.'); return; }
+    const I = window.DDInsel;
+    let cards;
+    if (onlyId) {
+      const c = opened.cards.find(x => x.id === onlyId);
+      if (!c) return;
+      cards = [c];
+    } else {
+      cards = I.session(opened.cards, id => prog[id], ROUND).cards;
+    }
+    if (!cards.length) return;
+    islSelect(null);
+    isl.round = { cards, i: 0, right: 0, grown: [], single: !!onlyId };
+    islNewTask();
+  }
+  function islNewTask() {
+    const R = isl.round, I = window.DDInsel;
+    const card = R.cards[R.i];
+    const e = stageOfId(card.id);
+    const t = I.makeTask(card, opened.cards, e);
+    t.fam = isl.byId.get(card.id) ? isl.byId.get(card.id).fam : 0;
+    t.seq = [];
+    t.done = false;
+    isl.task = t;
+    paintTask();
+  }
+
+  function taskHead(t) {
+    const I = window.DDInsel, R = isl.round;
+    const e = t.stage, next = Math.min(I.MAX, e + 1);
+    return '<div class="dd-task__head">' +
+        '<span class="dd-task__pic" id="ddTaskPic" style="--f:' + FAM[t.fam % FAM.length] + '"><img src="' + spriteURL(t.fam, e) + '" alt="' + I.STAGES[e] + '"></span>' +
+        '<span class="dd-task__who"><small>' + E(stackTitle(t.card.sid)) + '</small>' +
+          '<b id="ddTaskStage">' + (e >= I.MAX ? 'Leuchtend · Wiederholen' : I.STAGES[e] + ' → ' + I.STAGES[next]) + '</b>' + stageDots(e) + '</span>' +
+        (R.single ? '' : '<span class="dd-task__n" aria-label="Aufgabe ' + (R.i + 1) + ' von ' + R.cards.length + '">' +
+          R.cards.map((_, i) => '<i class="' + (i < R.i ? 'is-done' : i === R.i ? 'is-now' : '') + '"></i>').join('') + '</span>') +
+        '<button type="button" class="dd-x" data-act="isl-close" aria-label="Runde beenden">×</button>' +
+      '</div>';
+  }
+  function paintTask() {
+    const box = root.querySelector('#ddTask'), t = isl.task;
+    if (!box || !t) return;
+    let body = '';
+    const defBox = '<div class="dd-task__def"><span class="dd-task__l">Definition</span><p>' + E(t.card.d) + '</p></div>';
+    const termBox = '<div class="dd-task__term"><span class="dd-task__l">Begriff</span>' +
+      (okImg(t.card.i) ? '<img class="dd-task__img" src="' + t.card.i + '" alt="">' : '') + '<b><span class="dd-hl">' + E(t.card.t) + '</span></b></div>';
+    if (t.type === 'pickTerm') {
+      body = '<p class="dd-task__q">Welcher Begriff passt zu dieser Definition?</p>' + defBox +
+        '<div class="dd-opts6">' + t.options.map((o, i) => '<button type="button" class="dd-opt" data-act="isl-opt" data-id="' + E(o.id) + '"><kbd>' + (i + 1) + '</kbd>' + E(o.text) + '</button>').join('') + '</div>';
+    } else if (t.type === 'pickDef') {
+      body = '<p class="dd-task__q">Welche Definition passt zu diesem Begriff?</p>' + termBox +
+        '<div class="dd-opts4">' + t.options.map((o, i) => '<button type="button" class="dd-opt dd-opt--def" data-act="isl-opt" data-id="' + E(o.id) + '"><kbd>' + (i + 1) + '</kbd><span>' + E(o.text) + '</span></button>').join('') + '</div>';
+    } else if (t.type === 'build') {
+      body = '<p class="dd-task__q">Bau die Definition zusammen. Zwei Bausteine gehören nicht dazu.</p>' + termBox +
+        '<div class="dd-build" id="ddBuild"></div>' +
+        '<div class="dd-task__act"><button type="button" class="btn btn--primary" data-act="isl-check" id="ddCheck" disabled>' + ico.check + 'Prüfen</button></div>';
+    } else if (t.type === 'typeTerm') {
+      body = '<p class="dd-task__q">Wie heißt der Begriff?</p>' + defBox +
+        '<label class="dd-type"><span class="dd-task__l">Begriff</span><input class="dd-input dd-type__in" id="ddType" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="done" placeholder="Begriff eintippen …"></label>' +
+        '<div class="dd-task__act"><button type="button" class="btn" data-act="isl-skip">Weiß ich nicht</button>' +
+          '<button type="button" class="btn btn--primary" data-act="isl-check">' + ico.check + 'Prüfen</button></div>';
+    } else if (t.type === 'cloze') {
+      let gi = 0;
+      body = '<p class="dd-task__q">Fülle die Lücken in der Definition.</p>' + termBox +
+        '<div class="dd-task__def dd-cloze"><span class="dd-task__l">Definition</span><p>' + t.parts.map(p => p.gap
+          ? '<input class="dd-gap" data-g="' + (gi++) + '" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" aria-label="Lücke ' + gi + '" style="--n:' + Math.max(4, p.gap.length) + '">'
+          : E(p.text)).join(' ') + '</p></div>' +
+        '<div class="dd-task__act"><button type="button" class="btn" data-act="isl-skip">Weiß ich nicht</button>' +
+          '<button type="button" class="btn btn--primary" data-act="isl-check">' + ico.check + 'Prüfen</button></div>';
+    }
+    box.innerHTML = '<div class="dd-task__bg"></div>' +
+      '<div class="dd-task__sheet dd-task--' + t.type + '" role="dialog" aria-modal="true" aria-label="Aufgabe">' + taskHead(t) +
+        '<div class="dd-task__body">' + body + '</div>' +
+        '<div class="dd-task__fb" id="ddFb" aria-live="polite"></div>' +
+      '</div>';
+    box.hidden = false;
+    if (t.type === 'build') paintBuild();
+    const f = box.querySelector('#ddType, .dd-gap, .dd-opt');
+    if (f && (f.tagName === 'INPUT' || !('ontouchstart' in window))) f.focus({ preventScroll: true });
+  }
+
+  function paintBuild() {
+    const t = isl.task, box = root.querySelector('#ddBuild');
+    if (!box) return;
+    const used = new Set(t.seq);
+    const tile = (x, where) => '<button type="button" class="dd-tile' + (t.done && x.wrong && where === 'in' ? ' is-wrong' : '') + '" data-act="isl-tile" data-k="' + x.k + '"' + (t.done ? ' disabled' : '') + '>' + E(x.text) + '</button>';
+    const byK = k => t.tiles.find(x => x.k === k);
+    box.innerHTML =
+      '<div class="dd-build__line' + (t.seq.length ? '' : ' is-empty') + '" aria-label="Deine Definition">' +
+        (t.seq.length ? t.seq.map(k => tile(byK(k), 'in')).join('') : '<span class="dd-build__ph">Tippe die Bausteine in der richtigen Reihenfolge an.</span>') + '</div>' +
+      '<div class="dd-build__pool" aria-label="Bausteine">' + t.tiles.filter(x => !used.has(x.k)).map(x => tile(x, 'pool')).join('') + '</div>';
+    const chk = root.querySelector('#ddCheck');
+    if (chk) chk.disabled = t.done || !t.seq.length;
+  }
+  function islTile(k) {
+    const t = isl && isl.task;
+    if (!t || t.done || t.type !== 'build') return;
+    const i = t.seq.indexOf(k);
+    if (i >= 0) t.seq.splice(i, 1); else t.seq.push(k);
+    paintBuild();
+  }
+
+  /* Auswahl-Aufgaben: Antippen = Antwort. */
+  function islPick(id) {
+    const t = isl && isl.task;
+    if (!t || t.done || (t.type !== 'pickTerm' && t.type !== 'pickDef')) return;
+    const ok = id === t.card.id || norm2(t, id);
+    root.querySelectorAll('.dd-opt').forEach(b => {
+      b.disabled = true;
+      if (b.dataset.id === t.card.id) b.classList.add('is-right');
+      else if (b.dataset.id === id) b.classList.add('is-wrong');
+    });
+    islResult(ok, ok ? '' : (t.type === 'pickTerm' ? 'Richtig wäre: <b>' + E(t.card.t) + '</b>' : 'Die richtige Definition ist grün markiert.'));
+  }
+  /* Gleicher Begriff/gleiche Definition auf einer anderen Karte zählt auch. */
+  function norm2(t, id) {
+    const o = opened.cards.find(c => c.id === id), I = window.DDInsel;
+    if (!o) return false;
+    return t.type === 'pickTerm' ? I.norm(o.t) === I.norm(t.card.t) : I.norm(o.d) === I.norm(t.card.d);
+  }
+
+  function islCheck() {
+    const t = isl && isl.task, I = window.DDInsel;
+    if (!t || t.done) return;
+    if (t.type === 'build') {
+      if (!t.seq.length) return;
+      const seq = t.seq.map(k => t.tiles.find(x => x.k === k).text);
+      const ok = I.buildOk(t, seq);
+      t.done = true;
+      paintBuild();
+      islResult(ok, ok ? '' : 'Richtig heißt es: <b>' + E(t.card.d) + '</b>');
+    } else if (t.type === 'typeTerm') {
+      const inp = root.querySelector('#ddType');
+      const v = inp ? inp.value : '';
+      if (!v.trim()) { if (inp) inp.focus(); return; }
+      const r = I.check(v, t.card.t);
+      if (inp) { inp.readOnly = true; inp.classList.add(r.ok ? 'is-right' : 'is-wrong'); }
+      islResult(r.ok, r.ok ? (r.exact ? '' : 'Fast genau – geschrieben wird es: <b>' + E(t.card.t) + '</b>') : 'Gesucht war: <b>' + E(t.card.t) + '</b>');
+    } else if (t.type === 'cloze') {
+      const gaps = t.parts.filter(p => p.gap);
+      const ins = [...root.querySelectorAll('.dd-gap')];
+      if (ins.some(x => !x.value.trim())) { const f = ins.find(x => !x.value.trim()); if (f) f.focus(); return; }
+      let all = true, fuzzy = false;
+      ins.forEach((inp, i) => {
+        const r = I.checkGap(inp.value, gaps[i].gap);
+        all = all && r.ok;
+        fuzzy = fuzzy || (r.ok && !r.exact);
+        inp.readOnly = true;
+        inp.classList.add(r.ok ? 'is-right' : 'is-wrong');
+        if (!r.ok || !r.exact) inp.insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>');
+      });
+      islResult(all, all ? (fuzzy ? 'Fast genau – die richtige Schreibweise steht daneben.' : '') : 'Die richtigen Wörter stehen neben den Lücken.');
+    }
+  }
+  function islGiveUp() {
+    const t = isl && isl.task;
+    if (!t || t.done) return;
+    if (t.type === 'typeTerm') { const inp = root.querySelector('#ddType'); if (inp) inp.readOnly = true; islResult(false, 'Gesucht war: <b>' + E(t.card.t) + '</b>'); }
+    else if (t.type === 'cloze') {
+      const gaps = t.parts.filter(p => p.gap);
+      root.querySelectorAll('.dd-gap').forEach((inp, i) => { inp.readOnly = true; inp.value = ''; inp.insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>'); });
+      islResult(false, 'So heißt es richtig.');
+    }
+  }
+
+  /* Ergebnis anwenden: Stufe hoch/runter, speichern, Moment zeigen. */
+  function islResult(ok, extra) {
+    const t = isl.task, R = isl.round, I = window.DDInsel;
+    t.done = true;
+    const id = t.card.id;
+    const r = I.apply(prog[id], ok);
+    prog[id] = Object.assign({}, prog[id], { e: r.e, x: r.x, t: Date.now() });
+    saveProg(sidOf(id));
+    if (ok) R.right++;
+    const w = isl.byId.get(id);
+    let say;
+    if (r.up) {
+      R.grown.push({ id, fam: t.fam, e: r.e });
+      say = '<b>„' + E(t.card.t) + '“ ' + STAGE_TXT[r.e - 1] + '</b>';
+      if (w) w.burst = performance.now();
+      const pic = root.querySelector('#ddTaskPic');
+      if (pic) {
+        pic.classList.remove('is-grow'); void pic.offsetWidth;
+        pic.querySelector('img').src = spriteURL(t.fam, r.e);
+        pic.classList.add('is-grow');
+      }
+      const st = root.querySelector('#ddTaskStage');
+      if (st) { st.textContent = 'Jetzt: ' + I.STAGES[r.e]; st.nextElementSibling.outerHTML = stageDots(r.e); }
+    } else if (r.down) {
+      say = '„' + E(t.card.t) + '“ ist wieder ' + (r.e === 0 ? 'ein Ei' : I.STAGES[r.e]) + '. Beim nächsten Mal klappt’s!';
+      const pic = root.querySelector('#ddTaskPic');
+      if (pic) { pic.querySelector('img').src = spriteURL(t.fam, r.e); pic.classList.add('is-shrink'); }
+      const st = root.querySelector('#ddTaskStage');
+      if (st) { st.textContent = 'Jetzt: ' + I.STAGES[r.e]; st.nextElementSibling.outerHTML = stageDots(r.e); }
+    } else if (ok) {
+      say = t.stage >= I.MAX ? 'Richtig – es leuchtet weiter.' : 'Richtig!';
+    } else {
+      say = 'Nicht ganz.' + (r.x ? ' Noch ein Fehler auf dieser Stufe, dann wird es wieder kleiner.' : '');
+    }
+    const fb = root.querySelector('#ddFb');
+    const last = R.i >= R.cards.length - 1;
+    if (fb) {
+      fb.className = 'dd-task__fb ' + (r.up ? 'is-up' : ok ? 'is-ok' : 'is-no');
+      fb.innerHTML = '<p>' + say + '</p>' + (extra ? '<p class="dd-task__sol">' + extra + '</p>' : '') +
+        '<button type="button" class="btn btn--primary" data-act="isl-next" id="ddNext">' + (last ? (R.single ? 'Zur Insel' : 'Fertig') : 'Weiter') + '</button>';
+      root.querySelectorAll('.dd-task__act .btn').forEach(b => { b.disabled = true; });
+      const nb = fb.querySelector('#ddNext');
+      if (nb) nb.focus({ preventScroll: true });
+    }
+    paintSide();
+  }
+  function islNext() {
+    if (!isl || !isl.round || !isl.task || !isl.task.done) return;
+    const R = isl.round;
+    if (R.i < R.cards.length - 1) { R.i++; islNewTask(); return; }
+    if (R.single) { islCloseTask(); return; }
+    paintSummary();
+  }
+  function paintSummary() {
+    const R = isl.round, I = window.DDInsel, box = root.querySelector('#ddTask');
+    isl.task = null;
+    const n = R.cards.length;
+    box.innerHTML = '<div class="dd-task__bg"></div>' +
+      '<div class="dd-task__sheet dd-task__sheet--end" role="dialog" aria-modal="true" aria-labelledby="ddEndH">' +
+        '<button type="button" class="dd-x" data-act="isl-close" aria-label="Zur Insel">×</button>' +
+        '<span class="dd-memwin__stamp">Runde geschafft</span>' +
+        '<h2 id="ddEndH">' + R.right + ' von ' + n + ' richtig</h2>' +
+        (R.grown.length
+          ? '<p>' + (R.grown.length === 1 ? 'Ein Wesen ist gewachsen:' : R.grown.length + ' Wesen sind gewachsen:') + '</p>' +
+            '<ul class="dd-grown">' + R.grown.map(g => { const c = opened.cards.find(x => x.id === g.id);
+              return '<li><img src="' + spriteURL(g.fam, g.e) + '" alt=""><b>' + E(c ? c.t : '') + '</b><small>' + I.STAGES[g.e] + '</small></li>'; }).join('') + '</ul>'
+          : '<p>Diesmal ist niemand gewachsen – in der nächsten Runde bestimmt.</p>') +
+        '<div class="dd-memwin__act"><button type="button" class="btn btn--primary" data-act="isl-round">' + ico.again + 'Noch eine Runde</button>' +
+        '<button type="button" class="btn" data-act="isl-close">' + ico.back + 'Zur Insel</button></div>' +
+      '</div>';
+    const b = box.querySelector('.btn--primary'); if (b) b.focus({ preventScroll: true });
+  }
+  function islCloseTask() {
+    if (!isl) return;
+    isl.task = null; isl.round = null;
+    const box = root.querySelector('#ddTask');
+    if (box) { box.hidden = true; box.innerHTML = ''; }
+    paintSide();
+  }
+
+  /* Tasten: 1–6 wählen, Enter prüft bzw. geht weiter, Esc schließt. */
+  function islKey(ev, tag) {
+    if (!isl) return;
+    if (ev.key === 'Escape') { if (isl.round) { ev.preventDefault(); islCloseTask(); } else if (isl.selId) islSelect(null); return; }
+    const t = isl.task;
+    if (!t) return;
+    if (ev.key === 'Enter') {
+      if (t.done) { ev.preventDefault(); islNext(); return; }
+      if (tag === 'input') {
+        ev.preventDefault();
+        if (ev.target.classList.contains('dd-gap')) {
+          const ins = [...root.querySelectorAll('.dd-gap')];
+          const nx = ins.slice(ins.indexOf(ev.target) + 1).find(x => !x.value.trim());
+          if (nx) { nx.focus(); return; }
+        }
+        islCheck();
+      }
+      return;
+    }
+    if (tag === 'input' || t.done) return;
+    if ((t.type === 'pickTerm' || t.type === 'pickDef') && /^[1-6]$/.test(ev.key)) {
+      const o = t.options[Number(ev.key) - 1];
+      if (o) { ev.preventDefault(); islPick(o.id); }
+    }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
      EDITOR (nur Lehrkraft)
      ══════════════════════════════════════════════════════════════ */
   function ladeParse() {
@@ -1586,6 +2517,18 @@
         case 'mm-new': if (mm) { newMemory(mm.pairs, mm.players); renderMemory(); } break;
         case 'mm-players': if (mm && !mm.busy) { newMemory(mm.pairs, Number(b.dataset.v)); renderMemory(); } break;
         case 'mm-fs': memFullscreen(); break;
+        case 'isl-round': islRound(null); break;
+        case 'isl-train': if (isl && isl.selId) islRound(isl.selId); break;
+        case 'isl-unsel': islSelect(null); break;
+        case 'isl-fam': islFamily(Number(b.dataset.f)); break;
+        case 'isl-fit': islFit(true); break;
+        case 'isl-zoom': islZoomBy(Number(b.dataset.v)); break;
+        case 'isl-opt': islPick(b.dataset.id); break;
+        case 'isl-tile': islTile(b.dataset.k); break;
+        case 'isl-check': islCheck(); break;
+        case 'isl-skip': islGiveUp(); break;
+        case 'isl-next': islNext(); break;
+        case 'isl-close': islCloseTask(); break;
         case 'ed-save': saveEdit(); break;
         case 'ed-cancel': cancelEdit(); break;
         case 'ed-del': deleteStack(); break;
@@ -1680,6 +2623,7 @@
         if (d) d.focus();
         return;
       }
+      if (screen === 'play' && opened && opened.game === 'island') { islKey(ev, tag); return; }
       if (screen !== 'play' || !opened || opened.game !== 'cards' || !learn) return;
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
       if (ev.key === ' ' || ev.key === 'Enter') {
@@ -1691,7 +2635,7 @@
     };
 
     // Memory: bei neuer Größe (Drehen, Vollbild) nur die Spalten neu wählen.
-    onResize = () => { if (screen === 'play' && mm) layoutBoards(); };
+    onResize = () => { if (screen === 'play' && mm) layoutBoards(); if (screen === 'play' && isl) islResize(); };
     onFs = () => {
       const b = root && root.querySelector('.dd-fsbtn');
       if (b) b.innerHTML = fsEl() ? ico.unfull : ico.full;
@@ -1769,6 +2713,7 @@
       if (onResize) window.removeEventListener('resize', onResize);
       if (onFs) { document.removeEventListener('fullscreenchange', onFs); document.removeEventListener('webkitfullscreenchange', onFs); }
       if (pushTimer) pushProg();          // letzter Stand noch zum Konto, bevor alles abgeräumt wird
+      islStop();
       if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* egal */ } }
       onKey = onClick = onInput = onChange = onResize = onFs = null;
       root = null; ctx = null; view = null; opened = null; ed = null; learn = null; ov = null; mm = null; list = null; cache = {};
