@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027h';
+  const V = '20261027i';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];

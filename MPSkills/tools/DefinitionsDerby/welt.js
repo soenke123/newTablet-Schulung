@@ -91,23 +91,57 @@
      zur äußersten Küste hin ab (u, v = Ort / rx, ry). Eine Insel
      WÄCHST, indem die Küstenschwelle sinkt: gleiche Landschaft, nur
      mehr Land drumherum (Stufe je 10 Begriffe, bis 5 = 50+).
-       Mondsichel  dicker Bauch zuerst, die Hörner wachsen nach, innen
-                   eine geschützte Bucht
-       Kraterring  beginnt als Bogen auf einer Seite und wächst um eine
+       Bucht       hakenförmig um eine Bucht, Landzungen verschieden lang
+       Kraterring  beginnt als Bogen oben rechts und wächst um eine
                    Lagune herum, bis der Ring sich schließt
-       Kleeblatt   drei Lappen, wächst gleichmäßig nach außen        */
+       Landzungen  unregelmäßiger Körper mit Halbinseln in alle
+                   Richtungen, später taucht eine kleine Nebeninsel auf
+     Bucht und Landzungen sind „Rückgrate“ (spine): Abschnitte mit Dicke
+     am Anfang und Ende. Dicke Teile tauchen zuerst auf, dünne Spitzen
+     erst bei späteren Stufen — so wächst die Insel wie gewachsen und
+     nicht wie ein aufgeblasener Kreis. warp verbiegt den Ort vorher
+     leicht (Rauschen), damit keine Kante geometrisch aussieht; carve
+     hält Wasser frei (die Bucht wächst nicht zu).
+     (Sönke: Krater cool, Sichel und Kleeblatt „zu künstlich“.) */
+  // [x0, y0, Dicke0, x1, y1, Dicke1] je Abschnitt
+  function spine(segs, norm, carve) {
+    return (u, v) => {
+      let best = -1;
+      for (const [ax, ay, ra, bx, by, rb] of segs) {
+        const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy || 1e-9;
+        const t = clamp(((u - ax) * dx + (v - ay) * dy) / l2, 0, 1);
+        const d = Math.hypot(u - (ax + dx * t), v - (ay + dy * t)), r = ra + (rb - ra) * t;
+        best = Math.max(best, (r - d) / norm);
+      }
+      return carve ? best - carve(u, v) : best;
+    };
+  }
   const TEMPLATES = [
-    { id: 'sichel', name: 'Mondsichel', seed: 0x51c4e1, rx: 2050, ry: 1550,
-      shape: (u, v) => { const L = Math.hypot(u, v), bite = Math.hypot(u - 0.48, v + 0.22) / 0.68;
-        const belly = 0.45 + 0.55 * ((1 - Math.cos(Math.atan2(v, u))) / 2);     // links dick, die Hörner später
-        return Math.min(1 - L, bite - 1) / 0.4 * belly; } },
-    { id: 'ring', name: 'Kraterring', seed: 0x7a11e3, rx: 2250, ry: 1780,
+    { id: 'bucht', name: 'Bucht', seed: 0x51c4e1, rx: 2700, ry: 2100, warp: 0.2,
+      shape: spine([
+        [-0.62, 0.38, 0.17, -0.58, 0.0, 0.3],       // Südwesten, zur Mitte dicker
+        [-0.58, 0.0, 0.3, -0.3, -0.36, 0.34],       // Bauch
+        [-0.3, -0.36, 0.34, 0.12, -0.52, 0.25],     // Norden
+        [0.12, -0.52, 0.25, 0.5, -0.42, 0.15],      // Nordost, dünner
+        [0.5, -0.42, 0.15, 0.76, -0.12, 0.06],      // lange Landzunge im Osten
+        [-0.62, 0.38, 0.17, -0.25, 0.66, 0.07],     // Haken im Süden
+        [-0.58, 0.0, 0.2, -0.95, -0.12, 0.08],      // kurze Zunge nach Westen
+        [-0.3, -0.36, 0.18, -0.48, -0.8, 0.07]      // Nase nach Norden
+      ], 0.34, (u, v) => Math.max(0, 1 - Math.hypot(u - 0.1, v - 0.18) / 0.46) * 1.3) },   // die Bucht bleibt Wasser
+    { id: 'ring', name: 'Kraterring', seed: 0x7a11e3, rx: 2250, ry: 1780, warp: 0,
       shape: (u, v) => { const L = Math.hypot(u, v), a = Math.atan2(v, u);
         const side = ((Math.cos(a + 0.7) + 1) / 2) ** 2, w = 0.2 + 0.1 * side;   // beginnt oben rechts
         return (1 - Math.abs(L - 0.62) / w) * (0.2 + 0.8 * side * side); } },
-    { id: 'klee', name: 'Kleeblatt', seed: 0x3c1ee5, rx: 2450, ry: 1980,
-      shape: (u, v) => { const L = Math.hypot(u, v), a = Math.atan2(v, u);
-        return 1 - L / (0.6 + 0.3 * Math.cos(3 * (a + Math.PI / 2))); } }
+    { id: 'zungen', name: 'Landzungen', seed: 0x3c1ee5, rx: 2550, ry: 2000, warp: 0.22,
+      shape: spine([
+        [-0.38, 0.12, 0.33, 0.12, -0.08, 0.38],     // Körper
+        [0.12, -0.08, 0.38, 0.42, 0.16, 0.26],
+        [0.42, 0.16, 0.2, 0.86, 0.4, 0.07],         // lange Zunge Südost
+        [0.14, -0.12, 0.2, 0.3, -0.78, 0.09],       // Zunge Nord
+        [-0.38, 0.12, 0.22, -0.88, -0.24, 0.1],     // Zunge Nordwest
+        [-0.25, 0.3, 0.17, -0.42, 0.8, 0.06],       // dünne Zunge Süd
+        [0.66, -0.56, 0.12, 0.8, -0.66, 0.08]       // Nebeninsel, taucht spät auf
+      ], 0.38) }
   ];
   const STAGES = 5;                       // 10 · 20 · 30 · 40 · 50+ Begriffe
   const AREA = [1.2e6, 2.2e6, 3.3e6, 4.4e6, 5.5e6];   // Landfläche je Stufe (≈ 110 000 je Wesen)
@@ -118,6 +152,7 @@
     const X0 = -T.rx * 1.15, Y0 = -T.ry * 1.15, W = T.rx * 2.3, H = T.ry * 2.3;
     const cols = Math.ceil(W / CELL) + 1, rows = Math.ceil(H / CELL) + 1;
     const seed = T.seed;
+    const nW1 = fbm(seed ^ 0x1a2b, 3), nW2 = fbm(seed ^ 0x3c4d, 3);
     const nE = fbm(seed ^ 0x9e37, 4), nQ = fbm(seed ^ 0x51ed, 3), nP = fbm(seed ^ 0x2b7f, 3), nM = fbm(seed ^ 0x7a11, 3);
     const N = cols * rows;
     const ea = new Float32Array(N), e = new Float32Array(N), q = new Float32Array(N), p = new Float32Array(N), m = new Float32Array(N);
@@ -126,7 +161,10 @@
     const OFF = 5000;
     for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) {
       const x = X0 + i * CELL, y = Y0 + j * CELL;
-      ea[j * cols + i] = T.shape(x / T.rx, y / T.ry) + (nE((x + OFF) * fE, (y + OFF) * fE) - 0.5) * 0.35;
+      // Ort leicht verbiegen (warp), dann die Form, dann etwas Rauschen auf die Höhe
+      const wu = T.warp ? (nW1((x + OFF) / 900, (y + OFF) / 900) - 0.5) * T.warp * 2 : 0;
+      const wv = T.warp ? (nW2((x + OFF) / 900, (y + OFF) / 900) - 0.5) * T.warp * 2 : 0;
+      ea[j * cols + i] = T.shape(x / T.rx + wu, y / T.ry + wv) + (nE((x + OFF) * fE, (y + OFF) * fE) - 0.5) * 0.35;
     }
     // Küstenschwelle so, dass die Landfläche der Stufe stimmt
     const sorted = Float32Array.from(ea).sort();
