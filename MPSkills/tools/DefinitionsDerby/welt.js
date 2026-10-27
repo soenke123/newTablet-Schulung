@@ -25,7 +25,7 @@
      von tool.js zusammen mit den Wesen nach y sortiert gezeichnet —
      so steht ein Wesen auch mal hinter einem Riesenpilz.
      walk(x, y): darf ein Wesen hier stehen (Land, kein Teich, nicht
-     auf/hinter einem Tafelberg).
+     auf/hinter einem Tafelberg). depth(x, y): Wasser für die Schwimmer.
 
    Nur Browser (Leinwand). Deterministisch je Seed (eigener Zufall).
    ══════════════════════════════════════════════════════════════ */
@@ -710,7 +710,9 @@
       const x = R.x + r() * R.w, y = R.y + r() * R.h;
       if (F.e(x, y) > 0.18 && walk(x, y)) homes.push({ x, y });
     }
-    return { T, stage, n, F, R, land: L, canvas: terr.canvas, walk, plants, homes };
+    // Wassertiefe für Schwimmer: Küstenhöhe e (unter 0 = Wasser), außerhalb des Ausschnitts offenes Meer
+    const depth = (x, y) => (x < R.x || y < R.y || x > R.x + R.w || y > R.y + R.h) ? -1 : F.e(x, y);
+    return { T, stage, n, F, R, land: L, canvas: terr.canvas, walk, depth, plants, homes };
   }
 
   const GAP = 700;                        // Wasser zwischen zwei Inseln (für Schwimmer)
@@ -752,6 +754,12 @@
     }
     plants.sort((u, v) => u.y - v.y);
     const walk = (x, y) => parts.some(p => p.walk(x - p.ox, y - p.oy));
+    /* depth(x, y): Küstenhöhe der nächsten Insel — unter 0 ist Wasser (offenes
+       Meer -1), 0 … 0,09 Strand, darüber Land; null außerhalb der Welt. */
+    const depth = (x, y) => {
+      if (x < PAD * 0.5 || y < PAD * 0.5 || x > W - PAD * 0.5 || y > H - PAD * 0.5) return null;
+      return Math.max(...parts.map(p => p.depth(x - p.ox, y - p.oy)));
+    };
     const islands = parts.map(p => ({
       id: p.T.id, name: p.T.name, stage: p.stage, n: p.n, area: AREA[p.stage - 1],
       homes: p.homes.map(h => ({ x: h.x + p.ox, y: h.y + p.oy })),
@@ -761,7 +769,7 @@
     const x1 = Math.max(...islands.map(i => i.box.x + i.box.w)), y1 = Math.max(...islands.map(i => i.box.y + i.box.h));
     const pad = 80;
     return {
-      width: W, height: H, S, pieces, walk, islands, plants,
+      width: W, height: H, S, pieces, walk, depth, islands, plants,
       sea: 'rgb(' + C.deepFar.join(',') + ')', ms: Date.now() - t0,
       bbox: { x: x0 - pad, y: y0 - pad - WALL * 2, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad + WALL * 2 }
     };

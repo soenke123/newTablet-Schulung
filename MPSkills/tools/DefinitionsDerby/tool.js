@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027i';
+  const V = '20261027j';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1328,9 +1328,10 @@
      Seed kommt aus dem Raumtitel: dieselbe Klasse sieht dieselbe
      Insel, und sie wächst mit der Zahl der Wesen.
 
-     Die Wesen sind VORLÄUFIGE Zeichnungen (wesenSVG) — Sönke liefert
-     Sprites nach. Wer sie einsetzt, ersetzt nur spriteURL(fam, e):
-     Familie = Farbe, e = Stufe 0…5.
+     Die Wesen sind Sönkes Bilder (wesen/, Ast je Karte, Farbe je
+     Familie: spriteCanvas/spriteURL); wesenSVG ist nur der Ersatz,
+     falls sie nicht laden. Dazu Tag und Nacht, Leuchten mit Funken ab
+     Groß, Schwimmer im Wasser und ab und zu Wolken (islSky).
 
      Eine Runde (islRound) sind 8 Aufgaben aus DDInsel.session, ein
      angetipptes Wesen „Trainieren“ ist eine Runde aus einer Aufgabe.
@@ -1339,8 +1340,6 @@
      seinen eigenen Moment: das Bild im Aufgabenblatt wächst, ein Satz
      sagt, was passiert ist, und auf der Insel funkelt das Wesen. */
   const ROUND = 8;
-  const FAM = ['#e0604c', '#3d84c6', '#3fa35d', '#e3a72f', '#8b5fc8', '#e2739f', '#2ea4a4', '#d57a2e',
-               '#6f9426', '#5569d6', '#b85450', '#4aa3db'];
   const STAGE_TXT = ['ist geschlüpft!', 'ist gewachsen und jetzt klein.', 'ist gewachsen: jetzt mittelgroß.',
                      'ist groß geworden!', 'leuchtet!'];
   let isl = null;                 // Zustand der Insel (nur solange sie offen ist)
@@ -1418,7 +1417,7 @@
     if (screen === 'play' && opened && opened.game === 'island') renderIsland();
   }
 
-  /* ─── Wesen (vorläufige Zeichnungen) ─── */
+  /* ─── Wesen: Ersatz-Zeichnung, falls die Bilder nicht laden ─── */
   function mix(hex, to, k) {
     const a = parseInt(hex.slice(1), 16), b = parseInt(to.slice(1), 16);
     const ch = (v, s) => (v >> s) & 255;
@@ -1480,17 +1479,144 @@
     }
     return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' + g + '</svg>';
   }
-  const spriteUrls = {};
-  /* Bild eines Wesens: Familie (Farbe) × Stufe. HIER kommen später die Sprites hin. */
-  function spriteURL(fam, e) {
+  /* ─── Wesen: Sönkes Bilder ───
+     Kreaturen/ sind die Vorlagen, wesen/ die aufbereiteten Bilder
+     (wesen/aufbereiten.py: zugeschnitten, je Stufe größer, Füße auf
+     96 % eines Quadrats). Ein Wesen wächst auf einem Ast entlang
+     (Sönke 27.10.2026: „entstehen zufällig, in alle Richtungen auf dem
+     Ast“): Ei 1/2 → Baby → Klein a|b → Mittel a_a|a_b|b_a|b_b|b_c →
+     Groß/Leuchtend eine Gabel weiter (b_c gabelt nicht mehr). Welcher
+     Ast, würfelt die Karten-id — zufällig, aber auf jedem Gerät gleich.
+     Familie = Farbe (Sönke: „neuer Stapel: alle Monster-Arten in einer
+     neuen Farbe“): Familie 0 so, wie Sönke sie gemalt hat, die anderen
+     bekommen den Grün-Blau-Bereich (Körper, Laub) auf einen Farbton
+     gezogen; Holz, Bäuche, Augen und Blüten bleiben (recolor). */
+  const WESEN_DIR = BASE + 'wesen/';
+  const WESEN_FILES = ['ei1', 'ei2', 'baby', 'k_a', 'k_b', 'm_a_a', 'm_a_b', 'm_b_a', 'm_b_b', 'm_b_c',
+    'g_a_a_a', 'g_a_a_b', 'g_a_b_a', 'g_a_b_b', 'g_b_a_a', 'g_b_a_b', 'g_b_b_a', 'g_b_b_b', 'g_b_c',
+    'f_a_a_a', 'f_a_a_b', 'f_a_b_a', 'f_a_b_b', 'f_b_a_a', 'f_b_a_b', 'f_b_b_a', 'f_b_b_b', 'f_b_c'];
+  /* Schwimmen können der Seedrache (a_a_b) und die Meeresschildkröte (a_b_b), ab Groß. */
+  const SWIM = ['a_a_b', 'a_b_b'];
+  const wesenBase = {};
+  let wesenReady = null, wesenOk = false;
+  function ladeWesen() {
+    return wesenReady || (wesenReady = Promise.all(WESEN_FILES.map(f => new Promise(res => {
+      const im = new Image();
+      im.onload = () => { wesenBase[f] = im; res(true); };
+      im.onerror = () => res(false);
+      im.src = WESEN_DIR + f + '.webp?v=' + V;
+    }))).then(r => { wesenOk = r.every(Boolean); }));
+  }
+  const astCache = new Map();
+  function wesenAst(id) {
+    let a = astCache.get(id);
+    if (a) return a;
+    const r = rngOf(hashStr('wesen:' + id));
+    const egg = r() < 0.5 ? 1 : 2;
+    const k = r() < 0.5 ? 'a' : 'b';
+    const m = k + '_' + (k === 'a' ? (r() < 0.5 ? 'a' : 'b') : ['a', 'b', 'c'][Math.floor(r() * 3)]);
+    const g = m === 'b_c' ? m : m + '_' + (r() < 0.5 ? 'a' : 'b');
+    a = { egg, k, m, g, swim: SWIM.includes(g) };
+    astCache.set(id, a);
+    return a;
+  }
+  function wesenFile(id, e) {
+    const a = wesenAst(id);
+    return ['ei' + a.egg, 'baby', 'k_' + a.k, 'm_' + a.m, 'g_' + a.g, 'f_' + a.g][e];
+  }
+  const canSwim = (id, e) => e >= 4 && wesenAst(id).swim;
+
+  /* Zielfarbton je Familie (null = Originalfarben) und passende Farbe für Chips/Balken. */
+  const FAM_HUE = [null, 355, 275, 92, 218, 322, 32, 150, 250, 12, 195, 48];
+  const FAM = FAM_HUE.map(h => h === null ? '#3f97a2' : hsl2hex(h, 0.5, 0.47));
+  function hsl2hex(h, s, l) {
+    const f = n => { const k = (n + h / 30) % 12, c = l - s * Math.min(l, 1 - l) * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+      return Math.round(c * 255).toString(16).padStart(2, '0'); };
+    return '#' + f(0) + f(8) + f(4);
+  }
+  const sst = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+  /* hue: Zielton in Grad, 'grau' für die Legende. Gezogen wird nur Grün bis Blau
+     (45°–232°, weiche Ränder), und zusammengestaucht, damit alle Arten einer
+     Familie gleich wirken. */
+  function recolor(im, hue) {
+    const cv = document.createElement('canvas');
+    cv.width = im.naturalWidth; cv.height = im.naturalHeight;
+    const g = cv.getContext('2d');
+    g.drawImage(im, 0, 0);
+    if (hue === null) return cv;
+    const d = g.getImageData(0, 0, cv.width, cv.height), px = d.data;
+    for (let i = 0; i < px.length; i += 4) {
+      if (!px[i + 3]) continue;
+      const r = px[i] / 255, gg = px[i + 1] / 255, b = px[i + 2] / 255;
+      if (hue === 'grau') {
+        const y = (0.3 * r + 0.59 * gg + 0.11 * b) * 255 * 0.9 + 20;
+        px[i] = px[i + 1] = px[i + 2] = y;
+        continue;
+      }
+      const mx = Math.max(r, gg, b), mn = Math.min(r, gg, b), l = (mx + mn) / 2, dd = mx - mn;
+      if (dd < 0.02) continue;
+      let h = mx === r ? ((gg - b) / dd) % 6 : mx === gg ? (b - r) / dd + 2 : (r - gg) / dd + 4;
+      h = (h * 60 + 360) % 360;
+      const w = sst(45, 65, h) * (1 - sst(212, 232, h));
+      if (w <= 0) continue;
+      const s = dd / (1 - Math.abs(2 * l - 1));
+      const to = hue + (h - 140) * 0.4;
+      const nh = (h + ((((to - h) % 360) + 540) % 360 - 180) * w + 360) % 360;
+      const ns = Math.min(1, s * (1 + 0.25 * w));
+      const c = (1 - Math.abs(2 * l - 1)) * ns, x = c * (1 - Math.abs((nh / 60) % 2 - 1)), m0 = l - c / 2;
+      const sx = Math.floor(nh / 60);
+      const rgb = sx === 0 ? [c, x, 0] : sx === 1 ? [x, c, 0] : sx === 2 ? [0, c, x] : sx === 3 ? [0, x, c] : sx === 4 ? [x, 0, c] : [c, 0, x];
+      px[i] = (rgb[0] + m0) * 255; px[i + 1] = (rgb[1] + m0) * 255; px[i + 2] = (rgb[2] + m0) * 255;
+    }
+    g.putImageData(d, 0, 0);
+    return cv;
+  }
+  const spriteCvs = {}, spriteUrls = {};
+  /* Leinwand eines Wesens (Familie × Ast × Stufe), null solange die Bilder fehlen. */
+  function spriteCanvas(fam, id, e) {
+    if (!wesenOk) return null;
+    const f = wesenFile(id, e), k = (fam % FAM.length) + ':' + f;
+    return spriteCvs[k] || (spriteCvs[k] = recolor(wesenBase[f], FAM_HUE[fam % FAM.length]));
+  }
+  /* Bild-Adresse für <img> (Aufgabenblatt, Familien, Endstand). Ohne Bilder: die alte Zeichnung. */
+  function spriteURL(fam, e, id) {
+    const cv = id != null && spriteCanvas(fam, id, e);
+    if (cv) {
+      const k = (fam % FAM.length) + ':' + wesenFile(id, e);
+      return spriteUrls[k] || (spriteUrls[k] = cv.toDataURL('image/png'));
+    }
     const k = fam + ':' + e;
     return spriteUrls[k] || (spriteUrls[k] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(wesenSVG(FAM[fam % FAM.length], e)));
   }
-  const spriteImgs = {};
-  function spriteImg(fam, e) {
+  /* Kleinere Fassungen (halbiert, halbiert …): weit weg gezeichnet würde die
+     große Leinwand sonst flimmern und körnig wirken. */
+  const spriteMips = {};
+  function spriteLod(fam, id, e, px) {
+    const big = spriteCanvas(fam, id, e);
+    if (!big) return null;
+    const k = (fam % FAM.length) + ':' + wesenFile(id, e);
+    let m = spriteMips[k];
+    if (!m) {
+      m = [big];
+      while (m[m.length - 1].width > 48) {
+        const a = m[m.length - 1], cv = document.createElement('canvas');
+        cv.width = Math.round(a.width / 2); cv.height = Math.round(a.height / 2);
+        const g = cv.getContext('2d');
+        g.imageSmoothingQuality = 'high';
+        g.drawImage(a, 0, 0, cv.width, cv.height);
+        m.push(cv);
+      }
+      spriteMips[k] = m;
+    }
+    let i = m.length - 1;
+    while (i > 0 && m[i].width < px) i--;
+    return m[i];
+  }
+  const svgImgs = {};
+  function svgImg(fam, e) {
     const k = fam + ':' + e;
-    if (!spriteImgs[k]) { const im = new Image(); im.src = spriteURL(fam, e); spriteImgs[k] = im; }
-    return spriteImgs[k];
+    if (!svgImgs[k]) { const im = new Image(); im.src = spriteURL(fam, e); svgImgs[k] = im; }
+    return svgImgs[k];
   }
 
   /* ─── Öffnen ─── */
@@ -1517,7 +1643,7 @@
       '</section>';
     paintSide();
     const me = isl;
-    Promise.all([ladeInsel(), ladeWelt()]).then(() => {
+    Promise.all([ladeInsel(), ladeWelt(), ladeWesen()]).then(() => {
       if (isl !== me || !root) return;
       // Erst zeichnen lassen („entsteht …“), dann rechnen (blockiert ~½ s).
       setTimeout(() => { if (isl === me && root) islBuild(); }, 30);
@@ -1775,6 +1901,90 @@
     paintSide();
   }
 
+  /* ─── Himmel: Tag und Nacht, Wolken ───
+     Der Tag läuft nach der Uhr (Date.now), damit die ganze Klasse
+     gleichzeitig Nacht hat: DAY_MS lang, davon ~60 % Tag, Abendrot,
+     Nacht, Morgenrot. Nachts legt sich ein Blau über alles (multiply),
+     danach leuchten die großen Wesen, Laternenblumen und Kristalle
+     (lighter). Wolken ziehen ab und zu mit dem Wind über die Insel,
+     ihr Schatten fällt nach rechts unten (Licht von links oben); nah
+     herangezoomt werden sie durchsichtig. */
+  const DAY_MS = 6 * 60 * 1000;
+  function skyAt(ms) {
+    const p = (ms % DAY_MS) / DAY_MS;
+    // 0 … .56 Tag · .56 … .66 Abend · .66 … .88 Nacht · .88 … .97 Morgen · danach Tag
+    const night = sst(0.56, 0.66, p) * (1 - sst(0.88, 0.97, p));
+    const warm = Math.max(0, 1 - Math.abs(p - 0.6) / 0.06) + Math.max(0, 1 - Math.abs(p - 0.925) / 0.05) * 0.8;
+    return { night, warm: Math.min(1, warm) };
+  }
+  let cloudSprites = null;
+  function cloudSprite(seed) {
+    const r = rngOf(seed), W = 360, H = 170;
+    const mk = (shade) => {
+      const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+      const g = cv.getContext('2d');
+      const rr = rngOf(seed);
+      for (let i = 0; i < 26; i++) {
+        const u = rr(), x = 60 + u * (W - 120), y = 92 + (rr() - 0.5) * 40 - Math.sin(u * Math.PI) * 26, rad = (30 + rr() * 34) * (0.6 + Math.sin(u * Math.PI) * 0.6);
+        const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+        if (shade) { gr.addColorStop(0, 'rgba(15,25,35,.35)'); gr.addColorStop(1, 'rgba(15,25,35,0)'); }
+        else { gr.addColorStop(0, 'rgba(255,255,255,.7)'); gr.addColorStop(0.5, 'rgba(246,248,251,.45)'); gr.addColorStop(1, 'rgba(230,236,243,0)'); }
+        g.fillStyle = gr;
+        g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+      }
+      return cv;
+    };
+    r();
+    return { cloud: mk(false), shadow: mk(true), w: W, h: H };
+  }
+  function islClouds(now, dt) {
+    if (!cloudSprites) cloudSprites = [11, 23, 37, 51].map(cloudSprite);
+    const b = isl.wc.bbox;
+    if (!isl.clouds) { isl.clouds = []; isl.nextCloud = now + 4000 + Math.random() * 8000; }
+    if (now > isl.nextCloud && isl.clouds.length < 4 && !still()) {
+      const k = 3 + Math.random() * 2.5, sp = cloudSprites[Math.floor(Math.random() * cloudSprites.length)];
+      const n = Math.random() < 0.35 ? 2 + Math.floor(Math.random() * 2) : 1;
+      const y0 = b.y + Math.random() * b.h;
+      for (let i = 0; i < n; i++) {
+        isl.clouds.push({ sp, k: k * (0.6 + Math.random() * 0.5), x: b.x - sp.w * k * (1 + i * 0.9) - 400, y: y0 + (Math.random() - 0.5) * 500,
+                          v: 26 + Math.random() * 14 });
+      }
+      isl.nextCloud = now + 18000 + Math.random() * 40000;
+    }
+    for (const c of isl.clouds) c.x += c.v * dt;
+    isl.clouds = isl.clouds.filter(c => c.x < b.x + b.w + 600);
+  }
+  function drawClouds(g, part) {
+    if (!isl.clouds || !isl.clouds.length) return;
+    // nah dran: durchsichtig, damit man die Wesen sieht
+    const near = sst(0.2, 0.7, isl.S * isl.cam.s / 160);
+    for (const c of isl.clouds) {
+      const w = c.sp.w * c.k, h = c.sp.h * c.k;
+      if (part === 'shadow') {
+        g.globalAlpha = 0.45;
+        g.drawImage(c.sp.shadow, c.x + w * 0.12, c.y + h * 0.9, w, h * 0.85);
+      } else {
+        g.globalAlpha = 0.9 * (1 - near * 0.8);
+        g.drawImage(c.sp.cloud, c.x, c.y, w, h);
+      }
+    }
+    g.globalAlpha = 1;
+  }
+  /* Schein hinter großen Wesen: einmal je Farbe gemalt. */
+  const glowCvs = {};
+  function glowSprite(col) {
+    if (glowCvs[col]) return glowCvs[col];
+    const cv = document.createElement('canvas'); cv.width = cv.height = 128;
+    const g = cv.getContext('2d'), gr = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    gr.addColorStop(0, 'rgba(255,248,210,.95)');
+    gr.addColorStop(0.3, col + 'aa');
+    gr.addColorStop(1, col + '00');
+    g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
+    return (glowCvs[col] = cv);
+  }
+  /* Leuchtfarbe einer Familie: hell und satt, für Schein und Funken. */
+  const famGlow = f => FAM_HUE[f % FAM.length] === null ? '#8ff0dc' : hsl2hex(FAM_HUE[f % FAM.length], 0.9, 0.72);
+
   /* ─── Jedes Bild ─── */
   function islFrame(now) {
     if (!isl || !root) return;
@@ -1790,7 +2000,9 @@
       if (k >= 1) isl.anim = null;
     }
     islStep(now, dt);
-    const g = cv.getContext('2d'), c = isl.cam, dpr = isl.dpr, S = isl.S;
+    islClouds(now, dt);
+    const sky = skyAt(Date.now() + (isl.clock || 0));
+    const g = cv.getContext('2d'), c = isl.cam, dpr = isl.dpr, S = isl.S, calm = still();
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.fillStyle = isl.wc.sea;
     g.fillRect(0, 0, cv.width, cv.height);
@@ -1800,6 +2012,8 @@
     // Pflanzen und Wesen, von hinten nach vorn
     const list = isl.creatures.slice().sort((a, b) => a.y - b.y);
     const plants = isl.wc.plants;
+    const vx0 = -c.tx / c.s - S, vy0 = -c.ty / c.s - S, vx1 = (isl.W - c.tx) / c.s + S, vy1 = (isl.H - c.ty) / c.s + S * 2;
+    const lights = [];               // was nachts leuchtet: { x, y, r, col, a, w? }
     let pi = 0;
     const plantsUpTo = y => {
       g.globalAlpha = 1;
@@ -1811,37 +2025,49 @@
         if (p.flip) g.scale(-1, 1);
         g.drawImage(sp.canvas, -w / 2, -h, w, h);
         g.restore();
+        if (sky.night > 0.05 && (p.type === 'laterne' || p.type === 'kristall'))
+          lights.push({ x: p.x, y: p.y - p.lift - h * (p.type === 'laterne' ? 0.62 : 0.4), r: w * 0.7,
+                        col: p.type === 'laterne' ? '#ffcf6a' : '#9fe8ff', a: 0.75 });
       }
     };
-    const vx0 = -c.tx / c.s - S, vy0 = -c.ty / c.s - S, vx1 = (isl.W - c.tx) / c.s + S, vy1 = (isl.H - c.ty) / c.s + S * 2;
     for (const w of list) {
       plantsUpTo(w.y);
       if (w.x < vx0 || w.x > vx1 || w.y < vy0 || w.y > vy1) continue;
       const e = stageOfId(w.id);
       const dim = isl.fam >= 0 && w.fam !== isl.fam;
       g.globalAlpha = dim ? 0.28 : 1;
-      const bob = w.walking ? Math.abs(Math.sin(w.phase)) * S * 0.07 : 0;
-      // Schatten
-      g.fillStyle = 'rgba(20,30,10,.28)';
-      g.beginPath(); g.ellipse(w.x, w.y, S * (e ? 0.22 : 0.18), S * 0.06, 0, 0, Math.PI * 2); g.fill();
-      if (e === 5 && !dim) {
-        const pulse = 0.55 + 0.25 * Math.sin(now / 420 + w.phase);
-        const gr = g.createRadialGradient(w.x, w.y - S * 0.45, S * 0.08, w.x, w.y - S * 0.45, S * 0.7);
-        gr.addColorStop(0, 'rgba(255,236,140,' + pulse + ')');
-        gr.addColorStop(1, 'rgba(255,220,90,0)');
-        g.fillStyle = gr;
-        g.beginPath(); g.arc(w.x, w.y - S * 0.45, S * 0.7, 0, Math.PI * 2); g.fill();
+      const wet = w.wet;                       // schwimmt gerade (im Wasser)
+      const bob = wet ? Math.sin(now / 520 + w.phase) * S * 0.025 : w.walking ? Math.abs(Math.sin(w.phase)) * S * 0.07 : 0;
+      // Schatten bzw. Wellenring
+      if (wet) {
+        g.strokeStyle = 'rgba(235,250,250,.55)'; g.lineWidth = S * 0.025;
+        const rp = 0.3 + 0.04 * Math.sin(now / 400 + w.phase);
+        g.beginPath(); g.ellipse(w.x, w.y - S * 0.18, S * rp, S * rp * 0.28, 0, 0, Math.PI * 2); g.stroke();
+      } else {
+        g.fillStyle = 'rgba(20,30,10,.28)';
+        g.beginPath(); g.ellipse(w.x, w.y, S * (e ? 0.22 : 0.18), S * 0.06, 0, 0, Math.PI * 2); g.fill();
+      }
+      if (e >= 4 && !dim) {
+        const pulse = e === 5 ? 0.6 + 0.25 * Math.sin(now / 420 + w.phase) : 0.32;
+        const R = S * (e === 5 ? 0.75 : 0.55), cy = w.y - S * 0.45;
+        g.globalAlpha = pulse * (1 - sky.night * 0.4);
+        g.drawImage(glowSprite(famGlow(w.fam)), w.x - R, cy - R, R * 2, R * 2);
+        g.globalAlpha = 1;
+        lights.push({ x: w.x, y: cy, r: R * 1.15, col: famGlow(w.fam), a: pulse, w, e });
       }
       if (w.id === isl.selId) {
         g.strokeStyle = '#fff'; g.lineWidth = Math.max(2 / c.s, S * 0.03);
         g.beginPath(); g.ellipse(w.x, w.y, S * 0.34, S * 0.11, 0, 0, Math.PI * 2); g.stroke();
       }
-      const im = spriteImg(w.fam, e);
-      if (im.complete && im.naturalWidth) {
+      const im = spriteLod(w.fam, w.id, e, S * c.s * dpr) || svgImg(w.fam, e);
+      if (im.width || im.naturalWidth) {
         g.save();
         g.translate(w.x, w.y - bob);
         if (e === 0) g.rotate(Math.sin(now / 260 + w.phase) * (Math.sin(now / 1700 + w.phase) > 0.6 ? 0.12 : 0.02));
         if (w.dir < 0) g.scale(-1, 1);
+        if (wet) {                             // nur der Teil über Wasser
+          g.beginPath(); g.rect(-S, -S * 1.2, S * 2, S * 1.2 - S * 0.18); g.clip();
+        }
         g.drawImage(im, -S / 2, -S * 0.96, S, S);
         g.restore();
       }
@@ -1860,6 +2086,42 @@
     }
     g.globalAlpha = 1;
     plantsUpTo(Infinity);
+    drawClouds(g, 'shadow');
+    drawClouds(g, 'cloud');
+    // Nacht (und Abend-/Morgenrot) über alles
+    if (sky.night > 0.01 || sky.warm > 0.01) {
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalCompositeOperation = 'multiply';
+      const n = sky.night, wm = sky.warm * 0.55;
+      const ch = (day, warm, night) => Math.round(day + (warm - day) * wm + (night - day) * n);
+      g.fillStyle = 'rgb(' + ch(255, 255, 88) + ',' + ch(255, 196, 104) + ',' + ch(255, 150, 168) + ')';
+      g.fillRect(0, 0, cv.width, cv.height);
+      g.globalCompositeOperation = 'source-over';
+      g.setTransform(dpr * c.s, 0, 0, dpr * c.s, dpr * c.tx, dpr * c.ty);
+    }
+    // Was leuchtet: nachts kräftig, am Tag nur die Funken
+    g.globalCompositeOperation = 'lighter';
+    for (const L of lights) {
+      if (L.w && isl.fam >= 0 && L.w.fam !== isl.fam) continue;
+      if (sky.night > 0.02) {
+        g.globalAlpha = Math.min(1, L.a * sky.night * (L.w ? 0.9 : 0.7));
+        g.drawImage(glowSprite(L.col), L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
+      }
+      if (L.w && !calm) {                      // Funken steigen auf
+        const n = L.e === 5 ? 10 : 5, life = L.e === 5 ? 2.6 : 3.4, w = L.w;
+        g.fillStyle = L.col;
+        for (let i = 0; i < n; i++) {
+          const t = ((now / 1000) / life + i / n + w.phase) % 1;
+          const ang = i * 2.399 + w.phase;
+          const px = w.x + Math.sin(ang) * S * 0.32 + Math.sin(t * 7 + i) * S * 0.05;
+          const py = w.y - S * 0.12 - t * S * (L.e === 5 ? 1.05 : 0.8);
+          g.globalAlpha = Math.sin(t * Math.PI) * (0.55 + sky.night * 0.45);
+          g.beginPath(); g.arc(px, py, S * (0.014 + (i % 3) * 0.007) * (1 + sky.night * 0.4), 0, Math.PI * 2); g.fill();
+        }
+      }
+    }
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
     // Namen, wenn man nah genug dran ist
     if (S * c.s > 70) {
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1880,28 +2142,42 @@
     islPlacePop();
   }
 
-  /* Bewegung: laufen zu einem Ziel nahe der Heimat, dort eine Weile stehen. */
+  /* Bewegung: laufen zu einem Ziel nahe der Heimat, dort eine Weile stehen.
+     Schwimmer (canSwim) dürfen auch ins Wasser und weiter weg; im Wasser
+     (depth < -0,02) schwimmen sie langsamer und stecken halb darin. */
   function islStep(now, dt) {
     const wc = isl.wc;
+    const okFor = sw => sw ? (x, y) => { if (wc.walk(x, y)) return true; const d = wc.depth(x, y); return d !== null && d < 0.09; } : wc.walk;
     for (const w of isl.creatures) {
       const e = stageOfId(w.id);
+      const sw = canSwim(w.id, e);
+      const d0 = wc.depth(w.x, w.y);
+      w.wet = d0 !== null && d0 < -0.02 && !wc.walk(w.x, w.y);
       if (e === 0 || still()) { w.walking = false; continue; }
+      // Wer nicht (mehr) schwimmen kann und noch im Wasser ist, schwimmt nach Hause.
+      if (!sw && !w.walking && !wc.walk(w.x, w.y)) { w.tx = w.home.x; w.ty = w.home.y; w.walking = true; }
       if (!w.walking) {
         if (now < w.until) continue;
-        for (let k = 0; k < 8; k++) {
+        const ok = okFor(sw), roam = sw ? w.roam * 2.2 : w.roam;
+        for (let k = 0; k < (sw ? 14 : 8); k++) {
+          // Schwimmer: Ziele rund um sich selbst, an der Leine der Heimat
+          const cx = sw && w.rnd() < 0.6 ? w.x : w.home.x, cy = cx === w.x ? w.y : w.home.y;
           const a = w.rnd() * Math.PI * 2, d = Math.sqrt(w.rnd()) * w.roam;
-          const tx = w.home.x + Math.cos(a) * d, ty = w.home.y + Math.sin(a) * d;
+          const tx = cx + Math.cos(a) * d, ty = cy + Math.sin(a) * d;
           const step = Math.hypot(tx - w.x, ty - w.y);
           if (step > w.roam * 0.7 || step < 20) continue;
-          if (wc.walk(tx, ty) && wc.walk((tx + w.x) / 2, (ty + w.y) / 2)) { w.tx = tx; w.ty = ty; w.walking = true; break; }
+          if (Math.hypot(tx - w.home.x, ty - w.home.y) > roam) continue;
+          let fine = ok(tx, ty);
+          for (let q = 1; fine && q < 4; q++) fine = ok(w.x + (tx - w.x) * q / 4, w.y + (ty - w.y) * q / 4);
+          if (fine) { w.tx = tx; w.ty = ty; w.walking = true; break; }
         }
         if (!w.walking) { w.until = now + 1500; continue; }
       }
-      const sp = [0, 30, 34, 38, 42, 42][e] * (isl.size / 100);
+      const sp = [0, 30, 34, 38, 42, 42][e] * (isl.size / 100) * (w.wet ? 0.8 : 1);
       const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy);
       if (d < sp * dt + 1) {
         w.x = w.tx; w.y = w.ty; w.walking = false;
-        w.until = now + 1200 + w.rnd() * 4000;
+        w.until = now + (w.wet ? 400 : 1200) + w.rnd() * 4000;
         continue;
       }
       w.x += dx / d * sp * dt; w.y += dy / d * sp * dt;
@@ -1940,7 +2216,7 @@
           const tot = cs.reduce((a, b) => a + b, 0) || 1;
           const pts = cs.reduce((a, b, e) => a + b * e, 0);
           return '<li><button type="button" class="dd-isl__fam' + (isl && isl.fam === f ? ' is-on' : '') + '" data-act="isl-fam" data-f="' + f + '" aria-pressed="' + (isl && isl.fam === f) + '" style="--f:' + FAM[f % FAM.length] + '">' +
-            '<img src="' + spriteURL(f, Math.min(4, Math.round(pts / tot))) + '" alt="">' +
+            '<img src="' + famPic(f, s) + '" alt="">' +
             '<span class="dd-isl__famt"><b>' + E(s.title) + '</b><span class="dd-isl__fambar">' +
               cs.map((x, e) => x ? '<i class="dd-st' + e + '" style="width:' + (x / tot * 100) + '%"></i>' : '').join('') + '</span>' +
             '<small>' + cs[5] + ' von ' + s.cards.length + ' leuchten</small></span></button></li>';
@@ -1966,8 +2242,17 @@
   }
   /* Die Stufen-Legende zeigt die Wesen ohne Familienfarbe. */
   const neutralUrls = {};
+  const NEUTRAL = ['ei1', 'baby', 'k_a', 'm_a_a', 'g_a_a_a', 'f_a_a_a'];
   function neutralURL(e) {
-    return neutralUrls[e] || (neutralUrls[e] = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(wesenSVG('#9a948c', e)));
+    if (neutralUrls[e]) return neutralUrls[e];
+    if (wesenOk) return (neutralUrls[e] = recolor(wesenBase[NEUTRAL[e]], 'grau').toDataURL('image/png'));
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(wesenSVG('#9a948c', e));
+  }
+  /* Bild einer Familie in der Seitenleiste: ihr am weitesten gewachsenes Wesen. */
+  function famPic(f, s) {
+    let best = null, be = -1;
+    for (const k of opened.cards) if (k.sid === s.id) { const e = stageOfId(k.id); if (e > be) { be = e; best = k; } }
+    return spriteURL(f, Math.max(0, be), best ? best.id : null);
   }
   /* Neuer Stand von außen (anderes Gerät) oder nach einer Antwort. */
   function islRefresh() { if (isl) { paintSide(); if (isl.selId) islSelect(isl.selId); } }
@@ -2006,7 +2291,7 @@
     const I = window.DDInsel, R = isl.round;
     const e = t.stage, next = Math.min(I.MAX, e + 1);
     return '<div class="dd-task__head">' +
-        '<span class="dd-task__pic" id="ddTaskPic" style="--f:' + FAM[t.fam % FAM.length] + '"><img src="' + spriteURL(t.fam, e) + '" alt="' + I.STAGES[e] + '"></span>' +
+        '<span class="dd-task__pic" id="ddTaskPic" style="--f:' + FAM[t.fam % FAM.length] + '"><img src="' + spriteURL(t.fam, e, t.card.id) + '" alt="' + I.STAGES[e] + '"></span>' +
         '<span class="dd-task__who"><small>' + E(stackTitle(t.card.sid)) + '</small>' +
           '<b id="ddTaskStage">' + (e >= I.MAX ? 'Leuchtend · Wiederholen' : I.STAGES[e] + ' → ' + I.STAGES[next]) + '</b>' + stageDots(e) + '</span>' +
         (R.single ? '' : '<span class="dd-task__n" aria-label="Aufgabe ' + (R.i + 1) + ' von ' + R.cards.length + '">' +
@@ -2158,7 +2443,7 @@
       const pic = root.querySelector('#ddTaskPic');
       if (pic) {
         pic.classList.remove('is-grow'); void pic.offsetWidth;
-        pic.querySelector('img').src = spriteURL(t.fam, r.e);
+        pic.querySelector('img').src = spriteURL(t.fam, r.e, id);
         pic.classList.add('is-grow');
       }
       const st = root.querySelector('#ddTaskStage');
@@ -2166,7 +2451,7 @@
     } else if (r.down) {
       say = '„' + E(t.card.t) + '“ ist wieder ' + (r.e === 0 ? 'ein Ei' : I.STAGES[r.e]) + '. Beim nächsten Mal klappt’s!';
       const pic = root.querySelector('#ddTaskPic');
-      if (pic) { pic.querySelector('img').src = spriteURL(t.fam, r.e); pic.classList.add('is-shrink'); }
+      if (pic) { pic.querySelector('img').src = spriteURL(t.fam, r.e, id); pic.classList.add('is-shrink'); }
       const st = root.querySelector('#ddTaskStage');
       if (st) { st.textContent = 'Jetzt: ' + I.STAGES[r.e]; st.nextElementSibling.outerHTML = stageDots(r.e); }
     } else if (ok) {
@@ -2205,7 +2490,7 @@
         (R.grown.length
           ? '<p>' + (R.grown.length === 1 ? 'Ein Wesen ist gewachsen:' : R.grown.length + ' Wesen sind gewachsen:') + '</p>' +
             '<ul class="dd-grown">' + R.grown.map(g => { const c = opened.cards.find(x => x.id === g.id);
-              return '<li><img src="' + spriteURL(g.fam, g.e) + '" alt=""><b>' + E(c ? c.t : '') + '</b><small>' + I.STAGES[g.e] + '</small></li>'; }).join('') + '</ul>'
+              return '<li><img src="' + spriteURL(g.fam, g.e, g.id) + '" alt=""><b>' + E(c ? c.t : '') + '</b><small>' + I.STAGES[g.e] + '</small></li>'; }).join('') + '</ul>'
           : '<p>Diesmal ist niemand gewachsen – in der nächsten Runde bestimmt.</p>') +
         '<div class="dd-memwin__act"><button type="button" class="btn btn--primary" data-act="isl-round">' + ico.again + 'Noch eine Runde</button>' +
         '<button type="button" class="btn" data-act="isl-close">' + ico.back + 'Zur Insel</button></div>' +
