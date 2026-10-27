@@ -24,12 +24,22 @@ Eigenes Kleid statt MPSkills-Optik, „Pappe und Papier zum Anfassen“, nur in 
 3. **Übersicht/Glossar**: Suche über Begriff + Definition, Filter nach Lernstand, Sortierung „Nach Lernstand“ (Unsicher → Teilweise → Neu → Sicher, mit Gruppenköpfen), A–Z oder Stapelreihenfolge, Liste oder Kacheln, „Definitionen verdecken“ zum Selbsttest, Lernstand direkt per Antippen ändern.
 4. **Editor** (nur Lehrkraft): „Karte für Karte“ (Begriff, Definition, Bild, nach oben/unten, Strg+Enter = nächste Karte) und „Text einfügen“ mit Live-Vorschau („So habe ich es verstanden“, gelb bei fehlender Definition/doppeltem Begriff). `parse.js` erkennt Kopfzeilen (Titel/Fach/Thema/Klasse), eine Karte pro Zeile (`: – - = → ;` oder Tab), Blöcke mit Leerzeile, abwechselnde Zeilen, Umbrüche in Definitionen. Der Wechsel zwischen den Modi ist verlustfrei (`toText`/`applyText`; Bilder und Karten-ids bleiben bei gleichem Begriff).
 
+## Etappe 2: Startseite mit Spielen + Memory (Entscheidung Sönke 27.10.2026)
+
+- **Startseite** (`renderHome`): links die Stapel, rechts kleine Spiel-Kacheln, gegliedert in **Allein** (Karteikarten, Übersicht) · **Gemeinsam an einem Gerät** (Memory) · **Zusammen im Netz** (noch leer, Lehrkraft sieht „Kommt bald“). Stapel antippen = auswählen, auch mehrere (`sel`, bei genau einem Stapel automatisch gewählt, gerade gespeicherter Stapel wird gewählt). Über den Kacheln steht, was gewählt ist.
+- **Lehrkraft**: Kachel antippen = Beschreibung als Fenster (`renderInfo`, `.dd-layer`): Text, „So geht’s“, **Bildschirmfoto** (`img/spiel-*.jpg`, mit Playwright aus der echten Ansicht aufgenommen, 1040×650, JPEG 82), „Starten mit …“ (gewählte Stapel) und Teilen. Teilen geht auch direkt auf der Kachel. In `derby.html` (standalone) kein Teilen.
+- **Tablet**: sieht nur geteilte Spiele und geteilte Stapel; Kachel antippen startet mit den gewählten Stapeln, „i“ öffnet die Beschreibung (ohne Teilen).
+- **Geteilte Spiele**: `skill_room_state.data.games = ['cards','overview','memory']` neben `shared` (keine Migration). Fehlt `games` (Räume von vor Etappe 2), gelten Karteikarten + Übersicht als geteilt (`DEFAULT_GAMES`), damit bestehende Räume weiterlernen.
+- **Im Spiel** (`screen = 'play'`, `opened = {stacks, cards, game}`): oben „Im Spiel:“ mit den Stapeln. Karten mehrerer Stapel heißen `<stapel>:<karte>`; `prog` hält alle, gespeichert/synchronisiert wird weiter **je Stapel** (`buildProg`/`stackProg`, `dirty`-Menge für `dd_prog_put`). Karteikarte und Übersicht zeigen bei mehreren Stapeln die Herkunft.
+- **Memory** nach Sönkes „Evolutionsfaktoren“-Memory (Aufbau gleich, Optik Kork & Karton): links Begriffe, rechts Definitionen, Pappe-Rücken mit „?“-Stempel (Begriffe blau `--dd-tk`, Definitionen ocker `--dd-dk`). Je Zug eine Karte je Seite; beide fliegen groß in die Mitte (`startReview`), „Ja, Paar!“/„Nein“; richtig = Punkt, Karten fliegen zum Punktestand, gleiche Person nochmal; sonst zurück, umdrehen, Wechsel. Allein (Paare + Züge) oder zu zweit; 6/8/12/18/24 Paare bzw. alle (höchstens 24). Gleicher Begriff aus zwei Stapeln zählt nur einmal und gilt als Paar. Text steht erst nach dem Aufdecken im DOM, `fitText` passt ihn ein; Spalten je nach Platz (`memCols`), Vollbild-Knopf (nur `#ddMem`). **Memory schreibt keinen Lernstand** (zwei Personen, ein Konto).
+- Neues Spiel: Eintrag in `GAMES` (Gruppe, Texte, `min` Karten, `shot`), Mini-Bild in `MINI` (nur CSS, `.dd-mini--…`), Bildschirmfoto in `img/`, Zweig in `renderPane()`.
+
 ## Plan / Entscheidungen von Sönke (26.10.2026)
 
 Gewünscht, in dieser Reihenfolge der Begeisterung:
 
 - **Karteikarten gamifiziert**, ähnlich der Insel in Wordisland (Fortschritt sichtbar als Landschaft).
-- **Memory**: Einzelspieler und Mehrspieler an EINEM Gerät.
+- ~~**Memory**: Einzelspieler und Mehrspieler an EINEM Gerät.~~ — erledigt (Etappe 2).
 - **Übersichten**: Glossar mit Suche, Filter (Etappe 1 erledigt).
 - **Activity / Erklär-Bär**: Mehrspieler an einem Gerät (Begriff erklären ohne verbotene Wörter, die aus der Definition kommen).
 - **Rennen oder Team einnehmen** wie Kingdoms of Mathoria (Raum-Spiel, Beamer).
@@ -52,4 +62,4 @@ Gewünscht, in dieser Reihenfolge der Begeisterung:
 
 ## Verifizieren
 
-Kein Build. Im Browser (Playwright mit dem vorinstallierten Chromium) prüfen: Lehrkraft legt per Text und per Karte einen Stapel an, speichert, teilt; Tablet sieht ihn und lernt; Umdrehen per Tippen/Leertaste, Bewerten per Knopf/1-2-3; Übersicht Suche/Filter/Sortierung/Verdecken; 390 px und 1000 px, hell und dunkel, kein horizontaler Scroll. Beim Ausliefern `V` in `tool.js` und den Stempel in `lib/tool.js` (siehe dortige Warnung) drehen.
+Kein Build. Im Browser (Playwright mit dem vorinstallierten Chromium) prüfen: Lehrkraft legt per Text und per Karte einen Stapel an, speichert, teilt; Tablet sieht ihn und lernt; Umdrehen per Tippen/Leertaste, Bewerten per Knopf/1-2-3; Übersicht Suche/Filter/Sortierung/Verdecken; mehrere Stapel wählen + Spiel starten; Memory ganz durchspielen (allein und zu zweit, Ja/Nein richtig und falsch); 390 px und 1000 px, hell und dunkel, kein horizontaler Scroll. Beim Ausliefern `V` in `tool.js` und den Stempel in `lib/tool.js` (siehe dortige Warnung) drehen.

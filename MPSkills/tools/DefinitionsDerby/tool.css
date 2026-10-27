@@ -17,7 +17,7 @@
    Wortwolke; nur Wand, Licht und Schrift auf der Wand wechseln.
    Lernstand-Farben: neu --dd-s0 · unsicher --dd-s1 ·
    teilweise --dd-s2 · sicher --dd-s3 (Flächen); Stempel-Tinte
-   --dd-k1/2/3.
+   --dd-k1/2/3. Memory: Spieler --dd-p1/p2, Seiten --dd-tk/dk.
    ══════════════════════════════════════════════════════════════ */
 
 .dd {
@@ -53,6 +53,11 @@
   --dd-s1: #d36a55;
   --dd-s2: #e0ae3a;
   --dd-s3: #5f9a6e;
+  /* Memory: zwei Spieler, zwei Kartenseiten (Tinte) */
+  --dd-p1: #2d5f8a;
+  --dd-p2: #b0502a;
+  --dd-tk: #2d5f8a;            /* Begriffe */
+  --dd-dk: #94650f;            /* Definitionen */
   /* Hauptknopf */
   --dd-prim: #2f6b47;
   --dd-prim-edge: #24543a;
@@ -172,6 +177,23 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
   background: repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 6px, transparent 6px 12px), var(--tape);
 }
 .dd-stack:nth-child(2n)::after { transform: translateX(-30%) rotate(4deg); }
+/* Auswahl: angetippter Stapel hebt sich, grüner Doppelrand wie der Sicher-Stempel */
+.dd-stack[data-act="sel"] { cursor: pointer; transition: transform .15s, box-shadow .15s; -webkit-tap-highlight-color: transparent; }
+.dd-stack[data-act="sel"]:hover { transform: translateY(-2px); }
+.dd-stack:focus-visible { outline: 3px solid var(--dd-hl); outline-offset: 4px; }
+.dd-stack.is-sel {
+  transform: translate(-3px, -4px) rotate(-.6deg);
+  outline: 4px double var(--dd-k3); outline-offset: 3px;
+  box-shadow: 6px 6px 0 var(--dd-pappe2), 11px 11px 0 var(--dd-pappe3), 0 18px 24px var(--dd-shadow);
+}
+.dd-pick {
+  display: inline-flex; align-items: center; gap: 5px; margin-right: auto; padding: 4px 10px 4px 6px; min-height: 32px;
+  font-family: var(--mono); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--dd-pappe-soft); border: 2px dashed var(--dd-pappe3); border-radius: 4px;
+}
+.dd .dd-pick svg { width: 15px; height: 15px; opacity: .25; }
+.dd-stack.is-sel .dd-pick { color: #fff; background: var(--dd-k3); border: 2px solid var(--dd-k3); }
+.dd-stack.is-sel .dd-pick svg { opacity: 1; stroke-width: 3; }
 .dd-stack__head { display: flex; gap: 10px; justify-content: space-between; align-items: flex-start; }
 .dd-stack__head h3 { margin: 0; font-size: 1.08rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
 .dd-stack__n {
@@ -391,3 +413,254 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 /* Hinweis zum Lernstand (Konto oder nur dieses Gerät) */
 .dd-acct { margin: 18px 0 0; text-align: center; font-size: .82rem; color: var(--dd-on-soft); }
 .dd-acct--on { color: var(--dd-on); }
+
+
+/* ══════════════════════════════════════════════════════════════
+   STARTSEITE: Stapel links, Spiele rechts
+   ══════════════════════════════════════════════════════════════ */
+.dd-hub { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 30px 40px; align-items: start; }
+.dd-hub__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.dd-hub .dd-sub { margin: 12px 0 22px; }
+.dd-hub .dd-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 30px 26px; }
+.dd-h--b { transform: rotate(1deg); }
+
+/* Spiele-Spalte: ein Blatt Papier, angeheftet */
+.dd-hub__games {
+  position: relative; background: rgba(255,255,255,.18); border-radius: 4px; padding: 20px 18px 22px;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,.25);
+}
+:root[data-theme="dark"] .dd-hub__games { background: rgba(0,0,0,.18); box-shadow: inset 0 0 0 2px rgba(255,255,255,.06); }
+.dd-selnote {
+  display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 6px; padding: 9px 12px;
+  background: var(--dd-paper); color: var(--dd-ink); font-size: .9rem; line-height: 1.35; box-shadow: 0 3px 8px var(--dd-shadow); transform: rotate(-.4deg);
+}
+.dd-selnote svg { color: var(--dd-k3); stroke-width: 3; margin-top: 1px; }
+.dd-selnote.is-empty { color: var(--dd-ink-soft); background: #fff8d6; }
+.dd-ghead { margin: 22px 0 10px; font-family: var(--mono); font-size: .76rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--dd-on); }
+.dd-games { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr)); gap: 14px; }
+.dd-soon { margin: 0; padding: 12px 14px; border: 2px dashed rgba(255,255,255,.55); border-radius: 4px; color: var(--dd-on); font-size: .86rem; }
+:root[data-theme="dark"] .dd-soon { border-color: rgba(255,255,255,.18); }
+
+.dd-game {
+  position: relative; display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 10px; cursor: pointer;
+  background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; box-shadow: 0 5px 12px var(--dd-shadow);
+  transition: transform .15s, box-shadow .15s; -webkit-tap-highlight-color: transparent;
+}
+.dd-game:nth-child(2n) { transform: rotate(.6deg); }
+.dd-game:nth-child(2n+1) { transform: rotate(-.5deg); }
+.dd-game:hover { transform: translateY(-3px) rotate(0); box-shadow: 0 10px 18px var(--dd-shadow); }
+.dd-game:active { transform: translateY(0) scale(.98); }
+.dd-game:focus-visible { outline: 3px solid var(--dd-hl); outline-offset: 4px; }
+.dd-game__pic { display: block; height: 78px; border-radius: 2px; background: var(--dd-pappe); overflow: hidden; position: relative; }
+.dd-game__t b { display: block; font-size: 1rem; font-weight: 800; line-height: 1.2; }
+.dd-game__t small { display: block; margin-top: 3px; font-size: .78rem; line-height: 1.35; color: var(--dd-ink-soft); }
+.dd-game__act { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin-top: auto; min-height: 34px; }
+.dd-game__act .dd-badge { margin-right: auto; }
+.dd-game__act .btn { min-height: 34px; padding: 4px 8px; min-width: 36px; }
+
+/* ─── Mini-Bilder auf den Kacheln ─── */
+.dd-mini { position: absolute; inset: 0; display: block; }
+.dd-mini i, .dd-mini b, .dd-mini u, .dd-mini em { display: block; position: absolute; }
+/* Karteikarten: Karte mit Textmarker + drei Stempel */
+.dd-mini__card { left: 16%; top: 12px; width: 50%; height: 44px; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.25); transform: rotate(-3deg); }
+.dd-mini__card b { left: 18%; right: 22%; top: 14px; height: 7px; background: var(--dd-hl); }
+.dd-mini__card u { left: 18%; right: 40%; top: 26px; height: 3px; background: #c9c2b6; }
+.dd-mini__card::before { content: ''; position: absolute; top: -6px; left: 8px; width: 6px; height: 16px; border: 2px solid var(--dd-clip); border-radius: 4px; }
+.dd-mini__st { width: 20px; height: 12px; right: 9%; border: 2px double; border-radius: 2px; background: var(--dd-stamp-bg); }
+.dd-mini__st--1 { top: 10px; color: var(--dd-k1); border-color: var(--dd-k1); transform: rotate(-6deg); }
+.dd-mini__st--2 { top: 30px; color: var(--dd-k2); border-color: var(--dd-k2); transform: rotate(4deg); }
+.dd-mini__st--3 { top: 50px; color: var(--dd-k3); border-color: var(--dd-k3); transform: rotate(-3deg); }
+/* Übersicht: Liste mit Lernstand-Punkten */
+.dd-mini--ov { padding: 9px 12%; display: flex; flex-direction: column; gap: 5px; }
+.dd-mini--ov i { position: relative; height: 11px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+.dd-mini--ov em { left: 4px; top: 2px; width: 14px; height: 7px; border-radius: 2px; }
+.dd-mini--ov b { left: 24px; top: 3px; width: 24%; height: 5px; background: var(--dd-ink); opacity: .75; }
+.dd-mini--ov u { left: calc(24px + 28%); right: 8px; top: 4px; height: 3px; background: #c9c2b6; }
+/* Memory: zwei Bretter mit je sechs Karten, je eine aufgedeckt */
+.dd-mini--mem { display: flex; gap: 8%; padding: 9px 9%; }
+.dd-mini__side { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.dd-mini__side i { position: relative; height: 26px; border-radius: 2px; background: var(--dd-pappe2); border: 2px solid var(--dd-tk); }
+.dd-mini__side--d i { border-color: var(--dd-dk); }
+.dd-mini__side i.is-up { background: #fff; border-color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.dd-mini__side i.is-up::after { content: ''; position: absolute; left: 3px; right: 3px; top: 9px; height: 5px; background: var(--dd-hl); }
+.dd-mini__side--d i.is-up::after { background: #c9c2b6; height: 3px; top: 7px; box-shadow: 0 6px 0 #c9c2b6; }
+
+/* ─── Beschreibung eines Spiels: Blatt über der Startseite ─── */
+.dd-modal { position: fixed; inset: 0; z-index: 900; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.dd-modal__bg { position: absolute; inset: 0; background: rgba(30,20,10,.55); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: dd-fade .2s ease-out; }
+.dd-sheet {
+  position: relative; width: min(920px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); grid-template-areas: "txt shot" "act shot"; gap: 14px 30px; align-items: start;
+  background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; padding: 30px 30px 26px; box-shadow: 0 24px 50px rgba(0,0,0,.45);
+  animation: dd-sheet .25s cubic-bezier(.3,1.3,.5,1);
+  font-family: 'Outfit', system-ui, sans-serif;
+}
+.dd-sheet__txt { grid-area: txt; }
+.dd-sheet__txt .dd-chip { color: var(--dd-ink-soft); }
+.dd-sheet__h { margin: 8px 0 12px; font-size: 1.7rem; font-weight: 800; line-height: 1.15; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.dd-sheet__h .dd-badge { font-size: .62rem; }
+.dd-sheet__txt p { margin: 0 0 16px; line-height: 1.5; }
+.dd-sheet__txt h3 { margin: 0 0 6px; font-family: var(--mono); font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dd-ink-soft); }
+.dd-sheet__txt ul { margin: 0; padding: 0 0 0 18px; line-height: 1.45; font-size: .93rem; }
+.dd-sheet__txt li { margin-bottom: 4px; }
+.dd-sheet__txt li::marker { color: var(--dd-k3); }
+.dd-sheet__act { grid-area: act; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dd-sheet__act .btn { min-height: 46px; }
+.dd-sheet__act .btn.is-on { background: var(--dd-prim); border-color: var(--dd-prim-edge); color: #fff; }
+.dd-sheet__hint { flex-basis: 100%; margin: 0; font-size: .84rem; color: var(--dd-ink-soft); }
+.dd-shot { grid-area: shot; margin: 6px 0 0; background: #fff; padding: 10px 10px 34px; transform: rotate(1.5deg); box-shadow: 0 8px 20px rgba(0,0,0,.3); position: relative; }
+.dd-shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top center; background: var(--dd-pappe); }
+.dd-shot figcaption { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dd-faint); }
+.dd-shot::before { content: ''; position: absolute; top: -12px; left: 50%; width: 96px; height: 24px; transform: translateX(-50%) rotate(-2deg); background: repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 6px, transparent 6px 12px), rgba(110,170,190,.8); }
+.dd-x {
+  position: absolute; top: 8px; right: 10px; z-index: 2; width: 44px; height: 44px; border: 0; border-radius: 50%; cursor: pointer;
+  background: transparent; color: var(--dd-ink-soft); font-size: 1.8rem; line-height: 1;
+}
+.dd-x:hover { background: rgba(0,0,0,.06); color: var(--dd-ink); }
+@keyframes dd-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dd-sheet { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
+
+/* ─── Im Spiel: welche Stapel gerade drin sind ─── */
+.dd-using { align-items: center; }
+.dd-using__l { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--dd-on); margin-right: 2px; }
+.dd-stackhead .dd-chip--stack { text-transform: none; letter-spacing: 0; font-family: 'Outfit', system-ui, sans-serif; font-size: .86rem; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; border-left: 4px solid var(--dd-k3); }
+.dd-chip--stack i { font-style: normal; font-family: var(--mono); font-size: .7rem; color: var(--dd-ink-soft); }
+.dd-face__src { position: absolute; left: 20px; bottom: 16px; font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; color: var(--dd-faint); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dd-flip.is-stamped .dd-face__src { opacity: 0; }
+.dd-ov__src { display: inline-block; margin-top: 5px; font-family: var(--mono); font-size: .68rem; letter-spacing: .04em; color: var(--dd-faint); }
+
+/* ══════════════════════════════════════════════════════════════
+   MEMORY
+   ══════════════════════════════════════════════════════════════ */
+.dd-mem { display: flex; flex-direction: column; gap: 12px; }
+.dd-mem:fullscreen { background: var(--dd-bg); padding: 14px; height: 100%; }
+.dd-mem:-webkit-full-screen { background: var(--dd-bg); padding: 14px; height: 100%; width: 100%; }
+.dd-membar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; padding: 8px 10px;
+  background: var(--dd-pappe); color: var(--dd-pappe-ink); border: 1px solid var(--dd-pappe3); border-radius: 4px; box-shadow: 0 4px 10px var(--dd-shadow);
+}
+.dd-membar__set { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.dd-input--s { width: auto; min-height: 38px; padding: 6px 10px; font-size: .88rem; font-weight: 600; }
+.dd-segs--s { box-shadow: none; padding: 3px; background: var(--dd-pappe2); }
+.dd-segs--s .dd-seg { min-height: 32px; padding: 5px 11px; }
+.dd-players { display: flex; gap: 8px; }
+.dd-pl {
+  --k: var(--dd-p1);
+  display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; min-height: 38px; background: var(--dd-paper); color: var(--dd-ink);
+  border: 3px double transparent; border-radius: 4px; box-shadow: 0 2px 5px var(--dd-shadow); opacity: .6; transition: opacity .2s, transform .2s, border-color .2s;
+}
+.dd-pl--2 { --k: var(--dd-p2); }
+.dd-pl--z { --k: var(--dd-ink-soft); opacity: 1; }
+.dd-pl.is-on { opacity: 1; border-color: var(--k); transform: rotate(-1.5deg); }
+.dd-pl__n { font-size: .8rem; font-weight: 700; }
+.dd-pl b { font-family: var(--mono); font-size: 1.2rem; line-height: 1; color: var(--k); display: inline-block; }
+.dd-turn { flex: 1 1 200px; margin: 0; display: flex; align-items: center; gap: 8px; font-size: .86rem; font-weight: 600; min-width: 0; }
+.dd-turn__dot { flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--dd-p1); animation: dd-pulse 1.4s ease-in-out infinite; }
+.dd-turn__dot--2 { background: var(--dd-p2); }
+@keyframes dd-pulse { 50% { transform: scale(.6); opacity: .5; } }
+.dd-fsbtn { margin-left: auto; }
+
+.dd-memboards { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; height: clamp(360px, calc(100dvh - 300px), 820px); }
+.dd-mem:fullscreen .dd-memboards { flex: 1; height: auto; min-height: 0; }
+.dd-mem:-webkit-full-screen .dd-memboards { flex: 1; height: auto; min-height: 0; }
+.dd-memside { display: flex; flex-direction: column; min-height: 0; padding: 10px; border-radius: 4px; background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 2px rgba(255,255,255,.22); }
+:root[data-theme="dark"] .dd-memside { background: rgba(0,0,0,.2); box-shadow: inset 0 0 0 2px rgba(255,255,255,.06); }
+.dd-memside__h { margin: 0 0 9px; }
+.dd-memside__h span {
+  display: inline-block; padding: 3px 11px; font-size: .88rem; font-weight: 800; background: var(--dd-label); color: var(--dd-ink);
+  box-shadow: 0 2px 4px var(--dd-shadow); border-left: 5px solid var(--dd-tk); transform: rotate(-1deg);
+}
+.dd-memside--d .dd-memside__h span { border-left-color: var(--dd-dk); transform: rotate(.8deg); }
+.dd-memgrid { flex: 1; min-height: 0; display: grid; gap: 8px; }
+
+/* Eine Memory-Karte: Rücken aus Pappe, Vorderseite Papier */
+.dd-mc { appearance: none; border: 0; padding: 0; margin: 0; background: none; font: inherit; color: inherit; min-width: 0; min-height: 0; cursor: pointer; perspective: 900px; -webkit-tap-highlight-color: transparent; }
+.dd-mc:focus-visible { outline: 3px solid var(--dd-hl); outline-offset: 2px; border-radius: 4px; }
+.dd-mc--done { border: 2px dashed rgba(255,255,255,.4); border-radius: 4px; cursor: default; }
+:root[data-theme="dark"] .dd-mc--done { border-color: rgba(255,255,255,.1); }
+.dd-mc__in { position: relative; display: block; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform .45s ease; }
+.dd-mc.is-up .dd-mc__in { transform: rotateY(180deg); }
+.dd-mc__cover, .dd-mc__face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: 3px; }
+.dd-mc__cover {
+  --k: var(--dd-tk);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: repeating-linear-gradient(-45deg, rgba(255,255,255,.12) 0 3px, transparent 3px 9px), var(--dd-pappe);
+  border: 1px solid var(--dd-pappe3); box-shadow: 2px 2px 0 var(--dd-pappe3), 0 3px 6px var(--dd-shadow); transition: transform .12s;
+}
+.dd-mc--d .dd-mc__cover { --k: var(--dd-dk); }
+.dd-mc:not(.is-up):hover .dd-mc__cover { transform: translateY(-2px); }
+.dd-mc__q {
+  display: flex; align-items: center; justify-content: center; width: clamp(24px, 34%, 42px); aspect-ratio: 1; border-radius: 50%;
+  border: 2px solid var(--k); color: var(--k); font-family: var(--mono); font-weight: 700; font-size: clamp(.8rem, 2.2vw, 1.15rem); transform: rotate(-8deg);
+}
+.dd-mc__l { font-family: var(--mono); font-size: .58rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--k); }
+.dd-mc__face { transform: rotateY(180deg); display: flex; padding: 4px; background: var(--dd-paper); color: var(--dd-ink); box-shadow: 0 4px 10px var(--dd-shadow); border-top: 4px solid var(--dd-tk); overflow: hidden; }
+.dd-mc__face--d { border-top-color: var(--dd-dk); }
+.dd-mc__box { flex: 1; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.dd-mc__p { display: block; width: 100%; text-align: center; line-height: 1.2; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; }
+.dd-mc__face--t .dd-mc__p { font-weight: 800; }
+.dd-mc__face--d .dd-mc__p { font-weight: 500; color: #24332b; }
+
+/* Fliegende Kopien und die Frage in der Mitte */
+.dd-review { position: fixed; inset: 0; z-index: 950; }
+.dd-review[hidden] { display: none; }
+.dd-review__bg { position: absolute; inset: 0; background: rgba(30,20,10,.72); opacity: 0; transition: opacity .45s; }
+.dd-review.is-open .dd-review__bg { opacity: 1; }
+.dd-review__msg {
+  position: absolute; left: 16px; right: 16px; margin: 0; text-align: center; font-size: clamp(1.1rem, 3vw, 1.6rem); font-weight: 800; color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,.5); opacity: 0; transition: opacity .3s; pointer-events: none;
+}
+.dd-review.is-ask .dd-review__msg, .dd-review.is-said .dd-review__msg { opacity: 1; }
+.dd-review__msg.is-ok { color: #c9f2d3; }
+.dd-review__msg.is-no { color: #ffd9cc; }
+.dd-review__act { position: absolute; left: 50%; transform: translateX(-50%); z-index: 2; display: flex; gap: 16px; opacity: 0; pointer-events: none; transition: opacity .3s; }
+.dd-review.is-ask:not(.is-said) .dd-review__act { opacity: 1; pointer-events: auto; }
+.dd-review__act .dd-r { min-width: 150px; min-height: 60px; }
+.dd-review__act .dd-r b { font-size: 1.1rem; }
+.dd-fly { position: fixed; z-index: 1; }
+.dd-fly .dd-mc__face { transform: none; backface-visibility: visible; -webkit-backface-visibility: visible; box-shadow: 0 16px 36px rgba(0,0,0,.45); }
+
+/* Ende des Spiels */
+.dd-memwin { position: fixed; inset: 0; z-index: 960; display: flex; align-items: center; justify-content: center; padding: 16px; }
+.dd-memwin[hidden] { display: none; }
+.dd-memwin__bg { position: absolute; inset: 0; background: rgba(30,20,10,.6); animation: dd-fade .25s ease-out; }
+.dd-memwin__sheet {
+  position: relative; width: min(440px, 100%); padding: 34px 26px 24px; text-align: center; background: var(--dd-paper); color: var(--dd-ink);
+  border-radius: 3px; box-shadow: 0 24px 50px rgba(0,0,0,.45); transform: rotate(-1deg); animation: dd-sheet .3s cubic-bezier(.3,1.3,.5,1);
+}
+.dd-memwin__stamp {
+  position: absolute; top: 12px; right: 16px; font-family: var(--mono); font-weight: 700; font-size: .9rem; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--dd-k3); border: 4px double var(--dd-k3); padding: 2px 10px; border-radius: 4px; transform: rotate(9deg); opacity: .85;
+}
+.dd-memwin__sheet h2 { margin: 8px 0 6px; font-size: 1.6rem; font-weight: 800; }
+.dd-memwin__sheet p { margin: 0 0 18px; color: var(--dd-ink-soft); }
+.dd-memwin__sc { display: flex; justify-content: center; gap: 12px; margin-bottom: 20px; }
+.dd-memwin__sc .dd-pl { opacity: 1; border-color: var(--k); }
+.dd-memwin__act { display: flex; flex-direction: column; gap: 10px; }
+.dd-memwin__act .btn { justify-content: center; min-height: 46px; }
+
+/* ─── Startseite und Memory auf schmalen Geräten ─── */
+@media (max-width: 900px) {
+  .dd-hub { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .dd-sheet { grid-template-columns: 1fr; grid-template-areas: "txt" "shot" "act"; padding: 26px 18px 20px; }
+  .dd-shot { transform: rotate(.8deg); margin-top: 12px; }
+}
+@media (max-width: 600px) {
+  .dd-hub__games { padding: 14px 10px 16px; }
+  .dd-games { grid-template-columns: 1fr 1fr; gap: 12px; }
+  .dd-game__t small { display: none; }
+  .dd-game__pic { height: 64px; }
+  .dd-memboards { gap: 8px; height: clamp(380px, calc(100dvh - 330px), 760px); }
+  .dd-memside { padding: 6px; }
+  .dd-memgrid { gap: 5px; }
+  .dd-mc__l { display: none; }
+  .dd-membar { gap: 8px; }
+  .dd-turn { flex-basis: 100%; order: 5; }
+  .dd-review__act .dd-r { min-width: 120px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dd-mc__in { transition-duration: .01s; }
+  .dd-turn__dot, .dd-sheet, .dd-memwin__sheet, .dd-modal__bg { animation: none; }
+}
