@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028d';
+  const V = '20261028e';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1495,17 +1495,21 @@
   const WESEN_FILES = ['ei1', 'ei2', 'baby', 'k_a', 'k_b', 'm_a_a', 'm_a_b', 'm_b_a', 'm_b_b', 'm_b_c',
     'g_a_a_a', 'g_a_a_b', 'g_a_b_a', 'g_a_b_b', 'g_b_a_a', 'g_b_a_b', 'g_b_b_a', 'g_b_b_b', 'g_b_c',
     'f_a_a_a', 'f_a_a_b', 'f_a_b_a', 'f_a_b_b', 'f_b_a_a', 'f_b_a_b', 'f_b_b_a', 'f_b_b_b', 'f_b_c'];
+  /* Schlafende Fassung je Bild außer den Eiern (<name>_schlaf.webp). Fehlt
+     eine, schläft das Wesen eben mit offenen Augen weiter (wache Fassung). */
+  const SCHLAF = '_schlaf';
   /* Schwimmen können der Seedrache (a_a_b) und die Meeresschildkröte (a_b_b), ab Groß. */
   const SWIM = ['a_a_b', 'a_b_b'];
   const wesenBase = {};
   let wesenReady = null, wesenOk = false;
   function ladeWesen() {
-    return wesenReady || (wesenReady = Promise.all(WESEN_FILES.map(f => new Promise(res => {
+    const files = WESEN_FILES.concat(WESEN_FILES.filter(f => !f.startsWith('ei')).map(f => f + SCHLAF));
+    return wesenReady || (wesenReady = Promise.all(files.map(f => new Promise(res => {
       const im = new Image();
       im.onload = () => { wesenBase[f] = im; res(true); };
       im.onerror = () => res(false);
       im.src = WESEN_DIR + f + '.webp?v=' + V;
-    }))).then(r => { wesenOk = r.every(Boolean); }));
+    }))).then(() => { wesenOk = WESEN_FILES.every(f => wesenBase[f]); }));
   }
   const astCache = new Map();
   function wesenAst(id) {
@@ -1520,9 +1524,10 @@
     astCache.set(id, a);
     return a;
   }
-  function wesenFile(id, e) {
+  function wesenFile(id, e, zz) {
     const a = wesenAst(id);
-    return ['ei' + a.egg, 'baby', 'k_' + a.k, 'm_' + a.m, 'g_' + a.g, 'f_' + a.g][e];
+    const f = ['ei' + a.egg, 'baby', 'k_' + a.k, 'm_' + a.m, 'g_' + a.g, 'f_' + a.g][e];
+    return zz && wesenBase[f + SCHLAF] ? f + SCHLAF : f;
   }
   const canSwim = (id, e) => e >= 4 && wesenAst(id).swim;
 
@@ -1572,10 +1577,10 @@
     return cv;
   }
   const spriteCvs = {}, spriteUrls = {};
-  /* Leinwand eines Wesens (Familie × Ast × Stufe), null solange die Bilder fehlen. */
-  function spriteCanvas(fam, id, e) {
+  /* Leinwand eines Wesens (Familie × Ast × Stufe, zz = schlafend), null solange die Bilder fehlen. */
+  function spriteCanvas(fam, id, e, zz) {
     if (!wesenOk) return null;
-    const f = wesenFile(id, e), k = (fam % FAM.length) + ':' + f;
+    const f = wesenFile(id, e, zz), k = (fam % FAM.length) + ':' + f;
     return spriteCvs[k] || (spriteCvs[k] = recolor(wesenBase[f], FAM_HUE[fam % FAM.length]));
   }
   /* Bild-Adresse für <img> (Aufgabenblatt, Familien, Endstand). Ohne Bilder: die alte Zeichnung. */
@@ -1591,10 +1596,10 @@
   /* Kleinere Fassungen (halbiert, halbiert …): weit weg gezeichnet würde die
      große Leinwand sonst flimmern und körnig wirken. */
   const spriteMips = {};
-  function spriteLod(fam, id, e, px) {
-    const big = spriteCanvas(fam, id, e);
+  function spriteLod(fam, id, e, px, zz) {
+    const big = spriteCanvas(fam, id, e, zz);
     if (!big) return null;
-    const k = (fam % FAM.length) + ':' + wesenFile(id, e);
+    const k = (fam % FAM.length) + ':' + wesenFile(id, e, zz);
     let m = spriteMips[k];
     if (!m) {
       m = [big];
@@ -2056,6 +2061,7 @@
       const dim = isl.fam >= 0 && w.fam !== isl.fam;
       g.globalAlpha = dim ? 0.28 : 1;
       const wet = w.wet;                       // schwimmt gerade (im Wasser)
+      const zz = !!w.sleep;                    // schläft gerade (nur an Land)
       const bob = wet ? Math.sin(now / 520 + w.phase) * S * 0.025 : w.walking ? Math.abs(Math.sin(w.phase)) * S * 0.07 : 0;
       // Schatten bzw. Wellenring
       if (wet) {
@@ -2064,7 +2070,7 @@
         g.beginPath(); g.ellipse(w.x, w.y - S * 0.18, S * rp, S * rp * 0.28, 0, 0, Math.PI * 2); g.stroke();
       } else {
         g.fillStyle = 'rgba(20,30,10,.28)';
-        g.beginPath(); g.ellipse(w.x, w.y, S * (e ? 0.22 : 0.18), S * 0.06, 0, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.ellipse(w.x, w.y, S * (zz ? 0.3 : e ? 0.22 : 0.18), S * 0.06, 0, 0, Math.PI * 2); g.fill();
       }
       if (e >= 4 && !dim) {
         const pulse = e === 5 ? 0.62 + 0.18 * Math.sin(now / 1100 + w.seed) : 0.32;
@@ -2080,10 +2086,11 @@
         g.strokeStyle = '#fff'; g.lineWidth = Math.max(2 / c.s, S * 0.03);
         g.beginPath(); g.ellipse(w.x, w.y, S * 0.34, S * 0.11, 0, 0, Math.PI * 2); g.stroke();
       }
-      const im = spriteLod(w.fam, w.id, e, S * c.s * dpr) || svgImg(w.fam, e);
+      const im = spriteLod(w.fam, w.id, e, S * c.s * dpr, zz) || svgImg(w.fam, e);
       if (im.width || im.naturalWidth) {
         g.save();
         g.translate(w.x, w.y - bob);
+        if (zz && !calm) g.scale(1, 1 + 0.018 * Math.sin(now / 900 + w.seed));   // atmet
         if (e === 0) g.rotate(Math.sin(now / 260 + w.phase) * (Math.sin(now / 1700 + w.phase) > 0.6 ? 0.12 : 0.02));
         if (w.dir < 0) g.scale(-1, 1);
         if (wet) {                             // nur der Teil über Wasser
@@ -2091,6 +2098,20 @@
         }
         g.drawImage(im, -S / 2, -S * 0.96, S, S);
         g.restore();
+      }
+      if (zz && !dim && !calm && S * c.s > 26) {   // „z z z“ steigt auf und verblasst
+        const top = S * [0, 0.42, 0.5, 0.58, 0.66, 0.74][e];
+        g.textAlign = 'center';
+        g.lineJoin = 'round';
+        for (let i = 0; i < 3; i++) {
+          const t = (now / 2600 + i / 3 + w.seed) % 1, a = Math.sin(t * Math.PI) * 0.9;
+          const px = w.x + (w.dir < 0 ? -1 : 1) * S * (0.12 + t * 0.2), py = w.y - top - t * S * 0.32;
+          g.font = '700 ' + (S * (0.09 + t * 0.08)).toFixed(1) + 'px Outfit, system-ui, sans-serif';
+          g.lineWidth = S * 0.02;
+          g.strokeStyle = 'rgba(40,52,70,' + (a * 0.55).toFixed(3) + ')';
+          g.fillStyle = 'rgba(255,255,255,' + a.toFixed(3) + ')';
+          g.strokeText('z', px, py); g.fillText('z', px, py);
+        }
       }
       if (w.burst) {
         const k = (now - w.burst) / 1300;
@@ -2170,7 +2191,12 @@
 
   /* Bewegung: laufen zu einem Ziel nahe der Heimat, dort eine Weile stehen.
      Schwimmer (canSwim) dürfen auch ins Wasser und weiter weg; im Wasser
-     (depth < -0,02) schwimmen sie langsamer und stecken halb darin. */
+     (depth < -0,02) schwimmen sie langsamer und stecken halb darin.
+     Schlafen (Sönke 28.10.2026: „nicht nachts, sondern immer mal wieder“):
+     wer an Land ankommt, legt sich ab und zu 15–45 s hin (SLEEP_P), danach
+     mindestens 30 s wach. Schwimmer nur an Land und seltener, damit sie
+     auch weiter hinausschwimmen. Antippen oder ein Stufensprung weckt. */
+  const SLEEP_P = [0.09, 0.035];      // Wahrscheinlichkeit je Halt an Land: Landtier, Schwimmer
   function islStep(now, dt) {
     const wc = isl.wc;
     const okFor = sw => sw ? (x, y) => { if (wc.walk(x, y)) return true; const d = wc.depth(x, y); return d !== null && d < 0.09; } : wc.walk;
@@ -2179,7 +2205,11 @@
       const sw = canSwim(w.id, e);
       const d0 = wc.depth(w.x, w.y);
       w.wet = d0 !== null && d0 < -0.02 && !wc.walk(w.x, w.y);
-      if (e === 0 || still()) { w.walking = false; continue; }
+      if (e === 0 || still()) { w.walking = false; w.sleep = 0; continue; }
+      if (w.sleep) {
+        if (now < w.sleep && w.id !== isl.selId && !w.burst) continue;
+        w.sleep = 0; w.awake = now + 30000; w.until = now + 600 + w.rnd() * 1200;
+      }
       // Wer nicht (mehr) schwimmen kann und noch im Wasser ist, schwimmt nach Hause.
       if (!sw && !w.walking && !wc.walk(w.x, w.y)) { w.tx = w.home.x; w.ty = w.home.y; w.walking = true; }
       if (!w.walking) {
@@ -2204,6 +2234,8 @@
       if (d < sp * dt + 1) {
         w.x = w.tx; w.y = w.ty; w.walking = false;
         w.until = now + (w.wet ? 400 : 1200) + w.rnd() * 4000;
+        if (!w.wet && wc.walk(w.x, w.y) && now > (w.awake || 0) && w.rnd() < SLEEP_P[sw ? 1 : 0])
+          w.sleep = now + 15000 + w.rnd() * 30000;
         continue;
       }
       w.x += dx / d * sp * dt; w.y += dy / d * sp * dt;
