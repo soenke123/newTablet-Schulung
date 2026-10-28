@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028b';
+  const V = '20261028c';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -310,7 +310,6 @@
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4.5H15"/></svg>',
     full:  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>',
-    isle:  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.5c2 1.3 4 1.3 6 0s4-1.3 6 0 4 1.3 6 0"/><path d="M6 14.5c1.5-3 4-4.5 6-4.5s4.5 1.5 6 4.5"/><path d="M12 10V4.5M12 4.5c-1.5-1-3.5-.8-4.5.5M12 4.5c1.5-1 3.5-.8 4.5.5"/></svg>',
     unfull:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>'
   };
 
@@ -2226,6 +2225,12 @@
      (Kopf = alle Wesen nach Stufe, darunter die Stapel als Familien,
      zuklappbar, am Telefon zu Beginn zu), unten ein Kasten mit „Runde
      starten“ und — nur wer wählen darf — dem Inselwechsel hinter einem Knopf. */
+  /* Die drei Vorlagen als kleine Symbole (Reihenfolge = TEMPLATES in welt.js): Bucht · Kraterring · Landzungen. */
+  const TPL_ICO = [
+    '<path d="M17.5 7.2A7 7 0 1 0 17.5 16.8" fill="none" stroke-width="4.2"/>',
+    '<path d="M15.2 5.6A7 7 0 1 1 6.4 8.2" fill="none" stroke-width="3.4"/><circle cx="9.6" cy="4.9" r="1.4"/>',
+    '<path d="M12 3.5l1.6 4.3 4.6-1.6-2 4.2 4.3 1.9-4.4 1.6 1.4 4.6-4.1-2.3-2.4 4.3-1-4.7-4.6.9 2.8-3.8L4.2 10l4.6-.4L8.4 4.9z"/><circle cx="19.2" cy="19.2" r="1.3"/>'
+  ].map(d => '<svg class="dd-tplico" viewBox="0 0 24 24" aria-hidden="true">' + d + '</svg>');
   let islSideOpen = null;           // null = nach Breite
   let islTplOpen = false;
   function paintSide() {
@@ -2241,26 +2246,26 @@
     box.innerHTML =
       '<button type="button" class="dd-isl__grip" data-act="isl-side" aria-expanded="' + open + '">' +
         '<span class="dd-isl__n"><b>' + n + '</b> Wesen</span>' +
-        '<span class="dd-isl__lg">' + c.map((x, e) => x ? '<span title="' + names[e] + '"><i class="dd-st' + e + '"></i>' + x + '</span>' : '').join('') + '</span>' +
+        stageLegend(c, names) +
         '<span class="dd-isl__chev" aria-hidden="true">' + (open ? ico.up : ico.down) + '</span>' +
       '</button>' +
       (open ?
       '<div class="dd-isl__body">' +
-        '<ul class="dd-isl__stages">' + names.map((nm, e) =>
-          '<li' + (c[e] ? '' : ' class="is-zero"') + '><img src="' + neutralURL(e) + '" alt=""><b>' + c[e] + '</b><small>' + nm + '</small></li>').join('') + '</ul>' +
+        '<ul class="dd-isl__key" aria-label="Stufen">' + names.map((nm, e) => '<li><i class="dd-st' + e + '"></i>' + nm + '</li>').join('') + '</ul>' +
         '<h3 class="dd-isl__h">' + (opened.stacks.length === 1 ? 'Stapel' : opened.stacks.length + ' Stapel') + '</h3>' +
         '<ul class="dd-isl__fams">' + opened.stacks.map((s, f) => {
           const cs = islCounts(opened.cards.filter(k => k.sid === s.id));
-          const tot = cs.reduce((a, b) => a + b, 0) || 1;
           return '<li><button type="button" class="dd-isl__fam' + (isl && isl.fam === f ? ' is-on' : '') + '" data-act="isl-fam" data-f="' + f + '" aria-pressed="' + (isl && isl.fam === f) + '" title="Auf der Insel hervorheben" style="--f:' + FAM[f % FAM.length] + '">' +
             '<img src="' + famPic(f, s) + '" alt="">' +
-            '<span class="dd-isl__famt"><b>' + E(s.title) + '</b><span class="dd-isl__fambar">' +
-              cs.map((x, e) => x ? '<i class="dd-st' + e + '" style="width:' + (x / tot * 100) + '%"></i>' : '').join('') + '</span>' +
-            '<small>' + cs[5] + ' von ' + s.cards.length + ' leuchten</small></span></button></li>';
+            '<span class="dd-isl__famt"><b>' + E(s.title) + '</b>' + stageLegend(cs, names) + '</span></button></li>';
         }).join('') + '</ul>' +
         acctNote() +
       '</div>' : '');
     paintBar();
+  }
+  /* Stand als Punktreihe wie in Wordisland: je Stufe Punkt + Zahl, leere Stufen fehlen. */
+  function stageLegend(c, names) {
+    return '<span class="dd-isl__lg">' + c.map((x, e) => x ? '<span title="' + names[e] + '"><i class="dd-st' + e + '"></i>' + x + '</span>' : '').join('') + '</span>';
   }
   function paintBar() {
     const bar = root && root.querySelector('#ddIslBar');
@@ -2272,13 +2277,11 @@
     bar.innerHTML =
       (canPick ?
         '<div class="dd-isl__tplw">' +
-          '<button type="button" class="btn dd-isl__tplbtn' + (islTplOpen ? ' is-on' : '') + '" data-act="isl-tplmenu" aria-expanded="' + islTplOpen + '">' +
-            ico.isle + '<span>' + E(W.TEMPLATES[isl.tpl].name) + '</span></button>' +
+          '<button type="button" class="btn dd-isl__tplbtn' + (islTplOpen ? ' is-on' : '') + '" data-act="isl-tplmenu" aria-expanded="' + islTplOpen + '" title="Insel wechseln" aria-label="Insel wechseln: ' + E(W.TEMPLATES[isl.tpl].name) + '">' +
+            TPL_ICO[isl.tpl] + '</button>' +
           (islTplOpen ?
-            '<div class="dd-isl__tplmenu" role="group" aria-label="Insel wählen">' +
-              isl.wc.islands.map(J => '<p class="dd-isl__tplst"><b>' + E(J.name) + '</b> · Stufe ' + J.stage + ' von 5</p>').join('') +
-              '<div class="dd-segs dd-isl__tpls">' + W.TEMPLATES.map((T, i) =>
-                '<button type="button" class="dd-seg' + (i === isl.tpl ? ' is-on' : '') + '" data-act="isl-tpl" data-v="' + i + '" aria-pressed="' + (i === isl.tpl) + '">' + E(T.name) + '</button>').join('') + '</div>' +
+            '<div class="dd-isl__tplmenu" role="group" aria-label="Insel wählen">' + W.TEMPLATES.map((T, i) =>
+              '<button type="button" class="dd-isl__tplopt' + (i === isl.tpl ? ' is-on' : '') + '" data-act="isl-tpl" data-v="' + i + '" aria-pressed="' + (i === isl.tpl) + '" title="' + E(T.name) + '" aria-label="' + E(T.name) + '">' + TPL_ICO[i] + '</button>').join('') +
             '</div>' : '') +
         '</div>' : '') +
       '<button type="button" class="btn btn--primary dd-isl__go" data-act="isl-round"' + (isl && isl.ready ? '' : ' disabled') + '>' + ico.play +
@@ -2290,14 +2293,6 @@
     islSideOpen = !islSideOpen;
     paintSide();
     if (isl && isl.ready) { islInsets(); islFit(true); }
-  }
-  /* Die Stufen-Legende zeigt die Wesen ohne Familienfarbe. */
-  const neutralUrls = {};
-  const NEUTRAL = ['ei1', 'baby', 'k_a', 'm_a_a', 'g_a_a_a', 'f_a_a_a'];
-  function neutralURL(e) {
-    if (neutralUrls[e]) return neutralUrls[e];
-    if (wesenOk) return (neutralUrls[e] = recolor(wesenBase[NEUTRAL[e]], 'grau').toDataURL('image/png'));
-    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(wesenSVG('#9a948c', e));
   }
   /* Bild einer Familie in der Seitenleiste: ihr am weitesten gewachsenes Wesen. */
   function famPic(f, s) {

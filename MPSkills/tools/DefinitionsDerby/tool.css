@@ -735,19 +735,16 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-isl__side.is-open .dd-isl__grip { border-bottom: 1px dashed var(--dd-pappe3); }
 .dd-isl__n { font-size: .95rem; white-space: nowrap; }
 .dd-isl__n b { font-size: 1.15rem; font-weight: 800; }
-.dd-isl__lg { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px 9px; font-family: var(--mono); font-size: .76rem; color: var(--dd-ink-soft); }
+.dd-isl__lg { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 3px 10px; font-size: .84rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--dd-ink-soft); }
 .dd-isl__lg span { display: inline-flex; align-items: center; gap: 4px; }
 .dd-isl__lg i { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
 .dd-isl__chev { flex: none; width: 22px; height: 22px; color: var(--dd-ink-soft); }
 .dd-isl__chev svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .dd-isl__body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding: 12px; }
 .dd-isl__h { margin: 4px 0 8px; font-family: var(--mono); font-size: .7rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--dd-faint); }
-.dd-isl__stages { list-style: none; margin: 0 0 14px; padding: 0 0 12px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; border-bottom: 1px dashed var(--dd-pappe3); }
-.dd-isl__stages li { display: flex; flex-direction: column; align-items: center; text-align: center; line-height: 1.1; min-width: 0; }
-.dd-isl__stages li.is-zero { opacity: .4; }
-.dd-isl__stages img { width: 36px; height: 36px; }
-.dd-isl__stages b { font-size: .98rem; }
-.dd-isl__stages small { font-size: .6rem; color: var(--dd-ink-soft); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.dd-isl__key { list-style: none; margin: 0 0 12px; padding: 0 0 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .74rem; color: var(--dd-ink-soft); border-bottom: 1px dashed var(--dd-pappe3); }
+.dd-isl__key li { display: inline-flex; align-items: center; gap: 4px; }
+.dd-isl__key i { width: 9px; height: 9px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0,0,0,.18); }
 .dd-isl__body .dd-acct { margin-top: 12px; }
 
 /* ─── Kasten unten ─── */
@@ -762,14 +759,19 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-isl__go small { font-size: .74rem; font-weight: 500; opacity: .85; }
 .dd-isl__tplw { position: relative; margin-right: auto; }
 .dd-isl__tplbtn { min-height: 52px; }
-.dd-isl__tplbtn svg { width: 22px; height: 22px; }
+.dd-isl__tplbtn { padding: 6px 12px; }
+.dd .dd-tplico, .dd .btn .dd-tplico { width: 30px; height: 30px; fill: #7fa653; stroke: #7fa653; stroke-linecap: round; background: #2a7da0; border-radius: 6px; padding: 2px; box-shadow: inset 0 0 0 1.5px #d9c28a; }
+.dd-isl__tplopt {
+  appearance: none; cursor: pointer; display: grid; place-items: center; width: 54px; height: 54px; padding: 0;
+  background: var(--dd-pappe); border: 1px solid var(--dd-pappe3); border-radius: 4px; box-shadow: 2px 2px 0 var(--dd-pappe3);
+}
+.dd .dd-isl__tplopt .dd-tplico { width: 38px; height: 38px; }
+.dd-isl__tplopt.is-on { background: #fff; box-shadow: 0 0 0 2.5px var(--dd-prim); }
 .dd-isl__tplmenu {
-  position: absolute; left: -10px; bottom: calc(100% + 18px); width: max-content; max-width: min(380px, calc(100vw - 40px));
+  position: absolute; left: -10px; bottom: calc(100% + 18px); display: flex; gap: 8px;
   background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; padding: 12px; box-shadow: 0 10px 24px rgba(0,0,0,.35);
   animation: dd-fade .15s ease-out;
 }
-.dd-isl__tplst { margin: 0 0 8px; font-size: .88rem; color: var(--dd-ink-soft); }
-.dd-isl__tplst b { color: var(--dd-ink); }
 .dd-isl__fams { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 .dd-isl__fam {
   appearance: none; width: 100%; display: flex; gap: 10px; align-items: center; text-align: left; cursor: pointer;
@@ -781,8 +783,6 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-isl__famt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .dd-isl__famt b { font-size: .92rem; overflow-wrap: anywhere; }
 .dd-isl__famt small { font-size: .74rem; color: var(--dd-ink-soft); }
-.dd-isl__fambar { display: flex; height: 7px; border-radius: 4px; overflow: hidden; background: var(--dd-e0); }
-.dd-isl__fambar i { display: block; height: 100%; }
 
 /* ─── Aufgabenblatt ─── */
 .dd-task { position: fixed; inset: 0; z-index: 950; display: flex; align-items: center; justify-content: center; padding: 12px; }
@@ -885,7 +885,6 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 @media (max-width: 700px) {
   .dd-isl__map { height: clamp(420px, calc(100dvh - 150px), 820px); }
   .dd-isl__side { width: calc(100% - 70px); }
-  .dd-isl__tplbtn span { display: none; }
 }
 @media (max-width: 600px) {
   .dd-opts6 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -898,5 +897,3 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 @media (prefers-reduced-motion: reduce) {
   .dd-task__pic.is-grow, .dd-task__pic.is-grow img, .dd-task__pic.is-shrink img, .dd-grown img, .dd-task__sheet, .dd-task__bg { animation: none; }
 }
-.dd-isl__tpls { display: flex; flex-wrap: wrap; }
-.dd-isl__tpls .dd-seg { flex: 1 1 auto; }
