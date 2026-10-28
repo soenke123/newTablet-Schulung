@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261027k';
+  const V = '20261028a';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1982,6 +1982,18 @@
     g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
     return (glowCvs[col] = cv);
   }
+  /* Funke: ganz in der Familienfarbe, ohne weißen Kern. */
+  const sparkCvs = {};
+  function sparkSprite(col) {
+    if (sparkCvs[col]) return sparkCvs[col];
+    const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+    const g = cv.getContext('2d'), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gr.addColorStop(0, col + 'ff');
+    gr.addColorStop(0.35, col + 'aa');
+    gr.addColorStop(1, col + '00');
+    g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+    return (sparkCvs[col] = cv);
+  }
   /* Leuchtfarbe einer Familie: hell und satt, für Schein und Funken. */
   const famGlow = f => FAM_HUE[f % FAM.length] === null ? '#8ff0dc' : hsl2hex(FAM_HUE[f % FAM.length], 0.9, 0.72);
 
@@ -2050,9 +2062,11 @@
       if (e >= 4 && !dim) {
         const pulse = e === 5 ? 0.62 + 0.18 * Math.sin(now / 1100 + w.seed) : 0.32;
         const R = S * (e === 5 ? 0.75 : 0.55), cy = w.y - S * 0.45;
-        g.globalAlpha = pulse * (1 - sky.night * 0.4);
-        g.drawImage(glowSprite(famGlow(w.fam)), w.x - R, cy - R, R * 2, R * 2);
-        g.globalAlpha = 1;
+        if (sky.night > 0.02) {                // Schein nur nachts, ganz in der Familienfarbe
+          g.globalAlpha = pulse * sky.night * 0.5;
+          g.drawImage(sparkSprite(famGlow(w.fam)), w.x - R, cy - R, R * 2, R * 2);
+          g.globalAlpha = 1;
+        }
         lights.push({ x: w.x, y: cy, r: R * 1.15, col: famGlow(w.fam), a: pulse, w, e });
       }
       if (w.id === isl.selId) {
@@ -2099,17 +2113,17 @@
       g.globalCompositeOperation = 'source-over';
       g.setTransform(dpr * c.s, 0, 0, dpr * c.s, dpr * c.tx, dpr * c.ty);
     }
-    // Was leuchtet: nachts kräftig, am Tag nur die Funken
+    // Was leuchtet — nur nachts: Schein und Funken in der Familienfarbe
     g.globalCompositeOperation = 'lighter';
     for (const L of lights) {
       if (L.w && isl.fam >= 0 && L.w.fam !== isl.fam) continue;
       if (sky.night > 0.02) {
         g.globalAlpha = Math.min(1, L.a * sky.night * (L.w ? 0.9 : 0.7));
-        g.drawImage(glowSprite(L.col), L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
+        g.drawImage(L.w ? sparkSprite(L.col) : glowSprite(L.col), L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
       }
-      if (L.w && !calm) {                      // Funken: steigen sanft auf und verglimmen
+      if (L.w && !calm && sky.night > 0.02) {  // Funken (nur nachts): steigen sanft auf und verglimmen
         const n = L.e === 5 ? 8 : 4, life = L.e === 5 ? 4.6 : 5.6, w = L.w;
-        const sprk = glowSprite(L.col);
+        const sprk = sparkSprite(L.col);
         for (let i = 0; i < n; i++) {
           // fester Takt je Funke (w.seed, NICHT w.phase — die läuft beim Laufen mit und ließ es flackern)
           const age = (now / 1000) / life + i / n + w.seed;
@@ -2118,8 +2132,8 @@
           const sx = (h < 0 ? h + 1 : h) * 2 - 1;
           const px = w.x + sx * S * 0.3 + Math.sin(t * 2.4 + i * 1.7 + w.seed) * S * 0.04;
           const py = w.y - S * 0.15 - (1 - (1 - t) * (1 - t)) * S * (L.e === 5 ? 0.95 : 0.7);
-          const a = Math.min(1, t / 0.18) * Math.pow(1 - t, 1.6) * (0.6 + sky.night * 0.4);
-          const r = S * (0.05 + (i % 3) * 0.012) * (1 - t * 0.45) * (1 + sky.night * 0.3);
+          const a = Math.min(1, t / 0.18) * Math.pow(1 - t, 1.6) * sky.night;
+          const r = S * (0.06 + (i % 3) * 0.014) * (1 - t * 0.45);
           g.globalAlpha = a;
           g.drawImage(sprk, px - r, py - r, r * 2, r * 2);
         }
