@@ -1,18 +1,21 @@
 """Stellt Wesen-Bilder mit weißem Hintergrund frei (JPEG → PNG mit Durchsicht).
 
-Für Vorlagen, die als weißes JPEG kommen (z. B. die schlafenden Wesen):
+Für Vorlagen, die als weißes JPEG kommen (die schlafenden, fliegenden
+und stehenden Fassungen):
 Weiß, das vom Rand her erreichbar ist, wird durchsichtig, dazu größere
 weiße Löcher im Inneren (zwischen Schwanz und Körper, unter den Flügeln);
 kleine weiße Stellen (Glanzlichter, Augen) bleiben. Am Rand wird das Weiß
 aus den Kantenpixeln herausgerechnet, damit kein heller Saum bleibt.
 
-Liegt neben dem Ziel <name>_schlaf.png das wache <name>.png, wird das
-Ergebnis auf dessen Maßstab gebracht (gleiche sichtbare Fläche).
+Liegt neben dem Ziel <name>_schlaf.png / _flug.png / _steh.png das wache
+<name>.png, wird das Ergebnis auf dessen Maßstab gebracht (gleiche
+sichtbare Fläche).
 
 Aufruf: python3 wesen/freistellen.py QUELLE.jpeg ZIEL.png [...]
         (je zwei Pfade: Quelle, Ziel). Braucht numpy, scipy, Pillow.
 """
 import os
+import re
 import sys
 import numpy as np
 from PIL import Image
@@ -54,7 +57,7 @@ def freistellen(src, dst):
     out = np.dstack([farbe, a * 255]).round().astype(np.uint8)
     im = Image.fromarray(out, 'RGBA')
     im = im.crop(im.split()[3].point(lambda v: 255 if v > 8 else 0).getbbox())
-    wach = dst.replace('_schlaf.png', '.png')
+    wach = re.sub(r'_(schlaf|flug|steh)\.png$', '.png', dst)
     if wach != dst and os.path.exists(wach):
         flaeche = lambda b: sum(b.split()[3].histogram()[25:])
         k = (flaeche(Image.open(wach).convert('RGBA')) / flaeche(im)) ** 0.5

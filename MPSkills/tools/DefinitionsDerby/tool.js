@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028l';
+  const V = '20261028m';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1508,10 +1508,17 @@
   const SCHLAF = '_schlaf';
   /* Schwimmen können der Seedrache (a_a_b) und die Meeresschildkröte (a_b_b), ab Groß. */
   const SWIM = ['a_a_b', 'a_b_b'];
+  /* Fliegen (Sönke 28.10.2026): die drei Vögel (m_b_a, g_b_a_a, f_b_a_a) haben
+     ein fliegendes Bild (_flug), die Waldfeen (g_b_a_b, f_b_a_b) schweben schon
+     im Hauptbild und haben ein stehendes (_steh). An Land laufen alle fünf
+     ganz normal, in der Luft zeigen sie das fliegende Bild. */
+  const FLUG = '_flug', STEH = '_steh';
+  const FLY_FILES = { m_b_a: FLUG, g_b_a_a: FLUG, f_b_a_a: FLUG, g_b_a_b: STEH, f_b_a_b: STEH };
   const wesenBase = {};
   let wesenReady = null, wesenOk = false;
   function ladeWesen() {
-    const files = WESEN_FILES.concat(WESEN_FILES.filter(f => !f.startsWith('ei')).map(f => f + SCHLAF));
+    const files = WESEN_FILES.concat(WESEN_FILES.filter(f => !f.startsWith('ei')).map(f => f + SCHLAF),
+      Object.keys(FLY_FILES).map(f => f + FLY_FILES[f]));
     return wesenReady || (wesenReady = Promise.all(files.map(f => new Promise(res => {
       const im = new Image();
       im.onload = () => { wesenBase[f] = im; res(true); };
@@ -1532,12 +1539,18 @@
     astCache.set(id, a);
     return a;
   }
-  function wesenFile(id, e, zz) {
+  /* pose: 'zz' schläft, 'air' fliegt, 'ground' läuft auf der Insel, sonst das
+     Hauptbild (Aufgabenblatt, Leiste). Fehlt die Fassung, bleibt das Hauptbild. */
+  function wesenFile(id, e, pose) {
     const a = wesenAst(id);
     const f = ['ei' + a.egg, 'baby', 'k_' + a.k, 'm_' + a.m, 'g_' + a.g, 'f_' + a.g][e];
-    return zz && wesenBase[f + SCHLAF] ? f + SCHLAF : f;
+    const z = pose === 'zz' ? SCHLAF
+      : pose && FLY_FILES[f] && (pose === 'air') === (FLY_FILES[f] === FLUG) ? FLY_FILES[f] : '';
+    return z && wesenBase[f + z] ? f + z : f;
   }
   const canSwim = (id, e) => e >= 4 && wesenAst(id).swim;
+  /* Fliegen können der Vogel ab Mittel (Ast m = b_a) und alles, was aus ihm wird. */
+  const canFly = (id, e) => e >= 3 && wesenAst(id).m === 'b_a';
 
   /* Zielfarbton je Familie (null = Originalfarben) und passende Farbe für Chips/Balken. */
   const FAM_HUE = [null, 355, 275, 92, 218, 322, 32, 150, 250, 12, 195, 48];
@@ -1585,10 +1598,10 @@
     return cv;
   }
   const spriteCvs = {}, spriteUrls = {};
-  /* Leinwand eines Wesens (Familie × Ast × Stufe, zz = schlafend), null solange die Bilder fehlen. */
-  function spriteCanvas(fam, id, e, zz) {
+  /* Leinwand eines Wesens (Familie × Ast × Stufe, pose s. wesenFile), null solange die Bilder fehlen. */
+  function spriteCanvas(fam, id, e, pose) {
     if (!wesenOk) return null;
-    const f = wesenFile(id, e, zz), k = (fam % FAM.length) + ':' + f;
+    const f = wesenFile(id, e, pose), k = (fam % FAM.length) + ':' + f;
     return spriteCvs[k] || (spriteCvs[k] = recolor(wesenBase[f], FAM_HUE[fam % FAM.length]));
   }
   /* Bild-Adresse für <img> (Aufgabenblatt, Familien, Endstand). Ohne Bilder: die alte Zeichnung. */
@@ -1604,10 +1617,10 @@
   /* Kleinere Fassungen (halbiert, halbiert …): weit weg gezeichnet würde die
      große Leinwand sonst flimmern und körnig wirken. */
   const spriteMips = {};
-  function spriteLod(fam, id, e, px, zz) {
-    const big = spriteCanvas(fam, id, e, zz);
+  function spriteLod(fam, id, e, px, pose) {
+    const big = spriteCanvas(fam, id, e, pose);
     if (!big) return null;
-    const k = (fam % FAM.length) + ':' + wesenFile(id, e, zz);
+    const k = (fam % FAM.length) + ':' + wesenFile(id, e, pose);
     let m = spriteMips[k];
     if (!m) {
       m = [big];
@@ -1872,7 +1885,8 @@
     const c = isl.cam, S = isl.S;
     let best = null, bd = Infinity;
     for (const w of isl.creatures) {
-      const px = w.x * c.s + c.tx, py = w.y * c.s + c.ty, h = S * c.s;
+      if (w.gone) continue;
+      const px = w.x * c.s + c.tx, py = (w.y - (w.alt || 0)) * c.s + c.ty, h = S * c.s;
       const dx = sx - px, dy = sy - (py - h * 0.4);
       const rad = Math.max(22, h * 0.45);
       const d = dx * dx + dy * dy;
@@ -1906,10 +1920,11 @@
     const w = isl && isl.selId && isl.byId.get(isl.selId);
     if (!pop || !w || pop.hidden) return;
     const c = isl.cam;
-    const px = w.x * c.s + c.tx, py = w.y * c.s + c.ty - isl.S * c.s;
+    const wy = w.y - (w.alt || 0);
+    const px = w.x * c.s + c.tx, py = wy * c.s + c.ty - isl.S * c.s;
     const pw = pop.offsetWidth, ph = pop.offsetHeight;
     let left = px - pw / 2, top = py - ph - 10;
-    if (top < 6) top = w.y * c.s + c.ty + 12;
+    if (top < 6) top = wy * c.s + c.ty + 12;
     const v = islView();
     left = Math.max(v.x + 6, Math.min(isl.W - pw - 6, left));
     top = Math.max(6, Math.min(v.h - ph - 6, top));
@@ -2062,17 +2077,23 @@
                         col: p.type === 'laterne' ? '#ffcf6a' : '#9fe8ff', a: 0.75 });
       }
     };
-    for (const w of list) {
-      plantsUpTo(w.y);
-      if (w.x < vx0 || w.x > vx1 || w.y < vy0 || w.y > vy1) continue;
+    // Wer hoch in der Luft ist, kommt nach den Pflanzen (fliegt über sie hinweg).
+    const airs = [];
+    const drawW = w => {
       const e = stageOfId(w.id);
       const dim = isl.fam >= 0 && w.fam !== isl.fam;
       g.globalAlpha = dim ? 0.28 : 1;
       const wet = w.wet;                       // schwimmt gerade (im Wasser)
       const zz = !!w.sleep;                    // schläft gerade (nur an Land)
-      const bob = wet ? Math.sin(now / 520 + w.phase) * S * 0.025 : w.walking ? Math.abs(Math.sin(w.phase)) * S * 0.07 : 0;
+      const lift = w.alt || 0, wy = w.y - lift;   // Flughöhe
+      const bob = w.fly ? (calm ? 0 : Math.sin(now / 170 + w.seed) * S * 0.035 * Math.min(1, lift / FLY_ALT))
+        : wet ? Math.sin(now / 520 + w.phase) * S * 0.025 : w.walking ? Math.abs(Math.sin(w.phase)) * S * 0.07 : 0;
       // Schatten bzw. Wellenring
-      if (wet) {
+      if (lift > 1) {                          // in der Luft: Schatten unten, kleiner und blasser, je höher
+        const k = 1 - 0.45 * Math.min(1, lift / FLY_ALT);
+        g.fillStyle = 'rgba(20,30,10,' + (0.24 * k).toFixed(3) + ')';
+        g.beginPath(); g.ellipse(w.x, w.y, S * 0.24 * k, S * 0.06 * k, 0, 0, Math.PI * 2); g.fill();
+      } else if (wet) {
         g.strokeStyle = 'rgba(235,250,250,.55)'; g.lineWidth = S * 0.025;
         const rp = 0.3 + 0.04 * Math.sin(now / 400 + w.phase);
         g.beginPath(); g.ellipse(w.x, w.y - S * 0.18, S * rp, S * rp * 0.28, 0, 0, Math.PI * 2); g.stroke();
@@ -2082,7 +2103,7 @@
       }
       if (e >= 4 && !dim) {
         const pulse = e === 5 ? 0.62 + 0.18 * Math.sin(now / 1100 + w.seed) : 0.32;
-        const R = S * (e === 5 ? 0.75 : 0.55), cy = w.y - S * 0.45;
+        const R = S * (e === 5 ? 0.75 : 0.55), cy = wy - S * 0.45;
         if (sky.night > 0.02) {                // Schein nur nachts, ganz in der Familienfarbe
           g.globalAlpha = pulse * sky.night * 0.5;
           g.drawImage(sparkSprite(famGlow(w.fam)), w.x - R, cy - R, R * 2, R * 2);
@@ -2094,10 +2115,11 @@
         g.strokeStyle = '#fff'; g.lineWidth = Math.max(2 / c.s, S * 0.03);
         g.beginPath(); g.ellipse(w.x, w.y, S * 0.34, S * 0.11, 0, 0, Math.PI * 2); g.stroke();
       }
-      const im = spriteLod(w.fam, w.id, e, S * c.s * dpr, zz) || svgImg(w.fam, e);
+      const pose = zz ? 'zz' : w.fly ? 'air' : 'ground';
+      const im = spriteLod(w.fam, w.id, e, S * c.s * dpr, pose) || svgImg(w.fam, e);
       if (im.width || im.naturalWidth) {
         g.save();
-        g.translate(w.x, w.y - bob);
+        g.translate(w.x, wy - bob);
         if (zz && !calm) g.scale(1, 1 + 0.018 * Math.sin(now / 900 + w.seed));   // atmet
         if (e === 0) g.rotate(Math.sin(now / 260 + w.phase) * (Math.sin(now / 1700 + w.phase) > 0.6 ? 0.12 : 0.02));
         if (w.dir < 0) g.scale(-1, 1);
@@ -2129,13 +2151,22 @@
           for (let i = 0; i < 10; i++) {
             const a = i / 10 * Math.PI * 2 + w.phase;
             const rr = S * (0.25 + k * 0.6);
-            g.beginPath(); g.arc(w.x + Math.cos(a) * rr, w.y - S * 0.45 + Math.sin(a) * rr, S * 0.035 * (1 - k * 0.5), 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.arc(w.x + Math.cos(a) * rr, wy - S * 0.45 + Math.sin(a) * rr, S * 0.035 * (1 - k * 0.5), 0, Math.PI * 2); g.fill();
           }
         }
       }
+    };
+    for (const w of list) {
+      plantsUpTo(w.y);
+      if (w.gone) continue;                    // fliegt gerade weit draußen über dem Meer
+      if (w.x < vx0 || w.x > vx1 || w.y - (w.alt || 0) < vy0 || w.y > vy1) continue;
+      if ((w.alt || 0) > S * 0.2) airs.push(w);
+      else drawW(w);
     }
     g.globalAlpha = 1;
     plantsUpTo(Infinity);
+    for (const w of airs) drawW(w);
+    g.globalAlpha = 1;
     drawClouds(g, 'shadow');
     drawClouds(g, 'cloud');
     // Nacht (und Abend-/Morgenrot) über alles
@@ -2167,7 +2198,7 @@
           const h = Math.sin((cyc * 12.9898 + i * 78.233 + w.seed) * 43758.5453) % 1;   // neuer Startpunkt je Durchgang
           const sx = (h < 0 ? h + 1 : h) * 2 - 1;
           const px = w.x + sx * S * 0.3 + Math.sin(t * 2.4 + i * 1.7 + w.seed) * S * 0.04;
-          const py = w.y - S * 0.15 - (1 - (1 - t) * (1 - t)) * S * (L.e === 5 ? 0.95 : 0.7);
+          const py = w.y - (w.alt || 0) - S * 0.15 - (1 - (1 - t) * (1 - t)) * S * (L.e === 5 ? 0.95 : 0.7);
           const a = Math.min(1, t / 0.18) * Math.pow(1 - t, 1.6) * sky.night;
           const r = S * (0.06 + (i % 3) * 0.014) * (1 - t * 0.45);
           g.globalAlpha = a;
@@ -2183,7 +2214,8 @@
       g.font = '600 12px Outfit, system-ui, sans-serif';
       g.textAlign = 'center';
       for (const w of list) {
-        const px = w.x * c.s + c.tx, py = w.y * c.s + c.ty;
+        if (w.gone) continue;
+        const px = w.x * c.s + c.tx, py = (w.y - (w.alt || 0)) * c.s + c.ty;
         if (px < -60 || px > isl.W + 60 || py < -20 || py > isl.H + 30) continue;
         if (isl.fam >= 0 && w.fam !== isl.fam) continue;
         const t = w.card.t.length > 22 ? w.card.t.slice(0, 21) + '…' : w.card.t;
@@ -2205,12 +2237,78 @@
      mindestens 30 s wach. Schwimmer nur an Land und seltener, damit sie
      auch weiter hinausschwimmen. Antippen oder ein Stufensprung weckt. */
   const SLEEP_P = [0.09, 0.035];      // Wahrscheinlichkeit je Halt an Land: Landtier, Schwimmer
+  /* Fliegen (Sönke 28.10.2026): Vögel und Waldfeen (canFly) laufen an Land
+     ganz normal; bei einem Halt fliegen sie ab und zu über die Insel an eine
+     andere Stelle (FLY_P[0]) oder verlassen die Insel (FLY_P[1]): weit hinaus
+     übers Meer, bis sie außer Sicht sind, 20–60 s weg (w.gone), dann zurück
+     nahe der Heimat. In der Luft (w.fly) zeigen sie das fliegende Bild, die
+     Höhe w.alt steigt beim Abheben und sinkt vor der Landung. Antippen oder
+     ein Stufensprung holt ein weggeflogenes Wesen sofort zurück. */
+  const FLY_P = [0.12, 0.045];
+  const FLY_ALT = 150, FLY_SP = 210;  // Flughöhe und Tempo (Einheiten, Wesen = 100)
+  function landingSpot(w, wc, far) {
+    for (let k = 0; k < 30; k++) {
+      const a = w.rnd() * Math.PI * 2, d = (far ? 0.8 + w.rnd() * 1.7 : Math.sqrt(w.rnd())) * w.roam;
+      const cx = far ? w.x : w.home.x, cy = far ? w.y : w.home.y;
+      const tx = cx + Math.cos(a) * d, ty = cy + Math.sin(a) * d;
+      if (far && Math.hypot(tx - w.home.x, ty - w.home.y) > w.roam * 2.5) continue;
+      if (wc.walk(tx, ty)) return { x: tx, y: ty };
+    }
+    return far ? null : { x: w.home.x, y: w.home.y };
+  }
+  function islFly(w, now, dt, fl, wc) {
+    const f = w.fly, k = isl.size / 100;
+    if (w.gone) {                       // draußen über dem Meer
+      if (now < w.gone && fl && w.id !== isl.selId && !w.burst) return;
+      w.gone = 0;
+      f.away = false;
+      const p = landingSpot(w, wc, false);
+      f.tx = p.x; f.ty = p.y;
+    }
+    if (f.away && !fl) {                // nach einem Rückschritt: heim und landen
+      f.away = false;
+      const p = landingSpot(w, wc, false);
+      f.tx = p.x; f.ty = p.y;
+    }
+    const dx = f.tx - w.x, dy = f.ty - w.y, d = Math.hypot(dx, dy), sp = FLY_SP * k;
+    const want = FLY_ALT * k * (f.away ? 1 : Math.min(1, d / (FLY_ALT * k * 1.6)));
+    w.alt += (want - w.alt) * Math.min(1, dt * 3.5);
+    if (d < sp * dt + 1) {
+      w.x = f.tx; w.y = f.ty;
+      if (f.away) { w.gone = now + 20000 + w.rnd() * 40000; return; }
+      w.fly = null; w.alt = 0; w.walking = false;
+      w.until = now + 800 + w.rnd() * 2500;
+      return;
+    }
+    w.x += dx / d * sp * dt; w.y += dy / d * sp * dt;
+    if (Math.abs(dx) > 2) w.dir = dx < 0 ? -1 : 1;
+    w.phase += dt * 8;
+  }
+  function islTakeOff(w, wc, away) {
+    let p;
+    if (away) {                         // weit hinaus übers Meer, bis außer Sicht
+      // vom Inselmittelpunkt aus nach außen, ungefähr in die Richtung, in der es steht
+      const B = wc.bbox, cx = B.x + B.w / 2, cy = B.y + B.h / 2;
+      const a = Math.atan2(w.y - cy, w.x - cx) + (w.rnd() - 0.5) * 1.6, r = Math.hypot(B.w, B.h) / 2 + 900;
+      p = { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
+    } else p = landingSpot(w, wc, true);
+    if (!p) return false;
+    w.fly = { tx: p.x, ty: p.y, away };
+    w.alt = w.alt || 0;
+    w.walking = false;
+    return true;
+  }
   function islStep(now, dt) {
     const wc = isl.wc;
     const okFor = sw => sw ? (x, y) => { if (wc.walk(x, y)) return true; const d = wc.depth(x, y); return d !== null && d < 0.09; } : wc.walk;
     for (const w of isl.creatures) {
       const e = stageOfId(w.id);
-      const sw = canSwim(w.id, e);
+      const sw = canSwim(w.id, e), fl = canFly(w.id, e);
+      if (w.fly && still()) {             // Bewegung reduzieren: sofort zu Hause landen
+        w.fly = null; w.alt = 0; w.gone = 0;
+        if (!wc.walk(w.x, w.y)) { w.x = w.home.x; w.y = w.home.y; }
+      }
+      if (w.fly) { w.wet = false; islFly(w, now, dt, fl, wc); continue; }
       const d0 = wc.depth(w.x, w.y);
       w.wet = d0 !== null && d0 < -0.02 && !wc.walk(w.x, w.y);
       if (e === 0 || still()) { w.walking = false; w.sleep = 0; continue; }
@@ -2222,6 +2320,10 @@
       if (!sw && !w.walking && !wc.walk(w.x, w.y)) { w.tx = w.home.x; w.ty = w.home.y; w.walking = true; }
       if (!w.walking) {
         if (now < w.until) continue;
+        if (fl && !w.wet && wc.walk(w.x, w.y)) {
+          const r = w.rnd();
+          if (r < FLY_P[1] && now > (w.awake || 0) ? islTakeOff(w, wc, true) : r < FLY_P[0] + FLY_P[1] && islTakeOff(w, wc, false)) continue;
+        }
         const ok = okFor(sw), roam = sw ? w.roam * 2.2 : w.roam;
         for (let k = 0; k < (sw ? 14 : 8); k++) {
           // Schwimmer: Ziele rund um sich selbst, an der Leine der Heimat

@@ -9,6 +9,8 @@ Schlafende Fassung (<name>_schlaf.png, freigestellt mit freistellen.py):
 bekommt dieselbe sichtbare Fläche wie das wache Wesen (zusammengerollt
 ist es breiter und flacher, soll aber nicht größer oder kleiner wirken),
 höchstens so groß, dass es ins Quadrat passt. Ergebnis <name>_schlaf.webp.
+Genauso die fliegende (<name>_flug.png, Vögel) und die stehende Fassung
+(<name>_steh.png, Waldfeen, deren Hauptbild schon schwebt).
 Aufruf: python3 wesen/aufbereiten.py
 """
 import os
@@ -19,6 +21,7 @@ QUELLE = os.path.join(HIER, '..', 'Kreaturen')
 N = 320
 GROESSE = {0: 0.46, 1: 0.56, 2: 0.68, 3: 0.80, 4: 0.92, 5: 1.0}   # längste Seite je Stufe (Anteil von N)
 FUSS = 0.96
+ZUSATZ = ('_schlaf', '_flug', '_steh')   # Fassungen neben dem wachen Bild
 
 
 def zuschneiden(pfad):
@@ -40,7 +43,7 @@ def setzen(im, k, ziel):
 
 
 for f in sorted(os.listdir(QUELLE)):
-    if not f.endswith('.png') or f.endswith('_schlaf.png'):
+    if not f.endswith('.png') or f.endswith(tuple(z + '.png' for z in ZUSATZ)):
         continue
     stufe = int(f[0])
     im = zuschneiden(os.path.join(QUELLE, f))
@@ -48,9 +51,11 @@ for f in sorted(os.listdir(QUELLE)):
     name = f.replace('0_Ei_', 'ei').replace('1_Baby', 'baby').replace('2_klein_', 'k_').replace('3_mittel_', 'm_') \
             .replace('4_gross_', 'g_').replace('5_fertig_', 'f_').replace('.png', '')
     print(name, setzen(im, k, name + '.webp'))
-    schlaf = os.path.join(QUELLE, f.replace('.png', '_schlaf.png'))
-    if os.path.exists(schlaf):
-        zs = zuschneiden(schlaf)
+    for z in ZUSATZ:
+        neben = os.path.join(QUELLE, f.replace('.png', z + '.png'))
+        if not os.path.exists(neben):
+            continue
+        zs = zuschneiden(neben)
         ks = k * (flaeche(im) / flaeche(zs)) ** 0.5
         ks = min(ks, N * 0.98 / zs.width, N * FUSS * 0.98 / zs.height)
-        print(name + '_schlaf', setzen(zs, ks, name + '_schlaf.webp'))
+        print(name + z, setzen(zs, ks, name + z + '.webp'))
