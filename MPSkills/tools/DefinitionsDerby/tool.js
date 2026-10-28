@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028h';
+  const V = '20261028i';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -2393,15 +2393,16 @@
   function taskHead(t) {
     const I = window.DDInsel, R = isl.round;
     const e = t.stage, next = Math.min(I.MAX, e + 1);
-    return (R.single ? '' : '<div class="dd-task__prog" id="ddProg" role="progressbar" aria-label="Fortschritt der Runde" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
-        Math.round(R.shown * 100) + '"><i style="width:' + (R.shown * 100).toFixed(1) + '%"></i></div>') +
-      '<div class="dd-task__head">' +
+    // Reihenfolge (Sönke 28.10.2026): Wesen groß oben, darunter der Balken, dann die Frage (klein,
+    // ist ja immer gleich) und groß das, worum es geht: Definition bzw. Begriff.
+    return '<div class="dd-task__head">' +
         '<span class="dd-task__pic" id="ddTaskPic" style="--f:' + FAM[t.fam % FAM.length] + '"><img src="' + spriteURL(t.fam, e, t.card.id) + '" alt="' + I.STAGES[e] + '"></span>' +
         '<span class="dd-task__who"><small>' + E(stackTitle(t.card.sid)) + '</small>' +
           '<b id="ddTaskStage">' + (e >= I.MAX ? 'Leuchtend · Wiederholen' : I.STAGES[e] + ' → ' + I.STAGES[next]) + '</b>' + stageDots(e) + '</span>' +
-
         '<button type="button" class="dd-x" data-act="isl-close" aria-label="Runde beenden">×</button>' +
-      '</div>';
+      '</div>' +
+      (R.single ? '' : '<div class="dd-task__prog" id="ddProg" role="progressbar" aria-label="Fortschritt der Runde" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+        Math.round(R.shown * 100) + '"><i style="width:' + (R.shown * 100).toFixed(1) + '%"></i></div>');
   }
   function paintTask() {
     const box = root.querySelector('#ddTask'), t = isl.task;
@@ -2444,6 +2445,26 @@
     if (t.type === 'build') { paintBuild(); bindBuildDrag(box.querySelector('#ddBuild')); }
     const f = box.querySelector('#ddType, .dd-gap, .dd-opt');
     if (f && (f.tagName === 'INPUT' || !('ontouchstart' in window))) f.focus({ preventScroll: true });
+    box.querySelector('.dd-task__sheet').addEventListener('focusin', taskKbFit);
+  }
+  /* Tastatur am Handy: das Blatt sitzt im sichtbaren Bereich (--vv-h aus
+     viewport.js, der Kopf wird dann klein, html.kb-open). Danach wird so
+     gescrollt, dass oben die Definition/der Begriff steht und das Feld
+     darunter noch zu sehen ist – sonst wenigstens das Feld. */
+  function taskKbFit(ev) {
+    const el = ev.target;
+    if (!el || el.tagName !== 'INPUT') return;
+    const run = () => {
+      const sheet = el.closest('.dd-task__sheet');
+      if (!sheet || !el.isConnected || document.activeElement !== el || !document.documentElement.classList.contains('kb-open')) return;
+      const what = sheet.querySelector('.dd-task__def, .dd-task__term');
+      const sr = sheet.getBoundingClientRect();
+      if (what) sheet.scrollTop += what.getBoundingClientRect().top - sr.top - 6;
+      const r = el.getBoundingClientRect();
+      if (r.bottom > sr.bottom - 8) sheet.scrollTop += r.bottom - sr.bottom + 16;
+    };
+    setTimeout(run, 420);   // nach viewport.js (60/350 ms), wenn die Tastatur steht
+    setTimeout(run, 800);
   }
 
   function paintBuild() {
