@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028c';
+  const V = '20261028d';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1632,8 +1632,6 @@
           '<canvas class="dd-isl__cv" id="ddIslCv" aria-label="Die Insel mit allen Wesen"></canvas>' +
           '<p class="dd-isl__wait" id="ddIslWait">Die Insel entsteht …</p>' +
           '<div class="dd-isl__zoom">' +
-            '<button type="button" class="btn btn--sm dd-ic" data-act="isl-zoom" data-v="1.4" aria-label="Näher heran">+</button>' +
-            '<button type="button" class="btn btn--sm dd-ic" data-act="isl-zoom" data-v="0.7" aria-label="Weiter weg">−</button>' +
             '<button type="button" class="btn btn--sm dd-ic" data-act="isl-fit" aria-label="Ganze Insel">' + ico.full + '</button>' +
           '</div>' +
           '<div class="dd-isl__pop" id="ddIslPop" hidden></div>' +
@@ -1783,7 +1781,6 @@
     c.tx = sx - wx * c.s; c.ty = sy - wy * c.s;
     islClamp();
   }
-  function islZoomBy(k) { if (isl && isl.ready) { isl.anim = null; islZoomAt(k, isl.W / 2, isl.H / 2); } }
 
   function islBindCanvas() {
     const cv = root.querySelector('#ddIslCv');
@@ -2882,7 +2879,6 @@
         case 'isl-tplmenu': islTplOpen = !islTplOpen; paintBar(); break;
         case 'isl-side': islToggleSide(); break;
         case 'isl-fit': islFit(true); break;
-        case 'isl-zoom': islZoomBy(Number(b.dataset.v)); break;
         case 'isl-opt': islPick(b.dataset.id); break;
         case 'isl-tile': islTile(b.dataset.k); break;
         case 'isl-check': islCheck(); break;
