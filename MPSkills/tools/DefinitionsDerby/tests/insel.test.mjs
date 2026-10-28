@@ -23,7 +23,9 @@ s = I.apply({ e: 5, x: 0 }, true);
 ok('Leuchtend bleibt', s.e === 5 && !s.up);
 s = I.apply({ e: 2, x: 1 }, true);
 ok('richtig löscht Fehler', s.e === 3 && s.x === 0);
-ok('Aufgaben je Stufe', ['pickTerm', 'pickDef', 'build', 'typeTerm', 'cloze', 'cloze'].every((t, e) => I.taskFor(e) === t));
+ok('Aufgaben je Stufe', ['pickTerm', 'pickDef', 'build', 'typeTerm', 'cloze'].every((t, e) => I.taskFor(e) === t));
+{ const seen = new Set(); for (let k = 0; k < 200; k++) seen.add(I.taskFor(5));
+  ok('Leuchtend: zufällig alle fünf', seen.size === 5, JSON.stringify([...seen])); }
 
 // Freitext: nachsichtig
 const yes = (a, t) => I.check(a, t).ok;
@@ -61,16 +63,22 @@ ok('mind. 2 Wörter je Baustein', true);
 ok('lange Definition höchstens 6', I.chunks(Array.from({ length: 40 }, (_, i) => 'wort' + i).join(' ')).length === 6);
 
 // Lückentext
+const gapsOf = (d, t, o) => I.clozeGaps(d, t, o).filter(p => p.gap).map(p => p.gap);
 let parts = I.clozeGaps('Steuerzentrale der Zelle; enthält die Erbinformation (DNA).', 'Zellkern');
 let gaps = parts.filter(p => p.gap).map(p => p.gap);
-ok('2 Lücken', gaps.length === 2, JSON.stringify(parts));
-ok('Nomen bevorzugt', gaps.includes('Erbinformation'), JSON.stringify(gaps));
+ok('kurze Definition: 1 Lücke', gaps.length === 1, JSON.stringify(parts));
+ok('Nomen bevorzugt', gaps.includes('Erbinformation') || gaps.includes('Steuerzentrale'), JSON.stringify(gaps));
 ok('Text bleibt vollständig', parts.map(p => p.text || p.gap).join(' ').replace(/\s+/g, ' ').replace(/ ([;.,)])/g, '$1').replace(/\( /g, '(') ===
   'Steuerzentrale der Zelle; enthält die Erbinformation (DNA).', JSON.stringify(parts));
-parts = I.clozeGaps('Die Zahl unter dem Bruchstrich; sie sagt, in wie viele gleiche Teile das Ganze geteilt ist.', 'Nenner');
-ok('3 Lücken bei langer Definition', parts.filter(p => p.gap).length === 3, JSON.stringify(parts));
-parts = I.clozeGaps('Mitochondrium der Zelle', 'Mitochondrium');
-ok('Begriff selbst wird keine Lücke', !parts.some(p => p.gap === 'Mitochondrium'), JSON.stringify(parts));
+gaps = gapsOf('Die Zahl unter dem Bruchstrich; sie sagt, in wie viele gleiche Teile das Ganze geteilt ist.', 'Nenner');
+ok('höchstens 2 Lücken', gaps.length === 2, JSON.stringify(gaps));
+ok('keine Allerweltswörter', !gaps.some(g => ['Zahl', 'Teile', 'Ganze', 'gleiche'].includes(g)), JSON.stringify(gaps));
+ok('Begriff selbst wird keine Lücke', !gapsOf('Mitochondrium der Zelle', 'Mitochondrium').includes('Mitochondrium'));
+ok('auch nicht sein Stamm', !gapsOf('Die Zellkerne steuern die gesamte Zelle und ihre Teilung.', 'Zellkern').includes('Zellkerne'));
+gaps = gapsOf('Hülle der Zelle aus Zellulose; schützt die Zellmembran und gibt der Pflanze Festigkeit.', 'Zellwand',
+  [{ t: 'Zellmembran', d: 'Dünne Haut um die Zelle.' }, { t: 'Vakuole', d: 'Speicher der Zelle.' }]);
+ok('Fachwort aus dem Stapel bevorzugt', gaps.includes('Zellmembran'), JSON.stringify(gaps));
+ok('Wort aus vielen Definitionen gemieden', !gaps.includes('Zelle'), JSON.stringify(gaps));
 
 // Aufgaben bauen
 let seed = 7; I.setRandom(() => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; });
@@ -96,16 +104,22 @@ ok('zu kurz zum Bauen → Begriff tippen', t.type === 'typeTerm');
 t = I.makeTask(A[1], pool, 3);
 ok('Groß: Begriff tippen', t.type === 'typeTerm');
 t = I.makeTask(A[0], pool, 4);
-ok('Leuchtend-Aufgabe: Lückentext', t.type === 'cloze' && t.parts.some(p => p.gap));
+ok('Groß-Aufgabe: Lückentext', t.type === 'cloze' && t.parts.some(p => p.gap));
 
 // Runde
-const prog = { 'a:0': { e: 5 }, 'a:1': { e: 0, x: 1 } };
-const r = I.session(pool, id => prog[id], 8);
-ok('8 Aufgaben', r.cards.length === 8 && !r.review);
-ok('Leuchtende nicht in normaler Runde', !r.cards.some(c => c.id === 'a:0'));
-ok('nie zweimal in Folge', r.cards.every((c, i) => !i || r.cards[i - 1].id !== c.id));
-const all5 = {}; pool.forEach(c => { all5[c.id] = { e: 5 }; });
-ok('alles leuchtet → Wiederholen', I.session(pool, id => all5[id], 4).review);
+let q = I.roundCards(pool, []);
+ok('jeder Begriff genau einmal', q.length === pool.length && new Set(q.map(c => c.id)).size === pool.length);
+q = I.roundCards(pool, ['a:1', 'b:0', 'gibtsnicht']);
+ok('zweimal falsch = in der nächsten Runde doppelt', q.length === pool.length + 2 && q.filter(c => c.id === 'a:1').length === 2);
+let rep = true;
+for (let k = 0; k < 50; k++) { const z = I.roundCards(pool.slice(0, 3), ['a:0', 'a:1', 'a:2']); if (z.some((c, i) => i && z[i - 1].id === c.id)) rep = false; }
+ok('nie zweimal in Folge', rep);
+q = I.roundCards(pool, []);
+const at = I.requeue(q, 2, q[2]);
+ok('falsch = später in derselben Runde', q.length === pool.length + 1 && at >= 4 && q[at].id === q[2].id);
+q = I.roundCards(pool.slice(0, 3), []);
+I.requeue(q, 2, q[2]);
+ok('letzte Karte falsch: kommt gleich noch einmal', q.length === 4 && q[3].id === q[2].id);
 
 console.log(fails ? '\n' + fails + ' FEHLER' : '\nalles ok');
 process.exit(fails ? 1 : 0);

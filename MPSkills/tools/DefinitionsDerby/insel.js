@@ -15,8 +15,10 @@
      1  Baby        Klein: 1 Begriff, bis zu 4 Definitionen zur Wahl
      2  Klein       Mittel: Definition aus Bausteinen (+2 falsche)
      3  Mittel      Groß:  Definition sehen, Begriff eintippen
-     4  Groß        Leuchtend: Lückentext, 2–3 Lücken eintippen
-     5  Leuchtend   (fertig; Wiederholen = Lückentext)
+     4  Groß        Leuchtend: Lückentext, 1–2 Lücken eintippen
+                    (Anfangsbuchstabe und Länge stehen in der Lücke)
+     5  Leuchtend   (fertig; bleibt in den Runden, dann zufällig
+                    eine der fünf Aufgaben, Sönke 28.10.2026)
 
    Einmal richtig = eine Stufe hoch. Zweimal in Folge falsch auf
    derselben Stufe = eine Stufe runter (Entscheidung Sönke
@@ -43,7 +45,7 @@
 
   /* ─── Stufe und Ergebnis ─── */
   const stageOf = e => (e && Number.isInteger(e.e) && e.e >= 0 && e.e <= MAX ? e.e : 0);
-  const taskFor = e => TASKS[Math.max(0, Math.min(MAX, e))];
+  const taskFor = e => (e >= MAX ? TASKS[Math.floor(rnd() * MAX)] : TASKS[Math.max(0, e)]);
 
   /* Ergebnis einer Aufgabe auf den Stand einer Karte anwenden. */
   function apply(entry, ok) {
@@ -188,29 +190,55 @@
   }
 
   /* ─── Lückentext ───
-     2–3 Lücken (bei sehr kurzen Definitionen 1): bevorzugt Nomen
-     (im Deutschen großgeschrieben, nicht am Satzanfang), lange
-     Wörter zuerst, nicht der Begriff selbst, keine Füllwörter. */
+     1 Lücke, ab 8 Wörtern 2 (Sönke 28.10.2026: 2–3 waren zu schwer,
+     zu oft passten ähnliche Wörter). In der Lücke stehen Anfangs-
+     buchstabe und Länge (tool.js). Gesucht werden Fachwörter:
+       + Nomen (großgeschrieben, nicht am Satzanfang), lange Wörter
+       + Wörter, die im Stapel selbst Begriff sind („Erbinformation“)
+       + Wörter, die in den anderen Definitionen des Stapels selten sind
+       − Allerweltswörter (GENERIC), Füllwörter (STOP) fallen ganz weg
+       − der Begriff selbst und Wörter mit seinem Stamm fallen weg
+     others: die übrigen Karten desselben Stapels ({t, d}). */
   const STOP = new Set(['eine', 'einer', 'einem', 'einen', 'eines', 'sich', 'auch', 'nicht', 'oder', 'sowie', 'werden',
     'wird', 'wurde', 'sind', 'haben', 'hat', 'kann', 'können', 'dabei', 'dieser', 'diese', 'dieses', 'dass', 'wenn', 'weil',
     'durch', 'zwischen', 'gegen', 'ohne', 'unter', 'über', 'welche', 'welcher', 'welches', 'dessen', 'deren', 'immer',
-    'meist', 'meistens', 'besonders', 'zum', 'zur', 'beim', 'etwas', 'viele', 'vielen', 'mehr', 'sehr', 'ganz', 'alle']);
-  function clozeGaps(def, term) {
+    'meist', 'meistens', 'besonders', 'zum', 'zur', 'beim', 'etwas', 'viele', 'vielen', 'mehr', 'sehr', 'ganz', 'alle',
+    'dann', 'denn', 'wieder', 'noch', 'schon', 'nur', 'jede', 'jeder', 'jedes', 'jeden', 'einem', 'ihre', 'ihren', 'seine',
+    'seinen', 'andere', 'anderen', 'dort', 'hier', 'wobei', 'damit', 'indem', 'sodass', 'also', 'bzw', 'etwa', 'z.b']);
+  const GENERIC = new Set(['teil', 'teile', 'teilen', 'raum', 'art', 'arten', 'form', 'formen', 'stoff', 'stoffe', 'zahl',
+    'zahlen', 'ding', 'dinge', 'menge', 'weise', 'fall', 'falle', 'bereich', 'begriff', 'beispiel', 'mensch', 'menschen',
+    'zeit', 'ort', 'orte', 'grosse', 'wert', 'werte', 'seite', 'seiten', 'ganze', 'ganzen', 'gruppe', 'gruppen', 'sache',
+    'sachen', 'stelle', 'stellen', 'punkt', 'punkte', 'ende', 'anfang', 'mitte', 'person', 'personen', 'jahr', 'jahre',
+    'beim', 'gleich', 'gleiche', 'gleichen', 'bestimmt', 'bestimmte', 'bestimmten', 'verschiedene', 'verschiedenen',
+    'wichtig', 'wichtige', 'wichtigen', 'grosser', 'grossen', 'kleine', 'kleinen', 'kleiner', 'neue', 'neuen']);
+  function clozeGaps(def, term, others) {
     const w = words(def);
-    const tv = new Set(variants(term));
+    const tv = variants(term);
+    const terms = new Set();
+    const docs = [];
+    for (const o of others || []) {
+      variants(o.t).forEach(v => { if (v.length >= 4) terms.add(v); });
+      docs.push(words(o.d).map(norm));
+    }
+    const stem = c => tv.some(v => v.length >= 4 && (c.includes(v) || (c.length >= 4 && v.includes(c))));
     const cand = [];
     w.forEach((raw, i) => {
       const m = raw.match(/^([^A-Za-zÄÖÜäöüß0-9]*)([A-Za-zÄÖÜäöüß0-9][A-Za-zÄÖÜäöüß0-9\-]*[A-Za-zÄÖÜäöüß0-9]|[A-Za-zÄÖÜäöüß0-9])([^A-Za-zÄÖÜäöüß0-9]*)$/);
       if (!m) return;
       const core = m[2];
-      const lc = core.toLocaleLowerCase('de');
-      if (core.length < 4 || STOP.has(lc) || /^\d+$/.test(core)) return;
-      if (tv.has(norm(core))) return;
-      const atStart = i === 0 || /[.!?:]$/.test(w[i - 1]);
+      const lc = core.toLocaleLowerCase('de'), n = norm(core);
+      if (core.length < 4 || STOP.has(lc) || GENERIC.has(n) || /^\d+$/.test(core)) return;
+      if (stem(n)) return;
+      const atStart = i === 0 || /[.!?:;]$/.test(w[i - 1]);
       const noun = /^[A-ZÄÖÜ]/.test(core) && !atStart;
-      cand.push({ i, pre: m[1], core, post: m[3], score: core.length + (noun ? 6 : 0) });
+      const fach = [...terms].some(v => n === v || (n.startsWith(v) && n.length - v.length <= 2));
+      // gebeugte Formen zählen mit (Zelle/Zellen)
+      const like = x => x === n || (Math.min(x.length, n.length) >= 4 && Math.abs(x.length - n.length) <= 2 && (x.startsWith(n) || n.startsWith(x)));
+      const df = docs.reduce((a, d) => a + (d.some(like) ? 1 : 0), 0);
+      const score = Math.min(core.length, 14) * 0.5 + (noun ? 5 : 0) + (fach ? 8 : 0) - 2 * Math.min(df, 3);
+      cand.push({ i, pre: m[1], core, post: m[3], score });
     });
-    const want = w.length < 6 ? 1 : w.length < 14 ? 2 : 3;
+    const want = w.length < 8 ? 1 : 2;
     cand.sort((a, b) => b.score - a.score);
     const pick = [];
     for (const c of cand) {
@@ -269,7 +297,7 @@
       t.right = right;
       t.tiles = shuffle(right.map((text, i) => ({ k: 'r' + i, text })).concat(wrong.map((text, i) => ({ k: 'w' + i, text, wrong: true }))));
     } else if (type === 'cloze') {
-      t.parts = clozeGaps(card.d, card.t);
+      t.parts = clozeGaps(card.d, card.t, (pool || []).filter(c => c.sid === card.sid && c.id !== card.id));
       if (!t.parts.some(p => p.gap)) { t.type = 'typeTerm'; delete t.parts; }   // nichts zum Aussparen
     }
     return t;
@@ -277,37 +305,39 @@
   /* Ist die Bausteinfolge richtig? Verglichen wird der TEXT (gleiche Teile sind austauschbar). */
   const buildOk = (task, seq) => seq.length === task.right.length && seq.every((s, i) => norm(s) === norm(task.right[i]));
 
-  /* ─── Welche Wesen kommen in einer Runde dran ───
-     Niedrige Stufen und gerade falsch Beantwortetes öfter; Leuchtende
-     nur, wenn sonst nichts mehr da ist. Keine Karte zweimal in Folge. */
-  function weight(entry) {
-    const e = stageOf(entry);
-    if (e >= MAX) return 0;
-    return (entry && entry.x > 0 ? 6 : 0) + [5, 5, 4, 3.5, 3][e];
-  }
-  function session(cards, progOf, n) {
-    const out = [];
-    let left = cards.filter(c => weight(progOf(c.id)) > 0);
-    const review = !left.length;
-    if (review) left = cards.slice();
-    const w = c => (review ? 1 : weight(progOf(c.id)));
-    // Ziehen ohne Zurücklegen, dann ggf. von vorn (kleine Inseln)
-    let bag = left.slice();
-    while (out.length < n && left.length) {
-      if (!bag.length) bag = left.slice();
-      const cand = bag.filter(c => !out.length || out[out.length - 1].id !== c.id);
-      if (!cand.length) break;
-      let tot = 0;
-      const ws = cand.map(c => { const x = w(c); tot += x; return x; });
-      let r = rnd() * tot, pick = cand[cand.length - 1];
-      for (let i = 0; i < cand.length; i++) { r -= ws[i]; if (r <= 0) { pick = cand[i]; break; } }
-      out.push(pick);
-      bag = bag.filter(c => c !== pick);
+  /* ─── Runde (Sönke 28.10.2026) ───
+     „Runde starten“ = JEDER Begriff der Insel genau einmal (auch die
+     leuchtenden), gemischt. Dazu kommen die Begriffe aus extra (in der
+     letzten Runde zweimal falsch) ein zweites Mal. Wer in der Runde
+     falsch liegt, bekommt den Begriff einmal später in derselben Runde
+     wieder (requeue); liegt er da wieder falsch, merkt tool.js ihn für
+     die nächste Runde vor. Nie dieselbe Karte zweimal hintereinander. */
+  function noRepeat(q) {
+    for (let k = 1; k < q.length; k++) {
+      if (q[k].id !== q[k - 1].id) continue;
+      let j = q.findIndex((c, x) => x > k && c.id !== q[k - 1].id && (!q[x + 1] || q[x + 1].id !== q[k].id) && q[x - 1].id !== q[k].id);
+      if (j < 0) j = q.findIndex((c, x) => x < k - 1 && c.id !== q[k].id && (!x || q[x - 1].id !== q[k].id) && q[x + 1].id !== q[k].id);
+      if (j >= 0) [q[k], q[j]] = [q[j], q[k]];
     }
-    return { cards: out, review };
+    return q;
+  }
+  function roundCards(cards, extra) {
+    const ex = new Set(extra || []);
+    return noRepeat(shuffle(cards.concat(cards.filter(c => ex.has(c.id)))));
+  }
+  /* Karte nach Position i noch einmal einreihen: nicht direkt als
+     nächste (wenn es geht) und nie neben dieselbe Karte. */
+  function requeue(q, i, card) {
+    const from = Math.min(q.length, i + 2);
+    const ok = x => (!q[x - 1] || q[x - 1].id !== card.id) && (!q[x] || q[x].id !== card.id);
+    const spots = [];
+    for (let x = from; x <= q.length; x++) if (ok(x)) spots.push(x);
+    const at = spots.length ? spots[Math.floor(rnd() * spots.length)] : q.length;
+    q.splice(at, 0, card);
+    return at;
   }
 
   const api = { STAGES, MAX, TASKS, setRandom, shuffle, stageOf, taskFor, apply, norm, variants, dist, check,
-    checkGap, chunks, clozeGaps, makeTask, buildOk, session, others };
+    checkGap, chunks, clozeGaps, makeTask, buildOk, roundCards, requeue, others };
   global.DDInsel = api;
 })(typeof window !== 'undefined' ? window : globalThis);

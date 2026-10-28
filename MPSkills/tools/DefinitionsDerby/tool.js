@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028f';
+  const V = '20261028g';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -117,11 +117,12 @@
     { id: 'island', g: 'solo', name: 'Insel', min: 2, room: true, shot: 'spiel-insel.jpg',
       short: 'Jeder Begriff ist ein Wesen: vom Ei bis zum Leuchten.',
       text: 'Alle Begriffe des Raums leben als Wesen auf einer Insel, jeder Stapel ist eine Familie in eigener Farbe. Wer Aufgaben löst, lässt die Eier schlüpfen und die Wesen wachsen – bis sie leuchten. Die Aufgaben werden mit jeder Stufe schwerer.',
-      how: ['„Runde starten“: 8 Aufgaben, die Wesen mit den niedrigsten Stufen zuerst.',
+      how: ['„Runde starten“: jeder Begriff einmal. Was falsch war, kommt in der Runde noch einmal – und ist es wieder falsch, auch in der nächsten.',
             'Ein Wesen auf der Insel antippen, um genau dieses zu trainieren.',
             'Ei → Baby: zur Definition den Begriff wählen. Baby → Klein: zum Begriff die Definition wählen.',
             'Klein → Mittel: die Definition aus Bausteinen bauen. Mittel → Groß: den Begriff eintippen.',
-            'Groß → Leuchtend: Lücken in der Definition füllen. Kleine Tippfehler sind kein Problem.',
+            'Groß → Leuchtend: Lücken in der Definition füllen (Anfangsbuchstabe und Länge stehen da). Kleine Tippfehler sind kein Problem.',
+            'Leuchtende Wesen bleiben dabei: sie bekommen eine zufällige der fünf Aufgaben.',
             'Einmal richtig = eine Stufe hoch, zweimal hintereinander falsch = eine Stufe zurück.'] }
   ];
   const DEFAULT_GAMES = ['cards', 'overview'];
@@ -1333,13 +1334,16 @@
      falls sie nicht laden. Dazu Tag und Nacht, Leuchten mit Funken ab
      Groß, Schwimmer im Wasser und ab und zu Wolken (islSky).
 
-     Eine Runde (islRound) sind 8 Aufgaben aus DDInsel.session, ein
-     angetipptes Wesen „Trainieren“ ist eine Runde aus einer Aufgabe.
+     Eine Runde (islRound) ist jeder Begriff einmal (DDInsel.roundCards),
+     falsch Beantwortetes kommt einmal später in derselben Runde wieder
+     (requeue), ist es da wieder falsch, steht es in der nächsten Runde
+     doppelt (CARRY im Gerät). Ein angetipptes Wesen „Trainieren“ ist
+     eine Runde aus einer Aufgabe.
      Nach jeder Antwort wandert der neue Stand sofort in prog (e, x)
      und über saveProg zum Gerät/Konto. Der Stufensprung bekommt
      seinen eigenen Moment: das Bild im Aufgabenblatt wächst, ein Satz
      sagt, was passiert ist, und auf der Insel funkelt das Wesen. */
-  const ROUND = 8;
+  const CARRY = 'dd.isl.carry';   // Karten-ids: in der letzten Runde zweimal falsch → nächste Runde doppelt
   const STAGE_TXT = ['ist geschlüpft!', 'ist gewachsen und jetzt klein.', 'ist gewachsen: jetzt mittelgroß.',
                      'ist groß geworden!', 'leuchtet!'];
   let isl = null;                 // Zustand der Insel (nur solange sie offen ist)
@@ -2314,7 +2318,7 @@
             '</div>' : '') +
         '</div>' : '') +
       '<button type="button" class="btn btn--primary dd-isl__go" data-act="isl-round"' + (isl && isl.ready ? '' : ' disabled') + '>' + ico.play +
-        '<span>' + (done ? 'Wiederholen' : 'Runde starten') + '<small>' + ROUND + ' Aufgaben</small></span></button>';
+        '<span>' + (done ? 'Wiederholen' : 'Runde starten') + '<small>' + roundSize() + ' Aufgaben</small></span></button>';
     // Die Leiste links endet über dem Kasten (seine Höhe wird gemessen, nicht gerechnet).
     if (bar.offsetHeight) bar.parentNode.style.setProperty('--dd-isl-bar', (bar.offsetHeight + 20) + 'px');
   }
@@ -2333,6 +2337,12 @@
   function islRefresh() { if (isl) { paintSide(); if (isl.selId) islSelect(isl.selId); } }
 
   /* ══════ Aufgaben ══════ */
+  function carryIds() { const v = jget(CARRY, []); return Array.isArray(v) ? v : []; }
+  function roundSize() {
+    if (!opened) return 0;
+    const ids = new Set(opened.cards.map(c => c.id));
+    return opened.cards.length + carryIds().filter(id => ids.has(id)).length;
+  }
   async function islRound(onlyId) {
     if (!isl || !isl.ready) return;
     try { await ladeInsel(); } catch (e) { toast('Die Aufgaben konnten nicht geladen werden.'); return; }
@@ -2343,11 +2353,14 @@
       if (!c) return;
       cards = [c];
     } else {
-      cards = I.session(opened.cards, id => prog[id], ROUND).cards;
+      // Vorgemerkte dieser Insel kommen jetzt doppelt dran und sind damit eingelöst.
+      const ids = new Set(opened.cards.map(c => c.id)), carry = carryIds();
+      cards = I.roundCards(opened.cards, carry.filter(id => ids.has(id)));
+      jset(CARRY, carry.filter(id => !ids.has(id)));
     }
     if (!cards.length) return;
     islSelect(null);
-    isl.round = { cards, i: 0, right: 0, grown: [], single: !!onlyId };
+    isl.round = { cards, i: 0, right: 0, grown: [], single: !!onlyId, answered: 0, shown: 0, wrong: new Map(), carried: [] };
     islNewTask();
   }
   function islNewTask() {
@@ -2365,12 +2378,13 @@
   function taskHead(t) {
     const I = window.DDInsel, R = isl.round;
     const e = t.stage, next = Math.min(I.MAX, e + 1);
-    return '<div class="dd-task__head">' +
+    return (R.single ? '' : '<div class="dd-task__prog" id="ddProg" role="progressbar" aria-label="Fortschritt der Runde" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' +
+        Math.round(R.shown * 100) + '"><i style="width:' + (R.shown * 100).toFixed(1) + '%"></i></div>') +
+      '<div class="dd-task__head">' +
         '<span class="dd-task__pic" id="ddTaskPic" style="--f:' + FAM[t.fam % FAM.length] + '"><img src="' + spriteURL(t.fam, e, t.card.id) + '" alt="' + I.STAGES[e] + '"></span>' +
         '<span class="dd-task__who"><small>' + E(stackTitle(t.card.sid)) + '</small>' +
           '<b id="ddTaskStage">' + (e >= I.MAX ? 'Leuchtend · Wiederholen' : I.STAGES[e] + ' → ' + I.STAGES[next]) + '</b>' + stageDots(e) + '</span>' +
-        (R.single ? '' : '<span class="dd-task__n" aria-label="Aufgabe ' + (R.i + 1) + ' von ' + R.cards.length + '">' +
-          R.cards.map((_, i) => '<i class="' + (i < R.i ? 'is-done' : i === R.i ? 'is-now' : '') + '"></i>').join('') + '</span>') +
+
         '<button type="button" class="dd-x" data-act="isl-close" aria-label="Runde beenden">×</button>' +
       '</div>';
   }
@@ -2400,7 +2414,8 @@
       let gi = 0;
       body = '<p class="dd-task__q">Fülle die Lücken in der Definition.</p>' + termBox +
         '<div class="dd-task__def dd-cloze"><span class="dd-task__l">Definition</span><p>' + t.parts.map(p => p.gap
-          ? '<input class="dd-gap" data-g="' + (gi++) + '" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" aria-label="Lücke ' + gi + '" style="--n:' + Math.max(4, p.gap.length) + '">'
+          ? '<span class="dd-gapw"><b class="dd-gap__a" aria-hidden="true">' + E(p.gap[0]) + '</b><input class="dd-gap" data-g="' + (gi++) + '" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" maxlength="' + (p.gap.length + 3) +
+            '" aria-label="Lücke ' + gi + ': ' + p.gap.length + ' Buchstaben, beginnt mit ' + E(p.gap[0]) + '" style="--n:' + (p.gap.length - 1) + '"></span>'
           : E(p.text)).join(' ') + '</p></div>' +
         '<div class="dd-task__act"><button type="button" class="btn" data-act="isl-skip">Weiß ich nicht</button>' +
           '<button type="button" class="btn btn--primary" data-act="isl-check">' + ico.check + 'Prüfen</button></div>';
@@ -2575,15 +2590,24 @@
       if (ins.some(x => !x.value.trim())) { const f = ins.find(x => !x.value.trim()); if (f) f.focus(); return; }
       let all = true, fuzzy = false;
       ins.forEach((inp, i) => {
-        const r = I.checkGap(inp.value, gaps[i].gap);
+        const r = gapCheck(inp.value, gaps[i].gap);
         all = all && r.ok;
         fuzzy = fuzzy || (r.ok && !r.exact);
         inp.readOnly = true;
         inp.classList.add(r.ok ? 'is-right' : 'is-wrong');
-        if (!r.ok || !r.exact) inp.insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>');
+        if (!r.ok || !r.exact) (inp.closest('.dd-gapw') || inp).insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>');
       });
       islResult(all, all ? (fuzzy ? 'Fast genau – die richtige Schreibweise steht daneben.' : '') : 'Die richtigen Wörter stehen neben den Lücken.');
     }
+  }
+  /* Der Anfangsbuchstabe steht schon da: getippt wird der Rest. Wer das
+     ganze Wort tippt, liegt auch richtig. */
+  function gapCheck(v, word) {
+    const I = window.DDInsel;
+    const r = I.checkGap(word[0] + v, word);
+    if (r.ok) return r;
+    const r2 = I.checkGap(v, word);
+    return r2.ok ? r2 : r;
   }
   function islGiveUp() {
     const t = isl && isl.task;
@@ -2591,7 +2615,7 @@
     if (t.type === 'typeTerm') { const inp = root.querySelector('#ddType'); if (inp) inp.readOnly = true; islResult(false, 'Gesucht war: <b>' + E(t.card.t) + '</b>'); }
     else if (t.type === 'cloze') {
       const gaps = t.parts.filter(p => p.gap);
-      root.querySelectorAll('.dd-gap').forEach((inp, i) => { inp.readOnly = true; inp.value = ''; inp.insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>'); });
+      root.querySelectorAll('.dd-gap').forEach((inp, i) => { inp.readOnly = true; inp.value = ''; (inp.closest('.dd-gapw') || inp).insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>'); });
       islResult(false, 'So heißt es richtig.');
     }
   }
@@ -2605,6 +2629,20 @@
     prog[id] = Object.assign({}, prog[id], { e: r.e, x: r.x, t: Date.now() });
     saveProg(sidOf(id));
     if (ok) R.right++;
+    if (!R.single) {
+      // 1. Fehler in dieser Runde: später noch einmal. 2. Fehler: auch in der nächsten Runde.
+      if (!ok) {
+        const n = (R.wrong.get(id) || 0) + 1;
+        R.wrong.set(id, n);
+        if (n === 1) I.requeue(R.cards, R.i, t.card);
+        else if (n === 2) { const c = carryIds(); if (!c.includes(id)) jset(CARRY, c.concat(id)); R.carried.push(id); }
+      }
+      R.answered++;
+      // Der Balken wächst nur: kommt eine Aufgabe dazu, bleibt er stehen statt zu schrumpfen.
+      R.shown = Math.max(R.shown, R.answered / R.cards.length);
+      const pb = root.querySelector('#ddProg');
+      if (pb) { pb.setAttribute('aria-valuenow', Math.round(R.shown * 100)); pb.firstChild.style.width = (R.shown * 100).toFixed(1) + '%'; }
+    }
     const w = isl.byId.get(id);
     let say;
     if (r.up) {
@@ -2652,7 +2690,7 @@
   function paintSummary() {
     const R = isl.round, I = window.DDInsel, box = root.querySelector('#ddTask');
     isl.task = null;
-    const n = R.cards.length;
+    const n = R.answered;
     box.innerHTML = '<div class="dd-task__bg"></div>' +
       '<div class="dd-task__sheet dd-task__sheet--end" role="dialog" aria-modal="true" aria-labelledby="ddEndH">' +
         '<button type="button" class="dd-x" data-act="isl-close" aria-label="Zur Insel">×</button>' +
@@ -2663,6 +2701,7 @@
             '<ul class="dd-grown">' + R.grown.map(g => { const c = opened.cards.find(x => x.id === g.id);
               return '<li><img src="' + spriteURL(g.fam, g.e, g.id) + '" alt=""><b>' + E(c ? c.t : '') + '</b><small>' + I.STAGES[g.e] + '</small></li>'; }).join('') + '</ul>'
           : '<p>Diesmal ist niemand gewachsen – in der nächsten Runde bestimmt.</p>') +
+        (R.carried.length ? '<p class="dd-task__carry">' + (R.carried.length === 1 ? 'Ein Begriff kommt' : R.carried.length + ' Begriffe kommen') + ' in der nächsten Runde noch einmal extra dran.</p>' : '') +
         '<div class="dd-memwin__act"><button type="button" class="btn btn--primary" data-act="isl-round">' + ico.again + 'Noch eine Runde</button>' +
         '<button type="button" class="btn" data-act="isl-close">' + ico.back + 'Zur Insel</button></div>' +
       '</div>';
@@ -2674,6 +2713,7 @@
     const box = root.querySelector('#ddTask');
     if (box) { box.hidden = true; box.innerHTML = ''; }
     paintSide();
+    paintBar();
   }
 
   /* Tasten: 1–6 wählen, Enter prüft bzw. geht weiter, Esc schließt. */
