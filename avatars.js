@@ -86,7 +86,9 @@
     { id: 'mps_wildclusters',   skill: 'wildclusters',   folder: 'Wildclusters',         label: 'Wild Clusters',
       hint: 'Sobald eure Lehrkraft die Auflösung (Phase 3) startet, bekommst du alle Tiere. Das klappt nur, wenn du angemeldet bist.' },
     { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature',
-      hint: 'Spiel ein Szenario, das deine Lehrkraft mit der Klasse teilt — dann bekommst du die Figuren, die darin vorkommen. Das klappt nur, wenn du angemeldet bist.' }
+      hint: 'Spiel ein Szenario, das deine Lehrkraft mit der Klasse teilt — dann bekommst du die Figuren, die darin vorkommen. Das klappt nur, wenn du angemeldet bist.' },
+    { id: 'mps_derby',          skill: 'derby',          folder: 'Definitions Derby',    label: 'Definitions Derby',
+      hint: 'Lass auf der Insel deine Wesen schlüpfen und wachsen — jede Form, die eines deiner Wesen erreicht, kannst du als Profilbild nehmen. Das klappt nur, wenn du angemeldet bist.' }
   ];
 
   const AVATAR_GROUPS = [
@@ -361,6 +363,37 @@
       ['jagdwolf_4', 'jagdwolf_4_avatar.png',         'Wolfsjägerin'],
       ['sammeln_3',  'sammeln_3_avatar.png',          'Sammler'],
       ['villager',   'villager_11_avatar.png',        'Dorfbewohner']
+    ],
+    // Definitions Derby: jede Form der Insel-Wesen ab Baby (Endung = Name in
+    // tools/DefinitionsDerby/wesen/, Porträts von Sönke). Frei wird eine Form,
+    // sobald eines deiner Wesen sie erreicht (Migration 0236).
+    mps_derby: [
+      ['baby',    'baby_avatar.png',    'Flauschling'],
+      ['k_a',     'k_a_avatar.png',     'Drachling'],
+      ['k_b',     'k_b_avatar.png',     'Blattwicht'],
+      ['m_a_a',   'm_a_a_avatar.png',   'Federkiemer'],
+      ['m_a_b',   'm_a_b_avatar.png',   'Schildkrötchen'],
+      ['m_b_a',   'm_b_a_avatar.png',   'Pummelvogel'],
+      ['m_b_b',   'm_b_b_avatar.png',   'Blattmolch'],
+      ['m_b_c',   'm_b_c_avatar.png',   'Wurzelwicht'],
+      ['g_a_a_a', 'g_a_a_a_avatar.png', 'Stachelechse'],
+      ['g_a_a_b', 'g_a_a_b_avatar.png', 'Wellendrache'],
+      ['g_a_b_a', 'g_a_b_a_avatar.png', 'Moosschildkröte'],
+      ['g_a_b_b', 'g_a_b_b_avatar.png', 'Riffschildkröte'],
+      ['g_b_a_a', 'g_b_a_a_avatar.png', 'Federfalke'],
+      ['g_b_a_b', 'g_b_a_b_avatar.png', 'Blattfee'],
+      ['g_b_b_a', 'g_b_b_a_avatar.png', 'Rankenschlange'],
+      ['g_b_b_b', 'g_b_b_b_avatar.png', 'Laubsaurier'],
+      ['g_b_c',   'g_b_c_avatar.png',   'Buschgeist'],
+      ['f_a_a_a', 'f_a_a_a_avatar.png', 'Baumrücken'],
+      ['f_a_a_b', 'f_a_a_b_avatar.png', 'Seedrache'],
+      ['f_a_b_a', 'f_a_b_a_avatar.png', 'Waldschildkröte'],
+      ['f_a_b_b', 'f_a_b_b_avatar.png', 'Korallenschildkröte'],
+      ['f_b_a_a', 'f_b_a_a_avatar.png', 'Kronenvogel'],
+      ['f_b_a_b', 'f_b_a_b_avatar.png', 'Waldfee'],
+      ['f_b_b_a', 'f_b_b_a_avatar.png', 'Blütenschlange'],
+      ['f_b_b_b', 'f_b_b_b_avatar.png', 'Baumsaurier'],
+      ['f_b_c',   'f_b_c_avatar.png',   'Baumriese']
     ]
   };
   /* Gruppen mit gold: true haben zu jedem Bild eine goldene Fassung

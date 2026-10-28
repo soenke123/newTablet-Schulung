@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028r';
+  const V = '20261028s';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1737,7 +1737,7 @@
         const water = swimOk(wc, false);
         for (let k = 0; k < 120 && !p; k++) {
           const q = { x: I.box.x - 300 + cr() * (I.box.w + 600), y: I.box.y - 300 + cr() * (I.box.h + 600) };
-          if (water(q.x, q.y) && nearLand(wc, q.x, q.y, SWIM_COAST)) p = q;
+          if (water(q.x, q.y) && inMap(wc, q.x, q.y, 60) && nearLand(wc, q.x, q.y, SWIM_COAST)) p = q;
         }
       }
       if (I && !p && e0 >= 2 && !(e0 >= 3 && wesenAst(c.id).m === 'b_c')) {
@@ -1907,7 +1907,6 @@
     const c = isl.cam, S = isl.S;
     let best = null, bd = Infinity;
     for (const w of isl.creatures) {
-      if (w.gone) continue;
       const px = w.x * c.s + c.tx, py = (w.y - (w.alt || 0)) * c.s + c.ty, h = S * WSIZE[stageOfId(w.id)] * c.s;
       const dx = sx - px, dy = sy - (py - h * 0.4);
       const rad = Math.max(22, h * 0.45);
@@ -2183,7 +2182,6 @@
     };
     for (const w of list) {
       plantsUpTo(w.y);
-      if (w.gone) continue;                    // fliegt gerade weit draußen über dem Meer
       if (w.x < vx0 || w.x > vx1 || w.y - (w.alt || 0) < vy0 || w.y > vy1) continue;
       if ((w.alt || 0) > S * 0.2) airs.push(w);
       else drawW(w);
@@ -2239,7 +2237,6 @@
       g.font = '600 12px Outfit, system-ui, sans-serif';
       g.textAlign = 'center';
       for (const w of list) {
-        if (w.gone) continue;
         const px = w.x * c.s + c.tx, py = (w.y - (w.alt || 0)) * c.s + c.ty;
         if (px < -60 || px > isl.W + 60 || py < -20 || py > isl.H + 30) continue;
         if (isl.fam >= 0 && w.fam !== isl.fam) continue;
@@ -2259,17 +2256,19 @@
      -0,02: stecken halb darin) und gehen nur ab und zu an Land.
      Schlafen (Sönke 28.10.2026: „nicht nachts, sondern immer mal wieder“):
      wer an Land ankommt, legt sich ab und zu 15–45 s hin (CHARS.sleep), danach
-     mindestens 30 s wach. Schwimmer schlafen nur bei ihrem Landgang.
+     mindestens 30 s wach. Schwimmer schlafen am Strand oder treibend im Wasser.
      Antippen oder ein Stufensprung weckt. */
   /* Fliegen (Sönke 28.10.2026: „die Fliegenden fliegen gerne, auch etwas
      schneller über die ganze Karte“): Vögel und Waldfeen (canFly) laufen an
      Land ganz normal; bei einem Halt fliegen sie oft an eine weit entfernte
      Stelle irgendwo auf der Karte (FLY_P[0], auch zu einer anderen Insel)
-     oder verlassen die Insel (FLY_P[1]): weit hinaus übers Meer, bis sie
-     außer Sicht sind, 20–60 s weg (w.gone), dann zurück an Land. In der Luft (w.fly) zeigen sie das fliegende Bild, die
-     Höhe w.alt steigt beim Abheben und sinkt vor der Landung. Antippen oder
-     ein Stufensprung holt ein weggeflogenes Wesen sofort zurück. */
-  const FLY_P = [0.45, 0.08];         // je Halt an Land: über die Karte fliegen · die Insel verlassen
+     oder drehen eine Runde übers Meer (FLY_P[1]): erst zu einem Punkt über
+     dem Wasser (f.way, immer innerhalb der Karte — Sönke: „sie sollen nicht
+     von der Karte runterfliegen, sondern im Bogen zurückkehren“), dann ohne
+     anzuhalten im Bogen zu einem Landeplatz. In der Luft (w.fly) zeigen sie
+     das fliegende Bild, die Höhe w.alt steigt beim Abheben und sinkt vor der
+     Landung. */
+  const FLY_P = [0.45, 0.1];          // je Halt an Land: über die Karte fliegen · Runde übers Meer
   const FLY_ALT = 150, FLY_SP = 300;  // Flughöhe und Tempo (Einheiten, Wesen = 100)
   /* Landeplatz: irgendwo an Land auf der ganzen Karte, mindestens ein Stück weg (min). */
   function landingSpot(w, wc, min) {
@@ -2281,40 +2280,45 @@
     }
     return min ? null : { x: w.home.x, y: w.home.y };
   }
+  /* Punkt über dem Meer für die Runde: innerhalb der Karte (bbox, mit Rand
+     FLY_EDGE), vom Inselmittelpunkt aus eher nach außen, ein Stück weg. */
+  const FLY_EDGE = 120;
+  function seaSpot(w, wc) {
+    const B = wc.bbox, cx = B.x + B.w / 2, cy = B.y + B.h / 2, out = Math.atan2(w.y - cy, w.x - cx);
+    for (let k = 0; k < 50; k++) {
+      const a = out + (w.rnd() - 0.5) * (k < 25 ? 2 : Math.PI * 2), r = 450 + w.rnd() * 1300;
+      const tx = w.x + Math.cos(a) * r, ty = w.y + Math.sin(a) * r;
+      if (tx < B.x + FLY_EDGE || tx > B.x + B.w - FLY_EDGE || ty < B.y + FLY_EDGE || ty > B.y + B.h - FLY_EDGE) continue;
+      const d = wc.depth(tx, ty);
+      if (d !== null && d < -0.03 && !wc.walk(tx, ty)) return { x: tx, y: ty };
+    }
+    return null;
+  }
   function islFly(w, now, dt, fl, wc) {
     const f = w.fly, k = isl.size / 100;
-    if (w.gone) {                       // draußen über dem Meer
-      if (now < w.gone && fl && w.id !== isl.selId && !w.burst) return;
-      w.gone = 0;
-      f.away = false;
-      const p = landingSpot(w, wc, 0);
-      f.tx = p.x; f.ty = p.y;
-    }
-    if (f.away && !fl) {                // nach einem Rückschritt: landen
-      f.away = false;
-      const p = landingSpot(w, wc, 0);
-      f.tx = p.x; f.ty = p.y;
-    }
-    w.tx = f.tx; w.ty = f.ty;
-    const sp = FLY_SP * k * (w.temper || 1), d = Math.hypot(f.tx - w.x, f.ty - w.y);
-    const want = FLY_ALT * k * (f.away ? 1 : Math.min(1, d / (FLY_ALT * k * 1.6)));
+    if (f.way && !fl) f.way = null;     // nach einem Rückschritt: gleich landen
+    const tgt = f.way || f;
+    w.tx = tgt.x; w.ty = tgt.y;
+    const sp = FLY_SP * k * (w.temper || 1), d = Math.hypot(f.x - w.x, f.y - w.y);
+    const want = FLY_ALT * k * (f.way ? 1 : Math.min(1, d / (FLY_ALT * k * 1.6)));
     w.alt += (want - w.alt) * Math.min(1, dt * 3.5);
     w.phase += dt * 8;
+    if (f.way) {
+      // ohne Bremsen über den Wendepunkt: kurz davor kommt der Landeplatz dran → Bogen
+      steer(w, sp, 1.3, dt, null, true);
+      if (Math.hypot(f.way.x - w.x, f.way.y - w.y) < 220) f.way = null;
+      return;
+    }
     if (!steer(w, sp, 1.3, dt, null)) return;
-    if (f.away) { w.gone = now + 20000 + w.rnd() * 40000; return; }
     w.fly = null; w.alt = 0; w.walking = false; w.vx = w.vy = 0;
     w.until = now + 500 + w.rnd() * 1500;
   }
   function islTakeOff(w, wc, away) {
-    let p;
-    if (away) {                         // weit hinaus übers Meer, bis außer Sicht
-      // vom Inselmittelpunkt aus nach außen, ungefähr in die Richtung, in der es steht
-      const B = wc.bbox, cx = B.x + B.w / 2, cy = B.y + B.h / 2;
-      const a = Math.atan2(w.y - cy, w.x - cx) + (w.rnd() - 0.5) * 1.6, r = Math.hypot(B.w, B.h) / 2 + 900;
-      p = { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
-    } else p = landingSpot(w, wc, Math.min(900, Math.hypot(wc.bbox.w, wc.bbox.h) * 0.25));
+    const way = away ? seaSpot(w, wc) : null;
+    if (away && !way) return false;
+    const p = landingSpot(w, wc, away ? 300 : Math.min(900, Math.hypot(wc.bbox.w, wc.bbox.h) * 0.25));
     if (!p) return false;
-    w.fly = { tx: p.x, ty: p.y, away };
+    w.fly = { x: p.x, y: p.y, way };
     w.alt = w.alt || 0;
     w.walking = false;
     return true;
@@ -2324,11 +2328,11 @@
      dreht — so fährt es weich an, läuft Bögen und bremst vor dem Ziel. Würde
      der Bogen vom Weg abkommen (ok), geht es das Stück gerade (der gerade Weg
      ist geprüft). Liefert true, wenn das Ziel erreicht ist. */
-  function steer(w, sp, agil, dt, ok) {
+  function steer(w, sp, agil, dt, ok, through) {
     const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy);
     if (d < 2) { w.x = w.tx; w.y = w.ty; return true; }
-    const want = sp * Math.min(1, 0.22 + d / (sp * 0.9));          // vor dem Ziel abbremsen
-    const k = Math.min(1, dt * agil * (d < sp * 0.7 ? 3 : 1));     // nah am Ziel enger lenken
+    const want = through ? sp : sp * Math.min(1, 0.22 + d / (sp * 0.9));   // vor dem Ziel abbremsen (außer: durchfliegen)
+    const k = Math.min(1, dt * agil * (!through && d < sp * 0.7 ? 3 : 1)); // nah am Ziel enger lenken
     let vx = (w.vx || 0) + (dx / d * want - (w.vx || 0)) * k;
     let vy = (w.vy || 0) + (dy / d * want - (w.vy || 0)) * k;
     let nx = w.x + vx * dt, ny = w.y + vy * dt;
@@ -2350,7 +2354,7 @@
       const fd = w.dir - (w.face == null ? w.dir : w.face);
       w.face = still() ? w.dir : (w.face == null ? w.dir : w.face) + Math.sign(fd) * Math.min(Math.abs(fd), dt * 8);
       if (w.fly && still()) {             // Bewegung reduzieren: sofort zu Hause landen
-        w.fly = null; w.alt = 0; w.gone = 0;
+        w.fly = null; w.alt = 0;
         if (!wc.walk(w.x, w.y)) { w.x = w.home.x; w.y = w.home.y; }
       }
       if (w.fly) { w.wet = false; islFly(w, now, dt, fl, wc); continue; }
@@ -2393,8 +2397,9 @@
         w.until = now + C.pause[0] + w.rnd() * (C.pause[1] - C.pause[0]);
         // Besuch angekommen: zum anderen hinschauen
         if (w.visit) { const o = isl.byId.get(w.visit); if (o) w.dir = o.x < w.x ? -1 : 1; w.visit = null; }
-        if (!w.wet && wc.walk(w.x, w.y) && now > (w.awake || 0) && w.rnd() < C.sleep)
-          w.sleep = now + 15000 + w.rnd() * 30000;
+        // schlafen: an Land, Schwimmer auch im Wasser (treiben dann, C.wetSleep)
+        const p = w.wet ? C.wetSleep || 0 : wc.walk(w.x, w.y) ? C.sleep : 0;
+        if (now > (w.awake || 0) && w.rnd() < p) w.sleep = now + 15000 + w.rnd() * 30000;
       }
     }
   }
@@ -2410,15 +2415,16 @@
        slow  – Baum und Busch (Ast b_c ab Mittel): langsam, lange Pausen,
                kurze Wege, bleibt in der Nähe, schläft öfter, schwankt beim Gehen
        swim  – Seedrache und Meeresschildkröte ab Groß: ziehen im Wasser rund
-               um die Inseln, kommen selten (SWIM_LAND) an den Strand und
-               ruhen sich dort aus, dann zurück ins Wasser
+               um die Inseln, schwimmen ab und zu (SWIM_TRIP) zu einer anderen
+               Insel oder Nebeninsel, kommen selten (SWIM_LAND) an den Strand
+               und ruhen sich dort aus; schlafen auch treibend im Wasser
      agil = wie schnell sich die Richtung dreht (klein = weite Bögen).
      Dazu je Wesen ein eigenes Tempo (w.temper 0,8–1,2). */
   const CHARS = {
     baby: { sp: 30, step: 11, agil: 7, pause: [700, 2600], leg: [40, 150], leash: 0.55, sleep: 0.04, look: true, dash: 0, visit: 0 },
     ex:   { sp: 60, step: 8, agil: 3.2, pause: [300, 2000], leg: [160, 520], leash: 0, sleep: 0.035, look: true, dash: 0, visit: 0.14 },
     slow: { sp: 13, step: 3.2, agil: 1.6, pause: [5000, 14000], leg: [30, 110], leash: 0.8, sleep: 0.16, look: false, dash: 0, visit: 0 },
-    swim: { sp: 64, step: 6, agil: 1.6, pause: [100, 900], leg: [240, 700], leash: 0, sleep: 0.45, look: false, dash: 0, visit: 0 }
+    swim: { sp: 64, step: 6, agil: 1.6, pause: [100, 900], leg: [240, 700], leash: 0, sleep: 0.25, wetSleep: 0.06, look: false, dash: 0, visit: 0 }
   };
   const CHARS_KLEIN = Object.assign({}, CHARS.ex, { sp: 54, step: 10, agil: 4.5, dash: 0.18 });   // Kleine: flitzen manchmal
   function charOf(w, e, sw) {
@@ -2437,7 +2443,7 @@
     // Besuch: zu einem anderen Wesen hingehen und daneben stehen bleiben
     if (C.visit && w.rnd() < C.visit) {
       const o = isl.creatures[Math.floor(w.rnd() * isl.creatures.length)];
-      if (o && o !== w && !o.fly && !o.gone && wc.walk(o.x, o.y)) {
+      if (o && o !== w && !o.fly && wc.walk(o.x, o.y)) {
         const side = w.rnd() < 0.5 ? -1 : 1, tx = o.x + side * (70 + w.rnd() * 40), ty = o.y + (w.rnd() - 0.5) * 30;
         if (Math.hypot(tx - w.x, ty - w.y) > 40 && wc.walk(tx, ty) && lineOk(wc.walk, w.x, w.y, tx, ty)) {
           w.visit = o.id;
@@ -2472,7 +2478,7 @@
   /* Wasser für Schwimmer (mit land = true auch Strand und Land, für den
      Landgang). Ziele liegen nah an der Küste (nearLand, SWIM_COAST), damit sie
      rund um die Inseln ziehen statt aufs offene Meer. */
-  const SWIM_LAND = 0.08, SWIM_COAST = 450;
+  const SWIM_LAND = 0.06, SWIM_TRIP = 0.15, SWIM_COAST = 450;
   function swimOk(wc, land) {
     return (x, y) => {
       if (land && wc.walk(x, y)) return true;
@@ -2480,6 +2486,8 @@
       return d !== null && (land ? d < 0.09 : d < -0.03);
     };
   }
+  /* innerhalb der Karte (bbox) mit etwas Rand — sonst schwimmen sie aus dem Bild */
+  const inMap = (wc, x, y, m) => { const B = wc.bbox; return x > B.x + m && x < B.x + B.w - m && y > B.y + m && y < B.y + B.h - m; };
   function nearLand(wc, x, y, R) {
     for (let i = 1; i <= 3; i++) for (let a = 0; a < 12; a++) {
       const r = R * i / 3, t = a / 12 * Math.PI * 2 + i;
@@ -2489,7 +2497,7 @@
   }
   function swimTarget(w, C, wc, now) {
     const wet = swimOk(wc, false), any = swimOk(wc, true);
-    const water = (x, y) => wet(x, y) && nearLand(wc, x, y, SWIM_COAST);
+    const water = (x, y) => wet(x, y) && inMap(wc, x, y, 60) && nearLand(wc, x, y, SWIM_COAST);
     if (!w.wet) {
       // an Land (Landgang oder nach dem Schlüpfen zum Schwimmer): zurück ins Wasser
       for (let k = 0; k < 30; k++) {
@@ -2506,6 +2514,17 @@
         const tx = w.x + Math.cos(a) * d, ty = w.y + Math.sin(a) * d;
         const dd = wc.depth(tx, ty);
         if (wc.walk(tx, ty) && dd !== null && dd < 0.3 && lineOk(any, w.x, w.y, tx, ty)) return { x: tx, y: ty };
+      }
+    }
+    if (w.rnd() < SWIM_TRIP) {
+      // Ausflug: ins Wasser vor einer anderen Küste, gern einer anderen (Neben-)Insel
+      const B = wc.bbox;
+      for (let k = 0; k < 25; k++) {
+        const lx = B.x + w.rnd() * B.w, ly = B.y + w.rnd() * B.h;
+        if (Math.hypot(lx - w.x, ly - w.y) < 600 || !wc.walk(lx, ly)) continue;
+        const a = w.rnd() * Math.PI * 2, r = 120 + w.rnd() * 300;
+        const tx = lx + Math.cos(a) * r, ty = ly + Math.sin(a) * r;
+        if (wet(tx, ty) && inMap(wc, tx, ty, 60) && lineOk(any, w.x, w.y, tx, ty)) { w.head = Math.atan2(ty - w.y, tx - w.x); return { x: tx, y: ty }; }
       }
     }
     return headTarget(w, C, water);
