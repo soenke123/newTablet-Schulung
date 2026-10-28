@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028g';
+  const V = '20261028h';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1343,6 +1343,7 @@
      und über saveProg zum Gerät/Konto. Der Stufensprung bekommt
      seinen eigenen Moment: das Bild im Aufgabenblatt wächst, ein Satz
      sagt, was passiert ist, und auf der Insel funkelt das Wesen. */
+  const PLAY_OFF = 'dd.isl.off';  // Stapel-ids, die in den Runden NICHT mitspielen (Haken in der Leiste)
   const CARRY = 'dd.isl.carry';   // Karten-ids: in der letzten Runde zweimal falsch → nächste Runde doppelt
   const STAGE_TXT = ['ist geschlüpft!', 'ist gewachsen und jetzt klein.', 'ist gewachsen: jetzt mittelgroß.',
                      'ist groß geworden!', 'leuchtet!'];
@@ -2286,9 +2287,14 @@
       '<div class="dd-isl__body">' +
         '<ul class="dd-isl__key" aria-label="Stufen">' + names.map((nm, e) => '<li><i class="dd-st' + e + '"></i>' + nm + '</li>').join('') + '</ul>' +
         '<h3 class="dd-isl__h">' + (opened.stacks.length === 1 ? 'Stapel' : opened.stacks.length + ' Stapel') + '</h3>' +
+        (opened.stacks.length > 1 ? '<p class="dd-isl__hint">Haken = spielt in der Runde mit</p>' : '') +
         '<ul class="dd-isl__fams">' + opened.stacks.map((s, f) => {
           const cs = islCounts(opened.cards.filter(k => k.sid === s.id));
-          return '<li><button type="button" class="dd-isl__fam' + (isl && isl.fam === f ? ' is-on' : '') + '" data-act="isl-fam" data-f="' + f + '" aria-pressed="' + (isl && isl.fam === f) + '" title="Auf der Insel hervorheben" style="--f:' + FAM[f % FAM.length] + '">' +
+          const on = !playOff().includes(s.id);
+          return '<li class="' + (on ? '' : 'is-off') + '">' +
+            (opened.stacks.length > 1 ? '<label class="dd-isl__play" title="In der Runde mitspielen"><input type="checkbox" data-play="' + E(s.id) + '"' + (on ? ' checked' : '') +
+              ' aria-label="' + E(s.title) + ' spielt mit"></label>' : '') +
+            '<button type="button" class="dd-isl__fam' + (isl && isl.fam === f ? ' is-on' : '') + '" data-act="isl-fam" data-f="' + f + '" aria-pressed="' + (isl && isl.fam === f) + '" title="Auf der Insel hervorheben" style="--f:' + FAM[f % FAM.length] + '">' +
             '<img src="' + famPic(f, s) + '" alt="">' +
             '<span class="dd-isl__famt"><b>' + E(s.title) + '</b>' + stageLegend(cs, names) + '</span></button></li>';
         }).join('') + '</ul>' +
@@ -2304,7 +2310,9 @@
     const bar = root && root.querySelector('#ddIslBar');
     if (!bar || !opened) return;
     const W = window.DDWelt;
-    const done = islCounts(opened.cards)[5] === opened.cards.length;
+    const pc = playCards();
+    const done = pc.length > 0 && islCounts(pc)[5] === pc.length;
+    const nOn = opened.stacks.filter(s => !playOff().includes(s.id)).length;
     const canPick = (isTeacher || standalone) && W && isl && isl.wc;
     if (!canPick) islTplOpen = false;
     bar.innerHTML =
@@ -2317,8 +2325,9 @@
               '<button type="button" class="dd-isl__tplopt' + (i === isl.tpl ? ' is-on' : '') + '" data-act="isl-tpl" data-v="' + i + '" aria-pressed="' + (i === isl.tpl) + '" title="' + E(T.name) + '" aria-label="' + E(T.name) + '">' + TPL_ICO[i] + '</button>').join('') +
             '</div>' : '') +
         '</div>' : '') +
-      '<button type="button" class="btn btn--primary dd-isl__go" data-act="isl-round"' + (isl && isl.ready ? '' : ' disabled') + '>' + ico.play +
-        '<span>' + (done ? 'Wiederholen' : 'Runde starten') + '<small>' + roundSize() + ' Aufgaben</small></span></button>';
+      '<button type="button" class="btn btn--primary dd-isl__go" data-act="isl-round"' + (isl && isl.ready && pc.length ? '' : ' disabled') + '>' + ico.play +
+        '<span>' + (done ? 'Wiederholen' : 'Runde starten') + '<small>' + (pc.length ? roundSize() + ' Aufgaben' : 'Kein Stapel gewählt') +
+        (pc.length && nOn < opened.stacks.length ? ' · ' + nOn + ' von ' + opened.stacks.length + ' Stapeln' : '') + '</small></span></button>';
     // Die Leiste links endet über dem Kasten (seine Höhe wird gemessen, nicht gerechnet).
     if (bar.offsetHeight) bar.parentNode.style.setProperty('--dd-isl-bar', (bar.offsetHeight + 20) + 'px');
   }
@@ -2338,10 +2347,16 @@
 
   /* ══════ Aufgaben ══════ */
   function carryIds() { const v = jget(CARRY, []); return Array.isArray(v) ? v : []; }
+  /* Auf der Insel leben immer alle Stapel des Raums; in die Runde kommen nur die angehakten. */
+  function playOff() { const v = jget(PLAY_OFF, []); return Array.isArray(v) ? v : []; }
+  function playCards() {
+    if (!opened) return [];
+    const off = new Set(playOff());
+    return opened.cards.filter(c => !off.has(c.sid));
+  }
   function roundSize() {
-    if (!opened) return 0;
-    const ids = new Set(opened.cards.map(c => c.id));
-    return opened.cards.length + carryIds().filter(id => ids.has(id)).length;
+    const pc = playCards(), ids = new Set(pc.map(c => c.id));
+    return pc.length + carryIds().filter(id => ids.has(id)).length;
   }
   async function islRound(onlyId) {
     if (!isl || !isl.ready) return;
@@ -2354,8 +2369,8 @@
       cards = [c];
     } else {
       // Vorgemerkte dieser Insel kommen jetzt doppelt dran und sind damit eingelöst.
-      const ids = new Set(opened.cards.map(c => c.id)), carry = carryIds();
-      cards = I.roundCards(opened.cards, carry.filter(id => ids.has(id)));
+      const pc = playCards(), ids = new Set(pc.map(c => c.id)), carry = carryIds();
+      cards = I.roundCards(pc, carry.filter(id => ids.has(id)));
       jset(CARRY, carry.filter(id => !ids.has(id)));
     }
     if (!cards.length) return;
@@ -3111,6 +3126,12 @@
       if (t.dataset.mm === 'pairs' && mm) {
         if (mm.busy) { t.value = mm.pairs; return; }
         newMemory(Number(t.value), mm.players); renderMemory(); return;
+      }
+      if (t.dataset.play !== undefined) {
+        const off = playOff().filter(id => id !== t.dataset.play);
+        jset(PLAY_OFF, t.checked ? off : off.concat(t.dataset.play));
+        paintSide();
+        return;
       }
       if (t.dataset.f === 'fach') { homeFilter.fach = t.value; renderHome(); return; }
       if (t.dataset.ec === 'img' && ed && t.files && t.files[0]) {
