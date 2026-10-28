@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028m';
+  const V = '20261028n';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1725,6 +1725,14 @@
       const roam = roams[fam] || 300;
       const cr = rngOf(hashStr(c.id));
       let p = null;
+      // Entdecker (ab Klein, nicht Baum/Busch) starten irgendwo auf ihrer Insel, damit sie schon gemischt sind.
+      const e0 = stageOfId(c.id), I = wc.islands[famIsl[fam] || 0];
+      if (I && e0 >= 2 && !(e0 >= 3 && wesenAst(c.id).m === 'b_c')) {
+        for (let k = 0; k < 60 && !p; k++) {
+          const q = { x: I.box.x + cr() * I.box.w, y: I.box.y + cr() * I.box.h };
+          if (wc.walk(q.x, q.y)) p = q;
+        }
+      }
       for (let k = 0; k < 40 && !p; k++) {
         const a = cr() * Math.PI * 2, d = Math.sqrt(cr()) * roam;
         const q = { x: home.x + Math.cos(a) * d, y: home.y + Math.sin(a) * d };
@@ -1732,7 +1740,8 @@
       }
       if (!p) p = { x: home.x, y: home.y };
       const w = { id: c.id, card: c, fam, home, roam, x: p.x, y: p.y, tx: p.x, ty: p.y, walking: false,
-                  until: performance.now() + cr() * 3000, phase: cr() * 6, seed: cr() * 100, dir: cr() < 0.5 ? -1 : 1, burst: 0, rnd: cr };
+                  until: performance.now() + cr() * 3000, phase: cr() * 6, seed: cr() * 100, dir: cr() < 0.5 ? -1 : 1, burst: 0, rnd: cr,
+                  temper: 0.8 + cr() * 0.4 };
       isl.byId.set(c.id, w);
       return w;
     });
@@ -2087,7 +2096,8 @@
       const zz = !!w.sleep;                    // schläft gerade (nur an Land)
       const lift = w.alt || 0, wy = w.y - lift;   // Flughöhe
       const bob = w.fly ? (calm ? 0 : Math.sin(now / 170 + w.seed) * S * 0.035 * Math.min(1, lift / FLY_ALT))
-        : wet ? Math.sin(now / 520 + w.phase) * S * 0.025 : w.walking ? Math.abs(Math.sin(w.phase)) * S * 0.07 : 0;
+        : wet ? Math.sin(now / 520 + w.phase) * S * 0.025
+        : w.walking ? Math.abs(Math.sin(w.phase)) * S * (w.kind === 'slow' ? 0.02 : w.kind === 'baby' ? 0.09 : 0.07) : 0;
       // Schatten bzw. Wellenring
       if (lift > 1) {                          // in der Luft: Schatten unten, kleiner und blasser, je höher
         const k = 1 - 0.45 * Math.min(1, lift / FLY_ALT);
@@ -2122,6 +2132,7 @@
         g.translate(w.x, wy - bob);
         if (zz && !calm) g.scale(1, 1 + 0.018 * Math.sin(now / 900 + w.seed));   // atmet
         if (e === 0) g.rotate(Math.sin(now / 260 + w.phase) * (Math.sin(now / 1700 + w.phase) > 0.6 ? 0.12 : 0.02));
+        if (w.kind === 'slow' && w.walking && !calm) g.rotate(Math.sin(w.phase) * 0.06);   // Baum/Busch schwankt beim Gehen
         if (w.dir < 0) g.scale(-1, 1);
         if (wet) {                             // nur der Teil über Wasser
           g.beginPath(); g.rect(-S, -S * 1.2, S * 2, S * 1.2 - S * 0.18); g.clip();
@@ -2233,10 +2244,10 @@
      Schwimmer (canSwim) dürfen auch ins Wasser und weiter weg; im Wasser
      (depth < -0,02) schwimmen sie langsamer und stecken halb darin.
      Schlafen (Sönke 28.10.2026: „nicht nachts, sondern immer mal wieder“):
-     wer an Land ankommt, legt sich ab und zu 15–45 s hin (SLEEP_P), danach
+     wer an Land ankommt, legt sich ab und zu 15–45 s hin (CHARS.sleep, SLEEP_SWIM), danach
      mindestens 30 s wach. Schwimmer nur an Land und seltener, damit sie
      auch weiter hinausschwimmen. Antippen oder ein Stufensprung weckt. */
-  const SLEEP_P = [0.09, 0.035];      // Wahrscheinlichkeit je Halt an Land: Landtier, Schwimmer
+  const SLEEP_SWIM = 0.035;           // Schwimmer: Wahrscheinlichkeit je Halt an Land (Landtiere: CHARS)
   /* Fliegen (Sönke 28.10.2026): Vögel und Waldfeen (canFly) laufen an Land
      ganz normal; bei einem Halt fliegen sie ab und zu über die Insel an eine
      andere Stelle (FLY_P[0]) oder verlassen die Insel (FLY_P[1]): weit hinaus
@@ -2318,40 +2329,116 @@
       }
       // Wer nicht (mehr) schwimmen kann und noch im Wasser ist, schwimmt nach Hause.
       if (!sw && !w.walking && !wc.walk(w.x, w.y)) { w.tx = w.home.x; w.ty = w.home.y; w.walking = true; }
+      const C = charOf(w, e, sw);
       if (!w.walking) {
-        if (now < w.until) continue;
+        if (now < w.until) {
+          // in der Pause: ab und zu in die andere Richtung schauen (nicht die Trägen)
+          if (C.look && now > (w.look || 0)) {
+            w.look = now + 900 + w.rnd() * 2400;
+            if (w.rnd() < 0.4) w.dir = -w.dir;
+          }
+          continue;
+        }
         if (fl && !w.wet && wc.walk(w.x, w.y)) {
           const r = w.rnd();
           if (r < FLY_P[1] && now > (w.awake || 0) ? islTakeOff(w, wc, true) : r < FLY_P[0] + FLY_P[1] && islTakeOff(w, wc, false)) continue;
         }
-        const ok = okFor(sw), roam = sw ? w.roam * 2.2 : w.roam;
-        for (let k = 0; k < (sw ? 14 : 8); k++) {
-          // Schwimmer: Ziele rund um sich selbst, an der Leine der Heimat
-          const cx = sw && w.rnd() < 0.6 ? w.x : w.home.x, cy = cx === w.x ? w.y : w.home.y;
-          const a = w.rnd() * Math.PI * 2, d = Math.sqrt(w.rnd()) * w.roam;
-          const tx = cx + Math.cos(a) * d, ty = cy + Math.sin(a) * d;
-          const step = Math.hypot(tx - w.x, ty - w.y);
-          if (step > w.roam * 0.7 || step < 20) continue;
-          if (Math.hypot(tx - w.home.x, ty - w.home.y) > roam) continue;
-          let fine = ok(tx, ty);
-          for (let q = 1; fine && q < 4; q++) fine = ok(w.x + (tx - w.x) * q / 4, w.y + (ty - w.y) * q / 4);
-          if (fine) { w.tx = tx; w.ty = ty; w.walking = true; break; }
-        }
-        if (!w.walking) { w.until = now + 1500; continue; }
+        const t = sw ? swimTarget(w, wc, okFor(sw)) : wanderTarget(w, C, wc);
+        if (!t) { w.until = now + 400 + w.rnd() * 800; continue; }
+        w.tx = t.x; w.ty = t.y; w.walking = true;
+        // Kleine flitzen ab und zu ein Stück (Charakter)
+        w.dash = C.dash && w.rnd() < C.dash ? 1.7 : 1;
       }
-      const sp = [0, 30, 34, 38, 42, 42][e] * (isl.size / 100) * (w.wet ? 0.8 : 1);
+      const sp = C.sp * (w.temper || 1) * (w.dash || 1) * (isl.size / 100) * (w.wet ? 0.8 : 1);
       const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy);
       if (d < sp * dt + 1) {
-        w.x = w.tx; w.y = w.ty; w.walking = false;
-        w.until = now + (w.wet ? 400 : 1200) + w.rnd() * 4000;
-        if (!w.wet && wc.walk(w.x, w.y) && now > (w.awake || 0) && w.rnd() < SLEEP_P[sw ? 1 : 0])
+        w.x = w.tx; w.y = w.ty; w.walking = false; w.dash = 1;
+        w.until = now + (w.wet ? 400 : C.pause[0] + w.rnd() * (C.pause[1] - C.pause[0]));
+        // Besuch angekommen: zum anderen hinschauen
+        if (w.visit) { const o = isl.byId.get(w.visit); if (o) w.dir = o.x < w.x ? -1 : 1; w.visit = null; }
+        if (!w.wet && wc.walk(w.x, w.y) && now > (w.awake || 0) && w.rnd() < (sw ? SLEEP_SWIM : C.sleep))
           w.sleep = now + 15000 + w.rnd() * 30000;
         continue;
       }
       w.x += dx / d * sp * dt; w.y += dy / d * sp * dt;
       if (Math.abs(dx) > 2) w.dir = dx < 0 ? -1 : 1;
-      w.phase += dt * (e === 1 ? 11 : 8);
+      w.phase += dt * C.step * Math.min(1.6, w.dash || 1);
     }
+  }
+
+  /* Charakter der Bewegung (Sönke 28.10.2026: „die Wesen ab Klein sollen sich
+     deutlich mehr bewegen und sich durchmischen, die Insel soll erkundet
+     werden; die Babys bleiben lokal; Baum und Busch sind träger“):
+       baby  – bleibt nah an der Heimat (0,55 Laufradien), kurze Wege, tapsig
+       ex    – Entdecker ab Klein: ganze Insel, hält eine Richtung eine Weile
+               (w.head) und biegt bei Küste/Tafelberg ab, kurze Pausen,
+               besucht ab und zu ein anderes Wesen (auch anderer Familien)
+       slow  – Baum und Busch (Ast b_c ab Mittel): langsam, lange Pausen,
+               kurze Wege, bleibt in der Nähe, schläft öfter, schwankt beim Gehen
+     Dazu je Wesen ein eigenes Tempo (w.temper 0,8–1,2). */
+  const CHARS = {
+    baby: { sp: 30, step: 11, pause: [700, 2600], leg: [40, 150], leash: 0.55, sleep: 0.04, look: true, dash: 0, visit: 0 },
+    ex:   { sp: 60, step: 8, pause: [300, 2000], leg: [160, 520], leash: 0, sleep: 0.035, look: true, dash: 0, visit: 0.14 },
+    slow: { sp: 13, step: 3.2, pause: [5000, 14000], leg: [30, 110], leash: 0.8, sleep: 0.16, look: false, dash: 0, visit: 0 }
+  };
+  const CHARS_KLEIN = Object.assign({}, CHARS.ex, { sp: 54, step: 10, dash: 0.18 });   // Kleine: flitzen manchmal
+  function charOf(w, e, sw) {
+    const a = wesenAst(w.id);
+    const C = e <= 1 ? CHARS.baby : e >= 3 && a.m === 'b_c' ? CHARS.slow : e === 2 ? CHARS_KLEIN : CHARS.ex;
+    w.kind = C === CHARS.slow ? 'slow' : C === CHARS.baby ? 'baby' : 'ex';
+    return C;
+  }
+  /* Weg frei? In Schritten von ~35 Einheiten prüfen (lange Wege gehen sonst über Wasser). */
+  function lineOk(ok, x0, y0, x1, y1) {
+    const n = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 35));
+    for (let q = 1; q <= n; q++) if (!ok(x0 + (x1 - x0) * q / n, y0 + (y1 - y0) * q / n)) return false;
+    return true;
+  }
+  function wanderTarget(w, C, wc) {
+    // Besuch: zu einem anderen Wesen hingehen und daneben stehen bleiben
+    if (C.visit && w.rnd() < C.visit) {
+      const o = isl.creatures[Math.floor(w.rnd() * isl.creatures.length)];
+      if (o && o !== w && !o.fly && !o.gone && wc.walk(o.x, o.y)) {
+        const side = w.rnd() < 0.5 ? -1 : 1, tx = o.x + side * (55 + w.rnd() * 35), ty = o.y + (w.rnd() - 0.5) * 30;
+        if (Math.hypot(tx - w.x, ty - w.y) > 40 && wc.walk(tx, ty) && lineOk(wc.walk, w.x, w.y, tx, ty)) {
+          w.visit = o.id;
+          return { x: tx, y: ty };
+        }
+      }
+    }
+    if (w.head == null) w.head = w.rnd() * Math.PI * 2;
+    const leash = C.leash ? w.roam * C.leash : 0;
+    for (let k = 0; k < 14; k++) {
+      // erst geradeaus mit etwas Schlenker, dann immer weiter abbiegen
+      const a = w.head + (w.rnd() - 0.5) * (k < 5 ? 1.1 : k < 10 ? 3 : Math.PI * 2);
+      const d = C.leg[0] + w.rnd() * (C.leg[1] - C.leg[0]);
+      let tx = w.x + Math.cos(a) * d, ty = w.y + Math.sin(a) * d;
+      if (leash && Math.hypot(tx - w.home.x, ty - w.home.y) > leash) {
+        if (k < 10) continue;
+        // zu weit weg: ein Stück zurück Richtung Heimat
+        const b = Math.atan2(w.home.y - w.y, w.home.x - w.x) + (w.rnd() - 0.5) * 1.2;
+        tx = w.x + Math.cos(b) * d; ty = w.y + Math.sin(b) * d;
+      }
+      if (!wc.walk(tx, ty) || !lineOk(wc.walk, w.x, w.y, tx, ty)) continue;
+      w.head = Math.atan2(ty - w.y, tx - w.x);
+      return { x: tx, y: ty };
+    }
+    w.head += Math.PI * (0.6 + w.rnd() * 0.8);   // festgefahren: umdrehen
+    return null;
+  }
+  /* Schwimmer: Ziele rund um sich selbst, an der Leine der Heimat (wie bisher). */
+  function swimTarget(w, wc, ok) {
+    const roam = w.roam * 2.2;
+    for (let k = 0; k < 14; k++) {
+      const cx = w.rnd() < 0.6 ? w.x : w.home.x, cy = cx === w.x ? w.y : w.home.y;
+      const a = w.rnd() * Math.PI * 2, d = Math.sqrt(w.rnd()) * w.roam;
+      const tx = cx + Math.cos(a) * d, ty = cy + Math.sin(a) * d;
+      const step = Math.hypot(tx - w.x, ty - w.y);
+      if (step > w.roam * 0.7 || step < 20) continue;
+      if (Math.hypot(tx - w.home.x, ty - w.home.y) > roam) continue;
+      if (ok(tx, ty) && lineOk(ok, w.x, w.y, tx, ty)) return { x: tx, y: ty };
+    }
+    return null;
   }
 
   /* ─── Seitenleiste: Stufen, Familien, Runde ─── */
