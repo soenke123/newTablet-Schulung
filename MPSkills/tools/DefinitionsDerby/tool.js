@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028n';
+  const V = '20261028o';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1727,7 +1727,14 @@
       let p = null;
       // Entdecker (ab Klein, nicht Baum/Busch) starten irgendwo auf ihrer Insel, damit sie schon gemischt sind.
       const e0 = stageOfId(c.id), I = wc.islands[famIsl[fam] || 0];
-      if (I && e0 >= 2 && !(e0 >= 3 && wesenAst(c.id).m === 'b_c')) {
+      if (I && e0 >= 4 && wesenAst(c.id).swim) {   // Schwimmer starten im Wasser rund um ihre Insel
+        const water = swimOk(wc, false);
+        for (let k = 0; k < 120 && !p; k++) {
+          const q = { x: I.box.x - 300 + cr() * (I.box.w + 600), y: I.box.y - 300 + cr() * (I.box.h + 600) };
+          if (water(q.x, q.y) && nearLand(wc, q.x, q.y, SWIM_COAST)) p = q;
+        }
+      }
+      if (I && !p && e0 >= 2 && !(e0 >= 3 && wesenAst(c.id).m === 'b_c')) {
         for (let k = 0; k < 60 && !p; k++) {
           const q = { x: I.box.x + cr() * I.box.w, y: I.box.y + cr() * I.box.h };
           if (wc.walk(q.x, q.y)) p = q;
@@ -2133,7 +2140,7 @@
         if (zz && !calm) g.scale(1, 1 + 0.018 * Math.sin(now / 900 + w.seed));   // atmet
         if (e === 0) g.rotate(Math.sin(now / 260 + w.phase) * (Math.sin(now / 1700 + w.phase) > 0.6 ? 0.12 : 0.02));
         if (w.kind === 'slow' && w.walking && !calm) g.rotate(Math.sin(w.phase) * 0.06);   // Baum/Busch schwankt beim Gehen
-        if (w.dir < 0) g.scale(-1, 1);
+        g.scale(w.face == null ? w.dir : w.face, 1);   // dreht sich weich um (islStep)
         if (wet) {                             // nur der Teil über Wasser
           g.beginPath(); g.rect(-S, -S * 1.2, S * 2, S * 1.2 - S * 0.18); g.clip();
         }
@@ -2240,32 +2247,32 @@
     islPlacePop();
   }
 
-  /* Bewegung: laufen zu einem Ziel nahe der Heimat, dort eine Weile stehen.
-     Schwimmer (canSwim) dürfen auch ins Wasser und weiter weg; im Wasser
-     (depth < -0,02) schwimmen sie langsamer und stecken halb darin.
+  /* Bewegung: zu einem Ziel laufen (je nach Charakter, CHARS), dort eine Weile
+     stehen. Schwimmer (canSwim) leben im Wasser rund um die Inseln (depth <
+     -0,02: stecken halb darin) und gehen nur ab und zu an Land.
      Schlafen (Sönke 28.10.2026: „nicht nachts, sondern immer mal wieder“):
-     wer an Land ankommt, legt sich ab und zu 15–45 s hin (CHARS.sleep, SLEEP_SWIM), danach
-     mindestens 30 s wach. Schwimmer nur an Land und seltener, damit sie
-     auch weiter hinausschwimmen. Antippen oder ein Stufensprung weckt. */
-  const SLEEP_SWIM = 0.035;           // Schwimmer: Wahrscheinlichkeit je Halt an Land (Landtiere: CHARS)
-  /* Fliegen (Sönke 28.10.2026): Vögel und Waldfeen (canFly) laufen an Land
-     ganz normal; bei einem Halt fliegen sie ab und zu über die Insel an eine
-     andere Stelle (FLY_P[0]) oder verlassen die Insel (FLY_P[1]): weit hinaus
-     übers Meer, bis sie außer Sicht sind, 20–60 s weg (w.gone), dann zurück
-     nahe der Heimat. In der Luft (w.fly) zeigen sie das fliegende Bild, die
+     wer an Land ankommt, legt sich ab und zu 15–45 s hin (CHARS.sleep), danach
+     mindestens 30 s wach. Schwimmer schlafen nur bei ihrem Landgang.
+     Antippen oder ein Stufensprung weckt. */
+  /* Fliegen (Sönke 28.10.2026: „die Fliegenden fliegen gerne, auch etwas
+     schneller über die ganze Karte“): Vögel und Waldfeen (canFly) laufen an
+     Land ganz normal; bei einem Halt fliegen sie oft an eine weit entfernte
+     Stelle irgendwo auf der Karte (FLY_P[0], auch zu einer anderen Insel)
+     oder verlassen die Insel (FLY_P[1]): weit hinaus übers Meer, bis sie
+     außer Sicht sind, 20–60 s weg (w.gone), dann zurück an Land. In der Luft (w.fly) zeigen sie das fliegende Bild, die
      Höhe w.alt steigt beim Abheben und sinkt vor der Landung. Antippen oder
      ein Stufensprung holt ein weggeflogenes Wesen sofort zurück. */
-  const FLY_P = [0.12, 0.045];
-  const FLY_ALT = 150, FLY_SP = 210;  // Flughöhe und Tempo (Einheiten, Wesen = 100)
-  function landingSpot(w, wc, far) {
-    for (let k = 0; k < 30; k++) {
-      const a = w.rnd() * Math.PI * 2, d = (far ? 0.8 + w.rnd() * 1.7 : Math.sqrt(w.rnd())) * w.roam;
-      const cx = far ? w.x : w.home.x, cy = far ? w.y : w.home.y;
-      const tx = cx + Math.cos(a) * d, ty = cy + Math.sin(a) * d;
-      if (far && Math.hypot(tx - w.home.x, ty - w.home.y) > w.roam * 2.5) continue;
+  const FLY_P = [0.45, 0.08];         // je Halt an Land: über die Karte fliegen · die Insel verlassen
+  const FLY_ALT = 150, FLY_SP = 300;  // Flughöhe und Tempo (Einheiten, Wesen = 100)
+  /* Landeplatz: irgendwo an Land auf der ganzen Karte, mindestens ein Stück weg (min). */
+  function landingSpot(w, wc, min) {
+    const B = wc.bbox;
+    for (let k = 0; k < 40; k++) {
+      const tx = B.x + w.rnd() * B.w, ty = B.y + w.rnd() * B.h;
+      if (Math.hypot(tx - w.x, ty - w.y) < min) continue;
       if (wc.walk(tx, ty)) return { x: tx, y: ty };
     }
-    return far ? null : { x: w.home.x, y: w.home.y };
+    return min ? null : { x: w.home.x, y: w.home.y };
   }
   function islFly(w, now, dt, fl, wc) {
     const f = w.fly, k = isl.size / 100;
@@ -2273,27 +2280,23 @@
       if (now < w.gone && fl && w.id !== isl.selId && !w.burst) return;
       w.gone = 0;
       f.away = false;
-      const p = landingSpot(w, wc, false);
+      const p = landingSpot(w, wc, 0);
       f.tx = p.x; f.ty = p.y;
     }
-    if (f.away && !fl) {                // nach einem Rückschritt: heim und landen
+    if (f.away && !fl) {                // nach einem Rückschritt: landen
       f.away = false;
-      const p = landingSpot(w, wc, false);
+      const p = landingSpot(w, wc, 0);
       f.tx = p.x; f.ty = p.y;
     }
-    const dx = f.tx - w.x, dy = f.ty - w.y, d = Math.hypot(dx, dy), sp = FLY_SP * k;
+    w.tx = f.tx; w.ty = f.ty;
+    const sp = FLY_SP * k * (w.temper || 1), d = Math.hypot(f.tx - w.x, f.ty - w.y);
     const want = FLY_ALT * k * (f.away ? 1 : Math.min(1, d / (FLY_ALT * k * 1.6)));
     w.alt += (want - w.alt) * Math.min(1, dt * 3.5);
-    if (d < sp * dt + 1) {
-      w.x = f.tx; w.y = f.ty;
-      if (f.away) { w.gone = now + 20000 + w.rnd() * 40000; return; }
-      w.fly = null; w.alt = 0; w.walking = false;
-      w.until = now + 800 + w.rnd() * 2500;
-      return;
-    }
-    w.x += dx / d * sp * dt; w.y += dy / d * sp * dt;
-    if (Math.abs(dx) > 2) w.dir = dx < 0 ? -1 : 1;
     w.phase += dt * 8;
+    if (!steer(w, sp, 1.3, dt, null)) return;
+    if (f.away) { w.gone = now + 20000 + w.rnd() * 40000; return; }
+    w.fly = null; w.alt = 0; w.walking = false; w.vx = w.vy = 0;
+    w.until = now + 500 + w.rnd() * 1500;
   }
   function islTakeOff(w, wc, away) {
     let p;
@@ -2302,19 +2305,43 @@
       const B = wc.bbox, cx = B.x + B.w / 2, cy = B.y + B.h / 2;
       const a = Math.atan2(w.y - cy, w.x - cx) + (w.rnd() - 0.5) * 1.6, r = Math.hypot(B.w, B.h) / 2 + 900;
       p = { x: cx + Math.cos(a) * r, y: cy + Math.sin(a) * r };
-    } else p = landingSpot(w, wc, true);
+    } else p = landingSpot(w, wc, Math.min(900, Math.hypot(wc.bbox.w, wc.bbox.h) * 0.25));
     if (!p) return false;
     w.fly = { tx: p.x, ty: p.y, away };
     w.alt = w.alt || 0;
     w.walking = false;
     return true;
   }
+  /* Runde Bewegung (Sönke 28.10.2026: „flüssiger und runder“): jedes Wesen hat
+     eine Geschwindigkeit (w.vx/w.vy), die sich nur mit agil je Sekunde zum Ziel
+     dreht — so fährt es weich an, läuft Bögen und bremst vor dem Ziel. Würde
+     der Bogen vom Weg abkommen (ok), geht es das Stück gerade (der gerade Weg
+     ist geprüft). Liefert true, wenn das Ziel erreicht ist. */
+  function steer(w, sp, agil, dt, ok) {
+    const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy);
+    if (d < 2) { w.x = w.tx; w.y = w.ty; return true; }
+    const want = sp * Math.min(1, 0.22 + d / (sp * 0.9));          // vor dem Ziel abbremsen
+    const k = Math.min(1, dt * agil * (d < sp * 0.7 ? 3 : 1));     // nah am Ziel enger lenken
+    let vx = (w.vx || 0) + (dx / d * want - (w.vx || 0)) * k;
+    let vy = (w.vy || 0) + (dy / d * want - (w.vy || 0)) * k;
+    let nx = w.x + vx * dt, ny = w.y + vy * dt;
+    if (ok && !ok(nx, ny)) {
+      vx = dx / d * want; vy = dy / d * want;
+      nx = w.x + vx * dt; ny = w.y + vy * dt;
+    }
+    if (Math.hypot(nx - w.x, ny - w.y) >= d) { w.x = w.tx; w.y = w.ty; return true; }
+    w.vx = vx; w.vy = vy; w.x = nx; w.y = ny;
+    if (Math.abs(vx) > sp * 0.12) w.dir = vx < 0 ? -1 : 1;
+    return false;
+  }
   function islStep(now, dt) {
     const wc = isl.wc;
-    const okFor = sw => sw ? (x, y) => { if (wc.walk(x, y)) return true; const d = wc.depth(x, y); return d !== null && d < 0.09; } : wc.walk;
     for (const w of isl.creatures) {
       const e = stageOfId(w.id);
       const sw = canSwim(w.id, e), fl = canFly(w.id, e);
+      // Umdrehen dauert einen Augenblick (scale von -1 nach 1), statt zu springen
+      const fd = w.dir - (w.face == null ? w.dir : w.face);
+      w.face = still() ? w.dir : (w.face == null ? w.dir : w.face) + Math.sign(fd) * Math.min(Math.abs(fd), dt * 8);
       if (w.fly && still()) {             // Bewegung reduzieren: sofort zu Hause landen
         w.fly = null; w.alt = 0; w.gone = 0;
         if (!wc.walk(w.x, w.y)) { w.x = w.home.x; w.y = w.home.y; }
@@ -2322,7 +2349,7 @@
       if (w.fly) { w.wet = false; islFly(w, now, dt, fl, wc); continue; }
       const d0 = wc.depth(w.x, w.y);
       w.wet = d0 !== null && d0 < -0.02 && !wc.walk(w.x, w.y);
-      if (e === 0 || still()) { w.walking = false; w.sleep = 0; continue; }
+      if (e === 0 || still()) { w.walking = false; w.sleep = 0; w.vx = w.vy = 0; continue; }
       if (w.sleep) {
         if (now < w.sleep && w.id !== isl.selId && !w.burst) continue;
         w.sleep = 0; w.awake = now + 30000; w.until = now + 600 + w.rnd() * 1200;
@@ -2343,49 +2370,54 @@
           const r = w.rnd();
           if (r < FLY_P[1] && now > (w.awake || 0) ? islTakeOff(w, wc, true) : r < FLY_P[0] + FLY_P[1] && islTakeOff(w, wc, false)) continue;
         }
-        const t = sw ? swimTarget(w, wc, okFor(sw)) : wanderTarget(w, C, wc);
+        const t = sw ? swimTarget(w, C, wc, now) : wanderTarget(w, C, wc);
         if (!t) { w.until = now + 400 + w.rnd() * 800; continue; }
         w.tx = t.x; w.ty = t.y; w.walking = true;
         // Kleine flitzen ab und zu ein Stück (Charakter)
         w.dash = C.dash && w.rnd() < C.dash ? 1.7 : 1;
       }
-      const sp = C.sp * (w.temper || 1) * (w.dash || 1) * (isl.size / 100) * (w.wet ? 0.8 : 1);
-      const dx = w.tx - w.x, dy = w.ty - w.y, d = Math.hypot(dx, dy);
-      if (d < sp * dt + 1) {
-        w.x = w.tx; w.y = w.ty; w.walking = false; w.dash = 1;
-        w.until = now + (w.wet ? 400 : C.pause[0] + w.rnd() * (C.pause[1] - C.pause[0]));
+      const base = C.sp * (w.temper || 1) * (isl.size / 100);
+      const sp = base * (w.dash || 1) * (sw ? (w.wet ? 1 : 0.6) : w.wet ? 0.8 : 1);
+      const ok = sw ? swimOk(wc, true) : (x, y) => wc.walk(x, y);
+      const from = Math.hypot(w.vx || 0, w.vy || 0);
+      w.phase += dt * C.step * Math.min(1.6, Math.max(0.3, from / base));
+      if (steer(w, sp, C.agil, dt, ok)) {
+        w.walking = false; w.dash = 1; w.vx = w.vy = 0;
+        w.until = now + C.pause[0] + w.rnd() * (C.pause[1] - C.pause[0]);
         // Besuch angekommen: zum anderen hinschauen
         if (w.visit) { const o = isl.byId.get(w.visit); if (o) w.dir = o.x < w.x ? -1 : 1; w.visit = null; }
-        if (!w.wet && wc.walk(w.x, w.y) && now > (w.awake || 0) && w.rnd() < (sw ? SLEEP_SWIM : C.sleep))
+        if (!w.wet && wc.walk(w.x, w.y) && now > (w.awake || 0) && w.rnd() < C.sleep)
           w.sleep = now + 15000 + w.rnd() * 30000;
-        continue;
       }
-      w.x += dx / d * sp * dt; w.y += dy / d * sp * dt;
-      if (Math.abs(dx) > 2) w.dir = dx < 0 ? -1 : 1;
-      w.phase += dt * C.step * Math.min(1.6, w.dash || 1);
     }
   }
 
   /* Charakter der Bewegung (Sönke 28.10.2026: „die Wesen ab Klein sollen sich
      deutlich mehr bewegen und sich durchmischen, die Insel soll erkundet
-     werden; die Babys bleiben lokal; Baum und Busch sind träger“):
+     werden; die Babys bleiben lokal; Baum und Busch sind träger“; später:
+     „die Meeresbewohner sind fast nur im Wasser“):
        baby  – bleibt nah an der Heimat (0,55 Laufradien), kurze Wege, tapsig
        ex    – Entdecker ab Klein: ganze Insel, hält eine Richtung eine Weile
                (w.head) und biegt bei Küste/Tafelberg ab, kurze Pausen,
                besucht ab und zu ein anderes Wesen (auch anderer Familien)
        slow  – Baum und Busch (Ast b_c ab Mittel): langsam, lange Pausen,
                kurze Wege, bleibt in der Nähe, schläft öfter, schwankt beim Gehen
+       swim  – Seedrache und Meeresschildkröte ab Groß: ziehen im Wasser rund
+               um die Inseln, kommen selten (SWIM_LAND) an den Strand und
+               ruhen sich dort aus, dann zurück ins Wasser
+     agil = wie schnell sich die Richtung dreht (klein = weite Bögen).
      Dazu je Wesen ein eigenes Tempo (w.temper 0,8–1,2). */
   const CHARS = {
-    baby: { sp: 30, step: 11, pause: [700, 2600], leg: [40, 150], leash: 0.55, sleep: 0.04, look: true, dash: 0, visit: 0 },
-    ex:   { sp: 60, step: 8, pause: [300, 2000], leg: [160, 520], leash: 0, sleep: 0.035, look: true, dash: 0, visit: 0.14 },
-    slow: { sp: 13, step: 3.2, pause: [5000, 14000], leg: [30, 110], leash: 0.8, sleep: 0.16, look: false, dash: 0, visit: 0 }
+    baby: { sp: 30, step: 11, agil: 7, pause: [700, 2600], leg: [40, 150], leash: 0.55, sleep: 0.04, look: true, dash: 0, visit: 0 },
+    ex:   { sp: 60, step: 8, agil: 3.2, pause: [300, 2000], leg: [160, 520], leash: 0, sleep: 0.035, look: true, dash: 0, visit: 0.14 },
+    slow: { sp: 13, step: 3.2, agil: 1.6, pause: [5000, 14000], leg: [30, 110], leash: 0.8, sleep: 0.16, look: false, dash: 0, visit: 0 },
+    swim: { sp: 64, step: 6, agil: 1.6, pause: [100, 900], leg: [240, 700], leash: 0, sleep: 0.45, look: false, dash: 0, visit: 0 }
   };
-  const CHARS_KLEIN = Object.assign({}, CHARS.ex, { sp: 54, step: 10, dash: 0.18 });   // Kleine: flitzen manchmal
+  const CHARS_KLEIN = Object.assign({}, CHARS.ex, { sp: 54, step: 10, agil: 4.5, dash: 0.18 });   // Kleine: flitzen manchmal
   function charOf(w, e, sw) {
     const a = wesenAst(w.id);
-    const C = e <= 1 ? CHARS.baby : e >= 3 && a.m === 'b_c' ? CHARS.slow : e === 2 ? CHARS_KLEIN : CHARS.ex;
-    w.kind = C === CHARS.slow ? 'slow' : C === CHARS.baby ? 'baby' : 'ex';
+    const C = sw ? CHARS.swim : e <= 1 ? CHARS.baby : e >= 3 && a.m === 'b_c' ? CHARS.slow : e === 2 ? CHARS_KLEIN : CHARS.ex;
+    w.kind = C === CHARS.slow ? 'slow' : C === CHARS.baby ? 'baby' : C === CHARS.swim ? 'swim' : 'ex';
     return C;
   }
   /* Weg frei? In Schritten von ~35 Einheiten prüfen (lange Wege gehen sonst über Wasser). */
@@ -2406,10 +2438,14 @@
         }
       }
     }
+    return headTarget(w, C, wc.walk);
+  }
+  /* Ziel in der gehaltenen Richtung (w.head): erst geradeaus mit etwas
+     Schlenker, dann immer weiter abbiegen; festgefahren = umdrehen. */
+  function headTarget(w, C, ok) {
     if (w.head == null) w.head = w.rnd() * Math.PI * 2;
     const leash = C.leash ? w.roam * C.leash : 0;
     for (let k = 0; k < 14; k++) {
-      // erst geradeaus mit etwas Schlenker, dann immer weiter abbiegen
       const a = w.head + (w.rnd() - 0.5) * (k < 5 ? 1.1 : k < 10 ? 3 : Math.PI * 2);
       const d = C.leg[0] + w.rnd() * (C.leg[1] - C.leg[0]);
       let tx = w.x + Math.cos(a) * d, ty = w.y + Math.sin(a) * d;
@@ -2419,26 +2455,53 @@
         const b = Math.atan2(w.home.y - w.y, w.home.x - w.x) + (w.rnd() - 0.5) * 1.2;
         tx = w.x + Math.cos(b) * d; ty = w.y + Math.sin(b) * d;
       }
-      if (!wc.walk(tx, ty) || !lineOk(wc.walk, w.x, w.y, tx, ty)) continue;
+      if (!ok(tx, ty) || !lineOk(ok, w.x, w.y, tx, ty)) continue;
       w.head = Math.atan2(ty - w.y, tx - w.x);
       return { x: tx, y: ty };
     }
-    w.head += Math.PI * (0.6 + w.rnd() * 0.8);   // festgefahren: umdrehen
+    w.head += Math.PI * (0.6 + w.rnd() * 0.8);
     return null;
   }
-  /* Schwimmer: Ziele rund um sich selbst, an der Leine der Heimat (wie bisher). */
-  function swimTarget(w, wc, ok) {
-    const roam = w.roam * 2.2;
-    for (let k = 0; k < 14; k++) {
-      const cx = w.rnd() < 0.6 ? w.x : w.home.x, cy = cx === w.x ? w.y : w.home.y;
-      const a = w.rnd() * Math.PI * 2, d = Math.sqrt(w.rnd()) * w.roam;
-      const tx = cx + Math.cos(a) * d, ty = cy + Math.sin(a) * d;
-      const step = Math.hypot(tx - w.x, ty - w.y);
-      if (step > w.roam * 0.7 || step < 20) continue;
-      if (Math.hypot(tx - w.home.x, ty - w.home.y) > roam) continue;
-      if (ok(tx, ty) && lineOk(ok, w.x, w.y, tx, ty)) return { x: tx, y: ty };
+  /* Wasser für Schwimmer (mit land = true auch Strand und Land, für den
+     Landgang). Ziele liegen nah an der Küste (nearLand, SWIM_COAST), damit sie
+     rund um die Inseln ziehen statt aufs offene Meer. */
+  const SWIM_LAND = 0.08, SWIM_COAST = 450;
+  function swimOk(wc, land) {
+    return (x, y) => {
+      if (land && wc.walk(x, y)) return true;
+      const d = wc.depth(x, y);
+      return d !== null && (land ? d < 0.09 : d < -0.03);
+    };
+  }
+  function nearLand(wc, x, y, R) {
+    for (let i = 1; i <= 3; i++) for (let a = 0; a < 12; a++) {
+      const r = R * i / 3, t = a / 12 * Math.PI * 2 + i;
+      if (wc.walk(x + Math.cos(t) * r, y + Math.sin(t) * r)) return true;
     }
-    return null;
+    return false;
+  }
+  function swimTarget(w, C, wc, now) {
+    const wet = swimOk(wc, false), any = swimOk(wc, true);
+    const water = (x, y) => wet(x, y) && nearLand(wc, x, y, SWIM_COAST);
+    if (!w.wet) {
+      // an Land (Landgang oder nach dem Schlüpfen zum Schwimmer): zurück ins Wasser
+      for (let k = 0; k < 30; k++) {
+        const a = w.rnd() * Math.PI * 2, d = 150 + w.rnd() * 450;
+        const tx = w.x + Math.cos(a) * d, ty = w.y + Math.sin(a) * d;
+        if (water(tx, ty) && lineOk(any, w.x, w.y, tx, ty)) { w.head = a; return { x: tx, y: ty }; }
+      }
+      return headTarget(w, C, any);
+    }
+    if (now > (w.awake || 0) && w.rnd() < SWIM_LAND) {
+      // Landgang: an den Strand in der Nähe, dort ausruhen
+      for (let k = 0; k < 20; k++) {
+        const a = w.rnd() * Math.PI * 2, d = 100 + w.rnd() * 400;
+        const tx = w.x + Math.cos(a) * d, ty = w.y + Math.sin(a) * d;
+        const dd = wc.depth(tx, ty);
+        if (wc.walk(tx, ty) && dd !== null && dd < 0.3 && lineOk(any, w.x, w.y, tx, ty)) return { x: tx, y: ty };
+      }
+    }
+    return headTarget(w, C, water);
   }
 
   /* ─── Seitenleiste: Stufen, Familien, Runde ─── */
