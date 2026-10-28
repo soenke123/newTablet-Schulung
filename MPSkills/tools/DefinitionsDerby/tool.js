@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028p';
+  const V = '20261028q';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1552,10 +1552,11 @@
   /* Fliegen können der Vogel ab Mittel (Ast m = b_a) und alles, was aus ihm wird. */
   const canFly = (id, e) => e >= 3 && wesenAst(id).m === 'b_a';
   /* Größe auf der Insel je Stufe (Sönke 28.10.2026: „Eier und Babys sind kleiner,
-     die anderen etwas größer, sodass eine leichte Steigerung zu sehen ist“).
+     die anderen etwas größer, sodass eine leichte Steigerung zu sehen ist“;
+     Klein bleibt wie das Bild).
      Mal dem, was die Bilder schon mitbringen (aufbereiten.py GROESSE 0,46 … 1,0):
-     sichtbar ≈ 0,46 · 0,56 · 0,82 · 1,04 · 1,29 · 1,5 einer Wesen-Größe. */
-  const WSIZE = [1, 1, 1.2, 1.3, 1.4, 1.5];
+     sichtbar ≈ 0,46 · 0,56 · 0,68 · 1,04 · 1,29 · 1,5 einer Wesen-Größe. */
+  const WSIZE = [1, 1, 1, 1.3, 1.4, 1.5];
 
   /* Zielfarbton je Familie (null = Originalfarben) und passende Farbe für Chips/Balken. */
   const FAM_HUE = [null, 355, 275, 92, 218, 322, 32, 150, 250, 12, 195, 48];
