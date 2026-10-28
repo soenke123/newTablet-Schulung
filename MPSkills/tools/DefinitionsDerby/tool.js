@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028j';
+  const V = '20261028k';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -2288,9 +2288,7 @@
       '</button>' +
       (open ?
       '<div class="dd-isl__body">' +
-        '<ul class="dd-isl__key" aria-label="Stufen">' + names.map((nm, e) => '<li><i class="dd-st' + e + '"></i>' + nm + '</li>').join('') + '</ul>' +
         '<h3 class="dd-isl__h">' + (opened.stacks.length === 1 ? 'Stapel' : opened.stacks.length + ' Stapel') + '</h3>' +
-        (opened.stacks.length > 1 ? '<p class="dd-isl__hint">Haken = spielt in der Runde mit</p>' : '') +
         '<ul class="dd-isl__fams">' + opened.stacks.map((s, f) => {
           const cs = islCounts(opened.cards.filter(k => k.sid === s.id));
           const on = !playOff().includes(s.id);
@@ -2301,7 +2299,6 @@
             '<img src="' + famPic(f, s) + '" alt="">' +
             '<span class="dd-isl__famt"><b>' + E(s.title) + '</b>' + stageLegend(cs, names) + '</span></button></li>';
         }).join('') + '</ul>' +
-        acctNote() +
       '</div>' : '');
     paintBar();
   }
