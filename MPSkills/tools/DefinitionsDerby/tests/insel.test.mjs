@@ -46,10 +46,18 @@ ok('Lücke Tippfehler', I.checkGap('Erbinformaton', 'Erbinformation').ok && !I.c
 // Bausteine
 const def = 'Kraftwerk der Zelle, das aus Traubenzucker und Sauerstoff Energie für die Zelle freisetzt.';
 const ch = I.chunks(def);
-ok('3–6 Bausteine', ch.length >= 3 && ch.length <= 6, JSON.stringify(ch));
+ok('2–6 Bausteine', ch.length >= 2 && ch.length <= 6, JSON.stringify(ch));
 ok('Bausteine ergeben Definition', ch.join(' ') === def, JSON.stringify(ch));
 ok('Schnitt nach Komma', ch.some(c => c.endsWith('Zelle,')), JSON.stringify(ch));
-ok('kurze Definition Wort für Wort', JSON.stringify(I.chunks('Brüche gleichen Nenners')) === '["Brüche","gleichen","Nenners"]');
+ok('zu kurz zum Bauen', I.chunks('Brüche gleichen Nenners').length === 0);
+ok('vier Wörter = zwei Bausteine', JSON.stringify(I.chunks('Teil eines ganzen Kuchens')) === '["Teil eines","ganzen Kuchens"]');
+const wc = c => c.split(' ').length;
+for (let n = 4; n <= 40; n++) {
+  const cs = I.chunks(Array.from({ length: n }, (_, i) => (i % 5 === 2 ? 'und' : 'wort' + i) + (i % 7 === 3 ? ',' : '')).join(' '));
+  if (!cs.every(c => wc(c) >= 2)) ok('mind. 2 Wörter je Baustein (' + n + ')', false, JSON.stringify(cs));
+}
+ok('mind. 2 Wörter je Baustein', true);
+{ const cs = I.chunks(def); ok('meist 3 Wörter', cs.filter(c => wc(c) >= 3).length >= cs.length - 1, JSON.stringify(cs)); }
 ok('lange Definition höchstens 6', I.chunks(Array.from({ length: 40 }, (_, i) => 'wort' + i).join(' ')).length === 6);
 
 // Lückentext
@@ -82,6 +90,9 @@ ok('kleiner Stapel wird aufgefüllt', t.options.length === 6 && t.options.some(o
 t = I.makeTask(A[1], pool, 2);
 ok('Mittel: Bausteine + 2 falsche', t.type === 'build' && t.tiles.filter(x => x.wrong).length === 2 && t.tiles.filter(x => !x.wrong).length === t.right.length);
 ok('richtige Folge erkannt', I.buildOk(t, t.right) && !I.buildOk(t, t.right.slice().reverse()));
+ok('falsche Bausteine auch mind. 2 Wörter', t.tiles.every(x => wc(x.text) >= 2), JSON.stringify(t.tiles));
+t = I.makeTask({ id: 'b:9', sid: 'b', t: 'Bruch', d: 'Teil eines Ganzen' }, pool, 2);
+ok('zu kurz zum Bauen → Begriff tippen', t.type === 'typeTerm');
 t = I.makeTask(A[1], pool, 3);
 ok('Groß: Begriff tippen', t.type === 'typeTerm');
 t = I.makeTask(A[0], pool, 4);

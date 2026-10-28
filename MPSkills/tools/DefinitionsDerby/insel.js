@@ -148,33 +148,36 @@
   }
 
   /* ─── Bausteine ───
-     Die Definition wird in 3–6 Satzteile geschnitten: bevorzugt nach
-     Satzzeichen und vor Bindewörtern/Präpositionen, sonst gleich
-     lang. Kurze Definitionen (unter 3 Wörtern) werden Wort für Wort. */
+     Die Definition wird in Satzteile geschnitten, jeder mindestens
+     2 Wörter, am liebsten 3 (Entscheidung Sönke 28.10.2026: „1 Wort
+     ergibt keinen Sinn“). Schnitt bevorzugt nach Satzzeichen und vor
+     Bindewörtern/Präpositionen. Anzahl ≈ Wörter/3, höchstens 6.
+     Unter 4 Wörtern gibt es nichts zu bauen → [] (makeTask weicht aus). */
   const CUT_BEFORE = new Set(['und', 'oder', 'aber', 'sowie', 'der', 'die', 'das', 'dem', 'den', 'des', 'welche', 'welcher',
     'welches', 'wenn', 'weil', 'dass', 'da', 'mit', 'in', 'im', 'für', 'aus', 'zu', 'zum', 'zur', 'von', 'vom', 'durch',
     'bei', 'beim', 'nach', 'um', 'auf', 'an', 'am', 'über', 'unter', 'zwischen', 'ohne', 'gegen', 'wie', 'als', 'ob',
     'so', 'damit', 'indem', 'sodass', 'wobei', 'wird', 'werden', 'ist', 'sind', 'hat', 'haben', 'kann', 'können']);
+  const MIN_CHUNK = 2;
   function words(s) { return String(s || '').trim().split(/\s+/).filter(Boolean); }
   function chunks(def) {
     const w = words(def);
-    if (w.length <= 3) return w.slice();
-    const k = Math.max(3, Math.min(6, Math.round(w.length / 2.8)));
+    if (w.length < 2 * MIN_CHUNK) return [];
+    const k = Math.max(2, Math.min(6, Math.round(w.length / 3), Math.floor(w.length / MIN_CHUNK)));
     const cuts = [];
     let start = 0;
     for (let part = 1; part < k; part++) {
       const ideal = Math.round(w.length * part / k);
-      const lo = Math.max(start + 1, ideal - 2), hi = Math.min(w.length - (k - part), ideal + 2);
-      let best = -1, score = Infinity;
+      // Schnitt VOR Wort i: davor mind. MIN_CHUNK seit dem letzten Schnitt, dahinter Platz für die restlichen Teile
+      const lo = Math.max(start + MIN_CHUNK, ideal - 2), hi = Math.min(w.length - MIN_CHUNK * (k - part), ideal + 2);
+      let best = Math.max(lo, Math.min(hi, ideal)), score = Infinity;
       for (let i = lo; i <= hi; i++) {
-        // Schnitt VOR Wort i
         const prev = w[i - 1], next = (w[i] || '').toLocaleLowerCase('de').replace(/[^a-zäöüß]/g, '');
         let s = Math.abs(i - ideal);
         if (/[,;:)]$/.test(prev) || /[.!?]$/.test(prev)) s -= 3;
         else if (CUT_BEFORE.has(next)) s -= 1.5;
+        if (i - start === MIN_CHUNK) s += 0.6;   // 3 Wörter lieber als 2
         if (s < score) { score = s; best = i; }
       }
-      if (best <= start) best = Math.min(w.length - 1, start + 1);
       cuts.push(best);
       start = best;
     }
@@ -252,6 +255,10 @@
       t.options = shuffle([card].concat(others(card, pool, 'd', 3))).map(c => ({ id: c.id, text: c.d }));
     } else if (type === 'build') {
       const right = chunks(card.d);
+      if (right.length < 2) {   // zu kurz zum Bauen: Begriff eintippen statt Wort-Schnipsel
+        t.type = 'typeTerm';
+        return t;
+      }
       const rightN = new Set(right.map(norm));
       const wrong = [];
       for (const o of others(card, pool, 'd', 6)) {

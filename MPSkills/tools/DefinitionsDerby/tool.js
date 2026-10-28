@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028e';
+  const V = '20261028f';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -2388,7 +2388,7 @@
       body = '<p class="dd-task__q">Welche Definition passt zu diesem Begriff?</p>' + termBox +
         '<div class="dd-opts4">' + t.options.map((o, i) => '<button type="button" class="dd-opt dd-opt--def" data-act="isl-opt" data-id="' + E(o.id) + '"><kbd>' + (i + 1) + '</kbd><span>' + E(o.text) + '</span></button>').join('') + '</div>';
     } else if (t.type === 'build') {
-      body = '<p class="dd-task__q">Bau die Definition zusammen. Zwei Bausteine gehören nicht dazu.</p>' + termBox +
+      body = '<p class="dd-task__q">Bau die Definition zusammen: Bausteine in die Zeile ziehen und dort sortieren. Zwei gehören nicht dazu.</p>' + termBox +
         '<div class="dd-build" id="ddBuild"></div>' +
         '<div class="dd-task__act"><button type="button" class="btn btn--primary" data-act="isl-check" id="ddCheck" disabled>' + ico.check + 'Prüfen</button></div>';
     } else if (t.type === 'typeTerm') {
@@ -2411,7 +2411,7 @@
         '<div class="dd-task__fb" id="ddFb" aria-live="polite"></div>' +
       '</div>';
     box.hidden = false;
-    if (t.type === 'build') paintBuild();
+    if (t.type === 'build') { paintBuild(); bindBuildDrag(box.querySelector('#ddBuild')); }
     const f = box.querySelector('#ddType, .dd-gap, .dd-opt');
     if (f && (f.tagName === 'INPUT' || !('ontouchstart' in window))) f.focus({ preventScroll: true });
   }
@@ -2424,17 +2424,113 @@
     const byK = k => t.tiles.find(x => x.k === k);
     box.innerHTML =
       '<div class="dd-build__line' + (t.seq.length ? '' : ' is-empty') + '" aria-label="Deine Definition">' +
-        (t.seq.length ? t.seq.map(k => tile(byK(k), 'in')).join('') : '<span class="dd-build__ph">Tippe die Bausteine in der richtigen Reihenfolge an.</span>') + '</div>' +
+        (t.seq.length ? t.seq.map(k => tile(byK(k), 'in')).join('') : '<span class="dd-build__ph">Bausteine hierher ziehen oder antippen.</span>') + '</div>' +
       '<div class="dd-build__pool" aria-label="Bausteine">' + t.tiles.filter(x => !used.has(x.k)).map(x => tile(x, 'pool')).join('') + '</div>';
     const chk = root.querySelector('#ddCheck');
     if (chk) chk.disabled = t.done || !t.seq.length;
   }
+  let buildDragEnd = 0;
   function islTile(k) {
     const t = isl && isl.task;
     if (!t || t.done || t.type !== 'build') return;
+    if (Date.now() - buildDragEnd < 400) return;   // Klick nach dem Ziehen
     const i = t.seq.indexOf(k);
     if (i >= 0) t.seq.splice(i, 1); else t.seq.push(k);
     paintBuild();
+  }
+  /* Bausteine ziehen (Sönke 28.10.2026): aus dem Vorrat an jede Stelle
+     der Zeile, in der Zeile umsortieren, aus der Zeile hinausziehen =
+     zurück in den Vorrat. Wo er landet, zeigt eine Lücke in Größe des
+     Bausteins (.dd-build__mark); der Vorrat leuchtet, wenn er dorthin
+     zurückgeht. Antippen bleibt wie vorher (hinten anhängen/entfernen). */
+  function bindBuildDrag(box) {
+    let d = null;
+    const lineEl = () => box.querySelector('.dd-build__line');
+    const poolEl = () => box.querySelector('.dd-build__pool');
+    const inside = (r, x, y, pad) => x >= r.left - pad && x <= r.right + pad && y >= r.top - pad && y <= r.bottom + pad;
+    function begin() {
+      const r = d.el.getBoundingClientRect();
+      d.on = true;
+      d.dx = d.x0 - r.left; d.dy = d.y0 - r.top;
+      d.ghost = d.el.cloneNode(true);
+      d.ghost.className = 'dd-tile dd-tile--fly' + (d.fromLine ? ' is-in' : '');
+      d.ghost.removeAttribute('data-act');
+      d.ghost.style.width = r.width + 'px';
+      root.querySelector('#ddTask').appendChild(d.ghost);
+      d.mark = document.createElement('span');
+      d.mark.className = 'dd-build__mark';
+      d.mark.style.width = r.width + 'px';
+      d.mark.style.height = r.height + 'px';
+      const ph = box.querySelector('.dd-build__ph');
+      if (ph) ph.hidden = true;
+      if (d.fromLine) d.el.replaceWith(d.mark);   // Lücke genau dort, wo er lag
+      else d.el.classList.add('is-lifted');
+      box.classList.add('is-dragging');
+    }
+    function place(x, y) {
+      const line = lineEl(), pool = poolEl();
+      const overLine = inside(line.getBoundingClientRect(), x, y, 18);
+      pool.classList.toggle('is-over', !overLine && d.fromLine);
+      line.classList.toggle('is-over', overLine);
+      if (!overLine) { d.mark.remove(); return; }
+      const tiles = [...line.querySelectorAll('.dd-tile')];
+      if (inside(d.mark.getBoundingClientRect(), x, y, 0) && d.mark.isConnected) return;
+      const hit = tiles.find(el => inside(el.getBoundingClientRect(), x, y, 4));
+      if (hit) {
+        const r = hit.getBoundingClientRect();
+        const before = x < r.left + r.width / 2;
+        if (before ? hit.previousElementSibling !== d.mark : hit.nextElementSibling !== d.mark) hit.insertAdjacentElement(before ? 'beforebegin' : 'afterend', d.mark);
+        return;
+      }
+      // Zwischen/neben den Bausteinen: in der Reihe, die der Zeiger trifft, vor den ersten Baustein rechts davon.
+      const row = tiles.filter(el => { const r = el.getBoundingClientRect(); return y >= r.top - 6 && y <= r.bottom + 6; });
+      const nx = row.find(el => { const r = el.getBoundingClientRect(); return x < r.left + r.width / 2; });
+      if (nx) { if (nx.previousElementSibling !== d.mark) nx.before(d.mark); return; }
+      const last = row.length ? row[row.length - 1] : null;
+      if (last) { if (last.nextElementSibling !== d.mark) last.after(d.mark); return; }
+      const first = tiles[0];
+      if (first && y < first.getBoundingClientRect().top) { if (line.firstElementChild !== d.mark) line.prepend(d.mark); return; }
+      if (line.lastElementChild !== d.mark) line.append(d.mark);
+    }
+    function move(ev) {
+      if (!d || ev.pointerId !== d.id) return;
+      if (!d.on) {
+        if (Math.hypot(ev.clientX - d.x0, ev.clientY - d.y0) < 6) return;
+        begin();
+      }
+      ev.preventDefault();
+      d.ghost.style.transform = 'translate(' + (ev.clientX - d.dx) + 'px,' + (ev.clientY - d.dy) + 'px) rotate(-2deg)';
+      place(ev.clientX, ev.clientY);
+    }
+    function end(ev) {
+      if (!d || ev.pointerId !== d.id) return;
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', end);
+      document.removeEventListener('pointercancel', end);
+      const dd = d; d = null;
+      if (!dd.on) return;   // nur angetippt: das macht der Klick
+      buildDragEnd = Date.now();
+      dd.ghost.remove();
+      box.classList.remove('is-dragging');
+      const t = isl && isl.task;
+      if (!t || t.done || ev.type === 'pointercancel') { if (t) paintBuild(); return; }
+      if (dd.mark.isConnected) {
+        // Reihenfolge so, wie sie jetzt in der Zeile steht; die Lücke ist der gezogene Baustein.
+        t.seq = [...lineEl().children].map(el => (el === dd.mark ? dd.k : el.dataset.k)).filter(Boolean);
+      } else {
+        t.seq = t.seq.filter(k => k !== dd.k);
+      }
+      paintBuild();
+    }
+    box.addEventListener('pointerdown', ev => {
+      const el = ev.target.closest('.dd-tile');
+      const t = isl && isl.task;
+      if (!el || el.disabled || !t || t.done || d || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
+      d = { k: el.dataset.k, el, id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, on: false, fromLine: !!el.closest('.dd-build__line') };
+      document.addEventListener('pointermove', move, { passive: false });
+      document.addEventListener('pointerup', end);
+      document.addEventListener('pointercancel', end);
+    });
   }
 
   /* Auswahl-Aufgaben: Antippen = Antwort. */
