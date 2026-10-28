@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028i';
+  const V = '20261028j';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -490,8 +490,7 @@
     if (!G) return;
     const ids = G.room ? islandIds() : sel.filter(id => (list || []).some(x => x.id === id));
     if (!ids.length) {
-      toast(!G.room ? 'Wähle zuerst mindestens einen Stapel aus.'
-        : isTeacher && !standalone ? 'Teile zuerst Stapel mit der Klasse – oder wähle welche aus.' : 'Noch ist kein Stapel da.');
+      toast(!G.room ? 'Wähle zuerst mindestens einen Stapel aus.' : isTeacher ? 'Lege zuerst einen Stapel an.' : 'Noch ist kein Stapel da.');
       return;
     }
     busy(true);
@@ -676,10 +675,12 @@
             '<figcaption>So sieht es aus</figcaption></figure>' +
           '<div class="dd-sheet__act">' +
             '<button type="button" class="btn btn--primary" data-act="info-start"' + (it.length ? '' : ' disabled') + '>' + ico.play +
-              (it.length ? 'Starten mit ' + (it.length === 1 ? E(it[0].title) : it.length + ' Stapeln') + ' (' + kart(nCards) + ')' : 'Starten') + '</button>' +
+              (!it.length ? 'Starten'
+                : G.room ? 'Insel öffnen' + (it.length > 1 ? ' – alle ' + it.length + ' Stapel' : '') + ' (' + kart(nCards) + ')'
+                : 'Starten mit ' + (it.length === 1 ? E(it[0].title) : it.length + ' Stapeln') + ' (' + kart(nCards) + ')') + '</button>' +
             (canShare ? '<button type="button" class="btn' + (shared ? ' is-on' : '') + '" data-act="info-share" aria-pressed="' + shared + '">' + ico.share +
               (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '</button>' : '') +
-            (it.length ? '' : '<p class="dd-sheet__hint">' + (G.room ? 'Die Insel zeigt die geteilten Stapel des Raums – teile zuerst einen (oder wähle welche aus).' : 'Zum Starten erst einen oder mehrere Stapel auswählen.') + '</p>') +
+            (it.length ? '' : '<p class="dd-sheet__hint">' + (G.room ? 'Noch kein Stapel da – lege zuerst einen an.' : 'Zum Starten erst einen oder mehrere Stapel auswählen.') + '</p>') +
           '</div>' +
         '</div>' +
       '</div>';
@@ -1356,8 +1357,10 @@
   function islandIds() {
     const have = (list || []).map(x => x.id);
     if (!isTeacher || standalone) return have;
+    // Die Auswahl auf der Startseite zählt hier nie (Sönke 28.10.2026): die Insel startet
+    // immer mit allen Stapeln des Raums, gewählt wird auf der Insel (Haken in der Leiste).
     const sh = sharedRaw().map(e => e.id).filter(id => have.includes(id));
-    return sh.length ? sh : sel.filter(id => have.includes(id));
+    return sh.length ? sh : have;
   }
 
   /* ─── Nachladen ─── */
