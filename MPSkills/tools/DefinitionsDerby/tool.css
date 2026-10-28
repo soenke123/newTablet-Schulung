@@ -878,17 +878,25 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-type__in.is-right, .dd-gap.is-right { border-color: var(--dd-ok); background-color: #dcefdc; }
 .dd-type__in.is-wrong, .dd-gap.is-wrong { border-color: var(--dd-no); background-color: #f7ddd5; }
 .dd-cloze p { line-height: 2.3; }
-.dd-gapw { display: inline-flex; align-items: stretch; max-width: 100%; vertical-align: baseline; border-radius: 3px 3px 0 0; background: #fff6c8; }
-.dd-gap__a { display: flex; align-items: center; padding: 0 0 0 7px; font-family: var(--mono); font-weight: 700; color: var(--dd-k2); }
-/* Ein Strich je fehlendem Buchstaben, Schrift mit fester Breite: man sieht die Länge auch beim Tippen. */
-.dd-gap {
-  font-family: var(--mono); font-size: inherit; font-weight: 700; color: var(--dd-ink); width: calc(var(--n) * 1ch + 14px); max-width: 100%; min-width: 0; min-height: 38px;
-  padding: 2px 7px 2px 1px; border: 0; border-radius: 0 3px 0 0; color-scheme: light;
-  background: transparent repeating-linear-gradient(90deg, var(--dd-k2) 0 calc(1ch - 3px), transparent calc(1ch - 3px) 1ch) no-repeat left 1px bottom 5px / calc(var(--n) * 1ch) 2px;
+/* Lücke = Reihe aus Kästchen, je Buchstabe eins mit eigenem Strich (Sönke 28.10.2026: „muss exakt passen“).
+   Das echte Eingabefeld liegt unsichtbar über der ganzen Reihe. */
+.dd-gapw {
+  position: relative; display: inline-flex; gap: 3px; max-width: 100%; vertical-align: baseline; padding: 3px 6px 4px;
+  border-radius: 4px; background: #fff6c8; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--dd-k2) 45%, transparent); line-height: 1.25;
 }
-.dd-gapw:has(.is-right) { background: #dcefdc; }
-.dd-gapw:has(.is-wrong) { background: #f7ddd5; }
-.dd-gap:focus { outline: 2px solid var(--dd-prim); outline-offset: 1px; }
+.dd-gapw:focus-within { box-shadow: inset 0 0 0 2px var(--dd-prim), 0 0 0 3px color-mix(in srgb, var(--dd-prim) 25%, transparent); }
+.dd-gap__c {
+  flex: none; width: .9em; height: 1.35em; display: grid; place-items: end center; padding-bottom: 2px;
+  font-family: var(--mono); font-weight: 700; font-size: .95em; color: var(--dd-ink); border-bottom: 2.5px solid var(--dd-k2);
+}
+.dd-gap__c.is-a { color: var(--dd-k2); border-bottom-color: transparent; }
+.dd-gapw:focus-within .dd-gap__c.is-cur { background: color-mix(in srgb, var(--dd-prim) 16%, transparent); border-bottom-color: var(--dd-prim); }
+.dd-gap {
+  position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: text;
+  font-size: 16px; color: transparent; background: transparent; caret-color: transparent;
+}
+.dd-gapw:has(.is-right) { background: #dcefdc; box-shadow: inset 0 0 0 1.5px var(--dd-ok); }
+.dd-gapw:has(.is-wrong) { background: #f7ddd5; box-shadow: inset 0 0 0 1.5px var(--dd-no); }
 .dd-gap__sol { display: inline-block; margin: 0 4px 0 6px; padding: 0 6px; font-weight: 700; color: var(--dd-ok); border: 1.5px solid var(--dd-ok); border-radius: 3px; line-height: 1.6; }
 
 .dd-task__fb { margin-top: 14px; }

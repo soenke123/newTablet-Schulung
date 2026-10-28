@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028k';
+  const V = '20261028l';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -2430,8 +2430,12 @@
       let gi = 0;
       body = '<p class="dd-task__q">Fülle die Lücken in der Definition.</p>' + termBox +
         '<div class="dd-task__def dd-cloze"><span class="dd-task__l">Definition</span><p>' + t.parts.map(p => p.gap
-          ? '<span class="dd-gapw"><b class="dd-gap__a" aria-hidden="true">' + E(p.gap[0]) + '</b><input class="dd-gap" data-g="' + (gi++) + '" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" maxlength="' + (p.gap.length + 3) +
-            '" aria-label="Lücke ' + gi + ': ' + p.gap.length + ' Buchstaben, beginnt mit ' + E(p.gap[0]) + '" style="--n:' + (p.gap.length - 1) + '"></span>'
+          // Ein Kästchen je Buchstabe, der erste steht schon drin. Das echte Feld liegt unsichtbar
+          // darüber (paintGap verteilt die Eingabe auf die Kästchen) – so passt jeder Strich genau.
+          ? '<span class="dd-gapw"><span class="dd-gap__c is-a" aria-hidden="true">' + E(p.gap[0]) + '</span>' +
+            '<span class="dd-gap__c" aria-hidden="true"></span>'.repeat(p.gap.length - 1) +
+            '<input class="dd-gap" data-g="' + (gi++) + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" enterkeyhint="next" maxlength="' + (p.gap.length - 1) +
+            '" aria-label="Lücke ' + gi + ': ' + p.gap.length + ' Buchstaben, beginnt mit ' + E(p.gap[0]) + '"></span>'
           : E(p.text)).join(' ') + '</p></div>' +
         '<div class="dd-task__act"><button type="button" class="btn" data-act="isl-skip">Weiß ich nicht</button>' +
           '<button type="button" class="btn btn--primary" data-act="isl-check">' + ico.check + 'Prüfen</button></div>';
@@ -2443,6 +2447,7 @@
       '</div>';
     box.hidden = false;
     if (t.type === 'build') { paintBuild(); bindBuildDrag(box.querySelector('#ddBuild')); }
+    box.querySelectorAll('.dd-gap').forEach(paintGap);
     const f = box.querySelector('#ddType, .dd-gap, .dd-opt');
     if (f && (f.tagName === 'INPUT' || !('ontouchstart' in window))) f.focus({ preventScroll: true });
     box.querySelector('.dd-task__sheet').addEventListener('focusin', taskKbFit);
@@ -2636,6 +2641,12 @@
       islResult(all, all ? (fuzzy ? 'Fast genau – die richtige Schreibweise steht daneben.' : '') : 'Die richtigen Wörter stehen neben den Lücken.');
     }
   }
+  /* Eingabe einer Lücke auf ihre Kästchen verteilen; das nächste freie ist markiert. */
+  function paintGap(inp) {
+    const cs = [...inp.parentNode.querySelectorAll('.dd-gap__c:not(.is-a)')];
+    const v = [...inp.value];
+    cs.forEach((c, i) => { c.textContent = v[i] || ''; c.classList.toggle('is-cur', i === Math.min(v.length, cs.length - 1)); });
+  }
   /* Der Anfangsbuchstabe steht schon da: getippt wird der Rest. Wer das
      ganze Wort tippt, liegt auch richtig. */
   function gapCheck(v, word) {
@@ -2651,7 +2662,7 @@
     if (t.type === 'typeTerm') { const inp = root.querySelector('#ddType'); if (inp) inp.readOnly = true; islResult(false, 'Gesucht war: <b>' + E(t.card.t) + '</b>'); }
     else if (t.type === 'cloze') {
       const gaps = t.parts.filter(p => p.gap);
-      root.querySelectorAll('.dd-gap').forEach((inp, i) => { inp.readOnly = true; inp.value = ''; (inp.closest('.dd-gapw') || inp).insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>'); });
+      root.querySelectorAll('.dd-gap').forEach((inp, i) => { inp.readOnly = true; inp.value = ''; paintGap(inp); (inp.closest('.dd-gapw') || inp).insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>'); });
       islResult(false, 'So heißt es richtig.');
     }
   }
@@ -3123,6 +3134,7 @@
     onInput = (ev) => {
       const t = ev.target;
       if (t.dataset.f !== undefined) { homeFilter[t.dataset.f] = t.value; renderHomeKeepFocus(t); return; }
+      if (t.classList.contains('dd-gap')) { paintGap(t); return; }
       if (t.dataset.ov !== undefined && ov) {
         if (t.dataset.ov === 'q') { ov.q = t.value; paintOv(); }
         return;
