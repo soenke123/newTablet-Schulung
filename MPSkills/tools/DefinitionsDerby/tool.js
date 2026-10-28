@@ -72,7 +72,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028o';
+  const V = '20261028p';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1551,6 +1551,11 @@
   const canSwim = (id, e) => e >= 4 && wesenAst(id).swim;
   /* Fliegen können der Vogel ab Mittel (Ast m = b_a) und alles, was aus ihm wird. */
   const canFly = (id, e) => e >= 3 && wesenAst(id).m === 'b_a';
+  /* Größe auf der Insel je Stufe (Sönke 28.10.2026: „Eier und Babys sind kleiner,
+     die anderen etwas größer, sodass eine leichte Steigerung zu sehen ist“).
+     Mal dem, was die Bilder schon mitbringen (aufbereiten.py GROESSE 0,46 … 1,0):
+     sichtbar ≈ 0,46 · 0,56 · 0,82 · 1,04 · 1,29 · 1,5 einer Wesen-Größe. */
+  const WSIZE = [1, 1, 1.2, 1.3, 1.4, 1.5];
 
   /* Zielfarbton je Familie (null = Originalfarben) und passende Farbe für Chips/Balken. */
   const FAM_HUE = [null, 355, 275, 92, 218, 322, 32, 150, 250, 12, 195, 48];
@@ -1902,7 +1907,7 @@
     let best = null, bd = Infinity;
     for (const w of isl.creatures) {
       if (w.gone) continue;
-      const px = w.x * c.s + c.tx, py = (w.y - (w.alt || 0)) * c.s + c.ty, h = S * c.s;
+      const px = w.x * c.s + c.tx, py = (w.y - (w.alt || 0)) * c.s + c.ty, h = S * WSIZE[stageOfId(w.id)] * c.s;
       const dx = sx - px, dy = sy - (py - h * 0.4);
       const rad = Math.max(22, h * 0.45);
       const d = dx * dx + dy * dy;
@@ -1937,7 +1942,7 @@
     if (!pop || !w || pop.hidden) return;
     const c = isl.cam;
     const wy = w.y - (w.alt || 0);
-    const px = w.x * c.s + c.tx, py = wy * c.s + c.ty - isl.S * c.s;
+    const px = w.x * c.s + c.tx, py = wy * c.s + c.ty - isl.S * WSIZE[stageOfId(w.id)] * c.s;
     const pw = pop.offsetWidth, ph = pop.offsetHeight;
     let left = px - pw / 2, top = py - ph - 10;
     if (top < 6) top = wy * c.s + c.ty + 12;
@@ -2097,6 +2102,7 @@
     const airs = [];
     const drawW = w => {
       const e = stageOfId(w.id);
+      const S = isl.S * WSIZE[e];              // je Stufe größer
       const dim = isl.fam >= 0 && w.fam !== isl.fam;
       g.globalAlpha = dim ? 0.28 : 1;
       const wet = w.wet;                       // schwimmt gerade (im Wasser)
@@ -2207,7 +2213,7 @@
         g.drawImage(L.w ? sparkSprite(L.col) : glowSprite(L.col), L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
       }
       if (L.w && !calm && sky.night > 0.02) {  // Funken (nur nachts): steigen sanft auf und verglimmen
-        const n = L.e === 5 ? 8 : 4, life = L.e === 5 ? 4.6 : 5.6, w = L.w;
+        const n = L.e === 5 ? 8 : 4, life = L.e === 5 ? 4.6 : 5.6, w = L.w, S = isl.S * WSIZE[L.e];
         const sprk = sparkSprite(L.col);
         for (let i = 0; i < n; i++) {
           // fester Takt je Funke (w.seed, NICHT w.phase — die läuft beim Laufen mit und ließ es flackern)
@@ -2431,7 +2437,7 @@
     if (C.visit && w.rnd() < C.visit) {
       const o = isl.creatures[Math.floor(w.rnd() * isl.creatures.length)];
       if (o && o !== w && !o.fly && !o.gone && wc.walk(o.x, o.y)) {
-        const side = w.rnd() < 0.5 ? -1 : 1, tx = o.x + side * (55 + w.rnd() * 35), ty = o.y + (w.rnd() - 0.5) * 30;
+        const side = w.rnd() < 0.5 ? -1 : 1, tx = o.x + side * (70 + w.rnd() * 40), ty = o.y + (w.rnd() - 0.5) * 30;
         if (Math.hypot(tx - w.x, ty - w.y) > 40 && wc.walk(tx, ty) && lineOk(wc.walk, w.x, w.y, tx, ty)) {
           w.visit = o.id;
           return { x: tx, y: ty };
