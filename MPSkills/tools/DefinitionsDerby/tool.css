@@ -23,12 +23,14 @@
 .dd {
   /* Wand */
   --dd-bg:
-    radial-gradient(circle, rgba(90,55,25,.35) 0 1px, transparent 1.5px) 0 0 / 6px 6px,
-    radial-gradient(circle, rgba(255,230,190,.25) 0 1px, transparent 1.5px) 3px 3px / 9px 9px,
-    #c79a63;
+    radial-gradient(circle, rgba(90,55,25,.2) 0 1px, transparent 1.5px) 0 0 / 6px 6px,
+    radial-gradient(circle, rgba(255,230,190,.16) 0 1px, transparent 1.5px) 3px 3px / 9px 9px,
+    #c99d66;
   --dd-frame: #8a5a33;
-  --dd-on: #2b2620;            /* Schrift direkt auf der Wand */
-  --dd-on-soft: #4a3826;
+  --dd-on: #221a12;            /* Schrift direkt auf der Wand */
+  --dd-on-soft: #3a2a1a;
+  /* Schein hinter Schrift auf der Wand: die Pünktchen laufen nicht durch die Buchstaben */
+  --dd-halo: 0 0 2px rgba(236,206,160,.95), 0 0 6px rgba(236,206,160,.9), 0 0 12px rgba(236,206,160,.7);
   /* Papier (Karten, Etiketten, Felder) */
   --dd-paper: #ffffff;
   --dd-label: #ffffff;
@@ -80,8 +82,9 @@
     repeating-linear-gradient(90deg, rgba(255,255,255,.025) 0 2px, transparent 2px 11px),
     #2a1f17;
   --dd-frame: #1a120c;
-  --dd-on: #eadfcd;
-  --dd-on-soft: #bfae94;
+  --dd-on: #f3e9d8;
+  --dd-on-soft: #d6c6ab;
+  --dd-halo: 0 0 2px rgba(20,14,9,.95), 0 0 6px rgba(20,14,9,.85), 0 0 12px rgba(20,14,9,.6);
   --dd-paper: #f5ecdc;
   --dd-label: #f5ecdc;
   --dd-ink: #2b2620;
@@ -947,3 +950,22 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 @media (prefers-reduced-motion: reduce) {
   .dd-task__pic.is-grow, .dd-task__pic.is-grow img, .dd-task__pic.is-shrink img, .dd-grown img, .dd-task__sheet, .dd-task__bg { animation: none; }
 }
+
+/* ─── Lesbar auf der Wand (Sönke 29.10.2026: „alle Texte auf dem Kork kann man nicht gut lesen“) ───
+   Alles, was direkt auf Kork bzw. Holz steht (nicht auf Papier/Pappe):
+   Schein dahinter, etwas größer und kräftiger. Neue Schrift auf der
+   Wand hier eintragen (Farbe var(--dd-on)/var(--dd-on-soft)). */
+.dd-sub, .dd-rate__q, .dd-count, .dd-check, .dd-grp, .dd-fld > span, .dd-tip, .dd-acct,
+.dd-ghead, .dd-soon, .dd-using__l, .dd-pvh, .dd-pvmode { text-shadow: var(--dd-halo); }
+.dd-sub { font-size: 1rem; font-weight: 600; }
+.dd-count { font-size: .86rem; font-weight: 600; }
+.dd-check { font-size: .95rem; font-weight: 700; }
+.dd-grp { font-size: .86rem; font-weight: 700; }
+.dd-grp span { font-weight: 700; }
+.dd-fld > span { font-size: .78rem; }
+.dd-tip { font-size: .9rem; font-weight: 600; }
+.dd-acct { font-size: .9rem; font-weight: 600; color: var(--dd-on); }
+.dd-ghead { font-size: .82rem; }
+.dd-soon { font-size: .92rem; font-weight: 600; }
+.dd-using__l { font-size: .8rem; font-weight: 700; }
+.dd-rate__q { font-size: 1rem; font-weight: 700; }
