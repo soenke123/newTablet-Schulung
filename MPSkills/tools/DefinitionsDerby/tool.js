@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029h';
+  const V = '20261029i';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1427,8 +1427,8 @@
     const r = () => Math.random() * 2 - 1;
     du = {
       goal: DU_GOALS.includes(goal) ? goal : 5, size: sz, n: pool.length, opts,
-      // jx/jy/rot: fester Versatz je Platz, damit es durcheinander aussieht und beim Drehen des Tablets bleibt
-      slots: pool.slice(0, sz).map((c, i) => ({ i, c, jx: r(), jy: r(), rot: r() * 7 })),
+      // rot: leicht schräg; x/y: Mitte des Zettels im Brett (duLayout/duPlace)
+      slots: pool.slice(0, sz).map((c, i) => ({ i, c, rot: r() * 6, x: 0, y: 0 })),
       rest: pool.slice(sz),
       p: { 1: { card: null, prev: null, score: 0, lock: 0 }, 2: { card: null, prev: null, score: 0, lock: 0 } },
       log: [], drag: new Map(), state: 'ready', timers: []
@@ -1489,66 +1489,136 @@
     ? '<span class="dd-duchip" id="ddDuC' + s.i + '" data-slot="' + s.i + '"' + (demo ? ' data-cid="' + E(s.c.id) + '"' : '') + ' style="--r:' + s.rot.toFixed(1) + 'deg"><span class="dd-duchip__p">' + E(s.c.t) + '</span></span>'
     : '<span class="dd-duchip is-gone" id="ddDuC' + s.i + '" data-slot="' + s.i + '"></span>';
 
-  /* Plätze auf einem Raster über das ganze Brett (Begriffe sind breiter
-     als hoch), ohne die beiden Ecken unten mit den Definitionen; dazu
-     der feste Versatz je Platz. Eine Schrift für alle: so groß, dass
-     das breiteste Wort noch in eine Zeile passt (gemessen bei 100 px).
-     Spalten und Reihen sind die, bei denen diese Schrift am größten
-     wird; wer dann nicht passt, wird einzeln kleiner. */
-  function duLayout() {
+  /* Die Begriffe liegen verstreut über das Brett, ohne sich zu
+     überlappen und ohne die beiden Ecken unten mit den Definitionen
+     (Sönke 29.10.2026: „nicht in Reihen, einfach auf dem Feld
+     verteilt“). Eine Schrift für alle: so groß, dass alle Zettel
+     zusammen höchstens DU_FILL der freien Fläche belegen; dann wird
+     Zettel für Zettel ein freier Platz ausgelost — von mehreren
+     freien Kandidaten der, der am weitesten von den anderen weg ist,
+     damit es sich gleichmäßig verteilt. Passt nicht alles, wird die
+     Schrift kleiner. Ein neuer Begriff (duPlace) kommt in eine Lücke,
+     die anderen bleiben liegen. Ändert sich nur die Größe des Bretts
+     wenig (Adressleiste), werden die Plätze mitgezogen statt neu
+     gelost. */
+  const DU_FILL = 0.58, DU_GAP = 10;
+  function duGeom() {
     const pool = root && root.querySelector('#ddDuPool');
-    if (!du || !pool) return;
-    const w = pool.clientWidth || 400, h = pool.clientHeight || 400, n = du.slots.length;
-    const pr = pool.getBoundingClientRect();
-    const PAD = 8;
+    if (!du || !pool) return null;
+    const w = pool.clientWidth || 400, h = pool.clientHeight || 400, pr = pool.getBoundingClientRect();
     const holes = [1, 2].map(k => root.querySelector('#ddDu' + k)).filter(Boolean).map(el => {
       const r = el.getBoundingClientRect();
-      return { x0: r.left - pr.left - PAD, y0: r.top - pr.top - PAD, x1: r.right - pr.left + PAD, y1: r.bottom - pr.top + PAD };
+      return { x0: r.left - pr.left, y0: r.top - pr.top, x1: r.right - pr.left, y1: r.bottom - pr.top };
     });
-    const probe = document.createElement('span');
-    probe.className = 'dd-duchip__p';
-    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:100px';
-    pool.appendChild(probe);
-    let wide = 1;
-    for (const s of du.slots) if (s.c) for (const x of s.c.t.split(/\s+/)) { probe.textContent = x; wide = Math.max(wide, probe.offsetWidth); }
-    probe.remove();
-    const cellsOf = (c, r) => {
-      const cw = w / c, ch = h / r, out = [];
-      for (let y = 0; y < r; y++) for (let x = 0; x < c; x++) {
-        // frei, wenn die innere Hälfte der Zelle keine Ecke berührt
-        const cx0 = (x + 0.15) * cw, cx1 = (x + 0.85) * cw, cy0 = (y + 0.2) * ch, cy1 = (y + 0.8) * ch;
-        if (!holes.some(o => cx1 > o.x0 && cx0 < o.x1 && cy1 > o.y0 && cy0 < o.y1)) out.push({ x: (x + 0.5) * cw, y: (y + 0.5) * ch });
-      }
-      return out;
-    };
-    const fontFor = (c, r) => Math.min(22, h / r / 2.4, (w / c * 0.92 - 24) / (wide / 100));
-    let best = null;
-    for (let c = 1; c <= Math.min(n, 10); c++) {
-      for (let r = Math.ceil(n / c); r <= n + 2; r++) {
-        const cells = cellsOf(c, r);
-        if (cells.length < n) continue;
-        const f = fontFor(c, r);
-        if (!best || f > best.f + 0.3) best = { c, r, f, cells };
-        break;
+    return { pool, w, h, holes };
+  }
+  /* Schrift setzen und den Zettel messen (Drehung als Rand dazu). */
+  function duMeasure(G, s, font) {
+    const el = G.pool.querySelector('#ddDuC' + s.i);
+    if (!el || !s.c) return null;
+    const p = el.querySelector('.dd-duchip__p');
+    const maxW = Math.min(G.w * 0.34, 280);
+    el.style.maxWidth = maxW + 'px';
+    p.style.fontSize = font + 'px';
+    if (p.scrollWidth > el.clientWidth) fitText(p, el, font, 9);   // ein einzelnes sehr langes Wort
+    const sin = Math.abs(Math.sin(s.rot * Math.PI / 180));
+    const bw = el.offsetWidth, bh = el.offsetHeight;
+    return { el, w: bw + bh * sin, h: bh + bw * sin };
+  }
+  const duHit = (a, b) => a.x0 < b.x1 && a.x1 > b.x0 && a.y0 < b.y1 && a.y1 > b.y0;
+  /* Einen freien Platz für einen Zettel (m = Maße) suchen; taken = Rechtecke
+     der anderen. Geprüft wird ein feines Netz möglicher Mitten (mit
+     zufälligem Versatz); genommen wird zufällig einer der Plätze, die
+     fast so weit von allen anderen weg sind wie der beste. */
+  function duSpot(G, m, taken) {
+    const hw = m.w / 2 + DU_GAP / 2, hh = m.h / 2 + DU_GAP / 2;
+    if (G.w < 2 * hw || G.h < 2 * hh) return null;
+    const step = Math.max(8, Math.min(G.w, G.h) / 40);
+    const ox = Math.random() * step, oy = Math.random() * step;
+    const cand = [];
+    let bestD = 0;
+    for (let y = hh + oy; y <= G.h - hh; y += step) {
+      for (let x = hw + ox; x <= G.w - hw; x += step) {
+        const r = { x0: x - hw, y0: y - hh, x1: x + hw, y1: y + hh };
+        if (G.holes.some(o => duHit(r, o)) || taken.some(o => duHit(r, o))) continue;
+        // Abstand zum nächsten Zettel (Rand zu Rand), die Wand zählt halb
+        let d = Math.min(x - hw, G.w - hw - x, y - hh, G.h - hh - y) * 2 + 40;
+        for (const o of taken) d = Math.min(d, Math.max(o.x0 - r.x1, r.x0 - o.x1, o.y0 - r.y1, r.y0 - o.y1, 0) + 1);
+        cand.push({ x, y, r, d });
+        if (d > bestD) bestD = d;
       }
     }
-    if (!best) best = { c: 1, r: n, f: 12, cells: cellsOf(1, n) };
-    const cw = w / best.c, ch = h / best.r;
-    const font = Math.max(12, best.f);
-    // gibt es mehr freie Plätze als Begriffe, gleichmäßig verteilt nehmen
-    const pick = i => best.cells[Math.min(best.cells.length - 1, Math.floor(i * best.cells.length / n))];
-    for (const s of du.slots) {
-      const el = pool.querySelector('#ddDuC' + s.i);
-      if (!el) continue;
-      const cell = pick(s.i) || { x: w / 2, y: h / 2 };
-      el.style.left = (cell.x + s.jx * 0.12 * cw) + 'px';
-      el.style.top = (cell.y + s.jy * 0.14 * ch) + 'px';
-      el.style.maxWidth = (cw * 0.92) + 'px';
-      el.style.maxHeight = (ch * 0.84) + 'px';
-      const p = el.querySelector('.dd-duchip__p');
-      if (p) { p.style.fontSize = font + 'px'; if (el.scrollHeight > ch * 0.84 || p.scrollWidth > cw * 0.92) fitText(p, el, font, 9); }
+    if (!cand.length) return null;
+    const good = cand.filter(c => c.d >= bestD * 0.6);
+    return good[Math.floor(Math.random() * good.length)];
+  }
+  function duSet(m, s, x, y) {
+    s.x = x; s.y = y;
+    m.el.style.left = x + 'px';
+    m.el.style.top = y + 'px';
+  }
+  function duLayout() {
+    const G = duGeom();
+    if (!G) return;
+    const live = du.slots.filter(s => s.c);
+    // Nur etwas größer/kleiner geworden: Plätze mitziehen statt neu losen.
+    if (du.lw && Math.abs(G.w / du.lw - 1) < 0.2 && Math.abs(G.h / du.lh - 1) < 0.2) {
+      const fx = G.w / du.lw, fy = G.h / du.lh;
+      for (const s of live) {
+        const m = duMeasure(G, s, du.font);
+        if (m) duSet(m, s, s.x * fx, s.y * fy);
+      }
+      du.lw = G.w; du.lh = G.h;
+      for (const k of [1, 2]) duFitDef(k);
+      return;
     }
+    const free = G.w * G.h - G.holes.reduce((a, o) => a + (o.x1 - o.x0) * (o.y1 - o.y0), 0);
+    let font = 22, placed = false, ms = [];
+    for (;;) {
+      ms = live.map(s => ({ s, m: duMeasure(G, s, font) })).filter(x => x.m);
+      const area = ms.reduce((a, x) => a + (x.m.w + DU_GAP) * (x.m.h + DU_GAP), 0);
+      if (area > free * DU_FILL && font > 11) { font = Math.max(11, font * Math.max(0.85, Math.sqrt(free * DU_FILL / area))); continue; }
+      // große Zettel zuerst, sonst finden sie am Ende keinen Platz mehr
+      ms.sort((a, b) => b.m.w * b.m.h - a.m.w * a.m.h);
+      for (let tries = 0; tries < 3 && !placed; tries++) {
+        const taken = [], spots = [];
+        placed = ms.every(x => { const sp = duSpot(G, x.m, taken); if (!sp) return false; taken.push(sp.r); spots.push(sp); return true; });
+        if (placed) ms.forEach((x, i) => duSet(x.m, x.s, spots[i].x, spots[i].y));
+      }
+      if (placed || font <= 11) break;
+      font = Math.max(11, font * 0.92);
+    }
+    if (!placed) {   // zu wenig Platz (sehr kleines Brett): so viele wie möglich frei, der Rest notfalls überlappend
+      const taken = [];
+      for (const x of ms) {
+        const sp = duSpot(G, x.m, taken);
+        if (sp) { taken.push(sp.r); duSet(x.m, x.s, sp.x, sp.y); }
+        else duSet(x.m, x.s, x.m.w / 2 + Math.random() * Math.max(1, G.w - x.m.w), x.m.h / 2 + Math.random() * Math.max(1, G.h * 0.6 - x.m.h));
+      }
+    }
+    du.font = font; du.lw = G.w; du.lh = G.h;
     for (const k of [1, 2]) duFitDef(k);
+  }
+  /* Ein neuer Begriff in eine Lücke; die anderen bleiben liegen. */
+  function duPlace(s) {
+    const G = duGeom();
+    if (!G || !s.c || !du.font) { duLayout(); return; }
+    const taken = [];
+    for (const o of du.slots) {
+      if (o === s || !o.c) continue;
+      const el = G.pool.querySelector('#ddDuC' + o.i);
+      if (!el || el.classList.contains('is-away')) continue;
+      const sin = Math.abs(Math.sin(o.rot * Math.PI / 180)), bw = el.offsetWidth, bh = el.offsetHeight;
+      const hw = (bw + bh * sin) / 2 + DU_GAP / 2, hh = (bh + bw * sin) / 2 + DU_GAP / 2;
+      taken.push({ x0: o.x - hw, y0: o.y - hh, x1: o.x + hw, y1: o.y + hh });
+    }
+    for (let f = du.font; f >= 10; f *= 0.88) {
+      const m = duMeasure(G, s, f);
+      if (!m) return;
+      const sp = duSpot(G, m, taken);
+      if (sp) { duSet(m, s, sp.x, sp.y); return; }
+    }
+    duLayout();
   }
   function duFitDef(k) {
     const box = root.querySelector('#ddDuDef' + k);
@@ -1688,14 +1758,13 @@
       side.classList.remove('is-ok'); void side.offsetWidth; side.classList.add('is-ok');
       const s = g.s;
       s.c = d.rest.length ? d.rest.shift() : null;
-      s.rot = (Math.random() * 2 - 1) * 7;
+      s.rot = (Math.random() * 2 - 1) * 6;
       duLater(d, 320, () => {
         const old = root.querySelector('#ddDuC' + s.i);
         if (!old) return;
         old.outerHTML = duChipHTML(s);
         const nu = root.querySelector('#ddDuC' + s.i);
-        if (nu && s.c) nu.classList.add('is-new');
-        duLayout();
+        if (nu && s.c) { nu.classList.add('is-new'); duPlace(s); }
       });
       if (P.score >= d.goal) { duPaintSide(k); duWin(k); return; }
       duNewCard(k);
