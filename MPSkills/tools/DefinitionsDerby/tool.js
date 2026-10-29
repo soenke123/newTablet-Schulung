@@ -7,16 +7,18 @@
    und die Klasse übt sie mit SPIELEN. Plan und Entscheidungen:
    CLAUDE.md in diesem Ordner.
 
-   ── Startseite: Stapel links, Spiele rechts ──────────────────
-   Links die Stapel (Lehrkraft: eigene, mit Bearbeiten/Teilen;
-   Tablet: die geteilten). Antippen wählt sie aus, auch mehrere.
-   Rechts kleine Kacheln mit den Spielen, gegliedert in Allein ·
-   Gemeinsam an einem Gerät · Zusammen im Netz (GAMES/GROUPS).
-   Lehrkraft: Kachel antippen = Beschreibung mit Bildschirmfoto
-   (img/), dort und auf der Kachel teilen, dort auch selbst starten.
-   Tablet: sieht nur die geteilten Spiele; Kachel antippen startet
-   mit den gewählten Stapeln, „i“ zeigt die Beschreibung. Im Spiel
-   steht oben, welche Stapel gerade im Spiel sind.
+   ── Startseite: erst die Lernformen, dann die Stapel ─────────
+   Oben/links kleine Kacheln mit den LERNFORMEN (intern GAMES),
+   Übersicht zuerst, gegliedert in Allein · Gemeinsam an einem
+   Gerät · Zusammen im Netz (GAMES/GROUPS). Kachel antippen startet
+   sie, „i“ zeigt die Beschreibung mit Bildschirmfoto (img/), das
+   Teilen-Symbol hat nur die Lehrkraft. Darunter/rechts die Stapel
+   (Lehrkraft: eigene, mit Bearbeiten/Teilen; Tablet: die geteilten).
+   Ausgewählt wird auf der Startseite nichts mehr (Sönke 29.10.2026):
+   Stapel antippen springt in die erste freigegebene Lernform, nur
+   mit diesem Stapel. In der Lernform stehen oben ALLE Stapel mit
+   ihrer Begriffszahl, antippen schaltet sie an/aus (sel, im Gerät
+   gemerkt). Auf der Insel geht das auch links an den Familien.
 
    ── Wer sieht was ────────────────────────────────────────────
    presenter (Lehrkraft, lehrer.html)  eigene Stapel aus dem Konto
@@ -60,7 +62,7 @@
 
    ── Aufbau dieser Datei ──────────────────────────────────────
    Eine Zustandsmaschine: screen = home | play | edit, dazu die
-   Beschreibung eines Spiels als Fenster darüber (info, .dd-layer).
+   Beschreibung einer Lernform als Fenster darüber (info, .dd-layer).
    render…() baut die Ansicht neu; getippt wird NIE in einem Teil,
    der während des Tippens neu gebaut wird (Editor und Suche
    aktualisieren nur ihre Listen). update() des Systems kommt
@@ -72,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261028t';
+  const V = '20261029a';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -81,17 +83,25 @@
                    'Kunst', 'Sport', 'Wirtschaft', 'Sachunterricht', 'Allgemeinwissen'];
   const STUFEN = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13'];
 
-  /* ─── Spiele ───
-     Neues Spiel: Eintrag hier, Mini-Bild in MINI, Bildschirmfoto in
-     img/, render-Zweig in renderPane(). Es bekommt opened.cards
-     (alle Karten der gewählten Stapel) und schreibt Lernstand, wenn
-     überhaupt, nur über prog/saveProg. */
+  /* ─── Lernformen (im Code „Spiele“, GAMES) ───
+     Neue Lernform: Eintrag hier (Reihenfolge = Startseite, die erste
+     freigegebene öffnet ein angetippter Stapel), Mini-Bild in MINI,
+     Bildschirmfoto in img/, render-Zweig in renderPane(). Sie bekommt
+     opened.cards (alle Karten der aktiven Stapel) und schreibt
+     Lernstand, wenn überhaupt, nur über prog/saveProg. */
   const GROUPS = [
     { id: 'solo',   name: 'Allein' },
     { id: 'device', name: 'Gemeinsam an einem Gerät' },
     { id: 'net',    name: 'Zusammen im Netz' }
   ];
   const GAMES = [
+    { id: 'overview', g: 'solo', name: 'Übersicht', min: 1, shot: 'spiel-uebersicht.jpg',
+      short: 'Alle Begriffe als Glossar – suchen, filtern, verdecken.',
+      text: 'Alle Karten der aktiven Stapel auf einen Blick, geordnet nach Lernstand. Zum Nachschlagen, Wiederholen und für den schnellen Selbsttest.',
+      how: ['Suchen in Begriff und Definition.',
+            'Filtern und ordnen nach Lernstand, A–Z oder Stapel.',
+            '„Definitionen verdecken“ zum Selbsttest – antippen deckt auf.',
+            'Den Lernstand direkt an der Karte ändern.'] },
     { id: 'cards', g: 'solo', name: 'Karteikarten', min: 1, shot: 'spiel-karteikarten.jpg',
       short: 'Umdrehen, selbst stempeln – Unsicheres kommt öfter.',
       text: 'Eine Karte nach der anderen: erst überlegen, dann umdrehen und ehrlich stempeln. Unsichere Karten kommen öfter wieder, sichere seltener – so übt man genau das, was noch fehlt.',
@@ -99,13 +109,17 @@
             'Danach stempeln: Unsicher, Teilweise oder Sicher (Tasten 1–3).',
             'Richtung wählbar: Begriff → Definition, umgekehrt oder gemischt.',
             'Der Lernstand bleibt gespeichert – mit Konto auf jedem Gerät.'] },
-    { id: 'overview', g: 'solo', name: 'Übersicht', min: 1, shot: 'spiel-uebersicht.jpg',
-      short: 'Alle Begriffe als Glossar – suchen, filtern, verdecken.',
-      text: 'Alle Karten der gewählten Stapel auf einen Blick, geordnet nach Lernstand. Zum Nachschlagen, Wiederholen und für den schnellen Selbsttest.',
-      how: ['Suchen in Begriff und Definition.',
-            'Filtern und ordnen nach Lernstand, A–Z oder Stapel.',
-            '„Definitionen verdecken“ zum Selbsttest – antippen deckt auf.',
-            'Den Lernstand direkt an der Karte ändern.'] },
+    { id: 'island', g: 'solo', name: 'Insel', min: 2, room: true, shot: 'spiel-insel.jpg',
+      short: 'Jeder Begriff ist ein Wesen: vom Ei bis zum Leuchten.',
+      text: 'Alle Begriffe des Raums leben als Wesen auf einer Insel, jeder Stapel ist eine Familie in eigener Farbe. Wer Aufgaben löst, lässt die Eier schlüpfen und die Wesen wachsen – bis sie leuchten. Die Aufgaben werden mit jeder Stufe schwerer.',
+      how: ['„Runde starten“: jeder Begriff einmal. Was falsch war, kommt in der Runde noch einmal – und ist es wieder falsch, auch in der nächsten.',
+            'Welche Stapel in der Runde dran sind: oben an den Stapeln oder links an den Familien an- und ausschalten.',
+            'Ein Wesen auf der Insel antippen, um genau dieses zu trainieren.',
+            'Ei → Baby: zur Definition den Begriff wählen. Baby → Klein: zum Begriff die Definition wählen.',
+            'Klein → Mittel: die Definition aus Bausteinen bauen. Mittel → Groß: den Begriff eintippen.',
+            'Groß → Leuchtend: Lücken in der Definition füllen (Anfangsbuchstabe und Länge stehen da). Kleine Tippfehler sind kein Problem.',
+            'Leuchtende Wesen bleiben dabei: sie bekommen eine zufällige der fünf Aufgaben.',
+            'Einmal richtig = eine Stufe hoch, zweimal hintereinander falsch = eine Stufe zurück.'] },
     { id: 'memory', g: 'device', name: 'Memory', min: 2, shot: 'spiel-memory.jpg',
       short: 'Zu zweit: Begriff und passende Definition finden.',
       text: 'Links liegen die Begriffe, rechts die Definitionen, alle verdeckt. Wer dran ist, deckt einen Begriff und eine Definition auf. Beide Karten kommen groß in die Mitte, und dann wird entschieden: Passen sie zusammen?',
@@ -113,19 +127,9 @@
             '„Ja, Paar!“ – stimmt es, gibt es einen Punkt, und man ist noch einmal dran.',
             '„Ja, Paar!“, aber es ist keins: ein Minuspunkt, die andere Person ist dran.',
             '„Nein“: die andere Person ist dran. Ob es doch ein Paar war, wird nicht verraten.',
-            'Zu zweit oder allein (dann zählen die Züge), 6 bis 24 Paare.'] },
-    { id: 'island', g: 'solo', name: 'Insel', min: 2, room: true, shot: 'spiel-insel.jpg',
-      short: 'Jeder Begriff ist ein Wesen: vom Ei bis zum Leuchten.',
-      text: 'Alle Begriffe des Raums leben als Wesen auf einer Insel, jeder Stapel ist eine Familie in eigener Farbe. Wer Aufgaben löst, lässt die Eier schlüpfen und die Wesen wachsen – bis sie leuchten. Die Aufgaben werden mit jeder Stufe schwerer.',
-      how: ['„Runde starten“: jeder Begriff einmal. Was falsch war, kommt in der Runde noch einmal – und ist es wieder falsch, auch in der nächsten.',
-            'Ein Wesen auf der Insel antippen, um genau dieses zu trainieren.',
-            'Ei → Baby: zur Definition den Begriff wählen. Baby → Klein: zum Begriff die Definition wählen.',
-            'Klein → Mittel: die Definition aus Bausteinen bauen. Mittel → Groß: den Begriff eintippen.',
-            'Groß → Leuchtend: Lücken in der Definition füllen (Anfangsbuchstabe und Länge stehen da). Kleine Tippfehler sind kein Problem.',
-            'Leuchtende Wesen bleiben dabei: sie bekommen eine zufällige der fünf Aufgaben.',
-            'Einmal richtig = eine Stufe hoch, zweimal hintereinander falsch = eine Stufe zurück.'] }
+            'Zu zweit oder allein (dann zählen die Züge), 6 bis 24 Paare.'] }
   ];
-  const DEFAULT_GAMES = ['cards', 'overview'];
+  const DEFAULT_GAMES = ['overview', 'cards'];
   const gameOf = id => GAMES.find(g => g.id === id) || null;
 
   const OWN_ERRORS = {
@@ -147,8 +151,8 @@
   let list = null;               // Stapelliste (null = lädt)
   let listErr = '';
   let cache = {};                // id → { u, stack }
-  let sel = [];                  // gewählte Stapel (ids)
-  let info = null;               // id des Spiels, dessen Beschreibung offen ist
+  let sel = null;                // aktive Stapel (ids, im Gerät gemerkt); null = Standard (activeIds)
+  let info = null;               // id der Lernform, deren Beschreibung offen ist
   let opened = null;             // { stacks, cards, game } — das laufende Spiel
   let prog = {};                 // Lernstand der Karten im Spiel („<stapel>:<karte>“ → {l,s,t})
   let learn = null;              // Zustand des Lerners
@@ -484,39 +488,102 @@
   }
   function busy(on) { if (root) root.classList.toggle('dd-busy', !!on); }
 
-  /* Spiel mit den gewählten Stapeln starten. */
-  async function startGame(gid) {
+  /* ─── Aktive Stapel ───
+     Welche Stapel in einer Lernform mitmachen. Standard: alle des Raums
+     (islandIds). Wer oben in der Lernform einen Stapel an- oder
+     ausschaltet oder auf der Startseite einen Stapel antippt, setzt
+     sel; gemerkt im Gerät, damit die nächste Lernform genauso startet.
+     Mindestens einer bleibt immer an. */
+  const SEL = 'dd.sel';
+  function activeIds() {
+    const have = (list || []).map(x => x.id);
+    const s = (sel || []).filter(id => have.includes(id));
+    return s.length ? s : islandIds();
+  }
+  function setSel(ids) { sel = ids.slice(); jset(SEL, sel); }
+  /* Was eine Lernform lädt: die aktiven Stapel; die Insel alle des Raums
+     dazu (dort leben alle, in die Runde kommen nur die aktiven). */
+  function formIds(G) {
+    const act = activeIds();
+    if (!G.room) return act;
+    const base = islandIds();
+    return (list || []).map(x => x.id).filter(id => act.includes(id) || base.includes(id));
+  }
+  /* Die erste freigegebene Lernform, die mit n Karten geht. */
+  function firstForm(n) {
+    let gs = visibleGames();
+    if (isTeacher && !standalone && gs.some(g => gameShared(g.id))) gs = gs.filter(g => gameShared(g.id));
+    return gs.find(g => n >= g.min) || gs[0] || null;
+  }
+
+  /* Lernform mit den aktiven Stapeln starten. keep = dieselbe Lernform
+     mit anderen Stapeln neu laden (Einstellungen bleiben). Gibt zurück,
+     ob sie läuft. */
+  async function startGame(gid, keep) {
     const G = gameOf(gid);
-    if (!G) return;
-    const ids = G.room ? islandIds() : sel.filter(id => (list || []).some(x => x.id === id));
+    if (!G) return false;
+    const ids = formIds(G);
     if (!ids.length) {
-      toast(!G.room ? 'Wähle zuerst mindestens einen Stapel aus.' : isTeacher ? 'Lege zuerst einen Stapel an.' : 'Noch ist kein Stapel da.');
-      return;
+      toast(isTeacher ? 'Lege zuerst einen Stapel an.' : 'Noch ist kein Stapel da.');
+      return false;
     }
     busy(true);
     const got = await Promise.all(ids.map(getStack));
     busy(false);
-    if (!root || got.some(s => !s)) return;
+    if (!root || got.some(s => !s)) return false;
     const cards = [];
     for (const s of got) for (const c of s.cards) cards.push({ id: s.id + ':' + c.id, sid: s.id, t: c.t, d: c.d, i: c.i });
     if (cards.length < G.min) {
-      toast(G.name + ' braucht mindestens ' + G.min + ' Karten.' + (G.room ? '' : ' Wähle mehr Stapel aus.'));
-      return;
+      toast(G.name + ' braucht mindestens ' + G.min + ' Karten.' + (G.room ? '' : ' Schalte oben mehr Stapel an.'));
+      return false;
     }
+    const prev = keep && opened && opened.game === gid ? { learn, ov, mm } : null;
     info = null; renderInfo();
     if (opened) leavePlay();
     opened = { stacks: got, cards, game: gid };
     buildProg();
     learn = newLearn();
-    ov = { q: '', f: 'alle', sort: 'stand', mode: 'liste', hide: false, open: {} };
+    if (prev && prev.learn) { learn.focus = prev.learn.focus; learn.dir = prev.learn.dir; }
+    ov = prev && prev.ov ? Object.assign(prev.ov, { open: {} }) : { q: '', f: 'alle', sort: 'stand', mode: 'liste', hide: false, open: {} };
     mm = null;
+    if (prev && prev.mm) newMemory(prev.mm.pairs, prev.mm.players);
     saveProg();
     go('play');
     got.forEach(s => pullProg(s.id));
+    return true;
+  }
+
+  /* Stapel antippen (Startseite): erste freigegebene Lernform, nur mit diesem Stapel. */
+  function openStack(id) {
+    const it = (list || []).find(x => x.id === id);
+    if (!it) return;
+    const G = firstForm(it.n || 0);
+    if (!G) { toast('Noch ist keine Lernform freigegeben.'); return; }
+    setSel([id]);
+    startGame(G.id);
+  }
+
+  /* In der Lernform einen Stapel an- oder ausschalten. */
+  async function toggleActive(id) {
+    if (!opened || !(list || []).some(x => x.id === id)) return;
+    const before = activeIds();
+    const on = before.includes(id);
+    if (on && before.length === 1) { toast('Ein Stapel bleibt immer an.'); return; }
+    const next = on ? before.filter(x => x !== id) : (list || []).map(x => x.id).filter(x => x === id || before.includes(x));
+    const G = gameOf(opened.game);
+    // Insel: liegt der Stapel schon auf der Insel, ändert sich nur die Runde.
+    if (G.room && opened.stacks.some(s => s.id === id)) {
+      setSel(next);
+      paintUsing(); paintSide();
+      return;
+    }
+    if (G.room && isl && isl.round) { toast('Erst die Runde beenden, dann kommt der Stapel auf die Insel.'); return; }
+    setSel(next);
+    if (!(await startGame(opened.game, true))) { setSel(before); paintUsing(); }
   }
 
   /* ══════════════════════════════════════════════════════════════
-     STARTSEITE: Stapel links, Spiele rechts
+     STARTSEITE: erst die Lernformen, dann die Stapel
      ══════════════════════════════════════════════════════════════ */
   function sumOf(id, n) {
     let s = jget('dd.sum.' + id, null);
@@ -536,31 +603,16 @@
       c.map((n, i) => n ? '<i class="dd-s' + i + '" style="width:' + (n / tot * 100) + '%"></i>' : '').join('') + '</span>';
   }
 
-  /* Auswahl aufräumen: nur, was es noch gibt; bei genau einem Stapel ist er gewählt. */
-  function tidySel() {
-    if (!list) return;
-    sel = sel.filter(id => list.some(x => x.id === id));
-    if (!sel.length && list.length === 1) sel = [list[0].id];
-  }
-  const selItems = () => sel.map(id => (list || []).find(x => x.id === id)).filter(Boolean);
-  function selNote() {
-    const it = selItems();
-    if (!it.length) return '<p class="dd-selnote is-empty">Noch kein Stapel gewählt — tippe einen oder mehrere an.</p>';
-    const n = it.reduce((a, s) => a + (s.n || 0), 0);
-    return '<p class="dd-selnote">' + ico.check + '<span>Gewählt: <b>' + it.map(s => E(s.title)).join(', ') + '</b> · ' + kart(n) + '</span></p>';
-  }
-
   function renderHome() {
     if (!root) return;
-    tidySel();
     const items = list;
     let left = '<div class="dd-hub__head"><h2 class="dd-h">' + (isTeacher ? 'Meine Stapel' : 'Stapel') + '</h2>' +
       (isTeacher ? '<button type="button" class="btn btn--primary btn--sm dd-new" data-act="new">' + ico.plus + 'Neuer Stapel</button>' : '') + '</div>' +
       '<p class="dd-sub">' + (standalone
         ? 'Stapel vorbereiten, ohne dass ein Raum offen sein muss. Sie stehen in jedem deiner Räume, dort teilst du sie mit der Klasse.'
         : isTeacher
-        ? 'Antippen wählt aus (auch mehrere). Teilen gibt einen Stapel der Klasse frei.'
-        : 'Wähle einen oder mehrere Stapel aus und tippe dann auf ein Spiel.') + '</p>';
+        ? 'Antippen öffnet den Stapel in der ersten freigegebenen Lernform. Teilen gibt ihn der Klasse frei.'
+        : 'Antippen öffnet den Stapel. In jeder Lernform schaltest du oben weitere Stapel dazu.') + '</p>';
 
     if (items === null) {
       left += '<p class="dd-empty">Lade …</p>';
@@ -588,37 +640,33 @@
 
     root.querySelector('.dd-main').innerHTML =
       '<div class="dd-hub">' +
+        '<section class="dd-hub__col dd-hub__games" aria-label="Lernformen">' + gamesHTML() + '</section>' +
         '<section class="dd-hub__col dd-hub__stacks" aria-label="Stapel">' + left + '</section>' +
-        '<section class="dd-hub__col dd-hub__games" aria-label="Spiele">' + gamesHTML() + '</section>' +
       '</div>';
   }
 
   function stackCard(s) {
     const c = sumOf(s.id, s.n);
     const shared = isTeacher && !standalone && isShared(s.id);
-    const on = sel.includes(s.id);
-    return '<article class="dd-stack' + (on ? ' is-sel' : '') + '" data-id="' + E(s.id) + '" data-act="sel" tabindex="0" role="checkbox" aria-checked="' + on + '" aria-label="' + E(s.title) + ', ' + kart(s.n) + '">' +
+    return '<article class="dd-stack" data-id="' + E(s.id) + '" data-act="open" tabindex="0" role="button" aria-label="' + E(s.title) + ', ' + kart(s.n) + ' – öffnen">' +
       '<div class="dd-stack__head"><h3>' + E(s.title) + '</h3>' +
         '<span class="dd-stack__n" aria-hidden="true"><b>' + s.n + '</b><small>Karten</small></span></div>' +
       '<div class="dd-chips">' + metaChips(s) +
         (shared ? '<span class="dd-badge" title="Die Klasse sieht diesen Stapel">geteilt</span>' : '') + '</div>' +
       (c ? barHTML(c) : '<span class="dd-bar dd-bar--leer"></span>') +
-      '<div class="dd-stack__act">' +
-        '<span class="dd-pick" aria-hidden="true">' + ico.check + (on ? 'Gewählt' : 'Auswählen') + '</span>' +
-        (isTeacher
-          ? '<button type="button" class="btn btn--sm dd-ic" data-act="edit" title="Bearbeiten" aria-label="' + E(s.title) + ' bearbeiten">' + ico.edit + '</button>' +
-            (standalone ? '' : '<button type="button" class="btn btn--sm dd-ic' + (shared ? ' is-on' : '') + '" data-act="share" aria-pressed="' + shared + '" title="' +
-            (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '" aria-label="' + E(s.title) + ' teilen">' + ico.share + '</button>')
-          : '') +
-      '</div></article>';
+      (isTeacher ? '<div class="dd-stack__act">' +
+        '<button type="button" class="btn btn--sm dd-ic" data-act="edit" title="Bearbeiten" aria-label="' + E(s.title) + ' bearbeiten">' + ico.edit + '</button>' +
+        (standalone ? '' : '<button type="button" class="btn btn--sm dd-ic' + (shared ? ' is-on' : '') + '" data-act="share" aria-pressed="' + shared + '" title="' +
+          (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '" aria-label="' + E(s.title) + ' teilen">' + ico.share + '</button>') +
+      '</div>' : '') + '</article>';
   }
 
-  /* ─── Spiel-Kacheln ─── */
+  /* ─── Kacheln der Lernformen: antippen startet, „i“ beschreibt, Teilen nur Lehrkraft ─── */
   function gamesHTML() {
     const shown = visibleGames();
-    let html = '<div class="dd-hub__head"><h2 class="dd-h dd-h--b">Spiele</h2></div>' + selNote();
+    let html = '<div class="dd-hub__head"><h2 class="dd-h dd-h--b">Lernformen</h2></div>';
     if (!shown.length) {
-      return html + '<p class="dd-empty"><strong>Noch kein Spiel freigegeben.</strong> Sobald deine Lehrkraft eines teilt, erscheint es hier.</p>';
+      return html + '<p class="dd-empty"><strong>Noch keine Lernform freigegeben.</strong> Sobald deine Lehrkraft eine teilt, erscheint sie hier.</p>';
     }
     for (const grp of GROUPS) {
       const gs = shown.filter(g => g.g === grp.id);
@@ -626,7 +674,7 @@
       html += '<h3 class="dd-ghead">' + grp.name + '</h3>';
       html += gs.length
         ? '<div class="dd-games">' + gs.map(gameTile).join('') + '</div>'
-        : '<p class="dd-soon">Kommt bald: Spiele für die ganze Klasse, bei denen jedes Tablet mitspielt.</p>';
+        : '<p class="dd-soon">Kommt bald: Lernformen für die ganze Klasse, bei denen jedes Tablet mitspielt.</p>';
     }
     return html;
   }
@@ -634,18 +682,18 @@
     const canShare = isTeacher && !standalone;
     const shared = canShare && gameShared(G.id);
     return '<div class="dd-game' + (shared ? ' is-shared' : '') + '" data-act="game" data-g="' + G.id + '" tabindex="0" role="button" aria-label="' +
-        E(G.name + (isTeacher ? ' – Beschreibung' : ' starten')) + '">' +
+        E(G.name + ' starten') + '">' +
       '<span class="dd-game__pic">' + MINI[G.id] + '</span>' +
       '<span class="dd-game__t"><b>' + G.name + '</b><small>' + G.short + '</small></span>' +
       '<span class="dd-game__act">' +
         (shared ? '<span class="dd-badge">geteilt</span>' : '') +
         (canShare ? '<button type="button" class="btn btn--sm dd-ic' + (shared ? ' is-on' : '') + '" data-act="gshare" aria-pressed="' + shared + '" title="' +
           (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '" aria-label="' + E(G.name) + ' teilen">' + ico.share + '</button>' : '') +
-        (!isTeacher ? '<button type="button" class="btn btn--sm dd-ic" data-act="ginfo" title="Wie geht das?" aria-label="' + E(G.name) + ': Beschreibung">' + ico.info + '</button>' : '') +
+        '<button type="button" class="btn btn--sm dd-ic" data-act="ginfo" title="Wie geht das?" aria-label="' + E(G.name) + ': Beschreibung">' + ico.info + '</button>' +
       '</span></div>';
   }
 
-  /* ─── Beschreibung eines Spiels (Fenster über der Startseite) ─── */
+  /* ─── Beschreibung einer Lernform (Fenster über der Startseite) ─── */
   function openInfo(gid) { if (!gameOf(gid)) return; info = gid; renderInfo(); }
   function closeInfo() { if (!info) return; const was = info; info = null; renderInfo();
     const t = root && root.querySelector('.dd-game[data-g="' + was + '"]'); if (t) t.focus(); }
@@ -657,8 +705,7 @@
     const grp = GROUPS.find(g => g.id === G.g);
     const canShare = isTeacher && !standalone;
     const shared = canShare && gameShared(G.id);
-    const it = G.room ? islandIds().map(id => (list || []).find(x => x.id === id)).filter(Boolean) : selItems();
-    const nCards = it.reduce((a, s) => a + (s.n || 0), 0);
+    const it = formIds(G).map(id => (list || []).find(x => x.id === id)).filter(Boolean);
     const hadFocus = layer.contains(document.activeElement);
     layer.innerHTML =
       '<div class="dd-modal" role="dialog" aria-modal="true" aria-labelledby="ddInfoH">' +
@@ -675,12 +722,10 @@
             '<figcaption>So sieht es aus</figcaption></figure>' +
           '<div class="dd-sheet__act">' +
             '<button type="button" class="btn btn--primary" data-act="info-start"' + (it.length ? '' : ' disabled') + '>' + ico.play +
-              (!it.length ? 'Starten'
-                : G.room ? 'Insel öffnen' + (it.length > 1 ? ' – alle ' + it.length + ' Stapel' : '') + ' (' + kart(nCards) + ')'
-                : 'Starten mit ' + (it.length === 1 ? E(it[0].title) : it.length + ' Stapeln') + ' (' + kart(nCards) + ')') + '</button>' +
+              (G.room ? 'Insel öffnen' : 'Starten') + '</button>' +
             (canShare ? '<button type="button" class="btn' + (shared ? ' is-on' : '') + '" data-act="info-share" aria-pressed="' + shared + '">' + ico.share +
               (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '</button>' : '') +
-            (it.length ? '' : '<p class="dd-sheet__hint">' + (G.room ? 'Noch kein Stapel da – lege zuerst einen an.' : 'Zum Starten erst einen oder mehrere Stapel auswählen.') + '</p>') +
+            (it.length ? '' : '<p class="dd-sheet__hint">' + (isTeacher ? 'Noch kein Stapel da – lege zuerst einen an.' : 'Noch ist kein Stapel geteilt.') + '</p>') +
           '</div>' +
         '</div>' +
       '</div>';
@@ -694,14 +739,24 @@
     const G = gameOf(opened.game);
     root.querySelector('.dd-main').innerHTML =
       '<div class="dd-stackhead dd-playhead">' +
-        '<button type="button" class="btn btn--sm dd-backbtn" data-act="home">' + ico.back + 'Spiele</button>' +
+        '<button type="button" class="btn btn--sm dd-backbtn" data-act="home">' + ico.back + 'Lernformen</button>' +
         '<div class="dd-stackhead__t"><h2 class="dd-h">' + G.name + '</h2>' +
-        '<div class="dd-chips dd-using"><span class="dd-using__l">Im Spiel:</span>' +
-          opened.stacks.map(s => '<span class="dd-chip dd-chip--stack">' + E(s.title) + ' <i>' + s.cards.length + '</i></span>').join('') +
-        '</div></div>' +
+        '<div class="dd-chips dd-using" id="ddUsing" role="group" aria-label="Stapel an- und ausschalten"></div></div>' +
       '</div>' +
       '<div class="dd-pane" id="ddPane"></div>';
+    paintUsing();
     renderPane();
+  }
+  /* Oben alle Stapel mit ihrer Begriffszahl; antippen schaltet an/aus (toggleActive). */
+  function paintUsing() {
+    const box = root && root.querySelector('#ddUsing');
+    if (!box || !opened) return;
+    const act = activeIds();
+    box.innerHTML = '<span class="dd-using__l">Stapel:</span>' + (list || []).map(s => {
+      const on = act.includes(s.id);
+      return '<button type="button" class="dd-chip dd-chip--stack' + (on ? ' is-on' : '') + '" data-act="stk" data-id="' + E(s.id) + '" aria-pressed="' + on + '" title="' +
+        (on ? 'Ausschalten' : 'Dazuschalten') + '">' + (on ? ico.check : '') + E(s.title) + ' <i>' + s.n + '</i></button>';
+    }).join('');
   }
   function renderPane() {
     if (!opened || screen !== 'play') return;
@@ -1298,7 +1353,7 @@
       (m.players === 2 ? '<div class="dd-memwin__sc"><span class="dd-pl dd-pl--1"><span class="dd-pl__n">Spieler 1</span><b>' + m.scores[1] + '</b></span>' +
         '<span class="dd-pl dd-pl--2"><span class="dd-pl__n">Spieler 2</span><b>' + m.scores[2] + '</b></span></div>' : '') +
       '<div class="dd-memwin__act"><button type="button" class="btn btn--primary" data-act="mm-new">' + ico.again + 'Neues Spiel</button>' +
-      '<button type="button" class="btn" data-act="home">' + ico.back + 'Andere Stapel oder Spiele</button></div></div>';
+      '<button type="button" class="btn" data-act="home">' + ico.back + 'Zurück zu den Lernformen</button></div></div>';
     box.hidden = false;
     const b = box.querySelector('.btn--primary'); if (b) b.focus({ preventScroll: true });
   }
@@ -1344,7 +1399,6 @@
      und über saveProg zum Gerät/Konto. Der Stufensprung bekommt
      seinen eigenen Moment: das Bild im Aufgabenblatt wächst, ein Satz
      sagt, was passiert ist, und auf der Insel funkelt das Wesen. */
-  const PLAY_OFF = 'dd.isl.off';  // Stapel-ids, die in den Runden NICHT mitspielen (Haken in der Leiste)
   const CARRY = 'dd.isl.carry';   // Karten-ids: in der letzten Runde zweimal falsch → nächste Runde doppelt
   const STAGE_TXT = ['ist geschlüpft!', 'ist gewachsen und jetzt klein.', 'ist gewachsen: jetzt mittelgroß.',
                      'ist groß geworden!', 'leuchtet!'];
@@ -1352,13 +1406,13 @@
   let worldCache = null;          // { key, wc } — bleibt über mehrere Öffnungen
   let inselReady = null, weltReady = null;
 
-  /* Welche Stapel auf die Insel kommen: Tablet alle geteilten, Lehrkraft
-     im Raum die geteilten (sonst die gewählten), ohne Raum alle eigenen. */
+  /* Die Stapel des Raums: Tablet alle geteilten, Lehrkraft im Raum die
+     geteilten (sind keine geteilt: alle eigenen), ohne Raum alle eigenen.
+     Sie leben immer auf der Insel (dazu aktive, die nicht geteilt sind) und
+     sind der Standard für die aktiven Stapel (activeIds). */
   function islandIds() {
     const have = (list || []).map(x => x.id);
     if (!isTeacher || standalone) return have;
-    // Die Auswahl auf der Startseite zählt hier nie (Sönke 28.10.2026): die Insel startet
-    // immer mit allen Stapeln des Raums, gewählt wird auf der Insel (Haken in der Leiste).
     const sh = sharedRaw().map(e => e.id).filter(id => have.includes(id));
     return sh.length ? sh : have;
   }
@@ -1656,7 +1710,7 @@
     const pane = root.querySelector('#ddPane');
     if (!pane) return;
     islStop();
-    isl = { creatures: [], byId: new Map(), selId: null, fam: -1, cam: null, raf: 0, last: 0, task: null, round: null,
+    isl = { creatures: [], byId: new Map(), selId: null, dim: new Set(), cam: null, raf: 0, last: 0, task: null, round: null,
             ptr: new Map(), drag: null, ready: false };
     pane.innerHTML =
       '<section class="dd-isl" id="ddIsl">' +
@@ -1951,11 +2005,6 @@
     top = Math.max(6, Math.min(v.h - ph - 6, top));
     pop.style.transform = 'translate(' + Math.round(left) + 'px,' + Math.round(top) + 'px)';
   }
-  function islFamily(f) {
-    if (!isl) return;
-    isl.fam = isl.fam === f ? -1 : f;
-    paintSide();
-  }
 
   /* ─── Himmel: Tag und Nacht, Wolken ───
      Der Tag läuft nach der Uhr (Date.now), damit die ganze Klasse
@@ -2103,8 +2152,8 @@
     const drawW = w => {
       const e = stageOfId(w.id);
       const S = isl.S * WSIZE[e];              // je Stufe größer
-      const dim = isl.fam >= 0 && w.fam !== isl.fam;
-      g.globalAlpha = dim ? 0.28 : 1;
+      const dim = isl.dim.has(w.fam);
+      g.globalAlpha = dim ? 0.4 : 1;
       const wet = w.wet;                       // schwimmt gerade (im Wasser)
       const zz = !!w.sleep;                    // schläft gerade (nur an Land)
       const lift = w.alt || 0, wy = w.y - lift;   // Flughöhe
@@ -2206,7 +2255,7 @@
     // Was leuchtet — nur nachts: Schein und Funken in der Familienfarbe
     g.globalCompositeOperation = 'lighter';
     for (const L of lights) {
-      if (L.w && isl.fam >= 0 && L.w.fam !== isl.fam) continue;
+      if (L.w && isl.dim.has(L.w.fam)) continue;
       if (sky.night > 0.02) {
         g.globalAlpha = Math.min(1, L.a * sky.night * (L.w ? 0.9 : 0.7));
         g.drawImage(L.w ? sparkSprite(L.col) : glowSprite(L.col), L.x - L.r, L.y - L.r, L.r * 2, L.r * 2);
@@ -2239,7 +2288,7 @@
       for (const w of list) {
         const px = w.x * c.s + c.tx, py = (w.y - (w.alt || 0)) * c.s + c.ty;
         if (px < -60 || px > isl.W + 60 || py < -20 || py > isl.H + 30) continue;
-        if (isl.fam >= 0 && w.fam !== isl.fam) continue;
+        if (isl.dim.has(w.fam)) continue;
         const t = w.card.t.length > 22 ? w.card.t.slice(0, 21) + '…' : w.card.t;
         const tw = g.measureText(t).width;
         g.fillStyle = 'rgba(255,255,255,.85)';
@@ -2555,6 +2604,9 @@
     const names = I ? I.STAGES : ['Ei', 'Baby', 'Klein', 'Mittel', 'Groß', 'Leuchtend'];
     const c = islCounts(opened.cards);
     const n = opened.cards.length;
+    // Ausgeschaltete Familien stehen auf der Insel blass (islFrame).
+    const act = activeIds();
+    if (isl) isl.dim = new Set(opened.stacks.map((s, f) => act.includes(s.id) ? -1 : f).filter(f => f >= 0));
     if (islSideOpen === null) islSideOpen = !window.matchMedia('(max-width: 700px)').matches;
     const open = islSideOpen;
     box.classList.toggle('is-open', open);
@@ -2569,11 +2621,10 @@
         '<h3 class="dd-isl__h">' + (opened.stacks.length === 1 ? 'Stapel' : opened.stacks.length + ' Stapel') + '</h3>' +
         '<ul class="dd-isl__fams">' + opened.stacks.map((s, f) => {
           const cs = islCounts(opened.cards.filter(k => k.sid === s.id));
-          const on = !playOff().includes(s.id);
+          const on = act.includes(s.id);
           return '<li class="' + (on ? '' : 'is-off') + '">' +
-            (opened.stacks.length > 1 ? '<label class="dd-isl__play" title="In der Runde mitspielen"><input type="checkbox" data-play="' + E(s.id) + '"' + (on ? ' checked' : '') +
-              ' aria-label="' + E(s.title) + ' spielt mit"></label>' : '') +
-            '<button type="button" class="dd-isl__fam' + (isl && isl.fam === f ? ' is-on' : '') + '" data-act="isl-fam" data-f="' + f + '" aria-pressed="' + (isl && isl.fam === f) + '" title="Auf der Insel hervorheben" style="--f:' + FAM[f % FAM.length] + '">' +
+            '<button type="button" class="dd-isl__fam' + (on ? ' is-on' : '') + '" data-act="stk" data-id="' + E(s.id) + '" aria-pressed="' + on + '" title="' +
+              (on ? 'Ist in der Runde dran – antippen schaltet aus' : 'Antippen: in der Runde dran') + '" style="--f:' + FAM[f % FAM.length] + '">' +
             '<img src="' + famPic(f, s) + '" alt="">' +
             '<span class="dd-isl__famt"><b>' + E(s.title) + '</b>' + stageLegend(cs, names) + '</span></button></li>';
         }).join('') + '</ul>' +
@@ -2590,7 +2641,8 @@
     const W = window.DDWelt;
     const pc = playCards();
     const done = pc.length > 0 && islCounts(pc)[5] === pc.length;
-    const nOn = opened.stacks.filter(s => !playOff().includes(s.id)).length;
+    const act = activeIds();
+    const nOn = opened.stacks.filter(s => act.includes(s.id)).length;
     const canPick = (isTeacher || standalone) && W && isl && isl.wc;
     if (!canPick) islTplOpen = false;
     bar.innerHTML =
@@ -2625,12 +2677,11 @@
 
   /* ══════ Aufgaben ══════ */
   function carryIds() { const v = jget(CARRY, []); return Array.isArray(v) ? v : []; }
-  /* Auf der Insel leben immer alle Stapel des Raums; in die Runde kommen nur die angehakten. */
-  function playOff() { const v = jget(PLAY_OFF, []); return Array.isArray(v) ? v : []; }
+  /* Auf der Insel leben immer alle Stapel des Raums; in die Runde kommen nur die aktiven. */
   function playCards() {
     if (!opened) return [];
-    const off = new Set(playOff());
-    return opened.cards.filter(c => !off.has(c.sid));
+    const act = new Set(activeIds());
+    return opened.cards.filter(c => act.has(c.sid));
   }
   function roundSize() {
     const pc = playCards(), ids = new Set(pc.map(c => c.id));
@@ -3321,15 +3372,8 @@
         case 'new': openEditor(null); break;
         case 'reload': loadList(); break;
         case 'home': go('home'); pullSums(); break;
-        case 'sel': {
-          const i = sel.indexOf(sid);
-          if (i >= 0) sel.splice(i, 1); else sel.push(sid);
-          renderHome();
-          const n = root.querySelector('.dd-stack[data-id="' + (window.CSS && CSS.escape ? CSS.escape(sid) : sid) + '"]');
-          if (n) n.focus({ preventScroll: true });
-          break;
-        }
-        case 'game': if (isTeacher) openInfo(gid); else startGame(gid); break;
+        case 'open': openStack(sid); break;
+        case 'game': startGame(gid); break;
         case 'ginfo': openInfo(gid); break;
         case 'gshare': toggleGame(gid); break;
         case 'info-x': closeInfo(); break;
@@ -3367,7 +3411,7 @@
         case 'isl-round': islRound(null); break;
         case 'isl-train': if (isl && isl.selId) islRound(isl.selId); break;
         case 'isl-unsel': islSelect(null); break;
-        case 'isl-fam': islFamily(Number(b.dataset.f)); break;
+        case 'stk': toggleActive(b.dataset.id); break;
         case 'isl-tpl': islTplOpen = false; setTpl(Number(b.dataset.v)); break;
         case 'isl-tplmenu': islTplOpen = !islTplOpen; paintBar(); break;
         case 'isl-side': islToggleSide(); break;
@@ -3437,12 +3481,6 @@
       if (t.dataset.mm === 'pairs' && mm) {
         if (mm.busy) { t.value = mm.pairs; return; }
         newMemory(Number(t.value), mm.players); renderMemory(); return;
-      }
-      if (t.dataset.play !== undefined) {
-        const off = playOff().filter(id => id !== t.dataset.play);
-        jset(PLAY_OFF, t.checked ? off : off.concat(t.dataset.play));
-        paintSide();
-        return;
       }
       if (t.dataset.f === 'fach') { homeFilter.fach = t.value; renderHome(); return; }
       if (t.dataset.ec === 'img' && ed && t.files && t.files[0]) {
@@ -3533,7 +3571,8 @@
       isTeacher = demo ? true : ctx.role === 'presenter';
       acct = null; remoteSum = {}; pushTimer = null; dirty.clear();
       screen = 'home'; list = null; listErr = ''; cache = {}; opened = null; ed = null; learn = null; ov = null; mm = null;
-      sel = []; info = null;
+      sel = jget(SEL, null); if (!Array.isArray(sel)) sel = null;
+      info = null;
       homeFilter = { q: '', fach: '' };
       lastSharedKey = '';
       root.innerHTML = '<div class="dd"><div class="dd-main"></div><div class="dd-layer"></div></div>';
@@ -3575,7 +3614,7 @@
       if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* egal */ } }
       onKey = onClick = onInput = onChange = onResize = onFs = null;
       root = null; ctx = null; view = null; opened = null; ed = null; learn = null; ov = null; mm = null; list = null; cache = {};
-      sel = []; info = null;
+      sel = null; info = null;
     }
   });
 })();

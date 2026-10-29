@@ -177,23 +177,10 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
   background: repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 6px, transparent 6px 12px), var(--tape);
 }
 .dd-stack:nth-child(2n)::after { transform: translateX(-30%) rotate(4deg); }
-/* Auswahl: angetippter Stapel hebt sich, grüner Doppelrand wie der Sicher-Stempel */
-.dd-stack[data-act="sel"] { cursor: pointer; transition: transform .15s, box-shadow .15s; -webkit-tap-highlight-color: transparent; }
-.dd-stack[data-act="sel"]:hover { transform: translateY(-2px); }
+/* Stapel antippen öffnet ihn (erste freigegebene Lernform) */
+.dd-stack[data-act="open"] { cursor: pointer; transition: transform .15s, box-shadow .15s; -webkit-tap-highlight-color: transparent; }
+.dd-stack[data-act="open"]:hover { transform: translate(-2px, -3px) rotate(-.4deg); }
 .dd-stack:focus-visible { outline: 3px solid var(--dd-hl); outline-offset: 4px; }
-.dd-stack.is-sel {
-  transform: translate(-3px, -4px) rotate(-.6deg);
-  outline: 4px double var(--dd-k3); outline-offset: 3px;
-  box-shadow: 6px 6px 0 var(--dd-pappe2), 11px 11px 0 var(--dd-pappe3), 0 18px 24px var(--dd-shadow);
-}
-.dd-pick {
-  display: inline-flex; align-items: center; gap: 5px; margin-right: auto; padding: 4px 10px 4px 6px; min-height: 32px;
-  font-family: var(--mono); font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
-  color: var(--dd-pappe-soft); border: 2px dashed var(--dd-pappe3); border-radius: 4px;
-}
-.dd .dd-pick svg { width: 15px; height: 15px; opacity: .25; }
-.dd-stack.is-sel .dd-pick { color: #fff; background: var(--dd-k3); border: 2px solid var(--dd-k3); }
-.dd-stack.is-sel .dd-pick svg { opacity: 1; stroke-width: 3; }
 .dd-stack__head { display: flex; gap: 10px; justify-content: space-between; align-items: flex-start; }
 .dd-stack__head h3 { margin: 0; font-size: 1.08rem; font-weight: 800; line-height: 1.25; overflow-wrap: anywhere; }
 .dd-stack__n {
@@ -416,26 +403,20 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 
 
 /* ══════════════════════════════════════════════════════════════
-   STARTSEITE: Stapel links, Spiele rechts
+   STARTSEITE: erst die Lernformen, dann die Stapel
    ══════════════════════════════════════════════════════════════ */
-.dd-hub { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr); gap: 30px 40px; align-items: start; }
+.dd-hub { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 30px 40px; align-items: start; }
 .dd-hub__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 .dd-hub .dd-sub { margin: 12px 0 22px; }
 .dd-hub .dd-grid { grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 30px 26px; }
 .dd-h--b { transform: rotate(1deg); }
 
-/* Spiele-Spalte: ein Blatt Papier, angeheftet */
+/* Lernformen-Spalte: ein Blatt Papier, angeheftet */
 .dd-hub__games {
   position: relative; background: rgba(255,255,255,.18); border-radius: 4px; padding: 20px 18px 22px;
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.25);
 }
 :root[data-theme="dark"] .dd-hub__games { background: rgba(0,0,0,.18); box-shadow: inset 0 0 0 2px rgba(255,255,255,.06); }
-.dd-selnote {
-  display: flex; align-items: flex-start; gap: 8px; margin: 14px 0 6px; padding: 9px 12px;
-  background: var(--dd-paper); color: var(--dd-ink); font-size: .9rem; line-height: 1.35; box-shadow: 0 3px 8px var(--dd-shadow); transform: rotate(-.4deg);
-}
-.dd-selnote svg { color: var(--dd-k3); stroke-width: 3; margin-top: 1px; }
-.dd-selnote.is-empty { color: var(--dd-ink-soft); background: #fff8d6; }
 .dd-ghead { margin: 22px 0 10px; font-family: var(--mono); font-size: .76rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--dd-on); }
 .dd-games { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 168px), 1fr)); gap: 14px; }
 .dd-soon { margin: 0; padding: 12px 14px; border: 2px dashed rgba(255,255,255,.55); border-radius: 4px; color: var(--dd-on); font-size: .86rem; }
@@ -520,10 +501,19 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 @keyframes dd-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes dd-sheet { from { opacity: 0; transform: translateY(16px) scale(.97); } to { opacity: 1; transform: none; } }
 
-/* ─── Im Spiel: welche Stapel gerade drin sind ─── */
+/* ─── In der Lernform: alle Stapel oben, antippen schaltet an/aus ─── */
 .dd-using { align-items: center; }
 .dd-using__l { font-family: var(--mono); font-size: .72rem; letter-spacing: .08em; text-transform: uppercase; color: var(--dd-on); margin-right: 2px; }
-.dd-stackhead .dd-chip--stack { text-transform: none; letter-spacing: 0; font-family: 'Outfit', system-ui, sans-serif; font-size: .86rem; font-weight: 700; display: inline-flex; gap: 6px; align-items: center; border-left: 4px solid var(--dd-k3); }
+.dd-stackhead .dd-chip--stack {
+  appearance: none; border: 0; cursor: pointer; min-height: 34px;
+  text-transform: none; letter-spacing: 0; font-family: 'Outfit', system-ui, sans-serif; font-size: .86rem; font-weight: 700;
+  display: inline-flex; gap: 6px; align-items: center; border-left: 4px solid var(--dd-pappe3); opacity: .6;
+  transition: opacity .15s, transform .15s;
+}
+.dd-stackhead .dd-chip--stack:hover { opacity: .85; }
+.dd-stackhead .dd-chip--stack.is-on { border-left-color: var(--dd-k3); opacity: 1; transform: rotate(-.6deg); }
+.dd .dd-chip--stack svg { width: 14px; height: 14px; color: var(--dd-k3); stroke-width: 3; }
+.dd-chip--stack:focus-visible { outline: 3px solid var(--dd-hl); outline-offset: 2px; }
 .dd-chip--stack i { font-style: normal; font-family: var(--mono); font-size: .7rem; color: var(--dd-ink-soft); }
 .dd-face__src { position: absolute; left: 20px; bottom: 16px; font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; color: var(--dd-faint); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dd-flip.is-stamped .dd-face__src { opacity: 0; }
@@ -779,8 +769,6 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 }
 .dd-isl__fams li { display: flex; align-items: center; gap: 4px; }
 .dd-isl__fams li.is-off .dd-isl__fam { opacity: .45; }
-.dd-isl__play { flex: none; display: grid; place-items: center; width: 34px; height: 44px; cursor: pointer; }
-.dd-isl__play input { width: 20px; height: 20px; margin: 0; cursor: pointer; accent-color: var(--dd-ok); }
 .dd-isl__hint { margin: -2px 0 6px; font-size: .78rem; color: var(--dd-ink-soft); }
 .dd-isl__fam:hover { background: rgba(0,0,0,.04); }
 .dd-isl__fam.is-on { border-color: var(--f); background: color-mix(in srgb, var(--f) 12%, transparent); }
