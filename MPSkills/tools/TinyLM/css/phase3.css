@@ -31,7 +31,7 @@
 .trainbox-btns { margin: 8px 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 /* Training hat eigene Farbe (magenta); .btn.primary (grün) muss dafür überstimmt werden. Läuft das
    Training, wird der Knopf wie alle laufenden Knöpfe dunkel („❚❚ Anhalten“). */
-.btn.primary.train-btn:not(.playing) { background: var(--cat-train); border-color: var(--cat-train); }
+.btn.primary.train-btn:not(.playing) { background: var(--cat-train); border-color: var(--cat-train); box-shadow: 0 3px 0 color-mix(in srgb, var(--cat-train) 70%, #000); }
 .btn.primary.train-btn:not(.playing):hover:not(:disabled) { background: color-mix(in srgb, var(--cat-train) 80%, var(--ink)); border-color: color-mix(in srgb, var(--cat-train) 80%, var(--ink)); }
 .trainbox-spark { flex: 1 1 180px; min-width: 150px; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; }
 .trainbox-spark .spark-host { height: 44px; }

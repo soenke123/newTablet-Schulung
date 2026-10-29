@@ -25,7 +25,7 @@ function sourceChips(rows, more) {
 Phases.register(1, {
   mount(host) {
     let session, n = 3, temp = 1, playing = false, timer = null, panelCtrl = null;
-    let textEl, cursor, playBtn, stepBtn, legendHost, placeholder;
+    let textEl, cursor, playBtn, stepBtn, legendHost, placeholder, sayEl;
 
     function freshSession() {
       const sources = buildSources(State.activeTexts(), () => 1, () => new Map());
@@ -38,14 +38,16 @@ Phases.register(1, {
       return used;
     }
 
-    /* Jedes Wort bekommt die Farbe des Textes, aus dem es geholt wurde — so sieht man sofort,
-       dass der "eigene" Text ein Flickenteppich aus vielen Texten ist. */
+    /* Jedes Wort ist ein Baustein in der Farbe des Textes, aus dem es geholt wurde — so sieht man
+       sofort, dass der "eigene" Text ein Flickenteppich aus vielen Texten ist. Satzzeichen hängen am
+       Baustein davor; die letzten n Bausteine (.win) sind das Kontextfenster. */
     function updateText() {
       textEl.replaceChildren();
-      let prevSi = null;
+      let prevSi = null, last = null;
+      const words = [];
       pieces(session).forEach((p, idx) => {
         if (idx > 0 && !p.punct) textEl.appendChild(document.createTextNode(' '));
-        if (p.punct) { textEl.appendChild(document.createTextNode(p.txt)); return; }
+        if (p.punct) { if (last) last.textContent += p.txt; else textEl.appendChild(document.createTextNode(p.txt)); return; }
         if (prevSi != null && p.si !== prevSi) {
           const seam = el('span', 'seam');
           seam.title = 'Hier springt die KI zu einem anderen Text.';
@@ -55,11 +57,32 @@ Phases.register(1, {
         span.style.setProperty('--sc', sourceColor(p.si));
         span.title = 'aus: ' + session.sources[p.si].doc.title;
         textEl.appendChild(span);
+        words.push(span);
+        last = span;
         prevSi = p.si;
       });
+      markWindow(words);
       textEl.appendChild(cursor);
       placeholder.hidden = session.steps.length > 0;
       textEl.hidden = !session.steps.length;
+    }
+
+    /* Kontextfenster an den Bausteinen zeigen (.win) und Tiny sagen lassen, was jetzt passiert. */
+    function markWindow(words) {
+      const C = session.steps.length ? candidates(session, n, temp) : null;
+      if (C && C.level > 0) {
+        const k = session.ctx.slice(-C.level).filter(w => w !== '.' && w !== ',').length;
+        words.slice(-k).forEach(w => w.classList.add('win'));
+      }
+      if (!sayEl) return;
+      if (!State.activeTexts().length) { sayEl.textContent = 'Ich habe keine Texte! Wähl oben ein paar „Textwelten“ aus.'; return; }
+      if (!C) { sayEl.textContent = 'Drück auf „Schreiben starten“ – dann lege ich los!'; return; }
+      const top = C.list[0];
+      if (C.level === 0 || !top) { sayEl.textContent = 'Neuer Satz! Ich nehme einen Satzanfang aus deinen Texten …'; return; }
+      /* Wie auf den Bausteinen geschrieben (ohne Satzzeichen), nicht in der Großschreibung der Wortlisten. */
+      const ctx = words.filter(w => w.classList.contains('win')).map(w => w.textContent.replace(/[.,]+$/, '')).join(' ');
+      sayEl.replaceChildren(document.createTextNode('Nach „'), el('b', null, ctx), document.createTextNode('“ kam in deinen Texten meistens „'),
+        el('b', null, showWord(top.word)), document.createTextNode(temp === 0 ? '“ … das nehme ich!' : '“ … ich würfle!'));
     }
 
     function updateLegend() {
@@ -141,6 +164,7 @@ Phases.register(1, {
           n = v;
           paintStrip(strip);
           if (live.cand) live.cand();
+          updateText();
         }
       });
       container.appendChild(sl.el);
@@ -161,7 +185,7 @@ Phases.register(1, {
           const words = session.ctx.slice(-C.level).filter(w => w !== '.').map(showWord).join(' ');
           info.append(document.createTextNode('Nach „'), el('b', null, words || 'Satzanfang'), document.createTextNode('“ kam in deinen Texten:'));
         }
-        Heat.render(heatHost, C.list.map(a => ({ word: a.word, label: showWord(a.word), p: a.p })), { maxRows: 6, accent: 'var(--cat-candidates)' });
+        Heat.render(heatHost, C.list.map(a => ({ word: a.word, label: showWord(a.word), p: a.p })), { maxRows: 5, accent: 'var(--cat-candidates)' });
       }
       paint();
       live.cand = () => { if (heatHost.isConnected) paint(); };
@@ -172,7 +196,7 @@ Phases.register(1, {
       const sl = Info.slider({
         label: 'Temperatur', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp',
         fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
-        onInput: v => { temp = Math.round(v * 10) / 10; if (live.cand) live.cand(); }
+        onInput: v => { temp = Math.round(v * 10) / 10; if (live.cand) live.cand(); updateText(); }
       });
       container.appendChild(sl.el);
     }
@@ -206,7 +230,7 @@ Phases.register(1, {
       if (timer) { clearInterval(timer); timer = null; }
 
       const center = el('div', 'box machine-center');
-      center.appendChild(Info.centerHead('Phase 1 · Frei schreiben', 'Die KI schreibt ohne Frage', 'p1'));
+      center.appendChild(Info.centerHead('Phase 1 · Frei schreiben', 'Tiny schreibt drauflos', 'p1'));
 
 
       const paper = el('div', 'paper');
@@ -216,6 +240,12 @@ Phases.register(1, {
       textEl.appendChild(cursor);
       paper.append(placeholder, textEl);
       center.appendChild(paper);
+
+      /* Tiny erzählt in einem Satz, was es gerade macht. */
+      const say = el('div', 'tiny-say');
+      sayEl = el('p', 'tiny-bubble');
+      say.append(tinyEl('normal'), sayEl);
+      center.appendChild(say);
 
       legendHost = el('div', 'center-legend');
       center.appendChild(legendHost);

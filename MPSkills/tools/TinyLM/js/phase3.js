@@ -92,15 +92,24 @@ Phases.register(3, {
       textEl.replaceChildren();
       if (placeholder) placeholder.hidden = genSession.words.length > 0;
       textEl.hidden = !genSession.words.length;
-      let prev = '.';
+      /* Wie in Phase 1 als Bausteine, aber alle gleich gefärbt: das Netz weiß nicht mehr, aus welchem
+         Text ein Wort stammt. Die letzten C Bausteine (.win) sind das, was das Netz gerade sieht. */
+      let prev = '.', last = null;
+      const toks = [];
       genSession.words.forEach((w, idx) => {
         const punct = (w === '.' || w === ',');
         let txt = w === data.UNK ? '…' : data.display(w);
         if (!punct && prev === '.') txt = txt.charAt(0).toUpperCase() + txt.slice(1);
-        if (idx > 0 && !punct) textEl.appendChild(document.createTextNode(' '));
-        textEl.appendChild(document.createTextNode(txt));
+        if (punct) { if (last) last.textContent += txt; else textEl.appendChild(document.createTextNode(txt)); prev = w; return; }
+        if (idx > 0) textEl.appendChild(document.createTextNode(' '));
+        last = el('span', 'tok', txt);
+        textEl.appendChild(last);
+        toks.push({ w, span: last });
         prev = w;
       });
+      /* Kontext des Netzes: die letzten C Token (Satzzeichen zählen mit, haben aber keinen Baustein). */
+      const ctxN = genSession.ctxIds.filter(id => data.vocab[id] !== '.' && data.vocab[id] !== ',').length;
+      toks.slice(-ctxN).forEach(t => t.span.classList.add('win'));
       textEl.appendChild(cursor);
     }
 
@@ -256,13 +265,13 @@ Phases.register(3, {
         const arr = [];
         for (let i = 0; i < probsT.length; i++) arr.push([i, probsT[i]]);
         arr.sort((a, b) => b[1] - a[1]);
-        const K = 7;
+        const K = 4;
         const top = arr.slice(0, K);
         const restMass = arr.slice(K).reduce((s, x) => s + x[1], 0);
         const restCount = arr.length - K;
         const cands = top.map(([i, p]) => ({ word: data.vocab[i], label: wordLabel(data.vocab[i]), p }));
         if (restCount > 0) cands.push({ word: '__rest__', label: '+' + restCount + ' andere', p: restMass });
-        Heat.render(heatHost, cands, { maxRows: 8, accent: 'var(--cat-candidates)' });
+        Heat.render(heatHost, cands, { maxRows: 5, accent: 'var(--cat-candidates)' });
       }
       paint();
       live.output = paint;
