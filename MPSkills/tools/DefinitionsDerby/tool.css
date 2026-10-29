@@ -474,7 +474,7 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-modal__bg { position: absolute; inset: 0; background: rgba(30,20,10,.55); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); animation: dd-fade .2s ease-out; }
 .dd-sheet {
   position: relative; width: min(920px, 100%); max-height: calc(100dvh - 32px); overflow: auto;
-  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "shot shot" "txt how" "act act"; gap: 18px 30px; align-items: start;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "act act" "shot shot" "txt how"; gap: 18px 30px; align-items: start;
   background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; padding: 30px 30px 26px; box-shadow: 0 24px 50px rgba(0,0,0,.45);
   animation: dd-sheet .25s cubic-bezier(.3,1.3,.5,1);
   font-family: 'Outfit', system-ui, sans-serif;
@@ -489,10 +489,10 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-sheet__how ul { margin: 0; padding: 0 0 0 18px; line-height: 1.45; font-size: .93rem; }
 .dd-sheet__how li { margin-bottom: 4px; }
 .dd-sheet__how li::marker { color: var(--dd-k3); }
-.dd-sheet__act { grid-area: act; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dd-sheet__act { grid-area: act; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: flex-end; margin: -12px 40px 0 0; }
 .dd-sheet__act .btn { min-height: 46px; }
 .dd-sheet__act .btn.is-on { background: var(--dd-prim); border-color: var(--dd-prim-edge); color: #fff; }
-.dd-sheet__hint { flex-basis: 100%; margin: 0; font-size: .84rem; color: var(--dd-ink-soft); }
+.dd-sheet__hint { flex-basis: 100%; margin: 0; font-size: .84rem; color: var(--dd-ink-soft); text-align: right; }
 .dd-shot { grid-area: shot; justify-self: center; width: min(100%, 540px); margin: 10px 0 4px; background: #fff; padding: 10px 10px 34px; transform: rotate(1.5deg); box-shadow: 0 8px 20px rgba(0,0,0,.3); position: relative; }
 .dd-shot img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top center; background: var(--dd-pappe); }
 .dd-shot figcaption { position: absolute; left: 0; right: 0; bottom: 9px; text-align: center; font-family: var(--mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--dd-faint); }
@@ -640,7 +640,10 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
   .dd-hub { grid-template-columns: 1fr; }
 }
 @media (max-width: 700px) {
-  .dd-sheet { grid-template-columns: 1fr; grid-template-areas: "shot" "txt" "how" "act"; padding: 26px 18px 20px; }
+  .dd-sheet { grid-template-columns: 1fr; grid-template-areas: "act" "shot" "txt" "how"; padding: 26px 18px 20px; }
+  .dd-sheet__act { justify-content: flex-start; margin-right: 44px; }
+  .dd-sheet__act [data-act="info-start"] { order: -1; }
+  .dd-sheet__hint { text-align: left; }
   .dd-shot { transform: rotate(.8deg); }
 }
 @media (max-width: 600px) {

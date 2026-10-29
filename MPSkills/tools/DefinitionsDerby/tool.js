@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029d';
+  const V = '20261029e';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -715,6 +715,14 @@
         '<div class="dd-modal__bg" data-act="info-x"></div>' +
         '<div class="dd-sheet">' +
           '<button type="button" class="dd-x" data-act="info-x" aria-label="Schließen">×</button>' +
+          // Knöpfe oben rechts neben dem ×, Starten ganz rechts (Sönke 29.10.2026)
+          '<div class="dd-sheet__act">' +
+            (canShare ? '<button type="button" class="btn' + (shared ? ' is-on' : '') + '" data-act="info-share" aria-pressed="' + shared + '">' + ico.share +
+              (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '</button>' : '') +
+            '<button type="button" class="btn btn--primary" data-act="info-start"' + (it.length ? '' : ' disabled') + '>' + ico.play +
+              (G.room ? 'Insel öffnen' : 'Starten') + '</button>' +
+            (it.length ? '' : '<p class="dd-sheet__hint">' + (isTeacher ? 'Noch kein Stapel da – lege zuerst einen an.' : 'Noch ist kein Stapel geteilt.') + '</p>') +
+          '</div>' +
           // Oben das Bild, darunter die Erklärung in zwei Spalten (Sönke 29.10.2026)
           '<figure class="dd-shot"><img src="' + BASE + 'img/' + G.shot + '?v=' + V + '" alt="Bildschirmfoto: ' + E(G.name) + '" loading="lazy" decoding="async">' +
             '<figcaption>So sieht es aus</figcaption></figure>' +
@@ -725,13 +733,6 @@
           '</div>' +
           '<div class="dd-sheet__how">' +
             '<h3>So geht’s</h3><ul>' + G.how.map(h => '<li>' + h + '</li>').join('') + '</ul>' +
-          '</div>' +
-          '<div class="dd-sheet__act">' +
-            '<button type="button" class="btn btn--primary" data-act="info-start"' + (it.length ? '' : ' disabled') + '>' + ico.play +
-              (G.room ? 'Insel öffnen' : 'Starten') + '</button>' +
-            (canShare ? '<button type="button" class="btn' + (shared ? ' is-on' : '') + '" data-act="info-share" aria-pressed="' + shared + '">' + ico.share +
-              (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '</button>' : '') +
-            (it.length ? '' : '<p class="dd-sheet__hint">' + (isTeacher ? 'Noch kein Stapel da – lege zuerst einen an.' : 'Noch ist kein Stapel geteilt.') + '</p>') +
           '</div>' +
         '</div>' +
       '</div>';
