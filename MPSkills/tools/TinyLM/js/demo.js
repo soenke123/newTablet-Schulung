@@ -1,6 +1,6 @@
 /* Schaufenster (MPSkills/preview/tinylm.js): mit ?demo=1 merkt sich Tiny LM nichts.
    localStorage wird VOR allen anderen Skripten durch einen Speicher im Arbeitsspeicher
-   ersetzt — so startet die Vorschau immer frisch (Phase 1, leerer Leitfaden, Standardtexte)
+   ersetzt — so startet die Vorschau immer frisch (Phase 1, keine Tour, Standardtexte)
    und überschreibt nicht den Stand, mit dem jemand auf diesem Gerät gerade arbeitet. */
 (function () {
   if (!/[?&]demo=1(&|$)/.test(location.search)) return;

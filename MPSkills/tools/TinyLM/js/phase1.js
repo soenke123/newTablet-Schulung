@@ -1,8 +1,7 @@
 /* Phase 1: freies Schreiben ohne Frage.
-   Zentrum = Ablauf-Fließband + wachsender Text (jedes Wort in der Farbe seines Quelltexts);
+   Zentrum = wachsender Text (jedes Wort in der Farbe seines Quelltexts);
    rechts zeigen die vier Schritte (Kontextfenster · Quellen · Kandidaten · Zufall — in jeder Phase
-   gleich, siehe panel.js), was die Maschine gerade tut. Erklärt wird hinter den ?-Knöpfen.
-   Meldet jedes geschriebene Wort an den Leitfaden (p1-word). */
+   gleich, siehe panel.js), was die Maschine gerade tut. Erklärt wird hinter den ?-Knöpfen. */
 function sourceColor(si) {
   const hue = Math.round((si * 137.508) % 360);
   return 'hsl(' + hue + ' 60% 45%)';
@@ -26,8 +25,7 @@ function sourceChips(rows, more) {
 Phases.register(1, {
   mount(host) {
     let session, n = 3, temp = 1, playing = false, timer = null, panelCtrl = null;
-    let run = 0;   /* Wörter seit der letzten Änderung an Kontext/Zufall (für den Leitfaden) */
-    let textEl, cursor, playBtn, stepBtn, flowHost, legendHost, placeholder;
+    let textEl, cursor, playBtn, stepBtn, legendHost, placeholder;
 
     function freshSession() {
       const sources = buildSources(State.activeTexts(), () => 1, () => new Map());
@@ -75,28 +73,16 @@ Phases.register(1, {
       ));
     }
 
-    function updateFlow() {
-      const started = session.steps.length > 0;
-      Flow.render(flowHost, [
-        { id: 'ctx', label: 'Kontextfenster', sub: n + (n === 1 ? ' Wort anschauen' : ' Wörter anschauen'), cat: 'context', active: started },
-        { id: 'origin', label: 'Quellen', sub: 'was kam danach?', cat: 'origin', active: started },
-        { id: 'cand', label: 'Kandidaten', sub: 'nach Häufigkeit', cat: 'candidates', active: started },
-        { id: 'rand', label: 'Zufall', sub: 'würfeln & anhängen', cat: 'random', active: started }
-      ], { onPick: id => panelCtrl.reveal(id), help: 'ablauf' });
-    }
 
     function doStep() {
       if (!State.activeTexts().length) return false;
       const C = step(session, n, temp);
       if (!C) { stopPlay(); return false; }
-      run++;
       updateText();
       updateLegend();
       if (panelCtrl.isOpen('ctx') && live.ctx) live.ctx();
       if (panelCtrl.isOpen('cand') && live.cand) live.cand();
       panelCtrl.refreshAll();
-      Flow.pulse(flowHost, 380);
-      Guide.did('p1-word', { n, temp, run });
       if (session.steps.length >= 400) stopPlay();
       return true;
     }
@@ -110,7 +96,6 @@ Phases.register(1, {
       if (playing || !State.activeTexts().length) return;
       playing = true;
       syncPlay();
-      updateFlow();
       timer = setInterval(() => { if (!doStep()) stopPlay(); }, 550);
     }
     function stopPlay() {
@@ -153,10 +138,9 @@ Phases.register(1, {
         label: 'Kontextfenster', min: 1, max: 6, step: 1, value: n, spot: 'nslider',
         fmt: v => v + (v === 1 ? ' Wort' : ' Wörter'), ends: ['kurz', 'lang'],
         onInput: v => {
-          n = v; run = 0;
+          n = v;
           paintStrip(strip);
           if (live.cand) live.cand();
-          updateFlow();
         }
       });
       container.appendChild(sl.el);
@@ -188,7 +172,7 @@ Phases.register(1, {
       const sl = Info.slider({
         label: 'Temperatur', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp',
         fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
-        onInput: v => { temp = Math.round(v * 10) / 10; run = 0; if (live.cand) live.cand(); }
+        onInput: v => { temp = Math.round(v * 10) / 10; if (live.cand) live.cand(); }
       });
       container.appendChild(sl.el);
     }
@@ -219,14 +203,11 @@ Phases.register(1, {
       live.ctx = live.cand = null;
       session = freshSession();
       playing = false;
-      run = 0;
       if (timer) { clearInterval(timer); timer = null; }
 
       const center = el('div', 'box machine-center');
       center.appendChild(Info.centerHead('Phase 1 · Frei schreiben', 'Die KI schreibt ohne Frage', 'p1'));
 
-      flowHost = el('div', 'flow-host');
-      center.appendChild(flowHost);
 
       const paper = el('div', 'paper');
       placeholder = el('p', 'paper-ph', 'Hier schreibt gleich die KI …');
@@ -252,7 +233,7 @@ Phases.register(1, {
       if (!State.activeTexts().length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – öffne oben „Textwelten“.'));
 
       playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
-      stepBtn.addEventListener('click', () => { stopPlay(); doStep(); updateFlow(); });
+      stepBtn.addEventListener('click', () => { stopPlay(); doStep(); });
       resetBtn.addEventListener('click', () => render());
 
       const items = [
@@ -264,7 +245,6 @@ Phases.register(1, {
       panelCtrl = Panel.mount(host, center, items, { phase: 1 });
       updateText();
       updateLegend();
-      updateFlow();
     }
 
     render();
