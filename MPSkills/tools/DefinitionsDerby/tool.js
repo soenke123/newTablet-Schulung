@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029e';
+  const V = '20261029f';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1468,8 +1468,12 @@
 
   /* Welche Vorlage: im Raum aus data.isl (die Lehrkraft wählt; beim ersten
      Öffnen schreibt sie den Vorschlag aus dem Raumtitel fest, damit Umbenennen
-     die Insel nicht tauscht), ohne Raum aus dem Gerät. */
+     die Insel nicht tauscht), ohne Raum aus dem Gerät. Schüler dürfen auch
+     wechseln (Sönke 29.10.2026), aber nur für sich: ihre Wahl steht im Gerät
+     (dd.isl.m.<Raum>), sonst gilt die der Lehrkraft. */
+  const myTplKey = () => 'dd.isl.m.' + hashStr((ctx && ctx.title) || 'raum');
   function islTpl() {
+    if (!isTeacher && !standalone) { const m = Number(store.get(myTplKey())); if (store.get(myTplKey()) != null && m >= 0 && m < 3) return m; }
     const d = roomData().isl;
     if (Number.isInteger(d) && d >= 0 && d < 3) return d;
     if (standalone || demo) { const v = Number(store.get('dd.isl')); return v >= 0 && v < 3 ? v : 0; }
@@ -1479,7 +1483,8 @@
     if (!(v >= 0 && v < 3) || v === islTpl()) return;
     if (isl && isl.round) return;
     if (standalone || demo) store.set('dd.isl', String(v));
-    if (!standalone) {
+    if (!isTeacher && !standalone) store.set(myTplKey(), String(v));   // Schüler: nur im eigenen Gerät
+    else if (!standalone) {
       const res = await writeData({ isl: v });
       if (!res.ok) { toast(errMsg(res.error)); return; }
     }
@@ -2650,7 +2655,7 @@
     const done = pc.length > 0 && islCounts(pc)[5] === pc.length;
     const act = activeIds();
     const nOn = opened.stacks.filter(s => act.includes(s.id)).length;
-    const canPick = (isTeacher || standalone) && W && isl && isl.wc;
+    const canPick = W && isl && isl.wc;   // alle dürfen wechseln, Schüler nur für sich (setTpl)
     if (!canPick) islTplOpen = false;
     bar.innerHTML =
       (canPick ?
