@@ -97,9 +97,9 @@ window.TOOLS_OVERLAY = {
   // beta: frisch gebaut (07.10.2026).
   projekt: { ready: true, beta: true },
   // Elfter Skill (Migration 0210) — Tiny LM, ein Mini-Sprachmodell
-  // zum Aufschrauben. Eingerahmt wie NeuroLab (tools/TinyLM/index.html),
-  // nichts geteilt. beta: noch eine einzige Ansicht für alle, die
-  // Trennung Lehrkraft/Schüler kommt später. Schaufenster: preview/tinylm.js.
+  // zum Aufschrauben. Eingerahmt wie NeuroLab (tools/TinyLM/index.html);
+  // geteilt wird nur, welche Phasen die Klasse öffnen darf
+  // (skill_room_state.data.phases). Schaufenster: preview/tinylm.js.
   tinylm: { ready: true, beta: true },
   // Zwölfter Skill (Migration 0211) — Master PDF Skill: PDFs lesen und
   // bearbeiten. KEIN Raum: die Kachel öffnet die eigenständige App unter

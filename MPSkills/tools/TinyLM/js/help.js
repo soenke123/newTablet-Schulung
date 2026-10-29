@@ -4,7 +4,7 @@
    Tipp daneben, Esc oder ×. Auf schmalen Geräten kommt es als Blatt von unten.
 
    Help.btn(key)          -> <button class="help-btn">?</button>, öffnet HELP[key]
-   Help.open(key, anchor) -> öffnet direkt (z. B. aus dem Leitfaden)
+   Help.open(key, anchor) -> öffnet direkt (ohne Knopf)
    Help.show(entry, anchor) -> wie open, aber mit einem Eintrag, der nicht in HELP steht
    Help.close()
 
@@ -16,31 +16,8 @@
        { type: 'cycle',  items: [[symbol, wort]], loop: true }
        { type: 'scale',  items: [[symbol, wert, wort]] }
        { type: 'swatch', label, values: [..] }
-       { type: 'line' } | { type: 'abc' } | { type: 'dots' } | { type: 'net' }
-   Jeder Tipp auf ? meldet sich beim Leitfaden (Guide.did('help', {key})). */
+       { type: 'line' } | { type: 'abc' } | { type: 'dots' } | { type: 'net' } */
 const HELP = {
-  leitfaden: {
-    title: 'Der Leitfaden', icon: '🧭',
-    text: 'Erledige die Aufgaben der Reihe nach. „Zeig mir wo“ zeigt dir die Stelle, ein Haken heißt: geschafft.',
-    vis: { type: 'cycle', items: [['👆', 'machen'], ['✅', 'Haken'], ['💡', 'Aha!']] }
-  },
-  textwelten: {
-    title: 'Textwelten', icon: '📚',
-    text: 'Das ist das Futter der KI. Was in keinem Text steht, kann sie auch nicht sagen.',
-    vis: { type: 'cycle', items: [['📚', 'Texte'], ['🤖', 'KI'], ['💬', 'neuer Text']] }
-  },
-
-  /* ---- Phase 1 ---- */
-  p1: {
-    title: 'Frei schreiben', icon: '✍️',
-    text: 'Die KI hängt immer ein Wort an, das in deinen Texten oft danach kam. Ohne Plan und ohne Sinn.',
-    vis: { type: 'tokens', items: [['Der', ''], ['Hund', ''], ['frisst', ''], ['?', 'next']] }
-  },
-  ablauf: {
-    title: 'Der Ablauf', icon: '🔁',
-    text: 'Diese 4 Schritte laufen für jedes Wort neu – in jeder Phase, mit denselben Farben. Von Phase zu Phase wird nur anders geschaut und nachgesehen.',
-    vis: { type: 'cycle', items: [['👀', 'schauen'], ['📑', 'nachsehen'], ['📊', 'Kandidaten'], ['🎲', 'würfeln']], loop: true }
-  },
   kontext: {
     title: 'Kontextfenster', icon: '👀', cat: 'context',
     text: 'Die KI schaut nur auf die letzten paar Wörter. Alles davor hat sie schon vergessen.',
@@ -285,7 +262,6 @@ const Help = (() => {
     const h = HELP[key];
     if (!h) return;
     show(h, a);
-    if (typeof Guide !== 'undefined') Guide.did('help', { key });
   }
 
   function btn(key, cls) {
@@ -300,5 +276,5 @@ const Help = (() => {
     return b;
   }
 
-  return { btn, open, show, close };
+  return { btn, open, show, close, vis };
 })();

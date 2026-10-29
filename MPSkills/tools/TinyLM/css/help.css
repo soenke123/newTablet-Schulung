@@ -1,4 +1,4 @@
-/* Leitfaden (guide.js), ?-Knöpfe + Hilfe-Kärtchen (help.js), "Zeig mir wo"-Puls (app.js spotlight). */
+/* ?-Knöpfe + Hilfe-Kärtchen (help.js), "Zeig mir wo"-Puls (app.js spotlight). */
 
 /* ---- ?-Knopf ---- */
 .help-btn {
@@ -70,59 +70,6 @@
 .hv-cells i { width: 12px; height: 20px; border-radius: 3px; display: block; border: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
 .hv-doc { display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 .hv-lines { width: 30px; height: 18px; background: repeating-linear-gradient(to bottom, var(--line) 0 2px, transparent 2px 6px); }
-
-/* ---- Leitfaden ---- */
-.guide {
-  max-width: 1240px; margin: 0 auto; padding: 0 16px 9px;
-  display: flex; align-items: center; gap: 10px;
-}
-.g-lab { display: flex; align-items: center; gap: 6px; flex: none; font-family: var(--font-display); font-size: 0.92rem; }
-.g-lab-ico { font-size: 1.05rem; }
-.g-dots { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; flex: none; }
-.g-dots li { display: flex; align-items: center; }
-.g-dots li + li::before { content: ''; width: 10px; height: 2px; background: var(--line); }
-.g-dot {
-  width: 28px; height: 28px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface);
-  font-family: var(--font-display); font-weight: 700; font-size: 0.78rem; color: var(--muted); cursor: pointer; padding: 0;
-  display: grid; place-items: center; transition: transform .15s;
-}
-.g-dot.done { background: var(--accent); border-color: var(--accent); color: #fff; }
-.g-dot.cur { border-color: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 3px var(--accent-dim); transform: scale(1.1); }
-.g-dot.done.cur { color: #fff; }
-.g-task {
-  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
-  background: var(--accent-dim); border: 1px solid var(--accent-edge); border-radius: 14px; padding: 6px 6px 6px 12px;
-}
-.g-ico { font-size: 1.2rem; flex: none; width: 1.6rem; text-align: center; }
-.g-text { flex: 1; min-width: 0; font-size: 0.95rem; font-weight: 500; line-height: 1.3; }
-.g-count { font-family: var(--font-mono); font-size: 0.72rem; color: var(--accent-ink); background: var(--surface); border-radius: 999px; padding: 1px 6px; margin-right: 7px; vertical-align: 1px; }
-.g-acts { display: flex; gap: 6px; flex: none; }
-.g-task.flash { background: color-mix(in srgb, var(--accent) 22%, var(--surface)); border-color: var(--accent); animation: g-pop .4s ease-out; }
-.g-task.flash .g-ico { color: var(--accent-ink); font-weight: 800; }
-.g-task.was { background: var(--soft); border-color: var(--line); }
-.g-task.nudge { background: var(--cat-origin-tint); border-color: var(--cat-origin); }
-.g-task.complete { background: linear-gradient(90deg, var(--accent-dim), color-mix(in srgb, var(--cat-random-tint) 50%, var(--surface))); }
-@keyframes g-pop { 0% { transform: scale(.98); } 60% { transform: scale(1.01); } }
-.g-sum { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 7px; }
-.g-sum li { display: flex; gap: 8px; font-size: 0.92rem; color: var(--muted); }
-.g-sum li.ok { color: var(--ink); }
-.g-sum-ico { width: 1.2rem; height: 1.2rem; border-radius: 50%; flex: none; display: grid; place-items: center; font-size: 0.72rem; font-weight: 700; background: var(--soft); }
-.g-sum li.ok .g-sum-ico { background: var(--accent); color: #fff; }
-
-@media (max-width: 900px) {
-  .g-lab b { display: none; }
-}
-@media (max-width: 760px) {
-  .guide { flex-wrap: wrap; padding: 0 12px 8px; gap: 8px; }
-  .g-lab { order: 1; }
-  .g-dots { order: 2; }
-  .g-task { order: 3; flex-basis: 100%; }
-  .g-dot { width: 26px; height: 26px; }
-}
-@media (max-width: 480px) {
-  .g-task { flex-wrap: wrap; }
-  .g-acts { width: 100%; justify-content: flex-end; }
-}
 
 /* ---- "Zeig mir wo": die Stelle pulsiert kurz ---- */
 .spot { position: relative; z-index: 2; animation: spot 1s ease-in-out 3; border-radius: 14px; }

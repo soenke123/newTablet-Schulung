@@ -11,7 +11,6 @@
      meaning = Wortkarte (P2) · train = Training (P3, läuft neben dem Schreiben)
      net     = Netz-Bild, bewusst neutral-graphit: diese Karte zeigt ALLE Schichten auf einmal, und
                darin tragen die Schichten weiter ihre eigenen Farben (embed/hidden/candidates).
-   Das Ablauf-Band (flow.js) nutzt dieselben Namen und Farben wie die Karten.
 
    Jede Karte ist EINZELN auf- und zuklappbar (Tipp auf den Kopf); der Zustand wird je Phase in
    localStorage gemerkt. Erklärt wird NICHT auf der Karte, sondern hinter dem ?-Knopf im Kopf
@@ -100,9 +99,8 @@ const Panel = (() => {
       if (!e) return;
       apply(e, on);
       saveOpen(openMap);
-      if (on && typeof Guide !== 'undefined') Guide.did('card', { phase: opts.phase, id });
     }
-    /* Vom Ablauf-Fließband / Leitfaden aus: Karte aufklappen und hinspringen. */
+    /* Von der Tour aus: Karte aufklappen (und hinspringen). */
     function reveal(id, noScroll) {
       const e = entries[id];
       if (!e) return;

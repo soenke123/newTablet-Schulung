@@ -11,8 +11,6 @@
    live[id] eine Funktion, die NUR die Zahlen/Bilder auffrischt und die Bedienelemente stehen lässt.
    Die Trainingstasten sitzen nur in der rechten Karte "Training" (samt Aufbau-Zeile und Netz-Bild-Knopf);
    sie wird während des Trainings nie neu gebaut. Schließt man die Karte, hält das Training an.
-   Meldet Vorhersagen (p3-gen), den Fehler (p3-loss) und angetippte Neuronen (p3-neuron) an den
-   Leitfaden.
    Wie viele Wörter das Netz zurückschaut (3, 4 oder 5), wählt man im Zentrum; ein anderes Fenster
    ist ein anderes Netz. Die drei Netze bleiben aber nebeneinander bestehen (slots): man kann alle drei
    trainieren und hin und her wechseln; erst eine neue Textauswahl ("Netz neu bauen") wirft sie weg.
@@ -69,29 +67,19 @@ Phases.register(3, {
     let data, net, genSession, lastForward, netView = null;
     let temp = 1, training = false, trainRAF = null, lastUIRefresh = 0;
     let genPlaying = false, genTimer = null;
-    let textEl, cursor, genPlayBtn, bannerEl, panelCtrl, flowHost, placeholder;
+    let textEl, cursor, genPlayBtn, bannerEl, panelCtrl, placeholder;
     let centerToggle, centerDot;
-    const slots = {};   /* Kontextlänge -> { data, net, genSession, genRun, version }: je ein Netz pro Fenster */
+    const slots = {};   /* Kontextlänge -> { data, net, genSession, version }: je ein Netz pro Fenster */
     let builtVersion = 0;
-    let genRun = 0;   /* Vorhersagen seit "Von vorn"/Trainingsstart (für den Leitfaden) */
     let cardTrain = null;
     let ctxLen = 3;
     try { const v = Number(localStorage.getItem(P3_CTX_KEY)); if (P3_CTX.includes(v)) ctxLen = v; } catch (e) { /* ohne Speicher: 3 */ }
     function saveSlot() {
-      if (data && net) slots[ctxLen] = { data, net, genSession, genRun, version: builtVersion };
+      if (data && net) slots[ctxLen] = { data, net, genSession, version: builtVersion };
     }
     const live = {};  /* Karten-Id -> Auffrisch-Funktion; nur offene Karten tragen sich ein */
 
     const CARDS = ['embed', 'hidden', 'output', 'net', 'train'];
-
-    function updateFlow() {
-      Flow.render(flowHost, [
-        { id: 'embed', label: 'Embedding', sub: data.C + ' Wörter → Zahlen', cat: 'embed' },
-        { id: 'hidden', label: 'Hidden-Schicht', sub: 'Zahlen mischen', cat: 'hidden' },
-        { id: 'output', label: 'Kandidaten', sub: 'Prozente vom Netz', cat: 'candidates' },
-        { id: 'rand', label: 'Zufall', sub: 'würfeln & anhängen', cat: 'random' }
-      ], { onPick: id => panelCtrl.reveal(id), help: 'ablauf' });
-    }
 
     function freshGenSession() {
       const startId = data.toId('.');
@@ -132,8 +120,7 @@ Phases.register(3, {
     }
 
     /* Fehler als Mittel der letzten Messungen: ein einzelner Wert ist der Schnitt über ein paar
-       Millisekunden zufälliger Beispiele und springt stark (die Anzeige flackerte, und ein Ausreißer
-       hakte im Leitfaden "Fehler unter 3" ab, obwohl daneben 3,6 stand). */
+       Millisekunden zufälliger Beispiele und springt stark (die Anzeige flackerte). */
     function curLoss() {
       const h = net.lossHistory;
       if (!net.step || !h.length) return null;
@@ -173,10 +160,8 @@ Phases.register(3, {
       genSession.words.push(word);
       if (word === '.') genSession.sentences++;
       lastForward = forward(net, genSession.ctxIds);
-      genRun++;
       updateGenText();
       liveTick();
-      Guide.did('p3-gen', { loss: curLoss(), run: genRun });
       return genSession.sentences < 3 && genSession.words.length < 60;
     }
     function startGenPlay() {
@@ -206,14 +191,12 @@ Phases.register(3, {
       if (now - lastUIRefresh > 180) {
         lastUIRefresh = now;
         liveTick();
-        Guide.did('p3-loss', { loss: curLoss() });
       }
       if (training) trainRAF = requestAnimationFrame(trainTick);
     }
     function startTraining() {
       if (training || !data.pairs.length || net.diverged) return;
       training = true;
-      genRun = 0;
       syncTrainUI();
       trainRAF = requestAnimationFrame(trainTick);
     }
@@ -228,7 +211,6 @@ Phases.register(3, {
       stopGenPlay();
       net = createNet(data.vocab.length, data.C);
       genSession = freshGenSession();
-      genRun = 0;
       lastForward = forward(net, genSession.ctxIds);
       updateGenText();
       rebuildCards();
@@ -398,19 +380,17 @@ Phases.register(3, {
       if (fresh === true) Object.keys(slots).forEach(k => delete slots[k]);
       const slot = slots[ctxLen];
       if (slot && slot.version === State.corpusVersion) {
-        data = slot.data; net = slot.net; genSession = slot.genSession; genRun = slot.genRun;
+        data = slot.data; net = slot.net; genSession = slot.genSession;
       } else {
         data = buildPhase3Data(texts, { vocabCap: 600, C: ctxLen });
         net = createNet(data.vocab.length, data.C);
         genSession = freshGenSession();
-        genRun = 0;
       }
       builtVersion = State.corpusVersion;
       lastForward = forward(net, genSession.ctxIds);
       saveSlot();
 
       netView = NetView.create({
-        onReveal: () => Guide.did('p3-neuron'),
         getNet: () => net,
         getData: () => data,
         getForward: () => lastForward,
@@ -429,9 +409,6 @@ Phases.register(3, {
         (() => { const b = el('button', 'btn sm primary', 'Netz neu bauen'); b.type = 'button'; b.addEventListener('click', () => render(true)); return b; })()
       );
       center.appendChild(bannerEl);
-
-      flowHost = el('div', 'flow-host');
-      center.appendChild(flowHost);
 
       /* ① Vorhersagen */
       const paper = el('div', 'paper');
@@ -457,7 +434,6 @@ Phases.register(3, {
       resetGenBtn.addEventListener('click', () => {
         stopGenPlay();
         genSession = freshGenSession();
-        genRun = 0;
         lastForward = forward(net, genSession.ctxIds);
         updateGenText();
         liveTick();
@@ -504,7 +480,6 @@ Phases.register(3, {
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 3 });
       updateGenText();
-      updateFlow();
       syncTrainUI();
     }
 

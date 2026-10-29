@@ -340,6 +340,7 @@ node supabase/tests/0189_knowledgestack_sync_reveal.mjs       # Uhrabgleich, fai
 node supabase/tests/0194_knowledgestack_catalog.mjs           # Katalog: Sichtbarkeit, Rechte, Admin
 node supabase/tests/0217_knowledgestack_fragetypen.mjs        # Wahr/Falsch, Skala, Münzen
 node supabase/tests/0219_knowledgestack_gemeinsam_erstellen.mjs  # Entwürfe, An Lehrkraft senden
+node supabase/tests/0238_knowledgestack_anleitung.mjs          # Erklär-Quiz: für alle Lehrkräfte, nicht änderbar
 ```
 
 * **uitest.js** (linkedom, kein Browser) — *was* im Bild steht: die echten
@@ -366,7 +367,8 @@ braucht), `0189_knowledgestack_sync_reveal.sql` die gleichzeitigen Antworten,
 `0191_knowledgestack_intro.sql` die 10 Sekunden Auftritt vor der ersten Frage, (seit `0195_knowledgestack_intro_kuerzer.sql`: 9 Sekunden)
 `0194_knowledgestack_catalog.sql` den Fragenkatalog (Themenfelder, Status, Autor, Thumbnails, Admin-Rechte),
 `0217_knowledgestack_fragetypen.sql` die Fragetypen Wahr/Falsch, Skala und Münzen setzen,
-`0219_knowledgestack_gemeinsam_erstellen.sql` den Raum-Modus „gemeinsam erstellen" (Entwürfe, An Lehrkraft senden, Ordner im Katalog). Alle spielt Sönke selbst im Supabase-Dashboard ein.
+`0219_knowledgestack_gemeinsam_erstellen.sql` den Raum-Modus „gemeinsam erstellen" (Entwürfe, An Lehrkraft senden, Ordner im Katalog),
+`0238_knowledgestack_anleitung.sql` das Erklär-Quiz (siehe unten). Alle spielt Sönke selbst im Supabase-Dashboard ein.
 
 ## Der Fragen-Editor
 
@@ -509,3 +511,26 @@ es einen Hinweis und vorläufige Werte (0–100, Mitte). Das Textfeld liegt übe
 Zweitschicht (`.kse-imp-back`), die Zeilen einfärbt — dafür darf die
 Rückseite keine Schriftbreite ändern (kein Padding, kein Fettdruck). „Übernehmen"
 öffnet den normalen Editor mit dem Erkannten.
+
+## Das Erklär-Quiz (0238)
+
+„Knowledge Stack: Was das Quiz alles kann“ — 20 Fragen, die alle Funktionen
+zeigen (Lobby, Wesen, Vorlesezeit, Auflösung, Siegerehrung, Profilbild,
+Editor, Text-Import, Status, „gemeinsam erstellen“, hell/dunkel). Die vier
+Fragetypen kommen darin selbst vor, und jede Frage hat ein Bildschirmfoto
+der echten Oberfläche als Foto. Eine Vorlage (`is_template`, 🌍 Hub, feste
+id `…000238`): jede freigeschaltete Lehrkraft sieht sie, niemand ändert
+sie, „⧉ Kopie“ geht.
+
+Erzeugt wird die Migration — Fotos UND SQL — von
+`tools/anleitung.mjs` (Chromium, erfundene Klasse wie in `fitcheck.js`):
+
+```
+node MPSkills/tools/KnowledgeStack/tools/anleitung.mjs              # Fotos + Migration neu
+node MPSkills/tools/KnowledgeStack/tools/anleitung.mjs --nur-bilder # nur nach tools/shots/anleitung/
+```
+
+Fragen ändern: `FRAGEN` im Skript, nicht die SQL-Datei. Ändert sich die
+Oberfläche, das Skript neu laufen lassen und 0238 noch einmal einspielen
+(idempotent, die Fragen werden ersetzt). Die Datei ist knapp 1 MB groß
+(die Fotos als JPEG, 900 Punkte breit).

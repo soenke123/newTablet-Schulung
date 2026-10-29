@@ -8,25 +8,67 @@
    und steckt deshalb in einem <iframe>. Der Rahmen isoliert CSS und
    JS vollständig; die Seite lässt sich auch allein öffnen.
 
-   Es wird nichts geteilt: jede Person füttert ihre eigene KI,
-   trainiert ihr eigenes Netz. Eigene Texte und der Stand im
-   Leitfaden liegen im localStorage des Geräts. Deshalb ruft dieses
-   Modul keine einzige Handlung aus ctx.actions auf, und update()
-   hat nichts zu tun.
+   Jede Person füttert ihre eigene KI und trainiert ihr eigenes
+   Netz; eigene Texte und gesehene Tour-Schritte liegen im Gerät.
+   Geteilt wird nur, WELCHE Phasen die Klasse öffnen darf:
+   skill_room_state.data.phases = [1, 2] (fehlt = nur Phase 1),
+   gesetzt von der Lehrkraft über „Freigaben“ im Rahmen. Wie bei
+   Balance of Nature reicht dafür skill_room_set_state, es gibt
+   keine eigenen Tabellen.
+
+   Der Rahmen bekommt ?raum=lehrer bzw. ?raum=schueler.
+   Botschaften (gleicher Ursprung):
+     hinein   { type: 'tl:cmd', phases: [1, 2] }
+     heraus   { type: 'tl:ready' }                 Rahmen steht
+              { type: 'tl:phases', phases: [...] } Lehrkraft ändert Freigaben
 
    Im Schaufenster (preview/tinylm.js) bekommt der Rahmen ?demo=1:
-   dann merkt sich die App nichts (js/demo.js).
-
-   Noch EINE Ansicht für alle (Beta) — Lehrkraft und Schüler sehen
-   dasselbe. Die Trennung kommt, wenn die eine Ansicht sitzt.
+   dann merkt sich die App nichts, alles ist offen, keine Tour
+   (js/demo.js).
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
   'use strict';
 
+  const V = '20261029a';
+
   let root  = null;
   let frame = null;
-  let onResize = null;
+  let ctx   = null;
+  let view  = null;
+  let onResize = null, onMsg = null;
+  let ready = false, lastSent = '';
+  let phases = null;       // Lehrkraft: eigener Stand, bis der Server ihn bestätigt
+
+  const isPresenter = () => !!ctx && ctx.role === 'presenter';
+  function data() { return (view && view.state && view.state.data) || {}; }
+  function serverPhases() {
+    const p = data().phases;
+    return Array.isArray(p) ? p.map(Number).filter(n => n >= 1 && n <= 3) : [1];
+  }
+  const currentPhases = () => phases || serverPhases();
+
+  function post() {
+    if (!ready || !frame || !frame.contentWindow) return;
+    const msg = { type: 'tl:cmd', phases: currentPhases().slice().sort() };
+    const key = JSON.stringify(msg);
+    if (key === lastSent) return;
+    lastSent = key;
+    try { frame.contentWindow.postMessage(msg, location.origin); } catch (e) { /* zu */ }
+  }
+
+  /* skill_room_set_state ersetzt `data` als GANZES — deshalb geht
+     der vollständige Zustand hinaus (wie bei Balance of Nature). */
+  async function setPhases(list) {
+    phases = list;
+    post();
+    const next = Object.assign({}, data(), { phases: list });
+    if (view) view.state = Object.assign({}, view.state || {}, { data: next });
+    const res = await ctx.actions.setData(next);
+    if (res && !res.ok && res.error !== 'network') ctx.toast(ctx.errText(res.error));
+    phases = null;
+    ctx.refresh();
+  }
 
   const GAP = 12;          // Luft unter dem Rahmen
   const MIN = 460;         // damit auf einem kleinen Gerät nicht ein Streifen bleibt
@@ -58,17 +100,21 @@
 
   window.MPTool.register('tinylm', {
 
-    /* Nichts einzustellen — wie bei NeuroLab gilt alles nur für die
-       Person, die davorsitzt. Die leere Liste sagt lehrer.js
-       „keine Einstellungen" (und nicht „noch nicht geladen"). */
+    /* Nichts einzustellen — freigegeben wird im Skill selbst. Die
+       leere Liste sagt lehrer.js „keine Einstellungen" (und nicht
+       „noch nicht geladen"). */
     settingsFields: [],
 
-    mount(el, ctx) {
+    mount(el, c) {
       root = el;
+      ctx = c;
+      ready = false;
+      lastSent = '';
       /* Pfad relativ zur SEITE (j.html bzw. lehrer.html, beide in
          MPSkills/). Der Stempel gehört an die Rahmen-URL, sonst käme
          index.html aus dem Cache (siehe NeuroLab). */
-      const q = (ctx && ctx.preview ? '?demo=1&' : '?') + 'v=20261023a';
+      const q = ctx && ctx.preview ? '?demo=1&v=' + V
+              : '?raum=' + (isPresenter() ? 'lehrer' : 'schueler') + '&v=' + V;
       root.innerHTML =
         '<div class="tl-host">' +
           '<iframe class="tl-frame" src="tools/TinyLM/index.html' + q + '" ' +
@@ -78,20 +124,33 @@
       frame = root.querySelector('.tl-frame');
       if (!(ctx && ctx.preview)) document.body.classList.add('tool-fill');
 
+      onMsg = (e) => {
+        if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
+        const m = e.data || {};
+        if (m.type === 'tl:ready') { ready = true; lastSent = ''; post(); }
+        else if (m.type === 'tl:phases' && isPresenter() && !ctx.preview && Array.isArray(m.phases)) {
+          setPhases(m.phases.map(Number).filter(n => n >= 1 && n <= 3));
+        }
+      };
+      window.addEventListener('message', onMsg);
       onResize = () => fit();
       window.addEventListener('resize', onResize);
       fit();
       requestAnimationFrame(fit);
     },
 
-    update() {},
+    update(v) {
+      view = v;
+      post();
+    },
 
     unmount() {
+      if (onMsg) window.removeEventListener('message', onMsg);
       if (onResize) window.removeEventListener('resize', onResize);
-      onResize = null;
+      onMsg = onResize = null;
       document.body.classList.remove('tool-fill');
-      frame = null;
-      root  = null;
+      frame = root = ctx = view = null;
+      phases = null;
     }
   });
 })();

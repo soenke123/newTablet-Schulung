@@ -53,8 +53,4 @@
 @media (min-width: 981px) {
   .panel-wrap.phase-3 .panel { grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr); }
 }
-@media (min-width: 981px) {
-  /* schmales Zentrum: Ablaufband als 2×2, damit die Beschriftungen nicht abgeschnitten werden */
-  .panel-wrap.phase-3 .flow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); overflow: visible; }
-  .panel-wrap.phase-3 .flow .flow-arrow { display: none; }
-}
+
