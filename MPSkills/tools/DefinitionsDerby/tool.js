@@ -15,7 +15,7 @@
    Teilen-Symbol hat nur die Lehrkraft. Darunter/rechts die Stapel
    (Lehrkraft: eigene, mit Bearbeiten/Teilen; Tablet: die geteilten).
    Ausgewählt wird auf der Startseite nichts mehr (Sönke 29.10.2026):
-   Stapel antippen springt in die erste freigegebene Lernform, nur
+   Stapel antippen springt in die vorderste Lernform (firstForm), nur
    mit diesem Stapel. In der Lernform stehen oben ALLE Stapel mit
    ihrer Begriffszahl, antippen schaltet sie an/aus (sel, im Gerät
    gemerkt). Auf der Insel geht das auch links an den Familien.
@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029a';
+  const V = '20261029b';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -509,10 +509,13 @@
     const base = islandIds();
     return (list || []).map(x => x.id).filter(id => act.includes(id) || base.includes(id));
   }
-  /* Die erste freigegebene Lernform, die mit n Karten geht. */
+  /* Die Lernform, die auf der Startseite ganz vorn steht (Reihenfolge wie
+     gamesHTML: nach GROUPS, darin nach GAMES) und mit n Karten geht. Die
+     Klasse sieht nur Geteiltes, die Lehrkraft alle — auch nicht geteilte
+     (Sönke 29.10.2026: „immer die erste Lernform, die ganz vorne steht“). */
   function firstForm(n) {
-    let gs = visibleGames();
-    if (isTeacher && !standalone && gs.some(g => gameShared(g.id))) gs = gs.filter(g => gameShared(g.id));
+    const shown = visibleGames();
+    const gs = GROUPS.flatMap(grp => shown.filter(g => g.g === grp.id));
     return gs.find(g => n >= g.min) || gs[0] || null;
   }
 
@@ -553,7 +556,7 @@
     return true;
   }
 
-  /* Stapel antippen (Startseite): erste freigegebene Lernform, nur mit diesem Stapel. */
+  /* Stapel antippen (Startseite): die vorderste Lernform (firstForm), nur mit diesem Stapel. */
   function openStack(id) {
     const it = (list || []).find(x => x.id === id);
     if (!it) return;
@@ -611,7 +614,7 @@
       '<p class="dd-sub">' + (standalone
         ? 'Stapel vorbereiten, ohne dass ein Raum offen sein muss. Sie stehen in jedem deiner Räume, dort teilst du sie mit der Klasse.'
         : isTeacher
-        ? 'Antippen öffnet den Stapel in der ersten freigegebenen Lernform. Teilen gibt ihn der Klasse frei.'
+        ? 'Antippen öffnet den Stapel in der ersten Lernform oben. Teilen gibt ihn der Klasse frei.'
         : 'Antippen öffnet den Stapel. In jeder Lernform schaltest du oben weitere Stapel dazu.') + '</p>';
 
     if (items === null) {
