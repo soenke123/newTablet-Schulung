@@ -62,7 +62,7 @@
 .ds-fig--lama .tail { animation: ds-wag 1.4s ease-in-out infinite; }
 .ds-lift.ds-fig--lama .head-node { animation: ds-lama-lift .9s cubic-bezier(.3, .7, .3, 1) both; }
 @keyframes ds-nod { 50% { transform: rotate(4deg) translateY(1px); } }
-@keyframes ds-lama-lift { 22% { transform: translateY(3px); } 48%, 74% { transform: translateY(-5px) rotate(-6deg); } }
+@keyframes ds-lama-lift { 22% { transform: translateY(2px); } 48%, 74% { transform: translateY(-2px) rotate(-5deg); } }
 
 /* Lauch-Samurai: Blätter wehen, das Stirnband flattert, das Schwert blitzt. */
 .ds-fig--lauch .leaves { animation: ds-leaf 2.6s ease-in-out infinite; }

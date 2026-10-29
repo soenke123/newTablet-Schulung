@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029l';
+  const V = '20261029m';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3977,7 +3977,7 @@
     const bh = Math.max(3, Math.min(42, (h - 46) / st.v.goal));
     sc.style.setProperty('--bh', bh.toFixed(2) + 'px');
     sc.style.setProperty('--bw', Math.round(Math.min(130, w * 0.46, bh * 3.4 + 40)) + 'px');
-    sc.style.setProperty('--fw', Math.round(Math.max(56, Math.min(130, w * 0.46, h * 0.28))) + 'px');
+    sc.style.setProperty('--fw', Math.round(Math.max(64, Math.min(150, w * 0.5, h * 0.36))) + 'px');
     sc.classList.toggle('is-thin', bh < 12);
     const gl = sc.querySelector('#ddStGoalLine');
     if (gl) gl.style.bottom = 'calc(var(--floor) + ' + (st.v.goal * bh).toFixed(1) + 'px)';
