@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029b';
+  const V = '20261029c';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -715,14 +715,17 @@
         '<div class="dd-modal__bg" data-act="info-x"></div>' +
         '<div class="dd-sheet">' +
           '<button type="button" class="dd-x" data-act="info-x" aria-label="Schließen">×</button>' +
+          // Oben das Bild, darunter die Erklärung in zwei Spalten (Sönke 29.10.2026)
+          '<figure class="dd-shot"><img src="' + BASE + 'img/' + G.shot + '?v=' + V + '" alt="Bildschirmfoto: ' + E(G.name) + '" loading="lazy" decoding="async">' +
+            '<figcaption>So sieht es aus</figcaption></figure>' +
           '<div class="dd-sheet__txt">' +
             '<span class="dd-chip">' + grp.name + '</span>' +
             '<h2 class="dd-sheet__h" id="ddInfoH">' + G.name + (shared ? ' <span class="dd-badge">geteilt</span>' : '') + '</h2>' +
             '<p>' + G.text + '</p>' +
+          '</div>' +
+          '<div class="dd-sheet__how">' +
             '<h3>So geht’s</h3><ul>' + G.how.map(h => '<li>' + h + '</li>').join('') + '</ul>' +
           '</div>' +
-          '<figure class="dd-shot"><img src="' + BASE + 'img/' + G.shot + '?v=' + V + '" alt="Bildschirmfoto: ' + E(G.name) + '" loading="lazy" decoding="async">' +
-            '<figcaption>So sieht es aus</figcaption></figure>' +
           '<div class="dd-sheet__act">' +
             '<button type="button" class="btn btn--primary" data-act="info-start"' + (it.length ? '' : ' disabled') + '>' + ico.play +
               (G.room ? 'Insel öffnen' : 'Starten') + '</button>' +
