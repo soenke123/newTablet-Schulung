@@ -125,10 +125,10 @@ window.TOOLS_OVERLAY = {
   // legen Stapel aus Begriff · Definition · Bild an (Karte für Karte oder
   // als Text), teilen sie mit dem Raum; die Klasse lernt mit Karteikarten
   // und behält in der Übersicht den Lernstand im Blick. Direkt im Raum
-  // gebaut (tools/DefinitionsDerby/tool.js, kein iframe). Nur für Admins
-  // sichtbar, bis er rund ist (skill_tools.admin_only). beta: Etappe 1,
-  // Memory/Activity/Rennen/Spielfigur folgen (26.10.2026).
-  derby: { ready: true, beta: true, adminOnly: true, editor: 'derby.html', editorLabel: 'Stapel-Editor' },
+  // gebaut (tools/DefinitionsDerby/tool.js, kein iframe). Seit Migration
+  // 0237 für alle Lehrkräfte sichtbar (vorher nur Admins), Schaufenster:
+  // preview/derby.js. beta: Lernformen kommen noch dazu (29.10.2026).
+  derby: { ready: true, beta: true, editor: 'derby.html', editorLabel: 'Stapel-Editor' },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

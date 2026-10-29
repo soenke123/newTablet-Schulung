@@ -668,18 +668,20 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
    DUELL: zwei Seiten, Begriffe in der Mitte, beide ziehen zugleich
    ══════════════════════════════════════════════════════════════ */
 .dd-duboard {
-  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr) minmax(0, 1fr); gap: 12px;
-  height: clamp(380px, calc(100dvh - 300px), 820px);
+  position: relative; height: clamp(380px, calc(100dvh - 300px), 820px);
   touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
 }
 .dd-duel:fullscreen .dd-duboard { flex: 1; height: auto; min-height: 0; }
 .dd-duel:-webkit-full-screen .dd-duboard { flex: 1; height: auto; min-height: 0; }
+/* Definitionen klein in den Ecken unten, die Begriffe nutzen den Rest */
 .dd-duside {
   --k: var(--dd-p1);
-  position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; padding: 10px;
+  position: absolute; bottom: 0; left: 0; z-index: 1; width: clamp(220px, 29%, 340px); height: clamp(180px, 40%, 290px);
+  display: flex; flex-direction: column; gap: 5px; min-width: 0; min-height: 0; padding: 6px;
   border-radius: 6px; background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--k) 55%, transparent);
   transition: box-shadow .15s, background .15s;
 }
+.dd-duside--2 { left: auto; right: 0; }
 .dd-duside--2 { --k: var(--dd-p2); }
 :root[data-theme="dark"] .dd-duside { background: rgba(0,0,0,.2); }
 .dd-duside.is-over { background: color-mix(in srgb, var(--k) 22%, transparent); box-shadow: inset 0 0 0 4px var(--k); }
@@ -689,21 +691,15 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-dudots i { width: 13px; height: 13px; border-radius: 50%; background: var(--dd-paper); border: 2px solid var(--k); box-shadow: 0 1px 2px var(--dd-shadow); transition: background .2s, transform .2s; }
 .dd-dudots i.is-on { background: var(--k); transform: scale(1.15); }
 .dd-dudef {
-  position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 12px 12px 10px;
+  position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; padding: 8px 10px 8px;
   background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; border-top: 6px solid var(--k);
   box-shadow: 0 6px 14px var(--dd-shadow); overflow: hidden;
 }
 .dd-duside--1 .dd-dudef { transform: rotate(-.6deg); }
 .dd-duside--2 .dd-dudef { transform: rotate(.6deg); }
-.dd-dudef__l { font-family: var(--mono); font-size: .62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--k); }
 .dd-dudef__box { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .dd-dudef__p { display: block; width: 100%; text-align: center; line-height: 1.25; font-weight: 600; color: #24332b; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; }
 .dd-dudef.is-wait .dd-dudef__p { color: var(--dd-faint); font-family: var(--mono); font-weight: 700; }
-.dd-dudrop {
-  flex: none; display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 6px; text-align: center;
-  font-size: .8rem; font-weight: 700; color: var(--k); border: 2px dashed color-mix(in srgb, var(--k) 60%, transparent); border-radius: 4px;
-}
-.dd-duside.is-over .dd-dudrop { background: color-mix(in srgb, var(--k) 14%, transparent); border-style: solid; }
 /* richtig: kurz grün */
 .dd-duside.is-ok .dd-dudef { animation: dd-du-ok .5s ease-out; }
 @keyframes dd-du-ok { 30% { box-shadow: 0 0 0 5px var(--dd-k3), 0 6px 14px var(--dd-shadow); } }
@@ -718,7 +714,8 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 @keyframes dd-du-lock { to { transform: scaleX(0); } }
 
 /* Die Mitte: Begriffe als Zettel, leicht schräg verteilt */
-.dd-dupool { position: relative; z-index: 2; min-width: 0; min-height: 0; }
+.dd-dupool { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.dd-dupool .dd-duchip { pointer-events: auto; }
 .dd-duchip {
   position: absolute; z-index: 1; display: flex; align-items: center; justify-content: center; width: max-content; padding: 6px 10px; box-sizing: border-box;
   background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; border-left: 4px solid var(--dd-tk);
@@ -757,7 +754,8 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 @keyframes dd-du-n { from { transform: scale(1.6); opacity: 0; } 40% { opacity: 1; } }
 
 /* Ende: alle Definitionen der Runde */
-.dd-duwin { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; }
+/* max-height in %: steht das Fenster in einem Kasten (Schaufenster), passt es in den Kasten, sonst ins Fenster */
+.dd-duwin { width: min(560px, 100%); max-height: 100%; overflow-y: auto; }
 .dd-duwin .dd-memwin__act { margin-bottom: 20px; }
 .dd-dulog__h { margin: 0 0 8px; font-size: .9rem; font-weight: 800; text-align: left; }
 .dd-dulog { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; text-align: left; }
@@ -783,11 +781,10 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-mini__chip--6 { left: 52%; top: 72%; transform: rotate(6deg); background: var(--dd-hl); }
 
 @media (max-width: 600px) {
-  .dd-duboard { gap: 6px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); }
-  .dd-duside { padding: 6px; gap: 6px; }
-  .dd-dudef { padding: 8px 6px 6px; }
-  .dd-dudrop { min-height: 34px; font-size: .7rem; }
+  .dd-duside { width: 48%; height: 36%; padding: 4px; gap: 4px; }
+  .dd-dudef { padding: 6px 6px 5px; }
   .dd-duside__h .dd-pl__n { font-size: .7rem; }
+}
 }
 @media (prefers-reduced-motion: reduce) {
   .dd-duchip, .dd-duchip.is-away { transition-duration: .01s; }

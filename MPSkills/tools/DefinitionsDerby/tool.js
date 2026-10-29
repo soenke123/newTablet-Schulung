@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029g';
+  const V = '20261029h';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -1453,9 +1453,8 @@
     const side = k => '<div class="dd-duside dd-duside--' + k + '" id="ddDu' + k + '">' +
         '<div class="dd-duside__h"><span class="dd-pl dd-pl--' + k + ' is-on"><span class="dd-pl__n">Spieler ' + k + '</span><b id="ddDuS' + k + '"></b></span>' +
           '<span class="dd-dudots" id="ddDuDots' + k + '"></span></div>' +
-        '<div class="dd-dudef" id="ddDuDef' + k + '"><span class="dd-dudef__l">Definition</span>' +
+        '<div class="dd-dudef" id="ddDuDef' + k + '">' +
           '<span class="dd-dudef__box"><span class="dd-dudef__p"></span></span>' +
-          '<span class="dd-dudrop">Begriff hierher ziehen</span>' +
           '<span class="dd-dulock" aria-hidden="true"><b>Falsch!</b><i></i></span></div>' +
       '</div>';
     pane.innerHTML =
@@ -1487,18 +1486,25 @@
     duPaintReady();
   }
   const duChipHTML = s => s.c
-    ? '<span class="dd-duchip" id="ddDuC' + s.i + '" data-slot="' + s.i + '" style="--r:' + s.rot.toFixed(1) + 'deg"><span class="dd-duchip__p">' + E(s.c.t) + '</span></span>'
+    ? '<span class="dd-duchip" id="ddDuC' + s.i + '" data-slot="' + s.i + '"' + (demo ? ' data-cid="' + E(s.c.id) + '"' : '') + ' style="--r:' + s.rot.toFixed(1) + 'deg"><span class="dd-duchip__p">' + E(s.c.t) + '</span></span>'
     : '<span class="dd-duchip is-gone" id="ddDuC' + s.i + '" data-slot="' + s.i + '"></span>';
 
-  /* Plätze auf einem Raster, das zur Form der Mitte passt (Begriffe
-     sind breiter als hoch), dazu der feste Versatz je Platz. */
+  /* Plätze auf einem Raster über das ganze Brett (Begriffe sind breiter
+     als hoch), ohne die beiden Ecken unten mit den Definitionen; dazu
+     der feste Versatz je Platz. Eine Schrift für alle: so groß, dass
+     das breiteste Wort noch in eine Zeile passt (gemessen bei 100 px).
+     Spalten und Reihen sind die, bei denen diese Schrift am größten
+     wird; wer dann nicht passt, wird einzeln kleiner. */
   function duLayout() {
     const pool = root && root.querySelector('#ddDuPool');
     if (!du || !pool) return;
     const w = pool.clientWidth || 400, h = pool.clientHeight || 400, n = du.slots.length;
-    // Eine Schrift für alle: so groß, dass das breiteste Wort noch in eine
-    // Zeile passt (gemessen bei 100 px). Die Spaltenzahl ist die, bei der
-    // diese Schrift am größten wird; wer dann nicht passt, wird einzeln kleiner.
+    const pr = pool.getBoundingClientRect();
+    const PAD = 8;
+    const holes = [1, 2].map(k => root.querySelector('#ddDu' + k)).filter(Boolean).map(el => {
+      const r = el.getBoundingClientRect();
+      return { x0: r.left - pr.left - PAD, y0: r.top - pr.top - PAD, x1: r.right - pr.left + PAD, y1: r.bottom - pr.top + PAD };
+    });
     const probe = document.createElement('span');
     probe.className = 'dd-duchip__p';
     probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:100px';
@@ -1506,21 +1512,37 @@
     let wide = 1;
     for (const s of du.slots) if (s.c) for (const x of s.c.t.split(/\s+/)) { probe.textContent = x; wide = Math.max(wide, probe.offsetWidth); }
     probe.remove();
-    const fontFor = c => Math.min(22, h / Math.ceil(n / c) / 2.4, (w / c * 0.92 - 24) / (wide / 100));
-    let cols = 1;
-    for (let c = 2; c <= Math.min(n, 8); c++) if (fontFor(c) > fontFor(cols) + 0.3) cols = c;
-    const rows = Math.ceil(n / cols);
-    const cw = w / cols, ch = h / rows;
-    const font = Math.max(12, fontFor(cols));
+    const cellsOf = (c, r) => {
+      const cw = w / c, ch = h / r, out = [];
+      for (let y = 0; y < r; y++) for (let x = 0; x < c; x++) {
+        // frei, wenn die innere Hälfte der Zelle keine Ecke berührt
+        const cx0 = (x + 0.15) * cw, cx1 = (x + 0.85) * cw, cy0 = (y + 0.2) * ch, cy1 = (y + 0.8) * ch;
+        if (!holes.some(o => cx1 > o.x0 && cx0 < o.x1 && cy1 > o.y0 && cy0 < o.y1)) out.push({ x: (x + 0.5) * cw, y: (y + 0.5) * ch });
+      }
+      return out;
+    };
+    const fontFor = (c, r) => Math.min(22, h / r / 2.4, (w / c * 0.92 - 24) / (wide / 100));
+    let best = null;
+    for (let c = 1; c <= Math.min(n, 10); c++) {
+      for (let r = Math.ceil(n / c); r <= n + 2; r++) {
+        const cells = cellsOf(c, r);
+        if (cells.length < n) continue;
+        const f = fontFor(c, r);
+        if (!best || f > best.f + 0.3) best = { c, r, f, cells };
+        break;
+      }
+    }
+    if (!best) best = { c: 1, r: n, f: 12, cells: cellsOf(1, n) };
+    const cw = w / best.c, ch = h / best.r;
+    const font = Math.max(12, best.f);
+    // gibt es mehr freie Plätze als Begriffe, gleichmäßig verteilt nehmen
+    const pick = i => best.cells[Math.min(best.cells.length - 1, Math.floor(i * best.cells.length / n))];
     for (const s of du.slots) {
       const el = pool.querySelector('#ddDuC' + s.i);
       if (!el) continue;
-      const col = s.i % cols, row = Math.floor(s.i / cols);
-      // letzte, nicht volle Reihe mittig
-      const inRow = row === rows - 1 ? n - row * cols : cols;
-      const off = (cols - inRow) / 2;
-      el.style.left = ((col + off + 0.5 + s.jx * 0.12) * cw) + 'px';
-      el.style.top = ((row + 0.5 + s.jy * 0.14) * ch) + 'px';
+      const cell = pick(s.i) || { x: w / 2, y: h / 2 };
+      el.style.left = (cell.x + s.jx * 0.12 * cw) + 'px';
+      el.style.top = (cell.y + s.jy * 0.14 * ch) + 'px';
       el.style.maxWidth = (cw * 0.92) + 'px';
       el.style.maxHeight = (ch * 0.84) + 'px';
       const p = el.querySelector('.dd-duchip__p');
@@ -1532,7 +1554,7 @@
     const box = root.querySelector('#ddDuDef' + k);
     if (!box) return;
     const p = box.querySelector('.dd-dudef__p'), b = box.querySelector('.dd-dudef__box');
-    if (p && b && p.textContent) fitText(p, b, Math.max(14, Math.min(26, b.clientWidth / 9)), 9);
+    if (p && b && p.textContent) fitText(p, b, Math.max(14, Math.min(24, b.clientWidth / 10)), 10);
   }
 
   function duPaintSide(k) {
@@ -1543,6 +1565,8 @@
     const p = box.querySelector('.dd-dudef__p');
     p.textContent = P.card ? P.card.d : (d.state === 'ready' || d.state === 'count' ? '?' : '');
     box.classList.toggle('is-wait', !P.card);
+    // Nur im Schaufenster: das Drehbuch (preview/derby.js) muss wissen, welcher Begriff passt.
+    if (demo) box.dataset.cid = P.card ? P.card.id : '';
     duFitDef(k);
   }
 
@@ -3093,6 +3117,7 @@
   }
   function paintTask() {
     const box = root.querySelector('#ddTask'), t = isl.task;
+    if (demo && box) box.dataset.cid = t ? t.card.id : '';   // nur fürs Schaufenster (preview/derby.js)
     if (!box || !t) return;
     let body = '';
     const defBox = '<div class="dd-task__def"><span class="dd-task__l">Definition</span><p>' + E(t.card.d) + '</p></div>';
