@@ -57,11 +57,26 @@
 @keyframes ds-ear-l { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-12deg); } }
 @keyframes ds-ear-r { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(12deg); } }
 
+/* Das Fähnchen des Hasen stört beim Heben. */
+.ds-lift.ds-fig--astro .flag { opacity: 0; transition: opacity .1s; }
+
+/* Hase und GameBoy winken ab und zu (wie in den Vorlagen). */
+.c-idle.ds-fig--astro:not(.ds-lift) .arm-r { animation: ds-wave 4.6s ease-in-out infinite; }
+.c-idle.ds-fig--gameboy:not(.ds-lift) .arm-r { animation: ds-wave 5.2s ease-in-out infinite 1.2s; }
+@keyframes ds-wave {
+  0%, 55%, 100% { transform: none; }
+  62% { transform: rotate(-135deg); }
+  68% { transform: rotate(-115deg); }
+  74% { transform: rotate(-138deg); }
+  80% { transform: rotate(-115deg); }
+  88% { transform: rotate(-130deg); }
+}
+
 /* Bananalama nickt lässig im Takt. Ohne Arme: beim Heben reckt es den Kopf. */
 .c-idle.ds-fig--lama:not(.ds-lift) .head-node { animation: ds-nod 1.6s ease-in-out infinite; }
 .ds-fig--lama .tail { animation: ds-wag 1.4s ease-in-out infinite; }
 .ds-lift.ds-fig--lama .head-node { animation: ds-lama-lift .9s cubic-bezier(.3, .7, .3, 1) both; }
-@keyframes ds-nod { 50% { transform: rotate(4deg) translateY(1px); } }
+@keyframes ds-nod { 50% { transform: rotate(2deg); } }
 @keyframes ds-lama-lift { 22% { transform: translateY(2px); } 48%, 74% { transform: translateY(-2px) rotate(-5deg); } }
 
 /* Lauch-Samurai: Blätter wehen, das Stirnband flattert, das Schwert blitzt. */
