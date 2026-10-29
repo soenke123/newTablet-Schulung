@@ -3600,7 +3600,7 @@
   }
 
   /* ══════════════════════════════════════════════════════════════
-     KISTENSTURM (Zusammen im Netz)  ·  Migration 0238
+     KISTENSTURM (Zusammen im Netz)  ·  Migration 0239
      ══════════════════════════════════════════════════════════════
      Teams gegeneinander, jedes Tablet für sich (Sönke 29.10.2026,
      „etwas wie Mario Kart“). Jede richtige Antwort ist eine Kiste für

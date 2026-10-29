@@ -1,5 +1,5 @@
 -- ══════════════════════════════════════════════════════════════
--- Migration 0238 — Definitions Derby: Kistensturm (Grundspiel)
+-- Migration 0239 — Definitions Derby: Kistensturm (Grundspiel)
 -- ══════════════════════════════════════════════════════════════
 -- Erste Lernform „Zusammen im Netz“ (Sönke 29.10.2026): die Klasse
 -- spielt in Teams gegeneinander, jedes Tablet für sich. Jede richtige
@@ -76,7 +76,7 @@ create table if not exists dd_storm_boards (
 
 comment on table dd_storm_boards is
   'Definitions Derby, Kistensturm: Spielfeld je Raum (Einstellungen, Phase, Sieger, laufende '
-  'Ereignisnummer seq). Lazy angelegt von dd_storm_ensure. Seit 0238.';
+  'Ereignisnummer seq). Lazy angelegt von dd_storm_ensure. Seit 0239.';
 
 alter table dd_storm_boards enable row level security;
 
@@ -92,7 +92,7 @@ create table if not exists dd_storm_teams (
 
 comment on table dd_storm_teams is
   'Kistensturm: Turm je Team. progress zählt Anteile (fair bei ungleichen Teams), height = '
-  'floor(progress), reached_at = wann die aktuelle Höhe erreicht wurde (Gleichstand). Seit 0238.';
+  'floor(progress), reached_at = wann die aktuelle Höhe erreicht wurde (Gleichstand). Seit 0239.';
 
 alter table dd_storm_teams enable row level security;
 
@@ -108,7 +108,7 @@ create table if not exists dd_storm_players (
 
 comment on table dd_storm_players is
   'Kistensturm: Team und Zähler je Teilnehmer, ab dem Start bzw. dem ersten Kontakt eines '
-  'Spätzugangs. Seit 0238.';
+  'Spätzugangs. Seit 0239.';
 
 create index if not exists dd_storm_players_room_idx on dd_storm_players (room_id, team);
 
@@ -128,7 +128,7 @@ create table if not exists dd_storm_events (
 
 comment on table dd_storm_events is
   'Kistensturm: kurze Ereignisliste für die Animationen (box · start · win · end). Nur die '
-  'letzten 200 je Raum bleiben. Seit 0238.';
+  'letzten 200 je Raum bleiben. Seit 0239.';
 
 alter table dd_storm_events enable row level security;
 

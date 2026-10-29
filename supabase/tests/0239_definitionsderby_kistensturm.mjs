@@ -1,5 +1,5 @@
-/* Prüfstand für Migration 0238 — Definitions Derby: Kistensturm.
-   Echt gerechnet in pglite auf der ganzen Kette 0001…0238.
+/* Prüfstand für Migration 0239 — Definitions Derby: Kistensturm.
+   Echt gerechnet in pglite auf der ganzen Kette 0001…0239.
 
    Die Kernzusagen:
      1. Lobby: nur Lehrkräfte des Raums stellen ein; Grenzen werden geprüft;
@@ -15,7 +15,7 @@
      8. Ereignisse seit p_since; Nochmal = Lobby; fremde Lehrkraft / fremder
         Raum / falsches Werkzeug kommen nicht heran; Migration zweimal.
 
-   Aufruf:  node supabase/tests/0238_definitionsderby_kistensturm.mjs */
+   Aufruf:  node supabase/tests/0239_definitionsderby_kistensturm.mjs */
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
@@ -199,8 +199,8 @@ await as(null);
 r = await call(`dd_storm_view('gibtsnicht', 0)`);
 ok('8  unbekannter Token', r.error === 'unknown_token');
 let twice = true;
-try { await db.exec(mig('0238_definitionsderby_kistensturm.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  0238 läuft ein zweites Mal durch', twice);
+try { await db.exec(mig('0239_definitionsderby_kistensturm.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  0239 läuft ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);
