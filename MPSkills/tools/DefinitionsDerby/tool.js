@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029f';
+  const V = '20261029g';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -127,7 +127,16 @@
             '„Ja, Paar!“ – stimmt es, gibt es einen Punkt, und man ist noch einmal dran.',
             '„Ja, Paar!“, aber es ist keins: ein Minuspunkt, die andere Person ist dran.',
             '„Nein“: die andere Person ist dran. Ob es doch ein Paar war, wird nicht verraten.',
-            'Zu zweit oder allein (dann zählen die Züge), 6 bis 24 Paare.'] }
+            'Zu zweit oder allein (dann zählen die Züge), 6 bis 24 Paare.'] },
+    { id: 'duel', g: 'device', name: 'Duell', min: 3, shot: 'spiel-duell.jpg',
+      short: 'Zu zweit gleichzeitig: wer zieht schneller den richtigen Begriff?',
+      text: 'In der Mitte liegen die Begriffe durcheinander. Links und rechts bekommt jede Person eine eigene Definition und zieht so schnell wie möglich den passenden Begriff zu sich. Beide spielen gleichzeitig – das braucht ein Tablet, das zwei Finger auf einmal erkennt.',
+      how: ['Links spielt Spieler 1, rechts Spieler 2, beide zur selben Zeit.',
+            'Den passenden Begriff aus der Mitte auf die eigene Seite ziehen.',
+            'Richtig: ein Punkt und die nächste Definition.',
+            'Falsch: eine andere Definition, und die eigene Seite ist kurz gesperrt.',
+            'Wer zuerst 5 Begriffe richtig hat, gewinnt (einstellbar: 3 bis 10).',
+            'Am Ende stehen alle Definitionen der Runde mit ihrem Begriff da.'] }
   ];
   const DEFAULT_GAMES = ['overview', 'cards'];
   const gameOf = id => GAMES.find(g => g.id === id) || null;
@@ -158,6 +167,7 @@
   let learn = null;              // Zustand des Lerners
   let ov = null;                 // Zustand der Übersicht
   let mm = null;                 // Zustand des Memorys
+  let du = null;                 // Zustand des Duells
   let ed = null;                 // Zustand des Editors
   let homeFilter = { q: '', fach: '' };
   let lastSharedKey = '';
@@ -248,10 +258,10 @@
         saveProg(id);
       }
     } else noAccount(res.error);
-    // Neu zeichnen nur, wo es nichts kaputt macht: nicht mitten im Memory, nicht bei umgedrehter Karte.
+    // Neu zeichnen nur, wo es nichts kaputt macht: nicht mitten im Memory/Duell, nicht bei umgedrehter Karte.
     if (screen !== 'play') return;
     if (opened.game === 'island') islRefresh();
-    else if (opened.game !== 'memory' && !(learn && learn.flipped)) renderPane();
+    else if (opened.game !== 'memory' && opened.game !== 'duel' && !(learn && learn.flipped)) renderPane();
   }
   function schedulePush() {
     if (!syncOn() || !opened) return;
@@ -327,6 +337,9 @@
     memory: '<span class="dd-mini dd-mini--mem" aria-hidden="true">' +
            ['t', 'd'].map(s => '<span class="dd-mini__side dd-mini__side--' + s + '">' +
              [0, 1, 2, 3, 4, 5].map(i => '<i' + (i === (s === 't' ? 1 : 4) ? ' class="is-up"' : '') + '></i>').join('') + '</span>').join('') + '</span>',
+    duel: '<span class="dd-mini dd-mini--duel" aria-hidden="true"><i class="dd-mini__def"></i>' +
+           '<span class="dd-mini__pool">' + [1, 2, 3, 4, 5, 6].map(i => '<i class="dd-mini__chip dd-mini__chip--' + i + '"></i>').join('') + '</span>' +
+           '<i class="dd-mini__def dd-mini__def--2"></i></span>',
     island: '<span class="dd-mini dd-mini--isl" aria-hidden="true"><span class="dd-mini__land"></span>' +
            [1, 2, 3, 4, 5, 6].map(i => '<i class="dd-mini__w dd-mini__w--' + i + '"></i>').join('') + '</span>'
   };
@@ -462,7 +475,8 @@
     if (pushTimer) pushProg();
     if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* egal */ } }
     islStop();
-    opened = null; mm = null; learn = null; ov = null;
+    duStop();
+    opened = null; mm = null; du = null; learn = null; ov = null;
   }
 
   async function loadList() {
@@ -540,7 +554,7 @@
       toast(G.name + ' braucht mindestens ' + G.min + ' Karten.' + (G.room ? '' : ' Schalte oben mehr Stapel an.'));
       return false;
     }
-    const prev = keep && opened && opened.game === gid ? { learn, ov, mm } : null;
+    const prev = keep && opened && opened.game === gid ? { learn, ov, mm, du } : null;
     info = null; renderInfo();
     if (opened) leavePlay();
     opened = { stacks: got, cards, game: gid };
@@ -550,6 +564,8 @@
     ov = prev && prev.ov ? Object.assign(prev.ov, { open: {} }) : { q: '', f: 'alle', sort: 'stand', mode: 'liste', hide: false, open: {} };
     mm = null;
     if (prev && prev.mm) newMemory(prev.mm.pairs, prev.mm.players);
+    du = null;
+    if (prev && prev.du) newDuel(prev.du.goal, prev.du.size);
     saveProg();
     go('play');
     got.forEach(s => pullProg(s.id));
@@ -770,6 +786,7 @@
     if (opened.game === 'cards') renderLearn();
     else if (opened.game === 'overview') renderOverview();
     else if (opened.game === 'memory') renderMemory();
+    else if (opened.game === 'duel') renderDuel();
     else if (opened.game === 'island') renderIsland();
   }
   const multi = () => opened && opened.stacks.length > 1;
@@ -1366,7 +1383,7 @@
   }
 
   function memFullscreen() {
-    const el = root.querySelector('#ddMem');
+    const el = root.querySelector('#ddMem') || root.querySelector('#ddDuel');
     if (!el) return;
     if (fsEl()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -1375,6 +1392,335 @@
     if (p && p.catch) p.catch(() => {});
   }
 
+
+  /* ══════════════════════════════════════════════════════════════
+     DUELL (gemeinsam an einem Gerät, gleichzeitig)
+     ══════════════════════════════════════════════════════════════
+     Sönke 29.10.2026: In der Mitte liegen bis zu 30 Begriffe
+     durcheinander (du.slots, je Platz ein Begriff), links Spieler 1,
+     rechts Spieler 2, jede Seite mit ihrer eigenen Definition (nie
+     dieselbe wie drüben). Beide ziehen GLEICHZEITIG: jeder Finger hat
+     seine pointerId, jeder Begriff hängt an höchstens einem Finger
+     (du.drag: pointerId → Zug). Abgerechnet wird nach der Seite, auf
+     der der Begriff landet, nicht nach dem Finger:
+       richtig → Punkt, der Begriff verschwindet, sein Platz bekommt
+                 einen neuen aus dem Rest (du.rest), neue Definition
+       falsch  → Begriff zurück, eine ANDERE Definition, und die Seite
+                 ist DU_LOCK_MS gesperrt (dort Abgelegtes springt zurück)
+     Wer zuerst du.goal richtig hat, gewinnt; findet sich keine
+     Definition mehr, gewinnt, wer vorn liegt. Am Ende stehen alle
+     Definitionen der Runde mit ihrem Begriff da. Schreibt KEINEN
+     Lernstand (zwei Personen, ein Konto). Mit der Maus geht es auch,
+     nur eben einer nach dem anderen. */
+  const DU_LOCK_MS = 1200, DU_GOALS = [3, 5, 8, 10], DU_SIZES = [12, 20, 30], DU_MAX = 30;
+
+  function duOptions(n) {
+    const o = DU_SIZES.filter(x => x < n);
+    if (!o.includes(Math.min(n, DU_MAX))) o.push(Math.min(n, DU_MAX));
+    return o;
+  }
+  function newDuel(goal, size) {
+    duStop();
+    const pool = shuffle(memPool().slice());
+    const opts = duOptions(pool.length);
+    const sz = opts.includes(size) ? size : opts[opts.length - 1];
+    const r = () => Math.random() * 2 - 1;
+    du = {
+      goal: DU_GOALS.includes(goal) ? goal : 5, size: sz, n: pool.length, opts,
+      // jx/jy/rot: fester Versatz je Platz, damit es durcheinander aussieht und beim Drehen des Tablets bleibt
+      slots: pool.slice(0, sz).map((c, i) => ({ i, c, jx: r(), jy: r(), rot: r() * 7 })),
+      rest: pool.slice(sz),
+      p: { 1: { card: null, prev: null, score: 0, lock: 0 }, 2: { card: null, prev: null, score: 0, lock: 0 } },
+      log: [], drag: new Map(), state: 'ready', timers: []
+    };
+  }
+  /* Alle Takte und Finger des Duells loslassen (Neustart, Verlassen). */
+  function duStop() {
+    if (!du) return;
+    du.timers.forEach(clearTimeout);
+    du.timers = [];
+    du.drag.clear();
+    du.state = 'off';
+  }
+  function duLater(d, ms, fn) {
+    const t = setTimeout(() => { if (du === d && root && d.state !== 'off') fn(); }, ms);
+    d.timers.push(t);
+  }
+
+  function renderDuel() {
+    const pane = root.querySelector('#ddPane');
+    if (!du) newDuel(5, DU_MAX);
+    const side = k => '<div class="dd-duside dd-duside--' + k + '" id="ddDu' + k + '">' +
+        '<div class="dd-duside__h"><span class="dd-pl dd-pl--' + k + ' is-on"><span class="dd-pl__n">Spieler ' + k + '</span><b id="ddDuS' + k + '"></b></span>' +
+          '<span class="dd-dudots" id="ddDuDots' + k + '"></span></div>' +
+        '<div class="dd-dudef" id="ddDuDef' + k + '"><span class="dd-dudef__l">Definition</span>' +
+          '<span class="dd-dudef__box"><span class="dd-dudef__p"></span></span>' +
+          '<span class="dd-dudrop">Begriff hierher ziehen</span>' +
+          '<span class="dd-dulock" aria-hidden="true"><b>Falsch!</b><i></i></span></div>' +
+      '</div>';
+    pane.innerHTML =
+      '<section class="dd-mem dd-duel" id="ddDuel">' +
+        '<div class="dd-membar">' +
+          '<div class="dd-membar__set">' +
+            '<select class="dd-input dd-input--s" data-du="goal" aria-label="Wie viele richtig zum Sieg">' + DU_GOALS.map(g =>
+              '<option value="' + g + '"' + (g === du.goal ? ' selected' : '') + '>Sieg bei ' + g + '</option>').join('') + '</select>' +
+            '<select class="dd-input dd-input--s" data-du="size" aria-label="Begriffe in der Mitte">' + du.opts.map(o =>
+              '<option value="' + o + '"' + (o === du.size ? ' selected' : '') + '>' + o + ' Begriffe' + (o === du.n ? ' (alle)' : '') + '</option>').join('') + '</select>' +
+            '<button type="button" class="btn btn--sm" data-act="du-new">' + ico.again + 'Neustart</button>' +
+          '</div>' +
+          '<p class="dd-turn">Beide gleichzeitig: den passenden Begriff auf die eigene Seite ziehen.</p>' +
+          (fsOk() ? '<button type="button" class="btn btn--sm dd-ic dd-fsbtn" data-act="mm-fs" title="Vollbild" aria-label="Vollbild">' + (fsEl() ? ico.unfull : ico.full) + '</button>' : '') +
+        '</div>' +
+        '<div class="dd-duboard" id="ddDuBoard">' +
+          side(1) +
+          '<div class="dd-dupool" id="ddDuPool"></div>' +
+          side(2) +
+          '<div class="dd-duready" id="ddDuReady"></div>' +
+        '</div>' +
+        '<div class="dd-memwin" id="ddDuWin" hidden></div>' +
+      '</section>';
+    const pool = root.querySelector('#ddDuPool');
+    pool.innerHTML = du.slots.map(duChipHTML).join('');
+    bindDuelDrag(pool);
+    duPaintSide(1); duPaintSide(2);
+    duLayout();
+    duPaintReady();
+  }
+  const duChipHTML = s => s.c
+    ? '<span class="dd-duchip" id="ddDuC' + s.i + '" data-slot="' + s.i + '" style="--r:' + s.rot.toFixed(1) + 'deg"><span class="dd-duchip__p">' + E(s.c.t) + '</span></span>'
+    : '<span class="dd-duchip is-gone" id="ddDuC' + s.i + '" data-slot="' + s.i + '"></span>';
+
+  /* Plätze auf einem Raster, das zur Form der Mitte passt (Begriffe
+     sind breiter als hoch), dazu der feste Versatz je Platz. */
+  function duLayout() {
+    const pool = root && root.querySelector('#ddDuPool');
+    if (!du || !pool) return;
+    const w = pool.clientWidth || 400, h = pool.clientHeight || 400, n = du.slots.length;
+    // Eine Schrift für alle: so groß, dass das breiteste Wort noch in eine
+    // Zeile passt (gemessen bei 100 px). Die Spaltenzahl ist die, bei der
+    // diese Schrift am größten wird; wer dann nicht passt, wird einzeln kleiner.
+    const probe = document.createElement('span');
+    probe.className = 'dd-duchip__p';
+    probe.style.cssText = 'position:absolute;visibility:hidden;white-space:nowrap;font-size:100px';
+    pool.appendChild(probe);
+    let wide = 1;
+    for (const s of du.slots) if (s.c) for (const x of s.c.t.split(/\s+/)) { probe.textContent = x; wide = Math.max(wide, probe.offsetWidth); }
+    probe.remove();
+    const fontFor = c => Math.min(22, h / Math.ceil(n / c) / 2.4, (w / c * 0.92 - 24) / (wide / 100));
+    let cols = 1;
+    for (let c = 2; c <= Math.min(n, 8); c++) if (fontFor(c) > fontFor(cols) + 0.3) cols = c;
+    const rows = Math.ceil(n / cols);
+    const cw = w / cols, ch = h / rows;
+    const font = Math.max(12, fontFor(cols));
+    for (const s of du.slots) {
+      const el = pool.querySelector('#ddDuC' + s.i);
+      if (!el) continue;
+      const col = s.i % cols, row = Math.floor(s.i / cols);
+      // letzte, nicht volle Reihe mittig
+      const inRow = row === rows - 1 ? n - row * cols : cols;
+      const off = (cols - inRow) / 2;
+      el.style.left = ((col + off + 0.5 + s.jx * 0.12) * cw) + 'px';
+      el.style.top = ((row + 0.5 + s.jy * 0.14) * ch) + 'px';
+      el.style.maxWidth = (cw * 0.92) + 'px';
+      el.style.maxHeight = (ch * 0.84) + 'px';
+      const p = el.querySelector('.dd-duchip__p');
+      if (p) { p.style.fontSize = font + 'px'; if (el.scrollHeight > ch * 0.84 || p.scrollWidth > cw * 0.92) fitText(p, el, font, 9); }
+    }
+    for (const k of [1, 2]) duFitDef(k);
+  }
+  function duFitDef(k) {
+    const box = root.querySelector('#ddDuDef' + k);
+    if (!box) return;
+    const p = box.querySelector('.dd-dudef__p'), b = box.querySelector('.dd-dudef__box');
+    if (p && b && p.textContent) fitText(p, b, Math.max(14, Math.min(26, b.clientWidth / 9)), 9);
+  }
+
+  function duPaintSide(k) {
+    const d = du, P = d.p[k], box = root.querySelector('#ddDuDef' + k);
+    if (!box) return;
+    root.querySelector('#ddDuS' + k).textContent = P.score;
+    root.querySelector('#ddDuDots' + k).innerHTML = Array.from({ length: d.goal }, (_, i) => '<i' + (i < P.score ? ' class="is-on"' : '') + '></i>').join('');
+    const p = box.querySelector('.dd-dudef__p');
+    p.textContent = P.card ? P.card.d : (d.state === 'ready' || d.state === 'count' ? '?' : '');
+    box.classList.toggle('is-wait', !P.card);
+    duFitDef(k);
+  }
+
+  /* Vor dem Start: „Los!“ und ein Countdown, damit beide gleich anfangen. */
+  function duPaintReady(n) {
+    const box = root.querySelector('#ddDuReady');
+    if (!box) return;
+    if (du.state === 'ready') {
+      box.hidden = false;
+      box.innerHTML = '<div class="dd-duready__sheet"><h3>Bereit?</h3>' +
+        '<p>Spieler 1 links, Spieler 2 rechts. Wer zuerst <b>' + du.goal + '</b> Begriffe richtig zu sich zieht, gewinnt.</p>' +
+        '<button type="button" class="btn btn--primary dd-duready__go" data-act="du-start">Los!</button></div>';
+    } else if (du.state === 'count') {
+      box.hidden = false;
+      box.innerHTML = '<span class="dd-duready__n" aria-live="assertive">' + n + '</span>';
+    } else box.hidden = true;
+  }
+  function duStart() {
+    const d = du;
+    if (!d || d.state !== 'ready') return;
+    d.state = 'count';
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const step = n => {
+      if (n === 0) {
+        d.state = 'play';
+        duPaintReady();
+        duNewCard(1); duNewCard(2);
+        if (d.state === 'play') { duPaintSide(1); duPaintSide(2); }
+        return;
+      }
+      duPaintReady(n);
+      duLater(d, reduced ? 300 : 700, () => step(n - 1));
+    };
+    step(3);
+  }
+
+  /* Neue Definition für Seite k: ein Begriff aus der Mitte, nicht der
+     von drüben und möglichst nicht der eben gehabte. */
+  function duNewCard(k) {
+    const d = du, P = d.p[k], other = d.p[k === 1 ? 2 : 1].card;
+    const live = d.slots.filter(s => s.c && !(other && s.c.id === other.id)).map(s => s.c);
+    const fresh = live.filter(c => !(P.prev && c.id === P.prev.id));
+    const pick = (fresh.length ? fresh : live);
+    P.card = pick.length ? pick[Math.floor(Math.random() * pick.length)] : null;
+    if (P.card) P.prev = P.card;
+    if (!P.card) duWin(null);
+  }
+
+  /* Ziehen mit beliebig vielen Fingern zugleich (je pointerId ein Begriff). */
+  function bindDuelDrag(pool) {
+    const sideAt = (x, y) => {
+      for (const k of [1, 2]) {
+        const el = root.querySelector('#ddDu' + k);
+        const r = el && el.getBoundingClientRect();
+        if (r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return k;
+      }
+      return 0;
+    };
+    const markOver = () => {
+      const over = new Set();
+      for (const g of du.drag.values()) if (g.over) over.add(g.over);
+      for (const k of [1, 2]) { const el = root.querySelector('#ddDu' + k); if (el) el.classList.toggle('is-over', over.has(k)); }
+    };
+    pool.addEventListener('pointerdown', ev => {
+      const el = ev.target.closest('.dd-duchip');
+      if (!el || !du || du.state !== 'play' || el.classList.contains('is-gone') || el.classList.contains('is-drag') || el.classList.contains('is-away')) return;
+      if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+      ev.preventDefault();
+      const s = du.slots[Number(el.dataset.slot)];
+      if (!s || !s.c) return;
+      try { el.setPointerCapture(ev.pointerId); } catch (e) { /* alter Browser */ }
+      du.drag.set(ev.pointerId, { el, s, c: s.c, x0: ev.clientX, y0: ev.clientY, over: 0 });
+      el.classList.add('is-drag');
+      el.style.setProperty('--dx', '0px'); el.style.setProperty('--dy', '0px');
+    });
+    const move = ev => {
+      const g = du && du.drag.get(ev.pointerId);
+      if (!g) return;
+      ev.preventDefault();
+      g.el.style.setProperty('--dx', (ev.clientX - g.x0) + 'px');
+      g.el.style.setProperty('--dy', (ev.clientY - g.y0) + 'px');
+      const o = sideAt(ev.clientX, ev.clientY);
+      if (o !== g.over) { g.over = o; markOver(); }
+    };
+    const up = ev => {
+      const d = du, g = d && d.drag.get(ev.pointerId);
+      if (!g) return;
+      d.drag.delete(ev.pointerId);
+      markOver();
+      const k = ev.type === 'pointerup' ? sideAt(ev.clientX, ev.clientY) : 0;
+      if (!k || d.state !== 'play' || g.s.c !== g.c) { duBack(g.el); return; }
+      duDrop(k, g);
+    };
+    pool.addEventListener('pointermove', move);
+    pool.addEventListener('pointerup', up);
+    pool.addEventListener('pointercancel', up);
+    pool.addEventListener('lostpointercapture', up);
+  }
+  function duBack(el, wrong) {
+    el.classList.remove('is-drag');
+    el.style.setProperty('--dx', '0px'); el.style.setProperty('--dy', '0px');
+    if (wrong) { el.classList.remove('is-no'); void el.offsetWidth; el.classList.add('is-no'); }
+  }
+
+  function duDrop(k, g) {
+    const d = du, P = d.p[k], side = root.querySelector('#ddDu' + k);
+    if (!P.card || P.lock > Date.now()) { duBack(g.el); return; }   // gesperrt: einfach zurück
+    if (g.c.id === P.card.id) {
+      P.score++;
+      d.log.push({ k, card: P.card, ok: true });
+      // Der Begriff fliegt in die Definition und ist weg; sein Platz bekommt einen neuen.
+      const def = root.querySelector('#ddDuDef' + k).getBoundingClientRect();
+      const r = g.el.getBoundingClientRect();
+      const dx = parseFloat(g.el.style.getPropertyValue('--dx')) || 0, dy = parseFloat(g.el.style.getPropertyValue('--dy')) || 0;
+      g.el.classList.remove('is-drag');
+      g.el.classList.add('is-away');
+      g.el.style.setProperty('--dx', (dx + def.left + def.width / 2 - (r.left + r.width / 2)) + 'px');
+      g.el.style.setProperty('--dy', (dy + def.top + def.height / 2 - (r.top + r.height / 2)) + 'px');
+      side.classList.remove('is-ok'); void side.offsetWidth; side.classList.add('is-ok');
+      const s = g.s;
+      s.c = d.rest.length ? d.rest.shift() : null;
+      s.rot = (Math.random() * 2 - 1) * 7;
+      duLater(d, 320, () => {
+        const old = root.querySelector('#ddDuC' + s.i);
+        if (!old) return;
+        old.outerHTML = duChipHTML(s);
+        const nu = root.querySelector('#ddDuC' + s.i);
+        if (nu && s.c) nu.classList.add('is-new');
+        duLayout();
+      });
+      if (P.score >= d.goal) { duPaintSide(k); duWin(k); return; }
+      duNewCard(k);
+    } else {
+      d.log.push({ k, card: P.card, ok: false, got: g.c });
+      duBack(g.el, true);
+      P.lock = Date.now() + DU_LOCK_MS;
+      side.classList.add('is-lock');
+      side.style.setProperty('--lock', DU_LOCK_MS + 'ms');
+      duLater(d, DU_LOCK_MS, () => { side.classList.remove('is-lock'); });
+      duNewCard(k);
+    }
+    if (d.state === 'play') duPaintSide(k);
+  }
+
+  /* Ende: Sieger (k), oder null = kein Begriff mehr übrig → wer vorn liegt. */
+  function duWin(k) {
+    const d = du;
+    if (!d || d.state === 'over') return;
+    d.state = 'over';
+    for (const g of d.drag.values()) duBack(g.el);
+    d.drag.clear();
+    const a = d.p[1].score, b = d.p[2].score;
+    const w = k || (a === b ? 0 : a > b ? 1 : 2);
+    const h = w ? 'Spieler ' + w + ' gewinnt!' : 'Unentschieden!';
+    const t = k ? d.p[w].score + ' zu ' + d.p[w === 1 ? 2 : 1].score + '.' : 'Keine Begriffe mehr übrig. ' + (w ? a + ' zu ' + b + '.' : 'Beide haben ' + a + '.');
+    // Jede Definition einmal, mit dem, was daraus wurde
+    const seen = new Map();
+    for (const e of d.log) {
+      const x = seen.get(e.card.id) || { card: e.card, ok: 0, no: [] };
+      if (e.ok) x.ok = e.k; else x.no.push(e.k);
+      seen.set(e.card.id, x);
+    }
+    const rows = [...seen.values()].map(x =>
+      '<li class="dd-dulog__i' + (x.ok ? ' is-ok dd-dulog__i--' + x.ok : '') + '"><b>' + E(x.card.t) + '</b><span>' + E(x.card.d) + '</span>' +
+        '<em>' + (x.ok ? 'Spieler ' + x.ok : 'nicht gefunden') + '</em></li>').join('');
+    const box = root.querySelector('#ddDuWin');
+    if (!box) return;
+    box.innerHTML = '<div class="dd-memwin__bg"></div><div class="dd-memwin__sheet dd-duwin" role="dialog" aria-modal="true" aria-labelledby="ddDuWinH">' +
+      '<span class="dd-memwin__stamp">Fertig</span>' +
+      '<h2 id="ddDuWinH">' + h + '</h2><p>' + t + '</p>' +
+      '<div class="dd-memwin__sc"><span class="dd-pl dd-pl--1"><span class="dd-pl__n">Spieler 1</span><b>' + a + '</b></span>' +
+        '<span class="dd-pl dd-pl--2"><span class="dd-pl__n">Spieler 2</span><b>' + b + '</b></span></div>' +
+      '<div class="dd-memwin__act"><button type="button" class="btn btn--primary" data-act="du-new">' + ico.again + 'Noch einmal</button>' +
+      '<button type="button" class="btn" data-act="home">' + ico.back + 'Zurück zu den Lernformen</button></div>' +
+      (rows ? '<h3 class="dd-dulog__h">Diese Definitionen kamen dran</h3><ul class="dd-dulog">' + rows + '</ul>' : '') + '</div>';
+    box.hidden = false;
+    const btn = box.querySelector('.btn--primary'); if (btn) btn.focus({ preventScroll: true });
+  }
 
   /* ══════════════════════════════════════════════════════════════
      INSEL (allein): jeder Begriff ein Wesen  ·  Etappe 3
@@ -3420,6 +3766,8 @@
         case 'mm-new': if (mm) { newMemory(mm.pairs, mm.players); renderMemory(); } break;
         case 'mm-players': if (mm && !mm.busy) { newMemory(mm.pairs, Number(b.dataset.v)); renderMemory(); } break;
         case 'mm-fs': memFullscreen(); break;
+        case 'du-start': duStart(); break;
+        case 'du-new': if (du) { newDuel(du.goal, du.size); renderDuel(); } break;
         case 'isl-round': islRound(null); break;
         case 'isl-train': if (isl && isl.selId) islRound(isl.selId); break;
         case 'isl-unsel': islSelect(null); break;
@@ -3494,6 +3842,10 @@
         if (mm.busy) { t.value = mm.pairs; return; }
         newMemory(Number(t.value), mm.players); renderMemory(); return;
       }
+      if ((t.dataset.du === 'goal' || t.dataset.du === 'size') && du) {
+        const goal = t.dataset.du === 'goal' ? Number(t.value) : du.goal, size = t.dataset.du === 'size' ? Number(t.value) : du.size;
+        newDuel(goal, size); renderDuel(); return;
+      }
       if (t.dataset.f === 'fach') { homeFilter.fach = t.value; renderHome(); return; }
       if (t.dataset.ec === 'img' && ed && t.files && t.files[0]) {
         const i = Number(t.closest('.dd-cardin').dataset.i);
@@ -3541,7 +3893,7 @@
     };
 
     // Memory: bei neuer Größe (Drehen, Vollbild) nur die Spalten neu wählen.
-    onResize = () => { if (screen === 'play' && mm) layoutBoards(); if (screen === 'play' && isl) islResize(); };
+    onResize = () => { if (screen === 'play' && mm) layoutBoards(); if (screen === 'play' && isl) islResize(); if (screen === 'play' && du) duLayout(); };
     onFs = () => {
       const b = root && root.querySelector('.dd-fsbtn');
       if (b) b.innerHTML = fsEl() ? ico.unfull : ico.full;
@@ -3582,7 +3934,7 @@
       standalone = !!(ctx && ctx.standalone);
       isTeacher = demo ? true : ctx.role === 'presenter';
       acct = null; remoteSum = {}; pushTimer = null; dirty.clear();
-      screen = 'home'; list = null; listErr = ''; cache = {}; opened = null; ed = null; learn = null; ov = null; mm = null;
+      screen = 'home'; list = null; listErr = ''; cache = {}; opened = null; ed = null; learn = null; ov = null; mm = null; du = null;
       sel = jget(SEL, null); if (!Array.isArray(sel)) sel = null;
       info = null;
       homeFilter = { q: '', fach: '' };
@@ -3623,9 +3975,10 @@
       if (onFs) { document.removeEventListener('fullscreenchange', onFs); document.removeEventListener('webkitfullscreenchange', onFs); }
       if (pushTimer) pushProg();          // letzter Stand noch zum Konto, bevor alles abgeräumt wird
       islStop();
+      duStop();
       if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* egal */ } }
       onKey = onClick = onInput = onChange = onResize = onFs = null;
-      root = null; ctx = null; view = null; opened = null; ed = null; learn = null; ov = null; mm = null; list = null; cache = {};
+      root = null; ctx = null; view = null; opened = null; ed = null; learn = null; ov = null; mm = null; du = null; list = null; cache = {};
       sel = null; info = null;
     }
   });

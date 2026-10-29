@@ -665,6 +665,136 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 }
 
 /* ══════════════════════════════════════════════════════════════
+   DUELL: zwei Seiten, Begriffe in der Mitte, beide ziehen zugleich
+   ══════════════════════════════════════════════════════════════ */
+.dd-duboard {
+  position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2.1fr) minmax(0, 1fr); gap: 12px;
+  height: clamp(380px, calc(100dvh - 300px), 820px);
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.dd-duel:fullscreen .dd-duboard { flex: 1; height: auto; min-height: 0; }
+.dd-duel:-webkit-full-screen .dd-duboard { flex: 1; height: auto; min-height: 0; }
+.dd-duside {
+  --k: var(--dd-p1);
+  position: relative; z-index: 1; display: flex; flex-direction: column; gap: 10px; min-width: 0; min-height: 0; padding: 10px;
+  border-radius: 6px; background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 3px color-mix(in srgb, var(--k) 55%, transparent);
+  transition: box-shadow .15s, background .15s;
+}
+.dd-duside--2 { --k: var(--dd-p2); }
+:root[data-theme="dark"] .dd-duside { background: rgba(0,0,0,.2); }
+.dd-duside.is-over { background: color-mix(in srgb, var(--k) 22%, transparent); box-shadow: inset 0 0 0 4px var(--k); }
+.dd-duside__h { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
+.dd-duside__h .dd-pl { transform: none; }
+.dd-dudots { display: flex; flex-wrap: wrap; gap: 4px; }
+.dd-dudots i { width: 13px; height: 13px; border-radius: 50%; background: var(--dd-paper); border: 2px solid var(--k); box-shadow: 0 1px 2px var(--dd-shadow); transition: background .2s, transform .2s; }
+.dd-dudots i.is-on { background: var(--k); transform: scale(1.15); }
+.dd-dudef {
+  position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 12px 12px 10px;
+  background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; border-top: 6px solid var(--k);
+  box-shadow: 0 6px 14px var(--dd-shadow); overflow: hidden;
+}
+.dd-duside--1 .dd-dudef { transform: rotate(-.6deg); }
+.dd-duside--2 .dd-dudef { transform: rotate(.6deg); }
+.dd-dudef__l { font-family: var(--mono); font-size: .62rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--k); }
+.dd-dudef__box { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.dd-dudef__p { display: block; width: 100%; text-align: center; line-height: 1.25; font-weight: 600; color: #24332b; hyphens: auto; -webkit-hyphens: auto; overflow-wrap: break-word; }
+.dd-dudef.is-wait .dd-dudef__p { color: var(--dd-faint); font-family: var(--mono); font-weight: 700; }
+.dd-dudrop {
+  flex: none; display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 6px; text-align: center;
+  font-size: .8rem; font-weight: 700; color: var(--k); border: 2px dashed color-mix(in srgb, var(--k) 60%, transparent); border-radius: 4px;
+}
+.dd-duside.is-over .dd-dudrop { background: color-mix(in srgb, var(--k) 14%, transparent); border-style: solid; }
+/* richtig: kurz grün */
+.dd-duside.is-ok .dd-dudef { animation: dd-du-ok .5s ease-out; }
+@keyframes dd-du-ok { 30% { box-shadow: 0 0 0 5px var(--dd-k3), 0 6px 14px var(--dd-shadow); } }
+/* falsch: Seite kurz gesperrt, der Balken läuft ab */
+.dd-dulock {
+  position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: rgba(162,64,46,.88); color: #fff;
+}
+.dd-dulock b { font-size: 1.5rem; font-weight: 800; letter-spacing: .02em; }
+.dd-dulock i { width: 60%; height: 6px; border-radius: 3px; background: #fff; transform-origin: left; animation: dd-du-lock var(--lock, 1200ms) linear forwards; }
+.dd-duside.is-lock .dd-dulock { display: flex; }
+@keyframes dd-du-lock { to { transform: scaleX(0); } }
+
+/* Die Mitte: Begriffe als Zettel, leicht schräg verteilt */
+.dd-dupool { position: relative; z-index: 2; min-width: 0; min-height: 0; }
+.dd-duchip {
+  position: absolute; z-index: 1; display: flex; align-items: center; justify-content: center; width: max-content; padding: 6px 10px; box-sizing: border-box;
+  background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; border-left: 4px solid var(--dd-tk);
+  box-shadow: 0 2px 5px var(--dd-shadow); cursor: grab; touch-action: none;
+  transform: translate(-50%, -50%) translate(var(--dx, 0px), var(--dy, 0px)) rotate(var(--r, 0deg));
+  transition: transform .25s cubic-bezier(.3,1.2,.5,1), box-shadow .2s, opacity .3s;
+}
+.dd-duchip__p { display: block; text-align: center; font-weight: 800; line-height: 1.15; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; }
+.dd-duchip.is-drag {
+  z-index: 10; cursor: grabbing; transition: box-shadow .2s;
+  transform: translate(-50%, -50%) translate(var(--dx, 0px), var(--dy, 0px)) rotate(0deg) scale(1.08);
+  box-shadow: 0 14px 28px rgba(0,0,0,.4);
+}
+.dd-duchip.is-away {
+  z-index: 9; pointer-events: none; opacity: 0;
+  transform: translate(-50%, -50%) translate(var(--dx, 0px), var(--dy, 0px)) scale(.5);
+  transition: transform .3s ease-in, opacity .3s ease-in;
+}
+.dd-duchip.is-gone { visibility: hidden; pointer-events: none; }
+.dd-duchip.is-new { animation: dd-du-new .35s cubic-bezier(.3,1.4,.5,1); }
+@keyframes dd-du-new { from { opacity: 0; transform: translate(-50%, -50%) rotate(var(--r, 0deg)) scale(.4); } }
+.dd-duchip.is-no { animation: dd-du-no .4s ease-out; }
+@keyframes dd-du-no { 20%, 60% { margin-left: -7px; } 40%, 80% { margin-left: 7px; } }
+
+/* Vor dem Start */
+.dd-duready { position: absolute; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center; background: rgba(30,20,10,.45); border-radius: 6px; }
+.dd-duready[hidden] { display: none; }
+.dd-duready__sheet {
+  width: min(380px, 92%); padding: 24px 22px 20px; text-align: center; background: var(--dd-paper); color: var(--dd-ink);
+  border-radius: 3px; box-shadow: 0 18px 40px rgba(0,0,0,.4); transform: rotate(-1deg);
+}
+.dd-duready__sheet h3 { margin: 0 0 8px; font-size: 1.5rem; font-weight: 800; }
+.dd-duready__sheet p { margin: 0 0 18px; color: var(--dd-ink-soft); }
+.dd-duready__go { min-width: 160px; min-height: 52px; justify-content: center; font-size: 1.15rem; }
+.dd-duready__n { font-family: var(--mono); font-size: clamp(4rem, 14vw, 8rem); font-weight: 700; color: #fff; text-shadow: 0 4px 18px rgba(0,0,0,.5); animation: dd-du-n .7s ease-out; }
+@keyframes dd-du-n { from { transform: scale(1.6); opacity: 0; } 40% { opacity: 1; } }
+
+/* Ende: alle Definitionen der Runde */
+.dd-duwin { width: min(560px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; }
+.dd-duwin .dd-memwin__act { margin-bottom: 20px; }
+.dd-dulog__h { margin: 0 0 8px; font-size: .9rem; font-weight: 800; text-align: left; }
+.dd-dulog { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.dd-dulog__i { --k: var(--dd-faint); display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 7px 10px; border-left: 5px solid var(--k); background: var(--dd-stamp-bg); border-radius: 3px; }
+.dd-dulog__i--1 { --k: var(--dd-p1); }
+.dd-dulog__i--2 { --k: var(--dd-p2); }
+.dd-dulog__i b { font-weight: 800; }
+.dd-dulog__i span { grid-column: 1; font-size: .86rem; color: var(--dd-ink-soft); }
+.dd-dulog__i em { grid-column: 2; grid-row: 1; font-style: normal; font-size: .75rem; font-weight: 700; color: var(--k); white-space: nowrap; }
+
+/* Kachel: Definition links und rechts, Zettel in der Mitte */
+.dd-mini--duel { display: flex; align-items: stretch; gap: 6%; padding: 10px 7%; }
+.dd-mini .dd-mini__def { flex: 0 0 22%; background: #fff; border-top: 4px solid var(--dd-p1); box-shadow: 0 1px 3px rgba(0,0,0,.3); position: relative; }
+.dd-mini .dd-mini__def--2 { border-top-color: var(--dd-p2); }
+.dd-mini__def::after { content: ''; position: absolute; left: 4px; right: 4px; top: 8px; height: 3px; background: #c9c2b6; box-shadow: 0 6px 0 #c9c2b6, 0 12px 0 #c9c2b6; }
+.dd-mini__pool { flex: 1; position: relative; }
+.dd-mini__chip { position: absolute; width: 40%; height: 13px; background: #fff; border-left: 3px solid var(--dd-tk); box-shadow: 0 1px 2px rgba(0,0,0,.3); }
+.dd-mini__chip--1 { left: 4%; top: 6%; transform: rotate(-6deg); }
+.dd-mini__chip--2 { left: 54%; top: 4%; transform: rotate(4deg); }
+.dd-mini__chip--3 { left: 10%; top: 40%; transform: rotate(3deg); }
+.dd-mini__chip--4 { left: 56%; top: 38%; transform: rotate(-5deg); }
+.dd-mini__chip--5 { left: 2%; top: 74%; transform: rotate(-2deg); }
+.dd-mini__chip--6 { left: 52%; top: 72%; transform: rotate(6deg); background: var(--dd-hl); }
+
+@media (max-width: 600px) {
+  .dd-duboard { gap: 6px; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); }
+  .dd-duside { padding: 6px; gap: 6px; }
+  .dd-dudef { padding: 8px 6px 6px; }
+  .dd-dudrop { min-height: 34px; font-size: .7rem; }
+  .dd-duside__h .dd-pl__n { font-size: .7rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dd-duchip, .dd-duchip.is-away { transition-duration: .01s; }
+  .dd-duchip.is-new, .dd-duchip.is-no, .dd-duready__n, .dd-duside.is-ok .dd-dudef { animation: none; }
+}
+
+/* ══════════════════════════════════════════════════════════════
    INSEL (Etappe 3): jeder Begriff ein Wesen
    Die Karte ist ein aufgepinntes Foto (weißer Rand), Seitenleiste
    und Aufgabenblatt sind Papier. Stufenfarben --dd-e0…e5:
