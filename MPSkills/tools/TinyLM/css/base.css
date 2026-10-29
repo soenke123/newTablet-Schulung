@@ -79,7 +79,7 @@ button.chip:hover:not(:disabled) { border-color: var(--accent); background: var(
 }
 .slider-ends { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); margin-top: -4px; }
 
-/* ---- Klebende Kopfzeile: Marke · Phasen · Textwelten, darunter der Leitfaden ---- */
+/* ---- Klebende Kopfzeile: Marke · Phasen · Freigaben · Textwelten · ? ---- */
 .shell {
   position: sticky; top: 0; z-index: 20;
   background: color-mix(in srgb, var(--surface) 92%, transparent);
@@ -110,8 +110,6 @@ button.chip:hover:not(:disabled) { border-color: var(--accent); background: var(
 .phase-lab { display: flex; flex-direction: column; line-height: 1.1; min-width: 0; }
 .phase-kicker { font-size: 0.64rem; letter-spacing: .07em; text-transform: uppercase; font-weight: 600; }
 .phase-name { font-family: var(--font-display); font-weight: 600; font-size: 0.92rem; white-space: nowrap; }
-.phase-prog { font-family: var(--font-mono); font-size: 0.68rem; border-radius: 999px; padding: 1px 6px; background: var(--surface); border: 1px solid var(--line); flex: none; }
-.phase-prog.full { background: var(--accent); border-color: var(--accent); color: #fff; font-family: var(--font-body); font-weight: 700; }
 .phase-btn:hover { color: var(--ink); }
 .phase-btn.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(13,26,23,.08), 0 0 0 1px var(--line); }
 .phase-btn.active .n { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
@@ -129,7 +127,7 @@ button.chip:hover:not(:disabled) { border-color: var(--accent); background: var(
   .phase-btn { flex: 1 1 0; justify-content: center; padding: 4px 6px; gap: 6px; min-height: 40px; }
 }
 @media (max-width: 760px) {
-  /* Auf dem Handy wäre eine klebende Kopfzeile mit Leitfaden ein Drittel des Bildschirms. */
+  /* Auf dem Handy wäre eine klebende Kopfzeile ein Viertel des Bildschirms. */
   .shell { position: relative; }
   .topbar { padding: 8px 12px; }
   .corpus-lab { display: none; }
@@ -137,14 +135,12 @@ button.chip:hover:not(:disabled) { border-color: var(--accent); background: var(
 }
 @media (max-width: 480px) {
   .phase-name { font-size: 0.78rem; white-space: normal; }
-  .phase-prog { display: none; }
 }
 
 /* ---- Zentrum-Karte (die "Maschine" je Phase) ---- */
 .machine-center { display: flex; flex-direction: column; gap: 14px; padding: 18px; }
 .mc-head { display: flex; align-items: flex-start; gap: 10px; }
 .mc-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.flow-host { width: 100%; }
 
 /* Das "Blatt", auf dem die KI schreibt */
 .paper {

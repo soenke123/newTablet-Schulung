@@ -1,8 +1,7 @@
 /* Phase 2: Frage/Antwort mit Retrieval.
-   Zentrum = Ablauf-Fließband + Frage + wachsende Antwort (jedes Wort in der Farbe seines Quelltexts).
+   Zentrum = Frage + wachsende Antwort (jedes Wort in der Farbe seines Quelltexts).
    Rechts dieselben vier Schritte wie in jeder Phase: Frage zerlegen, Quellen, Kandidaten, Zufall.
-   Darunter breit: die Wortkarte.
-   Meldet Fragen (p2-ask) und Wortkarten-Auswahl (p2-map) an den Leitfaden. */
+   Darunter breit: die Wortkarte. */
 const SRC = ['A', 'B', 'C'];
 const srcVar = i => 'var(--src-' + ['a', 'b', 'c'][i] + ')';
 const CANNED = 'Dazu finde ich nichts. Ich kenne nur Texte, die du gerade ausgewählt hast.';
@@ -36,15 +35,13 @@ Phases.register(2, {
   mount(host) {
     let M = null, R = null, session = null, canned = false, asked = false;
     let temp = 1, playing = false, timer = null, panelCtrl = null, mapCtl = null;
-    let textEl, cursor, playBtn, input, flowHost, legendHost, askedEl, placeholder;
-    let lastQ = '';
+    let textEl, cursor, playBtn, input, legendHost, askedEl, placeholder;
 
     function rebuildModel() {
       M = buildModel(State.activeTexts());
       if (mapCtl) mapCtl.destroy();
       mapCtl = WordMap.create(M, {
         highlight: () => (R && !canned) ? R.ql.filter(x => x.inMap).map(x => x.lemma) : [],
-        onSelect: () => Guide.did('p2-map'),
         texts: () => State.activeTexts()
       });
     }
@@ -92,15 +89,6 @@ Phases.register(2, {
       }))));
     }
 
-    function updateFlow() {
-      const stage = !asked ? 0 : (canned ? 2 : (session && session.steps.length ? 3 : 2));
-      Flow.render(flowHost, [
-        { id: 'lookup', label: 'Frage zerlegen', sub: 'Schlüsselwörter', cat: 'ask', active: stage === 0 || stage === 1, done: stage > 1 },
-        { id: 'src', label: 'Quellen', sub: '3 Texte suchen', cat: 'origin', active: stage === 2, done: stage > 2 },
-        { id: 'word', label: 'Kandidaten', sub: 'aus den 3 Quellen', cat: 'candidates', active: stage === 3 },
-        { id: 'rand', label: 'Zufall', sub: 'würfeln & anhängen', cat: 'random', active: stage === 3 }
-      ], { onPick: id => panelCtrl.reveal(id), help: 'ablauf' });
-    }
 
     function ask(q) {
       q = (q || '').trim();
@@ -120,12 +108,8 @@ Phases.register(2, {
       askedEl.hidden = false;
       updateText();
       updateLegend();
-      updateFlow();
       panelCtrl.refreshAll();
       panelCtrl.refresh('rand');
-      const norm = x => x.toLowerCase().replace(/[^a-zäöüß0-9]+/g, ' ').trim();
-      Guide.did('p2-ask', { canned, unknown: R.ql.filter(x => !x.known).length, repeat: norm(q) === norm(lastQ) });
-      lastQ = q;
       /* Wortkarte nicht neu aufbauen (teuer) — nur auf ein Fragewort springen. */
       if (mapCtl && panelCtrl.isOpen('map')) {
         const start = R.ql.filter(x => x.inMap)[0];
@@ -140,9 +124,7 @@ Phases.register(2, {
       if (!C) return false;
       updateText();
       updateLegend();
-      updateFlow();
       panelCtrl.refreshAll();
-      Flow.pulse(flowHost, 300);
       if (session.sentences >= 3 || session.steps.length >= 70) return false;
       return true;
     }
@@ -321,8 +303,6 @@ Phases.register(2, {
       const center = el('div', 'box machine-center');
       center.appendChild(Info.centerHead('Phase 2 · Frage & Antwort', 'Frag etwas aus deinen Textwelten', 'p2'));
 
-      flowHost = el('div', 'flow-host');
-      center.appendChild(flowHost);
 
       const form = el('form', 'qform');
       form.dataset.spot = 'ask';
@@ -375,7 +355,6 @@ Phases.register(2, {
           help: 'wortkarte', render: renderMapNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 2 });
-      updateFlow();
     }
 
     rebuildModel();

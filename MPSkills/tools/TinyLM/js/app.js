@@ -1,5 +1,12 @@
-/* App-Shell: klebende Kopfzeile (Marke, Phasen-Reiter mit Leitfaden-Fortschritt, Textwelten-Knopf,
-   darunter der Leitfaden), Drawer-Rendering, Phasen-Hosting. */
+/* App-Shell: klebende Kopfzeile (Marke, Phasen-Reiter, Freigaben, Textwelten-Knopf, ? = Tour),
+   Drawer-Rendering, Phasen-Hosting.
+
+   Im MPSkills-Raum bekommt die Seite ?raum=lehrer bzw. ?raum=schueler (tool.js ist die Gegenseite):
+     hinein   { type: 'tl:cmd', phases: [1, 2] }   welche Phasen die Klasse benutzen darf
+     heraus   { type: 'tl:ready' }                 Seite steht
+              { type: 'tl:phases', phases: [...] } Lehrkraft hat die Freigaben geändert
+   Die Lehrkraft sieht immer alle Phasen und schaltet sie für die Klasse frei; Schüler sehen gesperrte
+   Phasen mit Schloss. Allein geöffnet (ohne ?raum=) und im Schaufenster ist alles offen. */
 const $ = id => document.getElementById(id);
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -27,6 +34,13 @@ const App = (() => {
     3: { label: 'Echtes Netz', icon: '🧠' }
   };
   const PHASE_STORE = 'tinylm-phase';
+  const ROOM = (() => { const r = new URLSearchParams(location.search).get('raum'); return r === 'lehrer' || r === 'schueler' ? r : null; })();
+  const TEACHER = ROOM === 'lehrer';
+  const STUDENT = ROOM === 'schueler';
+  /* Für die Klasse freigegebene Phasen. Schüler warten auf die erste Nachricht aus tool.js
+     (bis dahin null = noch nicht bekannt). */
+  let classPhases = ROOM ? null : [1, 2, 3];
+  let lockBtn = null, lockPop = null, waitEl = null;
   const panes = {};      /* n -> { el, api } */
   let active = 1;
   let tabs = {};
@@ -51,16 +65,112 @@ const App = (() => {
     try { new MutationObserver(apply).observe(pd, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) { /* egal */ }
   }
 
+  const isOpenForClass = n => !!classPhases && classPhases.includes(n);
+  /* Darf diese Person die Phase gerade öffnen? */
+  const usable = n => !STUDENT || isOpenForClass(n);
+
   function updateTabs() {
     [1, 2, 3].forEach(n => {
       const t = tabs[n];
       if (!t) return;
-      const p = Guide.progress(n);
+      const locked = !usable(n);
       t.btn.classList.toggle('active', n === active);
+      t.btn.classList.toggle('locked', locked);
+      t.btn.disabled = locked;
       t.btn.setAttribute('aria-selected', n === active ? 'true' : 'false');
-      t.prog.textContent = p.done >= p.total ? '✓' : p.done + '/' + p.total;
-      t.prog.classList.toggle('full', p.done >= p.total);
+      /* Schloss: Schüler = gesperrt, Lehrkraft = noch nicht für die Klasse frei. */
+      const showLock = ROOM && !isOpenForClass(n) && classPhases;
+      t.lock.hidden = !showLock;
+      t.btn.title = !showLock ? '' : (TEACHER ? 'Für die Klasse noch gesperrt' : 'Deine Lehrkraft hat diese Phase noch nicht freigegeben');
     });
+    if (lockBtn) lockBtn.querySelector('.count').textContent = (classPhases || []).length + '/3';
+  }
+
+  /* ---- Freigaben (nur Lehrkraft im Raum) ---- */
+  function sendUp(msg) {
+    if (window.parent === window) return;
+    try { window.parent.postMessage(msg, location.origin); } catch (e) { /* Rahmen weg */ }
+  }
+  function setClassPhases(list, fromServer) {
+    classPhases = [1, 2, 3].filter(n => list.includes(n));
+    if (!fromServer) sendUp({ type: 'tl:phases', phases: classPhases });
+    updateTabs();
+    if (lockPop) paintLockPop();
+    if (STUDENT) {
+      if (!classPhases.length) { showWait(true); return; }
+      showWait(false);
+      if (active == null || !classPhases.includes(active)) {
+        const saved = savedPhase();
+        goPhase(classPhases.includes(saved) ? saved : classPhases[0], active == null);
+      }
+    }
+  }
+  function paintLockPop() {
+    lockPop.replaceChildren();
+    lockPop.appendChild(el('b', 'lock-title', 'Für die Klasse freigeben'));
+    [1, 2, 3].forEach(n => {
+      const row = el('label', 'lock-row');
+      const cb = el('input');
+      cb.type = 'checkbox';
+      cb.checked = isOpenForClass(n);
+      cb.addEventListener('change', () => {
+        const next = (classPhases || []).filter(x => x !== n);
+        if (cb.checked) next.push(n);
+        setClassPhases(next, false);
+      });
+      const lab = el('span', 'lock-lab');
+      lab.append(el('span', 'n', String(n)), el('span', null, PHASE_META[n].label));
+      row.append(lab, cb);
+      lockPop.appendChild(row);
+    });
+    lockPop.appendChild(el('p', 'lock-note', 'Du selbst siehst immer alle Phasen.'));
+  }
+  function toggleLockPop() {
+    if (lockPop) { closeLockPop(); return; }
+    lockPop = el('div', 'lock-pop');
+    lockPop.setAttribute('role', 'dialog');
+    lockPop.setAttribute('aria-label', 'Phasen freigeben');
+    paintLockPop();
+    document.body.appendChild(lockPop);
+    /* Fest unter dem Knopf, aber nie über den Rand (auf dem Handy steht der Knopf links). */
+    const r = lockBtn.getBoundingClientRect(), w = lockPop.offsetWidth;
+    lockPop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
+    lockPop.style.top = (r.bottom + 8) + 'px';
+    lockBtn.setAttribute('aria-expanded', 'true');
+    setTimeout(() => {
+      document.addEventListener('pointerdown', onLockDoc, true);
+      window.addEventListener('resize', closeLockPop);
+      window.addEventListener('scroll', closeLockPop, { passive: true });
+    }, 0);
+  }
+  function closeLockPop() {
+    if (!lockPop) return;
+    lockPop.remove();
+    lockPop = null;
+    lockBtn.setAttribute('aria-expanded', 'false');
+    document.removeEventListener('pointerdown', onLockDoc, true);
+    window.removeEventListener('resize', closeLockPop);
+    window.removeEventListener('scroll', closeLockPop);
+  }
+  function onLockDoc(e) {
+    if (lockPop && !lockPop.contains(e.target) && !lockBtn.contains(e.target)) closeLockPop();
+  }
+
+  /* Schüler: noch keine Phase frei (oder alle wieder gesperrt). */
+  function showWait(on) {
+    if (on) {
+      if (active != null && panes[active] && panes[active].api.onHide) panes[active].api.onHide();
+      Object.values(panes).forEach(p => { p.el.hidden = true; });
+      active = null;
+      if (!waitEl) {
+        waitEl = el('div', 'box wait-card');
+        waitEl.append(el('span', 'wait-ico', '🔒'), el('h2', null, 'Gleich geht’s los'),
+          el('p', null, classPhases ? 'Deine Lehrkraft hat noch keine Phase freigegeben.' : 'Einen Moment …'));
+        $('phaseHost').appendChild(waitEl);
+      } else waitEl.querySelector('p').textContent = classPhases ? 'Deine Lehrkraft hat noch keine Phase freigegeben.' : 'Einen Moment …';
+      waitEl.hidden = false;
+      updateTabs();
+    } else if (waitEl) waitEl.hidden = true;
   }
 
   function renderShell() {
@@ -88,13 +198,26 @@ const App = (() => {
       b.setAttribute('role', 'tab');
       const lab = el('span', 'phase-lab');
       lab.append(el('span', 'phase-kicker', 'Phase ' + n), el('span', 'phase-name', PHASE_META[n].label));
-      const prog = el('span', 'phase-prog');
-      b.append(el('span', 'n', String(n)), lab, prog);
-      b.addEventListener('click', () => goPhase(n));
+      const lock = el('span', 'phase-lock', '🔒');
+      lock.hidden = true;
+      lock.setAttribute('aria-label', 'gesperrt');
+      b.append(el('span', 'n', String(n)), lab, lock);
+      b.addEventListener('click', () => { if (usable(n)) goPhase(n); });
       phasesNav.appendChild(b);
-      tabs[n] = { btn: b, prog };
+      tabs[n] = { btn: b, lock };
     });
     topbar.appendChild(phasesNav);
+
+    const tools = el('div', 'top-tools');
+    if (TEACHER) {
+      lockBtn = el('button', 'btn lock-btn');
+      lockBtn.type = 'button';
+      lockBtn.setAttribute('aria-haspopup', 'dialog');
+      lockBtn.setAttribute('aria-expanded', 'false');
+      lockBtn.append(el('span', 'corpus-ico', '🔓'), el('span', 'corpus-lab', 'Freigaben'), el('span', 'count', '–'));
+      lockBtn.addEventListener('click', toggleLockPop);
+      tools.appendChild(lockBtn);
+    }
 
     const corpusBtn = el('button', 'btn corpus-btn');
     corpusBtn.type = 'button';
@@ -102,12 +225,15 @@ const App = (() => {
     const count = el('span', 'count', String(State.activeTexts().length));
     corpusBtn.append(el('span', 'corpus-ico', '📚'), el('span', 'corpus-lab', 'Textwelten'), count);
     corpusBtn.addEventListener('click', toggleDrawer);
-    topbar.appendChild(corpusBtn);
+    tools.appendChild(corpusBtn);
+    const tourBtn = el('button', 'help-btn tour-btn', '?');
+    tourBtn.type = 'button';
+    tourBtn.title = 'Tour zu dieser Phase zeigen';
+    tourBtn.setAttribute('aria-label', 'Tour zu dieser Phase zeigen');
+    tourBtn.addEventListener('click', () => { if (active != null) Tour.replay(active); });
+    tools.appendChild(tourBtn);
+    topbar.appendChild(tools);
     head.appendChild(topbar);
-
-    const guide = el('div', 'guide');
-    guide.setAttribute('aria-live', 'polite');
-    head.appendChild(guide);
     root.appendChild(head);
 
     const backdrop = el('div', 'drawer-backdrop');
@@ -132,10 +258,16 @@ const App = (() => {
     measure();
     if (window.ResizeObserver) new ResizeObserver(measure).observe(head);
 
-    Guide.mount(guide);
-    Guide.onChange(updateTabs);
+    if (STUDENT) showWait(true);
+    else goPhase(savedPhase(), true);
 
-    goPhase(savedPhase(), true);
+    if (ROOM) {
+      window.addEventListener('message', e => {
+        if (e.origin !== location.origin || e.source !== window.parent || !e.data || e.data.type !== 'tl:cmd') return;
+        if (Array.isArray(e.data.phases)) setClassPhases(e.data.phases.map(Number), true);
+      });
+      sendUp({ type: 'tl:ready' });
+    }
 
     State.on('corpus-changed', () => {
       count.textContent = String(State.activeTexts().length);
@@ -148,7 +280,8 @@ const App = (() => {
   function goPhase(n, initial) {
     if (!initial && n === active && panes[n]) return;
     Help.close();
-    if (panes[active] && panes[active].api && panes[active].api.onHide && (n !== active)) panes[active].api.onHide();
+    Tour.stop(false);
+    if (active != null && panes[active] && panes[active].api && panes[active].api.onHide && (n !== active)) panes[active].api.onHide();
     Object.values(panes).forEach(p => { p.el.hidden = true; });
     active = n;
     try { localStorage.setItem(PHASE_STORE, String(n)); } catch (e) { /* egal */ }
@@ -164,39 +297,20 @@ const App = (() => {
       panes[n].el.hidden = false;
       if (panes[n].api.onShow) panes[n].api.onShow();
     }
-    Guide.setPhase(n);
     updateTabs();
     if (!initial) window.scrollTo({ top: 0, behavior: 'auto' });
+    Tour.forPhase(n);
   }
 
-  /* Leitfaden "Zeig mir wo": Karte aufklappen, hinscrollen, Stelle kurz pulsieren lassen. */
-  function spotlight(spot, card) {
-    Help.close();
+  /* Für die Tour: Karte der aktiven Phase aufklappen, ohne hinzuspringen. */
+  function revealCard(id) {
     const p = panes[active];
-    if (card && p && p.api.reveal) p.api.reveal(card);
-    requestAnimationFrame(() => {
-      const scope = spot === 'textwelten' ? document : (p ? p.el : document);
-      const t = scope.querySelector('[data-spot="' + spot + '"]') ||
-                (spot.startsWith('help-') ? scope.querySelector('[data-help="' + spot.slice(5) + '"]') : null) ||
-                (card ? scope.querySelector('[data-card="' + card + '"]') : null);
-      if (!t) return;
-      const r = t.getBoundingClientRect();
-      const headH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--head-h')) || 0;
-      if (r.top < headH + 10 || r.bottom > window.innerHeight - 10) {
-        window.scrollTo({ top: window.scrollY + r.top - headH - Math.max(40, (window.innerHeight - headH - r.height) / 2),
-          behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-      }
-      t.classList.remove('spot');
-      void t.offsetWidth;
-      t.classList.add('spot');
-      setTimeout(() => t.classList.remove('spot'), 3200);
-    });
+    if (p && p.api.reveal) p.api.reveal(id);
   }
 
   function toggleDrawer() {
     const open = $('drawer').classList.toggle('open');
     $('drawerBackdrop').classList.toggle('open', open);
-    if (open) Guide.did('drawer');
   }
   function closeDrawer() {
     $('drawer').classList.remove('open');
@@ -426,5 +540,6 @@ const App = (() => {
     drawer.scrollTop = keepScroll;
   }
 
-  return { renderShell, goPhase, spotlight, get activePhase() { return active; } };
+  return { renderShell, goPhase, revealCard, ROOM, TEACHER, STUDENT,
+    get activePhase() { return active; }, get classPhases() { return classPhases; } };
 })();

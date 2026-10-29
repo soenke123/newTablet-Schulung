@@ -624,7 +624,7 @@ const WordMap = (() => {
       draw();
       renderCard();
     }
-    /* Auswahl durch die Person selbst (Tipp, Suche, Nachbar) — meldet sich beim Leitfaden. */
+    /* Auswahl durch die Person selbst (Tipp, Suche, Nachbar). */
     function pick(w) {
       select(w);
       if (sel === w && opts && opts.onSelect) opts.onSelect(w);

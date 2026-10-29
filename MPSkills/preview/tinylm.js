@@ -11,9 +11,9 @@
    Geschichte des Skills: (1) die KI schreibt frei aus gezählten
    Wortfolgen, (2) sie beantwortet eine Frage aus ihren Texten,
    (3) ein echtes kleines Netz lernt, und danach sagt es vorher.
-   Geklickt wird nur auf Knöpfe mit festem data-spot (dieselben,
-   die der Leitfaden mit „Zeig mir wo" anleuchtet) bzw. auf die
-   Phasen-Reiter; zurückgestellt wird mit den eigenen ↺-Knöpfen.
+   Geklickt wird nur auf Knöpfe mit festem data-spot bzw. auf die
+   Phasen-Reiter (im Schaufenster sind alle Phasen offen und es
+   gibt keine Tour); zurückgestellt wird mit den eigenen ↺-Knöpfen.
 
    Das Standbild für die Kachel (tile()) ist ein leichter Nachbau:
    ein Satz, dessen letzte zwei Wörter das Kontextfenster sind, und

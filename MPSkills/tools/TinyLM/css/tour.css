@@ -1,0 +1,94 @@
+/* Tour (tour.js), Freigaben der Lehrkraft und Warte-Karte der Klasse (app.js). */
+
+/* ---- Kopfzeile rechts: Freigaben · Textwelten · ? ---- */
+.top-tools { display: flex; align-items: center; gap: 8px; flex: none; }
+.tour-btn { width: 36px; height: 36px; font-size: 1.05rem; }
+
+/* ---- Schloss am Phasen-Reiter ---- */
+.phase-lock { font-size: 0.8rem; line-height: 1; flex: none; }
+.phase-btn.locked { cursor: not-allowed; opacity: .55; }
+.phase-btn.locked:hover { color: var(--muted); }
+
+/* ---- Freigaben (Lehrkraft) ---- */
+.lock-btn .count { font-family: var(--font-mono); font-size: 0.76rem; background: var(--soft); border: 1px solid var(--line); padding: 0 7px; border-radius: 999px; }
+.lock-pop {
+  position: fixed; z-index: 40; width: min(270px, calc(100vw - 16px));
+  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px;
+  box-shadow: var(--shadow-pop); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;
+  animation: pop-in .16s ease-out;
+}
+.lock-title { font-family: var(--font-display); font-size: 0.98rem; margin-bottom: 4px; }
+.lock-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 4px; border-radius: 10px; cursor: pointer; }
+.lock-row:hover { background: var(--soft); }
+.lock-lab { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.92rem; }
+.lock-lab .n {
+  width: 1.5rem; height: 1.5rem; border-radius: 50%; display: inline-grid; place-items: center;
+  background: var(--soft); border: 1px solid var(--line); font-family: var(--font-display); font-size: 0.8rem;
+}
+.lock-row input { width: 20px; height: 20px; accent-color: var(--accent); }
+.lock-note { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+/* ---- Warte-Karte (Klasse, keine Phase frei) ---- */
+.wait-card { max-width: 420px; margin: 60px auto; padding: 28px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.wait-ico { font-size: 2rem; }
+.wait-card h2 { font-family: var(--font-display); font-size: 1.3rem; }
+.wait-card p { color: var(--muted); }
+
+/* ---- Tour ---- */
+.tour-shield { position: fixed; inset: 0; z-index: 80; }
+.tour-spot {
+  position: fixed; z-index: 81; pointer-events: none; border-radius: 16px;
+  box-shadow: 0 0 0 3px var(--tc, var(--accent)), 0 0 0 200vmax rgba(8, 14, 13, 0.55);
+  transition: left .25s, top .25s, width .25s, height .25s;
+}
+.tour-pop {
+  --tc: var(--accent); --tt: var(--accent-dim);
+  position: fixed; z-index: 82;
+  width: min(360px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto;
+  background: var(--surface); color: var(--ink);
+  border-radius: 16px; border-top: 4px solid var(--tc);
+  padding: 12px 14px; box-shadow: var(--shadow-pop);
+  animation: tour-in .2s ease-out;
+}
+@keyframes tour-in { from { opacity: 0; transform: scale(.96); } }
+.tour-pop::before { content: ''; position: absolute; width: 14px; height: 14px; background: var(--surface); transform: rotate(45deg); }
+.tour-pop[data-side="left"]::before { right: -7px; top: calc(var(--arrow, 50%) - 7px); }
+.tour-pop[data-side="right"]::before { left: -7px; top: calc(var(--arrow, 50%) - 7px); }
+.tour-pop[data-side="bottom"]::before { top: -9px; left: calc(var(--arrow, 50%) - 7px); background: var(--tc); }
+.tour-pop[data-side="top"]::before { bottom: -7px; left: calc(var(--arrow, 50%) - 7px); }
+.tour-pop[data-side="none"]::before { display: none; }
+.tour-pic { margin: 0 0 10px; }
+.tour-pic .hv { --hc: var(--tc); --ht: var(--tt); }
+.tour-pop h3 { margin: 0 0 3px; font-family: var(--font-display); font-size: 1.05rem; }
+.tour-lead { margin: 0; font-size: 0.9rem; line-height: 1.4; }
+.tour-items {
+  list-style: none; margin: 10px 0 0; padding: 0;
+  display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: baseline;
+  font-size: 0.85rem; line-height: 1.35;
+}
+.tour-items li { display: contents; }
+.tour-btns { display: flex; flex-wrap: wrap; gap: 3px; max-width: 170px; justify-self: end; justify-content: flex-end; }
+/* Nachbau eines Knopfs im Text */
+.tour-k {
+  display: inline-block; padding: 0 7px; border-radius: 7px; white-space: nowrap;
+  background: var(--soft); border: 1px solid var(--line); color: var(--ink);
+  font-size: 0.8rem; font-weight: 600; line-height: 1.6;
+}
+.tour-foot { display: flex; align-items: center; gap: 6px; margin-top: 12px; }
+.tour-foot .spacer { flex: 1; }
+.tour-foot button {
+  font: inherit; font-size: 0.86rem; font-weight: 600; cursor: pointer; white-space: nowrap; flex: none;
+  border-radius: 999px; padding: 6px 13px; border: 1px solid var(--line); background: var(--soft); color: var(--ink);
+}
+.tour-foot button.primary { background: var(--ink); border-color: var(--ink); color: var(--on-ink); }
+.tour-foot .tour-skip { background: none; border-color: transparent; color: var(--muted); padding-left: 4px; padding-right: 4px; }
+.tour-foot .tour-skip:hover { text-decoration: underline; }
+.tour-count { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
+
+@media (max-width: 760px) {
+  .lock-btn .corpus-lab { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-pop { animation: none; }
+  .tour-spot { transition: none; }
+}
