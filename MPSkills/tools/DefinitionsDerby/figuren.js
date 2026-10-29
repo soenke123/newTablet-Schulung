@@ -22,171 +22,194 @@
 
   const K = window.KSCreatures;
   if (!K || !K.kit || !K.buildDef) { console.error('[derby] figuren.js braucht KSCreatures'); return; }
-  const { INK, P, E, C, R, L, G, tube, shine, hl, shade, mirror } = K.kit;
+  const { INK, P, E, C, R, L, G, tube, shine, hl, shade, star, tw, mirror } = K.kit;
 
   /* key = CSS-Name, name = Teamname, col = Teamfarbe (Oberfläche),
      soft = helle Fassung (Flächen), say = Charakter in einem Satz. */
   const LIST = [
-    { key: 'brummo', name: 'Brummo', col: '#e5484d', soft: '#fde2e2',
-      say: 'Kraftpaket mit Stirnband – hebt am liebsten mit einer Hand und zeigt dann seine Muskeln.' },
-    { key: 'bolt', name: 'Bolt', col: '#2f7cf6', soft: '#dbe9ff',
-      say: 'Kleiner Kistenroboter – rechnet jede Kiste genau aus, die Antenne blinkt dabei.' },
-    { key: 'quaxi', name: 'Quaxi', col: '#2fa84f', soft: '#dcf5e2',
-      say: 'Hibbeliger Frosch mit Halstuch – kann keine Sekunde stillstehen.' },
-    { key: 'pieps', name: 'Pieps', col: '#e9a800', soft: '#fff3c4',
-      say: 'Mutiges Küken mit Eierschalen-Helm – klein, aber gibt nie auf.' },
-    { key: 'okti', name: 'Okti', col: '#8b5cf6', soft: '#ece4ff',
-      say: 'Tiefenentspannter Oktopus mit Mütze – stapelt mit acht Armen und gähnt dabei.' },
-    { key: 'flink', name: 'Flink', col: '#f97316', soft: '#ffe6d1',
-      say: 'Frecher Fuchs – schnell, schlau und immer mit wedelndem Schwanz.' }
+    { key: 'astro', name: 'Astro-Hase', col: '#5f7392', soft: '#e3e9f2',
+      say: 'Hüpft durchs All – im Raumanzug, aber die Ohren passen nicht in den Helm.' },
+    { key: 'lama', name: 'Bananalama', col: '#d99a00', soft: '#fff3c4',
+      say: 'Halb Lama, halb Banane, immer mit Sonnenbrille – nickt cool zu jeder Kiste.' },
+    { key: 'lauch', name: 'Lauch-Samurai', col: '#2fa84f', soft: '#dcf5e2',
+      say: 'Kämpft mit Stirnband und Schwert – klein, grün und sehr ehrenhaft.' },
+    { key: 'gameboy', name: 'GameBoy', col: '#2f7cf6', soft: '#dbe9ff',
+      say: 'Spielkonsole auf Beinen – lächelt auf dem Bildschirm und blinkt mit der Antenne.' },
+    { key: 'popcorn', name: 'Popcorn', col: '#e5484d', soft: '#fde2e2',
+      say: 'Popcorn-Tüte mit 3D-Brille – hier poppt es bei jeder Kiste.' },
+    { key: 'ghost', name: 'Magic Ghost', col: '#8b5cf6', soft: '#ece4ff',
+      say: 'Kleines Gespenst mit Zauberhut und Stab – schwebt und zaubert Kisten herbei.' }
   ];
 
   const D = [];
 
-  /* ── 0 Brummo · rotes Kraftpaket mit Hörnchen und Stirnband ── */
+  /* ── 0 Astro-Hase · Raumanzug, Glashelm, Ohren oben raus ── */
+  const ear = (x, rot) => G('ear-' + (x < 50 ? 'l' : 'r'), [x, 24],
+    '<g transform="rotate(' + rot + ' ' + x + ' 24)">' + E(x, 12, 5.2, 12.5, 'var(--c1)', 2.6) + E(x, 13, 2.4, 8.5, 'var(--c4)', 0) + '</g>');
   D[0] = {
-    pal: [['#e5484d', '#a8262c', '#fff8ec', '#ffcfc2']],
-    o: { al: [31, 67], ar: [69, 67], ll: [40, 86], lr: [60, 86], head: [50, 66] },
-    legL: E(40, 88.5, 7.5, 4.2, 'var(--c2)', 2.4) + E(40, 88, 3.6, 1.9, 'var(--c4)', 0, 'opacity=".7"'),
-    legR: E(60, 88.5, 7.5, 4.2, 'var(--c2)', 2.4) + E(60, 88, 3.6, 1.9, 'var(--c4)', 0, 'opacity=".7"'),
-    body: E(50, 75, 22, 15.5, 'var(--c1)', 3) + E(50, 77.5, 13, 10, 'var(--c4)', 0)
-      + L('M 44 74 Q 50 76 56 74', INK, 1.2, 'opacity=".3"'),
-    head: P('M 31 31 C 27 25 27 18 31 14 C 33 20 37 24 41 27 Z', 'var(--c3)', 2.4)
-      + P(mirror('M 31 31 C 27 25 27 18 31 14 C 33 20 37 24 41 27 Z'), 'var(--c3)', 2.4)
-      + E(50, 46, 26, 21.5, 'var(--c1)', 3.2)
-      + shade('M 71 36 C 78 46 75 60 63 66 C 70 58 73 48 71 36 Z')
-      + shine('M 28 44 C 29 38 32 34 36 32', 2.4, 0.55)
-      + E(50, 56, 10, 7, 'var(--c4)', 2.2)
-      // Stirnband mit Knoten rechts
-      + P('M 25 39 C 38 31 62 31 75 39 L 75 45 C 62 37 38 37 25 45 Z', 'var(--c3)', 2.4)
-      + L('M 30 40 C 42 35 58 35 70 40', 'var(--c1)', 1.6, 'opacity=".55"')
-      + G('band', [75, 41], P('M 75 40 C 82 37 86 39 87 43 C 83 42 80 43 76 44 Z', 'var(--c3)', 2)
-        + P('M 75 43 C 81 45 84 49 83 53 C 80 50 78 48 75 45 Z', 'var(--c3)', 2))
+    pal: [['#f8f9fc', '#b3bfd1', '#5aa9e6', '#ffb8cf', '#e3f2ff']],
+    o: { al: [37, 66], ar: [63, 66], ll: [43, 84], lr: [57, 84], head: [50, 64] },
+    legL: R(36.5, 83, 12, 8.5, 4, 'var(--c1)', 2.4) + L('M 38 88 L 47 88', 'var(--c2)', 1.6),
+    legR: R(51.5, 83, 12, 8.5, 4, 'var(--c1)', 2.4) + L('M 53 88 L 62 88', 'var(--c2)', 1.6),
+    body: E(50, 74, 15.5, 13, 'var(--c1)', 3)
+      + R(44, 69, 12, 8.5, 2.5, 'var(--c3)', 2) + C(47.5, 73.2, 1.3, '#fff', 0) + C(52.5, 73.2, 1.3, '#ffd84a', 0)
+      + shade('M 62 66 C 66 72 65 80 58 85 C 61 79 62 72 62 66 Z'),
+    head: ear(42, -12) + ear(58, 12)
+      + C(25.5, 42, 5, 'var(--c3)', 2.4) + C(74.5, 42, 5, 'var(--c3)', 2.4)
+      + C(50, 42, 24, 'var(--c5)', 3.2)
+      + E(50, 45, 17.5, 15.5, '#ffffff', 0)
+      + P('M 34 30 C 38 23 45 20 52 20', 'none', 0) + shine('M 33 33 C 36 26 42 22 49 21', 2.8, 0.8)
+      + shine('M 69 50 C 70 47 70.5 44 70.5 41', 2, 0.6)
       + '{FACE}',
-    face: { lx: 40.5, rx: 59.5, y: 48, r: 4.6, my: 58.5, mw: 3.2,
-      extra: E(50, 53.5, 3.4, 2.4, INK, 0) + hl(49, 52.8, 0.9, 0.8) },
-    back: E(50, 50, 9, 6, 'var(--c2)', 0, 'opacity=".35"'),
-    armL: tube('M 31 67 Q 24 73 25 80', 'var(--c1)', 7.5) + C(25, 81.5, 4, 'var(--c1)', 2.4),
-    armR: tube('M 69 67 Q 76 73 75 80', 'var(--c1)', 7.5) + C(75, 81.5, 4, 'var(--c1)', 2.4),
+    face: { lx: 43.5, rx: 56.5, y: 44.5, r: 4, my: 52, mw: 2.8, bcol: '#ff8fb3',
+      extra: P('M 48.6 48.4 L 51.4 48.4 L 50 50 Z', '#ff8fb3', 1) },
+    back: C(50, 44, 9, 'var(--c2)', 0, 'opacity=".25"'),
+    armL: tube('M 37 66 Q 30 71 31 78', 'var(--c1)', 5.5) + C(31, 79, 3.2, 'var(--c2)', 2),
+    armR: tube('M 63 66 Q 70 71 69 78', 'var(--c1)', 5.5) + C(69, 79, 3.2, 'var(--c2)', 2),
+    fx: tw(14, 30, 3.4, '#ffd84a', 0) + tw(86, 58, 2.6, '#c084fc', 0.7) + tw(16, 70, 2.2, '#5aa9e6', 1.2),
     vars: '--fx:var(--c3)'
   };
 
-  /* ── 1 Bolt · Kistenroboter auf Rädern ── */
+  /* ── 1 Bananalama · Bananen-Körper, Lama-Kopf, Sonnenbrille ── */
   D[1] = {
-    pal: [['#2f7cf6', '#1b3f8f', '#d6e6ff', '#5ee7ff']],
-    o: { al: [36, 66], ar: [64, 66], ll: [41, 84], lr: [59, 84], head: [50, 62] },
-    legL: C(41, 87, 5.4, 'var(--c2)', 2.4) + C(41, 87, 2, 'var(--c3)', 0),
-    legR: C(59, 87, 5.4, 'var(--c2)', 2.4) + C(59, 87, 2, 'var(--c3)', 0),
-    body: R(35, 61, 30, 22, 7, 'var(--c1)', 3)
-      + R(41, 65.5, 18, 12, 2.5, '#d9a066', 2, 'class="fo"')          // eine Kiste als Brustbild
-      + L('M 41 70 L 59 70', '#a8743f', 1.4, 'class="fo"') + L('M 50 65.5 L 50 70', '#a8743f', 1.4, 'class="fo"'),
-    head: G('antenna', [50, 22], L('M 50 22 L 50 12', INK, 2.4) + C(50, 10, 3.6, 'var(--c4)', 2, 'class="glow"'))
-      + C(23.5, 41, 3.6, 'var(--c2)', 2.4) + C(76.5, 41, 3.6, 'var(--c2)', 2.4)
-      + R(24, 21, 52, 40, 13, 'var(--c1)', 3.2)
-      + shade('M 74 30 L 74 50 C 74 56 70 59 64 59 L 69 56 C 72 54 72 50 72 46 Z', 0.15)
-      + shine('M 28 36 C 28 30 30 26 35 25', 2.4, 0.6)
-      + R(30, 28, 40, 25, 10, '#0f1d3a', 2.4, 'class="fo"')
-      + L('M 34 32 L 41 32', '#fff', 1.6, 'opacity=".25" class="fo"')
+    pal: [['#ffe066', '#e0a800', '#fff6e2', '#7a5a2a', '#2a2433']],
+    o: { al: [40, 70], ar: [60, 70], ll: [36, 82], lr: [62, 82], head: [64, 48], zz: [84, 16] },
+    behind: G('tail', [18, 66], P('M 20 64 L 12 60 L 11 64 L 19 68 Z', 'var(--c4)', 2)),
+    legL: tube('M 30 79 L 29 90', 'var(--c3)', 4.5) + tube('M 41 81 L 41 90', 'var(--c3)', 4.5)
+      + R(26.5, 88.5, 5.5, 3.2, 1.2, 'var(--c4)', 1.4) + R(38.3, 88.5, 5.5, 3.2, 1.2, 'var(--c4)', 1.4),
+    legR: tube('M 57 80 L 58 90', 'var(--c3)', 4.5) + tube('M 68 77 L 70 90', 'var(--c3)', 4.5)
+      + R(55.2, 88.5, 5.5, 3.2, 1.2, 'var(--c4)', 1.4) + R(67.3, 88.5, 5.5, 3.2, 1.2, 'var(--c4)', 1.4),
+    body: P('M 19 66 C 21 58 33 56 47 59 C 58 61 67 58 74 53 C 79 59 78 72 69 78 C 57 85 33 85 24 79 C 19 76 17 71 19 66 Z', 'var(--c1)', 3)
+      + L('M 24 70 C 36 76 56 76 70 66', 'var(--c2)', 1.6, 'opacity=".7"')
+      + L('M 27 63 C 38 66 54 66 66 61', 'var(--c2)', 1.3, 'opacity=".5"')
+      + shine('M 26 64 C 30 61 36 60 42 60.5', 2.4, 0.7),
+    head: P('M 56 68 C 57 58 58 48 58 38 L 72 38 C 72 48 72 58 71 66 Z', 'var(--c3)', 2.8)
+      + L('M 60 50 C 62 52 66 52 68 50 M 60 57 C 62 59 66 59 69 57', '#e8dcc4', 1.4)
+      + G('ear-l', [57, 22], P('M 55 24 C 51 17 51 9 54 5 C 58 9 60 16 60 22 Z', 'var(--c3)', 2.4) + P('M 55.5 20 C 54 15 54 11 55 9 C 57 12 58 16 58 20 Z', '#ffc7d4', 0))
+      + G('ear-r', [71, 22], P('M 68 22 C 69 15 72 9 76 5 C 78 10 76 17 73 24 Z', 'var(--c3)', 2.4) + P('M 70 20 C 71 15 73 12 75 9 C 75.5 13 74 17 72 21 Z', '#ffc7d4', 0))
+      + E(64, 31, 14.5, 12.5, 'var(--c3)', 3)
+      + P('M 56 21 C 58 15 63 13 67 15 C 70 13 74 16 74 20 C 69 18 62 18 56 21 Z', 'var(--c3)', 2.2)
+      + shade('M 75 27 C 79 33 77 40 71 43 C 74 38 76 33 75 27 Z')
+      + E(65, 38, 8.5, 5.5, '#fffaf0', 2.2)
+      + E(62.6, 36.4, 1.1, .9, 'var(--c5)', 0) + E(67.4, 36.4, 1.1, .9, 'var(--c5)', 0)
       + '{FACE}',
-    face: { type: 'screen', col: 'var(--c4)', lx: 41.5, rx: 58.5, y: 39.5, r: 4.2, my: 47.5, mw: 4, blush: false },
-    back: R(36, 30, 28, 22, 4, 'var(--c2)', 2),
-    armL: tube('M 36 66 L 28 73', 'var(--c2)', 3.4) + tube('M 29.5 72 C 23.5 72 22 78 25.5 80.5', 'var(--c3)', 2.8),
-    armR: tube('M 64 66 L 72 73', 'var(--c2)', 3.4) + tube('M 70.5 72 C 76.5 72 78 78 74.5 80.5', 'var(--c3)', 2.8),
+    headTop: R(52.5, 26, 10, 6.6, 2.8, 'var(--c5)', 1.6) + R(65, 26, 10, 6.6, 2.8, 'var(--c5)', 1.6)
+      + L('M 62.5 28.5 L 65 28.5 M 52.5 28 L 50.5 27', 'var(--c5)', 1.8)
+      + L('M 54.5 28 L 57.5 28', '#ffffff', 1.2, 'opacity=".75"') + L('M 67 28 L 70 28', '#ffffff', 1.2, 'opacity=".75"'),
+    face: { lx: 57.5, rx: 70, y: 29.3, r: 2.8, my: 40.6, mx: 65, mw: 2.6, bcol: '#ff9fb0' },
+    back: E(64, 29, 6, 4, 'var(--c2)', 0, 'opacity=".3"'),
+    armL: '', armR: '',
+    shadow: 30,
+    vars: '--fx:var(--c2)'
+  };
+
+  /* ── 2 Lauch-Samurai · Lauch-Kopf mit Blättern, Stirnband, Schwert ── */
+  D[2] = {
+    pal: [['#86c96e', '#3f8b3c', '#ffffff', '#2f5a35', '#d5dde6', '#6b3f22']],
+    o: { al: [37, 64], ar: [63, 64], ll: [43, 82], lr: [57, 82], head: [50, 60] },
+    legL: R(38, 78, 10, 9, 3, 'var(--c4)', 2.4) + E(42, 89.5, 6, 3, '#2a2433', 2),
+    legR: R(52, 78, 10, 9, 3, 'var(--c4)', 2.4) + E(58, 89.5, 6, 3, '#2a2433', 2),
+    body: R(36, 58, 28, 24, 10, 'var(--c4)', 3)
+      + P('M 44 58 L 50 66 L 56 58', 'none', 0) + L('M 44 59 L 50 66 L 56 59', '#e9f5d8', 2.4)
+      + R(36.5, 70, 27, 4.5, 1.5, '#1f3b24', 1.6) + P('M 56 72 L 60 79 L 58 72 Z', '#1f3b24', 1.2),
+    head: G('leaves', [50, 26],
+        P('M 50 28 C 44 18 40 10 38 2 C 46 8 51 16 52 26 Z', 'var(--c2)', 2.4)
+      + P('M 48 28 C 40 22 32 18 24 16 C 32 14 42 18 50 25 Z', 'var(--c2)', 2.4)
+      + P('M 52 28 C 58 18 62 10 66 4 C 68 12 62 20 54 28 Z', 'var(--c2)', 2.4)
+      + P('M 52 28 C 60 22 68 20 76 20 C 70 25 60 28 53 30 Z', 'var(--c2)', 2.4)
+      + L('M 44 13 L 50 25 M 60 12 L 53 25', '#2a6a2c', 1, 'opacity=".5"'))
+      + E(50, 42, 20, 17.5, 'var(--c1)', 3.2)
+      + shade('M 66 34 C 72 42 70 52 61 58 C 66 51 68 43 66 34 Z')
+      + L('M 41 52 L 41 57 M 50 53 L 50 58 M 59 52 L 59 57', '#5aa04a', 1.2, 'opacity=".5"')
+      + shine('M 34 40 C 35 35 38 31 42 29.5', 2.4, 0.55)
+      + G('band', [70, 33], P('M 69 31 C 76 28 82 29 84 32 C 80 33 76 34 70 35 Z', 'var(--c3)', 2)
+        + P('M 69 34 C 75 36 79 40 79 45 C 75 42 72 39 69 36 Z', 'var(--c3)', 2))
+      + P('M 30.5 33 C 42 28.5 58 28.5 69.5 33 L 70 38 C 58 34 42 34 30 38 Z', 'var(--c3)', 2.2)
+      + C(50, 33.5, 1.8, '#e5484d', 0)
+      + '{FACE}',
+    face: { lx: 43, rx: 57, y: 44.5, r: 3.8, my: 52, mw: 2.8 },
+    back: L('M 42 44 L 58 44', '#5aa04a', 1.4, 'opacity=".5"'),
+    armL: tube('M 37 64 Q 30 69 31 76', 'var(--c4)', 5) + C(31, 77, 3, 'var(--c1)', 2),
+    armR: tube('M 63 64 Q 69 69 70 76', 'var(--c4)', 5) + C(70, 77, 3, 'var(--c1)', 2),
+    front: '<g class="katana" transform="rotate(20 71 78)">' + R(68.6, 59, 4.4, 3.6, 1, '#ffd84a', 1.2)
+        + P('M 69.6 59 L 70.2 22 L 72.6 18.5 L 72 59 Z', 'var(--c5)', 1.6) + L('M 71.1 56 L 71.4 23', '#ffffff', 0.8, 'opacity=".8"')
+        + R(69.2, 62.4, 3.2, 13, 1.2, 'var(--c6)', 1.4) + '</g>',
+    vars: '--fx:var(--c1)'
+  };
+
+  /* ── 3 GameBoy · Spielkonsole mit Bildschirm-Gesicht ── */
+  D[3] = {
+    pal: [['#4f8df5', '#2a5bb8', '#ffd84a', '#7dff8a', '#ff5c8a', '#18202e']],
+    o: { al: [27, 58], ar: [73, 58], ll: [41, 84], lr: [59, 84], head: [50, 84] },
+    legL: tube('M 41 82 L 40 89', 'var(--c6)', 3.2) + E(39, 90, 5, 2.6, 'var(--c6)', 1.4),
+    legR: tube('M 59 82 L 60 89', 'var(--c6)', 3.2) + E(61, 90, 5, 2.6, 'var(--c6)', 1.4),
+    head: G('antenna', [50, 14], L('M 50 15 L 50 7', INK, 2.4) + C(50, 5.5, 3.4, 'var(--c4)', 2, 'class="glow"'))
+      + R(26, 13, 48, 70, 9, 'var(--c1)', 3.2)
+      + shade('M 70 20 L 70 74 C 70 78 68 80 64 80 L 68 77 C 69 76 69 74 69 72 Z', 0.18)
+      + shine('M 30 26 C 30 20 32 17 36 16.5', 2.4, 0.6)
+      + R(30, 18, 40, 32, 6, 'var(--c2)', 2.4)
+      + R(33.5, 21, 33, 26, 3.5, 'var(--c6)', 2)
+      + L('M 36 24 L 42 24', '#ffffff', 1.4, 'opacity=".2"')
+      + R(33.5, 59.5, 12, 4, 1.2, 'var(--c6)', 1.4) + R(37.5, 55.5, 4, 12, 1.2, 'var(--c6)', 1.4)
+      + C(60, 63, 3.4, 'var(--c5)', 2) + C(67, 58.5, 3.4, 'var(--c5)', 2)
+      + R(46, 71, 3, 7, 1.5, 'var(--c2)', 1.2, 'transform="rotate(-30 47.5 74.5)"') + R(52, 71, 3, 7, 1.5, 'var(--c2)', 1.2, 'transform="rotate(-30 53.5 74.5)"')
+      + L('M 60 75 L 66 71 M 62 78 L 68 74 M 64 81 L 69 77', 'var(--c2)', 1.4, 'opacity=".8"')
+      + '{FACE}',
+    face: { type: 'screen', col: 'var(--c4)', lx: 43, rx: 57, y: 31, r: 3.4, my: 39, mw: 5, blush: false },
+    back: R(32, 22, 36, 50, 5, 'var(--c2)', 2) + C(50, 46, 7, 'var(--c1)', 1.6),
+    armL: tube('M 27 58 Q 20 63 21 71', 'var(--c6)', 3.2) + C(21, 72.5, 3.2, '#f1f3f7', 2),
+    armR: tube('M 73 58 Q 80 63 79 71', 'var(--c6)', 3.2) + C(79, 72.5, 3.2, '#f1f3f7', 2),
     vars: '--fx:var(--c4)'
   };
 
-  /* ── 2 Quaxi · Frosch mit Halstuch ── */
-  D[2] = {
-    pal: [['#2fa84f', '#17702a', '#ff9f1c', '#c9f2b4']],
-    o: { al: [33, 68], ar: [67, 68], ll: [39, 86], lr: [61, 86], head: [50, 66], zz: [74, 22] },
-    legL: E(38, 89, 8.5, 3.6, 'var(--c1)', 2.4) + C(31.5, 90.8, 1.3, 'var(--c4)', 0) + C(36, 91.6, 1.3, 'var(--c4)', 0),
-    legR: E(62, 89, 8.5, 3.6, 'var(--c1)', 2.4) + C(68.5, 90.8, 1.3, 'var(--c4)', 0) + C(64, 91.6, 1.3, 'var(--c4)', 0),
-    body: E(50, 77, 18, 13.5, 'var(--c1)', 3) + E(50, 79, 11, 8.5, 'var(--c4)', 0),
-    head: E(50, 50, 28, 17.5, 'var(--c1)', 3.2)
-      + C(37, 35, 9.5, 'var(--c1)', 3) + C(63, 35, 9.5, 'var(--c1)', 3)
-      + shade('M 74 44 C 79 52 75 62 64 66 C 71 59 74 52 74 44 Z')
-      + shine('M 27 47 C 28 42 31 39 35 37', 2.4, 0.55)
-      + C(42, 54, 1, INK, 0, 'opacity=".55"') + C(58, 54, 1, INK, 0, 'opacity=".55"')
-      + '{FACE}',
-    face: { type: 'ring', lx: 37, rx: 63, y: 35, r: 5.6, my: 58, mw: 9, bcol: '#ff7a8a' },
-    front: P('M 33 64 C 42 69 58 69 67 64 L 66 69 C 57 74 43 74 34 69 Z', 'var(--c3)', 2.4)
-      + P('M 56 70 L 63 79 L 54 76 Z', 'var(--c3)', 2.2),
-    back: E(50, 46, 14, 7, 'var(--c2)', 0, 'opacity=".3"'),
-    armL: tube('M 33 68 Q 27 73 28 80', 'var(--c1)', 4.8) + E(28, 81, 3.4, 2.2, 'var(--c1)', 2),
-    armR: tube('M 67 68 Q 73 73 72 80', 'var(--c1)', 4.8) + E(72, 81, 3.4, 2.2, 'var(--c1)', 2),
-    vars: '--fx:var(--c3)'
-  };
-
-  /* ── 3 Pieps · Küken mit Eierschalen-Helm ── */
-  const beak = (open) => open
-    ? P('M 45.5 51 L 54.5 51 L 50 54 Z', 'var(--c3)', 2) + P('M 46.5 55 L 53.5 55 L 50 59 Z', 'var(--c3)', 2)
-    : P('M 45.5 51.5 L 54.5 51.5 L 50 57 Z', 'var(--c3)', 2) + L('M 46.5 53 L 53.5 53', INK, 0.9, 'opacity=".4"');
-  D[3] = {
-    pal: [['#ffd23f', '#f0ab00', '#ff8a1f', '#fff3c4', '#fffaf0']],
-    o: { al: [32, 66], ar: [68, 66], ll: [44, 86], lr: [56, 86], head: [50, 64] },
-    legL: L('M 44 84 L 44 89', 'var(--c3)', 2.2) + P('M 38.5 91.5 L 44 88.5 L 47 91.5 Z', 'var(--c3)', 1.8),
-    legR: L('M 56 84 L 56 89', 'var(--c3)', 2.2) + P(mirror('M 38.5 91.5 L 44 88.5 L 47 91.5 Z'), 'var(--c3)', 1.8),
-    body: E(50, 73, 19, 15, 'var(--c1)', 3) + E(50, 76, 11, 9, 'var(--c4)', 0),
-    head: E(50, 45, 22, 19.5, 'var(--c1)', 3.2)
-      + shade('M 66 34 C 73 42 72 54 63 61 C 68 54 69 44 66 34 Z')
-      + shine('M 32 42 C 33 37 36 34 40 32', 2.4, 0.6)
-      + G('shell', [50, 30], P('M 29 36 C 29 21 39 14 50 14 C 61 14 71 21 71 36 L 66 31 L 61 37 L 55.5 31 L 50 37 L 44.5 31 L 39 37 L 34 31 Z', 'var(--c5)', 2.6)
-        + C(41, 22, 1.6, '#e8dcc0', 0) + C(57, 20, 1.3, '#e8dcc0', 0) + C(62, 27, 1.1, '#e8dcc0', 0)
-        + shine('M 34 26 C 36 21 39 18 43 17', 1.8, 0.7))
-      + '{FACE}',
-    face: { lx: 42.5, rx: 57.5, y: 44, r: 4.3,
-      mouths: { normal: beak(false), open: beak(true), sad: beak(false), sleep: beak(false), wow: beak(true) } },
-    back: P('M 44 48 C 47 44 53 44 56 48', 'var(--c2)', 1.6),
-    armL: P('M 32 66 C 23 67 20 75 25 79 C 28 75 31 72 34 71 Z', 'var(--c2)', 2.4),
-    armR: P(mirror('M 32 66 C 23 67 20 75 25 79 C 28 75 31 72 34 71 Z'), 'var(--c2)', 2.4),
-    vars: '--fx:var(--c3)'
-  };
-
-  /* ── 4 Okti · lässiger Oktopus mit Mütze ── */
-  const tent = (d) => tube(d, 'var(--c1)', 5.5);
+  /* ── 4 Popcorn · gestreifte Tüte, Popcorn obendrauf, 3D-Brille ── */
+  const puff = (x, y, r) => C(x, y, r, 'var(--c3)', 2.2) + C(x - r * 0.25, y + r * 0.2, r * 0.45, 'var(--c4)', 0, 'opacity=".55"') + hl(x - r * 0.35, y - r * 0.35, r * 0.22, 0.9);
   D[4] = {
-    pal: [['#8b5cf6', '#5b2fc0', '#ff6fae', '#e6dbff', '#ffffff']],
-    o: { al: [27, 62], ar: [73, 62], ll: [41, 80], lr: [59, 80], head: [50, 80] },
-    legL: tent('M 38 78 C 33 85 27 85 27 91') + tent('M 45 80 C 44 86 41 88 42 91.5'),
-    legR: tent(mirror('M 38 78 C 33 85 27 85 27 91')) + tent(mirror('M 45 80 C 44 86 41 88 42 91.5')),
-    head: P('M 50 22 C 70 22 79 37 79 52 C 79 68 69 80 50 80 C 31 80 21 68 21 52 C 21 37 30 22 50 22 Z', 'var(--c1)', 3.2)
-      + shade('M 73 40 C 79 54 76 70 62 78 C 72 68 75 54 73 40 Z')
-      + shine('M 27 48 C 28 41 31 36 36 33', 2.6, 0.55)
-      + C(66, 62, 2.4, 'var(--c4)', 0, 'opacity=".55"') + C(70, 55, 1.6, 'var(--c4)', 0, 'opacity=".55"')
-      + C(31, 64, 1.8, 'var(--c4)', 0, 'opacity=".5"')
-      + G('cap', [50, 22], P('M 27 35 C 28 15 72 15 73 35 C 62 29 38 29 27 35 Z', 'var(--c3)', 2.6)
-        + P('M 26 34 C 38 27 62 27 74 34 L 74 39 C 62 32 38 32 26 39 Z', 'var(--c5)', 2.2)
-        + C(50, 12.5, 4, 'var(--c5)', 2.2) + L('M 40 19 L 40 29 M 50 17 L 50 28 M 60 19 L 60 29', INK, 1, 'opacity=".25"'))
+    pal: [['#e5484d', '#ffffff', '#fff3d1', '#f5c242', '#3b82f6', '#ff3b3b']],
+    o: { al: [31, 62], ar: [69, 62], ll: [42, 86], lr: [58, 86], head: [50, 86] },
+    legL: tube('M 42 85 L 41 89', INK, 2.6) + E(40.5, 90, 4.6, 2.5, '#2a2433', 1.4),
+    legR: tube('M 58 85 L 59 89', INK, 2.6) + E(59.5, 90, 4.6, 2.5, '#2a2433', 1.4),
+    head: G('pops', [50, 30], puff(34, 32, 7) + puff(66, 32, 7) + puff(44, 24, 7.5) + puff(57, 23, 8) + puff(50, 31, 7) + puff(40, 35, 6) + puff(61, 35, 6))
+      + P('M 28 38 L 72 38 L 66 87 L 34 87 Z', 'var(--c2)', 3)
+      + P('M 33.5 38 L 39.5 38 L 40.5 87 L 36.5 87 Z', 'var(--c1)', 0)
+      + P('M 47 38 L 53 38 L 52.5 87 L 47.5 87 Z', 'var(--c1)', 0)
+      + P('M 60.5 38 L 66.5 38 L 63.5 87 L 59.5 87 Z', 'var(--c1)', 0)
+      + P('M 28 38 L 72 38 L 66 87 L 34 87 Z', 'none', 3)
+      + R(26, 36, 48, 6.5, 2.5, 'var(--c2)', 2.4)
+      + shade('M 66 42 L 72 42 L 66 86 L 62 86 Z', 0.12)
       + '{FACE}',
-    face: { lx: 40.5, rx: 59.5, y: 52, r: 5, my: 63, mw: 4, lid: 'var(--c1)' },
-    back: C(50, 52, 6, 'var(--c2)', 0, 'opacity=".3"'),
-    armL: tube('M 27 62 C 18 65 17 74 22 78', 'var(--c1)', 5) + C(19.5, 70, 1, 'var(--c4)', 0) + C(20, 74.5, 1, 'var(--c4)', 0),
-    armR: tube('M 73 62 C 82 65 83 74 78 78', 'var(--c1)', 5) + C(80.5, 70, 1, 'var(--c4)', 0) + C(80, 74.5, 1, 'var(--c4)', 0),
-    shadow: 26,
-    vars: '--fx:var(--c3)'
+    headTop: R(36, 51, 12.5, 8.5, 2.5, 'var(--c6)', 1.8, 'opacity=".9"') + R(51.5, 51, 12.5, 8.5, 2.5, 'var(--c5)', 1.8, 'opacity=".9"')
+      + R(34.5, 49.8, 31, 11, 3, 'none', 2.6) + L('M 48.5 54 L 51.5 54', INK, 2)
+      + L('M 38 53 L 42 53', '#ffffff', 1.2, 'opacity=".7"') + L('M 53.5 53 L 57.5 53', '#ffffff', 1.2, 'opacity=".7"'),
+    face: { lx: 42.2, rx: 57.8, y: 55.3, r: 3.6, my: 67, mw: 4.5, bcol: '#ff7a8a' },
+    back: L('M 40 60 L 60 60', 'var(--c1)', 2, 'opacity=".4"'),
+    armL: tube('M 31 62 Q 24 66 25 73', INK, 2.6) + C(25, 74.5, 3, '#ffffff', 2),
+    armR: tube('M 69 62 Q 76 66 75 73', INK, 2.6) + C(75, 74.5, 3, '#ffffff', 2),
+    fx: G('fly', null, puff(17, 26, 3.2) + puff(84, 18, 2.8)),
+    vars: '--fx:var(--c4)'
   };
 
-  /* ── 5 Flink · frecher Fuchs mit Buschschwanz ── */
+  /* ── 5 Magic Ghost · schwebendes Gespenst mit Zauberhut und Stab ── */
   D[5] = {
-    pal: [['#f97316', '#b4470a', '#fff8ef', '#ffd9b8', '#3a2416']],
-    o: { al: [35, 68], ar: [65, 68], ll: [42, 86], lr: [58, 86], head: [50, 64] },
-    behind: G('tail', [62, 82], P('M 61 84 C 74 86 86 78 87 64 C 88 56 84 50 80 47 C 82 56 78 62 73 64 C 70 70 66 76 61 78 Z', 'var(--c1)', 2.8)
-      + P('M 87 64 C 88 56 84 50 80 47 C 81 53 80 58 77 62 C 81 63 85 64 87 64 Z', 'var(--c3)', 2.2)),
-    legL: E(42, 88.5, 6, 3.8, 'var(--c5)', 2.4),
-    legR: E(58, 88.5, 6, 3.8, 'var(--c5)', 2.4),
-    body: E(50, 75, 17, 14, 'var(--c1)', 3) + E(50, 78, 10, 9, 'var(--c3)', 0),
-    head: G('ear-l', [36, 30], P('M 31 35 L 27 11 L 46 27 Z', 'var(--c1)', 2.8) + P('M 32 30 L 30 18 L 40 26 Z', 'var(--c4)', 0))
-      + G('ear-r', [64, 30], P(mirror('M 31 35 L 27 11 L 46 27 Z'), 'var(--c1)', 2.8) + P(mirror('M 32 30 L 30 18 L 40 26 Z'), 'var(--c4)', 0))
-      + P('M 50 23 C 66 23 76 33 78 45 C 80 53 74 59 66 62 C 60 64 55 66 50 66 C 45 66 40 64 34 62 C 26 59 20 53 22 45 C 24 33 34 23 50 23 Z', 'var(--c1)', 3.2)
-      + P('M 50 66 C 44 66 39 64 33 61 C 37 55 44 52 50 55 C 56 52 63 55 67 61 C 61 64 56 66 50 66 Z', 'var(--c3)', 0)
-      + shade('M 70 34 C 77 42 77 52 70 58 C 73 50 73 42 70 34 Z')
-      + shine('M 28 42 C 29 36 33 31 38 29', 2.4, 0.55)
+    pal: [['#efe9fc', '#6b4fb8', '#ffd84a', '#5aa9ff', '#8b5e3c', '#c4b5f0']],
+    o: { al: [28, 60], ar: [72, 60], ll: [40, 84], lr: [60, 84], head: [50, 80], zz: [76, 22] },
+    head: P('M 50 32 C 66 32 74 44 74 58 L 74 78 C 70 82 67 77 63 81 C 59 85 55 79 50 83 C 45 79 41 85 37 81 C 33 77 30 82 26 78 L 26 58 C 26 44 34 32 50 32 Z', 'var(--c1)', 3.2)
+      + shade('M 68 44 C 73 52 73 68 72 77 C 69 79 67 77 65 78 C 69 68 70 56 68 44 Z', 0.12)
+      + shine('M 31 56 C 31 48 34 42 39 39', 2.6, 0.7)
+      + G('hat', [50, 34], P('M 33 35 C 37 22 45 13 55 8 C 62 5 69 6 72 11 C 66 9 61 12 61 18 C 61 25 63 30 66 35 Z', 'var(--c2)', 2.8)
+        + E(50, 35.5, 25, 5, 'var(--c2)', 2.6)
+        + L('M 36 32 C 45 30 56 30 65 32', 'var(--c6)', 2.2, 'opacity=".9"')
+        + star(48, 22, 2.6, 'var(--c3)') + star(57, 15, 2, 'var(--c3)') + star(42, 30, 1.6, 'var(--c3)')
+        + shine('M 40 28 C 43 21 47 16 52 13', 1.8, 0.4))
       + '{FACE}',
-    face: { lx: 40.5, rx: 59.5, y: 45, r: 4.6, my: 59, mw: 3.4, mouth: 'cat',
-      extra: E(50, 55, 3, 2.1, INK, 0) + hl(49.2, 54.4, 0.8, 0.8) },
-    back: P('M 44 40 C 47 36 53 36 56 40', 'var(--c2)', 1.6),
-    armL: tube('M 35 68 Q 29 73 30 79', 'var(--c1)', 5) + C(30, 80, 2.8, 'var(--c5)', 2),
-    armR: tube('M 65 68 Q 71 73 70 79', 'var(--c1)', 5) + C(70, 80, 2.8, 'var(--c5)', 2),
+    face: { lx: 43, rx: 57, y: 52, r: 4, my: 60, mw: 3, bcol: '#ff9fc6' },
+    back: E(50, 58, 10, 8, 'var(--c6)', 0, 'opacity=".35"'),
+    armL: P('M 28 60 C 21 62 19 68 22 71 C 25 69 27 66 29 66 Z', 'var(--c1)', 2.4),
+    armR: P(mirror('M 28 60 C 21 62 19 68 22 71 C 25 69 27 66 29 66 Z'), 'var(--c1)', 2.4),
+    front: G('staff', [80, 70], L('M 78 80 L 86 38', INK, 4.6) + L('M 78 80 L 86 38', 'var(--c5)', 2.6)
+        + C(86.5, 35.5, 5.4, 'var(--c4)', 2.2, 'class="glow"') + hl(85, 34, 1.6, 0.9)),
+    fx: tw(16, 40, 3, '#ffd84a', 0) + tw(88, 58, 2.4, '#c084fc', 0.6) + tw(20, 74, 2, '#5aa9ff', 1.1),
+    shadow: 17,
     vars: '--fx:var(--c3)'
   };
 

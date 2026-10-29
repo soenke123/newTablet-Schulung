@@ -49,54 +49,51 @@
 }
 
 /* ── Charakter in Ruhe (nur im Ruhezustand, nicht beim Heben/Jubeln) ── */
-/* Brummo zeigt ab und zu den Bizeps, das Stirnband flattert. */
-.c-idle.ds-fig--brummo:not(.ds-lift) .arm-r { animation: ds-flex 5.5s ease-in-out infinite; }
-.ds-fig--brummo .band { animation: ds-flap 1.6s ease-in-out infinite; }
-@keyframes ds-flex {
-  0%, 70%, 100% { transform: none; }
-  76%, 90% { transform: rotate(-120deg); }
-  83% { transform: rotate(-135deg); }
-}
+/* Astro-Hase schwebt wie in der Schwerelosigkeit, die Ohren wackeln. */
+.c-idle.ds-fig--astro:not(.ds-lift) .cr-root { animation: ds-float 3.4s ease-in-out infinite; }
+.ds-fig--astro .ear-l { animation: ds-ear-l 3s ease-in-out infinite; }
+.ds-fig--astro .ear-r { animation: ds-ear-r 3s ease-in-out infinite .4s; }
+@keyframes ds-float { 50% { transform: translateY(-4px) rotate(-2deg); } }
+@keyframes ds-ear-l { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-12deg); } }
+@keyframes ds-ear-r { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(12deg); } }
+
+/* Bananalama nickt lässig im Takt. Ohne Arme: beim Heben reckt es den Kopf. */
+.c-idle.ds-fig--lama:not(.ds-lift) .head-node { animation: ds-nod 1.6s ease-in-out infinite; }
+.ds-fig--lama .tail { animation: ds-wag 1.4s ease-in-out infinite; }
+.ds-lift.ds-fig--lama .head-node { animation: ds-lama-lift .9s cubic-bezier(.3, .7, .3, 1) both; }
+@keyframes ds-nod { 50% { transform: rotate(4deg) translateY(1px); } }
+@keyframes ds-lama-lift { 22% { transform: translateY(3px); } 48%, 74% { transform: translateY(-5px) rotate(-6deg); } }
+
+/* Lauch-Samurai: Blätter wehen, das Stirnband flattert, das Schwert blitzt. */
+.ds-fig--lauch .leaves { animation: ds-leaf 2.6s ease-in-out infinite; }
+.ds-fig--lauch .band { animation: ds-flap 1.4s ease-in-out infinite; }
+@keyframes ds-leaf { 50% { transform: rotate(5deg); } }
 @keyframes ds-flap { 50% { transform: rotate(-12deg); } }
 
-/* Bolt: Antenne blinkt (glow aus creatures.css), Kopf scannt hin und her. */
-.c-idle.ds-fig--bolt:not(.ds-lift) .head-node { animation: ds-scan 4.8s ease-in-out infinite; }
+/* GameBoy: Kopf scannt hin und her, die Antenne blinkt (glow aus creatures.css). */
+.c-idle.ds-fig--gameboy:not(.ds-lift) .head-node { animation: ds-scan 4.8s ease-in-out infinite; }
 @keyframes ds-scan {
   0%, 40%, 100% { transform: none; }
-  50%, 60% { transform: rotate(-7deg); }
-  70%, 80% { transform: rotate(7deg); }
+  50%, 60% { transform: rotate(-5deg); }
+  70%, 80% { transform: rotate(5deg); }
 }
 
-/* Quaxi kann nicht stillstehen: kleine Hüpfer. */
-.c-idle.ds-fig--quaxi:not(.ds-lift) .cr-root { animation: ds-hop 2.2s ease-in-out infinite; }
-@keyframes ds-hop {
-  0%, 55%, 100% { transform: none; }
-  62% { transform: translateY(1px) scale(1.06, .92); }
-  72% { transform: translateY(-8px) scale(.95, 1.06); }
-  84% { transform: translateY(0) scale(1.04, .95); }
-}
+/* Popcorn: oben poppt es, die fliegenden Körner hüpfen. */
+.ds-fig--popcorn .pops { animation: ds-pop 1.3s ease-in-out infinite; }
+.ds-fig--popcorn .fly { animation: ds-popfly 2.2s ease-in-out infinite; }
+@keyframes ds-pop { 0%, 60%, 100% { transform: none; } 70% { transform: translateY(-3px) scale(1.03); } 80% { transform: translateY(0); } }
+@keyframes ds-popfly { 50% { transform: translateY(-5px); } }
 
-/* Pieps wackelt tapfer, die Eierschale rutscht dabei. */
-.c-idle.ds-fig--pieps:not(.ds-lift) .cr-root { animation: ds-wobble 1.8s ease-in-out infinite; }
-.ds-fig--pieps .shell { animation: ds-shell 3.6s ease-in-out infinite; }
-@keyframes ds-wobble { 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
-@keyframes ds-shell { 0%, 60%, 100% { transform: none; } 70%, 85% { transform: rotate(-9deg) translateY(1px); } }
-
-/* Okti wiegt sich lässig, die Arme schlängeln. */
-.c-idle.ds-fig--okti:not(.ds-lift) .cr-root { animation: ds-sway 4s ease-in-out infinite; }
-.c-idle.ds-fig--okti:not(.ds-lift) .arm-l { animation: ds-curl-l 3s ease-in-out infinite; }
-.c-idle.ds-fig--okti:not(.ds-lift) .arm-r { animation: ds-curl-r 3s ease-in-out infinite .6s; }
-@keyframes ds-sway { 50% { transform: translateX(2px) rotate(3deg); } }
-@keyframes ds-curl-l { 50% { transform: rotate(14deg); } }
-@keyframes ds-curl-r { 50% { transform: rotate(-14deg); } }
-
-/* Flink wedelt mit dem Schwanz und spitzt die Ohren. */
-.ds-fig--flink .tail { animation: ds-wag 1.1s ease-in-out infinite; }
-.c-idle.ds-fig--flink:not(.ds-lift) .ear-r { animation: ds-ear 4.2s ease-in-out infinite; }
+/* Magic Ghost schwebt und schwingt den Stab. */
+.c-idle.ds-fig--ghost:not(.ds-lift) .cr-root { animation: ds-float 2.8s ease-in-out infinite; }
+.ds-fig--ghost .staff { animation: ds-wand 3.2s ease-in-out infinite; }
+.ds-fig--ghost .hat { animation: ds-hat 3.2s ease-in-out infinite; }
+@keyframes ds-wand { 0%, 60%, 100% { transform: none; } 75% { transform: rotate(-14deg); } }
+@keyframes ds-hat { 50% { transform: rotate(-3deg); } }
 @keyframes ds-wag { 50% { transform: rotate(12deg); } }
-@keyframes ds-ear { 0%, 80%, 100% { transform: none; } 86% { transform: rotate(14deg); } }
 
 @media (prefers-reduced-motion: reduce) {
   .ds-fig .cr-root, .ds-fig .arm-l, .ds-fig .arm-r, .ds-fig .head-node,
-  .ds-fig .band, .ds-fig .shell, .ds-fig .tail, .ds-fig .ear-r { animation: none !important; }
+  .ds-fig .band, .ds-fig .tail, .ds-fig .ear-l, .ds-fig .ear-r, .ds-fig .leaves,
+  .ds-fig .pops, .ds-fig .fly, .ds-fig .staff, .ds-fig .hat { animation: none !important; }
 }
