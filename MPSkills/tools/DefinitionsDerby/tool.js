@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261029i';
+  const V = '20261029k';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -136,7 +136,15 @@
             'Richtig: ein Punkt und die nächste Definition.',
             'Falsch: eine andere Definition, und die eigene Seite ist kurz gesperrt.',
             'Wer zuerst 5 Begriffe richtig hat, gewinnt (einstellbar: 3 bis 10).',
-            'Am Ende stehen alle Definitionen der Runde mit ihrem Begriff da.'] }
+            'Am Ende stehen alle Definitionen der Runde mit ihrem Begriff da.'] },
+    { id: 'storm', g: 'net', name: 'Kistensturm', min: 4, net: true, shot: 'spiel-kistensturm.jpg',
+      short: 'Teams stapeln um die Wette – jede richtige Antwort ist eine Kiste.',
+      text: 'Die Klasse spielt in Teams gegeneinander, jedes Tablet für sich. Jede richtige Antwort ist eine Kiste für das eigene Team: die Teamfigur hebt den Turm an, und darunter rutscht die neue Kiste hinein. Wer zuerst die Zielhöhe erreicht, gewinnt. Am Beamer sieht man alle Türme wachsen.',
+      how: ['Die Lehrkraft öffnet Kistensturm am Beamer, stellt Teams, Zielhöhe, Countdown und Stapel ein und startet.',
+            'Die Klasse kommt über „Mitmachen“ dazu, die Teams werden automatisch verteilt.',
+            'Jede richtige Antwort ist eine Kiste für das eigene Team. Falsch kostet nichts, nur einen Moment Zeit.',
+            'Je höher der eigene Turm, desto schwerer die Aufgaben – vom Begriff wählen bis zum Lückentext. Wer hinten liegt, holt so leichter auf.',
+            'Wer zuerst die Zielhöhe erreicht, gewinnt. Mit Countdown gewinnt bei Zeitende der höchste Turm.'] }
   ];
   const DEFAULT_GAMES = ['overview', 'cards'];
   const gameOf = id => GAMES.find(g => g.id === id) || null;
@@ -340,6 +348,9 @@
     duel: '<span class="dd-mini dd-mini--duel" aria-hidden="true"><i class="dd-mini__def"></i>' +
            '<span class="dd-mini__pool">' + [1, 2, 3, 4, 5, 6].map(i => '<i class="dd-mini__chip dd-mini__chip--' + i + '"></i>').join('') + '</span>' +
            '<i class="dd-mini__def dd-mini__def--2"></i></span>',
+    storm: '<span class="dd-mini dd-mini--storm" aria-hidden="true">' +
+           [[3, 1], [5, 2], [2, 3], [4, 4]].map(([h, c]) => '<span class="dd-mini__tw dd-mini__tw--' + c + '">' + '<i></i>'.repeat(h) + '</span>').join('') +
+           '<i class="dd-mini__goal"></i></span>',
     island: '<span class="dd-mini dd-mini--isl" aria-hidden="true"><span class="dd-mini__land"></span>' +
            [1, 2, 3, 4, 5, 6].map(i => '<i class="dd-mini__w dd-mini__w--' + i + '"></i>').join('') + '</span>'
   };
@@ -419,7 +430,8 @@
   }
   const gameShared = id => sharedGames().includes(id);
   /* Welche Spiele diese Ansicht zeigt: Lehrkraft alle, Tablet nur geteilte. */
-  const visibleGames = () => isTeacher ? GAMES : GAMES.filter(g => gameShared(g.id));
+  const visibleGames = () => (isTeacher ? GAMES : GAMES.filter(g => gameShared(g.id)))
+    .filter(g => !(g.net && (standalone || demo)));   // Zusammen im Netz geht nur im Raum
 
   async function writeData(patch) {
     const next = Object.assign({}, roomData(), patch);
@@ -468,6 +480,7 @@
     if (s === 'home') renderHome();
     else if (s === 'play') renderPlay();
     else if (s === 'edit') renderEdit();
+    stBanner();
   }
   /* Spiel verlassen: Lernstand noch weg, Vollbild zu, Memory-Takte ins Leere laufen lassen. */
   function leavePlay() {
@@ -476,6 +489,7 @@
     if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* egal */ } }
     islStop();
     duStop();
+    stStop();
     opened = null; mm = null; du = null; learn = null; ov = null;
   }
 
@@ -539,6 +553,14 @@
   async function startGame(gid, keep) {
     const G = gameOf(gid);
     if (!G) return false;
+    if (G.net) {                    // Kistensturm: Stapel wählt die Lehrkraft in der Lobby
+      if (standalone || demo) return false;
+      info = null; renderInfo();
+      if (opened) leavePlay();
+      opened = { stacks: [], cards: [], game: gid };
+      go('play');
+      return true;
+    }
     const ids = formIds(G);
     if (!ids.length) {
       toast(isTeacher ? 'Lege zuerst einen Stapel an.' : 'Noch ist kein Stapel da.');
@@ -689,7 +711,7 @@
     }
     for (const grp of GROUPS) {
       const gs = shown.filter(g => g.g === grp.id);
-      if (!gs.length && !isTeacher) continue;
+      if (!gs.length && (!isTeacher || (grp.id === 'net' && (standalone || demo)))) continue;
       html += '<h3 class="dd-ghead">' + grp.name + '</h3>';
       html += gs.length
         ? '<div class="dd-games">' + gs.map(gameTile).join('') + '</div>'
@@ -736,7 +758,7 @@
             (canShare ? '<button type="button" class="btn' + (shared ? ' is-on' : '') + '" data-act="info-share" aria-pressed="' + shared + '">' + ico.share +
               (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '</button>' : '') +
             '<button type="button" class="btn btn--primary" data-act="info-start"' + (it.length ? '' : ' disabled') + '>' + ico.play +
-              (G.room ? 'Insel öffnen' : 'Starten') + '</button>' +
+              (G.net ? 'Öffnen' : G.room ? 'Insel öffnen' : 'Starten') + '</button>' +
             (it.length ? '' : '<p class="dd-sheet__hint">' + (isTeacher ? 'Noch kein Stapel da – lege zuerst einen an.' : 'Noch ist kein Stapel geteilt.') + '</p>') +
           '</div>' +
           // Oben das Bild, darunter die Erklärung in zwei Spalten (Sönke 29.10.2026)
@@ -764,7 +786,7 @@
       '<div class="dd-stackhead dd-playhead">' +
         '<button type="button" class="btn btn--sm dd-backbtn" data-act="home">' + ico.back + 'Lernformen</button>' +
         '<div class="dd-stackhead__t"><h2 class="dd-h">' + G.name + '</h2>' +
-        '<div class="dd-chips dd-using" id="ddUsing" role="group" aria-label="Stapel an- und ausschalten"></div></div>' +
+        (G.net ? '' : '<div class="dd-chips dd-using" id="ddUsing" role="group" aria-label="Stapel an- und ausschalten"></div>') + '</div>' +
       '</div>' +
       '<div class="dd-pane" id="ddPane"></div>';
     paintUsing();
@@ -788,6 +810,7 @@
     else if (opened.game === 'memory') renderMemory();
     else if (opened.game === 'duel') renderDuel();
     else if (opened.game === 'island') renderIsland();
+    else if (opened.game === 'storm') renderStorm();
   }
   const multi = () => opened && opened.stacks.length > 1;
   const stackTitle = sid => { const s = opened && opened.stacks.find(x => x.id === sid); return s ? s.title : ''; };
@@ -1383,7 +1406,7 @@
   }
 
   function memFullscreen() {
-    const el = root.querySelector('#ddMem') || root.querySelector('#ddDuel');
+    const el = root.querySelector('#ddMem') || root.querySelector('#ddDuel') || root.querySelector('#ddSt');
     if (!el) return;
     if (fsEl()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
     const req = el.requestFullscreen || el.webkitRequestFullscreen;
@@ -3185,7 +3208,7 @@
         Math.round(R.shown * 100) + '"><i style="width:' + (R.shown * 100).toFixed(1) + '%"></i></div>');
   }
   function paintTask() {
-    const box = root.querySelector('#ddTask'), t = isl.task;
+    const box = root.querySelector('#ddTask'), t = curTask();
     if (demo && box) box.dataset.cid = t ? t.card.id : '';   // nur fürs Schaufenster (preview/derby.js)
     if (!box || !t) return;
     let body = '';
@@ -3222,7 +3245,7 @@
           '<button type="button" class="btn btn--primary" data-act="isl-check">' + ico.check + 'Prüfen</button></div>';
     }
     box.innerHTML = '<div class="dd-task__bg"></div>' +
-      '<div class="dd-task__sheet dd-task--' + t.type + '" role="dialog" aria-modal="true" aria-label="Aufgabe">' + taskHead(t) +
+      '<div class="dd-task__sheet dd-task--' + t.type + '"' + (st && st.task ? ' aria-label="Aufgabe">' + stTaskHead(t) : ' role="dialog" aria-modal="true" aria-label="Aufgabe">' + taskHead(t)) +
         '<div class="dd-task__body">' + body + '</div>' +
         '<div class="dd-task__fb" id="ddFb" aria-live="polite"></div>' +
       '</div>';
@@ -3254,7 +3277,7 @@
   }
 
   function paintBuild() {
-    const t = isl.task, box = root.querySelector('#ddBuild');
+    const t = curTask(), box = root.querySelector('#ddBuild');
     if (!box) return;
     const used = new Set(t.seq);
     const tile = (x, where) => '<button type="button" class="dd-tile' + (t.done && x.wrong && where === 'in' ? ' is-wrong' : '') + '" data-act="isl-tile" data-k="' + x.k + '"' + (t.done ? ' disabled' : '') + '>' + E(x.text) + '</button>';
@@ -3268,7 +3291,7 @@
   }
   let buildDragEnd = 0;
   function islTile(k) {
-    const t = isl && isl.task;
+    const t = curTask();
     if (!t || t.done || t.type !== 'build') return;
     if (Date.now() - buildDragEnd < 400) return;   // Klick nach dem Ziehen
     const i = t.seq.indexOf(k);
@@ -3349,7 +3372,7 @@
       buildDragEnd = Date.now();
       dd.ghost.remove();
       box.classList.remove('is-dragging');
-      const t = isl && isl.task;
+      const t = curTask();
       if (!t || t.done || ev.type === 'pointercancel') { if (t) paintBuild(); return; }
       if (dd.mark.isConnected) {
         // Reihenfolge so, wie sie jetzt in der Zeile steht; die Lücke ist der gezogene Baustein.
@@ -3361,7 +3384,7 @@
     }
     box.addEventListener('pointerdown', ev => {
       const el = ev.target.closest('.dd-tile');
-      const t = isl && isl.task;
+      const t = curTask();
       if (!el || el.disabled || !t || t.done || d || (ev.pointerType === 'mouse' && ev.button !== 0)) return;
       d = { k: el.dataset.k, el, id: ev.pointerId, x0: ev.clientX, y0: ev.clientY, on: false, fromLine: !!el.closest('.dd-build__line') };
       document.addEventListener('pointermove', move, { passive: false });
@@ -3372,7 +3395,7 @@
 
   /* Auswahl-Aufgaben: Antippen = Antwort. */
   function islPick(id) {
-    const t = isl && isl.task;
+    const t = curTask();
     if (!t || t.done || (t.type !== 'pickTerm' && t.type !== 'pickDef')) return;
     const ok = id === t.card.id || norm2(t, id);
     root.querySelectorAll('.dd-opt').forEach(b => {
@@ -3380,7 +3403,7 @@
       if (b.dataset.id === t.card.id) b.classList.add('is-right');
       else if (b.dataset.id === id) b.classList.add('is-wrong');
     });
-    islResult(ok, ok ? '' : (t.type === 'pickTerm' ? 'Richtig wäre: <b>' + E(t.card.t) + '</b>' : 'Die richtige Definition ist grün markiert.'));
+    taskResult(ok, ok ? '' : (t.type === 'pickTerm' ? 'Richtig wäre: <b>' + E(t.card.t) + '</b>' : 'Die richtige Definition ist grün markiert.'));
   }
   /* Gleicher Begriff/gleiche Definition auf einer anderen Karte zählt auch. */
   function norm2(t, id) {
@@ -3390,7 +3413,7 @@
   }
 
   function islCheck() {
-    const t = isl && isl.task, I = window.DDInsel;
+    const t = curTask(), I = window.DDInsel;
     if (!t || t.done) return;
     if (t.type === 'build') {
       if (!t.seq.length) return;
@@ -3398,14 +3421,14 @@
       const ok = I.buildOk(t, seq);
       t.done = true;
       paintBuild();
-      islResult(ok, ok ? '' : 'Richtig heißt es: <b>' + E(t.card.d) + '</b>');
+      taskResult(ok, ok ? '' : 'Richtig heißt es: <b>' + E(t.card.d) + '</b>');
     } else if (t.type === 'typeTerm') {
       const inp = root.querySelector('#ddType');
       const v = inp ? inp.value : '';
       if (!v.trim()) { if (inp) inp.focus(); return; }
       const r = I.check(v, t.card.t);
       if (inp) { inp.readOnly = true; inp.classList.add(r.ok ? 'is-right' : 'is-wrong'); }
-      islResult(r.ok, r.ok ? (r.exact ? '' : 'Fast genau – geschrieben wird es: <b>' + E(t.card.t) + '</b>') : 'Gesucht war: <b>' + E(t.card.t) + '</b>');
+      taskResult(r.ok, r.ok ? (r.exact ? '' : 'Fast genau – geschrieben wird es: <b>' + E(t.card.t) + '</b>') : 'Gesucht war: <b>' + E(t.card.t) + '</b>');
     } else if (t.type === 'cloze') {
       const gaps = t.parts.filter(p => p.gap);
       const ins = [...root.querySelectorAll('.dd-gap')];
@@ -3419,7 +3442,7 @@
         inp.classList.add(r.ok ? 'is-right' : 'is-wrong');
         if (!r.ok || !r.exact) (inp.closest('.dd-gapw') || inp).insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>');
       });
-      islResult(all, all ? (fuzzy ? 'Fast genau – die richtige Schreibweise steht daneben.' : '') : 'Die richtigen Wörter stehen neben den Lücken.');
+      taskResult(all, all ? (fuzzy ? 'Fast genau – die richtige Schreibweise steht daneben.' : '') : 'Die richtigen Wörter stehen neben den Lücken.');
     }
   }
   /* Eingabe einer Lücke auf ihre Kästchen verteilen; das nächste freie ist markiert. */
@@ -3438,15 +3461,21 @@
     return r2.ok ? r2 : r;
   }
   function islGiveUp() {
-    const t = isl && isl.task;
+    const t = curTask();
     if (!t || t.done) return;
-    if (t.type === 'typeTerm') { const inp = root.querySelector('#ddType'); if (inp) inp.readOnly = true; islResult(false, 'Gesucht war: <b>' + E(t.card.t) + '</b>'); }
+    if (t.type === 'typeTerm') { const inp = root.querySelector('#ddType'); if (inp) inp.readOnly = true; taskResult(false, 'Gesucht war: <b>' + E(t.card.t) + '</b>'); }
     else if (t.type === 'cloze') {
       const gaps = t.parts.filter(p => p.gap);
       root.querySelectorAll('.dd-gap').forEach((inp, i) => { inp.readOnly = true; inp.value = ''; paintGap(inp); (inp.closest('.dd-gapw') || inp).insertAdjacentHTML('afterend', '<span class="dd-gap__sol">' + E(gaps[i].gap) + '</span>'); });
-      islResult(false, 'So heißt es richtig.');
+      taskResult(false, 'So heißt es richtig.');
     }
   }
+
+  /* Die laufende Aufgabe: Kistensturm (st) oder Insel (isl). Beide nutzen
+     dasselbe Aufgabenblatt (paintTask & Co.); nur das Ergebnis geht
+     an verschiedene Stellen (stResult · islResult). */
+  function curTask() { return (st && st.task) || (isl && isl.task) || null; }
+  function taskResult(ok, extra) { if (st && st.task) stResult(ok, extra); else islResult(ok, extra); }
 
   /* Ergebnis anwenden: Stufe hoch/runter, speichern, Moment zeigen. */
   function islResult(ok, extra) {
@@ -3546,12 +3575,12 @@
 
   /* Tasten: 1–6 wählen, Enter prüft bzw. geht weiter, Esc schließt. */
   function islKey(ev, tag) {
-    if (!isl) return;
-    if (ev.key === 'Escape') { if (isl.round) { ev.preventDefault(); islCloseTask(); } else if (isl.selId) islSelect(null); return; }
-    const t = isl.task;
+    if (!isl && !st) return;
+    if (ev.key === 'Escape') { if (isl && isl.round) { ev.preventDefault(); islCloseTask(); } else if (isl && isl.selId) islSelect(null); return; }
+    const t = curTask();
     if (!t) return;
     if (ev.key === 'Enter') {
-      if (t.done) { ev.preventDefault(); islNext(); return; }
+      if (t.done) { ev.preventDefault(); if (st) stNext(); else islNext(); return; }
       if (tag === 'input') {
         ev.preventDefault();
         if (ev.target.classList.contains('dd-gap')) {
@@ -3568,6 +3597,662 @@
       const o = t.options[Number(ev.key) - 1];
       if (o) { ev.preventDefault(); islPick(o.id); }
     }
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     KISTENSTURM (Zusammen im Netz)  ·  Migration 0238
+     ══════════════════════════════════════════════════════════════
+     Teams gegeneinander, jedes Tablet für sich (Sönke 29.10.2026,
+     „etwas wie Mario Kart“). Jede richtige Antwort ist eine Kiste für
+     das eigene Team: die Teamfigur (figuren.js) steht unten neben dem
+     Turm, hebt ihn an, und darunter rutscht die neue Kiste hinein.
+     Wer zuerst die Zielhöhe hat, gewinnt; mit Countdown gewinnt bei
+     Zeitende der höchste Turm. Die Aufgaben sind die der Insel und
+     richten sich nach der Höhe des EIGENEN Turms (stLevel): unten
+     Begriff wählen, oben Lückentext — wer hinten liegt, hat es leichter.
+     Items (Bonus-Kisten, klauen …) kommen später.
+
+     Ablauf wie Kingdoms of Mathoria: die Lehrkraft (Beamer) stellt in
+     der Lobby Teams, Zielhöhe, Countdown und Stapel ein und startet;
+     die Teams werden automatisch verteilt (Server). Öffnet die
+     Lehrkraft Kistensturm, steht data.storm.live im Raumzustand, und
+     jedes Tablet bekommt oben den Knopf „Mitmachen“ (stBanner).
+
+     Server: dd_storm_room_get/setup/start/stop/reset (Lehrkraft),
+     dd_storm_view/answer (Tablet). Jede Antwort liefert die ganze
+     Ansicht zurück. Animationen hängen an den Turmhöhen (stSync, je
+     Team Kiste für Kiste nachziehen) und an den Ereignissen seit
+     p_since (Name über dem Turm). Ob eine Antwort stimmt, prüft das
+     Tablet mit insel.js; der Server zählt höchstens eine je 1,2 s.
+     Kistensturm schreibt keinen Lernstand (wie Memory/Duell). */
+  const ST_TEAMS = [2, 3, 4, 5, 6];
+  const ST_MINUTES = [0, 3, 5, 8, 10, 15];
+  const ST_LEVEL = ['Begriff wählen', 'Definition wählen', 'Bausteine', 'Begriff tippen', 'Lückentext'];
+  const ST_POLL = { lobby: 2500, countdown: 500, running: 1300, ended: 3000 };
+  const ST_BEAM_POLL = { lobby: 2000, countdown: 400, running: 900, ended: 3000 };
+  const ST_STEP_MS = 430;        // eine Kiste je Turm so oft (Heben dauert 0,9 s)
+  const ST_NEXT_MS = 1000;       // nach richtig: nächste Aufgabe
+  const ST_LOCK_MS = 1600;       // nach falsch: so lange erst Lösung lesen
+  let st = null;                 // Zustand, solange Kistensturm offen ist
+  let figReady = null;
+
+  function loadCss(href, key) {
+    if (document.querySelector('link[data-dd="' + key + '"]')) return;
+    const l = document.createElement('link');
+    l.rel = 'stylesheet'; l.href = href; l.dataset.dd = key;
+    document.head.appendChild(l);
+  }
+  /* Figuren = Baukasten von Knowledge Stack + figuren.js/css */
+  function ladeFiguren() {
+    if (window.DDFiguren) return Promise.resolve();
+    loadCss('tools/KnowledgeStack/creatures.css?v=' + V, 'ks-creatures');
+    loadCss(BASE + 'figuren.css?v=' + V, 'figuren');
+    return figReady || (figReady = (window.KSCreatures ? Promise.resolve() : loadScript('tools/KnowledgeStack/creatures.js?v=' + V))
+      .then(() => loadScript(BASE + 'figuren.js?v=' + V))
+      .catch(e => { figReady = null; throw e; }));
+  }
+  const stFig = i => window.DDFiguren.LIST[i % window.DDFiguren.LIST.length];
+  const stTeam = i => 'Team ' + stFig(i).name;
+  const figSVG = (i, a, px) => window.DDFiguren ? window.DDFiguren.svg(i, a, px) : '';
+  const stCol = i => '--tc:' + stFig(i).col + ';--ts:' + stFig(i).soft;
+  const stLive = () => { const s = roomData().storm; return !!(s && s.live && Date.now() - (s.t || 0) < 4 * 3600e3); };
+
+  function newStorm() {
+    return { v: null, seq: 0, run: null, layout: '', timer: null, busy: false, skew: 0,
+      shown: [], anim: [], lifting: [], cardsKey: '', cards: null, order: [], oi: 0,
+      task: null, nextT: null, lockUntil: 0, tick: null, goalTouched: false, autoKey: '', stacksInit: false, starting: false };
+  }
+
+  async function renderStorm() {
+    const pane = root.querySelector('#ddPane');
+    if (!pane) return;
+    stStop(true);
+    st = newStorm();
+    pane.innerHTML = '<div class="dd-st ' + (isTeacher ? 'dd-st--beam' : 'dd-st--dev') + '" id="ddSt"><p class="dd-empty">Lade …</p></div>';
+    if (isTeacher && !demo && !standalone) {
+      const patch = { storm: { live: true, t: Date.now() } };
+      if (!gameShared('storm')) patch.games = sharedGames().concat(['storm']);
+      writeData(patch);
+    }
+    try { await Promise.all([ladeFiguren(), ladeInsel()]); }
+    catch (e) {
+      const box = root && root.querySelector('#ddSt');
+      if (box) box.innerHTML = '<p class="dd-empty dd-empty--err">Kistensturm konnte nicht geladen werden. <button type="button" class="btn btn--sm" data-act="st-retry">Noch einmal</button></p>';
+      return;
+    }
+    if (!st || !root) return;
+    st.tick = setInterval(stTick, 250);
+    stPoll();
+  }
+
+  /* Aufräumen. quiet = nur Takte (neu aufbauen); sonst sagt die Lehrkraft der Klasse, dass es vorbei ist. */
+  function stStop(quiet) {
+    if (!st) return;
+    clearTimeout(st.timer); clearTimeout(st.nextT); clearInterval(st.tick);
+    st.anim.forEach(a => clearTimeout(a));
+    const was = st;
+    st = null;
+    if (!quiet && was && isTeacher && !demo && !standalone && ctx && stLive()) {
+      try { ctx.actions.setData(Object.assign({}, roomData(), { storm: { live: false, t: Date.now() } })); } catch (e) { /* egal */ }
+    }
+  }
+
+  /* ─── Server ─── */
+  async function stPoll() {
+    if (!st || !root) return;
+    clearTimeout(st.timer); st.timer = null;
+    const me = st;
+    if (!me.busy) {
+      me.busy = true;
+      const t0 = Date.now();
+      const r = await ctx.actions.call(isTeacher ? 'dd_storm_room_get' : 'dd_storm_view', { p_since: me.seq });
+      me.busy = false;
+      if (st !== me || !root) return;
+      if (r && r.ok) { stClock(t0, r.server_now); stApply(r); }
+      else stError(r && r.error);
+    }
+    if (st === me && root) {
+      const ph = me.v ? me.v.phase : 'lobby';
+      me.timer = setTimeout(stPoll, (isTeacher ? ST_BEAM_POLL : ST_POLL)[ph] || 2500);
+    }
+  }
+  function stClock(t0, iso) {
+    const s = Date.parse(iso);
+    if (!isNaN(s)) st.skew = s - (t0 + Date.now()) / 2;
+  }
+  const stNow = () => Date.now() + (st ? st.skew : 0);
+  function stError(code) {
+    const box = root && root.querySelector('#ddSt');
+    if (box && !st.v) box.innerHTML = '<p class="dd-empty dd-empty--err">' + E(errMsg(code || 'network')) + '</p>';
+  }
+  async function stCall(fn, args) {
+    const r = await ctx.actions.call(fn, args || {});
+    if (!r || !r.ok) toast(r && r.error === 'no_stacks' ? 'Wähle zuerst mindestens einen Stapel.' : errMsg(r && r.error));
+    return r;
+  }
+
+  /* ─── Neue Ansicht vom Server ─── */
+  function stApply(v) {
+    const newRun = st.run !== null && v.run !== st.run;
+    if (newRun) {                       // neues Spiel: Türme und Aufgaben von vorn
+      st.shown = []; st.anim.forEach(a => clearTimeout(a)); st.anim = [];
+      st.task = null; st.order = []; st.oi = 0;
+    }
+    st.run = v.run;
+    const evs = (v.events || []).filter(e => e.s > st.seq);
+    st.seq = Math.max(st.seq, v.seq || 0);
+    st.v = v;
+    if (isTeacher) stTeacherAuto(v);
+    const layout = v.phase === 'lobby' ? 'lobby' : (!isTeacher && v.phase === 'ended' ? 'end' : 'game');
+    if (layout !== st.layout || newRun) { st.layout = layout; stBuild(); }
+    else stUpdate();
+    if (st.layout === 'game') evs.forEach(stEvent);
+  }
+
+  /* ─── Aufbau je Abschnitt ─── */
+  function stBuild() {
+    const box = root.querySelector('#ddSt');
+    if (!box || !st.v) return;
+    clearTimeout(st.nextT);
+    if (st.layout === 'lobby') box.innerHTML = isTeacher ? stLobbyBeam() : stLobbyDev();
+    else if (st.layout === 'end') box.innerHTML = stEndDev();
+    else {
+      box.innerHTML = isTeacher ? stSceneBeam() : stSceneDev();
+      st.shown = [];
+      stSync(true);
+      if (!isTeacher) stMaybeTask();
+    }
+    stUpdate();
+    stLayout();
+  }
+  function stUpdate() {
+    const v = st.v;
+    if (!v) return;
+    if (st.layout === 'lobby') { if (isTeacher) stPaintLobbyBeam(); else stPaintLobbyDev(); return; }
+    if (st.layout === 'end') return;
+    stSync(false);
+    stPaintOver();
+    if (!isTeacher) { stPaintLevel(); stMaybeTask(); }
+    const btns = root.querySelector('#ddStBtns');
+    if (btns) btns.innerHTML = stBeamBtns();
+  }
+
+  /* ══ Lobby (Lehrkraft) ══ */
+  const stPeople = () => (st.v && st.v.people) || [];
+  function stLobbyBeam() {
+    return '<div class="dd-st__lobby">' +
+      '<section class="dd-st__set" aria-label="Einstellungen">' +
+        '<h3 class="dd-st__h3">Kistensturm</h3>' +
+        '<p class="dd-st__lead">Teams stapeln um die Wette: jede richtige Antwort ist eine Kiste. Wer zuerst oben ist, gewinnt.</p>' +
+        '<div class="dd-st__row"><span class="dd-st__lab">Teams</span><div class="dd-segs" id="ddStTeams" role="group" aria-label="Zahl der Teams">' +
+          ST_TEAMS.map(n => '<button type="button" class="dd-seg" data-act="st-teams" data-v="' + n + '">' + n + '</button>').join('') + '</div></div>' +
+        '<div class="dd-st__row"><span class="dd-st__lab">Zielhöhe</span><div class="dd-st__goalset">' +
+          '<button type="button" class="btn btn--sm dd-ic" data-act="st-goal" data-v="-1" aria-label="Weniger Kisten">−</button>' +
+          '<input class="dd-input dd-st__goalin" id="ddStGoal" type="number" min="5" max="200" inputmode="numeric" aria-label="Zielhöhe in Kisten">' +
+          '<button type="button" class="btn btn--sm dd-ic" data-act="st-goal" data-v="1" aria-label="Mehr Kisten">+</button>' +
+          '<span class="dd-st__unit">Kisten</span></div></div>' +
+        '<p class="dd-st__hint" id="ddStGoalHint"></p>' +
+        '<div class="dd-st__row"><span class="dd-st__lab">Countdown</span><div class="dd-segs" id="ddStMin" role="group" aria-label="Countdown">' +
+          ST_MINUTES.map(n => '<button type="button" class="dd-seg" data-act="st-min" data-v="' + n + '">' + (n ? n + ' Min.' : 'ohne') + '</button>').join('') + '</div></div>' +
+        '<div class="dd-st__row dd-st__row--top"><span class="dd-st__lab">Stapel</span><div class="dd-chips" id="ddStStacks"></div></div>' +
+        '<div class="dd-st__go"><button type="button" class="btn btn--primary dd-st__start" data-act="st-start" id="ddStStart">' + ico.play + 'Start</button>' +
+          '<p class="dd-st__hint" id="ddStStartHint"></p></div>' +
+      '</section>' +
+      '<section class="dd-st__teams" id="ddStTeamsBox" aria-label="Teams"></section>' +
+    '</div>';
+  }
+  function stPerTeam() {
+    const n = stPeople().length, k = (st.v && st.v.team_count) || 4;
+    return Math.max(1, Math.ceil(n / k));
+  }
+  /* Vorschlag: etwa 6 richtige Antworten je Kind, auf 5 gerundet, 10…60. */
+  const stSuggest = () => Math.max(10, Math.min(60, Math.round(stPerTeam() * 6 / 5) * 5));
+  function stPaintLobbyBeam() {
+    const v = st.v;
+    root.querySelectorAll('#ddStTeams .dd-seg').forEach(b => b.classList.toggle('is-on', Number(b.dataset.v) === v.team_count));
+    root.querySelectorAll('#ddStMin .dd-seg').forEach(b => b.classList.toggle('is-on', Number(b.dataset.v) === v.minutes));
+    const gi = root.querySelector('#ddStGoal');
+    if (gi && document.activeElement !== gi) gi.value = v.goal;
+    const per = stPerTeam(), n = stPeople().length;
+    const hint = root.querySelector('#ddStGoalHint');
+    if (hint) hint.textContent = n ? 'Das sind etwa ' + Math.max(1, Math.round(v.goal / per)) + ' richtige Antworten je Kind (' + per + ' je Team).' : 'Noch niemand im Raum.';
+    const sb = root.querySelector('#ddStStacks');
+    if (sb) {
+      const on = new Set(v.stacks || []);
+      sb.innerHTML = (list || []).length ? (list || []).map(s => '<button type="button" class="dd-chip dd-chip--stack' + (on.has(s.id) ? ' is-on' : '') +
+        '" data-act="st-stack" data-id="' + E(s.id) + '" aria-pressed="' + on.has(s.id) + '">' + (on.has(s.id) ? ico.check : '') + E(s.title) + ' <i>' + s.n + '</i></button>').join('')
+        : '<span class="dd-st__hint">Noch kein Stapel – lege zuerst einen an.</span>';
+    }
+    const cards = (list || []).filter(s => (v.stacks || []).includes(s.id)).reduce((a, s) => a + (s.n || 0), 0);
+    const sh = root.querySelector('#ddStStartHint'), go = root.querySelector('#ddStStart');
+    const why = !(v.stacks || []).length ? 'Wähle mindestens einen Stapel.' : cards < 4 ? 'Die Stapel brauchen zusammen mindestens 4 Karten.' : '';
+    if (go) go.disabled = !!why || st.starting;
+    if (sh) sh.textContent = why || (n ? n + (n === 1 ? ' Kind spielt' : ' Kinder spielen') + ' mit. Nicht gewählte Stapel werden beim Start mit der Klasse geteilt.' : 'Die Klasse kommt über „Mitmachen“ dazu – oder startet einfach mit.');
+    const tb = root.querySelector('#ddStTeamsBox');
+    if (tb) {
+      const key = JSON.stringify([v.team_count, stPeople().map(p => p.n + p.t)]);
+      if (tb.dataset.key !== key) {
+        tb.dataset.key = key;
+        tb.innerHTML = Array.from({ length: v.team_count }, (_, i) => {
+          const ps = stPeople().filter(p => p.t === i);
+          return '<article class="dd-st__tcard" style="' + stCol(i) + '">' +
+            '<span class="dd-st__tfig">' + figSVG(i, 'idle', 92) + '</span>' +
+            '<div class="dd-st__tinfo"><b>' + E(stTeam(i)) + '</b><small>' + E(stFig(i).say) + '</small>' +
+            '<p class="dd-st__names">' + (ps.length ? ps.map(p => '<span>' + E(p.n) + '</span>').join('') : '<em>noch leer</em>') + '</p></div></article>';
+        }).join('');
+      }
+    }
+  }
+  /* Einmal je Öffnen: Stapel vorbelegen; solange nicht angefasst, Zielhöhe nach der Klassengröße. */
+  function stTeacherAuto(v) {
+    if (v.phase !== 'lobby' || demo) return;
+    const patch = {};
+    if (!st.stacksInit && list) {
+      st.stacksInit = true;
+      if (!(v.stacks || []).length && (list || []).length) {
+        const sh = sharedRaw().map(e => e.id).filter(id => list.some(s => s.id === id));
+        patch.p_stacks = (sh.length ? sh : activeIds()).slice(0, 20);
+      }
+    }
+    const key = v.team_count + ':' + stPeople().length;
+    if (!st.goalTouched && st.autoKey !== key) {
+      st.autoKey = key;
+      if (stPeople().length && v.goal !== stSuggest()) patch.p_goal = stSuggest();
+    }
+    if (Object.keys(patch).length) stSetup(patch);
+  }
+  async function stSetup(patch) {
+    if (!st || !st.v) return;
+    const args = Object.assign({ p_team_count: null, p_goal: null, p_minutes: null, p_stacks: null }, patch);
+    // Gleich zeigen, der Server bestätigt beim nächsten Takt.
+    if (args.p_team_count != null) st.v.team_count = args.p_team_count;
+    if (args.p_goal != null) st.v.goal = args.p_goal;
+    if (args.p_minutes != null) st.v.minutes = args.p_minutes;
+    if (args.p_stacks != null) st.v.stacks = args.p_stacks;
+    stPaintLobbyBeam();
+    const r = await stCall('dd_storm_room_setup', args);
+    if (r && r.ok && args.p_team_count != null) stPoll();   // Teams neu verteilt
+  }
+  function stGoal(delta, abs) {
+    if (!st || !st.v) return;
+    st.goalTouched = true;
+    let g = abs != null ? abs : st.v.goal + delta * (st.v.goal >= 20 ? 5 : 1);
+    if (abs == null && delta > 0 && st.v.goal >= 20) g = Math.ceil((st.v.goal + 1) / 5) * 5;
+    if (abs == null && delta < 0 && st.v.goal > 20) g = Math.floor((st.v.goal - 1) / 5) * 5;
+    g = Math.max(5, Math.min(200, Math.round(g) || 20));
+    if (g !== st.v.goal) stSetup({ p_goal: g });
+    else stPaintLobbyBeam();
+  }
+  function stToggleStack(id) {
+    const cur = (st.v.stacks || []).slice();
+    const i = cur.indexOf(id);
+    if (i >= 0) cur.splice(i, 1); else if (cur.length < 20) cur.push(id);
+    stSetup({ p_stacks: cur });
+  }
+  async function stStart() {
+    if (!st || !st.v || st.starting) return;
+    st.starting = true; stPaintLobbyBeam();
+    // Stapel, die die Klasse noch nicht hat, jetzt teilen — sonst bekommt das Tablet keine Karten.
+    const cur = sharedRaw();
+    const add = (st.v.stacks || []).filter(id => !cur.some(e => e.id === id)).map(id => (list || []).find(s => s.id === id)).filter(Boolean);
+    if (add.length) {
+      if (cur.length + add.length > MAX_SHARED) { toast('Mehr als ' + MAX_SHARED + ' geteilte Stapel passen nicht in einen Raum.'); st.starting = false; stPaintLobbyBeam(); return; }
+      await writeShared(cur.concat(add.map(entryOf)));
+    }
+    if (!st) return;
+    const r = await stCall('dd_storm_room_start');
+    if (!st) return;
+    st.starting = false;
+    if (r && r.ok) { st.goalTouched = true; stPoll(); } else stPaintLobbyBeam();
+  }
+
+  /* ══ Lobby (Tablet) ══ */
+  function stMyTeam() {
+    const v = st.v;
+    if (!v || !v.me) return null;
+    if (v.me.t != null) return v.me.t;
+    const p = (v.people || []).find(x => x.id === v.me.id);
+    return p ? p.t : null;
+  }
+  function stLobbyDev() { return '<div class="dd-st__wait" id="ddStWait"></div>'; }
+  function stPaintLobbyDev() {
+    const box = root.querySelector('#ddStWait');
+    if (!box) return;
+    const t = stMyTeam(), v = st.v;
+    const key = JSON.stringify([t, v.team_count, stPeople().map(p => p.n + p.t)]);
+    if (box.dataset.key === key) return;
+    box.dataset.key = key;
+    if (t == null) {
+      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistensturm</h3><p>Gleich geht’s los. Sobald deine Lehrkraft startet, kommst du in ein Team.</p></div>';
+      return;
+    }
+    const mates = stPeople().filter(p => p.t === t);
+    box.innerHTML = '<div class="dd-st__card" style="' + stCol(t) + '">' +
+      '<span class="dd-st__bigfig">' + figSVG(t, 'wave', 150) + '</span>' +
+      '<p class="dd-st__you">Du bist in</p><h3 class="dd-st__h3 dd-st__tname">' + E(stTeam(t)) + '</h3>' +
+      '<p class="dd-st__say">' + E(stFig(t).say) + '</p>' +
+      '<p class="dd-st__names">' + mates.map(p => '<span' + (p.id === v.me.id ? ' class="is-me"' : '') + '>' + E(p.n) + '</span>').join('') + '</p>' +
+      '<p class="dd-st__hint">Warte, bis deine Lehrkraft startet. Jede richtige Antwort ist eine Kiste für dein Team.</p></div>';
+  }
+
+  /* ══ Spielfeld (Beamer) ══ */
+  function stSceneBeam() {
+    const v = st.v, n = v.team_count;
+    let lanes = '';
+    for (let i = 0; i < n; i++) {
+      const cnt = stPeople().filter(p => p.t === i).length;
+      lanes += '<div class="dd-st__lane" data-t="' + i + '" style="' + stCol(i) + '">' +
+        '<div class="dd-st__tower" id="ddStT' + i + '"></div>' +
+        '<span class="dd-st__hgt" id="ddStH' + i + '">0</span>' +
+        '<div class="dd-st__pops" id="ddStP' + i + '"></div>' +
+        '<span class="dd-st__fig" id="ddStF' + i + '">' + figSVG(i, 'idle', 120) + '</span>' +
+        '<span class="dd-st__tag"><b>' + E(stFig(i).name) + '</b><small>' + cnt + (cnt === 1 ? ' Kind' : ' Kinder') + '</small></span>' +
+      '</div>';
+    }
+    return '<div class="dd-st__top">' +
+        '<div class="dd-st__ttl"><b>Ziel: ' + v.goal + ' Kisten</b><span>' + v.team_count + ' Teams · ' + stPeople().length + (stPeople().length === 1 ? ' Kind' : ' Kinder') + '</span></div>' +
+        '<span class="dd-st__clock" id="ddStClock" hidden></span>' +
+        '<div class="dd-st__btns" id="ddStBtns">' + stBeamBtns() + '</div>' +
+      '</div>' +
+      '<div class="dd-st__scene" id="ddStScene" style="--n:' + n + '">' +
+        '<div class="dd-st__goal" id="ddStGoalLine"><span>Ziel · ' + v.goal + '</span></div>' +
+        '<div class="dd-st__lanes">' + lanes + '</div>' +
+        '<div class="dd-st__floor"></div>' +
+        '<div class="dd-st__over" id="ddStOver"></div>' +
+      '</div>';
+  }
+  function stBeamBtns() {
+    if (!isTeacher || !st.v) return '';
+    const ph = st.v.phase;
+    return (ph === 'running' || ph === 'countdown' ? '<button type="button" class="btn btn--sm" data-act="st-stop">Beenden</button>' : '') +
+      (ph === 'ended' ? '<button type="button" class="btn btn--primary btn--sm" data-act="st-reset">' + ico.again + 'Nochmal</button>' : '') +
+      (fsOk() ? '<button type="button" class="btn btn--sm dd-ic dd-fsbtn" data-act="mm-fs" title="Vollbild" aria-label="Vollbild">' + (fsEl() ? ico.unfull : ico.full) + '</button>' : '');
+  }
+  /* Kistengröße so, dass das Ziel genau unter die Ziellinie passt. */
+  function stLayout() {
+    const sc = root && root.querySelector('#ddStScene');
+    if (!sc || !st || !st.v) return;
+    const lanes = sc.querySelector('.dd-st__lanes');
+    const h = lanes.clientHeight, w = lanes.clientWidth / st.v.team_count;
+    const bh = Math.max(3, Math.min(42, (h - 46) / st.v.goal));
+    sc.style.setProperty('--bh', bh.toFixed(2) + 'px');
+    sc.style.setProperty('--bw', Math.round(Math.min(130, w * 0.46, bh * 3.4 + 40)) + 'px');
+    sc.style.setProperty('--fw', Math.round(Math.max(56, Math.min(130, w * 0.46, h * 0.28))) + 'px');
+    sc.classList.toggle('is-thin', bh < 12);
+    const gl = sc.querySelector('#ddStGoalLine');
+    if (gl) gl.style.bottom = 'calc(var(--floor) + ' + (st.v.goal * bh).toFixed(1) + 'px)';
+    for (let i = 0; i < st.v.team_count; i++) stPaintHeight(i);
+  }
+
+  /* ══ Spielfeld (Tablet) ══ */
+  function stSceneDev() {
+    const v = st.v, me = stMyTeam();
+    let rows = '';
+    for (let i = 0; i < v.team_count; i++) {
+      rows += '<div class="dd-st__rr' + (i === me ? ' is-me' : '') + '" style="' + stCol(i) + '">' +
+        '<span class="dd-st__rfig" id="ddStF' + i + '">' + figSVG(i, 'idle', i === me ? 54 : 38) + '</span>' +
+        '<span class="dd-st__rn">' + E(stFig(i).name) + (i === me ? ' <em>ihr</em>' : '') + '</span>' +
+        '<span class="dd-st__rbar"><i id="ddStB' + i + '"></i></span>' +
+        '<b class="dd-st__rh" id="ddStH' + i + '">0</b>' +
+        '<span class="dd-st__pops" id="ddStP' + i + '"></span></div>';
+    }
+    return '<div class="dd-st__hud" id="ddStHud">' +
+        '<div class="dd-st__hudtop"><b>Ziel: ' + v.goal + ' Kisten</b><span class="dd-st__clock" id="ddStClock" hidden></span></div>' +
+        '<div class="dd-st__race">' + rows + '</div>' +
+        '<p class="dd-st__lvl" id="ddStLvl"></p>' +
+      '</div>' +
+      '<div class="dd-task dd-task--inline" id="ddTask" hidden></div>' +
+      '<div class="dd-st__note" id="ddStNote" hidden></div>' +
+      '<div class="dd-st__over" id="ddStOver"></div>';
+  }
+
+  /* ─── Türme nachziehen: Kiste für Kiste, je Team ein eigener Takt ─── */
+  function stTarget(i) { const t = ((st.v && st.v.teams) || []).find(x => x.t === i); return t ? t.h : 0; }
+  function stSync(instant) {
+    if (!st.v) return;
+    for (let i = 0; i < st.v.team_count; i++) {
+      const goal = stTarget(i);
+      if (instant || st.shown[i] == null || goal < st.shown[i]) {
+        st.shown[i] = goal;
+        stRebuildTower(i);
+        stPaintHeight(i);
+        continue;
+      }
+      if (goal > st.shown[i] && !st.anim[i]) stStep(i);
+    }
+  }
+  function stStep(i) {
+    st.anim[i] = null;
+    if (!st || !st.v) return;
+    const goal = stTarget(i);
+    if (st.shown[i] >= goal) return;
+    // Weit zurück (Gerät war weg): bis auf drei Kisten springen, den Rest zeigen.
+    if (goal - st.shown[i] > 6) { st.shown[i] = goal - 3; stRebuildTower(i); }
+    st.shown[i]++;
+    stAddBox(i);
+    stPaintHeight(i);
+    stLift(i);
+    st.anim[i] = setTimeout(() => stStep(i), ST_STEP_MS);
+  }
+  function stRebuildTower(i) {
+    const tw = root.querySelector('#ddStT' + i);
+    if (!tw) return;
+    tw.innerHTML = '<i class="dd-st__box"></i>'.repeat(Math.min(st.shown[i] || 0, 200));
+  }
+  function stAddBox(i) {
+    const tw = root.querySelector('#ddStT' + i);
+    if (!tw) return;
+    const b = document.createElement('i');
+    b.className = 'dd-st__box is-new';
+    tw.prepend(b);              // column-reverse: das erste Kind ist ganz unten
+    setTimeout(() => b.classList.remove('is-new'), 700);
+  }
+  function stPaintHeight(i) {
+    const h = st.shown[i] || 0, v = st.v;
+    const lab = root.querySelector('#ddStH' + i);
+    if (lab) {
+      lab.textContent = h;
+      if (isTeacher) lab.style.bottom = 'calc(' + h + ' * var(--bh) + 8px)';
+    }
+    const bar = root.querySelector('#ddStB' + i);
+    if (bar) bar.style.width = Math.min(100, h / v.goal * 100).toFixed(1) + '%';
+    const pops = root.querySelector('#ddStP' + i);
+    if (pops && isTeacher) pops.style.bottom = 'calc(' + h + ' * var(--bh) + 44px)';
+  }
+  function stLift(i) {
+    const f = root.querySelector('#ddStF' + i);
+    if (!f || st.lifting[i] || (st.v && st.v.phase === 'ended')) return;
+    st.lifting[i] = true;
+    const px = isTeacher ? 120 : (i === stMyTeam() ? 54 : 38);
+    f.innerHTML = figSVG(i, 'lift', px);
+    setTimeout(() => {
+      if (!st) return;
+      st.lifting[i] = false;
+      if (f.isConnected && st.v && st.v.phase !== 'ended') f.innerHTML = figSVG(i, 'idle', px);
+    }, 920);
+  }
+  /* Ereignisse: Name über dem Turm, Sieg. */
+  function stEvent(e) {
+    if (e.k === 'box' && e.t != null) {
+      if (!isTeacher && e.t !== stMyTeam()) return;     // am Tablet nur das eigene Team
+      const pops = root.querySelector('#ddStP' + e.t);
+      if (!pops) return;
+      const p = document.createElement('span');
+      p.className = 'dd-st__pop';
+      p.textContent = isTeacher ? (e.w || '') + ' +1' : '+1' + (e.w ? ' ' + e.w : '');
+      pops.appendChild(p);
+      setTimeout(() => p.remove(), 1700);
+      if (pops.children.length > (isTeacher ? 4 : 2)) pops.firstChild.remove();
+    }
+  }
+
+  /* ─── Countdown, Uhr, Sieg (über dem Spielfeld) ─── */
+  function stTick() {
+    if (!st || !st.v || !root) return;
+    const v = st.v;
+    const clock = root.querySelector('#ddStClock');
+    if (clock) {
+      const show = v.phase === 'running' && v.ends_at;
+      clock.hidden = !show;
+      if (show) {
+        const s = Math.max(0, Math.ceil((Date.parse(v.ends_at) - stNow()) / 1000));
+        clock.textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+        clock.classList.toggle('is-low', s <= 30);
+      }
+    }
+    if (v.phase === 'countdown') {
+      const s = Math.ceil((Date.parse(v.countdown_ends_at) - stNow()) / 1000);
+      const over = root.querySelector('#ddStOver');
+      const txt = s > 3 ? 'Bereit?' : s > 0 ? String(s) : 'Los!';
+      if (over && over.dataset.cd !== txt) {
+        over.dataset.cd = txt;
+        over.innerHTML = '<span class="dd-st__cd' + (s > 0 && s <= 3 ? ' is-num' : '') + '">' + txt + '</span>';
+      }
+      if (s <= 0 && !st.busy && Date.now() - (st.lastKick || 0) > 400) { st.lastKick = Date.now(); stPoll(); }
+    }
+  }
+  function stRank() {
+    const v = st.v;
+    return Array.from({ length: v.team_count }, (_, i) => ({ t: i, h: stTarget(i) }))
+      .sort((a, b) => (a.t === v.winner_team ? -1 : b.t === v.winner_team ? 1 : b.h - a.h || a.t - b.t));
+  }
+  function stPaintOver() {
+    const over = root.querySelector('#ddStOver'), v = st.v;
+    if (!over) return;
+    if (v.phase === 'countdown') return;      // stTick zeichnet
+    if (v.phase === 'running') { if (over.innerHTML) { over.innerHTML = ''; over.dataset.cd = ''; } return; }
+    if (v.phase !== 'ended' || over.dataset.cd === 'end' + v.run) return;
+    over.dataset.cd = 'end' + v.run;
+    // Beamer: Sieger jubelt, die anderen sind traurig.
+    for (let i = 0; i < v.team_count; i++) {
+      const f = root.querySelector('#ddStF' + i);
+      if (f) f.innerHTML = figSVG(i, v.winner_team == null ? 'idle' : i === v.winner_team ? 'cheer' : 'sad', 120);
+    }
+    over.innerHTML = stWinHTML(160);
+  }
+  function stWinHTML(px) {
+    const v = st.v, w = v.winner_team;
+    const rank = stRank();
+    return '<div class="dd-st__win"' + (w != null ? ' style="' + stCol(w) + '"' : '') + '>' +
+      (w != null ? '<span class="dd-st__winfig">' + figSVG(w, 'cheer', px) + '</span>' +
+        '<span class="dd-memwin__stamp">Gewonnen</span><h2>' + E(stTeam(w)) + '</h2>' +
+        '<p>' + (stTarget(w) >= v.goal ? 'Als Erstes ganz oben – ' + v.goal + ' Kisten!' : 'Der höchste Turm, als die Zeit um war.') + '</p>'
+        : '<span class="dd-memwin__stamp">Vorbei</span><h2>Noch keine Kiste</h2><p>Diesmal hat kein Team eine Kiste gestapelt.</p>') +
+      '<ol class="dd-st__rank">' + rank.map((r, k) => '<li style="' + stCol(r.t) + '"><span>' + (k + 1) + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + r.h + ' Kisten</i></li>').join('') + '</ol>' +
+      (isTeacher ? '<div class="dd-memwin__act"><button type="button" class="btn btn--primary" data-act="st-reset">' + ico.again + 'Nochmal</button></div>' : '') +
+    '</div>';
+  }
+
+  /* ══ Ende (Tablet) ══ */
+  function stEndDev() {
+    const v = st.v, me = stMyTeam();
+    const won = me != null && me === v.winner_team;
+    return '<div class="dd-st__card dd-st__end"' + (me != null ? ' style="' + stCol(me) + '"' : '') + '>' +
+      (me != null ? '<span class="dd-st__bigfig">' + figSVG(me, won ? 'cheer' : 'sad', 150) + '</span>' +
+        '<h3 class="dd-st__h3">' + (won ? 'Gewonnen!' : v.winner_team != null ? E(stTeam(v.winner_team)) + ' gewinnt' : 'Vorbei') + '</h3>' +
+        '<p class="dd-st__say">' + (won ? 'Euer Turm ist ' + stTarget(me) + ' Kisten hoch. Stark!' : 'Euer Turm: ' + stTarget(me) + ' Kisten. Nächstes Mal!') + '</p>'
+        : '<h3 class="dd-st__h3">Vorbei</h3>') +
+      '<ol class="dd-st__rank">' + stRank().map((r, k) => '<li style="' + stCol(r.t) + '"' + (r.t === me ? ' class="is-me"' : '') + '><span>' + (k + 1) + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + r.h + ' Kisten</i></li>').join('') + '</ol>' +
+      (v.me && v.me.c ? '<p class="dd-st__hint">Du hast ' + v.me.c + (v.me.c === 1 ? ' Kiste' : ' Kisten') + ' beigetragen.</p>' : '') +
+      '<p class="dd-st__hint">Gleich kann es weitergehen – deine Lehrkraft startet die nächste Runde.</p></div>';
+  }
+
+  /* ══ Aufgaben (Tablet) ══ */
+  /* Stufe nach der Höhe des eigenen Turms: 0 Begriff wählen … 4 Lückentext. */
+  function stLevel() {
+    const me = stMyTeam(), v = st.v;
+    if (me == null || !v) return 0;
+    return Math.max(0, Math.min(4, Math.floor(stTarget(me) / v.goal * 5)));
+  }
+  function stPaintLevel() {
+    const el = root.querySelector('#ddStLvl');
+    if (!el) return;
+    const e = stLevel();
+    el.innerHTML = 'Aufgaben: <b>' + ST_LEVEL[e] + '</b>' + '<span class="dd-st__dots">' + ST_LEVEL.map((_, k) => '<i' + (k <= e ? ' class="is-on"' : '') + '></i>').join('') + '</span>' +
+      '<small>' + (e < 4 ? 'je höher euer Turm, desto schwerer' : 'ganz oben: die schwersten Aufgaben') + '</small>';
+  }
+  async function stLoadCards() {
+    const ids = (st.v.stacks || []).filter(id => (list || []).some(s => s.id === id));
+    const key = JSON.stringify(ids);
+    if (st.cardsKey === key) return st.cards;
+    st.cardsKey = key; st.cards = null;
+    const got = await Promise.all(ids.map(getStack));
+    if (!st || st.cardsKey !== key) return null;
+    const cards = [];
+    for (const s of got.filter(Boolean)) for (const c of s.cards) cards.push({ id: s.id + ':' + c.id, sid: s.id, t: c.t, d: c.d, i: c.i });
+    st.cards = cards;
+    opened.stacks = got.filter(Boolean);
+    opened.cards = cards;
+    return cards;
+  }
+  async function stMaybeTask() {
+    const note = root.querySelector('#ddStNote');
+    const v = st.v;
+    if (!v || v.phase !== 'running') { if (note && v && v.phase === 'countdown') { note.hidden = false; note.textContent = 'Gleich geht’s los …'; } stLoadCards(); return; }
+    if (stMyTeam() == null) { if (note) { note.hidden = false; note.textContent = 'Du kommst gleich in ein Team …'; } return; }
+    if (st.task) return;
+    const me = st;
+    const cards = await stLoadCards();
+    if (st !== me || st.task || !root) return;
+    if (!cards || cards.length < 2) {
+      if (note) { note.hidden = false; note.textContent = cards ? 'Für Kistensturm braucht es mehr Karten.' : 'Die Karten werden geladen …'; }
+      return;
+    }
+    if (note) note.hidden = true;
+    stNewTask();
+  }
+  function stNewTask() {
+    const I = window.DDInsel, cards = st.cards;
+    if (st.oi >= st.order.length) { st.order = I.roundCards(cards, []); st.oi = 0; }
+    const card = st.order[st.oi];
+    const t = I.makeTask(card, cards, stLevel());
+    t.seq = []; t.done = false;
+    st.task = t;
+    paintTask();
+  }
+  function stTaskHead(t) {
+    return '<div class="dd-st__thead">' + (multi() ? '<small>' + E(stackTitle(t.card.sid)) + '</small>' : '') + '</div>';
+  }
+  async function stResult(ok, extra) {
+    const t = st.task, I = window.DDInsel, me = st;
+    t.done = true;
+    if (!ok) I.requeue(st.order, st.oi, t.card);
+    const fb = root.querySelector('#ddFb');
+    root.querySelectorAll('.dd-task__act .btn').forEach(b => { b.disabled = true; });
+    const myT = stMyTeam();
+    if (fb) {
+      fb.className = 'dd-task__fb ' + (ok ? 'is-ok' : 'is-no');
+      fb.innerHTML = ok
+        ? '<p><span class="dd-st__flybox" style="' + (myT != null ? stCol(myT) : '') + '"></span><b>Richtig!</b> Eine Kiste für ' + E(myT != null ? stTeam(myT) : 'dein Team') + '.</p>'
+        : '<p>Nicht ganz.</p>' + (extra ? '<p class="dd-task__sol">' + extra + '</p>' : '') +
+          '<button type="button" class="btn btn--primary dd-st__nx" data-act="isl-next" id="ddNext" disabled><i class="dd-st__lock"></i>Weiter</button>';
+    }
+    st.lockUntil = ok ? 0 : Date.now() + ST_LOCK_MS;
+    if (!ok) setTimeout(() => { const b = root && root.querySelector('#ddNext'); if (b) { b.disabled = false; b.focus({ preventScroll: true }); } }, ST_LOCK_MS);
+    const r = await ctx.actions.call('dd_storm_answer', { p_ok: ok, p_since: me.seq });
+    if (st !== me) return;
+    if (r && r.ok) {
+      stApply(r);
+      if (ok && r.result === 'too_fast' && fb) fb.innerHTML = '<p><b>Richtig!</b></p>';
+    }
+    if (ok && st === me && st.layout === 'game') me.nextT = setTimeout(stNext, ST_NEXT_MS);
+  }
+  function stNext() {
+    if (!st || !st.task || !st.task.done || Date.now() < st.lockUntil) return;
+    clearTimeout(st.nextT);
+    st.task = null;
+    st.oi++;
+    if (st.v && st.v.phase === 'running') stNewTask();
+  }
+
+  /* ─── Knopf „Mitmachen“ für die Klasse, solange die Lehrkraft Kistensturm offen hat ─── */
+  function stBanner() {
+    const el = root && root.querySelector('.dd-stbanner');
+    if (!el) return;
+    const show = !isTeacher && !demo && stLive() && !(screen === 'play' && opened && opened.game === 'storm');
+    el.hidden = !show;
+    if (show && !el.innerHTML) el.innerHTML = '<span class="dd-stbanner__box" aria-hidden="true"></span><b>Kistensturm!</b><span>Deine Lehrkraft hat ein Teamspiel geöffnet.</span>' +
+      '<button type="button" class="btn btn--primary btn--sm" data-act="game" data-g="storm">' + ico.play + 'Mitmachen</button>';
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -3825,7 +4510,7 @@
         case 'reload': loadList(); break;
         case 'home': go('home'); pullSums(); break;
         case 'open': openStack(sid); break;
-        case 'game': startGame(gid); break;
+        case 'game': startGame(gid || b.dataset.g); break;
         case 'ginfo': openInfo(gid); break;
         case 'gshare': toggleGame(gid); break;
         case 'info-x': closeInfo(); break;
@@ -3874,8 +4559,18 @@
         case 'isl-tile': islTile(b.dataset.k); break;
         case 'isl-check': islCheck(); break;
         case 'isl-skip': islGiveUp(); break;
-        case 'isl-next': islNext(); break;
+        case 'isl-next': if (st && st.task) stNext(); else islNext(); break;
         case 'isl-close': islCloseTask(); break;
+        case 'st-retry': renderStorm(); break;
+        case 'st-teams': if (st && st.v) stSetup({ p_team_count: Number(b.dataset.v) }); break;
+        case 'st-min': if (st && st.v) stSetup({ p_minutes: Number(b.dataset.v) }); break;
+        case 'st-goal': stGoal(Number(b.dataset.v)); break;
+        case 'st-stack': if (st && st.v) stToggleStack(b.dataset.id); break;
+        case 'st-start': stStart(); break;
+        case 'st-stop':
+          if (st && await ctx.confirm('Kistensturm jetzt beenden? Der höchste Turm gewinnt.')) { await stCall('dd_storm_room_stop'); if (st) stPoll(); }
+          break;
+        case 'st-reset': if (st) { await stCall('dd_storm_room_reset'); if (st) stPoll(); } break;
         case 'ed-save': saveEdit(); break;
         case 'ed-cancel': cancelEdit(); break;
         case 'ed-del': deleteStack(); break;
@@ -3940,6 +4635,7 @@
         const goal = t.dataset.du === 'goal' ? Number(t.value) : du.goal, size = t.dataset.du === 'size' ? Number(t.value) : du.size;
         newDuel(goal, size); renderDuel(); return;
       }
+      if (t.id === 'ddStGoal' && st) { stGoal(0, Number(t.value)); return; }
       if (t.dataset.f === 'fach') { homeFilter.fach = t.value; renderHome(); return; }
       if (t.dataset.ec === 'img' && ed && t.files && t.files[0]) {
         const i = Number(t.closest('.dd-cardin').dataset.i);
@@ -3975,7 +4671,7 @@
         if (d) d.focus();
         return;
       }
-      if (screen === 'play' && opened && opened.game === 'island') { islKey(ev, tag); return; }
+      if (screen === 'play' && opened && (opened.game === 'island' || opened.game === 'storm')) { islKey(ev, tag); return; }
       if (screen !== 'play' || !opened || opened.game !== 'cards' || !learn) return;
       if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
       if (ev.key === ' ' || ev.key === 'Enter') {
@@ -3987,7 +4683,7 @@
     };
 
     // Memory: bei neuer Größe (Drehen, Vollbild) nur die Spalten neu wählen.
-    onResize = () => { if (screen === 'play' && mm) layoutBoards(); if (screen === 'play' && isl) islResize(); if (screen === 'play' && du) duLayout(); };
+    onResize = () => { if (screen === 'play' && mm) layoutBoards(); if (screen === 'play' && isl) islResize(); if (screen === 'play' && du) duLayout(); if (screen === 'play' && st) stLayout(); };
     onFs = () => {
       const b = root && root.querySelector('.dd-fsbtn');
       if (b) b.innerHTML = fsEl() ? ico.unfull : ico.full;
@@ -4033,7 +4729,7 @@
       info = null;
       homeFilter = { q: '', fach: '' };
       lastSharedKey = '';
-      root.innerHTML = '<div class="dd"><div class="dd-main"></div><div class="dd-layer"></div></div>';
+      root.innerHTML = '<div class="dd"><div class="dd-stbanner" hidden></div><div class="dd-main"></div><div class="dd-layer"></div></div>';
       bind();
       // Die Klasse bekommt ihre Liste aus dem Raumzustand (update); erst die Lehrkraft fragt den Server.
       if (isTeacher) loadList(); else renderHome();
@@ -4043,8 +4739,9 @@
     update(v) {
       view = v;
       if (!root) return;
-      const key = JSON.stringify([roomData().shared || [], roomData().games || null, roomData().isl]);
+      const key = JSON.stringify([roomData().shared || [], roomData().games || null, roomData().isl, roomData().storm || null]);
       if (key === lastSharedKey) return;
+      stBanner();
       lastSharedKey = key;
       // Die Lehrkraft hat eine andere Insel gewählt: neu bauen (nicht mitten in einer Aufgabe).
       if (screen === 'play' && opened && opened.game === 'island' && isl && isl.wc && !isl.round && isl.tpl !== islTpl()) renderIsland();
@@ -4070,6 +4767,7 @@
       if (pushTimer) pushProg();          // letzter Stand noch zum Konto, bevor alles abgeräumt wird
       islStop();
       duStop();
+      stStop();
       if (fsEl()) { try { (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { /* egal */ } }
       onKey = onClick = onInput = onChange = onResize = onFs = null;
       root = null; ctx = null; view = null; opened = null; ed = null; learn = null; ov = null; mm = null; du = null; list = null; cache = {};

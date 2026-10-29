@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kistensturm – Figuren</title>
+<link rel="stylesheet" href="../KnowledgeStack/creatures.css"><link rel="stylesheet" href="figuren.css">
+<style>
+body{margin:0;padding:16px;background:#e9dcc3;font-family:system-ui,sans-serif;color:#2a2230}
+h1{font-size:20px;margin:0 0 4px} p{margin:0 0 12px}
+.row{display:flex;flex-wrap:wrap;gap:12px}
+.f{background:#fffaf0;border-radius:12px;padding:8px;width:200px;box-shadow:0 2px 6px #0002}
+.f b{display:block} .f small{display:block;min-height:3.6em;font-size:12px;opacity:.75}
+.f .pic{width:140px;height:140px;margin:0 auto} .bar{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+button{font:inherit;font-size:12px;padding:3px 7px}
+</style></head><body>
+<h1>Kistensturm – die sechs Teamfiguren</h1><p>Knöpfe: Heben · Jubeln · Traurig · Ruhe. Alle zusammen: <button id=all>alle heben</button></p>
+<div class=row id=row></div>
+<script src="../KnowledgeStack/creatures.js"></script><script src="figuren.js"></script>
+<script>
+const F=DDFiguren,row=document.getElementById('row');
+row.innerHTML=F.LIST.map((d,i)=>'<div class=f><div class=pic data-i='+i+'>'+F.svg(i,'idle',140)+'</div><b style="color:'+d.col+'">Team '+d.name+'</b><small>'+d.say+'</small><div class=bar>'+['lift','cheer','sad','idle'].map(a=>'<button data-i='+i+' data-a='+a+'>'+a+'</button>').join('')+'</div></div>').join('');
+const set=(i,a)=>{const p=row.querySelector('.pic[data-i="'+i+'"]');p.innerHTML=F.svg(i,a,140);if(a==='lift')setTimeout(()=>{p.innerHTML=F.svg(i,'idle',140)},950)};
+row.onclick=e=>{const b=e.target.closest('button');if(b)set(+b.dataset.i,b.dataset.a)};
+document.getElementById('all').onclick=()=>F.LIST.forEach((_,i)=>set(i,'lift'));
+const q=new URLSearchParams(location.search).get('a'); if(q) F.LIST.forEach((_,i)=>{const p=row.querySelector('.pic[data-i="'+i+'"]');p.innerHTML=F.svg(i,q,140)});
+</script></body></html>
