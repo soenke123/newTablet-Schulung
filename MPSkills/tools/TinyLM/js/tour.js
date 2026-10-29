@@ -5,7 +5,7 @@
    damit Tour und ? dieselbe Sprache sprechen.
 
    Jede Phase hat ihre eigene Tour. Sie startet von selbst, wenn man die Phase zum ersten Mal öffnet.
-   Die Schritte zur Kopfzeile (Phasen, Textwelten, Freigaben, ?) kommen nur in der ersten Tour.
+   Die Schritte zur Kopfzeile (Phasen, Textwelten, Teilen, ?) kommen nur in der ersten Tour.
    Jeder Schritt hat eine id; gesehene ids werden gemerkt, „Überspringen“ zählt wie gesehen.
    Das ? oben rechts zeigt die Tour der aktuellen Phase noch einmal ganz.
 
@@ -35,6 +35,9 @@ const Tour = (() => {
 
   /* Knopf-Nachbau im Text */
   const k = t => '<span class="tour-k">' + t + '</span>';
+  const SHARE_ICO = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" style="vertical-align:-2px;fill:currentColor;stroke:currentColor;stroke-width:1.8;stroke-linecap:round"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg>';
+  const SHARE = SHARE_ICO;
+  const SHARE_ON = '<span style="color:var(--accent)">' + SHARE_ICO + '</span>';
   const P = n => '.phase-pane[data-phase="' + n + '"] ';
   const q = sel => () => document.querySelector(sel);
   const qs = (...sels) => () => sels.map(s => document.querySelector(s)).filter(Boolean);
@@ -51,7 +54,7 @@ const Tour = (() => {
         items: [[k('1'), 'Frei schreiben: zählt, welches Wort wie oft folgt'],
           [k('2'), 'Frage & Antwort: sucht erst passende Texte'],
           [k('3'), 'Echtes Netz: lernt Zahlen statt Texte']]
-          .concat(role().STUDENT ? [[k('🔒'), 'gibt deine Lehrkraft noch frei']] : []) },
+          .concat(role().STUDENT ? [[k('fehlt eine?'), 'die teilt deine Lehrkraft noch']] : []) },
       { id: 'k-texte', target: q('.corpus-btn'), place: ['bottom', 'left'],
         title: 'Textwelten',
         lead: 'Das Futter der KI. Sie kennt nur diese Texte – sonst nichts.',
@@ -60,11 +63,11 @@ const Tour = (() => {
           [k('Eigene'), 'eigenen Text dazuschreiben']] }
     ];
     if (role().TEACHER) st.push(
-      { id: 'k-freigaben', target: q('.lock-btn'), place: ['bottom', 'left'],
-        title: 'Freigaben',
-        lead: 'Welche Phasen die Tablets der Klasse öffnen dürfen.',
-        items: [[k('Haken'), 'Phase für die Klasse frei'],
-          [k('🔒'), 'am Reiter: für die Klasse noch zu'],
+      { id: 'k-teilen', target: () => [...document.querySelectorAll('.phase-share')], place: ['bottom'],
+        title: 'Mit der Klasse teilen',
+        lead: 'Die Tablets der Klasse sehen nur die Phasen, die du teilst.',
+        items: [[k(SHARE), 'neben dem Reiter: teilen, nochmal antippen: entziehen'],
+          [k(SHARE_ON), 'gefüllt = die Klasse sieht diese Phase'],
           [k('du'), 'siehst immer alle drei']] });
     return st;
   }

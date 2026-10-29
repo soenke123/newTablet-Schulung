@@ -46,7 +46,7 @@
     if (!await api.wait(1800)) return;
 
     // Phase 2: eine Frage stellen.
-    api.click('.phase-btn:nth-child(2)');
+    api.click('.phase-btn[data-n="2"]');
     if (!await api.waitFor(P(2) + '.qform input', 5000)) return;
     api.caption('Phase 2 · Frage & Antwort aus den eigenen Texten');
     if (!await api.wait(900)) return;
@@ -56,7 +56,7 @@
     if (!await api.wait(7500)) return;
 
     // Phase 3: ein echtes Netz trainieren, dann vorhersagen lassen.
-    api.click('.phase-btn:nth-child(3)');
+    api.click('.phase-btn[data-n="3"]');
     if (!await api.waitFor(P(3) + '[data-spot="train"]', 8000)) return;
     api.caption('Phase 3 · Ein echtes kleines Netz lernt');
     if (!await api.wait(1200)) return;
@@ -75,7 +75,7 @@
     api.click(P(3) + '[data-spot="gen"] ~ .btn:last-child');      // ↺ Von vorn
     api.click(P(3) + '[data-spot="train"] ~ .btn');                // ↺ Netz zurücksetzen
     api.click(P(1) + '[data-spot="play"] ~ .btn:last-child');      // ↺ Neu starten
-    api.click('.phase-btn:nth-child(1)');
+    api.click('.phase-btn[data-n="1"]');
     await api.wait(1000);
   }
 

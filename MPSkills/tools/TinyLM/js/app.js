@@ -1,12 +1,13 @@
-/* App-Shell: klebende Kopfzeile (Marke, Phasen-Reiter, Freigaben, Textwelten-Knopf, ? = Tour),
+/* App-Shell: klebende Kopfzeile (Marke, Phasen-Reiter mit Teilen-Symbol, Textwelten-Knopf, ? = Tour),
    Drawer-Rendering, Phasen-Hosting.
 
    Im MPSkills-Raum bekommt die Seite ?raum=lehrer bzw. ?raum=schueler (tool.js ist die Gegenseite):
      hinein   { type: 'tl:cmd', phases: [1, 2] }   welche Phasen die Klasse benutzen darf
      heraus   { type: 'tl:ready' }                 Seite steht
-              { type: 'tl:phases', phases: [...] } Lehrkraft hat die Freigaben geändert
-   Die Lehrkraft sieht immer alle Phasen und schaltet sie für die Klasse frei; Schüler sehen gesperrte
-   Phasen mit Schloss. Allein geöffnet (ohne ?raum=) und im Schaufenster ist alles offen. */
+              { type: 'tl:phases', phases: [...] } Lehrkraft hat geteilt/entzogen
+   Die Lehrkraft sieht immer alle Phasen und teilt sie wie in den anderen Skills mit dem Teilen-Symbol
+   direkt neben dem Reiter; die Klasse sieht nur geteilte Phasen. Allein geöffnet (ohne ?raum=) und im
+   Schaufenster ist alles offen. */
 const $ = id => document.getElementById(id);
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -58,7 +59,9 @@ const App = (() => {
   /* Für die Klasse freigegebene Phasen. Schüler warten auf die erste Nachricht aus tool.js
      (bis dahin null = noch nicht bekannt). */
   let classPhases = ROOM ? null : [1, 2, 3];
-  let lockBtn = null, lockPop = null, waitEl = null, brandSub = null;
+  let waitEl = null, brandSub = null;
+  /* Teilen-Symbol wie in den anderen Skills (Definitions Derby, Balance of Nature). */
+  const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg>';
   const panes = {};      /* n -> { el, api } */
   let active = 1;
   let tabs = {};
@@ -91,20 +94,21 @@ const App = (() => {
     [1, 2, 3].forEach(n => {
       const t = tabs[n];
       if (!t) return;
-      const locked = !usable(n);
       t.btn.classList.toggle('active', n === active);
-      t.btn.classList.toggle('locked', locked);
-      t.btn.disabled = locked;
       t.btn.setAttribute('aria-selected', n === active ? 'true' : 'false');
-      /* Schloss: Schüler = gesperrt, Lehrkraft = noch nicht für die Klasse frei. */
-      const showLock = ROOM && !isOpenForClass(n) && classPhases;
-      t.lock.hidden = !showLock;
-      t.btn.title = !showLock ? '' : (TEACHER ? 'Für die Klasse noch gesperrt' : 'Deine Lehrkraft hat diese Phase noch nicht freigegeben');
+      /* Klasse: nicht geteilte Phasen gibt es für sie nicht (wie in den anderen Skills). */
+      t.btn.hidden = !usable(n);
+      if (t.share) {
+        const on = isOpenForClass(n);
+        t.share.classList.toggle('is-on', on);
+        t.share.setAttribute('aria-pressed', on ? 'true' : 'false');
+        t.share.title = on ? 'Phase ' + n + ' ist mit der Klasse geteilt – antippen zum Entziehen' : 'Phase ' + n + ' mit der Klasse teilen';
+        t.share.setAttribute('aria-label', t.share.title);
+      }
     });
-    if (lockBtn) lockBtn.querySelector('.count').textContent = (classPhases || []).length + '/3';
   }
 
-  /* ---- Freigaben (nur Lehrkraft im Raum) ---- */
+  /* ---- Teilen (nur Lehrkraft im Raum): das Teilen-Symbol neben jedem Reiter ---- */
   function sendUp(msg) {
     if (window.parent === window) return;
     try { window.parent.postMessage(msg, location.origin); } catch (e) { /* Rahmen weg */ }
@@ -113,7 +117,6 @@ const App = (() => {
     classPhases = [1, 2, 3].filter(n => list.includes(n));
     if (!fromServer) sendUp({ type: 'tl:phases', phases: classPhases });
     updateTabs();
-    if (lockPop) paintLockPop();
     if (STUDENT) {
       if (!classPhases.length) { showWait(true); return; }
       showWait(false);
@@ -123,57 +126,6 @@ const App = (() => {
       }
     }
   }
-  function paintLockPop() {
-    lockPop.replaceChildren();
-    lockPop.appendChild(el('b', 'lock-title', 'Für die Klasse freigeben'));
-    [1, 2, 3].forEach(n => {
-      const row = el('label', 'lock-row');
-      const cb = el('input');
-      cb.type = 'checkbox';
-      cb.checked = isOpenForClass(n);
-      cb.addEventListener('change', () => {
-        const next = (classPhases || []).filter(x => x !== n);
-        if (cb.checked) next.push(n);
-        setClassPhases(next, false);
-      });
-      const lab = el('span', 'lock-lab');
-      lab.append(el('span', 'n', String(n)), el('span', null, PHASE_META[n].label));
-      row.append(lab, cb);
-      lockPop.appendChild(row);
-    });
-    lockPop.appendChild(el('p', 'lock-note', 'Du selbst siehst immer alle Phasen.'));
-  }
-  function toggleLockPop() {
-    if (lockPop) { closeLockPop(); return; }
-    lockPop = el('div', 'lock-pop');
-    lockPop.setAttribute('role', 'dialog');
-    lockPop.setAttribute('aria-label', 'Phasen freigeben');
-    paintLockPop();
-    document.body.appendChild(lockPop);
-    /* Fest unter dem Knopf, aber nie über den Rand (auf dem Handy steht der Knopf links). */
-    const r = lockBtn.getBoundingClientRect(), w = lockPop.offsetWidth;
-    lockPop.style.left = Math.max(8, Math.min(window.innerWidth - w - 8, r.right - w)) + 'px';
-    lockPop.style.top = (r.bottom + 8) + 'px';
-    lockBtn.setAttribute('aria-expanded', 'true');
-    setTimeout(() => {
-      document.addEventListener('pointerdown', onLockDoc, true);
-      window.addEventListener('resize', closeLockPop);
-      window.addEventListener('scroll', closeLockPop, { passive: true });
-    }, 0);
-  }
-  function closeLockPop() {
-    if (!lockPop) return;
-    lockPop.remove();
-    lockPop = null;
-    lockBtn.setAttribute('aria-expanded', 'false');
-    document.removeEventListener('pointerdown', onLockDoc, true);
-    window.removeEventListener('resize', closeLockPop);
-    window.removeEventListener('scroll', closeLockPop);
-  }
-  function onLockDoc(e) {
-    if (lockPop && !lockPop.contains(e.target) && !lockBtn.contains(e.target)) closeLockPop();
-  }
-
   /* Schüler: noch keine Phase frei (oder alle wieder gesperrt). */
   function showWait(on) {
     if (on) {
@@ -219,26 +171,28 @@ const App = (() => {
       b.setAttribute('role', 'tab');
       const lab = el('span', 'phase-lab');
       lab.append(el('span', 'phase-kicker', 'Phase ' + n), el('span', 'phase-name', PHASE_META[n].label));
-      const lock = el('span', 'phase-lock', '🔒');
-      lock.hidden = true;
-      lock.setAttribute('aria-label', 'gesperrt');
-      b.append(el('span', 'n', String(n)), lab, lock);
+      b.dataset.n = String(n);
+      b.append(el('span', 'n', String(n)), lab);
       b.addEventListener('click', () => { if (usable(n)) goPhase(n); });
       phasesNav.appendChild(b);
-      tabs[n] = { btn: b, lock };
+      let share = null;
+      if (TEACHER) {
+        share = el('button', 'phase-share');
+        share.type = 'button';
+        share.dataset.n = String(n);
+        share.innerHTML = SHARE_SVG;
+        share.addEventListener('click', () => {
+          const next = (classPhases || []).filter(x => x !== n);
+          if (!isOpenForClass(n)) next.push(n);
+          setClassPhases(next, false);
+        });
+        phasesNav.appendChild(share);
+      }
+      tabs[n] = { btn: b, share };
     });
     topbar.appendChild(phasesNav);
 
     const tools = el('div', 'top-tools');
-    if (TEACHER) {
-      lockBtn = el('button', 'btn lock-btn');
-      lockBtn.type = 'button';
-      lockBtn.setAttribute('aria-haspopup', 'dialog');
-      lockBtn.setAttribute('aria-expanded', 'false');
-      lockBtn.append(el('span', 'corpus-ico', '🔓'), el('span', 'corpus-lab', 'Freigaben'), el('span', 'count', '–'));
-      lockBtn.addEventListener('click', toggleLockPop);
-      tools.appendChild(lockBtn);
-    }
 
     const corpusBtn = el('button', 'btn corpus-btn');
     corpusBtn.type = 'button';
