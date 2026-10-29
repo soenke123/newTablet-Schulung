@@ -15,6 +15,24 @@ function el(tag, cls, text) {
   return e;
 }
 
+/* Tiny, das Maskottchen: ein runder Roboterkopf. mood: 'normal' | 'happy' (Bogen-Augen) | 'think'
+   (Augen nach oben, kleiner Mund). Nur Form, keine Schrift — Größe macht das CSS. */
+function tinySvg(mood) {
+  const eyes = mood === 'happy'
+    ? '<path d="M14 22q2-3 4 0M22 22q2-3 4 0" stroke="#1e1b3a" stroke-width="2" fill="none" stroke-linecap="round"/>'
+    : mood === 'think'
+      ? '<circle cx="17" cy="20" r="2.4" fill="#1e1b3a"/><circle cx="25" cy="20" r="2.4" fill="#1e1b3a"/><path d="M17 25.2h6" stroke="#1e1b3a" stroke-width="1.8" stroke-linecap="round"/>'
+      : '<circle cx="16" cy="21.5" r="2.4" fill="#1e1b3a"/><circle cx="24" cy="21.5" r="2.4" fill="#1e1b3a"/>';
+  return '<svg viewBox="0 0 40 40" aria-hidden="true"><line x1="20" y1="3" x2="20" y2="9" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<circle cx="20" cy="3" r="3" fill="var(--cat-candidates)"/><rect x="5" y="9" width="30" height="26" rx="10" fill="var(--accent)"/>' +
+    '<rect x="10" y="15" width="20" height="13" rx="6" fill="#fff"/>' + eyes + '</svg>';
+}
+function tinyEl(mood, cls) {
+  const t = el('span', 'tiny' + (cls ? ' ' + cls : ''));
+  t.innerHTML = tinySvg(mood);
+  return t;
+}
+
 /* Phasen registrieren sich selbst (phase1.js/phase2.js/phase3.js rufen Phases.register(...) auf,
    sobald sie geladen sind). mount(host) läuft genau EINMAL je Phase und gibt eine kleine
    Schnittstelle zurück: { reveal(kartenId), onShow(), onHide() }. Beim Wechsel wird die Phase nur
@@ -29,9 +47,9 @@ const Phases = (() => {
 
 const App = (() => {
   const PHASE_META = {
-    1: { label: 'Frei schreiben', icon: '✍️' },
-    2: { label: 'Frage & Antwort', icon: '💬' },
-    3: { label: 'Echtes Netz', icon: '🧠' }
+    1: { label: 'Frei schreiben', icon: '✍️', sub: 'tiny · zählt Wörter' },
+    2: { label: 'Frage & Antwort', icon: '💬', sub: 'tiny · sucht, dann schreibt es' },
+    3: { label: 'Echtes Netz', icon: '🧠', sub: 'tiny · echtes kleines Netz' }
   };
   const PHASE_STORE = 'tinylm-phase';
   const ROOM = (() => { const r = new URLSearchParams(location.search).get('raum'); return r === 'lehrer' || r === 'schueler' ? r : null; })();
@@ -40,7 +58,7 @@ const App = (() => {
   /* Für die Klasse freigegebene Phasen. Schüler warten auf die erste Nachricht aus tool.js
      (bis dahin null = noch nicht bekannt). */
   let classPhases = ROOM ? null : [1, 2, 3];
-  let lockBtn = null, lockPop = null, waitEl = null;
+  let lockBtn = null, lockPop = null, waitEl = null, brandSub = null;
   const panes = {};      /* n -> { el, api } */
   let active = 1;
   let tabs = {};
@@ -182,9 +200,12 @@ const App = (() => {
     const topbar = el('div', 'topbar');
     const brand = el('div', 'brand');
     const logo = el('span', 'brand-logo');
-    logo.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5.2 3.8h13.6a2.2 2.2 0 0 1 2.2 2.2v8.4a2.2 2.2 0 0 1-2.2 2.2H10l-4.2 3.6v-3.6h-.6A2.2 2.2 0 0 1 3 14.4V6a2.2 2.2 0 0 1 2.2-2.2z"/><path d="M6.8 8.2h4.2M13 8.2h4.2M6.8 12.2h3.4"/><rect x="12.4" y="10.6" width="4.8" height="3.2" rx=".8"/></svg>';
+    logo.innerHTML = tinySvg('normal');
     const name = el('span', 'brand-name');
-    name.append(el('b', null, 'Tiny LM'), el('span', 'beta', 'Beta'));
+    const row = el('span', 'brand-row');
+    row.append(el('b', null, 'Tiny LM'), el('span', 'beta', 'Beta'));
+    brandSub = el('span', 'brand-sub', '');
+    name.append(row, brandSub);
     brand.append(logo, name);
     topbar.appendChild(brand);
 
@@ -298,6 +319,7 @@ const App = (() => {
       if (panes[n].api.onShow) panes[n].api.onShow();
     }
     updateTabs();
+    if (brandSub) brandSub.textContent = PHASE_META[n].sub;
     if (!initial) window.scrollTo({ top: 0, behavior: 'auto' });
     Tour.forPhase(n);
   }

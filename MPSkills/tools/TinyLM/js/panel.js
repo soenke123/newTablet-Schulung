@@ -122,7 +122,7 @@ const Panel = (() => {
       head.id = 'ph-' + ns.replace(':', '') + '-' + item.id;
       const chev = el('span', 'panel-chev');
       chev.setAttribute('aria-hidden', 'true');
-      if (item.hint) head.appendChild(el('span', 'panel-item-hint', item.hint));
+      head.appendChild(item.hint ? el('span', 'panel-item-hint', item.hint) : el('span', 'cat-dot'));
       head.append(el('h3', null, item.label), chev);
 
       const headRow = el('div', 'panel-item-headrow');

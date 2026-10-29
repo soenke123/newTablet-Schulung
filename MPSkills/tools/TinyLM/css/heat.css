@@ -1,17 +1,25 @@
-/* Styling NUR für die Heat-Komponente (Kandidaten-/Wahrscheinlichkeitsliste). */
-.cands { display: flex; flex-direction: column; gap: 6px; }
+/* Styling NUR für die Heat-Komponente: Kandidaten als Säulen aus Bausteinen. */
+.cands { display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 8px; align-items: end; }
 .cand {
-  display: grid; grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) 3.1rem;
-  gap: 10px; align-items: center; padding: 3px 7px; border-radius: 9px; border: 1.5px solid transparent;
+  display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0;
+  padding: 4px 2px 3px; border-radius: 12px; border: 2px solid transparent; background: none; font: inherit; color: inherit;
 }
-.cand b { font-weight: 600; font-size: 0.92rem; overflow-wrap: anywhere; display: flex; align-items: center; gap: 6px; }
-.cand .tag { font-size: 0.68rem; font-weight: 700; color: var(--muted); letter-spacing: 0.03em; background: var(--soft); padding: 1px 6px; border-radius: 99px; white-space: nowrap; flex: none; }
-.cand.chosen { border-color: var(--cat-candidates); background: color-mix(in srgb, var(--cat-candidates-tint) 35%, var(--surface)); }
-.cand.clickable { cursor: pointer; }
-.cand.clickable:hover { background: var(--soft); }
-.sbar { height: 14px; background: var(--soft); border-radius: 99px; overflow: hidden; min-width: 0; }
-.sbar > span { display: flex; height: 100%; }
-.sbar i { display: block; height: 100%; }
-.num { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
-.cands.compact .cand { grid-template-columns: minmax(0, 5.5rem) minmax(0, 1fr) 2.6rem; padding: 3px 5px; }
-.cands.compact .sbar { height: 10px; }
+button.cand { cursor: pointer; }
+button.cand:hover { background: var(--soft); }
+.cand.chosen { border-color: var(--cat-candidates); background: color-mix(in srgb, var(--cat-candidates-tint) 30%, var(--surface)); }
+.cand-well { height: 88px; width: 100%; display: flex; align-items: flex-end; }
+.cands.compact .cand-well { height: 66px; }
+.cand-bar {
+  width: 100%; border-radius: 10px 10px 6px 6px; display: flex; flex-direction: column-reverse; overflow: hidden;
+  border-bottom: 4px solid color-mix(in srgb, var(--acc, var(--cat-candidates)) 75%, #000);
+  transition: height .25s ease-out;
+}
+.cand-bar.stacked { border-bottom-color: color-mix(in srgb, var(--ink) 30%, transparent); }
+.cand-bar i { display: block; width: 100%; flex: none; }
+.cand-w {
+  font-family: var(--font-display); font-weight: 600; font-size: 0.92rem; max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cand .tag { font-size: 0.64rem; font-weight: 700; color: var(--muted); background: var(--soft); padding: 0 5px; border-radius: 6px; white-space: nowrap; }
+.num { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) { .cand-bar { transition: none; } }

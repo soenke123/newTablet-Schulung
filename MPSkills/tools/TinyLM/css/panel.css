@@ -9,16 +9,15 @@
 
 .panel-item {
   background: var(--surface); border: 1px solid var(--line);
-  border-radius: 16px; min-width: 0; overflow: hidden; box-shadow: var(--shadow);
+  border-radius: 18px; min-width: 0; overflow: hidden; box-shadow: var(--shadow);
   position: relative;
 }
-.panel-item::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--cat-color); }
 .panel-item-headrow { display: flex; align-items: center; gap: 6px; padding-right: 10px; }
 .panel-item-head {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; text-align: left;
   background: transparent; border: 0; cursor: pointer; padding: 11px 4px 11px 16px; font: inherit; min-height: 50px;
 }
-.panel-item-head h3 { font-size: 0.98rem; color: var(--ink); min-width: 0; flex: 1; }
+.panel-item-head h3 { font-size: 1.05rem; font-weight: 600; color: var(--ink); min-width: 0; flex: 1; }
 .panel-chev {
   width: 22px; height: 22px; flex: none; border-radius: 50%; display: grid; place-items: center; color: var(--muted);
   transition: transform .2s;
@@ -26,13 +25,15 @@
 .panel-chev::before { content: ''; width: 7px; height: 7px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: translateY(-2px) rotate(45deg); }
 .panel-item.closed .panel-chev { transform: rotate(-90deg); }
 .panel-item-hint {
-  min-width: 1.6rem; height: 1.6rem; padding: 0 6px; border-radius: 999px; flex: none; display: inline-grid; place-items: center;
+  min-width: 1.6rem; height: 1.6rem; padding: 0 6px; border-radius: 9px; flex: none; display: inline-grid; place-items: center;
   font-family: var(--font-display); font-size: 0.78rem; font-weight: 700; color: #fff; background: var(--cat-color);
 }
-.panel-item.closed { background: color-mix(in srgb, var(--cat-tint) 18%, var(--surface)); box-shadow: none; }
+.panel-item.closed { background: color-mix(in srgb, var(--cat-tint) 14%, var(--surface)); }
+/* Karten ohne Nummer (Training, Wortkarte, Netz): ein Farbpunkt statt Nummer */
+.panel-item-head .cat-dot { width: 12px; height: 12px; border-radius: 4px; background: var(--cat-color); flex: none; }
 .panel-item.flash { box-shadow: 0 0 0 3px var(--cat-tint), var(--shadow); }
 
-.panel-item-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 0 16px 16px 18px; }
+.panel-item-body { display: flex; flex-direction: column; gap: 10px; min-width: 0; padding: 0 16px 16px 16px; }
 .panel-item-slot { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
 
 /* Kurze Zeilen in den Karten statt Erklärabsätzen */

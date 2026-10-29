@@ -1,25 +1,27 @@
 /* Farb- und Typografie-Variablen.
-   Grund und Schrift folgen MPSkills (Outfit/Inter, kühles Papier, grüner Akzent) — Tiny LM steckt
-   dort im Rahmen und soll wie ein Teil davon aussehen. Die Signalfarben --cat-* tragen Bedeutung
+   Eigener Look „Token-Bausteine“ (Sönke, 29.10.2026: soll wie ein echtes LLM wirken, aber verspielt,
+   und sich von MPSkills abheben): Lavendel-Fläche, weiße Karten mit einer Kante unten (--edge),
+   Violett als Hauptfarbe, Fredoka für Überschriften/Bausteine, Inter für Text, JetBrains Mono für Zahlen. Die Signalfarben --cat-* tragen Bedeutung
    ("Leuchtende Kategorien", siehe panel.js CAT): derselbe Schritt hat in jeder Phase dieselbe Farbfamilie.
    Hell/Dunkel per prefers-color-scheme, überschreibbar via data-theme (app.js übernimmt das
    data-theme der umgebenden MPSkills-Seite). */
 :root {
-  --bg: #eef2f1;
+  --bg: #f4f1ff;
   --surface: #FFFFFF;
-  --soft: #f2f6f5;
-  --ink: #0d1a17;
-  --muted: #5f706b;
-  --line: #dfe7e5;
-  --focus: #00b37e;
+  --soft: #f1eeff;
+  --ink: #1e1b3a;
+  --muted: #5b5880;
+  --line: #e4defa;
+  --edge: #e2dbfa;        /* Kante unter Karten und Knöpfen (wie ein Baustein) */
+  --focus: #6d4aff;
   --on-ink: #FFFFFF;
 
-  --accent: #00b37e;
-  --accent-ink: #00714f;
-  --accent-dim: #d6f5e8;
-  --accent-edge: #a5e3cd;
-  --shadow: 0 2px 4px rgba(13,26,23,.04), 0 12px 28px -14px rgba(13,26,23,.22);
-  --shadow-pop: 0 10px 30px rgba(13,26,23,.18);
+  --accent: #6d4aff;
+  --accent-ink: #4b2fd6;
+  --accent-dim: #ece8ff;
+  --accent-edge: #cfc4ff;
+  --shadow: 0 3px 0 var(--edge);
+  --shadow-pop: 0 14px 36px rgba(30,27,58,.20);
 
   /* Kategorie-Signalfarben. Jede Phase hat dieselben vier Schritte an derselben Stelle:
        ① worauf die KI schaut (Türkis-Familie)  ② woher sie das Wort nimmt (Bernstein-Familie)
@@ -67,18 +69,18 @@
   --good: #00996d;
   --bad: #D1483A;
 
-  --font-display: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fredoka', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-body: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
-  --r: 18px;
+  --r: 22px;
   --head-h: 120px;   /* Höhe der klebenden Kopfzeile; app.js misst nach */
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0a0b10; --surface: #12141b; --soft: #1a1d27; --ink: #edeff5; --muted: #a4a9bd; --line: #252836; --focus: #35d39a;
-    --on-ink: #0a0b10;
-    --accent: #35d39a; --accent-ink: #6fe6b9; --accent-dim: rgba(53,211,154,.14); --accent-edge: rgba(53,211,154,.42);
-    --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
+    --bg: #15132b; --surface: #1f1c3c; --soft: #29264b; --ink: #f1eeff; --muted: #b3aed6; --line: #353163; --edge: #0d0b20; --focus: #9b85ff;
+    --on-ink: #15132b;
+    --accent: #8b6cff; --accent-ink: #c4b5ff; --accent-dim: rgba(155,133,255,.18); --accent-edge: rgba(155,133,255,.45);
+    --shadow: 0 3px 0 var(--edge);
     --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
     --cat-context: #4FD6C3; --cat-context-tint: #183D38;
     --cat-ask: #4CC3E8; --cat-ask-tint: #16384A;
@@ -98,10 +100,10 @@
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0a0b10; --surface: #12141b; --soft: #1a1d27; --ink: #edeff5; --muted: #a4a9bd; --line: #252836; --focus: #35d39a;
-  --on-ink: #0a0b10;
-  --accent: #35d39a; --accent-ink: #6fe6b9; --accent-dim: rgba(53,211,154,.14); --accent-edge: rgba(53,211,154,.42);
-  --shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
+  --bg: #15132b; --surface: #1f1c3c; --soft: #29264b; --ink: #f1eeff; --muted: #b3aed6; --line: #353163; --edge: #0d0b20; --focus: #9b85ff;
+  --on-ink: #15132b;
+  --accent: #8b6cff; --accent-ink: #c4b5ff; --accent-dim: rgba(155,133,255,.18); --accent-edge: rgba(155,133,255,.45);
+  --shadow: 0 3px 0 var(--edge);
   --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
   --cat-context: #4FD6C3; --cat-context-tint: #183D38;
   --cat-ask: #4CC3E8; --cat-ask-tint: #16384A;

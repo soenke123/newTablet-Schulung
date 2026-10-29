@@ -35,7 +35,7 @@ Phases.register(2, {
   mount(host) {
     let M = null, R = null, session = null, canned = false, asked = false;
     let temp = 1, playing = false, timer = null, panelCtrl = null, mapCtl = null;
-    let textEl, cursor, playBtn, input, legendHost, askedEl, placeholder;
+    let textEl, cursor, playBtn, input, legendHost, askedEl, placeholder, answerEl, metaEl;
 
     function rebuildModel() {
       M = buildModel(State.activeTexts());
@@ -55,11 +55,12 @@ Phases.register(2, {
         textEl.appendChild(cursor);
         return;
       }
-      let prevSi = null;
+      let prevSi = null, last = null;
       pieces(session).forEach((p, idx) => {
         if (idx > 0 && !p.punct) textEl.appendChild(document.createTextNode(' '));
         if (p.punct) {
-          textEl.appendChild(document.createTextNode(p.txt));
+          /* Satzzeichen hängen am Baustein davor */
+          if (last) last.textContent += p.txt; else textEl.appendChild(document.createTextNode(p.txt));
           return;
         }
         if (prevSi != null && p.si !== prevSi) {
@@ -71,6 +72,7 @@ Phases.register(2, {
         span.style.setProperty('--sc', srcVar(p.si));
         span.title = 'aus Text ' + SRC[p.si] + ': ' + session.sources[p.si].doc.title;
         textEl.appendChild(span);
+        last = span;
         prevSi = p.si;
       });
       textEl.appendChild(cursor);
@@ -104,8 +106,17 @@ Phases.register(2, {
         const sources = buildPhase2Sources(R, 3);
         session = createSession(sources);
       }
-      askedEl.replaceChildren(el('span', 'asked-ico', '❓'), document.createTextNode(q));
+      placeholder.hidden = true;
+      askedEl.textContent = q;
       askedEl.hidden = false;
+      answerEl.hidden = false;
+      metaEl.replaceChildren();
+      if (canned) metaEl.appendChild(el('span', 'chat-found none', 'Dazu steht nichts in deinen Texten'));
+      else {
+        metaEl.appendChild(el('span', 'chat-found', session.sources.length + (session.sources.length === 1 ? ' Text gefunden' : ' Texte gefunden')));
+        const known = R.ql.filter(x => x.known).map(x => x.lemma);
+        if (known.length) metaEl.appendChild(el('span', 'chat-keys', '· ' + known.join(' · ')));
+      }
       updateText();
       updateLegend();
       panelCtrl.refreshAll();
@@ -271,8 +282,8 @@ Phases.register(2, {
         word: a.word, label: showWord(a.word), p: a.p, chosen: a.word === st.chosen,
         breakdown: [...a.bySrc.entries()].map(([si, w]) => ({ share: w / a.w, color: srcVar(si), label: 'Text ' + SRC[si] }))
       }));
-      Heat.render(heatHost, cands, { maxRows: 6, compact: true });
-      container.appendChild(el('p', 'mini-legend', 'Balkenfarbe = Text A · B · C   ▸ umrandet = gewürfelt'));
+      Heat.render(heatHost, cands, { maxRows: 5, compact: true });
+      container.appendChild(el('p', 'mini-legend', 'Säulenfarbe = Text A · B · C   ▸ umrandet = gewürfelt'));
     }
 
     function renderRandomNode(container) {
@@ -300,20 +311,40 @@ Phases.register(2, {
       stopPlay();
       asked = false; canned = false; session = null; R = null;
 
-      const center = el('div', 'box machine-center');
-      center.appendChild(Info.centerHead('Phase 2 · Frage & Antwort', 'Frag etwas aus deinen Textwelten', 'p2'));
+      const center = el('div', 'box machine-center chat-center');
+      center.appendChild(Info.centerHead('Phase 2 · Frage & Antwort', 'Frag Tiny etwas aus deinen Textwelten', 'p2'));
 
-
-      const form = el('form', 'qform');
-      form.dataset.spot = 'ask';
-      input = el('input', 'textin');
-      input.type = 'text'; input.placeholder = 'Frag mich etwas …'; input.setAttribute('aria-label', 'Frage');
-      input.enterKeyHint = 'send';
-      const send = el('button', 'btn primary', 'Fragen');
-      send.type = 'submit';
-      form.append(input, send);
-      form.addEventListener('submit', e => { e.preventDefault(); stopPlay(); ask(input.value); input.blur(); });
-      center.appendChild(form);
+      /* Der Chat: Begrüßung (bis zur ersten Frage), Frage rechts, Antwort mit Tiny links. */
+      const chat = el('div', 'chat');
+      placeholder = el('div', 'tiny-say');
+      const hello = el('p', 'tiny-bubble', 'Frag mich etwas! Ich suche die 3 passendsten Texte und schreibe daraus eine Antwort.');
+      placeholder.append(tinyEl('normal'), hello);
+      askedEl = el('p', 'chat-q');
+      askedEl.hidden = true;
+      answerEl = el('div', 'chat-a');
+      answerEl.hidden = true;
+      const aBody = el('div', 'chat-a-body');
+      metaEl = el('div', 'chat-meta');
+      const bubble = el('div', 'paper chat-bubble');
+      textEl = el('p', 'bot-text');
+      cursor = el('span', 'cursor');
+      textEl.appendChild(cursor);
+      textEl.hidden = true;
+      bubble.appendChild(textEl);
+      legendHost = el('div', 'center-legend');
+      const controls = el('div', 'machine-controls chat-controls');
+      playBtn = el('button', 'btn sm', '▶ Weiter');
+      playBtn.type = 'button';
+      playBtn.hidden = true;
+      playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
+      const again = el('button', 'btn sm', '↻ Dieselbe Frage nochmal');
+      again.type = 'button';
+      again.addEventListener('click', () => { stopPlay(); if (R) ask(R.question); });
+      controls.append(playBtn, again);
+      aBody.append(metaEl, bubble, legendHost, controls);
+      answerEl.append(tinyEl('happy'), aBody);
+      chat.append(placeholder, askedEl, answerEl);
+      center.appendChild(chat);
 
       const sugg = el('div', 'sugg');
       SUGGEST2.forEach(q => {
@@ -324,27 +355,19 @@ Phases.register(2, {
       });
       center.appendChild(sugg);
 
-      const paper = el('div', 'paper');
-      askedEl = el('p', 'asked');
-      askedEl.hidden = true;
-      placeholder = el('p', 'paper-ph', 'Hier erscheint die Antwort …');
-      textEl = el('p', 'bot-text');
-      cursor = el('span', 'cursor');
-      textEl.appendChild(cursor);
-      textEl.hidden = true;
-      paper.append(askedEl, placeholder, textEl);
-      center.appendChild(paper);
-
-      legendHost = el('div', 'center-legend');
-      center.appendChild(legendHost);
-
-      const controls = el('div', 'machine-controls');
-      playBtn = el('button', 'btn', '▶ Weiter');
-      playBtn.type = 'button';
-      playBtn.hidden = true;
-      playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
-      controls.appendChild(playBtn);
-      center.appendChild(controls);
+      const form = el('form', 'qform');
+      form.dataset.spot = 'ask';
+      input = el('input', 'textin');
+      input.type = 'text'; input.placeholder = 'Frag Tiny etwas …'; input.setAttribute('aria-label', 'Frage');
+      input.enterKeyHint = 'send';
+      const send = el('button', 'btn primary qsend');
+      send.type = 'submit';
+      send.setAttribute('aria-label', 'Fragen');
+      send.title = 'Fragen';
+      send.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+      form.append(input, send);
+      form.addEventListener('submit', e => { e.preventDefault(); stopPlay(); ask(input.value); input.blur(); });
+      center.appendChild(form);
 
       const items = [
         { id: 'lookup', label: 'Frage zerlegen', cat: 'ask', hint: '1', help: 'nachschlagen', render: renderLookupNode },
