@@ -24,15 +24,22 @@ steuert, welche Phasen die Klasse öffnen darf.
 - Freigabe: `skill_room_state.data.phases` (fehlt = nur Phase 1), geschrieben über
   `skill_room_set_state` – keine eigenen Tabellen.
 - Botschaften: hinein `ry:cmd {phases}`, heraus `ry:ready`, `ry:phases {phases}`.
-- Lehrkraft sieht alle Phasen offen und unter jeder Phase den Schalter
-  „Mit der Klasse teilen/geteilt“. Schüler sehen nicht geteilte Phasen gesperrt (🔒);
-  wird eine Phase entzogen, während man drin ist, geht es zurück zur Übersicht.
+- Aufbau wie die anderen Skills: Kopfzeile mit Reitern 1 Training · 2 Umgebungen · 3 Sandbox
+  (Phase 2 oben mit Umschalter Umgebung A/B), keine Kachel-Übersicht mehr. Phase 1 merkt sich
+  Einführung/Training, Phase 2 die Umgebung, die zuletzt offene Phase steht in `ry.phase`.
+- Lehrkraft sieht alle Reiter und daneben das Teilen-Symbol (gefüllt = geteilt), wie bei
+  Tiny LM/Definitions Derby. Schüler sehen nur geteilte Reiter; ohne geteilte Phase eine
+  Wartekarte; wird die offene Phase entzogen, springt die Seite in die nächste erlaubte.
+- Farben/Schrift = MPSkills (Tokens als `--mp-*` aus MPSkills/style.css, Outfit lokal),
+  Hell/Dunkel vom Rahmen (`data-theme`), allein vom Gerät. Umgebung A (Brett, beige) und
+  B (Aliens, lila) behalten ihre eigenen Welten, der Baum in der Sandbox bleibt eine dunkle Tafel
+  (auf der Leinwand fest gezeichnet).
 - Allein geöffnet (ohne `?raum=`) ist alles offen.
 
 ## Gerät
 
 Alles liegt im localStorage unter `ry.*` (getrennt vom GameHub-Spiel auf derselben Herkunft).
-„Alles zurücksetzen“ unten in der Übersicht löscht den Stand.
+„Zurücksetzen“ rechts in der Kopfzeile löscht den Stand.
 
 ## Daten / Werkzeuge
 

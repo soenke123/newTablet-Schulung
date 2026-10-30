@@ -3,15 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Reinforce Yourself!</title>
+<title>Reinforce Yourself</title>
+<link href="../../../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
 <style>
-/* ── Variables ── */
+/* ── Variables ──
+   Grundfarben = die von MPSkills (MPSkills/style.css), damit der Skill
+   aussieht wie die Seite drumherum — als --mp-*, weil die Spielteile
+   --surface, --accent … je Umgebung selbst umstellen. Hell/Dunkel kommt
+   im Raum vom Rahmen (data-theme), allein vom Gerät. Umgebung A (Brett)
+   und B (Aliens) behalten ihre eigenen Welten. */
 :root {
-  --bg:#0f172a; --surface:#1e293b; --surface2i:#253449; --border:#334155;
-  --accent:#3b82f6; --accent-h:#2563eb; --text:#f1f5f9; --muted:#94a3b8;
-  --win:#22c55e; --lose:#ef4444;
+  --mp-paper:#eef2f1; --mp-paper-2:#e2e9e7; --mp-surface:#ffffff; --mp-surface-2:#f7faf9;
+  --mp-line:#dfe7e5; --mp-ink:#0d1a17; --mp-ink-soft:#475853; --mp-ink-faint:#7b8a86;
+  --mp-accent:#00b37e; --mp-accent-dim:#d6f5e8; --mp-accent-ink:#00714f; --mp-accent-edge:#a5e3cd;
+  --mp-on-accent:#ffffff; --mp-ok:#00996d; --mp-warn:#d43a52;
+  --mp-shadow:0 2px 4px rgba(13,26,23,.04), 0 12px 28px -12px rgba(13,26,23,.2);
+  --bg:var(--mp-paper); --surface:var(--mp-surface); --surface2i:var(--mp-surface-2); --border:var(--mp-line);
+  --accent:var(--mp-accent); --accent-h:var(--mp-accent-ink); --text:var(--mp-ink); --muted:var(--mp-ink-faint);
+  --win:var(--mp-ok); --lose:var(--mp-warn);
+  --surface-active:rgba(0,179,126,.06); --surface-win:rgba(0,153,109,.06); --surface-lose:rgba(212,58,82,.06);
   --sq-light:#2a3f5f; --sq-dark:#172033; --moved:#064e3b;
-  --radius:12px; --gap:16px;
+  --radius:14px; --gap:16px;
   /* beige palette */
   --bg2:#f5e6c8; --surface2:#ede0c4; --border2:#c9a96e;
   --accent2:#8B5E3C; --text2:#3b2a1a; --muted2:#8a7560;
@@ -20,6 +32,26 @@
   --bg3:#1a0a2e; --surface3:#2d1b4e; --border3:#5b2d8e;
   --accent3:#39ff14; --text3:#e8d5ff; --muted3:#a78bfa;
   --sq-light3:#3d1f6e; --sq-dark3:#1f0d40; --win3:#39ff14; --lose3:#ff4090;
+}
+html[data-theme="dark"] {
+  color-scheme:dark;
+  --mp-paper:#0a0b10; --mp-paper-2:#1c1e29; --mp-surface:#12141b; --mp-surface-2:#171a22;
+  --mp-line:#252836; --mp-ink:#edeff5; --mp-ink-soft:#a4a9bd; --mp-ink-faint:#71768c;
+  --mp-accent:#7c4dff; --mp-accent-dim:rgba(124,77,255,.18); --mp-accent-ink:#b7a0ff; --mp-accent-edge:#453770;
+  --mp-ok:#35d39a; --mp-warn:#ff5c7c;
+  --mp-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
+  --surface-active:rgba(124,77,255,.10); --surface-win:rgba(53,211,154,.08); --surface-lose:rgba(255,92,124,.08);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    color-scheme:dark;
+    --mp-paper:#0a0b10; --mp-paper-2:#1c1e29; --mp-surface:#12141b; --mp-surface-2:#171a22;
+    --mp-line:#252836; --mp-ink:#edeff5; --mp-ink-soft:#a4a9bd; --mp-ink-faint:#71768c;
+    --mp-accent:#7c4dff; --mp-accent-dim:rgba(124,77,255,.18); --mp-accent-ink:#b7a0ff; --mp-accent-edge:#453770;
+    --mp-ok:#35d39a; --mp-warn:#ff5c7c;
+    --mp-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 14px 32px rgba(0,0,0,.5);
+    --surface-active:rgba(124,77,255,.10); --surface-win:rgba(53,211,154,.08); --surface-lose:rgba(255,92,124,.08);
+  }
 }
 body[data-screen="screen-p2-brett"] {
   --bg:var(--bg2); --surface:var(--surface2); --border:var(--border2);
@@ -32,15 +64,6 @@ body[data-screen="screen-p2-alien"] {
   --accent:var(--accent3); --accent-h:#2ecc10; --text:var(--text3); --muted:var(--muted3);
   --win:var(--win3); --lose:var(--lose3);
   --sq-light:var(--sq-light3); --sq-dark:var(--sq-dark3); --moved:#1a3d10;
-}
-body[data-screen="screen-p1-train"],
-body[data-screen="screen-p1-intro"] {
-  --bg:#f0f4f8; --surface:#ffffff; --border:#e2e8f0;
-  --accent:#4338ca; --accent-h:#3730a3; --text:#1e293b; --muted:#94a3b8;
-  --win:#16a34a; --lose:#dc2626;
-  --surface-active:rgba(67,56,202,.04);
-  --surface-win:rgba(22,163,74,.05);
-  --surface-lose:rgba(220,38,38,.05);
 }
 body[data-screen="screen-p1-train"] .train-section,
 body[data-screen="screen-p1-train"] .node-badge-wrap,
@@ -59,76 +82,85 @@ body[data-screen="screen-p1-train"] .train-row.result-lose > .train-section {
 
 /* ── Base ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+button,select,input{font-family:inherit;}
 html,body{min-height:100vh;min-height:100dvh;}
 body{
   background:var(--bg); color:var(--text);
-  font-family:'Segoe UI',system-ui,sans-serif;
+  font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;
   transition:background .3s,color .3s;
   display:flex; flex-direction:column; align-items:center;
 }
 
 /* ── Screen System ── */
-.screen{display:none; width:100%; max-width:600px; padding:28px 16px 60px; margin:0 auto;}
+.screen{display:none; width:100%; max-width:600px; padding:24px 16px 60px; margin:0 auto;}
 .screen.active{display:block;}
 
-/* ── Overview ── */
-#screen-overview{max-width:920px;}
-.ov-layout{display:flex; gap:24px; align-items:flex-start; justify-content:center;}
-.ov-main{flex:1; min-width:0; max-width:700px;}
-.ov-header{text-align:center; margin-bottom:32px; position:relative;}
-.ov-header h1{font-size:1.7rem; font-weight:700; color:var(--text);}
-.ov-header p{color:var(--muted); margin-top:6px; font-size:.95rem;}
-.overview-tree{display:flex; flex-direction:column; align-items:center; gap:0;}
-.ov-row{display:flex; justify-content:center; gap:20px;}
-.ov-connector{display:flex; justify-content:center;}
-.phase-card{
-  cursor:pointer; border-radius:var(--radius); padding:18px 22px;
-  border:2px solid transparent; position:relative; min-width:145px;
-  text-align:center; transition:transform .15s,box-shadow .15s,background .3s;
-  user-select:none;
+/* ── Kopfzeile mit Reitern (wie in MPSkills: Unterstrich statt Kästen,
+   Teilen-Symbol direkt am Reiter wie bei Tiny LM/Definitions Derby) ── */
+.ry-head{
+  position:sticky; top:0; z-index:300; width:100%;
+  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:8px 18px 0; background:var(--mp-surface); color:var(--mp-ink);
+  border-bottom:1px solid var(--mp-line);
+  font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
-.phase-card.locked{
-  background:#1a2744; border-color:#2d3f5e; color:#4a5a7a;
-  cursor:default; pointer-events:none;
+.ry-brand{display:flex; align-items:center; gap:8px; font-weight:700; font-size:1.05rem;
+  letter-spacing:-.02em; padding-bottom:8px; white-space:nowrap;}
+.ry-brand svg{width:22px; height:22px; fill:none; stroke:var(--mp-accent-ink); stroke-width:1.8;
+  stroke-linecap:round; stroke-linejoin:round;}
+.ry-tabs{display:flex; align-items:flex-end; gap:2px; flex:1; min-width:0; overflow-x:auto;}
+.ry-tabwrap{display:flex; align-items:center; gap:2px;}
+.ry-tabwrap[hidden]{display:none;}
+.ry-tab{
+  font:inherit; font-size:.95rem; font-weight:600; color:var(--mp-ink-faint);
+  background:none; border:0; border-bottom:2px solid transparent;
+  padding:9px 12px 10px; cursor:pointer; white-space:nowrap;
+  transition:color .14s ease, border-color .14s ease;
 }
-.phase-card .card-lock{display:none;}
-.phase-card.locked .card-lock{display:block;}
+.ry-tab:hover{color:var(--mp-ink);}
+.ry-tab.on{color:var(--mp-ink); border-bottom-color:var(--mp-accent);}
+.ry-tab-n{display:inline-grid; place-items:center; width:20px; height:20px; margin-right:6px;
+  border-radius:50%; font-size:.72rem; background:var(--mp-paper-2); color:var(--mp-ink-soft);}
+.ry-tab.on .ry-tab-n{background:var(--mp-accent); color:var(--mp-on-accent);}
+.ry-share{
+  display:none; align-items:center; justify-content:center; width:32px; height:30px;
+  margin:0 8px 6px 0; padding:0; cursor:pointer; border-radius:9px;
+  background:var(--mp-surface); color:var(--mp-ink-soft); border:1px solid var(--mp-line);
+  transition:background .14s, color .14s, border-color .14s;
+}
+.ry-share svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;}
+.ry-share:hover{background:var(--mp-paper-2); color:var(--mp-ink);}
+.ry-share.is-on{background:var(--mp-accent); border-color:var(--mp-accent); color:var(--mp-on-accent);}
+body.is-teacher .ry-share{display:inline-flex;}
+.ry-reset{
+  font:inherit; font-size:.82rem; color:var(--mp-ink-faint); background:none; border:0;
+  padding:0 0 8px; cursor:pointer; text-decoration:underline; white-space:nowrap;
+}
+.ry-reset:hover{color:var(--mp-ink);}
+.ry-reset-short{display:none; font-size:1.2rem; text-decoration:none;}
+@media(max-width:600px){
+  .ry-brand{display:none;} .ry-head{padding:6px 8px 0; gap:6px; flex-wrap:nowrap;}
+  .ry-tab{padding:8px 6px 10px; font-size:.9rem;} .ry-tab-n{margin-right:4px;}
+  .ry-share{margin-right:4px;}
+  .ry-reset-long{display:none;} .ry-reset-short{display:inline;}
+}
 
-/* Teilen-Schalter der Lehrkraft (nur im Raum), je Phase einer —
-   dasselbe Symbol wie in Tiny LM und Definitions Derby. */
-.ov-phase{display:flex; flex-direction:column; align-items:center; gap:8px;}
-.share-btn{
-  display:none; align-items:center; gap:6px; cursor:pointer;
-  font:inherit; font-size:.78rem; font-weight:600;
-  padding:5px 12px 5px 9px; border-radius:999px;
-  background:transparent; color:var(--muted); border:1.5px dashed var(--border);
-  transition:background .15s,color .15s,border-color .15s;
+/* Schüler: noch nichts geteilt */
+.ry-wait{
+  margin:60px auto 0; max-width:420px; text-align:center; padding:28px 24px;
+  background:var(--mp-surface); border:1px solid var(--mp-line); border-radius:18px;
+  box-shadow:var(--mp-shadow); color:var(--mp-ink-soft);
 }
-.share-btn svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;}
-.share-btn:hover{color:var(--text); border-color:var(--muted);}
-.share-btn.is-on{background:rgba(34,197,94,.14); color:var(--win); border:1.5px solid var(--win);}
-body.is-teacher .share-btn{display:inline-flex;}
-.ov-foot{text-align:center; margin-top:34px;}
+.ry-wait h2{color:var(--mp-ink); font-size:1.2rem; margin:8px 0 6px;}
+.ry-wait .ry-wait-ico{font-size:1.8rem;}
 
-/* Schüler: Hinweis, solange nichts geteilt ist. */
-.ov-wait{
-  display:none; margin:0 auto 26px; max-width:440px; text-align:center;
-  padding:12px 16px; border-radius:var(--radius);
-  border:1px dashed var(--border); color:var(--muted); font-size:.9rem;
-}
-.ov-wait.show{display:block;}
-.phase-card.unlocked{
-  background:var(--surface); border-color:var(--accent); color:var(--text);
-}
-.phase-card.unlocked:hover{transform:translateY(-2px); box-shadow:0 4px 18px rgba(59,130,246,.22);}
-.phase-card.completed::after{
-  content:'✓'; position:absolute; top:7px; right:10px;
-  color:var(--win); font-size:1.1em; font-weight:800;
-}
-.card-lock{font-size:1.3em; margin-bottom:3px; opacity:.5;}
-.card-phase{font-size:.68em; text-transform:uppercase; letter-spacing:.08em; opacity:.6; margin-bottom:3px;}
-.card-title{font-size:1rem; font-weight:600;}
-.card-desc{font-size:.78em; opacity:.6; margin-top:4px;}
+/* Umgebung A / B: Umschalter oben in Phase 2 */
+.ry-seg{display:flex; gap:4px; padding:4px; margin:0 auto 16px; width:max-content; max-width:100%;
+  background:var(--mp-surface); border:1px solid var(--mp-line); border-radius:999px;}
+.ry-seg button{font:inherit; font-size:.9rem; font-weight:600; border:0; border-radius:999px;
+  padding:7px 18px; cursor:pointer; background:none; color:var(--mp-ink-faint);}
+.ry-seg button:hover{color:var(--mp-ink);}
+.ry-seg button.on{background:var(--mp-accent); color:var(--mp-on-accent);}
 
 /* ── Shared Game Layout ── */
 .game-panel{max-width:520px; margin:0 auto; display:flex; flex-direction:column; gap:var(--gap);}
@@ -389,7 +421,7 @@ body[data-screen="screen-p2-alien"] .game-header h2{color:var(--accent3); text-s
 
 /* ── Alien Adventure Redesign ── */
 #screen-p2-alien{max-width:990px; padding:0 12px 60px;}
-#screen-p2-alien .back-link{padding:16px 0 0; display:block;}
+#screen-p2-alien .ry-seg{margin-top:16px;}
 #screen-p2-alien .game-panel{
   max-width:100%; gap:0;
   display:grid; grid-template-columns:1fr 1fr;
@@ -471,7 +503,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 /* ── Sandbox (Phase 3) ── */
 #screen-p3-sandbox{
   max-width:none; padding:0; overflow:hidden;
-  height:100vh; height:100dvh; align-self:stretch;
+  height:calc(100vh - var(--head-h, 0px)); height:calc(100dvh - var(--head-h, 0px)); align-self:stretch;
 }
 #screen-p3-sandbox.active{display:flex; flex-direction:column;}
 .sb-topbar{
@@ -487,7 +519,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   border-right:1px solid var(--border); overflow-y:auto;
   background:var(--surface);
 }
-.sb-right{flex:1; position:relative; overflow:hidden;}
+.sb-right{flex:1; position:relative; overflow:hidden; background:#0f172a;}
 #sb-tree-canvas{
   position:absolute; top:0; left:0; width:100%; height:100%;
   cursor:grab; display:block;
@@ -529,7 +561,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 #sb-alien-ai-moves .move-btn,
 #sb-alien-moves .move-btn{width:100%; text-align:left; font-size:.75rem; padding:6px 10px;}
 .sb-bottom{padding:10px; border-top:1px solid var(--border); flex-shrink:0;}
-#sb-settings{position:fixed;top:64px;right:16px;z-index:1000;}
+#sb-settings{position:fixed;top:calc(var(--head-h, 0px) + 12px);right:16px;z-index:1000;}
 #sb-gear-btn{display:none;width:48px;height:48px;border-radius:50%;background:var(--surface);border:1px solid var(--border);font-size:26px;color:#fff;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.18);line-height:1;align-items:center;justify-content:center;}
 #sb-settings-panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;min-width:200px;box-shadow:0 2px 12px rgba(0,0,0,.13);}
 #sb-settings-header{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--muted);}
@@ -581,83 +613,42 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 </style>
 
 </head>
-<body data-screen="screen-overview">
+<body data-screen="screen-wait">
 
-<!-- ═══════════════════════════════════════════════════════ OVERVIEW -->
-<div id="screen-overview" class="screen active">
-  <div class="ov-header">
-    <h1>Reinforce Yourself!</h1>
-    <p>Lerne wie eine Maschine</p>
+<!-- ═══════════════════════════════════════════════ KOPFZEILE -->
+<header class="ry-head" id="ry-head">
+  <div class="ry-brand">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 12a7.6 7.6 0 1 1-2.2-5.4"/><path d="M19.8 3.6v3.6h-3.6"/><path d="M12 8.8v6.4M8.8 12h6.4"/></svg>
+    <span>Reinforce Yourself</span>
   </div>
-  <div class="ov-wait" id="ov-wait">Einen Moment …</div>
-  <div class="overview-tree">
-    <div class="ov-phase">
-      <div class="ov-row">
-        <div class="phase-card" id="card-p1" data-phase="1" onclick="openPhase(1)">
-          <div class="card-lock">🔒</div>
-          <div class="card-phase">Phase 1</div>
-          <div class="card-title">Trainingsphase</div>
-          <div class="card-desc">Lerne durch Spielen</div>
-        </div>
-      </div>
-      <button class="share-btn" data-share="1" onclick="toggleShare(1)" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
+  <nav class="ry-tabs" role="tablist">
+    <div class="ry-tabwrap" data-tab="1">
+      <button class="ry-tab" data-phase="1" role="tab" type="button" onclick="goPhase(1)"><span class="ry-tab-n">1</span>Training</button>
+      <button class="ry-share" data-share="1" type="button" onclick="toggleShare(1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
     </div>
-    <div class="ov-connector">
-      <svg width="300" height="52" viewBox="0 0 300 52">
-        <defs><marker id="arr" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#334155"/></marker></defs>
-        <line x1="150" y1="0" x2="150" y2="18" stroke="#334155" stroke-width="1.5"/>
-        <line x1="150" y1="18" x2="75" y2="18" stroke="#334155" stroke-width="1.5"/>
-        <line x1="150" y1="18" x2="225" y2="18" stroke="#334155" stroke-width="1.5"/>
-        <line x1="75" y1="18" x2="75" y2="47" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
-        <line x1="225" y1="18" x2="225" y2="47" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
-      </svg>
+    <div class="ry-tabwrap" data-tab="2">
+      <button class="ry-tab" data-phase="2" role="tab" type="button" onclick="goPhase(2)"><span class="ry-tab-n">2</span>Umgebungen</button>
+      <button class="ry-share" data-share="2" type="button" onclick="toggleShare(2)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
     </div>
-    <div class="ov-phase">
-      <div class="ov-row">
-        <div class="phase-card" id="card-p2-brett" data-phase="2" onclick="openPhase(2, 'brett')">
-          <div class="card-lock">🔒</div>
-          <div class="card-phase">Phase 2</div>
-          <div class="card-title">Umgebung A</div>
-          <div class="card-desc">Das Gelernte anwenden</div>
-        </div>
-        <div class="phase-card" id="card-p2-alien" data-phase="2" onclick="openPhase(2, 'alien')">
-          <div class="card-lock">🔒</div>
-          <div class="card-phase">Phase 2</div>
-          <div class="card-title">Umgebung B</div>
-          <div class="card-desc">Das Gelernte anwenden</div>
-        </div>
-      </div>
-      <button class="share-btn" data-share="2" onclick="toggleShare(2)" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
+    <div class="ry-tabwrap" data-tab="3">
+      <button class="ry-tab" data-phase="3" role="tab" type="button" onclick="goPhase(3)"><span class="ry-tab-n">3</span>Sandbox</button>
+      <button class="ry-share" data-share="3" type="button" onclick="toggleShare(3)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
     </div>
-    <div class="ov-connector">
-      <svg width="300" height="52" viewBox="0 0 300 52">
-        <line x1="75" y1="0" x2="75" y2="26" stroke="#334155" stroke-width="1.5"/>
-        <line x1="225" y1="0" x2="225" y2="26" stroke="#334155" stroke-width="1.5"/>
-        <line x1="75" y1="26" x2="150" y2="26" stroke="#334155" stroke-width="1.5"/>
-        <line x1="225" y1="26" x2="150" y2="26" stroke="#334155" stroke-width="1.5"/>
-        <line x1="150" y1="26" x2="150" y2="47" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
-      </svg>
-    </div>
-    <div class="ov-phase">
-      <div class="ov-row">
-        <div class="phase-card" id="card-p3a" data-phase="3" onclick="openPhase(3)">
-          <div class="card-lock">🔒</div>
-          <div class="card-phase">Phase 3</div>
-          <div class="card-title">Sandbox</div>
-          <div class="card-desc">Beide Spiele gleichzeitig</div>
-        </div>
-      </div>
-      <button class="share-btn" data-share="3" onclick="toggleShare(3)" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
-    </div>
-  </div>
-  <div class="ov-foot">
-    <span class="back-link" onclick="resetAll()">Alles zurücksetzen</span>
+  </nav>
+  <button class="ry-reset" type="button" onclick="resetAll()" title="Alles zurücksetzen"><span class="ry-reset-long">Zurücksetzen</span><span class="ry-reset-short" aria-hidden="true">↺</span></button>
+</header>
+
+<!-- ═══════════════════════════════════════════════ WARTEN (Schüler) -->
+<div id="screen-wait" class="screen">
+  <div class="ry-wait">
+    <div class="ry-wait-ico">🔒</div>
+    <h2>Gleich geht’s los</h2>
+    <p id="ry-wait-text">Einen Moment …</p>
   </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════ PHASE 1 INTRO -->
 <div id="screen-p1-intro" class="screen">
-  <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
   <div class="intro-split">
 
     <!-- LINKS: Was ist RL? -->
@@ -688,7 +679,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
 <!-- ══════════════════════════════════════════════════ PHASE 1 TRAIN -->
 <div id="screen-p1-train" class="screen" style="position:relative">
-  <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
+  <span class="back-link" onclick="lastP1 = 'intro'; showScreen('screen-p1-intro')">← Einführung</span>
   <div class="game-panel">
     <div class="game-header">
       <h2>Trainingsphase</h2>
@@ -734,7 +725,10 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
 <!-- ════════════════════════════════════════════════ PHASE 2 BRETT -->
 <div id="screen-p2-brett" class="screen" style="position:relative">
-  <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
+  <div class="ry-seg" role="tablist">
+    <button type="button" data-env="brett" onclick="goEnv('brett')">Umgebung A</button>
+    <button type="button" data-env="alien" onclick="goEnv('alien')">Umgebung B</button>
+  </div>
   <div class="brett-panel">
     <div class="status thinking" id="p2brett-status">Bereit…</div>
     <div class="brett-board-wrap">
@@ -761,7 +755,10 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
 <!-- ════════════════════════════════════════════════ PHASE 2 ALIEN -->
 <div id="screen-p2-alien" class="screen" style="position:relative">
-  <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
+  <div class="ry-seg" role="tablist">
+    <button type="button" data-env="brett" onclick="goEnv('brett')">Umgebung A</button>
+    <button type="button" data-env="alien" onclick="goEnv('alien')">Umgebung B</button>
+  </div>
   <div class="game-panel">
     <!-- Linke Spalte: Szenenbild + Titeloverlay -->
     <div class="alien-col-left">
@@ -803,12 +800,6 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
 <!-- ════════════════════════════════════════════════════ PHASE 3: SANDBOX -->
 <div id="screen-p3-sandbox" class="screen" data-tab="games">
-  <div class="sb-topbar">
-    <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
-    <h2>Sandbox</h2>
-    <span class="back-link" style="margin:0 0 0 auto" onclick="document.getElementById('sandbox-intro-dialog').showModal()">Erklärung</span>
-  </div>
-
   <!-- Mobile Tab-Bar (nur auf kleinen Screens sichtbar) -->
   <div class="sb-tabs" id="sb-tabs">
     <button class="sb-tab-btn active" id="sb-tab-games" onclick="sbSetTab('games')">🎮 Spiele</button>
@@ -862,6 +853,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
           </div>
         </div>
         <button class="btn btn-secondary" onclick="startSandboxGame()" style="width:100%">Neue Partie</button>
+        <div style="text-align:center;margin-top:8px"><span class="back-link" style="margin:0" onclick="document.getElementById('sandbox-intro-dialog').showModal()">Was kann ich hier machen?</span></div>
       </div>
 
     </div>
@@ -955,11 +947,12 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.body.dataset.screen = id;
-  if (id === 'screen-overview') updateOverview();
+  updateTabs();
 }
 
 function enterTraining() {
   if (!phaseUsable(1)) return;
+  lastP1 = 'train';
   currentGameContext = 'p1-train';
   learningFrozen = false;
   showScreen('screen-p1-train');
@@ -994,8 +987,8 @@ function enterP2Alien() {
 //   hinein  { type: 'ry:cmd', phases: [1, 2] }   was die Klasse darf
 //   heraus  { type: 'ry:ready' }                 Seite steht
 //           { type: 'ry:phases', phases: [...] } Lehrkraft teilt/entzieht
-// Die Lehrkraft sieht immer alle Phasen und teilt sie mit dem Schalter
-// unter der Phase. Die Klasse sieht nicht geteilte Phasen gesperrt.
+// Die Lehrkraft sieht immer alle Phasen und teilt sie mit dem Teilen-
+// Symbol am Reiter. Die Klasse sieht nur geteilte Phasen als Reiter.
 // Allein geöffnet (ohne ?raum=) und im Schaufenster (?demo=1) ist alles
 // offen.
 
@@ -1019,11 +1012,35 @@ function sendUp(msg) {
   try { window.parent.postMessage(msg, location.origin); } catch (e) { /* Rahmen weg */ }
 }
 
-function openPhase(n, env) {
+// Reiter: wohin eine Phase führt. Phase 1 merkt sich Einführung/Training,
+// Phase 2 die zuletzt gewählte Umgebung.
+let lastP1  = 'intro';
+let lastEnv = 'brett';
+function stopTimers() {
+  if (aiTimeoutId)      { clearTimeout(aiTimeoutId); aiTimeoutId = null; }
+  if (alienAITimeoutId) { clearTimeout(alienAITimeoutId); alienAITimeoutId = null; }
+}
+function goPhase(n) {
   if (!phaseUsable(n)) return;
-  if (n === 1) showScreen('screen-p1-intro');
-  else if (n === 2) { if (env === 'alien') enterP2Alien(); else enterP2Brett(); }
+  stopTimers();
+  document.querySelectorAll('dialog[open]').forEach(d => d.close());
+  try { localStorage.setItem('ry.phase', String(n)); } catch (e) { /* egal */ }
+  if (n === 1) { if (lastP1 === 'train') enterTraining(); else showScreen('screen-p1-intro'); }
+  else if (n === 2) goEnv(lastEnv);
   else enterSandbox();
+}
+function goEnv(env) {
+  stopTimers();
+  lastEnv = env === 'alien' ? 'alien' : 'brett';
+  if (lastEnv === 'alien') enterP2Alien(); else enterP2Brett();
+}
+// Erste sinnvolle Phase: die zuletzt offene, sonst die erste erlaubte.
+function startPhase() {
+  let saved = 1;
+  try { saved = parseInt(localStorage.getItem('ry.phase'), 10) || 1; } catch (e) { /* egal */ }
+  const ok = [1, 2, 3].filter(phaseUsable);
+  if (!ok.length) { showScreen('screen-wait'); return; }
+  goPhase(ok.includes(saved) ? saved : ok[0]);
 }
 
 function toggleShare(n) {
@@ -1035,44 +1052,35 @@ function toggleShare(n) {
 function setClassPhases(list, fromServer) {
   classPhases = [1, 2, 3].filter(n => list.includes(n));
   if (!fromServer) sendUp({ type: 'ry:phases', phases: classPhases });
-  // Schüler: eine Phase wurde entzogen, während man drin ist → zurück.
+  // Schüler: Phase entzogen, während man drin ist (oder bisher nichts frei) → weiter.
   const cur = SCREEN_PHASE[document.body.dataset.screen];
-  if (cur && !phaseUsable(cur)) {
-    if (aiTimeoutId)      { clearTimeout(aiTimeoutId); aiTimeoutId = null; }
-    if (alienAITimeoutId) { clearTimeout(alienAITimeoutId); alienAITimeoutId = null; }
+  if (!cur || !phaseUsable(cur)) {
+    stopTimers();
     document.querySelectorAll('dialog[open]').forEach(d => d.close());
-    showScreen('screen-overview');
+    startPhase();
   }
-  updateOverview();
+  updateTabs();
 }
 
-function updateOverview() {
-  document.querySelectorAll('.phase-card[data-phase]').forEach(c => {
-    const open = phaseUsable(+c.dataset.phase);
-    c.classList.toggle('locked', !open);
-    c.classList.toggle('unlocked', open);
-  });
-  document.getElementById('card-p1').classList.toggle('completed', stats.w / Math.max(stats.l, 1) > 2.5);
-  document.getElementById('card-p2-brett').classList.toggle('completed', brettStats.runs > 0);
-  document.getElementById('card-p2-alien').classList.toggle('completed', alienStats.runs > 0);
-  document.querySelectorAll('.share-btn').forEach(b => {
-    const n = +b.dataset.share, on = isShared(n);
+function updateTabs() {
+  const cur = SCREEN_PHASE[document.body.dataset.screen];
+  document.querySelectorAll('.ry-tabwrap').forEach(w => {
+    const n = +w.dataset.tab;
+    w.hidden = !phaseUsable(n);
+    const t = w.querySelector('.ry-tab');
+    t.classList.toggle('on', n === cur);
+    t.setAttribute('aria-selected', n === cur ? 'true' : 'false');
+    const b = w.querySelector('.ry-share'), on = isShared(n);
     b.classList.toggle('is-on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    b.querySelector('span').textContent = on ? 'Mit der Klasse geteilt' : 'Mit der Klasse teilen';
-    b.title = on ? 'Phase ' + n + ' ist geteilt – antippen zum Entziehen' : 'Phase ' + n + ' mit der Klasse teilen';
+    b.title = on ? 'Phase ' + n + ' ist mit der Klasse geteilt – antippen zum Entziehen' : 'Phase ' + n + ' mit der Klasse teilen';
+    b.setAttribute('aria-label', b.title);
   });
-  const wait = document.getElementById('ov-wait');
-  if (wait) {
-    const show = STUDENT && (!classPhases || !classPhases.length);
-    wait.classList.toggle('show', show);
-    wait.textContent = classPhases ? 'Deine Lehrkraft hat noch keine Phase freigegeben.' : 'Einen Moment …';
-  }
+  const env = document.body.dataset.screen === 'screen-p2-alien' ? 'alien' : 'brett';
+  document.querySelectorAll('.ry-seg button').forEach(b => b.classList.toggle('on', b.dataset.env === env));
+  const wt = document.getElementById('ry-wait-text');
+  if (wt) wt.textContent = classPhases ? 'Deine Lehrkraft hat noch keine Phase freigegeben.' : 'Einen Moment …';
 }
-
-// ═══════════════════════════════════════════════════════════════════
-// SIMULATOR STATE
-// ═══════════════════════════════════════════════════════════════════
 
 // Alles, was sich die Seite merkt, liegt im Gerät unter „ry.“ — getrennt
 // vom Spiel im GameHub, das dieselbe Herkunft hat.
@@ -2107,8 +2115,9 @@ function resetAll(confirmed = false) {
   saveBrettDiscovered(); saveAlienDiscovered(); saveSandboxDiscovered();
   updateP1Stats(); updateBrettStatsDisplay(); updateAlienStatsDisplay(); updateSbStatsDisplay();
   checkUnlockCondition();
-  updateOverview();
-  showScreen('screen-overview');
+  lastP1 = 'intro';
+  const cur = SCREEN_PHASE[document.body.dataset.screen];
+  if (cur) goPhase(cur);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2990,8 +2999,29 @@ document.body.classList.toggle('is-teacher', TEACHER);
 loadDiscoveredNodes();
 updateP1Stats();
 checkUnlockCondition();
-showScreen('screen-overview');
 loadAlienSprites();
+// Hell/Dunkel wie die Seite drumherum (data-theme am <html> des Rahmens).
+(function syncTheme() {
+  let pd = null;
+  try { pd = window.parent !== window ? window.parent.document.documentElement : null; } catch (e) { pd = null; }
+  if (!pd) return;
+  const apply = () => {
+    const t = pd.getAttribute('data-theme');
+    if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    else document.documentElement.removeAttribute('data-theme');
+  };
+  apply();
+  try { new MutationObserver(apply).observe(pd, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) { /* egal */ }
+})();
+// Höhe der Kopfzeile für die Sandbox, die den Rest des Bildschirms füllt.
+(function measureHead() {
+  const head = document.getElementById('ry-head');
+  const set = () => document.documentElement.style.setProperty('--head-h', head.offsetHeight + 'px');
+  set();
+  if (window.ResizeObserver) new ResizeObserver(set).observe(head);
+})();
+if (STUDENT) { showScreen('screen-wait'); updateTabs(); }
+else startPhase();
 
 if (ROOM) {
   window.addEventListener('message', e => {

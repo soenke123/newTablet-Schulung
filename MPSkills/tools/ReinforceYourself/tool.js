@@ -15,8 +15,8 @@
    ihre eigene KI, der Stand liegt im Gerät (localStorage „ry.*“).
    Geteilt wird nur, WELCHE Phasen die Klasse öffnen darf:
    skill_room_state.data.phases = [1, 2] (fehlt = nur Phase 1),
-   gesetzt von der Lehrkraft über die Teilen-Schalter unter den
-   Phasen. Keine eigenen Tabellen, skill_room_set_state reicht.
+   gesetzt von der Lehrkraft über das Teilen-Symbol am Reiter der
+   Phase (wie bei Tiny LM). Keine eigenen Tabellen, skill_room_set_state reicht.
 
    Der Rahmen bekommt ?raum=lehrer bzw. ?raum=schueler.
    Botschaften (gleicher Ursprung):
@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030a';
+  const V = '20261030d';
 
   let root  = null;
   let frame = null;
