@@ -88,7 +88,11 @@ await ans(0, true);
 ok('3  Linie nach Verlust wieder überquert → neues Item (0241: Linie gilt immer)', (await team(0)).items.length === 2);
 await db.exec(`update dd_storm_teams set items = '[]' where team = 0`);
 await ans(0, true);
-ok('3  weiter wachsen ohne neue Linie → kein Item', (await team(0)).items.length === 0);
+// seit 0249 liegen die Linien bei 15/30/45/65/85 % (Ziel 10: 1,5 · 3 · 4,5 · 6,5 · 8,5)
+ok('3  Linie bei 3 (0249) → Item', (await team(0)).items.length === 1);
+await db.exec(`update dd_storm_teams set items = '[]' where team = 0`);
+await ans(0, true);
+ok('3  weiter wachsen ohne neue Linie (4 < 4,5) → kein Item', (await team(0)).items.length === 0);
 await boxes(0, N(0, 9));
 await db.exec(`update dd_storm_teams set line_max = 1 where team = 0`);
 await ans(0, false);

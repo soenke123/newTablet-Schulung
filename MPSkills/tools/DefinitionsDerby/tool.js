@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030l';
+  const V = '20261030m';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3724,8 +3724,8 @@
     { id: 'stein',  name: 'Steinkiste',   say: 'Eine Steinkiste: Möwe und Sturm kommen nicht an sie heran.' },
     { id: 'moewe',  name: 'Möwe',         say: 'Klaut beim Team vor euch die oberste Kiste.' },
     { id: 'moewe3', name: '3 Möwen',      say: 'Klauen bei bis zu drei Teams vor euch je eine Kiste.' },
-    { id: 'maxi',   name: 'Maxi-Kisten',  say: '20 Sekunden lang ist jede Kiste doppelt so hoch.' },
-    { id: 'mini',   name: 'Mini-Kisten',  say: 'Zwei Teams vor euch bekommen 20 Sekunden lang halbe Kisten.' },
+    { id: 'maxi',   name: 'Maxi-Kisten',  say: '40 Sekunden lang ist jede Kiste doppelt so hoch.' },
+    { id: 'mini',   name: 'Mini-Kisten',  say: 'Zwei Teams vor euch bekommen 40 Sekunden lang halbe Kisten.' },
     { id: 'sturm',  name: 'Sturm',        say: '30 Sekunden Sturm: wer über Stufe 1 ist, verliert bei jedem Fehler die oberste Kiste.' },
     { id: 'tea',    name: 'Teatime',      say: 'Die ersten beiden Teams machen 10 Sekunden Teepause.' },
     { id: 'bus',    name: 'Bus',          say: 'Fährt unten durch und nimmt jedem Team 5 Kisten weg.' },
@@ -3799,11 +3799,13 @@
   const sameList = (a, b) => a.length === b.length && a.every((x, k) => x === b[k]);
   const stUntil = iso => (iso ? Date.parse(iso) - stNow() : 0);
   /* Die Item-Linien (Höhen) dieses Spiels */
+  /* Item-Linien als Anteil der Zielhöhe, unten dichter (Migration 0249,
+     gleich wie dd_storm_lines in SQL — beide zusammen ändern). */
+  const ST_LINES = [[.15, .30, .45, .65, .85], [.08, .16, .24, .32, .40, .48, .60, .70, .80, .90]];
   function stLines() {
     const v = st.v;
     if (!v || !v.items_on) return [];
-    const div = v.items_often ? 10 : 5;
-    return Array.from({ length: div - 1 }, (_, k) => v.goal * (k + 1) / div);
+    return ST_LINES[v.items_often ? 1 : 0].map(f => v.goal * f);
   }
 
 
@@ -4443,7 +4445,7 @@
       const hit = tg.includes(me) && by !== me;
       const txt = {
         moewe: 'Eine Möwe hat euch eine Kiste geklaut!', moewe3: 'Eine Möwe hat euch eine Kiste geklaut!',
-        mini: 'Ihr bekommt 20 Sekunden lang nur Mini-Kisten.', tea: 'Teatime! 10 Sekunden Pause.',
+        mini: 'Ihr bekommt 40 Sekunden lang nur Mini-Kisten.', tea: 'Teatime! 10 Sekunden Pause.',
         boom: 'Boom! Fünf Kisten sind kaputt.', eis: 'Ihr habt unten eine Eiskiste! 5 richtige in Folge, sonst rutschen die neuen Kisten darunter weg.',
         bus: 'Der Bus hat unten Kisten mitgenommen.', kuddel: 'Kuddelmuddel! Alle Kisten wurden gemischt.'
       }[d.it];
