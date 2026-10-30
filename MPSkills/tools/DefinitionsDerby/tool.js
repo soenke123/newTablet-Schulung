@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030n';
+  const V = '20261030p';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3937,6 +3937,7 @@
     stPaintOver();
     stEffects();
     if (!isTeacher) { stPaintLevel(); stPaintItems(); stMaybeTask(); }
+    else stPaintWho();
     stPaintBtns();
   }
   /* Tablet: die eigene Teamfarbe färbt die ganze Spielfläche (Sönke 30.10.2026:
@@ -4200,7 +4201,6 @@
     const v = st.v, n = v.team_count;
     let lanes = '';
     for (let i = 0; i < n; i++) {
-      const cnt = stPeople().filter(p => p.t === i).length;
       lanes += '<div class="dd-st__lane" data-t="' + i + '" style="' + stCol(i) + '">' +
         '<div class="dd-st__tower" id="ddStT' + i + '"></div>' +
         '<span class="dd-st__hgt" id="ddStH' + i + '">0</span>' +
@@ -4208,11 +4208,11 @@
         '<span class="dd-st__fig" id="ddStF' + i + '">' + figSVG(i, 'idle', 120) + '</span>' +
         '<span class="dd-st__fxs" id="ddStX' + i + '"></span>' +
         '<span class="dd-st__tag"><b>' + E(stFig(i).name) + '</b><span class="dd-st__held" id="ddStI' + i + '"></span>' +
-          '<small>' + cnt + (cnt === 1 ? ' Kind' : ' Kinder') + '</small></span>' +
+          '<small class="dd-st__who" id="ddStN' + i + '">' + stWho(i) + '</small></span>' +
       '</div>';
     }
     return '<div class="dd-st__top">' +
-        '<div class="dd-st__ttl"><b>Ziel: ' + v.goal + ' Kisten</b><span>' + v.team_count + ' Teams · ' + stPeople().length + (stPeople().length === 1 ? ' Kind' : ' Kinder') + '</span></div>' +
+        '<div class="dd-st__ttl"><b>Ziel: ' + v.goal + ' Kisten</b><span>' + v.team_count + ' Teams · <span id="ddStNum">' + stPeople().length + ' Player</span></span></div>' +
         '<span class="dd-st__clock" id="ddStClock" hidden></span>' +
         '<span class="dd-st__stormtag" id="ddStStorm" hidden></span>' +
         '<div class="dd-st__btns" id="ddStBtns">' + stBeamBtns() + '</div>' +
@@ -4226,6 +4226,20 @@
         '<div class="dd-st__anns" id="ddStAnn" aria-live="polite"></div>' +
         '<div class="dd-st__over" id="ddStOver"></div>' +
       '</div>';
+  }
+  /* Beamer: unter dem Teamschild „x Player“ und die Namen (kommt jemand
+     später dazu, zieht stPaintWho nach) */
+  function stWho(t) {
+    const ps = stPeople().filter(p => p.t === t);
+    return '<b>' + ps.length + ' Player</b>' + (ps.length ? '<span>' + ps.map(p => E(p.n)).join(', ') + '</span>' : '');
+  }
+  function stPaintWho() {
+    for (let i = 0; i < st.v.team_count; i++) {
+      const el = root.querySelector('#ddStN' + i), h = stWho(i);
+      if (el && el.innerHTML !== h) el.innerHTML = h;
+    }
+    const num = root.querySelector('#ddStNum');
+    if (num) num.textContent = stPeople().length + ' Player';
   }
   function stBeamBtns() {
     if (!isTeacher || !st.v) return '';
@@ -4728,10 +4742,11 @@
     box.dataset.k = key;
     box.innerHTML = its.map((id, k) => {
       const mine = !iw[k] || iw[k] === myId, nm = E(stItem(id).name);
-      return mine
+      return '<span class="dd-st__itwrap">' + (mine
         ? '<button type="button" class="dd-st__item' + (fresh && k === its.length - 1 ? ' is-new' : '') + '" data-act="st-use" data-slot="' + k + '"' + (st.usingItem ? ' disabled' : '') +
             ' title="' + nm + '" aria-label="' + nm + ' einsetzen">' + itIco(id) + '<em>Einsetzen</em></button>'
-        : '<span class="dd-st__item is-other" title="' + nm + '">' + itIco(id) + '<span>' + E(stName(iw[k])) + ' hat ein Item</span></span>';
+        : '<span class="dd-st__item is-other" title="' + nm + '">' + itIco(id) + '<span>' + E(stName(iw[k])) + ' hat ein Item</span></span>') +
+        stInfoBtn(id) + '</span>';
     }).join('');
   }
   async function stUse(slot) {
