@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030g';
+  const V = '20261030h';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -814,6 +814,7 @@
     else if (opened.game === 'duel') renderDuel();
     else if (opened.game === 'island') renderIsland();
     else if (opened.game === 'storm') renderStorm();
+    fitStage();
   }
   const multi = () => opened && opened.stacks.length > 1;
   const stackTitle = sid => { const s = opened && opened.stacks.find(x => x.id === sid); return s ? s.title : ''; };
@@ -913,7 +914,7 @@
     const back  = termFirst ? faceHTML(c, 'def', 'Definition') : faceHTML(c, 'term', 'Begriff');
     const lv = lvl(c.id);
     box.innerHTML =
-      '<button type="button" class="dd-flip' + (learn.flipped ? ' is-flipped' : '') + '" data-act="flip" aria-label="' +
+      '<button type="button" class="dd-flip' + (learn.flipped ? ' is-flipped' : '') + (multi() ? ' is-multi' : '') + '" data-act="flip" aria-label="' +
         (learn.flipped ? 'Karte zurückdrehen' : 'Karte umdrehen') + '">' +
         '<span class="dd-flip__in"><span class="dd-flip__f">' + front + '</span><span class="dd-flip__b">' + back + '</span></span>' +
         '<span class="dd-flip__hint">' + ico.flip + (learn.flipped ? 'Tippen: zurück' : 'Tippen zum Umdrehen') + '</span>' +
@@ -1179,8 +1180,20 @@
     }
     return best;
   }
+  /* Spielfläche (Memory, Duell, Insel) so hoch, dass der ganze Kasten
+     samt Kopf und Leiste in den Bildschirm passt: gemessen wird, was
+     darüber und darunter steht (--dd-off, benutzt in tool.css). */
+  function fitStage() {
+    const dd = root && root.querySelector('.dd');
+    const box = dd && dd.querySelector('.dd-memboards, .dd-duboard, .dd-isl__map');
+    if (!box) return;
+    const a = dd.getBoundingClientRect(), b = box.getBoundingClientRect();
+    const off = Math.round((b.top - a.top) + (a.bottom - b.bottom)) + 'px';
+    if (dd.style.getPropertyValue('--dd-off') !== off) dd.style.setProperty('--dd-off', off);
+  }
   function layoutBoards() {
     if (!mm) return;
+    fitStage();
     const gt = root.querySelector('#ddMemT'), gd = root.querySelector('#ddMemD');
     if (!gt || !gd) return;
     const cols = memCols(gt.clientWidth || 300, gt.clientHeight || 300, mm.pairs);
@@ -1209,12 +1222,34 @@
 
   /* Text in seine Box einpassen, indem die Schrift kleiner wird (kein Scrollen). */
   function fitText(p, box, max, min) {
-    let lo = min, hi = max;
-    const fits = px => { p.style.fontSize = px + 'px'; return p.offsetHeight <= box.clientHeight && p.scrollWidth <= box.clientWidth; };
-    if (fits(hi)) return hi;
-    while (hi - lo > 0.5) { const mid = (lo + hi) / 2; if (fits(mid)) lo = mid; else hi = mid; }
-    p.style.fontSize = lo + 'px';
-    return lo;
+    const hi = max;
+    // Breite über die Zeilen selbst messen: scrollWidth ist gerundet und sieht zentrierten Überhang nicht
+    // (dann trennt der Browser ein Wort, das „gerade so“ passt: „Nen-ner“).
+    const rg = document.createRange();
+    const wide = () => {
+      const pr = p.getBoundingClientRect(), br = box.getBoundingClientRect();
+      const l = Math.max(pr.left, br.left), r = Math.min(pr.right, br.right);
+      rg.selectNodeContents(p);
+      for (const q of rg.getClientRects()) if (q.left < l - 0.01 || q.right > r + 0.01) return true;
+      return false;
+    };
+    const fits = px => { p.style.fontSize = px + 'px'; return p.offsetHeight <= box.clientHeight && !wide(); };
+    const search = (a, b) => {
+      if (fits(b)) return b;
+      if (!fits(a)) return 0;
+      while (b - a > 0.5) { const mid = (a + b) / 2; if (fits(mid)) a = mid; else b = mid; }
+      return a;
+    };
+    const hy = v => { p.style.hyphens = v; p.style.webkitHyphens = v; };
+    // Erst ganze Wörter (bis ein Drittel der Größe), dann mit Silbentrennung; zerrissen wird ein Wort nur im Notfall.
+    p.style.overflowWrap = 'normal';
+    hy('manual');
+    let px = search(Math.max(min, hi * 0.33), hi);
+    hy('');
+    if (!px) px = search(min, hi * 0.75) || min;
+    p.style.overflowWrap = '';
+    p.style.fontSize = px + 'px';
+    return px;
   }
   const boardFont = el => Math.max(9, Math.min(20, el.clientHeight / 4.2));
 
@@ -1583,7 +1618,10 @@
     m.el.style.left = x + 'px';
     m.el.style.top = y + 'px';
   }
+  /* Mitte so halten, dass der Zettel (Größe size) ganz auf dem Brett (Länge len) liegt. */
+  const duIn = (v, size, len) => size >= len ? len / 2 : Math.min(len - size / 2, Math.max(size / 2, v));
   function duLayout() {
+    fitStage();
     const G = duGeom();
     if (!G) return;
     const live = du.slots.filter(s => s.c);
@@ -1592,7 +1630,7 @@
       const fx = G.w / du.lw, fy = G.h / du.lh;
       for (const s of live) {
         const m = duMeasure(G, s, du.font);
-        if (m) duSet(m, s, s.x * fx, s.y * fy);
+        if (m) duSet(m, s, duIn(s.x * fx, m.w, G.w), duIn(s.y * fy, m.h, G.h));
       }
       du.lw = G.w; du.lh = G.h;
       for (const k of [1, 2]) duFitDef(k);
@@ -1619,7 +1657,18 @@
       for (const x of ms) {
         const sp = duSpot(G, x.m, taken);
         if (sp) { taken.push(sp.r); duSet(x.m, x.s, sp.x, sp.y); }
-        else duSet(x.m, x.s, x.m.w / 2 + Math.random() * Math.max(1, G.w - x.m.w), x.m.h / 2 + Math.random() * Math.max(1, G.h * 0.6 - x.m.h));
+        else {   // kein freier Platz: dorthin, wo er am wenigsten verdeckt
+          const hw = x.m.w / 2, hh = x.m.h / 2, others = taken.concat(G.holes);
+          let best = null, bestO = Infinity;
+          for (let k = 0; k < 80; k++) {
+            const cx = duIn(hw + Math.random() * (G.w - x.m.w), x.m.w, G.w), cy = duIn(hh + Math.random() * (G.h - x.m.h), x.m.h, G.h);
+            const r = { x0: cx - hw, y0: cy - hh, x1: cx + hw, y1: cy + hh };
+            const o = others.reduce((a, b) => a + Math.max(0, Math.min(r.x1, b.x1) - Math.max(r.x0, b.x0)) * Math.max(0, Math.min(r.y1, b.y1) - Math.max(r.y0, b.y0)), 0);
+            if (o < bestO) { bestO = o; best = { cx, cy, r }; }
+          }
+          taken.push(best.r);
+          duSet(x.m, x.s, best.cx, best.cy);
+        }
       }
     }
     du.font = font; du.lw = G.w; du.lh = G.h;
@@ -2312,6 +2361,7 @@
     if (!isl || !isl.ready) return;
     const cv = root.querySelector('#ddIslCv');
     if (!cv) return;
+    fitStage();
     const r = cv.getBoundingClientRect();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     isl.W = r.width; isl.H = r.height; isl.dpr = dpr;
@@ -3220,7 +3270,7 @@
       (okImg(t.card.i) ? '<img class="dd-task__img" src="' + t.card.i + '" alt="">' : '') + '<b><span class="dd-hl">' + E(t.card.t) + '</span></b></div>';
     if (t.type === 'pickTerm') {
       body = '<p class="dd-task__q">Welcher Begriff passt zu dieser Definition?</p>' + defBox +
-        '<div class="dd-opts6">' + t.options.map((o, i) => '<button type="button" class="dd-opt" data-act="isl-opt" data-id="' + E(o.id) + '"><kbd>' + (i + 1) + '</kbd>' + E(o.text) + '</button>').join('') + '</div>';
+        '<div class="dd-opts6">' + t.options.map((o, i) => '<button type="button" class="dd-opt" data-act="isl-opt" data-id="' + E(o.id) + '"><kbd>' + (i + 1) + '</kbd><span>' + E(o.text) + '</span></button>').join('') + '</div>';
     } else if (t.type === 'pickDef') {
       body = '<p class="dd-task__q">Welche Definition passt zu diesem Begriff?</p>' + termBox +
         '<div class="dd-opts4">' + t.options.map((o, i) => '<button type="button" class="dd-opt dd-opt--def" data-act="isl-opt" data-id="' + E(o.id) + '"><kbd>' + (i + 1) + '</kbd><span>' + E(o.text) + '</span></button>').join('') + '</div>';
