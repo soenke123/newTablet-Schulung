@@ -14,12 +14,12 @@ Zwischen-Quizze und **ohne** Punkte/Gewinn-Bildschirme.
    den nicht gestrichenen, markierte zählen dreifach. Sieg → alle KI-Züge der Partie markiert;
    Niederlage → letzter KI-Zug gestrichen, sind dadurch alle Möglichkeiten einer Stellung
    gestrichen, auch der Zug davor (rückwärts weiter); Unentschieden → nichts.
-   Rechts „Möglichkeiten der KI“: je KI-Zug eine Reihe Mini-Bretter (gleichwertige Felder blass),
-   die Auswahl läuft sichtbar zufällig darüber; nach der Partie wird markiert/ausgegraut.
-   „Gedanken der KI“ = Prozent auf dem Brett und unter den Möglichkeiten. Darunter Zähler (inkl.
-   gestrichene Züge) und Lernkurve (Bilanz Siege − Niederlagen + Ergebnis-Kästchen je Partie).
+   Rechts „Möglichkeiten der KI“: je KI-Zug eine Reihe Mini-Bretter (eins je Möglichkeit, keine
+   Prozente), die Auswahl läuft sichtbar zufällig darüber; nach der Partie wird markiert/ausgegraut.
+   Links Spielfeld und darunter Zähler (inkl. gestrichene Züge) + Lernkurve (Bilanz Siege −
+   Niederlagen + Ergebnis-Kästchen je Partie); links bleibt stehen (sticky), rechts scrollt.
    Kein Text, keine Aufgaben. Gerät: `ry.ttt2_brain`, `ry.ttt2_hist`, `ry.ttt2_game`,
-   `ry.ttt_first`, `ry.ttt_think`; „KI vergessen lassen“ löscht nur das.
+   `ry.ttt_first`; „KI vergessen lassen“ löscht nur das.
 1. **Trainingsphase** – Einführung „Was ist Reinforcement Learning?“ (infografik.png),
    dann als KI spielen: Zustände K0x.., Aktionen E0x.., nur Sieg/Niederlage als Rückmeldung.
    Gewichte in `ry.bsch_w`, Siege/Niederlagen in `ry.bsch_s`.

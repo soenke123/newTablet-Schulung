@@ -616,21 +616,17 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 :root{ --ttt-ki:var(--mp-accent); --ttt-du:#e8902a; }
 html[data-theme="dark"]{ --ttt-du:#ffb547; }
 @media (prefers-color-scheme: dark){ html:not([data-theme]){ --ttt-du:#ffb547; } }
-#screen-p0-ttt{max-width:1080px; padding-top:22px;}
+#screen-p0-ttt{max-width:1080px; padding-top:14px; padding-bottom:24px;}
 .ttt{display:grid; grid-template-columns:minmax(0,400px) minmax(0,1fr); gap:24px; align-items:start;}
-@media(max-width:820px){ .ttt{grid-template-columns:1fr;} }
-.ttt-play{display:flex; flex-direction:column; align-items:center; gap:14px;}
+/* Links (Spielfeld + Lernkurve) bleibt stehen, rechts wachsen die Züge nach unten. */
+.ttt-play{display:flex; flex-direction:column; align-items:center; gap:12px;
+  position:sticky; top:calc(var(--head-h, 50px) + 14px);}
+.ttt-curve{width:100%;}
+@media(max-width:820px){ .ttt{grid-template-columns:1fr;} .ttt-play{position:static;} }
 .ttt-opts{display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;}
 .ttt-opts .ry-seg{margin:0;}
-.ttt-eye{
-  display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:.88rem; font-weight:600;
-  padding:8px 14px; border-radius:999px; cursor:pointer;
-  background:var(--mp-surface); color:var(--mp-ink-faint); border:1px solid var(--mp-line);
-}
-.ttt-eye svg{width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round;}
-.ttt-eye.on{color:var(--mp-accent-ink); background:var(--mp-accent-dim); border-color:var(--mp-accent-edge);}
 .ttt-status{
-  display:flex; align-items:center; gap:9px; min-height:40px; padding:8px 18px; border-radius:999px;
+  display:flex; align-items:center; gap:9px; min-height:38px; padding:7px 16px; border-radius:999px;
   font-weight:600; font-size:.98rem; color:var(--mp-ink); background:var(--mp-surface);
   border:1px solid var(--mp-line); box-shadow:var(--mp-shadow);
 }
@@ -641,7 +637,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-status.end-D{border-color:var(--ttt-du);} .ttt-status.end-D .ttt-dot{background:var(--ttt-du);}
 @keyframes ttt-pulse{50%{transform:scale(.6); opacity:.5;}}
 .ttt-board{
-  position:relative; width:min(100%, 380px); aspect-ratio:1/1;
+  position:relative; width:min(100%, 380px, max(240px, 100dvh - var(--head-h, 50px) - 430px)); aspect-ratio:1/1;
   display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:10px; padding:10px;
   background:var(--mp-paper-2); border-radius:24px; user-select:none; -webkit-user-select:none;
 }
@@ -660,9 +656,6 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-cell.is-fresh svg path, .ttt-cell.is-fresh svg circle{stroke-dasharray:100; animation:ttt-draw .32s ease-out both;}
 .ttt-cell.is-fresh svg path + path{animation-delay:.14s;}
 @keyframes ttt-draw{from{stroke-dashoffset:100;} to{stroke-dashoffset:0;}}
-.ttt-hint{position:absolute; inset:6px; display:grid; place-items:center; border-radius:12px; overflow:hidden; animation:ttt-in .25s ease-out;}
-.ttt-hint i{position:absolute; inset:0; background:var(--ttt-ki);}
-.ttt-hint b{position:relative; font-size:clamp(.8rem, 3.6vw, 1.15rem); font-weight:700; color:var(--mp-ink); font-variant-numeric:tabular-nums;}
 @keyframes ttt-in{from{opacity:0; transform:scale(.9);}}
 .ttt-line{position:absolute; inset:10px; width:calc(100% - 20px); height:calc(100% - 20px); pointer-events:none; z-index:2; overflow:visible;}
 .ttt-line line{stroke-width:9; stroke-linecap:round; stroke-dasharray:100; animation:ttt-draw .4s .1s ease-out both; opacity:.9;}
@@ -682,13 +675,13 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-card h3{font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--mp-ink-faint); margin-bottom:10px;}
 .ttt-score{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
 .ttt-num{text-align:center; padding:4px 2px;}
-.ttt-num b{display:block; font-size:1.7rem; font-weight:700; line-height:1.1; color:var(--mp-ink); font-variant-numeric:tabular-nums;}
-.ttt-num span{display:inline-flex; align-items:center; gap:5px; font-size:.74rem; color:var(--mp-ink-soft);}
+.ttt-num b{display:block; font-size:1.4rem; font-weight:700; line-height:1.1; color:var(--mp-ink); font-variant-numeric:tabular-nums;}
+.ttt-num span{display:inline-flex; align-items:center; gap:5px; font-size:.74rem; white-space:nowrap; color:var(--mp-ink-soft);}
 .ttt-num span i{width:10px; height:10px; border-radius:3px; display:inline-block;}
 .ttt-num + .ttt-num{border-left:1px solid var(--mp-line);}
 @media(max-width:480px){ .ttt-num b{font-size:1.35rem;} .ttt-num span{font-size:.66rem;} }
 
-.ttt-chart{position:relative; width:100%; height:210px;}
+.ttt-chart{position:relative; width:100%; height:130px;}
 .ttt-chart svg{display:block; width:100%; height:100%; overflow:visible;}
 .ttt-chart text{font-family:inherit; font-size:11px; fill:var(--mp-ink-faint);}
 .ttt-chart .ax{stroke:var(--mp-line); stroke-width:1;}
@@ -709,7 +702,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-legend i{width:12px; height:12px; border-radius:3px; display:inline-block;}
 .ttt-legend .ln{width:16px; height:3px; border-radius:2px; background:var(--ttt-ki);}
 
-.ttt-score{margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--mp-line);}
+.ttt-score{margin-bottom:8px; padding-bottom:8px; border-bottom:1px solid var(--mp-line);}
 .ttt-path{display:flex; flex-direction:column; gap:10px;}
 .ttt-row{display:flex; align-items:flex-start; gap:10px; animation:ttt-in .25s ease-out both;}
 .ttt-row-n{flex:none; width:22px; height:22px; margin-top:24px; border-radius:50%; display:grid; place-items:center;
@@ -717,12 +710,10 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-opts-row{display:flex; flex-wrap:wrap; gap:6px; min-width:0;}
 .ttt-opt{position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px; border-radius:12px;
   border:2px solid transparent; transition:opacity .3s, filter .3s, border-color .15s, background .15s, transform .15s;}
-.ttt-opt small{font-size:.7rem; font-weight:600; color:var(--mp-ink-faint); font-variant-numeric:tabular-nums;}
 .ttt-mini{display:grid; grid-template-columns:repeat(3,18px); grid-template-rows:repeat(3,18px); gap:2px; padding:3px; border-radius:8px; background:var(--mp-paper-2);}
 .ttt-mini span{display:grid; place-items:center; border-radius:4px; background:var(--mp-surface); font-size:.78rem; font-weight:700; line-height:1;}
 .ttt-mini .k{color:var(--ttt-ki);} .ttt-mini .d{color:var(--ttt-du);}
 .ttt-mini .x{color:var(--ttt-ki); background:var(--mp-accent-dim);}
-.ttt-mini .sym{color:var(--ttt-ki); opacity:.28;}
 .ttt-opt.spin{border-color:var(--ttt-ki); background:var(--mp-accent-dim); transform:translateY(-2px);}
 .ttt-opt.is-chosen{border-color:var(--ttt-ki); background:var(--surface-active);}
 .ttt-opt.is-win .ttt-mini{box-shadow:0 0 0 2px var(--mp-ok);}
@@ -739,7 +730,6 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-legend .lg-pick{border:2px solid var(--ttt-ki); background:var(--surface-active);}
 .ttt-legend .lg-win{background:var(--mp-ok); color:#fff; border-radius:50%;}
 .ttt-legend .lg-lose{background:var(--mp-ink-faint); color:#fff; border-radius:50%;}
-.ttt-legend .lg-sym{color:var(--ttt-ki); opacity:.4; font-size:.8rem;}
 .ttt-none{font-size:.88rem; color:var(--mp-ink-faint);}
 
 </style>
@@ -792,13 +782,24 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
           <button type="button" data-first="ki" onclick="tttSetFirst('ki')">KI beginnt</button>
           <button type="button" data-first="du" onclick="tttSetFirst('du')">Du beginnst</button>
         </div>
-        <button class="ttt-eye" id="ttt-eye" type="button" onclick="tttToggleThink()" title="Zeigt, wie wahrscheinlich die KI welches Feld wählt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Gedanken der KI</button>
+        <div class="ttt-status" id="ttt-status"><span class="ttt-dot"></span><span id="ttt-status-t"></span></div>
       </div>
-      <div class="ttt-status" id="ttt-status"><span class="ttt-dot"></span><span id="ttt-status-t"></span></div>
       <div class="ttt-board" id="ttt-board"></div>
       <div class="ttt-actions">
         <button class="ttt-new" id="ttt-new" type="button" onclick="tttNew()">Neue Partie</button>
         <button class="ttt-forget" type="button" onclick="tttForget()">KI vergessen lassen</button>
+      </div>
+      <div class="ttt-card ttt-curve">
+        <div class="ttt-score">
+          <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i>KI-Siege</span></div>
+          <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i>Remis</span></div>
+          <div class="ttt-num"><b id="ttt-n-d">0</b><span><i style="background:var(--ttt-du)"></i>Deine Siege</span></div>
+          <div class="ttt-num"><b id="ttt-n-m">0</b><span>Gestrichen</span></div>
+        </div>
+        <div class="ttt-chart" id="ttt-chart"></div>
+        <div class="ttt-legend">
+          <span><i class="ln"></i>Bilanz der KI (Siege − Niederlagen)</span>
+        </div>
       </div>
     </div>
     <div class="ttt-side">
@@ -809,23 +810,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
           <span><i class="lg lg-pick"></i>gewählt</span>
           <span><i class="lg lg-win">★</i>führte zum Sieg</span>
           <span><i class="lg lg-lose">✕</i>führte zur Niederlage</span>
-          <span><i class="lg lg-sym">✕</i>gleichwertig (gespiegelt)</span>
-        </div>
-      </div>
-      <div class="ttt-card">
-        <div class="ttt-score">
-          <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i>KI gewinnt</span></div>
-          <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i>Unentschieden</span></div>
-          <div class="ttt-num"><b id="ttt-n-d">0</b><span><i style="background:var(--ttt-du)"></i>Du gewinnst</span></div>
-          <div class="ttt-num"><b id="ttt-n-m">0</b><span>Züge gestrichen</span></div>
-        </div>
-        <div class="ttt-chart" id="ttt-chart"></div>
-        <div class="ttt-legend">
-          <span><i class="ln"></i>Bilanz der KI (Siege − Niederlagen)</span>
-          <span><i style="background:var(--ttt-ki)"></i>KI gewinnt</span>
-          <span><i style="background:var(--mp-ink-faint)"></i>Unentschieden</span>
-          <span><i style="background:var(--ttt-du)"></i>Du gewinnst</span>
-        </div>
+                  </div>
       </div>
     </div>
   </div>
@@ -3200,8 +3185,9 @@ document.getElementById('sandbox-intro-dialog').addEventListener('click', e => {
 //   Unentschieden → nichts
 // Rechts im Kasten „Möglichkeiten der KI“ steht je KI-Zug eine Reihe mit
 // allen Möglichkeiten als Mini-Brett; die Auswahl läuft sichtbar zufällig.
+// Links bleiben Spielfeld und Lernkurve stehen (sticky), rechts scrollt.
 // KI = 'K' (✕), du = 'D' (◯). Im Gerät: ry.ttt2_brain, ry.ttt2_hist,
-// ry.ttt2_game, ry.ttt_first, ry.ttt_think.
+// ry.ttt2_game, ry.ttt_first.
 
 const TTT_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 // Die 8 Drehungen/Spiegelungen als Umordnung: neu[i] = alt[p[i]].
@@ -3222,7 +3208,6 @@ try { ['ry.ttt_brain', 'ry.ttt_last', 'ry.ttt_hist'].forEach(k => localStorage.r
 let tttBrain = tttLoad('ry.ttt2_brain', {});
 let tttHist  = tttLoad('ry.ttt2_hist', []);
 let tttFirst = tttLoad('ry.ttt_first', 'ki') === 'du' ? 'du' : 'ki';
-let tttThink = tttLoad('ry.ttt_think', true) !== false;
 let ttt = tttLoad('ry.ttt2_game', null);   // laufende/letzte Partie
 let tttTimer = null;
 let tttSpin = null;       // Zufalls-Lauf über die Möglichkeiten (Zeitgeber)
@@ -3233,7 +3218,7 @@ function tttSaveAll() {
 
 // Stellung b (KI am Zug) → Schlüssel + Möglichkeiten. Je Möglichkeit:
 // rep (Nummer in der Schachtel), cells (alle gleichwertigen Felder des
-// echten Bretts, cells[0] steht im Mini-Brett), p (je Feld).
+// echten Bretts, cells[0] steht im Mini-Brett).
 function tttState(b) {
   let best = null;
   for (const p of TTT_SYM) {
@@ -3285,7 +3270,7 @@ function enterTTT() {
 
 function tttNew() {
   tttStop();
-  ttt = { b: Array(9).fill(null), turn: tttFirst === 'ki' ? 'K' : 'D', moves: [], over: null, line: null, fresh: -1, hints: null, changed: [] };
+  ttt = { b: Array(9).fill(null), turn: tttFirst === 'ki' ? 'K' : 'D', moves: [], over: null, line: null, fresh: -1, changed: [] };
   tttRender();
   if (ttt.turn === 'K') tttAiTurn();
 }
@@ -3294,12 +3279,6 @@ function tttSetFirst(who) {
   tttFirst = who === 'du' ? 'du' : 'ki';
   tttStore('ry.ttt_first', tttFirst);
   tttNew();
-}
-
-function tttToggleThink() {
-  tttThink = !tttThink;
-  tttStore('ry.ttt_think', tttThink);
-  tttRender();
 }
 
 function tttForget() {
@@ -3325,14 +3304,14 @@ function tttAiTurn() {
   for (let i = 0; i < probs.length; i++) { r -= probs[i]; if (r <= 0) { k = i; break; } }
   const o = st.opts[k];
   const cell = o.cells[Math.random() * o.cells.length | 0];
-  const move = { key: st.key, b: ttt.b.slice(), opts: st.opts.map((x, i) => ({ rep: x.rep, cells: x.cells, p: probs[i] })), pick: null, cell: null };
+  const move = { key: st.key, b: ttt.b.slice(), opts: st.opts.map(x => ({ rep: x.rep, cells: x.cells })), pick: null, cell: null };
   ttt.moves.push(move);
-  ttt.hints = st.opts.flatMap((x, i) => x.cells.map(c => ({ cell: c, p: probs[i] / x.cells.length })));
   tttRender();
 
   const live = move.opts.map((x, i) => i).filter(i => tttStatus(st.key, move.opts[i].rep) !== -1);
   const pool = live.length ? live : move.opts.map((x, i) => i);
   const row = document.querySelector('.ttt-row:last-child');
+  if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   const els = row ? row.querySelectorAll('.ttt-opt') : [];
   const steps = pool.length > 1 ? 9 + (Math.random() * 4 | 0) : 1;
   let n = 0, at = pool[Math.random() * pool.length | 0];
@@ -3359,7 +3338,6 @@ function tttAiTurn() {
 function tttPlace(cell, who) {
   ttt.b[cell] = who;
   ttt.fresh = cell;
-  ttt.hints = null;
   const res = tttWinner(ttt.b);
   if (res) { tttEnd(res); return; }
   ttt.turn = who === 'K' ? 'D' : 'K';
@@ -3407,11 +3385,7 @@ function tttRender() {
     if (canPlay && !v) cls += ' can';
     if (i === ttt.fresh) cls += ' is-fresh';
     if (inLine.includes(i)) cls += ' in-line';
-    let inner = v === 'K' ? TTT_X : v === 'D' ? TTT_O : '';
-    if (!v && ttt.hints && tttThink) {
-      const x = ttt.hints.find(y => y.cell === i);
-      if (x) inner = '<span class="ttt-hint"><i style="opacity:' + (0.06 + 0.6 * x.p).toFixed(2) + '"></i><b>' + Math.round(x.p * 100) + ' %</b></span>';
-    }
+    const inner = v === 'K' ? TTT_X : v === 'D' ? TTT_O : '';
     const lbl = v === 'K' ? 'KI' : v === 'D' ? 'du' : 'frei';
     h += '<button type="button" class="' + cls + '" aria-label="Feld ' + (i + 1) + ': ' + lbl + '" onclick="tttClick(' + i + ')">' + inner + '</button>';
   }
@@ -3433,7 +3407,6 @@ function tttRender() {
   document.getElementById('ttt-status-t').textContent = t;
   document.getElementById('ttt-new').classList.toggle('nudge', !!ttt.over);
   document.querySelectorAll('[data-first]').forEach(b => b.classList.toggle('on', b.dataset.first === tttFirst));
-  document.getElementById('ttt-eye').classList.toggle('on', tttThink);
 
   const cnt = w => tttHist.filter(x => x === w).length;
   document.getElementById('ttt-n-k').textContent = cnt('K');
@@ -3445,7 +3418,7 @@ function tttRender() {
 }
 
 // Möglichkeiten der KI: je KI-Zug eine Reihe, je Möglichkeit ein
-// Mini-Brett (gleichwertige Felder blass mit eingezeichnet).
+// Mini-Brett.
 function tttPath() {
   const el = document.getElementById('ttt-path');
   if (!ttt.moves.length) { el.innerHTML = '<p class="ttt-none">Die KI ist noch nicht am Zug.</p>'; return; }
@@ -3462,12 +3435,10 @@ function tttPath() {
         const v = m.b[i];
         const here = chosen ? i === m.cell : i === o.cells[0];
         if (here) g += '<span class="x">✕</span>';
-        else if (o.cells.includes(i)) g += '<span class="sym">✕</span>';
         else g += v === 'K' ? '<span class="k">✕</span>' : v === 'D' ? '<span class="d">◯</span>' : '<span></span>';
       }
       const badge = s === 1 ? '<em class="ttt-badge win">★</em>' : s === -1 ? '<em class="ttt-badge lose">✕</em>' : '';
-      const pct = tttThink ? '<small>' + Math.round(o.p * 100) + ' %</small>' : '';
-      return '<div class="' + cls + '"><div class="ttt-mini">' + g + '</div>' + badge + pct + '</div>';
+      return '<div class="' + cls + '"><div class="ttt-mini">' + g + '</div>' + badge + '</div>';
     }).join('');
     return '<div class="ttt-row"><div class="ttt-row-n">' + (mi + 1) + '</div><div class="ttt-opts-row">' + opts + '</div></div>';
   }).join('');
