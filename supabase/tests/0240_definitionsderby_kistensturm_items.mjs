@@ -57,7 +57,10 @@ const tokOf = async t => (await one(`select p.token from dd_storm_players pl joi
 const team = async t => one(`select * from dd_storm_teams where room_id = $1 and team = $2`, [ROOM, t]);
 const H = async t => Number((await team(t)).height);
 const ans = async (t, okv) => { await db.exec(`update dd_storm_players set last_ok_at = null`); return call(`dd_storm_answer($1, $2, 0)`, [await tokOf(t), okv]); };
-const use = async t => call(`dd_storm_use($1, 0, 0)`, [await tokOf(t)]);
+// seit 0247 darf nur der Halter des Items einsetzen (items_who), sonst die erste Person
+const holderTok = async t => { const w = (await team(t)).items_who?.[0];
+  return w ? (await one(`select token from skill_participants where id = $1`, [w])).token : tokOf(t); };
+const use = async t => call(`dd_storm_use($1, 0, 0)`, [await holderTok(t)]);
 const kinds = async t => (await team(t)).boxes.map(b => b.k).join('');
 
 /* 1 Einstellungen */

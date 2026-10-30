@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030i';
+  const V = '20261030j';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3737,8 +3737,19 @@
   /* Kleine Bilder (eigene Farben; .dd-it hebt das allgemeine .dd svg auf) */
   const IT_BOX = (x, y, w, h, c, e) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="1.5" fill="' + c + '" stroke="' + e + '" stroke-width="1.6"/>' +
     '<rect x="' + (x + w * 0.42) + '" y="' + y + '" width="' + (w * 0.16) + '" height="' + h + '" fill="#f6ecc4" opacity=".85"/>';
-  const GULL = '<path d="M4 18c5-6 10-6 14 0c4-6 9-6 14 0c-5-2-9-1-14 3c-5-4-9-5-14-3z" fill="#fff" stroke="#3b4250" stroke-width="1.6" stroke-linejoin="round"/>' +
-    '<path d="M18 21l3 1.6l-3 1.2z" fill="#ff9f1c" stroke="#3b4250" stroke-width=".8"/><circle cx="19.6" cy="19.4" r=".9" fill="#3b4250"/>';
+  /* Möwe (Sönke 30.10.2026: „putziger“): runder Körper, großer Kopf mit Glanzauge,
+     Bäckchen, Schwanz, Füßchen; die Flügel (.dd-gw) schlagen im Flug. */
+  const GULL = '<g class="dd-gull">' +
+    '<path d="M11 24l-7 1.5l6.5 2.5" fill="#d6dde6" stroke="#3b4250" stroke-width="1.2" stroke-linejoin="round"/>' +
+    '<path class="dd-gw dd-gw--b" d="M18 21c-3-7-9-10-14-8c3 2 6 5 8 9z" fill="#c9d2dd" stroke="#3b4250" stroke-width="1.3" stroke-linejoin="round"/>' +
+    '<ellipse cx="19" cy="24" rx="10" ry="7.5" fill="#fff" stroke="#3b4250" stroke-width="1.6"/>' +
+    '<path d="M17 31v3.2M21.5 31v3.2M15.6 34.2h3M20.1 34.2h3" stroke="#ffa62b" stroke-width="1.5" stroke-linecap="round"/>' +
+    '<circle cx="26" cy="16.5" r="7" fill="#fff" stroke="#3b4250" stroke-width="1.6"/>' +
+    '<path d="M32 16.4c2.2-.2 4 .5 5 1.6c-1.4 1-3.2 1.4-5 1.2z" fill="#ffa62b" stroke="#3b4250" stroke-width="1" stroke-linejoin="round"/>' +
+    '<circle cx="28" cy="15.2" r="2.3" fill="#2a2f3a"/><circle cx="28.8" cy="14.3" r=".85" fill="#fff"/>' +
+    '<ellipse cx="25.4" cy="19.6" rx="1.8" ry="1.1" fill="#ff9aa8" opacity=".85"/>' +
+    '<path class="dd-gw dd-gw--f" d="M20 23c-2-8-8-12-14-10c3 2 6 6 7 11z" fill="#eef2f6" stroke="#3b4250" stroke-width="1.3" stroke-linejoin="round"/>' +
+    '</g>';
   const IT_SVG = {
     bonus:  IT_BOX(9, 20, 22, 13, '#f2c230', '#9a7410') + IT_BOX(12, 8, 16, 12, '#f2c230', '#9a7410') +
             '<path d="M32 6l1.4 3.4L37 10.8l-3.6 1.4L32 15.6l-1.4-3.4L27 10.8l3.6-1.4z" fill="#fff6b0" stroke="#9a7410" stroke-width=".8"/>',
@@ -3942,27 +3953,26 @@
 
   /* ══ Lobby (Lehrkraft) ══ */
   const stPeople = () => (st.v && st.v.people) || [];
+  /* Lobby wie Kingdoms of Mathoria (Sönke 30.10.2026): oben EINE Leiste
+     Teams · Stapel · Höhe · Items · Start, darunter die Teams. Ohne Fülltext. */
   function stLobbyBeam() {
     return '<div class="dd-st__lobby">' +
       '<section class="dd-st__set" aria-label="Einstellungen">' +
-        '<h3 class="dd-st__h3">Kistensturm</h3>' +
-        '<p class="dd-st__lead">Teams stapeln um die Wette: jede richtige Antwort ist eine Kiste. Wer zuerst oben ist, gewinnt.</p>' +
-        '<div class="dd-st__row dd-st__row--top"><span class="dd-st__lab">Teams</span><div class="dd-st__figpick" id="ddStFigs" role="group" aria-label="Welche Teams spielen mit"></div></div>' +
-        '<div class="dd-st__row"><span class="dd-st__lab">Zielhöhe</span><div class="dd-st__goalset">' +
+        '<div class="dd-st__grp"><span class="dd-st__lab">Teams</span><div class="dd-st__figpick" id="ddStFigs" role="group" aria-label="Welche Teams spielen mit"></div></div>' +
+        '<div class="dd-st__grp dd-st__grp--stk"><span class="dd-st__lab">Stapel</span><div class="dd-chips" id="ddStStacks"></div></div>' +
+        '<div class="dd-st__grp"><span class="dd-st__lab">Höhe</span><div class="dd-st__goalset">' +
           '<button type="button" class="btn btn--sm dd-ic" data-act="st-goal" data-v="-1" aria-label="Weniger Kisten">−</button>' +
           '<input class="dd-input dd-st__goalin" id="ddStGoal" type="number" min="5" max="200" inputmode="numeric" aria-label="Zielhöhe in Kisten">' +
-          '<button type="button" class="btn btn--sm dd-ic" data-act="st-goal" data-v="1" aria-label="Mehr Kisten">+</button>' +
-          '<span class="dd-st__unit">Kisten</span></div></div>' +
-        '<p class="dd-st__hint" id="ddStGoalHint"></p>' +
-        '<div class="dd-st__row dd-st__row--top"><span class="dd-st__lab">Stapel</span><div class="dd-chips" id="ddStStacks"></div></div>' +
-        '<div class="dd-st__row"><span class="dd-st__lab">Items</span><span class="dd-st__pair"><div class="dd-segs" id="ddStIon" role="group" aria-label="Items">' +
+          '<button type="button" class="btn btn--sm dd-ic" data-act="st-goal" data-v="1" aria-label="Mehr Kisten">+</button></div></div>' +
+        '<div class="dd-st__grp"><span class="dd-st__lab">Items</span><span class="dd-st__pair"><div class="dd-segs" id="ddStIon" role="group" aria-label="Items">' +
           '<button type="button" class="dd-seg" data-act="st-ion" data-v="1">an</button><button type="button" class="dd-seg" data-act="st-ion" data-v="0">aus</button></div>' +
           '<div class="dd-segs" id="ddStOften" role="group" aria-label="Wie oft" title="Häufig: doppelt so viele Item-Linien">' +
-          '<button type="button" class="dd-seg" data-act="st-often" data-v="0">normal</button><button type="button" class="dd-seg" data-act="st-often" data-v="1">häufig</button></div></span></div>' +
-        '<div class="dd-st__itset" id="ddStItemSet"></div>' +
-        '<div class="dd-st__go"><button type="button" class="btn btn--primary dd-st__start" data-act="st-start" id="ddStStart">' + ico.play + 'Start</button>' +
+          '<button type="button" class="dd-seg" data-act="st-often" data-v="0">normal</button><button type="button" class="dd-seg" data-act="st-often" data-v="1">häufig</button></div>' +
+          '<button type="button" class="dd-seg dd-st__itopen" id="ddStItOpen" data-act="st-itopen" aria-expanded="false"></button></span></div>' +
+        '<div class="dd-st__grp dd-st__go"><button type="button" class="btn btn--primary dd-st__start" data-act="st-start" id="ddStStart">' + ico.play + 'Start</button>' +
           '<p class="dd-st__hint" id="ddStStartHint"></p></div>' +
       '</section>' +
+      '<div class="dd-st__itset" id="ddStItemSet" hidden></div>' +
       '<section class="dd-st__teams" id="ddStTeamsBox" aria-label="Teams"></section>' +
     '</div>';
   }
@@ -3992,36 +4002,40 @@
         fp.innerHTML = window.DDFiguren.LIST.map((f, k) => {
           const on = sel.includes(k);
           return '<button type="button" class="dd-st__figbtn' + (on ? ' is-on' : '') + '" data-act="st-fig" data-v="' + k + '" aria-pressed="' + on +
-            '" title="Team ' + E(f.name) + '" style="--tc:' + f.col + ';--ts:' + f.soft + '">' + window.DDFiguren.svg(k, 'idle', 54) + '<span>' + E(f.name) + '</span></button>';
+            '" title="Team ' + E(f.name) + '" aria-label="Team ' + E(f.name) + '" style="--tc:' + f.col + ';--ts:' + f.soft + '">' + window.DDFiguren.svg(k, 'idle', 44) + '</button>';
         }).join('');
       }
     }
     const gi = root.querySelector('#ddStGoal');
     if (gi && document.activeElement !== gi) gi.value = v.goal;
-    const per = stPerTeam(), n = stPeople().length;
-    const hint = root.querySelector('#ddStGoalHint');
-    if (hint) hint.textContent = n ? 'Das sind etwa ' + Math.max(1, Math.round(v.goal / per)) + ' richtige Antworten je Kind (' + per + ' je Team).' : 'Noch niemand im Raum.';
+    if (gi) gi.title = 'Zielhöhe in Kisten · etwa ' + Math.max(1, Math.round(v.goal / stPerTeam())) + ' richtige Antworten je Kind';
     const sb = root.querySelector('#ddStStacks');
     if (sb) {
       const on = new Set(v.stacks || []);
       sb.innerHTML = (list || []).length ? (list || []).map(s => '<button type="button" class="dd-chip dd-chip--stack' + (on.has(s.id) ? ' is-on' : '') +
         '" data-act="st-stack" data-id="' + E(s.id) + '" aria-pressed="' + on.has(s.id) + '">' + (on.has(s.id) ? ico.check : '') + E(s.title) + ' <i>' + s.n + '</i></button>').join('')
-        : '<span class="dd-st__hint">Noch kein Stapel – lege zuerst einen an.</span>';
+        : '<span class="dd-st__hint">Noch kein Stapel.</span>';
     }
     root.querySelectorAll('#ddStIon .dd-seg').forEach(b => b.classList.toggle('is-on', (b.dataset.v === '1') === !!v.items_on));
     root.querySelectorAll('#ddStOften .dd-seg').forEach(b => { b.classList.toggle('is-on', (b.dataset.v === '1') === !!v.items_often); b.disabled = !v.items_on; });
     const iset = root.querySelector('#ddStItemSet');
     if (iset) {
       const off = new Set(v.items_off || []);
-      iset.hidden = !v.items_on;
+      iset.hidden = !v.items_on || !st.itOpen;
+      const io = root.querySelector('#ddStItOpen');
+      if (io) {
+        io.hidden = !v.items_on; io.setAttribute('aria-expanded', String(!!st.itOpen));
+        io.innerHTML = (ST_ITEMS.length - off.size) + '/' + ST_ITEMS.length + ' <span aria-hidden="true">' + (st.itOpen ? '▴' : '▾') + '</span>';
+        io.title = 'Welche Items';
+      }
       iset.innerHTML = '<div class="dd-st__itgrid">' + ST_ITEMS.map(it => '<span class="dd-st__itcell' + (off.has(it.id) ? '' : ' is-on') + '"><button type="button" class="dd-st__itbtn' + (off.has(it.id) ? '' : ' is-on') + '" data-act="st-item" data-id="' + it.id +
           '" aria-pressed="' + !off.has(it.id) + '" title="' + E(it.say) + '">' + itIco(it.id) + '<span>' + E(it.name) + '</span></button>' + stInfoBtn(it.id) + '</span>').join('') + '</div>';
     }
     const cards = (list || []).filter(s => (v.stacks || []).includes(s.id)).reduce((a, s) => a + (s.n || 0), 0);
     const sh = root.querySelector('#ddStStartHint'), go = root.querySelector('#ddStStart');
-    const why = !(v.stacks || []).length ? 'Wähle mindestens einen Stapel.' : cards < 4 ? 'Die Stapel brauchen zusammen mindestens 4 Karten.' : '';
+    const why = !(v.stacks || []).length ? 'Stapel wählen' : cards < 4 ? 'Mindestens 4 Karten' : '';
     if (go) go.disabled = !!why || st.starting;
-    if (sh) sh.textContent = why || (n ? n + (n === 1 ? ' Kind spielt' : ' Kinder spielen') + ' mit. Nicht gewählte Stapel werden beim Start mit der Klasse geteilt.' : 'Die Klasse kommt über „Mitmachen“ dazu – oder startet einfach mit.');
+    if (sh) { sh.textContent = why; sh.hidden = !why; }
     const tb = root.querySelector('#ddStTeamsBox');
     if (tb) {
       const key = JSON.stringify([v.team_count, stPeople().map(p => p.n + p.t)]);
@@ -4030,9 +4044,9 @@
         tb.innerHTML = Array.from({ length: v.team_count }, (_, i) => {
           const ps = stPeople().filter(p => p.t === i);
           return '<article class="dd-st__tcard" style="' + stCol(i) + '">' +
-            '<span class="dd-st__tfig">' + figSVG(i, 'idle', 92) + '</span>' +
-            '<div class="dd-st__tinfo"><b>' + E(stTeam(i)) + '</b><small>' + E(stFig(i).say) + '</small>' +
-            '<p class="dd-st__names">' + (ps.length ? ps.map(p => '<span>' + E(p.n) + '</span>').join('') : '<em>noch leer</em>') + '</p></div></article>';
+            '<span class="dd-st__tfig">' + figSVG(i, 'idle', 120) + '</span>' +
+            '<b class="dd-st__tname2">' + E(stTeam(i)) + '</b>' +
+            '<p class="dd-st__names">' + (ps.length ? ps.map(p => '<span>' + E(p.n) + '</span>').join('') : '<em>noch leer</em>') + '</p></article>';
         }).join('');
       }
     }
@@ -4129,16 +4143,14 @@
     if (box.dataset.key === key) return;
     box.dataset.key = key;
     if (t == null) {
-      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistensturm</h3><p>Gleich geht’s los. Sobald deine Lehrkraft startet, kommst du in ein Team.</p></div>' + stItemsDev();
+      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistensturm</h3><p>Gleich geht’s los.</p></div>' + stItemsDev();
       return;
     }
     const mates = stPeople().filter(p => p.t === t);
     box.innerHTML = '<div class="dd-st__card" style="' + stCol(t) + '">' +
       '<span class="dd-st__bigfig">' + figSVG(t, 'wave', 150) + '</span>' +
       '<p class="dd-st__you">Du bist in</p><h3 class="dd-st__h3 dd-st__tname">' + E(stTeam(t)) + '</h3>' +
-      '<p class="dd-st__say">' + E(stFig(t).say) + '</p>' +
-      '<p class="dd-st__names">' + mates.map(p => '<span' + (p.id === v.me.id ? ' class="is-me"' : '') + '>' + E(p.n) + '</span>').join('') + '</p>' +
-      '<p class="dd-st__hint">Warte, bis deine Lehrkraft startet. Jede richtige Antwort ist eine Kiste für dein Team.</p></div>' + stItemsDev();
+      '<p class="dd-st__names">' + mates.map(p => '<span' + (p.id === v.me.id ? ' class="is-me"' : '') + '>' + E(p.n) + '</span>').join('') + '</p></div>' + stItemsDev();
   }
   /* Lobby am Tablet: die Items dieses Spiels, antippen = Erklärung mit Bild */
   function stItemsDev() {
@@ -4146,9 +4158,7 @@
     if (!v.items_on) return '';
     const off = new Set(v.items_off || []), on = ST_ITEMS.filter(it => !off.has(it.id));
     if (!on.length) return '';
-    return '<div class="dd-st__card dd-st__itlist"><h3 class="dd-st__h3">Items in diesem Spiel</h3>' +
-      '<p class="dd-st__hint"><span class="dd-st__qbox">?</span>Überquert euer Turm eine gestrichelte Linie, bekommt euer Team ein Item' +
-        (v.items_often ? ' – heute gibt es besonders viele.' : '.') + ' Antippen zeigt, was es macht.</p>' +
+    return '<div class="dd-st__card dd-st__itlist"><h3 class="dd-st__h3">Items</h3>' +
       '<div class="dd-st__itgrid">' + on.map(it => '<button type="button" class="dd-st__itbtn is-on" data-act="st-iinfo" data-id="' + it.id + '">' +
         itIco(it.id) + '<span>' + E(it.name) + '</span><i class="dd-st__ii">i</i></button>').join('') + '</div></div>';
   }
@@ -4369,16 +4379,24 @@
       stPop(e.t, E(isTeacher ? (e.w || '') + ' ' + n : n + (e.w ? ' ' + e.w : '')));
     } else if (e.k === 'get' && e.t != null) {
       if (isTeacher || e.t === me) stPop(e.t, itIco(d.it) + 'Item!', 'is-item');
-      if (e.t === me) { st.newItem = Date.now(); stNote(itIco(d.it) + '<b>Neues Item: ' + E(stItem(d.it).name) + '</b><span>Jeder im Team kann es einsetzen.</span>', 'is-get'); }
+      if (e.t === me) {
+        st.newItem = Date.now();
+        const iw = stTeamV(me).iw || [], who = iw[iw.length - 1], mine = !who || (st.v.me && who === st.v.me.id);
+        stNote(itIco(d.it) + (mine ? '<b>Neues Item: ' + E(stItem(d.it).name) + '</b><span>Du darfst es einsetzen!</span>'
+          : '<b>' + E(stName(who)) + ' hat ein Item</b>'), 'is-get');
+      }
     } else if (e.k === 'use') {
       stUseFx(e, d);
     } else if (e.k === 'blow' && e.t != null) {
       stHold(e.t, 650);
       stFlyOff(e.t, d.box);
+      const p = stTop(e.t); if (p) stBam(p.x + 30, p.y - 10, 'HUI!', '#5a8fd8', 0.7);
       if (e.t === me) stNote(itIco('sturm') + '<b>Der Sturm hat eure oberste Kiste weggeweht.</b>', 'is-bad');
     } else if (e.k === 'icebreak' && e.t != null) {
       stHold(e.t, 700);
       stShake(e.t);
+      if (d.lost > 0) stKnock(e.t, 'bottom', d.lost, 1);
+      { const p = stTop(e.t); if (p) stBam(p.x, p.bottom - 30, 'KRACK!', '#3b8fc4', 1); }
       if (e.t === me) stNote(itIco('eis') + '<b>Das Eis ist gebrochen – die neuen Kisten darunter sind weggerutscht.</b>', 'is-bad');
     } else if (e.k === 'melt' && e.t === me) {
       stNote(itIco('eis') + '<b>Geschafft! Das Eis ist geschmolzen.</b>', 'is-good');
@@ -4391,13 +4409,21 @@
     stAnnounce(itIco(d.it, 'is-big') + '<span><b>' + who + '</b> setzt <b>' + E(it.name) + '</b> ein!</span>', by);
     const hold = (ts, ms) => ts.forEach(t => stHold(t, ms));
     const all = Array.from({ length: st.v.team_count }, (_, i) => i);
+    const at = (t, fn) => { const p = stTop(t); if (p) fn(p); };
     if (d.it === 'moewe' || d.it === 'moewe3') {
-      hold(tg.concat([by]), 1500);
-      tg.forEach((t, k) => setTimeout(() => stGull(t, by, d['b' + t]), k * 220));
-    } else if (d.it === 'bus') { hold(all, 1700); stBus(); }
-    else if (d.it === 'boom') { hold(tg, 1150); stBomb(tg[0]); }
+      hold(tg.concat([by]), 1700);
+      tg.forEach((t, k) => setTimeout(() => stGull(t, by, d['b' + t]), k * 260));
+    } else if (d.it === 'bus') stBus(d, hold);
+    else if (d.it === 'boom') { hold(tg, 1250); stBomb(tg[0], d.n || 0); }
     else if (d.it === 'eis') { hold(tg, 900); stDrop(tg[0], 'eis'); }
-    else if (d.it === 'kuddel') { hold(all, 1250); stKuddel(); }
+    else if (d.it === 'kuddel') { hold(all, 1250); stKuddel(); stBam(null, null, 'KUDDEL&shy;MUDDEL!', '#e5484d', 1.3); stQuake(2); }
+    else if (d.it === 'bonus') at(by, p => { stBam(p.x, p.bottom - 20, '+2!', '#e8a90f', 1.1); stSparks(p.x, p.bottom - 20, ['#ffd75a', '#fff6b0', '#e8a90f'], 16); });
+    else if (d.it === 'stein') at(by, p => stBam(p.x, p.bottom - 16, 'TOCK!', '#6b7280', 0.9));
+    else if (d.it === 'maxi') at(by, p => stBam(p.x, p.y - 30, 'MAXI!', '#2f8a4f', 1.1));
+    else if (d.it === 'mini') tg.forEach(t => at(t, p => stBam(p.x, p.y - 24, 'mini…', '#b5322a', 0.75)));
+    else if (d.it === 'tea') tg.forEach(t => at(t, p => stBam(p.x, p.y - 24, 'TEATIME!', '#8a5a2b', 0.9)));
+    else if (d.it === 'sturm') { stBam(null, null, 'STURM!', '#2a4a7a', 1.4); stQuake(1); }
+    if (!isTeacher && by === me) stBig(d.it);
     // Tablet: sagen, was das für das eigene Team heißt
     if (!isTeacher && me != null) {
       const hit = tg.includes(me) && by !== me;
@@ -4411,6 +4437,17 @@
       else if (hit && txt) stNote(itIco(d.it) + '<b>' + txt + '</b><span>von ' + E(stTeam(by)) + '</span>', 'is-bad');
       else if (d.it === 'sturm' || d.it === 'kuddel' || d.it === 'bus') stNote(itIco(d.it) + '<b>' + E(it.name) + '!</b><span>' + E(it.say) + '</span>');
     }
+  }
+  /* Tablet: wer einsetzt, bekommt das Item groß ins Gesicht (Bam!) */
+  function stBig(id) {
+    const box = root.querySelector('#ddSt');
+    if (!box || still()) return;
+    const el = document.createElement('div');
+    el.className = 'dd-st__big';
+    el.innerHTML = itIco(id) + '<b>' + E(stItem(id).name) + '!</b>';
+    box.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+    try { if (navigator.vibrate) navigator.vibrate([40, 30, 60]); } catch (e) { /* egal */ }
   }
   /* Große Ansage am Beamer, kleine Zeile am Tablet */
   function stAnnounce(html, t) {
@@ -4451,27 +4488,114 @@
     return el;
   }
   const stAnim = (el, frames, ms, ease) => (el && el.animate && !still() ? el.animate(frames, { duration: ms, easing: ease || 'ease-in-out', fill: 'forwards' }) : null);
+  /* „Bam“ (Sönke 30.10.2026: „die Effekte sollen mehr bam machen“):
+     Comic-Stern mit Wort, Funken, Wackeln der Szene. x/y null = Mitte. */
+  function stBam(x, y, word, col, size) {
+    const sc = root.querySelector('#ddStScene');
+    if (!sc || !isTeacher) return;
+    if (x == null) { x = sc.clientWidth / 2; y = sc.clientHeight * 0.42; }
+    const el = stFx('<span class="dd-st__bamstar"></span><b>' + word + '</b>', 'is-bam');
+    el.style.left = x + 'px'; el.style.top = y + 'px';
+    el.style.setProperty('--c', col || '#ff7a1a');
+    el.style.setProperty('--s', size || 1);
+    el.style.setProperty('--r', (Math.random() * 16 - 8).toFixed(1) + 'deg');
+    setTimeout(() => el.remove(), 1100);
+    stSparks(x, y, [col || '#ff7a1a', '#ffd23f', '#fff'], Math.round(10 * (size || 1)));
+  }
+  function stSparks(x, y, cols, n) {
+    if (!isTeacher || still()) return;
+    for (let k = 0; k < n; k++) {
+      const el = stFx('', 'is-spark');
+      if (!el) return;
+      el.style.left = x + 'px'; el.style.top = y + 'px';
+      el.style.background = cols[k % cols.length];
+      const a = Math.random() * Math.PI * 2, r = 50 + Math.random() * 90;
+      stAnim(el, [{ transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: 'translate(' + (Math.cos(a) * r).toFixed(0) + 'px,' + (Math.sin(a) * r + 30).toFixed(0) + 'px) scale(.2) rotate(' + (Math.random() * 360).toFixed(0) + 'deg)', opacity: 0 }],
+        500 + Math.random() * 350, 'cubic-bezier(.2,.7,.4,1)');
+      setTimeout(() => el.remove(), 900);
+    }
+  }
+  function stQuake(lv) {
+    const sc = root.querySelector('#ddStScene');
+    if (!sc || still()) return;
+    const c = 'is-quake' + (lv > 1 ? '2' : '');
+    sc.classList.remove('is-quake', 'is-quake2'); void sc.offsetWidth; sc.classList.add(c);
+    setTimeout(() => sc.classList.remove(c), 600);
+  }
+  /* Kisten wegschleudern: 'bottom' = die untersten n, 'top' = die obersten n.
+     Sie fliegen als Kopien davon, der Rest des Turms fällt nach. Der gezeigte
+     Stand (st.shown) wird gleich mitgekürzt, damit nichts doppelt nachläuft. */
+  function stKnock(t, where, n, dir) {
+    const tw = root.querySelector('#ddStT' + t), sc = root.querySelector('#ddStScene');
+    if (!tw || !sc || !n) return;
+    const kids = [...tw.children], pick = where === 'bottom' ? kids.slice(0, n) : kids.slice(-n);
+    if (!pick.length) return;
+    const a = sc.getBoundingClientRect();
+    let gone = 0;
+    pick.forEach((b, k) => {
+      const r = b.getBoundingClientRect();
+      gone += r.height;
+      const el = stFx('', 'is-knock');
+      el.appendChild(b.cloneNode(true));
+      el.style.left = (r.left - a.left) + 'px'; el.style.top = (r.top - a.top) + 'px'; el.style.width = r.width + 'px';
+      const dx = (dir || 1) * (120 + Math.random() * 220), dy = -(80 + Math.random() * 200) + k * 6;
+      stAnim(el, [{ transform: 'translate(0,0) rotate(0)', opacity: 1 },
+        { transform: 'translate(' + (dx * 0.6).toFixed(0) + 'px,' + dy.toFixed(0) + 'px) rotate(' + ((dir || 1) * (120 + Math.random() * 200)).toFixed(0) + 'deg)', opacity: 1, offset: 0.55 },
+        { transform: 'translate(' + dx.toFixed(0) + 'px,' + (dy + 260).toFixed(0) + 'px) rotate(' + ((dir || 1) * (260 + Math.random() * 300)).toFixed(0) + 'deg)', opacity: 0 }],
+        900 + Math.random() * 300, 'cubic-bezier(.25,.6,.5,1)');
+      setTimeout(() => el.remove(), 1300);
+      b.remove();
+    });
+    if (st.shown[t]) st.shown[t] = where === 'bottom' ? st.shown[t].slice(pick.length) : st.shown[t].slice(0, st.shown[t].length - pick.length);
+    if (where === 'bottom') stAnim(tw, [{ transform: 'translateY(-' + gone.toFixed(0) + 'px)' }, { transform: 'translateY(5px)', offset: 0.75 }, { transform: 'none' }], 380, 'ease-in');
+    stPaintHeight(t);
+  }
   function stGull(from, to, box) {
     const a = stTop(from), b = stTop(to);
     if (!a || !b) return;
-    const el = stFx('<svg class="dd-it" viewBox="0 0 40 40">' + GULL + '</svg>' +
+    const flip = b.x < a.x ? ' style="transform:scaleX(-1)"' : '';
+    const el = stFx('<span class="dd-st__gwrap"' + flip + '><svg class="dd-it" viewBox="0 0 40 40">' + GULL + '</svg></span>' +
       (box ? '<i class="dd-st__box k-' + E(box.k) + '" style="--sz:1;--tc:' + (box.t != null ? stFig(box.t).col : '#999') + '"></i>' : ''), 'is-gull');
-    const mid = { x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 90 };
-    const pos = (p, dy) => 'translate(' + (p.x - 30) + 'px,' + (p.y - 30 + (dy || 0)) + 'px)';
-    const an = stAnim(el, [{ transform: pos({ x: a.x, y: -40 }) }, { transform: pos(a, -10), offset: 0.3 },
-      { transform: pos(mid), offset: 0.65 }, { transform: pos(b, -10) }], 1400);
-    setTimeout(() => el.remove(), 1500);
+    const mid = { x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 110 };
+    const pos = (p, dy) => 'translate(' + (p.x - 38) + 'px,' + (p.y - 38 + (dy || 0)) + 'px)';
+    const an = stAnim(el, [{ transform: pos({ x: a.x - 120, y: -60 }) }, { transform: pos(a, -4), offset: 0.32 }, { transform: pos(a, -24), offset: 0.4 },
+      { transform: pos(mid), offset: 0.7 }, { transform: pos(b, -12) }], 1600);
+    const bx = el.querySelector('.dd-st__box');
+    if (bx) stAnim(bx, [{ opacity: 0 }, { opacity: 0, offset: 0.31 }, { opacity: 1, offset: 0.33 }, { opacity: 1 }], 1600, 'linear');
+    setTimeout(() => { stBam(a.x, a.y - 14, 'SCHNAPP!', '#ff9f1c', 0.8); stShake(from); }, 510);
+    setTimeout(() => el.remove(), 1650);
     if (!an) el.remove();
   }
-  function stBus() {
+  /* Bus (Sönke 30.10.2026): fährt unten auf Höhe der Türme durch und haut
+     an jedem Turm die untersten Kisten weg. d['n'+t] = Zahl der Kisten. */
+  function stBus(d, hold) {
     const sc = root.querySelector('#ddStScene');
     if (!sc) return;
-    const el = stFx(itIco('bus'), 'is-bus');
-    const W = sc.clientWidth;
-    stAnim(el, [{ transform: 'translateX(-160px)' }, { transform: 'translateX(' + (W + 20) + 'px)' }], 1600, 'linear');
-    setTimeout(() => el.remove(), 1700);
+    const W = sc.clientWidth, BW = 170, MS = 2200, x0 = -BW - 20, x1 = W + 20;
+    const el = stFx('<span class="dd-st__bus">' + itIco('bus') + '</span><i class="dd-st__dust"></i>', 'is-bus');
+    stAnim(el, [{ transform: 'translateX(' + x0 + 'px)' }, { transform: 'translateX(' + x1 + 'px)' }], MS, 'linear');
+    setTimeout(() => el.remove(), MS + 100);
+    const a = sc.getBoundingClientRect();
+    for (let t = 0; t < st.v.team_count; t++) {
+      const tw = root.querySelector('#ddStT' + t);
+      if (!tw) continue;
+      const r = tw.getBoundingClientRect();
+      // Zeitpunkt, an dem die Schnauze des Busses den Turm erreicht
+      const hit = Math.max(0, Math.min(MS, ((r.left - a.left) - BW - x0) / (x1 - x0) * MS));
+      hold([t], hit + 450);
+      const n = d['n' + t] || 0;
+      if (!n) continue;
+      setTimeout(() => {
+        if (!st) return;
+        stKnock(t, 'bottom', n, 1);
+        stBam(r.left - a.left + r.width / 2, r.bottom - a.top - 30, 'RUMMS!', '#e08a00', 1);
+        stShake(t);
+      }, hit);
+    }
+    stQuake(1);
   }
-  function stBomb(t) {
+  function stBomb(t, n) {
     const p = stTop(t);
     if (!p) return;
     const el = stFx(itIco('boom'), 'is-bomb');
@@ -4481,7 +4605,10 @@
       const ex = stFx('', 'is-blast');
       ex.style.left = p.x + 'px'; ex.style.top = p.y + 'px';
       setTimeout(() => ex.remove(), 700);
-      stShake(t);
+      if (n) stKnock(t, 'top', n, Math.random() < 0.5 ? -1 : 1);
+      stBam(p.x, p.y, 'BOOM!', '#3b6df0', 1.5);
+      stSparks(p.x, p.y, ['#7de3ff', '#3b6df0', '#fff'], 18);
+      stShake(t); stQuake(2);
     }, 650);
   }
   function stDrop(t, it) {
@@ -4491,6 +4618,7 @@
     const y = it === 'eis' ? p.bottom : p.y;   // Eis landet ganz unten (0245)
     stAnim(el, [{ transform: 'translate(' + (p.x - 22) + 'px,-50px)' }, { transform: 'translate(' + (p.x - 22) + 'px,' + (y - 44) + 'px)' }], 800, 'cubic-bezier(.5,0,.8,.4)');
     setTimeout(() => el.remove(), 850);
+    if (it === 'eis') setTimeout(() => { stBam(p.x, y - 24, 'FROST!', '#3b8fc4', 1); stSparks(p.x, y - 20, ['#bfe8ff', '#fff', '#7cc4f0'], 14); stShake(t); }, 800);
   }
   function stFlyOff(t, box) {
     const p = stTop(t);
@@ -4567,21 +4695,26 @@
       if (fxb.dataset.h !== html) { fxb.dataset.h = html; fxb.innerHTML = html; }
     }
   }
-  /* Item-Fach am Tablet: jedes Teammitglied kann einsetzen */
+  /* Item-Fach am Tablet (0247): jedes Item hält EINE Person (reihum). Wer es
+     hält, sieht „Einsetzen“; die anderen „Mia hat ein Item“. */
+  const stName = id => { const p = ((st.v && st.v.people) || []).find(x => x.id === id); return p ? p.n : 'Jemand'; };
   function stPaintItems() {
     const box = root.querySelector('#ddStItems'), v = st.v, me = stMyTeam();
     if (!box || me == null) return;
     if (!v.items_on) { box.hidden = true; return; }
     box.hidden = false;
-    const its = stTeamV(me).it || [];
-    const key = its.join() + '|' + (st.usingItem ? 1 : 0);
+    const tm = stTeamV(me), its = tm.it || [], iw = tm.iw || [], myId = v.me && v.me.id;
+    const key = its.join() + '|' + iw.join() + '|' + (st.usingItem ? 1 : 0);
     if (box.dataset.k === key) return;
     const fresh = st.newItem && Date.now() - st.newItem < 1500;
     box.dataset.k = key;
-    box.innerHTML = its.length
-      ? its.map((id, k) => '<button type="button" class="dd-st__item' + (fresh && k === its.length - 1 ? ' is-new' : '') + '" data-act="st-use" data-slot="' + k + '"' + (st.usingItem ? ' disabled' : '') +
-          ' title="' + E(stItem(id).name) + '" aria-label="' + E(stItem(id).name) + ' einsetzen">' + itIco(id) + '<em>Einsetzen</em></button>').join('')
-      : '';
+    box.innerHTML = its.map((id, k) => {
+      const mine = !iw[k] || iw[k] === myId, nm = E(stItem(id).name);
+      return mine
+        ? '<button type="button" class="dd-st__item' + (fresh && k === its.length - 1 ? ' is-new' : '') + '" data-act="st-use" data-slot="' + k + '"' + (st.usingItem ? ' disabled' : '') +
+            ' title="' + nm + '" aria-label="' + nm + ' einsetzen">' + itIco(id) + '<em>Einsetzen</em></button>'
+        : '<span class="dd-st__item is-other" title="' + nm + '">' + itIco(id) + '<span>' + E(stName(iw[k])) + ' hat ein Item</span></span>';
+    }).join('');
   }
   async function stUse(slot) {
     if (!st || st.usingItem) return;
@@ -4592,6 +4725,7 @@
     st.usingItem = false;
     if (r && r.ok) {
       if (r.result === 'no_item') toast('Das Item hat schon jemand aus deinem Team eingesetzt.');
+      else if (r.result === 'not_yours') toast('Dieses Item setzt jemand anderes aus deinem Team ein.');
       else if (r.result === 'tea') toast('Während der Teatime geht das nicht.');
       stApply(r);
     } else toast(errMsg(r && r.error));
@@ -4624,10 +4758,26 @@
       if (s <= 0 && !st.busy && Date.now() - (st.lastKick || 0) > 400) { st.lastKick = Date.now(); stPoll(); }
     }
   }
+  /* Sieger: bei Gleichstand zum Zeitende alle mit der größten Höhe (0247). */
+  function stWinners() {
+    const v = st.v;
+    if (Array.isArray(v.winners)) return v.winners;
+    return v.winner_team != null ? [v.winner_team] : [];
+  }
+  const stWon = t => stWinners().includes(t);
   function stRank() {
     const v = st.v;
     return Array.from({ length: v.team_count }, (_, i) => ({ t: i, h: stTarget(i) }))
-      .sort((a, b) => (a.t === v.winner_team ? -1 : b.t === v.winner_team ? 1 : b.h - a.h || a.t - b.t));
+      .sort((a, b) => (stWon(b.t) - stWon(a.t)) || b.h - a.h || a.t - b.t);
+  }
+  /* Platz mit Gleichstand: gleiche Höhe = gleicher Platz (Sieger immer 1.) */
+  function stPlaces(rank) {
+    let place = 0, prev = null;
+    return rank.map((r, k) => {
+      const key = stWon(r.t) ? 'w' : r.h;
+      if (key !== prev) { place = k + 1; prev = key; }
+      return place;
+    });
   }
   function stPaintOver() {
     const over = root.querySelector('#ddStOver'), v = st.v;
@@ -4639,19 +4789,21 @@
     // Beamer: Sieger jubelt, die anderen sind traurig.
     for (let i = 0; i < v.team_count; i++) {
       const f = root.querySelector('#ddStF' + i);
-      if (f) f.innerHTML = figSVG(i, v.winner_team == null ? 'idle' : i === v.winner_team ? 'cheer' : 'sad', 120);
+      if (f) f.innerHTML = figSVG(i, !stWinners().length ? 'idle' : stWon(i) ? 'cheer' : 'sad', 120);
     }
     over.innerHTML = stWinHTML(160);
   }
   function stWinHTML(px) {
-    const v = st.v, w = v.winner_team;
-    const rank = stRank();
+    const v = st.v, ws = stWinners(), w = ws[0];
+    const rank = stRank(), pl = stPlaces(rank);
+    const sm = ws.length > 2 ? Math.round(px * 0.6) : ws.length > 1 ? Math.round(px * 0.75) : px;
     return '<div class="dd-st__win"' + (w != null ? ' style="' + stCol(w) + '"' : '') + '>' +
-      (w != null ? '<span class="dd-st__winfig">' + figSVG(w, 'cheer', px) + '</span>' +
-        '<span class="dd-memwin__stamp">Gewonnen</span><h2>' + E(stTeam(w)) + '</h2>' +
-        '<p>' + (stTarget(w) >= v.goal ? 'Als Erstes ganz oben – ' + v.goal + ' Kisten!' : 'Der höchste Turm, als die Zeit um war.') + '</p>'
-        : '<span class="dd-memwin__stamp">Vorbei</span><h2>Noch keine Kiste</h2><p>Diesmal hat kein Team eine Kiste gestapelt.</p>') +
-      '<ol class="dd-st__rank">' + rank.map((r, k) => '<li style="' + stCol(r.t) + '"><span>' + (k + 1) + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + stFmt(r.h) + ' Kisten</i></li>').join('') + '</ol>' +
+      (w != null ? '<span class="dd-st__winfig">' + ws.map(t => figSVG(t, 'cheer', sm)).join('') + '</span>' +
+        '<span class="dd-memwin__stamp">' + (ws.length > 1 ? 'Gleichstand' : 'Gewonnen') + '</span><h2>' + (ws.length > 1 ? ws.map(t => E(stFig(t).name)).join(' & ') : E(stTeam(w))) + '</h2>' +
+        (ws.length > 1 ? '<p>Gleich hoch – ' + (ws.length === 2 ? 'beide' : 'alle ' + ws.length) + ' gewinnen!</p>'
+          : '<p>' + (stTarget(w) >= v.goal ? 'Als Erstes ganz oben – ' + v.goal + ' Kisten!' : 'Der höchste Turm, als die Zeit um war.') + '</p>')
+        : '<span class="dd-memwin__stamp">Vorbei</span><h2>Noch keine Kiste</h2>') +
+      '<ol class="dd-st__rank">' + rank.map((r, k) => '<li style="' + stCol(r.t) + '"><span>' + pl[k] + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + stFmt(r.h) + ' Kisten</i></li>').join('') + '</ol>' +
       (isTeacher ? '<div class="dd-memwin__act"><button type="button" class="btn btn--primary" data-act="st-reset">' + ico.again + 'Nochmal</button></div>' : '') +
     '</div>';
   }
@@ -4659,15 +4811,14 @@
   /* ══ Ende (Tablet) ══ */
   function stEndDev() {
     const v = st.v, me = stMyTeam();
-    const won = me != null && me === v.winner_team;
+    const won = me != null && stWon(me), ws = stWinners(), others = ws.filter(t => t !== me);
+    const rank = stRank(), pl = stPlaces(rank);
     return '<div class="dd-st__card dd-st__end"' + (me != null ? ' style="' + stCol(me) + '"' : '') + '>' +
       (me != null ? '<span class="dd-st__bigfig">' + figSVG(me, won ? 'cheer' : 'sad', 150) + '</span>' +
-        '<h3 class="dd-st__h3">' + (won ? 'Gewonnen!' : v.winner_team != null ? E(stTeam(v.winner_team)) + ' gewinnt' : 'Vorbei') + '</h3>' +
-        '<p class="dd-st__say">' + (won ? 'Euer Turm ist ' + stFmt(stTarget(me)) + ' Kisten hoch. Stark!' : 'Euer Turm: ' + stFmt(stTarget(me)) + ' Kisten. Nächstes Mal!') + '</p>'
+        '<h3 class="dd-st__h3">' + (won ? (others.length ? 'Gleichstand – gewonnen!' : 'Gewonnen!') : ws.length ? (ws.length > 1 ? ws.map(t => E(stFig(t).name)).join(' & ') + ' gewinnen' : E(stTeam(ws[0])) + ' gewinnt') : 'Vorbei') + '</h3>'
         : '<h3 class="dd-st__h3">Vorbei</h3>') +
-      '<ol class="dd-st__rank">' + stRank().map((r, k) => '<li style="' + stCol(r.t) + '"' + (r.t === me ? ' class="is-me"' : '') + '><span>' + (k + 1) + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + stFmt(r.h) + ' Kisten</i></li>').join('') + '</ol>' +
-      (v.me && v.me.c ? '<p class="dd-st__hint">Du hast ' + v.me.c + (v.me.c === 1 ? ' Kiste' : ' Kisten') + ' beigetragen.</p>' : '') +
-      '<p class="dd-st__hint">Gleich kann es weitergehen – deine Lehrkraft startet die nächste Runde.</p></div>';
+      '<ol class="dd-st__rank">' + rank.map((r, k) => '<li style="' + stCol(r.t) + '"' + (r.t === me ? ' class="is-me"' : '') + '><span>' + pl[k] + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + stFmt(r.h) + ' Kisten</i></li>').join('') + '</ol>' +
+      (v.me && v.me.c ? '<p class="dd-st__hint">Du hast ' + v.me.c + (v.me.c === 1 ? ' Kiste' : ' Kisten') + ' beigetragen.</p>' : '') + '</div>';
   }
 
   /* ══ Aufgaben (Tablet) ══ */
@@ -5102,6 +5253,7 @@
         case 'st-ion': if (st && st.v) stItems({ p_on: b.dataset.v === '1' }); break;
         case 'st-often': if (st && st.v) stItems({ p_often: b.dataset.v === '1' }); break;
         case 'st-item': if (st && st.v) stToggleItem(b.dataset.id); break;
+        case 'st-itopen': if (st && st.v) { st.itOpen = !st.itOpen; stPaintLobbyBeam(); } break;
         case 'st-use': stUse(Number(b.dataset.slot)); break;
         case 'st-iinfo': if (st && st.v) stItemInfo(b.dataset.id); break;
         case 'st-iinfo-x': stItemInfoClose(); break;
