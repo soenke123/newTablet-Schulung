@@ -129,6 +129,13 @@ window.TOOLS_OVERLAY = {
   // 0237 für alle Lehrkräfte sichtbar (vorher nur Admins), Schaufenster:
   // preview/derby.js. beta: Lernformen kommen noch dazu (29.10.2026).
   derby: { ready: true, beta: true, editor: 'derby.html', editorLabel: 'Stapel-Editor' },
+  // Sechzehnter Skill (Migration 0242) — Reinforce Yourself: kam aus dem
+  // GameHub (S2), ohne Begleiter, Quizze und Punkte. Drei Phasen
+  // (Training · zwei Umgebungen · Sandbox), eingerahmt wie Tiny LM
+  // (tools/ReinforceYourself/index.html); geteilt wird nur, welche
+  // Phasen die Klasse öffnen darf (skill_room_state.data.phases).
+  // beta: frisch umgezogen (30.10.2026).
+  reinforce: { ready: true, beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

@@ -86,6 +86,14 @@
       '<path d="M6.8 8.2h4.2M13 8.2h4.2M6.8 12.2h3.4"/>' +
       '<rect x="12.4" y="10.6" width="4.8" height="3.2" rx=".8"/>',
 
+    /* Reinforce Yourself — ein Pfeil, der sich im Kreis schließt, und
+       darin ein Plus: handeln, Rückmeldung bekommen, verstärken — und
+       wieder von vorn. Genau die Schleife des Reinforcement Learning. */
+    reinforce:
+      '<path d="M19.6 12a7.6 7.6 0 1 1-2.2-5.4"/>' +
+      '<path d="M19.8 3.6v3.6h-3.6"/>' +
+      '<path d="M12 8.8v6.4M8.8 12h6.4"/>',
+
     /* Definitions Derby — zwei übereinanderliegende Karten (die hintere nur
        als Rand, der von der vorderen verdeckt wird), die vordere mit
        drei Textzeilen. Keine
@@ -242,6 +250,7 @@
     'ScrumWerkstatt': 'scrum',
     'Projektarbeit':  'projekt',
     'TinyLM':         'tinylm',
+    'ReinforceYourself': 'reinforce',
     'DefinitionsDerby': 'derby',
     'SQLStudio':      'sqlstudio',
     'MasterPDF':      'masterpdf',
