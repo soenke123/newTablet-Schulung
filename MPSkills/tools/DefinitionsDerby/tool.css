@@ -1181,7 +1181,21 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__clock[hidden] { display: none; }
 .dd-st__clock.is-low { color: var(--dd-k1); border-color: var(--dd-k1); animation: dd-st-pulse 1s ease-in-out infinite; }
 @keyframes dd-st-pulse { 50% { transform: rotate(2deg) scale(1.08); } }
-.dd-st__btns { margin-left: auto; display: flex; gap: 8px; }
+.dd-st__btns { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+/* Rundenende setzen (Befehl wie bei Mathoria, springt zurück) */
+.dd-st__timer { width: auto; min-height: 38px; padding: 6px 10px; font-size: .88rem; font-weight: 600; cursor: pointer; }
+/* Lobby: Teams = Figuren an/aus (Migration 0242) */
+.dd-st__figpick { flex: 1 1 260px; display: flex; flex-wrap: wrap; gap: 6px; }
+.dd .dd-st__figbtn {
+  appearance: none; font: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 78px; padding: 4px 2px 6px; border-radius: 8px; border: 2px dashed var(--dd-pappe3); background: transparent;
+  color: var(--dd-ink-soft); opacity: .5; filter: grayscale(1);
+}
+.dd .dd-st__figbtn.is-on { opacity: 1; filter: none; border: 2px solid var(--tc); background: var(--ts); color: var(--dd-ink); box-shadow: 0 3px 6px var(--dd-shadow); }
+.dd-st__figbtn svg { width: 54px; height: 54px; }
+.dd-st__figbtn span { font-size: .7rem; font-weight: 700; line-height: 1.1; text-align: center; }
+/* Items an/aus und normal/häufig nebeneinander */
+.dd-st__pair { display: inline-flex; gap: 8px; flex-wrap: nowrap; }
 
 .dd-st__scene {
   --floor: 58px; --bh: 20px; --bw: 100px; --fw: 110px;
@@ -1475,3 +1489,4 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 @media (prefers-reduced-motion: reduce) {
   #ddSt.is-storm .dd-st__tower, .dd-st__wind i, .dd-st__ilines .dd-st__qbox, .dd-st__ann, .dd-st__msg, .dd-st__lane.is-tea::after { animation: none; }
 }
+.dd-st__itset { margin-top: 10px; }

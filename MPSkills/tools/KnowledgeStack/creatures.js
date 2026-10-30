@@ -131,9 +131,11 @@
           + hl(x - r * 0.3, y - r * 0.3, r * 0.18, 0.95)
           + hl(x + r * 0.22, y + r * 0.32, r * 0.08, 0.9);
       }
-      return E(x, y, r * 0.8, r, INK, 0)
-        + hl(x - r * 0.26, y - r * 0.4, r * 0.34, 0.95)
-        + hl(x + r * 0.26, y + r * 0.38, r * 0.15, 0.85)
+      // ew/hl (optional): Augenbreite und Glanzpunkt, z. B. für die Derby-Figuren
+      const ew = f.ew || 0.8, hs = f.hl || 0.34;
+      return E(x, y, r * ew, r, INK, 0)
+        + hl(x - r * 0.26 * ew / 0.8, y - r * 0.4, r * hs, 0.95)
+        + hl(x + r * 0.26 * ew / 0.8, y + r * 0.38, r * 0.15, 0.85)
         + (f.glint ? C(x + r * 0.3, y + r * 0.42, r * 0.18, f.glint, 0) : '');
     };
     const lw = t === 'cyc' ? 3.2 : 2.6;
