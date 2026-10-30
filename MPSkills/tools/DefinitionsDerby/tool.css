@@ -1181,7 +1181,16 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__clock[hidden] { display: none; }
 .dd-st__clock.is-low { color: var(--dd-k1); border-color: var(--dd-k1); animation: dd-st-pulse 1s ease-in-out infinite; }
 @keyframes dd-st-pulse { 50% { transform: rotate(2deg) scale(1.08); } }
-.dd-st__btns { margin-left: auto; display: flex; gap: 8px; }
+.dd-st__btns { margin-left: auto; display: flex; gap: 8px; align-items: flex-start; }
+.dd-st__btns .btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.dd-st__clockwrap { position: relative; }
+.dd-st__clockmenu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 230px; display: flex; flex-wrap: wrap; gap: 4px; padding: 8px;
+  background: var(--dd-paper); color: var(--dd-ink); border-radius: 4px; box-shadow: 0 10px 24px var(--dd-shadow); border: 1px solid var(--dd-pappe3);
+}
+.dd-st__clockmenu small { flex-basis: 100%; font-size: .78rem; color: var(--dd-ink-soft); margin-bottom: 2px; line-height: 1.3; }
+.dd-st__clockmenu .dd-seg { background: var(--dd-pappe); color: var(--dd-ink); min-height: 34px; padding: 5px 10px; }
+.dd-st__clockmenu .dd-st__clockx { flex-basis: 100%; justify-content: center; color: var(--dd-k1); }
 
 .dd-st__scene {
   --floor: 58px; --bh: 20px; --bw: 100px; --fw: 110px;

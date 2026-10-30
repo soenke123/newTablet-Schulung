@@ -163,6 +163,7 @@
    "dd_stacks_list(p_code text)",
    "dd_storm_answer(p_token text, p_ok boolean, p_since bigint)",
    "dd_storm_room_get(p_code text, p_since bigint)",
+   "dd_storm_room_clock(p_code text, p_minutes integer)",
    "dd_storm_room_items(p_code text, p_on boolean, p_often boolean, p_off jsonb)",
    "dd_storm_room_reset(p_code text)",
    "dd_storm_room_setup(p_code text, p_team_count integer, p_goal integer, p_minutes integer, p_stacks jsonb)",

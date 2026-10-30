@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030e';
+  const V = '20261030f';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -140,11 +140,11 @@
     { id: 'storm', g: 'net', name: 'Kistensturm', min: 4, net: true, shot: 'spiel-kistensturm.jpg',
       short: 'Teams stapeln um die Wette – jede richtige Antwort ist eine Kiste.',
       text: 'Die Klasse spielt in Teams gegeneinander, jedes Tablet für sich. Jede richtige Antwort ist eine Kiste für das eigene Team: die Teamfigur hebt den Turm an, und darunter rutscht die neue Kiste hinein. Wer zuerst die Zielhöhe erreicht, gewinnt. Am Beamer sieht man alle Türme wachsen.',
-      how: ['Die Lehrkraft öffnet Kistensturm am Beamer, stellt Teams, Zielhöhe, Countdown und Stapel ein und startet.',
+      how: ['Die Lehrkraft öffnet Kistensturm am Beamer, stellt Teams, Zielhöhe und Stapel ein und startet.',
             'Die Klasse kommt über „Mitmachen“ dazu, die Teams werden automatisch verteilt.',
             'Jede richtige Antwort ist eine Kiste für das eigene Team. Falsch kostet nichts, nur einen Moment Zeit.',
             'Je höher der eigene Turm, desto schwerer die Aufgaben – vom Begriff wählen bis zum Lückentext. Wer hinten liegt, holt so leichter auf.',
-            'Wer zuerst die Zielhöhe erreicht, gewinnt. Mit Countdown gewinnt bei Zeitende der höchste Turm.',
+            'Wer zuerst die Zielhöhe erreicht, gewinnt. Will die Lehrkraft zum Ende kommen, startet sie im Spiel einen Countdown – dann gewinnt der höchste Turm.',
             'Items wie bei Mario Kart: Überquert der Turm eine gestrichelte Linie, bekommt das Team ein Item – je weiter hinten, desto stärker (Möwe, Bus, Boom, Teatime …). Jeder im Team kann es einsetzen.',
             'Die Lehrkraft schaltet Items in der Lobby an oder aus, jedes einzeln, und kann „häufig“ wählen.'] }
   ];
@@ -335,7 +335,8 @@
     check: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4.5H15"/></svg>',
     full:  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>',
-    unfull:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>'
+    unfull:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>',
+    clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.5l3 2M10 3h4"/></svg>'
   };
 
   /* Kleine Darstellung des Spiels auf der Kachel (nur CSS, tool.css .dd-mini). */
@@ -3615,7 +3616,7 @@
      Items (Bonus-Kisten, klauen …) kommen später.
 
      Ablauf wie Kingdoms of Mathoria: die Lehrkraft (Beamer) stellt in
-     der Lobby Teams, Zielhöhe, Countdown und Stapel ein und startet;
+     der Lobby Teams, Zielhöhe und Stapel ein und startet (Countdown erst im Spiel, 0243);
      die Teams werden automatisch verteilt (Server). Öffnet die
      Lehrkraft Kistensturm, steht data.storm.live im Raumzustand, und
      jedes Tablet bekommt oben den Knopf „Mitmachen“ (stBanner).
@@ -3628,7 +3629,8 @@
      Tablet mit insel.js; der Server zählt höchstens eine je 1,2 s.
      Kistensturm schreibt keinen Lernstand (wie Memory/Duell). */
   const ST_TEAMS = [2, 3, 4, 5, 6];
-  const ST_MINUTES = [0, 3, 5, 8, 10, 15];
+  // Countdown setzt die Lehrkraft erst im Spiel, wenn sie zum Ende kommen will (Migration 0243)
+  const ST_MINUTES = [1, 2, 3, 5, 10];
   const ST_LEVEL = ['Begriff wählen', 'Definition wählen', 'Bausteine', 'Begriff tippen', 'Lückentext'];
   const ST_POLL = { lobby: 2500, countdown: 500, running: 1300, ended: 3000 };
   const ST_BEAM_POLL = { lobby: 2000, countdown: 400, running: 900, ended: 3000 };
@@ -3863,8 +3865,23 @@
     stPaintOver();
     stEffects();
     if (!isTeacher) { stPaintLevel(); stPaintItems(); stMaybeTask(); }
-    const btns = root.querySelector('#ddStBtns');
-    if (btns) btns.innerHTML = stBeamBtns();
+    stPaintBtns();
+  }
+  function stPaintBtns() {
+    const btns = root && root.querySelector('#ddStBtns');
+    if (!btns) return;
+    const html = stBeamBtns();
+    if (btns.dataset.h !== html) { btns.dataset.h = html; btns.innerHTML = html; }
+  }
+  /* Countdown im laufenden Spiel: läuft er ab, gewinnt der höchste Turm. 0 = abbrechen. */
+  async function stSetClock(min) {
+    const me = st;
+    st.clockMenu = false; stPaintBtns();
+    const r = await ctx.actions.call('dd_storm_room_clock', { p_minutes: min });
+    if (st !== me) return;
+    if (!r || !r.ok) { toast(errMsg(r && r.error)); return; }
+    toast(min ? 'Countdown läuft: noch ' + min + (min === 1 ? ' Minute' : ' Minuten') + '. Dann gewinnt der höchste Turm.' : 'Countdown abgebrochen.');
+    stPoll();
   }
 
   /* ══ Lobby (Lehrkraft) ══ */
@@ -3882,9 +3899,6 @@
           '<button type="button" class="btn btn--sm dd-ic" data-act="st-goal" data-v="1" aria-label="Mehr Kisten">+</button>' +
           '<span class="dd-st__unit">Kisten</span></div></div>' +
         '<p class="dd-st__hint" id="ddStGoalHint"></p>' +
-        '<div class="dd-st__row"><span class="dd-st__lab">Countdown</span><div class="dd-segs" id="ddStMin" role="group" aria-label="Countdown">' +
-          ST_MINUTES.map(n => '<button type="button" class="dd-seg" data-act="st-min" data-v="' + n + '"' + (n ? ' aria-label="' + n + ' Minuten"' : '') + '>' + (n || 'ohne') + '</button>').join('') + '</div>' +
-          '<span class="dd-st__unit">Min.</span></div>' +
         '<div class="dd-st__row dd-st__row--top"><span class="dd-st__lab">Stapel</span><div class="dd-chips" id="ddStStacks"></div></div>' +
         '<div class="dd-st__row"><span class="dd-st__lab">Items</span><div class="dd-segs" id="ddStIon" role="group" aria-label="Items">' +
           '<button type="button" class="dd-seg" data-act="st-ion" data-v="1">an</button><button type="button" class="dd-seg" data-act="st-ion" data-v="0">aus</button></div>' +
@@ -3906,7 +3920,6 @@
   function stPaintLobbyBeam() {
     const v = st.v;
     root.querySelectorAll('#ddStTeams .dd-seg').forEach(b => b.classList.toggle('is-on', Number(b.dataset.v) === v.team_count));
-    root.querySelectorAll('#ddStMin .dd-seg').forEach(b => b.classList.toggle('is-on', Number(b.dataset.v) === v.minutes));
     const gi = root.querySelector('#ddStGoal');
     if (gi && document.activeElement !== gi) gi.value = v.goal;
     const per = stPerTeam(), n = stPeople().length;
@@ -4120,7 +4133,14 @@
   function stBeamBtns() {
     if (!isTeacher || !st.v) return '';
     const ph = st.v.phase;
-    return (ph === 'running' || ph === 'countdown' ? '<button type="button" class="btn btn--sm" data-act="st-stop">Beenden</button>' : '') +
+    const run = ph === 'running', ends = run && st.v.ends_at;
+    return (run ? '<span class="dd-st__clockwrap"><button type="button" class="btn btn--sm' + (st.clockMenu ? ' is-on' : '') + '" data-act="st-clock" aria-expanded="' + !!st.clockMenu + '">' +
+        ico.clock + (ends ? 'Countdown ändern' : 'Countdown') + '</button>' +
+        (st.clockMenu ? '<span class="dd-st__clockmenu" role="menu"><small>Noch so lange, dann gewinnt der höchste Turm:</small>' +
+          ST_MINUTES.map(n => '<button type="button" class="dd-seg" role="menuitem" data-act="st-clock-set" data-v="' + n + '">' + n + ' Min.</button>').join('') +
+          (ends ? '<button type="button" class="dd-seg dd-st__clockx" role="menuitem" data-act="st-clock-set" data-v="0">Abbrechen</button>' : '') + '</span>' : '') +
+        '</span>' : '') +
+      (ph === 'running' || ph === 'countdown' ? '<button type="button" class="btn btn--sm" data-act="st-stop">Beenden</button>' : '') +
       (ph === 'ended' ? '<button type="button" class="btn btn--primary btn--sm" data-act="st-reset">' + ico.again + 'Nochmal</button>' : '') +
       (fsOk() ? '<button type="button" class="btn btn--sm dd-ic dd-fsbtn" data-act="mm-fs" title="Vollbild" aria-label="Vollbild">' + (fsEl() ? ico.unfull : ico.full) + '</button>' : '');
   }
@@ -5002,7 +5022,8 @@
         case 'isl-close': islCloseTask(); break;
         case 'st-retry': renderStorm(); break;
         case 'st-teams': if (st && st.v) stSetup({ p_team_count: Number(b.dataset.v) }); break;
-        case 'st-min': if (st && st.v) stSetup({ p_minutes: Number(b.dataset.v) }); break;
+        case 'st-clock': if (st) { st.clockMenu = !st.clockMenu; stPaintBtns(); } break;
+        case 'st-clock-set': if (st && st.v) stSetClock(Number(b.dataset.v)); break;
         case 'st-goal': stGoal(Number(b.dataset.v)); break;
         case 'st-stack': if (st && st.v) stToggleStack(b.dataset.id); break;
         case 'st-start': stStart(); break;
