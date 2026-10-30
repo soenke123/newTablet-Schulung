@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030h';
+  const V = '20261030i';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3875,6 +3875,10 @@
   /* ─── Neue Ansicht vom Server ─── */
   function stApply(v) {
     const newRun = st.run !== null && v.run !== st.run;
+    // Eine Abfrage, die vor dem Einsetzen/Antworten losging und erst danach
+    // ankommt, ist älter als der Stand: verwerfen, sonst springt ein Turm
+    // zurück und verliert die Kiste ein zweites Mal (Möwe „klaut doppelt“).
+    if (!newRun && st.v && (v.seq || 0) < st.seq) return;
     if (newRun) {                       // neues Spiel: Türme und Aufgaben von vorn
       st.shown = []; st.anim.forEach(a => clearTimeout(a)); st.anim = []; st.hold = [];
       st.task = null; st.order = []; st.oi = 0;
