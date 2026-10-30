@@ -94,7 +94,7 @@
       '<path d="M19.8 3.6v3.6h-3.6"/>' +
       '<path d="M12 8.8v6.4M8.8 12h6.4"/>',
 
-    /* Definitions Derby — zwei übereinanderliegende Karten (die hintere nur
+    /* How to Fachbegriffe — zwei übereinanderliegende Karten (die hintere nur
        als Rand, der von der vorderen verdeckt wird), die vordere mit
        drei Textzeilen. Keine
        Schrift im Zeichen: bei 20 Pixeln wäre sie nicht lesbar. */

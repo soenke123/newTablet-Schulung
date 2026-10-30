@@ -87,7 +87,7 @@
       hint: 'Sobald eure Lehrkraft die Auflösung (Phase 3) startet, bekommst du alle Tiere. Das klappt nur, wenn du angemeldet bist.' },
     { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature',
       hint: 'Spiel ein Szenario, das deine Lehrkraft mit der Klasse teilt — dann bekommst du die Figuren, die darin vorkommen. Das klappt nur, wenn du angemeldet bist.' },
-    { id: 'mps_derby',          skill: 'derby',          folder: 'Definitions Derby',    label: 'Definitions Derby',
+    { id: 'mps_derby',          skill: 'derby',          folder: 'Definitions Derby',    label: 'How to Fachbegriffe',
       hint: 'Lass auf der Insel deine Wesen schlüpfen und wachsen — jede Form, die eines deiner Wesen erreicht, kannst du als Profilbild nehmen. Das klappt nur, wenn du angemeldet bist.' }
   ];
 
@@ -364,7 +364,7 @@
       ['sammeln_3',  'sammeln_3_avatar.png',          'Sammler'],
       ['villager',   'villager_11_avatar.png',        'Dorfbewohner']
     ],
-    // Definitions Derby: jede Form der Insel-Wesen ab Baby (Endung = Name in
+    // How to Fachbegriffe (früher Definitions Derby): jede Form der Insel-Wesen ab Baby (Endung = Name in
     // tools/DefinitionsDerby/wesen/, Porträts von Sönke). Frei wird eine Form,
     // sobald eines deiner Wesen sie erreicht (Migration 0236).
     mps_derby: [

@@ -60,7 +60,7 @@ const App = (() => {
      (bis dahin null = noch nicht bekannt). */
   let classPhases = ROOM ? null : [1, 2, 3];
   let waitEl = null, brandSub = null;
-  /* Teilen-Symbol wie in den anderen Skills (Definitions Derby, Balance of Nature). */
+  /* Teilen-Symbol wie in den anderen Skills (How to Fachbegriffe, Balance of Nature). */
   const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg>';
   const panes = {};      /* n -> { el, api } */
   let active = 1;

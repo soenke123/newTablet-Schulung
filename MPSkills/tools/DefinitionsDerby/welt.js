@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — Definitions Derby  ·  welt.js  (window.DDWelt)
+   MPSkills — How to Fachbegriffe  ·  welt.js  (window.DDWelt)
    ══════════════════════════════════════════════════════════════
    Die Insel, auf der die Wesen leben — eigene Welt, nicht mehr die
    von Balance of Nature (Sönke 27.10.2026: „vom Maßstab besser zu

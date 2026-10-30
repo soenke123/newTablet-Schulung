@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Definitions Derby — parse.js   ·   Text → Karten
+   How to Fachbegriffe — parse.js   ·   Text → Karten
    ══════════════════════════════════════════════════════════════
    Liest frei eingetippten oder eingefügten Text und erkennt, was
    Begriff und was Definition ist. Absichtlich großzügig, wie der

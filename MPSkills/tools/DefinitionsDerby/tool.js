@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030m';
+  const V = '20261030n';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -137,10 +137,10 @@
             'Falsch: eine andere Definition, und die eigene Seite ist kurz gesperrt.',
             'Wer zuerst 5 Begriffe richtig hat, gewinnt (einstellbar: 3 bis 10).',
             'Am Ende stehen alle Definitionen der Runde mit ihrem Begriff da.'] },
-    { id: 'storm', g: 'net', name: 'Kistensturm', min: 4, net: true, shot: 'spiel-kistensturm.jpg',
+    { id: 'storm', g: 'net', name: 'Kistenturm', min: 4, net: true, shot: 'spiel-kistensturm.jpg',
       short: 'Teams stapeln um die Wette – jede richtige Antwort ist eine Kiste.',
       text: 'Die Klasse spielt in Teams gegeneinander, jedes Tablet für sich. Jede richtige Antwort ist eine Kiste für das eigene Team: die Teamfigur hebt den Turm an, und darunter rutscht die neue Kiste hinein. Wer zuerst die Zielhöhe erreicht, gewinnt. Am Beamer sieht man alle Türme wachsen.',
-      how: ['Die Lehrkraft öffnet Kistensturm am Beamer, wählt die Teams (Figuren), Zielhöhe und Stapel und startet.',
+      how: ['Die Lehrkraft öffnet Kistenturm am Beamer, wählt die Teams (Figuren), Zielhöhe und Stapel und startet.',
             'Die Klasse kommt über „Mitmachen“ dazu, die Teams werden automatisch verteilt.',
             'Jede richtige Antwort ist eine Kiste für das eigene Team. Falsch kostet nichts, nur einen Moment Zeit.',
             'Je höher der eigene Turm, desto schwerer die Aufgaben – vom Begriff wählen bis zum Lückentext. Wer hinten liegt, holt so leichter auf.',
@@ -556,7 +556,7 @@
   async function startGame(gid, keep) {
     const G = gameOf(gid);
     if (!G) return false;
-    if (G.net) {                    // Kistensturm: Stapel wählt die Lehrkraft in der Lobby
+    if (G.net) {                    // Kistenturm: Stapel wählt die Lehrkraft in der Lobby
       if (standalone || demo) return false;
       info = null; renderInfo();
       if (opened) leavePlay();
@@ -3524,7 +3524,7 @@
     }
   }
 
-  /* Die laufende Aufgabe: Kistensturm (st) oder Insel (isl). Beide nutzen
+  /* Die laufende Aufgabe: Kistenturm (st) oder Insel (isl). Beide nutzen
      dasselbe Aufgabenblatt (paintTask & Co.); nur das Ergebnis geht
      an verschiedene Stellen (stResult · islResult). */
   function curTask() { return (st && st.task) || (isl && isl.task) || null; }
@@ -3669,7 +3669,7 @@
      der Lobby die Teams (Figuren, Migration 0244: figs), Zielhöhe und
      Stapel und startet (Countdown erst im Spiel, 0243);
      die Teams werden automatisch verteilt (Server). Öffnet die
-     Lehrkraft Kistensturm, steht data.storm.live im Raumzustand, und
+     Lehrkraft Kistenturm, steht data.storm.live im Raumzustand, und
      jedes Tablet bekommt oben den Knopf „Mitmachen“ (stBanner).
 
      Server: dd_storm_room_get/setup/start/stop/reset (Lehrkraft),
@@ -3678,7 +3678,7 @@
      Team Kiste für Kiste nachziehen) und an den Ereignissen seit
      p_since (Name über dem Turm). Ob eine Antwort stimmt, prüft das
      Tablet mit insel.js; der Server zählt höchstens eine je 1,2 s.
-     Kistensturm schreibt keinen Lernstand (wie Memory/Duell). */
+     Kistenturm schreibt keinen Lernstand (wie Memory/Duell). */
   // Countdown setzt die Lehrkraft erst im Spiel, wenn sie zum Ende kommen will (Migration 0243)
   const ST_MINUTES = [1, 2, 3, 5, 10];
   const ST_LEVEL = ['Begriff wählen', 'Definition wählen', 'Bausteine', 'Begriff tippen', 'Lückentext'];
@@ -3687,7 +3687,7 @@
   const ST_STEP_MS = 430;        // eine Kiste je Turm so oft (Heben dauert 0,9 s)
   const ST_NEXT_MS = 1000;       // nach richtig: nächste Aufgabe
   const ST_LOCK_MS = 1600;       // nach falsch: so lange erst Lösung lesen
-  let st = null;                 // Zustand, solange Kistensturm offen ist
+  let st = null;                 // Zustand, solange Kistenturm offen ist
   let figReady = null;
 
   function loadCss(href, key) {
@@ -3830,7 +3830,7 @@
     try { await Promise.all([ladeFiguren(), ladeInsel()]); }
     catch (e) {
       const box = root && root.querySelector('#ddSt');
-      if (box) box.innerHTML = '<p class="dd-empty dd-empty--err">Kistensturm konnte nicht geladen werden. <button type="button" class="btn btn--sm" data-act="st-retry">Noch einmal</button></p>';
+      if (box) box.innerHTML = '<p class="dd-empty dd-empty--err">Kistenturm konnte nicht geladen werden. <button type="button" class="btn btn--sm" data-act="st-retry">Noch einmal</button></p>';
       return;
     }
     if (!st || !root) return;
@@ -4154,7 +4154,7 @@
     if (box.dataset.key === key) return;
     box.dataset.key = key;
     if (t == null) {
-      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistensturm</h3><p class="dd-st__goalsay">' + stGoalSay() + '</p></div>' + stItemsDev();
+      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistenturm</h3><p class="dd-st__goalsay">' + stGoalSay() + '</p></div>' + stItemsDev();
       return;
     }
     const mates = stPeople().filter(p => p.t === t);
@@ -4875,7 +4875,7 @@
     const cards = await stLoadCards();
     if (st !== me || st.task || !root) return;
     if (!cards || cards.length < 2) {
-      if (note) { note.hidden = false; note.textContent = cards ? 'Für Kistensturm braucht es mehr Karten.' : 'Die Karten werden geladen …'; }
+      if (note) { note.hidden = false; note.textContent = cards ? 'Für Kistenturm braucht es mehr Karten.' : 'Die Karten werden geladen …'; }
       return;
     }
     if (note) note.hidden = true;
@@ -4943,13 +4943,13 @@
     if (st.v && st.v.phase === 'running') stNewTask();
   }
 
-  /* ─── Knopf „Mitmachen“ für die Klasse, solange die Lehrkraft Kistensturm offen hat ─── */
+  /* ─── Knopf „Mitmachen“ für die Klasse, solange die Lehrkraft Kistenturm offen hat ─── */
   function stBanner() {
     const el = root && root.querySelector('.dd-stbanner');
     if (!el) return;
     const show = !isTeacher && !demo && stLive() && !(screen === 'play' && opened && opened.game === 'storm');
     el.hidden = !show;
-    if (show && !el.innerHTML) el.innerHTML = '<span class="dd-stbanner__box" aria-hidden="true"></span><b>Kistensturm!</b><span>Deine Lehrkraft hat ein Teamspiel geöffnet.</span>' +
+    if (show && !el.innerHTML) el.innerHTML = '<span class="dd-stbanner__box" aria-hidden="true"></span><b>Kistenturm!</b><span>Deine Lehrkraft hat ein Teamspiel geöffnet.</span>' +
       '<button type="button" class="btn btn--primary btn--sm" data-act="game" data-g="storm">' + ico.play + 'Mitmachen</button>';
   }
 
@@ -5274,7 +5274,7 @@
         case 'st-iinfo': if (st && st.v) stItemInfo(b.dataset.id); break;
         case 'st-iinfo-x': stItemInfoClose(); break;
         case 'st-stop':
-          if (st && await ctx.confirm('Kistensturm jetzt beenden? Der höchste Turm gewinnt.')) { await stCall('dd_storm_room_stop'); if (st) stPoll(); }
+          if (st && await ctx.confirm('Kistenturm jetzt beenden? Der höchste Turm gewinnt.')) { await stCall('dd_storm_room_stop'); if (st) stPoll(); }
           break;
         case 'st-reset': if (st) { await stCall('dd_storm_room_reset'); if (st) stPoll(); } break;
         case 'ed-save': saveEdit(); break;

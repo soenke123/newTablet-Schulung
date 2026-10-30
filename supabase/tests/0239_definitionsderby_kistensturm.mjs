@@ -196,7 +196,7 @@ r = await call(`dd_storm_room_get($1, 0)`, [CODE]);
 ok('7  Zeit um → höchster Turm, bei Gleichstand der frühere (Team 1)', r.phase === 'ended' && r.winner_team === 1, JSON.stringify([r.phase, r.winner_team]));
 ok('7  Ereignis time', r.events.some(e => e.k === 'time' && e.t === 1));
 
-ok('8  Kachel-Text nennt Kistensturm und Duell', /Kistensturm/.test((await one(`select blurb b from skill_tools where id = 'derby'`)).b) && /Duell/.test((await one(`select blurb b from skill_tools where id = 'derby'`)).b));
+ok('8  Kachel-Text nennt Kistenturm (seit 0250, vorher Kistensturm) und Duell', /Kistens?turm/.test((await one(`select blurb b from skill_tools where id = 'derby'`)).b) && /Duell/.test((await one(`select blurb b from skill_tools where id = 'derby'`)).b));
 
 /* 8 Beenden, fremde Räume, zweimal */
 await call(`dd_storm_room_reset($1)`, [CODE]);

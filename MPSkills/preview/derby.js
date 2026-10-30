@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — preview/derby.js   ·   Schaufenster für Definitions Derby
+   MPSkills — preview/derby.js   ·   Schaufenster für How to Fachbegriffe
    ══════════════════════════════════════════════════════════════
    Es läuft das ECHTE tools/DefinitionsDerby/tool.js. Mit ctx.preview
    steht es im Schaufenster-Betrieb (demo in tool.js): die Lehrkraft-

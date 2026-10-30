@@ -997,6 +997,15 @@ a.btn {
   color: var(--accent-ink);
 }
 .tools-sec:first-child { margin-top: 0; }
+/* Unterkategorie im Fach (Migration 0250), eine Stufe leiser. */
+.tools-sub {
+  margin: 18px 0 8px;
+  font-size: .74rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+  color: var(--ink-soft);
+}
+.tools-sec + .tools-sub { margin-top: 0; }
 
 /* ── Skill-Zeichen ─────────────────────────────────────────────
    Die Zeichnungen stehen in lib/icons.js, die Bildsprache steht
