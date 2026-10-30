@@ -1,8 +1,8 @@
 /* ══════════════════════════════════════════════════════════════
-   Definitions Derby — Bewegungen der Kistensturm-Figuren
+   How to Fachbegriffe — Bewegungen der Kistenturm-Figuren
    ══════════════════════════════════════════════════════════════
    Grundlage ist creatures.css (Knowledge Stack): Skelett, Gesichter,
-   Jubeln, Traurig … Hier nur, was Kistensturm dazu braucht:
+   Jubeln, Traurig … Hier nur, was Kistenturm dazu braucht:
      .ds-lift        Heben: in die Knie, beide Arme hoch, strecken,
                      Augen zugekniffen, Mund auf (0,9 s, einmal)
      .ds-fig--<key>  eigene Ruhebewegung je Figur (Charakter)

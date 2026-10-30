@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Definitions Derby — Die sechs Kistensturm-Figuren (figuren.js)
+   How to Fachbegriffe — Die sechs Kistenturm-Figuren (figuren.js)
    ══════════════════════════════════════════════════════════════
    Je Team eine Figur (Sönke 29.10.2026: „ähnlich wie die Wesen bei
    Knowledge Stack, aber neue Wesen, sechs verschiedene, cool/süß,

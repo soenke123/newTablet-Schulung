@@ -663,6 +663,34 @@ function demoCardHTML() {
     </div>`;
 }
 
+/* Das Dropdown für neue Räume in denselben Gruppen wie die Kacheln auf
+   der Landing (app.js renderTools): Fach, darin Unterkategorie
+   (Migration 0248) → „Informatik · Künstliche Intelligenz". Reihenfolge
+   der Gruppen nach dem kleinsten sort_order darin, Fach vor seinen
+   Unterkategorien. Fehlt subject (Migration noch nicht gelaufen), bleibt
+   es eine Liste ohne Gruppen. */
+function toolOptionGroups(entries) {
+  const sorted = [...entries].sort(([, a], [, b]) =>
+    (a.sort_order ?? 100) - (b.sort_order ?? 100) || String(a.title).localeCompare(String(b.title), 'de'));
+  if (!sorted.some(([, t]) => t.subject)) return [{ label: '', items: sorted }];
+
+  const subjects = new Map();
+  sorted.forEach(e => {
+    const subj = (e[1].subject || '').trim() || 'Skills';
+    const sub = (e[1].subcategory || '').trim();
+    if (!subjects.has(subj)) subjects.set(subj, new Map());
+    const subs = subjects.get(subj);
+    if (!subs.has(sub)) subs.set(sub, []);
+    subs.get(sub).push(e);
+  });
+  const out = [];
+  subjects.forEach((subs, subj) => {
+    [...subs.keys()].sort((a, b) => (a ? 1 : 0) - (b ? 1 : 0))   // ohne Unterkategorie zuerst
+      .forEach(sub => out.push({ label: sub ? `${subj} · ${sub}` : subj, items: subs.get(sub) }));
+  });
+  return out;
+}
+
 function renderSettings() {
   const pane = $('paneSet');
   const creating = !S.code;
@@ -689,17 +717,20 @@ function renderSettings() {
   // Frage mehr: der Skill macht den Raum aus, ihn zu tauschen hieße,
   // einen neuen anzulegen.
   const usable = Object.entries(S.tools).filter(([, t]) => t.active);
+  const option = ([id, t]) => {
+    const full = !t.multi_room ? t.live >= 1 : t.live >= t.max_rooms;
+    // Kein Zeichen davor: in ein <option> passt kein SVG,
+    // und ein Emoji zwischen lauter gezeichneten Zeichen
+    // wäre der einzige Ausreißer der Seite.
+    return `<option value="${esc(id)}"${full ? ' disabled' : ''}${id === S.toolId ? ' selected' : ''}>`
+         + `${esc(t.title)}${full ? ' — Kontingent voll' : ''}</option>`;
+  };
   const toolBlock = creating
     ? `<label class="field">Skill <span class="req">*</span>
          <select id="setTool" data-req>
-           ${usable.map(([id, t]) => {
-             const full = !t.multi_room ? t.live >= 1 : t.live >= t.max_rooms;
-             // Kein Zeichen davor: in ein <option> passt kein SVG,
-             // und ein Emoji zwischen lauter gezeichneten Zeichen
-             // wäre der einzige Ausreißer der Seite.
-             return `<option value="${esc(id)}"${full ? ' disabled' : ''}${id === S.toolId ? ' selected' : ''}>`
-                  + `${esc(t.title)}${full ? ' — Kontingent voll' : ''}</option>`;
-           }).join('')}
+           ${toolOptionGroups(usable).map(g => g.label
+               ? `<optgroup label="${esc(g.label)}">${g.items.map(option).join('')}</optgroup>`
+               : g.items.map(option).join('')).join('')}
          </select>
        </label>`
     : `<div class="field field--static">Skill

@@ -121,7 +121,7 @@ window.TOOLS_OVERLAY = {
   // (skill_tools.admin_only), `adminOnly` hier setzt nur das Schild auf
   // die Kachel. beta: Etappe 1, noch ohne Teilen (23.10.2026).
   sqlstudio: { ready: true, beta: true, adminOnly: true },
-  // Fünfzehnter Skill (Migration 0233) — Definitions Derby: Lehrkräfte
+  // Fünfzehnter Skill (Migration 0233) — How to Fachbegriffe: Lehrkräfte
   // legen Stapel aus Begriff · Definition · Bild an (Karte für Karte oder
   // als Text), teilen sie mit dem Raum; die Klasse lernt mit Karteikarten
   // und behält in der Übersicht den Lernstand im Blick. Direkt im Raum

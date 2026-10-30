@@ -810,11 +810,16 @@ async function loadTools() {
        und ohne diesen zweiten Anlauf wäre nicht die Gruppierung weg,
        sondern die ganze Skill-Liste. Fällt sie zurück, steht alles
        in einem Abschnitt, und das ist genau der Stand von vorher. */
+    // Dasselbe für `subcategory` (Migration 0248): erst mit, dann ohne.
     try {
-      toolsCache = await fetchTools(TOOL_COLS + ',subject');
-    } catch (e) {
-      console.warn('[mpskills] skill_tools ohne subject (Migration 0089 noch nicht gelaufen?):', e.message);
-      toolsCache = await fetchTools(TOOL_COLS);
+      toolsCache = await fetchTools(TOOL_COLS + ',subject,subcategory');
+    } catch (e0) {
+      try {
+        toolsCache = await fetchTools(TOOL_COLS + ',subject');
+      } catch (e) {
+        console.warn('[mpskills] skill_tools ohne subject (Migration 0089 noch nicht gelaufen?):', e.message);
+        toolsCache = await fetchTools(TOOL_COLS);
+      }
     }
     toolsError = null;
   } catch (e) {
@@ -1085,10 +1090,26 @@ async function renderTools(host, guest) {
     groups.get(key).items.push(t);
   });
 
+  /* Unterkategorie (Migration 0248): im Fach erst die Skills ohne,
+     dann je Unterkategorie eine kleine Überschrift — Reihenfolge wie
+     oben nach dem kleinsten sort_order darin. */
+  const subGroups = items => {
+    const m = new Map();
+    items.forEach((t, i) => {
+      const key = (t.subcategory || '').trim();
+      if (!m.has(key)) m.set(key, { name: key, rank: key ? i : -1, items: [] });
+      m.get(key).items.push(t);
+    });
+    return [...m.values()].sort((a, b) => a.rank - b.rank);
+  };
+  const grid = items => `<div class="tile-grid">${items.map(t => toolCard(t, guest)).join('')}</div>`;
+
   const secs = [...groups.values()].sort((a, b) => a.rank - b.rank);
   host.innerHTML = secs.map(s =>
     (secs.length > 1 ? `<h3 class="tools-sec">${esc(s.name)}</h3>` : '')
-    + `<div class="tile-grid">${s.items.map(t => toolCard(t, guest)).join('')}</div>`
+    + subGroups(s.items).map(g =>
+        (g.name ? `<h4 class="tools-sub">${esc(g.name)}</h4>` : '') + grid(g.items)
+      ).join('')
   ).join('');
   wireToolButtons(host);
   fillWindowsDownloads(host);

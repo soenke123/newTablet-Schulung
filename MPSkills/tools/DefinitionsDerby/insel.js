@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — Definitions Derby  ·  insel.js  (window.DDInsel)
+   MPSkills — How to Fachbegriffe  ·  insel.js  (window.DDInsel)
    ══════════════════════════════════════════════════════════════
    Die Regeln der Insel ohne Bildschirm: Stufen, welche Aufgabe zu
    welcher Stufe gehört, wie Aufgaben aus den Karten entstehen und

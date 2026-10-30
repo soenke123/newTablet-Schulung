@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
    MPSkills — derby.js   ·   Stapel-Editor ohne Raum
    ══════════════════════════════════════════════════════════════
-   Die Definitions-Derby-Kachel hat neben „+ Raum öffnen" einen
+   Die Kachel von How to Fachbegriffe hat neben „+ Raum öffnen" einen
    zweiten Knopf: „Stapel-Editor". Er führt hierher. Wer eine Stunde
    vorbereitet, will Begriffe und Definitionen schreiben, ohne dafür
    einen Raum aufzumachen, in dem dann niemand sitzt.
