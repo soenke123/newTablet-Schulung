@@ -145,7 +145,7 @@
             'Jede richtige Antwort ist eine Kiste für das eigene Team. Falsch kostet nichts, nur einen Moment Zeit.',
             'Je höher der eigene Turm, desto schwerer die Aufgaben – vom Begriff wählen bis zum Lückentext. Wer hinten liegt, holt so leichter auf.',
             'Wer zuerst die Zielhöhe erreicht, gewinnt. Setzt die Lehrkraft im Spiel ein Rundenende, gewinnt bei Zeitende der höchste Turm.',
-            'Items wie bei Mario Kart: Überquert der Turm eine gestrichelte Linie, bekommt das Team ein Item – je weiter hinten, desto stärker (Möwe, Bus, Boom, Teatime …). Jeder im Team kann es einsetzen.',
+            'Items wie bei Mario Kart: Überquert der Turm eine gestrichelte Linie, bekommt das Team ein Item – je weiter hinten, desto stärker (Möwe, Bus, Boom, Teatime …). Einsetzen darf es reihum immer eine Person im Team.',
             'Die Lehrkraft schaltet Items in der Lobby an oder aus, jedes einzeln, und kann „häufig“ wählen.'] }
   ];
   const DEFAULT_GAMES = ['overview', 'cards'];
@@ -434,7 +434,7 @@
   const gameShared = id => sharedGames().includes(id);
   /* Welche Spiele diese Ansicht zeigt: Lehrkraft alle, Tablet nur geteilte. */
   const visibleGames = () => (isTeacher ? GAMES : GAMES.filter(g => gameShared(g.id)))
-    .filter(g => !(g.net && (standalone || demo)));   // Zusammen im Netz geht nur im Raum
+    .filter(g => !(g.net && standalone));   // Zusammen im Netz geht nur im Raum (im Schaufenster nur die Beschreibung)
 
   async function writeData(patch) {
     const next = Object.assign({}, roomData(), patch);
@@ -557,7 +557,8 @@
     const G = gameOf(gid);
     if (!G) return false;
     if (G.net) {                    // Kistenturm: Stapel wählt die Lehrkraft in der Lobby
-      if (standalone || demo) return false;
+      if (standalone) return false;
+      if (demo) { openInfo(gid); return true; }   // Schaufenster: kein Server, also die Beschreibung mit Foto
       info = null; renderInfo();
       if (opened) leavePlay();
       opened = { stacks: [], cards: [], game: gid };
@@ -714,7 +715,7 @@
     }
     for (const grp of GROUPS) {
       const gs = shown.filter(g => g.g === grp.id);
-      if (!gs.length && (!isTeacher || (grp.id === 'net' && (standalone || demo)))) continue;
+      if (!gs.length && (!isTeacher || (grp.id === 'net' && standalone))) continue;
       html += '<h3 class="dd-ghead">' + grp.name + '</h3>';
       html += gs.length
         ? '<div class="dd-games">' + gs.map(gameTile).join('') + '</div>'
@@ -760,9 +761,10 @@
           '<div class="dd-sheet__act">' +
             (canShare ? '<button type="button" class="btn' + (shared ? ' is-on' : '') + '" data-act="info-share" aria-pressed="' + shared + '">' + ico.share +
               (shared ? 'Für die Klasse zurücknehmen' : 'Mit der Klasse teilen') + '</button>' : '') +
-            '<button type="button" class="btn btn--primary" data-act="info-start"' + (it.length ? '' : ' disabled') + '>' + ico.play +
+            '<button type="button" class="btn btn--primary" data-act="info-start"' + (it.length && !(demo && G.net) ? '' : ' disabled') + '>' + ico.play +
               (G.net ? 'Öffnen' : G.room ? 'Insel öffnen' : 'Starten') + '</button>' +
-            (it.length ? '' : '<p class="dd-sheet__hint">' + (isTeacher ? 'Noch kein Stapel da – lege zuerst einen an.' : 'Noch ist kein Stapel geteilt.') + '</p>') +
+            (demo && G.net ? '<p class="dd-sheet__hint">Läuft im Raum: die ganze Klasse spielt mit, jedes Tablet für sich.</p>'
+              : it.length ? '' : '<p class="dd-sheet__hint">' + (isTeacher ? 'Noch kein Stapel da – lege zuerst einen an.' : 'Noch ist kein Stapel geteilt.') + '</p>') +
           '</div>' +
           // Oben das Bild, darunter die Erklärung in zwei Spalten (Sönke 29.10.2026)
           '<figure class="dd-shot"><img src="' + BASE + 'img/' + G.shot + '?v=' + V + '" alt="Bildschirmfoto: ' + E(G.name) + '" loading="lazy" decoding="async">' +
@@ -5158,7 +5160,8 @@
     ed = null;
     go('home');
     await loadList();
-    if (root && !sel.includes(id)) { sel.push(id); if (screen === 'home') renderHome(); }   // gerade bearbeitet = gleich gewählt
+    // sel = null heißt „keine eigene Wahl, alle aktiv“ — dann ist der neue Stapel schon dabei.
+    if (root && sel && !sel.includes(id)) { sel.push(id); if (screen === 'home') renderHome(); }   // gerade bearbeitet = gleich gewählt
   }
   function focusField(sel) { const f = root.querySelector(sel); if (f) f.focus(); }
 
@@ -5182,7 +5185,7 @@
     if (!standalone && isShared(id)) await writeShared(sharedRaw().filter(e => e.id !== id));
     try { localStorage.removeItem('dd.p.' + id); localStorage.removeItem('dd.sum.' + id); } catch (e) { /* egal */ }
     ed = null;
-    sel = sel.filter(x => x !== id);
+    if (sel) sel = sel.filter(x => x !== id);
     toast('Stapel gelöscht.');
     go('home');
     loadList();

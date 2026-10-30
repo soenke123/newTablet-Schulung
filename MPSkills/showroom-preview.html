@@ -73,7 +73,7 @@
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="lib/preview.js?v=20261026a"></script>
+<script src="lib/preview.js?v=20261030n"></script>
 <script src="preview/wordcloud.js?v=20260819d"></script>
 <script src="preview/neurolab.js?v=20260819b"></script>
 <script src="preview/caesar.js?v=20260820"></script>
@@ -83,6 +83,7 @@
 <script src="preview/knowledgestack.js?v=20261021k"></script>
 <script src="preview/tinylm.js?v=20261029b"></script>
 <script src="preview/sqlstudio.js?v=20261023a"></script>
+<script src="preview/derby.js?v=20261030a"></script>
 <script>
 /* Der Ersatz für app.js: die Registry als Konstante und die zwei
    Klicks, die die Kachel kennt. Bewusst keine Kopie von toolCard —
@@ -118,7 +119,9 @@ const TOOLS = [
   { id: 'tinylm', title: 'Tiny LM', folder: 'TinyLM', icon: '💬',
     blurb: 'Ein Mini-Sprachmodell zum Aufschrauben — drei Phasen, ein Textkorpus.' },
   { id: 'sqlstudio', title: 'SQL Studio', folder: 'SQLStudio', icon: '🗄️',
-    blurb: 'Datenbanken wie mit phpMyAdmin — SQLite im Browser.' }
+    blurb: 'Datenbanken wie mit phpMyAdmin — SQLite im Browser.' },
+  { id: 'derby', title: 'How to Fachbegriffe', folder: 'DefinitionsDerby', icon: '🗂️',
+    blurb: 'Ein Stapel Begriffe, sechs Lernformen — vom Glossar bis zum Kistenturm.' }
 ];
 
 // Minimaler Toast, damit die Rückmeldungen des Werkzeugs
