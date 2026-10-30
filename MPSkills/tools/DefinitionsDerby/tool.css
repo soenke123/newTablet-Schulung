@@ -1003,7 +1003,7 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 /* Lücke = Reihe aus Kästchen, je Buchstabe eins mit eigenem Strich (Sönke 28.10.2026: „muss exakt passen“).
    Das echte Eingabefeld liegt unsichtbar über der ganzen Reihe. */
 .dd-gapw {
-  position: relative; display: inline-flex; gap: 3px; max-width: 100%; vertical-align: baseline; padding: 3px 6px 4px;
+  position: relative; display: inline-flex; flex-wrap: wrap; row-gap: 4px; gap: 3px; max-width: 100%; vertical-align: baseline; padding: 3px 6px 4px;
   border-radius: 4px; background: #fff6c8; box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--dd-k2) 45%, transparent); line-height: 1.25;
 }
 .dd-gapw:focus-within { box-shadow: inset 0 0 0 2px var(--dd-prim), 0 0 0 3px color-mix(in srgb, var(--dd-prim) 25%, transparent); }
@@ -1191,7 +1191,9 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 }
 #ddSt:fullscreen { background: var(--dd-bg); padding: 16px 20px; height: 100%; overflow: hidden; }
 #ddSt:fullscreen .dd-st__scene { flex: 1; height: auto; min-height: 0; }
-.dd-st__lanes { position: absolute; left: 0; right: 0; top: 0; bottom: var(--floor); display: flex; }
+.dd-st__lanes { position: absolute; left: 34px; right: 0; top: 0; bottom: var(--floor); display: flex; }
+/* ohne Item-Linien brauchen die Fragezeichen links keinen Streifen */
+.dd-st__scene:not(:has(.dd-st__ilines i)) .dd-st__lanes { left: 0; }
 .dd-st__lane { position: relative; flex: 1 1 0; min-width: 0; }
 .dd-st__tower { position: absolute; bottom: 0; left: 50%; width: var(--bw); display: flex; flex-direction: column-reverse; z-index: 1; }
 .dd-st__box {
@@ -1216,7 +1218,7 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__fig { position: absolute; bottom: -4px; right: calc(50% - 6px); width: var(--fw); height: var(--fw); z-index: 2; }
 .dd-st__fig svg, .dd-st__tfig svg, .dd-st__rfig svg, .dd-st__bigfig svg, .dd-st__winfig svg { width: 100% !important; height: 100% !important; display: block; }
 .dd-st__hgt {
-  position: absolute; left: calc(50% + var(--bw) / 2); transform: translateX(-50%) rotate(-6deg); z-index: 3;
+  position: absolute; left: calc(50% + var(--bw) / 2); transform: translateX(-50%) rotate(-6deg); z-index: 6;
   min-width: 34px; text-align: center; padding: 1px 7px; font-family: var(--mono); font-weight: 800; font-size: 1.05rem;
   background: var(--dd-stamp-bg); color: var(--tc); border: 3px double var(--tc); border-radius: 5px;
   transition: bottom .35s cubic-bezier(.3,1.3,.5,1);
@@ -1296,7 +1298,7 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__rn em { font-style: normal; font-family: var(--mono); font-size: .66rem; text-transform: uppercase; letter-spacing: .08em; color: var(--tc); filter: brightness(.8); }
 .dd-st__rbar { position: relative; height: 16px; background: var(--dd-pappe); border-radius: 3px; box-shadow: inset 0 0 0 1px var(--dd-pappe3); overflow: hidden; }
 .dd-st__rbar::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 5px; background: repeating-linear-gradient(0deg, #d23a2f 0 4px, #fff7ea 4px 8px); }
-.dd-st__rbar i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; transition: width .4s cubic-bezier(.3,1.3,.5,1);
+.dd-st__rbar i { position: absolute; left: 0; top: 0; bottom: 0; width: var(--p, 0%); transition: width .4s cubic-bezier(.3,1.3,.5,1), height .4s cubic-bezier(.3,1.3,.5,1);
   background: repeating-linear-gradient(90deg, rgba(0,0,0,.18) 0 1.5px, transparent 1.5px 12px), var(--tc); }
 .dd-st__rh { font-family: var(--mono); font-weight: 800; text-align: right; color: var(--tc); filter: brightness(.85); }
 .dd-st__rr .dd-st__pops { left: auto; right: 44px; top: 50%; bottom: auto; transform: translateY(-50%); }
@@ -1332,6 +1334,8 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 
 @media (max-width: 900px) {
   .dd-st__lobby { grid-template-columns: 1fr; }
+  .dd-st__tag b { font-size: .82rem; padding: 2px 6px; }
+  .dd-st__held .dd-it { width: 18px; height: 18px; }
 }
 @media (max-width: 600px) {
   .dd-st__set > .dd-st__hint { margin-left: 0; }
@@ -1368,7 +1372,7 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 /* Item-Linien am Beamer */
 .dd-st__ilines { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
 .dd-st__ilines i { position: absolute; left: 0; right: 0; height: 0; border-top: 2px dashed rgba(255,140,30,.65); }
-.dd-st__ilines .dd-st__qbox { position: absolute; left: 8px; top: -12px; width: 22px; height: 22px; animation: dd-st-qbox 2.4s ease-in-out infinite; }
+.dd-st__ilines .dd-st__qbox { position: absolute; left: 6px; top: -12px; width: 22px; height: 22px; animation: dd-st-qbox 2.4s ease-in-out infinite; }
 @keyframes dd-st-qbox { 50% { transform: rotate(-8deg) scale(1.08); } }
 /* Wirkungen an der Bahn */
 .dd-st__fxs { position: absolute; left: 4px; top: auto; bottom: calc(var(--fw) + 8px); z-index: 6; display: flex; flex-direction: column; gap: 4px; }
@@ -1417,7 +1421,7 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__pop.is-item { display: inline-flex; align-items: center; gap: 4px; border-left-color: #ff9f1c; }
 .dd-st__pop .dd-it { width: 20px; height: 20px; }
 /* Tablet: Items, Wirkungen, Hinweise, Teatime */
-.dd-st__rbar u { position: absolute; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: repeating-linear-gradient(#ff8c1e 0 3px, transparent 3px 5px); z-index: 1; }
+.dd-st__rbar u { position: absolute; left: var(--y); top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: repeating-linear-gradient(#ff8c1e 0 3px, transparent 3px 5px); z-index: 1; }
 .dd-st__rr .dd-st__fxs { position: static; flex-direction: row; grid-column: 2 / 4; margin-top: -2px; }
 .dd-st__rr .dd-st__fxs:empty { display: none; }
 .dd-st__rr .dd-st__fxs span { font-size: .7rem; }
@@ -1469,10 +1473,15 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
   background: var(--dd-pappe); color: var(--dd-ink); border: 1.5px solid var(--dd-pappe3); border-radius: 4px; padding: 3px 6px; opacity: .45; filter: grayscale(.8);
 }
 .dd .dd-st__itbtn.is-on { opacity: 1; filter: none; background: #fff6d8; border-color: #e08a1e; }
-.dd-st__itbtn .dd-it { width: 24px; height: 24px; }
+.dd-st__itbtn .dd-it { width: 24px; height: 24px; flex: none; }
 #ddStOften, #ddStIon { margin-right: 6px; }
-.dd-st__itcell { display: flex; align-items: stretch; gap: 2px; min-width: 0; }
-.dd-st__itcell .dd-st__itbtn { flex: 1; min-width: 0; }
+.dd-st__itcell {
+  display: flex; align-items: center; min-width: 0; border-radius: 4px; padding-right: 4px;
+  background: var(--dd-pappe); border: 1.5px solid var(--dd-pappe3);
+}
+.dd-st__itcell.is-on { background: #fff6d8; border-color: #e08a1e; }
+.dd .dd-st__itcell .dd-st__itbtn { flex: 1; min-width: 0; align-self: stretch; background: transparent; border: 0; padding: 4px 4px 4px 6px; }
+.dd-st__itcell .dd-st__itbtn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dd .dd-st__iinfo, .dd-st__ii {
   flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; align-self: center; border-radius: 50%; cursor: pointer;
   font: italic 800 .78rem/1 Georgia, serif; color: var(--dd-ink); background: var(--dd-paper); border: 1.5px solid var(--dd-pappe3); padding: 0;
@@ -1495,4 +1504,76 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__iwtxt b { display: block; font-size: 1.1rem; }
 @media (prefers-reduced-motion: reduce) {
   #ddSt.is-storm .dd-st__tower, .dd-st__wind i, .dd-st__ilines .dd-st__qbox, .dd-st__ann, .dd-st__msg, .dd-st__lane.is-tea::after { animation: none; }
+}
+
+/* ── Kistensturm am Handy (Sönke 30.10.2026: „ohne Scrollen weiterkommen“) ──
+   Im Spiel: schmaler Rahmen, kein großer Kopf, das Rennen als kleine
+   Türme nebeneinander, Aufgabe kompakt. Meldungen schweben oben drüber
+   statt den Inhalt zu verschieben. */
+.dd-st__myt { font-size: .78rem; font-weight: 800; color: #fff; background: var(--tc); padding: 1px 8px; border-radius: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+@media (max-width: 600px) {
+  .dd:has(#ddSt.is-game.dd-st--dev) { border-width: 5px; border-radius: 10px; padding: 8px 8px 10px; }
+  .dd:has(#ddSt.is-game.dd-st--dev) .dd-playhead { margin-bottom: 6px; gap: 8px; flex-wrap: nowrap; }
+  .dd:has(#ddSt.is-game.dd-st--dev) .dd-playhead .dd-stackhead__t { display: none; }
+  .dd:has(#ddSt.is-game.dd-st--dev) .dd-backbtn { min-height: 32px; padding: 4px 10px 4px 6px; font-size: .8rem; }
+  #ddSt.is-game.dd-st--dev { gap: 8px; }
+  .dd-st--dev .dd-st__hud { padding: 8px 10px; }
+  .dd-st--dev .dd-st__hudtop { margin-bottom: 4px; gap: 8px; }
+  .dd-st--dev .dd-st__hudtop b { font-size: .92rem; white-space: nowrap; }
+  /* Rennen: je Team ein kleiner Turm */
+  .dd-st--dev .dd-st__race { display: flex; gap: 4px; align-items: stretch; }
+  .dd-st--dev .dd-st__rr { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 3px 2px 2px; grid-template-columns: none; }
+  .dd-st--dev .dd-st__rr.is-me { box-shadow: inset 0 0 0 2px var(--tc); }
+  .dd-st--dev .dd-st__rn { display: none; }
+  .dd-st--dev .dd-st__rh { order: 1; font-size: .8rem; text-align: center; line-height: 1; }
+  .dd-st--dev .dd-st__rbar { order: 2; width: 14px; height: 46px; }
+  .dd-st--dev .dd-st__rbar::after { left: 0; right: 0; top: 0; bottom: auto; width: auto; height: 4px; background: repeating-linear-gradient(90deg, #d23a2f 0 4px, #fff7ea 4px 8px); }
+  .dd-st--dev .dd-st__rbar i { top: auto; right: 0; width: auto; height: var(--p, 0%);
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,.2) 0 1.5px, transparent 1.5px 8px), var(--tc); }
+  .dd-st--dev .dd-st__rbar u { left: -2px; right: -2px; top: auto; bottom: var(--y); width: auto; height: 2px; margin: 0 0 -1px; background: repeating-linear-gradient(90deg, #ff8c1e 0 3px, transparent 3px 5px); }
+  .dd-st--dev .dd-st__rfig, .dd-st--dev .dd-st__rr.is-me .dd-st__rfig { order: 3; width: 30px; height: 30px; }
+  .dd-st--dev .dd-st__rr .dd-st__pops { left: 50%; right: auto; top: 0; transform: translateX(-50%); }
+  .dd-st--dev .dd-st__rr .dd-st__pop { font-size: .66rem; padding: 1px 5px; }
+  .dd-st--dev .dd-st__rr .dd-st__fxs { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); flex-direction: column; gap: 1px; margin: 0; z-index: 3; }
+  .dd-st--dev .dd-st__rr .dd-st__fxs span { font-size: .6rem; padding: 0 3px 0 1px; gap: 1px; }
+  .dd-st--dev .dd-st__rr .dd-st__fxs .dd-it { width: 12px; height: 12px; }
+  .dd-st--dev .dd-st__lvl { margin-top: 6px; font-size: .8rem; flex-wrap: nowrap; white-space: nowrap; }
+  .dd-st--dev .dd-st__lvl small { display: none; }
+  .dd-st--dev .dd-st__fxbox { margin-top: 6px; }
+  .dd-st--dev .dd-st__fxbox p { padding: 4px 8px; font-size: .78rem; }
+  .dd-st--dev .dd-st__items { margin-top: 6px; }
+  .dd-st--dev .dd .dd-st__item, .dd .dd-st--dev .dd-st__item { padding: 3px 5px; }
+  .dd-st--dev .dd-st__item .dd-it { width: 30px; height: 30px; }
+  /* Meldungen schweben oben, statt die Aufgabe nach unten zu schieben */
+  .dd-st--dev .dd-st__notes { position: fixed; top: 8px; left: 8px; right: 8px; z-index: 960; pointer-events: none; }
+  .dd-st--dev .dd-st__msg { padding: 6px 10px; font-size: .86rem; }
+  /* Aufgabe kompakt */
+  .dd-st--dev .dd-task__sheet { padding: 10px 10px 12px; }
+  .dd-st--dev .dd-st__thead { margin-bottom: 2px; }
+  .dd-st--dev .dd-task__q { font-size: .82rem; margin-bottom: 4px; }
+  .dd-st--dev .dd-task__l { font-size: .6rem; margin-bottom: 2px; }
+  .dd-st--dev .dd-task__def, .dd-st--dev .dd-task__term { padding: 7px 10px; margin-bottom: 8px; border-left-width: 5px; }
+  .dd-st--dev .dd-task__def p { font-size: .98rem; line-height: 1.35; }
+  .dd-st--dev .dd-task__term b { font-size: 1.3rem; }
+  .dd-st--dev .dd-task__img { max-height: 70px; max-width: 110px; margin: 0 0 6px; border-width: 3px; }
+  .dd-st--dev .dd-opts6 { gap: 6px; }
+  .dd-st--dev .dd-opts4 { gap: 5px; }
+  .dd-st--dev .dd-opt { min-height: 42px; padding: 6px 8px; gap: 6px; font-size: .92rem; }
+  .dd-st--dev .dd-opt:not(.dd-opt--def) { overflow-wrap: normal; word-break: normal; hyphens: auto; -webkit-hyphens: auto; }
+  .dd-st--dev .dd-build__pool { gap: 5px; }
+  .dd-st--dev .dd-build__pool .dd-tile { font-size: .84rem; padding: 5px 8px; min-height: 34px; }
+  .dd-st--dev .dd-opt--def { font-size: .84rem; line-height: 1.3; }
+  .dd-st--dev .dd-build { gap: 8px; }
+  .dd-st--dev .dd-build__line { min-height: 48px; padding: 6px; gap: 5px; }
+  .dd-st--dev .dd-tile { padding: 6px 9px; min-height: 38px; font-size: .92rem; }
+  .dd-st--dev .dd-task__act { margin-top: 8px; }
+  .dd-st--dev .dd-task__act .btn, .dd-st--dev .dd-task__fb .btn { min-height: 42px; }
+  .dd-st--dev .dd-task__fb { margin-top: 8px; padding: 7px 10px; gap: 4px 10px; }
+  /* Lobby: Items zweispaltig und klein */
+  .dd-st__itlist .dd-st__itgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
+  .dd-st__itlist .dd-st__itbtn { padding: 3px 5px; font-size: .74rem; }
+  .dd-st__itlist .dd-st__itbtn .dd-it { width: 20px; height: 20px; }
+  .dd-st__itlist .dd-st__itbtn span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dd-st__card { padding: 14px 14px 16px; }
+  .dd-st__bigfig { width: 110px; height: 110px; }
 }

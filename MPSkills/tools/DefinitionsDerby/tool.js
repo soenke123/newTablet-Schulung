@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030d';
+  const V = '20261030e';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3841,6 +3841,7 @@
     const box = root.querySelector('#ddSt');
     if (!box || !st.v) return;
     clearTimeout(st.nextT);
+    box.classList.toggle('is-game', st.layout === 'game');
     if (st.layout === 'lobby') box.innerHTML = isTeacher ? stLobbyBeam() : stLobbyDev();
     else if (st.layout === 'end') box.innerHTML = stEndDev();
     else {
@@ -3851,6 +3852,7 @@
     }
     stUpdate();
     stLayout();
+    if (st.layout === 'game') stFitPhone();
   }
   function stUpdate() {
     const v = st.v;
@@ -3881,7 +3883,8 @@
           '<span class="dd-st__unit">Kisten</span></div></div>' +
         '<p class="dd-st__hint" id="ddStGoalHint"></p>' +
         '<div class="dd-st__row"><span class="dd-st__lab">Countdown</span><div class="dd-segs" id="ddStMin" role="group" aria-label="Countdown">' +
-          ST_MINUTES.map(n => '<button type="button" class="dd-seg" data-act="st-min" data-v="' + n + '">' + (n ? n + ' Min.' : 'ohne') + '</button>').join('') + '</div></div>' +
+          ST_MINUTES.map(n => '<button type="button" class="dd-seg" data-act="st-min" data-v="' + n + '"' + (n ? ' aria-label="' + n + ' Minuten"' : '') + '>' + (n || 'ohne') + '</button>').join('') + '</div>' +
+          '<span class="dd-st__unit">Min.</span></div>' +
         '<div class="dd-st__row dd-st__row--top"><span class="dd-st__lab">Stapel</span><div class="dd-chips" id="ddStStacks"></div></div>' +
         '<div class="dd-st__row"><span class="dd-st__lab">Items</span><div class="dd-segs" id="ddStIon" role="group" aria-label="Items">' +
           '<button type="button" class="dd-seg" data-act="st-ion" data-v="1">an</button><button type="button" class="dd-seg" data-act="st-ion" data-v="0">aus</button></div>' +
@@ -3924,7 +3927,7 @@
       iset.hidden = !v.items_on;
       iset.innerHTML = '<p class="dd-st__hint">' + (v.items_often ? 'Häufig: an jeder Stufe zwei Item-Linien.' : 'Normal: eine Item-Linie zwischen zwei Aufgabenstufen.') +
           ' Antippen schaltet ein Item aus oder an.</p>' +
-        '<div class="dd-st__itgrid">' + ST_ITEMS.map(it => '<span class="dd-st__itcell"><button type="button" class="dd-st__itbtn' + (off.has(it.id) ? '' : ' is-on') + '" data-act="st-item" data-id="' + it.id +
+        '<div class="dd-st__itgrid">' + ST_ITEMS.map(it => '<span class="dd-st__itcell' + (off.has(it.id) ? '' : ' is-on') + '"><button type="button" class="dd-st__itbtn' + (off.has(it.id) ? '' : ' is-on') + '" data-act="st-item" data-id="' + it.id +
           '" aria-pressed="' + !off.has(it.id) + '" title="' + E(it.say) + '">' + itIco(it.id) + '<span>' + E(it.name) + '</span></button>' + stInfoBtn(it.id) + '</span>').join('') + '</div>';
     }
     const cards = (list || []).filter(s => (v.stacks || []).includes(s.id)).reduce((a, s) => a + (s.n || 0), 0);
@@ -4125,9 +4128,18 @@
   function stLayout() {
     const sc = root && root.querySelector('#ddStScene');
     if (!sc || !st || !st.v) return;
+    // Spielfeld bis an den unteren Rand des Fensters (Vollbild: CSS)
+    if (!document.fullscreenElement) {
+      const top = sc.getBoundingClientRect().top + window.scrollY;
+      sc.style.height = Math.round(Math.max(320, Math.min(980, window.innerHeight - top - 22))) + 'px';
+    } else sc.style.height = '';
     const lanes = sc.querySelector('.dd-st__lanes');
     const h = lanes.clientHeight, w = lanes.clientWidth / st.v.team_count;
-    const bh = Math.max(3, Math.min(42, (h - 46) / st.v.goal));
+    // Platz bis zum Ziel – oder bis zum höchsten Turm, falls einer drüber ist
+    let tall = st.v.goal;
+    for (let i = 0; i < st.v.team_count; i++) tall = Math.max(tall, stSum(stList(i)), stTarget(i));
+    st.tall = tall;
+    const bh = Math.max(3, Math.min(42, (h - 46) / tall));
     sc.style.setProperty('--bh', bh.toFixed(2) + 'px');
     sc.style.setProperty('--bw', Math.round(Math.min(130, w * 0.46, bh * 3.4 + 40)) + 'px');
     sc.style.setProperty('--fw', Math.round(Math.max(64, Math.min(150, w * 0.5, h * 0.36))) + 'px');
@@ -4147,12 +4159,13 @@
       rows += '<div class="dd-st__rr' + (i === me ? ' is-me' : '') + '" data-t="' + i + '" style="' + stCol(i) + '">' +
         '<span class="dd-st__rfig" id="ddStF' + i + '">' + figSVG(i, 'idle', i === me ? 54 : 38) + '</span>' +
         '<span class="dd-st__rn">' + E(stFig(i).name) + (i === me ? ' <em>ihr</em>' : '') + '</span>' +
-        '<span class="dd-st__rbar"><i id="ddStB' + i + '"></i>' + stLines().map(y => '<u style="left:' + (y / v.goal * 100).toFixed(1) + '%"></u>').join('') + '</span>' +
+        '<span class="dd-st__rbar"><i id="ddStB' + i + '"></i>' + stLines().map(y => '<u style="--y:' + (y / v.goal * 100).toFixed(1) + '%"></u>').join('') + '</span>' +
         '<b class="dd-st__rh" id="ddStH' + i + '">0</b>' +
         '<span class="dd-st__pops" id="ddStP' + i + '"></span><span class="dd-st__fxs" id="ddStX' + i + '"></span></div>';
     }
     return '<div class="dd-st__hud" id="ddStHud">' +
-        '<div class="dd-st__hudtop"><b>Ziel: ' + v.goal + ' Kisten</b><span class="dd-st__clock" id="ddStClock" hidden></span></div>' +
+        '<div class="dd-st__hudtop"><b>Ziel: ' + v.goal + ' Kisten</b>' + (me != null ? '<span class="dd-st__myt" style="' + stCol(me) + '">' + E(stTeam(me)) + '</span>' : '') +
+          '<span class="dd-st__clock" id="ddStClock" hidden></span></div>' +
         '<div class="dd-st__race">' + rows + '</div>' +
         '<p class="dd-st__lvl" id="ddStLvl"></p>' +
         '<div class="dd-st__fxbox" id="ddStFx"></div>' +
@@ -4186,6 +4199,12 @@
       const extra = tgt.length - cur.length;
       if (extra > 0 && sameList(tgt.slice(extra), cur)) stStep(i);
       else { st.shown[i] = tgt.slice(); stRenderTower(i, 'is-settle'); stPaintHeight(i); }
+    }
+    // Ragt ein Turm über das Ziel, schrumpfen die Kisten am Beamer (nichts läuft oben raus)
+    if (isTeacher && st.tall != null) {
+      let tall = st.v.goal;
+      for (let i = 0; i < st.v.team_count; i++) tall = Math.max(tall, stSum(stList(i)));
+      if (tall !== st.tall) stLayout();
     }
   }
   function stStep(i) {
@@ -4223,7 +4242,7 @@
       if (isTeacher) lab.style.bottom = 'calc(' + h + ' * var(--bh) + 8px)';
     }
     const bar = root.querySelector('#ddStB' + i);
-    if (bar) bar.style.width = Math.min(100, h / v.goal * 100).toFixed(1) + '%';
+    if (bar) bar.style.setProperty('--p', Math.min(100, h / v.goal * 100).toFixed(1) + '%');
     const pops = root.querySelector('#ddStP' + i);
     if (pops && isTeacher) pops.style.bottom = 'calc(' + h + ' * var(--bh) + 44px)';
   }
@@ -4611,6 +4630,22 @@
     t.seq = []; t.done = false;
     st.task = t;
     paintTask();
+    stFitPhone();
+  }
+  /* Am Handy: Spielbereich oben an den Rand, damit Rennen und Aufgabe ohne
+     Scrollen zu sehen sind; ein Element (Rückmeldung, „Weiter“) ggf. nachholen. */
+  function stFitPhone(el) {
+    if (isTeacher || window.innerWidth > 600 || !root) return;
+    requestAnimationFrame(() => {
+      const dd = root && root.querySelector('#ddSt');
+      const frame = dd && (dd.closest('.dd') || dd);
+      if (!frame) return;
+      try {
+        const top = frame.getBoundingClientRect().top;
+        if (Math.abs(top) > 2) window.scrollBy({ top, behavior: 'auto' });
+        if (el && el.isConnected) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch (_) {}
+    });
   }
   function stTaskHead(t) {
     return '<div class="dd-st__thead">' + (multi() ? '<small>' + E(stackTitle(t.card.sid)) + '</small>' : '') + '</div>';
@@ -4628,6 +4663,7 @@
         ? '<p><span class="dd-st__flybox" style="' + (myT != null ? stCol(myT) : '') + '"></span><b>Richtig!</b> Eine Kiste für ' + E(myT != null ? stTeam(myT) : 'dein Team') + '.</p>'
         : '<p>Nicht ganz.</p>' + (extra ? '<p class="dd-task__sol">' + extra + '</p>' : '') +
           '<button type="button" class="btn btn--primary dd-st__nx" data-act="isl-next" id="ddNext" disabled><i class="dd-st__lock"></i>Weiter</button>';
+      stFitPhone(fb);
     }
     st.lockUntil = ok ? 0 : Date.now() + ST_LOCK_MS;
     if (!ok) setTimeout(() => { const b = root && root.querySelector('#ddNext'); if (b) { b.disabled = false; b.focus({ preventScroll: true }); } }, ST_LOCK_MS);
