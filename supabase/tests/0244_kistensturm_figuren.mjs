@@ -1,7 +1,7 @@
-/* Prüfstand für Migration 0242 — Kistensturm: Teams nach Figur, Zeit im Spiel.
-   Echt gerechnet in pglite auf der ganzen Kette 0001…0242.
+/* Prüfstand für Migration 0244 — Kistensturm: Teams nach Figur.
+   Echt gerechnet in pglite auf der ganzen Kette 0001…0244.
 
-   Aufruf:  node supabase/tests/0242_kistensturm_figuren_zeit.mjs */
+   Aufruf:  node supabase/tests/0244_kistensturm_figuren.mjs */
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';
@@ -57,7 +57,7 @@ r = await call(`dd_storm_room_get($1, 0)`, [CODE]);
 ok('sortiert gespeichert, team_count = 3', JSON.stringify(r.figs) === '[1,3,5]' && r.team_count === 3);
 ok('Lobby verteilt auf drei Teams', new Set(r.people.map(p => p.t)).size === 3 && r.people.every(p => p.t >= 0 && p.t < 3));
 
-ok('Zeit in der Lobby → abgelehnt', (await call(`dd_storm_room_timer($1, 60)`, [CODE])).error === 'not_allowed');
+ok('Countdown (0243) in der Lobby → abgelehnt', (await call(`dd_storm_room_clock($1, 1)`, [CODE])).error === 'not_allowed');
 
 await call(`dd_storm_room_setup($1, null, null, null, $2::jsonb)`, [CODE, JSON.stringify([S])]);
 ok('Start', (await call(`dd_storm_room_start($1)`, [CODE])).ok === true);
@@ -67,23 +67,19 @@ await db.query(`update dd_storm_boards set countdown_ends_at = now() - interval 
 r = await call(`dd_storm_room_get($1, 0)`, [CODE]);
 ok('läuft ohne Zeitlimit', r.phase === 'running' && r.ends_at == null);
 
-ok('ungültige Zeit → abgelehnt', (await call(`dd_storm_room_timer($1, 2)`, [CODE])).error === 'invalid_input');
-ok('3 Minuten setzen', (await call(`dd_storm_room_timer($1, 180)`, [CODE])).ok === true);
-const left = Number((await one(`select extract(epoch from ends_at - now()) s from dd_storm_boards where room_id = $1`, [ROOM])).s);
-ok('Rundenende in 3 Minuten', left > 170 && left <= 180, left.toFixed(1));
-ok('ohne Zeitlimit zurück', (await call(`dd_storm_room_timer($1, 0)`, [CODE])).ok === true);
-ok('ends_at wieder leer', (await one(`select ends_at from dd_storm_boards where room_id = $1`, [ROOM])).ends_at == null);
-await call(`dd_storm_room_timer($1, 60)`, [CODE]);
+ok('Countdown (0243) im Spiel', (await call(`dd_storm_room_clock($1, 1)`, [CODE])).ok === true);
 await db.query(`update dd_storm_boards set ends_at = now() - interval '1 second' where room_id = $1`, [ROOM]);
 r = await call(`dd_storm_room_get($1, 0)`, [CODE]);
-ok('Zeit um → beendet', r.phase === 'ended');
-ok('Zeit nach dem Ende → abgelehnt', (await call(`dd_storm_room_timer($1, 60)`, [CODE])).error === 'not_allowed');
+ok('Zeit um → beendet, Figuren bleiben', r.phase === 'ended' && JSON.stringify(r.figs) === '[1,3,5]');
+await call(`dd_storm_room_reset($1)`, [CODE]);
+r = await call(`dd_storm_room_get($1, 0)`, [CODE]);
+ok('Nochmal: Figuren bleiben', r.phase === 'lobby' && JSON.stringify(r.figs) === '[1,3,5]' && r.team_count === 3);
 
 await db.query(`delete from _who`);
 ok('ohne Anmeldung → abgelehnt', (await call(`dd_storm_room_figs($1, '[0,1]'::jsonb)`, [CODE])).error === 'not_authenticated');
 await db.query(`insert into _who values ($1)`, [T]);
 
-await db.exec(mig(FILES.find(f => f.startsWith('0242'))));
+await db.exec(mig(FILES.find(f => f.startsWith('0244'))));
 ok('Migration zweimal', true);
 
 console.log(fails ? `\n${fails} Fehler` : '\nalles grün');

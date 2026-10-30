@@ -1,24 +1,20 @@
--- 0242 — Definitions Derby, Kistensturm: Teams nach Figur wählen, Zeit im Spiel.
+-- 0244 — Definitions Derby, Kistensturm: Teams nach Figur wählen.
 --
--- Sönke 30.10.2026:
---  1. Statt „2 bis 6 Teams“ wählt die Lehrkraft in der Lobby genau die
---     Figuren (= Farben), die mitspielen. Neue Spalte figs: Liste der
---     Figurnummern 0…5 in Reihenfolge der Teams. Team t spielt mit Figur
---     figs[t]; team_count bleibt = Länge von figs, damit der Rest der
---     Kette (Verteilen, Türme, Items) unverändert über 0…team_count-1 läuft.
---  2. Kein Countdown mehr in der Lobby: wie bei Kingdoms of Mathoria setzt
---     die Lehrkraft das Rundenende im laufenden Spiel (dd_storm_room_timer,
---     0 = ohne Zeitlimit). minutes bleibt als Spalte, wird aber auf 0 gesetzt.
+-- Sönke 30.10.2026: Statt „2 bis 6 Teams“ wählt die Lehrkraft in der Lobby
+-- genau die Figuren (= Farben), die mitspielen. Neue Spalte figs: Liste der
+-- Figurnummern 0…5 in Reihenfolge der Teams. Team t spielt mit Figur
+-- figs[t]; team_count bleibt = Länge von figs, damit der Rest der Kette
+-- (Verteilen, Türme, Items, Countdown 0243) unverändert über
+-- 0…team_count-1 läuft. Kein DROP. Mehrfach ausführbar.
 
 alter table dd_storm_boards add column if not exists figs jsonb not null default '[0,1,2,3]'::jsonb;
 
 update dd_storm_boards b
    set figs = (select jsonb_agg(g order by g) from generate_series(0, b.team_count - 1) g)
  where jsonb_array_length(b.figs) <> b.team_count;
-update dd_storm_boards set minutes = 0 where minutes <> 0;
 
 comment on column dd_storm_boards.figs is
-  'Kistensturm: Figurnummern (0–5) der mitspielenden Teams, Team t = Figur figs[t]. Seit 0242.';
+  'Kistensturm: Figurnummern (0–5) der mitspielenden Teams, Team t = Figur figs[t]. Seit 0244.';
 
 
 -- Figuren wählen (nur Lobby): 2–6 verschiedene Nummern 0–5, aufsteigend gespeichert.
@@ -60,40 +56,6 @@ $$;
 
 revoke all on function dd_storm_room_figs(text, jsonb) from public;
 grant execute on function dd_storm_room_figs(text, jsonb) to authenticated;
-
-
--- Rundenende im laufenden Spiel (wie Mathoria): 0 = ohne Zeitlimit, sonst
--- 5 s … 60 Min. ab jetzt. Bei Zeitende gewinnt der höchste Turm (dd_storm_advance).
-create or replace function dd_storm_room_timer(p_code text, p_seconds int)
-  returns jsonb
-  security definer
-  set search_path = public
-  language plpgsql
-as $$
-declare
-  v_room skill_rooms := dd_storm_teacher_room(p_code);
-  v_b    dd_storm_boards;
-begin
-  if auth.uid() is null then return jsonb_build_object('ok', false, 'error', 'not_authenticated'); end if;
-  if v_room.id is null then return jsonb_build_object('ok', false, 'error', 'not_found'); end if;
-  if p_seconds is null or (p_seconds <> 0 and p_seconds not between 5 and 3600) then
-    return jsonb_build_object('ok', false, 'error', 'invalid_input');
-  end if;
-  perform dd_storm_advance(v_room.id);
-  select * into v_b from dd_storm_boards where room_id = v_room.id for update;
-  if v_b.room_id is null or v_b.phase <> 'running' then
-    return jsonb_build_object('ok', false, 'error', 'not_allowed');
-  end if;
-  update dd_storm_boards
-     set ends_at = case when p_seconds > 0 then now() + make_interval(secs => p_seconds) end
-   where room_id = v_room.id;
-  perform skill_touch(v_room.id);
-  return jsonb_build_object('ok', true);
-end;
-$$;
-
-revoke all on function dd_storm_room_timer(text, int) from public;
-grant execute on function dd_storm_room_timer(text, int) to authenticated;
 
 
 -- Ansicht wie 0240, zusätzlich figs.
