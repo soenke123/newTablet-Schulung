@@ -1170,7 +1170,17 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd .dd-st__start { justify-content: center; min-height: 54px; min-width: 130px; font-size: 1.2rem; }
 .dd-st__go .dd-st__hint { margin: 0; font-size: .8rem; text-align: center; color: var(--dd-k1); font-weight: 700; }
 .dd-st__go .dd-st__hint[hidden] { display: none; }
-.dd .dd-st__itopen { min-width: 64px; font-variant-numeric: tabular-nums; }
+.dd .dd-st__itopen {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 4px 10px 4px 6px; font-weight: 800;
+  background: #fff6d8; color: var(--dd-ink); border: 2px solid #e08a1e; border-radius: 6px; box-shadow: 0 3px 0 #b8640e; cursor: pointer;
+}
+.dd .dd-st__itopen:hover { background: #ffecbd; }
+.dd .dd-st__itopen:active, .dd .dd-st__itopen.is-on { transform: translateY(2px); box-shadow: 0 1px 0 #b8640e; background: #ffe2a8; }
+.dd .dd-st__itopen .dd-it { width: 26px; height: 26px; flex: none; }
+.dd-st__itopen { align-self: stretch; justify-content: center; }
+.dd-st__itopen b { font-family: var(--mono); font-size: .8rem; font-variant-numeric: tabular-nums; background: #e07a10; color: #fff; padding: 1px 6px; border-radius: 4px; }
+.dd-st__itchev { display: inline-grid; width: 16px; height: 16px; }
+.dd-st__itchev svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
 .dd-st__itopen[hidden] { display: none; }
 .dd-st__itset { background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px; padding: 10px; box-shadow: 0 6px 14px var(--dd-shadow); }
 .dd-st__teams { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 14px; }

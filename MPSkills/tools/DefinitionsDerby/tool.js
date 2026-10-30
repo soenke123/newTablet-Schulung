@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030j';
+  const V = '20261030k';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3968,7 +3968,7 @@
           '<button type="button" class="dd-seg" data-act="st-ion" data-v="1">an</button><button type="button" class="dd-seg" data-act="st-ion" data-v="0">aus</button></div>' +
           '<div class="dd-segs" id="ddStOften" role="group" aria-label="Wie oft" title="Häufig: doppelt so viele Item-Linien">' +
           '<button type="button" class="dd-seg" data-act="st-often" data-v="0">normal</button><button type="button" class="dd-seg" data-act="st-often" data-v="1">häufig</button></div>' +
-          '<button type="button" class="dd-seg dd-st__itopen" id="ddStItOpen" data-act="st-itopen" aria-expanded="false"></button></span></div>' +
+          '</span><button type="button" class="btn btn--sm dd-st__itopen" id="ddStItOpen" data-act="st-itopen" aria-expanded="false"></button></div>' +
         '<div class="dd-st__grp dd-st__go"><button type="button" class="btn btn--primary dd-st__start" data-act="st-start" id="ddStStart">' + ico.play + 'Start</button>' +
           '<p class="dd-st__hint" id="ddStStartHint"></p></div>' +
       '</section>' +
@@ -4025,8 +4025,11 @@
       const io = root.querySelector('#ddStItOpen');
       if (io) {
         io.hidden = !v.items_on; io.setAttribute('aria-expanded', String(!!st.itOpen));
-        io.innerHTML = (ST_ITEMS.length - off.size) + '/' + ST_ITEMS.length + ' <span aria-hidden="true">' + (st.itOpen ? '▴' : '▾') + '</span>';
-        io.title = 'Welche Items';
+        // Sönke 30.10.2026: „das ich mit dem Pfeil die Items öffnen kann, sieht niemand“ → echter Knopf mit Wort
+        io.innerHTML = itIco('bonus') + '<span>' + (st.itOpen ? 'Fertig' : 'Items wählen') + '</span><b>' + (ST_ITEMS.length - off.size) + '/' + ST_ITEMS.length + '</b>' +
+          '<span class="dd-st__itchev" aria-hidden="true">' + (st.itOpen ? ico.up : ico.down) + '</span>';
+        io.title = st.itOpen ? 'Item-Auswahl schließen' : 'Einzelne Items an- und ausschalten';
+        io.classList.toggle('is-on', !!st.itOpen);
       }
       iset.innerHTML = '<div class="dd-st__itgrid">' + ST_ITEMS.map(it => '<span class="dd-st__itcell' + (off.has(it.id) ? '' : ' is-on') + '"><button type="button" class="dd-st__itbtn' + (off.has(it.id) ? '' : ' is-on') + '" data-act="st-item" data-id="' + it.id +
           '" aria-pressed="' + !off.has(it.id) + '" title="' + E(it.say) + '">' + itIco(it.id) + '<span>' + E(it.name) + '</span></button>' + stInfoBtn(it.id) + '</span>').join('') + '</div>';
