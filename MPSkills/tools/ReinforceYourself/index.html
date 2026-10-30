@@ -3313,7 +3313,7 @@ function tttAiTurn() {
   const row = document.querySelector('.ttt-row:last-child');
   if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   const els = row ? row.querySelectorAll('.ttt-opt') : [];
-  const steps = pool.length > 1 ? 9 + (Math.random() * 4 | 0) : 1;
+  const steps = pool.length > 1 ? 4 : 0;   // kurz: soll beim Trainieren nicht aufhalten (~0,5 s)
   let n = 0, at = pool[Math.random() * pool.length | 0];
   const hop = () => {
     els.forEach(e => e.classList.remove('spin'));
@@ -3324,15 +3324,15 @@ function tttAiTurn() {
         tttTimer = null;
         move.pick = o.rep; move.cell = cell;
         tttPlace(cell, 'K');
-      }, 380);
+      }, 180);
       return;
     }
     if (pool.length > 1) { let nx; do { nx = pool[Math.random() * pool.length | 0]; } while (nx === at); at = nx; }
     if (els[at]) els[at].classList.add('spin');
     n++;
-    tttSpin = setTimeout(hop, 60 + n * 12);
+    tttSpin = setTimeout(hop, 55);
   };
-  tttSpin = setTimeout(hop, 350);
+  tttSpin = setTimeout(hop, 100);
 }
 
 function tttPlace(cell, who) {
