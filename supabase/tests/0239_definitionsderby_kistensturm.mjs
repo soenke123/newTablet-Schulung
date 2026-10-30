@@ -162,7 +162,9 @@ await db.exec(`update dd_storm_teams set progress = 9, height = 9 where team = 0
 await db.exec(`update dd_storm_players set last_ok_at = null`);
 r = await call(`dd_storm_answer($1, true, $2)`, [tok(2), seqBefore]);
 ok('6  Ziel erreicht → ended, Sieger Team 0', r.phase === 'ended' && r.winner_team === 0, JSON.stringify([r.phase, r.winner_team]));
-ok('6  nur neue Ereignisse: box + win', r.events.length === 2 && r.events[0].k === 'box' && r.events[1].k === 'win');
+// seit 0240 kommen beim Überqueren von Item-Linien noch 'get'-Ereignisse dazu
+const ks = r.events.map(e => e.k).filter(k => k !== 'get');
+ok('6  nur neue Ereignisse: box + win', ks.length === 2 && ks[0] === 'box' && ks[1] === 'win' && r.events.every(e => e.s > seqBefore), JSON.stringify(r.events.map(e => e.k)));
 r = await call(`dd_storm_answer($1, true, 0)`, [tok(1)]);
 ok('6  danach zählt nichts mehr', r.result === 'not_running');
 

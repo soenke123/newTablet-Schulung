@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030b';
+  const V = '20261030c';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -144,7 +144,9 @@
             'Die Klasse kommt über „Mitmachen“ dazu, die Teams werden automatisch verteilt.',
             'Jede richtige Antwort ist eine Kiste für das eigene Team. Falsch kostet nichts, nur einen Moment Zeit.',
             'Je höher der eigene Turm, desto schwerer die Aufgaben – vom Begriff wählen bis zum Lückentext. Wer hinten liegt, holt so leichter auf.',
-            'Wer zuerst die Zielhöhe erreicht, gewinnt. Mit Countdown gewinnt bei Zeitende der höchste Turm.'] }
+            'Wer zuerst die Zielhöhe erreicht, gewinnt. Mit Countdown gewinnt bei Zeitende der höchste Turm.',
+            'Items wie bei Mario Kart: Überquert der Turm eine gestrichelte Linie, bekommt das Team ein Item – je weiter hinten, desto stärker (Möwe, Bus, Boom, Teatime …). Jeder im Team kann es einsetzen.',
+            'Die Lehrkraft schaltet Items in der Lobby an oder aus, jedes einzeln, und kann „häufig“ wählen.'] }
   ];
   const DEFAULT_GAMES = ['overview', 'cards'];
   const gameOf = id => GAMES.find(g => g.id === id) || null;
@@ -3657,9 +3659,93 @@
   const stCol = i => '--tc:' + stFig(i).col + ';--ts:' + stFig(i).soft;
   const stLive = () => { const s = roomData().storm; return !!(s && s.live && Date.now() - (s.t || 0) < 4 * 3600e3); };
 
+  /* ─── Items (Migration 0240, Sönke 30.10.2026) ───
+     Liegen als Linien zwischen den Aufgabenstufen (20/40/60/80 % des
+     Ziels, „häufig“ alle 10 %); wer eine Linie überquert, bekommt ein
+     Item für sein Team (höchstens 2), jedes Teammitglied kann es
+     einsetzen. Welches, entscheidet der Server nach Platz (dd_storm_draw).
+     Reihenfolge = Reihenfolge in der Lobby. */
+  const ST_ITEMS = [
+    { id: 'bonus',  name: 'Bonus-Kisten', say: 'Zwei goldene Kisten für euer Team.' },
+    { id: 'stein',  name: 'Steinkiste',   say: 'Eine Steinkiste: Möwe und Sturm kommen nicht an sie heran.' },
+    { id: 'moewe',  name: 'Möwe',         say: 'Klaut beim Team vor euch die oberste Kiste.' },
+    { id: 'moewe3', name: '3 Möwen',      say: 'Klauen bei bis zu drei Teams vor euch je eine Kiste.' },
+    { id: 'maxi',   name: 'Maxi-Kisten',  say: '20 Sekunden lang ist jede Kiste doppelt so hoch.' },
+    { id: 'mini',   name: 'Mini-Kisten',  say: 'Zwei Teams vor euch bekommen 20 Sekunden lang halbe Kisten.' },
+    { id: 'sturm',  name: 'Sturm',        say: '30 Sekunden Sturm: wer über Stufe 1 ist, verliert bei jedem Fehler die oberste Kiste.' },
+    { id: 'tea',    name: 'Teatime',      say: 'Die ersten beiden Teams machen 10 Sekunden Teepause.' },
+    { id: 'bus',    name: 'Bus',          say: 'Fährt unten durch und nimmt jedem Team 5 Kisten weg.' },
+    { id: 'boom',   name: 'Boom',         say: 'Plasmabombe auf den Ersten: 5 Kisten kaputt, ein Stein hält den Rest.' },
+    { id: 'eis',    name: 'Eiskiste',     say: 'Ein anderes Team bekommt eine Eiskiste: 5 richtige in Folge, sonst rutscht alles darunter weg.' },
+    { id: 'kuddel', name: 'Kuddelmuddel', say: 'Alle Kisten aller Teams werden gemischt – die Anzahl bleibt.' }
+  ];
+  const stItem = id => ST_ITEMS.find(x => x.id === id) || { id, name: id, say: '' };
+  /* Kleine Bilder (eigene Farben; .dd-it hebt das allgemeine .dd svg auf) */
+  const IT_BOX = (x, y, w, h, c, e) => '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="1.5" fill="' + c + '" stroke="' + e + '" stroke-width="1.6"/>' +
+    '<rect x="' + (x + w * 0.42) + '" y="' + y + '" width="' + (w * 0.16) + '" height="' + h + '" fill="#f6ecc4" opacity=".85"/>';
+  const GULL = '<path d="M4 18c5-6 10-6 14 0c4-6 9-6 14 0c-5-2-9-1-14 3c-5-4-9-5-14-3z" fill="#fff" stroke="#3b4250" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<path d="M18 21l3 1.6l-3 1.2z" fill="#ff9f1c" stroke="#3b4250" stroke-width=".8"/><circle cx="19.6" cy="19.4" r=".9" fill="#3b4250"/>';
+  const IT_SVG = {
+    bonus:  IT_BOX(9, 20, 22, 13, '#f2c230', '#9a7410') + IT_BOX(12, 8, 16, 12, '#f2c230', '#9a7410') +
+            '<path d="M32 6l1.4 3.4L37 10.8l-3.6 1.4L32 15.6l-1.4-3.4L27 10.8l3.6-1.4z" fill="#fff6b0" stroke="#9a7410" stroke-width=".8"/>',
+    stein:  '<path d="M7 13l5-6h16l5 6v18l-4 3H11l-4-3z" fill="#9aa1ab" stroke="#4a4f57" stroke-width="1.8" stroke-linejoin="round"/>' +
+            '<path d="M13 15l5 4l-2 6M24 11l2 7l5 2M20 27l5 3" fill="none" stroke="#5b616b" stroke-width="1.4" stroke-linecap="round"/>',
+    moewe:  '<g transform="translate(2 6)">' + GULL + '</g>' + IT_BOX(17, 28, 10, 8, '#c9914f', '#7d5326'),
+    moewe3: '<g transform="translate(-4 -2) scale(.7)">' + GULL + '</g><g transform="translate(14 2) scale(.7)">' + GULL + '</g><g transform="translate(5 14) scale(.8)">' + GULL + '</g>',
+    maxi:   IT_BOX(7, 10, 22, 26, '#c9914f', '#7d5326') + '<path d="M33 22V6M28.5 10.5L33 6l4.5 4.5" fill="none" stroke="#2f7a4a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+    mini:   IT_BOX(9, 26, 14, 9, '#c9914f', '#7d5326') + '<path d="M31 8v18M26.5 21.5L31 26l4.5-4.5" fill="none" stroke="#b5322a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+    sturm:  '<path d="M9 16c4-6 14-7 18-2c4-1 8 2 7 6H8c-3 0-3-4 1-4z" fill="#d7dee8" stroke="#56627a" stroke-width="1.6" stroke-linejoin="round"/>' +
+            '<path d="M5 26h18c3 0 3 4 0 4M9 31h13M6 22h22" fill="none" stroke="#5a8fd8" stroke-width="2.2" stroke-linecap="round"/>',
+    tea:    '<path d="M8 17h20v6c0 6-4 10-10 10s-10-4-10-10z" fill="#fff" stroke="#6b4a2a" stroke-width="1.8"/>' +
+            '<path d="M28 19c5 0 5 7 0 7" fill="none" stroke="#6b4a2a" stroke-width="1.8"/><path d="M10 19h16v3H10z" fill="#c58a4a"/>' +
+            '<path d="M14 6c-2 3 2 4 0 7M20 5c-2 3 2 4 0 7" fill="none" stroke="#9aa1ab" stroke-width="1.6" stroke-linecap="round"/>' +
+            '<ellipse cx="18" cy="35" rx="13" ry="2.4" fill="#e9dcc3" stroke="#6b4a2a" stroke-width="1.2"/>',
+    bus:    '<rect x="3" y="11" width="34" height="19" rx="4" fill="#f5c518" stroke="#6b4a10" stroke-width="1.8"/>' +
+            '<rect x="7" y="14" width="7" height="6" rx="1" fill="#bfe3ff" stroke="#6b4a10"/><rect x="16" y="14" width="7" height="6" rx="1" fill="#bfe3ff" stroke="#6b4a10"/><rect x="25" y="14" width="8" height="6" rx="1" fill="#bfe3ff" stroke="#6b4a10"/>' +
+            '<circle cx="11" cy="31" r="3.6" fill="#333" stroke="#111"/><circle cx="29" cy="31" r="3.6" fill="#333" stroke="#111"/><path d="M3 24h34" stroke="#e08a00" stroke-width="1.6"/>',
+    boom:   '<circle cx="18" cy="23" r="12" fill="#3b6df0" stroke="#1d2f7a" stroke-width="1.8"/><circle cx="14" cy="19" r="3.4" fill="#9fd0ff" opacity=".8"/>' +
+            '<path d="M26 13l4-5" stroke="#4a3a2a" stroke-width="2.4" stroke-linecap="round"/><path d="M31 3l1.2 3l3 1.2l-3 1.2L31 11.4l-1.2-3l-3-1.2l3-1.2z" fill="#7de3ff" stroke="#1d6fa0" stroke-width=".8"/>',
+    eis:    '<path d="M8 12l12-5l12 5v16l-12 6l-12-6z" fill="#bfe8ff" stroke="#3b8fc4" stroke-width="1.8" stroke-linejoin="round"/>' +
+            '<path d="M8 12l12 6l12-6M20 18v16" fill="none" stroke="#3b8fc4" stroke-width="1.2"/><path d="M12 15l4 2M24 26l4-2" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/>',
+    kuddel: IT_BOX(4, 22, 11, 10, '#e5484d', '#7a1f22') + IT_BOX(15, 24, 10, 9, '#2f7cf6', '#163f8a') + IT_BOX(26, 21, 10, 11, '#2fa84f', '#165a28') +
+            '<path d="M6 15c5-8 21-8 27-1M30 9l3 5l-5 1" fill="none" stroke="#6b4a2a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+  };
+  const itIco = (id, cls) => '<svg class="dd-it' + (cls ? ' ' + cls : '') + '" viewBox="0 0 40 40" aria-hidden="true">' + (IT_SVG[id] || '') + '</svg>';
+
+  /* ─── Kisten: Kurzform vom Server „n2“, „x0“, „s1“, „i3.4“ ─── */
+  const ST_BSIZE = { x: 2, m: 0.5 };
+  const stBsize = k => ST_BSIZE[k] || 1;
+  const stSum = l => (l || []).reduce((a, s) => a + stBsize(s[0]), 0);
+  const stFmt = h => (Math.round(h * 2) / 2).toString().replace('.', ',');
+  function stParse(s) {
+    const rest = String(s).slice(1).split('.');
+    return { k: s[0], t: rest[0] === '' ? null : Number(rest[0]), n: rest[1] != null ? Number(rest[1]) : null };
+  }
+  function stBoxEl(s, cls) {
+    const b = stParse(s), el = document.createElement('i');
+    el.className = 'dd-st__box k-' + b.k + (cls ? ' ' + cls : '');
+    el.style.setProperty('--sz', stBsize(b.k));
+    if (b.t != null && window.DDFiguren) el.style.setProperty('--tc', stFig(b.t).col);
+    if (b.k === 'i' && b.n) el.innerHTML = '<b>' + b.n + '</b>';
+    return el;
+  }
+  const stTeamV = i => ((st.v && st.v.teams) || []).find(x => x.t === i) || { t: i, h: 0, b: [], it: [] };
+  const stList = i => stTeamV(i).b || [];
+  const sameList = (a, b) => a.length === b.length && a.every((x, k) => x === b[k]);
+  const stUntil = iso => (iso ? Date.parse(iso) - stNow() : 0);
+  /* Die Item-Linien (Höhen) dieses Spiels */
+  function stLines() {
+    const v = st.v;
+    if (!v || !v.items_on) return [];
+    const div = v.items_often ? 10 : 5;
+    return Array.from({ length: div - 1 }, (_, k) => v.goal * (k + 1) / div);
+  }
+
+
   function newStorm() {
     return { v: null, seq: 0, run: null, layout: '', timer: null, busy: false, skew: 0,
-      shown: [], anim: [], lifting: [], cardsKey: '', cards: null, order: [], oi: 0,
+      shown: [], anim: [], lifting: [], hold: [], holdT: [], newItem: 0, usingItem: false,
+      cardsKey: '', cards: null, order: [], oi: 0,
       task: null, nextT: null, lockUntil: 0, tick: null, goalTouched: false, autoKey: '', stacksInit: false, starting: false };
   }
 
@@ -3690,6 +3776,7 @@
     if (!st) return;
     clearTimeout(st.timer); clearTimeout(st.nextT); clearInterval(st.tick);
     st.anim.forEach(a => clearTimeout(a));
+    st.holdT.forEach(a => clearTimeout(a));
     const was = st;
     st = null;
     if (!quiet && was && isTeacher && !demo && !standalone && ctx && stLive()) {
@@ -3735,7 +3822,7 @@
   function stApply(v) {
     const newRun = st.run !== null && v.run !== st.run;
     if (newRun) {                       // neues Spiel: Türme und Aufgaben von vorn
-      st.shown = []; st.anim.forEach(a => clearTimeout(a)); st.anim = [];
+      st.shown = []; st.anim.forEach(a => clearTimeout(a)); st.anim = []; st.hold = [];
       st.task = null; st.order = []; st.oi = 0;
     }
     st.run = v.run;
@@ -3744,9 +3831,9 @@
     st.v = v;
     if (isTeacher) stTeacherAuto(v);
     const layout = v.phase === 'lobby' ? 'lobby' : (!isTeacher && v.phase === 'ended' ? 'end' : 'game');
-    if (layout !== st.layout || newRun) { st.layout = layout; stBuild(); }
-    else stUpdate();
-    if (st.layout === 'game') evs.forEach(stEvent);
+    // Ereignisse zuerst: Items halten betroffene Türme fest, bevor nachgezogen wird.
+    if (layout !== st.layout || newRun) { st.layout = layout; stBuild(); if (st.layout === 'game') evs.forEach(stEvent); }
+    else { if (st.layout === 'game') evs.forEach(stEvent); stUpdate(); }
   }
 
   /* ─── Aufbau je Abschnitt ─── */
@@ -3772,7 +3859,8 @@
     if (st.layout === 'end') return;
     stSync(false);
     stPaintOver();
-    if (!isTeacher) { stPaintLevel(); stMaybeTask(); }
+    stEffects();
+    if (!isTeacher) { stPaintLevel(); stPaintItems(); stMaybeTask(); }
     const btns = root.querySelector('#ddStBtns');
     if (btns) btns.innerHTML = stBeamBtns();
   }
@@ -3795,6 +3883,11 @@
         '<div class="dd-st__row"><span class="dd-st__lab">Countdown</span><div class="dd-segs" id="ddStMin" role="group" aria-label="Countdown">' +
           ST_MINUTES.map(n => '<button type="button" class="dd-seg" data-act="st-min" data-v="' + n + '">' + (n ? n + ' Min.' : 'ohne') + '</button>').join('') + '</div></div>' +
         '<div class="dd-st__row dd-st__row--top"><span class="dd-st__lab">Stapel</span><div class="dd-chips" id="ddStStacks"></div></div>' +
+        '<div class="dd-st__row"><span class="dd-st__lab">Items</span><div class="dd-segs" id="ddStIon" role="group" aria-label="Items">' +
+          '<button type="button" class="dd-seg" data-act="st-ion" data-v="1">an</button><button type="button" class="dd-seg" data-act="st-ion" data-v="0">aus</button></div>' +
+          '<div class="dd-segs" id="ddStOften" role="group" aria-label="Wie oft">' +
+          '<button type="button" class="dd-seg" data-act="st-often" data-v="0">normal</button><button type="button" class="dd-seg" data-act="st-often" data-v="1">häufig</button></div></div>' +
+        '<div class="dd-st__itset" id="ddStItemSet"></div>' +
         '<div class="dd-st__go"><button type="button" class="btn btn--primary dd-st__start" data-act="st-start" id="ddStStart">' + ico.play + 'Start</button>' +
           '<p class="dd-st__hint" id="ddStStartHint"></p></div>' +
       '</section>' +
@@ -3822,6 +3915,17 @@
       sb.innerHTML = (list || []).length ? (list || []).map(s => '<button type="button" class="dd-chip dd-chip--stack' + (on.has(s.id) ? ' is-on' : '') +
         '" data-act="st-stack" data-id="' + E(s.id) + '" aria-pressed="' + on.has(s.id) + '">' + (on.has(s.id) ? ico.check : '') + E(s.title) + ' <i>' + s.n + '</i></button>').join('')
         : '<span class="dd-st__hint">Noch kein Stapel – lege zuerst einen an.</span>';
+    }
+    root.querySelectorAll('#ddStIon .dd-seg').forEach(b => b.classList.toggle('is-on', (b.dataset.v === '1') === !!v.items_on));
+    root.querySelectorAll('#ddStOften .dd-seg').forEach(b => { b.classList.toggle('is-on', (b.dataset.v === '1') === !!v.items_often); b.disabled = !v.items_on; });
+    const iset = root.querySelector('#ddStItemSet');
+    if (iset) {
+      const off = new Set(v.items_off || []);
+      iset.hidden = !v.items_on;
+      iset.innerHTML = '<p class="dd-st__hint">' + (v.items_often ? 'Häufig: an jeder Stufe zwei Item-Linien.' : 'Normal: eine Item-Linie zwischen zwei Aufgabenstufen.') +
+          ' Antippen schaltet ein Item aus oder an.</p>' +
+        '<div class="dd-st__itgrid">' + ST_ITEMS.map(it => '<button type="button" class="dd-st__itbtn' + (off.has(it.id) ? '' : ' is-on') + '" data-act="st-item" data-id="' + it.id +
+          '" aria-pressed="' + !off.has(it.id) + '" title="' + E(it.say) + '">' + itIco(it.id) + '<span>' + E(it.name) + '</span></button>').join('') + '</div>';
     }
     const cards = (list || []).filter(s => (v.stacks || []).includes(s.id)).reduce((a, s) => a + (s.n || 0), 0);
     const sh = root.querySelector('#ddStStartHint'), go = root.querySelector('#ddStStart');
@@ -3872,6 +3976,21 @@
     stPaintLobbyBeam();
     const r = await stCall('dd_storm_room_setup', args);
     if (r && r.ok && args.p_team_count != null) stPoll();   // Teams neu verteilt
+  }
+  async function stItems(patch) {
+    if (!st || !st.v) return;
+    const args = Object.assign({ p_on: null, p_often: null, p_off: null }, patch);
+    if (args.p_on != null) st.v.items_on = args.p_on;
+    if (args.p_often != null) st.v.items_often = args.p_often;
+    if (args.p_off != null) st.v.items_off = args.p_off;
+    stPaintLobbyBeam();
+    await stCall('dd_storm_room_items', args);
+  }
+  function stToggleItem(id) {
+    const off = new Set(st.v.items_off || []);
+    if (off.has(id)) off.delete(id); else off.add(id);
+    if (off.size >= ST_ITEMS.length) { toast('Mindestens ein Item bleibt an – sonst schalte Items ganz aus.'); return; }
+    stItems({ p_off: [...off] });
   }
   function stGoal(delta, abs) {
     if (!st || !st.v) return;
@@ -3946,18 +4065,24 @@
         '<span class="dd-st__hgt" id="ddStH' + i + '">0</span>' +
         '<div class="dd-st__pops" id="ddStP' + i + '"></div>' +
         '<span class="dd-st__fig" id="ddStF' + i + '">' + figSVG(i, 'idle', 120) + '</span>' +
-        '<span class="dd-st__tag"><b>' + E(stFig(i).name) + '</b><small>' + cnt + (cnt === 1 ? ' Kind' : ' Kinder') + '</small></span>' +
+        '<span class="dd-st__fxs" id="ddStX' + i + '"></span>' +
+        '<span class="dd-st__tag"><b>' + E(stFig(i).name) + '</b><span class="dd-st__held" id="ddStI' + i + '"></span>' +
+          '<small>' + cnt + (cnt === 1 ? ' Kind' : ' Kinder') + '</small></span>' +
       '</div>';
     }
     return '<div class="dd-st__top">' +
         '<div class="dd-st__ttl"><b>Ziel: ' + v.goal + ' Kisten</b><span>' + v.team_count + ' Teams · ' + stPeople().length + (stPeople().length === 1 ? ' Kind' : ' Kinder') + '</span></div>' +
         '<span class="dd-st__clock" id="ddStClock" hidden></span>' +
+        '<span class="dd-st__stormtag" id="ddStStorm" hidden></span>' +
         '<div class="dd-st__btns" id="ddStBtns">' + stBeamBtns() + '</div>' +
       '</div>' +
       '<div class="dd-st__scene" id="ddStScene" style="--n:' + n + '">' +
+        '<div class="dd-st__ilines" id="ddStLines"></div>' +
         '<div class="dd-st__goal" id="ddStGoalLine"><span>Ziel · ' + v.goal + '</span></div>' +
         '<div class="dd-st__lanes">' + lanes + '</div>' +
         '<div class="dd-st__floor"></div>' +
+        '<div class="dd-st__wind" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>' +
+        '<div class="dd-st__anns" id="ddStAnn" aria-live="polite"></div>' +
         '<div class="dd-st__over" id="ddStOver"></div>' +
       '</div>';
   }
@@ -3981,6 +4106,8 @@
     sc.classList.toggle('is-thin', bh < 12);
     const gl = sc.querySelector('#ddStGoalLine');
     if (gl) gl.style.bottom = 'calc(var(--floor) + ' + (st.v.goal * bh).toFixed(1) + 'px)';
+    const il = sc.querySelector('#ddStLines');
+    if (il) il.innerHTML = stLines().map(y => '<i style="bottom:calc(var(--floor) + ' + (y * bh).toFixed(1) + 'px)"><span class="dd-st__qbox">?</span></i>').join('');
     for (let i = 0; i < st.v.team_count; i++) stPaintHeight(i);
   }
 
@@ -3989,69 +4116,82 @@
     const v = st.v, me = stMyTeam();
     let rows = '';
     for (let i = 0; i < v.team_count; i++) {
-      rows += '<div class="dd-st__rr' + (i === me ? ' is-me' : '') + '" style="' + stCol(i) + '">' +
+      rows += '<div class="dd-st__rr' + (i === me ? ' is-me' : '') + '" data-t="' + i + '" style="' + stCol(i) + '">' +
         '<span class="dd-st__rfig" id="ddStF' + i + '">' + figSVG(i, 'idle', i === me ? 54 : 38) + '</span>' +
         '<span class="dd-st__rn">' + E(stFig(i).name) + (i === me ? ' <em>ihr</em>' : '') + '</span>' +
-        '<span class="dd-st__rbar"><i id="ddStB' + i + '"></i></span>' +
+        '<span class="dd-st__rbar"><i id="ddStB' + i + '"></i>' + stLines().map(y => '<u style="left:' + (y / v.goal * 100).toFixed(1) + '%"></u>').join('') + '</span>' +
         '<b class="dd-st__rh" id="ddStH' + i + '">0</b>' +
-        '<span class="dd-st__pops" id="ddStP' + i + '"></span></div>';
+        '<span class="dd-st__pops" id="ddStP' + i + '"></span><span class="dd-st__fxs" id="ddStX' + i + '"></span></div>';
     }
     return '<div class="dd-st__hud" id="ddStHud">' +
         '<div class="dd-st__hudtop"><b>Ziel: ' + v.goal + ' Kisten</b><span class="dd-st__clock" id="ddStClock" hidden></span></div>' +
         '<div class="dd-st__race">' + rows + '</div>' +
         '<p class="dd-st__lvl" id="ddStLvl"></p>' +
+        '<div class="dd-st__fxbox" id="ddStFx"></div>' +
+        '<div class="dd-st__items" id="ddStItems" hidden></div>' +
       '</div>' +
-      '<div class="dd-task dd-task--inline" id="ddTask" hidden></div>' +
+      '<div class="dd-st__notes" id="ddStNotes" aria-live="polite"></div>' +
+      '<div class="dd-st__play"><div class="dd-task dd-task--inline" id="ddTask" hidden></div>' +
+        '<div class="dd-st__tea" id="ddStTea" hidden></div></div>' +
       '<div class="dd-st__note" id="ddStNote" hidden></div>' +
       '<div class="dd-st__over" id="ddStOver"></div>';
   }
 
-  /* ─── Türme nachziehen: Kiste für Kiste, je Team ein eigener Takt ─── */
-  function stTarget(i) { const t = ((st.v && st.v.teams) || []).find(x => x.t === i); return t ? t.h : 0; }
+  /* ─── Türme nachziehen ───
+     Der Server schickt je Team die Kisten von unten nach oben. Kamen
+     nur unten welche dazu (Antworten, Bonus, Stein), wird Kiste für
+     Kiste angehoben (stStep, je Team ein eigener Takt). Alles andere
+     (Möwe, Bus, Boom, Eis, Kuddelmuddel …) spielt erst seine Animation
+     (stHold hält den Turm so lange fest) und baut dann neu. */
+  function stTarget(i) { return Number(stTeamV(i).h) || 0; }
+  function stHold(i, ms) {
+    st.hold[i] = Math.max(st.hold[i] || 0, Date.now() + ms);
+    clearTimeout(st.holdT[i]);
+    st.holdT[i] = setTimeout(() => { if (st) stSync(false); }, ms + 30);
+  }
   function stSync(instant) {
     if (!st.v) return;
     for (let i = 0; i < st.v.team_count; i++) {
-      const goal = stTarget(i);
-      if (instant || st.shown[i] == null || goal < st.shown[i]) {
-        st.shown[i] = goal;
-        stRebuildTower(i);
-        stPaintHeight(i);
-        continue;
-      }
-      if (goal > st.shown[i] && !st.anim[i]) stStep(i);
+      const tgt = stList(i), cur = st.shown[i];
+      if (instant || !cur) { st.shown[i] = tgt.slice(); stRenderTower(i); stPaintHeight(i); continue; }
+      if ((st.hold[i] || 0) > Date.now() || st.anim[i] || sameList(cur, tgt)) continue;
+      const extra = tgt.length - cur.length;
+      if (extra > 0 && sameList(tgt.slice(extra), cur)) stStep(i);
+      else { st.shown[i] = tgt.slice(); stRenderTower(i, 'is-settle'); stPaintHeight(i); }
     }
   }
   function stStep(i) {
     st.anim[i] = null;
     if (!st || !st.v) return;
-    const goal = stTarget(i);
-    if (st.shown[i] >= goal) return;
+    const tgt = stList(i);
+    let extra = tgt.length - st.shown[i].length;
+    if (!(extra > 0 && sameList(tgt.slice(extra), st.shown[i]))) { stSync(false); return; }
     // Weit zurück (Gerät war weg): bis auf drei Kisten springen, den Rest zeigen.
-    if (goal - st.shown[i] > 6) { st.shown[i] = goal - 3; stRebuildTower(i); }
-    st.shown[i]++;
-    stAddBox(i);
+    if (extra > 6) { st.shown[i] = tgt.slice(3); stRenderTower(i); extra = 3; }
+    const s = tgt[extra - 1];
+    st.shown[i] = [s].concat(st.shown[i]);
+    const tw = root.querySelector('#ddStT' + i);
+    if (tw) {
+      const el = stBoxEl(s, 'is-new');
+      tw.prepend(el);                // column-reverse: das erste Kind ist ganz unten
+      setTimeout(() => el.classList.remove('is-new'), 700);
+    }
     stPaintHeight(i);
     stLift(i);
     st.anim[i] = setTimeout(() => stStep(i), ST_STEP_MS);
   }
-  function stRebuildTower(i) {
+  function stRenderTower(i, cls) {
     const tw = root.querySelector('#ddStT' + i);
     if (!tw) return;
-    tw.innerHTML = '<i class="dd-st__box"></i>'.repeat(Math.min(st.shown[i] || 0, 200));
-  }
-  function stAddBox(i) {
-    const tw = root.querySelector('#ddStT' + i);
-    if (!tw) return;
-    const b = document.createElement('i');
-    b.className = 'dd-st__box is-new';
-    tw.prepend(b);              // column-reverse: das erste Kind ist ganz unten
-    setTimeout(() => b.classList.remove('is-new'), 700);
+    tw.innerHTML = '';
+    (st.shown[i] || []).slice(0, 300).forEach(s => tw.appendChild(stBoxEl(s)));
+    if (cls) { tw.classList.remove(cls); void tw.offsetWidth; tw.classList.add(cls); }
   }
   function stPaintHeight(i) {
-    const h = st.shown[i] || 0, v = st.v;
+    const h = stSum(st.shown[i]), v = st.v;
     const lab = root.querySelector('#ddStH' + i);
     if (lab) {
-      lab.textContent = h;
+      lab.textContent = stFmt(h);
       if (isTeacher) lab.style.bottom = 'calc(' + h + ' * var(--bh) + 8px)';
     }
     const bar = root.querySelector('#ddStB' + i);
@@ -4071,25 +4211,259 @@
       if (f.isConnected && st.v && st.v.phase !== 'ended') f.innerHTML = figSVG(i, 'idle', px);
     }, 920);
   }
-  /* Ereignisse: Name über dem Turm, Sieg. */
+  function stPop(t, html, cls) {
+    const pops = root.querySelector('#ddStP' + t);
+    if (!pops) return;
+    const p = document.createElement('span');
+    p.className = 'dd-st__pop' + (cls ? ' ' + cls : '');
+    p.innerHTML = html;
+    pops.appendChild(p);
+    setTimeout(() => p.remove(), 1700);
+    if (pops.children.length > (isTeacher ? 4 : 2)) pops.firstChild.remove();
+  }
+
+  /* ─── Ereignisse: Name über dem Turm, Items, Animationen ─── */
   function stEvent(e) {
+    const me = stMyTeam(), d = e.d || {};
     if (e.k === 'box' && e.t != null) {
-      if (!isTeacher && e.t !== stMyTeam()) return;     // am Tablet nur das eigene Team
-      const pops = root.querySelector('#ddStP' + e.t);
-      if (!pops) return;
-      const p = document.createElement('span');
-      p.className = 'dd-st__pop';
-      p.textContent = isTeacher ? (e.w || '') + ' +1' : '+1' + (e.w ? ' ' + e.w : '');
-      pops.appendChild(p);
-      setTimeout(() => p.remove(), 1700);
-      if (pops.children.length > (isTeacher ? 4 : 2)) pops.firstChild.remove();
+      if (!isTeacher && e.t !== me) return;     // am Tablet nur das eigene Team
+      const n = d.n > 1 ? '+' + d.n : '+1';
+      stPop(e.t, E(isTeacher ? (e.w || '') + ' ' + n : n + (e.w ? ' ' + e.w : '')));
+    } else if (e.k === 'get' && e.t != null) {
+      if (isTeacher || e.t === me) stPop(e.t, itIco(d.it) + 'Item!', 'is-item');
+      if (e.t === me) { st.newItem = Date.now(); stNote(itIco(d.it) + '<b>Neues Item: ' + E(stItem(d.it).name) + '</b><span>Jeder im Team kann es einsetzen.</span>', 'is-get'); }
+    } else if (e.k === 'use') {
+      stUseFx(e, d);
+    } else if (e.k === 'blow' && e.t != null) {
+      stHold(e.t, 650);
+      stFlyOff(e.t, d.box);
+      if (e.t === me) stNote(itIco('sturm') + '<b>Der Sturm hat eure oberste Kiste weggeweht.</b>', 'is-bad');
+    } else if (e.k === 'icebreak' && e.t != null) {
+      stHold(e.t, 700);
+      stShake(e.t);
+      if (e.t === me) stNote(itIco('eis') + '<b>Das Eis ist gebrochen – alles darunter ist weggerutscht.</b>', 'is-bad');
+    } else if (e.k === 'melt' && e.t === me) {
+      stNote(itIco('eis') + '<b>Geschafft! Das Eis ist geschmolzen.</b>', 'is-good');
     }
+  }
+  /* Ein Item wurde eingesetzt: Ansage + Animation. Betroffene Türme warten. */
+  function stUseFx(e, d) {
+    const it = stItem(d.it), tg = Array.isArray(d.tg) ? d.tg : [], me = stMyTeam(), by = e.t;
+    const who = (e.w ? E(e.w) + ' (' + E(stFig(by).name) + ')' : E(stTeam(by)));
+    stAnnounce(itIco(d.it, 'is-big') + '<span><b>' + who + '</b> setzt <b>' + E(it.name) + '</b> ein!</span>', by);
+    const hold = (ts, ms) => ts.forEach(t => stHold(t, ms));
+    const all = Array.from({ length: st.v.team_count }, (_, i) => i);
+    if (d.it === 'moewe' || d.it === 'moewe3') {
+      hold(tg.concat([by]), 1500);
+      tg.forEach((t, k) => setTimeout(() => stGull(t, by, d['b' + t]), k * 220));
+    } else if (d.it === 'bus') { hold(all, 1700); stBus(); }
+    else if (d.it === 'boom') { hold(tg, 1150); stBomb(tg[0]); }
+    else if (d.it === 'eis') { hold(tg, 900); stDrop(tg[0], 'eis'); }
+    else if (d.it === 'kuddel') { hold(all, 1250); stKuddel(); }
+    // Tablet: sagen, was das für das eigene Team heißt
+    if (!isTeacher && me != null) {
+      const hit = tg.includes(me) && by !== me;
+      const txt = {
+        moewe: 'Eine Möwe hat euch eine Kiste geklaut!', moewe3: 'Eine Möwe hat euch eine Kiste geklaut!',
+        mini: 'Ihr bekommt 20 Sekunden lang nur Mini-Kisten.', tea: 'Teatime! 10 Sekunden Pause.',
+        boom: 'Boom! Fünf Kisten sind kaputt.', eis: 'Ihr habt eine Eiskiste! 5 richtige in Folge, sonst rutscht alles darunter weg.',
+        bus: 'Der Bus hat unten Kisten mitgenommen.', kuddel: 'Kuddelmuddel! Alle Kisten wurden gemischt.'
+      }[d.it];
+      if (by === me) stNote(itIco(d.it) + '<b>Ihr habt ' + E(it.name) + ' eingesetzt.</b><span>' + E(it.say) + '</span>', 'is-good');
+      else if (hit && txt) stNote(itIco(d.it) + '<b>' + txt + '</b><span>von ' + E(stTeam(by)) + '</span>', 'is-bad');
+      else if (d.it === 'sturm' || d.it === 'kuddel' || d.it === 'bus') stNote(itIco(d.it) + '<b>' + E(it.name) + '!</b><span>' + E(it.say) + '</span>');
+    }
+  }
+  /* Große Ansage am Beamer, kleine Zeile am Tablet */
+  function stAnnounce(html, t) {
+    const box = root.querySelector('#ddStAnn');
+    if (!box || !isTeacher) return;
+    const el = document.createElement('div');
+    el.className = 'dd-st__ann';
+    if (t != null) el.setAttribute('style', stCol(t));
+    el.innerHTML = html;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), 2600);
+    if (box.children.length > 2) box.firstChild.remove();
+  }
+  function stNote(html, cls) {
+    const box = root.querySelector('#ddStNotes');
+    if (!box) return;
+    const el = document.createElement('div');
+    el.className = 'dd-st__msg' + (cls ? ' ' + cls : '');
+    el.innerHTML = html;
+    box.appendChild(el);
+    setTimeout(() => el.remove(), 3600);
+    if (box.children.length > 2) box.firstChild.remove();
+  }
+  /* Geometrie am Beamer: Turmspitze eines Teams in Koordinaten der Szene */
+  function stTop(t) {
+    const sc = root.querySelector('#ddStScene'), tw = root.querySelector('#ddStT' + t);
+    if (!sc || !tw) return null;
+    const a = sc.getBoundingClientRect(), r = tw.getBoundingClientRect();
+    return { x: r.left - a.left + r.width / 2, y: (tw.lastElementChild ? r.top : r.bottom) - a.top, w: r.width, bottom: r.bottom - a.top };
+  }
+  function stFx(html, cls) {
+    const sc = root.querySelector('#ddStScene');
+    if (!sc) return null;
+    const el = document.createElement('div');
+    el.className = 'dd-st__fx ' + (cls || '');
+    el.innerHTML = html;
+    sc.appendChild(el);
+    return el;
+  }
+  const stAnim = (el, frames, ms, ease) => (el && el.animate && !still() ? el.animate(frames, { duration: ms, easing: ease || 'ease-in-out', fill: 'forwards' }) : null);
+  function stGull(from, to, box) {
+    const a = stTop(from), b = stTop(to);
+    if (!a || !b) return;
+    const el = stFx('<svg class="dd-it" viewBox="0 0 40 40">' + GULL + '</svg>' +
+      (box ? '<i class="dd-st__box k-' + E(box.k) + '" style="--sz:1;--tc:' + (box.t != null ? stFig(box.t).col : '#999') + '"></i>' : ''), 'is-gull');
+    const mid = { x: (a.x + b.x) / 2, y: Math.min(a.y, b.y) - 90 };
+    const pos = (p, dy) => 'translate(' + (p.x - 30) + 'px,' + (p.y - 30 + (dy || 0)) + 'px)';
+    const an = stAnim(el, [{ transform: pos({ x: a.x, y: -40 }) }, { transform: pos(a, -10), offset: 0.3 },
+      { transform: pos(mid), offset: 0.65 }, { transform: pos(b, -10) }], 1400);
+    setTimeout(() => el.remove(), 1500);
+    if (!an) el.remove();
+  }
+  function stBus() {
+    const sc = root.querySelector('#ddStScene');
+    if (!sc) return;
+    const el = stFx(itIco('bus'), 'is-bus');
+    const W = sc.clientWidth;
+    stAnim(el, [{ transform: 'translateX(-160px)' }, { transform: 'translateX(' + (W + 20) + 'px)' }], 1600, 'linear');
+    setTimeout(() => el.remove(), 1700);
+  }
+  function stBomb(t) {
+    const p = stTop(t);
+    if (!p) return;
+    const el = stFx(itIco('boom'), 'is-bomb');
+    stAnim(el, [{ transform: 'translate(' + (p.x - 28) + 'px,-60px) rotate(-20deg)' }, { transform: 'translate(' + (p.x - 28) + 'px,' + (p.y - 50) + 'px) rotate(10deg)' }], 650, 'ease-in');
+    setTimeout(() => {
+      el.remove();
+      const ex = stFx('', 'is-blast');
+      ex.style.left = p.x + 'px'; ex.style.top = p.y + 'px';
+      setTimeout(() => ex.remove(), 700);
+      stShake(t);
+    }, 650);
+  }
+  function stDrop(t, it) {
+    const p = stTop(t);
+    if (!p) return;
+    const el = stFx(itIco(it), 'is-drop');
+    stAnim(el, [{ transform: 'translate(' + (p.x - 22) + 'px,-50px)' }, { transform: 'translate(' + (p.x - 22) + 'px,' + (p.y - 44) + 'px)' }], 800, 'cubic-bezier(.5,0,.8,.4)');
+    setTimeout(() => el.remove(), 850);
+  }
+  function stFlyOff(t, box) {
+    const p = stTop(t);
+    if (!p || !box) return;
+    const el = stFx('<i class="dd-st__box k-' + E(box.k) + '" style="--sz:1;--tc:' + (box.t != null ? stFig(box.t).col : '#999') + '"></i>', 'is-flyoff');
+    stAnim(el, [{ transform: 'translate(' + (p.x - 30) + 'px,' + (p.y - 16) + 'px) rotate(0)' },
+      { transform: 'translate(' + (p.x + 140) + 'px,' + (p.y - 80) + 'px) rotate(200deg)', opacity: 0 }], 650, 'ease-out');
+    setTimeout(() => el.remove(), 700);
+  }
+  function stShake(t) {
+    const lane = root.querySelector('.dd-st__lane[data-t="' + t + '"], .dd-st__rr[data-t="' + t + '"]');
+    if (!lane) return;
+    lane.classList.remove('is-shake'); void lane.offsetWidth; lane.classList.add('is-shake');
+  }
+  function stKuddel() {
+    const sc = root.querySelector('#ddStScene');
+    if (!sc) return;
+    sc.classList.remove('is-kuddel'); void sc.offsetWidth; sc.classList.add('is-kuddel');
+    setTimeout(() => sc.classList.remove('is-kuddel'), 1300);
+  }
+
+  /* ─── Laufende Wirkungen (jede Viertelsekunde aus stTick) ─── */
+  function stEffects() {
+    const v = st.v;
+    if (!v || st.layout !== 'game') return;
+    const box = root.querySelector('#ddSt');
+    const storm = v.phase === 'running' ? stUntil(v.storm_until) : 0;
+    if (box) box.classList.toggle('is-storm', storm > 0);
+    const me = stMyTeam();
+    for (let i = 0; i < v.team_count; i++) {
+      const tm = stTeamV(i);
+      const tea = stUntil(tm.tea), mx = stUntil(tm.mx), mn = stUntil(tm.mn);
+      const lane = root.querySelector('.dd-st__lane[data-t="' + i + '"], .dd-st__rr[data-t="' + i + '"]');
+      if (lane) lane.classList.toggle('is-tea', tea > 0);
+      const fx = root.querySelector('#ddStX' + i);
+      if (fx) {
+        const parts = [];
+        if (tea > 0) parts.push(itIco('tea') + Math.ceil(tea / 1000) + ' s');
+        if (mx > 0) parts.push(itIco('maxi') + Math.ceil(mx / 1000) + ' s');
+        if (mn > 0) parts.push(itIco('mini') + Math.ceil(mn / 1000) + ' s');
+        const html = parts.map(p => '<span>' + p + '</span>').join('');
+        if (fx.dataset.h !== html) { fx.dataset.h = html; fx.innerHTML = html; }
+      }
+      const held = root.querySelector('#ddStI' + i);
+      if (held) {
+        const key = (tm.it || []).join();
+        if (held.dataset.k !== key) { held.dataset.k = key; held.innerHTML = (tm.it || []).map(id => itIco(id)).join(''); }
+      }
+    }
+    if (isTeacher) {
+      const sb = root.querySelector('#ddStStorm');
+      if (sb) { sb.hidden = !(storm > 0); if (storm > 0) sb.innerHTML = itIco('sturm') + 'Sturm · noch ' + Math.ceil(storm / 1000) + ' s'; }
+      return;
+    }
+    // Tablet: was gerade fürs eigene Team gilt
+    const mine = me != null ? stTeamV(me) : null;
+    const st1 = mine ? stUntil(mine.tea) : 0;
+    const tea = root.querySelector('#ddStTea');
+    if (tea) {
+      tea.hidden = !(st1 > 0);
+      if (st1 > 0) tea.innerHTML = itIco('tea', 'is-big') + '<b>Teatime!</b><span>Noch ' + Math.ceil(st1 / 1000) + ' Sekunden Pause – danach geht’s weiter.</span>';
+    }
+    const fxb = root.querySelector('#ddStFx');
+    if (fxb && mine) {
+      const ice = (mine.b || []).map(stParse).find(b => b.k === 'i' && b.n);
+      const myH = stTarget(me), msgs = [];
+      if (storm > 0) msgs.push('<p class="is-storm">' + itIco('sturm') + '<b>Sturm · ' + Math.ceil(storm / 1000) + ' s</b> ' +
+        (myH >= v.goal / 5 ? 'Jeder Fehler kostet eure oberste Kiste.' : 'Ihr seid noch auf Stufe 1 – euch passiert nichts.') + '</p>');
+      if (ice) msgs.push('<p class="is-ice">' + itIco('eis') + '<b>Eiskiste:</b> noch ' + ice.n + (ice.n === 1 ? ' richtige Antwort' : ' richtige Antworten') + ' in Folge.</p>');
+      const mx = stUntil(mine.mx), mn = stUntil(mine.mn);
+      if (mx > 0) msgs.push('<p class="is-good">' + itIco('maxi') + '<b>Maxi-Kisten</b> · noch ' + Math.ceil(mx / 1000) + ' s</p>');
+      if (mn > 0) msgs.push('<p class="is-bad">' + itIco('mini') + '<b>Mini-Kisten</b> · noch ' + Math.ceil(mn / 1000) + ' s</p>');
+      const html = msgs.join('');
+      if (fxb.dataset.h !== html) { fxb.dataset.h = html; fxb.innerHTML = html; }
+    }
+  }
+  /* Item-Fach am Tablet: jedes Teammitglied kann einsetzen */
+  function stPaintItems() {
+    const box = root.querySelector('#ddStItems'), v = st.v, me = stMyTeam();
+    if (!box || me == null) return;
+    if (!v.items_on) { box.hidden = true; return; }
+    box.hidden = false;
+    const its = stTeamV(me).it || [];
+    const key = its.join() + '|' + (st.usingItem ? 1 : 0);
+    if (box.dataset.k === key) return;
+    const fresh = st.newItem && Date.now() - st.newItem < 1500;
+    box.dataset.k = key;
+    box.innerHTML = its.length
+      ? its.map((id, k) => '<button type="button" class="dd-st__item' + (fresh && k === its.length - 1 ? ' is-new' : '') + '" data-act="st-use" data-slot="' + k + '"' + (st.usingItem ? ' disabled' : '') + '>' +
+          itIco(id) + '<span><b>' + E(stItem(id).name) + '</b><small>' + E(stItem(id).say) + '</small></span><em>Einsetzen</em></button>').join('')
+      : '<p class="dd-st__noitem"><span class="dd-st__qbox">?</span>Überquert euer Turm eine gestrichelte Linie, bekommt ihr ein Item.</p>';
+  }
+  async function stUse(slot) {
+    if (!st || st.usingItem) return;
+    st.usingItem = true; stPaintItems();
+    const me = st;
+    const r = await ctx.actions.call('dd_storm_use', { p_slot: slot, p_since: me.seq });
+    if (st !== me) return;
+    st.usingItem = false;
+    if (r && r.ok) {
+      if (r.result === 'no_item') toast('Das Item hat schon jemand aus deinem Team eingesetzt.');
+      else if (r.result === 'tea') toast('Während der Teatime geht das nicht.');
+      stApply(r);
+    } else toast(errMsg(r && r.error));
+    stPaintItems();
   }
 
   /* ─── Countdown, Uhr, Sieg (über dem Spielfeld) ─── */
   function stTick() {
     if (!st || !st.v || !root) return;
     const v = st.v;
+    stEffects();
     const clock = root.querySelector('#ddStClock');
     if (clock) {
       const show = v.phase === 'running' && v.ends_at;
@@ -4138,7 +4512,7 @@
         '<span class="dd-memwin__stamp">Gewonnen</span><h2>' + E(stTeam(w)) + '</h2>' +
         '<p>' + (stTarget(w) >= v.goal ? 'Als Erstes ganz oben – ' + v.goal + ' Kisten!' : 'Der höchste Turm, als die Zeit um war.') + '</p>'
         : '<span class="dd-memwin__stamp">Vorbei</span><h2>Noch keine Kiste</h2><p>Diesmal hat kein Team eine Kiste gestapelt.</p>') +
-      '<ol class="dd-st__rank">' + rank.map((r, k) => '<li style="' + stCol(r.t) + '"><span>' + (k + 1) + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + r.h + ' Kisten</i></li>').join('') + '</ol>' +
+      '<ol class="dd-st__rank">' + rank.map((r, k) => '<li style="' + stCol(r.t) + '"><span>' + (k + 1) + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + stFmt(r.h) + ' Kisten</i></li>').join('') + '</ol>' +
       (isTeacher ? '<div class="dd-memwin__act"><button type="button" class="btn btn--primary" data-act="st-reset">' + ico.again + 'Nochmal</button></div>' : '') +
     '</div>';
   }
@@ -4150,9 +4524,9 @@
     return '<div class="dd-st__card dd-st__end"' + (me != null ? ' style="' + stCol(me) + '"' : '') + '>' +
       (me != null ? '<span class="dd-st__bigfig">' + figSVG(me, won ? 'cheer' : 'sad', 150) + '</span>' +
         '<h3 class="dd-st__h3">' + (won ? 'Gewonnen!' : v.winner_team != null ? E(stTeam(v.winner_team)) + ' gewinnt' : 'Vorbei') + '</h3>' +
-        '<p class="dd-st__say">' + (won ? 'Euer Turm ist ' + stTarget(me) + ' Kisten hoch. Stark!' : 'Euer Turm: ' + stTarget(me) + ' Kisten. Nächstes Mal!') + '</p>'
+        '<p class="dd-st__say">' + (won ? 'Euer Turm ist ' + stFmt(stTarget(me)) + ' Kisten hoch. Stark!' : 'Euer Turm: ' + stFmt(stTarget(me)) + ' Kisten. Nächstes Mal!') + '</p>'
         : '<h3 class="dd-st__h3">Vorbei</h3>') +
-      '<ol class="dd-st__rank">' + stRank().map((r, k) => '<li style="' + stCol(r.t) + '"' + (r.t === me ? ' class="is-me"' : '') + '><span>' + (k + 1) + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + r.h + ' Kisten</i></li>').join('') + '</ol>' +
+      '<ol class="dd-st__rank">' + stRank().map((r, k) => '<li style="' + stCol(r.t) + '"' + (r.t === me ? ' class="is-me"' : '') + '><span>' + (k + 1) + '.</span><b>' + E(stFig(r.t).name) + '</b><i>' + stFmt(r.h) + ' Kisten</i></li>').join('') + '</ol>' +
       (v.me && v.me.c ? '<p class="dd-st__hint">Du hast ' + v.me.c + (v.me.c === 1 ? ' Kiste' : ' Kisten') + ' beigetragen.</p>' : '') +
       '<p class="dd-st__hint">Gleich kann es weitergehen – deine Lehrkraft startet die nächste Runde.</p></div>';
   }
@@ -4234,6 +4608,7 @@
     if (r && r.ok) {
       stApply(r);
       if (ok && r.result === 'too_fast' && fb) fb.innerHTML = '<p><b>Richtig!</b></p>';
+      if (r.result === 'tea' && fb) fb.innerHTML = '<p>' + itIco('tea') + '<b>Teatime!</b> Diese Antwort zählt nicht.</p>';
     }
     if (ok && st === me && st.layout === 'game') me.nextT = setTimeout(stNext, ST_NEXT_MS);
   }
@@ -4567,6 +4942,10 @@
         case 'st-goal': stGoal(Number(b.dataset.v)); break;
         case 'st-stack': if (st && st.v) stToggleStack(b.dataset.id); break;
         case 'st-start': stStart(); break;
+        case 'st-ion': if (st && st.v) stItems({ p_on: b.dataset.v === '1' }); break;
+        case 'st-often': if (st && st.v) stItems({ p_often: b.dataset.v === '1' }); break;
+        case 'st-item': if (st && st.v) stToggleItem(b.dataset.id); break;
+        case 'st-use': stUse(Number(b.dataset.slot)); break;
         case 'st-stop':
           if (st && await ctx.confirm('Kistensturm jetzt beenden? Der höchste Turm gewinnt.')) { await stCall('dd_storm_room_stop'); if (st) stPoll(); }
           break;
