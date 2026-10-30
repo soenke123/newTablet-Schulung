@@ -80,19 +80,6 @@
     }
     return d + ' Z';
   }
-  /* Wuschelrand um ein Vieleck: je Kante ein Bogen nach außen */
-  function fluffPoly(pts, k) {
-    const cx = pts.reduce((a, q) => a + q[0], 0) / pts.length, cy = pts.reduce((a, q) => a + q[1], 0) / pts.length;
-    let d = 'M ' + pts[0][0] + ' ' + pts[0][1];
-    for (let i = 0; i < pts.length; i++) {
-      const a = pts[i], b = pts[(i + 1) % pts.length];
-      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, len = Math.hypot(b[0] - a[0], b[1] - a[1]);
-      let nx = -(b[1] - a[1]) / len, ny = (b[0] - a[0]) / len;
-      if (nx * (mx - cx) + ny * (my - cy) < 0) { nx = -nx; ny = -ny; }
-      d += ' Q ' + f1(mx + nx * len * k) + ' ' + f1(my + ny * len * k) + ' ' + b[0] + ' ' + b[1];
-    }
-    return d + ' Z';
-  }
   /* Mehrere Flächen als EIN Umriss: erst alle mit Rand, dann alle ohne darüber */
   const merged = (ds, col, w) => ds.map(d => P(d, col, w)).join('') + ds.map(d => P(d, col, 0)).join('');
 
@@ -129,20 +116,16 @@
         sleep: E(51.7, 50.5, 1.4, 1.8, INK, 0),
         wow: E(51.7, 51, 2.2, 2.8, INK, 1.4) } },
     back: C(50, 44, 10, 'var(--c2)', 0, 'opacity=".25"'),
-    armL: limb(39, 70, 31, 78, 7.5, 6.4, -1.5, 'var(--c1)') + L('M 29 76 L 33.6 80.4', 'var(--c2)', 2.2)
-      + G('flag', null, L('M 29 81 L 21 64', INK, 2.6) + L('M 29 81 L 21 64', '#c9d4e3', 1.2)
-        + P('M 21.3 64.6 L 13 66 L 18.6 70.6 Z', 'var(--c3)', 1.6))
-      + hand(30.2, 81, 'l', 'var(--c1)', 3.6),
-    armR: limb(61, 70, 69, 78, 7.5, 6.4, 1.5, 'var(--c1)') + L('M 71 76 L 66.4 80.4', 'var(--c2)', 2.2)
-      + hand(69.8, 81, 'r', 'var(--c1)', 3.6),
+    armL: limb(39, 70, 32, 78, 7.6, 7, -1, 'var(--c1)') + C(31, 80, 4.2, 'var(--c1)', 2.4) + hl(29.8, 78.8, 1, 0.7),
+    armR: limb(61, 70, 68, 78, 7.6, 7, 1, 'var(--c1)') + C(69, 80, 4.2, 'var(--c1)', 2.4) + hl(67.8, 78.8, 1, 0.7),
     fx: tw(10, 26, 3.6, '#ffb347', 0) + tw(91, 62, 2.6, '#c084fc', 0.7) + tw(12, 46, 2.2, '#5aa9e6', 1.2) + tw(88, 22, 2, '#34d399', 1.6),
     vars: '--fx:var(--c6)'
   };
 
   /* ── 1 Bananalama · wie Sönkes Vorlage: flauschiges Lama, Schnauze nach vorn,
      die Banane ist der Körper (hinten nach oben gebogen, dunkle Spitze) ── */
-  const lamaFur = [[57, 84], [75, 84], [80, 72], [77, 60], [78, 48], [82, 41], [83, 30], [80, 19], [72, 11],
-                   [60, 11], [51, 16], [47, 26], [49, 36], [55, 44], [56, 56], [54, 69]];
+  const lamaHead = fluff(65.5, 32, 18, 16, 14, 0.07);
+  const lamaNeck = 'M 57 44 L 75 44 C 77 52 82 59 82 69 C 82 79 75 85 66 85 C 57 85 50 79 50 69 C 50 59 55 52 57 44 Z';
   D[1] = {
     pal: [['#ffe066', '#e3ab14', '#fffbf2', '#4a3a2a', '#ead9bd', '#fff1d6']],
     o: { al: [60, 66], ar: [72, 66], ll: [30, 82], lr: [66, 82], head: [66, 84], zz: [86, 10] },
@@ -155,21 +138,20 @@
       + P('M 16 64 C 18 56 30 53 44 55 C 54 56 60 58 64 62 C 69 70 66 79 56 82 C 42 86 26 85 19 79 C 15 75 14 69 16 64 Z', 'var(--c1)', 3)
       + L('M 19 70 C 30 78 48 79 62 72', 'var(--c2)', 1.8, 'opacity=".7"')
       + L('M 20 63 C 31 65 45 65 58 63', 'var(--c2)', 1.4, 'opacity=".45"')
-      + shine('M 22 60 C 27 57 34 56 41 56.5', 2.6, 0.75)
-      + P('M 17 78 C 14 80 12 83 13 86 C 16 85 18 82 19 80 Z', '#8a6a3a', 1.4),
-    head: G('ear-l', [58, 15], P('M 56 17 C 52 10 52 1 55 -3 C 59 1 61 8 61 15 Z', 'var(--c3)', 2.4)
+      + shine('M 22 60 C 27 57 34 56 41 56.5', 2.6, 0.75),
+    head: '<g transform="translate(0 6)">' + G('ear-l', [58, 15], P('M 56 17 C 52 10 52 1 55 -3 C 59 1 61 8 61 15 Z', 'var(--c3)', 2.4)
         + P('M 56.6 13.5 C 55 9 55 4 56 1.4 C 58 5 59 9 59 13.5 Z', '#ffc2d1', 0))
       + G('ear-r', [72, 14], P('M 70 15 C 70 8 73 1 77 -3 C 79.5 2 78 9 75 16 Z', 'var(--c3)', 2.4)
-        + P('M 72 12.5 C 72.4 8 74.4 4 76.6 1.6 C 77 5.5 75.8 9 74.2 13 Z', '#ffc2d1', 0))
-      + merged([fluffPoly(lamaFur, 0.16)], 'var(--c3)', 3)
-      + P(fluff(65, 11.5, 7, 3.8, 8, 0.28), 'var(--c3)', 2.2)
-      + L('M 61 58 Q 63 60 65 58 M 67 66 Q 69 68 71 66 M 61 72 Q 63 74 65 72 M 70 52 Q 72 54 74 52', 'var(--c5)', 1.4)
-      + shade('M 75 22 C 80 28 80 36 76 41 C 78 35 78 28 75 22 Z', 0.08)
-      + E(68, 31.5, 8, 4.6, 'var(--c6)', 0)
+        + P('M 72 12.5 C 72.4 8 74.4 4 76.6 1.6 C 77 5.5 75.8 9 74.2 13 Z', '#ffc2d1', 0)) + '</g>'
+      + merged([lamaNeck, lamaHead], 'var(--c3)', 3)
+      + P(fluff(65, 16.5, 7.5, 4, 8, 0.28), 'var(--c3)', 2.2)
+      + L('M 58 66 Q 60 68 62 66 M 69 72 Q 71 74 73 72 M 59 77 Q 61 79 63 77', 'var(--c5)', 1.4)
+      + shade('M 78 24 C 84 30 84 40 79 46 C 82 39 82 31 78 24 Z', 0.08)
+      + E(66.6, 38, 8, 4.6, 'var(--c6)', 0)
       + '{FACE}',
-    face: { lx: 60, rx: 72, y: 25, r: 4.4, my: 34, mx: 66.6, mw: 2.6, mouth: 'cat', bcol: '#ffb0c2',
-      extra: E(66.6, 30.6, 1.6, 1.1, 'var(--c4)', 0) + hl(66.1, 30.2, 0.45, 0.8) },
-    back: E(66, 28, 7, 5, 'var(--c5)', 0, 'opacity=".6"'),
+    face: { lx: 59.8, rx: 72.2, y: 31, r: 4.6, my: 40.4, mx: 66.6, mw: 2.6, mouth: 'cat', bcol: '#ffb0c2',
+      extra: E(66.6, 36.8, 1.6, 1.1, 'var(--c4)', 0) + hl(66.1, 36.4, 0.45, 0.8) },
+    back: E(66, 34, 7, 5, 'var(--c5)', 0, 'opacity=".6"'),
     armL: '', armR: '',
     shadow: 32,
     vars: '--fx:var(--c2)'

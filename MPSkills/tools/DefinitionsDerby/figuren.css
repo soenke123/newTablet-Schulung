@@ -57,8 +57,6 @@
 @keyframes ds-ear-l { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-12deg); } }
 @keyframes ds-ear-r { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(12deg); } }
 
-/* Das Fähnchen des Hasen stört beim Heben. */
-.ds-lift.ds-fig--astro .flag { opacity: 0; transition: opacity .1s; }
 
 /* Hase und GameBoy winken ab und zu (wie in den Vorlagen). */
 .c-idle.ds-fig--astro:not(.ds-lift) .arm-r { animation: ds-wave 4.6s ease-in-out infinite; }
