@@ -3,7 +3,10 @@
    ══════════════════════════════════════════════════════════════
    Reinforcement Learning zum Selbermachen (Migration 0242, Beta).
    Kam aus dem GameHub (S2 Reinforce Yourself!) — ohne Begleiter,
-   ohne Zwischen-Quizze, ohne Punkte. Drei Phasen:
+   ohne Zwischen-Quizze, ohne Punkte. Vier Phasen (Reiter 1–4,
+   intern 0–3):
+     0  Gegen die KI: Tic-Tac-Toe gegen eine KI, die aus jeder Partie
+        lernt (mit Lernkurve) — erst gegen die KI, dann selbst die KI
      1  Trainingsphase (mit Einführung): als KI lernen, nur durch
         Belohnung und Bestrafung
      2  Umgebung A (Brettspiel) und Umgebung B (Aliens): das
@@ -14,13 +17,13 @@
    (index.html) und steckt in einem <iframe>. Jede Person trainiert
    ihre eigene KI, der Stand liegt im Gerät (localStorage „ry.*“).
    Geteilt wird nur, WELCHE Phasen die Klasse öffnen darf:
-   skill_room_state.data.phases = [1, 2] (fehlt = nur Phase 1),
+   skill_room_state.data.phases = [0, 1] (fehlt = nur Phase 0),
    gesetzt von der Lehrkraft über das Teilen-Symbol am Reiter der
    Phase (wie bei Tiny LM). Keine eigenen Tabellen, skill_room_set_state reicht.
 
    Der Rahmen bekommt ?raum=lehrer bzw. ?raum=schueler.
    Botschaften (gleicher Ursprung):
-     hinein   { type: 'ry:cmd', phases: [1, 2] }
+     hinein   { type: 'ry:cmd', phases: [0, 1] }
      heraus   { type: 'ry:ready' }                 Rahmen steht
               { type: 'ry:phases', phases: [...] } Lehrkraft ändert Freigaben
 
@@ -30,7 +33,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030d';
+  const V = '20261030e';
 
   let root  = null;
   let frame = null;
@@ -44,7 +47,7 @@
   function data() { return (view && view.state && view.state.data) || {}; }
   function serverPhases() {
     const p = data().phases;
-    return Array.isArray(p) ? p.map(Number).filter(n => n >= 1 && n <= 3) : [1];
+    return Array.isArray(p) ? p.map(Number).filter(n => n >= 0 && n <= 3) : [0];
   }
   const currentPhases = () => phases || serverPhases();
 
@@ -129,7 +132,7 @@
         const m = e.data || {};
         if (m.type === 'ry:ready') { ready = true; lastSent = ''; post(); }
         else if (m.type === 'ry:phases' && isPresenter() && !ctx.preview && Array.isArray(m.phases)) {
-          setPhases(m.phases.map(Number).filter(n => n >= 1 && n <= 3));
+          setPhases(m.phases.map(Number).filter(n => n >= 0 && n <= 3));
         }
       };
       window.addEventListener('message', onMsg);

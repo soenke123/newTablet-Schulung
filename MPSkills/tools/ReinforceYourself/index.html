@@ -610,6 +610,119 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
 }
 
+/* ── Phase „Gegen die KI“ (Reiter 1): Tic-Tac-Toe gegen eine lernende KI.
+   KI = ✕ in der Akzentfarbe, du = ◯ in Orange. Alles aus den --mp-*-Tokens,
+   damit Hell/Dunkel mitgeht. ── */
+:root{ --ttt-ki:var(--mp-accent); --ttt-du:#e8902a; }
+html[data-theme="dark"]{ --ttt-du:#ffb547; }
+@media (prefers-color-scheme: dark){ html:not([data-theme]){ --ttt-du:#ffb547; } }
+#screen-p0-ttt{max-width:1080px; padding-top:22px;}
+.ttt{display:grid; grid-template-columns:minmax(0,400px) minmax(0,1fr); gap:24px; align-items:start;}
+@media(max-width:820px){ .ttt{grid-template-columns:1fr;} }
+.ttt-play{display:flex; flex-direction:column; align-items:center; gap:14px;}
+.ttt-opts{display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;}
+.ttt-opts .ry-seg{margin:0;}
+.ttt-eye{
+  display:inline-flex; align-items:center; gap:7px; font:inherit; font-size:.88rem; font-weight:600;
+  padding:8px 14px; border-radius:999px; cursor:pointer;
+  background:var(--mp-surface); color:var(--mp-ink-faint); border:1px solid var(--mp-line);
+}
+.ttt-eye svg{width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round;}
+.ttt-eye.on{color:var(--mp-accent-ink); background:var(--mp-accent-dim); border-color:var(--mp-accent-edge);}
+.ttt-status{
+  display:flex; align-items:center; gap:9px; min-height:40px; padding:8px 18px; border-radius:999px;
+  font-weight:600; font-size:.98rem; color:var(--mp-ink); background:var(--mp-surface);
+  border:1px solid var(--mp-line); box-shadow:var(--mp-shadow);
+}
+.ttt-status .ttt-dot{width:10px; height:10px; border-radius:50%; background:var(--mp-ink-faint);}
+.ttt-status.is-ki .ttt-dot{background:var(--ttt-ki); animation:ttt-pulse 1s ease-in-out infinite;}
+.ttt-status.is-du .ttt-dot{background:var(--ttt-du);}
+.ttt-status.end-K{border-color:var(--ttt-ki);} .ttt-status.end-K .ttt-dot{background:var(--ttt-ki);}
+.ttt-status.end-D{border-color:var(--ttt-du);} .ttt-status.end-D .ttt-dot{background:var(--ttt-du);}
+@keyframes ttt-pulse{50%{transform:scale(.6); opacity:.5;}}
+.ttt-board{
+  position:relative; width:min(100%, 380px); aspect-ratio:1/1;
+  display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:10px; padding:10px;
+  background:var(--mp-paper-2); border-radius:24px; user-select:none; -webkit-user-select:none;
+}
+.ttt-cell{
+  position:relative; display:grid; place-items:center; padding:0; border:0; border-radius:16px;
+  background:var(--mp-surface); box-shadow:0 1px 2px rgba(13,26,23,.06); cursor:default;
+  transition:background .15s, box-shadow .15s, transform .1s; -webkit-tap-highlight-color:transparent;
+}
+.ttt-cell.can{cursor:pointer;}
+.ttt-cell.can:hover{box-shadow:inset 0 0 0 3px var(--ttt-du);}
+.ttt-cell.can:active{transform:scale(.97);}
+.ttt-board.is-over .ttt-cell:not(.in-line) svg{opacity:.35;}
+.ttt-board.is-over{cursor:pointer;}
+.ttt-cell svg{width:66%; height:66%; fill:none; stroke-width:12; stroke-linecap:round; position:relative; z-index:1;}
+.ttt-x{stroke:var(--ttt-ki);} .ttt-o{stroke:var(--ttt-du);}
+.ttt-cell.is-fresh svg path, .ttt-cell.is-fresh svg circle{stroke-dasharray:100; animation:ttt-draw .32s ease-out both;}
+.ttt-cell.is-fresh svg path + path{animation-delay:.14s;}
+@keyframes ttt-draw{from{stroke-dashoffset:100;} to{stroke-dashoffset:0;}}
+.ttt-hint{position:absolute; inset:6px; display:grid; place-items:center; border-radius:12px; overflow:hidden; animation:ttt-in .25s ease-out;}
+.ttt-hint i{position:absolute; inset:0; background:var(--ttt-ki);}
+.ttt-hint b{position:relative; font-size:clamp(.8rem, 3.6vw, 1.15rem); font-weight:700; color:var(--mp-ink); font-variant-numeric:tabular-nums;}
+@keyframes ttt-in{from{opacity:0; transform:scale(.9);}}
+.ttt-line{position:absolute; inset:10px; width:calc(100% - 20px); height:calc(100% - 20px); pointer-events:none; z-index:2; overflow:visible;}
+.ttt-line line{stroke-width:9; stroke-linecap:round; stroke-dasharray:100; animation:ttt-draw .4s .1s ease-out both; opacity:.9;}
+.ttt-actions{display:flex; align-items:center; gap:14px;}
+.ttt-new{
+  font:inherit; font-size:.98rem; font-weight:600; padding:11px 26px; border-radius:999px; border:0; cursor:pointer;
+  background:var(--mp-accent); color:var(--mp-on-accent); box-shadow:var(--mp-shadow);
+}
+.ttt-new:hover{filter:brightness(1.06);}
+.ttt-new.nudge{animation:ttt-nudge 1.4s ease-in-out infinite;}
+@keyframes ttt-nudge{50%{transform:translateY(-2px); box-shadow:0 0 0 6px var(--mp-accent-dim);}}
+.ttt-forget{font:inherit; font-size:.82rem; color:var(--mp-ink-faint); background:none; border:0; cursor:pointer; text-decoration:underline;}
+.ttt-forget:hover{color:var(--mp-ink);}
+
+.ttt-side{display:flex; flex-direction:column; gap:16px; min-width:0;}
+.ttt-card{background:var(--mp-surface); border:1px solid var(--mp-line); border-radius:18px; padding:16px 18px; box-shadow:var(--mp-shadow); min-width:0;}
+.ttt-card h3{font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--mp-ink-faint); margin-bottom:10px;}
+.ttt-score{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+.ttt-num{text-align:center; padding:4px 2px;}
+.ttt-num b{display:block; font-size:1.7rem; font-weight:700; line-height:1.1; color:var(--mp-ink); font-variant-numeric:tabular-nums;}
+.ttt-num span{display:inline-flex; align-items:center; gap:5px; font-size:.74rem; color:var(--mp-ink-soft);}
+.ttt-num span i{width:10px; height:10px; border-radius:3px; display:inline-block;}
+.ttt-num + .ttt-num{border-left:1px solid var(--mp-line);}
+@media(max-width:480px){ .ttt-num b{font-size:1.35rem;} .ttt-num span{font-size:.66rem;} }
+
+.ttt-chart{position:relative; width:100%; height:210px;}
+.ttt-chart svg{display:block; width:100%; height:100%; overflow:visible;}
+.ttt-chart text{font-family:inherit; font-size:11px; fill:var(--mp-ink-faint);}
+.ttt-chart .ax{stroke:var(--mp-line); stroke-width:1;}
+.ttt-chart .zero{stroke:var(--mp-ink-faint); stroke-width:1; stroke-dasharray:3 4; opacity:.7;}
+.ttt-chart .lne{fill:none; stroke:var(--ttt-ki); stroke-width:2.5; stroke-linejoin:round; stroke-linecap:round;}
+.ttt-chart .end{fill:var(--ttt-ki); stroke:var(--mp-surface); stroke-width:2;}
+.ttt-chart .end-lbl{font-size:12px; font-weight:700; fill:var(--mp-ink);}
+.ttt-chart .cross{stroke:var(--mp-ink-faint); stroke-width:1;}
+.ttt-chart .empty{font-size:13px;}
+.ttt-tip{
+  position:absolute; pointer-events:none; transform:translate(-50%, calc(-100% - 10px));
+  padding:6px 10px; border-radius:9px; font-size:.78rem; white-space:nowrap; line-height:1.35;
+  background:var(--mp-ink); color:var(--mp-paper); box-shadow:var(--mp-shadow);
+}
+.ttt-tip[hidden]{display:none;}
+.ttt-legend{display:flex; flex-wrap:wrap; gap:6px 16px; margin-top:8px; font-size:.78rem; color:var(--mp-ink-soft);}
+.ttt-legend span{display:inline-flex; align-items:center; gap:6px;}
+.ttt-legend i{width:12px; height:12px; border-radius:3px; display:inline-block;}
+.ttt-legend .ln{width:16px; height:3px; border-radius:2px; background:var(--ttt-ki);}
+
+.ttt-lesson-head{display:flex; align-items:center; gap:8px; margin-bottom:12px; font-weight:600; font-size:.95rem;}
+.ttt-chip{font-size:.8rem; font-weight:700; padding:3px 10px; border-radius:999px; font-variant-numeric:tabular-nums;}
+.ttt-chip.up{background:var(--surface-win); color:var(--mp-ok);}
+.ttt-chip.down{background:var(--surface-lose); color:var(--mp-warn);}
+.ttt-lesson{display:flex; flex-wrap:wrap; gap:12px;}
+.ttt-step{display:flex; flex-direction:column; align-items:center; gap:6px; animation:ttt-in .3s ease-out both;}
+.ttt-mini{display:grid; grid-template-columns:repeat(3,22px); grid-template-rows:repeat(3,22px); gap:3px; padding:4px; border-radius:9px; background:var(--mp-paper-2);}
+.ttt-mini span{display:grid; place-items:center; border-radius:5px; background:var(--mp-surface); font-size:.8rem; font-weight:700; line-height:1;}
+.ttt-mini .k{color:var(--ttt-ki);} .ttt-mini .d{color:var(--ttt-du);}
+.ttt-mini .pick{box-shadow:inset 0 0 0 2px var(--ttt-ki); background:var(--mp-accent-dim);}
+.ttt-pct{font-size:.78rem; font-weight:600; color:var(--mp-ink-soft); font-variant-numeric:tabular-nums; white-space:nowrap;}
+.ttt-pct b.up{color:var(--mp-ok);} .ttt-pct b.down{color:var(--mp-warn);}
+.ttt-none{font-size:.88rem; color:var(--mp-ink-faint);}
+
 </style>
 
 </head>
@@ -622,16 +735,20 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
     <span>Reinforce Yourself</span>
   </div>
   <nav class="ry-tabs" role="tablist">
+    <div class="ry-tabwrap" data-tab="0">
+      <button class="ry-tab" data-phase="0" role="tab" type="button" onclick="goPhase(0)"><span class="ry-tab-n">1</span>Gegen die KI</button>
+      <button class="ry-share" data-share="0" type="button" onclick="toggleShare(0)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
+    </div>
     <div class="ry-tabwrap" data-tab="1">
-      <button class="ry-tab" data-phase="1" role="tab" type="button" onclick="goPhase(1)"><span class="ry-tab-n">1</span>Training</button>
+      <button class="ry-tab" data-phase="1" role="tab" type="button" onclick="goPhase(1)"><span class="ry-tab-n">2</span>Training</button>
       <button class="ry-share" data-share="1" type="button" onclick="toggleShare(1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
     </div>
     <div class="ry-tabwrap" data-tab="2">
-      <button class="ry-tab" data-phase="2" role="tab" type="button" onclick="goPhase(2)"><span class="ry-tab-n">2</span>Umgebungen</button>
+      <button class="ry-tab" data-phase="2" role="tab" type="button" onclick="goPhase(2)"><span class="ry-tab-n">3</span>Umgebungen</button>
       <button class="ry-share" data-share="2" type="button" onclick="toggleShare(2)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
     </div>
     <div class="ry-tabwrap" data-tab="3">
-      <button class="ry-tab" data-phase="3" role="tab" type="button" onclick="goPhase(3)"><span class="ry-tab-n">3</span>Sandbox</button>
+      <button class="ry-tab" data-phase="3" role="tab" type="button" onclick="goPhase(3)"><span class="ry-tab-n">4</span>Sandbox</button>
       <button class="ry-share" data-share="3" type="button" onclick="toggleShare(3)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
     </div>
   </nav>
@@ -644,6 +761,51 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
     <div class="ry-wait-ico">🔒</div>
     <h2>Gleich geht’s los</h2>
     <p id="ry-wait-text">Einen Moment …</p>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ PHASE „GEGEN DIE KI“ (Reiter 1) -->
+<div id="screen-p0-ttt" class="screen">
+  <div class="ttt">
+    <div class="ttt-play">
+      <div class="ttt-opts">
+        <div class="ry-seg" role="group" aria-label="Wer beginnt">
+          <button type="button" data-first="ki" onclick="tttSetFirst('ki')">KI beginnt</button>
+          <button type="button" data-first="du" onclick="tttSetFirst('du')">Du beginnst</button>
+        </div>
+        <button class="ttt-eye" id="ttt-eye" type="button" onclick="tttToggleThink()" title="Zeigt, wie wahrscheinlich die KI welches Feld wählt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Gedanken der KI</button>
+      </div>
+      <div class="ttt-status" id="ttt-status"><span class="ttt-dot"></span><span id="ttt-status-t"></span></div>
+      <div class="ttt-board" id="ttt-board"></div>
+      <div class="ttt-actions">
+        <button class="ttt-new" id="ttt-new" type="button" onclick="tttNew()">Neue Partie</button>
+        <button class="ttt-forget" type="button" onclick="tttForget()">KI vergessen lassen</button>
+      </div>
+    </div>
+    <div class="ttt-side">
+      <div class="ttt-card">
+        <div class="ttt-score">
+          <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i>KI gewinnt</span></div>
+          <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i>Unentschieden</span></div>
+          <div class="ttt-num"><b id="ttt-n-d">0</b><span><i style="background:var(--ttt-du)"></i>Du gewinnst</span></div>
+          <div class="ttt-num"><b id="ttt-n-m">0</b><span>Stellungen gemerkt</span></div>
+        </div>
+      </div>
+      <div class="ttt-card">
+        <h3>Lernkurve</h3>
+        <div class="ttt-chart" id="ttt-chart"></div>
+        <div class="ttt-legend">
+          <span><i class="ln"></i>Bilanz der KI (Siege − Niederlagen)</span>
+          <span><i style="background:var(--ttt-ki)"></i>KI gewinnt</span>
+          <span><i style="background:var(--mp-ink-faint)"></i>Unentschieden</span>
+          <span><i style="background:var(--ttt-du)"></i>Du gewinnst</span>
+        </div>
+      </div>
+      <div class="ttt-card">
+        <h3>Das lernt die KI aus der letzten Partie</h3>
+        <div id="ttt-lesson"></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -981,7 +1143,8 @@ function enterP2Alien() {
 // ═══════════════════════════════════════════════════════════════════
 // Im Raum bekommt die Seite ?raum=lehrer bzw. ?raum=schueler (tool.js
 // ist die Gegenseite):
-//   hinein  { type: 'ry:cmd', phases: [1, 2] }   was die Klasse darf
+//   hinein  { type: 'ry:cmd', phases: [0, 1] }   was die Klasse darf
+//   (0 = „Gegen die KI“, Reiter 1; 1 Training; 2 Umgebungen; 3 Sandbox)
 //   heraus  { type: 'ry:ready' }                 Seite steht
 //           { type: 'ry:phases', phases: [...] } Lehrkraft teilt/entzieht
 // Die Lehrkraft sieht immer alle Phasen und teilt sie mit dem Teilen-
@@ -993,9 +1156,10 @@ const ROOM = (() => { const r = new URLSearchParams(location.search).get('raum')
 const TEACHER = ROOM === 'lehrer';
 const STUDENT = ROOM === 'schueler';
 const DEMO    = new URLSearchParams(location.search).get('demo') === '1';
-let classPhases = ROOM ? null : [1, 2, 3];   // null = noch keine Nachricht aus dem Raum
+let classPhases = ROOM ? null : [0, 1, 2, 3];   // null = noch keine Nachricht aus dem Raum
 
 const SCREEN_PHASE = {
+  'screen-p0-ttt': 0,
   'screen-p1-intro': 1, 'screen-p1-train': 1,
   'screen-p2-brett': 2, 'screen-p2-alien': 2,
   'screen-p3-sandbox': 3
@@ -1015,6 +1179,7 @@ let lastP1  = 'intro';
 let lastEnv = 'brett';
 function stopTimers() {
   if (aiTimeoutId)      { clearTimeout(aiTimeoutId); aiTimeoutId = null; }
+  if (tttTimer)         { clearTimeout(tttTimer); tttTimer = null; }
   if (alienAITimeoutId) { clearTimeout(alienAITimeoutId); alienAITimeoutId = null; }
 }
 function goPhase(n) {
@@ -1022,7 +1187,8 @@ function goPhase(n) {
   stopTimers();
   document.querySelectorAll('dialog[open]').forEach(d => d.close());
   try { localStorage.setItem('ry.phase', String(n)); } catch (e) { /* egal */ }
-  if (n === 1) { if (lastP1 === 'train') enterTraining(); else showScreen('screen-p1-intro'); }
+  if (n === 0) enterTTT();
+  else if (n === 1) { if (lastP1 === 'train') enterTraining(); else showScreen('screen-p1-intro'); }
   else if (n === 2) goEnv(lastEnv);
   else enterSandbox();
 }
@@ -1033,9 +1199,9 @@ function goEnv(env) {
 }
 // Erste sinnvolle Phase: die zuletzt offene, sonst die erste erlaubte.
 function startPhase() {
-  let saved = 1;
-  try { saved = parseInt(localStorage.getItem('ry.phase'), 10) || 1; } catch (e) { /* egal */ }
-  const ok = [1, 2, 3].filter(phaseUsable);
+  let saved = 0;
+  try { saved = parseInt(localStorage.getItem('ry.phase'), 10); } catch (e) { /* egal */ }
+  const ok = [0, 1, 2, 3].filter(phaseUsable);
   if (!ok.length) { showScreen('screen-wait'); return; }
   goPhase(ok.includes(saved) ? saved : ok[0]);
 }
@@ -1047,11 +1213,11 @@ function toggleShare(n) {
 }
 
 function setClassPhases(list, fromServer) {
-  classPhases = [1, 2, 3].filter(n => list.includes(n));
+  classPhases = [0, 1, 2, 3].filter(n => list.includes(n));
   if (!fromServer) sendUp({ type: 'ry:phases', phases: classPhases });
   // Schüler: Phase entzogen, während man drin ist (oder bisher nichts frei) → weiter.
   const cur = SCREEN_PHASE[document.body.dataset.screen];
-  if (!cur || !phaseUsable(cur)) {
+  if (cur == null || !phaseUsable(cur)) {
     stopTimers();
     document.querySelectorAll('dialog[open]').forEach(d => d.close());
     startPhase();
@@ -1070,7 +1236,8 @@ function updateTabs() {
     const b = w.querySelector('.ry-share'), on = isShared(n);
     b.classList.toggle('is-on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    b.title = on ? 'Phase ' + n + ' ist mit der Klasse geteilt – antippen zum Entziehen' : 'Phase ' + n + ' mit der Klasse teilen';
+    const nr = n + 1;   // Reiter zählen ab 1, intern beginnt „Gegen die KI“ bei 0
+    b.title = on ? 'Phase ' + nr + ' ist mit der Klasse geteilt – antippen zum Entziehen' : 'Phase ' + nr + ' mit der Klasse teilen';
     b.setAttribute('aria-label', b.title);
   });
   const env = document.body.dataset.screen === 'screen-p2-alien' ? 'alien' : 'brett';
@@ -2110,11 +2277,12 @@ function resetAll(confirmed = false) {
   discoveredSandboxNodes = new Set([0]);
   saveW(); saveS(); saveBrettStats(); saveAlienStats(); saveSbStats();
   saveBrettDiscovered(); saveAlienDiscovered(); saveSandboxDiscovered();
+  tttReset(); ttt = null;
   updateP1Stats(); updateBrettStatsDisplay(); updateAlienStatsDisplay(); updateSbStatsDisplay();
   checkUnlockCondition();
   lastP1 = 'intro';
   const cur = SCREEN_PHASE[document.body.dataset.screen];
-  if (cur) goPhase(cur);
+  if (cur != null) goPhase(cur);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2991,6 +3159,315 @@ document.getElementById('sb-intro-ok').addEventListener('click', () => {
 document.getElementById('sandbox-intro-dialog').addEventListener('click', e => {
   if (e.target === e.currentTarget) e.currentTarget.close();
 });
+
+// ═══════════════════════════════════════════════════════════════════
+// PHASE „GEGEN DIE KI“ (Reiter 1, intern Phase 0)
+// ═══════════════════════════════════════════════════════════════════
+// Tic-Tac-Toe gegen eine KI, die mitlernt — erst spielt man GEGEN die
+// KI, danach (Training) IST man die KI. Gelernt wird wie bei MENACE
+// (Streichholzschachteln mit Perlen): je Stellung, in der die KI am Zug
+// ist, liegen Perlen auf den Feldern; sie zieht zufällig nach
+// Perlenzahl. Nach der Partie bekommt jeder ihrer Züge Perlen dazu
+// (Sieg +3, Unentschieden +1) oder verliert eine (Niederlage −1). Am
+// Anfang liegen spät in der Partie wenige Perlen, deshalb lernt die KI
+// einen Fehler kurz vor Schluss sofort. Gedrehte/gespiegelte Stellungen
+// sind eine Schachtel, gleichwertige Felder teilen sich die Perlen.
+// KI = 'K' (✕), du = 'D' (◯). Im Gerät: ry.ttt_brain, ry.ttt_hist,
+// ry.ttt_last, ry.ttt_first, ry.ttt_think.
+
+const TTT_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+// Die 8 Drehungen/Spiegelungen als Umordnung: neu[i] = alt[p[i]].
+const TTT_SYM = [
+  (r, c) => [r, c], (r, c) => [c, 2 - r], (r, c) => [2 - r, 2 - c], (r, c) => [2 - c, r],
+  (r, c) => [r, 2 - c], (r, c) => [2 - r, c], (r, c) => [c, r], (r, c) => [2 - c, 2 - r]
+].map(f => { const p = []; for (let i = 0; i < 9; i++) { const [r, c] = f(i / 3 | 0, i % 3); p[r * 3 + c] = i; } return p; });
+const TTT_INIT  = [4, 3, 2, 1, 1];          // Perlen je Feld, nach Zahl der eigenen Steine
+const TTT_DELTA = { K: 3, '=': 1, D: -1 };
+const TTT_X = '<svg viewBox="0 0 100 100" class="ttt-x" aria-hidden="true"><path pathLength="100" d="M26 26L74 74"/><path pathLength="100" d="M74 26L26 74"/></svg>';
+const TTT_O = '<svg viewBox="0 0 100 100" class="ttt-o" aria-hidden="true"><circle pathLength="100" cx="50" cy="50" r="26"/></svg>';
+
+function tttLoad(k, def) {
+  try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; } catch (e) { return def; }
+}
+function tttStore(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* egal */ } }
+
+let tttBrain = tttLoad('ry.ttt_brain', {});
+let tttHist  = tttLoad('ry.ttt_hist', []);
+let tttLast  = tttLoad('ry.ttt_last', null);
+let tttFirst = tttLoad('ry.ttt_first', 'ki') === 'du' ? 'du' : 'ki';
+let tttThink = tttLoad('ry.ttt_think', true) !== false;
+let ttt = null;            // laufende Partie
+let tttTimer = null;
+
+function tttSaveAll() {
+  tttStore('ry.ttt_brain', tttBrain); tttStore('ry.ttt_hist', tttHist); tttStore('ry.ttt_last', tttLast);
+}
+const tttSum = box => Object.values(box).reduce((a, v) => a + v, 0);
+
+// Schachtel zur Stellung b (KI am Zug) + jedes freie Feld mit seiner
+// Wahrscheinlichkeit. Gleichwertige Felder teilen sich die Perlen.
+function tttState(b) {
+  let best = null;
+  for (const p of TTT_SYM) {
+    const s = p.map(j => b[j] || '-').join('');
+    if (!best || s < best.s) best = { s, p };
+  }
+  const key = best.s;
+  const stab = TTT_SYM.filter(p => p.map(j => key[j]).join('') === key);
+  const rep = i => Math.min(...stab.map(p => p[i]));
+  const inv = []; best.p.forEach((j, i) => { inv[j] = i; });
+  let box = tttBrain[key];
+  if (!box) {
+    const own = [...key].filter(x => x === 'K').length;
+    box = {};
+    for (let i = 0; i < 9; i++) if (key[i] === '-') box[rep(i)] = TTT_INIT[Math.min(own, 4)];
+    tttBrain[key] = box;
+  }
+  const cells = [], size = {};
+  for (let j = 0; j < 9; j++) if (!b[j]) { const r = rep(inv[j]); cells.push({ cell: j, rep: r }); size[r] = (size[r] || 0) + 1; }
+  const total = tttSum(box);
+  cells.forEach(x => { x.n = size[x.rep]; x.p = total > 0 ? box[x.rep] / total / x.n : 1 / cells.length; });
+  return { key, cells };
+}
+
+function tttWinner(b) {
+  for (const l of TTT_LINES) if (b[l[0]] && b[l[0]] === b[l[1]] && b[l[0]] === b[l[2]]) return { w: b[l[0]], line: l };
+  return b.every(Boolean) ? { w: '=', line: null } : null;
+}
+
+function enterTTT() {
+  if (!phaseUsable(0)) return;
+  currentGameContext = null;
+  showScreen('screen-p0-ttt');
+  if (!ttt || ttt.over || (ttt.turn === 'K' && !tttTimer)) tttNew();
+  else tttRender();
+}
+
+function tttNew() {
+  if (tttTimer) { clearTimeout(tttTimer); tttTimer = null; }
+  ttt = { b: Array(9).fill(null), turn: tttFirst === 'ki' ? 'K' : 'D', moves: [], over: null, line: null, fresh: -1, hints: null };
+  tttRender();
+  if (ttt.turn === 'K') tttAiTurn();
+}
+
+function tttSetFirst(who) {
+  tttFirst = who === 'du' ? 'du' : 'ki';
+  tttStore('ry.ttt_first', tttFirst);
+  tttNew();
+}
+
+function tttToggleThink() {
+  tttThink = !tttThink;
+  tttStore('ry.ttt_think', tttThink);
+  if (ttt && ttt.hints && !tttThink) ttt.hints = null;
+  tttRender();
+}
+
+function tttForget() {
+  if (!confirm('Alles vergessen? Die KI fängt wieder bei null an, die Lernkurve wird gelöscht.')) return;
+  tttReset();
+  tttNew();
+}
+function tttReset() {
+  tttBrain = {}; tttHist = []; tttLast = null;
+  tttSaveAll();
+}
+
+function tttAiTurn() {
+  const st = tttState(ttt.b);
+  ttt.hints = st.cells;
+  tttRender();
+  tttTimer = setTimeout(() => {
+    tttTimer = null;
+    let r = Math.random(), pick = st.cells[st.cells.length - 1];
+    for (const x of st.cells) { r -= x.p; if (r <= 0) { pick = x; break; } }
+    ttt.moves.push({ key: st.key, rep: pick.rep, n: pick.n, cell: pick.cell, b: ttt.b.slice() });
+    tttPlace(pick.cell, 'K');
+  }, tttThink ? 1200 : 450);
+}
+
+function tttPlace(cell, who) {
+  ttt.b[cell] = who;
+  ttt.fresh = cell;
+  ttt.hints = null;
+  const res = tttWinner(ttt.b);
+  if (res) { tttEnd(res); return; }
+  ttt.turn = who === 'K' ? 'D' : 'K';
+  if (ttt.turn === 'K') tttAiTurn(); else tttRender();   // tttAiTurn zeichnet selbst
+}
+
+function tttClick(cell) {
+  if (!ttt) return;
+  if (ttt.over) { tttNew(); return; }
+  if (ttt.turn !== 'D' || ttt.b[cell]) return;
+  tttPlace(cell, 'D');
+}
+
+// Partie vorbei: jeder Zug der KI bekommt Perlen dazu oder verliert eine.
+function tttEnd(res) {
+  ttt.over = res.w;
+  ttt.line = res.line;
+  const d = TTT_DELTA[res.w];
+  const moves = ttt.moves.map(m => {
+    const box = tttBrain[m.key];
+    // je Feld, wie in den „Gedanken“ (gleichwertige Felder teilen sich die Perlen)
+    const share = () => tttSum(box) ? box[m.rep] / tttSum(box) / m.n : 0;
+    const before = share();
+    box[m.rep] = Math.max(0, box[m.rep] + d);
+    const after = share();
+    return { b: m.b.map(x => x || '').join(','), cell: m.cell, before, after };
+  });
+  tttLast = { r: res.w, d, moves };
+  tttHist.push(res.w);
+  tttSaveAll();
+  tttRender();
+}
+
+function tttRender() {
+  if (!ttt) return;
+  const board = document.getElementById('ttt-board');
+  const canPlay = !ttt.over && ttt.turn === 'D';
+  const inLine = ttt.line || [];
+  let h = '';
+  for (let i = 0; i < 9; i++) {
+    const v = ttt.b[i];
+    let cls = 'ttt-cell';
+    if (canPlay && !v) cls += ' can';
+    if (i === ttt.fresh) cls += ' is-fresh';
+    if (inLine.includes(i)) cls += ' in-line';
+    let inner = v === 'K' ? TTT_X : v === 'D' ? TTT_O : '';
+    if (!v && ttt.hints && tttThink) {
+      const x = ttt.hints.find(y => y.cell === i);
+      if (x) inner = '<span class="ttt-hint"><i style="opacity:' + (0.06 + 0.6 * x.p).toFixed(2) + '"></i><b>' + Math.round(x.p * 100) + ' %</b></span>';
+    }
+    const lbl = v === 'K' ? 'KI' : v === 'D' ? 'du' : 'frei';
+    h += '<button type="button" class="' + cls + '" aria-label="Feld ' + (i + 1) + ': ' + lbl + '" onclick="tttClick(' + i + ')">' + inner + '</button>';
+  }
+  if (ttt.line) {
+    const pt = i => [50 + (i % 3) * 100, 50 + (i / 3 | 0) * 100];
+    const [a, b] = [pt(ttt.line[0]), pt(ttt.line[2])];
+    const dx = (b[0] - a[0]) * 0.17, dy = (b[1] - a[1]) * 0.17;
+    h += '<svg class="ttt-line" viewBox="0 0 300 300" aria-hidden="true"><line pathLength="100" x1="' + (a[0] - dx) + '" y1="' + (a[1] - dy) +
+         '" x2="' + (b[0] + dx) + '" y2="' + (b[1] + dy) + '" style="stroke:var(' + (ttt.over === 'K' ? '--ttt-ki' : '--ttt-du') + ')"/></svg>';
+  }
+  board.innerHTML = h;
+  board.classList.toggle('is-over', !!ttt.over);
+  ttt.fresh = -1;
+
+  const st = document.getElementById('ttt-status');
+  const t = ttt.over === 'K' ? 'Die KI gewinnt' : ttt.over === 'D' ? 'Du gewinnst!' : ttt.over === '=' ? 'Unentschieden'
+          : ttt.turn === 'K' ? 'Die KI überlegt …' : 'Du bist dran';
+  st.className = 'ttt-status ' + (ttt.over ? 'end-' + (ttt.over === '=' ? 'E' : ttt.over) : ttt.turn === 'K' ? 'is-ki' : 'is-du');
+  document.getElementById('ttt-status-t').textContent = t;
+  document.getElementById('ttt-new').classList.toggle('nudge', !!ttt.over);
+  document.querySelectorAll('[data-first]').forEach(b => b.classList.toggle('on', b.dataset.first === tttFirst));
+  document.getElementById('ttt-eye').classList.toggle('on', tttThink);
+
+  const cnt = w => tttHist.filter(x => x === w).length;
+  document.getElementById('ttt-n-k').textContent = cnt('K');
+  document.getElementById('ttt-n-e').textContent = cnt('=');
+  document.getElementById('ttt-n-d').textContent = cnt('D');
+  document.getElementById('ttt-n-m').textContent = Object.keys(tttBrain).length;
+  tttChart();
+  tttLesson();
+}
+
+// Was die KI aus der letzten Partie mitnimmt: jeder ihrer Züge mit der
+// Wahrscheinlichkeit vorher → nachher.
+function tttLesson() {
+  const el = document.getElementById('ttt-lesson');
+  const L = tttLast;
+  if (!L || !L.moves.length) { el.innerHTML = '<p class="ttt-none">Noch keine Partie gespielt.</p>'; return; }
+  const key = L.moves.map(m => m.b + m.cell).join('|') + L.r;
+  if (el.dataset.key === key) return;
+  el.dataset.key = key;
+  const head = L.r === 'K' ? 'Die KI hat gewonnen' : L.r === 'D' ? 'Die KI hat verloren' : 'Unentschieden';
+  const chip = L.d > 0 ? '<span class="ttt-chip up">diese Züge öfter</span>' : '<span class="ttt-chip down">diese Züge seltener</span>';
+  const pc = v => Math.round(v * 100) + ' %';
+  const steps = L.moves.map((m, n) => {
+    const b = m.b.split(',');
+    let g = '';
+    for (let i = 0; i < 9; i++) {
+      if (i === m.cell) g += '<span class="pick k">✕</span>';
+      else g += b[i] === 'K' ? '<span class="k">✕</span>' : b[i] === 'D' ? '<span class="d">◯</span>' : '<span></span>';
+    }
+    const dir = m.after > m.before + 1e-9 ? 'up' : m.after < m.before - 1e-9 ? 'down' : '';
+    const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→';
+    return '<div class="ttt-step" style="animation-delay:' + (n * 0.08) + 's"><div class="ttt-mini">' + g + '</div>' +
+           '<div class="ttt-pct">' + pc(m.before) + ' ' + arrow + ' <b class="' + dir + '">' + pc(m.after) + '</b></div></div>';
+  }).join('');
+  el.innerHTML = '<div class="ttt-lesson-head">' + head + chip + '</div><div class="ttt-lesson">' + steps + '</div>';
+}
+
+// Lernkurve: laufende Bilanz der KI (Siege − Niederlagen) je Partie,
+// darunter je Partie ein Kästchen in der Farbe des Ergebnisses.
+function tttChart() {
+  const box = document.getElementById('ttt-chart');
+  if (!box || !box.offsetWidth) return;
+  const W = box.offsetWidth, H = box.offsetHeight;
+  const n = tttHist.length;
+  const L = 30, R = 34, T = 12, TICK = 10, B = 22 + TICK + 6;
+  const pw = W - L - R, ph = H - T - B;
+  if (!n) {
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '"><line class="ax" x1="' + L + '" x2="' + (W - R) + '" y1="' + (T + ph / 2) + '" y2="' + (T + ph / 2) + '"/>' +
+      '<text class="empty" x="' + (L + pw / 2) + '" y="' + (T + ph / 2 - 10) + '" text-anchor="middle">Noch keine Partie</text></svg>';
+    return;
+  }
+  const bal = []; let s = 0;
+  tttHist.forEach(r => { s += r === 'K' ? 1 : r === 'D' ? -1 : 0; bal.push(s); });
+  const lo = Math.min(-2, ...bal), hi = Math.max(2, ...bal);
+  const X = i => L + (n === 1 ? pw / 2 : (i / (n - 1)) * pw);
+  const Y = v => T + (hi - v) / (hi - lo) * ph;
+  const pts = bal.map((v, i) => [X(i), Y(v)]);
+  const line = 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L');
+  const area = line + 'L' + pts[n - 1][0].toFixed(1) + ' ' + Y(0).toFixed(1) + 'L' + pts[0][0].toFixed(1) + ' ' + Y(0).toFixed(1) + 'Z';
+  const yTicks = [hi, 0, lo];
+  let g = '<defs><linearGradient id="ttt-grad" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="var(--ttt-ki)" stop-opacity=".28"/><stop offset="' + ((Y(0) - T) / ph).toFixed(3) + '" stop-color="var(--ttt-ki)" stop-opacity=".04"/>' +
+    '<stop offset="1" stop-color="var(--ttt-du)" stop-opacity=".22"/></linearGradient></defs>';
+  yTicks.forEach(v => {
+    g += '<line class="' + (v === 0 ? 'zero' : 'ax') + '" x1="' + L + '" x2="' + (W - R) + '" y1="' + Y(v) + '" y2="' + Y(v) + '"/>' +
+         '<text x="' + (L - 8) + '" y="' + (Y(v) + 4) + '" text-anchor="end">' + (v > 0 ? '+' + v : v) + '</text>';
+  });
+  g += '<path d="' + area + '" fill="url(#ttt-grad)" stroke="none"/>';
+  g += '<path class="lne" d="' + line + '"/>';
+  // Ergebnis-Kästchen je Partie (2px Luft dazwischen)
+  const tw = Math.max(1, Math.min(14, pw / n - 2)), ty = T + ph + 8;
+  tttHist.forEach((r, i) => {
+    const c = r === 'K' ? 'var(--ttt-ki)' : r === 'D' ? 'var(--ttt-du)' : 'var(--mp-ink-faint)';
+    g += '<rect x="' + (X(i) - tw / 2).toFixed(1) + '" y="' + ty + '" width="' + tw.toFixed(1) + '" height="' + TICK + '" rx="' + Math.min(3, tw / 2) + '" fill="' + c + '"' + (r === '=' ? ' opacity=".55"' : '') + '/>';
+  });
+  g += '<text x="' + X(0) + '" y="' + (H - 4) + '" text-anchor="' + (n === 1 ? 'middle' : 'start') + '">Partie 1</text>';
+  if (n > 1) g += '<text x="' + X(n - 1) + '" y="' + (H - 4) + '" text-anchor="end">' + n + '</text>';
+  const e = pts[n - 1];
+  g += '<circle class="end" cx="' + e[0] + '" cy="' + e[1] + '" r="5"/>';
+  g += '<text class="end-lbl" x="' + (e[0] + 9) + '" y="' + (e[1] + 4) + '">' + (bal[n - 1] > 0 ? '+' : '') + bal[n - 1] + '</text>';
+  g += '<line class="cross" id="ttt-cross" x1="0" x2="0" y1="' + T + '" y2="' + (T + ph) + '" visibility="hidden"/>';
+  g += '<circle class="end" id="ttt-hdot" r="4.5" visibility="hidden"/>';
+  g += '<rect id="ttt-hit" x="' + (L - 10) + '" y="0" width="' + (pw + 20) + '" height="' + H + '" fill="transparent"/>';
+  box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="Lernkurve: Bilanz der KI nach ' + n + ' Partien: ' + bal[n - 1] + '">' + g + '</svg><div class="ttt-tip" id="ttt-tip" hidden></div>';
+
+  const hit = document.getElementById('ttt-hit'), tip = document.getElementById('ttt-tip');
+  const cross = document.getElementById('ttt-cross'), dot = document.getElementById('ttt-hdot');
+  const show = ev => {
+    const r = box.getBoundingClientRect();
+    const x = ev.clientX - r.left;
+    const i = n === 1 ? 0 : Math.max(0, Math.min(n - 1, Math.round((x - L) / pw * (n - 1))));
+    const [px, py] = pts[i];
+    cross.setAttribute('x1', px); cross.setAttribute('x2', px); cross.setAttribute('visibility', 'visible');
+    dot.setAttribute('cx', px); dot.setAttribute('cy', py); dot.setAttribute('visibility', 'visible');
+    const res = tttHist[i] === 'K' ? 'KI gewinnt' : tttHist[i] === 'D' ? 'Du gewinnst' : 'Unentschieden';
+    tip.innerHTML = '<b>Partie ' + (i + 1) + '</b> · ' + res + '<br>Bilanz ' + (bal[i] > 0 ? '+' : '') + bal[i];
+    tip.style.left = Math.max(60, Math.min(W - 60, px)) + 'px';
+    tip.style.top = py + 'px';
+    tip.hidden = false;
+  };
+  const hide = () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); dot.setAttribute('visibility', 'hidden'); };
+  hit.addEventListener('pointermove', show);
+  hit.addEventListener('pointerdown', show);
+  hit.addEventListener('pointerleave', hide);
+}
+window.addEventListener('resize', () => { if (document.body.dataset.screen === 'screen-p0-ttt') tttChart(); });
 
 document.body.classList.toggle('is-teacher', TEACHER);
 loadDiscoveredNodes();
