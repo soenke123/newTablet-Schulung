@@ -105,6 +105,9 @@
 .dd-busy .dd-main { opacity: .7; pointer-events: none; }
 
 .dd svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+/* Figuren (KSCreatures) erben den Strich über currentColor: im Dunkeln wäre er hell
+   und legt einen hellen Rand um die Augen — also immer dunkle Tinte */
+.dd .creature-svg { color: var(--ink); }
 
 /* ─── Kopf und Texte ─── */
 .dd-top { display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; margin-bottom: 22px; }
@@ -1437,13 +1440,13 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 @keyframes dd-st-settle { 0% { transform: translateY(-14px); } 60% { transform: translateY(3px); } 100% { transform: none; } }
 /* Item-Linien am Beamer */
 .dd-st__ilines { position: absolute; inset: 0; pointer-events: none; z-index: 0; }
-/* gut sichtbar (Sönke 30.10.2026: „nicht gut zu sehen“): kräftiges Band mit dunklem Saum und Schein */
+/* gut sichtbar, aber nicht aufdringlich (Sönke 30.10.2026: erst „nicht gut zu sehen“, dann „etwas too much“) */
 .dd-st__ilines i {
-  position: absolute; left: 0; right: 0; height: 6px; margin-bottom: -3px;
-  background: repeating-linear-gradient(90deg, #ffb21e 0 16px, #ff6a00 16px 26px);
-  box-shadow: 0 0 0 1.5px rgba(90,40,0,.75), 0 0 12px 2px rgba(255,150,20,.75);
+  position: absolute; left: 0; right: 0; height: 3px; margin-bottom: -1.5px;
+  background: repeating-linear-gradient(90deg, rgba(255,150,30,.85) 0 12px, transparent 12px 18px);
+  box-shadow: 0 0 6px rgba(255,150,20,.35);
 }
-.dd-st__ilines .dd-st__qbox { position: absolute; left: 3px; top: -11px; width: 28px; height: 28px; font-size: 1rem; animation: dd-st-qbox 2.4s ease-in-out infinite; }
+.dd-st__ilines .dd-st__qbox { position: absolute; left: 4px; top: -12px; width: 24px; height: 24px; font-size: .9rem; animation: dd-st-qbox 2.4s ease-in-out infinite; }
 @keyframes dd-st-qbox { 50% { transform: rotate(-8deg) scale(1.08); } }
 /* Wirkungen an der Bahn */
 .dd-st__fxs { position: absolute; left: 4px; top: auto; bottom: calc(var(--fw) + 8px); z-index: 6; display: flex; flex-direction: column; gap: 4px; }
@@ -1530,7 +1533,7 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__pop.is-item { display: inline-flex; align-items: center; gap: 4px; border-left-color: #ff9f1c; }
 .dd-st__pop .dd-it { width: 20px; height: 20px; }
 /* Tablet: Items, Wirkungen, Hinweise, Teatime */
-.dd-st__rbar u { position: absolute; left: var(--y); top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #ff8c1e; box-shadow: 0 0 0 1px rgba(90,40,0,.7), 0 0 5px rgba(255,140,30,.9); z-index: 2; }
+.dd-st__rbar u { position: absolute; left: var(--y); top: 0; bottom: 0; width: 3px; margin-left: -1.5px; background: #ff8c1e; box-shadow: 0 0 0 1px rgba(90,40,0,.35); z-index: 2; }
 .dd-st__rr .dd-st__fxs { position: static; flex-direction: row; grid-column: 2 / 4; margin-top: -2px; }
 .dd-st__rr .dd-st__fxs:empty { display: none; }
 .dd-st__rr .dd-st__fxs span { font-size: .7rem; }
@@ -1643,7 +1646,7 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
   .dd-st--dev .dd-st__rbar::after { left: 0; right: 0; top: 0; bottom: auto; width: auto; height: 4px; background: repeating-linear-gradient(90deg, #d23a2f 0 4px, #fff7ea 4px 8px); }
   .dd-st--dev .dd-st__rbar i { top: auto; right: 0; width: auto; height: var(--p, 0%);
     background: repeating-linear-gradient(0deg, rgba(0,0,0,.2) 0 1.5px, transparent 1.5px 8px), var(--tc); }
-  .dd-st--dev .dd-st__rbar u { left: 0; right: 0; top: auto; bottom: var(--y); width: auto; height: 3px; margin: 0 0 -1.5px; }
+  .dd-st--dev .dd-st__rbar u { left: 0; right: 0; top: auto; bottom: var(--y); width: auto; height: 2px; margin: 0 0 -1px; }
   .dd-st--dev .dd-st__rfig, .dd-st--dev .dd-st__rr.is-me .dd-st__rfig { order: 3; width: 30px; height: 30px; }
   .dd-st--dev .dd-st__rr .dd-st__pops { left: 50%; right: auto; top: 0; transform: translateX(-50%); }
   .dd-st--dev .dd-st__rr .dd-st__pop { font-size: .66rem; padding: 1px 5px; }
