@@ -2,13 +2,8 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<script src="../pause.js?v=20261001"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reinforce Yourself!</title>
-<link rel="icon" type="image/png" sizes="64x64" href="../../icons/favicon-64.png" />
-<link rel="icon" type="image/png" sizes="256x256" href="../../icons/favicon-256.png" />
-<link rel="apple-touch-icon" href="../../icons/icon-192.png" />
-<link rel="manifest" href="../../site.webmanifest" />
 <style>
 /* ── Variables ── */
 :root {
@@ -96,6 +91,32 @@ body{
   background:#1a2744; border-color:#2d3f5e; color:#4a5a7a;
   cursor:default; pointer-events:none;
 }
+.phase-card .card-lock{display:none;}
+.phase-card.locked .card-lock{display:block;}
+
+/* Teilen-Schalter der Lehrkraft (nur im Raum), je Phase einer —
+   dasselbe Symbol wie in Tiny LM und Definitions Derby. */
+.ov-phase{display:flex; flex-direction:column; align-items:center; gap:8px;}
+.share-btn{
+  display:none; align-items:center; gap:6px; cursor:pointer;
+  font:inherit; font-size:.78rem; font-weight:600;
+  padding:5px 12px 5px 9px; border-radius:999px;
+  background:transparent; color:var(--muted); border:1.5px dashed var(--border);
+  transition:background .15s,color .15s,border-color .15s;
+}
+.share-btn svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;}
+.share-btn:hover{color:var(--text); border-color:var(--muted);}
+.share-btn.is-on{background:rgba(34,197,94,.14); color:var(--win); border:1.5px solid var(--win);}
+body.is-teacher .share-btn{display:inline-flex;}
+.ov-foot{text-align:center; margin-top:34px;}
+
+/* Schüler: Hinweis, solange nichts geteilt ist. */
+.ov-wait{
+  display:none; margin:0 auto 26px; max-width:440px; text-align:center;
+  padding:12px 16px; border-radius:var(--radius);
+  border:1px dashed var(--border); color:var(--muted); font-size:.9rem;
+}
+.ov-wait.show{display:block;}
 .phase-card.unlocked{
   background:var(--surface); border-color:var(--accent); color:var(--text);
 }
@@ -307,101 +328,6 @@ body{
 }
 .rl-steps li strong{color:var(--text);}
 
-/* ── Quiz ── */
-.quiz-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:14px 0;}
-#p3q-grid{grid-template-columns:1fr;}
-#p3q-grid .quiz-opt{font-size:1rem; padding:12px 16px;}
-.quiz-opt{
-  padding:10px 12px; border-radius:8px; border:2px solid var(--border);
-  background:var(--surface); color:var(--text); cursor:pointer;
-  font-size:.87rem; text-align:left; transition:border-color .15s,background .15s;
-}
-.quiz-opt.selected{border-color:var(--accent); background:rgba(59,130,246,.1);}
-.quiz-opt.correct{border-color:var(--win)!important; background:rgba(34,197,94,.1)!important;}
-.quiz-opt.wrong{border-color:var(--lose)!important; background:rgba(239,68,68,.08)!important;}
-.quiz-feedback{font-size:.85rem; padding:8px 12px; border-radius:6px; margin-top:4px; text-align:center;}
-.quiz-feedback.ok{background:rgba(34,197,94,.1); color:var(--win);}
-.quiz-feedback.err{background:rgba(239,68,68,.1); color:var(--lose);}
-.quiz-feedback.neutral{background:rgba(148,163,184,.1); color:var(--muted);}
-.quiz-actions{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;}
-
-/* ── Score Widget (Overview sidebar) ── */
-#score-widget{
-  display:none; position:sticky; top:20px;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:var(--radius); padding:14px 16px; width:168px; flex-shrink:0;
-}
-#score-widget.visible{display:block;}
-.sw-title{font-size:.68rem; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:10px;}
-.sw-row{display:flex; align-items:center; gap:4px; padding:3px 0;}
-.sw-label{font-size:.82rem; color:var(--muted); flex:1;}
-.sw-val{font-size:.82rem; font-weight:700; color:var(--text); min-width:auto; text-align:right; white-space:nowrap;}
-.sw-check{display:none; font-size:.72rem; font-weight:700; color:#4caf50; flex-shrink:0; line-height:1;}
-.sw-row.score-locked .sw-val{color:var(--muted);}
-.sw-row.score-locked .sw-check{display:inline;}
-.sw-divider{border:none; border-top:1px solid var(--border); margin:10px 0 8px;}
-.sw-total{display:flex; justify-content:flex-end; align-items:baseline; gap:4px;}
-#score-total{font-size:1.35rem; font-weight:800; color:var(--accent);}
-.sw-pkt{font-size:.78rem; color:var(--muted);}
-
-/* ── Mobile Score Button (Overview) ── */
-.ov-score-btn{
-  display:none; position:absolute; top:0; right:0;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:20px; padding:4px 12px;
-  font-size:.8rem; font-weight:700; color:var(--accent);
-  cursor:pointer; transition:background .15s;
-}
-.ov-score-btn:hover{background:var(--border);}
-@media(max-width:600px){
-  #score-widget{display:none !important;}
-  .ov-score-btn{display:block;}
-}
-
-/* ── Score Badge (in-game screens) ── */
-.score-badge{
-  position:absolute; top:12px; right:16px;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:20px; padding:4px 10px 4px 12px;
-  font-size:.8rem; font-weight:700; color:var(--accent);
-  z-index:10; display:flex; align-items:center; gap:5px; cursor:default;
-}
-.score-badge-i{
-  background:none; border:1px solid var(--muted); border-radius:50%;
-  width:15px; height:15px; font-size:.55rem; font-style:italic; font-weight:700;
-  cursor:pointer; color:var(--muted);
-  display:flex; align-items:center; justify-content:center;
-  flex-shrink:0; padding:0; line-height:1;
-}
-.score-badge-i:hover{color:var(--accent); border-color:var(--accent);}
-.score-badge-popup{
-  display:none; position:absolute; top:calc(100% + 6px); right:0;
-  background:var(--surface); border:1px solid var(--border);
-  border-radius:8px; padding:8px 10px;
-  font-size:.75rem; color:var(--muted); line-height:1.5;
-  z-index:200; box-shadow:0 2px 10px rgba(0,0,0,.15);
-  min-width:220px; max-width:280px; text-align:left; font-weight:normal;
-}
-.score-badge-popup.open{display:block;}
-.score-hint{
-  display:inline-flex; align-items:center; gap:6px;
-  font-size:.75rem; color:var(--muted); background:rgba(0,0,0,.04);
-  border:1px solid var(--border); border-radius:20px; padding:3px 10px;
-  margin-bottom:10px; cursor:default;
-}
-
-/* ── Phase 3 Placeholder ── */
-.p3-card{
-  background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-  padding:22px; opacity:.5; text-align:center;
-}
-.p3-card .coming-soon{
-  display:inline-block; font-size:.7rem; text-transform:uppercase; letter-spacing:.1em;
-  background:var(--border); border-radius:4px; padding:2px 8px; margin-bottom:8px;
-}
-.p3-card h3{font-size:1rem; font-weight:600; margin-bottom:6px;}
-.p3-card p{font-size:.82rem; color:var(--muted);}
-
 /* ── Dialog ── */
 dialog{
   border:1px solid var(--border); background:var(--surface); color:var(--text);
@@ -414,16 +340,6 @@ dialog{
 dialog::backdrop{background:rgba(0,0,0,.55); backdrop-filter:blur(2px);}
 dialog h3{font-size:1.2rem; font-weight:700; margin-bottom:6px;}
 dialog p{font-size:.9rem; color:var(--muted); line-height:1.5;}
-.dialog-stats{
-  display:flex; gap:12px; margin:18px 0;
-}
-.dialog-stat{
-  flex:1; background:var(--bg); border:1px solid var(--border);
-  border-radius:10px; padding:12px 10px; text-align:center;
-}
-.dialog-stat-val{font-size:1.25rem; font-weight:700; line-height:1;}
-.dialog-stat-lbl{font-size:.62rem; color:var(--muted); margin-top:3px;
-  text-transform:uppercase; letter-spacing:.05em;}
 .dialog-btns{display:flex; gap:10px; justify-content:flex-end; margin-top:4px;}
 
 /* ── Sandbox intro dialog ── */
@@ -436,12 +352,6 @@ dialog p{font-size:.9rem; color:var(--muted); line-height:1.5;}
 .sb-intro-features{display:flex; flex-direction:column; gap:12px; margin:18px 0;}
 .sb-intro-item{display:flex; gap:12px; align-items:flex-start; font-size:.88rem; line-height:1.45; color:var(--text);}
 .sb-intro-icon{font-size:1.4rem; flex-shrink:0; margin-top:1px;}
-.sb-intro-goal{
-  background:var(--bg); border:1px solid var(--border); border-radius:10px;
-  padding:12px 16px; font-size:.88rem; line-height:1.5; margin-bottom:8px;
-}
-.sb-intro-goal strong{color:var(--accent);}
-
 /* ── Train Rows ── */
 .train-row{display:flex; align-items:stretch; gap:8px;}
 .train-arrow{
@@ -552,42 +462,6 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   width:100%; text-align:left; font-size:.78rem; opacity:.6;
 }
 
-/* ── Junction Box ── */
-.junction-box{
-  border-radius:8px; padding:9px 20px;
-  border:2px solid #2d3f5e; background:#1a2744;
-  text-align:center; min-width:130px;
-  cursor:default; user-select:none;
-  transition:background .3s,border-color .3s;
-}
-.jb-lock-icon{font-size:1.2em; display:block; opacity:.5; margin-bottom:2px;}
-.jb-quiz-icon{font-size:1.2em; display:none; margin-bottom:2px;}
-.jb-label{font-size:.78em; font-weight:600; color:#4a5a7a; text-transform:uppercase; letter-spacing:.06em;}
-.jb-done-label{display:none; font-size:.82em; font-weight:700;}
-
-.junction-box.quiz-ready{
-  background:var(--surface); border-color:var(--accent);
-  cursor:pointer;
-  animation:jb-pulse 1.4s ease-in-out infinite;
-}
-.junction-box.quiz-ready .jb-lock-icon{display:none;}
-.junction-box.quiz-ready .jb-quiz-icon{display:block;}
-.junction-box.quiz-ready .jb-label{color:var(--accent);}
-
-.junction-box.quiz-done{
-  background:rgba(34,197,94,.08); border-color:var(--win);
-  cursor:pointer; animation:none;
-}
-.junction-box.quiz-done:hover{background:rgba(34,197,94,.15);}
-.junction-box.quiz-done .jb-lock-icon,
-.junction-box.quiz-done .jb-quiz-icon,
-.junction-box.quiz-done .jb-label{display:none;}
-.junction-box.quiz-done .jb-done-label{display:block; color:var(--win);}
-
-@keyframes jb-pulse{
-  0%,100%{box-shadow:0 0 0 0 rgba(59,130,246,0);}
-  50%{box-shadow:0 0 0 6px rgba(59,130,246,.28);}
-}
 @keyframes card-waterfall{
   from{opacity:0; transform:translateY(10px);}
   to{opacity:1; transform:translateY(0);}
@@ -702,162 +576,35 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   /* Einstellungen auf Baum-Tab ausblenden */
   #screen-p3-sandbox[data-tab="tree"] #sb-settings{display:none !important;}
 
-  /* Topbar: "Simulation" ausblenden */
-  .sb-beenden-long{display:none;}
-
-  /* Companion im sb-bottom eingebettet */
-  #companion-widget.sb-companion-inline{
-    position:static !important;
-    width:100% !important;
-    margin-top:10px;
-    border-radius:var(--radius);
-    background:var(--surface);
-    border-color:var(--border);
-    color:var(--text);
-  }
-  #companion-widget.sb-companion-inline #eggVisual img,
-  #companion-widget.sb-companion-inline #eggVisual svg{width:72px;height:72px;}
 }
 
-/* ── Win Screens ── */
-.win-overlay{
-  position:fixed; inset:0; z-index:900; display:none;
-  background:rgba(0,0,0,.82); backdrop-filter:blur(5px);
-  align-items:center; justify-content:center; flex-direction:column;
-}
-.win-overlay.active{display:flex;}
-#win-confetti{position:fixed;inset:0;pointer-events:none;z-index:901;display:none;}
-#win-confetti.active{display:block;}
-.win-card{
-  background:var(--surface); border:1px solid var(--border); border-radius:22px;
-  width:92%; max-width:680px; max-height:92vh; max-height:92dvh;
-  position:relative; z-index:902; overflow:hidden;
-  box-shadow:0 0 80px rgba(59,130,246,.2), 0 24px 64px rgba(0,0,0,.5);
-  animation:winPop .55s cubic-bezier(.34,1.56,.64,1) both;
-  display:flex; flex-direction:row;
-}
-@keyframes winPop{
-  from{transform:scale(.55) translateY(30px);opacity:0}
-  to{transform:scale(1) translateY(0);opacity:1}
-}
-.win-col-game{
-  flex:1.2; padding:32px 28px; text-align:center;
-  display:flex; flex-direction:column;
-  overflow-y:auto; max-height:92vh; max-height:92dvh;
-}
-.win-col-hub{
-  flex:1; padding:28px 20px;
-  border-left:1px solid var(--border);
-  background:rgba(0,0,0,.15);
-  display:flex; flex-direction:column; align-items:center; gap:10px;
-  overflow-y:auto; max-height:92vh; max-height:92dvh;
-}
-.win-icon{margin-bottom:10px;}
-.win-icon img{
-  width:86px; height:auto; display:block; margin:0 auto;
-  animation:wingSpin .7s cubic-bezier(.34,1.56,.64,1);}
-@keyframes wingSpin{from{transform:scale(.4) translateY(20px);opacity:0}to{transform:none;opacity:1}}
-.win-title{font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:4px;}
-.win-sub{font-size:.8rem;color:var(--muted);margin-bottom:18px;}
-.win-rows{text-align:left;margin-bottom:0;flex:1;}
-.win-row{
-  display:flex;justify-content:space-between;align-items:center;
-  padding:5px 0;font-size:.85rem;color:var(--muted);
-  opacity:0;transform:translateX(-10px);
-  transition:opacity .35s,transform .35s;
-}
-.win-row.show{opacity:1;transform:none;}
-.win-row + .win-row{border-top:1px solid rgba(255,255,255,.05);}
-.win-row.win-total{
-  border-top:1px solid var(--border)!important;margin-top:8px;padding-top:10px;
-  color:var(--text);font-size:1rem;font-weight:700;
-}
-.win-val{font-weight:700;color:var(--accent);}
-.win-row.win-total .win-val{color:var(--win);font-size:1.3rem;}
-.win-creature-label{font-size:.75rem;color:var(--muted);text-align:center;min-height:1em;}
-.win-btns{
-  display:flex; flex-direction:column; gap:8px;
-  width:100%; margin-top:auto; padding-top:12px;
-}
-.win-btns .btn{width:100%; text-align:center;}
-@media(max-width:540px){
-  .win-card{flex-direction:column; max-width:95vw;}
-  .win-col-hub{border-left:none; border-top:1px solid var(--border);}
-}
-#companion-widget{
-  position:fixed;bottom:1rem;right:1rem;z-index:500;
-  background:rgba(0,0,0,.82);border:1px solid #555;border-radius:14px;
-  padding:.75rem 1rem;width:130px;text-align:center;font-size:.75rem;color:#ccc;
-  pointer-events:none;
-}
-#companion-widget #eggVisual{min-height:90px;display:flex;align-items:center;justify-content:center;}
-#companion-widget #eggVisual img,
-#companion-widget #eggVisual svg{width:88px;height:88px;object-fit:contain;}
-#win1-creature .creature-img,#win1-creature img{width:110px;height:110px;object-fit:contain;}
-#win2-creature .creature-img,#win2-creature img{width:120px;height:120px;object-fit:contain;}
-#companion-widget #eggProgressFill{height:100%;background:#3b82f6;border-radius:2px;width:0%;transition:width .4s;}
-#companion-item-icon{
-  display:none;position:absolute;top:6px;right:6px;
-  font-size:1.2rem;line-height:1;
-}
-#companion-item-icon.active{display:block;animation:itemPulse 1.8s ease-in-out infinite;}
-@keyframes itemPulse{0%,100%{opacity:1}50%{opacity:.3}}
 </style>
 
-<script>window.CREATURE_IMAGE_BASE = '../data/';</script>
-<script src="../../supabase-config.js"></script>
-<script src="../config.js"></script>
-<script src="../creatures.js"></script>
-
-<!-- Sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen. -->
-<script src="../../viewport.js?v=20260820"></script>
 </head>
 <body data-screen="screen-overview">
 
-<div id="companion-widget">
-  <div id="eggVisual"></div>
-  <div id="companion-item-icon"></div>
-  <div id="eggStageLabel" style="margin-top:2px;font-size:.65rem;"></div>
-  <div style="height:4px;background:#333;border-radius:2px;margin-top:4px;">
-    <div id="eggProgressFill"></div>
-  </div>
-  <div id="ry-boost-bar" class="boost-bar" style="margin-top:6px;"></div>
-</div>
-
 <!-- ═══════════════════════════════════════════════════════ OVERVIEW -->
 <div id="screen-overview" class="screen active">
-  <div class="ov-layout">
-  <div class="ov-main">
   <div class="ov-header">
-    <span class="back-link" onclick="resetAndGoHub()">← Hub</span>
-    <button class="ov-score-btn" id="ov-score-btn" onclick="openScoreModal()">0 Pkt</button>
     <h1>Reinforce Yourself!</h1>
     <p>Lerne wie eine Maschine</p>
   </div>
+  <div class="ov-wait" id="ov-wait">Einen Moment …</div>
   <div class="overview-tree">
-    <div class="ov-row">
-      <div class="phase-card unlocked" id="card-p1" onclick="showScreen('screen-p1-intro')">
-        <div class="card-phase">Phase 1</div>
-        <div class="card-title">Trainingsphase</div>
-        <div class="card-desc">Lerne durch Spielen</div>
+    <div class="ov-phase">
+      <div class="ov-row">
+        <div class="phase-card" id="card-p1" data-phase="1" onclick="openPhase(1)">
+          <div class="card-lock">🔒</div>
+          <div class="card-phase">Phase 1</div>
+          <div class="card-title">Trainingsphase</div>
+          <div class="card-desc">Lerne durch Spielen</div>
+        </div>
       </div>
-    </div>
-    <div class="ov-connector">
-      <svg width="60" height="24" viewBox="0 0 60 24">
-        <defs><marker id="arr" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#334155"/></marker></defs>
-        <line x1="30" y1="0" x2="30" y2="24" stroke="#334155" stroke-width="1.5"/>
-      </svg>
-    </div>
-    <div class="ov-row">
-      <div class="junction-box locked" id="junction-p2" onclick="junctionClick()">
-        <span class="jb-lock-icon">🔒</span>
-        <span class="jb-quiz-icon">📋</span>
-        <span class="jb-label">Quiz</span>
-        <span class="jb-done-label">✓ Quiz bestanden</span>
-      </div>
+      <button class="share-btn" data-share="1" onclick="toggleShare(1)" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
     </div>
     <div class="ov-connector">
       <svg width="300" height="52" viewBox="0 0 300 52">
+        <defs><marker id="arr" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto"><path d="M0,0 L7,3.5 L0,7 Z" fill="#334155"/></marker></defs>
         <line x1="150" y1="0" x2="150" y2="18" stroke="#334155" stroke-width="1.5"/>
         <line x1="150" y1="18" x2="75" y2="18" stroke="#334155" stroke-width="1.5"/>
         <line x1="150" y1="18" x2="225" y2="18" stroke="#334155" stroke-width="1.5"/>
@@ -865,19 +612,22 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
         <line x1="225" y1="18" x2="225" y2="47" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
       </svg>
     </div>
-    <div class="ov-row">
-      <div class="phase-card locked" id="card-p2-brett" onclick="p2CardClick('brett')">
-        <div class="card-lock">🔒</div>
-        <div class="card-phase">Phase 2</div>
-        <div class="card-title">Umgebung A</div>
-        <div class="card-desc">Das Gelernte anwenden</div>
+    <div class="ov-phase">
+      <div class="ov-row">
+        <div class="phase-card" id="card-p2-brett" data-phase="2" onclick="openPhase(2, 'brett')">
+          <div class="card-lock">🔒</div>
+          <div class="card-phase">Phase 2</div>
+          <div class="card-title">Umgebung A</div>
+          <div class="card-desc">Das Gelernte anwenden</div>
+        </div>
+        <div class="phase-card" id="card-p2-alien" data-phase="2" onclick="openPhase(2, 'alien')">
+          <div class="card-lock">🔒</div>
+          <div class="card-phase">Phase 2</div>
+          <div class="card-title">Umgebung B</div>
+          <div class="card-desc">Das Gelernte anwenden</div>
+        </div>
       </div>
-      <div class="phase-card locked" id="card-p2-alien" onclick="p2CardClick('alien')">
-        <div class="card-lock">🔒</div>
-        <div class="card-phase">Phase 2</div>
-        <div class="card-title">Umgebung B</div>
-        <div class="card-desc">Das Gelernte anwenden</div>
-      </div>
+      <button class="share-btn" data-share="2" onclick="toggleShare(2)" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
     </div>
     <div class="ov-connector">
       <svg width="300" height="52" viewBox="0 0 300 52">
@@ -888,61 +638,21 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
         <line x1="150" y1="26" x2="150" y2="47" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
       </svg>
     </div>
-    <div class="ov-row">
-      <div class="junction-box locked" id="junction-p3" onclick="junctionP3Click()">
-        <span class="jb-lock-icon">🔒</span>
-        <span class="jb-quiz-icon">📋</span>
-        <span class="jb-label">Quiz</span>
-        <span class="jb-done-label">✓ Quiz bestanden</span>
+    <div class="ov-phase">
+      <div class="ov-row">
+        <div class="phase-card" id="card-p3a" data-phase="3" onclick="openPhase(3)">
+          <div class="card-lock">🔒</div>
+          <div class="card-phase">Phase 3</div>
+          <div class="card-title">Sandbox</div>
+          <div class="card-desc">Beide Spiele gleichzeitig</div>
+        </div>
       </div>
-    </div>
-    <div class="ov-connector">
-      <svg width="60" height="24" viewBox="0 0 60 24">
-        <line x1="30" y1="0" x2="30" y2="24" stroke="#334155" stroke-width="1.5" marker-end="url(#arr)"/>
-      </svg>
-    </div>
-    <div class="ov-row">
-      <div class="phase-card locked" id="card-p3a">
-        <div class="card-lock">🔒</div>
-        <div class="card-phase">Phase 3</div>
-        <div class="card-title">Sandbox</div>
-        <div class="card-desc">Beide Spiele gleichzeitig</div>
-      </div>
+      <button class="share-btn" data-share="3" onclick="toggleShare(3)" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
     </div>
   </div>
-  </div><!-- /.ov-main -->
-
-  <div id="score-widget">
-    <div class="sw-title">Punkte</div>
-    <div class="sw-row" id="sw-row-p1">
-      <span class="sw-label">Phase 1</span>
-      <span class="sw-val" id="sw-p1">0</span>
-      <span class="sw-check">✓</span>
-    </div>
-    <div class="sw-row" id="sw-row-q1">
-      <span class="sw-label">Quiz 1</span>
-      <span class="sw-val" id="sw-q1">0</span>
-      <span class="sw-check">✓</span>
-    </div>
-    <div class="sw-row" id="sw-row-p2">
-      <span class="sw-label">Phase 2</span>
-      <span class="sw-val" id="sw-p2">0</span>
-      <span class="sw-check">✓</span>
-    </div>
-    <div class="sw-row" id="sw-row-q2">
-      <span class="sw-label">Quiz 2</span>
-      <span class="sw-val" id="sw-q2">0</span>
-      <span class="sw-check">✓</span>
-    </div>
-    <div class="sw-row">
-      <span class="sw-label">Phase 3</span>
-      <span class="sw-val" id="sw-p3">0</span>
-    </div>
-    <div class="sw-divider"></div>
-    <div class="sw-total"><span id="score-total">0 / 414</span><span class="sw-pkt">Pkt</span></div>
-  </div><!-- /#score-widget -->
-
-  </div><!-- /.ov-layout -->
+  <div class="ov-foot">
+    <span class="back-link" onclick="resetAll()">Alles zurücksetzen</span>
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════ PHASE 1 INTRO -->
@@ -953,7 +663,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
     <!-- LINKS: Was ist RL? -->
     <div class="intro-card">
       <h2>Was ist Reinforcement Learning?</h2>
-      <img src="Info graphik.png" alt="Reinforcement Learning Infografik" style="width:100%;border-radius:8px;margin:14px 0 12px;">
+      <img src="infografik.png" alt="Reinforcement Learning Infografik" style="width:100%;border-radius:8px;margin:14px 0 12px;">
       <ol class="rl-steps">
         <li><strong>Beobachten</strong> — Die KI sieht den aktuellen Zustand der Umgebung.</li>
         <li><strong>Handeln</strong> — Sie wählt eine Aktion. Am Anfang geschieht das zufällig.</li>
@@ -968,7 +678,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
       <p>Du schlüpfst in die Rolle einer KI, die gerade trainiert wird. Du siehst Zustände und musst Aktionen wählen — ohne zu wissen, wofür du eigentlich trainiert wirst.</p>
       <p style="margin-top:10px;">KIs denken nicht wie Menschen. Sie kennen keine Regeln und keine Zusammenhänge — nur: was wurde belohnt, was wurde bestraft.</p>
       <div class="highlight-box">
-        <strong>Dein Ziel:</strong> Trainiere die KI, bis sie eine Gewinnrate von über 2,5 : 1 erreicht — dann schaltest du Phase 2 frei.
+        <strong>Dein Ziel:</strong> Trainiere die KI, bis sie eine Gewinnrate von über 2,5 : 1 erreicht.
       </div>
       <button class="btn btn-primary" onclick="enterTraining()" style="width:100%;padding:13px;font-size:1rem;margin-top:14px;">Trainingsphase starten</button>
     </div>
@@ -978,11 +688,6 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
 <!-- ══════════════════════════════════════════════════ PHASE 1 TRAIN -->
 <div id="screen-p1-train" class="screen" style="position:relative">
-  <div class="score-badge" id="badge-p1">
-    <span id="badge-p1-val">0 Pkt</span>
-    <button class="score-badge-i" onclick="toggleBadgeInfo('p1')">i</button>
-    <div class="score-badge-popup" id="badge-info-p1">Entdeckte Kanten im Training.<br>Max. 100 Pkt bei 80 % Coverage.</div>
-  </div>
   <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
   <div class="game-panel">
     <div class="game-header">
@@ -1018,8 +723,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
     </div>
     <div class="controls">
       <button class="btn btn-secondary" id="p1-btn-new" onclick="startGame()">Neue Partie</button>
-      <button class="btn btn-finish" id="p1-btn-finish">Training beenden</button>
-    </div>
+          </div>
     <!-- Ab der 2. Trainings-Partie sichtbar (updateP1Stats) -->
     <div class="train-hint" id="p1-train-hint" hidden>
       🤖 <b>Du hast keine Ahnung, was du gerade machst?</b> Richtig! Du bist eine KI und wirst gerade trainiert.
@@ -1028,48 +732,8 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════ PHASE 2 INTRO -->
-<div id="screen-p2-intro" class="screen" style="position:relative">
-  <div class="score-badge" id="badge-q1">
-    <span id="badge-q1-val">0 / 40 Pkt</span>
-    <button class="score-badge-i" onclick="toggleBadgeInfo('q1')">i</button>
-    <div class="score-badge-popup" id="badge-info-q1">+10 pro richtiger Option.<br>+20 Bonus wenn beide richtig<br>und keine falsche gewählt.</div>
-  </div>
-  <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
-  <div class="intro-card">
-    <h2>Phase 2 — Anwendung des Gelernten</h2>
-    <p>Du wurdest erfolgreich trainiert und bist nun bereit für den Einsatz.</p>
-    <p><strong>Aber wofür wurdest du eigentlich trainiert?</strong></p>
-    <p style="margin-top:8px;font-size:.85rem;">Wähle aus, <strong>wofür du glaubst trainiert worden zu sein</strong>:</p>
-    <div class="quiz-grid" id="quiz-grid"></div>
-    <div class="quiz-feedback" id="quiz-feedback" style="display:none;"></div>
-    <div class="quiz-actions">
-      <button class="btn btn-secondary" id="quiz-check-btn" onclick="checkQuiz()">Überprüfen</button>
-      <button class="btn btn-primary" id="quiz-next-btn" onclick="onQuizPassed()" style="display:none;">Weiter →</button>
-    </div>
-  </div>
-</div>
-
-<!-- ════════════════════════════════════════════════ PHASE 2 SELECT -->
-<div id="screen-p2-select" class="screen">
-  <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
-  <div class="intro-card" style="text-align:center;">
-    <h2>Jetzt kannst du dein erlerntes Verhalten testen</h2>
-    <p>Wähle ein Szenario:</p>
-    <div style="display:flex;gap:16px;margin-top:18px;flex-wrap:wrap;justify-content:center;">
-      <button class="btn btn-primary" style="min-width:160px;padding:14px;" onclick="enterP2Brett()">Umgebung A</button>
-      <button class="btn btn-primary" style="min-width:160px;padding:14px;background:#7c3aed;" onclick="enterP2Alien()">Umgebung B</button>
-    </div>
-  </div>
-</div>
-
 <!-- ════════════════════════════════════════════════ PHASE 2 BRETT -->
 <div id="screen-p2-brett" class="screen" style="position:relative">
-  <div class="score-badge" id="badge-p2brett">
-    <span id="badge-p2brett-val">0 Pkt</span>
-    <button class="score-badge-i" onclick="toggleBadgeInfo('p2brett')">i</button>
-    <div class="score-badge-popup" id="badge-info-p2brett">+10 pro Sieg über gelerntem Weg (max. 5×).<br>−5 bei Verlust über nicht gelerntem Weg (max. 3×).</div>
-  </div>
   <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
   <div class="brett-panel">
     <div class="status thinking" id="p2brett-status">Bereit…</div>
@@ -1097,11 +761,6 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
 <!-- ════════════════════════════════════════════════ PHASE 2 ALIEN -->
 <div id="screen-p2-alien" class="screen" style="position:relative">
-  <div class="score-badge" id="badge-p2alien">
-    <span id="badge-p2alien-val">0 Pkt</span>
-    <button class="score-badge-i" onclick="toggleBadgeInfo('p2alien')">i</button>
-    <div class="score-badge-popup" id="badge-info-p2alien">+10 pro Sieg über gelerntem Weg (max. 5×).<br>−5 bei Verlust über nicht gelerntem Weg (max. 3×).</div>
-  </div>
   <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
   <div class="game-panel">
     <!-- Linke Spalte: Szenenbild + Titeloverlay -->
@@ -1147,14 +806,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
   <div class="sb-topbar">
     <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
     <h2>Sandbox</h2>
-    <div style="display:flex; align-items:center; gap:10px; margin-left:auto;">
-      <div class="score-badge" id="badge-p3" style="position:relative; top:auto; right:auto;">
-        <span id="badge-p3-val">0 Pkt</span>
-        <button class="score-badge-i" onclick="toggleBadgeInfo('p3')">i</button>
-        <div class="score-badge-popup" id="badge-info-p3">+2 pro entdecktem Knoten<br>(Brett- + Alien-Ansicht).<br>+20 Bonus wenn alle 42 gefunden.</div>
-      </div>
-      <button class="btn btn-danger" onclick="showWin2()" style="white-space:nowrap;"><span class="sb-beenden-long">Simulation </span>Beenden</button>
-    </div>
+    <span class="back-link" style="margin:0 0 0 auto" onclick="document.getElementById('sandbox-intro-dialog').showModal()">Erklärung</span>
   </div>
 
   <!-- Mobile Tab-Bar (nur auf kleinen Screens sichtbar) -->
@@ -1256,42 +908,6 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 
 </div>
 
-<!-- ══════════════════════════════════════════════════ P3-QUIZ -->
-<div id="screen-p3-quiz" class="screen" style="position:relative">
-  <div class="score-badge" id="badge-q2">
-    <span id="badge-q2-val">0 / 70 Pkt</span>
-    <button class="score-badge-i" onclick="toggleBadgeInfo('q2')">i</button>
-    <div class="score-badge-popup" id="badge-info-q2">+10 pro richtiger Erstantwort.<br>+20 Bonus wenn alle 5 Fragen korrekt.</div>
-  </div>
-  <span class="back-link" onclick="showScreen('screen-overview')">← Übersicht</span>
-  <div class="intro-card">
-    <div style="font-size:.75rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:12px;" id="p3q-progress">Frage 1 / 5</div>
-    <h2 id="p3q-text" style="font-size:1.05rem;line-height:1.45;margin-bottom:16px;"></h2>
-    <div class="quiz-grid" id="p3q-grid"></div>
-    <div class="quiz-feedback" id="p3q-feedback" style="display:none;"></div>
-    <div class="quiz-actions">
-      <button class="btn btn-primary" id="p3q-next-btn" onclick="p3QuizNext()" style="display:none;">Weiter →</button>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════ SCORE MODAL (nur Mobile) -->
-<dialog id="score-modal">
-  <h3>Punkte</h3>
-  <div style="margin-top:14px;">
-    <div class="sw-row" id="sm-row-p1"><span class="sw-label">Phase 1</span><span class="sw-val" id="sm-p1">—</span><span class="sw-check">✓</span></div>
-    <div class="sw-row" id="sm-row-q1"><span class="sw-label">Quiz 1</span><span class="sw-val" id="sm-q1">—</span><span class="sw-check">✓</span></div>
-    <div class="sw-row" id="sm-row-p2"><span class="sw-label">Phase 2</span><span class="sw-val" id="sm-p2">—</span><span class="sw-check">✓</span></div>
-    <div class="sw-row" id="sm-row-q2"><span class="sw-label">Quiz 2</span><span class="sw-val" id="sm-q2">—</span><span class="sw-check">✓</span></div>
-    <div class="sw-row"><span class="sw-label">Phase 3</span><span class="sw-val" id="sm-p3">—</span></div>
-    <hr class="sw-divider">
-    <div class="sw-total"><span id="sm-score-total">0 / 414</span><span class="sw-pkt">Pkt</span></div>
-  </div>
-  <div class="dialog-btns" style="margin-top:18px;">
-    <button class="btn btn-primary" onclick="document.getElementById('score-modal').close()">Schließen</button>
-  </div>
-</dialog>
-
 <!-- ════════════════════════════════════════ SANDBOX INTRO DIALOG -->
 <dialog id="sandbox-intro-dialog">
   <h3>Sandbox — Freies Erkunden</h3>
@@ -1310,39 +926,8 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
       <div>Lass den <strong>Computer alleine spielen</strong> oder stelle beide Seiten auf Mensch, um gegen jemanden zu spielen.</div>
     </div>
   </div>
-  <div class="sb-intro-goal">
-    Punkte bekommst du für jeden <strong>neu entdeckten Knoten</strong> im Baum — es gibt 42 davon.
-  </div>
   <div class="dialog-btns">
     <button class="btn btn-primary" id="sb-intro-ok">Los geht's!</button>
-  </div>
-</dialog>
-
-<!-- ════════════════════════════════════════════════════ DIALOG -->
-<dialog id="unlock-dialog">
-  <h3>Training abschließen?</h3>
-  <p>Die KI hat gelernt — aber ist sie bereit für den Einsatz? Schalte Phase 2 frei und beweise es.</p>
-  <div class="dialog-stats">
-    <div class="dialog-stat">
-      <div class="dialog-stat-val win" id="unlock-rate-display">—</div>
-      <div class="dialog-stat-lbl">Gewinnrate</div>
-    </div>
-    <div class="dialog-stat">
-      <div class="dialog-stat-val" id="unlock-coverage-pct" style="color:var(--accent)">0 %</div>
-      <div class="dialog-stat-lbl">Kanten gelernt</div>
-    </div>
-    <div class="dialog-stat">
-      <div class="dialog-stat-val" id="unlock-coverage-abs" style="color:var(--muted); font-size:.95rem;">0 / 0</div>
-      <div class="dialog-stat-lbl">Kanten absolut</div>
-    </div>
-    <div class="dialog-stat">
-      <div class="dialog-stat-val" id="unlock-p1-score" style="color:var(--accent)">0 / 100</div>
-      <div class="dialog-stat-lbl">Phase 1 Pkt</div>
-    </div>
-  </div>
-  <div class="dialog-btns">
-    <button class="btn btn-secondary" id="dlg-cancel">Weiter trainieren</button>
-    <button class="btn btn-primary" id="dlg-confirm">Phase 2 freischalten</button>
   </div>
 </dialog>
 
@@ -1366,91 +951,15 @@ function el(name) {
 }
 
 function showScreen(id) {
-  if (id !== 'screen-p3-sandbox') {
-    const cw = document.getElementById('companion-widget');
-    if (cw && cw.classList.contains('sb-companion-inline')) {
-      cw.classList.remove('sb-companion-inline');
-      document.body.insertBefore(cw, document.body.firstChild);
-    }
-  }
+  if (id !== 'screen-p3-sandbox' && sbAITimeoutId) { clearTimeout(sbAITimeoutId); sbAITimeoutId = null; }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.body.dataset.screen = id;
-  if (id === 'screen-overview') {
-    const wasLocked = simState.p2Locked;
-    if (simState.p2BrettPlayed && simState.p2AlienPlayed && !simState.p2Locked) {
-      simState.p2Locked = true; saveSimState();
-    }
-    updateScoreDisplay();
-    if (!wasLocked && simState.p2Locked) setTimeout(showWin1, 120);
-  }
-}
-
-function p2CardClick(game) {
-  if (!simState.quizDone) return;
-  if (game === 'brett') enterP2Brett();
-  else enterP2Alien();
-}
-
-function junctionClick() {
-  if (!simState.phase2Unlocked) return;
-  if (simState.quizDone) {
-    buildQuizReview();
-    showScreen('screen-p2-intro');
-    return;
-  }
-  quizSelected.clear();
-  buildQuiz();
-  document.getElementById('quiz-feedback').style.display = 'none';
-  document.getElementById('quiz-check-btn').style.display = '';
-  document.getElementById('quiz-next-btn').style.display = 'none';
-  showScreen('screen-p2-intro');
-}
-
-function buildQuizReview() {
-  const grid = document.getElementById('quiz-grid');
-  grid.innerHTML = '';
-  QUIZ_OPTIONS.slice().sort(() => Math.random() - 0.5).forEach(opt => {
-    const btn = document.createElement('button');
-    btn.className = 'quiz-opt' + (opt.correct ? ' correct' : '');
-    btn.textContent = opt.text;
-    btn.disabled = true;
-    grid.appendChild(btn);
-  });
-  const fb = document.getElementById('quiz-feedback');
-  fb.style.display = '';
-  fb.className = 'quiz-feedback neutral';
-  fb.textContent = 'Du als gelernte KI wirst nun in 2 Umgebungen geworfen — mal schauen, ob dein Training sich ausgezahlt hat.';
-  document.getElementById('quiz-check-btn').style.display = 'none';
-  const nextBtn = document.getElementById('quiz-next-btn');
-  nextBtn.style.display = '';
-  nextBtn.textContent = 'Schließen';
-  nextBtn.onclick = () => { nextBtn.onclick = onQuizPassed; showScreen('screen-overview'); };
-}
-
-function onQuizPassed() {
-  showScreen('screen-overview');
-  setTimeout(waterfallUnlockP2, 80);
-}
-
-function waterfallUnlockP2() {
-  const jbox = document.getElementById('junction-p2');
-  if (jbox) { jbox.classList.remove('quiz-ready'); jbox.classList.add('quiz-done'); }
-  function unlockCard(id, delay) {
-    setTimeout(() => {
-      const c = document.getElementById(id);
-      c.classList.remove('locked');
-      c.classList.add('unlocked', 'waterfall-unlock');
-      const lockEl = c.querySelector('.card-lock');
-      if (lockEl) lockEl.style.display = 'none';
-      setTimeout(() => c.classList.remove('waterfall-unlock'), 600);
-    }, delay);
-  }
-  unlockCard('card-p2-brett', 150);
-  unlockCard('card-p2-alien', 450);
+  if (id === 'screen-overview') updateOverview();
 }
 
 function enterTraining() {
+  if (!phaseUsable(1)) return;
   currentGameContext = 'p1-train';
   learningFrozen = false;
   showScreen('screen-p1-train');
@@ -1459,7 +968,7 @@ function enterTraining() {
 }
 
 function enterP2Brett() {
-  if (!simState.phase2Unlocked) return;
+  if (!phaseUsable(2)) return;
   currentGameContext = 'p2-brett';
   learningFrozen = true;
   showScreen('screen-p2-brett');
@@ -1469,7 +978,7 @@ function enterP2Brett() {
 }
 
 function enterP2Alien() {
-  if (!simState.phase2Unlocked) return;
+  if (!phaseUsable(2)) return;
   currentGameContext = 'p2-alien';
   learningFrozen = true;
   if (!alienSpritesLoaded) loadAlienSprites();
@@ -1478,119 +987,97 @@ function enterP2Alien() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// PHASEN-FREIGABE (MPSkills-Raum)
+// ═══════════════════════════════════════════════════════════════════
+// Im Raum bekommt die Seite ?raum=lehrer bzw. ?raum=schueler (tool.js
+// ist die Gegenseite):
+//   hinein  { type: 'ry:cmd', phases: [1, 2] }   was die Klasse darf
+//   heraus  { type: 'ry:ready' }                 Seite steht
+//           { type: 'ry:phases', phases: [...] } Lehrkraft teilt/entzieht
+// Die Lehrkraft sieht immer alle Phasen und teilt sie mit dem Schalter
+// unter der Phase. Die Klasse sieht nicht geteilte Phasen gesperrt.
+// Allein geöffnet (ohne ?raum=) und im Schaufenster (?demo=1) ist alles
+// offen.
+
+const ROOM = (() => { const r = new URLSearchParams(location.search).get('raum'); return r === 'lehrer' || r === 'schueler' ? r : null; })();
+const TEACHER = ROOM === 'lehrer';
+const STUDENT = ROOM === 'schueler';
+const DEMO    = new URLSearchParams(location.search).get('demo') === '1';
+let classPhases = ROOM ? null : [1, 2, 3];   // null = noch keine Nachricht aus dem Raum
+
+const SCREEN_PHASE = {
+  'screen-p1-intro': 1, 'screen-p1-train': 1,
+  'screen-p2-brett': 2, 'screen-p2-alien': 2,
+  'screen-p3-sandbox': 3
+};
+
+const isShared    = n => !!classPhases && classPhases.includes(n);
+const phaseUsable = n => !STUDENT || isShared(n);
+
+function sendUp(msg) {
+  if (window.parent === window) return;
+  try { window.parent.postMessage(msg, location.origin); } catch (e) { /* Rahmen weg */ }
+}
+
+function openPhase(n, env) {
+  if (!phaseUsable(n)) return;
+  if (n === 1) showScreen('screen-p1-intro');
+  else if (n === 2) { if (env === 'alien') enterP2Alien(); else enterP2Brett(); }
+  else enterSandbox();
+}
+
+function toggleShare(n) {
+  if (!TEACHER || !classPhases) return;
+  const next = isShared(n) ? classPhases.filter(x => x !== n) : classPhases.concat(n);
+  setClassPhases(next, false);
+}
+
+function setClassPhases(list, fromServer) {
+  classPhases = [1, 2, 3].filter(n => list.includes(n));
+  if (!fromServer) sendUp({ type: 'ry:phases', phases: classPhases });
+  // Schüler: eine Phase wurde entzogen, während man drin ist → zurück.
+  const cur = SCREEN_PHASE[document.body.dataset.screen];
+  if (cur && !phaseUsable(cur)) {
+    if (aiTimeoutId)      { clearTimeout(aiTimeoutId); aiTimeoutId = null; }
+    if (alienAITimeoutId) { clearTimeout(alienAITimeoutId); alienAITimeoutId = null; }
+    document.querySelectorAll('dialog[open]').forEach(d => d.close());
+    showScreen('screen-overview');
+  }
+  updateOverview();
+}
+
+function updateOverview() {
+  document.querySelectorAll('.phase-card[data-phase]').forEach(c => {
+    const open = phaseUsable(+c.dataset.phase);
+    c.classList.toggle('locked', !open);
+    c.classList.toggle('unlocked', open);
+  });
+  document.getElementById('card-p1').classList.toggle('completed', stats.w / Math.max(stats.l, 1) > 2.5);
+  document.getElementById('card-p2-brett').classList.toggle('completed', brettStats.runs > 0);
+  document.getElementById('card-p2-alien').classList.toggle('completed', alienStats.runs > 0);
+  document.querySelectorAll('.share-btn').forEach(b => {
+    const n = +b.dataset.share, on = isShared(n);
+    b.classList.toggle('is-on', on);
+    b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    b.querySelector('span').textContent = on ? 'Mit der Klasse geteilt' : 'Mit der Klasse teilen';
+    b.title = on ? 'Phase ' + n + ' ist geteilt – antippen zum Entziehen' : 'Phase ' + n + ' mit der Klasse teilen';
+  });
+  const wait = document.getElementById('ov-wait');
+  if (wait) {
+    const show = STUDENT && (!classPhases || !classPhases.length);
+    wait.classList.toggle('show', show);
+    wait.textContent = classPhases ? 'Deine Lehrkraft hat noch keine Phase freigegeben.' : 'Einen Moment …';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // SIMULATOR STATE
 // ═══════════════════════════════════════════════════════════════════
 
-const SIM_KEY = 'rl_sim_state';
-let simState = { phase2Unlocked: false, p2BrettPlayed: false, p2AlienPlayed: false, p2Locked: false, quizDone: false, p3QuizDone: false };
-
-let score = {};
-let win1Applied = false;
-const SCORE_DEF = { total:0, p1:0, quiz1:0, p2brett:0, p2alien:0, quiz2:0, p3:0,
-                    _p2bWins:0, _p2aWins:0, _p2bPenalties:0, _p2aPenalties:0, _p3Bonus:false };
-
+// Alles, was sich die Seite merkt, liegt im Gerät unter „ry.“ — getrennt
+// vom Spiel im GameHub, das dieselbe Herkunft hat.
 let gamePathLearned  = true;
 let alienPathLearned = true;
-
-const saveScore = () => localStorage.setItem('rl_score', JSON.stringify(score));
-function loadScore() {
-  try {
-    const saved = JSON.parse(localStorage.getItem('rl_score') || '{}');
-    score = {};
-    Object.keys(SCORE_DEF).forEach(k => { score[k] = saved[k] !== undefined ? saved[k] : SCORE_DEF[k]; });
-  } catch { score = { ...SCORE_DEF }; }
-}
-function recalcScore() {
-  score.total = score.p1 + score.quiz1 + score.p2brett + score.p2alien + score.quiz2 + score.p3;
-  saveScore();
-  updateScoreDisplay();
-  updateCompanion();
-}
-
-function updateCompanion() {
-  if (typeof gd === 'undefined' || !gd) return;
-  let crack = 0;
-  if (gd.creature) {
-    crack = 4;
-  } else if (simState.p2Locked || (simState.p2BrettPlayed && simState.p2AlienPlayed)) {
-    crack = 4;
-  } else if (simState.phase2Unlocked) {
-    crack = 3;
-  } else {
-    crack = Math.min(3, Math.floor(score.p1 / 34));
-  }
-  let liveGrowth = null;
-  if (gd.creature) {
-    const sd2 = loadShopData();
-    const p2total  = (score.p2brett || 0) + (score.p2alien || 0);
-    const part1    = (score.p1 || 0) + (score.quiz1 || 0) + p2total;    // Win1-Scores
-    const maxP3dyn = typeof T_NODES !== 'undefined' ? T_NODES.length * 2 + 20 : 50;
-    const part3    = (score.p3 || 0) + (score.quiz2 || 0);              // Win2-Scores
-    let contrib = win1Applied
-        ? computeSessionGrowth(part3, maxP3dyn + 70)
-        : computeSessionGrowth(part1, 240) + computeSessionGrowth(part3, maxP3dyn + 70);
-    if (sd2.wachstumsBooster) contrib *= 2;
-    liveGrowth = Math.min(gd.growth + contrib, 21);
-  }
-  updateGameEggDisplay(gd, crack, false, liveGrowth);
-
-  const sd = loadShopData();
-  const activeIcon = sd.wachstumsBooster ? '⚡' : sd.coinsx3 ? '🎰' : sd.lockmittel ? '🧲' : sd.glucksklee ? '🍀' : null;
-  const iconEl = document.getElementById('companion-item-icon');
-  if (iconEl) {
-    iconEl.textContent = activeIcon ?? '';
-    iconEl.classList.toggle('active', !!activeIcon);
-  }
-  renderBoostIndicators('ry-boost-bar', gameId);
-}
-
-function loadSimState() {
-  try { Object.assign(simState, JSON.parse(localStorage.getItem(SIM_KEY) || '{}')); } catch {}
-}
-function saveSimState() { localStorage.setItem(SIM_KEY, JSON.stringify(simState)); }
-
-function updateOverview() {
-  const p1   = document.getElementById('card-p1');
-  const p2b  = document.getElementById('card-p2-brett');
-  const p2a  = document.getElementById('card-p2-alien');
-  const jbox = document.getElementById('junction-p2');
-  const p3   = document.getElementById('card-p3a');
-
-  p1.classList.toggle('completed', simState.phase2Unlocked);
-
-  if (jbox) {
-    jbox.classList.toggle('locked',     !simState.phase2Unlocked);
-    jbox.classList.toggle('quiz-ready', simState.phase2Unlocked && !simState.quizDone);
-    jbox.classList.toggle('quiz-done',  simState.quizDone);
-  }
-
-  [p2b, p2a].forEach(c => {
-    const locked = !simState.quizDone;
-    c.classList.toggle('locked',   locked);
-    c.classList.toggle('unlocked', !locked);
-    const lockEl = c.querySelector('.card-lock');
-    if (lockEl) lockEl.style.display = locked ? '' : 'none';
-  });
-  p2b.classList.toggle('completed', simState.p2BrettPlayed);
-  p2a.classList.toggle('completed', simState.p2AlienPlayed);
-
-  const jbox3 = document.getElementById('junction-p3');
-  const p3QuizReady = simState.p2BrettPlayed && simState.p2AlienPlayed;
-  if (jbox3) {
-    jbox3.classList.toggle('locked',     !p3QuizReady);
-    jbox3.classList.toggle('quiz-ready', p3QuizReady && !simState.p3QuizDone);
-    jbox3.classList.toggle('quiz-done',  simState.p3QuizDone);
-  }
-
-  if (p3) {
-    const p3Unlocked = p3QuizReady && simState.p3QuizDone;
-    p3.classList.toggle('locked',   !p3Unlocked);
-    p3.classList.toggle('unlocked', p3Unlocked);
-    const lockEl = p3.querySelector('.card-lock');
-    if (lockEl) lockEl.style.display = p3Unlocked ? 'none' : '';
-    p3.onclick = p3Unlocked ? enterSandbox : null;
-  }
-}
 
 // ═══════════════════════════════════════════════════════════════════
 // BOARD MODEL
@@ -1714,8 +1201,8 @@ function computeAIMove(board) {
 
 const W_DEF = 1.0, W_MIN = 0.15, W_MAX = 3.0, W_DELTA = 0.3, GAMMA = 0.85;
 
-let weights = JSON.parse(localStorage.getItem('bsch_w') || '{}');
-let stats   = JSON.parse(localStorage.getItem('bsch_s') || '{"w":0,"l":0}');
+let weights = JSON.parse(localStorage.getItem('ry.bsch_w') || '{}');
+let stats   = JSON.parse(localStorage.getItem('ry.bsch_s') || '{"w":0,"l":0}');
 
 function wKey(bd, from, to) {
   const { canon, mirrored } = canonicalize(bd);
@@ -1733,8 +1220,8 @@ function getW(bd, from, to) {
   }
   return W_DEF;
 }
-const saveW = () => localStorage.setItem('bsch_w', JSON.stringify(weights));
-const saveS = () => localStorage.setItem('bsch_s', JSON.stringify(stats));
+const saveW = () => localStorage.setItem('ry.bsch_w', JSON.stringify(weights));
+const saveS = () => localStorage.setItem('ry.bsch_s', JSON.stringify(stats));
 
 function applyDiscountedRewards(history, won) {
   const n = history.length;
@@ -1963,19 +1450,11 @@ function finish(winner) {
   renderResultButtons(humanMoveHistory, humanWon);
 
   if (isBrettGame()) {
-    simState.p2BrettPlayed = true; saveSimState(); updateOverview(); updateScoreDisplay();
     brettStats.runs++;
     if (humanWon) brettStats.wins++; else brettStats.losses++;
     saveBrettStats();
     updateBrettStatsDisplay();
     saveBrettDiscovered();
-    if (!simState.p2Locked) {
-      if (humanWon && gamePathLearned && score._p2bWins < 5) {
-        score.p2brett += 10; score._p2bWins++; recalcScore();
-      } else if (!humanWon && !gamePathLearned && score._p2bPenalties < 3) {
-        score.p2brett -= 5; score._p2bPenalties++; recalcScore();
-      }
-    }
   }
 }
 
@@ -2194,77 +1673,6 @@ function updateP1Stats() {
   if (svl) svl.textContent = stats.l;
   const hint = document.getElementById('p1-train-hint');
   if (hint) hint.hidden = stats.w + stats.l < 2;
-  if (!simState.phase2Unlocked) {
-    score.p1 = Math.round(Math.min(Object.keys(weights).length / totalHumanEdges / 0.8, 1) * 100);
-    recalcScore();
-  }
-}
-
-function openScoreModal() {
-  ['p1','q1','p2','q2','p3'].forEach(k => {
-    const src = document.getElementById('sw-' + k);
-    const dst = document.getElementById('sm-' + k);
-    if (src && dst) dst.textContent = src.textContent;
-  });
-  const total = document.getElementById('score-total');
-  const smTotal = document.getElementById('sm-score-total');
-  if (total && smTotal) smTotal.textContent = total.textContent;
-  ['p1','q1','p2','q2'].forEach(k => {
-    const srcRow = document.getElementById('sw-row-' + k);
-    const dstRow = document.getElementById('sm-row-' + k);
-    if (srcRow && dstRow) dstRow.classList.toggle('score-locked', srcRow.classList.contains('score-locked'));
-  });
-  document.getElementById('score-modal').showModal();
-}
-
-function updateScoreDisplay() {
-  const total  = score.total;
-  const p2     = score.p2brett + score.p2alien;
-  const maxP3  = T_NODES.length * 2 + 20;
-  const maxTot = 100 + 40 + 100 + 70 + maxP3;
-  const widget = document.getElementById('score-widget');
-  if (widget) widget.classList.toggle('visible', total > 0 || score.p1 > 0);
-  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-  set('score-total',      total       + ' / ' + maxTot);
-  set('ov-score-btn',     total       + ' / ' + maxTot + ' Pkt');
-  set('sw-p1',            score.p1    + ' / 100');
-  set('sw-q1',            score.quiz1 + ' / 40');
-  set('sw-p2',            p2          + ' / 100');
-  set('sw-q2',            score.quiz2 + ' / 70');
-  set('sw-p3',            score.p3    + ' / ' + maxP3);
-  set('badge-p1-val',     score.p1    + ' / 100 Pkt');
-  set('badge-p2brett-val',p2          + ' / 100 Pkt');
-  set('badge-p2alien-val',p2          + ' / 100 Pkt');
-  set('badge-p3-val',     score.p3    + ' / ' + maxP3 + ' Pkt');
-  set('badge-q1-val',     score.quiz1 + ' / 40 Pkt');
-  set('badge-q2-val',     score.quiz2 + ' / 70 Pkt');
-  const locks = { p1: simState.phase2Unlocked, q1: simState.quizDone, p2: simState.p2Locked, q2: simState.p3QuizDone };
-  Object.entries(locks).forEach(([k, locked]) => {
-    const row = document.getElementById('sw-row-' + k);
-    if (row) row.classList.toggle('score-locked', !!locked);
-  });
-  const LOCK_SUFFIX = '<br><span style="opacity:.75">Phase abgeschlossen — keine weiteren Punkte.</span>';
-  const BADGE_BASE = {
-    'p1':      'Entdeckte Kanten im Training.<br>Max. 100 Pkt bei 80 % Coverage.',
-    'q1':      '+10 pro richtiger Option.<br>+20 Bonus wenn beide richtig<br>und keine falsche gewählt.',
-    'p2brett': '+10 pro Sieg über gelerntem Weg (max. 5×).<br>−5 bei Verlust über nicht gelerntem Weg (max. 3×).',
-    'p2alien': '+10 pro Sieg über gelerntem Weg (max. 5×).<br>−5 bei Verlust über nicht gelerntem Weg (max. 3×).',
-    'q2':      '+10 pro richtiger Erstantwort.<br>+20 Bonus wenn alle 5 Fragen korrekt.'
-  };
-  const badgeLocks = { 'p1': locks.p1, 'q1': locks.q1, 'p2brett': locks.p2, 'p2alien': locks.p2, 'q2': locks.q2 };
-  Object.entries(badgeLocks).forEach(([k, locked]) => {
-    const popup = document.getElementById('badge-info-' + k);
-    if (popup) popup.innerHTML = BADGE_BASE[k] + (locked ? LOCK_SUFFIX : '');
-  });
-}
-
-
-function toggleBadgeInfo(key) {
-  const popup = document.getElementById('badge-info-' + key);
-  if (!popup) return;
-  const wasOpen = popup.classList.contains('open');
-  document.querySelectorAll('.score-badge-popup.open').forEach(e => e.classList.remove('open'));
-  if (!wasOpen) popup.classList.add('open');
 }
 
 function updateNodeBadge(nodeId) {
@@ -2279,8 +1687,6 @@ function updateNodeBadge(nodeId) {
 
 function checkUnlockCondition() {
   const rate = stats.w / Math.max(stats.l, 1);
-  const btn  = document.getElementById('p1-btn-finish');
-  if (btn) btn.style.display = rate > 2.5 ? 'inline-block' : 'none';
   const fill  = document.getElementById('p1-winrate-fill');
   const ratio = document.getElementById('p1-winrate-ratio');
   const disp  = document.getElementById('p1-winrate');
@@ -2394,8 +1800,8 @@ let alienNodeId = 0, alienGameOver = false, alienResult = null, alienLastLosingE
 let alienAITimeoutId = null;
 let alienHumanMoveHistory = [];
 
-let brettStats = JSON.parse(localStorage.getItem('brett_p2_stats') || '{"runs":0,"wins":0,"losses":0}');
-const saveBrettStats = () => localStorage.setItem('brett_p2_stats', JSON.stringify(brettStats));
+let brettStats = JSON.parse(localStorage.getItem('ry.brett_p2_stats') || '{"runs":0,"wins":0,"losses":0}');
+const saveBrettStats = () => localStorage.setItem('ry.brett_p2_stats', JSON.stringify(brettStats));
 function updateBrettStatsDisplay() {
   const r = document.getElementById('p2brett-stat-runs');
   const w = document.getElementById('p2brett-stat-wins');
@@ -2405,8 +1811,8 @@ function updateBrettStatsDisplay() {
   if (l) l.textContent = brettStats.losses;
 }
 
-let alienStats = JSON.parse(localStorage.getItem('alien_stats') || '{"runs":0,"wins":0,"losses":0}');
-const saveAlienStats = () => localStorage.setItem('alien_stats', JSON.stringify(alienStats));
+let alienStats = JSON.parse(localStorage.getItem('ry.alien_stats') || '{"runs":0,"wins":0,"losses":0}');
+const saveAlienStats = () => localStorage.setItem('ry.alien_stats', JSON.stringify(alienStats));
 function updateAlienStatsDisplay() {
   const r = document.getElementById('p2alien-stat-runs');
   const w = document.getElementById('p2alien-stat-wins');
@@ -2416,8 +1822,8 @@ function updateAlienStatsDisplay() {
   if (l) l.textContent = alienStats.losses;
 }
 
-let sbStats = JSON.parse(localStorage.getItem('sandbox_stats') || '{"runs":0,"white":0,"black":0}');
-const saveSbStats = () => localStorage.setItem('sandbox_stats', JSON.stringify(sbStats));
+let sbStats = JSON.parse(localStorage.getItem('ry.sandbox_stats') || '{"runs":0,"white":0,"black":0}');
+const saveSbStats = () => localStorage.setItem('ry.sandbox_stats', JSON.stringify(sbStats));
 function updateSbStatsDisplay() {
   const r = document.getElementById('sb-stat-runs');
   const w = document.getElementById('sb-stat-white');
@@ -2625,19 +2031,11 @@ function doAlienMove(edge) {
       saveS(); checkUnlockCondition();
     }
     if (isAlienGame()) {
-      simState.p2AlienPlayed = true; saveSimState(); updateOverview(); updateScoreDisplay();
       alienStats.runs++;
       if (humanWon) alienStats.wins++; else alienStats.losses++;
       saveAlienStats();
       updateAlienStatsDisplay();
       saveAlienDiscovered();
-      if (!simState.p2Locked) {
-        if (humanWon && alienPathLearned && score._p2aWins < 5) {
-          score.p2alien += 10; score._p2aWins++; recalcScore();
-        } else if (!humanWon && !alienPathLearned && score._p2aPenalties < 3) {
-          score.p2alien -= 5; score._p2aPenalties++; recalcScore();
-        }
-      }
     }
     renderAlienScene();
     return;
@@ -2695,256 +2093,18 @@ function alienAIMove() {
   doAlienMove(chosen);
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// QUIZ
-// ═══════════════════════════════════════════════════════════════════
-
-const QUIZ_OPTIONS = [
-  { text: 'Brettspiel spielen',           correct: true  },
-  { text: 'Mit Aliens Kontakt aufnehmen', correct: true  },
-  { text: 'Autorennen fahren',            correct: false },
-  { text: 'TicTacToe spielen',            correct: false },
-  { text: 'Bilder erkennen',              correct: false },
-  { text: 'Text schreiben',               correct: false },
-  { text: 'Super Mario spielen',          correct: false },
-  { text: 'Wetter vorhersagen',           correct: false },
-];
-
-const quizSelected = new Set();
-
-function buildQuiz() {
-  const grid = document.getElementById('quiz-grid');
-  if (!grid) return;
-  const shuffled = QUIZ_OPTIONS.slice().sort(() => Math.random() - 0.5);
-  grid.innerHTML = '';
-  shuffled.forEach(opt => {
-    const btn = document.createElement('button');
-    btn.className = 'quiz-opt';
-    btn.textContent = opt.text;
-    btn.dataset.correct = opt.correct;
-    btn.addEventListener('click', () => {
-      if (btn.classList.contains('selected')) {
-        btn.classList.remove('selected');
-        quizSelected.delete(opt.text);
-      } else {
-        btn.classList.add('selected');
-        quizSelected.add(opt.text);
-      }
-    });
-    grid.appendChild(btn);
-  });
-}
-
-function checkQuiz() {
-  const fb   = document.getElementById('quiz-feedback');
-  const next = document.getElementById('quiz-next-btn');
-  fb.style.display = '';
-  fb.className = 'quiz-feedback ok';
-  fb.textContent = 'Du als gelernte KI wirst nun in 2 Umgebungen geworfen — mal schauen, ob dein Training sich ausgezahlt hat.';
-  if (!simState.quizDone) {
-    const opts = document.querySelectorAll('#quiz-grid .quiz-opt');
-    let correctCount = 0; let wrongCount = 0;
-    opts.forEach(btn => {
-      if (btn.classList.contains('selected')) {
-        if (btn.dataset.correct === 'true') correctCount++; else wrongCount++;
-      }
-    });
-    score.quiz1 += correctCount * 10;
-    if (correctCount === 2 && wrongCount === 0) score.quiz1 += 20;
-  }
-  simState.quizDone = true;
-  recalcScore();
-  saveSimState();
-  next.style.display = '';
-  document.getElementById('quiz-check-btn').style.display = 'none';
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// P3-QUIZ (sequential, 5 questions)
-// ═══════════════════════════════════════════════════════════════════
-
-const QUIZ_P3 = [
-  {
-    q: 'Wie wurde das Gelernte aus Phase 1 in den Umgebungen von Phase 2 dargestellt?',
-    opts: [
-      { text: 'Mit Pfeilen und grünen Kästen, die die bevorzugten Züge der KI zeigten', correct: true },
-      { text: 'Mit Zahlen, die den Score jedes Zugs anzeigten', correct: false },
-      { text: 'Mit roten Markierungen für schlechte Züge', correct: false },
-      { text: 'Die KI hat gar kein sichtbares Verhalten gezeigt', correct: false },
-    ],
-    explanation: 'Pfeile markierten die gewählten Züge, grüne Kästen hoben Stellungen hervor, in denen die KI aus ihrer Erfahrung gute Entscheidungen trifft.',
-  },
-  {
-    q: 'Warum wurde die KI für beide Umgebungen gleichermaßen trainiert?',
-    opts: [
-      { text: 'Beide Umgebungen haben exakt denselben Spielverlauf — nur die Darstellung ist anders', correct: true },
-      { text: 'Die KI hat durch das Training allgemein gelernt, Spiele zu spielen', correct: false },
-      { text: 'Die KI wurde zweimal trainiert — einmal pro Umgebung', correct: false },
-      { text: 'Zufall — das Training war nicht gezielt', correct: false },
-    ],
-    explanation: 'Das Alien-Spiel wurde gezielt so konstruiert, dass es exakt auf den Spielverlauf des Brettspiels passt. Die KI hat kein allgemeines Spielverständnis gelernt — sie funktioniert hier, weil die Umgebung extra dafür gebaut wurde.',
-  },
-  {
-    q: 'Beide Spiele haben denselben Spielverlauf — warum hat der Gegner beim Brettspiel 3 Zugmöglichkeiten, beim Alien-Spiel aber nur 2?',
-    opts: [
-      { text: 'Das Brettspiel ist symmetrisch: 2 der 3 Züge sind spiegelidentisch — einer davon fällt weg', correct: true },
-      { text: 'Die Regeln der Spiele sind doch unterschiedlich', correct: false },
-      { text: 'Beim Alien-Spiel fehlt ein Zug als Schwierigkeitsreduzierung', correct: false },
-      { text: 'Die KI hat einen Zug beim Alien-Spiel selbst blockiert', correct: false },
-    ],
-    explanation: 'Durch die Symmetrie des 3×3-Feldes sind gespiegelte Stellungen strategisch äquivalent. Das Alien-Spiel nutzt diese Symmetrie aus und fasst spiegelidentische Züge zusammen — daher sind es weniger sichtbare Optionen.',
-  },
-  {
-    q: 'Was hat die KI in Phase 1 wirklich gelernt?',
-    opts: [
-      { text: 'Welche Züge in welchen Stellungen langfristig zum Sieg führen', correct: true },
-      { text: 'Die expliziten Spielregeln auswendig', correct: false },
-      { text: 'Die optimale Strategie für jede Position (wie beim Minimax)', correct: false },
-      { text: 'Wie ein Mensch die Spiele beschreiben würde', correct: false },
-    ],
-    explanation: 'Die KI hat durch viele Partien gelernt, welche Stellungen gut und welche schlecht sind — ohne dass ihr jemand die Regeln erklärt hat. Das ist der Kern von Reinforcement Learning.',
-  },
-  {
-    q: 'Was unterscheidet Reinforcement Learning vom klassischen Lernen mit Beispieldaten?',
-    opts: [
-      { text: 'Die KI lernt durch Ausprobieren und bekommt erst am Ende der Partie Feedback', correct: true },
-      { text: 'RL braucht stets mehr Rechenleistung als andere Methoden', correct: false },
-      { text: 'RL funktioniert ausschließlich bei Brettspielen', correct: false },
-      { text: 'Es gibt keinen grundlegenden Unterschied', correct: false },
-    ],
-    explanation: 'Beim klassischen Lernen gibt es beschriftete Beispiele. Beim RL gibt es nur ein Ergebnis — Sieg oder Niederlage — und die KI muss selbst herausfinden, welche ihrer Entscheidungen dazu beigetragen haben.',
-  },
-];
-
-let p3QuizIdx = 0;
-let p3QuizAnswered = false;
-let p3ReviewMode = false;
-let p3QuizCorrectCount = 0;
-
-const saveP3Progress   = () => localStorage.setItem('p3_quiz_progress', JSON.stringify({ idx: p3QuizIdx, answered: p3QuizAnswered, correctCount: p3QuizCorrectCount }));
-const clearP3Progress  = () => localStorage.removeItem('p3_quiz_progress');
-function loadP3Progress() {
-  try {
-    const s = JSON.parse(localStorage.getItem('p3_quiz_progress') || 'null');
-    if (s && s.idx > 0) { p3QuizIdx = Math.min(s.idx, QUIZ_P3.length - 1); p3QuizAnswered = !!s.answered; p3QuizCorrectCount = s.correctCount || 0; return; }
-  } catch {}
-  p3QuizIdx = 0; p3QuizAnswered = false; p3QuizCorrectCount = 0;
-}
-
-function junctionP3Click() {
-  const ready = simState.p2BrettPlayed && simState.p2AlienPlayed;
-  if (!ready) return;
-  p3ReviewMode = simState.p3QuizDone;
-  if (p3ReviewMode) {
-    p3QuizIdx = 0; p3QuizAnswered = false; p3QuizCorrectCount = 0;
-  } else {
-    loadP3Progress();
-  }
-  showScreen('screen-p3-quiz');
-  renderP3Question();
-}
-
-function renderP3Question() {
-  const q = QUIZ_P3[p3QuizIdx];
-  const isLast = p3QuizIdx === QUIZ_P3.length - 1;
-  const frozen  = p3ReviewMode || p3QuizAnswered;
-  if (!p3QuizAnswered) p3QuizAnswered = p3ReviewMode;
-  document.getElementById('p3q-progress').textContent = p3ReviewMode
-    ? `Zusammenfassung — Frage ${p3QuizIdx + 1} / ${QUIZ_P3.length}`
-    : `Frage ${p3QuizIdx + 1} / ${QUIZ_P3.length}`;
-  document.getElementById('p3q-text').textContent = q.q;
-  const grid = document.getElementById('p3q-grid');
-  grid.innerHTML = '';
-  const shuffled = q.opts.slice().sort(() => Math.random() - 0.5);
-  shuffled.forEach(opt => {
-    const btn = document.createElement('button');
-    btn.className = 'quiz-opt' + (frozen && opt.correct ? ' correct' : '');
-    btn.textContent = opt.text;
-    if (frozen) {
-      btn.disabled = true;
-    } else {
-      btn.addEventListener('click', () => {
-        if (p3QuizAnswered) return;
-        p3QuizAnswered = true;
-        grid.querySelectorAll('.quiz-opt').forEach(b => {
-          const isCorrect = shuffled.find(o => o.text === b.textContent)?.correct;
-          if (isCorrect) b.classList.add('correct');
-        });
-        if (!opt.correct) btn.classList.add('wrong');
-        if (opt.correct) { if (!simState.p3QuizDone) { score.quiz2 += 10; recalcScore(); } p3QuizCorrectCount++; }
-        const fb = document.getElementById('p3q-feedback');
-        fb.textContent = q.explanation;
-        fb.className = 'quiz-feedback ' + (opt.correct ? 'ok' : 'err');
-        fb.style.display = '';
-        const nextBtn = document.getElementById('p3q-next-btn');
-        nextBtn.textContent = isLast ? 'Phase 3 freischalten →' : 'Weiter →';
-        nextBtn.style.display = '';
-        saveP3Progress();
-      });
-    }
-    grid.appendChild(btn);
-  });
-  const fb = document.getElementById('p3q-feedback');
-  const nextBtn = document.getElementById('p3q-next-btn');
-  if (frozen) {
-    fb.textContent = q.explanation;
-    fb.className = 'quiz-feedback neutral';
-    fb.style.display = '';
-    nextBtn.textContent = isLast ? (p3ReviewMode ? 'Schließen' : 'Phase 3 freischalten →') : 'Weiter →';
-    nextBtn.style.display = '';
-  } else {
-    fb.style.display = 'none';
-    nextBtn.style.display = 'none';
-  }
-}
-
-function p3QuizNext() {
-  p3QuizIdx++;
-  p3QuizAnswered = false;
-  if (p3QuizIdx >= QUIZ_P3.length) {
-    clearP3Progress();
-    if (p3ReviewMode) { showScreen('screen-overview'); return; }
-    if (p3QuizCorrectCount === QUIZ_P3.length && !simState.p3QuizDone) { score.quiz2 += 20; }
-    simState.p3QuizDone = true;
-    recalcScore();
-    saveSimState();
-    showScreen('screen-overview');
-    setTimeout(() => {
-      const jbox3 = document.getElementById('junction-p3');
-      if (jbox3) { jbox3.classList.remove('quiz-ready'); jbox3.classList.add('quiz-done'); }
-      const p3 = document.getElementById('card-p3a');
-      if (p3) {
-        p3.classList.remove('locked');
-        p3.classList.add('unlocked', 'waterfall-unlock');
-        const lockEl = p3.querySelector('.card-lock');
-        if (lockEl) lockEl.style.display = 'none';
-        p3.onclick = enterSandbox;
-        setTimeout(() => p3.classList.remove('waterfall-unlock'), 600);
-      }
-    }, 80);
-  } else {
-    saveP3Progress();
-    renderP3Question();
-  }
-}
-
 function resetAll(confirmed = false) {
-  if (!confirmed && !confirm('Alles zurücksetzen? Trainingsdaten und freigeschaltete Modi werden gelöscht.')) return;
+  if (!confirmed && !confirm('Alles zurücksetzen? Die Trainingsdaten auf diesem Gerät werden gelöscht.')) return;
   weights    = {};
   stats      = { w: 0, l: 0 };
   brettStats = { runs: 0, wins: 0, losses: 0 };
   alienStats = { runs: 0, wins: 0, losses: 0 };
   sbStats    = { runs: 0, white: 0, black: 0 };
-  simState   = { phase2Unlocked: false, p2BrettPlayed: false, p2AlienPlayed: false, p2Locked: false, quizDone: false, p3QuizDone: false };
   discoveredBrettNodes   = new Set([0]);
   discoveredAlienNodes   = new Set([0]);
   discoveredSandboxNodes = new Set([0]);
-  clearP3Progress();
-  saveW(); saveS(); saveBrettStats(); saveAlienStats(); saveSbStats(); saveSimState();
+  saveW(); saveS(); saveBrettStats(); saveAlienStats(); saveSbStats();
   saveBrettDiscovered(); saveAlienDiscovered(); saveSandboxDiscovered();
-  score = { ...SCORE_DEF };
-  saveScore();
-  updateScoreDisplay();
   updateP1Stats(); updateBrettStatsDisplay(); updateAlienStatsDisplay(); updateSbStatsDisplay();
   checkUnlockCondition();
   updateOverview();
@@ -2959,21 +2119,21 @@ let discoveredBrettNodes   = new Set([0]);
 let discoveredAlienNodes   = new Set([0]);
 let discoveredSandboxNodes = new Set([0]);
 
-const saveBrettDiscovered   = () => localStorage.setItem('brett_discovered',   JSON.stringify([...discoveredBrettNodes]));
-const saveAlienDiscovered   = () => localStorage.setItem('alien_discovered',   JSON.stringify([...discoveredAlienNodes]));
-const saveSandboxDiscovered = () => localStorage.setItem('sandbox_discovered', JSON.stringify([...discoveredSandboxNodes]));
+const saveBrettDiscovered   = () => localStorage.setItem('ry.brett_discovered',   JSON.stringify([...discoveredBrettNodes]));
+const saveAlienDiscovered   = () => localStorage.setItem('ry.alien_discovered',   JSON.stringify([...discoveredAlienNodes]));
+const saveSandboxDiscovered = () => localStorage.setItem('ry.sandbox_discovered', JSON.stringify([...discoveredSandboxNodes]));
 
 function loadDiscoveredNodes() {
   try {
-    const b = JSON.parse(localStorage.getItem('brett_discovered')   || '[0]');
+    const b = JSON.parse(localStorage.getItem('ry.brett_discovered')   || '[0]');
     discoveredBrettNodes   = new Set(b);
   } catch {}
   try {
-    const a = JSON.parse(localStorage.getItem('alien_discovered')   || '[0]');
+    const a = JSON.parse(localStorage.getItem('ry.alien_discovered')   || '[0]');
     discoveredAlienNodes   = new Set(a);
   } catch {}
   try {
-    const s = JSON.parse(localStorage.getItem('sandbox_discovered') || '[0]');
+    const s = JSON.parse(localStorage.getItem('ry.sandbox_discovered') || '[0]');
     discoveredSandboxNodes = new Set(s);
   } catch {}
   discoveredBrettNodes.add(0);
@@ -3691,18 +2851,10 @@ function sbFollowEdge(edge) {
   }
   sbNodeId = edge.to;
   sbPath.push(edge.to);
-  const isNewSb    = !discoveredSandboxNodes.has(edge.to);
-  const isNewBrett = !discoveredBrettNodes.has(edge.to);
-  const isNewAlien = !discoveredAlienNodes.has(edge.to);
   discoveredSandboxNodes.add(edge.to);
   discoveredBrettNodes.add(edge.to);
   discoveredAlienNodes.add(edge.to);
   saveBrettDiscovered(); saveAlienDiscovered();
-  const pts = (isNewBrett ? 1 : 0) + (isNewAlien ? 1 : 0);
-  if (pts > 0) { score.p3 += pts; recalcScore(); }
-  if (isNewSb && discoveredSandboxNodes.size === T_NODES.length && !score._p3Bonus) {
-    score.p3 += 20; score._p3Bonus = true; recalcScore();
-  }
   sbRenderAll();
 }
 
@@ -3804,73 +2956,29 @@ function startSandboxGame() {
 }
 
 function enterSandbox() {
-  if (!simState.p3QuizDone) return;
+  if (!phaseUsable(3)) return;
   loadAlienSprites();
-  // Credit Phase 2 discoveries: +1 per Brett-view, +1 per Alien-view, for nodes new to sandbox
-  const sbBefore = new Set(discoveredSandboxNodes);
+  // Was in Phase 2 schon gesehen wurde, ist im Baum schon entdeckt.
   discoveredBrettNodes.forEach(id => discoveredSandboxNodes.add(id));
   discoveredAlienNodes.forEach(id => discoveredSandboxNodes.add(id));
-  let pts = 0;
-  discoveredSandboxNodes.forEach(id => {
-    if (!sbBefore.has(id)) {
-      if (discoveredBrettNodes.has(id)) pts++;
-      if (discoveredAlienNodes.has(id)) pts++;
-    }
-  });
-  if (pts > 0) {
-    score.p3 += pts;
-    if (discoveredSandboxNodes.size === T_NODES.length && !score._p3Bonus) {
-      score.p3 += 20; score._p3Bonus = true;
-    }
-    saveSandboxDiscovered();
-    recalcScore();
-  }
+  saveSandboxDiscovered();
   showScreen('screen-p3-sandbox');
-  if (window.matchMedia('(max-width:600px)').matches) {
-    const cw = document.getElementById('companion-widget');
-    const sbBottom = document.querySelector('#screen-p3-sandbox .sb-bottom');
-    if (cw && sbBottom && !cw.classList.contains('sb-companion-inline')) {
-      sbBottom.appendChild(cw);
-      cw.classList.add('sb-companion-inline');
-    }
-    if (!sbSettingsOpen) sbToggleSettings();
-  }
+  if (window.matchMedia('(max-width:600px)').matches && !sbSettingsOpen) sbToggleSettings();
   sbComputeLayout();
   sbInitTree();
   updateSbStatsDisplay();
   startSandboxGame();
   requestAnimationFrame(sbFitAlienCanvas);
-  document.getElementById('sandbox-intro-dialog').showModal();
+  // Die Erklärung kommt nur beim ersten Mal von selbst.
+  let seen = false;
+  try { seen = localStorage.getItem('ry.sb_intro') === '1'; localStorage.setItem('ry.sb_intro', '1'); } catch (e) { /* egal */ }
+  if (!seen || DEMO) document.getElementById('sandbox-intro-dialog').showModal();
 }
 
 // ═══════════════════════════════════════════════════════════════════
 // BOOT
 // ═══════════════════════════════════════════════════════════════════
 
-document.getElementById('p1-btn-finish').addEventListener('click', () => {
-  const rate = stats.w / Math.max(stats.l, 1);
-  const learned = Object.keys(weights).length;
-  const pct = totalHumanEdges > 0 ? Math.round(learned / totalHumanEdges * 100) : 0;
-  document.getElementById('unlock-rate-display').textContent = rate.toFixed(1) + ' : 1';
-  document.getElementById('unlock-coverage-pct').textContent = pct + ' %';
-  document.getElementById('unlock-coverage-abs').textContent = learned + ' / ' + totalHumanEdges;
-  document.getElementById('unlock-p1-score').textContent = score.p1 + ' / 100';
-  document.getElementById('unlock-dialog').showModal();
-});
-document.getElementById('dlg-cancel').addEventListener('click', () => {
-  document.getElementById('unlock-dialog').close();
-});
-document.getElementById('dlg-confirm').addEventListener('click', () => {
-  document.getElementById('unlock-dialog').close();
-  simState.phase2Unlocked = true;
-  saveSimState();
-  updateOverview();
-  updateScoreDisplay();
-  showScreen('screen-overview');
-});
-document.getElementById('unlock-dialog').addEventListener('click', e => {
-  if (e.target === e.currentTarget) e.currentTarget.close();
-});
 document.getElementById('sb-intro-ok').addEventListener('click', () => {
   document.getElementById('sandbox-intro-dialog').close();
 });
@@ -3878,263 +2986,21 @@ document.getElementById('sandbox-intro-dialog').addEventListener('click', e => {
   if (e.target === e.currentTarget) e.currentTarget.close();
 });
 
-const gameId  = new URLSearchParams(window.location.search).get('id')  || 'game14';
-const eggType = new URLSearchParams(window.location.search).get('egg') || null;
-let gd = getGameData(gameId);
-
-loadSimState();
-if (simState.p2BrettPlayed && simState.p2AlienPlayed && !simState.p2Locked) {
-  simState.p2Locked = true; saveSimState();
-}
-loadScore();
-updateScoreDisplay();
+document.body.classList.toggle('is-teacher', TEACHER);
 loadDiscoveredNodes();
-updateOverview();
 updateP1Stats();
-buildQuiz();
+checkUnlockCondition();
 showScreen('screen-overview');
-updateGameEggDisplay(gd, 0);
-updateCompanion();
 loadAlienSprites();
 
-// ═══════════════════════════════════════════════════════════════════
-// WIN SCREENS
-// ═══════════════════════════════════════════════════════════════════
-
-let _confettiAlive = false;
-
-function startConfetti() {
-  const canvas = document.getElementById('win-confetti');
-  canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-  canvas.classList.add('active');
-  const ctx = canvas.getContext('2d');
-  const cols = ['#3b82f6','#22c55e','#f59e0b','#ec4899','#8b5cf6','#06b6d4','#f97316','#e11d48'];
-  const pts = Array.from({length:130}, () => ({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height - canvas.height,
-    w: Math.random() * 11 + 4, h: Math.random() * 6 + 3,
-    col: cols[Math.floor(Math.random() * cols.length)],
-    rot: Math.random() * Math.PI * 2, rv: (Math.random()-.5)*.14,
-    vy: Math.random() * 2.5 + 1.5, vx: (Math.random()-.5) * 1.3,
-  }));
-  _confettiAlive = true;
-  (function tick() {
-    if (!_confettiAlive) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    pts.forEach(p => {
-      p.y += p.vy; p.x += p.vx; p.rot += p.rv;
-      if (p.y > canvas.height + 12) p.y = -12;
-      ctx.save(); ctx.translate(p.x + p.w/2, p.y + p.h/2);
-      ctx.rotate(p.rot); ctx.fillStyle = p.col;
-      ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h); ctx.restore();
-    });
-    requestAnimationFrame(tick);
-  })();
-}
-
-function stopConfetti() {
-  _confettiAlive = false;
-  const canvas = document.getElementById('win-confetti');
-  canvas.classList.remove('active');
-  canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
-}
-
-function countUp(el, target, duration) {
-  const start = performance.now();
-  (function frame(now) {
-    const t = Math.min((now - start) / duration, 1);
-    el.textContent = Math.round(target * (1 - Math.pow(1 - t, 3))) + ' Pkt';
-    if (t < 1) requestAnimationFrame(frame);
-  })(performance.now());
-}
-
-function buildAndAnimateWinRows(containerId, rows) {
-  const c = document.getElementById(containerId);
-  c.innerHTML = '';
-  rows.forEach(({label, val, isTotal}) => {
-    const d = document.createElement('div');
-    d.className = 'win-row' + (isTotal ? ' win-total' : '');
-    d.innerHTML = `<span>${label}</span><span class="win-val" data-v="${val}">0 Pkt</span>`;
-    c.appendChild(d);
+if (ROOM) {
+  window.addEventListener('message', e => {
+    if (e.origin !== location.origin || e.source !== window.parent || !e.data || e.data.type !== 'ry:cmd') return;
+    if (Array.isArray(e.data.phases)) setClassPhases(e.data.phases.map(Number), true);
   });
-  const rowEls = c.querySelectorAll('.win-row');
-  rowEls.forEach((row, i) => {
-    setTimeout(() => {
-      row.classList.add('show');
-      const el = row.querySelector('.win-val');
-      countUp(el, +el.dataset.v, row.classList.contains('win-total') ? 1000 : 650);
-    }, i * 220 + 150);
-  });
-}
-
-function showWin1() {
-  const p2 = score.p2brett + score.p2alien;
-  buildAndAnimateWinRows('win1-rows', [
-    { label:'Phase 1',  val: score.p1    },
-    { label:'Quiz 1',   val: score.quiz1  },
-    { label:'Phase 2',  val: p2           },
-    { label:'Zwischensumme', val: score.p1 + score.quiz1 + p2, isTotal: true },
-  ]);
-
-  // Hub-Integration
-  const creatureEquiv = Math.round(Math.min(score.p1, 100) / 10); // für Kreaturtyp
-  const growthTotal1  = score.p1 + score.quiz1 + p2;              // für Wachstum (alle Win1-Scores)
-  const isFirstHatch  = !gd.creature; // VOR Kreatur-Bestimmung merken
-  if (isFirstHatch) {
-    const sd0 = loadShopData();
-    if (eggType) {
-      gd.creature = determineEggCreature(eggType, creatureEquiv);
-    } else {
-      gd.creature = sd0.lockmittel
-        ? determineCreatureWithLockmittel(creatureEquiv, gameId)
-        : sd0.glucksklee
-          ? determineCreatureWithGlucksklee(creatureEquiv, gameId)
-          : determineCreature(creatureEquiv, true, gameId);
-      // Migration 0042: Verbrauch = Bool clearen + Spent++.
-      if (sd0.lockmittel) {
-        sd0.lockmittel = false;
-        sd0.lockmittelSpent = (sd0.lockmittelSpent || 0) + 1;
-        saveShopData(sd0);
-      } else if (sd0.glucksklee) {
-        sd0.glucksklee = false;
-        sd0.gluckskleeSpent = (sd0.gluckskleeSpent || 0) + 1;
-        saveShopData(sd0);
-      }
-    }
-    gd.growth = 0;
-  }
-  const sd1 = loadShopData();
-  const coinsW1 = computeRoundResult(gd, growthTotal1, 240, sd1, isFirstHatch);
-  gd.points      = score.p1 + score.quiz1 + p2;
-  gd.roundsPlayed = Math.max(gd.roundsPlayed || 0, 1);
-
-  // Items VOR saveGameData clearen: bei Nest-IDs spiegelt saveGameData intern
-  // gd → sd.nests[i].hatched. Danach sd (Snapshot mit alten Werten) speichern
-  // würde die Spiegelung plätten.
-  if (sd1.wachstumsBooster) { sd1.wachstumsBooster = false; sd1.wachstumsBoosterSpent = (sd1.wachstumsBoosterSpent || 0) + 1; saveShopData(sd1); }
-  if (sd1.coinsx3)          { sd1.coinsx3 = false;          sd1.coinsx3Spent          = (sd1.coinsx3Spent          || 0) + 1; saveShopData(sd1); }
-
-  saveGameData(gameId, gd);
-  updateGameEggDisplay(gd, 4, true);
-
-  const stageW1 = getGrowthStage(gd.growth);
-  const w1img   = document.getElementById('win1-creature');
-  if (w1img) w1img.innerHTML = gd.creature ? getCreatureHTML(gd.creature, stageW1) : '';
-  populateWinHub(1);
-  renderCoinBank('win1-coins', coinsW1);
-  window.awardBonbonsAndRender?.(gameId, growthTotal1, 240, 'win1-coins');
-
-  win1Applied = true;
-  document.getElementById('win1').classList.add('active');
-  startConfetti();
-}
-
-function closeWin1() {
-  document.getElementById('win1').classList.remove('active');
-  stopConfetti();
-}
-
-function resetAndGoHub() {
-  resetAll(true);
-  window.location.href = '../index.html';
-}
-
-function populateWinHub(winNum) {
-  renderResultItemButton('win' + winNum + '-item-btn-wrap', gameId, () => {
-    document.getElementById('win' + winNum).classList.remove('active');
-    stopConfetti();
-    if (winNum !== 1) resetAll(true); // Win1: Spiel läuft weiter (Phase 3), Win2: neu starten
-  });
-
-  const lbl = document.getElementById('win' + winNum + '-creature-label');
-  if (lbl && gd.creature) {
-    const stage = getGrowthStage(gd.growth);
-    const stageName = ['Ei','Stufe 1','Stufe 2','Stufe 3','Stufe 4','Stufe 5'][stage] ?? 'Stufe 1';
-    lbl.textContent = (CREATURE_NAMES?.[gd.creature] ?? gd.creature) + ' – ' + stageName;
-  }
-}
-
-function showWin2() {
-  if (!confirm('Simulation wirklich beenden? Du kannst danach noch weiterspielen oder alles zurücksetzen.')) return;
-  const p2 = score.p2brett + score.p2alien;
-  const maxP3 = T_NODES.length * 2 + 20;
-  const maxTot = 100 + 40 + 100 + 70 + maxP3;
-  buildAndAnimateWinRows('win2-rows', [
-    { label:'Phase 1',  val: score.p1    },
-    { label:'Quiz 1',   val: score.quiz1  },
-    { label:'Phase 2',  val: p2           },
-    { label:'Quiz 2',   val: score.quiz2  },
-    { label:'Phase 3',  val: score.p3     },
-    { label:`Gesamt (max. ${maxTot})`, val: score.total, isTotal: true },
-  ]);
-
-  // Hub-Integration: Kreatur durch Phase 3 + Quiz 2 weiter wachsen lassen
-  gd = getGameData(gameId); // aktuellsten Stand holen (falls zwischendurch gespeichert)
-  const growthTotal2 = (score.p3 || 0) + (score.quiz2 || 0);
-  const coinsW2  = computeRoundResult(gd, growthTotal2, maxP3 + 70, loadShopData());
-  gd.points      = (gd.points || 0) + (score.quiz2 || 0) + (score.p3 || 0);
-  gd.roundsPlayed = Math.max(gd.roundsPlayed || 1, 2);
-  saveGameData(gameId, gd);
-  updateGameEggDisplay(gd, 4, true);
-
-  const stageW2 = getGrowthStage(gd.growth);
-  const w2img   = document.getElementById('win2-creature');
-  if (w2img) w2img.innerHTML = gd.creature ? getCreatureHTML(gd.creature, stageW2) : '';
-  populateWinHub(2);
-  renderCoinBank('win2-coins', coinsW2);
-  window.awardBonbonsAndRender?.(gameId, growthTotal2, maxP3 + 70, 'win2-coins');
-
-  document.getElementById('win2').classList.add('active');
-  startConfetti();
-}
-
-function closeWin2(action) {
-  document.getElementById('win2').classList.remove('active');
-  stopConfetti();
-  if (action === 'reset') resetAll(true);
+  sendUp({ type: 'ry:ready' });
 }
 </script>
 
-<canvas id="win-confetti"></canvas>
-<div id="win1" class="win-overlay">
-  <div class="win-card">
-    <div class="win-col-game">
-      <div class="win-icon"><img src="Sprites/Roboter1win.png" alt=""></div>
-      <div class="win-title">Phase 2 abgeschlossen!</div>
-      <div class="win-sub">Du hast beide Umgebungen gemeistert.</div>
-      <div class="win-rows" id="win1-rows"></div>
-    </div>
-    <div class="win-col-hub">
-      <div id="win1-creature" style="min-height:120px;display:flex;align-items:center;justify-content:center;"></div>
-      <div id="win1-creature-label" class="win-creature-label"></div>
-      <div id="win1-coins"></div>
-      <div class="win-btns">
-        <button class="btn btn-primary" onclick="closeWin1()">Weiterspielen →</button>
-        <div id="win1-item-btn-wrap"></div>
-        <button class="btn btn-secondary" onclick="resetAndGoHub()">← Zurück zum Hub</button>
-      </div>
-    </div>
-  </div>
-</div>
-<div id="win2" class="win-overlay">
-  <div class="win-card">
-    <div class="win-col-game">
-      <div class="win-icon"><img src="Sprites/Roboter2win.png" alt=""></div>
-      <div class="win-title">Simulation abgeschlossen!</div>
-      <div class="win-sub">Du hast alle Phasen durchlaufen.</div>
-      <div class="win-rows" id="win2-rows"></div>
-    </div>
-    <div class="win-col-hub">
-      <div id="win2-creature" style="min-height:130px;display:flex;align-items:center;justify-content:center;"></div>
-      <div id="win2-creature-label" class="win-creature-label"></div>
-      <div id="win2-coins"></div>
-      <div class="win-btns">
-        <button class="btn btn-primary" onclick="closeWin2('reset')">🔄 Nochmal spielen</button>
-        <div id="win2-item-btn-wrap"></div>
-        <button class="btn btn-secondary" onclick="resetAndGoHub()">← Zurück zum Hub</button>
-      </div>
-    </div>
-  </div>
-</div>
 </body>
 </html>
