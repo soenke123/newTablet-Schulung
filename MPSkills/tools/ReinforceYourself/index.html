@@ -318,12 +318,12 @@ body.is-teacher .ry-share{display:inline-flex;}
 @media(max-width:720px){.intro-split{grid-template-columns:1fr;}}
 
 /* ── Phase 1 Intro: Tablet/iPad — kein Scrollen ── */
-#screen-p1-intro .intro-card img{max-height:220px; object-fit:contain; width:100%;}
+#screen-p1-intro .intro-card img{max-height:420px; object-fit:contain; width:100%;}
 @media(max-height:900px){
   #screen-p1-intro{padding-top:14px; padding-bottom:18px;}
   #screen-p1-intro .intro-split{gap:16px;}
   #screen-p1-intro .intro-card{padding:14px 16px;}
-  #screen-p1-intro .intro-card img{max-height:150px; margin:8px 0 6px;}
+  #screen-p1-intro .intro-card img{max-height:300px; margin:8px 0 6px;}
   #screen-p1-intro .intro-card h2{font-size:1.05rem; margin-bottom:8px;}
   #screen-p1-intro .rl-steps{gap:4px; margin:6px 0 8px;}
   #screen-p1-intro .highlight-box{margin-top:8px; padding:10px;}
@@ -331,7 +331,7 @@ body.is-teacher .ry-share{display:inline-flex;}
 @media(max-height:768px){
   #screen-p1-intro{padding-top:8px; padding-bottom:10px;}
   #screen-p1-intro .intro-card{padding:11px 14px;}
-  #screen-p1-intro .intro-card img{max-height:100px; margin:5px 0;}
+  #screen-p1-intro .intro-card img{max-height:200px; margin:5px 0;}
   #screen-p1-intro .intro-card h2{font-size:.95rem; margin-bottom:6px;}
   #screen-p1-intro .intro-card p{font-size:.82rem; margin-bottom:6px;}
   #screen-p1-intro .rl-steps{gap:2px; margin:4px 0 6px;}
@@ -668,10 +668,7 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
       <h2>Deine Aufgabe</h2>
       <p>Du schlüpfst in die Rolle einer KI, die gerade trainiert wird. Du siehst Zustände und musst Aktionen wählen — ohne zu wissen, wofür du eigentlich trainiert wirst.</p>
       <p style="margin-top:10px;">KIs denken nicht wie Menschen. Sie kennen keine Regeln und keine Zusammenhänge — nur: was wurde belohnt, was wurde bestraft.</p>
-      <div class="highlight-box">
-        <strong>Dein Ziel:</strong> Trainiere die KI, bis sie eine Gewinnrate von über 2,5 : 1 erreicht.
-      </div>
-      <button class="btn btn-primary" onclick="enterTraining()" style="width:100%;padding:13px;font-size:1rem;margin-top:14px;">Trainingsphase starten</button>
+      <button class="btn btn-primary" onclick="enterTraining()" style="width:100%;padding:13px;font-size:1rem;margin-top:auto;">Trainingsphase starten</button>
     </div>
 
   </div>
