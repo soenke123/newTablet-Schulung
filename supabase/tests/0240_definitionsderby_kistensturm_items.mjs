@@ -122,8 +122,8 @@ await reset(); await give(2, 'stein'); await use(2);
 ok('5  Stein unten hinein', (await kinds(2)) === 'snn');
 await reset(); await give(1, 'moewe'); await use(1);
 r = (await one(`select data from dd_storm_events where room_id = $1 and kind = 'use' order by seq desc limit 1`, [ROOM])).data;
-// seit 0246: die geklaute Kiste trägt die Farbe des neuen Teams, die Möwe am Beamer noch die alte
-ok('5  Möwe: Team davor −1, eigenes +1, Kiste in eigener Farbe', await H(0) === 5 && await H(1) === 5 && (await team(1)).boxes.at(-1).t === 1 && r.b0.t === 0);
+// 0246 färbte um, seit 0248 behält die Kiste wieder ihre Farbe (man sieht, von wem sie ist)
+ok('5  Möwe: Team davor −1, eigenes +1, Farbe bleibt', await H(0) === 5 && await H(1) === 5 && (await team(1)).boxes.at(-1).t === 0 && r.b0.t === 0);
 await reset(); await boxes(0, [...N(0, 5), { k: 's', t: 0 }]); await give(1, 'moewe'); await use(1);
 ok('5  Möwe nimmt keinen Stein (der bleibt oben liegen)', (await kinds(0)) === 'nnnns' && (await team(1)).boxes.at(-1).k === 'n');
 await reset(); await give(3, 'moewe3'); r = await use(3);
@@ -163,8 +163,6 @@ await use(3);
 const cnt = await Promise.all([0, 1, 2, 3].map(async t => (await team(t)).boxes.length));
 const all1 = (await one(`select string_agg(e->>'k', '' order by e->>'k') s from dd_storm_teams t, jsonb_array_elements(t.boxes) e where room_id = $1`, [ROOM])).s;
 ok('5  Kuddelmuddel: jedes Team behält seine Anzahl, keine Kiste geht verloren', cnt.join() === '6,4,2,0' && all0 === all1);
-const colors = await Promise.all([0, 1, 2, 3].map(async t => (await team(t)).boxes.every(b => b.t === t)));
-ok('5  Kuddelmuddel: jede Kiste in der Farbe ihres neuen Teams (0246)', colors.every(Boolean));
 
 /* 6 Sieg durch ein Item */
 await reset(); await boxes(0, N(0, 9)); await give(0, 'bonus'); r = await use(0);

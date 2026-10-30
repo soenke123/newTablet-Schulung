@@ -87,7 +87,8 @@ const tok = i => 'tok' + i;
 
 /* 1 Lobby */
 r = await call(`dd_storm_room_get($1, 0)`, [CODE]);
-ok('1  Lobby legt sich von selbst an', r.ok && r.phase === 'lobby' && r.team_count === 4 && r.goal === 20, JSON.stringify(r).slice(0, 200));
+ok('1  Lobby legt sich von selbst an', r.ok && r.phase === 'lobby' && r.team_count === 4 && r.goal === 40, // seit 0248 Standard 40
+  JSON.stringify(r).slice(0, 200));
 ok('1  Vorschau: 5 Anwesende, ohne Stillgelegte und Abwesende', r.people.length === 5 && !r.people.some(p => p.n === 'Stillgelegt' || p.n === 'Weg'));
 r = await call(`dd_storm_room_setup($1, 2, 10, 0, $2::jsonb)`, [CODE, JSON.stringify([S])]);
 ok('1  einstellen: 2 Teams, Ziel 10, Stapel', r.ok, JSON.stringify(r));

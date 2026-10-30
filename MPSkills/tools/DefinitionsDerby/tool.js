@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030k';
+  const V = '20261030l';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3926,6 +3926,7 @@
   function stUpdate() {
     const v = st.v;
     if (!v) return;
+    if (!isTeacher) stPaintTeam();
     if (st.layout === 'lobby') { if (isTeacher) stPaintLobbyBeam(); else stPaintLobbyDev(); return; }
     if (st.layout === 'end') return;
     stSync(false);
@@ -3933,6 +3934,17 @@
     stEffects();
     if (!isTeacher) { stPaintLevel(); stPaintItems(); stMaybeTask(); }
     stPaintBtns();
+  }
+  /* Tablet: die eigene Teamfarbe färbt die ganze Spielfläche (Sönke 30.10.2026:
+     „durch das Farbdesign gleich sehen, welches Team ich bin“). */
+  function stPaintTeam() {
+    const box = root.querySelector('#ddSt'), me = stMyTeam();
+    if (!box) return;
+    const css = me != null ? stCol(me) : '';
+    if (box.dataset.tc === css) return;
+    box.dataset.tc = css;
+    box.setAttribute('style', css);
+    box.classList.toggle('has-team', me != null);
   }
   function stPaintBtns() {
     const btns = root && root.querySelector('#ddStBtns');
@@ -3990,8 +4002,6 @@
     const n = stPeople().length, k = (st.v && st.v.team_count) || 4;
     return Math.max(1, Math.ceil(n / k));
   }
-  /* Vorschlag: etwa 6 richtige Antworten je Kind, auf 5 gerundet, 10…60. */
-  const stSuggest = () => Math.max(10, Math.min(60, Math.round(stPerTeam() * 6 / 5) * 5));
   function stPaintLobbyBeam() {
     const v = st.v;
     const fp = root.querySelector('#ddStFigs');
@@ -4065,11 +4075,7 @@
         patch.p_stacks = (sh.length ? sh : activeIds()).slice(0, 20);
       }
     }
-    const key = v.team_count + ':' + stPeople().length;
-    if (!st.goalTouched && st.autoKey !== key) {
-      st.autoKey = key;
-      if (stPeople().length && v.goal !== stSuggest()) patch.p_goal = stSuggest();
-    }
+    // Zielhöhe: Standard 40 (0248, Sönke 30.10.2026) — kein Vorschlag nach Klassengröße mehr.
     if (Object.keys(patch).length) stSetup(patch);
   }
   async function stSetup(patch) {
@@ -4142,19 +4148,22 @@
     const box = root.querySelector('#ddStWait');
     if (!box) return;
     const t = stMyTeam(), v = st.v;
-    const key = JSON.stringify([t, v.team_count, stPeople().map(p => p.n + p.t), v.items_on, v.items_often, v.items_off]);
+    const key = JSON.stringify([t, v.team_count, v.goal, stPeople().map(p => p.n + p.t), v.items_on, v.items_often, v.items_off]);
     if (box.dataset.key === key) return;
     box.dataset.key = key;
     if (t == null) {
-      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistensturm</h3><p>Gleich geht’s los.</p></div>' + stItemsDev();
+      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistensturm</h3><p class="dd-st__goalsay">' + stGoalSay() + '</p></div>' + stItemsDev();
       return;
     }
     const mates = stPeople().filter(p => p.t === t);
     box.innerHTML = '<div class="dd-st__card" style="' + stCol(t) + '">' +
       '<span class="dd-st__bigfig">' + figSVG(t, 'wave', 150) + '</span>' +
       '<p class="dd-st__you">Du bist in</p><h3 class="dd-st__h3 dd-st__tname">' + E(stTeam(t)) + '</h3>' +
-      '<p class="dd-st__names">' + mates.map(p => '<span' + (p.id === v.me.id ? ' class="is-me"' : '') + '>' + E(p.n) + '</span>').join('') + '</p></div>' + stItemsDev();
+      '<p class="dd-st__names">' + mates.map(p => '<span' + (p.id === v.me.id ? ' class="is-me"' : '') + '>' + E(p.n) + '</span>').join('') + '</p>' +
+      '<p class="dd-st__goalsay">' + stGoalSay() + '</p></div>' + stItemsDev();
   }
+  /* Ein Satz zum Ziel (Sönke 30.10.2026: „1 Satz, was das Ziel des Spiels ist“) */
+  const stGoalSay = () => 'Jede richtige Antwort ist eine Kiste – das Team, das zuerst ' + st.v.goal + ' Kisten hoch stapelt, gewinnt.';
   /* Lobby am Tablet: die Items dieses Spiels, antippen = Erklärung mit Bild */
   function stItemsDev() {
     const v = st.v;
@@ -4414,8 +4423,10 @@
     const all = Array.from({ length: st.v.team_count }, (_, i) => i);
     const at = (t, fn) => { const p = stTop(t); if (p) fn(p); };
     if (d.it === 'moewe' || d.it === 'moewe3') {
-      hold(tg.concat([by]), 1700);
-      tg.forEach((t, k) => setTimeout(() => stGull(t, by, d['b' + t]), k * 260));
+      // 0248: d.g = [{t, b}] je geklaute Kiste (auch mehrfach vom selben Team)
+      const grabs = Array.isArray(d.g) ? d.g : tg.map(t => ({ t, b: d['b' + t] }));
+      hold(tg.concat([by]), 1700 + grabs.length * 260);
+      grabs.forEach((x, k) => setTimeout(() => stGull(x.t, by, x.b), k * 260));
     } else if (d.it === 'bus') stBus(d, hold);
     else if (d.it === 'boom') { hold(tg, 1250); stBomb(tg[0], d.n || 0); }
     else if (d.it === 'eis') { hold(tg, 900); stDrop(tg[0], 'eis'); }

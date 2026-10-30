@@ -1249,15 +1249,18 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__box {
   position: relative; display: block; flex: none; height: calc(var(--bh) * var(--sz, 1)); width: 100%;
   background:
-    linear-gradient(90deg, transparent 41%, rgba(244,232,190,.92) 41% 59%, transparent 59%),
+    linear-gradient(90deg, transparent 39%, var(--tc, #f4e8be) 39% 61%, transparent 61%),
     linear-gradient(#d9a96a, #c28c4b);
   border: 1.5px solid #7d5326; border-radius: 2px;
-  box-shadow: inset 0 -3px 0 rgba(0,0,0,.08), inset 3px 0 0 var(--tc);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.1), inset 4px 0 0 var(--tc), inset -4px 0 0 var(--tc);
 }
 .dd-st__box:nth-child(3n+2) { transform: translateX(3%); }
 .dd-st__box:nth-child(3n) { transform: translateX(-2.5%); }
-.dd-st__box::after { content: ''; position: absolute; right: 8%; top: 22%; width: 16%; height: 40%; background: rgba(255,255,255,.55); border-radius: 1px; }
-.is-thin .dd-st__box { border-width: 1px; box-shadow: inset 4px 0 0 var(--tc); }
+.dd-st__box::after { content: ''; position: absolute; right: 7%; top: 22%; width: 14%; height: 40%; background: rgba(255,255,255,.55); border-radius: 1px; }
+/* Glanz auf dem farbigen Klebeband */
+.dd-st__box::before { content: ''; position: absolute; left: 39%; width: 22%; top: 0; height: 35%; background: rgba(255,255,255,.28); pointer-events: none; }
+.is-thin .dd-st__box::before, .dd-st__box.k-g::before, .dd-st__box.k-s::before, .dd-st__box.k-i::before { display: none; }
+.is-thin .dd-st__box { border-width: 1px; box-shadow: inset 4px 0 0 var(--tc), inset -4px 0 0 var(--tc); }
 .is-thin .dd-st__box::after { display: none; }
 .dd-st__box.is-new { animation: dd-st-in .55s cubic-bezier(.25,.9,.35,1.15) both; }
 @keyframes dd-st-in {
@@ -1324,6 +1327,16 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 
 /* ── Tablet ── */
 .dd-st--dev { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+/* Tablet: die eigene Teamfarbe ist überall (Sönke 30.10.2026) — Rahmen um die
+   ganze Fläche, getönter Grund, Kopf und Aufgabenblatt mit Farbband. */
+#ddSt.dd-st--dev.has-team {
+  background: var(--ts); border: 5px solid var(--tc); border-radius: 10px; padding: 10px;
+  box-shadow: 0 0 0 3px rgba(255,255,255,.5), 0 8px 20px var(--dd-shadow);
+}
+.dd-st--dev.has-team .dd-st__hud { border-top: 8px solid var(--tc); background: linear-gradient(var(--ts), var(--dd-paper) 60%); }
+.dd-st--dev.has-team .dd-st__myt { font-size: .95rem; padding: 3px 12px; }
+.dd-st--dev.has-team .dd-task__sheet { border-top: 8px solid var(--tc); }
+.dd-st--dev.has-team .dd-st__card { border-top-color: var(--tc); }
 .dd-st__card {
   position: relative; max-width: 520px; margin: 0 auto; width: 100%; text-align: center; background: var(--dd-paper); color: var(--dd-ink);
   border-radius: 3px; padding: 18px 20px 22px; border-top: 8px solid var(--tc, var(--dd-pappe3)); box-shadow: 0 10px 22px var(--dd-shadow);
@@ -1608,6 +1621,7 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
   .dd:has(#ddSt.is-game.dd-st--dev) .dd-playhead .dd-stackhead__t { display: none; }
   .dd:has(#ddSt.is-game.dd-st--dev) .dd-backbtn { min-height: 32px; padding: 4px 10px 4px 6px; font-size: .8rem; }
   #ddSt.is-game.dd-st--dev { gap: 8px; }
+  #ddSt.dd-st--dev.has-team { padding: 5px; border-width: 4px; border-radius: 8px; }
   .dd-st--dev .dd-st__hud { padding: 8px 10px; }
   .dd-st--dev .dd-st__hudtop { margin-bottom: 4px; gap: 8px; }
   .dd-st--dev .dd-st__hudtop b { font-size: .92rem; white-space: nowrap; }
