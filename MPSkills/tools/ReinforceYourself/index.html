@@ -709,18 +709,37 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-legend i{width:12px; height:12px; border-radius:3px; display:inline-block;}
 .ttt-legend .ln{width:16px; height:3px; border-radius:2px; background:var(--ttt-ki);}
 
-.ttt-lesson-head{display:flex; align-items:center; gap:8px; margin-bottom:12px; font-weight:600; font-size:.95rem;}
-.ttt-chip{font-size:.8rem; font-weight:700; padding:3px 10px; border-radius:999px; font-variant-numeric:tabular-nums;}
-.ttt-chip.up{background:var(--surface-win); color:var(--mp-ok);}
-.ttt-chip.down{background:var(--surface-lose); color:var(--mp-warn);}
-.ttt-lesson{display:flex; flex-wrap:wrap; gap:12px;}
-.ttt-step{display:flex; flex-direction:column; align-items:center; gap:6px; animation:ttt-in .3s ease-out both;}
-.ttt-mini{display:grid; grid-template-columns:repeat(3,22px); grid-template-rows:repeat(3,22px); gap:3px; padding:4px; border-radius:9px; background:var(--mp-paper-2);}
-.ttt-mini span{display:grid; place-items:center; border-radius:5px; background:var(--mp-surface); font-size:.8rem; font-weight:700; line-height:1;}
+.ttt-score{margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--mp-line);}
+.ttt-path{display:flex; flex-direction:column; gap:10px;}
+.ttt-row{display:flex; align-items:flex-start; gap:10px; animation:ttt-in .25s ease-out both;}
+.ttt-row-n{flex:none; width:22px; height:22px; margin-top:24px; border-radius:50%; display:grid; place-items:center;
+  font-size:.72rem; font-weight:700; background:var(--mp-paper-2); color:var(--mp-ink-soft);}
+.ttt-opts-row{display:flex; flex-wrap:wrap; gap:6px; min-width:0;}
+.ttt-opt{position:relative; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px; border-radius:12px;
+  border:2px solid transparent; transition:opacity .3s, filter .3s, border-color .15s, background .15s, transform .15s;}
+.ttt-opt small{font-size:.7rem; font-weight:600; color:var(--mp-ink-faint); font-variant-numeric:tabular-nums;}
+.ttt-mini{display:grid; grid-template-columns:repeat(3,18px); grid-template-rows:repeat(3,18px); gap:2px; padding:3px; border-radius:8px; background:var(--mp-paper-2);}
+.ttt-mini span{display:grid; place-items:center; border-radius:4px; background:var(--mp-surface); font-size:.78rem; font-weight:700; line-height:1;}
 .ttt-mini .k{color:var(--ttt-ki);} .ttt-mini .d{color:var(--ttt-du);}
-.ttt-mini .pick{box-shadow:inset 0 0 0 2px var(--ttt-ki); background:var(--mp-accent-dim);}
-.ttt-pct{font-size:.78rem; font-weight:600; color:var(--mp-ink-soft); font-variant-numeric:tabular-nums; white-space:nowrap;}
-.ttt-pct b.up{color:var(--mp-ok);} .ttt-pct b.down{color:var(--mp-warn);}
+.ttt-mini .x{color:var(--ttt-ki); background:var(--mp-accent-dim);}
+.ttt-mini .sym{color:var(--ttt-ki); opacity:.28;}
+.ttt-opt.spin{border-color:var(--ttt-ki); background:var(--mp-accent-dim); transform:translateY(-2px);}
+.ttt-opt.is-chosen{border-color:var(--ttt-ki); background:var(--surface-active);}
+.ttt-opt.is-win .ttt-mini{box-shadow:0 0 0 2px var(--mp-ok);}
+.ttt-opt.is-lose{opacity:.32; filter:grayscale(1);}
+.ttt-opt.is-lose.is-chosen{border-color:var(--mp-ink-soft); background:none;}
+.ttt-badge{position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; display:grid; place-items:center;
+  font-style:normal; font-size:.62rem; font-weight:700; color:#fff; box-shadow:0 0 0 2px var(--mp-surface);}
+.ttt-badge.win{background:var(--mp-ok);} .ttt-badge.lose{background:var(--mp-ink-faint);}
+.ttt-opt.just.is-win{animation:ttt-mark .7s ease-out;}
+.ttt-opt.just.is-lose{animation:ttt-grey 1s ease-out;}
+@keyframes ttt-mark{0%{transform:scale(1);} 35%{transform:scale(1.14);} 100%{transform:scale(1);}}
+@keyframes ttt-grey{0%{opacity:1; filter:none; transform:scale(1);} 30%{opacity:1; filter:none; transform:scale(.92) rotate(-3deg);} 100%{opacity:.32; filter:grayscale(1);}}
+.ttt-legend .lg{display:inline-grid; place-items:center; width:14px; height:14px; border-radius:4px; font-style:normal; font-size:.6rem; font-weight:700;}
+.ttt-legend .lg-pick{border:2px solid var(--ttt-ki); background:var(--surface-active);}
+.ttt-legend .lg-win{background:var(--mp-ok); color:#fff; border-radius:50%;}
+.ttt-legend .lg-lose{background:var(--mp-ink-faint); color:#fff; border-radius:50%;}
+.ttt-legend .lg-sym{color:var(--ttt-ki); opacity:.4; font-size:.8rem;}
 .ttt-none{font-size:.88rem; color:var(--mp-ink-faint);}
 
 </style>
@@ -784,15 +803,22 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
     </div>
     <div class="ttt-side">
       <div class="ttt-card">
+        <h3>Möglichkeiten der KI</h3>
+        <div id="ttt-path" class="ttt-path"></div>
+        <div class="ttt-legend">
+          <span><i class="lg lg-pick"></i>gewählt</span>
+          <span><i class="lg lg-win">★</i>führte zum Sieg</span>
+          <span><i class="lg lg-lose">✕</i>führte zur Niederlage</span>
+          <span><i class="lg lg-sym">✕</i>gleichwertig (gespiegelt)</span>
+        </div>
+      </div>
+      <div class="ttt-card">
         <div class="ttt-score">
           <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i>KI gewinnt</span></div>
           <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i>Unentschieden</span></div>
           <div class="ttt-num"><b id="ttt-n-d">0</b><span><i style="background:var(--ttt-du)"></i>Du gewinnst</span></div>
-          <div class="ttt-num"><b id="ttt-n-m">0</b><span>Stellungen gemerkt</span></div>
+          <div class="ttt-num"><b id="ttt-n-m">0</b><span>Züge gestrichen</span></div>
         </div>
-      </div>
-      <div class="ttt-card">
-        <h3>Lernkurve</h3>
         <div class="ttt-chart" id="ttt-chart"></div>
         <div class="ttt-legend">
           <span><i class="ln"></i>Bilanz der KI (Siege − Niederlagen)</span>
@@ -800,10 +826,6 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
           <span><i style="background:var(--mp-ink-faint)"></i>Unentschieden</span>
           <span><i style="background:var(--ttt-du)"></i>Du gewinnst</span>
         </div>
-      </div>
-      <div class="ttt-card">
-        <h3>Das lernt die KI aus der letzten Partie</h3>
-        <div id="ttt-lesson"></div>
       </div>
     </div>
   </div>
@@ -1179,7 +1201,7 @@ let lastP1  = 'intro';
 let lastEnv = 'brett';
 function stopTimers() {
   if (aiTimeoutId)      { clearTimeout(aiTimeoutId); aiTimeoutId = null; }
-  if (tttTimer)         { clearTimeout(tttTimer); tttTimer = null; }
+  tttStop();
   if (alienAITimeoutId) { clearTimeout(alienAITimeoutId); alienAITimeoutId = null; }
 }
 function goPhase(n) {
@@ -2277,7 +2299,7 @@ function resetAll(confirmed = false) {
   discoveredSandboxNodes = new Set([0]);
   saveW(); saveS(); saveBrettStats(); saveAlienStats(); saveSbStats();
   saveBrettDiscovered(); saveAlienDiscovered(); saveSandboxDiscovered();
-  tttReset(); ttt = null;
+  tttReset();
   updateP1Stats(); updateBrettStatsDisplay(); updateAlienStatsDisplay(); updateSbStatsDisplay();
   checkUnlockCondition();
   lastP1 = 'intro';
@@ -3164,16 +3186,22 @@ document.getElementById('sandbox-intro-dialog').addEventListener('click', e => {
 // PHASE „GEGEN DIE KI“ (Reiter 1, intern Phase 0)
 // ═══════════════════════════════════════════════════════════════════
 // Tic-Tac-Toe gegen eine KI, die mitlernt — erst spielt man GEGEN die
-// KI, danach (Training) IST man die KI. Gelernt wird wie bei MENACE
-// (Streichholzschachteln mit Perlen): je Stellung, in der die KI am Zug
-// ist, liegen Perlen auf den Feldern; sie zieht zufällig nach
-// Perlenzahl. Nach der Partie bekommt jeder ihrer Züge Perlen dazu
-// (Sieg +3, Unentschieden +1) oder verliert eine (Niederlage −1). Am
-// Anfang liegen spät in der Partie wenige Perlen, deshalb lernt die KI
-// einen Fehler kurz vor Schluss sofort. Gedrehte/gespiegelte Stellungen
-// sind eine Schachtel, gleichwertige Felder teilen sich die Perlen.
-// KI = 'K' (✕), du = 'D' (◯). Im Gerät: ry.ttt_brain, ry.ttt_hist,
-// ry.ttt_last, ry.ttt_first, ry.ttt_think.
+// KI, danach (Training) IST man die KI.
+// Je Stellung, in der die KI am Zug ist, kennt sie ihre Möglichkeiten;
+// gedrehte/gespiegelte Züge sind EINE Möglichkeit (Symmetrie). Jede
+// Möglichkeit ist offen (0), markiert (1 = hat schon zu einem Sieg
+// geführt) oder gestrichen (−1 = hat zu einer Niederlage geführt).
+// Die KI wählt zufällig unter den nicht gestrichenen, markierte zählen
+// dreifach. Nach der Partie:
+//   Sieg          → alle Züge der KI dieser Partie werden markiert
+//   Niederlage    → ihr letzter Zug wird gestrichen; sind damit in einer
+//                   Stellung alle Möglichkeiten gestrichen, auch der Zug
+//                   davor (rückwärts weiter)
+//   Unentschieden → nichts
+// Rechts im Kasten „Möglichkeiten der KI“ steht je KI-Zug eine Reihe mit
+// allen Möglichkeiten als Mini-Brett; die Auswahl läuft sichtbar zufällig.
+// KI = 'K' (✕), du = 'D' (◯). Im Gerät: ry.ttt2_brain, ry.ttt2_hist,
+// ry.ttt2_game, ry.ttt_first, ry.ttt_think.
 
 const TTT_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 // Die 8 Drehungen/Spiegelungen als Umordnung: neu[i] = alt[p[i]].
@@ -3181,8 +3209,7 @@ const TTT_SYM = [
   (r, c) => [r, c], (r, c) => [c, 2 - r], (r, c) => [2 - r, 2 - c], (r, c) => [2 - c, r],
   (r, c) => [r, 2 - c], (r, c) => [2 - r, c], (r, c) => [c, r], (r, c) => [2 - c, 2 - r]
 ].map(f => { const p = []; for (let i = 0; i < 9; i++) { const [r, c] = f(i / 3 | 0, i % 3); p[r * 3 + c] = i; } return p; });
-const TTT_INIT  = [4, 3, 2, 1, 1];          // Perlen je Feld, nach Zahl der eigenen Steine
-const TTT_DELTA = { K: 3, '=': 1, D: -1 };
+const TTT_WEIGHT = { '-1': 0, '0': 1, '1': 3 };
 const TTT_X = '<svg viewBox="0 0 100 100" class="ttt-x" aria-hidden="true"><path pathLength="100" d="M26 26L74 74"/><path pathLength="100" d="M74 26L26 74"/></svg>';
 const TTT_O = '<svg viewBox="0 0 100 100" class="ttt-o" aria-hidden="true"><circle pathLength="100" cx="50" cy="50" r="26"/></svg>';
 
@@ -3190,22 +3217,23 @@ function tttLoad(k, def) {
   try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; } catch (e) { return def; }
 }
 function tttStore(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* egal */ } }
+try { ['ry.ttt_brain', 'ry.ttt_last', 'ry.ttt_hist'].forEach(k => localStorage.removeItem(k)); } catch (e) { /* alte Perlen-Fassung */ }
 
-let tttBrain = tttLoad('ry.ttt_brain', {});
-let tttHist  = tttLoad('ry.ttt_hist', []);
-let tttLast  = tttLoad('ry.ttt_last', null);
+let tttBrain = tttLoad('ry.ttt2_brain', {});
+let tttHist  = tttLoad('ry.ttt2_hist', []);
 let tttFirst = tttLoad('ry.ttt_first', 'ki') === 'du' ? 'du' : 'ki';
 let tttThink = tttLoad('ry.ttt_think', true) !== false;
-let ttt = null;            // laufende Partie
+let ttt = tttLoad('ry.ttt2_game', null);   // laufende/letzte Partie
 let tttTimer = null;
+let tttSpin = null;       // Zufalls-Lauf über die Möglichkeiten (Zeitgeber)
 
 function tttSaveAll() {
-  tttStore('ry.ttt_brain', tttBrain); tttStore('ry.ttt_hist', tttHist); tttStore('ry.ttt_last', tttLast);
+  tttStore('ry.ttt2_brain', tttBrain); tttStore('ry.ttt2_hist', tttHist); tttStore('ry.ttt2_game', ttt);
 }
-const tttSum = box => Object.values(box).reduce((a, v) => a + v, 0);
 
-// Schachtel zur Stellung b (KI am Zug) + jedes freie Feld mit seiner
-// Wahrscheinlichkeit. Gleichwertige Felder teilen sich die Perlen.
+// Stellung b (KI am Zug) → Schlüssel + Möglichkeiten. Je Möglichkeit:
+// rep (Nummer in der Schachtel), cells (alle gleichwertigen Felder des
+// echten Bretts, cells[0] steht im Mini-Brett), p (je Feld).
 function tttState(b) {
   let best = null;
   for (const p of TTT_SYM) {
@@ -3216,18 +3244,24 @@ function tttState(b) {
   const stab = TTT_SYM.filter(p => p.map(j => key[j]).join('') === key);
   const rep = i => Math.min(...stab.map(p => p[i]));
   const inv = []; best.p.forEach((j, i) => { inv[j] = i; });
-  let box = tttBrain[key];
-  if (!box) {
-    const own = [...key].filter(x => x === 'K').length;
-    box = {};
-    for (let i = 0; i < 9; i++) if (key[i] === '-') box[rep(i)] = TTT_INIT[Math.min(own, 4)];
+  if (!tttBrain[key]) {
+    const box = {};
+    for (let i = 0; i < 9; i++) if (key[i] === '-') box[rep(i)] = 0;
     tttBrain[key] = box;
   }
-  const cells = [], size = {};
-  for (let j = 0; j < 9; j++) if (!b[j]) { const r = rep(inv[j]); cells.push({ cell: j, rep: r }); size[r] = (size[r] || 0) + 1; }
-  const total = tttSum(box);
-  cells.forEach(x => { x.n = size[x.rep]; x.p = total > 0 ? box[x.rep] / total / x.n : 1 / cells.length; });
-  return { key, cells };
+  const byRep = {};
+  for (let j = 0; j < 9; j++) if (!b[j]) {
+    const r = rep(inv[j]);
+    (byRep[r] = byRep[r] || { rep: r, cells: [] }).cells.push(j);
+  }
+  const opts = Object.values(byRep).sort((a, c) => a.cells[0] - c.cells[0]);
+  return { key, opts };
+}
+const tttStatus = (key, rep) => (tttBrain[key] || {})[rep] || 0;
+function tttProbs(key, opts) {
+  const w = opts.map(o => TTT_WEIGHT[tttStatus(key, o.rep)]);
+  const tot = w.reduce((a, v) => a + v, 0);
+  return opts.map((o, i) => tot > 0 ? w[i] / tot : 1 / opts.length);   // alles gestrichen: blind raten
 }
 
 function tttWinner(b) {
@@ -3235,17 +3269,23 @@ function tttWinner(b) {
   return b.every(Boolean) ? { w: '=', line: null } : null;
 }
 
+function tttStop() {
+  if (tttTimer) { clearTimeout(tttTimer); tttTimer = null; }
+  if (tttSpin)  { clearTimeout(tttSpin); tttSpin = null; }
+}
+
 function enterTTT() {
   if (!phaseUsable(0)) return;
   currentGameContext = null;
   showScreen('screen-p0-ttt');
-  if (!ttt || ttt.over || (ttt.turn === 'K' && !tttTimer)) tttNew();
+  if (!ttt || !ttt.b) tttNew();
+  else if (!ttt.over && ttt.turn === 'K') { tttRender(); tttAiTurn(); }   // Zug war unterbrochen
   else tttRender();
 }
 
 function tttNew() {
-  if (tttTimer) { clearTimeout(tttTimer); tttTimer = null; }
-  ttt = { b: Array(9).fill(null), turn: tttFirst === 'ki' ? 'K' : 'D', moves: [], over: null, line: null, fresh: -1, hints: null };
+  tttStop();
+  ttt = { b: Array(9).fill(null), turn: tttFirst === 'ki' ? 'K' : 'D', moves: [], over: null, line: null, fresh: -1, hints: null, changed: [] };
   tttRender();
   if (ttt.turn === 'K') tttAiTurn();
 }
@@ -3259,7 +3299,6 @@ function tttSetFirst(who) {
 function tttToggleThink() {
   tttThink = !tttThink;
   tttStore('ry.ttt_think', tttThink);
-  if (ttt && ttt.hints && !tttThink) ttt.hints = null;
   tttRender();
 }
 
@@ -3269,21 +3308,52 @@ function tttForget() {
   tttNew();
 }
 function tttReset() {
-  tttBrain = {}; tttHist = []; tttLast = null;
+  tttStop();
+  tttBrain = {}; tttHist = []; ttt = null;
   tttSaveAll();
 }
 
+// KI am Zug: neue Reihe mit allen Möglichkeiten, dann läuft die Auswahl
+// sichtbar zufällig über die nicht gestrichenen und bleibt stehen.
 function tttAiTurn() {
+  tttStop();
+  const last = ttt.moves[ttt.moves.length - 1];
+  if (last && last.pick == null) ttt.moves.pop();   // unterbrochene Auswahl neu
   const st = tttState(ttt.b);
-  ttt.hints = st.cells;
+  const probs = tttProbs(st.key, st.opts);
+  let r = Math.random(), k = st.opts.length - 1;
+  for (let i = 0; i < probs.length; i++) { r -= probs[i]; if (r <= 0) { k = i; break; } }
+  const o = st.opts[k];
+  const cell = o.cells[Math.random() * o.cells.length | 0];
+  const move = { key: st.key, b: ttt.b.slice(), opts: st.opts.map((x, i) => ({ rep: x.rep, cells: x.cells, p: probs[i] })), pick: null, cell: null };
+  ttt.moves.push(move);
+  ttt.hints = st.opts.flatMap((x, i) => x.cells.map(c => ({ cell: c, p: probs[i] / x.cells.length })));
   tttRender();
-  tttTimer = setTimeout(() => {
-    tttTimer = null;
-    let r = Math.random(), pick = st.cells[st.cells.length - 1];
-    for (const x of st.cells) { r -= x.p; if (r <= 0) { pick = x; break; } }
-    ttt.moves.push({ key: st.key, rep: pick.rep, n: pick.n, cell: pick.cell, b: ttt.b.slice() });
-    tttPlace(pick.cell, 'K');
-  }, tttThink ? 1200 : 450);
+
+  const live = move.opts.map((x, i) => i).filter(i => tttStatus(st.key, move.opts[i].rep) !== -1);
+  const pool = live.length ? live : move.opts.map((x, i) => i);
+  const row = document.querySelector('.ttt-row:last-child');
+  const els = row ? row.querySelectorAll('.ttt-opt') : [];
+  const steps = pool.length > 1 ? 9 + (Math.random() * 4 | 0) : 1;
+  let n = 0, at = pool[Math.random() * pool.length | 0];
+  const hop = () => {
+    els.forEach(e => e.classList.remove('spin'));
+    if (n >= steps) {
+      tttSpin = null;
+      if (els[k]) els[k].classList.add('spin');
+      tttTimer = setTimeout(() => {
+        tttTimer = null;
+        move.pick = o.rep; move.cell = cell;
+        tttPlace(cell, 'K');
+      }, 380);
+      return;
+    }
+    if (pool.length > 1) { let nx; do { nx = pool[Math.random() * pool.length | 0]; } while (nx === at); at = nx; }
+    if (els[at]) els[at].classList.add('spin');
+    n++;
+    tttSpin = setTimeout(hop, 60 + n * 12);
+  };
+  tttSpin = setTimeout(hop, 350);
 }
 
 function tttPlace(cell, who) {
@@ -3293,6 +3363,7 @@ function tttPlace(cell, who) {
   const res = tttWinner(ttt.b);
   if (res) { tttEnd(res); return; }
   ttt.turn = who === 'K' ? 'D' : 'K';
+  tttStore('ry.ttt2_game', ttt);
   if (ttt.turn === 'K') tttAiTurn(); else tttRender();   // tttAiTurn zeichnet selbst
 }
 
@@ -3303,21 +3374,22 @@ function tttClick(cell) {
   tttPlace(cell, 'D');
 }
 
-// Partie vorbei: jeder Zug der KI bekommt Perlen dazu oder verliert eine.
+// Partie vorbei: Sieg markiert alle KI-Züge, Niederlage streicht den
+// letzten (und rückwärts weiter, wo dann alles gestrichen ist).
 function tttEnd(res) {
   ttt.over = res.w;
   ttt.line = res.line;
-  const d = TTT_DELTA[res.w];
-  const moves = ttt.moves.map(m => {
-    const box = tttBrain[m.key];
-    // je Feld, wie in den „Gedanken“ (gleichwertige Felder teilen sich die Perlen)
-    const share = () => tttSum(box) ? box[m.rep] / tttSum(box) / m.n : 0;
-    const before = share();
-    box[m.rep] = Math.max(0, box[m.rep] + d);
-    const after = share();
-    return { b: m.b.map(x => x || '').join(','), cell: m.cell, before, after };
-  });
-  tttLast = { r: res.w, d, moves };
+  ttt.changed = [];
+  const M = ttt.moves.filter(m => m.pick != null);
+  if (res.w === 'K') {
+    M.forEach((m, i) => { if (tttBrain[m.key][m.pick] === 0) { tttBrain[m.key][m.pick] = 1; ttt.changed.push(i); } });
+  } else if (res.w === 'D') {
+    for (let i = M.length - 1; i >= 0; i--) {
+      const box = tttBrain[M[i].key];
+      if (box[M[i].pick] !== -1) { box[M[i].pick] = -1; ttt.changed.push(i); }
+      if (!Object.values(box).every(v => v === -1)) break;   // es gibt noch einen anderen Weg
+    }
+  }
   tttHist.push(res.w);
   tttSaveAll();
   tttRender();
@@ -3356,7 +3428,7 @@ function tttRender() {
 
   const st = document.getElementById('ttt-status');
   const t = ttt.over === 'K' ? 'Die KI gewinnt' : ttt.over === 'D' ? 'Du gewinnst!' : ttt.over === '=' ? 'Unentschieden'
-          : ttt.turn === 'K' ? 'Die KI überlegt …' : 'Du bist dran';
+          : ttt.turn === 'K' ? 'Die KI wählt …' : 'Du bist dran';
   st.className = 'ttt-status ' + (ttt.over ? 'end-' + (ttt.over === '=' ? 'E' : ttt.over) : ttt.turn === 'K' ? 'is-ki' : 'is-du');
   document.getElementById('ttt-status-t').textContent = t;
   document.getElementById('ttt-new').classList.toggle('nudge', !!ttt.over);
@@ -3367,36 +3439,38 @@ function tttRender() {
   document.getElementById('ttt-n-k').textContent = cnt('K');
   document.getElementById('ttt-n-e').textContent = cnt('=');
   document.getElementById('ttt-n-d').textContent = cnt('D');
-  document.getElementById('ttt-n-m').textContent = Object.keys(tttBrain).length;
+  document.getElementById('ttt-n-m').textContent = Object.values(tttBrain).reduce((a, box) => a + Object.values(box).filter(v => v === -1).length, 0);
   tttChart();
-  tttLesson();
+  tttPath();
 }
 
-// Was die KI aus der letzten Partie mitnimmt: jeder ihrer Züge mit der
-// Wahrscheinlichkeit vorher → nachher.
-function tttLesson() {
-  const el = document.getElementById('ttt-lesson');
-  const L = tttLast;
-  if (!L || !L.moves.length) { el.innerHTML = '<p class="ttt-none">Noch keine Partie gespielt.</p>'; return; }
-  const key = L.moves.map(m => m.b + m.cell).join('|') + L.r;
-  if (el.dataset.key === key) return;
-  el.dataset.key = key;
-  const head = L.r === 'K' ? 'Die KI hat gewonnen' : L.r === 'D' ? 'Die KI hat verloren' : 'Unentschieden';
-  const chip = L.d > 0 ? '<span class="ttt-chip up">diese Züge öfter</span>' : '<span class="ttt-chip down">diese Züge seltener</span>';
-  const pc = v => Math.round(v * 100) + ' %';
-  const steps = L.moves.map((m, n) => {
-    const b = m.b.split(',');
-    let g = '';
-    for (let i = 0; i < 9; i++) {
-      if (i === m.cell) g += '<span class="pick k">✕</span>';
-      else g += b[i] === 'K' ? '<span class="k">✕</span>' : b[i] === 'D' ? '<span class="d">◯</span>' : '<span></span>';
-    }
-    const dir = m.after > m.before + 1e-9 ? 'up' : m.after < m.before - 1e-9 ? 'down' : '';
-    const arrow = dir === 'up' ? '↑' : dir === 'down' ? '↓' : '→';
-    return '<div class="ttt-step" style="animation-delay:' + (n * 0.08) + 's"><div class="ttt-mini">' + g + '</div>' +
-           '<div class="ttt-pct">' + pc(m.before) + ' ' + arrow + ' <b class="' + dir + '">' + pc(m.after) + '</b></div></div>';
+// Möglichkeiten der KI: je KI-Zug eine Reihe, je Möglichkeit ein
+// Mini-Brett (gleichwertige Felder blass mit eingezeichnet).
+function tttPath() {
+  const el = document.getElementById('ttt-path');
+  if (!ttt.moves.length) { el.innerHTML = '<p class="ttt-none">Die KI ist noch nicht am Zug.</p>'; return; }
+  const M = ttt.moves;
+  el.innerHTML = M.map((m, mi) => {
+    const done = M.slice(0, mi + 1).filter(x => x.pick != null).length - 1;   // Index unter den fertigen Zügen
+    const opts = m.opts.map(o => {
+      const s = tttStatus(m.key, o.rep);
+      const chosen = m.pick === o.rep;
+      let cls = 'ttt-opt' + (s === 1 ? ' is-win' : s === -1 ? ' is-lose' : '') + (chosen ? ' is-chosen' : '');
+      if (chosen && ttt.over && ttt.changed.includes(done)) cls += ' just';
+      let g = '';
+      for (let i = 0; i < 9; i++) {
+        const v = m.b[i];
+        const here = chosen ? i === m.cell : i === o.cells[0];
+        if (here) g += '<span class="x">✕</span>';
+        else if (o.cells.includes(i)) g += '<span class="sym">✕</span>';
+        else g += v === 'K' ? '<span class="k">✕</span>' : v === 'D' ? '<span class="d">◯</span>' : '<span></span>';
+      }
+      const badge = s === 1 ? '<em class="ttt-badge win">★</em>' : s === -1 ? '<em class="ttt-badge lose">✕</em>' : '';
+      const pct = tttThink ? '<small>' + Math.round(o.p * 100) + ' %</small>' : '';
+      return '<div class="' + cls + '"><div class="ttt-mini">' + g + '</div>' + badge + pct + '</div>';
+    }).join('');
+    return '<div class="ttt-row"><div class="ttt-row-n">' + (mi + 1) + '</div><div class="ttt-opts-row">' + opts + '</div></div>';
   }).join('');
-  el.innerHTML = '<div class="ttt-lesson-head">' + head + chip + '</div><div class="ttt-lesson">' + steps + '</div>';
 }
 
 // Lernkurve: laufende Bilanz der KI (Siege − Niederlagen) je Partie,

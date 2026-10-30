@@ -8,13 +8,18 @@ Zwischen-Quizze und **ohne** Punkte/Gewinn-Bildschirme.
 ## Vier Phasen (Reiter 1–4, intern 0–3)
 
 0. **Gegen die KI** (Reiter 1, seit 30.10.2026) – Tic-Tac-Toe gegen eine KI, die aus jeder
-   Partie lernt: erst spielt man GEGEN die KI, danach (Training) IST man die KI. Lernen wie
-   MENACE (Perlen je Stellung, gedrehte/gespiegelte Stellungen = eine Schachtel; Start 4/3/2/1/1
-   Perlen je nach Zahl eigener Steine, Sieg +3, Unentschieden +1, Niederlage −1). „Gedanken der KI“
-   zeigt vor ihrem Zug die Wahrscheinlichkeit je Feld, rechts Zähler, Lernkurve (Bilanz
-   Siege − Niederlagen + Ergebnis-Kästchen je Partie) und „Das lernt die KI aus der letzten
-   Partie“ (je KI-Zug vorher → nachher). Kein Text, keine Aufgaben. Gerät: `ry.ttt_brain`,
-   `ry.ttt_hist`, `ry.ttt_last`, `ry.ttt_first`, `ry.ttt_think`; „KI vergessen lassen“ löscht nur das.
+   Partie lernt: erst spielt man GEGEN die KI, danach (Training) IST man die KI. Je Stellung kennt
+   die KI ihre Möglichkeiten, gedrehte/gespiegelte Züge = EINE Möglichkeit. Jede ist offen,
+   markiert (★, führte zum Sieg) oder gestrichen (grau, führte zur Niederlage). Wahl zufällig unter
+   den nicht gestrichenen, markierte zählen dreifach. Sieg → alle KI-Züge der Partie markiert;
+   Niederlage → letzter KI-Zug gestrichen, sind dadurch alle Möglichkeiten einer Stellung
+   gestrichen, auch der Zug davor (rückwärts weiter); Unentschieden → nichts.
+   Rechts „Möglichkeiten der KI“: je KI-Zug eine Reihe Mini-Bretter (gleichwertige Felder blass),
+   die Auswahl läuft sichtbar zufällig darüber; nach der Partie wird markiert/ausgegraut.
+   „Gedanken der KI“ = Prozent auf dem Brett und unter den Möglichkeiten. Darunter Zähler (inkl.
+   gestrichene Züge) und Lernkurve (Bilanz Siege − Niederlagen + Ergebnis-Kästchen je Partie).
+   Kein Text, keine Aufgaben. Gerät: `ry.ttt2_brain`, `ry.ttt2_hist`, `ry.ttt2_game`,
+   `ry.ttt_first`, `ry.ttt_think`; „KI vergessen lassen“ löscht nur das.
 1. **Trainingsphase** – Einführung „Was ist Reinforcement Learning?“ (infografik.png),
    dann als KI spielen: Zustände K0x.., Aktionen E0x.., nur Sieg/Niederlage als Rückmeldung.
    Gewichte in `ry.bsch_w`, Siege/Niederlagen in `ry.bsch_s`.
@@ -33,7 +38,7 @@ steuert, welche Phasen die Klasse öffnen darf.
   `skill_room_set_state` – keine eigenen Tabellen.
 - Botschaften: hinein `ry:cmd {phases}`, heraus `ry:ready`, `ry:phases {phases}`.
 - Aufbau wie die anderen Skills: Kopfzeile mit Reitern 1 Gegen die KI · 2 Training · 3 Umgebungen · 4 Sandbox
-  (Phase 2 oben mit Umschalter Umgebung A/B), keine Kachel-Übersicht mehr. Phase 1 merkt sich
+  (Reiter 3 oben mit Umschalter Umgebung A/B), keine Kachel-Übersicht mehr. Phase 1 merkt sich
   Einführung/Training, Phase 2 die Umgebung, die zuletzt offene Phase steht in `ry.phase`.
 - Lehrkraft sieht alle Reiter und daneben das Teilen-Symbol (gefüllt = geteilt), wie bei
   Tiny LM/Definitions Derby. Schüler sehen nur geteilte Reiter; ohne geteilte Phase eine
