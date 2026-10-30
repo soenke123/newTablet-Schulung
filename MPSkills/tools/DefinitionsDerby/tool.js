@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030c';
+  const V = '20261030d';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3924,8 +3924,8 @@
       iset.hidden = !v.items_on;
       iset.innerHTML = '<p class="dd-st__hint">' + (v.items_often ? 'Häufig: an jeder Stufe zwei Item-Linien.' : 'Normal: eine Item-Linie zwischen zwei Aufgabenstufen.') +
           ' Antippen schaltet ein Item aus oder an.</p>' +
-        '<div class="dd-st__itgrid">' + ST_ITEMS.map(it => '<button type="button" class="dd-st__itbtn' + (off.has(it.id) ? '' : ' is-on') + '" data-act="st-item" data-id="' + it.id +
-          '" aria-pressed="' + !off.has(it.id) + '" title="' + E(it.say) + '">' + itIco(it.id) + '<span>' + E(it.name) + '</span></button>').join('') + '</div>';
+        '<div class="dd-st__itgrid">' + ST_ITEMS.map(it => '<span class="dd-st__itcell"><button type="button" class="dd-st__itbtn' + (off.has(it.id) ? '' : ' is-on') + '" data-act="st-item" data-id="' + it.id +
+          '" aria-pressed="' + !off.has(it.id) + '" title="' + E(it.say) + '">' + itIco(it.id) + '<span>' + E(it.name) + '</span></button>' + stInfoBtn(it.id) + '</span>').join('') + '</div>';
     }
     const cards = (list || []).filter(s => (v.stacks || []).includes(s.id)).reduce((a, s) => a + (s.n || 0), 0);
     const sh = root.querySelector('#ddStStartHint'), go = root.querySelector('#ddStStart');
@@ -4038,11 +4038,11 @@
     const box = root.querySelector('#ddStWait');
     if (!box) return;
     const t = stMyTeam(), v = st.v;
-    const key = JSON.stringify([t, v.team_count, stPeople().map(p => p.n + p.t)]);
+    const key = JSON.stringify([t, v.team_count, stPeople().map(p => p.n + p.t), v.items_on, v.items_often, v.items_off]);
     if (box.dataset.key === key) return;
     box.dataset.key = key;
     if (t == null) {
-      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistensturm</h3><p>Gleich geht’s los. Sobald deine Lehrkraft startet, kommst du in ein Team.</p></div>';
+      box.innerHTML = '<div class="dd-st__card"><h3 class="dd-st__h3">Kistensturm</h3><p>Gleich geht’s los. Sobald deine Lehrkraft startet, kommst du in ein Team.</p></div>' + stItemsDev();
       return;
     }
     const mates = stPeople().filter(p => p.t === t);
@@ -4051,8 +4051,36 @@
       '<p class="dd-st__you">Du bist in</p><h3 class="dd-st__h3 dd-st__tname">' + E(stTeam(t)) + '</h3>' +
       '<p class="dd-st__say">' + E(stFig(t).say) + '</p>' +
       '<p class="dd-st__names">' + mates.map(p => '<span' + (p.id === v.me.id ? ' class="is-me"' : '') + '>' + E(p.n) + '</span>').join('') + '</p>' +
-      '<p class="dd-st__hint">Warte, bis deine Lehrkraft startet. Jede richtige Antwort ist eine Kiste für dein Team.</p></div>';
+      '<p class="dd-st__hint">Warte, bis deine Lehrkraft startet. Jede richtige Antwort ist eine Kiste für dein Team.</p></div>' + stItemsDev();
   }
+  /* Lobby am Tablet: die Items dieses Spiels, antippen = Erklärung mit Bild */
+  function stItemsDev() {
+    const v = st.v;
+    if (!v.items_on) return '';
+    const off = new Set(v.items_off || []), on = ST_ITEMS.filter(it => !off.has(it.id));
+    if (!on.length) return '';
+    return '<div class="dd-st__card dd-st__itlist"><h3 class="dd-st__h3">Items in diesem Spiel</h3>' +
+      '<p class="dd-st__hint"><span class="dd-st__qbox">?</span>Überquert euer Turm eine gestrichelte Linie, bekommt euer Team ein Item' +
+        (v.items_often ? ' – heute gibt es besonders viele.' : '.') + ' Antippen zeigt, was es macht.</p>' +
+      '<div class="dd-st__itgrid">' + on.map(it => '<button type="button" class="dd-st__itbtn is-on" data-act="st-iinfo" data-id="' + it.id + '">' +
+        itIco(it.id) + '<span>' + E(it.name) + '</span><i class="dd-st__ii">i</i></button>').join('') + '</div></div>';
+  }
+  const stInfoBtn = id => '<button type="button" class="dd-st__iinfo" data-act="st-iinfo" data-id="' + id + '" aria-label="' + E(stItem(id).name) + ': was macht das?">i</button>';
+  /* Erklärung eines Items: Bildschirmfoto + Text (img/item-<id>.jpg) */
+  function stItemInfo(id) {
+    const it = stItem(id), box = root.querySelector('#ddSt');
+    if (!box) return;
+    stItemInfoClose();
+    const d = document.createElement('div');
+    d.className = 'dd-st__iwin'; d.id = 'ddStIWin';
+    d.innerHTML = '<div class="dd-st__iwbg" data-act="st-iinfo-x"></div><div class="dd-st__iwcard" role="dialog" aria-modal="true" aria-label="' + E(it.name) + '">' +
+      '<button type="button" class="dd-x" data-act="st-iinfo-x" aria-label="Schließen">×</button>' +
+      '<img src="' + BASE + 'img/item-' + id + '.jpg?v=' + V + '" alt="Bildschirmfoto: ' + E(it.name) + '" decoding="async">' +
+      '<div class="dd-st__iwtxt">' + itIco(id) + '<span><b>' + E(it.name) + '</b>' + E(it.say) + '</span></div></div>';
+    box.appendChild(d);
+    const x = d.querySelector('.dd-x'); if (x) x.focus();
+  }
+  function stItemInfoClose() { const d = root && root.querySelector('#ddStIWin'); if (d) d.remove(); }
 
   /* ══ Spielfeld (Beamer) ══ */
   function stSceneBeam() {
@@ -4440,9 +4468,9 @@
     const fresh = st.newItem && Date.now() - st.newItem < 1500;
     box.dataset.k = key;
     box.innerHTML = its.length
-      ? its.map((id, k) => '<button type="button" class="dd-st__item' + (fresh && k === its.length - 1 ? ' is-new' : '') + '" data-act="st-use" data-slot="' + k + '"' + (st.usingItem ? ' disabled' : '') + '>' +
-          itIco(id) + '<span><b>' + E(stItem(id).name) + '</b><small>' + E(stItem(id).say) + '</small></span><em>Einsetzen</em></button>').join('')
-      : '<p class="dd-st__noitem"><span class="dd-st__qbox">?</span>Überquert euer Turm eine gestrichelte Linie, bekommt ihr ein Item.</p>';
+      ? its.map((id, k) => '<button type="button" class="dd-st__item' + (fresh && k === its.length - 1 ? ' is-new' : '') + '" data-act="st-use" data-slot="' + k + '"' + (st.usingItem ? ' disabled' : '') +
+          ' title="' + E(stItem(id).name) + '" aria-label="' + E(stItem(id).name) + ' einsetzen">' + itIco(id) + '<em>Einsetzen</em></button>').join('')
+      : '';
   }
   async function stUse(slot) {
     if (!st || st.usingItem) return;
@@ -4946,6 +4974,8 @@
         case 'st-often': if (st && st.v) stItems({ p_often: b.dataset.v === '1' }); break;
         case 'st-item': if (st && st.v) stToggleItem(b.dataset.id); break;
         case 'st-use': stUse(Number(b.dataset.slot)); break;
+        case 'st-iinfo': if (st && st.v) stItemInfo(b.dataset.id); break;
+        case 'st-iinfo-x': stItemInfoClose(); break;
         case 'st-stop':
           if (st && await ctx.confirm('Kistensturm jetzt beenden? Der höchste Turm gewinnt.')) { await stCall('dd_storm_room_stop'); if (st) stPoll(); }
           break;
@@ -5028,6 +5058,7 @@
     onKey = (ev) => {
       if (!root || ev.defaultPrevented || ev.altKey || ev.metaKey) return;
       const tag = (ev.target.tagName || '').toLowerCase();
+      if (ev.key === 'Escape' && root.querySelector('#ddStIWin')) { ev.preventDefault(); stItemInfoClose(); return; }
       if (ev.key === 'Escape' && info) { ev.preventDefault(); closeInfo(); return; }
       // Stapel und Spiel-Kacheln sind keine echten Knöpfe: Enter/Leertaste wie ein Klick.
       if ((ev.key === 'Enter' || ev.key === ' ') && root.contains(ev.target) && ev.target.matches &&
