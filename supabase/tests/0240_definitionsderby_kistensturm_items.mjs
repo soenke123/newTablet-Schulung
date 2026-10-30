@@ -2,7 +2,7 @@
    Echt gerechnet in pglite auf der ganzen Kette 0001…0240.
 
    Geprüft: Einstellungen in der Lobby, Kisten als Liste (unten hinein),
-   Item-Linien (je Linie einmal, „häufig“ doppelt), Ziehen nach Platz
+   Item-Linien (jedes Überqueren zählt, seit 0241; „häufig“ doppelt), Ziehen nach Platz
    (der Erste bekommt keine Angriffe), alle zwölf Items, Sieg durch ein
    Item, Migration zweimal.
 
@@ -82,12 +82,20 @@ r = await ans(0, true);
 ok('3  Linie bei 2 → ein Item, Ereignis get', r.teams[0].it.length === 1 && r.events.some(e => e.k === 'get' && e.t === 0), JSON.stringify(r.teams[0]));
 await boxes(0, N(0, 1));
 await ans(0, true);
-ok('3  dieselbe Linie noch einmal → kein neues Item', (await team(0)).items.length === 1);
+ok('3  Linie nach Verlust wieder überquert → neues Item (0241: Linie gilt immer)', (await team(0)).items.length === 2);
+await db.exec(`update dd_storm_teams set items = '[]' where team = 0`);
+await ans(0, true);
+ok('3  weiter wachsen ohne neue Linie → kein Item', (await team(0)).items.length === 0);
 await boxes(0, N(0, 9));
 await db.exec(`update dd_storm_teams set line_max = 1 where team = 0`);
 await ans(0, false);
 await db.exec(`select dd_storm_award('${ROOM}', 0)`);
 ok('3  höchstens 2 Items auf Vorrat', (await team(0)).items.length === 2);
+await db.exec(`update dd_storm_teams set items = '[]' where team = 0`);
+await boxes(0, N(0, 4));
+ok('3  Höhe sinkt → Linie sinkt mit (line_max = 2 bei Höhe 4)', (await team(0)).line_max === 2);
+await boxes(0, N(0, 4));
+ok('3  genau auf der Linie gelandet → kein Item', (await team(0)).items.length === 0);
 
 /* 4 Ziehen nach Platz: der Erste bekommt keine Angriffe */
 await boxes(0, N(0, 6)); await boxes(1, N(1, 4)); await boxes(2, N(2, 2)); await boxes(3, []);
