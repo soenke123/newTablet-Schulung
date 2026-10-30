@@ -143,14 +143,15 @@ ok('5  Boom: Stein wird zerstört, schützt darunter', (await kinds(0)) === 'nnn
 await db.exec(`update dd_storm_boards set goal = 60`);   // damit 5 Antworten nicht gewinnen
 await reset(); await give(3, 'eis'); r = await use(3);
 const victim = r.events.at(-1).d.tg[0];
-ok('5  Eis landet oben bei einem anderen Team', victim !== 3 && (await team(victim)).boxes.at(-1).k === 'i');
+ok('5  Eis landet ganz unten bei einem anderen Team (seit 0245)', victim !== 3 && (await team(victim)).boxes[0].k === 'i');
 for (let i = 0; i < 5; i++) await ans(victim, true);
 ok('5  Eis: 5 richtige in Folge → taut zur Kiste', !(await kinds(victim)).includes('i'));
 await reset(); await give(3, 'eis'); r = await use(3);
 const v2 = r.events.at(-1).d.tg[0], before = (await team(v2)).boxes.length;
 await ans(v2, true); await ans(v2, false);
 await db.exec(`update dd_storm_boards set goal = 10`);
-ok('5  Eis: Fehler → alles darunter rutscht weg', (await team(v2)).boxes.length === 1, String((await team(v2)).boxes.length) + ' von ' + before);
+// seit 0245: nur die neuen Kisten unter dem Eis rutschen weg, die alten bleiben
+ok('5  Eis: Fehler → nur die neuen Kisten rutschen weg', (await team(v2)).boxes.length === before && !(await kinds(v2)).includes('i'), String((await team(v2)).boxes.length) + ' von ' + before);
 await reset(); await boxes(1, [{ k: 'x', t: 1 }, ...N(1, 3)]); await give(3, 'kuddel');
 const all0 = (await one(`select string_agg(e->>'k', '' order by e->>'k') s from dd_storm_teams t, jsonb_array_elements(t.boxes) e where room_id = $1`, [ROOM])).s;
 await use(3);

@@ -3730,7 +3730,7 @@
     { id: 'tea',    name: 'Teatime',      say: 'Die ersten beiden Teams machen 10 Sekunden Teepause.' },
     { id: 'bus',    name: 'Bus',          say: 'Fährt unten durch und nimmt jedem Team 5 Kisten weg.' },
     { id: 'boom',   name: 'Boom',         say: 'Plasmabombe auf den Ersten: 5 Kisten kaputt, ein Stein hält den Rest.' },
-    { id: 'eis',    name: 'Eiskiste',     say: 'Ein anderes Team bekommt eine Eiskiste: 5 richtige in Folge, sonst rutscht alles darunter weg.' },
+    { id: 'eis',    name: 'Eiskiste',     say: 'Ein anderes Team bekommt ganz unten eine Eiskiste: 5 richtige in Folge, sonst rutschen die neuen Kisten darunter weg.' },
     { id: 'kuddel', name: 'Kuddelmuddel', say: 'Alle Kisten aller Teams werden gemischt – die Anzahl bleibt.' }
   ];
   const stItem = id => ST_ITEMS.find(x => x.id === id) || { id, name: id, say: '' };
@@ -4375,7 +4375,7 @@
     } else if (e.k === 'icebreak' && e.t != null) {
       stHold(e.t, 700);
       stShake(e.t);
-      if (e.t === me) stNote(itIco('eis') + '<b>Das Eis ist gebrochen – alles darunter ist weggerutscht.</b>', 'is-bad');
+      if (e.t === me) stNote(itIco('eis') + '<b>Das Eis ist gebrochen – die neuen Kisten darunter sind weggerutscht.</b>', 'is-bad');
     } else if (e.k === 'melt' && e.t === me) {
       stNote(itIco('eis') + '<b>Geschafft! Das Eis ist geschmolzen.</b>', 'is-good');
     }
@@ -4400,7 +4400,7 @@
       const txt = {
         moewe: 'Eine Möwe hat euch eine Kiste geklaut!', moewe3: 'Eine Möwe hat euch eine Kiste geklaut!',
         mini: 'Ihr bekommt 20 Sekunden lang nur Mini-Kisten.', tea: 'Teatime! 10 Sekunden Pause.',
-        boom: 'Boom! Fünf Kisten sind kaputt.', eis: 'Ihr habt eine Eiskiste! 5 richtige in Folge, sonst rutscht alles darunter weg.',
+        boom: 'Boom! Fünf Kisten sind kaputt.', eis: 'Ihr habt unten eine Eiskiste! 5 richtige in Folge, sonst rutschen die neuen Kisten darunter weg.',
         bus: 'Der Bus hat unten Kisten mitgenommen.', kuddel: 'Kuddelmuddel! Alle Kisten wurden gemischt.'
       }[d.it];
       if (by === me) stNote(itIco(d.it) + '<b>Ihr habt ' + E(it.name) + ' eingesetzt.</b><span>' + E(it.say) + '</span>', 'is-good');
@@ -4484,7 +4484,8 @@
     const p = stTop(t);
     if (!p) return;
     const el = stFx(itIco(it), 'is-drop');
-    stAnim(el, [{ transform: 'translate(' + (p.x - 22) + 'px,-50px)' }, { transform: 'translate(' + (p.x - 22) + 'px,' + (p.y - 44) + 'px)' }], 800, 'cubic-bezier(.5,0,.8,.4)');
+    const y = it === 'eis' ? p.bottom : p.y;   // Eis landet ganz unten (0245)
+    stAnim(el, [{ transform: 'translate(' + (p.x - 22) + 'px,-50px)' }, { transform: 'translate(' + (p.x - 22) + 'px,' + (y - 44) + 'px)' }], 800, 'cubic-bezier(.5,0,.8,.4)');
     setTimeout(() => el.remove(), 850);
   }
   function stFlyOff(t, box) {
