@@ -1,32 +1,19 @@
-/* Tour (tour.js), Freigaben der Lehrkraft und Warte-Karte der Klasse (app.js). */
+/* Tour (tour.js), Teilen-Knöpfe der Lehrkraft und Warte-Karte der Klasse (app.js). */
 
-/* ---- Kopfzeile rechts: Freigaben · Textwelten · ? ---- */
+/* ---- Kopfzeile rechts: Textwelten · ? ---- */
 .top-tools { display: flex; align-items: center; gap: 8px; flex: none; }
 .tour-btn { width: 36px; height: 36px; font-size: 1.05rem; }
 
-/* ---- Schloss am Phasen-Reiter ---- */
-.phase-lock { font-size: 0.8rem; line-height: 1; flex: none; }
-.phase-btn.locked { cursor: not-allowed; opacity: .55; }
-.phase-btn.locked:hover { color: var(--muted); }
-
-/* ---- Freigaben (Lehrkraft) ---- */
-.lock-btn .count { font-family: var(--font-mono); font-size: 0.76rem; background: var(--soft); border: 1px solid var(--line); padding: 0 7px; border-radius: 999px; }
-.lock-pop {
-  position: fixed; z-index: 40; width: min(270px, calc(100vw - 16px));
-  background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 16px;
-  box-shadow: var(--shadow-pop); padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;
-  animation: pop-in .16s ease-out;
+/* ---- Teilen-Symbol neben jedem Phasen-Reiter (nur Lehrkraft im Raum) ---- */
+.phase-share {
+  width: 36px; height: 36px; flex: none; align-self: center; margin-left: -2px; margin-right: 4px;
+  display: grid; place-items: center; padding: 0; border-radius: 10px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--muted);
 }
-.lock-title { font-family: var(--font-display); font-size: 0.98rem; margin-bottom: 4px; }
-.lock-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 7px 4px; border-radius: 10px; cursor: pointer; }
-.lock-row:hover { background: var(--soft); }
-.lock-lab { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 0.92rem; }
-.lock-lab .n {
-  width: 1.5rem; height: 1.5rem; border-radius: 50%; display: inline-grid; place-items: center;
-  background: var(--soft); border: 1px solid var(--line); font-family: var(--font-display); font-size: 0.8rem;
-}
-.lock-row input { width: 20px; height: 20px; accent-color: var(--accent); }
-.lock-note { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+.phase-share svg { width: 18px; height: 18px; fill: currentColor; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.phase-share:hover { border-color: var(--accent-edge); color: var(--accent); }
+.phase-share.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.phase-share:last-child { margin-right: 0; }
 
 /* ---- Warte-Karte (Klasse, keine Phase frei) ---- */
 .wait-card { max-width: 420px; margin: 60px auto; padding: 28px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
@@ -85,10 +72,16 @@
 .tour-foot .tour-skip:hover { text-decoration: underline; }
 .tour-count { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); white-space: nowrap; }
 
-@media (max-width: 760px) {
-  .lock-btn .corpus-lab { display: none; }
-}
 @media (prefers-reduced-motion: reduce) {
   .tour-pop { animation: none; }
   .tour-spot { transition: none; }
+}
+
+/* Schmal: Reiter + Teilen-Knöpfe müssen nebeneinander in eine Zeile passen */
+@media (max-width: 560px) {
+  .phases { gap: 2px; }
+  .phase-btn { padding: 4px 4px; gap: 4px; min-width: 0; }
+  .phase-btn .n { width: 1.4rem; height: 1.4rem; font-size: 0.8rem; }
+  .phase-share { width: 30px; height: 30px; margin: 0 2px 0 0; border-radius: 9px; }
+  .phase-share svg { width: 15px; height: 15px; }
 }
