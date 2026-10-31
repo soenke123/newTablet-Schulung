@@ -1443,6 +1443,11 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 /* gut sichtbar, aber nicht aufdringlich (Sönke 30.10.2026: erst „nicht gut zu sehen“, dann „etwas too much“) */
 .dd-st__ilines i {
   position: absolute; left: 0; right: 0; height: 3px; margin-bottom: -1.5px;
+  /* hell: weiß mit feinem dunklem Rand (Orange auf Beige war kaum zu sehen, Sönke 31.10.2026) */
+  background: repeating-linear-gradient(90deg, #fff 0 12px, transparent 12px 18px);
+  box-shadow: 0 0 0 1px rgba(60,40,20,.28), 0 0 6px rgba(255,255,255,.6);
+}
+:root[data-theme="dark"] .dd-st__ilines i {
   background: repeating-linear-gradient(90deg, rgba(255,150,30,.85) 0 12px, transparent 12px 18px);
   box-shadow: 0 0 6px rgba(255,150,20,.35);
 }
