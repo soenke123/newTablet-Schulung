@@ -701,13 +701,70 @@ body[data-screen="screen-p2-alien"] .status.your-turn{color:var(--muted3);}
 :root{ --ttt-ki:var(--mp-accent); --ttt-du:#e8902a; }
 html[data-theme="dark"]{ --ttt-du:#ffb547; }
 @media (prefers-color-scheme: dark){ html:not([data-theme]){ --ttt-du:#ffb547; } }
-#screen-p0-ttt{max-width:1080px; padding-top:14px; padding-bottom:24px;}
-.ttt{display:grid; grid-template-columns:minmax(0,400px) minmax(0,1fr); gap:24px; align-items:start;}
-/* Links (Spielfeld + Lernkurve) bleibt stehen, rechts wachsen die Züge nach unten. */
-.ttt-play{display:flex; flex-direction:column; align-items:center; gap:12px;
-  position:sticky; top:calc(var(--head-h, 50px) + 14px);}
-.ttt-curve{width:100%;}
-@media(max-width:820px){ .ttt{grid-template-columns:1fr;} .ttt-play{position:static;} }
+/* Alles auf EINE Bildschirmhöhe (--ttt-h), die Seite scrollt nicht: das
+   Spielfeld steht fest, „Möglichkeiten der KI“ scrollt in sich und zeigt
+   immer unten die aktuelle Entscheidung (tttScrollPath).
+   Breit:  Spielfeld + Lernkurve links, Möglichkeiten rechts über die ganze Höhe.
+   Schmal: Spielfeld oben, darunter die Möglichkeiten (so hoch wie Platz ist,
+           mind. eine Reihe), unten Zähler + kleine Lernkurve nebeneinander. */
+#screen-p0-ttt{max-width:1180px; padding:12px 16px;
+  --ttt-h:calc(100dvh - var(--head-h, 52px) - 24px);}
+.ttt{
+  display:grid; gap:14px 20px; height:var(--ttt-h); min-height:420px;
+  grid-template-columns:auto minmax(0,1fr); grid-template-rows:auto minmax(0,1fr);
+  grid-template-areas:"play side" "curve side";
+  --bsz:clamp(180px, min(calc(var(--ttt-h) - 315px), 44vw), 440px);
+}
+.ttt-play{grid-area:play; display:flex; flex-direction:column; align-items:center; gap:10px; width:max(var(--bsz), 400px);}
+.ttt-side{grid-area:side; display:flex; flex-direction:column; min-height:0;}
+.ttt-curve{grid-area:curve; display:flex; flex-direction:column; min-height:0;}
+.ttt-curve .ttt-chart{flex:1; height:auto; min-height:56px;}
+.ttt-curve{padding:10px 14px;}
+.ttt-curve .ttt-num b{font-size:1.2rem;}
+.ttt-curve .ttt-score{margin-bottom:4px; padding-bottom:4px;}
+.ttt-curve .ttt-legend{margin-top:2px;}
+@media(max-width:820px){
+  #screen-p0-ttt{padding:8px 10px; --ttt-h:calc(100dvh - var(--head-h, 48px) - 16px);}
+  .ttt{
+    gap:8px; min-height:0;
+    grid-template-columns:minmax(0,1fr); grid-template-rows:auto minmax(96px,1fr) auto;
+    grid-template-areas:"play" "side" "curve";
+    --bsz:clamp(150px, min(calc(var(--ttt-h) - 318px), calc(100vw - 20px)), 420px);
+  }
+  .ttt-play{width:100%; min-width:0; gap:8px;}
+  .ttt-board{width:var(--bsz) !important;}
+  .ttt-card{padding:8px 10px; border-radius:14px;}
+  .ttt-side h3{display:none;}
+  .ttt-side .ttt-legend{margin-top:4px; font-size:.7rem; gap:4px 10px;}
+  .ttt-curve{flex-direction:row; align-items:center; gap:8px;}
+  .ttt-curve .ttt-score{flex:none; margin:0; padding:0 8px 0 0; border-bottom:0; border-right:1px solid var(--mp-line); gap:2px;}
+  .ttt-curve .ttt-num b{font-size:1.05rem;}
+  /* Zähler am Handy nur Farbpunkt + Zahl, damit die Lernkurve Platz hat */
+  .ttt-curve .ttt-num{display:flex; flex-direction:row-reverse; align-items:center; justify-content:flex-end; gap:4px; padding:2px 4px;}
+  .ttt-curve .ttt-num em{display:none;}
+  .ttt-curve .ttt-num span i{width:9px; height:9px;}
+  .ttt-curve .ttt-num + .ttt-num{border-left:0;}
+  .ttt-curve .ttt-score{grid-template-columns:auto; gap:0;}
+  .ttt-curve .ttt-chart{height:58px; min-height:0; flex:1;}
+  .ttt-curve .ttt-curve-legend{display:none;}
+  .ttt-curve .ttt-chart{min-width:0;}
+  .ttt-actions{flex-wrap:nowrap; gap:8px;}
+  .ttt-forget{font-size:.74rem; white-space:nowrap;}
+  .ttt-side{min-height:116px;}
+  .ttt-path{padding-top:8px;}
+  .ttt-opts{flex-wrap:nowrap; gap:6px;}
+  .ttt-opts .ry-seg button{padding:6px 11px; font-size:.82rem;}
+  .ttt-status{min-height:34px; padding:5px 12px; font-size:.86rem; white-space:nowrap;}
+  .ttt-new{padding:8px 18px; font-size:.9rem;}
+  .ttt-actions .btn-teach small{display:none;}
+  .ttt-actions .btn-teach{padding:6px 12px;}
+  .ttt-mini{grid-template-columns:repeat(3,14px) !important; grid-template-rows:repeat(3,14px) !important;}
+  .ttt-mini span{font-size:.62rem !important;}
+  .ttt-row-n{margin-top:17px !important;}
+  .ttt-path{gap:6px !important;}
+}
+/* Sehr niedrig (Handy quer): Seite darf scrollen, sonst wird alles winzig. */
+@media(max-height:460px){ .ttt{height:auto;} .ttt-side{max-height:60vh;} }
 .ttt-opts{display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap;}
 .ttt-opts .ry-seg{margin:0;}
 .ttt-status{
@@ -722,7 +779,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-status.end-D{border-color:var(--ttt-du);} .ttt-status.end-D .ttt-dot{background:var(--ttt-du);}
 @keyframes ttt-pulse{50%{transform:scale(.6); opacity:.5;}}
 .ttt-board{
-  position:relative; width:min(100%, 380px, max(240px, 100dvh - var(--head-h, 50px) - 430px)); aspect-ratio:1/1;
+  position:relative; width:var(--bsz, 380px); max-width:100%; aspect-ratio:1/1;
   display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); gap:10px; padding:10px;
   background:var(--mp-paper-2); border-radius:24px; user-select:none; -webkit-user-select:none;
 }
@@ -744,7 +801,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 @keyframes ttt-in{from{opacity:0; transform:scale(.9);}}
 .ttt-line{position:absolute; inset:10px; width:calc(100% - 20px); height:calc(100% - 20px); pointer-events:none; z-index:2; overflow:visible;}
 .ttt-line line{stroke-width:9; stroke-linecap:round; stroke-dasharray:100; animation:ttt-draw .4s .1s ease-out both; opacity:.9;}
-.ttt-actions{display:flex; align-items:center; gap:14px;}
+.ttt-actions{display:flex; align-items:center; justify-content:center; flex-wrap:wrap; gap:8px 14px;}
 .ttt-new{
   font:inherit; font-size:.98rem; font-weight:600; padding:11px 26px; border-radius:999px; border:0; cursor:pointer;
   background:var(--mp-accent); color:var(--mp-on-accent); box-shadow:var(--mp-shadow);
@@ -755,18 +812,19 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-forget{font:inherit; font-size:.82rem; color:var(--mp-ink-faint); background:none; border:0; cursor:pointer; text-decoration:underline;}
 .ttt-forget:hover{color:var(--mp-ink);}
 
-.ttt-side{display:flex; flex-direction:column; gap:16px; min-width:0;}
 .ttt-card{background:var(--mp-surface); border:1px solid var(--mp-line); border-radius:18px; padding:16px 18px; box-shadow:var(--mp-shadow); min-width:0;}
 .ttt-card h3{font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--mp-ink-faint); margin-bottom:10px;}
 .ttt-score{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
 .ttt-num{text-align:center; padding:4px 2px;}
 .ttt-num b{display:block; font-size:1.4rem; font-weight:700; line-height:1.1; color:var(--mp-ink); font-variant-numeric:tabular-nums;}
+.ttt-num em{font-style:normal;}
 .ttt-num span{display:inline-flex; align-items:center; gap:5px; font-size:.74rem; white-space:nowrap; color:var(--mp-ink-soft);}
 .ttt-num span i{width:10px; height:10px; border-radius:3px; display:inline-block;}
 .ttt-num + .ttt-num{border-left:1px solid var(--mp-line);}
 @media(max-width:480px){ .ttt-num b{font-size:1.35rem;} .ttt-num span{font-size:.66rem;} }
 
 .ttt-chart{position:relative; width:100%; height:130px;}
+.ttt-path{flex:1; min-height:0; overflow-y:auto; overscroll-behavior:contain; scroll-behavior:smooth; padding:6px 4px 4px 0;}
 .ttt-chart svg{display:block; width:100%; height:100%; overflow:visible;}
 .ttt-chart text{font-family:inherit; font-size:11px; fill:var(--mp-ink-faint);}
 .ttt-chart .ax{stroke:var(--mp-line); stroke-width:1;}
@@ -941,30 +999,28 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
       <div class="ttt-board" id="ttt-board"></div>
       <div class="ttt-actions">
         <button class="ttt-new" id="ttt-new" type="button" onclick="tttNew()">Neue Partie</button>
+        <button class="btn-teach" type="button" onclick="tttPlay50()" title="Die KI spielt 50 Partien gegen einen Zufallsgegner und lernt dabei – gut zum Besprechen der Lernkurve">+50 Runden <small>(nur Lehrkraft)</small></button>
         <button class="ttt-forget" type="button" onclick="tttForget()">KI vergessen lassen</button>
       </div>
-      <button class="btn-teach" type="button" onclick="tttPlay50()" title="Die KI spielt 50 Partien gegen einen Zufallsgegner und lernt dabei – gut zum Besprechen der Lernkurve">+50 Runden <small>(nur Lehrkraft)</small></button>
-      <div class="ttt-card ttt-curve">
-        <div class="ttt-score">
-          <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i>KI-Siege</span></div>
-          <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i>Unentschieden</span></div>
-          <div class="ttt-num"><b id="ttt-n-d">0</b><span><i style="background:var(--ttt-du)"></i>Deine Siege</span></div>
-        </div>
-        <div class="ttt-chart" id="ttt-chart"></div>
-        <div class="ttt-legend">
-          <span><i class="ln"></i>Bilanz der KI (Siege − Niederlagen)</span>
-        </div>
+    </div>
+    <div class="ttt-card ttt-side">
+      <h3>Möglichkeiten der KI</h3>
+      <div id="ttt-path" class="ttt-path"></div>
+      <div class="ttt-legend">
+        <span><i class="lg lg-pick"></i>gewählt</span>
+        <span><i class="lg lg-win">★</i>gewinnt direkt</span>
+        <span><i class="lg lg-lose">✕</i>verliert direkt</span>
       </div>
     </div>
-    <div class="ttt-side">
-      <div class="ttt-card">
-        <h3>Möglichkeiten der KI</h3>
-        <div id="ttt-path" class="ttt-path"></div>
-        <div class="ttt-legend">
-          <span><i class="lg lg-pick"></i>gewählt</span>
-          <span><i class="lg lg-win">★</i>gewinnt direkt</span>
-          <span><i class="lg lg-lose">✕</i>verliert direkt</span>
-                  </div>
+    <div class="ttt-card ttt-curve">
+      <div class="ttt-score">
+        <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i><em>KI-Siege</em></span></div>
+        <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i><em>Unentschieden</em></span></div>
+        <div class="ttt-num"><b id="ttt-n-d">0</b><span><i style="background:var(--ttt-du)"></i><em>Deine Siege</em></span></div>
+      </div>
+      <div class="ttt-chart" id="ttt-chart"></div>
+      <div class="ttt-legend ttt-curve-legend">
+        <span><i class="ln"></i>Bilanz der KI (Siege − Niederlagen)</span>
       </div>
     </div>
   </div>
@@ -3583,7 +3639,7 @@ function tttAiTurn() {
 
   const pool = move.opts.map((x, i) => i).filter(i => probs[i] > 0);   // worunter wirklich gewürfelt wird
   const row = document.querySelector('.ttt-row:last-child');
-  if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  tttScrollPath();   // nur der Kasten scrollt, nie die Seite
   const els = row ? row.querySelectorAll('.ttt-opt') : [];
   const steps = pool.length > 1 ? 4 : 0;   // kurz: soll beim Trainieren nicht aufhalten (~0,5 s)
   let n = 0, at = pool[Math.random() * pool.length | 0];
@@ -3733,6 +3789,10 @@ function tttRender() {
 
 // Möglichkeiten der KI: je KI-Zug eine Reihe, je Möglichkeit ein
 // Mini-Brett.
+function tttScrollPath() {
+  const el = document.getElementById('ttt-path');
+  if (el) el.scrollTop = el.scrollHeight;
+}
 function tttPath() {
   const el = document.getElementById('ttt-path');
   if (!ttt.moves.length) { el.innerHTML = '<p class="ttt-none">Die KI ist noch nicht am Zug.</p>'; return; }
@@ -3756,6 +3816,7 @@ function tttPath() {
     }).join('');
     return '<div class="ttt-row"><div class="ttt-row-n">' + (mi + 1) + '</div><div class="ttt-opts-row">' + opts + '</div></div>';
   }).join('');
+  tttScrollPath();
 }
 
 // Lernkurve: laufende Bilanz der KI (Siege − Niederlagen) je Partie,
@@ -3765,7 +3826,9 @@ function tttChart() {
   if (!box || !box.offsetWidth) return;
   const W = box.offsetWidth, H = box.offsetHeight;
   const n = tttHist.length;
-  const L = 30, R = 34, T = 12, TICK = 10, B = 22 + TICK + 6;
+  const compact = H < 90;   // kleine Lernkurve am Handy: ohne Beschriftung unten
+  const L = compact ? 24 : 30, R = compact ? 28 : 34, T = compact ? 6 : 12, TICK = compact ? 5 : 10;
+  const B = compact ? TICK + 5 : 22 + TICK + 6;
   const pw = W - L - R, ph = H - T - B;
   if (!n) {
     box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '"><line class="ax" x1="' + L + '" x2="' + (W - R) + '" y1="' + (T + ph / 2) + '" y2="' + (T + ph / 2) + '"/>' +
@@ -3791,13 +3854,15 @@ function tttChart() {
   g += '<path d="' + area + '" fill="url(#ttt-grad)" stroke="none"/>';
   g += '<path class="lne" d="' + line + '"/>';
   // Ergebnis-Kästchen je Partie (2px Luft dazwischen)
-  const tw = Math.max(1, Math.min(14, pw / n - 2)), ty = T + ph + 8;
+  const tw = Math.max(1, Math.min(14, pw / n - 2)), ty = T + ph + (compact ? 4 : 8);
   tttHist.forEach((r, i) => {
     const c = r === 'K' ? 'var(--ttt-ki)' : r === 'D' ? 'var(--ttt-du)' : 'var(--mp-ink-faint)';
     g += '<rect x="' + (X(i) - tw / 2).toFixed(1) + '" y="' + ty + '" width="' + tw.toFixed(1) + '" height="' + TICK + '" rx="' + Math.min(3, tw / 2) + '" fill="' + c + '"' + (r === '=' ? ' opacity=".55"' : '') + '/>';
   });
-  g += '<text x="' + X(0) + '" y="' + (H - 4) + '" text-anchor="' + (n === 1 ? 'middle' : 'start') + '">Partie 1</text>';
-  if (n > 1) g += '<text x="' + X(n - 1) + '" y="' + (H - 4) + '" text-anchor="end">' + n + '</text>';
+  if (!compact) {
+    g += '<text x="' + X(0) + '" y="' + (H - 4) + '" text-anchor="' + (n === 1 ? 'middle' : 'start') + '">Partie 1</text>';
+    if (n > 1) g += '<text x="' + X(n - 1) + '" y="' + (H - 4) + '" text-anchor="end">' + n + '</text>';
+  }
   const e = pts[n - 1];
   g += '<circle class="end" cx="' + e[0] + '" cy="' + e[1] + '" r="5"/>';
   g += '<text class="end-lbl" x="' + (e[0] + 9) + '" y="' + (e[1] + 4) + '">' + (bal[n - 1] > 0 ? '+' : '') + bal[n - 1] + '</text>';

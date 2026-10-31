@@ -35,9 +35,15 @@ Die Teile:
   Siegzug, nimmt die KI ihn zu 100 %, sonst zufällig unter den offenen, Verlustzüge nie (alles
   Verlustzüge → blind raten). Früher: alle Züge eines Sieges markiert (dreifach gewichtet) und Zähler
   „Gestrichen“ – entfernt, war nicht verständlich.
-  Rechts „Möglichkeiten der KI“ (Mini-Bretter je KI-Zug, Auswahl läuft sichtbar zufällig, Legende
-  gewählt · gewinnt direkt · verliert direkt), links Spielfeld + Zähler (KI-Siege · Unentschieden · Deine
-  Siege) + Lernkurve (sticky). Gerät: `ry.ttt3_brain`, `ry.ttt3_hist`, `ry.ttt3_game`, `ry.ttt_first`
+  „Möglichkeiten der KI“ (Mini-Bretter je KI-Zug, Auswahl läuft sichtbar zufällig, Legende
+  gewählt · gewinnt direkt · verliert direkt), Spielfeld, Zähler (KI-Siege · Unentschieden · Deine
+  Siege) + Lernkurve. Ansicht seit 31.10.2026 auf EINE Bildschirmhöhe (`--ttt-h`, Spielfeldgröße
+  `--bsz` aus der Höhe gerechnet), die Seite scrollt nicht: breit (> 820 px) Spielfeld + Lernkurve
+  links, Möglichkeiten rechts über die ganze Höhe; schmal (Handy/Tablet hoch) Spielfeld oben,
+  darunter die Möglichkeiten (so hoch wie Platz ist), unten Zähler als Farbpunkt + Zahl neben
+  kleiner Lernkurve (`compact` in `tttChart`). Nur der Kasten der Möglichkeiten scrollt und steht
+  immer unten bei der aktuellen Entscheidung (`tttScrollPath`, kein scrollIntoView der Seite).
+  Unter ca. 460 px Höhe (Handy quer) darf die Seite scrollen. Gerät: `ry.ttt3_brain`, `ry.ttt3_hist`, `ry.ttt3_game`, `ry.ttt_first`
   (die alten `ry.ttt2_*` werden beim Laden gelöscht); „KI vergessen lassen“ löscht nur das.
 - **train – Training**: als KI spielen: Zustände K0x.., Aktionen E0x.., nur Sieg/Niederlage
   als Rückmeldung. Gewichte in `ry.bsch_w`, Siege/Niederlagen in `ry.bsch_s`.
