@@ -155,7 +155,7 @@ body{
 }
 .btn-teach small{font-weight:500; color:var(--mp-ink-faint);}
 .btn-teach:hover{background:var(--mp-accent-dim);}
-body.is-teacher .btn-teach{display:inline-flex;}
+body.is-teacher .btn-teach, body.is-demo .btn-teach{display:inline-flex;}
 
 /* ── Startseite: Erklärung oben, darunter zwei Bereiche mit Kacheln ── */
 #screen-home{max-width:1100px; padding:20px 20px 48px;}
@@ -1282,6 +1282,23 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 <script>
 'use strict';
 
+// Schaufenster (MPSkills/preview/reinforce.js): mit ?demo=1 merkt sich die Seite
+// nichts. localStorage wird VOR allem anderen durch einen Speicher im
+// Arbeitsspeicher ersetzt (wie tools/TinyLM/js/demo.js) – die Vorschau startet
+// frisch und überschreibt nicht den Stand, mit dem hier jemand arbeitet.
+if (/[?&]demo=1(&|$)/.test(location.search)) (function () {
+  const m = new Map();
+  const mem = {
+    getItem: k => (m.has(String(k)) ? m.get(String(k)) : null),
+    setItem: (k, v) => { m.set(String(k), String(v)); },
+    removeItem: k => { m.delete(String(k)); },
+    clear: () => m.clear(),
+    key: i => [...m.keys()][i] ?? null,
+    get length() { return m.size; }
+  };
+  try { Object.defineProperty(window, 'localStorage', { value: mem, configurable: true }); } catch (e) { /* dann eben echt */ }
+})();
+
 // ═══════════════════════════════════════════════════════════════════
 // CONTEXT & NAVIGATION
 // ═══════════════════════════════════════════════════════════════════
@@ -1946,7 +1963,7 @@ function trainReset() {
 // zieht zufällig (wie im Training), die KI (Schwarz) wählt zufällig nach
 // ihren Gewichten – Sieg verstärkt, Niederlage schwächt (wie finish()).
 function trainPlay50() {
-  if (!TEACHER) return;
+  if (!TEACHER && !DEMO) return;
   stopTimers();
   const pick = (b, moves) => {
     const w = moves.map(m => getW(b, m.from, m.to));
@@ -3761,7 +3778,7 @@ function tttOptimal(b) {
   return cand[(Math.random() * cand.length) | 0];
 }
 function tttPlay50() {
-  if (!TEACHER) return;
+  if (!TEACHER && !DEMO) return;
   tttStop();
   const res0 = { K: 0, D: 0, '=': 0 };
   for (let g = 0; g < 50; g++) {
@@ -3945,6 +3962,7 @@ function tttChart() {
 window.addEventListener('resize', () => { if (document.body.dataset.screen === 'screen-p0-ttt') tttChart(); });
 
 document.body.classList.toggle('is-teacher', TEACHER);
+document.body.classList.toggle('is-demo', DEMO);   // Schaufenster: „+50 Runden“ zeigen
 loadDiscoveredNodes();
 updateP1Stats();
 checkUnlockCondition();

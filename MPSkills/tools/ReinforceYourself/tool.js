@@ -36,7 +36,7 @@
 (function () {
   'use strict';
 
-  const V = '20261031a';
+  const V = '20261031b';
 
   let root  = null;
   let frame = null;

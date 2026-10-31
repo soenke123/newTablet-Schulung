@@ -85,6 +85,13 @@ welche Kacheln die Klasse öffnen darf.
   B (Aliens, lila) behalten ihre eigenen Welten, der Baum in der Sandbox bleibt eine dunkle Tafel
   (auf der Leinwand fest gezeichnet).
 - Allein geöffnet (ohne `?raum=`) ist alles offen.
+- **Schaufenster** (`MPSkills/preview/reinforce.js`): Kachel-Standbild (Tic-Tac-Toe-Brett,
+  Möglichkeiten ★/✕, Lernkurve; beim Darüberfahren Siegzug + Linie, CSS `.ryp-*` in
+  MPSkills/style.css) und Drehbuch mit der echten App im Rahmen (`?demo=1`): Startseite →
+  Gegen die KI (zwei Partien als „Du“, 6 × „+50 Runden Optimal“) → Training (+50 Runden) →
+  Startseite. Mit `?demo=1` ersetzt index.html den localStorage durch einen Speicher im
+  Arbeitsspeicher (erstes Stück im Skript) und zeigt „+50 Runden“ (`body.is-demo`,
+  `tttPlay50`/`trainPlay50` laufen bei `TEACHER || DEMO`).
 
 ## Gerät
 

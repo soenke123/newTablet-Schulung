@@ -1873,6 +1873,57 @@ a.btn {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Standbild Reinforce Yourself  (preview/reinforce.js)
+   ═══════════════════════════════════════════════════════
+   Farben wie in der App: KI = Akzent der Seite, Du = Orange
+   (--ttt-du in tools/ReinforceYourself/index.html). Beim
+   Darüberfahren setzt die KI ihren Siegzug (★), die Linie wird
+   gezogen und die Lernkurve wächst weiter. */
+.tprev--ry {
+  --ry-du: #e8902a; --ry-lose: #9aa6a3;
+  background: var(--paper);
+  padding: 0;
+}
+:root[data-theme="dark"] .tprev--ry { --ry-du: #ffb547; --ry-lose: #66706d; background: var(--paper); }
+.ryp { width: 100%; height: 100%; display: block; font-family: 'Outfit', system-ui, sans-serif; }
+.ryp-card, .ryp-board { fill: var(--surface); stroke: var(--line); }
+.ryp-grid { stroke: var(--line); stroke-width: 1.6; stroke-linecap: round; fill: none; }
+.ryp-x { stroke: var(--accent); stroke-width: 4; stroke-linecap: round; fill: none; }
+.ryp-o { stroke: var(--ry-du); stroke-width: 4; fill: none; }
+.ryp-opt .ryp-x, .ryp-opt .ryp-o { stroke-width: 1.8; }
+.ryp-opt .ryp-x--ghost { stroke-width: 2.2; }
+.ryp-pick { fill: var(--accent-dim); }
+.ryp-opt--lose .ryp-pick { fill: var(--line-soft); }
+.ryp-opt--lose .ryp-x--ghost { stroke: var(--ry-lose); }
+.ryp-opt--open .ryp-pick { fill: none; stroke: var(--accent); stroke-dasharray: 2 2; }
+.ryp-opt--open .ryp-x--ghost { opacity: .45; }
+.ryp-head { font-size: 10px; font-weight: 700; fill: var(--ink); }
+.ryp-small { font-size: 8.5px; fill: var(--ink-faint); }
+.ryp-status { font-size: 9px; font-weight: 600; fill: var(--ink-soft); }
+.ryp-s1 { opacity: 0; fill: var(--accent-ink); }
+.ryp-tag { font-size: 8px; font-weight: 700; fill: var(--ink-faint); }
+.ryp-tag--win { fill: var(--accent-ink); }
+.ryp-opt--win .ryp-board { stroke: var(--accent); stroke-width: 1.5; }
+.ryp-axis { stroke: var(--line); stroke-width: 1; }
+.ryp-curve { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ryp-tail { stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset .8s ease .35s; }
+.ryp-new { opacity: 0; transition: opacity .3s ease; }
+.ryp-line { stroke: var(--accent); stroke-width: 4; stroke-linecap: round; opacity: .55;
+  stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset .45s ease .25s; }
+.ryp-s0, .ryp-s1 { transition: opacity .3s ease; }
+@media (hover: hover) {
+  .tile--peek:hover .ryp-new { opacity: 1; }
+  .tile--peek:hover .ryp-line, .tile--peek:hover .ryp-tail { stroke-dashoffset: 0; }
+  .tile--peek:hover .ryp-s0 { opacity: 0; }
+  .tile--peek:hover .ryp-s1 { opacity: 1; }
+  .tile--peek:hover .ryp-opt--lose, .tile--peek:hover .ryp-opt--open { opacity: .45; }
+}
+.ryp-opt { transition: opacity .3s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .ryp-new, .ryp-line, .ryp-tail, .ryp-s0, .ryp-s1, .ryp-opt { transition: none; }
+}
+
+/* ═══════════════════════════════════════════════════════
    Standbild SQL Studio  (preview/sqlstudio.js)
    ═══════════════════════════════════════════════════════
    Kippt mit dem Kleid der Seite wie die App. Farben aus
