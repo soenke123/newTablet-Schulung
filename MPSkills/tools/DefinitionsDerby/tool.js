@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261031b';
+  const V = '20261031c';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -4298,7 +4298,6 @@
         '<div class="dd-st__hudtop"><b>Ziel: ' + v.goal + ' Kisten</b>' + (me != null ? '<span class="dd-st__myt" style="' + stCol(me) + '">' + E(stTeam(me)) + '</span>' : '') +
           '<span class="dd-st__clock" id="ddStClock" hidden></span></div>' +
         '<div class="dd-st__race">' + rows + '</div>' +
-        '<p class="dd-st__lvl" id="ddStLvl"></p>' +
         '<div class="dd-st__fxbox" id="ddStFx"></div>' +
         '<div class="dd-st__items" id="ddStItems" hidden></div>' +
       '</div>' +
@@ -4862,11 +4861,7 @@
     return Math.max(0, Math.min(4, Math.floor(stTarget(me) / v.goal * 5)));
   }
   function stPaintLevel() {
-    const el = root.querySelector('#ddStLvl');
-    if (!el) return;
-    const e = stLevel();
-    el.innerHTML = 'Aufgaben: <b>' + ST_LEVEL[e] + '</b>' + '<span class="dd-st__dots">' + ST_LEVEL.map((_, k) => '<i' + (k <= e ? ' class="is-on"' : '') + '></i>').join('') + '</span>' +
-      '<small>' + (e < 4 ? 'je höher euer Turm, desto schwerer' : 'ganz oben: die schwersten Aufgaben') + '</small>';
+    /* Zeile „Aufgaben: … je höher euer Turm, desto schwerer“ entfernt (Sönke 31.10.2026), Platz fürs Spiel */
   }
   async function stLoadCards() {
     const ids = (st.v.stacks || []).filter(id => (list || []).some(s => s.id === id));
