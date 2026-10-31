@@ -37,7 +37,7 @@
 (function () {
   'use strict';
 
-  const V = '20261031d';
+  const V = '20261031e';
 
   let root  = null;
   let frame = null;
@@ -47,7 +47,7 @@
   let ready = false, lastSent = '';
   let parts = null;        // Lehrkraft: eigener Stand, bis der Server ihn bestätigt
 
-  const PARTS = ['ttt', 'train', 'envA', 'envB', 'sandbox'];
+  const PARTS = ['info', 'ttt', 'train', 'envA', 'envB', 'sandbox'];
   const NEEDS_TRAIN = ['envA', 'envB', 'sandbox'];
   const LEGACY = { 0: ['ttt'], 1: ['train'], 2: ['envA', 'envB'], 3: ['sandbox'] };
   function normParts(list) {

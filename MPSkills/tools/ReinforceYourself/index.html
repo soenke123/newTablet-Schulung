@@ -227,6 +227,7 @@ html[data-theme="dark"] .rl-cycle .c-reward{--rc:#f0b453;} html[data-theme="dark
    weil ein Knopf nicht in einem Knopf stehen darf) */
 .tile{position:relative;}
 body.is-teacher .tile-txt{padding-bottom:34px;}
+body.is-teacher .tile-info .tile-txt{padding-bottom:34px;}
 .tile-share{
   display:none; position:absolute; left:92px; top:calc(50% + 1px); height:28px; align-items:center; gap:6px;
   padding:0 11px 0 9px; font:inherit; font-size:.78rem; font-weight:600; border-radius:999px; cursor:pointer;
@@ -935,11 +936,13 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
       <h2>Du trainierst die KI</h2>
     </div>
     <div class="area-tiles">
-      <div class="tile tile-info">
-        <button class="tile-open" type="button" onclick="document.getElementById('rl-dialog').showModal()">
+      <div class="tile tile-info" data-part="info">
+        <button class="tile-open" type="button" onclick="openPart('info')">
           <span class="tile-art"><svg viewBox="0 0 64 64" class="art-icon"><path d="M32 8a17 17 0 0 0-9 31v7h18v-7a17 17 0 0 0-9-31z"/><path d="M26 54h12M28 60h8"/></svg></span>
           <span class="tile-txt"><b>Was ist Reinforcement Learning?</b></span>
+          <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
         </button>
+        <button class="tile-share" type="button" onclick="toggleShare('info')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
       </div>
       <div class="tile" data-part="ttt">
         <button class="tile-open" type="button" onclick="openPart('ttt', true)">
@@ -1418,7 +1421,7 @@ const TEACHER = ROOM === 'lehrer';
 const STUDENT = ROOM === 'schueler';
 const DEMO    = new URLSearchParams(location.search).get('demo') === '1';
 
-const PARTS = ['ttt', 'train', 'envA', 'envB', 'sandbox'];
+const PARTS = ['info', 'ttt', 'train', 'envA', 'envB', 'sandbox'];
 const NEEDS_TRAIN = ['envA', 'envB', 'sandbox'];
 function normParts(list) {
   const set = new Set((list || []).filter(x => PARTS.includes(x)));
@@ -1433,6 +1436,7 @@ const SCREEN_PART = {
   'screen-p3-sandbox': 'sandbox'
 };
 const PART_INFO = {
+  info:    { title: 'Erklärung',    area: 'Du trainierst die KI' },
   ttt:     { title: 'Gegen die KI', area: 'Du trainierst die KI' },
   train:   { title: 'Training',     area: 'Du lernst wie eine KI' },
   envA:    { title: 'Umgebung A',   area: 'Du lernst wie eine KI' },
@@ -1457,6 +1461,7 @@ function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d =>
 
 function openPart(p, withTask) {
   if (!PART_INFO[p] || !partUsable(p)) return;
+  if (p === 'info') { document.getElementById('rl-dialog').showModal(); return; }
   stopTimers();
   closeDialogs();
   try { localStorage.setItem('ry.part', p); } catch (e) { /* egal */ }

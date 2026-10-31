@@ -11,7 +11,7 @@ Zwischen-Quizze und **ohne** Punkte/Gewinn-Bildschirme.
 
 Startseite (`screen-home`, Umbau 31.10.2026): zwei Bereiche mit Kacheln.
 
-- **1 „Du trainierst die KI“** – zwei Kacheln: „Was ist Reinforcement Learning?“ (öffnet das Fenster `#rl-dialog` mit der Erklärung „Wie lernt eine KI durch Belohnung?“: infografik.png + Text, die vier Kästen KI-Agent · Umgebung · Belohnung · Lernen in deren Farben, `.rl-cycle`; kein Teil, nicht teilbar, immer offen, `.tile-info` ohne `data-part`) und `ttt` (Gegen die KI).
+- **1 „Du trainierst die KI“** – zwei Kacheln: „Was ist Reinforcement Learning?“ (öffnet das Fenster `#rl-dialog` mit der Erklärung „Wie lernt eine KI durch Belohnung?“: infografik.png + Text, die vier Kästen KI-Agent · Umgebung · Belohnung · Lernen in deren Farben, `.rl-cycle`; Teil `info` wie die anderen: Lehrkraft schaltet mit „Teilen“ frei, ohne Freigabe grau; öffnet nur das Fenster, kein Screen, nicht in `ry.part`; fehlt in `data.parts` = gesperrt, Standard bleibt nur `ttt`) und `ttt` (Gegen die KI).
 - **2 „Du lernst wie eine KI“** – Ablauf mit Pfeilen: `train` (Training) →
   `envA` (Brett) / `envB` (Aliens) im gestrichelten Kasten „Training anwenden“ →
   `sandbox` („Verstehen“).
