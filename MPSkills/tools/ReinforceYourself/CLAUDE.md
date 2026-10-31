@@ -47,6 +47,11 @@ Die Teile:
   (die alten `ry.ttt2_*` werden beim Laden gelöscht); „KI vergessen lassen“ löscht nur das.
 - **train – Training**: als KI spielen: Zustände K0x.., Aktionen E0x.., nur Sieg/Niederlage
   als Rückmeldung. Gewichte in `ry.bsch_w`, Siege/Niederlagen in `ry.bsch_s`.
+  „Training zurücksetzen“ (Link neben „Neue Partie“, für alle, `trainReset`) löscht nur diese beiden;
+  entdeckte Knoten (`ry.*_discovered`) bleiben. Das Training färbt im Sandbox-Baum nur die Kanten der
+  KI-Züge (Schwarz) grün/rot nach Gewicht (`getAlienEdgeWeight`, über `applyDiscountedRewards` gedämpft
+  über die ganze Partie, nicht nur Sieg/Niederlage des letzten Zugs); Bilder der Knoten (Mini-Brett oben,
+  Alien unten) kommen nur aus Umgebung A (`discoveredBrettNodes`), B (`discoveredAlienNodes`) und der Sandbox.
 - **envA / envB – Umgebung A (Brettspiel) und B (Aliens)**: das Gelernte anwenden,
   Lernen eingefroren (`learningFrozen`).
 - **sandbox**: beide Spiele gleichzeitig + Entscheidungsbaum, Einstellungen ⚙. Die

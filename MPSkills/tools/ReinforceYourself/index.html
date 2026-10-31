@@ -394,7 +394,7 @@ dialog.task-dialog{max-width:560px; padding:26px 26px 22px;
 #p2brett-arrows{position:absolute; top:0; left:0; width:100%; height:100%;}
 
 /* ── Controls ── */
-.controls{display:flex; gap:10px; flex-wrap:wrap;}
+.controls{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
 .btn{
   padding:9px 18px; border-radius:8px; border:none; cursor:pointer;
   font-size:.9rem; font-weight:600; transition:background .15s,transform .1s;
@@ -1064,6 +1064,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
     <div class="controls">
       <button class="btn btn-secondary" id="p1-btn-new" onclick="startGame()">Neue Partie</button>
       <button class="btn-teach" type="button" onclick="trainPlay50()" title="50 Trainingspartien mit Zufallszügen – die Gewichte werden dabei verstärkt bzw. geschwächt">+50 Runden <small>(nur Lehrkraft)</small></button>
+      <button class="ttt-forget" type="button" onclick="trainReset()" title="Gewichte und Siege/Niederlagen des Trainings löschen">Training zurücksetzen</button>
     </div>
     <!-- Ab der 2. Trainings-Partie sichtbar (updateP1Stats) -->
     <div class="train-hint" id="p1-train-hint" hidden>
@@ -1925,6 +1926,20 @@ function finish(winner) {
     updateBrettStatsDisplay();
     saveBrettDiscovered();
   }
+}
+
+// „Training zurücksetzen“: nur Gewichte und Siege/Niederlagen des Trainings.
+// Entdeckte Knoten (Bilder im Baum aus Umgebung A/B und Sandbox) bleiben.
+function trainReset() {
+  if (!confirm('Training zurücksetzen? Alle gelernten Gewichte und die Siege/Niederlagen werden gelöscht. Auch in den Umgebungen und in der Sandbox ist die KI dann wieder untrainiert.')) return;
+  stopTimers();
+  weights = {};
+  stats   = { w: 0, l: 0 };
+  saveW(); saveS();
+  updateP1Stats();
+  checkUnlockCondition();
+  if (isTraining()) startGame();
+  ryToast('Training zurückgesetzt');
 }
 
 // „+50 Runden (nur Lehrkraft)“: 50 Trainingspartien ohne Anzeige. Weiß
