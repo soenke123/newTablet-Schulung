@@ -43,7 +43,7 @@ Die Teile:
   darunter die Möglichkeiten (so hoch wie Platz ist), unten Zähler als Farbpunkt + Zahl neben
   kleiner Lernkurve (`compact` in `tttChart`). Nur der Kasten der Möglichkeiten scrollt und steht
   immer unten bei der aktuellen Entscheidung (`tttScrollPath`, kein scrollIntoView der Seite).
-  Unter ca. 460 px Höhe (Handy quer) darf die Seite scrollen. Gerät: `ry.ttt3_brain`, `ry.ttt3_hist`, `ry.ttt3_game`, `ry.ttt_first`
+  Unter ca. 460 px Höhe (Handy quer) darf die Seite scrollen. Zwei Lernkurven je „wer beginnt“ (für die KI zwei verschiedene Spiele): `tttHists = {ki, du}`, angezeigt wird die zum Umschalter passende, Zähler ebenso; jede Partie merkt sich `ttt.first`, „+50 Runden Optimal“ spielt mit dem eingestellten Anfang. Gerät: `ry.ttt3_brain`, `ry.ttt3_hist` (`{ki:[], du:[]}`, alte Liste wird verworfen), `ry.ttt3_game`, `ry.ttt_first`
   (die alten `ry.ttt2_*` werden beim Laden gelöscht); „KI vergessen lassen“ löscht nur das.
 - **train – Training**: als KI spielen: Zustände K0x.., Aktionen E0x.., nur Sieg/Niederlage
   als Rückmeldung. Gewichte in `ry.bsch_w`, Siege/Niederlagen in `ry.bsch_s`.
@@ -54,7 +54,7 @@ Die Teile:
   „Was kann ich hier machen?“.
 
 **„+50 Runden (nur Lehrkraft)“** (`.btn-teach`, nur `body.is-teacher`): in ttt (`tttPlay50`:
-Knopf „+50 Runden Optimal“: KI lernt normal gegen einen perfekten Gegner (`tttOptimal`, Minimax `tttValue` mit Merkliste, gleich gute Züge gewürfelt) – sie kann nicht gewinnen, man sieht das Lernen an immer mehr Unentschieden (Versuch: nach 300 Partien ~50 %, nach 1000 ~90 % remis gegen perfekt); vorher Zufall bzw. „Siegzug zu 80 %“; Anfang je Partie gewürfelt; am Handy steht „nur Lehrkraft“ klein darunter, Lernkurve wächst um 50) und im Training
+Knopf „+50 Runden Optimal“: KI lernt normal gegen einen perfekten Gegner (`tttOptimal`, Minimax `tttValue` mit Merkliste, gleich gute Züge gewürfelt) – sie kann nicht gewinnen, man sieht das Lernen an immer mehr Unentschieden (Versuch: nach 300 Partien ~50 %, nach 1000 ~90 % remis gegen perfekt); vorher Zufall bzw. „Siegzug zu 80 %“; Anfang = Umschalter; am Handy steht „nur Lehrkraft“ klein darunter, Lernkurve wächst um 50) und im Training
 (`trainPlay50`: Weiß zufällig, die KI wählt gewichtet nach `getW`, `applyDiscountedRewards` wie
 in `finish`). Ohne Anzeige, danach Meldung unten (`ryToast`) – zum Besprechen des Lerneffekts.
 

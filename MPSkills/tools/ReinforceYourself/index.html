@@ -1021,7 +1021,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
       </div>
       <div class="ttt-chart" id="ttt-chart"></div>
       <div class="ttt-legend ttt-curve-legend">
-        <span><i class="ln"></i>Bilanz der KI (Siege − Niederlagen)</span>
+        <span><i class="ln"></i>Bilanz der KI (Siege − Niederlagen) · <b id="ttt-curve-who">KI beginnt</b></span>
       </div>
     </div>
   </div>
@@ -3534,14 +3534,19 @@ function tttStore(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } ca
 try { ['ry.ttt_brain', 'ry.ttt_last', 'ry.ttt_hist', 'ry.ttt2_brain', 'ry.ttt2_hist', 'ry.ttt2_game'].forEach(k => localStorage.removeItem(k)); } catch (e) { /* alte Perlen-Fassung */ }
 
 let tttBrain = tttLoad('ry.ttt3_brain', {});
-let tttHist  = tttLoad('ry.ttt3_hist', []);
+// Lernkurve getrennt nach „wer beginnt“ – für die KI sind das zwei verschiedene
+// Spiele (andere Stellungen). Angezeigt wird die zum Umschalter passende.
+let tttHists = tttLoad('ry.ttt3_hist', null);
+if (!tttHists || Array.isArray(tttHists)) tttHists = { ki: [], du: [] };   // alte Fassung: eine Liste für beide
+tttHists.ki = tttHists.ki || []; tttHists.du = tttHists.du || [];
+const tttHistOf = first => tttHists[first === 'du' ? 'du' : 'ki'];
 let tttFirst = tttLoad('ry.ttt_first', 'ki') === 'du' ? 'du' : 'ki';
 let ttt = tttLoad('ry.ttt3_game', null);   // laufende/letzte Partie
 let tttTimer = null;
 let tttSpin = null;       // Zufalls-Lauf über die Möglichkeiten (Zeitgeber)
 
 function tttSaveAll() {
-  tttStore('ry.ttt3_brain', tttBrain); tttStore('ry.ttt3_hist', tttHist); tttStore('ry.ttt3_game', ttt);
+  tttStore('ry.ttt3_brain', tttBrain); tttStore('ry.ttt3_hist', tttHists); tttStore('ry.ttt3_game', ttt);
 }
 
 // Stellung b (KI am Zug) → Schlüssel + Möglichkeiten. Je Möglichkeit:
@@ -3600,7 +3605,7 @@ function enterTTT() {
 
 function tttNew() {
   tttStop();
-  ttt = { b: Array(9).fill(null), turn: tttFirst === 'ki' ? 'K' : 'D', moves: [], over: null, line: null, fresh: -1, changed: [] };
+  ttt = { b: Array(9).fill(null), first: tttFirst, turn: tttFirst === 'ki' ? 'K' : 'D', moves: [], over: null, line: null, fresh: -1, changed: [] };
   tttRender();
   if (ttt.turn === 'K') tttAiTurn();
 }
@@ -3618,7 +3623,7 @@ function tttForget() {
 }
 function tttReset() {
   tttStop();
-  tttBrain = {}; tttHist = []; ttt = null;
+  tttBrain = {}; tttHists = { ki: [], du: [] }; ttt = null;
   tttSaveAll();
 }
 
@@ -3683,7 +3688,7 @@ function tttClick(cell) {
 // Partie vorbei: Sieg markiert den letzten KI-Zug (Siegzug), Niederlage streicht den
 // Partie vorbei: Sieg markiert alle KI-Züge, Niederlage streicht den
 // letzten (und rückwärts weiter, wo dann alles gestrichen ist).
-function tttLearn(w, M) {
+function tttLearn(w, M, first) {
   const changed = [];
   const last = M.length - 1;
   if (last >= 0 && w === 'K') {
@@ -3698,13 +3703,13 @@ function tttLearn(w, M) {
       if (!Object.values(box).every(v => v === -1)) break;
     }
   }
-  tttHist.push(w);
+  tttHistOf(first).push(w);
   return changed;
 }
 function tttEnd(res) {
   ttt.over = res.w;
   ttt.line = res.line;
-  ttt.changed = tttLearn(res.w, ttt.moves.filter(m => m.pick != null));
+  ttt.changed = tttLearn(res.w, ttt.moves.filter(m => m.pick != null), ttt.first || tttFirst);
   tttSaveAll();
   tttRender();
 }
@@ -3714,7 +3719,8 @@ function tttEnd(res) {
 // Regeln. Gegen ihn kann sie nicht gewinnen – dass sie gelernt hat, sieht
 // man daran, dass sie immer seltener verliert (mehr Unentschieden, die
 // Lernkurve wird flach). Gleich gute Züge des Gegners werden gewürfelt.
-// Wer anfängt, wird je Partie gewürfelt. Danach steht eine neue Partie bereit.
+// Wer anfängt, sagt der Umschalter (tttFirst) – die Runden landen in dessen
+// Lernkurve. Danach steht eine neue Partie bereit.
 const tttMemo = new Map();
 // Wert der Stellung für 'who' am Zug bei perfektem Spiel: 1 Sieg, 0 remis, -1 Niederlage.
 function tttValue(b, who) {
@@ -3745,7 +3751,7 @@ function tttPlay50() {
   const res0 = { K: 0, D: 0, '=': 0 };
   for (let g = 0; g < 50; g++) {
     const b = Array(9).fill(null), M = [];
-    let turn = Math.random() < 0.5 ? 'K' : 'D', res = null;
+    let turn = tttFirst === 'ki' ? 'K' : 'D', res = null;
     while (!res) {
       let cell;
       if (turn === 'K') {
@@ -3762,7 +3768,7 @@ function tttPlay50() {
       res = tttWinner(b);
       turn = turn === 'K' ? 'D' : 'K';
     }
-    tttLearn(res.w, M);
+    tttLearn(res.w, M, tttFirst);
     res0[res.w]++;
   }
   ttt = null;
@@ -3806,7 +3812,9 @@ function tttRender() {
   document.getElementById('ttt-new').classList.toggle('nudge', !!ttt.over);
   document.querySelectorAll('[data-first]').forEach(b => b.classList.toggle('on', b.dataset.first === tttFirst));
 
-  const cnt = w => tttHist.filter(x => x === w).length;
+  const cnt = w => tttHistOf(tttFirst).filter(x => x === w).length;
+  const lg = document.getElementById('ttt-curve-who');
+  if (lg) lg.textContent = tttFirst === 'ki' ? 'KI beginnt' : 'Du beginnst';
   document.getElementById('ttt-n-k').textContent = cnt('K');
   document.getElementById('ttt-n-e').textContent = cnt('=');
   document.getElementById('ttt-n-d').textContent = cnt('D');
@@ -3849,6 +3857,7 @@ function tttPath() {
 // Lernkurve: laufende Bilanz der KI (Siege − Niederlagen) je Partie,
 // darunter je Partie ein Kästchen in der Farbe des Ergebnisses.
 function tttChart() {
+  const tttHist = tttHistOf(tttFirst);
   const box = document.getElementById('ttt-chart');
   if (!box || !box.offsetWidth) return;
   const W = box.offsetWidth, H = box.offsetHeight;
