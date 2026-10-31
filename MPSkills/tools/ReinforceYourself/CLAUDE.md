@@ -35,7 +35,7 @@ Die Teile:
   Verlustzüge → blind raten). Früher: alle Züge eines Sieges markiert (dreifach gewichtet) +
   Streichen rückwärts und Zähler „Gestrichen“ – entfernt, war nicht verständlich.
   Rechts „Möglichkeiten der KI“ (Mini-Bretter je KI-Zug, Auswahl läuft sichtbar zufällig, Legende
-  gewählt · gewinnt direkt · verliert direkt), links Spielfeld + Zähler (KI-Siege · Remis · Deine
+  gewählt · gewinnt direkt · verliert direkt), links Spielfeld + Zähler (KI-Siege · Unentschieden · Deine
   Siege) + Lernkurve (sticky). Gerät: `ry.ttt3_brain`, `ry.ttt3_hist`, `ry.ttt3_game`, `ry.ttt_first`
   (die alten `ry.ttt2_*` werden beim Laden gelöscht); „KI vergessen lassen“ löscht nur das.
 - **train – Training**: als KI spielen: Zustände K0x.., Aktionen E0x.., nur Sieg/Niederlage

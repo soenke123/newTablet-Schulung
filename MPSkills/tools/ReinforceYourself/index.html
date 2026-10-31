@@ -947,7 +947,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
       <div class="ttt-card ttt-curve">
         <div class="ttt-score">
           <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i>KI-Siege</span></div>
-          <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i>Remis</span></div>
+          <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i>Unentschieden</span></div>
           <div class="ttt-num"><b id="ttt-n-d">0</b><span><i style="background:var(--ttt-du)"></i>Deine Siege</span></div>
         </div>
         <div class="ttt-chart" id="ttt-chart"></div>
@@ -3675,7 +3675,7 @@ function tttPlay50() {
   ttt = null;
   tttSaveAll();
   tttNew();
-  ryToast('+50 Runden: KI ' + res0.K + ' Siege · ' + res0['='] + ' Remis · ' + res0.D + ' Niederlagen');
+  ryToast('+50 Runden: KI ' + res0.K + ' Siege · ' + res0['='] + ' Unentschieden · ' + res0.D + ' Niederlagen');
 }
 
 function tttRender() {
