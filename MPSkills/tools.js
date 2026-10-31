@@ -90,7 +90,7 @@ window.TOOLS_OVERLAY = {
   // eingerahmter nach NeuroLab und Wild Clusters. Die Lehrkraft gibt
   // Szenarien frei, holt Netze auf den Beamer und schaltet die
   // Tablets blind. beta: die Integration ist frisch (28.09.2026).
-  synir: { ready: true, beta: true },
+  synir: { ready: true },
   // Neunter Skill (Migration 0196) — Scrum Werkstatt, ein Raum je
   // Team, eingerahmt wie NeuroLab (tools/ScrumWerkstatt/index.html).
   // beta: frisch aus dem Prototyp in den Raum gezogen (06.10.2026).
@@ -112,20 +112,20 @@ window.TOOLS_OVERLAY = {
   // Browser). beta: noch in Arbeit (16.10.2026). `windows`: Ordner mit
   // dem Windows-Installer (gebaut von .github/workflows/master-pdf-windows.yml,
   // ausgeliefert von Vercel): version.json + MasterPDFSkill-Setup.exe.
-  masterpdf: { ready: true, beta: true, standalone: 'tools/Master%20PDF%20Skill/index.html',
+  masterpdf: { ready: true, standalone: 'tools/Master%20PDF%20Skill/index.html',
                windows: '../downloads/master-pdf/' },
   // Dreizehnter Skill (Migration 0213) — Balance of Nature: Ökosystem
   // auf einer Insel, eingerahmt wie SYNIR (tools/balance of nature/,
   // Ordner mit Leerzeichen, weil er so aus seinem eigenen Repository
   // kam). Vier feste Szenarien, die Lehrkraft teilt und entzieht sie
   // (skill_room_state.data.shared). beta: frisch eingezogen (18.10.2026).
-  balance: { ready: true, beta: true },
+  balance: { ready: true },
   // Vierzehnter Skill (Migration 0220) — SQL Studio: Datenbanken wie
   // mit phpMyAdmin, SQLite im Browser (tools/SQLStudio/, sql.js im
   // Worker). Nur für Admins sichtbar — das entscheidet die Datenbank
   // (skill_tools.admin_only), `adminOnly` hier setzt nur das Schild auf
   // die Kachel. beta: Etappe 1, noch ohne Teilen (23.10.2026).
-  sqlstudio: { ready: true, beta: true, adminOnly: true },
+  sqlstudio: { ready: true },
   // Fünfzehnter Skill (Migration 0233) — How to Fachbegriffe: Lehrkräfte
   // legen Stapel aus Begriff · Definition · Bild an (Karte für Karte oder
   // als Text), teilen sie mit dem Raum; die Klasse lernt mit Karteikarten
@@ -140,7 +140,7 @@ window.TOOLS_OVERLAY = {
   // (tools/ReinforceYourself/index.html); geteilt wird nur, welche
   // Phasen die Klasse öffnen darf (skill_room_state.data.phases).
   // beta: frisch umgezogen (30.10.2026).
-  reinforce: { ready: true, beta: true, learning: 'Bestärkendes Lernen' },
+  reinforce: { ready: true, learning: 'Bestärkendes Lernen' },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

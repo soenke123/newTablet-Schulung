@@ -210,6 +210,6 @@
       <p>Was du dabei gelernt hast, wendest du danach an – und verstehst, was in einer KI passiert,
          die durch Belohnung lernt (Reinforcement Learning).</p>
       <p>Die Lehrkraft gibt die Teile einzeln für die Klasse frei; jede Person trainiert ihre
-         <strong>eigene</strong> KI im Gerät. Der Skill ist noch in der <strong>Beta</strong>.`
+         <strong>eigene</strong> KI im Gerät.`
   });
 })();

@@ -175,7 +175,6 @@
          <em>i</em> jeder Kachel stehen kurze Infos für den Unterricht: Räuber-Beute-Wellen,
          knappe Nahrung, eingeschleppte Arten.</p>
       <p>Jedes Tablet rechnet seine eigene Insel. Diagramme, Todesursachen und Karten für die
-         Menschen (Landung, Schafweide, Jagd, Ratten …) gehören dazu. Der Skill ist noch in der
-         <strong>Beta</strong>.</p>`
+         Menschen (Landung, Schafweide, Jagd, Ratten …) gehören dazu.</p>`
   });
 })();

@@ -103,7 +103,6 @@
          Markierungen, Unterstreichen, Textfelder —, auch vorhandene Kommentare aus anderen
          Programmen werden eingelesen und stehen in der Kommentarliste.</p>
       <p>Am Ende exportierst du das ganze Dokument, die aktuelle Seite oder eine Auswahl
-         (z. B. <em>1-3, 5</em>) als neue PDF. Das Beispiel oben ist ein erfundenes Referat über Zahlensysteme im Tierreich mit Tabelle.
-         Der Skill ist noch in der <strong>Beta</strong>.</p>`
+         (z. B. <em>1-3, 5</em>) als neue PDF. Das Beispiel oben ist ein erfundenes Referat über Zahlensysteme im Tierreich mit Tabelle.</p>`
   });
 })();
