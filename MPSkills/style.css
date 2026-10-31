@@ -1074,6 +1074,13 @@ a.btn {
   font-size: 1rem;
   letter-spacing: -0.01em;
 }
+/* Untertitel unter dem Namen (KI-Lernform, tools.js `learning`). */
+.tile-name { min-width: 0; }
+.tile-kind {
+  margin: 2px 0 0;
+  font-size: .78rem;
+  color: var(--ink-faint);
+}
 
 .tile-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .tag {

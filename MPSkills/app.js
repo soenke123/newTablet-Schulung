@@ -925,12 +925,20 @@ function toolCard(t, guest) {
          ${editorHref ? `<a class="btn btn--sm" href="${esc(editorHref)}">${esc(window.TOOLS_OVERLAY?.[t.id]?.editorLabel || 'Quiz-Editor')}</a>` : ''}
        </div>`;
 
+  /* KI-Lernform als Untertitel (tools.js, `learning`): nur auf der
+     Werkbank der Lehrkraft. Das Gast-Fenster sehen auch Schüler, und
+     dort soll die Antwort nicht schon auf der Kachel stehen. */
+  const learning = guest ? '' : window.TOOLS_OVERLAY?.[t.id]?.learning;
+
   return `<article class="tile${ready ? '' : ' tile--soon'}${pv ? ' tile--peek' : ''}">
       ${peek}
       ${still}
       <div class="tile-head">
         <span class="tile-ic">${window.MPIcons.svg(t.id)}</span>
-        <h3>${esc(t.title)}</h3>
+        <div class="tile-name">
+          <h3>${esc(t.title)}</h3>
+          ${learning ? `<p class="tile-kind">${esc(learning)}</p>` : ''}
+        </div>
       </div>
       ${badges ? `<div class="tile-tags">${badges}</div>` : ''}
       <p class="tile-blurb">${esc(t.blurb || '')}</p>

@@ -31,6 +31,11 @@
 
    editorLabel — Beschriftung dieses zweiten Knopfs (Vorgabe „Quiz-Editor").
 
+   learning — Untertitel unter dem Kachelnamen: welche KI-Lernform der
+              Skill zeigt. Nur auf der Kachel der Lehrkraft (renderTools
+              mit guest=false), nicht im Gast-Fenster und nicht im Raum —
+              die Klasse soll das selbst herausfinden (31.10.2026).
+
    standalone — Adresse einer Seite, die der Skill SELBST ist: kein Raum,
               keine Tür, nichts Gemeinsames. Die Kachel zeigt „Öffnen"
               statt „+ Raum öffnen" (für Gäste auch), und im Dropdown
@@ -52,7 +57,7 @@ window.TOOLS_OVERLAY = {
   // Großschreibung, weil der Ordner so aus seinem eigenen Repository
   // kam; dass die id davon abweichen darf, ist genau der Grund für
   // die folder-Spalte in skill_tools.
-  neurolab:  { ready: true },
+  neurolab:  { ready: true, learning: 'Überwachtes Lernen' },
   // Dritter Skill (Migration 0092). Liegt unter tools/Caesercode/ —
   // wieder ein Ordner, dessen Name nicht die id ist, diesmal wegen
   // eines Drehers darin. Anders als NeuroLab ist die Scheibe
@@ -69,7 +74,7 @@ window.TOOLS_OVERLAY = {
   // erste, in dem der Raum wirklich etwas steuert: die Lehrkraft
   // schaltet die Phase, und die Brücke (js/ui/bridge.js) trägt sie in
   // den Rahmen hinein.
-  wildclusters: { ready: true },
+  wildclusters: { ready: true, learning: 'Unüberwachtes Lernen' },
   // Sechster Skill (Migrationen 0130–0132), erster im Fach Englisch.
   // Zweites Team-Spiel mit eigenen Tabellen — und das erste, dessen
   // INHALT nicht ihm gehört: die Vokabelsätze liegen in vocab_*
@@ -100,7 +105,7 @@ window.TOOLS_OVERLAY = {
   // zum Aufschrauben. Eingerahmt wie NeuroLab (tools/TinyLM/index.html);
   // geteilt wird nur, welche Phasen die Klasse öffnen darf
   // (skill_room_state.data.phases). Schaufenster: preview/tinylm.js.
-  tinylm: { ready: true, beta: true },
+  tinylm: { ready: true, beta: true, learning: 'Selbstüberwachtes Lernen' },
   // Zwölfter Skill (Migration 0211) — Master PDF Skill: PDFs lesen und
   // bearbeiten. KEIN Raum: die Kachel öffnet die eigenständige App unter
   // tools/Master PDF Skill/ direkt, ohne Anmeldung (läuft lokal im
@@ -135,7 +140,7 @@ window.TOOLS_OVERLAY = {
   // (tools/ReinforceYourself/index.html); geteilt wird nur, welche
   // Phasen die Klasse öffnen darf (skill_room_state.data.phases).
   // beta: frisch umgezogen (30.10.2026).
-  reinforce: { ready: true, beta: true },
+  reinforce: { ready: true, beta: true, learning: 'Bestärkendes Lernen' },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet
