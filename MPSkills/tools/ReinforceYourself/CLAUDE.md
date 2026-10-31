@@ -85,9 +85,11 @@ welche Kacheln die Klasse öffnen darf.
   B (Aliens, lila) behalten ihre eigenen Welten, der Baum in der Sandbox bleibt eine dunkle Tafel
   (auf der Leinwand fest gezeichnet).
 - Allein geöffnet (ohne `?raum=`) ist alles offen.
-- **Schaufenster** (`MPSkills/preview/reinforce.js`): Kachel-Standbild (Tic-Tac-Toe-Brett,
-  Möglichkeiten ★/✕, Lernkurve; beim Darüberfahren Siegzug + Linie, CSS `.ryp-*` in
-  MPSkills/style.css) und Drehbuch mit der echten App im Rahmen (`?demo=1`): Startseite →
+- **Schaufenster** (`MPSkills/preview/reinforce.js`): Kachel-Standbild „Perspektivwechsel“
+  (Wunsch 31.10.2026: nicht auf Tic-Tac-Toe begrenzen, Umgebungen nicht verraten): links
+  „Du trainierst die KI“ (Mensch → KI, kleines Brett, Lernkurve), rechts „Du bist die KI“
+  (Zustand K0x01, Aktionen mit Gewicht, „Sieg → Aktion wird verstärkt“ beim Darüberfahren),
+  CSS `.ryp-*` in MPSkills/style.css; Kacheltext (skill_tools.blurb) in Migration 0251 und Drehbuch mit der echten App im Rahmen (`?demo=1`): Startseite →
   Gegen die KI (zwei Partien als „Du“, 6 × „+50 Runden Optimal“) → Training (+50 Runden) →
   Startseite. Mit `?demo=1` ersetzt index.html den localStorage durch einen Speicher im
   Arbeitsspeicher (erstes Stück im Skript) und zeigt „+50 Runden“ (`body.is-demo`,
