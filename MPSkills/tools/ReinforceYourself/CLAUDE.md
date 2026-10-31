@@ -1,8 +1,10 @@
 # Reinforce Yourself (MPSkill, Migration 0242, Beta)
 
 Reinforcement Learning zum Selbermachen. Kommt aus dem GameHub
-(`GameHub/S2 Reinforce Yourself!`, game14); dort steht das Spiel vorerst
-noch unverändert. Hier **ohne** Begleiter/Kreatur, **ohne** die
+(früher `GameHub/S2 Reinforce Yourself!`, game14); dort ist das Spiel
+seit Migration 0252 entfernt (Kachel weg, Ordner gelöscht, game14 bleibt
+nur für Altbestände an Kreaturen/Münzen als `retired` in GAMES_CONFIG).
+Hier **ohne** Begleiter/Kreatur, **ohne** die
 Zwischen-Quizze und **ohne** Punkte/Gewinn-Bildschirme.
 
 ## Aufbau (seit 31.10.2026: Startseite mit Kacheln statt Reitern)
@@ -97,7 +99,7 @@ welche Kacheln die Klasse öffnen darf.
 
 ## Gerät
 
-Alles liegt im localStorage unter `ry.*` (getrennt vom GameHub-Spiel auf derselben Herkunft).
+Alles liegt im localStorage unter `ry.*` (eigener Präfix; das frühere GameHub-Spiel lag auf derselben Herkunft).
 „Zurücksetzen“ rechts in der Kopfzeile löscht den Stand.
 
 ## Daten / Werkzeuge

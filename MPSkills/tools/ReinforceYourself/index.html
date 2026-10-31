@@ -1561,8 +1561,8 @@ function ryToast(msg) {
   toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
 }
 
-// Alles, was sich die Seite merkt, liegt im Gerät unter „ry.“ — getrennt
-// vom Spiel im GameHub, das dieselbe Herkunft hat.
+// Alles, was sich die Seite merkt, liegt im Gerät unter „ry.“ — eigener
+// Präfix, damit nichts mit dem GameHub (dieselbe Herkunft) kollidiert.
 let gamePathLearned  = true;
 let alienPathLearned = true;
 
