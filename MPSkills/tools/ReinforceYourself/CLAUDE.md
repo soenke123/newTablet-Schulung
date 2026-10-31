@@ -10,10 +10,13 @@ Zwischen-Quizze und **ohne** Punkte/Gewinn-Bildschirme.
 Startseite (`screen-home`): oben die Erklärung „Wie lernt eine KI durch Belohnung?“
 (infografik.png + 4 Schritte Beobachten · Handeln · Feedback · Lernen), darunter zwei Bereiche:
 
-- **1 „Du trainierst die KI“** – Kachel `ttt` (Phase 1, Gegen die KI).
-- **2 „Du lernst wie eine KI“** – Ablauf mit Pfeilen: `train` (Phase 2, Training) →
-  `envA` (Phase 3 · A, Brett) / `envB` (Phase 3 · B, Aliens) im gestrichelten Kasten
-  „Training anwenden“ → `sandbox` (Phase 4, Verstehen).
+- **1 „Du trainierst die KI“** – Kachel `ttt` (Gegen die KI).
+- **2 „Du lernst wie eine KI“** – Ablauf mit Pfeilen: `train` (Training) →
+  `envA` (Brett) / `envB` (Aliens) im gestrichelten Kasten „Training anwenden“ →
+  `sandbox` („Verstehen“).
+
+Wenig Text (Wunsch 31.10.2026): Kacheln nur Bild + Name, keine Phasen-Nummern, keine
+Untertitel unter den Bereichen, kein Erklärsatz für die Lehrkraft, kein Fußsatz.
 
 Kachel antippen = `openPart(p, true)`: Teil öffnen + Aufgaben-Fenster (`showTask`, Texte und
 Bildleiste in `TASKS`, kurz). Kopfzeile im Teil: „‹ Übersicht“ (`goHome`), Bereich + Name,
@@ -59,9 +62,8 @@ welche Kacheln die Klasse öffnen darf.
   index.html gleich) nimmt `train` immer mit, sobald eins davon geteilt ist; Training entziehen
   nimmt sie mit weg. Die Umgebungen sind einzeln teilbar.
 - Botschaften: hinein `ry:cmd {parts}`, heraus `ry:ready`, `ry:parts {parts}`.
-- Lehrkraft sieht alle Kacheln, darunter „Teilen“ (grün = geteilt, beim Training „Geteilt ·
-  gehört dazu“, solange eine Umgebung/Sandbox geteilt ist). Schüler sehen alle Kacheln, nicht
-  geteilte ausgegraut mit Schloss; ohne Freigabe ein Hinweis auf der Startseite. Wird der offene
+- Lehrkraft sieht alle Kacheln, darunter „Teilen“ (grün = „Geteilt“). Schüler sehen alle Kacheln, nicht
+  geteilte ausgegraut mit Schloss; ohne Freigabe „Noch nichts freigegeben.“ auf der Startseite. Wird der offene
   Teil entzogen, springt die Seite zur Startseite.
 - Farben/Schrift = MPSkills (Tokens als `--mp-*` aus MPSkills/style.css, Outfit lokal),
   Hell/Dunkel vom Rahmen (`data-theme`), allein vom Gerät. Umgebung A (Brett, beige) und

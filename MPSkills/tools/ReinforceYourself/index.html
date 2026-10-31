@@ -184,7 +184,6 @@ body.is-teacher .btn-teach{display:inline-flex;}
 .area-n{flex:none; width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
   font-weight:700; background:var(--mp-accent); color:var(--mp-on-accent);}
 .area-tiles{display:grid; grid-template-columns:minmax(0,360px); gap:12px;}
-.area-foot{margin-top:12px; font-size:.8rem; color:var(--mp-ink-faint);}
 
 .flow{display:grid; grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr); gap:6px; align-items:center;}
 .flow-step{display:flex; flex-direction:column; gap:10px; min-width:0;}
@@ -209,9 +208,7 @@ body.is-teacher .btn-teach{display:inline-flex;}
 .tile-art svg{width:52px; height:52px;}
 .tile-art img{width:100%; height:100%; object-fit:cover;}
 .tile-txt{display:flex; flex-direction:column; gap:2px; min-width:0;}
-.tile-k{font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--mp-accent-ink);}
 .tile-txt b{font-size:1.06rem; letter-spacing:-.01em;}
-.tile-d{font-size:.84rem; color:var(--mp-ink-soft); line-height:1.35;}
 .tile-lock{display:none; position:absolute; top:10px; right:10px; width:26px; height:26px; border-radius:50%;
   place-items:center; background:var(--mp-paper-2); color:var(--mp-ink-faint);}
 .tile-lock svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round;}
@@ -859,13 +856,13 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   <section class="area area-a">
     <div class="area-head">
       <span class="area-n">1</span>
-      <div><h2>Du trainierst die KI</h2><p>Du spielst gegen ein Programm und schaust zu, wie es lernt.</p></div>
+      <h2>Du trainierst die KI</h2>
     </div>
     <div class="area-tiles">
       <div class="tile" data-part="ttt">
         <button class="tile-open" type="button" onclick="openPart('ttt', true)">
           <span class="tile-art"><svg viewBox="0 0 64 64" class="art-ttt"><path class="g" d="M24 8v48M40 8v48M8 24h48M8 40h48"/><path class="x" d="M11 11l9 9M20 11l-9 9M43 27l9 9M52 27l-9 9"/><circle class="o" cx="32" cy="32" r="5"/><circle class="o" cx="48" cy="16" r="5"/></svg></span>
-          <span class="tile-txt"><span class="tile-k">Phase 1</span><b>Gegen die KI</b><span class="tile-d">Tic-Tac-Toe gegen ein Programm, das erst lernt</span></span>
+          <span class="tile-txt"><b>Gegen die KI</b></span>
           <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
         </button>
         <button class="tile-share" type="button" onclick="toggleShare('ttt')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
@@ -876,7 +873,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   <section class="area area-b">
     <div class="area-head">
       <span class="area-n">2</span>
-      <div><h2>Du lernst wie eine KI</h2><p>Erst wirst du trainiert – dann wendest du an, was du gelernt hast.</p></div>
+      <h2>Du lernst wie eine KI</h2>
     </div>
     <div class="flow">
       <div class="flow-step">
@@ -884,7 +881,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
         <div class="tile" data-part="train">
         <button class="tile-open" type="button" onclick="openPart('train', true)">
           <span class="tile-art"><svg viewBox="0 0 64 64" class="art-bot"><path class="l" d="M32 6v8"/><circle class="f" cx="32" cy="6" r="3"/><rect class="h" x="12" y="14" width="40" height="32" rx="10"/><circle class="e" cx="24" cy="29" r="4"/><circle class="e" cx="40" cy="29" r="4"/><path class="l" d="M25 38h14"/><path class="l" d="M20 46v8M44 46v8"/></svg></span>
-          <span class="tile-txt"><span class="tile-k">Phase 2</span><b>Training</b><span class="tile-d">Du bist die KI und wirst trainiert</span></span>
+          <span class="tile-txt"><b>Training</b></span>
           <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
         </button>
         <button class="tile-share" type="button" onclick="toggleShare('train')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
@@ -896,7 +893,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
         <div class="tile" data-part="envA">
         <button class="tile-open" type="button" onclick="openPart('envA', true)">
           <span class="tile-art"><svg viewBox="0 0 64 64" class="art-brett"><rect x="6" y="6" width="52" height="52" rx="6" class="b"/><path class="d" d="M23.3 6h17.3v17.3H23.3zM6 23.3h17.3v17.3H6zM40.6 23.3H58v17.3H40.6zM23.3 40.6h17.3V58H23.3z"/><circle class="pw" cx="14.6" cy="14.6" r="5"/><circle class="pw" cx="49.4" cy="14.6" r="5"/><circle class="pb" cx="32" cy="32" r="5"/><circle class="pb" cx="14.6" cy="49.4" r="5"/><circle class="pb" cx="49.4" cy="49.4" r="5"/></svg></span>
-          <span class="tile-txt"><span class="tile-k">Phase 3 · A</span><b>Umgebung A</b><span class="tile-d">Das Training anwenden</span></span>
+          <span class="tile-txt"><b>Umgebung A</b></span>
           <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
         </button>
         <button class="tile-share" type="button" onclick="toggleShare('envA')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
@@ -904,7 +901,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
         <div class="tile" data-part="envB">
         <button class="tile-open" type="button" onclick="openPart('envB', true)">
           <span class="tile-art"><img src="Sprites/Knoten/K0x00.png" alt="" loading="lazy"></span>
-          <span class="tile-txt"><span class="tile-k">Phase 3 · B</span><b>Umgebung B</b><span class="tile-d">Das Training anwenden</span></span>
+          <span class="tile-txt"><b>Umgebung B</b></span>
           <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
         </button>
         <button class="tile-share" type="button" onclick="toggleShare('envB')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
@@ -916,14 +913,13 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
         <div class="tile" data-part="sandbox">
         <button class="tile-open" type="button" onclick="openPart('sandbox', true)">
           <span class="tile-art"><svg viewBox="0 0 64 64" class="art-tree"><path class="l" d="M32 14L16 32M32 14l16 18M16 32l-8 16M16 32l8 16M48 32l-8 16M48 32l8 16"/><circle class="n" cx="32" cy="12" r="5"/><circle class="n" cx="16" cy="32" r="4.5"/><circle class="n" cx="48" cy="32" r="4.5"/><circle class="w" cx="8" cy="50" r="4"/><circle class="v" cx="24" cy="50" r="4"/><circle class="w" cx="40" cy="50" r="4"/><circle class="v" cx="56" cy="50" r="4"/></svg></span>
-          <span class="tile-txt"><span class="tile-k">Phase 4</span><b>Sandbox</b><span class="tile-d">Warum hat das Training geklappt?</span></span>
+          <span class="tile-txt"><b>Sandbox</b></span>
           <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
         </button>
         <button class="tile-share" type="button" onclick="toggleShare('sandbox')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
       </div>
       </div>
     </div>
-    <p class="area-foot">Umgebungen und Sandbox gibt es nur zusammen mit dem Training – wer sie öffnen darf, darf auch trainieren.</p>
   </section>
 </div>
 
@@ -1318,11 +1314,11 @@ const SCREEN_PART = {
   'screen-p3-sandbox': 'sandbox'
 };
 const PART_INFO = {
-  ttt:     { k: 'Phase 1',     title: 'Gegen die KI', area: 'Du trainierst die KI' },
-  train:   { k: 'Phase 2',     title: 'Training',     area: 'Du lernst wie eine KI' },
-  envA:    { k: 'Phase 3 · A', title: 'Umgebung A',   area: 'Du lernst wie eine KI' },
-  envB:    { k: 'Phase 3 · B', title: 'Umgebung B',   area: 'Du lernst wie eine KI' },
-  sandbox: { k: 'Phase 4',     title: 'Sandbox',      area: 'Du lernst wie eine KI' }
+  ttt:     { title: 'Gegen die KI', area: 'Du trainierst die KI' },
+  train:   { title: 'Training',     area: 'Du lernst wie eine KI' },
+  envA:    { title: 'Umgebung A',   area: 'Du lernst wie eine KI' },
+  envB:    { title: 'Umgebung B',   area: 'Du lernst wie eine KI' },
+  sandbox: { title: 'Sandbox',      area: 'Du lernst wie eine KI' }
 };
 
 const isShared   = p => !!classParts && classParts.includes(p);
@@ -1398,7 +1394,7 @@ function renderHome() {
     b.classList.toggle('is-on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
     const needed = p === 'train' && on && NEEDS_TRAIN.some(isShared);
-    b.querySelector('span').textContent = on ? (needed ? 'Geteilt · gehört dazu' : 'Geteilt') : 'Teilen';
+    b.querySelector('span').textContent = on ? 'Geteilt' : 'Teilen';
     b.title = on
       ? (p === 'train' && needed ? 'Training ist geteilt, weil Umgebung oder Sandbox geteilt sind – Entziehen nimmt sie mit weg'
                                 : PART_INFO[p].title + ' ist mit der Klasse geteilt – antippen zum Entziehen')
@@ -1407,11 +1403,9 @@ function renderHome() {
   const note = document.getElementById('home-note');
   let txt = '';
   if (STUDENT) txt = !classParts ? 'Einen Moment …'
-                   : !classParts.length ? 'Deine Lehrkraft hat noch nichts freigegeben. Lies dir schon mal oben durch, wie eine KI lernt.' : '';
-  else if (TEACHER) txt = 'Mit „Teilen“ an der Kachel gibst du sie für die Klasse frei. Umgebungen und Sandbox nehmen das Training automatisch mit.';
+                   : !classParts.length ? 'Noch nichts freigegeben.' : '';
   note.textContent = txt;
   note.hidden = !txt;
-  note.classList.toggle('is-teacher-note', TEACHER);
 }
 
 function updateHead() {
@@ -1472,7 +1466,7 @@ function showTask(p) {
   p = p || SCREEN_PART[document.body.dataset.screen];
   const t = TASKS[p];
   if (!t) return;
-  document.getElementById('task-k').textContent = PART_INFO[p].k + ' · ' + PART_INFO[p].area;
+  document.getElementById('task-k').textContent = PART_INFO[p].area;
   document.getElementById('task-title').textContent = PART_INFO[p].title;
   document.getElementById('task-visual').innerHTML = t.visual.join('');
   document.getElementById('task-text').innerHTML = t.text;
