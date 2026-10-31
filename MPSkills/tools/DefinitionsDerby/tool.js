@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030p';
+  const V = '20261031a';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -576,10 +576,9 @@
     if (!root || got.some(s => !s)) return false;
     const cards = [];
     for (const s of got) for (const c of s.cards) cards.push({ id: s.id + ':' + c.id, sid: s.id, t: c.t, d: c.d, i: c.i });
-    if (cards.length < G.min) {
-      toast(G.name + ' braucht mindestens ' + G.min + ' Karten.' + (G.room ? '' : ' Schalte oben mehr Stapel an.'));
-      return false;
-    }
+    // Zu wenige Begriffe? Die Lernform öffnet trotzdem — dort schaltet man oben
+    // Stapel dazu; geprüft wird erst beim Start-Knopf (enough).
+    if (!cards.length) { toast('In den Stapeln ist noch kein Begriff.'); return false; }
     const prev = keep && opened && opened.game === gid ? { learn, ov, mm, du } : null;
     info = null; renderInfo();
     if (opened) leavePlay();
@@ -596,6 +595,18 @@
     go('play');
     got.forEach(s => pullProg(s.id));
     return true;
+  }
+
+  /* Genug Begriffe für die Lernform? Geprüft am Start-Knopf in der Lernform,
+     nicht beim Öffnen (Sönke 31.10.2026: „in der Lernform passe ich die Stapel an“). */
+  function lackMsg(G) {
+    return 'Für ' + G.name + ' brauchst du mindestens ' + G.min + ' Begriffe.' + (G.room ? '' : ' Schalte oben mehr Stapel an.');
+  }
+  function enough(n) {
+    const G = opened && gameOf(opened.game);
+    if (!G || n >= G.min) return true;
+    toast(lackMsg(G));
+    return false;
   }
 
   /* Stapel antippen (Startseite): die vorderste Lernform (firstForm), nur mit diesem Stapel. */
@@ -1139,10 +1150,11 @@
           '<p class="dd-turn" id="ddTurn" aria-live="polite"></p>' +
           (fsOk() ? '<button type="button" class="btn btn--sm dd-ic dd-fsbtn" data-act="mm-fs" title="Vollbild" aria-label="Vollbild">' + (fsEl() ? ico.unfull : ico.full) + '</button>' : '') +
         '</div>' +
+        (mm.n < gameOf('memory').min ? '<p class="dd-lack">' + E(lackMsg(gameOf('memory'))) + '</p>' :
         '<div class="dd-memboards">' +
           '<div class="dd-memside dd-memside--t"><h3 class="dd-memside__h"><span>Begriffe</span></h3><div class="dd-memgrid" id="ddMemT"></div></div>' +
           '<div class="dd-memside dd-memside--d"><h3 class="dd-memside__h"><span>Definitionen</span></h3><div class="dd-memgrid" id="ddMemD"></div></div>' +
-        '</div>' +
+        '</div>') +
         '<div class="dd-review" id="ddReview" hidden>' +
           '<div class="dd-review__bg"></div>' +
           '<p class="dd-review__msg" aria-live="polite"></p>' +
@@ -1733,7 +1745,7 @@
   }
   function duStart() {
     const d = du;
-    if (!d || d.state !== 'ready') return;
+    if (!d || d.state !== 'ready' || !enough(d.n)) return;
     d.state = 'count';
     const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const step = n => {
@@ -3217,7 +3229,7 @@
     return pc.length + carryIds().filter(id => ids.has(id)).length;
   }
   async function islRound(onlyId) {
-    if (!isl || !isl.ready) return;
+    if (!isl || !isl.ready || !enough(opened.cards.length)) return;
     try { await ladeInsel(); } catch (e) { toast('Die Aufgaben konnten nicht geladen werden.'); return; }
     const I = window.DDInsel;
     let cards;
@@ -5053,7 +5065,7 @@
         '<input class="dd-input" data-ec="t" maxlength="120" placeholder="Begriff" value="' + E(c.t) + '" aria-label="Begriff ' + (i + 1) + '">' +
         '<textarea class="dd-input" data-ec="d" rows="2" maxlength="1200" placeholder="Definition" aria-label="Definition ' + (i + 1) + '">' + E(c.d) + '</textarea>' +
       '</div>' +
-      '<div class="dd-cardin__img">' + imgSlot(c, i) + '</div>' +
+      '<div class="dd-cardin__img">' + imgSlot(c, i) + '<small class="dd-imghint">wird beim Fachbegriff angezeigt</small></div>' +
       '<div class="dd-cardin__act">' +
         '<button type="button" class="btn btn--sm dd-ic" data-act="ed-up" title="Nach oben" aria-label="Nach oben"' + (i === 0 ? ' disabled' : '') + '>' + ico.up + '</button>' +
         '<button type="button" class="btn btn--sm dd-ic" data-act="ed-down" title="Nach unten" aria-label="Nach unten"' + (i === ed.cards.length - 1 ? ' disabled' : '') + '>' + ico.down + '</button>' +
@@ -5063,7 +5075,7 @@
   function imgSlot(c, i) {
     return okImg(c.i)
       ? '<span class="dd-imgbox"><img src="' + c.i + '" alt=""><button type="button" class="dd-imgx" data-act="ed-imgx" aria-label="Bild entfernen" title="Bild entfernen">×</button></span>'
-      : '<label class="dd-imgadd" title="Bild zur Karte hinzufügen">' + ico.img + '<span>Bild</span><input type="file" accept="image/*" data-ec="img" hidden></label>';
+      : '<label class="dd-imgadd" title="Bild zur Karte hinzufügen – wird beim Fachbegriff angezeigt">' + ico.img + '<span>Bild</span><input type="file" accept="image/*" data-ec="img" hidden></label>';
   }
   function autoGrow(t) { t.style.height = 'auto'; t.style.height = Math.min(220, t.scrollHeight + 2) + 'px'; }
 
@@ -5258,7 +5270,7 @@
         case 'mm-pick': memPick(b.dataset.side, Number(b.dataset.i)); break;
         case 'mm-yes': memDecide(true); break;
         case 'mm-no': memDecide(false); break;
-        case 'mm-new': if (mm) { newMemory(mm.pairs, mm.players); renderMemory(); } break;
+        case 'mm-new': if (mm && enough(mm.n)) { newMemory(mm.pairs, mm.players); renderMemory(); } break;
         case 'mm-players': if (mm && !mm.busy) { newMemory(mm.pairs, Number(b.dataset.v)); renderMemory(); } break;
         case 'mm-fs': memFullscreen(); break;
         case 'du-start': duStart(); break;
