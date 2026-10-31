@@ -214,14 +214,18 @@ body.is-teacher .btn-teach{display:inline-flex;}
 .tile-lock svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round;}
 .tile.is-locked .tile-open{opacity:.5; filter:grayscale(.7);}
 .tile.is-locked .tile-lock{display:grid;}
+/* „Teilen“ klein unter dem Namen, neben dem Bild (liegt über der Kachel,
+   weil ein Knopf nicht in einem Knopf stehen darf) */
+.tile{position:relative;}
+body.is-teacher .tile-txt{padding-bottom:34px;}
 .tile-share{
-  display:none; align-items:center; justify-content:center; gap:7px; margin:0 14px 12px; padding:7px 12px;
-  font:inherit; font-size:.84rem; font-weight:600; border-radius:10px; cursor:pointer;
-  background:var(--mp-surface); color:var(--mp-ink-soft); border:1px dashed var(--mp-line);
+  display:none; position:absolute; left:92px; top:calc(50% + 1px); height:28px; align-items:center; gap:6px;
+  padding:0 11px 0 9px; font:inherit; font-size:.78rem; font-weight:600; border-radius:999px; cursor:pointer;
+  background:var(--mp-surface); color:var(--mp-ink-soft); border:1px dashed var(--mp-ink-faint);
   transition:background .14s, color .14s, border-color .14s;
 }
-.tile-share svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;}
-.tile-share:hover{color:var(--mp-ink); border-color:var(--mp-ink-faint);}
+.tile-share svg{width:14px; height:14px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round;}
+.tile-share:hover{color:var(--mp-ink); border-color:var(--mp-ink-soft);}
 .tile-share.is-on{background:var(--mp-accent); border:1px solid var(--mp-accent); color:var(--mp-on-accent);}
 body.is-teacher .tile-share{display:inline-flex;}
 body.is-teacher .tile.is-shared{border-color:var(--mp-accent-edge);}

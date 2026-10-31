@@ -62,7 +62,7 @@ welche Kacheln die Klasse öffnen darf.
   index.html gleich) nimmt `train` immer mit, sobald eins davon geteilt ist; Training entziehen
   nimmt sie mit weg. Die Umgebungen sind einzeln teilbar.
 - Botschaften: hinein `ry:cmd {parts}`, heraus `ry:ready`, `ry:parts {parts}`.
-- Lehrkraft sieht alle Kacheln, darunter „Teilen“ (grün = „Geteilt“). Schüler sehen alle Kacheln, nicht
+- Lehrkraft sieht alle Kacheln, „Teilen“ als kleine Pille unter dem Namen neben dem Bild (grün = „Geteilt“). Schüler sehen alle Kacheln, nicht
   geteilte ausgegraut mit Schloss; ohne Freigabe „Noch nichts freigegeben.“ auf der Startseite. Wird der offene
   Teil entzogen, springt die Seite zur Startseite.
 - Farben/Schrift = MPSkills (Tokens als `--mp-*` aus MPSkills/style.css, Outfit lokal),
