@@ -192,7 +192,7 @@ html[data-theme="dark"] .rl-cycle .c-reward{--rc:#f0b453;} html[data-theme="dark
 .area-head p{font-size:.9rem; color:var(--mp-ink-soft); margin-top:1px;}
 .area-n{flex:none; width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
   font-weight:700; background:var(--mp-accent); color:var(--mp-on-accent);}
-.area-tiles{display:grid; grid-template-columns:minmax(0,360px); gap:12px;}
+.area-tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),360px)); gap:12px;}
 
 .flow{display:grid; grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr); gap:6px; align-items:center;}
 .flow-step{display:flex; flex-direction:column; gap:10px; min-width:0;}
@@ -238,6 +238,24 @@ body.is-teacher .tile-txt{padding-bottom:34px;}
 .tile-share.is-on{background:var(--mp-accent); border:1px solid var(--mp-accent); color:var(--mp-on-accent);}
 body.is-teacher .tile-share{display:inline-flex;}
 body.is-teacher .tile.is-shared{border-color:var(--mp-accent-edge);}
+
+
+/* Erklärung im Fenster (Kachel „Was ist Reinforcement Learning?“) */
+dialog.task-dialog.rl-dialog{max-width:900px; width:calc(100% - 24px); max-height:calc(100% - 24px); overflow:auto;}
+.rl-dialog .home-hero{background:none; border:0; box-shadow:none; padding:0;}
+.rl-dialog .dialog-btns{margin-top:16px;}
+.rl-dialog .btn-primary{background:var(--mp-accent); color:var(--mp-on-accent); padding:11px 26px; border-radius:999px; font-size:1rem;}
+@media(max-width:780px){ .rl-dialog .home-hero{padding:0;} }
+.tile-info .tile-txt b{line-height:1.25;}
+
+/* Nicht freigegeben (Klasse): nur eine graue Kachel mit Schloss — kein Bild, kein Text */
+.tile.is-locked{background:var(--mp-line); border-color:var(--mp-line); box-shadow:none;}
+.tile.is-locked .tile-open{opacity:1; filter:none; min-height:92px; justify-content:center;}
+.tile.is-locked .tile-art, .tile.is-locked .tile-txt{visibility:hidden;}
+.tile.is-locked .tile-art{position:absolute; width:1px; height:1px;}
+.tile.is-locked .tile-txt{position:absolute; width:1px; height:1px; overflow:hidden;}
+.tile.is-locked .tile-lock{display:grid; position:static; width:34px; height:34px; background:var(--mp-paper-2); color:var(--mp-ink-faint);}
+.tile.is-locked .tile-lock svg{width:18px; height:18px;}
 
 /* Bilder in Kacheln und Aufgabe (passen sich Hell/Dunkel an) */
 .art-ttt .g{stroke:var(--mp-ink-faint); stroke-width:3; stroke-linecap:round; fill:none; opacity:.6;}
@@ -908,21 +926,6 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 
 <!-- ═══════════════════════════════════════════════ STARTSEITE -->
 <div id="screen-home" class="screen">
-  <section class="home-hero">
-    <div class="home-hero-txt">
-      <span class="home-kicker">Verstärkendes Lernen · Reinforcement Learning</span>
-      <h1>Wie lernt eine KI durch Belohnung?</h1>
-      <p class="home-lead">Niemand erklärt der KI die Regeln. Sie läuft immer wieder durch diesen Kreislauf:</p>
-      <ol class="rl-steps rl-cycle">
-        <li class="c-agent"><strong>KI-Agent</strong> — trifft eine Entscheidung, am Anfang ganz zufällig.</li>
-        <li class="c-env"><strong>Umgebung</strong> — Die KI handelt (Aktion), die Umgebung reagiert darauf.</li>
-        <li class="c-reward"><strong>Belohnung</strong> — Die Umgebung gibt Feedback, positiv oder negativ, und liefert den neuen Zustand.</li>
-        <li class="c-learn"><strong>Lernen</strong> — Die KI nutzt das Feedback und passt ihre Strategie an, um in Zukunft mehr Belohnung zu bekommen.</li>
-      </ol>
-      <p class="rl-again">Dann beginnt der Kreislauf von vorn – Runde für Runde wird die KI besser.</p>
-    </div>
-    <img class="home-hero-img" src="infografik.png" alt="Infografik: Kreislauf aus KI-Agent, Umgebung, Belohnung und Lernen">
-  </section>
 
   <p class="home-note" id="home-note" hidden></p>
 
@@ -932,6 +935,12 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
       <h2>Du trainierst die KI</h2>
     </div>
     <div class="area-tiles">
+      <div class="tile tile-info">
+        <button class="tile-open" type="button" onclick="document.getElementById('rl-dialog').showModal()">
+          <span class="tile-art"><svg viewBox="0 0 64 64" class="art-icon"><path d="M32 8a17 17 0 0 0-9 31v7h18v-7a17 17 0 0 0-9-31z"/><path d="M26 54h12M28 60h8"/></svg></span>
+          <span class="tile-txt"><b>Was ist Reinforcement Learning?</b></span>
+        </button>
+      </div>
       <div class="tile" data-part="ttt">
         <button class="tile-open" type="button" onclick="openPart('ttt', true)">
           <span class="tile-art"><svg viewBox="0 0 64 64" class="art-ttt"><path class="g" d="M24 8v48M40 8v48M8 24h48M8 40h48"/><path class="x" d="M11 11l9 9M20 11l-9 9M43 27l9 9M52 27l-9 9"/><circle class="o" cx="32" cy="32" r="5"/><circle class="o" cx="48" cy="16" r="5"/></svg></span>
@@ -1276,6 +1285,28 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   </div>
 </dialog>
 
+<!-- ════════════════════════════════════════ ERKLÄRUNG „Was ist Reinforcement Learning?“ -->
+<dialog id="rl-dialog" class="task-dialog rl-dialog">
+  <div class="home-hero">
+    <div class="home-hero-txt">
+      <span class="home-kicker">Verstärkendes Lernen · Reinforcement Learning</span>
+      <h1>Wie lernt eine KI durch Belohnung?</h1>
+      <p class="home-lead">Niemand erklärt der KI die Regeln. Sie läuft immer wieder durch diesen Kreislauf:</p>
+      <ol class="rl-steps rl-cycle">
+        <li class="c-agent"><strong>KI-Agent</strong> — trifft eine Entscheidung, am Anfang ganz zufällig.</li>
+        <li class="c-env"><strong>Umgebung</strong> — Die KI handelt (Aktion), die Umgebung reagiert darauf.</li>
+        <li class="c-reward"><strong>Belohnung</strong> — Die Umgebung gibt Feedback, positiv oder negativ, und liefert den neuen Zustand.</li>
+        <li class="c-learn"><strong>Lernen</strong> — Die KI nutzt das Feedback und passt ihre Strategie an, um in Zukunft mehr Belohnung zu bekommen.</li>
+      </ol>
+      <p class="rl-again">Dann beginnt der Kreislauf von vorn – Runde für Runde wird die KI besser.</p>
+    </div>
+    <img class="home-hero-img" src="infografik.png" alt="Infografik: Kreislauf aus KI-Agent, Umgebung, Belohnung und Lernen">
+  </div>
+  <div class="dialog-btns">
+    <button class="btn btn-primary" type="button" onclick="document.getElementById('rl-dialog').close()">Schließen</button>
+  </div>
+</dialog>
+
 <!-- ════════════════════════════════════════ AUFGABE (beim Öffnen einer Kachel) -->
 <dialog id="task-dialog" class="task-dialog">
   <div class="task-k" id="task-k"></div>
@@ -1473,7 +1504,7 @@ function setClassParts(list, fromServer) {
 }
 
 function renderHome() {
-  document.querySelectorAll('.tile').forEach(t => {
+  document.querySelectorAll('.tile[data-part]').forEach(t => {
     const p = t.dataset.part, on = isShared(p), ok = partUsable(p);
     t.classList.toggle('is-locked', !ok);
     t.classList.toggle('is-shared', on);

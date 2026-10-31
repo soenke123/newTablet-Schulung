@@ -9,13 +9,14 @@ Zwischen-Quizze und **ohne** Punkte/Gewinn-Bildschirme.
 
 ## Aufbau (seit 31.10.2026: Startseite mit Kacheln statt Reitern)
 
-Startseite (`screen-home`): oben die Erklärung „Wie lernt eine KI durch Belohnung?“
-(infografik.png + Text passend zum Bild: die vier Kästen KI-Agent · Umgebung · Belohnung · Lernen in deren Farben statt Nummern, `.rl-cycle`, damit sie nicht mit den Pfeil-Nummern 1–3 im Bild kollidieren), darunter zwei Bereiche:
+Startseite (`screen-home`, Umbau 31.10.2026): zwei Bereiche mit Kacheln.
 
-- **1 „Du trainierst die KI“** – Kachel `ttt` (Gegen die KI).
+- **1 „Du trainierst die KI“** – zwei Kacheln: „Was ist Reinforcement Learning?“ (öffnet das Fenster `#rl-dialog` mit der Erklärung „Wie lernt eine KI durch Belohnung?“: infografik.png + Text, die vier Kästen KI-Agent · Umgebung · Belohnung · Lernen in deren Farben, `.rl-cycle`; kein Teil, nicht teilbar, immer offen, `.tile-info` ohne `data-part`) und `ttt` (Gegen die KI).
 - **2 „Du lernst wie eine KI“** – Ablauf mit Pfeilen: `train` (Training) →
   `envA` (Brett) / `envB` (Aliens) im gestrichelten Kasten „Training anwenden“ →
   `sandbox` („Verstehen“).
+
+Nicht freigegebene Kacheln sieht die Klasse nur als graue Fläche mit Schloss – weder Bild noch Name (`.tile.is-locked`, Bild/Text per visibility:hidden).
 
 Wenig Text (Wunsch 31.10.2026): Kacheln nur Bild + Name, keine Phasen-Nummern, keine
 Untertitel unter den Bereichen, kein Erklärsatz für die Lehrkraft, kein Fußsatz.
