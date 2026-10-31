@@ -756,8 +756,9 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   .ttt-opts .ry-seg button{padding:6px 11px; font-size:.82rem;}
   .ttt-status{min-height:34px; padding:5px 12px; font-size:.86rem; white-space:nowrap;}
   .ttt-new{padding:8px 18px; font-size:.9rem;}
-  .ttt-actions .btn-teach small{display:none;}
-  .ttt-actions .btn-teach{padding:6px 12px;}
+  /* „nur Lehrkraft“ bleibt sichtbar, klein unter „+50 Runden“ */
+  .ttt-actions .btn-teach{flex-direction:column; gap:0; padding:3px 12px; line-height:1.15;}
+  .ttt-actions .btn-teach small{font-size:.62rem;}
   .ttt-mini{grid-template-columns:repeat(3,14px) !important; grid-template-rows:repeat(3,14px) !important;}
   .ttt-mini span{font-size:.62rem !important;}
   .ttt-row-n{margin-top:17px !important;}
@@ -3709,8 +3710,10 @@ function tttEnd(res) {
 }
 
 // „+50 Runden (nur Lehrkraft)“: die KI spielt 50 Partien gegen einen
-// Gegner, der zufällig setzt, und lernt nach denselben Regeln. Wer anfängt,
-// wird je Partie gewürfelt. Danach steht eine neue Partie bereit.
+// Gegner und lernt nach denselben Regeln. Der Gegner („Mensch“) spielt
+// besser als Zufall: kann er direkt gewinnen, tut er das meistens (80 %),
+// sonst setzt er zufällig. Wer anfängt, wird je Partie gewürfelt. Danach
+// steht eine neue Partie bereit.
 function tttPlay50() {
   if (!TEACHER) return;
   tttStop();
@@ -3729,7 +3732,9 @@ function tttPlay50() {
         M.push({ key: st.key, pick: o.rep });
       } else {
         const free = []; b.forEach((v, i) => { if (!v) free.push(i); });
-        cell = free[(Math.random() * free.length) | 0];
+        const wins = free.filter(i => { b[i] = 'D'; const w = tttWinner(b); b[i] = null; return w && w.w === 'D'; });
+        cell = wins.length && Math.random() < 0.8 ? wins[(Math.random() * wins.length) | 0]
+                                                  : free[(Math.random() * free.length) | 0];
       }
       b[cell] = turn;
       res = tttWinner(b);

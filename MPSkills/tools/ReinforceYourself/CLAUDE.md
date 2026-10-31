@@ -54,7 +54,7 @@ Die Teile:
   „Was kann ich hier machen?“.
 
 **„+50 Runden (nur Lehrkraft)“** (`.btn-teach`, nur `body.is-teacher`): in ttt (`tttPlay50`:
-KI gegen Zufallsgegner, Anfang je Partie gewürfelt, Lernkurve wächst um 50) und im Training
+KI lernt normal, der Gegner nimmt einen direkten Siegzug zu 80 %, sonst zufällig; Anfang je Partie gewürfelt; am Handy steht „nur Lehrkraft“ klein unter „+50 Runden“, Lernkurve wächst um 50) und im Training
 (`trainPlay50`: Weiß zufällig, die KI wählt gewichtet nach `getW`, `applyDiscountedRewards` wie
 in `finish`). Ohne Anzeige, danach Meldung unten (`ryToast`) – zum Besprechen des Lerneffekts.
 
