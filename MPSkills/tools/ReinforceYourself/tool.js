@@ -3,29 +3,32 @@
    ══════════════════════════════════════════════════════════════
    Reinforcement Learning zum Selbermachen (Migration 0242, Beta).
    Kam aus dem GameHub (S2 Reinforce Yourself!) — ohne Begleiter,
-   ohne Zwischen-Quizze, ohne Punkte. Vier Phasen (Reiter 1–4,
-   intern 0–3):
-     0  Gegen die KI: Tic-Tac-Toe gegen eine KI, die aus jeder Partie
-        lernt (mit Lernkurve) — erst gegen die KI, dann selbst die KI
-     1  Trainingsphase (mit Einführung): als KI lernen, nur durch
-        Belohnung und Bestrafung
-     2  Umgebung A (Brettspiel) und Umgebung B (Aliens): das
-        Gelernte anwenden
-     3  Sandbox: beide Spiele gleichzeitig + Entscheidungsbaum
+   ohne Zwischen-Quizze, ohne Punkte. Startseite = Erklärung, wie
+   eine KI durch Belohnung lernt, darunter zwei Bereiche mit Kacheln:
+     „Du trainierst die KI“   ttt      Gegen die KI (Tic-Tac-Toe gegen
+                                       ein Programm, das erst lernt)
+     „Du lernst wie eine KI“  train    Training (du bist die KI)
+                              envA     Umgebung A (Brettspiel)
+                              envB     Umgebung B (Aliens)
+                              sandbox  Sandbox (beide + Baum)
 
    Eingerahmt wie Tiny LM: die Anwendung ist eine eigene Seite
    (index.html) und steckt in einem <iframe>. Jede Person trainiert
    ihre eigene KI, der Stand liegt im Gerät (localStorage „ry.*“).
-   Geteilt wird nur, WELCHE Phasen die Klasse öffnen darf:
-   skill_room_state.data.phases = [0, 1] (fehlt = nur Phase 0),
-   gesetzt von der Lehrkraft über das Teilen-Symbol am Reiter der
-   Phase (wie bei Tiny LM). Keine eigenen Tabellen, skill_room_set_state reicht.
+   Geteilt wird nur, WELCHE Kacheln die Klasse öffnen darf:
+   skill_room_state.data.parts = ['ttt', 'train', 'envA'] (fehlt =
+   nur 'ttt'), gesetzt von der Lehrkraft über „Teilen“ an der Kachel.
+   Umgebung A, B und Sandbox ziehen das Training immer mit (normParts).
+   Ältere Räume haben noch data.phases [0..3] (0 = ttt, 1 = train,
+   2 = beide Umgebungen, 3 = sandbox) — wird umgerechnet und beim
+   nächsten Teilen durch parts ersetzt. Keine eigenen Tabellen,
+   skill_room_set_state reicht.
 
    Der Rahmen bekommt ?raum=lehrer bzw. ?raum=schueler.
    Botschaften (gleicher Ursprung):
-     hinein   { type: 'ry:cmd', phases: [0, 1] }
+     hinein   { type: 'ry:cmd', parts: ['ttt', 'train'] }
      heraus   { type: 'ry:ready' }                 Rahmen steht
-              { type: 'ry:phases', phases: [...] } Lehrkraft ändert Freigaben
+              { type: 'ry:parts', parts: [...] }   Lehrkraft ändert Freigaben
 
    Im Schaufenster bekäme der Rahmen ?demo=1: dann ist alles offen.
    ══════════════════════════════════════════════════════════════ */
@@ -33,7 +36,7 @@
 (function () {
   'use strict';
 
-  const V = '20261030e';
+  const V = '20261031a';
 
   let root  = null;
   let frame = null;
@@ -41,19 +44,30 @@
   let view  = null;
   let onResize = null, onMsg = null;
   let ready = false, lastSent = '';
-  let phases = null;       // Lehrkraft: eigener Stand, bis der Server ihn bestätigt
+  let parts = null;        // Lehrkraft: eigener Stand, bis der Server ihn bestätigt
+
+  const PARTS = ['ttt', 'train', 'envA', 'envB', 'sandbox'];
+  const NEEDS_TRAIN = ['envA', 'envB', 'sandbox'];
+  const LEGACY = { 0: ['ttt'], 1: ['train'], 2: ['envA', 'envB'], 3: ['sandbox'] };
+  function normParts(list) {
+    const set = new Set((list || []).filter(x => PARTS.includes(x)));
+    if (NEEDS_TRAIN.some(x => set.has(x))) set.add('train');
+    return PARTS.filter(x => set.has(x));
+  }
 
   const isPresenter = () => !!ctx && ctx.role === 'presenter';
   function data() { return (view && view.state && view.state.data) || {}; }
-  function serverPhases() {
-    const p = data().phases;
-    return Array.isArray(p) ? p.map(Number).filter(n => n >= 0 && n <= 3) : [0];
+  function serverParts() {
+    const d = data();
+    if (Array.isArray(d.parts)) return normParts(d.parts.map(String));
+    if (Array.isArray(d.phases)) return normParts([].concat(...d.phases.map(n => LEGACY[Number(n)] || [])));
+    return ['ttt'];
   }
-  const currentPhases = () => phases || serverPhases();
+  const currentParts = () => parts || serverParts();
 
   function post() {
     if (!ready || !frame || !frame.contentWindow) return;
-    const msg = { type: 'ry:cmd', phases: currentPhases().slice().sort() };
+    const msg = { type: 'ry:cmd', parts: currentParts().slice() };
     const key = JSON.stringify(msg);
     if (key === lastSent) return;
     lastSent = key;
@@ -61,15 +75,17 @@
   }
 
   /* skill_room_set_state ersetzt `data` als GANZES — deshalb geht
-     der vollständige Zustand hinaus (wie bei Balance of Nature). */
-  async function setPhases(list) {
-    phases = list;
+     der vollständige Zustand hinaus (wie bei Balance of Nature). Das
+     alte phases fällt dabei weg. */
+  async function setParts(list) {
+    parts = list;
     post();
-    const next = Object.assign({}, data(), { phases: list });
+    const next = Object.assign({}, data(), { parts: list });
+    delete next.phases;
     if (view) view.state = Object.assign({}, view.state || {}, { data: next });
     const res = await ctx.actions.setData(next);
     if (res && !res.ok && res.error !== 'network') ctx.toast(ctx.errText(res.error));
-    phases = null;
+    parts = null;
     ctx.refresh();
   }
 
@@ -131,8 +147,8 @@
         if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
         const m = e.data || {};
         if (m.type === 'ry:ready') { ready = true; lastSent = ''; post(); }
-        else if (m.type === 'ry:phases' && isPresenter() && !ctx.preview && Array.isArray(m.phases)) {
-          setPhases(m.phases.map(Number).filter(n => n >= 0 && n <= 3));
+        else if (m.type === 'ry:parts' && isPresenter() && !ctx.preview && Array.isArray(m.parts)) {
+          setParts(normParts(m.parts.map(String)));
         }
       };
       window.addEventListener('message', onMsg);
@@ -153,7 +169,7 @@
       onMsg = onResize = null;
       document.body.classList.remove('tool-fill');
       frame = root = ctx = view = null;
-      phases = null;
+      parts = null;
     }
   });
 })();

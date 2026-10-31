@@ -95,66 +95,181 @@ body{
 .screen{display:none; width:100%; max-width:600px; padding:24px 16px 60px; margin:0 auto;}
 .screen.active{display:block;}
 
-/* ── Kopfzeile mit Reitern (wie in MPSkills: Unterstrich statt Kästen,
-   Teilen-Symbol direkt am Reiter wie bei Tiny LM/How to Fachbegriffe) ── */
+/* ── Kopfzeile: auf der Startseite der Name, in einem Teil „‹ Übersicht“,
+   Bereich + Name des Teils und rechts „Aufgabe“ (keine Reiter mehr) ── */
 .ry-head{
   position:sticky; top:0; z-index:300; width:100%;
-  display:flex; align-items:center; gap:14px; flex-wrap:wrap;
-  padding:8px 18px 0; background:var(--mp-surface); color:var(--mp-ink);
+  display:flex; align-items:center; gap:12px;
+  padding:8px 18px; min-height:52px; background:var(--mp-surface); color:var(--mp-ink);
   border-bottom:1px solid var(--mp-line);
   font-family:'Outfit',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
-.ry-brand{display:flex; align-items:center; gap:8px; font-weight:700; font-size:1.05rem;
-  letter-spacing:-.02em; padding-bottom:8px; white-space:nowrap;}
+.ry-brand{display:flex; align-items:center; gap:8px; font:inherit; font-weight:700; font-size:1.05rem;
+  letter-spacing:-.02em; white-space:nowrap; color:var(--mp-ink); background:none; border:0; padding:4px 0; cursor:pointer;}
 .ry-brand svg{width:22px; height:22px; fill:none; stroke:var(--mp-accent-ink); stroke-width:1.8;
   stroke-linecap:round; stroke-linejoin:round;}
-.ry-tabs{display:flex; align-items:flex-end; gap:2px; flex:1; min-width:0; overflow-x:auto;}
-.ry-tabwrap{display:flex; align-items:center; gap:2px;}
-.ry-tabwrap[hidden]{display:none;}
-.ry-tab{
-  font:inherit; font-size:.95rem; font-weight:600; color:var(--mp-ink-faint);
-  background:none; border:0; border-bottom:2px solid transparent;
-  padding:9px 12px 10px; cursor:pointer; white-space:nowrap;
-  transition:color .14s ease, border-color .14s ease;
+.ry-brand.in-part span{display:none;}
+.ry-back, .ry-taskbtn{
+  display:inline-flex; align-items:center; gap:6px; font:inherit; font-size:.9rem; font-weight:600;
+  padding:7px 14px 7px 10px; border-radius:999px; cursor:pointer; white-space:nowrap;
+  background:var(--mp-paper-2); color:var(--mp-ink); border:1px solid var(--mp-line);
+  transition:background .14s, border-color .14s;
 }
-.ry-tab:hover{color:var(--mp-ink);}
-.ry-tab.on{color:var(--mp-ink); border-bottom-color:var(--mp-accent);}
-.ry-tab-n{display:inline-grid; place-items:center; width:20px; height:20px; margin-right:6px;
-  border-radius:50%; font-size:.72rem; background:var(--mp-paper-2); color:var(--mp-ink-soft);}
-.ry-tab.on .ry-tab-n{background:var(--mp-accent); color:var(--mp-on-accent);}
-.ry-share{
-  display:none; align-items:center; justify-content:center; width:32px; height:30px;
-  margin:0 8px 6px 0; padding:0; cursor:pointer; border-radius:9px;
-  background:var(--mp-surface); color:var(--mp-ink-soft); border:1px solid var(--mp-line);
-  transition:background .14s, color .14s, border-color .14s;
-}
-.ry-share svg{width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;}
-.ry-share:hover{background:var(--mp-paper-2); color:var(--mp-ink);}
-.ry-share.is-on{background:var(--mp-accent); border-color:var(--mp-accent); color:var(--mp-on-accent);}
-body.is-teacher .ry-share{display:inline-flex;}
+.ry-back[hidden], .ry-taskbtn[hidden], .ry-crumb[hidden]{display:none;}
+.ry-back:hover, .ry-taskbtn:hover{border-color:var(--mp-accent-edge); background:var(--mp-accent-dim);}
+.ry-back svg, .ry-taskbtn svg{width:17px; height:17px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round;}
+.ry-taskbtn{background:var(--mp-accent-dim); border-color:var(--mp-accent-edge); color:var(--mp-accent-ink);}
+.ry-crumb{display:flex; flex-direction:column; min-width:0; line-height:1.15;}
+.ry-crumb-area{font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--mp-ink-faint);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ry-crumb-title{font-size:1.02rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+.ry-spacer{flex:1;}
 .ry-reset{
   font:inherit; font-size:.82rem; color:var(--mp-ink-faint); background:none; border:0;
-  padding:0 0 8px; cursor:pointer; text-decoration:underline; white-space:nowrap;
+  padding:0; cursor:pointer; text-decoration:underline; white-space:nowrap;
 }
 .ry-reset:hover{color:var(--mp-ink);}
 .ry-reset-short{display:none; font-size:1.2rem; text-decoration:none;}
 @media(max-width:600px){
-  .ry-brand{display:none;} .ry-head{padding:6px 8px 0; gap:6px; flex-wrap:nowrap;}
-  .ry-tab{padding:8px 6px 10px; font-size:.9rem;} .ry-tab-n{margin-right:4px;}
-  .ry-share{margin-right:4px;}
+  .ry-head{padding:6px 10px; gap:8px; min-height:48px;}
+  .ry-brand.in-part{display:none;}
+  .ry-back span, .ry-taskbtn span{display:none;}
+  .ry-back, .ry-taskbtn{padding:7px 9px;}
   .ry-reset-long{display:none;} .ry-reset-short{display:inline;}
 }
 
-/* Schüler: noch nichts geteilt */
-.ry-wait{
-  margin:60px auto 0; max-width:420px; text-align:center; padding:28px 24px;
-  background:var(--mp-surface); border:1px solid var(--mp-line); border-radius:18px;
-  box-shadow:var(--mp-shadow); color:var(--mp-ink-soft);
+/* Hinweis/Meldung */
+.ry-toast{
+  position:fixed; left:50%; bottom:22px; transform:translateX(-50%); z-index:2000;
+  padding:10px 18px; border-radius:999px; font-size:.9rem; font-weight:600; max-width:calc(100% - 32px);
+  background:var(--mp-ink); color:var(--mp-paper); box-shadow:var(--mp-shadow); animation:ry-pop .2s ease-out;
 }
-.ry-wait h2{color:var(--mp-ink); font-size:1.2rem; margin:8px 0 6px;}
-.ry-wait .ry-wait-ico{font-size:1.8rem;}
+.ry-toast[hidden]{display:none;}
+@keyframes ry-pop{from{opacity:0; transform:translate(-50%, 8px);}}
 
-/* Umgebung A / B: Umschalter oben in Phase 2 */
+/* „+50 Runden (nur Lehrkraft)“ — nur im Raum für die Lehrkraft */
+.btn-teach{
+  display:none; align-items:center; gap:6px; font:inherit; font-size:.88rem; font-weight:600;
+  padding:8px 16px; border-radius:999px; cursor:pointer; white-space:nowrap;
+  background:var(--mp-surface); color:var(--mp-accent-ink); border:1.5px dashed var(--mp-accent-edge);
+}
+.btn-teach small{font-weight:500; color:var(--mp-ink-faint);}
+.btn-teach:hover{background:var(--mp-accent-dim);}
+body.is-teacher .btn-teach{display:inline-flex;}
+
+/* ── Startseite: Erklärung oben, darunter zwei Bereiche mit Kacheln ── */
+#screen-home{max-width:1100px; padding:20px 20px 48px;}
+.home-hero{
+  display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,1fr); gap:26px; align-items:center;
+  background:var(--mp-surface); border:1px solid var(--mp-line); border-radius:20px;
+  padding:22px 26px; box-shadow:var(--mp-shadow);
+}
+.home-kicker{font-size:.74rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--mp-accent-ink);}
+.home-hero h1{font-size:1.55rem; letter-spacing:-.02em; line-height:1.2; margin:4px 0 6px; color:var(--mp-ink);}
+.home-lead{color:var(--mp-ink-soft); font-size:.96rem; line-height:1.5;}
+.home-hero .rl-steps li{color:var(--mp-ink-soft);}
+.home-hero .rl-steps li strong{color:var(--mp-ink);}
+.home-hero .rl-steps li::before{background:var(--mp-accent); color:var(--mp-on-accent);}
+.home-hero-img{width:100%; max-height:360px; object-fit:contain; border-radius:12px;}
+@media(max-width:780px){ .home-hero{grid-template-columns:1fr; padding:18px;} .home-hero-img{max-height:260px; order:-1;} }
+
+.home-note{margin:18px auto 0; max-width:640px; text-align:center; font-size:.9rem; color:var(--mp-ink-soft);
+  padding:10px 16px; border-radius:12px; border:1px dashed var(--mp-line); background:var(--mp-surface);}
+.home-note[hidden]{display:none;}
+
+.area{margin-top:22px; padding:18px 20px 20px; border-radius:20px; background:var(--mp-paper-2); border:1px solid var(--mp-line);}
+.area-head{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+.area-head h2{font-size:1.18rem; letter-spacing:-.01em; color:var(--mp-ink);}
+.area-head p{font-size:.9rem; color:var(--mp-ink-soft); margin-top:1px;}
+.area-n{flex:none; width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
+  font-weight:700; background:var(--mp-accent); color:var(--mp-on-accent);}
+.area-tiles{display:grid; grid-template-columns:minmax(0,360px); gap:12px;}
+.area-foot{margin-top:12px; font-size:.8rem; color:var(--mp-ink-faint);}
+
+.flow{display:grid; grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr); gap:6px; align-items:center;}
+.flow-step{display:flex; flex-direction:column; gap:10px; min-width:0;}
+.flow-envs{padding:10px; margin:-10px 0; border-radius:16px; border:1.5px dashed var(--mp-accent-edge);}
+.flow-cap{font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--mp-ink-faint); padding-left:2px;}
+.flow-arrow{display:grid; place-items:center; color:var(--mp-ink-faint);}
+.flow-arrow svg{width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round;}
+@media(max-width:820px){
+  .flow{grid-template-columns:1fr;}
+  .flow-arrow svg{transform:rotate(90deg);}
+  .flow-envs{margin:0;}
+}
+
+/* Kachel: Bild · Text, darunter (nur Lehrkraft) „Teilen“ */
+.tile{display:flex; flex-direction:column; border-radius:16px; background:var(--mp-surface); border:1px solid var(--mp-line);
+  box-shadow:var(--mp-shadow); overflow:hidden; transition:border-color .15s, transform .15s, box-shadow .15s;}
+.tile:not(.is-locked):hover{border-color:var(--mp-accent-edge); transform:translateY(-2px);}
+.tile-open{display:flex; align-items:center; gap:14px; width:100%; padding:14px; font:inherit; text-align:left;
+  color:var(--mp-ink); background:none; border:0; cursor:pointer; position:relative;}
+.tile-open:disabled{cursor:default;}
+.tile-art{flex:none; width:64px; height:64px; border-radius:14px; display:grid; place-items:center; overflow:hidden; background:var(--mp-paper-2);}
+.tile-art svg{width:52px; height:52px;}
+.tile-art img{width:100%; height:100%; object-fit:cover;}
+.tile-txt{display:flex; flex-direction:column; gap:2px; min-width:0;}
+.tile-k{font-size:.7rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--mp-accent-ink);}
+.tile-txt b{font-size:1.06rem; letter-spacing:-.01em;}
+.tile-d{font-size:.84rem; color:var(--mp-ink-soft); line-height:1.35;}
+.tile-lock{display:none; position:absolute; top:10px; right:10px; width:26px; height:26px; border-radius:50%;
+  place-items:center; background:var(--mp-paper-2); color:var(--mp-ink-faint);}
+.tile-lock svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round;}
+.tile.is-locked .tile-open{opacity:.5; filter:grayscale(.7);}
+.tile.is-locked .tile-lock{display:grid;}
+.tile-share{
+  display:none; align-items:center; justify-content:center; gap:7px; margin:0 14px 12px; padding:7px 12px;
+  font:inherit; font-size:.84rem; font-weight:600; border-radius:10px; cursor:pointer;
+  background:var(--mp-surface); color:var(--mp-ink-soft); border:1px dashed var(--mp-line);
+  transition:background .14s, color .14s, border-color .14s;
+}
+.tile-share svg{width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round;}
+.tile-share:hover{color:var(--mp-ink); border-color:var(--mp-ink-faint);}
+.tile-share.is-on{background:var(--mp-accent); border:1px solid var(--mp-accent); color:var(--mp-on-accent);}
+body.is-teacher .tile-share{display:inline-flex;}
+body.is-teacher .tile.is-shared{border-color:var(--mp-accent-edge);}
+
+/* Bilder in Kacheln und Aufgabe (passen sich Hell/Dunkel an) */
+.art-ttt .g{stroke:var(--mp-ink-faint); stroke-width:3; stroke-linecap:round; fill:none; opacity:.6;}
+.art-ttt .x{stroke:var(--ttt-ki); stroke-width:4.5; stroke-linecap:round; fill:none;}
+.art-ttt .o{stroke:var(--ttt-du); stroke-width:4.5; fill:none;}
+.art-bot .h{fill:var(--mp-accent-dim); stroke:var(--mp-accent); stroke-width:3.5;}
+.art-bot .e, .art-bot .f{fill:var(--mp-accent);}
+.art-bot .l{stroke:var(--mp-accent); stroke-width:3.5; stroke-linecap:round; fill:none;}
+.art-brett .b{fill:#f0d9b5;} .art-brett .d{fill:#b58863;}
+.art-brett .pw{fill:#fff; stroke:#3b2a1a; stroke-width:2;} .art-brett .pb{fill:#3b2a1a;}
+.art-tree .l{stroke:var(--mp-ink-faint); stroke-width:2.5; fill:none;}
+.art-tree .n{fill:var(--mp-accent);} .art-tree .w{fill:var(--mp-ok);} .art-tree .v{fill:var(--mp-warn);}
+.art-icon{fill:none; stroke:var(--mp-accent); stroke-width:4; stroke-linecap:round; stroke-linejoin:round;}
+.art-icon .ax{stroke:var(--mp-ink-faint); stroke-width:3;}
+.art-icon .dot{fill:var(--mp-accent); stroke:none;}
+
+/* ── Aufgabe (Fenster beim Öffnen einer Kachel) ── */
+dialog.task-dialog{max-width:560px; padding:26px 26px 22px;
+  background:var(--mp-surface); color:var(--mp-ink); border-color:var(--mp-line);}
+.task-k{font-size:.74rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--mp-accent-ink);}
+.task-dialog h3{font-size:1.4rem; margin:2px 0 14px; color:var(--mp-ink);}
+.task-visual{display:flex; align-items:flex-start; justify-content:center; gap:6px; flex-wrap:wrap;
+  padding:14px 10px; border-radius:16px; background:var(--mp-paper-2); margin-bottom:16px;}
+.tv-step{display:flex; flex-direction:column; align-items:center; gap:6px; width:84px; text-align:center;
+  font-size:.76rem; font-weight:600; color:var(--mp-ink-soft); line-height:1.2;}
+.tv-art{width:64px; height:64px; border-radius:14px; display:grid; place-items:center; overflow:hidden;
+  background:var(--mp-surface); box-shadow:0 1px 3px rgba(13,26,23,.08);}
+.tv-art svg{width:50px; height:50px;}
+.tv-art img{width:100%; height:100%; object-fit:cover;}
+.tv-art code{font-family:'JetBrains Mono',ui-monospace,monospace; font-size:.82rem; font-weight:700; color:var(--mp-accent-ink);}
+.tv-arrow{align-self:flex-start; height:64px; display:grid; place-items:center; font-size:1.3rem; font-weight:700; color:var(--mp-ink-faint);}
+.fb{display:flex; gap:5px;}
+.fb span{width:24px; height:24px; border-radius:50%; display:grid; place-items:center; color:#fff; font-size:.8rem; font-weight:700;}
+.fb-ok{background:var(--mp-ok);} .fb-no{background:var(--mp-warn);}
+.task-text p{font-size:.95rem; color:var(--mp-ink-soft); line-height:1.5; margin-bottom:8px;}
+.task-text p.task-lead{font-size:1.08rem; color:var(--mp-ink);}
+.task-text b{color:var(--mp-ink);}
+.task-dialog .dialog-btns{margin-top:14px;}
+.task-dialog .btn-primary{background:var(--mp-accent); color:var(--mp-on-accent); padding:11px 26px; border-radius:999px; font-size:1rem;}
+@media(max-width:480px){ .tv-step{width:68px;} .tv-art{width:54px; height:54px;} .tv-art svg{width:42px; height:42px;} .tv-arrow{height:54px;} }
+
+/* Umschalter (Pille), z. B. „KI beginnt / Du beginnst“ */
 .ry-seg{display:flex; gap:4px; padding:4px; margin:0 auto 16px; width:max-content; max-width:100%;
   background:var(--mp-surface); border:1px solid var(--mp-line); border-radius:999px;}
 .ry-seg button{font:inherit; font-size:.9rem; font-weight:600; border:0; border-radius:999px;
@@ -310,36 +425,6 @@ body.is-teacher .ry-share{display:inline-flex;}
   border-radius:8px; padding:12px; margin-top:10px; font-size:.85rem; color:var(--text);
 }
 
-/* ── Intro Split Layout ── */
-#screen-p1-intro{max-width:1100px; padding-left:32px; padding-right:32px;}
-.intro-split{display:grid; grid-template-columns:1fr 1fr; gap:28px; align-items:stretch;}
-.intro-col-right{display:flex; flex-direction:column;}
-.intro-col-right .highlight-box{margin-top:auto;}
-@media(max-width:720px){.intro-split{grid-template-columns:1fr;}}
-
-/* ── Phase 1 Intro: Tablet/iPad — kein Scrollen ── */
-#screen-p1-intro .intro-card img{max-height:420px; object-fit:contain; width:100%;}
-@media(max-height:900px){
-  #screen-p1-intro{padding-top:14px; padding-bottom:18px;}
-  #screen-p1-intro .intro-split{gap:16px;}
-  #screen-p1-intro .intro-card{padding:14px 16px;}
-  #screen-p1-intro .intro-card img{max-height:300px; margin:8px 0 6px;}
-  #screen-p1-intro .intro-card h2{font-size:1.05rem; margin-bottom:8px;}
-  #screen-p1-intro .rl-steps{gap:4px; margin:6px 0 8px;}
-  #screen-p1-intro .highlight-box{margin-top:8px; padding:10px;}
-}
-@media(max-height:768px){
-  #screen-p1-intro{padding-top:8px; padding-bottom:10px;}
-  #screen-p1-intro .intro-card{padding:11px 14px;}
-  #screen-p1-intro .intro-card img{max-height:200px; margin:5px 0;}
-  #screen-p1-intro .intro-card h2{font-size:.95rem; margin-bottom:6px;}
-  #screen-p1-intro .intro-card p{font-size:.82rem; margin-bottom:6px;}
-  #screen-p1-intro .rl-steps{gap:2px; margin:4px 0 6px;}
-  #screen-p1-intro .rl-steps li{font-size:.79rem;}
-  #screen-p1-intro .highlight-box{padding:8px 10px; font-size:.8rem;}
-  #screen-p1-intro .intro-split{gap:12px;}
-}
-
 /* ── RL Steps List ── */
 .rl-steps{
   margin:10px 0 12px; padding-left:0; list-style:none;
@@ -421,7 +506,6 @@ body[data-screen="screen-p2-alien"] .game-header h2{color:var(--accent3); text-s
 
 /* ── Alien Adventure Redesign ── */
 #screen-p2-alien{max-width:990px; padding:0 12px 60px;}
-#screen-p2-alien .ry-seg{margin-top:16px;}
 #screen-p2-alien .game-panel{
   max-width:100%; gap:0;
   display:grid; grid-template-columns:1fr 1fr;
@@ -735,42 +819,112 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 </style>
 
 </head>
-<body data-screen="screen-wait">
+<body data-screen="screen-home">
 
 <!-- ═══════════════════════════════════════════════ KOPFZEILE -->
 <header class="ry-head" id="ry-head">
-  <div class="ry-brand">
+  <button class="ry-brand" type="button" onclick="goHome()" title="Zur Übersicht">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 12a7.6 7.6 0 1 1-2.2-5.4"/><path d="M19.8 3.6v3.6h-3.6"/><path d="M12 8.8v6.4M8.8 12h6.4"/></svg>
     <span>Reinforce Yourself</span>
+  </button>
+  <button class="ry-back" id="ry-back" type="button" onclick="goHome()" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span>Übersicht</span></button>
+  <div class="ry-crumb" id="ry-crumb" hidden>
+    <span class="ry-crumb-area" id="ry-crumb-area"></span>
+    <b class="ry-crumb-title" id="ry-crumb-title"></b>
   </div>
-  <nav class="ry-tabs" role="tablist">
-    <div class="ry-tabwrap" data-tab="0">
-      <button class="ry-tab" data-phase="0" role="tab" type="button" onclick="goPhase(0)"><span class="ry-tab-n">1</span>Gegen die KI</button>
-      <button class="ry-share" data-share="0" type="button" onclick="toggleShare(0)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
-    </div>
-    <div class="ry-tabwrap" data-tab="1">
-      <button class="ry-tab" data-phase="1" role="tab" type="button" onclick="goPhase(1)"><span class="ry-tab-n">2</span>Training</button>
-      <button class="ry-share" data-share="1" type="button" onclick="toggleShare(1)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
-    </div>
-    <div class="ry-tabwrap" data-tab="2">
-      <button class="ry-tab" data-phase="2" role="tab" type="button" onclick="goPhase(2)"><span class="ry-tab-n">3</span>Umgebungen</button>
-      <button class="ry-share" data-share="2" type="button" onclick="toggleShare(2)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
-    </div>
-    <div class="ry-tabwrap" data-tab="3">
-      <button class="ry-tab" data-phase="3" role="tab" type="button" onclick="goPhase(3)"><span class="ry-tab-n">4</span>Sandbox</button>
-      <button class="ry-share" data-share="3" type="button" onclick="toggleShare(3)"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg></button>
-    </div>
-  </nav>
+  <span class="ry-spacer"></span>
+  <button class="ry-taskbtn" id="ry-taskbtn" type="button" onclick="showTask()" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2"/></svg><span>Aufgabe</span></button>
   <button class="ry-reset" type="button" onclick="resetAll()" title="Alles zurücksetzen"><span class="ry-reset-long">Zurücksetzen</span><span class="ry-reset-short" aria-hidden="true">↺</span></button>
 </header>
 
-<!-- ═══════════════════════════════════════════════ WARTEN (Schüler) -->
-<div id="screen-wait" class="screen">
-  <div class="ry-wait">
-    <div class="ry-wait-ico">🔒</div>
-    <h2>Gleich geht’s los</h2>
-    <p id="ry-wait-text">Einen Moment …</p>
-  </div>
+<!-- ═══════════════════════════════════════════════ STARTSEITE -->
+<div id="screen-home" class="screen">
+  <section class="home-hero">
+    <div class="home-hero-txt">
+      <span class="home-kicker">Reinforcement Learning</span>
+      <h1>Wie lernt eine KI durch Belohnung?</h1>
+      <p class="home-lead">Niemand erklärt der KI die Regeln. Sie probiert aus – und merkt sich, was belohnt wurde.</p>
+      <ol class="rl-steps">
+        <li><strong>Beobachten</strong> — Die KI sieht den aktuellen Zustand der Umgebung.</li>
+        <li><strong>Handeln</strong> — Sie wählt eine Aktion. Am Anfang geschieht das zufällig.</li>
+        <li><strong>Feedback</strong> — Die Umgebung antwortet mit Belohnung oder Bestrafung.</li>
+        <li><strong>Lernen</strong> — Was belohnt wurde, wählt sie beim nächsten Mal häufiger. Was bestraft wurde, seltener.</li>
+      </ol>
+    </div>
+    <img class="home-hero-img" src="infografik.png" alt="Infografik: Kreislauf aus Zustand, Aktion, Belohnung und Lernen">
+  </section>
+
+  <p class="home-note" id="home-note" hidden></p>
+
+  <section class="area area-a">
+    <div class="area-head">
+      <span class="area-n">1</span>
+      <div><h2>Du trainierst die KI</h2><p>Du spielst gegen ein Programm und schaust zu, wie es lernt.</p></div>
+    </div>
+    <div class="area-tiles">
+      <div class="tile" data-part="ttt">
+        <button class="tile-open" type="button" onclick="openPart('ttt', true)">
+          <span class="tile-art"><svg viewBox="0 0 64 64" class="art-ttt"><path class="g" d="M24 8v48M40 8v48M8 24h48M8 40h48"/><path class="x" d="M11 11l9 9M20 11l-9 9M43 27l9 9M52 27l-9 9"/><circle class="o" cx="32" cy="32" r="5"/><circle class="o" cx="48" cy="16" r="5"/></svg></span>
+          <span class="tile-txt"><span class="tile-k">Phase 1</span><b>Gegen die KI</b><span class="tile-d">Tic-Tac-Toe gegen ein Programm, das erst lernt</span></span>
+          <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        </button>
+        <button class="tile-share" type="button" onclick="toggleShare('ttt')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="area area-b">
+    <div class="area-head">
+      <span class="area-n">2</span>
+      <div><h2>Du lernst wie eine KI</h2><p>Erst wirst du trainiert – dann wendest du an, was du gelernt hast.</p></div>
+    </div>
+    <div class="flow">
+      <div class="flow-step">
+        <span class="flow-cap">Trainiert werden</span>
+        <div class="tile" data-part="train">
+        <button class="tile-open" type="button" onclick="openPart('train', true)">
+          <span class="tile-art"><svg viewBox="0 0 64 64" class="art-bot"><path class="l" d="M32 6v8"/><circle class="f" cx="32" cy="6" r="3"/><rect class="h" x="12" y="14" width="40" height="32" rx="10"/><circle class="e" cx="24" cy="29" r="4"/><circle class="e" cx="40" cy="29" r="4"/><path class="l" d="M25 38h14"/><path class="l" d="M20 46v8M44 46v8"/></svg></span>
+          <span class="tile-txt"><span class="tile-k">Phase 2</span><b>Training</b><span class="tile-d">Du bist die KI und wirst trainiert</span></span>
+          <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        </button>
+        <button class="tile-share" type="button" onclick="toggleShare('train')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
+      </div>
+      </div>
+      <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+      <div class="flow-step flow-envs">
+        <span class="flow-cap">Training anwenden</span>
+        <div class="tile" data-part="envA">
+        <button class="tile-open" type="button" onclick="openPart('envA', true)">
+          <span class="tile-art"><svg viewBox="0 0 64 64" class="art-brett"><rect x="6" y="6" width="52" height="52" rx="6" class="b"/><path class="d" d="M23.3 6h17.3v17.3H23.3zM6 23.3h17.3v17.3H6zM40.6 23.3H58v17.3H40.6zM23.3 40.6h17.3V58H23.3z"/><circle class="pw" cx="14.6" cy="14.6" r="5"/><circle class="pw" cx="49.4" cy="14.6" r="5"/><circle class="pb" cx="32" cy="32" r="5"/><circle class="pb" cx="14.6" cy="49.4" r="5"/><circle class="pb" cx="49.4" cy="49.4" r="5"/></svg></span>
+          <span class="tile-txt"><span class="tile-k">Phase 3 · A</span><b>Umgebung A</b><span class="tile-d">Das Training anwenden</span></span>
+          <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        </button>
+        <button class="tile-share" type="button" onclick="toggleShare('envA')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
+      </div>
+        <div class="tile" data-part="envB">
+        <button class="tile-open" type="button" onclick="openPart('envB', true)">
+          <span class="tile-art"><img src="Sprites/Knoten/K0x00.png" alt="" loading="lazy"></span>
+          <span class="tile-txt"><span class="tile-k">Phase 3 · B</span><b>Umgebung B</b><span class="tile-d">Das Training anwenden</span></span>
+          <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        </button>
+        <button class="tile-share" type="button" onclick="toggleShare('envB')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
+      </div>
+      </div>
+      <div class="flow-arrow" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+      <div class="flow-step">
+        <span class="flow-cap">Verstehen</span>
+        <div class="tile" data-part="sandbox">
+        <button class="tile-open" type="button" onclick="openPart('sandbox', true)">
+          <span class="tile-art"><svg viewBox="0 0 64 64" class="art-tree"><path class="l" d="M32 14L16 32M32 14l16 18M16 32l-8 16M16 32l8 16M48 32l-8 16M48 32l8 16"/><circle class="n" cx="32" cy="12" r="5"/><circle class="n" cx="16" cy="32" r="4.5"/><circle class="n" cx="48" cy="32" r="4.5"/><circle class="w" cx="8" cy="50" r="4"/><circle class="v" cx="24" cy="50" r="4"/><circle class="w" cx="40" cy="50" r="4"/><circle class="v" cx="56" cy="50" r="4"/></svg></span>
+          <span class="tile-txt"><span class="tile-k">Phase 4</span><b>Sandbox</b><span class="tile-d">Warum hat das Training geklappt?</span></span>
+          <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        </button>
+        <button class="tile-share" type="button" onclick="toggleShare('sandbox')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
+      </div>
+      </div>
+    </div>
+    <p class="area-foot">Umgebungen und Sandbox gibt es nur zusammen mit dem Training – wer sie öffnen darf, darf auch trainieren.</p>
+  </section>
 </div>
 
 <!-- ═══════════════════════════════════════ PHASE „GEGEN DIE KI“ (Reiter 1) -->
@@ -789,6 +943,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
         <button class="ttt-new" id="ttt-new" type="button" onclick="tttNew()">Neue Partie</button>
         <button class="ttt-forget" type="button" onclick="tttForget()">KI vergessen lassen</button>
       </div>
+      <button class="btn-teach" type="button" onclick="tttPlay50()" title="Die KI spielt 50 Partien gegen einen Zufallsgegner und lernt dabei – gut zum Besprechen der Lernkurve">+50 Runden <small>(nur Lehrkraft)</small></button>
       <div class="ttt-card ttt-curve">
         <div class="ttt-score">
           <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i>KI-Siege</span></div>
@@ -816,36 +971,8 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════ PHASE 1 INTRO -->
-<div id="screen-p1-intro" class="screen">
-  <div class="intro-split">
-
-    <!-- LINKS: Was ist RL? -->
-    <div class="intro-card">
-      <h2>Was ist Reinforcement Learning?</h2>
-      <img src="infografik.png" alt="Reinforcement Learning Infografik" style="width:100%;border-radius:8px;margin:14px 0 12px;">
-      <ol class="rl-steps">
-        <li><strong>Beobachten</strong> — Die KI sieht den aktuellen Zustand der Umgebung.</li>
-        <li><strong>Handeln</strong> — Sie wählt eine Aktion. Am Anfang geschieht das zufällig.</li>
-        <li><strong>Feedback</strong> — Die Umgebung antwortet mit Belohnung oder Bestrafung.</li>
-        <li><strong>Lernen</strong> — Der Pfad wird positiv oder negativ gespeichert. Beim nächsten ähnlichen Zustand wählt die KI häufiger, was belohnt wurde.</li>
-      </ol>
-    </div>
-
-    <!-- RECHTS: Rolle, Ziel, Starten -->
-    <div class="intro-card intro-col-right">
-      <h2>Deine Aufgabe</h2>
-      <p>Du schlüpfst in die Rolle einer KI, die gerade trainiert wird. Du siehst Zustände und musst Aktionen wählen — ohne zu wissen, wofür du eigentlich trainiert wirst.</p>
-      <p style="margin-top:10px;">KIs denken nicht wie Menschen. Sie kennen keine Regeln und keine Zusammenhänge — nur: was wurde belohnt, was wurde bestraft.</p>
-      <button class="btn btn-primary" onclick="enterTraining()" style="width:100%;padding:13px;font-size:1rem;margin-top:auto;">Trainingsphase starten</button>
-    </div>
-
-  </div>
-</div>
-
 <!-- ══════════════════════════════════════════════════ PHASE 1 TRAIN -->
 <div id="screen-p1-train" class="screen" style="position:relative">
-  <span class="back-link" onclick="lastP1 = 'intro'; showScreen('screen-p1-intro')">← Einführung</span>
   <div class="game-panel">
     <div class="game-header">
       <h2>Trainingsphase</h2>
@@ -880,7 +1007,8 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
     </div>
     <div class="controls">
       <button class="btn btn-secondary" id="p1-btn-new" onclick="startGame()">Neue Partie</button>
-          </div>
+      <button class="btn-teach" type="button" onclick="trainPlay50()" title="50 Trainingspartien mit Zufallszügen – die Gewichte werden dabei verstärkt bzw. geschwächt">+50 Runden <small>(nur Lehrkraft)</small></button>
+    </div>
     <!-- Ab der 2. Trainings-Partie sichtbar (updateP1Stats) -->
     <div class="train-hint" id="p1-train-hint" hidden>
       🤖 <b>Du hast keine Ahnung, was du gerade machst?</b> Richtig! Du bist eine KI und wirst gerade trainiert.
@@ -891,10 +1019,6 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 
 <!-- ════════════════════════════════════════════════ PHASE 2 BRETT -->
 <div id="screen-p2-brett" class="screen" style="position:relative">
-  <div class="ry-seg" role="tablist">
-    <button type="button" data-env="brett" onclick="goEnv('brett')">Umgebung A</button>
-    <button type="button" data-env="alien" onclick="goEnv('alien')">Umgebung B</button>
-  </div>
   <div class="brett-panel">
     <div class="status thinking" id="p2brett-status">Bereit…</div>
     <div class="brett-board-wrap">
@@ -921,10 +1045,6 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 
 <!-- ════════════════════════════════════════════════ PHASE 2 ALIEN -->
 <div id="screen-p2-alien" class="screen" style="position:relative">
-  <div class="ry-seg" role="tablist">
-    <button type="button" data-env="brett" onclick="goEnv('brett')">Umgebung A</button>
-    <button type="button" data-env="alien" onclick="goEnv('alien')">Umgebung B</button>
-  </div>
   <div class="game-panel">
     <!-- Linke Spalte: Szenenbild + Titeloverlay -->
     <div class="alien-col-left">
@@ -1089,6 +1209,19 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   </div>
 </dialog>
 
+<!-- ════════════════════════════════════════ AUFGABE (beim Öffnen einer Kachel) -->
+<dialog id="task-dialog" class="task-dialog">
+  <div class="task-k" id="task-k"></div>
+  <h3 id="task-title"></h3>
+  <div class="task-visual" id="task-visual"></div>
+  <div class="task-text" id="task-text"></div>
+  <div class="dialog-btns">
+    <button class="btn btn-primary" type="button" id="task-ok">Los geht’s</button>
+  </div>
+</dialog>
+
+<div class="ry-toast" id="ry-toast" hidden></div>
+
 <script>
 'use strict';
 
@@ -1113,12 +1246,11 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   document.body.dataset.screen = id;
-  updateTabs();
+  updateHead();
 }
 
 function enterTraining() {
-  if (!phaseUsable(1)) return;
-  lastP1 = 'train';
+  if (!partUsable('train')) return;
   currentGameContext = 'p1-train';
   learningFrozen = false;
   showScreen('screen-p1-train');
@@ -1127,7 +1259,7 @@ function enterTraining() {
 }
 
 function enterP2Brett() {
-  if (!phaseUsable(2)) return;
+  if (!partUsable('envA')) return;
   currentGameContext = 'p2-brett';
   learningFrozen = true;
   showScreen('screen-p2-brett');
@@ -1137,7 +1269,7 @@ function enterP2Brett() {
 }
 
 function enterP2Alien() {
-  if (!phaseUsable(2)) return;
+  if (!partUsable('envB')) return;
   currentGameContext = 'p2-alien';
   learningFrozen = true;
   if (!alienSpritesLoaded) loadAlienSprites();
@@ -1146,111 +1278,215 @@ function enterP2Alien() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// PHASEN-FREIGABE (MPSkills-Raum)
+// STARTSEITE, KACHELN UND FREIGABE (MPSkills-Raum)
 // ═══════════════════════════════════════════════════════════════════
+// Startseite = Erklärung „Wie lernt eine KI?“ + zwei Bereiche mit Kacheln:
+//   1 „Du trainierst die KI“  → ttt (Gegen die KI)
+//   2 „Du lernst wie eine KI“ → train (Training) → envA / envB → sandbox
+// Kachel antippen = Teil öffnen + Aufgabe (showTask). Kopfzeile: zurück
+// zur Übersicht, Name des Teils, „Aufgabe“ nochmal.
+//
 // Im Raum bekommt die Seite ?raum=lehrer bzw. ?raum=schueler (tool.js
 // ist die Gegenseite):
-//   hinein  { type: 'ry:cmd', phases: [0, 1] }   was die Klasse darf
-//   (0 = „Gegen die KI“, Reiter 1; 1 Training; 2 Umgebungen; 3 Sandbox)
-//   heraus  { type: 'ry:ready' }                 Seite steht
-//           { type: 'ry:phases', phases: [...] } Lehrkraft teilt/entzieht
-// Die Lehrkraft sieht immer alle Phasen und teilt sie mit dem Teilen-
-// Symbol am Reiter. Die Klasse sieht nur geteilte Phasen als Reiter.
-// Allein geöffnet (ohne ?raum=) und im Schaufenster (?demo=1) ist alles
-// offen.
+//   hinein  { type: 'ry:cmd', parts: ['ttt', 'train'] }   was die Klasse darf
+//   heraus  { type: 'ry:ready' }                          Seite steht
+//           { type: 'ry:parts', parts: [...] }            Lehrkraft teilt/entzieht
+// Umgebung A, B und Sandbox ergeben nur mit dem Training Sinn: ist eine
+// davon geteilt, ist das Training immer mit geteilt (normParts); wird das
+// Training entzogen, gehen sie mit. Die Lehrkraft sieht alle Kacheln und
+// teilt mit „Teilen“ an der Kachel; die Klasse sieht nicht geteilte Kacheln
+// mit Schloss. Allein geöffnet (ohne ?raum=) und im Schaufenster (?demo=1)
+// ist alles offen.
 
 const ROOM = (() => { const r = new URLSearchParams(location.search).get('raum'); return r === 'lehrer' || r === 'schueler' ? r : null; })();
 const TEACHER = ROOM === 'lehrer';
 const STUDENT = ROOM === 'schueler';
 const DEMO    = new URLSearchParams(location.search).get('demo') === '1';
-let classPhases = ROOM ? null : [0, 1, 2, 3];   // null = noch keine Nachricht aus dem Raum
 
-const SCREEN_PHASE = {
-  'screen-p0-ttt': 0,
-  'screen-p1-intro': 1, 'screen-p1-train': 1,
-  'screen-p2-brett': 2, 'screen-p2-alien': 2,
-  'screen-p3-sandbox': 3
+const PARTS = ['ttt', 'train', 'envA', 'envB', 'sandbox'];
+const NEEDS_TRAIN = ['envA', 'envB', 'sandbox'];
+function normParts(list) {
+  const set = new Set((list || []).filter(x => PARTS.includes(x)));
+  if (NEEDS_TRAIN.some(x => set.has(x))) set.add('train');
+  return PARTS.filter(x => set.has(x));
+}
+let classParts = ROOM ? null : PARTS.slice();   // null = noch keine Nachricht aus dem Raum
+
+const SCREEN_PART = {
+  'screen-p0-ttt': 'ttt', 'screen-p1-train': 'train',
+  'screen-p2-brett': 'envA', 'screen-p2-alien': 'envB',
+  'screen-p3-sandbox': 'sandbox'
+};
+const PART_INFO = {
+  ttt:     { k: 'Phase 1',     title: 'Gegen die KI', area: 'Du trainierst die KI' },
+  train:   { k: 'Phase 2',     title: 'Training',     area: 'Du lernst wie eine KI' },
+  envA:    { k: 'Phase 3 · A', title: 'Umgebung A',   area: 'Du lernst wie eine KI' },
+  envB:    { k: 'Phase 3 · B', title: 'Umgebung B',   area: 'Du lernst wie eine KI' },
+  sandbox: { k: 'Phase 4',     title: 'Sandbox',      area: 'Du lernst wie eine KI' }
 };
 
-const isShared    = n => !!classPhases && classPhases.includes(n);
-const phaseUsable = n => !STUDENT || isShared(n);
+const isShared   = p => !!classParts && classParts.includes(p);
+const partUsable = p => !STUDENT || isShared(p);
 
 function sendUp(msg) {
   if (window.parent === window) return;
   try { window.parent.postMessage(msg, location.origin); } catch (e) { /* Rahmen weg */ }
 }
 
-// Reiter: wohin eine Phase führt. Phase 1 merkt sich Einführung/Training,
-// Phase 2 die zuletzt gewählte Umgebung.
-let lastP1  = 'intro';
-let lastEnv = 'brett';
 function stopTimers() {
   if (aiTimeoutId)      { clearTimeout(aiTimeoutId); aiTimeoutId = null; }
   tttStop();
   if (alienAITimeoutId) { clearTimeout(alienAITimeoutId); alienAITimeoutId = null; }
 }
-function goPhase(n) {
-  if (!phaseUsable(n)) return;
+function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d => d.close()); }
+
+function openPart(p, withTask) {
+  if (!PART_INFO[p] || !partUsable(p)) return;
   stopTimers();
-  document.querySelectorAll('dialog[open]').forEach(d => d.close());
-  try { localStorage.setItem('ry.phase', String(n)); } catch (e) { /* egal */ }
-  if (n === 0) enterTTT();
-  else if (n === 1) { if (lastP1 === 'train') enterTraining(); else showScreen('screen-p1-intro'); }
-  else if (n === 2) goEnv(lastEnv);
-  else enterSandbox();
+  closeDialogs();
+  try { localStorage.setItem('ry.part', p); } catch (e) { /* egal */ }
+  ({ ttt: enterTTT, train: enterTraining, envA: enterP2Brett, envB: enterP2Alien, sandbox: enterSandbox })[p]();
+  window.scrollTo(0, 0);
+  if (withTask) showTask(p);
 }
-function goEnv(env) {
+function goHome() {
   stopTimers();
-  lastEnv = env === 'alien' ? 'alien' : 'brett';
-  if (lastEnv === 'alien') enterP2Alien(); else enterP2Brett();
+  closeDialogs();
+  try { localStorage.removeItem('ry.part'); } catch (e) { /* egal */ }
+  currentGameContext = null;
+  showScreen('screen-home');
+  renderHome();
+  window.scrollTo(0, 0);
 }
-// Erste sinnvolle Phase: die zuletzt offene, sonst die erste erlaubte.
-function startPhase() {
-  let saved = 0;
-  try { saved = parseInt(localStorage.getItem('ry.phase'), 10); } catch (e) { /* egal */ }
-  const ok = [0, 1, 2, 3].filter(phaseUsable);
-  if (!ok.length) { showScreen('screen-wait'); return; }
-  goPhase(ok.includes(saved) ? saved : ok[0]);
-}
-
-function toggleShare(n) {
-  if (!TEACHER || !classPhases) return;
-  const next = isShared(n) ? classPhases.filter(x => x !== n) : classPhases.concat(n);
-  setClassPhases(next, false);
+// Nach dem Laden: zurück in den zuletzt offenen Teil, sonst Startseite.
+function startPart() {
+  let saved = null;
+  try { saved = localStorage.getItem('ry.part'); } catch (e) { /* egal */ }
+  if (saved && PART_INFO[saved] && partUsable(saved)) openPart(saved, false);
+  else goHome();
 }
 
-function setClassPhases(list, fromServer) {
-  classPhases = [0, 1, 2, 3].filter(n => list.includes(n));
-  if (!fromServer) sendUp({ type: 'ry:phases', phases: classPhases });
-  // Schüler: Phase entzogen, während man drin ist (oder bisher nichts frei) → weiter.
-  const cur = SCREEN_PHASE[document.body.dataset.screen];
-  if (cur == null || !phaseUsable(cur)) {
-    stopTimers();
-    document.querySelectorAll('dialog[open]').forEach(d => d.close());
-    startPhase();
-  }
-  updateTabs();
+function toggleShare(p) {
+  if (!TEACHER || !classParts) return;
+  let next;
+  if (isShared(p)) {
+    next = classParts.filter(x => x !== p);
+    if (p === 'train') next = next.filter(x => !NEEDS_TRAIN.includes(x));   // ohne Training ergibt der Rest keinen Sinn
+  } else next = classParts.concat(p);
+  setClassParts(next, false);
 }
 
-function updateTabs() {
-  const cur = SCREEN_PHASE[document.body.dataset.screen];
-  document.querySelectorAll('.ry-tabwrap').forEach(w => {
-    const n = +w.dataset.tab;
-    w.hidden = !phaseUsable(n);
-    const t = w.querySelector('.ry-tab');
-    t.classList.toggle('on', n === cur);
-    t.setAttribute('aria-selected', n === cur ? 'true' : 'false');
-    const b = w.querySelector('.ry-share'), on = isShared(n);
+let partsBooted = !STUDENT;
+function setClassParts(list, fromServer) {
+  classParts = normParts(list);
+  if (!fromServer) sendUp({ type: 'ry:parts', parts: classParts });
+  if (!partsBooted) { partsBooted = true; startPart(); }
+  // Schüler: Teil entzogen, während man drin ist → zurück zur Übersicht.
+  const cur = SCREEN_PART[document.body.dataset.screen];
+  if (cur && !partUsable(cur)) goHome();
+  renderHome();
+  updateHead();
+}
+
+function renderHome() {
+  document.querySelectorAll('.tile').forEach(t => {
+    const p = t.dataset.part, on = isShared(p), ok = partUsable(p);
+    t.classList.toggle('is-locked', !ok);
+    t.classList.toggle('is-shared', on);
+    t.querySelector('.tile-open').disabled = !ok;
+    const b = t.querySelector('.tile-share');
     b.classList.toggle('is-on', on);
     b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    const nr = n + 1;   // Reiter zählen ab 1, intern beginnt „Gegen die KI“ bei 0
-    b.title = on ? 'Phase ' + nr + ' ist mit der Klasse geteilt – antippen zum Entziehen' : 'Phase ' + nr + ' mit der Klasse teilen';
-    b.setAttribute('aria-label', b.title);
+    const needed = p === 'train' && on && NEEDS_TRAIN.some(isShared);
+    b.querySelector('span').textContent = on ? (needed ? 'Geteilt · gehört dazu' : 'Geteilt') : 'Teilen';
+    b.title = on
+      ? (p === 'train' && needed ? 'Training ist geteilt, weil Umgebung oder Sandbox geteilt sind – Entziehen nimmt sie mit weg'
+                                : PART_INFO[p].title + ' ist mit der Klasse geteilt – antippen zum Entziehen')
+      : PART_INFO[p].title + ' mit der Klasse teilen' + (NEEDS_TRAIN.includes(p) ? ' (das Training wird mit geteilt)' : '');
   });
-  const env = document.body.dataset.screen === 'screen-p2-alien' ? 'alien' : 'brett';
-  document.querySelectorAll('.ry-seg button').forEach(b => b.classList.toggle('on', b.dataset.env === env));
-  const wt = document.getElementById('ry-wait-text');
-  if (wt) wt.textContent = classPhases ? 'Deine Lehrkraft hat noch keine Phase freigegeben.' : 'Einen Moment …';
+  const note = document.getElementById('home-note');
+  let txt = '';
+  if (STUDENT) txt = !classParts ? 'Einen Moment …'
+                   : !classParts.length ? 'Deine Lehrkraft hat noch nichts freigegeben. Lies dir schon mal oben durch, wie eine KI lernt.' : '';
+  else if (TEACHER) txt = 'Mit „Teilen“ an der Kachel gibst du sie für die Klasse frei. Umgebungen und Sandbox nehmen das Training automatisch mit.';
+  note.textContent = txt;
+  note.hidden = !txt;
+  note.classList.toggle('is-teacher-note', TEACHER);
+}
+
+function updateHead() {
+  const part = SCREEN_PART[document.body.dataset.screen];
+  const inPart = !!part;
+  document.getElementById('ry-back').hidden = !inPart;
+  document.getElementById('ry-crumb').hidden = !inPart;
+  document.getElementById('ry-taskbtn').hidden = !inPart;
+  document.querySelector('.ry-brand').classList.toggle('in-part', inPart);
+  if (inPart) {
+    document.getElementById('ry-crumb-area').textContent = PART_INFO[part].area;
+    document.getElementById('ry-crumb-title').textContent = PART_INFO[part].title;
+  }
+}
+
+// ── Aufgabe je Teil: kurz, mit Bildleiste ──
+const T_BOT   = '<svg viewBox="0 0 64 64" class="art-bot"><path class="l" d="M32 6v8"/><circle class="f" cx="32" cy="6" r="3"/><rect class="h" x="12" y="14" width="40" height="32" rx="10"/><circle class="e" cx="24" cy="29" r="4"/><circle class="e" cx="40" cy="29" r="4"/><path class="l" d="M25 38h14"/><path class="l" d="M20 46v8M44 46v8"/></svg>';
+const T_TTT   = '<svg viewBox="0 0 64 64" class="art-ttt"><path class="g" d="M24 8v48M40 8v48M8 24h48M8 40h48"/><path class="x" d="M11 11l9 9M20 11l-9 9M43 27l9 9M52 27l-9 9"/><circle class="o" cx="32" cy="32" r="5"/><circle class="o" cx="48" cy="16" r="5"/></svg>';
+const T_BRETT = '<svg viewBox="0 0 64 64" class="art-brett"><rect x="6" y="6" width="52" height="52" rx="6" class="b"/><path class="d" d="M23.3 6h17.3v17.3H23.3zM6 23.3h17.3v17.3H6zM40.6 23.3H58v17.3H40.6zM23.3 40.6h17.3V58H23.3z"/><circle class="pw" cx="14.6" cy="14.6" r="5"/><circle class="pw" cx="49.4" cy="14.6" r="5"/><circle class="pb" cx="32" cy="32" r="5"/><circle class="pb" cx="14.6" cy="49.4" r="5"/><circle class="pb" cx="49.4" cy="49.4" r="5"/></svg>';
+const T_ALIEN = '<img src="Sprites/Knoten/K0x00.png" alt="">';
+const T_TREE  = '<svg viewBox="0 0 64 64" class="art-tree"><path class="l" d="M32 14L16 32M32 14l16 18M16 32l-8 16M16 32l8 16M48 32l-8 16M48 32l8 16"/><circle class="n" cx="32" cy="12" r="5"/><circle class="n" cx="16" cy="32" r="4.5"/><circle class="n" cx="48" cy="32" r="4.5"/><circle class="w" cx="8" cy="50" r="4"/><circle class="v" cx="24" cy="50" r="4"/><circle class="w" cx="40" cy="50" r="4"/><circle class="v" cx="56" cy="50" r="4"/></svg>';
+const T_LOOP  = '<svg viewBox="0 0 64 64" class="art-icon"><path d="M48 22a18 18 0 1 0 4 14"/><path d="M50 10v13H37"/></svg>';
+const T_CURVE = '<svg viewBox="0 0 64 64" class="art-icon"><path class="ax" d="M10 8v46h46"/><path d="M14 46c8-2 10-14 18-16s10 6 16-14"/><circle cx="48" cy="16" r="3.5" class="dot"/></svg>';
+const T_QUEST = '<svg viewBox="0 0 64 64" class="art-icon"><path d="M23 24a9 9 0 1 1 13 8c-3 1.6-4 3.5-4 7"/><circle cx="32" cy="48" r="2.6" class="dot"/></svg>';
+const T_FB    = '<span class="fb"><span class="fb-ok">✓</span><span class="fb-no">✕</span></span>';
+const tStep = (art, cap) => '<div class="tv-step"><div class="tv-art">' + art + '</div><span>' + cap + '</span></div>';
+const tArrow = '<div class="tv-arrow" aria-hidden="true">→</div>';
+const tPlus  = '<div class="tv-arrow" aria-hidden="true">+</div>';
+const TASKS = {
+  ttt: {
+    visual: [tStep(T_TTT, 'Spielen'), tArrow, tStep(T_LOOP, 'ganz oft'), tArrow, tStep(T_CURVE, 'Wie lernt es?')],
+    text: '<p class="task-lead">Du spielst Tic-Tac-Toe gegen ein Programm, das das Spiel <b>erst lernt</b>.</p>' +
+          '<p>Spiele ganz oft gegen das Programm und entdecke, <b>wie</b> das Programm lernt.</p>'
+  },
+  train: {
+    visual: [tStep(T_BOT, 'Du bist die KI'), tArrow, tStep('<code>K0x00</code>', 'Zustand'), tArrow, tStep('<code>E0x03</code>', 'Aktion'), tArrow, tStep(T_FB, 'Belohnung / Strafe')],
+    text: '<p class="task-lead">Jetzt bist <b>du</b> die KI. Du wirst – wie eine KI – verstärkt trainiert: für etwas Neues.</p>' +
+          '<p>Du kennst keine Regeln und weißt nicht, wofür du trainiert wirst. Du siehst nur Zustände, wählst Aktionen und erfährst am Ende: Sieg oder Niederlage.</p>' +
+          '<p><b>Trainiere, bis du fast immer gewinnst.</b></p>'
+  },
+  envA: {
+    visual: [tStep(T_BOT, 'Dein Training'), tArrow, tStep(T_BRETT, 'Umgebung A'), tArrow, tStep(T_QUEST, 'Wofür war es?')],
+    text: '<p class="task-lead">Wende dein Training an – in einer echten Umgebung.</p>' +
+          '<p>Hier wird nicht mehr gelernt: Es zählt, was du im Training gelernt hast. <b>Erkennst du, wofür du trainiert wurdest?</b></p>'
+  },
+  envB: {
+    visual: [tStep(T_BOT, 'Dein Training'), tArrow, tStep(T_ALIEN, 'Umgebung B'), tArrow, tStep(T_QUEST, 'Wofür war es?')],
+    text: '<p class="task-lead">Wende dein Training an – in einer ganz anderen Umgebung.</p>' +
+          '<p>Hier wird nicht mehr gelernt: Es zählt, was du im Training gelernt hast. <b>Klappt es auch hier? Erkennst du, wofür du trainiert wurdest?</b></p>'
+  },
+  sandbox: {
+    visual: [tStep(T_BRETT, 'Umgebung A'), tPlus, tStep(T_ALIEN, 'Umgebung B'), tArrow, tStep(T_TREE, 'Baum')],
+    text: '<p class="task-lead">Dein Training hat in <b>beiden</b> Umgebungen funktioniert. <b>Warum?</b></p>' +
+          '<p>Hier laufen beide Spiele gleichzeitig, rechts siehst du alle Spielverläufe als Baum. Finde heraus, was Training, Umgebung A und Umgebung B gemeinsam haben.</p>'
+  }
+};
+function showTask(p) {
+  p = p || SCREEN_PART[document.body.dataset.screen];
+  const t = TASKS[p];
+  if (!t) return;
+  document.getElementById('task-k').textContent = PART_INFO[p].k + ' · ' + PART_INFO[p].area;
+  document.getElementById('task-title').textContent = PART_INFO[p].title;
+  document.getElementById('task-visual').innerHTML = t.visual.join('');
+  document.getElementById('task-text').innerHTML = t.text;
+  const d = document.getElementById('task-dialog');
+  if (!d.open) d.showModal();
+}
+
+let toastTimer = null;
+function ryToast(msg) {
+  const t = document.getElementById('ry-toast');
+  t.textContent = msg;
+  t.hidden = false;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
 }
 
 // Alles, was sich die Seite merkt, liegt im Gerät unter „ry.“ — getrennt
@@ -1635,6 +1871,45 @@ function finish(winner) {
     updateBrettStatsDisplay();
     saveBrettDiscovered();
   }
+}
+
+// „+50 Runden (nur Lehrkraft)“: 50 Trainingspartien ohne Anzeige. Weiß
+// zieht zufällig (wie im Training), die KI (Schwarz) wählt zufällig nach
+// ihren Gewichten – Sieg verstärkt, Niederlage schwächt (wie finish()).
+function trainPlay50() {
+  if (!TEACHER) return;
+  stopTimers();
+  const pick = (b, moves) => {
+    const w = moves.map(m => getW(b, m.from, m.to));
+    let r = Math.random() * w.reduce((a, v) => a + v, 0);
+    for (let i = 0; i < moves.length; i++) { r -= w[i]; if (r <= 0) return moves[i]; }
+    return moves[moves.length - 1];
+  };
+  let won = 0;
+  for (let g = 0; g < 50; g++) {
+    let b = INIT_BOARD.slice(), winner = null;
+    const hist = [];
+    while (winner === null) {
+      const wm = legalMoves(b, 1);
+      if (!wm.length) { winner = 2; break; }
+      b = applyMove(b, wm[(Math.random() * wm.length) | 0]);
+      winner = checkWinner(b);
+      if (winner !== null) break;
+      const hm = legalMoves(b, 2);
+      if (!hm.length) { winner = 1; break; }
+      const m = pick(b, hm);
+      hist.push({ board: b.slice(), from: m.from, to: m.to });
+      b = applyMove(b, m);
+      winner = checkWinner(b);
+    }
+    if (hist.length) applyDiscountedRewards(hist, winner === 2);
+    if (winner === 2) { stats.w++; won++; } else stats.l++;
+  }
+  saveS();
+  updateP1Stats();
+  checkUnlockCondition();
+  if (isTraining()) startGame();
+  ryToast('+50 Runden trainiert: ' + won + ' Siege, ' + (50 - won) + ' Niederlagen');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2287,9 +2562,8 @@ function resetAll(confirmed = false) {
   tttReset();
   updateP1Stats(); updateBrettStatsDisplay(); updateAlienStatsDisplay(); updateSbStatsDisplay();
   checkUnlockCondition();
-  lastP1 = 'intro';
-  const cur = SCREEN_PHASE[document.body.dataset.screen];
-  if (cur != null) goPhase(cur);
+  const cur = SCREEN_PART[document.body.dataset.screen];
+  if (cur) openPart(cur, false);
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3137,7 +3411,7 @@ function startSandboxGame() {
 }
 
 function enterSandbox() {
-  if (!phaseUsable(3)) return;
+  if (!partUsable('sandbox')) return;
   loadAlienSprites();
   // Was in Phase 2 schon gesehen wurde, ist im Baum schon entdeckt.
   discoveredBrettNodes.forEach(id => discoveredSandboxNodes.add(id));
@@ -3150,10 +3424,8 @@ function enterSandbox() {
   updateSbStatsDisplay();
   startSandboxGame();
   requestAnimationFrame(sbFitAlienCanvas);
-  // Die Erklärung kommt nur beim ersten Mal von selbst.
-  let seen = false;
-  try { seen = localStorage.getItem('ry.sb_intro') === '1'; localStorage.setItem('ry.sb_intro', '1'); } catch (e) { /* egal */ }
-  if (!seen || DEMO) document.getElementById('sandbox-intro-dialog').showModal();
+  // Die Erklärung gibt es über „Was kann ich hier machen?“; beim Öffnen
+  // der Kachel kommt die Aufgabe (showTask).
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3260,7 +3532,7 @@ function tttStop() {
 }
 
 function enterTTT() {
-  if (!phaseUsable(0)) return;
+  if (!partUsable('ttt')) return;
   currentGameContext = null;
   showScreen('screen-p0-ttt');
   if (!ttt || !ttt.b) tttNew();
@@ -3354,23 +3626,62 @@ function tttClick(cell) {
 
 // Partie vorbei: Sieg markiert alle KI-Züge, Niederlage streicht den
 // letzten (und rückwärts weiter, wo dann alles gestrichen ist).
-function tttEnd(res) {
-  ttt.over = res.w;
-  ttt.line = res.line;
-  ttt.changed = [];
-  const M = ttt.moves.filter(m => m.pick != null);
-  if (res.w === 'K') {
-    M.forEach((m, i) => { if (tttBrain[m.key][m.pick] === 0) { tttBrain[m.key][m.pick] = 1; ttt.changed.push(i); } });
-  } else if (res.w === 'D') {
+function tttLearn(w, M) {
+  const changed = [];
+  if (w === 'K') {
+    M.forEach((m, i) => { if (tttBrain[m.key][m.pick] === 0) { tttBrain[m.key][m.pick] = 1; changed.push(i); } });
+  } else if (w === 'D') {
     for (let i = M.length - 1; i >= 0; i--) {
       const box = tttBrain[M[i].key];
-      if (box[M[i].pick] !== -1) { box[M[i].pick] = -1; ttt.changed.push(i); }
+      if (box[M[i].pick] !== -1) { box[M[i].pick] = -1; changed.push(i); }
       if (!Object.values(box).every(v => v === -1)) break;   // es gibt noch einen anderen Weg
     }
   }
-  tttHist.push(res.w);
+  tttHist.push(w);
+  return changed;
+}
+function tttEnd(res) {
+  ttt.over = res.w;
+  ttt.line = res.line;
+  ttt.changed = tttLearn(res.w, ttt.moves.filter(m => m.pick != null));
   tttSaveAll();
   tttRender();
+}
+
+// „+50 Runden (nur Lehrkraft)“: die KI spielt 50 Partien gegen einen
+// Gegner, der zufällig setzt, und lernt nach denselben Regeln. Wer anfängt,
+// wird je Partie gewürfelt. Danach steht eine neue Partie bereit.
+function tttPlay50() {
+  if (!TEACHER) return;
+  tttStop();
+  const res0 = { K: 0, D: 0, '=': 0 };
+  for (let g = 0; g < 50; g++) {
+    const b = Array(9).fill(null), M = [];
+    let turn = Math.random() < 0.5 ? 'K' : 'D', res = null;
+    while (!res) {
+      let cell;
+      if (turn === 'K') {
+        const st = tttState(b), probs = tttProbs(st.key, st.opts);
+        let r = Math.random(), k = st.opts.length - 1;
+        for (let i = 0; i < probs.length; i++) { r -= probs[i]; if (r <= 0) { k = i; break; } }
+        const o = st.opts[k];
+        cell = o.cells[(Math.random() * o.cells.length) | 0];
+        M.push({ key: st.key, pick: o.rep });
+      } else {
+        const free = []; b.forEach((v, i) => { if (!v) free.push(i); });
+        cell = free[(Math.random() * free.length) | 0];
+      }
+      b[cell] = turn;
+      res = tttWinner(b);
+      turn = turn === 'K' ? 'D' : 'K';
+    }
+    tttLearn(res.w, M);
+    res0[res.w]++;
+  }
+  ttt = null;
+  tttSaveAll();
+  tttNew();
+  ryToast('+50 Runden: KI ' + res0.K + ' Siege · ' + res0['='] + ' Remis · ' + res0.D + ' Niederlagen');
 }
 
 function tttRender() {
@@ -3539,13 +3850,15 @@ loadAlienSprites();
   set();
   if (window.ResizeObserver) new ResizeObserver(set).observe(head);
 })();
-if (STUDENT) { showScreen('screen-wait'); updateTabs(); }
-else startPhase();
+document.getElementById('task-ok').addEventListener('click', () => document.getElementById('task-dialog').close());
+document.getElementById('task-dialog').addEventListener('click', e => { if (e.target === e.currentTarget) e.currentTarget.close(); });
+if (STUDENT) goHome();     // erst die Freigabe abwarten (setClassParts → startPart)
+else startPart();
 
 if (ROOM) {
   window.addEventListener('message', e => {
     if (e.origin !== location.origin || e.source !== window.parent || !e.data || e.data.type !== 'ry:cmd') return;
-    if (Array.isArray(e.data.phases)) setClassPhases(e.data.phases.map(Number), true);
+    if (Array.isArray(e.data.parts)) setClassParts(e.data.parts.map(String), true);
   });
   sendUp({ type: 'ry:ready' });
 }

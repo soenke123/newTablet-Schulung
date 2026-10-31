@@ -4,7 +4,7 @@
    Die Kernzusagen:
      1. Der Skill steht in skill_tools (Ordner, Fach, aktiv, nicht admin_only).
      2. Eine Lehrkraft ohne Adminrechte legt einen Raum an und teilt
-        Phasen über skill_room_set_state (data.phases), ohne eigene Tabellen.
+        Phasen über skill_room_set_state (data.parts), ohne eigene Tabellen.
      3. 0242 läuft ein zweites Mal durch.
 
    Aufruf:  node supabase/tests/0242_reinforce_yourself.mjs */
@@ -73,11 +73,11 @@ catch (e) { r = { ok: false, error: e.message }; }
 ok('2  Lehrkraft legt einen Raum an', r && r.ok === true, JSON.stringify(r));
 const code = r && (r.code || (r.room && r.room.code));
 let s;
-try { s = (await one(`select skill_room_set_state($1, null, '{"phases":[1,2]}'::jsonb) v`, [code])).v; }
+try { s = (await one(`select skill_room_set_state($1, null, '{"parts":["train","envA"]}'::jsonb) v`, [code])).v; }
 catch (e) { s = { ok: false, error: e.message }; }
-ok('2  Phasen 1 und 2 geteilt', s && s.ok === true, JSON.stringify(s));
+ok('2  Training und Umgebung A geteilt', s && s.ok === true, JSON.stringify(s));
 const st = await one(`select s.data from skill_room_state s join skill_rooms r on r.id = s.room_id where r.code = $1`, [code]);
-ok('2  data.phases liegt im Raum', st && JSON.stringify(st.data.phases) === '[1,2]', JSON.stringify(st));
+ok('2  data.parts liegt im Raum', st && JSON.stringify(st.data.parts) === '["train","envA"]', JSON.stringify(st));
 
 /* 3 */
 let twice = true;
