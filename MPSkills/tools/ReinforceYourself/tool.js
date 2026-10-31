@@ -2,7 +2,8 @@
    MPSkills — Skill „Reinforce Yourself"  ·  tool.js
    ══════════════════════════════════════════════════════════════
    Reinforcement Learning zum Selbermachen (Migration 0242, Beta).
-   Kam aus dem GameHub (S2 Reinforce Yourself!) — ohne Begleiter,
+   Kam aus dem GameHub (früher S2 Reinforce Yourself!, dort seit
+   Migration 0252 entfernt) — ohne Begleiter,
    ohne Zwischen-Quizze, ohne Punkte. Startseite = Erklärung, wie
    eine KI durch Belohnung lernt, darunter zwei Bereiche mit Kacheln:
      „Du trainierst die KI“   ttt      Gegen die KI (Tic-Tac-Toe gegen
