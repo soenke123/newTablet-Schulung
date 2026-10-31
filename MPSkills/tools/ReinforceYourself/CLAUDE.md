@@ -8,7 +8,7 @@ Zwischen-Quizze und **ohne** Punkte/Gewinn-Bildschirme.
 ## Aufbau (seit 31.10.2026: Startseite mit Kacheln statt Reitern)
 
 Startseite (`screen-home`): oben die Erklärung „Wie lernt eine KI durch Belohnung?“
-(infografik.png + 4 Schritte Beobachten · Handeln · Feedback · Lernen), darunter zwei Bereiche:
+(infografik.png + Text passend zum Bild: die vier Kästen KI-Agent · Umgebung · Belohnung · Lernen in deren Farben statt Nummern, `.rl-cycle`, damit sie nicht mit den Pfeil-Nummern 1–3 im Bild kollidieren), darunter zwei Bereiche:
 
 - **1 „Du trainierst die KI“** – Kachel `ttt` (Gegen die KI).
 - **2 „Du lernst wie eine KI“** – Ablauf mit Pfeilen: `train` (Training) →

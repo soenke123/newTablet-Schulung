@@ -170,6 +170,15 @@ body.is-teacher .btn-teach, body.is-demo .btn-teach{display:inline-flex;}
 .home-hero .rl-steps li{color:var(--mp-ink-soft);}
 .home-hero .rl-steps li strong{color:var(--mp-ink);}
 .home-hero .rl-steps li::before{background:var(--mp-accent); color:var(--mp-on-accent);}
+.home-hero .rl-cycle li{display:block; position:relative; padding-left:24px;}
+.home-hero .rl-cycle li::before{content:''; position:absolute; left:2px; top:5px; width:13px; height:13px; border-radius:4px; background:var(--rc);}
+.rl-cycle li strong{color:var(--rc) !important;}
+.rl-cycle .c-agent{--rc:#3566c8;} .rl-cycle .c-env{--rc:#3f8f46;} .rl-cycle .c-reward{--rc:#c9821c;} .rl-cycle .c-learn{--rc:#7457b8;}
+html[data-theme="dark"] .rl-cycle .c-agent{--rc:#7fa6f0;} html[data-theme="dark"] .rl-cycle .c-env{--rc:#7cc684;}
+html[data-theme="dark"] .rl-cycle .c-reward{--rc:#f0b453;} html[data-theme="dark"] .rl-cycle .c-learn{--rc:#ad94ec;}
+@media (prefers-color-scheme: dark){ html:not([data-theme]) .rl-cycle .c-agent{--rc:#7fa6f0;} html:not([data-theme]) .rl-cycle .c-env{--rc:#7cc684;}
+  html:not([data-theme]) .rl-cycle .c-reward{--rc:#f0b453;} html:not([data-theme]) .rl-cycle .c-learn{--rc:#ad94ec;} }
+.rl-again{margin:0; font-size:.88rem; color:var(--mp-ink-soft); font-style:italic;}
 .home-hero-img{width:100%; max-height:360px; object-fit:contain; border-radius:12px;}
 @media(max-width:780px){ .home-hero{grid-template-columns:1fr; padding:18px;} .home-hero-img{max-height:260px; order:-1;} }
 
@@ -901,17 +910,18 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 <div id="screen-home" class="screen">
   <section class="home-hero">
     <div class="home-hero-txt">
-      <span class="home-kicker">Reinforcement Learning</span>
+      <span class="home-kicker">Verstärkendes Lernen · Reinforcement Learning</span>
       <h1>Wie lernt eine KI durch Belohnung?</h1>
-      <p class="home-lead">Niemand erklärt der KI die Regeln. Sie probiert aus – und merkt sich, was belohnt wurde.</p>
-      <ol class="rl-steps">
-        <li><strong>Beobachten</strong> — Die KI sieht den aktuellen Zustand der Umgebung.</li>
-        <li><strong>Handeln</strong> — Sie wählt eine Aktion. Am Anfang geschieht das zufällig.</li>
-        <li><strong>Feedback</strong> — Die Umgebung antwortet mit Belohnung oder Bestrafung.</li>
-        <li><strong>Lernen</strong> — Was belohnt wurde, wählt sie beim nächsten Mal häufiger. Was bestraft wurde, seltener.</li>
+      <p class="home-lead">Niemand erklärt der KI die Regeln. Sie läuft immer wieder durch diesen Kreislauf:</p>
+      <ol class="rl-steps rl-cycle">
+        <li class="c-agent"><strong>KI-Agent</strong> — trifft eine Entscheidung, am Anfang ganz zufällig.</li>
+        <li class="c-env"><strong>Umgebung</strong> — Die KI handelt (Aktion), die Umgebung reagiert darauf.</li>
+        <li class="c-reward"><strong>Belohnung</strong> — Die Umgebung gibt Feedback, positiv oder negativ, und liefert den neuen Zustand.</li>
+        <li class="c-learn"><strong>Lernen</strong> — Die KI nutzt das Feedback und passt ihre Strategie an, um in Zukunft mehr Belohnung zu bekommen.</li>
       </ol>
+      <p class="rl-again">Dann beginnt der Kreislauf von vorn – Runde für Runde wird die KI besser.</p>
     </div>
-    <img class="home-hero-img" src="infografik.png" alt="Infografik: Kreislauf aus Zustand, Aktion, Belohnung und Lernen">
+    <img class="home-hero-img" src="infografik.png" alt="Infografik: Kreislauf aus KI-Agent, Umgebung, Belohnung und Lernen">
   </section>
 
   <p class="home-note" id="home-note" hidden></p>
