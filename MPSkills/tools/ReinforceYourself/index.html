@@ -1000,7 +1000,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
       <div class="ttt-board" id="ttt-board"></div>
       <div class="ttt-actions">
         <button class="ttt-new" id="ttt-new" type="button" onclick="tttNew()">Neue Partie</button>
-        <button class="btn-teach" type="button" onclick="tttPlay50()" title="Die KI spielt 50 Partien gegen einen Zufallsgegner und lernt dabei – gut zum Besprechen der Lernkurve">+50 Runden <small>(nur Lehrkraft)</small></button>
+        <button class="btn-teach" type="button" onclick="tttPlay50()" title="Die KI spielt 50 Partien gegen einen perfekten Gegner und lernt dabei – sie lernt, nicht mehr zu verlieren (mehr Unentschieden)">+50 Runden Optimal <small>(nur Lehrkraft)</small></button>
         <button class="ttt-forget" type="button" onclick="tttForget()">KI vergessen lassen</button>
       </div>
     </div>
@@ -3709,11 +3709,36 @@ function tttEnd(res) {
   tttRender();
 }
 
-// „+50 Runden (nur Lehrkraft)“: die KI spielt 50 Partien gegen einen
-// Gegner und lernt nach denselben Regeln. Der Gegner („Mensch“) spielt
-// besser als Zufall: kann er direkt gewinnen, tut er das meistens (80 %),
-// sonst setzt er zufällig. Wer anfängt, wird je Partie gewürfelt. Danach
-// steht eine neue Partie bereit.
+// „+50 Runden Optimal (nur Lehrkraft)“: die KI spielt 50 Partien gegen einen
+// optimal spielenden Gegner (Minimax, perfekt) und lernt nach denselben
+// Regeln. Gegen ihn kann sie nicht gewinnen – dass sie gelernt hat, sieht
+// man daran, dass sie immer seltener verliert (mehr Unentschieden, die
+// Lernkurve wird flach). Gleich gute Züge des Gegners werden gewürfelt.
+// Wer anfängt, wird je Partie gewürfelt. Danach steht eine neue Partie bereit.
+const tttMemo = new Map();
+// Wert der Stellung für 'who' am Zug bei perfektem Spiel: 1 Sieg, 0 remis, -1 Niederlage.
+function tttValue(b, who) {
+  const k = b.map(v => v || '-').join('') + who;
+  if (tttMemo.has(k)) return tttMemo.get(k);
+  const w = tttWinner(b);
+  let res;
+  if (w) res = w.w === '=' ? 0 : (w.w === who ? 1 : -1);
+  else {
+    res = -2;
+    const o = who === 'K' ? 'D' : 'K';
+    for (let i = 0; i < 9; i++) if (!b[i]) { b[i] = who; res = Math.max(res, -tttValue(b, o)); b[i] = null; }
+  }
+  tttMemo.set(k, res);
+  return res;
+}
+function tttOptimal(b) {
+  let best = -9, cand = [];
+  for (let i = 0; i < 9; i++) if (!b[i]) {
+    b[i] = 'D'; const v = -tttValue(b, 'K'); b[i] = null;
+    if (v > best) { best = v; cand = [i]; } else if (v === best) cand.push(i);
+  }
+  return cand[(Math.random() * cand.length) | 0];
+}
 function tttPlay50() {
   if (!TEACHER) return;
   tttStop();
@@ -3731,10 +3756,7 @@ function tttPlay50() {
         cell = o.cells[(Math.random() * o.cells.length) | 0];
         M.push({ key: st.key, pick: o.rep });
       } else {
-        const free = []; b.forEach((v, i) => { if (!v) free.push(i); });
-        const wins = free.filter(i => { b[i] = 'D'; const w = tttWinner(b); b[i] = null; return w && w.w === 'D'; });
-        cell = wins.length && Math.random() < 0.8 ? wins[(Math.random() * wins.length) | 0]
-                                                  : free[(Math.random() * free.length) | 0];
+        cell = tttOptimal(b);
       }
       b[cell] = turn;
       res = tttWinner(b);
@@ -3746,7 +3768,7 @@ function tttPlay50() {
   ttt = null;
   tttSaveAll();
   tttNew();
-  ryToast('+50 Runden: KI ' + res0.K + ' Siege · ' + res0['='] + ' Unentschieden · ' + res0.D + ' Niederlagen');
+  ryToast('+50 Runden Optimal: KI ' + res0['='] + ' Unentschieden · ' + res0.D + ' Niederlagen' + (res0.K ? ' · ' + res0.K + ' Siege' : ''));
 }
 
 function tttRender() {
