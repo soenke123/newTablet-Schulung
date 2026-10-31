@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { PDFDocument, decodePDFRawStream } from '../lib/pdf-lib/pdf-lib.esm.min.js';
-import { md5, rc4, decryptPdf, looksEncrypted, PasswordError } from '../js/crypt.js';
+import { md5, rc4, decryptPdf, encryptPdf, looksEncrypted, PasswordError } from '../js/crypt.js';
 import { createBlankPdf } from '../js/export.js';
 
 // Fixtures (tests/fixtures): one page "Elternbrief", Titel „Elternbrief“, user password "geheim", owner password
@@ -47,4 +47,28 @@ test('Unverschlüsselte Dateien bleiben unangetastet', async () => {
   const bytes = await createBlankPdf(100, 100);
   assert.equal(looksEncrypted(bytes), false);
   assert.equal(await decryptPdf(bytes, ''), null);
+});
+
+test('Verschlüsseln (AES-256, R6): nur mit dem Passwort wieder lesbar, Inhalt bleibt', async () => {
+  for (const name of ['aes-128.pdf', 'objstm-aes-256.pdf']) {
+    const plain = await decryptPdf(fixture(name), 'geheim');
+    for (const password of ['geheim', 'Schüler!23 ß€']) {
+      const locked = await encryptPdf(plain, password);
+      assert.ok(looksEncrypted(locked));
+      const text = new TextDecoder('latin1').decode(locked);
+      assert.match(text, /\/R 6/);
+      assert.match(text, /\/CFM \/AESV3/);
+      assert.doesNotMatch(text, /Elternbrief|ObjStm/);
+      const back = await decryptPdf(locked, password);
+      const { title, content } = await opened(back);
+      assert.equal(title, 'Elternbrief');
+      assert.match(content, /Tf/);
+      await assert.rejects(decryptPdf(locked, 'falsch'), e => e.code === 'password');
+      await assert.rejects(decryptPdf(locked, ''), e => e.code === 'password');
+    }
+  }
+});
+
+test('Verschlüsseln: ohne Passwort gibt es keine Datei', async () => {
+  await assert.rejects(encryptPdf(await createBlankPdf(100, 100), ''));
 });
