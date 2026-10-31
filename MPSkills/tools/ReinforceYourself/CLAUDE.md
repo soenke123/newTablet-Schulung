@@ -28,13 +28,16 @@ Die Teile:
 
 - **ttt – Gegen die KI**: Tic-Tac-Toe gegen eine KI, die aus jeder Partie lernt.
   Je Stellung kennt die KI ihre Möglichkeiten, gedrehte/gespiegelte Züge = EINE Möglichkeit.
-  Jede ist offen, markiert (★, führte zum Sieg) oder gestrichen (grau, führte zur Niederlage).
-  Wahl zufällig unter den nicht gestrichenen, markierte zählen dreifach. Sieg → alle KI-Züge der
-  Partie markiert; Niederlage → letzter KI-Zug gestrichen, sind dadurch alle Möglichkeiten einer
-  Stellung gestrichen, auch der Zug davor (rückwärts weiter); Unentschieden → nichts (`tttLearn`).
-  Rechts „Möglichkeiten der KI“ (Mini-Bretter je KI-Zug, Auswahl läuft sichtbar zufällig), links
-  Spielfeld + Zähler + Lernkurve (sticky). Gerät: `ry.ttt2_brain`, `ry.ttt2_hist`, `ry.ttt2_game`,
-  `ry.ttt_first`; „KI vergessen lassen“ löscht nur das.
+  Jede ist offen, Siegzug (★, hat direkt gewonnen) oder Verlustzug (✕ grau, danach hat der Gegner
+  direkt gewonnen). Nach der Partie wird NUR der letzte KI-Zug markiert (`tttLearn`, seit 31.10.2026):
+  Sieg → Siegzug, Niederlage → Verlustzug, Unentschieden → nichts. Wahl (`tttProbs`): gibt es einen
+  Siegzug, nimmt die KI ihn zu 100 %, sonst zufällig unter den offenen, Verlustzüge nie (alles
+  Verlustzüge → blind raten). Früher: alle Züge eines Sieges markiert (dreifach gewichtet) +
+  Streichen rückwärts und Zähler „Gestrichen“ – entfernt, war nicht verständlich.
+  Rechts „Möglichkeiten der KI“ (Mini-Bretter je KI-Zug, Auswahl läuft sichtbar zufällig, Legende
+  gewählt · gewinnt direkt · verliert direkt), links Spielfeld + Zähler (KI-Siege · Remis · Deine
+  Siege) + Lernkurve (sticky). Gerät: `ry.ttt3_brain`, `ry.ttt3_hist`, `ry.ttt3_game`, `ry.ttt_first`
+  (die alten `ry.ttt2_*` werden beim Laden gelöscht); „KI vergessen lassen“ löscht nur das.
 - **train – Training**: als KI spielen: Zustände K0x.., Aktionen E0x.., nur Sieg/Niederlage
   als Rückmeldung. Gewichte in `ry.bsch_w`, Siege/Niederlagen in `ry.bsch_s`.
 - **envA / envB – Umgebung A (Brettspiel) und B (Aliens)**: das Gelernte anwenden,

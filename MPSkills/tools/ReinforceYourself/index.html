@@ -758,7 +758,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 .ttt-side{display:flex; flex-direction:column; gap:16px; min-width:0;}
 .ttt-card{background:var(--mp-surface); border:1px solid var(--mp-line); border-radius:18px; padding:16px 18px; box-shadow:var(--mp-shadow); min-width:0;}
 .ttt-card h3{font-size:.78rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--mp-ink-faint); margin-bottom:10px;}
-.ttt-score{display:grid; grid-template-columns:repeat(4,1fr); gap:8px;}
+.ttt-score{display:grid; grid-template-columns:repeat(3,1fr); gap:8px;}
 .ttt-num{text-align:center; padding:4px 2px;}
 .ttt-num b{display:block; font-size:1.4rem; font-weight:700; line-height:1.1; color:var(--mp-ink); font-variant-numeric:tabular-nums;}
 .ttt-num span{display:inline-flex; align-items:center; gap:5px; font-size:.74rem; white-space:nowrap; color:var(--mp-ink-soft);}
@@ -949,7 +949,6 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
           <div class="ttt-num"><b id="ttt-n-k">0</b><span><i style="background:var(--ttt-ki)"></i>KI-Siege</span></div>
           <div class="ttt-num"><b id="ttt-n-e">0</b><span><i style="background:var(--mp-ink-faint)"></i>Remis</span></div>
           <div class="ttt-num"><b id="ttt-n-d">0</b><span><i style="background:var(--ttt-du)"></i>Deine Siege</span></div>
-          <div class="ttt-num"><b id="ttt-n-m">0</b><span>Gestrichen</span></div>
         </div>
         <div class="ttt-chart" id="ttt-chart"></div>
         <div class="ttt-legend">
@@ -963,8 +962,8 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
         <div id="ttt-path" class="ttt-path"></div>
         <div class="ttt-legend">
           <span><i class="lg lg-pick"></i>gewählt</span>
-          <span><i class="lg lg-win">★</i>führte zum Sieg</span>
-          <span><i class="lg lg-lose">✕</i>führte zur Niederlage</span>
+          <span><i class="lg lg-win">★</i>gewinnt direkt</span>
+          <span><i class="lg lg-lose">✕</i>verliert direkt</span>
                   </div>
       </div>
     </div>
@@ -3444,20 +3443,21 @@ document.getElementById('sandbox-intro-dialog').addEventListener('click', e => {
 // KI, danach (Training) IST man die KI.
 // Je Stellung, in der die KI am Zug ist, kennt sie ihre Möglichkeiten;
 // gedrehte/gespiegelte Züge sind EINE Möglichkeit (Symmetrie). Jede
-// Möglichkeit ist offen (0), markiert (1 = hat schon zu einem Sieg
-// geführt) oder gestrichen (−1 = hat zu einer Niederlage geführt).
-// Die KI wählt zufällig unter den nicht gestrichenen, markierte zählen
-// dreifach. Nach der Partie:
-//   Sieg          → alle Züge der KI dieser Partie werden markiert
-//   Niederlage    → ihr letzter Zug wird gestrichen; sind damit in einer
-//                   Stellung alle Möglichkeiten gestrichen, auch der Zug
-//                   davor (rückwärts weiter)
+// Möglichkeit ist offen (0), Siegzug (1 = hat die Partie direkt gewonnen)
+// oder Verlustzug (−1 = danach hat der Gegner direkt gewonnen). Nach der
+// Partie wird nur der LETZTE Zug der KI markiert (seit 31.10.2026; vorher
+// alle Züge eines Sieges + Streichen rückwärts – war zu schwer zu sehen):
+//   Sieg          → letzter KI-Zug = Siegzug ★
+//   Niederlage    → letzter KI-Zug = Verlustzug ✕ (grau)
 //   Unentschieden → nichts
+// Wahl: gibt es in der Stellung einen Siegzug, nimmt die KI ihn (100 %);
+// sonst zufällig unter den offenen, Verlustzüge nie (alle Verlustzüge:
+// blind raten).
 // Rechts im Kasten „Möglichkeiten der KI“ steht je KI-Zug eine Reihe mit
 // allen Möglichkeiten als Mini-Brett; die Auswahl läuft sichtbar zufällig.
 // Links bleiben Spielfeld und Lernkurve stehen (sticky), rechts scrollt.
-// KI = 'K' (✕), du = 'D' (◯). Im Gerät: ry.ttt2_brain, ry.ttt2_hist,
-// ry.ttt2_game, ry.ttt_first.
+// KI = 'K' (✕), du = 'D' (◯). Im Gerät: ry.ttt3_brain, ry.ttt3_hist,
+// ry.ttt3_game, ry.ttt_first (ry.ttt2_* = alte Regel, wird gelöscht).
 
 const TTT_LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
 // Die 8 Drehungen/Spiegelungen als Umordnung: neu[i] = alt[p[i]].
@@ -3465,7 +3465,6 @@ const TTT_SYM = [
   (r, c) => [r, c], (r, c) => [c, 2 - r], (r, c) => [2 - r, 2 - c], (r, c) => [2 - c, r],
   (r, c) => [r, 2 - c], (r, c) => [2 - r, c], (r, c) => [c, r], (r, c) => [2 - c, 2 - r]
 ].map(f => { const p = []; for (let i = 0; i < 9; i++) { const [r, c] = f(i / 3 | 0, i % 3); p[r * 3 + c] = i; } return p; });
-const TTT_WEIGHT = { '-1': 0, '0': 1, '1': 3 };
 const TTT_X = '<svg viewBox="0 0 100 100" class="ttt-x" aria-hidden="true"><path pathLength="100" d="M26 26L74 74"/><path pathLength="100" d="M74 26L26 74"/></svg>';
 const TTT_O = '<svg viewBox="0 0 100 100" class="ttt-o" aria-hidden="true"><circle pathLength="100" cx="50" cy="50" r="26"/></svg>';
 
@@ -3473,17 +3472,17 @@ function tttLoad(k, def) {
   try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? def : v; } catch (e) { return def; }
 }
 function tttStore(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* egal */ } }
-try { ['ry.ttt_brain', 'ry.ttt_last', 'ry.ttt_hist'].forEach(k => localStorage.removeItem(k)); } catch (e) { /* alte Perlen-Fassung */ }
+try { ['ry.ttt_brain', 'ry.ttt_last', 'ry.ttt_hist', 'ry.ttt2_brain', 'ry.ttt2_hist', 'ry.ttt2_game'].forEach(k => localStorage.removeItem(k)); } catch (e) { /* alte Perlen-Fassung */ }
 
-let tttBrain = tttLoad('ry.ttt2_brain', {});
-let tttHist  = tttLoad('ry.ttt2_hist', []);
+let tttBrain = tttLoad('ry.ttt3_brain', {});
+let tttHist  = tttLoad('ry.ttt3_hist', []);
 let tttFirst = tttLoad('ry.ttt_first', 'ki') === 'du' ? 'du' : 'ki';
-let ttt = tttLoad('ry.ttt2_game', null);   // laufende/letzte Partie
+let ttt = tttLoad('ry.ttt3_game', null);   // laufende/letzte Partie
 let tttTimer = null;
 let tttSpin = null;       // Zufalls-Lauf über die Möglichkeiten (Zeitgeber)
 
 function tttSaveAll() {
-  tttStore('ry.ttt2_brain', tttBrain); tttStore('ry.ttt2_hist', tttHist); tttStore('ry.ttt2_game', ttt);
+  tttStore('ry.ttt3_brain', tttBrain); tttStore('ry.ttt3_hist', tttHist); tttStore('ry.ttt3_game', ttt);
 }
 
 // Stellung b (KI am Zug) → Schlüssel + Möglichkeiten. Je Möglichkeit:
@@ -3514,9 +3513,11 @@ function tttState(b) {
 }
 const tttStatus = (key, rep) => (tttBrain[key] || {})[rep] || 0;
 function tttProbs(key, opts) {
-  const w = opts.map(o => TTT_WEIGHT[tttStatus(key, o.rep)]);
+  const st = opts.map(o => tttStatus(key, o.rep));
+  const w = st.includes(1) ? st.map(v => v === 1 ? 1 : 0)   // Siegzug bekannt: den nehmen
+                           : st.map(v => v === -1 ? 0 : 1);  // sonst offene, nie Verlustzüge
   const tot = w.reduce((a, v) => a + v, 0);
-  return opts.map((o, i) => tot > 0 ? w[i] / tot : 1 / opts.length);   // alles gestrichen: blind raten
+  return opts.map((o, i) => tot > 0 ? w[i] / tot : 1 / opts.length);   // alles Verlustzüge: blind raten
 }
 
 function tttWinner(b) {
@@ -3578,8 +3579,7 @@ function tttAiTurn() {
   ttt.moves.push(move);
   tttRender();
 
-  const live = move.opts.map((x, i) => i).filter(i => tttStatus(st.key, move.opts[i].rep) !== -1);
-  const pool = live.length ? live : move.opts.map((x, i) => i);
+  const pool = move.opts.map((x, i) => i).filter(i => probs[i] > 0);   // worunter wirklich gewürfelt wird
   const row = document.querySelector('.ttt-row:last-child');
   if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   const els = row ? row.querySelectorAll('.ttt-opt') : [];
@@ -3611,7 +3611,7 @@ function tttPlace(cell, who) {
   const res = tttWinner(ttt.b);
   if (res) { tttEnd(res); return; }
   ttt.turn = who === 'K' ? 'D' : 'K';
-  tttStore('ry.ttt2_game', ttt);
+  tttStore('ry.ttt3_game', ttt);
   if (ttt.turn === 'K') tttAiTurn(); else tttRender();   // tttAiTurn zeichnet selbst
 }
 
@@ -3626,14 +3626,10 @@ function tttClick(cell) {
 // letzten (und rückwärts weiter, wo dann alles gestrichen ist).
 function tttLearn(w, M) {
   const changed = [];
-  if (w === 'K') {
-    M.forEach((m, i) => { if (tttBrain[m.key][m.pick] === 0) { tttBrain[m.key][m.pick] = 1; changed.push(i); } });
-  } else if (w === 'D') {
-    for (let i = M.length - 1; i >= 0; i--) {
-      const box = tttBrain[M[i].key];
-      if (box[M[i].pick] !== -1) { box[M[i].pick] = -1; changed.push(i); }
-      if (!Object.values(box).every(v => v === -1)) break;   // es gibt noch einen anderen Weg
-    }
+  const i = M.length - 1;
+  if (i >= 0 && (w === 'K' || w === 'D')) {
+    const box = tttBrain[M[i].key], v = w === 'K' ? 1 : -1;
+    if (box[M[i].pick] !== v) { box[M[i].pick] = v; changed.push(i); }
   }
   tttHist.push(w);
   return changed;
@@ -3721,7 +3717,6 @@ function tttRender() {
   document.getElementById('ttt-n-k').textContent = cnt('K');
   document.getElementById('ttt-n-e').textContent = cnt('=');
   document.getElementById('ttt-n-d').textContent = cnt('D');
-  document.getElementById('ttt-n-m').textContent = Object.values(tttBrain).reduce((a, box) => a + Object.values(box).filter(v => v === -1).length, 0);
   tttChart();
   tttPath();
 }
