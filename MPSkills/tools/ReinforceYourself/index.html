@@ -3446,9 +3446,11 @@ document.getElementById('sandbox-intro-dialog').addEventListener('click', e => {
 // Möglichkeit ist offen (0), Siegzug (1 = hat die Partie direkt gewonnen)
 // oder Verlustzug (−1 = danach hat der Gegner direkt gewonnen). Nach der
 // Partie wird nur der LETZTE Zug der KI markiert (seit 31.10.2026; vorher
-// alle Züge eines Sieges + Streichen rückwärts – war zu schwer zu sehen):
+// alle Züge eines Sieges markiert und dreifach gewichtet – war zu schwer zu sehen):
 //   Sieg          → letzter KI-Zug = Siegzug ★
-//   Niederlage    → letzter KI-Zug = Verlustzug ✕ (grau)
+//   Niederlage    → letzter KI-Zug = Verlustzug ✕ (grau); sind damit in
+//                   der Stellung ALLE Möglichkeiten Verlustzüge, wird auch
+//                   der KI-Zug davor gestrichen (rückwärts weiter)
 //   Unentschieden → nichts
 // Wahl: gibt es in der Stellung einen Siegzug, nimmt die KI ihn (100 %);
 // sonst zufällig unter den offenen, Verlustzüge nie (alle Verlustzüge:
@@ -3621,15 +3623,23 @@ function tttClick(cell) {
   if (ttt.turn !== 'D' || ttt.b[cell]) return;
   tttPlace(cell, 'D');
 }
-
+// Partie vorbei: Sieg markiert den letzten KI-Zug (Siegzug), Niederlage streicht den
 // Partie vorbei: Sieg markiert alle KI-Züge, Niederlage streicht den
 // letzten (und rückwärts weiter, wo dann alles gestrichen ist).
 function tttLearn(w, M) {
   const changed = [];
-  const i = M.length - 1;
-  if (i >= 0 && (w === 'K' || w === 'D')) {
-    const box = tttBrain[M[i].key], v = w === 'K' ? 1 : -1;
-    if (box[M[i].pick] !== v) { box[M[i].pick] = v; changed.push(i); }
+  const last = M.length - 1;
+  if (last >= 0 && w === 'K') {
+    const box = tttBrain[M[last].key];
+    if (box[M[last].pick] !== 1) { box[M[last].pick] = 1; changed.push(last); }
+  } else if (last >= 0 && w === 'D') {
+    // Verlustzug streichen; sind damit in dieser Stellung ALLE Möglichkeiten
+    // gestrichen, auch den Zug davor (und so weiter rückwärts).
+    for (let i = last; i >= 0; i--) {
+      const box = tttBrain[M[i].key];
+      if (box[M[i].pick] !== -1) { box[M[i].pick] = -1; changed.push(i); }
+      if (!Object.values(box).every(v => v === -1)) break;
+    }
   }
   tttHist.push(w);
   return changed;
