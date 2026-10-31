@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261031a';
+  const V = '20261031b';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -4290,7 +4290,7 @@
       rows += '<div class="dd-st__rr' + (i === me ? ' is-me' : '') + '" data-t="' + i + '" style="' + stCol(i) + '">' +
         '<span class="dd-st__rfig" id="ddStF' + i + '">' + figSVG(i, 'idle', i === me ? 54 : 38) + '</span>' +
         '<span class="dd-st__rn">' + E(stFig(i).name) + (i === me ? ' <em>ihr</em>' : '') + '</span>' +
-        '<span class="dd-st__rbar"><i id="ddStB' + i + '"></i>' + stLines().map(y => '<u style="--y:' + (y / v.goal * 100).toFixed(1) + '%"></u>').join('') + '</span>' +
+        '<span class="dd-st__rbar"><i id="ddStB' + i + '"></i>' + '<u style="--y:50%"></u>' + '</span>' +
         '<b class="dd-st__rh" id="ddStH' + i + '">0</b>' +
         '<span class="dd-st__pops" id="ddStP' + i + '"></span><span class="dd-st__fxs" id="ddStX' + i + '"></span></div>';
     }
