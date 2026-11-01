@@ -54,16 +54,28 @@ function collectSentenceStart(sources, used) {
   return out;
 }
 
-/* Kandidaten für den nächsten Schritt: probiert Kontextlänge n, n-1, … 1, bevor es auf "neuer Satz" zurückfällt. */
+/* n = 0 (nur Phase 1): kein Wort davor — jede Stelle jedes Texts ist Kandidat, also nur die
+   Häufigkeit der Wörter zählt (1-Gramm). */
+function collectAll(sources, used) {
+  const out = [];
+  sources.forEach(s => { for (let i = 1; i < s.toks.length; i++) pushCandidate(out, s, i, used); });
+  return out;
+}
+
+/* Kandidaten für den nächsten Schritt: probiert Kontextlänge n, n-1, … 1, bevor es auf "neuer Satz" zurückfällt.
+   Der Satzanfang zählt als Wort: session.ctx beginnt mit '.', ganz am Anfang ist also „.“ das Kontextfenster
+   (n = 2 nach „Die“: „. Die“ = „Die am Satzanfang“). */
 function candidates(session, n, temp) {
   const ctx = session.ctx;
   let level = 0, occ = [];
-  for (let k = Math.min(n, ctx.length); k >= 1; k--) {
+  const uni = n === 0;
+  if (uni) occ = collectAll(session.sources, session.used);
+  else for (let k = Math.min(n, ctx.length); k >= 1; k--) {
     const tail = ctx.slice(-k);
     occ = collectAt(session.sources, session.used, k, tail);
     if (occ.length) { level = k; break; }
   }
-  if (!occ.length) { level = 0; occ = collectSentenceStart(session.sources, session.used); }
+  if (!occ.length && !uni) { level = 0; occ = collectSentenceStart(session.sources, session.used); }
 
   const agg = new Map();
   occ.forEach(o => {
@@ -79,7 +91,7 @@ function candidates(session, n, temp) {
   list.forEach(a => { a.s = t <= 0.001 ? 0 : Math.pow(a.w, 1 / t); sum += a.s; });
   if (t <= 0.001) list.forEach((a, i) => { a.p = i === 0 ? 1 : 0; });
   else list.forEach(a => { a.p = a.s / sum; });
-  return { level, n, list };
+  return { level, n, uni, list };
 }
 
 function pickFrom(list) {

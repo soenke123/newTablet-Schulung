@@ -171,6 +171,17 @@ body:has(.phase-pane[data-phase="1"]:not([hidden])) .main { max-width: 1440px; }
 .ngrow.on { border-color: var(--ink); background: var(--soft); }
 .ngrow .gtok { font-size: 0.82rem; padding: 1px 6px 2px; }
 .ngn { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); flex: none; }
+.ngrow.now { background: color-mix(in srgb, var(--cat-context-tint) 35%, var(--surface)); border-color: color-mix(in srgb, var(--cat-context) 55%, var(--surface)); }
+.p1-gramline { margin: 6px 0 0; font-size: 0.82rem; color: var(--muted); }
+.p1-gramline b { color: var(--cat-context); font-family: var(--font-display); }
+.ngmodes { display: flex; flex-wrap: wrap; gap: 4px; }
+.ngmode {
+  font: inherit; font-size: 0.8rem; font-weight: 600; cursor: pointer; color: var(--muted);
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px; padding: 4px 10px; min-height: 32px;
+}
+.ngmode.on { color: var(--ink); border-color: var(--cat-context); background: color-mix(in srgb, var(--cat-context-tint) 40%, var(--surface)); }
+.ngplaces { display: flex; flex-direction: column; gap: 6px; margin: 4px 0 8px 10px; }
+.p1-moregrams { align-self: flex-start; }
 
 /* Quellen: Fundstellen */
 .flist { display: flex; flex-direction: column; gap: 8px; }

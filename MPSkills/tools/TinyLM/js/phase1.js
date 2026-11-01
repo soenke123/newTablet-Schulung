@@ -49,6 +49,9 @@ Phases.register(1, {
     let session, n = 2, temp = 1, playing = false, timer = null;
     let focus = null;   /* null = nächstes Wort, sonst Index in session.steps */
     let pick = null;    /* angetippter Kandidat (Quellen nur für dieses Wort) */
+    /* N-Gramm-Liste: 'all' = alle N-Gramme der Texte nach Häufigkeit, 'now' = nur die, die mit dem
+       jetzigen Kontextfenster anfangen (= die Kandidaten), 'mine' = die aus deinem Text. */
+    let ngMode = 'all', ngShow = 30, ngOpen = null, gramCache = null;
     let textEl, cursor, screen, playBtn, placeholder, sayEl, legendHost, focusHost;
     const cols = {};
     let phoneEl = null;
@@ -108,9 +111,14 @@ Phases.register(1, {
         const st = session.steps[focus];
         return { idx: focus, C: { level: st.level, n: st.cands.n, list: reweight(st.cands.list, temp) }, ctx: st.ctxUsed, chosen: st.chosen, si: st.si, pos: st.pos };
       }
-      if (!session.steps.length || !State.activeTexts().length) return null;
+      if (!State.activeTexts().length) return null;
       const C = candidates(session, n, temp);
       return { idx: null, C, ctx: C.level > 0 ? session.ctx.slice(-C.level) : [], chosen: null };
+    }
+    const winN = v => v.C.n != null ? v.C.n : n;
+    /* Schaut Tiny nur auf den Satzanfang (ganz am Anfang oder nach einem Punkt)? */
+    function atStart(v) {
+      return !v.C.uni && (v.C.level === 0 || v.ctx.every(isPunct));
     }
 
     /* Wortfolge so, wie sie im Handy steht (Original-Schreibung), ohne Satzzeichen. */
@@ -184,8 +192,12 @@ Phases.register(1, {
       if (!sayEl || !session) return;
       if (!State.activeTexts().length) { sayEl.textContent = 'Ich habe keine Texte! Schalte oben rechts unter „Alle Quellen“ welche an.'; return; }
       const v = view();
-      if (!v) { sayEl.textContent = 'Drück auf ▶ – dann lege ich los!'; return; }
-      if (!isOpen('cand') && !isOpen('ctx')) {
+      const peek = isOpen('cand') || isOpen('ctx');
+      if (!v || (!session.steps.length && !playing)) {
+        sayEl.textContent = peek ? 'Drück auf ▶ – rechts siehst du schon, womit ich anfangen könnte.' : 'Drück auf ▶ – dann lege ich los!';
+        return;
+      }
+      if (!peek) {
         sayEl.textContent = playing ? 'Ich schreibe …' : 'Soll ich weiterschreiben? Rechts kannst du nachsehen, wie ich das mache.';
         return;
       }
@@ -195,7 +207,8 @@ Phases.register(1, {
           el('b', null, word(v.chosen)), document.createTextNode('“ gekommen bin.'));
         return;
       }
-      if (v.C.level === 0 || !top) { sayEl.textContent = 'Neuer Satz! Ich nehme einen Satzanfang aus meinen Texten …'; return; }
+      if (v.C.uni) { sayEl.textContent = 'Ich schaue auf kein Wort davor – ich nehme einfach Wörter, die oft vorkommen …'; return; }
+      if (atStart(v) || !top) { sayEl.textContent = 'Neuer Satz! Ich nehme einen Satzanfang aus meinen Texten …'; return; }
       sayEl.replaceChildren(document.createTextNode('Nach „'), el('b', null, ctxText(v)),
         document.createTextNode('“ kam meistens „'), el('b', null, word(top.word)),
         document.createTextNode(temp === 0 ? '“ … das nehme ich!' : '“ … ich würfle!'));
@@ -265,8 +278,11 @@ Phases.register(1, {
     /* Wortfolge als kleine Bausteine (für Kontextfenster und N-Gramm-Liste). */
     function gram(ctx, next, nextCls) {
       const g = el('span', 'gram');
-      if (!ctx.length) g.appendChild(el('span', 'gtok start', 'Satzanfang'));
-      ctx.forEach(w => g.appendChild(el('span', 'gtok' + (isPunct(w) ? ' p' : ''), tokLabel(w))));
+      if (ctx == null) g.appendChild(el('span', 'gtok start', 'kein Wort'));
+      else if (!ctx.length) g.appendChild(el('span', 'gtok start', 'Satzanfang'));
+      else ctx.forEach((w, i) => g.appendChild(w === '.' && i === 0
+        ? el('span', 'gtok start', 'Satzanfang')
+        : el('span', 'gtok' + (isPunct(w) ? ' p' : ''), tokLabel(w))));
       if (next !== undefined) {
         g.appendChild(el('span', 'garr', '→'));
         g.appendChild(el('span', 'gtok ' + (nextCls || 'next'), next == null ? '?' : tokLabel(next)));
@@ -278,10 +294,11 @@ Phases.register(1, {
     function paintCand(v) {
       const b = cols.cand.body;
       b.replaceChildren();
-      if (!v) { b.appendChild(empty('Noch nichts geschrieben. Drück im Handy auf ▶.')); return; }
+      if (!v) { b.appendChild(empty('Keine Texte an – schalte oben unter „Alle Quellen“ welche an.')); return; }
       const line = el('p', 'p1-line');
-      if (v.C.level === 0) line.append(document.createTextNode('Neuer Satz – so fingen Sätze in den Texten an:'));
-      else line.append(document.createTextNode('Nach „'), el('b', null, ctxText(v)), document.createTextNode('“ stand in den Texten:'));
+      if (v.C.uni) line.append(document.createTextNode('Kein Wort davor – also zählt nur, wie oft jedes Wort in den Texten steht:'));
+      else if (atStart(v)) line.append(document.createTextNode('Satzanfang – so fingen Sätze in den Texten an:'));
+      else line.append(document.createTextNode(v.ctx[0] === '.' ? 'Am Satzanfang nach „' : 'Nach „'), el('b', null, ctxText(v)), document.createTextNode('“ stand in den Texten:'));
       b.appendChild(line);
       const MAX = 8;
       const list = el('ol', 'clist');
@@ -305,58 +322,156 @@ Phases.register(1, {
       if (more > 0) b.appendChild(el('p', 'p1-more', '… und ' + more + ' weitere Wörter'));
     }
 
-    /* Kontextfenster: jetzt + alle N-Gramme, die im Text schon benutzt wurden. */
+    /* Alle N-Gramme der aktiven Texte für Fensterbreite nn: (nn Wörter davor) + 1 Wort danach,
+       nach Häufigkeit. Genau die Folgen, die Tiny nachschlägt (Satzanfang „.“ zählt als Wort). */
+    function allGrams(nn) {
+      if (gramCache && gramCache.n === nn) return gramCache.list;
+      const m = new Map();
+      session.sources.forEach(s => {
+        const T = s.toks;
+        for (let i = nn; i < T.length; i++) {
+          const ctx = [];
+          for (let j = i - nn; j < i; j++) ctx.push(T[j].t);
+          const key = ctx.join(' ') + ' > ' + T[i].t;
+          const g = m.get(key);
+          if (g) g.count++;
+          else m.set(key, { key, ctx, next: T[i].t, count: 1 });
+        }
+      });
+      const list = [...m.values()].sort((x, y) => y.count - x.count || x.key.localeCompare(y.key, 'de'));
+      gramCache = { n: nn, list };
+      return list;
+    }
+    const sameSeq = (a, b) => a.length === b.length && a.every((w, i) => w === b[i]);
+    const gramName = nn => (nn + 1) + '-Gramm';
+    let gramLine = null;
+    function syncGramLine() {
+      if (!gramLine) return;
+      gramLine.replaceChildren(el('b', null, gramName(n) + 'e'), document.createTextNode(n === 0
+        ? ' = nur 1 Wort: kein Wort davor, nur das neue'
+        : ' = ' + n + (n === 1 ? ' Wort' : ' Wörter') + ' davor + 1 neues Wort'));
+    }
+
+    /* Kontextfenster: worauf Tiny jetzt schaut + Liste der N-Gramme. */
     function paintCtx(v) {
       const b = cols.ctx.body;
       b.replaceChildren();
-      if (!v) { b.appendChild(empty('Hier siehst du gleich, auf welche Wörter Tiny schaut.')); return; }
+      if (!v) { b.appendChild(empty('Keine Texte an – schalte oben unter „Alle Quellen“ welche an.')); return; }
+      let nn = winN(v);
       const now = el('div', 'ctxnow');
       now.appendChild(el('p', 'p1-sub', v.idx == null ? 'Tiny schaut jetzt auf' : 'Für „' + word(v.chosen) + '“ schaute Tiny auf'));
-      now.appendChild(gram(v.ctx, v.idx == null ? null : v.chosen, v.idx == null ? 'next' : 'chosen'));
-      const total = v.C.list.reduce((s, a) => s + a.occ.length, 0);
-      if (v.C.level > 0) now.appendChild(el('p', 'p1-count', total + '× in den Texten gefunden'));
-      const want = v.C.n || n;
-      const realWords = v.ctx.length;
-      if (v.C.level < want && (v.idx == null ? session.steps.length : v.idx) >= want) {
+      now.appendChild(gram(v.C.uni ? null : v.ctx, v.idx == null ? null : v.chosen, v.idx == null ? 'next' : 'chosen'));
+      const total = v.C.list.reduce((t, a) => t + a.occ.length, 0);
+      if (v.C.uni) now.appendChild(el('p', 'p1-count', 'Fenster 0 = 1-Gramme: einzelne Wörter, nur ihre Häufigkeit zählt.'));
+      else if (v.C.level > 0) now.appendChild(el('p', 'p1-count', total + '× in den Texten gefunden – ' + v.C.list.length + (v.C.list.length === 1 ? ' Wort kommt' : ' Wörter kommen') + ' danach in Frage'));
+      const end = v.idx == null ? session.steps.length : v.idx;
+      if (!v.C.uni && v.C.level < nn && end + 1 >= nn) {
         now.appendChild(el('p', 'p1-fall', v.C.level === 0
           ? 'Die letzten Wörter stehen so in keinem Text – also neuer Satz.'
-          : 'Die letzten ' + want + ' Wörter stehen so in keinem Text – Tiny nimmt nur ' + (realWords === 1 ? 'das letzte' : 'die letzten ' + realWords) + '.'));
+          : 'Die letzten ' + nn + ' Wörter stehen so in keinem Text – Tiny nimmt nur ' + (v.C.level === 1 ? 'das letzte' : 'die letzten ' + v.C.level) + '.'));
       }
       b.appendChild(now);
 
-      /* N-Gramme deines Textes: Wortfolge → Wort, wie oft genau so in den Texten. Neueste oben,
-         jede Folge nur einmal. Antippen = dieses Wort zerlegen. */
-      const seen = new Map();
-      for (let i = session.steps.length - 1; i >= 0; i--) {
-        const st = session.steps[i];
-        if (isPunct(st.word) && st.level === 0) continue;
-        const key = st.ctxUsed.join(' ') + ' > ' + st.chosen;
-        if (seen.has(key)) { seen.get(key).times++; continue; }
-        const cand = st.cands.list.find(a => a.word === st.chosen);
-        seen.set(key, { i, st, times: 1, count: cand ? cand.occ.length : 0 });
+      /* Umschalter: alle · passend zu jetzt · aus deinem Text */
+      const modes = el('div', 'ngmodes');
+      [['all', 'Alle'], ['now', 'Passen jetzt'], ['mine', 'In deinem Text']].forEach(([id, lab]) => {
+        const c = el('button', 'ngmode' + (ngMode === id ? ' on' : ''), lab);
+        c.type = 'button';
+        c.setAttribute('aria-pressed', ngMode === id ? 'true' : 'false');
+        c.addEventListener('click', () => { ngMode = id; ngShow = 30; ngOpen = null; paintCtx(view()); });
+        modes.appendChild(c);
+      });
+      b.appendChild(modes);
+
+      /* Zeilen sammeln: {key, ctx, next, count, step?} */
+      let rows, title;
+      const cur = !v.C.uni && v.C.level === nn ? v.ctx : (v.C.uni ? [] : null);
+      if (ngMode === 'mine') {
+        const seen = new Map();
+        for (let i = session.steps.length - 1; i >= 0; i--) {
+          const st = session.steps[i];
+          if (isPunct(st.word) && st.level === 0) continue;
+          const key = st.ctxUsed.join(' ') + ' > ' + st.chosen;
+          if (seen.has(key)) continue;
+          const cand = st.cands.list.find(a => a.word === st.chosen);
+          seen.set(key, { key, ctx: st.ctxUsed, next: st.chosen, count: cand ? cand.occ.length : 0, step: i, uni: !!st.cands.uni });
+        }
+        rows = [...seen.values()];
+        title = 'N-Gramme in deinem Text · neueste oben';
+        if (!rows.length) { b.append(el('p', 'p1-sub', title), el('p', 'p1-line', 'Noch nichts geschrieben.')); return; }
+      } else {
+        if (ngMode === 'now') {
+          /* Genau die Folgen, aus denen die Kandidaten kommen — mit dem Fenster, das Tiny wirklich
+             benutzt (am Textanfang oder wenn nichts passt, ist es kürzer als eingestellt). */
+          const lv = v.C.uni ? 0 : Math.max(1, v.C.level);
+          const tail = v.C.uni ? [] : (v.C.level ? v.ctx : ['.']);
+          rows = allGrams(lv).filter(g => sameSeq(g.ctx, tail));
+          title = rows.length + ' ' + gramName(lv) + (rows.length === 1 ? ' passt' : 'e passen') + ' jetzt = die Kandidaten';
+          if (lv !== nn) b.appendChild(el('p', 'p1-fall', 'Tiny schaut gerade nur auf ' + (lv === 1 ? '1 Wort' : lv + ' Wörter') + ' – darum ' + gramName(lv) + 'e.'));
+          nn = lv;
+        } else {
+          const all = allGrams(nn);
+          rows = all;
+          title = 'Alle ' + gramName(nn) + 'e · ' + all.length.toLocaleString('de-DE') + ' verschiedene';
+        }
       }
-      if (!seen.size) return;
-      b.appendChild(el('p', 'p1-sub', 'N-Gramme in deinem Text'));
+      b.appendChild(el('p', 'p1-sub', title));
+
       const list = el('div', 'nglist');
-      [...seen.values()].slice(0, 40).forEach(g => {
-        const row = el('button', 'ngrow' + (g.i === v.idx ? ' on' : ''));
+      rows.slice(0, ngShow).forEach(g => {
+        const wrap = el('div', 'ngitem');
+        const isNow = ngMode === 'all' && cur && cur.length && sameSeq(g.ctx, cur);
+        const on = g.step != null ? g.step === v.idx : ngOpen === g.key;
+        const row = el('button', 'ngrow' + (on ? ' on' : '') + (isNow ? ' now' : ''));
         row.type = 'button';
-        row.appendChild(gram(g.st.ctxUsed, g.st.chosen, 'chosen'));
+        row.appendChild(gram((g.step == null ? nn === 0 : g.uni) ? null : g.ctx, g.next, 'chosen'));
         row.appendChild(el('span', 'ngn', g.count + '×'));
-        row.title = '„' + g.st.ctxUsed.filter(w => !isPunct(w)).map(word).join(' ') + ' ' + word(g.st.chosen) + '“ steht ' + g.count + '× in den Texten';
-        row.addEventListener('click', () => setFocus(g.i === focus ? null : g.i));
-        list.appendChild(row);
+        const txt = g.ctx.filter(w => !isPunct(w)).map(word).concat(isPunct(g.next) ? [] : [word(g.next)]).join(' ');
+        row.title = isNow ? 'Passt zum jetzigen Kontextfenster' : '„' + txt + '“ – antippen: wo steht das?';
+        wrap.appendChild(row);
+        if (g.step != null) row.addEventListener('click', () => setFocus(g.step === focus ? null : g.step));
+        else {
+          row.addEventListener('click', () => { ngOpen = ngOpen === g.key ? null : g.key; paintCtx(view()); });
+          if (on) wrap.appendChild(gramPlaces(g, nn));
+        }
+        list.appendChild(wrap);
       });
       b.appendChild(list);
+      if (rows.length > ngShow) {
+        const more = el('button', 'btn sm p1-moregrams', 'Mehr zeigen (' + (rows.length - ngShow).toLocaleString('de-DE') + ' weitere)');
+        more.type = 'button';
+        more.addEventListener('click', () => { ngShow += 30; paintCtx(view()); });
+        b.appendChild(more);
+      }
+    }
+
+    /* Aufgeklapptes N-Gramm: bis zu 3 Stellen in den Texten. */
+    function gramPlaces(g, nn) {
+      const box = el('div', 'ngplaces');
+      const occ = findOcc(g.ctx, g.next, nn === 0);
+      occ.slice(0, 3).forEach(o => {
+        const doc = session.sources[o.si].doc;
+        const f = el('div', 'fund');
+        f.style.setProperty('--sc', sourceColor(o.si));
+        const h = el('button', 'fhead');
+        h.type = 'button';
+        h.title = 'Text lesen';
+        h.append(el('i', 'dot'), el('span', 'ft', doc.title));
+        h.addEventListener('click', () => App.openTexts(doc.own ? 'eigen' : doc.theme));
+        f.append(h, snippet(o));
+        box.appendChild(f);
+      });
+      if (occ.length > 3) box.appendChild(el('p', 'p1-more', '… und ' + (occ.length - 3) + ' weitere Stellen'));
+      return box;
     }
 
     /* Fundstellen einer Wortfolge (optional mit dem Wort danach) in den aktiven Texten. */
-    function findOcc(tail, next) {
+    function findOcc(tail, next, any) {
       const k = tail.length, out = [];
       session.sources.forEach(s => {
         const T = s.toks;
         for (let i = Math.max(0, k - 1); i < T.length - 1; i++) {
-          if (k === 0) { if (T[i].t !== '.') continue; }
+          if (k === 0) { if (!any && T[i].t !== '.') continue; }
           else {
             let ok = true;
             for (let j = 0; j < k; j++) { if (T[i - j].t !== tail[k - 1 - j]) { ok = false; break; } }
@@ -388,12 +503,14 @@ Phases.register(1, {
     function paintSrc(v) {
       const b = cols.src.body;
       b.replaceChildren();
-      if (!v) { b.appendChild(empty('Hier steht gleich, aus welchen Texten Tiny die Wörter holt.')); return; }
+      if (!v) { b.appendChild(empty('Keine Texte an.')); return; }
       const wsel = pick || v.chosen;
-      if (v.C.level === 0 && !wsel) {
+      if (v.C.uni && !wsel) {
+        b.appendChild(el('p', 'p1-line', 'Kein Wort davor: Tiny nimmt irgendein Wort aus irgendeinem Text – häufige Wörter öfter. Tipp links einen Kandidaten an, dann siehst du, wo er steht.'));
+      } else if (atStart(v) && !wsel) {
         b.appendChild(el('p', 'p1-line', 'Neuer Satz: Tiny nimmt einen Satzanfang aus irgendeinem Text. Tipp links einen Kandidaten an, dann siehst du, wo er steht.'));
       } else {
-        const occ = findOcc(v.ctx, wsel);
+        const occ = findOcc(v.ctx, wsel, v.C.uni);
         /* Die Stelle, aus der das Wort wirklich genommen wurde, kommt nach oben. */
         if (v.idx != null && wsel === v.chosen) {
           const k = occ.findIndex(o => o.si === v.si && o.pos === v.pos);
@@ -569,6 +686,7 @@ Phases.register(1, {
     function render() {
       stopPlay();
       session = freshSession();
+      gramCache = null; ngOpen = null; ngShow = 30;
       buildCasing();
       focus = null; pick = null;
 
@@ -604,11 +722,16 @@ Phases.register(1, {
       });
       cols.cand.tools.appendChild(tsl.el);
       const nsl = Info.slider({
-        label: 'Kontextfenster', min: 1, max: 6, step: 1, value: n, spot: 'nslider',
-        fmt: v => v + (v === 1 ? ' Wort' : ' Wörter'), ends: ['kurz', 'lang'],
-        onInput: v => { n = v; paintCols(); say(); }
+        label: 'Kontextfenster', min: 0, max: 6, step: 1, value: n, spot: 'nslider',
+        fmt: v => v === 0 ? 'kein Wort' : v + (v === 1 ? ' Wort' : ' Wörter'),
+        ends: ['kurz', 'lang'],
+        onInput: v => { n = v; ngShow = 30; ngOpen = null; syncGramLine(); paintCols(); updateText(); }
       });
       cols.ctx.tools.appendChild(nsl.el);
+      /* N-Gramm = n Wörter davor + 1 neues Wort (der Regler stellt nur die Wörter davor ein). */
+      gramLine = el('p', 'p1-gramline');
+      cols.ctx.tools.appendChild(gramLine);
+      syncGramLine();
 
       grid.append(left, right);
       root.appendChild(grid);
