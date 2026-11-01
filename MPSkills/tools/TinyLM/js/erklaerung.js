@@ -122,27 +122,31 @@ const Explain = (() => {
     pop.style.setProperty('--tt', c ? c.tint : 'var(--accent-dim)');
     pop.setAttribute('aria-label', h.title);
     pop.replaceChildren();
+    /* Inhalt scrollt in einer eigenen Hülle: scrollte das Fenster selbst, gab der Pfeil am Rand
+       (::before, ragt 7 px heraus) einen Scrollbalken nach links/rechts. */
+    const box = el('div', 'ex-box');
+    pop.appendChild(box);
 
     const head = el('div', 'ex-head');
     head.append(el('span', 'ex-ico', h.icon || '💡'), el('h3', null, h.title));
-    pop.appendChild(head);
+    box.appendChild(head);
     if (h.vis) {
       const pic = el('div', 'ex-pic');
       pic.appendChild(Help.vis(h.vis, h.cat));
-      pop.appendChild(pic);
+      box.appendChild(pic);
     }
-    (Array.isArray(h.text) ? h.text : [h.text]).forEach(t => { if (t) pop.appendChild(el('p', 'ex-txt', t)); });
+    (Array.isArray(h.text) ? h.text : [h.text]).forEach(t => { if (t) box.appendChild(el('p', 'ex-txt', t)); });
     if (h.try) {
       const tr = el('p', 'ex-try');
       tr.append(el('b', null, 'Probier mal: '), document.createTextNode(h.try));
-      pop.appendChild(tr);
+      box.appendChild(tr);
     }
     const foot = el('div', 'ex-foot');
     const ok = el('button', 'btn primary sm', 'Alles klar');
     ok.type = 'button';
     ok.addEventListener('click', () => close());
     foot.appendChild(ok);
-    pop.appendChild(foot);
+    box.appendChild(foot);
 
     pop.hidden = shield.hidden = false;
     place();

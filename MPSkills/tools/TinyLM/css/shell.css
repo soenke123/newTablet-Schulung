@@ -31,13 +31,17 @@
 .ex-pop {
   --tc: var(--accent); --tt: var(--accent-dim);
   position: fixed; z-index: 82;
-  width: min(340px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto;
+  width: min(340px, calc(100vw - 16px)); max-height: calc(100vh - 16px);
   background: var(--surface); color: var(--ink);
   border-radius: 18px; border-top: 5px solid var(--tc);
-  padding: 14px 16px 12px; box-shadow: var(--shadow-pop);
-  display: flex; flex-direction: column; gap: 8px;
+  box-shadow: var(--shadow-pop); display: flex; flex-direction: column;
   animation: ex-in .22s ease-out;
 }
+.ex-box {
+  padding: 14px 16px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 0;
+  overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain;
+}
+.ex-box > * { min-width: 0; max-width: 100%; }
 @keyframes ex-in { from { opacity: 0; transform: translateY(6px) scale(.97); } }
 .ex-pop::before { content: ''; position: absolute; width: 14px; height: 14px; background: var(--surface); transform: rotate(45deg); }
 .ex-pop[data-side="left"]::before { right: -7px; top: calc(var(--arrow, 50%) - 7px); }

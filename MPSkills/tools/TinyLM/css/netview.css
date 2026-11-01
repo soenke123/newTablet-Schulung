@@ -6,7 +6,10 @@
 }
 .net-tools-lab { font-size: 0.82rem; font-weight: 700; color: var(--muted); }
 .net-scroll { overflow-x: auto; }
-.net-canvas { display: block; width: 100%; min-width: 620px; height: 520px; touch-action: pan-y; }
+.net-canvas { display: block; width: 100%; min-width: 300px; height: 520px; touch-action: pan-y; }
+/* Im Reiter rechts: schmal und etwas niedriger */
+.panel-side .net-canvas { height: 460px; }
+.panel-side .net-row { grid-template-columns: minmax(0, 7rem) minmax(0, 1fr) 3.2rem; }
 .net-box > .small { padding: 7px 11px; border-top: 1px solid var(--line); background: var(--surface); }
 
 .net-detail-host { display: flex; flex-direction: column; gap: 10px; }

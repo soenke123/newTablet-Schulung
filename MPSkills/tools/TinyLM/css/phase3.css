@@ -62,4 +62,25 @@
 .neuron-arrow { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
 .neuron-words { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .emb-live { display: flex; flex-direction: column; gap: 6px; }
-.ctxpick { justify-content: flex-start; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+
+/* Zentrum: „Das Netz sieht die letzten 3 · 4 · 5 Wörter“ direkt unter dem Text (Sönke 01.11.2026:
+   die Zahl der betrachteten Wörter gehört nach links, dort sind sie im Text markiert). */
+.machine-center .ctxpick {
+  justify-content: flex-start; padding: 7px 10px; border-radius: 12px;
+  background: color-mix(in srgb, var(--cat-embed-tint) 35%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--cat-embed) 30%, var(--line));
+}
+.ctxpick-lab { font-size: 0.88rem; font-weight: 600; }
+.ctxpick-btns .chip.active { background: var(--cat-embed); border-color: var(--cat-embed); color: var(--surface); }
+
+/* Reiter „Training“: klar gegliedert — Knopf · Jedes Beispiel · So läuft es · Aufbau */
+.btn.train-btn.wide { width: 100%; justify-content: center; min-height: 46px; font-size: 1rem; }
+.tsec { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
+.tsec-h { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; letter-spacing: .04em; text-transform: uppercase; color: color-mix(in srgb, var(--cat-train) 70%, var(--muted)); }
+.train-ctx { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; --cat-color: var(--cat-embed); --cat-tint: var(--cat-embed-tint); }
+.train-ctx .ctxtok { font-size: 0.8rem; padding: 2px 8px; }
+.tsec .net-arch { margin-top: 0; }
+.tsec .btn.sm { align-self: flex-start; }
+/* Dunkel: Training-Magenta ist dort hell → dunkle Schrift statt weißer */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary.train-btn:not(.playing) { color: var(--bg); } }
+:root[data-theme="dark"] .btn.primary.train-btn:not(.playing) { color: var(--bg); }

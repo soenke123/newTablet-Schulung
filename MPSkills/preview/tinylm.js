@@ -57,11 +57,12 @@
 
     // Phase 3: ein echtes Netz trainieren, dann vorhersagen lassen.
     api.click('.phase-btn[data-n="3"]');
-    if (!await api.waitFor(P(3) + '[data-spot="train"]', 8000)) return;
+    if (!await api.waitFor(P(3) + '[data-card="train"]', 8000)) return;
     api.caption('Phase 3 · Ein echtes kleines Netz lernt');
     if (!await api.wait(1200)) return;
-    // Reiter „Training“ aufklappen, damit man die Fehlerlinie fallen sieht.
+    // Reiter „Training“ aufklappen: dort sitzt der Knopf, und man sieht die Fehlerlinie fallen.
     api.click(P(3) + '.panel-item.closed[data-card="train"] .panel-item-head');
+    if (!await api.waitFor(P(3) + '[data-spot="train"]', 3000)) return;
     api.click(P(3) + '[data-spot="train"]');
     if (!await api.wait(10000)) return;
     api.click(P(3) + '[data-spot="train"]');
