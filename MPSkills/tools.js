@@ -128,8 +128,8 @@ window.TOOLS_OVERLAY = {
   // mit phpMyAdmin, SQLite im Browser (tools/SQLStudio/, sql.js im
   // Worker). Nur für Admins sichtbar — das entscheidet die Datenbank
   // (skill_tools.admin_only), `adminOnly` hier setzt nur das Schild auf
-  // die Kachel. beta: Etappe 1, noch ohne Teilen (23.10.2026).
-  sqlstudio: { ready: true, subtitle: 'Relationale Datenbanken' },
+  // die Kachel. beta: Etappe 1, noch ohne Teilen (23.10.2026). Wieder Beta (01.11.2026).
+  sqlstudio: { ready: true, subtitle: 'Relationale Datenbanken', beta: true },
   // Fünfzehnter Skill (Migration 0233) — How to Fachbegriffe: Lehrkräfte
   // legen Stapel aus Begriff · Definition · Bild an (Karte für Karte oder
   // als Text), teilen sie mit dem Raum; die Klasse lernt mit Karteikarten
