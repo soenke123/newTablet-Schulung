@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261031c';
+  const V = '20261101a';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -182,6 +182,7 @@
   let homeFilter = { q: '', fach: '' };
   let lastSharedKey = '';
   let onKey = null, onClick = null, onInput = null, onChange = null, onResize = null, onFs = null;
+  let stFitT = 0;   // Kistenturm: Einpassen nach Größenänderung (gedrosselt)
   let parseReady = null;
   const mem = {};                // Ersatz für localStorage (Schaufenster, gesperrter Speicher)
   const E = s => (ctx ? ctx.esc(s) : String(s ?? ''));
@@ -3846,6 +3847,7 @@
     clearTimeout(st.timer); clearTimeout(st.nextT); clearInterval(st.tick);
     st.anim.forEach(a => clearTimeout(a));
     st.holdT.forEach(a => clearTimeout(a));
+    if (st.fitRO) st.fitRO.disconnect();
     const was = st;
     st = null;
     if (!quiet && was && isTeacher && !demo && !standalone && ctx && stLive()) {
@@ -3919,13 +3921,14 @@
     else if (st.layout === 'end') box.innerHTML = stEndDev();
     else {
       box.innerHTML = isTeacher ? stSceneBeam() : stSceneDev();
+      if (!isTeacher) stFitWatch();
       st.shown = [];
       stSync(true);
       if (!isTeacher) stMaybeTask();
     }
     stUpdate();
     stLayout();
-    if (st.layout === 'game') stFitPhone();
+    stFit();
   }
   function stUpdate() {
     const v = st.v;
@@ -4298,8 +4301,8 @@
         '<div class="dd-st__hudtop"><b>Ziel: ' + v.goal + ' Kisten</b>' + (me != null ? '<span class="dd-st__myt" style="' + stCol(me) + '">' + E(stTeam(me)) + '</span>' : '') +
           '<span class="dd-st__clock" id="ddStClock" hidden></span></div>' +
         '<div class="dd-st__race">' + rows + '</div>' +
-        '<div class="dd-st__fxbox" id="ddStFx"></div>' +
-        '<div class="dd-st__items" id="ddStItems" hidden></div>' +
+        '<div class="dd-st__hudrow"><div class="dd-st__fxbox" id="ddStFx"></div>' +
+        '<div class="dd-st__items" id="ddStItems" hidden></div></div>' +
       '</div>' +
       '<div class="dd-st__notes" id="ddStNotes" aria-live="polite"></div>' +
       '<div class="dd-st__play"><div class="dd-task dd-task--inline" id="ddTask" hidden></div>' +
@@ -4716,12 +4719,18 @@
     if (fxb && mine) {
       const ice = (mine.b || []).map(stParse).find(b => b.k === 'i' && b.n);
       const myH = stTarget(me), msgs = [];
-      if (storm > 0) msgs.push('<p class="is-storm">' + itIco('sturm') + '<b>Sturm · ' + Math.ceil(storm / 1000) + ' s</b> ' +
-        (myH >= v.goal / 5 ? 'Jeder Fehler kostet eure oberste Kiste.' : 'Ihr seid noch auf Stufe 1 – euch passiert nichts.') + '</p>');
-      if (ice) msgs.push('<p class="is-ice">' + itIco('eis') + '<b>Eiskiste:</b> noch ' + ice.n + (ice.n === 1 ? ' richtige Antwort' : ' richtige Antworten') + ' in Folge.</p>');
+      /* Kurz als Chips in einer Zeile (Sönke 31.10.2026: Items schoben die Aufgabe aus dem Bild) */
+      const sec = ms => '<span>' + Math.ceil(ms / 1000) + ' s</span>';
+      if (storm > 0) {
+        const hurt = myH >= v.goal / 5;
+        msgs.push('<p class="is-storm" title="' + (hurt ? 'Jeder Fehler kostet eure oberste Kiste.' : 'Ihr seid noch auf Stufe 1 – euch passiert nichts.') + '">' + itIco('sturm') +
+          '<b>Sturm</b>' + sec(storm) + '<em>' + (hurt ? 'Fehler = −1 Kiste' : 'euch passiert nichts') + '</em></p>');
+      }
+      if (ice) msgs.push('<p class="is-ice" title="Die nächsten Antworten müssen sitzen, sonst rutschen die neuen Kisten unter dem Eis weg.">' + itIco('eis') +
+        '<b>Eis</b><em>noch ' + ice.n + ' richtig in Folge</em></p>');
       const mx = stUntil(mine.mx), mn = stUntil(mine.mn);
-      if (mx > 0) msgs.push('<p class="is-good">' + itIco('maxi') + '<b>Maxi-Kisten</b> · noch ' + Math.ceil(mx / 1000) + ' s</p>');
-      if (mn > 0) msgs.push('<p class="is-bad">' + itIco('mini') + '<b>Mini-Kisten</b> · noch ' + Math.ceil(mn / 1000) + ' s</p>');
+      if (mx > 0) msgs.push('<p class="is-good" title="Maxi-Kisten: jede Kiste zählt doppelt.">' + itIco('maxi') + '<b>Maxi</b>' + sec(mx) + '</p>');
+      if (mn > 0) msgs.push('<p class="is-bad" title="Mini-Kisten: jede Kiste zählt nur halb.">' + itIco('mini') + '<b>Mini</b>' + sec(mn) + '</p>');
       const html = msgs.join('');
       if (fxb.dataset.h !== html) { fxb.dataset.h = html; fxb.innerHTML = html; }
     }
@@ -4744,7 +4753,7 @@
       return '<span class="dd-st__itwrap">' + (mine
         ? '<button type="button" class="dd-st__item' + (fresh && k === its.length - 1 ? ' is-new' : '') + '" data-act="st-use" data-slot="' + k + '"' + (st.usingItem ? ' disabled' : '') +
             ' title="' + nm + '" aria-label="' + nm + ' einsetzen">' + itIco(id) + '<em>Einsetzen</em></button>'
-        : '<span class="dd-st__item is-other" title="' + nm + '">' + itIco(id) + '<span>' + E(stName(iw[k])) + ' hat ein Item</span></span>') +
+        : '<span class="dd-st__item is-other" title="' + nm + '">' + itIco(id) + '<span>' + E(stName(iw[k])) + '<i> hat ein Item</i></span></span>') +
         stInfoBtn(id) + '</span>';
     }).join('');
   }
@@ -4901,22 +4910,87 @@
     t.seq = []; t.done = false;
     st.task = t;
     paintTask();
-    stFitPhone();
+    stFit();
   }
-  /* Am Handy: Spielbereich oben an den Rand, damit Rennen und Aufgabe ohne
-     Scrollen zu sehen sind; ein Element (Rückmeldung, „Weiter“) ggf. nachholen. */
-  function stFitPhone(el) {
-    if (isTeacher || window.innerWidth > 600 || !root) return;
-    requestAnimationFrame(() => {
-      const dd = root && root.querySelector('#ddSt');
-      const frame = dd && (dd.closest('.dd') || dd);
-      if (!frame) return;
-      try {
-        const top = frame.getBoundingClientRect().top;
-        if (Math.abs(top) > 2) window.scrollBy({ top, behavior: 'auto' });
-        if (el && el.isConnected) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      } catch (_) {}
+  /* Spielfläche passt in den Bildschirm – Handy, Tablet und PC (Sönke 31.10.2026:
+     „die Bildschirme fallen aus dem Display, gerade wenn Items reinkommen“).
+     #ddSt bekommt im Spiel genau die Höhe bis zum unteren Rand (.is-fit), der
+     Kopf mit dem Rennen bleibt fest, die Aufgabe nimmt den Rest. Reicht der
+     Platz nicht, wird sie kompakter (.is-tight, dann .is-tight2); reicht es
+     auch dann nicht, rückt der Rahmen an den oberen Rand (die MPSkills-Kopfzeile
+     scrollt weg, st.fitScroll bleibt fürs Spiel). Erst danach scrollt die Aufgabe
+     in sich. Bei offener Tastatur wird nichts neu eingepasst. */
+  function stFit(el) {
+    if (isTeacher || !root || !st) return;
+    requestAnimationFrame(() => stFitNow(el));
+  }
+  function stFitNow(el) {
+    const box = root && root.querySelector('#ddSt');
+    if (!box || !st) return;
+    const on = st.layout === 'game';
+    box.classList.toggle('is-fit', on);
+    if (!on) { box.style.height = ''; box.classList.remove('is-tight', 'is-tight2', 'is-tight3', 'is-side'); return; }
+    if (document.documentElement.classList.contains('kb-open')) { stFitShow(el); return; }
+    const frame = box.closest('.dd') || box;
+    const vh = Math.round((window.visualViewport && window.visualViewport.height) || window.innerHeight);
+    // Quer und flach (Handy quer, kleines Fenster): Rennen links, Aufgabe rechts
+    box.classList.toggle('is-side', window.innerWidth >= 640 && vh < 560 && window.innerWidth > vh * 1.3);
+    const fr = frame.getBoundingClientRect(), br = box.getBoundingClientRect();
+    const below = Math.max(0, Math.round(fr.bottom - br.bottom)) + 4;
+    const top = br.top + window.scrollY, ftop = fr.top + window.scrollY;
+    const phone = window.innerWidth <= 600;
+    const set = h => { box.style.height = Math.max(280, Math.floor(h)) + 'px'; };
+    let ok = false;
+    if (!st.fitScroll) {
+      set(vh - top - below);
+      ok = stFitTight(box, phone ? 2 : 1);
+      if (!ok) st.fitScroll = true;
+      else if (window.scrollY) window.scrollTo(0, 0);
+    }
+    if (st.fitScroll) {
+      set(vh - (top - ftop) - below);
+      stFitTight(box, 3);
+      if (Math.abs(window.scrollY - ftop) > 1) window.scrollTo(0, ftop);
+    }
+    stFitShow(el);
+  }
+  /* Kompakter, bis die Aufgabe passt (höchstens bis Stufe max). true = passt. */
+  function stFitTight(box, max) {
+    const play = box.querySelector('.dd-st__play');
+    if (!play) return true;
+    const over = () => play.scrollHeight > play.clientHeight + 1;
+    box.classList.toggle('is-tight', window.innerWidth <= 600);
+    box.classList.remove('is-tight2', 'is-tight3');
+    if (over()) box.classList.add('is-tight');
+    if (max > 1 && over()) box.classList.add('is-tight2');
+    if (max > 2 && over()) box.classList.add('is-tight3');
+    return !over();
+  }
+  /* Kommt nachträglich etwas dazu (Item, Wirkung, Rückmeldung), nur nachschärfen. */
+  function stFitWatch() {
+    if (isTeacher || typeof ResizeObserver === 'undefined' || !root) return;
+    if (st.fitRO) st.fitRO.disconnect();
+    const hud = root.querySelector('#ddStHud'), task = root.querySelector('#ddTask');
+    if (!hud || !task) return;
+    let raf = 0;
+    st.fitRO = new ResizeObserver(() => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const box = root && root.querySelector('#ddSt.is-fit'), play = box && box.querySelector('.dd-st__play');
+        if (!play || document.documentElement.classList.contains('kb-open')) return;
+        if (play.scrollHeight <= play.clientHeight + 1) return;
+        if (!box.classList.contains('is-tight')) box.classList.add('is-tight');
+        else if (!box.classList.contains('is-tight2')) box.classList.add('is-tight2');
+        else if (!st.fitScroll) { st.fitScroll = true; stFitNow(); }
+        else if (!box.classList.contains('is-tight3')) box.classList.add('is-tight3');
+      });
     });
+    st.fitRO.observe(hud);
+    st.fitRO.observe(task);
+  }
+  function stFitShow(el) {
+    if (!el || !el.isConnected) return;
+    try { el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); } catch (_) {}
   }
   function stTaskHead(t) {
     return '<div class="dd-st__thead">' + (multi() ? '<small>' + E(stackTitle(t.card.sid)) + '</small>' : '') + '</div>';
@@ -4934,7 +5008,7 @@
         ? '<p><span class="dd-st__flybox" style="' + (myT != null ? stCol(myT) : '') + '"></span><b>Richtig!</b> Eine Kiste für ' + E(myT != null ? stTeam(myT) : 'dein Team') + '.</p>'
         : '<p>Nicht ganz.</p>' + (extra ? '<p class="dd-task__sol">' + extra + '</p>' : '') +
           '<button type="button" class="btn btn--primary dd-st__nx" data-act="isl-next" id="ddNext" disabled><i class="dd-st__lock"></i>Weiter</button>';
-      stFitPhone(fb);
+      stFit(fb);
     }
     st.lockUntil = ok ? 0 : Date.now() + ST_LOCK_MS;
     if (!ok) setTimeout(() => { const b = root && root.querySelector('#ddNext'); if (b) { b.disabled = false; b.focus({ preventScroll: true }); } }, ST_LOCK_MS);
@@ -5403,7 +5477,7 @@
     };
 
     // Memory: bei neuer Größe (Drehen, Vollbild) nur die Spalten neu wählen.
-    onResize = () => { if (screen === 'play' && mm) layoutBoards(); if (screen === 'play' && isl) islResize(); if (screen === 'play' && du) duLayout(); if (screen === 'play' && st) stLayout(); };
+    onResize = () => { if (screen === 'play' && mm) layoutBoards(); if (screen === 'play' && isl) islResize(); if (screen === 'play' && du) duLayout(); if (screen === 'play' && st) { stLayout(); clearTimeout(stFitT); stFitT = setTimeout(() => { if (st && !document.documentElement.classList.contains('kb-open')) { st.fitScroll = false; stFit(); } }, 250); } };
     onFs = () => {
       const b = root && root.querySelector('.dd-fsbtn');
       if (b) b.innerHTML = fsEl() ? ico.unfull : ico.full;
