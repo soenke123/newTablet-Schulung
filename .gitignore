@@ -30,3 +30,6 @@ shots/
 # MPSkills/tools/wordisland/tools/greenline.mjs, der Inhalt bleibt
 # lokal und geht von dort direkt in die Datenbank.
 MPSkills/tools/wordisland/Englisch Greenline Vokabellisten/
+
+# NeuroLab-Prüfstand (FOTOS=1)
+MPSkills/tools/NeuroLab/tests/fotos/

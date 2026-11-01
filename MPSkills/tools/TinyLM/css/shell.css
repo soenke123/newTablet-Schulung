@@ -1,0 +1,75 @@
+/* Erklärfenster (erklaerung.js), Teilen-Knöpfe der Lehrkraft und Warte-Karte der Klasse (app.js). */
+
+/* Platzhalter rechts in der Kopfzeile, so breit wie die Marke: die Phasen-Reiter stehen mittig. */
+.top-tools { flex: none; width: 150px; }
+@media (max-width: 1000px) { .top-tools { display: none; } }
+
+/* ---- Teilen-Symbol neben jedem Phasen-Reiter (nur Lehrkraft im Raum) ---- */
+.phase-share {
+  width: 36px; height: 36px; flex: none; align-self: center; margin-left: -2px; margin-right: 4px;
+  display: grid; place-items: center; padding: 0; border-radius: 10px; cursor: pointer;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--muted);
+}
+.phase-share svg { width: 18px; height: 18px; fill: currentColor; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.phase-share:hover { border-color: var(--accent-edge); color: var(--accent); }
+.phase-share.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.phase-share:last-child { margin-right: 0; }
+
+/* ---- Warte-Karte (Klasse, keine Phase frei) ---- */
+.wait-card { max-width: 420px; margin: 60px auto; padding: 28px 24px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.wait-ico { font-size: 2rem; }
+.wait-card h2 { font-family: var(--font-display); font-size: 1.3rem; }
+.wait-card p { color: var(--muted); }
+
+/* ---- Erklärfenster beim ersten Öffnen eines Reiters (erklaerung.js) ---- */
+.ex-shield { position: fixed; inset: 0; z-index: 80; }
+.ex-spot {
+  position: fixed; z-index: 81; pointer-events: none; border-radius: 20px;
+  box-shadow: 0 0 0 3px var(--tc, var(--accent)), 0 0 0 200vmax rgba(20, 16, 48, 0.42);
+  transition: left .25s, top .25s, width .25s, height .25s;
+}
+.ex-pop {
+  --tc: var(--accent); --tt: var(--accent-dim);
+  position: fixed; z-index: 82;
+  width: min(340px, calc(100vw - 16px)); max-height: calc(100vh - 16px); overflow-y: auto;
+  background: var(--surface); color: var(--ink);
+  border-radius: 18px; border-top: 5px solid var(--tc);
+  padding: 14px 16px 12px; box-shadow: var(--shadow-pop);
+  display: flex; flex-direction: column; gap: 8px;
+  animation: ex-in .22s ease-out;
+}
+@keyframes ex-in { from { opacity: 0; transform: translateY(6px) scale(.97); } }
+.ex-pop::before { content: ''; position: absolute; width: 14px; height: 14px; background: var(--surface); transform: rotate(45deg); }
+.ex-pop[data-side="left"]::before { right: -7px; top: calc(var(--arrow, 50%) - 7px); }
+.ex-pop[data-side="right"]::before { left: -7px; top: calc(var(--arrow, 50%) - 7px); }
+.ex-pop[data-side="bottom"]::before { top: -9px; left: calc(var(--arrow, 50%) - 7px); background: var(--tc); }
+.ex-pop[data-side="top"]::before { bottom: -7px; left: calc(var(--arrow, 50%) - 7px); }
+.ex-pop[data-side="none"]::before { display: none; }
+.ex-head { display: flex; align-items: center; gap: 8px; }
+.ex-ico {
+  width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; flex: none; font-size: 1.1rem;
+  background: color-mix(in srgb, var(--tt) 70%, var(--surface));
+}
+.ex-head h3 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 1.12rem; }
+.ex-pic .hv { --hc: var(--tc); --ht: var(--tt); }
+.ex-txt { margin: 0; font-size: 0.92rem; line-height: 1.45; }
+.ex-try {
+  margin: 2px 0 0; font-size: 0.88rem; line-height: 1.4; padding: 8px 10px; border-radius: 12px;
+  background: color-mix(in srgb, var(--tt) 45%, var(--surface));
+}
+.ex-try b { color: color-mix(in srgb, var(--tc) 75%, var(--ink)); }
+.ex-foot { display: flex; justify-content: flex-end; margin-top: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ex-pop { animation: none; }
+  .ex-spot { transition: none; }
+}
+
+/* Schmal: Reiter + Teilen-Knöpfe müssen nebeneinander in eine Zeile passen */
+@media (max-width: 560px) {
+  .phases { gap: 2px; }
+  .phase-btn { padding: 4px 4px; gap: 4px; min-width: 0; }
+  .phase-btn .n { width: 1.4rem; height: 1.4rem; font-size: 0.8rem; }
+  .phase-share { width: 30px; height: 30px; margin: 0 2px 0 0; border-radius: 9px; }
+  .phase-share svg { width: 15px; height: 15px; }
+}

@@ -2174,8 +2174,10 @@ function addLearnPanelFreeDrag(header) {
     if (!group) return;
     state.learn.panelX = startPX + (e.clientX - startX);
     state.learn.panelY = startPY + (e.clientY - startY);
-    group.style.left = `${state.learn.panelX}px`;
-    group.style.top  = `${state.learn.panelY}px`;
+    placeLearnGroup(group);
+    // Gemerkt wird, wo es wirklich steht — nicht eine Stelle jenseits des Rands.
+    state.learn.panelX = parseFloat(group.style.left);
+    state.learn.panelY = parseFloat(group.style.top);
   });
   header.addEventListener('pointerup', () => {
     if (!active) return;
@@ -3135,7 +3137,15 @@ function applyView() {
   view.scale = clampScale(view.scale);
   clampView();
   stage.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.scale})`;
+  /* Für die Kanten (drawEdgeOverlay): ihre Untergrenze gilt in Bildschirm-
+     Pixeln, gezeichnet wird auf der Tafel — also durch den Maßstab teilen.
+     Und unter 0,6 wären die 10-px-Gewichte kleiner als 6 px auf dem Schirm:
+     dann lieber weglassen, als ein graues Gekrümel zu zeigen. Beim
+     Heranzoomen kommen sie wieder. */
+  stage.style.setProperty('--nl-inv', (1 / view.scale).toFixed(4));
+  stage.classList.toggle('edge-labels-off', view.scale < EDGE_LABEL_MIN_SCALE);
 }
+const EDGE_LABEL_MIN_SCALE = 0.6;
 
 /* Die Spalten sollen das Fenster ausfüllen — auch dann, wenn die Tafel
    verkleinert dargestellt wird, weil sie zu BREIT ist. Das CSS gibt ihnen
@@ -3443,11 +3453,108 @@ function renderNetwork() {
      jedem Lupenschritt. */
   syncStageHeight();
   if (view.touched) applyView(); else fitView();
+  clampSpacings(stage);
   drawEdgeOverlay(stage);
 
   /* Das Lernpanel ans FENSTER, nicht an die Tafel: es ist ein Bedienfeld
      und soll weder mitzoomen noch mitwandern. */
-  if (state.phase === 'learn') net.appendChild(renderLearnGroup());
+  if (state.phase === 'learn') {
+    const group = renderLearnGroup();
+    net.appendChild(group);
+    placeLearnGroup(group);
+  }
+  observeLayout(net, stage);
+}
+
+/* ── Nachmessen, wenn sich etwas bewegt ──
+   Die Kanten werden aus gemessenen Positionen gezeichnet. Ändert sich das
+   Layout NACH dem Zeichnen, zeigen sie ins Leere oder fehlen ganz — und das
+   passiert öfter, als man denkt: die Schrift wird erst nach dem ersten
+   render() fertig geladen (Kästen wachsen), der Rahmen in MPSkills ändert
+   seine Höhe, ohne dass das Fenster ein resize meldet, oder NeuroLab wurde
+   in einem noch unsichtbaren Reiter gezeichnet, wo jedes Maß 0 ist. Ein
+   ResizeObserver auf Fenster und Tafel fängt alle drei. Gebündelt auf einen
+   Frame, damit eine Kette von Änderungen nur einmal neu zeichnet. */
+let layoutObserver = null, layoutFrame = 0;
+function relayout() {
+  layoutFrame = 0;
+  const stage = stageEl();
+  if (!stage) return;
+  syncStageHeight();
+  if (view.touched) applyView(); else fitView();
+  clampSpacings(stage);
+  redrawEdges();
+  const group = document.getElementById('learn-group');
+  if (group) placeLearnGroup(group);
+}
+function observeLayout(port, stage) {
+  if (typeof ResizeObserver === 'undefined') return;
+  if (!layoutObserver) {
+    layoutObserver = new ResizeObserver(() => {
+      if (!layoutFrame) layoutFrame = requestAnimationFrame(relayout);
+    });
+  }
+  layoutObserver.disconnect();
+  layoutObserver.observe(port);
+  layoutObserver.observe(stage);
+}
+
+/* ── Kästen bleiben in ihrer Spalte ──
+   Neuronen und Eingänge lassen sich senkrecht verschieben (translateY,
+   gemerkt in spacing). Beim Ziehen hält addPointerDrag sie im Spaltenkörper
+   — aber danach kann die Spalte kürzer werden: weniger Neuronen, anderes
+   Gerät, anderes Szenario, ein alter Stand aus dem Speicher. Die Spalte
+   schneidet ab, und dann war ein Neuron halb oder ganz verschwunden,
+   samt den Kanten, die zu ihm laufen. Deshalb nach jedem Aufbau
+   nachziehen: was hinausragt, rückt bis an den Rand zurück. */
+function clampSpacings(stage) {
+  const s = view.scale || 1;
+  stage.querySelectorAll('.col-body').forEach(body => {
+    const b = body.getBoundingClientRect();
+    if (!b.height) return;                       // unsichtbar: nichts zu messen
+    body.querySelectorAll(':scope > .neuron-card, :scope > .input-node-row').forEach(el => {
+      const r = el.getBoundingClientRect();
+      let d = 0;
+      if (r.bottom > b.bottom) d = (b.bottom - r.bottom) / s;
+      if (r.top + d * s < b.top) d = (b.top - r.top) / s;
+      if (Math.abs(d) < 0.5) return;
+      let target;
+      if (el.classList.contains('neuron-card')) {
+        target = state.layers[+el.dataset.li]?.neurons[+el.dataset.ni];
+        if (!target) return;
+        target.spacing = (target.spacing || 0) + d;
+        el.style.transform = `translateY(${target.spacing}px)`;
+      } else {
+        const i = +el.dataset.ii;
+        state.inputSpacing[i] = (state.inputSpacing[i] || 0) + d;
+        el.style.transform = `translateY(${state.inputSpacing[i]}px)`;
+      }
+    });
+  });
+}
+
+/* ── Lernpanel im Bild halten ──
+   Es stand fest bei „Fensterbreite − 340 px“ — das passte, solange nur das
+   Lernpanel offen war. Mit der Szenario-Info links daneben wird die Gruppe
+   gut 550 px breit und lief rechts aus dem Bild, mitsamt Start-Knopf. Jetzt:
+   ohne eigene Position rechtsbündig, mit eigener (verschoben) dort, aber nie
+   über den Rand hinaus; und die Höhe endet am unteren Bildschirmrand, der
+   Rest scrollt im Panel. */
+function placeLearnGroup(group) {
+  const M = 8;
+  const W = window.innerWidth, H = window.innerHeight;
+  const w = group.offsetWidth;
+  // Natürliche Höhe, ohne den Deckel vom letzten Mal.
+  group.style.removeProperty('--lg-max');
+  const h = group.offsetHeight;
+  let x = state.learn.panelX ?? (W - w - 12);
+  let y = state.learn.panelY ?? 70;
+  x = Math.max(M, Math.min(x, W - w - M));
+  // So weit hoch, dass alles passt; ist es höher als der Bildschirm, scrollt es.
+  y = Math.max(M, Math.min(y, H - h - M));
+  group.style.left = `${x}px`;
+  group.style.top  = `${y}px`;
+  group.style.setProperty('--lg-max', `${Math.max(120, H - y - M)}px`);
 }
 
 /* Die Spalten lassen sich am Kopf nach rechts ziehen (col.style.left).
@@ -3487,6 +3594,10 @@ function renderInputsCol() {
   for (let i = 0; i < state.numInputs; i++) {
     const row = document.createElement('div');
     row.className = 'input-node-row';
+    row.dataset.ii = i;
+    /* Lange Namen (CSV-Spalten, „x (normiert)“) werden gekürzt — der
+       volle Name steht im Tooltip. */
+    row.title = state.inputLabels[i] || `x${i + 1}`;
     row.style.transform = `translateY(${state.inputSpacing[i] || 0}px)`;
     if (state.phase === 'run' || state.phase === 'learn') {
       const rect = document.createElement('div');
@@ -3602,6 +3713,8 @@ function renderLayerCol(layerIdx) {
       const { z, y } = computeNeuronOutput(neuron, inputs);
       const card = document.createElement('div');
       card.className = 'neuron-card';
+      card.dataset.li = layerIdx;
+      card.dataset.ni = ni;
       card.style.transform = `translateY(${neuron.spacing || 0}px)`;
       card.appendChild(buildNeuronSVG(neuron, layerIdx, ni, inputs, z, y));
       addPointerDrag(card,
@@ -3928,6 +4041,32 @@ const VB_MID_Y = 58;   // NB_CY — vertical center of neuron body
 const VB_W_REF = 268;  // viewBox width
 const VB_H_REF = 160;  // viewBox height
 
+/* Verteilt die Gewichts-Beschriftungen so, dass sich keine zwei Kästchen
+   überdecken. Gierig und in Tafel-Koordinaten (unabhängig vom Zoom, also
+   beim Heranzoomen dieselbe Anordnung): je Kante werden einige Stellen
+   entlang der Linie probiert, von der Mitte nach außen. Monospace ≈ 0,6 em
+   breit, daher 6 px je Zeichen. */
+const EDGE_LABEL_T = [0.5, 0.4, 0.6, 0.3, 0.7, 0.22, 0.78];
+function placeEdgeLabels(edges, obstacles = []) {
+  // Hindernisse (Neuronen, Eingänge) zählen wie schon gesetzte Kästchen —
+  // eine Zahl unter einem Neuron wäre halb verdeckt.
+  const placed = obstacles.map(box => ({ box }));
+  const order = edges.slice().sort((a, b) => Math.abs(b.w) - Math.abs(a.w));
+  for (const e of order) {
+    const label = fmt(e.w);
+    const w = label.length * 6 + 7, h = 13, pad = 1;
+    for (const t of EDGE_LABEL_T) {
+      const x = e.src.x + (e.tgt.x - e.src.x) * t;
+      const y = e.src.y + (e.tgt.y - e.src.y) * t;
+      const box = { l: x - w / 2 - pad, r: x + w / 2 + pad, t: y - 7 - pad, b: y - 7 + h + pad };
+      if (placed.some(o => box.l < o.box.r && box.r > o.box.l && box.t < o.box.b && box.b > o.box.t)) continue;
+      placed.push({ x, y, w, label, color: e.color, box });
+      break;
+    }
+  }
+  return placed.filter(p => p.label !== undefined);
+}
+
 /* `net` ist die TAFEL (#net-stage), nicht das Fenster: die Kanten liegen mit
    auf ihr und werden von ihrem transform mitgezoomt und mitgeschoben. Genau
    deshalb müssen sie beim Verschieben und Zoomen nicht neu gezeichnet werden
@@ -3966,21 +4105,26 @@ function drawEdgeOverlay(net) {
     height: net.offsetHeight,
   });
 
-  const inputAnchors = (state.phase === 'run' || state.phase === 'learn')
-    ? Array.from(net.querySelectorAll('.col-inputs .node-run-input'))
-    : Array.from(net.querySelectorAll('.col-inputs .node-circle'));
+  const isRun = state.phase === 'run' || state.phase === 'learn';
+  const inputAnchors = Array.from(net.querySelectorAll(
+    isRun ? '.col-inputs .node-run-input' : '.col-inputs .node-circle'));
 
+  /* Erst alle Kanten sammeln, dann zeichnen: die Beschriftungen werden
+     gemeinsam verteilt (siehe placeEdgeLabels), und dafür muss jede Kante
+     schon bekannt sein. */
+  const edges = [];
   for (let li = 0; li < 4; li++) {
     const layer = state.layers[li];
     if (layer.count === 0) continue;
 
     let sources;
     if (li === 0) {
-      // Input circles: anchor at right-center of the circle
+      /* Am rechten Rand des Eingangs, auch im Build-Modus: ein langer Name
+         macht aus dem Kreis eine Pille, und aus deren Mitte liefe die Kante
+         quer durch die Schrift. */
       sources = inputAnchors.slice(0, state.numInputs).map(el => {
         const r = el.getBoundingClientRect();
-        const anchorX = (state.phase === 'run' || state.phase === 'learn') ? r.right : (r.left + r.right) / 2;
-        return toNet(anchorX, (r.top + r.bottom) / 2);
+        return toNet(r.right, (r.top + r.bottom) / 2);
       });
     } else {
       const prevSvgs = Array.from(net.querySelectorAll(`[data-layer="${li - 1}"] .neuron-svg`));
@@ -3989,53 +4133,90 @@ function drawEdgeOverlay(net) {
     }
 
     const targetSvgs = Array.from(net.querySelectorAll(`[data-layer="${li}"] .neuron-svg`));
-
     targetSvgs.forEach((targetSvg, ni) => {
       const neuron = layer.neurons[ni];
-      // Target: left edge of neuron body at vertical center
       const tgt = svgPt(targetSvg, VB_IN_X, VB_MID_Y);
-
       sources.forEach((src, si) => {
         if (neuron.disabled?.[si]) return;
-        const w = neuron.weights[si] ?? 1;
-        if (Math.abs(w) < 0.01) return;
-        const sw = printMode ? 2 : Math.max(0.5, Math.min(Math.abs(w) * 2, 6));
-        const color = activations[neuron.type].color;
-
-        overlaySvg.appendChild(svgEl('line', {
-          x1: src.x, y1: src.y,
-          x2: tgt.x, y2: tgt.y,
-          stroke: color,
-          'stroke-width': sw,
-          'stroke-opacity': '0.7',
-        }));
-
-        const mx = (src.x + tgt.x) / 2;
-        const my = (src.y + tgt.y) / 2;
-        const label = fmt(w);
-        /* 10 px, nicht 16. Das Gewicht an der Kante ist nicht wichtiger
-           als die Zahlen IM Neuron (z und y′ stehen auf 10, der Bias auf
-           10–11) — vorher war es die mit Abstand größte Schrift auf der
-           Fläche. Bei einem Netz mit mehreren Neuronen je Schicht laufen
-           außerdem viele Kanten auf denselben Punkt zu, und dann legen
-           sich die Kästchen übereinander statt nebeneinander.
-           Monospace ≈ 0,6 em breit, daher 6 px je Zeichen. */
-        const lw = label.length * 6 + 7;
-        overlaySvg.appendChild(svgEl('rect', {
-          x: mx - lw / 2, y: my - 7, width: lw, height: 13, rx: 3,
-          fill: 'white', 'fill-opacity': '0.9',
-        }));
-        const t = svgEl('text', {
-          x: mx, y: my + 3.5,
-          'text-anchor': 'middle', 'font-size': '10', 'font-weight': '700',
-          'font-family': 'monospace', fill: color,
-        });
-        t.textContent = label;
-        overlaySvg.appendChild(t);
+        edges.push({ src, tgt, w: neuron.weights[si] ?? 1,
+                     color: activations[neuron.type].color });
       });
     });
   }
 
+  /* ── Linien ──
+     JEDE eingeschaltete Verbindung bekommt eine Linie. Früher fielen zwei
+     Fälle weg, und beide sahen aus, als wäre die Verbindung gelöscht:
+       1. Gewichte unter 0,01 wurden gar nicht gezeichnet — beim Training
+          laufen Gewichte aber ständig durch die Null, und dann blinkten
+          Kanten weg und wieder her. Jetzt: gestrichelt und blass.
+       2. Die dünnste Linie war 0,5 px auf der TAFEL. Die Tafel wird beim
+          Überblick verkleinert, bei einem großen Netz auf 0,5 und weniger,
+          und dann blieb ein Viertelpixel übrig, das der Bildschirm nicht
+          mehr zeigt. Jetzt: die Strichstärke hat eine Untergrenze in
+          BILDSCHIRM-Pixeln (--nl-edge-min, geteilt durch den Maßstab über
+          --nl-inv, das applyView pflegt). Dicke Kanten bleiben dick, dünne
+          werden beim Herauszoomen nie dünner als die Untergrenze. */
+  const lineLayer  = svgEl('g', { class: 'edge-lines' });
+  const labelLayer = svgEl('g', { class: 'edge-labels' });
+  for (const e of edges) {
+    const zero = Math.abs(e.w) < 0.01;
+    const sw = printMode ? 2 : (zero ? 0.5 : Math.max(0.5, Math.min(Math.abs(e.w) * 2, 6)));
+    const attrs = {
+      x1: e.src.x, y1: e.src.y, x2: e.tgt.x, y2: e.tgt.y,
+      stroke: e.color,
+      'stroke-opacity': zero ? '0.45' : '0.7',
+      'stroke-linecap': 'round',
+      class: 'edge-line' + (zero ? ' edge-zero' : ''),
+    };
+    if (printMode) attrs['stroke-width'] = sw;
+    else attrs.style = `stroke-width: max(${sw}px, calc(var(--nl-edge-min, 1px) * var(--nl-inv, 1)))`;
+    if (zero) attrs['stroke-dasharray'] = '4 3';
+    lineLayer.appendChild(svgEl('line', attrs));
+  }
+
+  /* ── Beschriftungen ──
+     Laufen viele Kanten durch dieselbe Lücke, legten sich die Kästchen
+     früher alle auf die Kantenmitte — bei 7 Eingängen und 10 Neuronen ein
+     Turm aus 70 Zahlen, von denen keine lesbar war. Jetzt sucht jede
+     Beschriftung entlang ihrer Kante einen freien Platz; findet sie keinen,
+     entfällt sie (das Gewicht steht weiter in der Strichstärke und im
+     Neuron-Fenster). Die großen Gewichte kommen zuerst an die Reihe, sie
+     sind die interessanten. */
+  /* Die Neuronen liegen ÜBER den Kanten (z-index) — eine Beschriftung
+     darunter wäre halb verdeckt. Gemessen wird der Rumpf samt Ausgabe-
+     Kästchen, nicht die ganze Karte: die ist so breit wie die Spalte. */
+  const obstacles = [...net.querySelectorAll('.neuron-svg, .col-inputs .node-run-input, .col-inputs .node-circle')]
+    .map(el => {
+      const r = el.getBoundingClientRect();
+      const a = toNet(r.left, r.top), b = toNet(r.right, r.bottom);
+      if (el.classList.contains('neuron-svg')) {
+        // Nur die obere Zone mit Rumpf und Ausgabe (viewBox y 14 … 100);
+        // darunter steht nur der Bias, durch den Kanten nicht laufen.
+        const h = b.y - a.y;
+        return { l: a.x, r: b.x, t: a.y + h * 14 / VB_H_REF, b: a.y + h * 100 / VB_H_REF };
+      }
+      return { l: a.x, r: b.x, t: a.y, b: b.y };
+    });
+  for (const p of placeEdgeLabels(edges, obstacles)) {
+    const g = svgEl('g', { class: 'edge-label' });
+    g.appendChild(svgEl('rect', {
+      x: p.x - p.w / 2, y: p.y - 7, width: p.w, height: 13, rx: 3,
+      fill: 'white', 'fill-opacity': '0.9',
+    }));
+    /* 10 px, nicht 16: das Gewicht an der Kante ist nicht wichtiger als die
+       Zahlen IM Neuron (z und y′ stehen auf 10). */
+    const t = svgEl('text', {
+      x: p.x, y: p.y + 3.5,
+      'text-anchor': 'middle', 'font-size': '10', 'font-weight': '700',
+      'font-family': 'monospace', fill: p.color,
+    });
+    t.textContent = p.label;
+    g.appendChild(t);
+    labelLayer.appendChild(g);
+  }
+
+  overlaySvg.append(lineLayer, labelLayer);
   net.insertBefore(overlaySvg, net.firstChild);
 }
 
@@ -4511,3 +4692,5 @@ else if (!loadState()) resetState();
 initNetGestures();
 render();
 window.addEventListener('resize', render);
+// Erst mit der fertigen Schrift stimmen die Maße der Kästen.
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);

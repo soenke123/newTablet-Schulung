@@ -48,6 +48,8 @@
   --cat-train-tint: #F5CDE3;
   --cat-net: #475853;          /* Netz-Bild: Aufbau der Maschine selbst (neutral) */
   --cat-net-tint: #DCE4E1;
+  --cat-texts: #4B4F8A;        /* Reiter Textwelten (in jeder Phase oben, kein Schritt) */
+  --cat-texts-tint: #D9DAF0;
 
   /* Welche genaue Quelle (A/B/C) innerhalb der "Quellen"-Kategorie — eigene, feinere Farbebene. */
   --src-a: #D1603D;
@@ -92,6 +94,7 @@
     --cat-meaning: #7FA8FF; --cat-meaning-tint: #1E2F5A;
     --cat-train: #F07ABF; --cat-train-tint: #4A1F38;
     --cat-net: #B9C3D6; --cat-net-tint: #2A2F3D;
+    --cat-texts: #A9ADE8; --cat-texts-tint: #2A2C4A;
     --src-a: #E08058; --src-b: #5FA3B0; --src-c: #E0C256;
     --t-sonne: #A88BFF; --t-tiere: #F2B354; --t-ki: #5FA3B0; --t-schule: #E57AA8; --t-berufe: #93C45A; --t-meer: #4FD6C3; --t-eigen: #a4a9bd;
     --mark-exact: #5C4620; --mark-sim: #4A2436; --mark-sim-line: #FF8FB8;
@@ -115,6 +118,7 @@
   --cat-meaning: #7FA8FF; --cat-meaning-tint: #1E2F5A;
   --cat-train: #F07ABF; --cat-train-tint: #4A1F38;
   --cat-net: #B9C3D6; --cat-net-tint: #2A2F3D;
+    --cat-texts: #A9ADE8; --cat-texts-tint: #2A2C4A;
   --src-a: #E08058; --src-b: #5FA3B0; --src-c: #E0C256;
   --t-sonne: #A88BFF; --t-tiere: #F2B354; --t-ki: #5FA3B0; --t-schule: #E57AA8; --t-berufe: #93C45A; --t-meer: #4FD6C3; --t-eigen: #a4a9bd;
   --mark-exact: #5C4620; --mark-sim: #4A2436; --mark-sim-line: #FF8FB8;

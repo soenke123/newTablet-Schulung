@@ -60,6 +60,8 @@
     if (!await api.waitFor(P(3) + '[data-spot="train"]', 8000)) return;
     api.caption('Phase 3 · Ein echtes kleines Netz lernt');
     if (!await api.wait(1200)) return;
+    // Reiter „Training“ aufklappen, damit man die Fehlerlinie fallen sieht.
+    api.click(P(3) + '.panel-item.closed[data-card="train"] .panel-item-head');
     api.click(P(3) + '[data-spot="train"]');
     if (!await api.wait(10000)) return;
     api.click(P(3) + '[data-spot="train"]');
@@ -72,9 +74,9 @@
 
     // Zurückstellen mit den eigenen Knöpfen, dann wieder vorn anfangen.
     api.caption('');
-    api.click(P(3) + '[data-spot="gen"] ~ .btn:last-child');      // ↺ Von vorn
-    api.click(P(3) + '[data-spot="train"] ~ .btn');                // ↺ Netz zurücksetzen
-    api.click(P(1) + '[data-spot="play"] ~ .btn:last-child');      // ↺ Neu starten
+    api.click(P(3) + '[data-spot="genreset"]');                    // ↺ Von vorn
+    api.click(P(3) + '[data-spot="netreset"]');                    // ↺ Netz zurücksetzen
+    api.click(P(1) + '[data-spot="reset"]');                       // ↺ Neu starten
     api.click('.phase-btn[data-n="1"]');
     await api.wait(1000);
   }
