@@ -1,8 +1,10 @@
 /* Erklärfenster (erklaerung.js), Teilen-Knöpfe der Lehrkraft und Warte-Karte der Klasse (app.js). */
 
-/* Platzhalter rechts in der Kopfzeile, so breit wie die Marke: die Phasen-Reiter stehen mittig. */
-.top-tools { flex: none; width: 150px; }
-@media (max-width: 1000px) { .top-tools { display: none; } }
+/* Rechts in der Kopfzeile „Alle Quellen“ (mind. so breit wie die Marke: die Phasen-Reiter stehen mittig). */
+.top-tools { flex: none; min-width: 150px; display: flex; justify-content: flex-end; }
+.corpus-btn { min-height: 44px; font-family: var(--font-display); font-weight: 600; }
+.corpus-ico { font-size: 1.05rem; }
+@media (max-width: 1000px) { .top-tools { min-width: 0; } }
 
 /* ---- Teilen-Symbol neben jedem Phasen-Reiter (nur Lehrkraft im Raum) ---- */
 .phase-share {

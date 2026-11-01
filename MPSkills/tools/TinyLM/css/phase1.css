@@ -6,31 +6,6 @@ body:has(.phase-pane[data-phase="1"]:not([hidden])) .main { max-width: 1440px; }
 
 .p1 { display: flex; flex-direction: column; gap: 16px; }
 
-/* ---- Leiste „Alle Quellen“ (app.js textweltenBar) ---- */
-.twbar {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
-  background: var(--surface); border-radius: 18px; padding: 10px 14px; box-shadow: var(--shadow);
-  border: 1px solid color-mix(in srgb, var(--cat-texts) 25%, var(--line));
-  scroll-margin-top: calc(var(--head-h) + 12px); transition: box-shadow .3s;
-}
-.twbar.flash { box-shadow: 0 0 0 4px var(--cat-texts-tint), var(--shadow); }
-.twbar-head { display: flex; align-items: baseline; gap: 7px; flex: none; }
-.twbar-head b { font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; }
-.twbar-n { font-family: var(--font-mono); font-size: 0.74rem; color: var(--cat-texts); }
-.twbar-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
-.twbar-chip {
-  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 0.84rem; font-weight: 600;
-  padding: 4px 10px 4px 8px; border-radius: 999px; cursor: pointer; color: var(--ink); min-height: 34px;
-  background: color-mix(in srgb, var(--tc) 12%, var(--surface));
-  border: 1.5px solid color-mix(in srgb, var(--tc) 45%, var(--surface));
-}
-.twbar-chip .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--tc); }
-.twbar-chip { white-space: nowrap; }
-.twbar-cn { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); font-weight: 400; }
-.twbar-chip.off { background: var(--surface); border-color: var(--line); color: var(--muted); font-weight: 500; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
-.twbar-chip.off .dot { background: var(--line); }
-.twbar-open { flex: none; }
-
 /* ---- Raster: Handy links, Zerlegen rechts ---- */
 .p1-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 22px; align-items: start; }
 .p1-left { position: sticky; top: calc(var(--head-h) + 14px); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
@@ -230,11 +205,7 @@ body:has(.phase-pane[data-phase="1"]:not([hidden])) .main { max-width: 1440px; }
   .phone { width: min(380px, 100%); height: clamp(440px, 68vh, 640px); }
   .p1-legend { width: min(380px, 100%); }
 }
-@media (max-width: 700px) {
-  .twbar-head { width: 100%; }
-}
 @media (max-width: 560px) {
-  .twbar-open { width: 100%; }
   .p1-intro h2 { font-size: 1.05rem; }
 }
 @media (prefers-reduced-motion: reduce) {

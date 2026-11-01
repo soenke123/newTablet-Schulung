@@ -6,7 +6,7 @@
      Kandidaten  (welches Wort kommt? — Temperatur gleich oben)
        ← Kontextfenster (auf welche letzten Wörter Tiny schaut; die N-Gramme in deinem Text)
        ← Quellen   (wo diese Wörter in den Texten stehen; unten alle genutzten Texte)
-   Ganz oben die Leiste „Alle Quellen“ (Textwelten an/aus).
+   „Alle Quellen“ (alle Texte, für alle Phasen) ist der Knopf oben rechts in der Kopfzeile.
 
    Ohne Auswahl zeigen die Spalten das NÄCHSTE Wort (das „?“ im Handy). Tippt man ein Wort im Handy
    oder ein N-Gramm an, zeigen alle drei Spalten, wie GENAU DIESES Wort entstanden ist (Schritt-Daten
@@ -182,7 +182,7 @@ Phases.register(1, {
        Zerlegen — die gibt es erst mit offenem Kontextfenster oder offenen Kandidaten. */
     function say() {
       if (!sayEl || !session) return;
-      if (!State.activeTexts().length) { sayEl.textContent = 'Ich habe keine Texte! Schalte oben unter „Alle Quellen“ welche an.'; return; }
+      if (!State.activeTexts().length) { sayEl.textContent = 'Ich habe keine Texte! Schalte oben rechts unter „Alle Quellen“ welche an.'; return; }
       const v = view();
       if (!v) { sayEl.textContent = 'Drück auf ▶ – dann lege ich los!'; return; }
       if (!isOpen('cand') && !isOpen('ctx')) {
@@ -426,7 +426,7 @@ Phases.register(1, {
         if (occ.length > MAX) b.appendChild(el('p', 'p1-more', '… und ' + (occ.length - MAX) + ' weitere Stellen'));
       }
 
-      /* Alle Texte, aus denen dein Text bisher stammt — mit Verweis nach oben auf „Alle Quellen“. */
+      /* Alle Texte, aus denen dein Text bisher stammt — mit Link auf „Alle Quellen“ (das große Fenster). */
       const used = usedCounts();
       if (!used.size) return;
       const all = el('div', 'p1-used');
@@ -444,15 +444,9 @@ Phases.register(1, {
         rows.appendChild(row);
       });
       all.appendChild(rows);
-      const up = el('button', 'btn sm p1-up', '↑ Alle Quellen');
+      const up = el('button', 'btn sm p1-up', '📚 Alle Quelltexte ansehen');
       up.type = 'button';
-      up.addEventListener('click', () => {
-        const bar = document.getElementById('alle-quellen');
-        if (!bar) return;
-        bar.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        bar.classList.add('flash');
-        setTimeout(() => bar.classList.remove('flash'), 1000);
-      });
+      up.addEventListener('click', () => App.openTexts());
       all.appendChild(up);
       b.appendChild(all);
     }
@@ -579,14 +573,13 @@ Phases.register(1, {
       focus = null; pick = null;
 
       const root = el('div', 'p1');
-      root.appendChild(App.textweltenBar());
       const grid = el('div', 'p1-grid');
 
       const left = el('div', 'p1-left');
       left.appendChild(buildPhone());
       legendHost = el('div', 'p1-legend');
       left.appendChild(legendHost);
-      if (!State.activeTexts().length) left.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – schalte oben unter „Alle Quellen“ welche an.'));
+      if (!State.activeTexts().length) left.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – schalte oben rechts unter „Alle Quellen“ welche an.'));
 
       const right = el('div', 'p1-right');
       const intro = el('div', 'p1-intro');
