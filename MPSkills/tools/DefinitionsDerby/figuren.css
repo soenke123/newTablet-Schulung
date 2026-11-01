@@ -48,6 +48,9 @@
   100% { opacity: 0; transform: scale(1.5) translateY(-3px); }
 }
 
+/* ── Klein (unter 70 px, svg(…, size)): nur EIN Glanzpunkt je Auge ── */
+.ds-sm .e-open ellipse + circle + circle { display: none; }
+
 /* ── Charakter in Ruhe (nur im Ruhezustand, nicht beim Heben/Jubeln) ── */
 /* Astro-Hase schwebt wie in der Schwerelosigkeit, die Ohren wackeln. */
 .c-idle.ds-fig--astro:not(.ds-lift) .cr-root { animation: ds-float 3.4s ease-in-out infinite; }
