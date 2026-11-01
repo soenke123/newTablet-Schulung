@@ -460,6 +460,8 @@
     if (!overlay || !host) return;
 
     document.getElementById('pvTitle').textContent = meta.title || '';
+    const sub = document.getElementById('pvSub');
+    if (sub) { sub.textContent = meta.subtitle || ''; sub.hidden = !meta.subtitle; }
     document.getElementById('pvBlurb').innerHTML   = show.blurb || '';
     setCaption('');
 

@@ -31,10 +31,14 @@
 
    editorLabel — Beschriftung dieses zweiten Knopfs (Vorgabe „Quiz-Editor").
 
-   learning — Untertitel unter dem Kachelnamen: welche KI-Lernform der
-              Skill zeigt. Nur auf der Kachel der Lehrkraft (renderTools
-              mit guest=false), nicht im Gast-Fenster und nicht im Raum —
-              die Klasse soll das selbst herausfinden (31.10.2026).
+   subtitle — Untertitel unter dem Kachelnamen: worum es im Skill geht,
+              in zwei, drei Wörtern (01.11.2026, für alle Skills). Steht auf
+              der Kachel und im Vorschau-Fenster, nicht im Raum.
+
+   learning — true bei den KI-Skills: der Untertitel nennt die KI-Lernform
+              und steht deshalb nur auf der Kachel der Lehrkraft
+              (renderTools mit guest=false), nicht im Gast-Fenster — die
+              Klasse soll das selbst herausfinden (31.10.2026).
 
    standalone — Adresse einer Seite, die der Skill SELBST ist: kein Raum,
               keine Tür, nichts Gemeinsames. Die Kachel zeigt „Öffnen"
@@ -52,21 +56,21 @@
 window.TOOLS_OVERLAY = {
   // Stufe 4 — Engine aus „Warum Tablets?" portiert, liegt unter
   // tools/wordcloud/ (tool.js + tool.css).
-  wordcloud: { ready: true },
+  wordcloud: { ready: true, subtitle: 'Wortwolke' },
   // Zweiter Skill (Migration 0089). Liegt unter tools/NeuroLab/ —
   // Großschreibung, weil der Ordner so aus seinem eigenen Repository
   // kam; dass die id davon abweichen darf, ist genau der Grund für
   // die folder-Spalte in skill_tools.
-  neurolab:  { ready: true, learning: 'Überwachtes Lernen' },
+  neurolab:  { ready: true, subtitle: 'Überwachtes Lernen · Neuronale Netze', learning: true },
   // Dritter Skill (Migration 0092). Liegt unter tools/Caesercode/ —
   // wieder ein Ordner, dessen Name nicht die id ist, diesmal wegen
   // eines Drehers darin. Anders als NeuroLab ist die Scheibe
   // PORTIERT und nicht eingerahmt (Begründung im Kopf ihrer tool.js).
-  caesar:    { ready: true },
+  caesar: { ready: true, subtitle: 'Verschlüsselung' },
   // Vierter Skill (Migration 0093), erstes Team-Spiel und der erste,
   // der eigene Tabellen statt der generischen Inhaltsschicht benutzt.
   // Grundgerüst-Stand: Platzhalterfarben, keine Fraktionsbilder.
-  'clash-of-math': { ready: true },
+  'clash-of-math': { ready: true, subtitle: 'Kopfrechnen · Klassenspiel' },
   // Fünfter Skill (Migration 0129). Liegt unter tools/wildclusters/ —
   // hier stimmt der Ordnername ausnahmsweise mit der id überein, weil
   // er beim Einzug umbenannt wurde (er hieß „wild Clusters", mit
@@ -74,58 +78,58 @@ window.TOOLS_OVERLAY = {
   // erste, in dem der Raum wirklich etwas steuert: die Lehrkraft
   // schaltet die Phase, und die Brücke (js/ui/bridge.js) trägt sie in
   // den Rahmen hinein.
-  wildclusters: { ready: true, learning: 'Unüberwachtes Lernen' },
+  wildclusters: { ready: true, subtitle: 'Unüberwachtes Lernen · Bewegungsdatenanalyse', learning: true },
   // Sechster Skill (Migrationen 0130–0132), erster im Fach Englisch.
   // Zweites Team-Spiel mit eigenen Tabellen — und das erste, dessen
   // INHALT nicht ihm gehört: die Vokabelsätze liegen in vocab_*
   // daneben, damit das Alleine-Lernen später auf denselben Listen
   // üben kann.
-  wordisland: { ready: true },
+  wordisland: { ready: true, subtitle: 'Vokabeltrainer · Klassenspiel und allein' },
   // Siebter Skill (Migration 0174) — Live-Quiz mit 40 Wesen & Leaderboard.
   // beta: zeigt einen „Beta"-Sticker auf der Kachel (26.09.2026) — der
   // Skill läuft, ist aber noch nicht rund; das ist eine Auskunft über die
   // Auslieferung, nicht über die Datenbankzeile, gehört also hierher.
-  knowledgestack: { ready: true, beta: true, editor: 'quiz.html' },
+  knowledgestack: { ready: true, subtitle: 'Klassenquiz', beta: true, editor: 'quiz.html' },
   // Achter Skill (Migration 0180) — Netzwerksimulator, dritter
   // eingerahmter nach NeuroLab und Wild Clusters. Die Lehrkraft gibt
   // Szenarien frei, holt Netze auf den Beamer und schaltet die
   // Tablets blind. beta: die Integration ist frisch (28.09.2026).
-  synir: { ready: true },
+  synir: { ready: true, subtitle: 'Netzwerksimulation' },
   // Neunter Skill (Migration 0196) — Scrum Werkstatt, ein Raum je
   // Team, eingerahmt wie NeuroLab (tools/ScrumWerkstatt/index.html).
   // beta: frisch aus dem Prototyp in den Raum gezogen (06.10.2026).
-  scrum: { ready: true, beta: true },
+  scrum: { ready: true, subtitle: 'Agile Softwareentwicklung', beta: true },
   // Zehnter Skill (Migration 0200) — Projektarbeit: ein Raum = eine
   // Klasse. Lobby, Gruppen per Drag & Drop, je Gruppe ein Planungsraum
   // (Projektziel, Board, Stunden, Anträge, Team, Regeln). Eingerahmt
   // wie die Scrum Werkstatt (tools/Projektarbeit/index.html).
   // beta: frisch gebaut (07.10.2026).
-  projekt: { ready: true, beta: true },
+  projekt: { ready: true, subtitle: 'Organisation von Gruppenarbeiten', beta: true },
   // Elfter Skill (Migration 0210) — Tiny LM, ein Mini-Sprachmodell
   // zum Aufschrauben. Eingerahmt wie NeuroLab (tools/TinyLM/index.html);
   // geteilt wird nur, welche Phasen die Klasse öffnen darf
   // (skill_room_state.data.phases). Schaufenster: preview/tinylm.js.
-  tinylm: { ready: true, beta: true, learning: 'Selbstüberwachtes Lernen' },
+  tinylm: { ready: true, subtitle: 'Selbstüberwachtes Lernen · Sprachmodell', learning: true, beta: true },
   // Zwölfter Skill (Migration 0211) — Master PDF Skill: PDFs lesen und
   // bearbeiten. KEIN Raum: die Kachel öffnet die eigenständige App unter
   // tools/Master PDF Skill/ direkt, ohne Anmeldung (läuft lokal im
   // Browser). beta: noch in Arbeit (16.10.2026). `windows`: Ordner mit
   // dem Windows-Installer (gebaut von .github/workflows/master-pdf-windows.yml,
   // ausgeliefert von Vercel): version.json + MasterPDFSkill-Setup.exe.
-  masterpdf: { ready: true, standalone: 'tools/Master%20PDF%20Skill/index.html',
+  masterpdf: { ready: true, subtitle: 'PDF-Reader + Editor', standalone: 'tools/Master%20PDF%20Skill/index.html',
                windows: '../downloads/master-pdf/' },
   // Dreizehnter Skill (Migration 0213) — Balance of Nature: Ökosystem
   // auf einer Insel, eingerahmt wie SYNIR (tools/balance of nature/,
   // Ordner mit Leerzeichen, weil er so aus seinem eigenen Repository
   // kam). Vier feste Szenarien, die Lehrkraft teilt und entzieht sie
   // (skill_room_state.data.shared). beta: frisch eingezogen (18.10.2026).
-  balance: { ready: true },
+  balance: { ready: true, subtitle: 'Räuber-Beute-Beziehung' },
   // Vierzehnter Skill (Migration 0220) — SQL Studio: Datenbanken wie
   // mit phpMyAdmin, SQLite im Browser (tools/SQLStudio/, sql.js im
   // Worker). Nur für Admins sichtbar — das entscheidet die Datenbank
   // (skill_tools.admin_only), `adminOnly` hier setzt nur das Schild auf
   // die Kachel. beta: Etappe 1, noch ohne Teilen (23.10.2026).
-  sqlstudio: { ready: true },
+  sqlstudio: { ready: true, subtitle: 'Relationale Datenbanken' },
   // Fünfzehnter Skill (Migration 0233) — How to Fachbegriffe: Lehrkräfte
   // legen Stapel aus Begriff · Definition · Bild an (Karte für Karte oder
   // als Text), teilen sie mit dem Raum; die Klasse lernt mit Karteikarten
@@ -133,14 +137,14 @@ window.TOOLS_OVERLAY = {
   // gebaut (tools/DefinitionsDerby/tool.js, kein iframe). Seit Migration
   // 0237 für alle Lehrkräfte sichtbar (vorher nur Admins), Schaufenster:
   // preview/derby.js. beta: Lernformen kommen noch dazu (29.10.2026).
-  derby: { ready: true, beta: true, editor: 'derby.html', editorLabel: 'Stapel-Editor' },
+  derby: { ready: true, subtitle: 'Fachbegriffe vielseitig üben', beta: true, editor: 'derby.html', editorLabel: 'Stapel-Editor' },
   // Sechzehnter Skill (Migration 0242) — Reinforce Yourself: kam aus dem
   // GameHub (S2), ohne Begleiter, Quizze und Punkte. Vier Phasen
   // (Gegen die KI · Training · zwei Umgebungen · Sandbox), eingerahmt wie Tiny LM
   // (tools/ReinforceYourself/index.html); geteilt wird nur, welche
   // Phasen die Klasse öffnen darf (skill_room_state.data.phases).
   // beta: frisch umgezogen (30.10.2026).
-  reinforce: { ready: true, learning: 'Bestärkendes Lernen' },
+  reinforce: { ready: true, subtitle: 'Bestärkendes Lernen', learning: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet
