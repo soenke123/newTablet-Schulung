@@ -8,7 +8,8 @@
    Help.show(entry, anchor) -> wie open, aber mit einem Eintrag, der nicht in HELP steht
    Help.close()
 
-   Ein HELP-Eintrag: { title, icon, text, cat, vis }
+   Ein HELP-Eintrag: { title, icon, text (Satz oder Liste), cat, vis, try (nur im Erklärfenster) }
+   Dieselben Einträge füllen das Erklärfenster der Reiter (erklaerung.js).
      cat  = Kategoriefarbe (Schlüssel aus panel.js CAT), sonst Akzent
      vis  = Mini-Bild, eins von:
        { type: 'tokens', items: [[wort, art]] }  art: '' | 'dim' | 'win' | 'next' | 's0'…'s2'
@@ -18,51 +19,78 @@
        { type: 'swatch', label, values: [..] }
        { type: 'line' } | { type: 'abc' } | { type: 'dots' } | { type: 'net' } */
 const HELP = {
+  /* ---- Reiter in jeder Phase ---- */
+  textwelten: {
+    title: 'Textwelten', icon: '📚', cat: 'texts',
+    text: ['Das ist das Futter von Tiny. Tiny kennt nur diese Texte – sonst gar nichts.',
+      'Mit dem Haken schaltest du eine ganze Welt an oder aus. Tipp auf einen Namen, dann kannst du die Texte lesen, ändern oder eigene dazuschreiben.'],
+    try: 'Lass nur „Haustiere“ an und lass Tiny schreiben. Worüber schreibt es jetzt?',
+    vis: { type: 'cycle', items: [['📚', 'Texte'], ['🤖', 'Tiny'], ['💬', 'Sätze']] }
+  },
+
+  /* ---- Phase 1 ---- */
+  p1: {
+    title: 'Frei schreiben', icon: '✍️',
+    text: 'Tiny zählt, welches Wort in deinen Texten wie oft auf welches folgt – und würfelt daraus Wort für Wort einen neuen Text.',
+    vis: { type: 'cycle', items: [['👀', 'letzte Wörter'], ['📊', 'zählen'], ['🎲', 'würfeln']], loop: true }
+  },
   kontext: {
     title: 'Kontextfenster', icon: '👀', cat: 'context',
-    text: 'Die KI schaut nur auf die letzten paar Wörter. Alles davor hat sie schon vergessen.',
+    text: ['Tiny schaut immer nur auf die letzten paar Wörter – das ist das Kontextfenster. Im Text sind sie umrandet, dahinter kommt das „?“.',
+      'Alles, was weiter vorn steht, hat Tiny schon vergessen.'],
+    try: 'Stell den Regler auf 1 und dann auf 6. Wann klingt Tiny wirr, wann schreibt es ganze Sätze ab?',
     vis: { type: 'tokens', items: [['Gestern', 'dim'], ['ging', 'dim'], ['der', 'dim'], ['Hund', 'win'], ['schnell', 'win'], ['?', 'next']] }
+  },
+  herkunft: {
+    title: 'Quellen', icon: '📑', cat: 'origin',
+    text: ['Tiny erfindet kein einziges Wort. Jedes Wort stammt aus einem deiner Texte – die Balken zeigen, aus welchen und wie viele.',
+      'Darum hat jedes Wort im Text die Farbe seines Textes.'],
+    try: 'Schau auf die Farben im Text: Wo springt Tiny mitten im Satz in einen anderen Text?',
+    vis: { type: 'tokens', items: [['Der', 's0'], ['Hund', 's0'], ['frisst', 's1'], ['Fisch', 's1'], ['im', 's2'], ['Meer', 's2']] }
   },
   kandidaten: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: 'Was stand in deinen Texten hinter diesen Wörtern? Je öfter, desto länger der Balken – und desto eher wird es gewürfelt.',
+    text: ['Diese Wörter standen in deinen Texten direkt hinter dem Kontextfenster. Je öfter, desto höher die Säule – und desto eher nimmt Tiny das Wort.'],
+    try: 'Drück „+1 Wort“ und vergleiche: Hat Tiny die höchste Säule genommen?',
     vis: { type: 'bars', items: [['Futter', 55], ['Fleisch', 30], ['Gras', 15]] }
   },
   zufall: {
     title: 'Zufall (Temperatur)', icon: '🌡️', cat: 'random',
-    text: 'Wie mutig würfelt die KI? In echten KIs heißt dieser Regler Temperatur: bei 0 immer der längste Balken, bei 2 hat auch Seltenes eine Chance.',
+    text: ['Tiny nimmt nicht immer das häufigste Wort, sondern würfelt unter den Kandidaten. Bei echten KIs heißt dieser Regler Temperatur.'],
+    try: 'Temperatur 0: immer die höchste Säule. Temperatur 2: auch Seltenes. Was klingt am besten?',
     vis: { type: 'scale', items: [['🎯', '0', 'sicher'], ['🎲', '1', 'normal'], ['🌪️', '2', 'wild']] }
-  },
-  herkunft: {
-    title: 'Quellen', icon: '📑', cat: 'origin',
-    text: 'Hier sieht die KI nach: in allen deinen Texten. Kein Wort ist erfunden – die Farbe zeigt, aus welchem Text es stammt.',
-    vis: { type: 'tokens', items: [['Der', 's0'], ['Hund', 's0'], ['frisst', 's1'], ['Fisch', 's1'], ['im', 's2'], ['Meer', 's2']] }
   },
 
   /* ---- Phase 2 ---- */
   p2: {
     title: 'Frage & Antwort', icon: '💬',
-    text: 'Die KI sucht 3 passende Texte und baut daraus Wort für Wort eine Antwort. Die Frage verstehen tut sie nicht.',
+    text: 'Tiny sucht die 3 passendsten Texte und baut daraus Wort für Wort eine Antwort. Findet es nichts, rät es trotzdem – wie echte KIs.',
     vis: { type: 'cycle', items: [['❓', 'Frage'], ['🔎', 'suchen'], ['📑', '3 Texte'], ['💬', 'Antwort']] }
   },
   nachschlagen: {
     title: 'Frage zerlegen', icon: '🔎', cat: 'ask',
-    text: 'Füllwörter fliegen raus. Der Rest wird auf die Grundform gekürzt und in den Texten gesucht.',
+    text: ['Tiny versteht deine Frage nicht wirklich. Es wirft die Füllwörter weg und sucht die übrigen Wörter in den Texten.',
+      'Grau = Füllwort, blau = kennt Tiny, rot = kennt Tiny nicht.'],
+    try: 'Frag nach etwas, das in keinem Text vorkommt – zum Beispiel nach dem Eiffelturm.',
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
   },
   quellen: {
     title: 'Quellen', icon: '📑', cat: 'origin',
-    text: 'Anders als in Phase 1 sieht die KI nur in 3 Texten nach: denen, die am besten zu deiner Frage passen (A · B · C).',
+    text: ['Anders als in Phase 1 nimmt Tiny nur die 3 Texte, die am besten zu deiner Frage passen: A · B · C. Nur aus ihnen baut es die Antwort.'],
+    try: 'Tipp „Fundstelle zeigen“: Wo steht dein Fragewort im Text?',
     vis: { type: 'abc' }
   },
   wortfuerwort: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: 'Was stand in den 3 Quellen hinter diesen Wörtern? Die Balkenfarbe zeigt, aus welcher Quelle.',
+    text: ['Wie in Phase 1: Tiny nimmt Wort für Wort das, was hinter den letzten Wörtern stand – aber nur aus den 3 Quellen. Die Farbe der Säule zeigt, aus welcher.'],
+    try: 'Stell die Frage nochmal. Nimmt Tiny jedes Mal dieselben Wörter?',
     vis: { type: 'bars', items: [['Napf', 60], ['Park', 25], ['Wasser', 15]] }
   },
   wortkarte: {
     title: 'Wortkarte', icon: '🗺️', cat: 'meaning',
-    text: 'Wörter mit ähnlichen Nachbarn landen nah beieinander, Filter und Wortwelten lassen eine Gruppe leuchten. Paar-Pfeile wie spielt → spielte zeigen hier kreuz und quer – ob sie in dieselbe Richtung gehen, zeigt „Pfeile nebeneinander“.',
+    text: ['Wörter, die in ähnlichen Sätzen vorkommen, liegen nah beieinander. So findet Tiny „ähnliche“ Wörter, auch wenn dein Wort nicht im Text steht.',
+      'Die Filter lassen eine Gruppe leuchten. Paar-Pfeile wie spielt → spielte zeigen hier kreuz und quer – ob sie in dieselbe Richtung gehen, zeigt „Pfeile nebeneinander“.'],
+    try: 'Tipp auf ein Wort und schau, welche Nachbarn es hat.',
     vis: { type: 'dots' }
   },
 
@@ -74,27 +102,34 @@ const HELP = {
   },
   embedding: {
     title: 'Embedding', icon: '🔢', cat: 'embed',
-    text: 'Die Wörter im Kontextfenster werden zu Zahlen – jedes Wort eine feste Reihe. Rot heißt plus, blau heißt minus.',
+    text: ['Ein Netz kann keine Buchstaben lesen. Jedes Wort im Kontextfenster wird deshalb zu einer festen Reihe aus 16 Zahlen: rot = plus, blau = minus.',
+      'Oben stellst du ein, wie viele Wörter das Netz sieht. Jede Länge ist ein eigenes Netz, das eigenes Training braucht.'],
+    try: 'Trainiere ein bisschen und schau, wie sich die Farben der Wörter verändern.',
     vis: { type: 'swatch', label: 'Hund', values: [0.9, -0.4, 0.2, -0.9, 0.6, 0.1, -0.2, 0.8, -0.6, 0.3, 0, -0.8] }
   },
   hidden: {
-    title: 'Hidden-Schicht', icon: '📦', cat: 'hidden',
-    text: 'Statt in Quellen nachzusehen, mischt das Netz hier die Zahlen mit dem, was es gelernt hat. Keine einzelne Zahl bedeutet etwas – nur alle zusammen.',
+    title: 'Hidden-Schicht', icon: '💡', cat: 'hidden',
+    text: ['Hier mischt das Netz die Zahlen aller Wörter zu 40 neuen Zahlen – den Neuronen. Jedes Kästchen ist ein Neuron: je kräftiger die Farbe, desto stärker ist es gerade an.',
+      'Niemand hat den Neuronen gesagt, was sie tun sollen – das lernen sie beim Training selbst. Darunter steht, welche Wörter die gerade stärksten Neuronen nach oben schieben.'],
+    try: 'Vor dem Training schieben die Neuronen wahllose Wörter. Trainiere eine Weile – passen die Wörter jetzt zusammen?',
     vis: { type: 'swatch', label: '?', values: [0.3, -0.7, 0.9, 0.1, -0.2, 0.5, -0.9, 0.4, 0.7, -0.3, 0.2, -0.5] }
   },
   ausgabe: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: 'Die Ausgabe des Netzes: jedes Wort bekommt einen Prozentwert, ganz ohne Texte. Daraus wird gewürfelt – genau wie in Phase 1.',
+    text: ['Am Ende bekommt jedes Wort, das das Netz kennt, einen Prozentwert – ganz ohne Texte nachzusehen. Daraus wird gewürfelt, genau wie in Phase 1.'],
+    try: 'Vergleiche vor und nach dem Training: Wie sicher ist sich das Netz?',
     vis: { type: 'bars', items: [['Hund', 48], ['Katze', 31], ['Napf', 21]] }
   },
   kontextnetz: {
     title: 'Kontextfenster', icon: '👀', cat: 'context',
-    text: 'Mehr Wörter im Blick = geradere Sätze. Aber das Netz muss neu lernen und schreibt die Texte eher wörtlich ab.',
+    text: 'Mehr Wörter im Blick = geradere Sätze. Aber jedes Fenster ist ein eigenes Netz, muss neu lernen und schreibt die Texte eher wörtlich ab.',
     vis: { type: 'tokens', items: [['Der', 'dim'], ['kleine', 'win'], ['Hund', 'win'], ['frisst', 'win'], ['?', 'next']] }
   },
   training: {
     title: 'Training', icon: '🏋️', cat: 'train',
-    text: 'Raten, mit dem echten Wort vergleichen, alle Zahlen ein Stück korrigieren. Erst grob, dann immer feiner – tausende Male.',
+    text: ['Das Netz rät das nächste Wort, vergleicht mit dem echten und dreht alle Zahlen ein kleines Stück in die richtige Richtung – tausende Male.',
+      'Die Fehlerlinie zeigt, wie sehr es danebenliegt. Sinkt sie, lernt das Netz.'],
+    try: 'Starte das Training links und schau zu, wie die Linie fällt. Wann wird sie flach?',
     vis: { type: 'cycle', items: [['🤔', 'raten'], ['✅', 'vergleichen'], ['🔧', 'korrigieren']], loop: true }
   },
   fehler: {
@@ -104,7 +139,9 @@ const HELP = {
   },
   netz: {
     title: 'Das Netz von innen', icon: '🕸️', cat: 'net',
-    text: 'Punkte sind Neuronen, Linien sind Gewichte. Rot schiebt an, blau bremst. Tipp ein Neuron an!',
+    text: ['Das ganze Netz auf einmal: Punkte sind Neuronen, Linien sind Gewichte. Rot schiebt an, blau bremst.',
+      'Jede Linie ist eine echte Zahl aus dem Netz – nichts ist hier nur zur Deko.'],
+    try: 'Tipp ein Neuron an und lies seine echten Zahlen.',
     vis: { type: 'net' }
   }
 };

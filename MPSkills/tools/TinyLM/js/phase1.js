@@ -24,6 +24,8 @@ function sourceChips(rows, more) {
 
 Phases.register(1, {
   mount(host) {
+    /* Reihenfolge, in der Tiny durch die Reiter führt (sobald es geschrieben hat). */
+    const GUIDE = ['ctx', 'origin', 'cand', 'rand', 'texte'];
     let session, n = 3, temp = 1, playing = false, timer = null, panelCtrl = null;
     let textEl, cursor, playBtn, stepBtn, legendHost, placeholder, sayEl;
 
@@ -75,7 +77,7 @@ Phases.register(1, {
         words.slice(-k).forEach(w => w.classList.add('win'));
       }
       if (!sayEl) return;
-      if (!State.activeTexts().length) { sayEl.textContent = 'Ich habe keine Texte! Wähl oben ein paar „Textwelten“ aus.'; return; }
+      if (!State.activeTexts().length) { sayEl.textContent = 'Ich habe keine Texte! Schalte rechts unter „Textwelten“ ein paar an.'; return; }
       if (!C) { sayEl.textContent = 'Drück auf „Schreiben starten“ – dann lege ich los!'; return; }
       const top = C.list[0];
       if (C.level === 0 || !top) { sayEl.textContent = 'Neuer Satz! Ich nehme einen Satzanfang aus deinen Texten …'; return; }
@@ -106,6 +108,7 @@ Phases.register(1, {
       if (panelCtrl.isOpen('ctx') && live.ctx) live.ctx();
       if (panelCtrl.isOpen('cand') && live.cand) live.cand();
       panelCtrl.refreshAll();
+      if (session.steps.length === 1) panelCtrl.guide(GUIDE);
       if (session.steps.length >= 400) stopPlay();
       return true;
     }
@@ -122,9 +125,20 @@ Phases.register(1, {
       timer = setInterval(() => { if (!doStep()) stopPlay(); }, 550);
     }
     function stopPlay() {
+      const was = playing;
       playing = false;
       if (timer) { clearInterval(timer); timer = null; }
       syncPlay();
+      /* Nach einer Pause schickt Tiny einen sanft zum nächsten Reiter, den man noch nicht kennt. */
+      if (was) sayHint();
+    }
+    const hinted = () => sayEl && sayEl.textContent.startsWith('Willst du wissen');
+    function sayHint() {
+      if (playing || !sayEl || !panelCtrl || !session.steps.length) return;
+      const nx = panelCtrl.nextItem();
+      if (nx) sayEl.replaceChildren(document.createTextNode('Willst du wissen, wie ich das mache? Tipp rechts auf „'),
+        el('b', null, nx.label), document.createTextNode('“.'));
+      else updateText();
     }
 
     /* Kontext- und Zufallskarte tragen Regler. Würden sie bei jedem Wort neu gebaut, wäre der
@@ -258,21 +272,25 @@ Phases.register(1, {
       stepBtn.type = 'button';
       const resetBtn = el('button', 'btn', '↺ Neu starten');
       resetBtn.type = 'button';
+      resetBtn.dataset.spot = 'reset';
       controls.append(playBtn, stepBtn, resetBtn);
       center.appendChild(controls);
-      if (!State.activeTexts().length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – öffne oben „Textwelten“.'));
+      if (!State.activeTexts().length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – schalte rechts unter „Textwelten“ welche an.'));
 
       playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
       stepBtn.addEventListener('click', () => { stopPlay(); doStep(); });
       resetBtn.addEventListener('click', () => render());
 
       const items = [
+        App.textweltenItem(),
         { id: 'ctx', label: 'Kontextfenster', cat: 'context', hint: '1', help: 'kontext', manual: true, render: renderCtxNode },
         { id: 'origin', label: 'Quellen', cat: 'origin', hint: '2', help: 'herkunft', render: renderOriginNode },
         { id: 'cand', label: 'Kandidaten', cat: 'candidates', hint: '3', help: 'kandidaten', manual: true, render: renderCandNode },
         { id: 'rand', label: 'Zufall', cat: 'random', hint: '4', help: 'zufall', manual: true, render: renderRandNode }
       ];
-      panelCtrl = Panel.mount(host, center, items, { phase: 1 });
+      panelCtrl = Panel.mount(host, center, items, { phase: 1, onGuide: () => { if (hinted()) sayHint(); } });
+      /* Hat Tiny schon geschrieben (z. B. nach neuer Textauswahl nicht), zeigt der Puls den Weg. */
+      if (session.steps.length) panelCtrl.guide(GUIDE);
       updateText();
       updateLegend();
     }

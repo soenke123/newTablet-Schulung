@@ -86,9 +86,12 @@
       <p>Projektarbeit nach Scrum: Das Team formuliert sein <strong>Product Goal</strong>,
          schreibt User Stories ins <strong>Product Backlog</strong>, plant Sprints und
          schiebt Zettel über das Board. Review, Retro und Archiv halten fest, was
-         geschafft wurde.</p>
+         geschafft wurde — und was das Team sich in der Retro vornimmt, steht im nächsten
+         Sprint auf dem Board und wird im Review wieder abgefragt.</p>
       <p><strong>Ein Raum ist ein Team.</strong> Wer beitritt, wählt: Teammitglied oder
          Beobachter. Mitglieder bekommen einen persönlichen Code und finden ihr Team
-         damit auf jedem Gerät wieder — ohne Konto, auch bei geschlossener Tür.</p>`
+         damit auf jedem Gerät wieder — ohne Konto, auch bei geschlossener Tür.</p>
+      <p>Die Lehrkraft schreibt mit und ist allein für Zurücksetzen, Import und Backups
+         zuständig; bei Aktivität sichert der Raum sich wöchentlich von selbst.</p>`
   });
 })();

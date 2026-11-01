@@ -1,19 +1,22 @@
 # Reinforce Yourself (MPSkill, Migration 0242, Beta)
 
 Reinforcement Learning zum Selbermachen. Kommt aus dem GameHub
-(`GameHub/S2 Reinforce Yourself!`, game14); dort steht das Spiel vorerst
-noch unverändert. Hier **ohne** Begleiter/Kreatur, **ohne** die
+(früher `GameHub/S2 Reinforce Yourself!`, game14); dort ist das Spiel
+seit Migration 0252 entfernt (Kachel weg, Ordner gelöscht, game14 bleibt
+nur für Altbestände an Kreaturen/Münzen als `retired` in GAMES_CONFIG).
+Hier **ohne** Begleiter/Kreatur, **ohne** die
 Zwischen-Quizze und **ohne** Punkte/Gewinn-Bildschirme.
 
 ## Aufbau (seit 31.10.2026: Startseite mit Kacheln statt Reitern)
 
-Startseite (`screen-home`): oben die Erklärung „Wie lernt eine KI durch Belohnung?“
-(infografik.png + 4 Schritte Beobachten · Handeln · Feedback · Lernen), darunter zwei Bereiche:
+Startseite (`screen-home`, Umbau 31.10.2026): zwei Bereiche mit Kacheln.
 
-- **1 „Du trainierst die KI“** – Kachel `ttt` (Gegen die KI).
+- **1 „Du trainierst die KI“** – zwei Kacheln: „Was ist Reinforcement Learning?“ (öffnet das Fenster `#rl-dialog` mit der Erklärung „Wie lernt eine KI durch Belohnung?“: infografik.png + Text, die vier Kästen KI-Agent · Umgebung · Belohnung · Lernen in deren Farben, `.rl-cycle`; Teil `info` wie die anderen: Lehrkraft schaltet mit „Teilen“ frei, ohne Freigabe grau; öffnet nur das Fenster, kein Screen, nicht in `ry.part`; fehlt in `data.parts` = gesperrt, Standard bleibt nur `ttt`) und `ttt` (Gegen die KI).
 - **2 „Du lernst wie eine KI“** – Ablauf mit Pfeilen: `train` (Training) →
   `envA` (Brett) / `envB` (Aliens) im gestrichelten Kasten „Training anwenden“ →
   `sandbox` („Verstehen“).
+
+Nicht freigegebene Kacheln sieht die Klasse nur als graue Fläche mit Schloss – weder Bild noch Name (`.tile.is-locked`, Bild/Text per visibility:hidden).
 
 Wenig Text (Wunsch 31.10.2026): Kacheln nur Bild + Name, keine Phasen-Nummern, keine
 Untertitel unter den Bereichen, kein Erklärsatz für die Lehrkraft, kein Fußsatz.
@@ -66,6 +69,17 @@ in `finish`). Ohne Anzeige, danach Meldung unten (`ryToast`) – zum Besprechen 
 Keine eigene Freischaltung (früher: Gewinnrate 2,5 : 1 + Quiz). Die **Lehrkraft** steuert,
 welche Kacheln die Klasse öffnen darf.
 
+## Arbeitsblatt (01.11.2026)
+
+`ReinforceYourself Arbeitsblatt.docx` / `.pdf` liegen neben `index.html` (wie bei Wild Clusters):
+Seite 1 Leitfaden für die Lehrkraft (vier Phasen Gegen die KI → Training → Umgebung A+B → Sandbox,
+Merksatz), Seite 2 AB 1 (Aufg. 1–4: Tic-Tac-Toe beobachten, Training, „wofür trainiert?“),
+Seite 3 AB 2 (Aufg. 5–8, erst nach dem Teilen der Umgebungen: anwenden, E0x00/E0x01 übersetzen,
+3 Bauernzüge vs. 2 Alien-Aktionen = Spiegelung, Sandbox-Baum). Die Word-Fassung ist die Quelle
+(von Sönke bearbeitet); PDF daraus mit LibreOffice erzeugen, beide gleich benennen.
+Knopf „Arbeitsblatt“ in der Kopfzeile (`.ry-sheetbtn`, nur `body.can-sheet` = Lehrkraft oder allein
+geöffnet, nicht Schüler/Schaufenster) öffnet `#sheet-dialog`: PDF in neuem Tab, DOCX als Download.
+
 ## Raum
 
 - `tool.js` rahmt `index.html` ein wie Tiny LM (`?raum=lehrer|schueler`, Schaufenster `?demo=1`).
@@ -85,10 +99,19 @@ welche Kacheln die Klasse öffnen darf.
   B (Aliens, lila) behalten ihre eigenen Welten, der Baum in der Sandbox bleibt eine dunkle Tafel
   (auf der Leinwand fest gezeichnet).
 - Allein geöffnet (ohne `?raum=`) ist alles offen.
+- **Schaufenster** (`MPSkills/preview/reinforce.js`): Kachel-Standbild „Perspektivwechsel“
+  (Wunsch 31.10.2026: nicht auf Tic-Tac-Toe begrenzen, Umgebungen nicht verraten): links
+  „Du trainierst die KI“ (Mensch → KI, kleines Brett, Lernkurve), rechts „Du bist die KI“
+  (Zustand K0x01, Aktionen mit Gewicht, „Sieg → Aktion wird verstärkt“ beim Darüberfahren),
+  CSS `.ryp-*` in MPSkills/style.css; Kacheltext (skill_tools.blurb) in Migration 0251 und Drehbuch mit der echten App im Rahmen (`?demo=1`): Startseite →
+  Gegen die KI (zwei Partien als „Du“, 6 × „+50 Runden Optimal“) → Training (+50 Runden) →
+  Startseite. Mit `?demo=1` ersetzt index.html den localStorage durch einen Speicher im
+  Arbeitsspeicher (erstes Stück im Skript) und zeigt „+50 Runden“ (`body.is-demo`,
+  `tttPlay50`/`trainPlay50` laufen bei `TEACHER || DEMO`).
 
 ## Gerät
 
-Alles liegt im localStorage unter `ry.*` (getrennt vom GameHub-Spiel auf derselben Herkunft).
+Alles liegt im localStorage unter `ry.*` (eigener Präfix; das frühere GameHub-Spiel lag auf derselben Herkunft).
 „Zurücksetzen“ rechts in der Kopfzeile löscht den Stand.
 
 ## Daten / Werkzeuge

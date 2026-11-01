@@ -34,6 +34,9 @@ function getGameAccess(gameId) {
   const adminCollab = !!(game?.collab && isAdminUser());
   if (game && !adminCollab && game.season > 1 && game.season > getUserSeason()) return 'locked';
 
+  // Ausgemustert (GAMES_CONFIG retired): es gibt keine Seite mehr dazu.
+  if (game?.retired) return 'locked';
+
   // Not-Aus aus config.js: schaltet ein Spiel global ab, unabhängig
   // von jedem Kurs. Steht vor der Kurs-Freischaltung, damit eine
   // Lehrkraft ein kaputtes Spiel nicht doch aufmachen kann.
@@ -201,7 +204,15 @@ const GAMES_CONFIG = [
   { id: 'game11', season: 1, title: 'Tip Turbo Kids',   icon: '⌨️', url: 'S1 10finger Blindschreiben/index.html' },
   { id: 'game12', season: 2, title: 'Quellen-Tinder',      icon: '🃏', url: 'S2 Quellen Tinder/index.html'      },
   { id: 'game15', season: 2, title: 'LLMaster',            icon: '💬', url: 'S2 LLMaster/index.html'             },
-  { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: 'S2 Reinforce Yourself!/index.html'  },
+  // retired: das Spiel gibt es im Hub nicht mehr (Reinforce Yourself ist
+  // seit Migration 0242 ein MPSkills-Skill, der Ordner ist weg, Migration
+  // 0252). Der Eintrag bleibt trotzdem stehen: Münzen, Kreatur und
+  // Wachstum, die jemand dort verdient hat, hängen an game14 — ohne
+  // Eintrag fielen sie aus getTotalCoins, Galerie und Wachstumstrank.
+  // Was retired ist, bekommt keine Kachel (buildSeasonSection), ist nie
+  // spielbar (getGameAccess) und Nester daran suchen sich ein neues
+  // Spiel (rehomeRetiredNests). url bleibt leer: es gibt nichts zu öffnen.
+  { id: 'game14', season: 2, title: 'Reinforce Yourself!', icon: '🤖', url: '', retired: true },
   { id: 'game16', season: 3, title: '???',                 icon: '🌈', url: '#', clusterLegi: true },
   // standalone: das Spiel steht für sich. Es hat keine Runden, sondern läuft
   // durch — das Ei brütet über Phase 0–2, danach wächst das Monster an der
@@ -245,7 +256,7 @@ const isAdminUser = () => !!window.getSessionUser?.()?.is_admin;
 
 const SEASONS_CONFIG = [
   { id: 1, title: 'Season 1 – Regeln, Ordnung, Dateien & Aufmerksamkeit', desc: 'Diese Season knüpft an die Inhalte der ersten Tablet-Schulung an und bringt dein Wissen auf das nächste Level. In sechs spannenden Spielen sicherst und vertiefst du wichtige Grundlagen rund um die Tabletnutzung – von unseren Hausregeln über Dateiformate bis hin zur richtigen Struktur auf deinem Gerät. Und weil deine Aufmerksamkeit eine deiner wichtigsten Ressourcen ist, lernst du außerdem, bewusst mit ihr umzugehen: In zwei Aufmerksamkeitsspielen geht es um Fokus und das Binden von Aufmerksamkeit. Mit Tip Turbo Kids tauchst du zusätzlich in das 10-Finger-Blindschreiben ein – eine Fähigkeit, die dir das Schreiben längerer Texte enorm erleichtert und im Schulalltag wie auch später im Berufsleben unverzichtbar ist.' },
-  { id: 2, title: 'Season 2 – LLM und Recherche',     desc: 'Welchen Quellen kannst du vertrauen – und wie erkennst du es? In dieser Season lernst du, Quellen zu bewerten und ihre Glaubwürdigkeit einzuschätzen. Du erforschst außerdem, wie Sprachmodelle wie ChatGPT funktionieren: Was passiert eigentlich unter der Haube – und warum verstehen KIs viel weniger, als es auf den ersten Blick scheint? Drei Spiele, ein Grundverständnis für das mächtigste Werkzeug unserer Zeit.' },
+  { id: 2, title: 'Season 2 – LLM und Recherche',     desc: 'Welchen Quellen kannst du vertrauen – und wie erkennst du es? In dieser Season lernst du, Quellen zu bewerten und ihre Glaubwürdigkeit einzuschätzen. Du erforschst, wie Sprachmodelle wie ChatGPT funktionieren: Was passiert eigentlich unter der Haube – und warum verstehen KIs viel weniger, als es auf den ersten Blick scheint? Und du merkst, wie dein Feed mitlernt: Was du anklickst, bekommst du öfter zu sehen – bis du in einer Filterblase steckst. Drei Spiele rund um Recherche, KI und die Frage, was du eigentlich zu sehen bekommst.' },
   { id: 3, title: 'Season 3 – Social Media und Folgen von KI', desc: 'Social Media prägt unseren Alltag mehr denn je – und KI verändert, was wir dort zu sehen bekommen. In dieser Season blickst du hinter die Kulissen: Wie funktionieren Empfehlungsalgorithmen und die kleinen Tricks der Plattformen, die uns zum Weiterscrollen bringen? Was macht generative KI mit Bildern, Texten und mit der Wahrheit? Und zum ersten Mal ist die Season kooperativ: Ihr sammelt als Kurs gemeinsam Regenbogen-Bonbons und schaltet damit ein legendäres Kreatur-Event frei, das nur euer Kurs zusammen erreichen kann. Vier neue Spiele – ein gemeinsames Ziel.' },
 ];
 
@@ -457,10 +468,39 @@ function repairAtariEggState() {
   }
 }
 
+// Nester, die an einem ausgemusterten Spiel hängen (GAMES_CONFIG
+// retired), kämen nie wieder in eine Runde — die Seite gibt es nicht
+// mehr. Sie werden losgebunden und bekommen rehome: true. Damit zeigt
+// die Nest-Kachel „Neues Spiel wählen" statt eines toten Knopfs, und
+// cancelPendingEgg() lässt so ein Nest beim Abbrechen stehen, statt es
+// wie ein frisch gekauftes Ei zu verwerfen (samt Kreatur darin).
+function rehomeRetiredNests() {
+  const sd = loadShopData();
+  let changed = false;
+  for (const nest of sd.nests) {
+    const game = GAMES_CONFIG.find(g => g.id === nest.gameId);
+    if (!game?.retired) continue;
+    nest.gameId  = null;
+    nest.gameUrl = null;
+    nest.rehome  = true;
+    changed = true;
+  }
+  if (changed) saveShopData(sd);
+}
+
+function chooseNestGame(nestId) {
+  const sd = loadShopData();
+  if (sd.pendingEggNestId || !sd.nests.some(n => n.nestId === nestId)) return;
+  sd.pendingEggNestId = nestId;
+  saveShopData(sd);
+  renderHub();
+}
+
 // Atari1 · Enter 4-8-2-6
 function renderHub() {
   refundAbandonedItems();
   repairAtariEggState();
+  rehomeRetiredNests();
 
   const allData  = loadAllData();
   const shopData = loadShopData();
@@ -568,7 +608,7 @@ function buildSeasonSection(season, allData, shopData) {
   const seasonGrid = document.createElement('div');
   seasonGrid.className = 'games-grid';
 
-  for (const game of GAMES_CONFIG.filter(g => g.season === season.id)) {
+  for (const game of GAMES_CONFIG.filter(g => g.season === season.id && !g.retired)) {
     const data = allData[game.id] || defaultGameData();
     seasonGrid.appendChild(buildGameCard(game, data, shopData));
   }
@@ -774,6 +814,7 @@ function attachCardListeners(card, game, data, isBackupTarget) {
       if (nest) {
         nest.gameId  = game.id;
         nest.gameUrl = game.url;
+        delete nest.rehome;
         sd.pendingEggNestId = null;
         saveShopData(sd);
         exitPendingEggMode();
@@ -3008,6 +3049,8 @@ function buildNestCard(nest, allData, shopData) {
       ? `<p class="nest-card__hint" style="opacity:0.6;">🔒 Spiel gerade gesperrt</p>`
       : isPending
       ? `<p class="nest-card__hint">Klicke auf "Spielen!" bei einem Spiel!</p>`
+      : (nest.rehome && !shopData.pendingEggNestId)
+      ? `<button class="game-card__btn nest-card__rehome">Neues Spiel wählen</button>`
       : `<p class="nest-card__hint" style="opacity:0.5;">Wähle ein Spiel…</p>`;
   }
 
@@ -3061,6 +3104,9 @@ function buildNestCard(nest, allData, shopData) {
 }
 
 function attachNestCardListeners(card, nest, nestData, hasCreature, canPlay) {
+  card.querySelector('.nest-card__rehome')?.addEventListener('click', () => {
+    chooseNestGame(nest.nestId);
+  });
   if (canPlay) {
     card.querySelector('.game-card__btn').addEventListener('click', () => {
       playNest(nest.nestId);
@@ -3228,7 +3274,9 @@ function cancelPendingEgg() {
   const nestId = sd.pendingEggNestId;
   if (nestId) {
     const nest = sd.nests.find(n => n.nestId === nestId);
-    if (nest) {
+    // Nest aus einem ausgemusterten Spiel (rehomeRetiredNests): Abbrechen
+    // heißt nur „jetzt noch kein neues Spiel" — das Nest bleibt.
+    if (nest && !nest.rehome) {
       const eggItem = SHOP_ITEMS.find(i => i.eggItem && i.eggType === nest.eggType);
       // Erstattung statt Zurückrollen von spentCoins (Migration 0185).
       if (eggItem) sd.refundedCoins = (sd.refundedCoins ?? 0) + eggItem.price;

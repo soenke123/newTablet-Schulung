@@ -69,3 +69,8 @@ insert into games (id, season, folder, title, icon, requires_login, active, clus
 on conflict (id) do update set
   requires_login  = excluded.requires_login,
   cluster_managed = excluded.cluster_managed;
+
+-- Reinforce Yourself (game14) ist seit Migration 0252 kein Hub-Spiel mehr
+-- (jetzt MPSkills-Skill 'reinforce'). Die Zeile bleibt für Altbestände
+-- (game_state), gehört aber nicht mehr dem Kurs-Schalter.
+update games set cluster_managed = false where id = 'game14';

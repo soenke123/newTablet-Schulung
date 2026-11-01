@@ -2,7 +2,8 @@
    MPSkills — Skill „Reinforce Yourself"  ·  tool.js
    ══════════════════════════════════════════════════════════════
    Reinforcement Learning zum Selbermachen (Migration 0242, Beta).
-   Kam aus dem GameHub (S2 Reinforce Yourself!) — ohne Begleiter,
+   Kam aus dem GameHub (früher S2 Reinforce Yourself!, dort seit
+   Migration 0252 entfernt) — ohne Begleiter,
    ohne Zwischen-Quizze, ohne Punkte. Startseite = Erklärung, wie
    eine KI durch Belohnung lernt, darunter zwei Bereiche mit Kacheln:
      „Du trainierst die KI“   ttt      Gegen die KI (Tic-Tac-Toe gegen
@@ -36,7 +37,7 @@
 (function () {
   'use strict';
 
-  const V = '20261031a';
+  const V = '20261031e';
 
   let root  = null;
   let frame = null;
@@ -46,7 +47,7 @@
   let ready = false, lastSent = '';
   let parts = null;        // Lehrkraft: eigener Stand, bis der Server ihn bestätigt
 
-  const PARTS = ['ttt', 'train', 'envA', 'envB', 'sandbox'];
+  const PARTS = ['info', 'ttt', 'train', 'envA', 'envB', 'sandbox'];
   const NEEDS_TRAIN = ['envA', 'envB', 'sandbox'];
   const LEGACY = { 0: ['ttt'], 1: ['train'], 2: ['envA', 'envB'], 3: ['sandbox'] };
   function normParts(list) {

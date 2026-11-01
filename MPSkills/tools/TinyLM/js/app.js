@@ -1,5 +1,6 @@
-/* App-Shell: klebende Kopfzeile (Marke, Phasen-Reiter mit Teilen-Symbol, Textwelten-Knopf, ? = Tour),
-   Drawer-Rendering, Phasen-Hosting.
+/* App-Shell: klebende Kopfzeile (Marke, Phasen-Reiter mit Teilen-Symbol), der Reiter „Textwelten“
+   (textweltenItem, steht in jeder Phase rechts ganz oben) samt großem Textwelten-Fenster (Drawer),
+   Phasen-Hosting. Seit 01.11.2026 kein Textwelten-Knopf und kein Tour-? mehr in der Kopfzeile.
 
    Im MPSkills-Raum bekommt die Seite ?raum=lehrer bzw. ?raum=schueler (tool.js ist die Gegenseite):
      hinein   { type: 'tl:cmd', phases: [1, 2] }   welche Phasen die Klasse benutzen darf
@@ -192,22 +193,8 @@ const App = (() => {
     });
     topbar.appendChild(phasesNav);
 
-    const tools = el('div', 'top-tools');
-
-    const corpusBtn = el('button', 'btn corpus-btn');
-    corpusBtn.type = 'button';
-    corpusBtn.dataset.spot = 'textwelten';
-    const count = el('span', 'count', String(State.activeTexts().length));
-    corpusBtn.append(el('span', 'corpus-ico', '📚'), el('span', 'corpus-lab', 'Textwelten'), count);
-    corpusBtn.addEventListener('click', toggleDrawer);
-    tools.appendChild(corpusBtn);
-    const tourBtn = el('button', 'help-btn tour-btn', '?');
-    tourBtn.type = 'button';
-    tourBtn.title = 'Tour zu dieser Phase zeigen';
-    tourBtn.setAttribute('aria-label', 'Tour zu dieser Phase zeigen');
-    tourBtn.addEventListener('click', () => { if (active != null) Tour.replay(active); });
-    tools.appendChild(tourBtn);
-    topbar.appendChild(tools);
+    /* Rechts nur ein Platzhalter so breit wie die Marke, damit die Phasen-Reiter mittig stehen. */
+    topbar.appendChild(el('div', 'top-tools'));
     head.appendChild(topbar);
     root.appendChild(head);
 
@@ -245,7 +232,8 @@ const App = (() => {
     }
 
     State.on('corpus-changed', () => {
-      count.textContent = String(State.activeTexts().length);
+      /* Kleine Welten-Listen in den Reitern auffrischen (die Zahl im Kopf frischt die Phase auf). */
+      miniLists.forEach(f => f());
       /* Nicht neu zeichnen, solange jemand in einem Text-Editor tippt — sonst wäre das Getippte weg. */
       if (!openEditors.size) renderDrawer();
     });
@@ -255,7 +243,7 @@ const App = (() => {
   function goPhase(n, initial) {
     if (!initial && n === active && panes[n]) return;
     Help.close();
-    Tour.stop(false);
+    Explain.close(true);
     if (active != null && panes[active] && panes[active].api && panes[active].api.onHide && (n !== active)) panes[active].api.onHide();
     Object.values(panes).forEach(p => { p.el.hidden = true; });
     active = n;
@@ -275,7 +263,6 @@ const App = (() => {
     updateTabs();
     if (brandSub) brandSub.textContent = PHASE_META[n].sub;
     if (!initial) window.scrollTo({ top: 0, behavior: 'auto' });
-    Tour.forPhase(n);
   }
 
   /* Für die Tour: Karte der aktiven Phase aufklappen, ohne hinzuspringen. */
@@ -284,9 +271,62 @@ const App = (() => {
     if (p && p.api.reveal) p.api.reveal(id);
   }
 
-  function toggleDrawer() {
-    const open = $('drawer').classList.toggle('open');
-    $('drawerBackdrop').classList.toggle('open', open);
+  /* Großes Textwelten-Fenster öffnen, auf Wunsch gleich bei einer Welt. */
+  function openTexts(themeId) {
+    if (themeId && THEME_ORDER.includes(themeId)) {
+      drawerTab = themeId;
+      try { localStorage.setItem(TAB_STORE, themeId); } catch (e) { /* egal */ }
+      renderDrawer();
+    }
+    $('drawer').classList.add('open');
+    $('drawerBackdrop').classList.add('open');
+  }
+
+  /* ---- Reiter „Textwelten“ (rechts ganz oben in jeder Phase) ----
+     Kurz: je Welt ein Farbpunkt, Name, x/y und ein Haken für die ganze Welt; Tipp auf den Namen
+     oder „Texte lesen & ändern“ öffnet das große Fenster. */
+  const miniLists = new Set();
+  function renderMini(box) {
+    box.replaceChildren();
+    const texts = Corpus.allTexts();
+    THEME_ORDER.forEach(themeId => {
+      const items = texts.filter(t => (t.own ? 'eigen' : t.theme) === themeId);
+      if (!items.length && themeId === 'eigen') return;
+      const nOn = items.filter(t => State.selectedIds.has(t.id)).length;
+      const row = el('div', 'tw-mini-row' + (nOn ? '' : ' off'));
+      row.style.setProperty('--tc', 'var(--t-' + themeId + ')');
+      const name = el('button', 'tw-mini-name', THEME_NAME[themeId]);
+      name.type = 'button';
+      name.title = 'Texte von „' + THEME_NAME[themeId] + '“ ansehen';
+      name.addEventListener('click', () => openTexts(themeId));
+      const sw = el('input');
+      sw.type = 'checkbox';
+      sw.checked = nOn > 0;
+      sw.indeterminate = nOn > 0 && nOn < items.length;
+      sw.setAttribute('aria-label', THEME_NAME[themeId] + (nOn ? ' abwählen' : ' auswählen'));
+      sw.addEventListener('change', () => State.setWorld(themeId, nOn === 0));
+      row.append(el('i', 'dot'), name, el('span', 'tw-mini-n', nOn + '/' + items.length), sw);
+      box.appendChild(row);
+    });
+  }
+  function textweltenItem() {
+    return {
+      id: 'texte', label: 'Textwelten', cat: 'texts', icon: '📚', help: 'textwelten',
+      meta: () => State.activeTexts().length + ' Texte',
+      render(container) {
+        const box = el('div', 'tw-mini');
+        container.appendChild(box);
+        renderMini(box);
+        const f = () => { if (box.isConnected) renderMini(box); else miniLists.delete(f); };
+        miniLists.add(f);
+        const open = el('button', 'btn sm tw-mini-open', '📖 Texte lesen, ändern, eigene schreiben');
+        open.type = 'button';
+        open.dataset.spot = 'textwelten';
+        open.addEventListener('click', () => openTexts());
+        container.appendChild(open);
+        if (!State.activeTexts().length) container.appendChild(el('p', 'warnline', 'Keine Texte an – Tiny weiß gerade gar nichts.'));
+      }
+    };
   }
   function closeDrawer() {
     $('drawer').classList.remove('open');
@@ -516,6 +556,6 @@ const App = (() => {
     drawer.scrollTop = keepScroll;
   }
 
-  return { renderShell, goPhase, revealCard, ROOM, TEACHER, STUDENT,
+  return { renderShell, goPhase, revealCard, openTexts, textweltenItem, ROOM, TEACHER, STUDENT,
     get activePhase() { return active; }, get classPhases() { return classPhases; } };
 })();

@@ -1,11 +1,17 @@
 /* Phase 2: Frage/Antwort mit Retrieval.
    Zentrum = Frage + wachsende Antwort (jedes Wort in der Farbe seines Quelltexts).
    Rechts dieselben vier Schritte wie in jeder Phase: Frage zerlegen, Quellen, Kandidaten, Zufall.
-   Darunter breit: die Wortkarte. */
+   Darunter breit: die Wortkarte.
+
+   Passt kein Text zur Frage, schweigt Tiny NICHT (früher kam ein fester Satz): es nimmt alle Texte,
+   setzt das unbekannte Wort aus der Frage als Satzanfang („Der Eiffelturm ist …“) und schreibt
+   einfach weiter — klingt sicher, ist aber ausgedacht. Darunter steht, dass echte KIs das auch tun
+   (Halluzinieren). Sönke 01.11.2026: „sollte mir trotzdem irgendeine Antwort geben“. */
 const SRC = ['A', 'B', 'C'];
 const srcVar = i => 'var(--src-' + ['a', 'b', 'c'][i] + ')';
-const CANNED = 'Dazu finde ich nichts. Ich kenne nur Texte, die du gerade ausgewählt hast.';
-const SUGGEST2 = ['Ist Pluto ein Planet?', 'Was frisst eine Kornnatter?', 'Wie lernt eine KI?', 'Was macht die Ärztin?'];
+const SUGGEST2 = ['Ist Pluto ein Planet?', 'Was frisst eine Kornnatter?', 'Wie lernt eine KI?', 'Wie hoch ist der Eiffelturm?'];
+/* Artikel vor dem unbekannten Wort → Satzanfang der ausgedachten Antwort */
+const GUESS_ART = { der: 'der', die: 'die', das: 'das', dem: 'der', den: 'der', des: 'der', ein: 'ein', eine: 'eine', einen: 'ein', einem: 'ein', einer: 'eine' };
 
 function buildPhase2Sources(R, k) {
   const top = R.results.filter(r => r.score > 0).slice(0, k || 3);
@@ -35,7 +41,33 @@ Phases.register(2, {
   mount(host) {
     let M = null, R = null, session = null, canned = false, asked = false;
     let temp = 1, playing = false, timer = null, panelCtrl = null, mapCtl = null;
-    let textEl, cursor, playBtn, input, legendHost, askedEl, placeholder, answerEl, metaEl;
+    let textEl, cursor, playBtn, input, legendHost, askedEl, placeholder, answerEl, metaEl, warnEl;
+    let guessWord = '';
+    const GUIDE = ['lookup', 'src', 'word', 'rand', 'map', 'texte'];
+    /* Farbe eines Quelltexts: A/B/C bei gefundenen Quellen, sonst (ausgedacht) die Farbe aus Phase 1. */
+    const colorOf = si => si < 0 ? 'var(--muted)' : canned ? sourceColor(si) : srcVar(si);
+    const nameOf = si => canned ? session.sources[si].doc.title : 'Text ' + SRC[si];
+
+    /* Keine passende Quelle: aus ALLEN Texten raten, mit dem unbekannten Fragewort als Satzanfang. */
+    function guessSession(q) {
+      const sess = createSession(buildSources(State.activeTexts(), () => 1, () => new Map()));
+      const unknown = new Set(R.ql.filter(x => !x.known).map(x => x.raw));
+      const toks = tokenize(q).filter(t => !t.punct);
+      /* Lieber ein großgeschriebenes Wort (Nomen) als „hoch“ aus „Wie hoch ist …“. */
+      const cand = toks.map((t, k) => k).filter(k => unknown.has(toks[k].raw));
+      const noun = cand.filter(k => k > 0 && /^[A-ZÄÖÜ]/.test(toks[k].raw));
+      const i = noun.length ? noun[0] : (cand.length ? cand[cand.length - 1] : -1);
+      guessWord = '';
+      if (i < 0) return sess;
+      const subj = toks[i].raw.charAt(0).toUpperCase() + toks[i].raw.slice(1);
+      guessWord = subj;
+      const art = i > 0 ? GUESS_ART[toks[i - 1].t] : null;
+      (art ? [art, subj, 'ist'] : [subj, 'ist']).forEach(w => {
+        sess.steps.push({ word: w.toLowerCase(), raw: w, si: -1, seed: true, cands: null });
+        sess.ctx.push(w.toLowerCase());
+      });
+      return sess;
+    }
 
     function rebuildModel() {
       M = buildModel(State.activeTexts());
@@ -50,11 +82,6 @@ Phases.register(2, {
        Wechselt die Farbe mitten im Satz, markiert ein kleiner Strich die "Naht". */
     function updateText() {
       textEl.replaceChildren();
-      if (canned) {
-        textEl.appendChild(document.createTextNode(CANNED));
-        textEl.appendChild(cursor);
-        return;
-      }
       let prevSi = null, last = null;
       pieces(session).forEach((p, idx) => {
         if (idx > 0 && !p.punct) textEl.appendChild(document.createTextNode(' '));
@@ -68,9 +95,9 @@ Phases.register(2, {
           seam.title = 'Hier wechselt die KI mitten im Satz zu einem anderen Text.';
           textEl.appendChild(seam);
         }
-        const span = el('span', 'srcword', p.txt);
-        span.style.setProperty('--sc', srcVar(p.si));
-        span.title = 'aus Text ' + SRC[p.si] + ': ' + session.sources[p.si].doc.title;
+        const span = el('span', 'srcword' + (p.si < 0 ? ' seedword' : ''), p.txt);
+        span.style.setProperty('--sc', colorOf(p.si));
+        span.title = p.si < 0 ? 'aus deiner Frage' : (canned ? 'aus: ' : 'aus Text ' + SRC[p.si] + ': ') + session.sources[p.si].doc.title;
         textEl.appendChild(span);
         last = span;
         prevSi = p.si;
@@ -81,9 +108,15 @@ Phases.register(2, {
 
     function updateLegend() {
       legendHost.replaceChildren();
-      if (!asked || canned || !session) return;
+      if (!asked || !session) return;
       const used = new Map();
-      session.steps.forEach(st => { if (st.word !== '.' && st.word !== ',') used.set(st.si, (used.get(st.si) || 0) + 1); });
+      session.steps.forEach(st => { if (st.si >= 0 && st.word !== '.' && st.word !== ',') used.set(st.si, (used.get(st.si) || 0) + 1); });
+      if (canned) {
+        const top = [...used.entries()].sort((a, b) => b[1] - a[1]);
+        if (top.length) legendHost.appendChild(sourceChips(top.slice(0, 3).map(([si, c]) => ({ color: sourceColor(si), label: session.sources[si].doc.title, sub: String(c) })),
+          top.length > 3 ? '+ ' + (top.length - 3) + ' Texte' : ''));
+        return;
+      }
       legendHost.appendChild(sourceChips(session.sources.map((s, i) => ({
         color: srcVar(i),
         label: SRC[i] + ' · ' + s.doc.title,
@@ -101,18 +134,19 @@ Phases.register(2, {
       R = retrieve(M, q);
       R.question = q;
       canned = !R.results.some(r => r.score > 0);
-      session = null;
-      if (!canned) {
-        const sources = buildPhase2Sources(R, 3);
-        session = createSession(sources);
-      }
+      session = canned ? guessSession(q) : createSession(buildPhase2Sources(R, 3));
       placeholder.hidden = true;
       askedEl.textContent = q;
       askedEl.hidden = false;
       answerEl.hidden = false;
       metaEl.replaceChildren();
-      if (canned) metaEl.appendChild(el('span', 'chat-found none', 'Dazu steht nichts in deinen Texten'));
-      else {
+      warnEl.hidden = !canned;
+      if (canned) {
+        metaEl.append(el('span', 'chat-found none', 'Kein passender Text'), el('span', 'chat-keys', '· Tiny rät trotzdem'));
+        warnEl.replaceChildren(el('b', null, '🤥 Ausgedacht! '), document.createTextNode(
+          (guessWord ? 'Zu „' + guessWord + '“ steht nichts in deinen Texten. ' : 'Dazu steht nichts in deinen Texten. ') +
+          'Tiny klebt trotzdem Wörter aneinander und klingt dabei ganz sicher. Echte KIs machen das auch – das nennt man Halluzinieren.'));
+      } else {
         metaEl.appendChild(el('span', 'chat-found', session.sources.length + (session.sources.length === 1 ? ' Text gefunden' : ' Texte gefunden')));
         const known = R.ql.filter(x => x.known).map(x => x.lemma);
         if (known.length) metaEl.appendChild(el('span', 'chat-keys', '· ' + known.join(' · ')));
@@ -126,21 +160,35 @@ Phases.register(2, {
         const start = R.ql.filter(x => x.inMap)[0];
         if (start) mapCtl.select(start.lemma); else mapCtl.redraw();
       }
-      if (!canned) startPlay();
+      panelCtrl.guide(GUIDE);
+      startPlay();
     }
 
     function doStep() {
       if (!session) return false;
-      const C = step(session, 6, temp);
-      if (!C) return false;
+      let C;
+      const last = session.steps[session.steps.length - 1];
+      if (last && last.seed) {
+        /* Direkt nach „Der Eiffelturm ist“ kein Satzzeichen — sonst endet die Antwort sofort. */
+        C = candidates(session, 6, temp);
+        const list = C.list.filter(a => a.word !== '.' && a.word !== ',');
+        if (!list.length) return false;
+        const sum = list.reduce((x, a) => x + a.p, 0) || 1;
+        list.forEach(a => { a.p /= sum; });
+        C.list = list;
+        commitWord(session, temp === 0 ? list[0] : pickFrom(list), C);
+      } else {
+        C = step(session, 6, temp);
+        if (!C) return false;
+      }
       updateText();
       updateLegend();
       panelCtrl.refreshAll();
-      if (session.sentences >= 3 || session.steps.length >= 70) return false;
+      if (session.sentences >= (canned ? 2 : 3) || session.steps.length >= 70) return false;
       return true;
     }
     function startPlay() {
-      if (playing || canned || !session) return;
+      if (playing || !session) return;
       playing = true;
       playBtn.textContent = '❚❚ Pause';
       timer = setInterval(() => { if (!doStep()) stopPlay(); }, 420);
@@ -154,7 +202,7 @@ Phases.register(2, {
     function renderSourcesNode(container) {
       container.replaceChildren();
       if (!asked) { container.appendChild(el('p', 'card-empty', 'Stell zuerst eine Frage.')); return; }
-      if (canned) { container.appendChild(el('p', 'card-empty', 'Kein Text passt – deshalb kam ein fester Satz.')); return; }
+      if (canned) { container.appendChild(el('p', 'card-empty', 'Kein Text passt zu deiner Frage. Tiny nimmt deshalb alle Texte und rät – die Antwort ist ausgedacht.')); return; }
       session.sources.forEach((s, i) => {
         const row = el('div', 'srcrow');
         const head = el('div', 'srcrow-head');
@@ -260,9 +308,8 @@ Phases.register(2, {
     function renderWordByWordNode(container) {
       container.replaceChildren();
       if (!asked) { container.appendChild(el('p', 'card-empty', 'Stell zuerst eine Frage.')); return; }
-      if (canned) { container.appendChild(el('p', 'card-empty', 'Nichts zum Zusammensetzen – fester Satz.')); return; }
       const st = session.steps[session.steps.length - 1];
-      if (!st) { container.appendChild(el('p', 'card-empty', 'Noch kein Wort.')); return; }
+      if (!st || !st.cands) { container.appendChild(el('p', 'card-empty', 'Noch kein Wort.')); return; }
       const C = st.cands;
 
       const strip = el('div', 'ctxstrip');
@@ -280,10 +327,10 @@ Phases.register(2, {
       container.appendChild(heatHost);
       const cands = C.list.map(a => ({
         word: a.word, label: showWord(a.word), p: a.p, chosen: a.word === st.chosen,
-        breakdown: [...a.bySrc.entries()].map(([si, w]) => ({ share: w / a.w, color: srcVar(si), label: 'Text ' + SRC[si] }))
+        breakdown: [...a.bySrc.entries()].map(([si, w]) => ({ share: w / a.w, color: colorOf(si), label: nameOf(si) }))
       }));
       Heat.render(heatHost, cands, { maxRows: 5, compact: true });
-      container.appendChild(el('p', 'mini-legend', 'Säulenfarbe = Text A · B · C   ▸ umrandet = gewürfelt'));
+      container.appendChild(el('p', 'mini-legend', (canned ? 'Säulenfarbe = Text' : 'Säulenfarbe = Text A · B · C') + '   ▸ umrandet = gewürfelt'));
     }
 
     function renderRandomNode(container) {
@@ -341,7 +388,9 @@ Phases.register(2, {
       again.type = 'button';
       again.addEventListener('click', () => { stopPlay(); if (R) ask(R.question); });
       controls.append(playBtn, again);
-      aBody.append(metaEl, bubble, legendHost, controls);
+      warnEl = el('p', 'chat-warn');
+      warnEl.hidden = true;
+      aBody.append(metaEl, bubble, warnEl, legendHost, controls);
       answerEl.append(tinyEl('happy'), aBody);
       chat.append(placeholder, askedEl, answerEl);
       center.appendChild(chat);
@@ -370,11 +419,12 @@ Phases.register(2, {
       center.appendChild(form);
 
       const items = [
+        App.textweltenItem(),
         { id: 'lookup', label: 'Frage zerlegen', cat: 'ask', hint: '1', help: 'nachschlagen', render: renderLookupNode },
         { id: 'src', label: 'Quellen', cat: 'origin', hint: '2', help: 'quellen', render: renderSourcesNode },
         { id: 'word', label: 'Kandidaten', cat: 'candidates', hint: '3', help: 'wortfuerwort', render: renderWordByWordNode },
         { id: 'rand', label: 'Zufall', cat: 'random', hint: '4', help: 'zufall', manual: true, render: renderRandomNode },
-        { id: 'map', label: 'Wortkarte: Welche Wörter gehören zusammen?', cat: 'meaning', wide: true, open: false, manual: true,
+        { id: 'map', label: 'Wortkarte: Welche Wörter gehören zusammen?', cat: 'meaning', wide: true, manual: true,
           help: 'wortkarte', render: renderMapNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 2 });

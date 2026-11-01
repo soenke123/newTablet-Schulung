@@ -12,20 +12,29 @@
      net     = Netz-Bild, bewusst neutral-graphit: diese Karte zeigt ALLE Schichten auf einmal, und
                darin tragen die Schichten weiter ihre eigenen Farben (embed/hidden/candidates).
 
-   Jede Karte ist EINZELN auf- und zuklappbar (Tipp auf den Kopf); der Zustand wird je Phase in
-   localStorage gemerkt. Erklärt wird NICHT auf der Karte, sondern hinter dem ?-Knopf im Kopf
-   (help.js) — auf der Karte steht nur, was die Maschine gerade tut.
+   Ganz oben steht in jeder Phase der Reiter „Textwelten“ (App.textweltenItem, Farbe texts, 📚 statt
+   Nummer) — das Futter der KI kommt zuerst.
+
+   Jede Karte ist ein REITER: am Anfang alle zugeklappt und nur ein schmaler Begriff (Sönke
+   01.11.2026: „erstmal zugeklappt … nur als Begriffe, ganz klein, damit es aufgeräumt aussieht“).
+   Tipp auf den Kopf klappt auf/zu; der Zustand wird je Phase in localStorage gemerkt. Beim ERSTEN
+   Aufklappen legt sich das Erklärfenster daneben (erklaerung.js), das ? an der Karte zeigt es
+   wieder. Auf der Karte selbst steht nur, was die Maschine gerade tut.
+   Führung: guide(liste) lässt den ersten Reiter der Liste, der noch nicht erklärt wurde, leise
+   pulsieren (.is-next) — so weiß man, wo es weitergeht, ohne Tour.
    Geschlossene Karten werden nicht gerendert (spart Arbeit beim Training in Phase 3) und
    rendern sich beim Aufklappen nach. Jede render()-Funktion zeigt selbst einen Platzhalter,
    solange es noch nichts zu erklären gibt.
 
-   Item-Felder: { id, label, cat, hint, help (Schlüssel in HELP), render(container),
-                  open:   false -> standardmäßig zugeklappt,
+   Item-Felder: { id, label, cat, hint (Nummer) | icon (Zeichen statt Nummer), help (Schlüssel in HELP),
+                  render(container), meta: fn -> kurzer Text rechts im Kopf (z. B. „61“),
+                  open:   true  -> standardmäßig aufgeklappt (sonst zu),
                   wide:   true  -> breite Karte unter dem Zweispalter (z. B. die Wortkarte),
                   onClose: fn   -> wird beim Zuklappen aufgerufen (z. B. Training anhalten),
                   manual: true  -> von refreshAll() ausgenommen (teure Inhalte wie Canvas-Karten;
                                    die Phase ruft dafür gezielt refresh(id) auf) } */
 const CAT = {
+  texts: { color: 'var(--cat-texts)', tint: 'var(--cat-texts-tint)' },
   origin: { color: 'var(--cat-origin)', tint: 'var(--cat-origin-tint)' },
   context: { color: 'var(--cat-context)', tint: 'var(--cat-context-tint)' },
   candidates: { color: 'var(--cat-candidates)', tint: 'var(--cat-candidates-tint)' },
@@ -39,7 +48,7 @@ const CAT = {
 };
 
 const Panel = (() => {
-  const STORE = 'tinylm-panel-offen';
+  const STORE = 'tinylm-reiter-offen';   /* neu seit 01.11.2026: alle starten zugeklappt */
   function loadOpen() {
     try { const v = JSON.parse(localStorage.getItem(STORE) || '{}'); return (v && typeof v === 'object') ? v : {}; }
     catch (e) { return {}; }
@@ -72,7 +81,7 @@ const Panel = (() => {
 
     function isOpen(item) {
       const v = openMap[ns + item.id];
-      return v == null ? (item.open !== false) : !!v;
+      return v == null ? item.open === true : !!v;
     }
 
     function renderBody(e) {
@@ -122,12 +131,28 @@ const Panel = (() => {
       head.id = 'ph-' + ns.replace(':', '') + '-' + item.id;
       const chev = el('span', 'panel-chev');
       chev.setAttribute('aria-hidden', 'true');
-      head.appendChild(item.hint ? el('span', 'panel-item-hint', item.hint) : el('span', 'cat-dot'));
-      head.append(el('h3', null, item.label), chev);
+      head.appendChild(item.hint ? el('span', 'panel-item-hint', item.hint)
+        : item.icon ? el('span', 'panel-item-hint icon', item.icon) : el('span', 'cat-dot'));
+      head.appendChild(el('h3', null, item.label));
+      let metaEl = null;
+      if (item.meta) { metaEl = el('span', 'panel-item-meta', item.meta()); head.appendChild(metaEl); }
+      head.appendChild(chev);
 
       const headRow = el('div', 'panel-item-headrow');
       headRow.appendChild(head);
-      if (item.help) headRow.appendChild(Help.btn(item.help));
+      if (item.help) {
+        /* Das ? zeigt dasselbe Erklärfenster wie beim ersten Öffnen. */
+        const hb = el('button', 'help-btn', '?');
+        hb.type = 'button';
+        hb.dataset.help = item.help;
+        hb.setAttribute('aria-label', 'Erklärung: ' + item.label);
+        hb.addEventListener('click', ev => {
+          ev.stopPropagation();
+          if (!e.open) setOpen(item.id, true);
+          requestAnimationFrame(() => Explain.show(item.help, card));
+        });
+        headRow.appendChild(hb);
+      }
 
       const body = el('div', 'panel-item-body');
       body.setAttribute('role', 'region');
@@ -135,10 +160,15 @@ const Panel = (() => {
       card.append(headRow, body);
       (item.wide ? wideList : list).appendChild(card);
 
-      const e = { item, card, head, body, rendered: false, open: true };
+      const e = { item, card, head, body, metaEl, rendered: false, open: true };
       entries[item.id] = e;
       order.push(item.id);
-      head.addEventListener('click', () => setOpen(item.id, !e.open));
+      head.addEventListener('click', () => {
+        const on = !e.open;
+        setOpen(item.id, on);
+        if (on && item.help) Explain.firstOpen(opts.phase, item.id, item.help, card, updateGuide);
+        updateGuide();
+      });
       apply(e, isOpen(item));
     });
 
@@ -152,8 +182,20 @@ const Panel = (() => {
     /* refreshAll läuft bei jedem erzeugten Wort — teure Karten (manual) bleiben dabei stehen. */
     function refreshAll() { order.forEach(id => { if (!entries[id].item.manual) refresh(id); }); }
 
+    /* Führung: der erste noch nicht erklärte Reiter aus der Liste pulsiert. */
+    let guideList = [];
+    const nextId = () => guideList.find(id => entries[id] && !Explain.isSeen(opts.phase, id));
+    function updateGuide() {
+      const next = nextId();
+      order.forEach(id => entries[id].card.classList.toggle('is-next', id === next));
+      if (opts.onGuide) opts.onGuide();
+    }
+    function guide(list) { guideList = list || []; updateGuide(); }
+    function updateMeta() { order.forEach(id => { const e = entries[id]; if (e.metaEl) e.metaEl.textContent = e.item.meta(); }); }
+
     const isCardOpen = id => !!(entries[id] && entries[id].open);
-    return { refresh, refreshAll, setOpen, reveal, isOpen: isCardOpen, root };
+    const nextItem = () => { const id = nextId(); return id ? entries[id].item : null; };
+    return { refresh, refreshAll, setOpen, reveal, guide, nextItem, updateMeta, isOpen: isCardOpen, root };
   }
   return { mount, CAT };
 })();

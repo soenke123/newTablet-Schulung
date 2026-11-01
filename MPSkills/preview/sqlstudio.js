@@ -147,7 +147,6 @@
          übersetzt. Vorlagen (Haustiere, Schule, Bibliothek, Online-Shop) sind dabei; die Lehrkraft
          teilt eigene Datenbanken mit der Klasse und legt fest, ob nur <strong>abgefragt</strong>
          oder auch die <strong>Struktur geändert</strong> werden darf. Jedes Kind arbeitet auf
-         seiner eigenen Kopie.</p>
-      <p>Der Skill ist in der <strong>Beta</strong> und vorerst nur für Admins sichtbar.</p>`
+         seiner eigenen Kopie.</p>`
   });
 })();

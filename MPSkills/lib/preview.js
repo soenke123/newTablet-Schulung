@@ -415,7 +415,7 @@
     if (window.MPTool) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'lib/tool.js?v=20261030p';
+      s.src = 'lib/tool.js?v=20261101a';
       s.onload  = () => window.MPTool ? resolve() : reject(new Error('MPTool fehlt'));
       s.onerror = () => reject(new Error('lib/tool.js nicht gefunden'));
       document.head.appendChild(s);
@@ -460,6 +460,8 @@
     if (!overlay || !host) return;
 
     document.getElementById('pvTitle').textContent = meta.title || '';
+    const sub = document.getElementById('pvSub');
+    if (sub) { sub.textContent = meta.subtitle || ''; sub.hidden = !meta.subtitle; }
     document.getElementById('pvBlurb').innerHTML   = show.blurb || '';
     setCaption('');
 

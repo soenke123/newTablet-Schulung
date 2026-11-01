@@ -60,6 +60,8 @@
     if (!await api.waitFor(P(3) + '[data-spot="train"]', 8000)) return;
     api.caption('Phase 3 · Ein echtes kleines Netz lernt');
     if (!await api.wait(1200)) return;
+    // Reiter „Training“ aufklappen, damit man die Fehlerlinie fallen sieht.
+    api.click(P(3) + '.panel-item.closed[data-card="train"] .panel-item-head');
     api.click(P(3) + '[data-spot="train"]');
     if (!await api.wait(10000)) return;
     api.click(P(3) + '[data-spot="train"]');
@@ -72,9 +74,9 @@
 
     // Zurückstellen mit den eigenen Knöpfen, dann wieder vorn anfangen.
     api.caption('');
-    api.click(P(3) + '[data-spot="gen"] ~ .btn:last-child');      // ↺ Von vorn
-    api.click(P(3) + '[data-spot="train"] ~ .btn');                // ↺ Netz zurücksetzen
-    api.click(P(1) + '[data-spot="play"] ~ .btn:last-child');      // ↺ Neu starten
+    api.click(P(3) + '[data-spot="genreset"]');                    // ↺ Von vorn
+    api.click(P(3) + '[data-spot="netreset"]');                    // ↺ Netz zurücksetzen
+    api.click(P(1) + '[data-spot="reset"]');                       // ↺ Neu starten
     api.click('.phase-btn[data-n="1"]');
     await api.wait(1000);
   }
@@ -145,14 +147,17 @@
     fade: false,
     blurb: `
       <p>Ein <strong>Mini-Sprachmodell zum Aufschrauben</strong>: Die Klasse wählt, mit welchen
-         Texten die KI gefüttert wird, und sieht in drei Phasen zu, wie daraus Text entsteht —
-         Wort für Wort, mit allen Wahrscheinlichkeiten.</p>
-      <p><strong>Frei schreiben</strong> (gezählte Wortfolgen, Kontextfenster, Zufall) ·
-         <strong>Frage &amp; Antwort</strong> (passende Texte nachschlagen, Wortkarte) ·
-         <strong>Echtes Netz</strong> (ein kleines neuronales Netz lernt live, Netz-Bild mit echten
-         Gewichten). Ein Leitfaden mit Aufgaben hakt sich von selbst ab, Erklärungen stehen kurz
-         hinter den ?-Knöpfen.</p>
-      <p>Jede Person arbeitet <strong>für sich</strong>, nichts wird geteilt. Der Skill ist noch in
-         der <strong>Beta</strong>.</p>`
+         Texten die KI gefüttert wird, und sieht zu, wie daraus Text entsteht —
+         Wort für Wort, mit allen Wahrscheinlichkeiten. So wird greifbar, was in Sprach-KIs
+         wie ChatGPT passiert: Sie lernen aus Texten selbst, welches Wort wahrscheinlich als
+         Nächstes kommt.</p>
+      <p>Drei Phasen auf denselben Textwelten: <strong>Frei schreiben</strong> (gezählte
+         Wortfolgen, Kontextfenster, Zufall) · <strong>Frage &amp; Antwort</strong> als Chat
+         (passende Texte nachschlagen, Wortkarte) · <strong>Echtes Netz</strong> (ein kleines
+         neuronales Netz lernt live, Netz-Bild mit echten Gewichten).</p>
+      <p>Die Lehrkraft gibt die Phasen einzeln für die Klasse frei. Eine kurze Tour führt durch
+         jede Phase, Erklärungen stehen hinter den ?-Knöpfen. Jede Person arbeitet
+         <strong>für sich</strong>, nichts wird geteilt. Der Skill ist noch in der
+         <strong>Beta</strong>.</p>`
   });
 })();

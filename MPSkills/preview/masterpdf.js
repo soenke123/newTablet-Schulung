@@ -92,18 +92,22 @@
     wide: true,
     fade: false,
     blurb: `
-      <p>PDFs <strong>lesen, sortieren und bearbeiten</strong> — direkt im Browser, ohne Raum
-         und ohne Anmeldung. Die Datei bleibt auf deinem Gerät: nichts wird hochgeladen
-         („Lokal verarbeitet").</p>
+      <p>PDFs <strong>lesen, sortieren und bearbeiten</strong> — direkt im Browser, ohne Raum.
+         Die Datei bleibt auf deinem Gerät: nichts wird hochgeladen („Lokal verarbeitet“).
+         Das Online-Tool steht <strong>angemeldeten Lehrkräften</strong> offen; die
+         <strong>Windows-Fassung</strong> lässt sich ohne Konto herunterladen.</p>
       <p><strong>Lesen:</strong> alle Seiten untereinander oder paarweise, Zoom, Textsuche,
-         Vollbild. <strong>Seiten:</strong> sortieren per Drag &amp; Drop, drehen, doppeln, löschen,
-         leere Seiten einfügen und mehrere PDFs zu einer zusammenfügen — mit Rückgängig und
-         Wiederholen. <strong>Zeichnen:</strong> Stift, Textmarker, Linien, Pfeile, Rechtecke und
-         Ellipsen mit Radierer. <strong>Kommentieren:</strong> echte PDF-Kommentare — Notizen,
-         Markierungen, Unterstreichen, Textfelder —, auch vorhandene Kommentare aus anderen
-         Programmen werden eingelesen und stehen in der Kommentarliste.</p>
+         Vorlesen, Fokusmodus. <strong>Seiten:</strong> sortieren per Drag &amp; Drop, drehen,
+         doppeln, löschen, leere Seiten einfügen und mehrere PDFs oder Bilder zu einer
+         zusammenfügen — mit Rückgängig. <strong>Zeichnen:</strong> Stift, Textmarker, Formen,
+         Radierer, mit Handflächenerkennung am Tablet. <strong>Kommentieren:</strong> echte
+         PDF-Kommentare, auch vorhandene aus anderen Programmen.</p>
+      <p><strong>Bearbeiten:</strong> Text ändern, Schwärzen, Wasserzeichen und Texterkennung (OCR).
+         <strong>Einfügen:</strong> Text, Bilder, Unterschrift und Formularfelder; vorhandene
+         Formulare lassen sich ausfüllen. Passwortgeschützte PDFs öffnen sich nach Eingabe des
+         Passworts.</p>
       <p>Am Ende exportierst du das ganze Dokument, die aktuelle Seite oder eine Auswahl
-         (z. B. <em>1-3, 5</em>) als neue PDF. Das Beispiel oben ist ein erfundenes Referat über Zahlensysteme im Tierreich mit Tabelle.
-         Der Skill ist noch in der <strong>Beta</strong>.</p>`
+         (z. B. <em>1-3, 5</em>) als PDF — auf Wunsch mit Passwort — oder als Word-Datei.
+         Das Beispiel oben ist ein erfundenes Referat über Zahlensysteme im Tierreich.</p>`
   });
 })();

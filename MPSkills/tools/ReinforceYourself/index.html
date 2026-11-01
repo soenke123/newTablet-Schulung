@@ -155,7 +155,7 @@ body{
 }
 .btn-teach small{font-weight:500; color:var(--mp-ink-faint);}
 .btn-teach:hover{background:var(--mp-accent-dim);}
-body.is-teacher .btn-teach{display:inline-flex;}
+body.is-teacher .btn-teach, body.is-demo .btn-teach{display:inline-flex;}
 
 /* ── Startseite: Erklärung oben, darunter zwei Bereiche mit Kacheln ── */
 #screen-home{max-width:1100px; padding:20px 20px 48px;}
@@ -170,6 +170,15 @@ body.is-teacher .btn-teach{display:inline-flex;}
 .home-hero .rl-steps li{color:var(--mp-ink-soft);}
 .home-hero .rl-steps li strong{color:var(--mp-ink);}
 .home-hero .rl-steps li::before{background:var(--mp-accent); color:var(--mp-on-accent);}
+.home-hero .rl-cycle li{display:block; position:relative; padding-left:24px;}
+.home-hero .rl-cycle li::before{content:''; position:absolute; left:2px; top:5px; width:13px; height:13px; border-radius:4px; background:var(--rc);}
+.rl-cycle li strong{color:var(--rc) !important;}
+.rl-cycle .c-agent{--rc:#3566c8;} .rl-cycle .c-env{--rc:#3f8f46;} .rl-cycle .c-reward{--rc:#c9821c;} .rl-cycle .c-learn{--rc:#7457b8;}
+html[data-theme="dark"] .rl-cycle .c-agent{--rc:#7fa6f0;} html[data-theme="dark"] .rl-cycle .c-env{--rc:#7cc684;}
+html[data-theme="dark"] .rl-cycle .c-reward{--rc:#f0b453;} html[data-theme="dark"] .rl-cycle .c-learn{--rc:#ad94ec;}
+@media (prefers-color-scheme: dark){ html:not([data-theme]) .rl-cycle .c-agent{--rc:#7fa6f0;} html:not([data-theme]) .rl-cycle .c-env{--rc:#7cc684;}
+  html:not([data-theme]) .rl-cycle .c-reward{--rc:#f0b453;} html:not([data-theme]) .rl-cycle .c-learn{--rc:#ad94ec;} }
+.rl-again{margin:0; font-size:.88rem; color:var(--mp-ink-soft); font-style:italic;}
 .home-hero-img{width:100%; max-height:360px; object-fit:contain; border-radius:12px;}
 @media(max-width:780px){ .home-hero{grid-template-columns:1fr; padding:18px;} .home-hero-img{max-height:260px; order:-1;} }
 
@@ -183,7 +192,7 @@ body.is-teacher .btn-teach{display:inline-flex;}
 .area-head p{font-size:.9rem; color:var(--mp-ink-soft); margin-top:1px;}
 .area-n{flex:none; width:34px; height:34px; border-radius:11px; display:grid; place-items:center;
   font-weight:700; background:var(--mp-accent); color:var(--mp-on-accent);}
-.area-tiles{display:grid; grid-template-columns:minmax(0,360px); gap:12px;}
+.area-tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),360px)); gap:12px;}
 
 .flow{display:grid; grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr) 30px minmax(0,1fr); gap:6px; align-items:center;}
 .flow-step{display:flex; flex-direction:column; gap:10px; min-width:0;}
@@ -218,6 +227,7 @@ body.is-teacher .btn-teach{display:inline-flex;}
    weil ein Knopf nicht in einem Knopf stehen darf) */
 .tile{position:relative;}
 body.is-teacher .tile-txt{padding-bottom:34px;}
+body.is-teacher .tile-info .tile-txt{padding-bottom:34px;}
 .tile-share{
   display:none; position:absolute; left:92px; top:calc(50% + 1px); height:28px; align-items:center; gap:6px;
   padding:0 11px 0 9px; font:inherit; font-size:.78rem; font-weight:600; border-radius:999px; cursor:pointer;
@@ -229,6 +239,24 @@ body.is-teacher .tile-txt{padding-bottom:34px;}
 .tile-share.is-on{background:var(--mp-accent); border:1px solid var(--mp-accent); color:var(--mp-on-accent);}
 body.is-teacher .tile-share{display:inline-flex;}
 body.is-teacher .tile.is-shared{border-color:var(--mp-accent-edge);}
+
+
+/* Erklärung im Fenster (Kachel „Was ist Reinforcement Learning?“) */
+dialog.task-dialog.rl-dialog{max-width:900px; width:calc(100% - 24px); max-height:calc(100% - 24px); overflow:auto;}
+.rl-dialog .home-hero{background:none; border:0; box-shadow:none; padding:0;}
+.rl-dialog .dialog-btns{margin-top:16px;}
+.rl-dialog .btn-primary{background:var(--mp-accent); color:var(--mp-on-accent); padding:11px 26px; border-radius:999px; font-size:1rem;}
+@media(max-width:780px){ .rl-dialog .home-hero{padding:0;} }
+.tile-info .tile-txt b{line-height:1.25;}
+
+/* Nicht freigegeben (Klasse): nur eine graue Kachel mit Schloss — kein Bild, kein Text */
+.tile.is-locked{background:var(--mp-line); border-color:var(--mp-line); box-shadow:none;}
+.tile.is-locked .tile-open{opacity:1; filter:none; min-height:92px; justify-content:center;}
+.tile.is-locked .tile-art, .tile.is-locked .tile-txt{visibility:hidden;}
+.tile.is-locked .tile-art{position:absolute; width:1px; height:1px;}
+.tile.is-locked .tile-txt{position:absolute; width:1px; height:1px; overflow:hidden;}
+.tile.is-locked .tile-lock{display:grid; position:static; width:34px; height:34px; background:var(--mp-paper-2); color:var(--mp-ink-faint);}
+.tile.is-locked .tile-lock svg{width:18px; height:18px;}
 
 /* Bilder in Kacheln und Aufgabe (passen sich Hell/Dunkel an) */
 .art-ttt .g{stroke:var(--mp-ink-faint); stroke-width:3; stroke-linecap:round; fill:none; opacity:.6;}
@@ -246,6 +274,16 @@ body.is-teacher .tile.is-shared{border-color:var(--mp-accent-edge);}
 .art-icon .dot{fill:var(--mp-accent); stroke:none;}
 
 /* ── Aufgabe (Fenster beim Öffnen einer Kachel) ── */
+.ry-sheetbtn{display:none;}
+body.can-sheet .ry-sheetbtn{display:inline-flex;}
+.sheet-files{display:grid; gap:10px; margin-top:4px;}
+.sheet-file{display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:14px; text-decoration:none;
+  background:var(--mp-paper-2); border:1px solid var(--mp-line); color:var(--mp-ink); transition:border-color .14s, background .14s;}
+.sheet-file:hover{border-color:var(--mp-accent-edge); background:var(--mp-accent-dim);}
+.sheet-ext{flex:none; width:56px; padding:8px 0; border-radius:10px; text-align:center; font-weight:700; font-size:.82rem;
+  letter-spacing:.04em; background:var(--mp-accent); color:var(--mp-on-accent);}
+.sheet-txt{display:flex; flex-direction:column; line-height:1.3;}
+.sheet-txt span{font-size:.85rem; color:var(--mp-ink-faint);}
 dialog.task-dialog{max-width:560px; padding:26px 26px 22px;
   background:var(--mp-surface); color:var(--mp-ink); border-color:var(--mp-line);}
 .task-k{font-size:.74rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--mp-accent-ink);}
@@ -894,25 +932,12 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   </div>
   <span class="ry-spacer"></span>
   <button class="ry-taskbtn" id="ry-taskbtn" type="button" onclick="showTask()" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2"/></svg><span>Aufgabe</span></button>
+  <button class="ry-taskbtn ry-sheetbtn" type="button" onclick="document.getElementById('sheet-dialog').showModal()" title="Leitfaden und Arbeitsblätter für die Stunde"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Arbeitsblatt</span></button>
   <button class="ry-reset" type="button" onclick="resetAll()" title="Alles zurücksetzen"><span class="ry-reset-long">Zurücksetzen</span><span class="ry-reset-short" aria-hidden="true">↺</span></button>
 </header>
 
 <!-- ═══════════════════════════════════════════════ STARTSEITE -->
 <div id="screen-home" class="screen">
-  <section class="home-hero">
-    <div class="home-hero-txt">
-      <span class="home-kicker">Reinforcement Learning</span>
-      <h1>Wie lernt eine KI durch Belohnung?</h1>
-      <p class="home-lead">Niemand erklärt der KI die Regeln. Sie probiert aus – und merkt sich, was belohnt wurde.</p>
-      <ol class="rl-steps">
-        <li><strong>Beobachten</strong> — Die KI sieht den aktuellen Zustand der Umgebung.</li>
-        <li><strong>Handeln</strong> — Sie wählt eine Aktion. Am Anfang geschieht das zufällig.</li>
-        <li><strong>Feedback</strong> — Die Umgebung antwortet mit Belohnung oder Bestrafung.</li>
-        <li><strong>Lernen</strong> — Was belohnt wurde, wählt sie beim nächsten Mal häufiger. Was bestraft wurde, seltener.</li>
-      </ol>
-    </div>
-    <img class="home-hero-img" src="infografik.png" alt="Infografik: Kreislauf aus Zustand, Aktion, Belohnung und Lernen">
-  </section>
 
   <p class="home-note" id="home-note" hidden></p>
 
@@ -922,6 +947,14 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
       <h2>Du trainierst die KI</h2>
     </div>
     <div class="area-tiles">
+      <div class="tile tile-info" data-part="info">
+        <button class="tile-open" type="button" onclick="openPart('info')">
+          <span class="tile-art"><svg viewBox="0 0 64 64" class="art-icon"><path d="M32 8a17 17 0 0 0-9 31v7h18v-7a17 17 0 0 0-9-31z"/><path d="M26 54h12M28 60h8"/></svg></span>
+          <span class="tile-txt"><b>Was ist Reinforcement Learning?</b></span>
+          <span class="tile-lock" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+        </button>
+        <button class="tile-share" type="button" onclick="toggleShare('info')"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg><span>Teilen</span></button>
+      </div>
       <div class="tile" data-part="ttt">
         <button class="tile-open" type="button" onclick="openPart('ttt', true)">
           <span class="tile-art"><svg viewBox="0 0 64 64" class="art-ttt"><path class="g" d="M24 8v48M40 8v48M8 24h48M8 40h48"/><path class="x" d="M11 11l9 9M20 11l-9 9M43 27l9 9M52 27l-9 9"/><circle class="o" cx="32" cy="32" r="5"/><circle class="o" cx="48" cy="16" r="5"/></svg></span>
@@ -1266,6 +1299,44 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   </div>
 </dialog>
 
+<!-- ════════════════════════════════════════ ERKLÄRUNG „Was ist Reinforcement Learning?“ -->
+<dialog id="rl-dialog" class="task-dialog rl-dialog">
+  <div class="home-hero">
+    <div class="home-hero-txt">
+      <span class="home-kicker">Verstärkendes Lernen · Reinforcement Learning</span>
+      <h1>Wie lernt eine KI durch Belohnung?</h1>
+      <p class="home-lead">Niemand erklärt der KI die Regeln. Sie läuft immer wieder durch diesen Kreislauf:</p>
+      <ol class="rl-steps rl-cycle">
+        <li class="c-agent"><strong>KI-Agent</strong> — trifft eine Entscheidung, am Anfang ganz zufällig.</li>
+        <li class="c-env"><strong>Umgebung</strong> — Die KI handelt (Aktion), die Umgebung reagiert darauf.</li>
+        <li class="c-reward"><strong>Belohnung</strong> — Die Umgebung gibt Feedback, positiv oder negativ, und liefert den neuen Zustand.</li>
+        <li class="c-learn"><strong>Lernen</strong> — Die KI nutzt das Feedback und passt ihre Strategie an, um in Zukunft mehr Belohnung zu bekommen.</li>
+      </ol>
+      <p class="rl-again">Dann beginnt der Kreislauf von vorn – Runde für Runde wird die KI besser.</p>
+    </div>
+    <img class="home-hero-img" src="infografik.png" alt="Infografik: Kreislauf aus KI-Agent, Umgebung, Belohnung und Lernen">
+  </div>
+  <div class="dialog-btns">
+    <button class="btn btn-primary" type="button" onclick="document.getElementById('rl-dialog').close()">Schließen</button>
+  </div>
+</dialog>
+
+<!-- ════════════════════════════════════════ ARBEITSBLATT (nur Lehrkraft / allein geöffnet) -->
+<dialog id="sheet-dialog" class="task-dialog">
+  <div class="task-k">Zur Stunde</div>
+  <h3>Leitfaden + Arbeitsblätter</h3>
+  <p class="task-text" style="margin-bottom:12px"><span style="color:var(--mp-ink-soft)">Seite 1 Leitfaden für dich, Seite 2 AB 1, Seite 3 AB 2 (erst austeilen, wenn die Umgebungen geteilt sind).</span></p>
+  <div class="sheet-files">
+    <a class="sheet-file" href="ReinforceYourself%20Arbeitsblatt.pdf" target="_blank" rel="noopener" onclick="document.getElementById('sheet-dialog').close()">
+      <span class="sheet-ext">PDF</span><span class="sheet-txt"><b>Ansehen und ausdrucken</b><span>Geht in einem neuen Tab auf.</span></span></a>
+    <a class="sheet-file" href="ReinforceYourself%20Arbeitsblatt.docx" download="ReinforceYourself Arbeitsblatt.docx" onclick="document.getElementById('sheet-dialog').close()">
+      <span class="sheet-ext">DOCX</span><span class="sheet-txt"><b>In Word ändern</b><span>Wird heruntergeladen.</span></span></a>
+  </div>
+  <div class="dialog-btns">
+    <button class="btn btn-primary" type="button" onclick="document.getElementById('sheet-dialog').close()">Schließen</button>
+  </div>
+</dialog>
+
 <!-- ════════════════════════════════════════ AUFGABE (beim Öffnen einer Kachel) -->
 <dialog id="task-dialog" class="task-dialog">
   <div class="task-k" id="task-k"></div>
@@ -1281,6 +1352,23 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
 
 <script>
 'use strict';
+
+// Schaufenster (MPSkills/preview/reinforce.js): mit ?demo=1 merkt sich die Seite
+// nichts. localStorage wird VOR allem anderen durch einen Speicher im
+// Arbeitsspeicher ersetzt (wie tools/TinyLM/js/demo.js) – die Vorschau startet
+// frisch und überschreibt nicht den Stand, mit dem hier jemand arbeitet.
+if (/[?&]demo=1(&|$)/.test(location.search)) (function () {
+  const m = new Map();
+  const mem = {
+    getItem: k => (m.has(String(k)) ? m.get(String(k)) : null),
+    setItem: (k, v) => { m.set(String(k), String(v)); },
+    removeItem: k => { m.delete(String(k)); },
+    clear: () => m.clear(),
+    key: i => [...m.keys()][i] ?? null,
+    get length() { return m.size; }
+  };
+  try { Object.defineProperty(window, 'localStorage', { value: mem, configurable: true }); } catch (e) { /* dann eben echt */ }
+})();
 
 // ═══════════════════════════════════════════════════════════════════
 // CONTEXT & NAVIGATION
@@ -1360,7 +1448,7 @@ const TEACHER = ROOM === 'lehrer';
 const STUDENT = ROOM === 'schueler';
 const DEMO    = new URLSearchParams(location.search).get('demo') === '1';
 
-const PARTS = ['ttt', 'train', 'envA', 'envB', 'sandbox'];
+const PARTS = ['info', 'ttt', 'train', 'envA', 'envB', 'sandbox'];
 const NEEDS_TRAIN = ['envA', 'envB', 'sandbox'];
 function normParts(list) {
   const set = new Set((list || []).filter(x => PARTS.includes(x)));
@@ -1375,6 +1463,7 @@ const SCREEN_PART = {
   'screen-p3-sandbox': 'sandbox'
 };
 const PART_INFO = {
+  info:    { title: 'Erklärung',    area: 'Du trainierst die KI' },
   ttt:     { title: 'Gegen die KI', area: 'Du trainierst die KI' },
   train:   { title: 'Training',     area: 'Du lernst wie eine KI' },
   envA:    { title: 'Umgebung A',   area: 'Du lernst wie eine KI' },
@@ -1399,6 +1488,7 @@ function closeDialogs() { document.querySelectorAll('dialog[open]').forEach(d =>
 
 function openPart(p, withTask) {
   if (!PART_INFO[p] || !partUsable(p)) return;
+  if (p === 'info') { document.getElementById('rl-dialog').showModal(); return; }
   stopTimers();
   closeDialogs();
   try { localStorage.setItem('ry.part', p); } catch (e) { /* egal */ }
@@ -1446,7 +1536,7 @@ function setClassParts(list, fromServer) {
 }
 
 function renderHome() {
-  document.querySelectorAll('.tile').forEach(t => {
+  document.querySelectorAll('.tile[data-part]').forEach(t => {
     const p = t.dataset.part, on = isShared(p), ok = partUsable(p);
     t.classList.toggle('is-locked', !ok);
     t.classList.toggle('is-shared', on);
@@ -1544,8 +1634,8 @@ function ryToast(msg) {
   toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
 }
 
-// Alles, was sich die Seite merkt, liegt im Gerät unter „ry.“ — getrennt
-// vom Spiel im GameHub, das dieselbe Herkunft hat.
+// Alles, was sich die Seite merkt, liegt im Gerät unter „ry.“ — eigener
+// Präfix, damit nichts mit dem GameHub (dieselbe Herkunft) kollidiert.
 let gamePathLearned  = true;
 let alienPathLearned = true;
 
@@ -1946,7 +2036,7 @@ function trainReset() {
 // zieht zufällig (wie im Training), die KI (Schwarz) wählt zufällig nach
 // ihren Gewichten – Sieg verstärkt, Niederlage schwächt (wie finish()).
 function trainPlay50() {
-  if (!TEACHER) return;
+  if (!TEACHER && !DEMO) return;
   stopTimers();
   const pick = (b, moves) => {
     const w = moves.map(m => getW(b, m.from, m.to));
@@ -3761,7 +3851,7 @@ function tttOptimal(b) {
   return cand[(Math.random() * cand.length) | 0];
 }
 function tttPlay50() {
-  if (!TEACHER) return;
+  if (!TEACHER && !DEMO) return;
   tttStop();
   const res0 = { K: 0, D: 0, '=': 0 };
   for (let g = 0; g < 50; g++) {
@@ -3945,6 +4035,8 @@ function tttChart() {
 window.addEventListener('resize', () => { if (document.body.dataset.screen === 'screen-p0-ttt') tttChart(); });
 
 document.body.classList.toggle('is-teacher', TEACHER);
+document.body.classList.toggle('is-demo', DEMO);
+document.body.classList.toggle('can-sheet', !STUDENT && !DEMO);   // Arbeitsblatt: Lehrkraft und allein geöffnet   // Schaufenster: „+50 Runden“ zeigen
 loadDiscoveredNodes();
 updateP1Stats();
 checkUnlockCondition();

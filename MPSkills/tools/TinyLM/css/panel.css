@@ -2,10 +2,10 @@
    (einzeln klappbar). Darunter die breiten Karten (wide: true), z. B. die Wortkarte. */
 .panel-wrap { display: flex; flex-direction: column; gap: 14px; }
 .panel-wide { display: flex; flex-direction: column; gap: 12px; }
-.panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 380px); gap: 18px; align-items: start; }
+.panel { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 370px); gap: 18px; align-items: start; }
 .panel-center { position: sticky; top: calc(var(--head-h) + 14px); }
-.panel-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
-.panel-list { display: flex; flex-direction: column; gap: 10px; }
+.panel-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.panel-list { display: flex; flex-direction: column; gap: 8px; }
 
 .panel-item {
   background: var(--surface); border: 1px solid var(--line);
@@ -43,7 +43,48 @@
 .card-empty { font-size: 0.9rem; color: var(--muted); background: var(--soft); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 12px; text-align: center; }
 .mini-legend { font-size: 0.78rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; white-space: pre-wrap; }
 
+
+/* ---- Reiter zugeklappt: nur ein schmaler Begriff (Sönke 01.11.2026) ---- */
+.panel-item.closed { box-shadow: none; border-color: color-mix(in srgb, var(--cat-color) 22%, var(--line)); border-radius: 14px; }
+.panel-item.closed .panel-item-head { min-height: 40px; padding-top: 6px; padding-bottom: 6px; padding-left: 12px; }
+.panel-item.closed .panel-item-head h3 { font-size: 0.94rem; }
+.panel-item.closed .panel-item-hint { min-width: 1.35rem; height: 1.35rem; font-size: 0.7rem; border-radius: 7px; }
+.panel-item.closed .help-btn { width: 26px; height: 26px; font-size: 0.8rem; opacity: .75; }
+.panel-item.closed:hover { border-color: var(--cat-color); }
+.panel-item-hint.icon { background: var(--cat-tint); font-size: 0.9rem; padding: 0 3px; }
+.panel-item-meta {
+  font-family: var(--font-mono); font-size: 0.74rem; color: var(--cat-color); flex: none;
+  background: color-mix(in srgb, var(--cat-tint) 60%, var(--surface)); border-radius: 8px; padding: 1px 7px;
+}
+/* Hier geht es weiter: leises Pulsieren am nächsten noch nicht erklärten Reiter */
+.panel-item.is-next { border-color: var(--cat-color); }
+.panel-item.is-next::after {
+  content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 0 var(--cat-color); animation: next-pulse 2s ease-out infinite;
+}
+.panel-item.is-next .panel-item-head h3::after {
+  content: 'Schau mal!'; margin-left: 8px; font-family: var(--font-body, inherit); font-size: 0.68rem; font-weight: 700;
+  letter-spacing: .03em; color: #fff; background: var(--cat-color); border-radius: 99px; padding: 1px 7px; vertical-align: 2px;
+}
+@keyframes next-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cat-color) 55%, transparent); } 100% { box-shadow: 0 0 0 10px transparent; } }
+
+/* ---- Reiter „Textwelten“ (app.js textweltenItem) ---- */
+.tw-mini { display: flex; flex-direction: column; gap: 4px; }
+.tw-mini-row {
+  display: grid; grid-template-columns: 12px minmax(0, 1fr) auto auto; gap: 8px; align-items: center;
+  padding: 5px 4px 5px 8px; border-radius: 10px;
+}
+.tw-mini-row:hover { background: var(--soft); }
+.tw-mini-row .dot { width: 12px; height: 12px; border-radius: 4px; background: var(--tc); }
+.tw-mini-row.off .dot { background: var(--line); }
+.tw-mini-name { font-size: 0.9rem; font-weight: 600; text-align: left; background: none; border: 0; padding: 0; color: var(--ink); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: inherit; }
+.tw-mini-row.off .tw-mini-name { color: var(--muted); font-weight: 500; }
+.tw-mini-n { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); }
+.tw-mini-row input { width: 20px; height: 20px; accent-color: var(--tc); cursor: pointer; margin: 0; }
+.tw-mini-open { align-self: stretch; }
+
 @media (max-width: 980px) {
   .panel { grid-template-columns: minmax(0, 1fr); }
   .panel-center { position: static; }
 }
+@media (prefers-reduced-motion: reduce) { .panel-item.is-next::after { animation: none; } }
