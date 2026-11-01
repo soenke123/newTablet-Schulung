@@ -80,7 +80,8 @@
   const MPS_GROUPS = [
     { id: 'mps_knowledgestack', skill: 'knowledgestack', folder: 'KnowlegeStack',        label: 'Knowledge Stack', gold: true,
       hint: 'Spiel ein Quiz bis zum Ende — dann bekommst du das Wesen, mit dem du gespielt hast. Wer Platz 1 holt, bekommt es zusätzlich in Gold. Das klappt nur, wenn du beim Spielen angemeldet bist.' },
-    { id: 'mps_wordisland',     skill: 'wordisland',     folder: 'Wordisland',           label: 'Wordisland' },
+    { id: 'mps_wordisland',     skill: 'wordisland',     folder: 'Wordisland',           label: 'Wordisland',
+      hint: 'Gewinne mit deinem Volk im Teamspiel — dann bekommst du es. Beim zweiten Sieg mit demselben Volk kommt die große Figur dazu, in Gold, wenn du auf deiner eigenen Insel schon einmal Level 5 erreicht hast. Echsen bekommst du, sobald eine auf deiner Insel so weit gewachsen ist. Das klappt nur, wenn du angemeldet bist.' },
     { id: 'mps_clash-of-math',  skill: 'clash-of-math',  folder: 'Kingdoms of Mathoria', label: 'Kingdoms of Mathoria',
       hint: 'Gewinne mit deinem Team eine Partie — dann bekommst du das Bild deines Volkes. Das klappt nur, wenn du beim Spielen angemeldet bist.' },
     { id: 'mps_wildclusters',   skill: 'wildclusters',   folder: 'Wildclusters',         label: 'Wild Clusters',
@@ -308,24 +309,35 @@
       ['kruemel', '38_Krümel_avatar.png',  'Krümel'],
       ['howl',    '39_Howl_avatar.png',    'Howl']
     ],
-    // Namen der Völker wie TEAMS in tools/wordisland/tool.js, Stufe = Bildstufe der Figur
+    // Namen der Völker wie TEAMS in tools/wordisland/tool.js, Stufe = Bildstufe der Figur.
+    // Frei per Trigger (Migration 0256): Stufe 1 = erster Sieg im Teamspiel mit dem Volk,
+    // Stufe 4 = zweiter Sieg, Gold = zwei Siege + auf der eigenen Insel einmal Level 5.
+    // Echsen: sobald eine Echse der eigenen Insel die Form erreicht (Variante wie in tool.js).
     mps_wordisland: [
       ['blue_1',    'blue 1 crew_avatar.png',    'Robo-Enten Stufe 1'],
-      ['blue_4',    'blue 4 crew_avatar.png',    'Robo-Enten Stufe 4'],
+      ['blue_4',    'blue 4 crew_avatar.png',    'Robo-Enten Stufe 4', { gold: true }],
       ['green_1',   'green 1 crew_avatar.png',   'Brokkoli-Giraffen Stufe 1'],
-      ['green_4',   'green 4 crew_avatar.png',   'Brokkoli-Giraffen Stufe 4'],
+      ['green_4',   'green 4 crew_avatar.png',   'Brokkoli-Giraffen Stufe 4', { gold: true }],
       ['lila_1',    'lila 1 crew_avatar.png',    'Kosmische Katzen Stufe 1'],
-      ['lila_4',    'lila 4 crew_avatar.png',    'Kosmische Katzen Stufe 4'],
+      ['lila_4',    'lila 4 crew_avatar.png',    'Kosmische Katzen Stufe 4', { gold: true }],
       ['magenta_1', 'magenta 1 crew_avatar.png', 'Spuk-Einhorn Stufe 1'],
-      ['magenta_4', 'magenta 4 crew_avatar.png', 'Spuk-Einhorn Stufe 4'],
+      ['magenta_4', 'magenta 4 crew_avatar.png', 'Spuk-Einhorn Stufe 4', { gold: true }],
       ['red_1',     'red 1 crew_avatar.png',     'Toast-Ritter Stufe 1'],
-      ['red_4',     'red 4 crew_avatar.png',     'Toast-Ritter Stufe 4'],
+      ['red_4',     'red 4 crew_avatar.png',     'Toast-Ritter Stufe 4', { gold: true }],
       ['rosa_1',    'rosa 1 crew_avatar.png',    'Wolken-Piraten Stufe 1'],
-      ['rosa_4',    'rosa 4 crew_avatar.png',    'Wolken-Piraten Stufe 4'],
+      ['rosa_4',    'rosa 4 crew_avatar.png',    'Wolken-Piraten Stufe 4', { gold: true }],
       ['tuerkis_1', 'türkis 1 crew_avatar.png',  'Okto-Pferdchen Stufe 1'],
-      ['tuerkis_4', 'türkis 4 crew_avatar.png',  'Okto-Pferdchen Stufe 4'],
+      ['tuerkis_4', 'türkis 4 crew_avatar.png',  'Okto-Pferdchen Stufe 4', { gold: true }],
       ['yellow_1',  'yellow 1 crew_avatar.png',  'Mal-Hasen Stufe 1'],
-      ['yellow_4',  'yellow 4 crew_avatar.png',  'Mal-Hasen Stufe 4']
+      ['yellow_4',  'yellow 4 crew_avatar.png',  'Mal-Hasen Stufe 4', { gold: true }],
+      // Echsen der eigenen Insel (Bilder wie sprites/Echse/, ids wie wi_echse_avatars in 0256)
+      ['echse1',         'Echse1_avatar.png',         'Echse geschlüpft'],
+      ['echse2b',        'Echse2b_avatar.png',        'Echse gewachsen'],
+      ['echse2b_snooze', 'Echse2bsnooze_avatar.png',  'Echse schläft'],
+      ['echse4b',        'Echse4b_avatar.png',        'Kristall-Echse'],
+      ['echse4c',        'Echse4c_avatar.png',        'Federkamm-Echse'],
+      ['echse4d',        'Echse4d_avatar.png',        'Schnörkel-Echse'],
+      ['echse4e_swim',   'Echse4eswim_avatar.png',    'Schwimm-Echse']
     ],
     // Namen der Völker wie FACTION_LABEL in tools/clash-of-math/tool.js
     'mps_clash-of-math': [
@@ -404,15 +416,17 @@
       ['kt_ghost',   'kt_ghost_avatar.png',   'Magic Ghost']
     ]
   };
-  /* Gruppen mit gold: true haben zu jedem Bild eine goldene Fassung
+  /* Gruppen mit gold: true haben zu jedem Bild eine goldene Fassung,
+     einzelne Bilder mit { gold: true } als viertem Wert nur dieses
+     (Wordisland: nur die Figuren der Stufe 4)
      (<id>_gold, Datei *_gold_avatar.png). Sie ist ein eigener Eintrag
      (goldOf → Grundbild, Grundbild.goldId → Gold), im Picker aber keine
      eigene Kachel: das Dreieck an der Kachel schaltet um. */
   for (const g of MPS_GROUPS) {
-    for (const [key, file, label] of (MPS_CATALOG[g.id] || [])) {
+    for (const [key, file, label, opt] of (MPS_CATALOG[g.id] || [])) {
       const base = { id: `${g.id}_${key}`, group: g.id, world: 'mpskills', skill: g.skill, folder: g.folder, file, label };
       AVATARS.push(base);
-      if (!g.gold) continue;
+      if (!g.gold && !(opt && opt.gold)) continue;
       base.goldId = `${base.id}_gold`;
       AVATARS.push({ ...base, id: base.goldId, goldId: undefined, goldOf: base.id,
                      file: file.replace(/_avatar\.png$/, '_gold_avatar.png'), label: `${label} Gold` });
