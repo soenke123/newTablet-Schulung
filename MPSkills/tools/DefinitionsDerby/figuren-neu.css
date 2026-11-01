@@ -1,0 +1,36 @@
+/* VORSCHLAG neue Kistenturm-Figuren (figuren-neu.js) — klein und Charakter */
+
+/* Unter 70 px: Kleinkram weg, nur EIN Glanzpunkt je Auge */
+.ds-sm .fine { display: none; }
+.ds-sm .e-open ellipse + circle + circle,
+.ds-sm .e-sad ellipse + circle + circle { display: none; }
+
+/* Ruhebewegungen */
+.dn-fig--troet .ear-l { transform-box: view-box; animation: dn-ear-l 3.2s ease-in-out infinite; }
+.dn-fig--troet .ear-r { transform-box: view-box; animation: dn-ear-r 3.2s ease-in-out infinite; }
+@keyframes dn-ear-l { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(-9deg); } 88% { transform: rotate(4deg); } }
+@keyframes dn-ear-r { 0%, 70%, 100% { transform: none; } 80% { transform: rotate(9deg); } 88% { transform: rotate(-4deg); } }
+.dn-fig--troet .tail, .dn-fig--rexi .tail { animation: dn-wag 1.6s ease-in-out infinite; }
+@keyframes dn-wag { 50% { transform: rotate(8deg); } }
+.c-idle.dn-fig--helmi:not(.ds-lift) .cr-root { animation: dn-munch 2.4s ease-in-out infinite; }
+@keyframes dn-munch { 0%, 60%, 100% { transform: none; } 70% { transform: scale(1.04, .97); } 80% { transform: none; } 88% { transform: scale(1.03, .98); } }
+.dn-fig--anton .ant-l { animation: dn-ant 2.2s ease-in-out infinite; }
+.dn-fig--anton .ant-r { animation: dn-ant 2.2s ease-in-out infinite reverse; }
+@keyframes dn-ant { 50% { transform: rotate(-8deg); } }
+.c-idle.dn-fig--okti:not(.ds-lift) .cr-root { animation: dn-float 3s ease-in-out infinite; }
+@keyframes dn-float { 50% { transform: translateY(-3px); } }
+.c-idle.dn-fig--frosti:not(.ds-lift) .cr-root { animation: dn-shiver 4s ease-in-out infinite; }
+@keyframes dn-shiver { 0%, 80%, 100% { transform: none; } 83% { transform: translateX(-.8px); } 86% { transform: translateX(.8px); } 89% { transform: translateX(-.6px); } }
+.dn-fig--packi .flap-l { animation: dn-flap-l 2.6s ease-in-out infinite; }
+.dn-fig--packi .flap-r { animation: dn-flap-r 2.6s ease-in-out infinite; }
+@keyframes dn-flap-l { 50% { transform: rotate(10deg); } }
+@keyframes dn-flap-r { 50% { transform: rotate(-10deg); } }
+/* Rexi: Winzärmchen strecken sich beim Heben nur ein bisschen — der Witz */
+.ds-lift.dn-fig--rexi .arm-l { animation: dn-tiny-l .9s cubic-bezier(.3,.7,.3,1) both; }
+.ds-lift.dn-fig--rexi .arm-r { animation: dn-tiny-r .9s cubic-bezier(.3,.7,.3,1) both; }
+@keyframes dn-tiny-l { 48%, 74% { transform: rotate(150deg); } }
+@keyframes dn-tiny-r { 48%, 74% { transform: rotate(-150deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dn-fig * { animation: none !important; }
+}
