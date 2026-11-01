@@ -59,9 +59,11 @@ const NetView = (() => {
       const C = net.C, d = net.d, H = net.H, inDim = C * d;
       const top = 58, bot = Math.max(top + 80, ch - 30);
       const span = bot - top;
-      const wordR = 108;
-      const inX = wordR + 42;
-      const outX = Math.max(inX + 140, cw - 170);
+      /* Schmal (Reiter rechts, ~330 px): kleinere Wortkästen, Ausgabe näher an den rechten Rand. */
+      const narrow = cw < 560;
+      const wordR = narrow ? 70 : 108;
+      const inX = wordR + (narrow ? 26 : 42);
+      const outX = narrow ? Math.max(inX + 90, cw - 92) : Math.max(inX + 140, cw - 170);
       const hidX = (inX + outX) / 2;
 
       const GAP = 1.8;  /* Lücke zwischen den Zahlenblöcken zweier Kontextwörter (in Punktabständen) */
@@ -89,7 +91,7 @@ const NetView = (() => {
         ? { layer: 'rest', i: -1, x: outX, y: top + (rows - 1) * sO, r: 5, v: 0, count: probs.length - ids.length, mass: Math.max(0, 1 - mass) }
         : null;
 
-      G = { C, d, H, inDim, top, bot, wordR, inX, hidX, outX, sIn, GAP, probs, f };
+      G = { C, d, H, inDim, top, bot, wordR, inX, hidX, outX, sIn, GAP, probs, f, narrow };
       return G;
     }
 
@@ -221,7 +223,7 @@ const NetView = (() => {
         cx.stroke(); cx.globalAlpha = 1;
 
         const w = ctx.length ? wl(D().vocab[ctx[c]]) : '…';
-        const bw = 94, bh = 26, bx = 10, by = my - bh / 2;
+        const bw = g.narrow ? 60 : 94, bh = 26, bx = g.narrow ? 4 : 10, by = my - bh / 2;
         cx.beginPath();
         if (cx.roundRect) cx.roundRect(bx, by, bw, bh, 7); else cx.rect(bx, by, bw, bh);
         cx.fillStyle = surface; cx.fill();
@@ -240,9 +242,15 @@ const NetView = (() => {
         cx.fillStyle = c; cx.font = '800 12px ' + fd; cx.fillText(t1, x, 24);
         cx.fillStyle = muted; cx.font = '10px ' + fb; cx.fillText(t2, x, 38);
       };
-      head(g.inX, cIn, de(g.inDim) + ' Eingangs-Zahlen', g.C + ' Wörter × ' + g.d + ' Zahlen');
-      head(g.hidX, cHid, de(g.H) + ' Hidden-Neuronen', 'tanh');
-      head(g.outX, cOut, de(V) + ' Ausgabe-Neuronen', 'die ' + outN.length + ' stärksten · Softmax');
+      if (g.narrow) {
+        head(g.inX, cIn, de(g.inDim) + ' rein', g.C + ' × ' + g.d + ' Zahlen');
+        head(g.hidX, cHid, de(g.H) + ' Hidden', 'Neuronen');
+        head(Math.min(g.outX + 20, cw - 46), cOut, de(V) + ' raus', 'die ' + outN.length + ' stärksten');
+      } else {
+        head(g.inX, cIn, de(g.inDim) + ' Eingangs-Zahlen', g.C + ' Wörter × ' + g.d + ' Zahlen');
+        head(g.hidX, cHid, de(g.H) + ' Hidden-Neuronen', 'tanh');
+        head(g.outX, cOut, de(V) + ' Ausgabe-Neuronen', 'die ' + outN.length + ' stärksten · Softmax');
+      }
 
       /* ---- Wortetiketten an der Ausgabe ---- */
       cx.textAlign = 'left'; cx.textBaseline = 'middle';
@@ -251,7 +259,7 @@ const NetView = (() => {
         cx.font = (strongRow ? '700 12px ' : '12px ') + fb;
         cx.fillStyle = ink;
         let t = wl(D().vocab[o.i]);
-        const maxW = cw - (o.x + 14) - 44;
+        const maxW = cw - (o.x + 14) - (g.narrow ? 4 : 44);
         while (cx.measureText(t).width > maxW && t.length > 2) t = t.slice(0, -2) + '…';
         cx.fillText(t, o.x + 13, o.y - 5);
         cx.font = '10px ' + fb; cx.fillStyle = muted;
@@ -261,7 +269,7 @@ const NetView = (() => {
         cx.font = '11px ' + fb; cx.fillStyle = muted;
         cx.fillText('+ ' + de(restN.count) + ' weitere', restN.x + 13, restN.y - 5);
         cx.font = '10px ' + fb;
-        cx.fillText(pctTxt(restN.mass) + ' zusammen', restN.x + 13, restN.y + 7);
+        cx.fillText(pctTxt(restN.mass) + (g.narrow ? '' : ' zusammen'), restN.x + 13, restN.y + 7);
       }
       cx.textBaseline = 'alphabetic';
     }

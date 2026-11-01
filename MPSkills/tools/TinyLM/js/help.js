@@ -103,7 +103,7 @@ const HELP = {
   embedding: {
     title: 'Embedding', icon: '🔢', cat: 'embed',
     text: ['Ein Netz kann keine Buchstaben lesen. Jedes Wort im Kontextfenster wird deshalb zu einer festen Reihe aus 16 Zahlen: rot = plus, blau = minus.',
-      'Oben stellst du ein, wie viele Wörter das Netz sieht. Jede Länge ist ein eigenes Netz, das eigenes Training braucht.'],
+      'Wie viele Wörter das Netz sieht, stellst du links unter dem Text ein (3 · 4 · 5). Jede Länge ist ein eigenes Netz, das eigenes Training braucht.'],
     try: 'Trainiere ein bisschen und schau, wie sich die Farben der Wörter verändern.',
     vis: { type: 'swatch', label: 'Hund', values: [0.9, -0.4, 0.2, -0.9, 0.6, 0.1, -0.2, 0.8, -0.6, 0.3, 0, -0.8] }
   },
@@ -129,7 +129,7 @@ const HELP = {
     title: 'Training', icon: '🏋️', cat: 'train',
     text: ['Das Netz rät das nächste Wort, vergleicht mit dem echten und dreht alle Zahlen ein kleines Stück in die richtige Richtung – tausende Male.',
       'Die Fehlerlinie zeigt, wie sehr es danebenliegt. Sinkt sie, lernt das Netz.'],
-    try: 'Starte das Training links und schau zu, wie die Linie fällt. Wann wird sie flach?',
+    try: 'Drück oben auf „Training starten“ und schau zu, wie die Fehlerlinie fällt. Wann wird sie flach?',
     vis: { type: 'cycle', items: [['🤔', 'raten'], ['✅', 'vergleichen'], ['🔧', 'korrigieren']], loop: true }
   },
   fehler: {
