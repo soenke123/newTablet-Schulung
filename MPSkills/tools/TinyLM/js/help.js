@@ -36,22 +36,22 @@ const HELP = {
   },
   kontext: {
     title: 'Kontextfenster', icon: '👀', cat: 'context',
-    text: ['Tiny schaut immer nur auf die letzten paar Wörter – das ist das Kontextfenster. Im Text sind sie umrandet, dahinter kommt das „?“.',
-      'Alles, was weiter vorn steht, hat Tiny schon vergessen.'],
+    text: ['Tiny schaut immer nur auf die letzten paar Wörter – das ist das Kontextfenster. Alles, was weiter vorn steht, hat Tiny schon vergessen.',
+      'Darunter: die Wortfolgen (N-Gramme) aus deinem Text und wie oft sie genau so in den Texten stehen. Tipp eine an!'],
     try: 'Stell den Regler auf 1 und dann auf 6. Wann klingt Tiny wirr, wann schreibt es ganze Sätze ab?',
     vis: { type: 'tokens', items: [['Gestern', 'dim'], ['ging', 'dim'], ['der', 'dim'], ['Hund', 'win'], ['schnell', 'win'], ['?', 'next']] }
   },
   herkunft: {
     title: 'Quellen', icon: '📑', cat: 'origin',
-    text: ['Tiny erfindet kein einziges Wort. Jedes Wort stammt aus einem deiner Texte – die Balken zeigen, aus welchen und wie viele.',
-      'Darum hat jedes Wort im Text die Farbe seines Textes.'],
+    text: ['Tiny erfindet kein einziges Wort. Hier siehst du die Stellen, an denen die Wörter genau so in den Texten stehen – grün das Kontextfenster, rot das Wort danach.',
+      'Darum hat jedes Wort im Handy die Farbe seines Textes.'],
     try: 'Schau auf die Farben im Text: Wo springt Tiny mitten im Satz in einen anderen Text?',
     vis: { type: 'tokens', items: [['Der', 's0'], ['Hund', 's0'], ['frisst', 's1'], ['Fisch', 's1'], ['im', 's2'], ['Meer', 's2']] }
   },
   kandidaten: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: ['Diese Wörter standen in deinen Texten direkt hinter dem Kontextfenster. Je öfter, desto höher die Säule – und desto eher nimmt Tiny das Wort.'],
-    try: 'Drück „+1 Wort“ und vergleiche: Hat Tiny die höchste Säule genommen?',
+    text: ['Diese Wörter standen in deinen Texten direkt hinter dem Kontextfenster. Je öfter, desto länger der Balken – und desto eher nimmt Tiny das Wort. Die Temperatur oben bestimmt, wie mutig Tiny würfelt.'],
+    try: 'Tipp im Handy auf ein Wort: Hat Tiny den längsten Balken genommen?',
     vis: { type: 'bars', items: [['Futter', 55], ['Fleisch', 30], ['Gras', 15]] }
   },
   zufall: {

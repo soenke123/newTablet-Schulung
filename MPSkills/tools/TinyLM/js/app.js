@@ -328,6 +328,42 @@ const App = (() => {
       }
     };
   }
+  /* Schmale Leiste „Alle Quellen“ (Phase 1 oben): je Welt ein Schalter-Chip, dazu „Texte lesen“.
+     Tipp auf einen Chip schaltet die ganze Welt an/aus; das große Fenster öffnet der Knopf rechts. */
+  function renderBar(box) {
+    box.replaceChildren();
+    const texts = Corpus.allTexts();
+    const head = el('div', 'twbar-head');
+    head.append(el('span', 'twbar-ico', '📚'), el('b', null, 'Alle Quellen'),
+      el('span', 'twbar-n', State.activeTexts().length + ' Texte gelesen'));
+    const chips = el('div', 'twbar-chips');
+    THEME_ORDER.forEach(themeId => {
+      const items = texts.filter(t => (t.own ? 'eigen' : t.theme) === themeId);
+      if (!items.length && themeId === 'eigen') return;
+      const nOn = items.filter(t => State.selectedIds.has(t.id)).length;
+      const c = el('button', 'twbar-chip' + (nOn ? '' : ' off'));
+      c.type = 'button';
+      c.style.setProperty('--tc', 'var(--t-' + themeId + ')');
+      c.setAttribute('aria-pressed', nOn ? 'true' : 'false');
+      c.title = THEME_NAME[themeId] + (nOn ? ' ausschalten' : ' einschalten');
+      c.append(el('i', 'dot'), el('span', null, THEME_NAME[themeId]), el('span', 'twbar-cn', nOn + '/' + items.length));
+      c.addEventListener('click', () => State.setWorld(themeId, nOn === 0));
+      chips.appendChild(c);
+    });
+    const open = el('button', 'btn sm twbar-open', '📖 Texte lesen & ändern');
+    open.type = 'button';
+    open.dataset.spot = 'textwelten';
+    open.addEventListener('click', () => openTexts());
+    box.append(head, chips, open);
+  }
+  function textweltenBar() {
+    const box = el('div', 'twbar');
+    box.id = 'alle-quellen';
+    renderBar(box);
+    const f = () => { if (box.isConnected) renderBar(box); else miniLists.delete(f); };
+    miniLists.add(f);
+    return box;
+  }
   function closeDrawer() {
     $('drawer').classList.remove('open');
     $('drawerBackdrop').classList.remove('open');
@@ -556,6 +592,6 @@ const App = (() => {
     drawer.scrollTop = keepScroll;
   }
 
-  return { renderShell, goPhase, revealCard, openTexts, textweltenItem, ROOM, TEACHER, STUDENT,
+  return { renderShell, goPhase, revealCard, openTexts, textweltenItem, textweltenBar, ROOM, TEACHER, STUDENT,
     get activePhase() { return active; }, get classPhases() { return classPhases; } };
 })();

@@ -1,0 +1,214 @@
+/* Phase 1 „Handy + Zerlegen“ (phase1.js): oben die Leiste „Alle Quellen“, links ein schmales Handy
+   (das Sprachmodell von außen), rechts drei Spalten, die das Wort rückwärts zerlegen. */
+
+/* Phase 1 darf breiter werden: Handy + drei Spalten nebeneinander. */
+body:has(.phase-pane[data-phase="1"]:not([hidden])) .main { max-width: 1440px; }
+
+.p1 { display: flex; flex-direction: column; gap: 16px; }
+
+/* ---- Leiste „Alle Quellen“ (app.js textweltenBar) ---- */
+.twbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
+  background: var(--surface); border-radius: 18px; padding: 10px 14px; box-shadow: var(--shadow);
+  border: 1px solid color-mix(in srgb, var(--cat-texts) 25%, var(--line));
+  scroll-margin-top: calc(var(--head-h) + 12px); transition: box-shadow .3s;
+}
+.twbar.flash { box-shadow: 0 0 0 4px var(--cat-texts-tint), var(--shadow); }
+.twbar-head { display: flex; align-items: baseline; gap: 7px; flex: none; }
+.twbar-head b { font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; }
+.twbar-n { font-family: var(--font-mono); font-size: 0.74rem; color: var(--cat-texts); }
+.twbar-chips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.twbar-chip {
+  display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 0.84rem; font-weight: 600;
+  padding: 4px 10px 4px 8px; border-radius: 999px; cursor: pointer; color: var(--ink); min-height: 34px;
+  background: color-mix(in srgb, var(--tc) 12%, var(--surface));
+  border: 1.5px solid color-mix(in srgb, var(--tc) 45%, var(--surface));
+}
+.twbar-chip .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--tc); }
+.twbar-chip { white-space: nowrap; }
+.twbar-cn { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); font-weight: 400; }
+.twbar-chip.off { background: var(--surface); border-color: var(--line); color: var(--muted); font-weight: 500; text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.twbar-chip.off .dot { background: var(--line); }
+.twbar-open { flex: none; }
+
+/* ---- Raster: Handy links, Zerlegen rechts ---- */
+.p1-grid { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 22px; align-items: start; }
+.p1-left { position: sticky; top: calc(var(--head-h) + 14px); display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+/* ---- Das Handy ---- */
+.phone {
+  position: relative; display: flex; flex-direction: column;
+  height: clamp(500px, calc(100vh - var(--head-h) - 150px), 720px);
+  background: var(--surface); border-radius: 38px; padding: 14px 12px 14px;
+  border: 7px solid #1e1b3a;
+  box-shadow: 0 6px 0 #4a4570, var(--shadow-pop);
+}
+.phone-notch {
+  position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+  width: 86px; height: 18px; border-radius: 99px; background: #1e1b3a;
+}
+.phone-head {
+  display: flex; align-items: center; gap: 9px; padding: 16px 6px 10px;
+  border-bottom: 1px solid var(--line);
+}
+.phone-head .tiny { width: 36px; height: 36px; }
+.phone-who { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.15; }
+.phone-who b { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; }
+.phone-who span { font-family: var(--font-mono); font-size: 0.68rem; color: var(--accent); }
+.phone-screen {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  padding: 14px 4px 4px; scroll-behavior: smooth;
+}
+.phone-screen .bot-text { font-size: 1.05rem; }
+.phone-screen .srcword { cursor: pointer; }
+.phone-screen .srcword:hover { transform: translateY(-1px); }
+/* angetipptes Wort = wird rechts zerlegt */
+.phone-screen .srcword.sel { outline: 3px solid var(--ink); outline-offset: 2px; transform: translateY(-2px); }
+.phone-screen .cursor { cursor: pointer; }
+.phone-screen .cursor.sel { background: color-mix(in srgb, var(--cat-candidates-tint) 45%, var(--surface)); }
+.phone-say { display: flex; align-items: flex-end; gap: 8px; padding: 8px 2px; border-top: 1px solid var(--line); }
+.phone-say .tiny { width: 30px; height: 30px; }
+.phone-say .tiny-bubble { font-size: 0.86rem; padding: 7px 11px; flex: 1; }
+.phone-controls { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; padding: 4px 2px 2px; }
+.phone-controls .btn { min-height: 44px; padding-left: 0.8rem; padding-right: 0.8rem; }
+
+.p1-legend { display: flex; flex-direction: column; gap: 6px; padding: 0 4px; }
+.p1-legend:empty { display: none; }
+.p1-legend-lab { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+
+/* ---- Rechts: Kernsatz + drei Spalten ---- */
+.p1-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.p1-intro { display: flex; flex-direction: column; gap: 6px; padding: 2px 4px 0; }
+.p1-intro h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.22rem; line-height: 1.3; max-width: 46rem; }
+.p1-focus {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 0.9rem; color: var(--muted);
+  min-height: 38px;
+}
+.p1-focus.on {
+  color: var(--ink); background: var(--surface); border-radius: 14px; padding: 5px 6px 5px 14px;
+  border: 2px solid var(--ink); align-self: flex-start;
+}
+.p1-focus-w { font-family: var(--font-display); font-size: 1.05rem; }
+
+.p1-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 14px; align-items: start; }
+.p1-col {
+  background: var(--surface); border-radius: 20px; box-shadow: var(--shadow); min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--cat-color) 28%, var(--line));
+  border-top: 5px solid var(--cat-color); display: flex; flex-direction: column;
+}
+.p1-col-head { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 8px 14px; }
+.p1-col-ico {
+  width: 36px; height: 36px; border-radius: 12px; flex: none; display: grid; place-items: center; font-size: 1.1rem;
+  background: color-mix(in srgb, var(--cat-tint) 70%, var(--surface));
+}
+.p1-col-t { flex: 1; min-width: 0; }
+.p1-col-t h3 { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; color: color-mix(in srgb, var(--cat-color) 70%, var(--ink)); }
+.p1-col-t p { font-size: 0.84rem; color: var(--muted); }
+.p1-col-tools { padding: 4px 14px 8px; margin: 0 10px; border-radius: 14px; background: color-mix(in srgb, var(--cat-tint) 28%, var(--surface)); }
+.p1-col-tools:empty { display: none; }
+.p1-col-tools .slider { background: transparent; padding: 6px 0 2px; }
+.p1-col-body { display: flex; flex-direction: column; gap: 9px; padding: 10px 14px 14px; min-width: 0; }
+
+.p1-line { font-size: 0.88rem; line-height: 1.4; }
+.p1-sub { font-size: 0.74rem; letter-spacing: .05em; text-transform: uppercase; font-weight: 700; color: var(--muted); margin-top: 2px; }
+.p1-more { font-size: 0.8rem; color: var(--muted); }
+.p1-count { font-family: var(--font-mono); font-size: 0.78rem; color: var(--cat-context); }
+.p1-fall {
+  font-size: 0.82rem; line-height: 1.35; padding: 6px 9px; border-radius: 10px;
+  background: color-mix(in srgb, var(--cat-origin-tint) 40%, var(--surface)); border: 1px dashed var(--cat-origin);
+}
+
+/* Kandidaten: senkrechte Liste */
+.clist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.crow {
+  width: 100%; display: grid; grid-template-columns: minmax(4.5rem, 7.5rem) minmax(0, 1fr) 2.9rem 2.2rem; gap: 8px; align-items: center;
+  font: inherit; text-align: left; color: var(--ink); background: transparent; cursor: pointer;
+  border: 1.5px solid transparent; border-radius: 11px; padding: 5px 6px; position: relative;
+}
+.crow:hover { background: var(--soft); }
+.cword { font-family: var(--font-display); font-weight: 600; font-size: 0.98rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cbar { height: 14px; border-radius: 7px; background: color-mix(in srgb, var(--cat-candidates-tint) 35%, var(--surface)); overflow: hidden; }
+.cbar i { display: block; height: 100%; border-radius: 7px; background: var(--cat-candidates); transition: width .25s; }
+.cp { font-family: var(--font-mono); font-size: 0.78rem; text-align: right; }
+.cn { font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); text-align: right; }
+.crow.chosen { background: color-mix(in srgb, var(--cat-candidates-tint) 40%, var(--surface)); border-color: var(--cat-candidates); }
+.crow.picked { border-color: var(--cat-origin); box-shadow: 0 0 0 2px color-mix(in srgb, var(--cat-origin-tint) 70%, transparent); }
+.ctag {
+  grid-column: 1 / -1; justify-self: start; font-size: 0.72rem; font-weight: 700; color: var(--cat-candidates);
+}
+
+/* Wortfolgen als kleine Bausteine */
+.gram { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; }
+.gtok {
+  display: inline-block; padding: 2px 8px 3px; border-radius: 8px; font-family: var(--font-display); font-weight: 600; font-size: 0.9rem;
+  background: color-mix(in srgb, var(--cat-context-tint) 55%, var(--surface));
+  border-bottom: 2px solid color-mix(in srgb, var(--cat-context) 45%, var(--surface));
+}
+.gtok.p { padding: 2px 6px 3px; color: var(--muted); }
+.gtok.start { background: var(--soft); border-bottom-color: var(--line); color: var(--muted); font-style: italic; font-weight: 500; }
+.gtok.next { background: transparent; border: 2px dashed var(--cat-candidates); color: var(--cat-candidates); padding: 1px 8px 1px; }
+.gtok.chosen { background: color-mix(in srgb, var(--cat-candidates-tint) 55%, var(--surface)); border-bottom-color: var(--cat-candidates); }
+.garr { color: var(--muted); font-weight: 700; }
+.ctxnow {
+  display: flex; flex-direction: column; gap: 7px; padding: 10px; border-radius: 14px;
+  background: color-mix(in srgb, var(--cat-context-tint) 22%, var(--surface));
+  border: 1.5px solid color-mix(in srgb, var(--cat-context) 40%, var(--surface));
+}
+.ctxnow .p1-sub { margin: 0; }
+.ctxnow .gtok { font-size: 1.02rem; }
+
+.nglist { display: flex; flex-direction: column; gap: 3px; max-height: 360px; overflow-y: auto; overscroll-behavior: contain; padding-right: 2px; }
+.ngrow {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%;
+  font: inherit; text-align: left; color: var(--ink); background: transparent; cursor: pointer;
+  border: 1.5px solid transparent; border-radius: 11px; padding: 4px 6px;
+}
+.ngrow:hover { background: var(--soft); }
+.ngrow.on { border-color: var(--ink); background: var(--soft); }
+.ngrow .gtok { font-size: 0.82rem; padding: 1px 6px 2px; }
+.ngn { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); flex: none; }
+
+/* Quellen: Fundstellen */
+.flist { display: flex; flex-direction: column; gap: 8px; }
+.fund {
+  border-radius: 12px; padding: 7px 10px 8px; background: color-mix(in srgb, var(--sc) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--sc) 30%, var(--line)); border-left: 4px solid var(--sc);
+}
+.fund.taken { border-color: var(--sc); box-shadow: 0 0 0 2px color-mix(in srgb, var(--sc) 30%, transparent); }
+.fhead {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; font: inherit; text-align: left;
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink);
+}
+.fhead .dot { width: 10px; height: 10px; border-radius: 3px; background: var(--sc); flex: none; }
+.fhead .ft { font-weight: 700; font-size: 0.84rem; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--sc) 50%, transparent); text-underline-offset: 2px; }
+.ftag { font-size: 0.72rem; font-weight: 700; color: var(--sc); margin-left: auto; }
+.fsnip { font-size: 0.88rem; line-height: 1.55; margin-top: 3px; overflow-wrap: anywhere; }
+.fsnip mark { border-radius: 4px; padding: 0 3px; color: var(--ink); }
+.fsnip .fx-ctx { background: color-mix(in srgb, var(--cat-context-tint) 75%, var(--surface)); }
+.fsnip .fx-next { background: color-mix(in srgb, var(--cat-candidates-tint) 80%, var(--surface)); font-weight: 700; }
+.p1-used { display: flex; flex-direction: column; gap: 7px; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; }
+.p1-up { align-self: flex-start; }
+
+/* Dunkel: Handy-Rahmen bleibt dunkel, bekommt aber eine helle Kante, damit er sich abhebt. */
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .phone { border-color: #0c0a1c; box-shadow: 0 0 0 1px var(--line), 0 6px 0 #05040e, var(--shadow-pop); } :root:not([data-theme="light"]) .phone-notch { background: #0c0a1c; } }
+:root[data-theme="dark"] .phone { border-color: #0c0a1c; box-shadow: 0 0 0 1px var(--line), 0 6px 0 #05040e, var(--shadow-pop); }
+:root[data-theme="dark"] .phone-notch { background: #0c0a1c; }
+
+/* ---- schmaler: Handy oben, Spalten darunter ---- */
+@media (max-width: 900px) {
+  .p1-grid { grid-template-columns: minmax(0, 1fr); }
+  .p1-left { position: static; align-items: center; }
+  .phone { width: min(380px, 100%); height: clamp(440px, 68vh, 640px); }
+  .p1-legend { width: min(380px, 100%); }
+}
+@media (max-width: 700px) {
+  .twbar-head { width: 100%; }
+}
+@media (max-width: 560px) {
+  .twbar-open { width: 100%; }
+  .p1-intro h2 { font-size: 1.05rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .phone-screen { scroll-behavior: auto; }
+  .cbar i { transition: none; }
+}
