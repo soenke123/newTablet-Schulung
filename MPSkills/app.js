@@ -863,10 +863,6 @@ function toolCard(t, guest) {
   const badges = [
     ready ? '' : '<span class="tag tag--soon">Skill in Vorbereitung</span>',
     t.active ? '' : '<span class="tag tag--off">Abgeschaltet</span>',
-    // Neutral und nicht tag--soon/tag--off: „Beta" ist keine Warnung
-    // und kein „noch nicht da" — der Skill läuft, ist nur noch nicht
-    // rund. Die unveränderte .tag-Grundfarbe sagt genau das.
-    isBeta(t.id) ? '<span class="tag">Beta</span>' : '',
     // Nur Admins sehen die Kachel überhaupt (skill_tools.admin_only,
     // Migration 0220) — das Schild erinnert sie daran, dass die
     // Lehrkräfte sie noch nicht haben.
@@ -948,7 +944,7 @@ function toolCard(t, guest) {
       <div class="tile-head">
         <span class="tile-ic">${window.MPIcons.svg(t.id)}</span>
         <div class="tile-name">
-          <h3>${esc(t.title)}</h3>
+          <h3>${esc(t.title)}${isBeta(t.id) ? ' <span class="tag tag--inline">Beta</span>' : ''}</h3>
           ${subtitle ? `<p class="tile-kind">${esc(subtitle)}</p>` : ''}
         </div>
       </div>

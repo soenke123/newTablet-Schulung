@@ -1095,6 +1095,8 @@ a.btn {
   background: var(--paper-2);
   color: var(--ink-faint);
 }
+/* „Beta" direkt hinter dem Namen in der Überschrift. */
+.tag--inline { margin-left: 6px; vertical-align: middle; letter-spacing: .04em; font-weight: 500; }
 .tag--soon { background: var(--accent-dim); border-color: var(--accent-edge); color: var(--accent-ink); }
 .tag--off  { background: var(--warn-dim);   border-color: var(--warn-edge); color: var(--warn-ink); }
 
