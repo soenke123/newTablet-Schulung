@@ -80,7 +80,7 @@
 (function () {
   'use strict';
 
-  const ASSET_V = '20261022b';
+  const ASSET_V = '20261101a';
 
   /* Takt je Phase, in Millisekunden. Während der Frage muss der
      Beamer zügig mitzählen („17 von 28 haben geantwortet") — in der
@@ -244,6 +244,8 @@
   const esc = s => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
     .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  /* Frage-, Antwort- und Erklärtexte: `…` wird Code (codehl.js) */
+  const txt = s => window.KSCode ? window.KSCode.html(s) : esc(s);
 
   /* Die Klassen, mit denen creatures.css ein Wesen bewegt. Der Name
      trägt die Wesen-Nummer, weil jedes der 40 Wesen sein eigenes
@@ -795,7 +797,7 @@
     const nr = (v.current_q_idx | 0) + 1;
     const n = v.question_count | 0;
     return `
-      <div class="ks-qbox">${artChip(q)}<h2 class="ks-q">${esc(q.text)}</h2></div>
+      <div class="ks-qbox">${artChip(q)}<h2 class="ks-q">${txt(q.text)}</h2></div>
       <div class="ks-mitte${q.has_image ? ' ks-mitte--bild' : ''}">
         <div class="ks-status">
           <div class="ks-stat ks-stat--uhr">
@@ -961,7 +963,7 @@
     return `
       <header class="ks-head ks-head--rv">
         <span class="ks-qnr">Frage ${(v.current_q_idx | 0) + 1} <i>/ ${v.question_count}</i></span>
-        <h2 class="ks-qsmall">${esc(q.text)}</h2>
+        <h2 class="ks-qsmall">${txt(q.text)}</h2>
         <button type="button" class="ks-go" data-act="next">
           ${letzte ? 'Siegerehrung' : 'Nächste Frage'}</button>
         ${steuerHTML(letzte)}
@@ -970,7 +972,7 @@
       ${artVon(q) === 'scale'
         ? skalaHTML(q, { aufgeloest: true, werte: v.scale_values || [] })
         : kachelnHTML(opts, { modus: 'fuell', art: artVon(q), seed: mischKey(v), correct: q.correct_idx, correct_indices: q.correct_indices })}
-      ${q.explanation ? '<p class="ks-expl">' + esc(q.explanation) + '</p>' : ''}`;
+      ${q.explanation ? '<p class="ks-expl">' + txt(q.explanation) + '</p>' : ''}`;
   }
 
   function beamEnde(v) {
@@ -1133,7 +1135,7 @@
         if (o.modus === 'wette') {
           return `
           <div class="${cls.join(' ')} ks-k--wette" data-idx="${i}" data-ziel="${i}">
-            <span class="ks-kt">${esc(t)}</span>
+            <span class="ks-kt">${txt(t)}</span>
             <span class="ks-stapel" data-stapel="${i}"></span>
           </div>`;
         }
@@ -1141,7 +1143,7 @@
           <${o.modus === 'wahl' ? 'button type="button"' : 'div'} class="${cls.join(' ')}" data-idx="${i}">
             ${o.modus === 'fuell' ? '<span class="ks-fuell" data-fuell="' + i + '"></span>' : ''}
             ${o.ohneBuchstabe ? '' : '<span class="ks-kk ' + (richtig ? 'ks-kk--richtig' : '') + '">' + (richtig ? '✓' : LABELS[pos]) + '</span>'}
-            <span class="ks-kt">${esc(t)}</span>
+            <span class="ks-kt">${txt(t)}</span>
             ${o.modus === 'fuell' ? '<span class="ks-kn" data-kn="' + i + '">0</span>' : ''}
             ${gewaehlt ? '<span class="ks-kmein">deine Wahl</span>' : ''}
           </${o.modus === 'wahl' ? 'button' : 'div'}>`;
@@ -2839,7 +2841,14 @@
       s.onerror = () => rej(new Error('creatures.js nicht gefunden'));
       document.head.appendChild(s);
     });
-    assetsP = Promise.all([js, css]).then(() => {}, e => { assetsP = null; throw e; });
+    const code = window.KSCode ? Promise.resolve() : new Promise((res, rej) => {
+      const s = document.createElement('script');
+      s.src = 'tools/KnowledgeStack/codehl.js?v=' + ASSET_V;
+      s.onload = res;
+      s.onerror = () => rej(new Error('codehl.js nicht gefunden'));
+      document.head.appendChild(s);
+    });
+    assetsP = Promise.all([js, css, code]).then(() => {}, e => { assetsP = null; throw e; });
     return assetsP;
   }
   ladeAssets().catch(() => {});   // vorladen; mount meldet den Fehler

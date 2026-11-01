@@ -60,6 +60,20 @@
   const esc = s => String(s || '').replace(/&/g, '&amp;')
     .replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
+  /* Code zwischen Backticks (codehl.js). Ohne KSCode wie esc(). */
+  const txt = s => window.KSCode ? window.KSCode.html(s) : esc(s);
+  const KC = () => window.KSCode;
+
+  /* Unter der Fragekarte: wie die Felder mit Code am Beamer aussehen.
+     Leer (und unsichtbar), solange kein `…` in der Frage steht. */
+  function codeZeile(q) {
+    const C = KC();
+    if (!C) return '';
+    const felder = [q.question_text].concat(Array.isArray(q.options) ? q.options : [], [q.explanation])
+      .filter(t => C.hat(t));
+    return felder.length ? felder.map(t => '<span>' + C.html(t) + '</span>').join('') : '';
+  }
+
   const LABELS = ['A', 'B', 'C', 'D'];
 
   /* ─── Fragetypen (Migration 0217) ───
@@ -474,6 +488,7 @@
             </div>
           </div>
         </section>
+        ${KC() ? `<p class="kse-code-tipp">Code hervorheben: Text markieren, dann <kbd>${KC().TASTE}</kbd> · nochmal = normal</p>` : ''}
         <div class="kse-fragen" data-ed-list="questions">`;
 
     for (let i = 0; i < qs.length; i++) {
@@ -571,6 +586,7 @@
                      placeholder="Erklärung (optional)…" />
             </label>
           </div>
+          <div class="kse-codezeile" data-codezeile="${idx}">${codeZeile(q)}</div>
         </div>
         <div class="kse-foto${q.image ? ' has-bild' : ''}" data-foto="${idx}">${fotoZelle(q, idx)}</div>
       </div>`;
@@ -622,7 +638,7 @@
           </div>
         </header>
         <div class="kse-pv-qbox">
-          <h2 class="kse-pv-q" contenteditable="true" data-ed-pv="text">${esc(q.question_text || '(Kein Text)')}</h2>
+          <h2 class="kse-pv-q" contenteditable="true" data-ed-pv="text">${q.question_text ? txt(q.question_text) : '(Kein Text)'}</h2>
         </div>
         ${q.image ? `
           <div class="kse-pv-bild" data-foto="pv">
@@ -655,11 +671,11 @@
             <div class="kse-pv-k kse-pv-k--${i} ${ci.includes(i) ? 'is-richtig' : ''}">
               <span class="kse-pv-kk">${ci.includes(i) ? '✅' : LABELS[i]}</span>
               <span class="kse-pv-kt" contenteditable="true"
-                    data-ed-pv="opt" data-oi="${i}">${esc(o || '…')}</span>
+                    data-ed-pv="opt" data-oi="${i}">${o ? txt(o) : '…'}</span>
             </div>
           `).join('')}
         </div>`}
-        ${q.explanation ? '<p class="kse-pv-expl">💡 ' + esc(q.explanation) + '</p>' : ''}
+        ${q.explanation ? '<p class="kse-pv-expl">💡 ' + txt(q.explanation) + '</p>' : ''}
       </div>`;
   }
 
@@ -972,6 +988,10 @@
 .kse-meta-feld--bild { grid-column: 1 / -1; }
 .kse-meta-l { font-size: 12px; font-weight: 800; color: var(--ks-soft); text-transform: uppercase; letter-spacing: .05em; }
 .kse-meta-hint { font-size: 12px; color: var(--ks-soft); }
+.kse-code-tipp { margin: 2px 2px -4px; font-size: 12px; color: var(--ks-soft); text-align: right; }
+.kse-code-tipp kbd { font: inherit; font-weight: 800; padding: 0 5px; border: 1px solid var(--ks-linie); border-radius: 5px; }
+.kse-codezeile { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 14px; color: var(--ks-ink); }
+.kse-codezeile:empty { display: none; }
 .kse-thumbbox { display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap; }
 .kse-thumbacts { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
 .kse-filebtn { cursor: pointer; }
@@ -1340,10 +1360,11 @@
       const q = data.questions[pvIdx];
       if (!q) return;
       const qEl = el.querySelector('[data-ed-pv=text]');
-      if (qEl) q.question_text = qEl.textContent.trim();
+      const lies = x => (KC() ? KC().text(x) : x.textContent).trim();
+      if (qEl) q.question_text = lies(qEl);
       el.querySelectorAll('[data-ed-pv=opt]').forEach(x => {
         const oi = parseInt(x.dataset.oi, 10);
-        if (!isNaN(oi) && Array.isArray(q.options)) q.options[oi] = x.textContent.trim();
+        if (!isNaN(oi) && Array.isArray(q.options)) q.options[oi] = lies(x);
       });
       dirty = true;
     }
@@ -1747,6 +1768,7 @@
        Einfärbung und die Ergebnisliste flicken — das Textfeld bleibt
        unangetastet (Cursor, Auswahl, Tastatur). */
     function onInput(ev) {
+      if (ev.target && ev.target.dataset && ev.target.dataset.qi != null) codeZeileNeu(ev.target.dataset.qi);
       if (mode === 'list') {
         const q = ev.target.closest && ev.target.closest('[data-lf=q]');
         if (q) { lf.q = q.value; listeNeu(); }
@@ -1762,6 +1784,25 @@
       if (k !== 'text') return;
       imp.text = f.value;
       importNeu();
+    }
+
+    /* Codezeile unter der Karte aus den Feldern neu bauen (vor dem Sichern) */
+    function codeZeileNeu(qi) {
+      const box = el && el.querySelector('[data-codezeile="' + qi + '"]');
+      if (!box) return;
+      const wert = f => { const x = el.querySelector('[data-qi="' + qi + '"][data-field="' + f + '"]'); return x ? x.value : ''; };
+      const opts = Array.from(el.querySelectorAll('[data-qi="' + qi + '"][data-field=option]')).map(x => x.value);
+      box.innerHTML = codeZeile({ question_text: wert('question_text'), options: opts, explanation: wert('explanation') });
+    }
+
+    /* Strg+E / ⌘E in Frage, Antwort, Erklärung: Code an/aus */
+    function onTaste(ev) {
+      const C = KC();
+      if (!C || !C.istTaste(ev) || (mode !== 'edit')) return;
+      const f = ev.target;
+      if (!f || !f.dataset || !/^(question_text|option|explanation)$/.test(f.dataset.field || '')) return;
+      ev.preventDefault();
+      if (C.toggle(f)) f.dispatchEvent(new Event('input', { bubbles: true }));
     }
 
     function importNeu() {
@@ -2238,6 +2279,7 @@
       el = host;
       host.addEventListener('click', onClick);
       host.addEventListener('input', onInput);
+      host.addEventListener('keydown', onTaste);
       host.addEventListener('change', onFotoWahl);
       host.addEventListener('dragover', schluckeDatei);
       host.addEventListener('drop', schluckeDatei);
