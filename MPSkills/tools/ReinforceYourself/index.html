@@ -274,6 +274,16 @@ dialog.task-dialog.rl-dialog{max-width:900px; width:calc(100% - 24px); max-heigh
 .art-icon .dot{fill:var(--mp-accent); stroke:none;}
 
 /* ── Aufgabe (Fenster beim Öffnen einer Kachel) ── */
+.ry-sheetbtn{display:none;}
+body.can-sheet .ry-sheetbtn{display:inline-flex;}
+.sheet-files{display:grid; gap:10px; margin-top:4px;}
+.sheet-file{display:flex; align-items:center; gap:14px; padding:12px 14px; border-radius:14px; text-decoration:none;
+  background:var(--mp-paper-2); border:1px solid var(--mp-line); color:var(--mp-ink); transition:border-color .14s, background .14s;}
+.sheet-file:hover{border-color:var(--mp-accent-edge); background:var(--mp-accent-dim);}
+.sheet-ext{flex:none; width:56px; padding:8px 0; border-radius:10px; text-align:center; font-weight:700; font-size:.82rem;
+  letter-spacing:.04em; background:var(--mp-accent); color:var(--mp-on-accent);}
+.sheet-txt{display:flex; flex-direction:column; line-height:1.3;}
+.sheet-txt span{font-size:.85rem; color:var(--mp-ink-faint);}
 dialog.task-dialog{max-width:560px; padding:26px 26px 22px;
   background:var(--mp-surface); color:var(--mp-ink); border-color:var(--mp-line);}
 .task-k{font-size:.74rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--mp-accent-ink);}
@@ -922,6 +932,7 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   </div>
   <span class="ry-spacer"></span>
   <button class="ry-taskbtn" id="ry-taskbtn" type="button" onclick="showTask()" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2"/></svg><span>Aufgabe</span></button>
+  <button class="ry-taskbtn ry-sheetbtn" type="button" onclick="document.getElementById('sheet-dialog').showModal()" title="Leitfaden und Arbeitsblätter für die Stunde"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H6v18h12V7z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg><span>Arbeitsblatt</span></button>
   <button class="ry-reset" type="button" onclick="resetAll()" title="Alles zurücksetzen"><span class="ry-reset-long">Zurücksetzen</span><span class="ry-reset-short" aria-hidden="true">↺</span></button>
 </header>
 
@@ -1307,6 +1318,22 @@ html[data-theme="dark"]{ --ttt-du:#ffb547; }
   </div>
   <div class="dialog-btns">
     <button class="btn btn-primary" type="button" onclick="document.getElementById('rl-dialog').close()">Schließen</button>
+  </div>
+</dialog>
+
+<!-- ════════════════════════════════════════ ARBEITSBLATT (nur Lehrkraft / allein geöffnet) -->
+<dialog id="sheet-dialog" class="task-dialog">
+  <div class="task-k">Zur Stunde</div>
+  <h3>Leitfaden + Arbeitsblätter</h3>
+  <p class="task-text" style="margin-bottom:12px"><span style="color:var(--mp-ink-soft)">Seite 1 Leitfaden für dich, Seite 2 AB 1, Seite 3 AB 2 (erst austeilen, wenn die Umgebungen geteilt sind).</span></p>
+  <div class="sheet-files">
+    <a class="sheet-file" href="ReinforceYourself%20Arbeitsblatt.pdf" target="_blank" rel="noopener" onclick="document.getElementById('sheet-dialog').close()">
+      <span class="sheet-ext">PDF</span><span class="sheet-txt"><b>Ansehen und ausdrucken</b><span>Geht in einem neuen Tab auf.</span></span></a>
+    <a class="sheet-file" href="ReinforceYourself%20Arbeitsblatt.docx" download="ReinforceYourself Arbeitsblatt.docx" onclick="document.getElementById('sheet-dialog').close()">
+      <span class="sheet-ext">DOCX</span><span class="sheet-txt"><b>In Word ändern</b><span>Wird heruntergeladen.</span></span></a>
+  </div>
+  <div class="dialog-btns">
+    <button class="btn btn-primary" type="button" onclick="document.getElementById('sheet-dialog').close()">Schließen</button>
   </div>
 </dialog>
 
@@ -4008,7 +4035,8 @@ function tttChart() {
 window.addEventListener('resize', () => { if (document.body.dataset.screen === 'screen-p0-ttt') tttChart(); });
 
 document.body.classList.toggle('is-teacher', TEACHER);
-document.body.classList.toggle('is-demo', DEMO);   // Schaufenster: „+50 Runden“ zeigen
+document.body.classList.toggle('is-demo', DEMO);
+document.body.classList.toggle('can-sheet', !STUDENT && !DEMO);   // Arbeitsblatt: Lehrkraft und allein geöffnet   // Schaufenster: „+50 Runden“ zeigen
 loadDiscoveredNodes();
 updateP1Stats();
 checkUnlockCondition();

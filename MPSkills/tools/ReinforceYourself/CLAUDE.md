@@ -69,6 +69,17 @@ in `finish`). Ohne Anzeige, danach Meldung unten (`ryToast`) – zum Besprechen 
 Keine eigene Freischaltung (früher: Gewinnrate 2,5 : 1 + Quiz). Die **Lehrkraft** steuert,
 welche Kacheln die Klasse öffnen darf.
 
+## Arbeitsblatt (01.11.2026)
+
+`ReinforceYourself Arbeitsblatt.docx` / `.pdf` liegen neben `index.html` (wie bei Wild Clusters):
+Seite 1 Leitfaden für die Lehrkraft (vier Phasen Gegen die KI → Training → Umgebung A+B → Sandbox,
+Merksatz), Seite 2 AB 1 (Aufg. 1–4: Tic-Tac-Toe beobachten, Training, „wofür trainiert?“),
+Seite 3 AB 2 (Aufg. 5–8, erst nach dem Teilen der Umgebungen: anwenden, E0x00/E0x01 übersetzen,
+3 Bauernzüge vs. 2 Alien-Aktionen = Spiegelung, Sandbox-Baum). Die Word-Fassung ist die Quelle
+(von Sönke bearbeitet); PDF daraus mit LibreOffice erzeugen, beide gleich benennen.
+Knopf „Arbeitsblatt“ in der Kopfzeile (`.ry-sheetbtn`, nur `body.can-sheet` = Lehrkraft oder allein
+geöffnet, nicht Schüler/Schaufenster) öffnet `#sheet-dialog`: PDF in neuem Tab, DOCX als Download.
+
 ## Raum
 
 - `tool.js` rahmt `index.html` ein wie Tiny LM (`?raum=lehrer|schueler`, Schaufenster `?demo=1`).
