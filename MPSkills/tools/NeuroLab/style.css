@@ -144,6 +144,9 @@ main#network {
   min-height: 100%;
   transform-origin: 0 0;
   will-change: transform;
+  /* Dünnste Kante in BILDSCHIRM-Pixeln — bleibt beim Herauszoomen sichtbar
+     (drawEdgeOverlay teilt sie über --nl-inv durch den Maßstab). */
+  --nl-edge-min: 1.2px;
 }
 
 /* ── Lupenknöpfe ──
@@ -191,11 +194,15 @@ body.print-mode .net-zoom { display: none; }
   position: relative;
 }
 
+/* Breit genug für Namen wie „x (normiert)“ samt Zahlenfeld. Vorher war bei
+   130 px Schluss, und die Eingänge ragten links aus der Spalte. Noch längere
+   Namen werden gekürzt (Tooltip am Eingang). */
 .col-inputs {
   min-width: 110px;
-  max-width: 130px;
+  max-width: 190px;
   flex-shrink: 0;
 }
+.col-inputs .input-node-row { max-width: 100%; }
 
 .col-layer {
   flex: 1;
@@ -310,14 +317,21 @@ body.print-mode .net-zoom { display: none; }
   border-radius: 8px;
 }
 
+/* Kreis bei kurzem Namen (x1), Pille bei langem — statt Schrift, die über
+   den Kreis hinausläuft. */
 .node-circle {
-  width: 34px;
+  min-width: 34px;
+  max-width: 150px;
   height: 34px;
-  border-radius: 50%;
+  padding: 0 7px;
+  border-radius: 17px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border: 2.5px solid;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
+  line-height: 29px;
+  text-align: center;
   font-size: 0.78rem;
   font-weight: 700;
   flex-shrink: 0;
@@ -333,6 +347,8 @@ body.print-mode .net-zoom { display: none; }
 
 /* Run mode: rectangular input label */
 .node-run-input {
+  max-width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -347,11 +363,15 @@ body.print-mode .net-zoom { display: none; }
   font-size: 0.78rem;
   font-weight: 700;
   color: #92400e;
-  flex-shrink: 0;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   user-select: none;
 }
 .node-run-input-field {
   width: 46px;
+  flex-shrink: 0;
   border: none;
   background: transparent;
   font-size: 0.88rem;
@@ -429,6 +449,10 @@ body.print-mode .net-zoom { display: none; }
      sie trotzdem. */
   overflow: visible;
 }
+/* Unter EDGE_LABEL_MIN_SCALE wären die Gewichte nicht mehr lesbar; die
+   Linien bleiben. In der Druckansicht immer mit Zahlen — dafür ist sie da. */
+#net-stage.edge-labels-off .edge-label { display: none; }
+body.print-mode #net-stage.edge-labels-off .edge-label { display: inline; }
 
 /* ── SVG element styles ── */
 .neuron-body    { fill: #fff; stroke: var(--type-color); stroke-width: 2.5; }
@@ -794,6 +818,10 @@ body.print-mode .random-btn {
 
 /* ── Learn info panel ── */
 #learn-info-panel {
+  max-height: var(--lg-max, calc(100vh - 90px));
+  overflow-y: auto;
+  touch-action: pan-y;
+  flex-shrink: 0;
   width: 215px;
   background: #fff;
   border-radius: 12px;
@@ -803,9 +831,6 @@ body.print-mode .random-btn {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: calc(100vh - 90px);
-  overflow-y: auto;
-  flex-shrink: 0;
 }
 
 .learn-info-toggle-btn {
@@ -921,7 +946,8 @@ body.print-mode .random-btn {
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
-  max-height: calc(100vh - 90px);
+  /* Endet am unteren Bildschirmrand (placeLearnGroup in app.js). */
+  max-height: var(--lg-max, calc(100vh - 90px));
   flex-shrink: 0;
 }
 
