@@ -131,8 +131,16 @@
           + hl(x - r * 0.3, y - r * 0.3, r * 0.18, 0.95)
           + hl(x + r * 0.22, y + r * 0.32, r * 0.08, 0.9);
       }
-      // ew/hl (optional): Augenbreite und Glanzpunkt, z. B. für die Derby-Figuren
+      // ew/hl (optional): Augenbreite und Glanzpunkt, nur die Kistenturm-Figuren.
+      // Dort sitzt der Glanz IMMER ganz im Auge (vorher ragte er bei schmalen
+      // Augen über den Rand — klein sah das aus wie ein verrutschter Fleck).
       const ew = f.ew || 0.8, hs = f.hl || 0.34;
+      if (f.hl) {
+        const rx = r * ew, h = Math.min(hs * r, 0.44 * rx);
+        return E(x, y, rx, r, INK, 0)
+          + hl(x - 0.24 * rx, y - 0.34 * r, h, 1)
+          + hl(x + 0.3 * rx, y + 0.42 * r, Math.min(0.16 * r, 0.2 * rx), 0.85);
+      }
       return E(x, y, r * ew, r, INK, 0)
         + hl(x - r * 0.26 * ew / 0.8, y - r * 0.4, r * hs, 0.95)
         + hl(x + r * 0.26 * ew / 0.8, y + r * 0.38, r * 0.15, 0.85)
