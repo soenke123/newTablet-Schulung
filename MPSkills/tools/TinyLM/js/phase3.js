@@ -9,10 +9,13 @@
    zwischen pointerdown und pointerup -> es kommt nie ein click an, das Training ließ sich nicht
    mehr anhalten). Darum: alle Karten sind manual:true, und jede Render-Funktion hinterlegt in
    live[id] eine Funktion, die NUR die Zahlen/Bilder auffrischt und die Bedienelemente stehen lässt.
-   Die Trainingstasten sitzen nur in der rechten Karte "Training" (samt Aufbau-Zeile und Netz-Bild-Knopf);
-   sie wird während des Trainings nie neu gebaut. Schließt man die Karte, hält das Training an.
-   Wie viele Wörter das Netz zurückschaut (3, 4 oder 5), wählt man im Zentrum; ein anderes Fenster
-   ist ein anderes Netz. Die drei Netze bleiben aber nebeneinander bestehen (slots): man kann alle drei
+   Seit 01.11.2026 (aufgeräumt: links das Wichtige, rechts nur zugeklappte Reiter) sitzt der Knopf
+   „Training starten/Anhalten“ im Zentrum neben den Vorhersage-Knöpfen, und Tiny sagt darüber, was
+   gerade los ist (Fehler, untrainiert …). Der Zentrum-Kasten wird während des Trainings nie neu
+   gebaut (syncTrainUI ändert nur Text/Klassen). Die rechte Karte „Training“ hält nur noch die
+   Zahlen, die Fehlerlinie, Zurücksetzen, den Aufbau und den Netz-Bild-Knopf; zu ist sie egal.
+   Wie viele Wörter das Netz zurückschaut (3, 4 oder 5), wählt man im Reiter ① Embedding (fester
+   Kopf der Karte, darunter frischt nur der Inhalt auf); ein anderes Fenster ist ein anderes Netz. Die drei Netze bleiben aber nebeneinander bestehen (slots): man kann alle drei
    trainieren und hin und her wechseln; erst eine neue Textauswahl ("Netz neu bauen") wirft sie weg.
    Wahl gemerkt in localStorage tinylm-p3-kontext. */
 const P3_CTX = [3, 4, 5];
@@ -67,8 +70,9 @@ Phases.register(3, {
     let data, net, genSession, lastForward, netView = null;
     let temp = 1, training = false, trainRAF = null, lastUIRefresh = 0;
     let genPlaying = false, genTimer = null;
-    let textEl, cursor, genPlayBtn, bannerEl, panelCtrl, placeholder;
-    let centerToggle, centerDot;
+    let textEl, cursor, genPlayBtn, bannerEl, panelCtrl, placeholder, sayEl;
+    const GUIDE = ['train', 'embed', 'hidden', 'output', 'rand', 'net', 'texte'];
+    let centerToggle, centerDot, centerLab;
     const slots = {};   /* Kontextlänge -> { data, net, genSession, version }: je ein Netz pro Fenster */
     let builtVersion = 0;
     let cardTrain = null;
@@ -145,11 +149,43 @@ Phases.register(3, {
     /* Hält die beiden Trainings-Tasten (Zentrum + Karte) in Form, OHNE sie neu zu bauen. */
     function syncTrainUI() {
       if (centerToggle) {
-        centerToggle.textContent = net.diverged ? 'Netz entgleist — neu initialisieren' : trainLabel();
+        centerLab.textContent = net.diverged ? 'Netz entgleist — neu initialisieren' : trainLabel();
         centerToggle.disabled = !data.pairs.length;
       }
       if (centerToggle) centerToggle.classList.toggle('playing', training);
       if (centerDot) centerDot.classList.toggle('on', training);
+      /* Untrainiert ist Training der Hauptknopf; danach wird „Vorhersagen“ zum Hauptknopf. */
+      if (genPlayBtn) genPlayBtn.classList.toggle('primary', !!net.step);
+      updateSay();
+    }
+
+    /* Tiny sagt in einem Satz, wie es um das Netz steht — nur Text, nichts wird neu gebaut. */
+    let lastSay = '';
+    function updateSay() {
+      if (!sayEl) return;
+      const loss = curLoss();
+      const L = loss == null ? '' : loss.toFixed(1).replace('.', ',');
+      let parts;
+      if (!data.pairs.length) parts = ['Ich habe keine Texte! Schalte rechts unter „Textwelten“ ein paar an.'];
+      else if (net.diverged) parts = ['Huch, ich bin entgleist. Drück den Knopf links, dann fange ich neu an.'];
+      else if (training) parts = ['Ich lerne … Mein Fehler: ', [L || '–'], '. Je kleiner, desto besser!'];
+      else if (!net.step) parts = ['Ich bin ein frisches Netz und weiß noch gar nichts. Drück auf „', ['Training starten'], '“ – sonst rate ich nur!'];
+      else if (!genSession.words.length) parts = loss > 3
+        ? ['Ich habe erst ein bisschen gelernt (Fehler ', [L], '). Trainier mich ruhig länger – oder drück auf „Vorhersagen“.']
+        : ['Fehler ', [L], ' – ich habe einiges gelernt! Drück auf „', ['Vorhersagen'], '“.'];
+      else {
+        const probs = softmaxTemp(lastForward.logits, temp);
+        let bi = 0;
+        for (let i = 1; i < probs.length; i++) if (probs[i] > probs[bi]) bi = i;
+        const seen = genSession.ctxIds.map(id => data.vocab[id]).filter(w => w !== '.' && w !== ',').map(wordLabel).join(' ');
+        parts = seen
+          ? ['Ich sehe „', [seen], '“ und rechne: am ehesten kommt „', [wordLabel(data.vocab[bi])], '“ (' + Math.round(probs[bi] * 100) + ' %).']
+          : ['Neuer Satz – am ehesten fange ich mit „', [wordLabel(data.vocab[bi])], '“ an.'];
+      }
+      const key = JSON.stringify(parts);
+      if (key === lastSay) return;
+      lastSay = key;
+      sayEl.replaceChildren(...parts.map(x => Array.isArray(x) ? el('b', null, x[0]) : document.createTextNode(x)));
     }
 
     function doGenStep() {
@@ -206,6 +242,7 @@ Phases.register(3, {
     function startTraining() {
       if (training || !data.pairs.length || net.diverged) return;
       training = true;
+      panelCtrl.guide(GUIDE);
       syncTrainUI();
       trainRAF = requestAnimationFrame(trainTick);
     }
@@ -225,30 +262,100 @@ Phases.register(3, {
       rebuildCards();
     }
 
+    /* ① Embedding: oben fest die Wahl des Kontextfensters (wird nie live neu gebaut), darunter
+       die Zahlen der Wörter, die sich beim Training ändern. */
     function renderEmbedNode(container) {
       container.replaceChildren();
-      const strip = el('div', 'ctxstrip');
-      genSession.ctxIds.forEach(id => strip.appendChild(el('span', 'ctxtok inwin', wordLabel(data.vocab[id]))));
-      strip.appendChild(el('span', 'flow-arrow', '→'));
-      strip.appendChild(el('span', 'ctxtok next', '?'));
-      container.appendChild(strip);
-      genSession.ctxIds.forEach(id => {
-        const row = el('div', 'embrow');
-        row.appendChild(el('span', 'embrow-w', wordLabel(data.vocab[id])));
-        const vals = [];
-        for (let j = 0; j < net.d; j++) vals.push(net.embed[id * net.d + j]);
-        row.appendChild(renderSwatch(vals, 1.5));
-        container.appendChild(row);
-      });
-      container.appendChild(el('p', 'mini-legend', 'je Wort ' + net.d + ' Zahlen · rot = plus · blau = minus'));
-      live.embed = () => renderEmbedNode(container);
+      container.appendChild(ctxPicker());
+      const liveBox = el('div', 'emb-live');
+      container.appendChild(liveBox);
+      function paint() {
+        liveBox.replaceChildren();
+        const strip = el('div', 'ctxstrip');
+        genSession.ctxIds.forEach(id => strip.appendChild(el('span', 'ctxtok inwin', wordLabel(data.vocab[id]))));
+        strip.appendChild(el('span', 'flow-arrow', '→'));
+        strip.appendChild(el('span', 'ctxtok next', '?'));
+        liveBox.appendChild(strip);
+        genSession.ctxIds.forEach(id => {
+          const row = el('div', 'embrow');
+          row.appendChild(el('span', 'embrow-w', wordLabel(data.vocab[id])));
+          const vals = [];
+          for (let j = 0; j < net.d; j++) vals.push(net.embed[id * net.d + j]);
+          row.appendChild(renderSwatch(vals, 1.5));
+          liveBox.appendChild(row);
+        });
+        liveBox.appendChild(el('p', 'mini-legend', 'je Wort ' + net.d + ' Zahlen · rot = plus · blau = minus'));
+      }
+      paint();
+      live.embed = () => { if (liveBox.isConnected) paint(); };
     }
 
+    /* Wie viele Wörter sieht das Netz? Wechsel = anderes Netz (render baut alles neu). */
+    function ctxPicker() {
+      const ctxRow = el('div', 'ctxpick');
+      ctxRow.dataset.spot = 'ctxlen';
+      ctxRow.appendChild(el('span', 'small', 'Das Netz sieht die letzten'));
+      const ctxBtns = el('div', 'ctxpick-btns');
+      ctxBtns.setAttribute('role', 'radiogroup');
+      ctxBtns.setAttribute('aria-label', 'Wie viele Wörter sieht das Netz?');
+      P3_CTX.forEach(c => {
+        const sl = c === ctxLen ? { net } : slots[c];
+        const trained = !!(sl && sl.net.step);
+        const b = el('button', 'chip' + (c === ctxLen ? ' active' : '') + (trained ? ' trained' : ''), String(c) + (trained ? ' ✓' : ''));
+        if (trained) b.title = 'Für ' + c + ' Wörter schon trainiert – bleibt erhalten';
+        b.type = 'button';
+        b.setAttribute('role', 'radio');
+        b.setAttribute('aria-checked', c === ctxLen ? 'true' : 'false');
+        b.addEventListener('click', () => {
+          if (c === ctxLen) return;
+          saveSlot();
+          ctxLen = c;
+          try { localStorage.setItem(P3_CTX_KEY, String(c)); } catch (e) { /* ohne Speicher geht es auch */ }
+          render();
+        });
+        ctxBtns.appendChild(b);
+      });
+      ctxRow.append(ctxBtns, el('span', 'small', 'Wörter'), Help.btn('kontextnetz', 'sm'));
+      return ctxRow;
+    }
+
+    /* ② Hidden-Schicht: alle Neuronen als Kästchen (Überblick) und darunter lesbar die drei gerade
+       stärksten: welche Wörter schieben sie nach oben? (Beitrag = Wert des Neurons × Gewicht zum Wort) */
+    function topNeurons(k) {
+      const h = lastForward.h, V = data.vocab.length;
+      const idx = Array.from(h, (v, i) => i).sort((a, b) => Math.abs(h[b]) - Math.abs(h[a])).slice(0, k);
+      return idx.map(n => {
+        const best = [];
+        for (let v = 0; v < V; v++) {
+          const w = data.vocab[v];
+          if (w === '.' || w === ',' || w === data.UNK) continue;
+          const c = h[n] * net.W2[n * V + v];
+          if (best.length < 3 || c > best[2][1]) { best.push([v, c]); best.sort((a, b) => b[1] - a[1]); if (best.length > 3) best.pop(); }
+        }
+        return { n, value: h[n], words: best.map(([v]) => wordLabel(data.vocab[v])) };
+      });
+    }
     function renderHiddenNode(container) {
       container.replaceChildren();
-      container.appendChild(renderSwatch(Array.from(lastForward.h), 1));
-      container.appendChild(el('p', 'mini-legend', net.H + ' Hidden-Neuronen · was bedeutet eins davon? Niemand weiß es 🙈'));
-      live.hidden = () => renderHiddenNode(container);
+      const box = el('div');
+      container.appendChild(box);
+      function paint() {
+        box.replaceChildren();
+        box.appendChild(renderSwatch(Array.from(lastForward.h), 1));
+        box.appendChild(el('p', 'mini-legend', net.H + ' Neuronen · kräftig = stark an'));
+        box.appendChild(el('p', 'card-line', net.step ? 'Gerade am stärksten an:' : 'Gerade am stärksten an (noch untrainiert – reiner Zufall):'));
+        const list = el('div', 'neurons');
+        topNeurons(3).forEach(t => {
+          const row = el('div', 'neuron-row');
+          const tag = el('span', 'neuron-tag', 'Neuron ' + (t.n + 1));
+          tag.style.background = valueColor(t.value, 1);
+          row.append(tag, el('span', 'neuron-arrow', 'schiebt hoch →'), el('span', 'neuron-words', t.words.join(' · ')));
+          list.appendChild(row);
+        });
+        box.appendChild(list);
+      }
+      paint();
+      live.hidden = () => { if (box.isConnected) paint(); };
     }
 
     function renderOutputNode(container) {
@@ -308,7 +415,6 @@ Phases.register(3, {
     function renderTrainNode(container) {
       container.replaceChildren();
       cardTrain = null;
-      centerToggle = centerDot = null;
       if (net.diverged) {
         container.appendChild(el('p', 'small net-warn', 'Das Training ist entgleist (Lernrate zu hoch).'));
         const rb = el('button', 'btn primary', 'Neu initialisieren');
@@ -318,23 +424,6 @@ Phases.register(3, {
         live.train = null;
         return;
       }
-      centerDot = el('i', 'net-live-dot');
-      centerDot.setAttribute('aria-hidden', 'true');
-
-      const tBtns = el('div', 'trainbox-btns');
-      centerToggle = el('button', 'btn primary train-btn', trainLabel());
-      centerToggle.type = 'button';
-      centerToggle.dataset.spot = 'train';
-      centerToggle.addEventListener('click', () => {
-        if (net.diverged) { reinitNet(); return; }
-        if (training) pauseTraining(); else startTraining();
-      });
-      const resetBtn = el('button', 'btn sm', '↺ Netz zurücksetzen');
-      resetBtn.type = 'button';
-      resetBtn.addEventListener('click', reinitNet);
-      tBtns.append(centerDot, centerToggle, resetBtn);
-      container.appendChild(tBtns);
-
       const facts = el('div', 'trainfacts');
       const fact = (k) => { const f = el('div', 'trainfact'); const v = el('b'); f.append(v, el('span', null, k)); facts.appendChild(f); return v; };
       const stepB = fact('Schritte');
@@ -364,6 +453,12 @@ Phases.register(3, {
       archRow.appendChild(netBtn);
       container.appendChild(archRow);
 
+      const resetBtn = el('button', 'btn sm', '↺ Netz zurücksetzen (alles vergessen)');
+      resetBtn.type = 'button';
+      resetBtn.dataset.spot = 'netreset';
+      resetBtn.addEventListener('click', reinitNet);
+      container.appendChild(resetBtn);
+
       cardTrain = { stepB, lossB, epochS, lrB, sparkHost };
       live.train = () => {
         if (!cardTrain || !cardTrain.stepB.isConnected) return;
@@ -374,7 +469,6 @@ Phases.register(3, {
         cardTrain.sparkHost.replaceChildren(renderSparkline(net.lossHistory, 260, 60));
       };
       live.train();
-      syncTrainUI();
     }
 
     function render(fresh) {
@@ -428,8 +522,28 @@ Phases.register(3, {
       paper.append(placeholder, textEl);
       center.appendChild(paper);
 
+      /* Tiny sagt, wie es um das Netz steht (updateSay). */
+      const say = el('div', 'tiny-say');
+      sayEl = el('p', 'tiny-bubble');
+      lastSay = '';
+      say.append(tinyEl('think'), sayEl);
+      center.appendChild(say);
+
       const controls = el('div', 'machine-controls');
-      genPlayBtn = el('button', 'btn primary', '▶ Vorhersagen');
+      /* Training zuerst: ohne Training rät das Netz nur. Dieser Knopf wird nie neu gebaut. */
+      centerDot = el('i', 'net-live-dot');
+      centerDot.setAttribute('aria-hidden', 'true');
+      centerToggle = el('button', 'btn primary train-btn');
+      centerToggle.type = 'button';
+      centerToggle.dataset.spot = 'train';
+      centerLab = el('span', null, trainLabel());
+      centerToggle.append(centerDot, centerLab);
+      centerToggle.addEventListener('click', () => {
+        if (net.diverged) { reinitNet(); return; }
+        if (training) pauseTraining(); else startTraining();
+      });
+      controls.appendChild(centerToggle);
+      genPlayBtn = el('button', 'btn' + (net.step ? ' primary' : ''), '▶ Vorhersagen');
       genPlayBtn.type = 'button';
       genPlayBtn.dataset.spot = 'gen';
       genPlayBtn.disabled = !texts.length;
@@ -440,6 +554,7 @@ Phases.register(3, {
       stepBtn.addEventListener('click', () => { stopGenPlay(); doGenStep(); });
       const resetGenBtn = el('button', 'btn', '↺ Von vorn');
       resetGenBtn.type = 'button';
+      resetGenBtn.dataset.spot = 'genreset';
       resetGenBtn.addEventListener('click', () => {
         stopGenPlay();
         genSession = freshGenSession();
@@ -450,50 +565,28 @@ Phases.register(3, {
       controls.append(genPlayBtn, stepBtn, resetGenBtn);
       center.appendChild(controls);
 
-      /* Wie weit schaut das Netz zurück? Wechsel = neues Netz (render baut alles neu). */
-      const ctxRow = el('div', 'ctxpick');
-      ctxRow.dataset.spot = 'ctxlen';
-      ctxRow.appendChild(el('span', 'small', 'Kontextfenster: die letzten'));
-      const ctxBtns = el('div', 'ctxpick-btns');
-      ctxBtns.setAttribute('role', 'radiogroup');
-      ctxBtns.setAttribute('aria-label', 'Wie viele Wörter sieht das Netz?');
-      P3_CTX.forEach(c => {
-        const sl = c === ctxLen ? { net } : slots[c];
-        const trained = !!(sl && sl.net.step);
-        const b = el('button', 'chip' + (c === ctxLen ? ' active' : '') + (trained ? ' trained' : ''), String(c) + (trained ? ' ✓' : ''));
-        if (trained) b.title = 'Für ' + c + ' Wörter schon trainiert – bleibt erhalten';
-        b.type = 'button';
-        b.setAttribute('role', 'radio');
-        b.setAttribute('aria-checked', c === ctxLen ? 'true' : 'false');
-        b.addEventListener('click', () => {
-          if (c === ctxLen) return;
-          saveSlot();
-          ctxLen = c;
-          try { localStorage.setItem(P3_CTX_KEY, String(c)); } catch (e) { /* ohne Speicher geht es auch */ }
-          render();
-        });
-        ctxBtns.appendChild(b);
-      });
-      ctxRow.append(ctxBtns, el('span', 'small', 'Wörter'), Help.btn('kontextnetz', 'sm'));
-      center.appendChild(ctxRow);
-
-      if (!texts.length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – öffne oben „Textwelten“.'));
+      if (!texts.length) center.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – schalte rechts unter „Textwelten“ welche an.'));
 
       const items = [
+        App.textweltenItem(),
         { id: 'embed', label: 'Embedding', cat: 'embed', hint: '1', help: 'embedding', manual: true, render: renderEmbedNode },
         { id: 'hidden', label: 'Hidden-Schicht', cat: 'hidden', hint: '2', help: 'hidden', manual: true, render: renderHiddenNode },
         { id: 'output', label: 'Kandidaten', cat: 'candidates', hint: '3', help: 'ausgabe', manual: true, render: renderOutputNode },
         { id: 'rand', label: 'Zufall', cat: 'random', hint: '4', help: 'zufall', manual: true, render: renderRandNode },
-        { id: 'train', label: 'Training', cat: 'train', help: 'training', manual: true, onClose: pauseTraining, render: renderTrainNode },
-        { id: 'net', label: 'Das Netz von innen', cat: 'net', wide: true, manual: true, open: false, help: 'netz', render: renderNetNode }
+        { id: 'train', label: 'Training', cat: 'train', help: 'training', manual: true, render: renderTrainNode },
+        { id: 'net', label: 'Das Netz von innen', cat: 'net', wide: true, manual: true, help: 'netz', render: renderNetNode }
       ];
       panelCtrl = Panel.mount(host, center, items, { phase: 3 });
+      if (net.step) panelCtrl.guide(GUIDE);
       updateGenText();
       syncTrainUI();
     }
 
     render(true);
-    State.on('corpus-changed', () => { if (bannerEl && State.corpusVersion !== builtVersion) bannerEl.hidden = false; });
+    State.on('corpus-changed', () => {
+      if (bannerEl && State.corpusVersion !== builtVersion) bannerEl.hidden = false;
+      if (panelCtrl) panelCtrl.updateMeta();
+    });
 
     return {
       reveal: id => panelCtrl.reveal(id, true),

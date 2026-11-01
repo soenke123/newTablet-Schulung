@@ -49,8 +49,17 @@
 
 .ctxpick-btns .chip.trained:not(.active) { border-color: var(--cat-train); }
 
-/* Phase 3: rechte Spalte (die Erklär-Karten) breit, Zentrum schmal — dort steht der meiste Text. */
-@media (min-width: 981px) {
-  .panel-wrap.phase-3 .panel { grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr); }
-}
 
+/* Zentrum: Trainings-Knopf mit Punkt, der beim Lernen pulsiert */
+.train-btn { display: inline-flex; align-items: center; gap: 8px; }
+.train-btn .net-live-dot { background: rgba(255,255,255,.55); }
+.train-btn .net-live-dot.on { background: var(--cat-train); }
+
+/* ② Hidden-Schicht: die drei gerade stärksten Neuronen, lesbar */
+.neurons { display: flex; flex-direction: column; gap: 6px; }
+.neuron-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; align-items: center; font-size: 0.86rem; }
+.neuron-tag { font-family: var(--font-mono); font-size: 0.74rem; font-weight: 600; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); white-space: nowrap; }
+.neuron-arrow { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
+.neuron-words { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.emb-live { display: flex; flex-direction: column; gap: 6px; }
+.ctxpick { justify-content: flex-start; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
