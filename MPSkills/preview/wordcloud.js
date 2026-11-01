@@ -294,7 +294,8 @@
     blurb: `
       <p>Eine Frage steht an der Wand, alle antworten gleichzeitig vom Tablet.
          Was Zustimmung bekommt, wächst und rückt zur Mitte — ohne dass jemand
-         Striche zählt.</p>
+         Striche zählt. So steht das <strong>Meinungsbild der Klasse</strong> in Sekunden
+         am Beamer: zum Einstieg, zum Sammeln von Vorwissen oder als Abschluss.</p>
       <p>Du kannst <strong>bis zu sieben Fragen</strong> einstellen. Jede bekommt
          ihr eigenes Fach, und jeder blättert für sich zwischen ihnen — du zeigst
          vorne die dritte, während hinten noch jemand an der ersten schreibt.</p>`

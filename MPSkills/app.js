@@ -901,18 +901,29 @@ function toolCard(t, guest) {
      Editor im Raum bleibt daneben bestehen. */
   const editorHref = ready ? window.TOOLS_OVERLAY?.[t.id]?.editor : null;
 
-  /* Ein Skill ohne Raum (tools.js, `standalone`) hat für alle denselben
-     Weg: öffnen. Auch für Gäste — es gibt nichts, wofür man
-     freigeschaltet sein müsste. */
+  /* Ein Skill ohne Raum (tools.js, `standalone`): kein Raum, nur
+     „Öffnen". Seit 01.11.2026 nur für angemeldete Lehrkräfte (Sönke:
+     „Downloaden darf man ohne Account, das Online-Tool nur als
+     Lehrer"); die App selbst prüft das auch (js/gate.js). Gäste sehen
+     die Vorschau und den Download. */
   const standaloneHref = ready ? window.TOOLS_OVERLAY?.[t.id]?.standalone : null;
+  const mayStandalone  = standaloneHref && isTeacherRole();
 
   /* Windows-Fassung (tools.js, `windows`): Knopf bleibt versteckt, bis
-     fillWindowsDownloads() dort eine version.json findet. */
+     fillWindowsDownloads() dort eine version.json findet. Für alle. */
   const winDir = ready ? window.TOOLS_OVERLAY?.[t.id]?.windows : null;
-  const foot = standaloneHref
+  const winBtn = winDir
+    ? `<a class="btn btn--sm" data-win-dir="${esc(winDir)}" href="${esc(winDir)}MasterPDFSkill-Setup.exe" download hidden>Download für Windows</a>`
+    : '';
+  const foot = mayStandalone
     ? `<div class="tile-foot">
          <a class="btn btn--sm btn--primary" href="${esc(standaloneHref)}">Öffnen</a>
-         ${winDir ? `<a class="btn btn--sm" data-win-dir="${esc(winDir)}" href="${esc(winDir)}MasterPDFSkill-Setup.exe" download hidden>Download für Windows</a>` : ''}
+         ${winBtn}
+       </div>`
+    : standaloneHref
+    ? `<div class="tile-foot">
+         ${pv ? `<button type="button" class="btn btn--sm" data-act="peek" data-tool="${esc(t.id)}">Vorschau ansehen</button>` : ''}
+         ${winBtn}
        </div>`
     : guest
     ? (pv
@@ -925,10 +936,11 @@ function toolCard(t, guest) {
          ${editorHref ? `<a class="btn btn--sm" href="${esc(editorHref)}">${esc(window.TOOLS_OVERLAY?.[t.id]?.editorLabel || 'Quiz-Editor')}</a>` : ''}
        </div>`;
 
-  /* KI-Lernform als Untertitel (tools.js, `learning`): nur auf der
-     Werkbank der Lehrkraft. Das Gast-Fenster sehen auch Schüler, und
-     dort soll die Antwort nicht schon auf der Kachel stehen. */
-  const learning = guest ? '' : window.TOOLS_OVERLAY?.[t.id]?.learning;
+  /* Untertitel (tools.js, `subtitle`). Bei den KI-Skills (`learning`)
+     nennt er die Lernform und steht nur auf der Werkbank der Lehrkraft:
+     das Gast-Fenster sehen auch Schüler, und dort soll die Antwort nicht
+     schon auf der Kachel stehen. */
+  const subtitle = subtitleOf(t.id, guest);
 
   return `<article class="tile${ready ? '' : ' tile--soon'}${pv ? ' tile--peek' : ''}">
       ${peek}
@@ -937,7 +949,7 @@ function toolCard(t, guest) {
         <span class="tile-ic">${window.MPIcons.svg(t.id)}</span>
         <div class="tile-name">
           <h3>${esc(t.title)}</h3>
-          ${learning ? `<p class="tile-kind">${esc(learning)}</p>` : ''}
+          ${subtitle ? `<p class="tile-kind">${esc(subtitle)}</p>` : ''}
         </div>
       </div>
       ${badges ? `<div class="tile-tags">${badges}</div>` : ''}
@@ -982,7 +994,8 @@ function wireToolButtons(host) {
       const t = (toolsCache || []).find(x => x.id === btn.dataset.tool);
       if (!t) return;
       syncPreviewCta(t);
-      window.MPPreview?.open({ id: t.id, title: t.title, folder: t.folder });
+      window.MPPreview?.open({ id: t.id, title: t.title, folder: t.folder,
+                               subtitle: subtitleOf(t.id, !isTeacherRole()) });
     });
   });
 }
@@ -1004,10 +1017,12 @@ function wireToolButtons(host) {
 function syncPreviewCta(t) {
   const b = document.getElementById('pvOpen');
   if (!b) return;
-  /* Ein Skill ohne Raum (tools.js, `standalone`) hat für alle denselben
-     Weg: die App öffnen — auch für Gäste und ohne Freischaltung. */
-  const href = t && window.TOOLS_OVERLAY?.[t.id]?.standalone;
-  b.dataset.href = href || '';
+  /* Ein Skill ohne Raum (tools.js, `standalone`): die App öffnen —
+     nur für Lehrkräfte (01.11.2026); Gäste bekommen wie sonst den Weg
+     zum Zugang. */
+  const standalone = t && window.TOOLS_OVERLAY?.[t.id]?.standalone;
+  const href = standalone && isTeacherRole() ? standalone : '';
+  b.dataset.href = href;
   if (href) { b.hidden = false; b.textContent = 'Skill öffnen'; return; }
   const role = roleOf(window.getSessionUser?.() ?? null);
   if (role === 'teacher' || role === 'admin') {
@@ -1244,6 +1259,17 @@ function showTab(which) {
 
   const schulung = document.getElementById('schulungCard');
   if (schulung) schulung.hidden = (which !== 'rooms');
+}
+
+function subtitleOf(id, guest) {
+  const o = window.TOOLS_OVERLAY?.[id];
+  if (!o?.subtitle || (o.learning && guest)) return '';
+  return o.subtitle;
+}
+
+function isTeacherRole() {
+  const r = roleOf(window.getSessionUser?.() ?? null);
+  return r === 'teacher' || r === 'admin';
 }
 
 function roleOf(s) {

@@ -75,13 +75,17 @@
     fade: false,
     blurb: `
       <p>Gruppenarbeit über Wochen: Alle treten dem Raum bei und stehen in der
-         <strong>Lobby</strong>. Die Lehrkraft zieht sie per Drag &amp; Drop zu Gruppen
+         <strong>Klassenübersicht</strong>. Die Lehrkraft zieht sie per Drag &amp; Drop zu Gruppen
          zusammen und öffnet für jede Gruppe — oder Einzelperson — einen
          <strong>Planungsraum</strong>.</p>
-      <p>Darin: <strong>Projektziel</strong> mit Fertig-Datum, die <strong>To-dos</strong> mit Zeitschätzung,
-         die <strong>Dokumentation</strong>, <strong>Anträge</strong> für das Lernen außerhalb
-         des Schulgeländes (eine rote Zahl in der Übersicht zeigt, wo einer wartet), das Team mit den
-         Einwilligungen der Eltern und die Regeln. Eine Klassenliste zeigt, wer heute woanders lernt.
-         Jede:r bekommt einen persönlichen Code und findet das Projekt damit auf jedem Gerät wieder.</p>`
+      <p>Darin: <strong>Team und Projektziel</strong> mit Fertig-Datum, die
+         <strong>Projektplanung</strong> mit To-dos und Zeitschätzung, das
+         <strong>Tagebuch</strong> mit Fotos, <strong>Experten</strong> und ihre Kontakte,
+         <strong>Anträge</strong> für das Lernen am anderen Ort (eine rote Zahl in der Übersicht
+         zeigt, wo einer wartet; auf Wunsch per Mail) und <strong>Kommentare der Lehrkraft</strong>.</p>
+      <p>In der Klassenübersicht stehen die Einwilligungen der Eltern, wer heute woanders lernt,
+         und ein <strong>Tätigkeitsbuch</strong> für die Lehrkraft. Weitere Lehrkräfte lassen sich
+         einladen. Jede:r bekommt einen persönlichen Code und findet das Projekt damit auf jedem
+         Gerät wieder.</p>`
   });
 })();
