@@ -146,9 +146,22 @@ code.kc .kc-f { color: color-mix(in srgb, #3b82f6 70%, currentColor); }
 code.kc .kc-s { color: color-mix(in srgb, #16a34a 75%, currentColor); }
 code.kc .kc-n { color: color-mix(in srgb, #ea580c 75%, currentColor); }
 code.kc .kc-c { opacity: .6; font-style: italic; }
-.ks-k code.kc { background: rgba(0, 0, 0, .18); }
-.ks-k code.kc span { color: inherit; }
-.ks-k code.kc .kc-k { font-weight: 900; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+/* Auf den farbigen Antwortkacheln: Code als dunkles „Terminal-Schild"
+   mit eigener, heller Farbpalette — lesbar auf Rot, Blau, Gelb, Grün
+   gleich, und die Kachelfarbe bleibt drumherum sichtbar. */
+.ks-k code.kc, .kse-pv-k code.kc {
+  background: rgba(15, 18, 30, .88);
+  color: #e8ecf4;
+  padding: .12em .45em; border-radius: .4em;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .14), 0 1px 3px rgba(0, 0, 0, .3);
+  text-shadow: none;
+  line-height: 1.5;
+}
+.ks-k code.kc .kc-k, .kse-pv-k code.kc .kc-k { color: #e9a8ff; }
+.ks-k code.kc .kc-f, .kse-pv-k code.kc .kc-f { color: #8cc8ff; }
+.ks-k code.kc .kc-s, .kse-pv-k code.kc .kc-s { color: #9ef0a8; }
+.ks-k code.kc .kc-n, .kse-pv-k code.kc .kc-n { color: #ffc27a; }
+.ks-k code.kc .kc-c, .kse-pv-k code.kc .kc-c { color: #9aa6bd; opacity: 1; }
 `;
   if (!document.getElementById('kc-css')) {
     const st = document.createElement('style');

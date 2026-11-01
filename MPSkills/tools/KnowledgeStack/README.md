@@ -545,6 +545,7 @@ Taste; unter einer Karte mit Code steht, wie es am Beamer aussieht.
 Angezeigt wird überall über `KSCode.html` (tool.js `txt`, editor.js
 Vorschau; zurückgelesen mit `KSCode.text`): Code-Schrift, Schlüsselwörter
 von Java/JavaScript/Python/SQL, Zeichenketten, Zahlen, Kommentare.
-Farben aus `currentColor` gemischt (hell/dunkel ohne Variablen), auf den
-Antwortkacheln nur Schrift + fette, unterstrichene Schlüsselwörter.
+Farben aus `currentColor` gemischt (hell/dunkel ohne Variablen). Auf den
+farbigen Antwortkacheln (.ks-k, Vorschau .kse-pv-k) steht Code als dunkles
+„Terminal-Schild" mit fester heller Palette — lesbar auf allen vier Farben.
 Geladen von tool.js `ladeAssets` und quiz.html.
