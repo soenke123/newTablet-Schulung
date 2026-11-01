@@ -88,7 +88,7 @@
     { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature',
       hint: 'Spiel ein Szenario, das deine Lehrkraft mit der Klasse teilt — dann bekommst du die Figuren, die darin vorkommen. Das klappt nur, wenn du angemeldet bist.' },
     { id: 'mps_derby',          skill: 'derby',          folder: 'Definitions Derby',    label: 'How to Fachbegriffe',
-      hint: 'Lass auf der Insel deine Wesen schlüpfen und wachsen — jede Form, die eines deiner Wesen erreicht, kannst du als Profilbild nehmen. Das klappt nur, wenn du angemeldet bist.' }
+      hint: 'Lass auf der Insel deine Wesen schlüpfen und wachsen — jede Form, die eines deiner Wesen erreicht, kannst du als Profilbild nehmen. Gewinnst du mit deinem Team den Kistenturm, bekommst du eure Teamfigur. Das klappt nur, wenn du angemeldet bist.' }
   ];
 
   const AVATAR_GROUPS = [
@@ -393,7 +393,15 @@
       ['f_b_a_b', 'f_b_a_b_avatar.png', 'Waldfee'],
       ['f_b_b_a', 'f_b_b_a_avatar.png', 'Blütenschlange'],
       ['f_b_b_b', 'f_b_b_b_avatar.png', 'Baumsaurier'],
-      ['f_b_c',   'f_b_c_avatar.png',   'Baumriese']
+      ['f_b_c',   'f_b_c_avatar.png',   'Baumriese'],
+      // Kistenturm: Teamfiguren (figuren.js DDFiguren.LIST), Kopf aus dem SVG gerendert.
+      // Frei für angemeldete Mitglieder des Sieger-Teams (Migration 0255).
+      ['kt_astro',   'kt_astro_avatar.png',   'Astro-Hase'],
+      ['kt_lama',    'kt_lama_avatar.png',    'Bananalama'],
+      ['kt_lauch',   'kt_lauch_avatar.png',   'Lauch-Samurai'],
+      ['kt_gameboy', 'kt_gameboy_avatar.png', 'GameBoy'],
+      ['kt_popcorn', 'kt_popcorn_avatar.png', 'Popcorn'],
+      ['kt_ghost',   'kt_ghost_avatar.png',   'Magic Ghost']
     ]
   };
   /* Gruppen mit gold: true haben zu jedem Bild eine goldene Fassung
