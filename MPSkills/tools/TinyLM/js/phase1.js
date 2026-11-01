@@ -12,6 +12,15 @@
    oder ein N-Gramm an, zeigen alle drei Spalten, wie GENAU DIESES Wort entstanden ist (Schritt-Daten
    aus ngram.js: cands, ctxUsed, si/pos). Ein Kandidat antippen = Quellen nur für dieses Wort.
 
+   Erst aufklappen, dann im Handy sichtbar (Sönke 01.11.2026): Das Handy sieht zuerst aus wie ein
+   ganz normales Sprachmodell (neutrale Bausteine, schlichter Schreib-Cursor, Tiny sagt nur
+   „ich schreibe“). Jede Spalte rechts ist ein Reiter (zu Beginn zu). Erst wer sie öffnet, sieht
+   ihre Ebene auch im Handy:
+     Quellen        → Quellfarben, Sprünge zwischen Texten, Farblegende unter dem Handy
+     Kontextfenster → die letzten Wörter sind umrandet (beim angetippten Wort: seine Wörter davor)
+     Kandidaten     → „?“-Baustein, unter jedem Wort seine Wahrscheinlichkeit, Tiny erklärt die Wahl
+   Offen/zu je Gerät in localStorage tinylm-p1-offen (Schaufenster: alles offen).
+
    Live-Regel (siehe CLAUDE.md): die Regler stehen in festen Köpfen der Spalten und werden nie neu
    gebaut; nur die Inhalte darunter. Wer in eine Liste tippt, hält das Schreiben an (pointerdown),
    damit der Eintrag zwischen Drücken und Loslassen nicht ausgetauscht wird. */
@@ -42,6 +51,16 @@ Phases.register(1, {
     let pick = null;    /* angetippter Kandidat (Quellen nur für dieses Wort) */
     let textEl, cursor, screen, playBtn, placeholder, sayEl, legendHost, focusHost;
     const cols = {};
+    let phoneEl = null;
+    /* Welche Spalten offen sind (= welche Ebenen das Handy zeigt). */
+    const OPEN_STORE = 'tinylm-p1-offen';
+    const DEMO = /[?&]demo=1(&|$)/.test(location.search);
+    const opened = (() => {
+      if (DEMO) return { cand: true, ctx: true, src: true };
+      try { const o = JSON.parse(localStorage.getItem(OPEN_STORE) || '{}'); return (o && typeof o === 'object') ? o : {}; }
+      catch (e) { return {}; }
+    })();
+    const isOpen = id => !!opened[id];
 
     const isPunct = w => w === '.' || w === ',';
     /* Wörter so schreiben, wie sie meist in den Texten stehen (Nomen groß, Rest klein) —
@@ -118,12 +137,16 @@ Phases.register(1, {
         const span = el('span', 'srcword', p.txt);
         span.style.setProperty('--sc', sourceColor(p.si));
         span.dataset.i = String(p.i);
-        span.title = 'aus: ' + session.sources[p.si].doc.title + ' – antippen zum Zerlegen';
+        span.title = 'Antippen zum Zerlegen';
+        const st = session.steps[p.i];
+        const ch = st.cands.list.find(a => a.word === st.chosen);
+        if (ch) span.dataset.p = fmtP(ch.p);
         if (p.i === focus) span.classList.add('sel');
         textEl.appendChild(span);
         last = span;
         prevSi = p.si;
       });
+      markWindow();
       cursor.classList.toggle('sel', focus == null && session.steps.length > 0);
       textEl.appendChild(cursor);
       placeholder.hidden = session.steps.length > 0;
@@ -132,12 +155,40 @@ Phases.register(1, {
       say();
     }
 
-    /* Tiny sagt in einem Satz, was es gerade tut. */
+    /* Kontextfenster im Handy umranden — nur wenn die Spalte offen ist. Beim angetippten Wort die
+       Wörter, auf die Tiny damals geschaut hat; sonst die letzten Wörter vor dem „?“. */
+    function markWindow() {
+      if (!isOpen('ctx')) return;
+      const v = view();
+      if (!v || !v.C.level) return;
+      const end = v.idx == null ? session.steps.length : v.idx;
+      for (let i = end - v.C.level; i < end; i++) {
+        const sp = textEl.querySelector('.srcword[data-i="' + i + '"]');
+        if (sp) sp.classList.add('win');
+      }
+    }
+
+    /* Ebenen im Handy an/aus (CSS-Klassen am Handy). */
+    function syncLayers() {
+      if (!phoneEl) return;
+      phoneEl.classList.toggle('show-src', isOpen('src'));
+      phoneEl.classList.toggle('show-ctx', isOpen('ctx'));
+      phoneEl.classList.toggle('show-cand', isOpen('cand'));
+      updateText();
+      updateLegend();
+    }
+
+    /* Tiny sagt in einem Satz, was es gerade tut. Die Erklärung „nach … kam meistens …“ ist schon
+       Zerlegen — die gibt es erst mit offenem Kontextfenster oder offenen Kandidaten. */
     function say() {
-      if (!sayEl) return;
+      if (!sayEl || !session) return;
       if (!State.activeTexts().length) { sayEl.textContent = 'Ich habe keine Texte! Schalte oben unter „Alle Quellen“ welche an.'; return; }
       const v = view();
       if (!v) { sayEl.textContent = 'Drück auf ▶ – dann lege ich los!'; return; }
+      if (!isOpen('cand') && !isOpen('ctx')) {
+        sayEl.textContent = playing ? 'Ich schreibe …' : 'Soll ich weiterschreiben? Rechts kannst du nachsehen, wie ich das mache.';
+        return;
+      }
       const top = v.C.list[0];
       if (v.idx != null) {
         sayEl.replaceChildren(document.createTextNode('Rechts siehst du, wie ich auf „'),
@@ -153,7 +204,7 @@ Phases.register(1, {
     function updateLegend() {
       legendHost.replaceChildren();
       const used = usedCounts();
-      if (!used.size) return;
+      if (!used.size || !isOpen('src')) return;
       const top = [...used.entries()].sort((a, b) => b[1] - a[1]);
       legendHost.append(el('p', 'p1-legend-lab', 'Die Farben im Handy = aus diesen Texten'),
         sourceChips(top.slice(0, 5).map(([si, c]) => ({ color: sourceColor(si), label: session.sources[si].doc.title, sub: String(c) })),
@@ -161,27 +212,51 @@ Phases.register(1, {
     }
 
     /* ---------------- Zerlegen: drei Spalten ---------------- */
-    function column(id, cat, icon, title, question, helpKey) {
+    function applyOpen(id) {
+      const c = cols[id], on = isOpen(id);
+      c.el.classList.toggle('closed', !on);
+      c.toggle.setAttribute('aria-expanded', on ? 'true' : 'false');
+      c.tools.hidden = c.body.hidden = !on;
+      c.peek.hidden = on;
+    }
+    function setOpen(id, on) {
+      opened[id] = on;
+      if (!DEMO) { try { localStorage.setItem(OPEN_STORE, JSON.stringify(opened)); } catch (e) { /* egal */ } }
+      applyOpen(id);
+      syncLayers();
+      paintCols();
+    }
+
+    function column(id, cat, icon, title, question, helpKey, reveals) {
       const c = el('section', 'p1-col');
       c.dataset.card = id;
       c.style.setProperty('--cat-color', 'var(--cat-' + cat + ')');
       c.style.setProperty('--cat-tint', 'var(--cat-' + cat + '-tint)');
       const head = el('div', 'p1-col-head');
+      const toggle = el('button', 'p1-col-toggle');
+      toggle.type = 'button';
       const t = el('div', 'p1-col-t');
       t.append(el('h3', null, title), el('p', null, question));
-      head.append(el('span', 'p1-col-ico', icon), t);
+      const chev = el('span', 'panel-chev');
+      chev.setAttribute('aria-hidden', 'true');
+      toggle.append(el('span', 'p1-col-ico', icon), t, chev);
+      head.appendChild(toggle);
       const hb = el('button', 'help-btn', '?');
       hb.type = 'button';
       hb.dataset.help = helpKey;
       hb.setAttribute('aria-label', 'Erklärung: ' + title);
-      hb.addEventListener('click', () => Explain.show(helpKey, c));
+      hb.addEventListener('click', () => { if (!isOpen(id)) setOpen(id, true); requestAnimationFrame(() => Explain.show(helpKey, c)); });
       head.appendChild(hb);
+      /* Zu: ein Satz, was das Öffnen im Handy sichtbar macht. */
+      const peek = el('p', 'p1-col-peek', reveals);
       const tools = el('div', 'p1-col-tools');
       const body = el('div', 'p1-col-body');
       /* In eine Liste tippen = Schreiben anhalten (sonst wäre der Eintrag beim Loslassen schon neu). */
       body.addEventListener('pointerdown', () => stopPlay());
-      c.append(head, tools, body);
-      cols[id] = { el: c, tools, body };
+      c.append(head, peek, tools, body);
+      cols[id] = { el: c, tools, body, toggle, peek };
+      toggle.addEventListener('click', () => setOpen(id, !isOpen(id)));
+      applyOpen(id);
       return c;
     }
 
@@ -394,7 +469,9 @@ Phases.register(1, {
       } else {
         focusHost.className = 'p1-focus';
         focusHost.append(el('span', null, session.steps.length
-          ? 'Zerlegt wird das nächste Wort „?“. Tipp im Handy auf ein Wort, um zu sehen, wie es entstanden ist.'
+          ? (Object.keys(cols).some(isOpen)
+            ? 'Zerlegt wird das nächste Wort. Tipp im Handy auf ein Wort, um zu sehen, wie es entstanden ist.'
+            : 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.')
           : 'Lass Tiny schreiben – dann zerlegen wir hier jedes Wort.'));
       }
     }
@@ -402,9 +479,9 @@ Phases.register(1, {
     function paintCols() {
       const v = view();
       paintFocus(v);
-      paintCand(v);
-      paintCtx(v);
-      paintSrc(v);
+      if (isOpen('cand')) paintCand(v); else cols.cand.body.replaceChildren();
+      if (isOpen('ctx')) paintCtx(v); else cols.ctx.body.replaceChildren();
+      if (isOpen('src')) paintSrc(v); else cols.src.body.replaceChildren();
     }
 
     function setFocus(i) {
@@ -432,6 +509,7 @@ Phases.register(1, {
       if (!playBtn) return;
       playBtn.textContent = playing ? '❚❚ Pause' : (session.steps.length ? '▶ Weiter' : '▶ Schreiben');
       playBtn.classList.toggle('playing', playing);
+      say();
     }
     function startPlay() {
       if (playing || !State.activeTexts().length) return;
@@ -447,6 +525,7 @@ Phases.register(1, {
 
     function buildPhone() {
       const phone = el('div', 'phone');
+      phoneEl = phone;
       const head = el('div', 'phone-head');
       const who = el('div', 'phone-who');
       who.append(el('b', null, 'Tiny'), el('span', null, 'tiny · model · Phase 1'));
@@ -519,9 +598,9 @@ Phases.register(1, {
 
       const row = el('div', 'p1-cols');
       row.append(
-        column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'kandidaten'),
-        column('ctx', 'context', '👀', 'Kontextfenster', 'Auf welche Wörter schaut Tiny?', 'kontext'),
-        column('src', 'origin', '📑', 'Quellen', 'Wo steht das in den Texten?', 'herkunft'));
+        column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'kandidaten', 'Öffnen: Im Handy steht unter jedem Wort, wie wahrscheinlich es war.'),
+        column('ctx', 'context', '👀', 'Kontextfenster', 'Auf welche Wörter schaut Tiny?', 'kontext', 'Öffnen: Im Handy siehst du, auf welche Wörter Tiny gerade schaut.'),
+        column('src', 'origin', '📑', 'Quellen', 'Wo steht das in den Texten?', 'herkunft', 'Öffnen: Im Handy bekommt jedes Wort die Farbe seines Textes.'));
       right.appendChild(row);
 
       /* Regler in den festen Köpfen — werden nie neu gebaut. */
@@ -541,8 +620,7 @@ Phases.register(1, {
       grid.append(left, right);
       root.appendChild(grid);
       host.replaceChildren(root);
-      updateText();
-      updateLegend();
+      syncLayers();
       paintCols();
     }
 

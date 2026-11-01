@@ -76,6 +76,24 @@ body:has(.phase-pane[data-phase="1"]:not([hidden])) .main { max-width: 1440px; }
 .p1-legend:empty { display: none; }
 .p1-legend-lab { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
 
+/* ---- Ebenen im Handy: erst sichtbar, wenn die Spalte rechts offen ist ----
+   Ohne Quellen: neutrale Bausteine, keine Sprünge. Ohne Kandidaten: schlichter Schreib-Cursor
+   statt „?“, keine Prozente. Das Kontextfenster (.win) setzt phase1.js nur bei offener Spalte. */
+.phone:not(.show-src) .srcword {
+  background: var(--soft); border-bottom-color: var(--accent-edge);
+}
+.phone:not(.show-src) .seam { display: none; }
+.phone:not(.show-cand) .cursor {
+  border: 0; padding: 0; width: 3px; height: 1.3em; vertical-align: -0.15em; margin: 0 0 9px 3px;
+  border-radius: 2px; background: var(--accent); animation: blink 1s steps(1) infinite;
+}
+.phone:not(.show-cand) .cursor::after { content: none; }
+.phone.show-cand .srcword[data-p]::after {
+  content: attr(data-p); display: block; text-align: center; margin-top: 1px;
+  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 500; line-height: 1; color: var(--cat-candidates);
+}
+.phone .srcword.win { outline-color: var(--cat-context); }
+
 /* ---- Rechts: Kernsatz + drei Spalten ---- */
 .p1-right { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 .p1-intro { display: flex; flex-direction: column; gap: 6px; padding: 2px 4px 0; }
@@ -96,7 +114,18 @@ body:has(.phase-pane[data-phase="1"]:not([hidden])) .main { max-width: 1440px; }
   border: 1px solid color-mix(in srgb, var(--cat-color) 28%, var(--line));
   border-top: 5px solid var(--cat-color); display: flex; flex-direction: column;
 }
-.p1-col-head { display: flex; align-items: flex-start; gap: 10px; padding: 12px 12px 8px 14px; }
+.p1-col-head { display: flex; align-items: flex-start; gap: 6px; padding: 8px 12px 6px 6px; }
+.p1-col-toggle {
+  flex: 1; min-width: 0; display: flex; align-items: flex-start; gap: 10px; text-align: left; font: inherit; color: inherit;
+  background: none; border: 0; padding: 4px 4px 4px 8px; border-radius: 14px; cursor: pointer;
+}
+.p1-col-toggle:hover { background: color-mix(in srgb, var(--cat-tint) 25%, transparent); }
+.p1-col-toggle .panel-chev { align-self: center; }
+.p1-col.closed .panel-chev { transform: rotate(-90deg); }
+.p1-col-peek { margin: 0 14px 12px; font-size: 0.82rem; line-height: 1.35; color: var(--muted); }
+/* Zu: schlanker, ohne Schatten, Farbe nur als Rand */
+.p1-col.closed { box-shadow: none; border-top-width: 3px; background: color-mix(in srgb, var(--cat-tint) 10%, var(--surface)); }
+.p1-col.closed:hover { border-color: var(--cat-color); }
 .p1-col-ico {
   width: 36px; height: 36px; border-radius: 12px; flex: none; display: grid; place-items: center; font-size: 1.1rem;
   background: color-mix(in srgb, var(--cat-tint) 70%, var(--surface));
