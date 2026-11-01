@@ -534,3 +534,17 @@ Fragen ändern: `FRAGEN` im Skript, nicht die SQL-Datei. Ändert sich die
 Oberfläche, das Skript neu laufen lassen und 0238 noch einmal einspielen
 (idempotent, die Fragen werden ersetzt). Die Datei ist knapp 1 MB groß
 (die Fotos als JPEG, 900 Punkte breit).
+
+## Code hervorheben (codehl.js, window.KSCode)
+
+Code steht im Text zwischen Backticks (`` `print(x)` ``) — bleibt reiner
+Text, Datenbank/Import/Export unverändert. Im Editor schaltet **Strg+E**
+(Mac ⌘E) in Frage, Antwort oder Erklärung um: markierter Text → Code,
+Cursor in Code → wieder normal. Kleine Zeile über den Fragen nennt die
+Taste; unter einer Karte mit Code steht, wie es am Beamer aussieht.
+Angezeigt wird überall über `KSCode.html` (tool.js `txt`, editor.js
+Vorschau; zurückgelesen mit `KSCode.text`): Code-Schrift, Schlüsselwörter
+von Java/JavaScript/Python/SQL, Zeichenketten, Zahlen, Kommentare.
+Farben aus `currentColor` gemischt (hell/dunkel ohne Variablen), auf den
+Antwortkacheln nur Schrift + fette, unterstrichene Schlüsselwörter.
+Geladen von tool.js `ladeAssets` und quiz.html.
