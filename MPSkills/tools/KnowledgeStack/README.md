@@ -255,7 +255,7 @@ wird je Frage im Editor (Knopfreihe über dem Fragetext, `ks_questions.kind`):
 |---|---|---|---|---|
 | **Wahr/Falsch** | `tf` | zwei Kacheln nebeneinander, **nicht gemischt** (Wahr links) | zwei Knöpfe | wie Auswahl (`ks_answer`, Tempo + Serie) |
 | **Skala** | `scale` | Strecke Start … Ende; Auflösung: Ziel, grünes Band, ein Punkt je Kind (dicht beieinander gestapelt), Durchschnitt | Regler + „Abgeben“ (einmal) | `ks_answer_scale`: genau = 1000, fällt exponentiell, ab ± 30 % der Spanne (Ende − Start) **0**. Tempo zählt nicht, Serie bleibt unverändert |
-| **Münzen setzen** | `bet` | wie Auswahl; Auflösung: Füllstand und Zahl zählen **Münzen** (`9 🪙`) statt Köpfe | Bank mit 5 Münzen à 200 Punkte, auf die Antworten **ziehen** (Zeigerereignisse, Finger/Stift/Maus) oder Antwort antippen; gesetzte Münze antippen = zurück in die Bank; umsetzen bis die Uhr abläuft | `ks_bet`: 200 je Münze auf einer richtigen Antwort, Serie bleibt unverändert |
+| **Münzen setzen** | `bet` | wie Auswahl; Auflösung: Füllstand und Zahl zählen **Münzen** (`9 🪙`) statt Köpfe | Bank mit 5 Münzen à 200 Punkte; je Antwort rechts eine Säule (Sönke 02.11.2026): oben die Summe, darunter die Münzen als **Stapel übereinander**, unten **− / +** (Münze zurück in die Bank / aus der Bank dazu); daneben weiter **ziehen** (Zeigerereignisse, Finger/Stift/Maus) oder Antwort antippen; gesetzte Münze antippen = zurück in die Bank; umsetzen bis die Uhr abläuft | `ks_bet`: 200 je Münze auf einer richtigen Antwort, Serie bleibt unverändert |
 
 * **Wahr/Falsch** ist im Editor mit „Wahr“/„Falsch“ vorbelegt, die Texte sind
   änderbar (Ja/Nein …); genau eine ist richtig (der Haken springt). Der
@@ -549,3 +549,5 @@ Farben aus `currentColor` gemischt (hell/dunkel ohne Variablen). Auf den
 farbigen Antwortkacheln (.ks-k, Vorschau .kse-pv-k) steht Code als dunkles
 „Terminal-Schild" mit fester heller Palette — lesbar auf allen vier Farben.
 Geladen von tool.js `ladeAssets` und quiz.html.
+
+**Eigene Antwort bleibt sichtbar** (Sönke 02.11.2026): Nach dem Antippen bleibt die gewählte Kachel auf dem Tablet hervorgehoben (`meineKachel`: weißer Rahmen, goldener Schein, Schild „Deine Antwort“, auch nach Neuladen/Flicken), die anderen treten zurück (auch im hellen Modus deutlich blasser). In der Auflösung steht unter dem Urteil „Deine Antwort: …“ (`.ks-tdeine`, Auswahl und Wahr/Falsch). Ändern lässt sich eine abgegebene Auswahl weiterhin nicht (Punkte nach Tempo, `ks_answer` → `already_answered`).

@@ -78,7 +78,8 @@ await game(4);
 await boxes(0, N(0, 20)); await boxes(1, N(1, 15)); await boxes(2, N(2, 10)); await boxes(3, N(3, 5));
 const last = await draws(3, 600), third = await draws(2, 600), first = await draws(0, 300);
 ok('2  Letzter: nie Möwe, Mini, Maxi, Eis, Bonus, Stein', ['moewe', 'mini', 'maxi', 'eis', 'bonus', 'stein'].every(k => !last[k]), JSON.stringify(last));
-ok('2  Letzter: 3 Möwen, Sturm, Boom, Bus kommen', ['moewe3', 'sturm', 'boom', 'bus'].every(k => last[k] > 40), JSON.stringify(last));
+// seit 0257 kommen Sturm/Bus/Boom seltener (Gewicht 1–2 statt 3), darum nur „kommen vor“
+ok('2  Letzter: 3 Möwen, Sturm, Boom, Bus kommen', ['moewe3', 'sturm', 'boom', 'bus'].every(k => last[k] > 0), JSON.stringify(last));
 ok('2  Platz 3: Teatime am häufigsten (Gewicht 5)', Object.entries(third).every(([k, n]) => k === 'tea' || n < third.tea), JSON.stringify(third));
 ok('2  Erster: nur Bonus, Stein, Maxi, Eis, Kuddelmuddel', Object.keys(first).every(k => ['bonus', 'stein', 'maxi', 'eis', 'kuddel'].includes(k)), JSON.stringify(first));
 

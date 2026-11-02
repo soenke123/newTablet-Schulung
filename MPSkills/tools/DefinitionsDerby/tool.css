@@ -855,6 +855,7 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
 .dd-isl__popfam::before { content: ''; position: absolute; left: 0; top: 50%; width: 9px; height: 9px; margin-top: -5px; border-radius: 50%; background: var(--f); }
 .dd-isl__popt { font-size: 1.15rem; font-weight: 800; line-height: 1.2; overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; }
 .dd-isl__popst { font-size: .82rem; color: var(--dd-ink-soft); margin-bottom: 4px; }
+.dd-isl__popd { margin: 2px 0 0; font-size: .92rem; line-height: 1.35; color: var(--dd-ink); overflow-wrap: break-word; hyphens: auto; -webkit-hyphens: auto; max-height: 9.5em; overflow-y: auto; }
 .dd-x--s { width: 34px; height: 34px; top: 4px; right: 4px; font-size: 1.4rem; }
 
 .dd-sdots { display: inline-flex; gap: 4px; }
@@ -993,8 +994,10 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
   appearance: none; cursor: pointer; font: inherit; font-size: 1rem; color: var(--dd-ink); padding: 9px 12px; min-height: 44px;
   background: #fff; border: 1px solid var(--dd-pappe3); border-radius: 4px; box-shadow: 0 2px 0 var(--dd-pappe3), 0 3px 6px rgba(0,0,0,.08);
 }
-.dd-build__line .dd-tile { background: var(--dd-hl); border-color: var(--dd-k2); }
-.dd-tile.is-wrong { background: #f7ddd5; border-color: var(--dd-no); text-decoration: line-through; }
+/* Eigene Farbe je Baustein (--tb/--tk aus paintBuild), in der Zeile kräftiger umrandet */
+.dd-build .dd-tile[style], .dd-tile--fly[style] { background: var(--tb); border-color: var(--tk); box-shadow: 0 2px 0 var(--tk), 0 3px 6px rgba(0,0,0,.08); }
+.dd-build__line .dd-tile { background: var(--tb, var(--dd-hl)); border-color: var(--tk, var(--dd-k2)); border-width: 2px; }
+.dd-build .dd-tile.is-wrong, .dd-tile.is-wrong { background: #f7ddd5; border-color: var(--dd-no); text-decoration: line-through; }
 .dd-tile[disabled] { cursor: default; }
 /* Ziehen: Zeile/Vorrat als Ziel, Lücke = Landeplatz, schwebender Baustein */
 .dd-build .dd-tile:not([disabled]) { touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
@@ -1009,7 +1012,7 @@ textarea.dd-input { resize: vertical; line-height: 1.4; min-height: 64px; }
   position: fixed; left: 0; top: 0; z-index: 2; margin: 0; pointer-events: none; cursor: grabbing;
   box-shadow: 0 10px 22px rgba(0,0,0,.28), 0 2px 0 var(--dd-pappe3);
 }
-.dd-tile--fly.is-in { background: var(--dd-hl); border-color: var(--dd-k2); }
+.dd-tile--fly.is-in { background: var(--tb, var(--dd-hl)); border-color: var(--tk, var(--dd-k2)); }
 .dd-task__act { display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end; margin-top: 14px; }
 .dd-task__act .btn { min-height: 46px; }
 
@@ -1127,9 +1130,11 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
    Balken, darunter das Aufgabenblatt der Insel (nicht als Fenster,
    .dd-task--inline). Teamfarbe kommt als --tc/--ts (stCol). */
 
-/* Knopf „Mitmachen“ für die Klasse */
+/* Knopf „Mitmachen“ für die Klasse. z-index UNTER dem Profil-Menü
+   (.ub-menu, 40): sonst lag das Band über dem Dropdown oben rechts
+   (Sönke 02.11.2026). */
 .dd-stbanner {
-  position: sticky; top: 8px; z-index: 40; display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+  position: sticky; top: 8px; z-index: 30; display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
   margin: -6px 0 18px; padding: 10px 14px; background: var(--dd-paper); color: var(--dd-ink); border-radius: 3px;
   border-left: 8px solid #e5484d; box-shadow: 0 8px 18px var(--dd-shadow); animation: dd-st-nudge 2.4s ease-in-out infinite;
 }
@@ -1244,9 +1249,9 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 }
 #ddSt:fullscreen { background: var(--dd-bg); padding: 16px 20px; height: 100%; overflow: hidden; }
 #ddSt:fullscreen .dd-st__scene { flex: 1; height: auto; min-height: 0; }
-.dd-st__lanes { position: absolute; left: 34px; right: 0; top: 0; bottom: var(--floor); display: flex; }
+.dd-st__lanes { position: absolute; left: 34px; right: 34px; top: 0; bottom: var(--floor); display: flex; }
 /* ohne Item-Linien brauchen die Fragezeichen links keinen Streifen */
-.dd-st__scene:not(:has(.dd-st__ilines i)) .dd-st__lanes { left: 0; }
+.dd-st__scene:not(:has(.dd-st__ilines i)) .dd-st__lanes { left: 0; right: 0; }
 .dd-st__lane { position: relative; flex: 1 1 0; min-width: 0; }
 .dd-st__tower { position: absolute; bottom: 0; left: 50%; width: var(--bw); display: flex; flex-direction: column-reverse; z-index: 1; }
 .dd-st__box {
@@ -1294,7 +1299,9 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd-st__who span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-family: Outfit, sans-serif; font-size: .74rem; line-height: 1.2; margin-top: 1px; overflow-wrap: break-word; }
 .dd-st__floor {
   position: absolute; left: 0; right: 0; bottom: 0; height: var(--floor);
-  background: repeating-linear-gradient(90deg, rgba(0,0,0,.12) 0 2px, transparent 2px 180px), linear-gradient(#a7713f, #7c4f28 30%, #6a4220);
+  /* ohne senkrechte Bretterfugen: die standen nicht unter den Türmen und
+     ließen das Feld schief wirken (Sönke 02.11.2026) */
+  background: linear-gradient(#a7713f, #7c4f28 30%, #6a4220);
   border-top: 3px solid #5a3718; box-shadow: 0 -3px 8px rgba(0,0,0,.25);
 }
 .dd-st__goal {
@@ -1781,3 +1788,24 @@ html.kb-open .dd-task__term b { font-size: 1.4rem; }
 .dd:has(#ddSt.is-fit) { min-height: 0; }
 /* Nach der Antwort braucht es „Prüfen“/„Weiß ich nicht“ nicht mehr – Platz für die Rückmeldung */
 .dd-st--dev .dd-task__sheet:has(.dd-task__fb:not(:empty)) .dd-task__act { display: none; }
+
+/* ══ Raum-Vollbild (lib/tool.js MPTool.vollbild) ══
+   Sönke 02.11.2026: „der Vollbildmodus ist horizontal nicht sauber
+   zentriert (Lehrer- und User-Sicht)“. Lehrkraft (.rpane--tool) und
+   Tablet (.toolhost) hatten verschiedene Ränder, ein Scrollbalken
+   schob alles nach links, unten blieb ein leerer Streifen. Jetzt: der
+   Holzrahmen füllt den ganzen Bildschirm, ohne Seitenrand, und der
+   Platz für einen Scrollbalken ist auf BEIDEN Seiten reserviert. */
+.mpfs-on:has(.dd) {
+  padding: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  scrollbar-gutter: stable both-edges;
+}
+.mpfs-on .dd {
+  box-sizing: border-box;
+  min-height: 100vh;
+  min-height: 100dvh;
+  border-radius: 0;
+  margin: 0;
+}

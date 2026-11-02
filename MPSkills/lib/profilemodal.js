@@ -491,7 +491,7 @@
         <img src="${esc(window.getAvatarUrl(a.id, '../'))}" alt="" />
         <span>${esc(a.label)}</span>
         ${t.both ? `<span class="tile-flip" role="button" tabindex="0" data-flip="${esc(t.base.id)}"
-          title="${a.goldOf ? 'Normal zeigen' : 'Gold zeigen'}" aria-label="${a.goldOf ? 'Normal zeigen' : 'Gold zeigen'}"></span>` : ''}
+          title="${a.goldOf ? 'Normal zeigen' : 'Gold zeigen'}" aria-label="${a.goldOf ? 'Normal zeigen' : 'Gold zeigen'}">${a.goldOf ? 'Normal' : 'Gold'}</span>` : ''}
       </button>`;
     }).join('');
 

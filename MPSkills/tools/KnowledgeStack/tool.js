@@ -541,7 +541,7 @@
           const gesperrt = !!view.my_answer || answering;
           els.tiles.forEach(t => {
             t.disabled = gesperrt;
-            t.classList.toggle('is-still', gesperrt);
+            t.classList.toggle('is-still', gesperrt && !t.classList.contains('is-meine'));
           });
         }
       }
@@ -1136,7 +1136,14 @@
           return `
           <div class="${cls.join(' ')} ks-k--wette" data-idx="${i}" data-ziel="${i}">
             <span class="ks-kt">${txt(t)}</span>
-            <span class="ks-stapel" data-stapel="${i}"></span>
+            <span class="ks-wsaeule">
+              <b class="ks-wsumme" data-summe="${i}">0</b>
+              <span class="ks-stapel" data-stapel="${i}"></span>
+              <span class="ks-wpm">
+                <button type="button" class="ks-wknopf" data-wminus="${i}" aria-label="Münze wegnehmen">−</button>
+                <button type="button" class="ks-wknopf" data-wplus="${i}" aria-label="Münze dazulegen">+</button>
+              </span>
+            </span>
           </div>`;
         }
         return `
@@ -1145,7 +1152,7 @@
             ${o.ohneBuchstabe ? '' : '<span class="ks-kk ' + (richtig ? 'ks-kk--richtig' : '') + '">' + (richtig ? '✓' : LABELS[pos]) + '</span>'}
             <span class="ks-kt">${txt(t)}</span>
             ${o.modus === 'fuell' ? '<span class="ks-kn" data-kn="' + i + '">0</span>' : ''}
-            ${gewaehlt ? '<span class="ks-kmein">deine Wahl</span>' : ''}
+            ${gewaehlt ? '<span class="ks-kmein">Deine Antwort</span>' : ''}
           </${o.modus === 'wahl' ? 'button' : 'div'}>`;
       }).join('') + '</div>';
   }
@@ -1274,6 +1281,16 @@
     poll();
   }
 
+  /* Die eigene Antwort bleibt auf dem Tablet stehen: Rahmen, Schild
+     „Deine Antwort", die anderen Kacheln treten zurück. */
+  function meineKachel(t, an) {
+    t.classList.toggle('is-meine', an);
+    if (an) t.classList.remove('is-still');
+    const schild = t.querySelector('.ks-kmein');
+    if (an && !schild) t.insertAdjacentHTML('beforeend', '<span class="ks-kmein">Deine Antwort</span>');
+    if (!an && schild) schild.remove();
+  }
+
   /* ─── Münzen ─────────────────────────────────────────────── */
   function tabWetteHTML(v, hidden) {
     const q = v.question || {};
@@ -1308,8 +1325,15 @@
       const i = Number(st.dataset.stapel);
       const n = wette.bets[i] || 0;
       st.innerHTML = Array.from({ length: n }, () => muenzeHTML(i)).join('');
+      st.querySelectorAll('.ks-muenze').forEach((m, k) => { m.style.zIndex = String(n - k); });
       const k = st.closest('.ks-k');
-      if (k) k.classList.toggle('is-meine', n > 0);
+      if (!k) return;
+      k.classList.toggle('is-meine', n > 0);
+      const su = k.querySelector('[data-summe]');
+      if (su) su.textContent = pkt(n * MUENZWERT);
+      const minus = k.querySelector('[data-wminus]'), plus = k.querySelector('[data-wplus]');
+      if (minus) minus.disabled = n <= 0;
+      if (plus) plus.disabled = rest() <= 0;
     });
   }
 
@@ -2196,9 +2220,14 @@
               + ((me.streak > 1 && richtig) ? ' <i>🔥 ' + me.streak + 'er Serie</i>' : ''))
           + '</div>'
         : '<div class="ks-urteil ks-urteil--weg">Keine Antwort abgegeben</div>';
+    // Was ich gewählt habe, steht auch in der Auflösung noch da.
+    const opts = (v.question && Array.isArray(v.question.options)) ? v.question.options : [];
+    const deine = my && (art === 'mc' || art === 'tf') && my.chosen_idx != null && opts[my.chosen_idx] != null
+      ? '<p class="ks-tdeine">Deine Antwort: <b>' + txt(opts[my.chosen_idx]) + '</b></p>' : '';
 
     return `
       ${urteil}
+      ${deine}
       <div class="ks-trio">
         ${nachbarHTML(v.neighbor_before, 'vor')}
         <div class="ks-ich" data-slot="ich" data-cid="${me.creature_id | 0}">
@@ -2295,7 +2324,8 @@
       if (lock) lock.hidden = !v.my_answer || reading;
       els.tiles.forEach(t => {
         const mein = v.my_answer && v.my_answer.chosen_idx === Number(t.dataset.idx);
-        t.classList.toggle('is-meine', !!mein);
+        // Nach einem Fehlschlag (answering zurück) bleibt nichts markiert.
+        if (mein || !answering) meineKachel(t, !!mein);
         t.disabled = gesperrt;
         t.classList.toggle('is-still', (gesperrt && !reading) && !mein);
       });
@@ -2496,6 +2526,12 @@
     if (role === 'participant' && view.phase === 'question' && artVon(view.question) === 'bet') {
       // Ein Ziehen endet auch mit einem Klick — der zählt nicht noch einmal.
       if (Date.now() - klickSperre < 400 || wetteZu()) return;
+      const pm = ev.target.closest('[data-wplus],[data-wminus]');
+      if (pm) {
+        if (pm.dataset.wminus != null) setzeMuenze(pm.dataset.wminus, 'bank');
+        else setzeMuenze('bank', pm.dataset.wplus);
+        return;
+      }
       const ziel = ev.target.closest('[data-ziel]');
       if (ziel && ziel.dataset.ziel !== 'bank') setzeMuenze('bank', ziel.dataset.ziel);
       return;
@@ -2509,7 +2545,7 @@
       answering = true;
       const idx = Number(el.dataset.idx);
       els.tiles.forEach(t => { t.disabled = true; if (t !== el) t.classList.add('is-still'); });
-      el.classList.add('is-meine');
+      meineKachel(el, true);
       const lock = stage.querySelector('[data-ks=lock]');
       if (lock) lock.hidden = false;
 
@@ -2527,7 +2563,7 @@
         answering = false;
         if (r.error !== 'already_answered') {
           ctx.toast(fehlerText(r.error), true);
-          els.tiles.forEach(t => { t.disabled = false; t.classList.remove('is-still', 'is-meine'); });
+          els.tiles.forEach(t => { t.disabled = false; t.classList.remove('is-still'); meineKachel(t, false); });
           if (lock) lock.hidden = true;
         }
       }

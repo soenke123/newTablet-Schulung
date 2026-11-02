@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261101c';
+  const V = '20261102a';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -337,6 +337,7 @@
     again: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4.5H15"/></svg>',
     full:  '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg>',
     unfull:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg>',
+    island:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19c1.5 1 3 1 4.5 0s3-1 4.5 0 3 1 4.5 0 3-1 4.5 0"/><path d="M5.5 16c1.6-2.3 3.9-3.3 6.5-3.3s4.9 1 6.5 3.3"/><path d="M12.5 12.7c-.3-2.8.2-5.4 1.5-7.7M14 5c-1.6-1-3.6-1-5 .3M14 5c1.6-.9 3.6-.6 4.8.9M14 5c.3 1.5-.2 3-1.4 4"/></svg>',
     clock: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4.5l3 2M10 3h4"/></svg>'
   };
 
@@ -1917,8 +1918,8 @@
      Eine Runde (islRound) ist jeder Begriff einmal (DDInsel.roundCards),
      falsch Beantwortetes kommt einmal später in derselben Runde wieder
      (requeue), ist es da wieder falsch, steht es in der nächsten Runde
-     doppelt (CARRY im Gerät). Ein angetipptes Wesen „Trainieren“ ist
-     eine Runde aus einer Aufgabe.
+     doppelt (CARRY im Gerät). Ein angetipptes Wesen zeigt nur Begriff,
+     Definition und Stufe (kein „Trainieren“ mehr, Sönke 02.11.2026).
      Nach jeder Antwort wandert der neue Stand sofort in prog (e, x)
      und über saveProg zum Gerät/Konto. Der Stufensprung bekommt
      seinen eigenen Moment: das Bild im Aufgabenblatt wächst, ein Satz
@@ -2247,7 +2248,7 @@
           '<canvas class="dd-isl__cv" id="ddIslCv" aria-label="Die Insel mit allen Wesen"></canvas>' +
           '<p class="dd-isl__wait" id="ddIslWait">Die Insel entsteht …</p>' +
           '<div class="dd-isl__zoom">' +
-            '<button type="button" class="btn btn--sm dd-ic" data-act="isl-fit" aria-label="Ganze Insel">' + ico.full + '</button>' +
+            '<button type="button" class="btn btn--sm dd-ic" data-act="isl-fit" title="Zurück zur ganzen Insel" aria-label="Zurück zur ganzen Insel">' + ico.island + '</button>' +
           '</div>' +
           '<div class="dd-isl__pop" id="ddIslPop" hidden></div>' +
           '<aside class="dd-isl__side" id="ddIslSide"></aside>' +
@@ -2513,7 +2514,9 @@
       '<strong class="dd-isl__popt">' + E(w.card.t) + '</strong>' +
       stageDots(e) +
       '<span class="dd-isl__popst">Stufe ' + (e + 1) + ' von 6 · ' + I.STAGES[e] + '</span>' +
-      '<button type="button" class="btn btn--primary btn--sm" data-act="isl-train">' + ico.play + (e >= I.MAX ? 'Wiederholen' : 'Trainieren') + '</button>';
+      // Sönke 02.11.2026: ein Wesen antippen = nur nachlesen, nicht
+      // trainieren. Gelernt (und gewachsen) wird in der Runde.
+      (w.card.d ? '<p class="dd-isl__popd">' + E(w.card.d) + '</p>' : '');
     pop.hidden = false;
     islPlacePop();
   }
@@ -3332,11 +3335,18 @@
     setTimeout(run, 800);
   }
 
+  // Hintergrund · Rand der Bausteine, hell genug für dunkle Schrift.
+  const TILE_TINT = [['#fff3bf', '#c9a227'], ['#dcecff', '#5b8cc7'], ['#e1f3d8', '#6aa357'], ['#fde0e3', '#c96a78'],
+                     ['#ebe2fb', '#8a72c4'], ['#ffe4c7', '#c98a45'], ['#d8f2ef', '#4f9c94']];
   function paintBuild() {
     const t = curTask(), box = root.querySelector('#ddBuild');
     if (!box) return;
     const used = new Set(t.seq);
-    const tile = (x, where) => '<button type="button" class="dd-tile' + (t.done && x.wrong && where === 'in' ? ' is-wrong' : '') + '" data-act="isl-tile" data-k="' + x.k + '"' + (t.done ? ' disabled' : '') + '>' + E(x.text) + '</button>';
+    // Jeder Baustein behält seine eigene, leicht andere Farbe (Vorrat und
+    // Zeile) — so sieht man, was sich beim Umsortieren bewegt hat
+    // (Sönke 02.11.2026).
+    const tint = x => { const i = t.tiles.indexOf(x); return i < 0 ? '' : ' style="--tb:' + TILE_TINT[i % TILE_TINT.length][0] + ';--tk:' + TILE_TINT[i % TILE_TINT.length][1] + '"'; };
+    const tile = (x, where) => '<button type="button" class="dd-tile' + (t.done && x.wrong && where === 'in' ? ' is-wrong' : '') + '" data-act="isl-tile" data-k="' + x.k + '"' + tint(x) + (t.done ? ' disabled' : '') + '>' + E(x.text) + '</button>';
     const byK = k => t.tiles.find(x => x.k === k);
     box.innerHTML =
       '<div class="dd-build__line' + (t.seq.length ? '' : ' is-empty') + '" aria-label="Deine Definition">' +
@@ -4263,9 +4273,15 @@
     const sc = root && root.querySelector('#ddStScene');
     if (!sc || !st || !st.v) return;
     // Spielfeld bis an den unteren Rand des Fensters (Vollbild: CSS)
-    if (!document.fullscreenElement) {
+    // Nur wenn #ddSt selbst im Vollbild ist, regelt CSS die Höhe; im
+    // Raum-Vollbild (ganzer Skill) zählt wie sonst das Fenster.
+    if (fsEl() !== root.querySelector('#ddSt')) {
       const top = sc.getBoundingClientRect().top + window.scrollY;
-      sc.style.height = Math.round(Math.max(320, Math.min(980, window.innerHeight - top - 22))) + 'px';
+      // Raum-Vollbild: genau bis zum unteren Rand des Holzrahmens (Polster + Rahmen der .dd).
+      const fr = sc.closest('.mpfs-on') && sc.closest('.dd');
+      const cs = fr && getComputedStyle(fr);
+      const below = cs ? parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth) + 2 : 22;
+      sc.style.height = Math.round(Math.max(320, Math.min(fr ? 4000 : 980, window.innerHeight - top - below))) + 'px';
     } else sc.style.height = '';
     const lanes = sc.querySelector('.dd-st__lanes');
     const h = lanes.clientHeight, w = lanes.clientWidth / st.v.team_count;
@@ -5333,7 +5349,6 @@
         case 'du-start': duStart(); break;
         case 'du-new': if (du) { newDuel(du.goal, du.size); renderDuel(); } break;
         case 'isl-round': islRound(null); break;
-        case 'isl-train': if (isl && isl.selId) islRound(isl.selId); break;
         case 'isl-unsel': islSelect(null); break;
         case 'stk': toggleActive(b.dataset.id); break;
         case 'isl-tpl': islTplOpen = false; setTpl(Number(b.dataset.v)); break;

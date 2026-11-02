@@ -476,6 +476,7 @@
       .picker-main .picker-grid { padding-left: 0.8rem; padding-right: 0.8rem; }
       .picker-main .picker-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 0.5rem; }
       .picker-main .avatar-tile-img { width: 76px; height: 76px; }
+      .picker-main .avatar-tile .tile-flip { top: calc(0.6rem + 56px); }
     }
 
     .picker-tabs {
@@ -598,33 +599,41 @@
       color: var(--muted);
       text-align: center;
     }
-    /* Gold-Fassung: Dreieck unten an der Kachel schaltet um (avatars.js
-       getPickerTiles). Zeigt die Kachel Gold, ist es grau = zurück. */
+    /* Gold-Fassung: Schalter „Gold“/„Normal“ unten am Bild (avatars.js
+       getPickerTiles). Vorher nur ein Dreieck — das übersahen Kinder
+       (Sönke 02.11.2026). Zeigt die Kachel Gold, ist er grau = zurück. */
     .avatar-tile .tile-flip {
       position: absolute;
-      top: calc(0.6rem + 78px);
-      left: calc(50% + 24px);
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
+      top: calc(0.6rem + 74px);
+      left: 50%;
+      transform: translateX(-50%);
+      height: 26px;
+      padding: 0 10px 0 8px;
+      border-radius: 13px;
       background: var(--surface, #fff);
-      box-shadow: 0 1px 4px rgba(0,0,0,0.25);
-      display: grid;
-      place-items: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #8a5a00;
+      white-space: nowrap;
       cursor: pointer;
     }
     .avatar-tile .tile-flip::before {
       content: '';
-      width: 13px;
-      height: 11px;
+      width: 11px;
+      height: 9px;
       margin-top: 2px;
       clip-path: polygon(50% 100%, 0 0, 100% 0);
       background: linear-gradient(135deg, #fff1b8, #e0a92a 55%, #a8700f);
       filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35));
     }
+    .avatar-tile.is-gold .tile-flip { color: var(--muted, #555); }
     .avatar-tile.is-gold .tile-flip::before { background: linear-gradient(135deg, #f4f4f4, #a9a9a9 60%, #7a7a7a); }
     .avatar-tile .tile-flip:hover,
-    .avatar-tile .tile-flip:focus-visible { background: var(--surface-soft); outline: none; transform: scale(1.12); }
+    .avatar-tile .tile-flip:focus-visible { background: var(--surface-soft); outline: none; transform: translateX(-50%) scale(1.08); }
     .avatar-tile.is-gold .avatar-tile-img { box-shadow: 0 0 0 3px #e0a92a; }
 
     /* ─── Ladeanzeige (bevor Session da ist) ─────────────────── */
@@ -1021,7 +1030,7 @@
             <img src="${window.getAvatarUrl(a.id, '')}" alt="" />
           </div>
           <div class="avatar-tile-label">${a.label}</div>
-          ${t.both ? `<span class="tile-flip" role="button" tabindex="0" title="${flipLabel}" aria-label="${flipLabel}"></span>` : ''}
+          ${t.both ? `<span class="tile-flip" role="button" tabindex="0" title="${flipLabel}" aria-label="${flipLabel}">${a.goldOf ? 'Normal' : 'Gold'}</span>` : ''}
         `;
         tile.addEventListener('click', () => selectAvatar(a.id));
         // Dreieck: zwischen normal und Gold umschalten, ohne zu wählen.
