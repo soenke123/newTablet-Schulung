@@ -18,7 +18,7 @@
    ihre Ebene auch im Handy:
      Quellen        → Quellfarben, Sprünge zwischen Texten, Farblegende unter dem Handy
      Kontextfenster → die letzten Wörter sind umrandet (beim angetippten Wort: seine Wörter davor)
-     Kandidaten     → „?“-Baustein, unter jedem Wort seine Wahrscheinlichkeit, Tiny erklärt die Wahl
+     Kandidaten     → „?“-Baustein für das nächste Wort, Tiny erklärt die Wahl (keine % unter den Wörtern — zu viel, Sönke 02.11.2026)
    Offen/zu je Gerät in localStorage tinylm-p1-offen (Schaufenster: alles offen).
 
    Live-Regel (siehe CLAUDE.md): die Regler stehen in festen Köpfen der Spalten und werden nie neu
@@ -146,9 +146,6 @@ Phases.register(1, {
         span.style.setProperty('--sc', sourceColor(p.si));
         span.dataset.i = String(p.i);
         span.title = 'Antippen zum Zerlegen';
-        const st = session.steps[p.i];
-        const ch = st.cands.list.find(a => a.word === st.chosen);
-        if (ch) span.dataset.p = fmtP(ch.p);
         if (p.i === focus) span.classList.add('sel');
         textEl.appendChild(span);
         last = span;
@@ -278,7 +275,8 @@ Phases.register(1, {
     /* Wortfolge als kleine Bausteine (für Kontextfenster und N-Gramm-Liste). */
     function gram(ctx, next, nextCls) {
       const g = el('span', 'gram');
-      if (ctx == null) g.appendChild(el('span', 'gtok start', 'kein Wort'));
+      if (ctx === false) { /* 1-Gramm in der Liste: nur das Wort selbst */ }
+      else if (ctx == null) g.appendChild(el('span', 'gtok start', 'kein Wort'));
       else if (!ctx.length) g.appendChild(el('span', 'gtok start', 'Satzanfang'));
       else ctx.forEach((w, i) => g.appendChild(w === '.' && i === 0
         ? el('span', 'gtok start', 'Satzanfang')
@@ -424,7 +422,7 @@ Phases.register(1, {
         const on = g.step != null ? g.step === v.idx : ngOpen === g.key;
         const row = el('button', 'ngrow' + (on ? ' on' : '') + (isNow ? ' now' : ''));
         row.type = 'button';
-        row.appendChild(gram((g.step == null ? nn === 0 : g.uni) ? null : g.ctx, g.next, 'chosen'));
+        row.appendChild(gram((g.step == null ? nn === 0 : g.uni) ? false : g.ctx, g.next, 'chosen'));
         row.appendChild(el('span', 'ngn', g.count + '×'));
         const txt = g.ctx.filter(w => !isPunct(w)).map(word).concat(isPunct(g.next) ? [] : [word(g.next)]).join(' ');
         row.title = isNow ? 'Passt zum jetzigen Kontextfenster' : '„' + txt + '“ – antippen: wo steht das?';
@@ -709,7 +707,7 @@ Phases.register(1, {
 
       const row = el('div', 'p1-cols');
       row.append(
-        column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'kandidaten', 'Öffnen: Im Handy steht unter jedem Wort, wie wahrscheinlich es war.'),
+        column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'kandidaten', 'Öffnen: Im Handy siehst du das nächste Wort als „?“ – und hier, welche Wörter in Frage kommen.'),
         column('ctx', 'context', '👀', 'Kontextfenster', 'Auf welche Wörter schaut Tiny?', 'kontext', 'Öffnen: Im Handy siehst du, auf welche Wörter Tiny gerade schaut.'),
         column('src', 'origin', '📑', 'Quellen', 'Wo steht das in den Texten?', 'herkunft', 'Öffnen: Im Handy bekommt jedes Wort die Farbe seines Textes.'));
       right.appendChild(row);

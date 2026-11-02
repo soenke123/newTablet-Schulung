@@ -63,10 +63,6 @@ body:has(.phase-pane[data-phase="1"]:not([hidden])) .main { max-width: 1440px; }
   border-radius: 2px; background: var(--accent); animation: blink 1s steps(1) infinite;
 }
 .phone:not(.show-cand) .cursor::after { content: none; }
-.phone.show-cand .srcword[data-p]::after {
-  content: attr(data-p); display: block; text-align: center; margin-top: 1px;
-  font-family: var(--font-mono); font-size: 0.6rem; font-weight: 500; line-height: 1; color: var(--cat-candidates);
-}
 .phone .srcword.win { outline-color: var(--cat-context); }
 
 /* ---- Rechts: Kernsatz + drei Spalten ---- */
