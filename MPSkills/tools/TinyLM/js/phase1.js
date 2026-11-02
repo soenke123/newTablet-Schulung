@@ -133,22 +133,22 @@ Phases.register(1, {
     /* ---------------- Handy ---------------- */
     function updateText() {
       textEl.replaceChildren();
-      let prevSi = null, last = null;
+      /* Punkt und Komma sind eigene Token und bekommen eigene Bausteine (Sönke 02.11.2026: „die sind
+         ja auch eigenständig“ — angehängt an Wörter verwirrte das). */
+      let prevSi = null;
       pieces(session).forEach((p, idx) => {
-        if (idx > 0 && !p.punct) textEl.appendChild(document.createTextNode(' '));
-        if (p.punct) { if (last) last.textContent += p.txt; else textEl.appendChild(document.createTextNode(p.txt)); return; }
+        if (idx > 0) textEl.appendChild(document.createTextNode(' '));
         if (prevSi != null && p.si !== prevSi) {
           const seam = el('span', 'seam');
           seam.title = 'Hier springt Tiny zu einem anderen Text.';
           textEl.appendChild(seam);
         }
-        const span = el('span', 'srcword', p.txt);
+        const span = el('span', 'srcword' + (p.punct ? ' punct' : ''), p.txt);
         span.style.setProperty('--sc', sourceColor(p.si));
         span.dataset.i = String(p.i);
         span.title = 'Antippen zum Zerlegen';
         if (p.i === focus) span.classList.add('sel');
         textEl.appendChild(span);
-        last = span;
         prevSi = p.si;
       });
       markWindow();
@@ -515,7 +515,7 @@ Phases.register(1, {
           if (k > 0) occ.unshift(occ.splice(k, 1)[0]);
         }
         const line = el('p', 'p1-line');
-        line.append(document.createTextNode('„'), el('b', null, [ctxText(v), wsel ? word(wsel) : ''].filter(Boolean).join(' ') || '…'),
+        line.append(document.createTextNode('„'), el('b', null, ([ctxText(v), wsel ? word(wsel) : ''].filter(Boolean).join(' ').replace(/ ([.,])/g, '$1')) || '…'),
           document.createTextNode('“ steht ' + occ.length + '× in den Texten:'));
         b.appendChild(line);
         const MAX = 5;
@@ -570,18 +570,19 @@ Phases.register(1, {
       focusHost.replaceChildren();
       if (v && v.idx != null) {
         focusHost.className = 'p1-focus on';
+        focusHost.hidden = false;
         const back = el('button', 'btn sm', '× zurück zum nächsten Wort');
         back.type = 'button';
         back.addEventListener('click', () => setFocus(null));
-        focusHost.append(el('span', null, 'Du zerlegst Wort ' + (pieces(session).slice(0, v.idx + 1).filter(p => !p.punct).length) + ': '),
+        focusHost.append(el('span', null, 'Du zerlegst Token ' + (v.idx + 1) + ': '),
           el('b', 'p1-focus-w', word(v.chosen)), back);
       } else {
         focusHost.className = 'p1-focus';
-        focusHost.append(el('span', null, session.steps.length
-          ? (Object.keys(cols).some(isOpen)
-            ? 'Zerlegt wird das nächste Wort. Tipp im Handy auf ein Wort, um zu sehen, wie es entstanden ist.'
-            : 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.')
-          : 'Lass Tiny schreiben – dann zerlegen wir hier jedes Wort.'));
+        const hint = !session.steps.length ? 'Lass Tiny schreiben – dann zerlegen wir hier jedes Wort.'
+          : (Object.keys(cols).some(isOpen) ? '' : 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.');
+        focusHost.hidden = !hint;
+        if (hint) focusHost.append(el('span', null, hint));
+        return;
       }
     }
 
