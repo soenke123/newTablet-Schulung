@@ -578,7 +578,7 @@ Phases.register(1, {
           el('b', 'p1-focus-w', word(v.chosen)), back);
       } else {
         focusHost.className = 'p1-focus';
-        const hint = !session.steps.length ? 'Lass Tiny schreiben – dann zerlegen wir hier jedes Wort.'
+        const hint = !session.steps.length ? ''
           : (Object.keys(cols).some(isOpen) ? '' : 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.');
         focusHost.hidden = !hint;
         if (hint) focusHost.append(el('span', null, hint));
@@ -700,8 +700,6 @@ Phases.register(1, {
 
       const right = el('div', 'p1-right');
       const intro = el('div', 'p1-intro');
-      intro.append(el('p', 'eyebrow', 'So kommt Tiny auf das Wort'),
-        el('h2', null, 'Tiny schaut auf die letzten Wörter, sucht sie in den Texten, zählt, was danach kam – und würfelt.'));
       focusHost = el('div', 'p1-focus');
       intro.appendChild(focusHost);
       right.appendChild(intro);

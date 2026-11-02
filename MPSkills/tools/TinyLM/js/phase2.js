@@ -510,8 +510,7 @@ Phases.register(2, {
 
     function paintFocus(v) {
       let hint = '';
-      if (!asked) hint = 'Stell links im Handy eine Frage – dann zerlegen wir hier die Antwort.';
-      else if (!['cand', 'ask', 'src'].some(Z.isOpen)) hint = 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.';
+      if (asked && !['cand', 'ask', 'src'].some(Z.isOpen)) hint = 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.';
       Zerlegen.focusBanner(focusHost, v && v.idx != null ? v.idx : null, v && v.idx != null ? word(v.chosen) : '', () => setFocus(null), hint);
     }
 
@@ -637,8 +636,6 @@ Phases.register(2, {
 
       const right = el('div', 'p1-right');
       const intro = el('div', 'p1-intro');
-      intro.append(el('p', 'eyebrow', 'So kommt Tiny auf die Antwort'),
-        el('h2', null, 'Tiny zerlegt deine Frage, sucht die passendsten Texte und schreibt nur aus ihnen – Wort für Wort wie in Phase 1.'));
       focusHost = el('div', 'p1-focus');
       intro.appendChild(focusHost);
       right.appendChild(intro);

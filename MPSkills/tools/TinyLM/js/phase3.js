@@ -684,8 +684,6 @@ Phases.register(3, {
 
       const right = el('div', 'p1-right');
       const intro = el('div', 'p1-intro');
-      intro.append(el('p', 'eyebrow', 'So kommt das Netz auf das Wort'),
-        el('h2', null, 'Keine Texte mehr – nur Zahlen: Das Netz macht aus den letzten Wörtern Zahlen, mischt sie in Neuronen und rechnet für jedes Wort einen Prozentwert aus.'));
       focusHost = el('div', 'p1-focus');
       intro.appendChild(focusHost);
       right.appendChild(intro);
