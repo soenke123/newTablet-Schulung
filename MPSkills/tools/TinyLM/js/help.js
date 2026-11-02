@@ -69,7 +69,7 @@ const HELP = {
   },
   nachschlagen: {
     title: 'Frage zerlegen', icon: '🔎', cat: 'ask',
-    text: ['Tiny versteht deine Frage nicht wirklich. Es wirft die Füllwörter weg, sucht die Grundform der übrigen Wörter und gibt jedem Text Punkte – seltene Wörter zählen mehr. Die 3 besten Texte werden die Quellen A · B · C.',
+    text: ['Tiny versteht deine Frage nicht wirklich. Es wirft die Füllwörter weg und schaut, in welchen Texten die übrigen Wörter stehen. Die 3 Texte mit den meisten Treffern werden die Quellen A · B · C.',
       'Ist die Spalte offen, siehst du an deiner Frage im Handy: grau = Füllwort, blau = sucht Tiny, rot = kennt Tiny nicht.'],
     try: 'Frag nach etwas, das in keinem Text vorkommt – zum Beispiel nach dem Eiffelturm.',
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
