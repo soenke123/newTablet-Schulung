@@ -37,8 +37,8 @@ const HELP = {
   kontext: {
     title: 'Kontextfenster', icon: '👀', cat: 'context',
     text: ['Tiny schaut immer nur auf die letzten paar Wörter – das ist das Kontextfenster. Alles, was weiter vorn steht, hat Tiny schon vergessen. Der Satzanfang zählt auch als „Wort“.',
-      'Ein N-Gramm sind N Wörter hintereinander: die Wörter im Fenster + das neue Wort. 2 Wörter im Fenster → 3-Gramme. Darunter alle N-Gramme deiner Texte, die häufigsten oben – tipp eins an, dann siehst du, wo es steht.'],
-    try: 'Stell den Regler auf 0, dann auf 1 und auf 6. Wann ist es Wortsalat, wann schreibt Tiny ganze Sätze ab?',
+      'Ein N-Gramm sind N Wörter hintereinander: N − 1 Wörter im Fenster + das neue Wort (farbig). 3-Gramm = 2 Wörter davor + 1 neues. Darunter alle N-Gramme deiner Texte, die häufigsten oben – tipp eins an, dann siehst du, wo es steht.'],
+    try: 'Stell den Regler auf 1-Gramm, dann auf 2 und auf 7. Wann ist es Wortsalat, wann schreibt Tiny ganze Sätze ab?',
     vis: { type: 'tokens', items: [['Gestern', 'dim'], ['ging', 'dim'], ['der', 'dim'], ['Hund', 'win'], ['schnell', 'win'], ['?', 'next']] }
   },
   herkunft: {

@@ -284,7 +284,6 @@ Phases.register(1, {
         ? el('span', 'gtok start', 'Satzanfang')
         : el('span', 'gtok' + (isPunct(w) ? ' p' : ''), tokLabel(w))));
       if (next !== undefined) {
-        g.appendChild(el('span', 'garr', '→'));
         g.appendChild(el('span', 'gtok ' + (nextCls || 'next'), next == null ? '?' : tokLabel(next)));
       }
       return g;
@@ -347,9 +346,10 @@ Phases.register(1, {
     let gramLine = null;
     function syncGramLine() {
       if (!gramLine) return;
-      gramLine.replaceChildren(el('b', null, gramName(n) + 'e'), document.createTextNode(n === 0
-        ? ' = nur 1 Wort: kein Wort davor, nur das neue'
-        : ' = ' + n + (n === 1 ? ' Wort' : ' Wörter') + ' davor + 1 neues Wort'));
+      gramLine.replaceChildren(document.createTextNode(n === 0
+        ? 'Nur das neue Wort, keins davor – häufige Wörter kommen öfter.'
+        : 'Kontextfenster: '), ...(n === 0 ? [] : [el('b', null, n + (n === 1 ? ' Wort' : ' Wörter')),
+        document.createTextNode(' davor + 1 neues Wort')]));
     }
 
     /* Kontextfenster: worauf Tiny jetzt schaut + Liste der N-Gramme. */
@@ -362,7 +362,7 @@ Phases.register(1, {
       now.appendChild(el('p', 'p1-sub', v.idx == null ? 'Tiny schaut jetzt auf' : 'Für „' + word(v.chosen) + '“ schaute Tiny auf'));
       now.appendChild(gram(v.C.uni ? null : v.ctx, v.idx == null ? null : v.chosen, v.idx == null ? 'next' : 'chosen'));
       const total = v.C.list.reduce((t, a) => t + a.occ.length, 0);
-      if (v.C.uni) now.appendChild(el('p', 'p1-count', 'Fenster 0 = 1-Gramme: einzelne Wörter, nur ihre Häufigkeit zählt.'));
+      if (v.C.uni) now.appendChild(el('p', 'p1-count', '1-Gramme: einzelne Wörter, nur ihre Häufigkeit zählt.'));
       else if (v.C.level > 0) now.appendChild(el('p', 'p1-count', total + '× in den Texten gefunden – ' + v.C.list.length + (v.C.list.length === 1 ? ' Wort kommt' : ' Wörter kommen') + ' danach in Frage'));
       const end = v.idx == null ? session.steps.length : v.idx;
       if (!v.C.uni && v.C.level < nn && end + 1 >= nn) {
@@ -722,13 +722,13 @@ Phases.register(1, {
       });
       cols.cand.tools.appendChild(tsl.el);
       const nsl = Info.slider({
-        label: 'Kontextfenster', min: 0, max: 6, step: 1, value: n, spot: 'nslider',
-        fmt: v => v === 0 ? 'kein Wort' : v + (v === 1 ? ' Wort' : ' Wörter'),
+        label: 'N-Gramm', min: 1, max: 7, step: 1, value: n + 1, spot: 'nslider',
+        fmt: v => v + '-Gramm',
         ends: ['kurz', 'lang'],
-        onInput: v => { n = v; ngShow = 30; ngOpen = null; syncGramLine(); paintCols(); updateText(); }
+        onInput: v => { n = v - 1; ngShow = 30; ngOpen = null; syncGramLine(); paintCols(); updateText(); }
       });
       cols.ctx.tools.appendChild(nsl.el);
-      /* N-Gramm = n Wörter davor + 1 neues Wort (der Regler stellt nur die Wörter davor ein). */
+      /* Regler = N (Sönke 02.11.2026: 1-Gramm = Stufe 1). Intern ist n = N − 1 = Wörter im Kontextfenster. */
       gramLine = el('p', 'p1-gramline');
       cols.ctx.tools.appendChild(gramLine);
       syncGramLine();
