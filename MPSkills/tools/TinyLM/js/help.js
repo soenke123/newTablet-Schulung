@@ -70,19 +70,20 @@ const HELP = {
   nachschlagen: {
     title: 'Frage zerlegen', icon: '🔎', cat: 'ask',
     text: ['Tiny versteht deine Frage nicht wirklich. Es wirft die Füllwörter weg und sucht die übrigen Wörter in den Texten.',
-      'Grau = Füllwort, blau = kennt Tiny, rot = kennt Tiny nicht.'],
+      'Grau = Füllwort, blau = sucht Tiny, rot = kennt Tiny nicht. Ist die Spalte offen, siehst du das auch an deiner Frage im Handy.'],
     try: 'Frag nach etwas, das in keinem Text vorkommt – zum Beispiel nach dem Eiffelturm.',
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
   },
   quellen: {
     title: 'Quellen', icon: '📑', cat: 'origin',
-    text: ['Anders als in Phase 1 nimmt Tiny nur die 3 Texte, die am besten zu deiner Frage passen: A · B · C. Nur aus ihnen baut es die Antwort.'],
-    try: 'Tipp „Fundstelle zeigen“: Wo steht dein Fragewort im Text?',
+    text: ['Anders als in Phase 1 nimmt Tiny nur die 3 Texte, die am besten zu deiner Frage passen: A · B · C. Nur aus ihnen baut es die Antwort.',
+      'Darum hat jedes Wort im Handy die Farbe seines Textes.'],
+    try: 'Tipp im Handy auf ein Wort: Aus welchem Text hat Tiny es geholt?',
     vis: { type: 'abc' }
   },
   wortfuerwort: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: ['Wie in Phase 1: Tiny nimmt Wort für Wort das, was hinter den letzten Wörtern stand – aber nur aus den 3 Quellen. Die Farbe der Säule zeigt, aus welcher.'],
+    text: ['Wie in Phase 1: Tiny nimmt Wort für Wort das, was hinter den letzten Wörtern stand – aber nur aus den 3 Quellen. Sind die Quellen offen, zeigt die Farbe des Balkens, aus welcher.'],
     try: 'Stell die Frage nochmal. Nimmt Tiny jedes Mal dieselben Wörter?',
     vis: { type: 'bars', items: [['Napf', 60], ['Park', 25], ['Wasser', 15]] }
   },
@@ -103,7 +104,7 @@ const HELP = {
   embedding: {
     title: 'Embedding', icon: '🔢', cat: 'embed',
     text: ['Ein Netz kann keine Buchstaben lesen. Jedes Wort im Kontextfenster wird deshalb zu einer festen Reihe aus 16 Zahlen: rot = plus, blau = minus.',
-      'Wie viele Wörter das Netz sieht, stellst du links unter dem Text ein (3 · 4 · 5). Jede Länge ist ein eigenes Netz, das eigenes Training braucht.'],
+      'Wie viele Wörter das Netz sieht, stellst du oben in dieser Spalte ein (3 · 4 · 5). Jede Länge ist ein eigenes Netz, das eigenes Training braucht.'],
     try: 'Trainiere ein bisschen und schau, wie sich die Farben der Wörter verändern.',
     vis: { type: 'swatch', label: 'Hund', values: [0.9, -0.4, 0.2, -0.9, 0.6, 0.1, -0.2, 0.8, -0.6, 0.3, 0, -0.8] }
   },
@@ -129,7 +130,7 @@ const HELP = {
     title: 'Training', icon: '🏋️', cat: 'train',
     text: ['Das Netz rät das nächste Wort, vergleicht mit dem echten und dreht alle Zahlen ein kleines Stück in die richtige Richtung – tausende Male.',
       'Die Fehlerlinie zeigt, wie sehr es danebenliegt. Sinkt sie, lernt das Netz.'],
-    try: 'Drück oben auf „Training starten“ und schau zu, wie die Fehlerlinie fällt. Wann wird sie flach?',
+    try: 'Drück auf „Training starten“ und schau zu, wie die Fehlerlinie fällt. Wann wird sie flach?',
     vis: { type: 'cycle', items: [['🤔', 'raten'], ['✅', 'vergleichen'], ['🔧', 'korrigieren']], loop: true }
   },
   fehler: {
