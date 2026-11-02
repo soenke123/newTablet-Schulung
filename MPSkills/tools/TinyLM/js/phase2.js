@@ -642,11 +642,11 @@ Phases.register(2, {
 
       const row = el('div', 'p1-cols');
       row.append(
-        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'wortfuerwort', 'Öffnen: Im Handy siehst du das nächste Wort als „?“ – und hier, welche Wörter in Frage kommen.'),
-        Z.column('ask', 'ask', '🔎', 'Frage zerlegen', 'Was sucht Tiny?', 'nachschlagen', 'Öffnen: Im Handy siehst du, welche Wörter deiner Frage Tiny sucht.'),
-        Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen', 'Öffnen: Im Handy bekommt jedes Wort die Farbe seines Textes A · B · C.'));
+        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'wortfuerwort'),
+        Z.column('ask', 'ask', '🔎', 'Frage zerlegen', 'Was sucht Tiny?', 'nachschlagen'),
+        Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'));
       right.appendChild(row);
-      right.appendChild(Z.column('map', 'meaning', '🗺️', 'Wortkarte', 'Welche Wörter gehören zusammen?', 'wortkarte', 'Öffnen: Eine Karte aller Wörter – ähnliche liegen nah beieinander.', { wide: true }));
+      right.appendChild(Z.column('map', 'meaning', '🗺️', 'Wortkarte', 'Welche Wörter gehören zusammen?', 'wortkarte', { wide: true }));
 
       /* Feste Köpfe (werden nie neu gebaut): Temperatur + „Dieselbe Frage nochmal“. */
       const tsl = Info.slider({

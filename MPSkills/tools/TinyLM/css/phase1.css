@@ -96,7 +96,6 @@ body:has(.phase-pane[data-phase]:not([hidden]) .p1-grid) .main { max-width: 1440
 .p1-col-toggle:hover { background: color-mix(in srgb, var(--cat-tint) 25%, transparent); }
 .p1-col-toggle .panel-chev { align-self: center; }
 .p1-col.closed .panel-chev { transform: rotate(-90deg); }
-.p1-col-peek { margin: 0 14px 12px; font-size: 0.82rem; line-height: 1.35; color: var(--muted); }
 /* Zu: schlanker, ohne Schatten, Farbe nur als Rand */
 .p1-col.closed { box-shadow: none; border-top-width: 3px; background: color-mix(in srgb, var(--cat-tint) 10%, var(--surface)); }
 .p1-col.closed:hover { border-color: var(--cat-color); }

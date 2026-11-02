@@ -7,7 +7,7 @@
    im Schaufenster (?demo=1) ist alles offen. Phase 1 hat dieselbe Mechanik noch in phase1.js.
 
    Zerlegen.columns({ store, defaults, onChange(id, on), onPointer() })
-     -> { column(id, cat, icon, title, question, helpKey, reveals, opts) -> <section>,
+     -> { column(id, cat, icon, title, question, helpKey, opts) -> <section>,
           isOpen(id), setOpen(id, on), cols }
         opts.wide = über die ganze Breite (Training, Wortkarte, Netz-Bild)
         demoClosed = Spalten, die im Schaufenster zu bleiben (teure Wortkarte)
@@ -32,7 +32,6 @@ const Zerlegen = (() => {
       c.el.classList.toggle('closed', !on);
       c.toggle.setAttribute('aria-expanded', on ? 'true' : 'false');
       c.tools.hidden = c.body.hidden = !on;
-      c.peek.hidden = on;
     }
     function setOpen(id, on) {
       opened[id] = !!on;
@@ -41,7 +40,7 @@ const Zerlegen = (() => {
       if (opt.onChange) opt.onChange(id, !!on);
     }
 
-    function column(id, cat, icon, title, question, helpKey, reveals, o) {
+    function column(id, cat, icon, title, question, helpKey, o) {
       const c = el('section', 'p1-col' + (o && o.wide ? ' wide' : ''));
       c.dataset.card = id;
       c.style.setProperty('--cat-color', 'var(--cat-' + cat + ')');
@@ -61,13 +60,12 @@ const Zerlegen = (() => {
       hb.setAttribute('aria-label', 'Erklärung: ' + title);
       hb.addEventListener('click', () => { if (!isOpen(id)) setOpen(id, true); requestAnimationFrame(() => Explain.show(helpKey, c)); });
       head.appendChild(hb);
-      const peek = el('p', 'p1-col-peek', reveals);
       const tools = el('div', 'p1-col-tools');
       const body = el('div', 'p1-col-body');
       /* In eine Liste tippen = Schreiben anhalten (sonst wäre der Eintrag beim Loslassen schon neu). */
       if (opt.onPointer) body.addEventListener('pointerdown', () => opt.onPointer());
-      c.append(head, peek, tools, body);
-      cols[id] = { el: c, tools, body, toggle, peek };
+      c.append(head, tools, body);
+      cols[id] = { el: c, tools, body, toggle };
       toggle.addEventListener('click', () => setOpen(id, !isOpen(id)));
       apply(id);
       return c;

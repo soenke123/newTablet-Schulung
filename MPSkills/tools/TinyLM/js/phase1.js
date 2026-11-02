@@ -227,7 +227,6 @@ Phases.register(1, {
       c.el.classList.toggle('closed', !on);
       c.toggle.setAttribute('aria-expanded', on ? 'true' : 'false');
       c.tools.hidden = c.body.hidden = !on;
-      c.peek.hidden = on;
     }
     function setOpen(id, on) {
       opened[id] = on;
@@ -237,7 +236,7 @@ Phases.register(1, {
       paintCols();
     }
 
-    function column(id, cat, icon, title, question, helpKey, reveals) {
+    function column(id, cat, icon, title, question, helpKey) {
       const c = el('section', 'p1-col');
       c.dataset.card = id;
       c.style.setProperty('--cat-color', 'var(--cat-' + cat + ')');
@@ -257,14 +256,12 @@ Phases.register(1, {
       hb.setAttribute('aria-label', 'Erklärung: ' + title);
       hb.addEventListener('click', () => { if (!isOpen(id)) setOpen(id, true); requestAnimationFrame(() => Explain.show(helpKey, c)); });
       head.appendChild(hb);
-      /* Zu: ein Satz, was das Öffnen im Handy sichtbar macht. */
-      const peek = el('p', 'p1-col-peek', reveals);
       const tools = el('div', 'p1-col-tools');
       const body = el('div', 'p1-col-body');
       /* In eine Liste tippen = Schreiben anhalten (sonst wäre der Eintrag beim Loslassen schon neu). */
       body.addEventListener('pointerdown', () => stopPlay());
-      c.append(head, peek, tools, body);
-      cols[id] = { el: c, tools, body, toggle, peek };
+      c.append(head, tools, body);
+      cols[id] = { el: c, tools, body, toggle };
       toggle.addEventListener('click', () => setOpen(id, !isOpen(id)));
       applyOpen(id);
       return c;
@@ -706,9 +703,9 @@ Phases.register(1, {
 
       const row = el('div', 'p1-cols');
       row.append(
-        column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'kandidaten', 'Öffnen: Im Handy siehst du das nächste Wort als „?“ – und hier, welche Wörter in Frage kommen.'),
-        column('ctx', 'context', '👀', 'Kontextfenster', 'Auf welche Wörter schaut Tiny?', 'kontext', 'Öffnen: Im Handy siehst du, auf welche Wörter Tiny gerade schaut.'),
-        column('src', 'origin', '📑', 'Quellen', 'Wo steht das in den Texten?', 'herkunft', 'Öffnen: Im Handy bekommt jedes Wort die Farbe seines Textes.'));
+        column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'kandidaten'),
+        column('ctx', 'context', '👀', 'Kontextfenster', 'Auf welche Wörter schaut Tiny?', 'kontext'),
+        column('src', 'origin', '📑', 'Quellen', 'Wo steht das in den Texten?', 'herkunft'));
       right.appendChild(row);
 
       /* Regler in den festen Köpfen — werden nie neu gebaut. */

@@ -688,14 +688,14 @@ Phases.register(3, {
       intro.appendChild(focusHost);
       right.appendChild(intro);
 
-      right.appendChild(Z.column('train', 'train', '🏋️', 'Training', 'Erst lernen, dann vorhersagen', 'training', 'Öffnen: Hier startest du das Training – vorher rät das Netz nur.', { wide: true }));
+      right.appendChild(Z.column('train', 'train', '🏋️', 'Training', 'Erst lernen, dann vorhersagen', 'training', { wide: true }));
       const row = el('div', 'p1-cols');
       row.append(
-        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'ausgabe', 'Öffnen: Im Handy siehst du das nächste Wort als „?“ – und hier die Prozente für jedes Wort.'),
-        Z.column('embed', 'embed', '🔢', 'Embedding', 'Was sieht das Netz?', 'embedding', 'Öffnen: Im Handy siehst du, auf welche Wörter das Netz gerade schaut.'),
-        Z.column('hidden', 'hidden', '💡', 'Hidden-Schicht', 'Was passiert innen?', 'hidden', 'Öffnen: Im Handy leuchten die Neuronen, während das Netz rechnet.'));
+        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'ausgabe'),
+        Z.column('embed', 'embed', '🔢', 'Embedding', 'Was sieht das Netz?', 'embedding'),
+        Z.column('hidden', 'hidden', '💡', 'Hidden-Schicht', 'Was passiert innen?', 'hidden'));
       right.appendChild(row);
-      right.appendChild(Z.column('net', 'net', '🕸️', 'Das Netz von innen', 'Alle Neuronen und Gewichte', 'netz', 'Öffnen: Das ganze Netz auf einmal – jede Linie ist eine echte Zahl.', { wide: true }));
+      right.appendChild(Z.column('net', 'net', '🕸️', 'Das Netz von innen', 'Alle Neuronen und Gewichte', 'netz', { wide: true }));
 
       /* Feste Köpfe (werden nie neu gebaut). */
       buildTrainTools();
