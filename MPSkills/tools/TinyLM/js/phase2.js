@@ -2,10 +2,13 @@
 
    Links das HANDY mit dem Chat: Tiny grüßt, deine Frage rechts, Tinys Antwort als Bausteine,
    unten Vorschläge und das Eingabefeld (.qform bleibt für das Schaufenster). Rechts wird ZERLEGT,
-   in denselben drei Spalten wie in Phase 1 (gleiche Plätze, gleiche Farben):
-     Kandidaten     (welches Wort kommt? — Temperatur + „Dieselbe Frage nochmal“ im festen Kopf)
-     Frage zerlegen (statt Kontextfenster: welche Wörter der Frage Tiny sucht)
+   in drei Spalten in der Reihenfolge des Ablaufs (Sönke 02.11.2026):
+     Frage zerlegen (Fließband ① Frage → ② Füllwörter raus → ③ Grundform → ④ seltene Wörter
+                     zählen mehr → ⑤ Punkte je Text, die 3 besten werden A · B · C)
      Quellen        (die 3 passendsten Texte A · B · C und wo das Wort darin steht)
+     Kandidaten     (welches Wort kommt? — Temperatur + „Dieselbe Frage nochmal“ im festen Kopf;
+                     oben der Kasten „Im Hintergrund: N-Gramme wie in Phase 1“, 🔎 = Wort aus
+                     einem Satz mit deinem Fragewort)
    darunter breit die Wortkarte.
 
    Erst aufklappen, dann im Handy sichtbar (wie Phase 1):
@@ -19,6 +22,8 @@
    aus der Frage als Satzanfang („Der Eiffelturm ist …“) und schreibt einfach weiter — klingt
    sicher, ist aber ausgedacht (Halluzinieren). Sönke 01.11.2026. */
 const SRC = ['A', 'B', 'C'];
+/* Wie viele Wörter davor Tiny beim Schreiben höchstens anschaut (N-Gramm-Motor aus Phase 1, ohne Regler). */
+const P2_N = 6;
 const srcVar = i => 'var(--src-' + ['a', 'b', 'c'][i] + ')';
 const SUGGEST2 = ['Ist Pluto ein Planet?', 'Was frisst eine Kornnatter?', 'Wie lernt eine KI?', 'Wie hoch ist der Eiffelturm?'];
 /* Artikel vor dem unbekannten Wort → Satzanfang der ausgedachten Antwort */
@@ -108,7 +113,7 @@ Phases.register(2, {
        sonst endet die ausgedachte Antwort sofort. */
     function nextCands() {
       const last = session.steps[session.steps.length - 1];
-      const C = candidates(session, 6, temp);
+      const C = candidates(session, P2_N, temp);
       if (last && last.seed) {
         const list = C.list.filter(a => !isPunct(a.word));
         const sum = list.reduce((x, a) => x + a.p, 0) || 1;
@@ -259,7 +264,7 @@ Phases.register(2, {
         const C = nextCands();
         if (!C.list.length) return false;
         commitWord(session, temp === 0 ? C.list[0] : pickFrom(C.list), C);
-      } else if (!step(session, 6, temp)) return false;
+      } else if (!step(session, P2_N, temp)) return false;
       updateText();
       updateLegend();
       paintCols();
@@ -293,6 +298,7 @@ Phases.register(2, {
         b.appendChild(el('p', 'p1-line', 'Dieses Wort hat Tiny nicht gezählt: Es kommt aus deiner Frage. So beginnt die ausgedachte Antwort.'));
         return;
       }
+      b.appendChild(gramBox(v));
       const where = canned ? 'in den Texten' : 'in den Quellen A · B · C';
       const line = el('p', 'p1-line');
       if (atStart(v)) line.append(document.createTextNode('Satzanfang – so fingen Sätze ' + where + ' an' + (canned ? '' : ' (Sätze mit deinen Fragewörtern zuerst)') + ':'));
@@ -326,7 +332,14 @@ Phases.register(2, {
           fill.style.width = width + '%';
           bar.appendChild(fill);
         }
-        row.append(el('span', 'cword', tokLabel(a.word)), bar, el('span', 'cp', fmtP(a.p)), el('span', 'cn', a.occ.length + '×'));
+        const cw = el('span', 'cword', tokLabel(a.word));
+        /* 🔎 = steht in einem Satz mit einem Wort deiner Frage — zählt darum mehr (pushCandidate). */
+        if (!canned && a.occ && a.occ.some(o => o.rel > 0)) {
+          const r = el('span', 'crel', '🔎');
+          r.title = 'Steht in einem Satz mit einem Wort deiner Frage – zählt darum mehr';
+          cw.prepend(r);
+        }
+        row.append(cw, bar, el('span', 'cp', fmtP(a.p)), el('span', 'cn', a.occ.length + '×'));
         if (a.word === v.chosen) row.appendChild(el('span', 'ctag', '🎲 gezogen'));
         row.addEventListener('click', () => { pick = pick === a.word ? null : a.word; const w = view(); paintCand(w); if (Z.isOpen('src')) paintSrc(w); });
         li.appendChild(row);
@@ -336,64 +349,195 @@ Phases.register(2, {
       const more = v.C.list.length - MAX;
       if (more > 0) b.appendChild(el('p', 'p1-more', '… und ' + more + ' weitere Wörter'));
       if (showSrc && !canned) b.appendChild(el('p', 'p1-more', 'Balkenfarbe = aus Text A · B · C'));
+      if (!canned && v.C.list.some(a => a.occ && a.occ.some(o => o.rel > 0))) b.appendChild(el('p', 'p1-more', '🔎 = steht in einem Satz mit deinem Fragewort, zählt bis zu 4× so viel'));
     }
 
-    /* Frage zerlegen: Füllwörter raus, bekannte Wörter suchen, ähnliche Wörter. */
+    /* Im Hintergrund laufen die N-Gramme aus Phase 1 weiter: bis zu P2_N Wörter davor, sonst weniger. */
+    function gramBox(v) {
+      const box = el('div', 'ctxnow p2-ngram');
+      const head = el('p', 'p1-sub');
+      head.append(document.createTextNode('Im Hintergrund: N-Gramme wie in Phase 1'));
+      box.appendChild(head);
+      const g = el('span', 'gram');
+      /* Wörter in der Schreibung aus dem Handy; das erste '.' von session.ctx ist der Satzanfang. */
+      const end = v.idx == null ? session.steps.length : v.idx;
+      const pcs = pieces(session).slice(0, end);
+      if (atStart(v) || !v.ctx.length) g.appendChild(el('span', 'gtok start', 'Satzanfang'));
+      else {
+        const k = v.ctx.length;
+        if (k > end) g.appendChild(el('span', 'gtok start', 'Satzanfang'));
+        pcs.slice(-Math.min(k, end)).forEach(p => g.appendChild(el('span', 'gtok' + (p.punct ? ' p' : ''), p.txt)));
+      }
+      const chosenTxt = v.idx != null && pieces(session)[v.idx] ? pieces(session)[v.idx].txt : null;
+      g.appendChild(v.chosen ? el('span', 'gtok chosen', chosenTxt || tokLabel(v.chosen)) : el('span', 'gtok next', '?'));
+      box.appendChild(g);
+      const k = v.C.level;
+      const avail = Math.min(P2_N, v.idx == null ? session.ctx.length : v.idx + 1);
+      const info = el('p', 'p1-line');
+      if (atStart(v)) {
+        info.append(document.createTextNode('Neuer Satz: Tiny schaut, wie Sätze in den Quellen anfangen.'));
+      } else {
+        info.append(document.createTextNode('Tiny probiert bis zu ' + P2_N + ' Wörter davor. Hier passen '),
+          el('b', null, k + (k === 1 ? ' Wort' : ' Wörter')), document.createTextNode(' → ein '),
+          el('b', null, (k + 1) + '-Gramm'), document.createTextNode('.'));
+        if (k < avail) info.append(document.createTextNode(' Mit mehr Wörtern davor stand das in keiner Quelle.'));
+      }
+      box.appendChild(info);
+      if (v.C.list.length === 1) box.appendChild(el('p', 'p1-count', 'Nur ein Wort passt – Tiny schreibt hier einfach aus der Quelle ab.'));
+      else box.appendChild(el('p', 'p1-count', v.C.list.length + ' Wörter passen'));
+      return box;
+    }
+
+    /* Frage zerlegen als Fließband in fünf Schritten (Sönke 02.11.2026: „cooler, visueller,
+       verständlicher“): ① deine Frage → ② Füllwörter raus → ③ Grundform → ④ wie selten ist
+       das Wort (seltene zählen mehr) → ⑤ Punkte je Text, die 3 besten werden A · B · C.
+       Gebaut wird nur bei einer neuen Frage (askKey), sonst liefe die Einblend-Animation bei
+       jedem geschriebenen Wort neu. */
+    const WCOL = ['#1590B5', '#7A4FD0', '#2E9E5B', '#D9861C', '#C2477A', '#4A6FD1'];
+    let askKey = null;
+    function askStep(n, title, delay) {
+      const s = el('div', 'askstep');
+      s.style.setProperty('--d', (delay * 0.32) + 's');
+      const h = el('div', 'askstep-h');
+      h.append(el('span', 'askstep-n', String(n)), el('b', null, title));
+      s.appendChild(h);
+      return s;
+    }
     function paintAsk() {
       const b = Z.cols.ask.body;
+      if (askKey === R && b.childNodes.length) return;
+      askKey = R;
       b.replaceChildren();
       if (!asked) { b.appendChild(empty('Stell links im Handy eine Frage – dann zerlegt Tiny sie hier.')); return; }
-      b.appendChild(el('p', 'p1-sub', 'Deine Frage, Wort für Wort'));
-      const qw = el('div', 'chiprow');
-      tokenize(R.question).filter(t => !t.punct).forEach(t => {
-        const isStop = STOP.has(t.t) || /^\d+$/.test(t.t) || t.t.length < 2;
-        const chip = el('div', 'chip');
-        if (isStop) {
-          chip.classList.add('off');
-          chip.append(document.createTextNode(t.raw));
-          chip.title = 'Füllwort – fliegt raus';
-          qw.appendChild(chip);
-          return;
-        }
-        const x = R.ql.find(y => y.raw === t.raw);
-        if (!x) return;
-        if (!x.known) {
-          chip.classList.add('unknown');
-          chip.append(document.createTextNode(t.raw), el('span', 'chip-tag', 'unbekannt'));
-          qw.appendChild(chip);
-          return;
-        }
-        chip.classList.add('known');
-        chip.appendChild(el('b', null, showWord(x.lemma)));
-        if (x.lemma !== t.t) chip.appendChild(el('span', 'small muted', ' ← ' + t.raw));
-        qw.appendChild(chip);
-      });
-      b.appendChild(qw);
-      const lg = el('p', 'mini-legend');
-      lg.append(el('span', 'chip off sm', 'grau'), document.createTextNode(' Füllwort  '),
-        el('span', 'chip known sm', 'blau'), document.createTextNode(' sucht Tiny  '),
-        el('span', 'chip unknown sm', 'rot'), document.createTextNode(' unbekannt'));
-      b.appendChild(lg);
-
+      const words = tokenize(R.question).filter(t => !t.punct);
+      const isStop = t => STOP.has(t.t) || /^\d+$/.test(t.t) || t.t.length < 2;
       const known = R.ql.filter(x => x.known);
-      const ctxBox = el('div', 'ctxnow');
-      ctxBox.appendChild(el('p', 'p1-sub', 'Tiny sucht in den Texten nach'));
-      const g = el('span', 'gram');
-      if (known.length) known.forEach(x => g.appendChild(el('span', 'gtok', showWord(x.lemma))));
-      else g.appendChild(el('span', 'gtok start', 'nichts Bekanntem'));
-      ctxBox.appendChild(g);
-      ctxBox.appendChild(el('p', 'p1-count', canned
-        ? 'Kein Text passt – darum rät Tiny aus allen Texten.'
-        : 'Gefunden: ' + session.sources.length + (session.sources.length === 1 ? ' Text' : ' Texte') + ' → bei den Quellen'));
-      b.appendChild(ctxBox);
+      const colOf = lem => WCOL[Math.max(0, known.findIndex(x => x.lemma === lem)) % WCOL.length];
+      const nd = M.docs.length;
+      const idfOf = lem => { const s = M.lemDocs.get(lem); return Math.log(1 + nd / (1 + (s ? s.size : 0))); };
+      const maxIdf = Math.log(1 + nd);
+      const flow = el('div', 'askflow');
 
-      const simRows = R.ql.filter(x => x.known && x.inMap).map(x => [x, neighbors(M, x.lemma, 4).filter(n => n[1] >= SIM_MIN)]).filter(p => p[1].length);
+      /* ① die Frage, so wie du sie getippt hast */
+      const s1 = askStep(1, 'Deine Frage', 0);
+      const g1 = el('div', 'gram');
+      words.forEach(t => g1.appendChild(el('span', 'gtok', t.raw)));
+      const qEnd = (R.question.match(/[?!.]$/) || [''])[0];
+      if (qEnd) g1.appendChild(el('span', 'gtok p', qEnd));
+      s1.appendChild(g1);
+      flow.appendChild(s1);
+
+      /* ② Füllwörter fliegen raus */
+      const s2 = askStep(2, 'Füllwörter fliegen raus', 1);
+      const g2 = el('div', 'gram');
+      const stops = [];
+      words.forEach(t => {
+        if (isStop(t)) { stops.push(t.raw); g2.appendChild(el('span', 'gtok askoff', t.raw)); return; }
+        g2.appendChild(el('span', 'gtok askkeep', t.raw));
+      });
+      s2.appendChild(g2);
+      s2.appendChild(el('p', 'p1-more', stops.length
+        ? 'Wörter wie „' + stops.slice(0, 3).join('“, „') + '“ stehen in fast jedem Text – sie verraten nichts über das Thema.'
+        : 'Keine Füllwörter – alle Wörter bleiben.'));
+      flow.appendChild(s2);
+
+      /* ③ Grundform: so, wie das Wort in den Texten steht */
+      const s3 = askStep(3, 'Grundform suchen', 2);
+      const l3 = el('div', 'asklem');
+      R.ql.forEach(x => {
+        const row = el('div', 'asklem-row' + (x.known ? '' : ' unknown'));
+        if (x.known) row.style.setProperty('--wc', colOf(x.lemma));
+        if (x.known && x.lemma === x.raw.toLowerCase()) {
+          /* schon die Grundform: kein Pfeil */
+          row.append(el('span', 'gtok askw', x.raw), el('span', 'p1-more', '✓ steht so in den Texten'));
+        } else {
+          row.appendChild(el('span', 'gtok', x.raw));
+          row.appendChild(el('span', 'garr', '→'));
+          if (x.known) row.appendChild(el('span', 'gtok askw', showWord(x.lemma)));
+          else row.appendChild(el('span', 'gtok askunk', 'kenne ich nicht'));
+        }
+        l3.appendChild(row);
+      });
+      if (!R.ql.length) l3.appendChild(el('p', 'p1-more', 'Es bleibt kein Wort übrig.'));
+      s3.appendChild(l3);
+      flow.appendChild(s3);
+
+      /* ④ Wie selten ist das Wort? Seltene Wörter zählen mehr (IDF). */
+      const s4 = askStep(4, 'Seltene Wörter zählen mehr', 3);
+      if (known.length) {
+        const l4 = el('div', 'askidf');
+        known.forEach(x => {
+          const df = M.lemDocs.get(x.lemma) ? M.lemDocs.get(x.lemma).size : 0;
+          const row = el('div', 'askidf-row');
+          row.style.setProperty('--wc', colOf(x.lemma));
+          const bar = el('span', 'askbar');
+          const fill = el('i');
+          fill.style.width = Math.max(6, 100 * idfOf(x.lemma) / maxIdf) + '%';
+          bar.appendChild(fill);
+          row.append(el('span', 'gtok askw', showWord(x.lemma)), bar,
+            el('span', 'askidf-n', 'in ' + df + ' von ' + nd + ' Texten'));
+          l4.appendChild(row);
+        });
+        s4.appendChild(l4);
+        s4.appendChild(el('p', 'p1-more', 'Langer Balken = steht nur in wenigen Texten = verrät viel über das Thema.'));
+      } else {
+        s4.appendChild(el('p', 'p1-more', 'Tiny kennt keins deiner Wörter.'));
+      }
+      flow.appendChild(s4);
+
+      /* ⑤ Punkte je Text: jedes Fragewort gibt Punkte, ähnliche Wörter etwas weniger */
+      const s5 = askStep(5, 'Punkte für jeden Text', 4);
+      const ranked = R.results.filter(r => r.score > 0);
+      if (!ranked.length) {
+        s5.appendChild(el('p', 'askfail', 'Kein Text bekommt Punkte – Tiny rät deshalb aus allen Texten. Die Antwort ist ausgedacht.'));
+      } else {
+        const top = ranked[0].score;
+        const l5 = el('div', 'askscore');
+        ranked.slice(0, 5).forEach((r, i) => {
+          const row = el('div', 'askscore-row' + (i < 3 ? ' picked' : ''));
+          const lt = el('span', 'letter sm', i < 3 ? SRC[i] : String(i + 1));
+          if (i < 3) lt.style.background = srcVar(i);
+          const mid = el('div', 'askscore-mid');
+          mid.appendChild(el('span', 'askscore-t', r.doc.title));
+          const bar = el('span', 'askstack');
+          const inner = el('span', 'askstack-in');
+          inner.style.width = (100 * r.score / top) + '%';
+          r.hits.forEach(h => {
+            const pts = h.type === 'exact' ? idfOf(h.q) : idfOf(h.q) * h.sim * 0.8;
+            const seg = el('i', h.type === 'exact' ? null : 'sim');
+            seg.style.width = (100 * pts / r.score) + '%';
+            seg.style.setProperty('--wc', colOf(h.q));
+            seg.title = h.type === 'exact' ? '„' + showWord(h.w) + '“ steht im Text'
+              : '„' + showWord(h.w) + '“ statt „' + showWord(h.q) + '“ (' + Math.round(h.sim * 100) + ' % ähnlich)';
+            inner.appendChild(seg);
+          });
+          bar.appendChild(inner);
+          mid.appendChild(bar);
+          const sims = r.hits.filter(h => h.type !== 'exact');
+          if (sims.length) mid.appendChild(el('span', 'askscore-sim', sims.map(h => showWord(h.w) + ' ≈ ' + showWord(h.q)).join(' · ')));
+          row.append(lt, mid, el('span', 'askscore-n', String(Math.round(r.score * 10) / 10).replace('.', ',')));
+          l5.appendChild(row);
+        });
+        s5.appendChild(l5);
+        const rest = R.results.length - Math.min(5, ranked.length);
+        const lg = el('p', 'mini-legend');
+        lg.append(el('span', 'asklg'), document.createTextNode(' Wort steht im Text  '),
+          el('span', 'asklg sim'), document.createTextNode(' nur ein ähnliches Wort'));
+        s5.appendChild(lg);
+        s5.appendChild(el('p', 'askwin', 'Die ' + Math.min(3, ranked.length) + ' besten werden die Quellen ' + SRC.slice(0, Math.min(3, ranked.length)).join(' · ') +
+          ' – nur aus ihnen schreibt Tiny die Antwort.' + (rest > 0 ? ' (' + rest + ' weitere Texte)' : '')));
+      }
+      flow.appendChild(s5);
+      b.appendChild(flow);
+
+      const simRows = known.filter(x => x.inMap).map(x => [x, neighbors(M, x.lemma, 4).filter(n => n[1] >= SIM_MIN)]).filter(p => p[1].length);
       if (simRows.length) {
-        b.appendChild(el('p', 'p1-sub', 'Hält Tiny für ähnlich'));
+        const sim = el('div', 'p1-used');
+        sim.appendChild(el('p', 'p1-sub', 'Hält Tiny für ähnlich'));
         simRows.forEach(([x, nbs]) => {
           const p = el('p', 'p1-line');
           p.append(el('b', null, showWord(x.lemma)), document.createTextNode(' ≈ ' + nbs.map(n => showWord(n[0]) + ' (' + Math.round(n[1] * 100) + ' %)').join(', ')));
-          b.appendChild(p);
+          sim.appendChild(p);
         });
         const mb = el('button', 'btn sm p1-up', '🗺️ Auf der Wortkarte');
         mb.type = 'button';
@@ -402,7 +546,8 @@ Phases.register(2, {
           if (mapCtl) mapCtl.select(simRows[0][0].lemma);
           Z.cols.map.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
         });
-        b.appendChild(mb);
+        sim.appendChild(mb);
+        b.appendChild(sim);
       }
     }
 
@@ -518,7 +663,7 @@ Phases.register(2, {
       const v = view();
       paintFocus(v);
       if (Z.isOpen('cand')) paintCand(v); else Z.cols.cand.body.replaceChildren();
-      if (Z.isOpen('ask')) paintAsk(); else Z.cols.ask.body.replaceChildren();
+      if (Z.isOpen('ask')) paintAsk(); else { Z.cols.ask.body.replaceChildren(); askKey = null; }
       if (Z.isOpen('src')) paintSrc(v); else Z.cols.src.body.replaceChildren();
     }
 
@@ -642,9 +787,10 @@ Phases.register(2, {
 
       const row = el('div', 'p1-cols');
       row.append(
-        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'wortfuerwort'),
+        /* Reihenfolge wie der Ablauf (Sönke 02.11.2026): erst die Frage zerlegen, dann die Quellen, dann schreiben. */
         Z.column('ask', 'ask', '🔎', 'Frage zerlegen', 'Was sucht Tiny?', 'nachschlagen'),
-        Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'));
+        Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'),
+        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'wortfuerwort'));
       right.appendChild(row);
       right.appendChild(Z.column('map', 'meaning', '🗺️', 'Wortkarte', 'Welche Wörter gehören zusammen?', 'wortkarte', { wide: true }));
 

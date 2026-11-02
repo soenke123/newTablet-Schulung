@@ -69,8 +69,8 @@ const HELP = {
   },
   nachschlagen: {
     title: 'Frage zerlegen', icon: '🔎', cat: 'ask',
-    text: ['Tiny versteht deine Frage nicht wirklich. Es wirft die Füllwörter weg und sucht die übrigen Wörter in den Texten.',
-      'Grau = Füllwort, blau = sucht Tiny, rot = kennt Tiny nicht. Ist die Spalte offen, siehst du das auch an deiner Frage im Handy.'],
+    text: ['Tiny versteht deine Frage nicht wirklich. Es wirft die Füllwörter weg, sucht die Grundform der übrigen Wörter und gibt jedem Text Punkte – seltene Wörter zählen mehr. Die 3 besten Texte werden die Quellen A · B · C.',
+      'Ist die Spalte offen, siehst du an deiner Frage im Handy: grau = Füllwort, blau = sucht Tiny, rot = kennt Tiny nicht.'],
     try: 'Frag nach etwas, das in keinem Text vorkommt – zum Beispiel nach dem Eiffelturm.',
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
   },
@@ -83,7 +83,8 @@ const HELP = {
   },
   wortfuerwort: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: ['Wie in Phase 1: Tiny nimmt Wort für Wort das, was hinter den letzten Wörtern stand – aber nur aus den 3 Quellen. Sind die Quellen offen, zeigt die Farbe des Balkens, aus welcher.'],
+    text: ['Im Hintergrund laufen die N-Gramme aus Phase 1: Tiny schaut auf bis zu 6 Wörter davor und nimmt, was dahinter stand – aber nur aus den 3 Quellen.',
+      'Wörter aus Sätzen mit deinem Fragewort (🔎) zählen mehr. Sind die Quellen offen, zeigt die Farbe des Balkens, aus welcher Quelle das Wort kommt.'],
     try: 'Stell die Frage nochmal. Nimmt Tiny jedes Mal dieselben Wörter?',
     vis: { type: 'bars', items: [['Napf', 60], ['Park', 25], ['Wasser', 15]] }
   },

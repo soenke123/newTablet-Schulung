@@ -280,3 +280,65 @@ div.crow.chosen:hover { background: color-mix(in srgb, var(--cat-candidates-tint
   .phone-screen { scroll-behavior: auto; }
   .cbar i { transition: none; }
 }
+
+/* ---- Phase 2: Frage zerlegen als Fließband (① … ⑤) ---- */
+.askflow { display: flex; flex-direction: column; gap: 0; }
+.askstep {
+  position: relative; display: flex; flex-direction: column; gap: 7px; padding: 9px 10px 10px; border-radius: 14px;
+  background: color-mix(in srgb, var(--cat-ask-tint) 20%, var(--surface));
+  border: 1.5px solid color-mix(in srgb, var(--cat-ask) 35%, var(--surface));
+  animation: askIn .45s ease both; animation-delay: var(--d, 0s);
+}
+.askstep + .askstep { margin-top: 20px; }
+.askstep + .askstep::before {
+  content: '↓'; position: absolute; top: -19px; left: 50%; transform: translateX(-50%);
+  font-weight: 800; color: var(--cat-ask); font-size: 1rem; line-height: 18px;
+}
+.askstep-h { display: flex; align-items: center; gap: 7px; font-size: 0.9rem; }
+.askstep-h b { font-family: var(--font-display); font-weight: 700; color: color-mix(in srgb, var(--cat-ask) 70%, var(--ink)); }
+.askstep-n {
+  flex: none; width: 1.45rem; height: 1.45rem; border-radius: 50%; display: grid; place-items: center;
+  background: var(--cat-ask); color: #fff; font-family: var(--font-display); font-weight: 700; font-size: 0.8rem;
+}
+.askstep .gtok { background: var(--surface); border-bottom-color: var(--line); }
+.askstep .gtok.askoff {
+  color: var(--muted); background: var(--soft); text-decoration: line-through; border-style: dashed;
+  animation: askOut .6s ease both; animation-delay: calc(var(--d, 0s) + .35s);
+}
+.askstep .gtok.askkeep { border-bottom-color: var(--cat-ask); }
+.askstep .gtok.askw { background: color-mix(in srgb, var(--wc) 18%, var(--surface)); border-bottom: 2px solid var(--wc); color: var(--ink); }
+.askstep .gtok.askunk { color: var(--bad); border: 1.5px dashed var(--bad); background: transparent; font-weight: 500; font-style: italic; }
+.asklem { display: flex; flex-direction: column; gap: 5px; }
+.asklem-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.askidf { display: flex; flex-direction: column; gap: 6px; }
+.askidf-row { display: grid; grid-template-columns: minmax(4.5rem, max-content) minmax(40px, 1fr); gap: 3px 8px; align-items: center; }
+.askidf-n { grid-column: 2; font-family: var(--font-mono); font-size: 0.72rem; color: var(--muted); }
+.askbar { height: 12px; border-radius: 6px; background: color-mix(in srgb, var(--soft) 80%, var(--surface)); overflow: hidden; }
+.askbar i { display: block; height: 100%; border-radius: 6px; background: var(--wc); animation: askGrow .7s ease both; animation-delay: calc(var(--d, 0s) + .2s); transform-origin: left; }
+.askscore { display: flex; flex-direction: column; gap: 6px; }
+.askscore-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; opacity: .55; }
+.askscore-row.picked { opacity: 1; }
+.askscore-row .letter.sm:not([style]) { background: var(--muted); }
+.askscore-mid { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.askscore-t { font-size: 0.82rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.askscore-sim { font-size: 0.72rem; color: var(--muted); }
+.askscore-n { font-family: var(--font-mono); font-size: 0.76rem; color: var(--muted); }
+.askstack { display: block; height: 14px; border-radius: 7px; background: color-mix(in srgb, var(--soft) 80%, var(--surface)); overflow: hidden; }
+.askstack-in { display: flex; height: 100%; border-radius: 7px; overflow: hidden; animation: askGrow .7s ease both; animation-delay: calc(var(--d, 0s) + .2s); transform-origin: left; }
+.askstack-in i { display: block; height: 100%; background: var(--wc); box-shadow: inset -1.5px 0 0 var(--surface); }
+.askstack-in i.sim, .asklg.sim {
+  background: repeating-linear-gradient(135deg, var(--wc, var(--cat-ask)) 0 4px, color-mix(in srgb, var(--wc, var(--cat-ask)) 35%, var(--surface)) 4px 8px);
+}
+.asklg { display: inline-block; width: 18px; height: 10px; border-radius: 3px; background: var(--cat-ask); vertical-align: middle; }
+.askwin { font-size: 0.84rem; font-weight: 600; line-height: 1.35; padding: 6px 9px; border-radius: 10px; background: var(--surface); border: 1.5px solid var(--cat-origin); }
+.askfail { font-size: 0.84rem; line-height: 1.35; padding: 6px 9px; border-radius: 10px; color: var(--bad); border: 1.5px dashed var(--bad); }
+@keyframes askIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes askOut { from { opacity: 1; } to { opacity: .45; } }
+@keyframes askGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+/* ---- Phase 2: Kandidaten, N-Gramm-Kasten und 🔎 ---- */
+.p2-ngram { margin-bottom: 2px; }
+.crel { font-size: 0.72rem; margin-right: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .askstep, .askstep .gtok.askoff, .askbar i, .askstack-in { animation: none; }
+}
