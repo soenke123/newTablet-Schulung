@@ -12,7 +12,7 @@
 --   bonus    3 3 1 0        3 3 1 0
 --   stein    3 2 1 0        3 2 1 0
 --   moewe    0 3 2 0        0 4 4 0
---   moewe3   0 0 2 3        0 1 3 5
+--   moewe3   0 0 2 3        0 1 5 5   (hintere Hälfte öfter, Sönke 02.11.2026)
 --   maxi     1 2 2 0        2 4 4 0
 --   mini     0 1 2 0        0 3 4 0
 --   eis      1 2 2 0        1 2 2 0
@@ -22,7 +22,7 @@
 --   bus      0 1 2 3        0 0 1 1
 --   kuddel   1 1 2 2        1 1 2 2
 -- Anteil Sturm + Bus + Boom: vordere Hälfte 18 % → 5 %, hintere 30 % →
--- 12 %, Letzter 56 % → 31 %. Beim Letzten bleiben Möwe, Mini, Maxi und
+-- 11 %, Letzter 56 % → 31 %. Beim Letzten bleiben Möwe, Mini, Maxi und
 -- Eis draußen (Entscheidung 0249); er klaut dafür mit 3 Möwen.
 --
 -- Nur dd_storm_draw. Idempotent.
@@ -53,7 +53,7 @@ begin
            case when x.it = 'tea' and v_rk = 3 then 5
                 else (array[x.w1, x.w2, x.w3, x.w4])[v_g] end::numeric as w
       from (values
-        ('bonus',  3, 3, 1, 0), ('stein', 3, 2, 1, 0), ('moewe', 0, 4, 4, 0), ('moewe3', 0, 1, 3, 5),
+        ('bonus',  3, 3, 1, 0), ('stein', 3, 2, 1, 0), ('moewe', 0, 4, 4, 0), ('moewe3', 0, 1, 5, 5),
         ('maxi',   2, 4, 4, 0), ('mini',  0, 3, 4, 0), ('eis',   1, 2, 2, 0), ('sturm',  0, 1, 1, 1),
         ('tea',    0, 0, 2, 2), ('boom',  0, 0, 1, 2), ('bus',   0, 0, 1, 1), ('kuddel', 1, 1, 2, 2)
       ) x(it, w1, w2, w3, w4)
