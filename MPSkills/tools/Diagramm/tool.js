@@ -51,21 +51,50 @@
   ];
   const COLOR_NAMES = ['Blau', 'Grün', 'Gelb', 'Pink', 'Lila', 'Orange', 'Türkis', 'Grau'];
   const TEXT = '#0f172a';
-  const LINE = 'var(--dg-line)';      // beim Export durch LINE_EXPORT ersetzt
-  const LINE_EXPORT = '#334155';
+  const LINE = 'var(--dg-line)';      // Bleistift; beim Export VARS_EXPORT
+  const LINK = 'var(--dg-link)';      // Linien im UML-Kleid (wie SQL Studio)
   const PLUS = '#16a34a', MINUS = '#dc2626';
 
-  // Systemschrift: dieselbe im Editor und im exportierten Bild (eine
-  // Webschrift kennt ein als <img> gezeichnetes SVG nicht).
-  const FONT = '"Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif';
-  const FS = 15;               // Schriftgröße im Diagramm
+  /* Zwei Kleider (03.11.2026):
+       Papier  — Mindmap und Wirkungsgefüge: Zettel auf einem Tisch,
+                 dezent: fast eckig, leichter Schatten, beim Ziehen
+                 hebt sich der Zettel. Schrift Outfit.
+       Karte   — Klassen- und Objektdiagramm wie das Klassendiagramm
+                 in SQL Studio (tools/SQLStudio/js/diagram.js): weiße
+                 Karte, Kopf in Petrol, Zebrastreifen, Typen rechts in
+                 Mono. Schrift Inter.
+     Farben, die mit hell/dunkel kippen, stehen als var(--dg-…) in den
+     Attributen (gesetzt in tool.css an .dg-canvas.k-<art>); beim Export
+     ersetzt VARS_EXPORT sie durch die helle Fassung. */
+  const FONT  = "Outfit, Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
+  const FONT_U = "Inter, system-ui, -apple-system, 'Segoe UI', sans-serif";
+  const MONO  = "'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace";
+  const FS = 15;               // Schriftgröße auf den Zetteln
   const LH = 20;               // Zeilenhöhe
-  const MAXW = 240;            // ab hier wird umgebrochen (Text-Knoten)
+  const MAXW = 240;            // ab hier wird umgebrochen (Zettel)
+  const U_ROW = 24, U_HEAD = 34, U_MINW = 170;   // wie SQL Studio
+  const PAPER = '#fffdf8';
+  const isUml = kind => kind === 'klasse' || kind === 'objekt';
+
+  const VARS_EXPORT = {
+    '--dg-line': '#57534e', '--dg-link': '#7a97a3', '--dg-paper': '#ffffff',
+    '--dg-card': '#ffffff', '--dg-card-edge': '#bccdd3', '--dg-head': '#dcf0f5',
+    '--dg-uml-ink': '#0c1f27', '--dg-muted': '#55707b', '--dg-zebra': '#d3e0e4'
+  };
+  const DEFS = '<defs>'
+    + '<filter id="dgPaper" x="-20%" y="-20%" width="140%" height="160%">'
+    +   '<feDropShadow dx="0" dy="1" stdDeviation="0.8" flood-color="#3b2f1e" flood-opacity=".16"/>'
+    +   '<feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#3b2f1e" flood-opacity=".08"/></filter>'
+    + '<filter id="dgLift" x="-25%" y="-25%" width="150%" height="190%">'
+    +   '<feDropShadow dx="0" dy="7" stdDeviation="6" flood-color="#3b2f1e" flood-opacity=".22"/></filter>'
+    + '<filter id="dgCard" x="-10%" y="-10%" width="120%" height="130%">'
+    +   '<feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#0c1f27" flood-opacity=".10"/></filter>'
+    + '</defs>';
 
   let measureCtx = null;
-  function textW(s, size, bold) {
+  function textW(s, size, bold, fam) {
     if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d');
-    measureCtx.font = `${bold ? '700 ' : ''}${size || FS}px ${FONT}`;
+    measureCtx.font = `${bold ? '700 ' : ''}${size || FS}px ${fam || FONT}`;
     return measureCtx.measureText(s).width;
   }
 
@@ -164,25 +193,38 @@
     return d;
   }
 
+  /* UML-Zeile in links/rechts teilen, wie SQL Studio Name und Typ:
+       Attribut  „- name: String"        → „- name"        | „String"
+       Methode   „+ fahren(km: int): void"→ „+ fahren(km: int)" | „void"
+       Objekt    „marke = "VW""          → „marke"         | „= "VW""   */
+  function umlRow(line, how) {
+    const s = line.trim();
+    if (how === 'obj') {
+      const i = s.indexOf('=');
+      return i > 0 ? { l: s.slice(0, i).trim(), r: '= ' + s.slice(i + 1).trim(), val: true } : { l: s, r: '' };
+    }
+    const close = s.lastIndexOf(')');
+    const i = close >= 0 ? s.indexOf(':', close) : s.indexOf(':');
+    return i > 0 ? { l: s.slice(0, i).trim(), r: s.slice(i + 1).trim() } : { l: s, r: '' };
+  }
+
   /* ════════════════════════════════════════════════════════════
      3  Zeichnen
      ════════════════════════════════════════════════════════════
      Größe eines Knotens hängt nur an seinem Text: measure() rechnet
      sie aus und legt Zeilen + Kasten in n._m ab (wird nie
-     gespeichert — save() schneidet alles mit _ ab). */
+     gespeichert — clean() schneidet alles mit _ ab). */
   function measure(n) {
-    const pad = 12;
     if (n.type === 'class' || n.type === 'object') {
-      const head = n.type === 'object'
-        ? [(n.t || '') + (n.k ? ' : ' + n.k : '') || ' : Klasse']
-        : (n.t ? [n.t] : ['Klasse']);
-      const a = linesOf(n.a), o = linesOf(n.o);
-      let w = Math.max(...head.map(l => textW(l, FS, true)), ...a.map(l => textW(l)), ...o.map(l => textW(l)), 90) + pad * 2;
-      w = Math.ceil(w);
-      const hh = LH + 14;
-      const ha = Math.max(a.length, 1) * LH + 10;
-      const ho = n.type === 'class' ? Math.max(o.length, 1) * LH + 10 : 0;
-      n._m = { w, h: hh + ha + ho, head, a, o, hh, ha, ho };
+      const obj = n.type === 'object';
+      const title = obj ? ((n.t || '') + ' : ' + (n.k || 'Klasse')) : (n.t || 'Klasse');
+      const a = linesOf(n.a).map(l => umlRow(l, obj ? 'obj' : 'attr'));
+      const o = obj ? [] : linesOf(n.o).map(l => umlRow(l, 'op'));
+      const rowW = r => textW(r.l, 13, false, FONT_U) + (r.r ? 24 + textW(r.r, 11.5, false, MONO) : 0);
+      const w = Math.ceil(Math.max(U_MINW, textW(title, 14, true, FONT_U) + 28, ...a.map(rowW).map(x => x + 26), ...o.map(rowW).map(x => x + 26)));
+      const ha = a.length ? a.length * U_ROW + 12 : 14;
+      const ho = obj ? 0 : (o.length ? o.length * U_ROW + 12 : 14);
+      n._m = { w, h: U_HEAD + ha + ho, title, a, o, ha, ho, empty: obj ? !n.t && !n.k : !n.t };
       return n._m;
     }
     const big = n.type === 'center';
@@ -190,9 +232,9 @@
     const lines = wrap(n.t || '', big ? 260 : MAXW, size, big);
     const tw = Math.max(...lines.map(l => textW(l, size, big)), big ? 60 : 30);
     const padX = big ? 26 : (n.type === 'note' ? 14 : 16);
-    const padY = big ? 16 : 10;
+    const padY = big ? 18 : (n.type === 'box' ? 12 : 10);
     const w = Math.ceil(tw + padX * 2);
-    const h = Math.ceil(lines.length * (big ? 25 : LH) + padY * 2);
+    const h = Math.ceil(lines.length * (big ? 25 : LH) + padY * 2 + (n.type === 'box' ? 3 : 0));
     n._m = { w, h, lines, size, big, lh: big ? 25 : LH };
     return n._m;
   }
@@ -208,22 +250,28 @@
     const dx = tx - n.x, dy = ty - n.y;
     if (!dx && !dy) return { x: n.x, y: n.y };
     const hw = m.w / 2 + (extra || 0), hh = m.h / 2 + (extra || 0);
-    let t;
-    if (n.type === 'center') {
-      // Ellipse
-      t = 1 / Math.sqrt((dx * dx) / (hw * hw) + (dy * dy) / (hh * hh));
-    } else {
-      t = Math.min(hw / Math.abs(dx || 1e-9), hh / Math.abs(dy || 1e-9));
-    }
+    const t = Math.min(hw / Math.abs(dx || 1e-9), hh / Math.abs(dy || 1e-9));
     return { x: n.x + dx * t, y: n.y + dy * t };
   }
 
   function textLines(lines, x, y0, lh, opts) {
     const o = opts || {};
     return lines.map((l, i) =>
-      `<text x="${x}" y="${y0 + i * lh}" font-size="${o.size || FS}"${o.bold ? ' font-weight="700"' : ''}`
+      `<text x="${x}" y="${y0 + i * lh}" font-family="${o.fam || FONT}" font-size="${o.size || FS}"${o.bold ? ' font-weight="700"' : ''}`
       + `${o.anchor ? ` text-anchor="${o.anchor}"` : ''}${o.under ? ' text-decoration="underline"' : ''}`
       + ` fill="${o.fill || TEXT}" dominant-baseline="central">${esc(l)}</text>`).join('');
+  }
+
+  // Ein UML-Abschnitt (Attribute bzw. Methoden) mit Zebrastreifen wie SQL Studio.
+  function umlRows(rows, b, y) {
+    let g = '';
+    rows.forEach((r, i) => {
+      const ry = y + 6 + i * U_ROW;
+      if (i % 2 === 1) g += `<rect x="${b.x + 1}" y="${ry}" width="${b.w - 2}" height="${U_ROW}" fill="var(--dg-zebra)" opacity=".35"/>`;
+      g += `<text x="${b.x + 14}" y="${ry + 16}" font-family="${FONT_U}" font-size="13" fill="var(--dg-uml-ink)">${esc(r.l)}</text>`;
+      if (r.r) g += `<text x="${b.x + b.w - 12}" y="${ry + 16}" font-family="${MONO}" font-size="11.5" text-anchor="end" fill="${r.val ? 'var(--dg-uml-ink)' : 'var(--dg-muted)'}">${esc(r.r)}</text>`;
+    });
+    return g;
   }
 
   function nodeSVG(n, st) {
@@ -232,36 +280,49 @@
     const [fill, stroke] = COLORS[n.c || 0] || COLORS[0];
     const sel = st.sel && st.sel.id === n.id;
     const hl = st.hl && st.hl.has(n.id);
+    const lift = st.lift && st.lift.has(n.id);
     let g = `<g class="dg-node${sel ? ' is-sel' : ''}${hl ? ' is-hl' : ''}" data-node="${n.id}">`;
     if (n.type === 'class' || n.type === 'object') {
-      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="3" fill="#fff" stroke="${stroke}" stroke-width="1.6"/>`;
-      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${m.hh}" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="1.6"/>`;
-      g += textLines(m.head, n.x, b.y + m.hh / 2, LH, { bold: true, anchor: 'middle', under: n.type === 'object' });
-      const y1 = b.y + m.hh;
-      g += textLines(m.a.length ? m.a : [''], b.x + 12, y1 + 5 + LH / 2, LH);
+      // Karte wie SQL Studio; Farbe 0 = Petrol-Kopf der Seite, sonst Pastell
+      const headFill = (n.c || 0) ? fill : 'var(--dg-head)';
+      const headInk = (n.c || 0) ? TEXT : 'var(--dg-uml-ink)';
+      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="12" fill="var(--dg-card)" stroke="var(--dg-card-edge)" stroke-width="1" filter="url(#${lift ? 'dgLift' : 'dgCard'})"/>`;
+      g += `<path d="M${b.x} ${b.y + 12}a12 12 0 0 1 12-12h${b.w - 24}a12 12 0 0 1 12 12v${U_HEAD - 12}h-${b.w}z" fill="${headFill}"/>`;
+      g += `<line x1="${b.x}" y1="${b.y + U_HEAD}" x2="${b.x + b.w}" y2="${b.y + U_HEAD}" stroke="var(--dg-card-edge)"/>`;
+      g += `<text x="${b.x + 14}" y="${b.y + 22}" font-family="${FONT_U}" font-size="14" font-weight="700" fill="${m.empty ? 'var(--dg-muted)' : headInk}"${n.type === 'object' ? ' text-decoration="underline"' : ''}>${esc(m.title)}</text>`;
+      g += umlRows(m.a, b, b.y + U_HEAD);
       if (n.type === 'class') {
-        const y2 = y1 + m.ha;
-        g += `<line x1="${b.x}" y1="${y2}" x2="${b.x + b.w}" y2="${y2}" stroke="${stroke}" stroke-width="1.4"/>`;
-        g += textLines(m.o.length ? m.o : [''], b.x + 12, y2 + 5 + LH / 2, LH);
+        const y2 = b.y + U_HEAD + m.ha;
+        g += `<line x1="${b.x}" y1="${y2}" x2="${b.x + b.w}" y2="${y2}" stroke="var(--dg-card-edge)"/>`;
+        g += umlRows(m.o, b, y2);
       }
     } else if (n.type === 'center') {
-      g += `<ellipse cx="${n.x}" cy="${n.y}" rx="${b.w / 2}" ry="${b.h / 2}" fill="${fill}" stroke="${stroke}" stroke-width="3"/>`;
-      g += textLines(m.lines, n.x, n.y - (m.lines.length - 1) * m.lh / 2, m.lh, { size: m.size, bold: true, anchor: 'middle' });
+      // Großer Zettel mit einem Streifen Klebeband
+      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="3" fill="${PAPER}" stroke="#e4dccb" stroke-width="1" filter="url(#${lift ? 'dgLift' : 'dgPaper'})"/>`;
+      g += `<rect x="${b.x}" y="${b.y + b.h - 4}" width="${b.w}" height="4" fill="${stroke}" opacity=".85"/>`;
+      g += `<rect x="${n.x - 30}" y="${b.y - 8}" width="60" height="16" fill="#e7dcc0" opacity=".85" transform="rotate(-2 ${n.x} ${b.y})"/>`;
+      g += textLines(m.lines, n.x, n.y - 2 - (m.lines.length - 1) * m.lh / 2, m.lh, { size: m.size, bold: true, anchor: 'middle' });
     } else if (n.type === 'note') {
-      const f = 12;
-      g += `<path d="M${b.x} ${b.y}H${b.x + b.w - f}L${b.x + b.w} ${b.y + f}V${b.y + b.h}H${b.x}Z" fill="#fef9c3" stroke="#ca8a04" stroke-width="1.3"/>`;
-      g += `<path d="M${b.x + b.w - f} ${b.y}V${b.y + f}H${b.x + b.w}" fill="none" stroke="#ca8a04" stroke-width="1.3"/>`;
-      g += textLines(m.lines, b.x + 14, n.y - (m.lines.length - 1) * m.lh / 2, m.lh);
+      const f = 10;
+      g += `<path d="M${b.x} ${b.y}H${b.x + b.w}V${b.y + b.h - f}L${b.x + b.w - f} ${b.y + b.h}H${b.x}Z" fill="#fdf3b8" filter="url(#${lift ? 'dgLift' : 'dgPaper'})"/>`;
+      g += `<path d="M${b.x + b.w} ${b.y + b.h - f}L${b.x + b.w - f} ${b.y + b.h - f}V${b.y + b.h}Z" fill="#e9d98a"/>`;
+      g += textLines(m.lines, b.x + 14, n.y - (m.lines.length - 1) * m.lh / 2, m.lh, { fill: '#3f3a2a' });
+    } else if (n.type === 'box') {
+      // Karteikarte mit farbigem Streifen oben
+      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${PAPER}" stroke="#e4dccb" stroke-width="1" filter="url(#${lift ? 'dgLift' : 'dgPaper'})"/>`;
+      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="4" rx="1" fill="${stroke}"/>`;
+      g += textLines(m.lines, n.x, n.y + 2 - (m.lines.length - 1) * m.lh / 2, m.lh, { anchor: 'middle' });
     } else {
-      const rx = n.type === 'topic' ? Math.min(b.h / 2, 16) : 6;
-      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="${rx}" fill="${n.type === 'box' ? '#fff' : fill}" stroke="${stroke}" stroke-width="${n.type === 'box' ? 2.2 : 1.8}"/>`;
+      // Mindmap-Ast: farbiger Zettel
+      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="3" fill="${fill}" stroke="${stroke}" stroke-opacity=".28" stroke-width="1" filter="url(#${lift ? 'dgLift' : 'dgPaper'})"/>`;
       g += textLines(m.lines, n.x, n.y - (m.lines.length - 1) * m.lh / 2, m.lh, { anchor: 'middle' });
     }
     if (!(n.t || '').trim() && n.type !== 'class' && n.type !== 'object') {
-      g += `<text x="${n.x}" y="${n.y}" font-size="${FS}" fill="#94a3b8" text-anchor="middle" dominant-baseline="central">…</text>`;
+      g += `<text x="${n.x}" y="${n.y}" font-family="${FONT}" font-size="${FS}" fill="#a8a29e" text-anchor="middle" dominant-baseline="central">…</text>`;
     }
     if (sel || hl) {
-      g += `<rect class="dg-selbox" x="${b.x - 5}" y="${b.y - 5}" width="${b.w + 10}" height="${b.h + 10}" rx="9" fill="none"/>`;
+      const r = n.type === 'class' || n.type === 'object' ? 15 : 7;
+      g += `<rect class="dg-selbox" x="${b.x - 5}" y="${b.y - 5}" width="${b.w + 10}" height="${b.h + 10}" rx="${r}" fill="none"/>`;
     }
     return g + '</g>';
   }
@@ -271,11 +332,11 @@
   function head(kind, p, ang, color) {
     const c = Math.cos(ang), s = Math.sin(ang);
     const pt = (u, v) => `${(p.x + u * c - v * s).toFixed(1)} ${(p.y + u * s + v * c).toFixed(1)}`;
-    if (kind === 'open')    return `<path d="M${pt(-13, -7)}L${pt(0, 0)}L${pt(-13, 7)}" fill="none" stroke="${color}" stroke-width="2"/>`;
-    if (kind === 'solid')   return `<path d="M${pt(-14, -7)}L${pt(0, 0)}L${pt(-14, 7)}Z" fill="${color}" stroke="${color}" stroke-width="1.5"/>`;
-    if (kind === 'tri')     return `<path d="M${pt(-17, -10)}L${pt(0, 0)}L${pt(-17, 10)}Z" fill="#fff" stroke="${color}" stroke-width="1.8"/>`;
-    if (kind === 'diamond') return `<path d="M${pt(0, 0)}L${pt(-11, -7)}L${pt(-22, 0)}L${pt(-11, 7)}Z" fill="#fff" stroke="${color}" stroke-width="1.8"/>`;
-    if (kind === 'diamondF')return `<path d="M${pt(0, 0)}L${pt(-11, -7)}L${pt(-22, 0)}L${pt(-11, 7)}Z" fill="${color}" stroke="${color}" stroke-width="1.8"/>`;
+    if (kind === 'open')    return `<path d="M${pt(-13, -7)}L${pt(0, 0)}L${pt(-13, 7)}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linejoin="round"/>`;
+    if (kind === 'solid')   return `<path d="M${pt(-13, -6.5)}L${pt(0, 0)}L${pt(-13, 6.5)}Z" fill="${color}" stroke="${color}" stroke-width="1.2" stroke-linejoin="round"/>`;
+    if (kind === 'tri')     return `<path d="M${pt(-17, -10)}L${pt(0, 0)}L${pt(-17, 10)}Z" fill="var(--dg-card)" stroke="${color}" stroke-width="1.6" stroke-linejoin="round"/>`;
+    if (kind === 'diamond') return `<path d="M${pt(0, 0)}L${pt(-11, -7)}L${pt(-22, 0)}L${pt(-11, 7)}Z" fill="var(--dg-card)" stroke="${color}" stroke-width="1.6"/>`;
+    if (kind === 'diamondF')return `<path d="M${pt(0, 0)}L${pt(-11, -7)}L${pt(-22, 0)}L${pt(-11, 7)}Z" fill="${color}" stroke="${color}" stroke-width="1.6"/>`;
     return '';
   }
   // Wie weit die Linie vor der Spitze aufhört (sonst ragt sie hinein).
@@ -283,9 +344,10 @@
 
   function labelSVG(x, y, text, opts) {
     if (!text) return '';
-    const w = textW(text, 13) + 10;
+    const fam = (opts && opts.fam) || FONT;
+    const w = textW(text, 13, false, fam) + 12;
     return `<g class="dg-elabel"><rect x="${x - w / 2}" y="${y - 10}" width="${w}" height="20" rx="5" fill="var(--dg-paper)" opacity=".92"/>`
-      + `<text x="${x}" y="${y}" font-size="13" text-anchor="middle" dominant-baseline="central" fill="${(opts && opts.fill) || LINE}">${esc(text)}</text></g>`;
+      + `<text x="${x}" y="${y}" font-family="${fam}" font-size="13" text-anchor="middle" dominant-baseline="central" fill="${(opts && opts.fill) || LINE}">${esc(text)}</text></g>`;
   }
 
   function edgeSVG(e, doc, byId, st) {
@@ -293,14 +355,16 @@
     if (!A || !B) return '';
     const sel = st.sel && st.sel.id === e.id;
     const hl = st.hl && st.hl.has(e.id);
-    let color = LINE;
-    let width = 1.8;
+    const uml = isUml(doc.kind);
+    let color = uml ? LINK : LINE;
+    let width = uml ? 1.5 : 1.6;
     let dash = '';
+    const fam = uml ? FONT_U : FONT;
     if (e.type === 'branch') {
       color = (COLORS[B.c || 0] || COLORS[0])[1];
-      width = A.type === 'center' ? 4 : 2.6;
+      width = A.type === 'center' ? 3.2 : 2.2;
     }
-    if (e.type === 'dep') dash = ' stroke-dasharray="7 5"';
+    if (e.type === 'dep') dash = ' stroke-dasharray="6 5"';
     if (hl) { color = '#f59e0b'; width += 1.5; }
 
     // Gegenläufige Kante dazwischen? Dann beide leicht biegen.
@@ -349,11 +413,11 @@
 
     if (e.type === 'effect') {
       const plus = e.s !== '-';
-      g += `<g class="dg-sign" data-sign="${e.id}"><circle cx="${mid.x}" cy="${mid.y}" r="13" fill="${plus ? PLUS : MINUS}" stroke="#fff" stroke-width="2"/>`
-        + `<text x="${mid.x}" y="${mid.y + 1}" font-size="20" font-weight="800" fill="#fff" text-anchor="middle" dominant-baseline="central">${plus ? '+' : '−'}</text></g>`;
-      if (e.l) g += labelSVG(mid.x, mid.y + 24, e.l);
+      g += `<g class="dg-sign" data-sign="${e.id}"><circle cx="${mid.x}" cy="${mid.y}" r="12" fill="${plus ? PLUS : MINUS}" stroke="${PAPER}" stroke-width="2"/>`
+        + `<text x="${mid.x}" y="${mid.y + 1}" font-family="${FONT}" font-size="19" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">${plus ? '+' : '−'}</text></g>`;
+      if (e.l) g += labelSVG(mid.x, mid.y + 24, e.l, { fam });
     } else if (e.l) {
-      g += labelSVG(mid.x, mid.y, e.l);
+      g += labelSVG(mid.x, mid.y, e.l, uml ? { fam, fill: 'var(--dg-muted)' } : { fam });
     }
     // Multiplizitäten an den Enden
     if (e.m1 || e.m2) {
@@ -361,7 +425,7 @@
         if (!t) return '';
         const ox = p.x + Math.cos(ang) * 24 + Math.cos(ang + Math.PI / 2) * 12;
         const oy = p.y + Math.sin(ang) * 24 + Math.sin(ang + Math.PI / 2) * 12;
-        return `<text x="${ox}" y="${oy}" font-size="13" text-anchor="middle" dominant-baseline="central" fill="${LINE}">${esc(t)}</text>`;
+        return `<text x="${ox}" y="${oy}" font-family="${fam}" font-size="12" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="var(--dg-muted)">${esc(t)}</text>`;
       };
       const a1 = Math.atan2(cy - p1.y, cx - p1.x), a2 = Math.atan2(cy - p2.y, cx - p2.x);
       g += off(p1, a1, e.m1) + off(p2, a2, e.m2);
@@ -494,11 +558,18 @@
     this.onBefore = o.onBefore || (() => {});
 
     host.classList.add('dg-canvas');
-    host.innerHTML = `<svg class="dg-svg" xmlns="${NS}"><g class="dg-world"><g class="dg-content"></g><g class="dg-overlay"></g></g></svg>`;
+    host.innerHTML = `<svg class="dg-svg" xmlns="${NS}">${DEFS}<g class="dg-world"><g class="dg-content"></g><g class="dg-overlay"></g></g></svg>`;
     this.host = host;
     this.svg = host.querySelector('svg');
     this.world = host.querySelector('.dg-world');
     this.content = host.querySelector('.dg-content');
+    // Erst mit geladener Webschrift stimmen die gemessenen Breiten.
+    if (document.fonts && document.fonts.load) {
+      Promise.all([document.fonts.load(`15px ${FONT}`), document.fonts.load(`700 15px ${FONT}`),
+                   document.fonts.load(`13px ${FONT_U}`), document.fonts.load(`700 14px ${FONT_U}`),
+                   document.fonts.load(`11.5px ${MONO}`)])
+        .then(() => { if (self.svg.isConnected) self.render(); }).catch(() => {});
+    }
     this.overlay = host.querySelector('.dg-overlay');
 
     /* ── Zeiger ─────────────────────────────────────────────── */
@@ -524,6 +595,7 @@
       if (ptrs.size === 2) {
         // Zweiter Finger: was auch lief, wird zum Zoomen.
         if (drag && drag.mode === 'node' && drag.moved) self.onChange();
+        self.lift = null;
         self.overlay.innerHTML = '';
         const p = pinchInfo();
         drag = { mode: 'pinch', start: p, view: Object.assign({}, self.view) };
@@ -585,7 +657,7 @@
         self.applyView();
       } else if (drag.mode === 'node') {
         if (!drag.moved && dist < 5) return;
-        if (!drag.moved) { self.onBefore(); drag.moved = true; self.select({ kind: 'node', id: drag.n.id }, true); }
+        if (!drag.moved) { self.onBefore(); drag.moved = true; self.lift = new Set(drag.group.map(g => g.id)); self.select({ kind: 'node', id: drag.n.id }, true); }
         const w = toWorld(ev.clientX, ev.clientY);
         const dx = w.x - drag.start.x, dy = w.y - drag.start.y;
         for (const it of drag.orig) { it.g.x = Math.round(it.x + dx); it.g.y = Math.round(it.y + dy); }
@@ -617,7 +689,7 @@
           else self.select(null);
         }
       } else if (d.mode === 'node') {
-        if (d.moved) { self.onChange(); }
+        if (d.moved) { self.lift = null; self.render(); self.onChange(); }
         else {
           const dbl = lastTap.id === d.n.id && now - lastTap.t < 420;
           lastTap = { t: now, id: d.n.id, x: ev.clientX, y: ev.clientY };
@@ -641,7 +713,7 @@
       }
     }
 
-    function cancel(ev) { ptrs.delete(ev.pointerId); if (ptrs.size === 0) { drag = null; self.overlay.innerHTML = ''; self.render(); } }
+    function cancel(ev) { ptrs.delete(ev.pointerId); if (ptrs.size === 0) { drag = null; self.lift = null; self.overlay.innerHTML = ''; self.render(); } }
 
     // Mausrad zoomt; Zweifinger-Wischen am Touchpad (deltaX dabei) verschiebt,
     // Zusammenziehen am Touchpad kommt als ctrl+Rad und zoomt.
@@ -708,8 +780,9 @@
     const v = this.view;
     this.world.setAttribute('transform', `translate(${v.x.toFixed(1)} ${v.y.toFixed(1)}) scale(${v.k.toFixed(4)})`);
     this.host.style.setProperty('--dg-k', v.k);
-    this.host.style.backgroundSize = `${22 * v.k}px ${22 * v.k}px`;
-    this.host.style.backgroundPosition = `${v.x}px ${v.y}px`;
+    // Zwei Ebenen beim Papier: Punkte wandern mit, das Korn bleibt fein.
+    this.host.style.backgroundSize = `${22 * v.k}px ${22 * v.k}px, 160px 160px`;
+    this.host.style.backgroundPosition = `${v.x}px ${v.y}px, 0 0`;
     if (this.onView) this.onView();
   };
   Canvas.prototype.zoomAt = function (sx, sy, f) {
@@ -753,7 +826,9 @@
     this.applyView();
   };
   Canvas.prototype.render = function () {
-    const st = { sel: this.sel, hl: this.hl };
+    const st = { sel: this.sel, hl: this.hl, lift: this.lift };
+    this.host.classList.toggle('k-uml', isUml(this.doc.kind));
+    this.host.classList.toggle('k-paper', !isUml(this.doc.kind));
     let s = docSVG(this.doc, st);
     // Anfasser am gewählten Knoten: vier Punkte zum Verbinden.
     if (!this.readonly && this.sel && this.sel.kind === 'node') {
@@ -774,10 +849,12 @@
     const b = bounds(doc);
     const pad = 30;
     const w = Math.ceil(b.w + pad * 2), h = Math.ceil(b.h + pad * 2);
-    const body = docSVG(doc, {}).split(LINE).join(LINE_EXPORT).split('var(--dg-paper)').join('#ffffff');
+    let body = docSVG(doc, {});
+    for (const [k, v] of Object.entries(VARS_EXPORT)) body = body.split(`var(${k})`).join(v);
     return {
       w: w * (scale || 1), h: h * (scale || 1),
-      svg: `<svg xmlns="${NS}" width="${w * (scale || 1)}" height="${h * (scale || 1)}" viewBox="${b.x - pad} ${b.y - pad} ${w} ${h}" font-family='${FONT.replace(/'/g, '')}'>`
+      svg: `<svg xmlns="${NS}" width="${w * (scale || 1)}" height="${h * (scale || 1)}" viewBox="${b.x - pad} ${b.y - pad} ${w} ${h}">`
+         + `${fontCSS ? `<style>${fontCSS}</style>` : ''}${DEFS}`
          + `<rect x="${b.x - pad}" y="${b.y - pad}" width="${w}" height="${h}" fill="#fff"/>${body}</svg>`
     };
   }
@@ -790,7 +867,44 @@
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
 
-  function exportPNG(doc, name) {
+  /* Ein als <img> gezeichnetes SVG kennt die Webschriften der Seite
+     nicht. Für den Export werden sie deshalb einmal geholt und als
+     data:-Adressen hineingeschrieben (nur latin, Outfit/Inter/JetBrains
+     Mono, je eine variable Datei) — sonst stünde im Bild eine
+     Ersatzschrift, die nicht in die gemessenen Kästen passt. */
+  const FONT_CSS_URL = (() => {
+    try { return new URL('../../../fonts/outfit-inter-jetbrainsmono-985fda.css', document.currentScript.src).href; }
+    catch (e) { return null; }
+  })();
+  let fontCSS = '', fontLoading = null;
+  function loadExportFonts() {
+    if (fontCSS || !FONT_CSS_URL) return Promise.resolve();
+    if (fontLoading) return fontLoading;
+    fontLoading = (async () => {
+      const css = await (await fetch(FONT_CSS_URL)).text();
+      const blocks = css.split('/* latin */').slice(1).map(x => x.slice(0, x.indexOf('}') + 1));
+      const seen = {};
+      let out = '';
+      for (const bl of blocks) {
+        const fam = (bl.match(/font-family:\s*'([^']+)'/) || [])[1];
+        const url = (bl.match(/url\(([^)]+)\)/) || [])[1];
+        if (!fam || !url) continue;
+        if (!seen[url]) {
+          const buf = await (await fetch(new URL(url, FONT_CSS_URL))).arrayBuffer();
+          let bin = ''; const u8 = new Uint8Array(buf);
+          for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+          seen[url] = 'data:font/woff2;base64,' + btoa(bin);
+        }
+        const wt = (bl.match(/font-weight:\s*(\d+)/) || [])[1] || '400';
+        out += `@font-face{font-family:'${fam}';font-weight:${wt};src:url(${seen[url]}) format('woff2');}`;
+      }
+      fontCSS = out;
+    })().catch(e => { console.warn('[diagramm] Schriften für den Export:', e.message); });
+    return fontLoading;
+  }
+
+  async function exportPNG(doc, name) {
+    await loadExportFonts();
     return new Promise(resolve => {
       const { svg, w, h } = exportSVG(doc, 2);
       const img = new Image();
@@ -1033,7 +1147,7 @@
     const doc = this.cv.doc;
     const n = { id: uid(), type, x: Math.round(x), y: Math.round(y), t: '', c: 0 };
     if (type === 'class') { n.t = ''; n.a = ''; n.o = ''; n.c = 0; }
-    if (type === 'object') { n.c = 4; }
+    if (type === 'object') { n.c = 0; }
     if (type === 'box') { n.c = 0; }
     if (type === 'topic' && from) {
       // Farbe vom Ast; Kinder der Mitte bekommen jede ihre eigene.
@@ -1504,8 +1618,8 @@
       { id: 'c', type: 'class', x: 140, y: 70, t: 'Fahrrad', a: '- gänge: int', o: '', c: 0 }],
       edges: [{ id: '1', a: 'b', b: 'a', type: 'inherit' }, { id: '2', a: 'c', b: 'a', type: 'inherit' }] },
     objekt: { kind: 'objekt', nodes: [
-      { id: 'a', type: 'object', x: -130, y: 0, t: 'meinAuto', k: 'Auto', a: 'marke = "VW"\ntüren = 5', c: 4 },
-      { id: 'b', type: 'object', x: 140, y: 0, t: 'mia', k: 'Person', a: 'alter = 16', c: 4 }],
+      { id: 'a', type: 'object', x: -130, y: 0, t: 'meinAuto', k: 'Auto', a: 'marke = "VW"\ntüren = 5', c: 0 },
+      { id: 'b', type: 'object', x: 140, y: 0, t: 'mia', k: 'Person', a: 'alter = 16', c: 0 }],
       edges: [{ id: '1', a: 'b', b: 'a', type: 'link', l: 'fährt' }] }
   };
   function thumb(kind) {
@@ -1521,7 +1635,7 @@
       ${note ? `<p class="dg-pick-note">${note}</p>` : ''}
       <div class="dg-pick-grid">
         ${KIND_IDS.map(k => `<button type="button" class="dg-pcard" data-pick="${k}">
-          <span class="dg-pthumb">${thumb(k)}</span>
+          <span class="dg-pthumb ${isUml(k) ? 'k-uml' : 'k-paper'}">${thumb(k)}</span>
           <b>${KINDS[k].icon} ${esc(KINDS[k].label)}</b><span>${esc(KINDS[k].hint)}</span></button>`).join('')}
       </div></div>`;
   }

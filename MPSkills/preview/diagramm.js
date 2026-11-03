@@ -53,41 +53,46 @@
   }
 
   /* ── Standbild ───────────────────────────────────────────── */
-  const node = (x, y, w, t, f, s, rx) =>
-    `<rect x="${x - w / 2}" y="${y - 11}" width="${w}" height="22" rx="${rx}" fill="${f}" stroke="${s}" stroke-width="1.5"/>`
-    + `<text x="${x}" y="${y + 3.5}" text-anchor="middle" font-size="10" fill="#0f172a">${t}</text>`;
+  // Zettel wie im Werkzeug: fast eckig, leichter Schatten; card = Karteikarte mit Streifen
+  const node = (x, y, w, t, f, s, card) =>
+    `<rect x="${x - w / 2}" y="${y - 11}" width="${w}" height="22" rx="2" fill="${card ? '#fffdf8' : f}" stroke="${card ? '#e4dccb' : s}" stroke-opacity="${card ? 1 : .3}" filter="url(#dgpTile)"/>`
+    + (card ? `<rect x="${x - w / 2}" y="${y - 11}" width="${w}" height="3" fill="${s}"/>` : '')
+    + `<text x="${x}" y="${y + 3.5 + (card ? 1 : 0)}" text-anchor="middle" font-size="10" fill="#0f172a">${t}</text>`;
   const sign = (x, y, plus) =>
     `<circle cx="${x}" cy="${y}" r="7" fill="${plus ? '#16a34a' : '#dc2626'}" stroke="#fff" stroke-width="1.4"/>`
     + `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">${plus ? '+' : '−'}</text>`;
 
   function tile() {
     return `<div class="tprev tprev--dg" aria-hidden="true">
-      <svg viewBox="0 0 340 186" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;font-family:system-ui,sans-serif">
+      <svg viewBox="0 0 340 186" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;font-family:Outfit,system-ui,sans-serif">
+        <defs><filter id="dgpTile" x="-20%" y="-20%" width="140%" height="170%"><feDropShadow dx="0" dy="1" stdDeviation="1" flood-color="#3b2f1e" flood-opacity=".18"/></filter></defs>
         <g>
-          <rect x="8" y="8" width="158" height="170" rx="10" fill="#fbfcfc" stroke="#dfe7e5"/>
+          <rect x="8" y="8" width="158" height="170" rx="10" fill="#f4f0e8" stroke="#e4dccb"/>
           <circle cx="20" cy="21" r="6" fill="#2563eb"/><text x="20" y="24" text-anchor="middle" font-size="8" font-weight="800" fill="#fff">1</text>
           <text x="31" y="25" font-size="10" font-weight="700" fill="#0d1a17">Emma</text>
-          <path d="M86 102 C104 102 104 72 118 72" fill="none" stroke="#16a34a" stroke-width="2.5"/>
-          <path d="M86 102 C104 102 104 132 118 132" fill="none" stroke="#db2777" stroke-width="2.5"/>
-          <path d="M60 102 C44 102 44 72 32 72" fill="none" stroke="#d97706" stroke-width="2.5"/>
-          <path d="M60 102 C44 102 44 132 32 132" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
-          <ellipse cx="73" cy="102" rx="28" ry="14" fill="#e0f2fe" stroke="#0284c7" stroke-width="2"/>
-          <text x="73" y="106" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">Wald</text>
-          ${node(136, 72, 40, 'Tiere', '#dcfce7', '#16a34a', 10)}
-          ${node(136, 132, 40, 'Boden', '#fce7f3', '#db2777', 10)}
-          ${node(26, 72, 40, 'Klima', '#fef3c7', '#d97706', 10)}
-          ${node(26, 132, 40, 'Wasser', '#ede9fe', '#7c3aed', 10)}
+          <path d="M95 102 C106 102 108 72 118 72" fill="none" stroke="#16a34a" stroke-width="2.5"/>
+          <path d="M95 102 C106 102 108 132 118 132" fill="none" stroke="#db2777" stroke-width="2.5"/>
+          <path d="M51 102 C42 102 42 72 32 72" fill="none" stroke="#d97706" stroke-width="2.5"/>
+          <path d="M51 102 C42 102 42 132 32 132" fill="none" stroke="#7c3aed" stroke-width="2.5"/>
+          <rect x="51" y="88" width="44" height="28" rx="2" fill="#fffdf8" stroke="#e4dccb" filter="url(#dgpTile)"/>
+          <rect x="51" y="113" width="44" height="3" fill="#16a34a"/>
+          <rect x="62" y="84" width="22" height="8" fill="#e7dcc0" opacity=".85" transform="rotate(-2 73 88)"/>
+          <text x="73" y="105" text-anchor="middle" font-size="11" font-weight="700" fill="#0f172a">Wald</text>
+          ${node(136, 72, 40, 'Tiere', '#dcfce7', '#16a34a')}
+          ${node(136, 132, 40, 'Boden', '#fce7f3', '#db2777')}
+          ${node(26, 72, 40, 'Klima', '#fef3c7', '#d97706')}
+          ${node(26, 132, 40, 'Wasser', '#ede9fe', '#7c3aed')}
         </g>
         <g>
-          <rect x="174" y="8" width="158" height="170" rx="10" fill="#fbfcfc" stroke="#dfe7e5"/>
+          <rect x="174" y="8" width="158" height="170" rx="10" fill="#f4f0e8" stroke="#e4dccb"/>
           <circle cx="186" cy="21" r="6" fill="#2563eb"/><text x="186" y="24" text-anchor="middle" font-size="8" font-weight="800" fill="#fff">2</text>
           <text x="197" y="25" font-size="10" font-weight="700" fill="#0d1a17">Leon</text>
-          <path d="M224 62 Q253 50 281 62" fill="none" stroke="#334155" stroke-width="1.4"/><path d="M276 57l6 5-7 3z" fill="#334155"/>
-          <path d="M281 82 Q253 94 224 82" fill="none" stroke="#334155" stroke-width="1.4"/><path d="M229 87l-6-5 7-3z" fill="#334155"/>
-          <path d="M240 145 L210 84" fill="none" stroke="#334155" stroke-width="1.4"/><path d="M208 90l2-7 4 6z" fill="#334155"/>
-          ${node(208, 72, 44, 'Hasen', '#fff', '#16a34a', 4)}
-          ${node(298, 72, 44, 'Füchse', '#fff', '#ea580c', 4)}
-          ${node(252, 155, 40, 'Gras', '#fff', '#16a34a', 4)}
+          <path d="M224 62 Q253 50 281 62" fill="none" stroke="#57534e" stroke-width="1.4"/><path d="M276 57l6 5-7 3z" fill="#57534e"/>
+          <path d="M281 82 Q253 94 224 82" fill="none" stroke="#57534e" stroke-width="1.4"/><path d="M229 87l-6-5 7-3z" fill="#57534e"/>
+          <path d="M240 145 L210 84" fill="none" stroke="#57534e" stroke-width="1.4"/><path d="M208 90l2-7 4 6z" fill="#57534e"/>
+          ${node(208, 72, 44, 'Hasen', '#fff', '#16a34a', true)}
+          ${node(298, 72, 44, 'Füchse', '#fff', '#ea580c', true)}
+          ${node(252, 155, 40, 'Gras', '#fff', '#16a34a', true)}
           ${sign(253, 56, true)}${sign(253, 88, false)}${sign(226, 116, true)}
         </g>
       </svg>

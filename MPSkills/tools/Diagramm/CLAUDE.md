@@ -15,6 +15,25 @@ Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie braucht. Direkt 
 - Schaufenster: `MPSkills/preview/diagramm.js` (Lehrkraft-Ansicht mit erfundener Klasse,
   `DEMO_PEOPLE` in tool.js).
 
+## Aussehen (03.11.2026)
+
+Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k-paper` / `.k-uml`):
+
+- **Papier** (Mindmap, Wirkungsgefüge): Tisch in warmem Ton mit Punkten und ganz leichtem Papierkorn
+  (zweite Hintergrund-Ebene, data:-SVG). Zettel fast eckig (rx 2–3) mit leichtem Schatten
+  (`#dgPaper`), beim Ziehen hebt sich der Zettel (`#dgLift`, `Canvas.lift`). Mitte der Mindmap = großer
+  Zettel mit Kreppband und Farbstreifen unten; Äste = farbige Zettel; Größen im Wirkungsgefüge =
+  Karteikarten mit Farbstreifen oben; Linien Bleistift-Grau (`--dg-line`). Schrift Outfit. Zettel bleiben
+  auch im Dunkelmodus hell (Papier auf dunklem Tisch).
+- **Karte wie SQL Studio** (Klassen-, Objektdiagramm; `tools/SQLStudio/js/diagram.js`): weiße Karte rx 12,
+  Schatten `#dgCard`, Kopf `--dg-head` (Petrol, Name links, fett 14), Zeilen 24 px mit Zebrastreifen, Typ
+  bzw. Wert rechts in JetBrains Mono (`umlRow` teilt „- name: String“, „+ m(): void“, „x = 5“), Linien
+  `--dg-link`. Farbe 0 = Petrol-Kopf, andere Farben = Pastell-Kopf. Dunkel mit den Werten aus SQL Studio.
+- Farben, die mit hell/dunkel kippen, stehen als `var(--dg-…)` in den SVG-Attributen (tool.css);
+  `exportSVG` ersetzt sie durch `VARS_EXPORT`. Der PNG-Export bettet die Schriften ein
+  (`loadExportFonts`: holt `fonts/outfit-inter-jetbrainsmono-985fda.css`, nur latin, als data:-URL),
+  sonst passte die Ersatzschrift nicht in die gemessenen Kästen.
+
 ## Datenmodell (`dg_work.doc`)
 
 ```jsonc

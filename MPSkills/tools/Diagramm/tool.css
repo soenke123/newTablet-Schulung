@@ -2,26 +2,37 @@
    MPSkills — Skill „Diagramm"  ·  tool.css
    ══════════════════════════════════════════════════════════════
    Farben der Seite (--surface, --line, --ink, --accent …), damit
-   hell/dunkel mitkippt. Die Bausteine selbst tragen feste Pastell-
-   farben (tool.js COLORS) — sie sehen auf beiden Flächen gleich aus
-   und landen so auch im exportierten Bild.
+   hell/dunkel mitkippt. Zwei Kleider für die Zeichenfläche:
+     .k-paper  Mindmap/Wirkungsgefüge — Zettel auf einem Tisch (warm,
+               dezentes Korn). Die Zettel bleiben auch dunkel hell.
+     .k-uml    Klassen-/Objektdiagramm — wie SQL Studio
+               (tools/SQLStudio/css/app.css, --dg-*).
+   Die --dg-…-Farben stehen in den SVG-Attributen; für den Export
+   ersetzt tool.js sie durch VARS_EXPORT (helle Fassung).
    ══════════════════════════════════════════════════════════════ */
 
 .dg {
-  --dg-paper: #fbfcfc;
-  --dg-dot: #d7dfdd;
-  --dg-line: #334155;
+  --dg-paper: #f4f0e8;
+  --dg-dot: #e0d8c9;
+  --dg-line: #57534e;
   --dg-sel: #2563eb;
+  --dg-link: #7a97a3; --dg-card: #fff; --dg-card-edge: #bccdd3; --dg-head: #dcf0f5;
+  --dg-uml-ink: #0c1f27; --dg-muted: #55707b; --dg-zebra: #d3e0e4;
   --dg-h: clamp(460px, calc(100vh - 230px), 980px);
   color: var(--ink);
   font-size: 15px;
 }
 :root[data-theme="dark"] .dg {
-  --dg-paper: #18211f;
-  --dg-dot: #2c3835;
-  --dg-line: #cbd5d1;
+  --dg-paper: #1c1a17;
+  --dg-dot: #2e2a24;
+  --dg-line: #d6cfc2;
   --dg-sel: #60a5fa;
+  --dg-link: #5f8794; --dg-card: #112830; --dg-card-edge: #29495a; --dg-head: #123a46;
+  --dg-uml-ink: #e3f2f6; --dg-muted: #8fb0ba; --dg-zebra: #1c3641;
 }
+/* UML wie SQL Studio: kühler Grund, Punkte */
+.dg-canvas.k-uml { --dg-paper: #eef3f5; --dg-dot: #cddde2; }
+:root[data-theme="dark"] .dg-canvas.k-uml { --dg-paper: #08151a; --dg-dot: #14303a; }
 .dg [hidden] { display: none !important; }
 .mpfs-on .dg { --dg-h: calc(100vh - 2px); height: 100%; }
 .mpfs-on .dg--teacher { --dg-h: calc(100vh - 52px); }
@@ -100,6 +111,12 @@
   background-image: radial-gradient(circle, var(--dg-dot) 1.2px, transparent 1.3px);
   background-size: 22px 22px;
 }
+/* Tisch: Punkte und ein ganz leichtes Papierkorn (zweite Ebene) */
+.dg-canvas.k-paper {
+  background-image:
+    radial-gradient(circle, var(--dg-dot) 1.1px, transparent 1.2px),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .35 0 0 0 0 .25 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 .dg-svg {
   display: block; width: 100%; height: 100%;
   touch-action: none;
@@ -107,7 +124,7 @@
   cursor: grab;
 }
 .dg-svg:active { cursor: grabbing; }
-.dg-svg text { pointer-events: none; font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif; }
+.dg-svg text { pointer-events: none; }
 .dg-node { cursor: move; }
 .dg-node .dg-selbox { stroke: var(--dg-sel); stroke-width: 2; stroke-dasharray: 6 4; }
 .dg-node.is-hl .dg-selbox { stroke: #f59e0b; stroke-width: 3; stroke-dasharray: none; }
@@ -335,6 +352,8 @@
   border: 1px solid var(--line-soft);
   overflow: hidden;
 }
+.dg-pthumb.k-paper { background: #f4f0e8; }
+.dg-pthumb.k-uml { background: #eef3f5; }
 .dg-pthumb svg { display: block; padding: 6px; box-sizing: border-box; }
 
 /* ── Lehrkraft ──────────────────────────────────────────────── */
