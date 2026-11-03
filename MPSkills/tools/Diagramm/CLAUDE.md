@@ -13,7 +13,8 @@ Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie braucht. Direkt 
 - `tool.css` – Aussehen, Farben der Seite (hell/dunkel). Bausteine tragen feste Pastellfarben
   (`COLORS` in tool.js), die auch im exportierten PNG landen.
 - `tests/logik.test.mjs` – `sane`, `clean`, neue Felder, rechtwinklige Linien, Rand-Punkte, Mindmap mit mehreren Themen (ohne Browser, Textbreite 8 px je Zeichen).
-- `tests/harness.html` – Prüfseite ohne Server: `?rolle=schueler|lehrer|demo`, `&art=wirkung`.
+- `tests/harness.html` – Prüfseite ohne Server: `?rolle=schueler|lehrer|demo`, `&art=wirkung`; `window.__store`
+  spielt den Server nach (Teilen, Anfrage `ask`, Diagramm der Lehrkraft `teacher`, Klasse Mia teilt/Leon nicht).
 - Schaufenster: `MPSkills/preview/diagramm.js` (Lehrkraft-Ansicht mit erfundener Klasse,
   `DEMO_PEOPLE` in tool.js).
 
@@ -64,6 +65,12 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
 
 ## Bedienung
 
+**Leisten**: oben links **Datei** (Menü: Neu · Öffnen … · Speichern · Als Bild (PNG) · bei Schülern
+„Diagramm der Lehrkraft“, solange eins geteilt ist), Art, Titel; Mitte Bausteine; rechts Teilen
+(`Editor.setShare`, `paintShare`). Rückgängig/Wiederholen/Zoom/Alles zeigen/Hilfe klein unten rechts auf
+der Fläche (`.dg-tools`). Speichern = Datei `<Titel>.diagramm.json` (`saveFile`: `{ app: 'mpskills-diagramm',
+v, title, doc }`), Öffnen liest sie (`readFile`, ≤ 1 MB, `sane`), ersetzt nach Rückfrage das jetzige
+Diagramm; im Raum mit fester Art nur Dateien dieser Art. Fragen stellt `modal()` (eigenes Fenster im Skill).
 Antippen = wählen · doppelt tippen = Text (auf leerer Fläche: neuer Baustein) · ziehen = verschieben
 (Mindmap: ganzer Ast) · leere Fläche ziehen = Blatt verschieben · zwei Finger/Mausrad = Zoom.
 Blaue Punkte am gewählten Baustein: antippen = neuer Baustein daneben + Verbindung, auf anderen
@@ -88,20 +95,36 @@ Concept Map die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr Text 
 ## Raum
 
 - Einstellung beim Anlegen `settings.kind` (free | mindmap | wirkung | klasse | objekt). free = Startseite
-  „Was möchtest du zeichnen?“, sonst gleich der Editor. „Neu“ nur bei free.
+  „Was möchtest du zeichnen?“, sonst gleich der Editor. Datei → Neu: bei free die Startseite, sonst ein leeres Diagramm der festen Art.
 - **Tablet**: `dg_mine_get` beim Start, `dg_mine_put` 1,5 s nach der letzten Änderung (bei Netzfehler
   alle 5 s nachholen), Anzeige „gespeichert ✓“ unten links. Ein Diagramm je Person.
-- **Lehrkraft**: Reiter „Diagramme der Klasse“ – `dg_class_list` alle 3 s (nur Kopfdaten, `rev`), bis zu
+- **Teilen mit der Lehrkraft (0260)**: privat bis die Person oben „Mit Lehrkraft teilen“ tippt
+  (`dg_mine_share`, vorher wird gespeichert); dann „Lehrkraft sieht mit“ + „Teilen beenden“. `dg_mine_poll`
+  alle 5 s: `shared`, `ask`, `teacher`. Fragt die Lehrkraft (`ask = 'open'`), erscheint am Tablet ein Fenster
+  „Deine Lehrkraft fragt“ (Ja = teilen, Nein = `declined`; `dg_mine_answer`).
+- **Diagramm der Lehrkraft (0260)**: neue `teacher.rev` → Fenster „Deine Lehrkraft hat ein Diagramm
+  geteilt“ (einmal je rev, gemerkt in `localStorage dg.tseen.<code>`): mit eigenem Inhalt „Meins
+  herunterladen, dann öffnen“ · „Meins verwerfen und öffnen“ · „An meinem weiterarbeiten“, sonst „Öffnen“ ·
+  „Später“. Später unter Datei → „Diagramm der Lehrkraft“ und auf der Startseite als Knopf. Öffnen =
+  `dg_mine_teacher_get` → eigene Kopie (ersetzt das eigene, wird normal gespeichert).
+- **Lehrkraft**: Reiter „Diagramme der Klasse“ – `dg_class_list` alle 3 s (nur Kopfdaten, `rev`; Zähler
+  geteilt/alle). Nicht geteilte stehen ausgegraut mit „Ansehen anfragen“ (Rückfrage-Fenster, dann
+  `dg_class_ask`; „angefragt …“ / „abgelehnt“ → „erneut fragen“, höchstens alle 30 s). Geteilte bis zu
   zwei antippen → nebeneinander (Split Screen), `dg_class_get` nur bei neuem `rev`; läuft live mit,
   solange niemand in der Ansicht selbst zoomt/verschiebt („Alles zeigen“ schaltet das Mitführen wieder
-  ein). „Liste ausblenden“ für den Beamer. Reiter „Mein Diagramm“: eigener Editor, vorerst nur im Gerät
-  (`localStorage dg.own.<code>`).
-- **Kommt später**: Lehrkraft teilt ihr Diagramm mit der Klasse zum Weiterbearbeiten (Idee:
-  `skill_room_state.data.shared` oder eigene Tabelle `dg_shared`, Tablet übernimmt es als Vorlage).
+  ein). „Liste ausblenden“ für den Beamer. Reiter „Mein Diagramm“: eigener Editor im Gerät
+  (`localStorage dg.own.<code>`); oben „Mit Klasse teilen“ (Rückfrage) → Schnappschuss per
+  `dg_class_share` in `dg_shared`; danach „Mit Klasse geteilt“ · „Neu geben“ (jetziger Stand, rev + 1, die
+  Tablets werden wieder gefragt) · „Zurücknehmen“ (`dg_class_unshare`; geöffnete Kopien bleiben).
+  Wer das Teilen beendet, verschwindet vorne aus dem Vergleich. Ohne Migration 0260 (kein `shared` in der
+  Liste) zeigt der Skill wie früher alles.
 
-## Server (Migration 0258)
+## Server (Migrationen 0258, 0260)
 
-Tabelle `dg_work` (eine Zeile je Teilnehmer, CASCADE an Raum und Teilnehmer, doc ≤ 300 000 Byte),
-RPCs `dg_mine_get/put` (Token, anon), `dg_class_list/get` (Lehrkraft des Raums inkl. eingeladener,
-`skill_room_is_teacher`). Prüfstand `supabase/tests/0258_diagramm.mjs`, Freigaben in
+Tabelle `dg_work` (eine Zeile je Teilnehmer, CASCADE an Raum und Teilnehmer, doc ≤ 300 000 Byte; seit
+0260 `shared`, `ask` open|declined, `ask_at`), Tabelle `dg_shared` (0260, eine Zeile je Raum, CASCADE),
+RPCs `dg_mine_get/put/poll/share/answer/teacher_get` (Token, anon), `dg_class_list/get/ask/share/unshare`
+(Lehrkraft des Raums inkl. eingeladener, `skill_room_is_teacher`). `dg_class_get` nur bei `shared`
+(sonst `not_shared`), `dg_class_list` verrät bei nicht geteilten nur Name, Art und Anfrage.
+Prüfstände `supabase/tests/0258_diagramm.mjs`, `0260_diagramm_teilen.mjs`, Freigaben in
 `0225_rechte_freigaben.json`.

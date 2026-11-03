@@ -6,19 +6,34 @@
 <link rel="stylesheet" href="../tool.css">
 <style>body{padding:16px;background:var(--paper)}</style>
 </head><body>
-<!-- Prüfseite ohne Server: ?rolle=schueler|lehrer|demo, &art=wirkung (Vorgabe der Lehrkraft) -->
+<!-- Prüfseite ohne Server: ?rolle=schueler|lehrer|demo, &art=wirkung (Vorgabe der Lehrkraft).
+     window.__store spielt den Server nach (Teilen, Anfrage, Diagramm der Lehrkraft, Klasse mit Mia/Leon). -->
 <div id="box"></div>
 <script src="../../../lib/tool.js"></script>
 <script src="../tool.js"></script>
 <script>
 const q = new URLSearchParams(location.search);
 const rolle = q.get('rolle') || 'schueler';
-const store = window.__store = { mine: null, rev: 0, calls: [] };
+const store = window.__store = { mine: null, rev: 0, calls: [], shared: false, ask: null, teacher: null,
+  // Lehrkraft: eine erfundene Klasse (Mia teilt, Leon nicht)
+  klasse: [{ participant: 'p1', person: 'Mia', seat: 1, kind: 'mindmap', shared: true, ask: null, title: 'Wald', nodes: 3, rev: 1, updated_at: new Date().toISOString() },
+           { participant: 'p2', person: 'Leon', seat: 2, kind: 'klasse', shared: false, ask: null, title: '', nodes: null, rev: 0, updated_at: new Date().toISOString() }],
+  tshare: null };
+const MIA = { v: 1, kind: 'mindmap', nodes: [{ id: 'c', type: 'center', x: 0, y: 0, t: 'Wald' }, { id: 'a', type: 'topic', x: 160, y: 0, t: 'Tiere', c: 2 }], edges: [{ id: 'e', a: 'c', b: 'a', type: 'branch' }] };
 const fake = (fn, args) => {
   store.calls.push(fn);
-  if (fn === 'dg_mine_get') return Promise.resolve(store.mine ? Object.assign({ ok: true }, store.mine) : { ok: true, doc: null });
-  if (fn === 'dg_mine_put') { store.rev++; store.mine = { doc: args.p_doc, title: args.p_title, kind: args.p_kind, rev: store.rev }; return Promise.resolve({ ok: true, rev: store.rev }); }
-  if (fn === 'dg_class_list') return Promise.resolve({ ok: true, items: [] });
+  const ok = o => Promise.resolve(Object.assign({ ok: true }, o));
+  if (fn === 'dg_mine_get') return ok(store.mine ? Object.assign({ shared: store.shared, ask: store.ask }, store.mine) : { doc: null, shared: false });
+  if (fn === 'dg_mine_put') { store.rev++; store.mine = { doc: args.p_doc, title: args.p_title, kind: args.p_kind, rev: store.rev }; return ok({ rev: store.rev }); }
+  if (fn === 'dg_mine_poll') return ok({ shared: store.shared, ask: store.ask, teacher: store.teacher && { rev: store.teacher.rev, title: store.teacher.title, kind: store.teacher.kind } });
+  if (fn === 'dg_mine_share') { if (!store.mine) return ok({ ok: false, error: 'not_found' }); store.shared = args.p_on; if (args.p_on) store.ask = null; return ok({ shared: store.shared }); }
+  if (fn === 'dg_mine_answer') { if (args.p_yes) { store.shared = true; store.ask = null; } else store.ask = 'declined'; return ok({ shared: !!args.p_yes }); }
+  if (fn === 'dg_mine_teacher_get') return store.teacher ? ok(store.teacher) : ok({ ok: false, error: 'not_found' });
+  if (fn === 'dg_class_list') return ok({ items: store.klasse, teacher: store.tshare });
+  if (fn === 'dg_class_get') { const it = store.klasse.find(x => x.participant === args.p_participant); return it && it.shared ? ok({ doc: MIA, kind: 'mindmap', title: it.title, rev: it.rev }) : ok({ ok: false, error: 'not_shared' }); }
+  if (fn === 'dg_class_ask') { const it = store.klasse.find(x => x.participant === args.p_participant); it.ask = 'open'; return ok({ ask: 'open' }); }
+  if (fn === 'dg_class_share') { store.tshare = { rev: (store.tshare ? store.tshare.rev : 0) + 1, title: args.p_title, kind: args.p_kind }; store.tdoc = args.p_doc; return ok({ rev: store.tshare.rev }); }
+  if (fn === 'dg_class_unshare') { store.tshare = null; return ok({}); }
   return Promise.resolve({ ok: false, error: 'fn_missing' });
 };
 const actions = { role: rolle === 'lehrer' ? 'presenter' : 'participant', call: fake };

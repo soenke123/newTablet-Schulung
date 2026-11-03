@@ -97,6 +97,8 @@ r = await call(`dg_mine_put('nix', $1::jsonb, 'x', 'mindmap')`, [JSON.stringify(
 ok('2  fremder Token → unknown_token', r.error === 'unknown_token');
 
 /* 3 */
+// Seit 0260 sieht die Lehrkraft nur, was geteilt ist (0260_diagramm_teilen.mjs) — hier beide teilen.
+await call(`dg_mine_share('tokA', true)`); await call(`dg_mine_share('tokB', true)`);
 r = await call(`dg_class_list($1)`, [CODE]);
 ok('3  ohne Anmeldung → not_authenticated', r.error === 'not_authenticated');
 await as(T1);

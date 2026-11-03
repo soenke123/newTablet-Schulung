@@ -1113,6 +1113,13 @@
     return fontLoading;
   }
 
+  // Datei → Speichern: das Diagramm als JSON-Datei, die „Öffnen" wieder liest.
+  function saveFile(doc, title) {
+    const data = { app: 'mpskills-diagramm', v: 1, title: title || '', doc: clean(doc) };
+    download(fileName(title || KINDS[doc.kind].label) + '.diagramm.json',
+      new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' }));
+  }
+
   async function exportPNG(doc, name) {
     await loadExportFonts();
     return new Promise(resolve => {
@@ -1211,6 +1218,13 @@
     copy:  '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
     paste: '<svg viewBox="0 0 24 24"><path d="M9 4h6v3H9zM15 5h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     cut:   '<svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 16L19 4M16 16L5 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    share: '<svg viewBox="0 0 24 24"><path d="M12 15V3M7 8l5-5 5 5M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    eye:   '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+    file:  '<svg viewBox="0 0 24 24"><path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z M14 3v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+    down:  '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    open:  '<svg viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+    pic:   '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 18l5-5 4 4 3-3 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+    inbox: '<svg viewBox="0 0 24 24"><path d="M12 3v10M8 9l4 4 4-4M4 14h4l1 3h6l1-3h4v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     reset: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     swap:  '<svg viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     help:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
@@ -1257,22 +1271,15 @@
       <div class="dg-ed">
         <div class="dg-bar">
           <div class="dg-bar-l">
+            <div class="dg-file">
+              <button type="button" class="dg-filebtn" data-act="file" aria-haspopup="menu" aria-expanded="false">${ICON.file}<span>Datei</span>${ICON.down}</button>
+              <div class="dg-menu" data-k="menu" role="menu" hidden></div>
+            </div>
             <span class="dg-kind" data-k="kind"></span>
             <input class="dg-title" data-k="title" maxlength="80" placeholder="Titel" aria-label="Titel des Diagramms"/>
           </div>
           <div class="dg-bar-m" data-k="adds"></div>
-          <div class="dg-bar-r">
-            <button type="button" class="dg-ib" data-act="undo" title="Rückgängig (Strg+Z)">${ICON.undo}</button>
-            <button type="button" class="dg-ib" data-act="redo" title="Wiederholen (Strg+Y)">${ICON.redo}</button>
-            <span class="dg-sep"></span>
-            <button type="button" class="dg-ib" data-act="zout" title="Verkleinern">${ICON.minus}</button>
-            <button type="button" class="dg-ib" data-act="fit" title="Alles zeigen">${ICON.fit}</button>
-            <button type="button" class="dg-ib" data-act="zin" title="Vergrößern">${ICON.plus}</button>
-            <span class="dg-sep"></span>
-            <button type="button" class="dg-ib" data-act="png" title="Als Bild speichern (PNG)">${ICON.img}</button>
-            <button type="button" class="dg-ib" data-act="help" title="Wie geht das?">${ICON.help}</button>
-            ${o.extraRight || ''}
-          </div>
+          <div class="dg-bar-r" data-k="share"></div>
         </div>
         <div class="dg-stage">
           <div class="dg-paper" data-k="paper"></div>
@@ -1280,7 +1287,18 @@
           <div class="dg-help" data-k="help" hidden></div>
           <div class="dg-edit" data-k="edit" hidden></div>
           <div class="dg-ctx" data-k="ctx" hidden></div>
+          <div class="dg-tools" role="toolbar" aria-label="Ansicht">
+            <button type="button" class="dg-tb" data-act="undo" title="Rückgängig (Strg+Z)">${ICON.undo}</button>
+            <button type="button" class="dg-tb" data-act="redo" title="Wiederholen (Strg+Y)">${ICON.redo}</button>
+            <span class="dg-tsep"></span>
+            <button type="button" class="dg-tb" data-act="zout" title="Verkleinern">${ICON.minus}</button>
+            <button type="button" class="dg-tb" data-act="fit" title="Alles zeigen">${ICON.fit}</button>
+            <button type="button" class="dg-tb" data-act="zin" title="Vergrößern">${ICON.plus}</button>
+            <span class="dg-tsep"></span>
+            <button type="button" class="dg-tb" data-act="help" title="Wie geht das?">${ICON.help}</button>
+          </div>
         </div>
+        <input type="file" data-k="fileinp" accept=".json,application/json" hidden/>
       </div>`;
     this.host = host;
     const $ = k => host.querySelector(`[data-k="${k}"]`);
@@ -1304,6 +1322,10 @@
       if (t.matches('[data-ef]')) this.ctxInput(t);
     };
     this.onKey = ev => this.key(ev);
+    // Datei-Menü schließt bei einem Tipp daneben
+    this.onDocDown = ev => { if (!ev.target.closest || !ev.target.closest('.dg-file')) this.menu(false); };
+    document.addEventListener('pointerdown', this.onDocDown);
+    $('fileinp').addEventListener('change', ev => { const f = ev.target.files && ev.target.files[0]; ev.target.value = ''; if (f) this.readFile(f); });
     host.addEventListener('click', this.onClick);
     host.addEventListener('input', this.onInput);
     document.addEventListener('keydown', this.onKey);
@@ -1315,9 +1337,45 @@
     this.host.removeEventListener('click', this.onClick);
     this.host.removeEventListener('input', this.onInput);
     document.removeEventListener('keydown', this.onKey);
+    document.removeEventListener('pointerdown', this.onDocDown);
     this.ro.disconnect();
     this.cv.destroy();
   };
+
+  /* ── Datei-Menü ─────────────────────────────────────────── */
+  Editor.prototype.menu = function (on) {
+    const m = this.$('menu'), b = this.host.querySelector('[data-act="file"]');
+    const show = on == null ? m.hidden : on;
+    if (!show) { if (!m.hidden) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } return; }
+    const it = (act, icon, label, sub) => `<button type="button" role="menuitem" class="dg-mi" data-act="${act}">${icon}<span><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span></button>`;
+    m.innerHTML = (this.o.onNew ? it('f-new', ICON.plus, 'Neu', 'leeres Diagramm anfangen') : '')
+      + it('f-open', ICON.open, 'Öffnen …', 'gespeicherte Diagramm-Datei laden')
+      + it('f-save', ICON.img, 'Speichern', 'als Datei herunterladen, später wieder öffnen')
+      + it('png', ICON.pic, 'Als Bild (PNG)', 'zum Einfügen in Texte und Folien')
+      + (this.o.teacherAvail && this.o.teacherAvail() ? '<span class="dg-msep"></span>' + it('f-teacher', ICON.inbox, 'Diagramm der Lehrkraft', 'als eigene Kopie öffnen') : '');
+    m.hidden = false;
+    b.setAttribute('aria-expanded', 'true');
+  };
+  // Datei → Öffnen: eine mit „Speichern" geladene Datei (oder nur das doc)
+  Editor.prototype.readFile = function (f) {
+    const bad = () => this.o.toast && this.o.toast('Das ist keine Diagramm-Datei.', true);
+    if (f.size > 1000000) return bad();
+    const r = new FileReader();
+    r.onload = () => {
+      let j;
+      try { j = JSON.parse(String(r.result)); } catch (e) { return bad(); }
+      const doc = j && j.doc ? j.doc : j;
+      if (!doc || !KIND_IDS.includes(doc.kind) || !Array.isArray(doc.nodes)) return bad();
+      const title = String((j && j.title) || f.name.replace(/\.(diagramm\.)?json$/i, '') || '').slice(0, 80);
+      const d = sane(doc, doc.kind);
+      if (this.o.onOpen) this.o.onOpen(d, title);
+      else { this.snap(); this.load(d, title); this.changed(); }
+    };
+    r.onerror = bad;
+    r.readAsText(f);
+  };
+  // Rechts oben: Teilen-Knöpfe der Rolle (Tablet bzw. Lehrkraft)
+  Editor.prototype.setShare = function (html) { this.$('share').innerHTML = html || ''; };
 
   Editor.prototype.load = function (doc, title) {
     this.cv.setDoc(doc);
@@ -1480,10 +1538,16 @@
     if (a === 'zin') return cv.zoom(1.25);
     if (a === 'zout') return cv.zoom(0.8);
     if (a === 'fit') return cv.fit();
+    if (a === 'file') return this.menu();
     if (a === 'png') {
+      this.menu(false);
       this.closeEdit(true);
       return exportPNG(clean(cv.doc), fileName(this.title || KINDS[cv.doc.kind].label));
     }
+    if (a === 'f-new') { this.menu(false); return this.o.onNew && this.o.onNew(); }
+    if (a === 'f-open') { this.menu(false); return this.$('fileinp').click(); }
+    if (a === 'f-save') { this.menu(false); this.closeEdit(true); return saveFile(cv.doc, this.title); }
+    if (a === 'f-teacher') { this.menu(false); return this.o.onTeacher && this.o.onTeacher(); }
     if (a === 'help') return this.toggleHelp();
     if (a === 'add') {
       this.closeEdit(true);
@@ -1969,6 +2033,7 @@
     return `<div class="dg-pick">
       <h3>Was möchtest du zeichnen?</h3>
       ${note ? `<p class="dg-pick-note">${note}</p>` : ''}
+      <div class="dg-pick-t" data-k="tpick"></div>
       <div class="dg-pick-grid">
         ${KIND_IDS.map(k => `<button type="button" class="dg-pcard" data-pick="${k}">
           <span class="dg-pthumb ${isUml(k) ? 'k-uml' : 'k-paper'}">${thumb(k)}</span>
@@ -1985,9 +2050,47 @@
 
   // Tablet
   let ed = null, kind = null, loaded = false, saveT = null, saving = false, dirty = false, lastErr = '';
+  let pShared = false, pAsk = null, tInfo = null, pollMT = null;   // Teilen (0260)
   // Lehrkraft
   let tab = 'class', classList = [], picked = [], panes = {}, pollT = null, listHidden = false, ownKey = null;
+  let tShare = null;        // eigenes, an die Klasse gegebenes Diagramm: { rev, title, kind } | null
   let onVis = null;
+  let modalOpen = false;
+
+  /* Kleines Fenster mitten über dem Skill: Frage + Knöpfe → Promise mit
+     dem Wert des gedrückten Knopfs (null = abgebrochen). sticky: kein
+     Schließen durch Tipp daneben oder Esc. */
+  function modal(o) {
+    return new Promise(res => {
+      const host = root && root.querySelector('.dg');
+      if (!host) return res(null);
+      modalOpen = true;
+      const el = document.createElement('div');
+      el.className = 'dg-modal-back';
+      el.innerHTML = `<div class="dg-modal" role="dialog" aria-modal="true" aria-labelledby="dgMt">
+          ${o.icon ? `<span class="dg-modal-ic">${o.icon}</span>` : ''}
+          <h3 id="dgMt">${esc(o.title)}</h3>
+          ${o.text ? `<p>${esc(o.text)}</p>` : ''}${o.html || ''}
+          <div class="dg-modal-btns${o.stack ? ' is-stack' : ''}">${o.buttons.map(b =>
+            `<button type="button" class="dg-mb${b.pri ? ' is-pri' : ''}" data-mv="${esc(b.v)}">${esc(b.label)}</button>`).join('')}</div>
+        </div>`;
+      host.appendChild(el);
+      const done = v => { el.remove(); modalOpen = false; document.removeEventListener('keydown', key, true); res(v); };
+      el.addEventListener('click', ev => {
+        const b = ev.target.closest('[data-mv]');
+        if (b) done(b.dataset.mv);
+        else if (ev.target === el && !o.sticky) done(null);
+      });
+      const key = ev => { if (ev.key === 'Escape' && !o.sticky) { ev.stopPropagation(); done(null); } };
+      document.addEventListener('keydown', key, true);
+      const pri = el.querySelector('.dg-mb.is-pri') || el.querySelector('.dg-mb');
+      if (pri) setTimeout(() => pri.focus(), 30);
+    });
+  }
+  const askYes = (title, text, yes) => modal({ title, text, buttons: [{ v: 'no', label: 'Abbrechen' }, { v: 'yes', label: yes, pri: true }] }).then(v => v === 'yes');
+  // Leer = nichts Eigenes drin (frische Mindmap mit „Thema" zählt als leer)
+  const isEmptyDoc = d => !d || !d.nodes.length || (d.nodes.length === 1 && !d.edges.length && d.nodes[0].type === 'center' && (!d.nodes[0].t || d.nodes[0].t === 'Thema'));
+  const roomCode = () => (view && view.room && view.room.code) || 'x';
 
   const settingsKind = () => {
     const k = view && view.room && view.room.settings && view.room.settings.kind;
@@ -2007,20 +2110,136 @@
         return;
       }
       loaded = true;
+      pShared = !!r.shared; pAsk = r.ask || null;
       if (r.doc && r.kind) startEditor(sane(r.doc, r.kind), r.title || '');
       else {
         const fixed = settingsKind();
         if (fixed) startEditor(emptyDoc(fixed), '');
         else showPick();
       }
+      pollMine();
     })();
+  }
+
+  /* ── Tablet: Teilen mit der Lehrkraft (0260) ──────────────────
+     dg_mine_poll alle 5 s: geteilt?, Anfrage der Lehrkraft?, hat sie
+     ein Diagramm an die Klasse gegeben (nur Kopfdaten)? */
+  async function pollMine() {
+    clearTimeout(pollMT); pollMT = null;
+    if (!root || mode !== 'participant') return;
+    if (!document.hidden && !demo) {
+      const r = await ctx.actions.call('dg_mine_poll', {});
+      if (!root) return;
+      if (r && r.ok) {
+        const was = pShared;
+        pShared = !!r.shared; pAsk = r.ask || null; tInfo = r.teacher || null;
+        if (was !== pShared) paintShare();
+        paintPickTeacher();
+        if (!modalOpen) {
+          if (pAsk === 'open') askModal();
+          else if (tInfo && String(tInfo.rev) !== String(jget('dg.tseen.' + roomCode(), ''))) teacherModal(true);
+        }
+      }
+    }
+    if (root) pollMT = setTimeout(pollMine, 5000);
+  }
+
+  function paintShare() {
+    if (!ed) return;
+    if (mode === 'participant') {
+      ed.setShare(pShared
+        ? `<span class="dg-chip is-on" title="Deine Lehrkraft kann dein Diagramm ansehen">${ICON.eye}<span>Lehrkraft sieht mit</span></span>`
+          + `<button type="button" class="dg-sbtn dg-sbtn--soft" data-sact="unshare">Teilen beenden</button>`
+        : `<button type="button" class="dg-sbtn" data-sact="share" title="Deine Lehrkraft darf dein Diagramm ansehen">${ICON.share}<span>Mit Lehrkraft teilen</span></button>`);
+    } else {
+      ed.setShare(tShare
+        ? `<span class="dg-chip is-on" title="„${esc(tShare.title || 'Diagramm')}“ ist an die Klasse gegeben">${ICON.share}<span>Mit Klasse geteilt</span></span>`
+          + `<button type="button" class="dg-sbtn dg-sbtn--soft" data-sact="tupdate" title="Den jetzigen Stand noch einmal an die Klasse geben">Neu geben</button>`
+          + `<button type="button" class="dg-sbtn dg-sbtn--soft" data-sact="tunshare">Zurücknehmen</button>`
+        : `<button type="button" class="dg-sbtn" data-sact="tshare" title="Die Klasse bekommt dein Diagramm als Kopie zum Weiterarbeiten">${ICON.share}<span>Mit Klasse teilen</span></button>`);
+    }
+  }
+
+  // Erst speichern (die Zeile muss es geben), dann teilen.
+  async function ensureSaved() {
+    if (demo) return true;
+    dirty = true;
+    for (let i = 0; i < 30 && saving; i++) await new Promise(r => setTimeout(r, 100));
+    await saveNow();
+    return !dirty;
+  }
+
+  async function shareMine(on) {
+    if (on) {
+      if (!await ensureSaved()) { toast('Erst muss gespeichert werden – gleich noch einmal versuchen.', true); return; }
+    } else if (!await askYes('Teilen beenden?', 'Deine Lehrkraft sieht dein Diagramm dann nicht mehr. Du kannst es später wieder teilen.', 'Teilen beenden')) return;
+    const r = demo ? { ok: true } : await ctx.actions.call('dg_mine_share', { p_on: on });
+    if (!r || !r.ok) { toast(errText(r && r.error), true); return; }
+    pShared = on; pAsk = null;
+    paintShare();
+    toast(on ? 'Deine Lehrkraft kann dein Diagramm jetzt ansehen.' : 'Teilen beendet.');
+  }
+
+  async function askModal() {
+    const v = await modal({
+      sticky: true, icon: ICON.eye,
+      title: 'Deine Lehrkraft fragt',
+      text: 'Darf deine Lehrkraft sich dein Diagramm ansehen? Sie sieht dann mit, was du zeichnest, bis du das Teilen beendest.',
+      buttons: [{ v: 'no', label: 'Nein, lieber nicht' }, { v: 'yes', label: 'Ja, teilen', pri: true }]
+    });
+    if (!root) return;
+    if (v === 'yes' && !await ensureSaved()) { toast('Erst muss gespeichert werden – gleich noch einmal versuchen.', true); return; }
+    const r = await ctx.actions.call('dg_mine_answer', { p_yes: v === 'yes' });
+    if (r && r.ok) { pShared = !!r.shared; pAsk = v === 'yes' ? null : 'declined'; paintShare(); }
+  }
+
+  /* Die Lehrkraft hat ein Diagramm an die Klasse gegeben. auto = vom
+     Poll aufgerufen (einmal je rev, gemerkt in dg.tseen.<code>);
+     sonst aus Datei → „Diagramm der Lehrkraft". */
+  async function teacherModal(auto) {
+    if (!tInfo) return;
+    jset('dg.tseen.' + roomCode(), String(tInfo.rev));
+    const own = ed && !isEmptyDoc(ed.cv.doc);
+    const what = `„${tInfo.title || 'Ohne Titel'}“ (${KINDS[tInfo.kind] ? KINDS[tInfo.kind].label : 'Diagramm'})`;
+    const v = await modal({
+      icon: ICON.inbox, stack: own,
+      title: 'Deine Lehrkraft hat ein Diagramm geteilt',
+      text: own
+        ? `${what}. Du kannst es als eigene Kopie öffnen – dein jetziges Diagramm wird dabei ersetzt. Lade es vorher herunter, wenn du es behalten willst.`
+        : `${what}. Du bekommst eine eigene Kopie zum Weiterarbeiten.`,
+      html: auto ? '<p class="dg-modal-k">Später findest du es unter Datei → Diagramm der Lehrkraft.</p>' : '',
+      buttons: own
+        ? [{ v: 'keep', label: 'Meins herunterladen, dann öffnen', pri: true }, { v: 'drop', label: 'Meins verwerfen und öffnen' }, { v: 'later', label: 'An meinem weiterarbeiten' }]
+        : [{ v: 'later', label: 'Später' }, { v: 'drop', label: 'Öffnen', pri: true }]
+    });
+    if (!root || (v !== 'keep' && v !== 'drop')) return;
+    if (v === 'keep' && ed) saveFile(ed.cv.doc, ed.title);
+    openTeacherDoc();
+  }
+
+  async function openTeacherDoc() {
+    const r = await ctx.actions.call('dg_mine_teacher_get', {});
+    if (!root) return;
+    if (!r || !r.ok || !r.doc) { toast(r && r.error === 'not_found' ? 'Die Lehrkraft hat das Diagramm wieder zurückgenommen.' : errText(r && r.error), true); return; }
+    startEditor(sane(r.doc, r.kind), r.title || '');
+    dirty = true; saveSoon();
+  }
+
+  // Auf der Startseite (noch kein Diagramm): Knopf zum Diagramm der Lehrkraft
+  function paintPickTeacher() {
+    const slot = root && root.querySelector('[data-k="tpick"]');
+    if (!slot) return;
+    slot.innerHTML = tInfo && mode === 'participant'
+      ? `<button type="button" class="dg-sbtn" data-topen>${ICON.inbox}<span>Diagramm der Lehrkraft öffnen: „${esc(tInfo.title || 'Ohne Titel')}“</span></button>` : '';
   }
 
   function showPick(note) {
     if (ed) { ed.destroy(); ed = null; }
     const main = root.querySelector('.dg-main');
     main.innerHTML = pickHTML(note);
+    paintPickTeacher();
     main.onclick = ev => {
+      if (ev.target.closest('[data-topen]')) { jset('dg.tseen.' + roomCode(), String(tInfo && tInfo.rev)); return openTeacherDoc(); }
       const b = ev.target.closest('[data-pick]');
       if (!b) return;
       main.onclick = null;
@@ -2035,11 +2254,13 @@
     main.onclick = null;
     if (ed) ed.destroy();
     kind = doc.kind;
-    const canSwitch = mode === 'presenter' || !settingsKind();
     ed = new Editor(main, {
       kindLocked: settingsKind(),
       toast,
-      extraRight: canSwitch ? `<span class="dg-sep"></span><button type="button" class="dg-ib dg-ib--txt" data-act="neu" title="Neues Diagramm">Neu</button>` : '',
+      onNew: () => newDiagram(),
+      onOpen: (d, t) => openDoc(d, t),
+      teacherAvail: () => mode === 'participant' && !!tInfo,
+      onTeacher: () => teacherModal(false),
       onChange: () => {
         if (mode === 'participant') { dirty = true; saveSoon(); }
         else saveOwn();
@@ -2051,16 +2272,32 @@
       ed.cv.select({ kind: 'node', id: doc.nodes[0].id }, true);
       setTimeout(() => ed && ed.openEdit(doc.nodes[0].id), 60);
     }
-    main.onclick = ev => { if (ev.target.closest('[data-act="neu"]')) newDiagram(); };
+    main.onclick = ev => {
+      const b = ev.target.closest('[data-sact]');
+      if (!b) return;
+      const a = b.dataset.sact;
+      if (a === 'share') shareMine(true);
+      else if (a === 'unshare') shareMine(false);
+      else if (a === 'tshare' || a === 'tupdate') shareClass(a === 'tupdate');
+      else if (a === 'tunshare') unshareClass();
+    };
+    paintShare();
     if (mode === 'participant') paintSave();
   }
 
+  // Datei → Öffnen: ersetzt das jetzige Diagramm (nach Rückfrage)
+  async function openDoc(d, title) {
+    const fixed = mode === 'participant' ? settingsKind() : null;
+    if (fixed && d.kind !== fixed) { toast(`In diesem Raum zeichnet ihr: ${KINDS[fixed].label}. Die Datei ist ein${d.kind === 'mindmap' ? 'e' : ''} ${KINDS[d.kind].label}.`, true); return; }
+    if (ed && !isEmptyDoc(ed.cv.doc)
+        && !await askYes('Datei öffnen?', 'Das jetzige Diagramm wird dabei ersetzt. Lade es vorher über Datei → Speichern herunter, wenn du es behalten willst.', 'Öffnen')) return;
+    startEditor(d, title);
+    if (mode === 'participant') { dirty = true; saveSoon(); } else saveOwn();
+  }
+
   async function newDiagram() {
-    const empty = !ed || ed.cv.doc.nodes.length <= 1;
-    if (!empty) {
-      const ok = await (ctx.confirm ? ctx.confirm('Neues Diagramm anfangen? Das jetzige wird dabei gelöscht.') : Promise.resolve(window.confirm('Neues Diagramm anfangen?')));
-      if (!ok) return;
-    }
+    if (ed && !isEmptyDoc(ed.cv.doc)
+        && !await askYes('Neues Diagramm anfangen?', 'Das jetzige wird dabei gelöscht. Lade es vorher über Datei → Speichern herunter, wenn du es behalten willst.', 'Neu anfangen')) return;
     const fixed = mode === 'participant' ? settingsKind() : null;
     if (fixed) { startEditor(emptyDoc(fixed), ''); dirty = true; saveSoon(); }
     else showPick();
@@ -2140,7 +2377,50 @@
     // Der Reiter trägt selbst die Klasse .dg-main — startEditor/showPick finden ihn.
     const saved = demo ? null : jget(ownKey || 'dg.own', null);
     if (saved && saved.doc) startEditor(sane(saved.doc, saved.doc.kind), saved.title || '');
-    else showPick('Dein eigenes Diagramm bleibt vorerst auf diesem Gerät. Teilen mit der Klasse kommt später.');
+    else showPick('Dein eigenes Diagramm liegt auf diesem Gerät. Mit „Mit Klasse teilen“ bekommt die Klasse eine Kopie.');
+  }
+
+  /* ── Lehrkraft → Klasse (0260) ───────────────────────────────
+     Ein Schnappschuss des eigenen Diagramms geht in dg_shared; die
+     Tablets sehen es im Poll und öffnen es auf Wunsch als Kopie.
+     Spätere Änderungen gehen erst mit „Neu geben" hinaus. */
+  async function shareClass(again) {
+    if (!ed) return;
+    const ok = await askYes(again ? 'Jetzigen Stand neu geben?' : 'Mit der Klasse teilen?',
+      again ? 'Die Klasse bekommt den jetzigen Stand noch einmal angeboten. Wer schon eine Kopie hat, wird gefragt, ob er sie ersetzen will.'
+            : 'Alle in der Klasse bekommen dein Diagramm angeboten und können es als eigene Kopie weiterbearbeiten. Was du danach änderst, geht erst mit „Neu geben“ hinaus.',
+      again ? 'Neu geben' : 'Teilen');
+    if (!ok || !ed) return;
+    const doc = clean(ed.cv.doc);
+    const r = demo ? { ok: true, rev: (tShare ? tShare.rev : 0) + 1 }
+      : await ctx.actions.call('dg_class_share', { p_doc: doc, p_title: ed.title || '', p_kind: doc.kind });
+    if (!r || !r.ok) { toast(r && r.error === 'payload_too_big' ? 'Das Diagramm ist zu groß zum Teilen.' : errText(r && r.error), true); return; }
+    tShare = { rev: r.rev, title: ed.title || '', kind: doc.kind };
+    paintShare();
+    toast(again ? 'Neuer Stand ist bei der Klasse.' : 'Die Klasse hat dein Diagramm bekommen.');
+  }
+  async function unshareClass() {
+    if (!await askYes('Zurücknehmen?', 'Die Klasse bekommt dein Diagramm nicht mehr angeboten. Kopien, die schon geöffnet wurden, bleiben bei den Schülerinnen und Schülern.', 'Zurücknehmen')) return;
+    const r = demo ? { ok: true } : await ctx.actions.call('dg_class_unshare', {});
+    if (!r || !r.ok) { toast(errText(r && r.error), true); return; }
+    tShare = null;
+    paintShare();
+  }
+
+  // Ansehen anfragen: am Tablet erscheint die Frage, Ja = geteilt.
+  async function askStudent(id) {
+    const it = classList.find(x => x.participant === id);
+    if (!it) return;
+    const again = it.ask === 'declined';
+    const ok = await askYes(again ? 'Noch einmal fragen?' : 'Ansehen anfragen?',
+      `${it.person} bekommt auf dem Tablet die Frage, ob du das Diagramm ansehen darfst. Erst wenn ${it.person} zustimmt, siehst du es.`
+        + (again ? ` Beim letzten Mal hat ${it.person} abgelehnt.` : ''), 'Anfragen');
+    if (!ok) return;
+    const r = demo ? demoAsk(id) : await ctx.actions.call('dg_class_ask', { p_participant: id });
+    if (!r || !r.ok) { toast(r && r.error === 'too_fast' ? 'Gerade erst gefragt – bitte einen Moment warten.' : errText(r && r.error), true); return; }
+    it.ask = r.shared ? null : 'open';
+    paintList();
+    if (r.shared) pollClass();
   }
 
   let ownT = null;
@@ -2162,13 +2442,24 @@
     const el = root && root.querySelector('[data-k="list"]');
     if (!el) return;
     const c = root.querySelector('[data-k="count"]');
-    if (c) c.textContent = classList.length ? `(${classList.length})` : '';
+    const nShared = classList.filter(x => x.shared).length;
+    if (c) c.textContent = classList.length ? `(${nShared}/${classList.length})` : '';
     if (!classList.length) {
       el.innerHTML = `<p class="dg-list-empty">Noch keine Diagramme. Sobald die Klasse zeichnet, stehen sie hier.</p>`;
       return;
     }
-    el.innerHTML = `<p class="dg-list-h">Antippen = vorne zeigen · bis zu zwei nebeneinander</p>`
+    el.innerHTML = `<p class="dg-list-h">Geteilte antippen = vorne zeigen · bis zu zwei nebeneinander</p>`
       + classList.map(it => {
+        if (!it.shared) {
+          // Nicht geteilt: nur Name und Art, dazu Anfragen
+          const st = it.ask === 'open' ? 'angefragt …' : it.ask === 'declined' ? 'abgelehnt' : 'nicht geteilt';
+          return `<div class="dg-li is-locked">
+            <span class="dg-li-k" title="${esc(KINDS[it.kind] ? KINDS[it.kind].label : '')}">${KINDS[it.kind] ? KINDS[it.kind].icon : ''}</span>
+            <span class="dg-li-t"><b>${esc(it.person)}</b><small>${st}</small></span>
+            ${it.ask === 'open' ? '<span class="dg-li-a">wartet</span>'
+              : `<button type="button" class="dg-ask" data-ask="${esc(it.participant)}">${it.ask === 'declined' ? 'erneut fragen' : 'Ansehen anfragen'}</button>`}
+          </div>`;
+        }
         const i = picked.indexOf(it.participant);
         const live = Date.now() - new Date(it.updated_at).getTime() < 20000;
         return `<button type="button" class="dg-li${i >= 0 ? ' is-on' : ''}" data-pp="${esc(it.participant)}">
@@ -2188,8 +2479,9 @@
       if (!picked.includes(id)) { panes[id].cv && panes[id].cv.destroy(); delete panes[id]; }
     }
     if (!picked.length) {
-      el.innerHTML = `<div class="dg-cmp-empty"><b>Diagramme vergleichen</b><p>Links ein Diagramm antippen – es erscheint hier groß.
-        Ein zweites antippen, und beide stehen nebeneinander. Was die Klasse weiterzeichnet, läuft vorne mit.</p></div>`;
+      el.innerHTML = `<div class="dg-cmp-empty"><b>Diagramme vergleichen</b><p>Links ein geteiltes Diagramm antippen – es erscheint hier groß.
+        Ein zweites antippen, und beide stehen nebeneinander. Was die Klasse weiterzeichnet, läuft vorne mit.</p>
+        <p>Die Klasse entscheidet selbst, ob sie teilt. Bei nicht geteilten kannst du fragen („Ansehen anfragen“).</p></div>`;
       return;
     }
     el.classList.toggle('is-two', picked.length === 2);
@@ -2236,8 +2528,12 @@
       const r = demo ? demoList() : await ctx.actions.call('dg_class_list', {});
       if (!root) return;
       if (r && r.ok) {
-        classList = r.items || [];
-        picked = picked.filter(id => classList.some(x => x.participant === id));
+        // Ohne Migration 0260 fehlt `shared` — dann wie früher: alles sichtbar
+        classList = (r.items || []).map(x => ('shared' in x) ? x : Object.assign({}, x, { shared: true }));
+        const t = r.teacher || null;
+        if (JSON.stringify(t && t.rev) !== JSON.stringify(tShare && tShare.rev)) { tShare = t; if (tab === 'own') paintShare(); }
+        // Wer das Teilen beendet, verschwindet von vorne.
+        picked = picked.filter(id => classList.some(x => x.participant === id && x.shared));
         paintList();
         paintCompare();
         for (const id of picked) {
@@ -2265,9 +2561,11 @@
 
   function presenterClick(ev) {
     const t = ev.target;
+    const ask = t.closest('[data-ask]');
+    if (ask) { askStudent(ask.dataset.ask); return; }
     const tb = t.closest('.dg-tab');
     if (tb) { tab = tb.dataset.tab; paintTabs(); if (tab === 'class') pollClass(); return; }
-    const li = t.closest('.dg-li');
+    const li = t.closest('button.dg-li');
     if (li) {
       const id = li.dataset.pp;
       const i = picked.indexOf(id);
@@ -2299,11 +2597,16 @@
   /* ── Schaufenster: eine erfundene Klasse ───────────────────── */
   let demoT0 = 0;
   const DEMO_PEOPLE = [
-    { participant: 'd1', person: 'Mia', seat: 1, title: 'Räuber und Beute', kind: 'wirkung' },
-    { participant: 'd2', person: 'Leon', seat: 2, title: 'Füchse und Hasen', kind: 'wirkung' },
-    { participant: 'd3', person: 'Emma', seat: 3, title: 'Der Wald', kind: 'mindmap' },
-    { participant: 'd4', person: 'Noah', seat: 4, title: 'Fahrzeuge', kind: 'klasse' }
+    { participant: 'd1', person: 'Mia', seat: 1, title: 'Räuber und Beute', kind: 'wirkung', shared: true },
+    { participant: 'd2', person: 'Leon', seat: 2, title: 'Füchse und Hasen', kind: 'wirkung', shared: true },
+    { participant: 'd3', person: 'Emma', seat: 3, title: 'Der Wald', kind: 'mindmap', shared: true },
+    { participant: 'd4', person: 'Noah', seat: 4, title: 'Fahrzeuge', kind: 'klasse', shared: false }
   ];
+  let demoAsks = {};       // Schaufenster: angefragt → nach 3 s sagt das „Tablet" Ja
+  function demoAsk(id) {
+    demoAsks[id] = Date.now();
+    return { ok: true, ask: 'open' };
+  }
   function demoDoc(id) {
     if (id === 'd1') return SAMPLES.wirkung;
     if (id === 'd3') return SAMPLES.mindmap;
@@ -2322,7 +2625,9 @@
     return { ok: true, items: DEMO_PEOPLE.map(p => {
       const d = demoDoc(p.participant);
       const live = p.participant === 'd2';
-      return Object.assign({}, p, { nodes: d.nodes.length, rev: live ? 1 + Math.min(3, Math.floor((Date.now() - demoT0) / 5000)) : 1,
+      const asked = demoAsks[p.participant];
+      const shared = p.shared || (asked && Date.now() - asked > 3000);
+      return Object.assign({}, p, { shared, ask: !shared && asked ? 'open' : null, nodes: d.nodes.length, rev: live ? 1 + Math.min(3, Math.floor((Date.now() - demoT0) / 5000)) : 1,
         updated_at: new Date(Date.now() - (live ? 2000 : 240000 * p.seat)).toISOString() });
     }) };
   }
@@ -2352,10 +2657,15 @@
       mode = (demo || ctx.role === 'presenter') ? 'presenter' : 'participant';
       ed = null; kind = null; loaded = false; saveT = null; saving = false; dirty = false; lastErr = '';
       tab = 'class'; classList = []; picked = []; panes = {}; pollT = null; listHidden = false; ownKey = null;
+      pShared = false; pAsk = null; tInfo = null; pollMT = null; tShare = null; modalOpen = false; demoAsks = {};
       demoT0 = Date.now();
       if (demo) picked = ['d1', 'd2'];
       if (mode === 'presenter') presenterMount();
-      else participantMount();
+      else {
+        participantMount();
+        onVis = () => { if (!document.hidden && loaded) pollMine(); };
+        document.addEventListener('visibilitychange', onVis);
+      }
     },
 
     update(v) {
@@ -2367,7 +2677,7 @@
     },
 
     unmount() {
-      clearTimeout(pollT); clearTimeout(ownT);
+      clearTimeout(pollT); clearTimeout(ownT); clearTimeout(pollMT);
       if (saveT && dirty && mode === 'participant' && ctx && ed) {
         // letzter Stand noch hinaus, bevor alles abgeräumt wird
         ctx.actions.call('dg_mine_put', { p_doc: clean(ed.cv.doc), p_title: ed.title || '', p_kind: ed.cv.doc.kind });

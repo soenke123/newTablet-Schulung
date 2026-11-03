@@ -84,7 +84,11 @@
    "wi_solo_start(p_token text)",
    "wi_solo_unit(p_token text, p_set uuid)",
    "wi_solo_view(p_token text)",
-   "wi_view(p_token text, p_full boolean)"
+   "wi_view(p_token text, p_full boolean)",
+   "dg_mine_poll(p_token text)",
+   "dg_mine_share(p_token text, p_on boolean)",
+   "dg_mine_answer(p_token text, p_yes boolean)",
+   "dg_mine_teacher_get(p_token text)"
   ],
   "tab": [
    "games_public:select",
@@ -406,7 +410,14 @@
    "dg_mine_get(p_token text)",
    "dg_mine_put(p_token text, p_doc jsonb, p_title text, p_kind text)",
    "dg_class_get(p_code text, p_participant uuid)",
-   "dg_class_list(p_code text)"
+   "dg_class_list(p_code text)",
+   "dg_mine_poll(p_token text)",
+   "dg_mine_share(p_token text, p_on boolean)",
+   "dg_mine_answer(p_token text, p_yes boolean)",
+   "dg_mine_teacher_get(p_token text)",
+   "dg_class_ask(p_code text, p_participant uuid)",
+   "dg_class_share(p_code text, p_doc jsonb, p_title text, p_kind text)",
+   "dg_class_unshare(p_code text)"
   ],
   "tab": [
    "board_likes:select",
