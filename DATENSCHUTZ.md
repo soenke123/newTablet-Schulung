@@ -20,6 +20,7 @@ Stand: 9. Oktober 2026. Technische Einschätzung, keine Rechtsberatung. Freigebe
 - Nutzungsstatistik MPSkills (Migration 0216, Tabelle skill_usage): je Raum nur Skill, Schule, Testraum ja/nein, angelegt/zuletzt aktiv, Zahl der Beitritte — keine Lehrkraft, kein Raumtitel, keine Namen. Bleibt nach dem Löschen des Raums (60 Tage) stehen, ohne Frist, weil nicht personenbezogen; nur Admins sehen sie im Admin-Panel.
 - Master PDF Skill sichert nicht exportierte Arbeit automatisch, aber nur im Browser auf dem Gerät (IndexedDB, nichts auf dem Server). Standard ist „aus“; wer es unter Datei einschaltet, dessen Gerät merkt sich das (in datenschutz.html Abschnitt 9). Auf geteilten Schul-Tablets aus lassen.
 - SQL Studio (Migrationen 0220/0221): SQL läuft nur im Browser (sql.js). Auf dem Server: eigene Datenbanken der Lehrkraft (sql_databases, bleiben im Konto bis sie sie löscht, gehen mit dem Konto) und die Kopien der Schüler je Raum (sql_work, ON DELETE CASCADE an Raum und Teilnehmer → gehen mit dem Raum nach 30 Tagen). Vorlagen-Kopien der Lehrkraft nur im Gerät (IndexedDB). In datenschutz.html bei „Wenn du in MPSkills mitmachst" und in Abschnitt 9.
+- Diagramm (Migration 0258): ein Diagramm je Teilnehmer in dg_work (ON DELETE CASCADE an Raum und Teilnehmer → geht mit dem Raum). Lehrkraft sieht es und zeigt es am Beamer. Eigenes Diagramm der Lehrkraft nur im Gerät (localStorage). In datenschutz.html bei „Wenn du in MPSkills mitmachst“.
 - Fotos in der Projektarbeit: Frist **30 Tage nach Projektende** (Entscheidung 24.10.2026, Migration 0227). Projektende = Fertig-Datum im Projektziel, sonst letzte Nutzung des Raums. Einwilligungsstufe und Hinweis klärt die Schule noch.
 
 ## Schritt 1 – Technik einstellen (Betreiber, ca. 1 Stunde)
@@ -193,6 +194,7 @@ Stand: Migrationen bis 0229 eingespielt, 2FA für alle Admins eingerichtet, „A
 | Knowledge Stack (Quiz, Entwürfe, Kataloge, Spitznamen, Emotes) | Teilnehmer, Lehrkräfte | maskiert bzw. `textContent`; Emotes auf feste Liste (Server) |
 | Wortwolke, Pinnwände (MPSkills, Zukunftsboard, Wieso weshalb warum) | Teilnehmer, Schüler | maskiert; Quellen-Link nur `https?://` und maskiert |
 | SQL Studio (Schülerdatenbanken, Tabellen, Zellen, Fehlermeldungen) | Teilnehmer | maskiert |
+| Diagramm (Texte, Titel, ids im Diagramm) | Teilnehmer | maskiert (`esc`), ids/Typen per Erlaubt-Liste in `sane()` |
 | SYNIR (Aufgaben, Netze, Szenarien) | Lehrkräfte, Teilnehmer | Aufgaben-HTML per Erlaubt-Liste neu aufgebaut, Rest maskiert |
 | Kingdoms of Mathoria, Wordisland, Wild Clusters, Balance of Nature, NeuroLab, TinyLM | Teilnehmer, Lehrkräfte | maskiert bzw. nur feste Inhalte/Zahlen |
 | Admin-Panel (Nutzer, Tickets, Räume) | alle | maskiert |

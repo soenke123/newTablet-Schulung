@@ -23,6 +23,8 @@
    "dd_storm_answer(p_token text, p_ok boolean, p_since bigint)",
    "dd_storm_use(p_token text, p_slot integer, p_since bigint)",
    "dd_storm_view(p_token text, p_since bigint)",
+   "dg_mine_get(p_token text)",
+   "dg_mine_put(p_token text, p_doc jsonb, p_title text, p_kind text)",
    "get_open_cluster(p_school_slug text)",
    "is_admin()",
    "is_any_admin()",
@@ -400,7 +402,11 @@
    "wi_solo_start(p_token text)",
    "wi_solo_unit(p_token text, p_set uuid)",
    "wi_solo_view(p_token text)",
-   "wi_view(p_token text, p_full boolean)"
+   "wi_view(p_token text, p_full boolean)",
+   "dg_mine_get(p_token text)",
+   "dg_mine_put(p_token text, p_doc jsonb, p_title text, p_kind text)",
+   "dg_class_get(p_code text, p_participant uuid)",
+   "dg_class_list(p_code text)"
   ],
   "tab": [
    "board_likes:select",

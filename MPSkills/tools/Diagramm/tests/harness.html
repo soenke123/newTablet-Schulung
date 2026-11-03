@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diagramm Prüfseite</title>
+<link rel="stylesheet" href="../../../style.css">
+<link rel="stylesheet" href="../tool.css">
+<style>body{padding:16px;background:var(--paper)}</style>
+</head><body>
+<!-- Prüfseite ohne Server: ?rolle=schueler|lehrer|demo, &art=wirkung (Vorgabe der Lehrkraft) -->
+<div id="box"></div>
+<script src="../../../lib/tool.js"></script>
+<script src="../tool.js"></script>
+<script>
+const q = new URLSearchParams(location.search);
+const rolle = q.get('rolle') || 'schueler';
+const store = window.__store = { mine: null, rev: 0, calls: [] };
+const fake = (fn, args) => {
+  store.calls.push(fn);
+  if (fn === 'dg_mine_get') return Promise.resolve(store.mine ? Object.assign({ ok: true }, store.mine) : { ok: true, doc: null });
+  if (fn === 'dg_mine_put') { store.rev++; store.mine = { doc: args.p_doc, title: args.p_title, kind: args.p_kind, rev: store.rev }; return Promise.resolve({ ok: true, rev: store.rev }); }
+  if (fn === 'dg_class_list') return Promise.resolve({ ok: true, items: [] });
+  return Promise.resolve({ ok: false, error: 'fn_missing' });
+};
+const actions = { role: rolle === 'lehrer' ? 'presenter' : 'participant', call: fake };
+const ctx = MPTool.makeCtx({ actions, title: 'Test', preview: rolle === 'demo', toast: (m) => console.log('TOAST', m) });
+const impl = MPTool.get('diagramm');
+impl.mount(document.getElementById('box'), ctx);
+impl.update({ room: { code: 'TEST01', settings: q.get('art') ? { kind: q.get('art') } : {} } });
+</script>
+</body></html>
