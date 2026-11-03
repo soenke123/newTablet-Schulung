@@ -151,13 +151,13 @@ window.TOOLS_OVERLAY = {
   // holt bis zu zwei nebeneinander an den Beamer. Schaufenster:
   // preview/diagramm.js. beta: frisch gebaut (03.11.2026).
   diagramm: { ready: true, subtitle: 'Mindmap · Wirkungsgefüge · UML', beta: true },
-  // Achtzehnter Skill (Migration 0262) — Social Hub: jede Person gründet
+  // Achtzehnter Skill (Migration 0262) — YourSozialNet (bis 0265 „Social Hub“): jede Person gründet
   // ihre eigene Plattform im Stil von TikTok (Fotos, Likes, Folgen,
   // Kommentare, Hashtags), die Lehrkraft erstellt die Tabellen, Admins
   // schauen mit SQL in die Datenbank dahinter (wie InstaHub).
   // tools/SocialHub/ im iframe, Editor/Kern/Diagramm von SQL Studio.
   // Nur für Admins (skill_tools.admin_only), noch ohne Schaufenster.
-  socialhub: { ready: true, subtitle: 'Soziales Netzwerk & Datenbank', beta: true, adminOnly: true },
+  socialhub: { ready: true, subtitle: 'Eigenes soziales Netzwerk & Datenbank', beta: true, adminOnly: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

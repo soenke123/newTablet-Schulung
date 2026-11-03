@@ -1,15 +1,24 @@
 /* ══════════════════════════════════════════════════════════════
-   Social Hub — js/app.js   ·   Die App
+   YourSozialNet — js/app.js   ·   Die App (bis 0265 „Social Hub“)
    ══════════════════════════════════════════════════════════════
-   Bildschirme:
-     Start      Schüler: eigenen Hub gründen/öffnen, andere Hubs der
-                Klasse. Lehrkraft: Tabellen erstellen, Upload an/aus,
-                Übersicht aller Hubs (öffnen, sperren, löschen).
-     Login      sieht aus wie eine normale Plattform: Logo, Name,
-                Anmelden / Registrieren.
-     Hub        unten: Für dich · Suche · ＋ · Profil · Admin
-                Feed = Vollbild-Karten zum Wischen, endlos.
-     Admin      Hub (Name + Logo) · Nutzer · Datenbank (js/db.js)
+   Begriffe (CLAUDE.md): Lehrkraft = hat den Raum eröffnet · Schüler =
+   ist beigetreten · Netzwerk = eigenes soziales Netzwerk (intern
+   „hub“, sh_hubs) · User = Konto in einem Netzwerk · Admin = wer das
+   Netzwerk erstellt hat (dessen erstes Konto).
+
+   Bildschirme (S.screen):
+     home    Schüler: „Netzwerk erstellen“ bzw. das eigene; Anmelden
+             für ein Netzwerk von einem anderen Tablet.
+             Lehrkraft: eigenes Netzwerk erstellen · Liste aller
+             Netzwerke · Tabellen als kleines Diagramm.
+     found   Schritt 1: Name, Logo, Farbschema
+     login   Anmelden / Registrieren (Schritt 2 = Admin-Konto)
+     netlogin  Schüler auf einem anderen Tablet
+     hub     Kopf: Logo · Name · [App] [Adminbereich]
+               App          unten Start · Suche · ＋ · Profil
+               Adminbereich oben Einstellungen · SQL · Diagramm
+   Neu gezeichnet wird von außen (Zustand vom Raum, Takt) nur home und
+   die App-Reiter ohne Eingaben – nie ein Formular (Rückmeldung 2).
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -43,6 +52,7 @@
   // alles, was (auch über Umwege) an t hängt
   const dependents = t => TABLES.filter(x => { for (let n = NEEDS[x.id]; n; n = NEEDS[n]) if (n === t) return true; return false; }).map(x => x.id);
   const SWATCHES = ['#fe2c55', '#e91d77', '#7c3aed', '#2563eb', '#0ea5e9', '#0d9488', '#16a34a', '#ca8a04', '#ea580c', '#dc2626', '#64748b'];
+  const GENDERS = [['female', 'weiblich'], ['male', 'männlich'], ['diverse', 'divers']];
 
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const $ = (s, el) => (el || document).querySelector(s);
@@ -50,15 +60,18 @@
   const app = $('#app');
 
   const S = {
+    screen: 'boot',   // home | found | login | netlogin | hub
     home: null,       // sh_home
     hub: null,        // sh_enter
     session: null,
-    tab: 'feed',
-    feedMode: 'foryou',
-    adminTab: 'hub',
+    view: 'app',      // app | admin
+    tab: 'feed',      // App: feed | search | post | profile
+    adminTab: 'settings', // settings | sql | diagram
     db: null,
-    logoUrls: {},     // hub id → blob-Url eigenes Logo
-    color: {}         // hub id → Farbe
+    tblSel: null,     // Lehrkraft: gewählte Tabelle im Diagramm
+    autoOpened: false,
+    logoUrls: {},     // Netzwerk-id → blob-Url eigenes Logo
+    color: {}         // Netzwerk-id → Farbe aus dem eigenen Logo
   };
   const on = t => !!(S.hub && S.hub.tables && S.hub.tables.indexOf(t) >= 0);
 
@@ -97,11 +110,19 @@
     back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
     more: '<svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18.5" cy="12" r="1.5"/></svg>',
     lock: '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
+    unlock: '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 7.6-1.7"/></svg>',
     trash: '<svg viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></svg>',
-    image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5.5-5 4 3.5 2.5-2 4 3.5"/></svg>'
+    key: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l2.5 2.5M14 9l2 2"/></svg>',
+    image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5.5-5 4 3.5 2.5-2 4 3.5"/></svg>',
+    gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3"/></svg>',
+    code: '<svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>',
+    table: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="7" height="6" rx="1.2"/><rect x="13.5" y="13.5" width="7" height="6" rx="1.2"/><path d="M10.5 7.5H14a2 2 0 0 1 2 2v4"/></svg>',
+    phone: '<svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>',
+    check: '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
+    x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>'
   };
 
-  /* ── Logos ──────────────────────────────────────────────── */
+  /* ── Logos und Farben ───────────────────────────────────── */
   function logoHtml(h, cls) {
     const c = 'logo ' + (cls || '');
     if (h.logo === 'custom') {
@@ -129,12 +150,14 @@
       if (S.hub && S.hub.hub.id === h.id) applyColor(h);
     }
   }
-  // Akzentfarbe: gewählt (h.color) oder aus dem Logo; Schema hell/dunkel je Hub
+  const logoColor = (logo, id) => (logo === 'custom' ? S.color[id] : LOGOS[logo] && LOGOS[logo].color) || '#fe2c55';
+  const accentOf = h => (h && (h.color || logoColor(h.logo, h.id))) || '#fe2c55';
+  // Im Netzwerk: dessen Akzent und Schema. Draußen (null): Farben von MPSkills.
   function applyColor(h) {
-    const c = (h && (h.color || (h.logo === 'custom' ? S.color[h.id] : LOGOS[h.logo] && LOGOS[h.logo].color))) || '#fe2c55';
-    document.documentElement.style.setProperty('--hub', c);
-    if (h && h.scheme === 'light') document.documentElement.setAttribute('data-scheme', 'light');
-    else document.documentElement.removeAttribute('data-scheme');
+    const root = document.documentElement;
+    if (!h) { root.style.removeProperty('--hub'); root.removeAttribute('data-scheme'); return; }
+    root.style.setProperty('--hub', accentOf(h));
+    root.setAttribute('data-scheme', h.scheme === 'light' ? 'light' : 'dark');
   }
 
   /* ── Bilder in einem Bereich nachladen ─────────────────── */
@@ -143,6 +166,7 @@
       if (!e.isIntersecting) continue;
       seen.unobserve(e.target);
       const el = e.target;
+      if (!S.hub) continue;
       M.url(S.hub.hub.id, el.dataset.m, el.dataset.thumb === '1').then(u => {
         if (!u) { el.classList.add('img-missing'); return; }
         if (el.tagName === 'IMG') el.src = u; else el.style.backgroundImage = 'url("' + u + '")';
@@ -159,86 +183,206 @@
     return '<span class="' + cls + '"><span class="av-l">' + letter + '</span></span>';
   }
 
+  // kleines Fenster mit Inhalt + Knöpfen
+  function dialog(title, bodyHtml, buttons) {
+    const el = document.createElement('div');
+    el.className = 'dlg-back';
+    el.innerHTML = '<div class="dlg" role="dialog"><h3>' + esc(title) + '</h3><div class="dlg-b">' + bodyHtml + '</div>' +
+      '<div class="dlg-acts">' + (buttons || [['ok', 'OK', 'accent']]).map(b =>
+        '<button type="button" class="btn btn--' + (b[2] || 'ghost') + '" data-dlg="' + b[0] + '">' + esc(b[1]) + '</button>').join('') + '</div></div>';
+    document.body.appendChild(el);
+    return new Promise(res => {
+      el.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-dlg]');
+        if (b || e.target === el) { el.remove(); res(b ? b.dataset.dlg : null); }
+      });
+    });
+  }
+
+  const brandHtml = () => '<span class="brand">Your<b>Sozial</b>Net</span>';
+
   /* ══ Start ═════════════════════════════════════════════════ */
-  async function loadHome() {
+  async function loadHome(quiet) {
     const r = await A.call('sh_home', {});
-    if (!r || !r.ok) { renderError(r); return; }
+    if (!r || !r.ok) { if (!quiet) renderError(r); return; }
+    // ein Takt im Hintergrund darf nicht über ein Formular zeichnen
+    if (quiet && S.screen !== 'home') return;
     S.home = r;
     S.hub = null;
-    document.documentElement.style.removeProperty('--hub');
-    document.documentElement.removeAttribute('data-scheme');
+    closeDb();
+    applyColor(null);
+    // Schüler: beim ersten Laden gleich ins eigene Netzwerk
+    if (!T && !S.autoOpened && r.hubs.length === 1 && !r.hubs[0].locked) {
+      S.autoOpened = true;
+      openHub(r.hubs[0].id);
+      return;
+    }
+    S.autoOpened = true;
+    S.screen = 'home';
     renderHome();
     loadLogos(r.hubs);
   }
 
   function renderError(r) {
-    app.innerHTML = '<div class="center"><div class="card-box"><h2>Social Hub</h2><p>' + esc(A.errText(r)) + '</p>' +
+    S.screen = 'error';
+    app.innerHTML = '<div class="center"><div class="card-box">' + brandHtml() + '<p>' + esc(A.errText(r)) + '</p>' +
       '<button class="btn btn--accent" id="retry">Nochmal</button></div></div>';
     $('#retry').onclick = () => loadHome();
   }
 
-  function hubTile(h, extra) {
-    return '<button type="button" class="hub-tile' + (h.locked ? ' is-locked' : '') + '" data-hub="' + esc(h.id) + '">' +
-      logoHtml(h, 'logo--tile') +
-      '<span class="hub-t"><b>' + esc(h.name) + (h.teacher_hub ? ' <span class="badge badge--lk">Lehrkraft</span>' : '') + '</b><span>' + (h.owner ? '@' + esc(h.owner) : '') + '</span>' +
-      '<small>' + h.users + ' Nutzer · ' + h.photos + ' Fotos</small></span>' + (extra || '') + '</button>';
-  }
-
   function renderHome() {
     const h = S.home;
-    const mine = h.mine ? h.hubs.find(x => x.id === h.mine) : null;
-    const others = h.hubs.filter(x => x.id !== h.mine);
-    let html = '<div class="home"><header class="home-top"><span class="brand">Social<b>Hub</b></span></header>';
-    // Eigener Hub – Schüler wie Lehrkraft (Migration 0264)
-    if (!mine) {
-      html += '<section class="found-cta"><h1>' + (T ? 'Dein eigener Hub' : 'Gründe deine eigene Plattform') + '</h1>' +
-        '<p>' + (T ? 'Mit allem, was die Klasse auch hat: zum Ausprobieren, Vorführen und Vergleichen. Die Klasse sieht ihn und kann sich bei dir registrieren.'
-                   : 'Gib ihr einen Namen und ein Logo. Du bist dort Admin – die anderen können sich bei dir registrieren.') + '</p>' +
-        '<button type="button" class="btn btn--accent btn--big" id="btnFound">Hub gründen</button></section>';
-    } else {
-      html += '<section class="mine"><h2>Dein Hub</h2>' + hubTile(mine, '<span class="go">Öffnen ›</span>') + '</section>';
-    }
-    if (T) html += teacherPanel();
-    if (!T) {
-      html += '<section><h2>Hubs in deiner Klasse</h2>' +
-        (others.length ? '<div class="hub-grid">' + others.map(x => hubTile(x)).join('') + '</div>'
-                       : '<p class="muted">Noch hat niemand sonst einen Hub gegründet.</p>') + '</section>';
+    let html = '<div class="home' + (T ? ' home--wide' : '') + '"><header class="home-top">' + brandHtml() +
+      (T ? '<span class="chip chip--lk">Lehrkraft</span>' : '') + '</header>';
+    if (T) html += teacherHome();
+    else {
+      // Schüler: nur das eigene Netzwerk (und eines, in dem dieses Gerät angemeldet ist)
+      if (!h.mine) {
+        html += '<section class="found-cta">' +
+          '<div class="fc-ic">' + IC.phone + '</div>' +
+          '<h1>Dein eigenes soziales Netzwerk</h1>' +
+          '<p>Gib ihm einen Namen, ein Logo und deine Farben. Du bist dort Admin.</p>' +
+          '<button type="button" class="btn btn--accent btn--big" id="btnFound">Netzwerk erstellen</button></section>';
+      }
+      if (h.hubs.length) {
+        html += '<section><h2>' + (h.hubs.length > 1 ? 'Deine Netzwerke' : 'Dein Netzwerk') + '</h2><div class="net-grid">' +
+          h.hubs.map(x => netTile(x)).join('') + '</div></section>';
+      }
+      html += '<p class="small muted center-t"><button type="button" class="link" id="btnNetLogin">Dein Netzwerk wurde auf einem anderen Tablet erstellt? Hier anmelden</button></p>';
     }
     html += '</div>';
     app.innerHTML = html;
-    $$('.hub-tile').forEach(b => b.addEventListener('click', () => openHub(b.dataset.hub)));
+    $$('[data-open]').forEach(b => b.addEventListener('click', () => openHub(b.dataset.open)));
     if ($('#btnFound')) $('#btnFound').onclick = renderFound;
+    if ($('#btnNetLogin')) $('#btnNetLogin').onclick = renderNetLogin;
     if (T) wireTeacher();
   }
 
-  /* ── Lehrkraft ──────────────────────────────────────────── */
-  function teacherPanel() {
-    const tabs = S.home.tables;
-    const up = S.home.upload;
-    let html = '<section class="panel"><h2>Tabellen für alle Hubs</h2>' +
-      '<p class="muted">users gibt es immer. Jede weitere Tabelle, die du erstellst, bringt ihre Funktion in alle Hubs dieses Raums.</p>' +
-      '<div class="tbl-list"><div class="tbl is-on is-fixed"><code>users</code><span>Konten, Profile, Anmelden</span><em>immer da</em></div>';
-    for (const t of TABLES) {
-      const isOn = tabs.indexOf(t.id) >= 0;
-      const blocked = t.needs && tabs.indexOf(t.needs) < 0;
-      html += '<div class="tbl' + (isOn ? ' is-on' : '') + '"><code>' + esc(t.id) + (t.id === 'tags' ? ' + photo_tag' : '') + '</code><span>' + esc(t.what) + '</span>' +
-        (isOn ? '<button type="button" class="btn btn--ghost btn--s" data-tdrop="' + t.id + '">Entfernen</button>'
-              : '<button type="button" class="btn btn--accent btn--s" data-tadd="' + t.id + '"' + (blocked ? ' disabled title="Erst ' + t.needs + ' erstellen"' : '') + '>Erstellen</button>') +
-        '</div>';
+  function netTile(x) {
+    return '<button type="button" class="net-tile' + (x.locked ? ' is-locked' : '') + '" data-open="' + esc(x.id) + '" style="--c:' + esc(accentOf(x)) + '">' +
+      logoHtml(x, 'logo--tile') + '<span class="nt-t"><b>' + esc(x.name) + '</b>' +
+      '<small>' + x.users + ' User · ' + x.photos + ' Fotos' + (x.locked ? ' · gesperrt' : '') + '</small></span>' +
+      '<span class="go">Öffnen ›</span></button>';
+  }
+
+  /* ── Lehrkraft: Startseite ──────────────────────────────── */
+  function teacherHome() {
+    const h = S.home;
+    const hubs = h.hubs;
+    let html = '';
+    if (!h.mine) {
+      html += '<section class="cta-bar"><div class="fc-ic">' + IC.phone + '</div><div class="cta-t"><b>Eigenes Netzwerk erstellen</b>' +
+        '<span>Mit allem, was die Klasse auch hat: zum Ausprobieren, Vorführen und Vergleichen.</span></div>' +
+        '<button type="button" class="btn btn--accent" id="btnFound">Netzwerk erstellen</button></section>';
     }
-    html += '</div><label class="switch"><input type="checkbox" id="upTgl"' + (up ? ' checked' : '') + '><span></span>Eigene Bilder hochladen erlaubt</label>' +
-      '<p class="muted small">Entfernen blendet die Funktion und die Tabelle nur aus – die Daten bleiben und kommen beim erneuten Erstellen zurück.</p></section>';
-    const hubs = S.home.hubs;
-    html += '<section><h2>Alle Hubs (' + hubs.length + ')</h2>' + (hubs.length ? '<div class="hub-grid">' + hubs.map(h =>
-      '<div class="hub-card' + (h.locked ? ' is-locked' : '') + '">' +
-        '<button type="button" class="hub-tile" data-hub="' + esc(h.id) + '">' + logoHtml(h, 'logo--tile') +
-          '<span class="hub-t"><b>' + esc(h.name) + '</b><span>' + esc(h.person || '') + (h.owner ? ' · @' + esc(h.owner) : '') + '</span>' +
-          '<small>' + h.users + ' Nutzer · ' + h.photos + ' Fotos · ' + h.likes + ' Likes · ' + h.comments + ' Komm.</small>' +
-          '<small>aktiv ' + esc(ago(h.active)) + (h.locked ? ' · <b class="bad">gesperrt</b>' : '') + '</small></span></button>' +
-        '<div class="hub-acts"><button type="button" class="btn btn--ghost btn--s" data-lock="' + esc(h.id) + '" data-v="' + (h.locked ? '0' : '1') + '">' + (h.locked ? 'Entsperren' : 'Sperren') + '</button>' +
-        '<button type="button" class="btn btn--ghost btn--s btn--bad" data-del="' + esc(h.id) + '">Löschen</button></div>' +
-      '</div>').join('') + '</div>' : '<p class="muted">Noch keine Hubs. Sobald die Klasse im Raum ist, gründet jede Person ihren eigenen.</p>') + '</section>';
+    html += '<section class="panel"><div class="panel-h"><h2>Netzwerke im Raum <span class="muted">(' + hubs.length + ')</span></h2></div>' +
+      (hubs.length ? '<div class="net-list">' + hubs.map(x =>
+        '<div class="net-row' + (x.mine ? ' is-mine' : '') + (x.locked ? ' is-locked' : '') + '">' +
+          '<button type="button" class="nr-main" data-open="' + esc(x.id) + '" title="Öffnen">' + logoHtml(x, 'logo--row') +
+            '<span class="nr-t"><b>' + esc(x.name) + (x.mine ? ' <span class="badge badge--gold">Dein Netzwerk</span>' : '') + '</b>' +
+            '<small>' + esc(x.mine ? 'von dir' : (x.person || '')) + (x.locked ? ' · <b class="bad">gesperrt</b>' : '') + '</small></span></button>' +
+          '<span class="nr-acts">' +
+            '<button type="button" class="icon-btn icon-btn--s" data-reset="' + esc(x.id) + '" title="Admin-Passwort zurücksetzen">' + IC.key + '</button>' +
+            (x.mine ? '' : '<button type="button" class="icon-btn icon-btn--s" data-lock="' + esc(x.id) + '" data-v="' + (x.locked ? '0' : '1') + '" title="' + (x.locked ? 'Entsperren' : 'Sperren') + '">' + (x.locked ? IC.unlock : IC.lock) + '</button>') +
+            '<button type="button" class="icon-btn icon-btn--s icon-btn--bad" data-del="' + esc(x.id) + '" title="Löschen">' + IC.trash + '</button>' +
+          '</span></div>').join('') + '</div>'
+        : '<p class="muted">Noch keine Netzwerke. Sobald die Klasse im Raum ist, erstellt jede Person ihr eigenes.</p>') +
+      '</section>';
+    html += '<section class="panel"><div class="panel-h"><h2>Tabellen für alle Netzwerke</h2>' +
+      '<label class="switch switch--s"><input type="checkbox" id="upTgl"' + (h.upload ? ' checked' : '') + '><span></span>Eigene Bilder hochladen</label></div>' +
+      '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums. Antippen zeigt die Attribute.</p>' +
+      tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
     return html;
+  }
+
+  /* Tabellen-Diagramm (nur Namen, Linien = Fremdschlüssel)
+     Spalte/Zeile im Raster: users in der Mitte der Beziehungen. */
+  const TPOS = {
+    follows: [1, 1], users: [2, 1], likes: [3, 1], photos: [4, 1], photo_tag: [5, 1], tags: [6, 1],
+    comment_likes: [2, 2], comments: [3, 2]
+  };
+  function parseDdl(t) {
+    const ddl = (window.SHDB && window.SHDB.DDL[t]) || '';
+    const body = ddl.slice(ddl.indexOf('(') + 1, ddl.lastIndexOf(')'));
+    const cols = [], fks = {};
+    let pk = [];
+    body.split('\n').map(l => l.trim().replace(/,$/, '')).filter(Boolean).forEach(l => {
+      let m;
+      if ((m = /^PRIMARY KEY \(([^)]+)\)/i.exec(l))) { pk = m[1].split(',').map(x => x.trim()); return; }
+      if ((m = /^FOREIGN KEY \((\w+)\) REFERENCES (\w+)\((\w+)\)/i.exec(l))) { fks[m[1]] = m[2]; return; }
+      m = /^(\w+)\s+(\w+(?:\([^)]*\))?)(.*)$/.exec(l);
+      if (!m) return;
+      if (/PRIMARY KEY/i.test(m[3])) pk.push(m[1]);
+      cols.push({ name: m[1], type: m[2], extra: m[3] });
+    });
+    cols.forEach(c => { c.pk = pk.indexOf(c.name) >= 0; c.fk = fks[c.name] || null; });
+    return cols;
+  }
+  const tblOn = t => t === 'users' || S.home.tables.indexOf(t) >= 0;
+  function tableDiagramHtml() {
+    const names = Object.keys(TPOS);
+    return '<div class="tdg-wrap"><div class="tdg" id="tdg"><svg class="tdg-lines" id="tdgLines"></svg>' + names.map(t => {
+      const fixed = t === 'users';
+      const isOn = tblOn(t);
+      const def = TABLES.find(x => x.id === t);
+      // photo_tag kommt mit tags
+      const auto = t === 'photo_tag';
+      const blocked = def && def.needs && !tblOn(def.needs);
+      let act = '';
+      if (fixed) act = '<span class="tb-ic" title="immer da">' + IC.lock + '</span>';
+      else if (auto) act = '<span class="tb-note">mit tags</span>';
+      else if (isOn) act = '<button type="button" class="tb-btn" data-tdrop="' + t + '" title="Entziehen">' + IC.x + '<span>Entziehen</span></button>';
+      else act = '<button type="button" class="tb-btn tb-btn--add" data-tadd="' + t + '"' + (blocked ? ' disabled title="Erst ' + def.needs + ' erstellen"' : ' title="Erstellen"') + '>' + IC.plus + '<span>Erstellen</span></button>';
+      return '<div class="tb' + (fixed ? ' tb--fixed' : isOn ? ' tb--on' : ' tb--off') + (S.tblSel === t ? ' tb--sel' : '') + '" data-tb="' + t + '" ' +
+        'style="grid-column:' + TPOS[t][0] + ';grid-row:' + TPOS[t][1] + '" tabindex="0">' +
+        '<code>' + esc(t) + '</code>' + act + '</div>';
+    }).join('') + '</div></div>';
+  }
+  function tableInfoHtml(t) {
+    if (!t) return '';
+    const def = TABLES.find(x => x.id === t);
+    const what = t === 'users' ? 'Konten, Profile, Anmelden – immer da' : t === 'photo_tag' ? 'verbindet photos und tags (n:m), kommt mit tags' : def.what;
+    return '<div class="ti-h"><code>' + esc(t) + '</code><span>' + esc(what) + '</span>' +
+      '<button type="button" class="icon-btn icon-btn--s" id="tiClose" title="Schließen">' + IC.x + '</button></div>' +
+      '<table class="ti"><tbody>' + parseDdl(t).map(c =>
+        '<tr><td class="ti-n">' + (c.pk ? '<span class="k k--pk" title="Primärschlüssel">PK</span>' : '') +
+          (c.fk ? '<span class="k k--fk" title="Fremdschlüssel">FK</span>' : '') + '<b' + (c.pk ? ' class="u"' : '') + '>' + esc(c.name) + '</b>' + (c.fk ? ' ↑' : '') + '</td>' +
+        '<td class="ti-t">' + esc(c.type) + '</td>' +
+        '<td class="ti-x">' + (c.fk ? '→ ' + esc(c.fk) : '') + (/NOT NULL/i.test(c.extra) ? ' <span>NOT NULL</span>' : '') + (/UNIQUE/i.test(c.extra) ? ' <span>UNIQUE</span>' : '') + '</td></tr>').join('') +
+      '</tbody></table>';
+  }
+  // Linien zwischen den Kästen nach dem Zeichnen ausrechnen
+  function drawTableLines() {
+    const box = $('#tdg'), svg = $('#tdgLines');
+    if (!box || !svg) return;
+    const R = box.getBoundingClientRect();
+    const rect = t => { const el = box.querySelector('[data-tb="' + t + '"]'); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left - R.left, y: r.top - R.top, w: r.width, h: r.height }; };
+    // Punkt auf dem Rand von r Richtung (tx, ty)
+    const edge = (r, tx, ty) => {
+      const cx = r.x + r.w / 2, cy = r.y + r.h / 2, dx = tx - cx, dy = ty - cy;
+      const k = Math.min(Math.abs((r.w / 2) / (dx || 1e-9)), Math.abs((r.h / 2) / (dy || 1e-9)));
+      return [cx + dx * k, cy + dy * k];
+    };
+    let out = '';
+    Object.keys(TPOS).forEach(t => {
+      const cols = parseDdl(t).filter(c => c.fk);
+      cols.forEach((c, i) => {
+        const a = rect(t), b = rect(c.fk);
+        if (!a || !b) return;
+        const live = tblOn(t) && tblOn(c.fk);
+        // zwei Fremdschlüssel auf dieselbe Tabelle (follows): parallel versetzt
+        const same = cols.filter(x => x.fk === c.fk);
+        const off = same.length > 1 ? (same.indexOf(c) - (same.length - 1) / 2) * 12 : 0;
+        const ax = a.x + a.w / 2, ay = a.y + a.h / 2 + off, bx = b.x + b.w / 2, by = b.y + b.h / 2 + off;
+        const p = edge({ x: a.x, y: a.y + off, w: a.w, h: a.h }, bx, by), q = edge({ x: b.x, y: b.y + off, w: b.w, h: b.h }, ax, ay);
+        out += '<line x1="' + p[0] + '" y1="' + p[1] + '" x2="' + q[0] + '" y2="' + q[1] + '" class="' + (live ? 'on' : 'off') + '"/>' +
+          // n-Seite (Fremdschlüssel) mit Punkt, 1-Seite mit Strich
+          '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.5" class="' + (live ? 'on' : 'off') + '"/>';
+      });
+    });
+    svg.setAttribute('width', R.width);
+    svg.setAttribute('height', R.height);
+    svg.innerHTML = out;
   }
 
   function wireTeacher() {
@@ -250,160 +394,311 @@
     };
     // Liste wie in data.tables (ohne users/photo_tag, die ergeben sich)
     const cur = () => S.home.tables.filter(t => t !== 'users' && t !== 'photo_tag');
-    $$('[data-tadd]').forEach(b => b.onclick = () => save(cur().concat(b.dataset.tadd), S.home.upload));
-    $$('[data-tdrop]').forEach(b => b.onclick = () => {
+    $$('[data-tadd]').forEach(b => b.onclick = (e) => { e.stopPropagation(); save(cur().concat(b.dataset.tadd), S.home.upload); });
+    $$('[data-tdrop]').forEach(b => b.onclick = async (e) => {
+      e.stopPropagation();
       const gone = [b.dataset.tdrop].concat(dependents(b.dataset.tdrop));
       const also = gone.slice(1).filter(t => S.home.tables.indexOf(t) >= 0);
-      if (also.length && !confirm('Damit verschwinden auch: ' + also.join(', ') + '. Weiter?')) return;
+      if (also.length && await dialog('Tabelle entziehen', '<p>Damit verschwinden auch: <b>' + esc(also.join(', ')) + '</b>.</p><p class="muted small">Die Daten bleiben und kommen beim erneuten Erstellen zurück.</p>',
+        [['no', 'Abbrechen'], ['yes', 'Entziehen', 'accent']]) !== 'yes') return;
       save(cur().filter(t => gone.indexOf(t) < 0), S.home.upload);
     });
+    $$('[data-tb]').forEach(el => el.onclick = () => {
+      S.tblSel = S.tblSel === el.dataset.tb ? null : el.dataset.tb;
+      $$('[data-tb]').forEach(x => x.classList.toggle('tb--sel', x.dataset.tb === S.tblSel));
+      $('#tdgInfo').innerHTML = tableInfoHtml(S.tblSel);
+      wireInfo();
+    });
+    const wireInfo = () => { if ($('#tiClose')) $('#tiClose').onclick = () => { S.tblSel = null; $$('[data-tb]').forEach(x => x.classList.remove('tb--sel')); $('#tdgInfo').innerHTML = ''; }; };
+    wireInfo();
     $('#upTgl').onchange = (e) => save(cur(), e.target.checked);
-    $$('[data-lock]').forEach(b => b.onclick = async (e) => {
-      e.stopPropagation();
+    $$('[data-lock]').forEach(b => b.onclick = async () => {
       const r = await A.call('sh_hub_lock', { p_hub: b.dataset.lock, p_locked: b.dataset.v === '1' });
       if (!r.ok) fail(r); else loadHome();
     });
-    $$('[data-del]').forEach(b => b.onclick = async (e) => {
-      e.stopPropagation();
-      if (!confirm('Diesen Hub mit allen Konten, Fotos und Likes endgültig löschen?')) return;
+    $$('[data-del]').forEach(b => b.onclick = async () => {
+      const x = S.home.hubs.find(h => h.id === b.dataset.del);
+      if (await dialog('Netzwerk löschen?', '<p><b>' + esc(x ? x.name : '') + '</b> mit allen Usern, Fotos und Likes endgültig löschen?</p>',
+        [['no', 'Abbrechen'], ['yes', 'Löschen', 'bad']]) !== 'yes') return;
       const r = await A.call('sh_hub_delete', { p_hub: b.dataset.del });
       if (!r.ok) fail(r); else loadHome();
     });
+    $$('[data-reset]').forEach(b => b.onclick = async () => {
+      const x = S.home.hubs.find(h => h.id === b.dataset.reset);
+      if (await dialog('Admin-Passwort zurücksetzen?', '<p>Das Admin-Konto von <b>' + esc(x ? x.name : '') + '</b> bekommt ein neues Passwort. Angemeldete Geräte werden abgemeldet.</p>',
+        [['no', 'Abbrechen'], ['yes', 'Zurücksetzen', 'accent']]) !== 'yes') return;
+      const r = await A.call('sh_admin_reset', { p_hub: b.dataset.reset });
+      if (!r || !r.ok) { fail(r); return; }
+      dialog('Neue Anmeldedaten', '<div class="cred"><span>Anmeldename</span><code>' + esc(r.username) + '</code><span>Passwort</span><code>' + esc(r.password) + '</code></div>' +
+        '<p class="muted small">Nur hier zu sehen – gib sie der Person weiter.</p>');
+    });
+    requestAnimationFrame(drawTableLines);
   }
+  window.addEventListener('resize', () => { if (S.screen === 'home' && T) drawTableLines(); });
 
-  /* ── Hub gründen ────────────────────────────────────────── */
-  function logoPicker(sel, allowCustom, customUrl) {
+  /* ── Gestaltung: Name, Logo, Farbschema (Gründen + Einstellungen) ─ */
+  function logoPicker(sel, customUrl) {
     return '<div class="logo-pick">' + Object.keys(LOGOS).map(id =>
       '<button type="button" class="lp' + (sel === id ? ' on' : '') + '" data-logo-id="' + id + '" title="' + esc(LOGOS[id].name) + '">' +
       '<img src="img/logos/' + id + '.png" alt="' + esc(LOGOS[id].name) + '"></button>').join('') +
-      (allowCustom ? '<button type="button" class="lp lp--custom' + (sel === 'custom' ? ' on' : '') + '" data-logo-id="custom" title="Eigenes Logo">' +
-        (customUrl ? '<img src="' + esc(customUrl) + '" alt="">' : IC.image + '<small>Eigenes</small>') + '</button>' : '') +
+      '<button type="button" class="lp lp--custom' + (sel === 'custom' ? ' on' : '') + '" data-logo-id="custom" title="Eigenes Logo hochladen">' +
+        (customUrl ? '<img src="' + esc(customUrl) + '" alt="">' : IC.image + '<small>Eigenes</small>') + '</button>' +
       '</div>';
   }
 
+  /* init: { id, name, logo, color, scheme } · o.live: Farben gleich auf
+     die ganze Seite (im Netzwerk) · o.onSubmit(v) mit v = { name, logo,
+     custom, color, scheme } */
+  function brandEditor(host, init, o) {
+    const v = { name: init.name || '', logo: init.logo || 'rocket', custom: null, color: init.color || null, scheme: init.scheme || 'dark' };
+    const id = init.id || '_new';
+    const customUrl = () => v.custom ? v.custom.preview : (init.logo === 'custom' ? S.logoUrls[id] : null);
+    const lc = () => v.logo === 'custom' ? (v.custom ? S.color._new : S.color[id]) || '#fe2c55' : LOGOS[v.logo].color;
+    const accent = () => v.color || lc();
+    const live = () => { if (o.live) applyColor({ id, logo: v.logo, color: accent(), scheme: v.scheme }); };
+    const mock = () => {
+      const lg = v.logo === 'custom' ? (customUrl() ? '<img class="logo logo--s" src="' + esc(customUrl()) + '" alt="">' : '<span class="logo logo--s logo--wait"></span>')
+                                     : '<img class="logo logo--s" src="img/logos/' + v.logo + '.png" alt="">';
+      return '<div class="mock" data-mock="' + v.scheme + '" style="--mc:' + esc(accent()) + '">' +
+        '<div class="mk-top">' + lg + '<b>' + esc(v.name || 'Dein Netzwerk') + '</b></div>' +
+        '<div class="mk-card"><span class="mk-heart">' + IC.heart + '</span><span class="mk-user">@admin</span><span class="mk-tag">#vorschau</span></div>' +
+        '<div class="mk-row"><span class="mk-btn">Folgen</span><span class="mk-link">12 Follower</span></div>' +
+        '<div class="mk-nav">' + IC.home + IC.search + '<span class="mk-plus">' + IC.plus + '</span>' + IC.user + '</div></div>';
+    };
+    const paint = () => {
+      host.innerHTML = '<form class="brand-ed" autocomplete="off">' +
+        '<div class="be-form form">' +
+          '<label>Name des Netzwerks<input name="name" maxlength="30" required placeholder="z. B. Pixelwelt" value="' + esc(v.name) + '"></label>' +
+          '<div class="lbl">Logo</div>' + logoPicker(v.logo, customUrl()) +
+          '<input type="file" accept="image/*" id="beFile" hidden>' +
+          '<div class="lbl">Farbschema</div>' +
+          '<div class="seg seg--s"><button type="button" data-sc="dark"' + (v.scheme === 'dark' ? ' class="on"' : '') + '>Dunkel</button>' +
+          '<button type="button" data-sc="light"' + (v.scheme === 'light' ? ' class="on"' : '') + '>Hell</button></div>' +
+          '<div class="lbl">Akzentfarbe <span class="muted">– passt sich dem Logo an, du kannst nachjustieren</span></div>' +
+          '<div class="swatches">' +
+            '<button type="button" class="sw sw--auto' + (!v.color ? ' on' : '') + '" data-col="" style="--c:' + esc(lc()) + '" title="Farbe aus dem Logo"><span>Logo</span></button>' +
+            SWATCHES.map(c => '<button type="button" class="sw' + (v.color === c ? ' on' : '') + '" data-col="' + c + '" style="--c:' + c + '" title="' + c + '"></button>').join('') +
+            '<label class="sw sw--pick' + (v.color && SWATCHES.indexOf(v.color) < 0 ? ' on' : '') + '" title="Eigene Farbe" style="--c:' + esc(v.color && SWATCHES.indexOf(v.color) < 0 ? v.color : 'transparent') + '">' +
+              '<input type="color" id="beColor" value="' + esc(accent().slice(0, 7)) + '">+</label>' +
+          '</div>' +
+          '<button class="btn btn--accent btn--big" type="submit">' + esc(o.submitLabel || 'Speichern') + '</button>' +
+        '</div>' +
+        '<div class="be-prev"><div class="lbl">Vorschau</div><div id="beMock">' + mock() + '</div></div>' +
+        '</form>';
+      const f = $('form', host);
+      f.name.oninput = () => { v.name = f.name.value; $('#beMock', host).innerHTML = mock(); };
+      $$('.lp', host).forEach(b => b.onclick = () => {
+        if (b.dataset.logoId === 'custom' && (v.logo === 'custom' || !customUrl())) { $('#beFile', host).click(); return; }
+        v.logo = b.dataset.logoId; paint(); live();
+      });
+      $('#beFile', host).onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        try {
+          v.custom = await M.compressLogo(file); v.logo = 'custom';
+          S.color._new = await M.mainColor(v.custom.preview);
+          paint(); live();
+        } catch (err) { toast(err.message, true); }
+      };
+      $$('[data-sc]', host).forEach(b => b.onclick = () => { v.scheme = b.dataset.sc; paint(); live(); });
+      $$('[data-col]', host).forEach(b => b.onclick = () => { v.color = b.dataset.col || null; paint(); live(); });
+      $('#beColor', host).oninput = (e) => { v.color = e.target.value.toLowerCase(); $('#beMock', host).innerHTML = mock(); live(); };
+      $('#beColor', host).onchange = () => paint();
+      f.onsubmit = (e) => { e.preventDefault(); v.name = f.name.value.trim(); o.onSubmit(v); };
+    };
+    paint();
+    live();
+  }
+
+  /* ── Schritt 1: Netzwerk erstellen ──────────────────────── */
   function renderFound() {
-    let logo = 'rocket';
-    app.innerHTML = '<div class="home"><header class="home-top"><button class="icon-btn" id="back">' + IC.back + '</button><span class="brand">Hub gründen</span></header>' +
-      '<form class="form" id="fForm" autocomplete="off">' +
-      '<label>Name deiner Plattform<input name="name" maxlength="30" required placeholder="z. B. Pixelwelt"></label>' +
-      '<div class="lbl">Logo</div>' + logoPicker(logo, false) +
-      '<p class="muted small">Ein eigenes Logo kannst du danach im Admin-Bereich hochladen.</p>' +
-      '<h3>Dein Konto (Admin)</h3>' +
-      '<label>Benutzername<input name="user" maxlength="24" required autocapitalize="off" placeholder="nur a–z, 0–9, . und _"></label>' +
-      '<label>Anzeigename<input name="display" maxlength="40" placeholder="optional"></label>' +
-      '<label>Passwort<input name="pw" type="password" maxlength="60" required autocomplete="new-password"></label>' +
-      '<p class="hint">Nimm ein ausgedachtes Passwort, nicht dein echtes. Damit meldest du dich auch an anderen Geräten an.</p>' +
-      '<button class="btn btn--accent btn--big" type="submit">Gründen</button></form></div>';
-    $('#back').onclick = () => renderHome();
-    $$('.lp').forEach(b => b.onclick = () => { logo = b.dataset.logoId; $$('.lp').forEach(x => x.classList.toggle('on', x === b)); });
-    $('#fForm').onsubmit = async (e) => {
+    S.screen = 'found';
+    app.innerHTML = '<div class="home home--wide"><header class="home-top"><button class="icon-btn" id="back" title="Zurück">' + IC.back + '</button>' +
+      '<span class="brand">Netzwerk erstellen</span></header>' +
+      '<ol class="steps"><li class="on"><b>1</b> Name, Logo, Farben</li><li><b>2</b> Dein Admin-Konto</li></ol>' +
+      '<div id="foundEd"></div></div>';
+    $('#back').onclick = () => { S.screen = 'home'; renderHome(); };
+    brandEditor($('#foundEd'), { name: '', logo: 'rocket', scheme: 'dark' }, {
+      submitLabel: 'Weiter',
+      onSubmit: async (v) => {
+        const r = await A.call('sh_found', { p_name: v.name, p_logo: v.logo === 'custom' ? 'rocket' : v.logo, p_color: v.color, p_scheme: v.scheme });
+        if (!r || !r.ok) { fail(r); return; }
+        if (v.logo === 'custom' && v.custom) {
+          // eigenes Logo: der Gründer ist schon Admin, auch ohne Konto
+          const b = await A.call('sh_brand', { p_hub: r.hub, p_session: null, p_name: v.name, p_logo: 'custom', p_logo_img: v.custom.data, p_color: v.color, p_scheme: v.scheme });
+          if (b && b.ok) { S.logoUrls[r.hub] = v.custom.preview; S.color[r.hub] = S.color._new; } else fail(b);
+        }
+        openHub(r.hub);
+      }
+    });
+  }
+
+  /* ── Schüler auf einem anderen Tablet ───────────────────── */
+  function renderNetLogin() {
+    S.screen = 'netlogin';
+    app.innerHTML = '<div class="home"><header class="home-top"><button class="icon-btn" id="back" title="Zurück">' + IC.back + '</button>' + brandHtml() + '</header>' +
+      '<form class="form card-form" id="nlForm" autocomplete="off"><h2>In dein Netzwerk anmelden</h2>' +
+      '<p class="muted small">Für ein Netzwerk, das auf einem anderen Tablet erstellt wurde.</p>' +
+      '<label>Name des Netzwerks<input name="net" required maxlength="30" placeholder="z. B. Pixelwelt"></label>' +
+      '<label>Benutzername<input name="user" required autocapitalize="off" value="admin"></label>' +
+      '<label>Passwort<input name="pw" type="password" required></label>' +
+      keepHtml() +
+      '<button class="btn btn--accent btn--big">Anmelden</button>' +
+      '<p class="muted small">Passwort vergessen? Die Lehrkraft kann das Admin-Passwort zurücksetzen.</p></form></div>';
+    $('#back').onclick = () => { S.screen = 'home'; renderHome(); };
+    $('#nlForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
-      const r = await A.call('sh_found', { p_name: f.name.value.trim(), p_logo: logo, p_username: f.user.value.trim().toLowerCase(),
-                                            p_password: f.pw.value, p_display: f.display.value.trim() || null });
+      const r = await A.call('sh_login_net', { p_net: f.net.value.trim(), p_username: f.user.value.trim(), p_password: f.pw.value });
       if (!r || !r.ok) { fail(r); return; }
-      A.session.set(r.hub, r.session);
-      toast('Dein Hub ist online!');
+      A.session.set(r.hub, r.session, f.keep.checked);
       openHub(r.hub);
     };
   }
 
-  /* ══ Hub betreten ══════════════════════════════════════════ */
+  const keepHtml = () => T ? '<input type="checkbox" name="keep" checked hidden>' :
+    '<label class="check"><input type="checkbox" name="keep"' + (A.session.keepDefault() ? ' checked' : '') + '><span></span>Angemeldet bleiben</label>';
+
+  /* ══ Netzwerk betreten ═════════════════════════════════════ */
   async function openHub(id) {
     const sess = A.session.get(id);
     const r = await A.call('sh_enter', { p_hub: id, p_session: sess });
-    if (!r || !r.ok) { fail(r); if (r && (r.error === 'hub_not_found' || r.error === 'hub_locked')) loadHome(); return; }
+    if (!r || !r.ok) {
+      fail(r);
+      if (r && /^hub_/.test(r.error)) { S.autoOpened = true; loadHome(); }
+      return;
+    }
     S.hub = r;
     S.session = r.session || null;
-    A.session.set(id, S.session);
+    if (S.session !== sess) A.session.set(id, S.session);
     applyColor(r.hub);
     loadLogos([r.hub]);
+    S.view = 'app';
     S.tab = 'feed';
     S.feedMode = 'foryou';
+    S.adminTab = 'settings';
+    if (r.needs_admin) renderLogin('admin');
     // Lehrkraft schaut ohne Konto zu (Admin), kann sich aber oben anmelden
-    if (!r.me && !T) renderLogin('login');
+    else if (!r.me && !T) renderLogin('login');
     else renderHub();
   }
 
   async function refreshHub() {
-    if (!S.hub) return;
+    if (!S.hub) return null;
     const r = await A.call('sh_enter', { p_hub: S.hub.hub.id, p_session: S.session });
-    if (r && r.ok) { S.hub = r; S.session = r.session || null; }
+    if (r && r.ok) {
+      S.hub = r;
+      if ((r.session || null) !== S.session) { S.session = r.session || null; A.session.set(r.hub.id, S.session); }
+    }
     return r;
   }
 
-  // hcall: Aufruf im Hub mit Sitzung
+  // hcall: Aufruf im Netzwerk mit Sitzung
   const hcall = (fn, args) => A.call(fn, Object.assign({ p_hub: S.hub.hub.id, p_session: S.session }, args || {}));
 
-  /* ── Login / Registrieren ───────────────────────────────── */
+  /* ── Anmelden / Registrieren ───────────────────────────── */
+  // mode: login | reg | admin (Schritt 2: erstes Konto = Admin)
   function renderLogin(mode) {
+    S.screen = 'login';
     const h = S.hub.hub;
+    const canReg = S.hub.founder || T;
+    if (mode === 'reg' && !canReg) mode = 'login';
+    const isAdmin = mode === 'admin';
+    const genderSel = '<select name="gender"><option value="">Geschlecht …</option>' + GENDERS.map(g => '<option value="' + g[0] + '">' + g[1] + '</option>').join('') + '</select>';
     app.innerHTML = '<div class="login">' +
-      '<button class="icon-btn login-back" id="back" title="Alle Hubs">' + IC.back + '</button>' +
-      '<div class="login-box">' + logoHtml(h, 'logo--big') + '<h1>' + esc(h.name) + '</h1>' +
-      '<div class="seg"><button type="button" data-m="login"' + (mode === 'login' ? ' class="on"' : '') + '>Anmelden</button>' +
-      '<button type="button" data-m="reg"' + (mode === 'reg' ? ' class="on"' : '') + '>Registrieren</button></div>' +
+      '<button class="icon-btn login-back" id="back" title="Zurück">' + IC.back + '</button>' +
+      '<div class="login-box">' +
+      (isAdmin ? '<ol class="steps steps--s"><li><b>' + IC.check + '</b> Netzwerk</li><li class="on"><b>2</b> Admin-Konto</li></ol>' : '') +
+      logoHtml(h, 'logo--big') + '<h1>' + esc(h.name) + '</h1>' +
+      (isAdmin ? '<p class="login-sub">Leg dein Admin-Konto an. Alles außer Benutzername und Passwort ist Deko – und darf ausgedacht sein.</p>'
+        : canReg ? '<div class="seg"><button type="button" data-m="login"' + (mode === 'login' ? ' class="on"' : '') + '>Anmelden</button>' +
+                   '<button type="button" data-m="reg"' + (mode === 'reg' ? ' class="on"' : '') + '>Registrieren</button></div>' : '') +
       (mode === 'login'
         ? '<form class="form" id="lForm" autocomplete="off"><input name="user" placeholder="Benutzername" autocapitalize="off" required>' +
-          '<input name="pw" type="password" placeholder="Passwort" required>' +
+          '<input name="pw" type="password" placeholder="Passwort" required>' + keepHtml() +
           '<button class="btn btn--accent btn--big" type="submit">Anmelden</button>' +
-          '<p class="muted small center-t">Passwort vergessen? Ein Admin dieses Hubs kann ein neues setzen.</p></form>'
-        : '<form class="form" id="rForm" autocomplete="off"><input name="user" placeholder="Benutzername (a–z, 0–9, . _)" maxlength="24" autocapitalize="off" required>' +
-          '<input name="name" placeholder="Name" maxlength="40">' +
+          '<p class="muted small center-t">Passwort vergessen? ' + (T ? 'Als Lehrkraft bist du hier ohnehin Admin.' : 'Die Lehrkraft kann das Admin-Passwort zurücksetzen.') + '</p></form>'
+        : '<form class="form" id="rForm" autocomplete="off">' +
+          '<label>Benutzername<input name="user" placeholder="a–z, 0–9, . _" maxlength="24" autocapitalize="off" required' + (isAdmin ? ' value="admin"' : '') + '></label>' +
+          '<div class="f2"><input name="name" placeholder="Name" maxlength="40">' + genderSel + '</div>' +
           '<input name="email" type="email" placeholder="E-Mail (ausgedacht)" maxlength="100">' +
-          '<label class="small">Geburtstag<input name="bday" type="date"></label>' +
-          '<input name="city" placeholder="Wohnort" maxlength="60">' +
-          '<input name="pw" type="password" placeholder="Passwort" maxlength="60" required autocomplete="new-password">' +
-          '<p class="hint">Alles darf ausgedacht sein – und nimm kein echtes Passwort.</p>' +
-          '<button class="btn btn--accent btn--big" type="submit">Konto erstellen</button></form>') +
+          '<div class="f2"><label class="small">Geburtstag<input name="bday" type="date"></label><label class="small">Wohnort<input name="city" maxlength="60"></label></div>' +
+          '<textarea name="bio" rows="2" maxlength="160" placeholder="Über mich"></textarea>' +
+          '<div class="f2"><input name="pw" type="password" placeholder="Passwort" maxlength="60" required autocomplete="new-password">' +
+          '<input name="pw2" type="password" placeholder="Passwort wiederholen" maxlength="60" required autocomplete="new-password"></div>' +
+          keepHtml() +
+          '<p class="hint">Nimm kein echtes Passwort. Damit meldest du dich auch an anderen Geräten an.</p>' +
+          '<button class="btn btn--accent btn--big" type="submit">' + (isAdmin ? 'Netzwerk starten' : 'Konto erstellen') + '</button></form>') +
       '</div></div>';
-    // Lehrkraft kommt zurück in den Hub (sie ist dort ohnehin Admin)
-    $('#back').onclick = () => T ? renderHub() : loadHome();
+    // Lehrkraft zurück ins Netzwerk (sie ist dort ohnehin Admin), sonst zur Startseite
+    $('#back').onclick = () => (T && !isAdmin) ? renderHub() : loadHome();
     $$('.seg button').forEach(b => b.onclick = () => renderLogin(b.dataset.m));
     if ($('#lForm')) $('#lForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
       const r = await A.call('sh_login', { p_hub: h.id, p_username: f.user.value.trim(), p_password: f.pw.value });
       if (!r || !r.ok) { fail(r); return; }
-      A.session.set(h.id, r.session);
+      A.session.set(h.id, r.session, f.keep.checked);
       openHub(h.id);
     };
     if ($('#rForm')) $('#rForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
+      if (f.pw.value !== f.pw2.value) { fail({ error: 'pw_mismatch' }); f.pw2.focus(); return; }
       const r = await A.call('sh_register', { p_hub: h.id, p_username: f.user.value.trim().toLowerCase(), p_password: f.pw.value,
-        p_name: f.name.value.trim() || null, p_email: f.email.value.trim() || null, p_birthday: f.bday.value || null, p_city: f.city.value.trim() || null });
+        p_name: f.name.value.trim() || null, p_email: f.email.value.trim() || null, p_birthday: f.bday.value || null,
+        p_city: f.city.value.trim() || null, p_gender: f.gender.value || null, p_bio: f.bio.value.trim() || null });
       if (!r || !r.ok) { fail(r); return; }
-      A.session.set(h.id, r.session);
-      toast('Willkommen!');
+      A.session.set(h.id, r.session, f.keep.checked);
+      toast(r.admin ? 'Dein Netzwerk ist online!' : 'Willkommen!');
       openHub(h.id);
     };
   }
 
-  /* ══ Hub-Ansicht ═══════════════════════════════════════════ */
+  /* ══ Im Netzwerk ═══════════════════════════════════════════ */
   function renderHub() {
+    S.screen = 'hub';
     const h = S.hub;
+    if (!h.admin) S.view = 'app';
+    const admin = S.view === 'admin';
     const nav = [['feed', IC.home, 'Start'], ['search', IC.search, 'Suche']];
-    if (h.me && on('photos')) nav.push(['post', IC.plus, '']);
+    if (h.me) nav.push(['post', IC.plus, '']);
     if (h.me) nav.push(['profile', IC.user, 'Profil']);
-    if (h.admin) nav.push(['admin', IC.shield, 'Admin']);
-    app.innerHTML = '<div class="hub">' +
-      '<header class="hub-top"><button class="icon-btn" id="toHome" title="Alle Hubs">' + IC.back + '</button>' +
+    const sub = [['settings', IC.gear, 'Einstellungen'], ['sql', IC.code, 'SQL'], ['diagram', IC.table, 'Diagramm']];
+    app.innerHTML = '<div class="hub' + (admin ? ' hub--admin' : '') + '">' +
+      '<header class="hub-top"><button class="icon-btn" id="toHome" title="Startseite">' + IC.back + '</button>' +
       logoHtml(h.hub, 'logo--s') + '<b class="hub-name">' + esc(h.hub.name) + '</b>' +
+      (h.admin ? '<nav class="views"><button type="button" data-view="app"' + (!admin ? ' class="on"' : '') + '>App</button>' +
+                 '<button type="button" data-view="admin"' + (admin ? ' class="on"' : '') + '>Adminbereich</button></nav>' : '') +
+      (admin ? '<nav class="subtabs">' + sub.map(x => '<button type="button" data-at="' + x[0] + '"' + (S.adminTab === x[0] ? ' class="on"' : '') + '>' + x[1] + '<span>' + x[2] + '</span></button>').join('') + '</nav>' : '') +
+      '<span class="spacer"></span>' +
       (h.me ? '<span class="chip">@' + esc(h.me.username) + (T ? ' · Lehrkraft' : '') + '</span>'
-            : T ? '<span class="chip">Lehrkraft · Admin</span><button type="button" class="btn btn--accent btn--s" id="lkLogin">Anmelden</button>' : '') + '</header>' +
+            : T ? '<span class="chip chip--lk">Lehrkraft · Admin</span><button type="button" class="btn btn--accent btn--s" id="lkLogin">Testkonto</button>' : '') +
+      '</header>' +
       '<main class="hub-main" id="main"></main>' +
-      '<nav class="hub-nav">' + nav.map(x => '<button type="button" data-tab="' + x[0] + '" class="' + (x[0] === 'post' ? 'nav-post' : '') + (S.tab === x[0] ? ' on' : '') + '">' + x[1] + (x[2] ? '<span>' + x[2] + '</span>' : '') + '</button>').join('') + '</nav>' +
+      (admin ? '' : '<nav class="hub-nav">' + nav.map(x => '<button type="button" data-tab="' + x[0] + '" class="' + (x[0] === 'post' ? 'nav-post' : '') + (S.tab === x[0] ? ' on' : '') + '">' + x[1] + (x[2] ? '<span>' + x[2] + '</span>' : '') + '</button>').join('') + '</nav>') +
       '</div>';
-    $('#toHome').onclick = () => { closeDb(); loadHome(); };
+    $('#toHome').onclick = () => { closeDb(); S.autoOpened = true; loadHome(); };
     if ($('#lkLogin')) $('#lkLogin').onclick = () => { closeDb(); renderLogin('login'); };
-    $$('.hub-nav button').forEach(b => b.onclick = () => { closeDb(); S.tab = b.dataset.tab; renderHub(); });
+    $$('[data-view]').forEach(b => b.onclick = () => { if (S.view === b.dataset.view) return; closeDb(); S.view = b.dataset.view; renderHub(); });
+    $$('[data-at]').forEach(b => b.onclick = () => {
+      const t = b.dataset.at;
+      if (S.adminTab === t) return;
+      $$('[data-at]').forEach(x => x.classList.toggle('on', x === b));
+      const wasDb = S.adminTab !== 'settings';
+      S.adminTab = t;
+      // SQL ↔ Diagramm: dieselbe Kopie, nur umschalten
+      if (wasDb && t !== 'settings' && S.db) { S.db.show(t === 'diagram' ? 'diagram' : 'sql'); return; }
+      closeDb();
+      renderAdmin($('#main'));
+    });
+    $$('.hub-nav button').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderHub(); });
     const main = $('#main');
-    if (S.tab === 'feed') renderFeedTab(main);
+    if (admin) renderAdmin(main);
+    else if (S.tab === 'feed') renderFeedTab(main);
     else if (S.tab === 'search') renderSearch(main);
     else if (S.tab === 'post') renderPost(main);
     else if (S.tab === 'profile') renderProfile(main, h.me && h.me.id, false);
-    else if (S.tab === 'admin') renderAdmin(main);
   }
 
   function closeDb() { if (S.db) { S.db.destroy(); S.db = null; } }
@@ -531,7 +826,7 @@
     }
 
     async function like(it, card, val) {
-      if (!S.hub.me) { toast(T ? 'Zum Mitmachen oben anmelden oder ein Testkonto anlegen.' : 'Melde dich an, um zu liken.'); return; }
+      if (!S.hub.me) { toast(T ? 'Zum Mitmachen oben ein Testkonto anlegen.' : 'Melde dich an, um zu liken.'); return; }
       it.liked = val; it.likes += val ? 1 : -1;
       syncCards(it);
       const r = await hcall('sh_like', { p_photo: it.id, p_on: val });
@@ -637,7 +932,7 @@
   }
 
   function openProfile(uid) {
-    if (S.hub.me && uid === S.hub.me.id && S.tab !== 'profile') { closeDb(); S.tab = 'profile'; renderHub(); return; }
+    if (S.hub.me && uid === S.hub.me.id && S.tab !== 'profile') { S.tab = 'profile'; renderHub(); return; }
     const ov = overlay('Profil');
     renderProfile(ov.body, uid, true);
   }
@@ -655,7 +950,9 @@
       '<div class="stats">' + stat(r.following, 'Folge ich') + stat(r.followers, 'Follower') + stat(r.likes, 'Likes') + stat(r.photos_n, 'Fotos') + '</div>' +
       (u.bio ? '<p class="bio">' + esc(u.bio) + '</p>' : '') +
       '<div class="prof-acts">' +
-        (r.me ? '<button type="button" class="btn btn--ghost" id="pEdit">Profil bearbeiten</button><button type="button" class="btn btn--ghost" id="pOut">Abmelden</button>'
+        (r.me ? '<button type="button" class="btn btn--ghost" id="pEdit">Profil bearbeiten</button>' +
+                // Lehrkraft bleibt in ihrem eigenen Netzwerk immer angemeldet
+                (T && S.hub.founder ? '' : '<button type="button" class="btn btn--ghost" id="pOut">Abmelden</button>')
               : (r.i_follow != null && S.hub.me ? '<button type="button" class="btn ' + (r.i_follow ? 'btn--ghost' : 'btn--accent') + '" id="pFollow">' + (r.i_follow ? 'Gefolgt ✓' : 'Folgen') + '</button>' : '')) +
       '</div></div>' +
       (r.photos == null ? '' : r.photos.length ? '<div class="grid3">' + r.photos.map(p => '<button type="button" class="g-it" data-pid="' + p.id + '"><span class="g-img" data-m="' + esc(p.image) + '" data-thumb="1"></span></button>').join('') + '</div>'
@@ -679,8 +976,9 @@
       A.session.set(S.hub.hub.id, null);
       sh.close();
       toast('Abgemeldet');
-      // Gründer: ohne Passwort wieder drin wäre verwirrend → zur Hub-Liste
-      loadHome();
+      // zurück zur Anmeldung dieses Netzwerks
+      S.session = null;
+      openHub(S.hub.hub.id);
     };
     $('#lo1', sh.el).onclick = () => go(false);
     $('#loAll', sh.el).onclick = () => go(true);
@@ -693,6 +991,7 @@
       '<label>Name<input name="name" maxlength="40" value="' + esc(u.name || '') + '"></label>' +
       '<label>Bio<textarea name="bio" maxlength="160" rows="3">' + esc(u.bio || '') + '</textarea></label>' +
       '<label>Wohnort<input name="city" maxlength="60" value="' + esc(u.city || '') + '"></label>' +
+      '<label>Geschlecht<select name="gender"><option value="">–</option>' + GENDERS.map(g => '<option value="' + g[0] + '"' + (u.gender === g[0] ? ' selected' : '') + '>' + g[1] + '</option>').join('') + '</select></label>' +
       '<button class="btn btn--accent btn--big">Speichern</button></form>');
     hydrate(sh.el);
     const file = $('#peFile', sh.el);
@@ -711,7 +1010,7 @@
     $('#peForm', sh.el).onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
-      const r = await hcall('sh_me_update', { p_name: f.name.value.trim() || null, p_bio: f.bio.value.trim() || null, p_avatar: avatar || null, p_city: f.city.value.trim() || null });
+      const r = await hcall('sh_me_update', { p_name: f.name.value.trim() || null, p_bio: f.bio.value.trim() || null, p_avatar: avatar || null, p_city: f.city.value.trim() || null, p_gender: f.gender.value || null });
       if (!r || !r.ok) { fail(r); return; }
       sh.close();
       await refreshHub();
@@ -743,7 +1042,11 @@
   /* ── Posten ─────────────────────────────────────────────── */
   function renderPost(main) {
     if (!S.hub.me) { main.innerHTML = '<p class="muted center-t">Bitte melde dich an.</p>'; return; }
-    if (!on('photos')) { main.innerHTML = '<p class="muted center-t">Die Tabelle photos gibt es noch nicht.</p>'; return; }
+    if (!on('photos')) {
+      main.innerHTML = '<div class="post"><div class="feed-empty">' + IC.image + '<p>Posten geht noch nicht: Die Tabelle <code>photos</code> gibt es in diesem Netzwerk noch nicht.</p>' +
+        '<p class="small">' + (T ? 'Erstelle sie auf der Startseite unter „Tabellen für alle Netzwerke“.' : 'Die Lehrkraft erstellt sie für alle.') + '</p></div></div>';
+      return;
+    }
     if (!S.hub.upload) {
       main.innerHTML = '<div class="post"><div class="feed-empty">' + IC.image + '<p>Bilder hochladen ist gerade ausgeschaltet.</p></div></div>';
       return;
@@ -785,124 +1088,74 @@
     };
   }
 
-  /* ── Admin ──────────────────────────────────────────────── */
+  /* ── Adminbereich: Einstellungen · SQL · Diagramm ───────── */
   function renderAdmin(main) {
     if (!S.hub.admin) { main.innerHTML = '<p class="muted center-t">Nur für Admins.</p>'; return; }
-    const tabs = [['hub', 'Hub'], ['users', 'Nutzer'], ['db', 'Datenbank']];
-    main.innerHTML = '<div class="adm"><nav class="adm-tabs">' + tabs.map(t => '<button type="button" data-at="' + t[0] + '"' + (S.adminTab === t[0] ? ' class="on"' : '') + '>' + t[1] + '</button>').join('') +
-      '</nav><div class="adm-body" id="admBody"></div></div>';
-    $$('[data-at]', main).forEach(b => b.onclick = () => { closeDb(); S.adminTab = b.dataset.at; renderAdmin(main); });
-    const body = $('#admBody', main);
-    if (S.adminTab === 'hub') adminHub(body);
-    else if (S.adminTab === 'users') adminUsers(body);
+    main.innerHTML = '<div class="adm" id="adm"></div>';
+    const body = $('#adm', main);
+    if (S.adminTab === 'settings') adminSettings(body);
     else {
-      body.classList.add('adm-body--db');
-      S.db = window.SHDB.create(body, { api: (fn, args) => hcall(fn, args), toast, onChanged: () => refreshHub() });
+      body.classList.add('adm--db');
+      S.db = window.SHDB.create(body, { api: (fn, args) => hcall(fn, args), toast, tab: S.adminTab === 'diagram' ? 'diagram' : 'sql', onChanged: () => refreshHub() });
     }
   }
 
-  function adminHub(body) {
+  function adminSettings(body) {
     const h = S.hub.hub;
-    let logo = h.logo, custom = null, color = h.color || null, scheme = h.scheme || 'dark';
-    // Vorschau sofort, gespeichert erst mit „Speichern“
-    const preview = () => applyColor(Object.assign({}, h, { logo, color, scheme }));
-    const paint = () => {
-      const logoColor = (logo === 'custom' ? (custom ? null : S.color[h.id]) : LOGOS[logo] && LOGOS[logo].color) || '#fe2c55';
-      body.innerHTML = '<form class="form adm-form" id="bForm">' +
-        '<label>Name der Plattform<input name="name" maxlength="30" value="' + esc(h.name) + '"></label>' +
-        '<div class="lbl">Logo</div>' + logoPicker(logo, true, custom ? custom.preview : (h.logo === 'custom' ? S.logoUrls[h.id] : null)) +
-        '<input type="file" accept="image/*" id="bFile" hidden>' +
-        '<p class="muted small">Eigenes Logo: quadratisch, wird auf 512 px verkleinert.</p>' +
-        '<div class="lbl">Farbschema</div>' +
-        '<div class="seg seg--s"><button type="button" data-sc="dark"' + (scheme === 'dark' ? ' class="on"' : '') + '>Dunkel</button>' +
-        '<button type="button" data-sc="light"' + (scheme === 'light' ? ' class="on"' : '') + '>Hell</button></div>' +
-        '<div class="lbl">Akzentfarbe</div>' +
-        '<div class="swatches">' +
-          '<button type="button" class="sw sw--auto' + (!color ? ' on' : '') + '" data-col="" style="--c:' + esc(logoColor) + '" title="Farbe aus dem Logo"><span>Logo</span></button>' +
-          SWATCHES.map(c => '<button type="button" class="sw' + (color === c ? ' on' : '') + '" data-col="' + c + '" style="--c:' + c + '" title="' + c + '"></button>').join('') +
-          '<label class="sw sw--pick' + (color && SWATCHES.indexOf(color) < 0 ? ' on' : '') + '" title="Eigene Farbe" style="--c:' + esc(color && SWATCHES.indexOf(color) < 0 ? color : 'transparent') + '">' +
-            '<input type="color" id="bColor" value="' + esc(color || logoColor.slice(0, 7)) + '">+</label>' +
-        '</div>' +
-        '<div class="brand-prev"><span class="bp-btn">Folgen</span><span class="bp-heart">' + IC.heart + '</span><span class="bp-tag">#vorschau</span></div>' +
-        '<button class="btn btn--accent btn--big">Speichern</button></form>';
-      $$('.lp', body).forEach(b => b.onclick = () => {
-        if (b.dataset.logoId === 'custom' && (logo === 'custom' || (!custom && h.logo !== 'custom'))) { $('#bFile', body).click(); return; }
-        logo = b.dataset.logoId; paint(); preview();
-      });
-      $('#bFile', body).onchange = async (e) => {
-        const f = e.target.files[0];
-        if (!f) return;
-        try {
-          custom = await M.compressLogo(f); logo = 'custom';
-          S.color[h.id] = await M.mainColor(custom.preview);
-          paint(); preview();
-        } catch (err) { toast(err.message, true); }
-      };
-      $$('[data-sc]', body).forEach(b => b.onclick = () => { scheme = b.dataset.sc; paint(); preview(); });
-      $$('[data-col]', body).forEach(b => b.onclick = () => { color = b.dataset.col || null; paint(); preview(); });
-      $('#bColor', body).oninput = (e) => { color = e.target.value.toLowerCase(); preview(); };
-      $('#bColor', body).onchange = () => paint();
-      $('#bForm', body).onsubmit = async (e) => {
-        e.preventDefault();
-        const r = await hcall('sh_brand', { p_name: e.target.name.value.trim(), p_logo: logo, p_logo_img: logo === 'custom' && custom ? custom.data : null,
-                                            p_color: color, p_scheme: scheme });
+    body.innerHTML = '<div class="adm-pad"><h2 class="adm-h">Einstellungen</h2><div id="admEd"></div></div>';
+    brandEditor($('#admEd', body), h, {
+      live: true,
+      onSubmit: async (v) => {
+        const r = await hcall('sh_brand', { p_name: v.name, p_logo: v.logo, p_logo_img: v.logo === 'custom' && v.custom ? v.custom.data : null,
+                                            p_color: v.color, p_scheme: v.scheme });
         if (!r || !r.ok) { fail(r); return; }
-        if (logo === 'custom' && custom) S.logoUrls[h.id] = custom.preview;
+        if (v.logo === 'custom' && v.custom) { S.logoUrls[h.id] = v.custom.preview; S.color[h.id] = S.color._new; }
         S.hub.hub = r.hub;
         applyColor(r.hub);
         toast('Gespeichert');
         renderHub();
-      };
-    };
-    paint();
-  }
-
-  async function adminUsers(body) {
-    body.innerHTML = '<p class="muted">lädt …</p>';
-    const r = await hcall('sh_admin_users', {});
-    if (!r || !r.ok) { body.innerHTML = '<p class="muted">' + esc(A.errText(r)) + '</p>'; return; }
-    body.innerHTML = '<div class="u-list">' + r.items.map(u =>
-      '<div class="u-row">' + avatarHtml(u, 'm') +
-      '<div class="u-t"><b>@' + esc(u.username) + '</b>' + (u.role === 'admin' ? ' <span class="badge">Admin</span>' : '') +
-      '<small>id ' + u.id + ' · ' + u.photos + ' Fotos · seit ' + esc(ago(u.created_at)) + (u.person ? ' · <b>' + esc(u.person) + '</b>' : '') + '</small></div>' +
-      '<div class="u-acts"><button type="button" class="btn btn--ghost btn--s" data-ua="' + (u.role === 'admin' ? 'user' : 'admin') + '" data-u="' + u.id + '">' + (u.role === 'admin' ? 'Admin entziehen' : 'Zum Admin') + '</button>' +
-      '<button type="button" class="btn btn--ghost btn--s" data-ua="password" data-u="' + u.id + '">Passwort neu</button>' +
-      '<button type="button" class="btn btn--ghost btn--s btn--bad" data-ua="delete" data-u="' + u.id + '">Löschen</button></div></div>').join('') + '</div>' +
-      (T ? '<p class="muted small">Fett: wer hinter dem Konto steckt (Name im Raum) – das sehen nur Lehrkräfte.</p>' : '');
-    hydrate(body);
-    $$('[data-ua]', body).forEach(b => b.onclick = async () => {
-      const a = b.dataset.ua, uid = +b.dataset.u;
-      let val = null;
-      if (a === 'password') { val = prompt('Neues Passwort (4–60 Zeichen):'); if (!val) return; }
-      if (a === 'delete' && !confirm('Konto mit allen Fotos, Likes und Kommentaren löschen?')) return;
-      const rr = await hcall('sh_admin_user', { p_user: uid, p_action: a, p_value: val });
-      if (!rr || !rr.ok) { fail(rr); return; }
-      toast(a === 'password' ? 'Neues Passwort gesetzt' : 'Erledigt');
-      adminUsers(body);
+      }
     });
   }
 
-  /* ══ Zustand vom Raum (Lehrkraft hat Tabellen geändert) ═══ */
+  /* ══ Zustand vom Raum (Lehrkraft hat Tabellen geändert) ═══
+     Nie über ein Formular zeichnen: nur Startseite und App-Reiter
+     ohne Eingaben werden neu gezeichnet, sonst nur die Daten. */
   let firstState = true;
   A.onState(async () => {
     if (firstState) { firstState = false; return; }
-    if (S.hub) {
+    if (S.screen === 'hub' && S.hub) {
       const prev = JSON.stringify([S.hub.tables, S.hub.upload]);
       await refreshHub();
-      if (S.hub && JSON.stringify([S.hub.tables, S.hub.upload]) !== prev && S.tab !== 'admin') renderHub();
-    } else if (S.home) {
-      loadHome();
+      if (S.screen !== 'hub' || !S.hub || JSON.stringify([S.hub.tables, S.hub.upload]) === prev) return;
+      if (S.view === 'app' && (S.tab === 'feed' || S.tab === 'search' || S.tab === 'profile')) renderHub();
+      else toast('Die Lehrkraft hat die Tabellen geändert.');
+    } else if (S.screen === 'home') {
+      loadHome(true);
     }
   });
 
-  // Lehrkraft-Übersicht frisch halten
-  setInterval(() => { if (T && !S.hub && S.home && document.visibilityState === 'visible') loadHome(); }, 15000);
+  // Lehrkraft-Übersicht frisch halten – nur, solange sie wirklich zu sehen ist
+  setInterval(() => {
+    if (T && S.screen === 'home' && document.visibilityState === 'visible' && !document.querySelector('.dlg-back')) loadHome(true);
+  }, 15000);
+
+  /* ── Hell / Dunkel wie MPSkills drumherum ──────────────── */
+  (function syncTheme() {
+    let pd = null;
+    try { pd = window.parent !== window ? window.parent.document.documentElement : null; } catch (e) { pd = null; }
+    if (!pd) return;
+    const apply = () => {
+      const t = pd.getAttribute('data-theme');
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+      else document.documentElement.removeAttribute('data-theme');
+      if (S.screen === 'home' && T) requestAnimationFrame(drawTableLines);
+    };
+    apply();
+    try { new MutationObserver(apply).observe(pd, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) { /* egal */ }
+  })();
 
   /* ── Start ──────────────────────────────────────────────── */
-  try {
-    const th = window.parent.document.documentElement.getAttribute('data-theme');
-    if (th) document.documentElement.setAttribute('data-theme', th);
-  } catch (e) { /* egal */ }
   document.body.classList.remove('loading');
   if (!A.IN_FRAME) { renderError({ error: 'no_room' }); return; }
   A.hello();

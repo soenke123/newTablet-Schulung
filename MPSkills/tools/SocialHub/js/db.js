@@ -1,10 +1,13 @@
 /* ══════════════════════════════════════════════════════════════
-   Social Hub — js/db.js   ·   Der Datenbank-Reiter im Admin-Bereich
+   YourSozialNet — js/db.js   ·   SQL und Diagramm im Adminbereich
    ══════════════════════════════════════════════════════════════
    Wie SQL Studio (dessen Editor, Kern und Klassendiagramm werden
-   mitbenutzt), aber die Datenbank ist der Hub selbst:
+   mitbenutzt), aber die Datenbank ist das Netzwerk selbst:
 
      1. sh_db_snapshot holt die erstellten Tabellen (nur Admins).
+        Die Reiter SQL / Diagramm stehen oben im Kopf (app.js), hier
+        nur show('sql'|'diagram'). Einen Daten-Reiter gibt es nicht:
+        geschaut wird mit SELECT.
      2. Daraus entsteht im Worker eine SQLite-Kopie (MySQL-Schreibweise,
         übersetzt vom Kern).
      3. SELECT läuft nur hier.
@@ -20,7 +23,7 @@
 (function () {
   'use strict';
 
-  const V = '20261103c';
+  const V = '20261103d';
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const DDL = {
@@ -30,6 +33,7 @@
   name VARCHAR(60),
   email VARCHAR(100),
   password VARCHAR(100) NOT NULL,
+  gender ENUM('male','female','diverse'),
   bio TEXT,
   avatar VARCHAR(60),
   birthday DATE,
@@ -100,11 +104,13 @@
     ['Alle Nutzer', 'SELECT * FROM users;'],
     ['Wer ist Admin?', "SELECT username, role FROM users WHERE role = 'admin';"],
     ['Passwörter (Hashes!)', 'SELECT username, password FROM users;'],
+    ['Wie viele je Geschlecht?', 'SELECT gender, COUNT(*) AS anzahl\nFROM users\nGROUP BY gender;'],
     ['Fotos mit Benutzername', 'SELECT p.id, u.username, p.description, p.created_at\nFROM photos p\nJOIN users u ON u.id = p.user_id\nORDER BY p.created_at DESC;', 'photos'],
     ['Likes je Foto', 'SELECT p.id, p.description, COUNT(l.user_id) AS likes\nFROM photos p\nLEFT JOIN likes l ON l.photo_id = p.id\nGROUP BY p.id\nORDER BY likes DESC;', 'likes'],
     ['Wer folgt wem?', 'SELECT a.username AS follower, b.username AS folgt\nFROM follows f\nJOIN users a ON a.id = f.follower_id\nJOIN users b ON b.id = f.following_id;', 'follows'],
     ['Beliebteste Tags', 'SELECT t.name, COUNT(*) AS fotos\nFROM tags t\nJOIN photo_tag pt ON pt.tag_id = t.id\nGROUP BY t.id\nORDER BY fotos DESC;', 'tags'],
-    ['Konto anlegen (INSERT)', "INSERT INTO users (username, name, password)\nVALUES ('neu_hier', 'Neu', PASSWORD_HASH('geheim'));"],
+    ['Konto anlegen (INSERT)', "INSERT INTO users (username, name, gender, password)\nVALUES ('neu_hier', 'Neu', 'diverse', PASSWORD_HASH('geheim'));"],
+    ['Passwort neu setzen (UPDATE)', "UPDATE users SET password = PASSWORD_HASH('neu123') WHERE username = 'neu_hier';"],
     ['Zum Admin machen (UPDATE)', "UPDATE users SET role = 'admin' WHERE username = 'neu_hier';"]
   ];
 
@@ -160,33 +166,26 @@
     let tables = [];               // Namen in ORDER-Reihenfolge
     let base = null;               // { t: Map(key → row-Objekt) }
     let schema = null;
-    let tab = 'sql';
+    let tab = opts.tab === 'diagram' ? 'diagram' : 'sql';
     let busy = false;
     let diagram = null;
-    let curTable = null;
 
     host.innerHTML =
       '<div class="db">' +
         '<div class="db-bar">' +
-          '<nav class="db-tabs">' +
-            '<button type="button" data-t="sql" class="on">SQL</button>' +
-            '<button type="button" data-t="data">Daten</button>' +
-            '<button type="button" data-t="diagram">Diagramm</button>' +
-          '</nav>' +
           '<span class="db-state" id="dbState"></span>' +
-          '<button type="button" class="btn btn--ghost btn--s" id="dbReload" title="Neuen Stand vom Hub holen">↻ Neu laden</button>' +
+          '<button type="button" class="btn btn--ghost btn--s" id="dbReload" title="Neuen Stand aus dem Netzwerk holen">↻ Neu laden</button>' +
         '</div>' +
         '<div class="db-tables" id="dbTables"></div>' +
         '<section class="db-pane" data-p="sql">' +
           '<div class="db-tools">' +
             '<button type="button" class="btn btn--accent" id="dbRun">▶ Ausführen</button>' +
             '<select id="dbEx" class="db-ex"><option value="">Beispiele …</option></select>' +
-            '<span class="db-hint">Strg + Enter · INSERT, UPDATE und DELETE ändern den echten Hub</span>' +
+            '<span class="db-hint">Strg + Enter · INSERT, UPDATE und DELETE ändern das echte Netzwerk</span>' +
           '</div>' +
           '<div class="sql-ed" id="dbEd"></div>' +
           '<div class="db-out" id="dbOut"><p class="muted">Schreib eine Abfrage und tippe auf Ausführen.</p></div>' +
         '</section>' +
-        '<section class="db-pane" data-p="data" hidden><div class="db-out" id="dbData"></div></section>' +
         '<section class="db-pane db-pane--dg" data-p="diagram" hidden><div class="dg-host" id="dbDg"></div></section>' +
       '</div>';
     const $ = s => host.querySelector(s);
@@ -197,7 +196,6 @@
     });
     editor.value = 'SELECT * FROM users;';
 
-    host.querySelectorAll('.db-tabs button').forEach(b => b.addEventListener('click', () => show(b.dataset.t)));
     $('#dbRun').addEventListener('click', () => run());
     $('#dbReload').addEventListener('click', () => load(true));
     $('#dbEx').addEventListener('change', (e) => {
@@ -213,11 +211,10 @@
     }
 
     function show(t) {
-      tab = t;
-      host.querySelectorAll('.db-tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
-      host.querySelectorAll('.db-pane').forEach(p => { p.hidden = p.dataset.p !== t; });
-      if (t === 'diagram') drawDiagram();
-      if (t === 'data') showData(curTable || tables[0]);
+      tab = t === 'diagram' ? 'diagram' : 'sql';
+      host.querySelectorAll('.db-pane').forEach(p => { p.hidden = p.dataset.p !== tab; });
+      $('#dbTables').hidden = tab !== 'sql';
+      if (tab === 'diagram') drawDiagram();
     }
 
     function drawDiagram() {
@@ -232,9 +229,8 @@
         return '<button type="button" class="db-tbl" data-tbl="' + esc(t) + '"><b>' + esc(t) + '</b><span>' + n + '</span></button>';
       }).join('');
       host.querySelectorAll('.db-tbl').forEach(b => b.addEventListener('click', () => {
-        curTable = b.dataset.tbl;
-        if (tab === 'data') showData(curTable);
-        else { editor.value = 'SELECT * FROM ' + curTable + ';'; run(); }
+        editor.value = 'SELECT * FROM ' + b.dataset.tbl + ';';
+        run();
       }));
       const sel = $('#dbEx');
       sel.innerHTML = '<option value="">Beispiele …</option>' + EXAMPLES.map((e, i) =>
@@ -255,20 +251,11 @@
       return '<div class="res res--ok">' + esc(r.message || 'Erledigt.') + '</div>';
     }
 
-    async function showData(t) {
-      if (!t) { $('#dbData').innerHTML = '<p class="muted">Keine Tabelle.</p>'; return; }
-      curTable = t;
-      try {
-        const r = await W.run('SELECT * FROM ' + t + ';');
-        $('#dbData').innerHTML = '<h3 class="db-h">' + esc(t) + '</h3>' + r.results.map(resultHtml).join('');
-      } catch (e) { $('#dbData').innerHTML = '<div class="res res--bad">' + esc(e.message) + '</div>'; }
-    }
-
     /* ── Schnappschuss → SQLite ─────────────────────────────── */
     async function load(manual) {
       state('lädt …');
       const res = await api('sh_db_snapshot', {});
-      if (!res || !res.ok) { state(res && res.error === 'not_admin' ? 'Nur für Admins.' : 'Konnte den Hub nicht laden.', true); return false; }
+      if (!res || !res.ok) { state(res && res.error === 'not_admin' ? 'Nur für Admins.' : 'Konnte das Netzwerk nicht laden.', true); return false; }
       const snap = res.tables || {};
       tables = ORDER.filter(t => snap[t]);
       let script = '';
@@ -287,7 +274,6 @@
         paintTables();
         state(manual ? 'Neu geladen.' : '');
         if (tab === 'diagram') drawDiagram();
-        if (tab === 'data') showData(curTable || tables[0]);
         return true;
       } catch (e) {
         state('Fehler beim Aufbauen: ' + e.message, true);
@@ -367,13 +353,13 @@
             state('wird übernommen …');
             const res = await api('sh_db_apply', { p_ops: ops });
             if (res && res.ok) {
-              html = '<div class="res res--live">✓ ' + ops.length + ' Änderung' + (ops.length === 1 ? '' : 'en') + ' im Hub übernommen – für alle sichtbar.</div>' + html;
+              html = '<div class="res res--live">✓ ' + ops.length + ' Änderung' + (ops.length === 1 ? '' : 'en') + ' im Netzwerk übernommen – für alle sichtbar.</div>' + html;
               state('');
-              toast('Hub geändert');
+              toast('Netzwerk geändert');
               opts.onChanged && opts.onChanged();
               await load(false);
             } else {
-              html = '<div class="res res--bad"><b>Der Hub hat die Änderung abgelehnt:</b> ' +
+              html = '<div class="res res--bad"><b>Das Netzwerk hat die Änderung abgelehnt:</b> ' +
                 esc((res && (res.message || res.error)) || 'unbekannt') + '<div class="res-hint">Nichts wurde geändert. Die Kopie wird neu geladen.</div></div>' + html;
               await load(false);
             }
@@ -389,12 +375,14 @@
       }
     }
 
+    show(tab);
     load(false);
     return {
+      show,
       reload: () => load(true),
       destroy: () => W.stop()
     };
   }
 
-  window.SHDB = { create };
+  window.SHDB = { create, DDL };
 })();

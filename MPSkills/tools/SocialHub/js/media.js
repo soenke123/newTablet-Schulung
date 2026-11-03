@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Social Hub — js/media.js   ·   Bilder verkleinern und holen
+   YourSozialNet — js/media.js   ·   Bilder verkleinern und holen
    ══════════════════════════════════════════════════════════════
    compress(file): egal wie groß das Foto ist, beim Server kommen
    höchstens ~250 KB an. Längste Seite 1080 px, WebP (Safari ohne

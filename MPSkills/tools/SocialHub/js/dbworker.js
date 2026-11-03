@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   Social Hub — js/dbworker.js   ·   Die Datenbank im Hintergrund
+   YourSozialNet — js/dbworker.js   ·   Die Datenbank im Hintergrund
    ══════════════════════════════════════════════════════════════
    sql.js und der Kern von SQL Studio (geteilt, nicht kopiert) laufen
    hier, damit eine Abfrage ohne Ende nur den Worker einfriert

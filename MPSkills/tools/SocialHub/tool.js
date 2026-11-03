@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — Skill „Social Hub"  ·  tool.js
+   MPSkills — Skill „YourSozialNet" (bis 0265 „Social Hub")  ·  tool.js
    ══════════════════════════════════════════════════════════════
    Eine soziale Plattform im Stil von TikTok, an der die Klasse
    Datenbanken lernt (Migration 0262, Beta, nur für Admins sichtbar).
@@ -19,7 +19,7 @@
 (function () {
   'use strict';
 
-  const V = '20261103c';
+  const V = '20261103d';
   let root = null;
   let ctx = null;
   let view = null;
@@ -101,7 +101,7 @@
       : 'tools/SocialHub/index.html?v=' + V +
         '&raum=' + encodeURIComponent(code) + '&rolle=' + (isPresenter() ? 'presenter' : 'participant');
     root.querySelector('.sh-host').innerHTML =
-      '<iframe class="sh-frame" src="' + src + '" title="Social Hub" loading="eager" allow="camera"></iframe>';
+      '<iframe class="sh-frame" src="' + src + '" title="YourSozialNet" loading="eager" allow="camera"></iframe>';
     frame = root.querySelector('.sh-frame');
     fit();
     requestAnimationFrame(fit);

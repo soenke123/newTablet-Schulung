@@ -1,13 +1,13 @@
 /* ══════════════════════════════════════════════════════════════
-   Social Hub — js/api.js   ·   Brücke zum Raum, Sitzungen, Texte
+   YourSozialNet — js/api.js   ·   Brücke zum Raum, Sitzungen, Texte
    ══════════════════════════════════════════════════════════════
    Alle Serveraufrufe gehen über den Rahmen (tool.js): der hängt
    p_token (Schüler) bzw. p_code (Lehrkraft) selbst an. Hier kommen
-   nur noch Hub und Sitzung dazu.
+   nur noch Netzwerk (p_hub) und Sitzung dazu.
 
-   Sitzung je Hub im Gerät: auf Schulgeräten (mpskills.device =
-   school, Standard) nur in sessionStorage — Tab zu = abgemeldet;
-   auf eigenen Geräten in localStorage.
+   Sitzung je Netzwerk im Gerät: mit „Angemeldet bleiben“ in
+   localStorage, sonst in sessionStorage (Tab zu = abgemeldet). Der
+   Haken ist auf eigenen Geräten (mpskills.device = own) vorbelegt.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -51,17 +51,27 @@
   const call = (fn, args) => send('sh:call', { fn, args: args || {} });
   const setData = (data) => send('sh:setData', { data });
 
-  /* ── Sitzung je Hub ─────────────────────────────────────── */
-  const store = (() => {
-    let own = false;
-    try { own = localStorage.getItem('mpskills.device') === 'own'; } catch (e) { /* aus */ }
-    const st = own ? window.localStorage : window.sessionStorage;
-    return {
-      get(k) { try { return st.getItem(k); } catch (e) { return null; } },
-      set(k, v) { try { if (v == null) st.removeItem(k); else st.setItem(k, v); } catch (e) { /* aus */ } }
-    };
-  })();
+  /* ── Sitzung je Netzwerk ────────────────────────────────── */
+  // „Angemeldet bleiben“ = localStorage, sonst sessionStorage (Tab zu =
+  // abgemeldet). Die Lehrkraft bleibt immer angemeldet.
+  const OWN = (() => { try { return localStorage.getItem('mpskills.device') === 'own'; } catch (e) { return false; } })();
+  const st = (kind) => { try { return kind === 'l' ? window.localStorage : window.sessionStorage; } catch (e) { return null; } };
+  const sget = (kind, k) => { try { const x = st(kind); return x ? x.getItem(k) : null; } catch (e) { return null; } };
+  const sput = (kind, k, v) => { try { const x = st(kind); if (!x) return; if (v == null) x.removeItem(k); else x.setItem(k, v); } catch (e) { /* aus */ } };
   const sessKey = hub => 'sh.s.' + CODE + '.' + hub;
+  const session = {
+    get: hub => sget('s', sessKey(hub)) || sget('l', sessKey(hub)),
+    // keep: true/false = dorthin; undefined = da lassen, wo sie schon liegt
+    set(hub, s, keep) {
+      const k = sessKey(hub);
+      if (keep === undefined) keep = TEACHER || (sget('l', k) != null && sget('s', k) == null);
+      if (TEACHER) keep = true;
+      sput(keep ? 's' : 'l', k, null);
+      sput(keep ? 'l' : 's', k, s);
+    },
+    // Vorschlag für den Haken „Angemeldet bleiben“
+    keepDefault: () => TEACHER || OWN
+  };
 
   const ERR = {
     invalid_name: 'Der Name braucht 2 bis 30 Zeichen.',
@@ -72,12 +82,16 @@
     invalid_color: 'Die Farbe muss als #rrggbb angegeben sein.',
     invalid_image: 'Bitte wähle zuerst ein Bild.',
     invalid_input: 'Das passt so nicht.',
-    username_taken: 'Diesen Benutzernamen gibt es in diesem Hub schon.',
+    username_taken: 'Diesen Benutzernamen gibt es in diesem Netzwerk schon.',
+    invalid_gender: 'Geschlecht: männlich, weiblich oder divers.',
+    pw_mismatch: 'Die beiden Passwörter sind nicht gleich.',
+    hub_private: 'Dieses Netzwerk gehört jemand anderem.',
+    no_admin: 'Dieses Netzwerk hat noch kein Admin-Konto.',
     wrong_login: 'Benutzername oder Passwort falsch.',
     blacklisted: 'Da steckt ein Wort drin, das hier nicht erlaubt ist.',
-    already_founded: 'Du hast schon einen Hub.',
-    hub_locked: 'Dieser Hub ist gesperrt.',
-    hub_not_found: 'Diesen Hub gibt es nicht mehr.',
+    already_founded: 'Du hast schon ein Netzwerk.',
+    hub_locked: 'Dieses Netzwerk ist gesperrt.',
+    hub_not_found: 'Dieses Netzwerk gibt es nicht mehr.',
     not_logged_in: 'Bitte melde dich zuerst an.',
     not_admin: 'Das dürfen nur Admins.',
     table_off: 'Das geht noch nicht – die Tabelle dazu fehlt noch.',
@@ -85,14 +99,14 @@
     quota_exceeded: 'Hier ist die Grenze erreicht.',
     room_full: 'Der Speicher dieses Raums ist voll.',
     payload_too_big: 'Das Bild ist zu groß.',
-    too_many_accounts: 'Höchstens 3 Konten je Gerät in einem Hub.',
+    too_many_accounts: 'Hier ist die Grenze für Konten von diesem Gerät erreicht.',
     not_found: 'Nicht gefunden.',
     blocked: 'Dieses Gerät wurde von der Lehrkraft stillgelegt.',
     room_gone: 'Dieser Raum ist abgelaufen.',
     unknown_token: 'Dieser Raum gehört nicht mehr zu diesem Gerät. Lade die Seite neu.',
     network: 'Keine Verbindung – bitte gleich noch einmal.',
-    no_room: 'Social Hub läuft nur in einem MPSkills-Raum.',
-    fn_missing: 'Der Server kennt diese Funktion noch nicht (Migration 0262 fehlt).'
+    no_room: 'YourSozialNet läuft nur in einem MPSkills-Raum.',
+    fn_missing: 'Der Server kennt diese Funktion noch nicht (Migrationen 0262–0265 fehlen).'
   };
   const errText = (r) => (r && (r.message || ERR[r.error])) || 'Das hat nicht geklappt (' + ((r && r.error) || '?') + ').';
 
@@ -101,10 +115,7 @@
     onState(cb) { stateCb = cb; if (lastState) cb(lastState); },
     get state() { return lastState || {}; },
     hello() { if (IN_FRAME) window.parent.postMessage({ type: 'sh:hello' }, location.origin); },
-    session: {
-      get: hub => store.get(sessKey(hub)),
-      set: (hub, s) => store.set(sessKey(hub), s)
-    },
+    session,
     errText
   };
 })();

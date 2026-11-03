@@ -1,6 +1,6 @@
 # Plan: Feed-Skill (Arbeitstitel) — „InstaHub, aber wie TikTok“
 
-Stand 03.11.2026 · Entwurf 4. **Etappe 1 + 2 gebaut** (Migration 0262, `MPSkills/tools/SocialHub/`, nur für Admins) – Entscheidungen: jeder eigener Hub, Tabellen englisch, nur Herz, alle Admins dürfen schreiben. Doku: `MPSkills/tools/SocialHub/CLAUDE.md`.
+Stand 03.11.2026 · Entwurf 4. **Etappe 1 + 2 gebaut**, seit Migration 0265 als **YourSozialNet** (`MPSkills/tools/SocialHub/`, nur für Admins). Begriffe und aktuelle Entscheidungen (Netzwerk statt Hub, Schüler nur im eigenen Netzwerk, Erstellen in 2 Schritten, App | Adminbereich): `MPSkills/tools/SocialHub/CLAUDE.md` – dort gilt der neuere Stand, wo dieser Plan abweicht.
 Aufgaben und Leitfaden von Sönke kommen später und werden dann hier eingearbeitet.
 
 ## Idee in einem Satz
