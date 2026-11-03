@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
-   MPSkills — Skill „Diagramm"   ·   tool.js
+   MPSkills — Skill „Conceptogram" (id diagramm)   ·   tool.js
    ══════════════════════════════════════════════════════════════
-   Mindmaps, Concept Map, Klassen- und Objektdiagramme zeichnen.
+   Mindmaps, Wirkungsgefüge, Klassen- und Objektdiagramme zeichnen.
    Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie
    braucht (Migration 0258, Details in CLAUDE.md daneben).
 
@@ -53,7 +53,7 @@
   const TEXT = '#0f172a';
   const LINE = 'var(--dg-line)';      // Bleistift; beim Export VARS_EXPORT
   const LINK = 'var(--dg-link)';      // Linien im UML-Kleid (wie SQL Studio)
-  /* Pfeilfarben im Concept Map (edge.f): schwarz (Bleistift), grün, rot.
+  /* Pfeilfarben im Wirkungsgefüge (edge.f): schwarz (Bleistift), grün, rot.
      Was die Farben bedeuten, legt die Klasse fest — der Skill rechnet
      nichts daraus. Vorher (bis 03.11.2026) gab es +/− (edge.s); sane()
      übersetzt alte Diagramme: − → rot, sonst schwarz. */
@@ -61,7 +61,7 @@
   const ARROW_NAME = { k: 'schwarz', g: 'grün', r: 'rot' };
 
   /* Zwei Kleider (03.11.2026):
-       Papier  — Mindmap und Concept Map: Zettel auf einem Tisch,
+       Papier  — Mindmap und Wirkungsgefüge: Zettel auf einem Tisch,
                  dezent: fast eckig, leichter Schatten, beim Ziehen
                  hebt sich der Zettel. Schrift Outfit.
        Karte   — Klassen- und Objektdiagramm wie das Klassendiagramm
@@ -125,7 +125,7 @@
      2  Diagrammarten
      ════════════════════════════════════════════════════════════
      node: { id, type, x, y, t, c, a, o, k }
-       type  center | topic (Mindmap) · box (Concept Map) ·
+       type  center | topic (Mindmap) · box (Wirkungsgefüge) ·
              class · object · note (überall)
        x, y  Mitte des Knotens
        t     Text bzw. Name;  a Attribute;  o Methoden;  k Klasse (Objekt)
@@ -133,7 +133,7 @@
      edge: { id, a, b, type, f, l, m1, m2, pa, pb, lo, o1, o2 }
        type  branch · effect · assoc · directed · inherit · aggr ·
              comp · dep · link · line · arrow
-       f     Pfeilfarbe in der Concept Map (k/g/r)
+       f     Pfeilfarbe im Wirkungsgefüge (k/g/r)
        l     Beschriftung;  m1/m2 Multiplizitäten (UML)
        pa/pb Andockpunkt am Anfang/Ende, selbst verschoben: [u, v] in
              -1…1 (Anteil der halben Breite/Höhe, liegt auf dem Rand) —
@@ -151,8 +151,8 @@
       add: [{ type: 'center', label: 'Thema' }, { type: 'topic', label: 'Ast' }, { type: 'note', label: 'Notiz' }],
       edges: ['branch', 'line', 'arrow']
     },
-    wirkung: {   // id bleibt 'wirkung' (gespeicherte Diagramme), heißt seit 03.11.2026 Concept Map
-      label: 'Concept Map', icon: '🔄',
+    wirkung: {
+      label: 'Wirkungsgefüge', icon: '🔄',
       hint: 'Begriffe mit Pfeilen verbinden – schwarz, grün oder rot – und beschriften.',
       node: 'box', edge: 'effect',
       add: [{ type: 'box', label: 'Begriff' }, { type: 'note', label: 'Notiz' }],

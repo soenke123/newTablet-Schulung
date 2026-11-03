@@ -145,12 +145,12 @@ window.TOOLS_OVERLAY = {
   // Phasen die Klasse öffnen darf (skill_room_state.data.phases).
   // beta: frisch umgezogen (30.10.2026).
   reinforce: { ready: true, subtitle: 'Bestärkendes Lernen', learning: true },
-  // Siebzehnter Skill (Migration 0258) — Diagramm: Mindmap, Concept Map,
+  // Siebzehnter Skill (Migration 0258) — Conceptogram (id diagramm): Mindmap, Wirkungsgefüge,
   // Klassen- und Objektdiagramm, direkt im Raum gebaut (tools/Diagramm/,
   // kein iframe). Jede Person zeichnet ein Diagramm (dg_work), die Lehrkraft
   // holt bis zu zwei nebeneinander an den Beamer. Schaufenster:
   // preview/diagramm.js. beta: frisch gebaut (03.11.2026).
-  diagramm: { ready: true, subtitle: 'Mindmap · Concept Map · UML', beta: true },
+  diagramm: { ready: true, subtitle: 'Mindmap · Wirkungsgefüge · UML', beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

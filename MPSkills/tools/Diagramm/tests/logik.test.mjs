@@ -17,7 +17,7 @@ const ok = (label, cond, extra = '') => { if (!cond) fails++; console.log(`${con
 const W = { kind: 'wirkung', nodes: ['a', 'b', 'c'].map(id => ({ id, type: 'box', x: 0, y: 0, t: id.toUpperCase() })),
   edges: [{ id: '1', a: 'a', b: 'b', type: 'effect', s: '+' }, { id: '2', a: 'b', b: 'a', type: 'effect', s: '-' },
           { id: '3', a: 'b', b: 'c', type: 'effect', s: '+' }, { id: '4', a: 'c', b: 'a', type: 'effect', s: '+' }] };
-ok('Concept Map heißt so, Bausteine sind Begriffe', D.KINDS.wirkung.label === 'Concept Map' && D.KINDS.wirkung.add[0].label === 'Begriff');
+ok('Wirkungsgefüge heißt so, Bausteine sind Begriffe', D.KINDS.wirkung.label === 'Wirkungsgefüge' && D.KINDS.wirkung.add[0].label === 'Begriff');
 ok('keine Kreisläufe mehr', !('findLoops' in D));
 
 // Pfeilfarben: alte +/−-Diagramme werden übersetzt, f bleibt erhalten

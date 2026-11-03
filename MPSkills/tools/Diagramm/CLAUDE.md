@@ -1,8 +1,9 @@
-# Diagramm (MPSkill `diagramm`, Migration 0258, Beta)
+# Conceptogram (MPSkill `diagramm`, Migration 0258, Beta)
 
-Schlankes Zeichenwerkzeug für **Mindmap · Concept Map · Klassendiagramm · Objektdiagramm**.
-„Concept Map“ hieß bis 03.11.2026 „Wirkungsgefüge“; die id bleibt `wirkung` (dg_work.kind, settings.kind),
-nur Anzeige und Kacheltext (Migration 0259) sind neu. Bausteine dort heißen „Begriff“.
+Schlankes Zeichenwerkzeug für **Mindmap · Wirkungsgefüge · Klassendiagramm · Objektdiagramm**.
+Der Skill heißt seit 03.11.2026 **Conceptogram** (Migration 0261: skill_tools.title + Kacheltext); id `diagramm`,
+Ordner `Diagramm/`, Tabellen `dg_*` bleiben. Das Wirkungsgefüge (id `wirkung`) hieß kurz „Concept Map“
+(Migration 0259), 0261 nimmt das zurück. Bausteine dort heißen „Begriff“.
 Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie braucht. Direkt im Raum gebaut
 (`tool.js` + `tool.css`, kein iframe).
 
@@ -22,10 +23,10 @@ Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie braucht. Direkt 
 
 Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k-paper` / `.k-uml`):
 
-- **Papier** (Mindmap, Concept Map): Tisch in warmem Ton mit Punkten und ganz leichtem Papierkorn
+- **Papier** (Mindmap, Wirkungsgefüge): Tisch in warmem Ton mit Punkten und ganz leichtem Papierkorn
   (zweite Hintergrund-Ebene, data:-SVG). Zettel fast eckig (rx 2–3) mit leichtem Schatten
   (`#dgPaper`), beim Ziehen hebt sich der Zettel (`#dgLift`, `Canvas.lift`). Mitte der Mindmap = großer
-  Zettel mit Kreppband und Farbstreifen unten; Äste = farbige Zettel; Begriffe der Concept Map =
+  Zettel mit Kreppband und Farbstreifen unten; Äste = farbige Zettel; Begriffe des Wirkungsgefüges =
   Karteikarten mit Farbstreifen oben; Linien Bleistift-Grau (`--dg-line`). Schrift Outfit. Zettel bleiben
   auch im Dunkelmodus hell (Papier auf dunklem Tisch).
 - **Karte wie SQL Studio** (Klassen-, Objektdiagramm; `tools/SQLStudio/js/diagram.js`): weiße Karte rx 12,
@@ -75,7 +76,7 @@ Antippen = wählen · doppelt tippen = Text (auf leerer Fläche: neuer Baustein)
 (Mindmap: ganzer Ast) · leere Fläche ziehen = Blatt verschieben · zwei Finger/Mausrad = Zoom.
 Blaue Punkte am gewählten Baustein: antippen = neuer Baustein daneben + Verbindung, auf anderen
 Baustein ziehen = verbinden, ins Leere ziehen = neuer Baustein dort. Auswahl-Leiste unten: Text, Farbe,
-Löschen bzw. Art der Verbindung, Pfeilfarbe (Concept Map: schwarz/grün/rot, der nächste Pfeil bekommt dieselbe), Beschriftung, Multiplizitäten. Mindmap: Tab = Kind, Enter =
+Löschen bzw. Art der Verbindung, Pfeilfarbe (Wirkungsgefüge: schwarz/grün/rot, der nächste Pfeil bekommt dieselbe), Beschriftung, Multiplizitäten. Mindmap: Tab = Kind, Enter =
 Nachbar, „Ordnen“ (`layoutMindmap`). PNG-Export. „Kreisläufe“ gibt es seit 03.11.2026 nicht mehr.
 Gewählte Verbindung: weiße Punkte an beiden Enden = Andockpunkt am Rand verschieben (wenn mehrere
 Linien ineinander liegen); Beschriftung/Anzahlen lassen sich ein Stück ziehen; „zurücksetzen“ in der
@@ -89,8 +90,8 @@ etwas drin ist (für Tablets ohne Tastatur).
 Griff doppelt antippen = wieder am Baustein).
 Die zuletzt gewählte Verbindungsart gilt für die nächste neue Verbindung.
 Verbindung gewählt → unten eine **Skizze des Pfeils** (`edgeForm`): immer Anfang links, Ende rechts, mit
-den Namen der beiden Bausteine; Beschriftung über der Mitte, Anzahlen (UML) an den Enden, bei der
-Concept Map die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr Text am Pfeil landet.
+den Namen der beiden Bausteine; Beschriftung über der Mitte, Anzahlen (UML) an den Enden, beim
+Wirkungsgefüge die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr Text am Pfeil landet.
 
 ## Raum
 
