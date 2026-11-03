@@ -316,8 +316,7 @@ try {
   await mia.app.locator('.card').first().waitFor();
   ok('4  normaler User: kein Adminbereich', await mia.app.locator('[data-view="admin"]').count() === 0);
   await mia.app.locator('.card-img.img-ok').first().waitFor();
-  const ex = await mia.app.locator('.card .m-exif').first().textContent();
-  ok('4  Post zeigt Aufnahmezeit (deutsche Zeit), Kamera und Ort', /12\.10\.2026, 14:32/.test(ex) && /Apple iPhone 13/.test(ex) && /53\.5510/.test(ex), ex);
+  ok('4  Metadaten stehen nicht am Post (nur in der DB)', await mia.app.locator('.card .m-exif').count() === 0);
   await shot(mia.page, '4-feed');
   await mia.app.locator('.card').first().click({ position: { x: 300, y: 250 } });
   await wait(100);

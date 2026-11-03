@@ -102,13 +102,6 @@
                                                                      local ? {} : { timeZone: 'Europe/Berlin' }));
   }
   const metaGeo = (la, lo) => Number(la).toFixed(5) + ', ' + Number(lo).toFixed(5);
-  function metaLine(it) {
-    const p = [];
-    if (it.taken_at) p.push('<span>' + IC.clock + esc(metaWhen(it.taken_at)) + '</span>');
-    if (it.camera) p.push('<span>' + IC.camera + esc(it.camera) + '</span>');
-    if (it.latitude != null && it.longitude != null) p.push('<span>' + IC.pin + esc(metaGeo(it.latitude, it.longitude)) + '</span>');
-    return p.length ? '<div class="m-exif">' + p.join('') + '</div>' : '';
-  }
   const metaOn = () => A.state.meta === true;
 
   function ago(iso) {
@@ -813,7 +806,6 @@
       '<div class="meta"><button type="button" class="m-user" data-act="profile">@' + esc(it.user.username) + '</button>' +
         '<span class="m-time">· ' + esc(ago(it.created_at)) + '</span>' +
         (it.description ? '<p class="m-desc">' + esc(it.description) + '</p>' : '') +
-        metaLine(it) +
         (it.tags && it.tags.length ? '<div class="m-tags">' + it.tags.map(t => '<button type="button" data-tag="' + esc(t) + '">#' + esc(t) + '</button>').join('') + '</div>' : '') +
       '</div></article>';
   }
