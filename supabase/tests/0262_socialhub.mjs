@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262 + 0263 — Social Hub (MPSkill „socialhub“).
+/* Prüfstand für Migration 0262 + 0263 + 0264 — Social Hub (MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -280,13 +280,45 @@ ok('7  Gründer sieht die Person dahinter nicht', r.ok && r.items.every(u => u.p
 await as(T1);
 r = await call(`sh_admin_user(null, $1, $2, null, 2, 'password', 'reset99')`, [CODE, HUB]);
 ok('7  Passwort zurücksetzen', r.ok && (await one(`select count(*)::int n from sh_sessions where hub_id = $1 and user_id = 2`, [HUB])).n === 0);
+/* 7b: Hub der Lehrkraft */
+r = await call(`sh_found(null, 'Lehrerzimmer', 'graph', 'frau_t', 'lehrer1', 'Frau T', $1)`, [CODE]);
+ok('7b Lehrkraft gründet eigenen Hub', r.ok && r.session, JSON.stringify(r));
+const THUB = r.hub; const TS = r.session;
+r = await call(`sh_found(null, 'Zweiter', 'graph', 'frau_t2', 'lehrer1', null, $1)`, [CODE]);
+ok('7b zweiter Hub der Lehrkraft → already_founded', r.error === 'already_founded');
+r = await call(`sh_enter(null, $1, $2, $3)`, [CODE, THUB, TS]);
+ok('7b Lehrkraft in ihrem Hub: angemeldet, Gründerin', r.ok && r.me.username === 'frau_t' && r.founder && r.admin);
+r = await call(`sh_enter(null, $1, $2, null)`, [CODE, THUB]);
+ok('7b ohne Sitzung: automatisch angemeldet', r.ok && r.session && r.me.username === 'frau_t');
+await call(`sh_media_put(null, $1, $2, $3, $3, 'image/webp', $4)`, [THUB, TS, PNG, CODE]);
+r = await call(`sh_photo_post(null, $1, $2, 'img_1.webp', 'Beispielfoto', '["demo"]'::jsonb, $3)`, [THUB, TS, CODE]);
+ok('7b Lehrkraft postet in ihrem Hub', r.ok && r.id === 1, JSON.stringify(r));
+r = await call(`sh_home(null, $1)`, [CODE]);
+ok('7b Übersicht: Lehrkraft-Hub vorn, als „mine“', r.ok && r.mine === THUB && r.hubs[0].id === THUB && r.hubs[0].teacher_hub === true && /Lehrkraft/.test(r.hubs[0].person), JSON.stringify(r.hubs[0]));
+r = await call(`sh_register(null, $1, 'frau_t_test', 'test99', null, null, null, null, $2)`, [HUB, CODE]);
+ok('7b Lehrkraft legt Testkonto im Schüler-Hub an', r.ok);
+const TSB = r.session;
+r = await call(`sh_like(null, $1, $2, 1, true, $3)`, [HUB, TSB, CODE]);
+ok('7b … und liked dort als Nutzerin', r.ok && r.likes >= 1, JSON.stringify(r));
+r = await call(`sh_admin_users(null, $1, $2, null)`, [CODE, HUB]);
+ok('7b hinter dem Testkonto steht die Lehrkraft', /Lehrkraft/.test(r.items.find(u => u.username === 'frau_t_test').person));
+await as(null);
+r = await call(`sh_home('tokA')`);
+ok('7b Klasse sieht den Lehrkraft-Hub', r.hubs.some(h => h.id === THUB && h.teacher_hub));
+r = await call(`sh_register('tokA', $1, 'mia_bei_lk', 'geheim1')`, [THUB]);
+ok('7b Schülerin registriert sich beim Lehrkraft-Hub', r.ok);
+r = await call(`sh_enter('tokA', null, $1, $2)`, [THUB, r.session]);
+ok('7b … ist dort kein Admin', r.ok && !r.admin && !r.founder);
+r = await call(`sh_enter('tokA', null, $1, $2)`, [THUB, TS]);
+ok('7b Sitzung der Lehrkraft gilt nicht auf dem Tablet', r.ok && r.me === null);
+await as(T1);
 r = await call(`sh_hub_lock($1, $2, true)`, [CODE, HUB2]);
 ok('7  Hub sperren', r.ok);
 await as(null);
 r = await call(`sh_enter('tokB', null, $1, null)`, [HUB2]);
 ok('7  gesperrter Hub → hub_locked (auch für den Gründer)', r.error === 'hub_locked');
 r = await call(`sh_home('tokA')`);
-ok('7  gesperrter Hub fehlt in der Liste der Klasse', r.hubs.length === 1);
+ok('7  gesperrter Hub fehlt in der Liste der Klasse', !r.hubs.some(h => h.id === HUB2) && r.hubs.length === 2);
 await as(T2);
 r = await call(`sh_home(null, $1)`, [CODE]);
 ok('7  fremde Lehrkraft → not_found', r.error === 'not_found');
@@ -306,8 +338,8 @@ const rest = await one(`select (select count(*) from sh_hubs) + (select count(*)
                               + (select count(*) from sh_media) + (select count(*) from sh_sessions) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0262_socialhub.sql')); await db.exec(mig('0263_socialhub_photos_farbe.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migrationen 0262 + 0263 laufen ein zweites Mal durch', twice);
+try { await db.exec(mig('0264_socialhub_lehrkraft_hub.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migration 0264 (letzter Stand) läuft ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

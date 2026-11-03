@@ -65,6 +65,7 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .link { border: 0; background: none; padding: 0; color: var(--muted); text-decoration: underline; font-size: inherit; }
 .chip { font-size: 12px; padding: 4px 9px; border-radius: 99px; background: var(--soft2); color: var(--muted); white-space: nowrap; }
 .badge { font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 99px; background: var(--hub); color: #fff; vertical-align: middle; }
+.badge--lk, .hub-t .badge--lk { background: #f5b301; color: #1a1300; font-size: 11px; display: inline; }
 
 .form { display: flex; flex-direction: column; gap: 12px; }
 .form label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); font-weight: 600; }

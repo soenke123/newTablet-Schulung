@@ -180,7 +180,7 @@
   function hubTile(h, extra) {
     return '<button type="button" class="hub-tile' + (h.locked ? ' is-locked' : '') + '" data-hub="' + esc(h.id) + '">' +
       logoHtml(h, 'logo--tile') +
-      '<span class="hub-t"><b>' + esc(h.name) + '</b><span>' + (h.owner ? '@' + esc(h.owner) : '') + '</span>' +
+      '<span class="hub-t"><b>' + esc(h.name) + (h.teacher_hub ? ' <span class="badge badge--lk">Lehrkraft</span>' : '') + '</b><span>' + (h.owner ? '@' + esc(h.owner) : '') + '</span>' +
       '<small>' + h.users + ' Nutzer · ' + h.photos + ' Fotos</small></span>' + (extra || '') + '</button>';
   }
 
@@ -189,15 +189,16 @@
     const mine = h.mine ? h.hubs.find(x => x.id === h.mine) : null;
     const others = h.hubs.filter(x => x.id !== h.mine);
     let html = '<div class="home"><header class="home-top"><span class="brand">Social<b>Hub</b></span></header>';
-    if (T) {
-      html += teacherPanel();
-    } else if (!mine) {
-      html += '<section class="found-cta"><h1>Gründe deine eigene Plattform</h1>' +
-        '<p>Gib ihr einen Namen und ein Logo. Du bist dort Admin – die anderen können sich bei dir registrieren.</p>' +
+    // Eigener Hub – Schüler wie Lehrkraft (Migration 0264)
+    if (!mine) {
+      html += '<section class="found-cta"><h1>' + (T ? 'Dein eigener Hub' : 'Gründe deine eigene Plattform') + '</h1>' +
+        '<p>' + (T ? 'Mit allem, was die Klasse auch hat: zum Ausprobieren, Vorführen und Vergleichen. Die Klasse sieht ihn und kann sich bei dir registrieren.'
+                   : 'Gib ihr einen Namen und ein Logo. Du bist dort Admin – die anderen können sich bei dir registrieren.') + '</p>' +
         '<button type="button" class="btn btn--accent btn--big" id="btnFound">Hub gründen</button></section>';
     } else {
       html += '<section class="mine"><h2>Dein Hub</h2>' + hubTile(mine, '<span class="go">Öffnen ›</span>') + '</section>';
     }
+    if (T) html += teacherPanel();
     if (!T) {
       html += '<section><h2>Hubs in deiner Klasse</h2>' +
         (others.length ? '<div class="hub-grid">' + others.map(x => hubTile(x)).join('') + '</div>'
@@ -310,22 +311,23 @@
   /* ══ Hub betreten ══════════════════════════════════════════ */
   async function openHub(id) {
     const sess = A.session.get(id);
-    const r = await A.call('sh_enter', { p_hub: id, p_session: T ? null : sess });
+    const r = await A.call('sh_enter', { p_hub: id, p_session: sess });
     if (!r || !r.ok) { fail(r); if (r && (r.error === 'hub_not_found' || r.error === 'hub_locked')) loadHome(); return; }
     S.hub = r;
     S.session = r.session || null;
-    if (!T) A.session.set(id, S.session);
+    A.session.set(id, S.session);
     applyColor(r.hub);
     loadLogos([r.hub]);
     S.tab = 'feed';
     S.feedMode = 'foryou';
+    // Lehrkraft schaut ohne Konto zu (Admin), kann sich aber oben anmelden
     if (!r.me && !T) renderLogin('login');
     else renderHub();
   }
 
   async function refreshHub() {
     if (!S.hub) return;
-    const r = await A.call('sh_enter', { p_hub: S.hub.hub.id, p_session: T ? null : S.session });
+    const r = await A.call('sh_enter', { p_hub: S.hub.hub.id, p_session: S.session });
     if (r && r.ok) { S.hub = r; S.session = r.session || null; }
     return r;
   }
@@ -355,7 +357,8 @@
           '<p class="hint">Alles darf ausgedacht sein – und nimm kein echtes Passwort.</p>' +
           '<button class="btn btn--accent btn--big" type="submit">Konto erstellen</button></form>') +
       '</div></div>';
-    $('#back').onclick = () => loadHome();
+    // Lehrkraft kommt zurück in den Hub (sie ist dort ohnehin Admin)
+    $('#back').onclick = () => T ? renderHub() : loadHome();
     $$('.seg button').forEach(b => b.onclick = () => renderLogin(b.dataset.m));
     if ($('#lForm')) $('#lForm').onsubmit = async (e) => {
       e.preventDefault();
@@ -381,17 +384,19 @@
   function renderHub() {
     const h = S.hub;
     const nav = [['feed', IC.home, 'Start'], ['search', IC.search, 'Suche']];
-    if (!T && on('photos')) nav.push(['post', IC.plus, '']);
+    if (h.me && on('photos')) nav.push(['post', IC.plus, '']);
     if (h.me) nav.push(['profile', IC.user, 'Profil']);
     if (h.admin) nav.push(['admin', IC.shield, 'Admin']);
     app.innerHTML = '<div class="hub">' +
       '<header class="hub-top"><button class="icon-btn" id="toHome" title="Alle Hubs">' + IC.back + '</button>' +
       logoHtml(h.hub, 'logo--s') + '<b class="hub-name">' + esc(h.hub.name) + '</b>' +
-      (T ? '<span class="chip">Lehrkraft · Admin</span>' : h.me ? '<span class="chip">@' + esc(h.me.username) + '</span>' : '') + '</header>' +
+      (h.me ? '<span class="chip">@' + esc(h.me.username) + (T ? ' · Lehrkraft' : '') + '</span>'
+            : T ? '<span class="chip">Lehrkraft · Admin</span><button type="button" class="btn btn--accent btn--s" id="lkLogin">Anmelden</button>' : '') + '</header>' +
       '<main class="hub-main" id="main"></main>' +
       '<nav class="hub-nav">' + nav.map(x => '<button type="button" data-tab="' + x[0] + '" class="' + (x[0] === 'post' ? 'nav-post' : '') + (S.tab === x[0] ? ' on' : '') + '">' + x[1] + (x[2] ? '<span>' + x[2] + '</span>' : '') + '</button>').join('') + '</nav>' +
       '</div>';
     $('#toHome').onclick = () => { closeDb(); loadHome(); };
+    if ($('#lkLogin')) $('#lkLogin').onclick = () => { closeDb(); renderLogin('login'); };
     $$('.hub-nav button').forEach(b => b.onclick = () => { closeDb(); S.tab = b.dataset.tab; renderHub(); });
     const main = $('#main');
     if (S.tab === 'feed') renderFeedTab(main);
@@ -526,7 +531,7 @@
     }
 
     async function like(it, card, val) {
-      if (!S.hub.me) { toast(T ? 'Als Lehrkraft schaust du nur zu.' : 'Melde dich an, um zu liken.'); return; }
+      if (!S.hub.me) { toast(T ? 'Zum Mitmachen oben anmelden oder ein Testkonto anlegen.' : 'Melde dich an, um zu liken.'); return; }
       it.liked = val; it.likes += val ? 1 : -1;
       syncCards(it);
       const r = await hcall('sh_like', { p_photo: it.id, p_on: val });

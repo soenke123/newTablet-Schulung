@@ -128,6 +128,18 @@ try {
   }
   ok('1  Lehrkraft erstellt sechs Tabellen', (await stateOf()).tables?.length === 6, JSON.stringify(await stateOf()));
   await shot(t.page, '1-lehrkraft');
+  // 1b) Lehrkraft gründet ihren eigenen Hub
+  await t.app.locator('#btnFound').click();
+  await t.app.locator('input[name=name]').fill('Lehrerzimmer');
+  await t.app.locator('[data-logo-id="graph"]').click();
+  await t.app.locator('input[name=user]').fill('frau_test');
+  await t.app.locator('input[name=pw]').fill('lehrer1');
+  await t.app.locator('button[type=submit]').click();
+  await t.app.locator('.hub-name', { hasText: 'Lehrerzimmer' }).waitFor();
+  ok('1b Lehrkraft-Hub: angemeldet mit Posten-Knopf', await t.app.locator('.hub-top .chip', { hasText: '@frau_test' }).count() === 1
+     && await t.app.locator('[data-tab="post"]').count() === 1);
+  await t.app.locator('#toHome').click();
+  await t.app.locator('.mine .hub-tile').waitFor();
 
   // 2) Mia gründet einen Hub
   const mia = await open('tokMia');
@@ -162,6 +174,7 @@ try {
 
   // 4) Leon registriert sich bei Mia
   const leon = await open('tokLeon');
+  ok('4  Klasse sieht den Lehrkraft-Hub', await leon.app.locator('.hub-tile', { hasText: 'Lehrerzimmer' }).locator('.badge--lk').count() === 1);
   await leon.app.locator('.hub-tile', { hasText: 'Pixelwelt' }).click();
   await leon.app.locator('.seg button[data-m="reg"]').click();
   await leon.app.locator('input[name=user]').fill('leon_b');
@@ -198,7 +211,7 @@ try {
   await mia.app.locator('#bForm button.btn--accent').click();
   await mia.app.locator('.hub-nav').waitFor();
   await wait(300);
-  const hb = (await db.query(`select color, scheme from sh_hubs`)).rows[0];
+  const hb = (await db.query(`select color, scheme from sh_hubs where name = 'Pixelwelt'`)).rows[0];
   ok('5  Farbschema gespeichert (hell, Petrol)', hb.color === '#0d9488' && hb.scheme === 'light', JSON.stringify(hb));
   ok('5  Hub erscheint hell', await mia.page.frames()[1].evaluate(() => document.documentElement.getAttribute('data-scheme')) === 'light');
 
@@ -216,7 +229,7 @@ try {
   await mia.app.locator('.res--live, .res--bad').first().waitFor();
   const out = await mia.app.locator('#dbOut').textContent();
   ok('5  INSERT im Hub übernommen', /übernommen/.test(out), out.slice(0, 200));
-  const lr = await rpcAs('tokLeon', 'sh_login', { p_hub: (await db.query(`select id from sh_hubs`)).rows[0].id, p_username: 'sql_kind', p_password: 'neu123' });
+  const lr = await rpcAs('tokLeon', 'sh_login', { p_hub: (await db.query(`select id from sh_hubs where name = 'Pixelwelt'`)).rows[0].id, p_username: 'sql_kind', p_password: 'neu123' });
   ok('5  per INSERT angelegtes Konto kann sich anmelden (bcrypt im Browser)', lr.ok, JSON.stringify(lr));
   await mia.app.locator('.ed-ta').fill("INSERT INTO photos (user_id, image) VALUES (99, 'img_1.webp');");
   await mia.app.locator('#dbRun').click();
@@ -225,7 +238,7 @@ try {
   await mia.app.locator('.ed-ta').fill('DROP TABLE users;');
   await mia.app.locator('#dbRun').click();
   await mia.app.locator('.res--bad').first().waitFor();
-  ok('5  DROP TABLE gesperrt', (await db.query(`select count(*)::int n from sh_users`)).rows[0].n === 3);
+  ok('5  DROP TABLE gesperrt', (await db.query(`select count(*)::int n from sh_users u join sh_hubs h on h.id = u.hub_id where h.name = 'Pixelwelt'`)).rows[0].n === 3);
   await mia.app.locator('.db-tabs [data-t="diagram"]').click();
   await mia.app.locator('.dg-svg .dg-t').first().waitFor();
   ok('5  Klassendiagramm mit allen Tabellen', await mia.app.locator('.dg-svg .dg-t').count() === 8);
@@ -233,16 +246,28 @@ try {
 
   // 6) Lehrkraft-Übersicht
   await t.page.reload();
-  await t.app.locator('.hub-card').first().waitFor();
-  const card = await t.app.locator('.hub-card').first().textContent();
+  await t.app.locator('.hub-card', { hasText: 'Pixelwelt' }).waitFor();
+  const card = await t.app.locator('.hub-card', { hasText: 'Pixelwelt' }).textContent();
   ok('6  Übersicht zeigt Hub mit Person und Zahlen', /Pixelwelt/.test(card) && /Mia/.test(card) && /3 Nutzer/.test(card), card);
   await shot(t.page, '10-uebersicht');
-  await t.app.locator('.hub-card .hub-tile').first().click();
+  await t.app.locator('.hub-card', { hasText: 'Pixelwelt' }).locator('.hub-tile').click();
   await t.app.locator('[data-tab="admin"]').click();
   await t.app.locator('[data-at="users"]').click();
   await t.app.locator('.u-row').first().waitFor();
   ok('6  Lehrkraft sieht, wer hinter den Konten steckt', /Leon/.test(await t.app.locator('.u-list').textContent()));
   await shot(t.page, '11-nutzer');
+  // Lehrkraft legt im Schüler-Hub ein Testkonto an und liked
+  await t.app.locator('#lkLogin').click();
+  await t.app.locator('.seg button[data-m="reg"]').click();
+  await t.app.locator('input[name=user]').fill('frau_test_b');
+  await t.app.locator('input[name=pw]').fill('test99');
+  await t.app.locator('#rForm button[type=submit]').click();
+  await t.app.locator('.hub-top .chip', { hasText: '@frau_test_b' }).waitFor();
+  await t.app.locator('[data-tab="feed"]').click();
+  await t.app.locator('[data-act="like"]').first().click();
+  await wait(500);
+  ok('6  Lehrkraft liked mit Testkonto im Schüler-Hub', (await db.query(`select count(*)::int n from sh_likes`)).rows[0].n === 2);
+  await shot(t.page, '12-lehrkraft-testkonto');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);
