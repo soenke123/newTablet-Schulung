@@ -2381,10 +2381,9 @@
     });
     root.querySelector('[data-k="pclass"]').hidden = tab !== 'class';
     root.querySelector('[data-k="pown"]').hidden = tab !== 'own';
-    root.querySelector('[data-k="tabsr"]').innerHTML = tab === 'class'
-      ? `<button type="button" class="dg-ib dg-ib--txt" data-tact="togglelist">${listHidden ? 'Liste zeigen' : 'Liste ausblenden'}</button>`
-      : '';
-    root.querySelector('.dg-pane-class').classList.toggle('is-nolist', listHidden);
+    root.querySelector('[data-k="tabsr"]').innerHTML = '';
+    // Liste schmal: nur Kürzel der Namen, der Vergleich bekommt die Breite (gemerkt im Gerät)
+    root.querySelector('.dg-pane-class').classList.toggle('is-mini', listHidden);
     if (tab === 'own' && !ed) openOwn();
     if (tab === 'class') requestAnimationFrame(() => Object.values(panes).forEach(p => p.cv && p.autofit && p.cv.fit()));
   }
@@ -2460,11 +2459,25 @@
     const c = root.querySelector('[data-k="count"]');
     const nShared = classList.filter(x => x.shared).length;
     if (c) c.textContent = classList.length ? `(${nShared}/${classList.length})` : '';
-    if (!classList.length) {
-      el.innerHTML = `<p class="dg-list-empty">Noch keine Diagramme. Sobald die Klasse zeichnet, stehen sie hier.</p>`;
+    const fold = `<button type="button" class="dg-fold" data-tact="togglelist" title="${listHidden ? 'Liste aufklappen' : 'Liste schmal machen'}" aria-expanded="${!listHidden}">`
+      + `<svg viewBox="0 0 24 24"><path d="${listHidden ? 'M9 6l6 6-6 6' : 'M15 6l-6 6 6 6'}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>`;
+    if (listHidden) {
+      // Schmal: je Person ein Kreis mit Kürzel; geteilt = antippbar, sonst grau (antippen = anfragen)
+      const ini = n => String(n || '?').trim().split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
+      el.innerHTML = fold + classList.map(it => {
+        const i = picked.indexOf(it.participant);
+        const st = it.shared ? '' : it.ask === 'open' ? ' · angefragt' : it.ask === 'declined' ? ' · abgelehnt' : ' · nicht geteilt';
+        return it.shared
+          ? `<button type="button" class="dg-li dg-mini${i >= 0 ? ' is-on' : ''}" data-pp="${esc(it.participant)}" title="${esc(it.person)}${it.title ? ' – ' + esc(it.title) : ''}">${esc(ini(it.person))}${i >= 0 ? `<span class="dg-li-n">${i + 1}</span>` : ''}</button>`
+          : `<button type="button" class="dg-mini is-locked"${it.ask === 'open' ? ' disabled' : ` data-ask="${esc(it.participant)}"`} title="${esc(it.person)}${st}">${esc(ini(it.person))}</button>`;
+      }).join('');
       return;
     }
-    el.innerHTML = `<p class="dg-list-h">Geteilte antippen = vorne zeigen · bis zu zwei nebeneinander</p>`
+    if (!classList.length) {
+      el.innerHTML = `<div class="dg-list-top">${fold}</div><p class="dg-list-empty">Noch keine Diagramme. Sobald die Klasse zeichnet, stehen sie hier.</p>`;
+      return;
+    }
+    el.innerHTML = `<div class="dg-list-top"><p class="dg-list-h">Geteilte antippen = vorne zeigen · bis zu zwei nebeneinander</p>${fold}</div>`
       + classList.map(it => {
         if (!it.shared) {
           // Nicht geteilt: nur Name und Art, dazu Anfragen
@@ -2595,7 +2608,7 @@
     const b = t.closest('[data-tact]');
     if (!b) return;
     const a = b.dataset.tact;
-    if (a === 'togglelist') { listHidden = !listHidden; paintTabs(); setTimeout(() => Object.values(panes).forEach(p => p.autofit && p.cv.fit()), 60); return; }
+    if (a === 'togglelist') { listHidden = !listHidden; jset('dg.listmini', listHidden); paintTabs(); paintList(); setTimeout(() => Object.values(panes).forEach(p => p.autofit && p.cv.fit()), 60); return; }
     const pane = b.closest('.dg-cmp');
     const id = pane && pane.dataset.pp;
     const p = id && panes[id];
@@ -2671,7 +2684,7 @@
       demo = !!(ctx && ctx.preview);
       mode = (demo || ctx.role === 'presenter') ? 'presenter' : 'participant';
       ed = null; kind = null; loaded = false; saveT = null; saving = false; dirty = false; lastErr = '';
-      tab = 'class'; classList = []; picked = []; panes = {}; pollT = null; listHidden = false; ownKey = null;
+      tab = 'class'; classList = []; picked = []; panes = {}; pollT = null; listHidden = !!jget('dg.listmini', false); ownKey = null;
       pShared = false; pAsk = null; tInfo = null; pollMT = null; tShare = null; modalOpen = false; demoAsks = {};
       demoT0 = Date.now();
       if (demo) picked = ['d1', 'd2'];

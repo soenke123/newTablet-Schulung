@@ -119,7 +119,7 @@ Wirkungsgefüge die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr T
   `dg_class_ask`; „angefragt …“ / „abgelehnt“ → „erneut fragen“, höchstens alle 30 s). Geteilte bis zu
   zwei antippen → nebeneinander (Split Screen), `dg_class_get` nur bei neuem `rev`; läuft live mit,
   solange niemand in der Ansicht selbst zoomt/verschiebt („Alles zeigen“ schaltet das Mitführen wieder
-  ein). „Liste ausblenden“ für den Beamer. Reiter „Mein Diagramm“: eigener Editor im Gerät
+  ein). Pfeil oben in der Liste macht sie schmal (54 px, nur Kreise mit Kürzeln: geteilt antippbar mit Nummer, nicht geteilt grau gestrichelt = anfragen; `localStorage dg.listmini`), der Vergleich bekommt die Breite. Reiter „Mein Diagramm“: eigener Editor im Gerät
   (`localStorage dg.own.<code>`); oben „Mit Klasse teilen“ (Rückfrage) → Schnappschuss per
   `dg_class_share` in `dg_shared`; danach „Mit Klasse geteilt“ · „Neu geben“ (jetziger Stand, rev + 1, die
   Tablets werden wieder gefragt) · „Zurücknehmen“ (`dg_class_unshare`; geöffnete Kopien bleiben).
