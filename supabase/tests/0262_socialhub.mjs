@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262–0268 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
+/* Prüfstand für Migration 0262–0269 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -370,7 +370,7 @@ await call(`sh_media_put(null, $1, $2, $3, $3, 'image/webp', $4)`, [THUB, TS, PN
 r = await call(`sh_photo_post(null, $1, $2, 'img_1.webp', 'Beispielfoto', '["demo"]'::jsonb, '{"camera":"Testkamera","lat":53.5,"lon":10}'::jsonb, $3)`, [THUB, TS, CODE]);
 ok('7b Lehrkraft postet in ihrem Netzwerk', r.ok && r.id === 1, JSON.stringify(r));
 ok('7c Metadaten aus (Standard): nichts gespeichert (0268)', r.ok && Object.keys(r.meta).length === 0
-   && (await one(`select count(*)::int n from sh_photos where hub_id = $1 and (camera is not null or latitude is not null or taken_at is not null)`, [THUB])).n === 0, JSON.stringify(r));
+   && (await one(`select count(*)::int n from sh_photos where hub_id = $1 and (camera is not null or taken_at is not null)`, [THUB])).n === 0, JSON.stringify(r));
 {
   await as(T1);
   const st = (await one(`select data from skill_room_state where room_id = $1`, [ROOM])).data || {};
@@ -378,15 +378,16 @@ ok('7c Metadaten aus (Standard): nichts gespeichert (0268)', r.ok && Object.keys
   await call(`sh_media_put(null, $1, $2, $3, $3, 'image/webp', $4)`, [THUB, TS, PNG, CODE]);
   const META = { taken_at: '2026-10-12 14:32:05', camera: 'Apple iPhone 13', lat: 53.5510849, lon: 9.9936818 };
   r = await call(`sh_photo_post(null, $1, $2, 'img_2.webp', 'Mit Metadaten', '[]'::jsonb, $3::jsonb, $4)`, [THUB, TS, JSON.stringify(META), CODE]);
-  const row = await one(`select to_char(taken_at at time zone 'Europe/Berlin', 'YYYY-MM-DD HH24:MI:SS') t, camera, latitude::text la, longitude::text lo
+  const row = await one(`select to_char(taken_at at time zone 'Europe/Berlin', 'YYYY-MM-DD HH24:MI:SS') t, camera
                            from sh_photos where hub_id = $1 and id = $2`, [THUB, r.id]);
-  ok('7c Metadaten an: Zeit, Kamera, GPS gespeichert (0268)', r.ok && row.t === META.taken_at && row.camera === 'Apple iPhone 13' && row.la === '53.551085' && row.lo === '9.993682', JSON.stringify(row));
+  ok('7c Metadaten an: Zeit und Kamera gespeichert, Ort nicht (0268/0269)', r.ok && row.t === META.taken_at && row.camera === 'Apple iPhone 13' && !('lat' in r.meta) && !('latitude' in r.meta), JSON.stringify([row, r.meta]));
+  ok('7c photos hat keine Spalten latitude/longitude (0269)', (await one(`select count(*)::int n from information_schema.columns where table_name = 'sh_photos' and column_name in ('latitude','longitude')`)).n === 0);
   r = await call(`sh_feed(null, $1, $2, $3)`, [CODE, THUB, TS]);
   const it = r.items && r.items.find(x => x.description === 'Mit Metadaten');
-  ok('7c Feed liefert camera/latitude/longitude/taken_at', it && it.camera === 'Apple iPhone 13' && Number(it.latitude) === 53.551085 && it.taken_at, JSON.stringify(it));
+  ok('7c Feed liefert camera/taken_at, keinen Ort', it && it.camera === 'Apple iPhone 13' && it.taken_at && !('latitude' in it), JSON.stringify(it));
   r = await call(`sh_db_snapshot(null, $1, $2, $3)`, [CODE, THUB, TS]);
-  ok('7c Schnappschuss: photos mit taken_at, camera, latitude, longitude',
-     r.ok && r.tables.photos.cols.join() === 'id,user_id,image,description,taken_at,camera,latitude,longitude,created_at'
+  ok('7c Schnappschuss: photos mit taken_at, camera',
+     r.ok && r.tables.photos.cols.join() === 'id,user_id,image,description,taken_at,camera,created_at'
      && r.tables.photos.rows.some(x => x[5] === 'Apple iPhone 13' && x[4] === META.taken_at), JSON.stringify(r.tables && r.tables.photos));
   await call(`sh_media_put(null, $1, $2, $3, $3, 'image/webp', $4)`, [THUB, TS, PNG, CODE]);
   const BAD = { taken_at: '1850-01-01 00:00', camera: '<script>' + 'x'.repeat(100), lat: 123, lon: 'abc' };
@@ -394,10 +395,10 @@ ok('7c Metadaten aus (Standard): nichts gespeichert (0268)', r.ok && Object.keys
   ok('7c falsche Metadaten fallen still weg, Posten klappt', r.ok && Object.keys(r.meta).length === 0, JSON.stringify(r));
   r = await call(`sh_photo_post(null, $1, $2, 'img_3.webp', 'Kein Objekt', '[]'::jsonb, '[1,2]'::jsonb, $3)`, [THUB, TS, CODE]);
   ok('7c Metadaten als Liste → ignoriert', r.ok && Object.keys(r.meta).length === 0, JSON.stringify(r));
-  r = await call(`sh_db_apply(null, $1, $2, $3, $4::jsonb)`, [CODE, THUB, TS, JSON.stringify([{ t: 'photos', op: 'update', key: { id: 2 }, row: { id: 2, latitude: 1.5, camera: 'Geändert' } }])]);
-  ok('7c UPDATE photos SET latitude/camera per SQL', r.ok && (await one(`select camera from sh_photos where hub_id = $1 and id = 2`, [THUB])).camera === 'Geändert', JSON.stringify(r));
-  r = await call(`sh_db_apply(null, $1, $2, $3, $4::jsonb)`, [CODE, THUB, TS, JSON.stringify([{ t: 'photos', op: 'update', key: { id: 2 }, row: { id: 2, latitude: 95 } }])]);
-  ok('7c latitude außerhalb ±90 → CHECK', r.error === 'db_rejected' && r.state === '23514', JSON.stringify(r));
+  r = await call(`sh_db_apply(null, $1, $2, $3, $4::jsonb)`, [CODE, THUB, TS, JSON.stringify([{ t: 'photos', op: 'update', key: { id: 2 }, row: { id: 2, camera: 'Geändert' } }])]);
+  ok('7c UPDATE photos SET camera per SQL', r.ok && (await one(`select camera from sh_photos where hub_id = $1 and id = 2`, [THUB])).camera === 'Geändert', JSON.stringify(r));
+  r = await call(`sh_db_apply(null, $1, $2, $3, $4::jsonb)`, [CODE, THUB, TS, JSON.stringify([{ t: 'photos', op: 'update', key: { id: 2 }, row: { id: 2, camera: 'x'.repeat(81) } }])]);
+  ok('7c camera länger als 80 → CHECK', r.error === 'db_rejected' && r.state === '23514', JSON.stringify(r));
 }
 r = await call(`sh_home(null, $1)`, [CODE]);
 ok('7b Übersicht: Netzwerk der Lehrkraft vorn, als „mine“', r.ok && r.mine === THUB && r.hubs[0].id === THUB && r.hubs[0].teacher_hub === true && r.hubs[0].mine === true && /Lehrkraft/.test(r.hubs[0].person), JSON.stringify(r.hubs[0]));
@@ -449,8 +450,8 @@ const rest = await one(`select (select count(*) from sh_hubs) + (select count(*)
                               + (select count(*) from sh_media) + (select count(*) from sh_sessions) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migrationen 0265–0268 laufen ein zweites Mal durch', twice);
+try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migrationen 0265–0269 laufen ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

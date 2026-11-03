@@ -106,7 +106,7 @@ const shot = (page, name) => page.screenshot({ path: path.join(SHOTS, name + '.p
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 // Testbild: buntes PNG, 1600×1200
-// JPEG mit EXIF (Kamera, Zeit, GPS) wie vom Handy – für Migration 0268
+// JPEG mit EXIF (Kamera, Zeit, GPS) wie vom Handy – 0268; den Ort liest die App seit 0269 nicht
 async function makeJpegExif(page) {
   const jpg = Buffer.from(await page.evaluate(async () => {
     const c = document.createElement('canvas'); c.width = 1600; c.height = 1200;
@@ -265,7 +265,7 @@ try {
   await mia.app.locator('#pGo:not([disabled])').waitFor();
   ok('3  Kamera-Foto übernommen (4:5 zugeschnitten)', /\((\d+)×(\d+)\)/.test(await mia.app.locator('#pInfo').textContent()));
   const camMeta = await mia.app.locator('#pMeta').textContent();
-  ok('3  Kamera-Foto: „Wird mitgespeichert“ mit Zeit und Kamera, Ort fehlt', /Wird mitgespeichert/.test(camMeta) && /\d{2}\.\d{2}\.\d{4}/.test(camMeta) && /Ortnicht in der Datei/.test(camMeta), camMeta);
+  ok('3  Kamera-Foto: „Wird mitgespeichert“ mit Zeit und Kamera, ohne Ort', /Wird mitgespeichert/.test(camMeta) && /\d{2}\.\d{2}\.\d{4}/.test(camMeta) && !/Ort/.test(camMeta), camMeta);
   await mia.app.locator('#pNew').click();
   // Datei wählen → Zuschneiden öffnet gleich; Abbrechen = ganzes Bild
   await mia.app.locator('#pFile').setInputFiles({ name: 'hafen.jpg', mimeType: 'image/jpeg', buffer: await makeJpegExif(mia.page) });
@@ -286,7 +286,7 @@ try {
   await mia.app.locator('.ph--crop [data-ph="ok"]').click();
   await mia.app.locator('#pInfo', { hasText: 'Fertig' }).waitFor();
   const fileMeta = await mia.app.locator('#pMeta').textContent();
-  ok('3  JPEG vom Handy: Zeit, Kamera und GPS aus EXIF gelesen', /12\.10\.2026, 14:32/.test(fileMeta) && /Apple iPhone 13/.test(fileMeta) && /53\.5510[89], 9\.99368/.test(fileMeta), fileMeta);
+  ok('3  JPEG vom Handy: Zeit und Kamera aus EXIF, GPS nicht', /12\.10\.2026, 14:32/.test(fileMeta) && /Apple iPhone 13/.test(fileMeta) && !/53\.55|Ort/.test(fileMeta), fileMeta);
   await shot(mia.page, '3c-metadaten');
   const dim = /\((\d+)×(\d+)\)/.exec(await mia.app.locator('#pInfo').textContent());
   ok('3  zugeschnitten: quadratisch und kleiner', dim && dim[1] === dim[2] && +dim[1] < 1080, dim && dim[0]);
@@ -296,8 +296,9 @@ try {
   await mia.app.locator('.prof-h').waitFor();
   const m = (await db.query(`select octet_length(data) d, octet_length(thumb) t, mime from sh_media`)).rows[0];
   ok('3  Bild beim Server ≤ 250 KB, Vorschau ≤ 40 KB', m && m.d <= 250000 && m.t <= 40000, JSON.stringify(m));
-  const pm = (await db.query(`select to_char(taken_at at time zone 'Europe/Berlin', 'YYYY-MM-DD HH24:MI:SS') t, camera, latitude::float la, longitude::float lo from sh_photos order by id desc limit 1`)).rows[0];
-  ok('3  Metadaten in photos gespeichert', pm.t === '2026-10-12 14:32:05' && pm.camera === 'Apple iPhone 13' && Math.abs(pm.la - 53.551085) < 1e-5 && Math.abs(pm.lo - 9.993682) < 1e-5, JSON.stringify(pm));
+  const pm = (await db.query(`select to_char(taken_at at time zone 'Europe/Berlin', 'YYYY-MM-DD HH24:MI:SS') t, camera from sh_photos order by id desc limit 1`)).rows[0];
+  ok('3  Aufnahmezeit und Kamera in photos gespeichert', pm.t === '2026-10-12 14:32:05' && pm.camera === 'Apple iPhone 13', JSON.stringify(pm));
+  ok('3  photos hat keine Spalten für den Ort (0269)', (await db.query(`select count(*)::int n from information_schema.columns where table_name = 'sh_photos' and column_name in ('latitude','longitude')`)).rows[0].n === 0);
   ok('3  Tags gespeichert', (await db.query(`select count(*)::int n from sh_photo_tag`)).rows[0].n === 2);
   await mia.app.locator('.g-img.img-ok').waitFor();
 

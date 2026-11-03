@@ -91,7 +91,7 @@
   }
   const fail = r => toast(A.errText(r), true);
 
-  // Metadaten eines Fotos (0268): Zeitpunkt, Kamera, Ort
+  // Metadaten eines Fotos (0268/0269): Zeitpunkt, Kamera
   const pad2 = x => String(x).padStart(2, '0');
   const localStamp = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
   function metaWhen(v) {
@@ -101,7 +101,6 @@
     return isNaN(d) ? '' : d.toLocaleString('de-DE', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' },
                                                                      local ? {} : { timeZone: 'Europe/Berlin' }));
   }
-  const metaGeo = (la, lo) => Number(la).toFixed(5) + ', ' + Number(lo).toFixed(5);
   const metaOn = () => A.state.meta === true;
 
   function ago(iso) {
@@ -133,7 +132,6 @@
     image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5.5-5 4 3.5 2.5-2 4 3.5"/></svg>',
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3"/></svg>',
     code: '<svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>',
-    pin: '<svg viewBox="0 0 24 24"><path d="M12 21.5s-6.5-6.2-6.5-11.5a6.5 6.5 0 0 1 13 0c0 5.3-6.5 11.5-6.5 11.5z"/><circle cx="12" cy="10" r="2.4"/></svg>',
     clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
     camera: '<svg viewBox="0 0 24 24"><path d="M4.5 7.5h3l1.5-2.5h6l1.5 2.5h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V9a1.5 1.5 0 0 1 1.5-1.5z"/><circle cx="12" cy="13" r="3.5"/></svg>',
     crop: '<svg viewBox="0 0 24 24"><path d="M6.5 2.5v14a1 1 0 0 0 1 1h14M2.5 6.5h14a1 1 0 0 1 1 1v14"/></svg>',
@@ -323,7 +321,7 @@
       '</section>';
     html += '<section class="panel"><div class="panel-h"><h2>Tabellen für alle Netzwerke</h2>' +
       '<div class="panel-sw"><label class="switch switch--s"><input type="checkbox" id="upTgl"' + (h.upload ? ' checked' : '') + '><span></span>Eigene Bilder hochladen</label>' +
-        '<label class="switch switch--s" title="Zeit, Kamera und Ort aus den Fotos mitspeichern (steht dann in photos)"><input type="checkbox" id="metaTgl"' + (metaOn() ? ' checked' : '') + '><span></span>Metadaten der Fotos speichern</label></div></div>' +
+        '<label class="switch switch--s" title="Aufnahmezeit und Kamera aus den Fotos mitspeichern (steht dann in photos)"><input type="checkbox" id="metaTgl"' + (metaOn() ? ' checked' : '') + '><span></span>Metadaten der Fotos speichern</label></div></div>' +
       '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums. Antippen zeigt die Attribute.</p>' +
       tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
     return html;
@@ -474,8 +472,8 @@
     $('#upTgl').onchange = (e) => save(cur(), e.target.checked);
     $('#metaTgl').onchange = async (e) => {
       if (e.target.checked && await dialog('Metadaten speichern',
-        '<p>Ab jetzt speichern alle Netzwerke dieses Raums bei neuen Fotos <b>Aufnahmezeit, Kamera und – falls in der Datei – den GPS-Ort</b> (Spalten <code>taken_at</code>, <code>camera</code>, <code>latitude</code>, <code>longitude</code> in <code>photos</code>).</p>' +
-        '<p class="muted small">Die Klasse sieht beim Posten, was mitgespeichert wird. Ein Ort kann zeigen, wo jemand wohnt – am besten Fotos aus der Schule nehmen. Ausschalten speichert nichts Neues mehr; Gespeichertes löscht ihr per SQL oder mit dem Foto.</p>',
+        '<p>Ab jetzt speichern alle Netzwerke dieses Raums bei neuen Fotos <b>Aufnahmezeit und Kamera</b> (Spalten <code>taken_at</code> und <code>camera</code> in <code>photos</code>). Den Ort speichert YourSozialNet nie.</p>' +
+        '<p class="muted small">Die Klasse sieht beim Posten, was mitgespeichert wird. Ausschalten speichert nichts Neues mehr; Gespeichertes löscht ihr per SQL oder mit dem Foto.</p>',
         [['no', 'Abbrechen'], ['yes', 'Einschalten', 'accent']]) !== 'yes') { e.target.checked = false; return; }
       save(cur(), S.home.upload, { meta: e.target.checked });
     };
@@ -1182,13 +1180,12 @@
     const showMeta = () => {
       const box = $('#pMeta', main);
       $('#pHint', main).textContent = 'Keine Fotos von anderen Personen ohne deren Erlaubnis. Das Bild wird verkleinert' +
-        (metaOn() ? '. Dieses Netzwerk speichert Aufnahmezeit, Kamera und Ort deines Fotos mit.' : ', Ort und Kameradaten werden entfernt.');
+        (metaOn() ? '. Dieses Netzwerk speichert Aufnahmezeit und Kamera deines Fotos mit.' : ', Ort und Kameradaten werden entfernt.');
       if (!metaOn() || !meta) { box.hidden = true; return; }
       const row = (ic, k, v) => '<li>' + ic + '<span>' + k + '</span><b' + (v ? '' : ' class="muted"') + '>' + esc(v || 'nicht in der Datei') + '</b></li>';
       box.innerHTML = '<b>Wird mitgespeichert</b><ul>' +
         row(IC.clock, 'Aufgenommen', meta.taken_at ? metaWhen(meta.taken_at) : '') +
-        row(IC.camera, 'Kamera', meta.camera) +
-        row(IC.pin, 'Ort', meta.lat != null ? metaGeo(meta.lat, meta.lon) : '') + '</ul>';
+        row(IC.camera, 'Kamera', meta.camera) + '</ul>';
       box.hidden = false;
     };
     S.onMeta = showMeta;

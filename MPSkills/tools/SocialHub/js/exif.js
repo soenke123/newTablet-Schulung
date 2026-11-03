@@ -1,15 +1,14 @@
 /* ══════════════════════════════════════════════════════════════
    YourSozialNet — js/exif.js   ·   Metadaten aus einem Foto lesen
    ══════════════════════════════════════════════════════════════
-   SHExif.read(file) → { taken_at, camera, lat, lon } (fehlendes fehlt)
+   SHExif.read(file) → { taken_at, camera } (fehlendes fehlt)
    Liest die EXIF-Daten einer JPEG-Datei (APP1 „Exif“) oder eines
    WebP (Chunk „EXIF“), bevor das Bild neu gezeichnet wird – danach
    sind sie weg. Gebraucht für die Einheit „Was Social Media alles
-   mitnimmt“ (Migration 0268, Raum-Schalter data.meta).
+   mitnimmt“ (Migration 0268/0269, Raum-Schalter data.meta).
      taken_at  DateTimeOriginal (sonst DateTime) als „JJJJ-MM-TT HH:MM:SS“
      camera    Make + Model, z. B. „Apple iPhone 13“
-     lat/lon   GPS in Grad (Dezimal), Süd/West negativ
-   Handys und Browser entfernen den Ort beim Hochladen oft selbst.
+   Den GPS-Ort liest es bewusst nicht (seit 0269 nicht gespeichert).
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -64,7 +63,6 @@
 
     const i0 = ifd(u32(4));
     const ex = i0[0x8769] ? ifd(i0[0x8769]) : {};
-    const gps = i0[0x8825] ? ifd(i0[0x8825]) : {};
     const r = {};
 
     const t = ex[0x9003] || ex[0x9004] || i0[0x0132];
@@ -77,13 +75,6 @@
     const cam = (make + ' ' + model).trim();
     if (cam) r.camera = cam.slice(0, 80);
 
-    const deg = v => Array.isArray(v) && v.length >= 1 ? (v[0] || 0) + (v[1] || 0) / 60 + (v[2] || 0) / 3600 : null;
-    let la = deg(gps[2]), lo = deg(gps[4]);
-    if (la != null && lo != null && isFinite(la) && isFinite(lo) && (la || lo)) {
-      if (/S/i.test(gps[1] || '')) la = -la;
-      if (/W/i.test(gps[3] || '')) lo = -lo;
-      if (Math.abs(la) <= 90 && Math.abs(lo) <= 180) { r.lat = Math.round(la * 1e6) / 1e6; r.lon = Math.round(lo * 1e6) / 1e6; }
-    }
     return r;
   }
 

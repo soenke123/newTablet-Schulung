@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  const V = '20261103h';
+  const V = '20261103i';
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const DDL = {
@@ -50,8 +50,6 @@
   description TEXT,
   taken_at DATETIME,
   camera VARCHAR(80),
-  latitude DECIMAL(9,6) CHECK (latitude BETWEEN -90 AND 90),
-  longitude DECIMAL(9,6) CHECK (longitude BETWEEN -180 AND 180),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );`,
