@@ -118,6 +118,9 @@
           const cv = document.createElement('canvas');
           cv.width = v.videoWidth; cv.height = v.videoHeight;
           cv.getContext('2d').drawImage(v, 0, 0);
+          // Was das Gerät dazu weiß (Metadaten, 0268): Name der Kamera, Zeitpunkt
+          const tr = stream && stream.getVideoTracks()[0];
+          cv.shMeta = { camera: ((tr && tr.label) || 'Kamera im Browser').slice(0, 80), at: new Date() };
           done(cv);
         }
       });

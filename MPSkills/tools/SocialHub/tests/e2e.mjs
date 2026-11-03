@@ -106,17 +106,42 @@ const shot = (page, name) => page.screenshot({ path: path.join(SHOTS, name + '.p
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
 // Testbild: buntes PNG, 1600×1200
-async function makePng(page) {
-  return await page.evaluate(async () => {
+// JPEG mit EXIF (Kamera, Zeit, GPS) wie vom Handy – für Migration 0268
+async function makeJpegExif(page) {
+  const jpg = Buffer.from(await page.evaluate(async () => {
     const c = document.createElement('canvas'); c.width = 1600; c.height = 1200;
-    const x = c.getContext('2d');
-    const g = x.createLinearGradient(0, 0, 1600, 1200); g.addColorStop(0, '#ff6a3d'); g.addColorStop(1, '#3d7bff');
-    x.fillStyle = g; x.fillRect(0, 0, 1600, 1200);
-    for (let i = 0; i < 400; i++) { x.fillStyle = `hsl(${i * 7},80%,60%)`; x.beginPath(); x.arc(Math.random() * 1600, Math.random() * 1200, Math.random() * 40, 0, 7); x.fill(); }
-    x.fillStyle = '#fff'; x.font = 'bold 160px sans-serif'; x.fillText('Sonne!', 520, 640);
-    const b = await new Promise(r => c.toBlob(r, 'image/png'));
+    const x = c.getContext('2d'); x.fillStyle = '#2a9d8f'; x.fillRect(0, 0, 1600, 1200);
+    x.fillStyle = '#fff'; x.font = 'bold 160px sans-serif'; x.fillText('Hafen', 560, 640);
+    const b = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
     return Array.from(new Uint8Array(await b.arrayBuffer()));
+  }));
+  // TIFF big-endian: IFD0 (Make, Model, ExifIFD, GPS) · Exif (DateTimeOriginal) · GPS
+  const asc = s => Buffer.from(s + '\0', 'latin1');
+  const rat = v => { const b = Buffer.alloc(v.length * 8); v.forEach((n, i) => { b.writeUInt32BE(Math.round(n * 10000), i * 8); b.writeUInt32BE(10000, i * 8 + 4); }); return b; };
+  const dms = d => { const a = Math.floor(d), m = Math.floor((d - a) * 60); return [a, m, ((d - a) * 60 - m) * 60]; };
+  const ifds = [
+    [[0x010F, 2, asc('Apple')], [0x0110, 2, asc('iPhone 13')], [0x8769, 4, 1], [0x8825, 4, 2]],
+    [[0x9003, 2, asc('2026:10:12 14:32:05')]],
+    [[1, 2, asc('N')], [2, 5, rat(dms(53.5510849))], [3, 2, asc('E')], [4, 5, rat(dms(9.9936818))]]
+  ];
+  const size = l => 2 + l.length * 12 + 4;
+  const off = [8]; ifds.forEach((l, i) => { if (i) off.push(off[i - 1] + size(ifds[i - 1])); });
+  let dataAt = off.at(-1) + size(ifds.at(-1));
+  const parts = [Buffer.from([0x4D, 0x4D, 0, 42, 0, 0, 0, 8])], extra = [];
+  ifds.forEach(l => {
+    const b = Buffer.alloc(size(l)); b.writeUInt16BE(l.length, 0);
+    l.forEach(([tag, type, v], i) => {
+      const e = 2 + i * 12; b.writeUInt16BE(tag, e); b.writeUInt16BE(type, e + 2);
+      if (type === 4) { b.writeUInt32BE(1, e + 4); b.writeUInt32BE(off[v], e + 8); return; }
+      b.writeUInt32BE(type === 5 ? v.length / 8 : v.length, e + 4);
+      if (v.length <= 4) v.copy(b, e + 8); else { b.writeUInt32BE(dataAt, e + 8); extra.push(v); dataAt += v.length; }
+    });
+    parts.push(b);
   });
+  const tiff = Buffer.concat(parts.concat(extra));
+  const app1 = Buffer.concat([Buffer.from([0xFF, 0xE1, 0, 0]), Buffer.from('Exif\0\0', 'latin1'), tiff]);
+  app1.writeUInt16BE(app1.length - 2, 2);
+  return Buffer.concat([jpg.subarray(0, 2), app1, jpg.subarray(2)]);
 }
 
 try {
@@ -130,6 +155,12 @@ try {
     await t.app.locator(`[data-tdrop="${id}"]`).waitFor();
   }
   ok('1  Lehrkraft erstellt fünf Tabellen, comment_likes gibt es nicht', (await stateOf()).tables?.length === 5 && await t.app.locator('[data-tb="comment_likes"]').count() === 0, JSON.stringify(await stateOf()));
+  // Metadaten der Fotos speichern (0268): mit Rückfrage
+  await t.app.locator('#metaTgl').evaluate(el => el.click());
+  await t.app.locator('[data-dlg="yes"]').click();
+  await t.app.locator('#metaTgl:checked').waitFor({ state: 'attached' });
+  for (let i = 0; i < 50 && (await stateOf()).meta !== true; i++) await new Promise(r => setTimeout(r, 100));
+  ok('1  Lehrkraft schaltet „Metadaten der Fotos speichern“ ein', (await stateOf()).meta === true, JSON.stringify(await stateOf()));
   await t.app.locator('[data-tb="users"]').click();
   ok('1  Antippen zeigt die Attribute (mit gender)', /gender/.test(await t.app.locator('#tdgInfo').textContent()));
   ok('1  Linien im Diagramm: 9, rechtwinklig, mit n und 1', await t.app.locator('.tdg-lines path.on').count() === 9 && await t.app.locator('.tdg-lines text.on').count() === 18, String(await t.app.locator('.tdg-lines path').count()));
@@ -202,10 +233,10 @@ try {
   await mia.app.locator('input[name=pw]').fill('geheim1');
   await mia.app.locator('input[name=pw2]').fill('geheim2');
   // Rückmeldung 2: ein Zustandswechsel im Raum darf das Formular nicht wegwerfen
-  await t.app.locator('label.switch').click();
+  await t.app.locator('label.switch:has(#upTgl)').click();
   await wait(2600);
   ok('2  Formular bleibt bei Zustandswechsel stehen', await mia.app.locator('input[name=pw]').inputValue() === 'geheim1');
-  await t.app.locator('label.switch').click();
+  await t.app.locator('label.switch:has(#upTgl)').click();
   await wait(1800);
   await shot(mia.page, '2c-admin-konto');
   await mia.app.locator('#rForm button[type=submit]').click();
@@ -221,7 +252,6 @@ try {
   ok('2  country und centimeter gespeichert', mc.country === 'Deutschland' && mc.centimeter === 158, JSON.stringify(mc));
 
   // 3) Foto posten (wird verkleinert)
-  const png = await makePng(mia.page);
   await mia.app.locator('[data-tab="post"]').click();
   // Kamera: Bild im Browser aufnehmen (Chromium mit Test-Kamera)
   await mia.app.locator('#pCam').click();
@@ -234,9 +264,11 @@ try {
   await mia.app.locator('.ph--crop [data-ph="ok"]').click();
   await mia.app.locator('#pGo:not([disabled])').waitFor();
   ok('3  Kamera-Foto übernommen (4:5 zugeschnitten)', /\((\d+)×(\d+)\)/.test(await mia.app.locator('#pInfo').textContent()));
+  const camMeta = await mia.app.locator('#pMeta').textContent();
+  ok('3  Kamera-Foto: „Wird mitgespeichert“ mit Zeit und Kamera, Ort fehlt', /Wird mitgespeichert/.test(camMeta) && /\d{2}\.\d{2}\.\d{4}/.test(camMeta) && /Ortnicht in der Datei/.test(camMeta), camMeta);
   await mia.app.locator('#pNew').click();
   // Datei wählen → Zuschneiden öffnet gleich; Abbrechen = ganzes Bild
-  await mia.app.locator('#pFile').setInputFiles({ name: 'sonne.png', mimeType: 'image/png', buffer: Buffer.from(png) });
+  await mia.app.locator('#pFile').setInputFiles({ name: 'hafen.jpg', mimeType: 'image/jpeg', buffer: await makeJpegExif(mia.page) });
   await mia.app.locator('.ph--crop').waitFor();
   await mia.app.locator('.ph--crop [data-ph="no"]').click();
   await mia.app.locator('#pGo:not([disabled])').waitFor();
@@ -253,6 +285,9 @@ try {
   await shot(mia.page, '3b-zuschneiden');
   await mia.app.locator('.ph--crop [data-ph="ok"]').click();
   await mia.app.locator('#pInfo', { hasText: 'Fertig' }).waitFor();
+  const fileMeta = await mia.app.locator('#pMeta').textContent();
+  ok('3  JPEG vom Handy: Zeit, Kamera und GPS aus EXIF gelesen', /12\.10\.2026, 14:32/.test(fileMeta) && /Apple iPhone 13/.test(fileMeta) && /53\.5510[89], 9\.99368/.test(fileMeta), fileMeta);
+  await shot(mia.page, '3c-metadaten');
   const dim = /\((\d+)×(\d+)\)/.exec(await mia.app.locator('#pInfo').textContent());
   ok('3  zugeschnitten: quadratisch und kleiner', dim && dim[1] === dim[2] && +dim[1] < 1080, dim && dim[0]);
   await mia.app.locator('textarea[name=d]').fill('Sonnenuntergang am See');
@@ -261,6 +296,8 @@ try {
   await mia.app.locator('.prof-h').waitFor();
   const m = (await db.query(`select octet_length(data) d, octet_length(thumb) t, mime from sh_media`)).rows[0];
   ok('3  Bild beim Server ≤ 250 KB, Vorschau ≤ 40 KB', m && m.d <= 250000 && m.t <= 40000, JSON.stringify(m));
+  const pm = (await db.query(`select to_char(taken_at at time zone 'Europe/Berlin', 'YYYY-MM-DD HH24:MI:SS') t, camera, latitude::float la, longitude::float lo from sh_photos order by id desc limit 1`)).rows[0];
+  ok('3  Metadaten in photos gespeichert', pm.t === '2026-10-12 14:32:05' && pm.camera === 'Apple iPhone 13' && Math.abs(pm.la - 53.551085) < 1e-5 && Math.abs(pm.lo - 9.993682) < 1e-5, JSON.stringify(pm));
   ok('3  Tags gespeichert', (await db.query(`select count(*)::int n from sh_photo_tag`)).rows[0].n === 2);
   await mia.app.locator('.g-img.img-ok').waitFor();
 
@@ -279,6 +316,8 @@ try {
   await mia.app.locator('.card').first().waitFor();
   ok('4  normaler User: kein Adminbereich', await mia.app.locator('[data-view="admin"]').count() === 0);
   await mia.app.locator('.card-img.img-ok').first().waitFor();
+  const ex = await mia.app.locator('.card .m-exif').first().textContent();
+  ok('4  Post zeigt Aufnahmezeit (deutsche Zeit), Kamera und Ort', /12\.10\.2026, 14:32/.test(ex) && /Apple iPhone 13/.test(ex) && /53\.5510/.test(ex), ex);
   await shot(mia.page, '4-feed');
   await mia.app.locator('.card').first().click({ position: { x: 300, y: 250 } });
   await wait(100);

@@ -91,6 +91,26 @@
   }
   const fail = r => toast(A.errText(r), true);
 
+  // Metadaten eines Fotos (0268): Zeitpunkt, Kamera, Ort
+  const pad2 = x => String(x).padStart(2, '0');
+  const localStamp = d => d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()) + ':' + pad2(d.getSeconds());
+  function metaWhen(v) {
+    // „JJJJ-MM-TT HH:MM:SS“ aus der Datei = Ortszeit wie sie dasteht; vom Server mit Zeitzone → deutsche Zeit
+    const local = typeof v === 'string' && /^\d{4}-\d{2}-\d{2} /.test(v);
+    const d = local ? new Date(v.replace(' ', 'T')) : new Date(v);
+    return isNaN(d) ? '' : d.toLocaleString('de-DE', Object.assign({ day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' },
+                                                                     local ? {} : { timeZone: 'Europe/Berlin' }));
+  }
+  const metaGeo = (la, lo) => Number(la).toFixed(5) + ', ' + Number(lo).toFixed(5);
+  function metaLine(it) {
+    const p = [];
+    if (it.taken_at) p.push('<span>' + IC.clock + esc(metaWhen(it.taken_at)) + '</span>');
+    if (it.camera) p.push('<span>' + IC.camera + esc(it.camera) + '</span>');
+    if (it.latitude != null && it.longitude != null) p.push('<span>' + IC.pin + esc(metaGeo(it.latitude, it.longitude)) + '</span>');
+    return p.length ? '<div class="m-exif">' + p.join('') + '</div>' : '';
+  }
+  const metaOn = () => A.state.meta === true;
+
   function ago(iso) {
     const t = Date.parse(iso);
     if (isNaN(t)) return '';
@@ -120,6 +140,8 @@
     image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5.5-5 4 3.5 2.5-2 4 3.5"/></svg>',
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3"/></svg>',
     code: '<svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>',
+    pin: '<svg viewBox="0 0 24 24"><path d="M12 21.5s-6.5-6.2-6.5-11.5a6.5 6.5 0 0 1 13 0c0 5.3-6.5 11.5-6.5 11.5z"/><circle cx="12" cy="10" r="2.4"/></svg>',
+    clock: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>',
     camera: '<svg viewBox="0 0 24 24"><path d="M4.5 7.5h3l1.5-2.5h6l1.5 2.5h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V9a1.5 1.5 0 0 1 1.5-1.5z"/><circle cx="12" cy="13" r="3.5"/></svg>',
     crop: '<svg viewBox="0 0 24 24"><path d="M6.5 2.5v14a1 1 0 0 0 1 1h14M2.5 6.5h14a1 1 0 0 1 1 1v14"/></svg>',
     thumb: '<svg viewBox="0 0 24 24"><path d="M2.5 10.5h3.6v10H2.5zM7.6 20.5V10.2l4.3-7c.4-.7 1.3-1 2.1-.6.8.4 1.2 1.3 1 2.1L14 9h5.3c1.6 0 2.7 1.5 2.3 3l-1.9 7c-.3 1-1.2 1.5-2.2 1.5z"/></svg>',
@@ -307,7 +329,8 @@
         : '<p class="muted">Noch keine Netzwerke. Sobald die Klasse im Raum ist, erstellt jede Person ihr eigenes.</p>') +
       '</section>';
     html += '<section class="panel"><div class="panel-h"><h2>Tabellen für alle Netzwerke</h2>' +
-      '<label class="switch switch--s"><input type="checkbox" id="upTgl"' + (h.upload ? ' checked' : '') + '><span></span>Eigene Bilder hochladen</label></div>' +
+      '<div class="panel-sw"><label class="switch switch--s"><input type="checkbox" id="upTgl"' + (h.upload ? ' checked' : '') + '><span></span>Eigene Bilder hochladen</label>' +
+        '<label class="switch switch--s" title="Zeit, Kamera und Ort aus den Fotos mitspeichern (steht dann in photos)"><input type="checkbox" id="metaTgl"' + (metaOn() ? ' checked' : '') + '><span></span>Metadaten der Fotos speichern</label></div></div>' +
       '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums. Antippen zeigt die Attribute.</p>' +
       tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
     return html;
@@ -430,8 +453,8 @@
   }
 
   function wireTeacher() {
-    const save = async (tables, upload) => {
-      const next = Object.assign({}, A.state, { tables, upload });
+    const save = async (tables, upload, extra) => {
+      const next = Object.assign({}, A.state, { tables, upload }, extra || {});
       const r = await A.setData(next);
       if (!r || r.ok === false) { fail(r); return; }
       await loadHome();
@@ -456,6 +479,13 @@
     const wireInfo = () => { if ($('#tiClose')) $('#tiClose').onclick = () => { S.tblSel = null; $$('[data-tb]').forEach(x => x.classList.remove('tb--sel')); $('#tdgInfo').innerHTML = ''; }; };
     wireInfo();
     $('#upTgl').onchange = (e) => save(cur(), e.target.checked);
+    $('#metaTgl').onchange = async (e) => {
+      if (e.target.checked && await dialog('Metadaten speichern',
+        '<p>Ab jetzt speichern alle Netzwerke dieses Raums bei neuen Fotos <b>Aufnahmezeit, Kamera und – falls in der Datei – den GPS-Ort</b> (Spalten <code>taken_at</code>, <code>camera</code>, <code>latitude</code>, <code>longitude</code> in <code>photos</code>).</p>' +
+        '<p class="muted small">Die Klasse sieht beim Posten, was mitgespeichert wird. Ein Ort kann zeigen, wo jemand wohnt – am besten Fotos aus der Schule nehmen. Ausschalten speichert nichts Neues mehr; Gespeichertes löscht ihr per SQL oder mit dem Foto.</p>',
+        [['no', 'Abbrechen'], ['yes', 'Einschalten', 'accent']]) !== 'yes') { e.target.checked = false; return; }
+      save(cur(), S.home.upload, { meta: e.target.checked });
+    };
     $$('[data-lock]').forEach(b => b.onclick = async () => {
       const r = await A.call('sh_hub_lock', { p_hub: b.dataset.lock, p_locked: b.dataset.v === '1' });
       if (!r.ok) fail(r); else loadHome();
@@ -783,6 +813,7 @@
       '<div class="meta"><button type="button" class="m-user" data-act="profile">@' + esc(it.user.username) + '</button>' +
         '<span class="m-time">· ' + esc(ago(it.created_at)) + '</span>' +
         (it.description ? '<p class="m-desc">' + esc(it.description) + '</p>' : '') +
+        metaLine(it) +
         (it.tags && it.tags.length ? '<div class="m-tags">' + it.tags.map(t => '<button type="button" data-tag="' + esc(t) + '">#' + esc(t) + '</button>').join('') + '</div>' : '') +
       '</div></article>';
   }
@@ -1140,6 +1171,7 @@
     }
     let pic = null;      // verkleinert, fertig zum Hochladen
     let orig = null;     // Original (zum erneuten Zuschneiden)
+    let meta = null;     // Metadaten aus Datei/Kamera (0268), gesendet nur bei data.meta
     main.innerHTML = '<form class="post form" id="pForm">' +
       '<div class="pick" id="pick">' + IC.image + '<span>Foto wählen oder aufnehmen</span>' +
         '<div class="pick-src"><label class="btn btn--accent">' + IC.image + 'Foto wählen<input type="file" accept="image/*" id="pFile" hidden></label>' +
@@ -1150,9 +1182,25 @@
       '<div class="pick-info muted small" id="pInfo"></div>' +
       '<textarea name="d" maxlength="300" rows="3" placeholder="Beschreibe dein Foto …"></textarea>' +
       (on('tags') ? '<input name="t" placeholder="#hashtags, z. B. #natur #sommer" autocapitalize="off">' : '') +
-      '<p class="hint">Keine Fotos von anderen Personen ohne deren Erlaubnis. Das Bild wird verkleinert, Ort und Kameradaten werden entfernt.</p>' +
+      '<div class="pick-meta" id="pMeta" hidden></div>' +
+      '<p class="hint" id="pHint"></p>' +
       '<button class="btn btn--accent btn--big" id="pGo" disabled>Posten</button></form>';
     const pickHtml = $('#pick', main).innerHTML;
+    // Was mitgespeichert wird (nur wenn die Lehrkraft es eingeschaltet hat)
+    const showMeta = () => {
+      const box = $('#pMeta', main);
+      $('#pHint', main).textContent = 'Keine Fotos von anderen Personen ohne deren Erlaubnis. Das Bild wird verkleinert' +
+        (metaOn() ? '. Dieses Netzwerk speichert Aufnahmezeit, Kamera und Ort deines Fotos mit.' : ', Ort und Kameradaten werden entfernt.');
+      if (!metaOn() || !meta) { box.hidden = true; return; }
+      const row = (ic, k, v) => '<li>' + ic + '<span>' + k + '</span><b' + (v ? '' : ' class="muted"') + '>' + esc(v || 'nicht in der Datei') + '</b></li>';
+      box.innerHTML = '<b>Wird mitgespeichert</b><ul>' +
+        row(IC.clock, 'Aufgenommen', meta.taken_at ? metaWhen(meta.taken_at) : '') +
+        row(IC.camera, 'Kamera', meta.camera) +
+        row(IC.pin, 'Ort', meta.lat != null ? metaGeo(meta.lat, meta.lon) : '') + '</ul>';
+      box.hidden = false;
+    };
+    S.onMeta = showMeta;
+    showMeta();
     // Bild (zugeschnitten oder nicht) verkleinern und zeigen
     const use = async (src, before) => {
       $('#pInfo', main).textContent = 'wird verkleinert …';
@@ -1166,8 +1214,10 @@
       } catch (e) { $('#pInfo', main).textContent = ''; toast(e.message, true); }
     };
     // neues Bild: gleich zuschneiden (Abbrechen = ganzes Bild)
-    const take = async (src, before) => {
+    const take = async (src, before, m) => {
       orig = { src, before };
+      meta = m || (src && src.shMeta ? { taken_at: localStamp(src.shMeta.at), camera: src.shMeta.camera } : {});
+      showMeta();
       const c = await window.SHPhoto.crop(src, { start: 0.8 });
       await use(c || src, c ? null : before);
     };
@@ -1175,7 +1225,8 @@
       const fl = inp.files[0];
       inp.value = '';
       if (!fl) return;
-      try { await take(await M.decode(fl), fl.size); } catch (e) { toast(e.message, true); }
+      const m = window.SHExif ? await window.SHExif.read(fl) : {};
+      try { await take(await M.decode(fl), fl.size, m); } catch (e) { toast(e.message, true); }
     };
     const wirePick = () => {
       const file = $('#pFile', main);
@@ -1194,7 +1245,8 @@
       if (c) use(c, null);
     };
     $('#pNew', main).onclick = () => {
-      pic = null; orig = null;
+      pic = null; orig = null; meta = null;
+      showMeta();
       $('#pick', main).innerHTML = pickHtml;
       $('#pick', main).classList.remove('pick--img');
       $('#pActs', main).hidden = true;
@@ -1211,7 +1263,8 @@
       if (!up || !up.ok) { fail(up); $('#pGo', main).disabled = false; return; }
       M.prime(S.hub.hub.id, up.name, pic.preview);
       const tags = f.t ? (f.t.value.match(/[#]?[\wäöüß]+/gi) || []).map(x => x.replace(/^#/, '').toLowerCase()) : [];
-      const r = await hcall('sh_photo_post', { p_image: up.name, p_description: f.d.value.trim() || null, p_tags: tags });
+      const r = await hcall('sh_photo_post', { p_image: up.name, p_description: f.d.value.trim() || null, p_tags: tags,
+                                               p_meta: metaOn() && meta ? meta : null });
       if (!r || !r.ok) { fail(r); $('#pGo', main).disabled = false; return; }
       toast('Gepostet!');
       S.tab = 'profile';
@@ -1255,6 +1308,7 @@
   let firstState = true;
   A.onState(async () => {
     if (firstState) { firstState = false; return; }
+    if (S.onMeta && $('#pMeta')) S.onMeta();       // Hinweis beim Posten, ohne das Formular neu zu zeichnen
     if (S.screen === 'hub' && S.hub) {
       const prev = JSON.stringify([S.hub.tables, S.hub.upload]);
       await refreshHub();

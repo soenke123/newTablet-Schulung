@@ -5,7 +5,9 @@
    höchstens ~250 KB an. Längste Seite 1080 px, WebP (Safari ohne
    WebP-Encoder: JPEG), Qualität sinkt schrittweise. Dazu eine
    Vorschau mit 320 px. Weil das Bild neu gezeichnet wird, fallen
-   alle Metadaten weg (GPS-Ort, Kamera, Zeitpunkt).
+   alle Metadaten weg (GPS-Ort, Kamera, Zeitpunkt) – wer sie
+   behalten soll (Raum-Schalter data.meta, 0268), liest sie vorher mit
+   js/exif.js aus und schickt sie getrennt an sh_photo_post.
 
    Media.url(hub, name, thumb): holt Bilder gebündelt (12 je Aufruf)
    über sh_media_get und merkt sie als blob:-Adresse (CSP: img-src

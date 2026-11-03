@@ -107,7 +107,7 @@
     unknown_token: 'Dieser Raum gehört nicht mehr zu diesem Gerät. Lade die Seite neu.',
     network: 'Keine Verbindung – bitte gleich noch einmal.',
     no_room: 'YourSozialNet läuft nur in einem MPSkills-Raum.',
-    fn_missing: 'Der Server kennt diese Funktion noch nicht (Migrationen 0262–0265 fehlen).'
+    fn_missing: 'Der Server kennt diese Funktion noch nicht (Migrationen 0262–0268 fehlen).'
   };
   const errText = (r) => (r && (r.message || ERR[r.error])) || 'Das hat nicht geklappt (' + ((r && r.error) || '?') + ').';
 

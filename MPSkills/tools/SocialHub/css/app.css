@@ -360,6 +360,11 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .m-user { border: 0; background: none; padding: 0; color: #fff; font: 700 16px var(--font-display); }
 .m-time { font-size: 13px; opacity: .8; margin-left: 4px; }
 .m-desc { margin: 4px 0 0; font-size: 15px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+/* Metadaten am Post (0268) */
+.m-exif { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 6px; }
+.m-exif span { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px; border-radius: 999px;
+  background: rgba(0,0,0,.45); font-size: 12px; font-variant-numeric: tabular-nums; }
+.m-exif svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; }
 .m-tags { display: flex; flex-wrap: wrap; gap: 4px 10px; margin-top: 4px; }
 .m-tags button { border: 0; background: none; padding: 0; color: #fff; font-weight: 700; font-size: 15px; }
 .feed-mark { height: 64px; scroll-snap-align: start; display: grid; place-items: center; color: var(--muted); font-size: 13px; background: var(--bg); }
@@ -543,6 +548,13 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .pick-src { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .pick-src .btn { gap: 8px; }
 .pick-src .btn svg { font-size: 20px; }
+.pick-meta { border: 1px solid var(--line, rgba(127,127,127,.3)); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.pick-meta ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.pick-meta li { display: grid; grid-template-columns: 18px 96px 1fr; align-items: center; gap: 6px; }
+.pick-meta li svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; opacity: .75; }
+.pick-meta li b { font-weight: 600; overflow-wrap: anywhere; }
+.pick-meta li b.muted { font-weight: 400; }
+.panel-sw { display: flex; gap: 8px 16px; flex-wrap: wrap; }
 .pick-acts { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
 .pick { cursor: default; text-align: center; padding: 14px; }
 .pick > span { font-weight: 600; }
