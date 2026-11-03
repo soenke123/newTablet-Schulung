@@ -1196,7 +1196,7 @@
       this.snap();
       [e.a, e.b] = [e.b, e.a];
       [e.m1, e.m2] = [e.m2, e.m1];
-      cv.render();
+      cv.render(); this.showCtx(cv.sel);
       return this.changed();
     }
     if (a === 'loop') {
@@ -1297,21 +1297,56 @@
           + kinds.map(t => `<button type="button" class="dg-et${e.type === t ? ' is-on' : ''}" data-act="etype" data-t="${t}" title="${esc(EDGE_HINT[t] || EDGE_LABEL[t])}"><svg viewBox="0 0 24 12">${EDGE_ICON[t]}</svg><span>${EDGE_LABEL[t]}</span></button>`).join('')
           + '</div><span class="dg-csep"></span>';
       }
-      if (e.type !== 'branch') {
-        h += `<input class="dg-ein" data-ef="l" maxlength="80" placeholder="Beschriftung" value="${esc(e.l || '')}"/>`;
-      }
-      if (cv.doc.kind === 'klasse' && ['assoc', 'directed', 'aggr', 'comp'].includes(e.type)) {
-        h += `<input class="dg-ein dg-ein--m" data-ef="m1" maxlength="12" placeholder="1" title="Anzahl am Anfang" value="${esc(e.m1 || '')}"/>`
-          + `<input class="dg-ein dg-ein--m" data-ef="m2" maxlength="12" placeholder="0..*" title="Anzahl am Ende" value="${esc(e.m2 || '')}"/>`;
-      }
       if (e.type !== 'branch' && e.type !== 'line' && e.type !== 'assoc' && e.type !== 'link') {
-        h += `<button type="button" class="dg-cb" data-act="flip" title="Richtung umdrehen">${ICON.swap}</button>`;
+        h += `<button type="button" class="dg-cb" data-act="flip" title="Richtung umdrehen">${ICON.swap}<span>umdrehen</span></button>`;
       }
       h += `<span class="dg-csep"></span><button type="button" class="dg-cb dg-cb--del" data-act="del" title="Löschen (Entf)">${ICON.trash}</button>`;
+      if (e.type !== 'branch') h += edgeForm(e, cv);
     }
     box_.innerHTML = h;
     box_.hidden = false;
   };
+
+  /* Die Verbindung als kleine Skizze, immer von links (Anfang) nach
+     rechts (Ende), mit den Namen der beiden Bausteine. Die Felder
+     stehen dort, wo ihr Text später am Pfeil steht: Beschriftung über
+     der Mitte, Anzahlen (UML) an den beiden Enden. */
+  const PV_END = {
+    effect: '<path d="M1 1L13 6 1 11Z" fill="currentColor"/>', arrow: '<path d="M1 1L13 6 1 11Z" fill="currentColor"/>',
+    directed: '<path d="M1 1L13 6 1 11" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+    dep: '<path d="M1 1L13 6 1 11" fill="none" stroke="currentColor" stroke-width="1.8"/>',
+    inherit: '<path d="M1 1L13 6 1 11Z" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>'
+  };
+  const PV_START = {
+    aggr: '<path d="M1 6L7 1.5 13 6 7 10.5Z" fill="var(--surface)" stroke="currentColor" stroke-width="1.6"/>',
+    comp: '<path d="M1 6L7 1.5 13 6 7 10.5Z" fill="currentColor" stroke="currentColor" stroke-width="1.6"/>'
+  };
+  function edgeForm(e, cv) {
+    const name = id => {
+      const n = cv.node(id);
+      const t = n ? (n.type === 'object' && n.k ? (n.t || '') + ' : ' + n.k : (n.t || '').split('\n')[0]) : '';
+      return t.trim() || '…';
+    };
+    const mult = cv.doc.kind === 'klasse' && ['assoc', 'directed', 'aggr', 'comp'].includes(e.type);
+    const ph = { effect: 'z. B. fördert', inherit: '', assoc: 'z. B. besitzt', directed: 'z. B. kennt',
+                 aggr: 'z. B. hat', comp: 'z. B. besteht aus', link: 'z. B. fährt', dep: 'z. B. benutzt' }[e.type] || 'Beschriftung';
+    const svg = (m, cls) => m ? `<svg class="${cls}" viewBox="0 0 14 12">${m}</svg>` : '';
+    return `<div class="dg-epv">
+        <span class="dg-epv-n" title="Anfang">${esc(name(e.a))}</span>
+        <div class="dg-epv-mid">
+          <div class="dg-epv-row">
+            ${mult ? `<input class="dg-ein dg-ein--m" data-ef="m1" maxlength="12" placeholder="1" title="Anzahl am Anfang" value="${esc(e.m1 || '')}"/>` : '<span></span>'}
+            <input class="dg-ein dg-ein--l" data-ef="l" maxlength="80" placeholder="${esc(ph)}" title="Beschriftung" value="${esc(e.l || '')}"/>
+            ${mult ? `<input class="dg-ein dg-ein--m" data-ef="m2" maxlength="12" placeholder="0..*" title="Anzahl am Ende" value="${esc(e.m2 || '')}"/>` : '<span></span>'}
+          </div>
+          <div class="dg-epv-line${e.type === 'dep' ? ' is-dash' : ''}">
+            ${svg(PV_START[e.type], 'dg-epv-h')}<i></i>${e.type === 'effect'
+              ? `<b class="dg-epv-s ${e.s === '-' ? 'is-m' : 'is-p'}">${e.s === '-' ? '−' : '+'}</b><i></i>` : ''}${svg(PV_END[e.type], 'dg-epv-h')}
+          </div>
+        </div>
+        <span class="dg-epv-n" title="Ende">${esc(name(e.b))}</span>
+      </div>`;
+  }
 
   let ctxSnapT = 0;
   Editor.prototype.ctxInput = function (inp) {

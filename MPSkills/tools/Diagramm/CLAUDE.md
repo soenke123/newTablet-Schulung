@@ -41,6 +41,9 @@ Löschen bzw. Art der Verbindung, +/−, Beschriftung, Multiplizitäten. Mindmap
 Nachbar, „Ordnen“ (`layoutMindmap`). Wirkungsgefüge: +/− auf dem Pfeil antippen dreht um,
 „Kreisläufe“ (`findLoops`, gerade Zahl an − = verstärkend R, ungerade = ausgleichend B). PNG-Export.
 Die zuletzt gewählte Verbindungsart gilt für die nächste neue Verbindung.
+Verbindung gewählt → unten eine **Skizze des Pfeils** (`edgeForm`): immer Anfang links, Ende rechts, mit
+den Namen der beiden Bausteine; Beschriftung über der Mitte, Anzahlen (UML) an den Enden, beim
+Wirkungsgefüge das +/− auf der Linie — die Felder stehen dort, wo ihr Text am Pfeil landet.
 
 ## Raum
 

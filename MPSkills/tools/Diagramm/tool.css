@@ -201,6 +201,39 @@
   background: var(--surface-2); color: var(--ink);
 }
 .dg-ein--m { width: 62px; text-align: center; }
+
+/* Skizze der Verbindung mit den Feldern an ihrem Platz (edgeForm) */
+.dg-epv {
+  flex-basis: 100%;
+  display: grid; grid-template-columns: auto minmax(220px, 380px) auto; justify-content: center;
+  align-items: end; gap: 8px;
+  padding: 6px 4px 2px;
+  border-top: 1px solid var(--line);
+}
+.dg-epv-n {
+  max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 700; font-size: .85rem;
+  padding: 5px 10px; margin-bottom: -4px;
+  border: 1.5px solid var(--ink-soft); border-radius: 6px;
+  background: var(--surface-2);
+}
+.dg-epv-mid { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dg-epv-row { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; }
+.dg-epv-row .dg-ein { padding: 4px 6px; font-size: .85rem; }
+.dg-ein--l { width: auto; min-width: 0; text-align: center; }
+.dg-epv-line { display: flex; align-items: center; color: var(--dg-line); height: 20px; }
+.dg-epv-line i { flex: 1; border-top: 2px solid currentColor; }
+.dg-epv-line.is-dash i { border-top-style: dashed; }
+.dg-epv-h { width: 18px; height: 15px; flex: none; }
+.dg-epv-s {
+  flex: none; display: grid; place-items: center;
+  width: 20px; height: 20px; border-radius: 50%;
+  color: #fff; font-weight: 800; font-size: 15px; line-height: 1;
+}
+.dg-epv-s.is-p { background: #16a34a; }
+.dg-epv-s.is-m { background: #dc2626; }
+.dg-epv-line .dg-epv-h:first-child { margin-right: -1px; }
+.dg-epv-line .dg-epv-h:last-child { margin-left: -1px; }
 .dg-ein:focus { outline: none; border-color: var(--accent); }
 
 /* Text bearbeiten: Kasten am Baustein */
