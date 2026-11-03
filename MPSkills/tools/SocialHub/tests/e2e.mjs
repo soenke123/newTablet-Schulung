@@ -121,11 +121,12 @@ try {
   // 1) Lehrkraft erstellt Tabellen
   const t = await open('teacher', { width: 1100, height: 800 });
   await t.app.locator('text=Tabellen für alle Hubs').waitFor();
-  for (const id of ['follows', 'likes', 'comments', 'comment_likes', 'tags']) {
+  ok('1  ohne photos: likes erst nach photos', await t.app.locator('[data-tadd="likes"][disabled]').count() === 1);
+  for (const id of ['photos', 'follows', 'likes', 'comments', 'comment_likes', 'tags']) {
     await t.app.locator(`[data-tadd="${id}"]`).click();
     await t.app.locator(`[data-tdrop="${id}"]`).waitFor();
   }
-  ok('1  Lehrkraft erstellt fünf Tabellen', (await stateOf()).tables?.length === 5, JSON.stringify(await stateOf()));
+  ok('1  Lehrkraft erstellt sechs Tabellen', (await stateOf()).tables?.length === 6, JSON.stringify(await stateOf()));
   await shot(t.page, '1-lehrkraft');
 
   // 2) Mia gründet einen Hub
@@ -188,6 +189,18 @@ try {
   await leon.app.locator('[data-act="follow"]').first().click();
   await wait(400);
   ok('4  Folgen über das Plus', (await db.query(`select count(*)::int n from sh_follows`)).rows[0].n === 1);
+
+  // 5a) Mia: Farbschema im Admin-Bereich
+  await mia.app.locator('[data-tab="admin"]').click();
+  await mia.app.locator('[data-sc="light"]').click();
+  await mia.app.locator('[data-col="#0d9488"]').click();
+  await shot(mia.page, '8a-farbschema');
+  await mia.app.locator('#bForm button.btn--accent').click();
+  await mia.app.locator('.hub-nav').waitFor();
+  await wait(300);
+  const hb = (await db.query(`select color, scheme from sh_hubs`)).rows[0];
+  ok('5  Farbschema gespeichert (hell, Petrol)', hb.color === '#0d9488' && hb.scheme === 'light', JSON.stringify(hb));
+  ok('5  Hub erscheint hell', await mia.page.frames()[1].evaluate(() => document.documentElement.getAttribute('data-scheme')) === 'light');
 
   // 5) Mia: Datenbank-Reiter
   await mia.app.locator('[data-tab="admin"]').click();

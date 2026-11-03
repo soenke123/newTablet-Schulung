@@ -29,13 +29,20 @@
     like:    { name: 'Like',     color: '#7c3aed' },
     mesh:    { name: 'Netz',     color: '#16a34a' }
   };
+  // users gibt es immer; alles andere erstellt die Lehrkraft (Migration 0263).
   const TABLES = [
+    { id: 'photos',        what: 'Fotos posten, Feed' },
     { id: 'follows',       what: 'Folgen, Follower, Feed „Folge ich“' },
-    { id: 'likes',         what: 'Herz an Fotos, „Für dich“ lernt mit' },
-    { id: 'comments',      what: 'Kommentare unter Fotos' },
+    { id: 'likes',         what: 'Herz an Fotos, „Für dich“ lernt mit', needs: 'photos' },
+    { id: 'comments',      what: 'Kommentare unter Fotos', needs: 'photos' },
     { id: 'comment_likes', what: 'Herzen an Kommentaren', needs: 'comments' },
-    { id: 'tags',          what: 'Hashtags (mit photo_tag)' }
+    { id: 'tags',          what: 'Hashtags (mit photo_tag)', needs: 'photos' }
   ];
+  const NEEDS = {};
+  TABLES.forEach(t => { if (t.needs) NEEDS[t.id] = t.needs; });
+  // alles, was (auch über Umwege) an t hängt
+  const dependents = t => TABLES.filter(x => { for (let n = NEEDS[x.id]; n; n = NEEDS[n]) if (n === t) return true; return false; }).map(x => x.id);
+  const SWATCHES = ['#fe2c55', '#e91d77', '#7c3aed', '#2563eb', '#0ea5e9', '#0d9488', '#16a34a', '#ca8a04', '#ea580c', '#dc2626', '#64748b'];
 
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const $ = (s, el) => (el || document).querySelector(s);
@@ -122,9 +129,12 @@
       if (S.hub && S.hub.hub.id === h.id) applyColor(h);
     }
   }
+  // Akzentfarbe: gewählt (h.color) oder aus dem Logo; Schema hell/dunkel je Hub
   function applyColor(h) {
-    const c = (h && (h.logo === 'custom' ? S.color[h.id] : LOGOS[h.logo] && LOGOS[h.logo].color)) || '#fe2c55';
+    const c = (h && (h.color || (h.logo === 'custom' ? S.color[h.id] : LOGOS[h.logo] && LOGOS[h.logo].color))) || '#fe2c55';
     document.documentElement.style.setProperty('--hub', c);
+    if (h && h.scheme === 'light') document.documentElement.setAttribute('data-scheme', 'light');
+    else document.documentElement.removeAttribute('data-scheme');
   }
 
   /* ── Bilder in einem Bereich nachladen ─────────────────── */
@@ -156,6 +166,7 @@
     S.home = r;
     S.hub = null;
     document.documentElement.style.removeProperty('--hub');
+    document.documentElement.removeAttribute('data-scheme');
     renderHome();
     loadLogos(r.hubs);
   }
@@ -204,15 +215,14 @@
     const tabs = S.home.tables;
     const up = S.home.upload;
     let html = '<section class="panel"><h2>Tabellen für alle Hubs</h2>' +
-      '<p class="muted">users und photos gibt es immer. Jede weitere Tabelle, die du erstellst, bringt ihre Funktion in alle Hubs dieses Raums.</p>' +
-      '<div class="tbl-list"><div class="tbl is-on is-fixed"><code>users</code><span>Konten, Profile, Anmelden</span><em>immer da</em></div>' +
-      '<div class="tbl is-on is-fixed"><code>photos</code><span>Fotos posten, Feed</span><em>immer da</em></div>';
+      '<p class="muted">users gibt es immer. Jede weitere Tabelle, die du erstellst, bringt ihre Funktion in alle Hubs dieses Raums.</p>' +
+      '<div class="tbl-list"><div class="tbl is-on is-fixed"><code>users</code><span>Konten, Profile, Anmelden</span><em>immer da</em></div>';
     for (const t of TABLES) {
       const isOn = tabs.indexOf(t.id) >= 0;
       const blocked = t.needs && tabs.indexOf(t.needs) < 0;
       html += '<div class="tbl' + (isOn ? ' is-on' : '') + '"><code>' + esc(t.id) + (t.id === 'tags' ? ' + photo_tag' : '') + '</code><span>' + esc(t.what) + '</span>' +
         (isOn ? '<button type="button" class="btn btn--ghost btn--s" data-tdrop="' + t.id + '">Entfernen</button>'
-              : '<button type="button" class="btn btn--accent btn--s" data-tadd="' + t.id + '"' + (blocked ? ' disabled title="Erst comments erstellen"' : '') + '>Erstellen</button>') +
+              : '<button type="button" class="btn btn--accent btn--s" data-tadd="' + t.id + '"' + (blocked ? ' disabled title="Erst ' + t.needs + ' erstellen"' : '') + '>Erstellen</button>') +
         '</div>';
     }
     html += '</div><label class="switch"><input type="checkbox" id="upTgl"' + (up ? ' checked' : '') + '><span></span>Eigene Bilder hochladen erlaubt</label>' +
@@ -237,13 +247,16 @@
       if (!r || r.ok === false) { fail(r); return; }
       await loadHome();
     };
-    $$('[data-tadd]').forEach(b => b.onclick = () => save(S.home.tables.filter(t => t !== 'users' && t !== 'photos' && t !== 'photo_tag').concat(b.dataset.tadd), S.home.upload));
+    // Liste wie in data.tables (ohne users/photo_tag, die ergeben sich)
+    const cur = () => S.home.tables.filter(t => t !== 'users' && t !== 'photo_tag');
+    $$('[data-tadd]').forEach(b => b.onclick = () => save(cur().concat(b.dataset.tadd), S.home.upload));
     $$('[data-tdrop]').forEach(b => b.onclick = () => {
-      let next = S.home.tables.filter(t => t !== 'users' && t !== 'photos' && t !== 'photo_tag' && t !== b.dataset.tdrop);
-      if (b.dataset.tdrop === 'comments') next = next.filter(t => t !== 'comment_likes');
-      save(next, S.home.upload);
+      const gone = [b.dataset.tdrop].concat(dependents(b.dataset.tdrop));
+      const also = gone.slice(1).filter(t => S.home.tables.indexOf(t) >= 0);
+      if (also.length && !confirm('Damit verschwinden auch: ' + also.join(', ') + '. Weiter?')) return;
+      save(cur().filter(t => gone.indexOf(t) < 0), S.home.upload);
     });
-    $('#upTgl').onchange = (e) => save(S.home.tables.filter(t => t !== 'users' && t !== 'photos' && t !== 'photo_tag'), e.target.checked);
+    $('#upTgl').onchange = (e) => save(cur(), e.target.checked);
     $$('[data-lock]').forEach(b => b.onclick = async (e) => {
       e.stopPropagation();
       const r = await A.call('sh_hub_lock', { p_hub: b.dataset.lock, p_locked: b.dataset.v === '1' });
@@ -368,7 +381,7 @@
   function renderHub() {
     const h = S.hub;
     const nav = [['feed', IC.home, 'Start'], ['search', IC.search, 'Suche']];
-    if (!T) nav.push(['post', IC.plus, '']);
+    if (!T && on('photos')) nav.push(['post', IC.plus, '']);
     if (h.me) nav.push(['profile', IC.user, 'Profil']);
     if (h.admin) nav.push(['admin', IC.shield, 'Admin']);
     app.innerHTML = '<div class="hub">' +
@@ -440,6 +453,12 @@
       const r = await hcall('sh_feed', { p_mode: opts.mode, p_arg: opts.arg == null ? null : String(opts.arg), p_offset: offset, p_limit: LIM, p_seed: seed });
       loading = false;
       if (!r || !r.ok) { fail(r); return; }
+      if (r.off) {
+        list.innerHTML = '<div class="feed-empty">' + IC.image + '<p>Fotos gibt es hier noch nicht – die Tabelle <code>photos</code> fehlt.</p>' +
+          (S.hub.me ? '<p class="small">Du kannst dir schon ein Profil einrichten' + (on('follows') ? ' und anderen folgen' : '') + '.</p>' : '') + '</div>';
+        finished = true;
+        return;
+      }
       if (!r.items.length && offset === 0) {
         if (!items.length) list.innerHTML = '<div class="feed-empty">' + IC.image + '<p>' +
           (opts.mode === 'following' ? 'Hier erscheinen Fotos von dir und von Leuten, denen du folgst.' : 'Noch keine Fotos. Poste das erste!') + '</p></div>';
@@ -634,7 +653,7 @@
         (r.me ? '<button type="button" class="btn btn--ghost" id="pEdit">Profil bearbeiten</button><button type="button" class="btn btn--ghost" id="pOut">Abmelden</button>'
               : (r.i_follow != null && S.hub.me ? '<button type="button" class="btn ' + (r.i_follow ? 'btn--ghost' : 'btn--accent') + '" id="pFollow">' + (r.i_follow ? 'Gefolgt ✓' : 'Folgen') + '</button>' : '')) +
       '</div></div>' +
-      (r.photos.length ? '<div class="grid3">' + r.photos.map(p => '<button type="button" class="g-it" data-pid="' + p.id + '"><span class="g-img" data-m="' + esc(p.image) + '" data-thumb="1"></span></button>').join('') + '</div>'
+      (r.photos == null ? '' : r.photos.length ? '<div class="grid3">' + r.photos.map(p => '<button type="button" class="g-it" data-pid="' + p.id + '"><span class="g-img" data-m="' + esc(p.image) + '" data-thumb="1"></span></button>').join('') + '</div>'
                        : '<p class="muted center-t">Noch keine Fotos.</p>') + '</div>';
     hydrate(main);
     $$('[data-pid]', main).forEach(b => b.onclick = () => openViewer({ mode: 'user', arg: u.id, startId: +b.dataset.pid, title: '@' + u.username }));
@@ -719,6 +738,7 @@
   /* ── Posten ─────────────────────────────────────────────── */
   function renderPost(main) {
     if (!S.hub.me) { main.innerHTML = '<p class="muted center-t">Bitte melde dich an.</p>'; return; }
+    if (!on('photos')) { main.innerHTML = '<p class="muted center-t">Die Tabelle photos gibt es noch nicht.</p>'; return; }
     if (!S.hub.upload) {
       main.innerHTML = '<div class="post"><div class="feed-empty">' + IC.image + '<p>Bilder hochladen ist gerade ausgeschaltet.</p></div></div>';
       return;
@@ -778,29 +798,51 @@
 
   function adminHub(body) {
     const h = S.hub.hub;
-    let logo = h.logo, custom = null;
+    let logo = h.logo, custom = null, color = h.color || null, scheme = h.scheme || 'dark';
+    // Vorschau sofort, gespeichert erst mit „Speichern“
+    const preview = () => applyColor(Object.assign({}, h, { logo, color, scheme }));
     const paint = () => {
+      const logoColor = (logo === 'custom' ? (custom ? null : S.color[h.id]) : LOGOS[logo] && LOGOS[logo].color) || '#fe2c55';
       body.innerHTML = '<form class="form adm-form" id="bForm">' +
         '<label>Name der Plattform<input name="name" maxlength="30" value="' + esc(h.name) + '"></label>' +
         '<div class="lbl">Logo</div>' + logoPicker(logo, true, custom ? custom.preview : (h.logo === 'custom' ? S.logoUrls[h.id] : null)) +
         '<input type="file" accept="image/*" id="bFile" hidden>' +
-        '<p class="muted small">Eigenes Logo: quadratisch, wird auf 512 px verkleinert. Die Farbe des Hubs kommt aus dem Logo.</p>' +
+        '<p class="muted small">Eigenes Logo: quadratisch, wird auf 512 px verkleinert.</p>' +
+        '<div class="lbl">Farbschema</div>' +
+        '<div class="seg seg--s"><button type="button" data-sc="dark"' + (scheme === 'dark' ? ' class="on"' : '') + '>Dunkel</button>' +
+        '<button type="button" data-sc="light"' + (scheme === 'light' ? ' class="on"' : '') + '>Hell</button></div>' +
+        '<div class="lbl">Akzentfarbe</div>' +
+        '<div class="swatches">' +
+          '<button type="button" class="sw sw--auto' + (!color ? ' on' : '') + '" data-col="" style="--c:' + esc(logoColor) + '" title="Farbe aus dem Logo"><span>Logo</span></button>' +
+          SWATCHES.map(c => '<button type="button" class="sw' + (color === c ? ' on' : '') + '" data-col="' + c + '" style="--c:' + c + '" title="' + c + '"></button>').join('') +
+          '<label class="sw sw--pick' + (color && SWATCHES.indexOf(color) < 0 ? ' on' : '') + '" title="Eigene Farbe" style="--c:' + esc(color && SWATCHES.indexOf(color) < 0 ? color : 'transparent') + '">' +
+            '<input type="color" id="bColor" value="' + esc(color || logoColor.slice(0, 7)) + '">+</label>' +
+        '</div>' +
+        '<div class="brand-prev"><span class="bp-btn">Folgen</span><span class="bp-heart">' + IC.heart + '</span><span class="bp-tag">#vorschau</span></div>' +
         '<button class="btn btn--accent btn--big">Speichern</button></form>';
       $$('.lp', body).forEach(b => b.onclick = () => {
-        if (b.dataset.logoId === 'custom' && !custom && h.logo !== 'custom') { $('#bFile', body).click(); return; }
-        if (b.dataset.logoId === 'custom' && (custom || h.logo === 'custom') && logo === 'custom') { $('#bFile', body).click(); return; }
-        logo = b.dataset.logoId; paint();
+        if (b.dataset.logoId === 'custom' && (logo === 'custom' || (!custom && h.logo !== 'custom'))) { $('#bFile', body).click(); return; }
+        logo = b.dataset.logoId; paint(); preview();
       });
       $('#bFile', body).onchange = async (e) => {
         const f = e.target.files[0];
         if (!f) return;
-        try { custom = await M.compressLogo(f); logo = 'custom'; paint(); } catch (err) { toast(err.message, true); }
+        try {
+          custom = await M.compressLogo(f); logo = 'custom';
+          S.color[h.id] = await M.mainColor(custom.preview);
+          paint(); preview();
+        } catch (err) { toast(err.message, true); }
       };
+      $$('[data-sc]', body).forEach(b => b.onclick = () => { scheme = b.dataset.sc; paint(); preview(); });
+      $$('[data-col]', body).forEach(b => b.onclick = () => { color = b.dataset.col || null; paint(); preview(); });
+      $('#bColor', body).oninput = (e) => { color = e.target.value.toLowerCase(); preview(); };
+      $('#bColor', body).onchange = () => paint();
       $('#bForm', body).onsubmit = async (e) => {
         e.preventDefault();
-        const r = await hcall('sh_brand', { p_name: e.target.name.value.trim(), p_logo: logo, p_logo_img: logo === 'custom' && custom ? custom.data : null });
+        const r = await hcall('sh_brand', { p_name: e.target.name.value.trim(), p_logo: logo, p_logo_img: logo === 'custom' && custom ? custom.data : null,
+                                            p_color: color, p_scheme: scheme });
         if (!r || !r.ok) { fail(r); return; }
-        if (logo === 'custom' && custom) { S.logoUrls[h.id] = custom.preview; S.color[h.id] = await M.mainColor(custom.preview); }
+        if (logo === 'custom' && custom) S.logoUrls[h.id] = custom.preview;
         S.hub.hub = r.hub;
         applyColor(r.hub);
         toast('Gespeichert');

@@ -20,7 +20,7 @@
 (function () {
   'use strict';
 
-  const V = '20261103a';
+  const V = '20261103b';
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const DDL = {
@@ -100,7 +100,7 @@
     ['Alle Nutzer', 'SELECT * FROM users;'],
     ['Wer ist Admin?', "SELECT username, role FROM users WHERE role = 'admin';"],
     ['Passwörter (Hashes!)', 'SELECT username, password FROM users;'],
-    ['Fotos mit Benutzername', 'SELECT p.id, u.username, p.description, p.created_at\nFROM photos p\nJOIN users u ON u.id = p.user_id\nORDER BY p.created_at DESC;'],
+    ['Fotos mit Benutzername', 'SELECT p.id, u.username, p.description, p.created_at\nFROM photos p\nJOIN users u ON u.id = p.user_id\nORDER BY p.created_at DESC;', 'photos'],
     ['Likes je Foto', 'SELECT p.id, p.description, COUNT(l.user_id) AS likes\nFROM photos p\nLEFT JOIN likes l ON l.photo_id = p.id\nGROUP BY p.id\nORDER BY likes DESC;', 'likes'],
     ['Wer folgt wem?', 'SELECT a.username AS follower, b.username AS folgt\nFROM follows f\nJOIN users a ON a.id = f.follower_id\nJOIN users b ON b.id = f.following_id;', 'follows'],
     ['Beliebteste Tags', 'SELECT t.name, COUNT(*) AS fotos\nFROM tags t\nJOIN photo_tag pt ON pt.tag_id = t.id\nGROUP BY t.id\nORDER BY fotos DESC;', 'tags'],

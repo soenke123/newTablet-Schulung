@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262 — Social Hub (MPSkill „socialhub“).
+/* Prüfstand für Migration 0262 + 0263 — Social Hub (MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -84,7 +84,7 @@ await db.query(`insert into skill_participants (room_id, token, seat, name) valu
 /* 2 */
 await as(null);
 r = await call(`sh_home('tokA')`);
-ok('2  Start: noch kein Hub', r.ok && r.mine === null && r.hubs.length === 0 && r.tables.join() === 'users,photos', JSON.stringify(r));
+ok('2  Start: noch kein Hub', r.ok && r.mine === null && r.hubs.length === 0 && r.tables.join() === 'users', JSON.stringify(r));
 r = await call(`sh_found('tokA', 'Pixelwelt', 'rocket', 'mia', 'geheim1', 'Mia')`);
 ok('2  Hub gründen', r.ok && r.session, JSON.stringify(r));
 const HUB = r.hub; let SA = r.session;
@@ -103,10 +103,16 @@ r = await call(`sh_enter('tokA', null, $1, null)`, [HUB]);
 ok('2  Gründer ohne Sitzung → neue Sitzung', r.ok && r.session && r.me.username === 'mia');
 r = await call(`sh_enter('tokB', null, $1, null)`, [HUB]);
 ok('2  Fremder betritt: nicht angemeldet, kein Admin', r.ok && r.me === null && !r.admin && !r.founder);
-r = await call(`sh_brand('tokB', null, $1, null, 'Gekapert', 'bell', null)`, [HUB]);
+r = await call(`sh_brand('tokB', null, $1, null, 'Gekapert', 'bell', null, null, 'dark')`, [HUB]);
 ok('2  Fremder ändert Marke nicht', r.error === 'not_admin');
-r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'custom', $3)`, [HUB, SA, Buffer.from('fakepng').toString('base64')]);
-ok('2  Gründer: eigenes Logo', r.ok && r.hub.logo === 'custom' && r.hub.name === 'Pixelwelt+');
+r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'custom', $3, '#12AB9F', 'light')`, [HUB, SA, Buffer.from('fakepng').toString('base64')]);
+ok('2  Gründer: eigenes Logo + Farbschema', r.ok && r.hub.logo === 'custom' && r.hub.name === 'Pixelwelt+' && r.hub.color === '#12ab9f' && r.hub.scheme === 'light', JSON.stringify(r));
+r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'custom', null, 'rot', 'dark')`, [HUB, SA]);
+ok('2  Farbe kein #rrggbb → invalid_color', r.error === 'invalid_color');
+r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'custom', null, null, 'bunt')`, [HUB, SA]);
+ok('2  Schema außer dark/light → invalid_input', r.error === 'invalid_input');
+r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'custom', null, null, 'dark')`, [HUB, SA]);
+ok('2  Farbe leer = aus dem Logo, Logo bleibt', r.ok && r.hub.color === null && r.hub.scheme === 'dark' && r.hub.logo === 'custom');
 r = await call(`sh_logo_get('tokB', null, $1)`, [HUB]);
 ok('2  Logo holen (jeder im Raum)', r.ok && Buffer.from(r.img, 'base64').toString() === 'fakepng');
 
@@ -136,6 +142,20 @@ SB = r.session;
 
 /* 4 + 5: posten, Tabellen erstellen */
 r = await call(`sh_photo_post('tokB', $1, $2, 'img_1.webp', 'Hallo', '[]'::jsonb)`, [HUB, SB]);
+ok('4  photos noch nicht erstellt → table_off', r.error === 'table_off');
+r = await call(`sh_feed('tokB', null, $1, $2)`, [HUB, SB]);
+ok('4  Feed ohne photos: leer mit off', r.ok && r.off === true && r.items.length === 0);
+r = await call(`sh_profile('tokB', null, $1, $2, 2)`, [HUB, SB]);
+ok('4  Profil ohne photos: keine Fotos', r.ok && r.photos === null && r.photos_n === null);
+await as(T1);
+await call(`skill_room_set_state($1, null, '{"tables":["likes","tags"]}'::jsonb)`, [CODE]);
+await as(null);
+r = await call(`sh_enter('tokA', null, $1, $2)`, [HUB, SA]);
+ok('4  likes/tags ohne photos zählen nicht', r.tables.join() === 'users', JSON.stringify(r.tables));
+await as(T1);
+await call(`skill_room_set_state($1, null, '{"tables":["photos"]}'::jsonb)`, [CODE]);
+await as(null);
+r = await call(`sh_photo_post('tokB', $1, $2, 'img_1.webp', 'Hallo', '[]'::jsonb)`, [HUB, SB]);
 ok('4  Foto ohne hochgeladenes Bild → invalid_image', r.error === 'invalid_image');
 const PNG = Buffer.from('x'.repeat(500)).toString('base64');
 r = await call(`sh_media_put('tokB', $1, $2, $3, $3, 'image/webp')`, [HUB, SB, PNG]);
@@ -152,7 +172,7 @@ r = await call(`sh_media_get('tokC', null, $1, '["img_1.webp","img_9.webp"]'::js
 ok('4  Bilder holen (jeder im Raum)', r.ok && r.items['img_1.webp'] && !r.items['img_9.webp']);
 
 await as(T1);
-r = await call(`skill_room_set_state($1, null, '{"tables":["follows","likes","comments","comment_likes","tags"]}'::jsonb)`, [CODE]).catch(e => ({ error: e.message }));
+r = await call(`skill_room_set_state($1, null, '{"tables":["photos","follows","likes","comments","comment_likes","tags"]}'::jsonb)`, [CODE]).catch(e => ({ error: e.message }));
 if (!r || r.ok === false) {
   // Signatur je nach Stand von 0080: (code, version, data)
   ok('4  Lehrkraft erstellt Tabellen', false, JSON.stringify(r));
@@ -286,8 +306,8 @@ const rest = await one(`select (select count(*) from sh_hubs) + (select count(*)
                               + (select count(*) from sh_media) + (select count(*) from sh_sessions) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0262_socialhub.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migration läuft ein zweites Mal durch', twice);
+try { await db.exec(mig('0262_socialhub.sql')); await db.exec(mig('0263_socialhub_photos_farbe.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migrationen 0262 + 0263 laufen ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

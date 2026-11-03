@@ -69,6 +69,7 @@
     invalid_password: 'Das Passwort braucht 4 bis 60 Zeichen.',
     invalid_birthday: 'Das Geburtsdatum stimmt nicht.',
     invalid_logo: 'Bitte wähle ein Logo.',
+    invalid_color: 'Die Farbe muss als #rrggbb angegeben sein.',
     invalid_image: 'Bitte wähle zuerst ein Bild.',
     invalid_input: 'Das passt so nicht.',
     username_taken: 'Diesen Benutzernamen gibt es in diesem Hub schon.',

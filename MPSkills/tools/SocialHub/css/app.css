@@ -23,6 +23,16 @@
   color-scheme: dark;
 }
 
+/* Farbschema „Hell“ eines Hubs (Admin → Hub, sh_hubs.scheme). Feed-Karten bleiben dunkel. */
+:root[data-scheme="light"] {
+  --bg: #f6f6f9; --surface: #ffffff; --soft: #eeeef3; --soft2: #e2e2ea;
+  --ink: #15151d; --muted: #63637a; --line: #e2e2ea; --line2: #cfcfdb;
+  --t-kw: #7c3aed; --t-fn: #0f7ea8; --t-str: #b4541b; --t-num: #0e7490; --t-com: #8a9a95; --t-tbl: #0b6f8a; --t-col: #1f5fbf; --t-op: #5f706b;
+  --dg-bg: #f1f1f6; --dg-dot: #dcdce6; --dg-head: #ececf4; --dg-edge: #cfcfdb; --dg-link: #8a8aa0; --dg-shadow: rgba(20,20,40,.10);
+  --shadow-pop: 0 10px 30px rgba(20,20,40,.18);
+  color-scheme: light;
+}
+
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 15px/1.45 var(--font-body); overflow: hidden; -webkit-text-size-adjust: 100%; }
@@ -31,7 +41,7 @@ body.loading #app { opacity: 0; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 [hidden] { display: none !important; }
-svg { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+svg:not(.dg-svg) { width: 1em; height: 1em; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .muted { color: var(--muted); }
 .small { font-size: 13px; }
 .center-t { text-align: center; }
@@ -82,6 +92,21 @@ code { font-family: var(--font-mono); font-size: .9em; }
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 .toast.bad { background: var(--bad); color: #fff; }
+
+/* Farbschema im Admin-Bereich */
+.seg--s { max-width: 260px; margin-bottom: 0; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; }
+.sw { width: 38px; height: 38px; border-radius: 50%; border: 3px solid var(--surface); background: var(--c); box-shadow: 0 0 0 1px var(--line2); padding: 0; position: relative; cursor: pointer; }
+.sw.on { box-shadow: 0 0 0 3px var(--ink); }
+.sw--auto { width: auto; border-radius: 99px; padding: 0 12px; color: #fff; font-size: 12px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.4); }
+.sw--pick { display: grid; place-items: center; font: 700 20px var(--font-body); color: var(--muted);
+  background: conic-gradient(from 0deg, #f43f5e, #f59e0b, #84cc16, #06b6d4, #6366f1, #d946ef, #f43f5e); }
+.sw--pick.on { background: var(--c); color: transparent; }
+.sw--pick input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.brand-prev { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; background: var(--soft); }
+.bp-btn { background: var(--hub); color: #fff; font-weight: 700; padding: 6px 16px; border-radius: 8px; font-size: 14px; }
+.bp-heart svg { font-size: 26px; fill: var(--hub); stroke: none; }
+.bp-tag { color: var(--hub); font-weight: 700; }
 
 /* ── Logos ──────────────────────────────────────────────── */
 .logo { display: block; object-fit: contain; border-radius: 22%; background: #fff; flex: none; }
