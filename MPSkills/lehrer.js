@@ -601,7 +601,8 @@ function choiceFieldsHTML() {
    z. B. bei Diagramm „welche Diagrammarten dürfen neu angelegt
    werden". Kacheln mit Zeichen und Haken statt einer Schiene; eine
    bleibt immer an (den letzten Haken lässt das Formular nicht weg).
-   Gespeichert als Liste der Werte. f.legacy(cur) darf aus älteren
+   Gespeichert als Liste der Werte. o.svg = kleines Zeichen aus dem
+   Code des Skills (kein Emoji, nicht aus der Datenbank). f.legacy(cur) darf aus älteren
    Einstellungen die Vorauswahl ableiten. */
 function multiFieldHTML(f, cur) {
   const ok = v => f.options.some(o => o.value === v);
@@ -616,7 +617,7 @@ function multiFieldHTML(f, cur) {
               <label class="pickset-i" for="multi_${esc(f.key)}_${i}">
                 <input type="checkbox" id="multi_${esc(f.key)}_${i}" value="${esc(o.value)}"
                        data-setting-multi="${esc(f.key)}" ${val.includes(o.value) ? 'checked' : ''} />
-                ${o.icon ? `<span class="pickset-ic" aria-hidden="true">${esc(o.icon)}</span>` : ''}
+                ${o.svg ? `<span class="pickset-ic" aria-hidden="true">${o.svg}</span>` : ''}
                 <span class="pickset-t">${esc(o.label)}</span>
                 <span class="pickset-ck" aria-hidden="true"></span>
               </label>`).join('')}

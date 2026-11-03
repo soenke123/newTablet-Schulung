@@ -175,6 +175,14 @@
   };
   const KIND_IDS = Object.keys(KINDS);
 
+  // Kleine Zeichen je Art (Strich, currentColor) — für die Kacheln im Raum-Formular.
+  const KIND_SVG = {
+    mindmap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="8.5" y="9.5" width="7" height="5" rx="1.2"/><path d="M8.5 12H6M15.5 12H18M10 9.5L7.5 6.5M14 9.5l2.5-3M10 14.5l-2.5 3M14 14.5l2.5 3"/><circle cx="4.5" cy="12" r="1.5"/><circle cx="19.5" cy="12" r="1.5"/><circle cx="6.5" cy="5.5" r="1.3"/><circle cx="17.5" cy="5.5" r="1.3"/><circle cx="6.5" cy="18.5" r="1.3"/><circle cx="17.5" cy="18.5" r="1.3"/></svg>',
+    wirkung: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3.5" width="7" height="5" rx="1"/><rect x="14.5" y="3.5" width="7" height="5" rx="1"/><rect x="8.5" y="15.5" width="7" height="5" rx="1"/><path d="M9.5 6h4.5M12.5 4.5L14 6l-1.5 1.5M17.5 8.5l-3 6M14.5 12.3l0 2.2 2-.9M6 8.5l3 6"/></svg>',
+    klasse:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 8.5h16M4 14.5h16M7 11.5h6M7 17.5h8"/></svg>',
+    objekt:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4.5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 7h8M7 13h4M13 13h4M7 16.5h4M13 16.5h4"/></svg>'
+  };
+
   const EDGE_LABEL = {
     branch: 'Ast', line: 'Linie', arrow: 'Pfeil', effect: 'Wirkung',
     assoc: 'Assoziation', directed: 'gerichtet', inherit: 'Vererbung',
@@ -2655,7 +2663,7 @@
       default: KIND_IDS.slice(),
       legacy: cur => (cur && KIND_IDS.includes(cur.kind)) ? [cur.kind] : null,
       hint: 'Gilt nur für neue Diagramme. Was schon gezeichnet ist, bleibt, und Dateien jeder Art lassen sich weiter öffnen.',
-      options: KIND_IDS.map(k => ({ value: k, label: KINDS[k].label, icon: KINDS[k].icon }))
+      options: KIND_IDS.map(k => ({ value: k, label: KINDS[k].label, svg: KIND_SVG[k] }))
     }],
 
     mount(el, context) {

@@ -3552,7 +3552,8 @@ body.mpfs-body { overflow: hidden; }
 }
 .pickset-i:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--ink); }
 .pickset-i input { position: absolute; width: 1px; height: 1px; opacity: 0; margin: 0; pointer-events: none; }
-.pickset-ic { font-size: 1.6rem; line-height: 1; filter: grayscale(1); opacity: .5; transition: filter .12s, opacity .12s; }
+.pickset-ic { display: grid; place-items: center; color: var(--ink-faint); transition: color .12s; }
+.pickset-ic svg { width: 26px; height: 26px; }
 .pickset-t { max-width: 100%; overflow-wrap: anywhere; line-height: 1.25; }
 .pickset-ck {
   position: absolute; top: 8px; right: 8px;
@@ -3564,7 +3565,7 @@ body.mpfs-body { overflow: hidden; }
   border-color: var(--accent); color: var(--ink);
   background: color-mix(in srgb, var(--accent) 9%, var(--surface));
 }
-.pickset-i:has(input:checked) .pickset-ic { filter: none; opacity: 1; }
+.pickset-i:has(input:checked) .pickset-ic { color: var(--accent-ink); }
 .pickset-i:has(input:checked) .pickset-ck { background: var(--accent); border-color: var(--accent); }
 .pickset-i:has(input:checked) .pickset-ck::after {
   content: ''; width: 9px; height: 4.5px; margin-top: -3px;
