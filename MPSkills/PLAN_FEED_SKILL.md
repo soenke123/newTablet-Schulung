@@ -1,11 +1,20 @@
 # Plan: Feed-Skill (Arbeitstitel) — „InstaHub, aber wie TikTok“
 
-Stand 03.11.2026 · Entwurf 3 zum Abstimmen mit Sönke, noch keine Zeile Code.
+Stand 03.11.2026 · Entwurf 4 zum Abstimmen mit Sönke, noch keine Zeile Code.
 Aufgaben und Leitfaden von Sönke kommen später und werden dann hier eingearbeitet.
 
 ## Idee in einem Satz
 
 Die Klasse benutzt eine eigene soziale Plattform im Stil von TikTok (Vollbild-Karten, endloses Scrollen, „Für dich“, Tags), nur mit Fotos statt Videos. Dabei entstehen echte Daten. Die Lehrkraft erstellt nach und nach die Tabellen für den Raum, und die Klasse untersucht im Admin-Bereich mit SQL und Diagramm, was die Plattform über sie weiß.
+
+## 0. Hubs: jede Person gründet ihre eigene Plattform
+
+- Im Klassenraum gründet **jede Schülerin und jeder Schüler einen eigenen Hub** (wie bei InstaHub) und ist dort automatisch **Admin**, ohne Passwort, weil MPSkills sie schon kennt.
+- Im **Admin-Bereich** wählt jede Person **Name und Logo** ihres Hubs: eins der 8 Logos aus Startup Story (mit Farb-Theme) **oder ein eigenes Logo** (Upload, quadratisch auf 512 px verkleinert und komprimiert, Farbe wird aus dem Logo abgeleitet). Der Name läuft durch die Blacklist.
+- Die anderen können sich auf fremden Hubs **registrieren** und dort posten, liken und folgen (eigenes Konto je Hub, wie bei echten Plattformen). Auf der Login-Seite gibt es „Andere Hubs entdecken“ mit der Liste der Hubs im Raum.
+- Damit ein Hub nicht leer ist, kommen später **Dummy-Daten** hinein (Figuren, Fotos, Likes …).
+- **Lehrkraft:** hat Admin-Zugriff auf **jeden** Hub und eine **Übersicht aller Hubs** (Kachel je Hub: Logo, Name, Gründer, Zahl der Nutzer/Fotos, letzte Aktivität; antippen = als Admin öffnen; Name/Logo zurücksetzen, Hub sperren).
+- **Freier Raum:** ein gemeinsamer Hub für alle (Name/Logo legt der Lernwelt-Admin fest).
 
 ## 1. Tabellen (schlank, wie InstaHub)
 
@@ -33,7 +42,7 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 
 ## 2. Tabellen erstellen = Lehrkraft
 
-- Kein `CREATE TABLE` durch Schüler. Die **Lehrkraft erstellt** jede Tabelle in ihrer Steuerung mit einem Knopf, für alle im Raum. Damit erscheint die passende Funktion in der App (Likes, Folgen, Kommentare, Tags …).
+- Kein `CREATE TABLE` durch Schüler. Die **Lehrkraft erstellt** jede Tabelle in ihrer Steuerung mit einem Knopf, für **alle Hubs im Raum** (alle bleiben im gleichen Takt). Damit erscheint die passende Funktion in der App (Likes, Folgen, Kommentare, Tags …).
 - Optional „mit Dummy-Daten füllen“ (Figuren, Fotos, Likes …). Die Dummy-Daten kommen später.
 - `users` und `photos` sind von Anfang an da (sonst gibt es keine Plattform).
 
@@ -57,9 +66,9 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 
 ## 5. Admin
 
-- **Lehrkraft-Steuerung** (nur Lehrkraft): Tabellen erstellen, Dummy-Daten, Name + Logo, Upload an/aus, wer im Datenbank-Reiter schreiben darf, Rollen vergeben, Raum zurücksetzen.
-- **Admin-Bereich** (Lehrkraft + alle mit `role = 'admin'`): Nutzer (sperren, Passwort neu, Rolle), gemeldete Inhalte, Analysen, **Datenbank**.
-- Die Lehrkraft ist beim Öffnen des Raums automatisch als Admin angemeldet. Schüler werden Admin, wenn die Lehrkraft es einstellt oder per `UPDATE users SET role = 'admin' …`, sofern sie schreiben dürfen. Das ist auch eine schöne Lektion.
+- **Lehrkraft-Steuerung** (nur Lehrkraft): Übersicht aller Hubs, Tabellen erstellen, Dummy-Daten, Upload an/aus, wer im Datenbank-Reiter schreiben darf, Raum zurücksetzen.
+- **Admin-Bereich je Hub** (Gründer + Lehrkraft + alle mit `role = 'admin'` in diesem Hub): **Name und Logo**, Nutzer (sperren, Passwort neu, Rolle), gemeldete Inhalte, Analysen, **Datenbank** (nur die Daten dieses Hubs).
+- Gründer und Lehrkraft sind automatisch Admin. Weitere Admins vergibt der Gründer, per Knopf oder per `UPDATE users SET role = 'admin' …`.
 
 ## 6. Fotos
 
@@ -72,7 +81,7 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 - „Für dich“ (Algorithmus nach Tags/Likes) und „Folge ich“.
 - Profil mit Foto-Raster, Follower, Folge ich, Bio. Suche nach Tags und Nutzern.
 - Kommentare mit Herz (`comment_likes`), sortiert nach Herzen wie bei TikTok.
-- Name und Logo je Raum: 8 Logos + `nice`-Fassungen aus Startup Story mit ihren Farb-Themes.
+- Name und Logo je Hub (im Admin-Bereich): 8 Logos + `nice`-Fassungen aus Startup Story mit Farb-Themes oder ein eigenes Logo.
 
 ## 8. Datenschutz
 
@@ -80,18 +89,18 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 
 ## 9. Räume
 
-- **Klassenraum:** normaler MPSkills-Raum, Lehrkraft = Admin.
-- **Freier Raum:** eine Plattform je Schule, alle Angemeldeten automatisch drin (nur mit Lernwelt-Konto).
+- **Klassenraum:** normaler MPSkills-Raum, darin ein Hub je Schüler; Lehrkraft = Admin überall, mit Übersicht.
+- **Freier Raum:** ein gemeinsamer Hub je Schule, alle Angemeldeten automatisch drin (nur mit Lernwelt-Konto).
 
 ## 10. Technik
 
 - `MPSkills/tools/<Skill>/`: `tool.js` + `tool.css` als Brücke, App in `index.html` im iframe.
-- Migration **0262**: interne Tabellen `fs_*` mit `room_id`, RPCs (Login, Feed, Likes …, Admin, `fs_admin_apply` für INSERT/UPDATE/DELETE aus dem Datenbank-Reiter), Passwörter bcrypt mit pgcrypto (`$2y$`/`$2a$` beide prüfbar), welche Tabellen erstellt sind in `skill_room_state.data.tables`.
+- Migration **0262**: `fs_hubs` (room_id, Gründer = participant_id, name, logo/eigenes Logo, gesperrt), interne Tabellen `fs_*` mit `hub_id` (Daten je Hub getrennt, Schnappschuss je Hub), RPCs (Login, Feed, Likes …, Admin, `fs_admin_apply` für INSERT/UPDATE/DELETE aus dem Datenbank-Reiter), Passwörter bcrypt mit pgcrypto (`$2y$`/`$2a$` beide prüfbar), welche Tabellen erstellt sind in `skill_room_state.data.tables`.
 - `PASSWORD_HASH()` als eigene SQLite-Funktion im Editor (bcrypt im Browser, Bibliothek fest in `vendor/`).
 
 ## 11. Etappen
 
-1. Login/Registrieren, Feed, Fotos (Upload), Profil, Folgen, Likes, Kommentare (+ Herz), Tags, Lehrkraft erstellt Tabellen, Name + Logo.
+1. Hub gründen (Name + Logo, eigenes Logo), Übersicht der Lehrkraft, Login/Registrieren auf jedem Hub, Feed, Fotos (Upload), Profil, Folgen, Likes, Kommentare (+ Herz), Tags, Lehrkraft erstellt Tabellen.
 2. Admin-Bereich mit Datenbank-Reiter (SELECT lokal, INSERT/UPDATE/DELETE auf die Plattform), Nutzerverwaltung.
 3. Dummy-Daten + Bildbibliothek, Analytics (`views`), Werbung.
 4. Freier Raum, Schaufenster, Aufgaben aus Sönkes Leitfaden.
@@ -101,4 +110,5 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 - Tabellennamen englisch (wie oben) oder deutsch?
 - `likes` mit verschiedenen Reaktionen (`type`) oder nur Herz?
 - Wer darf im Datenbank-Reiter schreiben: nur Admins, alle, oder per Schalter der Lehrkraft?
-- Name und Logo: Lehrkraft oder Abstimmung der Klasse?
+- Hub je Person oder auch Gruppen-Hubs (2–3 gründen zusammen)?
+- Darf man sich auf allen Hubs der Klasse registrieren, oder nur auf denen, die der Gründer einlädt?
