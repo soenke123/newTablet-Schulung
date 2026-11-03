@@ -3505,9 +3505,11 @@ body.mpfs-body { overflow: hidden; }
    Die geltende ist gefüllt — man muss nicht erst lesen, um zu
    sehen, wo man steht. Es sind echte Radios darunter: die Gruppe
    für Tastatur und Vorlesegerät gibt es damit geschenkt. */
+/* Mit vielen Antworten (z. B. Diagramm: fünf) bricht die Schiene um,
+   statt die Wörter über den Rand hinauszuschieben. */
 .seg2 {
   position: relative;
-  display: flex; gap: 3px; padding: 3px;
+  display: flex; flex-wrap: wrap; gap: 3px; padding: 3px;
   border: 1px solid var(--line); border-radius: 12px;
   background: var(--paper);
 }
@@ -3516,7 +3518,7 @@ body.mpfs-body { overflow: hidden; }
   opacity: 0; margin: 0; pointer-events: none;
 }
 .seg2 label {
-  flex: 1; text-align: center;
+  flex: 1 1 auto; min-width: max-content; text-align: center;
   padding: 7px 10px; border-radius: 9px;
   font-size: .9rem; font-weight: 500; color: var(--ink-soft);
   cursor: pointer; user-select: none;

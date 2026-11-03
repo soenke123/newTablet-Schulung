@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
    MPSkills — Skill „Diagramm"   ·   tool.js
    ══════════════════════════════════════════════════════════════
-   Mindmaps, Wirkungsgefüge, Klassen- und Objektdiagramme zeichnen.
+   Mindmaps, Concept Map, Klassen- und Objektdiagramme zeichnen.
    Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie
    braucht (Migration 0258, Details in CLAUDE.md daneben).
 
@@ -53,7 +53,7 @@
   const TEXT = '#0f172a';
   const LINE = 'var(--dg-line)';      // Bleistift; beim Export VARS_EXPORT
   const LINK = 'var(--dg-link)';      // Linien im UML-Kleid (wie SQL Studio)
-  /* Pfeilfarben im Wirkungsgefüge (edge.f): schwarz (Bleistift), grün, rot.
+  /* Pfeilfarben im Concept Map (edge.f): schwarz (Bleistift), grün, rot.
      Was die Farben bedeuten, legt die Klasse fest — der Skill rechnet
      nichts daraus. Vorher (bis 03.11.2026) gab es +/− (edge.s); sane()
      übersetzt alte Diagramme: − → rot, sonst schwarz. */
@@ -61,7 +61,7 @@
   const ARROW_NAME = { k: 'schwarz', g: 'grün', r: 'rot' };
 
   /* Zwei Kleider (03.11.2026):
-       Papier  — Mindmap und Wirkungsgefüge: Zettel auf einem Tisch,
+       Papier  — Mindmap und Concept Map: Zettel auf einem Tisch,
                  dezent: fast eckig, leichter Schatten, beim Ziehen
                  hebt sich der Zettel. Schrift Outfit.
        Karte   — Klassen- und Objektdiagramm wie das Klassendiagramm
@@ -125,29 +125,37 @@
      2  Diagrammarten
      ════════════════════════════════════════════════════════════
      node: { id, type, x, y, t, c, a, o, k }
-       type  center | topic (Mindmap) · box (Wirkungsgefüge) ·
+       type  center | topic (Mindmap) · box (Concept Map) ·
              class · object · note (überall)
        x, y  Mitte des Knotens
        t     Text bzw. Name;  a Attribute;  o Methoden;  k Klasse (Objekt)
        c     Farbindex in COLORS
-     edge: { id, a, b, type, s, l, m1, m2 }
+     edge: { id, a, b, type, f, l, m1, m2, pa, pb, lo, o1, o2 }
        type  branch · effect · assoc · directed · inherit · aggr ·
              comp · dep · link · line · arrow
-       s     Vorzeichen beim Wirkungsgefüge ('+' / '-')
-       l     Beschriftung;  m1/m2 Multiplizitäten (UML)              */
+       f     Pfeilfarbe in der Concept Map (k/g/r)
+       l     Beschriftung;  m1/m2 Multiplizitäten (UML)
+       pa/pb Andockpunkt am Anfang/Ende, selbst verschoben: [u, v] in
+             -1…1 (Anteil der halben Breite/Höhe, liegt auf dem Rand) —
+             wächst der Kasten, wandert der Punkt mit. Fehlt = von selbst.
+       lo/o1/o2  Feinjustierung der Beschriftung bzw. der Anzahlen:
+             [dx, dy] in px relativ zu ihrem ausgerechneten Platz,
+             höchstens ±LAB_MAX — sie wandern mit der Linie mit.
+     doc.ortho (nur Klassen-/Objektdiagramm): Linien rechtwinklig wie
+       im Klassendiagramm von SQL Studio statt schräg.                 */
   const KINDS = {
     mindmap: {
       label: 'Mindmap', icon: '🧠',
-      hint: 'Ein Thema in der Mitte, Gedanken als Äste drumherum.',
+      hint: 'Themen mit Gedanken als Äste drumherum – eins oder mehrere.',
       node: 'topic', edge: 'branch',
-      add: [{ type: 'topic', label: 'Ast' }, { type: 'note', label: 'Notiz' }],
+      add: [{ type: 'center', label: 'Thema' }, { type: 'topic', label: 'Ast' }, { type: 'note', label: 'Notiz' }],
       edges: ['branch', 'line', 'arrow']
     },
-    wirkung: {
-      label: 'Wirkungsgefüge', icon: '🔄',
-      hint: 'Größen mit Pfeilen verbinden – schwarz, grün oder rot – und beschriften.',
+    wirkung: {   // id bleibt 'wirkung' (gespeicherte Diagramme), heißt seit 03.11.2026 Concept Map
+      label: 'Concept Map', icon: '🔄',
+      hint: 'Begriffe mit Pfeilen verbinden – schwarz, grün oder rot – und beschriften.',
       node: 'box', edge: 'effect',
-      add: [{ type: 'box', label: 'Größe' }, { type: 'note', label: 'Notiz' }],
+      add: [{ type: 'box', label: 'Begriff' }, { type: 'note', label: 'Notiz' }],
       edges: ['effect']
     },
     klasse: {
@@ -283,10 +291,9 @@
     const m = measure(n);
     const b = box(n);
     const [fill, stroke] = COLORS[n.c || 0] || COLORS[0];
-    const sel = st.sel && st.sel.id === n.id;
-    const hl = st.hl && st.hl.has(n.id);
+    const sel = st.selSet && st.selSet.has(n.id);
     const lift = st.lift && st.lift.has(n.id);
-    let g = `<g class="dg-node${sel ? ' is-sel' : ''}${hl ? ' is-hl' : ''}" data-node="${n.id}">`;
+    let g = `<g class="dg-node${sel ? ' is-sel' : ''}" data-node="${n.id}">`;
     if (n.type === 'class' || n.type === 'object') {
       // Karte wie SQL Studio; Farbe 0 = Petrol-Kopf der Seite, sonst Pastell
       const headFill = (n.c || 0) ? fill : 'var(--dg-head)';
@@ -325,7 +332,7 @@
     if (!(n.t || '').trim() && n.type !== 'class' && n.type !== 'object') {
       g += `<text x="${n.x}" y="${n.y}" font-family="${FONT}" font-size="${FS}" fill="#a8a29e" text-anchor="middle" dominant-baseline="central">…</text>`;
     }
-    if (sel || hl) {
+    if (sel) {
       const r = n.type === 'class' || n.type === 'object' ? 15 : 7;
       g += `<rect class="dg-selbox" x="${b.x - 5}" y="${b.y - 5}" width="${b.w + 10}" height="${b.h + 10}" rx="${r}" fill="none"/>`;
     }
@@ -347,19 +354,139 @@
   // Wie weit die Linie vor der Spitze aufhört (sonst ragt sie hinein).
   const HEAD_BACK = { tri: 17, diamond: 22, diamondF: 22, solid: 6, open: 0 };
 
+  // Beschriftung bzw. Anzahl: lab = 'l' | 'm1' | 'm2' — daran lässt sie sich
+  // im Editor ein Stück verschieben (lo/o1/o2).
   function labelSVG(x, y, text, opts) {
     if (!text) return '';
     const fam = (opts && opts.fam) || FONT;
     const w = textW(text, 13, false, fam) + 12;
-    return `<g class="dg-elabel"><rect x="${x - w / 2}" y="${y - 10}" width="${w}" height="20" rx="5" fill="var(--dg-paper)" opacity=".92"/>`
+    return `<g class="dg-elabel" data-lab="l"><rect x="${x - w / 2}" y="${y - 10}" width="${w}" height="20" rx="5" fill="var(--dg-paper)" opacity=".92"/>`
       + `<text x="${x}" y="${y}" font-family="${fam}" font-size="13" text-anchor="middle" dominant-baseline="central" fill="${(opts && opts.fill) || LINE}">${esc(text)}</text></g>`;
+  }
+
+  /* ── Andockpunkte ───────────────────────────────────────────── */
+  const LAB_MAX = 70;            // so weit lassen sich Beschriftungen verschieben
+  const nudge = v => Array.isArray(v) ? [Number(v[0]) || 0, Number(v[1]) || 0] : [0, 0];
+
+  // Seite eines Andockpunkts u als Richtung nach außen.
+  function sideOf(u) {
+    return Math.abs(u[0]) >= Math.abs(u[1]) ? [u[0] >= 0 ? 1 : -1, 0] : [0, u[1] >= 0 ? 1 : -1];
+  }
+  function anchorPt(n, u) {
+    const m = n._m || measure(n);
+    return { x: n.x + u[0] * m.w / 2, y: n.y + u[1] * m.h / 2, d: sideOf(u) };
+  }
+  // Nächster Punkt auf dem Rand von n zu (x, y), als u. Mitte einer Seite rastet ein.
+  function borderU(n, x, y) {
+    const m = n._m || measure(n);
+    const hw = m.w / 2, hh = m.h / 2;
+    let px = clamp(x - n.x, -hw, hw), py = clamp(y - n.y, -hh, hh);
+    const dl = px + hw, dr = hw - px, dt = py + hh, db = hh - py;
+    const mn = Math.min(dl, dr, dt, db);
+    if (mn === dr) px = hw; else if (mn === dl) px = -hw; else if (mn === db) py = hh; else py = -hh;
+    return [px / hw, py / hh].map(v => { const r = Math.round(v * 100) / 100; return Math.abs(r) < 0.1 ? 0 : r; });
+  }
+
+  /* ── Rechtwinklige Linien (Klassen-/Objektdiagramm, doc.ortho) ──
+     Wie in SQL Studio: waagrecht aus der Seite heraus, senkrecht in
+     der Mitte, waagrecht hinein (bzw. gedreht, wenn die Kästen
+     übereinander stehen). Liegen sie ineinander, geht es außen
+     rechts herum. Selbst gesetzte Andockpunkte bestimmen die Seite. */
+  function orthoEnds(A, B, e, twin) {
+    const ba = box(A), bb = box(B);
+    const gx = Math.max(bb.x - (ba.x + ba.w), ba.x - (bb.x + bb.w));
+    const gy = Math.max(bb.y - (ba.y + ba.h), ba.y - (bb.y + bb.h));
+    const shift = twin ? (e.a < e.b ? -10 : 10) : 0;
+    let p1, p2;
+    if (gx >= 24) {
+      const r = B.x >= A.x ? 1 : -1;
+      const top = Math.max(ba.y, bb.y), bot = Math.min(ba.y + ba.h, bb.y + bb.h);
+      const y1 = bot - top > 16 ? (top + bot) / 2 : A.y, y2 = bot - top > 16 ? (top + bot) / 2 : B.y;
+      p1 = { x: r > 0 ? ba.x + ba.w : ba.x, y: y1 + shift, d: [r, 0] };
+      p2 = { x: r > 0 ? bb.x : bb.x + bb.w, y: y2 + shift, d: [-r, 0] };
+    } else if (gy >= 24) {
+      const r = B.y >= A.y ? 1 : -1;
+      const l = Math.max(ba.x, bb.x), rr = Math.min(ba.x + ba.w, bb.x + bb.w);
+      const x1 = rr - l > 16 ? (l + rr) / 2 : A.x, x2 = rr - l > 16 ? (l + rr) / 2 : B.x;
+      p1 = { x: x1 + shift, y: r > 0 ? ba.y + ba.h : ba.y, d: [0, r] };
+      p2 = { x: x2 + shift, y: r > 0 ? bb.y : bb.y + bb.h, d: [0, -r] };
+    } else {
+      p1 = { x: ba.x + ba.w, y: A.y + shift, d: [1, 0] };
+      p2 = { x: bb.x + bb.w, y: B.y + shift, d: [1, 0] };
+    }
+    if (e.pa) p1 = anchorPt(A, e.pa);
+    if (e.pb) p2 = anchorPt(B, e.pb);
+    return [p1, p2];
+  }
+  function orthoRoute(p1, p2) {
+    const OFF = 24;
+    const d1 = p1.d, d2 = p2.d;
+    const a = { x: p1.x + d1[0] * OFF, y: p1.y + d1[1] * OFF };
+    const b = { x: p2.x + d2[0] * OFF, y: p2.y + d2[1] * OFF };
+    const h1 = d1[0] !== 0, h2 = d2[0] !== 0;
+    let mid;
+    if (h1 && h2) {
+      if (d1[0] === -d2[0] && (b.x - a.x) * d1[0] >= 0) { const mx = (p1.x + p2.x) / 2; mid = [[mx, p1.y], [mx, p2.y]]; }
+      else if (d1[0] === d2[0]) { const x = d1[0] > 0 ? Math.max(a.x, b.x) : Math.min(a.x, b.x); mid = [[x, p1.y], [x, p2.y]]; }
+      else { const my = (p1.y + p2.y) / 2; mid = [[a.x, p1.y], [a.x, my], [b.x, my], [b.x, p2.y]]; }
+    } else if (!h1 && !h2) {
+      if (d1[1] === -d2[1] && (b.y - a.y) * d1[1] >= 0) { const my = (p1.y + p2.y) / 2; mid = [[p1.x, my], [p2.x, my]]; }
+      else if (d1[1] === d2[1]) { const y = d1[1] > 0 ? Math.max(a.y, b.y) : Math.min(a.y, b.y); mid = [[p1.x, y], [p2.x, y]]; }
+      else { const mx = (p1.x + p2.x) / 2; mid = [[p1.x, a.y], [mx, a.y], [mx, b.y], [p2.x, b.y]]; }
+    } else if (h1) {
+      if ((p2.x - p1.x) * d1[0] > 0 && (p1.y - p2.y) * d2[1] > 0) mid = [[p2.x, p1.y]];
+      else mid = [[a.x, p1.y], [a.x, b.y], [p2.x, b.y]];
+    } else {
+      if ((p2.y - p1.y) * d1[1] > 0 && (p1.x - p2.x) * d2[0] > 0) mid = [[p1.x, p2.y]];
+      else mid = [[p1.x, a.y], [b.x, a.y], [b.x, p2.y]];
+    }
+    const raw = [[p1.x, p1.y], ...mid, [p2.x, p2.y]];
+    // Doppelte und gerade durchlaufende Punkte weg
+    const pts = [];
+    for (const q of raw) {
+      const l = pts[pts.length - 1];
+      if (l && Math.abs(l[0] - q[0]) < 0.5 && Math.abs(l[1] - q[1]) < 0.5) continue;
+      if (pts.length >= 2) {
+        const k = pts[pts.length - 2];
+        if ((Math.abs(k[0] - l[0]) < 0.5 && Math.abs(l[0] - q[0]) < 0.5) || (Math.abs(k[1] - l[1]) < 0.5 && Math.abs(l[1] - q[1]) < 0.5)) pts.pop();
+      }
+      pts.push(q);
+    }
+    return pts;
+  }
+  function roundPath(pts) {
+    let d = `M${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const r = Math.min(10, Math.hypot(x1 - x0, y1 - y0) / 2, Math.hypot(x2 - x1, y2 - y1) / 2);
+      const ax = x1 - Math.sign(x1 - x0) * r, ay = y1 - Math.sign(y1 - y0) * r;
+      const bx = x1 + Math.sign(x2 - x1) * r, by = y1 + Math.sign(y2 - y1) * r;
+      d += `L${ax} ${ay}Q${x1} ${y1} ${bx} ${by}`;
+    }
+    const l = pts[pts.length - 1];
+    return d + `L${l[0]} ${l[1]}`;
+  }
+  // Punkt auf halber Länge eines Linienzugs, mit Richtung des Stücks dort.
+  function halfway(pts) {
+    let total = 0;
+    for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+    let rest = total / 2;
+    for (let i = 1; i < pts.length; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+      const len = Math.hypot(x1 - x0, y1 - y0);
+      if (rest <= len || i === pts.length - 1) {
+        const t = len ? Math.min(1, rest / len) : 0;
+        return { x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, dx: (x1 - x0) / (len || 1), dy: (y1 - y0) / (len || 1) };
+      }
+      rest -= len;
+    }
+    return { x: pts[0][0], y: pts[0][1], dx: 1, dy: 0 };
   }
 
   function edgeSVG(e, doc, byId, st) {
     const A = byId[e.a], B = byId[e.b];
     if (!A || !B) return '';
-    const sel = st.sel && st.sel.id === e.id;
-    const hl = st.hl && st.hl.has(e.id);
+    const sel = st.selSet && st.selSet.has(e.id);
     const uml = isUml(doc.kind);
     let color = uml ? LINK : LINE;
     let width = uml ? 1.5 : 1.6;
@@ -371,17 +498,12 @@
     }
     if (e.type === 'dep') dash = ' stroke-dasharray="6 5"';
     if (e.type === 'effect') { color = ARROW[e.f] || LINE; width = e.f && e.f !== 'k' ? 2 : 1.6; }
-    if (hl) { color = '#f59e0b'; width += 1.5; }
 
-    // Gegenläufige Kante dazwischen? Dann beide leicht biegen.
     const twin = e.type !== 'branch' && doc.edges.some(o => o !== e && o.a === e.b && o.b === e.a);
-    const bend = twin ? 28 : 0;
-    const mx0 = (A.x + B.x) / 2, my0 = (A.y + B.y) / 2;
-    const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy) || 1;
-    const nx = -dy / len, ny = dx / len;
-    const cx = mx0 + nx * bend, cy = my0 + ny * bend;
+    const endHead = { effect: 'solid', arrow: 'solid', directed: 'open', dep: 'open', inherit: 'tri' }[e.type];
+    const startHead = { aggr: 'diamond', comp: 'diamondF' }[e.type];
 
-    let d, p1, p2, mid, angEnd, angStart, heads = '';
+    let d, p1, p2, mid, nrm = null, out1, out2, heads = '';
     if (e.type === 'branch') {
       // Waagrechter Schwung vom Elternteil zum Kind.
       const right = B.x >= A.x;
@@ -396,50 +518,74 @@
         d = `M${p1.x} ${p1.y}C${p1.x + k} ${p1.y} ${p2.x - k} ${p2.y} ${p2.x} ${p2.y}`;
       }
       mid = { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+    } else if (uml && doc.ortho) {
+      [p1, p2] = orthoEnds(A, B, e, twin);
+      const pts = orthoRoute(p1, p2);
+      const n = pts.length;
+      const angEnd = Math.atan2(pts[n - 1][1] - pts[n - 2][1], pts[n - 1][0] - pts[n - 2][0]);
+      const angStart = Math.atan2(pts[0][1] - pts[1][1], pts[0][0] - pts[1][0]);
+      out1 = angStart + Math.PI; out2 = angEnd + Math.PI;
+      const cut = pts.map(q => q.slice());
+      if (endHead) { cut[n - 1][0] -= Math.cos(angEnd) * HEAD_BACK[endHead]; cut[n - 1][1] -= Math.sin(angEnd) * HEAD_BACK[endHead]; }
+      if (startHead) { cut[0][0] -= Math.cos(angStart) * HEAD_BACK[startHead]; cut[0][1] -= Math.sin(angStart) * HEAD_BACK[startHead]; }
+      d = roundPath(cut);
+      const h = halfway(pts);
+      mid = { x: h.x, y: h.y };
+      nrm = { x: -h.dy, y: h.dx };
+      heads = [endHead && head(endHead, p2, angEnd, color), startHead && head(startHead, p1, angStart, color)].filter(Boolean).join('');
     } else {
-      p1 = clipToBox(A, cx, cy, 2);
-      p2 = clipToBox(B, cx, cy, 2);
-      angEnd = Math.atan2(p2.y - cy, p2.x - cx);
-      angStart = Math.atan2(p1.y - cy, p1.x - cx);
+      // Gegenläufige Kante dazwischen? Dann beide leicht biegen.
+      const bend = twin ? 28 : 0;
+      const qa = e.pa ? anchorPt(A, e.pa) : null, qb = e.pb ? anchorPt(B, e.pb) : null;
+      const ax = qa ? qa.x : A.x, ay = qa ? qa.y : A.y, bx = qb ? qb.x : B.x, by = qb ? qb.y : B.y;
+      const mx0 = (ax + bx) / 2, my0 = (ay + by) / 2;
+      const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      const cx = mx0 + nx * bend, cy = my0 + ny * bend;
+      p1 = qa || clipToBox(A, cx, cy, 2);
+      p2 = qb || clipToBox(B, cx, cy, 2);
+      const angEnd = Math.atan2(p2.y - cy, p2.x - cx);
+      const angStart = Math.atan2(p1.y - cy, p1.x - cx);
+      out1 = angStart + Math.PI; out2 = angEnd + Math.PI;
       // Linie an der Spitze kürzen
-      const endHead = { effect: 'solid', arrow: 'solid', directed: 'open', dep: 'open', inherit: 'tri' }[e.type];
-      const startHead = { aggr: 'diamond', comp: 'diamondF' }[e.type];
       const q2 = endHead ? { x: p2.x - Math.cos(angEnd) * HEAD_BACK[endHead], y: p2.y - Math.sin(angEnd) * HEAD_BACK[endHead] } : p2;
       const q1 = startHead ? { x: p1.x - Math.cos(angStart) * HEAD_BACK[startHead], y: p1.y - Math.sin(angStart) * HEAD_BACK[startHead] } : p1;
       d = bend ? `M${q1.x} ${q1.y}Q${cx} ${cy} ${q2.x} ${q2.y}` : `M${q1.x} ${q1.y}L${q2.x} ${q2.y}`;
       mid = bend ? { x: (p1.x + 2 * cx + p2.x) / 4, y: (p1.y + 2 * cy + p2.y) / 4 } : { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 };
+      nrm = { x: nx, y: ny };
       heads = [endHead && head(endHead, p2, angEnd, color), startHead && head(startHead, p1, angStart, color)].filter(Boolean).join('');
     }
+    if (st.ends && e.type !== 'branch') st.ends[e.id] = { p1, p2 };
 
     let g = `<g class="dg-edge${sel ? ' is-sel' : ''}" data-edge="${e.id}">`;
     g += `<path class="dg-hit" d="${d}" fill="none" stroke="transparent" stroke-width="18"/>`;
     if (sel) g += `<path d="${d}" fill="none" stroke="var(--dg-sel)" stroke-width="${width + 7}" stroke-linecap="round" opacity=".35"/>`;
-    g += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round"${dash}/>`;
+    g += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"${dash}/>`;
     g += heads;
 
-    if (e.type === 'effect') {
+    const lo = nudge(e.lo);
+    if (e.l && e.type === 'effect' && nrm) {
       // Beschriftung neben den Pfeil statt darauf: über waagrechte, rechts neben senkrechte
       // (sonst verdeckt sie bei kurzen Pfeilen die ganze Linie).
-      if (e.l) {
-        let ux = nx, uy = ny;
-        if (uy > 1e-6 || (Math.abs(uy) <= 1e-6 && ux < 0)) { ux = -ux; uy = -uy; }
-        const lw = textW(e.l, 13, false, fam) + 12;
-        const off = 15 * Math.abs(uy) + (lw / 2 + 6) * Math.abs(ux);
-        g += labelSVG(mid.x + ux * off, mid.y + uy * off, e.l, { fam, fill: color });
-      }
+      let ux = nrm.x, uy = nrm.y;
+      if (uy > 1e-6 || (Math.abs(uy) <= 1e-6 && ux < 0)) { ux = -ux; uy = -uy; }
+      const lw = textW(e.l, 13, false, fam) + 12;
+      const off = 15 * Math.abs(uy) + (lw / 2 + 6) * Math.abs(ux);
+      g += labelSVG(mid.x + ux * off + lo[0], mid.y + uy * off + lo[1], e.l, { fam, fill: color });
     } else if (e.l) {
-      g += labelSVG(mid.x, mid.y, e.l, uml ? { fam, fill: 'var(--dg-muted)' } : { fam });
+      g += labelSVG(mid.x + lo[0], mid.y + lo[1], e.l, uml ? { fam, fill: 'var(--dg-muted)' } : { fam });
     }
     // Multiplizitäten an den Enden
-    if (e.m1 || e.m2) {
-      const off = (p, ang, t) => {
+    if ((e.m1 || e.m2) && out1 != null) {
+      const off = (p, ang, t, key) => {
         if (!t) return '';
-        const ox = p.x + Math.cos(ang) * 24 + Math.cos(ang + Math.PI / 2) * 12;
-        const oy = p.y + Math.sin(ang) * 24 + Math.sin(ang + Math.PI / 2) * 12;
-        return `<text x="${ox}" y="${oy}" font-family="${fam}" font-size="12" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="var(--dg-muted)">${esc(t)}</text>`;
+        const o = nudge(e[key === 'm1' ? 'o1' : 'o2']);
+        const ox = p.x + Math.cos(ang) * 24 + Math.cos(ang + Math.PI / 2) * 12 + o[0];
+        const oy = p.y + Math.sin(ang) * 24 + Math.sin(ang + Math.PI / 2) * 12 + o[1];
+        return `<g class="dg-elabel" data-lab="${key}"><circle cx="${ox}" cy="${oy}" r="13" fill="transparent"/>`
+          + `<text x="${ox}" y="${oy}" font-family="${fam}" font-size="12" font-weight="600" text-anchor="middle" dominant-baseline="central" fill="var(--dg-muted)">${esc(t)}</text></g>`;
       };
-      const a1 = Math.atan2(cy - p1.y, cx - p1.x), a2 = Math.atan2(cy - p2.y, cx - p2.x);
-      g += off(p1, a1, e.m1) + off(p2, a2, e.m2);
+      g += off(p1, out1, e.m1, 'm1') + off(p2, out2, e.m2, 'm2');
     }
     return g + '</g>';
   }
@@ -465,86 +611,64 @@
   }
 
   /* ════════════════════════════════════════════════════════════
-     Wirkungsgefüge: Kreisläufe finden
-     ════════════════════════════════════════════════════════════
-     Jeder einfache Kreis entlang der Pfeile — nur gefunden und
-     hervorgehoben, nicht gedeutet (die Farben bedeuten, was die Klasse
-     festlegt). Höchstens 30 Kreise, damit ein Knäuel die Seite nicht
-     anhält. */
-  function findLoops(doc) {
-    const out = [];
-    const effects = doc.edges.filter(e => e.type === 'effect');
-    const adj = {};
-    for (const e of effects) (adj[e.a] = adj[e.a] || []).push(e);
-    const ids = doc.nodes.map(n => n.id);
-    const order = {}; ids.forEach((id, i) => { order[id] = i; });
-    for (const start of ids) {
-      // DFS, nur über Knoten mit größerem Index als start (jeder Kreis einmal)
-      const walk = (v, path, seen) => {
-        if (out.length >= 30) return;
-        for (const e of adj[v] || []) {
-          if (e.b === start) { out.push(path.concat(e)); continue; }
-          if (order[e.b] <= order[start] || seen.has(e.b)) continue;
-          seen.add(e.b); walk(e.b, path.concat(e), seen); seen.delete(e.b);
-        }
-      };
-      walk(start, [], new Set([start]));
-    }
-    const byId = {}; doc.nodes.forEach(n => { byId[n.id] = n; });
-    return out.map(edges => ({
-      edges, nodes: edges.map(e => e.a),
-      names: edges.map(e => (byId[e.a] && byId[e.a].t) || '…')
-    }));
-  }
-
-  /* ════════════════════════════════════════════════════════════
      Mindmap ordnen
      ════════════════════════════════════════════════════════════
-     Mitte bei (0,0), Äste erster Ebene abwechselnd rechts und links,
-     jeder Teilbaum bekommt so viel Höhe, wie seine Blätter brauchen. */
+     Jedes Thema (center) mit seinem Baum; das erste bei (0,0), die
+     weiteren darunter. Äste erster Ebene abwechselnd rechts und links,
+     jeder Teilbaum bekommt so viel Höhe, wie seine Blätter brauchen.
+     Ein Baum endet an einem anderen Thema. */
   function layoutMindmap(doc) {
-    const center = doc.nodes.find(n => n.type === 'center');
-    if (!center) return false;
+    const centers = doc.nodes.filter(n => n.type === 'center');
+    if (!centers.length) return false;
     const kids = {};
-    const hasParent = new Set();
     for (const e of doc.edges) {
       if (e.type !== 'branch') continue;
       (kids[e.a] = kids[e.a] || []).push(e.b);
-      hasParent.add(e.b);
     }
     const byId = {}; doc.nodes.forEach(n => { byId[n.id] = n; measure(n); });
-    const GAP_Y = 14, GAP_X = 60;
-    const seen = new Set([center.id]);
-    const childrenOf = id => (kids[id] || []).filter(k => byId[k] && !seen.has(k) && (seen.add(k), true));
+    const GAP_Y = 14, GAP_X = 60, GAP_TREE = 70;
+    const seen = new Set(centers.map(c => c.id));
+    const childrenOf = id => (kids[id] || []).filter(k => byId[k] && byId[k].type !== 'center' && !seen.has(k) && (seen.add(k), true));
     const tree = id => ({ id, kids: childrenOf(id).map(tree) });
-    const root = tree(center.id);
     const height = t => {
       const own = byId[t.id]._m.h;
       const kh = t.kids.reduce((s, k) => s + height(k), 0) + Math.max(0, t.kids.length - 1) * GAP_Y;
       t.h = Math.max(own, kh);
       return t.h;
     };
-    const place = (t, x, yTop, dir) => {
+    const place = (t, x, yTop, dir, out) => {
       const n = byId[t.id];
+      out.push(n);
       n.x = Math.round(x + dir * n._m.w / 2);
       n.y = Math.round(yTop + t.h / 2);
       let y = yTop + (t.h - (t.kids.reduce((s, k) => s + k.h, 0) + Math.max(0, t.kids.length - 1) * GAP_Y)) / 2;
       for (const k of t.kids) {
-        place(k, x + dir * (n._m.w + GAP_X), y, dir);
+        place(k, x + dir * (n._m.w + GAP_X), y, dir, out);
         y += k.h + GAP_Y;
       }
     };
-    const R = [], L = [];
-    root.kids.forEach((k, i) => (i % 2 ? L : R).push(k));
-    center.x = 0; center.y = 0;
-    for (const [side, dir] of [[R, 1], [L, -1]]) {
-      side.forEach(height);
-      const total = side.reduce((s, k) => s + k.h, 0) + Math.max(0, side.length - 1) * GAP_Y * 2;
-      let y = -total / 2;
-      for (const k of side) {
-        place(k, dir * (center._m.w / 2 + GAP_X + 20), y, dir);
-        y += k.h + GAP_Y * 2;
+    let cursor = null;
+    for (const center of centers) {
+      const root = tree(center.id);
+      const R = [], L = [];
+      root.kids.forEach((k, i) => (i % 2 ? L : R).push(k));
+      center.x = 0; center.y = 0;
+      const out = [center];
+      for (const [side, dir] of [[R, 1], [L, -1]]) {
+        side.forEach(height);
+        const total = side.reduce((s, k) => s + k.h, 0) + Math.max(0, side.length - 1) * GAP_Y * 2;
+        let y = -total / 2;
+        for (const k of side) {
+          place(k, dir * (center._m.w / 2 + GAP_X + 20), y, dir, out);
+          y += k.h + GAP_Y * 2;
+        }
       }
+      // Bäume untereinander
+      const top = Math.min(...out.map(n => n.y - n._m.h / 2));
+      const bot = Math.max(...out.map(n => n.y + n._m.h / 2));
+      const dy = cursor == null ? 0 : Math.round(cursor - top);
+      if (dy) out.forEach(n => { n.y += dy; });
+      cursor = bot + dy + GAP_TREE;
     }
     return true;
   }
@@ -556,8 +680,8 @@
     const o = opts || {};
     const self = this;
     this.doc = emptyDoc('mindmap');
-    this.sel = null;              // { kind: 'node'|'edge', id }
-    this.hl = null;               // Set hervorgehobener ids (Kreisläufe)
+    this.sel = null;              // { kind: 'node'|'edge', id } — zuletzt angetippt
+    this.multi = null;            // Set mehrerer ids (Strg+Klick), enthält sel
     this.view = { x: 0, y: 0, k: 1 };
     this.readonly = !!o.readonly;
     this.onChange = o.onChange || (() => {});
@@ -613,8 +737,25 @@
       const w = toWorld(ev.clientX, ev.clientY);
       const t = ev.target;
       const handle = !self.readonly && t.closest && t.closest('[data-handle]');
+      const endEl = !self.readonly && t.closest && t.closest('[data-end]');
+      const labEl = !self.readonly && t.closest && t.closest('[data-lab]');
       const nodeEl = t.closest && t.closest('[data-node]');
       const edgeEl = t.closest && t.closest('[data-edge]');
+      const add = ev.ctrlKey || ev.metaKey;     // Strg/⌘ + Klick = zur Auswahl dazu
+      if (endEl) {
+        // Andockpunkt einer gewählten Verbindung am Rand entlang schieben
+        drag = { mode: 'end', id: endEl.dataset.edge, which: endEl.dataset.end, sx: ev.clientX, sy: ev.clientY, moved: false };
+        ev.preventDefault();
+        return;
+      }
+      if (labEl && edgeEl) {
+        // Beschriftung/Anzahl ein Stück verschieben (Feinjustierung)
+        const e = self.edge(edgeEl.dataset.edge);
+        const key = { l: 'lo', m1: 'o1', m2: 'o2' }[labEl.dataset.lab];
+        drag = { mode: 'lab', id: edgeEl.dataset.edge, key, orig: nudge(e && e[key]), start: w, sx: ev.clientX, sy: ev.clientY, moved: false, add };
+        ev.preventDefault();
+        return;
+      }
       if (handle) {
         const from = self.node(handle.dataset.handle);
         drag = { mode: 'link', from, dir: handle.dataset.dir, sx: ev.clientX, sy: ev.clientY, moved: false, w };
@@ -623,13 +764,18 @@
       }
       if (nodeEl && !self.readonly) {
         const n = self.node(nodeEl.dataset.node);
-        // Mindmap: der ganze Ast wandert mit.
-        const group = (self.doc.kind === 'mindmap' && n.type !== 'center') ? self.subtree(n.id) : [n];
-        drag = { mode: 'node', n, group, start: w, orig: group.map(g => ({ g, x: g.x, y: g.y })), sx: ev.clientX, sy: ev.clientY, moved: false };
+        // Mehrere gewählt und einer davon gefasst: alle wandern mit.
+        // Mindmap: der ganze Ast (bzw. das Thema mit seinen Ästen) wandert mit.
+        const inMulti = !!(self.multi && self.multi.has(n.id));
+        const ids = inMulti ? [...self.multi].filter(id => self.node(id)) : [n.id];
+        const set = new Map();
+        for (const id of ids) for (const g of (self.doc.kind === 'mindmap' ? self.subtree(id) : [self.node(id)])) set.set(g.id, g);
+        const group = [...set.values()];
+        drag = { mode: 'node', n, group, inMulti, add, start: w, orig: group.map(g => ({ g, x: g.x, y: g.y })), sx: ev.clientX, sy: ev.clientY, moved: false };
         return;
       }
       if (edgeEl && !self.readonly) {
-        drag = { mode: 'edge', id: edgeEl.dataset.edge, sx: ev.clientX, sy: ev.clientY };
+        drag = { mode: 'edge', id: edgeEl.dataset.edge, sx: ev.clientX, sy: ev.clientY, add };
         return;
       }
       drag = { mode: 'pan', sx: ev.clientX, sy: ev.clientY, view: Object.assign({}, self.view), moved: false, w };
@@ -660,10 +806,33 @@
         self.applyView();
       } else if (drag.mode === 'node') {
         if (!drag.moved && dist < 5) return;
-        if (!drag.moved) { self.onBefore(); drag.moved = true; self.lift = new Set(drag.group.map(g => g.id)); self.select({ kind: 'node', id: drag.n.id }, true); }
+        if (!drag.moved) {
+          self.onBefore(); drag.moved = true; self.lift = new Set(drag.group.map(g => g.id));
+          if (drag.inMulti) { self.sel = { kind: 'node', id: drag.n.id }; self.onSelect(self.sel); }
+          else self.select({ kind: 'node', id: drag.n.id }, true);
+        }
         const w = toWorld(ev.clientX, ev.clientY);
         const dx = w.x - drag.start.x, dy = w.y - drag.start.y;
         for (const it of drag.orig) { it.g.x = Math.round(it.x + dx); it.g.y = Math.round(it.y + dy); }
+        self.render();
+      } else if (drag.mode === 'end') {
+        if (!drag.moved && dist < 3) return;
+        const e = self.edge(drag.id);
+        const n = e && self.node(drag.which === 'a' ? e.a : e.b);
+        if (!n) return;
+        if (!drag.moved) { self.onBefore(); drag.moved = true; }
+        const w = toWorld(ev.clientX, ev.clientY);
+        e[drag.which === 'a' ? 'pa' : 'pb'] = borderU(n, w.x, w.y);
+        self.render();
+      } else if (drag.mode === 'lab') {
+        if (!drag.moved && dist < 4) return;
+        const e = self.edge(drag.id);
+        if (!e) return;
+        if (!drag.moved) { self.onBefore(); drag.moved = true; }
+        const w = toWorld(ev.clientX, ev.clientY);
+        const v = [Math.round(clamp(drag.orig[0] + w.x - drag.start.x, -LAB_MAX, LAB_MAX)),
+                   Math.round(clamp(drag.orig[1] + w.y - drag.start.y, -LAB_MAX, LAB_MAX))];
+        if (v[0] || v[1]) e[drag.key] = v; else delete e[drag.key];
         self.render();
       } else if (drag.mode === 'link') {
         if (dist > 6) drag.moved = true;
@@ -689,10 +858,11 @@
           const dbl = lastTap.id === '#bg' && now - lastTap.t < 380 && Math.hypot(ev.clientX - lastTap.x, ev.clientY - lastTap.y) < 24;
           lastTap = { t: now, id: '#bg', x: ev.clientX, y: ev.clientY };
           if (dbl && !self.readonly) { self.onEdit({ create: true, x: w.x, y: w.y }); lastTap.t = 0; }
-          else self.select(null);
+          else if (!(ev.ctrlKey || ev.metaKey)) self.select(null);
         }
       } else if (d.mode === 'node') {
         if (d.moved) { self.lift = null; self.render(); self.onChange(); }
+        else if (d.add) self.toggle(d.n.id);
         else {
           const dbl = lastTap.id === d.n.id && now - lastTap.t < 420;
           lastTap = { t: now, id: d.n.id, x: ev.clientX, y: ev.clientY };
@@ -701,7 +871,14 @@
           if (dbl) { self.onEdit({ id: d.n.id }); lastTap.t = 0; }
         }
       } else if (d.mode === 'edge') {
-        self.select({ kind: 'edge', id: d.id });
+        if (d.add) self.toggle(d.id);
+        else self.select({ kind: 'edge', id: d.id });
+      } else if (d.mode === 'end') {
+        if (d.moved) { self.onChange(); self.onSelect(self.sel); }
+      } else if (d.mode === 'lab') {
+        if (d.moved) { self.onChange(); if (self.sel && self.sel.id === d.id) self.onSelect(self.sel); }
+        else if (d.add) self.toggle(d.id);
+        else self.select({ kind: 'edge', id: d.id });
       } else if (d.mode === 'link') {
         self.overlay.innerHTML = '';
         const target = self.nodeAt(w.x, w.y, d.from.id);
@@ -757,7 +934,9 @@
     const out = [], seen = new Set();
     const go = nid => {
       if (seen.has(nid)) return; seen.add(nid);
-      const n = this.node(nid); if (n) out.push(n);
+      const n = this.node(nid); if (!n) return;
+      if (n.type === 'center' && nid !== id) return;     // ein anderes Thema bleibt stehen
+      out.push(n);
       for (const e of this.doc.edges) if (e.type === 'branch' && e.a === nid) go(e.b);
     };
     go(id);
@@ -765,14 +944,40 @@
   };
   Canvas.prototype.setDoc = function (doc, keepView) {
     this.doc = doc;
-    this.sel = null; this.hl = null;
+    this.sel = null; this.multi = null;
     this.render();
     if (!keepView) this.fit();
   };
   Canvas.prototype.select = function (sel, silent) {
     this.sel = sel;
+    this.multi = null;
     this.render();
     if (!silent || sel) this.onSelect(sel);
+  };
+  // Alles, was gerade gewählt ist (eine oder mehrere ids).
+  Canvas.prototype.selSet = function () {
+    const s = new Set(this.multi || []);
+    if (this.sel) s.add(this.sel.id);
+    return s;
+  };
+  Canvas.prototype.kindOf = function (id) { return this.node(id) ? 'node' : 'edge'; };
+  // Mehrere wählen: ids (Knoten und Verbindungen gemischt).
+  Canvas.prototype.selectMany = function (ids) {
+    const s = new Set(ids.filter(id => this.node(id) || this.edge(id)));
+    if (s.size <= 1) return this.select(s.size ? { kind: this.kindOf([...s][0]), id: [...s][0] } : null);
+    this.multi = s;
+    const last = [...s][s.size - 1];
+    this.sel = { kind: this.kindOf(last), id: last };
+    this.render();
+    this.onSelect(this.sel);
+  };
+  // Strg+Klick: id zur Auswahl dazu bzw. wieder heraus.
+  Canvas.prototype.toggle = function (id) {
+    const s = this.selSet();
+    if (s.has(id)) s.delete(id); else s.add(id);
+    const list = [...s];
+    if (s.has(id)) { list.splice(list.indexOf(id), 1); list.push(id); }   // zuletzt angetippt = vorne
+    this.selectMany(list);
   };
   Canvas.prototype.applyView = function () {
     const v = this.view;
@@ -824,12 +1029,19 @@
     this.applyView();
   };
   Canvas.prototype.render = function () {
-    const st = { sel: this.sel, hl: this.hl, lift: this.lift };
+    const st = { selSet: this.selSet(), lift: this.lift, ends: {} };
     this.host.classList.toggle('k-uml', isUml(this.doc.kind));
     this.host.classList.toggle('k-paper', !isUml(this.doc.kind));
     let s = docSVG(this.doc, st);
+    // Gewählte Verbindung: Andockpunkte an beiden Enden zum Verschieben.
+    if (!this.readonly && !this.multi && this.sel && this.sel.kind === 'edge' && st.ends[this.sel.id]) {
+      const { p1, p2 } = st.ends[this.sel.id];
+      s += [['a', p1], ['b', p2]].map(([w, p]) =>
+        `<g class="dg-end" data-end="${w}" data-edge="${this.sel.id}"><circle cx="${p.x}" cy="${p.y}" r="14" class="dg-handle-hit"/>`
+        + `<circle cx="${p.x}" cy="${p.y}" r="6" class="dg-end-dot"/></g>`).join('');
+    }
     // Anfasser am gewählten Knoten: vier Punkte zum Verbinden.
-    if (!this.readonly && this.sel && this.sel.kind === 'node') {
+    if (!this.readonly && !this.multi && this.sel && this.sel.kind === 'node') {
       const n = this.node(this.sel.id);
       if (n) {
         const b = box(n);
@@ -925,6 +1137,7 @@
   function clean(doc) {
     return {
       v: 1, kind: doc.kind,
+      ...(doc.ortho && isUml(doc.kind) ? { ortho: true } : {}),
       nodes: doc.nodes.map(n => {
         const o = {};
         for (const k of Object.keys(n)) if (k[0] !== '_' && n[k] !== '' && n[k] != null) o[k] = n[k];
@@ -946,6 +1159,10 @@
     const k = KIND_IDS.includes(kind) ? kind : (doc && KIND_IDS.includes(doc.kind) ? doc.kind : 'mindmap');
     const d = { v: 1, kind: k, nodes: [], edges: [] };
     if (!doc || typeof doc !== 'object') return emptyDoc(k);
+    if (doc.ortho === true && isUml(k)) d.ortho = true;
+    // [u, v] auf dem Rand (-1…1) bzw. [dx, dy] Verschiebung (±LAB_MAX), sonst weg
+    const pair = (v, lim) => Array.isArray(v) && v.length === 2 && v.every(x => Number.isFinite(Number(x)))
+      ? v.map(x => Math.round(clamp(Number(x), -lim, lim) * 100) / 100) : undefined;
     const ids = new Set();
     for (const n of Array.isArray(doc.nodes) ? doc.nodes : []) {
       if (!n || typeof n.id !== 'string' || !ID_OK.test(n.id) || ids.has(n.id)) continue;
@@ -965,7 +1182,9 @@
         type: EDGE_LABEL[e.type] ? e.type : 'line',
         f: e.type === 'effect' ? (['k', 'g', 'r'].includes(e.f) ? e.f : (e.s === '-' ? 'r' : 'k')) : undefined,
         l: e.l ? String(e.l).slice(0, 80) : undefined,
-        m1: e.m1 ? String(e.m1).slice(0, 12) : undefined, m2: e.m2 ? String(e.m2).slice(0, 12) : undefined
+        m1: e.m1 ? String(e.m1).slice(0, 12) : undefined, m2: e.m2 ? String(e.m2).slice(0, 12) : undefined,
+        pa: pair(e.pa, 1), pb: pair(e.pb, 1),
+        lo: pair(e.lo, LAB_MAX), o1: pair(e.o1, LAB_MAX), o2: pair(e.o2, LAB_MAX)
       });
     }
     return d;
@@ -986,7 +1205,11 @@
     pen:   '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     img:   '<svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     tidy:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 12h3M6 12h3M18 7h3M18 17h3M3 7h3M3 17h3M18 7v10M6 7v10" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
-    loop:  '<svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-3-6.2M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    ortho: '<svg viewBox="0 0 24 24"><path d="M3 6h8v12h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 14l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    copy:  '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
+    paste: '<svg viewBox="0 0 24 24"><path d="M9 4h6v3H9zM15 5h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+    cut:   '<svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 16L19 4M16 16L5 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+    reset: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     swap:  '<svg viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     help:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
   };
@@ -997,16 +1220,26 @@
       ['Doppelt tippen', 'auf einen Baustein: Text schreiben. Auf die leere Fläche: neuer Baustein.'],
       ['Ziehen', 'verschiebt einen Baustein. Die leere Fläche ziehen verschiebt das Blatt.'],
       ['Blaue Punkte', 'am gewählten Baustein: antippen = neuer Baustein daneben, auf einen anderen Baustein ziehen = verbinden.'],
+      ['Verbindung', 'antippen: an den Punkten an beiden Enden lässt sich verschieben, wo sie am Baustein andockt. Beschriftungen lassen sich ein Stück verschieben.'],
+      ['Strg + Klick', 'wählt mehrere aus. Strg+C kopieren, Strg+X ausschneiden, Strg+V einfügen, Strg+A alles.'],
+      ['Textfenster', 'lässt sich am Griff oben verschieben, falls es im Weg ist.'],
       ['Zwei Finger', 'zoomen. Am Rechner: Mausrad.']
     ],
-    mindmap: [['Tastatur', 'Tab = neuer Ast, Enter = Nachbar-Ast, Entf = löschen.'], ['Ordnen', 'räumt die Mindmap auf.']],
+    mindmap: [['Thema', 'legt ein weiteres Thema an – eine Mindmap kann mehrere haben.'],
+              ['Tastatur', 'Tab = neuer Ast, Enter = Nachbar-Ast, Entf = löschen.'], ['Ordnen', 'räumt die Mindmap auf.']],
     wirkung: [['Pfeilfarbe', 'Pfeil antippen und unten schwarz, grün oder rot wählen. Der nächste Pfeil bekommt dieselbe Farbe.'],
-              ['Beschriftung', 'Pfeil antippen und unten in das Feld über dem Pfeil schreiben.'],
-              ['Kreisläufe', 'zeigt geschlossene Kreise: Pfeil-Wege, die wieder am Anfang ankommen.']],
+              ['Beschriftung', 'Pfeil antippen und unten in das Feld über dem Pfeil schreiben.']],
     klasse:  [['Klasse', 'doppelt tippen: Name, Attribute (z. B. - name: String) und Methoden (z. B. + fahren(): void) eintragen, je Zeile eins.'],
-              ['Beziehung', 'eine Verbindung antippen und unten die Art wählen: Assoziation, Vererbung, Aggregation …']],
-    objekt:  [['Objekt', 'doppelt tippen: Objektname, Klasse und Attributwerte (z. B. farbe = "rot") eintragen.']]
+              ['Beziehung', 'eine Verbindung antippen und unten die Art wählen: Assoziation, Vererbung, Aggregation …'],
+              ['Rechtwinklig', 'der Schalter oben führt alle Linien rechtwinklig statt schräg.']],
+    objekt:  [['Objekt', 'doppelt tippen: Objektname, Klasse und Attributwerte (z. B. farbe = "rot") eintragen.'],
+              ['Rechtwinklig', 'der Schalter oben führt alle Linien rechtwinklig statt schräg.']]
   };
+
+  /* Zwischenablage für Strg+C/X/V: gilt für alle Editoren der Seite
+     (auch zwischen „Mein Diagramm" und einem neuen), aber nur für
+     dieselbe Diagrammart. */
+  let CLIP = null;     // { kind, data: JSON von clean(), n: wie oft eingefügt }
 
   function Editor(host, opts) {
     const self = this;
@@ -1016,7 +1249,7 @@
     this.undo = []; this.redo = [];
     this.title = '';
     this.edgeType = {};
-    this.loops = null;
+    this.editPin = null;      // selbst verschobenes Textfenster: { x, y } in der Bühne
 
     host.innerHTML = `
       <div class="dg-ed">
@@ -1042,7 +1275,6 @@
         <div class="dg-stage">
           <div class="dg-paper" data-k="paper"></div>
           <div class="dg-status" data-k="status" aria-live="polite"></div>
-          <div class="dg-loops" data-k="loops" hidden></div>
           <div class="dg-help" data-k="help" hidden></div>
           <div class="dg-edit" data-k="edit" hidden></div>
           <div class="dg-ctx" data-k="ctx" hidden></div>
@@ -1094,7 +1326,6 @@
     this.$('title').value = this.title;
     this.paintBar();
     this.showCtx(null);
-    this.hideLoops();
   };
 
   Editor.prototype.paintBar = function () {
@@ -1103,7 +1334,12 @@
     this.$('kind').title = k.hint;
     let adds = k.add.map(a => `<button type="button" class="dg-add" data-act="add" data-type="${a.type}">${ICON.plus}<span>${esc(a.label)}</span></button>`).join('');
     if (this.cv.doc.kind === 'mindmap') adds += `<button type="button" class="dg-add dg-add--soft" data-act="tidy" title="Mindmap aufräumen">${ICON.tidy}<span>Ordnen</span></button>`;
-    if (this.cv.doc.kind === 'wirkung') adds += `<button type="button" class="dg-add dg-add--soft" data-act="loops" title="Kreisläufe finden">${ICON.loop}<span>Kreisläufe</span></button>`;
+    if (isUml(this.cv.doc.kind)) {
+      const on = !!this.cv.doc.ortho;
+      adds += `<button type="button" class="dg-switch${on ? ' is-on' : ''}" data-act="ortho" role="switch" aria-checked="${on}" title="Linien rechtwinklig wie in SQL Studio">`
+        + `<i aria-hidden="true"></i>${ICON.ortho}<span>rechtwinklig</span></button>`;
+    }
+    if (CLIP && CLIP.kind === this.cv.doc.kind) adds += `<button type="button" class="dg-add dg-add--soft" data-act="paste" title="Einfügen (Strg+V)">${ICON.paste}<span>Einfügen</span></button>`;
     this.$('adds').innerHTML = adds;
     this.paintUndo();
   };
@@ -1119,8 +1355,7 @@
     this.redo = [];
     this.paintUndo();
   };
-  Editor.prototype.changed = function (titleOnly) {
-    if (!titleOnly && this.loops) this.findLoops(true);
+  Editor.prototype.changed = function () {
     if (this.o.onChange) this.o.onChange();
   };
   Editor.prototype.restore = function (from, to) {
@@ -1128,10 +1363,10 @@
     to.push(JSON.stringify(clean(this.cv.doc)));
     const d = JSON.parse(from.pop());
     this.cv.doc = sane(d, d.kind);
-    this.cv.sel = null; this.cv.hl = null;
+    this.cv.sel = null; this.cv.multi = null;
     this.cv.render();
     this.showCtx(null);
-    this.paintUndo();
+    this.paintBar();
     this.changed();
   };
 
@@ -1148,6 +1383,11 @@
     if (type === 'class') { n.t = ''; n.a = ''; n.o = ''; n.c = 0; }
     if (type === 'object') { n.c = 0; }
     if (type === 'box') { n.c = 0; }
+    if (type === 'center') {
+      // weiteres Thema: eine Farbe, die noch kein Thema hat
+      const used = doc.nodes.filter(x => x.type === 'center').map(x => x.c || 0);
+      n.c = [0, 1, 2, 3, 4, 5, 6, 7].find(c => !used.includes(c)) ?? 0;
+    }
     if (type === 'topic' && from) {
       // Farbe vom Ast; Kinder der Mitte bekommen jede ihre eigene.
       if (from.type === 'center') {
@@ -1167,7 +1407,8 @@
     const k = KINDS[doc.kind];
     let type = this.edgeType[doc.kind] || k.edge;
     if (A.type === 'note' || B.type === 'note') type = 'line';
-    if (doc.kind === 'mindmap' && type === 'branch' && B.type === 'center') return null;
+    // Zu einem anderen Thema führt kein Ast (das bliebe sonst an dessen Baum hängen), nur eine Linie.
+    if (doc.kind === 'mindmap' && type === 'branch' && B.type === 'center') type = 'line';
     const e = { id: uid(), a, b, type };
     if (type === 'effect') e.f = this.arrowCol || 'k';   // Farbe wie beim letzten Pfeil
     doc.edges.push(e);
@@ -1248,11 +1489,11 @@
       for (let i = 0; i < 20 && cv.nodeAt(x, y); i++) { x += 30; y += 30; }
       const sel = cv.sel && cv.sel.kind === 'node' ? cv.node(cv.sel.id) : null;
       const type = btn.dataset.type;
-      // Mindmap: „Ast" hängt sich an den gewählten Knoten (oder die Mitte).
+      // Mindmap: „Ast" hängt sich an den gewählten Knoten (oder an ein Thema).
       if (type === 'topic' && cv.doc.kind === 'mindmap') {
         const par = (sel && sel.type !== 'note') ? sel : cv.doc.nodes.find(n => n.type === 'center');
         if (par) {
-          const p = this.freeSpot(par, par.type === 'center' ? (cv.doc.edges.filter(e => e.a === par.id).length % 2 ? 'l' : 'r') : (par.x < 0 ? 'l' : 'r'));
+          const p = this.freeSpot(par, par.type === 'center' ? (cv.doc.edges.filter(e => e.a === par.id).length % 2 ? 'l' : 'r') : this.side(par));
           const n = this.newNode('topic', p.x, p.y, par);
           this.newEdge(par.id, n.id);
           cv.select({ kind: 'node', id: n.id }, true);
@@ -1260,8 +1501,15 @@
           return this.openEdit(n.id);
         }
       }
+      if (type === 'center' && cv.doc.nodes.length) {
+        // weiteres Thema: unter alles, was schon da ist
+        const b = bounds(cv.doc);
+        const first = cv.doc.nodes.find(n => n.type === 'center');
+        x = first ? first.x : b.x + b.w / 2; y = b.y + b.h + 80;
+      }
       const n = this.newNode(type, x, y);
       cv.select({ kind: 'node', id: n.id }, true);
+      if (type === 'center') cv.reveal(n);
       this.changed();
       return this.openEdit(n.id);
     }
@@ -1271,17 +1519,36 @@
       cv.render(); cv.fit();
       return this.changed();
     }
-    if (a === 'loops') return this.loops ? this.hideLoops() : this.findLoops();
     if (a === 'del') return this.remove();
+    if (a === 'copy') return this.copy();
+    if (a === 'cut') return this.copy() && this.remove();
+    if (a === 'paste') return this.paste();
+    if (a === 'ortho') {
+      this.snap();
+      if (cv.doc.ortho) delete cv.doc.ortho; else cv.doc.ortho = true;
+      cv.render(); this.paintBar();
+      return this.changed();
+    }
+    if (a === 'eredo') {
+      // Andockpunkte und verschobene Beschriftungen wieder von selbst
+      const e = cv.sel && cv.edge(cv.sel.id);
+      if (!e) return;
+      this.snap();
+      ['pa', 'pb', 'lo', 'o1', 'o2'].forEach(k => { delete e[k]; });
+      cv.render(); this.showCtx(cv.sel);
+      return this.changed();
+    }
     if (a === 'edit') return cv.sel && this.openEdit(cv.sel.id);
     if (a === 'color') {
-      const n = cv.sel && cv.node(cv.sel.id);
-      if (!n) return;
+      const nodes = [...cv.selSet()].map(id => cv.node(id)).filter(x => x && x.type !== 'note');
+      if (!nodes.length) return;
       this.snap();
       const c = Number(btn.dataset.c);
       // Mindmap: der ganze Ast nimmt die Farbe mit.
-      const group = cv.doc.kind === 'mindmap' && n.type === 'topic' ? cv.subtree(n.id).filter(x => x.type === 'topic') : [n];
-      group.forEach(x => { x.c = c; });
+      for (const n of nodes) {
+        const group = cv.doc.kind === 'mindmap' && n.type === 'topic' ? cv.subtree(n.id).filter(x => x.type === 'topic') : [n];
+        group.forEach(x => { x.c = c; });
+      }
       cv.render(); this.showCtx(cv.sel);
       return this.changed();
     }
@@ -1313,36 +1580,71 @@
       cv.render(); this.showCtx(cv.sel);
       return this.changed();
     }
-    if (a === 'loop') {
-      const i = Number(btn.dataset.i);
-      const L = this.loops && this.loops[i];
-      if (!L) return;
-      cv.hl = new Set([...L.nodes, ...L.edges.map(e => e.id)]);
-      this.$('loops').querySelectorAll('[data-i]').forEach(b => b.classList.toggle('is-on', b === btn));
-      cv.render();
-      return;
-    }
-    if (a === 'loopsx') return this.hideLoops();
     if (a === 'helpx') return this.toggleHelp(false);
     if (a === 'editok') return this.closeEdit(true);
   };
 
   Editor.prototype.remove = function () {
     const cv = this.cv;
-    if (!cv.sel) return;
-    if (cv.sel.kind === 'node') {
-      const n = cv.node(cv.sel.id);
-      if (!n) return;
-      if (n.type === 'center') { this.o.toast && this.o.toast('Die Mitte der Mindmap bleibt stehen.'); return; }
-      this.snap();
-      cv.doc.nodes = cv.doc.nodes.filter(x => x.id !== n.id);
-      cv.doc.edges = cv.doc.edges.filter(e => e.a !== n.id && e.b !== n.id);
-    } else {
-      this.snap();
-      cv.doc.edges = cv.doc.edges.filter(e => e.id !== cv.sel.id);
+    const ids = cv.selSet();
+    if (!ids.size) return;
+    // Das letzte Thema der Mindmap bleibt stehen.
+    const centers = cv.doc.nodes.filter(n => n.type === 'center');
+    if (centers.length && centers.every(n => ids.has(n.id))) {
+      ids.delete(centers[0].id);
+      this.o.toast && this.o.toast('Ein Thema bleibt stehen.');
+      if (!ids.size) return;
     }
+    this.snap();
+    cv.doc.nodes = cv.doc.nodes.filter(x => !ids.has(x.id));
+    cv.doc.edges = cv.doc.edges.filter(e => !ids.has(e.id) && !ids.has(e.a) && !ids.has(e.b));
     cv.select(null);
     this.changed();
+    return true;
+  };
+
+  /* ── Kopieren, Ausschneiden, Einfügen ─────────────────────── */
+  Editor.prototype.copy = function () {
+    const cv = this.cv;
+    const ids = cv.selSet();
+    const nodes = cv.doc.nodes.filter(n => ids.has(n.id));
+    if (!nodes.length) return false;
+    const have = new Set(nodes.map(n => n.id));
+    // Verbindungen zwischen den kopierten Bausteinen kommen mit.
+    const edges = cv.doc.edges.filter(e => have.has(e.a) && have.has(e.b));
+    CLIP = { kind: cv.doc.kind, data: JSON.stringify(clean({ kind: cv.doc.kind, nodes, edges })), n: 0 };
+    this.paintBar();
+    return true;
+  };
+  Editor.prototype.paste = function () {
+    const cv = this.cv;
+    if (!CLIP) return;
+    if (CLIP.kind !== cv.doc.kind) { this.o.toast && this.o.toast('Das passt nicht in diese Diagrammart.'); return; }
+    this.closeEdit(true);
+    const src = sane(JSON.parse(CLIP.data), CLIP.kind);
+    CLIP.n++;
+    const off = 30 * CLIP.n;
+    const map = {};
+    this.snap();
+    for (const n of src.nodes) {
+      const id = uid(); map[n.id] = id;
+      cv.doc.nodes.push(Object.assign({}, n, { id, x: n.x + off, y: n.y + off }));
+    }
+    for (const e of src.edges) cv.doc.edges.push(Object.assign({}, e, { id: uid(), a: map[e.a], b: map[e.b] }));
+    cv.selectMany(Object.values(map));
+    this.changed();
+  };
+
+  // Mindmap: Auf welcher Seite seines Themas steht ein Ast? Dorthin wachsen seine Kinder.
+  Editor.prototype.side = function (n) {
+    const cv = this.cv;
+    let cur = n;
+    for (let i = 0; i < 60 && cur && cur.type !== 'center'; i++) {
+      const pe = cv.doc.edges.find(e => e.type === 'branch' && e.b === cur.id);
+      cur = pe ? cv.node(pe.a) : null;
+    }
+    const root = cur || cv.doc.nodes.find(x => x.type === 'center');
+    return n.x < (root ? root.x : 0) ? 'l' : 'r';
   };
 
   Editor.prototype.key = function (ev) {
@@ -1357,12 +1659,17 @@
     // Nur, wenn der Editor sichtbar ist und nichts anderes den Fokus hat.
     if (t && t !== document.body && !this.host.contains(t)) return;
     const cv = this.cv;
+    const k = (ev.key || '').toLowerCase();
+    if (mod && k === 'c') { if (this.copy()) ev.preventDefault(); return; }
+    if (mod && k === 'x') { if (this.copy()) { ev.preventDefault(); this.remove(); } return; }
+    if (mod && k === 'v') { if (CLIP) { ev.preventDefault(); this.paste(); } return; }
+    if (mod && k === 'a') { ev.preventDefault(); return cv.selectMany(cv.doc.nodes.map(n => n.id)); }
     if (mod && (ev.key === 'z' || ev.key === 'Z')) { ev.preventDefault(); return ev.shiftKey ? this.restore(this.redo, this.undo) : this.restore(this.undo, this.redo); }
     if (mod && (ev.key === 'y' || ev.key === 'Y')) { ev.preventDefault(); return this.restore(this.redo, this.undo); }
     if (!cv.sel) return;
     if (ev.key === 'Delete' || ev.key === 'Backspace') { ev.preventDefault(); return this.remove(); }
     if (ev.key === 'Escape') return cv.select(null);
-    if (cv.sel.kind !== 'node') return;
+    if (cv.sel.kind !== 'node' || cv.multi) return;
     const n = cv.node(cv.sel.id);
     if (!n) return;
     if (ev.key === 'F2' || (ev.key === 'Enter' && cv.doc.kind !== 'mindmap')) { ev.preventDefault(); return this.openEdit(n.id); }
@@ -1374,7 +1681,7 @@
         par = pe ? cv.node(pe.a) : null;
         if (!par) return this.openEdit(n.id);
       }
-      const dir = par.type === 'center' ? (n.x < par.x && ev.key === 'Enter' ? 'l' : 'r') : (par.x < 0 ? 'l' : 'r');
+      const dir = par.type === 'center' ? (n.x < par.x && ev.key === 'Enter' ? 'l' : 'r') : this.side(par);
       this.handleEdit({ link: true, from: par.id, dir });
     }
   };
@@ -1382,11 +1689,25 @@
   /* ── Auswahl-Leiste ───────────────────────────────────────── */
   Editor.prototype.showCtx = function (sel) {
     const box_ = this.$('ctx');
-    if (this.editing && (!sel || sel.id !== this.editing)) this.closeEdit(true);
+    if (this.editing && (!sel || sel.id !== this.editing || this.cv.multi)) this.closeEdit(true);
     if (!sel) { box_.hidden = true; box_.innerHTML = ''; return; }
     const cv = this.cv;
     let h = '';
-    if (sel.kind === 'node') {
+    if (cv.multi) {
+      // Mehrere gewählt (Strg+Klick): Farbe für alle, kopieren, löschen
+      const ids = cv.selSet();
+      const nodes = [...ids].map(id => cv.node(id)).filter(Boolean);
+      h += `<span class="dg-cnum">${ids.size} ausgewählt</span>`;
+      if (nodes.some(n => n.type !== 'note')) {
+        const cur = nodes.find(n => n.type !== 'note').c || 0;
+        h += '<span class="dg-csep"></span><div class="dg-colors" role="group" aria-label="Farbe">'
+          + COLORS.map(([f, s], i) => `<button type="button" class="dg-col${cur === i && nodes.every(n => n.type === 'note' || (n.c || 0) === i) ? ' is-on' : ''}" data-act="color" data-c="${i}" title="${COLOR_NAMES[i]}" style="--f:${f};--s:${s}"></button>`).join('')
+          + '</div>';
+      }
+      if (nodes.length) h += `<span class="dg-csep"></span><button type="button" class="dg-cb" data-act="copy" title="Kopieren (Strg+C)">${ICON.copy}</button>`
+        + `<button type="button" class="dg-cb" data-act="cut" title="Ausschneiden (Strg+X)">${ICON.cut}</button>`;
+      h += `<span class="dg-csep"></span><button type="button" class="dg-cb dg-cb--del" data-act="del" title="Löschen (Entf)">${ICON.trash}</button>`;
+    } else if (sel.kind === 'node') {
       const n = cv.node(sel.id);
       if (!n) { box_.hidden = true; return; }
       h += `<button type="button" class="dg-cb dg-cb--main" data-act="edit">${ICON.pen}<span>Text</span></button>`;
@@ -1395,7 +1716,9 @@
           + COLORS.map(([f, s], i) => `<button type="button" class="dg-col${(n.c || 0) === i ? ' is-on' : ''}" data-act="color" data-c="${i}" title="${COLOR_NAMES[i]}" style="--f:${f};--s:${s}"></button>`).join('')
           + '</div>';
       }
-      if (n.type !== 'center') h += `<span class="dg-csep"></span><button type="button" class="dg-cb dg-cb--del" data-act="del" title="Löschen (Entf)">${ICON.trash}</button>`;
+      h += `<span class="dg-csep"></span><button type="button" class="dg-cb" data-act="copy" title="Kopieren (Strg+C)">${ICON.copy}</button>`;
+      const lastCenter = n.type === 'center' && cv.doc.nodes.filter(x => x.type === 'center').length < 2;
+      if (!lastCenter) h += `<button type="button" class="dg-cb dg-cb--del" data-act="del" title="Löschen (Entf)">${ICON.trash}</button>`;
     } else {
       const e = cv.edge(sel.id);
       if (!e) { box_.hidden = true; return; }
@@ -1413,6 +1736,9 @@
       }
       if (e.type !== 'branch' && e.type !== 'line' && e.type !== 'assoc' && e.type !== 'link') {
         h += `<button type="button" class="dg-cb" data-act="flip" title="Richtung umdrehen">${ICON.swap}<span>umdrehen</span></button>`;
+      }
+      if (['pa', 'pb', 'lo', 'o1', 'o2'].some(k => e[k])) {
+        h += `<button type="button" class="dg-cb" data-act="eredo" title="Andockpunkte und Beschriftung wieder von selbst setzen">${ICON.reset}<span>zurücksetzen</span></button>`;
       }
       h += `<span class="dg-csep"></span><button type="button" class="dg-cb dg-cb--del" data-act="del" title="Löschen (Entf)">${ICON.trash}</button>`;
       if (e.type !== 'branch') h += edgeForm(e, cv);
@@ -1495,9 +1821,28 @@
     } else {
       h = `<textarea class="dg-etext" data-f="t" rows="2" placeholder="Text …" spellcheck="true">${esc(n.t || '')}</textarea>`;
     }
-    ed.innerHTML = `<div class="dg-edit-in${n.type === 'class' || n.type === 'object' ? ' is-form' : ''}">${h}
+    ed.innerHTML = `<div class="dg-edit-in${n.type === 'class' || n.type === 'object' ? ' is-form' : ''}">
+      <div class="dg-grip" data-grip title="Fenster verschieben (doppelt tippen: wieder an den Baustein)" aria-hidden="true"><i></i></div>${h}
       <button type="button" class="dg-ok" data-act="editok">Fertig</button></div>`;
     ed.hidden = false;
+    // Das Fenster lässt sich am Griff frei verschieben; der Platz gilt,
+    // bis der Griff doppelt angetippt wird (dann wieder am Baustein).
+    ed.onpointerdown = ev => {
+      if (!ev.target.closest('[data-grip]')) return;
+      ev.preventDefault();
+      const r0 = { x: parseFloat(ed.style.left) || 0, y: parseFloat(ed.style.top) || 0, cx: ev.clientX, cy: ev.clientY };
+      const now = Date.now();
+      if (now - (this._gripTap || 0) < 380) { this.editPin = null; this._gripTap = 0; this.placeEdit(); return; }
+      this._gripTap = now;
+      const mv = e2 => {
+        this.editPin = { x: r0.x + e2.clientX - r0.cx, y: r0.y + e2.clientY - r0.cy };
+        this.placeEdit();
+      };
+      const upf = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', upf); window.removeEventListener('pointercancel', upf); };
+      window.addEventListener('pointermove', mv);
+      window.addEventListener('pointerup', upf);
+      window.addEventListener('pointercancel', upf);
+    };
     ed.oninput = ev => {
       const el = ev.target.closest('[data-f]');
       if (!el) return;
@@ -1529,7 +1874,7 @@
       } else if (ev.key === 'Tab' && ev.target.matches('.dg-etext') && this.cv.doc.kind === 'mindmap') {
         ev.preventDefault();
         this.closeEdit(true);
-        this.handleEdit({ link: true, from: id, dir: n.x < 0 ? 'l' : 'r' });
+        this.handleEdit({ link: true, from: id, dir: n.type === 'center' ? 'r' : this.side(n) });
       }
     };
     this.cv.reveal(n);
@@ -1546,6 +1891,11 @@
     const stage = this.host.querySelector('.dg-stage').getBoundingClientRect();
     const inner = ed.firstElementChild;
     const w = inner ? inner.offsetWidth : 260, h = inner ? inner.offsetHeight : 80;
+    if (this.editPin) {
+      const px = clamp(this.editPin.x, 0, Math.max(0, stage.width - w)), py = clamp(this.editPin.y, 0, Math.max(0, stage.height - h));
+      ed.style.left = px + 'px'; ed.style.top = py + 'px';
+      return;
+    }
     let x = v.x + (b.x + b.w / 2) * v.k - w / 2;
     let y = v.y + (b.y + b.h) * v.k + 10;
     if (y + h > stage.height - 8) y = v.y + b.y * v.k - h - 10;
@@ -1558,7 +1908,7 @@
     const ed = this.$('edit');
     const before = this.editSnap;
     this.editing = null;
-    ed.hidden = true; ed.innerHTML = ''; ed.oninput = null; ed.onkeydown = null;
+    ed.hidden = true; ed.innerHTML = ''; ed.oninput = null; ed.onkeydown = null; ed.onpointerdown = null;
     if (keep && before && before !== JSON.stringify(clean(this.cv.doc))) {
       this.undo.push(before);
       if (this.undo.length > 80) this.undo.shift();
@@ -1567,32 +1917,12 @@
     }
   };
 
-  /* ── Kreisläufe ───────────────────────────────────────────── */
-  Editor.prototype.findLoops = function (quiet) {
-    const L = findLoops(this.cv.doc);
-    this.loops = L;
-    const box_ = this.$('loops');
-    box_.innerHTML = `<div class="dg-loops-h"><b>Kreisläufe</b><button type="button" class="dg-x" data-act="loopsx" aria-label="Schließen">✕</button></div>`
-      + (L.length ? L.map((l, i) => `<button type="button" class="dg-loop" data-act="loop" data-i="${i}">
-            <span class="dg-lt">${i + 1}</span>
-            <span>${l.names.map(esc).join(' → ')} → ↺</span></button>`).join('')
-        : '<p class="dg-loops-none">Noch kein geschlossener Kreis. Verbinde die Größen so, dass ein Pfeil-Weg wieder am Anfang ankommt.</p>')
-      + (L.length ? '<p class="dg-loops-k">Antippen hebt den Kreis im Diagramm hervor.</p>' : '');
-    box_.hidden = false;
-    if (!quiet) { this.cv.hl = null; this.cv.render(); }
-  };
-  Editor.prototype.hideLoops = function () {
-    this.loops = null;
-    this.$('loops').hidden = true;
-    if (this.cv.hl) { this.cv.hl = null; this.cv.render(); }
-  };
-
   Editor.prototype.toggleHelp = function (on) {
     const h = this.$('help');
     const show = on == null ? h.hidden : on;
     if (!show) { h.hidden = true; return; }
     const rows = HELP.common.concat(HELP[this.cv.doc.kind] || []);
-    h.innerHTML = `<div class="dg-loops-h"><b>So geht's</b><button type="button" class="dg-x" data-act="helpx" aria-label="Schließen">✕</button></div>`
+    h.innerHTML = `<div class="dg-help-h"><b>So geht's</b><button type="button" class="dg-x" data-act="helpx" aria-label="Schließen">✕</button></div>`
       + '<dl>' + rows.map(([a, b]) => `<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join('') + '</dl>';
     h.hidden = false;
   };
@@ -2001,9 +2331,9 @@
     settingsFields: [{
       key: 'kind', type: 'choice', label: 'Was zeichnet die Klasse?', default: 'free',
       options: [
-        { value: 'free',    label: 'frei wählen',      hint: 'Jede Person wählt selbst: Mindmap, Wirkungsgefüge, Klassen- oder Objektdiagramm.' },
+        { value: 'free',    label: 'frei wählen',      hint: 'Jede Person wählt selbst: Mindmap, Concept Map, Klassen- oder Objektdiagramm.' },
         { value: 'mindmap', label: 'Mindmap',          hint: KINDS.mindmap.hint },
-        { value: 'wirkung', label: 'Wirkungsgefüge',   hint: KINDS.wirkung.hint },
+        { value: 'wirkung', label: 'Concept Map',      hint: KINDS.wirkung.hint },
         { value: 'klasse',  label: 'Klassendiagramm',  hint: KINDS.klasse.hint },
         { value: 'objekt',  label: 'Objektdiagramm',   hint: KINDS.objekt.hint }
       ]
@@ -2046,5 +2376,5 @@
   });
 
   // Für Prüfstände und das Schaufenster.
-  window.MPDiagramm = { KINDS, SAMPLES, sane, clean, findLoops, layoutMindmap, exportSVG, measure };
+  window.MPDiagramm = { KINDS, SAMPLES, sane, clean, layoutMindmap, exportSVG, measure, orthoRoute, orthoEnds, borderU, docSVG };
 })();

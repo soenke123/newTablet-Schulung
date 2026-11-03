@@ -7,11 +7,11 @@
    Mia und Leon nebeneinander, Leon „zeichnet" noch und läuft mit.
 
    Drehbuch: Vergleich ansehen → Emmas Mindmap dazunehmen → zurück
-   zu Mia + Leon → „Mein Diagramm": Wirkungsgefüge wählen und eine
-   Größe anlegen.
+   zu Mia + Leon → „Mein Diagramm": Concept Map wählen und einen
+   Begriff anlegen.
 
    Das Standbild für die Kachel (tile()): zwei Diagramme im geteilten
-   Bildschirm, links eine Mindmap, rechts ein Wirkungsgefüge.
+   Bildschirm, links eine Mindmap, rechts eine Concept Map.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -36,7 +36,7 @@
     if (!await api.wait(4000)) return;
     api.click('.dg-li[data-pp="d1"]');
     if (!await api.wait(3500)) return;
-    api.caption('Selbst zeichnen: Mindmap, Wirkungsgefüge, Klassen- und Objektdiagramm');
+    api.caption('Selbst zeichnen: Mindmap, Concept Map, Klassen- und Objektdiagramm');
     api.click('.dg-tab[data-tab="own"]');
     if (!await api.wait(3500)) return;
     api.click('[data-pick="wirkung"]');
@@ -103,7 +103,7 @@
     fade: false,
     blurb: `
       <p>Ein <strong>Zeichenwerkzeug für Diagramme</strong>, schlank wie Papier: Mindmap,
-         Wirkungsgefüge (Pfeile schwarz, grün oder rot, beschriftet), Klassen- und Objektdiagramm nach UML.
+         Concept Map (Begriffe mit Pfeilen schwarz, grün oder rot, beschriftet), Klassen- und Objektdiagramm nach UML.
          Bausteine antippen, an den blauen Punkten verbinden, doppelt tippen zum Schreiben.</p>
       <p>Jedes Kind zeichnet auf seinem Tablet, gespeichert wird von selbst. Die Lehrkraft holt
          <strong>ein oder zwei Diagramme nebeneinander</strong> an den Beamer – sie laufen live mit,

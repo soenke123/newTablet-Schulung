@@ -1,6 +1,8 @@
 # Diagramm (MPSkill `diagramm`, Migration 0258, Beta)
 
-Schlankes Zeichenwerkzeug für **Mindmap · Wirkungsgefüge · Klassendiagramm · Objektdiagramm**.
+Schlankes Zeichenwerkzeug für **Mindmap · Concept Map · Klassendiagramm · Objektdiagramm**.
+„Concept Map“ hieß bis 03.11.2026 „Wirkungsgefüge“; die id bleibt `wirkung` (dg_work.kind, settings.kind),
+nur Anzeige und Kacheltext (Migration 0259) sind neu. Bausteine dort heißen „Begriff“.
 Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie braucht. Direkt im Raum gebaut
 (`tool.js` + `tool.css`, kein iframe).
 
@@ -10,7 +12,7 @@ Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie braucht. Direkt 
   Zoomen, Ziehen, Anfasser), `Editor` (Leisten, Text-Kasten, Rückgängig), Rollen.
 - `tool.css` – Aussehen, Farben der Seite (hell/dunkel). Bausteine tragen feste Pastellfarben
   (`COLORS` in tool.js), die auch im exportierten PNG landen.
-- `tests/logik.test.mjs` – Kreisläufe, `sane`, `clean` (ohne Browser).
+- `tests/logik.test.mjs` – `sane`, `clean`, neue Felder, rechtwinklige Linien, Rand-Punkte, Mindmap mit mehreren Themen (ohne Browser, Textbreite 8 px je Zeichen).
 - `tests/harness.html` – Prüfseite ohne Server: `?rolle=schueler|lehrer|demo`, `&art=wirkung`.
 - Schaufenster: `MPSkills/preview/diagramm.js` (Lehrkraft-Ansicht mit erfundener Klasse,
   `DEMO_PEOPLE` in tool.js).
@@ -19,10 +21,10 @@ Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie braucht. Direkt 
 
 Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k-paper` / `.k-uml`):
 
-- **Papier** (Mindmap, Wirkungsgefüge): Tisch in warmem Ton mit Punkten und ganz leichtem Papierkorn
+- **Papier** (Mindmap, Concept Map): Tisch in warmem Ton mit Punkten und ganz leichtem Papierkorn
   (zweite Hintergrund-Ebene, data:-SVG). Zettel fast eckig (rx 2–3) mit leichtem Schatten
   (`#dgPaper`), beim Ziehen hebt sich der Zettel (`#dgLift`, `Canvas.lift`). Mitte der Mindmap = großer
-  Zettel mit Kreppband und Farbstreifen unten; Äste = farbige Zettel; Größen im Wirkungsgefüge =
+  Zettel mit Kreppband und Farbstreifen unten; Äste = farbige Zettel; Begriffe der Concept Map =
   Karteikarten mit Farbstreifen oben; Linien Bleistift-Grau (`--dg-line`). Schrift Outfit. Zettel bleiben
   auch im Dunkelmodus hell (Papier auf dunklem Tisch).
 - **Karte wie SQL Studio** (Klassen-, Objektdiagramm; `tools/SQLStudio/js/diagram.js`): weiße Karte rx 12,
@@ -37,9 +39,9 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
 ## Datenmodell (`dg_work.doc`)
 
 ```jsonc
-{ "v": 1, "kind": "mindmap|wirkung|klasse|objekt",
+{ "v": 1, "kind": "mindmap|wirkung|klasse|objekt", "ortho": true /* nur UML, rechtwinklig */,
   "nodes": [{ "id", "type": "center|topic|box|class|object|note", "x", "y", "t", "c", "a", "o", "k" }],
-  "edges": [{ "id", "a", "b", "type", "f": "k|g|r", "l", "m1", "m2" }] }
+  "edges": [{ "id", "a", "b", "type", "f": "k|g|r", "l", "m1", "m2", "pa", "pb", "lo", "o1", "o2" }] }
 ```
 
 - `x/y` = Mitte; Größe wird aus dem Text gerechnet (`measure`, nie gespeichert – `clean` schneidet `_…` ab).
@@ -47,6 +49,16 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
 - Kanten: `branch` (Mindmap), `effect` (Wirkung, Farbe `f`: k schwarz · g grün · r rot – seit 03.11.2026 statt +/−; `sane()` übersetzt alte `s`: − → rot, sonst schwarz; der Skill deutet die Farben nicht), UML `assoc · directed · inherit · aggr ·
   comp · dep`, `link` (Objekte), `line/arrow`. Vererbung: Pfeil von Unter- zur Oberklasse;
   Aggregation/Komposition: Raute am Anfang (`a` = das Ganze). „Richtung umdrehen“ tauscht a/b.
+- `pa`/`pb`: selbst verschobener Andockpunkt am Anfang/Ende, `[u, v]` in −1…1 (Anteil der halben
+  Breite/Höhe, auf dem Rand; `borderU`) — wächst der Kasten, wandert er mit. Fehlt = von selbst.
+- `lo`/`o1`/`o2`: Feinjustierung von Beschriftung bzw. Anzahlen, `[dx, dy]` px relativ zum
+  ausgerechneten Platz, höchstens ±`LAB_MAX` (70) — wandern mit der Linie mit.
+- `ortho` (Schalter „rechtwinklig“ oben, nur Klassen-/Objektdiagramm): Linien wie in SQL Studio
+  (`orthoEnds` wählt die Seiten: nebeneinander waagrecht, übereinander senkrecht, ineinander außen rechts;
+  `orthoRoute` baut den Linienzug, `roundPath` rundet die Ecken). Gesetzte Andockpunkte bestimmen die Seite.
+- Mindmap: beliebig viele Themen (`center`, Knopf „Thema“); ein Ast zu einem anderen Thema wird eine
+  Linie. Ziehen eines Themas nimmt seinen Baum mit (`subtree` endet an anderen Themen), „Ordnen“ legt die
+  Bäume untereinander, das letzte Thema lässt sich nicht löschen.
 - **Alles vom Server geht durch `sane()`** – ids nur `[A-Za-z0-9_-]{1,40}` (landen in
   data-Attributen der Lehrkraft-Ansicht), Typen gegen feste Listen, Texte gekürzt. Texte immer über `esc()`.
 
@@ -56,13 +68,22 @@ Antippen = wählen · doppelt tippen = Text (auf leerer Fläche: neuer Baustein)
 (Mindmap: ganzer Ast) · leere Fläche ziehen = Blatt verschieben · zwei Finger/Mausrad = Zoom.
 Blaue Punkte am gewählten Baustein: antippen = neuer Baustein daneben + Verbindung, auf anderen
 Baustein ziehen = verbinden, ins Leere ziehen = neuer Baustein dort. Auswahl-Leiste unten: Text, Farbe,
-Löschen bzw. Art der Verbindung, Pfeilfarbe (Wirkungsgefüge: schwarz/grün/rot, der nächste Pfeil bekommt dieselbe), Beschriftung, Multiplizitäten. Mindmap: Tab = Kind, Enter =
-Nachbar, „Ordnen“ (`layoutMindmap`). Wirkungsgefüge: „Kreisläufe“ (`findLoops`) findet geschlossene Pfeil-Wege und hebt sie
-hervor, ohne sie zu deuten. PNG-Export.
+Löschen bzw. Art der Verbindung, Pfeilfarbe (Concept Map: schwarz/grün/rot, der nächste Pfeil bekommt dieselbe), Beschriftung, Multiplizitäten. Mindmap: Tab = Kind, Enter =
+Nachbar, „Ordnen“ (`layoutMindmap`). PNG-Export. „Kreisläufe“ gibt es seit 03.11.2026 nicht mehr.
+Gewählte Verbindung: weiße Punkte an beiden Enden = Andockpunkt am Rand verschieben (wenn mehrere
+Linien ineinander liegen); Beschriftung/Anzahlen lassen sich ein Stück ziehen; „zurücksetzen“ in der
+Auswahl-Leiste holt beides wieder auf „von selbst“.
+**Mehrfachauswahl**: Strg/⌘ + Klick nimmt Bausteine und Verbindungen dazu (`Canvas.multi`, `selSet()`,
+`toggle`, `selectMany`); Ziehen bewegt alle, Leiste unten: Farbe für alle, Kopieren, Ausschneiden, Löschen.
+Strg+C/X/V/A; die Zwischenablage `CLIP` gilt seitenweit, nur für dieselbe Diagrammart, Verbindungen
+zwischen kopierten Bausteinen kommen mit, jedes Einfügen 30 px versetzt; Knopf „Einfügen“ oben, solange
+etwas drin ist (für Tablets ohne Tastatur).
+**Textfenster** lässt sich am Griff oben frei verschieben (`editPin`, gilt für die Sitzung des Editors;
+Griff doppelt antippen = wieder am Baustein).
 Die zuletzt gewählte Verbindungsart gilt für die nächste neue Verbindung.
 Verbindung gewählt → unten eine **Skizze des Pfeils** (`edgeForm`): immer Anfang links, Ende rechts, mit
-den Namen der beiden Bausteine; Beschriftung über der Mitte, Anzahlen (UML) an den Enden, beim
-Wirkungsgefüge die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr Text am Pfeil landet.
+den Namen der beiden Bausteine; Beschriftung über der Mitte, Anzahlen (UML) an den Enden, bei der
+Concept Map die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr Text am Pfeil landet.
 
 ## Raum
 
