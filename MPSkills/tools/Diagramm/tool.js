@@ -1347,12 +1347,12 @@
     const m = this.$('menu'), b = this.host.querySelector('[data-act="file"]');
     const show = on == null ? m.hidden : on;
     if (!show) { if (!m.hidden) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } return; }
-    const it = (act, icon, label, sub) => `<button type="button" role="menuitem" class="dg-mi" data-act="${act}">${icon}<span><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span></button>`;
-    m.innerHTML = (this.o.onNew ? it('f-new', ICON.plus, 'Neu', 'leeres Diagramm anfangen') : '')
-      + it('f-open', ICON.open, 'Öffnen …', 'gespeicherte Diagramm-Datei laden')
-      + it('f-save', ICON.img, 'Speichern', 'als Datei herunterladen, später wieder öffnen')
-      + it('png', ICON.pic, 'Als Bild (PNG)', 'zum Einfügen in Texte und Folien')
-      + (this.o.teacherAvail && this.o.teacherAvail() ? '<span class="dg-msep"></span>' + it('f-teacher', ICON.inbox, 'Diagramm der Lehrkraft', 'als eigene Kopie öffnen') : '');
+    const it = (act, icon, label) => `<button type="button" role="menuitem" class="dg-mi" data-act="${act}">${icon}<span><b>${label}</b></span></button>`;
+    m.innerHTML = (this.o.onNew ? it('f-new', ICON.plus, 'Neu') : '')
+      + it('f-open', ICON.open, 'Öffnen …')
+      + it('f-save', ICON.img, 'Speichern')
+      + it('png', ICON.pic, 'Als Bild (PNG)')
+      + (this.o.teacherAvail && this.o.teacherAvail() ? '<span class="dg-msep"></span>' + it('f-teacher', ICON.inbox, 'Diagramm der Lehrkraft') : '');
     m.hidden = false;
     b.setAttribute('aria-expanded', 'true');
   };
