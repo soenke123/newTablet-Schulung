@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262–0266 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
+/* Prüfstand für Migration 0262–0267 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -134,7 +134,7 @@ r = await call(`sh_logo_get('tokA', null, $1)`, [HUB]);
 ok('2  Logo holen', r.ok && Buffer.from(r.img, 'base64').toString() === 'fakepng');
 
 /* 3 */
-r = await call(`sh_register('tokA', $1, 'Leon_B', 'pw1234', 'Leon', 'leon@x.de', '2011-05-04', 'Kiel', 'male', 'Hi')`, [HUB]);
+r = await call(`sh_register('tokA', $1, 'Leon_B', 'pw1234', 'Leon', 'leon@x.de', '2011-05-04', 'Kiel', 'male', 'Hi', 'Deutschland', 172)`, [HUB]);
 ok('3  Gründer legt weiteres Konto an (Kleinschreibung, kein Admin)', r.ok && r.user === 2 && r.admin === false, JSON.stringify(r));
 let SB = r.session;
 r = await call(`sh_db_snapshot('tokA', null, $1, $2)`, [HUB, SB]);
@@ -145,6 +145,8 @@ r = await call(`sh_register('tokA', $1, 'a', 'xyz123')`, [HUB]);
 ok('3  zu kurzer Name → invalid_username', r.error === 'invalid_username');
 r = await call(`sh_register('tokA', $1, 'tom', 'xyz123', null, null, '3000-01-01')`, [HUB]);
 ok('3  Geburtstag in der Zukunft → invalid_birthday', r.error === 'invalid_birthday');
+r = await call(`sh_register('tokA', $1, 'tom', 'xyz123', null, null, null, null, null, null, null, 400)`, [HUB]);
+ok('3  Größe außerhalb 50–250 cm → abgelehnt (0267)', r.error === 'invalid_centimeter', JSON.stringify(r));
 r = await call(`sh_register('tokA', $1, 'tom', 'xyz123', null, null, null, null, 'robot')`, [HUB]);
 ok('3  gender außerhalb des ENUM → invalid_gender', r.error === 'invalid_gender');
 const hash = (await one(`select password from sh_users where hub_id = $1 and id = 2`, [HUB])).password;
@@ -211,8 +213,13 @@ if (!r || r.ok === false) {
 await as(null);
 r = await call(`sh_enter('tokA', null, $1, $2)`, [HUB, SA]);
 ok('4  erstellte Tabellen sichtbar', r.tables.includes('likes') && r.tables.includes('photo_tag'), JSON.stringify(r.tables));
+ok('4  comment_likes gibt es nicht mehr, auch wenn es in data.tables steht (0267)', !r.tables.includes('comment_likes'));
 r = await call(`sh_like('tokA', $1, $2, 1, true)`, [HUB, SA]);
-ok('5  Like', r.ok && r.likes === 1);
+ok('5  Like', r.ok && r.likes === 1 && r.my_kind === 'heart');
+r = await call(`sh_like('tokA', $1, $2, 1, true, 'thumb')`, [HUB, SA]);
+ok('5  andere Art ersetzt die alte, zählt nicht doppelt (0267)', r.ok && r.likes === 1 && r.my_kind === 'thumb' && r.kinds.thumb === 1 && r.kinds.heart === 0, JSON.stringify(r));
+r = await call(`sh_like('tokA', $1, $2, 1, true, 'wut')`, [HUB, SA]);
+ok('5  unbekannte Art → abgelehnt', r.error === 'invalid_input');
 r = await call(`sh_follow('tokA', $1, $2, 2, true)`, [HUB, SA]);
 ok('5  Folgen', r.ok && r.followers === 1);
 r = await call(`sh_follow('tokA', $1, $2, 1, true)`, [HUB, SA]);
@@ -222,14 +229,14 @@ ok('5  Foto mit Tags', r.ok && r.id === 3);
 r = await call(`sh_comment_add('tokA', $1, $2, 2, 'Süß!')`, [HUB, SB]);
 ok('5  Kommentar', r.ok && r.id === 1);
 await call(`sh_comment_add('tokA', $1, $2, 2, 'Danke')`, [HUB, SA]);
-r = await call(`sh_comment_like('tokA', $1, $2, 1, true)`, [HUB, SA]);
-ok('5  Herz am Kommentar', r.ok);
+ok('5  sh_comment_like gibt es nicht mehr (0267)', !(await one(`select count(*)::int n from pg_proc where proname = 'sh_comment_like'`)).n
+   && !(await one(`select to_regclass('public.sh_comment_likes') is not null f`)).f);
 r = await call(`sh_comments('tokA', null, $1, $2, 2)`, [HUB, SB]);
-ok('5  Kommentare nach Herzen', r.ok && r.items.length === 2 && r.items[0].body === 'Süß!' && r.items[0].hearts === 1 && r.items[0].mine === true, JSON.stringify(r.items));
+ok('5  Kommentare in Reihenfolge, ohne Herzen', r.ok && r.items.length === 2 && r.items[0].body === 'Süß!' && r.items[0].hearts === undefined && r.items[0].mine === true, JSON.stringify(r.items));
 r = await call(`sh_feed('tokA', null, $1, $2, 'foryou', null, 0, 8, 7)`, [HUB, SA]);
 ok('5  Für dich: alle 3 Fotos', r.ok && r.items.length === 3 && r.total === 3, JSON.stringify(r).slice(0, 200));
 const it = r.items.find(x => x.id === 1);
-ok('5  Foto mit Likes/liked/Kommentaren', it.likes === 1 && it.liked === true && it.comments === 0 && it.user.username === 'leon_b' && it.following === true);
+ok('5  Foto mit Likes/liked/Kommentaren', it.likes === 1 && it.liked === true && it.my_kind === 'thumb' && it.kinds.thumb === 1 && it.comments === 0 && it.user.username === 'leon_b' && it.following === true);
 r = await call(`sh_feed('tokA', null, $1, $2, 'foryou', null, 2, 8, 7)`, [HUB, SA]);
 ok('5  zweite Seite', r.ok && r.items.length === 1);
 r = await call(`sh_feed('tokA', null, $1, $2, 'following', null, 0, 8, 0)`, [HUB, SA]);
@@ -246,8 +253,10 @@ r = await call(`sh_search('tokA', null, $1, $2, '#na')`, [HUB, SB]);
 ok('5  Suche nach Tag', r.ok && r.tags.length === 1 && r.tags[0].name === 'natur');
 r = await call(`sh_search('tokA', null, $1, $2, '@adm')`, [HUB, SB]);
 ok('5  Suche nach Nutzer', r.ok && r.users.length === 1 && r.users[0].username === 'admin');
-r = await call(`sh_me_update('tokA', $1, $2, 'Leon B.', 'Ich mag Fotos', 'img_1.webp', 'Kiel', 'male')`, [HUB, SB]);
+r = await call(`sh_me_update('tokA', $1, $2, 'Leon B.', 'Ich mag Fotos', 'img_1.webp', 'Kiel', 'male', 'Dänemark', 175)`, [HUB, SB]);
 ok('5  Profil ändern', r.ok);
+r = await call(`sh_profile('tokA', null, $1, $2, null)`, [HUB, SB]);
+ok('5  Profil mit country und centimeter (0267)', r.ok && r.user.country === 'Dänemark' && r.user.centimeter === 175, JSON.stringify(r.user));
 
 /* 6: Datenbank */
 r = await call(`sh_login_net('tokC', 'Pixelwelt+', 'leon_b', 'pw1234')`);
@@ -258,7 +267,9 @@ r = await call(`sh_db_snapshot('tokA', null, $1, $2)`, [HUB, SA]);
 ok('6  Schnappschuss', r.ok && r.tables.users.rows.length === 2 && r.tables.likes.rows.length === 1 && r.tables.photo_tag.rows.length === 2, Object.keys(r.tables || {}).join());
 ok('6  Passwort-Hash im Schnappschuss', /^\$2a\$/.test(r.tables.users.rows[1][4]));
 ok('6  gender im Schnappschuss', r.tables.users.cols[5] === 'gender' && r.tables.users.rows[1][5] === 'male');
-ok('6  Zeit als Text', /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(r.tables.users.rows[0][11]));
+ok('6  country/centimeter im Schnappschuss, kein comment_likes', r.tables.users.cols.join() === 'id,username,name,email,password,gender,bio,avatar,birthday,city,country,centimeter,role,created_at'
+   && r.tables.users.rows[1][10] === 'Dänemark' && r.tables.users.rows[1][11] === 175 && !r.tables.comment_likes, JSON.stringify(r.tables.users.rows[1]));
+ok('6  Zeit als Text', /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/.test(r.tables.users.rows[0][13]));
 const BC = (await one(`select crypt('neu123', gen_salt('bf', 8)) h`)).h;
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([
   { t: 'users', op: 'insert', row: { id: 3, username: 'sqlkind', name: 'SQL', password: BC, gender: 'diverse', role: 'user', created_at: '2026-11-03 10:00:00' } },
@@ -277,6 +288,12 @@ r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.st
 ok('6  Benutzername mit Zeichen außer [A-Za-z0-9._] → abgelehnt (0266)', !r.ok && /Benutzername/.test(r.message), JSON.stringify(r));
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'update', key: { id: 4 }, row: { id: 4, bio: { x: 1 } } }])]);
 ok('6  JSON-Objekt als Wert → abgelehnt (0266)', !r.ok, JSON.stringify(r));
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'update', key: { id: 4 }, row: { id: 4, country: 'Schweden', centimeter: 181 } }])]);
+ok('6  UPDATE country/centimeter (0267)', r.ok && (await one(`select centimeter from sh_users where hub_id = $1 and id = 4`, [HUB])).centimeter === 181, JSON.stringify(r));
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'update', key: { id: 4 }, row: { id: 4, centimeter: 20 } }])]);
+ok('6  centimeter außerhalb 50–250 → CHECK', !r.ok && /CHECK/.test(r.message));
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'comment_likes', op: 'insert', row: { user_id: 1, comment_id: 1 } }])]);
+ok('6  comment_likes per SQL → gibt es nicht', !r.ok && /gibt es hier nicht/.test(r.message));
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'delete', key: { id: "1 or 1=1" } }])]);
 ok('6  Schlüssel mit SQL darin → abgelehnt', !r.ok && /ganze Zahl/.test(r.message));
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users; drop table sh_users; --', op: 'delete', key: { id: 1 } }])]);
@@ -344,7 +361,7 @@ r = await call(`sh_found(null, 'Zweiter', 'graph', null, 'dark', $1)`, [CODE]);
 ok('7b zweites Netzwerk der Lehrkraft → already_founded', r.error === 'already_founded');
 r = await call(`sh_enter(null, $1, $2, null)`, [CODE, THUB]);
 ok('7b ohne Konto: needs_admin', r.ok && r.needs_admin && r.me === null);
-r = await call(`sh_register(null, $1, 'admin', 'lehrer1', 'Frau T', null, null, null, 'female', null, $2)`, [THUB, CODE]);
+r = await call(`sh_register(null, $1, 'admin', 'lehrer1', 'Frau T', null, null, null, 'female', null, null, null, $2)`, [THUB, CODE]);
 ok('7b Lehrkraft: erstes Konto wird Admin', r.ok && r.admin);
 const TS = r.session;
 r = await call(`sh_enter(null, $1, $2, null)`, [CODE, THUB]);
@@ -354,10 +371,10 @@ r = await call(`sh_photo_post(null, $1, $2, 'img_1.webp', 'Beispielfoto', '["dem
 ok('7b Lehrkraft postet in ihrem Netzwerk', r.ok && r.id === 1, JSON.stringify(r));
 r = await call(`sh_home(null, $1)`, [CODE]);
 ok('7b Übersicht: Netzwerk der Lehrkraft vorn, als „mine“', r.ok && r.mine === THUB && r.hubs[0].id === THUB && r.hubs[0].teacher_hub === true && r.hubs[0].mine === true && /Lehrkraft/.test(r.hubs[0].person), JSON.stringify(r.hubs[0]));
-r = await call(`sh_register(null, $1, 'frau_t_test', 'test99', null, null, null, null, null, null, $2)`, [HUB, CODE]);
+r = await call(`sh_register(null, $1, 'frau_t_test', 'test99', null, null, null, null, null, null, null, null, $2)`, [HUB, CODE]);
 ok('7b Lehrkraft legt Testkonto im Schüler-Netzwerk an (kein Admin)', r.ok && r.admin === false);
 const TSB = r.session;
-r = await call(`sh_like(null, $1, $2, 1, true, $3)`, [HUB, TSB, CODE]);
+r = await call(`sh_like(null, $1, $2, 1, true, 'laugh', $3)`, [HUB, TSB, CODE]);
 ok('7b … und liked dort als Userin', r.ok && r.likes >= 1, JSON.stringify(r));
 r = await call(`sh_admin_users(null, $1, $2, null)`, [CODE, HUB]);
 const TID = (await one(`select id from sh_users where hub_id = $1 and username = 'frau_t_test'`, [HUB])).id;
@@ -402,8 +419,8 @@ const rest = await one(`select (select count(*) from sh_hubs) + (select count(*)
                               + (select count(*) from sh_media) + (select count(*) from sh_sessions) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migrationen 0265 + 0266 laufen ein zweites Mal durch', twice);
+try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migrationen 0265–0267 laufen ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

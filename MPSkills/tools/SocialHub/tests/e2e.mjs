@@ -125,22 +125,24 @@ try {
   await t.app.locator('text=Tabellen für alle Netzwerke').waitFor();
   ok('1  users grün und fest, likes erst nach photos', await t.app.locator('.tb--fixed[data-tb="users"]').count() === 1
      && await t.app.locator('[data-tadd="likes"][disabled]').count() === 1);
-  for (const id of ['photos', 'follows', 'likes', 'comments', 'comment_likes', 'tags']) {
+  for (const id of ['photos', 'follows', 'likes', 'comments', 'tags']) {
     await t.app.locator(`[data-tadd="${id}"]`).click();
     await t.app.locator(`[data-tdrop="${id}"]`).waitFor();
   }
-  ok('1  Lehrkraft erstellt sechs Tabellen', (await stateOf()).tables?.length === 6, JSON.stringify(await stateOf()));
+  ok('1  Lehrkraft erstellt fünf Tabellen, comment_likes gibt es nicht', (await stateOf()).tables?.length === 5 && await t.app.locator('[data-tb="comment_likes"]').count() === 0, JSON.stringify(await stateOf()));
   await t.app.locator('[data-tb="users"]').click();
   ok('1  Antippen zeigt die Attribute (mit gender)', /gender/.test(await t.app.locator('#tdgInfo').textContent()));
-  ok('1  Linien im Diagramm', await t.app.locator('.tdg-lines line.on').count() === 11, String(await t.app.locator('.tdg-lines line').count()));
+  ok('1  Linien im Diagramm: 9, rechtwinklig, mit n und 1', await t.app.locator('.tdg-lines path.on').count() === 9 && await t.app.locator('.tdg-lines text.on').count() === 18, String(await t.app.locator('.tdg-lines path').count()));
   // keine Linie läuft durch einen fremden Kasten (users–photos war verdeckt)
   const hidden = await t.app.locator('#tdg').evaluate((box) => {
     const R = box.getBoundingClientRect(), bad = [];
     const rects = [...box.querySelectorAll('.tb')].map(el => { const r = el.getBoundingClientRect(); return { t: el.dataset.tb, x: r.left - R.left, y: r.top - R.top, w: r.width, h: r.height }; });
-    for (const l of box.querySelectorAll('.tdg-lines line')) {
-      const [x1, y1, x2, y2] = ['x1', 'y1', 'x2', 'y2'].map(k => +l.getAttribute(k));
-      for (let i = 1; i < 20; i++) {
-        const x = x1 + (x2 - x1) * i / 20, y = y1 + (y2 - y1) * i / 20;
+    const svg = box.querySelector('.tdg-lines'), S = svg.getBoundingClientRect();
+    for (const l of box.querySelectorAll('.tdg-lines path')) {
+      const L = l.getTotalLength();
+      // nur gerade/rechtwinklige Stücke: jeder Abschnitt waagerecht oder senkrecht
+      for (let i = 1; i < 40; i++) {
+        const pt = l.getPointAtLength(L * i / 40), x = pt.x + S.left - R.left, y = pt.y + S.top - R.top;
         const hit = rects.find(r => x > r.x + 2 && x < r.x + r.w - 2 && y > r.y + 2 && y < r.y + r.h - 2);
         if (hit) { bad.push(hit.t); break; }
       }
@@ -178,6 +180,10 @@ try {
   ok('2  Schüler: nur „Netzwerk erstellen“, keine fremden Netzwerke', await mia.app.locator('.net-tile').count() === 0);
   await shot(mia.page, '2a-start-schueler');
   await mia.app.locator('#btnFound').click();
+  ok('2  Schritt 1: erst Logo, dann Name; Namensfeld breit (CSS greift)', await mia.app.locator('.be-form').evaluate(f => {
+    const lp = f.querySelector('.logo-pick'), nm = f.querySelector('input[name=name]');
+    return lp.getBoundingClientRect().top < nm.getBoundingClientRect().top && nm.getBoundingClientRect().height >= 40;
+  }));
   ok('2  Name aus Startup Story vorgeschlagen', await mia.app.locator('input[name=name]').inputValue() === 'ToTheMoon');
   await mia.app.locator('[data-logo-id="bell"]').click();
   ok('2  … wechselt mit dem Logo', await mia.app.locator('input[name=name]').inputValue() === 'RingRing');
@@ -190,6 +196,9 @@ try {
   ok('2  Schritt 2: admin vorbelegt', await mia.app.locator('input[name=user]').inputValue() === 'admin');
   await mia.app.locator('input[name=name]').fill('Mia');
   await mia.app.locator('select[name=gender]').selectOption('female');
+  await mia.app.locator('input[name=cm]').fill('158');
+  await mia.app.locator('input[name=country]').fill('Deutschland');
+  ok('2  Registrieren: Eingabefelder in voller Höhe', (await mia.app.locator('input[name=pw]').boundingBox()).height >= 40);
   await mia.app.locator('input[name=pw]').fill('geheim1');
   await mia.app.locator('input[name=pw2]').fill('geheim2');
   // Rückmeldung 2: ein Zustandswechsel im Raum darf das Formular nicht wegwerfen
@@ -208,6 +217,8 @@ try {
   ok('2  Netzwerk online, Reiter App/Adminbereich', await mia.app.locator('[data-view="admin"]').count() === 1 && await mia.app.locator('[data-view="app"].on').count() === 1);
   const mu = (await db.query(`select username, role, gender from sh_users u join sh_hubs h on h.id = u.hub_id where h.name = 'Pixelwelt'`)).rows[0];
   ok('2  erstes Konto = admin, mit gender', mu.username === 'admin' && mu.role === 'admin' && mu.gender === 'female', JSON.stringify(mu));
+  const mc = (await db.query(`select country, centimeter from sh_users u join sh_hubs h on h.id = u.hub_id where h.name = 'Pixelwelt'`)).rows[0];
+  ok('2  country und centimeter gespeichert', mc.country === 'Deutschland' && mc.centimeter === 158, JSON.stringify(mc));
 
   // 3) Foto posten (wird verkleinert)
   const png = await makePng(mia.page);
@@ -273,6 +284,16 @@ try {
   await wait(100);
   await mia.app.locator('.card').first().click({ position: { x: 300, y: 250 } });
   await mia.app.locator('.r-btn.liked').first().waitFor();
+  ok('4  Doppeltipp = Herz', (await db.query(`select kind from sh_likes`)).rows[0]?.kind === 'heart');
+  // Like-Knopf → Auswahl Herz · Daumen · Smiley, Daumen ersetzt das Herz
+  await mia.app.locator('.card').first().locator('[data-act="like"]').click();
+  await mia.app.locator('.react-pick [data-react="laugh"]').waitFor();
+  await shot(mia.page, '4c-like-arten');
+  await mia.app.locator('.react-pick [data-react="thumb"]').click();
+  await mia.app.locator('.r-btn.liked[data-kind="thumb"]').first().waitFor();
+  await wait(300);
+  const lk = (await db.query(`select kind from sh_likes`)).rows;
+  ok('4  Daumen hoch ersetzt das Herz (ein Like je Person)', lk.length === 1 && lk[0].kind === 'thumb', JSON.stringify(lk));
   ok('4  Doppeltipp = Like', (await db.query(`select count(*)::int n from sh_likes`)).rows[0].n === 1);
   await mia.app.locator('[data-act="comments"]').first().click();
   await mia.app.locator('.c-form input').fill('Wow, wie schön!');
@@ -311,8 +332,8 @@ try {
   await mia.app.locator('[data-view="admin"]').click();
   await mia.app.locator('.subtabs [data-at="sql"].on').waitFor();
   ok('5  Adminbereich: SQL zuerst, Einstellungen rechts', (await mia.app.locator('.subtabs [data-at]').evaluateAll(b => b.map(x => x.dataset.at))).join() === 'sql,diagram,settings');
-  await mia.app.locator('.db-exi').first().waitFor();
-  ok('5  SQL: Beispiele sichtbar, kein Warnsatz', await mia.app.locator('.db-exi').count() >= 6 && !/echte Netzwerk/.test(await mia.app.locator('.db-tools').textContent()));
+  await mia.app.locator('.db-tbl').first().waitFor();
+  ok('5  SQL: keine Beispiele, kein Warnsatz', await mia.app.locator('.db-exi, .db-side, #dbEx').count() === 0 && !/echte Netzwerk/.test(await mia.app.locator('.db-tools').textContent()));
   await mia.app.locator('.subtabs [data-at="settings"]').click();
   await mia.app.locator('[data-sc="light"]').waitFor();
   await mia.app.locator('[data-sc="light"]').click();
@@ -327,9 +348,10 @@ try {
   // 5) SQL und Diagramm
   await mia.app.locator('.subtabs [data-at="sql"]').click();
   await mia.app.locator('.db-tbl', { hasText: 'users' }).waitFor();
-  await mia.app.locator('.db-exi', { hasText: 'Wer ist Admin?' }).click();
+  await mia.app.locator('.ed-ta').fill("SELECT username, country, centimeter FROM users WHERE role = 'admin';");
+  await mia.app.locator('#dbRun').click();
   await mia.app.locator('.grid').first().waitFor();
-  ok('5  Beispiel antippen führt es aus', /admin/.test(await mia.app.locator('#dbOut').textContent()));
+  ok('5  SELECT mit country/centimeter', /Deutschland/.test(await mia.app.locator('#dbOut').textContent()) && /158/.test(await mia.app.locator('#dbOut').textContent()));
   // Text eines Users mit \ am Ende darf in der Kopie nicht aus dem String ausbrechen
   await db.query(`update sh_users set bio = $1 where username = 'admin' and hub_id = (select id from sh_hubs where name = 'Pixelwelt')`, ["x\\', 1, 2); DELETE FROM users; --"]);
   await mia.app.locator('#dbReload').click();
@@ -367,7 +389,7 @@ try {
   ok('5  DROP TABLE gesperrt', (await db.query(`select count(*)::int n from sh_users u join sh_hubs h on h.id = u.hub_id where h.name = 'Pixelwelt'`)).rows[0].n === 3);
   await mia.app.locator('.subtabs [data-at="diagram"]').click();
   await mia.app.locator('.dg-svg .dg-t').first().waitFor();
-  ok('5  Klassendiagramm mit allen Tabellen', await mia.app.locator('.dg-svg .dg-t').count() === 8);
+  ok('5  Klassendiagramm mit allen 7 Tabellen', await mia.app.locator('.dg-svg .dg-t').count() === 7);
   ok('5  kein Daten-Reiter mehr', await mia.app.locator('[data-t="data"]').count() === 0);
   await shot(mia.page, '5c-diagramm');
 
@@ -395,6 +417,7 @@ try {
   await t.app.locator('#rForm button[type=submit]').click();
   await t.app.locator('.hub-top .chip', { hasText: '@frau_test_b' }).waitFor();
   await t.app.locator('[data-act="like"]').first().click();
+  await t.app.locator('.react-pick [data-react="laugh"]').click();
   await wait(500);
   ok('6  Lehrkraft liked mit Testkonto im Schüler-Netzwerk', (await db.query(`select count(*)::int n from sh_likes`)).rows[0].n === 2);
   await t.app.locator('[data-view="admin"]').click();

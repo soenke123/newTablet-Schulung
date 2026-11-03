@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  const V = '20261103e';
+  const V = '20261103f';
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const DDL = {
@@ -38,6 +38,8 @@
   avatar VARCHAR(60),
   birthday DATE,
   city VARCHAR(60),
+  country VARCHAR(60),
+  centimeter INT CHECK (centimeter BETWEEN 50 AND 250),
   role ENUM('user','admin') NOT NULL DEFAULT 'user',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );`,
@@ -73,18 +75,11 @@
     likes: `CREATE TABLE likes (
   user_id INT NOT NULL,
   photo_id INT NOT NULL,
+  kind ENUM('heart','thumb','laugh') NOT NULL DEFAULT 'heart',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (user_id, photo_id),
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE
-);`,
-    comment_likes: `CREATE TABLE comment_likes (
-  user_id INT NOT NULL,
-  comment_id INT NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (user_id, comment_id),
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-  FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE
 );`,
     photo_tag: `CREATE TABLE photo_tag (
   photo_id INT NOT NULL,
@@ -95,26 +90,11 @@
 );`
   };
   // Eltern vor Kindern (anlegen, einfügen); rückwärts = löschen
-  const ORDER = ['users', 'tags', 'photos', 'comments', 'follows', 'likes', 'comment_likes', 'photo_tag'];
+  const ORDER = ['users', 'tags', 'photos', 'comments', 'follows', 'likes', 'photo_tag'];
   const PK = { follows: ['follower_id', 'following_id'], likes: ['user_id', 'photo_id'],
-               comment_likes: ['user_id', 'comment_id'], photo_tag: ['photo_id', 'tag_id'] };
+               photo_tag: ['photo_id', 'tag_id'] };
   const pkOf = t => PK[t] || ['id'];
 
-  const EXAMPLES = [
-    ['Alle Nutzer', 'SELECT * FROM users;'],
-    ['Wer ist Admin?', "SELECT username, role FROM users WHERE role = 'admin';"],
-    ['Passwörter (Hashes!)', 'SELECT username, password FROM users;'],
-    ['Wie viele je Geschlecht?', 'SELECT gender, COUNT(*) AS anzahl\nFROM users\nGROUP BY gender;'],
-    ['Fotos mit Benutzername', 'SELECT p.id, u.username, p.description, p.created_at\nFROM photos p\nJOIN users u ON u.id = p.user_id\nORDER BY p.created_at DESC;', 'photos'],
-    ['Likes je Foto', 'SELECT p.id, p.description, COUNT(l.user_id) AS likes\nFROM photos p\nLEFT JOIN likes l ON l.photo_id = p.id\nGROUP BY p.id\nORDER BY likes DESC;', 'likes'],
-    ['Wer folgt wem?', 'SELECT a.username AS follower, b.username AS folgt\nFROM follows f\nJOIN users a ON a.id = f.follower_id\nJOIN users b ON b.id = f.following_id;', 'follows'],
-    ['Beliebteste Tags', 'SELECT t.name, COUNT(*) AS fotos\nFROM tags t\nJOIN photo_tag pt ON pt.tag_id = t.id\nGROUP BY t.id\nORDER BY fotos DESC;', 'tags'],
-    ['Kommentare mit Autor', 'SELECT u.username, c.body, c.created_at\nFROM comments c\nJOIN users u ON u.id = c.user_id\nORDER BY c.created_at DESC;', 'comments'],
-    ['Konto anlegen (INSERT)', "INSERT INTO users (username, name, gender, password)\nVALUES ('neu_hier', 'Neu', 'diverse', PASSWORD_HASH('geheim'));"],
-    ['Passwort neu setzen (UPDATE)', "UPDATE users SET password = PASSWORD_HASH('neu123') WHERE username = 'neu_hier';"],
-    ['Zum Admin machen (UPDATE)', "UPDATE users SET role = 'admin' WHERE username = 'neu_hier';"],
-    ['Konto löschen (DELETE)', "DELETE FROM users WHERE username = 'neu_hier';"]
-  ];
 
   function lit(v) {
     if (v === null || v === undefined) return 'NULL';
@@ -183,14 +163,13 @@
         '</div>' +
         '<div class="db-tables" id="dbTables"></div>' +
         '<section class="db-pane db-pane--sql" data-p="sql">' +
-          '<aside class="db-side"><div class="db-side-h">Beispiele</div><div id="dbEx"></div></aside>' +
           '<div class="db-main">' +
             '<div class="db-tools">' +
               '<button type="button" class="btn btn--accent" id="dbRun">▶ Ausführen</button>' +
               '<span class="db-hint">Strg + Enter</span>' +
             '</div>' +
             '<div class="sql-ed" id="dbEd"></div>' +
-            '<div class="db-out" id="dbOut"><p class="muted">Schreib eine Abfrage oder tippe links auf ein Beispiel.</p></div>' +
+            '<div class="db-out" id="dbOut"><p class="muted">Schreib eine Abfrage und tippe auf Ausführen.</p></div>' +
           '</div>' +
         '</section>' +
         '<section class="db-pane db-pane--dg" data-p="diagram" hidden><div class="dg-host" id="dbDg"></div></section>' +
@@ -205,15 +184,6 @@
 
     $('#dbRun').addEventListener('click', () => run());
     $('#dbReload').addEventListener('click', () => load(true));
-    $('#dbEx').addEventListener('click', (e) => {
-      const b = e.target.closest('[data-ex]');
-      const ex = b && EXAMPLES[+b.dataset.ex];
-      if (!ex) return;
-      editor.value = ex[1];
-      editor.clearMark();
-      // Lesen gleich ausführen, Ändern erst nach eigenem Klick
-      if (/^\s*SELECT/i.test(ex[1])) run(); else editor.focus();
-    });
 
     function state(t, bad) {
       const el = $('#dbState');
@@ -243,11 +213,6 @@
         editor.value = 'SELECT * FROM ' + b.dataset.tbl + ';';
         run();
       }));
-      const item = (e, i) => (!e[2] || tables.includes(e[2]))
-        ? '<button type="button" class="db-exi" data-ex="' + i + '" title="' + esc(e[1]) + '">' + esc(e[0]) + '</button>' : '';
-      const read = EXAMPLES.map((e, i) => /^\s*SELECT/i.test(e[1]) ? item(e, i) : '').join('');
-      const write = EXAMPLES.map((e, i) => /^\s*SELECT/i.test(e[1]) ? '' : item(e, i)).join('');
-      $('#dbEx').innerHTML = '<div class="db-exg"><small>Lesen</small>' + read + '</div><div class="db-exg"><small>Ändern</small>' + write + '</div>';
     }
 
     function resultHtml(r) {

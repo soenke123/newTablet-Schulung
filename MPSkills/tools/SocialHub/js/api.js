@@ -84,6 +84,7 @@
     invalid_input: 'Das passt so nicht.',
     username_taken: 'Diesen Benutzernamen gibt es in diesem Netzwerk schon.',
     invalid_gender: 'Geschlecht: männlich, weiblich oder divers.',
+    invalid_centimeter: 'Größe in cm: zwischen 50 und 250.',
     pw_mismatch: 'Die beiden Passwörter sind nicht gleich.',
     hub_private: 'Dieses Netzwerk gehört jemand anderem.',
     no_admin: 'Dieses Netzwerk hat noch kein Admin-Konto.',

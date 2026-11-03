@@ -46,7 +46,6 @@
     { id: 'follows',       what: 'Folgen, Follower, Feed „Folge ich“' },
     { id: 'likes',         what: 'Herz an Fotos, „Für dich“ lernt mit', needs: 'photos' },
     { id: 'comments',      what: 'Kommentare unter Fotos', needs: 'photos' },
-    { id: 'comment_likes', what: 'Herzen an Kommentaren', needs: 'comments' },
     { id: 'tags',          what: 'Hashtags (mit photo_tag)', needs: 'photos' }
   ];
   const NEEDS = {};
@@ -54,6 +53,9 @@
   // alles, was (auch über Umwege) an t hängt
   const dependents = t => TABLES.filter(x => { for (let n = NEEDS[x.id]; n; n = NEEDS[n]) if (n === t) return true; return false; }).map(x => x.id);
   const SWATCHES = ['#fe2c55', '#e91d77', '#7c3aed', '#2563eb', '#0ea5e9', '#0d9488', '#16a34a', '#ca8a04', '#ea580c', '#dc2626', '#64748b'];
+  // Arten beim Like (0267): ein Like je Person und Foto
+  const KINDS = [['heart', 'Herz'], ['thumb', 'Daumen hoch'], ['laugh', 'Lustig']];
+  const kindIcon = k => IC[k === 'thumb' || k === 'laugh' ? k : 'heart'];
   const GENDERS = [['female', 'weiblich'], ['male', 'männlich'], ['diverse', 'divers']];
 
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -120,6 +122,8 @@
     code: '<svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>',
     camera: '<svg viewBox="0 0 24 24"><path d="M4.5 7.5h3l1.5-2.5h6l1.5 2.5h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V9a1.5 1.5 0 0 1 1.5-1.5z"/><circle cx="12" cy="13" r="3.5"/></svg>',
     crop: '<svg viewBox="0 0 24 24"><path d="M6.5 2.5v14a1 1 0 0 0 1 1h14M2.5 6.5h14a1 1 0 0 1 1 1v14"/></svg>',
+    thumb: '<svg viewBox="0 0 24 24"><path d="M2.5 10.5h3.6v10H2.5zM7.6 20.5V10.2l4.3-7c.4-.7 1.3-1 2.1-.6.8.4 1.2 1.3 1 2.1L14 9h5.3c1.6 0 2.7 1.5 2.3 3l-1.9 7c-.3 1-1.2 1.5-2.2 1.5z"/></svg>',
+    laugh: '<svg viewBox="0 0 24 24"><path fill-rule="evenodd" d="M12 1.8a10.2 10.2 0 1 1 0 20.4 10.2 10.2 0 0 1 0-20.4zM6.6 12.6h10.8a5.4 5.4 0 0 1-10.8 0zM6.4 9.6c.5-1.6 2.9-1.6 3.4 0l-1 .4c-.3-.6-1.1-.6-1.4 0zM14.2 9.6c.5-1.6 2.9-1.6 3.4 0l-1 .4c-.3-.6-1.1-.6-1.4 0z"/></svg>',
     grid: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M10 9.5v10"/></svg>',
     table: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="7" height="6" rx="1.2"/><rect x="13.5" y="13.5" width="7" height="6" rx="1.2"/><path d="M10.5 7.5H14a2 2 0 0 1 2 2v4"/></svg>',
     phone: '<svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>',
@@ -310,15 +314,63 @@
   }
 
   /* Tabellen-Diagramm (nur Namen, Linien = Fremdschlüssel)
-     Mittelpunkte auf einer Fläche von TW × TH, als Raute angeordnet:
-     users und photos nebeneinander, likes darüber, comments darunter –
-     so kreuzt keine Linie einen Kasten. */
-  const TW = 900, TH = 380;
-  const TPOS = {
-    follows: [95, 190], users: [330, 190], photos: [640, 190],
-    likes: [485, 60], comments: [485, 320], comment_likes: [270, 330],
-    photo_tag: [815, 190], tags: [815, 330]
+     Fest angeordnet in Spalten wie das Klassendiagramm von SQL Studio:
+       users │ follows, likes, comments │ photos │ photo_tag │ tags
+     Linien rechtwinklig (waagerecht – senkrecht – waagerecht), „n“ am
+     Fremdschlüssel, „1“ an der Tabelle, auf die er zeigt. users–photos
+     läuft gerade durch die Lücke zwischen likes und comments. Die
+     senkrechten Stücke sind gestaffelt, damit sich nichts kreuzt. */
+  const BW = 136, BH = 66, GX = 64, PAD = 22;
+  const colX = c => PAD + c * (BW + GX);
+  const MID = PAD + 177;                                // Mittellinie
+  const TBOX = {
+    users:     { x: colX(0), y: MID - 65, h: 130 },
+    follows:   { x: colX(1), y: PAD, h: BH },
+    likes:     { x: colX(1), y: PAD + 96, h: BH },
+    comments:  { x: colX(1), y: PAD + 192, h: BH },
+    photos:    { x: colX(2), y: MID - BH / 2, h: BH },
+    photo_tag: { x: colX(3), y: MID - BH / 2, h: BH },
+    tags:      { x: colX(4), y: MID - BH / 2, h: BH }
   };
+  const TW = colX(5) - GX + PAD, TH = PAD + 192 + BH + PAD;
+  // [Tabelle mit Fremdschlüssel, Ziel, y an der Quelle, y am Ziel (relativ), senkrecht bei (Anteil der Lücke)]
+  const TEDGES = [
+    ['follows',   'users',  22, 12, 0.28], ['follows', 'users', 44, 28, 0.5],
+    ['likes',     'users',  33, 44, 0.72], ['photos',  'users', 33, 65, 0.5],
+    ['comments',  'users',  33, 96, 0.5],
+    ['likes',     'photos', 33, 11, 0.5],  ['comments', 'photos', 33, 55, 0.5],
+    ['photo_tag', 'photos', 33, 33, 0.5],  ['photo_tag', 'tags', 33, 33, 0.5]
+  ];
+  // Pfad mit kleinen Rundungen an den Ecken
+  function roundPath(pts, r) {
+    let d = 'M' + pts[0][0] + ' ' + pts[0][1];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+      const k1 = Math.min(r, Math.hypot(x1 - x0, y1 - y0) / 2), k2 = Math.min(r, Math.hypot(x2 - x1, y2 - y1) / 2);
+      const ax = x1 - Math.sign(x1 - x0) * k1, ay = y1 - Math.sign(y1 - y0) * k1;
+      const bx = x1 + Math.sign(x2 - x1) * k2, by = y1 + Math.sign(y2 - y1) * k2;
+      d += ' L' + ax + ' ' + ay + ' Q' + x1 + ' ' + y1 + ' ' + bx + ' ' + by;
+    }
+    const e = pts[pts.length - 1];
+    return d + ' L' + e[0] + ' ' + e[1];
+  }
+  function tableLinesSvg() {
+    let out = '';
+    TEDGES.forEach(([src, dst, sy, ty, f]) => {
+      const a = TBOX[src], b = TBOX[dst];
+      const right = b.x > a.x;                       // Ziel rechts von der Quelle?
+      const x1 = right ? a.x + BW : a.x, y1 = a.y + sy;
+      const x2 = right ? b.x : b.x + BW, y2 = b.y + ty;
+      const vx = Math.round(Math.min(x1, x2) + Math.abs(x2 - x1) * f);   // f = Anteil von links
+      const pts = y1 === y2 ? [[x1, y1], [x2, y2]] : [[x1, y1], [vx, y1], [vx, y2], [x2, y2]];
+      const cls = tblOn(src) && tblOn(dst) ? 'on' : 'off';
+      const dir = right ? 1 : -1;
+      out += '<path d="' + roundPath(pts, 6) + '" class="' + cls + '"/>' +
+        '<text x="' + (x1 + dir * 5) + '" y="' + (y1 - 4) + '" class="' + cls + '" text-anchor="' + (right ? 'start' : 'end') + '">n</text>' +
+        '<text x="' + (x2 - dir * 5) + '" y="' + (y2 - 4) + '" class="' + cls + '" text-anchor="' + (right ? 'end' : 'start') + '">1</text>';
+    });
+    return out;
+  }
   function parseDdl(t) {
     const ddl = (window.SHDB && window.SHDB.DDL[t]) || '';
     const body = ddl.slice(ddl.indexOf('(') + 1, ddl.lastIndexOf(')'));
@@ -338,25 +390,25 @@
   }
   const tblOn = t => t === 'users' || S.home.tables.indexOf(t) >= 0;
   function tableDiagramHtml() {
-    const names = Object.keys(TPOS);
-    return '<div class="tdg-wrap"><div class="tdg" id="tdg" style="aspect-ratio:' + TW + '/' + TH + '"><svg class="tdg-lines" id="tdgLines"></svg>' + names.map(t => {
-      const fixed = t === 'users';
-      const isOn = tblOn(t);
-      const def = TABLES.find(x => x.id === t);
-      // photo_tag kommt mit tags
-      const auto = t === 'photo_tag';
-      const blocked = def && def.needs && !tblOn(def.needs);
-      let act = '';
-      if (fixed) act = '<span class="tb-note">' + IC.lock + ' immer da</span>';
-      else if (auto) act = '<span class="tb-note">kommt mit tags</span>';
-      else if (isOn) act = '<button type="button" class="tb-btn" data-tdrop="' + t + '" title="Entziehen">' + IC.x + 'Entziehen</button>';
-      else act = '<button type="button" class="tb-btn tb-btn--add" data-tadd="' + t + '"' + (blocked ? ' disabled title="Erst ' + def.needs + ' erstellen"' : ' title="Erstellen"') + '>' + IC.plus + 'Erstellen</button>';
-      const n = parseDdl(t).length;
-      return '<div class="tb' + (fixed ? ' tb--fixed' : isOn ? ' tb--on' : ' tb--off') + (S.tblSel === t ? ' tb--sel' : '') + '" data-tb="' + t + '" ' +
-        'style="left:' + (TPOS[t][0] / TW * 100) + '%;top:' + (TPOS[t][1] / TH * 100) + '%" tabindex="0">' +
-        '<div class="tb-h">' + IC.grid + '<code>' + esc(t) + '</code></div>' +
-        '<div class="tb-b"><small>' + n + ' Attribute</small>' + act + '</div></div>';
-    }).join('') + '</div></div>';
+    return '<div class="tdg-wrap"><div class="tdg" id="tdg" style="width:' + TW + 'px;height:' + TH + 'px">' +
+      '<svg class="tdg-lines" id="tdgLines" width="' + TW + '" height="' + TH + '" viewBox="0 0 ' + TW + ' ' + TH + '">' + tableLinesSvg() + '</svg>' +
+      Object.keys(TBOX).map(t => {
+        const fixed = t === 'users';
+        const isOn = tblOn(t);
+        const def = TABLES.find(x => x.id === t);
+        // photo_tag kommt mit tags
+        const auto = t === 'photo_tag';
+        const blocked = def && def.needs && !tblOn(def.needs);
+        let act = '';
+        if (fixed) act = '<span class="tb-note">' + IC.lock + ' immer da</span>';
+        else if (auto) act = '<span class="tb-note">kommt mit tags</span>';
+        else if (isOn) act = '<button type="button" class="tb-btn" data-tdrop="' + t + '" title="Entziehen">' + IC.x + 'Entziehen</button>';
+        else act = '<button type="button" class="tb-btn tb-btn--add" data-tadd="' + t + '"' + (blocked ? ' disabled title="Erst ' + def.needs + ' erstellen"' : ' title="Erstellen"') + '>' + IC.plus + 'Erstellen</button>';
+        const b = TBOX[t];
+        return '<div class="tb' + (fixed ? ' tb--fixed' : isOn ? ' tb--on' : ' tb--off') + (S.tblSel === t ? ' tb--sel' : '') + '" data-tb="' + t + '" ' +
+          'style="left:' + b.x + 'px;top:' + b.y + 'px;width:' + BW + 'px;height:' + b.h + 'px" tabindex="0">' +
+          '<div class="tb-h"><code>' + esc(t) + '</code></div><div class="tb-b">' + act + '</div></div>';
+      }).join('') + '</div></div>';
   }
   function tableInfoHtml(t) {
     if (!t) return '';
@@ -371,45 +423,10 @@
         '<td class="ti-x">' + (c.fk ? '→ ' + esc(c.fk) : '') + (/NOT NULL/i.test(c.extra) ? ' <span>NOT NULL</span>' : '') + (/UNIQUE/i.test(c.extra) ? ' <span>UNIQUE</span>' : '') + '</td></tr>').join('') +
       '</tbody></table>';
   }
-  // Linien zwischen den Kästen nach dem Zeichnen ausrechnen
+  // Linien neu (z. B. nach Hell/Dunkel); Lage steht fest, nichts zu messen
   function drawTableLines() {
-    const box = $('#tdg'), svg = $('#tdgLines');
-    if (!box || !svg) return;
-    const R = box.getBoundingClientRect();
-    const rect = t => { const el = box.querySelector('[data-tb="' + t + '"]'); if (!el) return null; const r = el.getBoundingClientRect(); return { x: r.left - R.left, y: r.top - R.top, w: r.width, h: r.height }; };
-    // Punkt auf dem Rand von r Richtung (tx, ty)
-    const edge = (r, tx, ty) => {
-      const cx = r.x + r.w / 2, cy = r.y + r.h / 2, dx = tx - cx, dy = ty - cy;
-      const k = Math.min(Math.abs((r.w / 2) / (dx || 1e-9)), Math.abs((r.h / 2) / (dy || 1e-9)));
-      return [cx + dx * k, cy + dy * k];
-    };
-    let out = '';
-    Object.keys(TPOS).forEach(t => {
-      const cols = parseDdl(t).filter(c => c.fk);
-      cols.forEach((c, i) => {
-        const a = rect(t), b = rect(c.fk);
-        if (!a || !b) return;
-        const live = tblOn(t) && tblOn(c.fk);
-        // zwei Fremdschlüssel auf dieselbe Tabelle (follows): parallel versetzt
-        const same = cols.filter(x => x.fk === c.fk);
-        const off = same.length > 1 ? (same.indexOf(c) - (same.length - 1) / 2) * 12 : 0;
-        const ax = a.x + a.w / 2, ay = a.y + a.h / 2 + off, bx = b.x + b.w / 2, by = b.y + b.h / 2 + off;
-        const p = edge({ x: a.x, y: a.y + off, w: a.w, h: a.h }, bx, by), q = edge({ x: b.x, y: b.y + off, w: b.w, h: b.h }, ax, ay);
-        const cls = live ? 'on' : 'off';
-        const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, ux = (q[0] - p[0]) / L, uy = (q[1] - p[1]) / L, nx = -uy, ny = ux;
-        // n-Seite (beim Fremdschlüssel): Krähenfuß · 1-Seite: Querstrich
-        const f = 13, w = 7;
-        const foot = 'M' + (p[0] + ux * f) + ' ' + (p[1] + uy * f) + ' L' + (p[0] + nx * w) + ' ' + (p[1] + ny * w) +
-                     ' M' + (p[0] + ux * f) + ' ' + (p[1] + uy * f) + ' L' + p[0] + ' ' + p[1] +
-                     ' M' + (p[0] + ux * f) + ' ' + (p[1] + uy * f) + ' L' + (p[0] - nx * w) + ' ' + (p[1] - ny * w);
-        const bar = 'M' + (q[0] - ux * 9 + nx * 7) + ' ' + (q[1] - uy * 9 + ny * 7) + ' L' + (q[0] - ux * 9 - nx * 7) + ' ' + (q[1] - uy * 9 - ny * 7);
-        out += '<line x1="' + p[0] + '" y1="' + p[1] + '" x2="' + q[0] + '" y2="' + q[1] + '" class="' + cls + '"/>' +
-          '<path d="' + foot + ' ' + bar + '" class="' + cls + '"/>';
-      });
-    });
-    svg.setAttribute('width', R.width);
-    svg.setAttribute('height', R.height);
-    svg.innerHTML = out;
+    const svg = $('#tdgLines');
+    if (svg) svg.innerHTML = tableLinesSvg();
   }
 
   function wireTeacher() {
@@ -497,9 +514,9 @@
     const paint = () => {
       host.innerHTML = '<form class="brand-ed" autocomplete="off">' +
         '<div class="be-form form">' +
-          '<label>Name des Netzwerks<input name="name" maxlength="30" required placeholder="z. B. ' + esc(LOGOS[v.logo] ? LOGOS[v.logo].dflt : 'Pixelwelt') + '" value="' + esc(v.name) + '"></label>' +
           '<div class="lbl">Logo</div>' + logoPicker(v.logo, customUrl()) +
           '<input type="file" accept="image/*" id="beFile" hidden>' +
+          '<label>Name des Netzwerks<input name="name" maxlength="30" required placeholder="z. B. ' + esc(LOGOS[v.logo] ? LOGOS[v.logo].dflt : 'Pixelwelt') + '" value="' + esc(v.name) + '"></label>' +
           '<div class="lbl">Farbschema</div>' +
           '<div class="seg seg--s">' + [['auto', 'Auto'], ['light', 'Hell'], ['dark', 'Dunkel']].map(x =>
             '<button type="button" data-sc="' + x[0] + '"' + (v.scheme === x[0] ? ' class="on"' : '') + (x[0] === 'auto' ? ' title="Wie MPSkills: hell oder dunkel"' : '') + '>' + x[1] + '</button>').join('') + '</div>' +
@@ -546,7 +563,7 @@
     S.screen = 'found';
     app.innerHTML = '<div class="home home--wide"><header class="home-top"><button class="icon-btn" id="back" title="Zurück">' + IC.back + '</button>' +
       '<span class="brand">Netzwerk erstellen</span></header>' +
-      '<ol class="steps"><li class="on"><b>1</b> Name, Logo, Farben</li><li><b>2</b> Dein Admin-Konto</li></ol>' +
+      '<ol class="steps"><li class="on"><b>1</b> Logo, Name, Farben</li><li><b>2</b> Dein Admin-Konto</li></ol>' +
       '<div id="foundEd"></div></div>';
     $('#back').onclick = () => { S.screen = 'home'; renderHome(); };
     brandEditor($('#foundEd'), { name: '', logo: 'rocket', scheme: 'auto' }, {
@@ -653,7 +670,8 @@
           '<label>Benutzername<input name="user" placeholder="a–z, 0–9, . _" maxlength="24" autocapitalize="off" required' + (isAdmin ? ' value="admin"' : '') + '></label>' +
           '<div class="f2"><input name="name" placeholder="Name" maxlength="40">' + genderSel + '</div>' +
           '<input name="email" type="email" placeholder="E-Mail (ausgedacht)" maxlength="100">' +
-          '<div class="f2"><label class="small">Geburtstag<input name="bday" type="date"></label><label class="small">Wohnort<input name="city" maxlength="60"></label></div>' +
+          '<div class="f2"><label class="small">Geburtstag<input name="bday" type="date"></label><label class="small">Größe in cm<input name="cm" type="number" min="50" max="250" inputmode="numeric"></label></div>' +
+          '<div class="f2"><label class="small">Wohnort<input name="city" maxlength="60"></label><label class="small">Land<input name="country" maxlength="60" placeholder="z. B. Deutschland"></label></div>' +
           '<textarea name="bio" rows="2" maxlength="160" placeholder="Über mich"></textarea>' +
           '<div class="f2"><input name="pw" type="password" placeholder="Passwort" maxlength="60" required autocomplete="new-password">' +
           '<input name="pw2" type="password" placeholder="Passwort wiederholen" maxlength="60" required autocomplete="new-password"></div>' +
@@ -678,7 +696,8 @@
       if (f.pw.value !== f.pw2.value) { fail({ error: 'pw_mismatch' }); f.pw2.focus(); return; }
       const r = await A.call('sh_register', { p_hub: h.id, p_username: f.user.value.trim().toLowerCase(), p_password: f.pw.value,
         p_name: f.name.value.trim() || null, p_email: f.email.value.trim() || null, p_birthday: f.bday.value || null,
-        p_city: f.city.value.trim() || null, p_gender: f.gender.value || null, p_bio: f.bio.value.trim() || null });
+        p_city: f.city.value.trim() || null, p_gender: f.gender.value || null, p_bio: f.bio.value.trim() || null,
+        p_country: f.country.value.trim() || null, p_centimeter: f.cm.value ? Math.round(+f.cm.value) : null });
       if (!r || !r.ok) { fail(r); return; }
       A.session.set(h.id, r.session, f.keep.checked);
       toast(r.admin ? 'Dein Netzwerk ist online!' : 'Willkommen!');
@@ -752,11 +771,12 @@
     return '<article class="card" data-i="' + i + '" data-id="' + it.id + '">' +
       '<div class="card-bg" data-m="' + esc(it.image) + '" data-thumb="1"></div>' +
       '<img class="card-img" data-m="' + esc(it.image) + '" alt="" draggable="false">' +
-      '<span class="burst">' + IC.heart + '</span>' +
+      '<span class="burst" data-kind="heart">' + IC.heart + '</span>' +
       '<div class="rail">' +
         '<button type="button" class="r-av" data-act="profile">' + avatarHtml(it.user, 'l') +
           (it.following === false && !it.mine ? '<span class="r-plus" data-act="follow">+</span>' : '') + '</button>' +
-        (likeOk ? '<button type="button" class="r-btn' + (it.liked ? ' liked' : '') + '" data-act="like">' + IC.heart + '<span>' + n(it.likes) + '</span></button>' : '') +
+        (likeOk ? '<button type="button" class="r-btn r-like' + (it.liked ? ' liked' : '') + '" data-act="like" data-kind="' + esc(it.my_kind || 'heart') + '" title="Liken">' +
+                  kindIcon(it.my_kind) + '<span>' + n(it.likes) + '</span></button>' : '') +
         (comOk ? '<button type="button" class="r-btn" data-act="comments">' + IC.chat + '<span>' + n(it.comments) + '</span></button>' : '') +
         (canDel ? '<button type="button" class="r-btn r-more" data-act="more">' + IC.more + '</button>' : '') +
       '</div>' +
@@ -833,36 +853,73 @@
       const act = actEl ? actEl.dataset.act : null;
       if (act === 'follow') { e.stopPropagation(); follow(it, card); return; }
       if (act === 'profile') { openProfile(it.user.id); return; }
-      if (act === 'like') { like(it, card, !it.liked); return; }
+      const rk = e.target.closest('[data-react]');
+      if (rk) { e.stopPropagation(); closePick(); react(it, card, rk.dataset.react); return; }
+      if (act === 'like') { togglePick(it, card); return; }
+      if (closePick()) return;
       if (act === 'comments') { openComments(it, card); return; }
       if (act === 'more') { moreMenu(it, card); return; }
       // Doppeltipp aufs Bild = Herz
       const now = Date.now();
-      if (now - lastTap < 320 && it.likes != null) {
-        const b = card.querySelector('.burst');
-        b.classList.remove('go'); void b.offsetWidth; b.classList.add('go');
-        if (!it.liked) like(it, card, true);
-      }
+      if (now - lastTap < 320 && it.likes != null && !it.liked) react(it, card, 'heart');
+      else if (now - lastTap < 320 && it.likes != null) burst(card, it.my_kind);
       lastTap = now;
     });
 
     function syncCards(it) {
       $$('.card[data-id="' + it.id + '"]', list).forEach(c => {
         const b = c.querySelector('[data-act="like"]');
-        if (b) { b.classList.toggle('liked', !!it.liked); b.querySelector('span').textContent = n(it.likes); }
+        if (b) {
+          b.classList.toggle('liked', !!it.liked);
+          b.dataset.kind = it.my_kind || 'heart';
+          b.innerHTML = kindIcon(it.my_kind) + '<span>' + n(it.likes) + '</span>';
+        }
         const cb = c.querySelector('[data-act="comments"] span');
         if (cb) cb.textContent = n(it.comments);
       });
-      items.forEach(x => { if (x !== it && x.id === it.id) { x.liked = it.liked; x.likes = it.likes; x.comments = it.comments; } });
+      items.forEach(x => { if (x !== it && x.id === it.id) Object.assign(x, { liked: it.liked, likes: it.likes, my_kind: it.my_kind, kinds: it.kinds, comments: it.comments }); });
     }
 
-    async function like(it, card, val) {
+    // Auswahl Herz · Daumen · Smiley neben dem Like-Knopf
+    function closePick() {
+      const p = $('.react-pick', list);
+      if (p) { p.remove(); return true; }
+      return false;
+    }
+    function togglePick(it, card) {
+      if (closePick()) return;
       if (!S.hub.me) { toast(T ? 'Zum Mitmachen oben ein Testkonto anlegen.' : 'Melde dich an, um zu liken.'); return; }
-      it.liked = val; it.likes += val ? 1 : -1;
+      const btn = card.querySelector('[data-act="like"]');
+      const k = it.kinds || {};
+      const el = document.createElement('div');
+      el.className = 'react-pick';
+      el.style.top = (btn.offsetTop + btn.offsetHeight / 2) + 'px';
+      el.innerHTML = KINDS.map(x => '<button type="button" data-react="' + x[0] + '" data-kind="' + x[0] + '" title="' + x[1] + '"' +
+        (it.my_kind === x[0] ? ' class="on"' : '') + '>' + kindIcon(x[0]) + '<small>' + n(k[x[0]] || 0) + '</small></button>').join('');
+      card.querySelector('.rail').appendChild(el);
+    }
+    function burst(card, kind) {
+      const b = card.querySelector('.burst');
+      b.dataset.kind = kind || 'heart';
+      b.innerHTML = kindIcon(kind);
+      b.classList.remove('go');
+      requestAnimationFrame(() => b.classList.add('go'));
+    }
+    // kind antippen: setzen; dieselbe Art noch einmal = Like weg
+    async function react(it, card, kind) {
+      if (!S.hub.me) { toast(T ? 'Zum Mitmachen oben ein Testkonto anlegen.' : 'Melde dich an, um zu liken.'); return; }
+      const before = { liked: it.liked, likes: it.likes, my_kind: it.my_kind, kinds: Object.assign({}, it.kinds || {}) };
+      const off = it.liked && it.my_kind === kind;
+      const k = Object.assign({ heart: 0, thumb: 0, laugh: 0 }, it.kinds || {});
+      if (it.liked && it.my_kind) k[it.my_kind] = Math.max(0, k[it.my_kind] - 1);
+      if (!off) k[kind]++;
+      Object.assign(it, { liked: !off, likes: it.likes + (off ? -1 : it.liked ? 0 : 1), my_kind: off ? null : kind, kinds: k });
       syncCards(it);
-      const r = await hcall('sh_like', { p_photo: it.id, p_on: val });
-      if (!r || !r.ok) { it.liked = !val; it.likes += val ? -1 : 1; syncCards(it); fail(r); }
-      else { it.likes = r.likes; syncCards(it); }
+      if (!off) burst(card, kind);
+      const r = await hcall('sh_like', { p_photo: it.id, p_on: !off, p_kind: kind });
+      if (!r || !r.ok) { Object.assign(it, before); syncCards(it); fail(r); return; }
+      Object.assign(it, { likes: r.likes, kinds: r.kinds, my_kind: r.my_kind || null, liked: !!r.my_kind });
+      syncCards(it);
     }
     async function follow(it, card) {
       if (!S.hub.me) return;
@@ -912,18 +969,10 @@
         '<div class="c-body"><button type="button" class="c-user" data-u="' + c.user.id + '">@' + esc(c.user.username) + '</button>' +
         '<p>' + esc(c.body) + '</p><small>' + esc(ago(c.created_at)) +
         ((c.mine || S.hub.admin) ? ' · <button type="button" class="link" data-cdel="' + c.id + '">löschen</button>' : '') + '</small></div>' +
-        (c.hearts != null ? '<button type="button" class="c-heart' + (c.liked ? ' liked' : '') + '" data-ch="' + c.id + '" data-v="' + (c.liked ? '0' : '1') + '">' + IC.heart + '<span>' + n(c.hearts) + '</span></button>' : '') +
         '</div>').join('') : '<p class="muted center-t">Noch keine Kommentare. Schreib den ersten!</p>';
       hydrate(listEl);
     }
     listEl.addEventListener('click', async (e) => {
-      const h = e.target.closest('[data-ch]');
-      if (h) {
-        if (!S.hub.me) return;
-        const r = await hcall('sh_comment_like', { p_comment: +h.dataset.ch, p_on: h.dataset.v === '1' });
-        if (!r || !r.ok) fail(r); else load();
-        return;
-      }
       const d = e.target.closest('[data-cdel]');
       if (d) {
         const r = await hcall('sh_comment_delete', { p_comment: +d.dataset.cdel });
@@ -1021,7 +1070,9 @@
       '<div class="pe-av">' + avatarHtml(u, 'xl') + (S.hub.upload ? '<label class="btn btn--ghost btn--s">Profilbild wählen<input type="file" accept="image/*" hidden id="peFile"></label>' : '') + '</div>' +
       '<label>Name<input name="name" maxlength="40" value="' + esc(u.name || '') + '"></label>' +
       '<label>Bio<textarea name="bio" maxlength="160" rows="3">' + esc(u.bio || '') + '</textarea></label>' +
-      '<label>Wohnort<input name="city" maxlength="60" value="' + esc(u.city || '') + '"></label>' +
+      '<div class="f2"><label>Wohnort<input name="city" maxlength="60" value="' + esc(u.city || '') + '"></label>' +
+      '<label>Land<input name="country" maxlength="60" value="' + esc(u.country || '') + '"></label></div>' +
+      '<label>Größe in cm<input name="cm" type="number" min="50" max="250" inputmode="numeric" value="' + esc(u.centimeter == null ? '' : u.centimeter) + '"></label>' +
       '<label>Geschlecht<select name="gender"><option value="">–</option>' + GENDERS.map(g => '<option value="' + g[0] + '"' + (u.gender === g[0] ? ' selected' : '') + '>' + g[1] + '</option>').join('') + '</select></label>' +
       '<button class="btn btn--accent btn--big">Speichern</button></form>');
     hydrate(sh.el);
@@ -1045,7 +1096,8 @@
     $('#peForm', sh.el).onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
-      const r = await hcall('sh_me_update', { p_name: f.name.value.trim() || null, p_bio: f.bio.value.trim() || null, p_avatar: avatar || null, p_city: f.city.value.trim() || null, p_gender: f.gender.value || null });
+      const r = await hcall('sh_me_update', { p_name: f.name.value.trim() || null, p_bio: f.bio.value.trim() || null, p_avatar: avatar || null, p_city: f.city.value.trim() || null, p_gender: f.gender.value || null,
+        p_country: f.country.value.trim() || null, p_centimeter: f.cm.value ? Math.round(+f.cm.value) : null });
       if (!r || !r.ok) { fail(r); return; }
       sh.close();
       await refreshHub();
