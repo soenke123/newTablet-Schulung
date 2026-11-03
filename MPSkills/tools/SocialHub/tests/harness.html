@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Social Hub – Prüfrahmen</title>
+<style>html,body{margin:0;height:100%;background:#000}iframe{display:block;width:100%;height:100%;border:0}</style>
+</head>
+<body>
+<!-- Spielt den MPSkills-Raum nach (statt tool.js): leitet sh:call an
+     window.rpc weiter, das der Prüfstand (tests/e2e.mjs) bereitstellt
+     und gegen pglite mit der echten Migration ausführt. -->
+<script>
+  const p = new URLSearchParams(location.search);
+  const rolle = p.get('rolle') || 'participant';
+  const f = document.createElement('iframe');
+  f.src = '../index.html?raum=' + encodeURIComponent(p.get('raum') || 'RAUM') + '&rolle=' + rolle;
+  document.body.appendChild(f);
+  let data = {};
+  const push = () => f.contentWindow.postMessage({ type: 'sh:state', data }, location.origin);
+  window.addEventListener('message', async (ev) => {
+    if (ev.source !== f.contentWindow) return;
+    const m = ev.data;
+    if (m.type === 'sh:hello') { data = await window.rpcState(); push(); return; }
+    if (m.type === 'sh:call') {
+      const res = await window.rpc(m.fn, m.args || {});
+      f.contentWindow.postMessage({ type: 'sh:result', id: m.id, res }, location.origin);
+    }
+    if (m.type === 'sh:setData') {
+      const res = await window.rpc('skill_room_set_state', { p_data: m.data });
+      data = m.data;
+      f.contentWindow.postMessage({ type: 'sh:result', id: m.id, res }, location.origin);
+      push();
+    }
+  });
+  // Zustand regelmäßig nachschieben (wie der Poller im Raum)
+  setInterval(async () => { const d = await window.rpcState(); if (JSON.stringify(d) !== JSON.stringify(data)) { data = d; push(); } }, 1500);
+</script>
+</body>
+</html>

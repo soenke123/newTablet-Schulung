@@ -33,3 +33,6 @@ MPSkills/tools/wordisland/Englisch Greenline Vokabellisten/
 
 # NeuroLab-Prüfstand (FOTOS=1)
 MPSkills/tools/NeuroLab/tests/fotos/
+
+# Bildschirmfotos des Social-Hub-Prüfstands (tests/e2e.mjs)
+MPSkills/tools/SocialHub/tests/shots/

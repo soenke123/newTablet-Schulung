@@ -1,6 +1,6 @@
 # Plan: Feed-Skill (Arbeitstitel) — „InstaHub, aber wie TikTok“
 
-Stand 03.11.2026 · Entwurf 4 zum Abstimmen mit Sönke, noch keine Zeile Code.
+Stand 03.11.2026 · Entwurf 4. **Etappe 1 + 2 gebaut** (Migration 0262, `MPSkills/tools/SocialHub/`, nur für Admins) – Entscheidungen: jeder eigener Hub, Tabellen englisch, nur Herz, alle Admins dürfen schreiben. Doku: `MPSkills/tools/SocialHub/CLAUDE.md`.
 Aufgaben und Leitfaden von Sönke kommen später und werden dann hier eingearbeitet.
 
 ## Idee in einem Satz
