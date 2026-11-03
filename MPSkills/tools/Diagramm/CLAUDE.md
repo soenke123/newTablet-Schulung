@@ -13,7 +13,7 @@ Vorbild draw.io, aber je Diagrammart nur die Bausteine, die sie braucht. Direkt 
 - `tool.css` – Aussehen, Farben der Seite (hell/dunkel). Bausteine tragen feste Pastellfarben
   (`COLORS` in tool.js), die auch im exportierten PNG landen.
 - `tests/logik.test.mjs` – `sane`, `clean`, neue Felder, rechtwinklige Linien, Rand-Punkte, Mindmap mit mehreren Themen (ohne Browser, Textbreite 8 px je Zeichen).
-- `tests/harness.html` – Prüfseite ohne Server: `?rolle=schueler|lehrer|demo`, `&art=wirkung`; `window.__store`
+- `tests/harness.html` – Prüfseite ohne Server: `?rolle=schueler|lehrer|demo`, `&arten=mindmap,klasse` (alt `&art=wirkung`); `window.__store`
   spielt den Server nach (Teilen, Anfrage `ask`, Diagramm der Lehrkraft `teacher`, Klasse Mia teilt/Leon nicht).
 - Schaufenster: `MPSkills/preview/diagramm.js` (Lehrkraft-Ansicht mit erfundener Klasse,
   `DEMO_PEOPLE` in tool.js).
@@ -70,7 +70,7 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
 (`Editor.setShare`, `paintShare`). Rückgängig/Wiederholen/Zoom/Alles zeigen/Hilfe klein unten rechts auf
 der Fläche (`.dg-tools`). Speichern = Datei `<Titel>.diagramm.json` (`saveFile`: `{ app: 'mpskills-diagramm',
 v, title, doc }`), Öffnen liest sie (`readFile`, ≤ 1 MB, `sane`), ersetzt nach Rückfrage das jetzige
-Diagramm; im Raum mit fester Art nur Dateien dieser Art. Fragen stellt `modal()` (eigenes Fenster im Skill).
+Diagramm; Dateien jeder Art lassen sich öffnen, auch wenn die Art im Raum nicht freigegeben ist. Fragen stellt `modal()` (eigenes Fenster im Skill).
 Antippen = wählen · doppelt tippen = Text (auf leerer Fläche: neuer Baustein) · ziehen = verschieben
 (Mindmap: ganzer Ast) · leere Fläche ziehen = Blatt verschieben · zwei Finger/Mausrad = Zoom.
 Blaue Punkte am gewählten Baustein: antippen = neuer Baustein daneben + Verbindung, auf anderen
@@ -94,8 +94,14 @@ Concept Map die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr Text 
 
 ## Raum
 
-- Einstellung beim Anlegen `settings.kind` (free | mindmap | wirkung | klasse | objekt). free = Startseite
-  „Was möchtest du zeichnen?“, sonst gleich der Editor. Datei → Neu: bei free die Startseite, sonst ein leeres Diagramm der festen Art.
+- Einstellung `settings.kinds` (seit 03.11.2026, Feldart `multi` in lehrer.js: Kacheln mit Haken, mindestens
+  eine an, auch nachträglich in den Raum-Einstellungen änderbar): welche Arten die Klasse **neu anlegen**
+  darf (`allowedKinds`/`kindsOf`). Vorhandene Diagramme bleiben, Dateien jeder Art und das Diagramm der
+  Lehrkraft lassen sich trotzdem öffnen. Mehrere erlaubt → Startseite „Was möchtest du zeichnen?“ nur mit
+  diesen Arten, eine → gleich der Editor. Datei → Neu genauso (`startNew`). Ändert die Lehrkraft die Liste,
+  während jemand auf der Startseite steht, baut sie sich neu (`pickSig`). Ältere Räume: `settings.kind`
+  (free = alle, sonst diese eine), auch als Vorauswahl im Formular (`legacy`). Die Lehrkraft selbst darf
+  in „Mein Diagramm“ immer alle Arten.
 - **Tablet**: `dg_mine_get` beim Start, `dg_mine_put` 1,5 s nach der letzten Änderung (bei Netzfehler
   alle 5 s nachholen), Anzeige „gespeichert ✓“ unten links. Ein Diagramm je Person.
 - **Teilen mit der Lehrkraft (0260)**: privat bis die Person oben „Mit Lehrkraft teilen“ tippt

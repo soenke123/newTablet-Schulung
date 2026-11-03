@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="../tool.css">
 <style>body{padding:16px;background:var(--paper)}</style>
 </head><body>
-<!-- Prüfseite ohne Server: ?rolle=schueler|lehrer|demo, &art=wirkung (Vorgabe der Lehrkraft).
+<!-- Prüfseite ohne Server: ?rolle=schueler|lehrer|demo, &arten=mindmap,klasse (erlaubte Arten) oder alt &art=wirkung.
      window.__store spielt den Server nach (Teilen, Anfrage, Diagramm der Lehrkraft, Klasse mit Mia/Leon). -->
 <div id="box"></div>
 <script src="../../../lib/tool.js"></script>
@@ -40,6 +40,6 @@ const actions = { role: rolle === 'lehrer' ? 'presenter' : 'participant', call: 
 const ctx = MPTool.makeCtx({ actions, title: 'Test', preview: rolle === 'demo', toast: (m) => console.log('TOAST', m) });
 const impl = MPTool.get('diagramm');
 impl.mount(document.getElementById('box'), ctx);
-impl.update({ room: { code: 'TEST01', settings: q.get('art') ? { kind: q.get('art') } : {} } });
+impl.update({ room: { code: 'TEST01', settings: q.get('arten') ? { kinds: q.get('arten').split(',') } : q.get('art') ? { kind: q.get('art') } : {} } });
 </script>
 </body></html>

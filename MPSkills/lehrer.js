@@ -543,7 +543,7 @@ function toolFieldsHTML(locked) {
   return S.fields.map(f => {
     if (f.type === 'list') return listHTML(f);
     // Auswahlfelder stehen oben neben dem Titel (choiceFieldsHTML).
-    if (f.type === 'choice') return '';
+    if (f.type === 'choice' || f.type === 'multi') return '';
 
     if (f.type === 'quota') {
       const v = Number(cur[f.key]) || 0;
@@ -577,7 +577,8 @@ function toolFieldsHTML(locked) {
 function choiceFieldsHTML() {
   if (S.fieldsFor !== S.toolId) return '';
   const cur = S.view?.room?.settings || {};
-  return S.fields.filter(f => f.type === 'choice' && Array.isArray(f.options)).map(f => {
+  return S.fields.filter(f => (f.type === 'choice' || f.type === 'multi') && Array.isArray(f.options)).map(f => {
+    if (f.type === 'multi') return multiFieldHTML(f, cur);
     const val = f.options.some(o => o.value === cur[f.key]) ? cur[f.key]
               : (f.default || f.options[0]?.value);
     const sel = f.options.find(o => o.value === val) || {};
@@ -594,6 +595,34 @@ function choiceFieldsHTML() {
             <p class="setfield-hint" data-choice-hint>${esc(sel.hint || '')}</p>
           </div>`;
   }).join('');
+}
+
+/* Mehrfachauswahl (type 'multi') — mehrere Antworten gleichzeitig,
+   z. B. bei Diagramm „welche Diagrammarten dürfen neu angelegt
+   werden". Kacheln mit Zeichen und Haken statt einer Schiene; eine
+   bleibt immer an (den letzten Haken lässt das Formular nicht weg).
+   Gespeichert als Liste der Werte. f.legacy(cur) darf aus älteren
+   Einstellungen die Vorauswahl ableiten. */
+function multiFieldHTML(f, cur) {
+  const ok = v => f.options.some(o => o.value === v);
+  let val = Array.isArray(cur[f.key]) ? cur[f.key].filter(ok) : null;
+  if ((!val || !val.length) && typeof f.legacy === 'function') val = (f.legacy(cur) || []).filter(ok);
+  if (!val || !val.length) val = Array.isArray(f.default) ? f.default.filter(ok) : f.options.map(o => o.value);
+  return `
+          <div class="setfield" data-multi="${esc(f.key)}">
+            <span class="setfield-l" id="multiL_${esc(f.key)}">${esc(f.label)}</span>
+            <div class="pickset" role="group" aria-labelledby="multiL_${esc(f.key)}">
+              ${f.options.map((o, i) => `
+              <label class="pickset-i" for="multi_${esc(f.key)}_${i}">
+                <input type="checkbox" id="multi_${esc(f.key)}_${i}" value="${esc(o.value)}"
+                       data-setting-multi="${esc(f.key)}" ${val.includes(o.value) ? 'checked' : ''} />
+                ${o.icon ? `<span class="pickset-ic" aria-hidden="true">${esc(o.icon)}</span>` : ''}
+                <span class="pickset-t">${esc(o.label)}</span>
+                <span class="pickset-ck" aria-hidden="true"></span>
+              </label>`).join('')}
+            </div>
+            ${f.hint ? `<p class="setfield-hint">${esc(f.hint)}</p>` : ''}
+          </div>`;
 }
 
 /* Die Listen liegen in S.groups und nicht im DOM: eine Zeile, die
@@ -796,6 +825,12 @@ function renderSettings() {
   form.addEventListener('input',  updateGo);
   // Der Satz unter einem Auswahlfeld folgt der gewählten Antwort.
   form.addEventListener('change', (ev) => {
+    // Mehrfachauswahl: der letzte Haken bleibt
+    const m = ev.target.closest('input[data-setting-multi]');
+    if (m && !m.checked && !form.querySelector(`input[data-setting-multi="${CSS.escape(m.dataset.settingMulti)}"]:checked`)) {
+      m.checked = true;
+      return;
+    }
     const r = ev.target.closest('input[data-setting-choice]');
     if (!r) return;
     const f = S.fields.find(x => x.key === r.dataset.settingChoice);
@@ -945,6 +980,11 @@ function readSettings() {
   document.querySelectorAll('#setToolChoice input[data-setting-choice]:checked').forEach(el => {
     out[el.dataset.settingChoice] = el.value;
   });
+
+  for (const f of S.fields) {
+    if (f.type !== 'multi') continue;
+    out[f.key] = [...document.querySelectorAll(`#setToolChoice input[data-setting-multi="${CSS.escape(f.key)}"]:checked`)].map(el => el.value);
+  }
 
   harvestGroups();
   for (const f of S.fields) {

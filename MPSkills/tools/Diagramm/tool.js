@@ -1262,7 +1262,6 @@
     const self = this;
     const o = opts || {};
     this.o = o;
-    this.kindLocked = o.kindLocked || null;
     this.undo = []; this.redo = [];
     this.title = '';
     this.edgeType = {};
@@ -2030,13 +2029,13 @@
               .replace(/<rect[^>]*fill="#fff"\/>/, '');
   }
 
-  function pickHTML(note) {
+  function pickHTML(note, kinds) {
     return `<div class="dg-pick">
       <h3>Was möchtest du zeichnen?</h3>
       ${note ? `<p class="dg-pick-note">${note}</p>` : ''}
       <div class="dg-pick-t" data-k="tpick"></div>
       <div class="dg-pick-grid">
-        ${KIND_IDS.map(k => `<button type="button" class="dg-pcard" data-pick="${k}">
+        ${(kinds || KIND_IDS).map(k => `<button type="button" class="dg-pcard" data-pick="${k}">
           <span class="dg-pthumb ${isUml(k) ? 'k-uml' : 'k-paper'}">${thumb(k)}</span>
           <b>${KINDS[k].icon} ${esc(KINDS[k].label)}</b><span>${esc(KINDS[k].hint)}</span></button>`).join('')}
       </div></div>`;
@@ -2093,10 +2092,18 @@
   const isEmptyDoc = d => !d || !d.nodes.length || (d.nodes.length === 1 && !d.edges.length && d.nodes[0].type === 'center' && (!d.nodes[0].t || d.nodes[0].t === 'Thema'));
   const roomCode = () => (view && view.room && view.room.code) || 'x';
 
-  const settingsKind = () => {
-    const k = view && view.room && view.room.settings && view.room.settings.kind;
-    return KIND_IDS.includes(k) ? k : null;
-  };
+  /* Welche Arten dürfen neu angelegt werden? settings.kinds (Liste,
+     seit 03.11.2026); ältere Räume: settings.kind = eine Art oder free.
+     Gilt nur für NEUE Diagramme — Vorhandenes bleibt, Dateien jeder
+     Art lassen sich öffnen, das Diagramm der Lehrkraft auch. */
+  function kindsOf(st) {
+    const ks = st && Array.isArray(st.kinds) ? st.kinds.filter(k => KIND_IDS.includes(k)) : [];
+    if (ks.length) return KIND_IDS.filter(k => ks.includes(k));
+    if (st && KIND_IDS.includes(st.kind)) return [st.kind];
+    return KIND_IDS.slice();
+  }
+  const allowedKinds = () => mode === 'presenter' ? KIND_IDS.slice() : kindsOf(view && view.room && view.room.settings);
+  let pickSig = '';        // welche Arten die Startseite gerade zeigt
   const toast = (m, err) => ctx && ctx.toast && ctx.toast(m, err);
   const errText = c => (ctx && ctx.errText) ? ctx.errText(c) : c;
 
@@ -2113,11 +2120,7 @@
       loaded = true;
       pShared = !!r.shared; pAsk = r.ask || null;
       if (r.doc && r.kind) startEditor(sane(r.doc, r.kind), r.title || '');
-      else {
-        const fixed = settingsKind();
-        if (fixed) startEditor(emptyDoc(fixed), '');
-        else showPick();
-      }
+      else startNew();
       pollMine();
     })();
   }
@@ -2234,10 +2237,19 @@
       ? `<button type="button" class="dg-sbtn" data-topen>${ICON.inbox}<span>Diagramm der Lehrkraft öffnen: „${esc(tInfo.title || 'Ohne Titel')}“</span></button>` : '';
   }
 
+  // Neues Diagramm: nur eine Art erlaubt → gleich der Editor, sonst die Auswahl
+  function startNew() {
+    const ks = allowedKinds();
+    if (ks.length === 1) { startEditor(emptyDoc(ks[0]), ''); if (mode === 'participant') { dirty = true; saveSoon(); } else saveOwn(); }
+    else showPick();
+  }
+
   function showPick(note) {
     if (ed) { ed.destroy(); ed = null; }
     const main = root.querySelector('.dg-main');
-    main.innerHTML = pickHTML(note);
+    const ks = allowedKinds();
+    pickSig = ks.join();
+    main.innerHTML = pickHTML(note, ks);
     paintPickTeacher();
     main.onclick = ev => {
       if (ev.target.closest('[data-topen]')) { jset('dg.tseen.' + roomCode(), String(tInfo && tInfo.rev)); return openTeacherDoc(); }
@@ -2256,7 +2268,6 @@
     if (ed) ed.destroy();
     kind = doc.kind;
     ed = new Editor(main, {
-      kindLocked: settingsKind(),
       toast,
       onNew: () => newDiagram(),
       onOpen: (d, t) => openDoc(d, t),
@@ -2288,8 +2299,6 @@
 
   // Datei → Öffnen: ersetzt das jetzige Diagramm (nach Rückfrage)
   async function openDoc(d, title) {
-    const fixed = mode === 'participant' ? settingsKind() : null;
-    if (fixed && d.kind !== fixed) { toast(`In diesem Raum zeichnet ihr: ${KINDS[fixed].label}. Die Datei ist ein${d.kind === 'mindmap' ? 'e' : ''} ${KINDS[d.kind].label}.`, true); return; }
     if (ed && !isEmptyDoc(ed.cv.doc)
         && !await askYes('Datei öffnen?', 'Das jetzige Diagramm wird dabei ersetzt. Lade es vorher über Datei → Speichern herunter, wenn du es behalten willst.', 'Öffnen')) return;
     startEditor(d, title);
@@ -2299,9 +2308,7 @@
   async function newDiagram() {
     if (ed && !isEmptyDoc(ed.cv.doc)
         && !await askYes('Neues Diagramm anfangen?', 'Das jetzige wird dabei gelöscht. Lade es vorher über Datei → Speichern herunter, wenn du es behalten willst.', 'Neu anfangen')) return;
-    const fixed = mode === 'participant' ? settingsKind() : null;
-    if (fixed) { startEditor(emptyDoc(fixed), ''); dirty = true; saveSoon(); }
-    else showPick();
+    startNew();
   }
 
   function saveSoon() {
@@ -2642,14 +2649,13 @@
      ════════════════════════════════════════════════════════════ */
   window.MPTool.register('diagramm', {
     settingsFields: [{
-      key: 'kind', type: 'choice', label: 'Was zeichnet die Klasse?', default: 'free',
-      options: [
-        { value: 'free',    label: 'frei wählen',      hint: 'Jede Person wählt selbst: Mindmap, Concept Map, Klassen- oder Objektdiagramm.' },
-        { value: 'mindmap', label: 'Mindmap',          hint: KINDS.mindmap.hint },
-        { value: 'wirkung', label: 'Concept Map',      hint: KINDS.wirkung.hint },
-        { value: 'klasse',  label: 'Klassendiagramm',  hint: KINDS.klasse.hint },
-        { value: 'objekt',  label: 'Objektdiagramm',   hint: KINDS.objekt.hint }
-      ]
+      // Seit 03.11.2026 mehrere zugleich (vorher kind: free | eine Art).
+      // Nur für NEUE Diagramme; nachträglich änderbar.
+      key: 'kinds', type: 'multi', label: 'Welche Diagramme darf die Klasse neu anlegen?',
+      default: KIND_IDS.slice(),
+      legacy: cur => (cur && KIND_IDS.includes(cur.kind)) ? [cur.kind] : null,
+      hint: 'Gilt nur für neue Diagramme. Was schon gezeichnet ist, bleibt, und Dateien jeder Art lassen sich weiter öffnen.',
+      options: KIND_IDS.map(k => ({ value: k, label: KINDS[k].label, icon: KINDS[k].icon }))
     }],
 
     mount(el, context) {
@@ -2673,8 +2679,8 @@
       view = v;
       if (!root) return;
       if (mode === 'presenter' && !ownKey && v && v.room && v.room.code) ownKey = 'dg.own.' + v.room.code;
-      // Die Lehrkraft hat die Art festgelegt, und hier liegt noch die Auswahl offen
-      if (mode === 'participant' && loaded && !ed && settingsKind()) startEditor(emptyDoc(settingsKind()), '');
+      // Die Lehrkraft hat die erlaubten Arten geändert, und hier liegt noch die Auswahl offen
+      if (mode === 'participant' && loaded && !ed && allowedKinds().join() !== pickSig) startNew();
     },
 
     unmount() {

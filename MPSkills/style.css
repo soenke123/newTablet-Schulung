@@ -3533,6 +3533,46 @@ body.mpfs-body { overflow: hidden; }
 .seg2 input:disabled + label:hover { background: none; color: var(--ink-soft); }
 .seg2 input:disabled:checked + label { background: var(--accent); color: var(--on-accent); }
 
+/* Mehrfachauswahl (lehrer.js multiFieldHTML): Kacheln mit Zeichen und
+   Haken, mehrere an. Echte Checkboxen darunter, also Tastatur und
+   Vorlesegerät gratis. */
+.pickset {
+  display: grid; gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+}
+.pickset-i {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 10px 12px;
+  border: 1.5px solid var(--line); border-radius: 12px;
+  background: var(--surface);
+  font-size: .88rem; font-weight: 600; color: var(--ink-soft); text-align: center;
+  cursor: pointer; user-select: none;
+  transition: border-color .12s, background .12s, color .12s;
+}
+.pickset-i:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); color: var(--ink); }
+.pickset-i input { position: absolute; width: 1px; height: 1px; opacity: 0; margin: 0; pointer-events: none; }
+.pickset-ic { font-size: 1.6rem; line-height: 1; filter: grayscale(1); opacity: .5; transition: filter .12s, opacity .12s; }
+.pickset-t { max-width: 100%; overflow-wrap: anywhere; line-height: 1.25; }
+.pickset-ck {
+  position: absolute; top: 8px; right: 8px;
+  width: 18px; height: 18px; border-radius: 6px;
+  border: 1.5px solid var(--line); background: var(--surface);
+  display: grid; place-items: center;
+}
+.pickset-i:has(input:checked) {
+  border-color: var(--accent); color: var(--ink);
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+.pickset-i:has(input:checked) .pickset-ic { filter: none; opacity: 1; }
+.pickset-i:has(input:checked) .pickset-ck { background: var(--accent); border-color: var(--accent); }
+.pickset-i:has(input:checked) .pickset-ck::after {
+  content: ''; width: 9px; height: 4.5px; margin-top: -3px;
+  border: solid var(--on-accent); border-width: 0 0 2.2px 2.2px;
+  transform: rotate(-45deg);
+}
+.pickset-i:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* Gesperrte Felder bleiben SICHTBAR und werden nur unbedienbar: ein
    verschwundenes Feld beantwortet die Frage „wo ist das hin?" nicht,
    ein graues mit einer Zeile Begründung schon. */
