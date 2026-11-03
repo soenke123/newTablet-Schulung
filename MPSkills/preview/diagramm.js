@@ -58,10 +58,7 @@
     `<rect x="${x - w / 2}" y="${y - 11}" width="${w}" height="22" rx="2" fill="${card ? '#fffdf8' : f}" stroke="${card ? '#e4dccb' : s}" stroke-opacity="${card ? 1 : .3}" filter="url(#dgpTile)"/>`
     + (card ? `<rect x="${x - w / 2}" y="${y - 11}" width="${w}" height="3" fill="${s}"/>` : '')
     + `<text x="${x}" y="${y + 3.5 + (card ? 1 : 0)}" text-anchor="middle" font-size="10" fill="#0f172a">${t}</text>`;
-  const sign = (x, y, plus) =>
-    `<circle cx="${x}" cy="${y}" r="7" fill="${plus ? '#16a34a' : '#dc2626'}" stroke="#fff" stroke-width="1.4"/>`
-    + `<text x="${x}" y="${y + 4}" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">${plus ? '+' : '−'}</text>`;
-
+  
   function tile() {
     return `<div class="tprev tprev--dg" aria-hidden="true">
       <svg viewBox="0 0 340 186" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%;display:block;font-family:Outfit,system-ui,sans-serif">
@@ -87,13 +84,13 @@
           <rect x="174" y="8" width="158" height="170" rx="10" fill="#f4f0e8" stroke="#e4dccb"/>
           <circle cx="186" cy="21" r="6" fill="#2563eb"/><text x="186" y="24" text-anchor="middle" font-size="8" font-weight="800" fill="#fff">2</text>
           <text x="197" y="25" font-size="10" font-weight="700" fill="#0d1a17">Leon</text>
-          <path d="M224 62 Q253 50 281 62" fill="none" stroke="#57534e" stroke-width="1.4"/><path d="M276 57l6 5-7 3z" fill="#57534e"/>
-          <path d="M281 82 Q253 94 224 82" fill="none" stroke="#57534e" stroke-width="1.4"/><path d="M229 87l-6-5 7-3z" fill="#57534e"/>
+          <path d="M224 62 Q253 50 281 62" fill="none" stroke="#16a34a" stroke-width="1.8"/><path d="M276 57l6 5-7 3z" fill="#16a34a"/>
+          <path d="M281 82 Q253 94 224 82" fill="none" stroke="#dc2626" stroke-width="1.8"/><path d="M229 87l-6-5 7-3z" fill="#dc2626"/>
           <path d="M240 145 L210 84" fill="none" stroke="#57534e" stroke-width="1.4"/><path d="M208 90l2-7 4 6z" fill="#57534e"/>
           ${node(208, 72, 44, 'Hasen', '#fff', '#16a34a', true)}
           ${node(298, 72, 44, 'Füchse', '#fff', '#ea580c', true)}
           ${node(252, 155, 40, 'Gras', '#fff', '#16a34a', true)}
-          ${sign(253, 56, true)}${sign(253, 88, false)}${sign(226, 116, true)}
+          
         </g>
       </svg>
     </div>`;
@@ -106,7 +103,7 @@
     fade: false,
     blurb: `
       <p>Ein <strong>Zeichenwerkzeug für Diagramme</strong>, schlank wie Papier: Mindmap,
-         Wirkungsgefüge (mit + und − und Kreisläufen), Klassen- und Objektdiagramm nach UML.
+         Wirkungsgefüge (Pfeile schwarz, grün oder rot, beschriftet), Klassen- und Objektdiagramm nach UML.
          Bausteine antippen, an den blauen Punkten verbinden, doppelt tippen zum Schreiben.</p>
       <p>Jedes Kind zeichnet auf seinem Tablet, gespeichert wird von selbst. Die Lehrkraft holt
          <strong>ein oder zwei Diagramme nebeneinander</strong> an den Beamer – sie laufen live mit,

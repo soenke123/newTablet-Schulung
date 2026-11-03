@@ -130,8 +130,6 @@
 .dg-node.is-hl .dg-selbox { stroke: #f59e0b; stroke-width: 3; stroke-dasharray: none; }
 .dg-edge { cursor: pointer; }
 .dg-edge .dg-hit { pointer-events: stroke; }
-.dg-sign { cursor: pointer; }
-.dg-sign:hover circle { filter: brightness(1.1); }
 .dg-handle { cursor: crosshair; }
 .dg-handle-hit { fill: transparent; }
 .dg-handle-dot { fill: var(--dg-sel); stroke: #fff; stroke-width: 2; opacity: .85; }
@@ -194,23 +192,20 @@
 .dg-et svg { width: 34px; height: 17px; }
 .dg-et:hover { background: var(--paper-2); }
 .dg-et.is-on { border-color: var(--accent-edge); background: var(--accent-dim); color: var(--accent-ink); }
-.dg-signs { display: flex; gap: 4px; }
-.dg-sb {
-  display: inline-flex; align-items: center; gap: 6px;
-  font: inherit; font-size: .82rem; font-weight: 600;
-  padding: 4px 10px 4px 4px;
-  border: 1.5px solid var(--line); border-radius: 999px;
-  background: transparent; color: var(--ink-soft); cursor: pointer;
+.dg-acols { display: flex; gap: 4px; }
+.dg-ac {
+  display: inline-flex; flex-direction: column; align-items: center; gap: 2px;
+  font: inherit; font-size: .72rem; font-weight: 700;
+  padding: 4px 8px; min-width: 52px;
+  border: 1.5px solid transparent; border-radius: 9px;
+  background: transparent; cursor: pointer;
 }
-.dg-sb b {
-  display: grid; place-items: center;
-  width: 26px; height: 26px; border-radius: 50%;
-  color: #fff; font-size: 1.15rem; line-height: 1;
-}
-.dg-sb--p b { background: #16a34a; }
-.dg-sb--m b { background: #dc2626; }
-.dg-sb.is-on.dg-sb--p { border-color: #16a34a; color: #15803d; background: #dcfce7; }
-.dg-sb.is-on.dg-sb--m { border-color: #dc2626; color: #b91c1c; background: #fee2e2; }
+.dg-ac svg { width: 30px; height: 15px; }
+.dg-ac--k { color: var(--dg-line); }
+.dg-ac--g { color: #16a34a; }
+.dg-ac--r { color: #dc2626; }
+.dg-ac:hover { background: var(--paper-2); }
+.dg-ac.is-on { border-color: currentColor; background: color-mix(in srgb, currentColor 10%, var(--surface)); }
 .dg-ein {
   font: inherit; font-size: .9rem;
   width: 130px; padding: 7px 9px;
@@ -242,13 +237,6 @@
 .dg-epv-line i { flex: 1; border-top: 2px solid currentColor; }
 .dg-epv-line.is-dash i { border-top-style: dashed; }
 .dg-epv-h { width: 18px; height: 15px; flex: none; }
-.dg-epv-s {
-  flex: none; display: grid; place-items: center;
-  width: 20px; height: 20px; border-radius: 50%;
-  color: #fff; font-weight: 800; font-size: 15px; line-height: 1;
-}
-.dg-epv-s.is-p { background: #16a34a; }
-.dg-epv-s.is-m { background: #dc2626; }
 .dg-epv-line .dg-epv-h:first-child { margin-right: -1px; }
 .dg-epv-line .dg-epv-h:last-child { margin-left: -1px; }
 .dg-ein:focus { outline: none; border-color: var(--accent); }
@@ -310,10 +298,8 @@
 .dg-lt {
   flex: none; display: grid; place-items: center;
   width: 28px; height: 28px; border-radius: 50%;
-  font-weight: 800; color: #fff;
+  font-weight: 800; color: #fff; background: #f59e0b;
 }
-.dg-lt--R { background: #dc2626; }
-.dg-lt--B { background: #2563eb; }
 .dg-loops-none, .dg-loops-k { color: var(--ink-soft); font-size: .84rem; margin: 6px 0 0; }
 .dg-help dl { margin: 0; }
 .dg-help dt { font-weight: 700; margin-top: 8px; }

@@ -53,7 +53,12 @@
   const TEXT = '#0f172a';
   const LINE = 'var(--dg-line)';      // Bleistift; beim Export VARS_EXPORT
   const LINK = 'var(--dg-link)';      // Linien im UML-Kleid (wie SQL Studio)
-  const PLUS = '#16a34a', MINUS = '#dc2626';
+  /* Pfeilfarben im Wirkungsgefüge (edge.f): schwarz (Bleistift), grün, rot.
+     Was die Farben bedeuten, legt die Klasse fest — der Skill rechnet
+     nichts daraus. Vorher (bis 03.11.2026) gab es +/− (edge.s); sane()
+     übersetzt alte Diagramme: − → rot, sonst schwarz. */
+  const ARROW = { k: LINE, g: '#16a34a', r: '#dc2626' };
+  const ARROW_NAME = { k: 'schwarz', g: 'grün', r: 'rot' };
 
   /* Zwei Kleider (03.11.2026):
        Papier  — Mindmap und Wirkungsgefüge: Zettel auf einem Tisch,
@@ -140,7 +145,7 @@
     },
     wirkung: {
       label: 'Wirkungsgefüge', icon: '🔄',
-      hint: 'Größen mit Pfeilen verbinden: je mehr … desto mehr (+) oder desto weniger (−).',
+      hint: 'Größen mit Pfeilen verbinden – schwarz, grün oder rot – und beschriften.',
       node: 'box', edge: 'effect',
       add: [{ type: 'box', label: 'Größe' }, { type: 'note', label: 'Notiz' }],
       edges: ['effect']
@@ -365,6 +370,7 @@
       width = A.type === 'center' ? 3.2 : 2.2;
     }
     if (e.type === 'dep') dash = ' stroke-dasharray="6 5"';
+    if (e.type === 'effect') { color = ARROW[e.f] || LINE; width = e.f && e.f !== 'k' ? 2 : 1.6; }
     if (hl) { color = '#f59e0b'; width += 1.5; }
 
     // Gegenläufige Kante dazwischen? Dann beide leicht biegen.
@@ -412,10 +418,15 @@
     g += heads;
 
     if (e.type === 'effect') {
-      const plus = e.s !== '-';
-      g += `<g class="dg-sign" data-sign="${e.id}"><circle cx="${mid.x}" cy="${mid.y}" r="12" fill="${plus ? PLUS : MINUS}" stroke="${PAPER}" stroke-width="2"/>`
-        + `<text x="${mid.x}" y="${mid.y + 1}" font-family="${FONT}" font-size="19" font-weight="700" fill="#fff" text-anchor="middle" dominant-baseline="central">${plus ? '+' : '−'}</text></g>`;
-      if (e.l) g += labelSVG(mid.x, mid.y + 24, e.l, { fam });
+      // Beschriftung neben den Pfeil statt darauf: über waagrechte, rechts neben senkrechte
+      // (sonst verdeckt sie bei kurzen Pfeilen die ganze Linie).
+      if (e.l) {
+        let ux = nx, uy = ny;
+        if (uy > 1e-6 || (Math.abs(uy) <= 1e-6 && ux < 0)) { ux = -ux; uy = -uy; }
+        const lw = textW(e.l, 13, false, fam) + 12;
+        const off = 15 * Math.abs(uy) + (lw / 2 + 6) * Math.abs(ux);
+        g += labelSVG(mid.x + ux * off, mid.y + uy * off, e.l, { fam, fill: color });
+      }
     } else if (e.l) {
       g += labelSVG(mid.x, mid.y, e.l, uml ? { fam, fill: 'var(--dg-muted)' } : { fam });
     }
@@ -456,9 +467,10 @@
   /* ════════════════════════════════════════════════════════════
      Wirkungsgefüge: Kreisläufe finden
      ════════════════════════════════════════════════════════════
-     Jeder einfache Kreis entlang der Pfeile. Gerade Zahl an „−" →
-     verstärkend (Teufelskreis/Aufschaukeln), ungerade → ausgleichend.
-     Höchstens 30 Kreise, damit ein Knäuel die Seite nicht anhält. */
+     Jeder einfache Kreis entlang der Pfeile — nur gefunden und
+     hervorgehoben, nicht gedeutet (die Farben bedeuten, was die Klasse
+     festlegt). Höchstens 30 Kreise, damit ein Knäuel die Seite nicht
+     anhält. */
   function findLoops(doc) {
     const out = [];
     const effects = doc.edges.filter(e => e.type === 'effect');
@@ -479,14 +491,10 @@
       walk(start, [], new Set([start]));
     }
     const byId = {}; doc.nodes.forEach(n => { byId[n.id] = n; });
-    return out.map(edges => {
-      const minus = edges.filter(e => e.s === '-').length;
-      return {
-        edges, nodes: edges.map(e => e.a),
-        type: minus % 2 ? 'B' : 'R',
-        names: edges.map(e => (byId[e.a] && byId[e.a].t) || '…')
-      };
-    });
+    return out.map(edges => ({
+      edges, nodes: edges.map(e => e.a),
+      names: edges.map(e => (byId[e.a] && byId[e.a].t) || '…')
+    }));
   }
 
   /* ════════════════════════════════════════════════════════════
@@ -605,17 +613,12 @@
       const w = toWorld(ev.clientX, ev.clientY);
       const t = ev.target;
       const handle = !self.readonly && t.closest && t.closest('[data-handle]');
-      const sign = !self.readonly && t.closest && t.closest('[data-sign]');
       const nodeEl = t.closest && t.closest('[data-node]');
       const edgeEl = t.closest && t.closest('[data-edge]');
       if (handle) {
         const from = self.node(handle.dataset.handle);
         drag = { mode: 'link', from, dir: handle.dataset.dir, sx: ev.clientX, sy: ev.clientY, moved: false, w };
         ev.preventDefault();
-        return;
-      }
-      if (sign) {
-        drag = { mode: 'sign', id: sign.dataset.sign, sx: ev.clientX, sy: ev.clientY };
         return;
       }
       if (nodeEl && !self.readonly) {
@@ -699,11 +702,6 @@
         }
       } else if (d.mode === 'edge') {
         self.select({ kind: 'edge', id: d.id });
-      } else if (d.mode === 'sign') {
-        if (Math.hypot(ev.clientX - d.sx, ev.clientY - d.sy) < 8) {
-          const e = self.edge(d.id);
-          if (e) { self.onBefore(); e.s = e.s === '-' ? '+' : '-'; self.select({ kind: 'edge', id: e.id }, true); self.render(); self.onChange(); }
-        }
       } else if (d.mode === 'link') {
         self.overlay.innerHTML = '';
         const target = self.nodeAt(w.x, w.y, d.from.id);
@@ -965,7 +963,7 @@
       d.edges.push({
         id: ID_OK.test(String(e.id || '')) ? String(e.id) : uid(), a: e.a, b: e.b,
         type: EDGE_LABEL[e.type] ? e.type : 'line',
-        s: e.s === '-' ? '-' : (e.type === 'effect' ? '+' : undefined),
+        f: e.type === 'effect' ? (['k', 'g', 'r'].includes(e.f) ? e.f : (e.s === '-' ? 'r' : 'k')) : undefined,
         l: e.l ? String(e.l).slice(0, 80) : undefined,
         m1: e.m1 ? String(e.m1).slice(0, 12) : undefined, m2: e.m2 ? String(e.m2).slice(0, 12) : undefined
       });
@@ -1002,8 +1000,9 @@
       ['Zwei Finger', 'zoomen. Am Rechner: Mausrad.']
     ],
     mindmap: [['Tastatur', 'Tab = neuer Ast, Enter = Nachbar-Ast, Entf = löschen.'], ['Ordnen', 'räumt die Mindmap auf.']],
-    wirkung: [['+ / −', 'auf dem Pfeil antippen dreht das Vorzeichen um: + = je mehr, desto mehr; − = je mehr, desto weniger.'],
-              ['Kreisläufe', 'sucht geschlossene Kreise: verstärkend (R) oder ausgleichend (B).']],
+    wirkung: [['Pfeilfarbe', 'Pfeil antippen und unten schwarz, grün oder rot wählen. Der nächste Pfeil bekommt dieselbe Farbe.'],
+              ['Beschriftung', 'Pfeil antippen und unten in das Feld über dem Pfeil schreiben.'],
+              ['Kreisläufe', 'zeigt geschlossene Kreise: Pfeil-Wege, die wieder am Anfang ankommen.']],
     klasse:  [['Klasse', 'doppelt tippen: Name, Attribute (z. B. - name: String) und Methoden (z. B. + fahren(): void) eintragen, je Zeile eins.'],
               ['Beziehung', 'eine Verbindung antippen und unten die Art wählen: Assoziation, Vererbung, Aggregation …']],
     objekt:  [['Objekt', 'doppelt tippen: Objektname, Klasse und Attributwerte (z. B. farbe = "rot") eintragen.']]
@@ -1170,7 +1169,7 @@
     if (A.type === 'note' || B.type === 'note') type = 'line';
     if (doc.kind === 'mindmap' && type === 'branch' && B.type === 'center') return null;
     const e = { id: uid(), a, b, type };
-    if (type === 'effect') e.s = '+';
+    if (type === 'effect') e.f = this.arrowCol || 'k';   // Farbe wie beim letzten Pfeil
     doc.edges.push(e);
     return e;
   };
@@ -1291,16 +1290,17 @@
       if (!e) return;
       this.snap();
       e.type = btn.dataset.t;
-      if (e.type === 'effect' && !e.s) e.s = '+';
+      if (e.type === 'effect' && !e.f) e.f = 'k';
       this.edgeType[cv.doc.kind] = e.type;      // die nächste Verbindung wird genauso
       cv.render(); this.showCtx(cv.sel);
       return this.changed();
     }
-    if (a === 'sign') {
+    if (a === 'acol') {
       const e = cv.sel && cv.edge(cv.sel.id);
       if (!e) return;
       this.snap();
-      e.s = btn.dataset.s;
+      e.f = btn.dataset.f;
+      this.arrowCol = e.f;
       cv.render(); this.showCtx(cv.sel);
       return this.changed();
     }
@@ -1401,10 +1401,10 @@
       if (!e) { box_.hidden = true; return; }
       const kinds = KINDS[cv.doc.kind].edges;
       if (cv.doc.kind === 'wirkung' && e.type === 'effect') {
-        h += `<div class="dg-signs" role="group" aria-label="Vorzeichen">
-          <button type="button" class="dg-sb dg-sb--p${e.s !== '-' ? ' is-on' : ''}" data-act="sign" data-s="+"><b>+</b><span>je mehr, desto mehr</span></button>
-          <button type="button" class="dg-sb dg-sb--m${e.s === '-' ? ' is-on' : ''}" data-act="sign" data-s="-"><b>−</b><span>je mehr, desto weniger</span></button>
-        </div><span class="dg-csep"></span>`;
+        h += '<div class="dg-acols" role="group" aria-label="Pfeilfarbe">'
+          + ['k', 'g', 'r'].map(f => `<button type="button" class="dg-ac dg-ac--${f}${(e.f || 'k') === f ? ' is-on' : ''}" data-act="acol" data-f="${f}">`
+            + `<svg viewBox="0 0 24 12"><path d="M2 6H20M15 2l5 4-5 4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>${ARROW_NAME[f]}</span></button>`).join('')
+          + '</div><span class="dg-csep"></span>';
       }
       if (kinds.length > 1) {
         h += '<div class="dg-etypes" role="group" aria-label="Art der Verbindung">'
@@ -1453,9 +1453,8 @@
             <input class="dg-ein dg-ein--l" data-ef="l" maxlength="80" placeholder="${esc(ph)}" title="Beschriftung" value="${esc(e.l || '')}"/>
             ${mult ? `<input class="dg-ein dg-ein--m" data-ef="m2" maxlength="12" placeholder="0..*" title="Anzahl am Ende" value="${esc(e.m2 || '')}"/>` : '<span></span>'}
           </div>
-          <div class="dg-epv-line${e.type === 'dep' ? ' is-dash' : ''}">
-            ${svg(PV_START[e.type], 'dg-epv-h')}<i></i>${e.type === 'effect'
-              ? `<b class="dg-epv-s ${e.s === '-' ? 'is-m' : 'is-p'}">${e.s === '-' ? '−' : '+'}</b><i></i>` : ''}${svg(PV_END[e.type], 'dg-epv-h')}
+          <div class="dg-epv-line${e.type === 'dep' ? ' is-dash' : ''}"${e.type === 'effect' && e.f && e.f !== 'k' ? ` style="color:${ARROW[e.f]}"` : ''}>
+            ${svg(PV_START[e.type], 'dg-epv-h')}<i></i>${svg(PV_END[e.type], 'dg-epv-h')}
           </div>
         </div>
         <span class="dg-epv-n" title="Ende">${esc(name(e.b))}</span>
@@ -1575,10 +1574,10 @@
     const box_ = this.$('loops');
     box_.innerHTML = `<div class="dg-loops-h"><b>Kreisläufe</b><button type="button" class="dg-x" data-act="loopsx" aria-label="Schließen">✕</button></div>`
       + (L.length ? L.map((l, i) => `<button type="button" class="dg-loop" data-act="loop" data-i="${i}">
-            <span class="dg-lt dg-lt--${l.type}">${l.type}</span>
-            <span><b>${l.type === 'R' ? 'verstärkend' : 'ausgleichend'}</b><br>${l.names.map(esc).join(' → ')} → ↺</span></button>`).join('')
+            <span class="dg-lt">${i + 1}</span>
+            <span>${l.names.map(esc).join(' → ')} → ↺</span></button>`).join('')
         : '<p class="dg-loops-none">Noch kein geschlossener Kreis. Verbinde die Größen so, dass ein Pfeil-Weg wieder am Anfang ankommt.</p>')
-      + '<p class="dg-loops-k"><b>R</b> = gerade Zahl an −: schaukelt sich auf. <b>B</b> = ungerade Zahl an −: pendelt sich ein.</p>';
+      + (L.length ? '<p class="dg-loops-k">Antippen hebt den Kreis im Diagramm hervor.</p>' : '');
     box_.hidden = false;
     if (!quiet) { this.cv.hl = null; this.cv.render(); }
   };
@@ -1611,7 +1610,7 @@
     wirkung: { kind: 'wirkung', nodes: [
       { id: 'a', type: 'box', x: -140, y: -60, t: 'Hasen', c: 1 }, { id: 'b', type: 'box', x: 140, y: -60, t: 'Füchse', c: 5 },
       { id: 'c', type: 'box', x: 0, y: 80, t: 'Gras', c: 1 }],
-      edges: [{ id: '1', a: 'a', b: 'b', type: 'effect', s: '+' }, { id: '2', a: 'b', b: 'a', type: 'effect', s: '-' }, { id: '3', a: 'c', b: 'a', type: 'effect', s: '+' }, { id: '4', a: 'a', b: 'c', type: 'effect', s: '-' }] },
+      edges: [{ id: '1', a: 'a', b: 'b', type: 'effect', f: 'g' }, { id: '2', a: 'b', b: 'a', type: 'effect', f: 'r' }, { id: '3', a: 'c', b: 'a', type: 'effect', f: 'g', l: 'Nahrung' }, { id: '4', a: 'a', b: 'c', type: 'effect', f: 'r' }] },
     klasse: { kind: 'klasse', nodes: [
       { id: 'a', type: 'class', x: -120, y: 0, t: 'Fahrzeug', a: '- marke: String', o: '+ fahren(): void', c: 0 },
       { id: 'b', type: 'class', x: 140, y: -60, t: 'Auto', a: '- türen: int', o: '', c: 0 },
@@ -1976,10 +1975,10 @@
     const steps = Math.min(3, Math.floor((Date.now() - demoT0) / 5000));
     const d = { kind: 'wirkung', nodes: [
       { id: 'a', type: 'box', x: -150, y: 0, t: 'Hasen', c: 1 }, { id: 'b', type: 'box', x: 150, y: 0, t: 'Füchse', c: 5 }],
-      edges: [{ id: '1', a: 'a', b: 'b', type: 'effect', s: '+' }] };
-    if (steps >= 1) d.edges.push({ id: '2', a: 'b', b: 'a', type: 'effect', s: '-' });
+      edges: [{ id: '1', a: 'a', b: 'b', type: 'effect', f: 'g' }] };
+    if (steps >= 1) d.edges.push({ id: '2', a: 'b', b: 'a', type: 'effect', f: 'r' });
     if (steps >= 2) d.nodes.push({ id: 'c', type: 'box', x: 0, y: 140, t: 'Jäger', c: 7 });
-    if (steps >= 3) d.edges.push({ id: '3', a: 'c', b: 'b', type: 'effect', s: '-' });
+    if (steps >= 3) d.edges.push({ id: '3', a: 'c', b: 'b', type: 'effect', f: 'r', l: 'jagen' });
     return d;
   }
   function demoList() {

@@ -39,12 +39,12 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
 ```jsonc
 { "v": 1, "kind": "mindmap|wirkung|klasse|objekt",
   "nodes": [{ "id", "type": "center|topic|box|class|object|note", "x", "y", "t", "c", "a", "o", "k" }],
-  "edges": [{ "id", "a", "b", "type", "s": "+|-", "l", "m1", "m2" }] }
+  "edges": [{ "id", "a", "b", "type", "f": "k|g|r", "l", "m1", "m2" }] }
 ```
 
 - `x/y` = Mitte; Größe wird aus dem Text gerechnet (`measure`, nie gespeichert – `clean` schneidet `_…` ab).
 - `t` Text/Name, `a` Attribute, `o` Methoden, `k` Klasse eines Objekts, `c` Farbindex.
-- Kanten: `branch` (Mindmap), `effect` (Wirkung mit `s`), UML `assoc · directed · inherit · aggr ·
+- Kanten: `branch` (Mindmap), `effect` (Wirkung, Farbe `f`: k schwarz · g grün · r rot – seit 03.11.2026 statt +/−; `sane()` übersetzt alte `s`: − → rot, sonst schwarz; der Skill deutet die Farben nicht), UML `assoc · directed · inherit · aggr ·
   comp · dep`, `link` (Objekte), `line/arrow`. Vererbung: Pfeil von Unter- zur Oberklasse;
   Aggregation/Komposition: Raute am Anfang (`a` = das Ganze). „Richtung umdrehen“ tauscht a/b.
 - **Alles vom Server geht durch `sane()`** – ids nur `[A-Za-z0-9_-]{1,40}` (landen in
@@ -56,13 +56,13 @@ Antippen = wählen · doppelt tippen = Text (auf leerer Fläche: neuer Baustein)
 (Mindmap: ganzer Ast) · leere Fläche ziehen = Blatt verschieben · zwei Finger/Mausrad = Zoom.
 Blaue Punkte am gewählten Baustein: antippen = neuer Baustein daneben + Verbindung, auf anderen
 Baustein ziehen = verbinden, ins Leere ziehen = neuer Baustein dort. Auswahl-Leiste unten: Text, Farbe,
-Löschen bzw. Art der Verbindung, +/−, Beschriftung, Multiplizitäten. Mindmap: Tab = Kind, Enter =
-Nachbar, „Ordnen“ (`layoutMindmap`). Wirkungsgefüge: +/− auf dem Pfeil antippen dreht um,
-„Kreisläufe“ (`findLoops`, gerade Zahl an − = verstärkend R, ungerade = ausgleichend B). PNG-Export.
+Löschen bzw. Art der Verbindung, Pfeilfarbe (Wirkungsgefüge: schwarz/grün/rot, der nächste Pfeil bekommt dieselbe), Beschriftung, Multiplizitäten. Mindmap: Tab = Kind, Enter =
+Nachbar, „Ordnen“ (`layoutMindmap`). Wirkungsgefüge: „Kreisläufe“ (`findLoops`) findet geschlossene Pfeil-Wege und hebt sie
+hervor, ohne sie zu deuten. PNG-Export.
 Die zuletzt gewählte Verbindungsart gilt für die nächste neue Verbindung.
 Verbindung gewählt → unten eine **Skizze des Pfeils** (`edgeForm`): immer Anfang links, Ende rechts, mit
 den Namen der beiden Bausteine; Beschriftung über der Mitte, Anzahlen (UML) an den Enden, beim
-Wirkungsgefüge das +/− auf der Linie — die Felder stehen dort, wo ihr Text am Pfeil landet.
+Wirkungsgefüge die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr Text am Pfeil landet.
 
 ## Raum
 

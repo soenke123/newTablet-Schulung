@@ -17,9 +17,16 @@ const W = { kind: 'wirkung', nodes: ['a', 'b', 'c'].map(id => ({ id, type: 'box'
   edges: [{ id: '1', a: 'a', b: 'b', type: 'effect', s: '+' }, { id: '2', a: 'b', b: 'a', type: 'effect', s: '-' },
           { id: '3', a: 'b', b: 'c', type: 'effect', s: '+' }, { id: '4', a: 'c', b: 'a', type: 'effect', s: '+' }] };
 const L = D.findLoops(W);
-ok('zwei Kreisläufe gefunden', L.length === 2, JSON.stringify(L.map(l => l.type + l.names.join(''))));
-ok('A→B→A mit einem − ist ausgleichend', L.some(l => l.names.join('') === 'AB' && l.type === 'B'));
-ok('A→B→C→A ohne − ist verstärkend', L.some(l => l.names.join('') === 'ABC' && l.type === 'R'));
+ok('zwei Kreisläufe gefunden', L.length === 2, JSON.stringify(L.map(l => l.names.join(''))));
+ok('A→B→A und A→B→C→A', L.some(l => l.names.join('') === 'AB') && L.some(l => l.names.join('') === 'ABC'));
+ok('Kreisläufe ohne Deutung (kein R/B)', L.every(l => !('type' in l)));
+
+// Pfeilfarben: alte +/−-Diagramme werden übersetzt, f bleibt erhalten
+const F = D.sane({ kind: 'wirkung', nodes: W.nodes, edges: W.edges.concat([{ id: '6', a: 'c', b: 'b', type: 'effect', f: 'g' }, { id: '7', a: 'c', b: 'b', type: 'effect', f: 'lila' }]) }, 'wirkung');
+const f = id => F.edges.find(e => e.id === id).f;
+ok('altes − → rot, altes + → schwarz', f('2') === 'r' && f('1') === 'k');
+ok('grün bleibt, Unsinn → schwarz', f('6') === 'g' && f('7') === 'k');
+ok('kein Vorzeichen mehr gespeichert', F.edges.every(e => !('s' in e) || e.s === undefined));
 ok('ohne Pfeile kein Kreis', D.findLoops({ nodes: W.nodes, edges: [] }).length === 0);
 
 // sane: Unsinn raus, XSS-ids raus
