@@ -53,7 +53,7 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
   Breite/Höhe, auf dem Rand; `borderU`) — wächst der Kasten, wandert er mit. Fehlt = von selbst.
 - `lo`/`o1`/`o2`: Feinjustierung von Beschriftung bzw. Anzahlen, `[dx, dy]` px relativ zum
   ausgerechneten Platz, höchstens ±`LAB_MAX` (70) — wandern mit der Linie mit.
-- `ortho` (Schalter „rechtwinklig“ oben, nur Klassen-/Objektdiagramm): Linien wie in SQL Studio
+- `ortho` (oben zwei Bild-Knöpfe schräg | rechtwinklig, `.dg-lines`, nur Klassen-/Objektdiagramm): Linien wie in SQL Studio
   (`orthoEnds` wählt die Seiten: nebeneinander waagrecht, übereinander senkrecht, ineinander außen rechts;
   `orthoRoute` baut den Linienzug, `roundPath` rundet die Ecken). Gesetzte Andockpunkte bestimmen die Seite.
 - Mindmap: beliebig viele Themen (`center`, Knopf „Thema“); ein Ast zu einem anderen Thema wird eine

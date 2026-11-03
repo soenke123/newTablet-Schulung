@@ -1205,7 +1205,9 @@
     pen:   '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4zM14 6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     img:   '<svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     tidy:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M15 12h3M6 12h3M18 7h3M18 17h3M3 7h3M3 17h3M18 7v10M6 7v10" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
-    ortho: '<svg viewBox="0 0 24 24"><path d="M3 6h8v12h10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 14l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    // Linienführung: schräg (direkt) bzw. rechtwinklig — als Bild statt Wort
+    slant: '<svg viewBox="0 0 24 24"><path d="M4 19L19 5M11 5h8v8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    ortho: '<svg viewBox="0 0 24 24"><path d="M4 4h8v13h8M16.5 13.5l3.5 3.5-3.5 3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     copy:  '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
     paste: '<svg viewBox="0 0 24 24"><path d="M9 4h6v3H9zM15 5h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     cut:   '<svg viewBox="0 0 24 24"><circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="18" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 16L19 4M16 16L5 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
@@ -1231,9 +1233,9 @@
               ['Beschriftung', 'Pfeil antippen und unten in das Feld über dem Pfeil schreiben.']],
     klasse:  [['Klasse', 'doppelt tippen: Name, Attribute (z. B. - name: String) und Methoden (z. B. + fahren(): void) eintragen, je Zeile eins.'],
               ['Beziehung', 'eine Verbindung antippen und unten die Art wählen: Assoziation, Vererbung, Aggregation …'],
-              ['Rechtwinklig', 'der Schalter oben führt alle Linien rechtwinklig statt schräg.']],
+              ['Linien', 'oben zwischen schräg und rechtwinklig umschalten.']],
     objekt:  [['Objekt', 'doppelt tippen: Objektname, Klasse und Attributwerte (z. B. farbe = "rot") eintragen.'],
-              ['Rechtwinklig', 'der Schalter oben führt alle Linien rechtwinklig statt schräg.']]
+              ['Linien', 'oben zwischen schräg und rechtwinklig umschalten.']]
   };
 
   /* Zwischenablage für Strg+C/X/V: gilt für alle Editoren der Seite
@@ -1336,8 +1338,11 @@
     if (this.cv.doc.kind === 'mindmap') adds += `<button type="button" class="dg-add dg-add--soft" data-act="tidy" title="Mindmap aufräumen">${ICON.tidy}<span>Ordnen</span></button>`;
     if (isUml(this.cv.doc.kind)) {
       const on = !!this.cv.doc.ortho;
-      adds += `<button type="button" class="dg-switch${on ? ' is-on' : ''}" data-act="ortho" role="switch" aria-checked="${on}" title="Linien rechtwinklig wie in SQL Studio">`
-        + `<i aria-hidden="true"></i>${ICON.ortho}<span>rechtwinklig</span></button>`;
+      // Zwei Bilder nebeneinander, das gewählte ist gefüllt
+      adds += `<div class="dg-lines" role="radiogroup" aria-label="Linien">`
+        + `<button type="button" class="dg-lb${on ? '' : ' is-on'}" data-act="ortho" data-v="0" role="radio" aria-checked="${!on}" title="Linien schräg (direkt)">${ICON.slant}</button>`
+        + `<button type="button" class="dg-lb${on ? ' is-on' : ''}" data-act="ortho" data-v="1" role="radio" aria-checked="${on}" title="Linien rechtwinklig (wie in SQL Studio)">${ICON.ortho}</button>`
+        + `</div>`;
     }
     if (CLIP && CLIP.kind === this.cv.doc.kind) adds += `<button type="button" class="dg-add dg-add--soft" data-act="paste" title="Einfügen (Strg+V)">${ICON.paste}<span>Einfügen</span></button>`;
     this.$('adds').innerHTML = adds;
@@ -1524,8 +1529,10 @@
     if (a === 'cut') return this.copy() && this.remove();
     if (a === 'paste') return this.paste();
     if (a === 'ortho') {
+      const want = btn.dataset.v === '1';
+      if (want === !!cv.doc.ortho) return;
       this.snap();
-      if (cv.doc.ortho) delete cv.doc.ortho; else cv.doc.ortho = true;
+      if (want) cv.doc.ortho = true; else delete cv.doc.ortho;
       cv.render(); this.paintBar();
       return this.changed();
     }
