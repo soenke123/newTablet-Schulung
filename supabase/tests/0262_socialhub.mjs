@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262–0265 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
+/* Prüfstand für Migration 0262–0266 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -99,6 +99,7 @@ ok('2  Blacklist im Namen', r.error === 'blacklisted');
 r = await call(`sh_found('tokB', 'Leons Netz', 'mesh', 'blau')`);
 ok('2  Farbe kein #rrggbb → invalid_color', r.error === 'invalid_color');
 r = await call(`sh_found('tokB', 'Leons Netz', 'mesh')`);
+ok('1  ohne Angabe: Farbschema auto (0266)', r.ok && (await one(`select scheme from sh_hubs where id = $1`, [r.hub])).scheme === 'auto');
 ok('2  zweites Netzwerk (andere Person)', r.ok);
 const HUB2 = r.hub;
 r = await call(`sh_enter('tokA', null, $1, null)`, [HUB]);
@@ -117,6 +118,10 @@ r = await call(`sh_home('tokB')`);
 ok('2  Fremder sieht nur sein eigenes Netzwerk', r.ok && r.hubs.length === 1 && r.hubs[0].id === HUB2 && r.mine === HUB2);
 r = await call(`sh_brand('tokB', null, $1, null, 'Gekapert', 'bell', null, null, 'dark')`, [HUB]);
 ok('2  Fremder ändert Marke nicht', r.error === 'hub_private');
+r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'bell', null, null, 'auto')`, [HUB, SA]);
+ok('2  Farbschema auto speichern (0266)', r.ok && r.hub.scheme === 'auto', JSON.stringify(r));
+r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'bell', null, null, 'neon')`, [HUB, SA]);
+ok('2  unbekanntes Farbschema → abgelehnt', r.error === 'invalid_input');
 r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'custom', $3, '#12AB9F', 'light')`, [HUB, SA, Buffer.from('fakepng').toString('base64')]);
 ok('2  Gründer: eigenes Logo + Farbschema', r.ok && r.hub.logo === 'custom' && r.hub.name === 'Pixelwelt+' && r.hub.color === '#12ab9f' && r.hub.scheme === 'light', JSON.stringify(r));
 r = await call(`sh_brand('tokA', null, $1, $2, 'Pixelwelt+', 'custom', null, 'rot', 'dark')`, [HUB, SA]);
@@ -266,7 +271,18 @@ ok('6  INSERT/UPDATE übernommen', r.ok && r.done === 5, JSON.stringify(r));
 r = await call(`sh_login_net('tokC', 'Pixelwelt+', 'sqlkind', 'neu123')`);
 ok('6  per INSERT angelegtes Konto kann sich anmelden', r.ok);
 r = await call(`sh_login_net('tokC', 'Pixelwelt+', 'klartext', 'geheim')`);
-ok('6  Klartext-Passwort → Anmelden scheitert', r.error === 'wrong_login');
+ok('6  Klartext-Passwort wird auf dem Server gehasht → Anmelden geht (0266)', r.ok, JSON.stringify(r));
+ok('6  … und steht nie lesbar in der Tabelle', /^\$2a\$08\$/.test((await one(`select password from sh_users where hub_id = $1 and id = 4`, [HUB])).password));
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'insert', row: { id: 8, username: '<img src=x onerror=alert(1)>', password: '' } }])]);
+ok('6  Benutzername mit Zeichen außer [A-Za-z0-9._] → abgelehnt (0266)', !r.ok && /Benutzername/.test(r.message), JSON.stringify(r));
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'update', key: { id: 4 }, row: { id: 4, bio: { x: 1 } } }])]);
+ok('6  JSON-Objekt als Wert → abgelehnt (0266)', !r.ok, JSON.stringify(r));
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'delete', key: { id: "1 or 1=1" } }])]);
+ok('6  Schlüssel mit SQL darin → abgelehnt', !r.ok && /ganze Zahl/.test(r.message));
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users; drop table sh_users; --', op: 'delete', key: { id: 1 } }])]);
+ok('6  Tabellenname mit SQL darin → abgelehnt', !r.ok && (await one(`select to_regclass('public.sh_users') is not null f`)).f);
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'update', key: { id: 4 }, row: { id: 4, 'name = (select 1) --': 'x', name: "Robert'); DROP TABLE sh_users; --" } }])]);
+ok('6  fremde Spaltennamen ignoriert, Wert bleibt Text', r.ok && (await one(`select name from sh_users where hub_id = $1 and id = 4`, [HUB])).name === "Robert'); DROP TABLE sh_users; --", JSON.stringify(r));
 ok('6  created_at fehlt → jetzt', (await one(`select created_at > now() - interval '1 minute' f from sh_users where hub_id = $1 and id = 4`, [HUB])).f);
 ok('6  created_at als deutsche Zeit', (await one(`select to_char(created_at at time zone 'Europe/Berlin', 'HH24:MI') t from sh_users where hub_id = $1 and id = 3`, [HUB])).t === '10:00');
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([
@@ -344,8 +360,13 @@ const TSB = r.session;
 r = await call(`sh_like(null, $1, $2, 1, true, $3)`, [HUB, TSB, CODE]);
 ok('7b … und liked dort als Userin', r.ok && r.likes >= 1, JSON.stringify(r));
 r = await call(`sh_admin_users(null, $1, $2, null)`, [CODE, HUB]);
+const TID = (await one(`select id from sh_users where hub_id = $1 and username = 'frau_t_test'`, [HUB])).id;
 ok('7b hinter dem Testkonto steht die Lehrkraft', /Lehrkraft/.test(r.items.find(u => u.username === 'frau_t_test').person));
 await as(null);
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'update', key: { id: TID }, row: { id: TID, password: 'gekapert' } }])]);
+ok('7b Admin des Netzwerks ändert das Testkonto der Lehrkraft nicht (0266)', !r.ok && /Testkonto/.test(r.message), JSON.stringify(r));
+r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'delete', key: { id: TID } }])]);
+ok('7b … und löscht es nicht', !r.ok && /Testkonto/.test(r.message));
 r = await call(`sh_home('tokA')`);
 ok('7b Klasse sieht das Netzwerk der Lehrkraft nicht (kommt später)', !r.hubs.some(h => h.id === THUB));
 r = await call(`sh_register('tokA', $1, 'mia_bei_lk', 'geheim1')`, [THUB]);
@@ -381,8 +402,8 @@ const rest = await one(`select (select count(*) from sh_hubs) + (select count(*)
                               + (select count(*) from sh_media) + (select count(*) from sh_sessions) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0265_yoursozialnet.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migration 0265 (letzter Stand) läuft ein zweites Mal durch', twice);
+try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migrationen 0265 + 0266 laufen ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

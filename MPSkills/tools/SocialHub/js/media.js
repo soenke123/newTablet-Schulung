@@ -69,13 +69,16 @@
     });
   }
 
+  // file = Datei ODER schon fertiges Bild (Canvas aus Kamera/Zuschneiden)
   async function compress(file) {
-    if (!file || !/^image\//.test(file.type || 'image/')) throw new Error('Das ist kein Bild.');
-    const src = await decode(file);
+    const isFile = file && typeof file.size === 'number' && typeof file.type === 'string';
+    if (isFile && !/^image\//.test(file.type || 'image/')) throw new Error('Das ist kein Bild.');
+    if (!file) throw new Error('Das ist kein Bild.');
+    const src = isFile ? await decode(file) : file;
     const full = await shrink(src, 1080, 250000, false);
     const thumb = await shrink(src, 320, 40000, false);
     return {
-      before: file.size, after: full.blob.size, w: full.w, h: full.h,
+      before: isFile ? file.size : null, after: full.blob.size, w: full.w, h: full.h,
       mime: full.blob.type, data: await b64(full.blob), thumb: await b64(thumb.blob),
       preview: URL.createObjectURL(full.blob)
     };
@@ -83,7 +86,7 @@
 
   // Logo: quadratisch, 512 px, ≤ 100 KB.
   async function compressLogo(file) {
-    const src = await decode(file);
+    const src = file instanceof Blob ? await decode(file) : file;
     const r = await shrink(src, 512, 100000, true);
     return { data: await b64(r.blob), preview: URL.createObjectURL(r.blob) };
   }
@@ -163,5 +166,5 @@
     cache.set(hub + '|f|' + name, Promise.resolve(previewUrl));
   }
 
-  window.SHMedia = { compress, compressLogo, mainColor, url, prime };
+  window.SHMedia = { decode, compress, compressLogo, mainColor, url, prime };
 })();

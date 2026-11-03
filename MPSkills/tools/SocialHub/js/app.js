@@ -29,15 +29,17 @@
   const T = A.TEACHER;
 
   const LOGOS = {
-    bell:    { name: 'Glocke',   color: '#e91d77' },
-    connect: { name: 'Connect',  color: '#d97706' },
-    rocket:  { name: 'Rakete',   color: '#ea580c' },
-    graph:   { name: 'Graph',    color: '#2563eb' },
-    trend:   { name: 'Trend',    color: '#0d9488' },
-    chat:    { name: 'Plausch',  color: '#dc2626' },
-    like:    { name: 'Like',     color: '#7c3aed' },
-    mesh:    { name: 'Netz',     color: '#16a34a' }
+    // dflt = Vorschlag für den Namen, wie in Startup Story (GameHub/S3 Startup Story/js/assets.js)
+    bell:    { name: 'Glocke',   color: '#e91d77', dflt: 'RingRing' },
+    connect: { name: 'Connect',  color: '#d97706', dflt: 'Space' },
+    rocket:  { name: 'Rakete',   color: '#ea580c', dflt: 'ToTheMoon' },
+    graph:   { name: 'Graph',    color: '#2563eb', dflt: 'The River' },
+    trend:   { name: 'Trend',    color: '#0d9488', dflt: 'Trendr' },
+    chat:    { name: 'Plausch',  color: '#dc2626', dflt: 'Großepause' },
+    like:    { name: 'Like',     color: '#7c3aed', dflt: 'Liky' },
+    mesh:    { name: 'Netz',     color: '#16a34a', dflt: 'Nexus' }
   };
+  const isDefaultName = n => !n || Object.keys(LOGOS).some(k => LOGOS[k].dflt === n);
   // users gibt es immer; alles andere erstellt die Lehrkraft (Migration 0263).
   const TABLES = [
     { id: 'photos',        what: 'Fotos posten, Feed' },
@@ -66,7 +68,7 @@
     session: null,
     view: 'app',      // app | admin
     tab: 'feed',      // App: feed | search | post | profile
-    adminTab: 'settings', // settings | sql | diagram
+    adminTab: 'sql', // sql | diagram | settings
     db: null,
     tblSel: null,     // Lehrkraft: gewählte Tabelle im Diagramm
     autoOpened: false,
@@ -116,6 +118,9 @@
     image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5.5-5 4 3.5 2.5-2 4 3.5"/></svg>',
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3"/></svg>',
     code: '<svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>',
+    camera: '<svg viewBox="0 0 24 24"><path d="M4.5 7.5h3l1.5-2.5h6l1.5 2.5h3a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V9a1.5 1.5 0 0 1 1.5-1.5z"/><circle cx="12" cy="13" r="3.5"/></svg>',
+    crop: '<svg viewBox="0 0 24 24"><path d="M6.5 2.5v14a1 1 0 0 0 1 1h14M2.5 6.5h14a1 1 0 0 1 1 1v14"/></svg>',
+    grid: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M10 9.5v10"/></svg>',
     table: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="7" height="6" rx="1.2"/><rect x="13.5" y="13.5" width="7" height="6" rx="1.2"/><path d="M10.5 7.5H14a2 2 0 0 1 2 2v4"/></svg>',
     phone: '<svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/></svg>',
     check: '<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>',
@@ -157,7 +162,16 @@
     const root = document.documentElement;
     if (!h) { root.style.removeProperty('--hub'); root.removeAttribute('data-scheme'); return; }
     root.style.setProperty('--hub', accentOf(h));
-    root.setAttribute('data-scheme', h.scheme === 'light' ? 'light' : 'dark');
+    // auto = Hell/Dunkel wie MPSkills drumherum (data-theme vom Rahmen)
+    if (h.scheme === 'light' || h.scheme === 'dark') root.setAttribute('data-scheme', h.scheme);
+    else root.removeAttribute('data-scheme');
+  }
+
+  // Hell oder Dunkel, das gerade gilt (für 'auto' in der Vorschau)
+  function themeNow() {
+    const t = document.documentElement.getAttribute('data-theme');
+    if (t === 'dark' || t === 'light') return t;
+    return window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
 
   /* ── Bilder in einem Bereich nachladen ─────────────────── */
@@ -296,10 +310,14 @@
   }
 
   /* Tabellen-Diagramm (nur Namen, Linien = Fremdschlüssel)
-     Spalte/Zeile im Raster: users in der Mitte der Beziehungen. */
+     Mittelpunkte auf einer Fläche von TW × TH, als Raute angeordnet:
+     users und photos nebeneinander, likes darüber, comments darunter –
+     so kreuzt keine Linie einen Kasten. */
+  const TW = 900, TH = 380;
   const TPOS = {
-    follows: [1, 1], users: [2, 1], likes: [3, 1], photos: [4, 1], photo_tag: [5, 1], tags: [6, 1],
-    comment_likes: [2, 2], comments: [3, 2]
+    follows: [95, 190], users: [330, 190], photos: [640, 190],
+    likes: [485, 60], comments: [485, 320], comment_likes: [270, 330],
+    photo_tag: [815, 190], tags: [815, 330]
   };
   function parseDdl(t) {
     const ddl = (window.SHDB && window.SHDB.DDL[t]) || '';
@@ -321,7 +339,7 @@
   const tblOn = t => t === 'users' || S.home.tables.indexOf(t) >= 0;
   function tableDiagramHtml() {
     const names = Object.keys(TPOS);
-    return '<div class="tdg-wrap"><div class="tdg" id="tdg"><svg class="tdg-lines" id="tdgLines"></svg>' + names.map(t => {
+    return '<div class="tdg-wrap"><div class="tdg" id="tdg" style="aspect-ratio:' + TW + '/' + TH + '"><svg class="tdg-lines" id="tdgLines"></svg>' + names.map(t => {
       const fixed = t === 'users';
       const isOn = tblOn(t);
       const def = TABLES.find(x => x.id === t);
@@ -329,13 +347,15 @@
       const auto = t === 'photo_tag';
       const blocked = def && def.needs && !tblOn(def.needs);
       let act = '';
-      if (fixed) act = '<span class="tb-ic" title="immer da">' + IC.lock + '</span>';
-      else if (auto) act = '<span class="tb-note">mit tags</span>';
-      else if (isOn) act = '<button type="button" class="tb-btn" data-tdrop="' + t + '" title="Entziehen">' + IC.x + '<span>Entziehen</span></button>';
-      else act = '<button type="button" class="tb-btn tb-btn--add" data-tadd="' + t + '"' + (blocked ? ' disabled title="Erst ' + def.needs + ' erstellen"' : ' title="Erstellen"') + '>' + IC.plus + '<span>Erstellen</span></button>';
+      if (fixed) act = '<span class="tb-note">' + IC.lock + ' immer da</span>';
+      else if (auto) act = '<span class="tb-note">kommt mit tags</span>';
+      else if (isOn) act = '<button type="button" class="tb-btn" data-tdrop="' + t + '" title="Entziehen">' + IC.x + 'Entziehen</button>';
+      else act = '<button type="button" class="tb-btn tb-btn--add" data-tadd="' + t + '"' + (blocked ? ' disabled title="Erst ' + def.needs + ' erstellen"' : ' title="Erstellen"') + '>' + IC.plus + 'Erstellen</button>';
+      const n = parseDdl(t).length;
       return '<div class="tb' + (fixed ? ' tb--fixed' : isOn ? ' tb--on' : ' tb--off') + (S.tblSel === t ? ' tb--sel' : '') + '" data-tb="' + t + '" ' +
-        'style="grid-column:' + TPOS[t][0] + ';grid-row:' + TPOS[t][1] + '" tabindex="0">' +
-        '<code>' + esc(t) + '</code>' + act + '</div>';
+        'style="left:' + (TPOS[t][0] / TW * 100) + '%;top:' + (TPOS[t][1] / TH * 100) + '%" tabindex="0">' +
+        '<div class="tb-h">' + IC.grid + '<code>' + esc(t) + '</code></div>' +
+        '<div class="tb-b"><small>' + n + ' Attribute</small>' + act + '</div></div>';
     }).join('') + '</div></div>';
   }
   function tableInfoHtml(t) {
@@ -375,9 +395,16 @@
         const off = same.length > 1 ? (same.indexOf(c) - (same.length - 1) / 2) * 12 : 0;
         const ax = a.x + a.w / 2, ay = a.y + a.h / 2 + off, bx = b.x + b.w / 2, by = b.y + b.h / 2 + off;
         const p = edge({ x: a.x, y: a.y + off, w: a.w, h: a.h }, bx, by), q = edge({ x: b.x, y: b.y + off, w: b.w, h: b.h }, ax, ay);
-        out += '<line x1="' + p[0] + '" y1="' + p[1] + '" x2="' + q[0] + '" y2="' + q[1] + '" class="' + (live ? 'on' : 'off') + '"/>' +
-          // n-Seite (Fremdschlüssel) mit Punkt, 1-Seite mit Strich
-          '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3.5" class="' + (live ? 'on' : 'off') + '"/>';
+        const cls = live ? 'on' : 'off';
+        const L = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1, ux = (q[0] - p[0]) / L, uy = (q[1] - p[1]) / L, nx = -uy, ny = ux;
+        // n-Seite (beim Fremdschlüssel): Krähenfuß · 1-Seite: Querstrich
+        const f = 13, w = 7;
+        const foot = 'M' + (p[0] + ux * f) + ' ' + (p[1] + uy * f) + ' L' + (p[0] + nx * w) + ' ' + (p[1] + ny * w) +
+                     ' M' + (p[0] + ux * f) + ' ' + (p[1] + uy * f) + ' L' + p[0] + ' ' + p[1] +
+                     ' M' + (p[0] + ux * f) + ' ' + (p[1] + uy * f) + ' L' + (p[0] - nx * w) + ' ' + (p[1] - ny * w);
+        const bar = 'M' + (q[0] - ux * 9 + nx * 7) + ' ' + (q[1] - uy * 9 + ny * 7) + ' L' + (q[0] - ux * 9 - nx * 7) + ' ' + (q[1] - uy * 9 - ny * 7);
+        out += '<line x1="' + p[0] + '" y1="' + p[1] + '" x2="' + q[0] + '" y2="' + q[1] + '" class="' + cls + '"/>' +
+          '<path d="' + foot + ' ' + bar + '" class="' + cls + '"/>';
       });
     });
     svg.setAttribute('width', R.width);
@@ -450,7 +477,9 @@
      die ganze Seite (im Netzwerk) · o.onSubmit(v) mit v = { name, logo,
      custom, color, scheme } */
   function brandEditor(host, init, o) {
-    const v = { name: init.name || '', logo: init.logo || 'rocket', custom: null, color: init.color || null, scheme: init.scheme || 'dark' };
+    const v = { name: init.name || '', logo: init.logo || 'rocket', custom: null, color: init.color || null, scheme: init.scheme || 'auto' };
+    // neues Netzwerk: Name aus Startup Story vorschlagen
+    if (!v.name && LOGOS[v.logo]) v.name = LOGOS[v.logo].dflt;
     const id = init.id || '_new';
     const customUrl = () => v.custom ? v.custom.preview : (init.logo === 'custom' ? S.logoUrls[id] : null);
     const lc = () => v.logo === 'custom' ? (v.custom ? S.color._new : S.color[id]) || '#fe2c55' : LOGOS[v.logo].color;
@@ -459,7 +488,7 @@
     const mock = () => {
       const lg = v.logo === 'custom' ? (customUrl() ? '<img class="logo logo--s" src="' + esc(customUrl()) + '" alt="">' : '<span class="logo logo--s logo--wait"></span>')
                                      : '<img class="logo logo--s" src="img/logos/' + v.logo + '.png" alt="">';
-      return '<div class="mock" data-mock="' + v.scheme + '" style="--mc:' + esc(accent()) + '">' +
+      return '<div class="mock" data-mock="' + (v.scheme === 'auto' ? themeNow() : v.scheme) + '" style="--mc:' + esc(accent()) + '">' +
         '<div class="mk-top">' + lg + '<b>' + esc(v.name || 'Dein Netzwerk') + '</b></div>' +
         '<div class="mk-card"><span class="mk-heart">' + IC.heart + '</span><span class="mk-user">@admin</span><span class="mk-tag">#vorschau</span></div>' +
         '<div class="mk-row"><span class="mk-btn">Folgen</span><span class="mk-link">12 Follower</span></div>' +
@@ -468,12 +497,12 @@
     const paint = () => {
       host.innerHTML = '<form class="brand-ed" autocomplete="off">' +
         '<div class="be-form form">' +
-          '<label>Name des Netzwerks<input name="name" maxlength="30" required placeholder="z. B. Pixelwelt" value="' + esc(v.name) + '"></label>' +
+          '<label>Name des Netzwerks<input name="name" maxlength="30" required placeholder="z. B. ' + esc(LOGOS[v.logo] ? LOGOS[v.logo].dflt : 'Pixelwelt') + '" value="' + esc(v.name) + '"></label>' +
           '<div class="lbl">Logo</div>' + logoPicker(v.logo, customUrl()) +
           '<input type="file" accept="image/*" id="beFile" hidden>' +
           '<div class="lbl">Farbschema</div>' +
-          '<div class="seg seg--s"><button type="button" data-sc="dark"' + (v.scheme === 'dark' ? ' class="on"' : '') + '>Dunkel</button>' +
-          '<button type="button" data-sc="light"' + (v.scheme === 'light' ? ' class="on"' : '') + '>Hell</button></div>' +
+          '<div class="seg seg--s">' + [['auto', 'Auto'], ['light', 'Hell'], ['dark', 'Dunkel']].map(x =>
+            '<button type="button" data-sc="' + x[0] + '"' + (v.scheme === x[0] ? ' class="on"' : '') + (x[0] === 'auto' ? ' title="Wie MPSkills: hell oder dunkel"' : '') + '>' + x[1] + '</button>').join('') + '</div>' +
           '<div class="lbl">Akzentfarbe <span class="muted">– passt sich dem Logo an, du kannst nachjustieren</span></div>' +
           '<div class="swatches">' +
             '<button type="button" class="sw sw--auto' + (!v.color ? ' on' : '') + '" data-col="" style="--c:' + esc(lc()) + '" title="Farbe aus dem Logo"><span>Logo</span></button>' +
@@ -489,6 +518,8 @@
       f.name.oninput = () => { v.name = f.name.value; $('#beMock', host).innerHTML = mock(); };
       $$('.lp', host).forEach(b => b.onclick = () => {
         if (b.dataset.logoId === 'custom' && (v.logo === 'custom' || !customUrl())) { $('#beFile', host).click(); return; }
+        // Name war noch ein Vorschlag (oder leer)? Dann den des neuen Logos nehmen
+        if (!init.id && LOGOS[b.dataset.logoId] && isDefaultName(v.name.trim())) v.name = LOGOS[b.dataset.logoId].dflt;
         v.logo = b.dataset.logoId; paint(); live();
       });
       $('#beFile', host).onchange = async (e) => {
@@ -518,7 +549,7 @@
       '<ol class="steps"><li class="on"><b>1</b> Name, Logo, Farben</li><li><b>2</b> Dein Admin-Konto</li></ol>' +
       '<div id="foundEd"></div></div>';
     $('#back').onclick = () => { S.screen = 'home'; renderHome(); };
-    brandEditor($('#foundEd'), { name: '', logo: 'rocket', scheme: 'dark' }, {
+    brandEditor($('#foundEd'), { name: '', logo: 'rocket', scheme: 'auto' }, {
       submitLabel: 'Weiter',
       onSubmit: async (v) => {
         const r = await A.call('sh_found', { p_name: v.name, p_logo: v.logo === 'custom' ? 'rocket' : v.logo, p_color: v.color, p_scheme: v.scheme });
@@ -576,7 +607,7 @@
     S.view = 'app';
     S.tab = 'feed';
     S.feedMode = 'foryou';
-    S.adminTab = 'settings';
+    S.adminTab = 'sql';
     if (r.needs_admin) renderLogin('admin');
     // Lehrkraft schaut ohne Konto zu (Admin), kann sich aber oben anmelden
     else if (!r.me && !T) renderLogin('login');
@@ -664,13 +695,13 @@
     const nav = [['feed', IC.home, 'Start'], ['search', IC.search, 'Suche']];
     if (h.me) nav.push(['post', IC.plus, '']);
     if (h.me) nav.push(['profile', IC.user, 'Profil']);
-    const sub = [['settings', IC.gear, 'Einstellungen'], ['sql', IC.code, 'SQL'], ['diagram', IC.table, 'Diagramm']];
+    const sub = [['sql', IC.code, 'SQL'], ['diagram', IC.table, 'Diagramm'], ['settings', IC.gear, 'Einstellungen']];
     app.innerHTML = '<div class="hub' + (admin ? ' hub--admin' : '') + '">' +
       '<header class="hub-top"><button class="icon-btn" id="toHome" title="Startseite">' + IC.back + '</button>' +
       logoHtml(h.hub, 'logo--s') + '<b class="hub-name">' + esc(h.hub.name) + '</b>' +
       (h.admin ? '<nav class="views"><button type="button" data-view="app"' + (!admin ? ' class="on"' : '') + '>App</button>' +
                  '<button type="button" data-view="admin"' + (admin ? ' class="on"' : '') + '>Adminbereich</button></nav>' : '') +
-      (admin ? '<nav class="subtabs">' + sub.map(x => '<button type="button" data-at="' + x[0] + '"' + (S.adminTab === x[0] ? ' class="on"' : '') + '>' + x[1] + '<span>' + x[2] + '</span></button>').join('') + '</nav>' : '') +
+      (admin ? '<nav class="subtabs">' + sub.map(x => '<button type="button" data-at="' + x[0] + '" class="' + (S.adminTab === x[0] ? 'on' : '') + (x[0] === 'settings' ? ' st-set' : '') + '">' + x[1] + '<span>' + x[2] + '</span></button>').join('') + '</nav>' : '') +
       '<span class="spacer"></span>' +
       (h.me ? '<span class="chip">@' + esc(h.me.username) + (T ? ' · Lehrkraft' : '') + '</span>'
             : T ? '<span class="chip chip--lk">Lehrkraft · Admin</span><button type="button" class="btn btn--accent btn--s" id="lkLogin">Testkonto</button>' : '') +
@@ -998,7 +1029,11 @@
     if (file) file.onchange = async () => {
       if (!file.files[0]) return;
       try {
-        const c = await M.compress(file.files[0]);
+        const fl = file.files[0];
+        file.value = '';
+        const cut = await window.SHPhoto.crop(await M.decode(fl), { ratio: 1, title: 'Profilbild zuschneiden' });
+        if (!cut) return;
+        const c = await M.compress(cut);
         const r = await hcall('sh_media_put', { p_data: c.data, p_thumb: c.thumb, p_mime: c.mime });
         if (!r || !r.ok) { fail(r); return; }
         M.prime(S.hub.hub.id, r.name, c.preview);
@@ -1051,25 +1086,69 @@
       main.innerHTML = '<div class="post"><div class="feed-empty">' + IC.image + '<p>Bilder hochladen ist gerade ausgeschaltet.</p></div></div>';
       return;
     }
-    let pic = null;
+    let pic = null;      // verkleinert, fertig zum Hochladen
+    let orig = null;     // Original (zum erneuten Zuschneiden)
     main.innerHTML = '<form class="post form" id="pForm">' +
-      '<label class="pick" id="pick">' + IC.image + '<span>Foto wählen</span><input type="file" accept="image/*" id="pFile" hidden></label>' +
+      '<div class="pick" id="pick">' + IC.image + '<span>Foto wählen oder aufnehmen</span>' +
+        '<div class="pick-src"><label class="btn btn--accent">' + IC.image + 'Foto wählen<input type="file" accept="image/*" id="pFile" hidden></label>' +
+        '<button type="button" class="btn btn--ghost" id="pCam">' + IC.camera + 'Kamera</button></div></div>' +
+      '<input type="file" accept="image/*" capture="environment" id="pCap" hidden>' +
+      '<div class="pick-acts" id="pActs" hidden><button type="button" class="btn btn--ghost btn--s" id="pCrop">' + IC.crop + ' Zuschneiden</button>' +
+        '<button type="button" class="btn btn--ghost btn--s" id="pNew">Anderes Foto</button></div>' +
       '<div class="pick-info muted small" id="pInfo"></div>' +
       '<textarea name="d" maxlength="300" rows="3" placeholder="Beschreibe dein Foto …"></textarea>' +
       (on('tags') ? '<input name="t" placeholder="#hashtags, z. B. #natur #sommer" autocapitalize="off">' : '') +
       '<p class="hint">Keine Fotos von anderen Personen ohne deren Erlaubnis. Das Bild wird verkleinert, Ort und Kameradaten werden entfernt.</p>' +
       '<button class="btn btn--accent btn--big" id="pGo" disabled>Posten</button></form>';
-    const file = $('#pFile', main);
-    file.onchange = async () => {
-      if (!file.files[0]) return;
+    const pickHtml = $('#pick', main).innerHTML;
+    // Bild (zugeschnitten oder nicht) verkleinern und zeigen
+    const use = async (src, before) => {
       $('#pInfo', main).textContent = 'wird verkleinert …';
       try {
-        pic = await M.compress(file.files[0]);
+        pic = await M.compress(src);
         $('#pick', main).innerHTML = '<img src="' + pic.preview + '" alt="">';
-        $('#pick', main).appendChild(file);
-        $('#pInfo', main).textContent = 'Original ' + Math.round(pic.before / 1024) + ' KB → ' + Math.round(pic.after / 1024) + ' KB (' + pic.w + '×' + pic.h + ')';
+        $('#pick', main).classList.add('pick--img');
+        $('#pActs', main).hidden = false;
+        $('#pInfo', main).textContent = (before ? 'Original ' + Math.round(before / 1024) + ' KB → ' : 'Fertig: ') + Math.round(pic.after / 1024) + ' KB (' + pic.w + '×' + pic.h + ')';
         $('#pGo', main).disabled = false;
       } catch (e) { $('#pInfo', main).textContent = ''; toast(e.message, true); }
+    };
+    // neues Bild: gleich zuschneiden (Abbrechen = ganzes Bild)
+    const take = async (src, before) => {
+      orig = { src, before };
+      const c = await window.SHPhoto.crop(src, { start: 0.8 });
+      await use(c || src, c ? null : before);
+    };
+    const fromFile = async (inp) => {
+      const fl = inp.files[0];
+      inp.value = '';
+      if (!fl) return;
+      try { await take(await M.decode(fl), fl.size); } catch (e) { toast(e.message, true); }
+    };
+    const wirePick = () => {
+      const file = $('#pFile', main);
+      if (file) file.onchange = () => fromFile(file);
+      if ($('#pCam', main)) $('#pCam', main).onclick = async () => {
+        const c = await window.SHPhoto.camera();
+        if (c === 'fallback') { $('#pCap', main).click(); return; }
+        if (c) take(c, null);
+      };
+    };
+    $('#pCap', main).onchange = () => fromFile($('#pCap', main));
+    wirePick();
+    $('#pCrop', main).onclick = async () => {
+      if (!orig) return;
+      const c = await window.SHPhoto.crop(orig.src, { start: 0.8 });
+      if (c) use(c, null);
+    };
+    $('#pNew', main).onclick = () => {
+      pic = null; orig = null;
+      $('#pick', main).innerHTML = pickHtml;
+      $('#pick', main).classList.remove('pick--img');
+      $('#pActs', main).hidden = true;
+      $('#pInfo', main).textContent = '';
+      $('#pGo', main).disabled = true;
+      wirePick();
     };
     $('#pForm', main).onsubmit = async (e) => {
       e.preventDefault();

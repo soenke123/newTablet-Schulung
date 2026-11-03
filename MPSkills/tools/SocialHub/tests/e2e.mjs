@@ -89,10 +89,10 @@ const BASE = `http://localhost:${server.address().port}/MPSkills/tools/SocialHub
 /* ── Browser ───────────────────────────────────────────── */
 let fails = 0;
 const ok = (label, cond, extra = '') => { if (!cond) fails++; console.log(`${cond ? 'ok  ' : 'FAIL'}  ${label}${extra ? '   ' + extra : ''}`); };
-const browser = await chromium.launch();
+const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 const errors = [];
 async function open(who, size) {
-  const ctx = await browser.newContext({ viewport: size || { width: 400, height: 760 }, deviceScaleFactor: 1 });
+  const ctx = await browser.newContext({ viewport: size || { width: 400, height: 760 }, deviceScaleFactor: 1, permissions: ['camera'] });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(who + ': ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(who + ' console: ' + m.text()); });
@@ -133,6 +133,21 @@ try {
   await t.app.locator('[data-tb="users"]').click();
   ok('1  Antippen zeigt die Attribute (mit gender)', /gender/.test(await t.app.locator('#tdgInfo').textContent()));
   ok('1  Linien im Diagramm', await t.app.locator('.tdg-lines line.on').count() === 11, String(await t.app.locator('.tdg-lines line').count()));
+  // keine Linie läuft durch einen fremden Kasten (users–photos war verdeckt)
+  const hidden = await t.app.locator('#tdg').evaluate((box) => {
+    const R = box.getBoundingClientRect(), bad = [];
+    const rects = [...box.querySelectorAll('.tb')].map(el => { const r = el.getBoundingClientRect(); return { t: el.dataset.tb, x: r.left - R.left, y: r.top - R.top, w: r.width, h: r.height }; });
+    for (const l of box.querySelectorAll('.tdg-lines line')) {
+      const [x1, y1, x2, y2] = ['x1', 'y1', 'x2', 'y2'].map(k => +l.getAttribute(k));
+      for (let i = 1; i < 20; i++) {
+        const x = x1 + (x2 - x1) * i / 20, y = y1 + (y2 - y1) * i / 20;
+        const hit = rects.find(r => x > r.x + 2 && x < r.x + r.w - 2 && y > r.y + 2 && y < r.y + r.h - 2);
+        if (hit) { bad.push(hit.t); break; }
+      }
+    }
+    return bad;
+  });
+  ok('1  jede Linie sichtbar (keine läuft unter einem Kasten)', hidden.length === 0, hidden.join());
   await shot(t.page, '1-lehrkraft');
   // 1b) Lehrkraft erstellt ihr eigenes Netzwerk (2 Schritte)
   await t.app.locator('#btnFound').click();
@@ -163,6 +178,10 @@ try {
   ok('2  Schüler: nur „Netzwerk erstellen“, keine fremden Netzwerke', await mia.app.locator('.net-tile').count() === 0);
   await shot(mia.page, '2a-start-schueler');
   await mia.app.locator('#btnFound').click();
+  ok('2  Name aus Startup Story vorgeschlagen', await mia.app.locator('input[name=name]').inputValue() === 'ToTheMoon');
+  await mia.app.locator('[data-logo-id="bell"]').click();
+  ok('2  … wechselt mit dem Logo', await mia.app.locator('input[name=name]').inputValue() === 'RingRing');
+  ok('2  Farbschema steht auf Auto', await mia.app.locator('[data-sc="auto"].on').count() === 1);
   await mia.app.locator('input[name=name]').fill('Pixelwelt');
   await mia.app.locator('[data-logo-id="like"]').click();
   await shot(mia.page, '2b-gruenden');
@@ -193,10 +212,38 @@ try {
   // 3) Foto posten (wird verkleinert)
   const png = await makePng(mia.page);
   await mia.app.locator('[data-tab="post"]').click();
+  // Kamera: Bild im Browser aufnehmen (Chromium mit Test-Kamera)
+  await mia.app.locator('#pCam').click();
+  await mia.app.locator('.ph--cam video').waitFor();
+  await mia.app.locator('.ph--cam video').evaluate(v => new Promise(r => { const t = () => v.videoWidth ? r() : setTimeout(t, 50); t(); }));
+  ok('3  Kamera: Auswahl der Kamera da', await mia.app.locator('#phCams option').count() >= 1);
+  await shot(mia.page, '3a-kamera');
+  await mia.app.locator('[data-ph="shot"]').click();
+  await mia.app.locator('.ph--crop').waitFor();
+  await mia.app.locator('.ph--crop [data-ph="ok"]').click();
+  await mia.app.locator('#pGo:not([disabled])').waitFor();
+  ok('3  Kamera-Foto übernommen (4:5 zugeschnitten)', /\((\d+)×(\d+)\)/.test(await mia.app.locator('#pInfo').textContent()));
+  await mia.app.locator('#pNew').click();
+  // Datei wählen → Zuschneiden öffnet gleich; Abbrechen = ganzes Bild
   await mia.app.locator('#pFile').setInputFiles({ name: 'sonne.png', mimeType: 'image/png', buffer: Buffer.from(png) });
+  await mia.app.locator('.ph--crop').waitFor();
+  await mia.app.locator('.ph--crop [data-ph="no"]').click();
   await mia.app.locator('#pGo:not([disabled])').waitFor();
   const info = await mia.app.locator('#pInfo').textContent();
-  ok('3  Bild verkleinert', /→/.test(info), info);
+  ok('3  Bild verkleinert (ohne Zuschneiden: ganzes Bild 4:3)', /→/.test(info) && /\(1080×810\)/.test(info), info);
+  // Zuschneiden: 1:1, Ecke nach innen ziehen
+  await mia.app.locator('#pCrop').click();
+  await mia.app.locator('.ph--crop [data-r="1"]').click();
+  const hd = await mia.app.locator('.ph--crop [data-hd="se"]').boundingBox();
+  await mia.page.mouse.move(hd.x + 10, hd.y + 10);
+  await mia.page.mouse.down();
+  await mia.page.mouse.move(hd.x - 60, hd.y - 90, { steps: 5 });
+  await mia.page.mouse.up();
+  await shot(mia.page, '3b-zuschneiden');
+  await mia.app.locator('.ph--crop [data-ph="ok"]').click();
+  await mia.app.locator('#pInfo', { hasText: 'Fertig' }).waitFor();
+  const dim = /\((\d+)×(\d+)\)/.exec(await mia.app.locator('#pInfo').textContent());
+  ok('3  zugeschnitten: quadratisch und kleiner', dim && dim[1] === dim[2] && +dim[1] < 1080, dim && dim[0]);
   await mia.app.locator('textarea[name=d]').fill('Sonnenuntergang am See');
   await mia.app.locator('input[name=t]').fill('#natur #sommer');
   await mia.app.locator('#pGo').click();
@@ -260,8 +307,14 @@ try {
   await shot(leon.page, '4b-anderes-tablet');
 
   // 5a) Mia: Einstellungen im Adminbereich
+  ok('5  Auto: Netzwerk übernimmt Hell/Dunkel von MPSkills (kein eigenes data-scheme)', await mia.page.frames()[1].evaluate(() => document.documentElement.getAttribute('data-scheme')) === null);
   await mia.app.locator('[data-view="admin"]').click();
-  await mia.app.locator('.subtabs [data-at="settings"].on').waitFor();
+  await mia.app.locator('.subtabs [data-at="sql"].on').waitFor();
+  ok('5  Adminbereich: SQL zuerst, Einstellungen rechts', (await mia.app.locator('.subtabs [data-at]').evaluateAll(b => b.map(x => x.dataset.at))).join() === 'sql,diagram,settings');
+  await mia.app.locator('.db-exi').first().waitFor();
+  ok('5  SQL: Beispiele sichtbar, kein Warnsatz', await mia.app.locator('.db-exi').count() >= 6 && !/echte Netzwerk/.test(await mia.app.locator('.db-tools').textContent()));
+  await mia.app.locator('.subtabs [data-at="settings"]').click();
+  await mia.app.locator('[data-sc="light"]').waitFor();
   await mia.app.locator('[data-sc="light"]').click();
   await mia.app.locator('[data-col="#0d9488"]').click();
   await shot(mia.page, '5a-einstellungen');
@@ -274,6 +327,23 @@ try {
   // 5) SQL und Diagramm
   await mia.app.locator('.subtabs [data-at="sql"]').click();
   await mia.app.locator('.db-tbl', { hasText: 'users' }).waitFor();
+  await mia.app.locator('.db-exi', { hasText: 'Wer ist Admin?' }).click();
+  await mia.app.locator('.grid').first().waitFor();
+  ok('5  Beispiel antippen führt es aus', /admin/.test(await mia.app.locator('#dbOut').textContent()));
+  // Text eines Users mit \ am Ende darf in der Kopie nicht aus dem String ausbrechen
+  await db.query(`update sh_users set bio = $1 where username = 'admin' and hub_id = (select id from sh_hubs where name = 'Pixelwelt')`, ["x\\', 1, 2); DELETE FROM users; --"]);
+  await mia.app.locator('#dbReload').click();
+  await mia.app.locator('.db-state', { hasText: 'Neu geladen' }).waitFor();
+  await mia.app.locator('.ed-ta').fill('SELECT COUNT(*) AS n, MAX(bio) AS bio FROM users;');
+  await mia.app.locator('#dbRun').click();
+  await mia.app.locator('.grid').first().waitFor();
+  const bc = await mia.app.locator('.grid td').allTextContents();
+  ok('5  Backslash im Text: keine Injektion in die Kopie', bc[0] === '2' && bc[1] === "x\\', 1, 2); DELETE FROM users; --", bc.join(' | '));
+  await db.query(`update sh_users set bio = null where username = 'admin'`);
+  await mia.app.locator('#dbState').evaluate(e => { e.textContent = ''; });
+  await mia.app.locator('#dbReload').click();
+  await mia.app.locator('.db-state', { hasText: 'Neu geladen' }).waitFor();
+  await mia.app.locator('.ed-ta').fill('SELECT * FROM users;');
   await mia.app.locator('#dbRun').click();
   await mia.app.locator('.grid').first().waitFor();
   const cells = await mia.app.locator('.grid td').allTextContents();
