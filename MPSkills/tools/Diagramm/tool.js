@@ -1055,7 +1055,8 @@
   };
 
   /* Export: das Diagramm als eigenständiges SVG (für PNG und Datei). */
-  function exportSVG(doc, scale) {
+  // clear = ohne weißen Hintergrund (PNG-Download: durchsichtig)
+  function exportSVG(doc, scale, clear) {
     const b = bounds(doc);
     const pad = 30;
     const w = Math.ceil(b.w + pad * 2), h = Math.ceil(b.h + pad * 2);
@@ -1065,7 +1066,7 @@
       w: w * (scale || 1), h: h * (scale || 1),
       svg: `<svg xmlns="${NS}" width="${w * (scale || 1)}" height="${h * (scale || 1)}" viewBox="${b.x - pad} ${b.y - pad} ${w} ${h}">`
          + `${fontCSS ? `<style>${fontCSS}</style>` : ''}${DEFS}`
-         + `<rect x="${b.x - pad}" y="${b.y - pad}" width="${w}" height="${h}" fill="#fff"/>${body}</svg>`
+         + (clear ? '' : `<rect x="${b.x - pad}" y="${b.y - pad}" width="${w}" height="${h}" fill="#fff"/>`) + `${body}</svg>`
     };
   }
 
@@ -1123,7 +1124,7 @@
   async function exportPNG(doc, name) {
     await loadExportFonts();
     return new Promise(resolve => {
-      const { svg, w, h } = exportSVG(doc, 2);
+      const { svg, w, h } = exportSVG(doc, 2, true);
       const img = new Image();
       const url = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
       img.onload = () => {

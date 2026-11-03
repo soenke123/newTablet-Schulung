@@ -33,7 +33,7 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
   bzw. Wert rechts in JetBrains Mono (`umlRow` teilt „- name: String“, „+ m(): void“, „x = 5“), Linien
   `--dg-link`. Farbe 0 = Petrol-Kopf, andere Farben = Pastell-Kopf. Dunkel mit den Werten aus SQL Studio.
 - Farben, die mit hell/dunkel kippen, stehen als `var(--dg-…)` in den SVG-Attributen (tool.css);
-  `exportSVG` ersetzt sie durch `VARS_EXPORT`. Der PNG-Export bettet die Schriften ein
+  `exportSVG` ersetzt sie durch `VARS_EXPORT`. PNG mit durchsichtigem Hintergrund (`exportSVG(doc, 2, true)`). Der PNG-Export bettet die Schriften ein
   (`loadExportFonts`: holt `fonts/outfit-inter-jetbrainsmono-985fda.css`, nur latin, als data:-URL),
   sonst passte die Ersatzschrift nicht in die gemessenen Kästen.
 
