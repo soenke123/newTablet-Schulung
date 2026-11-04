@@ -525,6 +525,23 @@ try {
   ok('7  Aufdeckung auf Mias Tablet: „Das wurde gespeichert“', await mia.app.locator('.ov--reveal').locator('text=Das wurde gespeichert').count() > 0);
   ok('7  Aufdeckung zeigt alle vier Teile + die Haken', (await mia.app.locator('.ov--reveal .rv-s').count()) === 4 && /Standort erlaubt/.test(await mia.app.locator('.rv-perms').textContent()), await mia.app.locator('.rv-perms').textContent());
   await shot(mia.page, '7-aufdeckung');
+  // Schließen bleibt zu (kein Wiederaufpoppen beim Reiterwechsel)
+  await mia.app.locator('.ov--reveal [data-close]').click();
+  await mia.app.locator('.hub-nav [data-tab="feed"]').click();
+  await wait(600);
+  ok('7  geschlossene Aufdeckung poppt beim Reiterwechsel nicht wieder auf', await mia.app.locator('.ov--reveal').count() === 0);
+  // Lehrkraft beendet → im Profil bleibt „Was weiß das Netzwerk über mich?“
+  await t.app.locator('#revBtn').click();
+  for (let i = 0; i < 30 && (await stateOf()).reveal !== false; i++) await wait(100);
+  ok('7  beendet, Merker „revealed“ bleibt', (await stateOf()).reveal === false && (await stateOf()).revealed === true, JSON.stringify(await stateOf()));
+  await wait(1800);
+  await mia.app.locator('.hub-nav [data-tab="profile"]').click();
+  await mia.app.locator('#pData').waitFor({ timeout: 8000 });
+  await mia.app.locator('#pData').click();
+  await mia.app.locator('.ov--reveal .rv-s--got').waitFor({ timeout: 8000 });
+  ok('7  Schüler öffnet die Auflösung danach selbst über das Profil', (await mia.app.locator('.ov--reveal .rv-s').count()) === 4);
+  await wait(500);
+  await shot(mia.page, '7c-profil-auskunft');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

@@ -111,6 +111,8 @@
 
   // Analytics (0270): es wird getrackt, sobald die Lehrkraft sessions erstellt hat
   const revealOn = () => A.state.reveal === true;
+  // einmal aufgelöst → im Profil dauerhaft „Was weiß das Netzwerk über mich?“
+  const revealedOnce = () => revealOn() || A.state.revealed === true;
   // Feed-Name für die views-Tabelle (profile/user-Betrachter → 'profile')
   const feedName = (m) => m === 'user' ? 'profile' : (['foryou', 'following', 'tag', 'search', 'profile'].indexOf(m) >= 0 ? m : 'foryou');
 
@@ -523,7 +525,7 @@
         [['no', 'Abbrechen'], ['yes', 'Einschalten', 'accent']]) !== 'yes') { e.target.checked = false; return; }
       save(cur(), S.home.upload, { meta: e.target.checked });
     };
-    if ($('#revBtn')) $('#revBtn').onclick = () => save(cur(), S.home.upload, { reveal: !revealOn() });
+    if ($('#revBtn')) $('#revBtn').onclick = () => save(cur(), S.home.upload, revealOn() ? { reveal: false } : { reveal: true, revealed: true });
     $$('[data-lock]').forEach(b => b.onclick = async () => {
       const r = await A.call('sh_hub_lock', { p_hub: b.dataset.lock, p_locked: b.dataset.v === '1' });
       if (!r.ok) fail(r); else loadHome();
@@ -819,7 +821,7 @@
     else if (S.tab === 'post') renderPost(main);
     else if (S.tab === 'profile') renderProfile(main, h.me && h.me.id, false);
     manageTrack();
-    if (revealOn()) openReveal(); else closeReveal();
+    syncReveal();
   }
 
   function closeDb() { if (S.db) { S.db.destroy(); S.db = null; } }
@@ -1109,9 +1111,17 @@
 
   /* ── Aufdeckung: „Was weiß das Netzwerk über dich?“ (0270) ── */
   let revealEl = null;
-  function closeReveal() { if (revealEl) { revealEl.remove(); revealEl = null; } }
-  async function openReveal() {
+  let revealManual = false;     // über den Profil-Knopf geöffnet (bleibt, auch wenn die Lehrkraft beendet)
+  let revealShown = false;      // in dieser Aufdeckung schon automatisch gezeigt → nach Schließen nicht wieder aufpoppen
+  function closeReveal() { if (revealEl) { revealEl.remove(); revealEl = null; } revealManual = false; }
+  // Vom Zustand des Raums: einmal automatisch öffnen, beim Beenden wieder zu
+  function syncReveal() {
+    if (revealOn()) { if (!revealShown && S.hub && S.hub.me) { revealShown = true; openReveal(false); } }
+    else { revealShown = false; if (!revealManual) closeReveal(); }
+  }
+  async function openReveal(manual) {
     if (revealEl || !document.querySelector('.hub')) return;
+    revealManual = !!manual;
     const ov = overlay('Was weiß das Netzwerk über dich?');
     ov.el.classList.add('ov--reveal');
     revealEl = ov.el;
@@ -1245,6 +1255,7 @@
       (u.bio ? '<p class="bio">' + esc(u.bio) + '</p>' : '') +
       '<div class="prof-acts">' +
         (r.me ? '<button type="button" class="btn btn--ghost" id="pEdit">Profil bearbeiten</button>' +
+                (revealedOnce() ? '<button type="button" class="btn btn--ghost" id="pData">' + IC.shield + 'Was weiß das Netzwerk über mich?</button>' : '') +
                 // Lehrkraft bleibt in ihrem eigenen Netzwerk immer angemeldet
                 (T && S.hub.founder ? '' : '<button type="button" class="btn btn--ghost" id="pOut">Abmelden</button>')
               : (r.i_follow != null && S.hub.me ? '<button type="button" class="btn ' + (r.i_follow ? 'btn--ghost' : 'btn--accent') + '" id="pFollow">' + (r.i_follow ? 'Gefolgt ✓' : 'Folgen') + '</button>' : '')) +
@@ -1259,6 +1270,7 @@
       renderProfile(main, uid, inOverlay);
     };
     if ($('#pOut', main)) $('#pOut', main).onclick = () => logoutDialog();
+    if ($('#pData', main)) $('#pData', main).onclick = () => openReveal(true);
     if ($('#pEdit', main)) $('#pEdit', main).onclick = () => editProfile(u, () => renderProfile(main, uid, inOverlay));
   }
 
@@ -1496,7 +1508,7 @@
     if (firstState) { firstState = false; return; }
     if (S.onMeta && $('#pMeta')) S.onMeta();       // Hinweis beim Posten, ohne das Formular neu zu zeichnen
     if (S.screen === 'hub' && S.hub) {
-      if (revealOn()) openReveal(); else closeReveal();
+      syncReveal();
       const prev = JSON.stringify([S.hub.tables, S.hub.upload]);
       await refreshHub();
       if (S.screen !== 'hub' || !S.hub) return;
