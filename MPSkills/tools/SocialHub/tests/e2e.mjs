@@ -411,6 +411,16 @@ try {
   const cells = await mia.app.locator('.grid td').allTextContents();
   ok('5  SELECT * FROM users zeigt Hashes und gender', cells.some(c => /^\$2a\$08\$/.test(c)) && cells.includes('female'), cells.slice(0, 8).join(' | '));
   await shot(mia.page, '5b-sql');
+  // ganz runter scrollen: der Befehl rollt weg, nur noch Daten zu sehen, kein eigener Scrollkasten
+  const sc = await mia.app.locator('.db-pane--sql').evaluate(p => {
+    p.scrollTop = p.scrollHeight;
+    const r = p.getBoundingClientRect(), ed = p.querySelector('.sql-ed').getBoundingClientRect(), out = p.querySelector('.db-out');
+    return { scrolls: p.scrollTop > 0, edGone: ed.bottom <= r.top + 1, outFills: out.getBoundingClientRect().bottom >= r.bottom - 1,
+             inner: getComputedStyle(out).overflowY === 'visible' && getComputedStyle(p.querySelector('.res-scroll')).overflowY !== 'auto' };
+  });
+  ok('5  SQL: ganz runter scrollen zeigt nur die Daten', sc.scrolls && sc.edGone && sc.outFills && sc.inner, JSON.stringify(sc));
+  await shot(mia.page, '5c-sql-runter');
+  await mia.app.locator('.db-pane--sql').evaluate(p => { p.scrollTop = 0; });
   await mia.app.locator('.ed-ta').fill("INSERT INTO users (username, name, gender, password) VALUES ('sql_kind', 'SQL', 'diverse', PASSWORD_HASH('neu123'));");
   await mia.app.locator('#dbRun').click();
   await mia.app.locator('.res--live, .res--bad').first().waitFor();
@@ -553,11 +563,16 @@ try {
   await shot(t.page, '8-daten-knopf');
   const nets = Number((await db.query(`select count(*)::int n from sh_hubs where room_id = $1`, [ROOM])).rows[0].n);
   const before8 = Number((await db.query(`select count(*)::int n from sh_users where hub_id in (select id from sh_hubs where room_id = $1)`, [ROOM])).rows[0].n);
+  const homeY = [];
   for (const tb of ['users', 'photos', 'comments']) {
+    await t.app.locator(`[data-dload="${tb}"]:not([disabled])`).scrollIntoViewIfNeeded();
+    const y0 = await t.app.locator('.home').evaluate(e => e.scrollTop);
     await t.app.locator(`[data-dload="${tb}"]:not([disabled])`).click();
     await t.app.locator('.dlg [data-dlg="yes"]').click();
     await t.app.locator(`[data-dclear="${tb}"]`).waitFor({ timeout: 20000 });
+    homeY.push([y0, await t.app.locator('.home').evaluate(e => e.scrollTop)]);
   }
+  ok('8  Füllen springt nicht nach oben (Scrollstand bleibt)', homeY.every(([a, b]) => Math.abs(a - b) < 2), JSON.stringify(homeY));
   const after8 = Number((await db.query(`select count(*)::int n from sh_users where hub_id in (select id from sh_hubs where room_id = $1)`, [ROOM])).rows[0].n);
   ok('8  users/photos/comments geladen: 70 User je Netzwerk', after8 - before8 === 70 * nets, JSON.stringify({ nets, before8, after8 }));
   ok('8  „Daten: gefüllt · Leeren“ an den drei Tabellen', await t.app.locator('.tb-d--full').count() === 3 && await t.app.locator('[data-dclear]').count() === 3);

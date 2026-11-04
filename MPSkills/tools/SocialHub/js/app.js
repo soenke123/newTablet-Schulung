@@ -306,7 +306,12 @@
       html += '<p class="small muted center-t"><button type="button" class="link" id="btnNetLogin">Dein Netzwerk wurde auf einem anderen Tablet erstellt? Hier anmelden</button></p>';
     }
     html += '</div>';
+    // Neu zeichnen (Füllen/Leeren, Erstellen, Takt) darf nicht nach oben springen
+    const oldHome = $('.home', app), oldWrap = $('.tdg-wrap', app);
+    const keepY = oldHome ? oldHome.scrollTop : 0, keepX = oldWrap ? oldWrap.scrollLeft : 0;
     app.innerHTML = html;
+    if (keepY && $('.home', app)) $('.home', app).scrollTop = keepY;
+    if (keepX && $('.tdg-wrap', app)) $('.tdg-wrap', app).scrollLeft = keepX;
     $$('[data-open]').forEach(b => b.addEventListener('click', () => openHub(b.dataset.open)));
     if ($('#btnFound')) $('#btnFound').onclick = renderFound;
     if ($('#btnNetLogin')) $('#btnNetLogin').onclick = renderNetLogin;

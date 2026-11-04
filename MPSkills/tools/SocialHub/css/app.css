@@ -465,10 +465,13 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .db-tbl span { color: var(--muted); font-size: 11px; }
 .db-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .db-pane--dg { position: relative; }
-.db-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+/* SQL: die ganze Fläche scrollt (Befehl rollt nach oben weg, unten nur die Daten),
+   kein eigener Scrollkasten fürs Ergebnis; Ergebnis mindestens so hoch wie die Fläche */
+.db-pane--sql { overflow-y: auto; overscroll-behavior: contain; container-type: size; }
+.db-main { flex: 1 0 auto; min-width: 0; display: flex; flex-direction: column; }
 .db-tools { display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-wrap: wrap; flex: none; }
 .db-hint { font-size: 12px; color: var(--muted); }
-.db-out { flex: 1; overflow: auto; padding: 10px 12px 20px; border-top: 1px solid var(--line); }
+.db-out { flex: 1 0 auto; min-height: 100cqh; padding: 10px 12px 20px; border-top: 1px solid var(--line); }
 .db-h { font: 700 15px var(--font-mono); color: var(--t-tbl); margin: 4px 0 8px; }
 .res { margin-bottom: 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 10px 12px; font-size: 14px; }
 .res--ok { border-color: rgba(63,209,139,.35); }
@@ -476,7 +479,7 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .res--bad { border-color: rgba(255,92,108,.45); background: var(--bad-dim); }
 .res-hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
 .res-n { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-.res-scroll { overflow: auto; max-height: 60vh; }
+.res-scroll { overflow-x: auto; overflow-y: hidden; }
 .grid { border-collapse: collapse; font: 13px var(--font-mono); }
 .grid th, .grid td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; white-space: nowrap; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
 .grid th { background: var(--soft); position: sticky; top: 0; color: var(--t-col); }
