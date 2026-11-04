@@ -5,7 +5,7 @@
 
    Fest: gleicher Stichtag = gleiche Daten in jedem Netzwerk des Raums (der
    Zufall hängt NUR am Stichtag, nicht am Netzwerk). netz ersetzt nur {netz}
-   in den E-Mails. firstId verschiebt die User-ids (falls schon Konten da sind).
+   in den E-Mails (netz: '{netz}' lässt den Platzhalter für den Server stehen). firstId verschiebt die User-ids (falls schon Konten da sind).
 
    Zeiten: Text 'YYYY-MM-DD HH:MM:SS' (Ortszeit, ohne Zone), gerechnet in UTC-
    Arithmetik, damit keine Sommerzeit-Sprünge hineinrechnen.
@@ -133,7 +133,8 @@
     const day0 = parseDay(opt.stichtag || fmtDate(Date.now()));
     const now = day0 + 23 * 3600000 + 59 * 60000;
     const R = rng(fnv('yoursozialnet|' + fmtDate(day0)));
-    const netz = String(opt.netz || 'netzwerk').toLowerCase()
+    // '{netz}' bleibt stehen: der Server setzt beim Füllen den Namen jedes Netzwerks ein (0272)
+    const netz = opt.netz === '{netz}' ? '{netz}' : String(opt.netz || 'netzwerk').toLowerCase()
       .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[^a-z0-9]/g, '') || 'netzwerk';
     const firstId = opt.firstId || 1;
 

@@ -7,7 +7,7 @@
 > - **Passwort per INSERT/UPDATE bleibt Klartext** (Migration 0271), gehasht nur beim Registrieren.
 > - **Befüllen**: jede Tabelle bekommt im Diagramm der Lehrkraft einen Knopf **„Daten laden“**.
 > - Namen frei gewählt, ~25 % nicht-deutsch – **nicht** bei Trollen/Fake News.
-> - **Gebaut** (04.11.2026): `dummy/daten.js` (User, Fotos, Diskussionen), `dummy/generator.js` (Likes, Follows, Füll-/Troll-/Spam-Kommentare, Gewinnspiel-Markierungen, sessions, views), `dummy/bilder.mjs` (Bilder nachliefern), Prüfstand `tests/dummy.test.mjs`. **Offen**: Knopf „Daten laden“ je Tabelle + Server-RPC, Platzhalter-Bilder in der App.
+> - **Gebaut** (04.11.2026): `dummy/daten.js` (User, Fotos, Diskussionen), `dummy/generator.js` (Likes, Follows, Füll-/Troll-/Spam-Kommentare, Gewinnspiel-Markierungen, sessions, views), `dummy/bilder.mjs` (Bilder nachliefern), Prüfstand `tests/dummy.test.mjs`. Seit Migration 0272 auch das **Laden**: ＋ oben an jeder Tabelle im Diagramm der Lehrkraft (alle Netzwerke, neue per Trigger) und Platzhalter für fehlende Bilder. **Offen**: Arbeitsblatt anpassen, Bilder.
 > - Arbeitsblatt wird **noch nicht** angefasst; für 3h später „… die vor 17 Jahren geboren sind“.
 
 Gesprächsgrundlage, noch nichts gebaut. Ziel: Jedes neue Netzwerk startet nicht leer, sondern mit einer

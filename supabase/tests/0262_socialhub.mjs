@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262–0271 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
+/* Prüfstand für Migration 0262–0272 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -498,6 +498,87 @@ row = await one(`select allow_camera ac, allow_notifications an, allow_location 
 ok('9  wieder erstellt: Haken nachgetragen (Kamera ja, Benachrichtigungen nein), Standort bleibt, Ende gesetzt',
    r.tracked === true && row.ac === true && row.an === false && row.al === true && row.e === true, JSON.stringify(row));
 
+/* 10  Dummy-Daten (0272) — echte Zeilen aus dummy/generator.js */
+{
+  new Function(readFileSync(`${REPO}/MPSkills/tools/SocialHub/dummy/daten.js`, 'utf8'))();
+  new Function(readFileSync(`${REPO}/MPSkills/tools/SocialHub/dummy/generator.js`, 'utf8'))();
+  const G = globalThis.SHDummy;
+  await as(null);
+  r = await call(`sh_dummy_status($1)`, [CODE]);
+  ok('10 ohne Anmeldung kein Dummy-Status', r.ok === false, JSON.stringify(r));
+  r = await call(`sh_dummy_put(null, 'users', '[]'::jsonb, '[]'::jsonb)`);
+  ok('10 Schüler/ohne Code: kein Speichern', r.ok === false, JSON.stringify(r));
+  await as(T1);
+  r = await call(`sh_dummy_status($1)`, [CODE]);
+  ok('10 Status: Stichtag = Raum erstellt, nichts gespeichert', r.ok && /^\d{4}-\d\d-\d\d$/.test(r.stichtag) && r.stored.length === 0 && r.hubs[THUB] && Object.keys(r.hubs[THUB]).length === 0, JSON.stringify(r));
+  const D = G.build({ stichtag: r.stichtag, netz: '{netz}' });
+  const put = (t) => call(`sh_dummy_put($1, $2, $3::jsonb, $4::jsonb)`, [CODE, t, JSON.stringify(D[t].cols), JSON.stringify(D[t].rows)]);
+  const load = (t, hub) => call(`sh_dummy_load($1, $2, $3)`, [CODE, t, hub]);
+  r = await call(`sh_dummy_put($1, 'users', '["id"]'::jsonb, '[]'::jsonb)`, [CODE]);
+  ok('10 falsche Spalten → bad_columns', r.error === 'bad_columns', JSON.stringify(r));
+  r = await call(`sh_dummy_put($1, 'tags', '["id","name"]'::jsonb, '[[1,"Scheisse"]]'::jsonb)`, [CODE]);
+  ok('10 Blacklist greift', r.error === 'blacklisted', JSON.stringify(r));
+  r = await call(`sh_dummy_put($1, 'tags', '["id","name"]'::jsonb, '[[1,{"x":1}]]'::jsonb)`, [CODE]);
+  ok('10 JSON-Objekt als Wert → bad_rows', r.error === 'bad_rows', JSON.stringify(r));
+  r = await call(`sh_dummy_put($1, 'ads', '["id"]'::jsonb, '[]'::jsonb)`, [CODE]);
+  ok('10 unbekannte Tabelle → bad_table', r.error === 'bad_table', JSON.stringify(r));
+  for (const t of ['users', 'photos', 'tags', 'photo_tag', 'follows', 'likes', 'comments', 'sessions', 'views']) {
+    r = await put(t);
+    if (!r.ok) ok('10 put ' + t, false, JSON.stringify(r));
+  }
+  r = await call(`sh_dummy_status($1)`, [CODE]);
+  ok('10 alle 9 Tabellen gespeichert', r.stored.length === 9, JSON.stringify(r.stored));
+  ok('10 Passwörter einmal gehasht gespeichert', /^\$2a\$08\$/.test((await one(`select rows->0->>4 p from sh_dummy where room_id = $1 and tbl = 'users'`, [ROOM])).p));
+  r = await load('photos', THUB);
+  ok('10 photos vor users → needs', r.error === 'needs', JSON.stringify(r));
+  const before = await one(`select (select max(id) from sh_users where hub_id = $1) mu, (select max(id) from sh_photos where hub_id = $1) mp,
+                                   (select owner_user from sh_hubs where id = $1) ow, (select count(*)::int from sh_tags where hub_id = $1) nt`, [THUB]);
+  for (const t of ['users', 'photos', 'tags', 'follows', 'likes', 'comments', 'sessions', 'views']) {
+    r = await load(t, THUB);
+    if (!r.ok) ok('10 load ' + t, false, JSON.stringify(r));
+  }
+  const cnt = async (t, hub) => (await one(`select count(*)::int n from ${t} where hub_id = $1`, [hub])).n;
+  ok('10 70 User dazu, ids hinter den vorhandenen', (await one(`select count(*)::int n, min(id) a from sh_users where hub_id = $1 and id > $2`, [THUB, before.mu])).n === 70
+     && (await one(`select min(id) a from sh_users where hub_id = $1 and id > $2`, [THUB, before.mu])).a === before.mu + 1);
+  ok('10 Dummy-User nie Admin, Gründer-Admin bleibt', (await one(`select count(*)::int n from sh_users where hub_id = $1 and id > $2 and role <> 'user'`, [THUB, before.mu])).n === 0
+     && (await one(`select owner_user from sh_hubs where id = $1`, [THUB])).owner_user === before.ow);
+  ok('10 Fotos gehören den richtigen Usern (Versatz)', (await one(`select u.username from sh_photos p join sh_users u on u.hub_id = p.hub_id and u.id = p.user_id where p.hub_id = $1 and p.image = 'dummy/paul_01.webp'`, [THUB])).username === 'pixelpaul');
+  ok('10 Tags: gleiche Namen mitbenutzt, eindeutig', (await one(`select count(*)::int n, count(distinct lower(name))::int d from sh_tags where hub_id = $1`, [THUB])).n === (await one(`select count(distinct lower(name))::int d from sh_tags where hub_id = $1`, [THUB])).d);
+  ok('10 photo_tag vollständig', (await one(`select count(*)::int n from sh_photo_tag pt join sh_photos p on p.hub_id = pt.hub_id and p.id = pt.photo_id where pt.hub_id = $1 and p.image like 'dummy/%'`, [THUB])).n === D.photo_tag.rows.length);
+  ok('10 likes/comments/follows/sessions/views vollständig',
+     (await one(`select count(*)::int n from sh_likes l join sh_photos p on p.hub_id = l.hub_id and p.id = l.photo_id where l.hub_id = $1 and p.image like 'dummy/%'`, [THUB])).n === D.likes.rows.length
+     && (await one(`select count(*)::int n from sh_comments c join sh_photos p on p.hub_id = c.hub_id and p.id = c.photo_id where c.hub_id = $1 and p.image like 'dummy/%'`, [THUB])).n === D.comments.rows.length
+     && (await one(`select count(*)::int n from sh_follows where hub_id = $1 and follower_id > $2`, [THUB, before.mu])).n === D.follows.rows.length
+     && (await one(`select count(*)::int n from sh_vsessions where hub_id = $1 and user_id > $2`, [THUB, before.mu])).n === D.sessions.rows.length
+     && (await one(`select count(*)::int n from sh_views where hub_id = $1 and user_id > $2`, [THUB, before.mu])).n === D.views.rows.length);
+  ok('10 views zeigen auf Sessions desselben Users', (await one(`select count(*)::int n from sh_views v join sh_vsessions s on s.hub_id = v.hub_id and s.id = v.session_id where v.hub_id = $1 and s.user_id <> v.user_id`, [THUB])).n === 0);
+  ok('10 Geburtstag + Zeit kommen an (Erna, 78)', (await one(`select extract(year from age((select created_at from skill_rooms where id = $2)::date, birthday))::int a from sh_users where hub_id = $1 and username = 'erna.lueders'`, [THUB, ROOM])).a === 78);
+  ok('10 {netz} in E-Mails = Name des Netzwerks', (await one(`select email from sh_users where hub_id = $1 and username = 'pixelpaul'`, [THUB])).email === 'paul.brandt@lehrerzimmer.test');
+  r = await load('users', THUB);
+  ok('10 zweimal laden → nichts doppelt', r.ok && r.rows === 0 && (await cnt('sh_users', THUB)) === before.mu + 70, JSON.stringify(r));
+  // gelöschte Eltern: Kind-Zeilen fallen still weg (hier: neue Tabelle in frischem Netzwerk nicht nötig)
+  // Netzwerk, das erst danach erstellt wird, bekommt alles beim Anlegen
+  await as(null);
+  r = await call(`sh_found('tokB', 'Neues Netz', 'bell')`);
+  ok('10 neues Netzwerk gründen', r.ok, JSON.stringify(r));
+  const NH = r.hub;
+  ok('10 … ist gleich gefüllt (Trigger)', (await cnt('sh_users', NH)) === 70 && (await cnt('sh_photos', NH)) === D.photos.rows.length
+     && (await cnt('sh_views', NH)) === D.views.rows.length && (await cnt('sh_comments', NH)) === D.comments.rows.length,
+     JSON.stringify({ u: await cnt('sh_users', NH), v: await cnt('sh_views', NH) }));
+  ok('10 … mit eigenem Namen in den E-Mails', (await one(`select email from sh_users where hub_id = $1 and username = 'pixelpaul'`, [NH])).email === 'paul.brandt@neuesnetz.test');
+  r = await call(`sh_enter('tokB', null, $1, null)`, [NH]);
+  ok('10 Gründer bleibt Admin-Kandidat (needs_admin, kein Dummy wird Admin)', r.ok && r.needs_admin === true && r.admin, JSON.stringify({ n: r.needs_admin }));
+  r = await call(`sh_register('tokB', $1, 'admin', 'geheim1', 'Leon')`, [NH]);
+  ok('10 Gründer registriert sich → Admin mit id 71', r.ok && r.admin === true && r.user === 71, JSON.stringify(r));
+  r = await call(`sh_login_net('tokC', 'Neues Netz', 'coach_ralf', '123456')`);
+  ok('10 Dummy-User mit schwachem Passwort kann sich anmelden', r.ok, JSON.stringify(r));
+  const pw = D.users.rows.find(x => x[1] === 'pixelpaul')[4];
+  r = await call(`sh_login_net('tokC', 'Neues Netz', 'pixelpaul', $1)`, [pw]);
+  ok('10 … und mit dem erzeugten Passwort', r.ok, JSON.stringify(r));
+  r = await call(`sh_db_snapshot('tokB', null, $1, $2)`, [NH, (await call(`sh_login('tokB', $1, 'admin', 'geheim1')`, [NH])).session]);
+  ok('10 Schnappschuss zeigt die Dummy-User', r.ok && r.tables.users.rows.length === 71, JSON.stringify(r.error || ''));
+}
+
 /* 8 */
 await as(null);
 await db.query(`update skill_participants set blocked = true where token = 'tokC'`);
@@ -509,8 +590,8 @@ const rest = await one(`select (select count(*) from sh_hubs) + (select count(*)
                               + (select count(*) from sh_vsessions) + (select count(*) from sh_views) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); await db.exec(mig('0270_yoursozialnet_analytics.sql')); await db.exec(mig('0271_yoursozialnet_passwort_klartext.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migrationen 0265–0271 laufen ein zweites Mal durch', twice);
+try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); await db.exec(mig('0270_yoursozialnet_analytics.sql')); await db.exec(mig('0271_yoursozialnet_passwort_klartext.sql')); await db.exec(mig('0272_yoursozialnet_dummydaten.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migrationen 0265–0272 laufen ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

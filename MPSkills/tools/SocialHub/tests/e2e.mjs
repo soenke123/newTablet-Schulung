@@ -545,6 +545,37 @@ try {
   await wait(500);
   await mia.app.locator('.ov--reveal [data-close]').click();
   await shot(mia.page, '7c-knopf-oben');
+
+  // 8) Beispieldaten (0272): Knopf „Daten“ je Tabelle im Diagramm der Lehrkraft
+  await t.app.locator('[data-dload="users"]').waitFor({ timeout: 8000 });
+  ok('8  „Daten“ an users frei, an photos gesperrt (erst users)', await t.app.locator('[data-dload="photos"][disabled]').count() === 1
+     && await t.app.locator('[data-dload="likes"][disabled]').count() === 1);
+  await shot(t.page, '8-daten-knopf');
+  const nets = Number((await db.query(`select count(*)::int n from sh_hubs where room_id = $1`, [ROOM])).rows[0].n);
+  const before8 = Number((await db.query(`select count(*)::int n from sh_users where hub_id in (select id from sh_hubs where room_id = $1)`, [ROOM])).rows[0].n);
+  for (const tb of ['users', 'photos', 'comments']) {
+    await t.app.locator(`[data-dload="${tb}"]:not([disabled])`).click();
+    await t.app.locator('.dlg [data-dlg="yes"]').click();
+    await t.app.locator(`.tb .tb-dl--ok`).nth(['users', 'photos', 'comments'].indexOf(tb)).waitFor({ timeout: 20000 });
+  }
+  const after8 = Number((await db.query(`select count(*)::int n from sh_users where hub_id in (select id from sh_hubs where room_id = $1)`, [ROOM])).rows[0].n);
+  ok('8  users/photos/comments geladen: 70 User je Netzwerk', after8 - before8 === 70 * nets, JSON.stringify({ nets, before8, after8 }));
+  ok('8  Häkchen an den geladenen Tabellen', await t.app.locator('.tb .tb-dl--ok').count() === 3);
+  const mail = (await db.query(`select h.name, u.email from sh_users u join sh_hubs h on h.id = u.hub_id where h.room_id = $1 and u.username = 'pixelpaul' order by h.name`, [ROOM])).rows;
+  ok('8  E-Mails tragen den Namen des jeweiligen Netzwerks', mail.length === nets && mail.every(m => m.email.endsWith('@' + m.name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.test')), JSON.stringify(mail));
+  await shot(t.page, '8-daten-geladen');
+  // Platzhalter: fehlt das Bild unter dummy/img/, gibt es ein erzeugtes Bild; Profilbilder ohne Datei → Buchstabe
+  const ph = await mia.app.locator('body').evaluate(async () => [await SHMedia.url('x', 'dummy/paul_01.webp', true), await SHMedia.url('x', 'dummy/av_paul.webp', true)]);
+  ok('8  Foto ohne Datei → Platzhalter, Profilbild ohne Datei → nichts', /^blob:/.test(ph[0] || '') && ph[1] === null, JSON.stringify(ph));
+  await mia.app.locator('.hub-nav [data-tab="feed"]').click();
+  await mia.app.locator('.card-img.img-ok').first().waitFor({ timeout: 10000 });
+  await shot(mia.page, '8-feed-mit-beispieldaten');
+  // ein paar Karten weiter: Beispiel-Post mit Platzhalter
+  for (let i = 0; i < 4; i++) {
+    await mia.app.locator('.feed-host').evaluate(h => { const sc = [h, ...h.querySelectorAll('*')].find(e => e.scrollHeight > e.clientHeight + 50 && /auto|scroll/.test(getComputedStyle(e).overflowY)); if (sc) sc.scrollBy(0, sc.clientHeight); });
+    await wait(500);
+  }
+  await shot(mia.page, '8-feed-platzhalter');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

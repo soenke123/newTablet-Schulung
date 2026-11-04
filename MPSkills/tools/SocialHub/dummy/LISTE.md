@@ -164,6 +164,9 @@ Fehlende Bilder zeigt die App als **Platzhalter** (Farbfläche mit Motiv), die D
 1. Bild in **`dummy/eingang/`** legen, Dateiname = Schlüssel aus den Tabellen unten (z. B. `paul_01.jpg`, `av_erna.png`; jpg/png/webp, Größe egal) – oder mir im Chat schicken und den Schlüssel dazuschreiben.
 2. `node MPSkills/tools/SocialHub/dummy/bilder.mjs --convert` schneidet mittig zu (Posts 4:5 → 1080 × 1350, Profilbilder 1:1 → 400 × 400), speichert WebP (≤ 250 KB bzw. ≤ 60 KB) nach `dummy/img/`, **entfernt alle Metadaten** und legt das Original nach `eingang/erledigt/` (nicht im Repo).
 3. `node MPSkills/tools/SocialHub/dummy/bilder.mjs --fehlend` zeigt, was noch fehlt.
+4. Die Bilder **und** `dummy/img/index.json` (Liste der vorhandenen Bilder, schreibt das Skript) einchecken – erst dann zeigt die App das echte Bild statt des Platzhalters.
+
+In die Netzwerke kommen die Daten über das kleine ＋ oben an jeder Tabelle im Diagramm der Lehrkraft (erst `users`, dann die Tabellen, die darauf zeigen).
 
 
 ### Regeln (kurz)

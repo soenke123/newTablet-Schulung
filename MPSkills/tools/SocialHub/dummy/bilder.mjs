@@ -7,7 +7,9 @@
    --convert schneidet mittig zu (Posts 4:5 → 1080 × 1350, Profilbilder av_* 1:1 → 400 × 400),
    speichert WebP (Posts ≤ 250 KB, Profilbilder ≤ 60 KB) nach dummy/img/<schlüssel>.webp,
    entfernt dabei alle Metadaten (EXIF, GPS) und verschiebt das Original nach dummy/eingang/erledigt/.
-   Unbekannte Namen bleiben liegen und werden gemeldet. Fehlende Bilder zeigt die App als Platzhalter. */
+   Unbekannte Namen bleiben liegen und werden gemeldet. Fehlende Bilder zeigt die App als Platzhalter.
+   Jeder Lauf schreibt dummy/img/index.json neu (Liste der vorhandenen Bilder für die App) –
+   mit einchecken, sonst zeigt die App weiter Platzhalter. */
 import { readFileSync, readdirSync, existsSync, mkdirSync, writeFileSync, renameSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, extname, basename } from 'node:path';
@@ -63,6 +65,9 @@ async function convert() {
 
 function status() {
   const have = existsSync(IMG) ? new Set(readdirSync(IMG).filter(f => f.endsWith('.webp')).map(f => f.slice(0, -5))) : new Set();
+  // Verzeichnis für die App (js/media.js): nur, was da ist und in der Liste steht
+  mkdirSync(IMG, { recursive: true });
+  writeFileSync(join(IMG, 'index.json'), JSON.stringify([...have].filter(k => need.has(k)).sort()) + '\n');
   let ok = 0; const miss = { post: [], avatar: [] }; const big = [];
   for (const [k, n] of need) {
     if (have.has(k)) { ok++; const kb = statSync(join(IMG, k + '.webp')).size / 1024; if (kb > LIMIT[n.kind].kb + 1) big.push(k + ' (' + Math.round(kb) + ' KB)'); }

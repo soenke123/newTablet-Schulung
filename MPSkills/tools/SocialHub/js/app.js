@@ -256,6 +256,8 @@
   async function loadHome(quiet) {
     const r = await A.call('sh_home', {});
     if (!r || !r.ok) { if (!quiet) renderError(r); return; }
+    // Lehrkraft: Stand der Beispieldaten (0272) – fehlt der Server-Teil, bleibt der Knopf einfach weg
+    if (T) { const d = await A.call('sh_dummy_status', {}); S.dummy = d && d.ok ? d : null; }
     // ein Takt im Hintergrund darf nicht über ein Formular zeichnen
     if (quiet && S.screen !== 'home') return;
     S.home = r;
@@ -344,7 +346,8 @@
     html += '<section class="panel"><div class="panel-h"><h2>Tabellen für alle Netzwerke</h2>' +
       '<div class="panel-sw"><label class="switch switch--s"><input type="checkbox" id="upTgl"' + (h.upload ? ' checked' : '') + '><span></span>Eigene Bilder hochladen</label>' +
         '<label class="switch switch--s" title="Aufnahmezeit und Kamera aus den Fotos mitspeichern (steht dann in photos)"><input type="checkbox" id="metaTgl"' + (metaOn() ? ' checked' : '') + '><span></span>Metadaten der Fotos speichern</label></div></div>' +
-      '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums. Antippen zeigt die Attribute.</p>' +
+      '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums. Antippen zeigt die Attribute.' +
+        (S.dummy && window.SHDummy ? ' <span class="tb-dl tb-dl--inline">' + IC.plus + '</span> oben an einer Tabelle lädt Beispieldaten (70 User, Fotos, Likes, Diskussionen …) in alle Netzwerke; <span class="tb-dl tb-dl--ok tb-dl--inline">' + IC.check + '</span> = geladen.' : '') + '</p>' +
       tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
     // Analytics (0270): getrackt wird, sobald sessions erstellt ist – hier nur das Auflösen
     html += '<section class="panel"><div class="panel-h"><h2>Analytics</h2></div>' +
@@ -469,8 +472,57 @@
         const b = TBOX[t];
         return '<div class="tb' + (fixed ? ' tb--fixed' : isOn ? ' tb--on' : ' tb--off') + (S.tblSel === t ? ' tb--sel' : '') + '" data-tb="' + t + '" ' +
           'style="left:' + b.x + 'px;top:' + b.y + 'px;width:' + BW + 'px;height:' + b.h + 'px" tabindex="0">' +
-          '<div class="tb-h"><code>' + esc(t) + '</code></div><div class="tb-b">' + act + '</div></div>';
+          '<div class="tb-h"><code>' + esc(t) + '</code>' + dummyBtnHtml(t, isOn) + '</div><div class="tb-b">' + act + '</div></div>';
       }).join('') + '</div></div>';
+  }
+  /* ── Beispieldaten (0272): je Tabelle „Daten laden“ ──────────
+     Der Browser baut die Zeilen (dummy/generator.js, Stichtag = Raum
+     erstellt), schickt sie einmal (sh_dummy_put) und füllt dann die
+     Netzwerke einzeln (sh_dummy_load). Spätere Netzwerke füllt der Server. */
+  const DNEEDS = { users: [], photos: ['users'], tags: ['photos'], follows: ['users'], likes: ['users', 'photos'],
+                   comments: ['users', 'photos'], sessions: ['users'], views: ['photos', 'sessions'] };
+  const DWHAT = { users: '70 Beispiel-User', photos: '150 Fotos', tags: 'die Tags und ihre Zuordnung zu den Fotos', follows: 'wer wem folgt',
+                  likes: 'die Likes', comments: 'die Kommentare und Diskussionen', sessions: 'die Besuche (Geräte, IPs, Uhrzeiten)', views: 'die angesehenen Fotos' };
+  const dStored = t => !!(S.dummy && S.dummy.stored.indexOf(t) >= 0);
+  const dAll = t => !!S.dummy && S.home.hubs.every(h => S.dummy.hubs[h.id] && t in S.dummy.hubs[h.id]);
+  function dummyBtnHtml(t, isOn) {
+    if (!S.dummy || !window.SHDummy || !DNEEDS[t] || !isOn) return '';
+    if (dStored(t) && dAll(t)) return '<span class="tb-dl tb-dl--ok" title="Beispieldaten geladen – auch neue Netzwerke bekommen sie" aria-label="Beispieldaten geladen">' + IC.check + '</span>';
+    const miss = DNEEDS[t].filter(x => !dStored(x));
+    return '<button type="button" class="tb-dl" data-dload="' + t + '"' + (miss.length ? ' disabled title="Beispieldaten: erst ' + esc(miss.join(' und ')) + ' laden"' : ' title="Beispieldaten laden"') +
+      ' aria-label="Beispieldaten laden">' + IC.plus + '</button>';
+  }
+  async function loadDummy(t) {
+    if (!S.dummy || !window.SHDummy) return;
+    const hubs = S.home.hubs;
+    const again = dStored(t);
+    if (await dialog(again ? 'Beispieldaten nachladen' : 'Beispieldaten laden',
+      '<p>Lädt <b>' + esc(DWHAT[t]) + '</b> in <b>' + (hubs.length === 1 ? 'das Netzwerk' : 'alle ' + hubs.length + ' Netzwerke') + '</b> dieses Raums – Netzwerke, die später erstellt werden, bekommen sie automatisch.</p>' +
+      '<p class="muted small">Jedes Netzwerk bekommt die Daten nur einmal; Vorhandenes bleibt. Beispiel-User sind normale Konten, nie Admin. Wieder entfernen geht per SQL (<code>DELETE</code>).</p>',
+      [['no', 'Abbrechen'], ['yes', 'Laden', 'accent']]) !== 'yes') return;
+    const box = document.createElement('div');
+    box.className = 'dlg-back dlg-back--busy';
+    box.innerHTML = '<div class="dlg" role="dialog"><h3>Beispieldaten</h3><div class="dlg-b"><p id="dlProg">Daten werden erzeugt …</p></div></div>';
+    document.body.appendChild(box);
+    const prog = (m) => { const el = box.querySelector('#dlProg'); if (el) el.textContent = m; };
+    try {
+      const D = SHDummy.build({ stichtag: S.dummy.stichtag, netz: '{netz}' });
+      for (const x of (t === 'tags' ? ['tags', 'photo_tag'] : [t])) {
+        prog('Speichere ' + x + ' …');
+        const r = await A.call('sh_dummy_put', { p_tbl: x, p_cols: D[x].cols, p_rows: D[x].rows });
+        if (!r || !r.ok) { fail(r); return; }
+      }
+      let i = 0;
+      for (const h of hubs) {
+        prog('Netzwerk ' + (++i) + ' von ' + hubs.length + ': ' + h.name);
+        const r = await A.call('sh_dummy_load', { p_tbl: t, p_hub: h.id });
+        if (!r || (!r.ok && r.error !== 'needs')) { fail(r); return; }
+      }
+      toast('Beispieldaten für ' + t + ' geladen.');
+    } finally {
+      box.parentNode && box.parentNode.removeChild(box);
+      await loadHome();
+    }
   }
   function tableInfoHtml(t) {
     if (!t) return '';
@@ -509,6 +561,7 @@
         [['no', 'Abbrechen'], ['yes', 'Entziehen', 'accent']]) !== 'yes') return;
       save(cur().filter(t => gone.indexOf(t) < 0), S.home.upload);
     });
+    $$('[data-dload]').forEach(b => b.onclick = (e) => { e.stopPropagation(); loadDummy(b.dataset.dload); });
     $$('[data-tb]').forEach(el => el.onclick = () => {
       S.tblSel = S.tblSel === el.dataset.tb ? null : el.dataset.tb;
       $$('[data-tb]').forEach(x => x.classList.toggle('tb--sel', x.dataset.tb === S.tblSel));

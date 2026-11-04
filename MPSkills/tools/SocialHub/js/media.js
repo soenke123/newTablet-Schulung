@@ -126,7 +126,43 @@
   const queue = [];            // { hub, name, thumb, res }
   let timer = null;
 
+  /* Beispieldaten (0272): 'dummy/<schlüssel>.webp' liegt als Datei unter
+     dummy/img/. Fehlt sie noch, gibt es für Fotos einen Platzhalter (Farbe je
+     Account + Schlüssel), für Profilbilder nichts (dann der Buchstabe). */
+  const DUMMY = /^dummy\/([a-z0-9_]{1,40})\.webp$/;
+  const dummyCache = new Map();
+  // Welche Bilder schon da sind, steht in dummy/img/index.json (pflegt dummy/bilder.mjs) –
+  // so fragt die App nie nach fehlenden Dateien (keine 404 in der Konsole).
+  let have = null;
+  const haveList = () => have || (have = fetch('dummy/img/index.json', { cache: 'no-cache' })
+    .then(r => r.ok ? r.json() : []).then(a => new Set(Array.isArray(a) ? a : [])).catch(() => new Set()));
+  function dummyUrl(name) {
+    const key = DUMMY.exec(name)[1];
+    if (dummyCache.has(key)) return dummyCache.get(key);
+    const p = haveList().then(set => set.has(key) ? 'dummy/img/' + key + '.webp' : key.startsWith('av_') ? null : placeholder(key));
+    dummyCache.set(key, p);
+    return p;
+  }
+  function placeholder(key) {
+    const acc = key.replace(/_[^_]*$/, '');
+    let h = 0; for (let i = 0; i < acc.length; i++) h = (h * 31 + acc.charCodeAt(i)) % 360;
+    const c = document.createElement('canvas'); c.width = 540; c.height = 675;
+    const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 540, 675);
+    gr.addColorStop(0, 'hsl(' + h + ',55%,42%)'); gr.addColorStop(1, 'hsl(' + ((h + 50) % 360) + ',60%,24%)');
+    g.fillStyle = gr; g.fillRect(0, 0, 540, 675);
+    g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 10; g.lineJoin = 'round';
+    g.strokeRect(190, 250, 160, 125);
+    g.beginPath(); g.moveTo(200, 365); g.lineTo(255, 315); g.lineTo(290, 345); g.lineTo(315, 325); g.lineTo(340, 365); g.stroke();
+    g.beginPath(); g.arc(240, 290, 13, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.textAlign = 'center';
+    g.font = '700 30px system-ui, sans-serif'; g.fillText('Bild folgt', 270, 440);
+    g.font = '500 22px ui-monospace, monospace'; g.fillStyle = 'rgba(255,255,255,.7)'; g.fillText(key, 270, 478);
+    return new Promise(res => c.toBlob(b => res(b ? URL.createObjectURL(b) : null), 'image/webp', 0.8));
+  }
+
   function url(hub, name, thumb) {
+    if (name && DUMMY.test(name)) return dummyUrl(name);
     if (!name || !/^img_\d{1,6}\.webp$/.test(name)) return Promise.resolve(null);
     const key = hub + '|' + (thumb ? 't' : 'f') + '|' + name;
     if (cache.has(key)) return cache.get(key);
