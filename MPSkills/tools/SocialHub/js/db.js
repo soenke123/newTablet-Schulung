@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  const V = '20261103i';
+  const V = '20261104c';
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const DDL = {
@@ -89,10 +89,50 @@
   PRIMARY KEY (photo_id, tag_id),
   FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
   FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);`,
+    // Analytics (0270): sessions = ein Besuch, views = ein angesehenes Foto
+    sessions: `CREATE TABLE sessions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  ended_at DATETIME,
+  ip VARCHAR(45),
+  user_agent VARCHAR(400),
+  browser VARCHAR(60),
+  os VARCHAR(60),
+  device_type ENUM('phone','tablet','desktop'),
+  device VARCHAR(80),
+  screen_width INT,
+  screen_height INT,
+  pixel_ratio DECIMAL(3,1),
+  language VARCHAR(20),
+  timezone VARCHAR(60),
+  dark_mode BOOLEAN,
+  connection VARCHAR(20),
+  allow_location BOOLEAN,
+  allow_camera BOOLEAN,
+  allow_microphone BOOLEAN,
+  allow_notifications BOOLEAN,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);`,
+    views: `CREATE TABLE views (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  photo_id INT NOT NULL,
+  session_id INT,
+  viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  duration_ms INT,
+  feed ENUM('foryou','following','profile','search','tag'),
+  position INT,
+  ended_by ENUM('swipe','like','comment','profile','tag','leave'),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
+  FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL
 );`
   };
   // Eltern vor Kindern (anlegen, einfügen); rückwärts = löschen
-  const ORDER = ['users', 'tags', 'photos', 'comments', 'follows', 'likes', 'photo_tag'];
+  const ORDER = ['users', 'tags', 'photos', 'sessions', 'comments', 'follows', 'likes', 'photo_tag', 'views'];
   const PK = { follows: ['follower_id', 'following_id'], likes: ['user_id', 'photo_id'],
                photo_tag: ['photo_id', 'tag_id'] };
   const pkOf = t => PK[t] || ['id'];
@@ -100,6 +140,7 @@
 
   function lit(v) {
     if (v === null || v === undefined) return 'NULL';
+    if (typeof v === 'boolean') return v ? '1' : '0';   // SQLite kennt kein BOOLEAN → 1/0
     if (typeof v === 'number') return String(v);
     // Der Kern liest Strings wie MySQL (\' und \\ sind Escapes): ohne das
     // Verdoppeln von \ könnte ein Text eines anderen Users („abc\“) aus

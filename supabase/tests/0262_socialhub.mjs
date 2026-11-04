@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262–0269 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
+/* Prüfstand für Migration 0262–0270 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -440,6 +440,64 @@ await as(T1);
 r = await call(`sh_hub_delete($1, $2)`, [CODE, HUB2]);
 ok('7  Lehrkraft löscht Netzwerk', r.ok);
 
+/* 9  Analytics / Tracking (0270) — auf dem Netzwerk der Lehrkraft (hat Fotos 1–3) */
+await as(T1);
+await call(`skill_room_set_state($1, null, $2::jsonb)`, [CODE, JSON.stringify({ tables: ['photos', 'views'] })]);
+ok('9  views ohne sessions → nicht da (braucht sessions)', (await call(`sh_on($1,'views')`, [ROOM])) === false && (await call(`sh_on($1,'sessions')`, [ROOM])) === false);
+r = await call(`sh_track(null, $1, $2, null, '{}'::jsonb, null, '[]'::jsonb, false, null, $3)`, [THUB, TS, CODE]);
+ok('9  ohne sessions wird nicht getrackt', r.ok && r.tracked === false && (await one(`select count(*)::int n from sh_vsessions`)).n === 0, JSON.stringify(r));
+await call(`skill_room_set_state($1, null, $2::jsonb)`, [CODE, JSON.stringify({ tables: ['photos', 'sessions', 'views'] })]);
+ok('9  Lehrkraft erstellt sessions + views → sh_on', (await call(`sh_on($1,'sessions')`, [ROOM])) === true && (await call(`sh_on($1,'views')`, [ROOM])) === true);
+ok('9  kein Schalter, kein Zeitlimit mehr (alte Helfer weg)', (await one(`select count(*)::int n from pg_proc where proname in ('sh_analytics_on','sh_analytics_seen')`)).n === 0);
+r = await call(`sh_enter(null, $1, $2, null)`, [CODE, THUB]);
+ok('9  sessions+views stehen in der Tabellenliste', r.tables.includes('sessions') && r.tables.includes('views'));
+const DEV = { user_agent: 'Mozilla/5.0 (iPad)', browser: 'Safari 18', os: 'iPadOS 18', device: 'iPad', device_type: 'tablet', screen_width: 1180, screen_height: 820, pixel_ratio: 2, language: 'de-DE', timezone: 'Europe/Berlin', dark_mode: true, connection: 'wifi' };
+const PERM = { location: true, camera: null, microphone: false, notifications: null };
+r = await call(`sh_track(null, $1, $2, null, $3::jsonb, $4::jsonb, '[]'::jsonb, false, $5, $6)`, [THUB, TS, JSON.stringify(DEV), JSON.stringify(PERM), '10.0.0.5', CODE]);
+ok('9  sh_track legt Session an (vsid), speichert nichts falsch', r.ok && r.tracked === true && r.vsid > 0, JSON.stringify(r));
+const VSID = r.vsid;
+let row = await one(`select ip, browser, os, device, device_type, screen_width sw, dark_mode dm, allow_location al, allow_microphone am, allow_camera ac
+                       from sh_vsessions where hub_id = $1 and id = $2`, [THUB, VSID]);
+ok('9  sessions: IP/Browser/Gerät/Bildschirm/Hell-Dunkel gespeichert',
+   row.ip === '10.0.0.5' && row.browser === 'Safari 18' && row.device === 'iPad' && row.device_type === 'tablet' && row.sw === 1180 && row.dm === true, JSON.stringify(row));
+ok('9  Haken: Standort erlaubt, Mikrofon abgelehnt, Kamera nicht gefragt (NULL)', row.al === true && row.am === false && row.ac === null, JSON.stringify(row));
+ok('9  participant_id steht NICHT im Schnappschuss, aber in der Tabelle (nur Lehrkraft)',
+   (await one(`select count(*)::int n from sh_vsessions where hub_id = $1`, [THUB])).n === 1);
+// Zweiter Aufruf: Views dazu (Foto 1 lang, Foto 2 kurz); falsches Foto fällt weg
+const VW = [{ photo: '1', ms: 3200, feed: 'foryou', pos: 0, end: 'swipe' }, { photo: '2', ms: '800', feed: 'foryou', pos: 1, end: 'like' }, { photo: '999', ms: 500, feed: 'foryou', pos: 2, end: 'swipe' }, { photo: '1', ms: 100, feed: 'kaputt', pos: 3, end: 'swipe' }];
+r = await call(`sh_track(null, $1, $2, $3, null, '{"location":true}'::jsonb, $4::jsonb, false, null, $5)`, [THUB, TS, VSID, JSON.stringify(VW), CODE]);
+ok('9  views: gültige Fotos gespeichert, unbekanntes Foto fällt weg', r.ok && r.views === 3, JSON.stringify(r));
+row = await one(`select count(*)::int n, count(*) filter (where session_id = $2) s, count(*) filter (where feed is null) nf,
+                        max(duration_ms) mx from sh_views where hub_id = $1`, [THUB, VSID]);
+ok('9  views hängen an der Session, falsches feed → NULL, Dauer gespeichert', row.n === 3 && row.s === 3 && row.nf === 1 && row.mx === 3200, JSON.stringify(row));
+// Schnappschuss zeigt sessions/views mit den richtigen Spalten
+r = await call(`sh_db_snapshot(null, $1, $2, $3)`, [CODE, THUB, TS]);
+ok('9  Schnappschuss: sessions ohne participant_id',
+   r.ok && r.tables.sessions && r.tables.sessions.cols.join() === 'id,user_id,started_at,last_seen_at,ended_at,ip,user_agent,browser,os,device_type,device,screen_width,screen_height,pixel_ratio,language,timezone,dark_mode,connection,allow_location,allow_camera,allow_microphone,allow_notifications'
+   && !r.tables.sessions.cols.includes('participant_id'), JSON.stringify(r.tables && r.tables.sessions && r.tables.sessions.cols));
+ok('9  Schnappschuss: views mit session_id/duration_ms',
+   r.tables.views && r.tables.views.cols.join() === 'id,user_id,photo_id,session_id,viewed_at,duration_ms,feed,position,ended_by' && r.tables.views.rows.length === 3, JSON.stringify(r.tables && r.tables.views && r.tables.views.cols));
+// sh_my_data: jeder sieht nur seine eigenen Daten
+r = await call(`sh_my_data(null, $1, $2, $3)`, [THUB, TS, CODE]);
+ok('9  sh_my_data: eigene Session + Views-Summe + Haken', r.ok && r.sessions.length === 1 && r.views.count === 3 && r.sessions[0].allow.location === true && r.sessions[0].ip === '10.0.0.5', JSON.stringify(r.views));
+// SQL (sh_db_apply): 'sessions' → sh_vsessions (Namensabbildung), UPDATE/DELETE
+r = await call(`sh_db_apply(null, $1, $2, $3, $4::jsonb)`, [CODE, THUB, TS, JSON.stringify([{ t: 'sessions', op: 'update', key: { id: VSID }, row: { id: VSID, ip: '1.2.3.4' } }])]);
+ok('9  UPDATE sessions per SQL trifft sh_vsessions', r.ok && (await one(`select ip from sh_vsessions where hub_id = $1 and id = $2`, [THUB, VSID])).ip === '1.2.3.4', JSON.stringify(r));
+r = await call(`sh_db_apply(null, $1, $2, $3, $4::jsonb)`, [CODE, THUB, TS, JSON.stringify([{ t: 'views', op: 'delete', key: { id: 2 } }])]);
+ok('9  DELETE views per SQL', r.ok && (await one(`select count(*)::int n from sh_views where hub_id = $1`, [THUB])).n === 2, JSON.stringify(r));
+r = await call(`sh_db_apply(null, $1, $2, $3, $4::jsonb)`, [CODE, THUB, TS, JSON.stringify([{ t: 'views', op: 'insert', row: { id: 50, user_id: 1, photo_id: 999, viewed_at: '2026-11-04 10:00:00' } }])]);
+ok('9  INSERT views mit fremdem Foto → Fremdschlüssel', r.error === 'db_rejected' && r.state === '23503', JSON.stringify(r));
+// sessions entzogen: nicht mehr tracken (die Daten bleiben, wie bei den anderen Tabellen)
+await call(`skill_room_set_state($1, null, $2::jsonb)`, [CODE, JSON.stringify({ tables: ['photos'] })]);
+r = await call(`sh_track(null, $1, $2, $3, null, null, '[]'::jsonb, false, null, $4)`, [THUB, TS, VSID, CODE]);
+ok('9  sessions entzogen → sh_track meldet tracked:false', r.ok && r.tracked === false, JSON.stringify(r));
+ok('9  … die Daten bleiben', (await one(`select count(*)::int n from sh_vsessions where hub_id = $1`, [THUB])).n === 1);
+await call(`skill_room_set_state($1, null, $2::jsonb)`, [CODE, JSON.stringify({ tables: ['photos', 'sessions', 'views'] })]);
+r = await call(`sh_track(null, $1, $2, $3, null, '{"camera":true,"notifications":false}'::jsonb, '[]'::jsonb, true, null, $4)`, [THUB, TS, VSID, CODE]);
+row = await one(`select allow_camera ac, allow_notifications an, allow_location al, ended_at is not null e from sh_vsessions where hub_id = $1 and id = $2`, [THUB, VSID]);
+ok('9  wieder erstellt: Haken nachgetragen (Kamera ja, Benachrichtigungen nein), Standort bleibt, Ende gesetzt',
+   r.tracked === true && row.ac === true && row.an === false && row.al === true && row.e === true, JSON.stringify(row));
+
 /* 8 */
 await as(null);
 await db.query(`update skill_participants set blocked = true where token = 'tokC'`);
@@ -447,11 +505,12 @@ r = await call(`sh_home('tokC')`);
 ok('8  stillgelegt → blocked', r.error === 'blocked');
 await db.query(`delete from skill_rooms where id = $1`, [ROOM]);
 const rest = await one(`select (select count(*) from sh_hubs) + (select count(*) from sh_users) + (select count(*) from sh_photos)
-                              + (select count(*) from sh_media) + (select count(*) from sh_sessions) n`);
+                              + (select count(*) from sh_media) + (select count(*) from sh_sessions)
+                              + (select count(*) from sh_vsessions) + (select count(*) from sh_views) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migrationen 0265–0269 laufen ein zweites Mal durch', twice);
+try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); await db.exec(mig('0270_yoursozialnet_analytics.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migrationen 0265–0270 laufen ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

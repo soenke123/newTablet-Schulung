@@ -572,3 +572,54 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .react-pick button:hover svg, .react-pick button:active svg { transform: scale(1.18); }
 .react-pick button.on { background: rgba(255,255,255,.16); }
 .react-pick small { font-size: 11px; font-weight: 700; }
+
+/* ── Analytics / Aufdeckung (0270) ──────────────────────────── */
+.an-reveal { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.ov--reveal .ov-body { background: var(--bg); }
+.rv { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
+.rv-lead { font-size: 16px; line-height: 1.5; margin: 6px 2px 18px; }
+.rv-s { border: 1px solid var(--line); border-radius: 16px; padding: 16px 18px; margin: 14px 0; background: var(--surface); box-shadow: var(--shadow); }
+.rv-s h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-family: var(--font-display); font-size: 18px; }
+.rv-s h4 { margin: 16px 0 8px; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+.rv-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.rv-s--got  { border-color: color-mix(in srgb, var(--bad) 40%, var(--line)); }
+.rv-s--got  .rv-dot { background: var(--bad); }
+.rv-s--could .rv-dot { background: var(--gold, #f5b301); }
+.rv-s--ask   .rv-dot { background: var(--hub); }
+.rv-s--apps  .rv-dot { background: var(--muted); }
+.rv-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--line); border-radius: 10px; overflow: hidden; }
+.rv-list li { display: flex; justify-content: space-between; gap: 14px; padding: 9px 12px; background: var(--surface); font-size: 14px; }
+.rv-list li > span { color: var(--muted); }
+.rv-list li > b { text-align: right; word-break: break-word; }
+.rv-list--plain { background: transparent; gap: 6px; }
+.rv-list--plain li { display: block; background: var(--soft); border-radius: 9px; }
+.rv-perms { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.rv-perms li { background: var(--soft); border: 1px solid var(--line); border-radius: 99px; padding: 6px 12px; font-size: 14px; font-weight: 600; }
+.rv-perms .yes { color: var(--ok); } .rv-perms .no { color: var(--bad); }
+.rv-sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; }
+.rv-sum > div { background: var(--soft); border-radius: 12px; padding: 12px; text-align: center; }
+.rv-sum b { display: block; font-family: var(--font-display); font-size: 22px; color: var(--hub); }
+.rv-sum span { font-size: 12px; color: var(--muted); }
+.rv-note { font-size: 13px; color: var(--muted); margin: 8px 2px 0; line-height: 1.5; }
+.rv-ip { font-size: 13px; margin: 10px 0 0; padding: 10px 12px; border-radius: 10px; background: var(--bad-dim); border-left: 3px solid var(--bad); }
+.rv-foot { margin: 18px 2px 0; font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; }
+.rv code { font-family: var(--font-mono); font-size: .9em; background: var(--soft2); padding: 1px 5px; border-radius: 5px; }
+@media (max-width: 560px) { .rv-sum { grid-template-columns: repeat(2, 1fr); } }
+
+/* Nachgebaute „Zulassen?“-Abfrage (0270): sieht aus wie beim Browser, fragt aber nur zum Schein */
+.perm-pop { position: fixed; top: 10px; left: 10px; z-index: 90; width: min(320px, calc(100vw - 20px)); padding: 14px 16px 12px;
+  background: #fff; color: #1f1f1f; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.28), 0 0 0 1px rgba(0,0,0,.06);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; animation: ppIn .18s ease-out; }
+.perm-pop .pp-h { margin-bottom: 10px; }
+.perm-pop .pp-what { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.perm-pop .pp-what svg { width: 20px; height: 20px; flex: none; fill: none; stroke: #444; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.perm-pop .pp-acts { display: flex; justify-content: flex-end; gap: 8px; }
+.perm-pop button { min-height: 34px; padding: 0 16px; border-radius: 99px; border: 1px solid #c7c7c7; background: #fff; color: #0b57d0; font: inherit; font-weight: 600; cursor: pointer; }
+.perm-pop button.pp-ok { background: #0b57d0; border-color: #0b57d0; color: #fff; }
+@keyframes ppIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+@media (prefers-color-scheme: dark) {
+  .perm-pop { background: #2b2b2f; color: #eee; box-shadow: 0 6px 24px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.08); }
+  .perm-pop .pp-what svg { stroke: #ccc; }
+  .perm-pop button { background: transparent; border-color: #555; color: #a8c7fa; }
+  .perm-pop button.pp-ok { background: #a8c7fa; border-color: #a8c7fa; color: #062e6f; }
+}

@@ -78,6 +78,7 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
                '.woff2': 'font/woff2', '.json': 'application/json', '.svg': 'image/svg+xml' };
 const server = http.createServer((req, res) => {
   const u = decodeURIComponent(new URL(req.url, 'http://x').pathname);
+  if (u === '/api/my_ip') { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ip":"10.1.2.3"}'); return; }
   const file = path.join(REPO, u);
   if (!file.startsWith(REPO)) { res.writeHead(403); res.end(); return; }
   try { const b = readFileSync(file); res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream' }); res.end(b); }
@@ -461,6 +462,69 @@ try {
   ok('6  Lehrkraft liked mit Testkonto im Schüler-Netzwerk', (await db.query(`select count(*)::int n from sh_likes`)).rows[0].n === 2);
   await t.app.locator('[data-view="admin"]').click();
   await shot(t.page, '6c-lehrkraft-admin');
+
+  /* 7  Analytics / Tracking (0270): Lehrkraft erstellt sessions + views im
+     Diagramm → Mias Gerät läuft von selbst mit, das nachgebaute „Zulassen?“
+     speichert nur den Klick, danach die Aufdeckung auf Mias Tablet. */
+  // Mia nach dem Passwort-Reset (Abschnitt 6) im Browser neu anmelden
+  await mia.page.reload();
+  await mia.app.locator('.login input[name=user]').fill('admin');
+  await mia.app.locator('.login input[name=pw]').fill(cred[1]);
+  await mia.app.locator('#lForm button[type=submit]').click();
+  await mia.app.locator('.hub-top').waitFor();
+  // Lehrkraft: views geht erst mit sessions, dann beide erstellen
+  await t.app.locator('#toHome').click();
+  await t.app.locator('[data-tb="sessions"]').waitFor();
+  ok('7  views gesperrt, solange sessions fehlt', await t.app.locator('[data-tadd="views"][disabled]').count() === 1);
+  for (const id of ['sessions', 'views']) {
+    await t.app.locator(`[data-tadd="${id}"]`).click();
+    await t.app.locator(`[data-tdrop="${id}"]`).waitFor();
+  }
+  ok('7  sessions + views erstellt, kein Analytics-Schalter', (await stateOf()).tables.includes('views') && !('analytics' in (await stateOf())) && await t.app.locator('#anTgl').count() === 0, JSON.stringify(await stateOf()));
+  ok('7  Diagramm: 13 Linien mit n und 1', await t.app.locator('.tdg-lines path.on').count() === 13 && await t.app.locator('.tdg-lines text.on').count() === 26, String(await t.app.locator('.tdg-lines path.on').count()));
+  const hidden2 = await t.app.locator('#tdg').evaluate((box) => {
+    const R = box.getBoundingClientRect(), bad = [];
+    const rects = [...box.querySelectorAll('.tb')].map(el => { const r = el.getBoundingClientRect(); return { t: el.dataset.tb, x: r.left - R.left, y: r.top - R.top, w: r.width, h: r.height }; });
+    const svg = box.querySelector('.tdg-lines'), S = svg.getBoundingClientRect();
+    for (const l of box.querySelectorAll('.tdg-lines path')) {
+      const L = l.getTotalLength();
+      for (let i = 1; i < 40; i++) {
+        const pt = l.getPointAtLength(L * i / 40), x = pt.x + S.left - R.left, y = pt.y + S.top - R.top;
+        const hit = rects.find(r => x > r.x + 2 && x < r.x + r.w - 2 && y > r.y + 2 && y < r.y + r.h - 2);
+        if (hit) { bad.push(hit.t); break; }
+      }
+    }
+    return bad;
+  });
+  ok('7  auch mit sessions/views läuft keine Linie unter einem Kasten', hidden2.length === 0, hidden2.join());
+  await shot(t.page, '7a-diagramm-analytics');
+  // Mias Gerät meldet von selbst eine Session (sh_track)
+  const miaUid = (await db.query(`select id from sh_users where hub_id = $1 and username = 'admin'`, [HUBID])).rows[0].id;
+  for (let i = 0; i < 25 && (await db.query(`select count(*)::int n from sh_vsessions where user_id = $1`, [miaUid])).rows[0].n === 0; i++) await wait(400);
+  let vs = (await db.query(`select ip, browser, os, device_type from sh_vsessions where user_id = $1 order by id desc limit 1`, [miaUid])).rows[0];
+  ok('7  Mias Gerät legt von selbst eine Session an (Browser/OS/Gerät)', !!vs && !!vs.browser && !!vs.os && !!vs.device_type, JSON.stringify(vs));
+  ok('7  IP über /api/my_ip gespeichert', vs && vs.ip === '10.1.2.3', JSON.stringify(vs));
+  // Nachgebautes Fenster „… möchte Deinen Standort verwenden“ → Zulassen
+  await mia.app.locator('.perm-pop', { hasText: 'Standort' }).waitFor({ timeout: 8000 });
+  await shot(mia.page, '7b-standort-frage');
+  await mia.app.locator('.perm-pop [data-pp="1"]').click();
+  for (let i = 0; i < 25 && (await db.query(`select allow_location from sh_vsessions where user_id = $1 order by id desc limit 1`, [miaUid])).rows[0].allow_location !== true; i++) await wait(200);
+  vs = (await db.query(`select allow_location al, allow_camera ac from sh_vsessions where user_id = $1 order by id desc limit 1`, [miaUid])).rows[0];
+  ok('7  Klick „Zulassen“ als Haken gespeichert (Standort ja, Kamera noch nicht gefragt)', vs.al === true && vs.ac === null, JSON.stringify(vs));
+  // ＋ öffnen → Frage nach der Kamera → Blockieren
+  await mia.app.locator('[data-view="app"]').click();
+  await mia.app.locator('.hub-nav [data-tab="post"]').click();
+  await mia.app.locator('.perm-pop', { hasText: 'Kamera' }).waitFor({ timeout: 8000 });
+  await mia.app.locator('.perm-pop [data-pp="0"]').click();
+  for (let i = 0; i < 25 && (await db.query(`select allow_camera from sh_vsessions where user_id = $1 order by id desc limit 1`, [miaUid])).rows[0].allow_camera !== false; i++) await wait(200);
+  ok('7  Kamera „Blockieren“ gespeichert', (await db.query(`select allow_camera from sh_vsessions where user_id = $1 order by id desc limit 1`, [miaUid])).rows[0].allow_camera === false);
+  // Aufdeckung: Lehrkraft löst aus → erscheint auf Mias Tablet
+  await t.app.locator('#revBtn').click();
+  await mia.app.locator('.ov--reveal').waitFor({ timeout: 8000 });
+  await mia.app.locator('.ov--reveal .rv-s--got').waitFor({ timeout: 8000 });
+  ok('7  Aufdeckung auf Mias Tablet: „Das wurde gespeichert“', await mia.app.locator('.ov--reveal').locator('text=Das wurde gespeichert').count() > 0);
+  ok('7  Aufdeckung zeigt alle vier Teile + die Haken', (await mia.app.locator('.ov--reveal .rv-s').count()) === 4 && /Standort erlaubt/.test(await mia.app.locator('.rv-perms').textContent()), await mia.app.locator('.rv-perms').textContent());
+  await shot(mia.page, '7-aufdeckung');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

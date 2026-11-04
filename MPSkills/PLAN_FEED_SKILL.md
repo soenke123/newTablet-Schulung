@@ -38,7 +38,8 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 
 - **`password`** enthält den Hash und ist sichtbar wie bei InstaHub (bcrypt, `$2y$10$…`).
 - **Verschiedene Likes?** TikTok kennt nur das Herz. Kommentare kann man bei TikTok aber liken → `comment_likes` (ist schon drin). Optional: `likes.type` mit Reaktionen (Herz, Lachen, Wow …). Das wäre eher Facebook, gibt aber schöne `GROUP BY type`-Aufgaben. Entscheidung offen.
-- Später, für Analytics und Werbung (eigener Block, erst wenn Kern steht): `views` (wer hat welches Foto wie lange gesehen) und `ads` + `ad_views`/`ad_clicks`.
+- **Analytics gebaut (Migration 0270):** `sessions` (ein Besuch je User: IP, Browser, OS, Gerät, Bildschirm, Sprache, Zeitzone, Hell/Dunkel + vier Erlaubnis-Haken Standort/Kamera/Mikrofon/Benachrichtigungen) und `views` (wer hat welches Foto wie lange gesehen). Laufen wie auf echten Seiten still mit – **ohne Banner, ohne Haken für die Klasse** – sobald die Lehrkraft `sessions` (und `views`) im Diagramm erstellt hat; kein Schalter, kein Zeitlimit. Standort/Kamera/Mikrofon/Benachrichtigungen werden nur zum Schein abgefragt (nachgebautes „Zulassen?“), gespeichert wird der Klick. Die Lehrkraft löst am Ende auf („Was haben wir gesammelt / was ginge ohne Fragen / was eine Erlaubnis kostet / was nur echte Apps können“). Details: `tools/SocialHub/CLAUDE.md`.
+- Später, für Werbung (eigener Block): `ads` + `ad_views`/`ad_clicks`.
 
 ## 2. Tabellen erstellen = Lehrkraft
 
@@ -102,7 +103,7 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 
 1. Hub gründen (Name + Logo, eigenes Logo), Übersicht der Lehrkraft, Login/Registrieren auf jedem Hub, Feed, Fotos (Upload), Profil, Folgen, Likes, Kommentare (+ Herz), Tags, Lehrkraft erstellt Tabellen.
 2. Admin-Bereich mit Datenbank-Reiter (SELECT lokal, INSERT/UPDATE/DELETE auf die Plattform), Nutzerverwaltung.
-3. Dummy-Daten + Bildbibliothek, Analytics (`views`), Werbung.
+3. Dummy-Daten + Bildbibliothek, Werbung. (Analytics `sessions`/`views` sind seit Migration 0270 gebaut.)
 4. Freier Raum, Schaufenster, Aufgaben aus Sönkes Leitfaden.
 
 ## 12. Offene Fragen an Sönke

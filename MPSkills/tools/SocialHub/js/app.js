@@ -44,14 +44,20 @@
   const TABLES = [
     { id: 'photos',        what: 'Fotos posten, Feed' },
     { id: 'follows',       what: 'Folgen, Follower, Feed „Folge ich“' },
-    { id: 'likes',         what: 'Herz an Fotos, „Für dich“ lernt mit', needs: 'photos' },
-    { id: 'comments',      what: 'Kommentare unter Fotos', needs: 'photos' },
-    { id: 'tags',          what: 'Hashtags (mit photo_tag)', needs: 'photos' }
+    { id: 'likes',         what: 'Herz an Fotos, „Für dich“ lernt mit', needs: ['photos'] },
+    { id: 'comments',      what: 'Kommentare unter Fotos', needs: ['photos'] },
+    { id: 'tags',          what: 'Hashtags (mit photo_tag)', needs: ['photos'] },
+    // Analytics (0270): erstellt = es wird getrackt, wie auf einer echten Seite
+    { id: 'sessions',      what: 'Analytics: jeder Besuch mit IP, Gerät, Browser – läuft still mit' },
+    { id: 'views',         what: 'Analytics: welches Foto wie lange angesehen wurde', needs: ['photos', 'sessions'] }
   ];
   const NEEDS = {};
   TABLES.forEach(t => { if (t.needs) NEEDS[t.id] = t.needs; });
   // alles, was (auch über Umwege) an t hängt
-  const dependents = t => TABLES.filter(x => { for (let n = NEEDS[x.id]; n; n = NEEDS[n]) if (n === t) return true; return false; }).map(x => x.id);
+  const dependents = t => {
+    const hangs = (x, seen) => (NEEDS[x] || []).some(n => n === t || (!seen[n] && (seen[n] = 1) && hangs(n, seen)));
+    return TABLES.filter(x => hangs(x.id, {})).map(x => x.id);
+  };
   const SWATCHES = ['#fe2c55', '#e91d77', '#7c3aed', '#2563eb', '#0ea5e9', '#0d9488', '#16a34a', '#ca8a04', '#ea580c', '#dc2626', '#64748b'];
   // Arten beim Like (0267): ein Like je Person und Foto
   const KINDS = [['heart', 'Herz'], ['thumb', 'Daumen hoch'], ['laugh', 'Lustig']];
@@ -102,6 +108,18 @@
                                                                      local ? {} : { timeZone: 'Europe/Berlin' }));
   }
   const metaOn = () => A.state.meta === true;
+
+  // Analytics (0270): es wird getrackt, sobald die Lehrkraft sessions erstellt hat
+  const revealOn = () => A.state.reveal === true;
+  // Feed-Name für die views-Tabelle (profile/user-Betrachter → 'profile')
+  const feedName = (m) => m === 'user' ? 'profile' : (['foryou', 'following', 'tag', 'search', 'profile'].indexOf(m) >= 0 ? m : 'foryou');
+
+  // Tracking starten/stoppen – angemeldet, im Netzwerk, Analytics an
+  function manageTrack() {
+    if (!window.SHTrack) return;
+    if (S.screen === 'hub' && S.hub && S.hub.me && on('sessions')) SHTrack.start(hcall, S.hub.hub.id + '.' + S.hub.me.id, S.hub.hub.name);
+    else SHTrack.stop();
+  }
 
   function ago(iso) {
     const t = Date.parse(iso);
@@ -241,6 +259,8 @@
     S.home = r;
     S.hub = null;
     closeDb();
+    if (window.SHTrack) SHTrack.stop();
+    closeReveal();
     applyColor(null);
     // Schüler: beim ersten Laden gleich ins eigene Netzwerk
     if (!T && !S.autoOpened && r.hubs.length === 1 && !r.hubs[0].locked) {
@@ -324,12 +344,22 @@
         '<label class="switch switch--s" title="Aufnahmezeit und Kamera aus den Fotos mitspeichern (steht dann in photos)"><input type="checkbox" id="metaTgl"' + (metaOn() ? ' checked' : '') + '><span></span>Metadaten der Fotos speichern</label></div></div>' +
       '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums. Antippen zeigt die Attribute.</p>' +
       tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
+    // Analytics (0270): getrackt wird, sobald sessions erstellt ist – hier nur das Auflösen
+    html += '<section class="panel"><div class="panel-h"><h2>Analytics</h2></div>' +
+      (tblOn('sessions')
+        ? '<p class="muted small">Seit <code>sessions</code> erstellt ist, schreiben alle Netzwerke still mit – ohne Banner, wie eine echte Plattform: jeder Besuch mit IP, Browser, Gerät, Bildschirm' +
+          (tblOn('views') ? ', dazu in <code>views</code> jedes angesehene Foto mit Dauer' : '') + '. Standort, Kamera, Mikrofon und Benachrichtigungen werden nur zum Schein abgefragt – gespeichert wird, was angeklickt wurde.</p>' +
+          '<div class="an-reveal"><button type="button" class="btn ' + (revealOn() ? 'btn--bad' : 'btn--accent') + '" id="revBtn">' + (revealOn() ? 'Aufdeckung beenden' : 'Auflösen: „Was haben wir gesammelt?“') + '</button>' +
+          '<span class="muted small">Zeigt auf jedem Tablet, was gespeichert wurde, was ohne Fragen noch ginge, was eine Erlaubnis gekostet hätte und was nur echte Apps können.</span></div>'
+        : '<p class="muted small">Erstelle oben <code>sessions</code> (und <code>views</code>), dann schreiben alle Netzwerke still mit, was die Klasse tut – wie eine echte Plattform. Hier löst du es danach auf.</p>') +
+      '</section>';
     return html;
   }
 
   /* Tabellen-Diagramm (nur Namen, Linien = Fremdschlüssel)
      Fest angeordnet in Spalten wie das Klassendiagramm von SQL Studio:
        users │ follows, likes, comments │ photos │ photo_tag │ tags
+       sessions (unter users) · views (unter photos) – Analytics (0270)
      Linien rechtwinklig (waagerecht – senkrecht – waagerecht), „n“ am
      Fremdschlüssel, „1“ an der Tabelle, auf die er zeigt. users–photos
      läuft gerade durch die Lücke zwischen likes und comments. Die
@@ -337,6 +367,7 @@
   const BW = 136, BH = 66, GX = 64, PAD = 22;
   const colX = c => PAD + c * (BW + GX);
   const MID = PAD + 177;                                // Mittellinie
+  const ROW2 = PAD + 192 + BH + 40;                     // untere Reihe: Analytics
   const TBOX = {
     users:     { x: colX(0), y: MID - 65, h: 130 },
     follows:   { x: colX(1), y: PAD, h: BH },
@@ -344,17 +375,23 @@
     comments:  { x: colX(1), y: PAD + 192, h: BH },
     photos:    { x: colX(2), y: MID - BH / 2, h: BH },
     photo_tag: { x: colX(3), y: MID - BH / 2, h: BH },
-    tags:      { x: colX(4), y: MID - BH / 2, h: BH }
+    tags:      { x: colX(4), y: MID - BH / 2, h: BH },
+    sessions:  { x: colX(0), y: ROW2, h: BH },
+    views:     { x: colX(2), y: ROW2, h: BH }
   };
-  const TW = colX(5) - GX + PAD, TH = PAD + 192 + BH + PAD;
+  const TW = colX(5) - GX + PAD, TH = ROW2 + BH + PAD;
   // [Tabelle mit Fremdschlüssel, Ziel, y an der Quelle, y am Ziel (relativ), senkrecht bei (Anteil der Lücke)]
   const TEDGES = [
     ['follows',   'users',  22, 12, 0.28], ['follows', 'users', 44, 28, 0.5],
     ['likes',     'users',  33, 44, 0.72], ['photos',  'users', 33, 65, 0.5],
     ['comments',  'users',  33, 96, 0.5],
     ['likes',     'photos', 33, 11, 0.5],  ['comments', 'photos', 33, 55, 0.5],
-    ['photo_tag', 'photos', 33, 33, 0.5],  ['photo_tag', 'tags', 33, 33, 0.5]
+    ['photo_tag', 'photos', 33, 33, 0.5],  ['photo_tag', 'tags', 33, 33, 0.5],
+    // views → users: unten links raus, dicht an users hoch (läuft rechts an sessions vorbei)
+    ['views',     'users',  20, 120, 0.03], ['views', 'sessions', 44, 44, 0.5]
   ];
+  // senkrecht von oben aus der Quelle in den Boden des Ziels (gleiche Spalte)
+  const TVEDGES = [['sessions', 'users'], ['views', 'photos']];
   // Pfad mit kleinen Rundungen an den Ecken
   function roundPath(pts, r) {
     let d = 'M' + pts[0][0] + ' ' + pts[0][1];
@@ -382,6 +419,14 @@
       out += '<path d="' + roundPath(pts, 6) + '" class="' + cls + '"/>' +
         '<text x="' + (x1 + dir * 5) + '" y="' + (y1 - 4) + '" class="' + cls + '" text-anchor="' + (right ? 'start' : 'end') + '">n</text>' +
         '<text x="' + (x2 - dir * 5) + '" y="' + (y2 - 4) + '" class="' + cls + '" text-anchor="' + (right ? 'end' : 'start') + '">1</text>';
+    });
+    TVEDGES.forEach(([src, dst]) => {
+      const a = TBOX[src], b = TBOX[dst];
+      const x = a.x + BW / 2, y1 = a.y, y2 = b.y + b.h;
+      const cls = tblOn(src) && tblOn(dst) ? 'on' : 'off';
+      out += '<path d="M' + x + ' ' + y1 + ' L' + x + ' ' + y2 + '" class="' + cls + '"/>' +
+        '<text x="' + (x + 6) + '" y="' + (y1 - 6) + '" class="' + cls + '">n</text>' +
+        '<text x="' + (x + 6) + '" y="' + (y2 + 14) + '" class="' + cls + '">1</text>';
     });
     return out;
   }
@@ -412,12 +457,13 @@
         const def = TABLES.find(x => x.id === t);
         // photo_tag kommt mit tags
         const auto = t === 'photo_tag';
-        const blocked = def && def.needs && !tblOn(def.needs);
+        const missing = def && def.needs ? def.needs.filter(x => !tblOn(x)) : [];
+        const blocked = missing.length > 0;
         let act = '';
         if (fixed) act = '<span class="tb-note">' + IC.lock + ' immer da</span>';
         else if (auto) act = '<span class="tb-note">kommt mit tags</span>';
         else if (isOn) act = '<button type="button" class="tb-btn" data-tdrop="' + t + '" title="Entziehen">' + IC.x + 'Entziehen</button>';
-        else act = '<button type="button" class="tb-btn tb-btn--add" data-tadd="' + t + '"' + (blocked ? ' disabled title="Erst ' + def.needs + ' erstellen"' : ' title="Erstellen"') + '>' + IC.plus + 'Erstellen</button>';
+        else act = '<button type="button" class="tb-btn tb-btn--add" data-tadd="' + t + '"' + (blocked ? ' disabled title="Erst ' + missing.join(' und ') + ' erstellen"' : ' title="Erstellen"') + '>' + IC.plus + 'Erstellen</button>';
         const b = TBOX[t];
         return '<div class="tb' + (fixed ? ' tb--fixed' : isOn ? ' tb--on' : ' tb--off') + (S.tblSel === t ? ' tb--sel' : '') + '" data-tb="' + t + '" ' +
           'style="left:' + b.x + 'px;top:' + b.y + 'px;width:' + BW + 'px;height:' + b.h + 'px" tabindex="0">' +
@@ -477,6 +523,7 @@
         [['no', 'Abbrechen'], ['yes', 'Einschalten', 'accent']]) !== 'yes') { e.target.checked = false; return; }
       save(cur(), S.home.upload, { meta: e.target.checked });
     };
+    if ($('#revBtn')) $('#revBtn').onclick = () => save(cur(), S.home.upload, { reveal: !revealOn() });
     $$('[data-lock]').forEach(b => b.onclick = async () => {
       const r = await A.call('sh_hub_lock', { p_hub: b.dataset.lock, p_locked: b.dataset.v === '1' });
       if (!r.ok) fail(r); else loadHome();
@@ -669,6 +716,7 @@
   // mode: login | reg | admin (Schritt 2: erstes Konto = Admin)
   function renderLogin(mode) {
     S.screen = 'login';
+    if (window.SHTrack) SHTrack.stop();
     const h = S.hub.hub;
     const canReg = S.hub.founder || T;
     if (mode === 'reg' && !canReg) mode = 'login';
@@ -770,6 +818,8 @@
     else if (S.tab === 'search') renderSearch(main);
     else if (S.tab === 'post') renderPost(main);
     else if (S.tab === 'profile') renderProfile(main, h.me && h.me.id, false);
+    manageTrack();
+    if (revealOn()) openReveal(); else closeReveal();
   }
 
   function closeDb() { if (S.db) { S.db.destroy(); S.db = null; } }
@@ -819,6 +869,25 @@
       for (const e of ents) if (e.isIntersecting) { io.unobserve(e.target); more(); }
     }, { root: list, rootMargin: '0px 0px 150% 0px' });
 
+    // Analytics (0270): wie lange ist ein Foto im Bild? Die Karte gilt als
+    // „angesehen“, solange sie zu mind. 60 % sichtbar ist.
+    const viewTimes = new Map();   // cardEl → Startzeit
+    function emitView(card) {
+      const t0 = viewTimes.get(card);
+      if (t0 == null) return;
+      viewTimes.delete(card);
+      const it = items[+card.dataset.i];
+      if (!it || !window.SHTrack || !SHTrack.isOn()) return;
+      SHTrack.view(it.id, performance.now() - t0, feedName(opts.mode), +card.dataset.i, card.__end || 'swipe');
+      card.__end = null;
+    }
+    const vio = new IntersectionObserver((ents) => {
+      for (const e of ents) {
+        if (e.isIntersecting && e.intersectionRatio >= 0.6) { if (!viewTimes.has(e.target)) viewTimes.set(e.target, performance.now()); }
+        else emitView(e.target);
+      }
+    }, { root: list, threshold: [0, 0.6] });
+
     async function more() {
       if (loading || finished) return;
       loading = true;
@@ -840,7 +909,7 @@
       const frag = document.createElement('div');
       frag.innerHTML = r.items.map(it => { items.push(it); return cardHtml(it, idx++); }).join('');
       const cards = Array.from(frag.children);
-      cards.forEach(c => list.appendChild(c));
+      cards.forEach(c => { list.appendChild(c); vio.observe(c); });
       hydrate(list);
       offset += r.items.length;
       if (r.items.length < LIM) {
@@ -866,23 +935,23 @@
     let lastTap = 0;
     list.addEventListener('click', async (e) => {
       const tagB = e.target.closest('[data-tag]');
-      if (tagB) { openViewer({ mode: 'tag', arg: tagB.dataset.tag, title: '#' + tagB.dataset.tag }); return; }
+      if (tagB) { const tc = e.target.closest('.card'); if (tc) tc.__end = 'tag'; openViewer({ mode: 'tag', arg: tagB.dataset.tag, title: '#' + tagB.dataset.tag }); return; }
       const card = e.target.closest('.card');
       if (!card) return;
       const it = items[+card.dataset.i];
       const actEl = e.target.closest('[data-act]');
       const act = actEl ? actEl.dataset.act : null;
       if (act === 'follow') { e.stopPropagation(); follow(it, card); return; }
-      if (act === 'profile') { openProfile(it.user.id); return; }
+      if (act === 'profile') { card.__end = 'profile'; openProfile(it.user.id); return; }
       const rk = e.target.closest('[data-react]');
-      if (rk) { e.stopPropagation(); closePick(); react(it, card, rk.dataset.react); return; }
+      if (rk) { e.stopPropagation(); closePick(); card.__end = 'like'; react(it, card, rk.dataset.react); return; }
       if (act === 'like') { togglePick(it, card); return; }
       if (closePick()) return;
-      if (act === 'comments') { openComments(it, card); return; }
+      if (act === 'comments') { card.__end = 'comment'; openComments(it, card); return; }
       if (act === 'more') { moreMenu(it, card); return; }
       // Doppeltipp aufs Bild = Herz
       const now = Date.now();
-      if (now - lastTap < 320 && it.likes != null && !it.liked) react(it, card, 'heart');
+      if (now - lastTap < 320 && it.likes != null && !it.liked) { card.__end = 'like'; react(it, card, 'heart'); }
       else if (now - lastTap < 320 && it.likes != null) burst(card, it.my_kind);
       lastTap = now;
     });
@@ -1038,6 +1107,130 @@
     renderProfile(ov.body, uid, true);
   }
 
+  /* ── Aufdeckung: „Was weiß das Netzwerk über dich?“ (0270) ── */
+  let revealEl = null;
+  function closeReveal() { if (revealEl) { revealEl.remove(); revealEl = null; } }
+  async function openReveal() {
+    if (revealEl || !document.querySelector('.hub')) return;
+    const ov = overlay('Was weiß das Netzwerk über dich?');
+    ov.el.classList.add('ov--reveal');
+    revealEl = ov.el;
+    ov.el.querySelector('[data-close]').onclick = closeReveal;
+    ov.body.innerHTML = '<p class="muted center-t">lädt …</p>';
+    const r = await hcall('sh_my_data', {});
+    if (!revealEl) return;
+    if (!r || !r.ok) {
+      ov.body.innerHTML = '<div class="rv"><p class="rv-lead">' +
+        (r && r.error === 'not_logged_in' ? 'Melde dich an, dann siehst du, was das Netzwerk über dich gespeichert hat.' : esc(A.errText(r))) + '</p></div>';
+      return;
+    }
+    ov.body.innerHTML = revealHtml(r);
+    fillLiveReveal(ov.body);
+  }
+
+  const fmtMs = (ms) => {
+    ms = +ms || 0;
+    if (ms < 1000) return ms + ' ms';
+    const s = ms / 1000;
+    if (s < 60) return s.toFixed(1).replace('.', ',') + ' s';
+    const m = Math.floor(s / 60);
+    return m + ' min ' + Math.round(s - m * 60) + ' s';
+  };
+  const yn = (v) => v === true ? '<b class="yes">erlaubt ✓</b>' : v === false ? '<b class="no">abgelehnt ✗</b>' : '<span class="muted">nicht gefragt</span>';
+  const rvRow = (k, v) => '<li><span>' + k + '</span><b>' + (v == null || v === '' ? '<span class="muted">–</span>' : esc(v)) + '</b></li>';
+
+  function revealHtml(r) {
+    const s = (r.sessions && r.sessions[0]) || null;   // jüngster Besuch
+    const al = (s && s.allow) || {};
+    const v = r.views || {};
+    let h = '<div class="rv">';
+    h += '<p class="rv-lead">Deine Profilangaben waren ausgedacht. Wie du die App benutzt hast, war <b>echt</b> – und genau das sammelt eine Plattform. Das hier lag die ganze Zeit mit in der Datenbank:</p>';
+
+    // 1 — gespeichert
+    h += '<section class="rv-s rv-s--got"><h3><span class="rv-dot"></span>1 · Das wurde gespeichert – ganz ohne zu fragen</h3>';
+    if (s) {
+      h += '<ul class="rv-list">' +
+        rvRow('Deine IP-Adresse', s.ip) +
+        rvRow('Browser', s.browser) + rvRow('Betriebssystem', s.os) +
+        rvRow('Gerät', (s.device || s.device_type)) +
+        rvRow('Bildschirm', s.screen + (s.pixel_ratio ? ' · ' + s.pixel_ratio + '×' : '')) +
+        rvRow('Sprache', s.language) + rvRow('Zeitzone', s.timezone) +
+        rvRow('Ansicht', s.dark_mode === true ? 'Dunkel' : s.dark_mode === false ? 'Hell' : null) +
+        rvRow('Verbindung', s.connection) +
+        '</ul>';
+      h += '<p class="rv-ip">In der Schule haben <b>alle dieselbe IP</b> – ihr hängt an einem Anschluss. Von zu Hause hättest du deine eigene, mit Anbieter und ungefährem Ort.</p>';
+    }
+    h += '<div class="rv-sum"><div><b>' + (v.count || 0) + '</b><span>Fotos angesehen</span></div>' +
+      '<div><b>' + fmtMs(v.total_ms) + '</b><span>insgesamt geschaut</span></div>' +
+      '<div><b>' + fmtMs(v.longest_ms) + '</b><span>längster Blick</span></div>' +
+      '<div><b>' + (r.sessions ? r.sessions.length : 0) + '</b><span>Besuche</span></div></div>';
+    h += '<p class="rv-note">Jedes Foto auf die Millisekunde genau (Tabelle <code>views</code>) – daraus baut eine App ihren „Für dich“-Algorithmus. Dein Besuch mit allem oben steht in <code>sessions</code>.</p>';
+    h += '<h4>Was du dem Netzwerk erlaubt hast</h4><ul class="rv-perms">' +
+      '<li>Standort ' + yn(al.location) + '</li>' +
+      '<li>Kamera ' + yn(al.camera) + '</li>' +
+      '<li>Mikrofon ' + yn(al.microphone) + '</li>' +
+      '<li>Benachrichtigungen ' + yn(al.notifications) + '</li></ul>' +
+      '<p class="rv-note">Die Fenster waren nachgebaut: Wir haben nur gespeichert, was du angeklickt hast – Standort, Bild oder Ton haben wir nie abgerufen. Eine echte App hätte es ab deinem „Zulassen“ gekonnt.</p>';
+    h += '</section>';
+
+    // 2 — ginge ohne Fragen (live auf dem eigenen Gerät)
+    h += '<section class="rv-s rv-s--could"><h3><span class="rv-dot"></span>2 · Das hätten wir auch noch gekonnt – ohne zu fragen</h3>' +
+      '<p class="rv-note">Das liest dein Gerät gerade heraus. Wir speichern es <b>nicht</b> – eine echte Seite oft schon.</p>' +
+      '<ul class="rv-list" id="rvLive">' +
+        rvRow('Akku', '…') + rvRow('Prozessorkerne', '…') + rvRow('Arbeitsspeicher', '…') +
+        rvRow('Touch-Punkte', '…') + rvRow('Von welcher Seite du kamst', '…') +
+        '<li><span>Fingerabdruck deines Geräts</span><b id="rvFp">…</b></li>' +
+      '</ul><p class="rv-note">Der Fingerabdruck erkennt dein Gerät <b>auch ohne Anmeldung</b> wieder. Auf den Schul-Tablets sind viele gleich – zu Hause bist du damit eindeutig.</p></section>';
+
+    // 3 — nach „Erlauben?“
+    h += '<section class="rv-s rv-s--ask"><h3><span class="rv-dot"></span>3 · Das hätten wir mit einem „Erlauben“ bekommen</h3>' +
+      '<ul class="rv-list rv-list--plain">' +
+      '<li>Dein <b>genauer Standort</b> (GPS) – auf ein paar Meter</li>' +
+      '<li><b>Kamera</b> und <b>Mikrofon</b> – Bild und Ton</li>' +
+      '<li><b>Benachrichtigungen</b> – dich zurückholen, wenn du gerade nicht da bist</li></ul>' +
+      '<p class="rv-note">Viele tippen so ein „Zulassen?“ einfach weg – wie oft hast du es heute gemacht?</p></section>';
+
+    // 4 — nur echte Apps
+    h += '<section class="rv-s rv-s--apps"><h3><span class="rv-dot"></span>4 · Das können nur echte Apps – kein Browser</h3>' +
+      '<ul class="rv-list rv-list--plain">' +
+      '<li><b>MAC-Adresse</b> (heute vom Handy zufällig gemacht)</li>' +
+      '<li><b>Werbe-ID</b> – über alle Apps hinweg dieselbe</li>' +
+      '<li><b>Kontakte</b>, Namen der WLANs, andere installierte Apps</li>' +
+      '<li><b>Bewegungssensoren</b> im Hintergrund: ob du gehst, fährst oder liegst</li></ul></section>';
+
+    h += '<p class="rv-foot">Das alles lag nur in diesem Raum und wird mit ihm gelöscht. Echte Seiten in Deutschland müssten für so ein Tracking eigentlich vorher fragen – viele tun es trotzdem.</p>';
+    return h + '</div>';
+  }
+
+  // Fingerabdruck: eine kurze Zahl aus ein paar Gerätewerten (FNV-1a)
+  function fp32(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return ('00000000' + (h >>> 0).toString(16)).slice(-8);
+  }
+  async function fillLiveReveal(root) {
+    const live = $('#rvLive', root);
+    if (!live) return;
+    const set = (i, v) => { const li = live.children[i]; if (li) li.querySelector('b').innerHTML = v == null || v === '' ? '<span class="muted">verrät dein Gerät nicht</span>' : esc(v); };
+    // Akku
+    try {
+      if (navigator.getBattery) { const b = await navigator.getBattery(); set(0, Math.round(b.level * 100) + ' %' + (b.charging ? ' (lädt)' : '')); }
+      else set(0, null);
+    } catch (e) { set(0, null); }
+    set(1, navigator.hardwareConcurrency ? navigator.hardwareConcurrency + ' Kerne' : null);
+    set(2, navigator.deviceMemory ? '≈ ' + navigator.deviceMemory + ' GB' : null);
+    set(3, (navigator.maxTouchPoints || 0) + ' gleichzeitig');
+    set(4, document.referrer ? document.referrer.slice(0, 60) : 'diesmal nichts');
+    const fpEl = $('#rvFp', root);
+    if (fpEl) {
+      const sig = [navigator.userAgent, navigator.language, screen.width + 'x' + screen.height, screen.colorDepth,
+        (window.devicePixelRatio || 1), navigator.hardwareConcurrency, navigator.deviceMemory,
+        (function () { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch (e) { return ''; } })(),
+        navigator.platform, navigator.maxTouchPoints].join('|');
+      fpEl.textContent = fp32(sig);
+    }
+  }
+
   /* ── Profil ─────────────────────────────────────────────── */
   async function renderProfile(main, uid, inOverlay) {
     main.innerHTML = '<div class="prof"><p class="muted center-t">lädt …</p></div>';
@@ -1159,6 +1352,8 @@
       main.innerHTML = '<div class="post"><div class="feed-empty">' + IC.image + '<p>Bilder hochladen ist gerade ausgeschaltet.</p></div></div>';
       return;
     }
+    // Analytics (0270): ＋ geöffnet → nachgebaute Frage nach der Kamera (nur der Klick wird gespeichert)
+    if (window.SHTrack && SHTrack.isOn()) SHTrack.askCamera();
     let pic = null;      // verkleinert, fertig zum Hochladen
     let orig = null;     // Original (zum erneuten Zuschneiden)
     let meta = null;     // Metadaten aus Datei/Kamera (0268), gesendet nur bei data.meta
@@ -1247,6 +1442,8 @@
       e.preventDefault();
       if (!pic) return;
       const f = e.target;
+      // Analytics (0270): ein Foto-Netzwerk fragt beim Posten nach dem Mikrofon
+      if (window.SHTrack && SHTrack.isOn()) SHTrack.askMic();
       $('#pGo', main).disabled = true;
       const up = await hcall('sh_media_put', { p_data: pic.data, p_thumb: pic.thumb, p_mime: pic.mime });
       if (!up || !up.ok) { fail(up); $('#pGo', main).disabled = false; return; }
@@ -1299,9 +1496,12 @@
     if (firstState) { firstState = false; return; }
     if (S.onMeta && $('#pMeta')) S.onMeta();       // Hinweis beim Posten, ohne das Formular neu zu zeichnen
     if (S.screen === 'hub' && S.hub) {
+      if (revealOn()) openReveal(); else closeReveal();
       const prev = JSON.stringify([S.hub.tables, S.hub.upload]);
       await refreshHub();
-      if (S.screen !== 'hub' || !S.hub || JSON.stringify([S.hub.tables, S.hub.upload]) === prev) return;
+      if (S.screen !== 'hub' || !S.hub) return;
+      manageTrack();                                // sessions erstellt/entzogen → Tracking an/aus
+      if (JSON.stringify([S.hub.tables, S.hub.upload]) === prev) return;
       if (S.view === 'app' && (S.tab === 'feed' || S.tab === 'search' || S.tab === 'profile')) renderHub();
       else toast('Die Lehrkraft hat die Tabellen geändert.');
     } else if (S.screen === 'home') {
