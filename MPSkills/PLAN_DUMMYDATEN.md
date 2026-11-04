@@ -1,5 +1,14 @@
 # Plan: Dummy-Daten für YourSozialNet (Entwurf 04.11.2026)
 
+> **Stand nach Rückmeldung 04.11.2026** – gilt vor allem Folgenden:
+> - **70 User**, Liste in `MPSkills/tools/SocialHub/dummy/LISTE.md` (dort gelten Namen, Zahlen, Bilder).
+> - Kein Account, der nur Minderjährigen folgt. **Kein „Hitler“** – stattdessen Trolle, die Leute zu
+>   „Echsenmenschen von der Rückseite des Mondes“ erklären (auch Streit mit dem Flacherdler; harmlose Falle: Bartagame bei katzenkram).
+> - **Passwort per INSERT/UPDATE bleibt Klartext** (Migration 0271), gehasht nur beim Registrieren.
+> - **Befüllen**: jede Tabelle bekommt im Diagramm der Lehrkraft einen Knopf **„Daten laden“**.
+> - Namen frei gewählt, ~25 % nicht-deutsch – **nicht** bei Trollen/Fake News.
+> - Arbeitsblatt wird **noch nicht** angefasst; für 3h später „… die vor 17 Jahren geboren sind“.
+
 Gesprächsgrundlage, noch nichts gebaut. Ziel: Jedes neue Netzwerk startet nicht leer, sondern mit einer
 glaubwürdigen kleinen Plattform – mit Content Creators, Mitläufern, Trollen, Minderjährigen und
 Datenfehlern –, sodass **jede Aufgabe des Begleitdokuments „Datenbanksysteme“ (If Q1, Sep. 26)
@@ -9,7 +18,7 @@ eine eindeutige, interessante Antwort hat** und die Einheiten Analytics und Werb
 
 ## 1. Grundidee in fünf Sätzen
 
-1. **~80 User** in vier Rollen: Content Creator (posten viel, haben Fans), Normalos (2–3 private Fotos,
+1. **70 User** in vier Rollen: Content Creator (posten viel, haben Fans), Normalos (2–3 private Fotos,
    folgen, liken, kommentieren), Stille/Kommentierer (posten nichts, liken/kommentieren, einige mit Hass
    in pädagogisch vertretbarer Form) und Pflichtfiguren aus dem Arbeitsblatt (Levi Schumacher, Erna, Alina Keller …).
 2. **Themenwelten** mit je 2–3 Creators, damit Zielgruppen entstehen: Gaming, Fußball/Fitness, Lifestyle/Fashion,
@@ -57,6 +66,8 @@ Gewollte Grenzfälle beim Alter:
 ---
 
 ## 3. Die User (~80)
+
+> Die Tabellen in Abschnitt 3 sind der erste Entwurf; verbindlich ist `dummy/LISTE.md`.
 
 ### 3.1 Altersverteilung
 
