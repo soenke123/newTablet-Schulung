@@ -518,6 +518,7 @@ try {
   await mia.app.locator('.perm-pop [data-pp="0"]').click();
   for (let i = 0; i < 25 && (await db.query(`select allow_camera from sh_vsessions where user_id = $1 order by id desc limit 1`, [miaUid])).rows[0].allow_camera !== false; i++) await wait(200);
   ok('7  Kamera „Blockieren“ gespeichert', (await db.query(`select allow_camera from sh_vsessions where user_id = $1 order by id desc limit 1`, [miaUid])).rows[0].allow_camera === false);
+  ok('7  vor der Aufdeckung kein Knopf „Was weiß das Netzwerk über mich?“', await mia.app.locator('#hdData:visible').count() === 0);
   // Aufdeckung: Lehrkraft löst aus → erscheint auf Mias Tablet
   await t.app.locator('#revBtn').click();
   await mia.app.locator('.ov--reveal').waitFor({ timeout: 8000 });
@@ -530,18 +531,20 @@ try {
   await mia.app.locator('.hub-nav [data-tab="feed"]').click();
   await wait(600);
   ok('7  geschlossene Aufdeckung poppt beim Reiterwechsel nicht wieder auf', await mia.app.locator('.ov--reveal').count() === 0);
-  // Lehrkraft beendet → im Profil bleibt „Was weiß das Netzwerk über mich?“
+  // Lehrkraft beendet → oben neben App | Adminbereich bleibt „Was weiß das Netzwerk über mich?“
   await t.app.locator('#revBtn').click();
   for (let i = 0; i < 30 && (await stateOf()).reveal !== false; i++) await wait(100);
   ok('7  beendet, Merker „revealed“ bleibt', (await stateOf()).reveal === false && (await stateOf()).revealed === true, JSON.stringify(await stateOf()));
   await wait(1800);
   await mia.app.locator('.hub-nav [data-tab="profile"]').click();
-  await mia.app.locator('#pData').waitFor({ timeout: 8000 });
-  await mia.app.locator('#pData').click();
+  await mia.app.locator('.hub-top #hdData').waitFor({ timeout: 8000 });
+  ok('7  Knopf steht oben neben App | Adminbereich', await mia.app.locator('.hub-top .views + #hdData').count() === 1);
+  await mia.app.locator('#hdData').click();
   await mia.app.locator('.ov--reveal .rv-s--got').waitFor({ timeout: 8000 });
-  ok('7  Schüler öffnet die Auflösung danach selbst über das Profil', (await mia.app.locator('.ov--reveal .rv-s').count()) === 4);
+  ok('7  Schüler öffnet die Auflösung danach selbst über den Knopf oben', (await mia.app.locator('.ov--reveal .rv-s').count()) === 4);
   await wait(500);
-  await shot(mia.page, '7c-profil-auskunft');
+  await mia.app.locator('.ov--reveal [data-close]').click();
+  await shot(mia.page, '7c-knopf-oben');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

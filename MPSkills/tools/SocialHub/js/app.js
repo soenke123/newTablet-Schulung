@@ -791,6 +791,9 @@
       logoHtml(h.hub, 'logo--s') + '<b class="hub-name">' + esc(h.hub.name) + '</b>' +
       (h.admin ? '<nav class="views"><button type="button" data-view="app"' + (!admin ? ' class="on"' : '') + '>App</button>' +
                  '<button type="button" data-view="admin"' + (admin ? ' class="on"' : '') + '>Adminbereich</button></nav>' : '') +
+      // Aufdeckung (0270): erst sichtbar, wenn die Lehrkraft einmal aufgelöst hat (syncReveal schaltet nach)
+      (h.me ? '<button type="button" class="hd-data" id="hdData" title="Was weiß das Netzwerk über mich?"' + (revealedOnce() ? '' : ' hidden') + '>' +
+              IC.shield + '<span>Was weiß das Netzwerk über mich?</span></button>' : '') +
       (admin ? '<nav class="subtabs">' + sub.map(x => '<button type="button" data-at="' + x[0] + '" class="' + (S.adminTab === x[0] ? 'on' : '') + (x[0] === 'settings' ? ' st-set' : '') + '">' + x[1] + '<span>' + x[2] + '</span></button>').join('') + '</nav>' : '') +
       '<span class="spacer"></span>' +
       (h.me ? '<span class="chip">@' + esc(h.me.username) + (T ? ' · Lehrkraft' : '') + '</span>'
@@ -800,6 +803,7 @@
       (admin ? '' : '<nav class="hub-nav">' + nav.map(x => '<button type="button" data-tab="' + x[0] + '" class="' + (x[0] === 'post' ? 'nav-post' : '') + (S.tab === x[0] ? ' on' : '') + '">' + x[1] + (x[2] ? '<span>' + x[2] + '</span>' : '') + '</button>').join('') + '</nav>') +
       '</div>';
     $('#toHome').onclick = () => { closeDb(); S.autoOpened = true; loadHome(); };
+    if ($('#hdData')) $('#hdData').onclick = () => openReveal(true);
     if ($('#lkLogin')) $('#lkLogin').onclick = () => { closeDb(); renderLogin('login'); };
     $$('[data-view]').forEach(b => b.onclick = () => { if (S.view === b.dataset.view) return; closeDb(); S.view = b.dataset.view; renderHub(); });
     $$('[data-at]').forEach(b => b.onclick = () => {
@@ -1111,11 +1115,13 @@
 
   /* ── Aufdeckung: „Was weiß das Netzwerk über dich?“ (0270) ── */
   let revealEl = null;
-  let revealManual = false;     // über den Profil-Knopf geöffnet (bleibt, auch wenn die Lehrkraft beendet)
+  let revealManual = false;     // über den Knopf oben geöffnet (bleibt, auch wenn die Lehrkraft beendet)
   let revealShown = false;      // in dieser Aufdeckung schon automatisch gezeigt → nach Schließen nicht wieder aufpoppen
   function closeReveal() { if (revealEl) { revealEl.remove(); revealEl = null; } revealManual = false; }
   // Vom Zustand des Raums: einmal automatisch öffnen, beim Beenden wieder zu
   function syncReveal() {
+    const hd = $('#hdData');
+    if (hd) hd.hidden = !revealedOnce();
     if (revealOn()) { if (!revealShown && S.hub && S.hub.me) { revealShown = true; openReveal(false); } }
     else { revealShown = false; if (!revealManual) closeReveal(); }
   }
@@ -1255,7 +1261,6 @@
       (u.bio ? '<p class="bio">' + esc(u.bio) + '</p>' : '') +
       '<div class="prof-acts">' +
         (r.me ? '<button type="button" class="btn btn--ghost" id="pEdit">Profil bearbeiten</button>' +
-                (revealedOnce() ? '<button type="button" class="btn btn--ghost" id="pData">' + IC.shield + 'Was weiß das Netzwerk über mich?</button>' : '') +
                 // Lehrkraft bleibt in ihrem eigenen Netzwerk immer angemeldet
                 (T && S.hub.founder ? '' : '<button type="button" class="btn btn--ghost" id="pOut">Abmelden</button>')
               : (r.i_follow != null && S.hub.me ? '<button type="button" class="btn ' + (r.i_follow ? 'btn--ghost' : 'btn--accent') + '" id="pFollow">' + (r.i_follow ? 'Gefolgt ✓' : 'Folgen') + '</button>' : '')) +
@@ -1270,7 +1275,6 @@
       renderProfile(main, uid, inOverlay);
     };
     if ($('#pOut', main)) $('#pOut', main).onclick = () => logoutDialog();
-    if ($('#pData', main)) $('#pData', main).onclick = () => openReveal(true);
     if ($('#pEdit', main)) $('#pEdit', main).onclick = () => editProfile(u, () => renderProfile(main, uid, inOverlay));
   }
 

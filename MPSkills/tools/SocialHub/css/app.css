@@ -623,3 +623,12 @@ code { font-family: var(--font-mono); font-size: .9em; }
   .perm-pop button { background: transparent; border-color: #555; color: #a8c7fa; }
   .perm-pop button.pp-ok { background: #a8c7fa; border-color: #a8c7fa; color: #062e6f; }
 }
+
+/* Knopf oben neben App | Adminbereich: „Was weiß das Netzwerk über mich?“ (0270, erst nach der Aufdeckung) */
+.hd-data { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; padding: 7px 12px; border-radius: 11px;
+  border: 1px solid color-mix(in srgb, var(--bad) 45%, var(--line)); background: var(--bad-dim); color: var(--ink);
+  font-weight: 700; font-size: 14px; white-space: nowrap; cursor: pointer; }
+.hd-data[hidden] { display: none; }
+.hd-data svg { width: 17px; height: 17px; flex: none; fill: none; stroke: var(--bad); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.hd-data:hover { border-color: var(--bad); }
+@media (max-width: 760px) { .hd-data span { display: none; } .hd-data { padding: 7px 9px; } }
