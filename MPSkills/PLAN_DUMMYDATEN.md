@@ -7,6 +7,7 @@
 > - **Passwort per INSERT/UPDATE bleibt Klartext** (Migration 0271), gehasht nur beim Registrieren.
 > - **Befüllen**: jede Tabelle bekommt im Diagramm der Lehrkraft einen Knopf **„Daten laden“**.
 > - Namen frei gewählt, ~25 % nicht-deutsch – **nicht** bei Trollen/Fake News.
+> - **Gebaut** (04.11.2026): `dummy/daten.js` (User, Fotos, Diskussionen), `dummy/generator.js` (Likes, Follows, Füll-/Troll-/Spam-Kommentare, Gewinnspiel-Markierungen, sessions, views), `dummy/bilder.mjs` (Bilder nachliefern), Prüfstand `tests/dummy.test.mjs`. **Offen**: Knopf „Daten laden“ je Tabelle + Server-RPC, Platzhalter-Bilder in der App.
 > - Arbeitsblatt wird **noch nicht** angefasst; für 3h später „… die vor 17 Jahren geboren sind“.
 
 Gesprächsgrundlage, noch nichts gebaut. Ziel: Jedes neue Netzwerk startet nicht leer, sondern mit einer
@@ -181,7 +182,7 @@ Geplante Threads (handgeschrieben, 6–15 Kommentare):
 | `gender` | NULL bei einigen, `diverse` bei 3 | 4e zählt nicht alle |
 | `bio` | leer, Emojis, eine mit Handynummer (!) und Schule | Datenschutz-Gespräch |
 | Passwörter | ~10 User haben `123456`, `passwort`, `hallo123`, ihren Benutzernamen | `WHERE PASSWORD_VERIFY('123456', password)` – Hash sicher, Passwort nicht |
-| Tags | `Abenteuerlust`, `abenteuerlust`, `abenteuer_lust` | „Wie viele Bilder haben den Tag abenteuerlust?“ |
+| Tags | `abenteuerlust`, `abenteuer`, `abenteuer_lust` (Groß/klein geht nicht: Tags sind case-insensitiv eindeutig) | „Wie viele Bilder haben den Tag abenteuerlust?“ |
 | Fotos | 5 ohne Like, 8 ohne Tag, 3 ohne Beschreibung | LEFT/RIGHT JOIN-Aufgaben b–d |
 
 **Passwort-Falle Aufgabe 7c**: seit 0266 hasht der Server Klartext von selbst – das „Aha, ich habe das Passwort

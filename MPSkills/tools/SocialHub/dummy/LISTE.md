@@ -26,7 +26,7 @@ Legende Rolle: **CC** = Content Creator · **N** = Normalo · **K** = nur Kommen
 | 11 | `lostwithlena` | Lena Vogt | 26 | f | Freiburg | Deutschland | Reisen, Rucksack | 6 | Tag `abenteuerlust` |
 | 12 | `vanlife_tomasz` | Tomasz Kowalski | 31 | m | *NULL* | Polen | Vanlife Norwegen/Portugal | 5 | **VPN**: 9 IPs |
 | 13 | `alex.achen` | **Alexander Achen** | 29 | m | Aachen | Deutschland | Städtereisen | 5 | 9b; Bordkarte mit Name im Bild |
-| 14 | `inkandmila` | Mila Hoffmann | 16 | f | Leipzig | Deutschland | Zeichnen | 5 | gleicher Geburtstag wie Lasse (#33), anderes Jahr |
+| 14 | `inkandmila` | Mila Hoffmann | 16 | f | Leipzig | Deutschland | Zeichnen | 5 | gleicher Geburtstag wie Elisa (#44), anderes Jahr |
 | 15 | `linus.lens` | Linus Graf | 22 | m | Rostock | Deutschland | Fotografie, Meer | 6 | Bild `seascape` (Beispiel S. 12) |
 | 16 | `beatsbyamara` | Amara Okafor | 19 | f | Berlin | Deutschland | Musik, Studio | 4 | |
 | 17 | `backmitbrigitte` | Brigitte Lang | 52 | f | Stuttgart | Deutschland | Backen | 5 | |
@@ -108,6 +108,7 @@ Städte-Kontrolle: München 7 · Leipzig 5 · Kiel 11 · Berlin 8 (für 6a, 6b, 
 | centimeter | NULL bei 8 Usern; Ronny gibt 250 an |
 | gender | diverse #9 + 2 weitere; NULL bei #30, #68, #70 |
 | schwache Passwörter | #3 `passwort`, #6 `123456`, #21 `wahrheit`, #27 = Benutzername, #34 `lasse`, #53 `hallo123`, #58 `123456` (als bcrypt-Hash, findbar mit `PASSWORD_VERIFY`) |
+| email | gemischt (`dummy/daten.js`): ~30 mit der Netzwerk-Domain `@<netz>.test` in verschiedenen Formen (`paul.brandt@`, `finn@`, `fmr@`, `mila.zeichnet@`), dazu gmx/web/gmail/posteo/t-online `.test` und witzige/Troll-Adressen (`echsenjaeger@aluhut.test`, `die.wahrheit@wachtauf.test`, `hugo.ist.der.beste@web.test`, `sagt.nur.die.wahrheit@web.test`, `noreply@gratis-follower.test`); Erna in GROSSBUCHSTABEN; `test_account` und gelöschtes Konto ohne |
 | bio | leer bei ~20; Ida (#53) mit Klassenangabe „7b 🏫“; Kai mit Link „wacht-auf.test“ |
 
 ---
@@ -155,6 +156,15 @@ Gib E-Mail, Kommentar und Bild aus.“* bzw. *„Lösche alle Echsen-Kommentare.
 ---
 
 ## 3. Bilder
+
+### Nachliefern – Stück für Stück
+
+Fehlende Bilder zeigt die App als **Platzhalter** (Farbfläche mit Motiv), die Daten funktionieren also auch ohne Bilder.
+
+1. Bild in **`dummy/eingang/`** legen, Dateiname = Schlüssel aus den Tabellen unten (z. B. `paul_01.jpg`, `av_erna.png`; jpg/png/webp, Größe egal) – oder mir im Chat schicken und den Schlüssel dazuschreiben.
+2. `node MPSkills/tools/SocialHub/dummy/bilder.mjs --convert` schneidet mittig zu (Posts 4:5 → 1080 × 1350, Profilbilder 1:1 → 400 × 400), speichert WebP (≤ 250 KB bzw. ≤ 60 KB) nach `dummy/img/`, **entfernt alle Metadaten** und legt das Original nach `eingang/erledigt/` (nicht im Repo).
+3. `node MPSkills/tools/SocialHub/dummy/bilder.mjs --fehlend` zeigt, was noch fehlt.
+
 
 ### Regeln (kurz)
 
@@ -243,7 +253,7 @@ Gib E-Mail, Kommentar und Bild aus.“* bzw. *„Lösche alle Echsen-Kommentare.
 **lostwithlena** – *Stil: Weite, Natur, Rucksack, oft von hinten, Reisende (KI, 26)*
 | lena_01 | Lena von hinten auf Felsen über Fjord | „Drei Tage kein Netz. Bestes Gefühl.“ | reisen, abenteuerlust, norwegen |
 | lena_02 | Zelt unter Sternenhimmel | „Sternenhotel ✨“ | abenteuerlust, camping |
-| lena_03 | Wanderschuhe im Schlamm | „Hat sich gelohnt“ | Abenteuerlust |
+| lena_03 | Wanderschuhe im Schlamm | „Hat sich gelohnt“ | abenteuer |
 | lena_04 | Bergsee, türkis | — | reisen, berge |
 | lena_05 | Streetfood-Markt Bangkok | „Keine Ahnung, was ich gegessen hab 😂“ | reisen, food |
 | lena_06 | Lena lacht mit Rucksack am Bahnhof | „Nächster Stopp?“ | reisen, abenteuer_lust |
@@ -358,7 +368,7 @@ Gib E-Mail, Kommentar und Bild aus.“* bzw. *„Lösche alle Echsen-Kommentare.
 | emma_01 | emma.kr | Geburtstagstorte mit „18“ | „18!!! Danke für alles ❤️“ | geburtstag |
 | jannik_01 | jannik_hh | Elbphilharmonie von der Fähre | „HH 💙“ | hamburg |
 | werner_01 | werner.angelt | kleines Angelboot am Steg | „Mein Schmuckstück“ | boot, angeln |
-| werner_02 | werner.angelt | Dorsch in der Hand | „Petri Heil“ | angeln |
+| werner_02 | werner.angelt | Dorsch in der Hand | „Dorsch des Tages 🎣“ | angeln |
 | sophie_01 | sophie.db | Fachwerkhäuser in Straßburg | „Petite France 💛“ | reisen |
 | sophie_02 | sophie.db | Skizze vom Münster | — | zeichnen |
 | mikkel_01 | mikkel.s | Segelboot in Aarhus | „Hygge på vandet ⛵“ | segeln, boot |
@@ -370,7 +380,7 @@ Gib E-Mail, Kommentar und Bild aus.“* bzw. *„Lösche alle Echsen-Kommentare.
 | priya_01 | priya.sh | Teleskop auf Balkon | „Jupiter gesehen!!“ | wissenschaft |
 | ben_01 | ben.fischer | Trikot auf Bügel | — | — |
 
-**Kontrolle**: ohne Tag 4 (hugo_03, alina_07, ole_04, ben_01) · ohne Text: alle mit „—“ in der Spalte Post-Text · **5 Fotos ohne Like** legt der Generator fest (ole_04, ralf_02, ben_01, larsole_01, jakob_01) · Boote: finn_01/03/05, werner_01, mikkel_01 + Falle fee_03 „Bootcamp“ · Tag-Varianten: abenteuerlust (5) · Abenteuerlust (lena_03) · abenteuer_lust (lena_06).
+**Kontrolle**: ohne Tag 4 (hugo_03, alina_07, ole_04, ben_01) · ohne Text: alle mit „—“ in der Spalte Post-Text · **5 Fotos ohne Like** legt der Generator fest (ole_04, ralf_02, ben_01, larsole_01, jakob_01) · Boote: finn_01/03/05, werner_01, mikkel_01 + Falle fee_03 „Bootcamp“ · Tag-Varianten: abenteuerlust (4) · abenteuer (lena_03; Groß-/Kleinschreibung geht nicht, Tags sind ohne Rücksicht darauf eindeutig) · abenteuer_lust (lena_06).
 
 ### 3.3 Profilbilder (~42)
 
