@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262–0272 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
+/* Prüfstand für Migration 0262–0273 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -577,6 +577,29 @@ ok('9  wieder erstellt: Haken nachgetragen (Kamera ja, Benachrichtigungen nein),
   ok('10 … und mit dem erzeugten Passwort', r.ok, JSON.stringify(r));
   r = await call(`sh_db_snapshot('tokB', null, $1, $2)`, [NH, (await call(`sh_login('tokB', $1, 'admin', 'geheim1')`, [NH])).session]);
   ok('10 Schnappschuss zeigt die Dummy-User', r.ok && r.tables.users.rows.length === 71, JSON.stringify(r.error || ''));
+  // Leeren (0273)
+  await as(T1);
+  const clear = (t, hub) => call(`sh_dummy_clear($1, $2, $3)`, [CODE, t, hub]);
+  r = await clear('photos', THUB);
+  ok('10 photos leeren: Dummy-Fotos weg, eigene Fotos der Lehrkraft bleiben', r.ok && (await cnt('sh_photos', THUB)) === before.mp, JSON.stringify({ r, n: await cnt('sh_photos', THUB), mp: before.mp }));
+  ok('10 … Likes/Kommentare/Views der Dummy-Fotos gehen mit, users bleiben',
+     (await one(`select count(*)::int n from sh_views where hub_id = $1 and user_id > $2`, [THUB, before.mu])).n === 0 && (await cnt('sh_users', THUB)) === before.mu + 70
+     && JSON.stringify(Object.keys((await one(`select dummy from sh_hubs where id = $1`, [THUB])).dummy).sort()) === '["follows","sessions","users"]',
+     JSON.stringify((await one(`select dummy from sh_hubs where id = $1`, [THUB])).dummy));
+  r = await clear('users', THUB);
+  ok('10 users leeren: alle Dummy-User weg, Admin + Testkonten bleiben, nichts mehr vermerkt', r.ok && (await cnt('sh_users', THUB)) === before.mu
+     && (await one(`select owner_user from sh_hubs where id = $1`, [THUB])).owner_user === before.ow
+     && Object.keys((await one(`select dummy from sh_hubs where id = $1`, [THUB])).dummy).length === 0, JSON.stringify(r));
+  r = await load('users', THUB);
+  ok('10 danach wieder füllen geht', r.ok && (await cnt('sh_users', THUB)) === before.mu + 70, JSON.stringify(r));
+  r = await clear('users', null);
+  ok('10 Raum vergisst users (und alles, was daran hängt)', r.ok && (await one(`select count(*)::int n from sh_dummy where room_id = $1`, [ROOM])).n === 0);
+  await as(null);
+  await db.query(`delete from sh_hubs where id = $1`, [NH]);
+  r = await call(`sh_found('tokB', 'Leeres Netz', 'bell')`);
+  ok('10 … neue Netzwerke bleiben dann leer', r.ok && (await cnt('sh_users', r.hub)) === 0, JSON.stringify(r));
+  r = await call(`sh_dummy_clear(null, 'users', null)`);
+  ok('10 Schüler kann nicht leeren', r.ok === false);
 }
 
 /* 8 */
@@ -590,8 +613,8 @@ const rest = await one(`select (select count(*) from sh_hubs) + (select count(*)
                               + (select count(*) from sh_vsessions) + (select count(*) from sh_views) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); await db.exec(mig('0270_yoursozialnet_analytics.sql')); await db.exec(mig('0271_yoursozialnet_passwort_klartext.sql')); await db.exec(mig('0272_yoursozialnet_dummydaten.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migrationen 0265–0272 laufen ein zweites Mal durch', twice);
+try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); await db.exec(mig('0270_yoursozialnet_analytics.sql')); await db.exec(mig('0271_yoursozialnet_passwort_klartext.sql')); await db.exec(mig('0272_yoursozialnet_dummydaten.sql')); await db.exec(mig('0273_yoursozialnet_dummy_leeren.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migrationen 0265–0273 laufen ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

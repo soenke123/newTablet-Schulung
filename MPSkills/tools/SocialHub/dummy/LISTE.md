@@ -166,7 +166,7 @@ Fehlende Bilder zeigt die App als **Platzhalter** (Farbfläche mit Motiv), die D
 3. `node MPSkills/tools/SocialHub/dummy/bilder.mjs --fehlend` zeigt, was noch fehlt.
 4. Die Bilder **und** `dummy/img/index.json` (Liste der vorhandenen Bilder, schreibt das Skript) einchecken – erst dann zeigt die App das echte Bild statt des Platzhalters.
 
-In die Netzwerke kommen die Daten über das kleine ＋ oben an jeder Tabelle im Diagramm der Lehrkraft (erst `users`, dann die Tabellen, die darauf zeigen).
+In die Netzwerke kommen die Daten über „Füllen“ unten in jeder Kachel im Diagramm der Lehrkraft (erst `users`, dann die Tabellen, die darauf zeigen); „Leeren“ nimmt sie wieder heraus.
 
 
 ### Regeln (kurz)

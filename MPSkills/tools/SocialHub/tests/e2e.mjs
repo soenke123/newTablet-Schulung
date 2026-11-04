@@ -548,7 +548,7 @@ try {
 
   // 8) Beispieldaten (0272): Knopf „Daten“ je Tabelle im Diagramm der Lehrkraft
   await t.app.locator('[data-dload="users"]').waitFor({ timeout: 8000 });
-  ok('8  „Daten“ an users frei, an photos gesperrt (erst users)', await t.app.locator('[data-dload="photos"][disabled]').count() === 1
+  ok('8  „Füllen“ an users frei, an photos gesperrt (erst users)', await t.app.locator('[data-dload="photos"][disabled]').count() === 1
      && await t.app.locator('[data-dload="likes"][disabled]').count() === 1);
   await shot(t.page, '8-daten-knopf');
   const nets = Number((await db.query(`select count(*)::int n from sh_hubs where room_id = $1`, [ROOM])).rows[0].n);
@@ -556,11 +556,12 @@ try {
   for (const tb of ['users', 'photos', 'comments']) {
     await t.app.locator(`[data-dload="${tb}"]:not([disabled])`).click();
     await t.app.locator('.dlg [data-dlg="yes"]').click();
-    await t.app.locator(`.tb .tb-dl--ok`).nth(['users', 'photos', 'comments'].indexOf(tb)).waitFor({ timeout: 20000 });
+    await t.app.locator(`[data-dclear="${tb}"]`).waitFor({ timeout: 20000 });
   }
   const after8 = Number((await db.query(`select count(*)::int n from sh_users where hub_id in (select id from sh_hubs where room_id = $1)`, [ROOM])).rows[0].n);
   ok('8  users/photos/comments geladen: 70 User je Netzwerk', after8 - before8 === 70 * nets, JSON.stringify({ nets, before8, after8 }));
-  ok('8  Häkchen an den geladenen Tabellen', await t.app.locator('.tb .tb-dl--ok').count() === 3);
+  ok('8  „Daten: gefüllt · Leeren“ an den drei Tabellen', await t.app.locator('.tb-d--full').count() === 3 && await t.app.locator('[data-dclear]').count() === 3);
+  ok('8  erstellte Tabellen leicht blau', await t.app.locator('[data-tb="photos"]').evaluate(e => getComputedStyle(e).backgroundColor !== getComputedStyle(document.querySelector('[data-tb="photo_tag"]').closest('.tdg')).backgroundColor));
   const mail = (await db.query(`select h.name, u.email from sh_users u join sh_hubs h on h.id = u.hub_id where h.room_id = $1 and u.username = 'pixelpaul' order by h.name`, [ROOM])).rows;
   ok('8  E-Mails tragen den Namen des jeweiligen Netzwerks', mail.length === nets && mail.every(m => m.email.endsWith('@' + m.name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.test')), JSON.stringify(mail));
   await shot(t.page, '8-daten-geladen');
@@ -576,6 +577,14 @@ try {
     await wait(500);
   }
   await shot(mia.page, '8-feed-platzhalter');
+  // Leeren: comments aus allen Netzwerken, Eigenes bleibt
+  const ownC = Number((await db.query(`select count(*)::int n from sh_comments c join sh_photos p on p.hub_id = c.hub_id and p.id = c.photo_id where p.image not like 'dummy/%' and c.hub_id in (select id from sh_hubs where room_id = $1)`, [ROOM])).rows[0].n);
+  await t.app.locator('[data-dclear="comments"]').click();
+  await t.app.locator('.dlg [data-dlg="yes"]').click();
+  await t.app.locator('[data-dload="comments"]').waitFor({ timeout: 20000 });
+  const leftC = Number((await db.query(`select count(*)::int n from sh_comments where hub_id in (select id from sh_hubs where room_id = $1)`, [ROOM])).rows[0].n);
+  ok('8  Leeren: Dummy-Kommentare weg, eigene bleiben, Zeile zeigt wieder „leer · Füllen“', leftC === ownC && await t.app.locator('.tb-d--full').count() === 2, JSON.stringify({ ownC, leftC }));
+  await shot(t.page, '8-nach-leeren');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

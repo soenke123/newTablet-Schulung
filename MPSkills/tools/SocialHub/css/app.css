@@ -254,15 +254,23 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .tb-h code { font: 700 13px var(--font-mono); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 .tb-h { display: flex; align-items: center; gap: 4px; }
 .tb-h code { flex: 1; min-width: 0; }
-/* Beispieldaten (0272) */
-.tb-dl { flex: none; display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--line2); background: var(--surface); color: var(--ink);
-  border-radius: 99px; width: 20px; height: 18px; padding: 0; justify-content: center; cursor: pointer; }
-.tb-dl svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
-.tb-dl:hover:not(:disabled) { border-color: var(--ink); }
-.tb-dl:disabled { opacity: .45; cursor: default; }
-.tb-dl--ok { cursor: default; color: var(--ok); border-color: transparent; background: transparent; }
-.tb--fixed .tb-dl--ok { color: var(--surface); }
-.tb-dl--inline { display: inline-flex; vertical-align: -4px; cursor: default; }
+/* Erstellte Tabelle: leicht blau (Sönke 04.11.2026) */
+.tb--on { background: color-mix(in srgb, #3b82f6 8%, var(--surface)); }
+.tb--on .tb-h { background: color-mix(in srgb, #3b82f6 16%, var(--surface)); }
+/* Beispieldaten (0272/0273): unterste Zeile der Kachel */
+.tb-b { flex: 0 0 auto; padding: 6px 8px 3px; }
+.tb-d { flex: 1; display: flex; align-items: center; justify-content: space-between; gap: 4px; padding: 0 8px 6px 10px;
+  font-size: 11px; color: var(--muted); white-space: nowrap; }
+.tb-d b { color: var(--ink); font-weight: 700; }
+.tb-d--full b { color: var(--ok); }
+.tb-d--note { justify-content: center; }
+.tb--fixed .tb-b { flex: 1; }
+.tb-dbtn { border: 1px solid var(--line2); background: var(--surface); color: var(--ink); border-radius: 99px; padding: 1px 8px;
+  font-size: 11px; font-weight: 700; cursor: pointer; }
+.tb-dbtn:hover:not(:disabled) { border-color: var(--ink); }
+.tb-dbtn:disabled { opacity: .45; cursor: default; }
+.tb-dbtn--clear { color: var(--muted); }
+.tb-dbtn--clear:hover { color: var(--bad); border-color: var(--bad) !important; }
 .tb-b { flex: 1; display: flex; align-items: center; justify-content: center; padding: 5px 8px; }
 .tb--fixed { border-color: var(--ok); }
 .tb--fixed .tb-h { background: var(--ok); border-color: var(--ok); }

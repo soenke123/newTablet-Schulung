@@ -347,7 +347,7 @@
       '<div class="panel-sw"><label class="switch switch--s"><input type="checkbox" id="upTgl"' + (h.upload ? ' checked' : '') + '><span></span>Eigene Bilder hochladen</label>' +
         '<label class="switch switch--s" title="Aufnahmezeit und Kamera aus den Fotos mitspeichern (steht dann in photos)"><input type="checkbox" id="metaTgl"' + (metaOn() ? ' checked' : '') + '><span></span>Metadaten der Fotos speichern</label></div></div>' +
       '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums. Antippen zeigt die Attribute.' +
-        (S.dummy && window.SHDummy ? ' <span class="tb-dl tb-dl--inline">' + IC.plus + '</span> oben an einer Tabelle lädt Beispieldaten (70 User, Fotos, Likes, Diskussionen …) in alle Netzwerke; <span class="tb-dl tb-dl--ok tb-dl--inline">' + IC.check + '</span> = geladen.' : '') + '</p>' +
+        (S.dummy && window.SHDummy ? ' „Füllen“ lädt Beispieldaten (70 User, Fotos, Likes, Diskussionen …) in alle Netzwerke – auch in später erstellte.' : '') + '</p>' +
       tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
     // Analytics (0270): getrackt wird, sobald sessions erstellt ist – hier nur das Auflösen
     html += '<section class="panel"><div class="panel-h"><h2>Analytics</h2></div>' +
@@ -369,31 +369,34 @@
      Fremdschlüssel, „1“ an der Tabelle, auf die er zeigt. users–photos
      läuft gerade durch die Lücke zwischen likes und comments. Die
      senkrechten Stücke sind gestaffelt, damit sich nichts kreuzt. */
-  const BW = 136, BH = 66, GX = 64, PAD = 22;
+  // Kästen: Kopf · Erstellen/Entziehen · Daten füllen/leeren (0273)
+  const BW = 148, BH = 84, GX = 60, PAD = 22, K = BH / 2;
   const colX = c => PAD + c * (BW + GX);
-  const MID = PAD + 177;                                // Mittellinie
-  const ROW2 = PAD + 192 + BH + 40;                     // untere Reihe: Analytics
+  const STEP = BH + 30;                                 // Abstand der Kästen in Spalte 1
+  const MID = PAD + STEP + BH + 15;                     // Mittellinie: Lücke zwischen likes und comments
+  const ROW2 = PAD + 2 * STEP + BH + 40;                // untere Reihe: Analytics
+  const UH = 160;                                       // Höhe von users
   const TBOX = {
-    users:     { x: colX(0), y: MID - 65, h: 130 },
+    users:     { x: colX(0), y: MID - UH / 2, h: UH },
     follows:   { x: colX(1), y: PAD, h: BH },
-    likes:     { x: colX(1), y: PAD + 96, h: BH },
-    comments:  { x: colX(1), y: PAD + 192, h: BH },
-    photos:    { x: colX(2), y: MID - BH / 2, h: BH },
-    photo_tag: { x: colX(3), y: MID - BH / 2, h: BH },
-    tags:      { x: colX(4), y: MID - BH / 2, h: BH },
+    likes:     { x: colX(1), y: PAD + STEP, h: BH },
+    comments:  { x: colX(1), y: PAD + 2 * STEP, h: BH },
+    photos:    { x: colX(2), y: MID - K, h: BH },
+    photo_tag: { x: colX(3), y: MID - K, h: BH },
+    tags:      { x: colX(4), y: MID - K, h: BH },
     sessions:  { x: colX(0), y: ROW2, h: BH },
     views:     { x: colX(2), y: ROW2, h: BH }
   };
   const TW = colX(5) - GX + PAD, TH = ROW2 + BH + PAD;
   // [Tabelle mit Fremdschlüssel, Ziel, y an der Quelle, y am Ziel (relativ), senkrecht bei (Anteil der Lücke)]
   const TEDGES = [
-    ['follows',   'users',  22, 12, 0.28], ['follows', 'users', 44, 28, 0.5],
-    ['likes',     'users',  33, 44, 0.72], ['photos',  'users', 33, 65, 0.5],
-    ['comments',  'users',  33, 96, 0.5],
-    ['likes',     'photos', 33, 11, 0.5],  ['comments', 'photos', 33, 55, 0.5],
-    ['photo_tag', 'photos', 33, 33, 0.5],  ['photo_tag', 'tags', 33, 33, 0.5],
+    ['follows',   'users',  24, 14, 0.28], ['follows', 'users', 52, 32, 0.5],
+    ['likes',     'users',  K, 52, 0.72],  ['photos',  'users', K, UH / 2, 0.5],
+    ['comments',  'users',  K, 112, 0.5],
+    ['likes',     'photos', K, 12, 0.5],   ['comments', 'photos', K, BH - 12, 0.5],
+    ['photo_tag', 'photos', K, K, 0.5],    ['photo_tag', 'tags', K, K, 0.5],
     // views → users: unten links raus, dicht an users hoch (läuft rechts an sessions vorbei)
-    ['views',     'users',  20, 120, 0.03], ['views', 'sessions', 44, 44, 0.5]
+    ['views',     'users',  22, UH - 12, 0.03], ['views', 'sessions', 56, 56, 0.5]
   ];
   // senkrecht von oben aus der Quelle in den Boden des Ziels (gleiche Spalte)
   const TVEDGES = [['sessions', 'users'], ['views', 'photos']];
@@ -472,7 +475,7 @@
         const b = TBOX[t];
         return '<div class="tb' + (fixed ? ' tb--fixed' : isOn ? ' tb--on' : ' tb--off') + (S.tblSel === t ? ' tb--sel' : '') + '" data-tb="' + t + '" ' +
           'style="left:' + b.x + 'px;top:' + b.y + 'px;width:' + BW + 'px;height:' + b.h + 'px" tabindex="0">' +
-          '<div class="tb-h"><code>' + esc(t) + '</code>' + dummyBtnHtml(t, isOn) + '</div><div class="tb-b">' + act + '</div></div>';
+          '<div class="tb-h"><code>' + esc(t) + '</code></div><div class="tb-b">' + act + '</div>' + dummyRowHtml(t, isOn) + '</div>';
       }).join('') + '</div></div>';
   }
   /* ── Beispieldaten (0272): je Tabelle „Daten laden“ ──────────
@@ -485,12 +488,47 @@
                   likes: 'die Likes', comments: 'die Kommentare und Diskussionen', sessions: 'die Besuche (Geräte, IPs, Uhrzeiten)', views: 'die angesehenen Fotos' };
   const dStored = t => !!(S.dummy && S.dummy.stored.indexOf(t) >= 0);
   const dAll = t => !!S.dummy && S.home.hubs.every(h => S.dummy.hubs[h.id] && t in S.dummy.hubs[h.id]);
-  function dummyBtnHtml(t, isOn) {
-    if (!S.dummy || !window.SHDummy || !DNEEDS[t] || !isOn) return '';
-    if (dStored(t) && dAll(t)) return '<span class="tb-dl tb-dl--ok" title="Beispieldaten geladen – auch neue Netzwerke bekommen sie" aria-label="Beispieldaten geladen">' + IC.check + '</span>';
+  // Unterste Zeile der Kachel: „Daten: leer · Füllen“ / „Daten: gefüllt · Leeren“
+  function dummyRowHtml(t, isOn) {
+    if (!S.dummy || !window.SHDummy) return '';
+    if (t === 'photo_tag') return '<div class="tb-d tb-d--note"><span>Daten: <b>mit tags</b></span></div>';
+    if (!DNEEDS[t] || !isOn) return '<div class="tb-d tb-d--off"></div>';
+    if (dStored(t) && dAll(t)) return '<div class="tb-d tb-d--full"><span>Daten: <b>gefüllt</b></span>' +
+      '<button type="button" class="tb-dbtn tb-dbtn--clear" data-dclear="' + t + '" title="Beispieldaten aus allen Netzwerken entfernen">Leeren</button></div>';
     const miss = DNEEDS[t].filter(x => !dStored(x));
-    return '<button type="button" class="tb-dl" data-dload="' + t + '"' + (miss.length ? ' disabled title="Beispieldaten: erst ' + esc(miss.join(' und ')) + ' laden"' : ' title="Beispieldaten laden"') +
-      ' aria-label="Beispieldaten laden">' + IC.plus + '</button>';
+    return '<div class="tb-d"><span>Daten: <b>' + (dStored(t) ? 'teils' : 'leer') + '</b></span>' +
+      '<button type="button" class="tb-dbtn" data-dload="' + t + '"' + (miss.length ? ' disabled title="Erst ' + esc(miss.join(' und ')) + ' füllen"' : ' title="Beispieldaten in alle Netzwerke laden"') + '>Füllen</button></div>';
+  }
+  // Wer beim Leeren mitgeht (wie sh_dummy_deps, Migration 0273)
+  const DDEPS = { users: ['photos', 'tags', 'follows', 'likes', 'comments', 'sessions', 'views'], photos: ['tags', 'likes', 'comments', 'views'], sessions: ['views'] };
+  async function clearDummy(t) {
+    if (!S.dummy) return;
+    const hubs = S.home.hubs;
+    const also = (DDEPS[t] || []).filter(dStored);
+    if (await dialog('Beispieldaten leeren',
+      '<p>Entfernt die Beispieldaten von <b>' + esc(t) + '</b> aus ' + (hubs.length === 1 ? 'dem Netzwerk' : 'allen ' + hubs.length + ' Netzwerken') + '.' +
+        (also.length ? ' Mit geleert wird, was daran hängt: <b>' + esc(also.join(', ')) + '</b>.' : '') + '</p>' +
+      '<p class="muted small">Was die Klasse an diesen Beispielzeilen geändert hat, ist dann weg. Eigene Einträge der Klasse (eigene Konten, Fotos, Likes …) bleiben. Neue Netzwerke bekommen diese Daten nicht mehr.</p>',
+      [['no', 'Abbrechen'], ['yes', 'Leeren', 'bad']]) !== 'yes') return;
+    const box = document.createElement('div');
+    box.className = 'dlg-back dlg-back--busy';
+    box.innerHTML = '<div class="dlg" role="dialog"><h3>Beispieldaten</h3><div class="dlg-b"><p id="dlProg">Leere …</p></div></div>';
+    document.body.appendChild(box);
+    const prog = (m) => { const el = box.querySelector('#dlProg'); if (el) el.textContent = m; };
+    try {
+      let i = 0;
+      for (const h of hubs) {
+        prog('Netzwerk ' + (++i) + ' von ' + hubs.length + ': ' + h.name);
+        const r = await A.call('sh_dummy_clear', { p_tbl: t, p_hub: h.id });
+        if (!r || !r.ok) { fail(r); return; }
+      }
+      const r = await A.call('sh_dummy_clear', { p_tbl: t, p_hub: null });
+      if (!r || !r.ok) { fail(r); return; }
+      toast('Beispieldaten von ' + t + ' geleert.');
+    } finally {
+      box.parentNode && box.parentNode.removeChild(box);
+      await loadHome();
+    }
   }
   async function loadDummy(t) {
     if (!S.dummy || !window.SHDummy) return;
@@ -562,6 +600,7 @@
       save(cur().filter(t => gone.indexOf(t) < 0), S.home.upload);
     });
     $$('[data-dload]').forEach(b => b.onclick = (e) => { e.stopPropagation(); loadDummy(b.dataset.dload); });
+    $$('[data-dclear]').forEach(b => b.onclick = (e) => { e.stopPropagation(); clearDummy(b.dataset.dclear); });
     $$('[data-tb]').forEach(el => el.onclick = () => {
       S.tblSel = S.tblSel === el.dataset.tb ? null : el.dataset.tb;
       $$('[data-tb]').forEach(x => x.classList.toggle('tb--sel', x.dataset.tb === S.tblSel));
