@@ -205,7 +205,7 @@ Erzeugt nach Regeln für die letzten 30 Tage:
   für personalisierte Werbung, und `beobachter_kl` fällt auf.
 - **Erlaubnis-Haken**: Mehrheit hat „Standort zulassen“ geklickt.
 
-Umfang etwa 1 500 sessions, 15 000 views (Deckel 5 000 / 100 000 je Netzwerk eingehalten).
+Umfang etwa 1 000 sessions und 8 000 views je Netzwerk (Sönke 04.11.2026: reicht für die Aufgaben; mehr wären bei 30 Netzwerken über 1 Mio. Zeilen je Raum).
 
 ⚠ **Arbeitsblatt anpassen**: Kapitel 6 nennt eine Tabelle `analytics` mit `brand_family` usw.; bei uns heißen sie
 `sessions` + `views` (andere Spalten).

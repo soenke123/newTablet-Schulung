@@ -361,7 +361,8 @@
         if (!pool.length || u.bot) continue;
         const w = pool.map(p => (p.topics.some(t => u.i.includes(t)) ? 5 : 1) * (follows(u, p.owner) ? 3 : 1));
         let t = start + R.int(2, 20) * 1000;
-        const nv = Math.min(80, Math.round(durMin * R.int(2, 4) * 0.6) + 3);
+        // ~8 000 views je Netzwerk (Sönke 04.11.2026: genug für die Aufgaben, bei 30 Netzwerken je Raum sonst > 1 Mio. Zeilen)
+        const nv = Math.min(20, Math.round(durMin * 0.25) + R.int(1, 4));
         for (let j = 0; j < nv && t < last; j++) {
           const p = R.weighted(pool, w);
           const hot = p.topics.some(x => u.i.includes(x));
