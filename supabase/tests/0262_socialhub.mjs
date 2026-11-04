@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0262–0270 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
+/* Prüfstand für Migration 0262–0271 — YourSozialNet (bis 0265 „Social Hub“, MPSkill „socialhub“).
    Echt gerechnet in pglite auf der ganzen Kette 0001…0262.
 
    Die Kernzusagen:
@@ -282,8 +282,8 @@ ok('6  INSERT/UPDATE übernommen', r.ok && r.done === 5, JSON.stringify(r));
 r = await call(`sh_login_net('tokC', 'Pixelwelt+', 'sqlkind', 'neu123')`);
 ok('6  per INSERT angelegtes Konto kann sich anmelden', r.ok);
 r = await call(`sh_login_net('tokC', 'Pixelwelt+', 'klartext', 'geheim')`);
-ok('6  Klartext-Passwort wird auf dem Server gehasht → Anmelden geht (0266)', r.ok, JSON.stringify(r));
-ok('6  … und steht nie lesbar in der Tabelle', /^\$2a\$08\$/.test((await one(`select password from sh_users where hub_id = $1 and id = 4`, [HUB])).password));
+ok('6  Klartext-Passwort per SQL → Anmelden scheitert (0271)', !r.ok, JSON.stringify(r));
+ok('6  … und steht lesbar in der Tabelle (0271, nicht gehasht)', (await one(`select password from sh_users where hub_id = $1 and id = 4`, [HUB])).password === 'geheim');
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'insert', row: { id: 8, username: '<img src=x onerror=alert(1)>', password: '' } }])]);
 ok('6  Benutzername mit Zeichen außer [A-Za-z0-9._] → abgelehnt (0266)', !r.ok && /Benutzername/.test(r.message), JSON.stringify(r));
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'users', op: 'update', key: { id: 4 }, row: { id: 4, bio: { x: 1 } } }])]);
@@ -509,8 +509,8 @@ const rest = await one(`select (select count(*) from sh_hubs) + (select count(*)
                               + (select count(*) from sh_vsessions) + (select count(*) from sh_views) n`);
 ok('8  Raum weg → alles weg', Number(rest.n) === 0);
 let twice = true;
-try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); await db.exec(mig('0270_yoursozialnet_analytics.sql')); } catch (e) { twice = false; console.error(e.message); }
-ok('8  Migrationen 0265–0270 laufen ein zweites Mal durch', twice);
+try { await db.exec(mig('0265_yoursozialnet.sql')); await db.exec(mig('0266_yoursozialnet_feinschliff.sql')); await db.exec(mig('0267_yoursozialnet_country_cm_likes.sql')); await db.exec(mig('0268_yoursozialnet_foto_metadaten.sql')); await db.exec(mig('0269_yoursozialnet_ohne_ort.sql')); await db.exec(mig('0270_yoursozialnet_analytics.sql')); await db.exec(mig('0271_yoursozialnet_passwort_klartext.sql')); } catch (e) { twice = false; console.error(e.message); }
+ok('8  Migrationen 0265–0271 laufen ein zweites Mal durch', twice);
 
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);
