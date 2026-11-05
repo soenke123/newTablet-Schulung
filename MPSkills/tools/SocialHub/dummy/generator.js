@@ -104,7 +104,7 @@
     ['alina.daily', 'laura.mauer', 'lars_p', 'jannik_hh'],
     ['emma.kr', 'aylin.ylmz', 'leila.hd', 'ana.kovac'],
     ['frag_frieda', 'priya.sh', 'lisamarie.k'],
-    ['wachtauf_kai', 'kai_hat_recht']
+    ['wachtauf_marco', 'marco_hat_recht']
   ];
   // feste Follows (folgt → wem)
   const FIXED_FOLLOWS = [
@@ -112,8 +112,8 @@
     ['sandra.schu', 'coach_ralf'], ['levi_fan_09', 'levi.kicks'], ['erna.lueders', 'backmitbrigitte'],
     ['aaron183', 'alina.daily'], ['aaron183', 'hugo.ranked'], ['aaron183', 'jona.sneaks'], ['aaron183', 'inkandmila'],
     ['realtalk_dennis', 'alina.daily'], ['realtalk_dennis', 'fitbyfee'], ['realtalk_dennis', 'jona.sneaks'],
-    ['mondrueckseite', 'wachtauf_kai'], ['mondrueckseite', 'frag_frieda'], ['echsenwache', 'wachtauf_kai'],
-    ['echsenwache', 'wuffi_und_ich'], ['frag_frieda', 'wachtauf_kai'], ['wuffi_und_ich', 'katzenkram'],
+    ['mondrueckseite', 'wachtauf_marco'], ['mondrueckseite', 'frag_frieda'], ['echsenwache', 'wachtauf_marco'],
+    ['echsenwache', 'wuffi_und_ich'], ['frag_frieda', 'wachtauf_marco'], ['wuffi_und_ich', 'katzenkram'],
     ['wuffi_und_ich', 'finn.kielwasser'], ['wuffi_und_ich', 'backmitbrigitte'], ['werner.angelt', 'finn.kielwasser'],
     ['lotta.b', 'gewinn_jetzt_2026'], ['tim.richter', 'gewinn_jetzt_2026']
   ];
@@ -257,8 +257,8 @@
         if (u.k === 'levi_fan_09' && p.owner.k === 'levi.kicks') x = 1;
         if (u.k === 'erna.lueders' && p.owner.k === 'lasse.ld') x = 1;
         if (u.k === 'sandra.schu' && p.owner.k === 'levi.kicks') x = 1;
-        if (u.k === 'kai_hat_recht' && p.owner.k === 'wachtauf_kai') x = 1;
-        if (['mondrueckseite', 'echsenwache'].includes(u.k) && p.owner.k === 'wachtauf_kai') x = 0.3;
+        if (u.k === 'marco_hat_recht' && p.owner.k === 'wachtauf_marco') x = 1;
+        if (['mondrueckseite', 'echsenwache'].includes(u.k) && p.owner.k === 'wachtauf_marco') x = 0.3;
         if (u.k === 'laura.mauer' || u.k === 'marlo.eb') x = Math.min(1, x * 1.3);
         if (R.p(Math.min(1, x))) addL(u, p);
       });

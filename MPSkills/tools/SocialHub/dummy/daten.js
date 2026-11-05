@@ -79,8 +79,8 @@
     { k: 'katzenkram', n: 'Sofia Weber', a: [14, 150], g: 'female', c: 'Hannover', l: 'Deutschland', cm: 158,
       m: 'katzenliebe2000@gmx.test', bio: '🐱 Mimi 🐹 Pausbacke 🦎 Rocky', av: 'av_sofia',
       reg: 260, r: 'cc', i: ['tiere'], dev: ['android'] },
-    { k: 'wachtauf_kai', n: 'Kai Brenner', a: [38, 70], g: 'male', c: 'Dresden', l: 'Deutschland', cm: 177,
-      m: 'die.wahrheit@wachtauf.test', pw: 'wahrheit', bio: 'Selber denken! 🌍 ist flach. Mehr auf wacht-auf.test', av: 'av_kai',
+    { k: 'wachtauf_marco', n: 'Marco Brenner', a: [38, 70], g: 'male', c: 'Dresden', l: 'Deutschland', cm: 177,
+      m: 'die.wahrheit@wachtauf.test', pw: 'wahrheit', bio: 'Selber denken! 🌍 ist flach. Mehr auf wacht-auf.test', av: 'av_marco',
       reg: 520, r: 'cc', i: ['flacheerde'], dev: ['desktop_win_edge', 'android'] },
     { k: 'frag_frieda', n: 'Frieda Ahrens', a: [25, 305], g: 'female', c: 'Göttingen', l: 'Deutschland', cm: 166,
       m: 'frieda.ahrens@{netz}.test', bio: 'Physik-Studentin 🔭 Ich erkläre, ihr fragt', av: 'av_frieda',
@@ -99,8 +99,8 @@
     { k: 'echsenwache', n: 'Sven Kühn', a: [35, 40], g: 'male', c: 'Zwickau', l: 'Deutschland', cm: 178,
       m: 'sven.kuehn@{netz}.test', bio: 'Augen auf 👀', av: 'av_sven',
       reg: 260, r: 't', i: ['flacheerde', 'tiere', 'food'], dev: ['android'] },
-    { k: 'kai_hat_recht', n: 'Uwe Fink', a: [52, 300], g: 'male', c: 'Dresden', l: 'deutschland', cm: 173,
-      m: 'uwe.fink1972@t-online.test', pw: 'kai_hat_recht', bio: 'Kai for President', av: 'av_uwe',
+    { k: 'marco_hat_recht', n: 'Uwe Fink', a: [52, 300], g: 'male', c: 'Dresden', l: 'deutschland', cm: 173,
+      m: 'uwe.fink1972@t-online.test', pw: 'marco_hat_recht', bio: 'Marco for President', av: 'av_uwe',
       reg: 480, r: 'k', i: ['flacheerde'], dev: ['desktop_win_edge'] },
     { k: 'nina.netz', n: 'Nina Lehmann', a: [19, 250], g: 'female', c: 'Kiel', l: 'Deutschland', cm: 171,
       m: 'nina.lehmann@{netz}.test', bio: 'Sei nett. Ist kostenlos. 💛', av: 'av_nina',
@@ -336,11 +336,12 @@
     ['sofia_02', 'katzenkram', 'Pausbacke 🐹', ['hamster', 'haustier']],
     ['sofia_03', 'katzenkram', 'Rocky hat sich gehäutet 🦎', ['echse', 'haustier']],
     ['sofia_04', 'katzenkram', 'Spannung 😂', ['katze', 'hamster']],
-    ['kai_01', 'wachtauf_kai', 'Die Wasserwaage lügt nicht 🌊 #wachtauf', ['flacheerde', 'wachtauf'], 30, '19:45'],
-    ['kai_02', 'wachtauf_kai', 'Seht ihr eine Krümmung? Ich nicht.', ['flacheerde', 'wahrheit']],
-    ['kai_03', 'wachtauf_kai', 'Das hier ist Propaganda 🙃', ['flacheerde']],
-    ['kai_04', 'wachtauf_kai', 'Warum fliegen die nicht übers Ende? 🤔', ['wahrheit']],
-    ['kai_05', 'wachtauf_kai', 'Verteile heute in Dresden. Wer hilft?', ['wachtauf', 'dresden']],
+    ['marco_01', 'wachtauf_marco', 'Die Wasserwaage lügt nicht 🌊 #wachtauf', ['flacheerde', 'wachtauf'], 30, '19:45'],
+    ['marco_02', 'wachtauf_marco', 'Seht ihr eine Krümmung? Ich nicht.', ['flacheerde', 'wahrheit']],
+    ['marco_03', 'wachtauf_marco', 'Das hier ist Propaganda 🙃', ['flacheerde']],
+    ['marco_04', 'wachtauf_marco', 'Warum fliegen die nicht übers Ende? 🤔', ['wahrheit']],
+    ['marco_05', 'wachtauf_marco', 'Verteile heute in Dresden. Wer hilft?', ['wachtauf', 'dresden']],
+    ['marco_06', 'wachtauf_marco', 'So ist unsere Welt WIRKLICH aufgebaut. Das zeigt euch keine Schule. Teilen!! 🌍🧱', ['flacheerde', 'wahrheit', 'wachtauf'], 18, '21:15'],
     ['frieda_01', 'frag_frieda', 'Warum sieht man erst den Mast? 🧵', ['physik', 'wissenschaft'], 28, '16:20'],
     ['frieda_02', 'frag_frieda', 'Der Erdschatten ist rund. Immer.', ['wissenschaft', 'mond']],
     ['frieda_03', 'frag_frieda', 'Tag & Nacht in 30 Sekunden erklärt', ['physik']],
@@ -409,35 +410,46 @@
      Antworten beginnen mit @username (wie bei Instagram), Reihenfolge = Zeit. */
   const THREADS = {
     // Die zwei Verschwörer streiten sich
-    kai_01: [
-      ['wachtauf_kai', 'Seht ihr? Horizont gerade. Wasserwaage gerade. Erde flach. Punkt.', 2],
-      ['kai_hat_recht', 'Kai hat recht!! 👏👏', 9],
+    marco_01: [
+      ['wachtauf_marco', 'Seht ihr? Horizont gerade. Wasserwaage gerade. Erde flach. Punkt.', 2],
+      ['marco_hat_recht', 'Marco hat recht!! 👏👏', 9],
       ['mondrueckseite', 'Flache Erde ist doch nur Ablenkung 🙄 Die Echsenmenschen von der Mondrückseite WOLLEN, dass wir uns über die Form streiten.', 25],
-      ['wachtauf_kai', '@mondrueckseite Mond? Der Mond ist ein Scheinwerfer. Der hat gar keine Rückseite.', 31],
-      ['mondrueckseite', '@wachtauf_kai Genau das sollst du glauben. Klassischer Echsen-Trick.', 40],
-      ['echsenwache', '@kai_hat_recht Uwe, wer bezahlt dich eigentlich? 🦎', 52],
+      ['wachtauf_marco', '@mondrueckseite Mond? Der Mond ist ein Scheinwerfer. Der hat gar keine Rückseite.', 31],
+      ['mondrueckseite', '@wachtauf_marco Genau das sollst du glauben. Klassischer Echsen-Trick.', 40],
+      ['echsenwache', '@marco_hat_recht Uwe, wer bezahlt dich eigentlich? 🦎', 52],
       ['frag_frieda', 'Ihr widersprecht euch gerade gegenseitig 😅 Wenn der Mond eine Rückseite hat, ist er eine Kugel – wie die Erde.', 70],
       ['priya.sh', '@frag_frieda 😂 Mic drop.', 74],
-      ['wachtauf_kai', '@frag_frieda Studierte Leute glauben alles, was im Buch steht.', 95],
+      ['wachtauf_marco', '@frag_frieda Studierte Leute glauben alles, was im Buch steht.', 95],
       ['patte_witzig', 'Ich hol Popcorn 🍿', 101],
       ['werner.angelt', 'Ich bin 40 Jahre zur See gefahren. Man sieht zuerst den Mast.', 180],
       ['mondrueckseite', '@werner.angelt Zur See oder hinter die Mondrückseite? 🤔', 200],
       ['lisamarie.k', 'Wasserwaagen messen, ob etwas waagerecht ist – nicht, ob die Erde krumm ist. Auf 30 cm sieht man keine Krümmung.', 260],
-      ['kai_hat_recht', '@lisamarie.k Lehrerin halt 🙄', 275]
+      ['marco_hat_recht', '@lisamarie.k Lehrerin halt 🙄', 275]
     ],
-    kai_02: [
+    marco_02: [
       ['patte_witzig', 'Ich seh auch keine Krümmung. Ich seh Kühe 🐄', 15],
       ['frag_frieda', 'Auf 5 km fällt die Erde nur um ca. 2 Meter ab – das sieht man auf einem Feld nicht. Am Meer mit Fernglas schon!', 50],
-      ['wachtauf_kai', '@frag_frieda Hast du das selbst gemessen? Na also.', 61],
-      ['frag_frieda', '@wachtauf_kai Ja, letzten Sommer an der Ostsee. Post kommt 😉', 66]
+      ['wachtauf_marco', '@frag_frieda Hast du das selbst gemessen? Na also.', 61],
+      ['frag_frieda', '@wachtauf_marco Ja, letzten Sommer an der Ostsee. Post kommt 😉', 66]
     ],
-    kai_03: [
+    marco_03: [
       ['echsenwache', 'Der Globus ist von Echsen designt. Sieht man an der grünen Farbe.', 20],
-      ['wachtauf_kai', '@echsenwache Du bist echt nicht ganz dicht.', 33],
+      ['wachtauf_marco', '@echsenwache Du bist echt nicht ganz dicht.', 33],
       ['priya.sh', 'Ein Verschwörer nennt den anderen verrückt. Ich liebe dieses Netzwerk 😂', 40]
     ],
-    kai_05: [
-      ['kai_hat_recht', 'Bin dabei! Wo treffen wir uns?', 30],
+    // Grafik des Flache-Erde-Modells: Fragen statt Spott
+    marco_06: [
+      ['marco_hat_recht', 'Endlich zeigt es mal jemand richtig! Geteilt 👍', 6],
+      ['frag_frieda', 'Ehrliche Frage zum Modell: Wenn die Sonne über der Scheibe kreist und nie untergeht – warum ist es dann in Australien Nacht, während bei uns Tag ist? Wir müssten sie doch alle gleichzeitig sehen 🤔', 40],
+      ['priya.sh', 'Und wie fliegt man von Australien nach Südamerika? Auf dieser Karte wäre das einmal quer über die ganze Scheibe, in echt sind es 13 Stunden 😅', 55],
+      ['wachtauf_marco', '@priya.sh Die echten Flugrouten werden geheim gehalten.', 70],
+      ['mondrueckseite', 'Die Kuppel haben die Echsen gebaut, das sieht man doch an der Form 🦎', 85],
+      ['wachtauf_marco', '@mondrueckseite Bitte nicht schon wieder.', 90],
+      ['patte_witzig', 'Wer putzt eigentlich die Kuppel? 🧽', 120],
+      ['lisamarie.k', 'Spannend, wie überzeugend so eine Grafik aussieht. Nehme ich mit in den Unterricht – als Beispiel, wie man Quellen prüft.', 240]
+    ],
+    marco_05: [
+      ['marco_hat_recht', 'Bin dabei! Wo treffen wir uns?', 30],
       ['nina.netz', 'Bitte nicht in der Schule verteilen 🙏', 90]
     ],
     frieda_01: [
@@ -446,8 +458,8 @@
       ['mondrueckseite', 'Typisch Echsen-Propaganda. Die Mondrückseite zeigt uns keiner, warum wohl?', 45],
       ['priya.sh', '@mondrueckseite Die Rückseite wurde schon 1959 fotografiert 🙂', 52],
       ['mondrueckseite', '@priya.sh Von wem? Na? Echsen.', 60],
-      ['wachtauf_kai', 'Optische Täuschung durch Luftspiegelung.', 120],
-      ['frag_frieda', '@wachtauf_kai Luftspiegelung gibt es, ja – aber dann würde es bei jedem Wetter anders aussehen. Tut es nicht 🙂', 140],
+      ['wachtauf_marco', 'Optische Täuschung durch Luftspiegelung.', 120],
+      ['frag_frieda', '@wachtauf_marco Luftspiegelung gibt es, ja – aber dann würde es bei jedem Wetter anders aussehen. Tut es nicht 🙂', 140],
       ['lisamarie.k', 'Den Post zeige ich meiner Klasse!', 300]
     ],
     frieda_02: [
