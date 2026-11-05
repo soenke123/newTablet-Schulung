@@ -630,6 +630,12 @@ code { font-family: var(--font-mono); font-size: .9em; }
 
 /* ── Analytics / Aufdeckung (0270) ──────────────────────────── */
 .an-reveal { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.an-l { flex-basis: 100%; font-size: 14px; }
+.seg--rev { margin: 0; flex: 0 1 420px; }
+.seg--rev button { min-height: 38px; padding: 0 10px; }
+.seg--rev button[data-rev="show"].on { background: var(--bad, #dc2626); color: #fff; }
+.seg--rev button:disabled { cursor: progress; }
+.an-h { flex: 1 1 220px; }
 .ov--reveal .ov-body { background: var(--bg); }
 .rv { max-width: 760px; margin: 0 auto; padding: 16px 16px 48px; }
 .rv-lead { font-size: 16px; line-height: 1.5; margin: 6px 2px 18px; }

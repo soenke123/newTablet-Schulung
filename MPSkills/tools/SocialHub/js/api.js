@@ -73,7 +73,13 @@
     } catch (e) { return { ok: false, error: 'network' }; }
   }
   const call = (fn, args) => APP ? direct(fn, args) : send('sh:call', { fn, args: args || {} });
-  const setData = (data) => APP ? Promise.resolve({ ok: false, error: 'not_allowed' }) : send('sh:setData', { data });
+  const setData = async (data) => {
+    if (APP) return { ok: false, error: 'not_allowed' };
+    const r = await send('sh:setData', { data });
+    // Der Rahmen schickt den eigenen Stand nicht zurück → hier übernehmen, sonst zeigt die Seite den alten
+    if (r && r.ok !== false) lastState = Object.assign({}, data);
+    return r;
+  };
 
   // App-Adresse: Netzwerk + Schalter des Raums
   let appInfo = null;

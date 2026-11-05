@@ -585,7 +585,10 @@ try {
   ok('7  Kamera „Blockieren“ gespeichert', (await db.query(`select allow_camera from sh_vsessions where user_id = $1 order by id desc limit 1`, [miaUid])).rows[0].allow_camera === false);
   ok('7  vor der Aufdeckung kein Knopf „Was weiß das Netzwerk über mich?“', await mia.app.locator('#hdData:visible').count() === 0);
   // Aufdeckung: Lehrkraft löst aus → erscheint auf Mias Tablet
-  await t.app.locator('#revBtn').click();
+  ok('7  Auflösen steht auf „Verborgen“', await t.app.locator('[data-rev="off"].on').count() === 1);
+  await t.app.locator('[data-rev="show"]').click();
+  await t.app.locator('[data-rev="show"].on:not([disabled])').waitFor({ timeout: 8000 });
+  ok('7  Lehrkraft: nach dem Tippen steht „Jetzt zeigen“ (Seite kennt den neuen Stand)', await t.app.locator('[data-rev].on').count() === 1 && (await stateOf()).reveal === true);
   await mia.app.locator('.ov--reveal').waitFor({ timeout: 8000 });
   await mia.app.locator('.ov--reveal .rv-s--got').waitFor({ timeout: 8000 });
   ok('7  Aufdeckung auf Mias Tablet: „Das wurde gespeichert“', await mia.app.locator('.ov--reveal').locator('text=Das wurde gespeichert').count() > 0);
@@ -597,9 +600,10 @@ try {
   await wait(600);
   ok('7  geschlossene Aufdeckung poppt beim Reiterwechsel nicht wieder auf', await mia.app.locator('.ov--reveal').count() === 0);
   // Lehrkraft beendet → oben neben App | Adminbereich bleibt „Was weiß das Netzwerk über mich?“
-  await t.app.locator('#revBtn').click();
+  await t.app.locator('[data-rev="button"]').click();
   for (let i = 0; i < 30 && (await stateOf()).reveal !== false; i++) await wait(100);
-  ok('7  beendet, Merker „revealed“ bleibt', (await stateOf()).reveal === false && (await stateOf()).revealed === true, JSON.stringify(await stateOf()));
+  await t.app.locator('[data-rev="button"].on:not([disabled])').waitFor({ timeout: 8000 });
+  ok('7  „Nur Knopf“: Fenster zu, Merker „revealed“ bleibt', (await stateOf()).reveal === false && (await stateOf()).revealed === true, JSON.stringify(await stateOf()));
   await wait(1800);
   await mia.app.locator('.hub-nav [data-tab="profile"]').click();
   await mia.app.locator('.hub-top #hdData').waitFor({ timeout: 8000 });
@@ -610,6 +614,12 @@ try {
   await wait(500);
   await mia.app.locator('.ov--reveal [data-close]').click();
   await shot(mia.page, '7c-knopf-oben');
+  await shot(t.page, '7d-lehrkraft-aufloesen');
+  // „Verborgen“: Knopf oben verschwindet wieder, ganz weg
+  await t.app.locator('[data-rev="off"]').click();
+  await t.app.locator('[data-rev="off"].on:not([disabled])').waitFor({ timeout: 8000 });
+  for (let i = 0; i < 40 && await mia.app.locator('#hdData:visible').count(); i++) await wait(200);
+  ok('7  „Verborgen“: Knopf bei Mia weg, nichts gemerkt', await mia.app.locator('#hdData:visible').count() === 0 && (await stateOf()).revealed === false && (await stateOf()).reveal === false, JSON.stringify(await stateOf()));
 
   // 8) Beispieldaten (0272): Knopf „Daten“ je Tabelle im Diagramm der Lehrkraft
   await t.app.locator('[data-dload="users"]').waitFor({ timeout: 8000 });

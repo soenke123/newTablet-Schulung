@@ -110,9 +110,13 @@
   const metaOn = () => A.state.meta === true;
 
   // Analytics (0270): es wird getrackt, sobald die Lehrkraft sessions erstellt hat
+  // Aufdeckung: drei Stufen der Lehrkraft – aus · Knopf (revealed) · zeigen (reveal + revealed)
   const revealOn = () => A.state.reveal === true;
-  // einmal aufgelöst → im Profil dauerhaft „Was weiß das Netzwerk über mich?“
+  // Knopf „Was weiß das Netzwerk über mich?“ oben, solange die Lehrkraft ihn nicht ganz weggenommen hat
   const revealedOnce = () => revealOn() || A.state.revealed === true;
+  // im Netzwerk nur, wenn dort auch mitgeschrieben wird (sessions erstellt / Klassen-Netz)
+  const revealHere = () => on('sessions') && revealedOnce();
+  const revealLevel = () => revealOn() ? 'show' : A.state.revealed === true ? 'button' : 'off';
   // Feed-Name für die views-Tabelle (profile/user-Betrachter → 'profile')
   const feedName = (m) => m === 'user' ? 'profile' : (['foryou', 'following', 'tag', 'search', 'profile'].indexOf(m) >= 0 ? m : 'foryou');
 
@@ -393,12 +397,20 @@
         (S.dummy && window.SHDummy ? ' „Füllen“ lädt Beispieldaten (70 User, Fotos, Likes, Diskussionen …) in alle Netzwerke – auch in später erstellte.' : '') + '</p>' +
       tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
     // Analytics (0270): der Kasten kommt erst, wenn sessions erstellt ist – hier nur das Auflösen
-    if (tblOn('sessions')) html += '<section class="panel"><div class="panel-h"><h2>Analytics</h2></div>' +
-      '<p class="muted small">Seit <code>sessions</code> erstellt ist, schreiben alle Netzwerke still mit – ohne Banner, wie eine echte Plattform: jeder Besuch mit IP, Browser, Gerät, Bildschirm' +
-      (tblOn('views') ? ', dazu in <code>views</code> jedes angesehene Foto mit Dauer' : '') + '. Standort, Kamera, Mikrofon und Benachrichtigungen werden nur zum Schein abgefragt – gespeichert wird, was angeklickt wurde.</p>' +
-      '<div class="an-reveal"><button type="button" class="btn ' + (revealOn() ? 'btn--bad' : 'btn--accent') + '" id="revBtn">' + (revealOn() ? 'Aufdeckung beenden' : 'Auflösen: „Was haben wir gesammelt?“') + '</button>' +
-      '<span class="muted small">Zeigt auf jedem Tablet, was gespeichert wurde, was ohne Fragen noch ginge, was eine Erlaubnis gekostet hätte und was nur echte Apps können.</span></div>' +
-      '</section>';
+    if (analyticsOn()) {
+      const lv = revealLevel();
+      const LV = [['off', 'Verborgen', 'Nichts verrät, dass mitgeschrieben wird.'],
+                  ['show', 'Jetzt zeigen', 'Auf jedem Tablet öffnet sich einmal „Was weiß das Netzwerk über dich?“ – gespeichert, ohne Fragen möglich, mit Erlaubnis, nur echte Apps.'],
+                  ['button', 'Nur Knopf', 'Kein Fenster, aber oben im Netzwerk bleibt der Knopf „Was weiß das Netzwerk über mich?“.']];
+      html += '<section class="panel"><div class="panel-h"><h2>Analytics</h2></div>' +
+        '<p class="muted small">' + (tblOn('sessions') ? 'Seit <code>sessions</code> erstellt ist, schreiben alle Netzwerke' : 'Im Klassen-Netz wird') +
+        ' still mit – ohne Banner, wie eine echte Plattform: jeder Besuch mit IP, Browser, Gerät, Bildschirm' +
+        (tblOn('views') || !tblOn('sessions') ? ', dazu in <code>views</code> jedes angesehene Foto mit Dauer' : '') + '. Standort, Kamera, Mikrofon und Benachrichtigungen werden nur zum Schein abgefragt – gespeichert wird, was angeklickt wurde.</p>' +
+        '<div class="an-reveal"><b class="an-l">Auflösen: „Was haben wir gesammelt?“</b>' +
+        '<div class="seg seg--rev" role="radiogroup">' + LV.map(x => '<button type="button" role="radio" aria-checked="' + (lv === x[0]) + '" data-rev="' + x[0] + '"' + (lv === x[0] ? ' class="on"' : '') + '>' + x[1] + '</button>').join('') + '</div>' +
+        '<span class="muted small an-h">' + LV.find(x => x[0] === lv)[2] + '</span></div>' +
+        '</section>';
+    }
     return html;
   }
 
@@ -497,6 +509,8 @@
     return cols;
   }
   const tblOn = t => t === 'users' || S.home.tables.indexOf(t) >= 0;
+  // Analytics laufen: sessions erstellt oder es gibt das Klassen-Netz (dort immer alle Tabellen)
+  const analyticsOn = () => tblOn('sessions') || !!S.home.class;
   function tableDiagramHtml() {
     return '<div class="tdg-wrap"><div class="tdg" id="tdg" style="width:' + TW + 'px;height:' + TH + 'px">' +
       '<svg class="tdg-lines" id="tdgLines" width="' + TW + '" height="' + TH + '" viewBox="0 0 ' + TW + ' ' + TH + '">' + tableLinesSvg() + '</svg>' +
@@ -627,6 +641,8 @@
   function wireTeacher() {
     const save = async (tables, upload, extra) => {
       const next = Object.assign({}, A.state, { tables, upload }, extra || {});
+      // ohne Analytics ist eine Aufdeckung sinnlos → mit weg
+      if (tables.indexOf('sessions') < 0 && !S.home.class) { next.reveal = false; next.revealed = false; }
       const r = await A.setData(next);
       if (!r || r.ok === false) { fail(r); return; }
       await loadHome();
@@ -660,7 +676,12 @@
         [['no', 'Abbrechen'], ['yes', 'Einschalten', 'accent']]) !== 'yes') { e.target.checked = false; return; }
       save(cur(), S.home.upload, { meta: e.target.checked });
     };
-    if ($('#revBtn')) $('#revBtn').onclick = () => save(cur(), S.home.upload, revealOn() ? { reveal: false } : { reveal: true, revealed: true });
+    $$('[data-rev]').forEach(b => b.onclick = async () => {
+      const lv = b.dataset.rev;
+      if (lv === revealLevel()) return;
+      $$('[data-rev]').forEach(x => { x.disabled = true; x.classList.toggle('on', x === b); });
+      await save(cur(), S.home.upload, { reveal: lv === 'show', revealed: lv !== 'off' });
+    });
     $$('[data-lock]').forEach(b => b.onclick = async () => {
       const r = await A.call('sh_hub_lock', { p_hub: b.dataset.lock, p_locked: b.dataset.v === '1' });
       if (!r.ok) fail(r); else loadHome();
@@ -1008,7 +1029,7 @@
       (h.admin ? '<nav class="views"><button type="button" data-view="app"' + (!admin ? ' class="on"' : '') + '>App</button>' +
                  '<button type="button" data-view="admin"' + (admin ? ' class="on"' : '') + '>Adminbereich</button></nav>' : '') +
       // Aufdeckung (0270): erst sichtbar, wenn die Lehrkraft einmal aufgelöst hat (syncReveal schaltet nach)
-      (h.me ? '<button type="button" class="hd-data" id="hdData" title="Was weiß das Netzwerk über mich?"' + (revealedOnce() ? '' : ' hidden') + '>' +
+      (h.me ? '<button type="button" class="hd-data" id="hdData" title="Was weiß das Netzwerk über mich?"' + (revealHere() ? '' : ' hidden') + '>' +
               IC.shield + '<span>Was weiß das Netzwerk über mich?</span></button>' : '') +
       (admin ? '<nav class="subtabs">' + sub.map(x => '<button type="button" data-at="' + x[0] + '" class="' + (S.adminTab === x[0] ? 'on' : '') + (x[0] === 'settings' ? ' st-set' : '') + '">' + x[1] + '<span>' + x[2] + '</span></button>').join('') + '</nav>' : '') +
       '<span class="spacer"></span>' +
@@ -1341,9 +1362,10 @@
   // Vom Zustand des Raums: einmal automatisch öffnen, beim Beenden wieder zu
   function syncReveal() {
     const hd = $('#hdData');
-    if (hd) hd.hidden = !revealedOnce();
-    if (revealOn()) { if (!revealShown && S.hub && S.hub.me) { revealShown = true; openReveal(false); } }
-    else { revealShown = false; if (!revealManual) closeReveal(); }
+    if (hd) hd.hidden = !revealHere();
+    if (revealOn() && on('sessions')) { if (!revealShown && S.hub && S.hub.me) { revealShown = true; openReveal(false); } }
+    // „Nur Knopf“: selbst geöffnete bleibt offen · „Verborgen“: alles zu
+    else { revealShown = false; if (!revealManual || !revealHere()) closeReveal(); }
   }
   async function openReveal(manual) {
     if (revealEl || !document.querySelector('.hub')) return;
