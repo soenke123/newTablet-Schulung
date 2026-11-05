@@ -110,13 +110,14 @@
   const metaOn = () => A.state.meta === true;
 
   // Analytics (0270): es wird getrackt, sobald die Lehrkraft sessions erstellt hat
-  // Aufdeckung: drei Stufen der Lehrkraft – aus · Knopf (revealed) · zeigen (reveal + revealed)
+  // Aufdeckung: zwei Stufen der Lehrkraft – Verborgen · Jetzt zeigen (reveal + revealed:
+  // öffnet sich einmal je Gerät, danach bleibt oben der Knopf zum Wieder-Anschauen)
   const revealOn = () => A.state.reveal === true;
   // Knopf „Was weiß das Netzwerk über mich?“ oben, solange die Lehrkraft ihn nicht ganz weggenommen hat
   const revealedOnce = () => revealOn() || A.state.revealed === true;
   // im Netzwerk nur, wenn dort auch mitgeschrieben wird (sessions erstellt / Klassen-Netz)
   const revealHere = () => on('sessions') && revealedOnce();
-  const revealLevel = () => revealOn() ? 'show' : A.state.revealed === true ? 'button' : 'off';
+  const revealLevel = () => revealedOnce() ? 'show' : 'off';
   // Feed-Name für die views-Tabelle (profile/user-Betrachter → 'profile')
   const feedName = (m) => m === 'user' ? 'profile' : (['foryou', 'following', 'tag', 'search', 'profile'].indexOf(m) >= 0 ? m : 'foryou');
 
@@ -400,8 +401,7 @@
     if (analyticsOn()) {
       const lv = revealLevel();
       const LV = [['off', 'Verborgen', 'Nichts verrät, dass mitgeschrieben wird.'],
-                  ['show', 'Jetzt zeigen', 'Auf jedem Tablet öffnet sich einmal „Was weiß das Netzwerk über dich?“ – gespeichert, ohne Fragen möglich, mit Erlaubnis, nur echte Apps.'],
-                  ['button', 'Nur Knopf', 'Kein Fenster, aber oben im Netzwerk bleibt der Knopf „Was weiß das Netzwerk über mich?“.']];
+                  ['show', 'Jetzt zeigen', 'Auf jedem Tablet öffnet sich einmal „Was weiß das Netzwerk über dich?“. Nach dem Wegklicken bleibt oben im Netzwerk der Knopf, damit kann es sich jeder immer wieder ansehen.']];
       html += '<section class="panel"><div class="panel-h"><h2>Analytics</h2></div>' +
         '<p class="muted small">' + (tblOn('sessions') ? 'Seit <code>sessions</code> erstellt ist, schreiben alle Netzwerke' : 'Im Klassen-Netz wird') +
         ' still mit – ohne Banner, wie eine echte Plattform: jeder Besuch mit IP, Browser, Gerät, Bildschirm' +
@@ -680,7 +680,7 @@
       const lv = b.dataset.rev;
       if (lv === revealLevel()) return;
       $$('[data-rev]').forEach(x => { x.disabled = true; x.classList.toggle('on', x === b); });
-      await save(cur(), S.home.upload, { reveal: lv === 'show', revealed: lv !== 'off' });
+      await save(cur(), S.home.upload, { reveal: lv === 'show', revealed: lv === 'show' });
     });
     $$('[data-lock]').forEach(b => b.onclick = async () => {
       const r = await A.call('sh_hub_lock', { p_hub: b.dataset.lock, p_locked: b.dataset.v === '1' });
@@ -1364,7 +1364,7 @@
     const hd = $('#hdData');
     if (hd) hd.hidden = !revealHere();
     if (revealOn() && on('sessions')) { if (!revealShown && S.hub && S.hub.me) { revealShown = true; openReveal(false); } }
-    // „Nur Knopf“: selbst geöffnete bleibt offen · „Verborgen“: alles zu
+    // „Verborgen“: alles zu
     else { revealShown = false; if (!revealManual || !revealHere()) closeReveal(); }
   }
   async function openReveal(manual) {

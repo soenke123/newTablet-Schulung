@@ -599,12 +599,8 @@ try {
   await mia.app.locator('.hub-nav [data-tab="feed"]').click();
   await wait(600);
   ok('7  geschlossene Aufdeckung poppt beim Reiterwechsel nicht wieder auf', await mia.app.locator('.ov--reveal').count() === 0);
-  // Lehrkraft beendet → oben neben App | Adminbereich bleibt „Was weiß das Netzwerk über mich?“
-  await t.app.locator('[data-rev="button"]').click();
-  for (let i = 0; i < 30 && (await stateOf()).reveal !== false; i++) await wait(100);
-  await t.app.locator('[data-rev="button"].on:not([disabled])').waitFor({ timeout: 8000 });
-  ok('7  „Nur Knopf“: Fenster zu, Merker „revealed“ bleibt', (await stateOf()).reveal === false && (await stateOf()).revealed === true, JSON.stringify(await stateOf()));
-  await wait(1800);
+  // nach dem Wegklicken bleibt oben neben App | Adminbereich „Was weiß das Netzwerk über mich?“
+  ok('7  nur zwei Stufen: Verborgen · Jetzt zeigen', await t.app.locator('[data-rev]').count() === 2);
   await mia.app.locator('.hub-nav [data-tab="profile"]').click();
   await mia.app.locator('.hub-top #hdData').waitFor({ timeout: 8000 });
   ok('7  Knopf steht oben neben App | Adminbereich', await mia.app.locator('.hub-top .views + #hdData').count() === 1);
