@@ -101,7 +101,7 @@
     ['levi.kicks', 'levi_nwk', 'noobqueen', 'nina.netz', 'levi_fan_09', 'ida.hsn', 'finn.kielwasser'],
     ['pixelpaul', 'inkandmila', 'elisa_b', 'tim.richter', 'lisamarie.k'],
     ['lisa.mei', 'jakob.hu', 'ana.kovac', 'annalisa.f', 'giulia.glow', 'fitbyfee'],
-    ['alina.daily', 'laura.mauer', 'lars_p', 'jannik_hh'],
+    ['alina.daily', 'laura.mauer', 'lars_p', 'jannik.wolf'],
     ['emma.kr', 'aylin.ylmz', 'leila.hd', 'ana.kovac'],
     ['frag_frieda', 'priya.sh', 'lisamarie.k'],
     ['wachtauf_marco', 'marco_hat_recht']
