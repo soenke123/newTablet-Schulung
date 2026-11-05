@@ -142,6 +142,7 @@
     search: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>',
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
     user: '<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>',
+    users: '<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.9 2.9-6.2 6.5-6.2s6.5 2.3 6.5 6.2"/><circle cx="17" cy="9" r="2.8"/><path d="M16.5 14c2.9.2 5 2.2 5 5.4"/></svg>',
     shield: '<svg viewBox="0 0 24 24"><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6z"/></svg>',
     back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
     more: '<svg viewBox="0 0 24 24"><circle cx="5.5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="18.5" cy="12" r="1.5"/></svg>',
@@ -266,8 +267,8 @@
     if (window.SHTrack) SHTrack.stop();
     closeReveal();
     applyColor(null);
-    // Schüler: beim ersten Laden gleich ins eigene Netzwerk
-    if (!T && !S.autoOpened && r.hubs.length === 1 && !r.hubs[0].locked) {
+    // Schüler: beim ersten Laden gleich ins eigene Netzwerk (gibt es ein Klassen-Netz, erst die Auswahl)
+    if (!T && !S.autoOpened && r.hubs.length === 1 && r.hubs[0].id === r.mine && !r.hubs[0].locked) {
       S.autoOpened = true;
       openHub(r.hubs[0].id);
       return;
@@ -291,7 +292,12 @@
       (T ? '<span class="chip chip--lk">Lehrkraft</span>' : '') + '</header>';
     if (T) html += teacherHome();
     else {
-      // Schüler: nur das eigene Netzwerk (und eines, in dem dieses Gerät angemeldet ist)
+      // Schüler: das Klassen-Netz (0274), das eigene Netzwerk (und eines, in dem dieses Gerät angemeldet ist)
+      const cls = h.hubs.filter(x => x.class), own = h.hubs.filter(x => !x.class);
+      if (cls.length) {
+        html += '<section class="class-sec"><h2>Klassen-Netz</h2><p class="muted small">Das Netzwerk der ganzen Klasse – registrier dich und poste mit den anderen.</p>' +
+          '<div class="net-grid">' + cls.map(x => netTile(x)).join('') + '</div></section>';
+      }
       if (!h.mine) {
         html += '<section class="found-cta">' +
           '<div class="fc-ic">' + IC.phone + '</div>' +
@@ -299,9 +305,9 @@
           '<p>Gib ihm einen Namen, ein Logo und deine Farben. Du bist dort Admin.</p>' +
           '<button type="button" class="btn btn--accent btn--big" id="btnFound">Netzwerk erstellen</button></section>';
       }
-      if (h.hubs.length) {
-        html += '<section><h2>' + (h.hubs.length > 1 ? 'Deine Netzwerke' : 'Dein Netzwerk') + '</h2><div class="net-grid">' +
-          h.hubs.map(x => netTile(x)).join('') + '</div></section>';
+      if (own.length) {
+        html += '<section><h2>' + (own.length > 1 ? 'Deine Netzwerke' : 'Dein Netzwerk') + '</h2><div class="net-grid">' +
+          own.map(x => netTile(x)).join('') + '</div></section>';
       }
       html += '<p class="small muted center-t"><button type="button" class="link" id="btnNetLogin">Dein Netzwerk wurde auf einem anderen Tablet erstellt? Hier anmelden</button></p>';
     }
@@ -313,7 +319,8 @@
     if (keepY && $('.home', app)) $('.home', app).scrollTop = keepY;
     if (keepX && $('.tdg-wrap', app)) $('.tdg-wrap', app).scrollLeft = keepX;
     $$('[data-open]').forEach(b => b.addEventListener('click', () => openHub(b.dataset.open)));
-    if ($('#btnFound')) $('#btnFound').onclick = renderFound;
+    if ($('#btnFound')) $('#btnFound').onclick = () => renderFound(false);
+    if ($('#btnClass')) $('#btnClass').onclick = () => renderFound(true);
     if ($('#btnNetLogin')) $('#btnNetLogin').onclick = renderNetLogin;
     if (T) wireTeacher();
   }
@@ -335,12 +342,18 @@
         '<span>Mit allem, was die Klasse auch hat: zum Ausprobieren, Vorführen und Vergleichen.</span></div>' +
         '<button type="button" class="btn btn--accent" id="btnFound">Netzwerk erstellen</button></section>';
     }
+    if (!h.class) {
+      html += '<section class="cta-bar cta-bar--class"><div class="fc-ic">' + IC.users + '</div><div class="cta-t"><b>Klassen-Netz erstellen</b>' +
+        '<span>Ein gemeinsames Netzwerk für die ganze Klasse: alle registrieren sich dort selbst und sind normale User. Alle Tabellen sind da, ohne Beispieldaten.</span></div>' +
+        '<button type="button" class="btn btn--accent" id="btnClass">Klassen-Netz erstellen</button></section>';
+    }
     html += '<section class="panel"><div class="panel-h"><h2>Netzwerke im Raum <span class="muted">(' + hubs.length + ')</span></h2></div>' +
       (hubs.length ? '<div class="net-list">' + hubs.map(x =>
-        '<div class="net-row' + (x.mine ? ' is-mine' : '') + (x.locked ? ' is-locked' : '') + '">' +
+        '<div class="net-row' + (x.mine ? ' is-mine' : '') + (x.class ? ' is-class' : '') + (x.locked ? ' is-locked' : '') + '">' +
           '<button type="button" class="nr-main" data-open="' + esc(x.id) + '" title="Öffnen">' + logoHtml(x, 'logo--row') +
-            '<span class="nr-t"><b>' + esc(x.name) + (x.mine ? ' <span class="badge badge--gold">Dein Netzwerk</span>' : '') + '</b>' +
-            '<small>' + esc(x.mine ? 'von dir' : (x.person || '')) + (x.locked ? ' · <b class="bad">gesperrt</b>' : '') + '</small></span></button>' +
+            '<span class="nr-t"><b>' + esc(x.name) + (x.mine ? ' <span class="badge badge--gold">Dein Netzwerk</span>' : '') + (x.class ? ' <span class="badge badge--class">Klassen-Netz</span>' : '') + '</b>' +
+            '<small>' + (x.class ? esc(x.users + ' User · ' + x.photos + ' Fotos · alle Tabellen, ohne Beispieldaten')
+                                 : esc(x.mine ? 'von dir' : (x.person || ''))) + (x.locked ? ' · <b class="bad">gesperrt</b>' : '') + '</small></span></button>' +
           '<span class="nr-acts">' +
             '<button type="button" class="icon-btn icon-btn--s" data-reset="' + esc(x.id) + '" title="Admin-Passwort zurücksetzen">' + IC.key + '</button>' +
             (x.mine ? '' : '<button type="button" class="icon-btn icon-btn--s" data-lock="' + esc(x.id) + '" data-v="' + (x.locked ? '0' : '1') + '" title="' + (x.locked ? 'Entsperren' : 'Sperren') + '">' + (x.locked ? IC.unlock : IC.lock) + '</button>') +
@@ -351,7 +364,7 @@
     html += '<section class="panel"><div class="panel-h"><h2>Tabellen für alle Netzwerke</h2>' +
       '<div class="panel-sw"><label class="switch switch--s"><input type="checkbox" id="upTgl"' + (h.upload ? ' checked' : '') + '><span></span>Eigene Bilder hochladen</label>' +
         '<label class="switch switch--s" title="Aufnahmezeit und Kamera aus den Fotos mitspeichern (steht dann in photos)"><input type="checkbox" id="metaTgl"' + (metaOn() ? ' checked' : '') + '><span></span>Metadaten der Fotos speichern</label></div></div>' +
-      '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums. Antippen zeigt die Attribute.' +
+      '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums' + (h.class ? ' (das Klassen-Netz hat immer alle)' : '') + '. Antippen zeigt die Attribute.' +
         (S.dummy && window.SHDummy ? ' „Füllen“ lädt Beispieldaten (70 User, Fotos, Likes, Diskussionen …) in alle Netzwerke – auch in später erstellte.' : '') + '</p>' +
       tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
     // Analytics (0270): getrackt wird, sobald sessions erstellt ist – hier nur das Auflösen
@@ -492,7 +505,9 @@
   const DWHAT = { users: '70 Beispiel-User', photos: '150 Fotos', tags: 'die Tags und ihre Zuordnung zu den Fotos', follows: 'wer wem folgt',
                   likes: 'die Likes', comments: 'die Kommentare und Diskussionen', sessions: 'die Besuche (Geräte, IPs, Uhrzeiten)', views: 'die angesehenen Fotos' };
   const dStored = t => !!(S.dummy && S.dummy.stored.indexOf(t) >= 0);
-  const dAll = t => !!S.dummy && S.home.hubs.every(h => S.dummy.hubs[h.id] && t in S.dummy.hubs[h.id]);
+  // Beispieldaten nur für die eigenen Netzwerke – das Klassen-Netz füllt die Klasse selbst (0274)
+  const dummyHubs = () => S.home.hubs.filter(h => !h.class);
+  const dAll = t => !!S.dummy && dummyHubs().every(h => S.dummy.hubs[h.id] && t in S.dummy.hubs[h.id]);
   // Unterste Zeile der Kachel: „Daten: leer · Füllen“ / „Daten: gefüllt · Leeren“
   function dummyRowHtml(t, isOn) {
     if (!S.dummy || !window.SHDummy) return '';
@@ -508,7 +523,7 @@
   const DDEPS = { users: ['photos', 'tags', 'follows', 'likes', 'comments', 'sessions', 'views'], photos: ['tags', 'likes', 'comments', 'views'], sessions: ['views'] };
   async function clearDummy(t) {
     if (!S.dummy) return;
-    const hubs = S.home.hubs;
+    const hubs = dummyHubs();
     const also = (DDEPS[t] || []).filter(dStored);
     if (await dialog('Beispieldaten leeren',
       '<p>Entfernt die Beispieldaten von <b>' + esc(t) + '</b> aus ' + (hubs.length === 1 ? 'dem Netzwerk' : 'allen ' + hubs.length + ' Netzwerken') + '.' +
@@ -537,7 +552,7 @@
   }
   async function loadDummy(t) {
     if (!S.dummy || !window.SHDummy) return;
-    const hubs = S.home.hubs;
+    const hubs = dummyHubs();
     const again = dStored(t);
     if (await dialog(again ? 'Beispieldaten nachladen' : 'Beispieldaten laden',
       '<p>Lädt <b>' + esc(DWHAT[t]) + '</b> in <b>' + (hubs.length === 1 ? 'das Netzwerk' : 'alle ' + hubs.length + ' Netzwerke') + '</b> dieses Raums – Netzwerke, die später erstellt werden, bekommen sie automatisch.</p>' +
@@ -726,17 +741,19 @@
   }
 
   /* ── Schritt 1: Netzwerk erstellen ──────────────────────── */
-  function renderFound() {
+  // cls: Klassen-Netz der Lehrkraft (0274)
+  function renderFound(cls) {
     S.screen = 'found';
     app.innerHTML = '<div class="home home--wide"><header class="home-top"><button class="icon-btn" id="back" title="Zurück">' + IC.back + '</button>' +
-      '<span class="brand">Netzwerk erstellen</span></header>' +
+      '<span class="brand">' + (cls ? 'Klassen-Netz erstellen' : 'Netzwerk erstellen') + '</span></header>' +
       '<ol class="steps"><li class="on"><b>1</b> Logo, Name, Farben</li><li><b>2</b> Dein Admin-Konto</li></ol>' +
       '<div id="foundEd"></div></div>';
     $('#back').onclick = () => { S.screen = 'home'; renderHome(); };
     brandEditor($('#foundEd'), { name: '', logo: 'rocket', scheme: 'auto' }, {
       submitLabel: 'Weiter',
       onSubmit: async (v) => {
-        const r = await A.call('sh_found', { p_name: v.name, p_logo: v.logo === 'custom' ? 'rocket' : v.logo, p_color: v.color, p_scheme: v.scheme });
+        const r = await A.call('sh_found', Object.assign({ p_name: v.name, p_logo: v.logo === 'custom' ? 'rocket' : v.logo, p_color: v.color, p_scheme: v.scheme },
+                                                         cls ? { p_class: true } : {}));
         if (!r || !r.ok) { fail(r); return; }
         if (v.logo === 'custom' && v.custom) {
           // eigenes Logo: der Gründer ist schon Admin, auch ohne Konto
@@ -794,7 +811,7 @@
     S.adminTab = 'sql';
     if (r.needs_admin) renderLogin('admin');
     // Lehrkraft schaut ohne Konto zu (Admin), kann sich aber oben anmelden
-    else if (!r.me && !T) renderLogin('login');
+    else if (!r.me && !T) renderLogin(r.hub.class && !sess ? 'reg' : 'login');
     else renderHub();
   }
 
@@ -817,7 +834,7 @@
     S.screen = 'login';
     if (window.SHTrack) SHTrack.stop();
     const h = S.hub.hub;
-    const canReg = S.hub.founder || T;
+    const canReg = S.hub.founder || T || !!h.class;
     if (mode === 'reg' && !canReg) mode = 'login';
     const isAdmin = mode === 'admin';
     const genderSel = '<select name="gender"><option value="">Geschlecht …</option>' + GENDERS.map(g => '<option value="' + g[0] + '">' + g[1] + '</option>').join('') + '</select>';
@@ -833,7 +850,7 @@
         ? '<form class="form" id="lForm" autocomplete="off"><input name="user" placeholder="Benutzername" autocapitalize="off" required>' +
           '<input name="pw" type="password" placeholder="Passwort" required>' + keepHtml() +
           '<button class="btn btn--accent btn--big" type="submit">Anmelden</button>' +
-          '<p class="muted small center-t">Passwort vergessen? ' + (T ? 'Als Lehrkraft bist du hier ohnehin Admin.' : 'Die Lehrkraft kann das Admin-Passwort zurücksetzen.') + '</p></form>'
+          '<p class="muted small center-t">Passwort vergessen? ' + (T ? 'Als Lehrkraft bist du hier ohnehin Admin.' : h.class ? 'Frag die Lehrkraft.' : 'Die Lehrkraft kann das Admin-Passwort zurücksetzen.') + '</p></form>'
         : '<form class="form" id="rForm" autocomplete="off">' +
           '<label>Benutzername<input name="user" placeholder="a–z, 0–9, . _" maxlength="24" autocapitalize="off" required' + (isAdmin ? ' value="admin"' : '') + '></label>' +
           '<div class="f2"><input name="name" placeholder="Name" maxlength="40">' + genderSel + '</div>' +

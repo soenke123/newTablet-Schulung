@@ -610,6 +610,40 @@ try {
   const leftC = Number((await db.query(`select count(*)::int n from sh_comments where hub_id in (select id from sh_hubs where room_id = $1)`, [ROOM])).rows[0].n);
   ok('8  Leeren: Dummy-Kommentare weg, eigene bleiben, Zeile zeigt wieder „leer · Füllen“', leftC === ownC && await t.app.locator('.tb-d--full').count() === 2, JSON.stringify({ ownC, leftC }));
   await shot(t.page, '8-nach-leeren');
+
+  // 9) Klassen-Netz (0274): Lehrkraft erstellt es, Mia registriert sich, alle Tabellen, keine Beispieldaten
+  await t.app.locator('#btnClass').click();
+  await t.app.locator('input[name=name]').fill('Klasse 9a');
+  await t.app.locator('[data-logo-id="mesh"]').click();
+  await t.app.locator('button[type=submit]').click();
+  await t.app.locator('#rForm').waitFor();
+  await t.app.locator('input[name=user]').fill('frau.test');
+  await t.app.locator('input[name=pw]').fill('lehrer1');
+  await t.app.locator('input[name=pw2]').fill('lehrer1');
+  await t.app.locator('#rForm button[type=submit]').click();
+  await t.app.locator('.hub-name', { hasText: 'Klasse 9a' }).waitFor();
+  await t.app.locator('#toHome').click();
+  await t.app.locator('.net-row.is-class').waitFor();
+  ok('9  Lehrkraft: Klassen-Netz in der Liste (blau, „Klassen-Netz“), Knopf weg, keine Beispiel-User',
+     await t.app.locator('.net-row.is-class .badge--class').count() === 1 && await t.app.locator('#btnClass').count() === 0
+     && Number((await db.query(`select count(*)::int n from sh_users u join sh_hubs h on h.id = u.hub_id where h.class`)).rows[0].n) === 1);
+  await shot(t.page, '9a-lehrkraft-klassennetz');
+  await mia.page.reload();
+  await mia.app.locator('.class-sec .net-tile').waitFor();
+  ok('9  Mia: Startseite zeigt Klassen-Netz und ihr eigenes', await mia.app.locator('.class-sec .net-tile').count() === 1 && await mia.app.locator('.net-tile').count() === 2);
+  await shot(mia.page, '9b-schueler-start');
+  await mia.app.locator('.class-sec .net-tile').click();
+  await mia.app.locator('#rForm').waitFor();
+  ok('9  Mia: Klassen-Netz öffnet „Registrieren“ (mit Anmelden daneben)', await mia.app.locator('.seg [data-m="login"]').count() === 1);
+  await mia.app.locator('input[name=user]').fill('mia_k');
+  await mia.app.locator('input[name=name]').fill('Mia');
+  await mia.app.locator('input[name=pw]').fill('mia123');
+  await mia.app.locator('input[name=pw2]').fill('mia123');
+  await mia.app.locator('#rForm button[type=submit]').click();
+  await mia.app.locator('.hub-name', { hasText: 'Klasse 9a' }).waitFor();
+  ok('9  Mia: im Klassen-Netz als User, kein Adminbereich, Posten da', await mia.app.locator('.hub-top .chip', { hasText: '@mia_k' }).count() === 1
+     && await mia.app.locator('[data-view="admin"]').count() === 0 && await mia.app.locator('[data-tab="post"]').count() === 1);
+  await shot(mia.page, '9c-schueler-im-klassennetz');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

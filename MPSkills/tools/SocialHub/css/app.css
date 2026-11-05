@@ -230,6 +230,14 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .net-row { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
 .net-row:hover { border-color: var(--line2); }
 .net-row.is-mine { border: 2px solid var(--gold); background: var(--gold-dim); box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 15%, transparent); }
+/* Klassen-Netz (0274): blau abgesetzt, das eigene bleibt golden */
+.net-row.is-class { border: 2px solid #2563eb; background: color-mix(in srgb, #2563eb 7%, var(--surface)); }
+.badge--class { background: #2563eb; color: #fff; font-family: var(--font-body); }
+.cta-bar--class { margin-top: 12px; }
+.cta-bar--class .fc-ic { background: #2563eb; color: #fff; }
+.class-sec { margin-top: 18px; }
+.class-sec h2 { margin-bottom: 2px; }
+.class-sec > p { margin: 0 0 10px; }
 .nr-main { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; border: 0; background: none; padding: 4px; text-align: left; border-radius: 10px; }
 .nr-t { display: flex; flex-direction: column; min-width: 0; }
 .nr-t b { font: 700 16px var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
