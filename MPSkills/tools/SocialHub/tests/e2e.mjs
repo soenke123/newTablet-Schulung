@@ -71,6 +71,29 @@ function rpcAs(who, fn, args) {
   lock = p.catch(() => {});
   return p;
 }
+// App-Adresse (0275): Aufrufe kommen ohne Raum, p_token = 'app:<schlüssel>' steht schon drin
+function rpcRaw(fn, a) {
+  const run = async () => {
+    await db.exec(`delete from _who`);
+    const keys = Object.keys(a || {});
+    const vals = keys.map(k => (a[k] !== null && typeof a[k] === 'object') ? JSON.stringify(a[k]) : a[k]);
+    const sql = `select ${fn}(${keys.map((k, i) => `${k} => $${i + 1}` + ((a[k] !== null && typeof a[k] === 'object') ? '::jsonb' : '')).join(', ')}) v`;
+    try { return (await db.query(sql, vals)).rows[0].v; }
+    catch (e) { console.error('RPC', fn, e.message); return { ok: false, error: 'server_error', message: e.message }; }
+  };
+  const p = lock.then(run, run);
+  lock = p.catch(() => {});
+  return p;
+}
+process.env.SUPABASE_URL = 'http://supabase.test';
+process.env.SUPABASE_SERVICE_ROLE_KEY = 'service';
+const realFetch = globalThis.fetch;
+globalThis.fetch = async (url, o) => {
+  const m = /^http:\/\/supabase\.test\/rest\/v1\/rpc\/(\w+)$/.exec(String(url));
+  if (!m) return realFetch(url, o);
+  return new Response(JSON.stringify(await rpcRaw(m[1], JSON.parse(o.body))), { status: 200, headers: { 'content-type': 'application/json' } });
+};
+const shApp = (await import(path.join(REPO, 'api', 'sh_app.js'))).default;
 const stateOf = async () => (await db.query(`select coalesce(data, '{}'::jsonb) d from skill_room_state where room_id = $1`, [ROOM])).rows[0]?.d || {};
 
 /* ── Webserver ─────────────────────────────────────────── */
@@ -79,7 +102,15 @@ const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css
 const server = http.createServer((req, res) => {
   const u = decodeURIComponent(new URL(req.url, 'http://x').pathname);
   if (u === '/api/my_ip') { res.writeHead(200, { 'content-type': 'application/json' }); res.end('{"ip":"10.1.2.3"}'); return; }
-  const file = path.join(REPO, u);
+  if (u === '/api/sh_app') {
+    const q = Object.fromEntries(new URL(req.url, 'http://x').searchParams);
+    const out = { headers: {}, setHeader(k, v) { this.headers[k.toLowerCase()] = v; }, status(c) { this.code = c; return this; },
+                  json(o) { this.send(JSON.stringify(o)); }, send(b) { res.writeHead(this.code || 200, this.headers); res.end(b); } };
+    shApp({ method: 'GET', query: q }, out);
+    return;
+  }
+  // App-Adresse /n/<schlüssel>/ wie vercel.json
+  const file = /^\/n\/[0-9a-f]{32}\/?$/.test(u) ? path.join(REPO, 'MPSkills/tools/SocialHub/index.html') : path.join(REPO, u);
   if (!file.startsWith(REPO)) { res.writeHead(403); res.end(); return; }
   try { const b = readFileSync(file); res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream' }); res.end(b); }
   catch (e) { res.writeHead(404); res.end(); }
@@ -644,6 +675,54 @@ try {
   ok('9  Mia: im Klassen-Netz als User, kein Adminbereich, Posten da', await mia.app.locator('.hub-top .chip', { hasText: '@mia_k' }).count() === 1
      && await mia.app.locator('[data-view="admin"]').count() === 0 && await mia.app.locator('[data-tab="post"]').count() === 1);
   await shot(mia.page, '9c-schueler-im-klassennetz');
+
+  // 10) Klassen-Netz als App (0275): eigene Adresse, Manifest, Anmelden ohne Raum
+  await mia.app.locator('#appBtn').waitFor();
+  ok('10 im Klassen-Netz: Knopf „Als App“', true);
+  const KEY = (await db.query(`select app_key from sh_hubs where class`)).rows[0].app_key;
+  const ORIGIN = `http://localhost:${server.address().port}`;
+  const man = await (await realFetch(`${ORIGIN}/api/sh_app?f=manifest&k=${KEY}`)).json();
+  ok('10 Manifest: Name, eigene Adresse als id/scope/start_url, Logo', man.name === 'Klasse 9a' && man.id === `/n/${KEY}/` && man.scope === man.id
+     && man.start_url === man.id && man.display === 'standalone' && /img\/logos\/mesh\.png$/.test(man.icons[0].src), JSON.stringify(man));
+  ok('10 falscher Schlüssel → 404', (await realFetch(`${ORIGIN}/api/sh_app?f=manifest&k=${'0'.repeat(32)}`)).status === 404);
+  const appCtx = await browser.newContext({ viewport: { width: 400, height: 760 }, deviceScaleFactor: 1 });
+  const ap = await appCtx.newPage();
+  ap.on('pageerror', e => errors.push('app: ' + e.message));
+  ap.on('console', m => { if (m.type() === 'error') errors.push('app console: ' + m.text()); });
+  await ap.route('https://*.supabase.co/rest/v1/rpc/*', async (route) => {
+    const fn = /rpc\/(\w+)$/.exec(route.request().url())[1];
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(await rpcRaw(fn, JSON.parse(route.request().postData() || '{}'))) });
+  });
+  await ap.goto(`${ORIGIN}/n/${KEY}/`);
+  await ap.locator('#lForm').waitFor();
+  ok('10 App-Adresse: Titel = Netzwerk, Manifest verlinkt, nur Anmelden (kein Registrieren, kein Zurück)',
+     await ap.title() === 'Klasse 9a' && await ap.locator(`link[rel=manifest][href*="${KEY}"]`).count() === 1
+     && await ap.locator('.seg [data-m="reg"]').count() === 0 && await ap.locator('#back').count() === 0);
+  await ap.locator('input[name=user]').fill('mia_k');
+  await ap.locator('input[name=pw]').fill('mia123');
+  await ap.locator('#lForm button[type=submit]').click();
+  await ap.locator('.hub-name', { hasText: 'Klasse 9a' }).waitFor();
+  ok('10 angemeldet über die App-Adresse, kein Weg zur Startseite', await ap.locator('.hub-top .chip', { hasText: '@mia_k' }).count() === 1 && await ap.locator('#toHome').count() === 0);
+  await shot(ap, '10a-app-adresse');
+  // Chrome selbst fragen: lässt sich die Seite installieren? (Manifest, Symbol, Bereich)
+  const cdp = await appCtx.newCDPSession(ap);
+  let inst = null;
+  for (let i = 0; i < 20; i++) { inst = await cdp.send('Page.getInstallabilityErrors'); if (!inst.installabilityErrors.length) break; await wait(300); }
+  ok('10 Chrome: installierbar (keine Installability-Fehler)', inst.installabilityErrors.length === 0, JSON.stringify(inst.installabilityErrors));
+  await ap.reload();
+  await ap.locator('.hub-top .chip', { hasText: '@mia_k' }).waitFor();
+  ok('10 bleibt angemeldet (nach Neuladen)', true);
+  // „Als App“ aus dem Raum: Sitzung kommt im Adress-Teil mit und verschwindet daraus
+  const sess = (await db.query(`select s.token from sh_sessions s join sh_hubs h on h.id = s.hub_id where h.class and s.participant_id is not null order by s.created_at desc limit 1`)).rows[0].token;
+  const hubId = (await db.query(`select id from sh_hubs where class`)).rows[0].id;
+  const ap2 = await (await browser.newContext({ viewport: { width: 400, height: 760 } })).newPage();
+  await ap2.route('https://*.supabase.co/rest/v1/rpc/*', async (route) => {
+    const fn = /rpc\/(\w+)$/.exec(route.request().url())[1];
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(await rpcRaw(fn, JSON.parse(route.request().postData() || '{}'))) });
+  });
+  await ap2.goto(`${ORIGIN}/n/${KEY}/#s=${sess}&h=${hubId}`);
+  await ap2.locator('.hub-top .chip', { hasText: '@mia_k' }).waitFor();
+  ok('10 „Als App“: gleich angemeldet, Sitzung aus der Adresse genommen', !ap2.url().includes('#s='), ap2.url());
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

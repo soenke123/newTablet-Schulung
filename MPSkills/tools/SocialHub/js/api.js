@@ -8,15 +8,24 @@
    Sitzung je Netzwerk im Gerät: mit „Angemeldet bleiben“ in
    localStorage, sonst in sessionStorage (Tab zu = abgemeldet). Der
    Haken ist auf eigenen Geräten (mpskills.device = own) vorbelegt.
+
+   App-Adresse /n/<schlüssel>/ (Klassen-Netz als App, Migration 0275):
+   kein Rahmen, kein Raum. Die Aufrufe gehen direkt an Supabase mit
+   p_token = 'app:<schlüssel>'; die Schalter des Raums (meta, reveal …)
+   kommen über sh_app_info, alle 20 s nachgefragt. Eine Sitzung kann
+   im Adress-Teil #s=… mitkommen (Knopf „Als App“ im Raum) – sie wird
+   sofort gemerkt und aus der Adresse genommen.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
   'use strict';
 
   const P = new URLSearchParams(location.search);
-  const TEACHER = P.get('rolle') === 'presenter';
-  const CODE = (P.get('raum') || '').toUpperCase();
-  const IN_FRAME = window.parent && window.parent !== window;
+  const APPM = /^\/n\/([0-9a-f]{32})\/?$/.exec(location.pathname);
+  const APP = APPM ? APPM[1] : null;
+  const TEACHER = !APP && P.get('rolle') === 'presenter';
+  const CODE = APP ? 'APP' : (P.get('raum') || '').toUpperCase();
+  const IN_FRAME = !APP && window.parent && window.parent !== window;
 
   let seq = 0;
   const waits = new Map();
@@ -48,8 +57,36 @@
     });
   }
 
-  const call = (fn, args) => send('sh:call', { fn, args: args || {} });
-  const setData = (data) => send('sh:setData', { data });
+  // App-Adresse: direkt an Supabase (wie lib/room.js), ohne Konto
+  async function direct(fn, args) {
+    if (!/^sh_[a-z_]+$/.test(fn) || !window.SUPABASE_URL) return { ok: false, error: 'network' };
+    try {
+      const res = await fetch(window.SUPABASE_URL + '/rest/v1/rpc/' + fn, {
+        method: 'POST',
+        headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY,
+                   'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(Object.assign({}, args || {}, fn === 'sh_app_info' ? { p_key: APP } : { p_token: 'app:' + APP }))
+      });
+      if (res.status === 404) return { ok: false, error: 'fn_missing' };
+      if (!res.ok) return { ok: false, error: 'network' };
+      return await res.json();
+    } catch (e) { return { ok: false, error: 'network' }; }
+  }
+  const call = (fn, args) => APP ? direct(fn, args) : send('sh:call', { fn, args: args || {} });
+  const setData = (data) => APP ? Promise.resolve({ ok: false, error: 'not_allowed' }) : send('sh:setData', { data });
+
+  // App-Adresse: Netzwerk + Schalter des Raums
+  let appInfo = null;
+  async function loadAppInfo() {
+    const r = await direct('sh_app_info', {});
+    if (r && r.ok) {
+      appInfo = r;
+      const s = JSON.stringify(r.state || {});
+      if (s !== JSON.stringify(lastState)) { lastState = r.state || {}; if (stateCb) stateCb(lastState); }
+    }
+    return r;
+  }
+  if (APP) setInterval(() => { if (document.visibilityState === 'visible') loadAppInfo(); }, 20000);
 
   /* ── Sitzung je Netzwerk ────────────────────────────────── */
   // „Angemeldet bleiben“ = localStorage, sonst sessionStorage (Tab zu =
@@ -70,8 +107,14 @@
       sput(keep ? 'l' : 's', k, s);
     },
     // Vorschlag für den Haken „Angemeldet bleiben“
-    keepDefault: () => TEACHER || OWN
+    keepDefault: () => TEACHER || OWN || !!APP
   };
+  // Sitzung aus „Als App“ (#s=…): merken und aus der Adresse nehmen
+  if (APP && /^#s=([0-9a-f]{48})&h=([0-9a-f-]{36})$/.test(location.hash)) {
+    const m = /^#s=([0-9a-f]{48})&h=([0-9a-f-]{36})$/.exec(location.hash);
+    session.set(m[2], m[1], true);
+    try { history.replaceState(null, '', location.pathname); } catch (e) { /* egal */ }
+  }
 
   const ERR = {
     invalid_name: 'Der Name braucht 2 bis 30 Zeichen.',
@@ -112,12 +155,16 @@
     unknown_token: 'Dieser Raum gehört nicht mehr zu diesem Gerät. Lade die Seite neu.',
     network: 'Keine Verbindung – bitte gleich noch einmal.',
     no_room: 'YourSozialNet läuft nur in einem MPSkills-Raum.',
+    app_not_found: 'Diese App-Adresse gibt es nicht (mehr).',
+    register_in_room: 'Ein Konto legst du im Unterricht im Raum an – hier kannst du dich nur anmelden.',
+    busy: 'Zu viele falsche Versuche – bitte in ein paar Minuten noch einmal.',
     fn_missing: 'Der Server kennt diese Funktion noch nicht (Migrationen 0262–0268 fehlen).'
   };
   const errText = (r) => (r && (r.message || ERR[r.error])) || 'Das hat nicht geklappt (' + ((r && r.error) || '?') + ').';
 
   window.SHApi = {
-    TEACHER, CODE, IN_FRAME, call, setData,
+    TEACHER, CODE, IN_FRAME, APP, call, setData, loadAppInfo,
+    get appInfo() { return appInfo; },
     onState(cb) { stateCb = cb; if (lastState) cb(lastState); },
     get state() { return lastState || {}; },
     hello() { if (IN_FRAME) window.parent.postMessage({ type: 'sh:hello' }, location.origin); },

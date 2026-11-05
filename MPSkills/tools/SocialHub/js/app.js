@@ -255,6 +255,16 @@
 
   /* ══ Start ═════════════════════════════════════════════════ */
   async function loadHome(quiet) {
+    // App-Adresse (0275): es gibt keine Startseite, nur das Klassen-Netz
+    if (A.APP) {
+      if (quiet) return;
+      const i = await A.loadAppInfo();
+      if (!i || !i.ok) { renderError(i); return; }
+      if (i.hub.locked) { renderError({ error: 'hub_locked' }); return; }
+      setupAppHead(i);
+      openHub(i.hub.id);
+      return;
+    }
     const r = await A.call('sh_home', {});
     if (!r || !r.ok) { if (!quiet) renderError(r); return; }
     // Lehrkraft: Stand der Beispieldaten (0272) – fehlt der Server-Teil, bleibt der Knopf einfach weg
@@ -796,6 +806,7 @@
     const sess = A.session.get(id);
     const r = await A.call('sh_enter', { p_hub: id, p_session: sess });
     if (!r || !r.ok) {
+      if (A.APP) { renderError(r); return; }
       fail(r);
       if (r && /^hub_/.test(r.error)) { S.autoOpened = true; loadHome(); }
       return;
@@ -834,12 +845,13 @@
     S.screen = 'login';
     if (window.SHTrack) SHTrack.stop();
     const h = S.hub.hub;
-    const canReg = S.hub.founder || T || !!h.class;
+    // Klassen-Netz: registrieren im Raum – über die App-Adresse nur anmelden (0275)
+    const canReg = !A.APP && (S.hub.founder || T || !!h.class);
     if (mode === 'reg' && !canReg) mode = 'login';
     const isAdmin = mode === 'admin';
     const genderSel = '<select name="gender"><option value="">Geschlecht …</option>' + GENDERS.map(g => '<option value="' + g[0] + '">' + g[1] + '</option>').join('') + '</select>';
     app.innerHTML = '<div class="login">' +
-      '<button class="icon-btn login-back" id="back" title="Zurück">' + IC.back + '</button>' +
+      (A.APP ? '' : '<button class="icon-btn login-back" id="back" title="Zurück">' + IC.back + '</button>') +
       '<div class="login-box">' +
       (isAdmin ? '<ol class="steps steps--s"><li><b>' + IC.check + '</b> Netzwerk</li><li class="on"><b>2</b> Admin-Konto</li></ol>' : '') +
       logoHtml(h, 'logo--big') + '<h1>' + esc(h.name) + '</h1>' +
@@ -850,7 +862,8 @@
         ? '<form class="form" id="lForm" autocomplete="off"><input name="user" placeholder="Benutzername" autocapitalize="off" required>' +
           '<input name="pw" type="password" placeholder="Passwort" required>' + keepHtml() +
           '<button class="btn btn--accent btn--big" type="submit">Anmelden</button>' +
-          '<p class="muted small center-t">Passwort vergessen? ' + (T ? 'Als Lehrkraft bist du hier ohnehin Admin.' : h.class ? 'Frag die Lehrkraft.' : 'Die Lehrkraft kann das Admin-Passwort zurücksetzen.') + '</p></form>'
+          '<p class="muted small center-t">Passwort vergessen? ' + (T ? 'Als Lehrkraft bist du hier ohnehin Admin.' : h.class ? 'Frag die Lehrkraft.' : 'Die Lehrkraft kann das Admin-Passwort zurücksetzen.') + '</p>' +
+          (A.APP ? '<p class="muted small center-t">Noch kein Konto? Das legst du im Unterricht im Raum an.</p><p class="center-t">' + installHtml() + '</p>' : '') + '</form>'
         : '<form class="form" id="rForm" autocomplete="off">' +
           '<label>Benutzername<input name="user" placeholder="a–z, 0–9, . _" maxlength="24" autocapitalize="off" required' + (isAdmin ? ' value="admin"' : '') + '></label>' +
           '<div class="f2"><input name="name" placeholder="Name" maxlength="40">' + genderSel + '</div>' +
@@ -865,7 +878,7 @@
           '<button class="btn btn--accent btn--big" type="submit">' + (isAdmin ? 'Netzwerk starten' : 'Konto erstellen') + '</button></form>') +
       '</div></div>';
     // Lehrkraft zurück ins Netzwerk (sie ist dort ohnehin Admin), sonst zur Startseite
-    $('#back').onclick = () => (T && !isAdmin) ? renderHub() : loadHome();
+    if ($('#back')) $('#back').onclick = () => (T && !isAdmin) ? renderHub() : loadHome();
     $$('.seg button').forEach(b => b.onclick = () => renderLogin(b.dataset.m));
     if ($('#lForm')) $('#lForm').onsubmit = async (e) => {
       e.preventDefault();
@@ -890,6 +903,82 @@
     };
   }
 
+  /* ══ Klassen-Netz als App (0275) ══════════════════════════════
+     Im Raum: „Als App“ öffnet die eigene Adresse /n/<schlüssel>/ in
+     einem neuen Tab (mit der Sitzung im Adress-Teil, damit man dort
+     gleich angemeldet ist). Dort: Name, Logo und Manifest des Netzes,
+     „Installieren“ (Chrome/Edge/Android) bzw. Anleitung (iPad/iPhone). */
+  const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const standalone = () => (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; syncInstall(); });
+  window.addEventListener('appinstalled', () => { installEvt = null; syncInstall(); toast('Die App ist installiert.'); });
+  function installHtml() {
+    if (!A.APP || standalone() || (!installEvt && !isIOS())) return '<span class="inst-slot"></span>';
+    return '<span class="inst-slot"><button type="button" class="btn btn--accent btn--s hd-app" data-install>' + IC.phone +
+      '<span>' + (installEvt ? 'Installieren' : 'Zum Home-Bildschirm') + '</span></button></span>';
+  }
+  function syncInstall() {
+    $$('.inst-slot').forEach(el => { el.outerHTML = installHtml(); });
+  }
+  document.addEventListener('click', async (e) => {
+    if (!e.target.closest('[data-install]')) return;
+    if (installEvt) {
+      const ev = installEvt;
+      installEvt = null;
+      ev.prompt();
+      try { await ev.userChoice; } catch (x) { /* egal */ }
+      syncInstall();
+      return;
+    }
+    dialog('Zum Home-Bildschirm', '<ol class="steps-ios"><li>Tippe in Safari auf <b>Teilen</b> (Quadrat mit Pfeil nach oben).</li>' +
+      '<li>Wähle <b>Zum Home-Bildschirm</b>.</li><li>Tippe auf <b>Hinzufügen</b>.</li></ol>' +
+      '<p class="muted small">Die App heißt dann wie das Netzwerk und hat sein Logo. Dort meldest du dich einmal an.</p>');
+  });
+  function appDialog() {
+    const h = S.hub.hub;
+    dialog('Als App speichern',
+      '<p><b>' + esc(h.name) + '</b> bekommt eine eigene App mit Name und Logo – auf dem Home-Bildschirm, im Startmenü oder auf dem Desktop. Sie öffnet direkt das Klassen-Netz, auch ohne Raum.</p>' +
+      '<p class="muted small">Auf der nächsten Seite <b>Installieren</b> antippen (Android, Chromebook, Windows). Am iPad/iPhone in Safari über <b>Teilen → Zum Home-Bildschirm</b>. Ein Konto brauchst du schon – registrieren geht nur hier im Raum.</p>',
+      [['no', 'Abbrechen'], ['yes', 'App-Seite öffnen', 'accent']]).then(b => {
+      if (b !== 'yes') return;
+      const url = '/n/' + h.app_key + '/' + (S.session ? '#s=' + S.session + '&h=' + h.id : '');
+      const w = window.open(url, '_blank');
+      if (!w) location.href = url;
+    });
+  }
+  // Kopf der App-Adresse: Titel, Farbe, Manifest, Symbol für iPad/iPhone
+  function setupAppHead(i) {
+    const h = i.hub, head = document.head;
+    const put = (sel, tag, attrs) => {
+      let el = head.querySelector(sel);
+      if (!el) { el = document.createElement(tag); head.appendChild(el); }
+      Object.keys(attrs).forEach(k => el.setAttribute(k, attrs[k]));
+      return el;
+    };
+    document.title = h.name;
+    put('meta[name="apple-mobile-web-app-title"]', 'meta', { name: 'apple-mobile-web-app-title', content: h.name });
+    put('meta[name="apple-mobile-web-app-capable"]', 'meta', { name: 'apple-mobile-web-app-capable', content: 'yes' });
+    put('meta[name="mobile-web-app-capable"]', 'meta', { name: 'mobile-web-app-capable', content: 'yes' });
+    put('meta[name="theme-color"]', 'meta', { name: 'theme-color', content: accentOf(h) });
+    put('link[rel="manifest"]', 'link', { rel: 'manifest', href: '/api/sh_app?f=manifest&k=' + h.app_key });
+    // Symbol: Logo auf weißem Grund, 180 px (iOS füllt Durchsichtiges sonst schwarz)
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas');
+        c.width = c.height = 180;
+        const x = c.getContext('2d');
+        x.fillStyle = '#ffffff';
+        x.fillRect(0, 0, 180, 180);
+        const k = Math.min(144 / img.width, 144 / img.height), w = img.width * k, hh = img.height * k;
+        x.drawImage(img, (180 - w) / 2, (180 - hh) / 2, w, hh);
+        put('link[rel="apple-touch-icon"]', 'link', { rel: 'apple-touch-icon', href: c.toDataURL('image/png') });
+      } catch (e) { /* egal */ }
+    };
+    img.src = h.logo === 'custom' && i.logo_img ? 'data:image/webp;base64,' + i.logo_img : 'img/logos/' + (LOGOS[h.logo] ? h.logo : 'bell') + '.png';
+  }
+
   /* ══ Im Netzwerk ═══════════════════════════════════════════ */
   function renderHub() {
     S.screen = 'hub';
@@ -901,7 +990,7 @@
     if (h.me) nav.push(['profile', IC.user, 'Profil']);
     const sub = [['sql', IC.code, 'SQL'], ['diagram', IC.table, 'Diagramm'], ['settings', IC.gear, 'Einstellungen']];
     app.innerHTML = '<div class="hub' + (admin ? ' hub--admin' : '') + '">' +
-      '<header class="hub-top"><button class="icon-btn" id="toHome" title="Startseite">' + IC.back + '</button>' +
+      '<header class="hub-top">' + (A.APP ? '' : '<button class="icon-btn" id="toHome" title="Startseite">' + IC.back + '</button>') +
       logoHtml(h.hub, 'logo--s') + '<b class="hub-name">' + esc(h.hub.name) + '</b>' +
       (h.admin ? '<nav class="views"><button type="button" data-view="app"' + (!admin ? ' class="on"' : '') + '>App</button>' +
                  '<button type="button" data-view="admin"' + (admin ? ' class="on"' : '') + '>Adminbereich</button></nav>' : '') +
@@ -910,13 +999,17 @@
               IC.shield + '<span>Was weiß das Netzwerk über mich?</span></button>' : '') +
       (admin ? '<nav class="subtabs">' + sub.map(x => '<button type="button" data-at="' + x[0] + '" class="' + (S.adminTab === x[0] ? 'on' : '') + (x[0] === 'settings' ? ' st-set' : '') + '">' + x[1] + '<span>' + x[2] + '</span></button>').join('') + '</nav>' : '') +
       '<span class="spacer"></span>' +
+      // Klassen-Netz als App (0275): im Raum „Als App“, auf der App-Adresse „Installieren“
+      (!A.APP && h.hub.class && h.hub.app_key ? '<button type="button" class="btn btn--ghost btn--s hd-app" id="appBtn" title="Als App auf den Home-Bildschirm">' + IC.phone + '<span>Als App</span></button>' : '') +
+      (A.APP ? installHtml() : '') +
       (h.me ? '<span class="chip">@' + esc(h.me.username) + (T ? ' · Lehrkraft' : '') + '</span>'
             : T ? '<span class="chip chip--lk">Lehrkraft · Admin</span><button type="button" class="btn btn--accent btn--s" id="lkLogin">Testkonto</button>' : '') +
       '</header>' +
       '<main class="hub-main" id="main"></main>' +
       (admin ? '' : '<nav class="hub-nav">' + nav.map(x => '<button type="button" data-tab="' + x[0] + '" class="' + (x[0] === 'post' ? 'nav-post' : '') + (S.tab === x[0] ? ' on' : '') + '">' + x[1] + (x[2] ? '<span>' + x[2] + '</span>' : '') + '</button>').join('') + '</nav>') +
       '</div>';
-    $('#toHome').onclick = () => { closeDb(); S.autoOpened = true; loadHome(); };
+    if ($('#toHome')) $('#toHome').onclick = () => { closeDb(); S.autoOpened = true; loadHome(); };
+    if ($('#appBtn')) $('#appBtn').onclick = appDialog;
     if ($('#hdData')) $('#hdData').onclick = () => openReveal(true);
     if ($('#lkLogin')) $('#lkLogin').onclick = () => { closeDb(); renderLogin('login'); };
     $$('[data-view]').forEach(b => b.onclick = () => { if (S.view === b.dataset.view) return; closeDb(); S.view = b.dataset.view; renderHub(); });
@@ -1661,7 +1754,8 @@
 
   /* ── Start ──────────────────────────────────────────────── */
   document.body.classList.remove('loading');
-  if (!A.IN_FRAME) { renderError({ error: 'no_room' }); return; }
-  A.hello();
+  if (!A.IN_FRAME && !A.APP) { renderError({ error: 'no_room' }); return; }
+  if (A.APP) document.documentElement.classList.add('is-app');
+  else A.hello();
   loadHome();
 })();

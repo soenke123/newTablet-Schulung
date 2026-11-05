@@ -666,3 +666,9 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .hd-data svg { width: 17px; height: 17px; flex: none; fill: none; stroke: var(--bad); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .hd-data:hover { border-color: var(--bad); }
 @media (max-width: 760px) { .hd-data span { display: none; } .hd-data { padding: 7px 9px; } }
+
+/* ── Klassen-Netz als App (0275) ───────────────────────── */
+.hd-app { display: inline-flex; align-items: center; gap: 6px; margin-right: 6px; white-space: nowrap; }
+.hd-app svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@media (max-width: 760px) { .hub-top .hd-app span { display: none; } .hub-top .hd-app { padding: 0 9px; } }
+.steps-ios { margin: 0 0 10px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }

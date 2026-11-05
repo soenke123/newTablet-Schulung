@@ -34,7 +34,7 @@
       ]
     },
     {
-      "source": "/(admin|admin/.*|MPSkills/j\\.html|MPSkills/lehrer\\.html)",
+      "source": "/(admin|admin/.*|MPSkills/j\\.html|MPSkills/lehrer\\.html|n/.*)",
       "headers": [
         {
           "key": "X-Robots-Tag",
@@ -67,6 +67,16 @@
           "value": "attachment"
         }
       ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/n/:key",
+      "destination": "/MPSkills/tools/SocialHub/index.html"
+    },
+    {
+      "source": "/n/:key/",
+      "destination": "/MPSkills/tools/SocialHub/index.html"
     }
   ]
 }

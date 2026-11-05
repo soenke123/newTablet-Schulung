@@ -4,26 +4,30 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>YourSozialNet</title>
+<!-- Alle Pfade gelten von hier aus – auch auf der App-Adresse /n/<schlüssel>/ (Klassen-Netz als App, 0275) -->
+<base href="/MPSkills/tools/SocialHub/">
 <!-- Schriften lokal (Datenschutz: keine Anfrage an Google), derselbe Satz wie MPSkills. -->
 <link rel="stylesheet" href="../../../fonts/outfit-inter-jetbrainsmono-985fda.css">
-<link rel="stylesheet" href="css/app.css?v=20261105b">
+<link rel="stylesheet" href="css/app.css?v=20261105c">
 </head>
 <body class="loading">
 <div id="app"></div>
 
 <!-- Editor, SQL-Kern und Klassendiagramm von SQL Studio (geteilt, nicht kopiert) -->
-<script src="../SQLStudio/js/core.js?v=20261105b"></script>
-<script src="../SQLStudio/js/editor.js?v=20261105b"></script>
-<script src="../SQLStudio/js/diagram.js?v=20261105b"></script>
-<script src="js/sichtbar.js?v=20261105b"></script>
-<script src="js/api.js?v=20261105b"></script>
-<script src="js/media.js?v=20261105b"></script>
-<script src="js/exif.js?v=20261105b"></script>
-<script src="js/photo.js?v=20261105b"></script>
-<script src="js/db.js?v=20261105b"></script>
-<script src="js/track.js?v=20261105b"></script>
-<script src="dummy/daten.js?v=20261105b"></script>
-<script src="dummy/generator.js?v=20261105b"></script>
-<script src="js/app.js?v=20261105b"></script>
+<script src="../SQLStudio/js/core.js?v=20261105c"></script>
+<script src="../SQLStudio/js/editor.js?v=20261105c"></script>
+<script src="../SQLStudio/js/diagram.js?v=20261105c"></script>
+<!-- nur für die App-Adresse: direkt an Supabase (öffentliche Adresse + anon-Schlüssel) -->
+<script src="../../../supabase-config.js"></script>
+<script src="js/sichtbar.js?v=20261105c"></script>
+<script src="js/api.js?v=20261105c"></script>
+<script src="js/media.js?v=20261105c"></script>
+<script src="js/exif.js?v=20261105c"></script>
+<script src="js/photo.js?v=20261105c"></script>
+<script src="js/db.js?v=20261105c"></script>
+<script src="js/track.js?v=20261105c"></script>
+<script src="dummy/daten.js?v=20261105c"></script>
+<script src="dummy/generator.js?v=20261105c"></script>
+<script src="js/app.js?v=20261105c"></script>
 </body>
 </html>
