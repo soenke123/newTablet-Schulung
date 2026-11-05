@@ -71,5 +71,5 @@ In der Oberfläche steht nie „Hub“, immer „Netzwerk“.
 ## Später
 
 - Dummy-Daten: Plan `MPSkills/PLAN_DUMMYDATEN.md`, User- und Bilderliste `dummy/LISTE.md` (70 User, Knopf „Daten laden“ je Tabelle im Diagramm der Lehrkraft), dazu erfundene `sessions`/`views` mit verschiedenen Geräten/IPs/Uhrzeiten; Schaufenster `preview/socialhub.js`.
-- Werbung (`ads`, zielgruppengenau ausgespielt), freier Raum je Schule (siehe Plan).
+- Werbung (`ads`, Zielgruppe per SQL auf dem Admin-Gerät berechnet, Anzeigen + beworbene Posts), Plan: `MPSkills/PLAN_FEED_SKILL.md` Abschnitt 13; freier Raum je Schule (siehe Plan).
 - Analytics (0270) ist gebaut; vor der Freigabe für alle: Abschnitt in `datenschutz.html`/`DATENSCHUTZ.md` (Bild-Upload, Konten mit ausgedachten Daten, Tracking solange die Tabellen erstellt sind, alles im Raum und mit ihm gelöscht), die Kommentar-Entwürfe bewusst NICHT gebaut (DSB).
