@@ -227,14 +227,35 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .panel h2 { margin: 0; }
 .panel > p { margin: 0 0 12px; }
 .net-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 8px; }
-.net-row { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
+.net-row { min-width: 0; display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 8px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); }
 .net-row:hover { border-color: var(--line2); }
 .net-row.is-mine { border: 2px solid var(--gold); background: var(--gold-dim); box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 15%, transparent); }
 /* Klassen-Netz (0274): blau abgesetzt, das eigene bleibt golden */
 .net-row.is-class { border: 2px solid #2563eb; background: color-mix(in srgb, #2563eb 7%, var(--surface)); }
 .badge--class { background: #2563eb; color: #fff; font-family: var(--font-body); }
-.cta-bar--class { margin-top: 12px; }
-.cta-bar--class .fc-ic { background: #2563eb; color: #fff; }
+/* Noch nicht erstellt: blasse Zeile in der Liste, kräftig erst nach dem Erstellen */
+.net-row.is-ghost { border-style: dashed; border-width: 2px; box-shadow: none; background: var(--surface); }
+.net-row.is-mine.is-ghost { border-color: color-mix(in srgb, var(--gold) 55%, transparent); }
+.net-row.is-class.is-ghost { border-color: color-mix(in srgb, #2563eb 45%, transparent); }
+.net-row.is-ghost .nr-t b, .net-row.is-ghost .nr-ghost-ic { opacity: .55; }
+.nr-ghost-ic { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; color: #fff; background: var(--gold); }
+.is-class .nr-ghost-ic { background: #2563eb; }
+.nr-ghost-ic svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.btn--gold { background: var(--gold); border-color: transparent; color: #1a1300; }
+.btn--class { background: #2563eb; border-color: transparent; color: #fff; }
+.nr-info { font: 700 15px/1 Georgia, serif; font-style: italic; border: 1.5px solid currentColor; width: 24px; height: 24px; border-radius: 50%; align-self: center; margin-right: 4px; }
+.is-class .nr-info { color: #2563eb; }
+.nl-empty { margin: 10px 0 0; }
+.dlg-list { margin: 6px 0; padding-left: 20px; }
+.dlg-list li { margin: 5px 0; }
+@media (max-width: 560px) {
+  .net-list { grid-template-columns: minmax(0, 1fr); }
+  .net-row { flex-wrap: wrap; }
+  .nr-main { flex-basis: 100%; }
+  .nr-acts { margin-left: auto; }
+  .net-row.is-ghost { flex-wrap: nowrap; }
+  .net-row.is-ghost .nr-main { flex-basis: auto; }
+}
 .class-sec { margin-top: 18px; }
 .class-sec h2 { margin-bottom: 2px; }
 .class-sec > p { margin: 0 0 10px; }

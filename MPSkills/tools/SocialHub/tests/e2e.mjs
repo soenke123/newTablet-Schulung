@@ -214,6 +214,26 @@ try {
   });
   ok('1  jede Linie sichtbar (keine läuft unter einem Kasten)', hidden.length === 0, hidden.join());
   await shot(t.page, '1-lehrkraft');
+  // 1a) Handy: Eigenes Netzwerk + Klassen-Netz als blasse Zeilen in der Liste, kein Analytics-Kasten, nichts ragt raus
+  {
+    const ph = await open('teacher', { width: 390, height: 800 });
+    await ph.app.locator('.net-row.is-ghost.is-class #btnClass').waitFor();
+    const m = await ph.app.locator('.home').evaluate((el) => {
+      const d = el.ownerDocument, vw = d.documentElement.clientWidth;
+      const out = [...d.querySelectorAll('.net-row.is-ghost, .net-row.is-ghost button')].filter(b => b.getBoundingClientRect().right > vw + 1).length;
+      return { ghosts: d.querySelectorAll('.net-row.is-ghost').length, gold: !!d.querySelector('.net-row.is-mine.is-ghost #btnFound'),
+               info: !!d.querySelector('.net-row.is-class [data-cinfo]'), out, cta: d.querySelectorAll('.cta-bar').length,
+               analytics: [...d.querySelectorAll('.panel h2')].some(h => h.textContent.trim() === 'Analytics') };
+    });
+    ok('1a Handy: beide „Erstellen“ als blasse Zeilen in der Liste (golden/blau, i am Klassen-Netz), nichts ragt raus', m.ghosts === 2 && m.gold && m.info && m.out === 0 && m.cta === 0, JSON.stringify(m));
+    ok('1a ohne sessions kein Analytics-Kasten', !m.analytics);
+    await shot(ph.page, '1a-lehrkraft-handy');
+    await ph.app.locator('[data-cinfo]').click();
+    ok('1a i öffnet die Erklärung zum Klassen-Netz', await ph.app.locator('.dlg h3', { hasText: 'Klassen-Netz' }).count() === 1);
+    await ph.page.waitForTimeout(300);
+    await shot(ph.page, '1a-klassennetz-info');
+    await ph.page.context().close();
+  }
   // 1b) Lehrkraft erstellt ihr eigenes Netzwerk (2 Schritte)
   await t.app.locator('#btnFound').click();
   await t.app.locator('input[name=name]').fill('Lehrerzimmer');

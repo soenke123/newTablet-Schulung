@@ -332,6 +332,7 @@
     if ($('#btnFound')) $('#btnFound').onclick = () => renderFound(false);
     if ($('#btnClass')) $('#btnClass').onclick = () => renderFound(true);
     if ($('#btnNetLogin')) $('#btnNetLogin').onclick = renderNetLogin;
+    $$('[data-cinfo]').forEach(b => b.onclick = (e) => { e.stopPropagation(); classInfo(); });
     if (T) wireTeacher();
   }
 
@@ -342,34 +343,48 @@
       '<span class="go">Öffnen ›</span></button>';
   }
 
+  /* Noch nicht erstellt: blasse Zeilen oben in der Liste (golden = eigenes, blau = Klassen-Netz);
+     erst nach dem Erstellen stehen sie kräftig da */
+  function ghostRows() {
+    const h = S.home;
+    let r = '';
+    if (!h.mine) r += '<div class="net-row is-mine is-ghost"><span class="nr-main"><span class="nr-ghost-ic">' + IC.phone + '</span>' +
+      '<span class="nr-t"><b>Dein Netzwerk</b><small>zum Ausprobieren und Vorführen</small></span></span>' +
+      '<span class="nr-acts"><button type="button" class="btn btn--s btn--gold" id="btnFound">Erstellen</button></span></div>';
+    if (!h.class) r += '<div class="net-row is-class is-ghost"><span class="nr-main"><span class="nr-ghost-ic">' + IC.users + '</span>' +
+      '<span class="nr-t"><b>Klassen-Netz</b><small>ein Netzwerk für die ganze Klasse</small></span></span>' +
+      '<span class="nr-acts">' + classInfoBtn() + '<button type="button" class="btn btn--s btn--class" id="btnClass">Erstellen</button></span></div>';
+    return r;
+  }
+  const classInfoBtn = () => '<button type="button" class="icon-btn icon-btn--s nr-info" data-cinfo title="Was ist das Klassen-Netz?">i</button>';
+  function classInfo() {
+    dialog('Das Klassen-Netz',
+      '<p>Ein gemeinsames Netzwerk für die ganze Klasse – zusätzlich zu den eigenen Netzwerken.</p><ul class="dlg-list">' +
+      '<li>Jeder Schüler im Raum sieht es oben auf seiner Startseite und registriert sich dort selbst als normaler User.</li>' +
+      '<li>Du bist dort Admin und bleibst angemeldet. Weitere Admins machst du per SQL (<code>UPDATE users SET role = &#39;admin&#39; …</code>).</li>' +
+      '<li>Alle Tabellen sind immer da, auch <code>sessions</code> und <code>views</code> – dort wird also immer mitgeschrieben. Beispieldaten gibt es keine.</li>' +
+      '<li>Im Netz oben „Als App“: eigene Adresse mit Name und Logo, lässt sich auf dem Tablet installieren. Anmelden geht dort, Registrieren nur im Raum.</li>' +
+      '<li>Wer nicht im Raum ist, kommt nicht hinein. Das Netz lebt so lange wie der Raum.</li></ul>');
+  }
+
   /* ── Lehrkraft: Startseite ──────────────────────────────── */
   function teacherHome() {
     const h = S.home;
     const hubs = h.hubs;
     let html = '';
-    if (!h.mine) {
-      html += '<section class="cta-bar"><div class="fc-ic">' + IC.phone + '</div><div class="cta-t"><b>Eigenes Netzwerk erstellen</b>' +
-        '<span>Mit allem, was die Klasse auch hat: zum Ausprobieren, Vorführen und Vergleichen.</span></div>' +
-        '<button type="button" class="btn btn--accent" id="btnFound">Netzwerk erstellen</button></section>';
-    }
-    if (!h.class) {
-      html += '<section class="cta-bar cta-bar--class"><div class="fc-ic">' + IC.users + '</div><div class="cta-t"><b>Klassen-Netz erstellen</b>' +
-        '<span>Ein gemeinsames Netzwerk für die ganze Klasse: alle registrieren sich dort selbst und sind normale User. Alle Tabellen sind da, ohne Beispieldaten.</span></div>' +
-        '<button type="button" class="btn btn--accent" id="btnClass">Klassen-Netz erstellen</button></section>';
-    }
     html += '<section class="panel"><div class="panel-h"><h2>Netzwerke im Raum <span class="muted">(' + hubs.length + ')</span></h2></div>' +
-      (hubs.length ? '<div class="net-list">' + hubs.map(x =>
+      '<div class="net-list">' + ghostRows() + hubs.map(x =>
         '<div class="net-row' + (x.mine ? ' is-mine' : '') + (x.class ? ' is-class' : '') + (x.locked ? ' is-locked' : '') + '">' +
           '<button type="button" class="nr-main" data-open="' + esc(x.id) + '" title="Öffnen">' + logoHtml(x, 'logo--row') +
             '<span class="nr-t"><b>' + esc(x.name) + (x.mine ? ' <span class="badge badge--gold">Dein Netzwerk</span>' : '') + (x.class ? ' <span class="badge badge--class">Klassen-Netz</span>' : '') + '</b>' +
             '<small>' + (x.class ? esc(x.users + ' User · ' + x.photos + ' Fotos · alle Tabellen, ohne Beispieldaten')
                                  : esc(x.mine ? 'von dir' : (x.person || ''))) + (x.locked ? ' · <b class="bad">gesperrt</b>' : '') + '</small></span></button>' +
-          '<span class="nr-acts">' +
+          '<span class="nr-acts">' + (x.class ? classInfoBtn() : '') +
             '<button type="button" class="icon-btn icon-btn--s" data-reset="' + esc(x.id) + '" title="Admin-Passwort zurücksetzen">' + IC.key + '</button>' +
             (x.mine ? '' : '<button type="button" class="icon-btn icon-btn--s" data-lock="' + esc(x.id) + '" data-v="' + (x.locked ? '0' : '1') + '" title="' + (x.locked ? 'Entsperren' : 'Sperren') + '">' + (x.locked ? IC.unlock : IC.lock) + '</button>') +
             '<button type="button" class="icon-btn icon-btn--s icon-btn--bad" data-del="' + esc(x.id) + '" title="Löschen">' + IC.trash + '</button>' +
-          '</span></div>').join('') + '</div>'
-        : '<p class="muted">Noch keine Netzwerke. Sobald die Klasse im Raum ist, erstellt jede Person ihr eigenes.</p>') +
+          '</span></div>').join('') + '</div>' +
+      (hubs.some(x => !x.mine && !x.class) ? '' : '<p class="muted small nl-empty">Sobald die Klasse im Raum ist, erstellt jede Person ihr eigenes Netzwerk.</p>') +
       '</section>';
     html += '<section class="panel"><div class="panel-h"><h2>Tabellen für alle Netzwerke</h2>' +
       '<div class="panel-sw"><label class="switch switch--s"><input type="checkbox" id="upTgl"' + (h.upload ? ' checked' : '') + '><span></span>Eigene Bilder hochladen</label>' +
@@ -377,14 +392,12 @@
       '<p class="muted small">users gibt es immer. Jede Tabelle, die du erstellst, bringt ihre Funktion in alle Netzwerke dieses Raums' + (h.class ? ' (das Klassen-Netz hat immer alle)' : '') + '. Antippen zeigt die Attribute.' +
         (S.dummy && window.SHDummy ? ' „Füllen“ lädt Beispieldaten (70 User, Fotos, Likes, Diskussionen …) in alle Netzwerke – auch in später erstellte.' : '') + '</p>' +
       tableDiagramHtml() + '<div class="tdg-info" id="tdgInfo">' + tableInfoHtml(S.tblSel) + '</div></section>';
-    // Analytics (0270): getrackt wird, sobald sessions erstellt ist – hier nur das Auflösen
-    html += '<section class="panel"><div class="panel-h"><h2>Analytics</h2></div>' +
-      (tblOn('sessions')
-        ? '<p class="muted small">Seit <code>sessions</code> erstellt ist, schreiben alle Netzwerke still mit – ohne Banner, wie eine echte Plattform: jeder Besuch mit IP, Browser, Gerät, Bildschirm' +
-          (tblOn('views') ? ', dazu in <code>views</code> jedes angesehene Foto mit Dauer' : '') + '. Standort, Kamera, Mikrofon und Benachrichtigungen werden nur zum Schein abgefragt – gespeichert wird, was angeklickt wurde.</p>' +
-          '<div class="an-reveal"><button type="button" class="btn ' + (revealOn() ? 'btn--bad' : 'btn--accent') + '" id="revBtn">' + (revealOn() ? 'Aufdeckung beenden' : 'Auflösen: „Was haben wir gesammelt?“') + '</button>' +
-          '<span class="muted small">Zeigt auf jedem Tablet, was gespeichert wurde, was ohne Fragen noch ginge, was eine Erlaubnis gekostet hätte und was nur echte Apps können.</span></div>'
-        : '<p class="muted small">Erstelle oben <code>sessions</code> (und <code>views</code>), dann schreiben alle Netzwerke still mit, was die Klasse tut – wie eine echte Plattform. Hier löst du es danach auf.</p>') +
+    // Analytics (0270): der Kasten kommt erst, wenn sessions erstellt ist – hier nur das Auflösen
+    if (tblOn('sessions')) html += '<section class="panel"><div class="panel-h"><h2>Analytics</h2></div>' +
+      '<p class="muted small">Seit <code>sessions</code> erstellt ist, schreiben alle Netzwerke still mit – ohne Banner, wie eine echte Plattform: jeder Besuch mit IP, Browser, Gerät, Bildschirm' +
+      (tblOn('views') ? ', dazu in <code>views</code> jedes angesehene Foto mit Dauer' : '') + '. Standort, Kamera, Mikrofon und Benachrichtigungen werden nur zum Schein abgefragt – gespeichert wird, was angeklickt wurde.</p>' +
+      '<div class="an-reveal"><button type="button" class="btn ' + (revealOn() ? 'btn--bad' : 'btn--accent') + '" id="revBtn">' + (revealOn() ? 'Aufdeckung beenden' : 'Auflösen: „Was haben wir gesammelt?“') + '</button>' +
+      '<span class="muted small">Zeigt auf jedem Tablet, was gespeichert wurde, was ohne Fragen noch ginge, was eine Erlaubnis gekostet hätte und was nur echte Apps können.</span></div>' +
       '</section>';
     return html;
   }
