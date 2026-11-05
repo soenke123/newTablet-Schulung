@@ -114,7 +114,7 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 - Hub je Person oder auch Gruppen-Hubs (2–3 gründen zusammen)?
 - Darf man sich auf allen Hubs der Klasse registrieren, oder nur auf denen, die der Gründer einlädt?
 
-## 13. Werbung (Plan, Sönke 05.11.2026)
+## 13. Werbung (Plan Sönke 05.11.2026 – gebaut in Migration 0276, Details `tools/SocialHub/CLAUDE.md`)
 
 **Idee:** Die Plattform selbst spielt Werbung aus. Die Admins eines Netzwerks (Schüler im eigenen Netzwerk; im
 Klassen-Netz die, die die Lehrkraft per `UPDATE users SET role = 'admin'` dazu macht) legen **Kampagnen** an.
@@ -172,8 +172,8 @@ ganze Datenbank). Deshalb rechnet **das Gerät eines Admins**:
 2. Das Ergebnis (nur ganze Zahlen) geht an den Server und wird **intern** an der Kampagne gemerkt (z. B. Spalten
    `audience int[]` / `content int[]` in `sh_ads`, die nicht im Schnappschuss stehen – im SQL-Editor unsichtbar).
    Der Server prüft nur: ids gehören zum Netzwerk, Kampagne gehört zum Netzwerk, Deckel.
-3. `sh_feed` mischt danach aus diesen Listen: Anzeigen als Karte alle 5–7 Posts, beworbene Fotos in „Für dich“ mit
-   Vorrang; dieselbe Kampagne höchstens alle n Karten (Frequenz-Deckel).
+3. `sh_feed` mischt danach aus diesen Listen: je Seite (6 Posts) eine Anzeige mitten hinein, reihum; beworbene Fotos
+   in „Für dich“: je Runde bis zu 3 sicher ganz vorn, die übrigen etwas weiter oben (gebaut so, 0276).
 
 Neu gerechnet wird beim Speichern einer Kampagne und von selbst, solange ein Admin im Netzwerk ist (z. B. jede
 Minute). Ob es zusätzlich einen Knopf „Neu berechnen“ braucht, schauen wir beim Bauen (Sönke). Klassen-Netz: die

@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  const V = '20261105c';
+  const V = '20261105w';
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const DDL = {
@@ -129,10 +129,26 @@
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   FOREIGN KEY (photo_id) REFERENCES photos(id) ON DELETE CASCADE,
   FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE SET NULL
+);`,
+    // Werbung (0276): Kampagnen; target_sql = „Wem?“, content_sql = „Was?“ (beworbene Fotos)
+    ads: `CREATE TABLE ads (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT,
+  name VARCHAR(60) NOT NULL,
+  kind ENUM('ad','boost') NOT NULL DEFAULT 'ad',
+  title VARCHAR(80),
+  body TEXT,
+  image VARCHAR(60),
+  button VARCHAR(30),
+  target_sql TEXT,
+  content_sql TEXT,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );`
   };
   // Eltern vor Kindern (anlegen, einfügen); rückwärts = löschen
-  const ORDER = ['users', 'tags', 'photos', 'sessions', 'comments', 'follows', 'likes', 'photo_tag', 'views'];
+  const ORDER = ['users', 'tags', 'photos', 'sessions', 'comments', 'follows', 'likes', 'photo_tag', 'views', 'ads'];
   const PK = { follows: ['follower_id', 'following_id'], likes: ['user_id', 'photo_id'],
                photo_tag: ['photo_id', 'tag_id'] };
   const pkOf = t => PK[t] || ['id'];
@@ -146,6 +162,21 @@
     // Verdoppeln von \ könnte ein Text eines anderen Users („abc\“) aus
     // dem String ausbrechen und eigenes SQL in die Kopie schreiben.
     return "'" + String(v).replace(/\\/g, '\\\\').replace(/'/g, "''") + "'";
+  }
+
+  // Schnappschuss → SQLite-Skript (CREATE TABLE + INSERT), Eltern vor Kindern
+  function buildScript(snap) {
+    const tables = ORDER.filter(t => snap[t]);
+    let script = '';
+    for (const t of tables) {
+      script += DDL[t] + '\n';
+      const { cols, rows } = snap[t];
+      for (let i = 0; i < rows.length; i += 200) {
+        script += 'INSERT INTO ' + t + ' (' + cols.join(', ') + ') VALUES\n' +
+          rows.slice(i, i + 200).map(r => '(' + r.map(lit).join(', ') + ')').join(',\n') + ';\n';
+      }
+    }
+    return { tables, script };
   }
 
   /* ── Worker mit Zeitlimit ─────────────────────────────────── */
@@ -183,6 +214,9 @@
       open(s) { script = s; return call('open', { script: s }, 20000); },
       run(sql) { return call('run', { sql }, 8000); },
       rows(tables) { return call('rows', { tables }, 8000); },
+      // Werbung (0276): alle Zielgruppen / Probelauf – nur lesen
+      ads(ads) { return call('ads', { ads }, 20000); },
+      probe(sql, kind) { return call('adprobe', { sql, kind }, 8000); },
       stop() { if (w) w.terminate(); w = null; }
     };
   }
@@ -283,17 +317,9 @@
       state('lädt …');
       const res = await api('sh_db_snapshot', {});
       if (!res || !res.ok) { state(res && res.error === 'not_admin' ? 'Nur für Admins.' : 'Konnte das Netzwerk nicht laden.', true); return false; }
-      const snap = res.tables || {};
-      tables = ORDER.filter(t => snap[t]);
-      let script = '';
-      for (const t of tables) {
-        script += DDL[t] + '\n';
-        const { cols, rows } = snap[t];
-        for (let i = 0; i < rows.length; i += 200) {
-          script += 'INSERT INTO ' + t + ' (' + cols.join(', ') + ') VALUES\n' +
-            rows.slice(i, i + 200).map(r => '(' + r.map(lit).join(', ') + ')').join(',\n') + ';\n';
-        }
-      }
+      const b = buildScript(res.tables || {});
+      tables = b.tables;
+      const script = b.script;
       try {
         const o = await W.open(script);
         schema = o.schema;
@@ -412,5 +438,5 @@
     };
   }
 
-  window.SHDB = { create, DDL };
+  window.SHDB = { create, DDL, worker: makeWorker, buildScript };
 })();

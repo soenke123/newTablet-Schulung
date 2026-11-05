@@ -117,7 +117,12 @@
    "sh_media_get(p_token text, p_code text, p_hub uuid, p_names jsonb, p_thumb boolean)",
    "sh_photo_delete(p_token text, p_code text, p_hub uuid, p_session text, p_photo integer)",
    "sh_profile(p_token text, p_code text, p_hub uuid, p_session text, p_user integer)",
-   "sh_search(p_token text, p_code text, p_hub uuid, p_session text, p_q text)"
+   "sh_search(p_token text, p_code text, p_hub uuid, p_session text, p_q text)",
+   "sh_ad_active(p_token text, p_code text, p_hub uuid, p_session text, p_id integer, p_on boolean)",
+   "sh_ad_delete(p_token text, p_code text, p_hub uuid, p_session text, p_id integer)",
+   "sh_ad_pick(p_token text, p_code text, p_hub uuid, p_session text, p_salt text)",
+   "sh_ad_save(p_token text, p_code text, p_hub uuid, p_session text, p_id integer, p_name text, p_kind text, p_title text, p_body text, p_image text, p_button text, p_target text, p_content text, p_active boolean)",
+   "sh_ads_compute(p_token text, p_code text, p_hub uuid, p_session text, p_results jsonb)"
   ],
   "tab": [
    "games_public:select",
@@ -482,7 +487,12 @@
    "sh_media_get(p_token text, p_code text, p_hub uuid, p_names jsonb, p_thumb boolean)",
    "sh_photo_delete(p_token text, p_code text, p_hub uuid, p_session text, p_photo integer)",
    "sh_profile(p_token text, p_code text, p_hub uuid, p_session text, p_user integer)",
-   "sh_search(p_token text, p_code text, p_hub uuid, p_session text, p_q text)"
+   "sh_search(p_token text, p_code text, p_hub uuid, p_session text, p_q text)",
+   "sh_ad_active(p_token text, p_code text, p_hub uuid, p_session text, p_id integer, p_on boolean)",
+   "sh_ad_delete(p_token text, p_code text, p_hub uuid, p_session text, p_id integer)",
+   "sh_ad_pick(p_token text, p_code text, p_hub uuid, p_session text, p_salt text)",
+   "sh_ad_save(p_token text, p_code text, p_hub uuid, p_session text, p_id integer, p_name text, p_kind text, p_title text, p_body text, p_image text, p_button text, p_target text, p_content text, p_active boolean)",
+   "sh_ads_compute(p_token text, p_code text, p_hub uuid, p_session text, p_results jsonb)"
   ],
   "tab": [
    "board_likes:select",
