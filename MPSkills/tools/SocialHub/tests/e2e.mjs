@@ -324,6 +324,8 @@ try {
   await wait(100);
   await mia.app.locator('.card').first().click({ position: { x: 300, y: 250 } });
   await mia.app.locator('.r-btn.liked').first().waitFor();
+  // die Leiste färbt sich sofort, der Server schreibt kurz danach
+  for (let i = 0; i < 40 && !(await db.query(`select 1 from sh_likes`)).rows.length; i++) await wait(100);
   ok('4  Doppeltipp = Herz', (await db.query(`select kind from sh_likes`)).rows[0]?.kind === 'heart');
   // Like-Knopf → Auswahl Herz · Daumen · Smiley, Daumen ersetzt das Herz
   await mia.app.locator('.card').first().locator('[data-act="like"]').click();
@@ -398,7 +400,8 @@ try {
   await mia.app.locator('.db-state', { hasText: 'Neu geladen' }).waitFor();
   await mia.app.locator('.ed-ta').fill('SELECT COUNT(*) AS n, MAX(bio) AS bio FROM users;');
   await mia.app.locator('#dbRun').click();
-  await mia.app.locator('.grid').first().waitFor();
+  // auf DIESES Ergebnis warten (Spalte bio), nicht auf die Tabelle vom Befehl davor
+  await mia.app.locator('.grid th', { hasText: 'bio' }).first().waitFor({ timeout: 8000 });
   const bc = await mia.app.locator('.grid td').allTextContents();
   ok('5  Backslash im Text: keine Injektion in die Kopie', bc[0] === '2' && bc[1] === "x\\', 1, 2); DELETE FROM users; --", bc.join(' | '));
   await db.query(`update sh_users set bio = null where username = 'admin'`);
@@ -407,7 +410,8 @@ try {
   await mia.app.locator('.db-state', { hasText: 'Neu geladen' }).waitFor();
   await mia.app.locator('.ed-ta').fill('SELECT * FROM users;');
   await mia.app.locator('#dbRun').click();
-  await mia.app.locator('.grid').first().waitFor();
+  // auf DIESES Ergebnis warten (Spalte password), nicht auf die Tabelle davor
+  await mia.app.locator('.grid th', { hasText: 'password' }).first().waitFor({ timeout: 8000 });
   const cells = await mia.app.locator('.grid td').allTextContents();
   ok('5  SELECT * FROM users zeigt Hashes und gender', cells.some(c => /^\$2a\$08\$/.test(c)) && cells.includes('female'), cells.slice(0, 8).join(' | '));
   await shot(mia.page, '5b-sql');
@@ -581,8 +585,14 @@ try {
   ok('8  E-Mails tragen den Namen des jeweiligen Netzwerks', mail.length === nets && mail.every(m => m.email.endsWith('@' + m.name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.test')), JSON.stringify(mail));
   await shot(t.page, '8-daten-geladen');
   // Platzhalter: fehlt das Bild unter dummy/img/, gibt es ein erzeugtes Bild; Profilbilder ohne Datei → Buchstabe
-  const ph = await mia.app.locator('body').evaluate(async () => [await SHMedia.url('x', 'dummy/paul_01.webp', true), await SHMedia.url('x', 'dummy/av_paul.webp', true)]);
+  // Stand von dummy/img/index.json: was da ist → Datei, was fehlt → Platzhalter bzw. nichts
+  const have = JSON.parse(readFileSync(path.join(HERE, '..', 'dummy', 'img', 'index.json'), 'utf8'));
+  const ph = await mia.app.locator('body').evaluate(async () => [await SHMedia.url('x', 'dummy/zz_fehlt_01.webp', true), await SHMedia.url('x', 'dummy/av_zz_fehlt.webp', true)]);
   ok('8  Foto ohne Datei → Platzhalter, Profilbild ohne Datei → nichts', /^blob:/.test(ph[0] || '') && ph[1] === null, JSON.stringify(ph));
+  if (have.length) {
+    const real = await mia.app.locator('body').evaluate(async (el, k) => SHMedia.url('x', 'dummy/' + k + '.webp', true), have[0]);
+    ok('8  vorhandenes Bild kommt aus dummy/img/', real === 'dummy/img/' + have[0] + '.webp', String(real));
+  }
   await mia.app.locator('.hub-nav [data-tab="feed"]').click();
   await mia.app.locator('.card-img.img-ok').first().waitFor({ timeout: 10000 });
   await shot(mia.page, '8-feed-mit-beispieldaten');
