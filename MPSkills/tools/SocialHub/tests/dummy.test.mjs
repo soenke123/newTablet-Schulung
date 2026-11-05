@@ -76,7 +76,7 @@ for (const day of days) {
   // Mengen
   ok('70 User', one(db, 'SELECT COUNT(*) FROM users') === 70);
   const np = one(db, 'SELECT COUNT(*) FROM photos');
-  ok('150 Fotos', np === 150, np);
+  ok('151 Fotos', np === 151, np);
   const ns = one(db, 'SELECT COUNT(*) FROM sessions'), nv = one(db, 'SELECT COUNT(*) FROM views');
   ok('sessions ~1000, views ~8000 je Netzwerk (Deckel 5000 / 100 000)', ns > 600 && ns <= 1500 && nv > 6000 && nv <= 10000, { ns, nv });
   console.log('      Umfang: ' + ['follows', 'likes', 'comments'].map(t => t + ' ' + one(db, 'SELECT COUNT(*) FROM ' + t)).join(' · ') + ` · sessions ${ns} · views ${nv}`);

@@ -1,6 +1,6 @@
 # YourSozialNet – Dummy-Daten: User- und Bilderliste (Entwurf 04.11.2026)
 
-Gehört zu `MPSkills/PLAN_DUMMYDATEN.md`. **70 User**, **~150 Post-Fotos**, **~42 Profilbilder**.
+Gehört zu `MPSkills/PLAN_DUMMYDATEN.md`. **70 User**, **~151 Post-Fotos**, **~42 Profilbilder**.
 Alle Alter gelten **am Stichtag** (= Raum erstellt), alle Zeiten werden relativ dazu berechnet.
 
 Legende Rolle: **CC** = Content Creator · **N** = Normalo · **K** = nur Kommentare/Likes · **T** = Troll · **L** = leeres Konto
@@ -9,7 +9,7 @@ Legende Rolle: **CC** = Content Creator · **N** = Normalo · **K** = nur Kommen
 
 ## 1. User
 
-### 1.1 Content Creators (22) – 109 Fotos
+### 1.1 Content Creators (22) – 110 Fotos
 
 | # | username | Name | Alter | g | Stadt | country (so gespeichert) | Thema | Fotos | Besonderheit |
 |---|---|---|---|---|---|---|---|---|---|
@@ -33,8 +33,8 @@ Legende Rolle: **CC** = Content Creator · **N** = Normalo · **K** = nur Kommen
 | 18 | `ole.kocht.billig` | Ole Jansen | 23 | m | Münster | Deutschland | Studentenküche | 4 | |
 | 19 | `wuffi_und_ich` | **Henriette Zimmerman** | 34 | f | Kiel | Deutschland | Hund Bruno | 5 | 9c: hat alles (Fotos, Kommentare, Follower, Abos, Profilbild) |
 | 20 | `katzenkram` | Sofia Weber | 14 | f | Hannover | Deutschland | Katzen, Hamster, Bartagame Rocky | 4 | „Echse“ harmlos (Falle beim Löschen) |
-| 21 | `wachtauf_kai` | Kai Brenner | 38 | m | Dresden | Deutschland | **Flache Erde** | 5 | Passwort `wahrheit` |
-| 22 | `frag_frieda` | Frieda Ahrens | 25 | f | Göttingen | Deutschland | Wissenschaft erklärt | 4 | widerlegt Kai freundlich |
+| 21 | `wachtauf_marco` | Marco Brenner | 38 | m | Dresden | Deutschland | **Flache Erde** | 6 | Passwort `wahrheit` |
+| 22 | `frag_frieda` | Frieda Ahrens | 25 | f | Göttingen | Deutschland | Wissenschaft erklärt | 4 | widerlegt Marco freundlich |
 
 ### 1.2 Kommentierer und Trolle (10) – keine Fotos
 
@@ -44,7 +44,7 @@ Legende Rolle: **CC** = Content Creator · **N** = Normalo · **K** = nur Kommen
 | 24 | `realtalk_dennis` | Dennis Vogel | 22 | m | Magdeburg | Deutschland | T | Style-Kritik in mild („Die Hose ist ein Verbrechen“) |
 | 25 | `mondrueckseite` | Ronny Pfeiffer | 41 | m | Chemnitz | Deutschland | T | **Echsenmenschen von der Rückseite des Mondes** |
 | 26 | `echsenwache` | Sven Kühn | 35 | m | Zwickau | Deutschland | T | zweiter Echsen-Troll, Echo von Ronny |
-| 27 | `kai_hat_recht` | Uwe Fink | 52 | m | Dresden | deutschland | K | Kai-Fan, Passwort = Benutzername |
+| 27 | `marco_hat_recht` | Uwe Fink | 52 | m | Dresden | deutschland | K | Marco-Fan, Passwort = Benutzername |
 | 28 | `nina.netz` | Nina Lehmann | 19 | f | Kiel | Deutschland | K | verteidigt Leute gegen Hater |
 | 29 | `levi_fan_09` | Marie Schuster | 14 | f | Kiel | Deutschland | K | liked alles von Levi, „🔥🔥🔥“ |
 | 30 | `gewinn_jetzt_2026` | *NULL* | *NULL* | *NULL* | *NULL* | *NULL* | K (Bot) | gleicher Spam unter ~30 Fotos |
@@ -109,7 +109,7 @@ Städte-Kontrolle: München 7 · Leipzig 5 · Kiel 11 · Berlin 8 (für 6a, 6b, 
 | gender | diverse #9 + 2 weitere; NULL bei #30, #68, #70 |
 | schwache Passwörter | #3 `passwort`, #6 `123456`, #21 `wahrheit`, #27 = Benutzername, #34 `lasse`, #53 `hallo123`, #58 `123456` (als bcrypt-Hash, findbar mit `PASSWORD_VERIFY`) |
 | email | gemischt (`dummy/daten.js`): ~30 mit der Netzwerk-Domain `@<netz>.test` in verschiedenen Formen (`paul.brandt@`, `finn@`, `fmr@`, `mila.zeichnet@`), dazu gmx/web/gmail/posteo/t-online `.test` und witzige/Troll-Adressen (`echsenjaeger@aluhut.test`, `die.wahrheit@wachtauf.test`, `hugo.ist.der.beste@web.test`, `sagt.nur.die.wahrheit@web.test`, `noreply@gratis-follower.test`); Erna in GROSSBUCHSTABEN; `test_account` und gelöschtes Konto ohne |
-| bio | leer bei ~20; Ida (#53) mit Klassenangabe „7b 🏫“; Kai mit Link „wacht-auf.test“ |
+| bio | leer bei ~20; Ida (#53) mit Klassenangabe „7b 🏫“; Marco mit Link „wacht-auf.test“ |
 
 ---
 
@@ -128,17 +128,17 @@ Gib E-Mail, Kommentar und Bild aus.“* bzw. *„Lösche alle Echsen-Kommentare.
 | backmitbrigitte, Torte | Ronny | „Grüne Glasur 🤨 ich sag nur Echsen“ |
 | **katzenkram**, Bartagame | Sofia selbst, Ida, Lotta | „Rocky hat sich gehäutet 🦎“ / „Süße Echse!!“ → **harmlos – würde beim pauschalen Löschen mit weg** |
 
-**Diskussion der beiden Verschwörer** (unter Kais Post „Die Wasserwaage lügt nicht 🌊“):
+**Diskussion der beiden Verschwörer** (unter Marcos Post „Die Wasserwaage lügt nicht 🌊“):
 
-1. **Kai**: „Seht ihr? Horizont gerade. Wasserwaage gerade. Erde flach. Punkt.“
+1. **Marco**: „Seht ihr? Horizont gerade. Wasserwaage gerade. Erde flach. Punkt.“
 2. **Ronny**: „Flache Erde ist doch nur Ablenkung 🙄 Die Echsen von der Mondrückseite WOLLEN, dass wir uns über die Form streiten.“
-3. **Kai**: „Mond? Der Mond ist ein Scheinwerfer. Der hat gar keine Rückseite.“
+3. **Marco**: „Mond? Der Mond ist ein Scheinwerfer. Der hat gar keine Rückseite.“
 4. **Ronny**: „Genau das sollst du glauben. Klassischer Echsen-Trick.“
-5. **Uwe**: „Kai hat recht!!“
+5. **Uwe**: „Marco hat recht!!“
 6. **Sven**: „Uwe, wer bezahlt dich? 🦎“
 7. **Frieda**: „Ihr widersprecht euch gerade gegenseitig 😅 Wenn der Mond eine Rückseite hat, ist er eine Kugel – wie die Erde.“
 8. **Priya**: „@frag_frieda 😂 Mic drop.“
-9. **Kai**: „@frag_frieda Studierte Leute glauben alles.“
+9. **Marco**: „@frag_frieda Studierte Leute glauben alles.“
 10. **Patrick**: „Ich hol Popcorn 🍿“
 11. **Werner**: „Ich bin 40 Jahre zur See gefahren. Man sieht zuerst den Mast.“
 12. **Ronny**: „@werner.angelt Zur See oder unter die Mondrückseite? 🤔“
@@ -178,7 +178,7 @@ In die Netzwerke kommen die Daten über „Füllen“ unten in jeder Kachel im D
 - Freie Fotos: Unsplash/Pexels/Pixabay, Quelle notieren.
 - In den Tags bedeutet **—**: Foto ohne Tag (für LEFT JOIN). Ohne Text: Foto ohne Beschreibung.
 
-### 3.1 Creator-Fotos (109)
+### 3.1 Creator-Fotos (110)
 
 **pixelpaul** – *Stil: dunkles Zimmer, RGB-Licht lila/blau, Weitwinkel, Streamer-Look*
 | Datei | Motiv | Post-Text | Tags |
@@ -322,12 +322,13 @@ In die Netzwerke kommen die Daten über „Füllen“ unten in jeder Kachel im D
 | sofia_03 | Bartagame auf Stein unter Wärmelampe | „Rocky hat sich gehäutet 🦎“ | echse, haustier |
 | sofia_04 | Katze und Hamster durch Glas getrennt | „Spannung 😂“ | katze, hamster |
 
-**wachtauf_kai** – *Stil: Handy, schief, viel Text-Emoji, Strand/Felder, Mann (KI, 38)*
-| kai_01 | Wasserwaage auf Strandmauer vor Horizont | „Die Wasserwaage lügt nicht 🌊 #wachtauf“ | flacheerde, wachtauf |
-| kai_02 | Weites, flaches Feld | „Seht ihr eine Krümmung? Ich nicht.“ | flacheerde, wahrheit |
-| kai_03 | Kai vor Globus, macht skeptisches Gesicht | „Das hier ist Propaganda 🙃“ | flacheerde |
-| kai_04 | Flugzeug am Himmel | „Warum fliegen die nicht übers Ende? 🤔“ | wahrheit |
-| kai_05 | Stapel selbst gedruckter Flyer | „Verteile heute in Dresden. Wer hilft?“ | wachtauf, dresden |
+**wachtauf_marco** – *Stil: Handy, schief, viel Text-Emoji, Strand/Felder, Mann (KI, 38)*
+| marco_01 | Wasserwaage auf Strandmauer vor Horizont | „Die Wasserwaage lügt nicht 🌊 #wachtauf“ | flacheerde, wachtauf |
+| marco_02 | Weites, flaches Feld | „Seht ihr eine Krümmung? Ich nicht.“ | flacheerde, wahrheit |
+| marco_03 | Marco vor Globus, macht skeptisches Gesicht | „Das hier ist Propaganda 🙃“ | flacheerde |
+| marco_04 | Flugzeug am Himmel | „Warum fliegen die nicht übers Ende? 🤔“ | wahrheit |
+| marco_05 | Stapel selbst gedruckter Flyer | „Verteile heute in Dresden. Wer hilft?“ | wachtauf, dresden |
+| marco_06 | **Grafik** des Flache-Erde-Modells: Scheibe, Nordpol in der Mitte, Eiswand am Rand, Kuppel, kleine Sonne und Mond kreisen darüber | „So ist unsere Welt WIRKLICH aufgebaut. Das zeigt euch keine Schule. Teilen!! 🌍🧱“ | flacheerde, wahrheit, wachtauf |
 
 **frag_frieda** – *Stil: hell, aufgeräumt, Erklär-Optik, Studentin (KI, 25)*
 | frieda_01 | Schiff am Horizont, nur Aufbauten sichtbar (Tele) | „Warum sieht man erst den Mast? 🧵“ | physik, wissenschaft |
@@ -409,11 +410,11 @@ In die Netzwerke kommen die Daten über „Füllen“ unten in jeder Kachel im D
 | av_ole | ole.kocht.billig | Kochlöffel |
 | av_henriette | wuffi_und_ich | Bruno-Porträt |
 | av_sofia | katzenkram | Katzenpfote |
-| av_kai | wachtauf_kai | Augen-Symbol im Dreieck (Kai-typisch) |
+| av_marco | wachtauf_marco | Augen-Symbol im Dreieck (Marco-typisch) |
 | av_frieda | frag_frieda | Gesicht mit Brille, Tafel (KI) |
 | av_ronny | mondrueckseite | Mond mit grünem Schimmer, gezeichnet |
 | av_sven | echsenwache | Fernglas |
-| av_uwe | kai_hat_recht | Deutschlandkarte, alt |
+| av_uwe | marco_hat_recht | Deutschlandkarte, alt |
 | av_nina | nina.netz | Herz aus Händen |
 | av_marie | levi_fan_09 | Feuer-Emoji-Stil |
 | av_bot | gewinn_jetzt_2026 | Geldsack-Clipart |

@@ -512,7 +512,7 @@
      Netzwerke einzeln (sh_dummy_load). Spätere Netzwerke füllt der Server. */
   const DNEEDS = { users: [], photos: ['users'], tags: ['photos'], follows: ['users'], likes: ['users', 'photos'],
                    comments: ['users', 'photos'], sessions: ['users'], views: ['photos', 'sessions'] };
-  const DWHAT = { users: '70 Beispiel-User', photos: '150 Fotos', tags: 'die Tags und ihre Zuordnung zu den Fotos', follows: 'wer wem folgt',
+  const DWHAT = { users: '70 Beispiel-User', photos: 'die Beispiel-Fotos', tags: 'die Tags und ihre Zuordnung zu den Fotos', follows: 'wer wem folgt',
                   likes: 'die Likes', comments: 'die Kommentare und Diskussionen', sessions: 'die Besuche (Geräte, IPs, Uhrzeiten)', views: 'die angesehenen Fotos' };
   const dStored = t => !!(S.dummy && S.dummy.stored.indexOf(t) >= 0);
   // Beispieldaten nur für die eigenen Netzwerke – das Klassen-Netz füllt die Klasse selbst (0274)

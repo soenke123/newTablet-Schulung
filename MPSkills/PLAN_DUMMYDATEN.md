@@ -104,8 +104,8 @@ Gewollte Grenzfälle beim Alter:
 | **Tiere** | `wuffi_und_ich` Henriette Zimmerman, 34 | Hund Bruno – 9c „lösche alles von ihr“ | Kiel |
 | | `katzenkram` Sofia Weber, 14 | Katzen, Hamster | Hannover |
 | **Segeln / Küste** | `kielwasser` Finn Lüdtke, 27 | Boote, Regatta – 8f „auf hoher See“ | Kiel |
-| **Flache Erde** | `wachtauf_kai` Kai Brenner, 38 | „Horizont ist gerade“, Wasserwaage am Strand | Dresden |
-| **Wissenschaft** | `frag_frieda` Frieda Ahrens, 25 | Physik-Studentin, widerlegt Kai freundlich | Göttingen |
+| **Flache Erde** | `wachtauf_marco` Marco Brenner, 38 | „Horizont ist gerade“, Wasserwaage am Strand | Dresden |
+| **Wissenschaft** | `frag_frieda` Frieda Ahrens, 25 | Physik-Studentin, widerlegt Marco freundlich | Göttingen |
 
 Kiel bekommt bewusst viele aktive User (Beispiel im Arbeitsblatt: Kiel mit > 5 Fotos → Levi, Ralf, Finn,
 Henriette erfüllen es, Mia nicht ganz).
@@ -147,7 +147,7 @@ Abwertung („cringe“, „peinlich“) · Body/Style-Shaming in mild · Pile-o
 **Nazi-Vergleich** statt Antisemitismus. Für 6d/9e mit dem Begriff „Hitler“ drei Kommentare:
 
 1. `n0name_88` unter Friedas Erklärpost: „Du laberst wie Hitler, nur Propaganda“ (Nazi-Vergleich, löschen ✔)
-2. `n0name_88` unter einem Kai-Post: „Hitler hatte auch nicht in allem unrecht“ (Relativierung, löschen ✔) – evtl. zu scharf, s. Fragen
+2. `n0name_88` unter einem Marco-Post: „Hitler hatte auch nicht in allem unrecht“ (Relativierung, löschen ✔) – evtl. zu scharf, s. Fragen
 3. `coach_ralf` unter einem Geschichts-Ausflugsfoto (Normalo): „Starke Doku über Hitlers Aufstieg – sollte jeder sehen“ → **falsch-positiv**: `DELETE … LIKE '%Hitler%'` löscht einen guten Kommentar mit. Schöne Diskussion „Filter vs. Moderation“.
 
 ---
@@ -156,13 +156,13 @@ Abwertung („cringe“, „peinlich“) · Body/Style-Shaming in mild · Pile-o
 
 Das Schema hat keine Antwort-Spalte – braucht es auch nicht: Antworten stehen wie bei Instagram mit
 `@username` vorne, die Reihenfolge ergibt `ORDER BY created_at`. Abfragebar mit
-`WHERE photo_id = … ORDER BY created_at` bzw. `body LIKE '%@wachtauf_kai%'`.
+`WHERE photo_id = … ORDER BY created_at` bzw. `body LIKE '%@wachtauf_marco%'`.
 
 Geplante Threads (handgeschrieben, 6–15 Kommentare):
 
 | Thread | Wer | Inhalt |
 |---|---|---|
-| „Die Wasserwaage lügt nicht 🌊“ | Kai, Frieda, n0name_88, 2 Normalos, Kai-Fans | Kai behauptet, Frieda erklärt Erdkrümmung, Fans feiern Kai, ein Normalo wird überzeugt (!), einer macht Witze |
+| „Die Wasserwaage lügt nicht 🌊“ | Marco, Frieda, n0name_88, 2 Normalos, Marco-Fans | Marco behauptet, Frieda erklärt Erdkrümmung, Fans feiern Marco, ein Normalo wird überzeugt (!), einer macht Witze |
 | Beef Gaming | xXhugoXx vs. pixelpaul, deren Fans | „Du bist doch nur Silber“ – endet mit Versöhnung/Duell-Ankündigung |
 | Outfit-Pile-on | Alina, realtalk_dennis, aaron183, nina.netz, Alina-Fans | drei Hater, dann kippt die Stimmung, Alina antwortet souverän |
 | Gewinnspiel | Gina: „Markiere 2 Freunde“ | 25 Kommentare mit @-Markierungen → wer kennt wen (Netzwerk ohne follows ablesbar) |
@@ -196,7 +196,7 @@ oder pro Raum abschaltbar machen. Entscheidung nötig.
 Erzeugt nach Regeln für die letzten 30 Tage:
 
 - **Geräte**: Teenager meist Handy (iPhone/Samsung/Xiaomi), Creators zusätzlich Desktop (Chrome/Firefox/Edge/Safari),
-  Erna ein altes iPad, Kai Windows + Edge.
+  Erna ein altes iPad, Marco Windows + Edge.
 - **VPN**: `vanlife_tom` mit 9 IPs aus verschiedenen Ländern (Zeitzone passt nicht zur Sprache) → Aufgabe e.
 - **Gleicher Ort**: Lasse Lüders und Lars-Ole Kunz (beide Berlin, Nachbarn) teilen eine Heim-IP; die Schüler-IP der Schule taucht
   bei den echten Usern auf (Kontrast).
@@ -219,7 +219,7 @@ Die Themenwelten sind der Kern: jede Zielgruppe ist per SQL eindeutig fassbar, z
 - „Gamer“ = hat ≥ 3 Fotos mit Tag `gaming` gelikt oder folgt ≥ 2 Gaming-Creators
 - „Minderjährige Sportler in Kiel“ (Ethik-Frage: darf man das?)
 - „Reisende mit Desktop“ (Laptop-Werbung)
-- „Leute, die Kai glauben“ (liken Flacherde und kommentieren positiv) → Verschwörungs-Werbung als Warnbeispiel
+- „Leute, die Marco glauben“ (liken Flacherde und kommentieren positiv) → Verschwörungs-Werbung als Warnbeispiel
 
 Die `ads`-Tabelle selbst ist das nächste Thema.
 
@@ -273,7 +273,7 @@ User feststehen – als `MPSkills/tools/SocialHub/dummy/bilder.csv`. Beispielzei
 | Datei | Motiv | Post-Text | Tags |
 |---|---|---|---|
 | gaming_pixelpaul_01 | Gaming-Setup, RGB, Nacht, zwei Monitore | „Neues Setup ist endlich fertig 😍“ | gaming, setup |
-| flat_kai_03 | Wasserwaage auf Strandmauer vor Horizont | „Erklärt mir das mal, Physiker 🤔 #wachtauf“ | flacheerde, wahrheit |
+| flat_marco_03 | Wasserwaage auf Strandmauer vor Horizont | „Erklärt mir das mal, Physiker 🤔 #wachtauf“ | flacheerde, wahrheit |
 | travel_lena_02 | Rucksack auf Felsen, Fjord | „Drei Tage kein Netz. Bestes Gefühl.“ | abenteuerlust, norwegen |
 | sail_finn_01 | Jolle bei Kieler Woche | „Regatta Tag 2 – Platz 4!“ | segeln, boot, kiel |
 | normal_lasse_01 | Döner in der Hand, Berlin-Straße | „Bester in Kreuzberg“ | food, berlin |
