@@ -14,8 +14,13 @@
 // Gelesen wird nur über die RPC sh_app_info (128-Bit-Schlüssel, nichts
 // Persönliches: Name, Logo, Farbe). Nichts wird gespeichert.
 //
+// f=ip ist /api/my_ip (Rewrite in vercel.json, Code in _my_ip.js) –
+// eigene Function geht nicht, der Hobby-Plan erlaubt höchstens 12.
+//
 // Env-Vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // ══════════════════════════════════════════════════════════════
+
+import myIp from './_my_ip.js';
 
 const LOGO_COLOR = {
   bell: '#e91d77', connect: '#d97706', rocket: '#ea580c', graph: '#2563eb',
@@ -61,6 +66,7 @@ async function appInfo(key) {
 }
 
 export default async function handler(req, res) {
+  if (req.query.f === 'ip') return myIp(req, res);
   if (req.method !== 'GET') return res.status(405).json({ ok: false, error: 'method_not_allowed' });
   const key = String(req.query.k || '');
   const f = String(req.query.f || 'manifest');

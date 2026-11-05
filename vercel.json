@@ -71,6 +71,10 @@
   ],
   "rewrites": [
     {
+      "source": "/api/my_ip",
+      "destination": "/api/sh_app?f=ip"
+    },
+    {
       "source": "/n/:key",
       "destination": "/MPSkills/tools/SocialHub/index.html"
     },

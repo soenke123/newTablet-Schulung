@@ -1,5 +1,7 @@
 // ══════════════════════════════════════════════════════════════
 // GET /api/my_ip — die eigene öffentliche IP (für Siegel I im GameHub)
+//   Keine eigene Function (Hobby-Plan: höchstens 12 in api/):
+//   vercel.json schreibt /api/my_ip auf /api/sh_app?f=ip um.
 // ══════════════════════════════════════════════════════════════
 // Ersetzt api.ipify.org: Das Rätsel „Kennst du deine Adresse?“ hat die
 // IP dafür an einen fremden Dienst in den USA geschickt. Hier bleibt
