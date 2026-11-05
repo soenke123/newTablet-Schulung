@@ -39,7 +39,7 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 - **`password`** enthält den Hash und ist sichtbar wie bei InstaHub (bcrypt, `$2y$10$…`).
 - **Verschiedene Likes?** TikTok kennt nur das Herz. Kommentare kann man bei TikTok aber liken → `comment_likes` (ist schon drin). Optional: `likes.type` mit Reaktionen (Herz, Lachen, Wow …). Das wäre eher Facebook, gibt aber schöne `GROUP BY type`-Aufgaben. Entscheidung offen.
 - **Analytics gebaut (Migration 0270):** `sessions` (ein Besuch je User: IP, Browser, OS, Gerät, Bildschirm, Sprache, Zeitzone, Hell/Dunkel + vier Erlaubnis-Haken Standort/Kamera/Mikrofon/Benachrichtigungen) und `views` (wer hat welches Foto wie lange gesehen). Laufen wie auf echten Seiten still mit – **ohne Banner, ohne Haken für die Klasse** – sobald die Lehrkraft `sessions` (und `views`) im Diagramm erstellt hat; kein Schalter, kein Zeitlimit. Standort/Kamera/Mikrofon/Benachrichtigungen werden nur zum Schein abgefragt (nachgebautes „Zulassen?“), gespeichert wird der Klick. Die Lehrkraft löst am Ende auf („Was haben wir gesammelt / was ginge ohne Fragen / was eine Erlaubnis kostet / was nur echte Apps können“). Details: `tools/SocialHub/CLAUDE.md`.
-- Werbung: `ads` + `ad_audience`/`ad_content`/`ad_views`/`ad_clicks`, Plan in Abschnitt 13.
+- Werbung: nur `ads` (sichtbar), Plan in Abschnitt 13.
 
 ## 2. Tabellen erstellen = Lehrkraft
 
@@ -123,8 +123,8 @@ Keine eigene Werbekunden-Rolle: Admins sehen ohnehin alle Daten (Entscheidung S�
 
 ### 13.1 Einschalten
 
-- `ads` ist eine Tabelle im Diagramm der Lehrkraft wie alle anderen (`data.tables`). `ads` braucht `users`; die
-  Hilfstabellen (`ad_audience`, `ad_content`, `ad_views`, `ad_clicks`) kommen mit `ads` und gehen mit ihm.
+- `ads` ist eine Tabelle im Diagramm der Lehrkraft wie alle anderen (`data.tables`), braucht `users`. Für die Schüler
+  gibt es **nur `ads`** – keine weiteren Werbe-Tabellen (Sönke: sonst zu kompliziert).
 - Ist `ads` erstellt, erscheint im Adminbereich der Reiter **Werbung** (neben SQL · Diagramm).
 - **Dummy-Kampagnen** wie die übrigen Dummy-Daten („Füllen / Leeren“ an der Kachel) – **auch im Klassen-Netz**
   (Ausnahme von „Klassen-Netz ohne Dummy-Daten“). Deshalb fragen die Dummy-Kampagnen nur Dinge ab, die es auch ohne
@@ -169,37 +169,32 @@ ganze Datenbank). Deshalb rechnet **das Gerät eines Admins**:
 
 1. Das Admin-Gerät führt `target_sql` in der SQLite-Kopie aus (Form 1: einmal je User mit eingesetztem `$user`;
    Form 2: einmal) und `content_sql` einmal – im Worker mit dem üblichen Abbruch nach 8 s.
-2. Das Ergebnis (nur ganze Zahlen) geht an den Server: `ad_audience (ad_id, user_id)` und `ad_content (ad_id, photo_id)`.
+2. Das Ergebnis (nur ganze Zahlen) geht an den Server und wird **intern** an der Kampagne gemerkt (z. B. Spalten
+   `audience int[]` / `content int[]` in `sh_ads`, die nicht im Schnappschuss stehen – im SQL-Editor unsichtbar).
    Der Server prüft nur: ids gehören zum Netzwerk, Kampagne gehört zum Netzwerk, Deckel.
 3. `sh_feed` mischt danach aus diesen Listen: Anzeigen als Karte alle 5–7 Posts, beworbene Fotos in „Für dich“ mit
    Vorrang; dieselbe Kampagne höchstens alle n Karten (Frequenz-Deckel).
 
-Neu gerechnet wird beim Speichern einer Kampagne und von selbst, solange ein Admin den Adminbereich offen hat
-(z. B. jede Minute). Ob es zusätzlich einen Knopf „Neu berechnen“ und die Anzeige „Zielgruppe: 7 User, berechnet
-vor 3 Min.“ braucht, schauen wir beim Bauen (Sönke). Offen: Klassen-Netz mit Dummy-Kampagnen, solange noch kein
-Admin dort war → Zielgruppe leer; ggf. rechnet das Gerät der Lehrkraft beim Öffnen des Klassen-Netzes mit.
+Neu gerechnet wird beim Speichern einer Kampagne und von selbst, solange ein Admin im Netzwerk ist (z. B. jede
+Minute). Ob es zusätzlich einen Knopf „Neu berechnen“ braucht, schauen wir beim Bauen (Sönke). Klassen-Netz: die
+Lehrkraft ist dort Admin, ihr Gerät rechnet beim Öffnen mit – die Dummy-Kampagnen bekommen so ihre Zielgruppe.
 
-### 13.4 Tabellen (im SQL-Editor sichtbar)
+### 13.4 Tabelle `ads` (im SQL-Editor sichtbar, die einzige)
 
 ```
-ads          (id, user_id → users (wer sie angelegt hat), name, kind ENUM('ad','boost'),
-              title, body, image, button, target_sql TEXT, content_sql TEXT,
-              active BOOL, computed_at DATETIME, created_at)
-ad_audience  (ad_id → ads, user_id → users, PK beide)     ← berechnete Zielgruppe
-ad_content   (ad_id → ads, photo_id → photos, PK beide)   ← berechnete beworbene Fotos (nur boost)
-ad_views     (id, ad_id, user_id, photo_id NULL, placement ENUM('feed','photo'), duration_ms, created_at)
-ad_clicks    (id, ad_id, user_id, created_at)
+ads (id, user_id → users (wer sie angelegt hat), name, kind ENUM('ad','boost'),
+     title, body, image, button, target_sql TEXT, content_sql TEXT,
+     active BOOL, created_at)
 ```
 
-- Anlegen/Ändern/Löschen auch per SQL (`INSERT INTO ads …`) über `sh_db_apply`; `ad_audience`/`ad_content` schreibt
-  nur die Berechnung. `target_sql`/`content_sql` sind für den Server nur Text (Blacklist wie andere Texte).
-- `ad_views`/`ad_clicks` laufen wie `views` über `js/track.js` mit → Auswertung per SQL (Klickrate je Kampagne,
-  je Geschlecht, je Gerät …).
+- Anlegen/Ändern/Löschen im Reiter Werbung oder per SQL (`INSERT INTO ads …`, `UPDATE ads SET active = false …`)
+  über `sh_db_apply`. `target_sql`/`content_sql` sind für den Server nur Text (Blacklist wie andere Texte).
+- Keine Tabellen für Zielgruppe, Anzeigen oder Klicks; berechnete Listen bleiben intern (13.3).
 - Klick auf eine Anzeige öffnet eine kleine Seite mit Bild + Text der Kampagne (kein Link nach draußen).
 
 ### 13.5 Reiter „Werbung“ (Adminbereich)
 
-- Liste der Kampagnen als Karten: Name, Art, Schalter aktiv, Zielgruppe (Anzahl), Anzeigen/Klicks.
+- Liste der Kampagnen als Karten: Name, Art, Schalter aktiv, Zielgruppe (Anzahl).
 - Neu/Bearbeiten: Name · Art (Anzeige | Beworbene Posts) · bei Anzeige Bild (wie Posten, Zuschneiden), Titel, Text,
   Knopf · „Wem?“ als SQL-Editor (derselbe wie im Reiter SQL) mit Probelauf „trifft 7 User: …“ · bei Boost „Was?“
   ebenso mit Vorschau der Fotos.
