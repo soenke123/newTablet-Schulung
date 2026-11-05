@@ -1110,7 +1110,9 @@
   function cardHtml(it, i) {
     const likeOk = it.likes != null;
     const comOk = it.comments != null;
-    const canDel = it.mine || S.hub.admin;
+    // Nur eigene Fotos über die drei Punkte löschen – Admins nicht (Sönke 05.11.2026);
+    // wer Admin ist, geht dafür über SQL (DELETE FROM photos …).
+    const canDel = !!it.mine;
     return '<article class="card" data-i="' + i + '" data-id="' + it.id + '">' +
       '<div class="card-bg" data-m="' + esc(it.image) + '" data-thumb="1"></div>' +
       '<img class="card-img" data-m="' + esc(it.image) + '" alt="" draggable="false">' +
@@ -1317,6 +1319,7 @@
       Comments(it, () => syncCards(it));
     }
     async function moreMenu(it, card) {
+      if (!it.mine) return;
       if (!confirm('Dieses Foto löschen?')) return;
       const r = await hcall('sh_photo_delete', { p_photo: it.id });
       if (!r || !r.ok) { fail(r); return; }
