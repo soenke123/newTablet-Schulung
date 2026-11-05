@@ -81,7 +81,7 @@ Trolle und Fake-News-Accounts tragen bewusst nur deutsche Namen.
 | 54 | `lotta.b` | Lotta Berg | **12** | f | Kassel | Deutschland | 1 | Tiere, Kreativ | unter Mindestalter 13 |
 | 55 | `noah.sz` | Noah Schulz | **17 J. 364 T.** | m | Bochum | Deutschland | 1 | Gaming | wird morgen 18 – `DATEDIFF/365` sagt schon 18 |
 | 56 | `emma.kr` | Emma Krüger | **18 J. 1 T.** | f | Bonn | Deutschland | 1 | Lifestyle | gestern 18 geworden |
-| 57 | `jannik_hh` | Jannik Wolf | 18 | m | HH | DE | 1 | Fußball | Stadt „HH“, Land „DE“ |
+| 57 | `jannik.wolf` | Jannik Wolf | 18 | m | Hambrug | DE | 1 | Fußball | Stadt „Hambrug“ (Tippfehler), Land „DE“ |
 | 58 | `werner.angelt` | Werner Kaiser | 63 | m | Rostock | Deutschland | 2 | Segeln | Angelboot (8f), Passwort `123456` |
 | 59 | `sophie.db` | Sophie Dubois | 21 | f | Straßburg | Frankreich | 2 | Reisen, Kreativ | |
 | 60 | `mikkel.s` | Mikkel Sørensen | 24 | m | Aarhus | Dänemark | 1 | Segeln | ø im Namen |
@@ -104,7 +104,7 @@ Städte-Kontrolle: München 7 · Leipzig 5 · Kiel 11 · Berlin 8 (für 6a, 6b, 
 | Spalte | Werte |
 |---|---|
 | country | Deutschland (Mehrheit) · Germany (#5, #48) · deutschland (#27) · DE (#57) · NULL (#30, #66, #68, #70) · Polen · Italien · Frankreich · Dänemark · Österreich · Schweiz |
-| city | Hamburg · hamburg · „Hamburg␣“ · HH · NULL bei #12 |
+| city | Hamburg · hamburg · „Hamburg␣“ · Hambrug (Tippfehler) · NULL bei #12 |
 | centimeter | NULL bei 8 Usern; Ronny gibt 250 an |
 | gender | diverse #9 + 2 weitere; NULL bei #30, #68, #70 |
 | schwache Passwörter | #3 `passwort`, #6 `123456`, #21 `wahrheit`, #27 = Benutzername, #34 `lasse`, #53 `hallo123`, #58 `123456` (als bcrypt-Hash, findbar mit `PASSWORD_VERIFY`) |
@@ -284,7 +284,7 @@ In die Netzwerke kommen die Daten über „Füllen“ unten in jeder Kachel im D
 
 **linus.lens** – *Stil: Langzeitbelichtung, Blaue Stunde, Ostsee, Fotograf (KI, 22)*
 | linus_seascape | Ostsee mit seidigem Wasser, Steine (Langzeitbelichtung) | „90 Sekunden Belichtung“ | seascape, fotografie, langzeitbelichtung |
-| linus_02 | Leuchtturm Warnemünde Blaue Stunde | „Blaue Stunde 💙“ | fotografie, rostock |
+| linus_02 | Leuchtturm Warnemünde Blaue Stunde | „Blaue Stunde ✨“ | fotografie, rostock |
 | linus_03 | Kamera auf Stativ am Strand | „Mein Werkzeug“ | fotografie |
 | linus_04 | Möwe im Flug, gestochen scharf | „1/4000 s“ | fotografie, tiere |
 | linus_05 | Polarlicht über der Ostsee | „Das hier in Deutschland?!“ | fotografie, polarlicht |
@@ -361,7 +361,7 @@ In die Netzwerke kommen die Daten über „Füllen“ unten in jeder Kachel im D
 | laura_01 | laura.mauer | Fischbrötchen am Hafen | „Hamburg 🐟“ | food, hamburg |
 | marlo_01 | marlo.eb | Analogkamera auf Reisetagebuch | „Film ist zurück 📷“ | fotografie, reisen |
 | jakob_01 | jakob.hu | Fußballschuhe vor Schrank | — | fussball |
-| yusuf_01 | yusuf.dmr | Stadion Gelsenkirchen von außen | „Heute mit Papa 💙“ | fussball |
+| yusuf_01 | yusuf.dmr | Stadion Gelsenkirchen von außen | „Heute mit Papa ⚽“ | fussball |
 | yusuf_02 | yusuf.dmr | Controller auf Sofa | „FIFA-Abend“ | gaming |
 | ana_01 | ana.kovac | Yogamatte im Park | „Morgenroutine“ | fitness |
 | ana_02 | ana.kovac | Outfit-Detail Schuhe + Tasche | „Neu 🤍“ | fashion |
@@ -370,7 +370,7 @@ In die Netzwerke kommen die Daten über „Füllen“ unten in jeder Kachel im D
 | lotta_01 | lotta.b | gemaltes Pferdebild | „Für Oma“ | zeichnen |
 | noah_01 | noah.sz | Geburtstagskerzen „18“ (vorbereitet) | „Morgen ist es so weit 🎉“ | geburtstag |
 | emma_01 | emma.kr | Geburtstagstorte mit „18“ | „18!!! Danke für alles ❤️“ | geburtstag |
-| jannik_01 | jannik_hh | Elbphilharmonie von der Fähre | „HH 💙“ | hamburg |
+| jannik_01 | jannik.wolf | Elbphilharmonie von der Fähre | „Meine Stadt ⚓“ | hamburg |
 | werner_01 | werner.angelt | kleines Angelboot am Steg | „Mein Schmuckstück“ | boot, angeln |
 | werner_02 | werner.angelt | Dorsch in der Hand | „Dorsch des Tages 🎣“ | angeln |
 | sophie_01 | sophie.db | Fachwerkhäuser in Straßburg | „Petite France 💛“ | reisen |

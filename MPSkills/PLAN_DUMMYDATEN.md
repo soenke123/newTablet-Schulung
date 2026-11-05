@@ -176,7 +176,7 @@ Geplante Threads (handgeschrieben, 6–15 Kommentare):
 | Spalte | Fehler | Aufgabe |
 |---|---|---|
 | `country` | „Deutschland“ (meist), „Germany“ (6), „deutschland“ (2), „DE“ (1), NULL (5), „Österreich“, „Schweiz“, „Dänemark“, „Türkei“, „Polen“ | 3c, IN, Aufgabe a (LEFT-JOIN-Blatt) |
-| `city` | „Hamburg“, „hamburg“, „Hamburg “ (Leerzeichen), „HH“ | Beispiel `LIKE 'HAMBURG%'`, Gruppierung kaputt |
+| `city` | „Hamburg“, „hamburg“, „Hamburg “ (Leerzeichen), „Hambrug“ (Tippfehler) | Beispiel `LIKE 'HAMBURG%'`, Gruppierung kaputt |
 | `email` | Mehrheit `@<netz>.test`, dazu gmx/web/gmail-artig `.test`, Großbuchstaben | 3j, Übung c |
 | `centimeter` | NULL bei 8 Usern, ein Troll mit 250 | AVG ignoriert NULL, Bundeswehr 3n |
 | `gender` | NULL bei einigen, `diverse` bei 3 | 4e zählt nicht alle |
