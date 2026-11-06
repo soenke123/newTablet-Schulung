@@ -721,7 +721,8 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .wb-top { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .wb-top b { font: 700 16px var(--font-display); }
 .wb-kind { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: var(--soft2); color: var(--muted); }
-.wb-kind--wb { background: #fde68a; color: #6b4a00; }
+.wb-kind--feed { background: #fde68a; color: #6b4a00; }
+.wb-kind--label { background: #dbe4ff; color: #22337a; }
 .wb-kind--boost { background: #c7f0dc; color: #0b5a34; }
 .wb-n { font-size: 13.5px; display: flex; flex-direction: column; gap: 2px; }
 .wb-err { color: var(--bad); font-size: 13px; }
@@ -734,6 +735,8 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .wb-col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .wb-seg { max-width: none; margin-top: 5px; }
 .wb-form.is-boost .wb-only-ad { display: none; }
+.wb-form.is-feed .wb-only-c { display: none; }
+.wb-form:not(.is-label) .wb-only-label { display: none; }
 .wb-form:not(.is-boost) .wb-only-boost { display: none; }
 .wb-only-ad { display: flex; flex-direction: column; gap: 12px; }
 .wb-pic { display: flex; gap: 12px; align-items: center; }
@@ -806,3 +809,23 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .wb-onphoto .wb-why:hover { background: rgba(255,255,255,.18); }
 /* Der SQL-Editor steckt hier in einem .form – dessen Textfeld-Stil (weißer Grund, Rahmen) würde den farbigen Text verdecken */
 .wb-form .ed-ta, .wb-form .ed-ta:focus { background: transparent; border: 0; border-radius: 0; box-shadow: none; padding: 12px 14px; min-height: 0; color: transparent; font: 13.5px/21px var(--font-mono); resize: none; }
+
+/* Häufigkeit der Feed-Werbung (0278) */
+.wb-every { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px; }
+.wb-every:empty { display: none; }
+.wb-every .lbl { margin: 0; }
+.wb-every .seg { margin: 0; }
+/* Vorschau (0278): ein kleines Handy mit der Karte */
+.dlg-back--wb .dlg { max-width: 360px; }
+.wb-prev { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.wb-phone { width: 270px; max-width: 100%; height: 480px; border-radius: 28px; border: 7px solid #0b0d18; overflow: hidden; position: relative; background: #000; box-shadow: var(--shadow); }
+.wb-phone .feed { height: 100%; overflow: hidden; }
+.wb-phone * { pointer-events: none; }
+.wb-phone .wb-label { top: 14px; }
+.wb-phone .meta { right: 14px; }   /* keine Knopfleiste rechts in der Vorschau */
+.wb-phone .wb-title { font-size: 17px; }
+.wb-phone .wb-cta { min-height: 40px; font-size: 14px; }
+.wb-phone .wb-fill span { font-size: 26px; }
+.wb-prev-n { margin: 0; text-align: center; }
+.wb-prev-b svg { font-size: 15px; }
+@media (max-width: 760px) { .wb-prev-b span { display: none; } }

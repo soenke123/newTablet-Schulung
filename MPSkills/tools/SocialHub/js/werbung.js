@@ -5,10 +5,14 @@
    ══════════════════════════════════════════════════════════════
    Reiter „Werbung“ im Adminbereich (erscheint, wenn die Lehrkraft die
    Tabelle ads erstellt hat; im Klassen-Netz immer):
-     - Liste der Kampagnen mit Schalter an/aus, Zielgruppe, Fehlern
-     - Editor: Name · Art (Anzeige | Beworbene Posts) · Bild/Titel/Text/
-       Knopf · „Wem?“ (target_sql) · „Was?“ bzw. „Wo?“ (content_sql) mit Probelauf
-     Anzeige ohne „Wo?“ = Karte im Feed, mit „Wo?“ = nur an diesen Fotos (0277)
+     - Liste der Kampagnen mit Schalter an/aus, Zielgruppe, Fehlern, Vorschau
+     - oben „Feed-Werbung nach jedem 3. · 5. · 10. Foto“ (sh_ad_every, 0278)
+     - Editor: Name · Art · Bild/Titel/Text/Knopf · „Wem?“ · zweites SQL-Feld
+       Drei Arten (0278, kind):
+         feed  = Feed-Werbung: Karte im Feed, nur „Wem?“
+         label = Foto-Label: am Foto, „Wem?“ + „An welchen Fotos?“ (content_sql)
+         boost = Beworbener Post: „Wem?“ + „Was?“ (content_sql = Foto-ids)
+     - Vorschau: Handy mit der Karte / dem Foto mit Label / „Gesponsert“
 
    Die Zielgruppen rechnet NUR dieses Gerät (Admin): Schnappschuss →
    SQLite-Kopie im Worker → js/werbung-rechnen.js → nur die ids an
@@ -26,7 +30,10 @@
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const $ = (s, el) => (el || document).querySelector(s);
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
-  const KIND = { ad: 'Anzeige', boost: 'Beworbene Posts' };
+  const KIND = { feed: 'Feed-Werbung', label: 'Foto-Label', boost: 'Beworbener Post' };
+  const KINDS = ['feed', 'label', 'boost'];
+  const EVERY = [3, 5, 10];
+  const isOn = a => a.active === true || a.active === 1;
   const COLS = ['id', 'user_id', 'name', 'kind', 'title', 'body', 'image', 'button', 'target_sql', 'content_sql', 'active', 'created_at'];
 
   const ICON = {
@@ -38,8 +45,11 @@
     play: '<svg viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>',
     redo: '<svg viewBox="0 0 24 24"><path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4v4.5H15"/></svg>',
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
-    image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5-5 4 4 2.5-2.5L20 19"/></svg>'
+    image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5-5 4 4 2.5-2.5L20 19"/></svg>',
+    tag: '<svg viewBox="0 0 24 24"><path d="M3.5 12.5V4.5h8l9 9-8 8z"/><circle cx="8" cy="9" r="1.5"/></svg>',
+    eye: '<svg viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/></svg>'
   };
+  const kindIcon = k => k === 'boost' ? ICON.rocket : k === 'label' ? ICON.tag : ICON.mega;
 
   const rowsToAds = t => !t ? [] : t.rows.map(r => { const o = {}; t.cols.forEach((c, i) => { o[c] = r[i]; }); return o; });
   const firstLine = sql => { const l = String(sql || '').trim().split('\n').map(x => x.trim()).filter(Boolean); return l.length ? l.slice(0, 3).join(' ').slice(0, 140) : ''; };
@@ -47,7 +57,7 @@
 
   /* ── Rechnen: Schnappschuss → Worker → sh_ads_compute ────── */
   async function computeWith(W, call, snap) {
-    const ads = rowsToAds(snap.ads).filter(a => a.active === true || a.active === 1);
+    const ads = rowsToAds(snap.ads).filter(isOn);
     if (!ads.length) return { ads: rowsToAds(snap.ads), results: [] };
     const results = await W.ads(ads.map(a => ({ id: a.id, kind: a.kind, target_sql: a.target_sql, content_sql: a.content_sql })));
     await call('sh_ads_compute', { p_results: results.map(x => ({ id: x.id, a: x.a, c: x.c })) });
@@ -82,7 +92,7 @@
   function stop() { if (autoT) clearInterval(autoT); autoT = null; autoKey = null; }
 
   /* ── Bausteine für die App ───────────────────────────────── */
-  // Karte im Feed (kind 'ad')
+  // Karte im Feed (Feed-Werbung, kind 'feed')
   function cardHtml(ad) {
     const img = ad.image;
     return '<article class="card card--wb" data-wb="' + esc(ad.id) + '">' +
@@ -102,7 +112,7 @@
       '<button type="button" class="wb-strip-t" data-wbgo><small>Anzeige · ' + esc(ad.name) + '</small><b>' + esc(ad.title || ad.name) + '</b></button>' +
       '<button type="button" class="wb-why wb-why--s" data-wbwhy title="Warum sehe ich das?">' + ICON.info + '</button></div>';
   }
-  // Leiste unten auf einer Foto-Karte (Anzeige mit „Wo?“, 0277)
+  // Leiste unten auf einer Foto-Karte (Foto-Label, kind 'label')
   function photoAdHtml(ad) {
     return '<div class="wb-onphoto" data-wbp>' +
       (ad.image ? '<span class="wb-strip-img" data-m="' + esc(ad.image) + '" data-thumb="1"></span>' : '<span class="wb-strip-img wb-strip-img--x">' + ICON.mega + '</span>') +
@@ -118,8 +128,30 @@
                                    : '<p class="muted small">Die Abfrage liefert eine Liste von User-ids – deine ist dabei.</p>')
          : '<p>Diese Werbung sehen <b>alle</b> – die Kampagne hat keine Zielgruppe.</p>') +
       (sponsored && ad.content_sql ? '<p>Beworben werden die Fotos aus dieser Abfrage:</p><pre class="wb-sqlv">' + esc(String(ad.content_sql).trim()) + '</pre>' : '') +
-      (!sponsored && ad.content_sql ? '<p>Und sie hängt an Fotos, die diese Abfrage liefert – so wie das Foto, das du gerade ansiehst:</p><pre class="wb-sqlv">' + esc(String(ad.content_sql).trim()) + '</pre>' : '') +
+      (!sponsored && ad.kind === 'label' && ad.content_sql ? '<p>Und sie hängt an Fotos, die diese Abfrage liefert – so wie das Foto, das du gerade ansiehst:</p><pre class="wb-sqlv">' + esc(String(ad.content_sql).trim()) + '</pre>' : '') +
       '<p class="muted small">Gerechnet wird mit dem, was das Netzwerk über dich gespeichert hat: Likes, Follows, Besuche, wie lange du Fotos ansiehst …</p>';
+  }
+
+  /* ── Vorschau: so sähe es im Netzwerk aus ────────────────── */
+  // Foto-Karte wie in der App (ohne Knöpfe rechts), optional mit Label/„Gesponsert“
+  function photoCardHtml(ph, extra) {
+    return '<article class="card">' +
+      (ph && ph.image ? '<div class="card-bg" data-m="' + esc(ph.image) + '" data-thumb="1"></div><img class="card-img" data-m="' + esc(ph.image) + '" alt="" draggable="false">'
+                      : '<div class="wb-fill"><span>Beispielfoto</span></div>') +
+      '<div class="meta"><span class="m-user">@' + esc(ph && ph.username || 'user') + '</span><span class="m-time">· gerade eben</span>' +
+        (extra && extra.sponsored ? '<span class="m-gesp">Gesponsert ' + ICON.info + '</span>' : '') +
+        (ph && ph.description ? '<p class="m-desc">' + esc(ph.description) + '</p>' : '') +
+        (extra && extra.label ? photoAdHtml(extra.label) : '') +
+      '</div></article>';
+  }
+  // ad = Kampagne (auch ungespeichert), ph = Foto aus dem Schnappschuss oder null,
+  // note = Satz unter dem Handy
+  function previewHtml(ad, ph, note) {
+    const k = ad.kind;
+    const card = k === 'feed' ? cardHtml(Object.assign({}, ad, { id: 'vorschau' }))
+      : photoCardHtml(ph, k === 'label' ? { label: ad } : { sponsored: true });
+    return '<div class="wb-prev"><div class="wb-phone"><div class="feed">' + card + '</div></div>' +
+      (note ? '<p class="muted small wb-prev-n">' + note + '</p>' : '') + '</div>';
   }
 
   /* ── Reiter „Werbung“ ────────────────────────────────────── */
@@ -128,6 +160,59 @@
     const W = window.SHDB.worker();
     let snap = null, schema = null, ads = [], results = {}, loaded = false, at = null, dead = false;
     let listed = false, failMsg = null;   // Liste schon aus dem Schnappschuss da? / was beim Laden schiefging
+    let every = null;                      // Feed-Werbung nach jedem n-ten Foto (sh_ad_every, 0278)
+    call('sh_ad_every', {}).then(r => { if (r && r.ok) { every = r.every; if (!editing && !dead) paintEvery(); } });
+
+    function paintEvery() {
+      const el = $('#wbEvery', host);
+      if (!el) return;
+      el.innerHTML = '<span class="lbl">Feed-Werbung nach jedem</span><div class="seg seg--s" role="radiogroup">' +
+        EVERY.map(n => '<button type="button" role="radio" data-every="' + n + '"' + (every === n ? ' class="on" aria-checked="true"' : ' aria-checked="false"') + '>' + n + '.</button>').join('') +
+        '</div><span class="lbl">Foto</span>';
+      $$('[data-every]', el).forEach(b => b.onclick = async () => {
+        const n = +b.dataset.every;
+        if (n === every) return;
+        const r = await call('sh_ad_every', { p_every: n });
+        if (!r || !r.ok) { ctx.fail(r); return; }
+        every = r.every;
+        paintEvery();
+        ctx.toast('Feed-Werbung jetzt nach jedem ' + every + '. Foto');
+      });
+    }
+
+    // Foto aus dem Schnappschuss (für die Vorschau)
+    function photoOf(id) {
+      const P = snap && snap.photos, U = snap && snap.users;
+      if (!P || !P.rows.length) return null;
+      const ci = c => P.cols.indexOf(c);
+      const row = (id != null && P.rows.find(r => r[ci('id')] === id)) || null;
+      if (!row) return null;
+      let username = null;
+      if (U) { const ur = U.rows.find(r => r[U.cols.indexOf('id')] === row[ci('user_id')]); if (ur) username = ur[U.cols.indexOf('username')]; }
+      return { id: row[ci('id')], image: row[ci('image')], description: row[ci('description')], username };
+    }
+    function anyPhoto() {
+      const P = snap && snap.photos;
+      return P && P.rows.length ? photoOf(P.rows[P.rows.length - 1][P.cols.indexOf('id')]) : null;
+    }
+    // Vorschau öffnen: ids = Foto-ids aus „An welchen Fotos?“/„Was?“ (oder null)
+    function preview(ad, ids, extraNote) {
+      let ph = null, note = '';
+      const k = ad.kind;
+      if (k === 'feed') note = 'So erscheint die Karte im Feed – ' + (every ? 'nach jedem <b>' + every + '.</b> Foto' : 'zwischen den Fotos') + ', für alle in der Zielgruppe.';
+      else {
+        ph = ids && ids.length ? photoOf(ids[0]) : null;
+        const hit = !!ph;
+        if (!ph) ph = anyPhoto();
+        note = (k === 'label' ? 'So hängt das Label am Foto (und über den Kommentaren dieses Fotos).' : 'So steht der beworbene Post in „Für dich“ – ganz vorn, mit „Gesponsert“.') +
+          (hit ? ' Beispiel: Foto #' + esc(ph.id) + (ids.length > 1 ? ' (eins von ' + ids.length + ')' : '') + '.'
+               : ph ? ' <b>Noch passt kein Foto</b> – gezeigt wird ein beliebiges.' : ' <b>Im Netzwerk gibt es noch keine Fotos.</b>');
+      }
+      if (extraNote) note += ' ' + extraNote;
+      ctx.dialog('Vorschau: ' + (ad.name || KIND[k]), previewHtml(ad, ph, note), [['ok', 'Schließen', 'accent']]);
+      const back = document.body.lastElementChild;
+      if (back) { back.classList.add('dlg-back--wb'); ctx.hydrate(back); }
+    }
 
     function state(t, bad) { const el = $('#wbSt', host); if (el) { el.textContent = t || ''; el.classList.toggle('bad', !!bad); } }
 
@@ -183,13 +268,21 @@
           '<button type="button" class="btn btn--ghost btn--s" id="wbRe" title="Zielgruppen jetzt neu berechnen">' + ICON.redo + ' Neu berechnen</button>' +
           '<button type="button" class="btn btn--accent btn--s" id="wbNew">' + ICON.plus + ' Neue Kampagne</button></div>' +
         '<p class="hint">Jede Kampagne hat eine Zielgruppe als SQL-Abfrage („Wem?“). Dieses Gerät rechnet sie mit den gesammelten Daten aus – der Server bekommt nur die Liste der User. ' +
-          '<b>Anzeige</b> = eigene Karte im Feed und unter den Kommentaren. <b>Beworbene Posts</b> = Fotos aus „Was?“ werden der Zielgruppe in „Für dich“ vorgeschlagen.</p>' +
+          '<b>Feed-Werbung</b> = eigene Karte zwischen den Fotos. <b>Foto-Label</b> = Werbung direkt an bestimmten Fotos. <b>Beworbener Post</b> = Fotos aus „Was?“ werden der Zielgruppe in „Für dich“ ganz vorn vorgeschlagen.</p>' +
+        '<div class="wb-every" id="wbEvery"></div>' +
         (failMsg ? '<div class="res res--bad wb-fail"><b>Fehler:</b> ' + esc(failMsg) + ' <button type="button" class="btn btn--ghost btn--s" id="wbRetry">Nochmal</button></div>' : '') +
         '<div class="wb-list" id="wbList">' + (loaded || listed ? listHtml() : failMsg ? '' : '<p class="muted">lädt …</p>') + '</div></div>';
       if (at) state(plural(ads.length, 'Kampagne', 'Kampagnen') + ' · Zielgruppen berechnet um ' + at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
       $('#wbRe', host).onclick = () => load('rechnet …');
       if ($('#wbRetry', host)) $('#wbRetry', host).onclick = () => load('lädt …');
       $('#wbNew', host).onclick = () => edit(null);
+      paintEvery();
+      $$('[data-wbprev]', host).forEach(b => b.onclick = () => {
+        const a = ads.find(x => x.id === +b.dataset.wbprev);
+        if (!a) return;
+        const r = results[a.id];
+        preview(a, r && r.c, isOn(a) ? '' : '(Die Kampagne ist gerade pausiert.)');
+      });
       $$('[data-aon]', host).forEach(i => i.onchange = async () => {
         const r = await call('sh_ad_active', { p_id: +i.dataset.aon, p_on: i.checked });
         if (!r || !r.ok) { ctx.fail(r); i.checked = !i.checked; return; }
@@ -211,7 +304,7 @@
       if (!ads.length) return '<div class="wb-empty">' + ICON.mega + '<p>Noch keine Kampagne. Leg die erste an – zum Beispiel Werbung nur für Leute, die Gaming-Fotos liken.</p>' +
         '<p class="muted small">Beispiel-Kampagnen lädt die Lehrkraft auf der Startseite: im Tabellen-Diagramm an der Kachel <code>ads</code> auf „Füllen“.</p></div>';
       return ads.map(a => {
-        const on = a.active === true || a.active === 1;
+        const on = isOn(a);
         const r = results[a.id];
         let n = '';
         if (!on) n = '<span class="muted">pausiert – wird niemandem gezeigt</span>';
@@ -219,19 +312,20 @@
         else {
           n = '<span>' + (r.a === null ? '<b>alle ' + r.n + ' User</b>' : '<b>' + plural(r.n, 'User', 'User') + '</b>') + ' in der Zielgruppe' +
               (a.kind === 'boost' ? ' · <b>' + plural(r.nc || 0, 'Foto', 'Fotos') + '</b> beworben'
-                : a.content_sql ? ' · an <b>' + plural(r.nc || 0, 'Foto', 'Fotos') + '</b>' : ' · Karte im Feed') + '</span>';
+                : a.kind === 'label' ? ' · an <b>' + plural(r.nc || 0, 'Foto', 'Fotos') + '</b>' : ' · Karte im Feed') + '</span>';
           if (r.error) n += '<span class="wb-err">„Wem?“: ' + esc(r.error) + '</span>';
-          if (r.cerror) n += '<span class="wb-err">' + (a.kind === 'boost' ? '„Was?“' : '„Wo?“') + ': ' + esc(r.cerror) + '</span>';
+          if (r.cerror) n += '<span class="wb-err">' + (a.kind === 'boost' ? '„Was?“' : '„An welchen Fotos?“') + ': ' + esc(r.cerror) + '</span>';
         }
         return '<article class="wb-row' + (on ? '' : ' is-off') + '">' +
           (a.image ? '<span class="wb-thumb" data-m="' + esc(a.image) + '" data-thumb="1"></span>'
-                   : '<span class="wb-thumb wb-thumb--x">' + (a.kind === 'boost' ? ICON.rocket : ICON.mega) + '</span>') +
-          '<div class="wb-main"><div class="wb-top"><b>' + esc(a.name) + '</b><span class="wb-kind wb-kind--' + esc(a.kind) + '">' + esc(a.kind === 'ad' && a.content_sql ? 'Anzeige am Foto' : (KIND[a.kind] || a.kind)) + '</span>' +
+                   : '<span class="wb-thumb wb-thumb--x">' + kindIcon(a.kind) + '</span>') +
+          '<div class="wb-main"><div class="wb-top"><b>' + esc(a.name) + '</b><span class="wb-kind wb-kind--' + esc(a.kind) + '">' + esc(KIND[a.kind] || a.kind) + '</span>' +
             (a.user_id == null ? '<span class="wb-kind">Plattform</span>' : '') + '</div>' +
             '<div class="wb-n">' + n + '</div>' +
             (a.target_sql ? '<code class="wb-q" title="' + esc(a.target_sql) + '">' + esc(firstLine(a.target_sql)) + '</code>' : '<code class="wb-q muted">ohne Zielgruppe = alle</code>') +
           '</div>' +
           '<div class="wb-acts"><label class="switch switch--s" title="' + (on ? 'Pausieren' : 'Starten') + '"><input type="checkbox" data-aon="' + a.id + '"' + (on ? ' checked' : '') + '><span></span></label>' +
+            '<button type="button" class="btn btn--ghost btn--s wb-prev-b" data-wbprev="' + a.id + '" title="So sähe es im Netzwerk aus">' + ICON.eye + '<span>Vorschau</span></button>' +
             '<button type="button" class="icon-btn icon-btn--s" data-aedit="' + a.id + '" title="Bearbeiten">' + ICON.edit + '</button>' +
             '<button type="button" class="icon-btn icon-btn--s icon-btn--bad" data-wbel="' + a.id + '" title="Löschen">' + ICON.trash + '</button></div>' +
         '</article>';
@@ -248,7 +342,8 @@
       }
     }
     function editNow(a) {
-      const v = Object.assign({ id: null, name: '', kind: 'ad', title: '', body: '', image: null, button: 'Mehr erfahren', target_sql: '', content_sql: '', active: true }, a || {});
+      const v = Object.assign({ id: null, name: '', kind: 'feed', title: '', body: '', image: null, button: 'Mehr erfahren', target_sql: '', content_sql: '', active: true }, a || {});
+      if (!KIND[v.kind]) v.kind = v.content_sql ? 'label' : 'feed';   // alte 'ad'-Zeilen
       editing = v;
       host.innerHTML = '<div class="adm-pad wbx wbx--ed"><form class="form wb-form" id="wbForm">' +
         '<div class="wb-h"><button type="button" class="btn btn--ghost btn--s" id="wbBack">‹ Alle Kampagnen</button>' +
@@ -256,7 +351,7 @@
         '<div class="wb-grid"><div class="wb-col">' +
           '<label>Name (Werbekunde)<input name="name" maxlength="60" required value="' + esc(v.name) + '" placeholder="z. B. VOLTA Energy"></label>' +
           '<div><span class="lbl">Art</span><div class="seg seg--s wb-seg" role="radiogroup">' +
-            ['ad', 'boost'].map(k => '<button type="button" role="radio" data-kind="' + k + '"' + (v.kind === k ? ' class="on" aria-checked="true"' : ' aria-checked="false"') + '>' + KIND[k] + '</button>').join('') + '</div></div>' +
+            KINDS.map(k => '<button type="button" role="radio" data-kind="' + k + '"' + (v.kind === k ? ' class="on" aria-checked="true"' : ' aria-checked="false"') + '>' + KIND[k] + '</button>').join('') + '</div></div>' +
           '<div class="wb-only-ad">' +
             '<div class="wb-pic"><span class="wb-pic-img" id="wbPic"></span><div><span class="lbl">Bild</span>' +
               (ctx.upload() ? '<label class="btn btn--ghost btn--s">' + ICON.image + ' Bild wählen<input type="file" accept="image/*" id="wbFile" hidden></label>' : '<p class="muted small">Bilder hochladen ist ausgeschaltet – die Anzeige zeigt dann den Titel groß.</p>') +
@@ -276,16 +371,16 @@
               '<p><b>Ohne <code>$user</code></b>: eine Liste von User-ids. Ist der User dabei, passt es.</p>' +
               '<pre>SELECT id FROM users WHERE gender = \'male\'</pre></details>' +
             '<div class="wb-probe" id="wbOutT"></div></div>' +
-          '<div class="wb-q-box"><div class="wb-q-h"><b class="wb-c-l"></b> <span class="muted small wb-c-h"></span>' +
+          '<div class="wb-q-box wb-only-c"><div class="wb-q-h"><b class="wb-c-l"></b> <span class="muted small wb-c-h"></span>' +
             '<button type="button" class="btn btn--ghost btn--s" id="wbProbeC">' + ICON.play + ' Probelauf</button></div>' +
             '<div class="sql-ed wb-ed" id="wbEdC"></div>' +
-            '<details class="wb-help wb-only-ad"><summary>Wozu „Wo?“</summary>' +
-              '<p><b>Leer</b>: die Anzeige erscheint als eigene Karte im Feed.</p>' +
-              '<p><b>Mit Abfrage</b>: sie erscheint nur an diesen Fotos – unten auf dem Foto und über den Kommentaren (Kontext-Werbung: es zählt, was jemand ansieht, nicht wer er ist). „Wem?“ gilt zusätzlich.</p>' +
+            '<details class="wb-help wb-only-label"><summary>Wozu „An welchen Fotos?“</summary>' +
+              '<p>Das Label erscheint nur an diesen Fotos – unten auf dem Foto und über den Kommentaren (Kontext-Werbung: es zählt, was jemand ansieht, nicht nur wer er ist). „Wem?“ gilt zusätzlich, leer = alle.</p>' +
               '<pre>SELECT pt.photo_id FROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN (\'hund\', \'katze\')</pre></details>' +
             '<div class="wb-probe" id="wbOutC"></div></div>' +
         '</div></div>' +
         '<div class="wb-foot"><span class="hint" id="wbHint" hidden></span><span class="spacer"></span>' +
+          '<button type="button" class="btn btn--ghost" id="wbPrev">' + ICON.eye + ' Vorschau</button>' +
           '<button type="button" class="btn btn--ghost" id="wbCancel">Abbrechen</button>' +
           '<button class="btn btn--accent" id="wbSave">Speichern</button></div>' +
       '</form></div>';
@@ -297,9 +392,9 @@
       edT.value = v.target_sql || '';
       edC.value = v.content_sql || '';
       const syncKind = () => {
-        f.classList.toggle('is-boost', v.kind === 'boost');
-        $('.wb-c-l', f).textContent = v.kind === 'boost' ? 'Was?' : 'Wo?';
-        $('.wb-c-h', f).textContent = v.kind === 'boost' ? 'Fotos, die beworben werden (Liste von photo-ids)' : 'An welchen Fotos? (photo-ids) – leer = Karte im Feed';
+        KINDS.forEach(k => f.classList.toggle('is-' + k, v.kind === k));
+        $('.wb-c-l', f).textContent = v.kind === 'boost' ? 'Was?' : 'An welchen Fotos?';
+        $('.wb-c-h', f).textContent = v.kind === 'boost' ? 'Fotos, die beworben werden (Liste von photo-ids)' : 'Liste von photo-ids – dort hängt das Label';
         $$('[data-kind]', f).forEach(b => { b.classList.toggle('on', b.dataset.kind === v.kind); b.setAttribute('aria-checked', b.dataset.kind === v.kind); });
       };
       const paintPic = () => {
@@ -340,7 +435,7 @@
           const r = await W.probe(ed.value, kind === 'content' ? 'content' : 'target');
           if (r.error) { out.innerHTML = '<div class="res res--bad"><b>Fehler:</b> ' + esc(r.error) + '</div>'; return; }
           if (kind === 'content') {
-            out.innerHTML = '<div class="res res--ok"><b>' + plural(r.ids.length, 'Foto', 'Fotos') + '</b> ' + (v.kind === 'boost' ? 'würden beworben' : 'bekämen die Anzeige') + (r.ids.length ? ':' : '.') + '</div>' +
+            out.innerHTML = '<div class="res res--ok"><b>' + plural(r.ids.length, 'Foto', 'Fotos') + '</b> ' + (v.kind === 'boost' ? 'würden beworben' : 'bekämen das Label') + (r.ids.length ? ':' : '.') + '</div>' +
               (r.rows.length ? '<div class="wb-hits">' + r.rows.map(x => '<span title="' + esc(x[1] || '') + '">#' + esc(x[0]) + (x[1] ? ' ' + esc(String(x[1]).slice(0, 28)) : '') + '</span>').join('') + '</div>' : '');
           } else {
             out.innerHTML = '<div class="res res--ok"><b>' + (r.all ? 'Alle ' + r.ids.length + ' User' : plural(r.ids.length, 'User', 'User')) + '</b> ' +
@@ -352,18 +447,34 @@
       $('#wbProbeT', host).onclick = () => probe('target');
       $('#wbProbeC', host).onclick = () => probe('content');
 
+      // Vorschau mit dem, was gerade im Formular steht
+      $('#wbPrev', host).onclick = async () => {
+        const ad = { id: v.id, name: fv('name').value.trim() || KIND[v.kind], kind: v.kind, title: fv('title').value.trim(), body: fv('body').value.trim(),
+          button: fv('button').value.trim(), image: v.image, target_sql: edT.value, content_sql: v.kind === 'feed' ? '' : edC.value };
+        let ids = null, extra = '';
+        if (v.kind !== 'feed' && edC.value.trim()) {
+          if (!loaded) extra = '(Die Daten laden noch – deshalb ein Beispielfoto.)';
+          else {
+            try { const r = await W.probe(edC.value, 'content'); if (r.error) extra = '„' + esc($('.wb-c-l', f).textContent) + '“ hat einen Fehler: ' + esc(r.error); else ids = r.ids; }
+            catch (e) { extra = esc(e.message); }
+          }
+        }
+        preview(ad, ids, extra);
+      };
+
       f.onsubmit = async (e) => {
         e.preventDefault();
         const hint = $('#wbHint', host);
         const name = fv('name').value.trim();
         if (!name) { hint.hidden = false; hint.textContent = 'Bitte einen Namen eingeben.'; return; }
-        if (v.kind === 'boost' && !edC.value.trim()) { hint.hidden = false; hint.textContent = 'Bei „Beworbene Posts“ braucht es eine Abfrage bei „Was?“.'; return; }
+        if (v.kind === 'boost' && !edC.value.trim()) { hint.hidden = false; hint.textContent = 'Beim „Beworbenen Post“ braucht es eine Abfrage bei „Was?“.'; return; }
+        if (v.kind === 'label' && !edC.value.trim()) { hint.hidden = false; hint.textContent = 'Beim „Foto-Label“ braucht es eine Abfrage bei „An welchen Fotos?“.'; return; }
         $('#wbSave', host).disabled = true;
         const r = await call('sh_ad_save', {
           p_id: v.id, p_name: name, p_kind: v.kind,
-          p_title: v.kind === 'ad' ? fv('title').value : null, p_body: v.kind === 'ad' ? fv('body').value : null,
-          p_image: v.kind === 'ad' ? v.image : null, p_button: v.kind === 'ad' ? fv('button').value : null,
-          p_target: edT.value, p_content: edC.value, p_active: fv('active').checked
+          p_title: v.kind !== 'boost' ? fv('title').value : null, p_body: v.kind !== 'boost' ? fv('body').value : null,
+          p_image: v.kind !== 'boost' ? v.image : null, p_button: v.kind !== 'boost' ? fv('button').value : null,
+          p_target: edT.value, p_content: v.kind === 'feed' ? null : edC.value, p_active: fv('active').checked
         });
         $('#wbSave', host).disabled = false;
         if (!r || !r.ok) { ctx.fail(r); return; }
@@ -379,5 +490,5 @@
     return { destroy() { dead = true; W.stop(); } };
   }
 
-  window.SHAds = { tab, compute, auto, stop, cardHtml, stripHtml, photoAdHtml, whyHtml, ICON };
+  window.SHAds = { tab, compute, auto, stop, cardHtml, stripHtml, photoAdHtml, whyHtml, previewHtml, KIND, ICON };
 })();

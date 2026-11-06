@@ -134,7 +134,7 @@ ok('3  Schnappschuss: ads mit sichtbaren Spalten, ohne audience/content',
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'ads', op: 'insert', row: { id: 7, name: 'Per SQL', target_sql: 'SELECT 1' } }])]);
 ok('3  INSERT INTO ads per SQL (kind/active vorbelegt)', r.ok, JSON.stringify(r));
 const a7 = (await ads(HUB)).find(x => x.id === 7);
-ok('3  … kind ad, active true', a7 && a7.kind === 'ad' && a7.active === true, JSON.stringify(a7));
+ok('3  … kind feed (seit 0278, vorher ad), active true', a7 && a7.kind === 'feed' && a7.active === true, JSON.stringify(a7));
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'ads', op: 'update', key: { id: 7 }, row: { id: 7, kind: 'popup' } }])]);
 ok('3  kind popup → CHECK abgelehnt', !r.ok && r.state === '23514', JSON.stringify(r));
 r = await call(`sh_db_apply('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.stringify([{ t: 'ads', op: 'update', key: { id: 7 }, row: { id: 7, active: 0 } }])]);

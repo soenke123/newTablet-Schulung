@@ -102,8 +102,8 @@
      → [{ id, a, c, n, nc, form, error, cerror }] */
   function all(C, db, ads) {
     const users = listIds(C, db, 'users');
-    // „Was?“ (Boost) bzw. „Wo?“ (Anzeige am Foto, 0277) – beides Foto-ids aus content_sql
-    const withC = x => x.kind === 'boost' || !blank(x.content_sql);
+    // „Was?“ (Beworbener Post) bzw. „An welchen Fotos?“ (Foto-Label, 0278) – beides Foto-ids aus content_sql
+    const withC = x => x.kind === 'boost' || x.kind === 'label';
     const photos = ads.some(withC) ? listIds(C, db, 'photos') : [];
     return ads.map(ad => {
       const t = target(C, db, ad.target_sql, users);

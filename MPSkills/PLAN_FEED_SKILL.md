@@ -143,6 +143,16 @@ Keine gesponserten Profile (Sönke: nicht gewollt).
 
 **Nachtrag 06.11.2026 (Migration 0277):** Anzeigen bekommen optional **„Wo?“** (content_sql = Foto-ids). Ohne „Wo?“ nur als Karte im Feed, mit „Wo?“ nur an diesen Fotos (Leiste am Foto + über dessen Kommentaren) – Kontext-Werbung neben personalisierter Werbung.
 
+**Nachtrag 06.11.2026 (Migration 0278): drei trennscharfe Arten** – `kind` ist jetzt `feed | label | boost`:
+
+| Art | Wo sichtbar | Felder |
+|---|---|---|
+| **Feed-Werbung** (`feed`) | eigene Karte im Feed, nach jedem 3./5./10. Foto (Schalter oben im Reiter, je Netzwerk) | Bild/Titel/Text/Knopf + „Wem?“ |
+| **Foto-Label** (`label`) | Leiste direkt am Foto + über dessen Kommentaren | Bild/Titel/Text/Knopf + „Wem?“ + „An welchen Fotos?“ |
+| **Beworbener Post** (`boost`) | Foto ganz vorn in „Für dich“ mit „Gesponsert“ | „Wem?“ + „Was?“ |
+
+Jede Kampagne hat einen Knopf **Vorschau** (kleines Handy mit Karte / Foto mit Label / gesponsertem Foto).
+
 **Zwei Formen für „Wem?“** (`$user` = id des aktuellen Users):
 
 ```sql

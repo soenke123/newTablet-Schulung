@@ -393,7 +393,7 @@
     const ads = {
       cols: ['id', 'user_id', 'name', 'kind', 'title', 'body', 'image', 'button', 'target_sql', 'content_sql', 'active', 'created_at'],
       rows: (D.ADS || []).map((a, i) => [i + 1, null, a[1], a[2], a[3], a[4],
-        a[2] === 'ad' ? 'dummy/wb_' + a[0] + '.webp' : null, a[5], a[6], a[7], true,
+        a[2] !== 'boost' ? 'dummy/wb_' + a[0] + '.webp' : null, a[5], a[6], a[7], true,
         fmtDate(day0 - a[8] * 86400000) + ' 10:00:00'])
     };
 

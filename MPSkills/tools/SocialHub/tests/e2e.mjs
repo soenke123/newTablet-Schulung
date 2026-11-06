@@ -794,8 +794,21 @@ try {
   ok('11 Liste zeigt Zielgruppen ohne Fehler', /User in der Zielgruppe/.test(await t.app.locator('#wbList').textContent()) && await t.app.locator('.wb-err').count() === 0,
      (await t.app.locator('.wb-err').allTextContents()).join(' | '));
   await shot(t.page, '11b-werbung-liste');
+  // Häufigkeit (0278): Standard 5, umschalten auf 3
+  await t.app.locator('#wbEvery [data-every="5"].on').waitFor({ timeout: 10000 });
+  await t.app.locator('#wbEvery [data-every="3"]').click();
+  for (let i = 0; i < 30 && (await db.query(`select ad_every from sh_hubs where id = $1`, [HUBID])).rows[0].ad_every !== 3; i++) await wait(200);
+  ok('11 Häufigkeit: Feed-Werbung nach jedem 3. Foto', (await db.query(`select ad_every from sh_hubs where id = $1`, [HUBID])).rows[0].ad_every === 3);
+  // Vorschau aus der Liste: Feed-Werbung als Karte im Handy
+  await t.app.locator('.wb-row', { hasText: 'Plus-Abo' }).locator('[data-wbprev]').click();
+  await t.app.locator('.dlg .wb-phone .card--wb').waitFor({ timeout: 5000 });
+  ok('11 Vorschau Feed-Werbung: Karte im Handy, Satz nennt „3.“', /3\./.test(await t.app.locator('.dlg .wb-prev-n').textContent()));
+  await shot(t.page, '11b2-vorschau-feed');
+  await t.app.locator('.dlg [data-dlg="ok"]').click();
   // neue Kampagne: beworbene Posts, Probelauf „Wem?“ und „Was?“
   await t.app.locator('#wbNew').click();
+  ok('11 Editor: drei Arten', await t.app.locator('#wbForm [data-kind]').count() === 3);
+  ok('11 Feed-Werbung: nur „Wem?“', await t.app.locator('#wbEdC').isHidden() && await t.app.locator('#wbEdT').isVisible());
   await t.app.locator('#wbForm input[name=name]').fill('Pixel Boost');
   await t.app.locator('#wbForm [data-kind="boost"]').click();
   await t.app.locator('#wbEdT .ed-ta').fill("SELECT id FROM users WHERE gender = 'female'");
@@ -819,28 +832,39 @@ try {
   for (let i = 0; i < 30 && !(await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Boost'`, [HUBID])).rows[0].content; i++) await wait(300);
   const pb = (await db.query(`select kind, target_sql, content from sh_ads where hub_id = $1 and name = 'Pixel Boost'`, [HUBID])).rows[0];
   ok('11 gespeichert: beworbene Posts für alle, 2 Fotos berechnet', pb.kind === 'boost' && pb.target_sql === null && pb.content && pb.content.length === 2, JSON.stringify(pb));
-  // Anzeige am Foto (0277): „Wo?“ = die drei neuesten Fotos
+  // Foto-Label (0278): „An welchen Fotos?“ = die drei neuesten Fotos
   await t.app.locator('#wbNew').click();
   await t.app.locator('#wbForm input[name=name]').fill('Pixel Shop');
+  await t.app.locator('#wbForm [data-kind="label"]').click();
   await t.app.locator('#wbForm input[name=title]').fill('Neue Hüllen');
-  ok('11 Anzeige: Feld heißt „Wo?“', (await t.app.locator('#wbForm .wb-c-l').textContent()) === 'Wo?');
+  ok('11 Foto-Label: Feld heißt „An welchen Fotos?“', (await t.app.locator('#wbForm .wb-c-l').textContent()) === 'An welchen Fotos?');
   // der farbige SQL-Text muss sichtbar sein (Textfeld durchsichtig, nicht vom .form-Stil überdeckt)
   ok('11 SQL-Editor im Formular: Textfeld durchsichtig', await t.app.locator('#wbEdC .ed-ta').evaluate(e => getComputedStyle(e).backgroundColor === 'rgba(0, 0, 0, 0)'));
   await t.app.locator('#wbEdC .ed-ta').fill('SELECT id FROM photos ORDER BY id DESC LIMIT 3');
   await t.app.locator('#wbProbeC').click();
-  await t.app.locator('#wbOutC .res--ok', { hasText: 'bekämen die Anzeige' }).waitFor({ timeout: 10000 });
+  await t.app.locator('#wbOutC .res--ok', { hasText: 'bekämen das Label' }).waitFor({ timeout: 10000 });
   await shot(t.page, '11c2-anzeige-wo');
+  // Vorschau aus dem Editor (ungespeichert): Foto mit Label
+  await t.app.locator('#wbPrev').click();
+  await t.app.locator('.dlg .wb-phone .wb-onphoto', { hasText: 'Neue Hüllen' }).waitFor({ timeout: 10000 });
+  ok('11 Vorschau Foto-Label: Foto mit Label, Beispielfoto aus der Abfrage', /Foto #/.test(await t.app.locator('.dlg .wb-prev-n').textContent()));
+  await shot(t.page, '11c3-vorschau-label');
+  await t.app.locator('.dlg [data-dlg="ok"]').click();
   await t.app.locator('#wbSave').click();
   await t.app.locator('.wb-row', { hasText: 'Pixel Shop' }).waitFor({ timeout: 10000 });
   for (let i = 0; i < 30 && !(await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Shop'`, [HUBID])).rows[0].content; i++) await wait(300);
   ok('11 „Wo?“ berechnet: 3 Fotos', (await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Shop'`, [HUBID])).rows[0].content.length === 3);
-  ok('11 Liste: „Anzeige am Foto“', await t.app.locator('.wb-row', { hasText: 'Pixel Shop' }).locator('text=Anzeige am Foto').count() === 1);
+  ok('11 Liste: „Foto-Label“', await t.app.locator('.wb-row', { hasText: 'Pixel Shop' }).locator('.wb-kind--label').count() === 1);
+  ok('11 gespeichert als label', (await db.query(`select kind from sh_ads where hub_id = $1 and name = 'Pixel Shop'`, [HUBID])).rows[0].kind === 'label');
   // VOLTA pausieren
   const voltaId = (await db.query(`select id from sh_ads where hub_id = $1 and name = 'VOLTA Energy'`, [HUBID])).rows[0].id;
   await t.app.locator(`[data-aon="${voltaId}"]`).evaluate(el => el.click());
   for (let i = 0; i < 30 && (await db.query(`select active from sh_ads where hub_id = $1 and id = $2`, [HUBID, voltaId])).rows[0].active; i++) await wait(200);
   ok('11 Schalter pausiert VOLTA', (await db.query(`select active from sh_ads where hub_id = $1 and id = $2`, [HUBID, voltaId])).rows[0].active === false);
   // App: Anzeige-Karte (Plus-Abo für alle) und „Gesponsert“ (Pixel Boost)
+  // (nach 30 s fragt das Netzwerk nachgebaut nach Benachrichtigungen – das Fenster liegt über dem Kopf)
+  const pops = t.app.locator('.perm-pop [data-pp="0"]');
+  if (await pops.count()) await pops.first().click();
   await t.app.locator('[data-view="app"]').click();
   await t.app.locator('.card--wb').first().waitFor({ state: 'attached', timeout: 15000 });
   ok('11 Feed: Anzeige als eigene Karte mit „Anzeige“', /Anzeige/.test(await t.app.locator('.card--wb .wb-label').first().textContent()));

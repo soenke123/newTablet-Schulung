@@ -23,7 +23,7 @@
 (function () {
   'use strict';
 
-  const V = '20261106f';
+  const V = '20261106g';
   const esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
   const DDL = {
@@ -135,7 +135,7 @@
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT,
   name VARCHAR(60) NOT NULL,
-  kind ENUM('ad','boost') NOT NULL DEFAULT 'ad',
+  kind ENUM('feed','label','boost') NOT NULL DEFAULT 'feed',
   title VARCHAR(80),
   body TEXT,
   image VARCHAR(60),

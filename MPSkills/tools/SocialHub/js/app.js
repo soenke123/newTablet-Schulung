@@ -1130,7 +1130,7 @@
         (it.sponsored ? '<button type="button" class="m-gesp" data-act="why" title="Warum sehe ich das?">Gesponsert ' + SHAds.ICON.info + '</button>' : '') +
         (it.description ? '<p class="m-desc">' + esc(it.description) + '</p>' : '') +
         (it.tags && it.tags.length ? '<div class="m-tags">' + it.tags.map(t => '<button type="button" data-tag="' + esc(t) + '">#' + esc(t) + '</button>').join('') + '</div>' : '') +
-        // Werbung am Foto (0277): Anzeige mit „Wo?“
+        // Foto-Label (0278, vorher „Anzeige mit Wo?“)
         (it.ad && window.SHAds ? SHAds.photoAdHtml(it.ad) : '') +
       '</div></article>';
   }
@@ -1186,13 +1186,19 @@
       }
       const frag = document.createElement('div');
       frag.innerHTML = r.items.map(it => { items.push(it); return cardHtml(it, idx++); }).join('');
-      // Werbung (0276): eine Anzeige mitten in die Seite
-      if (r.ad && window.SHAds) {
-        ads[r.ad.id] = r.ad;
-        const at = frag.children[Math.min(3, frag.children.length)];
-        const tmp = document.createElement('div');
-        tmp.innerHTML = SHAds.cardHtml(r.ad);
-        frag.insertBefore(tmp.firstElementChild, at || null);
+      // Feed-Werbung (0278): nach jedem n-ten Foto (sh_hubs.ad_every) eine Karte;
+      // r.ads = [{ after: Index des Fotos in dieser Seite, ad }]
+      const slots = Array.isArray(r.ads) ? r.ads : r.ad ? [{ after: Math.min(2, r.items.length - 1), ad: r.ad }] : [];
+      if (slots.length && window.SHAds) {
+        const photoCards = Array.from(frag.children);
+        slots.forEach(x => {
+          if (!x || !x.ad) return;
+          ads[x.ad.id] = x.ad;
+          const ref = photoCards[x.after];
+          const tmp = document.createElement('div');
+          tmp.innerHTML = SHAds.cardHtml(x.ad);
+          frag.insertBefore(tmp.firstElementChild, ref ? ref.nextSibling : null);
+        });
       }
       const cards = Array.from(frag.children);
       cards.forEach(c => { list.appendChild(c); if (!c.classList.contains('card--wb')) vio.observe(c); });
