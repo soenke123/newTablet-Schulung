@@ -158,7 +158,7 @@
         r.results.forEach(x => { results[x.id] = x; });
         loaded = true;
         at = new Date();
-        state('Zielgruppen berechnet um ' + at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+        state(plural(ads.length, 'Kampagne', 'Kampagnen') + ' · Zielgruppen berechnet um ' + at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
       } catch (e) {
         failMsg = 'Zielgruppen konnten nicht berechnet werden: ' + (e && e.message || e);
         state('Fehler', true);
@@ -184,7 +184,7 @@
           '<b>Anzeige</b> = eigene Karte im Feed und unter den Kommentaren. <b>Beworbene Posts</b> = Fotos aus „Was?“ werden der Zielgruppe in „Für dich“ vorgeschlagen.</p>' +
         (failMsg ? '<div class="res res--bad ads-fail"><b>Fehler:</b> ' + esc(failMsg) + ' <button type="button" class="btn btn--ghost btn--s" id="adRetry">Nochmal</button></div>' : '') +
         '<div class="ads-list" id="adList">' + (loaded || listed ? listHtml() : failMsg ? '' : '<p class="muted">lädt …</p>') + '</div></div>';
-      if (at) state('Zielgruppen berechnet um ' + at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+      if (at) state(plural(ads.length, 'Kampagne', 'Kampagnen') + ' · Zielgruppen berechnet um ' + at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
       $('#adRe', host).onclick = () => load('rechnet …');
       if ($('#adRetry', host)) $('#adRetry', host).onclick = () => load('lädt …');
       $('#adNew', host).onclick = () => edit(null);
