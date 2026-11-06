@@ -19,7 +19,7 @@
 (function () {
   'use strict';
 
-  const V = '20261106a';
+  const V = '20261106b';
   let root = null;
   let ctx = null;
   let view = null;

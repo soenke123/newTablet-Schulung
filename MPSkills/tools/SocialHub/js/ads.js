@@ -125,15 +125,29 @@
     const call = ctx.call;
     const W = window.SHDB.worker();
     let snap = null, schema = null, ads = [], results = {}, loaded = false, at = null, dead = false;
+    let listed = false, failMsg = null;   // Liste schon aus dem Schnappschuss da? / was beim Laden schiefging
 
     function state(t, bad) { const el = $('#adSt', host); if (el) { el.textContent = t || ''; el.classList.toggle('bad', !!bad); } }
 
     async function load(msg) {
       state(msg || 'rechnet …');
+      failMsg = null;
       const res = await call('sh_db_snapshot', {});
       if (dead) return;
-      if (!res || !res.ok) { state(res && res.error === 'not_admin' ? 'Nur für Admins.' : 'Konnte das Netzwerk nicht laden.', true); return; }
+      if (!res || !res.ok) {
+        failMsg = res && res.error === 'not_admin' ? 'Das dürfen nur Admins.'
+          : res && res.error === 'fn_missing' ? 'Der Server kennt die Werbung noch nicht – Migration 0276 fehlt.'
+          : 'Konnte die Daten des Netzwerks nicht laden (' + ((res && (res.message || res.error)) || '?') + ').';
+        state('Fehler', true);
+        if (!editing) paintList();
+        return;
+      }
       snap = res.tables || {};
+      // Liste gleich zeigen – die Zielgruppen kommen danach
+      ads = rowsToAds(snap.ads);
+      listed = true;
+      if (!snap.ads) failMsg = 'Die Tabelle ads fehlt in diesem Netzwerk.';
+      if (!editing) { paintList(); state('rechnet die Zielgruppen …'); }
       try {
         const o = await W.open(window.SHDB.buildScript(snap).script);
         schema = o.schema;
@@ -146,7 +160,8 @@
         at = new Date();
         state('Zielgruppen berechnet um ' + at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
       } catch (e) {
-        state('Fehler: ' + e.message, true);
+        failMsg = 'Zielgruppen konnten nicht berechnet werden: ' + (e && e.message || e);
+        state('Fehler', true);
       }
       if (!editing) paintList();
     }
@@ -160,9 +175,11 @@
           '<button type="button" class="btn btn--accent btn--s" id="adNew">' + ICON.plus + ' Neue Kampagne</button></div>' +
         '<p class="hint">Jede Kampagne hat eine Zielgruppe als SQL-Abfrage („Wem?“). Dieses Gerät rechnet sie mit den gesammelten Daten aus – der Server bekommt nur die Liste der User. ' +
           '<b>Anzeige</b> = eigene Karte im Feed und unter den Kommentaren. <b>Beworbene Posts</b> = Fotos aus „Was?“ werden der Zielgruppe in „Für dich“ vorgeschlagen.</p>' +
-        '<div class="ads-list" id="adList">' + (loaded ? listHtml() : '<p class="muted">lädt …</p>') + '</div></div>';
+        (failMsg ? '<div class="res res--bad ads-fail"><b>Fehler:</b> ' + esc(failMsg) + ' <button type="button" class="btn btn--ghost btn--s" id="adRetry">Nochmal</button></div>' : '') +
+        '<div class="ads-list" id="adList">' + (loaded || listed ? listHtml() : failMsg ? '' : '<p class="muted">lädt …</p>') + '</div></div>';
       if (at) state('Zielgruppen berechnet um ' + at.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
       $('#adRe', host).onclick = () => load('rechnet …');
+      if ($('#adRetry', host)) $('#adRetry', host).onclick = () => load('lädt …');
       $('#adNew', host).onclick = () => edit(null);
       $$('[data-aon]', host).forEach(i => i.onchange = async () => {
         const r = await call('sh_ad_active', { p_id: +i.dataset.aon, p_on: i.checked });
@@ -182,7 +199,8 @@
     }
 
     function listHtml() {
-      if (!ads.length) return '<div class="ads-empty">' + ICON.mega + '<p>Noch keine Kampagne. Leg die erste an – zum Beispiel Werbung nur für Leute, die Gaming-Fotos liken.</p></div>';
+      if (!ads.length) return '<div class="ads-empty">' + ICON.mega + '<p>Noch keine Kampagne. Leg die erste an – zum Beispiel Werbung nur für Leute, die Gaming-Fotos liken.</p>' +
+        '<p class="muted small">Beispiel-Kampagnen lädt die Lehrkraft auf der Startseite: im Tabellen-Diagramm an der Kachel <code>ads</code> auf „Füllen“.</p></div>';
       return ads.map(a => {
         const on = a.active === true || a.active === 1;
         const r = results[a.id];
@@ -213,6 +231,14 @@
 
     /* Editor */
     function edit(a) {
+      try { editNow(a); } catch (e) {
+        console.error('[Werbung]', e);
+        host.innerHTML = '<div class="adm-pad ads"><div class="res res--bad"><b>Der Editor ließ sich nicht öffnen:</b> ' + esc(e && e.message || e) +
+          ' <button type="button" class="btn btn--ghost btn--s" id="adBack2">Zurück</button></div></div>';
+        $('#adBack2', host).onclick = () => paintList();
+      }
+    }
+    function editNow(a) {
       const v = Object.assign({ id: null, name: '', kind: 'ad', title: '', body: '', image: null, button: 'Mehr erfahren', target_sql: '', content_sql: '', active: true }, a || {});
       editing = v;
       host.innerHTML = '<div class="adm-pad ads ads--ed"><form class="form ad-form" id="adForm">' +
