@@ -1592,8 +1592,10 @@
         (r.me ? '<button type="button" class="btn btn--ghost" id="pEdit">Profil bearbeiten</button>' +
                 // Lehrkraft bleibt in ihrem eigenen Netzwerk immer angemeldet
                 (T && S.hub.founder ? '' : '<button type="button" class="btn btn--ghost" id="pOut">Abmelden</button>')
-              : (r.i_follow != null && S.hub.me ? '<button type="button" class="btn ' + (r.i_follow ? 'btn--ghost' : 'btn--accent') + '" id="pFollow">' + (r.i_follow ? 'Gefolgt ✓' : 'Folgen') + '</button>' : '')) +
-      '</div></div>' +
+              : (r.i_follow != null && S.hub.me ? '<button type="button" class="btn ' + (r.i_follow ? 'btn--ghost' : 'btn--accent') + '" id="pFollow">' + (r.i_follow ? 'Gefolgt ✓' : 'Folgen') + '</button>' : '') +
+                // Admins (und die Lehrkraft) setzen das Passwort zurück: 6 Ziffern, bcrypt (0279)
+                (S.hub.admin ? '<button type="button" class="btn btn--ghost" id="pPwReset">Passwort zurücksetzen</button>' : '')) +
+      '</div>' + (!r.me && S.hub.admin ? '<div class="pw-new" id="pPwNew" hidden></div>' : '') + '</div>' +
       (r.photos == null ? '' : r.photos.length ? '<div class="grid3">' + r.photos.map(p => '<button type="button" class="g-it" data-pid="' + p.id + '"><span class="g-img" data-m="' + esc(p.image) + '" data-thumb="1"></span></button>').join('') + '</div>'
                        : '<p class="muted center-t">Noch keine Fotos.</p>') + '</div>';
     hydrate(main);
@@ -1602,6 +1604,16 @@
       const rr = await hcall('sh_follow', { p_user: u.id, p_on: !r.i_follow });
       if (!rr || !rr.ok) { fail(rr); return; }
       renderProfile(main, uid, inOverlay);
+    };
+    if ($('#pPwReset', main)) $('#pPwReset', main).onclick = async () => {
+      if (await dialog('Passwort zurücksetzen?', '<p><b>@' + esc(u.username) + '</b> bekommt ein neues Passwort (6 Ziffern). Alle Geräte von @' + esc(u.username) + ' werden abgemeldet.</p>',
+        [['no', 'Abbrechen'], ['yes', 'Zurücksetzen', 'accent']]) !== 'yes') return;
+      const rr = await hcall('sh_user_pw_reset', { p_user: u.id });
+      if (!rr || !rr.ok) { fail(rr); return; }
+      const box = $('#pPwNew', main);
+      box.innerHTML = '<span>Neues Passwort für @' + esc(rr.username) + '</span><code>' + esc(rr.password) + '</code>' +
+        '<small>Nur jetzt zu sehen – in der Datenbank steht es nur als Hash.</small>';
+      box.hidden = false;
     };
     if ($('#pOut', main)) $('#pOut', main).onclick = () => logoutDialog();
     if ($('#pEdit', main)) $('#pEdit', main).onclick = () => editProfile(u, () => renderProfile(main, uid, inOverlay));

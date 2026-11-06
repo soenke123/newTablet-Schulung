@@ -405,6 +405,22 @@ try {
   await mia.app.locator('#lForm input[name=pw]').fill('geheim1');
   await mia.app.locator('#lForm button[type=submit]').click();
   await mia.app.locator('[data-view="admin"]').waitFor();
+  // 4a) Admin: Passwort eines Users zurücksetzen (0279) – Knopf neben „Folgen“, 6 Ziffern darunter
+  await mia.app.locator('[data-view="app"]').click();
+  await mia.app.locator('[data-tab="search"]').click();
+  await mia.app.locator('#q').fill('leon_b');
+  await mia.app.locator('.s-user', { hasText: '@leon_b' }).click();
+  await mia.app.locator('#pPwReset').waitFor();
+  ok('4a Profil eines Users: „Passwort zurücksetzen“ neben „Folgen“', await mia.app.locator('.prof-acts #pFollow + #pPwReset').count() === 1);
+  await mia.app.locator('#pPwReset').click();
+  await mia.app.locator('.dlg [data-dlg="yes"]').click();
+  await mia.app.locator('#pPwNew:not([hidden]) code').waitFor();
+  const pwNeu = await mia.app.locator('#pPwNew code').textContent();
+  const pwDb = (await db.query(`select password from sh_users where username = 'leon_b'`)).rows[0].password;
+  ok('4a neues Passwort: 6 Ziffern unter dem Knopf, in der DB nur der Hash', /^\d{6}$/.test(pwNeu) && /^\$2a\$08\$/.test(pwDb), pwNeu);
+  await shot(mia.page, '4a-passwort-zuruecksetzen');
+  await mia.app.locator('[data-close]').first().click();
+  await mia.app.locator('[data-tab="feed"]').click();
 
   // 4b) Leon: kommt nicht in Mias Netzwerk – außer über „anderes Tablet“
   const leon = await open('tokLeon');
@@ -413,7 +429,7 @@ try {
   await leon.app.locator('#btnNetLogin').click();
   await leon.app.locator('#nlForm input[name=net]').fill('pixelwelt');
   await leon.app.locator('#nlForm input[name=user]').fill('leon_b');
-  await leon.app.locator('#nlForm input[name=pw]').fill('pw1234');
+  await leon.app.locator('#nlForm input[name=pw]').fill(pwNeu);   // das zurückgesetzte (4a)
   await leon.app.locator('#nlForm button').click();
   await leon.app.locator('.hub-name', { hasText: 'Pixelwelt' }).waitFor();
   ok('4b Anmelden auf anderem Tablet über den Netzwerk-Namen', await leon.app.locator('.hub-top .chip', { hasText: '@leon_b' }).count() === 1);

@@ -458,7 +458,12 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .st b { font: 700 18px var(--font-display); }
 .st span { color: var(--muted); font-size: 13px; }
 .bio { margin: 6px 0; max-width: 420px; white-space: pre-wrap; }
-.prof-acts { display: flex; gap: 8px; margin-top: 10px; }
+.prof-acts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+.pw-new { display: flex; flex-direction: column; align-items: center; gap: 2px; margin: 10px auto 0; padding: 10px 16px; border-radius: 12px; background: var(--soft); border: 1px solid var(--line); text-align: center; }
+.pw-new[hidden] { display: none; }
+.pw-new span { color: var(--muted); font-size: 13px; font-weight: 600; }
+.pw-new code { font-size: 26px; font-weight: 700; letter-spacing: .12em; user-select: all; }
+.pw-new small { color: var(--muted); font-size: 12px; }
 .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
 .g-it { aspect-ratio: 3 / 4; border: 0; padding: 0; background: var(--soft); position: relative; overflow: hidden; }
 .g-img { position: absolute; inset: 0; background: center/cover no-repeat; opacity: 0; transition: opacity .2s; }

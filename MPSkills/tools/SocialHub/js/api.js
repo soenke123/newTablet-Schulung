@@ -144,6 +144,8 @@
     hub_not_found: 'Dieses Netzwerk gibt es nicht mehr.',
     not_logged_in: 'Bitte melde dich zuerst an.',
     not_admin: 'Das dürfen nur Admins.',
+    self: 'Dein eigenes Passwort änderst du nicht hier.',
+    forbidden: 'Das darf nur die Lehrkraft.',
     table_off: 'Das geht noch nicht – die Tabelle dazu fehlt noch.',
     upload_off: 'Bilder hochladen ist gerade ausgeschaltet.',
     quota_exceeded: 'Hier ist die Grenze erreicht.',
