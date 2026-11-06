@@ -23,12 +23,14 @@ const C = globalThis.SQLCore;
 new Function(readFileSync(join(SH, 'dummy', 'daten.js'), 'utf8'))();
 new Function(readFileSync(join(SH, 'dummy', 'generator.js'), 'utf8'))();
 const G = globalThis.SHDummy;
+new Function(readFileSync(join(SH, 'js', 'adseval.js'), 'utf8'))();
+const E = globalThis.SHAdsEval;
 
 // DDL aus js/db.js (Objekt-Literal herausschneiden)
 const dbjs = readFileSync(join(SH, 'js', 'db.js'), 'utf8');
 const ddlSrc = dbjs.slice(dbjs.indexOf('const DDL = {') + 12, dbjs.indexOf('// Eltern vor Kindern'));
 const DDL = new Function('return ' + ddlSrc.trim().replace(/;\s*$/, ''))();
-const ORDER = ['users', 'tags', 'photos', 'sessions', 'comments', 'follows', 'likes', 'photo_tag', 'views'];
+const ORDER = ['users', 'tags', 'photos', 'sessions', 'comments', 'follows', 'likes', 'photo_tag', 'views', 'ads'];
 
 let n = 0, bad = 0;
 const ok = (name, cond, info) => { n++; if (cond) console.log('ok    ' + name); else { bad++; console.log('FEHL  ' + name + (info !== undefined ? '   ' + JSON.stringify(info) : '')); } };
@@ -154,6 +156,25 @@ for (const day of days) {
   ok('views: nur Fotos, die es schon gab', one(db, 'SELECT COUNT(*) FROM views v JOIN photos p ON p.id=v.photo_id WHERE v.viewed_at < p.created_at') === 0);
   ok('Gamer schauen Gaming länger an (Werbung)', one(db, "SELECT AVG(v.duration_ms) FROM views v JOIN users u ON u.id=v.user_id JOIN photo_tag pt ON pt.photo_id=v.photo_id JOIN tags t ON t.id=pt.tag_id WHERE u.username='tim.richter' AND t.name='gaming'")
     > 2 * one(db, "SELECT AVG(v.duration_ms) FROM views v JOIN users u ON u.id=v.user_id JOIN photo_tag pt ON pt.photo_id=v.photo_id JOIN tags t ON t.id=pt.tag_id WHERE u.username='tim.richter' AND t.name='hund'"));
+  // Werbung (0276): jede Dummy-Kampagne rechnet ohne Fehler und trifft eine echte, aber nicht die ganze Gruppe
+  const ads = q(db, 'SELECT id, name, kind, target_sql, content_sql FROM ads').map(r => ({ id: r[0], name: r[1], kind: r[2], target_sql: r[3], content_sql: r[4] }));
+  ok('9 Kampagnen', ads.length === 9, ads.length);
+  const res = E.all(C, db, ads);
+  for (const x of res) {
+    const ad = ads.find(a => a.id === x.id);
+    if (!ad.target_sql) ok('Kampagne ' + ad.name + ': ohne Abfrage = alle', x.a === null && x.n === 70, x);
+    else ok('Kampagne ' + ad.name + ': trifft 1 bis 50 User (' + x.n + ')', !x.error && x.n >= 1 && x.n <= 50, x.error || x.n);
+    // „Was?“ (Boost) bzw. „Wo?“ (Anzeige am Foto, 0277)
+    if (ad.content_sql) ok('Kampagne ' + ad.name + ': ' + (ad.kind === 'boost' ? 'bewirbt' : 'hängt an') + ' Fotos (' + x.nc + ')', !x.cerror && x.nc >= 1, x.cerror || x.nc);
+    else ok('Kampagne ' + ad.name + ': ohne „Wo?“ keine Fotos', x.c === null);
+  }
+  const p1 = E.probe(C, db, "SELECT CASE gender WHEN 'male' THEN true ELSE false END FROM users WHERE id = $user");
+  ok('Probelauf Form 1 ($user) = alle Männer', p1.form === 'user' && p1.ids.length === one(db, "SELECT COUNT(*) FROM users WHERE gender = 'male'"), p1);
+  const p2 = E.probe(C, db, "SELECT id FROM users WHERE gender = 'male';");
+  ok('Probelauf Form 2 (Liste) = dasselbe', p2.form === 'list' && JSON.stringify(p2.ids) === JSON.stringify(p1.ids));
+  ok('nur lesen: UPDATE wird abgelehnt', !!E.probe(C, db, "UPDATE users SET name = 'x'").error && one(db, "SELECT COUNT(*) FROM users WHERE name = 'x'") === 0);
+  ok('nur eine Abfrage', !!E.probe(C, db, 'SELECT 1; SELECT 2').error);
+  ok('Fehler in der Abfrage kommt zurück', /users2|no such/i.test(E.probe(C, db, 'SELECT id FROM users2').error || ''));
 }
 
 // Blacklist wie contains_blacklisted_text (Migration 0081) – sonst lehnt der Server die Daten ab
@@ -166,6 +187,8 @@ for (const day of days) {
     .find(tok => words.some(w => tok === w || (w.length >= 6 && tok.includes(w))));
   const d = G.build({ stichtag: '2026-11-04', netz: 'Liky' });
   const hits = [];
+  // ads: nur name, title, body, button (die Abfragen prüft der Server nicht)
+  d.ads.rows.forEach(r => { const w = bad([r[2], r[4], r[5], r[7]].filter(Boolean).join(' ')); if (w) hits.push('ads: ' + w); });
   for (const t of ['users', 'photos', 'comments', 'tags']) d[t].rows.forEach(r => {
     const txt = r.filter(v => typeof v === 'string' && !/^\$2|^Mozilla/.test(v)).join(' ');
     // Passwort (Spalte 4 bei users) prüft der Server nicht

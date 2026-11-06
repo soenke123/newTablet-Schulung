@@ -39,7 +39,7 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 - **`password`** enthält den Hash und ist sichtbar wie bei InstaHub (bcrypt, `$2y$10$…`).
 - **Verschiedene Likes?** TikTok kennt nur das Herz. Kommentare kann man bei TikTok aber liken → `comment_likes` (ist schon drin). Optional: `likes.type` mit Reaktionen (Herz, Lachen, Wow …). Das wäre eher Facebook, gibt aber schöne `GROUP BY type`-Aufgaben. Entscheidung offen.
 - **Analytics gebaut (Migration 0270):** `sessions` (ein Besuch je User: IP, Browser, OS, Gerät, Bildschirm, Sprache, Zeitzone, Hell/Dunkel + vier Erlaubnis-Haken Standort/Kamera/Mikrofon/Benachrichtigungen) und `views` (wer hat welches Foto wie lange gesehen). Laufen wie auf echten Seiten still mit – **ohne Banner, ohne Haken für die Klasse** – sobald die Lehrkraft `sessions` (und `views`) im Diagramm erstellt hat; kein Schalter, kein Zeitlimit. Standort/Kamera/Mikrofon/Benachrichtigungen werden nur zum Schein abgefragt (nachgebautes „Zulassen?“), gespeichert wird der Klick. Die Lehrkraft löst am Ende auf („Was haben wir gesammelt / was ginge ohne Fragen / was eine Erlaubnis kostet / was nur echte Apps können“). Details: `tools/SocialHub/CLAUDE.md`.
-- Später, für Werbung (eigener Block): `ads` + `ad_views`/`ad_clicks`.
+- Werbung: nur `ads` (sichtbar), Plan in Abschnitt 13.
 
 ## 2. Tabellen erstellen = Lehrkraft
 
@@ -103,7 +103,7 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 
 1. Hub gründen (Name + Logo, eigenes Logo), Übersicht der Lehrkraft, Login/Registrieren auf jedem Hub, Feed, Fotos (Upload), Profil, Folgen, Likes, Kommentare (+ Herz), Tags, Lehrkraft erstellt Tabellen.
 2. Admin-Bereich mit Datenbank-Reiter (SELECT lokal, INSERT/UPDATE/DELETE auf die Plattform), Nutzerverwaltung.
-3. Dummy-Daten + Bildbibliothek, Werbung. (Analytics `sessions`/`views` sind seit Migration 0270 gebaut.)
+3. Dummy-Daten + Bildbibliothek, Werbung (Plan: Abschnitt 13). (Analytics `sessions`/`views` sind seit Migration 0270 gebaut.)
 4. Freier Raum, Schaufenster, Aufgaben aus Sönkes Leitfaden.
 
 ## 12. Offene Fragen an Sönke
@@ -113,3 +113,107 @@ photo_tag      (photo_id FK→photos, tag_id FK→tags, PK(photo_id, tag_id))
 - Wer darf im Datenbank-Reiter schreiben: nur Admins, alle, oder per Schalter der Lehrkraft?
 - Hub je Person oder auch Gruppen-Hubs (2–3 gründen zusammen)?
 - Darf man sich auf allen Hubs der Klasse registrieren, oder nur auf denen, die der Gründer einlädt?
+
+## 13. Werbung (Plan Sönke 05.11.2026 – gebaut in Migration 0276, Details `tools/SocialHub/CLAUDE.md`)
+
+**Idee:** Die Plattform selbst spielt Werbung aus. Die Admins eines Netzwerks (Schüler im eigenen Netzwerk; im
+Klassen-Netz die, die die Lehrkraft per `UPDATE users SET role = 'admin'` dazu macht) legen **Kampagnen** an.
+Ob eine Kampagne zu einem User passt, entscheidet eine **SQL-Abfrage** auf den gesammelten Daten – wie bei InstaHub.
+Keine eigene Werbekunden-Rolle: Admins sehen ohnehin alle Daten (Entscheidung Sönke).
+
+### 13.1 Einschalten
+
+- `ads` ist eine Tabelle im Diagramm der Lehrkraft wie alle anderen (`data.tables`), braucht `users`. Für die Schüler
+  gibt es **nur `ads`** – keine weiteren Werbe-Tabellen (Sönke: sonst zu kompliziert).
+- Ist `ads` erstellt, erscheint im Adminbereich der Reiter **Werbung** (neben SQL · Diagramm).
+- **Dummy-Kampagnen** wie die übrigen Dummy-Daten („Füllen / Leeren“ an der Kachel) – **auch im Klassen-Netz**
+  (Ausnahme von „Klassen-Netz ohne Dummy-Daten“). Deshalb fragen die Dummy-Kampagnen nur Dinge ab, die es auch ohne
+  Dummy-User gibt (Tags, Likes, Geschlecht, Gerät, Uhrzeit, Verweildauer), keine bestimmten Dummy-Namen.
+
+### 13.2 Eine Kampagne = „Wem?“ + „Was?“
+
+| Feld | Bedeutung |
+|---|---|
+| **Wem?** (`target_sql`) | Zielgruppe als SQL (zwei Formen, siehe unten). Leer = alle. |
+| **Was?** – Art `ad` | **Anzeige**: eigenes Bild + Titel + Text + Knopf („Mehr erfahren“). Erscheint im Feed als eigene Karte mit „Anzeige“ und als schmale Leiste am Bild (Kommentar-/Detailansicht) – wie bei InstaHub. |
+| **Was?** – Art `boost` | **Beworbene Posts**: eine zweite Abfrage `content_sql` liefert Foto-ids (z. B. alle Fotos mit Tag `wissenschaft`). Diese Fotos werden der Zielgruppe im „Für dich“-Feed **vorgeschlagen** und dort mit „Gesponsert“ markiert. Damit wird der Vorschlags-Algorithmus sichtbar und steuerbar. |
+| `active` | an/aus – im Reiter Werbung per Schalter (Admins können jede Kampagne deaktivieren, auch Dummy-Kampagnen) |
+
+Keine gesponserten Profile (Sönke: nicht gewollt).
+
+**Nachtrag 06.11.2026 (Migration 0277):** Anzeigen bekommen optional **„Wo?“** (content_sql = Foto-ids). Ohne „Wo?“ nur als Karte im Feed, mit „Wo?“ nur an diesen Fotos (Leiste am Foto + über dessen Kommentaren) – Kontext-Werbung neben personalisierter Werbung.
+
+**Zwei Formen für „Wem?“** (`$user` = id des aktuellen Users):
+
+```sql
+-- Form 1: mit $user → ein Wert; wahr (true/1) = Anzeige passt
+SELECT CASE gender WHEN 'male' THEN true ELSE false END FROM users WHERE id = $user
+
+-- Form 2: ohne $user → Liste von ids; aktueller User dabei = Anzeige passt
+SELECT id FROM users WHERE gender = 'male'
+```
+
+Beispiel „wissenschaftlich begeistert“ → Wissenschafts-Posts vorschlagen:
+
+```sql
+-- Wem?
+SELECT l.user_id FROM likes l
+JOIN photo_tag pt ON pt.photo_id = l.photo_id JOIN tags t ON t.id = pt.tag_id
+WHERE t.name IN ('wissenschaft','physik','mond') GROUP BY l.user_id HAVING COUNT(*) >= 2
+-- Was?
+SELECT pt.photo_id FROM photo_tag pt JOIN tags t ON t.id = pt.tag_id WHERE t.name = 'wissenschaft'
+```
+
+### 13.3 Kein Schüler-SQL auf dem Server
+
+Der Server führt nie SQL der Schüler aus (Sönke: wichtig). Beim Betrachter kann es auch nicht laufen (er bräuchte die
+ganze Datenbank). Deshalb rechnet **das Gerät eines Admins**:
+
+1. Das Admin-Gerät führt `target_sql` in der SQLite-Kopie aus (Form 1: einmal je User mit eingesetztem `$user`;
+   Form 2: einmal) und `content_sql` einmal – im Worker mit dem üblichen Abbruch nach 8 s.
+2. Das Ergebnis (nur ganze Zahlen) geht an den Server und wird **intern** an der Kampagne gemerkt (z. B. Spalten
+   `audience int[]` / `content int[]` in `sh_ads`, die nicht im Schnappschuss stehen – im SQL-Editor unsichtbar).
+   Der Server prüft nur: ids gehören zum Netzwerk, Kampagne gehört zum Netzwerk, Deckel.
+3. `sh_feed` mischt danach aus diesen Listen: je Seite (6 Posts) eine Anzeige mitten hinein, reihum; beworbene Fotos
+   in „Für dich“: je Runde bis zu 3 sicher ganz vorn, die übrigen etwas weiter oben (gebaut so, 0276).
+
+Neu gerechnet wird beim Speichern einer Kampagne und von selbst, solange ein Admin im Netzwerk ist (z. B. jede
+Minute). Ob es zusätzlich einen Knopf „Neu berechnen“ braucht, schauen wir beim Bauen (Sönke). Klassen-Netz: die
+Lehrkraft ist dort Admin, ihr Gerät rechnet beim Öffnen mit – die Dummy-Kampagnen bekommen so ihre Zielgruppe.
+
+### 13.4 Tabelle `ads` (im SQL-Editor sichtbar, die einzige)
+
+```
+ads (id, user_id → users (wer sie angelegt hat), name, kind ENUM('ad','boost'),
+     title, body, image, button, target_sql TEXT, content_sql TEXT,
+     active BOOL, created_at)
+```
+
+- Anlegen/Ändern/Löschen im Reiter Werbung oder per SQL (`INSERT INTO ads …`, `UPDATE ads SET active = false …`)
+  über `sh_db_apply`. `target_sql`/`content_sql` sind für den Server nur Text (Blacklist wie andere Texte).
+- Keine Tabellen für Zielgruppe, Anzeigen oder Klicks; berechnete Listen bleiben intern (13.3).
+- Klick auf eine Anzeige öffnet eine kleine Seite mit Bild + Text der Kampagne (kein Link nach draußen).
+
+### 13.5 Reiter „Werbung“ (Adminbereich)
+
+- Liste der Kampagnen als Karten: Name, Art, Schalter aktiv, Zielgruppe (Anzahl).
+- Neu/Bearbeiten: Name · Art (Anzeige | Beworbene Posts) · bei Anzeige Bild (wie Posten, Zuschneiden), Titel, Text,
+  Knopf · „Wem?“ als SQL-Editor (derselbe wie im Reiter SQL) mit Probelauf „trifft 7 User: …“ · bei Boost „Was?“
+  ebenso mit Vorschau der Fotos.
+- „Warum sehe ich das?“ an jeder Anzeige/jedem gesponserten Post zeigt dem User die Abfrage (passt zu
+  „Was weiß das Netzwerk über mich?“).
+
+### 13.6 Dummy-Kampagnen (Entwurf, ausgedachte Marken)
+
+| Name | Art | Wem? | Was? |
+|---|---|---|---|
+| VOLTA Energy | Anzeige | ≥ 3 Likes auf Gaming-Tags | Dose, „Durchzocken?“ |
+| Nachtschicht-Snacks | Anzeige | Form 1: `$user` hatte eine Session zwischen 0 und 4 Uhr | Chips-Lieferdienst |
+| Sternwarte Pro | Boost | ≥ 2 Likes auf `wissenschaft`/`physik`/`mond` | Fotos mit Tag `wissenschaft` |
+| Reiselust | Boost | `views` auf Reise-Tags mit Ø > 4 s | Fotos mit Tag `reisen` |
+| Glow Skin | Anzeige | `gender = 'female'` | Kosmetik – Diskussion „Werbung nach Geschlecht“ |
+| SpeedPhone X | Anzeige | Form 1: letzte Session von `$user` mit `os` = Android | „Zeit für ein Upgrade“ |
+| Wahrheit.tv | Boost | liken `flacheerde`/`wachtauf` | Fotos mit Tag `flacheerde` – Warnbeispiel Filterblase |
+| Pfotenglück | Anzeige | ≥ 1 Like auf Tier-Tags | Tierfutter |
+
+Bilder kommen in `dummy/img/ads/` (Liste in `dummy/LISTE.md` ergänzen).

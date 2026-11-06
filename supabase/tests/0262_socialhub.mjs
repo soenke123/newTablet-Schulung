@@ -520,7 +520,7 @@ ok('9  wieder erstellt: Haken nachgetragen (Kamera ja, Benachrichtigungen nein),
   ok('10 Blacklist greift', r.error === 'blacklisted', JSON.stringify(r));
   r = await call(`sh_dummy_put($1, 'tags', '["id","name"]'::jsonb, '[[1,{"x":1}]]'::jsonb)`, [CODE]);
   ok('10 JSON-Objekt als Wert → bad_rows', r.error === 'bad_rows', JSON.stringify(r));
-  r = await call(`sh_dummy_put($1, 'ads', '["id"]'::jsonb, '[]'::jsonb)`, [CODE]);
+  r = await call(`sh_dummy_put($1, 'secret', '["id"]'::jsonb, '[]'::jsonb)`, [CODE]);
   ok('10 unbekannte Tabelle → bad_table', r.error === 'bad_table', JSON.stringify(r));
   for (const t of ['users', 'photos', 'tags', 'photo_tag', 'follows', 'likes', 'comments', 'sessions', 'views']) {
     r = await put(t);

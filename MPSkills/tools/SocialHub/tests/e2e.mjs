@@ -749,6 +749,125 @@ try {
   await ap2.goto(`${ORIGIN}/n/${KEY}/#s=${sess}&h=${hubId}`);
   await ap2.locator('.hub-top .chip', { hasText: '@mia_k' }).waitFor();
   ok('10 „Als App“: gleich angemeldet, Sitzung aus der Adresse genommen', !ap2.url().includes('#s='), ap2.url());
+
+  /* 11 Werbung (0276): Lehrkraft erstellt ads, füllt die Beispiel-Kampagnen (auch ins
+     Klassen-Netz), Reiter „Werbung“ rechnet die Zielgruppen im Browser, neue Kampagne
+     mit Probelauf, Anzeige + „Gesponsert“ im Feed, „Warum sehe ich das?“ */
+  await t.page.reload();
+  await t.app.locator('[data-tadd="ads"]').waitFor();
+  ok('11 ads im Diagramm über users, braucht nichts', await t.app.locator('[data-tadd="ads"][disabled]').count() === 0);
+  await t.app.locator('[data-tadd="ads"]').click();
+  await t.app.locator('[data-tdrop="ads"]').waitFor();
+  ok('11 Diagramm: 14 Linien (ads → users)', await t.app.locator('.tdg-lines path.on').count() === 14 && await t.app.locator('.tdg-lines text.on').count() === 28, String(await t.app.locator('.tdg-lines path.on').count()));
+  const hidden3 = await t.app.locator('#tdg').evaluate((box) => {
+    const R = box.getBoundingClientRect(), bad = [];
+    const rects = [...box.querySelectorAll('.tb')].map(el => { const r = el.getBoundingClientRect(); return { t: el.dataset.tb, x: r.left - R.left, y: r.top - R.top, w: r.width, h: r.height }; });
+    const S = box.querySelector('.tdg-lines').getBoundingClientRect();
+    for (const l of box.querySelectorAll('.tdg-lines path')) {
+      const L = l.getTotalLength();
+      for (let i = 1; i < 40; i++) {
+        const pt = l.getPointAtLength(L * i / 40), x = pt.x + S.left - R.left, y = pt.y + S.top - R.top;
+        const hit = rects.find(r => x > r.x + 2 && x < r.x + r.w - 2 && y > r.y + 2 && y < r.y + r.h - 2);
+        if (hit) { bad.push(hit.t); break; }
+      }
+    }
+    return bad;
+  });
+  ok('11 keine Linie unter einem Kasten', hidden3.length === 0, hidden3.join());
+  await t.app.locator('[data-dload="ads"]:not([disabled])').scrollIntoViewIfNeeded();
+  await t.app.locator('[data-dload="ads"]').click();
+  await t.app.locator('.dlg [data-dlg="yes"]').click();
+  await t.app.locator('[data-dclear="ads"]').waitFor({ timeout: 20000 });
+  const adsPer = (await db.query(`select h.class, count(a.*)::int n from sh_hubs h left join sh_ads a on a.hub_id = h.id where h.room_id = $1 group by h.id, h.class`, [ROOM])).rows;
+  ok('11 9 Beispiel-Kampagnen in jedem Netzwerk, auch im Klassen-Netz', adsPer.length > 1 && adsPer.every(x => x.n === 9) && adsPer.some(x => x.class), JSON.stringify(adsPer));
+  await shot(t.page, '11a-diagramm-ads');
+  // Lehrkraft geht in Mias Netzwerk → Adminbereich → Werbung
+  await t.app.locator(`[data-open="${HUBID}"]`).click();
+  await t.app.locator('[data-view="admin"]').click();
+  await t.app.locator('[data-at="ads"]').click();
+  await t.app.locator('.ad-row').first().waitFor({ timeout: 15000 });
+  await t.app.locator('#adSt', { hasText: 'berechnet' }).waitFor({ timeout: 20000 });
+  const comp = (await db.query(`select name, coalesce(array_length(audience, 1), 0) n, audience is null alle, computed_at is not null c from sh_ads where hub_id = $1 order by id`, [HUBID])).rows;
+  // (hier sind nur users/photos/comments gefüllt – Kampagnen über Likes/Tags treffen deshalb niemanden)
+  ok('11 Reiter Werbung: 9 Kampagnen, im Browser berechnet und an den Server geschickt', await t.app.locator('.ad-row').count() === 9 && comp.every(x => x.c)
+     && comp.find(x => x.name === 'Plus-Abo').alle && comp.find(x => x.name === 'Glow Skin').n > 0, JSON.stringify(comp));
+  ok('11 Liste zeigt Zielgruppen ohne Fehler', /User in der Zielgruppe/.test(await t.app.locator('#adList').textContent()) && await t.app.locator('.ads-err').count() === 0,
+     (await t.app.locator('.ads-err').allTextContents()).join(' | '));
+  await shot(t.page, '11b-werbung-liste');
+  // neue Kampagne: beworbene Posts, Probelauf „Wem?“ und „Was?“
+  await t.app.locator('#adNew').click();
+  await t.app.locator('#adForm input[name=name]').fill('Pixel Boost');
+  await t.app.locator('#adForm [data-kind="boost"]').click();
+  await t.app.locator('#adEdT .ed-ta').fill("SELECT id FROM users WHERE gender = 'female'");
+  await t.app.locator('#adProbeT').click();
+  await t.app.locator('#adOutT .res--ok').waitFor({ timeout: 10000 });
+  const nFem = (await db.query(`select count(*)::int n from sh_users where hub_id = $1 and gender = 'female'`, [HUBID])).rows[0].n;
+  ok('11 Probelauf „Wem?“ trifft alle Userinnen', (await t.app.locator('#adOutT .res--ok').textContent()).includes(nFem + ' User'), await t.app.locator('#adOutT').textContent());
+  await t.app.locator('#adEdC .ed-ta').fill('SELECT id FROM photos ORDER BY id DESC LIMIT 2');
+  await t.app.locator('#adProbeC').click();
+  await t.app.locator('#adOutC .res--ok', { hasText: '2 Fotos' }).waitFor({ timeout: 10000 });
+  ok('11 Probelauf „Was?“: 2 Fotos', true);
+  await t.app.locator('#adEdT .ed-ta').fill("UPDATE users SET name = 'x'");
+  await t.app.locator('#adProbeT').click();
+  await t.app.locator('#adOutT .res--bad').waitFor({ timeout: 10000 });
+  ok('11 Probelauf: UPDATE geht nicht (nur lesen)', Number((await db.query(`select count(*)::int n from sh_users where name = 'x'`)).rows[0].n) === 0);
+  await t.app.locator('#adEdT .ed-ta').fill('');
+  await shot(t.page, '11c-werbung-editor');
+  await t.app.locator('#adSave').click();
+  await t.app.locator('.ad-row', { hasText: 'Pixel Boost' }).waitFor({ timeout: 10000 });
+  await t.app.locator('#adSt', { hasText: 'berechnet' }).waitFor({ timeout: 20000 });
+  for (let i = 0; i < 30 && !(await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Boost'`, [HUBID])).rows[0].content; i++) await wait(300);
+  const pb = (await db.query(`select kind, target_sql, content from sh_ads where hub_id = $1 and name = 'Pixel Boost'`, [HUBID])).rows[0];
+  ok('11 gespeichert: beworbene Posts für alle, 2 Fotos berechnet', pb.kind === 'boost' && pb.target_sql === null && pb.content && pb.content.length === 2, JSON.stringify(pb));
+  // Anzeige am Foto (0277): „Wo?“ = die drei neuesten Fotos
+  await t.app.locator('#adNew').click();
+  await t.app.locator('#adForm input[name=name]').fill('Pixel Shop');
+  await t.app.locator('#adForm input[name=title]').fill('Neue Hüllen');
+  ok('11 Anzeige: Feld heißt „Wo?“', (await t.app.locator('#adForm .ad-c-l').textContent()) === 'Wo?');
+  // der farbige SQL-Text muss sichtbar sein (Textfeld durchsichtig, nicht vom .form-Stil überdeckt)
+  ok('11 SQL-Editor im Formular: Textfeld durchsichtig', await t.app.locator('#adEdC .ed-ta').evaluate(e => getComputedStyle(e).backgroundColor === 'rgba(0, 0, 0, 0)'));
+  await t.app.locator('#adEdC .ed-ta').fill('SELECT id FROM photos ORDER BY id DESC LIMIT 3');
+  await t.app.locator('#adProbeC').click();
+  await t.app.locator('#adOutC .res--ok', { hasText: 'bekämen die Anzeige' }).waitFor({ timeout: 10000 });
+  await shot(t.page, '11c2-anzeige-wo');
+  await t.app.locator('#adSave').click();
+  await t.app.locator('.ad-row', { hasText: 'Pixel Shop' }).waitFor({ timeout: 10000 });
+  for (let i = 0; i < 30 && !(await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Shop'`, [HUBID])).rows[0].content; i++) await wait(300);
+  ok('11 „Wo?“ berechnet: 3 Fotos', (await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Shop'`, [HUBID])).rows[0].content.length === 3);
+  ok('11 Liste: „Anzeige am Foto“', await t.app.locator('.ad-row', { hasText: 'Pixel Shop' }).locator('text=Anzeige am Foto').count() === 1);
+  // VOLTA pausieren
+  const voltaId = (await db.query(`select id from sh_ads where hub_id = $1 and name = 'VOLTA Energy'`, [HUBID])).rows[0].id;
+  await t.app.locator(`[data-aon="${voltaId}"]`).evaluate(el => el.click());
+  for (let i = 0; i < 30 && (await db.query(`select active from sh_ads where hub_id = $1 and id = $2`, [HUBID, voltaId])).rows[0].active; i++) await wait(200);
+  ok('11 Schalter pausiert VOLTA', (await db.query(`select active from sh_ads where hub_id = $1 and id = $2`, [HUBID, voltaId])).rows[0].active === false);
+  // App: Anzeige-Karte (Plus-Abo für alle) und „Gesponsert“ (Pixel Boost)
+  await t.app.locator('[data-view="app"]').click();
+  await t.app.locator('.card--ad').first().waitFor({ state: 'attached', timeout: 15000 });
+  ok('11 Feed: Anzeige als eigene Karte mit „Anzeige“', /Anzeige/.test(await t.app.locator('.card--ad .ad-label').first().textContent()));
+  await t.app.locator('.m-spons').first().waitFor({ state: 'attached', timeout: 10000 });
+  ok('11 Feed: beworbenes Foto ganz vorn mit „Gesponsert“', await t.app.locator('.card').first().locator('.m-spons').count() === 1);
+  ok('11 am gesponserten (neuesten) Foto hängt die Anzeige „Pixel Shop“', /Pixel Shop/.test(await t.app.locator('.card').first().locator('.ad-onphoto').textContent()));
+  await shot(t.page, '11d-feed-gesponsert');
+  await t.app.locator('.card').first().locator('[data-act="comments"]').click();
+  await t.app.locator('.sheet .ad-strip', { hasText: 'Pixel Shop' }).waitFor({ timeout: 10000 });
+  ok('11 über den Kommentaren dieses Fotos: dieselbe Anzeige', true);
+  await shot(t.page, '11d2-kommentare-anzeige');
+  await t.app.locator('.sheet [data-close]').click();
+  await t.app.locator('.card').first().locator('.m-spons').click();
+  await t.app.locator('.dlg', { hasText: 'Warum siehst du diesen Beitrag' }).waitFor();
+  ok('11 „Warum?“ am gesponserten Beitrag zeigt die Abfrage „Was?“', /LIMIT 2/.test(await t.app.locator('.dlg').textContent()));
+  await t.app.locator('.dlg [data-dlg="ok"]').click();
+  await t.app.locator('.card--ad').first().scrollIntoViewIfNeeded();
+  await wait(400);
+  await shot(t.page, '11e-feed-anzeige');
+  await t.app.locator('.card--ad [data-adwhy]').first().click();
+  await t.app.locator('.dlg', { hasText: 'Warum siehst du diese Anzeige' }).waitFor();
+  ok('11 „Warum?“ an der Anzeige', /alle/.test(await t.app.locator('.dlg').textContent()));
+  await t.app.locator('.dlg [data-dlg="ok"]').click();
+  await t.app.locator('.card--ad [data-adgo]').first().click();
+  await t.app.locator('.ov--ad .ad-page').waitFor();
+  ok('11 Anzeige antippen → eigene Seite, Knopf führt nirgendwohin', await t.app.locator('.ov--ad .ad-page button.btn[disabled]').count() === 1);
+  await shot(t.page, '11f-anzeige-seite');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

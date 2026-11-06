@@ -49,7 +49,9 @@
     { id: 'tags',          what: 'Hashtags (mit photo_tag)', needs: ['photos'] },
     // Analytics (0270): erstellt = es wird getrackt, wie auf einer echten Seite
     { id: 'sessions',      what: 'Analytics: jeder Besuch mit IP, Gerät, Browser – läuft still mit' },
-    { id: 'views',         what: 'Analytics: welches Foto wie lange angesehen wurde', needs: ['photos', 'sessions'] }
+    { id: 'views',         what: 'Analytics: welches Foto wie lange angesehen wurde', needs: ['photos', 'sessions'] },
+    // Werbung (0276): Kampagnen mit SQL-Zielgruppe, Reiter „Werbung“ im Adminbereich
+    { id: 'ads',           what: 'Werbung: Kampagnen mit Zielgruppe per SQL – Reiter „Werbung“ im Adminbereich' }
   ];
   const NEEDS = {};
   TABLES.forEach(t => { if (t.needs) NEEDS[t.id] = t.needs; });
@@ -76,7 +78,8 @@
     session: null,
     view: 'app',      // app | admin
     tab: 'feed',      // App: feed | search | post | profile
-    adminTab: 'sql', // sql | diagram | settings
+    adminTab: 'sql', // sql | diagram | ads | settings
+    adsTab: null,     // Reiter Werbung (SHAds.tab)
     db: null,
     tblSel: null,     // Lehrkraft: gewählte Tabelle im Diagramm
     autoOpened: false,
@@ -280,6 +283,7 @@
     S.hub = null;
     closeDb();
     if (window.SHTrack) SHTrack.stop();
+    if (window.SHAds) SHAds.stop();
     closeReveal();
     applyColor(null);
     // Schüler: beim ersten Laden gleich ins eigene Netzwerk (gibt es ein Klassen-Netz, erst die Auswahl)
@@ -438,7 +442,9 @@
     photo_tag: { x: colX(3), y: MID - K, h: BH },
     tags:      { x: colX(4), y: MID - K, h: BH },
     sessions:  { x: colX(0), y: ROW2, h: BH },
-    views:     { x: colX(2), y: ROW2, h: BH }
+    views:     { x: colX(2), y: ROW2, h: BH },
+    // Werbung (0276): über users
+    ads:       { x: colX(0), y: PAD, h: BH }
   };
   const TW = colX(5) - GX + PAD, TH = ROW2 + BH + PAD;
   // [Tabelle mit Fremdschlüssel, Ziel, y an der Quelle, y am Ziel (relativ), senkrecht bei (Anteil der Lücke)]
@@ -452,7 +458,7 @@
     ['views',     'users',  22, UH - 12, 0.03], ['views', 'sessions', 56, 56, 0.5]
   ];
   // senkrecht von oben aus der Quelle in den Boden des Ziels (gleiche Spalte)
-  const TVEDGES = [['sessions', 'users'], ['views', 'photos']];
+  const TVEDGES = [['sessions', 'users'], ['views', 'photos'], ['ads', 'users']];
   // Pfad mit kleinen Rundungen an den Ecken
   function roundPath(pts, r) {
     let d = 'M' + pts[0][0] + ' ' + pts[0][1];
@@ -483,11 +489,12 @@
     });
     TVEDGES.forEach(([src, dst]) => {
       const a = TBOX[src], b = TBOX[dst];
-      const x = a.x + BW / 2, y1 = a.y, y2 = b.y + b.h;
+      const down = a.y < b.y;                         // Quelle über dem Ziel (ads → users)
+      const x = a.x + BW / 2, y1 = down ? a.y + a.h : a.y, y2 = down ? b.y : b.y + b.h;
       const cls = tblOn(src) && tblOn(dst) ? 'on' : 'off';
       out += '<path d="M' + x + ' ' + y1 + ' L' + x + ' ' + y2 + '" class="' + cls + '"/>' +
-        '<text x="' + (x + 6) + '" y="' + (y1 - 6) + '" class="' + cls + '">n</text>' +
-        '<text x="' + (x + 6) + '" y="' + (y2 + 14) + '" class="' + cls + '">1</text>';
+        '<text x="' + (x + 6) + '" y="' + (down ? y1 + 14 : y1 - 6) + '" class="' + cls + '">n</text>' +
+        '<text x="' + (x + 6) + '" y="' + (down ? y2 - 6 : y2 + 14) + '" class="' + cls + '">1</text>';
     });
     return out;
   }
@@ -538,13 +545,16 @@
      erstellt), schickt sie einmal (sh_dummy_put) und füllt dann die
      Netzwerke einzeln (sh_dummy_load). Spätere Netzwerke füllt der Server. */
   const DNEEDS = { users: [], photos: ['users'], tags: ['photos'], follows: ['users'], likes: ['users', 'photos'],
-                   comments: ['users', 'photos'], sessions: ['users'], views: ['photos', 'sessions'] };
+                   comments: ['users', 'photos'], sessions: ['users'], views: ['photos', 'sessions'], ads: [] };
   const DWHAT = { users: '70 Beispiel-User', photos: 'die Beispiel-Fotos', tags: 'die Tags und ihre Zuordnung zu den Fotos', follows: 'wer wem folgt',
-                  likes: 'die Likes', comments: 'die Kommentare und Diskussionen', sessions: 'die Besuche (Geräte, IPs, Uhrzeiten)', views: 'die angesehenen Fotos' };
+                  likes: 'die Likes', comments: 'die Kommentare und Diskussionen', sessions: 'die Besuche (Geräte, IPs, Uhrzeiten)', views: 'die angesehenen Fotos',
+                  ads: '9 Beispiel-Kampagnen (Werbung, auch ins Klassen-Netz)' };
   const dStored = t => !!(S.dummy && S.dummy.stored.indexOf(t) >= 0);
   // Beispieldaten nur für die eigenen Netzwerke – das Klassen-Netz füllt die Klasse selbst (0274)
-  const dummyHubs = () => S.home.hubs.filter(h => !h.class);
-  const dAll = t => !!S.dummy && dummyHubs().every(h => S.dummy.hubs[h.id] && t in S.dummy.hubs[h.id]);
+  // … außer der Werbung (0276): die Beispiel-Kampagnen kommen auch ins Klassen-Netz
+  const dummyHubs = t => S.home.hubs.filter(h => !h.class || t === 'ads');
+  const dLoaded = (h, t) => h.class ? !!(S.dummy.class && S.dummy.class.dummy && t in S.dummy.class.dummy) : !!(S.dummy.hubs[h.id] && t in S.dummy.hubs[h.id]);
+  const dAll = t => !!S.dummy && dummyHubs(t).every(h => dLoaded(h, t));
   // Unterste Zeile der Kachel: „Daten: leer · Füllen“ / „Daten: gefüllt · Leeren“
   function dummyRowHtml(t, isOn) {
     if (!S.dummy || !window.SHDummy) return '';
@@ -560,7 +570,7 @@
   const DDEPS = { users: ['photos', 'tags', 'follows', 'likes', 'comments', 'sessions', 'views'], photos: ['tags', 'likes', 'comments', 'views'], sessions: ['views'] };
   async function clearDummy(t) {
     if (!S.dummy) return;
-    const hubs = dummyHubs();
+    const hubs = dummyHubs(t);
     const also = (DDEPS[t] || []).filter(dStored);
     if (await dialog('Beispieldaten leeren',
       '<p>Entfernt die Beispieldaten von <b>' + esc(t) + '</b> aus ' + (hubs.length === 1 ? 'dem Netzwerk' : 'allen ' + hubs.length + ' Netzwerken') + '.' +
@@ -589,7 +599,7 @@
   }
   async function loadDummy(t) {
     if (!S.dummy || !window.SHDummy) return;
-    const hubs = dummyHubs();
+    const hubs = dummyHubs(t);
     const again = dStored(t);
     if (await dialog(again ? 'Beispieldaten nachladen' : 'Beispieldaten laden',
       '<p>Lädt <b>' + esc(DWHAT[t]) + '</b> in <b>' + (hubs.length === 1 ? 'das Netzwerk' : 'alle ' + hubs.length + ' Netzwerke') + '</b> dieses Raums – Netzwerke, die später erstellt werden, bekommen sie automatisch.</p>' +
@@ -1022,7 +1032,11 @@
     const nav = [['feed', IC.home, 'Start'], ['search', IC.search, 'Suche']];
     if (h.me) nav.push(['post', IC.plus, '']);
     if (h.me) nav.push(['profile', IC.user, 'Profil']);
-    const sub = [['sql', IC.code, 'SQL'], ['diagram', IC.table, 'Diagramm'], ['settings', IC.gear, 'Einstellungen']];
+    const sub = [['sql', IC.code, 'SQL'], ['diagram', IC.table, 'Diagramm']];
+    // Werbung (0276): eigener Reiter, sobald es die Tabelle ads gibt
+    if (on('ads') && window.SHAds) sub.push(['ads', SHAds.ICON.mega, 'Werbung']);
+    else if (S.adminTab === 'ads') S.adminTab = 'sql';
+    sub.push(['settings', IC.gear, 'Einstellungen']);
     app.innerHTML = '<div class="hub' + (admin ? ' hub--admin' : '') + '">' +
       '<header class="hub-top">' + (A.APP ? '' : '<button class="icon-btn" id="toHome" title="Startseite">' + IC.back + '</button>') +
       logoHtml(h.hub, 'logo--s') + '<b class="hub-name">' + esc(h.hub.name) + '</b>' +
@@ -1051,10 +1065,10 @@
       const t = b.dataset.at;
       if (S.adminTab === t) return;
       $$('[data-at]').forEach(x => x.classList.toggle('on', x === b));
-      const wasDb = S.adminTab !== 'settings';
+      const wasDb = S.adminTab === 'sql' || S.adminTab === 'diagram';
       S.adminTab = t;
       // SQL ↔ Diagramm: dieselbe Kopie, nur umschalten
-      if (wasDb && t !== 'settings' && S.db) { S.db.show(t === 'diagram' ? 'diagram' : 'sql'); return; }
+      if (wasDb && (t === 'sql' || t === 'diagram') && S.db) { S.db.show(t === 'diagram' ? 'diagram' : 'sql'); return; }
       closeDb();
       renderAdmin($('#main'));
     });
@@ -1066,10 +1080,21 @@
     else if (S.tab === 'post') renderPost(main);
     else if (S.tab === 'profile') renderProfile(main, h.me && h.me.id, false);
     manageTrack();
+    manageAds();
     syncReveal();
   }
 
-  function closeDb() { if (S.db) { S.db.destroy(); S.db = null; } }
+  function closeDb() {
+    if (S.db) { S.db.destroy(); S.db = null; }
+    if (S.adsTab) { S.adsTab.destroy(); S.adsTab = null; }
+  }
+
+  // Werbung (0276): Admins rechnen die Zielgruppen im Hintergrund (beim Hineingehen, dann alle 3 Min.)
+  function manageAds() {
+    if (!window.SHAds) return;
+    if (S.screen === 'hub' && S.hub && S.hub.admin && on('ads') && S.hub.ads_sql > 0) SHAds.auto(hcall, S.hub.hub.id + '.' + (S.session || ''));
+    else SHAds.stop();
+  }
 
   /* ── Feed ───────────────────────────────────────────────── */
   function renderFeedTab(main) {
@@ -1102,8 +1127,11 @@
       '</div>' +
       '<div class="meta"><button type="button" class="m-user" data-act="profile">@' + esc(it.user.username) + '</button>' +
         '<span class="m-time">· ' + esc(ago(it.created_at)) + '</span>' +
+        (it.sponsored ? '<button type="button" class="m-spons" data-act="why" title="Warum sehe ich das?">Gesponsert ' + SHAds.ICON.info + '</button>' : '') +
         (it.description ? '<p class="m-desc">' + esc(it.description) + '</p>' : '') +
         (it.tags && it.tags.length ? '<div class="m-tags">' + it.tags.map(t => '<button type="button" data-tag="' + esc(t) + '">#' + esc(t) + '</button>').join('') + '</div>' : '') +
+        // Werbung am Foto (0277): Anzeige mit „Wo?“
+        (it.ad && window.SHAds ? SHAds.photoAdHtml(it.ad) : '') +
       '</div></article>';
   }
 
@@ -1112,6 +1140,7 @@
     const LIM = 6;
     let offset = 0, seed = Math.floor(Math.random() * 1e6), loading = false, finished = false, idx = 0;
     const items = [];
+    const ads = {};       // Anzeigen dieser Liste (id → Kampagne)
     host.innerHTML = '<div class="feed"></div>';
     const list = $('.feed', host);
     const io = new IntersectionObserver((ents) => {
@@ -1157,8 +1186,16 @@
       }
       const frag = document.createElement('div');
       frag.innerHTML = r.items.map(it => { items.push(it); return cardHtml(it, idx++); }).join('');
+      // Werbung (0276): eine Anzeige mitten in die Seite
+      if (r.ad && window.SHAds) {
+        ads[r.ad.id] = r.ad;
+        const at = frag.children[Math.min(3, frag.children.length)];
+        const tmp = document.createElement('div');
+        tmp.innerHTML = SHAds.cardHtml(r.ad);
+        frag.insertBefore(tmp.firstElementChild, at || null);
+      }
       const cards = Array.from(frag.children);
-      cards.forEach(c => { list.appendChild(c); vio.observe(c); });
+      cards.forEach(c => { list.appendChild(c); if (!c.classList.contains('card--ad')) vio.observe(c); });
       hydrate(list);
       offset += r.items.length;
       if (r.items.length < LIM) {
@@ -1187,10 +1224,20 @@
       if (tagB) { const tc = e.target.closest('.card'); if (tc) tc.__end = 'tag'; openViewer({ mode: 'tag', arg: tagB.dataset.tag, title: '#' + tagB.dataset.tag }); return; }
       const card = e.target.closest('.card');
       if (!card) return;
+      // Anzeige: „Warum?“ oder öffnen
+      if (card.classList.contains('card--ad')) {
+        const ad = ads[card.dataset.ad];
+        if (!ad) return;
+        if (e.target.closest('[data-adwhy]')) adWhy(ad, false);
+        else if (e.target.closest('[data-adgo]') || !e.target.closest('.meta')) adOpen(ad);
+        return;
+      }
       const it = items[+card.dataset.i];
       const actEl = e.target.closest('[data-act]');
       const act = actEl ? actEl.dataset.act : null;
       if (act === 'follow') { e.stopPropagation(); follow(it, card); return; }
+      if (act === 'why' && it.sponsored) { adWhy(it.sponsored, true); return; }
+      if (it.ad && e.target.closest('[data-adp]')) { if (e.target.closest('[data-adwhy]')) adWhy(it.ad, false); else adOpen(it.ad); return; }
       if (act === 'profile') { card.__end = 'profile'; openProfile(it.user.id); return; }
       const rk = e.target.closest('[data-react]');
       if (rk) { e.stopPropagation(); closePick(); card.__end = 'like'; react(it, card, rk.dataset.react); return; }
@@ -1312,6 +1359,19 @@
         '</div>').join('') : '<p class="muted center-t">Noch keine Kommentare. Schreib den ersten!</p>';
       hydrate(listEl);
     }
+    // Werbung (0276): eine Anzeige als Leiste über den Kommentaren
+    // seit 0277 nur Anzeigen, deren „Wo?“ dieses Foto enthält
+    if (on('ads') && window.SHAds) hcall('sh_ad_pick', { p_salt: 'c' + Math.floor(Date.now() / 60000), p_photo: it.id }).then(r => {
+      if (!r || !r.ok || !r.ad || !sh.el.isConnected) return;
+      const w = document.createElement('div');
+      w.innerHTML = SHAds.stripHtml(r.ad);
+      const strip = w.firstElementChild;
+      listEl.parentNode.insertBefore(strip, listEl);
+      strip.addEventListener('click', (e) => {
+        if (e.target.closest('[data-adwhy]')) adWhy(r.ad, false); else adOpen(r.ad);
+      });
+      hydrate(strip);
+    });
     listEl.addEventListener('click', async (e) => {
       const d = e.target.closest('[data-cdel]');
       if (d) {
@@ -1333,6 +1393,24 @@
       load();
     };
     load();
+  }
+
+  /* ── Werbung (0276): „Warum sehe ich das?“ und Anzeige öffnen ── */
+  function adWhy(ad, sponsored) {
+    dialog(sponsored ? 'Warum siehst du diesen Beitrag?' : 'Warum siehst du diese Anzeige?', SHAds.whyHtml(ad, S.hub && S.hub.hub.name, sponsored));
+  }
+  function adOpen(ad) {
+    const ov = overlay(ad.name);
+    ov.el.classList.add('ov--ad');
+    ov.body.innerHTML = '<div class="ad-page">' +
+      (ad.image ? '<img class="ad-page-img" data-m="' + esc(ad.image) + '" alt="">' : '<div class="ad-fill ad-fill--page"><span>' + esc(ad.title || ad.name) + '</span></div>') +
+      '<div class="ad-page-b"><small>Anzeige · ' + esc(ad.name) + '</small>' +
+      (ad.title ? '<h2>' + esc(ad.title) + '</h2>' : '') + (ad.body ? '<p>' + esc(ad.body) + '</p>' : '') +
+      '<button type="button" class="btn btn--accent btn--big" disabled>' + esc(ad.button || 'Mehr erfahren') + '</button>' +
+      '<p class="muted small">Das ist eine ausgedachte Werbung in eurem Netzwerk – hier geht es nicht weiter.</p>' +
+      '<button type="button" class="link" data-why>Warum sehe ich das?</button></div></div>';
+    ov.body.querySelector('[data-why]').onclick = () => adWhy(ad, false);
+    hydrate(ov.body);
   }
 
   /* ── Ansicht über allem (Profil anderer, Tag, Fotos) ────── */
@@ -1725,7 +1803,9 @@
     main.innerHTML = '<div class="adm" id="adm"></div>';
     const body = $('#adm', main);
     if (S.adminTab === 'settings') adminSettings(body);
-    else {
+    else if (S.adminTab === 'ads' && window.SHAds) {
+      S.adsTab = SHAds.tab(body, { call: hcall, toast, fail, dialog, hydrate, hubId: S.hub.hub.id, upload: () => !!S.hub.upload });
+    } else {
       body.classList.add('adm--db');
       S.db = window.SHDB.create(body, { api: (fn, args) => hcall(fn, args), toast, tab: S.adminTab === 'diagram' ? 'diagram' : 'sql', onChanged: () => refreshHub() });
     }

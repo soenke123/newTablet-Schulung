@@ -164,7 +164,7 @@
     app_not_found: 'Diese App-Adresse gibt es nicht (mehr).',
     register_in_room: 'Ein Konto legst du im Unterricht im Raum an – hier kannst du dich nur anmelden.',
     busy: 'Zu viele falsche Versuche – bitte in ein paar Minuten noch einmal.',
-    fn_missing: 'Der Server kennt diese Funktion noch nicht (Migrationen 0262–0268 fehlen).'
+    fn_missing: 'Der Server kennt diese Funktion noch nicht – eine Migration fehlt.'
   };
   const errText = (r) => (r && (r.message || ERR[r.error])) || 'Das hat nicht geklappt (' + ((r && r.error) || '?') + ').';
 

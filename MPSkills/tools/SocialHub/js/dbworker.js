@@ -13,10 +13,10 @@
    damit ein per INSERT angelegtes Konto sich auch anmelden kann.
    ══════════════════════════════════════════════════════════════ */
 
-/* global initSqlJs, SQLCore, dcodeIO */
-const V = '?v=20261103a';
+/* global initSqlJs, SQLCore, dcodeIO, SHAdsEval */
+const V = '?v=20261106b';
 const SQLS = '../../SQLStudio/';
-importScripts(SQLS + 'lib/sql-wasm.js' + V, SQLS + 'js/core.js' + V, '../../../../vendor/bcryptjs-2.4.3.min.js');
+importScripts(SQLS + 'lib/sql-wasm.js' + V, SQLS + 'js/core.js' + V, '../../../../vendor/bcryptjs-2.4.3.min.js', 'adseval.js' + V);
 
 const bcrypt = dcodeIO.bcrypt;
 bcrypt.setRandomFallback(n => Array.from(self.crypto.getRandomValues(new Uint8Array(n))));
@@ -67,6 +67,9 @@ const OPS = {
     return out;
   },
   page(a) { return SQLCore.page(db, a.table, a); },
+  /* Werbung (0276): Zielgruppen aller Kampagnen rechnen (nur lesen) */
+  ads(a) { return SHAdsEval.all(SQLCore, db, a.ads || []); },
+  adprobe(a) { return SHAdsEval.probe(SQLCore, db, a.sql, a.kind); },
   schema() { return SQLCore.schema(db); }
 };
 

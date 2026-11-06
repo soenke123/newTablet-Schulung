@@ -389,7 +389,15 @@
     };
     const views = { cols: ['id', 'user_id', 'photo_id', 'session_id', 'viewed_at', 'duration_ms', 'feed', 'position', 'ended_by'], rows: V };
 
-    return { users, photos, tags, photo_tag, follows: followsT, likes, comments, sessions, views,
+    // Werbung (0276): Kampagnen der Plattform (user_id NULL); „Wem?“/„Was?“ sind nur Text
+    const ads = {
+      cols: ['id', 'user_id', 'name', 'kind', 'title', 'body', 'image', 'button', 'target_sql', 'content_sql', 'active', 'created_at'],
+      rows: (D.ADS || []).map((a, i) => [i + 1, null, a[1], a[2], a[3], a[4],
+        a[2] === 'ad' ? 'dummy/ad_' + a[0] + '.webp' : null, a[5], a[6], a[7], true,
+        fmtDate(day0 - a[8] * 86400000) + ' 10:00:00'])
+    };
+
+    return { users, photos, tags, photo_tag, follows: followsT, likes, comments, sessions, views, ads,
       meta: { stichtag: fmtDate(day0), netz, firstId } };
   }
 
