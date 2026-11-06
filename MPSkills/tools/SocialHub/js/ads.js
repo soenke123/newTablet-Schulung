@@ -5,7 +5,8 @@
    Tabelle ads erstellt hat; im Klassen-Netz immer):
      - Liste der Kampagnen mit Schalter an/aus, Zielgruppe, Fehlern
      - Editor: Name · Art (Anzeige | Beworbene Posts) · Bild/Titel/Text/
-       Knopf · „Wem?“ (target_sql) · „Was?“ (content_sql) mit Probelauf
+       Knopf · „Wem?“ (target_sql) · „Was?“ bzw. „Wo?“ (content_sql) mit Probelauf
+     Anzeige ohne „Wo?“ = Karte im Feed, mit „Wo?“ = nur an diesen Fotos (0277)
 
    Die Zielgruppen rechnet NUR dieses Gerät (Admin): Schnappschuss →
    SQLite-Kopie im Worker → js/adseval.js → nur die ids an
@@ -99,6 +100,13 @@
       '<button type="button" class="ad-strip-t" data-adgo><small>Anzeige · ' + esc(ad.name) + '</small><b>' + esc(ad.title || ad.name) + '</b></button>' +
       '<button type="button" class="ad-why ad-why--s" data-adwhy title="Warum sehe ich das?">' + ICON.info + '</button></div>';
   }
+  // Leiste unten auf einer Foto-Karte (Anzeige mit „Wo?“, 0277)
+  function photoAdHtml(ad) {
+    return '<div class="ad-onphoto" data-adp>' +
+      (ad.image ? '<span class="ad-strip-img" data-m="' + esc(ad.image) + '" data-thumb="1"></span>' : '<span class="ad-strip-img ad-strip-img--x">' + ICON.mega + '</span>') +
+      '<button type="button" class="ad-strip-t" data-adgo><small>Anzeige · ' + esc(ad.name) + '</small><b>' + esc(ad.title || ad.name) + '</b></button>' +
+      '<button type="button" class="ad-why ad-why--s" data-adwhy title="Warum sehe ich das?">' + ICON.info + '</button></div>';
+  }
   // „Warum sehe ich das?“ – die Abfrage, durch die man in der Zielgruppe ist
   function whyHtml(ad, netName, sponsored) {
     const t = String(ad.target_sql || '').trim();
@@ -108,6 +116,7 @@
                                    : '<p class="muted small">Die Abfrage liefert eine Liste von User-ids – deine ist dabei.</p>')
          : '<p>Diese Werbung sehen <b>alle</b> – die Kampagne hat keine Zielgruppe.</p>') +
       (sponsored && ad.content_sql ? '<p>Beworben werden die Fotos aus dieser Abfrage:</p><pre class="ad-sqlv">' + esc(String(ad.content_sql).trim()) + '</pre>' : '') +
+      (!sponsored && ad.content_sql ? '<p>Und sie hängt an Fotos, die diese Abfrage liefert – so wie das Foto, das du gerade ansiehst:</p><pre class="ad-sqlv">' + esc(String(ad.content_sql).trim()) + '</pre>' : '') +
       '<p class="muted small">Gerechnet wird mit dem, was das Netzwerk über dich gespeichert hat: Likes, Follows, Besuche, wie lange du Fotos ansiehst …</p>';
   }
 
@@ -182,14 +191,15 @@
         else if (!r) n = '<span class="muted">noch nicht berechnet</span>';
         else {
           n = '<span>' + (r.a === null ? '<b>alle ' + r.n + ' User</b>' : '<b>' + plural(r.n, 'User', 'User') + '</b>') + ' in der Zielgruppe' +
-              (a.kind === 'boost' ? ' · <b>' + plural(r.nc || 0, 'Foto', 'Fotos') + '</b> beworben' : '') + '</span>';
+              (a.kind === 'boost' ? ' · <b>' + plural(r.nc || 0, 'Foto', 'Fotos') + '</b> beworben'
+                : a.content_sql ? ' · an <b>' + plural(r.nc || 0, 'Foto', 'Fotos') + '</b>' : ' · Karte im Feed') + '</span>';
           if (r.error) n += '<span class="ads-err">„Wem?“: ' + esc(r.error) + '</span>';
-          if (r.cerror) n += '<span class="ads-err">„Was?“: ' + esc(r.cerror) + '</span>';
+          if (r.cerror) n += '<span class="ads-err">' + (a.kind === 'boost' ? '„Was?“' : '„Wo?“') + ': ' + esc(r.cerror) + '</span>';
         }
         return '<article class="ad-row' + (on ? '' : ' is-off') + '">' +
           (a.image ? '<span class="ad-thumb" data-m="' + esc(a.image) + '" data-thumb="1"></span>'
                    : '<span class="ad-thumb ad-thumb--x">' + (a.kind === 'boost' ? ICON.rocket : ICON.mega) + '</span>') +
-          '<div class="ad-main"><div class="ad-top"><b>' + esc(a.name) + '</b><span class="ad-kind ad-kind--' + esc(a.kind) + '">' + esc(KIND[a.kind] || a.kind) + '</span>' +
+          '<div class="ad-main"><div class="ad-top"><b>' + esc(a.name) + '</b><span class="ad-kind ad-kind--' + esc(a.kind) + '">' + esc(a.kind === 'ad' && a.content_sql ? 'Anzeige am Foto' : (KIND[a.kind] || a.kind)) + '</span>' +
             (a.user_id == null ? '<span class="ad-kind">Plattform</span>' : '') + '</div>' +
             '<div class="ad-n">' + n + '</div>' +
             (a.target_sql ? '<code class="ad-q" title="' + esc(a.target_sql) + '">' + esc(firstLine(a.target_sql)) + '</code>' : '<code class="ad-q muted">ohne Zielgruppe = alle</code>') +
@@ -231,9 +241,13 @@
               '<p><b>Ohne <code>$user</code></b>: eine Liste von User-ids. Ist der User dabei, passt es.</p>' +
               '<pre>SELECT id FROM users WHERE gender = \'male\'</pre></details>' +
             '<div class="ad-probe" id="adOutT"></div></div>' +
-          '<div class="ad-q-box ad-only-boost"><div class="ad-q-h"><b>Was?</b> <span class="muted small">Fotos, die beworben werden (Liste von photo-ids)</span>' +
+          '<div class="ad-q-box"><div class="ad-q-h"><b class="ad-c-l"></b> <span class="muted small ad-c-h"></span>' +
             '<button type="button" class="btn btn--ghost btn--s" id="adProbeC">' + ICON.play + ' Probelauf</button></div>' +
             '<div class="sql-ed ad-ed" id="adEdC"></div>' +
+            '<details class="ad-help ad-only-ad"><summary>Wozu „Wo?“</summary>' +
+              '<p><b>Leer</b>: die Anzeige erscheint als eigene Karte im Feed.</p>' +
+              '<p><b>Mit Abfrage</b>: sie erscheint nur an diesen Fotos – unten auf dem Foto und über den Kommentaren (Kontext-Werbung: es zählt, was jemand ansieht, nicht wer er ist). „Wem?“ gilt zusätzlich.</p>' +
+              '<pre>SELECT pt.photo_id FROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN (\'hund\', \'katze\')</pre></details>' +
             '<div class="ad-probe" id="adOutC"></div></div>' +
         '</div></div>' +
         '<div class="ad-foot"><span class="hint" id="adHint" hidden></span><span class="spacer"></span>' +
@@ -249,6 +263,8 @@
       edC.value = v.content_sql || '';
       const syncKind = () => {
         f.classList.toggle('is-boost', v.kind === 'boost');
+        $('.ad-c-l', f).textContent = v.kind === 'boost' ? 'Was?' : 'Wo?';
+        $('.ad-c-h', f).textContent = v.kind === 'boost' ? 'Fotos, die beworben werden (Liste von photo-ids)' : 'An welchen Fotos? (photo-ids) – leer = Karte im Feed';
         $$('[data-kind]', f).forEach(b => { b.classList.toggle('on', b.dataset.kind === v.kind); b.setAttribute('aria-checked', b.dataset.kind === v.kind); });
       };
       const paintPic = () => {
@@ -289,7 +305,7 @@
           const r = await W.probe(ed.value, kind === 'content' ? 'content' : 'target');
           if (r.error) { out.innerHTML = '<div class="res res--bad"><b>Fehler:</b> ' + esc(r.error) + '</div>'; return; }
           if (kind === 'content') {
-            out.innerHTML = '<div class="res res--ok"><b>' + plural(r.ids.length, 'Foto', 'Fotos') + '</b> würden beworben' + (r.ids.length ? ':' : '.') + '</div>' +
+            out.innerHTML = '<div class="res res--ok"><b>' + plural(r.ids.length, 'Foto', 'Fotos') + '</b> ' + (v.kind === 'boost' ? 'würden beworben' : 'bekämen die Anzeige') + (r.ids.length ? ':' : '.') + '</div>' +
               (r.rows.length ? '<div class="ad-hits">' + r.rows.map(x => '<span title="' + esc(x[1] || '') + '">#' + esc(x[0]) + (x[1] ? ' ' + esc(String(x[1]).slice(0, 28)) : '') + '</span>').join('') + '</div>' : '');
           } else {
             out.innerHTML = '<div class="res res--ok"><b>' + (r.all ? 'Alle ' + r.ids.length + ' User' : plural(r.ids.length, 'User', 'User')) + '</b> ' +
@@ -312,7 +328,7 @@
           p_id: v.id, p_name: name, p_kind: v.kind,
           p_title: v.kind === 'ad' ? fv('title').value : null, p_body: v.kind === 'ad' ? fv('body').value : null,
           p_image: v.kind === 'ad' ? v.image : null, p_button: v.kind === 'ad' ? fv('button').value : null,
-          p_target: edT.value, p_content: v.kind === 'boost' ? edC.value : null, p_active: fv('active').checked
+          p_target: edT.value, p_content: edC.value, p_active: fv('active').checked
         });
         $('#adSave', host).disabled = false;
         if (!r || !r.ok) { ctx.fail(r); return; }
@@ -328,5 +344,5 @@
     return { destroy() { dead = true; W.stop(); } };
   }
 
-  window.SHAds = { tab, compute, auto, stop, cardHtml, stripHtml, whyHtml, ICON };
+  window.SHAds = { tab, compute, auto, stop, cardHtml, stripHtml, photoAdHtml, whyHtml, ICON };
 })();

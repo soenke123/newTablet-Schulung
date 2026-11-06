@@ -819,6 +819,22 @@ try {
   for (let i = 0; i < 30 && !(await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Boost'`, [HUBID])).rows[0].content; i++) await wait(300);
   const pb = (await db.query(`select kind, target_sql, content from sh_ads where hub_id = $1 and name = 'Pixel Boost'`, [HUBID])).rows[0];
   ok('11 gespeichert: beworbene Posts für alle, 2 Fotos berechnet', pb.kind === 'boost' && pb.target_sql === null && pb.content && pb.content.length === 2, JSON.stringify(pb));
+  // Anzeige am Foto (0277): „Wo?“ = die drei neuesten Fotos
+  await t.app.locator('#adNew').click();
+  await t.app.locator('#adForm input[name=name]').fill('Pixel Shop');
+  await t.app.locator('#adForm input[name=title]').fill('Neue Hüllen');
+  ok('11 Anzeige: Feld heißt „Wo?“', (await t.app.locator('#adForm .ad-c-l').textContent()) === 'Wo?');
+  // der farbige SQL-Text muss sichtbar sein (Textfeld durchsichtig, nicht vom .form-Stil überdeckt)
+  ok('11 SQL-Editor im Formular: Textfeld durchsichtig', await t.app.locator('#adEdC .ed-ta').evaluate(e => getComputedStyle(e).backgroundColor === 'rgba(0, 0, 0, 0)'));
+  await t.app.locator('#adEdC .ed-ta').fill('SELECT id FROM photos ORDER BY id DESC LIMIT 3');
+  await t.app.locator('#adProbeC').click();
+  await t.app.locator('#adOutC .res--ok', { hasText: 'bekämen die Anzeige' }).waitFor({ timeout: 10000 });
+  await shot(t.page, '11c2-anzeige-wo');
+  await t.app.locator('#adSave').click();
+  await t.app.locator('.ad-row', { hasText: 'Pixel Shop' }).waitFor({ timeout: 10000 });
+  for (let i = 0; i < 30 && !(await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Shop'`, [HUBID])).rows[0].content; i++) await wait(300);
+  ok('11 „Wo?“ berechnet: 3 Fotos', (await db.query(`select content from sh_ads where hub_id = $1 and name = 'Pixel Shop'`, [HUBID])).rows[0].content.length === 3);
+  ok('11 Liste: „Anzeige am Foto“', await t.app.locator('.ad-row', { hasText: 'Pixel Shop' }).locator('text=Anzeige am Foto').count() === 1);
   // VOLTA pausieren
   const voltaId = (await db.query(`select id from sh_ads where hub_id = $1 and name = 'VOLTA Energy'`, [HUBID])).rows[0].id;
   await t.app.locator(`[data-aon="${voltaId}"]`).evaluate(el => el.click());
@@ -830,7 +846,13 @@ try {
   ok('11 Feed: Anzeige als eigene Karte mit „Anzeige“', /Anzeige/.test(await t.app.locator('.card--ad .ad-label').first().textContent()));
   await t.app.locator('.m-spons').first().waitFor({ state: 'attached', timeout: 10000 });
   ok('11 Feed: beworbenes Foto ganz vorn mit „Gesponsert“', await t.app.locator('.card').first().locator('.m-spons').count() === 1);
+  ok('11 am gesponserten (neuesten) Foto hängt die Anzeige „Pixel Shop“', /Pixel Shop/.test(await t.app.locator('.card').first().locator('.ad-onphoto').textContent()));
   await shot(t.page, '11d-feed-gesponsert');
+  await t.app.locator('.card').first().locator('[data-act="comments"]').click();
+  await t.app.locator('.sheet .ad-strip', { hasText: 'Pixel Shop' }).waitFor({ timeout: 10000 });
+  ok('11 über den Kommentaren dieses Fotos: dieselbe Anzeige', true);
+  await shot(t.page, '11d2-kommentare-anzeige');
+  await t.app.locator('.sheet [data-close]').click();
   await t.app.locator('.card').first().locator('.m-spons').click();
   await t.app.locator('.dlg', { hasText: 'Warum siehst du diesen Beitrag' }).waitFor();
   ok('11 „Warum?“ am gesponserten Beitrag zeigt die Abfrage „Was?“', /LIMIT 2/.test(await t.app.locator('.dlg').textContent()));

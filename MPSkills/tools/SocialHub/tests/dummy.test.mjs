@@ -162,9 +162,11 @@ for (const day of days) {
   const res = E.all(C, db, ads);
   for (const x of res) {
     const ad = ads.find(a => a.id === x.id);
-    if (!ad.target_sql) { ok('Kampagne ' + ad.name + ': ohne Abfrage = alle', x.a === null && x.n === 70, x); continue; }
-    ok('Kampagne ' + ad.name + ': trifft 1 bis 50 User (' + x.n + ')', !x.error && x.n >= 1 && x.n <= 50, x.error || x.n);
-    if (ad.kind === 'boost') ok('Kampagne ' + ad.name + ': bewirbt Fotos (' + x.nc + ')', !x.cerror && x.nc >= 1, x.cerror || x.nc);
+    if (!ad.target_sql) ok('Kampagne ' + ad.name + ': ohne Abfrage = alle', x.a === null && x.n === 70, x);
+    else ok('Kampagne ' + ad.name + ': trifft 1 bis 50 User (' + x.n + ')', !x.error && x.n >= 1 && x.n <= 50, x.error || x.n);
+    // „Was?“ (Boost) bzw. „Wo?“ (Anzeige am Foto, 0277)
+    if (ad.content_sql) ok('Kampagne ' + ad.name + ': ' + (ad.kind === 'boost' ? 'bewirbt' : 'hängt an') + ' Fotos (' + x.nc + ')', !x.cerror && x.nc >= 1, x.cerror || x.nc);
+    else ok('Kampagne ' + ad.name + ': ohne „Wo?“ keine Fotos', x.c === null);
   }
   const p1 = E.probe(C, db, "SELECT CASE gender WHEN 'male' THEN true ELSE false END FROM users WHERE id = $user");
   ok('Probelauf Form 1 ($user) = alle Männer', p1.form === 'user' && p1.ids.length === one(db, "SELECT COUNT(*) FROM users WHERE gender = 'male'"), p1);

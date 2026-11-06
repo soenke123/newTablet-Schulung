@@ -604,6 +604,7 @@
      Die Abfragen nutzen nur Tags, Likes, Geschlecht, Geräte, Uhrzeiten und
      Verweildauer – keine Dummy-Namen –, damit sie auch im Klassen-Netz
      (ohne Dummy-User) funktionieren. Bild: dummy/img/ad_<schlüssel>.webp.
+     content_sql: bei 'boost' = „Was?“, bei 'ad' = „Wo?“ (an welchen Fotos, 0277; leer = Karte im Feed)
      [schlüssel, name, kind, title, body, button, target_sql, content_sql, Tage davor] */
   const ADS = [
     ['volta', 'VOLTA Energy', 'ad', 'Noch eine Runde?', 'VOLTA – der Energydrink für lange Nächte am Controller. Jetzt mit Geschmack Blue Rush.', 'Jetzt probieren',
@@ -623,8 +624,9 @@
     ['wahrheit', 'Wahrheit.tv', 'boost', null, null, null,
       "SELECT DISTINCT l.user_id\nFROM likes l\nJOIN photo_tag pt ON pt.photo_id = l.photo_id\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('flacheerde', 'wachtauf', 'wahrheit')",
       "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('flacheerde', 'wachtauf')", 4],
+    // Anzeige am Foto (0277): keine Zielgruppe, aber „Wo?“ = Tier-Fotos → Kontext-Werbung
     ['pfoten', 'Pfotenglück', 'ad', 'Für deinen Liebling', 'Futter, Spielzeug, Leckerlis – Pfotenglück liefert alles für Hund, Katze und Hamster.', 'Mehr erfahren',
-      "SELECT DISTINCT l.user_id\nFROM likes l\nJOIN photo_tag pt ON pt.photo_id = l.photo_id\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('hund', 'katze', 'hamster', 'haustier')", null, 3],
+      null, "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('hund', 'katze', 'hamster', 'haustier')", 3],
     ['plus', 'Plus-Abo', 'ad', 'Ohne Werbung scrollen?', 'Mit dem Plus-Abo siehst du keine Anzeigen mehr – für nur 4,99 € im Monat.', 'Plus holen',
       null, null, 2]
   ];

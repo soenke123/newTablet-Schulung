@@ -14,7 +14,7 @@
    ══════════════════════════════════════════════════════════════ */
 
 /* global initSqlJs, SQLCore, dcodeIO, SHAdsEval */
-const V = '?v=20261105w';
+const V = '?v=20261106a';
 const SQLS = '../../SQLStudio/';
 importScripts(SQLS + 'lib/sql-wasm.js' + V, SQLS + 'js/core.js' + V, '../../../../vendor/bcryptjs-2.4.3.min.js', 'adseval.js' + V);
 

@@ -1128,6 +1128,8 @@
         (it.sponsored ? '<button type="button" class="m-spons" data-act="why" title="Warum sehe ich das?">Gesponsert ' + SHAds.ICON.info + '</button>' : '') +
         (it.description ? '<p class="m-desc">' + esc(it.description) + '</p>' : '') +
         (it.tags && it.tags.length ? '<div class="m-tags">' + it.tags.map(t => '<button type="button" data-tag="' + esc(t) + '">#' + esc(t) + '</button>').join('') + '</div>' : '') +
+        // Werbung am Foto (0277): Anzeige mit „Wo?“
+        (it.ad && window.SHAds ? SHAds.photoAdHtml(it.ad) : '') +
       '</div></article>';
   }
 
@@ -1233,6 +1235,7 @@
       const act = actEl ? actEl.dataset.act : null;
       if (act === 'follow') { e.stopPropagation(); follow(it, card); return; }
       if (act === 'why' && it.sponsored) { adWhy(it.sponsored, true); return; }
+      if (it.ad && e.target.closest('[data-adp]')) { if (e.target.closest('[data-adwhy]')) adWhy(it.ad, false); else adOpen(it.ad); return; }
       if (act === 'profile') { card.__end = 'profile'; openProfile(it.user.id); return; }
       const rk = e.target.closest('[data-react]');
       if (rk) { e.stopPropagation(); closePick(); card.__end = 'like'; react(it, card, rk.dataset.react); return; }
@@ -1354,7 +1357,8 @@
       hydrate(listEl);
     }
     // Werbung (0276): eine Anzeige als Leiste über den Kommentaren
-    if (on('ads') && window.SHAds) hcall('sh_ad_pick', { p_salt: 'c' + it.id + ':' + Math.floor(Date.now() / 60000) }).then(r => {
+    // seit 0277 nur Anzeigen, deren „Wo?“ dieses Foto enthält
+    if (on('ads') && window.SHAds) hcall('sh_ad_pick', { p_salt: 'c' + Math.floor(Date.now() / 60000), p_photo: it.id }).then(r => {
       if (!r || !r.ok || !r.ad || !sh.el.isConnected) return;
       const w = document.createElement('div');
       w.innerHTML = SHAds.stripHtml(r.ad);

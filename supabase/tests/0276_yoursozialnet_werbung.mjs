@@ -179,7 +179,7 @@ await call(`sh_ads_compute('tokA', null, $1, $2, $3::jsonb)`, [HUB, SA, JSON.str
 F = await feedAds('foryou');
 ok('5  nach neuer Rechnung: VOLTA ja, Boost nicht mehr', F.seen.has('VOLTA Energy') && !F.spons, JSON.stringify([[...F.seen], F.first && F.first.id]));
 r = await call(`sh_ad_pick('tokA', null, $1, $2, 'c1')`, [HUB, SA]);
-ok('5  sh_ad_pick liefert eine passende Anzeige', r.ok && r.ad && ['VOLTA Energy', 'Für alle'].includes(r.ad.name) && r.ad.kind === 'ad', JSON.stringify(r));
+ok('5  sh_ad_pick ohne Foto: keine Leiste (seit 0277 nur Anzeigen mit „Wo?“ am Foto)', r.ok && r.ad === null, JSON.stringify(r));
 r = await call(`sh_ad_active('tokA', null, $1, $2, 1, false)`, [HUB, SA]);
 await call(`sh_ad_active('tokA', null, $1, $2, 3, false)`, [HUB, SA]);
 F = await feedAds('foryou');

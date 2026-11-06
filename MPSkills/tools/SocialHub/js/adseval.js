@@ -10,7 +10,8 @@
      mit $user   → für jeden User einmal, ein Wert; wahr = passt
      ohne $user  → einmal; Liste von ids (erste Spalte); dabei = passt
      leer        → alle (a = null)
-   „Was?“ (content_sql, nur beworbene Posts): Liste von Foto-ids
+   „Was?“ (content_sql, beworbene Posts) bzw. „Wo?“ (content_sql einer
+   Anzeige, 0277: an welchen Fotos sie erscheint): Liste von Foto-ids
    (erste Spalte).
 
    Nur EINE Abfrage (SELECT oder WITH), nur lesen (readOnly im Kern).
@@ -86,7 +87,7 @@
   /* Beworbene Fotos → { c: [ids], error } */
   function content(C, db, sql, photos) {
     if (blank(sql)) return { c: [] };
-    if (hasUser(sql)) return { c: [], error: '$user geht nur bei „Wem?“ – bei „Was?“ geht es um Fotos für alle in der Zielgruppe.' };
+    if (hasUser(sql)) return { c: [], error: '$user geht nur bei „Wem?“ – hier geht es um Fotos, nicht um den User.' };
     try {
       const set = new Set(photos);
       return { c: idsOf(query(C, db, sql)).filter(id => set.has(id)) };
@@ -101,11 +102,13 @@
      → [{ id, a, c, n, nc, form, error, cerror }] */
   function all(C, db, ads) {
     const users = listIds(C, db, 'users');
-    const photos = ads.some(x => x.kind === 'boost') ? listIds(C, db, 'photos') : [];
+    // „Was?“ (Boost) bzw. „Wo?“ (Anzeige am Foto, 0277) – beides Foto-ids aus content_sql
+    const withC = x => x.kind === 'boost' || !blank(x.content_sql);
+    const photos = ads.some(withC) ? listIds(C, db, 'photos') : [];
     return ads.map(ad => {
       const t = target(C, db, ad.target_sql, users);
       const out = { id: ad.id, a: t.a, form: t.form, n: t.a === null ? users.length : t.a.length, error: t.error || null };
-      if (ad.kind === 'boost') {
+      if (withC(ad)) {
         const k = content(C, db, ad.content_sql, photos);
         out.c = k.c; out.nc = k.c.length; out.cerror = k.error || null;
       } else out.c = null;

@@ -141,6 +141,8 @@ Keine eigene Werbekunden-Rolle: Admins sehen ohnehin alle Daten (Entscheidung S�
 
 Keine gesponserten Profile (Sönke: nicht gewollt).
 
+**Nachtrag 06.11.2026 (Migration 0277):** Anzeigen bekommen optional **„Wo?“** (content_sql = Foto-ids). Ohne „Wo?“ nur als Karte im Feed, mit „Wo?“ nur an diesen Fotos (Leiste am Foto + über dessen Kommentaren) – Kontext-Werbung neben personalisierter Werbung.
+
 **Zwei Formen für „Wem?“** (`$user` = id des aktuellen Users):
 
 ```sql
