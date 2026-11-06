@@ -96,7 +96,7 @@
     el.textContent = msg;
     el.className = 'toast show' + (bad ? ' bad' : '');
     clearTimeout(toastT);
-    toastT = setTimeout(() => { el.className = 'toast'; }, 2600);
+    toastT = setTimeout(() => { el.className = 'toast'; }, bad ? 9000 : 2600);
   }
   const fail = r => toast(A.errText(r), true);
 
@@ -1868,6 +1868,21 @@
     };
     apply();
     try { new MutationObserver(apply).observe(pd, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) { /* egal */ }
+  })();
+
+  /* ── Fehler sichtbar machen ─────────────────────────────── */
+  // Ein Fehler im Skript soll nicht still eine leere Fläche hinterlassen:
+  // die Meldung erscheint unten als rote Leiste (Text für die Fehlersuche).
+  (function showErrors() {
+    let last = '';
+    const show = (msg) => {
+      msg = String(msg || 'Unbekannter Fehler').slice(0, 300);
+      if (msg === last) return;
+      last = msg;
+      toast('Fehler: ' + msg, true);
+    };
+    window.addEventListener('error', (e) => show(e.message + (e.filename ? ' (' + e.filename.split('/').pop() + ':' + e.lineno + ')' : '')));
+    window.addEventListener('unhandledrejection', (e) => show(e.reason && (e.reason.message || e.reason)));
   })();
 
   /* ── Start ──────────────────────────────────────────────── */

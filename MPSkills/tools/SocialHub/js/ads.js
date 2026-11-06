@@ -167,7 +167,14 @@
     }
 
     let editing = null;
+    // Fehler beim Zeichnen nie verschlucken (sonst bleibt der Reiter einfach leer)
     function paintList() {
+      try { paintListNow(); } catch (e) {
+        console.error('[Werbung]', e);
+        host.innerHTML = '<div class="adm-pad ads"><div class="res res--bad"><b>Die Werbung ließ sich nicht anzeigen:</b> ' + esc(e && (e.stack || e.message) || e) + '</div></div>';
+      }
+    }
+    function paintListNow() {
       editing = null;
       host.innerHTML = '<div class="adm-pad ads">' +
         '<div class="ads-h"><h2 class="adm-h">Werbung</h2><span class="ads-st" id="adSt"></span><span class="spacer"></span>' +
@@ -366,7 +373,7 @@
     }
 
     paintList();
-    load();
+    load().catch(e => { failMsg = 'Fehler: ' + (e && (e.stack || e.message) || e); if (!editing) paintList(); });
     return { destroy() { dead = true; W.stop(); } };
   }
 
