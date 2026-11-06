@@ -1,6 +1,6 @@
 # Bild-Prompts für die 9 Beispiel-Kampagnen (YourSozialNet, Migration 0278)
 
-Für einen Bildgenerator. Alle gleich gebaut, damit die Bilder zusammenpassen:
+Für einen Bildgenerator. Die Bilder 1–6 sind generiert und liegen in `dummy/img/` (06.11.2026). Alle gleich gebaut, damit die Bilder zusammenpassen:
 **Hochformat 4:5**, nur das Produkt bzw. die Szene, **kein Text, keine Logos, keine echten Marken, keine Gesichter** –
 Titel, Text und Knopf legt die App darüber. Das Motiv mittig lassen: die Karte im Feed schneidet auf 4:5 zu,
 das Foto-Label zeigt das Bild nur als kleines Quadrat (Mitte).
@@ -13,11 +13,11 @@ beworben. Die Prompts 7–9 sind für den Fall, dass die Werbekunden ein Bild be
 
 | # | Schlüssel | Kampagne | Art |
 |---|---|---|---|
-| 1 | `wb_volta` | VOLTA Energy | Foto-Label |
-| 2 | `wb_speedphone` | SpeedPhone X | Foto-Label |
+| 1 | `wb_volta` | VOLTA Energy | Feed-Werbung |
+| 2 | `wb_speedphone` | SpeedPhone X | Feed-Werbung |
 | 3 | `wb_pfoten` | Pfotenglück | Foto-Label |
 | 4 | `wb_snacks` | Nachtschicht Snacks | Feed-Werbung |
-| 5 | `wb_glow` | Glow Skin | Feed-Werbung |
+| 5 | `wb_glow` | Glow Skin | Foto-Label |
 | 6 | `wb_plus` | Plus-Abo | Feed-Werbung |
 | 7 | `wb_sternwarte` | Sternwarte Pro | Beworbener Post |
 | 8 | `wb_fernweh` | Fernweh Reisen | Beworbener Post |

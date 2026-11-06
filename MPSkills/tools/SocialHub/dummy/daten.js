@@ -602,40 +602,43 @@
 
   /* Werbung (Migration 0276): Kampagnen der Plattform (user_id NULL).
      Die Abfragen nutzen nur Tags, Likes, Geschlecht, Geräte, Uhrzeiten und
-     Verweildauer – keine Dummy-Namen –, damit sie auch im Klassen-Netz
+     Verweildauer – (bis auf Glow Skin) keine Dummy-Namen –, damit sie auch im Klassen-Netz
      (ohne Dummy-User) funktionieren. Bild: dummy/img/wb_<schlüssel>.webp.
-     Drei Arten (0278), je drei Beispiele:
-       feed  = Feed-Werbung (Karte im Feed), nur „Wem?“
-       label = Foto-Label (am Foto), „Wem?“ + content_sql = an welchen Fotos
-       boost = Beworbener Post, „Wem?“ + content_sql = „Was?“ (Foto-ids)
+     Drei Arten (0278):
+       feed  = Feed-Werbung (Karte im Feed), nur „Wem?“ – 4 Beispiele
+       label = Foto-Label (am Foto), „Wem?“ + content_sql = an welchen Fotos – 2 Beispiele
+       boost = Beworbener Post, „Wem?“ + content_sql = „Was?“ (Foto-ids) – 3 Beispiele
+     Ausnahme: Glow Skin hängt an den Fotos von @giulia.glow (Dummy-Creatorin) –
+     im Klassen-Netz ohne Dummy-User trifft das Label deshalb kein Foto.
      [schlüssel, name, kind, title, body, button, target_sql, content_sql, Tage davor] */
   const ADS = [
-    // Foto-Label mit beidem: nur für Gaming-Fans („Wem?“) und nur an Gaming-Fotos („An welchen Fotos?“)
-    ['volta', 'VOLTA Energy', 'label', 'Noch eine Runde?', 'VOLTA – der Energydrink für lange Nächte am Controller. Jetzt mit Geschmack Blue Rush.', 'Jetzt probieren',
-      "SELECT l.user_id\nFROM likes l\nJOIN photo_tag pt ON pt.photo_id = l.photo_id\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('gaming', 'setup', 'stream', 'ranked', 'nintendo', 'retro')\nGROUP BY l.user_id\nHAVING COUNT(*) >= 3",
-      "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('gaming', 'setup', 'stream', 'ranked', 'nintendo', 'retro')", 12],
+    // ── Feed-Werbung (4): Karte im Feed, nur „Wem?“
+    ['volta', 'VOLTA Energy', 'feed', 'Noch eine Runde?', 'VOLTA – der Energydrink für lange Nächte am Controller. Jetzt mit Geschmack Blue Rush.', 'Jetzt probieren',
+      "SELECT l.user_id\nFROM likes l\nJOIN photo_tag pt ON pt.photo_id = l.photo_id\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('gaming', 'setup', 'stream', 'ranked', 'nintendo', 'retro')\nGROUP BY l.user_id\nHAVING COUNT(*) >= 3", null, 12],
     ['snacks', 'Nachtschicht Snacks', 'feed', 'Hunger um 2 Uhr?', 'Chips, Pizza, Cola – in 20 Minuten an deiner Tür. Auch mitten in der Nacht.', 'Bestellen',
       "SELECT COUNT(*) > 0\nFROM sessions\nWHERE user_id = $user\n  AND HOUR(started_at) BETWEEN 0 AND 4", null, 9],
+    ['speedphone', 'SpeedPhone X', 'feed', 'Zeit für ein Upgrade', 'Dein Handy ist zu langsam? Das SpeedPhone X lädt in 15 Minuten auf 80 %.', 'Angebot ansehen',
+      "SELECT COUNT(*) > 0\nFROM sessions\nWHERE user_id = $user\n  AND os LIKE 'Android%'", null, 5],
+    ['plus', 'Plus-Abo', 'feed', 'Ohne Werbung scrollen?', 'Mit dem Plus-Abo siehst du keine Anzeigen mehr – für nur 4,99 € im Monat.', 'Plus holen',
+      null, null, 2],
+    // ── Beworbene Posts (3): „Wem?“ + „Was?“ (Fotos aus dem Netzwerk, kein eigenes Bild)
     ['sternwarte', 'Sternwarte Pro', 'boost', null, null, null,
       "SELECT l.user_id\nFROM likes l\nJOIN photo_tag pt ON pt.photo_id = l.photo_id\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('wissenschaft', 'physik', 'mond')\nGROUP BY l.user_id\nHAVING COUNT(*) >= 2",
       "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('wissenschaft', 'physik', 'mond')", 8],
     ['fernweh', 'Fernweh Reisen', 'boost', null, null, null,
       "SELECT v.user_id\nFROM views v\nJOIN photo_tag pt ON pt.photo_id = v.photo_id\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('reisen', 'urlaub', 'camping', 'berge', 'citytrip')\nGROUP BY v.user_id\nHAVING AVG(v.duration_ms) > 4000",
       "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('reisen', 'urlaub', 'citytrip')", 7],
-    ['glow', 'Glow Skin', 'feed', 'Dein Glow-up beginnt heute', 'Die neue Pflege-Serie – nur diese Woche 30 % günstiger.', 'Zum Shop',
-      "SELECT\n  CASE gender\n    WHEN 'female' THEN true\n    ELSE false\n  END\nFROM users\nWHERE id = $user", null, 6],
-    // Foto-Label: Android-Nutzer, an Fotografie-Fotos („Solche Fotos mit deinem Handy?“)
-    ['speedphone', 'SpeedPhone X', 'label', 'Zeit für ein Upgrade', 'Solche Fotos mit deinem Handy? Die Kamera des SpeedPhone X schafft das auch nachts.', 'Angebot ansehen',
-      "SELECT COUNT(*) > 0\nFROM sessions\nWHERE user_id = $user\n  AND os LIKE 'Android%'",
-      "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('fotografie', 'langzeitbelichtung', 'polarlicht', 'sonnenuntergang')", 5],
     ['wahrheit', 'Wahrheit.tv', 'boost', null, null, null,
       "SELECT DISTINCT l.user_id\nFROM likes l\nJOIN photo_tag pt ON pt.photo_id = l.photo_id\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('flacheerde', 'wachtauf', 'wahrheit')",
       "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('flacheerde', 'wachtauf')", 4],
-    // Foto-Label (0278): keine Zielgruppe, aber „An welchen Fotos?“ = Tier-Fotos → Kontext-Werbung
+    // ── Foto-Labels (2): „Wem?“ + „An welchen Fotos?“
+    // Glow Skin: Influencer-Werbung – an den Fotos der Creatorin @giulia.glow, nur für Userinnen
+    ['glow', 'Glow Skin', 'label', 'Dein Glow-up beginnt heute', 'Die Pflege, die Giulia benutzt – nur diese Woche 30 % günstiger.', 'Zum Shop',
+      "SELECT\n  CASE gender\n    WHEN 'female' THEN true\n    ELSE false\n  END\nFROM users\nWHERE id = $user",
+      "SELECT p.id\nFROM photos p\nJOIN users u ON u.id = p.user_id\nWHERE u.username = 'giulia.glow'", 6],
+    // Pfotenglück: keine Zielgruppe, aber nur an Tier-Fotos → Kontext-Werbung
     ['pfoten', 'Pfotenglück', 'label', 'Für deinen Liebling', 'Futter, Spielzeug, Leckerlis – Pfotenglück liefert alles für Hund, Katze und Hamster.', 'Mehr erfahren',
-      null, "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('hund', 'katze', 'hamster', 'haustier')", 3],
-    ['plus', 'Plus-Abo', 'feed', 'Ohne Werbung scrollen?', 'Mit dem Plus-Abo siehst du keine Anzeigen mehr – für nur 4,99 € im Monat.', 'Plus holen',
-      null, null, 2]
+      null, "SELECT pt.photo_id\nFROM photo_tag pt\nJOIN tags t ON t.id = pt.tag_id\nWHERE t.name IN ('hund', 'katze', 'hamster', 'haustier')", 3]
   ];
 
   root.SHDummyDaten = { USERS, PHOTOS, TOPIC, THREADS, FILL, SPAM, ADS };

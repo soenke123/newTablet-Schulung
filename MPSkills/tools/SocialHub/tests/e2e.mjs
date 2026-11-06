@@ -791,6 +791,10 @@ try {
   // (hier sind nur users/photos/comments gefüllt – Kampagnen über Likes/Tags treffen deshalb niemanden)
   ok('11 Reiter Werbung: 9 Kampagnen, im Browser berechnet und an den Server geschickt', await t.app.locator('.wb-row').count() === 9 && comp.every(x => x.c)
      && comp.find(x => x.name === 'Plus-Abo').alle && comp.find(x => x.name === 'Glow Skin').n > 0, JSON.stringify(comp));
+  const glow = (await db.query(`select a.kind, coalesce(array_length(a.content, 1), 0) n,
+      (select count(*)::int from sh_photos p join sh_users u on u.hub_id = p.hub_id and u.id = p.user_id where p.hub_id = a.hub_id and u.username = 'giulia.glow') soll
+    from sh_ads a where a.hub_id = $1 and a.name = 'Glow Skin'`, [HUBID])).rows[0];
+  ok('11 Glow Skin: Foto-Label an allen Fotos von @giulia.glow', glow.kind === 'label' && glow.n > 0 && glow.n === glow.soll, JSON.stringify(glow));
   ok('11 Liste zeigt Zielgruppen ohne Fehler', /User in der Zielgruppe/.test(await t.app.locator('#wbList').textContent()) && await t.app.locator('.wb-err').count() === 0,
      (await t.app.locator('.wb-err').allTextContents()).join(' | '));
   await shot(t.page, '11b-werbung-liste');
