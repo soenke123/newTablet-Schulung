@@ -1127,7 +1127,7 @@
       '</div>' +
       '<div class="meta"><button type="button" class="m-user" data-act="profile">@' + esc(it.user.username) + '</button>' +
         '<span class="m-time">· ' + esc(ago(it.created_at)) + '</span>' +
-        (it.sponsored ? '<button type="button" class="m-spons" data-act="why" title="Warum sehe ich das?">Gesponsert ' + SHAds.ICON.info + '</button>' : '') +
+        (it.sponsored ? '<button type="button" class="m-gesp" data-act="why" title="Warum sehe ich das?">Gesponsert ' + SHAds.ICON.info + '</button>' : '') +
         (it.description ? '<p class="m-desc">' + esc(it.description) + '</p>' : '') +
         (it.tags && it.tags.length ? '<div class="m-tags">' + it.tags.map(t => '<button type="button" data-tag="' + esc(t) + '">#' + esc(t) + '</button>').join('') + '</div>' : '') +
         // Werbung am Foto (0277): Anzeige mit „Wo?“
@@ -1195,7 +1195,7 @@
         frag.insertBefore(tmp.firstElementChild, at || null);
       }
       const cards = Array.from(frag.children);
-      cards.forEach(c => { list.appendChild(c); if (!c.classList.contains('card--ad')) vio.observe(c); });
+      cards.forEach(c => { list.appendChild(c); if (!c.classList.contains('card--wb')) vio.observe(c); });
       hydrate(list);
       offset += r.items.length;
       if (r.items.length < LIM) {
@@ -1225,19 +1225,19 @@
       const card = e.target.closest('.card');
       if (!card) return;
       // Anzeige: „Warum?“ oder öffnen
-      if (card.classList.contains('card--ad')) {
-        const ad = ads[card.dataset.ad];
+      if (card.classList.contains('card--wb')) {
+        const ad = ads[card.dataset.wb];
         if (!ad) return;
-        if (e.target.closest('[data-adwhy]')) adWhy(ad, false);
-        else if (e.target.closest('[data-adgo]') || !e.target.closest('.meta')) adOpen(ad);
+        if (e.target.closest('[data-wbwhy]')) wbWhy(ad, false);
+        else if (e.target.closest('[data-wbgo]') || !e.target.closest('.meta')) wbOpen(ad);
         return;
       }
       const it = items[+card.dataset.i];
       const actEl = e.target.closest('[data-act]');
       const act = actEl ? actEl.dataset.act : null;
       if (act === 'follow') { e.stopPropagation(); follow(it, card); return; }
-      if (act === 'why' && it.sponsored) { adWhy(it.sponsored, true); return; }
-      if (it.ad && e.target.closest('[data-adp]')) { if (e.target.closest('[data-adwhy]')) adWhy(it.ad, false); else adOpen(it.ad); return; }
+      if (act === 'why' && it.sponsored) { wbWhy(it.sponsored, true); return; }
+      if (it.ad && e.target.closest('[data-wbp]')) { if (e.target.closest('[data-wbwhy]')) wbWhy(it.ad, false); else wbOpen(it.ad); return; }
       if (act === 'profile') { card.__end = 'profile'; openProfile(it.user.id); return; }
       const rk = e.target.closest('[data-react]');
       if (rk) { e.stopPropagation(); closePick(); card.__end = 'like'; react(it, card, rk.dataset.react); return; }
@@ -1368,7 +1368,7 @@
       const strip = w.firstElementChild;
       listEl.parentNode.insertBefore(strip, listEl);
       strip.addEventListener('click', (e) => {
-        if (e.target.closest('[data-adwhy]')) adWhy(r.ad, false); else adOpen(r.ad);
+        if (e.target.closest('[data-wbwhy]')) wbWhy(r.ad, false); else wbOpen(r.ad);
       });
       hydrate(strip);
     });
@@ -1396,20 +1396,20 @@
   }
 
   /* ── Werbung (0276): „Warum sehe ich das?“ und Anzeige öffnen ── */
-  function adWhy(ad, sponsored) {
+  function wbWhy(ad, sponsored) {
     dialog(sponsored ? 'Warum siehst du diesen Beitrag?' : 'Warum siehst du diese Anzeige?', SHAds.whyHtml(ad, S.hub && S.hub.hub.name, sponsored));
   }
-  function adOpen(ad) {
+  function wbOpen(ad) {
     const ov = overlay(ad.name);
-    ov.el.classList.add('ov--ad');
-    ov.body.innerHTML = '<div class="ad-page">' +
-      (ad.image ? '<img class="ad-page-img" data-m="' + esc(ad.image) + '" alt="">' : '<div class="ad-fill ad-fill--page"><span>' + esc(ad.title || ad.name) + '</span></div>') +
-      '<div class="ad-page-b"><small>Anzeige · ' + esc(ad.name) + '</small>' +
+    ov.el.classList.add('ov--wb');
+    ov.body.innerHTML = '<div class="wb-page">' +
+      (ad.image ? '<img class="wb-page-img" data-m="' + esc(ad.image) + '" alt="">' : '<div class="wb-fill wb-fill--page"><span>' + esc(ad.title || ad.name) + '</span></div>') +
+      '<div class="wb-page-b"><small>Anzeige · ' + esc(ad.name) + '</small>' +
       (ad.title ? '<h2>' + esc(ad.title) + '</h2>' : '') + (ad.body ? '<p>' + esc(ad.body) + '</p>' : '') +
       '<button type="button" class="btn btn--accent btn--big" disabled>' + esc(ad.button || 'Mehr erfahren') + '</button>' +
       '<p class="muted small">Das ist eine ausgedachte Werbung in eurem Netzwerk – hier geht es nicht weiter.</p>' +
       '<button type="button" class="link" data-why>Warum sehe ich das?</button></div></div>';
-    ov.body.querySelector('[data-why]').onclick = () => adWhy(ad, false);
+    ov.body.querySelector('[data-why]').onclick = () => wbWhy(ad, false);
     hydrate(ov.body);
   }
 

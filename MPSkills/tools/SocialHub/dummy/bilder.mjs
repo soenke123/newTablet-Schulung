@@ -25,7 +25,7 @@ const need = new Map(); // schlüssel → { kind, info }
 D.PHOTOS.forEach(p => need.set(p[0], { kind: 'post', info: p[1] + ': ' + (p[2] || '(ohne Text)') }));
 D.USERS.forEach(u => { if (u.av) need.set(u.av, { kind: 'avatar', info: 'Profilbild ' + u.k }); });
 // Werbung (0276): Bilder der Beispiel-Anzeigen – zeichnet dummy/werbung.mjs nach dummy/eingang/
-(D.ADS || []).filter(a => a[2] === 'ad').forEach(a => need.set('ad_' + a[0], { kind: 'post', info: 'Anzeige ' + a[1] }));
+(D.ADS || []).filter(a => a[2] === 'ad').forEach(a => need.set('wb_' + a[0], { kind: 'post', info: 'Anzeige ' + a[1] }));
 
 const LIMIT = { post: { w: 1080, h: 1350, kb: 250 }, avatar: { w: 400, h: 400, kb: 60 } };
 

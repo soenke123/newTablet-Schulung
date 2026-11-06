@@ -3,7 +3,7 @@
      node MPSkills/tools/SocialHub/dummy/bilder.mjs --convert   ← wandelt sie um, schreibt index.json
 
    Ausgedachte Marken, gezeichnet mit HTML/SVG im Browser (Playwright wie
-   tests/e2e.mjs), 1080 × 1350 als PNG – nur das Produkt (Name, Titel, Text und Knopf legt die App darüber; oben links sitzt das Schild „Anzeige“) nach dummy/eingang/ad_<schlüssel>.png.
+   tests/e2e.mjs), 1080 × 1350 als PNG – nur das Produkt (Name, Titel, Text und Knopf legt die App darüber; oben links sitzt das Schild „Anzeige“) nach dummy/eingang/wb_<schlüssel>.png.
    Schrift Outfit aus fonts/ (eingebettet, keine Anfrage nach draußen). */
 import { readFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -69,7 +69,7 @@ mkdirSync(IN, { recursive: true });
 for (const [k, html] of Object.entries(ADS)) {
   await page.setContent('<!doctype html><html><head><meta charset="utf-8"><style>' + base + '</style></head>' + html + '</html>');
   await page.evaluate(() => document.fonts.ready);
-  await page.screenshot({ path: join(IN, 'ad_' + k + '.png') });
-  console.log('✓  eingang/ad_' + k + '.png');
+  await page.screenshot({ path: join(IN, 'wb_' + k + '.png') });
+  console.log('✓  eingang/wb_' + k + '.png');
 }
 await browser.close();

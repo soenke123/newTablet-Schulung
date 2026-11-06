@@ -137,7 +137,8 @@
   const haveList = () => have || (have = fetch('dummy/img/index.json', { cache: 'no-cache' })
     .then(r => r.ok ? r.json() : []).then(a => new Set(Array.isArray(a) ? a : [])).catch(() => new Set()));
   function dummyUrl(name) {
-    const key = DUMMY.exec(name)[1];
+    // Werbe-Bilder liegen als wb_*.webp (Werbeblocker sperren „ad_“-Dateien); ältere Einträge heißen noch ad_*
+    const key = DUMMY.exec(name)[1].replace(/^ad_/, 'wb_');
     if (dummyCache.has(key)) return dummyCache.get(key);
     const p = haveList().then(set => set.has(key) ? 'dummy/img/' + key + '.webp' : key.startsWith('av_') ? null : placeholder(key));
     dummyCache.set(key, p);

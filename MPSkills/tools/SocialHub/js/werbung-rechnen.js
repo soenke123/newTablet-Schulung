@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════════════
-   YourSozialNet — js/adseval.js   ·   Zielgruppen der Werbung rechnen
+   YourSozialNet — js/werbung-rechnen.js   ·   Zielgruppen der Werbung rechnen
    ══════════════════════════════════════════════════════════════
    Läuft NUR im Browser eines Admins (im Worker js/dbworker.js, auf der
    SQLite-Kopie des Netzwerks) und im Prüfstand unter Node. Der Server

@@ -14,9 +14,9 @@
    ══════════════════════════════════════════════════════════════ */
 
 /* global initSqlJs, SQLCore, dcodeIO, SHAdsEval */
-const V = '?v=20261106e';
+const V = '?v=20261106f';
 const SQLS = '../../SQLStudio/';
-importScripts(SQLS + 'lib/sql-wasm.js' + V, SQLS + 'js/core.js' + V, '../../../../vendor/bcryptjs-2.4.3.min.js', 'adseval.js' + V);
+importScripts(SQLS + 'lib/sql-wasm.js' + V, SQLS + 'js/core.js' + V, '../../../../vendor/bcryptjs-2.4.3.min.js', 'werbung-rechnen.js' + V);
 
 const bcrypt = dcodeIO.bcrypt;
 bcrypt.setRandomFallback(n => Array.from(self.crypto.getRandomValues(new Uint8Array(n))));

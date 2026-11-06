@@ -23,7 +23,7 @@ const C = globalThis.SQLCore;
 new Function(readFileSync(join(SH, 'dummy', 'daten.js'), 'utf8'))();
 new Function(readFileSync(join(SH, 'dummy', 'generator.js'), 'utf8'))();
 const G = globalThis.SHDummy;
-new Function(readFileSync(join(SH, 'js', 'adseval.js'), 'utf8'))();
+new Function(readFileSync(join(SH, 'js', 'werbung-rechnen.js'), 'utf8'))();
 const E = globalThis.SHAdsEval;
 
 // DDL aus js/db.js (Objekt-Literal herausschneiden)
