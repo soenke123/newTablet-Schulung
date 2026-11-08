@@ -356,6 +356,10 @@ writeFileSync(OUT + '/Datenbanksysteme_Loesungen.docx', await Packer.toBuffer(ma
    die Ersatzschrift für Consolas (schrift.py) – sonst bricht der Bau ab. */
 const FOOT = 'Datenbanksysteme · Informatik Q-Phase · YourSozialNet';
 const MAT = new URL('../material/', import.meta.url).pathname;
+// Seit 09.11.2026 ist Sönkes Word/PDF das Original des Skripts: zerlegen.mjs schneidet SEIN PDF in die Teile.
+// build.mjs baut nur noch die Word-Dateien hier und das Lösungsheft-PDF nach ../material/.
+// --eigene-pdfs = wie früher Skript + Teile aus inhalt.mjs (überschreibt Sönkes Fassung in ../material/!).
+const EIGENE = process.argv.includes('--eigene-pdfs');
 if (!process.argv.includes('--ohne-teile')) {
   const cons = execFileSync('fc-match', ['Consolas'], { encoding: 'utf8' });
   if (!/"Consolas"/.test(cons)) { console.error('Consolas fehlt für LibreOffice (' + cons.trim() + '). Erst: python3 ' + new URL('./schrift.py', import.meta.url).pathname); process.exit(1); }
@@ -373,6 +377,7 @@ if (!process.argv.includes('--ohne-teile')) {
   copyFileSync(OUT + '/Datenbanksysteme.docx', tmp + '/Datenbanksysteme.docx');
   const pdf = (files, outdir) => execFileSync('soffice', ['-env:UserInstallation=file://' + tmp + '/lo', '--headless', '--convert-to', 'pdf', '--outdir', outdir, ...files],
     { env: { ...process.env, SAL_USE_VCLPLUGIN: 'svp' }, stdio: 'ignore', timeout: 600000 });
+  if (EIGENE) {
   rmSync(MAT + 'teile', { recursive: true, force: true });
   mkdirSync(MAT + 'teile', { recursive: true });
   pdf(Object.keys(docs).map(k => tmp + '/' + k + '.docx'), MAT + 'teile');
@@ -393,11 +398,12 @@ if (!process.argv.includes('--ohne-teile')) {
     version: hash(MAT + 'Datenbanksysteme.pdf') + '.' + teile.map(f => hash(MAT + 'teile/' + f)).join('').slice(0, 10)
   };
   writeFileSync(MAT + 'material.json', JSON.stringify(manifest, null, 2) + '\n');
+  console.log('Teile:', manifest.staende.map(x => x.id + ' ' + x.seiten + ' S.').join(', '), '|', manifest.teile.map(x => x.id + ' ' + x.seiten).join(', '));
+  }
   // Lösungsheft als PDF – liegt neben dem Skript (Sönke 09.11.2026: kein Hochladen, PDF reicht)
   copyFileSync(OUT + '/Datenbanksysteme_Loesungen.docx', tmp + '/Datenbanksysteme_Loesungen.docx');
   pdf([tmp + '/Datenbanksysteme_Loesungen.docx'], MAT);
   rmSync(OUT + '/Datenbanksysteme_Loesungen.pdf', { force: true });
   rmSync(tmp, { recursive: true, force: true });
-  console.log('Teile:', manifest.staende.map(x => x.id + ' ' + x.seiten + ' S.').join(', '), '|', manifest.teile.map(x => x.id + ' ' + x.seiten).join(', '));
 }
 console.log('fertig');

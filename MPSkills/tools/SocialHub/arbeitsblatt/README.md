@@ -20,6 +20,17 @@ node MPSkills/tools/SocialHub/arbeitsblatt/build.mjs
 Bilder neu (nur nach Änderungen an Schema oder Abbildungen): `diagrams.mjs`, dann `images.mjs` (Playwright).
 Der Ordner liegt nicht auf Vercel (`.vercelignore`), damit das Lösungsheft nicht öffentlich ist.
 
+## Sönkes Word/PDF ist das Original (seit 09.11.2026)
+
+Sönke bearbeitet das Skript in Word (seine Umbrüche, 25 Seiten). Neue Fassung einspielen:
+
+```bash
+node MPSkills/tools/SocialHub/arbeitsblatt/zerlegen.mjs <Skript.pdf> <Skript.docx>
+```
+
+`zerlegen.mjs` kopiert beides nach `../material/`, sucht die Überschriften der Teile (`KOPF`), schneidet sein PDF dort in `teile/*.pdf`, deckt die alten Seitenzahlen ab (die Seite stempelt neu an derselben Stelle, `material.json` → `seitenzahl`) und schreibt `material.json`. Kapitel I: beginnt ein Teil mitten auf einer Seite (2.1 unter I.2), bekommt der Stand davor diese Seite ab der Überschrift weiß abgedeckt. Teile von Kapitel II müssen oben auf einer Seite beginnen, sonst bricht es ab.
+`build.mjs` baut seitdem nur noch die Word-Dateien hier und das Lösungsheft-PDF (`../material/Datenbanksysteme_Loesungen.pdf`); `--eigene-pdfs` = wie früher alles aus `inhalt.mjs` (überschreibt Sönkes Fassung). Textänderungen aus Sönkes Word fließen nicht mehr automatisch in `inhalt.mjs` – die Lösungsprüfung gilt für den Stand von `inhalt.mjs`.
+
 ## Arbeitsmaterial (`MPSkills/material.html?tool=socialhub&raum=CODE`, Migration 0282)
 
 - **Bausteine**: In `inhalt.mjs` beginnt jeder Teil mit `{ t: 'teil', id }`; Liste und Beschriftung in `TEILE`, Unterrichtsstufen (Schnell-Knöpfe) in `STUFEN`.

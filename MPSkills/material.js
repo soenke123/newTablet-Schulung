@@ -204,7 +204,8 @@
       out.getPages().forEach((p, i) => {
         if (i === 0) return;
         const t = String(i + 1), size = 7.5, w = font.widthOfTextAtSize(t, size);
-        p.drawText(t, { x: p.getWidth() - 56.7 - w, y: 37.7, size, font, color: rgb(0.31, 0.275, 0.898) });
+        const at = S.man.seitenzahl || { right: p.getWidth() - 56.7, base: 37.7 };   // Stelle wie im Skript (misst zerlegen.mjs)
+        p.drawText(t, { x: at.right - w, y: at.base, size, font, color: rgb(0.31, 0.275, 0.898) });
       });
       out.setTitle(S.man.titel);
       out.setAuthor('');
