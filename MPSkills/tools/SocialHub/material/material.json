@@ -7,16 +7,7 @@
     "word": "Datenbanksysteme.docx",
     "pdf": "Datenbanksysteme.pdf"
   },
-  "loesungen": [
-    {
-      "name": "Datenbanksysteme_Loesungen.docx",
-      "label": "Lösungsheft (Word)"
-    },
-    {
-      "name": "Datenbanksysteme_Loesungen.pdf",
-      "label": "Lösungsheft (PDF)"
-    }
-  ],
+  "loesungen": "Datenbanksysteme_Loesungen.pdf",
   "deckblatt": "teile/deckblatt.pdf",
   "staende": [
     {
@@ -153,5 +144,5 @@
       ]
     }
   ],
-  "version": "7bb57c9470.9dc2b4b15f"
+  "version": "ad9fc028cc.14a930a23d"
 }

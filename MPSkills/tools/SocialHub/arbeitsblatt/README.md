@@ -25,8 +25,9 @@ Der Ordner liegt nicht auf Vercel (`.vercelignore`), damit das Lösungsheft nich
 - **Bausteine**: In `inhalt.mjs` beginnt jeder Teil mit `{ t: 'teil', id }`; Liste und Beschriftung in `TEILE`, Unterrichtsstufen (Schnell-Knöpfe) in `STUFEN`.
   Kapitel I **wächst mit**: `build.mjs` setzt I-1 … I-k zu den Ständen `teile/I-stand1…4.pdf` zusammen (z. B. steht der Primärschlüssel in Stand 2 auf derselben Seite wie I.2).
   Kapitel II gibt es je Teil (`teile/II-*.pdf`). Jeder Teil von Kapitel II beginnt mit `page()`. Teile haben keine Seitenzahl – die Seite stempelt beim Zusammensetzen neu.
-- **Seite**: Downloads (Skript offen aus `../material/`, Lösungsheft über `skill_material_file_get`), Kapitel I als Stand, Kapitel II als Häkchen, je Kurs gespeichert (`skill_material_marks_*`).
+- **Seite**: Downloads (Skript Word/PDF und Lösungsheft PDF, alles aus `../material/`), Kapitel I als Stand, Kapitel II als Häkchen, je Kurs gespeichert (`skill_material_marks_*`).
   „Schüler-PDF“ = Deckblatt + Stand + abgehakte Teile, im Browser mit pdf-lib (`tools/Master PDF Skill/lib/pdf-lib`).
-- **Lösungsheft hochladen**: als Admin (nach 2FA im Admin-Panel) auf der Seite unter „Admin: Lösungsheft hochladen“ – `arbeitsblatt/Datenbanksysteme_Loesungen.docx` und `.pdf`. Es liegt nie im öffentlichen Ordner.
+- **Lösungsheft**: `build.mjs` legt es als PDF nach `../material/` (kein Hochladen, Sönke 09.11.2026). Achtung: das Repository ist öffentlich – was hier liegt, ist auf GitHub lesbar.
+- **Schrift**: LibreOffice kennt Consolas nicht. Vor dem ersten Bauen `python3 MPSkills/tools/SocialHub/arbeitsblatt/schrift.py` (fonttools) – baut eine Ersatzschrift mit den Maßen von Consolas, damit die PDFs wie in Word umbrechen; `build.mjs` bricht sonst ab.
 - Prüfstand Server: `supabase/tests/0282_arbeitsmaterial.mjs`.
 Ändern sich die Dummy-Daten, zuerst `pruefen.mjs` laufen lassen – die Aufgaben verweisen auf feste Figuren (Erna, Noah, levi.kicks, die Echsen-Trolle …).

@@ -6,10 +6,9 @@
    dann merkt sich nur das Gerät die Häkchen).
 
    Nur für freigeschaltete Lehrkräfte und Admins. Die Seite zeigt:
-     1. Downloads: Skript (Word, PDF – offen unter tools/<Skill>/material/)
-        und Lösungsheft (nicht offen: RPC skill_material_file_get, 0282).
-        Admins laden das Lösungsheft hier hoch (skill_material_file_put,
-        braucht 2FA – sonst 'not_admin').
+     1. Downloads: Skript (Word, PDF) und Lösungsheft (PDF), alle aus
+        tools/<Skill>/material/ (Sönke 09.11.2026: kein Hochladen nötig,
+        Lösungen reichen als PDF).
      2. Für die Klasse: Kapitel I als Stand (I-1 … I-4, wächst mit),
         Kapitel II als Häkchen je Abschnitt, Knöpfe für die Unterrichts-
         stufen. Gespeichert je Kurs = Raum (skill_material_marks_set).
@@ -40,7 +39,6 @@
   const ERR = {
     not_logged_in: 'Bitte anmelden.',
     not_teacher: 'Dafür musst du Lehrkraft in diesem Raum sein.',
-    not_admin: 'Hochladen dürfen nur Admins – und nur nach der Anmeldung mit 2FA im Admin-Panel.',
     not_found: 'Diese Datei wurde noch nicht hochgeladen.',
     too_big: 'Die Datei ist zu groß (höchstens 12 MB).',
     bad_mime: 'Nur Word (.docx) oder PDF.',
@@ -73,7 +71,7 @@
   }
 
   /* ── Zustand ─────────────────────────────────────────────── */
-  const S = { man: null, sel: new Set(), room: null, files: [], admin: false, saveT: null };
+  const S = { man: null, sel: new Set(), room: null, admin: false, saveT: null };
 
   const stand = () => { // höchster gewählter Stand aus Kapitel I (Index 0 … 3) oder -1
     let k = -1;
@@ -121,19 +119,13 @@
   function render() {
     const m = S.man;
     const k = stand();
-    const sol = name => S.files.find(f => f.name === name);
     let h = '<h1 class="mat-h">Arbeitsmaterial <span class="mat-sub">' + esc(T.skill) + ' · ' + esc(m.titel) + '</span></h1>';
 
     h += '<section class="card"><h2 class="card-h">Für dich</h2><div class="mat-dl">' +
       '<a class="mat-file" href="' + esc(T.dir + m.dateien.word) + '" download>' + icon('doc') + '<span><b>Skript</b><small>Word, zum Bearbeiten</small></span></a>' +
       '<a class="mat-file" href="' + esc(T.dir + m.dateien.pdf) + '" download>' + icon('pdf') + '<span><b>Skript</b><small>PDF, alle Kapitel</small></span></a>' +
-      m.loesungen.map(l => {
-        const f = sol(l.name);
-        return '<button type="button" class="mat-file mat-file--sol" data-sol="' + esc(l.name) + '"' + (f ? '' : ' disabled') + '>' + icon(/\.pdf$/.test(l.name) ? 'pdf' : 'doc') +
-          '<span><b>' + esc(l.label.replace(/ \(.*\)$/, '')) + '</b><small>' + (f ? esc((/\.pdf$/.test(l.name) ? 'PDF' : 'Word') + ' · nur für Lehrkräfte') : 'noch nicht hochgeladen') + '</small></span></button>';
-      }).join('') + '</div>' +
-      (S.admin ? '<div class="mat-admin"><b>Admin:</b> Lösungsheft hochladen <label class="btn btn--sm">Datei wählen<input type="file" id="matUp" accept=".docx,.pdf" multiple hidden></label>' +
-        '<span class="mat-faint">Name wie im Skript: ' + m.loesungen.map(l => '<code>' + esc(l.name) + '</code>').join(' · ') + '</span></div>' : '') +
+      '<a class="mat-file mat-file--sol" href="' + esc(T.dir + m.loesungen) + '" download>' + icon('pdf') + '<span><b>Lösungsheft</b><small>PDF · nur für Lehrkräfte</small></span></a>' +
+      '</div>' +
       '</section>';
 
     h += '<section class="card"><h2 class="card-h">Für die Klasse' + (S.room ? ' <span class="card-h-note">Kurs „' + esc(S.room) + '“</span>' : '') + '</h2>' +
@@ -145,10 +137,10 @@
         '<div class="mat-col"><h3 class="mat-kap">I. Begriffe <small>wächst mit – wähle den Stand</small></h3>' +
           '<label class="mat-row"><input type="radio" name="stand" value="-1"' + (k < 0 ? ' checked' : '') + '><span>noch nichts</span></label>' +
           m.staende.map((x, i) => '<label class="mat-row"><input type="radio" name="stand" value="' + i + '"' + (k === i ? ' checked' : '') + '><span>' +
-            (i ? 'bis ' : '') + esc(x.label) + '<small>' + x.seiten + ' S.</small></span></label>').join('') + '</div>' +
+            (i ? 'bis ' : '') + esc(x.label) + '</span></label>').join('') + '</div>' +
         '<div class="mat-col"><h3 class="mat-kap">II. SQL</h3>' +
           m.teile.map(t => '<label class="mat-row"><input type="checkbox" data-teil="' + esc(t.id) + '"' + (S.sel.has(t.id) ? ' checked' : '') + '><span>' + esc(t.label) +
-            '<small>' + (t.aufg ? 'Aufgabe ' + esc(t.aufg) + ' · ' : '') + t.seiten + ' S.' + (t.optional ? ' · <i>optional</i>' : '') + '</small></span></label>').join('') + '</div>' +
+            (t.aufg || t.optional ? '<small>' + (t.aufg ? 'Aufgabe ' + esc(t.aufg) : '') + (t.aufg && t.optional ? ' · ' : '') + (t.optional ? '<i>optional</i>' : '') + '</small>' : '') + '</span></label>').join('') + '</div>' +
       '</div>' +
       '<div class="mat-go"><button type="button" class="btn btn--primary" id="matBuild">Schüler-PDF herunterladen</button>' +
         '<span class="mat-faint"><span id="matPages"></span> · <span id="matSaved">' + (CODE ? 'Für diesen Kurs gespeichert' : 'Im Gerät') + '</span></span></div>' +
@@ -169,7 +161,6 @@
     const t = e.target;
     if (t.name === 'stand') { setStand(+t.value); save(); return; }
     if (t.dataset && t.dataset.teil) { t.checked ? S.sel.add(t.dataset.teil) : S.sel.delete(t.dataset.teil); save(); return; }
-    if (t.id === 'matUp') { await upload([...t.files]); t.value = ''; }
   });
   document.addEventListener('click', async e => {
     const st = e.target.closest('[data-stufe]');
@@ -184,8 +175,6 @@
       toast(S.man.stufen[+st.dataset.stufe].label + ' gesetzt');
       return;
     }
-    const so = e.target.closest('[data-sol]');
-    if (so && !so.disabled) { await downloadSolution(so.dataset.sol, so); return; }
     if (e.target.closest('#matBuild')) await buildPdf(e.target.closest('#matBuild'));
   });
 
@@ -197,32 +186,6 @@
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   }
-  async function downloadSolution(name, btn) {
-    btn.disabled = true;
-    try {
-      const r = await rpc('skill_material_file_get', { p_tool: TOOL, p_name: name });
-      const bin = atob(r.data), u8 = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
-      saveBlob(new Blob([u8], { type: r.mime }), name);
-    } catch (e) { toast(errText(e.code || e.message), true); }
-    btn.disabled = false;
-  }
-  async function upload(files) {
-    for (const f of files) {
-      const mime = /\.pdf$/i.test(f.name) ? 'application/pdf' : /\.docx$/i.test(f.name) ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : null;
-      const target = S.man.loesungen.find(l => l.name.toLowerCase() === f.name.toLowerCase())
-        || S.man.loesungen.find(l => (mime === 'application/pdf') === /\.pdf$/.test(l.name));
-      if (!mime || !target) { toast('„' + f.name + '“: nur Word oder PDF', true); continue; }
-      const b64 = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
-      try { await rpc('skill_material_file_put', { p_tool: TOOL, p_name: target.name, p_mime: mime, p_data: b64 }); toast(target.label + ' hochgeladen'); }
-      catch (e) { toast(errText(e.code || e.message), true); }
-    }
-    await loadFiles(); render();
-  }
-  async function loadFiles() {
-    try { S.files = (await rpc('skill_material_files_list', { p_tool: TOOL })).files || []; } catch (e) { S.files = []; }
-  }
-
   /* ── Schüler-PDF ─────────────────────────────────────────── */
   async function buildPdf(btn) {
     btn.disabled = true;
@@ -279,7 +242,6 @@
     // nur ids, die es im Material gibt
     const known = new Set([...S.man.staende, ...S.man.teile].map(x => x.id));
     [...S.sel].forEach(x => { if (!known.has(x)) S.sel.delete(x); });
-    await loadFiles();
     render();
   })();
 })();

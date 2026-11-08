@@ -144,6 +144,7 @@
   const n = v => v == null ? '' : (v >= 10000 ? (v / 1000).toFixed(0) + 'K' : v >= 1000 ? (v / 1000).toFixed(1).replace('.', ',') + 'K' : String(v));
 
   const IC = {
+    doc: '<svg viewBox="0 0 24 24"><path d="M6 2.5h8l4.5 4.5v14.5H6z"/><path d="M14 2.5V7h4.5M9 12h6M9 15.5h6"/></svg>',
     heart: '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 2.9 4.5 6.6 4.5c2.2 0 3.6 1.2 5.4 3.2 1.8-2 3.2-3.2 5.4-3.2 3.7 0 5.7 3.9 4.2 7.3C19.5 16.4 12 21 12 21z"/></svg>',
     chat: '<svg viewBox="0 0 24 24"><path d="M12 3.5c5 0 9 3.4 9 7.7 0 4.2-4 7.6-9 7.6-1 0-2-.1-2.9-.4L4 20.5l1.4-4.1C4 15 3 13.2 3 11.2 3 6.9 7 3.5 12 3.5z"/></svg>',
     home: '<svg viewBox="0 0 24 24"><path d="M3.5 11 12 4l8.5 7v9h-5.5v-6h-6v6H3.5z"/></svg>',
@@ -307,7 +308,9 @@
 
   function renderHome() {
     const h = S.home;
+    // Lehrkraft: Knopf „Arbeitsmaterial“ (0282) gleich neben dem Namen – Skript, Lösungen, Schüler-PDF je Kurs
     let html = '<div class="home' + (T ? ' home--wide' : '') + '"><header class="home-top">' + brandHtml() +
+      (T ? '<a class="btn btn--s btn--accent home-mat" href="../../material.html?tool=socialhub&amp;raum=' + encodeURIComponent(A.CODE) + '" target="_blank" rel="noopener">' + IC.doc + 'Arbeitsmaterial</a>' : '') +
       (T ? '<span class="chip chip--lk">Lehrkraft</span>' : '') + '</header>';
     if (T) html += teacherHome();
     else {
@@ -415,10 +418,6 @@
         '<span class="muted small an-h">' + LV.find(x => x[0] === lv)[2] + '</span></div>' +
         '</section>';
     }
-    // Arbeitsmaterial (0282): Skript, Lösungsheft und Schüler-PDF je Kurs – eigene Seite in MPSkills
-    html += '<section class="panel panel--mat"><div class="panel-h"><h2>Arbeitsmaterial</h2>' +
-      '<a class="btn btn--s btn--accent" href="../../material.html?tool=socialhub&amp;raum=' + encodeURIComponent(A.CODE) + '" target="_blank" rel="noopener">Öffnen</a></div>' +
-      '<p class="muted small">Skript „Datenbanksysteme“ (Word, PDF) und Lösungsheft. Für diesen Kurs hakst du an, was die Klasse schon hat – daraus entsteht das Schüler-PDF.</p></section>';
     return html;
   }
 

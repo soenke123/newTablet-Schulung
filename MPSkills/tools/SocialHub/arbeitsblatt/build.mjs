@@ -351,11 +351,14 @@ writeFileSync(OUT + '/Datenbanksysteme_Loesungen.docx', await Packer.toBuffer(ma
 /* ── Bausteine fürs Arbeitsmaterial ──────────────────────────
    material/ wird veröffentlicht (Vercel), arbeitsblatt/ nicht. Dort liegen:
    Skript (Word + PDF), teile/*.pdf (ohne Seitenzahlen – die stempelt die
-   Seite beim Zusammensetzen neu) und material.json. Das Lösungsheft kommt
-   NICHT hierher, sondern über den Admin auf den Server (skill_material_put). */
+   Seite beim Zusammensetzen neu), material.json und das Lösungsheft (PDF).
+   Die PDFs macht LibreOffice. Damit sie wie in Word umbrechen, braucht es
+   die Ersatzschrift für Consolas (schrift.py) – sonst bricht der Bau ab. */
 const FOOT = 'Datenbanksysteme · Informatik Q-Phase · YourSozialNet';
 const MAT = new URL('../material/', import.meta.url).pathname;
 if (!process.argv.includes('--ohne-teile')) {
+  const cons = execFileSync('fc-match', ['Consolas'], { encoding: 'utf8' });
+  if (!/"Consolas"/.test(cons)) { console.error('Consolas fehlt für LibreOffice (' + cons.trim() + '). Erst: python3 ' + new URL('./schrift.py', import.meta.url).pathname); process.exit(1); }
   const seg = {}; let cur = null;
   for (const b of DOC) { if (b.t === 'teil') { cur = b.id; seg[cur] = []; continue; } if (cur) seg[cur].push(b); }
   const lead = bl => { const x = bl.slice(); while (x.length && x[0].t === 'page') x.shift(); return x; };
@@ -382,7 +385,7 @@ if (!process.argv.includes('--ohne-teile')) {
     titel: 'Datenbanksysteme', untertitel: 'Relationale Datenbanken und SQL – mit YourSozialNet', fuss: FOOT,
     erstellt: new Date().toISOString().slice(0, 10),
     dateien: { word: 'Datenbanksysteme.docx', pdf: 'Datenbanksysteme.pdf' },
-    loesungen: [{ name: 'Datenbanksysteme_Loesungen.docx', label: 'Lösungsheft (Word)' }, { name: 'Datenbanksysteme_Loesungen.pdf', label: 'Lösungsheft (PDF)' }],
+    loesungen: 'Datenbanksysteme_Loesungen.pdf',
     deckblatt: 'teile/deckblatt.pdf',
     staende: IT.map((t, k) => ({ id: t.id, label: t.label, datei: 'teile/I-stand' + (k + 1) + '.pdf', seiten: pages(MAT + 'teile/I-stand' + (k + 1) + '.pdf') })),
     teile: TEILE.filter(t => t.kap === 'II').map(t => ({ ...t, datei: 'teile/' + t.id + '.pdf', seiten: pages(MAT + 'teile/' + t.id + '.pdf') })),
@@ -390,9 +393,10 @@ if (!process.argv.includes('--ohne-teile')) {
     version: hash(MAT + 'Datenbanksysteme.pdf') + '.' + teile.map(f => hash(MAT + 'teile/' + f)).join('').slice(0, 10)
   };
   writeFileSync(MAT + 'material.json', JSON.stringify(manifest, null, 2) + '\n');
-  // Lösungsheft als PDF (bleibt in arbeitsblatt/, wird vom Admin hochgeladen)
+  // Lösungsheft als PDF – liegt neben dem Skript (Sönke 09.11.2026: kein Hochladen, PDF reicht)
   copyFileSync(OUT + '/Datenbanksysteme_Loesungen.docx', tmp + '/Datenbanksysteme_Loesungen.docx');
-  pdf([tmp + '/Datenbanksysteme_Loesungen.docx'], OUT);
+  pdf([tmp + '/Datenbanksysteme_Loesungen.docx'], MAT);
+  rmSync(OUT + '/Datenbanksysteme_Loesungen.pdf', { force: true });
   rmSync(tmp, { recursive: true, force: true });
   console.log('Teile:', manifest.staende.map(x => x.id + ' ' + x.seiten + ' S.').join(', '), '|', manifest.teile.map(x => x.id + ' ' + x.seiten).join(', '));
 }
