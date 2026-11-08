@@ -1528,6 +1528,12 @@ function paintRoom(data) {
   document.title = r.title + ' · MPSkills';
   // Hat das Werkzeug eigene Reiter (setToolTabs), gibt es diesen nicht mehr.
   if ($('rtToolName')) $('rtToolName').innerHTML = MPIcons.label(r.tool_id, r.tool_title || 'Skill');
+  // Für „Feedback & Fragen": aus welchem Skill geschrieben wird.
+  // (Als Funktion: zurück in „Meine Räume" ist S.view leer, dann ohne Skill.)
+  window.MPSFeedbackContext = () => {
+    const v = S.view && S.code ? S.view.room : null;
+    return v ? 'Skill: ' + (v.tool_title || v.tool_id || '?') + (v.title ? ' · Raum: ' + v.title : '') : '';
+  };
 
   // Angezeigt wird dieselbe Adresse, die der Knopf kopiert und der
   // QR-Code trägt: mit Geheimnis (0226), gilt, solange die Tür offen

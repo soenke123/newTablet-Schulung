@@ -36,8 +36,9 @@
      Ursprung und eigentlich vertrauenswürdig — die Liste ist trotzdem
      da, damit ein Fehler im Rahmen nicht irgendeine RPC erreicht. */
   const ALLOWED = {
-    participant: ['scrum_save', 'scrum_enter', 'scrum_member_update'],
+    participant: ['scrum_save', 'scrum_enter', 'scrum_member_update', 'scrum_daily', 'scrum_goal_edit'],
     presenter:   ['scrum_room_save', 'scrum_room_member_update', 'scrum_room_rekey',
+                  'scrum_room_daily', 'scrum_room_goal_edit',
                   'scrum_room_restore', 'scrum_room_backups', 'scrum_room_backup_get']
   };
 
@@ -150,7 +151,7 @@
 
       // Im Schaufenster ohne Raum: das Beispielprojekt, und nichts
       // bleibt hängen (?demo=1, siehe bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261008';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261108';
       root.innerHTML =
         '<div class="sw-host">' +
           '<iframe class="sw-frame" src="tools/ScrumWerkstatt/index.html' + q + '" ' +

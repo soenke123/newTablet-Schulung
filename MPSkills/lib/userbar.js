@@ -51,7 +51,7 @@
   // ../feedback.js wird erst beim ersten Klick geladen — so muss
   // keine MPSkills-Seite ein weiteres <script> mitschleppen. Der Pfad
   // hängt an dieser Datei, nicht an der Seite, die sie einbindet.
-  const FEEDBACK_SRC = new URL('../../feedback.js?v=20260927',
+  const FEEDBACK_SRC = new URL('../../feedback.js?v=20261108',
     document.currentScript?.src || location.href).href;
   let feedbackLoading = null;
 
