@@ -1,0 +1,157 @@
+{
+  "titel": "Datenbanksysteme",
+  "untertitel": "Relationale Datenbanken und SQL – mit YourSozialNet",
+  "fuss": "Datenbanksysteme · Informatik Q-Phase · YourSozialNet",
+  "erstellt": "2026-11-08",
+  "dateien": {
+    "word": "Datenbanksysteme.docx",
+    "pdf": "Datenbanksysteme.pdf"
+  },
+  "loesungen": [
+    {
+      "name": "Datenbanksysteme_Loesungen.docx",
+      "label": "Lösungsheft (Word)"
+    },
+    {
+      "name": "Datenbanksysteme_Loesungen.pdf",
+      "label": "Lösungsheft (PDF)"
+    }
+  ],
+  "deckblatt": "teile/deckblatt.pdf",
+  "staende": [
+    {
+      "id": "I-1",
+      "label": "I.1–I.2 Grundbegriffe, mehrere Tabellen",
+      "datei": "teile/I-stand1.pdf",
+      "seiten": 2
+    },
+    {
+      "id": "I-2",
+      "label": "I.2.1 Primärschlüssel",
+      "datei": "teile/I-stand2.pdf",
+      "seiten": 2
+    },
+    {
+      "id": "I-3",
+      "label": "I.2.2–2.3 Fremdschlüssel, 1-zu-n",
+      "datei": "teile/I-stand3.pdf",
+      "seiten": 3
+    },
+    {
+      "id": "I-4",
+      "label": "I.2.4 n-zu-m",
+      "datei": "teile/I-stand4.pdf",
+      "seiten": 4
+    }
+  ],
+  "teile": [
+    {
+      "id": "II-1",
+      "kap": "II",
+      "label": "II.1–1.2 Abfragen, Projektion, Sortierung",
+      "aufg": "1–2",
+      "datei": "teile/II-1.pdf",
+      "seiten": 3
+    },
+    {
+      "id": "II-1b",
+      "kap": "II",
+      "label": "II.1.3–1.4 Selektion, Gruppierung",
+      "aufg": "3–4",
+      "datei": "teile/II-1b.pdf",
+      "seiten": 4
+    },
+    {
+      "id": "II-2",
+      "kap": "II",
+      "label": "II.2 Photos und Comments",
+      "aufg": "5",
+      "datei": "teile/II-2.pdf",
+      "seiten": 2
+    },
+    {
+      "id": "II-3",
+      "kap": "II",
+      "label": "II.3 Tags, Follows und Likes",
+      "aufg": "6",
+      "datei": "teile/II-3.pdf",
+      "seiten": 3
+    },
+    {
+      "id": "II-4",
+      "kap": "II",
+      "label": "II.4 Tiefer in SQL",
+      "aufg": "7",
+      "optional": true,
+      "datei": "teile/II-4.pdf",
+      "seiten": 3
+    },
+    {
+      "id": "II-5",
+      "kap": "II",
+      "label": "II.5 Alles zusammen (Übung vor der Klausur)",
+      "aufg": "8",
+      "datei": "teile/II-5.pdf",
+      "seiten": 1
+    },
+    {
+      "id": "II-6",
+      "kap": "II",
+      "label": "II.6 Datenbankinhalte ändern",
+      "aufg": "9–11",
+      "datei": "teile/II-6.pdf",
+      "seiten": 4
+    },
+    {
+      "id": "II-7",
+      "kap": "II",
+      "label": "II.7 Analytics",
+      "aufg": "12",
+      "datei": "teile/II-7.pdf",
+      "seiten": 2
+    },
+    {
+      "id": "II-8",
+      "kap": "II",
+      "label": "II.8 Werbung",
+      "aufg": "13",
+      "datei": "teile/II-8.pdf",
+      "seiten": 2
+    }
+  ],
+  "stufen": [
+    {
+      "label": "Stufe 1",
+      "hint": "Grundlagen ohne Schlüssel, Aufgaben 1–2",
+      "teile": [
+        "I-1",
+        "II-1"
+      ]
+    },
+    {
+      "label": "Stufe 2",
+      "hint": "Primärschlüssel, Aufgaben 3–4",
+      "teile": [
+        "I-2",
+        "II-1b"
+      ]
+    },
+    {
+      "label": "Stufe 3",
+      "hint": "Fremdschlüssel, 1-zu-n, Photos und Comments",
+      "teile": [
+        "I-3",
+        "II-2"
+      ]
+    },
+    {
+      "label": "Stufe 4",
+      "hint": "n-zu-m, Tags, Follows, Likes",
+      "teile": [
+        "I-4",
+        "II-3"
+      ]
+    }
+  ],
+  "version": "7bb57c9470.9dc2b4b15f"
+}

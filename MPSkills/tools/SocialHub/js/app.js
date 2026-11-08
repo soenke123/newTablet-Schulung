@@ -415,6 +415,10 @@
         '<span class="muted small an-h">' + LV.find(x => x[0] === lv)[2] + '</span></div>' +
         '</section>';
     }
+    // Arbeitsmaterial (0280): Skript, Lösungsheft und Schüler-PDF je Kurs – eigene Seite in MPSkills
+    html += '<section class="panel panel--mat"><div class="panel-h"><h2>Arbeitsmaterial</h2>' +
+      '<a class="btn btn--s btn--accent" href="../../material.html?tool=socialhub&amp;raum=' + encodeURIComponent(A.CODE) + '" target="_blank" rel="noopener">Öffnen</a></div>' +
+      '<p class="muted small">Skript „Datenbanksysteme“ (Word, PDF) und Lösungsheft. Für diesen Kurs hakst du an, was die Klasse schon hat – daraus entsteht das Schüler-PDF.</p></section>';
     return html;
   }
 

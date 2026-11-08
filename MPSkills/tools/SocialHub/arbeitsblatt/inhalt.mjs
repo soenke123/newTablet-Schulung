@@ -24,10 +24,37 @@ const NOTIERE_LANG = 'Notiere für die folgenden Abfragen einen SQL-Befehl. Dein
 const NOTIERE = 'Notiere für die folgenden Abfragen einen SQL-Befehl.';
 const AGE = 'FLOOR(DATEDIFF(NOW(), birthday) / 365.25)';
 
+/* Bausteine fürs Arbeitsmaterial (MPSkills/material.html): Jeder Teil beginnt
+   mit { t: 'teil', id } und reicht bis zum nächsten. Kapitel I gibt es als Stände
+   (I-1 … I-k zusammen gesetzt), Kapitel II je Teil einzeln. */
+export const TEILE = [
+  { id: 'I-1', kap: 'I', label: 'I.1–I.2 Grundbegriffe, mehrere Tabellen' },
+  { id: 'I-2', kap: 'I', label: 'I.2.1 Primärschlüssel' },
+  { id: 'I-3', kap: 'I', label: 'I.2.2–2.3 Fremdschlüssel, 1-zu-n' },
+  { id: 'I-4', kap: 'I', label: 'I.2.4 n-zu-m' },
+  { id: 'II-1', kap: 'II', label: 'II.1–1.2 Abfragen, Projektion, Sortierung', aufg: '1–2' },
+  { id: 'II-1b', kap: 'II', label: 'II.1.3–1.4 Selektion, Gruppierung', aufg: '3–4' },
+  { id: 'II-2', kap: 'II', label: 'II.2 Photos und Comments', aufg: '5' },
+  { id: 'II-3', kap: 'II', label: 'II.3 Tags, Follows und Likes', aufg: '6' },
+  { id: 'II-4', kap: 'II', label: 'II.4 Tiefer in SQL', aufg: '7', optional: true },
+  { id: 'II-5', kap: 'II', label: 'II.5 Alles zusammen (Übung vor der Klausur)', aufg: '8' },
+  { id: 'II-6', kap: 'II', label: 'II.6 Datenbankinhalte ändern', aufg: '9–11' },
+  { id: 'II-7', kap: 'II', label: 'II.7 Analytics', aufg: '12' },
+  { id: 'II-8', kap: 'II', label: 'II.8 Werbung', aufg: '13' }
+];
+// Unterrichtsstufen (Sönke 09.11.2026): Knöpfe, die die Häkchen setzen – jede Stufe enthält die vorigen
+export const STUFEN = [
+  { label: 'Stufe 1', hint: 'Grundlagen ohne Schlüssel, Aufgaben 1–2', teile: ['I-1', 'II-1'] },
+  { label: 'Stufe 2', hint: 'Primärschlüssel, Aufgaben 3–4', teile: ['I-2', 'II-1b'] },
+  { label: 'Stufe 3', hint: 'Fremdschlüssel, 1-zu-n, Photos und Comments', teile: ['I-3', 'II-2'] },
+  { label: 'Stufe 4', hint: 'n-zu-m, Tags, Follows, Likes', teile: ['I-4', 'II-3'] }
+];
+
 export const DOC = [
   { t: 'title' },
 
   /* ═══════════════════ I. Begriffe ═══════════════════ */
+  { t: 'teil', id: 'I-1' },
   h1('I. Begriffe rund um die Datenwelt'),
   h2('1. Grundbegriffe'),
   p('Eine Datenbank ist eine Sammlung von Daten, die von einem **Datenbankmanagementsystem (DBMS)** verwaltet wird. Der Ort, an dem die eigentlichen Daten gesammelt werden, wird als **Datenbank** bezeichnet. Eine solche Datenbank kann zum Beispiel aus einzelnen Tabellen bestehen. In welcher Form die Daten in der Datenbank abgelegt werden, muss auch definiert und beschrieben werden. Es handelt sich um die **Metadaten**. Die Metadaten sind also die Datenbank zur Datenbank.'),
@@ -40,6 +67,7 @@ export const DOC = [
   p('Relationale Datenbanken bestehen in der Regel nicht nur aus einer einzelnen Tabelle, sondern aus mehreren Tabellen. Wie diese Tabellen aufgebaut sind, stellen wir – wie in Java – in einem **Klassendiagramm** dar. So sieht es auch im Programm aus (YourSozialNet: Adminbereich → Diagramm): Jede **Klasse** (Tabelle) ist ein Kasten. Oben steht ihr Name, darunter ihre **Attribute** (Spalten) mit Datentyp.'),
   p('Als Beispiel dient in diesem Kapitel unsere Schule mit ihren Klassen, Schülerinnen und Schülern und Kursen.'),
 
+  { t: 'teil', id: 'I-2' },
   h3('2.1 Primärschlüssel (Primary Key)'),
   p('Da Zeilen sich stark ähneln können (zwei SchülerInnen könnten den gleichen Namen haben, in demselben Haus wohnen und in die gleiche Klasse gehen), gibt es Attribute, die ein Objekt eindeutig identifizieren sollen. Ohne einen solchen Primärschlüssel könnte der Datensatz einer Tabelle nicht eindeutig angesprochen werden. Der oder die Primärschlüssel einer Klasse werden im Klassendiagramm unterstrichen und haben einen Schlüssel 🔑 davor. Es gibt verschiedene Arten von Primärschlüsseln:'),
   list(
@@ -48,6 +76,7 @@ export const DOC = [
     '**Künstlicher Primärschlüssel:** Gibt es in einer Tabelle keine eindeutigen Schlüssel, so kann man einen künstlichen Schlüssel definieren. Hierzu wird meist eine fortlaufende Nummer als ID verwendet.'
   ),
 
+  { t: 'teil', id: 'I-3' },
   page(),
   h3('2.2 Fremdschlüssel (Foreign Key)'),
   p('Ein Fremdschlüssel ist ein Attribut einer Tabelle, das auf einen Primärschlüssel einer anderen Tabelle verweist. Er dient dazu, Verbindungen zwischen verschiedenen Tabellen herstellen zu können. *Ein Schüler hat beispielsweise das Attribut „klasse“. Dies ist der Fremdschlüssel, der den Primärschlüssel der Tabelle klasse enthält.* Im Klassendiagramm hat ein Fremdschlüssel ein ↑ hinter dem Namen (und eine Kette davor).'),
@@ -61,6 +90,7 @@ export const DOC = [
   { t: 'tables2', left: { title: 'klasse', head: ['bezeichnung 🔑', 'klassenlehrkraft'], rows: [['5b', 'Frau Jansen'], ['7a', 'Herr Okafor'], ['10c', 'Frau Graf']] },
     right: { title: 'schueler', head: ['s_nr 🔑', 'name', 'adresse', 'klasse ↑'], rows: [['1', 'Mila', 'Ostring 4', '7a'], ['2', 'Jonas', 'Hafenweg 1', '5b'], ['4', 'Ida', 'Ostring 4', '7a'], ['5', 'Tarek', 'Am Deich 9', '10c']] } },
 
+  { t: 'teil', id: 'I-4' },
   page(),
   h3('2.4 n-zu-m-Kardinalität'),
   p('Jedes Objekt einer Klasse steht mit beliebig vielen Objekten der anderen Klasse in Beziehung. In der Gegenrichtung gilt das Gleiche. *In einen Kurs gehen mehrere Schülerinnen und Schüler, und eine Schülerin oder ein Schüler geht in mehrere Kurse.*'),
@@ -69,6 +99,7 @@ export const DOC = [
   table(['id 🔑', 'kurs ↑', 's_nr ↑'], [['1', 'Ma1', '1'], ['2', 'Ma1', '2'], ['3', 'If3', '1'], ['4', 'If3', '4'], ['5', 'If3', '5']], [1600, 2200, 2200]),
   p('An diese Tabelle können weitere Attribute ergänzt werden, falls man diesen Zusammenhang spezifizieren will (*z. B. die Note im Kurs*). Diese Tabelle gilt nicht als neue Klasse, sondern nur als Hilfstabelle, damit der Zusammenhang der n-zu-m-Kardinalität in der Datenbank umgesetzt werden kann.'),
 
+  { t: 'teil', id: 'II-1' },
   page(),
   /* ═══════════════════ II. SQL ═══════════════════ */
   h1('II. SQL (Structured Query Language)'),
@@ -119,6 +150,7 @@ export const DOC = [
     a('Gib die fünf zuletzt registrierten User aus.', 'SELECT username, created_at FROM users ORDER BY created_at DESC LIMIT 5', 'Auf Platz 1 steht jule.w – außer jemand aus der Klasse hat sich danach registriert (das eigene Admin-Konto!).')
   ]),
 
+  { t: 'teil', id: 'II-1b' },
   page(),
   h3('1.3 Selektion (Auswahl von Objekten)'),
   p('Bei der Selektion im WHERE-Befehl können Objekte (Zeilen) einer Klasse mithilfe von Bedingungen ausgewählt werden.'),
@@ -133,6 +165,7 @@ export const DOC = [
   code('Alle User, die aus Berlin kommen und nicht Felix heißen', "SELECT username, name, city\nFROM users\nWHERE city = 'Berlin' AND name NOT LIKE 'Felix%'", false),
   p('*Hinweis:* `AND name NOT LIKE` lässt sich in SQL auch mit `AND NOT name LIKE` schreiben.'),
   p('**Leere Werte (IS NULL)** – Hat ein User etwas nicht angegeben, steht dort **NULL** („nichts“). NULL ist kein Wert: `city = NULL` findet deshalb nie etwas. Stattdessen schreibt man `city IS NULL` bzw. `city IS NOT NULL`.'),
+  page(),
   p('**Wechselwirkungen von Einschränkungen** – AND bindet stärker als OR (wie Punkt- vor Strichrechnung). Um Bedingungen logisch zu kapseln, können – wie in der Mathematik – Klammern genutzt werden.'),
   compare('Alle User aus Kiel, egal ob männlich oder weiblich – nur eine Möglichkeit funktioniert',
     { title: 'Möglichkeit 1', sql: "SELECT name, city, gender\nFROM users\nWHERE city = 'Kiel' AND\n      gender = 'male' OR\n      gender = 'female'" },
@@ -160,7 +193,6 @@ export const DOC = [
     ['`GROUP BY <Attribut>`', 'fasst alle Zeilen mit gleichem Wert zu einer Gruppe zusammen; die Funktionen oben rechnen dann je Gruppe']
   ], [3800, 5800]),
   code('Größe des größten Users', 'SELECT MAX(centimeter) AS maximale_groesse\nFROM users', true),
-  code('Anzahl der User aus Kiel', "SELECT COUNT(*) AS anzahl\nFROM users\nWHERE city = 'Kiel'", true),
   code('Liste der Städte und der jeweiligen User-Anzahl', 'SELECT city, COUNT(*) AS anzahl\nFROM users\nGROUP BY city\nORDER BY anzahl DESC', true),
   task(4, NOTIERE, [
     a('Gib an, wann sich zuletzt ein Mitglied registriert hat.', 'SELECT MAX(created_at) FROM users'),
@@ -175,6 +207,7 @@ export const DOC = [
     a('Wie viele User kommen aus Hamburg? Vergleiche `city = \'Hamburg\'` mit `city LIKE \'Hamburg%\'`. Hast du wirklich alle Hamburger gefunden?', ["SELECT COUNT(*) FROM users WHERE city = 'Hamburg'", "SELECT city, COUNT(*) FROM users WHERE city LIKE 'Ham%' GROUP BY city"], '= findet 1, LIKE \'Hamburg%\' findet 3 (Hamburg, hamburg, „Hamburg “ mit Leerzeichen). „Hambrug“ (Tippfehler) findet nur ein genauer Blick. LIKE unterscheidet nicht zwischen Groß- und Kleinschreibung.'),
   ]),
 
+  { t: 'teil', id: 'II-2' },
   page(),
   /* ═══════════════════ 2. Photos und Comments ═══════════════════ */
   h2('2. Photos und Comments'),
@@ -199,6 +232,7 @@ export const DOC = [
     a('Die Moderation deines Netzwerks bittet um Mithilfe: Einige User verbreiten, andere seien „Echsenmenschen von der Rückseite des Mondes“. Wer hat solche Kommentare geschrieben? Gib E-Mail, Benutzername und Kommentar aus. Prüfe dein Ergebnis: Sind wirklich alle Treffer Verschwörungstheoretiker?', "SELECT users.email, users.username, comments.body FROM comments JOIN users ON comments.user_id = users.id WHERE comments.body LIKE '%Echse%'", 'Die Theoretiker: mondrueckseite (Ronny Pfeiffer) und echsenwache (Sven Kühn). Falle: Treffer sind auch harmlose Kommentare („Süße Echse!!“ unter Sofias Bartagame) und Antworten anderer, die @echsenwache erwähnen. Unter welchen Bildern sie stehen, kommt in Aufgabe [[echsenBild]]. Wichtig für Aufgabe [[echsenDel]].', { id: 'echsen' })
   ]),
 
+  { t: 'teil', id: 'II-3' },
   page(),
   /* ═══════════════════ 3. Follows, Likes, Tags ═══════════════════ */
   h2('3. Tags, Follows und Likes'),
@@ -209,8 +243,7 @@ export const DOC = [
     '**likes**: Ein User liked viele Fotos, ein Foto wird von vielen Usern gelikt. Die Hilfstabelle bekommt ein zusätzliches Attribut **kind** – die Art des Likes (heart, thumb, laugh).'
   ),
   p('Bei den drei Hilfstabellen ist der Primärschlüssel **zusammengesetzt** (siehe I.2.1): `(photo_id, tag_id)`, `(follower_id, following_id)` und `(user_id, photo_id)`. So kann niemand ein Foto zweimal liken.'),
-  img('db_nm', 16.5, 'Abb. 9: Das Netzwerk mit Tags, Follows und Likes'),
-  page(),
+  img('db_nm', 13.3, 'Abb. 9: Das Netzwerk mit Tags, Follows und Likes'),
   h3('JOIN über eine Hilfstabelle'),
   p('Um eine n-zu-m-Beziehung auszugeben, geht man über die Hilfstabelle: von der einen Klasse zur Hilfstabelle und von dort zur anderen Klasse. Es werden also drei Tabellen verbunden.'),
   syntax('Alle Tags des Fotos mit der Ostsee (seascape)', 'SELECT <Liste von Attributen>\nFROM <Klasse1>\nJOIN <Hilfstabelle>\n  ON <Fremdschlüssel1> = <Primärschlüssel1>\nJOIN <Klasse2>\n  ON <Primärschlüssel2> = <Fremdschlüssel2>\nWHERE <Bedingung>', "SELECT photos.image, tags.name\nFROM photos\nJOIN photo_tag ON photo_tag.photo_id = photos.id\nJOIN tags      ON tags.id = photo_tag.tag_id\nWHERE photos.image = 'dummy/linus_seascape.webp'", true),
@@ -231,6 +264,7 @@ export const DOC = [
     a('Welche User folgen sich gegenseitig?', 'SELECT a.username, b.username FROM follows AS f1 JOIN follows AS f2 ON f1.follower_id = f2.following_id AND f1.following_id = f2.follower_id JOIN users AS a ON a.id = f1.follower_id JOIN users AS b ON b.id = f1.following_id WHERE a.id < b.id', 'follows zweimal mit Alias. `a.id < b.id` verhindert, dass jedes Paar doppelt erscheint.', { star: true })
   ]),
 
+  { t: 'teil', id: 'II-4' },
   page(),
   /* ═══════════════════ 4. Tiefer in SQL ═══════════════════ */
   h2('4. Tiefer in SQL'),
@@ -277,6 +311,7 @@ export const DOC = [
     a('Welche User haben mehr Fotos gepostet als der Durchschnitt aller User, die posten?', 'SELECT users.username, COUNT(*) AS fotos FROM users JOIN photos ON photos.user_id = users.id GROUP BY users.id HAVING COUNT(*) > (SELECT AVG(anzahl) FROM (SELECT COUNT(*) AS anzahl FROM photos GROUP BY user_id) AS t)', 'Unterabfrage in der Unterabfrage – nach HAVING.', { star: true })
   ]),
 
+  { t: 'teil', id: 'II-5' },
   page(),
   /* ═══════════════════ 5. Übung ═══════════════════ */
   h2('5. Alles zusammen: 10 Aufgaben zum Üben'),
@@ -294,6 +329,7 @@ export const DOC = [
     a('Welche User haben noch nie etwas gepostet, gelikt oder kommentiert?', 'SELECT username FROM users WHERE id NOT IN (SELECT user_id FROM photos) AND id NOT IN (SELECT user_id FROM likes) AND id NOT IN (SELECT user_id FROM comments)', 'Die leeren Konten (max.mueller, test_account, jule.w, geloescht_4711) – und das eigene Admin-Konto.', { deep: true })
   ]),
 
+  { t: 'teil', id: 'II-6' },
   page(),
   /* ═══════════════════ 6. Ändern ═══════════════════ */
   h2('6. Datenbankinhalte ändern'),
@@ -339,6 +375,7 @@ export const DOC = [
     a('Lösche den User aaron183. Zähle vorher und nachher alle Kommentare. Warum fehlen danach Kommentare, obwohl du in comments gar nichts gelöscht hast?', ['SELECT COUNT(*) FROM comments', "DELETE FROM users WHERE username = 'aaron183'", 'SELECT COUNT(*) FROM comments'], 'ON DELETE CASCADE: Mit dem User verschwinden seine 18 Kommentare, Likes und Follows.')
   ]),
 
+  { t: 'teil', id: 'II-7' },
   page(),
   /* ═══════════════════ 7. Analytics ═══════════════════ */
   h2('7. Analytics'),
@@ -353,7 +390,6 @@ export const DOC = [
     ['`views.duration_ms`', 'wie lange ein Foto angeschaut wurde (in Millisekunden)'],
     ['`views.feed`, `position`, `ended_by`', 'in welchem Feed, an welcher Stelle, und wie es endete (weiter wischen, liken, kommentieren …)']
   ], [3800, 5800]),
-  box('denk', 'Nur nachgebaut', 'Die Fenster „… möchte deinen Standort verwenden“ sind in YourSozialNet nur nachgebaut: Gespeichert wird nur, was ihr angetippt habt – gemessen wird nichts. Eine echte App hätte nach „Zulassen“ euren genauen Ort bekommen.'),
   task(12, 'Findet so viel wie möglich über die User heraus – in eurem Netzwerk oder über den Kurs im Klassen-Netz. Es gibt keine feste Lösung: Jede und jeder darf etwas anderes entdecken. Nutzt dazu nicht nur sessions und views, sondern auch alle bekannten Tabellen. Notiert eure SQL-Befehle und was ihr herausgefunden habt.', [], {
     open: true,
     ideas: [
@@ -363,7 +399,7 @@ export const DOC = [
       '**Verbindungen:** WLAN oder Mobilfunk? Hell- oder Dunkelmodus? Sprache, Zeitzone?',
       '**Erlaubnisse:** Wer hat Standort, Kamera, Mikrofon „zugelassen“?',
       '**Interessen:** Welche Fotos schaut jemand am längsten an – auch ohne sie zu liken?',
-      '**Eine Person:** Was weiß das Netzwerk alles über eine bestimmte Person (mit ihrem Einverständnis!)?'
+      '**Eine Person:** Was weiß das Netzwerk alles über eine bestimmte Person?'
     ],
     examples: [
       a('Beliebteste Desktop-Browser', "SELECT browser, COUNT(*) AS sessions FROM sessions WHERE device_type = 'desktop' GROUP BY browser ORDER BY sessions DESC"),
@@ -377,6 +413,7 @@ export const DOC = [
     note: 'Im Klassen-Netz braucht man Admin-Rechte (`UPDATE users SET role = \'admin\' WHERE …`). Abschluss: „Was weiß das Netzwerk über mich?“ auslösen.'
   }),
 
+  { t: 'teil', id: 'II-8' },
   page(),
   /* ═══════════════════ 8. Werbung ═══════════════════ */
   h2('8. Werbung'),

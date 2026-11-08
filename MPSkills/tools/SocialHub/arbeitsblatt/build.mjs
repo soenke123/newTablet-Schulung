@@ -5,7 +5,11 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { load, run } from './db.mjs';
-import { DOC } from './inhalt.mjs';
+import { DOC, TEILE, STUFEN } from './inhalt.mjs';
+import { execFileSync } from 'node:child_process';
+import { mkdtempSync, mkdirSync, readdirSync, copyFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
 const D = require('docx');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, AlignmentType, WidthType, BorderStyle,
@@ -229,7 +233,7 @@ function taskBlock(b) {
   });
   const lg = [];
   if (b.items.some(x => x.deep)) lg.push(new TextRun({ text: '* nur mit tieferen SQL-Befehlen lösbar (Abschnitt 4)', font: FONT, size: 15, color: C.muted }));
-  if (b.items.some(x => x.star)) { if (lg.length) lg.push(new TextRun({ text: '    ·    ', font: FONT, size: 15, color: C.muted })); lg.push(star(10), new TextRun({ text: ' zum Knobeln (freiwillig)', font: FONT, size: 15, color: C.muted })); }
+  if (b.items.some(x => x.star)) { if (lg.length) lg.push(new TextRun({ text: '    ·    ', font: FONT, size: 15, color: C.muted })); lg.push(star(10), new TextRun({ text: ' zum Knobeln ', font: FONT, size: 15, color: C.muted })); }
   if (lg.length) kids.push(new Paragraph({ children: lg, alignment: AlignmentType.RIGHT, spacing: { after: 0 } }));
   return [tbl([new TableRow({ children: [cell(kids, { w: W, fill: 'FFFFFF', borders: { top: line(C.line2), bottom: line(C.line2), right: line(C.line2), left: { style: BorderStyle.SINGLE, size: 30, color: C.hub } }, margins: { top: 180, bottom: 160, left: 240, right: 240 } })] })], [W]), spacer(260)];
 }
@@ -269,22 +273,22 @@ function titlePage(sub) {
     new Paragraph({ children: [new PageBreak()] })
   ];
 }
-const footer = txt => new Footer({ children: [new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: W }], border: { top: { style: BorderStyle.SINGLE, size: 4, color: C.line, space: 6 } },
-  children: [new TextRun({ text: txt, font: FONT, size: 15, color: C.muted }), new TextRun({ text: '\t', font: FONT }), new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 15, bold: true, color: C.hub })] })] });
+const footer = (txt, nr = true) => new Footer({ children: [new Paragraph({ tabStops: [{ type: TabStopType.RIGHT, position: W }], border: { top: { style: BorderStyle.SINGLE, size: 4, color: C.line, space: 6 } },
+  children: [new TextRun({ text: txt, font: FONT, size: 15, color: C.muted }), ...(nr ? [new TextRun({ text: '\t', font: FONT }), new TextRun({ children: [PageNumber.CURRENT], font: FONT, size: 15, bold: true, color: C.hub })] : [])] })] });
 
-function makeDoc(children, foot) {
+function makeDoc(children, foot, { nr = true, title = true } = {}) {
   return new Document({
     creator: 'Sönke Birkner', title: 'Datenbanksysteme', description: 'Informatik Q-Phase mit YourSozialNet',
     styles: { default: { document: { run: { font: FONT, size: 21, color: C.ink } } } },
     numbering: { config: [{ reference: 'dot', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 400, hanging: 260 } }, run: { color: C.hub, bold: true } } }] }] },
-    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } }, titlePage: true },
-      footers: { default: footer(foot), first: new Footer({ children: [new Paragraph({ children: [] })] }) }, children }]
+    sections: [{ properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } }, titlePage: title },
+      footers: { default: footer(foot, nr), first: new Footer({ children: [new Paragraph({ children: [] })] }) }, children }]
   });
 }
 
 /* ── Skript ──────────────────────────────────────────────── */
-const kids = [];
-for (const b of DOC) {
+function render(blocks, kids = []) {
+for (const b of blocks) {
   if (b.t === 'title') kids.push(...titlePage('Relationale Datenbanken und SQL – mit YourSozialNet'));
   else if (b.t === 'h1') kids.push(H1(b.text));
   else if (b.t === 'h2') kids.push(H2(b.text));
@@ -303,6 +307,9 @@ for (const b of DOC) {
   else if (b.t === 'task') kids.push(...taskBlock(b));
   else if (b.t === 'page') kids.push(new Paragraph({ children: [new PageBreak()] }));
 }
+return kids;
+}
+const kids = render(DOC);
 writeFileSync(OUT + '/Datenbanksysteme.docx', await Packer.toBuffer(makeDoc(kids, 'Datenbanksysteme · Informatik Q-Phase · YourSozialNet')));
 
 /* ── Lösungen ────────────────────────────────────────────── */
@@ -340,4 +347,53 @@ for (const b of DOC) {
   });
 }
 writeFileSync(OUT + '/Datenbanksysteme_Loesungen.docx', await Packer.toBuffer(makeDoc(sol, 'Datenbanksysteme · Lösungen · nur für Lehrkräfte')));
+
+/* ── Bausteine fürs Arbeitsmaterial ──────────────────────────
+   material/ wird veröffentlicht (Vercel), arbeitsblatt/ nicht. Dort liegen:
+   Skript (Word + PDF), teile/*.pdf (ohne Seitenzahlen – die stempelt die
+   Seite beim Zusammensetzen neu) und material.json. Das Lösungsheft kommt
+   NICHT hierher, sondern über den Admin auf den Server (skill_material_put). */
+const FOOT = 'Datenbanksysteme · Informatik Q-Phase · YourSozialNet';
+const MAT = new URL('../material/', import.meta.url).pathname;
+if (!process.argv.includes('--ohne-teile')) {
+  const seg = {}; let cur = null;
+  for (const b of DOC) { if (b.t === 'teil') { cur = b.id; seg[cur] = []; continue; } if (cur) seg[cur].push(b); }
+  const lead = bl => { const x = bl.slice(); while (x.length && x[0].t === 'page') x.shift(); return x; };
+  const tmp = mkdtempSync(tmpdir() + '/dbs-teile-');
+  const docs = {
+    deckblatt: makeDoc(titlePage('Relationale Datenbanken und SQL – mit YourSozialNet').slice(0, -1), FOOT, { nr: false, title: true })
+  };
+  const IT = TEILE.filter(t => t.kap === 'I');
+  IT.forEach((t, k) => { docs['I-stand' + (k + 1)] = makeDoc(render(lead(IT.slice(0, k + 1).flatMap(x => seg[x.id]))), FOOT, { nr: false, title: false }); });
+  for (const t of TEILE.filter(t => t.kap === 'II')) docs[t.id] = makeDoc(render(lead(seg[t.id])), FOOT, { nr: false, title: false });
+  for (const [k, d] of Object.entries(docs)) writeFileSync(tmp + '/' + k + '.docx', await Packer.toBuffer(d));
+  copyFileSync(OUT + '/Datenbanksysteme.docx', tmp + '/Datenbanksysteme.docx');
+  const pdf = (files, outdir) => execFileSync('soffice', ['-env:UserInstallation=file://' + tmp + '/lo', '--headless', '--convert-to', 'pdf', '--outdir', outdir, ...files],
+    { env: { ...process.env, SAL_USE_VCLPLUGIN: 'svp' }, stdio: 'ignore', timeout: 600000 });
+  rmSync(MAT + 'teile', { recursive: true, force: true });
+  mkdirSync(MAT + 'teile', { recursive: true });
+  pdf(Object.keys(docs).map(k => tmp + '/' + k + '.docx'), MAT + 'teile');
+  pdf([tmp + '/Datenbanksysteme.docx'], MAT);
+  copyFileSync(OUT + '/Datenbanksysteme.docx', MAT + 'Datenbanksysteme.docx');
+  const pages = f => { const b = readFileSync(f, 'latin1'); return (b.match(/\/Type\s*\/Page[^s]/g) || []).length; };
+  const hash = f => createHash('sha1').update(readFileSync(f)).digest('hex').slice(0, 10);
+  const teile = readdirSync(MAT + 'teile').filter(f => f.endsWith('.pdf'));
+  const manifest = {
+    titel: 'Datenbanksysteme', untertitel: 'Relationale Datenbanken und SQL – mit YourSozialNet', fuss: FOOT,
+    erstellt: new Date().toISOString().slice(0, 10),
+    dateien: { word: 'Datenbanksysteme.docx', pdf: 'Datenbanksysteme.pdf' },
+    loesungen: [{ name: 'Datenbanksysteme_Loesungen.docx', label: 'Lösungsheft (Word)' }, { name: 'Datenbanksysteme_Loesungen.pdf', label: 'Lösungsheft (PDF)' }],
+    deckblatt: 'teile/deckblatt.pdf',
+    staende: IT.map((t, k) => ({ id: t.id, label: t.label, datei: 'teile/I-stand' + (k + 1) + '.pdf', seiten: pages(MAT + 'teile/I-stand' + (k + 1) + '.pdf') })),
+    teile: TEILE.filter(t => t.kap === 'II').map(t => ({ ...t, datei: 'teile/' + t.id + '.pdf', seiten: pages(MAT + 'teile/' + t.id + '.pdf') })),
+    stufen: STUFEN,
+    version: hash(MAT + 'Datenbanksysteme.pdf') + '.' + teile.map(f => hash(MAT + 'teile/' + f)).join('').slice(0, 10)
+  };
+  writeFileSync(MAT + 'material.json', JSON.stringify(manifest, null, 2) + '\n');
+  // Lösungsheft als PDF (bleibt in arbeitsblatt/, wird vom Admin hochgeladen)
+  copyFileSync(OUT + '/Datenbanksysteme_Loesungen.docx', tmp + '/Datenbanksysteme_Loesungen.docx');
+  pdf([tmp + '/Datenbanksysteme_Loesungen.docx'], OUT);
+  rmSync(tmp, { recursive: true, force: true });
+  console.log('Teile:', manifest.staende.map(x => x.id + ' ' + x.seiten + ' S.').join(', '), '|', manifest.teile.map(x => x.id + ' ' + x.seiten).join(', '));
+}
 console.log('fertig');
