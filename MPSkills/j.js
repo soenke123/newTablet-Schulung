@@ -711,6 +711,8 @@ function paintRoom(data, token) {
   MPRoom.snapshot(r.code, r);
   document.getElementById('rTitle').textContent = r.title;
   document.getElementById('rTool').textContent  = r.tool_title || '';
+  // Für „Feedback & Fragen": aus welchem Skill geschrieben wird.
+  window.MPSFeedbackContext = 'Skill: ' + (r.tool_title || r.tool_id || '?') + (r.title ? ' · Raum: ' + r.title : '');
   document.getElementById('rTip').innerHTML     = window.MPIcons.svg(r.tool_id);
   // Der Reiter trug bis hierher, was im Gerätespeicher stand — das
   // kann von gestern sein. Ab jetzt steht der Name des Skills drauf,

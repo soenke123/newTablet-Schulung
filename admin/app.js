@@ -4070,7 +4070,10 @@ function renderTickets() {
     const more = long
       ? `<button type="button" class="linkish js-ticket-more" data-id="${t.id}">${open ? 'weniger' : 'mehr anzeigen'}</button>`
       : '';
-    const page = t.page ? `<small class="muted">gesendet von ${escapeHtml(t.page)}</small>` : '';
+    // Seit 08.11.2026 hängt feedback.js in MPSkills-Räumen „· Skill: … · Raum: …" an.
+    const pageParts = String(t.page || '').split(' · ');
+    const page = t.page ? `<small class="muted">gesendet von ${escapeHtml(pageParts[0])}${
+      pageParts.slice(1).map(x => ' · ' + (/^Skill: /.test(x) ? `<b>${escapeHtml(x)}</b>` : escapeHtml(x))).join('')}</small>` : '';
     const opts = ['<option value="">Neu</option>']
       .concat(Object.entries(TICKET_PRIORITY).map(([k, v]) =>
         `<option value="${k}"${t.priority === k ? ' selected' : ''}>${v.label}</option>`))

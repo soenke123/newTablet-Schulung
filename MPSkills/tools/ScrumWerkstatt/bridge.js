@@ -126,13 +126,27 @@
                     : JSON.parse(JSON.stringify(DEFAULT_PRODUCT)),
       team: (view.members || []).map(m => ({
         id: m.id, name: m.name, role: m.role, label: m.label || '',
-        avatar: m.avatar || null, online: !!m.online, me: !!m.me, key: m.key || null
+        // Profilbild des MPSkills-Kontos (0280); ohne Konto: Buchstaben.
+        accAv: m.account_avatar ? accountAvatarUrl(m.account_avatar) : null,
+        online: !!m.online, me: !!m.me, key: m.key || null
       })),
       stories,
       sprints,
       active: act ? act.id : null,
       seq: { story: view.seq?.story || 0, sprint: view.seq?.sprint || 0 }
     };
+  }
+
+  /* Profilbild eines Kontos: avatars.js der Seite drumherum kennt den
+     Katalog (unbekannte ids → Standardbild). Die Adresse gilt relativ
+     zur Seite drumherum, das Bild steht aber in diesem Rahmen — darum
+     absolut machen. */
+  function accountAvatarUrl(id) {
+    try {
+      const P = global.parent;
+      if (!P || typeof P.getAvatarUrl !== 'function') return null;
+      return new URL(P.getAvatarUrl(String(id), '../'), P.location.href).href;
+    } catch (e) { return null; }
   }
 
   function remember(state) {
@@ -189,7 +203,19 @@
   // wird es deshalb über eine Funktion, die index.html bereitstellt.
   function setS(next) { if (typeof global.swSetS === 'function') global.swSetS(next); }
 
+  /* Daily-Uhr und Goal-Sperre gehen sofort an die Seite — auch wenn
+     der Rest der Ansicht wartet, weil gerade jemand tippt. */
+  function live(view) {
+    if (view.daily) {
+      SW.daily = view.daily;
+      if (typeof view.now === 'number') SW.offset = view.now - Date.now();
+    }
+    SW.goalEdit = view.goal_edit || null;
+    if (typeof global.swLive === 'function') global.swLive();
+  }
+
   function offer(view) {
+    live(view);
     if (inflight || again) { deferred = view; return; }
     if (typing()) { deferred = view; return; }
     deferred = null;
@@ -242,7 +268,9 @@
     observer_locked: 'Beobachter können dem Team nicht nachträglich beitreten.',
     not_found:       'Das gibt es nicht (mehr).',
     invalid_input:   'Die Datei passt nicht zu einem Scrum-Projekt.',
-    fn_missing:      'Auf dem Server fehlt die neueste Migration (0198). Bitte der Lehrkraft Bescheid sagen.'
+    not_yours:       'Das Label ändert nur die Person selbst.',
+    goal_busy:       'Gerade schreibt jemand anderes am Product Goal — warte, bis das Feld wieder frei ist.',
+    fn_missing:      'Auf dem Server fehlt die neueste Migration (0280). Bitte der Lehrkraft Bescheid sagen.'
   };
   SW.splitProduct = splitProduct;
   SW.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
@@ -308,6 +336,69 @@
       SW.refresh();
     }
     if (deferred && !typing()) offer(deferred);
+  };
+
+  // Bis nichts mehr unterwegs ist (höchstens 6 s).
+  SW.idle = function () {
+    return new Promise(resolve => {
+      const t0 = Date.now();
+      (function wait() {
+        if ((!inflight && !again) || Date.now() - t0 > 6000) return resolve();
+        setTimeout(wait, 100);
+      })();
+    });
+  };
+
+  /* ─── Daily-Uhr (0280) ─────────────────────────────────── */
+  // action: 'start' | 'pause' | 'reset' | 'turn' (mit id). Der Server
+  // rechnet die Zeit; die Antwort ist der neue Zustand für alle.
+  SW.daily = null;
+  SW.offset = 0;
+  SW.dailyAct = async function (action, id) {
+    if (SW.ro) { global.toast(SW.msg('read_only')); return null; }
+    const res = await SW.call(SW.owner ? 'scrum_room_daily' : 'scrum_daily',
+                              { p_action: action, p_id: id || null });
+    if (!res || !res.ok) { global.toast(SW.msg(res && res.error)); SW.refresh(); return null; }
+    SW.daily = res.daily;
+    if (typeof res.now === 'number') SW.offset = res.now - Date.now();
+    SW.refresh();
+    return res.daily;
+  };
+
+  /* ─── Product Goal: Schreibsperre (0280) ─────────────────── */
+  // SW.goalEdit: { key, name } — wer gerade schreibt, oder null.
+  SW.goalEdit = null;
+  SW.myKey = () => SW.owner ? 'owner' : 'p:' + (SW.me && SW.me.id);
+  SW.goalMine = () => !!SW.goalEdit && SW.goalEdit.key === SW.myKey();
+  SW.goalOther = () => !!SW.goalEdit && SW.goalEdit.key !== SW.myKey();
+
+  // on=true: greifen/verlängern. Beim Greifen kommt der aktuelle Stand
+  // des Goals mit; er wird hier als „bekannt" gemerkt und zurückgegeben,
+  // damit die Seite ihn ins Feld übernimmt.
+  SW.goalLock = async function (on) {
+    if (SW.ro) return { ok: false, error: 'read_only' };
+    const res = await SW.call(SW.owner ? 'scrum_room_goal_edit' : 'scrum_goal_edit', { p_on: !!on });
+    if (!res) return { ok: false, error: 'network' };
+    if (on && res.ok) {
+      SW.goalEdit = { key: SW.myKey(), name: '' };
+      if (res.goal && res.goal.data) {
+        const k = keyOf('product', 'goal');
+        const cur = known[k];
+        if (!cur || cur.v <= res.goal.v) {
+          known[k] = { v: res.goal.v, json: canon(res.goal.data) };
+          if (lastView) {
+            const li = lastView.items.find(i => i.kind === 'product' && i.id === 'goal');
+            if (li) { li.v = res.goal.v; li.data = res.goal.data; }
+            else lastView.items.push({ kind: 'product', id: 'goal', v: res.goal.v, data: res.goal.data });
+          }
+        }
+      }
+    } else if (!on && res.ok) {
+      if (SW.goalMine()) SW.goalEdit = null;
+    } else if (res.error === 'goal_busy') {
+      SW.goalEdit = { key: '?', name: res.name || 'Jemand' };
+    }
+    return res;
   };
 
   /* ─── Team ──────────────────────────────────────────────── */

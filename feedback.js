@@ -227,6 +227,21 @@
     }
   }
 
+  /* Woher die Nachricht kommt: der Pfad, und in einem MPSkills-Raum
+     zusätzlich der Skill (window.MPSFeedbackContext, gesetzt von
+     MPSkills/j.js und lehrer.js), z. B.
+     „/MPSkills/j.html · Skill: Scrum Werkstatt · Raum: Team Blau".
+     Der Server kürzt auf 200 Zeichen. */
+  function pageInfo() {
+    var p = location.pathname;
+    try {
+      var c = window.MPSFeedbackContext;
+      if (typeof c === 'function') c = c();
+      if (c) p += ' · ' + String(c).replace(/\s+/g, ' ').trim();
+    } catch (e) {}
+    return p.slice(0, 200);
+  }
+
   async function send() {
     var body = el('text').value.trim();
     if (!state.cat || !body || body.length > MAX || state.busy) return;
@@ -241,7 +256,7 @@
       var res = await client.rpc('submit_feedback', {
         p_category: state.cat,
         p_body:     body,
-        p_page:     location.pathname
+        p_page:     pageInfo()
       });
       if (res.error) throw res.error;
       var data = res.data || {};
