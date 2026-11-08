@@ -1,5 +1,5 @@
 -- ═════════════════════════════════════════════════════════════
--- 0280 — Scrum Werkstatt: Konto-Profilbild, Label nur selbst,
+-- 0281 — Scrum Werkstatt: Konto-Profilbild, Label nur selbst,
 --        gemeinsame Daily-Uhr, Schreibsperre am Product Goal
 -- ═════════════════════════════════════════════════════════════
 -- 1) Profilbild: Wer mit Konto im Raum ist (skill_participants.user_id),
@@ -20,7 +20,7 @@
 --    Signatur — läuft sie ab (Tablet zugeklappt), merken es alle beim
 --    nächsten Takt. Beim Greifen kommt der aktuelle Stand des Goals mit,
 --    damit niemand auf einer alten Fassung weiterschreibt.
--- Prüfstand: supabase/tests/0280_scrum_daily_goal_avatar.mjs
+-- Prüfstand: supabase/tests/0281_scrum_daily_goal_avatar.mjs
 -- ═════════════════════════════════════════════════════════════
 
 alter table scrum_rooms add column if not exists daily             jsonb;
@@ -29,9 +29,9 @@ alter table scrum_rooms add column if not exists goal_editor_name  text;
 alter table scrum_rooms add column if not exists goal_editor_until timestamptz;
 
 comment on column scrum_rooms.daily is
-  'Daily-Uhr des Teams (0280): {left: Sekunden Rest zum Zeitpunkt at, run, at: Server-Zeit in ms, turn, spoke:[ids]}.';
+  'Daily-Uhr des Teams (0281): {left: Sekunden Rest zum Zeitpunkt at, run, at: Server-Zeit in ms, turn, spoke:[ids]}.';
 comment on column scrum_rooms.goal_editor is
-  'Wer gerade am Product Goal schreibt (0280): ''p:<participant>'' oder ''owner''. Gilt bis goal_editor_until.';
+  'Wer gerade am Product Goal schreibt (0281): ''p:<participant>'' oder ''owner''. Gilt bis goal_editor_until.';
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -510,7 +510,7 @@ declare
 begin
   v_src := pg_get_functiondef('scrum_apply_ops(uuid, uuid, jsonb)'::regprocedure);
   if position('scrum_goal_blocked(' in v_src) > 0 then
-    raise notice '0280: scrum_apply_ops schon umgestellt, übersprungen';
+    raise notice '0281: scrum_apply_ops schon umgestellt, übersprungen';
   else
     v_new := replace(v_src,
       $a$      if v_kind = 'product' and not scrum_product_ok(v_data) then$a$,
@@ -519,7 +519,7 @@ begin
           return jsonb_build_object('ok', false, 'error', 'goal_busy', 'kind', v_kind, 'id', v_id);
         end if;
         if v_kind = 'product' and not scrum_product_ok(v_data) then$b$);
-    if v_new = v_src then raise exception '0280: Stelle in scrum_apply_ops nicht gefunden'; end if;
+    if v_new = v_src then raise exception '0281: Stelle in scrum_apply_ops nicht gefunden'; end if;
     execute v_new;
   end if;
 end

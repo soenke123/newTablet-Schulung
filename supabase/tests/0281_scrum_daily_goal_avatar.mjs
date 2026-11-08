@@ -1,8 +1,8 @@
-/* Prüfstand für Migration 0280 — Scrum Werkstatt: Konto-Profilbild,
+/* Prüfstand für Migration 0281 — Scrum Werkstatt: Konto-Profilbild,
    Label nur selbst, gemeinsame Daily-Uhr, Schreibsperre am Product Goal.
    Echt gerechnet in pglite auf der ganzen Kette.
 
-   Aufruf:  node supabase/tests/0280_scrum_daily_goal_avatar.mjs */
+   Aufruf:  node supabase/tests/0281_scrum_daily_goal_avatar.mjs */
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';

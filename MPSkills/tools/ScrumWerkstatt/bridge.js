@@ -126,7 +126,7 @@
                     : JSON.parse(JSON.stringify(DEFAULT_PRODUCT)),
       team: (view.members || []).map(m => ({
         id: m.id, name: m.name, role: m.role, label: m.label || '',
-        // Profilbild des MPSkills-Kontos (0280); ohne Konto: Buchstaben.
+        // Profilbild des MPSkills-Kontos (0281); ohne Konto: Buchstaben.
         accAv: m.account_avatar ? accountAvatarUrl(m.account_avatar) : null,
         online: !!m.online, me: !!m.me, key: m.key || null
       })),
@@ -270,7 +270,7 @@
     invalid_input:   'Die Datei passt nicht zu einem Scrum-Projekt.',
     not_yours:       'Das Label ändert nur die Person selbst.',
     goal_busy:       'Gerade schreibt jemand anderes am Product Goal — warte, bis das Feld wieder frei ist.',
-    fn_missing:      'Auf dem Server fehlt die neueste Migration (0280). Bitte der Lehrkraft Bescheid sagen.'
+    fn_missing:      'Auf dem Server fehlt die neueste Migration (0281). Bitte der Lehrkraft Bescheid sagen.'
   };
   SW.splitProduct = splitProduct;
   SW.msg = code => MSG[code] || 'Das hat nicht geklappt. Bitte noch einmal.';
@@ -349,7 +349,7 @@
     });
   };
 
-  /* ─── Daily-Uhr (0280) ─────────────────────────────────── */
+  /* ─── Daily-Uhr (0281) ─────────────────────────────────── */
   // action: 'start' | 'pause' | 'reset' | 'turn' (mit id). Der Server
   // rechnet die Zeit; die Antwort ist der neue Zustand für alle.
   SW.daily = null;
@@ -365,7 +365,7 @@
     return res.daily;
   };
 
-  /* ─── Product Goal: Schreibsperre (0280) ─────────────────── */
+  /* ─── Product Goal: Schreibsperre (0281) ─────────────────── */
   // SW.goalEdit: { key, name } — wer gerade schreibt, oder null.
   SW.goalEdit = null;
   SW.myKey = () => SW.owner ? 'owner' : 'p:' + (SW.me && SW.me.id);

@@ -2031,7 +2031,7 @@ function canEditPO(){
 function canEditGoal(){
   if(!SW.on) return true;
   if(SW.ro) return false;
-  if(SW.goalOther()) return false;   // jemand anderes schreibt gerade (0280)
+  if(SW.goalOther()) return false;   // jemand anderes schreibt gerade (0281)
   return !S.product.goalLocked;
 }
 
@@ -2651,7 +2651,7 @@ function renderTeam(){
 /* Das Team im Raum: die Kacheln entstehen beim Beitritt (wer „Ich bin
    im Team" wählt), nicht über einen Knopf. Name kommt aus dem Raum.
    Die Rolle verteilt das Team an jeder Karte; das Label ändert nur das
-   Mitglied selbst (und die Lehrkraft, 0280). Das Bild ist das Profilbild
+   Mitglied selbst (und die Lehrkraft, 0281). Das Bild ist das Profilbild
    des MPSkills-Kontos, ohne Konto die Buchstaben. Gespeichert wird
    sofort (scrum_member_update), nicht über save(). */
 function renderTeamRoom(){
@@ -3272,7 +3272,7 @@ function openArchive(id){
    DAILY STANDUP
    ════════════════════════════════════════════════════════════ */
 /* Die Uhr ist EIN Zustand für das ganze Team (im Raum: scrum_rooms.daily,
-   0280). left = Sekunden Rest zum Zeitpunkt at (ms, Server-Uhr); läuft
+   0281). left = Sekunden Rest zum Zeitpunkt at (ms, Server-Uhr); läuft
    sie (run), rechnet jedes Gerät selbst herunter — mit dem Abstand
    seiner Uhr zur Server-Uhr (SW.offset). Ohne Raum dasselbe lokal. */
 const DAILY_LEN=300;
@@ -3359,7 +3359,7 @@ function go(v,fromHash){
   window.scrollTo({top:0,behavior:fromHash?'auto':'smooth'});
 }
 
-/* ── Product Goal: Sperre greifen / halten / loslassen (0280) ── */
+/* ── Product Goal: Sperre greifen / halten / loslassen (0281) ── */
 let goalHeld=false, goalDirty=false, goalHb=null, goalRel=null, goalBusyCall=false;
 async function goalGrab(){
   clearTimeout(goalRel); goalRel=null;
@@ -3579,7 +3579,7 @@ function wire(){
       },'Fixieren');
     }
   };
-  /* Schreiben am Goal (0280): Im Raum hält, wer im Feld ist, eine Sperre
+  /* Schreiben am Goal (0281): Im Raum hält, wer im Feld ist, eine Sperre
      (scrum_goal_edit). Gespeichert wird nur, was wirklich getippt wurde
      (goalDirty) — früher schrieb schon das bloße Verlassen des Feldes
      den Inhalt dieses Geräts zurück, auch einen leeren oder alten. */
