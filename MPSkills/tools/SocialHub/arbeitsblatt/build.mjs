@@ -12,6 +12,17 @@ const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageR
   ShadingType, PageBreak, Footer, Header, PageNumber, TabStopType, VerticalAlign, LevelFormat, TableLayoutType, HeightRule,
   HorizontalPositionRelativeFrom, HorizontalPositionAlign, VerticalPositionRelativeFrom, TextWrappingType, TextWrappingSide } = D;
 
+// Querverweise [[id]] → „5 k)“, [[id:kurz]] → „k)“ (Buchstaben verschieben sich beim Kürzen)
+const REF = {};
+for (const b of DOC) if (b.t === 'task') b.items.forEach((it, i) => { if (it.id) REF[it.id] = { n: b.n, l: String.fromCharCode(97 + i) }; });
+(function walk(o) {
+  for (const k of Object.keys(o)) {
+    if (typeof o[k] === 'string') o[k] = o[k].replace(/\[\[(\w+)(:kurz)?\]\]/g, (m, id, kurz) => { const r = REF[id]; if (!r) throw new Error('Verweis fehlt: ' + id); return kurz ? r.l + ')' : r.n + ' ' + r.l + ')'; });
+    else if (o[k] && typeof o[k] === 'object') walk(o[k]);
+  }
+})(DOC);
+const STAR = readFileSync(new URL('./bilder/knobeln.png', import.meta.url).pathname);
+const star = (px = 13) => new ImageRun({ type: 'png', data: STAR, transformation: { width: px, height: px } });
 const OUT = process.argv[2] || new URL('.', import.meta.url).pathname;
 const IMG = new URL('./bilder/', import.meta.url).pathname;
 const DAY = '2026-11-07';
@@ -212,12 +223,14 @@ function taskBlock(b) {
   b.items.forEach((it, i) => {
     kids.push(new Paragraph({ children: [new TextRun({ text: L(i) + ')', font: FONT, size: 20, bold: true, color: C.hub }), new TextRun({ text: '\t', font: FONT }),
       ...(it.deep ? [new TextRun({ text: '* ', font: FONT, size: 20, bold: true, color: C.hub })] : []),
-      ...(it.star ? [new TextRun({ text: '★ ', font: FONT, size: 20, color: C.gold })] : []), ...runs(it.text, { size: 20 })],
+      ...(it.star ? [star(), new TextRun({ text: ' ', font: FONT, size: 20 })] : []), ...runs(it.text, { size: 20 })],
       tabStops: [{ type: TabStopType.LEFT, position: 400 }], indent: { left: 400, hanging: 400 }, spacing: { after: it.compare ? 80 : 110, line: 276 }, keepNext: !!it.compare }));
     if (it.compare) { kids.push(compareTable(it.compare[0], it.compare[1], iw)); kids.push(spacer(120)); }
   });
-  const legend = [b.items.some(x => x.deep) ? '* nur mit tieferen SQL-Befehlen lösbar (Abschnitt 4)' : null, b.items.some(x => x.star) ? '★ = zum Knobeln' : null].filter(Boolean).join('    ·    ');
-  if (legend) kids.push(P(legend, { run: { size: 15, color: C.muted }, after: 0, align: AlignmentType.RIGHT }));
+  const lg = [];
+  if (b.items.some(x => x.deep)) lg.push(new TextRun({ text: '* nur mit tieferen SQL-Befehlen lösbar (Abschnitt 4)', font: FONT, size: 15, color: C.muted }));
+  if (b.items.some(x => x.star)) { if (lg.length) lg.push(new TextRun({ text: '    ·    ', font: FONT, size: 15, color: C.muted })); lg.push(star(10), new TextRun({ text: ' zum Knobeln (freiwillig)', font: FONT, size: 15, color: C.muted })); }
+  if (lg.length) kids.push(new Paragraph({ children: lg, alignment: AlignmentType.RIGHT, spacing: { after: 0 } }));
   return [tbl([new TableRow({ children: [cell(kids, { w: W, fill: 'FFFFFF', borders: { top: line(C.line2), bottom: line(C.line2), right: line(C.line2), left: { style: BorderStyle.SINGLE, size: 30, color: C.hub } }, margins: { top: 180, bottom: 160, left: 240, right: 240 } })] })], [W]), spacer(260)];
 }
 function tables2(b) {
@@ -303,7 +316,7 @@ sol.push(...bullets([
   '**E-Mail-Domain** = Name des Netzwerks, klein und ohne Sonderzeichen (hier `@liky.test`).',
   '**Klassen-Netz:** Für Aufgabe 12 und 13 c) brauchen die Gruppen dort Admin-Rechte: `UPDATE users SET role = \'admin\' WHERE username IN (…)`. Im Klassen-Netz gibt es keine Dummy-User, aber die Beispiel-Werbung.',
   '**Fehlermeldungen sind manchmal gewollt** (7 l, 10 a, 10 d): Sie sind in den Lösungen rot markiert.',
-  '**\\*** an einer Teilaufgabe = nur mit den Befehlen aus Abschnitt 4 (Tiefer in SQL) lösbar; ★ = zum Knobeln.'
+  '**\\*** an einer Teilaufgabe = nur mit den Befehlen aus Abschnitt 4 (Tiefer in SQL) lösbar; Stern = zum Knobeln (freiwillig, schwerer).'
 ]));
 sol.push(new Paragraph({ children: [new PageBreak()] }));
 for (const b of DOC) {
@@ -312,7 +325,7 @@ for (const b of DOC) {
   if (b.open) sol.push(P('*Offene Aufgabe – jede und jeder findet etwas anderes. Beispiele für mögliche Befehle:*', { run: { size: 18, color: C.muted } }));
   if (b.note) sol.push(...boxBlock('loes', '', [b.note]));
   (b.open ? b.examples : b.items).forEach((it, i) => {
-    sol.push(new Paragraph({ children: [new TextRun({ text: L(i) + ')', font: FONT, size: 20, bold: true, color: C.hub }), new TextRun({ text: '\t' }), ...(it.star ? [new TextRun({ text: '★ ', color: C.gold })] : []), ...runs(it.text, { size: 18, color: C.muted })],
+    sol.push(new Paragraph({ children: [new TextRun({ text: L(i) + ')', font: FONT, size: 20, bold: true, color: C.hub }), new TextRun({ text: '\t' }), ...(it.star ? [star(12), new TextRun({ text: ' ' })] : []), ...runs(it.text, { size: 18, color: C.muted })],
       tabStops: [{ type: TabStopType.LEFT, position: 400 }], indent: { left: 400, hanging: 400 }, spacing: { before: 120, after: 80 }, keepNext: true }));
     if (it.deep) sol.push(P('*braucht Abschnitt 4 (Tiefer in SQL)*', { run: { size: 15, color: C.hub }, indent: { left: 400 }, after: 60 }));
     const sqls = it.sol ? [].concat(it.sol) : [];
