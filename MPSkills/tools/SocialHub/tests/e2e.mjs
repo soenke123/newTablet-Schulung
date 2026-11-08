@@ -508,6 +508,57 @@ try {
   await mia.app.locator('#dbRun').click();
   await mia.app.locator('.res--bad').first().waitFor();
   ok('5  DROP TABLE gesperrt', (await db.query(`select count(*)::int n from sh_users u join sh_hubs h on h.id = u.hub_id where h.name = 'Pixelwelt'`)).rows[0].n === 3);
+
+  /* 5d Befehl speichern (0280): rechts neben „Ausführen“, Fenster mit zwei Spalten, Teilen */
+  const tb = await mia.app.locator('.db-tools').boundingBox(), sb = await mia.app.locator('.cmd-save').boundingBox();
+  ok('5d „Befehl speichern“ rechts in der Zeile von „Ausführen“', sb && Math.abs((sb.x + sb.width) - (tb.x + tb.width)) < 70 && Math.abs(sb.y - (await mia.app.locator('#dbRun').boundingBox()).y) < 10, JSON.stringify([tb, sb]));
+  await mia.app.locator('.ed-ta').fill('SELECT username FROM users;');
+  await mia.app.locator('.cmd-save').click();
+  ok('5d Dialog: Aufgabe oben, darunter der aktive Befehl', await mia.app.locator('.cmd-dlg textarea[name=sql]').inputValue() === 'SELECT username FROM users;');
+  await mia.app.locator('.cmd-dlg input[name=task]').fill('Aufgabe 1b');
+  await mia.app.locator('.cmd-dlg button[type=submit]').click();
+  await mia.app.locator('.cmd-dlg').waitFor({ state: 'detached' });
+  await mia.app.locator('.ed-ta').fill('SELECT name FROM users;');
+  await mia.app.locator('.cmd-save').click();
+  await mia.app.locator('.cmd-dlg input[name=task]').fill('Aufgabe 2');
+  await mia.app.locator('.cmd-dlg button[type=submit]').click();
+  await mia.app.locator('.cmd-dlg').waitFor({ state: 'detached' });
+  let cm = (await db.query(`select task, sql from sh_cmds order by pos`)).rows;
+  ok('5d zwei Befehle am Konto gespeichert', cm.length === 2 && cm[0].task === 'Aufgabe 1b' && cm[0].sql === 'SELECT username FROM users;', JSON.stringify(cm));
+  await mia.page.setViewportSize({ width: 1000, height: 760 });
+  await mia.app.locator('.cmd-open').click();
+  await mia.app.locator('.cmd-card').nth(1).waitFor();
+  await wait(400);
+  const cols = await mia.app.locator('.cmd-card').evaluateAll(c => c.map(x => Math.round(x.getBoundingClientRect().left)));
+  ok('5d Fenster: zwei Spalten, Stift, Mülltonne, Teilen', cols[0] !== cols[1] && await mia.app.locator('.cmd-card [data-a="edit"]').count() === 2
+     && await mia.app.locator('.cmd-card [data-a="del"]').count() === 2 && await mia.app.locator('.cmd-card [data-a="share"]').count() === 2, cols.join());
+  await shot(mia.page, '5d-befehle');
+  // Drag & Drop: zweite Karte am Griff vor die erste ziehen
+  const g = await mia.app.locator('.cmd-card').nth(1).locator('.cmd-grip').boundingBox();
+  const c0 = await mia.app.locator('.cmd-card').nth(0).boundingBox();
+  await mia.page.mouse.move(g.x + g.width / 2, g.y + g.height / 2);
+  await mia.page.mouse.down();
+  await mia.page.mouse.move(c0.x + 40, c0.y + 30, { steps: 8 });
+  await mia.page.mouse.up();
+  await wait(400);
+  cm = (await db.query(`select task from sh_cmds order by pos`)).rows.map(x => x.task);
+  ok('5d per Drag & Drop sortiert (gespeichert)', cm.join() === 'Aufgabe 2,Aufgabe 1b', cm.join());
+  await mia.app.locator('.cmd-card', { hasText: 'Aufgabe 2' }).locator('[data-a="edit"]').click();
+  await mia.app.locator('.cmd-dlg input[name=task]').fill('Aufgabe 2a');
+  await mia.app.locator('.cmd-dlg button[type=submit]').click();
+  await mia.app.locator('.cmd-card', { hasText: 'Aufgabe 2a' }).waitFor();
+  ok('5d bearbeiten', (await db.query(`select count(*)::int n from sh_cmds where task = 'Aufgabe 2a'`)).rows[0].n === 1);
+  await mia.app.locator('.cmd-card', { hasText: 'Aufgabe 1b' }).locator('[data-a="share"]').click();
+  await mia.app.locator('.cmd-share.is-done').waitFor();
+  const ib = (await db.query(`select from_name, task, sql from sh_cmd_inbox`)).rows;
+  ok('5d Teilen: Kopie bei der Lehrkraft „Aufgabe 1b von Mia“', ib.length === 1 && ib[0].from_name === 'Mia' && ib[0].task === 'Aufgabe 1b', JSON.stringify(ib));
+  const del = mia.app.locator('.cmd-card', { hasText: 'Aufgabe 2a' }).locator('[data-a="del"]');
+  await del.click(); await del.click();
+  await mia.app.locator('.cmd-card', { hasText: 'Aufgabe 2a' }).waitFor({ state: 'detached' });
+  ok('5d löschen (zweimal tippen)', (await db.query(`select count(*)::int n from sh_cmds`)).rows[0].n === 1);
+  await mia.app.locator('.cmd-card [data-a="use"]').click();
+  ok('5d „In den Editor“ übernimmt den Befehl', await mia.app.locator('.ed-ta').inputValue() === 'SELECT username FROM users;' && await mia.app.locator('.cmd-win').count() === 0);
+  await mia.page.setViewportSize({ width: 400, height: 760 });
   await mia.app.locator('.subtabs [data-at="diagram"]').click();
   await mia.app.locator('.dg-svg .dg-t').first().waitFor();
   ok('5  Klassendiagramm mit allen 7 Tabellen', await mia.app.locator('.dg-svg .dg-t').count() === 7);
@@ -543,6 +594,23 @@ try {
   ok('6  Lehrkraft liked mit Testkonto im Schüler-Netzwerk', (await db.query(`select count(*)::int n from sh_likes`)).rows[0].n === 2);
   await t.app.locator('[data-view="admin"]').click();
   await shot(t.page, '6c-lehrkraft-admin');
+
+  // 6d Befehle (0280): Lehrkraft hat „Eigene“ und „Geteilt“, rote Zahl am Symbol
+  await t.app.locator('.cmd-open').waitFor();
+  await t.app.locator('.cmd-open').click();
+  await t.app.locator('.cmd-tabs [data-tab="inbox"]').click();
+  await t.app.locator('.cmd-card--in').first().waitFor();
+  const inTxt = await t.app.locator('.cmd-card--in').first().textContent();
+  ok('6d Lehrkraft: Reiter Eigene/Geteilt, „Aufgabe 1b von Mia“ mit dem Befehl', await t.app.locator('.cmd-tabs [data-tab]').count() === 2
+     && /Aufgabe 1b\s*von Mia/.test(inTxt) && /SELECT username FROM users;/.test(inTxt), inTxt);
+  ok('6d Lehrkraft hat kein „Teilen“', await t.app.locator('[data-a="share"]').count() === 0);
+  await shot(t.page, '6d-lehrkraft-geteilt');
+  const tdel = t.app.locator('.cmd-card--in [data-a="del"]').first();
+  await tdel.click(); await tdel.click();
+  await t.app.locator('.cmd-card--in').waitFor({ state: 'detached' });
+  ok('6d Lehrkraft löscht die Kopie, Mias Befehl bleibt', (await db.query(`select (select count(*) from sh_cmd_inbox)::int i, (select count(*) from sh_cmds)::int c`)).rows[0].i === 0
+     && (await db.query(`select count(*)::int n from sh_cmds`)).rows[0].n === 1);
+  await t.app.locator('[data-close]').click();
 
   /* 7  Analytics / Tracking (0270): Lehrkraft erstellt sessions + views im
      Diagramm → Mias Gerät läuft von selbst mit, das nachgebaute „Zulassen?“

@@ -1030,7 +1030,9 @@
     if (!h.admin) S.view = 'app';
     const admin = S.view === 'admin';
     const nav = [['feed', IC.home, 'Start'], ['search', IC.search, 'Suche']];
-    if (h.me) nav.push(['post', IC.plus, '']);
+    // ＋ nur, wenn es die Tabelle photos gibt – ohne sie gibt es nichts zu posten
+    if (h.me && on('photos')) nav.push(['post', IC.plus, '']);
+    else if (S.tab === 'post') S.tab = 'feed';
     if (h.me) nav.push(['profile', IC.user, 'Profil']);
     const sub = [['sql', IC.code, 'SQL'], ['diagram', IC.table, 'Diagramm']];
     // Werbung (0276): eigener Reiter, sobald es die Tabelle ads gibt
@@ -1861,7 +1863,7 @@
       if (S.screen !== 'hub' || !S.hub) return;
       manageTrack();                                // sessions erstellt/entzogen → Tracking an/aus
       if (JSON.stringify([S.hub.tables, S.hub.upload]) === prev) return;
-      if (S.view === 'app' && (S.tab === 'feed' || S.tab === 'search' || S.tab === 'profile')) renderHub();
+      if (S.view === 'app' && (S.tab === 'feed' || S.tab === 'search' || S.tab === 'profile' || (S.tab === 'post' && !on('photos')))) renderHub();
       else toast('Die Lehrkraft hat die Tabellen geändert.');
     } else if (S.screen === 'home') {
       loadHome(true);

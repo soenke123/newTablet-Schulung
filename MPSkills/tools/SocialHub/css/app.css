@@ -834,3 +834,62 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .wb-prev-n { margin: 0; text-align: center; }
 .wb-prev-b svg { font-size: 15px; }
 @media (max-width: 760px) { .wb-prev-b span { display: none; } }
+
+/* ══ Befehle speichern (0280, js/befehle.js) ═══════════════════ */
+.db-sp { flex: 1; }
+.cmd-bar { display: inline-flex; align-items: center; gap: 6px; }
+.cmd-save svg { font-size: 16px; }
+.cmd-open { position: relative; width: 34px; height: 32px; border-radius: 8px; border: 1px solid var(--line2); background: var(--surface); display: grid; place-items: center; font-size: 17px; color: var(--ink); }
+.cmd-open:hover { border-color: var(--ink); }
+.cmd-badge { position: absolute; top: -7px; right: -7px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px; background: var(--bad); color: #fff; font: 700 11px/18px var(--font-body, inherit); text-align: center; }
+.cmd-badge[hidden] { display: none; }
+
+.cmd-dlg { max-width: 560px; display: flex; flex-direction: column; gap: 12px; }
+.cmd-lbl { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); font-weight: 600; }
+.cmd-lbl input, .cmd-lbl textarea { width: 100%; padding: 10px 14px; border-radius: 12px; border: 1.5px solid var(--line2); background: var(--surface); color: var(--ink); font-size: 16px; font-weight: 400; outline: none; }
+.cmd-lbl input { min-height: 46px; font-weight: 650; }
+.cmd-lbl textarea { font: 14px/1.5 var(--font-mono); resize: vertical; min-height: 120px; background: var(--soft); white-space: pre; overflow: auto; }
+.cmd-lbl input:focus, .cmd-lbl textarea:focus { border-color: var(--hub); box-shadow: 0 0 0 3px var(--accent-dim); }
+.cmd-err { color: var(--bad); font-size: 14px; margin: 0; }
+.cmd-err[hidden] { display: none; }
+.cmd-dlg .dlg-acts { margin-top: 4px; }
+
+.cmd-win-back { place-items: stretch center; }
+.cmd-win { width: 100%; max-width: 1040px; height: min(88vh, 100%); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow-pop); overflow: hidden; align-self: center; }
+.cmd-win-h { display: flex; align-items: center; gap: 12px; padding: 12px 12px 12px 20px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.cmd-win-h h3 { margin: 0; font: 700 19px var(--font-display); }
+.cmd-sp { flex: 1; }
+.cmd-tabs { display: inline-flex; background: var(--soft); border-radius: 10px; padding: 3px; gap: 2px; }
+.cmd-tabs[hidden] { display: none; }
+.cmd-tabs button { border: 0; background: transparent; padding: 6px 14px; border-radius: 8px; font-weight: 650; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+.cmd-tabs button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.cmd-tabs span { font-size: 12px; background: var(--soft2); border-radius: 99px; padding: 1px 7px; }
+.cmd-tabs span.new { background: var(--bad); color: #fff; }
+.cmd-body { flex: 1; overflow-y: auto; padding: 16px; overscroll-behavior: contain; }
+.cmd-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+@media (max-width: 640px) { .cmd-grid { grid-template-columns: minmax(0, 1fr); } }
+.cmd-card { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; transition: box-shadow .15s, opacity .15s; }
+.cmd-card.is-drag { opacity: .85; box-shadow: 0 0 0 2px var(--hub), var(--shadow-pop); position: relative; z-index: 2; }
+.cmd-grid.is-sorting { user-select: none; -webkit-user-select: none; }
+.cmd-card-h { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.cmd-grip { width: 26px; height: 32px; display: grid; place-items: center; color: var(--muted); cursor: grab; touch-action: none; flex: none; border-radius: 6px; font-size: 18px; }
+.cmd-grip:hover { background: var(--soft); color: var(--ink); }
+.cmd-grip svg circle { fill: currentColor; stroke: none; }
+.is-drag .cmd-grip { cursor: grabbing; }
+.cmd-task { flex: 1; min-width: 0; font: 700 16px var(--font-display); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cmd-task.none { color: var(--muted); font-weight: 500; font-style: italic; }
+.cmd-from { font-weight: 500; color: var(--muted); }
+.cmd-meta { font-size: 12px; color: var(--muted); margin-top: -4px; }
+.cmd-card-h .icon-btn svg { width: 18px; height: 18px; }
+.cmd-share { min-height: 30px; }
+.cmd-share.is-done { color: var(--ok); border-color: var(--ok); }
+.cmd-sql { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); font: 13px/1.5 var(--font-mono); white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; user-select: text; -webkit-user-select: text; }
+.cmd-card-f { display: flex; gap: 6px; flex-wrap: wrap; }
+.cmd-card-f .btn svg, .cmd-inbar .btn svg, .cmd-share svg { font-size: 15px; }
+.is-sure { color: var(--bad) !important; border-color: var(--bad) !important; background: var(--bad-dim) !important; width: auto !important; padding: 0 9px; gap: 4px; border-radius: 8px; font-size: 13px; font-weight: 650; white-space: nowrap; display: inline-flex !important; align-items: center; }
+.cmd-inbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.cmd-inbar .btn { margin-left: auto; }
+.cmd-empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+.cmd-empty > svg { font-size: 40px; opacity: .6; }
+.cmd-empty p { margin: 8px auto; max-width: 420px; }
+.cmd-empty p:first-of-type { color: var(--ink); font-weight: 650; }

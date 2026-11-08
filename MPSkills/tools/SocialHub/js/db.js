@@ -244,6 +244,8 @@
             '<div class="db-tools">' +
               '<button type="button" class="btn btn--accent" id="dbRun">▶ Ausführen</button>' +
               '<span class="db-hint">Strg + Enter</span>' +
+              // Befehl speichern (0280): rechts in derselben Zeile, js/befehle.js
+              '<span class="db-sp"></span><div id="dbCmds"></div>' +
             '</div>' +
             '<div class="sql-ed" id="dbEd"></div>' +
             '<div class="db-out" id="dbOut"><p class="muted">Schreib eine Abfrage und tippe auf Ausführen.</p></div>' +
@@ -260,6 +262,15 @@
     editor.value = 'SELECT * FROM users;';
 
     $('#dbRun').addEventListener('click', () => run());
+
+    // Befehle speichern/teilen (0280) – fehlt das Modul, bleibt die Zeile wie sie war
+    const cmds = window.SHCmds ? window.SHCmds.mount($('#dbCmds'), {
+      call: (n, args) => api('sh_cmd_' + n, args),
+      getSql: () => editor.value,
+      setSql: v => { editor.value = v; editor.focus(); },
+      toast,
+      errText: window.SHApi && window.SHApi.errText
+    }) : null;
     $('#dbReload').addEventListener('click', () => load(true));
 
     function state(t, bad) {
@@ -434,7 +445,7 @@
     return {
       show,
       reload: () => load(true),
-      destroy: () => W.stop()
+      destroy: () => { W.stop(); if (cmds) cmds.destroy(); }
     };
   }
 

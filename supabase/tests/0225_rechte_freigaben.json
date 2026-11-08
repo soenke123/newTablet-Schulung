@@ -124,7 +124,13 @@
    "sh_ad_every(p_token text, p_code text, p_hub uuid, p_session text, p_every integer)",
    "sh_ad_pick(p_token text, p_code text, p_hub uuid, p_session text, p_salt text, p_photo integer)",
    "sh_ad_save(p_token text, p_code text, p_hub uuid, p_session text, p_id integer, p_name text, p_kind text, p_title text, p_body text, p_image text, p_button text, p_target text, p_content text, p_active boolean)",
-   "sh_ads_compute(p_token text, p_code text, p_hub uuid, p_session text, p_results jsonb)"
+   "sh_ads_compute(p_token text, p_code text, p_hub uuid, p_session text, p_results jsonb)",
+   "sh_cmd_delete(p_token text, p_code text, p_hub uuid, p_session text, p_id bigint)",
+   "sh_cmd_inbox_delete(p_token text, p_code text, p_hub uuid, p_session text, p_id bigint)",
+   "sh_cmd_list(p_token text, p_code text, p_hub uuid, p_session text)",
+   "sh_cmd_order(p_token text, p_code text, p_hub uuid, p_session text, p_ids jsonb)",
+   "sh_cmd_save(p_token text, p_code text, p_hub uuid, p_session text, p_id bigint, p_task text, p_sql text)",
+   "sh_cmd_share(p_token text, p_code text, p_hub uuid, p_session text, p_id bigint)"
   ],
   "tab": [
    "games_public:select",
@@ -496,7 +502,13 @@
    "sh_ad_every(p_token text, p_code text, p_hub uuid, p_session text, p_every integer)",
    "sh_ad_pick(p_token text, p_code text, p_hub uuid, p_session text, p_salt text, p_photo integer)",
    "sh_ad_save(p_token text, p_code text, p_hub uuid, p_session text, p_id integer, p_name text, p_kind text, p_title text, p_body text, p_image text, p_button text, p_target text, p_content text, p_active boolean)",
-   "sh_ads_compute(p_token text, p_code text, p_hub uuid, p_session text, p_results jsonb)"
+   "sh_ads_compute(p_token text, p_code text, p_hub uuid, p_session text, p_results jsonb)",
+   "sh_cmd_delete(p_token text, p_code text, p_hub uuid, p_session text, p_id bigint)",
+   "sh_cmd_inbox_delete(p_token text, p_code text, p_hub uuid, p_session text, p_id bigint)",
+   "sh_cmd_list(p_token text, p_code text, p_hub uuid, p_session text)",
+   "sh_cmd_order(p_token text, p_code text, p_hub uuid, p_session text, p_ids jsonb)",
+   "sh_cmd_save(p_token text, p_code text, p_hub uuid, p_session text, p_id bigint, p_task text, p_sql text)",
+   "sh_cmd_share(p_token text, p_code text, p_hub uuid, p_session text, p_id bigint)"
   ],
   "tab": [
    "board_likes:select",

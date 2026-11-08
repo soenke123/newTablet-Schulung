@@ -153,6 +153,7 @@
     payload_too_big: 'Das Bild ist zu groß.',
     too_many_accounts: 'Hier ist die Grenze für Konten von diesem Gerät erreicht.',
     not_found: 'Nicht gefunden.',
+    inbox_full: 'Bei der Lehrkraft liegen schon sehr viele geteilte Befehle – sie muss erst aufräumen.',
     needs: 'Erst die Daten der Tabelle laden, auf die diese zeigt.',
     no_dummy: 'Für diese Tabelle sind noch keine Beispieldaten gespeichert.',
     bad_rows: 'Die Beispieldaten haben eine falsche Form.',
