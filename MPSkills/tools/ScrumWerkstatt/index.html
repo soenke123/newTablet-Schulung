@@ -89,10 +89,25 @@ header.top{
 .brand-name{
   font-family:var(--serif); font-size:19px; font-weight:600; color:#fff;
   background:none;border:0;padding:1px 4px;margin-left:-4px;border-radius:5px;
-  width:100%; max-width:440px; text-overflow:ellipsis;
+  width:100%; max-width:640px; display:block;
+  /* Textfeld statt einzeiligem Eingabefeld: lange Namen brechen um
+     (höchstens 2 Zeilen sichtbar) und werden kleiner, statt hinten
+     abgeschnitten zu werden. Höhe setzt fitName(). */
+  resize:none; overflow:hidden; line-height:1.22; white-space:pre-wrap; overflow-wrap:anywhere;
 }
+.brand-name.long{font-size:16px}
+.brand-name.xlong{font-size:14px}
 .brand-name:hover{background:rgba(255,255,255,.08)}
 .brand-name:focus{outline:2px solid var(--marker); background:rgba(0,0,0,.25)}
+
+/* Daily-Uhr im Kopf: läuft weiter, auch wenn das Fenster zu ist */
+.dmini{font-variant-numeric:tabular-nums;font-weight:700;font-size:12.5px;background:var(--marker);color:#fff;border-radius:99px;padding:1px 8px;margin-left:2px}
+.dmini[hidden]{display:none}
+.dmini.run{animation:dpulse 2s ease-in-out infinite}
+.dmini.over{background:#c0392b}
+@keyframes dpulse{50%{opacity:.6}}
+@media (prefers-reduced-motion:reduce){.dmini.run{animation:none}}
+.turn:disabled{cursor:default}
 
 /* sprint pill in header */
 .sprint-pill{
@@ -733,6 +748,9 @@ body.ro .postit{cursor:default}
 body.ro .avbtn{cursor:default}
 .robar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12.5px;color:var(--petrol);margin-bottom:16px}
 .robar[hidden]{display:none}
+.robar.busy{background:#fdf3d8;border-color:#e8cf8a;color:#7a5a06}
+body.goalbusy #view-goal .rte-bar, body.goalbusy #goalAdd, body.goalbusy #goalImgs .x{opacity:.3;pointer-events:none}
+body.goalbusy #goalRte{opacity:.75}
 .robar .btn{margin-left:auto}
 
 .choice{display:block;width:100%;text-align:left;background:var(--paper-up);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;margin-bottom:10px;box-shadow:var(--sh-1)}
@@ -780,7 +798,7 @@ body.inroom::after{display:none}
 @media (max-width:640px){
   .grid2{grid-template-columns:1fr}
   .imgs{grid-template-columns:1fr 1fr}
-  .brand-name{max-width:60vw}
+  .brand-name{max-width:none}
   .goalbar .meta{width:100%}
   .goalbar .focus{border-left:0;padding-left:0}
 
@@ -849,7 +867,7 @@ body.inroom::after{display:none}
       </div>
       <div class="brand-txt">
         <div class="brand-eyebrow">Scrum Werkstatt</div>
-        <input class="brand-name" id="productName" value="Projekt" aria-label="Projektname">
+        <textarea class="brand-name" id="productName" rows="1" maxlength="80" aria-label="Projektname">Projekt</textarea>
       </div>
     </div>
 
@@ -859,6 +877,7 @@ body.inroom::after{display:none}
       <button class="btn onDark" id="btnDaily">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6"/></svg>
         <span>Daily</span>
+        <b class="dmini" id="dailyMini" hidden></b>
       </button>
       <button class="btn mark" id="btnSprintAction">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>
@@ -1041,6 +1060,7 @@ body.inroom::after{display:none}
         <button class="btn" id="goalLockBtn" hidden></button></div>
     </div>
 
+    <div class="robar busy" id="goalBusy" hidden></div>
     <div class="robar" id="goalNote" hidden>🔒 Das Product Goal ist fixiert – das Scrum Team kann es gerade nicht bearbeiten.</div>
 
     <div class="goalwrap">
@@ -1584,7 +1604,7 @@ body.inroom::after{display:none}
 <input type="file" id="importFile" accept=".json,application/json" hidden>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261007"></script>
+<script src="bridge.js?v=20261108"></script>
 <script>
 'use strict';
 /* ════════════════════════════════════════════════════════════
@@ -1882,7 +1902,10 @@ function storyText(s){
 function avatar(m, size){
   const cls=`av s${size}`;
   if(!m) return `<span class="${cls}" style="background:var(--line);color:var(--ink-3)">?</span>`;
-  if(safeImg(m.avatar)) return `<span class="${cls}"><img src="${m.avatar}" alt=""></span>`;
+  // Im Raum: Profilbild des MPSkills-Kontos (Adresse aus avatars.js, bridge.js).
+  if(SW.on){
+    if(m.accAv) return `<span class="${cls}" style="background:var(--paper-down)"><img src="${esc(m.accAv)}" alt=""></span>`;
+  } else if(safeImg(m.avatar)) return `<span class="${cls}"><img src="${m.avatar}" alt=""></span>`;
   const col=AVC[hash(m.id+m.name)%AVC.length];
   const t=m.name.trim();
   // immer zwei Zeichen – sonst sind Max und Mia beide nur "M"
@@ -1986,10 +2009,7 @@ function lockRO(){
     b.title=po?'':'Das verwaltet nur der Product Owner';
   });
   $('#poNote').hidden=po;
-  const goalOK=canEditGoal();
-  document.body.classList.toggle('goallock', !goalOK);
-  $('#goalRte').contentEditable = goalOK ? 'true' : 'false';
-  $('#goalNote').hidden=goalOK || !!SW.ro;
+  goalLive();
   const gb=$('#goalLockBtn');
   gb.hidden=!SW.owner;
   gb.textContent=S.product.goalLocked ? 'Product Goal öffnen' : 'Product Goal fixieren';
@@ -2011,7 +2031,29 @@ function canEditPO(){
 function canEditGoal(){
   if(!SW.on) return true;
   if(SW.ro) return false;
+  if(SW.goalOther()) return false;   // jemand anderes schreibt gerade (0281)
   return !S.product.goalLocked;
+}
+
+/* Wer gerade am Goal schreibt: Hinweis über dem Feld, Feld gesperrt.
+   Läuft bei jeder Ansicht vom Server sofort (swLive), nicht erst nach
+   dem Tippen anderswo. */
+function goalLive(){
+  if(!SW.on || !SW.ready) return;
+  const r=$('#goalRte');
+  const other=SW.goalOther();
+  // Die eigene Sperre ist weg (abgelaufen, jemand anderes hat sie):
+  // aufhören, damit nichts über die Arbeit der anderen gespeichert wird.
+  if(other && goalHeld){ goalLost(); }
+  const busy=$('#goalBusy');
+  const nm=other?(SW.goalEdit.name||'Jemand'):'';
+  busy.hidden=!other;
+  if(other) busy.textContent=`✏️ ${nm} bearbeitet das Feld gerade. Sobald ${nm} fertig ist, kannst du weiterschreiben.`;
+  document.body.classList.toggle('goalbusy', other);
+  const ok=canEditGoal();
+  document.body.classList.toggle('goallock', !ok && !other);
+  if(document.activeElement!==r) r.contentEditable = ok ? 'true' : 'false';
+  $('#goalNote').hidden=ok || other || !!SW.ro;
 }
 
 /* Tasks anlegen/löschen: der Product Owner immer, alle anderen Mitglieder
@@ -2029,6 +2071,19 @@ async function joinAsMember(){
   if(r && r.key){ $('#keyBig').textContent=SW.fmtKey(r.key); show('mKey'); }
 }
 
+/* Projektname: kleiner, wenn lang; Höhe nach Inhalt (höchstens 2 Zeilen
+   sichtbar, der Rest per Fokus/Scrollen). Der volle Name steht im Tooltip. */
+function fitName(){
+  const n=$('#productName'); if(!n) return;
+  const len=n.value.length;
+  n.classList.toggle('long', len>28 && len<=50);
+  n.classList.toggle('xlong', len>50);
+  n.title=n.value;
+  n.style.height='auto';
+  const lh=parseFloat(getComputedStyle(n).lineHeight)||22;
+  n.style.height=Math.min(n.scrollHeight, Math.ceil(lh*2+4))+'px';
+}
+
 function renderCounts(){
   $('#cntBacklog').textContent = S.stories.length;
   $('#cntTeam').textContent    = S.team.length;
@@ -2038,6 +2093,7 @@ function renderCounts(){
 function renderHeader(){
   const n=$('#productName');
   if(document.activeElement!==n) n.value=S.product.name;
+  fitName();
 
   const a=active(), pill=$('#sprintPill'), btn=$('#btnSprintActionTxt');
   if(!a){
@@ -2594,8 +2650,10 @@ function renderTeam(){
 
 /* Das Team im Raum: die Kacheln entstehen beim Beitritt (wer „Ich bin
    im Team" wählt), nicht über einen Knopf. Name kommt aus dem Raum.
-   Rolle, Label und Bild darf jedes Mitglied an jeder Karte ändern —
-   gespeichert wird sofort (scrum_member_update), nicht über save(). */
+   Die Rolle verteilt das Team an jeder Karte; das Label ändert nur das
+   Mitglied selbst (und die Lehrkraft, 0281). Das Bild ist das Profilbild
+   des MPSkills-Kontos, ohne Konto die Buchstaben. Gespeichert wird
+   sofort (scrum_member_update), nicht über save(). */
 function renderTeamRoom(){
   const teacher=SW.role==='presenter';
   $('#teamGrid').innerHTML = S.team.map(m=>{
@@ -2603,11 +2661,13 @@ function renderTeamRoom(){
     const dn=mine.filter(s=>s.status==='done').length;
     return `<div class="mcard${m.me?' me':''}" data-m="${m.id}">
       <div class="mtop">
-        <button class="avbtn" data-avup="${m.id}" title="Bild wählen" style="background:none;border:0;padding:0;border-radius:14px" ${SW.ro?'disabled':''}>${avatar(m,52)}</button>
+        <span title="${m.accAv?'Profilbild aus dem MPSkills-Konto':'Ohne MPSkills-Konto: die ersten Buchstaben'}">${avatar(m,52)}</span>
         <div style="flex:1;min-width:0">
           <div class="mname" style="border:0">${esc(m.name)}${m.me?' <span class="metag">du</span>':''}
             <span class="dot${m.online?' on':''}" title="${m.online?'gerade da':'nicht da'}"></span></div>
-          <input class="mlabel" data-f="label" value="${esc(m.label||'')}" placeholder="+ eigenes Label" aria-label="Label" maxlength="40">
+          ${(m.me||teacher)
+            ? `<input class="mlabel" data-f="label" value="${esc(m.label||'')}" placeholder="+ eigenes Label" aria-label="Label" maxlength="40">`
+            : `<div class="mlabel" style="border:0;cursor:default" title="Das Label ändert nur ${esc(m.name)} selbst">${esc(m.label||'')}</div>`}
         </div>
       </div>
       <select data-f="role" aria-label="Scrum-Rolle">
@@ -3211,23 +3271,79 @@ function openArchive(id){
 /* ════════════════════════════════════════════════════════════
    DAILY STANDUP
    ════════════════════════════════════════════════════════════ */
-let tSec=300, tRun=false, tInt=null, spoke=new Set(), turn=null;
-
+/* Die Uhr ist EIN Zustand für das ganze Team (im Raum: scrum_rooms.daily,
+   0281). left = Sekunden Rest zum Zeitpunkt at (ms, Server-Uhr); läuft
+   sie (run), rechnet jedes Gerät selbst herunter — mit dem Abstand
+   seiner Uhr zur Server-Uhr (SW.offset). Ohne Raum dasselbe lokal. */
+const DAILY_LEN=300;
+let D={ left:DAILY_LEN, run:false, at:0, turn:null, spoke:[] };
+let dailyDone=false;
+const nowMs=()=>Date.now()+(SW.on?(SW.offset||0):0);
+function dailyRest(){ return D.run ? Math.max(0, D.left-(nowMs()-D.at)/1000) : D.left; }
+// Dieselbe Regel wie scrum_daily_apply auf dem Server.
+function dailyApply(d, action, id){
+  const n=nowMs(), x=Object.assign({}, d, { spoke:[...(d.spoke||[])] });
+  if(x.run) x.left=Math.max(0, x.left-(n-x.at)/1000);
+  if(action==='start'){ if(x.left<=0) x.left=DAILY_LEN; x.run=true; }
+  else if(action==='pause') x.run=false;
+  else if(action==='reset'){ x.left=DAILY_LEN; x.run=false; x.turn=null; x.spoke=[]; }
+  else if(action==='turn'){
+    const add=t=>{ if(t && !x.spoke.includes(t)) x.spoke.push(t); };
+    if(x.turn===id){ add(id); x.turn=null; } else { add(x.turn); x.turn=id; }
+  }
+  x.at=n;
+  return x;
+}
+async function dailyDo(action, id){
+  if(SW.on && SW.ro){ toast(SW.msg('read_only')); return; }
+  D=dailyApply(D, action, id);   // sofort zeigen, der Server bestätigt
+  dailyDone=dailyRest()<=0;
+  renderDaily();
+  if(SW.on){ const d=await SW.dailyAct(action, id); if(d){ D=d; renderDaily(); } }
+}
+function renderClock(){
+  const rest=dailyRest(), sec=Math.ceil(rest);
+  const txt=`${pad(Math.floor(sec/60))}:${pad(sec%60)}`;
+  $('#clockT').textContent=txt;
+  $('#clock').style.setProperty('--p',`${((DAILY_LEN-rest)/DAILY_LEN*100).toFixed(1)}%`);
+  // Kopf: sichtbar, solange das Daily läuft, pausiert oder gerade um ist.
+  const mini=$('#dailyMini');
+  const endedAgo=D.run && rest<=0 ? nowMs()-(D.at+D.left*1000) : 0;
+  const showMini=(D.run && endedAgo<120000) || (!D.run && D.left>0 && D.left<DAILY_LEN);
+  mini.hidden=!showMini;
+  mini.textContent=rest<=0?'Zeit um':txt;
+  mini.classList.toggle('run', D.run && rest>0);
+  mini.classList.toggle('over', rest<=0);
+  $('#btnDaily').title=showMini?(D.run?'Daily läuft':'Daily pausiert')+' – '+txt:'';
+  // Ende: einmal Bescheid geben.
+  if(D.run && rest<=0 && !dailyDone){
+    dailyDone=true;
+    if(endedAgo<5000) toast('⏱ Fünf Minuten sind um – zurück an die Arbeit!');
+  }
+  if(rest>0) dailyDone=false;
+}
 function renderDaily(){
-  $('#clockT').textContent=`${pad(Math.floor(tSec/60))}:${pad(tSec%60)}`;
-  $('#clock').style.setProperty('--p',`${((300-tSec)/300*100).toFixed(1)}%`);
+  renderClock();
+  const can=!SW.on || !SW.ro;
+  const spoke=new Set(D.spoke||[]);
   $('#turns').innerHTML=S.team.map(m=>
-    `<button class="turn ${spoke.has(m.id)?'spoke':''}" data-turn="${m.id}" aria-pressed="${turn===m.id}">
+    `<button class="turn ${spoke.has(m.id)?'spoke':''}" data-turn="${m.id}" aria-pressed="${D.turn===m.id}" ${can?'':'disabled'}>
       ${avatar(m,22)}<span>${esc(m.name)}</span></button>`).join('');
-  $('#dlToggle').textContent = tRun?'Pause':(tSec<300?'Weiter':'Starten');
+  const rest=dailyRest();
+  $('#dlToggle').textContent = D.run&&rest>0?'Pause':(rest>0&&rest<DAILY_LEN?'Weiter':'Starten');
+  $('#dlToggle').disabled=!can; $('#dlReset').disabled=!can;
 }
-function tick(){
-  if(tSec>0){ tSec--; renderDaily(); }
-  else { stopTimer(); toast('⏱ Fünf Minuten sind um – zurück an die Arbeit!'); }
-}
-function startTimer(){ if(tRun) return; tRun=true; tInt=setInterval(tick,1000); renderDaily(); }
-function stopTimer(){ tRun=false; clearInterval(tInt); renderDaily(); }
-function resetTimer(){ stopTimer(); tSec=300; spoke=new Set(); turn=null; renderDaily(); }
+setInterval(()=>{ if(D.run) renderClock(); }, 500);
+
+/* Vom Server (bridge.js), sofort — auch während jemand tippt. */
+window.swLive=function(){
+  if(SW.daily){
+    const same=JSON.stringify(SW.daily)===JSON.stringify(D);
+    D=SW.daily;
+    if(!same){ if(dailyRest()<=0) dailyDone=true; renderDaily(); }
+  }
+  goalLive();
+};
 
 /* ════════════════════════════════════════════════════════════
    NAV + EVENTS
@@ -3243,12 +3359,80 @@ function go(v,fromHash){
   window.scrollTo({top:0,behavior:fromHash?'auto':'smooth'});
 }
 
+/* ── Product Goal: Sperre greifen / halten / loslassen (0281) ── */
+let goalHeld=false, goalDirty=false, goalHb=null, goalRel=null, goalBusyCall=false;
+async function goalGrab(){
+  clearTimeout(goalRel); goalRel=null;
+  if(goalHeld || goalBusyCall || !canEditGoal()) return;
+  goalBusyCall=true;
+  const res=await SW.goalLock(true);
+  goalBusyCall=false;
+  const r=$('#goalRte');
+  if(!res.ok){
+    if(res.error==='goal_busy') toast(`${res.name||'Jemand'} bearbeitet das Product Goal gerade`);
+    else toast(SW.msg(res.error));
+    goalDirty=false;
+    r.innerHTML=cleanHtml(S.product.goal||'');
+    if(document.activeElement===r) r.blur();
+    goalLive();
+    return;
+  }
+  goalHeld=true;
+  // Den neuesten Stand übernehmen, bevor weitergeschrieben wird.
+  if(res.goal && res.goal.data && !goalDirty){
+    const g=res.goal.data;
+    S.product.goal=g.goal||''; S.product.images=Array.isArray(g.images)?g.images:[];
+    if(g.goalLocked) S.product.goalLocked=true; else delete S.product.goalLocked;
+    const focused=document.activeElement===r;
+    r.innerHTML=cleanHtml(S.product.goal);
+    if(focused){ // Schreibmarke ans Ende
+      const sel=getSelection(), rg=document.createRange();
+      rg.selectNodeContents(r); rg.collapse(false); sel.removeAllRanges(); sel.addRange(rg);
+    }
+  }
+  // Wurde das Feld schon wieder verlassen, gleich wieder freigeben.
+  if(document.activeElement!==r){ goalLetGo(); return; }
+  goalLive();
+  clearInterval(goalHb);
+  goalHb=setInterval(async()=>{
+    if(!goalHeld) return;
+    const h=await SW.goalLock(true);
+    if(!h.ok && h.error!=='network') goalLost();
+  },10000);
+}
+// Kurz warten: Bild hinzufügen oder ein Formatknopf holt den Fokus zurück.
+function goalLetGo(){
+  clearTimeout(goalRel);
+  goalRel=setTimeout(async()=>{
+    goalRel=null;
+    if(document.activeElement===$('#goalRte')) return;
+    clearInterval(goalHb); goalHb=null;
+    if(!goalHeld) return;
+    await SW.idle();            // erst speichern, dann freigeben
+    goalHeld=false; goalDirty=false;
+    await SW.goalLock(false);
+    goalLive();
+  },1200);
+}
+function goalLost(){
+  clearInterval(goalHb); goalHb=null;
+  goalHeld=false; goalDirty=false;
+  const r=$('#goalRte');
+  if(document.activeElement===r) r.blur();
+  r.innerHTML=cleanHtml(S.product.goal||'');
+  toast(SW.msg('goal_busy'));
+}
+
 function wire(){
   /* tabs */
   $$('.tab').forEach(t=>t.onclick=()=>go(t.dataset.view));
 
   /* header */
-  $('#productName').onchange=e=>{ S.product.name=e.target.value.trim()||'Unser Projekt'; renderAll(); };
+  const pn=$('#productName');
+  pn.onchange=e=>{ S.product.name=e.target.value.replace(/\s+/g,' ').trim()||'Unser Projekt'; renderAll(); };
+  pn.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); pn.blur(); } });
+  pn.addEventListener('input',()=>{ if(/\n/.test(pn.value)) pn.value=pn.value.replace(/\n/g,' '); fitName(); });
+  window.addEventListener('resize',fitName);
   $('#btnDaily').onclick=()=>{ renderDaily(); show('mDaily'); };
   $('#btnSprintAction').onclick=()=>{ active()?openReview():openPlan(); };
   $('#btnPlanFromEmpty').onclick=openPlan;
@@ -3376,30 +3560,44 @@ function wire(){
   /* product goal */
   const rte=$('#goalRte');
   $$('.rte-bar button').forEach(b=>b.onclick=()=>{
+    if(!canEditGoal()) return;
     rte.focus();
     const v=b.dataset.cmd==='formatBlock' ? '<'+b.dataset.val+'>' : (b.dataset.val||null);
-    if(!canEditGoal()) return;
     document.execCommand(b.dataset.cmd, false, v);
+    goalDirty=true;
     S.product.goal=rte.innerHTML; save();
   });
   $('#goalLockBtn').onclick=()=>{
     if(!SW.owner) return;
+    if(SW.goalOther()){ toast(SW.msg('goal_busy')); return; }
     if(S.product.goalLocked){
       delete S.product.goalLocked; save(); renderAll(); toast('Product Goal geöffnet – das Team kann wieder daran arbeiten');
     } else {
       ask('Product Goal fixieren?','Solange das Product Goal fixiert ist, kann das Scrum Team das Goal nicht mehr bearbeiten.',()=>{
-        S.product.goal=rte.innerHTML; S.product.goalLocked=true; save(); renderAll(); toast('Product Goal fixiert');
+        if(goalDirty) S.product.goal=rte.innerHTML;
+        S.product.goalLocked=true; save(); renderAll(); toast('Product Goal fixiert');
       },'Fixieren');
     }
   };
+  /* Schreiben am Goal (0281): Im Raum hält, wer im Feld ist, eine Sperre
+     (scrum_goal_edit). Gespeichert wird nur, was wirklich getippt wurde
+     (goalDirty) — früher schrieb schon das bloße Verlassen des Feldes
+     den Inhalt dieses Geräts zurück, auch einen leeren oder alten. */
   let gt=null;
+  rte.addEventListener('focus',()=>{ if(SW.on) goalGrab(); });
   rte.addEventListener('input',()=>{
     if(!canEditGoal()) return;
+    goalDirty=true;
     clearTimeout(gt);
     $('#goalSaved').textContent='…';
     gt=setTimeout(()=>{ S.product.goal=rte.innerHTML; save(); $('#goalSaved').textContent='gespeichert'; },500);
   });
-  rte.addEventListener('blur',()=>{ if(!canEditGoal()) return; S.product.goal=rte.innerHTML; save(); });
+  rte.addEventListener('blur',()=>{
+    if(goalDirty && canEditGoal()){ clearTimeout(gt); S.product.goal=rte.innerHTML; save(); $('#goalSaved').textContent='gespeichert'; }
+    if(SW.on) goalLetGo();
+  });
+  // Formatknöpfe nehmen dem Feld nicht den Fokus (sonst Sperre los/greifen).
+  $$('.rte-bar button').forEach(b=>b.addEventListener('mousedown',e=>e.preventDefault()));
   rte.addEventListener('paste',e=>{
     e.preventDefault();
     document.execCommand('insertText',false,(e.clipboardData||window.clipboardData).getData('text'));
@@ -3408,7 +3606,7 @@ function wire(){
     if(!canEditGoal()) return;
     if(e.target.closest('#goalAdd')) return $('#goalImgInput').click();
     const x=e.target.closest('[data-img]');
-    if(x){ S.product.images.splice(+x.dataset.img,1); renderAll(); }
+    if(x){ S.product.images.splice(+x.dataset.img,1); goalDirty=true; renderAll(); }
   });
   $('#goalImgInput').onchange=e=>{
     const files=Array.from(e.target.files).slice(0,5-S.product.images.length);
@@ -3533,15 +3731,13 @@ function wire(){
   };
 
   /* daily */
-  $('#dlToggle').onclick=()=>tRun?stopTimer():startTimer();
-  $('#dlReset').onclick=resetTimer;
+  // Schließen hält die Uhr nicht an — sie läuft im Kopf weiter.
+  $('#dlToggle').onclick=()=>dailyDo(D.run&&dailyRest()>0?'pause':'start');
+  $('#dlReset').onclick=()=>dailyDo('reset');
   $('#turns').addEventListener('click',e=>{
-    const b=e.target.closest('[data-turn]'); if(!b) return;
-    const id=b.dataset.turn;
-    if(turn===id){ spoke.add(id); turn=null; } else { if(turn) spoke.add(turn); turn=id; }
-    renderDaily();
+    const b=e.target.closest('[data-turn]'); if(!b||b.disabled) return;
+    dailyDo('turn', b.dataset.turn);
   });
-  $('#mDaily').addEventListener('click',e=>{ if(e.target.id==='mDaily') stopTimer(); });
 
   /* import / export */
   $('#importFile').onchange=e=>{

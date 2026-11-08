@@ -7,7 +7,7 @@
 
    Nur für freigeschaltete Lehrkräfte und Admins. Die Seite zeigt:
      1. Downloads: Skript (Word, PDF – offen unter tools/<Skill>/material/)
-        und Lösungsheft (nicht offen: RPC skill_material_file_get, 0280).
+        und Lösungsheft (nicht offen: RPC skill_material_file_get, 0282).
         Admins laden das Lösungsheft hier hoch (skill_material_file_put,
         braucht 2FA – sonst 'not_admin').
      2. Für die Klasse: Kapitel I als Stand (I-1 … I-4, wächst mit),

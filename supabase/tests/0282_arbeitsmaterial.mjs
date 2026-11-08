@@ -1,4 +1,4 @@
-/* Prüfstand für Migration 0280 — Arbeitsmaterial.
+/* Prüfstand für Migration 0282 — Arbeitsmaterial.
 
    Die Kernzusagen:
      1. Lehrkraft des Raums liest und setzt die Häkchen ihres Kurses, eingeladene Lehrkraft auch.
@@ -8,7 +8,7 @@
         nicht freigeschaltete Konten und Gäste nicht.
      5. Häkchen gehen mit dem Raum.
 
-   Aufruf:  node supabase/tests/0280_arbeitsmaterial.mjs */
+   Aufruf:  node supabase/tests/0282_arbeitsmaterial.mjs */
 import { PGlite } from '@electric-sql/pglite';
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto';
 import { btree_gist } from '@electric-sql/pglite/contrib/btree_gist';

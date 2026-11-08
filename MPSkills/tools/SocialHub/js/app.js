@@ -415,7 +415,7 @@
         '<span class="muted small an-h">' + LV.find(x => x[0] === lv)[2] + '</span></div>' +
         '</section>';
     }
-    // Arbeitsmaterial (0280): Skript, Lösungsheft und Schüler-PDF je Kurs – eigene Seite in MPSkills
+    // Arbeitsmaterial (0282): Skript, Lösungsheft und Schüler-PDF je Kurs – eigene Seite in MPSkills
     html += '<section class="panel panel--mat"><div class="panel-h"><h2>Arbeitsmaterial</h2>' +
       '<a class="btn btn--s btn--accent" href="../../material.html?tool=socialhub&amp;raum=' + encodeURIComponent(A.CODE) + '" target="_blank" rel="noopener">Öffnen</a></div>' +
       '<p class="muted small">Skript „Datenbanksysteme“ (Word, PDF) und Lösungsheft. Für diesen Kurs hakst du an, was die Klasse schon hat – daraus entsteht das Schüler-PDF.</p></section>';
@@ -1034,7 +1034,9 @@
     if (!h.admin) S.view = 'app';
     const admin = S.view === 'admin';
     const nav = [['feed', IC.home, 'Start'], ['search', IC.search, 'Suche']];
-    if (h.me) nav.push(['post', IC.plus, '']);
+    // ＋ nur, wenn es die Tabelle photos gibt – ohne sie gibt es nichts zu posten
+    if (h.me && on('photos')) nav.push(['post', IC.plus, '']);
+    else if (S.tab === 'post') S.tab = 'feed';
     if (h.me) nav.push(['profile', IC.user, 'Profil']);
     const sub = [['sql', IC.code, 'SQL'], ['diagram', IC.table, 'Diagramm']];
     // Werbung (0276): eigener Reiter, sobald es die Tabelle ads gibt
@@ -1865,7 +1867,7 @@
       if (S.screen !== 'hub' || !S.hub) return;
       manageTrack();                                // sessions erstellt/entzogen → Tracking an/aus
       if (JSON.stringify([S.hub.tables, S.hub.upload]) === prev) return;
-      if (S.view === 'app' && (S.tab === 'feed' || S.tab === 'search' || S.tab === 'profile')) renderHub();
+      if (S.view === 'app' && (S.tab === 'feed' || S.tab === 'search' || S.tab === 'profile' || (S.tab === 'post' && !on('photos')))) renderHub();
       else toast('Die Lehrkraft hat die Tabellen geändert.');
     } else if (S.screen === 'home') {
       loadHome(true);

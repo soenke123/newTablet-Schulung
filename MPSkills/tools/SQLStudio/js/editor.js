@@ -41,6 +41,41 @@
 
   const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+  /* Nur lesen: SQL-Text als farbiges HTML (wie im Editor), z. B. für
+     gespeicherte Befehle in YourSozialNet. schema optional ({tables, views}). */
+  function highlight(text, schema) {
+    const tables = new Set(), cols = new Set();
+    if (schema) {
+      (schema.tables || []).concat(schema.views || []).forEach(t => {
+        tables.add(t.name.toLowerCase()); (t.columns || []).forEach(c => cols.add(c.name.toLowerCase()));
+      });
+    }
+    const toks = window.SQLCore.tokenize(String(text || ''));
+    let html = '';
+    for (let i = 0; i < toks.length; i++) {
+      const t = toks[i];
+      let cls = '';
+      if (t.t === 'com') cls = 'com';
+      else if (t.t === 'str') cls = 'str';
+      else if (t.t === 'num') cls = 'num';
+      else if (t.t === 'dq' || t.t === 'bq') cls = 'qid';
+      else if (t.t === 'var') cls = 'var';
+      else if (t.t === 'op') cls = 'op';
+      else if (t.t === 'id') {
+        const u = t.v.toUpperCase();
+        let k = i + 1;
+        while (k < toks.length && toks[k].t === 'ws') k++;
+        const call = toks[k] && toks[k].t === 'op' && toks[k].v === '(';
+        if (KW.has(u) && !(call && FUNCS.includes(u) && !['IF', 'LEFT', 'RIGHT', 'REPLACE'].includes(u))) cls = 'kw';
+        else if (call) cls = 'fn';
+        else if (tables.has(t.v.toLowerCase())) cls = 'tbl';
+        else if (cols.has(t.v.toLowerCase())) cls = 'col';
+      }
+      html += cls ? '<span class="t-' + cls + '">' + esc(t.v) + '</span>' : esc(t.v);
+    }
+    return html;
+  }
+
   function create(host, opts) {
     host.innerHTML =
       '<div class="ed">' +
@@ -332,5 +367,5 @@
     };
   }
 
-  window.SQLEditor = { create, FUNCS };
+  window.SQLEditor = { create, FUNCS, highlight };
 })();

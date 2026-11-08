@@ -1,5 +1,5 @@
 -- ═════════════════════════════════════════════════════════════
--- 0280 — Arbeitsmaterial (MPSkills/material.html)
+-- 0282 — Arbeitsmaterial (MPSkills/material.html)
 -- ═════════════════════════════════════════════════════════════
 -- Sönke 09.11.2026: Zu einem Skill gibt es Arbeitsmaterial (zuerst das
 -- Skript „Datenbanksysteme“ zu YourSozialNet). Die Lehrkraft lädt Skript
@@ -28,7 +28,7 @@ create table if not exists skill_material_marks (
   primary key (room_id, tool)
 );
 comment on table skill_material_marks is
-  'Arbeitsmaterial (0280): welche Teile des Materials eine Klasse schon hat – je Raum und Skill. Nur über skill_material_marks_get/set.';
+  'Arbeitsmaterial (0282): welche Teile des Materials eine Klasse schon hat – je Raum und Skill. Nur über skill_material_marks_get/set.';
 alter table skill_material_marks enable row level security;
 
 create table if not exists skill_material_files (
@@ -42,7 +42,7 @@ create table if not exists skill_material_files (
   primary key (tool, name)
 );
 comment on table skill_material_files is
-  'Arbeitsmaterial (0280): nicht öffentliche Dateien (Lösungsheft). Holen nur Lehrkräfte/Admins (skill_material_file_get), hochladen nur Admins (skill_material_file_put).';
+  'Arbeitsmaterial (0282): nicht öffentliche Dateien (Lösungsheft). Holen nur Lehrkräfte/Admins (skill_material_file_get), hochladen nur Admins (skill_material_file_put).';
 alter table skill_material_files enable row level security;
 
 
