@@ -9,7 +9,8 @@ import { DOC } from './inhalt.mjs';
 const require = createRequire(import.meta.url);
 const D = require('docx');
 const { Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell, ImageRun, AlignmentType, WidthType, BorderStyle,
-  ShadingType, PageBreak, Footer, Header, PageNumber, TabStopType, VerticalAlign, LevelFormat, TableLayoutType, HeightRule } = D;
+  ShadingType, PageBreak, Footer, Header, PageNumber, TabStopType, VerticalAlign, LevelFormat, TableLayoutType, HeightRule,
+  HorizontalPositionRelativeFrom, HorizontalPositionAlign, VerticalPositionRelativeFrom, TextWrappingType, TextWrappingSide } = D;
 
 const OUT = process.argv[2] || new URL('.', import.meta.url).pathname;
 const IMG = new URL('./bilder/', import.meta.url).pathname;
@@ -144,20 +145,40 @@ function image(name, cm, caption) {
   return [new Paragraph({ children: [new ImageRun({ type: 'png', data: readFileSync(f), transformation: { width: wpx, height: hpx } })], alignment: AlignmentType.CENTER, spacing: { before: 120, after: caption ? 40 : 160 }, keepNext: !!caption }),
     ...(caption ? [P('*' + caption + '*', { align: AlignmentType.CENTER, run: { size: 16, color: C.muted }, after: 220 })] : [])];
 }
+function floatImage(name, cm) {
+  const f = IMG + name + '.png', s = pngSize(f);
+  const wpx = Math.round(cm * 37.795), hpx = Math.round(wpx * s.h / s.w);
+  return new Paragraph({ spacing: { after: 0 }, children: [new ImageRun({ type: 'png', data: readFileSync(f), transformation: { width: wpx, height: hpx },
+    floating: { horizontalPosition: { relative: HorizontalPositionRelativeFrom.MARGIN, align: HorizontalPositionAlign.RIGHT },
+      verticalPosition: { relative: VerticalPositionRelativeFrom.PARAGRAPH, offset: 0 },
+      wrap: { type: TextWrappingType.SQUARE, side: TextWrappingSide.LEFT }, margins: { left: 180000, bottom: 120000 } } })] });
+}
+// Text links, Bild rechts (Tabelle ohne Rahmen – hält in Word und LibreOffice)
+function sideBlock(b) {
+  const f = IMG + b.file + '.png', sz = pngSize(f);
+  const iw = Math.round(b.cm * 567) + 120, lw = W - iw;
+  const wpx = Math.round(b.cm * 37.795), hpx = Math.round(wpx * sz.h / sz.w);
+  const left = [];
+  for (const x of b.left) {
+    if (x.t === 'p') left.push(P(x.text));
+    else if (x.t === 'list') left.push(...x.items.map(t => new Paragraph({ children: runs(t, { size: 19 }), numbering: { reference: 'dot', level: 0 }, spacing: { after: 60, line: 264 } })));
+  }
+  const right = [new Paragraph({ children: [new ImageRun({ type: 'png', data: readFileSync(f), transformation: { width: wpx, height: hpx } })], alignment: AlignmentType.RIGHT, spacing: { after: 40 } })];
+  if (b.caption) right.push(P('*' + b.caption + '*', { align: AlignmentType.CENTER, run: { size: 16, color: C.muted }, after: 0 }));
+  return [tbl([new TableRow({ cantSplit: true, children: [cell(left, { w: lw, margins: { top: 0, bottom: 0, left: 0, right: 160 } }), cell(right, { w: iw, margins: { top: 0, bottom: 0, left: 120, right: 0 } })] })], [lw, iw]), spacer(200)];
+}
 function syntaxBlock(b) {
   const lw = 3900, rw = W - lw - 120;
   const left = cell([label('AUFBAU'), ...codeParas(b.aufbau, 17)], { w: lw, fill: 'FFFFFF', borders: { top: line(C.line2), bottom: line(C.line2), left: line(C.line2), right: line(C.line2) } });
   const gap = cell([new Paragraph({ children: [] })], { w: 120 });
   const right = codeCard(b.sql, 'Beispiel · ' + b.title, rw);
   const out = [tbl([new TableRow({ children: [left, gap, right], cantSplit: true })], [lw, 120, rw])];
-  if (b.result) out.push(...resultBlock(exec(b.sql)[0]));
-  else out.push(spacer(200));
+  out.push(spacer(200));
   return out;
 }
 function codeBlock(b) {
   const out = [tbl([new TableRow({ children: [codeCard(b.sql, b.title)], cantSplit: true })], [W])];
-  if (b.result) out.push(...resultBlock(exec(b.sql)[0]));
-  else out.push(spacer(200));
+  out.push(spacer(200));
   return out;
 }
 function compareTable(a, b, w = W, ta = 'Befehl 1', tb = 'Befehl 2') {
@@ -187,6 +208,7 @@ function taskBlock(b) {
     P(b.intro, { after: 140, run: { size: 19, color: C.muted } })
   ];
   const iw = W - 440;
+  if (b.ideas) kids.push(...b.ideas.map(t => new Paragraph({ children: runs(t, { size: 20 }), numbering: { reference: 'dot', level: 0 }, spacing: { after: 80, line: 276 } })));
   b.items.forEach((it, i) => {
     kids.push(new Paragraph({ children: [new TextRun({ text: L(i) + ')', font: FONT, size: 20, bold: true, color: C.hub }), new TextRun({ text: '\t', font: FONT }),
       ...(it.star ? [new TextRun({ text: '★ ', font: FONT, size: 20, color: C.gold })] : []), ...runs(it.text, { size: 20 })],
@@ -256,6 +278,8 @@ for (const b of DOC) {
   else if (b.t === 'p') kids.push(P(b.text));
   else if (b.t === 'list') kids.push(...bullets(b.items));
   else if (b.t === 'img') kids.push(...image(b.file, b.cm, b.caption));
+  else if (b.t === 'float') kids.push(floatImage(b.file, b.cm));
+  else if (b.t === 'side') kids.push(...sideBlock(b));
   else if (b.t === 'syntax') kids.push(...syntaxBlock(b));
   else if (b.t === 'code') kids.push(...codeBlock(b));
   else if (b.t === 'compare') { kids.push(P('**' + b.title + '**', { keepNext: true, after: 80 })); kids.push(compareTable(b.a.sql, b.b.sql, W, b.a.title, b.b.title)); kids.push(spacer(220)); }
@@ -276,14 +300,16 @@ sol.push(...bullets([
   '**Ergebnisse** wurden mit den Dummy-Daten gerechnet (Netzwerk „Liky“, Stichtag ' + DAY + '). Alle Zeiten (Alter, Registrierung, Posts) wachsen mit dem Raum mit – Aussagen wie „Erna ist 78“ oder „Noah wird morgen 18“ gelten an jedem Stichtag. Absolute Datumswerte unterscheiden sich.',
   '**Eigene Zeilen der Klasse** verändern einige Ergebnisse: Das eigene Admin-Konto ist die neueste Registrierung und hat die Rolle admin; eigene Posts sind die neuesten Fotos. Die eigene id ist in den Lösungen **71**.',
   '**E-Mail-Domain** = Name des Netzwerks, klein und ohne Sonderzeichen (hier `@liky.test`).',
-  '**Klassen-Netz:** Für Aufgabe 12 k) und 13 e) brauchen die Gruppen dort Admin-Rechte: `UPDATE users SET role = \'admin\' WHERE username IN (…)`. Im Klassen-Netz gibt es keine Dummy-User, aber die Beispiel-Werbung.',
+  '**Klassen-Netz:** Für Aufgabe 12 und 13 c) brauchen die Gruppen dort Admin-Rechte: `UPDATE users SET role = \'admin\' WHERE username IN (…)`. Im Klassen-Netz gibt es keine Dummy-User, aber die Beispiel-Werbung.',
   '**Fehlermeldungen sind manchmal gewollt** (7 l, 10 a, 10 d): Sie sind in den Lösungen rot markiert.'
 ]));
 sol.push(new Paragraph({ children: [new PageBreak()] }));
 for (const b of DOC) {
   if (b.t !== 'task') continue;
   sol.push(H2('Aufgabe ' + b.n));
-  b.items.forEach((it, i) => {
+  if (b.open) sol.push(P('*Offene Aufgabe – jede und jeder findet etwas anderes. Beispiele für mögliche Befehle:*', { run: { size: 18, color: C.muted } }));
+  if (b.note) sol.push(...boxBlock('loes', '', [b.note]));
+  (b.open ? b.examples : b.items).forEach((it, i) => {
     sol.push(new Paragraph({ children: [new TextRun({ text: L(i) + ')', font: FONT, size: 20, bold: true, color: C.hub }), new TextRun({ text: '\t' }), ...(it.star ? [new TextRun({ text: '★ ', color: C.gold })] : []), ...runs(it.text, { size: 18, color: C.muted })],
       tabStops: [{ type: TabStopType.LEFT, position: 400 }], indent: { left: 400, hanging: 400 }, spacing: { before: 120, after: 80 }, keepNext: true }));
     const sqls = it.sol ? [].concat(it.sol) : [];

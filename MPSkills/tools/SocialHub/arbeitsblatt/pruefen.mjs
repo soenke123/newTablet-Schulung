@@ -9,11 +9,11 @@ export function exec(sqls, pre) {
 }
 let bad = 0;
 for (const b of DOC) {
-  if ((b.t === 'syntax' || b.t === 'code') && b.result && !only) {
+  if ((b.t === 'syntax' || b.t === 'code') && !only && !/INSERT|UPDATE|DELETE/.test(b.sql)) {
     const [r] = exec(b.sql); console.log('BEISPIEL ' + b.title + ' → ' + fmt(r)); if (r.kind === 'error') bad++;
   }
   if (b.t !== 'task' || (only && String(b.n) !== only)) continue;
-  b.items.forEach((it, i) => {
+  (b.open ? b.examples : b.items).forEach((it, i) => {
     if (!it.sol) return;
     const rs = exec(it.sol, it.pre);
     rs.forEach((r, j) => { const err = r.kind === 'error'; if (err && !it.error) bad++; console.log(`A${b.n}${String.fromCharCode(97 + i)}${rs.length > 1 ? '.' + (j + 1) : ''} → ${fmt(r)}`); });

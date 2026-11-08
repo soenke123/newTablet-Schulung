@@ -185,6 +185,9 @@ ${phone(photo('#0f3d5e', '#7fb3d5', ['frag_frieda', 'Der Erdschatten ist rund. I
   `<div style="position:absolute;left:12px;top:14px;background:rgba(0,0,0,.45);border-radius:999px;padding:3px 10px;font-weight:700;font-size:11px">Gesponsert ⓘ</div>`,
   'Beworbener Post', 'ein normales Foto rutscht nach vorn')}</div>`;
 
+IMG.abb_werbung_cap = IMG.abb_werbung.replace('<div class="a" style="display:inline-flex;gap:18px">', '<div class="a" style="display:inline-flex;flex-direction:column;align-items:center;gap:10px"><div style="display:flex;gap:18px">') +
+  '<div style="font-size:15px;font-style:italic;color:#545b70">Abb. 13: Die drei Arten von Werbung in YourSozialNet</div></div>';
+
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 1800, height: 1200 }, deviceScaleFactor: 3 });
 for (const [name, html] of Object.entries(IMG)) {
