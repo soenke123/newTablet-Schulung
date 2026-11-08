@@ -211,12 +211,13 @@ function taskBlock(b) {
   if (b.ideas) kids.push(...b.ideas.map(t => new Paragraph({ children: runs(t, { size: 20 }), numbering: { reference: 'dot', level: 0 }, spacing: { after: 80, line: 276 } })));
   b.items.forEach((it, i) => {
     kids.push(new Paragraph({ children: [new TextRun({ text: L(i) + ')', font: FONT, size: 20, bold: true, color: C.hub }), new TextRun({ text: '\t', font: FONT }),
+      ...(it.deep ? [new TextRun({ text: '* ', font: FONT, size: 20, bold: true, color: C.hub })] : []),
       ...(it.star ? [new TextRun({ text: '★ ', font: FONT, size: 20, color: C.gold })] : []), ...runs(it.text, { size: 20 })],
       tabStops: [{ type: TabStopType.LEFT, position: 400 }], indent: { left: 400, hanging: 400 }, spacing: { after: it.compare ? 80 : 110, line: 276 }, keepNext: !!it.compare }));
     if (it.compare) { kids.push(compareTable(it.compare[0], it.compare[1], iw)); kids.push(spacer(120)); }
   });
-  kids.push(P('★ = zum Knobeln', { run: { size: 15, color: C.muted }, after: 0, align: AlignmentType.RIGHT }));
-  if (!b.items.some(x => x.star)) kids.pop();
+  const legend = [b.items.some(x => x.deep) ? '* nur mit tieferen SQL-Befehlen lösbar (Abschnitt 4)' : null, b.items.some(x => x.star) ? '★ = zum Knobeln' : null].filter(Boolean).join('    ·    ');
+  if (legend) kids.push(P(legend, { run: { size: 15, color: C.muted }, after: 0, align: AlignmentType.RIGHT }));
   return [tbl([new TableRow({ children: [cell(kids, { w: W, fill: 'FFFFFF', borders: { top: line(C.line2), bottom: line(C.line2), right: line(C.line2), left: { style: BorderStyle.SINGLE, size: 30, color: C.hub } }, margins: { top: 180, bottom: 160, left: 240, right: 240 } })] })], [W]), spacer(260)];
 }
 function tables2(b) {
@@ -301,7 +302,8 @@ sol.push(...bullets([
   '**Eigene Zeilen der Klasse** verändern einige Ergebnisse: Das eigene Admin-Konto ist die neueste Registrierung und hat die Rolle admin; eigene Posts sind die neuesten Fotos. Die eigene id ist in den Lösungen **71**.',
   '**E-Mail-Domain** = Name des Netzwerks, klein und ohne Sonderzeichen (hier `@liky.test`).',
   '**Klassen-Netz:** Für Aufgabe 12 und 13 c) brauchen die Gruppen dort Admin-Rechte: `UPDATE users SET role = \'admin\' WHERE username IN (…)`. Im Klassen-Netz gibt es keine Dummy-User, aber die Beispiel-Werbung.',
-  '**Fehlermeldungen sind manchmal gewollt** (7 l, 10 a, 10 d): Sie sind in den Lösungen rot markiert.'
+  '**Fehlermeldungen sind manchmal gewollt** (7 l, 10 a, 10 d): Sie sind in den Lösungen rot markiert.',
+  '**\\*** an einer Teilaufgabe = nur mit den Befehlen aus Abschnitt 4 (Tiefer in SQL) lösbar; ★ = zum Knobeln.'
 ]));
 sol.push(new Paragraph({ children: [new PageBreak()] }));
 for (const b of DOC) {
@@ -312,6 +314,7 @@ for (const b of DOC) {
   (b.open ? b.examples : b.items).forEach((it, i) => {
     sol.push(new Paragraph({ children: [new TextRun({ text: L(i) + ')', font: FONT, size: 20, bold: true, color: C.hub }), new TextRun({ text: '\t' }), ...(it.star ? [new TextRun({ text: '★ ', color: C.gold })] : []), ...runs(it.text, { size: 18, color: C.muted })],
       tabStops: [{ type: TabStopType.LEFT, position: 400 }], indent: { left: 400, hanging: 400 }, spacing: { before: 120, after: 80 }, keepNext: true }));
+    if (it.deep) sol.push(P('*braucht Abschnitt 4 (Tiefer in SQL)*', { run: { size: 15, color: C.hub }, indent: { left: 400 }, after: 60 }));
     const sqls = it.sol ? [].concat(it.sol) : [];
     const res = sqls.length ? exec(sqls, it.pre) : [];
     if (it.pre) sol.push(P('*Vorher angenommen:* `' + it.pre + '`', { run: { size: 16, color: C.muted }, indent: { left: 400 }, after: 60 }));
