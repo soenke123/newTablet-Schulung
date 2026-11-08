@@ -532,6 +532,9 @@ try {
   const cols = await mia.app.locator('.cmd-card').evaluateAll(c => c.map(x => Math.round(x.getBoundingClientRect().left)));
   ok('5d Fenster: zwei Spalten, Stift, Mülltonne, Teilen', cols[0] !== cols[1] && await mia.app.locator('.cmd-card [data-a="edit"]').count() === 2
      && await mia.app.locator('.cmd-card [data-a="del"]').count() === 2 && await mia.app.locator('.cmd-card [data-a="share"]').count() === 2, cols.join());
+  ok('5d Befehl farbig (SELECT als Schlüsselwort, users als Tabelle)', await mia.app.locator('.cmd-sql .t-kw').count() >= 2 && await mia.app.locator('.cmd-sql .t-tbl').count() >= 2);
+  ok('5d „In den Editor“/„Kopieren“ als Symbole oben neben Stift und Mülltonne', await mia.app.locator('.cmd-card-h [data-a="use"].icon-btn').count() === 2
+     && await mia.app.locator('.cmd-card-h [data-a="copy"].icon-btn').count() === 2 && await mia.app.locator('.cmd-card-f').count() === 0);
   await shot(mia.page, '5d-befehle');
   // Drag & Drop: zweite Karte am Griff vor die erste ziehen
   const g = await mia.app.locator('.cmd-card').nth(1).locator('.cmd-grip').boundingBox();
@@ -604,6 +607,14 @@ try {
   ok('6d Lehrkraft: Reiter Eigene/Geteilt, „Aufgabe 1b von Mia“ mit dem Befehl', await t.app.locator('.cmd-tabs [data-tab]').count() === 2
      && /Aufgabe 1b\s*von Mia/.test(inTxt) && /SELECT username FROM users;/.test(inTxt), inTxt);
   ok('6d Lehrkraft hat kein „Teilen“', await t.app.locator('[data-a="share"]').count() === 0);
+  // „Neu laden“ holt, was inzwischen geschickt wurde (ohne das Fenster zu schließen)
+  await db.query(`insert into sh_cmd_inbox (room_id, from_name, task, sql) select room_id, 'Leon', 'Aufgabe 3', 'SELECT 1;' from sh_cmd_inbox limit 1`);
+  await t.app.locator('[data-a="refresh"]').click();
+  await t.app.locator('.cmd-card--in', { hasText: 'Aufgabe 3' }).waitFor();
+  ok('6d Lehrkraft: „Neu laden“ zeigt den neuen geteilten Befehl', await t.app.locator('.cmd-card--in').count() === 2);
+  await db.query(`delete from sh_cmd_inbox where task = 'Aufgabe 3'`);
+  await t.app.locator('[data-a="refresh"]').click();
+  await t.app.locator('.cmd-card--in', { hasText: 'Aufgabe 3' }).waitFor({ state: 'detached' });
   await shot(t.page, '6d-lehrkraft-geteilt');
   const tdel = t.app.locator('.cmd-card--in [data-a="del"]').first();
   await tdel.click(); await tdel.click();

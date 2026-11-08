@@ -883,12 +883,14 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .cmd-card-h .icon-btn svg { width: 18px; height: 18px; }
 .cmd-share { min-height: 30px; }
 .cmd-share.is-done { color: var(--ok); border-color: var(--ok); }
-.cmd-sql { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); font: 13px/1.5 var(--font-mono); white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; user-select: text; -webkit-user-select: text; }
-.cmd-card-f { display: flex; gap: 6px; flex-wrap: wrap; }
-.cmd-card-f .btn svg, .cmd-inbar .btn svg, .cmd-share svg { font-size: 15px; }
+.cmd-sql { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--soft); border: 1px solid var(--line); font: 13px/1.5 var(--font-mono); white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; user-select: text; -webkit-user-select: text; color: var(--ink); }
+.cmd-inbar .btn svg, .cmd-share svg { font-size: 15px; }
+.cmd-card-h .icon-btn { width: 32px; height: 32px; }
+.cmd-refresh.is-spin svg { animation: cmdspin .8s linear infinite; }
+@keyframes cmdspin { to { transform: rotate(360deg); } }
 .is-sure { color: var(--bad) !important; border-color: var(--bad) !important; background: var(--bad-dim) !important; width: auto !important; padding: 0 9px; gap: 4px; border-radius: 8px; font-size: 13px; font-weight: 650; white-space: nowrap; display: inline-flex !important; align-items: center; }
 .cmd-inbar { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-.cmd-inbar .btn { margin-left: auto; }
+.cmd-inbar .cmd-refresh { margin-left: auto; }
 .cmd-empty { text-align: center; color: var(--muted); padding: 40px 16px; }
 .cmd-empty > svg { font-size: 40px; opacity: .6; }
 .cmd-empty p { margin: 8px auto; max-width: 420px; }

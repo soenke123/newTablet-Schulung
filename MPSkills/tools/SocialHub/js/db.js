@@ -267,6 +267,7 @@
     const cmds = window.SHCmds ? window.SHCmds.mount($('#dbCmds'), {
       call: (n, args) => api('sh_cmd_' + n, args),
       getSql: () => editor.value,
+      getSchema: () => schema,      // Tabellen/Spalten farbig wie im Editor
       setSql: v => { editor.value = v; editor.focus(); },
       toast,
       errText: window.SHApi && window.SHApi.errText

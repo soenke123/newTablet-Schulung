@@ -31,6 +31,7 @@
     use:   '<svg viewBox="0 0 24 24"><path d="M5 12h12M12 6l6 6-6 6"/></svg>',
     copy:  '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg>',
     x:     '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+    refresh: '<svg viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>',
     check: '<svg viewBox="0 0 24 24"><path d="M5 12l5 5 9-10"/></svg>'
   };
 
@@ -170,10 +171,17 @@
       body.scrollTop = top;
     }
 
-    function sqlHtml(s) { return '<pre class="cmd-sql">' + esc(s) + '</pre>'; }
+    // farbig wie im Editor (SQLEditor.highlight aus SQL Studio), sonst schlicht
+    function sqlHtml(s) {
+      let h;
+      try { h = window.SQLEditor && SQLEditor.highlight ? SQLEditor.highlight(s, o.getSchema ? o.getSchema() : null) : esc(s); }
+      catch (e) { h = esc(s); }
+      return '<pre class="cmd-sql">' + h + '</pre>';
+    }
+    // In den Editor / Kopieren: nur Symbole, oben neben Stift und Mülltonne
     function useBtns() {
-      return '<button type="button" class="btn btn--ghost btn--s" data-a="use">' + IC.use + 'In den Editor</button>' +
-             '<button type="button" class="btn btn--ghost btn--s" data-a="copy">' + IC.copy + 'Kopieren</button>';
+      return '<button type="button" class="icon-btn icon-btn--s" data-a="use" title="In den Editor">' + IC.use + '</button>' +
+             '<button type="button" class="icon-btn icon-btn--s" data-a="copy" title="Kopieren">' + IC.copy + '</button>';
     }
 
     function paintOwn(body) {
@@ -187,10 +195,10 @@
           '<div class="cmd-card-h"><span class="cmd-grip" title="Ziehen zum Sortieren">' + IC.grip + '</span>' +
           '<b class="cmd-task' + (c.task ? '' : ' none') + '">' + esc(c.task || 'ohne Aufgabe') + '</b>' +
           (teacher ? '' : '<button type="button" class="btn btn--ghost btn--s cmd-share" data-a="share" title="Kopie an die Lehrkraft schicken">' + IC.share + 'Teilen</button>') +
+          useBtns() +
           '<button type="button" class="icon-btn icon-btn--s" data-a="edit" title="Bearbeiten">' + IC.pen + '</button>' +
           '<button type="button" class="icon-btn icon-btn--s icon-btn--bad" data-a="del" title="Löschen">' + IC.trash + '</button></div>' +
           sqlHtml(c.sql) +
-          '<div class="cmd-card-f">' + useBtns() + '</div>' +
         '</article>').join('') + '</div>';
       body.querySelectorAll('.cmd-card').forEach(card => {
         // erst beim Antippen nachschlagen: load() kann die Liste inzwischen ersetzt haben
@@ -200,21 +208,26 @@
     }
 
     function paintInbox(body) {
+      // Leiste immer da: „Neu laden“ fragt sofort nach, ob etwas geschickt wurde
+      const bar = '<div class="cmd-inbar"><span class="muted small">Nur Kopien – Löschen ändert bei den Schülern nichts.</span>' +
+        '<button type="button" class="btn btn--ghost btn--s cmd-refresh" data-a="refresh" title="Nachsehen, ob etwas Neues geschickt wurde">' + IC.refresh + 'Neu laden</button>' +
+        (inbox.length ? '<button type="button" class="btn btn--ghost btn--s" data-a="clear">' + IC.trash + 'Alle löschen</button>' : '') + '</div>';
       if (!inbox.length) {
-        body.innerHTML = '<div class="cmd-empty">' + IC.share + '<p>Noch nichts geteilt.</p>' +
+        body.innerHTML = bar + '<div class="cmd-empty">' + IC.share + '<p>Noch nichts geteilt.</p>' +
           '<p class="small">Schüler schicken hier über „Teilen“ eine Kopie ihres Befehls hin – zum Besprechen der Aufgaben.</p></div>';
+        wireRefresh(body);
         return;
       }
-      body.innerHTML = '<div class="cmd-inbar"><span class="muted small">Nur Kopien – Löschen ändert bei den Schülern nichts.</span>' +
-        '<button type="button" class="btn btn--ghost btn--s" data-a="clear">' + IC.trash + 'Alle löschen</button></div>' +
+      body.innerHTML = bar +
         '<div class="cmd-grid">' + inbox.map(c =>
         '<article class="cmd-card cmd-card--in" data-id="' + c.id + '">' +
           '<div class="cmd-card-h"><b class="cmd-task">' + (c.task ? esc(c.task) + ' ' : '') + '<span class="cmd-from">von ' + esc(c.from || c.username || '?') + '</span></b>' +
+          useBtns() +
           '<button type="button" class="icon-btn icon-btn--s icon-btn--bad" data-a="del" title="Löschen">' + IC.trash + '</button></div>' +
           '<div class="cmd-meta">' + (c.username ? '@' + esc(c.username) + ' · ' : '') + esc(c.hub || '') + (c.at ? ' · ' + esc(c.at) : '') + '</div>' +
           sqlHtml(c.sql) +
-          '<div class="cmd-card-f">' + useBtns() + '</div>' +
         '</article>').join('') + '</div>';
+      wireRefresh(body);
       body.querySelector('[data-a="clear"]').onclick = (e) => confirmBtn(e.currentTarget, 'Wirklich alle?', async () => {
         const r = await o.call('inbox_delete', { p_id: null });
         if (!r || !r.ok) { toast(errText(r)); return; }
@@ -223,6 +236,21 @@
       body.querySelectorAll('.cmd-card').forEach(card => {
         card.querySelectorAll('[data-a]').forEach(b => b.onclick = () => act(b, inbox.find(x => String(x.id) === card.dataset.id), true));
       });
+    }
+
+    function wireRefresh(body) {
+      const btn = body.querySelector('[data-a="refresh"]');
+      btn.onclick = async () => {
+        btn.disabled = true;
+        btn.classList.add('is-spin');
+        const n = inbox.length;
+        const r = await load();
+        if (!win) return;
+        if (!r || !r.ok) { btn.disabled = false; btn.classList.remove('is-spin'); toast(errText(r)); return; }
+        paintWin();
+        const d = inbox.length - n;
+        toast(d > 0 ? d + ' neu' : 'Nichts Neues');
+      };
     }
 
     // zweimal tippen statt Rückfrage-Fenster: erst „Löschen?“, dann weg
