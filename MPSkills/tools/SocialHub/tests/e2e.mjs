@@ -123,8 +123,10 @@ let fails = 0;
 const ok = (label, cond, extra = '') => { if (!cond) fails++; console.log(`${cond ? 'ok  ' : 'FAIL'}  ${label}${extra ? '   ' + extra : ''}`); };
 const browser = await chromium.launch({ args: ['--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
 const errors = [];
-async function open(who, size) {
+async function open(who, size, tour) {
   const ctx = await browser.newContext({ viewport: size || { width: 400, height: 760 }, deviceScaleFactor: 1, permissions: ['camera'] });
+  // die Tour der Lehrkraft geht beim ersten Besuch von selbst auf – nur Punkt 0 will sie sehen
+  if (!tour) await ctx.addInitScript(() => { try { localStorage.setItem('sh.tour.seen', '1'); } catch (e) { /* egal */ } });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(who + ': ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(who + ' console: ' + m.text()); });
@@ -177,6 +179,44 @@ async function makeJpegExif(page) {
 }
 
 try {
+  // 0) Tour der Lehrkraft (js/tour.js): beim ersten Besuch von selbst, links alle Überschriften, Überspringen, „?“ öffnet sie wieder
+  {
+    const tt = await open('teacher', { width: 1280, height: 860 }, true);
+    await tt.app.locator('.tr').waitFor();
+    ok('0  Tour öffnet beim ersten Besuch von selbst, links alle Überschriften', await tt.app.locator('.tr-nav').count() === 14
+       && await tt.app.locator('.tr-grp', { hasText: 'Adminbereich' }).count() === 1);
+    await tt.app.locator('.tr-shot img').first().evaluate(i => i.complete ? 0 : new Promise(r => { i.onload = r; i.onerror = r; }));
+    ok('0  Foto geladen, nummerierte Kreise und Legende', await tt.app.locator('.tr-shot img').first().evaluate(i => i.naturalWidth > 0)
+       && await tt.app.locator('.tr-mk').count() === 4 && await tt.app.locator('.tr-legend li').count() === 4);
+    await tt.app.locator('#trNext').click();
+    ok('0  Weiter → Klassen-Netz', /Klasse/.test(await tt.app.locator('.tr-h h2').textContent()));
+    await tt.app.locator('.tr-nav', { hasText: 'Befehle speichern' }).click();
+    ok('0  Überschrift links anklicken springt dorthin', /Befehle speichern/.test(await tt.app.locator('.tr-h h2').textContent())
+       && await tt.app.locator('.tr-nav.on', { hasText: 'Befehle' }).count() === 1);
+    const missing = await tt.app.locator('body').evaluate(async () => {
+      const m = await (await fetch('img/tour/marken.json')).json(), bad = [];
+      for (const st of SHTour.STEPS.filter(x => !x.group)) {
+        for (const n of st.img) if (!m[n]) bad.push(n);
+        for (const [n, k] of st.m) if (!(m[n] && m[n].m[k])) bad.push(n + '.' + k);
+      }
+      return bad;
+    });
+    ok('0  alle Fotos und Marken der Tour vorhanden (tests/tour-bilder.mjs)', missing.length === 0, missing.join(' '));
+    await tt.app.locator('#trSkip').click();
+    ok('0  Überspringen schließt die Tour', await tt.app.locator('.tr').count() === 0);
+    await tt.page.reload();
+    await tt.app.locator('text=Tabellen für alle Netzwerke').waitFor();
+    await wait(300);
+    ok('0  danach nicht mehr von selbst', await tt.app.locator('.tr').count() === 0);
+    await tt.app.locator('#btnTour').click();
+    await tt.app.locator('.tr').waitFor();
+    await tt.page.keyboard.press('ArrowRight');
+    ok('0  „?“ öffnet die Tour, Pfeiltaste blättert', /Klasse/.test(await tt.app.locator('.tr-h h2').textContent()));
+    await tt.page.keyboard.press('Escape');
+    ok('0  Esc schließt', await tt.app.locator('.tr').count() === 0);
+    await tt.page.context().close();
+  }
+
   // 1) Lehrkraft erstellt Tabellen im Diagramm
   const t = await open('teacher', { width: 1280, height: 860 });
   await t.app.locator('text=Tabellen für alle Netzwerke').waitFor();

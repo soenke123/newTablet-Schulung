@@ -310,7 +310,8 @@
     const h = S.home;
     // Lehrkraft: Knopf „Arbeitsmaterial“ (0282) gleich neben dem Namen – Skript, Lösungen, Schüler-PDF je Kurs
     let html = '<div class="home' + (T ? ' home--wide' : '') + '"><header class="home-top">' + brandHtml() +
-      (T ? '<a class="btn btn--s btn--accent home-mat" href="../../material.html?tool=socialhub&amp;raum=' + encodeURIComponent(A.CODE) + '" target="_blank" rel="noopener">' + IC.doc + 'Arbeitsmaterial</a>' : '') +
+      (T ? '<a class="btn btn--s btn--accent home-mat" href="../../material.html?tool=socialhub&amp;raum=' + encodeURIComponent(A.CODE) + '" target="_blank" rel="noopener">' + IC.doc + 'Arbeitsmaterial</a>' +
+        '<button type="button" class="home-tour" id="btnTour" title="Tour: So funktioniert YourSozialNet" aria-label="Tour öffnen">?</button>' : '') +
       (T ? '<span class="chip chip--lk">Lehrkraft</span>' : '') + '</header>';
     if (T) html += teacherHome();
     else {
@@ -346,6 +347,9 @@
     if ($('#btnNetLogin')) $('#btnNetLogin').onclick = renderNetLogin;
     $$('[data-cinfo]').forEach(b => b.onclick = (e) => { e.stopPropagation(); classInfo(); });
     if (T) wireTeacher();
+    // Tour der Lehrkraft (js/tour.js): „?“ neben Arbeitsmaterial, beim ersten Besuch von selbst
+    if ($('#btnTour')) $('#btnTour').onclick = () => window.SHTour && SHTour.open();
+    if (T && window.SHTour) SHTour.auto();
   }
 
   function netTile(x) {
