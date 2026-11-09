@@ -348,8 +348,8 @@
     $$('[data-cinfo]').forEach(b => b.onclick = (e) => { e.stopPropagation(); classInfo(); });
     if (T) wireTeacher();
     // Tour der Lehrkraft (js/tour.js): „?“ neben Arbeitsmaterial, beim ersten Besuch von selbst
-    if ($('#btnTour')) $('#btnTour').onclick = () => window.SHTour && SHTour.open();
-    if (T && window.SHTour) SHTour.auto();
+    if ($('#btnTour')) $('#btnTour').onclick = () => window.SHTour && SHTour.open('lk', 0, A.CODE);
+    if (T && window.SHTour) SHTour.auto('lk', A.CODE);
   }
 
   function netTile(x) {
@@ -1054,7 +1054,9 @@
       // Aufdeckung (0270): erst sichtbar, wenn die Lehrkraft einmal aufgelöst hat (syncReveal schaltet nach)
       (h.me ? '<button type="button" class="hd-data" id="hdData" title="Was weiß das Netzwerk über mich?"' + (revealHere() ? '' : ' hidden') + '>' +
               IC.shield + '<span>Was weiß das Netzwerk über mich?</span></button>' : '') +
-      (admin ? '<nav class="subtabs">' + sub.map(x => '<button type="button" data-at="' + x[0] + '" class="' + (S.adminTab === x[0] ? 'on' : '') + (x[0] === 'settings' ? ' st-set' : '') + '">' + x[1] + '<span>' + x[2] + '</span></button>').join('') + '</nav>' : '') +
+      (admin ? '<nav class="subtabs">' + sub.map(x => '<button type="button" data-at="' + x[0] + '" class="' + (S.adminTab === x[0] ? 'on' : '') + (x[0] === 'settings' ? ' st-set' : '') + '">' + x[1] + '<span>' + x[2] + '</span></button>').join('') +
+        // kurze Tour des Adminbereichs (js/tour.js)
+        '<button type="button" class="sub-tour" id="admTour" title="Tour: der Adminbereich" aria-label="Tour öffnen">?</button></nav>' : '') +
       '<span class="spacer"></span>' +
       // Klassen-Netz als App (0275): im Raum „Als App“, auf der App-Adresse „Installieren“
       (!A.APP && h.hub.class && h.hub.app_key ? '<button type="button" class="btn btn--ghost btn--s hd-app" id="appBtn" title="Als App auf den Home-Bildschirm">' + IC.phone + '<span>Als App</span></button>' : '') +
@@ -1069,6 +1071,9 @@
     if ($('#appBtn')) $('#appBtn').onclick = appDialog;
     if ($('#hdData')) $('#hdData').onclick = () => openReveal(true);
     if ($('#lkLogin')) $('#lkLogin').onclick = () => { closeDb(); renderLogin('login'); };
+    if ($('#admTour')) $('#admTour').onclick = () => window.SHTour && SHTour.open('admin', 0, A.CODE);
+    // Schüler: beim ersten Mal im Adminbereich (je Raum) die kurze Tour – nicht im Schaufenster
+    if (admin && !T && !A.DEMO && window.SHTour) SHTour.auto('admin', A.CODE);
     $$('[data-view]').forEach(b => b.onclick = () => { if (S.view === b.dataset.view) return; closeDb(); S.view = b.dataset.view; renderHub(); });
     $$('[data-at]').forEach(b => b.onclick = () => {
       const t = b.dataset.at;

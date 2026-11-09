@@ -4,8 +4,15 @@
    Eine kleine Bilderschau mit Bildschirmfotos statt viel Text
    (Sönke 09.11.2026): links alle Überschriften zum Anklicken,
    unten Überspringen · Zurück · Weiter. Öffnet sich beim ersten
-   Besuch der Lehrkraft von selbst (localStorage sh.tour.seen),
-   danach über das „?“ neben „Arbeitsmaterial“.
+   Zwei Touren (TOURS):
+     lk    – Lehrkraft, Startseite: geht in jedem Raum einmal von selbst
+             auf, danach über das „?“ neben „Arbeitsmaterial“.
+     admin – Schüler, nur der Adminbereich (Einstellungen · SQL mit
+             Befehl speichern/teilen · Diagramm), ganz kurz: geht beim
+             ersten Öffnen des Adminbereichs im Raum einmal von selbst
+             auf, danach über das „?“ hinter den Reitern.
+   Gemerkt je Raum und Gerät: localStorage sh.tour.<tour>.<raum>;
+   sh.tour.off = '1' schaltet das Aufgehen ab (Prüfstände).
 
    Fotos und die Lage der Knöpfe darin (nummerierte Kreise) baut
    tests/tour-bilder.mjs → img/tour/<name>.webp + img/tour/marken.json.
@@ -16,11 +23,10 @@
   'use strict';
 
   const DIR = 'img/tour/';
-  const SEEN = 'sh.tour.seen';
 
   /* Kapitel = Überschrift links; sub = eingerückt (Adminbereich).
      img: Fotos nebeneinander (gleich hoch); m: [bild, marke, Text] in der Reihenfolge der Nummern. */
-  const STEPS = [
+  const LK = [
     { nav: 'Alle Netzwerke', h: 'Alle Netzwerke auf einen Blick',
       lead: 'Jeder Schüler baut sich ein eigenes Netzwerk – und kommt nur in seins. Du siehst alle.',
       img: ['netze'],
@@ -114,7 +120,42 @@
           ['netze', 'material', 'Arbeitsmaterial'],
           ['netze', 'hilfe', 'Diese Tour – jederzeit wieder']] }
   ];
-  const SLIDES = STEPS.filter(s => !s.group);
+
+  /* Schüler: nur der Adminbereich – wenig Text */
+  const ADMIN = [
+    { nav: 'Einstellungen', h: 'Einstellungen',
+      lead: 'Gestalte dein Netzwerk.',
+      img: ['sch-einstellungen'],
+      m: [['sch-einstellungen', 'reiter', 'Hier'],
+          ['sch-einstellungen', 'logo', 'Logo'],
+          ['sch-einstellungen', 'name', 'Name'],
+          ['sch-einstellungen', 'farben', 'Farben'],
+          ['sch-einstellungen', 'vorschau', 'Vorschau']] },
+    { nav: 'SQL', h: 'SQL',
+      lead: 'Die Datenbank deines Netzwerks. Änderungen wirken sofort.',
+      img: ['sch-sql'],
+      m: [['sch-sql', 'befehl', 'Befehl schreiben'],
+          ['sch-sql', 'run', 'Ausführen'],
+          ['sch-sql', 'grid', 'Ergebnis'],
+          ['sch-sql', 'speichern', 'Befehl speichern']] },
+    { nav: 'Befehle speichern', h: 'Befehle speichern',
+      lead: 'Speichere deine Lösungen – und schick sie deiner Lehrkraft.',
+      img: ['sch-speichern', 'sch-befehle'],
+      m: [['sch-speichern', 'aufgabe', 'Aufgabe eintragen'],
+          ['sch-befehle', 'teilen', 'An die Lehrkraft schicken'],
+          ['sch-befehle', 'editor', 'Zurück in den Editor']] },
+    { nav: 'Diagramm', h: 'Diagramm',
+      lead: 'So hängen die Tabellen zusammen.',
+      img: ['sch-diagramm'],
+      m: [['sch-diagramm', 'reiter', 'Alle Tabellen mit ihren Verbindungen']] }
+  ];
+
+  const TOURS = {
+    lk: { steps: LK, title: 'Tour' },
+    admin: { steps: ADMIN, title: 'Adminbereich' }
+  };
+  let tour = TOURS.lk, which = 'lk', room = '';
+  let SLIDES = LK.filter(s => !s.group);
 
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   let marken = null, el = null, cur = 0;
@@ -126,7 +167,7 @@
 
   function navHtml() {
     let n = 0;
-    return STEPS.map(s => {
+    return tour.steps.map(s => {
       if (s.group) return '<div class="tr-grp"><span class="tr-num">' + (++n) + '</span>' + esc(s.nav) + '</div>';
       const i = SLIDES.indexOf(s);
       const num = s.sub ? '' : '<span class="tr-num">' + (++n) + '</span>';
@@ -195,8 +236,10 @@
     render();
   }
 
+  const seenKey = () => 'sh.tour.' + which + '.' + (room || '-');
+
   function close() {
-    try { localStorage.setItem(SEEN, '1'); } catch (e) { /* egal */ }
+    try { localStorage.setItem(seenKey(), '1'); } catch (e) { /* egal */ }
     if (!el) return;
     el.remove(); el = null;
     window.removeEventListener('resize', fit);
@@ -213,13 +256,17 @@
   const $ = (q) => el && el.querySelector(q);
   const $$ = (q, root) => Array.from((root || el).querySelectorAll(q));
 
-  async function open(start) {
+  async function open(name, start, code) {
     if (el) return;
+    which = TOURS[name] ? name : 'lk';
+    tour = TOURS[which];
+    if (code !== undefined) room = code || '';
+    SLIDES = tour.steps.filter(s => !s.group);
     await loadMarken();
     el = document.createElement('div');
     el.className = 'tr-back';
-    el.innerHTML = '<div class="tr" role="dialog" aria-modal="true" aria-label="Tour durch YourSozialNet">' +
-      '<aside class="tr-side"><div class="tr-brand">Tour · <span class="brand">Your<b>Sozial</b>Net</span></div><nav class="tr-navs">' + navHtml() + '</nav></aside>' +
+    el.innerHTML = '<div class="tr' + (which === 'admin' ? ' tr--short' : '') + '" role="dialog" aria-modal="true" aria-label="Tour durch YourSozialNet">' +
+      '<aside class="tr-side"><div class="tr-brand">' + esc(tour.title) + ' · <span class="brand">Your<b>Sozial</b>Net</span></div><nav class="tr-navs">' + navHtml() + '</nav></aside>' +
       '<section class="tr-main"></section>' +
       '<footer class="tr-foot"><button type="button" class="btn btn--ghost" id="trSkip">Überspringen</button>' +
         '<span class="tr-count" id="trCount"></span>' +
@@ -238,11 +285,14 @@
     go(start || 0);
   }
 
-  function auto() {
+  /* Einmal je Raum und Gerät von selbst */
+  function auto(name, code) {
     let seen = true;
-    try { seen = !!localStorage.getItem(SEEN); } catch (e) { /* ohne Speicher lieber nicht aufdrängen */ }
-    if (!seen) open();
+    try {
+      seen = localStorage.getItem('sh.tour.off') === '1' || !!localStorage.getItem('sh.tour.' + name + '.' + (code || '-'));
+    } catch (e) { /* ohne Speicher lieber nicht aufdrängen */ }
+    if (!seen) open(name, 0, code);
   }
 
-  window.SHTour = { open, auto, close, STEPS };
+  window.SHTour = { open, auto, close, TOURS };
 })();

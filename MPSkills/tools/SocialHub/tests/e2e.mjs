@@ -126,7 +126,7 @@ const errors = [];
 async function open(who, size, tour) {
   const ctx = await browser.newContext({ viewport: size || { width: 400, height: 760 }, deviceScaleFactor: 1, permissions: ['camera'] });
   // die Tour der Lehrkraft geht beim ersten Besuch von selbst auf – nur Punkt 0 will sie sehen
-  if (!tour) await ctx.addInitScript(() => { try { localStorage.setItem('sh.tour.seen', '1'); } catch (e) { /* egal */ } });
+  if (!tour) await ctx.addInitScript(() => { try { localStorage.setItem('sh.tour.off', '1'); } catch (e) { /* egal */ } });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(who + ': ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(who + ' console: ' + m.text()); });
@@ -195,7 +195,7 @@ try {
        && await tt.app.locator('.tr-nav.on', { hasText: 'Befehle' }).count() === 1);
     const missing = await tt.app.locator('body').evaluate(async () => {
       const m = await (await fetch('img/tour/marken.json')).json(), bad = [];
-      for (const st of SHTour.STEPS.filter(x => !x.group)) {
+      for (const st of Object.values(SHTour.TOURS).flatMap(t => t.steps).filter(x => !x.group)) {
         for (const n of st.img) if (!m[n]) bad.push(n);
         for (const [n, k] of st.m) if (!(m[n] && m[n].m[k])) bad.push(n + '.' + k);
       }
@@ -607,6 +607,30 @@ try {
   ok('5  Klassendiagramm mit allen 7 Tabellen', await mia.app.locator('.dg-svg .dg-t').count() === 7);
   ok('5  kein Daten-Reiter mehr', await mia.app.locator('[data-t="data"]').count() === 0);
   await shot(mia.page, '5c-diagramm');
+  // 5e) Schüler-Tour (js/tour.js 'admin'): beim ersten Öffnen des Adminbereichs im Raum einmal, „?“ hinter den Reitern
+  {
+    const mt = await open('tokMia', { width: 1024, height: 768 }, true);
+    await mt.app.locator('#lForm, #lo1').first().waitFor();
+    if (await mt.app.locator('#lo1').count()) await mt.app.locator('#lo1').click();
+    await mt.app.locator('#lForm input[name=user]').fill('admin');
+    await mt.app.locator('#lForm input[name=pw]').fill('geheim1');
+    await mt.app.locator('#lForm button[type=submit]').click();
+    await mt.app.locator('[data-view="admin"]').waitFor();
+    ok('5e Schüler: in der App noch keine Tour', await mt.app.locator('.tr').count() === 0);
+    await mt.app.locator('[data-view="admin"]').click();
+    await mt.app.locator('.tr').waitFor();
+    const nav = (await mt.app.locator('.tr-nav').allTextContents()).map(x => x.replace(/^\d+/, '').trim());
+    ok('5e Adminbereich öffnet die kurze Tour: Einstellungen · SQL · Befehle speichern · Diagramm', nav.join() === 'Einstellungen,SQL,Befehle speichern,Diagramm', nav.join());
+    await mt.app.locator('#trSkip').click();
+    await mt.app.locator('[data-view="app"]').click();
+    await mt.app.locator('[data-view="admin"]').click();
+    await wait(300);
+    ok('5e … nur einmal von selbst', await mt.app.locator('.tr').count() === 0);
+    await mt.app.locator('#admTour').click();
+    ok('5e „?“ hinter den Reitern öffnet sie wieder', await mt.app.locator('.tr .tr-nav').count() === 4);
+    await mt.page.keyboard.press('Escape');
+    await mt.page.context().close();
+  }
 
   // 6) Lehrkraft-Übersicht
   await t.page.reload();

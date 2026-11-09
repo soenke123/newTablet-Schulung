@@ -905,6 +905,8 @@ code { font-family: var(--font-mono); font-size: .9em; }
   font: 800 16px var(--font-display); color: var(--hub); display: grid; place-items: center; padding: 0; flex: none;
 }
 .home-tour:hover { border-color: var(--hub); background: var(--accent-dim); }
+.subtabs .sub-tour { width: 28px; height: 28px; padding: 0; justify-content: center; border: 1.5px solid var(--line2); font: 800 14px var(--font-display); color: var(--hub); margin-left: 2px; }
+.subtabs .sub-tour:hover { border-color: var(--hub); }
 .tr-back {
   --tr: #ff2e74; --tr-dim: rgba(255,46,116,.16);
   position: fixed; inset: 0; z-index: 90; background: rgba(8,10,20,.55); display: grid; place-items: center; padding: 12px; animation: fade .15s;
@@ -914,6 +916,7 @@ code { font-family: var(--font-mono); font-size: .9em; }
   border-radius: 20px; box-shadow: var(--shadow-pop); overflow: hidden;
   display: grid; grid-template-columns: 236px minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto;
 }
+.tr--short { width: min(1080px, 100%); height: min(760px, 100%); }
 .tr-side { grid-row: 1 / 3; background: var(--soft); border-right: 1px solid var(--line); display: flex; flex-direction: column; min-height: 0; }
 .tr-brand { padding: 18px 18px 10px; font: 600 14px var(--font-display); color: var(--muted); }
 .tr-brand .brand { font-size: 17px; color: var(--ink); }

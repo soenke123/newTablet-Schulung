@@ -101,7 +101,7 @@ const errors = [];
 async function open(who, size, scheme) {
   const ctx = await browser.newContext({ viewport: size, deviceScaleFactor: 2, colorScheme: scheme || 'light' });
   // die Tour selbst soll auf den Fotos nicht aufgehen
-  await ctx.addInitScript(() => { try { localStorage.setItem('sh.tour.seen', '1'); } catch (e) { /* egal */ } });
+  await ctx.addInitScript(() => { try { localStorage.setItem('sh.tour.off', '1'); } catch (e) { /* egal */ } });
   const page = await ctx.newPage();
   page.on('pageerror', e => errors.push(who + ': ' + e.message));
   await page.exposeFunction('rpc', (fn, args) => rpcAs(who, fn, args));
@@ -415,6 +415,76 @@ try {
   await wait(800);
   await snap('analytics-aufdeckung', mia.page, null, {});
   await mia.page.context().close();
+
+  /* ── 6b) Schüler-Tour: Mia im eigenen Adminbereich (Tablet) ── */
+  {
+    // Aufdeckung wieder verbergen, sonst liegt sie über Mias Tablet
+    await t.app.locator('[data-rev="off"]').click();
+    for (let i = 0; i < 40 && (await stateOf()).reveal; i++) await wait(100);
+    // ein zweiter, noch nicht geteilter Befehl → „Teilen“ ist sichtbar
+    await rpcAs('tokMia', 'sh_cmd_save', { p_hub: kid.tokMia.hub, p_session: kid.tokMia.session, p_task: 'Aufgabe 2', p_sql: 'SELECT name, city\nFROM users\nORDER BY name;' });
+    const ms = await open('tokMia', { width: 1024, height: 768 });
+    await ms.app.locator('.net-tile', { hasText: 'Pixelwelt' }).click();
+    await ms.app.locator('#lForm, #lo1').first().waitFor();
+    if (await ms.app.locator('#lo1').count()) await ms.app.locator('#lo1').click();
+    await ms.app.locator('#lForm input[name=user]').fill('admin');
+    await ms.app.locator('#lForm input[name=pw]').fill('geheim1');
+    await ms.app.locator('#lForm button[type=submit]').click();
+    await ms.app.locator('[data-view="admin"]').waitFor({ timeout: 20000 });
+    // die nachgebaute Standort-Frage kommt 2,5 s nach dem Start – erst abwarten, dann wegklicken
+    await ms.app.locator('.perm-pop').waitFor({ timeout: 6000 }).catch(() => {});
+    if (await ms.app.locator('.perm-pop').count()) await ms.app.locator('.perm-pop button', { hasText: 'Zulassen' }).click().catch(() => {});
+    await ms.app.locator('[data-view="admin"]').click();
+    await ms.app.locator('.subtabs [data-at="settings"]').click();
+    await ms.app.locator('[data-sc="light"]').waitFor();
+    await wait(500);
+    await snap('sch-einstellungen', ms.page, null, {
+      reiter: ms.app.locator('.subtabs [data-at="settings"]'),
+      logo: ms.app.locator('.logo-pick'),
+      name: ms.app.locator('.be-form input[name=name]'),
+      farben: ms.app.locator('.swatches'),
+      vorschau: ms.app.locator('.be-prev')
+    });
+    await ms.app.locator('.subtabs [data-at="sql"]').click();
+    await ms.app.locator('.db-tbl').first().waitFor({ timeout: 20000 });
+    await ms.app.locator('.ed-ta').fill("SELECT username, name, city\nFROM users\nWHERE city = 'Hamburg';");
+    await ms.app.locator('#dbRun').click();
+    await ms.app.locator('.grid th', { hasText: 'city' }).first().waitFor({ timeout: 15000 });
+    await snap('sch-sql', ms.page, null, {
+      befehl: ms.app.locator('.ed-ta'),
+      run: ms.app.locator('#dbRun'),
+      grid: ms.app.locator('.grid'),
+      speichern: ms.app.locator('.cmd-save')
+    });
+    await ms.app.locator('.cmd-save').click();
+    await ms.app.locator('.cmd-dlg input[name=task]').fill('Aufgabe 3a');
+    await snap('sch-speichern', ms.page, ms.app.locator('.cmd-dlg'), { aufgabe: ms.app.locator('.cmd-dlg input[name=task]') }, 14);
+    await ms.app.locator('.cmd-dlg button[type=submit]').click();
+    await ms.app.locator('.cmd-dlg').waitFor({ state: 'detached' });
+    await wait(3000);
+    await ms.app.locator('.cmd-open').click();
+    await ms.app.locator('.cmd-card [data-a="share"]').first().waitFor();
+    await wait(400);
+    const open1 = ms.app.locator('.cmd-card', { has: ms.app.locator('[data-a="share"]:not(.is-done)') }).first();
+    await snap('sch-befehle', ms.page, ms.app.locator('.cmd-win'), {
+      teilen: open1.locator('[data-a="share"]'),
+      editor: open1.locator('[data-a="use"]')
+    });
+    await ms.app.locator('.cmd-win [data-close]').first().click();
+    await ms.app.locator('.subtabs [data-at="diagram"]').click();
+    await ms.app.locator('.dg-svg .dg-t').first().waitFor();
+    await wait(600);
+    const sdb = await ms.app.locator('.dg-svg').first().evaluate(svg => {
+      const R = svg.getBoundingClientRect();
+      const rs = [...svg.querySelectorAll('.dg-t')].map(c => c.getBoundingClientRect()).filter(r => r.width > 2 && r.width < R.width * 0.8);
+      return { x: Math.min(...rs.map(r => r.left)), r: Math.max(...rs.map(r => r.right)), b: Math.max(...rs.map(r => r.bottom)) };
+    });
+    const sx = Math.max(0, Math.min(sdb.x - 40, 200));
+    await snap('sch-diagramm', ms.page, { x: sx, y: 0, width: Math.min(1024 - sx, Math.max(sdb.r + 40 - sx, 640)), height: Math.min(768, sdb.b + 20) },
+      { reiter: ms.app.locator('.subtabs [data-at="diagram"]') });
+    // das „?“ hinter den Reitern (für die Marke in der Tour der Lehrkraft nicht nötig)
+    await ms.page.context().close();
+  }
 
   writeFileSync(path.join(OUT, 'marken.json'), JSON.stringify(MARKEN, null, 1) + '\n');
   console.log(errors.length ? 'Fehler in der Seite:\n  ' + errors.join('\n  ') : 'keine Fehler in der Seite');
