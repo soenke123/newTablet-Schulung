@@ -439,10 +439,7 @@ try {
     await ms.app.locator('[data-sc="light"]').waitFor();
     await wait(500);
     await snap('sch-einstellungen', ms.page, null, {
-      reiter: ms.app.locator('.subtabs [data-at="settings"]'),
-      logo: ms.app.locator('.logo-pick'),
-      name: ms.app.locator('.be-form input[name=name]'),
-      farben: ms.app.locator('.swatches'),
+      personal: ms.app.locator('.be-form'),
       vorschau: ms.app.locator('.be-prev')
     });
     await ms.app.locator('.subtabs [data-at="sql"]').click();
