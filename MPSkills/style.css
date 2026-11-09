@@ -1940,6 +1940,57 @@ a.btn {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Standbild YourSozialNet  (preview/socialhub.js)
+   ═══════════════════════════════════════════════════════
+   Links ein Handy mit einer Foto-Karte (immer dunkel wie die
+   Feed-Karten der App), rechts die Tabelle likes in den Farben der
+   Seite. Beim Darüberfahren wird das Herz rot, 41 → 42, und in der
+   Tabelle erscheint die neue Zeile von @du (user_id 1). */
+.tprev--sh {
+  --sh-like: #fe2c55;
+  background: var(--paper);
+  padding: 0;
+}
+.shp { width: 100%; height: 100%; display: block; font-family: 'Outfit', system-ui, sans-serif; }
+.shp-phone { fill: #111318; }
+.shp-screen { fill: #1f1a2e; }
+.shp-hill { fill: #2b1840; opacity: .9; }
+.shp-sun { fill: #fde68a; opacity: .9; }
+.shp-notch { fill: #111318; }
+.shp-av { fill: #f9a8d4; stroke: #fff; stroke-width: 1; }
+.shp-user { font-size: 7.5px; font-weight: 700; fill: #fff; }
+.shp-desc { font-size: 6.5px; fill: rgba(255,255,255,.85); }
+.shp-n { font-size: 7px; font-weight: 700; fill: #fff; }
+.shp-chat { fill: #fff; }
+.shp-h0 { fill: #fff; }
+.shp-h1 { fill: var(--sh-like); opacity: 0; transition: opacity .25s ease; }
+.shp-heart { transform-box: fill-box; transform-origin: center; transition: transform .3s cubic-bezier(.3,1.6,.5,1); }
+.shp-n1 { opacity: 0; transition: opacity .2s ease .1s; }
+.shp-n0 { transition: opacity .2s ease .1s; }
+.shp-link { fill: none; stroke: var(--ink-faint); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 3 3; }
+.shp-card { fill: var(--surface); stroke: var(--line); }
+.shp-th { fill: var(--surface-2); }
+.shp-head { font-size: 11px; font-weight: 800; fill: var(--ink); font-family: var(--mono, ui-monospace, monospace); }
+.shp-small { font-size: 8.5px; font-weight: 700; fill: var(--accent-ink); }
+.shp-col { font-size: 8px; font-weight: 700; fill: var(--ink-faint); font-family: var(--mono, ui-monospace, monospace); }
+.shp-mono { font-size: 9px; fill: var(--ink); font-family: var(--mono, ui-monospace, monospace); }
+.shp-mono--k { fill: var(--accent-ink); }
+.shp-new { opacity: 0; transition: opacity .35s ease .35s; }
+.shp-newbg { fill: var(--accent-dim); stroke: var(--accent-edge); opacity: 0; transition: opacity .35s ease .35s; }
+@media (hover: hover) {
+  .tile--peek:hover .shp-h1 { opacity: 1; }
+  .tile--peek:hover .shp-heart { transform: scale(1.25); }
+  .tile--peek:hover .shp-n0 { opacity: 0; }
+  .tile--peek:hover .shp-n1, .tile--peek:hover .shp-new, .tile--peek:hover .shp-newbg { opacity: 1; }
+  .tile--peek:hover .shp-link { stroke: var(--sh-like); animation: shp-flow .8s linear infinite; }
+}
+@keyframes shp-flow { to { stroke-dashoffset: -12; } }
+@media (prefers-reduced-motion: reduce) {
+  .shp-h1, .shp-heart, .shp-n0, .shp-n1, .shp-new, .shp-newbg { transition: none; }
+  .tile--peek:hover .shp-link { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════
    Standbild SQL Studio  (preview/sqlstudio.js)
    ═══════════════════════════════════════════════════════
    Kippt mit dem Kleid der Seite wie die App. Farben aus

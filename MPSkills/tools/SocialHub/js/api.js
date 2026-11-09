@@ -26,6 +26,8 @@
   const TEACHER = !APP && P.get('rolle') === 'presenter';
   const CODE = APP ? 'APP' : (P.get('raum') || '').toUpperCase();
   const IN_FRAME = !APP && window.parent && window.parent !== window;
+  // Schaufenster der MPSkills-Startseite: alles über js/demo.js, kein Server, kein Speicher
+  const DEMO = !APP && P.get('demo') === '1';
 
   let seq = 0;
   const waits = new Map();
@@ -72,9 +74,10 @@
       return await res.json();
     } catch (e) { return { ok: false, error: 'network' }; }
   }
-  const call = (fn, args) => APP ? direct(fn, args) : send('sh:call', { fn, args: args || {} });
+  const call = (fn, args) => DEMO ? (window.SHDemo ? window.SHDemo.call(fn, args || {}) : Promise.resolve({ ok: false, error: 'network' }))
+    : APP ? direct(fn, args) : send('sh:call', { fn, args: args || {} });
   const setData = async (data) => {
-    if (APP) return { ok: false, error: 'not_allowed' };
+    if (APP || DEMO) return { ok: false, error: 'not_allowed' };
     const r = await send('sh:setData', { data });
     // Der Rahmen schickt den eigenen Stand nicht zurück → hier übernehmen, sonst zeigt die Seite den alten
     if (r && r.ok !== false) lastState = Object.assign({}, data);
@@ -102,7 +105,7 @@
   const sget = (kind, k) => { try { const x = st(kind); return x ? x.getItem(k) : null; } catch (e) { return null; } };
   const sput = (kind, k, v) => { try { const x = st(kind); if (!x) return; if (v == null) x.removeItem(k); else x.setItem(k, v); } catch (e) { /* aus */ } };
   const sessKey = hub => 'sh.s.' + CODE + '.' + hub;
-  const session = {
+  const session = DEMO ? { get: () => 'demo', set() { /* Schaufenster merkt nichts */ }, keepDefault: () => false } : {
     get: hub => sget('s', sessKey(hub)) || sget('l', sessKey(hub)),
     // keep: true/false = dorthin; undefined = da lassen, wo sie schon liegt
     set(hub, s, keep) {
@@ -172,11 +175,11 @@
   const errText = (r) => (r && (r.message || ERR[r.error])) || 'Das hat nicht geklappt (' + ((r && r.error) || '?') + ').';
 
   window.SHApi = {
-    TEACHER, CODE, IN_FRAME, APP, call, setData, loadAppInfo,
+    TEACHER, CODE, IN_FRAME, APP, DEMO, call, setData, loadAppInfo,
     get appInfo() { return appInfo; },
     onState(cb) { stateCb = cb; if (lastState) cb(lastState); },
     get state() { return lastState || {}; },
-    hello() { if (IN_FRAME) window.parent.postMessage({ type: 'sh:hello' }, location.origin); },
+    hello() { if (IN_FRAME && !DEMO) window.parent.postMessage({ type: 'sh:hello' }, location.origin); },
     session,
     errText
   };

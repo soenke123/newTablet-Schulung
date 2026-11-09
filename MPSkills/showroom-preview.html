@@ -6,7 +6,7 @@
 <title>MPSkills — Schaufenster ansehen</title>
 <meta name="robots" content="noindex" />
 <link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261102a" />
+<link rel="stylesheet" href="style.css?v=20261109a" />
 <script src="lib/theme.js?v=20260819d"></script>
 </head>
 <body>
@@ -86,6 +86,7 @@
 <script src="preview/sqlstudio.js?v=20261023a"></script>
 <script src="preview/derby.js?v=20261030a"></script>
 <script src="preview/diagramm.js?v=20261103c"></script>
+<script src="preview/socialhub.js?v=20261109a"></script>
 <script>
 /* Der Ersatz für app.js: die Registry als Konstante und die zwei
    Klicks, die die Kachel kennt. Bewusst keine Kopie von toolCard —
@@ -127,7 +128,9 @@ const TOOLS = [
   { id: 'diagramm', title: 'Conceptogram', folder: 'Diagramm', icon: '🗺️',
     blurb: 'Mindmaps, Wirkungsgefüge, Klassen- und Objektdiagramme — zwei Ergebnisse nebeneinander am Beamer.' },
   { id: 'derby', title: 'How to Fachbegriffe', folder: 'DefinitionsDerby', icon: '🗂️',
-    blurb: 'Ein Stapel Begriffe, sechs Lernformen — vom Glossar bis zum Kistenturm.' }
+    blurb: 'Ein Stapel Begriffe, sechs Lernformen — vom Glossar bis zum Kistenturm.' },
+  { id: 'socialhub', title: 'YourSozialNet', folder: 'SocialHub', icon: '📱',
+    blurb: 'Das eigene soziale Netzwerk — und die Datenbank dahinter.' }
 ];
 
 // Minimaler Toast, damit die Rückmeldungen des Werkzeugs

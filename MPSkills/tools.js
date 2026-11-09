@@ -156,8 +156,10 @@ window.TOOLS_OVERLAY = {
   // Kommentare, Hashtags), die Lehrkraft erstellt die Tabellen, Admins
   // schauen mit SQL in die Datenbank dahinter (wie InstaHub).
   // tools/SocialHub/ im iframe, Editor/Kern/Diagramm von SQL Studio.
-  // Nur für Admins (skill_tools.admin_only), noch ohne Schaufenster.
-  socialhub: { ready: true, subtitle: 'Eigenes soziales Netzwerk & Datenbank', beta: true, adminOnly: true },
+  // Seit Migration 0283 für alle Lehrkräfte (vorher admin_only – ohne 2FA
+  // war die Kachel weg und das Anlegen schlug fehl). Schaufenster:
+  // preview/socialhub.js (echte App mit ?demo=1, js/demo.js spielt den Server).
+  socialhub: { ready: true, subtitle: 'Eigenes soziales Netzwerk & Datenbank', beta: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

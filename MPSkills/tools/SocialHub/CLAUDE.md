@@ -1,6 +1,6 @@
-# YourSozialNet — soziales Netzwerk + Datenbank (MPSkill, Migrationen 0262–0280)
+# YourSozialNet — soziales Netzwerk + Datenbank (MPSkill, Migrationen 0262–0283)
 
-Wie InstaHub, nur moderner im Stil von TikTok (Fotos statt Videos, Vollbild-Karten, endloses Scrollen). **Nur für Admins sichtbar** (`skill_tools.admin_only`, Schild über `tools.js` `adminOnly`), Beta. Plan und Hintergrund: `MPSkills/PLAN_FEED_SKILL.md`.
+Wie InstaHub, nur moderner im Stil von TikTok (Fotos statt Videos, Vollbild-Karten, endloses Scrollen). **Für alle Lehrkräfte seit Migration 0283** (09.11.2026; vorher `skill_tools.admin_only` – seit 0223 zählt Admin nur mit 2FA, ohne Code war die Kachel weg und das Anlegen scheiterte mit `tool_admin_only`), Beta. **Schaufenster** `MPSkills/preview/socialhub.js`: Kachel-Standbild (Handy + Tabelle likes, Hover = Like landet als Zeile), Vorschau = echte App im Rahmen mit `?demo=1` → `js/demo.js` statt Server (siehe Dateien). Plan und Hintergrund: `MPSkills/PLAN_FEED_SKILL.md`.
 
 ## Begriffe (nur für diesen Skill, mit Sönke geklärt 03.11.2026)
 
@@ -49,6 +49,7 @@ In der Oberfläche steht nie „Hub“, immer „Netzwerk“.
 |---|---|
 | `tool.js` / `tool.css` | Brücke wie SQL Studio: Rahmen `index.html?raum=CODE&rolle=presenter|participant`; `sh:call` (nur `sh_*`) → `ctx.actions.call`, `sh:setData` (nur Lehrkraft) → `skill_room_set_state`, `sh:state` = `skill_room_state.data` |
 | `index.html` | App; lädt `../SQLStudio/js/core.js`, `editor.js`, `diagram.js` mit (geteilt, nicht kopiert) |
+| `js/demo.js` | Schaufenster (`?demo=1`, 0283): `SHDemo.call` spielt die RPCs im Arbeitsspeicher – Schüler @du (Gründer/Admin) im eigenen Netzwerk „Liky“ mit den Beispieldaten (`SHDummy.build`, Stichtag gestern), Tabellen ohne sessions/views/ads; liken/folgen/kommentieren wirken auch im SQL-Schnappschuss, Schreiben/Posten/Profil sagen ab. `api.js` leitet bei `DEMO` jeden Aufruf hierher, merkt keine Sitzung und schickt kein `sh:hello`. Neue RPC, die die App beim Start braucht → hier nachtragen, sonst zeigt die Vorschau einen Fehler |
 | `js/api.js` | Brücke zum Rahmen, Sitzung je Netzwerk im Gerät („Angemeldet bleiben“), deutsche Fehlertexte (`ERR`) |
 | `js/media.js` | Bilder verkleinern (`compress` nimmt Datei oder Canvas, `compressLogo`, `decode`), Hauptfarbe eigener Logos, gebündeltes Holen über `sh_media_get` als blob:-Adressen |
 | `js/exif.js` | `SHExif.read(file)` → `{ taken_at, camera }` aus EXIF (JPEG APP1, WebP-Chunk), ohne Bibliothek, kein GPS (0268/0269) |
@@ -81,6 +82,6 @@ In der Oberfläche steht nie „Hub“, immer „Netzwerk“.
 
 ## Später
 
-- Dummy-Daten: Plan `MPSkills/PLAN_DUMMYDATEN.md`, User- und Bilderliste `dummy/LISTE.md` (70 User, Knopf „Daten laden“ je Tabelle im Diagramm der Lehrkraft), dazu erfundene `sessions`/`views` mit verschiedenen Geräten/IPs/Uhrzeiten; Schaufenster `preview/socialhub.js`.
+- Dummy-Daten: Plan `MPSkills/PLAN_DUMMYDATEN.md`, User- und Bilderliste `dummy/LISTE.md` (70 User, Knopf „Daten laden“ je Tabelle im Diagramm der Lehrkraft), dazu erfundene `sessions`/`views` mit verschiedenen Geräten/IPs/Uhrzeiten.
 - Freier Raum je Schule (siehe Plan). Werbung ist gebaut (0276, siehe oben).
 - Analytics (0270) ist gebaut; vor der Freigabe für alle: Abschnitt in `datenschutz.html`/`DATENSCHUTZ.md` (Bild-Upload, Konten mit ausgedachten Daten, Tracking solange die Tabellen erstellt sind, alles im Raum und mit ihm gelöscht), die Kommentar-Entwürfe bewusst NICHT gebaut (DSB).

@@ -2,7 +2,8 @@
    MPSkills — Skill „YourSozialNet" (bis 0265 „Social Hub")  ·  tool.js
    ══════════════════════════════════════════════════════════════
    Eine soziale Plattform im Stil von TikTok, an der die Klasse
-   Datenbanken lernt (Migration 0262, Beta, nur für Admins sichtbar).
+   Datenbanken lernt (Migration 0262, Beta; seit 0283 für alle Lehrkräfte).
+   Im Schaufenster (ctx.preview) läuft die App mit ?demo=1 ohne Server (js/demo.js).
    Doku: tools/SocialHub/CLAUDE.md, Plan: MPSkills/PLAN_FEED_SKILL.md.
 
    Die App ist eine eigene Seite (index.html + js/ + css/) im
@@ -19,7 +20,7 @@
 (function () {
   'use strict';
 
-  const V = '20261108b';
+  const V = '20261109c';
   let root = null;
   let ctx = null;
   let view = null;

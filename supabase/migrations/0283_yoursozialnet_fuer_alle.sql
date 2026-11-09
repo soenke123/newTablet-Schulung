@@ -1,0 +1,25 @@
+-- ══════════════════════════════════════════════════════════════
+-- Migration 0283 — YourSozialNet für alle Lehrkräfte
+-- ══════════════════════════════════════════════════════════════
+-- Sönke 09.11.2026: „Ich kann gerade keinen neuen YourSozialNet
+-- erstellen. Es gibt einen Fehler und die Kachel ist auch weg. Das Tool
+-- kann nun auch für alle sichtbar sein … mit interaktiver Kachel.“
+--
+-- Ursache: 0262 hat den Skill mit admin_only = true eingetragen. Seit
+-- 0223 zählt is_any_admin() nur mit 2FA in der Sitzung (aal2). Wer in
+-- MPSkills ohne 2FA-Code angemeldet ist, ist dort keine Admin: die
+-- Policy skill_tools_select_public blendet die Kachel aus, und der
+-- Trigger skill_rooms_admin_only bricht das Anlegen mit
+-- tool_admin_only ab.
+--
+-- Lösung wie bei SQL Studio (0253) und Definitions Derby (0237):
+-- admin_only = false. In 0262 steht admin_only zwar im on-conflict-Teil,
+-- 0262 wird aber nicht erneut eingespielt; der Prüfstand hält fest, dass
+-- die Kette am Ende frei ist. Das Schaufenster (preview/socialhub.js)
+-- und der Sticker „Beta“ kommen aus MPSkills/, nicht aus der Datenbank.
+--
+-- Prüfstand: supabase/tests/0283_yoursozialnet_fuer_alle.mjs
+-- Mehrfach ausführbar.
+-- ══════════════════════════════════════════════════════════════
+
+update skill_tools set admin_only = false where id = 'socialhub';
