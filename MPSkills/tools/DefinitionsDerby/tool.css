@@ -105,9 +105,8 @@
 .dd-busy .dd-main { opacity: .7; pointer-events: none; }
 
 .dd svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-/* Figuren (KSCreatures) erben den Strich über currentColor: im Dunkeln wäre er hell
-   und legt einen hellen Rand um die Augen — also immer dunkle Tinte */
-.dd .creature-svg { color: var(--ink); }
+/* Kistenturm-Figuren (figuren.js) bringen ihre Farben mit, Strich/Füllung der
+   Symbol-Regel oben gilt für sie nicht (figuren.css: svg.kf) */
 
 /* ─── Kopf und Texte ─── */
 .dd-top { display: flex; gap: 14px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; margin-bottom: 22px; }

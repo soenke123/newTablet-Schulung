@@ -74,7 +74,7 @@
 (function () {
   'use strict';
 
-  const V = '20261102a';
+  const V = '20261110a';
   const BASE = 'tools/DefinitionsDerby/';
   const MAX_SHARED = 20;          // data.shared muss in 8 KB passen
   const LEVELS = ['neu', 'unsicher', 'teilweise', 'sicher'];
@@ -3709,13 +3709,11 @@
     l.rel = 'stylesheet'; l.href = href; l.dataset.dd = key;
     document.head.appendChild(l);
   }
-  /* Figuren = Baukasten von Knowledge Stack + figuren.js/css */
+  /* Figuren = figuren.js/css (neu gezeichnet 10.11.2026, ohne Baukasten von Knowledge Stack) */
   function ladeFiguren() {
     if (window.DDFiguren) return Promise.resolve();
-    loadCss('tools/KnowledgeStack/creatures.css?v=' + V, 'ks-creatures');
     loadCss(BASE + 'figuren.css?v=' + V, 'figuren');
-    return figReady || (figReady = (window.KSCreatures ? Promise.resolve() : loadScript('tools/KnowledgeStack/creatures.js?v=' + V))
-      .then(() => loadScript(BASE + 'figuren.js?v=' + V))
+    return figReady || (figReady = loadScript(BASE + 'figuren.js?v=' + V)
       .catch(e => { figReady = null; throw e; }));
   }
   /* Team i spielt mit Figur figs[i] (Migration 0242, Auswahl in der Lobby) */
