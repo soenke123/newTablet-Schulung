@@ -406,7 +406,7 @@
       ['f_b_b_a', 'f_b_b_a_avatar.png', 'Blütenschlange'],
       ['f_b_b_b', 'f_b_b_b_avatar.png', 'Baumsaurier'],
       ['f_b_c',   'f_b_c_avatar.png',   'Baumriese'],
-      // Kistenturm: Teamfiguren (figuren.js DDFiguren.LIST), Kopf aus dem SVG gerendert.
+      // Kistenturm: Teamfiguren (figuren.js DDFiguren.LIST), Kopf aus dem SVG gerendert (neue Figuren seit 10.11.2026).
       // Frei für angemeldete Mitglieder des Sieger-Teams (Migration 0255).
       ['kt_astro',   'kt_astro_avatar.png',   'Astro-Hase'],
       ['kt_lama',    'kt_lama_avatar.png',    'Bananalama'],
