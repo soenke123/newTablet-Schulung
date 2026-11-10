@@ -1,0 +1,682 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Kistenturm – Figuren im Vergleich</title>
+<!-- ══════════════════════════════════════════════════════════════
+     Gegenüberstellung der sechs Kistenturm-Figuren (Sönke 10.11.2026:
+     „noch nicht richtig schön … die Bewegungen sind nicht toll, sie
+     haben noch keinen Charakter“).
+     Links  = bisher (figuren.js + KSCreatures-Baukasten, unverändert)
+     Rechts = Entwurf: jede Figur von Hand gezeichnet, eigenes Skelett,
+              eigene Mimik und eigene Bewegungen je Zustand.
+     NUR ein Entwurf zum Ansehen – das Spiel benutzt weiter figuren.js.
+     Die neuen Figuren stehen komplett in dieser Datei (NEU.svg(i, a, px)).
+     ══════════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="../KnowledgeStack/creatures.css"><link rel="stylesheet" href="figuren.css">
+<style>
+:root { --ink: #2b2438; }
+* { box-sizing: border-box; }
+body { margin: 0; padding: 20px 16px 48px; background: #e9dcc3; font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; color: #2a2230; }
+main { max-width: 1060px; margin: 0 auto; }
+h1 { font-size: 24px; margin: 0 0 4px; }
+.lead { margin: 0 0 14px; max-width: 70ch; line-height: 1.45; }
+.top { position: sticky; top: 0; z-index: 5; background: #e9dcc3ee; padding: 8px 0 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.top span { font-weight: 600; margin-right: 4px; }
+button { font: inherit; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 2px solid var(--ink); background: #fffaf0; color: var(--ink); cursor: pointer; }
+button:hover { background: #fff; } button:active { transform: translateY(1px); }
+button.on { background: var(--ink); color: #fffaf0; }
+.heads, .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.heads { margin: 6px 0 8px; font-weight: 700; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; opacity: .7; }
+.fig { margin: 0 0 22px; }
+.fig h2 { font-size: 19px; margin: 0 0 2px; }
+.fig .say { margin: 0 0 8px; font-size: 14px; line-height: 1.4; max-width: 75ch; }
+.card { background: #fffaf0; border-radius: 16px; box-shadow: 0 2px 6px #0002; padding: 12px; display: flex; flex-direction: column; align-items: center; min-width: 0; }
+.card.neu { box-shadow: 0 2px 6px #0002, inset 0 0 0 3px var(--tc); }
+.stage { width: 100%; max-width: 260px; aspect-ratio: 1; display: grid; place-items: center; }
+.stage > svg { width: 88%; height: 88%; }
+.small { display: flex; gap: 14px; align-items: flex-end; min-height: 76px; margin-top: 4px; }
+.small svg { display: block; }
+.small small { display: block; text-align: center; font-size: 11px; opacity: .6; }
+.bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+.bar button { font-size: 13px; padding: 5px 12px; }
+.note { font-size: 13px; opacity: .75; margin: 6px 0 0; }
+@media (max-width: 560px) { .heads, .row { gap: 8px; } .card { padding: 8px; } .small { gap: 8px; } }
+
+/* ════════════ Neue Figuren: gemeinsame Regeln ════════════ */
+.kf { display: block; overflow: visible; }
+.kf [data-s] { display: none; }
+.kf.is-idle [data-s~="idle"], .kf.is-lift [data-s~="lift"], .kf.is-cheer [data-s~="cheer"], .kf.is-sad [data-s~="sad"] { display: inline; }
+.kf .fb { transform-box: fill-box; transform-origin: center; }
+.kf .blink { animation: kf-blink 4.4s infinite; }
+.kf .shadow { transform-box: fill-box; transform-origin: center; }
+.kf .tw { animation: kf-tw 1.8s ease-in-out infinite; }
+@keyframes kf-blink { 0%, 93%, 100% { transform: none; } 96% { transform: scaleY(.08); } }
+@keyframes kf-tw { 0%, 100% { transform: scale(0) rotate(0); } 50% { transform: scale(1) rotate(40deg); } }
+@keyframes kf-tear { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: translateY(26px); opacity: 0; } }
+
+/* ── Astro-Hase ── */
+.kf--astro .root { animation: as-float 3.6s ease-in-out infinite; }
+.kf--astro .shadow { animation: as-shadow 3.6s ease-in-out infinite; }
+.kf--astro .ear-l { animation: as-ear-l 3.6s ease-in-out infinite .25s; }
+.kf--astro .ear-r { animation: as-ear-r 3.6s ease-in-out infinite .35s; }
+.kf--astro .leg-l { animation: as-leg 2.4s ease-in-out infinite; }
+.kf--astro .leg-r { animation: as-leg 2.4s ease-in-out infinite reverse; }
+.kf--astro .flame { animation: as-flame .16s linear infinite alternate; }
+.kf--astro .lamp { animation: as-lamp 1.2s steps(1) infinite; }
+.kf--astro.is-idle .arm-r { animation: as-wave 5s ease-in-out infinite; }
+.kf--astro.is-idle .head { animation: as-look 7s ease-in-out infinite; }
+@keyframes as-float { 0%, 100% { transform: translateY(-8px) rotate(-3deg); } 50% { transform: translateY(-17px) rotate(3deg); } }
+@keyframes as-shadow { 0%, 100% { transform: scaleX(.82); opacity: .9; } 50% { transform: scaleX(.66); opacity: .6; } }
+@keyframes as-ear-l { 0%, 100% { transform: rotate(5deg); } 50% { transform: rotate(-7deg); } }
+@keyframes as-ear-r { 0%, 100% { transform: rotate(4deg); } 50% { transform: rotate(-5deg); } }
+@keyframes as-leg { 0%, 100% { transform: rotate(9deg); } 50% { transform: rotate(-9deg); } }
+@keyframes as-flame { from { transform: scale(1, .7); } to { transform: scale(.85, 1.15); } }
+@keyframes as-lamp { 0% { fill: #ff5c5c; } 50% { fill: #7a2b2b; } }
+@keyframes as-wave { 0%, 58%, 100% { transform: none; } 64% { transform: rotate(-128deg); } 70% { transform: rotate(-104deg); } 76% { transform: rotate(-130deg); } 82% { transform: rotate(-104deg); } 90% { transform: rotate(-126deg); } }
+@keyframes as-look { 0%, 30%, 52%, 100% { transform: none; } 36%, 46% { transform: rotate(-7deg); } }
+/* Heben: Düsenstoß nach oben */
+.kf--astro.is-lift .root { animation: as-boost .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--astro.is-lift .flame { animation: as-flame .08s linear infinite alternate, as-boostflame .9s ease both; }
+.kf--astro.is-lift .arm-l { animation: as-up-l .9s ease both; }
+.kf--astro.is-lift .arm-r { animation: as-up-r .9s ease both; }
+.kf--astro.is-lift .ear-l, .kf--astro.is-lift .ear-r { animation: as-earback .9s ease both; }
+@keyframes as-boost { 0%, 100% { transform: translateY(-8px); } 18% { transform: translateY(2px) scale(1.08, .88); } 46% { transform: translateY(-36px) scale(.94, 1.1); } 72% { transform: translateY(-30px); } }
+@keyframes as-boostflame { 0%, 14%, 100% { scale: 1 1; } 30%, 70% { scale: 1.3 3; } }
+@keyframes as-up-l { 0%, 100% { transform: none; } 30%, 78% { transform: rotate(118deg); } }
+@keyframes as-up-r { 0%, 100% { transform: none; } 30%, 78% { transform: rotate(-118deg); } }
+@keyframes as-earback { 0%, 100% { transform: none; } 18% { transform: rotate(0); } 46% { transform: scaleY(.8) rotate(4deg); } 72% { transform: scaleY(1.08); } }
+/* Jubeln: Salto in der Schwerelosigkeit */
+.kf--astro.is-cheer .root { animation: as-flip 1.5s cubic-bezier(.4, 0, .3, 1) infinite; }
+.kf--astro.is-cheer .arm-l { transform: rotate(118deg); animation: none; }
+.kf--astro.is-cheer .arm-r { transform: rotate(-118deg); animation: none; }
+.kf--astro.is-cheer .shadow { animation: none; transform: scaleX(.6); }
+@keyframes as-flip { 0% { transform: translateY(-6px) rotate(0); } 12% { transform: translateY(0) scale(1.06, .9) rotate(0); } 45% { transform: translateY(-34px) rotate(-200deg); } 70%, 100% { transform: translateY(-6px) rotate(-360deg); } }
+/* Traurig: gelandet, Ohren hängen */
+.kf--astro.is-sad .root { animation: as-sigh 3.2s ease-in-out infinite; }
+.kf--astro.is-sad .shadow { animation: none; }
+.kf--astro.is-sad .ear-l { animation: as-droop-l 3.2s ease-in-out infinite; }
+.kf--astro.is-sad .ear-r { animation: as-droop-r 3.2s ease-in-out infinite; }
+.kf--astro.is-sad .leg-l, .kf--astro.is-sad .leg-r { animation: none; }
+.kf--astro.is-sad .head { transform: rotate(5deg) translateY(3px); }
+.kf--astro.is-sad .arm-l { transform: rotate(-12deg); } .kf--astro.is-sad .arm-r { transform: rotate(12deg); }
+.kf--astro.is-sad .tear { animation: kf-tear 2s ease-in infinite; }
+@keyframes as-sigh { 0%, 100% { transform: none; } 50% { transform: scale(1.02, .97); } }
+@keyframes as-droop-l { 0%, 100% { transform: rotate(-72deg); } 50% { transform: rotate(-66deg); } }
+@keyframes as-droop-r { 0%, 100% { transform: rotate(38deg); } 50% { transform: rotate(33deg); } }
+
+/* ── Bananalama ── */
+.kf--lama .jaw { animation: la-chew 1.5s ease-in-out infinite; }
+.kf--lama .tail { animation: la-wag 1.3s ease-in-out infinite; }
+.kf--lama .ear-r { animation: la-flick 4.7s ease-in-out infinite; }
+.kf--lama .ear-l { animation: la-flick 6.1s ease-in-out infinite 1.3s; }
+.kf--lama.is-idle .head { animation: la-tilt 6s ease-in-out infinite; }
+.kf--lama.is-idle .root { animation: la-breathe 3s ease-in-out infinite; }
+.kf--lama.is-idle .lid { animation: la-lid 6s ease-in-out infinite; }
+@keyframes la-chew { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(3px, 1px); } 40% { transform: translate(-1px, 0); } 60% { transform: translate(-3px, 1px); } 80% { transform: translate(1px, 0); } }
+@keyframes la-wag { 0%, 100% { transform: rotate(-10deg); } 50% { transform: rotate(14deg); } }
+@keyframes la-flick { 0%, 84%, 100% { transform: none; } 88% { transform: rotate(-20deg); } 92% { transform: rotate(8deg); } 96% { transform: rotate(-10deg); } }
+@keyframes la-tilt { 0%, 40%, 100% { transform: rotate(-2deg); } 50%, 85% { transform: rotate(7deg) translateX(2px); } }
+@keyframes la-breathe { 50% { transform: scale(1.012, .985); } }
+@keyframes la-lid { 0%, 44%, 60%, 100% { transform: none; } 50%, 54% { transform: translateY(5px); } }
+/* Heben: Hals wird lang, Kopfstoß nach oben */
+.kf--lama.is-lift .root { animation: la-squash .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--lama.is-lift .neck { animation: la-neck .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--lama.is-lift .head { animation: la-head .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--lama.is-lift .jaw { animation: none; }
+@keyframes la-squash { 0%, 100% { transform: none; } 20% { transform: scale(1.05, .93); } 46% { transform: scale(.97, 1.04); } }
+@keyframes la-neck { 0%, 100% { transform: none; } 20% { transform: scaleY(.82); } 46% { transform: scaleY(1.42); } 72% { transform: scaleY(1.34); } }
+@keyframes la-head { 0%, 100% { transform: none; } 20% { transform: translateY(9px) rotate(6deg); } 46% { transform: translateY(-21px) rotate(-10deg); } 72% { transform: translateY(-17px) rotate(-4deg); } }
+/* Jubeln: Galopp-Hüpfer, Kopf im Nacken */
+.kf--lama.is-cheer .root { animation: la-prance .56s ease-in-out infinite; }
+.kf--lama.is-cheer .head { animation: la-toss .56s ease-in-out infinite; }
+.kf--lama.is-cheer .tail { animation-duration: .28s; }
+.kf--lama.is-cheer .leg-f { animation: la-kick-f .56s ease-in-out infinite; }
+.kf--lama.is-cheer .leg-b { animation: la-kick-b .56s ease-in-out infinite; }
+.kf--lama.is-cheer .jaw { animation: none; }
+.kf--lama.is-cheer .shadow { animation: la-shadow .56s ease-in-out infinite; }
+@keyframes la-prance { 0%, 100% { transform: translateY(0) rotate(3deg) scale(1.03, .96); } 50% { transform: translateY(-16px) rotate(-7deg); } }
+@keyframes la-toss { 0%, 100% { transform: rotate(4deg); } 50% { transform: rotate(-12deg); } }
+@keyframes la-kick-f { 0%, 100% { transform: none; } 50% { transform: rotate(-38deg); } }
+@keyframes la-kick-b { 0%, 100% { transform: none; } 50% { transform: rotate(30deg); } }
+@keyframes la-shadow { 50% { transform: scaleX(.75); opacity: .6; } }
+/* Traurig: Kopf hängt, Ohren unten */
+.kf--lama.is-sad .neckhead { animation: la-hang 3.4s ease-in-out infinite; }
+.kf--lama.is-sad .head { transform: rotate(14deg); }
+.kf--lama.is-sad .ear-l { animation: none; transform: rotate(-58deg); }
+.kf--lama.is-sad .ear-r { animation: none; transform: rotate(38deg); }
+.kf--lama.is-sad .tail { animation: none; transform: rotate(-24deg); }
+.kf--lama.is-sad .jaw { animation: none; }
+@keyframes la-hang { 0%, 100% { transform: rotate(17deg); } 50% { transform: rotate(20deg); } }
+
+/* ── Lauch-Samurai ── */
+.kf--lauch .lf1 { animation: lc-sway 3.2s ease-in-out infinite; }
+.kf--lauch .lf2 { animation: lc-sway 3.2s ease-in-out infinite .2s; }
+.kf--lauch .lf3 { animation: lc-sway 3.2s ease-in-out infinite .4s; }
+.kf--lauch .lf4 { animation: lc-sway 3.2s ease-in-out infinite .6s; }
+.kf--lauch .lf5 { animation: lc-sway 3.2s ease-in-out infinite .8s; }
+.kf--lauch .band1 { animation: lc-flap .7s ease-in-out infinite; }
+.kf--lauch .band2 { animation: lc-flap .7s ease-in-out infinite .22s; }
+.kf--lauch.is-idle .root { animation: lc-breathe 3.2s ease-in-out infinite; }
+.kf--lauch.is-idle .pupils { animation: lc-glance 6.4s ease-in-out infinite; }
+.kf--lauch.is-idle .arm-l { animation: lc-tap 6.4s ease-in-out infinite; }
+@keyframes lc-sway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(5deg); } }
+@keyframes lc-flap { 0%, 100% { transform: rotate(-9deg) scaleX(1); } 50% { transform: rotate(10deg) scaleX(.92); } }
+@keyframes lc-breathe { 50% { transform: scale(1.015, .98); } }
+@keyframes lc-glance { 0%, 34%, 70%, 100% { transform: none; } 40%, 50% { transform: translateX(-3px); } 56%, 64% { transform: translateX(3px); } }
+@keyframes lc-tap { 0%, 38%, 54%, 100% { transform: none; } 42%, 50% { transform: rotate(-9deg); } 46% { transform: rotate(-3deg); } }
+/* Heben: Schwert ziehen, ein Schnitt */
+.kf--lauch.is-lift .root { animation: lc-lunge .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--lauch.is-lift .arm-r { animation: lc-slash .9s cubic-bezier(.5, 0, .2, 1) both; }
+.kf--lauch.is-lift .cut { animation: lc-cut .9s ease-out both; }
+.kf--lauch.is-lift .leaves { animation: lc-whip .9s ease both; }
+@keyframes lc-lunge { 0%, 100% { transform: none; } 20% { transform: translateX(-7px) rotate(-8deg) scale(1.03, .96); } 38%, 62% { transform: translateX(9px) rotate(9deg); } }
+@keyframes lc-slash { 0% { transform: rotate(-40deg); } 20% { transform: rotate(-178deg); } 38%, 66% { transform: rotate(-12deg); } 100% { transform: rotate(-40deg); } }
+@keyframes lc-cut { 0%, 24% { opacity: 0; transform: scale(.7) rotate(-20deg); } 36% { opacity: 1; transform: scale(1) rotate(0); } 70%, 100% { opacity: 0; transform: scale(1.12) rotate(8deg); } }
+@keyframes lc-whip { 0%, 100% { transform: none; } 20% { transform: rotate(12deg); } 40% { transform: rotate(-16deg); } 70% { transform: rotate(5deg); } }
+/* Jubeln: Schwert zum Himmel */
+.kf--lauch.is-cheer .root { animation: lc-jump .62s cubic-bezier(.3, 0, .4, 1) infinite; }
+.kf--lauch.is-cheer .arm-r { animation: lc-raise .62s ease-in-out infinite; }
+.kf--lauch.is-cheer .arm-l { animation: lc-fist .62s ease-in-out infinite; }
+.kf--lauch.is-cheer .leaves { animation: lc-flare .62s ease-in-out infinite; }
+.kf--lauch.is-cheer .shadow { animation: la-shadow .62s ease-in-out infinite; }
+@keyframes lc-jump { 0%, 100% { transform: translateY(0) scale(1.05, .93); } 50% { transform: translateY(-18px) scale(.97, 1.04); } }
+@keyframes lc-raise { 0%, 100% { transform: rotate(-122deg); } 50% { transform: rotate(-136deg); } }
+@keyframes lc-fist { 0%, 100% { transform: rotate(138deg); } 50% { transform: rotate(158deg); } }
+@keyframes lc-flare { 0%, 100% { transform: scale(1.08, .92); } 50% { transform: scale(.95, 1.1); } }
+/* Traurig: tiefe Verbeugung, Blätter welken */
+.kf--lauch.is-sad .root { animation: lc-bow 3.6s ease-in-out infinite; }
+.kf--lauch.is-sad .lf1 { animation: none; transform: rotate(-26deg); } .kf--lauch.is-sad .lf2 { animation: none; transform: rotate(30deg); }
+.kf--lauch.is-sad .lf3 { animation: none; transform: rotate(-34deg); } .kf--lauch.is-sad .lf4 { animation: none; transform: rotate(40deg); }
+.kf--lauch.is-sad .lf5 { animation: none; transform: rotate(18deg) scaleY(.9); }
+.kf--lauch.is-sad .band1 { animation: none; transform: rotate(48deg); } .kf--lauch.is-sad .band2 { animation: none; transform: rotate(30deg); }
+.kf--lauch.is-sad .sweat { animation: kf-tear 2.2s ease-in infinite; }
+@keyframes lc-bow { 0%, 100% { transform: rotate(9deg); } 50% { transform: rotate(12deg) scale(1.01, .98); } }
+
+/* ── GameBoy ── */
+.kf--gameboy.is-idle .root { animation: gb-bob 1s steps(1) infinite; }
+.kf--gameboy.is-idle .arm-l { animation: gb-swing 1s steps(1) infinite; }
+.kf--gameboy.is-idle .arm-r { animation: gb-swing 1s steps(1) infinite reverse; }
+.kf--gameboy.is-idle .leg-r { animation: gb-tap .5s steps(1) infinite; }
+.kf--gameboy .btn-a { animation: gb-press 2s steps(1) infinite; }
+.kf--gameboy .btn-b { animation: gb-press 2s steps(1) infinite 1s; }
+.kf--gameboy .cart { animation: gb-cart 4s ease-in-out infinite; }
+.kf--gameboy.is-idle .pxeyes { animation: gb-eyes 5s steps(1) infinite; }
+.kf--gameboy .scan { animation: gb-scan 2.6s linear infinite; }
+@keyframes gb-bob { 0% { transform: none; } 50% { transform: translateY(-4px); } }
+@keyframes gb-swing { 0% { transform: rotate(8deg); } 50% { transform: rotate(-8deg); } }
+@keyframes gb-tap { 0% { transform: none; } 50% { transform: rotate(-14deg); } }
+@keyframes gb-press { 0%, 12%, 100% { transform: none; filter: none; } 0.1%, 11.9% { transform: scale(.82); filter: brightness(1.5); } }
+@keyframes gb-cart { 0%, 80%, 100% { transform: none; } 86% { transform: translateY(-5px); } 92% { transform: translateY(1px); } }
+@keyframes gb-eyes { 0%, 100% { transform: none; } 30% { transform: translateX(-4px); } 44% { transform: none; } 60% { transform: translateX(4px); } 74% { transform: none; } 90% { transform: scaleY(.25); } 94% { transform: none; } }
+@keyframes gb-scan { from { transform: translateY(0); } to { transform: translateY(44px); } }
+/* Heben: Sprung wie im Jump ’n’ Run, Münze */
+.kf--gameboy.is-lift .root { animation: gb-jump .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--gameboy.is-lift .arm-r { animation: gb-fist .9s ease both; }
+.kf--gameboy.is-lift .arm-l { animation: gb-back .9s ease both; }
+.kf--gameboy.is-lift .leg-l { animation: gb-tuck-l .9s ease both; }
+.kf--gameboy.is-lift .leg-r { animation: gb-tuck-r .9s ease both; }
+.kf--gameboy.is-lift .coin { animation: gb-coin .9s ease-out both; }
+.kf--gameboy.is-lift .shadow { animation: gb-shadow .9s ease both; }
+@keyframes gb-jump { 0%, 100% { transform: none; } 16% { transform: translateY(4px) scale(1.08, .9); } 42% { transform: translateY(-30px) scale(.95, 1.07); } 62% { transform: translateY(-26px); } 86% { transform: translateY(2px) scale(1.05, .94); } }
+@keyframes gb-fist { 0%, 100% { transform: none; } 30%, 70% { transform: rotate(-112deg); } }
+@keyframes gb-back { 0%, 100% { transform: none; } 30%, 70% { transform: rotate(-30deg); } }
+@keyframes gb-tuck-l { 0%, 16%, 86%, 100% { transform: none; } 42%, 62% { transform: rotate(34deg); } }
+@keyframes gb-tuck-r { 0%, 16%, 86%, 100% { transform: none; } 42%, 62% { transform: rotate(-24deg) translateY(-4px); } }
+@keyframes gb-coin { 0%, 34% { opacity: 0; transform: translateY(26px) scaleX(1); } 44% { opacity: 1; transform: translateY(0) scaleX(.2); } 60% { transform: translateY(-14px) scaleX(1); opacity: 1; } 76% { transform: translateY(-20px) scaleX(.2); opacity: 1; } 100% { opacity: 0; transform: translateY(-24px) scaleX(1); } }
+@keyframes gb-shadow { 42%, 62% { transform: scaleX(.7); opacity: .55; } }
+/* Jubeln: hüpft, 1UP */
+.kf--gameboy.is-cheer .root { animation: gb-hop .5s cubic-bezier(.3, 0, .4, 1) infinite; }
+.kf--gameboy.is-cheer .arm-l { animation: gb-yay-l .5s ease-in-out infinite; }
+.kf--gameboy.is-cheer .arm-r { animation: gb-yay-r .5s ease-in-out infinite; }
+.kf--gameboy.is-cheer .oneup { animation: gb-1up 1s steps(1) infinite; }
+.kf--gameboy.is-cheer .cart { animation: gb-cartpop .5s ease-in-out infinite; }
+.kf--gameboy.is-cheer .shadow { animation: la-shadow .5s ease-in-out infinite; }
+@keyframes gb-hop { 0%, 100% { transform: translateY(0) scale(1.06, .92); } 50% { transform: translateY(-16px) scale(.97, 1.04); } }
+@keyframes gb-yay-l { 0%, 100% { transform: rotate(92deg); } 50% { transform: rotate(122deg); } }
+@keyframes gb-yay-r { 0%, 100% { transform: rotate(-92deg); } 50% { transform: rotate(-122deg); } }
+@keyframes gb-1up { 0% { opacity: 1; transform: translateY(0); } 50% { opacity: 1; transform: translateY(-5px); } }
+@keyframes gb-cartpop { 50% { transform: translateY(-6px); } }
+/* Traurig: Game over, Bildschirm flackert */
+.kf--gameboy.is-sad .root { animation: gb-slump 3s ease-in-out infinite; }
+.kf--gameboy.is-sad .arm-l { transform: rotate(-16deg); } .kf--gameboy.is-sad .arm-r { transform: rotate(16deg); }
+.kf--gameboy.is-sad .over { animation: gb-blink 1.2s steps(1) infinite; }
+.kf--gameboy.is-sad .dim { animation: gb-flicker 2.4s steps(1) infinite; }
+.kf--gameboy.is-sad .btn-a, .kf--gameboy.is-sad .btn-b, .kf--gameboy.is-sad .cart { animation: none; }
+@keyframes gb-slump { 0%, 100% { transform: rotate(-6deg) translateY(2px); } 50% { transform: rotate(-8deg) translateY(3px) scale(1.01, .98); } }
+@keyframes gb-blink { 0% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes gb-flicker { 0%, 100% { opacity: .22; } 40% { opacity: .5; } 44% { opacity: .22; } 70% { opacity: .42; } 74% { opacity: .22; } }
+
+/* ── Popcorn ── */
+.kf--popcorn.is-idle .root { animation: pc-jitter .56s ease-in-out infinite; }
+.kf--popcorn .pf { animation: pc-jig 1.1s ease-in-out infinite; }
+.kf--popcorn .pf:nth-child(2n) { animation-delay: -.3s; animation-duration: .9s; }
+.kf--popcorn .pf:nth-child(3n) { animation-delay: -.55s; animation-duration: 1.3s; }
+.kf--popcorn.is-idle .kern { animation: pc-kern 2.6s linear infinite; }
+.kf--popcorn.is-idle .arm-l { animation: pc-arm-l .56s ease-in-out infinite; }
+.kf--popcorn.is-idle .arm-r { animation: pc-arm-r .56s ease-in-out infinite; }
+.kf--popcorn.is-idle .glasses { animation: pc-glass .56s ease-in-out infinite; }
+@keyframes pc-jitter { 0%, 100% { transform: scale(1.03, .97); } 50% { transform: translateY(-5px) scale(.985, 1.02); } }
+@keyframes pc-jig { 0%, 100% { transform: rotate(-7deg) translateY(0); } 50% { transform: rotate(7deg) translateY(-2px); } }
+@keyframes pc-kern { 0%, 55% { transform: translate(0, 0) scale(.4); opacity: 0; } 58% { opacity: 1; transform: translate(0, -6px) scale(1); } 70% { transform: translate(14px, -40px) rotate(120deg); opacity: 1; } 82% { transform: translate(26px, -22px) rotate(240deg); opacity: 1; } 92%, 100% { transform: translate(34px, 20px) rotate(330deg); opacity: 0; } }
+@keyframes pc-arm-l { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(10deg); } }
+@keyframes pc-arm-r { 0%, 100% { transform: rotate(6deg); } 50% { transform: rotate(-10deg); } }
+@keyframes pc-glass { 0%, 100% { transform: translateY(1px); } 50% { transform: translateY(-1.5px); } }
+/* Heben: zusammenstauchen, dann poppt alles hoch */
+.kf--popcorn.is-lift .root { animation: pc-pop .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--popcorn.is-lift .pops { animation: pc-puffup .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--popcorn.is-lift .glasses { animation: pc-glasshop .9s ease both; }
+.kf--popcorn.is-lift .arm-l { animation: pc-up-l .9s ease both; }
+.kf--popcorn.is-lift .arm-r { animation: pc-up-r .9s ease both; }
+.kf--popcorn.is-lift .burst { animation: pc-burst .9s cubic-bezier(.2, .6, .4, 1) both; }
+@keyframes pc-up-l { 0%, 100% { transform: none; } 22% { transform: rotate(-14deg); } 46%, 72% { transform: rotate(100deg); } }
+@keyframes pc-up-r { 0%, 100% { transform: none; } 22% { transform: rotate(14deg); } 46%, 72% { transform: rotate(-100deg); } }
+@keyframes pc-pop { 0%, 100% { transform: none; } 22% { transform: translateY(5px) scale(1.14, .82); } 46% { transform: translateY(-20px) scale(.92, 1.12); } 70% { transform: translateY(-4px) scale(1.03, .97); } }
+@keyframes pc-puffup { 0%, 100% { transform: none; } 22% { transform: scale(1.06, .8); } 46% { transform: translateY(-12px) scale(1.12, 1.25); } 70% { transform: translateY(2px) scale(1, .95); } }
+@keyframes pc-glasshop { 0%, 100% { transform: none; } 22% { transform: translateY(3px); } 46% { transform: translateY(-9px) rotate(-6deg); } 70% { transform: translateY(2px) rotate(3deg); } }
+@keyframes pc-burst { 0%, 24% { opacity: 0; transform: translate(0, 0) scale(.3); } 30% { opacity: 1; } 60% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1) rotate(160deg); } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.5), calc(var(--dy) * .2 + 30px)) scale(.9) rotate(320deg); } }
+/* Jubeln: Brille hoch, Popcorn-Fontäne */
+.kf--popcorn.is-cheer .root { animation: pc-cheer .46s ease-in-out infinite; }
+.kf--popcorn.is-cheer .glasses { transform: translateY(-27px) rotate(-5deg); }
+.kf--popcorn.is-cheer .arm-l { animation: gb-yay-l .46s ease-in-out infinite; }
+.kf--popcorn.is-cheer .arm-r { animation: gb-yay-r .46s ease-in-out infinite; }
+.kf--popcorn.is-cheer .burst { animation: pc-fount 1s cubic-bezier(.2, .6, .4, 1) infinite; }
+.kf--popcorn.is-cheer .shadow { animation: la-shadow .46s ease-in-out infinite; }
+@keyframes pc-cheer { 0%, 100% { transform: scale(1.07, .92); } 50% { transform: translateY(-14px) scale(.96, 1.05); } }
+@keyframes pc-fount { 0% { opacity: 0; transform: translate(0, 0) scale(.3); } 12% { opacity: 1; } 55% { opacity: 1; transform: translate(var(--dx), var(--dy)) scale(1) rotate(160deg); } 100% { opacity: 0; transform: translate(calc(var(--dx) * 1.5), calc(var(--dy) * .2 + 30px)) scale(.9) rotate(320deg); } }
+/* Traurig: Brille rutscht, Popcorn sackt zusammen */
+.kf--popcorn.is-sad .root { animation: as-sigh 3s ease-in-out infinite; }
+.kf--popcorn.is-sad .pops { transform: translateY(9px) scale(.94, .8); }
+.kf--popcorn.is-sad .pf { animation-duration: 3s; }
+.kf--popcorn.is-sad .glasses { animation: pc-slip 3s ease-in-out infinite; }
+.kf--popcorn.is-sad .arm-l { transform: rotate(-24deg); } .kf--popcorn.is-sad .arm-r { transform: rotate(24deg); }
+.kf--popcorn.is-sad .tear { animation: kf-tear 2s ease-in infinite; }
+@keyframes pc-slip { 0%, 100% { transform: translateY(15px) rotate(9deg); } 50% { transform: translateY(17px) rotate(11deg); } }
+
+/* ── Magic Ghost ── */
+.kf--ghost .root { animation: gh-float 3s ease-in-out infinite; }
+.kf--ghost .shadow { animation: gh-shadow 3s ease-in-out infinite; }
+.kf--ghost.is-idle .hat { animation: gh-hatslip 7s ease-in-out infinite; }
+.kf--ghost.is-idle .arm-l { animation: gh-push 7s ease-in-out infinite; }
+.kf--ghost.is-idle .arm-r { animation: gh-wand 3s ease-in-out infinite; }
+.kf--ghost .star { animation: gh-star 1.5s ease-in-out infinite; }
+@keyframes gh-float { 0%, 100% { transform: translateY(-5px) rotate(-2deg); } 50% { transform: translateY(-14px) rotate(2deg); } }
+@keyframes gh-shadow { 0%, 100% { transform: scaleX(.8); opacity: .8; } 50% { transform: scaleX(.62); opacity: .5; } }
+@keyframes gh-hatslip { 0%, 30% { transform: rotate(-9deg); } 62% { transform: translateY(20px) rotate(-2deg); } 70% { transform: translateY(21px) rotate(-1deg); } 76% { transform: translateY(-7px) rotate(-14deg); } 84%, 100% { transform: rotate(-9deg); } }
+@keyframes gh-push { 0%, 66%, 84%, 100% { transform: none; } 71% { transform: rotate(-50deg) translateY(-4px); } 76% { transform: rotate(118deg) translate(2px, -6px); } 79% { transform: rotate(118deg) translate(2px, -6px); } }
+@keyframes gh-wand { 0%, 100% { transform: rotate(6deg); } 50% { transform: rotate(-8deg); } }
+@keyframes gh-star { 0%, 100% { transform: scale(1) rotate(0); } 50% { transform: scale(1.18) rotate(18deg); } }
+/* Heben: Zauberstab-Schlenker, Funken */
+.kf--ghost.is-lift .root { animation: gh-cast .9s cubic-bezier(.3, .7, .3, 1) both; }
+.kf--ghost.is-lift .arm-r { animation: gh-flick .9s cubic-bezier(.4, 0, .2, 1) both; }
+.kf--ghost.is-lift .arm-l { animation: gh-open .9s ease both; }
+.kf--ghost.is-lift .hat { animation: gh-hattip .9s ease both; }
+.kf--ghost.is-lift .star { animation: gh-flash .9s ease both; }
+.kf--ghost.is-lift .spark { animation: gh-spark .9s ease-out both; }
+@keyframes gh-cast { 0%, 100% { transform: translateY(-5px); } 20% { transform: translateY(1px) scale(1.07, .9) rotate(5deg); } 46% { transform: translateY(-26px) scale(.95, 1.08) rotate(-5deg); } 72% { transform: translateY(-20px); } }
+@keyframes gh-flick { 0%, 100% { transform: none; } 20% { transform: rotate(46deg); } 44% { transform: rotate(-22deg); } 56% { transform: rotate(-8deg); } 72% { transform: rotate(-18deg); } }
+@keyframes gh-open { 0%, 100% { transform: none; } 44%, 72% { transform: rotate(40deg); } }
+@keyframes gh-hattip { 0%, 100% { transform: rotate(-9deg); } 20% { transform: translateY(5px) rotate(-4deg); } 46% { transform: translateY(-10px) rotate(-20deg); } 72% { transform: translateY(1px) rotate(-11deg); } }
+@keyframes gh-flash { 0%, 30%, 100% { transform: none; filter: none; } 48% { transform: scale(1.8) rotate(72deg); filter: brightness(1.25) drop-shadow(0 0 6px #ffe98a); } 72% { transform: scale(1.3) rotate(144deg); } }
+@keyframes gh-spark { 0%, 38% { opacity: 0; transform: translate(0, 0) scale(.2); } 48% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.2) rotate(90deg); } }
+/* Jubeln: dreht sich, der Hut fliegt hoch */
+.kf--ghost.is-cheer .root { animation: gh-spin 1.2s ease-in-out infinite; }
+.kf--ghost.is-cheer .hat { animation: gh-hatfly 1.2s ease-in-out infinite; }
+.kf--ghost.is-cheer .arm-r { animation: gh-yay-r .4s ease-in-out infinite; }
+.kf--ghost.is-cheer .arm-l { animation: gh-yay-l .4s ease-in-out infinite; }
+.kf--ghost.is-cheer .star { animation: gh-star .4s ease-in-out infinite; }
+@keyframes gh-spin { 0%, 30%, 100% { transform: translateY(-6px) scaleX(1); } 42% { transform: translateY(-22px) scaleX(.15); } 50%, 80% { transform: translateY(-24px) scaleX(-1); } 92% { transform: translateY(-12px) scaleX(.15); } }
+@keyframes gh-hatfly { 0%, 100% { transform: rotate(-9deg); } 40% { transform: translateY(-26px) rotate(-30deg); } 70% { transform: translateY(-20px) rotate(10deg); } 88% { transform: translateY(3px) rotate(-6deg); } }
+@keyframes gh-yay-r { 0%, 100% { transform: rotate(-50deg); } 50% { transform: rotate(-74deg); } }
+@keyframes gh-yay-l { 0%, 100% { transform: rotate(50deg); } 50% { transform: rotate(74deg); } }
+/* Traurig: sackt zusammen, Hut über die Augen */
+.kf--ghost.is-sad .root { animation: gh-melt 3.4s ease-in-out infinite; }
+.kf--ghost.is-sad .shadow { animation: none; transform: scaleX(1.15); }
+.kf--ghost.is-sad .hat { transform: translateY(21px) rotate(3deg); }
+.kf--ghost.is-sad .arm-r { transform: rotate(100deg) translate(0, -6px); } .kf--ghost.is-sad .arm-l { transform: rotate(-30deg); }
+.kf--ghost.is-sad .star { animation: none; filter: grayscale(1) brightness(.9); }
+.kf--ghost.is-sad .tear { animation: kf-tear 1.8s ease-in infinite; }
+.kf--ghost.is-sad .tear.t2 { animation-delay: .9s; }
+@keyframes gh-melt { 0%, 100% { transform: translateY(12px) scale(1.13, .8); } 50% { transform: translateY(13px) scale(1.16, .77); } }
+
+@media (prefers-reduced-motion: reduce) { .kf *, .kf { animation: none !important; } }
+</style></head><body><main>
+<h1>Kistenturm – Figuren im Vergleich</h1>
+<p class="lead">Links die sechs Figuren, wie sie jetzt im Spiel sind. Rechts ein neuer Entwurf: jede Figur von Hand gezeichnet, mit eigenem Gesicht und eigenen Bewegungen für Ruhe, Heben, Jubeln und Traurig. Die Knöpfe schalten immer beide Seiten.</p>
+<div class="top"><span>Alle sechs:</span>
+  <button data-all="idle" class="on">Ruhe</button><button data-all="lift">Heben</button><button data-all="cheer">Jubeln</button><button data-all="sad">Traurig</button></div>
+<div class="heads"><div>Bisher (Opus)</div><div>Neuer Entwurf</div></div>
+<div id="list"></div>
+<p class="note">Die kleinen Figuren zeigen die Größen aus dem Spiel (Rennen-Leiste am Tablet und Handy). Das ist nur eine Ansicht – im Spiel ist noch nichts geändert.</p>
+</main>
+<script src="../KnowledgeStack/creatures.js"></script><script src="figuren.js"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════
+   Neue Figuren. Kasten 0…200, Boden y = 184, Umriss INK.
+   Zustände über die Klasse am <svg>: is-idle · is-lift · is-cheer · is-sad;
+   Teile mit data-s="…" sind nur in diesen Zuständen sichtbar.
+   ══════════════════════════════════════════════════════════════ */
+const NEU = (function () {
+  const INK = '#2b2438';
+  const at = (sw) => sw ? ' stroke="' + INK + '" stroke-width="' + sw + '" stroke-linejoin="round" stroke-linecap="round"' : '';
+  const P = (d, fill, sw = 5, x = '') => '<path d="' + d + '" fill="' + fill + '"' + at(sw) + ' ' + x + '/>';
+  const E = (cx, cy, rx, ry, fill, sw = 5, x = '') => '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + rx + '" ry="' + ry + '" fill="' + fill + '"' + at(sw) + ' ' + x + '/>';
+  const C = (cx, cy, r, fill, sw = 5, x = '') => E(cx, cy, r, r, fill, sw, x);
+  const R = (x0, y0, w, h, r, fill, sw = 5, x = '') => '<rect x="' + x0 + '" y="' + y0 + '" width="' + w + '" height="' + h + '" rx="' + r + '" fill="' + fill + '"' + at(sw) + ' ' + x + '/>';
+  const L = (d, col, sw, x = '') => '<path d="' + d + '" fill="none" stroke="' + col + '" stroke-width="' + sw + '" stroke-linecap="round" stroke-linejoin="round" ' + x + '/>';
+  const tube = (d, col, w) => L(d, INK, w + 6) + L(d, col, w);
+  const G = (cls, ox, oy, inner, x = '') => '<g class="' + cls + '" style="transform-origin:' + ox + 'px ' + oy + 'px" ' + x + '>' + inner + '</g>';
+  const S = (states, inner) => '<g data-s="' + states + '">' + inner + '</g>';
+  const hl = (x, y, r, o = 1) => '<circle cx="' + x + '" cy="' + y + '" r="' + r + '" fill="#fff" opacity="' + o + '"/>';
+  const shadow = (cx, rx) => '<ellipse class="shadow" cx="' + cx + '" cy="187" rx="' + rx + '" ry="5.5" fill="' + INK + '" opacity=".16"/>';
+  /* Spiegeln an x = ax: ein Pfad oder fertiges Markup (dann nur die d="…"; M L C Q Z und l q c m) */
+  const mirD = (d, ax) => d.replace(/([MLCQZmlcqz])([^MLCQZmlcqz]*)/g, (m, c, rest) => {
+    let i = 0; const rel = c === c.toLowerCase();
+    return c + rest.replace(/-?\d+(\.\d+)?/g, n => (i++ % 2 === 0) ? String(+(rel ? -n : 2 * ax - n).toFixed(2)) : n);
+  });
+  const mir = (s, ax = 100) => s.indexOf('d="') < 0 ? mirD(s, ax) : s.replace(/ d="([^"]*)"/g, (m, d) => ' d="' + mirD(d, ax) + '"');
+  /* Mehrere Kreise als EIN Umriss */
+  const blob = (cs, fill, sw = 5) => cs.map(c => C(c[0], c[1], c[2], fill, sw)).join('') + cs.map(c => C(c[0], c[1], c[2], fill, 0)).join('');
+  const tw = (x, y, r, col, delay = 0, cls = 'tw') => '<path class="' + cls + ' fb" style="animation-delay:' + delay + 's" d="M ' + x + ' ' + (y - r) + ' Q ' + x + ' ' + y + ' ' + (x + r) + ' ' + y + ' Q ' + x + ' ' + y + ' ' + x + ' ' + (y + r) + ' Q ' + x + ' ' + y + ' ' + (x - r) + ' ' + y + ' Q ' + x + ' ' + y + ' ' + x + ' ' + (y - r) + ' Z" fill="' + col + '"/>';
+  const star5 = (cx, cy, r, fill, sw = 3.5, x = '') => { let d = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .46 : r; d += (i ? ' L ' : 'M ') + (cx + q * Math.cos(a)).toFixed(1) + ' ' + (cy + q * Math.sin(a)).toFixed(1); } return P(d + ' Z', fill, sw, x); };
+  /* Augen-Bausteine */
+  const eye = (x, y, rx, ry) => '<g class="blink fb">' + E(x, y, rx, ry, INK, 0) + hl(x - rx * .36, y - ry * .4, rx * .42) + hl(x + rx * .3, y + ry * .38, rx * .2, .9) + '</g>';
+  const happy = (x, y, w, sw = 4) => L('M ' + (x - w) + ' ' + (y + w * .45) + ' Q ' + x + ' ' + (y - w * .9) + ' ' + (x + w) + ' ' + (y + w * .45), INK, sw);
+  const sleepy = (x, y, w, sw = 4) => L('M ' + (x - w) + ' ' + (y - w * .2) + ' Q ' + x + ' ' + (y + w * .8) + ' ' + (x + w) + ' ' + (y - w * .2), INK, sw);
+  const squL = (x, y, w, sw = 4) => L('M ' + (x - w) + ' ' + (y - w * .8) + ' L ' + (x + w * .7) + ' ' + y + ' L ' + (x - w) + ' ' + (y + w * .8), INK, sw);
+  const squR = (x, y, w, sw = 4) => L('M ' + (x + w) + ' ' + (y - w * .8) + ' L ' + (x - w * .7) + ' ' + y + ' L ' + (x + w) + ' ' + (y + w * .8), INK, sw);
+  const tear = (x, y, cls = 'tear') => P('M ' + x + ' ' + (y - 5) + ' Q ' + (x + 4.5) + ' ' + (y + 2) + ' ' + x + ' ' + (y + 4) + ' Q ' + (x - 4.5) + ' ' + (y + 2) + ' ' + x + ' ' + (y - 5) + ' Z', '#7cc8ff', 2, 'class="' + cls + ' fb"');
+  const blush = (x, y, rx = 6.5, ry = 4, col = '#ffb3c7') => E(x, y, rx, ry, col, 0, 'opacity=".85"');
+
+  const LIST = [
+    { key: 'astro', name: 'Astro-Hase', col: '#5f7392',
+      say: 'Der Träumer. Schwebt mit Düsenrucksack, schaut Sternen nach und winkt jedem. Heben: ein Düsenstoß nach oben. Jubeln: Salto in der Schwerelosigkeit. Traurig: landet, die Ohren hängen.' },
+    { key: 'lama', name: 'Bananalama', col: '#d99a00',
+      say: 'Die Diva. Halb geschlossene Augen, kaut gelangweilt, die Bananenschale trägt sie als Kragen. Heben: der Hals wird lang und sie stupst von unten. Jubeln: Galopp-Hüpfer mit Kopf im Nacken. Traurig: der Kopf hängt bis zum Boden.' },
+    { key: 'lauch', name: 'Lauch-Samurai', col: '#2fa84f',
+      say: 'Der Ernste. Strenge Brauen, Hand am Schwert, die Augen wandern wachsam hin und her. Heben: zieht das Schwert, ein Schnitt, fertig. Jubeln: Schwert zum Himmel. Traurig: tiefe Verbeugung, die Blätter welken.' },
+    { key: 'gameboy', name: 'GameBoy', col: '#2f7cf6',
+      say: 'Der Zocker. Wippt im Takt, drückt seine eigenen Knöpfe, Pixel-Gesicht auf dem Bildschirm. Heben: Sprung wie im Jump ’n’ Run mit Münze. Jubeln: „1UP“. Traurig: „GAME OVER“, der Bildschirm flackert.' },
+    { key: 'popcorn', name: 'Popcorn', col: '#e5484d',
+      say: 'Der Überdrehte. Kann nicht stillstehen, breites Grinsen, ständig springt ein Korn heraus. Heben: staucht sich zusammen – und poppt. Jubeln: Brille hoch, Popcorn-Fontäne. Traurig: die Brille rutscht, das Popcorn sackt zusammen.' },
+    { key: 'ghost', name: 'Magic Ghost', col: '#8b5cf6',
+      say: 'Der schusselige Zauberlehrling. Der Hut ist zu groß und rutscht ihm über die Augen, dann schiebt er ihn wieder hoch. Heben: Schlenker mit dem Stab, Funken. Jubeln: dreht sich, der Hut fliegt. Traurig: sackt zusammen, Hut über den Augen.' }
+  ];
+  const F = {};
+
+  /* ── 0 Astro-Hase ── */
+  F.astro = () => {
+    const flame = P('M 60 162 Q 67 188 74 162 Z', '#ff9f1c', 3.5) + P('M 64 162 Q 67 176 70 162 Z', '#fff3b0', 0);
+    const earL = P('M 74 56 C 63 38 61 17 70 6 C 82 12 92 33 92 54 Z', '#fff') + P('M 77 47 C 71 35 69 23 73 15 C 80 23 85 35 85 47 Z', '#ffc2d4', 0);
+    const earR = P('M 108 54 C 108 38 112 25 122 18 C 133 10 149 13 154 26 C 144 23 136 27 132 35 C 129 41 128 47 128 56 Z', '#fff')
+      + P('M 114 47 C 114.5 37 118 29 125 24 C 131 20 139 20 144 22.5 C 137 24 130 28 126 35 C 123.5 40 122.5 44 122 48 Z', '#ffc2d4', 0);
+    return shadow(100, 36)
+    + G('root', 100, 170,
+        S('idle lift cheer', G('flame', 67, 162, flame) + G('flame', 133, 162, mir(flame)))
+      + R(57, 120, 20, 46, 8, '#9aa6bd') + R(123, 120, 20, 46, 8, '#9aa6bd')
+      + L('M 62 130 L 72 130 M 128 130 L 138 130', '#fff', 3, 'opacity=".6"')
+      + G('leg-l', 88, 160, tube('M 88 160 L 86 172', '#fff', 13) + P('M 71 178 Q 71 168 82 168 L 90 168 Q 98 168 98 176 Q 98 183 91 183 L 77 183 Q 71 183 71 178 Z', '#7d92b3'))
+      + G('leg-r', 112, 160, tube('M 112 160 L 114 172', '#fff', 13) + P(mir('M 71 178 Q 71 168 82 168 L 90 168 Q 98 168 98 176 Q 98 183 91 183 L 77 183 Q 71 183 71 178 Z'), '#7d92b3'))
+      + P('M 72 124 C 67 150 72 167 86 167 L 114 167 C 128 167 133 150 128 124 Z', '#fff')
+      + P('M 118 128 C 123 148 121 160 110 167 L 114 167 C 128 167 133 150 128 126 Z', '#d3dbea', 0)
+      + R(86, 141, 28, 16, 5, '#333b52', 3.5) + C(93, 149, 2.8, '#ff6b6b', 0, 'class="lamp"') + C(100, 149, 2.8, '#ffd84a', 0) + C(107, 149, 2.8, '#5ee08a', 0)
+      + L('M 74 160 Q 100 166 126 160', '#ff8a3d', 4)
+      + G('head', 100, 126,
+          '<g transform="translate(10 3) scale(.9)">' + G('ear-l', 83, 54, earL) + G('ear-r', 118, 54, earR)
+        + E(82.5, 54, 11, 5, '#9aa6bd', 3.5, 'transform="rotate(-12 82.5 54)"') + E(118, 54.5, 11, 5, '#9aa6bd', 3.5, 'transform="rotate(8 118 54.5)"')
+        + L('M 59 68 L 50 53', INK, 4) + C(49, 50, 5, '#ff5c5c', 3, 'class="lamp"')
+        + C(100, 90, 45, '#cfeaff')
+        + E(100, 96, 35, 31, '#fff', 3.5)
+        + P('M 126 80 C 134 92 132 110 120 120 C 127 108 129 94 126 80 Z', '#e6ecf5', 0)
+        + blush(76, 106) + blush(124, 106)
+        + S('idle', eye(85, 94, 6.5, 8.5) + eye(115, 94, 6.5, 8.5))
+        + S('lift', squL(86, 94, 6.5) + squR(114, 94, 6.5))
+        + S('cheer', happy(85, 95, 7) + happy(115, 95, 7))
+        + S('sad', eye(85, 96, 6, 7.5) + eye(115, 96, 6, 7.5) + L('M 77 87 L 91 82 M 123 87 L 109 82', INK, 3.5) + tear(79, 108))
+        + P('M 96.5 103 L 103.5 103 L 100 107 Z', '#ff8fb3', 2.5)
+        + S('idle', L('M 92 110 Q 96 114.5 100 110 Q 104 114.5 108 110', INK, 3) + R(96.2, 111.5, 7.6, 7.5, 2, '#fff', 2.5) + L('M 100 112 L 100 118', INK, 1.5))
+        + S('lift cheer', P('M 90 109 Q 100 130 110 109 Z', '#7a2b3d', 3) + E(100, 118, 5, 3.4, '#ff7f9c', 0) + R(95.5, 109, 9, 6.5, 2, '#fff', 2.5))
+        + S('sad', L('M 93 116 Q 100 110 107 116', INK, 3))
+        + L('M 66 78 C 70 64 80 55 93 51', '#fff', 5, 'opacity=".9"') + hl(63, 88, 2.4, .9)
+        + C(100, 90, 45, 'none') + '</g>'
+        + E(100, 126, 23, 7, '#9aa6bd'))
+      + G('arm-l', 76, 136, tube('M 76 137 Q 62 142 57 154', '#fff', 13) + C(55, 158, 9, '#7d92b3') + hl(52, 155, 2.2, .7))
+      + G('arm-r', 124, 136, tube('M 124 137 Q 138 142 143 154', '#fff', 13) + C(145, 158, 9, '#7d92b3') + hl(142, 155, 2.2, .7))
+      )
+    + S('idle cheer', tw(22, 46, 8, '#ffb347', 0) + tw(180, 112, 6, '#c084fc', .7) + tw(26, 122, 5, '#5aa9e6', 1.2) + tw(174, 40, 5, '#34d399', .3));
+  };
+
+  /* ── 1 Bananalama ── */
+  F.lama = () => {
+    const W = '#fffaf0', W2 = '#eadfc8', HOOF = '#5a4230';
+    const earL = P('M 110 48 C 99 38 95 24 99 11 C 112 18 122 30 125 44 Z', W) + P('M 111 41 C 105 34 102 26 103 19 C 110 24 116 32 118 40 Z', '#ffc2d1', 0);
+    const lidL = P('M 115.5 59 C 115.5 47 132.5 47 132.5 59 Z', '#cdb8ee', 0) + L('M 114 59 L 134 59', INK, 3.5) + L('M 115 58 l -5 -3 M 118 53 l -4 -5', INK, 2.5);
+    return shadow(92, 62)
+    + G('root', 92, 184,
+        G('leg-b', 66, 154, R(60, 150, 12, 33, 5.5, W2) + R(60, 175, 12, 8, 3, HOOF, 3.5))
+      + G('leg-f', 122, 154, R(116, 150, 12, 33, 5.5, W2) + R(116, 175, 12, 8, 3, HOOF, 3.5))
+      + G('tail', 34, 106, P('M 24 106 C 20 97 21 88 26 82 L 35 86 C 33 92 35 99 39 104 Z', '#8a7a2a'))
+      + P('M 22 108 C 22 138 52 165 98 165 C 128 165 150 153 158 131 C 148 134 130 135 110 133 C 82 131 58 121 44 101 C 38 94 23 98 22 108 Z', '#ffdf5a')
+      + L('M 32 122 C 50 149 92 158 138 149', '#e3ab14', 3.5, 'opacity=".75"')
+      + L('M 31 108 C 36 120 48 130 62 136', '#fff8c8', 4, 'opacity=".8"')
+      + G('leg-b', 48, 156, R(42, 152, 13, 31, 6, W) + R(42, 175, 13, 8, 3, HOOF, 3.5))
+      + G('leg-f', 140, 156, R(134, 152, 13, 31, 6, W) + R(134, 175, 13, 8, 3, HOOF, 3.5))
+      + G('neckhead', 136, 142,
+          G('neck', 136, 142, blob([[136, 128, 21], [137, 110, 17], [138, 93, 16]], W) + L('M 128 112 q 4 3 8 0 M 138 124 q 4 3 8 0 M 130 100 q 4 3 8 0', W2, 3))
+        + G('head', 138, 86,
+            G('ear-l', 116, 44, earL) + G('ear-r', 160, 44, mir(earL, 138))
+          + blob([[138, 62, 27], [124, 41, 10], [138, 35, 12], [152, 41, 10], [116, 72, 11], [160, 72, 11]], W)
+          + blush(113, 72, 6, 4, '#ffb0c2') + blush(163, 72, 6, 4, '#ffb0c2')
+          + S('idle', E(124, 60, 6.5, 8, INK, 0) + hl(122, 62, 2.2) + E(152, 60, 6.5, 8, INK, 0) + hl(150, 62, 2.2)
+              + G('lid', 124, 55, lidL) + G('lid', 152, 55, mir(lidL, 138)))
+          + S('lift', squL(125, 59, 6.5) + squR(151, 59, 6.5))
+          + S('cheer', happy(124, 60, 7) + happy(152, 60, 7))
+          + S('sad', sleepy(124, 60, 7) + sleepy(152, 60, 7) + tear(118, 72))
+          + E(138, 78, 18, 13, '#fff1d6', 3.5)
+          + P('M 133.5 70 L 142.5 70 L 138 75 Z', HOOF, 0) + L('M 138 75 L 138 79', INK, 2.5)
+          + G('jaw', 138, 82,
+              S('idle', L('M 129 80 Q 133.5 85.5 138 80.5 Q 142.5 85.5 147 80', INK, 3))
+            + S('lift', R(129, 79.5, 18, 7.5, 2.5, '#fff', 2.5) + L('M 135 80 L 135 86.5 M 141 80 L 141 86.5', INK, 1.5))
+            + S('cheer', P('M 127 79 Q 138 96 149 79 Z', '#7a2b3d', 3) + R(133, 79.5, 10, 5, 1.5, '#fff', 2) + E(138, 86.5, 4.5, 2.6, '#ff7f9c', 0))
+            + S('sad', L('M 130 85 Q 138 79 146 85', INK, 3)))))
+      + P('M 113 133 C 106 146 108 158 115 165 C 122 157 125 146 124 135 Z', '#ffdf5a') + P('M 115 139 C 111 147 112 154 115 159 C 118 153 120 146 120 140 Z', '#fff3a8', 0)
+      + P('M 128 138 C 126 152 130 163 138 169 C 145 161 146 150 144 138 Z', '#ffdf5a') + P('M 131 142 C 130 151 133 158 138 163 C 141 157 142 150 141 142 Z', '#fff3a8', 0)
+      + P('M 147 134 C 150 146 156 155 164 157 C 166 147 163 138 158 130 Z', '#ffdf5a') + P('M 151 137 C 153 144 157 150 161 152 C 161.5 146 160 140 157 135 Z', '#fff3a8', 0)
+      );
+  };
+
+  /* ── 2 Lauch-Samurai ── */
+  F.lauch = (u) => {
+    const D1 = '#2c8a45', D2 = '#3da553', D3 = '#58bf66', RED = '#e5484d', ARM = '#8fd06b';
+    const lfSide = 'M 82 72 C 68 58 50 48 30 51 C 40 35 63 37 80 53 C 86 59 90 65 92 72 Z';
+    const lfUp = 'M 78 72 C 69 48 71 24 84 8 C 95 24 99 48 97 72 Z';
+    return shadow(100, 40)
+    + '<defs><linearGradient id="lg' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a5d873"/><stop offset=".5" stop-color="#e3f1c4"/><stop offset="1" stop-color="#fdfdf2"/></linearGradient></defs>'
+    + G('root', 100, 184,
+        S('idle sad', L('M 78 150 L 36 172', INK, 13) + L('M 78 150 L 36 172', '#34416b', 7) + L('M 40 170 L 36 172', '#f2c14e', 7))
+      + E(88, 179, 11, 6, '#fdfdf2') + E(112, 179, 11, 6, '#fdfdf2')
+      + L('M 76 174 q -6 7 -11 5 M 124 174 q 6 7 11 5 M 100 176 l 0 7', '#cfc7a2', 3)
+      + G('leaves', 100, 70,
+          G('lf1', 88, 72, P(lfSide, D1) + L('M 36 50 C 54 48 72 58 86 70', '#1f6e36', 2.5, 'opacity=".6"'))
+        + G('lf2', 112, 72, P(mir(lfSide), D1) + L(mir('M 36 50 C 54 48 72 58 86 70'), '#1f6e36', 2.5, 'opacity=".6"'))
+        + G('lf3', 88, 72, P(lfUp, D2) + L('M 84 14 C 86 34 88 54 88 70', '#1f6e36', 2.5, 'opacity=".5"'))
+        + G('lf4', 112, 72, P(mir(lfUp), D2) + L(mir('M 84 14 C 86 34 88 54 88 70'), '#1f6e36', 2.5, 'opacity=".5"'))
+        + G('lf5', 100, 72, P('M 88 72 C 84 46 90 20 101 4 C 112 20 116 46 112 72 Z', D3) + L('M 101 10 L 100 70', '#1f6e36', 2.5, 'opacity=".5"')))
+      + P('M 74 68 L 74 150 C 69 161 72 176 100 176 C 128 176 131 161 126 150 L 126 68 Q 100 60 74 68 Z', 'url(#lg' + u + ')')
+      + L('M 84 134 L 84 166 M 100 138 L 100 170 M 116 134 L 116 166', '#d6dcb8', 2, 'opacity=".7"')
+      + P('M 118 70 L 118 152 C 121 160 120 170 110 175 C 127 173 130 161 126 150 L 126 68 Z', '#2c4637', 0, 'opacity=".1"')
+      + L('M 80 104 L 80 76', '#fff', 4, 'opacity=".55"')
+      + blush(81, 124, 6, 3.5, '#f5a3a3') + blush(119, 124, 6, 3.5, '#f5a3a3')
+      + S('idle', '<g class="pupils">' + eye(88, 115, 4.8, 6) + eye(112, 115, 4.8, 6) + '</g>' + L('M 79 104 L 94 108.5 M 121 104 L 106 108.5', INK, 5))
+      + S('lift', L('M 80 112 L 94 116 M 120 112 L 106 116', INK, 5) + L('M 79 104 L 94 109 M 121 104 L 106 109', INK, 5))
+      + S('cheer', happy(88, 116, 6) + happy(112, 116, 6) + L('M 79 105 L 94 108 M 121 105 L 106 108', INK, 5))
+      + S('sad', sleepy(88, 115, 6) + sleepy(112, 115, 6) + L('M 80 108 L 94 104 M 120 108 L 106 104', INK, 4.5) + tear(124, 106, 'sweat'))
+      + S('idle', L('M 94 128.5 Q 100 126 106 128', INK, 3.5))
+      + S('lift cheer', P('M 92 125 L 108 125 Q 107 137 100 137 Q 93 137 92 125 Z', '#7a2b3d', 3) + R(95, 125, 10, 4, 1, '#fff', 0))
+      + S('sad', L('M 94 131 Q 100 126 106 131', INK, 3.5))
+      + L('M 116 123 l 7 5 M 123 123 l -7 5', '#b0563f', 2.2, 'opacity=".7"')
+      + G('band2', 127, 90, P('M 126 92 C 137 99 143 110 154 111 C 147 118 134 113 125 99 Z', RED, 4))
+      + G('band1', 127, 90, P('M 126 87 C 139 82 150 87 160 80 C 158 92 147 97 127 95 Z', RED, 4))
+      + P('M 73 82 Q 100 91 127 82 L 127 96 Q 100 105 73 96 Z', RED) + C(100, 93.5, 4, '#fff', 0)
+      + C(128, 90, 6.5, RED, 4)
+      + P('M 73 143 Q 100 152 127 143 L 127.5 156 Q 100 165 72.5 156 Z', '#34416b')
+      + S('idle sad', L('M 78 150 L 104 136', INK, 12) + L('M 78 150 L 104 136', '#ece6d6', 6.5) + L('M 85 143.5 l 4 5 M 91 140.5 l 4 5 M 97 137 l 4 5', INK, 1.6) + L('M 103 136.5 L 104 136', '#f2c14e', 7) + E(78, 150, 4.5, 8, '#f2c14e', 3.5, 'transform="rotate(-28 78 150)"'))
+      + R(105, 146, 10, 11, 2.5, '#f2c14e', 3.5)
+      + G('arm-l', 74, 126, tube('M 74 127 Q 64 136 74 143', ARM, 8) + C(77, 145, 6.5, ARM, 4))
+      + G('arm-r', 126, 126,
+          S('lift cheer', L('M 137 152 L 162 200', INK, 9) + L('M 137 152 L 162 200', '#e8eef5', 4.5) + L('M 134 146 L 139 156', '#4a2c2a', 7) + E(137.5, 151.5, 7.5, 3.5, '#f2c14e', 3, 'transform="rotate(-27 137.5 151.5)"'))
+        + tube('M 126 127 Q 137 134 135 146', ARM, 8) + C(135, 148, 6.5, ARM, 4))
+      + S('lift', P('M 138 60 C 176 76 190 122 164 166 C 176 124 164 88 138 60 Z', '#d9f1ff', 2.5, 'class="cut" style="transform-origin:120px 120px"'))
+      );
+  };
+
+  /* ── 3 GameBoy ── */
+  F.gameboy = () => {
+    const BL = '#4f8df5', BD = '#3468c9', DK = '#2b3350', LCD = '#b9e36c', PX = '#243d2a', PINK = '#ff5c8a';
+    const px = (list) => list.map(p => '<rect x="' + (70 + 4 * p[0]) + '" y="' + (51 + 4 * p[1]) + '" width="' + 4 * (p[2] || 1) + '" height="' + 4 * (p[3] || 1) + '" fill="' + PX + '"/>').join('');
+    const shoe = 'M 66 176 Q 66 166 77 166 L 87 166 Q 93 166 93 172 L 93 178 Q 93 183 88 183 L 71 183 Q 66 183 66 178 Z';
+    const glove = (x, y) => C(x, y, 9, '#fff', 3.5) + L('M ' + (x - 3) + ' ' + (y + 4) + ' l 0 4 M ' + (x + 2) + ' ' + (y + 5) + ' l 0 3.5', INK, 1.8, 'opacity=".5"');
+    return shadow(100, 44)
+    + G('root', 100, 184,
+        G('leg-l', 84, 158, L('M 84 156 L 82 170', INK, 6) + P(shoe, '#ff5c5c', 4) + P('M 66 176 Q 66 166 75 166 L 75 183 L 71 183 Q 66 183 66 178 Z', '#fff', 0) + P(shoe, 'none', 4))
+      + G('leg-r', 116, 158, L('M 116 156 L 118 170', INK, 6) + P(mir(shoe), '#ff5c5c', 4) + P(mir('M 66 176 Q 66 166 75 166 L 75 183 L 71 183 Q 66 183 66 178 Z'), '#fff', 0) + P(mir(shoe), 'none', 4))
+      + G('arm-l', 56, 98, L('M 56 98 Q 40 106 37 122', INK, 6) + glove(36, 127))
+      + G('arm-r', 144, 98, L('M 144 98 Q 160 106 163 122', INK, 6) + glove(164, 127))
+      + G('cart', 100, 34, R(77, 20, 46, 22, 4, '#aab4c8') + R(85, 24, 30, 8, 2, '#ffd84a', 2.5))
+      + P('M 68 34 L 132 34 Q 146 34 146 48 L 146 132 Q 146 160 118 160 L 68 160 Q 54 160 54 146 L 54 48 Q 54 34 68 34 Z', BL)
+      + P('M 138 37 Q 146 38 146 48 L 146 132 Q 146 160 118 160 L 110 160 Q 138 158 138 130 Z', BD, 0)
+      + L('M 61 60 L 61 48 Q 61 41 68 41', '#fff', 4, 'opacity=".55"')
+      + R(63, 43, 74, 60, 8, DK, 4)
+      + R(70, 50, 60, 46, 3, LCD, 0)
+      + S('idle', '<g class="pxeyes fb">' + px([[3, 2, 2, 4], [10, 2, 2, 4]]) + '</g>' + px([[5, 7], [6, 8, 3, 1], [9, 7]]))
+      + S('lift', px([[3, 1], [4, 2], [5, 3], [4, 4], [3, 5], [11, 1], [10, 2], [9, 3], [10, 4], [11, 5], [6, 7, 3, 3]]))
+      + S('cheer', px([[2, 4], [3, 3], [4, 2], [5, 3], [6, 4], [8, 4], [9, 3], [10, 2], [11, 3], [12, 4], [4, 6, 7, 1], [5, 7, 5, 1], [6, 8, 3, 1]]))
+      + S('sad', px([[2, 1], [4, 1], [3, 2], [2, 3], [4, 3], [10, 1], [12, 1], [11, 2], [10, 3], [12, 3], [5, 6], [6, 5, 3, 1], [9, 6]])
+          + '<text class="over" x="100" y="93" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="8.5" font-weight="700" fill="' + PX + '">GAME OVER</text>'
+          + R(70, 50, 60, 46, 3, '#1c2433', 0, 'class="dim"'))
+      + '<rect class="scan" x="70" y="50" width="60" height="2" fill="#fff" opacity=".22"/>'
+      + L('M 73 60 L 73 54 L 79 54', '#fff', 2, 'opacity=".5"')
+      + R(66, 121, 24, 9, 2.5, DK, 0) + R(73.5, 113.5, 9, 24, 2.5, DK, 0)
+      + C(129, 119, 8, PINK, 3.5, 'class="btn-a fb"') + C(112, 130, 8, PINK, 3.5, 'class="btn-b fb"')
+      + R(84, 146, 11, 4.5, 2.2, DK, 0, 'transform="rotate(-24 89.5 148)"') + R(99, 146, 11, 4.5, 2.2, DK, 0, 'transform="rotate(-24 104.5 148)"')
+      + L('M 124 150 l 7 -5 M 129 153 l 7 -5 M 134 155 l 5 -4', BD, 2.5)
+      + S('lift', G('coin', 100, 6, E(100, 6, 8, 10, '#ffd84a', 3.5) + L('M 100 1.5 L 100 10.5', '#c98a00', 2.5)))
+      + S('cheer', '<text class="oneup" x="100" y="12" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="16" font-weight="800" fill="#2f7cf6" stroke="' + INK + '" stroke-width=".6">1UP</text>')
+      );
+  };
+
+  /* ── 4 Popcorn ── */
+  F.popcorn = () => {
+    const RED = '#e5484d', CR = '#fff6dc';
+    const puff = (x, y, r, cls = 'pf fb', st = '') => '<g class="' + cls + '" ' + st + '>'
+      + blob([[x, y, r], [x - r * .55, y - r * .25, r * .62], [x + r * .55, y - r * .3, r * .62], [x + r * .1, y + r * .35, r * .7]], CR, 4)
+      + C(x + r * .15, y + r * .2, r * .34, '#ffd35c', 0, 'opacity=".75"') + hl(x - r * .5, y - r * .45, r * .2, .9) + '</g>';
+    let stripes = '';
+    for (let i = 0; i < 7; i += 2) { const a = 54 + i * 92 / 7, b = 54 + (i + 1) * 92 / 7, c = 68 + (i + 1) * 64 / 7, d = 68 + i * 64 / 7; stripes += P('M ' + a.toFixed(1) + ' 92 L ' + b.toFixed(1) + ' 92 L ' + c.toFixed(1) + ' 176 L ' + d.toFixed(1) + ' 176 Z', RED, 0); }
+    const glove = (x, y) => C(x, y, 8.5, '#fff', 3.5);
+    const bur = [[-46, -58, 60, 60], [-20, -80, 86, 44], [8, -86, 104, 40], [34, -72, 122, 52], [52, -50, 138, 64]];
+    return shadow(100, 42)
+    + G('root', 100, 184,
+        L('M 86 174 L 85 180', INK, 6) + L('M 114 174 L 115 180', INK, 6) + E(82, 181, 10, 5, '#ffd84a', 3.5) + E(118, 181, 10, 5, '#ffd84a', 3.5)
+      + G('arm-l', 59, 122, L('M 59 122 Q 44 128 40 140', INK, 6) + glove(39, 145))
+      + G('arm-r', 141, 122, L('M 141 122 Q 156 128 160 140', INK, 6) + glove(161, 145))
+      + S('lift cheer', bur.map((b, i) => puff(b[2], b[3], 6.5, 'burst fb', 'style="--dx:' + b[0] + 'px;--dy:' + b[1] + 'px;animation-delay:' + (i * .07).toFixed(2) + 's"')).join(''))
+      + S('idle', puff(100, 44, 6.5, 'kern fb'))
+      + G('pops', 100, 90,
+          puff(74, 64, 15) + puff(126, 64, 15) + puff(100, 54, 17) + puff(88, 42, 12) + puff(113, 41, 12)
+        + puff(62, 78, 13) + puff(138, 78, 13) + puff(86, 74, 15) + puff(115, 74, 15) + puff(100, 82, 12))
+      + P('M 54 92 L 146 92 L 132 176 L 68 176 Z', '#fff')
+      + stripes
+      + P('M 138 92 L 146 92 L 132 176 L 126 176 Z', INK, 0, 'opacity=".12"')
+      + P('M 54 92 L 146 92 L 132 176 L 68 176 Z', 'none')
+      + R(49, 84, 102, 14, 5.5, '#fff') + L('M 56 89 L 72 89', '#e6e0d2', 3)
+      + E(100, 132, 34, 30, '#fff', 0, 'opacity=".88"')
+      + S('cheer', happy(80, 119, 8, 4.5) + happy(120, 119, 8, 4.5))
+      + S('sad', eye(81, 109, 5, 6) + eye(119, 109, 5, 6) + L('M 72 102 L 87 98 M 128 102 L 113 98', INK, 4) + tear(70, 124))
+      + S('idle', P('M 78 141 Q 100 167 122 141 Z', '#7a2b3d', 3.5) + P('M 81 142.5 L 119 142.5 L 115.5 148.5 L 84.5 148.5 Z', '#fff', 0) + E(100, 155, 8, 3.2, '#ff7f9c', 0) + P('M 78 141 Q 100 167 122 141 Z', 'none', 3.5))
+      + S('lift', E(100, 151, 9, 11, '#7a2b3d', 3.5) + E(100, 157, 5, 3.4, '#ff7f9c', 0))
+      + S('cheer', P('M 74 139 Q 100 176 126 139 Z', '#7a2b3d', 3.5) + P('M 77.5 140.5 L 122.5 140.5 L 118.5 147.5 L 81.5 147.5 Z', '#fff', 0) + E(100, 158, 10, 4.5, '#ff7f9c', 0) + P('M 74 139 Q 100 176 126 139 Z', 'none', 3.5))
+      + S('sad', L('M 84 155 Q 92 146 100 151 Q 108 146 116 155', INK, 4))
+      + blush(68, 138, 6, 4, '#ff9aa5') + blush(132, 138, 6, 4, '#ff9aa5')
+      + G('glasses', 100, 118,
+          L('M 58 110 L 52 104 M 142 110 L 148 104', INK, 4)
+        + P('M 61 104 L 139 104 Q 144 104 144 109 L 143 126 Q 142.5 131 138 131 L 111 131 Q 106 131 104 125 L 100 121 L 96 125 Q 94 131 89 131 L 62 131 Q 57.5 131 57 126 L 56 109 Q 56 104 61 104 Z', '#fff', 4.5)
+        + R(62, 109, 31, 17, 4, '#ff4d5e', 3) + R(107, 109, 31, 17, 4, '#35c3e6', 3)
+        + L('M 67 114 L 76 114 M 112 114 L 121 114', '#fff', 3, 'opacity=".85"'))
+      );
+  };
+
+  /* ── 5 Magic Ghost ── */
+  F.ghost = () => {
+    const B = '#f6f1ff', B2 = '#d9cdf5', HAT = '#7b5bd6', HAT2 = '#5d41b3';
+    const A = 'M 60 104 C 60 68 78 52 100 52 C 122 52 140 68 140 104 L 140 160 C 134 171 126 171 120 160 C 114 149 106 149 100 160 C 94 171 86 171 80 160 C 74 149 66 152 60 163 Z';
+    const Bp = 'M 60 104 C 60 68 78 52 100 52 C 122 52 140 68 140 104 L 140 165 C 134 154 126 154 120 165 C 114 176 106 176 100 165 C 94 154 86 154 80 165 C 74 176 66 172 60 158 Z';
+    const armL = 'M 64 110 C 50 108 40 118 43 128 C 50 134 60 128 67 122 Z';
+    const sp = [[-30, -34], [26, -40], [-6, -52], [38, -8], [-40, -4]];
+    return shadow(100, 30)
+    + G('root', 100, 172,
+        '<path d="' + A + '" fill="' + B + '"' + at(5) + '><animate attributeName="d" dur="1.7s" repeatCount="indefinite" values="' + A + ';' + Bp + ';' + A + '" calcMode="spline" keySplines=".4 0 .6 1;.4 0 .6 1"/></path>'
+      + P('M 128 76 C 135 90 134 130 132 148 C 136 146 138 142 140 146 L 140 104 C 140 92 136 82 128 76 Z', B2, 0, 'opacity=".8"')
+      + L('M 68 100 C 69 86 75 76 84 70', '#fff', 5, 'opacity=".9"')
+      + blush(74, 116, 7, 4.5, '#ffb0d0') + blush(126, 116, 7, 4.5, '#ffb0d0')
+      + S('idle', eye(86, 103, 7, 9.5) + eye(114, 103, 7, 9.5))
+      + S('lift', squL(87, 103, 7) + squR(113, 103, 7))
+      + S('cheer', happy(86, 104, 7.5) + happy(114, 104, 7.5))
+      + S('idle', P('M 94 116 Q 100 126 106 116 Z', '#7a2b3d', 3) + E(100, 120.5, 2.8, 1.8, '#ff7f9c', 0))
+      + S('lift', L('M 93 118 Q 100 122 107 117', INK, 3.5) + P('M 102 119.5 Q 109 119 108.5 125 Q 104 127 102 119.5 Z', '#ff7f9c', 2.5))
+      + S('cheer', P('M 90 114 Q 100 134 110 114 Z', '#7a2b3d', 3) + E(100, 124, 4.5, 3, '#ff7f9c', 0))
+      + S('sad', L('M 92 124 Q 96 118 100 122 Q 104 118 108 124', INK, 3.5) + tear(82, 112) + tear(118, 112, 'tear t2'))
+      + G('arm-l', 64, 116, P(armL, B))
+      + G('hat', 100, 78,
+          E(100, 76, 55, 12.5, HAT2)
+        + P('M 66 76 C 72 50 86 30 104 18 C 117 9 136 9 144 22 C 132 19 123 25 123 36 C 123 52 129 64 135 76 Q 100 89 66 76 Z', HAT)
+        + P('M 123 36 C 123 52 129 64 135 76 Q 128 79 120 80 C 116 66 114 50 123 36 Z', HAT2, 0, 'opacity=".55"')
+        + P('M 69 66 Q 100 78 131 66 L 135 76 Q 100 89 66 76 Z', '#ffd84a', 4) + R(94, 71, 12, 11, 2, '#fff3b0', 3)
+        + star5(96, 48, 7, '#ffd84a', 0) + star5(112, 30, 4.5, '#ffd84a', 0)
+        + P('M 76 58 L 86 54 L 89 63 L 79 66 Z', '#9c82ea', 2.5, 'stroke-dasharray="3 3"')
+        + L('M 80 60 C 84 46 92 34 102 26', '#fff', 3.5, 'opacity=".35"'))
+      + G('arm-r', 136, 116,
+          L('M 151 130 L 168 86', INK, 9) + L('M 151 130 L 168 86', '#a9743f', 4)
+        + '<g class="star fb">' + star5(169, 78, 12, '#ffd84a', 4) + '</g>'
+        + S('lift', sp.map((s, i) => tw(169, 78, 7, i % 2 ? '#c084fc' : '#ffe98a', 0, 'spark').replace('style="', 'style="--dx:' + s[0] + 'px;--dy:' + s[1] + 'px;')).join(''))
+        + P(mir(armL), B))
+      )
+    + S('idle cheer lift', tw(30, 70, 7, '#ffd84a', 0) + tw(176, 132, 6, '#c084fc', .6) + tw(34, 140, 5, '#5aa9ff', 1.1))
+    + S('cheer', tw(160, 30, 8, '#ffd84a', .2) + tw(48, 26, 6, '#ff9fc6', .9) + tw(184, 84, 5, '#5aa9ff', .5));
+  };
+
+  let uid = 0;
+  function svg(i, action, size) {
+    const d = LIST[i], a = action || 'idle';
+    return '<svg class="kf kf--' + d.key + ' is-' + a + '" viewBox="0 0 200 200" width="' + (size || 200) + '" height="' + (size || 200) + '" role="img" aria-label="' + d.name + '">' + F[d.key](++uid) + '</svg>';
+  }
+  return { LIST, svg };
+})();
+
+/* ── Seite ── */
+const OLD = window.DDFiguren, list = document.getElementById('list');
+const SIZES = [72, 44];
+const LABEL = { idle: 'Ruhe', lift: 'Heben', cheer: 'Jubeln', sad: 'Traurig' };
+list.innerHTML = NEU.LIST.map((d, i) =>
+  '<section class="fig" data-i="' + i + '" style="--tc:' + d.col + '"><h2 style="color:' + d.col + '">' + d.name + '</h2><p class="say">' + d.say + '</p>'
+  + '<div class="row"><div class="card"><div class="stage" data-side="old"></div><div class="small" data-side="old"></div></div>'
+  + '<div class="card neu"><div class="stage" data-side="neu"></div><div class="small" data-side="neu"></div></div></div>'
+  + '<div class="bar">' + Object.keys(LABEL).map(a => '<button data-a="' + a + '">' + LABEL[a] + '</button>').join('') + '</div></section>').join('');
+const timers = {};
+function paint(i, a) {
+  const sec = list.querySelector('.fig[data-i="' + i + '"]');
+  const make = (side, px) => side === 'old' ? (OLD ? OLD.svg(i, a, px) : '<em>figuren.js fehlt</em>') : NEU.svg(i, a, px);
+  sec.querySelectorAll('.stage').forEach(s => { s.innerHTML = make(s.dataset.side, 220); });
+  sec.querySelectorAll('.small').forEach(s => { s.innerHTML = SIZES.map(px => '<div>' + make(s.dataset.side, px) + '<small>' + px + ' px</small></div>').join(''); });
+  sec.querySelectorAll('.bar button').forEach(b => b.classList.toggle('on', b.dataset.a === a));
+  clearTimeout(timers[i]);
+  if (a === 'lift') timers[i] = setTimeout(() => paint(i, 'idle'), 960);
+}
+list.addEventListener('click', e => { const b = e.target.closest('button[data-a]'); if (b) paint(+b.closest('.fig').dataset.i, b.dataset.a); });
+document.querySelector('.top').addEventListener('click', e => {
+  const b = e.target.closest('button[data-all]'); if (!b) return;
+  NEU.LIST.forEach((_, i) => paint(i, b.dataset.all));
+  document.querySelectorAll('.top button').forEach(x => x.classList.toggle('on', x === b && b.dataset.all !== 'lift' || (b.dataset.all === 'lift' && x.dataset.all === 'idle')));
+});
+const q = new URLSearchParams(location.search).get('a') || 'idle';
+NEU.LIST.forEach((_, i) => paint(i, LABEL[q] ? q : 'idle'));
+</script></body></html>
