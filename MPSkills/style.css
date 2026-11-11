@@ -3715,20 +3715,21 @@ label.field input.is-missing::placeholder { color: color-mix(in srgb, var(--warn
 /* Das Auswahlfenster: Mini-Kacheln, gruppiert wie die Landing. */
 .modal--sk { max-width: 1012px; padding: 24px 24px 26px; }
 .modal--sk h2 { margin-bottom: 4px; }
-.skgrp { margin-top: 16px; }
+/* Kleine Fächer (Mathematik, Englisch, Biologie) stehen nebeneinander,
+   solange sie in die Zeile passen; große füllen die Breite und brechen um. */
+.skgrps-small { display: flex; flex-wrap: wrap; column-gap: 28px; }
+.skgrp { margin-top: 16px; min-width: 0; }
 .skgrp-h {
   margin: 0 0 8px; font-size: .72rem; font-weight: 800;
   letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint);
 }
-.skgrid {
-  display: grid; gap: 10px;
-  grid-template-columns: repeat(auto-fill, 150px);
-}
-@media (max-width: 400px) { .skgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.skgrid { display: flex; flex-wrap: wrap; gap: 10px; }
+.skgrid > .skmini { width: 150px; }
+@media (max-width: 400px) { .skgrid > .skmini { width: calc(50% - 5px); } }
 .skmini {
   position: relative;
   display: flex; flex-direction: column; gap: 6px;
-  width: 100%; aspect-ratio: 1 / 1; padding: 0 0 8px;
+  padding: 0 0 9px;
   border: 1.5px solid var(--line); border-radius: 12px;
   background: var(--surface);
   font: inherit; color: var(--ink); text-align: left;
@@ -3752,7 +3753,7 @@ label.field input.is-missing::placeholder { color: color-mix(in srgb, var(--warn
 }
 .skmini-name .mpic { width: 15px; height: 15px; flex: none; margin-top: 1px; color: var(--accent-ink); }
 .skmini-name span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.skmini-meta { margin-top: auto; padding: 0 9px; font-size: .72rem; color: var(--ink-faint); }
+.skmini-meta { padding: 0 9px; font-size: .72rem; color: var(--ink-faint); }
 .skmini[disabled] .skmini-meta { color: var(--warn); font-weight: 600; }
 
 /* Laufzeit: fünf Zahlen nebeneinander, eine gewählt (Radios darunter). */
@@ -3772,7 +3773,7 @@ label.field input.is-missing::placeholder { color: color-mix(in srgb, var(--warn
 .lifepick label span { font-size: .72rem; font-weight: 600; }
 .lifepick label:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
 .lifepick label.is-def::after {
-  content: 'Vorgabe'; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  content: 'Vorschlag'; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
   padding: 1px 6px; border-radius: var(--r-pill);
   background: var(--surface); border: 1px solid var(--line);
   font-size: .6rem; font-weight: 700; letter-spacing: .04em; color: var(--ink-faint);

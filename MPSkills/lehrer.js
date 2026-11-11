@@ -730,7 +730,7 @@ function toolOptionGroups(entries) {
 /* ── Laufzeit (Migration 0284) ─────────────────────────────────
    Fünf feste Zahlen nebeneinander, eine ist gewählt. Die Vorgabe des
    Skills (skill_tools.lifetime_days) ist vorausgewählt und trägt ein
-   kleines „Vorgabe“, damit man sieht, wovon man abweicht. */
+   kleines „Vorschlag“, damit man sieht, wovon man abweicht. */
 const LIFETIMES = [2, 10, 30, 90, 180];
 const lifeDefault = (id) => {
   const d = Number(S.tools[id]?.lifetime_days);
@@ -801,18 +801,27 @@ function skillPickerHTML() {
                     aria-pressed="${on}"${full ? ' disabled' : ''}>
         ${skillArt(id)}
         <span class="skmini-name">${MPIcons.svg(id)}<span>${esc(t.title)}</span></span>
-        <span class="skmini-meta">${full ? 'Kontingent voll' : `${lifeDefault(id)} Tage`}</span>
+        ${full ? '<span class="skmini-meta">Kontingent voll</span>' : ''}
       </button>`;
   };
   return `
     <div class="modal modal--sk" role="dialog" aria-modal="true" aria-labelledby="skH">
       <button type="button" class="modal-close" data-skclose aria-label="Schließen">×</button>
       <h2 id="skH">Skill wählen</h2>
-      ${toolOptionGroups(usable).map(g => `
+      ${(() => {
+        /* Große Fächer je eine eigene Zeile; die kleinen (Mathematik,
+           Englisch, Biologie: je ein, zwei Skills) zusammen in EINER Zeile
+           nebeneinander, solange sie passen (.skgrps-small bricht sonst um). */
+        const grp = g => `
         <section class="skgrp">
           ${g.label ? `<h3 class="skgrp-h">${esc(g.label)}</h3>` : ''}
           <div class="skgrid">${g.items.map(mini).join('')}</div>
-        </section>`).join('')}
+        </section>`;
+        const gs = toolOptionGroups(usable);
+        const small = gs.filter(g => g.items.length <= 2);
+        return gs.filter(g => g.items.length > 2).map(grp).join('')
+             + (small.length ? `<div class="skgrps-small">${small.map(grp).join('')}</div>` : '');
+      })()}
     </div>`;
 }
 
