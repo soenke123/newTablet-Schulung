@@ -532,6 +532,7 @@ async function rpc(fn, args) {
    Landing sind sie kein eigenes Kapitel, sondern einer von
    wenigen Räumen. */
 const ROOM_ERRORS = {
+  lifetime_invalid: 'Diese Laufzeit gibt es nicht.',
   not_authenticated: 'Du bist nicht angemeldet.',
   not_a_teacher:     'Dein Konto ist für MPSkills nicht freigeschaltet.',
   not_found:         'Diesen Raum gibt es nicht (mehr).',
@@ -555,11 +556,11 @@ function roomRow(r) {
   /* Die Restlaufzeit steht an JEDER Zeile und nicht erst, wenn es
      eng wird: ein Raum, der still abläuft, ist die eine Sache, die
      diese Liste rechtzeitig sagen muss — „verlängern" geht nur
-     vorher leicht. Ab acht Tagen wird sie eingefärbt, dann ist sie
-     ein Hinweis und keine Angabe mehr; das Gegenmittel steht in
-     derselben Zeile hinter den drei Punkten. */
+     vorher leicht. Unter zwei Wochen wird sie rot (Sönke 11.11.2026,
+     vorher acht Tage), dann ist sie ein Hinweis und keine Angabe mehr;
+     das Gegenmittel steht in derselben Zeile hinter den drei Punkten. */
   const left = new Date(r.expires_at).getTime() - Date.now();
-  const soon = r.expired || (isFinite(left) && left < 8 * 86400000);
+  const soon = r.expired || (isFinite(left) && left < 14 * 86400000);
   const until = esc(r.expired ? 'abgelaufen' : window.MPRoom.untilText(r.expires_at));
   bits.push(soon ? `<span class="roomlist-soon">${until}</span>` : until);
 
@@ -583,7 +584,12 @@ function roomRow(r) {
                Ablauf und Aufräum-Lauf liegt bis zu ein Tag, und genau in
                dem Fenster ist „den hätte ich doch noch gebraucht" der
                wahrscheinlichste Grund, hier zu klicken. -->
-          <button type="button" data-act="extend">${r.expired ? 'Zurückholen' : 'Verlängern'}</button>
+          <!-- Seit 0284 um wählbare Tage, dieselben Zahlen wie beim Anlegen. -->
+          <div class="rowmenu-ext" role="group" aria-label="${r.expired ? 'Zurückholen' : 'Verlängern'} um Tage">
+            <span class="rowmenu-ext-l">${r.expired ? 'Zurückholen' : 'Verlängern'} um … Tage</span>
+            <span class="rowmenu-ext-row">${[2, 10, 30, 90, 180].map(d =>
+              `<button type="button" data-act="extend" data-days="${d}">${d}</button>`).join('')}</span>
+          </div>
           ${r.co_teacher
             ? '<button type="button" class="rowmenu-danger" data-act="leave">Raum verlassen</button>'
             : '<button type="button" class="rowmenu-danger" data-act="delete">Löschen</button>'}
@@ -621,7 +627,7 @@ async function roomAction(code, act, btn) {
     if (act === 'toggle') {
       r = await rpc('skill_room_set_open', { p_code: code, p_open: btn.dataset.open === '1' });
     } else if (act === 'extend') {
-      r = await rpc('skill_room_extend', { p_code: code });
+      r = await rpc('skill_room_extend', { p_code: code, p_days: Number(btn.dataset.days) || null });
     } else if (act === 'leave') {
       r = await rpc('pa_room_teacher_remove', { p_code: code });
     } else {
@@ -633,7 +639,7 @@ async function roomAction(code, act, btn) {
       return;
     }
     toast(act === 'toggle'  ? (btn.dataset.open === '1' ? 'Beitritt geöffnet.' : 'Beitritt geschlossen.')
-        : act === 'extend'  ? (r.revived ? 'Raum zurückgeholt — er läuft wieder 30 Tage.'
+        : act === 'extend'  ? (r.revived ? 'Raum zurückgeholt: ' + window.MPRoom.untilText(r.expires_at) + '.'
                                          : 'Verlängert: ' + window.MPRoom.untilText(r.expires_at) + '.')
         : act === 'leave'   ? 'Raum verlassen.'
         : 'Raum gelöscht.');
@@ -710,8 +716,8 @@ async function renderRooms() {
 
   pane.innerHTML = `
       <div class="pane-head">
-        <p class="pane-head-note">Ein Raum läuft ab, wenn 30 Tage lang niemand mehr darin
-          war — verlängern kannst du ihn über die drei Punkte.</p>
+        <p class="pane-head-note">Ein Raum läuft ab, wenn so lange niemand mehr darin war,
+          wie beim Anlegen gewählt (2 bis 180 Tage) — verlängern kannst du ihn über die drei Punkte.</p>
         <a class="btn btn--primary" href="lehrer.html?new">+ Raum eröffnen</a>
       </div>
       <div class="card">

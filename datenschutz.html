@@ -16,7 +16,8 @@
            → skill_cleanup (Migration 0208)
          Konto: Reset nach 1 Jahr, Löschung nach 4 Jahren
            → account_lifecycle (Migration 0209)
-         Räume 30 Tage nach letzter Nutzung → 0085, Projektarbeit 1 Jahr → 0202
+         Räume 2/10/30/90/180 Tage nach letzter Nutzung, beim Anlegen gewählt, Vorgabe je Skill → 0284
+         (vorher 30 Tage → 0085, Projektarbeit 1 Jahr → 0202); Verlängern höchstens 1 Jahr ab heute
          Fotos → 0206, 30 Tage nach Projektende gelöscht → 0227 (pa_photo_cleanup),
          Einwilligungsstufe → 0201, Antrags-Mails → 0203
          Jeder Lauf protokolliert (nur Zahlen) → cleanup_runs (0227), Admin-Panel „Löschläufe“
@@ -292,8 +293,7 @@
       <tbody>
         <tr><td>Spielstände, Münzen, Wesen, Beiträge, Lernstand in How to Fachbegriffe, Feedback, Mail-Adresse für Benachrichtigungen</td><td>wenn das Konto <strong>1 Jahr</strong> nicht online war. Konto, Kurs und Highscores bleiben, die Handouts sind weiter erreichbar.</td></tr>
         <tr><td>Das ganze Konto mit Highscores</td><td>wenn das Konto <strong>4 Jahre</strong> nicht online war</td></tr>
-        <tr><td>MPSkills-Räume mit allen Namen und Beiträgen</td><td><strong>30 Tage</strong> nach der letzten Nutzung. Die Lehrkraft kann früher löschen oder verlängern.</td></tr>
-        <tr><td>Projektarbeit-Räume mit Dokumentation, Anträgen und Backups</td><td><strong>1 Jahr</strong> nach dem Anlegen bzw. der letzten Verlängerung. Die Lehrkraft kann den Raum jederzeit früher löschen.</td></tr>
+        <tr><td>MPSkills-Räume mit allen Namen und Beiträgen (bei der Projektarbeit mit Dokumentation, Anträgen und Backups)</td><td>je nach Raum <strong>2, 10, 30, 90 oder 180 Tage</strong> nach der letzten Nutzung – die Lehrkraft wählt das beim Anlegen. Sie kann den Raum früher löschen oder verlängern, aber nie weiter als ein Jahr im Voraus.</td></tr>
         <tr><td>Fotos in der Dokumentation der Projektarbeit</td><td><strong>30 Tage</strong> nach Projektende (Fertig-Datum im Projektziel, sonst letzte Nutzung des Raums). Die Lehrkraft kann Fotos jederzeit früher löschen.</td></tr>
         <tr><td>Eigene Vokabel-Insel ohne Konto (Myth of Wordisland)</td><td>läuft nicht ab. Sie trägt keinen Namen, nur ein zufälliges Kennzeichen auf deinem Gerät.</td></tr>
         <tr><td>Feedback-Tickets</td><td><strong>365 Tage</strong> nach der letzten Bearbeitung</td></tr>

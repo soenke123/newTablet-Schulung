@@ -95,7 +95,12 @@ const S = {
   setStale: false, // Sperren haben sich geändert, Fach 1 muss neu gezeichnet werden
   qrDrawn: {},     // Ziel-Element-ID → Adresse, für die dort schon ein QR steht
   secret:  null,   // Geheimnis für QR/Link (0226), aus skill_room_get
-  codeUntil: null  // bis wann der Code allein reicht (0226)
+  codeUntil: null, // bis wann der Code allein reicht (0226)
+  /* Laufzeit des neuen Raums in Tagen (Migration 0284). Folgt der
+     Vorgabe des Skills, bis die Lehrkraft selbst eine Zahl antippt —
+     danach bleibt ihre Wahl auch beim Wechsel des Skills stehen. */
+  life:        null,
+  lifeTouched: false
 };
 
 /* ─── Toast ───────────────────────────────────────────────── */
@@ -240,7 +245,8 @@ const ERRORS = {
                    + 'umformulieren, aber nicht löschen.',
   groups_required:   'Mindestens eine Frage muss stehen bleiben.',
   groups_invalid:    'Mit den Fragen stimmt etwas nicht.',
-  too_many_groups:   'Mehr Fragen gehen in einem Raum nicht.'
+  too_many_groups:   'Mehr Fragen gehen in einem Raum nicht.',
+  lifetime_invalid:  'Diese Laufzeit gibt es nicht — bitte 2, 10, 30, 90 oder 180 Tage wählen.'
 };
 const errText = (e, data) =>
   e === 'room_limit'
@@ -721,6 +727,142 @@ function toolOptionGroups(entries) {
   return out;
 }
 
+/* ── Laufzeit (Migration 0284) ─────────────────────────────────
+   Fünf feste Zahlen nebeneinander, eine ist gewählt. Die Vorgabe des
+   Skills (skill_tools.lifetime_days) ist vorausgewählt und trägt ein
+   kleines „Vorgabe“, damit man sieht, wovon man abweicht. */
+const LIFETIMES = [2, 10, 30, 90, 180];
+const lifeDefault = (id) => {
+  const d = Number(S.tools[id]?.lifetime_days);
+  return LIFETIMES.includes(d) ? d : 30;
+};
+
+function lifeHTML() {
+  const def = lifeDefault(S.toolId);
+  if (!LIFETIMES.includes(S.life)) S.life = def;
+  return `
+          <div class="setfield" id="lifeField">
+            <span class="setfield-l" id="lifeL">Wie lange soll der Raum leben?</span>
+            <div class="lifepick" role="radiogroup" aria-labelledby="lifeL">
+              ${LIFETIMES.map(d => `
+              <input type="radio" name="life" id="life${d}" value="${d}" ${d === S.life ? 'checked' : ''} />
+              <label for="life${d}"${d === def ? ' class="is-def"' : ''}>
+                <strong>${d}</strong><span>Tage</span>
+              </label>`).join('')}
+            </div>
+            <p class="setfield-hint">Gezählt ab der letzten Nutzung. Du kannst den Raum später
+              jederzeit verlängern (Meine Räume → drei Punkte).</p>
+          </div>`;
+}
+
+/* ── Skill-Auswahl als Kacheln ─────────────────────────────────
+   Statt eines Dropdowns: der gewählte Skill als quadratische Kachel
+   mit dem Standbild aus seinem Schaufenster (preview/<id>.js, dasselbe
+   wie auf der Landing), ein Tipp darauf öffnet ein Fenster mit allen
+   Skills als Mini-Kacheln, gruppiert wie die Landing (toolOptionGroups).
+   Das Standbild ist für 340 × 186 px gebaut und wird nur verkleinert
+   (style.css .skart); ohne Schaufenster steht das Zeichen des Skills. */
+const toolFull = (t) => (!t.multi_room ? t.live >= 1 : t.live >= t.max_rooms);
+const subOf = (id) => window.TOOLS_OVERLAY?.[id]?.subtitle || '';
+
+function skillArt(id) {
+  const still = window.MPPreview?.has(id) ? window.MPPreview.tileHTML(id) : '';
+  return still
+    ? `<span class="skart" aria-hidden="true"><span class="skart-in">${still}</span></span>`
+    : `<span class="skart skart--ic" aria-hidden="true">${MPIcons.svg(id)}</span>`;
+}
+
+function skillCardHTML() {
+  const t = S.tools[S.toolId];
+  if (!t) {
+    return `<button type="button" class="skcard skcard--empty" id="skBtn" aria-haspopup="dialog">
+        <span class="skcard-body"><strong>Skill wählen</strong></span>
+        <span class="skcard-swap">Alle Skills ansehen</span>
+      </button>`;
+  }
+  const sub = subOf(S.toolId);
+  return `<button type="button" class="skcard" id="skBtn" aria-haspopup="dialog"
+                  aria-label="Skill: ${esc(t.title)} — anderen Skill wählen">
+      ${skillArt(S.toolId)}
+      <span class="skcard-body">
+        <span class="skcard-name">${MPIcons.svg(S.toolId)}<strong>${esc(t.title)}</strong></span>
+        ${sub ? `<span class="skcard-sub">${esc(sub)}</span>` : ''}
+      </span>
+      <span class="skcard-swap">Anderen Skill wählen</span>
+    </button>`;
+}
+
+function skillPickerHTML() {
+  const usable = Object.entries(S.tools).filter(([, t]) => t.active);
+  const mini = ([id, t]) => {
+    const full = toolFull(t);
+    const on = id === S.toolId;
+    return `<button type="button" class="skmini${on ? ' is-on' : ''}" data-pick="${esc(id)}"
+                    aria-pressed="${on}"${full ? ' disabled' : ''}>
+        ${skillArt(id)}
+        <span class="skmini-name">${MPIcons.svg(id)}<span>${esc(t.title)}</span></span>
+        <span class="skmini-meta">${full ? 'Kontingent voll' : `${lifeDefault(id)} Tage`}</span>
+      </button>`;
+  };
+  return `
+    <div class="modal modal--sk" role="dialog" aria-modal="true" aria-labelledby="skH">
+      <button type="button" class="modal-close" data-skclose aria-label="Schließen">×</button>
+      <h2 id="skH">Skill wählen</h2>
+      ${toolOptionGroups(usable).map(g => `
+        <section class="skgrp">
+          ${g.label ? `<h3 class="skgrp-h">${esc(g.label)}</h3>` : ''}
+          <div class="skgrid">${g.items.map(mini).join('')}</div>
+        </section>`).join('')}
+    </div>`;
+}
+
+function openSkillPicker() {
+  let ov = $('skModal');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.className = 'overlay';
+    ov.id = 'skModal';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', (ev) => {
+      if (ev.target === ov || ev.target.closest('[data-skclose]')) { closeSkillPicker(); return; }
+      const b = ev.target.closest('button[data-pick]');
+      if (b && !b.disabled) { closeSkillPicker(); pickTool(b.dataset.pick); }
+    });
+    ov.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') closeSkillPicker(); });
+  }
+  ov.innerHTML = skillPickerHTML();
+  ov.hidden = false;
+  document.body.classList.add('pv-lock');
+  (ov.querySelector('.skmini.is-on') || ov.querySelector('.skmini:not([disabled])'))?.focus();
+}
+
+function closeSkillPicker() {
+  const ov = $('skModal');
+  if (!ov || ov.hidden) return;
+  ov.hidden = true;
+  document.body.classList.remove('pv-lock');
+  $('skBtn')?.focus();
+}
+
+async function pickTool(id) {
+  if (!S.tools[id] || id === S.toolId) return;
+  S.toolId = id;
+  if ($('setTool')) $('setTool').value = id;
+  if (!S.lifeTouched) S.life = lifeDefault(id);
+  $('rtToolName').innerHTML = MPIcons.label(S.toolId, S.tools[S.toolId]?.title || 'Skill');
+  $('skPick').innerHTML = skillCardHTML();
+  $('lifeHost').innerHTML = lifeHTML();
+  $('setToolChoice').innerHTML = '';
+  $('setToolFields').innerHTML = toolFieldsBlock(false);
+  updateGo();
+  await loadFields();
+  if (S.toolId !== id) return;
+  $('setToolChoice').innerHTML = choiceFieldsHTML();
+  $('setToolFields').innerHTML = toolFieldsBlock(false);
+  updateGo();
+  $('demoCard').hidden = !DEMO_TOOLS[S.toolId];
+}
+
 function renderSettings() {
   const pane = $('paneSet');
   const creating = !S.code;
@@ -746,23 +888,12 @@ function renderSettings() {
   // auf der Landing hat sie schon beantwortet. Danach ist es keine
   // Frage mehr: der Skill macht den Raum aus, ihn zu tauschen hieße,
   // einen neuen anzulegen.
-  const usable = Object.entries(S.tools).filter(([, t]) => t.active);
-  const option = ([id, t]) => {
-    const full = !t.multi_room ? t.live >= 1 : t.live >= t.max_rooms;
-    // Kein Zeichen davor: in ein <option> passt kein SVG,
-    // und ein Emoji zwischen lauter gezeichneten Zeichen
-    // wäre der einzige Ausreißer der Seite.
-    return `<option value="${esc(id)}"${full ? ' disabled' : ''}${id === S.toolId ? ' selected' : ''}>`
-         + `${esc(t.title)}${full ? ' — Kontingent voll' : ''}</option>`;
-  };
+  /* Seit 11.11.2026 kein Dropdown mehr, sondern eine Kachel mit
+     Auswahlfenster (skillCardHTML/skillPickerHTML). Der gewählte Skill
+     steht in einem versteckten Feld, damit „Pflichtfeld leer“ (data-req)
+     wie bei den anderen Feldern greift. */
   const toolBlock = creating
-    ? `<label class="field">Skill <span class="req">*</span>
-         <select id="setTool" data-req>
-           ${toolOptionGroups(usable).map(g => g.label
-               ? `<optgroup label="${esc(g.label)}">${g.items.map(option).join('')}</optgroup>`
-               : g.items.map(option).join('')).join('')}
-         </select>
-       </label>`
+    ? ''
     : `<div class="field field--static">Skill
          <strong class="field-tool">${
            MPIcons.label(room?.tool_id, room?.tool_title || '')}</strong>
@@ -779,21 +910,37 @@ function renderSettings() {
            ${(val === '1') === askNames ? 'checked' : ''} ${lockNames ? 'disabled' : ''} />
     <label for="${id}">${label}</label>`;
 
+  const titleField = `
+            <label class="field field--title">${creating ? 'Name des Raums' : 'Titel'} <span class="req">*</span>
+              <input type="text" id="setTitle" data-req maxlength="60" placeholder="z. B. 9b Deutsch"
+                     value="${esc(room?.title || '')}" />
+            </label>`;
+
+  if (creating && !LIFETIMES.includes(S.life)) S.life = lifeDefault(S.toolId);
+  pane.classList.toggle('rpane--create', creating);
+
   pane.innerHTML = `
-    <div class="card card--form">
+    <div class="card card--form${creating ? ' card--create' : ''}">
       <h1 class="pane-h">${creating ? 'Neuer Raum' : 'Einstellungen'}</h1>
 
       <div class="msg msg--err" id="setError" hidden></div>
 
       <form id="setForm" novalidate>
+        ${creating ? `
+        <div class="create">
+          <div class="create-skill">
+            <span class="setfield-l">Skill <span class="req">*</span></span>
+            <div id="skPick">${skillCardHTML()}</div>
+            <input type="hidden" id="setTool" data-req value="${esc(S.toolId || '')}" />
+          </div>
+          <div class="setbox">
+            ${titleField}
+            <div id="lifeHost">${lifeHTML()}</div>` : `
         <div class="setbox">
           <div class="setrow">
-            <label class="field">Titel <span class="req">*</span>
-              <input type="text" id="setTitle" data-req maxlength="60" placeholder="9b Deutsch"
-                     value="${esc(room?.title || '')}" />
-            </label>
+            ${titleField}
             ${toolBlock}
-          </div>
+          </div>`}
 
           <div id="setToolChoice">${choiceFieldsHTML()}</div>
 
@@ -807,6 +954,7 @@ function renderSettings() {
               ? 'ist schon jemand' : `sind schon ${S.counts.people} Leute`} im Raum.</p>` : ''}
           </div>
         </div>
+        ${creating ? '</div>' : ''}
 
         <div id="setToolFields">${toolFieldsBlock(lockTool)}</div>
         ${anyLocked ? `<p class="lockline">Nicht mehr änderbar: im Raum ${S.counts.entries === 1
@@ -832,6 +980,8 @@ function renderSettings() {
       m.checked = true;
       return;
     }
+    const lf = ev.target.closest('input[name="life"]');
+    if (lf) { S.life = Number(lf.value); S.lifeTouched = true; return; }
     const r = ev.target.closest('input[data-setting-choice]');
     if (!r) return;
     const f = S.fields.find(x => x.key === r.dataset.settingChoice);
@@ -919,15 +1069,8 @@ function renderSettings() {
   });
 
   if (creating) {
-    $('setTool').addEventListener('change', async (ev) => {
-      S.toolId = ev.target.value;
-      $('rtToolName').innerHTML =
-        MPIcons.label(S.toolId, S.tools[S.toolId]?.title || 'Skill');
-      await loadFields();
-      $('setToolChoice').innerHTML = choiceFieldsHTML();
-      $('setToolFields').innerHTML = toolFieldsBlock(false);
-      updateGo();
-      $('demoCard').hidden = !DEMO_TOOLS[S.toolId];
+    $('skPick').addEventListener('click', (ev) => {
+      if (ev.target.closest('#skBtn')) openSkillPicker();
     });
     $('demoGo').addEventListener('click', () => {
       // Jede Demo fängt frisch an (der Stand liegt nur im Tab, bridge.js).
@@ -935,11 +1078,9 @@ function renderSettings() {
       location.href = DEMO_TOOLS[S.toolId];
     });
   }
-  /* Sind alle Werkzeuge voll, sind alle Einträge gesperrt und der
-     Browser wählt keinen aus — dann steht in S.toolId noch einer, den
-     das Formular gar nicht anbietet. Lieber ehrlich leer: der Knopf
-     bleibt grau, und in der Liste steht bei jedem, warum. */
-  if (creating && $('setTool').value !== S.toolId) S.toolId = $('setTool').value || null;
+  /* Sind alle Werkzeuge voll, ist keiner wählbar — dann bleibt die
+     Kachel leer („Skill wählen“), der Knopf grau, und im Fenster steht
+     bei jedem, warum (renderNew wählt dann keinen vor). */
 
   updateGo();
   if (creating) setTimeout(() => $('setTitle')?.focus(), 60);
@@ -951,8 +1092,15 @@ function renderSettings() {
 function updateGo() {
   const go = $('setGo');
   if (!go) return;
-  const missing = [...document.querySelectorAll('#paneSet [data-req]')]
-    .some(el => !el.disabled && !String(el.value || '').trim());
+  let missing = false;
+  document.querySelectorAll('#paneSet [data-req]').forEach(el => {
+    const empty = !el.disabled && !String(el.value || '').trim();
+    if (empty) missing = true;
+    // Roter Rand: hier fehlt noch etwas (Sönke 11.11.2026, zuerst für
+    // den Namen des Raums). Gilt für jedes leere Pflichtfeld zum Tippen.
+    if (el.type !== 'hidden') el.classList.toggle('is-missing', empty);
+  });
+  $('skBtn')?.classList.toggle('is-missing', !S.toolId);
   go.disabled = missing;
 }
 
@@ -1049,7 +1197,8 @@ async function submitCreate(e) {
       p_title:     $('setTitle').value.trim(),
       p_ask_names: readAskNames(),
       p_settings:  readSettings(),
-      p_is_test:   false
+      p_is_test:   false,
+      p_lifetime_days: LIFETIMES.includes(S.life) ? S.life : lifeDefault(S.toolId)
     });
     if (!r.ok) {
       errBox.textContent = errText(r.error, r);
@@ -1690,7 +1839,9 @@ async function renderNew() {
   const wanted = params.get('new');
   S.toolId = (wanted && S.tools[wanted]?.active && !isFull(wanted))
     ? wanted
-    : (usable.find(id => !isFull(id)) || usable[0]);
+    : (usable.find(id => !isFull(id)) || null);
+  S.life = lifeDefault(S.toolId);
+  S.lifeTouched = false;
 
   await loadFields();
   renderShell();
