@@ -66,6 +66,32 @@ Zum Ansehen: **`showroom-wesen.html`** (läuft ohne Netz, benutzt genau
 `creatures.js`/`creatures.css`): alle Wesen × Farben × Bewegungen,
 hell/dunkel, und eine Bühne mit Rundgang.
 
+### Fassung 3 — Entwurf mit mehr Charakter (November 2026)
+
+**Nur ein Showroom, das Quiz benutzt weiter Fassung 2.** Ansehen:
+**`showroom-wesen-neu.html`** (Knopf „Altes Wesen daneben“ zeigt den
+Vergleich). Dieselben 40 Wesen, Ids, Namen und Farbfassungen, aber jedes
+hat einen **Typ** („Der Lässige“, „Die Überdrehte“ …), den man sieht:
+Augen mit Pupille, die irgendwohin schaut, Lider, Brauen (auch ungleich),
+viele Münder (schiefes Grinsen, Zähne, Reißzahn, Zunge) und eine eigene
+Kleinigkeit in Ruhe (Kaugummi-Blase, Sekundenschlaf, Fuß tippt …).
+
+Skelett, Emotes, Gehen, Fallen kommen **unverändert** aus `creatures.js`
+(`KSCreatures.buildDef`) und `creatures.css`. Neu ist nur der Ordner
+`wesen-neu/`:
+
+| Datei | Wofür |
+|---|---|
+| `kern.js` | Gesichts-Baukasten `gesicht()` / `mund()` und Register `KSWesenNeu.add/svg/info` |
+| `farben.js` | die Farbfassungen, aus `creatures.js` übernommen |
+| `wesen-0.js` … `wesen-3.js` | je zehn Wesen: Typ, Spruch, Zeichnung |
+| `wesen.css` | Brauen (`.brw`), Pupillen (`.pp.lk-…`), Kleinigkeiten in Ruhe (`.q-…`, nur bei `.c-idle`) |
+
+Übernehmen ins Quiz hieße: die Beschreibungen nach `DEFS` in
+`creatures.js` holen, `face()` durch `gesicht()` ersetzen, `wesen.css` an
+`creatures.css` hängen — und die Profilbilder (`avatare MPSkills/`)
+neu rendern, die zeigen noch Fassung 2.
+
 ## Die Emotes
 
 👋 Winken · 🚀 Springen · 🎉 Jubeln · 🕺 Tanzen · 😴 Schlafen — dazu 💧 Trauer,
@@ -321,6 +347,7 @@ sehen.
 | `creatures.js` | Die 40 Wesen: Liste, Paletten, Skelett (`build`), Gesichter (`face`), Zeichnungen (`DEFS`). |
 | `creatures.css` | Ihre Bewegungen: erst alle gemeinsam (`state-…`), dann je Wesen (`wave-7`, `cheer-7` …). |
 | `showroom-wesen.html` | Showroom der Fassung 2 — ohne Netz, zeigt genau creatures.js/.css. |
+| `showroom-wesen-neu.html`, `wesen-neu/` | Entwurf Fassung 3: dieselben Wesen mit mehr Charakter, nur Showroom (siehe oben). |
 | `showroom-*-wesen.html`, `showroom-beamer-mobile.html` | Entwurfsstand der ersten Fassung, **eingefroren** (siehe `feedback_showrooms_frozen`). Zeigt die alten Wesen. |
 
 Die Wesen-Dateien hängen an `ASSET_V` in `tool.js` — dem einen Stempel für
