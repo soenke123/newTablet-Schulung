@@ -74,6 +74,7 @@ const near = (a, b) => Math.abs(a - b) < 0.01;
 const def = async id => (await one(`select lifetime_days d from skill_tools where id = $1`, [id]))?.d;
 ok('1  Knowledge Stack 2 Tage',   (await def('knowledgestack')) === 2);
 ok('1  Mathoria 2 Tage',          (await def('clash-of-math')) === 2);
+ok('1  Caesar 2 Tage',            (await def('caesar')) === 2);
 ok('1  Wild Clusters 10 Tage',    (await def('wildclusters')) === 10);
 ok('1  Balance of Nature 30 Tage',(await def('balance')) === 30);
 ok('1  SQL Studio 90 Tage',       (await def('sqlstudio')) === 90);

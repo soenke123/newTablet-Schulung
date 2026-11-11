@@ -63,7 +63,7 @@ comment on column skill_rooms.lifetime_days is
 comment on column skill_tools.lifetime_days is
   'Vorgabe für die Laufzeit neuer Räume dieses Skills (0284), im Formular vorausgewählt.';
 
--- Vorgaben je Skill (Sönke 11.11.2026). Caesar stand nicht auf der Liste → 10.
+-- Vorgaben je Skill (Sönke 11.11.2026), Caesar nachgereicht: 2.
 update skill_tools set lifetime_days = case id
     when 'knowledgestack' then 2
     when 'clash-of-math'  then 2
@@ -75,7 +75,7 @@ update skill_tools set lifetime_days = case id
     when 'tinylm'         then 10
     when 'reinforce'      then 10
     when 'wordisland'     then 10
-    when 'caesar'         then 10
+    when 'caesar'         then 2
     when 'sqlstudio'      then 90
     when 'derby'          then 90
     when 'socialhub'      then 90
