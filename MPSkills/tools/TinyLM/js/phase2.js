@@ -1,14 +1,16 @@
 /* Phase 2: Frage & Antwort — „Handy + Zerlegen“ wie Phase 1 (Sönke 02.11.2026).
 
-   Links das HANDY mit dem Chat: Tiny grüßt, deine Frage rechts, Tinys Antwort als Bausteine,
-   unten Vorschläge und das Eingabefeld (.qform bleibt für das Schaufenster). Rechts wird ZERLEGT,
-   in drei Spalten in der Reihenfolge des Ablaufs (Sönke 02.11.2026):
+   Links das HANDY mit dem Chat: Tiny grüßt, deine Frage oben rechts, Tinys Antwort als Bausteine.
+   Unten im Handy vor der Frage Vorschläge + Eingabefeld (.qform bleibt für das Schaufenster);
+   sobald gefragt ist, werden daraus wie in Phase 1 Tinys Zeile + die Knöpfe ▶ Weiter/❚❚ Pause ·
+   +1 Wort · ↻ Nochmal (Sönke 11.11.2026); ↻ Nochmal räumt den Chat und zeigt wieder die Vorschläge.
+   Rechts wird ZERLEGT, in drei Spalten (Sönke 11.11.2026: Kandidaten zuerst, wie in Phase 1):
+     Kandidaten     (welches Wort kommt? — Temperatur + N-Gramm-Regler + „Dieselbe Frage nochmal“
+                     im festen Kopf; „wie in Phase 1, nur in den 3 gefundenen Texten“; 🔎 = Wort aus
+                     einem Satz mit deinem Fragewort)
      Frage zerlegen (welche Wörter zählen, in welchen Texten sie stehen, welche Texte gewählt
                      wurden: A · B · C)
      Quellen        (die 3 passendsten Texte A · B · C und wo das Wort darin steht)
-     Kandidaten     (welches Wort kommt? — Temperatur + „Dieselbe Frage nochmal“ im festen Kopf;
-                     oben der Kasten „Im Hintergrund: N-Gramme wie in Phase 1“, 🔎 = Wort aus
-                     einem Satz mit deinem Fragewort)
    darunter breit die Wortkarte.
 
    Erst aufklappen, dann im Handy sichtbar (wie Phase 1):
@@ -22,7 +24,7 @@
    aus der Frage als Satzanfang („Der Eiffelturm ist …“) und schreibt einfach weiter — klingt
    sicher, ist aber ausgedacht (Halluzinieren). Sönke 01.11.2026. */
 const SRC = ['A', 'B', 'C'];
-/* Wie viele Wörter davor Tiny beim Schreiben höchstens anschaut (N-Gramm-Motor aus Phase 1, ohne Regler). */
+/* Wie viele Wörter davor Tiny beim Schreiben höchstens anschaut (Start; Regler „N-Gramm“ = n + 1). */
 const P2_N = 6;
 const srcVar = i => 'var(--src-' + ['a', 'b', 'c'][i] + ')';
 const SUGGEST2 = ['Ist Pluto ein Planet?', 'Was frisst eine Kornnatter?', 'Wie lernt eine KI?', 'Wie hoch ist der Eiffelturm?'];
@@ -56,9 +58,10 @@ function buildPhase2Sources(R, k) {
 Phases.register(2, {
   mount(host) {
     let M = null, R = null, session = null, canned = false, asked = false;
-    let temp = 1, playing = false, timer = null, mapCtl = null;
+    let temp = 1, n = P2_N, playing = false, timer = null, mapCtl = null, done = false;
     let focus = null, pick = null;
-    let textEl, cursor, playBtn, againBtn, reaskBtn, input, legendHost, askedEl, placeholder, answerEl, metaEl, warnEl, screen, focusHost;
+    let textEl, cursor, playBtn, reaskBtn, input, legendHost, askedEl, placeholder, answerEl, metaEl, warnEl, screen, focusHost;
+    let askBox, sayBox, sayEl, controls, gramLine;
     let phoneEl = null, Z = null;
     let guessWord = '';
     const isPunct = w => w === '.' || w === ',';
@@ -113,7 +116,7 @@ Phases.register(2, {
        sonst endet die ausgedachte Antwort sofort. */
     function nextCands() {
       const last = session.steps[session.steps.length - 1];
-      const C = candidates(session, P2_N, temp);
+      const C = candidates(session, n, temp);
       if (last && last.seed) {
         const list = C.list.filter(a => !isPunct(a.word));
         const sum = list.reduce((x, a) => x + a.p, 0) || 1;
@@ -134,7 +137,7 @@ Phases.register(2, {
       const C = nextCands();
       return { idx: null, C, ctx: C.level > 0 ? session.ctx.slice(-C.level) : [], chosen: null };
     }
-    const atStart = v => v.C && (v.C.level === 0 || v.ctx.every(isPunct));
+    const atStart = v => v.C && !v.C.uni && (v.C.level === 0 || v.ctx.every(isPunct));
     function ctxText(v) {
       if (!v.ctx.length) return '';
       const end = v.idx == null ? session.steps.length : v.idx;
@@ -230,8 +233,10 @@ Phases.register(2, {
       askedEl.hidden = false;
       answerEl.hidden = false;
       textEl.hidden = false;
-      playBtn.hidden = false;
-      againBtn.hidden = false;
+      done = false;
+      askBox.hidden = true;
+      sayBox.hidden = false;
+      controls.hidden = false;
       reaskBtn.disabled = false;
       metaEl.replaceChildren();
       warnEl.hidden = !canned;
@@ -245,6 +250,7 @@ Phases.register(2, {
         const known = R.ql.filter(x => x.known).map(x => showWord(x.lemma));
         if (known.length) metaEl.appendChild(el('span', 'chat-keys', '· gesucht: ' + known.join(' · ')));
       }
+      syncGramLine();
       updateText();
       updateLegend();
       paintCols();
@@ -264,16 +270,58 @@ Phases.register(2, {
         const C = nextCands();
         if (!C.list.length) return false;
         commitWord(session, temp === 0 ? C.list[0] : pickFrom(C.list), C);
-      } else if (!step(session, P2_N, temp)) return false;
+      } else if (!step(session, n, temp)) { done = true; return false; }
       updateText();
       updateLegend();
       paintCols();
-      return !(session.sentences >= (canned ? 2 : 3) || session.steps.length >= 70);
+      if (session.sentences >= (canned ? 2 : 3) || session.steps.length >= 70) { done = true; return false; }
+      return true;
     }
     function syncPlay() {
       if (!playBtn) return;
       playBtn.textContent = playing ? '❚❚ Pause' : '▶ Weiter';
       playBtn.classList.toggle('playing', playing);
+      say();
+    }
+    /* Tinys Zeile unten im Handy (statt der Vorschläge, sobald gefragt ist). */
+    function say() {
+      if (!sayEl || !asked) return;
+      let t;
+      if (canned) t = playing ? 'Dazu steht nichts in meinen Texten – ich rate einfach drauflos …'
+        : 'Das war geraten! Rechts siehst du, woher die Wörter wirklich kommen. ↻ Nochmal = neue Frage.';
+      else if (playing) t = 'Ich schreibe nur aus den 3 Texten, die zu deiner Frage passen.';
+      else if (done) t = 'Fertig! Tipp ein Wort an – rechts siehst du, wie ich darauf gekommen bin. ↻ Nochmal = neue Frage.';
+      else t = 'Pause. Tipp ein Wort an, dann zerlegst du rechts genau diesen Schritt.';
+      sayEl.textContent = t;
+    }
+    /* ↻ Nochmal: Chat leeren, wieder die Vorschläge + das Eingabefeld zeigen. */
+    function resetChat() {
+      stopPlay();
+      asked = false; canned = false; session = null; R = null; focus = null; pick = null; done = false;
+      placeholder.hidden = false;
+      askedEl.hidden = true; askedEl.replaceChildren();
+      answerEl.hidden = true;
+      textEl.hidden = true;
+      warnEl.hidden = true;
+      metaEl.replaceChildren();
+      askBox.hidden = false;
+      sayBox.hidden = true;
+      controls.hidden = true;
+      reaskBtn.disabled = true;
+      input.value = '';
+      askKey = null;
+      syncGramLine();
+      updateText();
+      updateLegend();
+      paintCols();
+    }
+    /* Zeile unter dem N-Gramm-Regler: wie in Phase 1, aber nur in den gefundenen Texten. */
+    function syncGramLine() {
+      if (!gramLine) return;
+      const where = canned ? 'in allen Texten (keiner passt zur Frage)' : 'nur in den 3 Texten, die beim Frage zerlegen gefunden wurden';
+      gramLine.replaceChildren(
+        document.createTextNode(n === 0 ? 'Kein Wort davor – nur wie oft ein Wort vorkommt. ' : 'Bis zu ' + n + (n === 1 ? ' Wort' : ' Wörter') + ' davor + 1 neues Wort. '),
+        el('b', null, 'Wie in Phase 1'), document.createTextNode(' – Tiny sucht aber ' + where + '.'));
     }
     function startPlay() {
       if (playing || !session) return;
@@ -301,7 +349,8 @@ Phases.register(2, {
       b.appendChild(gramBox(v));
       const where = canned ? 'in den Texten' : 'in den Quellen A · B · C';
       const line = el('p', 'p1-line');
-      if (atStart(v)) line.append(document.createTextNode('Satzanfang – so fingen Sätze ' + where + ' an' + (canned ? '' : ' (Sätze mit deinen Fragewörtern zuerst)') + ':'));
+      if (v.C.uni) line.append(document.createTextNode('So oft kommen die Wörter ' + where + ' vor:'));
+      else if (atStart(v)) line.append(document.createTextNode('Satzanfang – so fingen Sätze ' + where + ' an' + (canned ? '' : ' (Sätze mit deinen Fragewörtern zuerst)') + ':'));
       else line.append(document.createTextNode('Nach „'), el('b', null, ctxText(v)), document.createTextNode('“ stand ' + where + ':'));
       b.appendChild(line);
       const MAX = 8;
@@ -356,13 +405,14 @@ Phases.register(2, {
     function gramBox(v) {
       const box = el('div', 'ctxnow p2-ngram');
       const head = el('p', 'p1-sub');
-      head.append(document.createTextNode('Im Hintergrund: N-Gramme wie in Phase 1'));
+      head.append(document.createTextNode('Tiny schaut jetzt auf'));
       box.appendChild(head);
       const g = el('span', 'gram');
       /* Wörter in der Schreibung aus dem Handy; das erste '.' von session.ctx ist der Satzanfang. */
       const end = v.idx == null ? session.steps.length : v.idx;
       const pcs = pieces(session).slice(0, end);
-      if (atStart(v) || !v.ctx.length) g.appendChild(el('span', 'gtok start', 'Satzanfang'));
+      if (v.C.uni) { /* 1-Gramm: kein Wort davor */ }
+      else if (atStart(v) || !v.ctx.length) g.appendChild(el('span', 'gtok start', 'Satzanfang'));
       else {
         const k = v.ctx.length;
         if (k > end) g.appendChild(el('span', 'gtok start', 'Satzanfang'));
@@ -372,12 +422,14 @@ Phases.register(2, {
       g.appendChild(v.chosen ? el('span', 'gtok chosen', chosenTxt || tokLabel(v.chosen)) : el('span', 'gtok next', '?'));
       box.appendChild(g);
       const k = v.C.level;
-      const avail = Math.min(P2_N, v.idx == null ? session.ctx.length : v.idx + 1);
+      const avail = Math.min(n, v.idx == null ? session.ctx.length : v.idx + 1);
       const info = el('p', 'p1-line');
-      if (atStart(v)) {
+      if (v.C.uni) {
+        info.append(document.createTextNode('1-Gramm: kein Wort davor – nur die Häufigkeit zählt. Das gibt Wortsalat.'));
+      } else if (atStart(v)) {
         info.append(document.createTextNode('Neuer Satz: Tiny schaut, wie Sätze in den Quellen anfangen.'));
       } else {
-        info.append(document.createTextNode('Tiny probiert bis zu ' + P2_N + ' Wörter davor. Hier passen '),
+        info.append(document.createTextNode('Tiny probiert bis zu ' + n + (n === 1 ? ' Wort' : ' Wörter') + ' davor. Hier passen '),
           el('b', null, k + (k === 1 ? ' Wort' : ' Wörter')), document.createTextNode(' → ein '),
           el('b', null, (k + 1) + '-Gramm'), document.createTextNode('.'));
         if (k < avail) info.append(document.createTextNode(' Mit mehr Wörtern davor stand das in keiner Quelle.'));
@@ -398,7 +450,7 @@ Phases.register(2, {
     let askKey = null;
     function paintAsk() {
       const b = Z.cols.ask.body;
-      if (askKey === R && b.childNodes.length) return;
+      if (R && askKey === R && b.childNodes.length) return;
       askKey = R;
       b.replaceChildren();
       if (!asked) { b.appendChild(empty('Stell links im Handy eine Frage – dann zerlegt Tiny sie hier.')); return; }
@@ -524,10 +576,12 @@ Phases.register(2, {
       const wsel = pick || v.chosen;
       if (v.seed) {
         b.appendChild(el('p', 'p1-line', 'Dieses Wort steht in keiner Quelle – es kommt aus deiner Frage.'));
-      } else if (atStart(v) && !wsel) {
-        b.appendChild(el('p', 'p1-line', 'Neuer Satz: Tiny nimmt einen Satzanfang aus ' + (canned ? 'irgendeinem Text' : 'einer der Quellen') + '. Tipp einen Kandidaten an, dann siehst du, wo er steht.'));
+      } else if ((atStart(v) || (v.C && v.C.uni)) && !wsel) {
+        if (v.C && v.C.uni) b.appendChild(el('p', 'p1-line', '1-Gramm: Tiny nimmt irgendein Wort aus ' + (canned ? 'den Texten' : 'den Quellen') + '. Tipp einen Kandidaten an, dann siehst du, wo er steht.'));
+        else
+          b.appendChild(el('p', 'p1-line', 'Neuer Satz: Tiny nimmt einen Satzanfang aus ' + (canned ? 'irgendeinem Text' : 'einer der Quellen') + '. Tipp einen Kandidaten an, dann siehst du, wo er steht.'));
       } else {
-        const occ = Zerlegen.findOcc(session, v.ctx, wsel, false);
+        const occ = Zerlegen.findOcc(session, v.ctx, wsel, !!(v.C && v.C.uni));
         if (v.idx != null && wsel === v.chosen) {
           const k = occ.findIndex(o => o.si === v.si && o.pos === v.pos);
           if (k > 0) occ.unshift(occ.splice(k, 1)[0]);
@@ -639,18 +693,7 @@ Phases.register(2, {
       bubble.appendChild(textEl);
       warnEl = el('p', 'chat-warn');
       warnEl.hidden = true;
-      const controls = el('div', 'machine-controls chat-controls');
-      playBtn = el('button', 'btn sm', '▶ Weiter');
-      playBtn.type = 'button';
-      playBtn.hidden = true;
-      playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
-      againBtn = el('button', 'btn sm', '↻ Nochmal');
-      againBtn.type = 'button';
-      againBtn.title = 'Dieselbe Frage nochmal';
-      againBtn.hidden = true;
-      againBtn.addEventListener('click', () => { if (R) ask(R.question); });
-      controls.append(playBtn, againBtn);
-      aBody.append(metaEl, bubble, warnEl, controls);
+      aBody.append(metaEl, bubble, warnEl);
       answerEl.append(tinyEl('happy'), aBody);
       chat.append(placeholder, askedEl, answerEl);
       screen.appendChild(chat);
@@ -663,7 +706,30 @@ Phases.register(2, {
         if (ev.target.closest('.cursor')) setFocus(null);
       });
 
+      /* Nach der Frage: Tinys Zeile + Knöpfe wie in Phase 1 (statt Vorschläge + Eingabefeld). */
+      sayBox = el('div', 'phone-say');
+      sayEl = el('p', 'tiny-bubble');
+      sayBox.append(tinyEl('normal'), sayEl);
+      sayBox.hidden = true;
+      controls = el('div', 'phone-controls');
+      playBtn = el('button', 'btn primary', '▶ Weiter');
+      playBtn.type = 'button';
+      playBtn.dataset.spot = 'play2';
+      const stepBtn = el('button', 'btn', '+1 Wort');
+      stepBtn.type = 'button';
+      stepBtn.dataset.spot = 'step2';
+      const againBtn = el('button', 'btn', '↻ Nochmal');
+      againBtn.type = 'button';
+      againBtn.title = 'Neue Frage stellen';
+      againBtn.dataset.spot = 'again';
+      controls.append(playBtn, stepBtn, againBtn);
+      controls.hidden = true;
+      playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
+      stepBtn.addEventListener('click', () => { stopPlay(); if (!doStep()) syncPlay(); });
+      againBtn.addEventListener('click', resetChat);
+
       const bottom = el('div', 'phone-ask');
+      askBox = bottom;
       const sugg = el('div', 'sugg');
       SUGGEST2.forEach(q => {
         const b = el('button', 'chip', q);
@@ -684,13 +750,13 @@ Phases.register(2, {
       form.append(input, send);
       form.addEventListener('submit', e => { e.preventDefault(); ask(input.value); input.blur(); });
       bottom.append(sugg, form);
-      phoneEl.appendChild(bottom);
+      phoneEl.append(sayBox, controls, bottom);
       return phoneEl;
     }
 
     function render() {
       stopPlay();
-      asked = false; canned = false; session = null; R = null; focus = null; pick = null;
+      asked = false; canned = false; session = null; R = null; focus = null; pick = null; done = false;
 
       Z = Zerlegen.columns({
         store: 'tinylm-p2-offen',
@@ -719,20 +785,29 @@ Phases.register(2, {
 
       const row = el('div', 'p1-cols');
       row.append(
-        /* Reihenfolge wie der Ablauf (Sönke 02.11.2026): erst die Frage zerlegen, dann die Quellen, dann schreiben. */
+        /* Reihenfolge (Sönke 11.11.2026): erst Kandidaten wie in Phase 1, dann Frage zerlegen, dann Quellen. */
+        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'wortfuerwort'),
         Z.column('ask', 'ask', '🔎', 'Frage zerlegen', 'Was sucht Tiny?', 'nachschlagen'),
-        Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'),
-        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'wortfuerwort'));
+        Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'));
       right.appendChild(row);
       right.appendChild(Z.column('map', 'meaning', '🗺️', 'Wortkarte', 'Welche Wörter gehören zusammen?', 'wortkarte', { wide: true }));
 
-      /* Feste Köpfe (werden nie neu gebaut): Temperatur + „Dieselbe Frage nochmal“. */
+      /* Feste Köpfe (werden nie neu gebaut): Temperatur + N-Gramm + „Dieselbe Frage nochmal“. */
       const tsl = Info.slider({
         label: 'Temperatur', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp',
         fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
         onInput: v => { temp = Math.round(v * 10) / 10; if (Z.isOpen('cand')) paintCand(view()); }
       });
       Z.cols.cand.tools.appendChild(tsl.el);
+      const nsl = Info.slider({
+        label: 'N-Gramm', min: 1, max: 7, step: 1, value: n + 1, spot: 'nslider2',
+        fmt: v => v + '-Gramm', ends: ['kurz', 'lang'],
+        onInput: v => { n = v - 1; syncGramLine(); paintCols(); }
+      });
+      Z.cols.cand.tools.appendChild(nsl.el);
+      gramLine = el('p', 'p1-gramline');
+      Z.cols.cand.tools.appendChild(gramLine);
+      syncGramLine();
       reaskBtn = el('button', 'btn sm p1-up', '🔁 Dieselbe Frage nochmal');
       reaskBtn.type = 'button';
       reaskBtn.dataset.spot = 'reask';

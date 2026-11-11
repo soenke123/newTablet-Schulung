@@ -9,7 +9,7 @@
      Merkmale = Wort direkt davor/danach + Inhaltswörter im selben Satz bis WIN Wörter weit).
      Das t-SNE schaut nur auf die nächsten Nachbarn jedes Wortes (kNN), dadurch entstehen Inseln.
      Linien verbinden jedes Wort mit seinen KNN ähnlichsten — die Beziehungen sieht man direkt.
-   - Filter (Nomen, Verben, spielt → spielte, Lehrer → Lehrerin) und die Wortwelten in der Legende
+   - Filter (Nomen, Verben; die Paar-Filter sind seit 11.11.2026 aus, siehe FILTERS) und die Wortwelten in der Legende
      lassen ihre Wörter leuchten und den Rest verblassen; die Karte bleibt, wie sie ist.
    - Bei den Paar-Filtern gibt es Pfeile von Wort zu Wort und den Knopf „Pfeile nebeneinander“:
      die Paarwörter gleiten in die feste Ansicht (pairProj: Hauptrichtungen derselben Vektoren, mittlerer
@@ -164,11 +164,13 @@ const WordMap = (() => {
   const FILTERS = [
     { id: 'alle', label: 'Alle Wörter' },
     { id: 'nomen', label: 'Nomen', what: 'Nomen' },
-    { id: 'verben', label: 'Verben', what: 'Verben' },
-    { id: 'zeiten', label: 'spielt → spielte', pairs: 'tensePairs', what: 'Wörter aus Paaren', left: '← Gegenwart', right: 'Vergangenheit →',
-      a: 'Gegenwart', b: 'Vergangenheit' },
-    { id: 'paare', label: 'Lehrer → Lehrerin', pairs: 'genderPairs', what: 'Wörter aus Paaren', left: '← der …', right: 'die … →',
-      a: 'der …', b: 'die …' }
+    { id: 'verben', label: 'Verben', what: 'Verben' }
+    /* Die Paar-Filter „spielt → spielte“ / „Lehrer → Lehrerin“ mit „Pfeile nebeneinander“ sind seit
+       11.11.2026 raus (Sönke: die Mehrdimensionalität wird nicht deutlich, „es wirkt, als wenn das
+       Programm sie absichtlich nebeneinander packt“). Der Code dafür (pairs, pairProj, Wort-Rechnen)
+       bleibt, wird aber ohne Filter mit `pairs` nie aktiv. Wieder einschalten = Einträge zurück:
+       { id: 'zeiten', label: 'spielt → spielte', pairs: 'tensePairs', what: 'Wörter aus Paaren', left: '← Gegenwart', right: 'Vergangenheit →', a: 'Gegenwart', b: 'Vergangenheit' },
+       { id: 'paare', label: 'Lehrer → Lehrerin', pairs: 'genderPairs', what: 'Wörter aus Paaren', left: '← der …', right: 'die … →', a: 'der …', b: 'die …' } */
   ];
 
   function create(M0, opts) {

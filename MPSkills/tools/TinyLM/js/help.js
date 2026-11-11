@@ -83,7 +83,7 @@ const HELP = {
   },
   wortfuerwort: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: ['Im Hintergrund laufen die N-Gramme aus Phase 1: Tiny schaut auf bis zu 6 Wörter davor und nimmt, was dahinter stand – aber nur aus den 3 Quellen.',
+    text: ['Wie in Phase 1: Tiny schaut auf die Wörter davor (Regler N-Gramm) und nimmt, was dahinter stand – aber es durchsucht nur die 3 Texte, die beim Frage zerlegen gefunden wurden.',
       'Wörter aus Sätzen mit deinem Fragewort (🔎) zählen mehr. Sind die Quellen offen, zeigt die Farbe des Balkens, aus welcher Quelle das Wort kommt.'],
     try: 'Stell die Frage nochmal. Nimmt Tiny jedes Mal dieselben Wörter?',
     vis: { type: 'bars', items: [['Napf', 60], ['Park', 25], ['Wasser', 15]] }
@@ -91,7 +91,7 @@ const HELP = {
   wortkarte: {
     title: 'Wortkarte', icon: '🗺️', cat: 'meaning',
     text: ['Wörter, die in ähnlichen Sätzen vorkommen, liegen nah beieinander. So findet Tiny „ähnliche“ Wörter, auch wenn dein Wort nicht im Text steht.',
-      'Die Filter lassen eine Gruppe leuchten. Paar-Pfeile wie spielt → spielte zeigen hier kreuz und quer – ob sie in dieselbe Richtung gehen, zeigt „Pfeile nebeneinander“.'],
+      'Die Filter lassen eine Gruppe leuchten, die Linien verbinden jedes Wort mit seinen ähnlichsten Nachbarn.'],
     try: 'Tipp auf ein Wort und schau, welche Nachbarn es hat.',
     vis: { type: 'dots' }
   },
