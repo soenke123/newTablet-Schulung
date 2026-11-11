@@ -11,7 +11,8 @@
      Frage zerlegen (welche Wörter zählen, in welchen Texten sie stehen, welche Texte gewählt
                      wurden: A · B · C)
      Quellen        (die 3 passendsten Texte A · B · C und wo das Wort darin steht)
-   darunter breit die Wortkarte.
+   Die Wortkarte war bis 11.11.2026 breit darunter; sie zieht in eine eigene Phase „Wörter als Punkte“
+   (Sönke: Phase 2 nutzt sie nicht, Tiny sucht hier nur Stichwörter).
 
    Erst aufklappen, dann im Handy sichtbar (wie Phase 1):
      Quellen        → Wörter in der Farbe von A · B · C, Sprünge, Farblegende unter dem Handy
@@ -58,7 +59,7 @@ function buildPhase2Sources(R, k) {
 Phases.register(2, {
   mount(host) {
     let M = null, R = null, session = null, canned = false, asked = false;
-    let temp = 1, n = P2_N, playing = false, timer = null, mapCtl = null, done = false;
+    let temp = 1, n = P2_N, playing = false, timer = null, done = false;
     let focus = null, pick = null;
     let textEl, cursor, playBtn, reaskBtn, input, legendHost, askedEl, placeholder, answerEl, metaEl, warnEl, screen, focusHost;
     let askBox, sayBox, sayEl, controls, gramLine;
@@ -95,11 +96,6 @@ Phases.register(2, {
 
     function rebuildModel() {
       M = buildModel(State.activeTexts());
-      if (mapCtl) mapCtl.destroy();
-      mapCtl = WordMap.create(M, {
-        highlight: () => (R && !canned) ? R.ql.filter(x => x.inMap).map(x => x.lemma) : [],
-        texts: () => State.activeTexts()
-      });
     }
 
     /* Gleiche Formel wie candidates() in ngram.js — für ein früheres Wort mit der Temperatur von jetzt. */
@@ -254,11 +250,6 @@ Phases.register(2, {
       updateText();
       updateLegend();
       paintCols();
-      /* Wortkarte nicht neu aufbauen (teuer) — nur auf ein Fragewort springen. */
-      if (mapCtl && Z.isOpen('map')) {
-        const start = R.ql.filter(x => x.inMap)[0];
-        if (start) mapCtl.select(start.lemma); else mapCtl.redraw();
-      }
       startPlay();
     }
 
@@ -335,7 +326,7 @@ Phases.register(2, {
       syncPlay();
     }
 
-    /* ---------------- Zerlegen: drei Spalten + Wortkarte ---------------- */
+    /* ---------------- Zerlegen: drei Spalten ---------------- */
     function empty(text) { return el('p', 'card-empty', text); }
 
     function paintCand(v) {
@@ -661,14 +652,6 @@ Phases.register(2, {
       paintCols();
     }
 
-    function mountMap() {
-      const b = Z.cols.map.body;
-      b.replaceChildren();
-      if (!Z.isOpen('map')) { if (mapCtl) mapCtl.destroy(); return; }
-      if (!M.words.length) { b.appendChild(empty('Wähl ein paar Texte aus, dann entsteht die Karte.')); return; }
-      mapCtl.mount(b);
-    }
-
     function buildPhone() {
       const P = Zerlegen.phone({ label: 'tiny · model · Phase 2', help: 'p2' });
       phoneEl = P.el;
@@ -760,10 +743,8 @@ Phases.register(2, {
 
       Z = Zerlegen.columns({
         store: 'tinylm-p2-offen',
-        demoClosed: ['map'],
         onPointer: stopPlay,
         onChange: id => {
-          if (id === 'map') { mountMap(); return; }
           syncLayers();
           paintCols();
         }
@@ -790,7 +771,6 @@ Phases.register(2, {
         Z.column('ask', 'ask', '🔎', 'Frage zerlegen', 'Was sucht Tiny?', 'nachschlagen'),
         Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'));
       right.appendChild(row);
-      right.appendChild(Z.column('map', 'meaning', '🗺️', 'Wortkarte', 'Welche Wörter gehören zusammen?', 'wortkarte', { wide: true }));
 
       /* Feste Köpfe (werden nie neu gebaut): Temperatur + N-Gramm + „Dieselbe Frage nochmal“. */
       const tsl = Info.slider({
@@ -820,7 +800,6 @@ Phases.register(2, {
       host.replaceChildren(root);
       syncLayers();
       paintCols();
-      mountMap();
     }
 
     rebuildModel();
