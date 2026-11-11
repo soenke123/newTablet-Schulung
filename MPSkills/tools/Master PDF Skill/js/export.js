@@ -1,6 +1,6 @@
 import {
   PDFDocument, PDFArray, PDFName, PDFRef, PDFDict, PDFHexString, PDFString, PDFBool, StandardFonts, degrees, LineCapStyle, LineJoinStyle,
-  PDFObjectCopier, PDFPage, rgb, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList,
+  PDFObjectCopier, PDFPage, rgb, PDFTextField, PDFCheckBox, PDFRadioGroup, PDFDropdown, PDFOptionList, PDFStream, PDFNumber,
   beginText, endText, setFontAndSize, moveText, showText,
   pushGraphicsState, popGraphicsState, setGraphicsState, setStrokingRgbColor, setFillingRgbColor, setLineWidth, setLineCap, setLineJoin,
   moveTo, lineTo, appendBezierCurve, closePath, stroke, fill, fillAndStroke, drawObject, concatTransformationMatrix,
@@ -17,13 +17,14 @@ import { COMMENT_KINDS, COMMENT_STATES, HIGHLIGHT_OPACITY, NOTE_SIZE, NOTE_ICON,
  * writeComments). `ownedAnnots(sourceId, pageIndex)` returns the ids of the source annotations the comments were read
  * from (comments.js importAnnotations). `formValues(sourceId)` returns the changed form field values of a source as
  * Map fieldName → value (forms.js), see writeForms; `newFields` the values of the fields created in the app (field marks,
- * see createFields) as Map name → value.
+ * see createFields) as Map name → value. `flattenForms` puts every form field into the page content (see flattenFields):
+ * the values stay visible but nothing can be filled in any more.
  * `meta` = {title, author, subject, keywords, clean}: the document properties; with `clean` no producer, creator or dates
  * are written (the old file's information is never copied – the PDF is new).
  * Uses one copyPages call per source so shared resources (fonts, images) are stored only once,
  * even when pages repeat. `onProgress({phase:'copy'|'save', done, total})` may be async (to let the UI repaint).
  */
-export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null, newFields = null, rasters = new Map(), invisibleText = new Map(), watermark = null, meta = null } = {}) {
+export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { ownedAnnots = () => null, formValues = () => null, newFields = null, rasters = new Map(), invisibleText = new Map(), watermark = null, meta = null, flattenForms = false } = {}) {
   const out = await PDFDocument.create({ updateMetadata: !meta?.clean });
   setMetadata(out, meta);
   const bySource = new Map();
@@ -70,8 +71,9 @@ export async function buildPdf(pages, sourceBytes, onProgress = () => {}, { owne
   dropUnused(out, replaced);
   const withForm = forms.size && await writeForms(out, placed.map((page, i) => ({ page, sourceId: pages[i].sourceId })), forms);
   const created = await createFields(out, placed.map((page, i) => ({ page, marks: pages[i].marks })), newFields);
+  const flat = flattenForms && await flattenFields(out);
   await onProgress({ phase: 'save', done, total: pages.length });
-  return out.save(withForm || created ? { updateFieldAppearances: false } : {});
+  return out.save(withForm || created || flat ? { updateFieldAppearances: false } : {});
 }
 
 /** Widths of the 14 standard fonts for fonts that come without /Widths (textedit.js): (baseFont, char) → width at size 1. */
@@ -371,6 +373,105 @@ async function createFields(out, placed, values) {
     form.markFieldAsClean(field.ref);
   }
   return true;
+}
+
+const [N_N, N_AS, N_F, N_BBOX, N_MATRIX, N_TYPE, N_FIELDS] = ['N', 'AS', 'F', 'BBox', 'Matrix', 'Type', 'Fields'].map(key => PDFName.of(key));
+
+/**
+ * „Formularinhalte fest einbetten“ (export dialog): every widget is drawn into its page with its normal appearance
+ * (the state in /AS for check boxes and radio buttons), as a form XObject mapped from its /BBox (after /Matrix) onto
+ * /Rect like a reader does (PDF 32000 12.5.5); hidden widgets (/F Hidden or NoView) are left out. Then the widgets
+ * leave /Annots, the field dictionaries are deleted and the catalog loses /AcroForm: nothing can be filled in any more,
+ * the text stays selectable. Widgets without an appearance (left to the reader by /NeedAppearances, see setFieldValue)
+ * get one from pdf-lib first; a value Helvetica cannot write (e.g. emoji) throws an error naming the field instead
+ * of silently losing the value. Returns true when the document had widgets.
+ */
+async function flattenFields(out) {
+  const context = out.context, lookup = ref => context.lookup(ref);
+  const acro = out.catalog.lookupMaybe(N_ACROFORM, PDFDict);
+  if (acro) {
+    const need = acro.lookup(N_NEED) === PDFBool.True;
+    const form = out.getForm(), font = await out.embedFont(StandardFonts.Helvetica);
+    for (const field of form.getFields()) {
+      const widgets = field.acroField.getWidgets();
+      const missing = widgets.some(w => !w.dict.has(N_AP));
+      const drawn = field instanceof PDFTextField || field instanceof PDFDropdown || field instanceof PDFOptionList;
+      if (!(missing || (need && drawn))) continue;
+      try {
+        if (drawn) field.updateAppearances(font);
+        else if (missing && (field instanceof PDFCheckBox || field instanceof PDFRadioGroup)) field.updateAppearances();
+      } catch (error) {
+        if (!drawn || !missing) { console.warn('Formularfeld behält sein Aussehen', field.getName(), error); continue; }
+        throw new Error(`Formularfeld „${field.getName()}“ enthält Zeichen, die sich nicht fest einbetten lassen (z. B. Emojis). Bitte ändern oder ohne „Formularinhalte fest einbetten“ exportieren`);
+      }
+    }
+  }
+  const fieldNodes = new Set();
+  const collect = ref => {
+    for (let node = ref; node instanceof PDFRef && !fieldNodes.has(node); node = lookup(node)?.get?.(N_PARENT)) {
+      fieldNodes.add(node);
+      const kids = lookup(node)?.lookupMaybe?.(N_KIDS, PDFArray);
+      if (kids) kids.asArray().forEach(collect);
+    }
+  };
+  let found = false;
+  for (const page of out.getPages()) {
+    const annots = page.node.lookupMaybe(N_ANNOTS, PDFArray);
+    if (!annots) continue;
+    const keep = [], ops = [];
+    for (const ref of annots.asArray()) {
+      const dict = lookup(ref);
+      if (!(dict instanceof PDFDict) || dict.get(N_SUBTYPE) !== N_WIDGET) { keep.push(ref); continue; }
+      found = true;
+      collect(ref);
+      const flags = dict.lookup(N_F);
+      if (flags instanceof PDFNumber && (flags.asNumber() & (2 | 32))) continue;
+      const stream = normalAppearance(context, dict), matrix = stream && appearanceMatrix(lookup(stream), dict);
+      if (!matrix) continue;
+      const xo = lookup(stream).dict;
+      if (!xo.has(N_TYPE)) xo.set(N_TYPE, PDFName.of('XObject'));
+      xo.set(N_SUBTYPE, PDFName.of('Form'));
+      ops.push(pushGraphicsState(), concatTransformationMatrix(...matrix), drawObject(page.node.newXObject('FlatWidget', stream)), popGraphicsState());
+    }
+    if (keep.length === annots.size()) continue;
+    if (keep.length) page.node.set(N_ANNOTS, context.obj(keep)); else page.node.delete(N_ANNOTS);
+    if (ops.length) { ownContents(page.node); page.pushOperators(...ops); }
+  }
+  acro?.lookupMaybe(N_FIELDS, PDFArray)?.asArray().forEach(collect);
+  // The field values must not stay in the file as unreferenced objects.
+  for (const ref of fieldNodes) context.delete(ref);
+  out.catalog.delete(N_ACROFORM);
+  return found || !!acro;
+}
+
+/** Reference of a widget's normal appearance stream (for buttons: the one of its /AS state), or null. */
+function normalAppearance(context, dict) {
+  const ap = dict.lookupMaybe(N_AP, PDFDict);
+  if (!ap) return null;
+  let ref = ap.get(N_N), value = context.lookup(ref);
+  if (value instanceof PDFDict && !(value instanceof PDFStream)) {
+    const state = dict.get(N_AS);
+    if (!(state instanceof PDFName)) return null;
+    ref = value.get(state);
+    value = context.lookup(ref);
+  }
+  return ref instanceof PDFRef && value instanceof PDFStream ? ref : null;
+}
+
+/** Matrix that puts an appearance stream (its /BBox transformed by its /Matrix) onto the widget's /Rect; null when empty. */
+export function appearanceMatrix(stream, dict) {
+  const nums = (d, key) => d.lookupMaybe(key, PDFArray)?.asArray().map(v => (v instanceof PDFNumber ? v.asNumber() : 0));
+  const rect = nums(dict, PDFName.of('Rect')), bbox = nums(stream.dict, N_BBOX);
+  if (rect?.length !== 4 || bbox?.length !== 4) return null;
+  const m = nums(stream.dict, N_MATRIX);
+  const [a, b, c, d, e, f] = m?.length === 6 ? m : [1, 0, 0, 1, 0, 0];
+  const xs = [], ys = [];
+  for (const [x, y] of [[bbox[0], bbox[1]], [bbox[2], bbox[1]], [bbox[0], bbox[3]], [bbox[2], bbox[3]]]) { xs.push(a * x + c * y + e); ys.push(b * x + d * y + f); }
+  const bx0 = Math.min(...xs), bx1 = Math.max(...xs), by0 = Math.min(...ys), by1 = Math.max(...ys);
+  const rx0 = Math.min(rect[0], rect[2]), rx1 = Math.max(rect[0], rect[2]), ry0 = Math.min(rect[1], rect[3]), ry1 = Math.max(rect[1], rect[3]);
+  if (bx1 - bx0 <= 0 || by1 - by0 <= 0 || rx1 - rx0 <= 0 || ry1 - ry0 <= 0) return null;
+  const sx = (rx1 - rx0) / (bx1 - bx0), sy = (ry1 - ry0) / (by1 - by0);
+  return [sx, 0, 0, sy, rx0 - sx * bx0, ry0 - sy * by0];
 }
 
 /** A second widget of the same field for a repeated page (see writeForms); returns its reference. */
