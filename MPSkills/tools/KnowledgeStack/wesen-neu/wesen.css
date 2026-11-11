@@ -1,0 +1,152 @@
+/* ══════════════════════════════════════════════════════════════
+   Knowledge Stack — Wesen, Fassung 3 (Entwurf): wesen.css
+   ══════════════════════════════════════════════════════════════
+   Kommt NACH creatures.css. Dort stehen alle Emotes, Gehen, Fallen.
+   Hier steht nur, was die neuen Gesichter zusätzlich brauchen:
+     .brw   Brauen des offenen Gesichts (weg, wenn die Augen wechseln)
+     .pp    Pupille — schaut in Ruhe herum (lk-…)
+     q-…    die eigene Kleinigkeit eines Wesens, nur in Ruhe (.c-idle)
+   Alle Wege in Einheiten des viewBox (0…100).
+   ══════════════════════════════════════════════════════════════ */
+
+.creature-svg .only-sleep, .creature-svg .only-cheer, .creature-svg .only-sad { display: none; }
+.state-sleep .only-sleep, .state-cheer .only-cheer, .state-sad .only-sad { display: inline; }
+.state-sleep .not-sleep, .state-sad .not-sad, .state-cheer .not-cheer { display: none; }
+
+/* Brauen gehören zu den offenen Augen */
+.state-jump .brw, .state-cheer .brw, .state-dance .brw, .state-sleep .brw,
+.state-sad .brw, .state-clap .brw { display: none; }
+.state-fall .brw { animation: cr-out-60 1.3s forwards; }
+.state-getup .brw { animation: cr-in-45 1.2s forwards; }
+.state-getup.from-sit .brw { animation: none; }
+
+.creature-svg .gum, .creature-svg .q-sweat, .creature-svg .q-pop, .creature-svg .q-spark {
+  transform-box: fill-box; transform-origin: center;
+}
+
+/* ── Pupillen ──────────────────────────────────────────────── */
+.c-idle .pp.lk-lr { animation: w3-lr 6.5s ease-in-out infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes w3-lr {
+  0%, 38%, 100% { transform: translate(0, 0); }
+  44%, 58% { transform: translate(-1.5px, 0); }
+  66%, 82% { transform: translate(1.5px, 0); }
+  90% { transform: translate(0, 0); }
+}
+.c-idle .pp.lk-slow { animation: w3-slow 8s ease-in-out infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes w3-slow {
+  0%, 55%, 100% { transform: translate(0, 0); }
+  68%, 86% { transform: translate(-1.6px, .3px); }
+}
+.c-idle .pp.lk-up { animation: w3-up 7s ease-in-out infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes w3-up {
+  0%, 100% { transform: translate(0, 0); }
+  30% { transform: translate(-1.2px, -.3px); }
+  60% { transform: translate(.6px, .5px); }
+}
+.c-idle .pp.lk-roll { animation: w3-roll 5s linear infinite; }
+@keyframes w3-roll {
+  0% { transform: translate(2.2px, 0); } 25% { transform: translate(0, 2px); }
+  50% { transform: translate(-2.2px, 0); } 75% { transform: translate(0, -2px); }
+  100% { transform: translate(2.2px, 0); }
+}
+.c-idle .pp.lk-dart { animation: w3-dart 3.6s steps(1) infinite; animation-delay: var(--cr-d, 0s); }
+@keyframes w3-dart {
+  0% { transform: translate(0, 0); } 22% { transform: translate(-1.4px, .2px); }
+  34% { transform: translate(1.4px, -.3px); } 46% { transform: translate(0, 0); }
+  78% { transform: translate(1.2px, .5px); } 88% { transform: translate(0, 0); }
+}
+/* Chamäleon: jedes Auge für sich */
+.c-idle .pp.lk-a { animation: w3-roll 3.4s linear infinite; }
+.c-idle .pp.lk-b { animation: w3-roll 4.6s linear infinite reverse; animation-delay: -1.7s; }
+
+/* ── Kleinigkeiten in Ruhe ─────────────────────────────────── */
+/* Kaugummi-Blase: wächst, platzt, Pause */
+.creature-svg .gum { opacity: 0; }
+.c-idle .gum, .state-sleep .gum { animation: w3-gum 4.4s ease-in infinite; }
+@keyframes w3-gum {
+  0%, 12% { transform: scale(.12); opacity: 0; }
+  16% { transform: scale(.2); opacity: 1; }
+  78% { transform: scale(1); opacity: 1; }
+  82% { transform: scale(1.18); opacity: 1; }
+  84%, 100% { transform: scale(1.3); opacity: 0; }
+}
+.state-sleep .gum { animation-duration: 3.4s; }
+
+/* Kopf legt sich neugierig schief */
+.c-idle .q-tilt { animation: w3-tilt 5s ease-in-out infinite; }
+@keyframes w3-tilt {
+  0%, 30%, 100% { transform: rotate(0); }
+  40%, 62% { transform: rotate(-7deg); }
+  72%, 90% { transform: rotate(5deg); }
+}
+/* Sekundenschlaf: Kopf sackt weg und schreckt hoch */
+.c-idle .q-nod { animation: w3-nod 5.5s ease-in infinite; }
+@keyframes w3-nod {
+  0%, 20% { transform: rotate(0) translateY(0); }
+  70% { transform: rotate(7deg) translateY(2.4px); }
+  76% { transform: rotate(-3deg) translateY(-1px); }
+  84%, 100% { transform: rotate(0) translateY(0); }
+}
+/* Aufplustern */
+.c-idle .q-puff { animation: w3-puff 4.2s ease-in-out infinite; }
+@keyframes w3-puff {
+  0%, 55%, 100% { transform: scale(1); }
+  62%, 84% { transform: scale(1.07); }
+}
+/* Zucken (zu viel Energie, zu viel Kaffee) */
+.c-idle .q-twitch { animation: w3-twitch 2.6s linear infinite; }
+@keyframes w3-twitch {
+  0%, 70%, 100% { transform: translate(0, 0) rotate(0); }
+  73% { transform: translate(-.9px, 0) rotate(-2deg); }
+  76% { transform: translate(.9px, 0) rotate(2deg); }
+  79% { transform: translate(-.6px, 0) rotate(-1deg); }
+  82% { transform: translate(0, 0) rotate(0); }
+}
+/* Schweißtropfen läuft herunter */
+.c-idle .q-sweat { animation: w3-sweat 2.8s ease-in infinite; }
+@keyframes w3-sweat {
+  0% { transform: translateY(-2px) scale(.5); opacity: 0; }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  85% { opacity: 1; }
+  100% { transform: translateY(9px) scale(1); opacity: 0; }
+}
+/* etwas blitzt kurz auf (Zahn, Brille, Münze) */
+.c-idle .q-spark { animation: w3-spark 4s ease-in-out infinite; }
+@keyframes w3-spark {
+  0%, 78%, 100% { transform: scale(0) rotate(0); opacity: 0; }
+  86% { transform: scale(1.2) rotate(40deg); opacity: 1; }
+  94% { transform: scale(.6) rotate(70deg); opacity: .6; }
+}
+/* Fuß tippt ungeduldig */
+.c-idle .q-tap { animation: w3-tap .5s ease-in-out infinite alternate; }
+@keyframes w3-tap { from { transform: rotate(0); } to { transform: rotate(-14deg); } }
+/* Zunge schnellt heraus */
+.creature-svg .q-lick { transform: scaleY(0); }
+.c-idle .q-lick { animation: w3-lick 5s ease-in-out infinite; }
+@keyframes w3-lick {
+  0%, 80%, 100% { transform: scaleY(0); }
+  86%, 92% { transform: scaleY(1); }
+}
+/* langsames Nicken / Wippen eines Teils */
+.c-idle .q-bob { animation: w3-bob 1.8s ease-in-out infinite alternate; }
+@keyframes w3-bob { from { transform: translateY(0); } to { transform: translateY(-1.8px); } }
+/* schaut sich misstrauisch um: Kopf dreht kurz */
+.c-idle .q-peek { animation: w3-peek 6s ease-in-out infinite; }
+@keyframes w3-peek {
+  0%, 50%, 100% { transform: translateX(0); }
+  58%, 70% { transform: translateX(-2.2px); }
+  80%, 92% { transform: translateX(2.2px); }
+}
+/* Bildstörung */
+.c-idle .q-glitch { animation: w3-glitch 3.2s steps(1) infinite; }
+@keyframes w3-glitch {
+  0%, 84%, 100% { transform: translateX(0); }
+  86% { transform: translateX(-3px); }
+  90% { transform: translateX(2.5px); }
+  94% { transform: translateX(-1px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .creature-svg .pp, .creature-svg [class*="q-"] { animation: none !important; }
+  .creature-svg .gum { opacity: 1; }
+}
