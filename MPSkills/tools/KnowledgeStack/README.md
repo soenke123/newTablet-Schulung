@@ -21,7 +21,7 @@ läuft). Sonst sehen 28 Köpfe nach unten statt nach vorn.
 
 ## Die Wesen (Fassung 2, Oktober 2026)
 
-Alle 36 Wesen sind neu gezeichnet — gleiche Ids, Namen und Farbfassungen
+Alle 36 Wesen wurden neu gezeichnet — gleiche Ids, Namen und Farbfassungen
 (die stehen als Zahl in der Datenbank), aber auf **einem gemeinsamen
 Skelett**:
 
@@ -66,31 +66,33 @@ Zum Ansehen: **`showroom-wesen.html`** (läuft ohne Netz, benutzt genau
 `creatures.js`/`creatures.css`): alle Wesen × Farben × Bewegungen,
 hell/dunkel, und eine Bühne mit Rundgang.
 
-### Fassung 3 — Entwurf mit mehr Charakter (November 2026)
+### Fassung 3 — Wesen mit Charakter (November 2026)
 
-**Nur ein Showroom, das Quiz benutzt weiter Fassung 2.** Ansehen:
-**`showroom-wesen-neu.html`** (Knopf „Altes Wesen daneben“ zeigt den
-Vergleich). Dieselben 40 Wesen, Ids, Namen und Farbfassungen, aber jedes
-hat einen **Typ** („Der Lässige“, „Die Überdrehte“ …), den man sieht:
-Augen mit Pupille, die irgendwohin schaut, Lider, Brauen (auch ungleich),
-viele Münder (schiefes Grinsen, Zähne, Reißzahn, Zunge) und eine eigene
-Kleinigkeit in Ruhe (Kaugummi-Blase, Sekundenschlaf, Fuß tippt …).
+Dieselben 40 Wesen, Ids, Namen und Farbfassungen, aber alle neu
+gezeichnet: jedes hat einen **Typ** („Der Lässige“, „Die Überdrehte“ …)
+und einen Spruch (`KSCreatures.info(id)`), und den Typ sieht man:
 
-Skelett, Emotes, Gehen, Fallen kommen **unverändert** aus `creatures.js`
-(`KSCreatures.buildDef`) und `creatures.css`. Neu ist nur der Ordner
-`wesen-neu/`:
+* Augen mit Augapfel und Pupille (`.pp`), die irgendwohin schaut und in
+  Ruhe wandert; Lider und Brauen (`.brw`), auch ungleich
+* viele Münder: schiefes Grinsen, Zahnreihe, Reißzahn, Zunge, Schnabel
+* je Wesen eine eigene Kleinigkeit in Ruhe (`q-…`, nur bei `.c-idle`):
+  Puddl macht eine Kaugummi-Blase, Snooze fällt in Sekundenschlaf,
+  Boomer tippt mit dem Fuß, Platos Propellermütze dreht sich …
 
-| Datei | Wofür |
-|---|---|
-| `kern.js` | Gesichts-Baukasten `gesicht()` / `mund()` und Register `KSWesenNeu.add/svg/info` |
-| `farben.js` | die Farbfassungen, aus `creatures.js` übernommen |
-| `wesen-0.js` … `wesen-3.js` | je zehn Wesen: Typ, Spruch, Zeichnung |
-| `wesen.css` | Brauen (`.brw`), Pupillen (`.pp.lk-…`), Kleinigkeiten in Ruhe (`.q-…`, nur bei `.c-idle`) |
+Gebaut wird das Gesicht mit `gesicht()` und `mund()` in `creatures.js`
+(Abschnitt „Fassung 3“); `face()` aus Fassung 2 bleibt für `buildDef`-Figuren
+außerhalb der Datei. Die Klassen im Gesicht heißen gleich,
+das Skelett ist dasselbe — darum sind Emotes, Gehen, Fallen und alle
+Regeln in `creatures.css` unverändert; neu ist dort nur der Abschnitt
+„FASSUNG 3“ am Ende. Die Sonderregeln je Wesen aus Fassung 2 greifen
+weiter, wo die neue Zeichnung dieselben Klassen trägt (`cap`, `hat`,
+`sway`, `tail`, `claw`, `lid`, `toast`, `lure`, `kaese` …).
 
-Übernehmen ins Quiz hieße: die Beschreibungen nach `DEFS` in
-`creatures.js` holen, `face()` durch `gesicht()` ersetzen, `wesen.css` an
-`creatures.css` hängen — und die Profilbilder (`avatare MPSkills/`)
-neu rendern, die zeigen noch Fassung 2.
+**Profilbilder:** `tools/avatare.mjs` rendert aus `creatures.js` die 80
+Bilder in „avatare MPSkills/KnowlegeStack/“ (Kopf groß, Farbe 1, dazu
+die Gold-Fassung). Nach jeder Änderung an einer Zeichnung neu laufen
+lassen. Die Bildschirmfotos im Erklär-Quiz (Migration 0238) zeigen noch
+die Wesen aus Fassung 2.
 
 ## Die Emotes
 
@@ -346,8 +348,8 @@ sehen.
 | `tool.css` | Alles rechnet aus `--ks-h` (der gemessenen Rahmenhöhe), nichts aus `vh`. Alle Farben stehen in zwei Sätzen ganz oben. |
 | `creatures.js` | Die 40 Wesen: Liste, Paletten, Skelett (`build`), Gesichter (`face`), Zeichnungen (`DEFS`). |
 | `creatures.css` | Ihre Bewegungen: erst alle gemeinsam (`state-…`), dann je Wesen (`wave-7`, `cheer-7` …). |
-| `showroom-wesen.html` | Showroom der Fassung 2 — ohne Netz, zeigt genau creatures.js/.css. |
-| `showroom-wesen-neu.html`, `wesen-neu/` | Entwurf Fassung 3: dieselben Wesen mit mehr Charakter, nur Showroom (siehe oben). |
+| `showroom-wesen.html` | Showroom — ohne Netz, zeigt genau creatures.js/.css, mit Typ und Spruch je Wesen. |
+| `tools/avatare.mjs` | Rendert die 80 Profilbilder der Wesen neu (Playwright). |
 | `showroom-*-wesen.html`, `showroom-beamer-mobile.html` | Entwurfsstand der ersten Fassung, **eingefroren** (siehe `feedback_showrooms_frozen`). Zeigt die alten Wesen. |
 
 Die Wesen-Dateien hängen an `ASSET_V` in `tool.js` — dem einen Stempel für

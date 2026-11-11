@@ -5,10 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wesen-Showroom</title>
 <!--
-  Showroom der Wesen, Fassung 2 (Oktober 2026).
-  Bei Winken, Jubeln, Tanzen, Springen und Traurig steht unter jedem
-  Wesen, welche seiner eigenen Bewegungen es gerade zeigt
-  (KSCreatures.moveNames) — keine zwei Wesen haben dieselbe.
+  Showroom der Wesen, Fassung 3 (November 2026): 40 Wesen, jedes mit
+  einem eigenen Typ, den man im Gesicht sieht. Unter jedem Wesen stehen
+  Typ und Spruch (KSCreatures.info) und bei den Emotes, welche seiner
+  eigenen Bewegungen es gerade zeigt (KSCreatures.moveNames).
   Läuft ohne Netz und ohne Build: zieht nur creatures.js und
   creatures.css aus diesem Ordner — also genau das, was auch das
   Quiz benutzt. (Die alten showroom-*-wesen.html sind eingefroren
@@ -34,27 +34,28 @@
   button.on { background: var(--accent); border-color: var(--accent); color: var(--on); }
   main { padding: 16px; max-width: 1400px; margin: 0 auto; }
 
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 8px 8px 10px; text-align: center; cursor: pointer; }
+  .card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
   .card:focus-visible { outline: 3px solid var(--accent); }
-  .pic { position: relative; aspect-ratio: 1; }
+  .pics { display: flex; gap: 4px; align-items: flex-end; }
+  .pic { position: relative; aspect-ratio: 1; flex: 1 1 0; min-width: 0; }
   .pic .w { position: absolute; inset: 0; filter: drop-shadow(0 0 .7px var(--rand)) drop-shadow(0 0 .7px var(--rand)); }
   .pic svg { width: 100%; height: 100%; display: block; }
-  .name { font-weight: 700; margin-top: 4px; }
-  .meta { font-size: 12px; color: var(--soft); }
-  .mv { font-size: 12px; font-weight: 600; color: var(--accent); margin-top: 2px; }
+  .name { font-weight: 700; margin-top: 6px; }
+  .typ { font-size: 13px; font-weight: 700; color: var(--accent); }
+  .spruch { font-size: 12px; color: var(--soft); margin-top: 2px; }
+  .mv { font-size: 11px; color: var(--soft); margin-top: 3px; opacity: .8; }
 
-  /* Bühne: das Wesen läuft im Viereck, fällt, steht auf, plumpst */
   .stage-wrap { scroll-margin-top: 230px; margin: 0 0 18px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 12px; }
-  .stage { position: relative; height: 320px; border-radius: 12px; overflow: hidden;
-    background: linear-gradient(var(--card), var(--card)) padding-box; }
+  .stage { position: relative; height: 320px; border-radius: 12px; overflow: hidden; background: var(--card); }
   .stage::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 40%;
     background: repeating-linear-gradient(90deg, transparent 0 38px, rgba(127,127,127,.08) 38px 40px); pointer-events: none; }
-  .actor { position: absolute; width: 150px; height: 150px; left: 0; top: 0; z-index: 2; transition: transform linear; }
+  .actor { position: absolute; width: 170px; height: 170px; left: 0; top: 0; z-index: 2; transition: transform linear; }
   .actor .w { position: absolute; inset: 0; filter: drop-shadow(0 0 .7px var(--rand)) drop-shadow(0 0 .7px var(--rand)); }
   .actor svg { width: 100%; height: 100%; display: block; }
   .say { font-size: 13px; color: var(--soft); min-height: 1.4em; margin-top: 6px; }
-  @media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); } .stage { height: 260px; } .actor { width: 110px; height: 110px; } }
+  @media (max-width: 600px) { .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); } .stage { height: 260px; } .actor { width: 120px; height: 120px; } }
 </style>
 </head>
 <body>
@@ -88,7 +89,8 @@
     ['walk:left', '← Gehen'], ['walk:right', 'Gehen →'], ['walk:front', '↓ Gehen (vorn)'], ['walk:back', '↑ Gehen (hinten)'],
     ['fall', 'Hinfallen'], ['getup', 'Aufstehen'], ['plop', 'Hinplumsen'], ['getup:sit', 'Aufstehen (Sitz)']
   ];
-  let act = 'idle', skin = 0, byGroup = false, chosen = 7;
+  const q = new URLSearchParams(location.search);
+  let act = q.get('act') || 'idle', skin = +(q.get('skin') || 0), byGroup = false, chosen = +(q.get('id') || 0);
 
   const $ = id => document.getElementById(id);
   const classesFor = (a, id) => { const [n, d] = a.split(':'); return K.cls(n, id, d); };
@@ -111,16 +113,22 @@
     document.querySelectorAll('[data-skin]').forEach(b => b.classList.toggle('on', +b.dataset.skin === skin));
     const order = K.list.slice();
     if (byGroup) order.sort((a, b) => a.gruppe.localeCompare(b.gruppe) || a.id - b.id);
-    $('grid').innerHTML = order.map(c =>
-      '<div class="card" tabindex="0" data-id="' + c.id + '"><div class="pic"><span class="w">'
-      + K.svg(c.id, skin, classesFor(act, c.id)) + '</span></div>'
-      + '<div class="name">' + c.name + '</div><div class="meta">' + c.skins[skin] + ' · ' + c.gruppe + '</div>'
-      + (K.moveNames(c.id, act) ? '<div class="mv">' + K.moveNames(c.id, act) + '</div>' : '') + '</div>').join('');
+    $('grid').innerHTML = order.map(c => {
+      const i = K.info(c.id), mv = K.moveNames(c.id, act.split(':')[0]);
+      return '<div class="card' + (c.id === chosen ? ' sel' : '') + '" tabindex="0" data-id="' + c.id + '"><div class="pics">'
+        + '<div class="pic"><span class="w">' + K.svg(c.id, skin, classesFor(act, c.id)) + '</span></div>'
+        + '</div><div class="name">' + c.name + '</div>'
+        + '<div class="typ">' + i.typ + '</div>'
+        + (i.spruch ? '<div class="spruch">' + i.spruch + '</div>' : '')
+        + (mv ? '<div class="mv">' + mv + '</div>' : '') + '</div>';
+    }).join('');
     if (!touring) setActor('idle');
   }
   $('grid').addEventListener('click', e => {
     const c = e.target.closest('.card'); if (!c) return;
-    chosen = +c.dataset.id; setActor('idle'); $('say').textContent = K.list[chosen].name + ' steht auf der Bühne.';
+    chosen = +c.dataset.id;
+    document.querySelectorAll('.card').forEach(x => x.classList.toggle('sel', +x.dataset.id === chosen));
+    setActor('idle'); $('say').textContent = K.list[chosen].name + ' steht auf der Bühne.';
   });
   $('grid').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.click(); });
 
@@ -129,6 +137,7 @@
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
     $('btnTheme').classList.toggle('on', dark);
   };
+  if (q.has('dark')) $('btnTheme').click();
   $('btnGroup').onclick = () => { byGroup = !byGroup; $('btnGroup').classList.toggle('on', byGroup); paint(); };
 
   /* ── Bühne ───────────────────────────────────────────── */
