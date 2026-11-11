@@ -1,11 +1,11 @@
 /* Prüfstand für Migration 0284 — Laufzeit eines Raums wählbar.
-   Echt gerechnet in pglite auf der ganzen Kette 0001…0284.
+   Echt gerechnet in pglite auf der ganzen Kette (mit 0285).
 
      1. Vorgaben je Skill stehen in skill_tools.lifetime_days.
      2. Anlegen ohne Angabe nimmt die Vorgabe des Skills (Quiz = 2 Tage).
      3. Anlegen mit Angabe (90) setzt Laufzeit und Frist; Unsinn → lifetime_invalid.
-     4. Aktivität (skill_touch) schiebt die Frist auf jetzt + Laufzeit,
-        nicht mehr pauschal auf 30 Tage — und verkürzt nichts.
+     4. Seit 0285: Laufzeit ab Erstellung — Aktivität (skill_touch, Tür
+        öffnen, Einstellungen) verlängert nicht; Testräume ab letzter Nutzung.
      5. Verlängern um p_days, ohne Angabe um die Laufzeit, höchstens 1 Jahr.
      6. Projektarbeit: neue Räume 180 Tage, keine Jahres-Untergrenze mehr.
      7. skill_rooms_list liefert lifetime_days je Raum und je Skill.
@@ -102,19 +102,28 @@ const touch = async code => {
   await db.query(`update skill_rooms set last_active_at = now() - interval '1 hour' where code = $1`, [code]);
   await db.query(`select skill_touch(id) from skill_rooms where code = $1`, [code]);
 };
+// Seit 0285 gilt die Laufzeit ab Erstellung: Nutzung verlängert nicht.
 await db.query(`update skill_rooms set expires_at = now() + interval '1 day' where code = $1`, [Q]);
 await touch(Q);
-ok('4  Aktivität im Quiz: wieder 2 Tage (nicht 30)', near(await days(Q), 2), String(await days(Q)));
+ok('4  Aktivität im Quiz verlängert nicht (0285)', near(await days(Q), 1), String(await days(Q)));
 await touch(W);
-ok('4  Aktivität verkürzt 90 Tage nicht auf 30', near(await days(W), 90), String(await days(W)));
+ok('4  Aktivität lässt 90 Tage stehen', near(await days(W), 90), String(await days(W)));
 r = await call(`skill_room_set_open($1, true)`, [Q]);
-ok('4  Tür öffnen im Quiz: 2 Tage', r?.ok && near(await days(Q), 2), String(await days(Q)));
+ok('4  Tür öffnen verlängert nicht', r?.ok && near(await days(Q), 1), String(await days(Q)));
+r = await call(`skill_room_update($1, 'Quiz 9b neu', null, null)`, [Q]);
+ok('4  Einstellungen speichern verlängert nicht', r?.ok && near(await days(Q), 1), JSON.stringify(r));
+// Testraum: weiter ab letzter Nutzung (wird beim Öffnen wiederverwendet)
+r = await call(`skill_room_create('knowledgestack', null, true, '{}'::jsonb, true)`);
+const TR = r.code;
+await db.query(`update skill_rooms set expires_at = now() + interval '1 hour', last_active_at = now() - interval '1 hour' where code = $1`, [TR]);
+r = await call(`skill_room_create('knowledgestack', null, true, '{}'::jsonb, true)`);
+ok('4  Testraum: Wiederöffnen hält ihn am Leben', r?.reused === true && near(await days(TR), 2), String(await days(TR)));
 
 /* 5 */
 r = await call(`skill_room_extend($1, 30)`, [Q]);
-ok('5  Quiz um 30 Tage verlängert', r?.ok && near(await days(Q), 32), String(await days(Q)));
+ok('5  Quiz um 30 Tage verlängert', r?.ok && near(await days(Q), 31), String(await days(Q)));
 await touch(Q);
-ok('5  danach verkürzt Aktivität nicht', near(await days(Q), 32), String(await days(Q)));
+ok('5  danach ändert Aktivität nichts', near(await days(Q), 31), String(await days(Q)));
 r = await call(`skill_room_extend($1)`, [W]);
 ok('5  ohne Angabe: um die Laufzeit (90)', r?.ok && r.days === 90 && near(await days(W), 180), String(await days(W)));
 await call(`skill_room_extend($1, 180)`, [W]);

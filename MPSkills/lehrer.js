@@ -750,8 +750,8 @@ function lifeHTML() {
                 <strong>${d}</strong><span>Tage</span>
               </label>`).join('')}
             </div>
-            <p class="setfield-hint">Gezählt ab der letzten Nutzung. Du kannst den Raum später
-              jederzeit verlängern (Meine Räume → drei Punkte).</p>
+            <p class="setfield-hint">Gezählt ab heute. Du kannst den Raum später jederzeit
+              verlängern (Meine Räume → drei Punkte).</p>
           </div>`;
 }
 

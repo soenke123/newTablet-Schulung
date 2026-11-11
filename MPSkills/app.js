@@ -716,8 +716,8 @@ async function renderRooms() {
 
   pane.innerHTML = `
       <div class="pane-head">
-        <p class="pane-head-note">Ein Raum läuft ab, wenn so lange niemand mehr darin war,
-          wie beim Anlegen gewählt (2 bis 180 Tage) — verlängern kannst du ihn über die drei Punkte.</p>
+        <p class="pane-head-note">Ein Raum läuft nach der Laufzeit ab, die beim Anlegen gewählt
+          wurde (2 bis 180 Tage ab Erstellung) — verlängern kannst du ihn über die drei Punkte.</p>
         <a class="btn btn--primary" href="lehrer.html?new">+ Raum eröffnen</a>
       </div>
       <div class="card">
