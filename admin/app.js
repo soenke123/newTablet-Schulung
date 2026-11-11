@@ -19,6 +19,7 @@ let clusterCache    = [];     // {id, name, season, opens_at, closes_at, bonus?}
 let gamesBySeason   = null;   // { 1: ['game1', ...], 2: [...] }, lazy geladen
 let gameTitleById   = null;   // { game1: 'Zahlenduell', ... }, lazy geladen aus games-Tabelle
 let userCache       = [];     // profiles rows (angereichert mit progress-Daten wenn geladen)
+let userRooms       = null;   // { user_id: [raum, …] } aus admin_user_rooms (0287); null = nicht verfügbar
 let adminCache      = [];     // profiles rows aller Admins (Volladmin-Reiter)
 let teacherCache    = [];     // profiles rows mit teacher_status <> 'none' (MPSkills-Reiter)
 let ticketCache     = [];     // feedback_tickets rows (Tickets-Reiter, nur Volladmin)
@@ -1481,12 +1482,16 @@ async function ensureViewData() {
 async function loadUsers() {
   const tbody = document.getElementById('userTbody');
   try {
-    const rows = await api('GET',
-      // teacher_requested_at wird nicht angezeigt, entscheidet aber beim
-      // Entziehen zwischen 'none' und 'rejected' — siehe teacherRevokeStatus().
-      `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,is_superadmin,teacher_status,teacher_requested_at,avatar_id,created_at`
-      + `&school_id=eq.${currentSchoolId}`);
+    const [rows, rooms] = await Promise.all([
+      api('GET',
+        // teacher_requested_at wird nicht angezeigt, entscheidet aber beim
+        // Entziehen zwischen 'none' und 'rejected' — siehe teacherRevokeStatus().
+        `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,is_superadmin,teacher_status,teacher_requested_at,avatar_id,created_at`
+        + `&school_id=eq.${currentSchoolId}`),
+      loadUserRooms()
+    ]);
     userCache = rows;
+    userRooms = rooms;
 
     // Bei aktiver Progress-View direkt mitziehen
     await ensureViewData();
@@ -1495,6 +1500,31 @@ async function loadUsers() {
   } catch (err) {
     tbody.innerHTML = `<tr><td class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
   }
+}
+
+// Räume je Konto (Migration 0287). Fehlt die Migration noch, bleibt die
+// Liste benutzbar — die Spalte „Räume“ zeigt dann „?“.
+async function loadUserRooms() {
+  try {
+    const res = await api('POST', 'rpc/admin_user_rooms',
+      { p_school: isVolladmin ? (currentSchoolId || null) : null });
+    return res?.ok ? (res.users || {}) : null;
+  } catch (err) {
+    console.warn('[admin] admin_user_rooms:', err.message);
+    return null;
+  }
+}
+
+// Räume, die für „wer ist das?“ zählen: laufende, nicht verlassen,
+// nicht entfernt. Abgelaufene/verlassene stehen nur im Fenster.
+function liveRoomsOf(u) {
+  return (userRooms?.[u.id] || []).filter(r => !r.expired && !r.left && !r.removed);
+}
+
+// Lehrkräfte und Admins sitzen nicht als Schüler in Räumen — bei ihnen
+// ist „kein Raum“ kein Verdacht.
+function isStaff(u) {
+  return !!(u.is_admin || u.is_superadmin || u.teacher_status === 'approved');
 }
 
 // Lädt Coins/Kristalle/Kreaturen/Legies/last-active und mergt in userCache.
@@ -1756,6 +1786,7 @@ const VIEW_COLUMNS = {
     { label: 'Status',       key: 'status'          },
     { label: 'Cluster',      key: 'cluster'         },
     { label: 'Rolle',        key: 'is_admin'        },
+    { label: 'Räume',        key: 'rooms'           },
     { label: 'Avatar',       key: null              },
     { label: 'Erstellt',     key: 'created_at'      },
     { label: 'Aktion',       key: null              }
@@ -1825,6 +1856,10 @@ function renderUsers() {
       case 'teacher':         return !isAdmin && r.teacher_status === 'approved';
       case 'teacher_pending': return !isAdmin && r.teacher_status === 'pending';
       case 'student':         return !isAdmin && r.teacher_status !== 'approved';
+      // „Troll-Verdacht“: kein laufender Raum. Ohne Raum-Daten (Migration
+      // fehlt) lieber niemanden zeigen als alle.
+      case 'student_noroom':  return !isAdmin && r.teacher_status !== 'approved'
+                                  && userRooms !== null && liveRoomsOf(r).length === 0;
       default:                return true;
     }
   });
@@ -1875,6 +1910,9 @@ function renderUsers() {
   });
   tbody.querySelectorAll('.js-detail').forEach(btn => {
     btn.addEventListener('click', () => openUserDetail(btn.dataset.userId));
+  });
+  tbody.querySelectorAll('.js-rooms').forEach(btn => {
+    btn.addEventListener('click', () => openUserRooms(btn.dataset.userId));
   });
   tbody.querySelectorAll('.js-ss-detail').forEach(btn => {
     btn.addEventListener('click', () => openStartupDetail(btn.dataset.userId));
@@ -1946,6 +1984,7 @@ function sortRows(rows, sort) {
       case 'ss_updated':   return u._ss ? u._ss.updatedAt  : '';
       case 'display_name_locked': return u.display_name_locked ? 1 : 0;
       case 'is_admin':    return roleRank(u);
+      case 'rooms':       return userRooms ? liveRoomsOf(u).length : -1;
       default:            return u[key] ?? '';
     }
   };
@@ -2012,6 +2051,8 @@ function renderCell(u, col) {
       return `<td>${u.display_name_locked ? '🔒 gesperrt' : '—'}</td>`;
     case 'is_admin':
       return `<td>${roleBadge(u)}</td>`;
+    case 'rooms':
+      return `<td>${roomsCell(u)}</td>`;
     // Progress-Metriken
     case 'coins':
       return `<td><span class="metric"><span class="metric-icon">🪙</span>${u._progress?.coins ?? '—'}</span></td>`;
@@ -2092,6 +2133,67 @@ function renderCell(u, col) {
       return '<td>—</td>';
     }
   }
+}
+
+// Spalte „Räume“: Zahl der laufenden Räume als Knopf (öffnet die Liste).
+// Schüler-Konto ohne laufenden Raum = gelbes „kein Raum“ — der Hinweis
+// auf einen möglichen Troll. Bei Lehrkräften/Admins zählen auch eigene
+// Räume, ohne Raum steht nur ein Strich.
+function roomsCell(u) {
+  if (userRooms === null) {
+    return '<span class="hint" title="Raum-Daten nicht verfügbar (Migration 0287?)">?</span>';
+  }
+  const all  = userRooms[u.id] || [];
+  const live = liveRoomsOf(u);
+  if (!live.length) {
+    const old = all.length
+      ? ` <button type="button" class="link-btn js-rooms" data-user-id="${u.id}"`
+        + ` title="Nur abgelaufene oder verlassene Räume">(${all.length} alt)</button>`
+      : '';
+    return isStaff(u)
+      ? `<span class="hint">—</span>${old}`
+      : `<span class="badge noroom" title="In keinem laufenden Raum einer Lehrkraft">kein Raum</span>${old}`;
+  }
+  const tip = live.map(r => `${r.title} (${r.owner})`).join('\n');
+  return `<button type="button" class="badge rooms js-rooms" data-user-id="${u.id}"`
+    + ` title="${escapeHtml(tip)}">${live.length} ${live.length === 1 ? 'Raum' : 'Räume'}</button>`;
+}
+
+const ROOM_ROLE = { member: 'Teilnehmer', owner: 'Besitzer', teacher: 'eingeladen' };
+
+function openUserRooms(userId) {
+  const u = userCache.find(x => x.id === userId);
+  if (!u) return;
+  const rooms = userRooms?.[userId] || [];
+  document.getElementById('userDetailTitle').textContent =
+    `${u.display_name || u.account_name} · Räume`;
+  const rows = rooms.map(r => {
+    const tags = [
+      r.is_test  ? '<span class="badge">Test</span>'                  : '',
+      r.expired  ? '<span class="badge closed">abgelaufen</span>'     : '',
+      r.left     ? '<span class="badge closed">verlassen</span>'      : '',
+      r.removed  ? '<span class="badge closed">entfernt</span>'       : '',
+      r.blocked  ? '<span class="badge pending">gesperrt</span>'      : ''
+    ].filter(Boolean).join(' ');
+    return `<tr class="${r.expired || r.left || r.removed ? 'row-muted' : ''}">
+      <td><strong>${escapeHtml(r.title)}</strong> <code>${escapeHtml(r.code)}</code> ${tags}</td>
+      <td><span class="skillcell">${window.MPIcons?.label
+        ? window.MPIcons.label(r.tool_id, r.tool_title || r.tool_id)
+        : escapeHtml(r.tool_title || r.tool_id)}</span></td>
+      <td>${escapeHtml(r.owner || '—')}</td>
+      <td>${ROOM_ROLE[r.role] || escapeHtml(r.role)}</td>
+      <td>${escapeHtml(r.name || '—')}</td>
+      <td>${escapeHtml(fmtRelative(r.last_seen_at || r.since))}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('userDetailBody').innerHTML = rooms.length
+    ? `<table class="dtable">
+         <thead><tr><th>Raum</th><th>Skill</th><th>Lehrkraft</th><th>Als</th>
+           <th>Name im Raum</th><th>Zuletzt da</th></tr></thead>
+         <tbody>${rows}</tbody>
+       </table>`
+    : '<p class="hint">In keinem Raum.</p>';
+  document.getElementById('userDetailModal').hidden = false;
 }
 
 // „Noch nie gespielt" — eine leere Zelle, kein 0-Wert.

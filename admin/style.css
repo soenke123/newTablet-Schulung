@@ -460,6 +460,18 @@ html, body {
 }
 .badge.closed  { background: rgba(0,0,0,0.3); color: var(--a-muted); }
 .badge.open    { background: rgba(107,191,89,0.15); color: #8fd97e; }
+/* Spalte „Räume“ (Migration 0287): Zahl als Knopf, öffnet die Liste.
+   „kein Raum“ bei Schüler-Konten in Gelb — Hinweis auf möglichen Troll,
+   kein Urteil (darum nicht rot). */
+button.badge { border: 0; cursor: pointer; font-family: inherit; }
+.badge.rooms  { background: rgba(110,150,230,0.15); color: #9db8f0; text-transform: none; letter-spacing: 0; }
+.badge.rooms:hover { background: rgba(110,150,230,0.28); }
+.badge.noroom { background: rgba(230,180,60,0.16); color: #f0c860; text-transform: none; letter-spacing: 0; }
+.link-btn {
+  background: none; border: 0; padding: 0; cursor: pointer;
+  font: inherit; font-size: 11px; color: var(--a-muted); text-decoration: underline;
+}
+tr.row-muted td { opacity: 0.55; }
 
 /* ─── Modal ──────────────────────────────────────────────── */
 /* `top`/`height` statt `inset: 0`: der sichtbare Bereich ist bei

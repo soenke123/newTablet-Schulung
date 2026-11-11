@@ -160,6 +160,7 @@
    "add_bonbons(p_amount integer)",
    "admin_cleanup_status()",
    "admin_cluster_bonbon_totals()",
+   "admin_user_rooms(p_school uuid)",
    "apply_cluster_bonus(p_user_id uuid)",
    "award_game_bonbons(p_game_id text, p_correct integer, p_max_rounds integer)",
    "board_claim_reward(p_cluster_id uuid)",
