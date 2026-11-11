@@ -199,7 +199,9 @@ const days = async (id) => (await one(`select extract(day from expires_at - now(
 // Seit 0284 kein Jahr mehr per Trigger: Projektarbeit hat ihre eigene
 // Laufzeit (lifetime_days, Vorgabe 180, Bestand 365). Geprüft wird, dass
 // Aktivität die Laufzeit des Raums hält und nicht auf 30 Tage kürzt.
+await db.query(`select set_config('mps.room_extend', '1', false)`);   // 0286: nur mit Merker höher
 await db.query(`update skill_rooms set lifetime_days = 365, expires_at = now() + interval '365 days' where id = $1`, [R]);
+await db.query(`select set_config('mps.room_extend', '', false)`);
 ok('6  Projektarbeit-Raum läuft ein Jahr', (await days(R)) >= 364, String(await days(R)));
 await db.query(`update skill_rooms set last_active_at = now() - interval '1 hour' where id = $1`, [R]);
 await db.query(`select skill_touch($1)`, [R]);

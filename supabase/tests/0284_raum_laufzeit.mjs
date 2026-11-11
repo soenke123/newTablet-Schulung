@@ -4,6 +4,7 @@
      1. Vorgaben je Skill stehen in skill_tools.lifetime_days.
      2. Anlegen ohne Angabe nimmt die Vorgabe des Skills (Quiz = 2 Tage).
      3. Anlegen mit Angabe (90) setzt Laufzeit und Frist; Unsinn → lifetime_invalid.
+     4b. Seit 0286: ohne „Verlängern“ steigt die Frist nie, egal welcher Wert.
      4. Seit 0285: Laufzeit ab Erstellung — Aktivität (skill_touch, Tür
         öffnen, Einstellungen) verlängert nicht; Testräume ab letzter Nutzung.
      5. Verlängern um p_days, ohne Angabe um die Laufzeit, höchstens 1 Jahr.
@@ -112,6 +113,13 @@ r = await call(`skill_room_set_open($1, true)`, [Q]);
 ok('4  Tür öffnen verlängert nicht', r?.ok && near(await days(Q), 1), String(await days(Q)));
 r = await call(`skill_room_update($1, 'Quiz 9b neu', null, null)`, [Q]);
 ok('4  Einstellungen speichern verlängert nicht', r?.ok && near(await days(Q), 1), JSON.stringify(r));
+// 0286: auch eine alte Fassung, die „+60 Tage“ schreibt, verlängert nicht
+await db.query(`create or replace function _alt_touch(p uuid) returns void language sql as $f$
+  update skill_rooms set last_active_at = now(), expires_at = now() + interval '60 days' where id = p $f$`);
+await db.query(`select _alt_touch(id) from skill_rooms where code = $1`, [Q]);
+ok('4b alte 60-Tage-Fassung verlängert nicht (0286)', near(await days(Q), 1), String(await days(Q)));
+await db.query(`update skill_rooms set expires_at = expires_at + interval '5 days' where code = $1`, [Q]);
+ok('4b beliebige Erhöhung ohne Verlängern bleibt aus', near(await days(Q), 1), String(await days(Q)));
 // Testraum: weiter ab letzter Nutzung (wird beim Öffnen wiederverwendet)
 r = await call(`skill_room_create('knowledgestack', null, true, '{}'::jsonb, true)`);
 const TR = r.code;
