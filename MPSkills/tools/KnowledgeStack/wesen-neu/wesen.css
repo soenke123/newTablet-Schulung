@@ -13,6 +13,10 @@
 .state-sleep .only-sleep, .state-cheer .only-cheer, .state-sad .only-sad { display: inline; }
 .state-sleep .not-sleep, .state-sad .not-sad, .state-cheer .not-cheer { display: none; }
 
+/* .eo = nur zu sehen, solange die Augen offen sind (Glühen um die Augen) */
+.state-jump .eo, .state-cheer .eo, .state-dance .eo, .state-sleep .eo,
+.state-sad .eo, .state-clap .eo, .state-fall .eo { display: none; }
+
 /* Brauen gehören zu den offenen Augen */
 .state-jump .brw, .state-cheer .brw, .state-dance .brw, .state-sleep .brw,
 .state-sad .brw, .state-clap .brw { display: none; }
@@ -145,6 +149,12 @@
   90% { transform: translateX(2.5px); }
   94% { transform: translateX(-1px); }
 }
+
+/* Propeller, von der Seite gesehen */
+.creature-svg .q-prop { animation: w3-prop .7s linear infinite; }
+.state-cheer .q-prop, .state-jump .q-prop, .state-dance .q-prop { animation-duration: .18s; }
+.state-sleep .q-prop, .state-sad .q-prop { animation-duration: 3s; }
+@keyframes w3-prop { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(-1); } }
 
 @media (prefers-reduced-motion: reduce) {
   .creature-svg .pp, .creature-svg [class*="q-"] { animation: none !important; }

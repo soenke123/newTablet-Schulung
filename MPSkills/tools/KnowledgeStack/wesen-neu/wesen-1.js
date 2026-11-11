@@ -69,8 +69,8 @@
       + E(50, 78, 11, 7, c2, 0, 'opacity=".5" class="fo"')
       + shine('M 28 52 C 29 44 33 38 39 35', 2.8, 0.6)
       + G('fo', null, P('M 23.5 46 C 40 41 60 41 76.5 46 L 77.5 51.5 C 60 46.5 40 46.5 22.5 51.5 Z', '#fff', 2.2))
-      + gesicht({ x: [38.5, 61.5], y: 58, r: 6.4, p: 0.48, lid: [0.2, 18], look: [[0.2, 0], [-0.2, 0]],
-          brow: { dy: -0.6, a: 20, l: 5.6, w: 3, k: 0 }, bx: [29, 71], by: 68,
+      + gesicht({ x: [38.5, 61.5], y: 58, r: 6.4, p: 0.5, look: [[0.15, 0], [-0.15, 0]], lookc: 'lk-lr',
+          brow: { dy: 1.4, a: 8, l: 5, w: 2.6, k: 1 }, bx: [29, 71], by: 68,
           m: 'grin', mx: 50, my: 71, mw: 7, teeth: true,
           extra: '<g transform="rotate(-20 68 66)">' + R(63.5, 64, 9, 4, 1.6, '#f6d7b0', 1.4) + L('M 67 65 L 67 67 M 69 65 L 69 67', INK, 0.8, 'opacity=".5"') + '</g>',
           post: R(48.8, 71, 2.4, 6.6, 0, MOUTH, 0) }),
@@ -198,8 +198,8 @@
       + G('fo', null, P('M 21 43 L 50 51 L 79 43 L 50 69 Z', c1, 2.4) + L('M 50 51 L 50 62', INK, 1, 'opacity=".2"'))
       + shade('M 64 30 L 79 43 L 50 69 L 66 46 Z', 0.1)
       + gesicht({ x: [37.5, 62.5], y: 42, r: 4.8, ex: 1.25, p: 0.56, lid: [0.42, 14], lidc: c2, lash: true, look: [[0.45, 0.1], [0.45, 0.1]], lookc: 'lk-slow',
-          blush: false, m: 'smirk', ms: 1, mx: 50, my: 58.5, mw: 4, mlw: 2.2,
-          post: P('M 47.6 63.5 L 52.4 63.5 L 50 67.5 Z', INK, 0) }),
+          blush: false, m: 'cat', mx: 50, my: 60.4, mw: 3.4, mlw: 1.9,
+          extra: P('M 47.4 54.8 C 47.4 53.6 52.6 53.6 52.6 54.8 L 50 58.2 Z', INK, 0) + hl(49.2, 55, 0.6, 0.7) + L('M 50 58.2 L 50 60.4', INK, 1.4) }),
     back: L('M 36 30 L 50 69 L 64 30', INK, 1.2, 'opacity=".3"'),
     armL: tube('M 39 70 L 32 76', c1, 4)
       + G('q-bob', null, P(mirror('M 68 76 L 66 58 L 76 56 L 85 60 L 90 68 Z'), c4, 2.2) + L(mirror('M 68 76 L 76 56 M 68 76 L 85 60'), INK, 1, 'opacity=".4"')),

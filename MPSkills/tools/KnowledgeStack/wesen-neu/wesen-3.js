@@ -118,25 +118,27 @@
   const wing34 = 'M 32 62 C 22 66 18 76 21 86 C 28 84 34 78 36 70 Z';
   const beak34 = P('M 45.6 52 C 45.6 49.6 54.4 49.6 54.4 52 L 50 60 Z', c2, 2);
   W.add(34, {
-    typ: 'Die Strenge', spruch: 'Hat alles gesehen. Ist von wenig beeindruckt.',
+    typ: 'Die Weise', spruch: 'Schweigt lange. Sagt dann einen Satz, der sitzt.',
     vars: '--fx:var(--c2)',
     o: { al: [32, 64], ar: [68, 64], ll: [43, 86], lr: [57, 86], head: [50, 64] },
     legL: P('M 39 86 L 47 86 L 48 91 L 44.6 89 L 43 91.4 L 41.4 89 L 38 91 Z', c2, 1.8),
     legR: P(mirror('M 39 86 L 47 86 L 48 91 L 44.6 89 L 43 91.4 L 41.4 89 L 38 91 Z'), c2, 1.8),
     body: E(50, 73, 19, 15.5, c1, 3)
-      + G('fo', null, E(50, 75.5, 12, 11, c3, 0, 'opacity=".9"')
-        + L('M 42 70 q 2 2.4 4 0 q 2 2.4 4 0 q 2 2.4 4 0 q 2 2.4 4 0 M 44 76 q 2 2.4 4 0 q 2 2.4 4 0 q 2 2.4 4 0 M 46 82 q 2 2.4 4 0 q 2 2.4 4 0', INK, 1.1, 'opacity=".35"')),
+      + G('fo', null, E(50, 75.5, 12, 11, c3, 0, 'opacity=".75"')
+        + L('M 44 77 q 2 2.4 4 0 q 2 2.4 4 0 q 2 2.4 4 0 M 46 83 q 2 2.4 4 0 q 2 2.4 4 0', INK, 1.1, 'opacity=".35"')
+        + P('M 32.6 62.6 C 40 69 60 69 67.4 62.6 L 67 69.6 C 60 76 40 76 33 69.6 Z', '#1e1b2e', 2, 'fill-opacity=".8"') + P('M 50 68.6 L 53 72 L 50 75.4 L 47 72 Z', c2, 1.4)),
     head: G('ear-l', [30, 32], P(tuft34, c1, 3)) + G('ear-r', [70, 32], P(mirror(tuft34), c1, 3))
       + E(50, 44, 27, 21.5, c1, 3.2)
       + shade('M 72 34 C 80 44 77 58 64 64 C 72 57 75 46 72 34 Z', 0.18)
-      + G('fo', null, C(37.5, 45, 12.6, c3, 2) + C(62.5, 45, 12.6, c3, 2)
-        + P('M 45 23 L 47.5 29 L 50 24 L 52.5 29 L 55 23', 'none', 1.4))
-      + gesicht({ x: [37.5, 62.5], y: 45, r: 8.6, ex: 1, p: 0.36, iris: c2, lid: [0.34, 14], look: [0, 0.1], lookc: 'lk-slow',
-          brow: { dy: -1.4, a: 20, l: 8.4, w: 3.6, c: c1, k: -0.4 }, blush: false, mx: 50, my: 55,
+      + shade('M 23.6 42 C 25 29 37 22.6 50 22.6 C 63 22.6 75 29 76.4 42 C 68 33.5 32 33.5 23.6 42 Z', 0.26)
+      + G('fo', null, C(37.5, 46, 12.6, c3, 2, 'fill-opacity=".8"') + C(62.5, 46, 12.6, c3, 2, 'fill-opacity=".8"')
+        + P('M 45.4 25 C 46.4 31.8 54 31.8 55.8 25.6 C 53.4 28.8 48.6 28.8 45.4 25 Z', c2, 1.4, 'class="glow-soft"'))
+      + gesicht({ x: [37.5, 62.5], y: 46, r: 8.4, ex: 1, p: 0.4, iris: c2, lid: [0.46, -5], look: [0, 0.25], lookc: 'lk-slow', bags: INK,
+          brow: { dy: 2.6, a: -13, l: 9.6, w: 3, c: '#f1f5f9', k: 2.6 }, blush: false, mx: 50, my: 55,
           mouths: { normal: beak34, sleep: beak34, sad: beak34,
             open: P('M 46 55 L 54 55 L 50 62.5 Z', MOUTH, 1.6) + P('M 45.6 52 C 45.6 49.6 54.4 49.6 54.4 52 L 50 56.6 Z', c2, 2),
             wow: P('M 46 55 L 54 55 L 50 62.5 Z', MOUTH, 1.6) + P('M 45.6 52 C 45.6 49.6 54.4 49.6 54.4 52 L 50 56.6 Z', c2, 2) } })
-      + G('fo', null, L('M 21 38 L 44 43.5 M 79 38 L 56 43.5', INK, 6) + L('M 21 38 L 44 43.5 M 79 38 L 56 43.5', c1, 3.4)),
+,
     back: L('M 40 36 q 2.5 3 5 0 q 2.5 3 5 0 q 2.5 3 5 0 q 2.5 3 5 0 M 42 46 q 2.6 3 5.2 0 q 2.6 3 5.2 0 q 2.6 3 5.2 0', INK, 1.2, 'opacity=".3"'),
     armL: P(wing34, c1, 2.8) + L('M 25 78 L 31 72 M 23 84 L 33 76', INK, 1, 'opacity=".3"'),
     armR: P(mirror(wing34), c1, 2.8) + L(mirror('M 25 78 L 31 72 M 23 84 L 33 76'), INK, 1, 'opacity=".3"'),
@@ -206,7 +208,7 @@
     + shine('M 35 54.6 C 40 52.6 46 52 52 52', 1.8, 0.3)
     + E(45.6, 54.6, 1.3, 1, INK, 0) + E(54.4, 54.6, 1.3, 1, INK, 0) + mouth;
   W.add(37, {
-    typ: 'Der Miesepeter', spruch: 'Findet alles doof. Kommt trotzdem jedes Mal.',
+    typ: 'Der Miesepeter', spruch: 'Findet alles doof. Außer seine Propellermütze.',
     o: { al: [34, 70], ar: [66, 70], ll: [41, 86], lr: [59, 86], head: [50, 68] },
     behind: G('tail', [62, 82], P('M 60 78 C 72 74 86 76 92 82 C 88 90 72 92 60 87 Z', c4, 2.8)
       + L('M 68 79 L 72 88 M 76 78 L 80 88 M 84 79 L 86 86 M 66 84 L 88 82', INK, 1, 'opacity=".3"')),
@@ -216,10 +218,15 @@
     head: E(50, 45, 26, 21, c1, 3.2)
       + shade('M 71 35 C 78 45 75 58 63 64 C 70 57 73 46 71 35 Z', 0.14)
       + shine('M 28 42 C 29 35 33 30 38 28', 2.4, 0.4)
-      + P('M 46 25 C 45 20 47 17 50 16 C 49.6 19 51 21 53 22 C 52.6 19.6 54 18 56 18 C 56 21 55 24 54 25.6 Z', c4, 2)
-      + gesicht({ x: [38.5, 61.5], y: 42.5, r: 5.6, p: 0.5, lid: [0.4, 12], look: [[0.2, 0.25], [-0.2, 0.25]], lookc: 'lk-slow',
+      + G('hat', [50, 30], P('M 32.4 32 C 33 20.6 41.6 15.4 50 15.4 C 58.4 15.4 67 20.6 67.6 32 C 60 28 40 28 32.4 32 Z', '#ef4444', 2.6)
+        + P('M 43.6 16.6 C 46.6 15.2 53.4 15.2 56.4 16.6 C 57.6 20.6 58 24.6 58 28.6 C 53 27.8 47 27.8 42 28.6 C 42 24.6 42.4 20.6 43.6 16.6 Z', '#ffd23f', 0)
+        + L('M 43.6 16.6 C 42.4 20.6 42 24.6 42 28.6 M 56.4 16.6 C 57.6 20.6 58 24.6 58 28.6', INK, 1.2, 'opacity=".4"')
+        + shine('M 36.6 26 C 37.6 21.6 40 19 43 17.6', 1.8, 0.5)
+        + L('M 50 15.4 L 50 9.6', INK, 4) + L('M 50 15.4 L 50 9.6', '#cbd5e1', 1.8)
+        + G('q-prop', [50, 9], E(43, 9, 7, 2.5, '#38bdf8', 1.8) + E(57, 9, 7, 2.5, '#34d399', 1.8)) + C(50, 9, 1.9, '#ffd23f', 1.4))
+      + gesicht({ x: [38.5, 61.5], y: 42.5, r: 5.8, p: 0.5, lid: [0.44, 0], look: [[0.1, 0.3], [-0.1, 0.3]], lookc: 'lk-slow',
           blush: false, mx: 50, my: 60,
-          pre: G('brow', null, L('M 30.5 32.5 L 45.5 38.5 M 69.5 32.5 L 54.5 38.5', INK, 4.4)),
+          pre: G('brow', null, L('M 32.5 34.6 L 45 37.4 M 67.5 34.6 L 55 37.4', INK, 3)),
           mouths: { normal: bill37(L('M 36 61 Q 50 57.4 64 61', INK, 2.2) + L('M 35 59.4 L 36.6 62 M 65 59.4 L 63.4 62', INK, 1.4)),
             open: P('M 37 62 C 38 72 62 72 63 62 Z', MOUTH, 2.2) + E(50, 67.4, 5, 2.2, TONGUE, 0) + bill37(''),
             sad: bill37(L('M 37 62.4 Q 50 57 63 62.4', INK, 2.2)),
@@ -262,7 +269,7 @@
     + 'C 71 70 61 73 50 73 C 39 73 29 70 25 63 L 17 63.4 L 20.4 57 L 14 53 L 21 50 C 21 44 23 38 28 33 L 29 23 L 34 28 C 38 25 44 23 50 23 Z';
   const krallen = (x, y) => L('M ' + (x - 2.4) + ' ' + y + ' l -.8 2.6 M ' + x + ' ' + (y + 0.6) + ' l 0 2.8 M ' + (x + 2.4) + ' ' + y + ' l .8 2.6', '#f1f0f7', 1.5);
   W.add(39, {
-    typ: 'Der Rocker', spruch: 'Heult den Mond an. Trifft keinen einzigen Ton.',
+    typ: 'Der Heuler', spruch: 'Heult den Mond an. Trifft keinen einzigen Ton.',
     vars: '--fx:var(--c3)',
     o: { al: [32, 71], ar: [68, 71], ll: [41, 86], lr: [59, 86], head: [50, 72], zz: [8, 44], cl: [20, 12] },
     behind: E(50, 52, 35, 37, c3, 0, 'class="pulse"')
@@ -283,14 +290,14 @@
       + G('fo', null, P('M 50 51 C 60 51 64.6 56.6 63.6 62 C 62.6 68 56 71 50 71 C 44 71 37.4 68 36.4 62 C 35.4 56.6 40 51 50 51 Z', c6, 2.4)
         + E(50, 55.4, 4.4, 3, INK, 0) + hl(48.8, 54.6, 1, 0.8)
         + L('M 62 34 L 67 42', '#fff', 1.5, 'opacity=".55"'))
-      + gesicht({ x: [38.5, 61.5], y: 44.5, r: 6, sc: 'var(--c2)', p: 0.3, lid: [0.26, 22], look: [[0.2, 0.1], [-0.2, 0.1]], lookc: 'lk-lr',
+      + gesicht({ x: [38.5, 61.5], y: 44.5, r: 6, sc: 'var(--c2)', p: 0.3, lid: [0.2, 14], look: [[0.2, 0.1], [-0.2, 0.1]], lookc: 'lk-lr',
           brow: { dy: -1, a: 22, l: 6.4, w: 3.4, c: c5, k: 0 }, blush: false,
           m: 'grin', mx: 50, my: 62.4, mw: 6.4, teeth: true,
-          post: G('not-sad not-sleep', null, P('M 44.4 62.6 L 45.8 67.6 L 47.4 63.2 Z', '#fff', 1) + P('M 52.6 63.2 L 54.2 67.6 L 55.6 62.6 Z', '#fff', 1)
-            + E(55.6, 68, 2.6, 3.4, TONGUE, 1.4, 'transform="rotate(-14 55.6 66)"')) }),
+          post: G('not-sad not-sleep', null, P('M 44.4 62.6 L 45.8 67.6 L 47.4 63.2 Z', '#fff', 1) + P('M 52.6 63.2 L 54.2 67.6 L 55.6 62.6 Z', '#fff', 1)) ,
+          pre: G('eo', null, C(38.5, 44.5, 10, c2, 0, 'opacity=".4" class="glow"') + C(61.5, 44.5, 10, c2, 0, 'opacity=".4" class="glow"')) }),
     back: L('M 36 41 L 42 47 M 50 37 L 50 47 M 64 41 L 58 47', c5, 2, 'opacity=".6"'),
     armL: tube('M 32 71 Q 25 75 24 81', c1, 5.5) + C(24, 82.5, 4, c5, 2.2) + krallen(24, 85.6),
-    armR: tube('M 68 71 Q 77 70 79 61', c1, 5.5) + C(79.4, 59.6, 4, c5, 2.2) + L('M 77 57 L 75.6 51.6 M 82 57 L 84 51.6', INK, 3.6) + L('M 77 57 L 75.6 51.6 M 82 57 L 84 51.6', c5, 1.8),
+    armR: tube('M 68 71 Q 75 75 76 81', c1, 5.5) + C(76, 82.5, 4, c5, 2.2) + krallen(76, 85.6),
     fx: tw(12, 26, 3, c3, 0.2) + tw(92, 44, 2.4, c3, 1.1) + tw(14, 78, 2.2, c2, 1.7)
       + '<text class="note only-cheer" x="12" y="18" font-size="12">♪</text>'
   });

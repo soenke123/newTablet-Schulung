@@ -183,7 +183,7 @@
   /* ── 6 Chompy · kleiner Drache ───────────────────────────── */
   const wing6 = 'M 37 64 C 28 52 17 51 9 56 L 17 61 L 11 67 L 21 68.5 L 19 76 C 28 74 35 70 37 66 Z';
   W.add(6, {
-    typ: 'Der Möchtegern-Gefährliche', spruch: 'ROOAAR! … War das gruselig? Bitte sag ja.',
+    typ: 'Der Möchtegern-Gefährliche', spruch: 'Rooaar! … War das gruselig? Ein bisschen?',
     vars: '--fx:var(--c3)',
     o: { al: [37, 71], ar: [63, 71], ll: [42, 86], lr: [58, 86], head: [50, 68] },
     behind: G('wing-l', [37, 65], P(wing6, c4, 2.6) + L('M 35 64 L 17 61 M 35 66 L 21 68.5', INK, 1.1, 'opacity=".4"'))
@@ -199,11 +199,11 @@
       + shine('M 27 42 C 28 35 32 30 37 28', 2.6, 0.5)
       + G('fo', null, E(50, 58, 15.5, 9.5, c1, 2.6) + E(50, 53.2, 14, 5, c1, 0)
         + E(44.5, 55, 1.5, 1.9, INK, 0) + E(55.5, 55, 1.5, 1.9, INK, 0))
-      + gesicht({ x: [37.5, 62.5], y: 42, r: 7, iris: c3, p: 0.4, lid: [0.26, 24], look: [[0.25, 0.1], [-0.25, 0.1]],
-          brow: { dy: -1.2, a: 24, l: 6.4, w: 3.2, k: 0 }, bx: [28, 72], by: 53,
+      + gesicht({ x: [37.5, 62.5], y: 42, r: 7, iris: c3, p: 0.46, look: [[0.2, 0.05], [-0.2, 0.05]], lookc: 'lk-lr',
+          brow: { dy: 1.8, a: 9, l: 5, w: 2.6, k: 1.2 }, bx: [28, 72], by: 53,
           mx: 50, my: 61.5, mw: 7, teeth: true,
-          mouths: { normal: L('M 41 61.5 Q 50 65.5 59 61.5', INK, 2.4)
-            + P('M 43 62.4 L 44.7 57.4 L 46.6 63.4 Z', '#fff', 1.2) + P('M 53.4 63.4 L 55.3 57.4 L 57 62.4 Z', '#fff', 1.2) } }),
+          mouths: { normal: L('M 39.5 60 Q 50 68 60.5 60', INK, 2.4)
+            + P('M 42.6 62.6 L 44.4 58 L 46.2 63.8 Z', '#fff', 1.2) + P('M 53.8 63.8 L 55.6 58 L 57.4 62.6 Z', '#fff', 1.2) } }),
     back: P('M 46 36 L 50 30 L 54 36 Z M 46 46 L 50 40 L 54 46 Z M 46 56 L 50 50 L 54 56 Z', c3, 1.6),
     armL: tube('M 37 71 Q 30 71 28 65', c1, 4.6) + L('M 26 63 l -1.4 -2.6 M 28 62.4 l 0 -3 M 30 63 l 1.4 -2.6', '#fff', 1.6),
     armR: tube('M 63 71 Q 70 71 72 65', c1, 4.6) + L('M 70 63 l -1.4 -2.6 M 72 62.4 l 0 -3 M 74 63 l 1.4 -2.6', '#fff', 1.6),
