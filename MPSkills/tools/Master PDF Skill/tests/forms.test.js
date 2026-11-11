@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PDFDocument, PDFName, PDFArray, decodePDFRawStream } from '../lib/pdf-lib/pdf-lib.esm.min.js';
-import { buildPdf, createBlankPdf } from '../js/export.js';
+import { PDFDocument, PDFName, PDFArray, PDFDict, decodePDFRawStream } from '../lib/pdf-lib/pdf-lib.esm.min.js';
+import { buildPdf, createBlankPdf, appearanceMatrix } from '../js/export.js';
 import { importFields, normalValue, storageValue, tappedValue, sameValue, originalValues, shownText, createdField, nextFieldName, isMultiline } from '../js/forms.js';
 
 /** Two pages: "name" on both pages (two widgets), checkbox, radio group, drop-down on page 1, "notiz" on page 2. */
@@ -173,4 +173,62 @@ test('Angelegtes Feld auf doppelter Seite ist ein Feld; belegter Name bekommt ei
   const out = await PDFDocument.load(await buildPdf(pages, () => bytes));
   assert.deepEqual(fieldNames(out), ['farbe', 'klasse', 'name', 'name_2', 'ok']);
   assert.deepEqual(widgetPages(out, out.getForm().getTextField('name_2')), [0, 1]);
+});
+
+/** Text of all content streams of a page and of the form XObjects it draws (one level deep). */
+function pageText(doc, page) {
+  const decode = ref => new TextDecoder('latin1').decode(decodePDFRawStream(doc.context.lookup(ref)).decode());
+  const contents = page.node.Contents();
+  const list = contents instanceof PDFArray ? contents.asArray() : [page.node.get(PDFName.of('Contents'))];
+  const xobjects = page.node.Resources().lookupMaybe(PDFName.of('XObject'), PDFDict);
+  return [...list.map(decode), ...(xobjects ? xobjects.entries().map(([, ref]) => decode(ref)) : [])].join('\n');
+}
+
+test('Formularinhalte fest einbetten: keine Felder mehr, Werte stehen auf der Seite', async () => {
+  const bytes = await formPdf();
+  const values = new Map([['name', 'Leon'], ['ok', 'Yes'], ['farbe', 'blau'], ['klasse', ['5b']], ['notiz', 'Zeile 1\nZeile 2']]);
+  const saved = await buildPdf([0, 1, 0].map(i => ({ sourceId: 'a', pageIndex: i, rotation: 0 })), () => bytes, () => {}, { formValues: () => values, flattenForms: true });
+  const out = await PDFDocument.load(saved);
+  assert.equal(out.catalog.get(PDFName.of('AcroForm')), undefined);
+  assert.deepEqual(out.getForm().getFields(), []);
+  for (const page of out.getPages()) assert.equal(page.node.get(PDFName.of('Annots')), undefined);
+  const [one, two, three] = out.getPages().map(page => pageText(out, page));
+  assert.match(one, /FlatWidget[-\d]* Do/);
+  for (const text of [one, two, three]) assert.match(text, /<4C656F6E>|\(Leon\)/);
+  assert.match(one, /\(5b\)|<3562>/);
+  assert.match(two, /\(Zeile 2\)|5A65696C652032>/);
+  // The field values are gone from the file, also as unreferenced objects.
+  assert.doesNotMatch(new TextDecoder('latin1').decode(saved), /\/T \(name\)|\/T \(notiz\)/);
+});
+
+test('Formularinhalte fest einbetten: angelegte Felder und Kommentare', async () => {
+  const bytes = await createBlankPdf(400, 400);
+  const pages = [{ sourceId: 'a', pageIndex: 0, rotation: 90, marks: [fieldMark(1, 'text', 'Textfeld 1', [20, 300, 200, 322]), fieldMark(2, 'checkbox', 'Kontrollkästchen 1', [20, 250, 34, 264])],
+    comments: [{ id: 'c1', kind: 'note', rect: [300, 300, 320, 320], text: 'Hallo', color: '#ffd400' }] }];
+  const values = new Map([['Textfeld 1', 'Mia'], ['Kontrollkästchen 1', 'Yes']]);
+  const out = await PDFDocument.load(await buildPdf(pages, () => bytes, () => {}, { newFields: values, flattenForms: true }));
+  assert.equal(out.catalog.get(PDFName.of('AcroForm')), undefined);
+  const annots = out.getPage(0).node.lookup(PDFName.of('Annots'), PDFArray).asArray().map(ref => out.context.lookup(ref).get(PDFName.of('Subtype')).asString());
+  assert.deepEqual(annots, ['/Text', '/Popup']);
+  assert.match(pageText(out, out.getPage(0)), /<4D6961>|\(Mia\)/);
+});
+
+test('Formularinhalte fest einbetten: Zeichen ohne Schrift ergeben eine Meldung mit dem Feldnamen', async () => {
+  const bytes = await formPdf();
+  const values = new Map([['name', 'Leon 😀']]);
+  await assert.rejects(buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0 }], () => bytes, () => {}, { formValues: () => values, flattenForms: true }), /Formularfeld „name“/);
+  // Without flattening the export still works (the reader draws the value).
+  await buildPdf([{ sourceId: 'a', pageIndex: 0, rotation: 0 }], () => bytes, () => {}, { formValues: () => values });
+});
+
+test('Aussehen eines Felds landet auf seinem Rechteck, auch gedreht', async () => {
+  const doc = await PDFDocument.create();
+  const stream = matrix => doc.context.formXObject([], { BBox: [0, 0, 100, 20], ...(matrix ? { Matrix: matrix } : {}) });
+  const rect = r => doc.context.obj({ Rect: r });
+  assert.deepEqual(appearanceMatrix(stream(), rect([10, 10, 110, 30])), [1, 0, 0, 1, 10, 10]);
+  assert.deepEqual(appearanceMatrix(stream(), rect([110, 30, 10, 10])), [1, 0, 0, 1, 10, 10]);
+  assert.deepEqual(appearanceMatrix(stream(), rect([0, 0, 200, 40])), [2, 0, 0, 2, 0, 0]);
+  // Turned by 90°: the box becomes x -20…0, y 0…100.
+  assert.deepEqual(appearanceMatrix(stream([0, 1, -1, 0, 0, 0]), rect([10, 10, 30, 110])), [1, 0, 0, 1, 30, 10]);
+  assert.equal(appearanceMatrix(stream(), rect([10, 10, 10, 30])), null);
 });
