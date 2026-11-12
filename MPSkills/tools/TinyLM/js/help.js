@@ -112,22 +112,28 @@ const HELP = {
   bedeutung: {
     title: 'Frage als Punkt', icon: '⭐', cat: 'ask',
     text: ['Die Wörter deiner Frage sind Punkte. Ihre Mitte ist der Punkt der Frage. Jeder Text ist auch ein Punkt – die Mitte seiner Wörter.',
-      'Tiny nimmt die 3 Texte, die am nächsten liegen, und schreibt daraus.'],
+      'Tiny nimmt die 3 Texte mit dem kleinsten Abstand (0 = genau da, 1 = weit weg) und schreibt daraus.'],
     try: 'Frag „Wie lange dauert eine Reise zum Mars?“. Welche Texte liegen nah?',
     vis: { type: 'dots' }
   },
   sprung: {
     title: 'Wolken-Sprung', icon: '🦘', cat: 'meaning',
-    text: ['Das N-Gramm zieht ein Wort, zum Beispiel „Katze“. Dann schaut Tiny in der Wolke, welche Wörter nah liegen, und springt manchmal hinüber – zu „Hund“. Nicht weil das so im Text steht, sondern weil es in der Wolke nah liegt.',
-      'Der Regler sagt, wie gern Tiny springt: 0 = nie, weiter rechts = öfter und auch zu weiter entfernten Wörtern. Echte Sprachmodelle machen das von selbst: Ähnliche Wörter bekommen ähnliche Chancen.',
+    text: ['Das N-Gramm zieht ein Wort, zum Beispiel „Katze“. Dann schaut Tiny in der Wolke, welche Wörter nah liegen (kleiner Abstand), und springt manchmal hinüber – „Katze springt zu Hund!“. Nicht weil das so im Text steht, sondern weil es in der Wolke nah liegt.',
+      'Die Sprungwahrscheinlichkeit sagt, wie oft Tiny springt: 0 % = nie, weiter rechts = öfter und auch zu weiter entfernten Wörtern. Echte Sprachmodelle machen das von selbst: Ähnliche Wörter bekommen ähnliche Chancen.',
       'Die Wolke kennt alle Quellen. Deshalb kann Tiny zu einem Wort springen, das in A · B · C gar nicht steht – dann steht „nicht in A · B · C“ daneben.'],
     try: 'Stell den Regler auf 0 und frag etwas. Dann schieb ihn nach rechts und frag nochmal.',
     vis: { type: 'tokens', items: [['Katze', 'win'], ['→', 'dim'], ['Hund', 's0'], ['bellt', 'next']] }
   },
+  sprungzufall: {
+    title: 'Warum gerade dieses Wort?', icon: '🎲', cat: 'meaning',
+    text: ['Das war Zufall. Jede Möglichkeit hat eine Chance (die %-Zahl): je kleiner der Abstand, desto größer die Chance. Dann würfelt Tiny – wie bei den Kandidaten.',
+      'Fragst du nochmal, kann Tiny bleiben oder zu einem anderen Wort springen.'],
+    vis: { type: 'bars', items: [['bleibt', 55], ['Hund', 30], ['Maus', 15]] }
+  },
   wolke: {
     title: 'Wortwolke', icon: '🌌', cat: 'meaning',
     text: ['Jeder Punkt ist ein Wort. Nah beieinander liegen Wörter, die oft bei denselben Wörtern stehen (Hund und Katze stehen beide bei „frisst“ und „schläft“).',
-      'Die Wolke entsteht aus allen Quellen. Oben kannst du eine Quelle zeigen oder nach einer Frage nur die Wörter aus A · B · C.',
+      'Die Wolke zeigt die Wörter aller Quellen. Der Abstand sagt, wie nah zwei Wörter sind: 0 = derselbe Punkt, 1 = weit weg.',
       'Eigentlich hat jedes Wort 20 Zahlen. Das Bild zeigt nur 3 davon – deshalb kann Nähe im Bild täuschen.'],
     try: 'Tipp auf „Hund“. Welche Wörter liegen am nächsten?',
     vis: { type: 'dots' }

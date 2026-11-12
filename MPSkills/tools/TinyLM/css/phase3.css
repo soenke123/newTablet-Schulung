@@ -21,6 +21,8 @@
 .p3-jump .p1-line { margin: 2px 0; }
 .p3-jump .clist { margin: 4px 0; }
 .p3-jump .crow { grid-template-columns: minmax(0, 1fr) 3.4rem minmax(2.5rem, 4rem) 2.4rem; }
+.p3-jumphead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 2px 0 6px; font-family: var(--font-display, Fredoka, system-ui); font-size: 1.05rem; }
+.p3-jumphead .help-btn { margin-left: auto; }
 .p3-sim { font-family: var(--font-mono, monospace); font-size: 0.72rem; color: var(--muted); }
 .p3-took { color: var(--cat-candidates); }
 .p3-jumpline { margin-top: 6px; }
@@ -47,10 +49,6 @@
 .p3-cloudcol .p3-cloud { grid-template-columns: minmax(0, 1fr) 190px; }
 @container (max-width: 600px) { .p3-cloudcol .p3-cloud { grid-template-columns: 1fr; } }
 @container (min-width: 560px) { .p3-cols > [data-card="jump"] .p1-col-body { max-height: 560px; overflow-y: auto; } }
-.p3-filter { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
-.p3-filter .chip:disabled { opacity: .45; cursor: not-allowed; }
-.p3-pick { flex: 1 1 160px; min-width: 0; max-width: 260px; font: inherit; font-size: 0.85rem; padding: 4px 8px; border: 1.5px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); }
-.p3-pick.active { border-color: var(--accent); background: var(--accent-dim); font-weight: 600; }
 .p3-where { display: inline-flex; gap: 2px; align-items: center; grid-column: 1 / -1; justify-self: start; font-size: 0.7rem; color: var(--muted); }
 .p3-where.out { color: var(--cat-candidates); font-weight: 600; }
 .letter.xs { width: 1.05rem; height: 1.05rem; border-radius: 4px; font-size: 0.62rem; }

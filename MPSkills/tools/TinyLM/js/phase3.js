@@ -6,7 +6,7 @@
    Unterschied zu Phase 2 — Tiny benutzt die WORTWOLKE (wolke.js), geschrieben wird weiter mit N-Grammen:
      1. Die Frage wird ein Punkt; gewählt werden die 3 Texte, die ihr am nächsten liegen
         (statt Stichwörter zu zählen).
-     2. WOLKEN-SPRUNG (Regler in der Spalte „Wolken-Sprung“, 0 = reines N-Gramm): hat das N-Gramm ein
+     2. WOLKEN-SPRUNG (Regler „Sprungwahrscheinlichkeit“ in der Spalte „Wolken-Sprung“, 0 = reines N-Gramm): hat das N-Gramm ein
         Wort gezogen (Katze), springt Tiny manchmal zu einem nahen Punkt derselben Art (Hund) und
         schreibt von dort weiter; der Artikel davor wird angepasst (die → der).
      3. Lücke: steht die Wortfolge in keinem Text („Ein Welpe frisst“), springt Tiny mit einem Wort der
@@ -15,8 +15,9 @@
    Rechts oben wie Phase 2 (Sönke 12.11.2026: „der obere Teil gleich“): Frage als Punkt · Kandidaten ·
    N-Gramme über Quellen (N-Gramm-Regler im Kopf). Darunter das Neue: Wolken-Sprung (so breit wie
    Frage als Punkt) und die Wortwolke als eigener Reiter (doppelt so breit — sie gehört zur Frage UND
-   zum Sprung). Die Wolke entsteht aus allen Quellen: jede Quelle lässt sich zeigen, nach einer Frage
-   auch nur die Wörter aus A · B · C — dann sieht man, ob ein Sprung aus den Quellen hinausführt.
+   zum Sprung). Die Wolke zeigt immer alle Quellen (keine Filter, Sönke 12.11.2026); welche Texte die
+   Frage gefunden hat, steht in „Frage als Punkt“, welche wirklich benutzt wurden, unter dem Handy.
+   Nähe wird als Abstand 0 – 1 angezeigt (1 − Kosinus), nicht als „% nah“.
    Ehrlicher Hinweis: eigentlich 20 Zahlen je Wort. Leere Spalten bleiben leer (keine Platzhalter). */
 const P3_SUGGEST = ['Was frisst ein Welpe?', 'Wo schläft ein Welpe?', 'Wie lange dauert eine Reise zum Mars?', 'Was lernt ein Programm?', 'Wo arbeitet eine Tierärztin?'];
 /* Start des N-Gramm-Reglers: n Wörter davor, der Regler zeigt n + 1 = 3-Gramm wie in Phase 2. */
@@ -24,13 +25,23 @@ const P3_N = 2;
 /* Wolken-Sprung: Gewicht e^((Nähe − 1) / Sprung). Gemessen 12.11.2026 (alle Texte): 0,05 → im Schnitt
    springen 9 % der Wörter, 0,1 → 26 %, 0,2 → 51 %, 0,3 → 62 %. */
 const P3_JUMP = 0.05, P3_JUMP_MAX = 0.3;
+/* Der Regler heißt „Sprungwahrscheinlichkeit“ (Sönke 12.11.2026) und zeigt deshalb die gemessene Quote
+   (Anteil der Wörter, die springen), zwischen den Messpunkten gerade verbunden. */
+const P3_JUMP_RATE = [[0, 0], [0.05, 9], [0.1, 26], [0.15, 41], [0.2, 51], [0.3, 62]];
+function p3JumpRate(x) {
+  const T = P3_JUMP_RATE;
+  for (let i = 1; i < T.length; i++) if (x <= T[i][0]) { const [a, pa] = T[i - 1], [b, pb] = T[i]; return pa + (pb - pa) * (x - a) / (b - a); }
+  return T[T.length - 1][1];
+}
+/* Abstand in der Wolke statt „% nah“: 0 = derselbe Punkt, 1 = gar nichts gemeinsam (1 − Kosinus, gekappt). */
+function p3Dist(sim) { return Math.max(0, Math.min(1, 1 - sim)).toFixed(2).replace('.', ','); }
 
 Phases.register(3, {
   mount(host) {
     let W = null, docs = null;
     let R = null, session = null, asked = false, seedLen = 0;
     let temp = 1, n = P3_N, jump = P3_JUMP, playing = false, timer = null, done = false, focus = null;
-    let gramLine, abcSets = [], Z, phoneEl, screen, placeholder, askedEl, answerEl, metaEl, textEl, cursor, askBox, sayBox, sayEl, controls, playBtn, input, focusHost;
+    let gramLine, legendHost, abcSets = [], Z, phoneEl, screen, placeholder, askedEl, answerEl, metaEl, textEl, cursor, askBox, sayBox, sayEl, controls, playBtn, input, focusHost;
     let cloud = null;
     const SRC = ['A', 'B', 'C'];
     const gramState = { open: null }, srcState = { open: null };
@@ -183,13 +194,29 @@ Phases.register(3, {
         } else span.textContent = p.txt;
         span.style.setProperty('--sc', colorOf(p.si));
         span.dataset.i = String(p.i);
-        span.title = j ? 'Wolken-Sprung: ' + cap(j.from) + ' → ' + cap(j.to) + ' – antippen' : b ? 'Lücke: ' + cap(b.from) + ' → ' + cap(b.to) + ' – antippen' : 'Antippen zum Zerlegen';
+        span.title = j ? cap(j.from) + ' springt zu ' + cap(j.to) + ' – antippen' : b ? 'Lücke: ' + cap(b.from) + ' → ' + cap(b.to) + ' – antippen' : 'Antippen zum Zerlegen';
         if (p.i === focus) span.classList.add('sel');
         textEl.appendChild(span);
       });
       cursor.classList.toggle('sel', focus == null && session.steps.length > 0);
       textEl.appendChild(cursor);
       if (focus == null) screen.scrollTop = screen.scrollHeight;
+    }
+
+    /* Unter dem Handy: die Quellen, aus denen Tiny wirklich Wörter genommen hat (nicht alle gefundenen). */
+    function updateLegend() {
+      if (!legendHost) return;
+      legendHost.replaceChildren();
+      if (!asked || !session || !['mean', 'gram', 'src'].some(Z.isOpen)) return;
+      const used = new Map();
+      let jumped = 0;
+      session.steps.forEach(st => { if (st.si >= 0) used.set(st.si, (used.get(st.si) || 0) + 1); else if (st.si === -2) jumped++; });
+      if (!used.size && !jumped) return;
+      const top = [...used.entries()].sort((a, b) => (a[0] < NTOP ? 0 : 1) - (b[0] < NTOP ? 0 : 1) || b[1] - a[1]);
+      const rows = top.slice(0, 5).map(([si, c]) => ({ color: colorOf(si), label: (si < NTOP ? SRC[si] + ' · ' : '') + session.sources[si].doc.title, sub: String(c) }));
+      if (jumped) rows.push({ color: 'var(--muted)', label: '🦘 gesprungen', sub: String(jumped) });
+      legendHost.append(el('p', 'p1-legend-lab', 'Die Farben im Handy = aus diesen Quellen genommen'),
+        sourceChips(rows, top.length > 5 ? '+ ' + (top.length - 5) + ' Texte' : ''));
     }
 
     function buildPhone() {
@@ -282,7 +309,7 @@ Phases.register(3, {
       const j = v.st && v.st.jump && !v.st.jump.stay ? v.st.jump : null;
       if (j) {
         const l = el('p', 'p1-line p3-jumpline');
-        l.append(document.createTextNode('🦘 Danach Wolken-Sprung: '), el('b', null, cap(j.from)), document.createTextNode(' → '), el('b', null, cap(j.to)));
+        l.append(document.createTextNode('🦘 Danach: '), el('b', null, cap(j.from)), document.createTextNode(' springt zu '), el('b', null, cap(j.to)), document.createTextNode('!'));
         b.appendChild(l);
       }
     }
@@ -307,11 +334,13 @@ Phases.register(3, {
         const row = el('div', 'p3-rank' + (i < NTOP ? ' on' : ''));
         const lt = el('span', 'letter sm', i < NTOP ? 'ABC'[i] : '·');
         if (i < NTOP) lt.style.background = srcVar(i);
-        row.append(lt, el('span', 'p3-rank-t', r.text.title), el('span', 'p3-rank-n', pct(Math.max(0, r.score))));
+        const d = el('span', 'p3-rank-n', p3Dist(r.score));
+        d.title = 'Abstand zur Frage: 0 = genau da, 1 = weit weg';
+        row.append(lt, el('span', 'p3-rank-t', r.text.title), d);
         list.appendChild(row);
       });
       if (!R.ranked.length) list.appendChild(el('p', 'p1-more', 'nichts gefunden'));
-      b.appendChild(el('p', 'p1-sub', 'Diese Texte liegen am nächsten'));
+      b.appendChild(el('p', 'p1-sub', 'Diese Texte liegen am nächsten (Abstand 0 – 1)'));
       b.appendChild(list);
     }
 
@@ -328,19 +357,23 @@ Phases.register(3, {
     function jumpCard(st, i) {
       const J = st.jump;
       const box = el('div', 'p3-jump' + (i === focus ? ' on' : ''));
-      const l1 = el('p', 'p1-line');
-      l1.append(document.createTextNode('Das N-Gramm hat '), el('b', null, cap(J.from)), document.createTextNode(' gezogen. In der Wolke liegen nah:'));
+      const l1 = el('p', 'p3-jumphead');
+      const hs = el('span');
+      hs.append(document.createTextNode('🦘 '), el('b', null, cap(J.from)), document.createTextNode(' springt zu '), el('b', null, cap(J.to)), document.createTextNode('!'));
+      l1.append(hs, Help.btn('sprungzufall', 'sm'));
       const list = el('ol', 'clist');
       J.opts.forEach(o => {
         const li = el('li');
         const row = el('div', 'crow' + (o.word === J.to ? ' chosen' : ''));
         const bar = el('span', 'cbar'); const fill = el('i'); fill.style.width = Math.max(2, o.p * 100) + '%'; bar.appendChild(fill);
-        row.append(el('span', 'cword', cap(o.word)), el('span', 'p3-sim', o.stay ? 'bleibt' : pct(o.sim) + ' nah'), bar, el('span', 'cp', pct(o.p)));
+        const sim = el('span', 'p3-sim', o.stay ? 'bleibt' : p3Dist(o.sim));
+        sim.title = o.stay ? 'Das Wort, das das N-Gramm gezogen hat' : 'Abstand in der Wolke: 0 = derselbe Punkt, 1 = weit weg';
+        row.append(el('span', 'cword', cap(o.word)), sim, bar, el('span', 'cp', pct(o.p)));
         if (!o.stay) row.appendChild(whereTag(o.word));
         if (o.word === J.to) row.appendChild(el('span', 'ctag', o.stay ? '🎲 bleibt' : '🦘 gesprungen'));
         li.appendChild(row); list.appendChild(li);
       });
-      box.append(l1, list);
+      box.append(l1, el('p', 'p1-sub', 'Möglichkeiten · Abstand · Chance'), list);
       if (!J.stay) {
         const sh = W.shared(J.from, J.to, 4);
         if (sh.length) box.appendChild(el('p', 'p1-more', 'Warum nah? Beide stehen oft bei: ' + sh.join(', ')));
@@ -350,7 +383,7 @@ Phases.register(3, {
           box.appendChild(l);
         }
       }
-      box.addEventListener('click', () => { focus = i; paintAll(); });
+      box.addEventListener('click', ev => { if (ev.target.closest('.help-btn')) return; focus = i; paintAll(); });
       return box;
     }
     /* Sprung in einer Lücke: die Wortfolge stand nirgends, also ein Wort der Folge gegen einen nahen Punkt. */
@@ -362,7 +395,7 @@ Phases.register(3, {
         document.createTextNode('“ steht in ' + (B.wide ? 'keinem Text.' : 'keinem der 3 Texte.')));
       const l2 = el('p', 'p1-line');
       l2.append(document.createTextNode('🦘 Tiny springt von '), el('b', null, cap(B.from)), document.createTextNode(' zu '), el('b', null, cap(B.to)),
-        document.createTextNode(' (' + pct(B.sim) + ' nah).'));
+        document.createTextNode(' (Abstand ' + p3Dist(B.sim) + ').'));
       const l3 = el('p', 'p1-line');
       l3.append(document.createTextNode('„'), el('b', null, phrase(B.tail2)),
         document.createTextNode('“ steht da' + (B.wide ? ' (in einem anderen Text)' : '') + ' → Tiny nimmt '), el('b', 'p3-took', tok(st.chosen || st.word)), document.createTextNode('.'));
@@ -378,11 +411,11 @@ Phases.register(3, {
         if (v.st.seed) { b.appendChild(el('p', 'p1-line', 'Dieses Wort kommt aus deiner Frage – hier springt Tiny nicht.')); return; }
         if (v.st.cands && v.st.cands.borrow) b.appendChild(gapCard(v.st, v.idx));
         if (v.st.jump) b.appendChild(jumpCard(v.st, v.idx));
-        else if (!(v.st.cands && v.st.cands.borrow)) b.appendChild(el('p', 'p1-line', !v.st.jumpJ ? 'Wolken-Sprung stand auf 0 – Tiny ist nicht gesprungen.' : 'Dieses Wort ist kein Punkt in der Wolke (oder hat keinen nahen Nachbarn) – hier kann Tiny nicht springen.'));
+        else if (!(v.st.cands && v.st.cands.borrow)) b.appendChild(el('p', 'p1-line', !v.st.jumpJ ? 'Sprungwahrscheinlichkeit stand auf 0 – Tiny ist nicht gesprungen.' : 'Dieses Wort ist kein Punkt in der Wolke (oder hat keinen nahen Nachbarn) – hier kann Tiny nicht springen.'));
         return;
       }
       const all = jumpSteps();
-      if (!all.length) { b.appendChild(el('p', 'p1-line', jump > 0 ? 'Bisher kein Sprung.' : 'Wolken-Sprung steht auf 0: Tiny schreibt nur mit N-Grammen.')); return; }
+      if (!all.length) { b.appendChild(el('p', 'p1-line', jump > 0 ? 'Bisher kein Sprung.' : 'Sprungwahrscheinlichkeit steht auf 0: Tiny schreibt nur mit N-Grammen.')); return; }
       b.appendChild(el('p', 'p1-sub', all.length + (all.length === 1 ? ' Sprung' : ' Sprünge')));
       all.slice(-3).forEach(x => b.appendChild(x.st.jump && !x.st.jump.stay ? jumpCard(x.st, x.i) : gapCard(x.st, x.i)));
     }
@@ -497,6 +530,7 @@ Phases.register(3, {
       if (Z.isOpen('gram')) paintGram(v); else Z.cols.gram.body.replaceChildren();
       if (Z.isOpen('src')) paintSrc(v); else Z.cols.src.body.replaceChildren();
       if (Z.isOpen('jump')) paintJump(v); else Z.cols.jump.body.replaceChildren();
+      updateLegend();
       if (cloud) cloud.redraw();
       say();
     }
@@ -519,50 +553,7 @@ Phases.register(3, {
         document.createTextNode('Das Bild zeigt nur 3 Richtungen davon. Von den 3 ähnlichsten Wörtern eines Worts liegen hier nur ' + Math.round(W.keep3 * 100) + ' % auch im Bild nah – die Liste rechts rechnet mit allen ' + W.dims + ' Zahlen.'));
       side.append(tools, info);
       wrap.append(cv, side);
-      /* Welche Wörter zeigen? Alle (die Wolke entsteht aus allen Quellen) · nur aus A · B · C (nach einer
-         Frage) · nur aus einer Quelle. Die anderen Punkte bleiben blass stehen, damit man sich nicht verliert. */
-      const filt = el('div', 'p3-filter');
-      const chipAll = el('button', 'chip active', 'Alle Quellen'); chipAll.type = 'button';
-      const chipAbc = el('button', 'chip', 'Nur A · B · C'); chipAbc.type = 'button';
-      chipAbc.title = 'Nur die Wörter aus den 3 Texten, die Tiny zu deiner Frage gefunden hat';
-      const pick = el('select', 'p3-pick');
-      pick.setAttribute('aria-label', 'Eine Quelle zeigen');
-      filt.append(chipAll, chipAbc, pick);
-      hostEl.append(filt, wrap, honest);
-      const texts = State.activeTexts();
-      const textWords = new Map();
-      texts.forEach(t => textWords.set(t.id, new Set(tokenize(t.body).map(tk => tk.t).filter(w => W.idx.has(w)))));
-      pick.appendChild(Object.assign(el('option', null, 'Eine Quelle zeigen …'), { value: '' }));
-      const byTheme = new Map();
-      texts.forEach(t => { const k = t.theme || 'eigen'; if (!byTheme.has(k)) byTheme.set(k, []); byTheme.get(k).push(t); });
-      byTheme.forEach((ts, k) => {
-        const th = (typeof THEMES !== 'undefined' && THEMES.find(x => x.id === k)) || null;
-        const og = el('optgroup'); og.label = th ? th.name : 'Eigene Texte';
-        ts.forEach(t => og.appendChild(Object.assign(el('option', null, t.title + ' (' + textWords.get(t.id).size + ')'), { value: t.id })));
-        pick.appendChild(og);
-      });
-      let mode = 'all', pickId = '';
-      /* Welche Wörter sind gerade „an“? null = alle. Bei A · B · C auch die Farbe der Quelle. */
-      function shown() {
-        if (mode === 'abc' && abcSets.length) {
-          const m = new Map();
-          abcSets.forEach((S, i) => S.forEach(w => { if (W.idx.has(w) && !m.has(w)) m.set(w, i); }));
-          return m;
-        }
-        if (mode === 'one' && textWords.has(pickId)) return new Map([...textWords.get(pickId)].map(w => [w, -1]));
-        return null;
-      }
-      function syncFilter() {
-        if (mode === 'abc' && !abcSets.length) mode = 'all';
-        chipAbc.disabled = !abcSets.length;
-        chipAll.classList.toggle('active', mode === 'all');
-        chipAbc.classList.toggle('active', mode === 'abc');
-        pick.classList.toggle('active', mode === 'one');
-        if (mode !== 'one') pick.value = '';
-      }
-      chipAll.addEventListener('click', () => { mode = 'all'; syncFilter(); draw(); });
-      chipAbc.addEventListener('click', () => { mode = 'abc'; syncFilter(); draw(); });
-      pick.addEventListener('change', () => { pickId = pick.value; mode = pickId ? 'one' : 'all'; syncFilter(); draw(); });
+      hostEl.append(wrap, honest);
 
       let ax = -0.35, ay = 0.6, auto = !matchMedia('(prefers-reduced-motion: reduce)').matches, sel = null, raf = 0, drag = null, proj = [];
       const TC = {};
@@ -597,7 +588,6 @@ Phases.register(3, {
         };
         proj = W.xyz.map((p, i) => Object.assign(P(p), { i }));
         const hi = highlight();
-        const on = shown();
         /* Linien: ausgewähltes Wort zu seinen 5 nächsten (in 20 Zahlen gerechnet), Wolken-Sprünge. */
         g.lineWidth = 1.5;
         const line = (a, b, col, dash) => { const pa = proj[W.idx.get(a)], pb = proj[W.idx.get(b)]; if (!pa || !pb) return; g.strokeStyle = col; g.setLineDash(dash || []); g.beginPath(); g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y); g.stroke(); };
@@ -607,10 +597,9 @@ Phases.register(3, {
         const order = proj.slice().sort((a, b) => b.z - a.z);
         order.forEach(p => {
           const word = W.words[p.i], hk = hi.get(word);
-          const inF = !on || on.has(word);
-          const r = (hk ? 5 : inF && on ? 3.4 : 2.6) * p.f;
-          g.globalAlpha = hk ? 1 : !inF ? 0.08 : Math.max(0.25, 0.75 - p.z * 0.3) + (on ? 0.2 : 0);
-          g.fillStyle = on && on.get(word) >= 0 ? cs.getPropertyValue('--src-' + 'abc'[on.get(word)]).trim() : themeColor(W.theme[p.i]);
+          const r = (hk ? 5 : 2.6) * p.f;
+          g.globalAlpha = hk ? 1 : Math.max(0.25, 0.75 - p.z * 0.3);
+          g.fillStyle = themeColor(W.theme[p.i]);
           g.beginPath();
           if (W.kind[p.i] === 'verb') g.rect(p.x - r, p.y - r, 2 * r, 2 * r); else g.arc(p.x, p.y, r, 0, Math.PI * 2);
           g.fill();
@@ -636,14 +625,14 @@ Phases.register(3, {
         info.replaceChildren();
         if (!sel) {
           info.append(el('p', 'p1-sub', 'Tipp einen Punkt an'),
-            el('p', 'p1-more', (mode === 'abc' ? 'Farbe = Quelle A · B · C' : 'Farbe = Textwelt') + ' · ● Nomen · ■ Verb. Ziehen zum Drehen.'));
+            el('p', 'p1-more', 'Alle Quellen · Farbe = Textwelt · ● Nomen · ■ Verb. Ziehen zum Drehen.'));
           return;
         }
-        info.appendChild(el('p', 'p1-sub', cap(sel) + ' – am nächsten (mit allen ' + W.dims + ' Zahlen)'));
+        info.appendChild(el('p', 'p1-sub', cap(sel) + ' – am nächsten (Abstand, mit allen ' + W.dims + ' Zahlen)'));
         W.neighbors(sel, 6).forEach(([x, s]) => {
           const row = el('button', 'p3-nb'); row.type = 'button';
           const bar = el('span', 'cbar'); const f = el('i'); f.style.width = Math.max(2, s * 100) + '%'; bar.appendChild(f);
-          row.append(el('span', 'cword', cap(x)), bar, el('span', 'cp', pct(Math.max(0, s))));
+          row.append(el('span', 'cword', cap(x)), bar, el('span', 'cp', p3Dist(s)));
           row.addEventListener('click', () => { sel = x; paintInfo(); draw(); });
           info.appendChild(row);
         });
@@ -679,13 +668,11 @@ Phases.register(3, {
         const hit = W.resolve(q) || W.words.find(w => w.startsWith(q));
         if (hit) { sel = hit; paintInfo(); draw(); }
       });
-      syncFilter();
-      chipAll.addEventListener('click', paintInfo); chipAbc.addEventListener('click', paintInfo);
       const ro = new ResizeObserver(() => draw());
       ro.observe(cv);
       paintInfo(); draw(); kick();
       return {
-        redraw: () => { syncFilter(); paintInfo(); draw(); },
+        redraw: () => { paintInfo(); draw(); },
         destroy: () => { if (raf) cancelAnimationFrame(raf); raf = 0; ro.disconnect(); auto = false; },
         pause: () => { if (raf) cancelAnimationFrame(raf); raf = 0; },
         resume: () => kick()
@@ -712,6 +699,8 @@ Phases.register(3, {
       const grid = el('div', 'p1-grid');
       const left = el('div', 'p1-left');
       left.appendChild(buildPhone());
+      legendHost = el('div', 'p1-legend');
+      left.appendChild(legendHost);
       left.appendChild(el('p', 'p3-proto', 'Prototyp – Phase „Wörter als Punkte“'));
       const right = el('div', 'p1-right');
       const intro = el('div', 'p1-intro');
@@ -743,8 +732,8 @@ Phases.register(3, {
       });
       Z.cols.cand.tools.appendChild(tsl.el);
       const jsl = Info.slider({
-        label: 'Wolken-Sprung', min: 0, max: P3_JUMP_MAX, step: 0.01, value: jump, spot: 'jump3',
-        fmt: x => x.toFixed(2).replace('.', ','), ends: ['🎯 bleibt', 'springt 🦘'],
+        label: 'Sprungwahrscheinlichkeit', min: 0, max: P3_JUMP_MAX, step: 0.01, value: jump, spot: 'jump3',
+        fmt: x => '≈ ' + Math.round(p3JumpRate(x)) + ' %', ends: ['🎯 bleibt', 'springt 🦘'],
         onInput: v => { jump = Math.round(v * 100) / 100; paintAll(); }
       });
       Z.cols.jump.tools.appendChild(jsl.el);
