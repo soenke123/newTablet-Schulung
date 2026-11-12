@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const V = '20261112b';
+  const V = '20261112c';
 
   let root  = null;
   let frame = null;
