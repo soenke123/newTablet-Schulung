@@ -7,7 +7,7 @@
    - Texte „mit wenig Vielfalt“ (12.11.2026, ganz hinten): dieselben Nomen mit denselben Verben
      („Der Hund schläft …, Die Katze schläft …“) — erst so rücken in der Wortwolke Tiere zu Tieren und
      Planeten zu Planeten. Gemessen mit der Gruppen-Probe (5 nächste Nachbarn aus derselben Gruppe).
-   - Wortpaare für das Wort-Rechnen: Lehrer/Lehrerin, Schüler/Schülerin, Tierarzt/Tierärztin, Kapitän/Kapitänin,
+   - Wortpaare für das Wort-Rechnen: Lehrer/Lehrerin, Schüler/Schülerin, Tierarzt/Tierärztin,
      Astronaut/Astronautin, Programmierer/Programmiererin … stehen jeweils in ähnlichen Sätzen (er/sie).
      Gegenwart/Vergangenheit: spielt/spielte, lernt/lernte, läuft/lief, schläft/schlief … mit heute/gestern.
    - Berufe: absichtlich einseitig (die Chefin, die Ärztin, der Krankenpfleger) — so lernt ein Modell Vorurteile.
