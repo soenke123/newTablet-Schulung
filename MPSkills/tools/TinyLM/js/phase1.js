@@ -49,8 +49,8 @@ Phases.register(1, {
     let session, n = 2, temp = 1, playing = false, timer = null;
     let focus = null;   /* null = nächstes Wort, sonst Index in session.steps */
     /* N-Gramm-Liste: 'all' = alle N-Gramme der Texte nach Häufigkeit, 'now' = nur die, die mit dem
-       jetzigen Kontextfenster anfangen (= die Kandidaten), 'mine' = die aus deinem Text. */
-    let ngMode = 'all', ngShow = 30, ngOpen = null, gramCache = null;
+       jetzigen Kontextfenster anfangen (= die Kandidaten, Start); 'mine' (aus deinem Text) hat seit 12.11.2026 keinen Knopf mehr. */
+    let ngMode = 'now', ngShow = 30, ngOpen = null, gramCache = null;
     let textEl, cursor, screen, playBtn, placeholder, sayEl, legendHost, focusHost;
     const cols = {};
     let phoneEl = null;
@@ -288,11 +288,6 @@ Phases.register(1, {
       const b = cols.cand.body;
       b.replaceChildren();
       if (!v) { b.appendChild(empty('Keine Texte an – schalte oben unter „Alle Quellen“ welche an.')); return; }
-      const line = el('p', 'p1-line');
-      if (v.C.uni) line.append(document.createTextNode('Kein Wort davor – also zählt nur, wie oft jedes Wort in den Texten steht:'));
-      else if (atStart(v)) line.append(document.createTextNode('Satzanfang – so fingen Sätze in den Texten an:'));
-      else line.append(document.createTextNode(v.ctx[0] === '.' ? 'Am Satzanfang nach „' : 'Nach „'), el('b', null, ctxText(v)), document.createTextNode('“ stand in den Texten:'));
-      b.appendChild(line);
       const MAX = 8;
       const list = el('ol', 'clist');
       v.C.list.slice(0, MAX).forEach(a => {
@@ -352,9 +347,6 @@ Phases.register(1, {
       const now = el('div', 'ctxnow');
       now.appendChild(el('p', 'p1-sub', v.idx == null ? 'Tiny schaut jetzt auf' : 'Für „' + word(v.chosen) + '“ schaute Tiny auf'));
       now.appendChild(gram(v.C.uni ? null : v.ctx, v.idx == null ? null : v.chosen, v.idx == null ? 'next' : 'chosen'));
-      const total = v.C.list.reduce((t, a) => t + a.occ.length, 0);
-      if (v.C.uni) now.appendChild(el('p', 'p1-count', '1-Gramme: einzelne Wörter, nur ihre Häufigkeit zählt.'));
-      else if (v.C.level > 0) now.appendChild(el('p', 'p1-count', total + '× in den Texten gefunden – ' + v.C.list.length + (v.C.list.length === 1 ? ' Wort kommt' : ' Wörter kommen') + ' danach in Frage'));
       const end = v.idx == null ? session.steps.length : v.idx;
       if (!v.C.uni && v.C.level < nn && end + 1 >= nn) {
         now.appendChild(el('p', 'p1-fall', v.C.level === 0
@@ -365,7 +357,7 @@ Phases.register(1, {
 
       /* Umschalter: alle · passend zu jetzt · aus deinem Text */
       const modes = el('div', 'ngmodes');
-      [['all', 'Alle'], ['now', 'Passen jetzt'], ['mine', 'In deinem Text']].forEach(([id, lab]) => {
+      [['now', 'Passen jetzt'], ['all', 'Alle']].forEach(([id, lab]) => {
         const c = el('button', 'ngmode' + (ngMode === id ? ' on' : ''), lab);
         c.type = 'button';
         c.setAttribute('aria-pressed', ngMode === id ? 'true' : 'false');

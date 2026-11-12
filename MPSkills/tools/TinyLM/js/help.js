@@ -74,18 +74,25 @@ const HELP = {
     try: 'Frag nach etwas, das in keinem Text vorkommt – zum Beispiel nach dem Eiffelturm.',
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
   },
-  quellen: {
-    title: 'N-Gramme und Quellen', icon: '📑', cat: 'origin',
-    text: ['Wie in Phase 1: Tiny schaut auf die Wörter davor (Regler N-Gramm) und sucht, was dahinter stand – aber nur in den 3 Texten A · B · C, die zu deiner Frage passen.',
-      'Unten die Quellen A · B · C: wie viele Token daraus kommen. Tipp eine an: Die genommenen Token sind markiert.'],
+  ngramme2: {
+    title: 'N-Gramme', icon: '👀', cat: 'context',
+    text: ['Wie in Phase 1: Tiny schaut auf die Wörter davor (Regler N-Gramm) und sucht in den Quellen, was dahinter stand.',
+      'Darunter: wie oft das in welchem Text steht. Tipp einen Text an – alle Fundstellen sind markiert.'],
     try: 'Stell den Regler auf 7-Gramm: Schreibt Tiny dann ganze Sätze aus einer Quelle ab?',
+    vis: { type: 'tokens', items: [['Die', 'win'], ['Kornnatter', 'win'], ['?', 'next']] }
+  },
+  quellen: {
+    title: 'Quellen', icon: '📑', cat: 'origin',
+    text: ['A · B · C sind die Texte mit der größten Übereinstimmung mit deiner Frage. Daraus schreibt Tiny.',
+      'Hier siehst du, wie viele Token aus jeder Quelle kommen. Tipp eine an: Die genommenen Token sind markiert.'],
+    try: 'Stell eine andere Frage: Wechseln die Quellen?',
     vis: { type: 'abc' }
   },
   wortfuerwort: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: ['Wie in Phase 1: Diese Wörter standen hinter den letzten Wörtern – aber nur in den 3 Texten A · B · C. Je länger der Balken, desto wahrscheinlicher.',
+    text: ['Wie in Phase 1: Diese Wörter standen in den Quellen hinter den letzten Wörtern. Je länger der Balken, desto wahrscheinlicher.',
       'Wörter aus Sätzen mit deinem Fragewort (🔎) zählen mehr.'],
-    try: 'Stell die Frage nochmal. Nimmt Tiny jedes Mal dieselben Wörter?',
+    try: 'Stell die Frage mit ↻ Nochmal noch einmal. Nimmt Tiny jedes Mal dieselben Wörter?',
     vis: { type: 'bars', items: [['Napf', 60], ['Park', 25], ['Wasser', 15]] }
   },
   wortkarte: {

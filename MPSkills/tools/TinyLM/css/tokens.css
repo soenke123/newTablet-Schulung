@@ -30,8 +30,8 @@
      Was zu keinem Schritt gehört (Wortkarte, Training, Netz-Bild), hat eine eigene Farbe. */
   --cat-context: #14A18F;      /* ① Kontextfenster (P1, P3-Wahl) */
   --cat-context-tint: #B5EBE2;
-  --cat-ask: #1590B5;          /* ① Frage zerlegen (P2) — Türkis, ins Blaue */
-  --cat-ask-tint: #BFE6F2;
+  --cat-ask: #5B5FC7;          /* ① Frage zerlegen (P2) — Indigo, klar abgesetzt von N-Gramme (grün) und Quellen (gelb), Sönke 12.11.2026 */
+  --cat-ask-tint: #D9DAF6;
   --cat-embed: #2E7491;        /* ① Embedding (P3) — Türkis, ins Petrol */
   --cat-embed-tint: #C6DDE7;
   --cat-origin: #E39A2A;       /* ② Quellen (P1, P2) */
@@ -85,7 +85,7 @@
     --shadow: 0 3px 0 var(--edge);
     --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
     --cat-context: #4FD6C3; --cat-context-tint: #183D38;
-    --cat-ask: #4CC3E8; --cat-ask-tint: #16384A;
+    --cat-ask: #9A9EF2; --cat-ask-tint: #26284D;
     --cat-embed: #6BB3D1; --cat-embed-tint: #1A3240;
     --cat-origin: #F2B354; --cat-origin-tint: #4A3A1E;
     --cat-hidden: #D49452; --cat-hidden-tint: #46301A;
@@ -109,7 +109,7 @@
   --shadow: 0 3px 0 var(--edge);
   --shadow-pop: 0 16px 40px rgba(0,0,0,.6);
   --cat-context: #4FD6C3; --cat-context-tint: #183D38;
-  --cat-ask: #4CC3E8; --cat-ask-tint: #16384A;
+  --cat-ask: #9A9EF2; --cat-ask-tint: #26284D;
   --cat-embed: #6BB3D1; --cat-embed-tint: #1A3240;
   --cat-origin: #F2B354; --cat-origin-tint: #4A3A1E;
   --cat-hidden: #D49452; --cat-hidden-tint: #46301A;

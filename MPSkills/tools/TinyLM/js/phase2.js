@@ -4,21 +4,21 @@
    Unten im Handy vor der Frage Vorschläge + Eingabefeld (.qform bleibt für das Schaufenster);
    sobald gefragt ist, werden daraus wie in Phase 1 Tinys Zeile + die Knöpfe ▶ Weiter/❚❚ Pause ·
    +1 Wort · ↻ Nochmal (Sönke 11.11.2026); ↻ Nochmal räumt den Chat und zeigt wieder die Vorschläge.
-   Rechts wird ZERLEGT, in drei Spalten (Sönke 12.11.2026: Frage zerlegen wieder zuerst, Kandidaten
-   schlank wie in Phase 1, die N-Gramme in eine eigene Spalte):
-     Frage zerlegen (welche Wörter zählen, in welchen Texten sie stehen, welche Texte gewählt
-                     wurden: A · B · C)
-     Kandidaten     (welches Wort kommt? — Temperatur + „Dieselbe Frage nochmal“ im festen Kopf,
-                     Liste wie in Phase 1; 🔎 = Wort aus einem Satz mit deinem Fragewort)
-     N-Gramme und Quellen (N-Gramm-Regler im Kopf, Start 3-Gramm; „Tiny schaut jetzt auf“, wo das in
-                     A · B · C steht, darunter wie viele Token aus welcher Quelle — antippen =
-                     ganzer Text mit markierten Token; A · B · C stehen immer da, auch mit 0 Token,
-                     und die Titel in Frage zerlegen springen hierher)
+   Rechts wird ZERLEGT (Sönke 12.11.2026, nach dem Kürzen „Schere ansetzen“: keine Platzhalter-
+   und Hilfesätze mehr, kein „Dieselbe Frage nochmal“, nirgends „nur aus A · B · C“):
+     Frage zerlegen (welche Wörter zählen, in welchen Texten sie stehen; Indigo, klar abgesetzt)
+     Kandidaten     (welches Wort kommt? — Temperatur im festen Kopf, Liste wie in Phase 1;
+                     🔎 = Wort aus einem Satz mit deinem Fragewort)
+     N-Gramme  ┐ zwei Reiter untereinander in der dritten Spalte (.p1-stack):
+     Quellen   ┘ N-Gramme grün (Regler im Kopf, „Tiny schaut jetzt auf“, „11× gefunden“ und je
+                 Text „3× Die Kornnatter“ — antippen = ganzer Text, alle Fundstellen markiert),
+                 Quellen gelb (ein Satz, warum A · B · C, dann Token je Quelle wie in Phase 1;
+                 die Titel in Frage zerlegen springen hierher)
    Die Wortkarte war bis 11.11.2026 breit darunter; sie zieht in eine eigene Phase „Wörter als Punkte“
    (Sönke: Phase 2 nutzt sie nicht, Tiny sucht hier nur Stichwörter).
 
    Erst aufklappen, dann im Handy sichtbar (wie Phase 1):
-     N-Gramme       → Wörter in der Farbe von A · B · C, Sprünge, Farblegende unter dem Handy
+     Quellen        → Wörter in der Farbe von A · B · C, Sprünge, Farblegende unter dem Handy
      Frage zerlegen → die Wörter deiner Frage im Handy grau / blau / rot, die gesuchten Wörter
      Kandidaten     → „?“-Baustein für das nächste Wort
    Offen/zu je Gerät in localStorage tinylm-p2-offen. Ein Wort im Handy antippen = genau diesen
@@ -65,7 +65,7 @@ Phases.register(2, {
     let M = null, R = null, session = null, canned = false, asked = false;
     let temp = 1, n = P2_N, playing = false, timer = null, done = false;
     let focus = null, pick = null;
-    let textEl, cursor, playBtn, reaskBtn, input, legendHost, askedEl, placeholder, answerEl, metaEl, warnEl, screen, focusHost;
+    let textEl, cursor, playBtn, input, legendHost, askedEl, placeholder, answerEl, metaEl, warnEl, screen, focusHost;
     let askBox, sayBox, sayEl, controls, gramLine;
     const srcState = { open: null };
     let phoneEl = null, Z = null;
@@ -139,12 +139,6 @@ Phases.register(2, {
       return { idx: null, C, ctx: C.level > 0 ? session.ctx.slice(-C.level) : [], chosen: null };
     }
     const atStart = v => v.C && !v.C.uni && (v.C.level === 0 || v.ctx.every(isPunct));
-    function ctxText(v) {
-      if (!v.ctx.length) return '';
-      const end = v.idx == null ? session.steps.length : v.idx;
-      const words = pieces(session).slice(0, end).slice(-v.ctx.length).filter(p => !p.punct).map(p => p.txt);
-      return words.length ? words.join(' ') : v.ctx.filter(w => !isPunct(w)).map(word).join(' ');
-    }
     function usedCounts() {
       const used = new Map();
       if (session) session.steps.forEach(st => { if (st.si >= 0) used.set(st.si, (used.get(st.si) || 0) + 1); });
@@ -197,7 +191,7 @@ Phases.register(2, {
       legendHost.replaceChildren();
       if (!asked || !session || !Z.isOpen('src')) return;
       const used = usedCounts();
-      legendHost.appendChild(el('p', 'p1-legend-lab', canned ? 'Die Farben im Handy = aus diesen Texten' : 'Die Farben im Handy = Text A · B · C'));
+      legendHost.appendChild(el('p', 'p1-legend-lab', 'Die Farben im Handy = aus diesen Quellen'));
       if (canned) {
         const top = [...used.entries()].sort((a, b) => b[1] - a[1]);
         if (top.length) legendHost.appendChild(sourceChips(top.slice(0, 4).map(([si, c]) => ({ color: sourceColor(si), label: session.sources[si].doc.title, sub: String(c) })),
@@ -238,7 +232,6 @@ Phases.register(2, {
       askBox.hidden = true;
       sayBox.hidden = false;
       controls.hidden = false;
-      reaskBtn.disabled = false;
       metaEl.replaceChildren();
       warnEl.hidden = !canned;
       if (canned) {
@@ -285,7 +278,7 @@ Phases.register(2, {
       let t;
       if (canned) t = playing ? 'Dazu steht nichts in meinen Texten – ich rate einfach drauflos …'
         : 'Das war geraten! Rechts siehst du, woher die Wörter wirklich kommen. ↻ Nochmal = neue Frage.';
-      else if (playing) t = 'Ich schreibe nur aus den 3 Texten, die zu deiner Frage passen.';
+      else if (playing) t = 'Ich schreibe …';
       else if (done) t = 'Fertig! Tipp ein Wort an – rechts siehst du, wie ich darauf gekommen bin. ↻ Nochmal = neue Frage.';
       else t = 'Pause. Tipp ein Wort an, dann zerlegst du rechts genau diesen Schritt.';
       sayEl.textContent = t;
@@ -303,7 +296,6 @@ Phases.register(2, {
       askBox.hidden = false;
       sayBox.hidden = true;
       controls.hidden = true;
-      reaskBtn.disabled = true;
       input.value = '';
       askKey = null;
       syncGramLine();
@@ -314,10 +306,9 @@ Phases.register(2, {
     /* Zeile unter dem N-Gramm-Regler: wie in Phase 1, aber nur in den gefundenen Texten. */
     function syncGramLine() {
       if (!gramLine) return;
-      const where = canned ? ' · in allen Texten' : ' · nur in A · B · C';
-      if (n === 0) gramLine.replaceChildren(document.createTextNode('Nur das neue Wort, keins davor – häufige Wörter kommen öfter' + where + '.'));
+      if (n === 0) gramLine.replaceChildren(document.createTextNode('Nur das neue Wort, keins davor – häufige Wörter kommen öfter.'));
       else gramLine.replaceChildren(document.createTextNode('Kontextfenster: '), el('b', null, n + (n === 1 ? ' Wort' : ' Wörter')),
-        document.createTextNode(' davor + 1 neues Wort' + where));
+        document.createTextNode(' davor + 1 neues Wort'));
     }
     function startPlay() {
       if (playing || !session) return;
@@ -331,24 +322,17 @@ Phases.register(2, {
       syncPlay();
     }
 
-    /* ---------------- Zerlegen: drei Spalten ---------------- */
-    function empty(text) { return el('p', 'card-empty', text); }
+    /* ---------------- Zerlegen: Spalten ---------------- */
 
     /* Kandidaten — schlank wie in Phase 1 (Sönke 12.11.2026: „super überladen“). */
     function paintCand(v) {
       const b = Z.cols.cand.body;
       b.replaceChildren();
-      if (!v) { b.appendChild(empty('Stell links im Handy eine Frage – dann siehst du hier, welche Wörter Tiny zur Wahl hat.')); return; }
+      if (!v) return;
       if (v.seed) {
         b.appendChild(el('p', 'p1-line', 'Dieses Wort hat Tiny nicht gezählt: Es kommt aus deiner Frage. So beginnt die ausgedachte Antwort.'));
         return;
       }
-      const where = canned ? 'in den Texten' : 'in A · B · C';
-      const line = el('p', 'p1-line');
-      if (v.C.uni) line.append(document.createTextNode('Kein Wort davor – also zählt nur, wie oft jedes Wort ' + where + ' steht:'));
-      else if (atStart(v)) line.append(document.createTextNode('Satzanfang – so fingen Sätze ' + where + ' an:'));
-      else line.append(document.createTextNode('Nach „'), el('b', null, ctxText(v)), document.createTextNode('“ stand ' + where + ':'));
-      b.appendChild(line);
       const MAX = 8;
       const list = el('ol', 'clist');
       v.C.list.slice(0, MAX).forEach(a => {
@@ -369,7 +353,7 @@ Phases.register(2, {
         }
         row.append(cw, bar, el('span', 'cp', fmtP(a.p)), el('span', 'cn', a.occ.length + '×'));
         if (a.word === v.chosen) row.appendChild(el('span', 'ctag', '🎲 gezogen'));
-        row.addEventListener('click', () => { pick = pick === a.word ? null : a.word; const w = view(); paintCand(w); if (Z.isOpen('src')) paintSrc(w); });
+        row.addEventListener('click', () => { pick = pick === a.word ? null : a.word; const w = view(); paintCand(w); if (Z.isOpen('gram')) paintGram(w); });
         li.appendChild(row);
         list.appendChild(li);
       });
@@ -395,10 +379,6 @@ Phases.register(2, {
       const chosenTxt = v.idx != null && pieces(session)[v.idx] ? pieces(session)[v.idx].txt : null;
       g.appendChild(v.chosen ? el('span', 'gtok chosen', chosenTxt || tokLabel(v.chosen)) : el('span', 'gtok next', '?'));
       box.appendChild(g);
-      const where = canned ? 'in den Texten' : 'in A · B · C';
-      const total = v.C.list.reduce((t, a) => t + a.occ.length, 0);
-      if (v.C.uni) box.appendChild(el('p', 'p1-count', '1-Gramme: einzelne Wörter, nur ihre Häufigkeit zählt.'));
-      else if (v.C.level > 0) box.appendChild(el('p', 'p1-count', total + '× ' + where + ' gefunden – ' + v.C.list.length + (v.C.list.length === 1 ? ' Wort kommt' : ' Wörter kommen') + ' danach in Frage'));
       const avail = Math.min(n, v.idx == null ? session.ctx.length : v.idx + 1);
       if (!v.C.uni && v.C.level < avail && v.C.level < n) {
         box.appendChild(el('p', 'p1-fall', v.C.level === 0
@@ -421,7 +401,7 @@ Phases.register(2, {
       if (R && askKey === R && b.childNodes.length) return;
       askKey = R;
       b.replaceChildren();
-      if (!asked) { b.appendChild(empty('Stell links im Handy eine Frage – dann zerlegt Tiny sie hier.')); return; }
+      if (!asked) return;
       const isStop = t => STOP.has(t.t) || /^\d+$/.test(t.t) || t.t.length < 2;
       const known = R.ql.filter(x => x.known);
       const colOf = lem => WCOL[Math.max(0, known.findIndex(x => x.lemma === lem)) % WCOL.length];
@@ -439,11 +419,6 @@ Phases.register(2, {
         g.appendChild(s);
       });
       b.appendChild(g);
-      const lg = el('p', 'mini-legend');
-      lg.append(el('span', 'gtok askoff sm', 'grau'), document.createTextNode(' Füllwort  '),
-        el('span', 'gtok askw sm', 'farbig'), document.createTextNode(' sucht Tiny  '),
-        el('span', 'gtok askunk sm', 'rot'), document.createTextNode(' steht in keinem Text'));
-      b.appendChild(lg);
 
       /* 2. In welchen Texten stehen sie — und welche hat Tiny gewählt? */
       const ranked = R.results.filter(r => r.score > 0);
@@ -473,10 +448,10 @@ Phases.register(2, {
         if (i < 3) lt.style.background = srcVar(i);
         const tw = el('div', 'askgrid-tw');
         if (i < 3) {
-          /* Gewählte Quelle antippen = in „N-Gramme und Quellen“ aufklappen (Sönke 12.11.2026). */
+          /* Gewählte Quelle antippen = in „Quellen“ aufklappen (Sönke 12.11.2026). */
           const link = el('button', 'askgrid-title asklink', r.doc.title);
           link.type = 'button';
-          link.title = 'In „N-Gramme und Quellen“ öffnen – mit den Token, die Tiny daraus genommen hat';
+          link.title = 'In „Quellen“ öffnen – mit den Token, die Tiny daraus genommen hat';
           link.addEventListener('click', () => openSource(i));
           tw.append(lt, link);
         } else tw.append(lt, el('span', 'askgrid-title', r.doc.title));
@@ -504,63 +479,81 @@ Phases.register(2, {
       const lg2 = el('p', 'mini-legend');
       lg2.append(document.createTextNode('● steht im Text   ≈ nur ein ähnliches Wort'));
       b.appendChild(lg2);
-      const n3 = Math.min(3, ranked.length);
-      b.appendChild(el('p', 'askwin', 'Gewählt: ' + SRC.slice(0, n3).join(' · ') + ' – die ' + (n3 === 1 ? 'Text' : n3 + ' Texte') +
-        ' mit den meisten Treffern. Nur daraus schreibt Tiny.' +
-        (ranked.length > MAX ? ' (+ ' + (ranked.length - MAX) + ' weitere Texte mit Treffern)' : '')));
     }
 
-    function fundBox(o, taken) {
-      const doc = session.sources[o.si].doc;
-      const f = el('div', 'fund' + (taken ? ' taken' : ''));
-      f.style.setProperty('--sc', colorOf(o.si));
-      const h = el('button', 'fhead');
-      h.type = 'button';
-      h.title = 'Text lesen';
-      if (!canned) { const lt = el('span', 'letter sm', SRC[o.si]); lt.style.background = srcVar(o.si); h.appendChild(lt); }
-      else h.appendChild(el('i', 'dot'));
-      h.appendChild(el('span', 'ft', doc.title));
-      if (taken) h.appendChild(el('span', 'ftag', '✓ von hier genommen'));
-      h.addEventListener('click', () => App.openTexts(doc.own ? 'eigen' : doc.theme));
-      f.append(h, Zerlegen.snippet(session, o));
-      return f;
+    /* N-Gramme (Sönke 12.11.2026, eigener Reiter über den Quellen): worauf Tiny schaut und wie oft
+       das in den Quellen steht — je Text eine Zeile „3× Die Kornnatter“; antippen = ganzer Text,
+       alle Fundstellen markiert (Kontext grün, Wort danach koralle). */
+    const gramState = { open: null };
+    function paintGram(v) {
+      const b = Z.cols.gram.body;
+      b.replaceChildren();
+      if (!v) return;
+      if (v.seed) { b.appendChild(el('p', 'p1-line', 'Dieses Wort steht in keiner Quelle – es kommt aus deiner Frage.')); return; }
+      b.appendChild(gramBox(v));
+      const wsel = pick || v.chosen;
+      if ((atStart(v) || v.C.uni) && !wsel) return;
+      const occ = Zerlegen.findOcc(session, v.ctx, wsel, !!v.C.uni);
+      if (!occ.length) return;
+      const per = new Map();
+      occ.forEach(o => { if (!per.has(o.si)) per.set(o.si, []); per.get(o.si).push(o); });
+      if (gramState.open != null && !per.has(gramState.open)) gramState.open = null;
+      b.appendChild(el('p', 'p1-sub', occ.length + '× gefunden'));
+      const list = el('div', 'usedsrc');
+      [...per.entries()].sort((x, y) => y[1].length - x[1].length).forEach(([si, os]) => {
+        const s = session.sources[si];
+        const open = gramState.open === si;
+        const item = el('div', 'usrc gocc' + (open ? ' open' : ''));
+        item.style.setProperty('--sc', colorOf(si));
+        const row = el('button', 'usrc-row');
+        row.type = 'button';
+        row.setAttribute('aria-expanded', open ? 'true' : 'false');
+        row.title = open ? 'Text zuklappen' : 'Text aufklappen – alle Fundstellen sind markiert';
+        row.appendChild(el('span', 'gocc-n', os.length + '×'));
+        if (!canned) { const lt = el('span', 'letter sm', SRC[si]); lt.style.background = srcVar(si); row.appendChild(lt); }
+        else row.appendChild(el('i', 'dot'));
+        const tw = el('span', 'usrc-tw');
+        tw.appendChild(el('span', 'usrc-t', s.doc.title));
+        row.append(tw, el('span', 'usrc-chev', open ? '▴' : '▾'));
+        row.addEventListener('click', () => { gramState.open = open ? null : si; paintGram(view()); });
+        item.appendChild(row);
+        if (open) {
+          const cls = new Map();
+          os.forEach(o => {
+            for (let i = o.start; i < o.pos; i++) if (!cls.has(i)) cls.set(i, 'fx-ctx');
+            cls.set(o.pos, 'fx-next');
+          });
+          const focusPos = v.idx != null && v.si === si && wsel === v.chosen ? v.pos : null;
+          const T = s.toks;
+          const p = el('p', 'usrc-text');
+          for (let i = 1; i < T.length; i++) {
+            const tk = T[i];
+            if (i > 1 && !tk.punct) p.appendChild(document.createTextNode(' '));
+            const c = cls.get(i);
+            if (c) p.appendChild(el('mark', c + (i === focusPos ? ' focus' : ''), tk.raw));
+            else p.appendChild(document.createTextNode(tk.raw));
+          }
+          requestAnimationFrame(() => {
+            const m = p.querySelector('mark.focus') || p.querySelector('mark');
+            if (m && p.scrollHeight > p.clientHeight) p.scrollTop = Math.max(0, m.offsetTop - p.clientHeight / 3);
+          });
+          item.appendChild(p);
+        }
+        list.appendChild(item);
+      });
+      b.appendChild(list);
     }
 
-    /* N-Gramme in den Quellen: worauf Tiny schaut, wo das in A · B · C steht, und darunter wie
-       viele Token aus welcher Quelle (antippen = Text mit markierten Token). */
+    /* Quellen: wie viele Token aus welchem Text (antippen = Text mit markierten Token). */
     function paintSrc(v) {
       const b = Z.cols.src.body;
       b.replaceChildren();
-      if (!v) { b.appendChild(empty('Stell links im Handy eine Frage – dann siehst du hier, aus welchen Texten Tiny antwortet.')); return; }
-
-      const wsel = pick || v.chosen;
-      if (v.seed) {
-        b.appendChild(el('p', 'p1-line', 'Dieses Wort steht in keiner Quelle – es kommt aus deiner Frage.'));
-      } else {
-        b.appendChild(gramBox(v));
-        if ((atStart(v) || v.C.uni) && !wsel) {
-          b.appendChild(el('p', 'p1-line', 'Tipp einen Kandidaten an, dann siehst du, wo er steht.'));
-        } else {
-          const occ = Zerlegen.findOcc(session, v.ctx, wsel, !!v.C.uni);
-          if (v.idx != null && wsel === v.chosen) {
-            const k = occ.findIndex(o => o.si === v.si && o.pos === v.pos);
-            if (k > 0) occ.unshift(occ.splice(k, 1)[0]);
-          }
-          const line = el('p', 'p1-line');
-          const wtxt = wsel && v.idx != null && wsel === v.chosen && pieces(session)[v.idx] ? pieces(session)[v.idx].txt : (wsel ? word(wsel) : '');
-          line.append(document.createTextNode('„'), el('b', null, ([ctxText(v), wtxt].filter(Boolean).join(' ').replace(/ ([.,])/g, '$1')) || '…'),
-            document.createTextNode('“ steht ' + occ.length + '× ' + (canned ? 'in den Texten' : 'in A · B · C') + ':'));
-          b.appendChild(line);
-          const MAX = 3;
-          const list = el('div', 'flist');
-          occ.slice(0, MAX).forEach(o => list.appendChild(fundBox(o, v.idx != null && o.si === v.si && o.pos === v.pos && wsel === v.chosen)));
-          b.appendChild(list);
-          if (occ.length > MAX) b.appendChild(el('p', 'p1-more', '… und ' + (occ.length - MAX) + ' weitere Stellen'));
-        }
-      }
-
+      if (!v) return;
       if (canned && !session.steps.some(st => st.si >= 0)) return;
       if (canned && srcState.open != null && !session.steps.some(st => st.si === srcState.open)) srcState.open = null;
+      b.appendChild(el('p', 'p1-line', canned
+        ? 'Kein Text passt zu deiner Frage – Tiny nimmt alle Texte und rät.'
+        : 'A · B · C sind die Quellen, weil hier die größte Übereinstimmung mit deiner Frage ist.'));
       const used = el('div', 'p1-used');
       used.appendChild(Zerlegen.usedSources(session, {
         state: srcState,
@@ -570,11 +563,10 @@ Phases.register(2, {
         all: !canned,
         focus: v.idx != null && !v.seed ? { si: v.si, pos: v.pos } : null
       }));
-      if (canned) used.appendChild(el('p', 'p1-more', 'Kein Text passt zu deiner Frage – Tiny nimmt alle Texte und rät.'));
       b.appendChild(used);
     }
 
-    /* Aus Frage zerlegen: Quelle si in der Spalte „N-Gramme und Quellen“ aufklappen und hinscrollen. */
+    /* Aus Frage zerlegen: Quelle si im Reiter „Quellen“ aufklappen und hinscrollen. */
     function openSource(si) {
       srcState.open = si;
       if (!Z.isOpen('src')) Z.setOpen('src', true); else paintSrc(view());
@@ -586,7 +578,7 @@ Phases.register(2, {
 
     function paintFocus(v) {
       let hint = '';
-      if (asked && !['ask', 'cand', 'src'].some(Z.isOpen)) hint = 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.';
+      if (asked && !['ask', 'cand', 'gram', 'src'].some(Z.isOpen)) hint = 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.';
       Zerlegen.focusBanner(focusHost, v && v.idx != null ? v.idx : null, v && v.idx != null ? word(v.chosen) : '', () => setFocus(null), hint);
     }
 
@@ -595,6 +587,7 @@ Phases.register(2, {
       paintFocus(v);
       if (Z.isOpen('cand')) paintCand(v); else Z.cols.cand.body.replaceChildren();
       if (Z.isOpen('ask')) paintAsk(); else { Z.cols.ask.body.replaceChildren(); askKey = null; }
+      if (Z.isOpen('gram')) paintGram(v); else Z.cols.gram.body.replaceChildren();
       if (Z.isOpen('src')) paintSrc(v); else Z.cols.src.body.replaceChildren();
     }
 
@@ -719,14 +712,19 @@ Phases.register(2, {
       right.appendChild(intro);
 
       const row = el('div', 'p1-cols');
+      /* Reihenfolge (Sönke 12.11.2026): Frage zerlegen · Kandidaten · N-Gramme über Quellen
+         (zwei Reiter untereinander: N-Gramme grün wie das Kontextfenster, Quellen gelb wie in Phase 1). */
+      const stack = el('div', 'p1-stack');
+      stack.append(
+        Z.column('gram', 'context', '👀', 'N-Gramme', 'Wo steht das?', 'ngramme2'),
+        Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'));
       row.append(
-        /* Reihenfolge (Sönke 12.11.2026): Frage zerlegen · Kandidaten · N-Gramme in den Quellen. */
         Z.column('ask', 'ask', '🔎', 'Frage zerlegen', 'Was sucht Tiny?', 'nachschlagen'),
         Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'wortfuerwort'),
-        Z.column('src', 'origin', '📑', 'N-Gramme und Quellen', 'Wo steht das in A · B · C?', 'quellen'));
+        stack);
       right.appendChild(row);
 
-      /* Feste Köpfe (werden nie neu gebaut): Kandidaten = Temperatur + „Dieselbe Frage nochmal“,
+      /* Feste Köpfe (werden nie neu gebaut): Kandidaten = Temperatur,
          N-Gramme = Regler N-Gramm (Start 3-Gramm). */
       const tsl = Info.slider({
         label: 'Temperatur', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp',
@@ -739,16 +737,10 @@ Phases.register(2, {
         fmt: v => v + '-Gramm', ends: ['kurz', 'lang'],
         onInput: v => { n = v - 1; syncGramLine(); paintCols(); }
       });
-      Z.cols.src.tools.appendChild(nsl.el);
+      Z.cols.gram.tools.appendChild(nsl.el);
       gramLine = el('p', 'p1-gramline');
-      Z.cols.src.tools.appendChild(gramLine);
+      Z.cols.gram.tools.appendChild(gramLine);
       syncGramLine();
-      reaskBtn = el('button', 'btn sm p1-up', '🔁 Dieselbe Frage nochmal');
-      reaskBtn.type = 'button';
-      reaskBtn.dataset.spot = 'reask';
-      reaskBtn.disabled = true;
-      reaskBtn.addEventListener('click', () => { if (R) ask(R.question); });
-      Z.cols.cand.tools.appendChild(reaskBtn);
 
       grid.append(left, right);
       root.appendChild(grid);
