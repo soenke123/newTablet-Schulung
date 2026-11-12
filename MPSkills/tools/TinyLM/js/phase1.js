@@ -5,12 +5,12 @@
    welcher Text ist. Rechts wird ZERLEGT, und zwar rückwärts vom Wort aus:
      Kandidaten  (welches Wort kommt? — Temperatur gleich oben)
        ← Kontextfenster (auf welche letzten Wörter Tiny schaut; die N-Gramme in deinem Text)
-       ← Quellen   (wo diese Wörter in den Texten stehen; unten alle genutzten Texte)
+       ← Quellen   (wie viele Token aus welchem Text; antippen = Text mit markierten Token)
    „Alle Quellen“ (alle Texte, für alle Phasen) ist der Knopf oben rechts in der Kopfzeile.
 
    Ohne Auswahl zeigen die Spalten das NÄCHSTE Wort (das „?“ im Handy). Tippt man ein Wort im Handy
    oder ein N-Gramm an, zeigen alle drei Spalten, wie GENAU DIESES Wort entstanden ist (Schritt-Daten
-   aus ngram.js: cands, ctxUsed, si/pos). Ein Kandidat antippen = Quellen nur für dieses Wort.
+   aus ngram.js: cands, ctxUsed, si/pos); in den Quellen ist es dann im Text extra markiert.
 
    Erst aufklappen, dann im Handy sichtbar (Sönke 01.11.2026): Das Handy sieht zuerst aus wie ein
    ganz normales Sprachmodell (neutrale Bausteine, schlichter Schreib-Cursor, Tiny sagt nur
@@ -48,7 +48,6 @@ Phases.register(1, {
   mount(host) {
     let session, n = 2, temp = 1, playing = false, timer = null;
     let focus = null;   /* null = nächstes Wort, sonst Index in session.steps */
-    let pick = null;    /* angetippter Kandidat (Quellen nur für dieses Wort) */
     /* N-Gramm-Liste: 'all' = alle N-Gramme der Texte nach Häufigkeit, 'now' = nur die, die mit dem
        jetzigen Kontextfenster anfangen (= die Kandidaten), 'mine' = die aus deinem Text. */
     let ngMode = 'all', ngShow = 30, ngOpen = null, gramCache = null;
@@ -90,7 +89,7 @@ Phases.register(1, {
 
     function usedCounts() {
       const used = new Map();
-      session.steps.forEach(st => { if (!isPunct(st.word)) used.set(st.si, (used.get(st.si) || 0) + 1); });
+      session.steps.forEach(st => used.set(st.si, (used.get(st.si) || 0) + 1));  /* Satzzeichen sind auch Token */
       return used;
     }
 
@@ -298,16 +297,13 @@ Phases.register(1, {
       const list = el('ol', 'clist');
       v.C.list.slice(0, MAX).forEach(a => {
         const li = el('li');
-        const row = el('button', 'crow' + (a.word === v.chosen ? ' chosen' : '') + (a.word === pick ? ' picked' : ''));
-        row.type = 'button';
-        row.title = 'Wo steht das? (rechts bei den Quellen)';
+        const row = el('div', 'crow' + (a.word === v.chosen ? ' chosen' : ''));
         const bar = el('span', 'cbar');
         const fill = el('i');
         fill.style.width = Math.max(2, a.p * 100) + '%';
         bar.appendChild(fill);
         row.append(el('span', 'cword', word(a.word)), bar, el('span', 'cp', fmtP(a.p)), el('span', 'cn', a.occ.length + '×'));
         if (a.word === v.chosen) row.appendChild(el('span', 'ctag', '🎲 gezogen'));
-        row.addEventListener('click', () => { pick = pick === a.word ? null : a.word; paintCand(view()); paintSrc(view()); });
         li.appendChild(row);
         list.appendChild(li);
       });
@@ -495,72 +491,26 @@ Phases.register(1, {
       return p;
     }
 
+    /* Quellen (Sönke 12.11.2026): nicht mehr, wo das Wort gerade steht (das zeigt das Kontextfenster
+       beim Antippen eines N-Gramms), sondern nur: wie viele Token aus welchem Text. Text antippen =
+       ganzer Text, die genommenen Token markiert. */
+    const srcState = { open: null };
     function paintSrc(v) {
       const b = cols.src.body;
       b.replaceChildren();
       if (!v) { b.appendChild(empty('Keine Texte an.')); return; }
-      const wsel = pick || v.chosen;
-      if (v.C.uni && !wsel) {
-        b.appendChild(el('p', 'p1-line', 'Kein Wort davor: Tiny nimmt irgendein Wort aus irgendeinem Text – häufige Wörter öfter. Tipp links einen Kandidaten an, dann siehst du, wo er steht.'));
-      } else if (atStart(v) && !wsel) {
-        b.appendChild(el('p', 'p1-line', 'Neuer Satz: Tiny nimmt einen Satzanfang aus irgendeinem Text. Tipp links einen Kandidaten an, dann siehst du, wo er steht.'));
-      } else {
-        const occ = findOcc(v.ctx, wsel, v.C.uni);
-        /* Die Stelle, aus der das Wort wirklich genommen wurde, kommt nach oben. */
-        if (v.idx != null && wsel === v.chosen) {
-          const k = occ.findIndex(o => o.si === v.si && o.pos === v.pos);
-          if (k > 0) occ.unshift(occ.splice(k, 1)[0]);
-        }
-        const line = el('p', 'p1-line');
-        line.append(document.createTextNode('„'), el('b', null, ([ctxText(v), wsel ? word(wsel) : ''].filter(Boolean).join(' ').replace(/ ([.,])/g, '$1')) || '…'),
-          document.createTextNode('“ steht ' + occ.length + '× in den Texten:'));
-        b.appendChild(line);
-        const MAX = 5;
-        const list = el('div', 'flist');
-        occ.slice(0, MAX).forEach(o => {
-          const doc = session.sources[o.si].doc;
-          const f = el('div', 'fund');
-          f.style.setProperty('--sc', sourceColor(o.si));
-          const h = el('button', 'fhead');
-          h.type = 'button';
-          h.title = 'Text lesen';
-          h.append(el('i', 'dot'), el('span', 'ft', doc.title));
-          h.addEventListener('click', () => App.openTexts(doc.own ? 'eigen' : doc.theme));
-          f.appendChild(h);
-          if (v.idx != null && o.si === v.si && o.pos === v.pos && wsel === v.chosen) {
-            f.classList.add('taken');
-            h.appendChild(el('span', 'ftag', '✓ von hier genommen'));
-          }
-          f.appendChild(snippet(o));
-          list.appendChild(f);
-        });
-        b.appendChild(list);
-        if (occ.length > MAX) b.appendChild(el('p', 'p1-more', '… und ' + (occ.length - MAX) + ' weitere Stellen'));
-      }
-
-      /* Alle Texte, aus denen dein Text bisher stammt — mit Link auf „Alle Quellen“ (das große Fenster). */
-      const used = usedCounts();
-      if (!used.size) return;
-      const all = el('div', 'p1-used');
-      all.appendChild(el('p', 'p1-sub', 'Dein Text stammt aus ' + used.size + (used.size === 1 ? ' Text' : ' Texten')));
-      const total = [...used.values()].reduce((a, c) => a + c, 0);
-      const rows = el('div', 'originrows');
-      [...used.entries()].sort((a, c) => c[1] - a[1]).slice(0, 5).forEach(([si, count]) => {
-        const row = el('div', 'originrow');
-        const bar = el('div', 'bar');
-        const fill = el('i');
-        fill.style.width = Math.max(3, 100 * count / total) + '%';
-        fill.style.background = sourceColor(si);
-        bar.appendChild(fill);
-        row.append(el('span', 'small', session.sources[si].doc.title), bar, el('span', 'num', String(count)));
-        rows.appendChild(row);
-      });
-      all.appendChild(rows);
+      if (srcState.open != null && !session.steps.some(st => st.si === srcState.open)) srcState.open = null;
+      b.appendChild(Zerlegen.usedSources(session, {
+        state: srcState,
+        repaint: () => paintSrc(view()),
+        color: sourceColor,
+        focus: v.idx != null ? { si: v.si, pos: v.pos } : null
+      }));
+      if (!session.steps.length) return;
       const up = el('button', 'btn sm p1-up', '📚 Alle Quelltexte ansehen');
       up.type = 'button';
       up.addEventListener('click', () => App.openTexts());
-      all.appendChild(up);
-      b.appendChild(all);
+      b.appendChild(up);
     }
 
     function paintFocus(v) {
@@ -594,7 +544,6 @@ Phases.register(1, {
     function setFocus(i) {
       stopPlay();
       focus = i;
-      pick = null;
       updateText();
       paintCols();
     }
@@ -602,7 +551,7 @@ Phases.register(1, {
     /* ---------------- Schreiben ---------------- */
     function doStep() {
       if (!State.activeTexts().length) return false;
-      focus = null; pick = null;
+      focus = null;
       const C = step(session, n, temp);
       if (!C) { stopPlay(); return false; }
       updateText();
@@ -684,7 +633,7 @@ Phases.register(1, {
       session = freshSession();
       gramCache = null; ngOpen = null; ngShow = 30;
       buildCasing();
-      focus = null; pick = null;
+      focus = null;
 
       const root = el('div', 'p1');
       const grid = el('div', 'p1-grid');
@@ -705,7 +654,7 @@ Phases.register(1, {
       row.append(
         column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'kandidaten'),
         column('ctx', 'context', '👀', 'Kontextfenster', 'Auf welche Wörter schaut Tiny?', 'kontext'),
-        column('src', 'origin', '📑', 'Quellen', 'Wo steht das in den Texten?', 'herkunft'));
+        column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'herkunft'));
       right.appendChild(row);
 
       /* Regler in den festen Köpfen — werden nie neu gebaut. */

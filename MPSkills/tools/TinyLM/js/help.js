@@ -43,8 +43,8 @@ const HELP = {
   },
   herkunft: {
     title: 'Quellen', icon: '📑', cat: 'origin',
-    text: ['Tiny erfindet kein einziges Wort. Hier siehst du die Stellen, an denen die Wörter genau so in den Texten stehen – grün das Kontextfenster, rot das Wort danach.',
-      'Darum hat jedes Wort im Handy die Farbe seines Textes.'],
+    text: ['Tiny erfindet kein einziges Wort. Hier siehst du, wie viele Token es aus jedem Text genommen hat.',
+      'Tipp einen Text an: Die genommenen Token sind darin markiert. Darum hat jedes Wort im Handy die Farbe seines Textes.'],
     try: 'Schau auf die Farben im Text: Wo springt Tiny mitten im Satz in einen anderen Text?',
     vis: { type: 'tokens', items: [['Der', 's0'], ['Hund', 's0'], ['frisst', 's1'], ['Fisch', 's1'], ['im', 's2'], ['Meer', 's2']] }
   },
@@ -75,16 +75,16 @@ const HELP = {
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
   },
   quellen: {
-    title: 'Quellen', icon: '📑', cat: 'origin',
-    text: ['Anders als in Phase 1 nimmt Tiny nur die 3 Texte, die am besten zu deiner Frage passen: A · B · C. Nur aus ihnen baut es die Antwort.',
-      'Darum hat jedes Wort im Handy die Farbe seines Textes.'],
-    try: 'Tipp im Handy auf ein Wort: Aus welchem Text hat Tiny es geholt?',
+    title: 'N-Gramme', icon: '📑', cat: 'origin',
+    text: ['Wie in Phase 1: Tiny schaut auf die Wörter davor (Regler N-Gramm) und sucht, was dahinter stand – aber nur in den 3 Texten A · B · C, die zu deiner Frage passen.',
+      'Unten siehst du, wie viele Token aus jeder Quelle kommen. Tipp eine an: Die genommenen Token sind markiert.'],
+    try: 'Stell den Regler auf 7-Gramm: Schreibt Tiny dann ganze Sätze aus einer Quelle ab?',
     vis: { type: 'abc' }
   },
   wortfuerwort: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
-    text: ['Wie in Phase 1: Tiny schaut auf die Wörter davor (Regler N-Gramm) und nimmt, was dahinter stand – aber es durchsucht nur die 3 Texte, die beim Frage zerlegen gefunden wurden.',
-      'Wörter aus Sätzen mit deinem Fragewort (🔎) zählen mehr. Sind die Quellen offen, zeigt die Farbe des Balkens, aus welcher Quelle das Wort kommt.'],
+    text: ['Wie in Phase 1: Diese Wörter standen hinter den letzten Wörtern – aber nur in den 3 Texten A · B · C. Je länger der Balken, desto wahrscheinlicher.',
+      'Wörter aus Sätzen mit deinem Fragewort (🔎) zählen mehr.'],
     try: 'Stell die Frage nochmal. Nimmt Tiny jedes Mal dieselben Wörter?',
     vis: { type: 'bars', items: [['Napf', 60], ['Park', 25], ['Wasser', 15]] }
   },

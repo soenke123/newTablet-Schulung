@@ -137,5 +137,67 @@ const Zerlegen = (() => {
     if (hint) hostEl.append(el('span', null, hint));
   }
 
-  return { columns, phone, findOcc, snippet, focusBanner, DEMO };
+  /* „Aus welchen Quellen?“ (Sönke 12.11.2026): nur noch, wie viele Token Tiny aus jedem Text
+     genommen hat. Antippen klappt den ganzen Text auf, die genommenen Token sind markiert
+     (das angetippte Wort im Handy noch kräftiger). Satzzeichen zählen mit — sie sind auch Token.
+     o = { state: {open}, repaint(), color(si), letter(si)?, focus: {si, pos}?, head? } */
+  function usedSources(session, o) {
+    const box = el('div', 'usedsrc');
+    const taken = new Map();
+    session.steps.forEach(st => {
+      if (st.si == null || st.si < 0 || st.pos == null) return;
+      if (!taken.has(st.si)) taken.set(st.si, new Set());
+      taken.get(st.si).add(st.pos);
+    });
+    if (!taken.size) { box.appendChild(el('p', 'card-empty', 'Noch kein Token genommen.')); return box; }
+    const total = [...taken.values()].reduce((a, t) => a + t.size, 0);
+    box.appendChild(el('p', 'p1-sub', o.head || (total + ' Token aus ' + taken.size + (taken.size === 1 ? ' Quelle' : ' Quellen'))));
+    const max = Math.max(...[...taken.values()].map(t => t.size));
+    [...taken.entries()].sort((a, b) => b[1].size - a[1].size).forEach(([si, set]) => {
+      const s = session.sources[si];
+      const open = o.state.open === si;
+      const item = el('div', 'usrc' + (open ? ' open' : ''));
+      item.style.setProperty('--sc', o.color(si));
+      const row = el('button', 'usrc-row');
+      row.type = 'button';
+      row.setAttribute('aria-expanded', open ? 'true' : 'false');
+      row.title = open ? 'Text zuklappen' : 'Text aufklappen – die genommenen Token sind markiert';
+      const lt = o.letter && o.letter(si);
+      row.appendChild(lt ? Object.assign(el('span', 'letter sm', lt), { style: 'background:' + o.color(si) }) : el('i', 'dot'));
+      const bar = el('span', 'usrc-bar');
+      const fill = el('i');
+      fill.style.width = Math.max(4, 100 * set.size / max) + '%';
+      bar.appendChild(fill);
+      const tw = el('span', 'usrc-tw');
+      tw.append(el('span', 'usrc-t', s.doc.title), bar);
+      row.append(tw, el('span', 'usrc-n', set.size + ' Token'), el('span', 'usrc-chev', open ? '▴' : '▾'));
+      row.addEventListener('click', () => { o.state.open = open ? null : si; o.repaint(); });
+      item.appendChild(row);
+      if (open) {
+        const T = s.toks;
+        const p = el('p', 'usrc-text');
+        for (let i = 1; i < T.length; i++) {
+          const tk = T[i];
+          if (i > 1 && !tk.punct) p.appendChild(document.createTextNode(' '));
+          if (set.has(i)) {
+            const m = el('mark', 'fx-take' + (o.focus && o.focus.si === si && o.focus.pos === i ? ' focus' : ''), tk.raw);
+            p.appendChild(m);
+          } else p.appendChild(document.createTextNode(tk.raw));
+        }
+        /* Das angetippte Token (sonst das zuletzt genommene) in den sichtbaren Teil scrollen. */
+        requestAnimationFrame(() => {
+          const ms = p.querySelectorAll('mark');
+          const m = p.querySelector('mark.focus') || ms[ms.length - 1];
+          if (m && p.scrollHeight > p.clientHeight) p.scrollTop = Math.max(0, m.offsetTop - p.clientHeight / 3);
+        });
+        const foot = el('p', 'usrc-foot');
+        foot.append(el('mark', 'fx-take', 'markiert'), document.createTextNode(' = hat Tiny hier genommen'));
+        item.append(p, foot);
+      }
+      box.appendChild(item);
+    });
+    return box;
+  }
+
+  return { columns, phone, findOcc, snippet, focusBanner, usedSources, DEMO };
 })();
