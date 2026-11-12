@@ -575,7 +575,7 @@ Phases.register(3, {
     }
 
     function buildPhone() {
-      const P = Zerlegen.phone({ label: 'tiny · model · Phase 3', help: 'p3' });
+      const P = Zerlegen.phone({ label: 'tiny · model · Phase 4', help: 'p3' });
       phoneEl = P.el;
       screen = P.screen;
 

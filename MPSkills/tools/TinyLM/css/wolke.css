@@ -1,0 +1,35 @@
+/* Phase „Wörter als Punkte“ (Prototyp 12.11.2026, js/phase-wolke.js). */
+.p4-proto { margin: 8px 2px 0; font-size: 0.78rem; color: var(--muted); text-align: center; }
+
+/* Geborgte Wörter im Handy: erst sichtbar, wenn die Spalte „Geborgt“ offen ist. */
+.phone.show-borrow .srcword.borrowed { outline: 2px dashed var(--cat-meaning); outline-offset: 2px; }
+.phone .srcword.farword { opacity: 0.85; }
+
+/* Bedeutung gegen Stichwort */
+.p4-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+@media (max-width: 560px) { .p4-vs { grid-template-columns: 1fr; } }
+.p4-vs-col { min-width: 0; }
+.p4-rank { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; font-size: 0.84rem; opacity: 0.6; }
+.p4-rank.on { opacity: 1; background: var(--soft); }
+.p4-rank-t { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.p4-rank-n { font-family: var(--font-mono, monospace); font-size: 0.75rem; color: var(--muted); }
+
+/* Geborgt */
+.p4-borrow { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; margin-top: 8px; cursor: pointer; background: var(--surface); }
+.p4-borrow.on { border-color: var(--cat-meaning); box-shadow: 0 0 0 3px var(--cat-meaning-tint); }
+.p4-borrow .p1-line { margin: 2px 0; }
+.p4-took { color: var(--cat-candidates); }
+
+/* 3D-Wolke */
+.p4-cloud { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 12px; align-items: start; }
+@media (max-width: 820px) { .p4-cloud { grid-template-columns: 1fr; } }
+.p4-canvas { width: 100%; height: 440px; border-radius: 14px; background: var(--soft); touch-action: none; cursor: grab; display: block; }
+.p4-canvas:active { cursor: grabbing; }
+@media (max-width: 560px) { .p4-canvas { height: 320px; } }
+.p4-side { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.p4-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.p4-tools .textin { flex: 1 1 120px; min-width: 0; }
+.p4-nb { display: grid; grid-template-columns: 1fr 70px auto; gap: 6px; align-items: center; width: 100%; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.p4-nb:hover { background: var(--soft); }
+.p4-honest { margin: 10px 2px 0; font-size: 0.86rem; color: var(--muted); }
+.p4-honest b { color: var(--ink); }

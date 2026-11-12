@@ -96,6 +96,34 @@ const HELP = {
     vis: { type: 'dots' }
   },
 
+  /* ---- Phase „Wörter als Punkte“ (intern 4, angezeigt als Phase 3; Prototyp 12.11.2026) ---- */
+  p4: {
+    title: 'Wörter als Punkte', icon: '🌌',
+    text: 'Jedes Wort ist hier ein Punkt aus Zahlen. Wörter, die in ähnlichen Sätzen stehen, liegen nah beieinander – damit sucht Tiny Texte und borgt Wörter.',
+    vis: { type: 'cycle', items: [['📚', 'Texte'], ['🔢', 'Punkte'], ['⭐', 'Frage'], ['💬', 'Antwort']] }
+  },
+  bedeutung: {
+    title: 'Frage als Punkt', icon: '⭐', cat: 'ask',
+    text: ['Die Wörter deiner Frage sind Punkte. Ihre Mitte ist der Punkt der Frage. Jeder Text ist auch ein Punkt – die Mitte seiner Wörter.',
+      'Tiny nimmt die 3 Texte, die am nächsten liegen. Daneben siehst du, was die Stichwortsuche aus Phase 2 genommen hätte.'],
+    try: 'Frag „Wie lange dauert eine Reise zum Mars?“ und vergleiche beide Listen.',
+    vis: { type: 'dots' }
+  },
+  geborgt: {
+    title: 'Geborgt', icon: '🔁', cat: 'meaning',
+    text: ['Steht eine Wortfolge in keinem Text, tauscht Tiny ein Wort gegen eines, das in der Wolke nah liegt – und nimmt, was dort dahinter stand.',
+      'Das klappt oft („Welpe ≈ Hund“), manchmal aber auch nicht. Nah heißt nur: steht in ähnlichen Sätzen.'],
+    try: 'Frag „Was frisst ein Welpe?“. Wovon borgt Tiny?',
+    vis: { type: 'tokens', items: [['Welpe', 'win'], ['≈', 'dim'], ['Hund', 's0'], ['frisst', ''], ['Fleisch', 'next']] }
+  },
+  wolke: {
+    title: 'Wortwolke', icon: '🌌', cat: 'meaning',
+    text: ['Jeder Punkt ist ein Wort. Nah beieinander liegen Wörter, die oft bei denselben Wörtern stehen (Hund und Katze stehen beide bei „frisst“ und „schläft“).',
+      'Eigentlich hat jedes Wort 20 Zahlen. Das Bild zeigt nur 3 davon – deshalb kann Nähe im Bild täuschen.'],
+    try: 'Tipp auf „Hund“. Welche Wörter liegen am nächsten?',
+    vis: { type: 'dots' }
+  },
+
   /* ---- Phase 3 ---- */
   p3: {
     title: 'Echtes Netz', icon: '🧠',

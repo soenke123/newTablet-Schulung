@@ -30,7 +30,7 @@
 (function () {
   'use strict';
 
-  const V = '20261112c';
+  const V = '20261112d';
 
   let root  = null;
   let frame = null;
@@ -44,7 +44,7 @@
   function data() { return (view && view.state && view.state.data) || {}; }
   function serverPhases() {
     const p = data().phases;
-    return Array.isArray(p) ? p.map(Number).filter(n => n >= 1 && n <= 3) : [1];
+    return Array.isArray(p) ? p.map(Number).filter(n => n >= 1 && n <= 4) : [1];
   }
   const currentPhases = () => phases || serverPhases();
 
@@ -129,7 +129,7 @@
         const m = e.data || {};
         if (m.type === 'tl:ready') { ready = true; lastSent = ''; post(); }
         else if (m.type === 'tl:phases' && isPresenter() && !ctx.preview && Array.isArray(m.phases)) {
-          setPhases(m.phases.map(Number).filter(n => n >= 1 && n <= 3));
+          setPhases(m.phases.map(Number).filter(n => n >= 1 && n <= 4));
         }
       };
       window.addEventListener('message', onMsg);

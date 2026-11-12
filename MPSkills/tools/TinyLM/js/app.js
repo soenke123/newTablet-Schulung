@@ -51,15 +51,21 @@ const App = (() => {
   const PHASE_META = {
     1: { label: 'Frei schreiben', icon: '✍️', sub: 'tiny · zählt Wörter' },
     2: { label: 'Frage & Antwort', icon: '💬', sub: 'tiny · sucht, dann schreibt es' },
-    3: { label: 'Echtes Netz', icon: '🧠', sub: 'tiny · echtes kleines Netz' }
+    3: { label: 'Echtes Netz', icon: '🧠', sub: 'tiny · echtes kleines Netz' },
+    4: { label: 'Wörter als Punkte', icon: '🌌', sub: 'tiny · sucht nach Bedeutung' }
   };
+  /* Reihenfolge der Reiter. Die Wortwolken-Phase hat intern die Nummer 4 (geteilte Räume speichern
+     data.phases mit diesen Nummern, „3“ bleibt so „Echtes Netz“), steht aber vor dem Netz und heißt
+     dort „Phase 3“. Angezeigt wird immer die Stelle in ORDER (shown). */
+  const ORDER = [1, 2, 4, 3];
+  const shown = n => ORDER.indexOf(n) + 1;
   const PHASE_STORE = 'tinylm-phase';
   const ROOM = (() => { const r = new URLSearchParams(location.search).get('raum'); return r === 'lehrer' || r === 'schueler' ? r : null; })();
   const TEACHER = ROOM === 'lehrer';
   const STUDENT = ROOM === 'schueler';
   /* Für die Klasse freigegebene Phasen. Schüler warten auf die erste Nachricht aus tool.js
      (bis dahin null = noch nicht bekannt). */
-  let classPhases = ROOM ? null : [1, 2, 3];
+  let classPhases = ROOM ? null : ORDER.slice();
   let waitEl = null, brandSub = null;
   /* Teilen-Symbol wie in den anderen Skills (How to Fachbegriffe, Balance of Nature). */
   const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="2.4"/><circle cx="18" cy="6" r="2.4"/><circle cx="18" cy="18" r="2.4"/><path d="M8.2 11l7.6-4M8.2 13l7.6 4"/></svg>';
@@ -68,7 +74,7 @@ const App = (() => {
   let tabs = {};
 
   function savedPhase() {
-    try { const n = parseInt(localStorage.getItem(PHASE_STORE), 10); return [1, 2, 3].includes(n) ? n : 1; }
+    try { const n = parseInt(localStorage.getItem(PHASE_STORE), 10); return ORDER.includes(n) ? n : 1; }
     catch (e) { return 1; }
   }
 
@@ -92,7 +98,7 @@ const App = (() => {
   const usable = n => !STUDENT || isOpenForClass(n);
 
   function updateTabs() {
-    [1, 2, 3].forEach(n => {
+    ORDER.forEach(n => {
       const t = tabs[n];
       if (!t) return;
       t.btn.classList.toggle('active', n === active);
@@ -103,7 +109,7 @@ const App = (() => {
         const on = isOpenForClass(n);
         t.share.classList.toggle('is-on', on);
         t.share.setAttribute('aria-pressed', on ? 'true' : 'false');
-        t.share.title = on ? 'Phase ' + n + ' ist mit der Klasse geteilt – antippen zum Entziehen' : 'Phase ' + n + ' mit der Klasse teilen';
+        t.share.title = on ? 'Phase ' + shown(n) + ' ist mit der Klasse geteilt – antippen zum Entziehen' : 'Phase ' + shown(n) + ' mit der Klasse teilen';
         t.share.setAttribute('aria-label', t.share.title);
       }
     });
@@ -115,7 +121,7 @@ const App = (() => {
     try { window.parent.postMessage(msg, location.origin); } catch (e) { /* Rahmen weg */ }
   }
   function setClassPhases(list, fromServer) {
-    classPhases = [1, 2, 3].filter(n => list.includes(n));
+    classPhases = ORDER.filter(n => list.includes(n));
     if (!fromServer) sendUp({ type: 'tl:phases', phases: classPhases });
     updateTabs();
     if (STUDENT) {
@@ -166,14 +172,14 @@ const App = (() => {
     phasesNav.setAttribute('role', 'tablist');
     phasesNav.setAttribute('aria-label', 'Phasen');
     tabs = {};
-    [1, 2, 3].forEach(n => {
+    ORDER.forEach(n => {
       const b = el('button', 'phase-btn');
       b.type = 'button';
       b.setAttribute('role', 'tab');
       const lab = el('span', 'phase-lab');
-      lab.append(el('span', 'phase-kicker', 'Phase ' + n), el('span', 'phase-name', PHASE_META[n].label));
+      lab.append(el('span', 'phase-kicker', 'Phase ' + shown(n)), el('span', 'phase-name', PHASE_META[n].label));
       b.dataset.n = String(n);
-      b.append(el('span', 'n', String(n)), lab);
+      b.append(el('span', 'n', String(shown(n))), lab);
       b.addEventListener('click', () => { if (usable(n)) goPhase(n); });
       phasesNav.appendChild(b);
       let share = null;
