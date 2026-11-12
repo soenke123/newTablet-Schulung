@@ -106,22 +106,22 @@ const HELP = {
   /* ---- Phase 3 „Wörter als Punkte“ (Prototyp 12.11.2026) ---- */
   p3: {
     title: 'Wörter als Punkte', icon: '🌌',
-    text: 'Jedes Wort ist hier ein Punkt aus Zahlen. Wörter, die in ähnlichen Sätzen stehen, liegen nah beieinander – damit sucht Tiny Texte und borgt Wörter.',
+    text: 'Jedes Wort ist hier ein Punkt aus Zahlen. Wörter, die in ähnlichen Sätzen stehen, liegen nah beieinander. Tiny schreibt weiter mit N-Grammen – aber es sucht die Texte über die Wolke und springt manchmal zu einem nahen Wort.',
     vis: { type: 'cycle', items: [['📚', 'Texte'], ['🔢', 'Punkte'], ['⭐', 'Frage'], ['💬', 'Antwort']] }
   },
   bedeutung: {
     title: 'Frage als Punkt', icon: '⭐', cat: 'ask',
     text: ['Die Wörter deiner Frage sind Punkte. Ihre Mitte ist der Punkt der Frage. Jeder Text ist auch ein Punkt – die Mitte seiner Wörter.',
-      'Tiny nimmt die 3 Texte, die am nächsten liegen. Daneben siehst du, was die Stichwortsuche aus Phase 2 genommen hätte.'],
-    try: 'Frag „Wie lange dauert eine Reise zum Mars?“ und vergleiche beide Listen.',
+      'Tiny nimmt die 3 Texte, die am nächsten liegen, und schreibt daraus.'],
+    try: 'Frag „Wie lange dauert eine Reise zum Mars?“. Welche Texte liegen nah?',
     vis: { type: 'dots' }
   },
-  geborgt: {
-    title: 'Geborgt', icon: '🔁', cat: 'meaning',
-    text: ['Steht eine Wortfolge in keinem Text, tauscht Tiny ein Wort gegen eines, das in der Wolke nah liegt – und nimmt, was dort dahinter stand.',
-      'Das klappt oft („Welpe ≈ Hund“), manchmal aber auch nicht. Nah heißt nur: steht in ähnlichen Sätzen.'],
-    try: 'Frag „Was frisst ein Welpe?“. Wovon borgt Tiny?',
-    vis: { type: 'tokens', items: [['Welpe', 'win'], ['≈', 'dim'], ['Hund', 's0'], ['frisst', ''], ['Fleisch', 'next']] }
+  sprung: {
+    title: 'Wolken-Sprung', icon: '🦘', cat: 'meaning',
+    text: ['Das N-Gramm zieht ein Wort, zum Beispiel „Katze“. Dann schaut Tiny in der Wolke, welche Wörter nah liegen, und springt manchmal hinüber – zu „Hund“. Nicht weil das so im Text steht, sondern weil es in der Wolke nah liegt.',
+      'Der Regler sagt, wie gern Tiny springt: 0 = nie, weiter rechts = öfter und auch zu weiter entfernten Wörtern. Echte Sprachmodelle machen das von selbst: Ähnliche Wörter bekommen ähnliche Chancen.'],
+    try: 'Stell den Regler auf 0 und frag etwas. Dann schieb ihn nach rechts und frag nochmal.',
+    vis: { type: 'tokens', items: [['Katze', 'win'], ['→', 'dim'], ['Hund', 's0'], ['bellt', 'next']] }
   },
   wolke: {
     title: 'Wortwolke', icon: '🌌', cat: 'meaning',

@@ -1,24 +1,26 @@
 /* Phase „Wörter als Punkte“ (Prototyp 12.11.2026, js/phase3.js). */
 .p3-proto { margin: 8px 2px 0; font-size: 0.78rem; color: var(--muted); text-align: center; }
 
-/* Geborgte Wörter im Handy: erst sichtbar, wenn die Spalte „Geborgt“ offen ist. */
-.phone.show-borrow .srcword.borrowed { outline: 2px dashed var(--cat-meaning); outline-offset: 2px; }
+/* Wolken-Sprünge im Handy: erst sichtbar, wenn die Spalte „Wolken-Sprung“ offen ist. */
+.phone.show-jump .srcword.jumped { outline: 2px dashed var(--cat-meaning); outline-offset: 2px; }
 .phone .srcword.farword { opacity: 0.85; }
 
-/* Bedeutung gegen Stichwort */
-.p3-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
-@media (max-width: 560px) { .p3-vs { grid-template-columns: 1fr; } }
-.p3-vs-col { min-width: 0; }
+/* Frage als Punkt: die nächsten Texte */
+.p3-ranks { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }
 .p3-rank { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; font-size: 0.84rem; opacity: 0.6; }
 .p3-rank.on { opacity: 1; background: var(--soft); }
 .p3-rank-t { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
 .p3-rank-n { font-family: var(--font-mono, monospace); font-size: 0.75rem; color: var(--muted); }
 
-/* Geborgt */
-.p3-borrow { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; margin-top: 8px; cursor: pointer; background: var(--surface); }
-.p3-borrow.on { border-color: var(--cat-meaning); box-shadow: 0 0 0 3px var(--cat-meaning-tint); }
-.p3-borrow .p1-line { margin: 2px 0; }
+/* Wolken-Sprung */
+.p3-jump { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; margin-top: 8px; cursor: pointer; background: var(--surface); }
+.p3-jump.on { border-color: var(--cat-meaning); box-shadow: 0 0 0 3px var(--cat-meaning-tint); }
+.p3-jump .p1-line { margin: 2px 0; }
+.p3-jump .clist { margin: 4px 0; }
+.p3-jump .crow { grid-template-columns: minmax(4rem, 7rem) 3.6rem minmax(0, 1fr) 2.6rem; }
+.p3-sim { font-family: var(--font-mono, monospace); font-size: 0.72rem; color: var(--muted); }
 .p3-took { color: var(--cat-candidates); }
+.p3-jumpline { margin-top: 6px; }
 
 /* 3D-Wolke */
 .p3-cloud { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 12px; align-items: start; }

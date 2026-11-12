@@ -5,19 +5,29 @@
    verdichtet (Eigenvektoren der Ähnlichkeitsmatrix). Gemessen 12.11.2026 mit der Gruppen-Probe
    (Tiere/Himmel/Personen/Futter): 59 % der 5 nächsten Nachbarn aus derselben Gruppe.
 
-   Darauf zwei Dinge, die Tiny damit macht:
+   Darauf drei Dinge, die Tiny damit macht:
    - search(W, frage): die Frage wird ein Punkt (Mittel ihrer Wörter), die Texte sind Punkte (Mittel
      ihrer Wörter) — gewählt werden die Texte mit dem kleinsten Winkel zur Frage.
    - borrow(…): steht die Wortfolge so in keinem Text, tauscht Tiny ein Wort der Folge gegen einen
      nahen Punkt in der Wolke und schaut, was DANN dahinter stand („Welpe frisst“ → „Hund frisst“).
      Bewusst NICHT: das nächste Wort als nächsten Nachbarn nehmen (Nähe = kann an derselben Stelle
      stehen, nicht = kommt danach).
+   - jumpOptions(…): der WOLKEN-SPRUNG (Sönke 12.11.2026). Das N-Gramm hat ein Wort gezogen (Katze);
+     mit dem Regler „Wolken-Sprung“ springt Tiny manchmal zu einem nahen Punkt derselben Art (Hund) –
+     nicht weil ein N-Gramm dazu passt, sondern weil es in der Wolke nah liegt. Gewicht je Möglichkeit
+     e^((Nähe − 1) / Sprung), das Wort selbst hat Nähe 1: Sprung 0 = bleibt immer, groß = springt oft,
+     auch weit. Wie die Temperatur, nur über die Nähe in der Wolke. In echten Netzen passiert das von
+     selbst (ähnliche Wörter bekommen ähnliche Wahrscheinlichkeit); früher machten N-Gramm-Modelle es
+     so ausdrücklich („class-based“ / „similarity-based smoothing“).
 
    Wolke.build(texts) -> W  { words, idx, emb, xyz, kind, theme, neighbors(w,k), sim(a,b), resolve(raw),
                               shared(a,b,k), keep3 }  (Wörter klein geschrieben, wie im Text) */
 const Wolke = (() => {
   const DIMS = 20;
   const WIN = 4;
+  const ART_DEF = ['der', 'die', 'das', 'dem', 'den', 'des'];
+  const ART_INDEF = ['ein', 'eine', 'einen', 'einem', 'einer', 'eines'];
+  const ART_ALL = new Set(ART_DEF.concat(ART_INDEF));
 
   function denseEmb(sim, n, k) {
     k = Math.min(k, n);
@@ -114,7 +124,18 @@ const Wolke = (() => {
       const near = new Set([...Array(n).keys()].filter(j => j !== i).sort((a, b) => d3(a) - d3(b)).slice(0, 10));
       top.forEach(j => { tot++; if (near.has(j)) hit++; });
     }
-    return { words: M.words, idx, emb: E, xyz, kind, theme, neighbors, sim, resolve, shared, keep3: tot ? hit / tot : 0, dims: DIMS };
+    /* Welche Artikel stehen in den Texten direkt vor einem Nomen? (für den Wolken-Sprung: die Katze → der Hund) */
+    const arts = new Map();
+    texts.forEach(t => {
+      const tk = tokenize(t.body);
+      for (let k = 0; k + 1 < tk.length; k++) {
+        if (!ART_ALL.has(tk[k].t) || !idx.has(tk[k + 1].t)) continue;
+        let m = arts.get(tk[k + 1].t);
+        if (!m) { m = new Map(); arts.set(tk[k + 1].t, m); }
+        m.set(tk[k].t, (m.get(tk[k].t) || 0) + 1);
+      }
+    });
+    return { words: M.words, idx, emb: E, xyz, kind, theme, neighbors, sim, resolve, shared, arts, keep3: tot ? hit / tot : 0, dims: DIMS };
   }
 
   /* Texte als Punkte: Mittel der Wort-Punkte, die im Text vorkommen (Füllwörter sind keine Punkte). */
@@ -176,13 +197,14 @@ const Wolke = (() => {
   const SIM_MIN = 0.35;
   /* session.sources = erst die nTop gefundenen Texte, dahinter alle übrigen. Geschrieben wird nur aus
      den gefundenen; geborgt wird zuerst dort, sonst aus allen Texten (borrow.wide). */
-  function candidatesWithCloud(W, session, n, temp, nTop) {
+  function candidatesWithCloud(W, session, n, temp, nTop, opt) {
+    opt = opt || {};
     nTop = nTop || session.sources.length;
     const top = session.sources.slice(0, nTop);
     const C = candidates({ sources: top, ctx: session.ctx, used: session.used }, n, temp);
     const ctx = session.ctx;
     const maxK = Math.min(n, ctx.length);
-    if (C.uni || C.level >= maxK) return C;
+    if (C.uni || C.level >= maxK || opt.borrow === false) return wideIfStuck(C, session, n, temp, top);
     for (let k = maxK; k > C.level; k--) {
       const tail = ctx.slice(-k);
       let best = null;
@@ -191,7 +213,7 @@ const Wolke = (() => {
         const i = W.idx.get(w);
         /* Nur Nomen tauschen (Welpe ≈ Hund). Verben zu tauschen änderte den Sinn zu stark
            („arbeitet“ ≈ „beginnt“ → „Die Tierärztin arbeitet um acht Uhr“). */
-        if (i == null || STOP.has(w) || W.kind[i] !== 'nomen') return;
+        if (i == null || STOP.has(w) || W.kind[i] !== 'nomen' || (opt.noSwap && opt.noSwap.has(w))) return;
         W.neighbors(w, 6, j => W.kind[j] === 'nomen').forEach(([v, s]) => {
           if (s < SIM_MIN || (best && best.sim >= s)) return;
           const t2 = tail.slice(); t2[pos] = v;
@@ -215,14 +237,50 @@ const Wolke = (() => {
       if (t <= 0.001) list.forEach((a, i) => { a.p = i === 0 ? 1 : 0; }); else list.forEach(a => { a.p = a.s / sum; });
       return { level: k, n, uni: false, list, borrow: { from: best.from, to: best.to, sim: best.sim, k, tail2: best.tail2, wide: best.wide, plain: C } };
     }
-    /* Mitten im Satz gar nichts gefunden (sonst springt Tiny auf einen Satzanfang: „arbeitet Wenn es …“):
-       dann die Wortfolge in allen Texten suchen, ohne Tausch. */
-    if (C.level === 0 && ctx[ctx.length - 1] !== '.' && session.sources.length > top.length) {
+    return wideIfStuck(C, session, n, temp, top);
+  }
+  /* Mitten im Satz gar nichts gefunden (sonst springt Tiny auf einen Satzanfang: „arbeitet Wenn es …“):
+     dann die Wortfolge in allen Texten suchen, ohne Tausch. */
+  function wideIfStuck(C, session, n, temp, top) {
+    const ctx = session.ctx;
+    if (!C.uni && C.level === 0 && ctx[ctx.length - 1] !== '.' && session.sources.length > top.length) {
       const Cw = candidates(session, n, temp);
       if (Cw.level > 0) { Cw.wide = true; return Cw; }
     }
     return C;
   }
 
-  return { build, docPoints, search, pointNear, seedFrom, candidatesWithCloud, SIM_MIN, DIMS };
+  /* Wolken-Sprung: Möglichkeiten für das gezogene Wort — es selbst (bleibt) und bis zu JUMP_K nahe Punkte
+     derselben Art (Nähe ≥ SIM_MIN). Keine Formen desselben Worts (Hund → Hunde, frisst → fressen bringt
+     nichts), Verben nur mit derselben Endung (frisst → schläft, nicht → schlafen), sonst passt der Satz nicht.
+     null = das Wort ist kein Punkt oder der Regler steht auf 0. */
+  const JUMP_K = 5;
+  const endCls = w => /en$/.test(w) ? 'en' : /te$/.test(w) ? 'te' : /t$/.test(w) ? 't' : /e$/.test(w) ? 'e' : 'x';
+  const sameStem = (a, b) => a.length >= 4 && b.length >= 4 && (a.startsWith(b.slice(0, 4)) || b.startsWith(a.slice(0, 4)));
+  function jumpOptions(W, word, jump) {
+    const i = W.idx.get(word);
+    if (i == null || !(jump > 0.001)) return null;
+    const kind = W.kind[i];
+    const nb = W.neighbors(word, 40, j => W.kind[j] === kind)
+      .filter(([v, s]) => s >= SIM_MIN && !sameStem(v, word) && (kind !== 'verb' || endCls(v) === endCls(word)))
+      .slice(0, JUMP_K);
+    if (!nb.length) return null;
+    const opts = [{ word, sim: 1, stay: true }].concat(nb.map(([v, s]) => ({ word: v, sim: s, stay: false })));
+    let sum = 0;
+    opts.forEach(o => { o.w = Math.exp((o.sim - 1) / jump); sum += o.w; });
+    opts.forEach(o => { o.p = o.w / sum; });
+    return opts;
+  }
+  /* Artikel passend zum neuen Nomen: steht „die“ vor Hund nie, nimm den Artikel derselben Sorte
+     (bestimmt/unbestimmt), der in den Texten am häufigsten vor Hund steht. null = passt schon/unbekannt. */
+  function fixArticle(W, art, noun) {
+    const fam = ART_DEF.includes(art) ? ART_DEF : ART_INDEF.includes(art) ? ART_INDEF : null;
+    const m = fam && W.arts.get(noun);
+    if (!m || m.get(art)) return null;
+    let best = null, bc = 0;
+    fam.forEach(a => { const c = m.get(a) || 0; if (c > bc) { bc = c; best = a; } });
+    return best;
+  }
+
+  return { build, docPoints, search, pointNear, seedFrom, candidatesWithCloud, jumpOptions, fixArticle, SIM_MIN, DIMS };
 })();
