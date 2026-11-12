@@ -38,3 +38,15 @@
 .p3-nb:hover { background: var(--soft); }
 .p3-honest { margin: 10px 2px 0; font-size: 0.86rem; color: var(--muted); }
 .p3-honest b { color: var(--ink); }
+
+/* Wolken-Sprung = ein Reiter: links die Sprünge, rechts die Wolke (Sönke 12.11.2026). */
+.p3-wolke { display: grid; grid-template-columns: minmax(250px, 330px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.p3-jumps { min-width: 0; }
+.p3-jumps > .p3-jump:first-child, .p3-jumps > .p1-sub:first-child { margin-top: 0; }
+.p3-cloudhost { min-width: 0; }
+.p3-cloudhost .p3-cloud { grid-template-columns: minmax(0, 1fr) 200px; }
+@media (max-width: 1240px) { .p3-cloudhost .p3-cloud { grid-template-columns: 1fr; } }
+@media (max-width: 980px) { .p3-wolke { grid-template-columns: 1fr; } }
+@media (min-width: 981px) { .p3-jumps { max-height: 520px; overflow-y: auto; padding-right: 4px; } }
+.p3-wolke:has(> .p3-jumps:empty) { grid-template-columns: 1fr; }
+.p3-jumps:empty { display: none; }

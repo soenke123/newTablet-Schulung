@@ -151,13 +151,15 @@ const Zerlegen = (() => {
       taken.get(st.si).add(st.pos);
     });
     if (o.all) session.sources.forEach((s, si) => { if (!taken.has(si)) taken.set(si, new Set()); });
+    /* o.always: diese Quellen immer listen (Phase 3: A · B · C, dazu weitere benutzte Texte). */
+    if (o.always) o.always.forEach(si => { if (!taken.has(si)) taken.set(si, new Set()); });
     if (!taken.size) { box.appendChild(el('p', 'card-empty', 'Noch kein Token genommen.')); return box; }
     const total = [...taken.values()].reduce((a, t) => a + t.size, 0);
     const usedN = [...taken.values()].filter(t => t.size).length;
     box.appendChild(el('p', 'p1-sub', o.head || (total + ' Token aus ' + usedN + (usedN === 1 ? ' Quelle' : ' Quellen'))));
     const max = Math.max(1, ...[...taken.values()].map(t => t.size));
     const order = [...taken.entries()];
-    if (o.all) order.sort((a, b) => a[0] - b[0]); else order.sort((a, b) => b[1].size - a[1].size);
+    if (o.all || o.always) order.sort((a, b) => a[0] - b[0]); else order.sort((a, b) => b[1].size - a[1].size);
     order.forEach(([si, set]) => {
       const s = session.sources[si];
       const open = o.state.open === si;
