@@ -1,6 +1,6 @@
-/* Vokabular + Trainingspaare für das echte Mini-Netz (Phase 3). Voller Tokenstrom (inkl. Stopwörter/Satzzeichen),
-   Frequenz-gekappt + <unk> für den Rest. Kontextlänge C ist vor dem Training fix (siehe phase3.js). */
-function buildPhase3Data(texts, opts) {
+/* Vokabular + Trainingspaare für das echte Mini-Netz (Phase 4). Voller Tokenstrom (inkl. Stopwörter/Satzzeichen),
+   Frequenz-gekappt + <unk> für den Rest. Kontextlänge C ist vor dem Training fix (siehe phase4.js). */
+function buildPhase4Data(texts, opts) {
   const o = Object.assign({ vocabCap: 600, C: 3 }, opts || {});
   const UNK = '<unk>';
   const docs = texts.map(t => tokenize(t.body));

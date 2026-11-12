@@ -6,7 +6,7 @@ const State = (() => {
 
   const selectedIds = new Set();
   let corpusVersion = 0;
-  let phase3Dirty = true;
+  let phase4Dirty = true;
   let activePhase = 1;
   let rebuildTimer = null;
 
@@ -21,7 +21,7 @@ const State = (() => {
 
   function scheduleRebuild() {
     corpusVersion++;
-    phase3Dirty = true;
+    phase4Dirty = true;
     if (rebuildTimer) clearTimeout(rebuildTimer);
     rebuildTimer = setTimeout(() => {
       rebuildTimer = null;
@@ -77,8 +77,8 @@ const State = (() => {
     toggleText, setWorld, addOwnText, removeOwnText, updateText, resetText,
     scheduleRebuild,
     get corpusVersion() { return corpusVersion; },
-    get phase3Dirty() { return phase3Dirty; },
-    clearPhase3Dirty() { phase3Dirty = false; },
+    get phase4Dirty() { return phase4Dirty; },
+    clearPhase4Dirty() { phase4Dirty = false; },
     get activePhase() { return activePhase; },
     setActivePhase
   };

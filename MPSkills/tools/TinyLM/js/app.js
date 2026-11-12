@@ -35,7 +35,7 @@ function tinyEl(mood, cls) {
   return t;
 }
 
-/* Phasen registrieren sich selbst (phase1.js/phase2.js/phase3.js rufen Phases.register(...) auf,
+/* Phasen registrieren sich selbst (phase1.js … phase4.js rufen Phases.register(...) auf,
    sobald sie geladen sind). mount(host) läuft genau EINMAL je Phase und gibt eine kleine
    Schnittstelle zurück: { reveal(kartenId), onShow(), onHide() }. Beim Wechsel wird die Phase nur
    versteckt, nicht abgebaut — so bleiben geschriebener Text, Frage und vor allem das trainierte
@@ -51,13 +51,11 @@ const App = (() => {
   const PHASE_META = {
     1: { label: 'Frei schreiben', icon: '✍️', sub: 'tiny · zählt Wörter' },
     2: { label: 'Frage & Antwort', icon: '💬', sub: 'tiny · sucht, dann schreibt es' },
-    3: { label: 'Echtes Netz', icon: '🧠', sub: 'tiny · echtes kleines Netz' },
-    4: { label: 'Wörter als Punkte', icon: '🌌', sub: 'tiny · sucht nach Bedeutung' }
+    3: { label: 'Wörter als Punkte', icon: '🌌', sub: 'tiny · sucht nach Bedeutung' },
+    4: { label: 'Echtes Netz', icon: '🧠', sub: 'tiny · echtes kleines Netz' }
   };
-  /* Reihenfolge der Reiter. Die Wortwolken-Phase hat intern die Nummer 4 (geteilte Räume speichern
-     data.phases mit diesen Nummern, „3“ bleibt so „Echtes Netz“), steht aber vor dem Netz und heißt
-     dort „Phase 3“. Angezeigt wird immer die Stelle in ORDER (shown). */
-  const ORDER = [1, 2, 4, 3];
+  /* Reihenfolge der Reiter = Nummern (seit 12.11.2026: 3 = Wörter als Punkte, 4 = Echtes Netz). */
+  const ORDER = [1, 2, 3, 4];
   const shown = n => ORDER.indexOf(n) + 1;
   const PHASE_STORE = 'tinylm-phase';
   const ROOM = (() => { const r = new URLSearchParams(location.search).get('raum'); return r === 'lehrer' || r === 'schueler' ? r : null; })();
@@ -517,7 +515,7 @@ const App = (() => {
     h.appendChild(el('span', 'drawer-ico', '📚'));
     const ht = el('div');
     ht.appendChild(el('h2', null, 'Was soll die KI lernen?'));
-    ht.appendChild(el('p', null, 'Haken = dieser Text füttert die KI. Gilt für alle drei Phasen.'));
+    ht.appendChild(el('p', null, 'Haken = dieser Text füttert die KI. Gilt für alle Phasen.'));
     h.append(ht, Help.btn('textwelten'));
     head.appendChild(h);
     const closeBtn = el('button', 'btn', 'Fertig');

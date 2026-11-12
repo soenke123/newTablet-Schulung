@@ -96,8 +96,8 @@ const HELP = {
     vis: { type: 'dots' }
   },
 
-  /* ---- Phase „Wörter als Punkte“ (intern 4, angezeigt als Phase 3; Prototyp 12.11.2026) ---- */
-  p4: {
+  /* ---- Phase 3 „Wörter als Punkte“ (Prototyp 12.11.2026) ---- */
+  p3: {
     title: 'Wörter als Punkte', icon: '🌌',
     text: 'Jedes Wort ist hier ein Punkt aus Zahlen. Wörter, die in ähnlichen Sätzen stehen, liegen nah beieinander – damit sucht Tiny Texte und borgt Wörter.',
     vis: { type: 'cycle', items: [['📚', 'Texte'], ['🔢', 'Punkte'], ['⭐', 'Frage'], ['💬', 'Antwort']] }
@@ -124,8 +124,8 @@ const HELP = {
     vis: { type: 'dots' }
   },
 
-  /* ---- Phase 3 ---- */
-  p3: {
+  /* ---- Phase 4 (Echtes Netz) ---- */
+  p4: {
     title: 'Echtes Netz', icon: '🧠',
     text: 'Hier wird nichts nachgeschlagen. Das Netz merkt sich beim Training nur Zahlen – die Texte selbst sind danach weg.',
     vis: { type: 'cycle', items: [['📚', 'Texte'], ['🔢', 'Zahlen'], ['🧠', 'Netz'], ['💬', 'Wort']] }

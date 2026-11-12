@@ -1,5 +1,5 @@
 /* Handgebautes Mini-Netz: Embedding -> Concat -> Hidden (tanh) -> Softmax. Bengio-2003-Stil, bewusst ohne Attention.
-   Zeitgeschedultes Training (trainBudget) läuft in phase3.js über requestAnimationFrame.
+   Zeitgeschedultes Training (trainBudget) läuft in phase4.js über requestAnimationFrame.
    Lernrate: am Anfang groß (schnell bergab), dann immer kleiner (lrAt). Mit fester Lernrate 0,08
    blieb der Fehler bei etwa 2,1 hängen und stieg danach sogar wieder — die Schritte waren zu grob,
    um die feinen Unterschiede zwischen den Wortfolgen zu lernen. Jetzt 0,15 → nach 4 Durchgängen halb

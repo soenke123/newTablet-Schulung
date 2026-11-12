@@ -1,736 +1,510 @@
-/* Phase 3: echtes neuronales Netz — „Handy + Zerlegen“ wie Phase 1 (Sönke 02.11.2026).
+/* Phase 3 „Wörter als Punkte“ — PROTOTYP (12.11.2026). Steht zwischen Frage & Antwort und Echtes Netz
+   (Phase 4, phase4.js). Bis 12.11.2026 hieß das Netz Phase 3 — Datei, Nummer und Speicher-Schlüssel
+   sind seitdem umgezogen (es gab noch keine Räume, die Phase 3 geteilt hatten).
 
-   Links das HANDY: Tiny sagt Wort für Wort vorher (Bausteine alle gleich gefärbt — das Netz weiß
-   nicht mehr, aus welchem Text ein Wort kommt), Tiny sagt, wie es um das Netz steht, darunter
-   ▶ Vorhersagen · +1 Wort · ↺. Rechts oben breit das TRAINING (zu Beginn offen: ohne Training
-   rät das Netz nur), darunter dieselben drei Spalten wie in Phase 1/2 (gleiche Plätze, Farben):
-     Kandidaten     (③ Prozent für jedes Wort — Temperatur im festen Kopf)
-     Embedding      (① was das Netz sieht — Wahl 3 · 4 · 5 Wörter im festen Kopf)
-     Hidden-Schicht (② die Neuronen)
-   und unten breit „Das Netz von innen“ (netview.js).
-
-   Erst aufklappen, dann im Handy sichtbar (wie Phase 1):
-     Embedding      → die letzten Token, die das Netz sieht, sind umrandet
-     Kandidaten     → „?“-Baustein für das nächste Wort, Tiny sagt, was am ehesten kommt
-     Hidden-Schicht → eine Leiste mit den Neuronen im Handy
-   Ein Wort im Handy antippen = genau diesen Schritt zerlegen: je Wort merkt sich doGenStep, was das
-   Netz damals sah und rechnete (ctxIds, logits, h). Offen/zu je Gerät in tinylm-p3-offen.
-
-   WICHTIG — Live-Regel: Der Trainings-Tick frischt die Anzeige mehrmals pro Sekunde auf. Er baut
-   nur die Inhalte der Spalten neu (dort gibt es nichts anzutippen), nie Knöpfe oder Regler: der
-   Trainings-Knopf, die Temperatur und die Wahl 3 · 4 · 5 sitzen in festen Köpfen (.p1-col-tools),
-   live.train ändert nur Zahlen und die Fehlerlinie, syncTrainUI nur Text/Klassen des Knopfs, der
-   Banner „Du zerlegst …“ wird beim Tick nicht angefasst. (Ein Element, das zwischen pointerdown und
-   pointerup ersetzt wird, bekommt nie seinen click — so ließ sich das Training einmal nicht anhalten.)
-   Jede Kontextlänge ist ein eigenes Netz; die drei Netze bleiben nebeneinander (slots), erst eine
-   neue Textauswahl („Netz neu bauen“) wirft sie weg. Wahl gemerkt in localStorage tinylm-p3-kontext. */
-const P3_CTX = [3, 4, 5];
-const P3_CTX_KEY = 'tinylm-p3-kontext';
-function deInt(n) { return n.toLocaleString('de-DE'); }
-function valueColor(v, scale) {
-  const t = Math.max(-1, Math.min(1, v / scale));
-  return t >= 0
-    ? 'color-mix(in srgb, var(--src-a) ' + Math.round(t * 100) + '%, var(--surface))'
-    : 'color-mix(in srgb, var(--src-b) ' + Math.round(-t * 100) + '%, var(--surface))';
-}
-function renderSwatch(values, scale) {
-  const row = el('div', 'swatchrow');
-  row.style.setProperty('--cols', String(Math.min(values.length, 20)));
-  values.forEach(v => {
-    const cell = el('span', 'swatchcell');
-    cell.style.background = valueColor(v, scale);
-    cell.title = v.toFixed(3);
-    row.appendChild(cell);
-  });
-  return row;
-}
-function renderSparkline(history, w, h) {
-  const ns = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(ns, 'svg');
-  svg.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
-  svg.setAttribute('class', 'sparkline');
-  svg.setAttribute('preserveAspectRatio', 'none');
-  if (history.length < 2) return svg;
-  /* Geglättet (gleitender Mittelwert): jeder Punkt ist der Schnitt über ein paar Millisekunden
-     zufälliger Beispiele und springt deshalb stark — die Richtung soll man aber sehen. */
-  const sm = [];
-  let acc = history[0];
-  history.forEach(v => { acc = acc * 0.85 + v * 0.15; sm.push(acc); });
-  history = sm;
-  const mn = Math.min(...history), mx = Math.max(...history);
-  const range = (mx - mn) || 1;
-  const pts = history.map((v, i) => (i / (history.length - 1)) * w + ',' + (h - ((v - mn) / range) * (h - 6) - 3)).join(' ');
-  const poly = document.createElementNS(ns, 'polyline');
-  poly.setAttribute('points', pts);
-  poly.setAttribute('fill', 'none');
-  poly.setAttribute('stroke', 'var(--cat-train)');
-  poly.setAttribute('stroke-width', '2.5');
-  poly.setAttribute('stroke-linejoin', 'round');
-  poly.setAttribute('vector-effect', 'non-scaling-stroke');
-  svg.appendChild(poly);
-  return svg;
-}
+   Links das Handy wie in Phase 2 (Frage stellen → Antwort als Bausteine, danach Knöpfe wie Phase 1).
+   Unterschied zu Phase 2 — Tiny benutzt die WORTWOLKE (wolke.js):
+     1. Die Frage wird ein Punkt; gewählt werden die 3 Texte, die ihr am nächsten liegen
+        (statt Stichwörter zu zählen).
+     2. Fängt die Antwort mit dem Fragewort an („Ein Welpe frisst …“) und steht die Wortfolge in keinem
+        Text, tauscht Tiny das Wort gegen einen nahen Punkt („Welpe ≈ Hund“) und nimmt, was dort
+        dahinter stand. Diese Wörter heißen „geborgt“.
+   Rechts: Kandidaten · Frage als Punkt (Bedeutung gegen Stichwort) · Geborgt, darunter breit die
+   3D-Wolke zum Drehen (ehrlicher Hinweis: eigentlich 20 Zahlen je Wort). */
+const P3_SUGGEST = ['Was frisst ein Welpe?', 'Wo schläft ein Welpe?', 'Wie lange dauert eine Reise zum Mars?', 'Was lernt ein Programm?', 'Wo arbeitet eine Tierärztin?'];
+const P3_N = 3;
 
 Phases.register(3, {
   mount(host) {
-    let data, net, genSession, lastForward, netView = null;
-    let temp = 1, training = false, trainRAF = null, lastUIRefresh = 0;
-    let genPlaying = false, genTimer = null;
-    let textEl, cursor, screen, genPlayBtn, bannerEl, placeholder, sayEl, focusHost, neuronHost;
-    let phoneEl = null, Z = null;
-    let focus = null;   /* null = nächstes Wort, sonst Index in genSession.steps */
-    let trainToggle, trainDot, trainLab;
-    const slots = {};   /* Kontextlänge -> { data, net, genSession, version }: je ein Netz pro Fenster */
-    let builtVersion = 0;
-    let cardTrain = null;
-    let ctxLen = 3;
-    try { const v = Number(localStorage.getItem(P3_CTX_KEY)); if (P3_CTX.includes(v)) ctxLen = v; } catch (e) { /* ohne Speicher: 3 */ }
-    function saveSlot() {
-      if (data && net) slots[ctxLen] = { data, net, genSession, version: builtVersion };
-    }
-    const live = {};  /* train / net: Auffrisch-Funktionen, die nur Zahlen und Bilder ändern */
+    let W = null, docs = null, Mkw = null;
+    let R = null, KW = null, session = null, asked = false, seedLen = 0;
+    let temp = 1, playing = false, timer = null, done = false, focus = null;
+    let Z, phoneEl, screen, placeholder, askedEl, answerEl, metaEl, textEl, cursor, askBox, sayBox, sayEl, controls, playBtn, input, focusHost;
+    let cloud = null;
+    const NTOP = 3;
+    const srcVar = i => 'var(--src-' + ['a', 'b', 'c'][i] + ')';
     const isPunct = w => w === '.' || w === ',';
-    const fmtP = p => p >= 0.005 ? Math.round(p * 100) + ' %' : '<1 %';
+    const pct = x => Math.round(x * 100) + ' %';
+    /* Nomen groß, alles andere klein (Verben aus der Wolke nicht „Frisst“). */
+    const cap = w => (W && W.idx.has(w) && W.kind[W.idx.get(w)] === 'nomen') ? showWord(w) : w;
+    const phrase = ws => { const t = ws.filter(w => !isPunct(w)).map(cap).join(' '); return t.charAt(0).toUpperCase() + t.slice(1); };
 
-    function freshGenSession() {
-      const startId = data.toId('.');
-      return { ctxIds: Array(data.C).fill(startId), words: [], steps: [], sentences: 0 };
+    function ensureModel() {
+      if (W) return;
+      const texts = State.activeTexts();
+      W = texts.length ? Wolke.build(texts) : null;
+      docs = W ? Wolke.docPoints(W, texts) : [];
+      Mkw = texts.length ? buildModel(texts) : null;
     }
 
-    function wordLabel(w) { return w === data.UNK ? '[unbekannt]' : (w === '.' ? '(Satzende)' : showWord(w)); }
-    function tokLabel(w) { return w === data.UNK ? '…' : w === '.' ? '·' : w === ',' ? ',' : data.display(w); }
+    /* ---------------- Fragen und Schreiben ---------------- */
+    function ask(q) {
+      q = (q || '').trim();
+      ensureModel();
+      if (!q || !W) return;
+      stopPlay();
+      asked = true; done = false; focus = null;
+      R = Wolke.search(W, docs, q);
+      R.question = q;
+      KW = Mkw ? retrieve(Mkw, q) : null;
+      const top = R.ranked.slice(0, NTOP).map(r => r.text);
+      const rest = State.activeTexts().filter(t => !top.includes(t));
+      session = createSession(buildSources(top.concat(rest), () => 1, () => new Map()));
+      /* Neue Sätze lieber mit einem Satz, in dem ein Wort der Frage steht (wie Phase 2). */
+      const qset = new Set(R.qwords.filter(x => x.w).map(x => x.w));
+      session.sources.forEach(s => {
+        const rel = new Map();
+        s.toks.forEach(t => { if (qset.has(t.t)) rel.set(t.sent, 1); });
+        s.sentRel = rel;
+      });
+      const seed = Wolke.seedFrom(q);
+      seedLen = 0;
+      if (seed) seed.forEach(w => { session.steps.push({ word: w.toLowerCase(), raw: w, si: -1, seed: true, cands: null }); session.ctx.push(w.toLowerCase()); seedLen++; });
+      placeholder.hidden = true;
+      askedEl.textContent = q;
+      askedEl.hidden = false;
+      answerEl.hidden = false;
+      askBox.hidden = true; sayBox.hidden = false; controls.hidden = false;
+      metaEl.replaceChildren(el('span', 'chat-found', top.length + ' Texte in der Nähe gefunden'));
+      paintAll();
+      if (cloud) cloud.redraw();
+      startPlay();
+    }
 
-    /* Was die Spalten zeigen: das nächste Wort oder ein angetipptes (mit den Zahlen von damals). */
-    function view() {
-      if (focus != null && genSession.steps[focus]) {
-        const st = genSession.steps[focus];
-        return { idx: focus, ctxIds: st.ctxIds, logits: st.logits, h: st.h, chosen: st.id };
-      }
-      return { idx: null, ctxIds: genSession.ctxIds, logits: lastForward.logits, h: lastForward.h, chosen: null };
+    function doStep() {
+      if (!session) return false;
+      focus = null;
+      const C = Wolke.candidatesWithCloud(W, session, P3_N, temp, NTOP);
+      if (!C.list.length) { done = true; return false; }
+      const cand = temp === 0 ? C.list[0] : pickFrom(C.list);
+      commitWord(session, cand, C);
+      paintAll();
+      if (session.sentences >= 2 || session.steps.length >= 60) { done = true; return false; }
+      return true;
+    }
+    function syncPlay() {
+      if (!playBtn) return;
+      playBtn.textContent = playing ? '❚❚ Pause' : '▶ Weiter';
+      playBtn.classList.toggle('playing', playing);
+      say();
+    }
+    function startPlay() {
+      if (playing || !session) return;
+      playing = true; syncPlay();
+      timer = setInterval(() => { if (!doStep()) stopPlay(); }, 480);
+    }
+    function stopPlay() {
+      playing = false;
+      if (timer) { clearInterval(timer); timer = null; }
+      syncPlay();
+    }
+    function borrowedSteps() { return session ? session.steps.map((st, i) => ({ st, i })).filter(x => x.st.cands && x.st.cands.borrow) : []; }
+    function say() {
+      if (!sayEl || !asked) return;
+      const nb = borrowedSteps().length;
+      if (playing) sayEl.textContent = 'Ich suche die Texte, die in der Wolke nah an deiner Frage liegen, und schreibe daraus.';
+      else if (done) sayEl.textContent = nb ? 'Fertig! ' + nb + (nb === 1 ? ' Wort habe ich' : ' Wörter habe ich') + ' geborgt – von einem Wort, das in der Wolke nah liegt. Tipp es an.' : 'Fertig! Diesmal musste ich nichts borgen. ↻ Nochmal = neue Frage.';
+      else sayEl.textContent = 'Pause. Tipp ein Wort an, dann siehst du rechts, woher es kommt.';
+    }
+    function resetChat() {
+      stopPlay();
+      asked = false; session = null; R = null; KW = null; focus = null; done = false;
+      placeholder.hidden = false; askedEl.hidden = true; answerEl.hidden = true;
+      askBox.hidden = false; sayBox.hidden = true; controls.hidden = true;
+      input.value = '';
+      paintAll();
+      if (cloud) cloud.redraw();
     }
 
     /* ---------------- Handy ---------------- */
-    /* Bausteine wie in Phase 1, aber alle gleich gefärbt: das Netz weiß nicht mehr, aus welchem
-       Text ein Wort stammt. Punkt und Komma sind eigene Bausteine (auch eigene Token des Netzes). */
-    function updateGenText() {
+    function colorOf(si) { return si < 0 ? 'var(--muted)' : si < NTOP ? srcVar(si) : 'var(--muted)'; }
+    function updateText() {
       textEl.replaceChildren();
-      const n = genSession.words.length;
-      if (placeholder) placeholder.hidden = n > 0;
-      textEl.hidden = !n;
-      let prev = '.';
-      genSession.words.forEach((w, idx) => {
-        let txt = tokLabel(w);
-        if (!isPunct(w) && prev === '.') txt = txt.charAt(0).toUpperCase() + txt.slice(1);
+      if (!session) { textEl.appendChild(cursor); return; }
+      pieces(session).forEach((p, idx) => {
         if (idx > 0) textEl.appendChild(document.createTextNode(' '));
-        const span = el('span', 'tok' + (isPunct(w) ? ' punct' : ''), txt);
-        span.dataset.i = String(idx);
-        span.title = 'Antippen zum Zerlegen';
-        if (idx === focus) span.classList.add('sel');
+        const st = session.steps[p.i];
+        const b = st.cands && st.cands.borrow;
+        const span = el('span', 'srcword' + (p.punct ? ' punct' : '') + (p.si < 0 ? ' seedword' : '') + (b ? ' borrowed' : '') + (p.si >= NTOP ? ' farword' : ''), p.txt);
+        span.style.setProperty('--sc', colorOf(p.si));
+        span.dataset.i = String(p.i);
+        span.title = b ? 'Geborgt: ' + cap(b.from) + ' ≈ ' + cap(b.to) + ' – antippen' : 'Antippen zum Zerlegen';
+        if (p.i === focus) span.classList.add('sel');
         textEl.appendChild(span);
-        prev = w;
       });
-      markWindow();
-      cursor.classList.toggle('sel', focus == null && n > 0);
+      cursor.classList.toggle('sel', focus == null && session.steps.length > 0);
       textEl.appendChild(cursor);
       if (focus == null) screen.scrollTop = screen.scrollHeight;
     }
 
-    /* Kontextfenster im Handy umranden — nur mit offenem Embedding: die letzten C Token vor dem „?“
-       (beim angetippten Wort: die C Token davor). */
-    function markWindow() {
-      if (!Z.isOpen('embed')) return;
-      const end = focus != null ? focus : genSession.words.length;
-      for (let i = Math.max(0, end - data.C); i < end; i++) {
-        const sp = textEl.querySelector('.tok[data-i="' + i + '"]');
-        if (sp) sp.classList.add('win');
-      }
-    }
-
-    /* Mit offener Hidden-Schicht: die Neuronen als Leiste im Handy. */
-    function paintNeurons() {
-      if (!neuronHost || !Z.isOpen('hidden')) return;
-      const v = view();
-      neuronHost.replaceChildren(el('span', 'phone-neurons-lab', '💡 ' + net.H + ' Neuronen'), renderSwatch(Array.from(v.h), 1));
-    }
-
-    function syncLayers() {
-      if (!phoneEl) return;
-      phoneEl.classList.toggle('show-ctx', Z.isOpen('embed'));
-      phoneEl.classList.toggle('show-cand', Z.isOpen('cand'));
-      phoneEl.classList.toggle('show-hidden', Z.isOpen('hidden'));
-      updateGenText();
-      paintNeurons();
-      lastSay = '';
-      updateSay();
-    }
-
-    /* ---- Live-Auffrischen: nur Zahlen/Bilder, keine Bedienelemente ---- */
-    function liveTick() {
-      syncTrainUI();
-      if (live.train && Z.isOpen('train')) live.train();
-      paintBodies();
-      paintNeurons();
-      if (live.net && Z.isOpen('net')) live.net();
-    }
-
-    /* Fehler als Mittel der letzten Messungen: ein einzelner Wert springt stark. */
-    function curLoss() {
-      const h = net.lossHistory;
-      if (!net.step || !h.length) return null;
-      const k = Math.min(25, h.length);
-      let sum = 0;
-      for (let i = h.length - k; i < h.length; i++) sum += h[i];
-      return sum / k;
-    }
-    function lossTxt() { const l = curLoss(); return l == null ? '–' : l.toFixed(2).replace('.', ','); }
-    function epochTxt() { return data.pairs.length ? (net.step / data.pairs.length).toFixed(1).replace('.', ',') : '0'; }
-    function trainLabel() { return training ? '❚❚ Anhalten' : (net.step ? '▶ Weitertrainieren' : '▶ Training starten'); }
-
-    /* Hält den Trainings-Knopf in Form, OHNE ihn neu zu bauen. */
-    function syncTrainUI() {
-      if (trainToggle && trainToggle.isConnected) {
-        trainLab.textContent = trainLabel();
-        trainToggle.disabled = !data.pairs.length || net.diverged;
-        trainToggle.classList.toggle('playing', training);
-        trainDot.classList.toggle('on', training);
-      }
-      if (Z && Z.cols.train) Z.cols.train.el.classList.toggle('is-training', training);
-      /* Untrainiert ist Training der Hauptknopf; danach wird „Vorhersagen“ zum Hauptknopf. */
-      if (genPlayBtn) genPlayBtn.classList.toggle('primary', !!net.step);
-      updateSay();
-    }
-
-    /* Tiny sagt in einem Satz, wie es um das Netz steht — nur Text, nichts wird neu gebaut.
-       Wie in Phase 1: „ich sehe … am ehesten …“ ist schon Zerlegen und kommt erst mit offenen
-       Kandidaten oder offenem Embedding. */
-    let lastSay = '';
-    function updateSay() {
-      if (!sayEl) return;
-      const loss = curLoss();
-      const L = loss == null ? '' : loss.toFixed(1).replace('.', ',');
-      const peek = Z && (Z.isOpen('cand') || Z.isOpen('embed'));
-      let parts;
-      if (!data.pairs.length) parts = ['Ich habe keine Texte! Schalte oben rechts unter „Alle Quellen“ welche an.'];
-      else if (net.diverged) parts = ['Huch, ich bin entgleist. Rechts bei „Training“ kannst du mich neu starten.'];
-      else if (training) parts = ['Ich lerne … Mein Fehler: ', [L || '–'], '. Je kleiner, desto besser! Drück ruhig zwischendurch auf ▶.'];
-      else if (!net.step) parts = ['Ich bin ein frisches Netz und weiß noch nichts. Drück rechts auf „', ['Training starten'], '“ – sonst rate ich nur!'];
-      else if (!genSession.words.length) parts = loss > 3
-        ? ['Ich habe erst ein bisschen gelernt (Fehler ', [L], '). Trainier mich ruhig länger – oder drück auf ▶.']
-        : ['Fehler ', [L], ' – ich habe einiges gelernt! Drück auf ▶ – ich sage Wort für Wort vorher.'];
-      else if (!peek) parts = [genPlaying ? 'Ich schreibe …' : 'Soll ich weiterschreiben? Rechts kannst du nachsehen, wie ich das mache.'];
-      else if (focus != null) parts = ['Rechts siehst du, wie ich auf „', [wordLabel(data.vocab[genSession.steps[focus].id])], '“ gekommen bin.'];
-      else {
-        const probs = softmaxTemp(lastForward.logits, temp);
-        let bi = 0;
-        for (let i = 1; i < probs.length; i++) if (probs[i] > probs[bi]) bi = i;
-        const seen = genSession.ctxIds.map(id => data.vocab[id]).filter(w => !isPunct(w)).map(wordLabel).join(' ');
-        parts = seen
-          ? ['Ich sehe „', [seen], '“ und rechne: am ehesten kommt „', [wordLabel(data.vocab[bi])], '“ (' + Math.round(probs[bi] * 100) + ' %).']
-          : ['Neuer Satz – am ehesten fange ich mit „', [wordLabel(data.vocab[bi])], '“ an.'];
-      }
-      const key = JSON.stringify(parts);
-      if (key === lastSay) return;
-      lastSay = key;
-      sayEl.replaceChildren(...parts.map(x => Array.isArray(x) ? el('b', null, x[0]) : document.createTextNode(x)));
-    }
-
-    function doGenStep() {
-      focus = null;
-      lastForward = forward(net, genSession.ctxIds);
-      const probsT = softmaxTemp(lastForward.logits, temp);
-      let id;
-      if (temp <= 0.001) {
-        let bi = 0, bv = -1;
-        for (let i = 0; i < probsT.length; i++) if (probsT[i] > bv) { bv = probsT[i]; bi = i; }
-        id = bi;
-      } else {
-        let r = Math.random(), acc = 0; id = probsT.length - 1;
-        for (let i = 0; i < probsT.length; i++) { acc += probsT[i]; if (r <= acc) { id = i; break; } }
-      }
-      /* Für das Zerlegen merken, was das Netz für genau dieses Wort gerechnet hat. */
-      genSession.steps.push({ id, ctxIds: genSession.ctxIds.slice(), logits: Float32Array.from(lastForward.logits), h: Float32Array.from(lastForward.h) });
-      genSession.ctxIds = genSession.ctxIds.slice(1).concat([id]);
-      const word = data.vocab[id];
-      genSession.words.push(word);
-      if (word === '.') genSession.sentences++;
-      lastForward = forward(net, genSession.ctxIds);
-      updateGenText();
-      paintFocus();
-      liveTick();
-      return genSession.sentences < 3 && genSession.words.length < 60;
-    }
-    function startGenPlay() {
-      if (genPlaying || !data.pairs.length) return;
-      genPlaying = true;
-      genPlayBtn.textContent = '❚❚ Pause';
-      genPlayBtn.classList.add('playing');
-      updateSay();
-      genTimer = setInterval(() => { if (!doGenStep()) stopGenPlay(); }, 500);
-    }
-    function stopGenPlay() {
-      genPlaying = false;
-      if (genPlayBtn) { genPlayBtn.textContent = genSession && genSession.words.length ? '▶ Weiter' : '▶ Vorhersagen'; genPlayBtn.classList.remove('playing'); }
-      if (genTimer) { clearInterval(genTimer); genTimer = null; }
-      updateSay();
-    }
-
-    function trainTick() {
-      const { nanHit } = trainBudget(net, data.pairs, 8);
-      if (nanHit) {
-        training = false;
-        trainRAF = null;
-        renderTrainBody();
-        syncTrainUI();
-        return;
-      }
-      lastForward = forward(net, genSession.ctxIds);
-      const now = performance.now();
-      if (now - lastUIRefresh > 180) {
-        lastUIRefresh = now;
-        liveTick();
-      }
-      if (training) trainRAF = requestAnimationFrame(trainTick);
-    }
-    function startTraining() {
-      if (training || !data.pairs.length || net.diverged) return;
-      training = true;
-      syncTrainUI();
-      trainRAF = requestAnimationFrame(trainTick);
-    }
-    function pauseTraining() {
-      training = false;
-      if (trainRAF) { cancelAnimationFrame(trainRAF); trainRAF = null; }
-      syncTrainUI();
-      if (live.train && Z && Z.isOpen('train')) live.train();
-    }
-    function resetGen() {
-      stopGenPlay();
-      focus = null;
-      genSession = freshGenSession();
-      saveSlot();
-      lastForward = forward(net, genSession.ctxIds);
-      updateGenText();
-      paintFocus();
-      liveTick();
-    }
-    function reinitNet() {
-      pauseTraining();
-      net = createNet(data.vocab.length, data.C);
-      resetGen();
-      renderTrainBody();
-      syncTrainUI();
-    }
-
-    /* ---------------- Zerlegen: Spalten ---------------- */
-    function empty(text) { return el('p', 'card-empty', text); }
-    function noTexts(b) { b.appendChild(empty('Keine Texte an – schalte oben unter „Alle Quellen“ welche an.')); }
-
-    /* ③ Kandidaten: für JEDES Wort, das das Netz kennt, ein Prozentwert. */
-    function paintCand(v) {
-      const b = Z.cols.cand.body;
-      b.replaceChildren();
-      if (!data.pairs.length) { noTexts(b); return; }
-      b.appendChild(el('p', 'p1-line', !net.step
-        ? 'Untrainiert: alle ' + deInt(data.vocab.length) + ' Wörter fast gleich wahrscheinlich.'
-        : (v.idx == null ? 'Das Netz rechnet für alle ' + deInt(data.vocab.length) + ' Wörter einen Wert aus – ganz ohne Texte:' : 'Das rechnete das Netz damals aus:')));
-      const probs = softmaxTemp(v.logits, temp);
-      const arr = [];
-      for (let i = 0; i < probs.length; i++) arr.push([i, probs[i]]);
-      arr.sort((a, c) => c[1] - a[1]);
-      const MAX = 8;
-      const list = el('ol', 'clist');
-      arr.slice(0, MAX).forEach(([i, p]) => {
-        const li = el('li');
-        const row = el('div', 'crow' + (i === v.chosen ? ' chosen' : ''));
-        const bar = el('span', 'cbar');
-        const fill = el('i');
-        fill.style.width = Math.max(2, p * 100) + '%';
-        bar.appendChild(fill);
-        row.append(el('span', 'cword', wordLabel(data.vocab[i])), bar, el('span', 'cp', fmtP(p)), el('span', 'cn', ''));
-        if (i === v.chosen) row.appendChild(el('span', 'ctag', '🎲 gezogen'));
-        li.appendChild(row);
-        list.appendChild(li);
-      });
-      b.appendChild(list);
-      if (v.chosen != null && !arr.slice(0, MAX).some(x => x[0] === v.chosen)) {
-        const k = arr.findIndex(x => x[0] === v.chosen);
-        b.appendChild(el('p', 'p1-more', '🎲 gezogen: „' + wordLabel(data.vocab[v.chosen]) + '“ – erst auf Platz ' + (k + 1) + ' (' + fmtP(arr[k][1]) + ')'));
-      }
-      const rest = arr.slice(MAX).reduce((s, x) => s + x[1], 0);
-      b.appendChild(el('p', 'p1-more', '… und ' + deInt(arr.length - MAX) + ' weitere Wörter mit zusammen ' + fmtP(rest)));
-    }
-
-    /* ① Embedding: worauf das Netz schaut und die Zahlen dieser Wörter. */
-    function paintEmbed(v) {
-      const b = Z.cols.embed.body;
-      b.replaceChildren();
-      if (!data.pairs.length) { noTexts(b); return; }
-      const now = el('div', 'ctxnow');
-      now.appendChild(el('p', 'p1-sub', v.idx == null ? 'Das Netz sieht jetzt' : 'Für „' + wordLabel(data.vocab[v.chosen]) + '“ sah das Netz'));
-      const g = el('span', 'gram');
-      let lead = true;
-      v.ctxIds.forEach(id => {
-        const w = data.vocab[id];
-        if (lead && w === '.') { g.appendChild(el('span', 'gtok start', 'Satzanfang')); return; }
-        lead = false;
-        g.appendChild(el('span', 'gtok' + (isPunct(w) ? ' p' : ''), tokLabel(w)));
-      });
-      g.appendChild(el('span', 'gtok ' + (v.idx == null ? 'next' : 'chosen'), v.idx == null ? '?' : tokLabel(data.vocab[v.chosen])));
-      now.appendChild(g);
-      now.appendChild(el('p', 'p1-count', data.C + ' Token → je ' + net.d + ' Zahlen = ' + (data.C * net.d) + ' Zahlen gehen ins Netz'));
-      b.appendChild(now);
-      b.appendChild(el('p', 'p1-sub', 'So sieht das Netz die Wörter'));
-      const seen = new Set();
-      v.ctxIds.forEach(id => {
-        if (seen.has(id)) return;
-        seen.add(id);
-        const row = el('div', 'embrow');
-        row.appendChild(el('span', 'embrow-w', wordLabel(data.vocab[id])));
-        const vals = [];
-        for (let j = 0; j < net.d; j++) vals.push(net.embed[id * net.d + j]);
-        row.appendChild(renderSwatch(vals, 1.5));
-        b.appendChild(row);
-      });
-      b.appendChild(el('p', 'mini-legend', 'je Wort ' + net.d + ' Zahlen · rot = plus · blau = minus' + (net.step ? '' : ' · noch Zufall')));
-    }
-
-    /* ② Hidden-Schicht: alle Neuronen als Kästchen und lesbar die drei gerade stärksten: welche Wörter
-       schieben sie nach oben? (Beitrag = Wert des Neurons × Gewicht zum Wort) */
-    function topNeurons(h, k) {
-      const V = data.vocab.length;
-      const idx = Array.from(h, (x, i) => i).sort((a, c) => Math.abs(h[c]) - Math.abs(h[a])).slice(0, k);
-      return idx.map(n => {
-        const best = [];
-        for (let v = 0; v < V; v++) {
-          const w = data.vocab[v];
-          if (isPunct(w) || w === data.UNK) continue;
-          const c = h[n] * net.W2[n * V + v];
-          if (best.length < 3 || c > best[2][1]) { best.push([v, c]); best.sort((a, d) => d[1] - a[1]); if (best.length > 3) best.pop(); }
-        }
-        return { n, value: h[n], words: best.map(([v]) => wordLabel(data.vocab[v])) };
-      });
-    }
-    function paintHidden(v) {
-      const b = Z.cols.hidden.body;
-      b.replaceChildren();
-      if (!data.pairs.length) { noTexts(b); return; }
-      b.appendChild(el('p', 'p1-line', 'Das Netz mischt die ' + (data.C * net.d) + ' Zahlen zu ' + net.H + ' neuen – den Neuronen:'));
-      b.appendChild(renderSwatch(Array.from(v.h), 1));
-      b.appendChild(el('p', 'mini-legend', net.H + ' Neuronen · kräftig = stark an'));
-      b.appendChild(el('p', 'p1-sub', net.step ? 'Gerade am stärksten an' : 'Am stärksten an (noch untrainiert – Zufall)'));
-      const list = el('div', 'neurons');
-      topNeurons(v.h, 3).forEach(t => {
-        const row = el('div', 'neuron-row');
-        const tag = el('span', 'neuron-tag', 'Neuron ' + (t.n + 1));
-        tag.style.background = valueColor(t.value, 1);
-        row.append(tag, el('span', 'neuron-arrow', 'schiebt hoch →'), el('span', 'neuron-words', t.words.join(' · ')));
-        list.appendChild(row);
-      });
-      b.appendChild(list);
-    }
-
-    function paintBodies() {
-      const v = view();
-      if (Z.isOpen('cand')) paintCand(v); else Z.cols.cand.body.replaceChildren();
-      if (Z.isOpen('embed')) paintEmbed(v); else Z.cols.embed.body.replaceChildren();
-      if (Z.isOpen('hidden')) paintHidden(v); else Z.cols.hidden.body.replaceChildren();
-    }
-    function paintFocus() {
-      let hint = '';
-      if (!genSession.words.length) hint = net.step ? 'Lass das Netz vorhersagen – dann zerlegen wir hier jedes Wort.' : '';
-      else if (!['cand', 'embed', 'hidden'].some(Z.isOpen)) hint = 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.';
-      Zerlegen.focusBanner(focusHost, focus, focus != null ? wordLabel(data.vocab[genSession.steps[focus].id]) : '', () => setFocus(null), hint);
-    }
-    function setFocus(i) {
-      stopGenPlay();
-      focus = i;
-      updateGenText();
-      paintFocus();
-      paintBodies();
-      paintNeurons();
-      updateSay();
-    }
-
-    /* Wie viele Wörter sieht das Netz? Wechsel = anderes Netz (render baut alles neu). */
-    function ctxPicker() {
-      const ctxRow = el('div', 'ctxpick');
-      ctxRow.dataset.spot = 'ctxlen';
-      ctxRow.appendChild(el('span', 'ctxpick-lab', '👀 Das Netz sieht die letzten'));
-      const ctxBtns = el('div', 'ctxpick-btns');
-      ctxBtns.setAttribute('role', 'radiogroup');
-      ctxBtns.setAttribute('aria-label', 'Wie viele Wörter sieht das Netz?');
-      P3_CTX.forEach(c => {
-        const sl = c === ctxLen ? { net } : slots[c];
-        const trained = !!(sl && sl.net.step);
-        const b = el('button', 'chip' + (c === ctxLen ? ' active' : '') + (trained ? ' trained' : ''), String(c) + (trained ? ' ✓' : ''));
-        if (trained) b.title = 'Für ' + c + ' Wörter schon trainiert – bleibt erhalten';
-        b.type = 'button';
-        b.setAttribute('role', 'radio');
-        b.setAttribute('aria-checked', c === ctxLen ? 'true' : 'false');
-        b.addEventListener('click', () => {
-          if (c === ctxLen) return;
-          saveSlot();
-          ctxLen = c;
-          try { localStorage.setItem(P3_CTX_KEY, String(c)); } catch (e) { /* ohne Speicher geht es auch */ }
-          render();
-        });
-        ctxBtns.appendChild(b);
-      });
-      ctxRow.append(ctxBtns, el('span', 'ctxpick-lab', 'Wörter'), Help.btn('kontextnetz', 'sm'));
-      return ctxRow;
-    }
-
-    /* Training (breit, über den Spalten): der Knopf sitzt im festen Kopf, darunter nebeneinander
-       Jedes Beispiel · So läuft es · Aufbau. Wird während des Trainings nie neu gebaut: live.train
-       ändert nur Zahlen und die Linie, syncTrainUI nur Text und Klassen des Knopfs. */
-    function buildTrainTools() {
-      const t = Z.cols.train.tools;
-      trainDot = el('i', 'net-live-dot');
-      trainDot.setAttribute('aria-hidden', 'true');
-      trainToggle = el('button', 'btn primary train-btn wide');
-      trainToggle.type = 'button';
-      trainToggle.dataset.spot = 'train';
-      trainLab = el('span', null, trainLabel());
-      trainToggle.append(trainDot, trainLab);
-      trainToggle.addEventListener('click', () => { if (training) pauseTraining(); else startTraining(); });
-      t.appendChild(trainToggle);
-    }
-    function renderTrainBody() {
-      const b = Z.cols.train.body;
-      b.replaceChildren();
-      cardTrain = null;
-      live.train = null;
-      if (!data.pairs.length) { noTexts(b); return; }
-      if (net.diverged) {
-        b.appendChild(el('p', 'small net-warn', 'Das Training ist entgleist (Lernrate zu hoch).'));
-        const rb = el('button', 'btn primary', 'Neu initialisieren');
-        rb.type = 'button';
-        rb.addEventListener('click', reinitNet);
-        b.appendChild(rb);
-        return;
-      }
-      const grid = el('div', 'p3-train');
-      b.appendChild(grid);
-      const sec = (title) => { const s = el('div', 'tsec'); s.appendChild(el('h4', 'tsec-h', title)); grid.appendChild(s); return s; };
-
-      const what = sec('Jedes Beispiel');
-      const strip = el('div', 'train-ctx');
-      for (let c = 0; c < net.C; c++) strip.appendChild(el('span', 'ctxtok inwin', 'Wort'));
-      strip.append(el('span', 'flow-arrow', '→'), el('span', 'ctxtok next', '?'));
-      what.appendChild(strip);
-      const whatLine = el('p', 'card-line');
-      whatLine.append(el('b', null, net.C + ' Wörter'), document.createTextNode(' im Blick → das nächste raten · '),
-        el('b', null, deInt(data.pairs.length)), document.createTextNode(' Beispiele'));
-      what.appendChild(whatLine);
-
-      const how = sec('So läuft es');
-      const facts = el('div', 'trainfacts');
-      const fact = (k) => { const f = el('div', 'trainfact'); const v = el('b'); f.append(v, el('span', null, k)); facts.appendChild(f); return v; };
-      const stepB = fact('Schritte');
-      const lossB = fact('Fehler');
-      const epochS = fact('× alle Beispiele');
-      const lrB = fact('Schrittgröße');
-      how.appendChild(facts);
-
-      const line = sec('Fehlerlinie');
-      line.querySelector('.tsec-h').appendChild(Help.btn('fehler', 'sm'));
-      const sparkHost = el('div', 'spark-host');
-      line.appendChild(sparkHost);
-
-      const build = sec('Aufbau');
-      const inDim = net.C * net.d;
-      const paramCount = data.vocab.length * net.d + inDim * net.H + net.H + net.H * data.vocab.length + data.vocab.length;
-      const archRow = el('div', 'net-arch');
-      const arch = el('span', 'arch-num', inDim + ' → ' + net.H + ' → ' + deInt(data.vocab.length));
-      arch.title = inDim + ' Eingabe-Zahlen (' + net.C + ' Wörter × ' + net.d + ') → ' + net.H + ' Hidden-Neuronen → ' + deInt(data.vocab.length) + ' Ausgabe-Neuronen (eins je Wort)';
-      archRow.append(arch, el('span', 'arch-lab', 'Eingabe → Hidden → Wörter · ' + deInt(paramCount) + ' Zahlen'));
-      build.appendChild(archRow);
-      const resetBtn = el('button', 'btn sm', '↺ Netz zurücksetzen');
-      resetBtn.type = 'button';
-      resetBtn.title = 'Alles Gelernte vergessen';
-      resetBtn.dataset.spot = 'netreset';
-      resetBtn.addEventListener('click', reinitNet);
-      build.appendChild(resetBtn);
-
-      cardTrain = { stepB, lossB, epochS, lrB, sparkHost };
-      live.train = () => {
-        if (!cardTrain || !cardTrain.stepB.isConnected) return;
-        cardTrain.stepB.textContent = deInt(net.step);
-        cardTrain.lossB.textContent = lossTxt();
-        cardTrain.epochS.textContent = epochTxt();
-        cardTrain.lrB.textContent = net.lr.toFixed(3).replace('.', ',');
-        cardTrain.sparkHost.replaceChildren(renderSparkline(net.lossHistory, 260, 60));
-      };
-      live.train();
-    }
-
-    function mountNet() {
-      const b = Z.cols.net.body;
-      b.replaceChildren();
-      live.net = null;
-      if (!Z.isOpen('net')) return;
-      if (!data.pairs.length) { noTexts(b); return; }
-      netView.mount(b);
-      live.net = () => netView.update();
-    }
-
     function buildPhone() {
-      const P = Zerlegen.phone({ label: 'tiny · model · Phase 4', help: 'p3' });
+      const P = Zerlegen.phone({ label: 'tiny · model · Phase 3', help: 'p3' });
       phoneEl = P.el;
+      phoneEl.classList.add('phone-chat');
       screen = P.screen;
-
-      bannerEl = el('div', 'net-banner');
-      bannerEl.hidden = true;
-      const nb = el('button', 'btn sm primary', 'Netz neu bauen');
-      nb.type = 'button';
-      nb.addEventListener('click', () => render(true));
-      bannerEl.append(el('span', 'small', '📚 Neue Textauswahl.'), nb);
-      phoneEl.insertBefore(bannerEl, screen);
-
-      placeholder = el('p', 'paper-ph', 'Hier sagt das Netz gleich Wort für Wort vorher …');
+      const chat = el('div', 'chat');
+      placeholder = el('div', 'tiny-say');
+      placeholder.append(tinyEl('normal'), el('p', 'tiny-bubble', 'Frag mich etwas! Diesmal suche ich nicht nach gleichen Wörtern, sondern nach Wörtern, die in meiner Wolke nah beieinander liegen.'));
+      askedEl = el('p', 'chat-q'); askedEl.hidden = true;
+      answerEl = el('div', 'chat-a'); answerEl.hidden = true;
+      const aBody = el('div', 'chat-a-body');
+      metaEl = el('div', 'chat-meta');
+      const bubble = el('div', 'paper chat-bubble');
       textEl = el('p', 'bot-text');
       cursor = el('span', 'cursor');
-      cursor.title = 'Das nächste Wort – antippen zum Zerlegen';
+      cursor.title = 'Das nächste Wort';
       textEl.appendChild(cursor);
-      screen.append(placeholder, textEl);
-      textEl.addEventListener('pointerdown', ev => { if (ev.target.closest('.tok, .cursor')) stopGenPlay(); });
+      bubble.appendChild(textEl);
+      aBody.append(metaEl, bubble);
+      answerEl.append(tinyEl('happy'), aBody);
+      chat.append(placeholder, askedEl, answerEl);
+      screen.appendChild(chat);
+      textEl.addEventListener('pointerdown', ev => { if (ev.target.closest('.srcword, .cursor')) stopPlay(); });
       textEl.addEventListener('click', ev => {
-        const w = ev.target.closest('.tok');
-        if (w) { const i = +w.dataset.i; setFocus(i === focus ? null : i); return; }
-        if (ev.target.closest('.cursor')) setFocus(null);
+        const w = ev.target.closest('.srcword');
+        if (w) { const i = +w.dataset.i; focus = i === focus ? null : i; paintAll(); return; }
+        if (ev.target.closest('.cursor')) { focus = null; paintAll(); }
       });
 
-      neuronHost = el('div', 'phone-neurons');
+      sayBox = el('div', 'phone-say'); sayEl = el('p', 'tiny-bubble'); sayBox.append(tinyEl('normal'), sayEl); sayBox.hidden = true;
+      controls = el('div', 'phone-controls');
+      playBtn = el('button', 'btn primary', '▶ Weiter'); playBtn.type = 'button'; playBtn.dataset.spot = 'play3';
+      const stepBtn = el('button', 'btn', '+1 Wort'); stepBtn.type = 'button'; stepBtn.dataset.spot = 'step3';
+      const againBtn = el('button', 'btn', '↻ Nochmal'); againBtn.type = 'button'; againBtn.dataset.spot = 'again3';
+      controls.append(playBtn, stepBtn, againBtn); controls.hidden = true;
+      playBtn.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
+      stepBtn.addEventListener('click', () => { stopPlay(); if (!doStep()) syncPlay(); });
+      againBtn.addEventListener('click', resetChat);
 
-      const sayBox = el('div', 'phone-say');
-      sayEl = el('p', 'tiny-bubble');
-      lastSay = '';
-      sayBox.append(tinyEl('think'), sayEl);
-
-      const controls = el('div', 'phone-controls');
-      genPlayBtn = el('button', 'btn' + (net.step ? ' primary' : ''), genSession.words.length ? '▶ Weiter' : '▶ Vorhersagen');
-      genPlayBtn.type = 'button';
-      genPlayBtn.dataset.spot = 'gen';
-      genPlayBtn.disabled = !data.pairs.length;
-      genPlayBtn.addEventListener('click', () => { if (genPlaying) stopGenPlay(); else startGenPlay(); });
-      const stepBtn = el('button', 'btn', '+1 Wort');
-      stepBtn.type = 'button';
-      stepBtn.dataset.spot = 'genstep';
-      stepBtn.disabled = !data.pairs.length;
-      stepBtn.addEventListener('click', () => { stopGenPlay(); doGenStep(); });
-      const resetGenBtn = el('button', 'btn', '↺');
-      resetGenBtn.type = 'button';
-      resetGenBtn.title = 'Von vorn';
-      resetGenBtn.setAttribute('aria-label', 'Von vorn');
-      resetGenBtn.dataset.spot = 'genreset';
-      resetGenBtn.addEventListener('click', resetGen);
-      controls.append(genPlayBtn, stepBtn, resetGenBtn);
-
-      phoneEl.append(neuronHost, sayBox, controls);
+      askBox = el('div', 'phone-ask');
+      const sugg = el('div', 'sugg');
+      P3_SUGGEST.forEach(q => { const b = el('button', 'chip', q); b.type = 'button'; b.addEventListener('click', () => { input.value = q; ask(q); }); sugg.appendChild(b); });
+      const form = el('form', 'qform');
+      input = el('input', 'textin'); input.type = 'text'; input.placeholder = 'Frag Tiny etwas …'; input.setAttribute('aria-label', 'Frage');
+      const send = el('button', 'btn primary qsend'); send.type = 'submit'; send.setAttribute('aria-label', 'Fragen');
+      send.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+      form.append(input, send);
+      form.addEventListener('submit', e => { e.preventDefault(); ask(input.value); input.blur(); });
+      askBox.append(sugg, form);
+      phoneEl.append(sayBox, controls, askBox);
       return phoneEl;
     }
 
-    function render(fresh) {
-      pauseTraining();
-      stopGenPlay();
-      temp = 1;
-      focus = null;
-      live.train = live.net = null;
-      cardTrain = null;
-      if (netView) { netView.destroy(); netView = null; }
-
-      const texts = State.activeTexts();
-      if (fresh === true) Object.keys(slots).forEach(k => delete slots[k]);
-      const slot = slots[ctxLen];
-      if (slot && slot.version === State.corpusVersion) {
-        data = slot.data; net = slot.net; genSession = slot.genSession;
-      } else {
-        data = buildPhase3Data(texts, { vocabCap: 600, C: ctxLen });
-        net = createNet(data.vocab.length, data.C);
-        genSession = freshGenSession();
+    /* ---------------- Spalten ---------------- */
+    function empty(t) { return el('p', 'card-empty', t); }
+    function view() {
+      if (!session) return null;
+      if (focus != null && session.steps[focus]) {
+        const st = session.steps[focus];
+        return { idx: focus, st, C: st.cands, chosen: st.word, ctx: st.ctxUsed || [] };
       }
-      builtVersion = State.corpusVersion;
-      lastForward = forward(net, genSession.ctxIds);
-      saveSlot();
+      const C = Wolke.candidatesWithCloud(W, session, P3_N, temp, NTOP);
+      return { idx: null, C, chosen: null, ctx: C.level > 0 ? session.ctx.slice(-C.level) : [] };
+    }
+    const tok = w => w === '.' ? '·' : isPunct(w) ? w : cap(w);
 
-      netView = NetView.create({
-        getNet: () => net,
-        getData: () => data,
-        getForward: () => lastForward,
-        getProbs: () => softmaxTemp(lastForward.logits, temp),
-        getCtxIds: () => genSession.ctxIds,
-        wordLabel
+    function paintCand(v) {
+      const b = Z.cols.cand.body;
+      b.replaceChildren();
+      if (!v) { b.appendChild(empty('Stell links eine Frage.')); return; }
+      if (v.st && v.st.seed) { b.appendChild(el('p', 'p1-line', 'Dieses Wort kommt aus deiner Frage: Tiny macht aus „Was frisst ein Welpe?“ den Anfang „Ein Welpe frisst …“.')); return; }
+      const C = v.C;
+      const line = el('p', 'p1-line');
+      if (C.borrow) line.append(document.createTextNode('Geborgt von „'), el('b', null, cap(C.borrow.to)), document.createTextNode('“ – das stand dort dahinter:'));
+      else if (C.wide) line.append(document.createTextNode('In den 3 Texten stand nichts – das stand in einem anderen Text:'));
+      else line.append(document.createTextNode(C.level > 0 ? 'Das stand in den Texten dahinter:' : 'Neuer Satz – so fingen Sätze an:'));
+      b.appendChild(line);
+      const list = el('ol', 'clist');
+      C.list.slice(0, 7).forEach(a => {
+        const li = el('li');
+        const row = el('div', 'crow' + (a.word === v.chosen ? ' chosen' : ''));
+        const bar = el('span', 'cbar'); const fill = el('i'); fill.style.width = Math.max(2, a.p * 100) + '%'; bar.appendChild(fill);
+        row.append(el('span', 'cword', tok(a.word)), bar, el('span', 'cp', pct(a.p)));
+        if (a.word === v.chosen) row.appendChild(el('span', 'ctag', '🎲 gezogen'));
+        li.appendChild(row); list.appendChild(li);
       });
+      b.appendChild(list);
+      if (C.borrow && C.borrow.plain) {
+        const pl = C.borrow.plain.list.slice(0, 3).map(a => tok(a.word)).join(' · ');
+        b.appendChild(el('p', 'p1-more', 'Ohne Wolke hätte Tiny Wörter vergessen und genommen: ' + (pl || '–')));
+      }
+    }
 
+    function paintMean() {
+      const b = Z.cols.mean.body;
+      b.replaceChildren();
+      if (!R) { b.appendChild(empty('Stell links eine Frage – dann wird sie hier ein Punkt in der Wolke.')); return; }
+      b.appendChild(el('p', 'p1-sub', 'Welche Wörter werden Punkte?'));
+      const g = el('div', 'gram askq');
+      tokenize(R.question).filter(t => !t.punct).forEach(t => {
+        const x = R.qwords.find(q => q.raw === t.raw);
+        const s = el('span', 'gtok ' + (!x ? 'askoff' : x.w ? 'askw' : 'askunk'), t.raw);
+        if (x && x.w) s.style.setProperty('--wc', 'var(--cat-meaning)');
+        s.title = !x ? 'Füllwort – kein Punkt' : x.w ? 'Punkt in der Wolke' : 'Kein Punkt – kommt zu selten vor';
+        g.appendChild(s);
+      });
+      b.appendChild(g);
+      b.appendChild(el('p', 'p1-line', 'Der Punkt der Frage liegt in der Mitte dieser Wörter. Jeder Text ist auch ein Punkt (die Mitte seiner Wörter).'));
+      const cols = el('div', 'p3-vs');
+      const mk = (title, rows, fmt) => {
+        const c = el('div', 'p3-vs-col');
+        c.appendChild(el('p', 'p1-sub', title));
+        rows.slice(0, 5).forEach((r, i) => {
+          const row = el('div', 'p3-rank' + (i < NTOP ? ' on' : ''));
+          const lt = el('span', 'letter sm', i < NTOP && fmt ? 'ABC'[i] : '·');
+          if (i < NTOP && fmt) lt.style.background = srcVar(i);
+          row.append(lt, el('span', 'p3-rank-t', r.t), el('span', 'p3-rank-n', r.n));
+          c.appendChild(row);
+        });
+        if (!rows.length) c.appendChild(el('p', 'p1-more', 'nichts gefunden'));
+        return c;
+      };
+      cols.append(
+        mk('Nach Bedeutung (hier)', R.ranked.map(r => ({ t: r.text.title, n: pct(Math.max(0, r.score)) })), true),
+        mk('Nach Stichwort (Phase 2)', KW ? KW.results.filter(r => r.score > 0).map(r => ({ t: r.doc.title, n: r.score.toFixed(1) })) : [], false));
+      b.appendChild(cols);
+      b.appendChild(el('p', 'p1-more', 'Mit A · B · C schreibt Tiny. Vergleich: Welche Texte hätte die Stichwortsuche aus Phase 2 genommen?'));
+    }
+
+    function borrowCard(st, i) {
+      const B = st.cands.borrow;
+      const box = el('div', 'p3-borrow' + (i === focus ? ' on' : ''));
+      const words = B.tail2.map((w, k) => { const o = st.ctxUsed[k]; return { o, w }; });
+      const l1 = el('p', 'p1-line');
+      l1.append(document.createTextNode('„'), el('b', null, phrase(st.ctxUsed)),
+        document.createTextNode('“ steht in ' + (B.wide ? 'keinem Text.' : 'keinem der 3 Texte.')));
+      const l2 = el('p', 'p1-line');
+      l2.append(document.createTextNode('In der Wolke liegt '), el('b', null, cap(B.from)), document.createTextNode(' nah an '), el('b', null, cap(B.to)),
+        document.createTextNode(' (' + pct(B.sim) + ').'));
+      const sh = W.shared(B.from, B.to, 5);
+      const l3 = el('p', 'p1-more', sh.length ? 'Warum? Beide stehen oft bei: ' + sh.join(', ') : '');
+      const l4 = el('p', 'p1-line');
+      l4.append(document.createTextNode('„'), el('b', null, phrase(words.map(x => x.w))),
+        document.createTextNode('“ steht da' + (B.wide ? ' (in einem anderen Text)' : '') + ' → Tiny nimmt '), el('b', 'p3-took', tok(st.word)), document.createTextNode('.'));
+      box.append(l1, l2, l3, l4);
+      box.addEventListener('click', () => { focus = i; paintAll(); });
+      return box;
+    }
+    function paintBorrow(v) {
+      const b = Z.cols.borrow.body;
+      b.replaceChildren();
+      if (!session) { b.appendChild(empty('Stell links eine Frage. Tipp am besten eine wie „Was frisst ein Welpe?“.')); return; }
+      if (v && v.st && v.st.cands && v.st.cands.borrow) { b.appendChild(borrowCard(v.st, v.idx)); return; }
+      const all = borrowedSteps();
+      if (!all.length) { b.appendChild(el('p', 'p1-line', 'Bisher nichts geborgt: Jede Wortfolge stand so in den Texten.')); return; }
+      b.appendChild(el('p', 'p1-sub', all.length + (all.length === 1 ? ' Wort geborgt' : ' Wörter geborgt')));
+      all.slice(-3).forEach(x => b.appendChild(borrowCard(x.st, x.i)));
+    }
+
+    function paintAll() {
+      updateText();
+      const v = asked ? view() : null;
+      Zerlegen.focusBanner(focusHost, v && v.idx != null ? v.idx : null, v && v.idx != null ? tok(v.chosen) : '', () => { focus = null; paintAll(); }, '');
+      phoneEl.classList.toggle('show-borrow', Z.isOpen('borrow'));
+      phoneEl.classList.toggle('show-src', Z.isOpen('mean'));
+      if (Z.isOpen('cand')) paintCand(v); else Z.cols.cand.body.replaceChildren();
+      if (Z.isOpen('mean')) paintMean(); else Z.cols.mean.body.replaceChildren();
+      if (Z.isOpen('borrow')) paintBorrow(v); else Z.cols.borrow.body.replaceChildren();
+      if (cloud) cloud.redraw();
+      say();
+    }
+
+    /* ---------------- 3D-Wolke ---------------- */
+    function makeCloud(hostEl) {
+      ensureModel();
+      if (!W) { hostEl.appendChild(empty('Wähl ein paar Texte aus, dann entsteht die Wolke.')); return null; }
+      const wrap = el('div', 'p3-cloud');
+      const cv = el('canvas', 'p3-canvas');
+      cv.setAttribute('aria-label', 'Wortwolke in 3D. Ziehen zum Drehen, Punkt antippen zum Auswählen.');
+      const side = el('div', 'p3-side');
+      const tools = el('div', 'p3-tools');
+      const search = el('input', 'textin'); search.type = 'search'; search.placeholder = 'Wort suchen'; search.setAttribute('aria-label', 'Wort in der Wolke suchen');
+      const spin = el('button', 'btn sm', '⏸ Drehen anhalten'); spin.type = 'button';
+      tools.append(search, spin);
+      const info = el('div', 'p3-info');
+      const honest = el('p', 'p3-honest');
+      honest.append(el('b', null, 'Eigentlich hat jedes Wort ' + W.dims + ' Zahlen. '),
+        document.createTextNode('Das Bild zeigt nur 3 Richtungen davon. Von den 3 ähnlichsten Wörtern eines Worts liegen hier nur ' + Math.round(W.keep3 * 100) + ' % auch im Bild nah – die Liste rechts rechnet mit allen ' + W.dims + ' Zahlen.'));
+      side.append(tools, info);
+      wrap.append(cv, side);
+      hostEl.append(wrap, honest);
+
+      let ax = -0.35, ay = 0.6, auto = !matchMedia('(prefers-reduced-motion: reduce)').matches, sel = null, raf = 0, drag = null, proj = [];
+      const TC = {};
+      function themeColor(t) {
+        if (!TC[t]) TC[t] = getComputedStyle(document.documentElement).getPropertyValue('--t-' + (t || 'eigen')).trim() || '#888';
+        return TC[t];
+      }
+      function highlight() {
+        const hi = new Map();
+        if (R) R.qwords.forEach(q => { if (q.w) hi.set(q.w, 'q'); });
+        borrowedSteps().forEach(x => { hi.set(x.st.cands.borrow.from, 'b'); hi.set(x.st.cands.borrow.to, 'b'); });
+        if (sel) { hi.set(sel, 's'); W.neighbors(sel, 5).forEach(([w]) => { if (!hi.has(w)) hi.set(w, 'n'); }); }
+        return hi;
+      }
+      function draw() {
+        const dpr = window.devicePixelRatio || 1;
+        const w = cv.clientWidth, h = cv.clientHeight;
+        if (!w || !h) return;
+        if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
+        const g = cv.getContext('2d');
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        g.clearRect(0, 0, w, h);
+        const cs = getComputedStyle(document.documentElement);
+        const ink = cs.getPropertyValue('--ink').trim(), muted = cs.getPropertyValue('--muted').trim(), acc = cs.getPropertyValue('--cat-meaning').trim();
+        const sa = Math.sin(ay), ca = Math.cos(ay), sb = Math.sin(ax), cb = Math.cos(ax);
+        const R0 = Math.min(w, h) * 0.42;
+        const P = p => {
+          const x1 = p[0] * ca + p[2] * sa, z1 = -p[0] * sa + p[2] * ca;
+          const y1 = p[1] * cb - z1 * sb, z2 = p[1] * sb + z1 * cb;
+          const f = 2.6 / (2.6 + z2);
+          return { x: w / 2 + x1 * R0 * f, y: h / 2 + y1 * R0 * f, z: z2, f };
+        };
+        proj = W.xyz.map((p, i) => Object.assign(P(p), { i }));
+        const hi = highlight();
+        /* Linien: ausgewähltes Wort zu seinen 5 nächsten (in 20 Zahlen gerechnet), geborgte Paare. */
+        g.lineWidth = 1.5;
+        const line = (a, b, col, dash) => { const pa = proj[W.idx.get(a)], pb = proj[W.idx.get(b)]; if (!pa || !pb) return; g.strokeStyle = col; g.setLineDash(dash || []); g.beginPath(); g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y); g.stroke(); };
+        if (sel) W.neighbors(sel, 5).forEach(([x]) => line(sel, x, acc + '99'));
+        borrowedSteps().forEach(x => line(x.st.cands.borrow.from, x.st.cands.borrow.to, cs.getPropertyValue('--cat-candidates').trim(), [5, 4]));
+        g.setLineDash([]);
+        const order = proj.slice().sort((a, b) => b.z - a.z);
+        order.forEach(p => {
+          const word = W.words[p.i], hk = hi.get(word);
+          const r = (hk ? 5 : 2.6) * p.f;
+          g.globalAlpha = hk ? 1 : Math.max(0.25, 0.75 - p.z * 0.3);
+          g.fillStyle = themeColor(W.theme[p.i]);
+          g.beginPath();
+          if (W.kind[p.i] === 'verb') g.rect(p.x - r, p.y - r, 2 * r, 2 * r); else g.arc(p.x, p.y, r, 0, Math.PI * 2);
+          g.fill();
+          if (hk) { g.lineWidth = 2; g.strokeStyle = hk === 'q' ? acc : hk === 'b' ? cs.getPropertyValue('--cat-candidates').trim() : ink; g.stroke(); }
+        });
+        g.globalAlpha = 1;
+        g.font = '600 13px Fredoka, system-ui, sans-serif';
+        g.textBaseline = 'bottom';
+        order.forEach(p => {
+          const word = W.words[p.i];
+          if (!hi.has(word)) return;
+          g.fillStyle = hi.get(word) === 'n' ? muted : ink;
+          g.fillText(cap(word), p.x + 6, p.y - 4);
+        });
+        /* Die Frage als Stern */
+        if (R && R.q) {
+          const q = P(Wolke.pointNear(W, R.q));
+          g.fillStyle = acc; g.font = '700 20px system-ui, sans-serif'; g.textBaseline = 'middle';
+          g.fillText('★', q.x - 8, q.y); g.font = '600 12px Fredoka, system-ui, sans-serif'; g.fillText('deine Frage', q.x + 10, q.y);
+        }
+      }
+      function paintInfo() {
+        info.replaceChildren();
+        if (!sel) {
+          info.append(el('p', 'p1-sub', 'Tipp einen Punkt an'),
+            el('p', 'p1-more', 'Farbe = Textwelt · ● Nomen · ■ Verb. Ziehen zum Drehen.'));
+          return;
+        }
+        info.appendChild(el('p', 'p1-sub', cap(sel) + ' – am nächsten (mit allen ' + W.dims + ' Zahlen)'));
+        W.neighbors(sel, 6).forEach(([x, s]) => {
+          const row = el('button', 'p3-nb'); row.type = 'button';
+          const bar = el('span', 'cbar'); const f = el('i'); f.style.width = Math.max(2, s * 100) + '%'; bar.appendChild(f);
+          row.append(el('span', 'cword', cap(x)), bar, el('span', 'cp', pct(Math.max(0, s))));
+          row.addEventListener('click', () => { sel = x; paintInfo(); draw(); });
+          info.appendChild(row);
+        });
+      }
+      function loop() {
+        raf = 0;
+        if (auto && !drag) { ay += 0.004; draw(); raf = requestAnimationFrame(loop); }
+      }
+      function kick() { if (!raf && auto) raf = requestAnimationFrame(loop); }
+      cv.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, ax, ay, moved: false }; cv.setPointerCapture(e.pointerId); });
+      cv.addEventListener('pointermove', e => {
+        if (!drag) return;
+        const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+        if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+        ay = drag.ay + dx * 0.01; ax = Math.max(-1.4, Math.min(1.4, drag.ax + dy * 0.01));
+        draw();
+      });
+      cv.addEventListener('pointerup', e => {
+        const d = drag; drag = null;
+        if (d && !d.moved) {
+          const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+          let best = null, bd = 18;
+          proj.forEach(p => { const dd = Math.hypot(p.x - x, p.y - y); if (dd < bd) { bd = dd; best = p; } });
+          sel = best ? W.words[best.i] : null;
+          paintInfo(); draw();
+        }
+        kick();
+      });
+      spin.addEventListener('click', () => { auto = !auto; spin.textContent = auto ? '⏸ Drehen anhalten' : '▶ Drehen'; kick(); });
+      search.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        if (!q) return;
+        const hit = W.resolve(q) || W.words.find(w => w.startsWith(q));
+        if (hit) { sel = hit; paintInfo(); draw(); }
+      });
+      const ro = new ResizeObserver(() => draw());
+      ro.observe(cv);
+      paintInfo(); draw(); kick();
+      return {
+        redraw: () => { draw(); },
+        destroy: () => { if (raf) cancelAnimationFrame(raf); raf = 0; ro.disconnect(); auto = false; },
+        pause: () => { if (raf) cancelAnimationFrame(raf); raf = 0; },
+        resume: () => kick()
+      };
+    }
+    function mountCloud() {
+      const b = Z.cols.cloud.body;
+      if (cloud) { cloud.destroy(); cloud = null; }
+      b.replaceChildren();
+      if (Z.isOpen('cloud')) cloud = makeCloud(b);
+    }
+
+    /* ---------------- Aufbau ---------------- */
+    function render() {
+      stopPlay();
+      W = null; asked = false; session = null; R = null; KW = null; focus = null;
       Z = Zerlegen.columns({
         store: 'tinylm-p3-offen',
-        defaults: { train: true },
-        demoClosed: ['net'],
-        onPointer: stopGenPlay,
-        onChange: id => {
-          if (id === 'net') { mountNet(); return; }
-          if (id === 'train') { if (live.train && Z.isOpen('train')) live.train(); syncTrainUI(); return; }
-          syncLayers();
-          paintFocus();
-          paintBodies();
-        }
+        defaults: { cloud: true },
+        onPointer: stopPlay,
+        onChange: id => { if (id === 'cloud') mountCloud(); else paintAll(); }
       });
-
       const root = el('div', 'p1');
       const grid = el('div', 'p1-grid');
       const left = el('div', 'p1-left');
       left.appendChild(buildPhone());
-      if (!texts.length) left.appendChild(el('p', 'warnline', 'Keine Texte ausgewählt – schalte oben rechts unter „Alle Quellen“ welche an.'));
-
+      left.appendChild(el('p', 'p3-proto', 'Prototyp – Phase „Wörter als Punkte“'));
       const right = el('div', 'p1-right');
       const intro = el('div', 'p1-intro');
       focusHost = el('div', 'p1-focus');
       intro.appendChild(focusHost);
       right.appendChild(intro);
-
-      right.appendChild(Z.column('train', 'train', '🏋️', 'Training', 'Erst lernen, dann vorhersagen', 'training', { wide: true }));
       const row = el('div', 'p1-cols');
       row.append(
-        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'ausgabe'),
-        Z.column('embed', 'embed', '🔢', 'Embedding', 'Was sieht das Netz?', 'embedding'),
-        Z.column('hidden', 'hidden', '💡', 'Hidden-Schicht', 'Was passiert innen?', 'hidden'));
+        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'kandidaten'),
+        Z.column('mean', 'ask', '⭐', 'Frage als Punkt', 'Welche Texte liegen nah?', 'bedeutung'),
+        Z.column('borrow', 'meaning', '🔁', 'Geborgt', 'Welches Wort lag nah?', 'geborgt'));
       right.appendChild(row);
-      right.appendChild(Z.column('net', 'net', '🕸️', 'Das Netz von innen', 'Alle Neuronen und Gewichte', 'netz', { wide: true }));
-
-      /* Feste Köpfe (werden nie neu gebaut). */
-      buildTrainTools();
+      right.appendChild(Z.column('cloud', 'meaning', '🌌', 'Wortwolke', 'Welche Wörter liegen nah beieinander?', 'wolke', { wide: true }));
       const tsl = Info.slider({
-        label: 'Temperatur', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp',
+        label: 'Temperatur', min: 0, max: 2, step: 0.1, value: temp, spot: 'temp3',
         fmt: de1, ends: ['🎯 sicher', 'wild 🌪️'],
-        onInput: v => {
-          temp = Math.round(v * 10) / 10;
-          if (Z.isOpen('cand')) paintCand(view());
-          if (live.net && Z.isOpen('net')) live.net();
-          updateSay();
-        }
+        onInput: v => { temp = Math.round(v * 10) / 10; }
       });
       Z.cols.cand.tools.appendChild(tsl.el);
-      Z.cols.embed.tools.appendChild(ctxPicker());
-
       grid.append(left, right);
       root.appendChild(grid);
       host.replaceChildren(root);
-      renderTrainBody();
-      syncLayers();
-      paintFocus();
-      paintBodies();
-      mountNet();
-      syncTrainUI();
+      paintAll();
+      mountCloud();
     }
 
-    render(true);
-    State.on('corpus-changed', () => {
-      if (bannerEl && State.corpusVersion !== builtVersion) bannerEl.hidden = false;
-    });
-
+    render();
+    State.on('corpus-changed', () => render());
     return {
       reveal: id => { const c = Z.cols[id]; if (!c) return; if (!Z.isOpen(id)) Z.setOpen(id, true); c.el.scrollIntoView({ block: 'nearest' }); },
-      onHide: () => { pauseTraining(); stopGenPlay(); }
+      onHide: () => { stopPlay(); if (cloud) cloud.pause(); },
+      onShow: () => { if (cloud) cloud.resume(); }
     };
   }
 });

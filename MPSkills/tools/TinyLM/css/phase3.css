@@ -1,86 +1,35 @@
-/* Phase 3: Vektor-Swatches, Fehlerlinie, Trainings-Block im Zentrum, Banner. */
-.swatchrow { display: grid; grid-template-columns: repeat(var(--cols, 16), minmax(0, 1fr)); gap: 2px; max-width: 420px; }
-.swatchcell { min-width: 0; height: 18px; border-radius: 3px; display: inline-block; cursor: default; border: 1px solid color-mix(in srgb, var(--line) 60%, transparent); }
-.embrow { display: grid; grid-template-columns: minmax(0, 6.5rem) minmax(0, 1fr); gap: 8px; align-items: center; }
-.embrow-w { font-size: 0.86rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.net-banner {
-  background: var(--cat-origin-tint); border: 1px solid var(--cat-origin); border-radius: 12px; padding: 8px 8px 8px 14px;
-  display: flex; align-items: center; gap: 10px; justify-content: space-between; flex-wrap: wrap;
-}
-.sparkline { display: block; width: 100%; height: 100%; }
-.spark-host { width: 100%; height: 60px; }
-.spark-head { display: flex; align-items: center; gap: 8px; }
-.net-warn { color: var(--bad); font-weight: 700; }
+/* Phase „Wörter als Punkte“ (Prototyp 12.11.2026, js/phase3.js). */
+.p3-proto { margin: 8px 2px 0; font-size: 0.78rem; color: var(--muted); text-align: center; }
 
-.trainfacts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-.trainfact { background: var(--soft); border-radius: 10px; padding: 6px 8px; display: flex; flex-direction: column; }
-.trainfact b { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
-.trainfact span { font-size: 0.72rem; color: var(--muted); }
+/* Geborgte Wörter im Handy: erst sichtbar, wenn die Spalte „Geborgt“ offen ist. */
+.phone.show-borrow .srcword.borrowed { outline: 2px dashed var(--cat-meaning); outline-offset: 2px; }
+.phone .srcword.farword { opacity: 0.85; }
 
-/* Trainings-Block in der rechten Karte "Training": wird während des Trainings nie neu gebaut,
-   damit "anhalten" jederzeit antippbar ist (siehe Kopfkommentar in phase3.js). */
-.trainbox {
-  border: 1px solid color-mix(in srgb, var(--cat-train) 35%, var(--line)); border-radius: 14px;
-  background: color-mix(in srgb, var(--cat-train-tint) 22%, var(--surface)); padding: 10px 12px;
-  display: flex; flex-direction: column; gap: 8px;
-}
-.trainbox-head { display: flex; align-items: center; gap: 8px; }
-.trainbox-head b { font-family: var(--font-display); font-weight: 700; }
-.trainbox-head .counter { margin-left: auto; }
-.trainbox-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.trainbox-btns { margin: 8px 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-/* Training hat eigene Farbe (magenta); .btn.primary (grün) muss dafür überstimmt werden. Läuft das
-   Training, wird der Knopf wie alle laufenden Knöpfe dunkel („❚❚ Anhalten“). */
-.btn.primary.train-btn:not(.playing) { background: var(--cat-train); border-color: var(--cat-train); box-shadow: 0 3px 0 color-mix(in srgb, var(--cat-train) 70%, #000); }
-.btn.primary.train-btn:not(.playing):hover:not(:disabled) { background: color-mix(in srgb, var(--cat-train) 80%, var(--ink)); border-color: color-mix(in srgb, var(--cat-train) 80%, var(--ink)); }
-.trainbox-spark { flex: 1 1 180px; min-width: 150px; display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 4px 10px; }
-.trainbox-spark .spark-host { height: 44px; }
-.trainbox-spark-lab { font-size: 0.72rem; color: var(--muted); font-weight: 600; writing-mode: vertical-rl; transform: rotate(180deg); }
-.net-live-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--line); flex: none; }
-.net-live-dot.on { background: var(--cat-train); animation: netpulse 1s ease-in-out infinite; }
-@keyframes netpulse { 50% { opacity: 0.25; transform: scale(0.7); } }
+/* Bedeutung gegen Stichwort */
+.p3-vs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+@media (max-width: 560px) { .p3-vs { grid-template-columns: 1fr; } }
+.p3-vs-col { min-width: 0; }
+.p3-rank { display: grid; grid-template-columns: auto 1fr auto; gap: 6px; align-items: center; padding: 4px 6px; border-radius: 8px; font-size: 0.84rem; opacity: 0.6; }
+.p3-rank.on { opacity: 1; background: var(--soft); }
+.p3-rank-t { min-width: 0; overflow-wrap: anywhere; line-height: 1.25; }
+.p3-rank-n { font-family: var(--font-mono, monospace); font-size: 0.75rem; color: var(--muted); }
 
-.net-arch { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 10px; }
-.arch-lab { font-size: 0.72rem; color: var(--muted); }
-.arch-num { font-family: var(--font-mono); font-size: 0.86rem; font-weight: 500; background: var(--soft); border-radius: 999px; padding: 2px 10px; }
-.ctxpick { display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center; justify-content: center; }
-.ctxpick-btns { display: inline-flex; gap: 4px; }
-.ctxpick-btns .chip { min-width: 2.2rem; justify-content: center; font-family: var(--font-mono); }
+/* Geborgt */
+.p3-borrow { border: 1.5px solid var(--line); border-radius: 12px; padding: 8px 10px; margin-top: 8px; cursor: pointer; background: var(--surface); }
+.p3-borrow.on { border-color: var(--cat-meaning); box-shadow: 0 0 0 3px var(--cat-meaning-tint); }
+.p3-borrow .p1-line { margin: 2px 0; }
+.p3-took { color: var(--cat-candidates); }
 
-.ctxpick-btns .chip.trained:not(.active) { border-color: var(--cat-train); }
-
-
-/* Zentrum: Trainings-Knopf mit Punkt, der beim Lernen pulsiert */
-.train-btn { display: inline-flex; align-items: center; gap: 8px; }
-.train-btn .net-live-dot { background: rgba(255,255,255,.55); }
-.train-btn .net-live-dot.on { background: var(--cat-train); }
-
-/* ② Hidden-Schicht: die drei gerade stärksten Neuronen, lesbar */
-.neurons { display: flex; flex-direction: column; gap: 6px; }
-.neuron-row { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; align-items: center; font-size: 0.86rem; }
-.neuron-tag { font-family: var(--font-mono); font-size: 0.74rem; font-weight: 600; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--line); color: var(--ink); white-space: nowrap; }
-.neuron-arrow { color: var(--muted); font-size: 0.78rem; white-space: nowrap; }
-.neuron-words { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.emb-live { display: flex; flex-direction: column; gap: 6px; }
-
-/* Zentrum: „Das Netz sieht die letzten 3 · 4 · 5 Wörter“ direkt unter dem Text (Sönke 01.11.2026:
-   die Zahl der betrachteten Wörter gehört nach links, dort sind sie im Text markiert). */
-.machine-center .ctxpick {
-  justify-content: flex-start; padding: 7px 10px; border-radius: 12px;
-  background: color-mix(in srgb, var(--cat-embed-tint) 35%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--cat-embed) 30%, var(--line));
-}
-.ctxpick-lab { font-size: 0.88rem; font-weight: 600; }
-.ctxpick-btns .chip.active { background: var(--cat-embed); border-color: var(--cat-embed); color: var(--surface); }
-
-/* Reiter „Training“: klar gegliedert — Knopf · Jedes Beispiel · So läuft es · Aufbau */
-.btn.train-btn.wide { width: 100%; justify-content: center; min-height: 46px; font-size: 1rem; }
-.tsec { display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 1px solid var(--line); }
-.tsec-h { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 0.8rem; letter-spacing: .04em; text-transform: uppercase; color: color-mix(in srgb, var(--cat-train) 70%, var(--muted)); }
-.train-ctx { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; --cat-color: var(--cat-embed); --cat-tint: var(--cat-embed-tint); }
-.train-ctx .ctxtok { font-size: 0.8rem; padding: 2px 8px; }
-.tsec .net-arch { margin-top: 0; }
-.tsec .btn.sm { align-self: flex-start; }
-/* Dunkel: Training-Magenta ist dort hell → dunkle Schrift statt weißer */
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary.train-btn:not(.playing) { color: var(--bg); } }
-:root[data-theme="dark"] .btn.primary.train-btn:not(.playing) { color: var(--bg); }
+/* 3D-Wolke */
+.p3-cloud { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 12px; align-items: start; }
+@media (max-width: 820px) { .p3-cloud { grid-template-columns: 1fr; } }
+.p3-canvas { width: 100%; height: 440px; border-radius: 14px; background: var(--soft); touch-action: none; cursor: grab; display: block; }
+.p3-canvas:active { cursor: grabbing; }
+@media (max-width: 560px) { .p3-canvas { height: 320px; } }
+.p3-side { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.p3-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.p3-tools .textin { flex: 1 1 120px; min-width: 0; }
+.p3-nb { display: grid; grid-template-columns: 1fr 70px auto; gap: 6px; align-items: center; width: 100%; padding: 4px 6px; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.p3-nb:hover { background: var(--soft); }
+.p3-honest { margin: 10px 2px 0; font-size: 0.86rem; color: var(--muted); }
+.p3-honest b { color: var(--ink); }

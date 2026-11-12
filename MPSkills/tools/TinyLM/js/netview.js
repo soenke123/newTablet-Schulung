@@ -1,4 +1,4 @@
-/* NetView — eine ECHTE Darstellung des Mini-Netzes aus phase3-net.js.
+/* NetView — eine ECHTE Darstellung des Mini-Netzes aus phase4-net.js.
    Jeder gezeichnete Punkt ist ein Neuron, jede Linie eine echte Kante mit ihrem echten Gewicht
    aus net.W1 / net.W2 (nichts ist Deko oder Zufallsgrafik):
      Eingang  = C × d Zahlen (die Embeddings der Kontextwörter)  -> Kategorie "embed"   (Schritt ①)
@@ -13,7 +13,7 @@
      -> { mount(host), update(), destroy() }
    mount()  läuft bei jedem Aufklappen der Karte erneut (Panel rendert geschlossene Karten nicht).
    update() ruft der Trainings-Tick (~5×/s) auf: zeichnet nur neu und baut KEINE Bedienelemente
-            neu — sonst wären Buttons mitten im Klick weg (siehe phase3.js).
+            neu — sonst wären Buttons mitten im Klick weg (siehe phase4.js).
 */
 const NetView = (() => {
   const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();

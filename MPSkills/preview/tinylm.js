@@ -55,28 +55,28 @@
     api.click(P(2) + '.qform button[type="submit"]');
     if (!await api.wait(7500)) return;
 
-    // Phase 3: ein echtes Netz trainieren, dann vorhersagen lassen.
-    api.click('.phase-btn[data-n="3"]');
-    if (!await api.waitFor(P(3) + '[data-card="train"]', 8000)) return;
-    api.caption('Phase 3 · Ein echtes kleines Netz lernt');
+    // Phase 4: ein echtes Netz trainieren, dann vorhersagen lassen.
+    api.click('.phase-btn[data-n="4"]');
+    if (!await api.waitFor(P(4) + '[data-card="train"]', 8000)) return;
+    api.caption('Phase 4 · Ein echtes kleines Netz lernt');
     if (!await api.wait(1200)) return;
     // Reiter „Training“ aufklappen: dort sitzt der Knopf, und man sieht die Fehlerlinie fallen.
-    api.click(P(3) + '.p1-col.closed[data-card="train"] .p1-col-toggle');
-    if (!await api.waitFor(P(3) + '[data-spot="train"]', 3000)) return;
-    api.click(P(3) + '[data-spot="train"]');
+    api.click(P(4) + '.p1-col.closed[data-card="train"] .p1-col-toggle');
+    if (!await api.waitFor(P(4) + '[data-spot="train"]', 3000)) return;
+    api.click(P(4) + '[data-spot="train"]');
     if (!await api.wait(10000)) return;
-    api.click(P(3) + '[data-spot="train"]');
+    api.click(P(4) + '[data-spot="train"]');
     if (!await api.wait(600)) return;
-    api.caption('Phase 3 · Jetzt sagt das Netz Wort für Wort vorher');
-    api.click(P(3) + '[data-spot="gen"]');
+    api.caption('Phase 4 · Jetzt sagt das Netz Wort für Wort vorher');
+    api.click(P(4) + '[data-spot="gen"]');
     if (!await api.wait(6000)) return;
-    api.click(P(3) + '[data-spot="gen"]');
+    api.click(P(4) + '[data-spot="gen"]');
     if (!await api.wait(2400)) return;
 
     // Zurückstellen mit den eigenen Knöpfen, dann wieder vorn anfangen.
     api.caption('');
-    api.click(P(3) + '[data-spot="genreset"]');                    // ↺ Von vorn
-    api.click(P(3) + '[data-spot="netreset"]');                    // ↺ Netz zurücksetzen
+    api.click(P(4) + '[data-spot="genreset"]');                    // ↺ Von vorn
+    api.click(P(4) + '[data-spot="netreset"]');                    // ↺ Netz zurücksetzen
     api.click(P(1) + '[data-spot="reset"]');                       // ↺ Neu starten
     api.click('.phase-btn[data-n="1"]');
     await api.wait(1000);
