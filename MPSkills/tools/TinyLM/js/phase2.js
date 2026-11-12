@@ -10,9 +10,10 @@
                      wurden: A · B · C)
      Kandidaten     (welches Wort kommt? — Temperatur + „Dieselbe Frage nochmal“ im festen Kopf,
                      Liste wie in Phase 1; 🔎 = Wort aus einem Satz mit deinem Fragewort)
-     N-Gramme       (N-Gramm-Regler im Kopf, Start 3-Gramm; „Tiny schaut jetzt auf“, wo das in
+     N-Gramme und Quellen (N-Gramm-Regler im Kopf, Start 3-Gramm; „Tiny schaut jetzt auf“, wo das in
                      A · B · C steht, darunter wie viele Token aus welcher Quelle — antippen =
-                     ganzer Text mit markierten Token)
+                     ganzer Text mit markierten Token; A · B · C stehen immer da, auch mit 0 Token,
+                     und die Titel in Frage zerlegen springen hierher)
    Die Wortkarte war bis 11.11.2026 breit darunter; sie zieht in eine eigene Phase „Wörter als Punkte“
    (Sönke: Phase 2 nutzt sie nicht, Tiny sucht hier nur Stichwörter).
 
@@ -471,7 +472,14 @@ Phases.register(2, {
         const lt = el('span', 'letter sm', i < 3 ? SRC[i] : '–');
         if (i < 3) lt.style.background = srcVar(i);
         const tw = el('div', 'askgrid-tw');
-        tw.append(lt, el('span', 'askgrid-title', r.doc.title));
+        if (i < 3) {
+          /* Gewählte Quelle antippen = in „N-Gramme und Quellen“ aufklappen (Sönke 12.11.2026). */
+          const link = el('button', 'askgrid-title asklink', r.doc.title);
+          link.type = 'button';
+          link.title = 'In „N-Gramme und Quellen“ öffnen – mit den Token, die Tiny daraus genommen hat';
+          link.addEventListener('click', () => openSource(i));
+          tw.append(lt, link);
+        } else tw.append(lt, el('span', 'askgrid-title', r.doc.title));
         td.appendChild(tw);
         tr.appendChild(td);
         known.forEach(x => {
@@ -551,18 +559,29 @@ Phases.register(2, {
         }
       }
 
-      if (!session.steps.some(st => st.si >= 0)) return;
-      if (srcState.open != null && !session.steps.some(st => st.si === srcState.open)) srcState.open = null;
+      if (canned && !session.steps.some(st => st.si >= 0)) return;
+      if (canned && srcState.open != null && !session.steps.some(st => st.si === srcState.open)) srcState.open = null;
       const used = el('div', 'p1-used');
       used.appendChild(Zerlegen.usedSources(session, {
         state: srcState,
         repaint: () => paintSrc(view()),
         color: colorOf,
         letter: canned ? null : si => SRC[si],
+        all: !canned,
         focus: v.idx != null && !v.seed ? { si: v.si, pos: v.pos } : null
       }));
       if (canned) used.appendChild(el('p', 'p1-more', 'Kein Text passt zu deiner Frage – Tiny nimmt alle Texte und rät.'));
       b.appendChild(used);
+    }
+
+    /* Aus Frage zerlegen: Quelle si in der Spalte „N-Gramme und Quellen“ aufklappen und hinscrollen. */
+    function openSource(si) {
+      srcState.open = si;
+      if (!Z.isOpen('src')) Z.setOpen('src', true); else paintSrc(view());
+      requestAnimationFrame(() => {
+        const it = Z.cols.src.body.querySelector('.usrc[data-si="' + si + '"]');
+        if (it) it.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      });
     }
 
     function paintFocus(v) {
@@ -704,7 +723,7 @@ Phases.register(2, {
         /* Reihenfolge (Sönke 12.11.2026): Frage zerlegen · Kandidaten · N-Gramme in den Quellen. */
         Z.column('ask', 'ask', '🔎', 'Frage zerlegen', 'Was sucht Tiny?', 'nachschlagen'),
         Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'wortfuerwort'),
-        Z.column('src', 'origin', '📑', 'N-Gramme', 'Wo steht das in den Quellen?', 'quellen'));
+        Z.column('src', 'origin', '📑', 'N-Gramme und Quellen', 'Wo steht das in A · B · C?', 'quellen'));
       right.appendChild(row);
 
       /* Feste Köpfe (werden nie neu gebaut): Kandidaten = Temperatur + „Dieselbe Frage nochmal“,

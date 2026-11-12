@@ -140,7 +140,8 @@ const Zerlegen = (() => {
   /* „Aus welchen Quellen?“ (Sönke 12.11.2026): nur noch, wie viele Token Tiny aus jedem Text
      genommen hat. Antippen klappt den ganzen Text auf, die genommenen Token sind markiert
      (das angetippte Wort im Handy noch kräftiger). Satzzeichen zählen mit — sie sind auch Token.
-     o = { state: {open}, repaint(), color(si), letter(si)?, focus: {si, pos}?, head? } */
+     o = { state: {open}, repaint(), color(si), letter(si)?, focus: {si, pos}?, head?,
+           all? = alle Quellen der Sitzung zeigen, auch mit 0 Token, in ihrer Reihenfolge (Phase 2: A · B · C) } */
   function usedSources(session, o) {
     const box = el('div', 'usedsrc');
     const taken = new Map();
@@ -149,14 +150,19 @@ const Zerlegen = (() => {
       if (!taken.has(st.si)) taken.set(st.si, new Set());
       taken.get(st.si).add(st.pos);
     });
+    if (o.all) session.sources.forEach((s, si) => { if (!taken.has(si)) taken.set(si, new Set()); });
     if (!taken.size) { box.appendChild(el('p', 'card-empty', 'Noch kein Token genommen.')); return box; }
     const total = [...taken.values()].reduce((a, t) => a + t.size, 0);
-    box.appendChild(el('p', 'p1-sub', o.head || (total + ' Token aus ' + taken.size + (taken.size === 1 ? ' Quelle' : ' Quellen'))));
-    const max = Math.max(...[...taken.values()].map(t => t.size));
-    [...taken.entries()].sort((a, b) => b[1].size - a[1].size).forEach(([si, set]) => {
+    const usedN = [...taken.values()].filter(t => t.size).length;
+    box.appendChild(el('p', 'p1-sub', o.head || (total + ' Token aus ' + usedN + (usedN === 1 ? ' Quelle' : ' Quellen'))));
+    const max = Math.max(1, ...[...taken.values()].map(t => t.size));
+    const order = [...taken.entries()];
+    if (o.all) order.sort((a, b) => a[0] - b[0]); else order.sort((a, b) => b[1].size - a[1].size);
+    order.forEach(([si, set]) => {
       const s = session.sources[si];
       const open = o.state.open === si;
       const item = el('div', 'usrc' + (open ? ' open' : ''));
+      item.dataset.si = String(si);
       item.style.setProperty('--sc', o.color(si));
       const row = el('button', 'usrc-row');
       row.type = 'button';
@@ -166,7 +172,7 @@ const Zerlegen = (() => {
       row.appendChild(lt ? Object.assign(el('span', 'letter sm', lt), { style: 'background:' + o.color(si) }) : el('i', 'dot'));
       const bar = el('span', 'usrc-bar');
       const fill = el('i');
-      fill.style.width = Math.max(4, 100 * set.size / max) + '%';
+      fill.style.width = (set.size ? Math.max(4, 100 * set.size / max) : 0) + '%';
       bar.appendChild(fill);
       const tw = el('span', 'usrc-tw');
       tw.append(el('span', 'usrc-t', s.doc.title), bar);
@@ -191,7 +197,8 @@ const Zerlegen = (() => {
           if (m && p.scrollHeight > p.clientHeight) p.scrollTop = Math.max(0, m.offsetTop - p.clientHeight / 3);
         });
         const foot = el('p', 'usrc-foot');
-        foot.append(el('mark', 'fx-take', 'markiert'), document.createTextNode(' = hat Tiny hier genommen'));
+        if (set.size) foot.append(el('mark', 'fx-take', 'markiert'), document.createTextNode(' = hat Tiny hier genommen'));
+        else foot.appendChild(document.createTextNode('Aus diesem Text hat Tiny noch kein Token genommen.'));
         item.append(p, foot);
       }
       box.appendChild(item);

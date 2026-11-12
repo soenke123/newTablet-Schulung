@@ -332,3 +332,7 @@ div.crow.chosen:hover { background: color-mix(in srgb, var(--cat-candidates-tint
 .fx-take { background: color-mix(in srgb, var(--sc, var(--accent)) 28%, var(--surface)); font-weight: 700; }
 .fx-take.focus { background: color-mix(in srgb, var(--sc, var(--accent)) 55%, var(--surface)); box-shadow: 0 0 0 2px var(--sc, var(--accent)); }
 .usrc-foot { margin: 0; padding: 0 10px 8px; font-size: 0.76rem; color: var(--muted); }
+/* Frage zerlegen: Titel der gewählten Quellen A · B · C = Link in „N-Gramme und Quellen“ */
+.asklink { all: unset; cursor: pointer; font-weight: 700; line-height: 1.2; overflow-wrap: anywhere; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--ink) 30%, transparent); text-underline-offset: 2px; }
+.asklink:hover { text-decoration-color: var(--ink); }
+.asklink:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }

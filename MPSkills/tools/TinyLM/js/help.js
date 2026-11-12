@@ -75,9 +75,9 @@ const HELP = {
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
   },
   quellen: {
-    title: 'N-Gramme', icon: '📑', cat: 'origin',
+    title: 'N-Gramme und Quellen', icon: '📑', cat: 'origin',
     text: ['Wie in Phase 1: Tiny schaut auf die Wörter davor (Regler N-Gramm) und sucht, was dahinter stand – aber nur in den 3 Texten A · B · C, die zu deiner Frage passen.',
-      'Unten siehst du, wie viele Token aus jeder Quelle kommen. Tipp eine an: Die genommenen Token sind markiert.'],
+      'Unten die Quellen A · B · C: wie viele Token daraus kommen. Tipp eine an: Die genommenen Token sind markiert.'],
     try: 'Stell den Regler auf 7-Gramm: Schreibt Tiny dann ganze Sätze aus einer Quelle ab?',
     vis: { type: 'abc' }
   },
