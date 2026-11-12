@@ -4,6 +4,9 @@
 /* Wolken-Sprünge im Handy: erst sichtbar, wenn die Spalte „Wolken-Sprung“ offen ist. */
 .phone.show-jump .srcword.jumped { outline: 2px dashed var(--cat-meaning); outline-offset: 2px; }
 .phone .srcword.farword { opacity: 0.85; }
+/* Wolken-Sprung im Baustein: altes Wort durchgestrichen davor, nur bei offener Spalte. */
+.phone .srcword .jump-old { display: none; }
+.phone.show-jump .srcword .jump-old { display: inline; margin-right: 0.35em; opacity: 0.55; text-decoration: line-through 2px; font-weight: 500; }
 
 /* Frage als Punkt: die nächsten Texte */
 .p3-ranks { display: flex; flex-direction: column; gap: 2px; margin-top: 4px; }

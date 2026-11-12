@@ -112,7 +112,7 @@ Phases.register(3, {
       const opts = Wolke.jumpOptions(W, st.word, jump);
       if (!opts) return;
       const pick = pickFrom(opts);
-      st.jump = { from: st.word, to: pick.word, sim: pick.sim, stay: pick.stay, opts, J: jump };
+      st.jump = { from: st.word, fromRaw: st.raw, to: pick.word, sim: pick.sim, stay: pick.stay, opts, J: jump };
       if (pick.stay) return;
       const n = session.steps.length;
       st.word = pick.word;
@@ -123,6 +123,7 @@ Phases.register(3, {
       const a = prev && Wolke.fixArticle(W, prev.word, pick.word);
       if (a) {
         st.jump.art = { from: prev.raw, to: a };
+        prev.artFrom = prev.raw;
         prev.raw = /^[A-ZÄÖÜ]/.test(prev.raw) ? showWord(a) : a;
         prev.word = a;
         session.ctx[session.ctx.length - 2] = a;
@@ -162,7 +163,14 @@ Phases.register(3, {
         const st = session.steps[p.i];
         const b = st.cands && st.cands.borrow;
         const j = st.jump && !st.jump.stay ? st.jump : null;
-        const span = el('span', 'srcword' + (p.punct ? ' punct' : '') + (st.seed ? ' seedword' : '') + (b || j ? ' jumped' : '') + (p.si >= NTOP ? ' farword' : ''), p.txt);
+        /* Gesprungen: im selben Baustein das alte Wort durchgestrichen, dahinter das neue (nur bei offener Spalte
+           „Wolken-Sprung“ sichtbar, .jump-old). Ebenso ein angepasster Artikel. Lücke: gestrichelter Rand. */
+        const old = j ? j.fromRaw : st.artFrom;
+        const span = el('span', 'srcword' + (p.punct ? ' punct' : '') + (st.seed ? ' seedword' : '') + (b && !j ? ' jumped' : '') + (old ? ' has-old' : '') + (p.si >= NTOP ? ' farword' : ''));
+        if (old) {
+          const o = /^[A-ZÄÖÜ]/.test(p.txt) ? old.charAt(0).toUpperCase() + old.slice(1) : old;
+          span.append(el('s', 'jump-old', o), document.createTextNode(p.txt));
+        } else span.textContent = p.txt;
         span.style.setProperty('--sc', colorOf(p.si));
         span.dataset.i = String(p.i);
         span.title = j ? 'Wolken-Sprung: ' + cap(j.from) + ' → ' + cap(j.to) + ' – antippen' : b ? 'Lücke: ' + cap(b.from) + ' → ' + cap(b.to) + ' – antippen' : 'Antippen zum Zerlegen';
