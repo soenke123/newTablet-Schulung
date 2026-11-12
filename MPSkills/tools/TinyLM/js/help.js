@@ -119,13 +119,15 @@ const HELP = {
   sprung: {
     title: 'Wolken-Sprung', icon: '🦘', cat: 'meaning',
     text: ['Das N-Gramm zieht ein Wort, zum Beispiel „Katze“. Dann schaut Tiny in der Wolke, welche Wörter nah liegen, und springt manchmal hinüber – zu „Hund“. Nicht weil das so im Text steht, sondern weil es in der Wolke nah liegt.',
-      'Der Regler sagt, wie gern Tiny springt: 0 = nie, weiter rechts = öfter und auch zu weiter entfernten Wörtern. Echte Sprachmodelle machen das von selbst: Ähnliche Wörter bekommen ähnliche Chancen.'],
+      'Der Regler sagt, wie gern Tiny springt: 0 = nie, weiter rechts = öfter und auch zu weiter entfernten Wörtern. Echte Sprachmodelle machen das von selbst: Ähnliche Wörter bekommen ähnliche Chancen.',
+      'Die Wolke kennt alle Quellen. Deshalb kann Tiny zu einem Wort springen, das in A · B · C gar nicht steht – dann steht „nicht in A · B · C“ daneben.'],
     try: 'Stell den Regler auf 0 und frag etwas. Dann schieb ihn nach rechts und frag nochmal.',
     vis: { type: 'tokens', items: [['Katze', 'win'], ['→', 'dim'], ['Hund', 's0'], ['bellt', 'next']] }
   },
   wolke: {
     title: 'Wortwolke', icon: '🌌', cat: 'meaning',
     text: ['Jeder Punkt ist ein Wort. Nah beieinander liegen Wörter, die oft bei denselben Wörtern stehen (Hund und Katze stehen beide bei „frisst“ und „schläft“).',
+      'Die Wolke entsteht aus allen Quellen. Oben kannst du eine Quelle zeigen oder nach einer Frage nur die Wörter aus A · B · C.',
       'Eigentlich hat jedes Wort 20 Zahlen. Das Bild zeigt nur 3 davon – deshalb kann Nähe im Bild täuschen.'],
     try: 'Tipp auf „Hund“. Welche Wörter liegen am nächsten?',
     vis: { type: 'dots' }
