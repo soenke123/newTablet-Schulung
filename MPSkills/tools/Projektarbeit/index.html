@@ -167,6 +167,9 @@ main.wrap{padding-top:30px;padding-bottom:80px}
 
 .robar svg{flex:none}
 .robar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--petrol-wash);border:1px solid #b8d2ce;border-radius:var(--r);padding:9px 13px;font-size:12.5px;color:var(--petrol);margin-bottom:16px}
+/* Schreibsperre am Projektziel (0288): jemand anderes schreibt gerade */
+.robar.busy{background:#fdf3d8;border-color:#e8cf8a;color:#7a5a06}
+body.goalbusy #goalRte{opacity:.8}
 /* Demo-Raum (bridge.js, ?demo=1&rollen=1): Leiste über dem Kopf, mit Umschalter */
 .demobar{display:flex;align-items:center;gap:8px 14px;flex-wrap:wrap;background:var(--marker-wash);border-bottom:2px solid var(--marker);padding:8px clamp(14px,2.4vw,30px);font-size:13px;color:var(--ink-2)}
 .demobar-tag{flex:none;background:var(--marker);color:#fff;font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;border-radius:6px;padding:4px 9px}
@@ -1099,6 +1102,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
         <button class="btn" id="goalLockBtn" hidden></button></div>
     </div>
     <div class="robar" id="goalNote" hidden><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg><span>Das Projektziel ist fixiert — es gilt so. Änderungen bitte mit eurer Lehrkraft besprechen.</span></div>
+    <div class="robar busy" id="goalBusy" hidden></div>
     <div class="goalwrap">
       <div>
         <div class="goalhead">
@@ -1481,7 +1485,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261113a"></script>
-<script src="app.js?v=20261026d"></script>
+<script src="bridge.js?v=20261113b"></script>
+<script src="app.js?v=20261113b"></script>
 </body>
 </html>

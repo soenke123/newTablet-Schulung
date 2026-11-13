@@ -142,9 +142,18 @@
     });
   }
 
+  /* Wer gerade am Projektziel schreibt (0288), geht sofort an die
+     Seite — auch wenn der Rest der Ansicht wartet, weil jemand tippt. */
+  function live(v, forFocus) {
+    if (PA.owner || v.role === 'presenter') { if ((forFocus || null) !== PA.focus) return; }
+    PA.goalEdit = (v.group && v.group.goal_edit) || null;
+    if (typeof PA.onLive === 'function') PA.onLive();
+  }
+
   function offer(v, forFocus) {
     if (!v) return;
     keepNewer(v);
+    live(v, forFocus);
     if (inflight || Object.keys(pending).length || typing()) { deferred = v; deferredFor = forFocus; return; }
     deferred = null;
     apply(v, forFocus);
@@ -169,6 +178,7 @@
     blocked:         'Deine Lehrkraft hat dieses Tablet gerade stillgelegt.',
     no_plan:         'Euer Planungsraum ist (noch) nicht geöffnet.',
     goal_locked:     'Das Projektziel ist fixiert — nur die Lehrkraft kann es öffnen.',
+    goal_busy:       'Gerade schreibt jemand anderes am Projektziel — warte, bis das Feld wieder frei ist.',
     not_yours:       'Das hat jemand anderes eingetragen — ändern kann es nur, wer es eingetragen hat oder darin steht.',
     decided:         'Dieser Antrag ist genehmigt — er lässt sich nicht mehr ändern oder löschen.',
     date_missing:    'Bitte ein gültiges Datum eintragen.',
@@ -242,6 +252,7 @@
         if (!pending[k]) items[k] = { kind: it.kind, id: it.id, v: it.v, data: it.data };
       });
     } else {
+      if (res && res.error === 'goal_busy') PA.goalEdit = { name: res.name || 'Jemand', mine: false };
       global.toast(PA.msg(res && res.error));
       // Den Server-Stand holen; die abgelehnte Änderung fällt weg.
       Object.keys(sent).forEach(k => { delete pending[k]; });
@@ -268,6 +279,54 @@
     else list.push({ kind, id, v, data });
   }
 
+  // Bis nichts mehr unterwegs ist (höchstens 6 s).
+  PA.idle = function () {
+    return new Promise(resolve => {
+      const t0 = Date.now();
+      (function wait() {
+        if ((!inflight && !Object.keys(pending).length) || Date.now() - t0 > 6000) return resolve();
+        setTimeout(wait, 100);
+      })();
+    });
+  };
+
+  /* ─── Projektziel: Schreibsperre (0288) ──────────────────── */
+  // PA.goalEdit: { name, mine } — wer gerade schreibt, oder null.
+  // Im Schaufenster/Demo gibt es keine Sperre (nur ein Gerät).
+  PA.goalEdit = null;
+  PA.goalMine  = () => !!PA.goalEdit && !!PA.goalEdit.mine;
+  PA.goalOther = () => EMBED && !!PA.goalEdit && !PA.goalEdit.mine;
+
+  // on=true: greifen/verlängern, false: freigeben. group: für die
+  // Lehrkraft der Planungsraum, in dem die Sperre gegriffen wurde.
+  // Beim Greifen kommt der aktuelle Stand des Projektziels mit.
+  PA.goalLock = async function (on, group) {
+    if (!EMBED) return { ok: true };
+    if (on && PA.ro) return { ok: false, error: 'blocked' };
+    const g = group === undefined ? PA.focus : group;
+    const res = PA.owner
+      ? await call('pa_room_goal_edit', { p_group: g, p_on: !!on })
+      : await call('pa_goal_edit', { p_on: !!on });
+    if (!res) return { ok: false, error: 'network' };
+    const here = !PA.owner || g === PA.focus;
+    if (on && res.ok && here) {
+      PA.goalEdit = { name: '', mine: true };
+      const k = keyOf('goal', 'main');
+      if (res.goal && res.goal.data && !pending[k]) {
+        const cur = items[k];
+        if (!cur || (cur.v || 0) <= res.goal.v) {
+          items[k] = { kind: 'goal', id: 'main', v: res.goal.v, data: res.goal.data };
+          setVer('goal', 'main', res.goal.v, res.goal.data);
+        }
+      }
+    } else if (!on && res.ok && here) {
+      if (PA.goalMine()) PA.goalEdit = null;
+    } else if (res.error === 'goal_busy' && here) {
+      PA.goalEdit = { name: res.name || 'Jemand', mine: false };
+    }
+    return res;
+  };
+
   /* ─── Handlungen (Lehrkraft und Team) ───────────────────── */
   // Einmalige Aufrufe ohne Versionsprüfung: Gruppen ziehen, Planungsraum
   // eröffnen, Label, Code, Regeln. Danach frisch holen.
@@ -282,7 +341,7 @@
   PA.setFocus = function (group) {
     if (PA.focus === group) return;
     PA.focus = group || null;
-    items = {}; pending = {}; deferred = null; recent = {};
+    items = {}; pending = {}; deferred = null; recent = {}; PA.goalEdit = null;
     if (view) { view = Object.assign({}, view, { items: [], group: null }); }
     PA.viewFor = undefined;   // noch keine Ansicht für den neuen Raum
     if (DEMO) { PA.refresh(); return; }

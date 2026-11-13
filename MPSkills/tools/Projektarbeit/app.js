@@ -324,7 +324,8 @@ const person  = id => members().find(m => m.id === id) || (V().people || []).fin
 const gTitle  = (g, mem) => (g && g.name) || (mem && mem[0] && mem[0].name) || 'Einzelarbeit';
 const goalObj = () => Object.assign({ title: '', text: '', due: '', images: [], locked: false }, PA.get('goal', 'main') || {});
 const canWrite = () => !PA.ro;
-const canEditGoal = () => canWrite() && (PA.owner || !goalObj().locked);
+// Schreibsperre (0288): schreibt gerade jemand anderes, ist das Feld zu.
+const canEditGoal = () => canWrite() && (PA.owner || !goalObj().locked) && !PA.goalOther();
 
 /* ════════════════════════════════════════════════════════════
    ZEICHNEN
@@ -903,8 +904,16 @@ function renderGoal() {
   renderDueHint(du.value);
   ti.disabled = !ok;
   r.contentEditable = ok ? 'true' : 'false';
+  const other = PA.goalOther();
   document.body.classList.toggle('goallock', !ok);
-  $('#goalNote').hidden = !g.locked || PA.owner;
+  document.body.classList.toggle('goalbusy', other);
+  const busy = $('#goalBusy');
+  busy.hidden = !other;
+  if (other) {
+    const nm = PA.goalEdit.name || 'Jemand';
+    busy.textContent = `${nm} bearbeitet das Projektziel gerade. Sobald ${nm} fertig ist, kannst du weiterschreiben.`;
+  }
+  $('#goalNote').hidden = !g.locked || PA.owner || other;
   const lb = $('#goalLockBtn');
   lb.hidden = !PA.owner;
   lb.innerHTML = g.locked ? ICO.unlock + ' Projektziel öffnen' : ICO.lock + ' Projektziel fixieren';
@@ -951,6 +960,93 @@ function saveGoal() {
   $('#goalSaved').textContent = 'gespeichert';
   renderHeader(mode());
 }
+
+/* ── Schreibsperre am Projektziel (0288) ─────────────────────
+   Wer in Titel, Datum oder Text tippt, hält die Sperre (pa_goal_edit),
+   alle 10 s verlängert. Die anderen sehen den Hinweis und den Text,
+   können aber nichts ändern. Verlassen des Feldes: kurz warten (ein
+   Formatknopf holt den Fokus zurück), speichern, dann freigeben. */
+const GOAL_FIELDS = ['goalTitle', 'goalRte', 'goalDue'];
+let goalHeld = false, goalHeldFor = null, goalHb = null, goalRel = null, goalBusyCall = false;
+const inGoal = () => !!document.activeElement && GOAL_FIELDS.includes(document.activeElement.id);
+const goalShown = () => !!$('#goalRte').offsetParent;
+
+function fillGoalFields() {
+  const g = goalObj();
+  const ti = $('#goalTitle'), r = $('#goalRte'), du = $('#goalDue');
+  ti.value = g.title || '';
+  du.value = /^\d{4}-\d{2}-\d{2}$/.test(g.due || '') ? g.due : '';
+  renderDueHint(du.value);
+  const focused = document.activeElement === r;
+  r.innerHTML = cleanHtml(g.text);
+  if (focused) { // Schreibmarke ans Ende
+    const sel = getSelection(), rg = document.createRange();
+    rg.selectNodeContents(r); rg.collapse(false); sel.removeAllRanges(); sel.addRange(rg);
+  }
+}
+
+async function goalGrab() {
+  clearTimeout(goalRel); goalRel = null;
+  if (!PA.on || goalHeld || goalBusyCall || !canEditGoal()) return;
+  goalBusyCall = true;
+  const grp = PA.focus;
+  const res = await PA.goalLock(true, grp);
+  goalBusyCall = false;
+  if (!res.ok) {
+    toast(res.error === 'goal_busy' ? `${res.name || 'Jemand'} bearbeitet das Projektziel gerade` : PA.msg(res.error));
+    clearTimeout(goalTimer); goalDirty = false;
+    if (inGoal()) document.activeElement.blur();
+    renderGoal();
+    return;
+  }
+  goalHeld = true; goalHeldFor = grp;
+  // Den neuesten Stand übernehmen, bevor weitergeschrieben wird.
+  if (!goalDirty) fillGoalFields();
+  if (!inGoal()) { goalLetGo(); return; }
+  renderGoal();
+  clearInterval(goalHb);
+  goalHb = setInterval(async () => {
+    if (!goalHeld) return;
+    // Feld nicht mehr zu sehen (anderer Reiter, anderer Planungsraum):
+    // loslassen statt die Sperre endlos zu halten.
+    if (!inGoal() || !goalShown() || (PA.owner && PA.focus !== goalHeldFor)) { goalLetGo(0); return; }
+    const h = await PA.goalLock(true, goalHeldFor);
+    if (!h.ok && h.error !== 'network') goalLost();
+  }, 10000);
+}
+
+function goalLetGo(wait) {
+  clearTimeout(goalRel);
+  goalRel = setTimeout(async () => {
+    goalRel = null;
+    if (inGoal() && goalShown() && !(PA.owner && PA.focus !== goalHeldFor)) return;
+    clearInterval(goalHb); goalHb = null;
+    if (!goalHeld) return;
+    if (goalDirty && (!PA.owner || PA.focus === goalHeldFor)) saveGoal();
+    await PA.idle();              // erst speichern, dann freigeben
+    goalHeld = false;
+    await PA.goalLock(false, goalHeldFor);
+    goalHeldFor = null;
+    if (mode() === 'plan') renderGoal();
+  }, wait === undefined ? 1200 : wait);
+}
+
+// Die eigene Sperre ist weg (abgelaufen, jemand anderes hat sie):
+// aufhören, damit nichts über die Arbeit der anderen gespeichert wird.
+function goalLost() {
+  clearInterval(goalHb); goalHb = null;
+  clearTimeout(goalTimer);
+  goalHeld = false; goalHeldFor = null; goalDirty = false;
+  if (inGoal()) document.activeElement.blur();
+  if (mode() === 'plan') { fillGoalFields(); renderGoal(); }
+  toast(PA.msg('goal_busy'));
+}
+
+// Vom Server, sofort — auch während jemand tippt.
+PA.onLive = function () {
+  if (goalHeld && PA.goalOther()) goalLost();
+  if (mode() === 'plan') renderGoal();
+};
 
 function shrinkImg(file, max, cb) {
   const fr = new FileReader();
@@ -2230,6 +2326,17 @@ function wire() {
   $('#goalTitle').addEventListener('blur', saveGoal);
   $('#goalRte').addEventListener('input', goalChanged);
   $('#goalRte').addEventListener('blur', saveGoal);
+  // Schreibsperre (0288): greifen beim Betreten, freigeben beim Verlassen.
+  GOAL_FIELDS.forEach(id => {
+    $('#' + id).addEventListener('focus', () => goalGrab());
+    $('#' + id).addEventListener('blur', () => { if (goalHeld || goalBusyCall) goalLetGo(); });
+  });
+  // Am Tablet bleibt der Fokus im Feld, wenn man daneben tippt —
+  // dann hielte das Gerät die Sperre ewig. Tippen außerhalb = Feld verlassen.
+  document.addEventListener('pointerdown', e => {
+    if (!inGoal() || e.target.closest('.goalwrap')) return;
+    document.activeElement.blur();
+  }, true);
   $('#goalRte').addEventListener('paste', e => {
     // Nur Text einfügen — fremde Formatierung und Bilder bleiben draußen.
     e.preventDefault();
@@ -2245,6 +2352,7 @@ function wire() {
   });
   $('#goalLockBtn').addEventListener('click', () => {
     if (!PA.owner) return;
+    if (PA.goalOther()) { toast(PA.msg('goal_busy')); return; }
     if (goalDirty) saveGoal();
     const g = goalObj();
     PA.put('goal', 'main', Object.assign({}, g, { locked: !g.locked }));
