@@ -346,6 +346,8 @@
         cwwConf = { prefix: m.cwwNetz.prefix | 0, backbone: String(m.cwwNetz.backbone || '') };
         SIM.netz.setInternet(cwwConf);
         cwwModus();
+        // „3. Das große Netz" & Co.: vor dem Bereich geladen → jetzt passend.
+        if (!watching && !applying && SIM.bereichNachziehen && SIM.bereichNachziehen()) spaeterSenden();
         lastNamen = '';
         lastAktiv = null;
         SIM.neuZeichnen();

@@ -2672,6 +2672,67 @@ section('Sek I und II · neue Szenarien');
     ok('was es nicht kennt, geht weiter in die Wolke', raus && raus.why === 'Internet', JSON.stringify(raus));
   }
 
+  // ⭐ Großes Netz im Bereich 67: beim Laden im Raum auf den Bereich des cww umgestellt.
+  {
+    const u = S.grossesnetz.imBereich(67);
+    const roh = JSON.stringify(u.netz);
+    ok('Großes Netz im Bereich 67: keine Adresse 50.0. mehr, weder im Netz noch im Auftrag',
+       !/50\.0\./.test(roh) && !/50\.0\./.test(u.aufgabe), (roh.match(/.{30}50\.0\..{20}/) || [''])[0]);
+    ok('Großes Netz im Bereich 67: die Heimnetze bleiben privat', /"192\.168\.1\.20"/.test(roh) && /"192\.168\.2\.1"/.test(roh));
+    const namen = [...new Set(roh.match(/[a-z0-9.-]+\.de\b/g))];
+    ok('Großes Netz im Bereich 67: jeder Name trägt die 67', namen.length >= 8 && namen.every(n => /67\.de$/.test(n)), namen.join(' '));
+    ok('Großes Netz im Bereich 67: das Original bleibt unberührt',
+       S.grossesnetz.netz.nodes.find(n => n.name === 'DNS-Server').nics[0].ip === '50.0.5.53');
+    ok('Großes Netz: ungültige Bereiche werden nicht umgestellt',
+       S.grossesnetz.imBereich(8) === null && S.grossesnetz.imBereich(0) === null && S.grossesnetz.imBereich(300) === null);
+
+    const { engine, netz, stack } = bau();
+    const dienste = new sandbox.Dienste(engine, netz, stack, {});
+    const term = new sandbox.Terminal(engine, netz, stack, dienste);
+    const inet = sandbox.Internet.erzeugen(engine, netz, stack, {});
+    netz.setInternet({ prefix: 67 });
+    netz.fromJSON(U.deepCopy(u.netz));
+    const z = { engine, netz, stack, dienste, term };
+    const by = (n) => netz.byName(n);
+    const K = sandbox.Tls.Krypto;
+    const zsN = by('Zertifizierungsstelle');
+    const zerts = ['Webserver Schule', 'Mailserver', 'Filmwelt', 'VPN-Server'].map(n => by(n).zertifikat);
+    ok('Großes Netz im Bereich 67: die vier Zertifikate sind auf die neuen Namen neu unterschrieben',
+       zerts.every(c => /67\.de$/.test(c.zert.name) && K.unterschriftPasst(K.zertText(c.zert), c.zert.signatur, zsN.zsServer.schluessel)),
+       zerts.map(c => c.zert.name).join(' '));
+    dienste.start(); dienste.sync();
+    engine.runUntil(engine.now + 120 * SEC);
+    ok('Großes Netz im Bereich 67: Laptop 1 hat 67.0.4.50, Heimrouter 1 hat 67.0.6.10',
+       by('Laptop 1').nics[0].ip === '67.0.4.50' && by('Heimrouter 1').nics[0].ip === '67.0.6.10',
+       by('Laptop 1').nics[0].ip + ' / ' + by('Heimrouter 1').nics[0].ip);
+    const seite = (von, url) => { let r = null; dienste.http.seiteHolen(by(von), url, (x) => r = x);
+      engine.runUntil(engine.now + 40 * SEC); return r; };
+    for (const [von, url] of [['Laptop 1', 'www.mps-schule67.de'], ['Laptop 1', 'www.heimseite67.de'],
+                              ['Handy 3', 'mpsflix67.de'], ['Laptop 3', '192.168.1.20']]) {
+      const r = seite(von, url);
+      ok('Großes Netz im Bereich 67: ' + von + ' ruft ' + url + ' auf', r && r.ok, r && r.grund);
+    }
+    const sicher = seite('Laptop 1', 'https://www.mps-schule67.de');
+    ok('⭐ Großes Netz im Bereich 67: HTTPS ohne Warnung auf Laptop 1', sicher && sicher.ok && sicher.tls, sicher && JSON.stringify(sicher.tls || sicher.grund));
+    let post = null;
+    dienste.mail.abholen(by('Laptop 1'), (f, n) => post = [f, n]);
+    engine.runUntil(engine.now + 40 * SEC);
+    ok('Großes Netz im Bereich 67: Anna holt ihre drei Mails (anna@mps-schule67.de)',
+       post && !post[0] && post[1] === 3 && by('Laptop 1').mailKonto.adresse === 'anna@mps-schule67.de', JSON.stringify(post));
+    const fw = seite('Laptop 5', 'mpsflix67.de');
+    ok('Großes Netz im Bereich 67: die Firewall sperrt mpsflix67.de im Internat', fw && !fw.ok, fw && JSON.stringify(fw.grund));
+    let tun = 'offen';
+    dienste.vpn.verbinden(by('Laptop 5'), {}, (f) => tun = f);
+    engine.runUntil(engine.now + 40 * SEC);
+    ok('Großes Netz im Bereich 67: der Tunnel zu vpn.tunnelfix67.de steht', tun === null, String(tun));
+    const draussen = inet.veroeffentlicht();
+    const a = (n) => draussen.find(e => e.typ === 'A' && e.name === n);
+    ok('⭐ Großes Netz im Bereich 67: 8.8.8.8 bekommt die Namen (www.mps-schule67.de → 67.0.5.80)',
+       a('www.mps-schule67.de') && a('www.mps-schule67.de').wert === '67.0.5.80' && a('www.heimseite67.de')
+       && draussen.some(e => e.typ === 'MX' && e.name === 'mps-schule67.de'),
+       JSON.stringify(inet.eigene().slice(0, 4)));
+  }
+
   // 2. Der Handschlag: genau EIN Handschlag vor der Seite, RST am Mailserver.
   {
     const z = lade('handschlag');

@@ -6,6 +6,28 @@ dieser Runde passiert ist und was als Nächstes dran ist.
 
 ---
 
+## 0016 · Großes Netz im Bereich des cww (2026-11-13)
+
+Berührt: `js/szenarien.js` (`grUmstellen`, `grAuftrag`, `grossesnetz.imBereich`), `js/app.js` (`eingebaut`, `frisch`,
+`bereichNachziehen`), `js/bruecke.js` (`cwwNetz` zieht nach), `tests/kerntest.js` (1376 grün, Abschnitt „Großes Netz im
+Bereich 67"), Cache-Stempel `20261113a` (synir `index.html` + `tool.js`) und `20261113d` (`MPSkills/lib/tool.js` + Seiten).
+
+* ⭐ **Vom Nutzer verlangt:** „das große Netz so bauen, dass jeder einen funktionierenden Bereich bekommt — die globalen
+  IP-Adressen im Bereich des cww, die lokalen bleiben, und der DNS passt sich an. Die Namen haben am Ende die Nummer
+  (kann man ändern)."
+* Ein mitgeliefertes Szenario mit `imBereich(p)` wird im Raum (`internet.modus === 'raum'`) beim Laden umgestellt:
+  jede Zeichenkette im Netz und im Auftrag, `50.0.x.y` → `p.0.x.y`, `mps-schule.de` → `mps-schule<p>.de` (ebenso mpsflix,
+  heimseite, filmwelt, tunnelfix) — auch Webseiten, Mails, Konten, Firewall-Regeln, VPN-Client. `192.168.…` bleibt.
+* Zertifikate unterschreiben ihren Namen; `grUmstellen` stellt sie mit dem Schlüssel der ZS neu aus (Fingerabdruck
+  gleich, Vertrauenslisten bleiben gültig).
+* Kommt der Bereich erst nach dem Laden (`cwwNetz`), legt `bereichNachziehen` das Szenario noch einmal passend auf —
+  nur solange seit dem Laden nichts geändert wurde (`frisch`, gelöscht bei jedem `gemeldet` außer szenario/modus).
+* Ohne Raum bleibt alles beim Übungsnetz mit 50 und den Namen ohne Zahl.
+* ⚠️ Die Geräte fragen ihren eigenen DNS-Server (`p.0.5.53`); der kennt nur die eigenen Namen und fragt 8.8.8.8 nicht
+  weiter. Seiten anderer findet man über 8.8.8.8 als DNS oder über die Adresse.
+* ⚠️ `tests/raumtest.js` bricht schon vor dieser Runde ab („Aufgabentext", Reiter, „15 mitgelieferte"). Der Raum-Weg
+  wurde mit einem eigenen Playwright-Lauf geprüft (Bereich 67/88: Nachziehen, HTTPS ohne Warnung).
+
 ## 0015 · E-Mail: IMAP ist der Standard, POP3 nur auf Wunsch (2026-10-25)
 
 Berührt: `js/mail.js` (IMAP-Server und -Gespräch, UIDs, Löschen), `js/netz.js` (`mailKonto`: `art`, `eingang`,

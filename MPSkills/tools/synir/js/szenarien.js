@@ -1400,10 +1400,12 @@
      und zertAusstellen; kerntest prüft, dass die Unterschriften passen.
 
      ⚠️ Alle öffentlichen Adressen beginnen mit 50. — das ist der
-     Bereich des Übungsnetzes (ohne Raum). Wer im Raum einen anderen
-     Bereich hat, ersetzt überall die 50 durch seine Zahl. Deshalb
-     gibt es keine einzige Adresse, die sich nicht aus 50.0.x.y
-     ergibt, und die Heimnetze bleiben ohnehin privat.
+     Bereich des Übungsnetzes (ohne Raum). Im Raum stellt grUmstellen
+     (unten, seit 2026-11-13) das Netz beim Laden auf den Bereich des
+     Tablets um: 50 → eigene Zahl, Namen mit der Zahl am Ende,
+     Zertifikate neu unterschrieben. Deshalb gibt es keine einzige
+     Adresse, die sich nicht aus 50.0.x.y ergibt, und die Heimnetze
+     bleiben ohnehin privat.
 
      Zwei Dinge sind Absicht und stehen im Auftrag:
        · Heimrouter 1 bekommt vom Anbieter immer 50.0.6.10 (feste
@@ -1787,12 +1789,16 @@
     + '<li><code>zs.mps-schule.de</code> → <code>50.0.5.70</code> (Zertifizierungsstelle)</li>'
     + '<li><code>vpn.tunnelfix.de</code> → <code>50.0.6.20</code> (VPN-Server)</li></ul>';
 
-  const grossesnetz = {
-    titel: '3. Das große Netz', gruppe: ANDERE,
-    aufgabe: auftrag({
+  /* Der Auftrag, einmal für das Übungsnetz (umgestellt = false) und
+     einmal für ein Netz, das schon auf den Bereich des Raums
+     umgestellt ist (dann tauscht grUmstellen danach Adressen und
+     Namen im fertigen Text aus). */
+  const grAuftrag = (umgestellt) => auftrag({
       kontext: 'Ein <strong>fertig eingerichtetes</strong> Netz, in dem alles läuft, was SYNIR kann — auch HTTPS mit Zertifizierungsstelle, Mitlesen im WLAN, Firewall und VPN. '
         + 'Zum Ausprobieren und Testen, ohne dass du etwas einrichten musst. '
-        + 'Es hat keine Aufgabe außer: <strong>probier etwas aus</strong>. Unten steht, was wo läuft, mit allen Konten, Passwörtern und Namen zum Nachlesen.',
+        + 'Es hat keine Aufgabe außer: <strong>probier etwas aus</strong>. Unten steht, was wo läuft, mit allen Konten, Passwörtern und Namen zum Nachlesen.'
+        + (umgestellt ? ' Das Netz ist schon auf den Bereich <strong>deines cww</strong> umgestellt (Adressen <code>50.0.…</code>, Namen mit deiner Zahl) — '
+          + 'so funktioniert es auch im Class Wide Web, und die anderen erreichen deine Seiten.' : ''),
       aufgaben: [
         { typ: 'benutzen', text: 'Schalte auf <em>Aktion</em> und ruf auf <strong>Laptop 1</strong> im Browser <code>www.mps-schule.de</code>, '
           + '<code>www.heimseite.de</code> und <code>mpsflix.de</code> auf. Ruf dann im Mailprogramm die Post ab.' },
@@ -1810,9 +1816,15 @@
           'Internat (Firewall-Router): <code>50.0.7.0</code>, angebunden an Router 4 über <code>50.0.108.0</code>',
           'Heimnetze: <code>192.168.1.0</code> (Heimrouter 1) und <code>192.168.2.0</code> (Heimrouter 2)'
         ] },
-        { begriff: 'Auf dein cww umstellen', text: 'Im Raum hat dein cww einen eigenen Bereich (Fenster des cww, Reiter <em>Internet</em>). Ersetze in diesem Netz die erste Zahl <code>50</code> '
-          + 'durch deine: an allen Routern und am cww, an den festen Adressen der Server, im DHCP-Bereich, bei Gateway und DNS, bei den DNS-Einträgen, '
-          + 'bei der festen Zuweisung für Heimrouter 1 und bei den Mail-Einstellungen (dort stehen nur Namen, die brauchen nichts).' },
+        umgestellt
+          ? { begriff: 'Dein Bereich', text: 'Dieses Netz ist beim Laden auf den Bereich deines cww umgestellt worden (Fenster des cww, Reiter <em>Internet</em>): '
+              + 'alle öffentlichen Adressen beginnen mit deiner Zahl, die privaten Heimnetze <code>192.168.…</code> sind geblieben. '
+              + 'Die Namen tragen deine Zahl am Ende (zum Beispiel <code>www.mps-schule.de</code>), damit sie im Class Wide Web dir gehören — '
+              + 'über <code>8.8.8.8</code> finden auch die anderen deine Seiten. Du darfst die Namen ändern; dann aber überall: im DNS-Server, '
+              + 'in den Mail-Einstellungen, an der Firewall, im VPN-Client und bei den Zertifikaten (neu beantragen).' }
+          : { begriff: 'Im Raum', text: 'Im Raum hat dein cww einen eigenen Bereich (Fenster des cww, Reiter <em>Internet</em>). Wählst du dieses Szenario dort, '
+              + 'stellt SYNIR das Netz beim Laden selbst um: die erste Zahl <code>50</code> wird überall zu deiner, und die Namen bekommen deine Zahl am Ende '
+              + '(aus <code>www.mps-schule.de</code> wird zum Beispiel <code>www.mps-schule67.de</code>).' },
         { begriff: 'Die Heimseite von innen', text: 'Aus <em>Heimnetz 1</em> selbst klappt <code>www.heimseite.de</code> nicht: Der Name führt zur öffentlichen Adresse des Heimrouters, '
           + 'und der übersetzt nur, was von <em>außen</em> hereinkommt. Wer im Heimnetz sitzt, ruft <code>192.168.1.20</code> auf.' },
         { begriff: 'Firewall und VPN', text: 'Die Firewall sieht nur Absender und Ziel. Mit VPN geht von Laptop 5 alles als verschlüsselter Tunnel '
@@ -1820,8 +1832,63 @@
           + 'Dafür sieht jetzt der VPN-Server alles, was Laptop 5 tut.' },
         WERKZEUG_MITSCHNITT, WERKZEUG_LERN
       ]
-    }).replace('<details>', grListen + '<details>'),
-    netz: grNetz
+    }).replace('<details>', grListen + '<details>');
+
+  /* ── Umstellen auf den Bereich des Raums ─────────────────────
+     Im Raum hat jedes Tablet ein eigenes /8 (50 bis 150). Das
+     Netz oben ist für 50 gebaut; `grUmstellen(p)` gibt eine Kopie,
+     in der jede öffentliche Adresse 50.0.x.y zu p.0.x.y wird und
+     jeder Name eine Zahl bekommt (mps-schule.de → mps-schule67.de),
+     damit zwei Kinder im Class Wide Web nicht denselben Namen
+     anmelden. Die privaten Heimnetze bleiben, wie sie sind.
+
+     ⚠️ Ein Zertifikat unterschreibt seinen Namen (Tls.zertText).
+     Mit neuen Namen stellt die ZS sie hier mit ihrem eigenen
+     Schlüssel neu aus — dieselben Schlüssel, derselbe
+     Fingerabdruck, die Vertrauenslisten bleiben gültig.
+
+     ⚠️ Wer einen neuen Namen oder eine neue öffentliche Adresse in
+     dieses Netz legt, muss ihn hier mitdenken: Namen in GR_NAMEN,
+     Adressen nur aus grPraefix. Der Prüfstand (kerntest, „Großes
+     Netz im Bereich 67") sucht nach Resten von 50.0. */
+  const GR_NAMEN = ['mps-schule', 'mpsflix', 'heimseite', 'filmwelt', 'tunnelfix'];
+  function grUmstellen(p) {
+    p = p | 0;
+    if (!(p >= 1 && p <= 223) || p === 8 || p === 10 || p === 127) return null;
+    const ipRe = /(^|[^0-9.])50\.0\.(?=\d)/g;
+    const nameRe = new RegExp('(^|[^a-z0-9-])(' + GR_NAMEN.join('|') + ')\\.de(?![a-z0-9-])', 'gi');
+    const neu = (t) => t.replace(ipRe, '$1' + p + '.0.').replace(nameRe, (m, vor, name) => vor + name + p + '.de');
+    const tief = (w) => {
+      if (typeof w === 'string') return neu(w);
+      if (Array.isArray(w)) return w.map(tief);
+      if (w && typeof w === 'object') {
+        const o = {};
+        for (const k of Object.keys(w)) o[k] = tief(w[k]);
+        return o;
+      }
+      return w;
+    };
+    const netz = tief(grNetz);
+    const K = window.Tls && window.Tls.Krypto;
+    const zs = { name: grZsName, schluessel: grZsSchluessel };
+    const neuAus = (z) => (K && z && z.besitzer) ? K.zertAusstellen(zs, z.nr, z.name, z.besitzer) : z;
+    for (const n of netz.nodes) {
+      if (n.zertifikat && n.zertifikat.zert) n.zertifikat.zert = neuAus(n.zertifikat.zert);
+      if (n.zsServer && n.zsServer.antraege) {
+        for (const a of n.zsServer.antraege) if (a.zert) a.zert = neuAus(a.zert);
+      }
+    }
+    // Dazu die Stellen, an denen nur der Anfang steht („<code>50.0.</code>").
+    const aufgabe = neu(grAuftrag(true)).split('<code>50.0.').join('<code>' + p + '.0.');
+    return { aufgabe: aufgabe, netz: netz, praefix: p };
+  }
+
+  const grossesnetz = {
+    titel: '3. Das große Netz', gruppe: ANDERE,
+    aufgabe: grAuftrag(false),
+    netz: grNetz,
+    /* app.js fragt danach, wenn das Tablet im Raum einen Bereich hat. */
+    imBereich: grUmstellen
   };
 
   window.SZENARIEN = { i1, i2, i3, i4, i5, i6, i7, ii1, ii2, ii3, ii4, ii5, ii6, ii7, ii8, ii9, handschlag, grossesnetz };

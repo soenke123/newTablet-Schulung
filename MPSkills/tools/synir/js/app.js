@@ -212,6 +212,7 @@
     }
     const INET_TAKT_MS = 3000;
     function gemeldet(was) {
+      if (was !== 'szenario' && was !== 'modus') frisch = null;
       for (const f of extern.beiAenderung) {
         try { f(was); } catch (e) { console.warn('[app] Rückruf:', e.message); }
       }
@@ -224,6 +225,13 @@
        mehr dazu. `id` ist „builtin:<schlüssel>", eine uuid (eigenes
        Szenario im Raum) oder null (selbst gebaut). */
     const aktuell = { id: null, titel: '', aufgabe: '' };
+
+    /* Ein mitgeliefertes Szenario, das sich auf den Bereich des Raums
+       umstellen lässt (`imBereich`, z. B. „3. Das große Netz") und an
+       dem seit dem Laden niemand etwas geändert hat. Kommt der Bereich
+       erst NACH dem Laden vom Server (bruecke.js, cwwNetz), legt
+       `bereichNachziehen` es noch einmal passend auf. */
+    let frisch = null;                // { id, praefix } oder null
 
     const konfig = new window.Konfig(netz, stack, dienste);
     konfig.setInternet(inet);
@@ -1270,6 +1278,7 @@
        ein Text. */
     const SZENARIEN = window.SZENARIEN || {};
 
+
     /* Ein Szenario auflegen — egal woher es kommt: aus dem Code
        (die mitgelieferten), vom Server (ein eigenes, im Raum) oder
        von der Lehrkraft vorn (Spiegelung: dann ist `s` der Stand
@@ -1312,6 +1321,7 @@
          Sprung in eine andere Aufgabe — und würde die gerade
          verteilte Aufgabe der Lehrkraft lautlos wegnehmen. */
       verlauf.leeren();
+      frisch = s.anpassbar ? { id: s.id, praefix: s.praefix } : null;
       auftragAus({
         szenario: s.id !== undefined ? s.id : s.szenario,
         titel: s.titel, aufgabe: s.aufgabe
@@ -1328,7 +1338,30 @@
     function eingebaut(id) {
       const k = String(id || '').replace(/^builtin:/, '');
       const s = SZENARIEN[k];
-      return s ? { id: 'builtin:' + k, titel: s.titel, aufgabe: s.aufgabe, netz: s.netz } : null;
+      if (!s) return null;
+      const aus = { id: 'builtin:' + k, titel: s.titel, aufgabe: s.aufgabe, netz: s.netz };
+      /* Im Raum (cww mit eigenem Bereich) gleich passend umgestellt;
+         ohne Raum bleibt es beim Übungsnetz mit 50. */
+      if (typeof s.imBereich === 'function') {
+        aus.anpassbar = true;
+        aus.praefix = 0;
+        if (inet && inet.modus === 'raum') {
+          const u = s.imBereich(netz.internetConf().prefix);
+          if (u) { aus.aufgabe = u.aufgabe; aus.netz = u.netz; aus.praefix = u.praefix; }
+        }
+      }
+      return aus;
+    }
+
+    /* Der Bereich des Raums ist da (oder hat sich geändert): liegt
+       noch ein unberührtes, umstellbares Szenario auf, das für einen
+       anderen Bereich gebaut ist, kommt es noch einmal — passend. */
+    function bereichNachziehen() {
+      if (!frisch || !inet || inet.modus !== 'raum') return false;
+      if (frisch.praefix === netz.internetConf().prefix) return false;
+      const s = eingebaut(frisch.id);
+      if (!s || !s.praefix) return false;
+      return szenarioLaden(s, { still: true });
     }
     const menue = window.SzMenue({
       knopf: $('szenarioBtn'),
@@ -1941,7 +1974,7 @@
                    setModus, leisteSetzen, verlauf,
                    kopieren, einfuegen, loeschenAuswahl,
                    // Für den Raum (bruecke.js) und die Prüfstände.
-                   standJson, szenarioLaden, eingebaut, showAufgabe, toast,
+                   standJson, szenarioLaden, eingebaut, bereichNachziehen, showAufgabe, toast,
                    internet: inet, internetNeu, neuZeichnen,
                    setRunning, menue, extern, aktuell, ROLLE, IM_RAUM,
                    speichern(an) { nichtSpeichern = !an || VORSCHAU; if (!nichtSpeichern) save(); },
