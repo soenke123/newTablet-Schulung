@@ -134,8 +134,9 @@ const HELP = {
     title: 'Wortwolke', icon: '🌌', cat: 'meaning',
     text: ['Jeder Punkt ist ein Wort. Nah beieinander liegen Wörter, die oft bei denselben Wörtern stehen (Hund und Katze stehen beide bei „frisst“ und „schläft“).',
       'Die Wolke zeigt die Wörter aller Quellen. Der Abstand sagt, wie nah zwei Wörter sind: 0 = derselbe Punkt, 1 = weit weg.',
+      'Oben blendest du ein: Frage (blau, ★), Antwort-Weg (grün, Pfeile in der Reihenfolge, in der Tiny geschrieben hat) und Sprünge (gestrichelt: von welchem Wort Tiny gesprungen ist). Wörter wie „der“ oder „und“ haben keinen Punkt.',
       'Eigentlich hat jedes Wort 20 Zahlen. Das Bild zeigt nur 3 davon – deshalb kann Nähe im Bild täuschen.'],
-    try: 'Tipp auf „Hund“. Welche Wörter liegen am nächsten?',
+    try: 'Frag etwas und schau, welchen Weg die Antwort durch die Wolke nimmt. Wo ist sie gesprungen?',
     vis: { type: 'dots' }
   },
 

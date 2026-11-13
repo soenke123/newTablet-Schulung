@@ -52,3 +52,13 @@
 .p3-where { display: inline-flex; gap: 2px; align-items: center; grid-column: 1 / -1; justify-self: start; font-size: 0.7rem; color: var(--muted); }
 .p3-where.out { color: var(--cat-candidates); font-weight: 600; }
 .letter.xs { width: 1.05rem; height: 1.05rem; border-radius: 4px; font-size: 0.62rem; }
+
+/* Wortwolke: Frage · Antwort-Weg · Sprünge ein- und ausblenden (13.11.2026) */
+.p3-show { display: flex; flex-wrap: wrap; gap: 6px; }
+.p3-showchip { gap: 6px; font-size: 0.8rem; }
+.p3-showchip .p3-dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; border: 2px solid currentColor; display: inline-block; }
+.p3-showchip.q .p3-dot { color: var(--cat-meaning); }
+.p3-showchip.path .p3-dot { color: var(--cat-context); }
+.p3-showchip.jump .p3-dot { color: var(--cat-candidates); border-style: dashed; }
+.p3-showchip:not(.active) { opacity: 0.6; }
+.p3-showchip.active .p3-dot { background: currentColor; }

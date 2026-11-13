@@ -40,6 +40,9 @@ Phases.register(3, {
   mount(host) {
     let W = null, docs = null;
     let R = null, session = null, asked = false, seedLen = 0;
+    const SHOW_KEY = 'tinylm-p3-wolke-zeigen';
+    const cloudShow = { q: true, path: true, jump: true };
+    try { Object.assign(cloudShow, JSON.parse(localStorage.getItem(SHOW_KEY) || '{}')); } catch (e) {}
     let temp = 1, n = P3_N, jump = P3_JUMP, playing = false, timer = null, done = false, focus = null;
     let gramLine, legendHost, abcSets = [], Z, phoneEl, screen, placeholder, askedEl, answerEl, metaEl, textEl, cursor, askBox, sayBox, sayEl, controls, playBtn, input, focusHost;
     let cloud = null;
@@ -156,6 +159,17 @@ Phases.register(3, {
     }
     function jumpPairs() {
       return jumpSteps().map(({ st }) => st.jump && !st.jump.stay ? [st.jump.from, st.jump.to] : [st.cands.borrow.from, st.cands.borrow.to]);
+    }
+    /* Antwort-Weg: die geschriebenen Wörter (mit Anfang aus der Frage, nach einem Sprung das neue Wort),
+       nur solche mit Punkt in der Wolke (Nomen/Verben, mind. 2×), gleiche direkt hintereinander nur einmal. */
+    function pathWords() {
+      if (!session || !W) return [];
+      const out = [];
+      session.steps.forEach(st => {
+        const w = W.idx.has(st.word) ? st.word : W.resolve(st.raw || st.word);
+        if (w && out[out.length - 1] !== w) out.push(w);
+      });
+      return out;
     }
     function say() {
       if (!sayEl || !asked) return;
@@ -547,11 +561,27 @@ Phases.register(3, {
       const search = el('input', 'textin'); search.type = 'search'; search.placeholder = 'Wort suchen'; search.setAttribute('aria-label', 'Wort in der Wolke suchen');
       const spin = el('button', 'btn sm', '⏸ Drehen anhalten'); spin.type = 'button';
       tools.append(search, spin);
+      /* Ein- und ausblenden: Frage · Antwort-Weg · Sprünge (Sönke 13.11.2026). Die Sprünge gehören zum Weg:
+         der Weg läuft durch das Wort, zu dem Tiny gesprungen ist; „Sprünge“ zeigt zusätzlich, woher. */
+      const showRow = el('div', 'p3-show');
+      [['q', 'Frage', 'Die Wörter deiner Frage'], ['path', 'Antwort-Weg', 'Die Wörter der Antwort, in der Reihenfolge, in der Tiny sie geschrieben hat'],
+        ['jump', 'Sprünge', 'Wolken-Sprünge: von welchem Wort Tiny zu welchem gesprungen ist']].forEach(([k, label, title]) => {
+        const b = el('button', 'chip p3-showchip ' + k); b.type = 'button'; b.title = title;
+        b.append(el('i', 'p3-dot'), document.createTextNode(label));
+        const sync = () => { b.classList.toggle('active', !!cloudShow[k]); b.setAttribute('aria-pressed', cloudShow[k] ? 'true' : 'false'); };
+        b.addEventListener('click', () => {
+          cloudShow[k] = !cloudShow[k]; sync();
+          try { localStorage.setItem(SHOW_KEY, JSON.stringify(cloudShow)); } catch (e) {}
+          draw();
+        });
+        sync();
+        showRow.appendChild(b);
+      });
       const info = el('div', 'p3-info');
       const honest = el('p', 'p3-honest');
       honest.append(el('b', null, 'Eigentlich hat jedes Wort ' + W.dims + ' Zahlen. '),
         document.createTextNode('Das Bild zeigt nur 3 Richtungen davon. Von den 3 ähnlichsten Wörtern eines Worts liegen hier nur ' + Math.round(W.keep3 * 100) + ' % auch im Bild nah – die Liste rechts rechnet mit allen ' + W.dims + ' Zahlen.'));
-      side.append(tools, info);
+      side.append(showRow, tools, info);
       wrap.append(cv, side);
       hostEl.append(wrap, honest);
 
@@ -563,8 +593,9 @@ Phases.register(3, {
       }
       function highlight() {
         const hi = new Map();
-        if (R) R.qwords.forEach(q => { if (q.w) hi.set(q.w, 'q'); });
-        jumpPairs().forEach(([a, b]) => { hi.set(a, 'b'); hi.set(b, 'b'); });
+        if (cloudShow.path) pathWords().forEach(w => hi.set(w, 'a'));
+        if (cloudShow.q && R) R.qwords.forEach(q => { if (q.w) hi.set(q.w, 'q'); });
+        if (cloudShow.jump) jumpPairs().forEach(([a, b]) => { hi.set(a, 'b'); hi.set(b, 'b'); });
         if (sel) { hi.set(sel, 's'); W.neighbors(sel, 5).forEach(([w]) => { if (!hi.has(w)) hi.set(w, 'n'); }); }
         return hi;
       }
@@ -592,7 +623,25 @@ Phases.register(3, {
         g.lineWidth = 1.5;
         const line = (a, b, col, dash) => { const pa = proj[W.idx.get(a)], pb = proj[W.idx.get(b)]; if (!pa || !pb) return; g.strokeStyle = col; g.setLineDash(dash || []); g.beginPath(); g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y); g.stroke(); };
         if (sel) W.neighbors(sel, 5).forEach(([x]) => line(sel, x, acc + '99'));
-        jumpPairs().forEach(([a, b]) => line(a, b, cs.getPropertyValue('--cat-candidates').trim(), [5, 4]));
+        if (cloudShow.path) {
+          /* Antwort-Weg: Wort für Wort, mit kleinem Pfeil in der Mitte jeder Strecke. */
+          const pc = cs.getPropertyValue('--cat-context').trim();
+          const pw = pathWords();
+          g.lineWidth = 2; g.strokeStyle = pc; g.fillStyle = pc; g.globalAlpha = 0.85;
+          for (let k = 1; k < pw.length; k++) {
+            const pa = proj[W.idx.get(pw[k - 1])], pb = proj[W.idx.get(pw[k])];
+            if (!pa || !pb) continue;
+            g.beginPath(); g.moveTo(pa.x, pa.y); g.lineTo(pb.x, pb.y); g.stroke();
+            const dx = pb.x - pa.x, dy = pb.y - pa.y, L = Math.hypot(dx, dy);
+            if (L < 22) continue;
+            const ux = dx / L, uy = dy / L, mx = pa.x + dx * 0.55, my = pa.y + dy * 0.55;
+            g.beginPath(); g.moveTo(mx + ux * 5, my + uy * 5);
+            g.lineTo(mx - ux * 4 - uy * 4, my - uy * 4 + ux * 4); g.lineTo(mx - ux * 4 + uy * 4, my - uy * 4 - ux * 4);
+            g.closePath(); g.fill();
+          }
+          g.globalAlpha = 1; g.lineWidth = 1.5;
+        }
+        if (cloudShow.jump) jumpPairs().forEach(([a, b]) => line(a, b, cs.getPropertyValue('--cat-candidates').trim(), [5, 4]));
         g.setLineDash([]);
         const order = proj.slice().sort((a, b) => b.z - a.z);
         order.forEach(p => {
@@ -603,7 +652,7 @@ Phases.register(3, {
           g.beginPath();
           if (W.kind[p.i] === 'verb') g.rect(p.x - r, p.y - r, 2 * r, 2 * r); else g.arc(p.x, p.y, r, 0, Math.PI * 2);
           g.fill();
-          if (hk) { g.lineWidth = 2; g.strokeStyle = hk === 'q' ? acc : hk === 'b' ? cs.getPropertyValue('--cat-candidates').trim() : ink; g.stroke(); }
+          if (hk) { g.lineWidth = 2; g.strokeStyle = hk === 'q' ? acc : hk === 'b' ? cs.getPropertyValue('--cat-candidates').trim() : hk === 'a' ? cs.getPropertyValue('--cat-context').trim() : ink; g.stroke(); }
         });
         g.globalAlpha = 1;
         g.font = '600 13px Fredoka, system-ui, sans-serif';
@@ -615,7 +664,7 @@ Phases.register(3, {
           g.fillText(cap(word), p.x + 6, p.y - 4);
         });
         /* Die Frage als Stern */
-        if (R && R.q) {
+        if (cloudShow.q && R && R.q) {
           const q = P(Wolke.pointNear(W, R.q));
           g.fillStyle = acc; g.font = '700 20px system-ui, sans-serif'; g.textBaseline = 'middle';
           g.fillText('★', q.x - 8, q.y); g.font = '600 12px Fredoka, system-ui, sans-serif'; g.fillText('deine Frage', q.x + 10, q.y);
