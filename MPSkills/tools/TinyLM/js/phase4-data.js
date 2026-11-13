@@ -30,14 +30,19 @@ function buildPhase4Data(texts, opts) {
 
   function toId(w) { return id.has(w) ? id.get(w) : id.get(UNK); }
 
+  /* Inhaltswörter je Text (ohne <unk>): daraus zieht das Training die Übungs-„Fragen“ (drawTopic). */
+  const unkId = id.get(UNK);
+  function contentIds(toks) { return [...new Set(toks.filter(isContentTok).map(t => toId(t.t)))].filter(i => i !== unkId); }
+
   const pairs = [];
   docs.forEach(toks => {
+    const topic = contentIds(toks);
     const stream = Array(o.C).fill('.').concat(toks.map(t => t.t));
     for (let i = o.C; i < stream.length; i++) {
       const ctx = stream.slice(i - o.C, i).map(toId);
-      pairs.push({ ctx, target: toId(stream[i]) });
+      pairs.push({ ctx, target: toId(stream[i]), topic });
     }
   });
 
-  return { vocab, id, toId, pairs, C: o.C, UNK, vocabSize: vocab.length, display };
+  return { vocab, id, toId, contentIds, pairs, C: o.C, UNK, vocabSize: vocab.length, display };
 }

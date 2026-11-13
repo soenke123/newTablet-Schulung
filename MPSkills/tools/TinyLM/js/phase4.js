@@ -1,8 +1,12 @@
 /* Phase 4: echtes neuronales Netz (bis 12.11.2026 Phase 3, Datei phase3.js) — „Handy + Zerlegen“ wie Phase 1 (Sönke 02.11.2026).
 
-   Links das HANDY: Tiny sagt Wort für Wort vorher (Bausteine alle gleich gefärbt — das Netz weiß
-   nicht mehr, aus welchem Text ein Wort kommt), Tiny sagt, wie es um das Netz steht, darunter
-   ▶ Vorhersagen · +1 Wort · ↺. Rechts oben breit das TRAINING (zu Beginn offen: ohne Training
+   Links das HANDY als Chat wie in Phase 2/3 (Sönke 13.11.2026: ohne Frage fühlte sich Phase 4 wie
+   ein Rückschritt an): erst Vorschläge + Eingabefeld, dann die Frage oben rechts und darunter Tinys
+   Antwort Wort für Wort (Bausteine alle gleich gefärbt — das Netz weiß nicht mehr, aus welchem Text
+   ein Wort kommt), Tiny sagt, wie es um das Netz steht, darunter ▶ Weiter · +1 Wort · ↻ Nochmal.
+   Die Frage ist ein EIGENER EINGANG des Netzes (phase4-net.js, opts.topic): der Mittelpunkt der
+   Embeddings ihrer Inhaltswörter, bei jedem Wort zusätzlich zu den letzten C Wörtern — so bleibt die
+   Antwort beim Thema, obwohl die Frage nie im Kontextfenster steht. Rechts oben breit das TRAINING (zu Beginn offen: ohne Training
    rät das Netz nur), darunter dieselben drei Spalten wie in Phase 1/2 (gleiche Plätze, Farben):
      Kandidaten     (③ Prozent für jedes Wort — Temperatur im festen Kopf)
      Embedding      (① was das Netz sieht — Wahl 3 · 4 · 5 Wörter im festen Kopf)
@@ -26,6 +30,7 @@
    neue Textauswahl („Netz neu bauen“) wirft sie weg. Wahl gemerkt in localStorage tinylm-p4-kontext. */
 const P4_CTX = [3, 4, 5];
 const P4_CTX_KEY = 'tinylm-p4-kontext';
+const P4_SUGGEST = ['Was frisst ein Hund?', 'Welche Planeten haben Ringe?', 'Wie lernt eine KI?', 'Was macht man in der Pause?', 'Wo arbeitet eine Tierärztin?'];
 function deInt(n) { return n.toLocaleString('de-DE'); }
 function valueColor(v, scale) {
   const t = Math.max(-1, Math.min(1, v / scale));
@@ -78,6 +83,7 @@ Phases.register(4, {
     let genPlaying = false, genTimer = null;
     let textEl, cursor, screen, genPlayBtn, bannerEl, placeholder, sayEl, focusHost, neuronHost;
     let phoneEl = null, Z = null;
+    let askedEl, answerEl, metaEl, askBox, input, controls;
     let focus = null;   /* null = nächstes Wort, sonst Index in genSession.steps */
     let trainToggle, trainDot, trainLab;
     const slots = {};   /* Kontextlänge -> { data, net, genSession, version }: je ein Netz pro Fenster */
@@ -92,10 +98,25 @@ Phases.register(4, {
     const isPunct = w => w === '.' || w === ',';
     const fmtP = p => p >= 0.005 ? Math.round(p * 100) + ' %' : '<1 %';
 
-    function freshGenSession() {
+    /* Eine Antwort-Sitzung; question = null, solange noch nicht gefragt ist. qwords: die Wörter der
+       Frage (kind: off = Füllwort, known = kennt das Netz, unknown = zu selten, nicht im Vokabular). */
+    function freshGenSession(question) {
       const startId = data.toId('.');
-      return { ctxIds: Array(data.C).fill(startId), words: [], steps: [], sentences: 0 };
+      const S = { ctxIds: Array(data.C).fill(startId), words: [], steps: [], sentences: 0, question: question || null, qwords: [], topicIds: [] };
+      if (question) {
+        const unk = data.toId(data.UNK), ids = new Set();
+        tokenize(question).filter(t => !t.punct).forEach(t => {
+          let kind = 'off';
+          if (isContentTok(t)) { const id = data.toId(t.t); kind = id === unk ? 'unknown' : 'known'; if (id !== unk) ids.add(id); }
+          S.qwords.push({ raw: t.raw, kind });
+        });
+        S.topicIds = [...ids];
+      }
+      return S;
     }
+    const topic = () => genSession.topicIds;
+    function topicLabel() { return genSession.topicIds.map(id => data.display(data.vocab[id])).join(' · '); }
+    function fwd() { return forward(net, genSession.ctxIds, topic()); }
 
     function wordLabel(w) { return w === data.UNK ? '[unbekannt]' : (w === '.' ? '(Satzende)' : showWord(w)); }
     function tokLabel(w) { return w === data.UNK ? '…' : w === '.' ? '·' : w === ',' ? ',' : data.display(w); }
@@ -115,8 +136,7 @@ Phases.register(4, {
     function updateGenText() {
       textEl.replaceChildren();
       const n = genSession.words.length;
-      if (placeholder) placeholder.hidden = n > 0;
-      textEl.hidden = !n;
+      textEl.hidden = !genSession.question;
       let prev = '.';
       genSession.words.forEach((w, idx) => {
         let txt = tokLabel(w);
@@ -156,6 +176,7 @@ Phases.register(4, {
     function syncLayers() {
       if (!phoneEl) return;
       phoneEl.classList.toggle('show-ctx', Z.isOpen('embed'));
+      phoneEl.classList.toggle('show-ask', Z.isOpen('embed'));
       phoneEl.classList.toggle('show-cand', Z.isOpen('cand'));
       phoneEl.classList.toggle('show-hidden', Z.isOpen('hidden'));
       updateGenText();
@@ -214,9 +235,10 @@ Phases.register(4, {
       else if (net.diverged) parts = ['Huch, ich bin entgleist. Rechts bei „Training“ kannst du mich neu starten.'];
       else if (training) parts = ['Ich lerne … Mein Fehler: ', [L || '–'], '. Je kleiner, desto besser! Drück ruhig zwischendurch auf ▶.'];
       else if (!net.step) parts = ['Ich bin ein frisches Netz und weiß noch nichts. Drück rechts auf „', ['Training starten'], '“ – sonst rate ich nur!'];
-      else if (!genSession.words.length) parts = loss > 3
-        ? ['Ich habe erst ein bisschen gelernt (Fehler ', [L], '). Trainier mich ruhig länger – oder drück auf ▶.']
-        : ['Fehler ', [L], ' – ich habe einiges gelernt! Drück auf ▶ – ich sage Wort für Wort vorher.'];
+      else if (!genSession.question) parts = loss > 3
+        ? ['Ich habe erst ein bisschen gelernt (Fehler ', [L], '). Trainier mich ruhig länger – oder frag mich schon mal etwas.']
+        : ['Fehler ', [L], ' – ich habe einiges gelernt! Frag mich etwas.'];
+      else if (!genSession.words.length) parts = ['Drück auf ▶ – ich antworte Wort für Wort.'];
       else if (!peek) parts = [genPlaying ? 'Ich schreibe …' : 'Soll ich weiterschreiben? Rechts kannst du nachsehen, wie ich das mache.'];
       else if (focus != null) parts = ['Rechts siehst du, wie ich auf „', [wordLabel(data.vocab[genSession.steps[focus].id])], '“ gekommen bin.'];
       else {
@@ -224,9 +246,10 @@ Phases.register(4, {
         let bi = 0;
         for (let i = 1; i < probs.length; i++) if (probs[i] > probs[bi]) bi = i;
         const seen = genSession.ctxIds.map(id => data.vocab[id]).filter(w => !isPunct(w)).map(wordLabel).join(' ');
+        const q = topicLabel();
         parts = seen
-          ? ['Ich sehe „', [seen], '“ und rechne: am ehesten kommt „', [wordLabel(data.vocab[bi])], '“ (' + Math.round(probs[bi] * 100) + ' %).']
-          : ['Neuer Satz – am ehesten fange ich mit „', [wordLabel(data.vocab[bi])], '“ an.'];
+          ? ['Ich sehe „', [seen], '“' + (q ? ' und deine Frage' : '') + ' und rechne: am ehesten kommt „', [wordLabel(data.vocab[bi])], '“ (' + Math.round(probs[bi] * 100) + ' %).']
+          : ['Neuer Satz' + (q ? ' zu deiner Frage' : '') + ' – am ehesten fange ich mit „', [wordLabel(data.vocab[bi])], '“ an.'];
       }
       const key = JSON.stringify(parts);
       if (key === lastSay) return;
@@ -235,8 +258,9 @@ Phases.register(4, {
     }
 
     function doGenStep() {
+      if (!genSession.question) return false;
       focus = null;
-      lastForward = forward(net, genSession.ctxIds);
+      lastForward = fwd();
       const probsT = softmaxTemp(lastForward.logits, temp);
       let id;
       if (temp <= 0.001) {
@@ -253,14 +277,14 @@ Phases.register(4, {
       const word = data.vocab[id];
       genSession.words.push(word);
       if (word === '.') genSession.sentences++;
-      lastForward = forward(net, genSession.ctxIds);
+      lastForward = fwd();
       updateGenText();
       paintFocus();
       liveTick();
       return genSession.sentences < 3 && genSession.words.length < 60;
     }
     function startGenPlay() {
-      if (genPlaying || !data.pairs.length) return;
+      if (genPlaying || !data.pairs.length || !genSession.question) return;
       genPlaying = true;
       genPlayBtn.textContent = '❚❚ Pause';
       genPlayBtn.classList.add('playing');
@@ -269,7 +293,7 @@ Phases.register(4, {
     }
     function stopGenPlay() {
       genPlaying = false;
-      if (genPlayBtn) { genPlayBtn.textContent = genSession && genSession.words.length ? '▶ Weiter' : '▶ Vorhersagen'; genPlayBtn.classList.remove('playing'); }
+      if (genPlayBtn) { genPlayBtn.textContent = '▶ Weiter'; genPlayBtn.classList.remove('playing'); }
       if (genTimer) { clearInterval(genTimer); genTimer = null; }
       updateSay();
     }
@@ -283,7 +307,7 @@ Phases.register(4, {
         syncTrainUI();
         return;
       }
-      lastForward = forward(net, genSession.ctxIds);
+      lastForward = fwd();
       const now = performance.now();
       if (now - lastUIRefresh > 180) {
         lastUIRefresh = now;
@@ -303,20 +327,62 @@ Phases.register(4, {
       syncTrainUI();
       if (live.train && Z && Z.isOpen('train')) live.train();
     }
+    /* Fragen: neue Sitzung mit der Frage als Eingang, Chat zeigen, gleich losschreiben. */
+    function ask(q) {
+      q = (q || '').trim();
+      if (!q || !data.pairs.length) return;
+      stopGenPlay();
+      focus = null;
+      genSession = freshGenSession(q);
+      saveSlot();
+      lastForward = fwd();
+      syncChat();
+      updateGenText();
+      paintFocus();
+      liveTick();
+      startGenPlay();
+    }
+    /* ↻ Nochmal: Chat leeren, wieder Vorschläge + Eingabefeld. */
     function resetGen() {
       stopGenPlay();
       focus = null;
       genSession = freshGenSession();
       saveSlot();
-      lastForward = forward(net, genSession.ctxIds);
+      lastForward = fwd();
+      if (input) input.value = '';
+      syncChat();
       updateGenText();
       paintFocus();
       liveTick();
     }
+    /* Handy nach dem Stand der Sitzung: gefragt → Frage + Antwort + Knöpfe, sonst Vorschläge + Feld. */
+    function syncChat() {
+      if (!askedEl) return;
+      const S = genSession, asked = !!S.question;
+      placeholder.hidden = asked;
+      askedEl.hidden = answerEl.hidden = !asked;
+      askBox.hidden = asked;
+      controls.hidden = !asked;
+      askedEl.replaceChildren();
+      metaEl.replaceChildren();
+      if (!asked) return;
+      S.qwords.forEach((w, i) => {
+        if (i) askedEl.appendChild(document.createTextNode(' '));
+        askedEl.appendChild(el('span', 'qw ' + w.kind, w.raw));
+      });
+      askedEl.appendChild(document.createTextNode('?'));
+      metaEl.appendChild(S.topicIds.length
+        ? el('span', 'chat-found', '⭐ Frage: ' + topicLabel())
+        : el('span', 'chat-found none', 'Kein Wort der Frage kenne ich'));
+      const unk = S.qwords.filter(w => w.kind === 'unknown').map(w => w.raw);
+      if (unk.length) metaEl.appendChild(el('span', 'chat-keys', 'zu selten: ' + unk.join(', ')));
+    }
     function reinitNet() {
       pauseTraining();
-      net = createNet(data.vocab.length, data.C);
-      resetGen();
+      net = createNet(data.vocab.length, data.C, { topic: true });
+      const q = genSession.question;
+      if (q) ask(q); else resetGen();
+      stopGenPlay();
       renderTrainBody();
       syncTrainUI();
     }
@@ -358,6 +424,29 @@ Phases.register(4, {
       }
       const rest = arr.slice(MAX).reduce((s, x) => s + x[1], 0);
       b.appendChild(el('p', 'p1-more', '… und ' + deInt(arr.length - MAX) + ' weitere Wörter mit zusammen ' + fmtP(rest)));
+      const pushed = questionPush(3);
+      if (pushed.length) {
+        const qp = el('p', 'p1-line p4-qpush');
+        qp.append(document.createTextNode('⭐ Deine Frage schiebt direkt hoch: '), el('b', null, pushed.join(' · ')));
+        b.appendChild(qp);
+      }
+    }
+
+    /* Welche Wörter die Frage über ihren direkten Weg (WQ) am stärksten nach oben schiebt — ohne
+       Satzzeichen und <unk>, erst nach etwas Training (vorher Zufall). */
+    function questionPush(k) {
+      if (!net.T || !genSession.topicIds.length || !net.step) return [];
+      const V = data.vocab.length, d = net.d, q = new Float64Array(d);
+      genSession.topicIds.forEach(id => { for (let j = 0; j < d; j++) q[j] += net.embed[id * d + j] / genSession.topicIds.length; });
+      const best = [];
+      for (let v = 0; v < V; v++) {
+        const w = data.vocab[v];
+        if (isPunct(w) || w === data.UNK || STOP.has(w)) continue;
+        let c = 0;
+        for (let j = 0; j < d; j++) c += net.WQ[j * V + v] * q[j];
+        if (best.length < k || c > best[best.length - 1][1]) { best.push([v, c]); best.sort((a, e) => e[1] - a[1]); if (best.length > k) best.pop(); }
+      }
+      return best.filter(x => x[1] > 0).map(([v]) => wordLabel(data.vocab[v]));
     }
 
     /* ① Embedding: worauf das Netz schaut und die Zahlen dieser Wörter. */
@@ -377,9 +466,32 @@ Phases.register(4, {
       });
       g.appendChild(el('span', 'gtok ' + (v.idx == null ? 'next' : 'chosen'), v.idx == null ? '?' : tokLabel(data.vocab[v.chosen])));
       now.appendChild(g);
-      now.appendChild(el('p', 'p1-count', data.C + ' Token → je ' + net.d + ' Zahlen = ' + (data.C * net.d) + ' Zahlen gehen ins Netz'));
+      now.appendChild(el('p', 'p1-count', data.C + ' Token + Frage → je ' + net.d + ' Zahlen = ' + net.inDim + ' Zahlen gehen ins Netz'));
       b.appendChild(now);
-      b.appendChild(el('p', 'p1-sub', 'So sieht das Netz die Wörter'));
+      /* Die Frage: Mittelpunkt ihrer Wörter (wie der Stern in der Wortwolke). */
+      const qh = el('p', 'p1-sub', '⭐ Dazu bei jedem Wort: deine Frage ');
+      qh.appendChild(Help.btn('frage4', 'sm'));
+      b.appendChild(qh);
+      if (!genSession.question) b.appendChild(el('p', 'p1-line', 'Noch keine Frage – dann sind es ' + net.d + ' Nullen.'));
+      else if (!genSession.topicIds.length) b.appendChild(el('p', 'p1-line', 'Kein Wort der Frage kennt das Netz – dann sind es ' + net.d + ' Nullen.'));
+      else {
+        genSession.topicIds.forEach(id => {
+          const row = el('div', 'embrow');
+          row.appendChild(el('span', 'embrow-w', wordLabel(data.vocab[id])));
+          const vals = [];
+          for (let j = 0; j < net.d; j++) vals.push(net.embed[id * net.d + j]);
+          row.appendChild(renderSwatch(vals, 1.5));
+          b.appendChild(row);
+        });
+        if (genSession.topicIds.length > 1) {
+          const row = el('div', 'embrow p4-qmean');
+          row.appendChild(el('span', 'embrow-w', '⭐ Mittelpunkt'));
+          const f = forward(net, v.ctxIds, topic());
+          row.appendChild(renderSwatch(Array.from(f.x.slice(net.C * net.d)), 1.5));
+          b.appendChild(row);
+        }
+      }
+      b.appendChild(el('p', 'p1-sub', 'Die letzten Wörter'));
       const seen = new Set();
       v.ctxIds.forEach(id => {
         if (seen.has(id)) return;
@@ -414,7 +526,7 @@ Phases.register(4, {
       const b = Z.cols.hidden.body;
       b.replaceChildren();
       if (!data.pairs.length) { noTexts(b); return; }
-      b.appendChild(el('p', 'p1-line', 'Das Netz mischt die ' + (data.C * net.d) + ' Zahlen zu ' + net.H + ' neuen – den Neuronen:'));
+      b.appendChild(el('p', 'p1-line', 'Das Netz mischt die ' + net.inDim + ' Zahlen (Wörter + Frage) zu ' + net.H + ' neuen – den Neuronen:'));
       b.appendChild(renderSwatch(Array.from(v.h), 1));
       b.appendChild(el('p', 'mini-legend', net.H + ' Neuronen · kräftig = stark an'));
       b.appendChild(el('p', 'p1-sub', net.step ? 'Gerade am stärksten an' : 'Am stärksten an (noch untrainiert – Zufall)'));
@@ -437,7 +549,7 @@ Phases.register(4, {
     }
     function paintFocus() {
       let hint = '';
-      if (!genSession.words.length) hint = net.step ? 'Lass das Netz vorhersagen – dann zerlegen wir hier jedes Wort.' : '';
+      if (!genSession.words.length) hint = '';
       else if (!['cand', 'embed', 'hidden'].some(Z.isOpen)) hint = 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.';
       Zerlegen.focusBanner(focusHost, focus, focus != null ? wordLabel(data.vocab[genSession.steps[focus].id]) : '', () => setFocus(null), hint);
     }
@@ -516,10 +628,10 @@ Phases.register(4, {
       const what = sec('Jedes Beispiel');
       const strip = el('div', 'train-ctx');
       for (let c = 0; c < net.C; c++) strip.appendChild(el('span', 'ctxtok inwin', 'Wort'));
-      strip.append(el('span', 'flow-arrow', '→'), el('span', 'ctxtok next', '?'));
+      strip.append(el('span', 'ctxtok p4-qtok', '⭐ Frage'), el('span', 'flow-arrow', '→'), el('span', 'ctxtok next', '?'));
       what.appendChild(strip);
       const whatLine = el('p', 'card-line');
-      whatLine.append(el('b', null, net.C + ' Wörter'), document.createTextNode(' im Blick → das nächste raten · '),
+      whatLine.append(el('b', null, net.C + ' Wörter'), document.createTextNode(' + eine Übungsfrage aus demselben Text → das nächste raten · '),
         el('b', null, deInt(data.pairs.length)), document.createTextNode(' Beispiele'));
       what.appendChild(whatLine);
 
@@ -538,12 +650,12 @@ Phases.register(4, {
       line.appendChild(sparkHost);
 
       const build = sec('Aufbau');
-      const inDim = net.C * net.d;
-      const paramCount = data.vocab.length * net.d + inDim * net.H + net.H + net.H * data.vocab.length + data.vocab.length;
+      const inDim = net.inDim;
+      const paramCount = data.vocab.length * net.d + inDim * net.H + net.H + net.H * data.vocab.length + data.vocab.length + (net.WQ ? net.WQ.length : 0);
       const archRow = el('div', 'net-arch');
       const arch = el('span', 'arch-num', inDim + ' → ' + net.H + ' → ' + deInt(data.vocab.length));
-      arch.title = inDim + ' Eingabe-Zahlen (' + net.C + ' Wörter × ' + net.d + ') → ' + net.H + ' Hidden-Neuronen → ' + deInt(data.vocab.length) + ' Ausgabe-Neuronen (eins je Wort)';
-      archRow.append(arch, el('span', 'arch-lab', 'Eingabe → Hidden → Wörter · ' + deInt(paramCount) + ' Zahlen'));
+      arch.title = inDim + ' Eingabe-Zahlen (' + net.C + ' Wörter + Frage, je ' + net.d + ') → ' + net.H + ' Hidden-Neuronen → ' + deInt(data.vocab.length) + ' Ausgabe-Neuronen (eins je Wort)';
+      archRow.append(arch, el('span', 'arch-lab', 'Eingabe → Hidden → Wörter · die Frage auch direkt → Wörter · ' + deInt(paramCount) + ' Zahlen'));
       build.appendChild(archRow);
       const resetBtn = el('button', 'btn sm', '↺ Netz zurücksetzen');
       resetBtn.type = 'button';
@@ -577,6 +689,7 @@ Phases.register(4, {
     function buildPhone() {
       const P = Zerlegen.phone({ label: 'tiny · model · Phase 4', help: 'p4' });
       phoneEl = P.el;
+      phoneEl.classList.add('phone-chat');
       screen = P.screen;
 
       bannerEl = el('div', 'net-banner');
@@ -587,12 +700,24 @@ Phases.register(4, {
       bannerEl.append(el('span', 'small', '📚 Neue Textauswahl.'), nb);
       phoneEl.insertBefore(bannerEl, screen);
 
-      placeholder = el('p', 'paper-ph', 'Hier sagt das Netz gleich Wort für Wort vorher …');
+      /* Chat wie in Phase 2/3: Begrüßung, dann Frage (rechts) und Antwort (Bausteine). */
+      const chat = el('div', 'chat');
+      placeholder = el('div', 'tiny-say');
+      placeholder.append(tinyEl('normal'), el('p', 'tiny-bubble', 'Ich schlage nichts mehr nach – ich habe nur noch meine Zahlen. Deine Frage höre ich bei jedem Wort mit.'));
+      askedEl = el('p', 'chat-q');
+      answerEl = el('div', 'chat-a');
+      const aBody = el('div', 'chat-a-body');
+      metaEl = el('div', 'chat-meta');
+      const bubble = el('div', 'paper chat-bubble');
       textEl = el('p', 'bot-text');
       cursor = el('span', 'cursor');
       cursor.title = 'Das nächste Wort – antippen zum Zerlegen';
       textEl.appendChild(cursor);
-      screen.append(placeholder, textEl);
+      bubble.appendChild(textEl);
+      aBody.append(metaEl, bubble);
+      answerEl.append(tinyEl('happy'), aBody);
+      chat.append(placeholder, askedEl, answerEl);
+      screen.appendChild(chat);
       textEl.addEventListener('pointerdown', ev => { if (ev.target.closest('.tok, .cursor')) stopGenPlay(); });
       textEl.addEventListener('click', ev => {
         const w = ev.target.closest('.tok');
@@ -607,8 +732,8 @@ Phases.register(4, {
       lastSay = '';
       sayBox.append(tinyEl('think'), sayEl);
 
-      const controls = el('div', 'phone-controls');
-      genPlayBtn = el('button', 'btn' + (net.step ? ' primary' : ''), genSession.words.length ? '▶ Weiter' : '▶ Vorhersagen');
+      controls = el('div', 'phone-controls');
+      genPlayBtn = el('button', 'btn' + (net.step ? ' primary' : ''), '▶ Weiter');
       genPlayBtn.type = 'button';
       genPlayBtn.dataset.spot = 'gen';
       genPlayBtn.disabled = !data.pairs.length;
@@ -618,15 +743,27 @@ Phases.register(4, {
       stepBtn.dataset.spot = 'genstep';
       stepBtn.disabled = !data.pairs.length;
       stepBtn.addEventListener('click', () => { stopGenPlay(); doGenStep(); });
-      const resetGenBtn = el('button', 'btn', '↺');
+      const resetGenBtn = el('button', 'btn', '↻ Nochmal');
       resetGenBtn.type = 'button';
-      resetGenBtn.title = 'Von vorn';
-      resetGenBtn.setAttribute('aria-label', 'Von vorn');
+      resetGenBtn.title = 'Neue Frage';
       resetGenBtn.dataset.spot = 'genreset';
       resetGenBtn.addEventListener('click', resetGen);
       controls.append(genPlayBtn, stepBtn, resetGenBtn);
 
-      phoneEl.append(neuronHost, sayBox, controls);
+      askBox = el('div', 'phone-ask');
+      const sugg = el('div', 'sugg');
+      P4_SUGGEST.forEach(q => { const b = el('button', 'chip', q); b.type = 'button'; b.addEventListener('click', () => { input.value = q; ask(q); }); sugg.appendChild(b); });
+      const form = el('form', 'qform');
+      input = el('input', 'textin'); input.type = 'text'; input.placeholder = 'Frag Tiny etwas …'; input.setAttribute('aria-label', 'Frage');
+      const send = el('button', 'btn primary qsend'); send.type = 'submit'; send.setAttribute('aria-label', 'Fragen');
+      send.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+      form.append(input, send);
+      form.addEventListener('submit', e => { e.preventDefault(); ask(input.value); input.blur(); });
+      askBox.append(sugg, form);
+      if (!data.pairs.length) { input.disabled = send.disabled = true; sugg.querySelectorAll('button').forEach(b => { b.disabled = true; }); }
+
+      phoneEl.append(neuronHost, sayBox, controls, askBox);
+      syncChat();
       return phoneEl;
     }
 
@@ -646,11 +783,12 @@ Phases.register(4, {
         data = slot.data; net = slot.net; genSession = slot.genSession;
       } else {
         data = buildPhase4Data(texts, { vocabCap: 600, C: ctxLen });
-        net = createNet(data.vocab.length, data.C);
-        genSession = freshGenSession();
+        net = createNet(data.vocab.length, data.C, { topic: true });
+        /* Andere Fenstergröße, gleiche Frage: das neue Netz bekommt sie auch. */
+        genSession = freshGenSession(genSession && genSession.question);
       }
       builtVersion = State.corpusVersion;
-      lastForward = forward(net, genSession.ctxIds);
+      lastForward = fwd();
       saveSlot();
 
       netView = NetView.create({
@@ -659,6 +797,7 @@ Phases.register(4, {
         getForward: () => lastForward,
         getProbs: () => softmaxTemp(lastForward.logits, temp),
         getCtxIds: () => genSession.ctxIds,
+        getTopicLabel: topicLabel,
         wordLabel
       });
 

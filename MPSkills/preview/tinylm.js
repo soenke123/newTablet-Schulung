@@ -55,7 +55,7 @@
     api.click(P(2) + '.qform button[type="submit"]');
     if (!await api.wait(7500)) return;
 
-    // Phase 4: ein echtes Netz trainieren, dann vorhersagen lassen.
+    // Phase 4: ein echtes Netz trainieren, dann eine Frage stellen.
     api.click('.phase-btn[data-n="4"]');
     if (!await api.waitFor(P(4) + '[data-card="train"]', 8000)) return;
     api.caption('Phase 4 · Ein echtes kleines Netz lernt');
@@ -67,15 +67,17 @@
     if (!await api.wait(10000)) return;
     api.click(P(4) + '[data-spot="train"]');
     if (!await api.wait(600)) return;
-    api.caption('Phase 4 · Jetzt sagt das Netz Wort für Wort vorher');
-    api.click(P(4) + '[data-spot="gen"]');
+    api.caption('Phase 4 · Das Netz antwortet – die Frage ist ein eigener Eingang');
+    if (!await api.type(P(4) + '.qform input', 'Was frisst ein Hund?')) return;
+    if (!await api.wait(400)) return;
+    api.click(P(4) + '.qform button[type="submit"]');
     if (!await api.wait(6000)) return;
     api.click(P(4) + '[data-spot="gen"]');
     if (!await api.wait(2400)) return;
 
     // Zurückstellen mit den eigenen Knöpfen, dann wieder vorn anfangen.
     api.caption('');
-    api.click(P(4) + '[data-spot="genreset"]');                    // ↺ Von vorn
+    api.click(P(4) + '[data-spot="genreset"]');                    // ↻ Nochmal
     api.click(P(4) + '[data-spot="netreset"]');                    // ↺ Netz zurücksetzen
     api.click(P(1) + '[data-spot="reset"]');                       // ↺ Neu starten
     api.click('.phase-btn[data-n="1"]');

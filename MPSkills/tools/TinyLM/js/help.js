@@ -143,8 +143,16 @@ const HELP = {
   /* ---- Phase 4 (Echtes Netz) ---- */
   p4: {
     title: 'Echtes Netz', icon: '🧠',
-    text: 'Hier wird nichts nachgeschlagen. Das Netz merkt sich beim Training nur Zahlen – die Texte selbst sind danach weg.',
+    text: ['Hier wird nichts nachgeschlagen. Das Netz merkt sich beim Training nur Zahlen – die Texte selbst sind danach weg.',
+      'Deine Frage bekommt das Netz bei jedem Wort als eigenen Eingang dazu – so bleibt es beim Thema, auch wenn die Frage längst nicht mehr in den letzten Wörtern steht.'],
     vis: { type: 'cycle', items: [['📚', 'Texte'], ['🔢', 'Zahlen'], ['🧠', 'Netz'], ['💬', 'Wort']] }
+  },
+  frage4: {
+    title: 'Die Frage als Eingang', icon: '⭐', cat: 'embed',
+    text: ['Die Wörter deiner Frage werden zu Zahlen, und das Netz nimmt ihren Mittelpunkt – wie der Stern in der Wortwolke. Diese 16 Zahlen bekommt es bei JEDEM Wort zusätzlich zu den letzten Wörtern.',
+      'Geübt hat es das im Training: zu jedem Beispiel gab es ein paar Wörter aus demselben Text als Übungsfrage.'],
+    try: 'Stell dieselbe Frage mit einem anderen Tier oder Planeten. Ändern sich die Kandidaten?',
+    vis: { type: 'tokens', items: [['⭐ Hund · frisst', 'win'], ['der', 'win'], ['Hund', 'win'], ['frisst', 'win'], ['?', 'next']] }
   },
   embedding: {
     title: 'Embedding', icon: '🔢', cat: 'embed',
@@ -173,7 +181,7 @@ const HELP = {
   },
   training: {
     title: 'Training', icon: '🏋️', cat: 'train',
-    text: ['Das Netz rät das nächste Wort, vergleicht mit dem echten und dreht alle Zahlen ein kleines Stück in die richtige Richtung – tausende Male.',
+    text: ['Das Netz rät das nächste Wort, vergleicht mit dem echten und dreht alle Zahlen ein kleines Stück in die richtige Richtung – tausende Male. Zu jedem Beispiel bekommt es ein paar Wörter aus demselben Text als Übungsfrage.',
       'Die Fehlerlinie zeigt, wie sehr es danebenliegt. Sinkt sie, lernt das Netz.'],
     try: 'Drück auf „Training starten“ und schau zu, wie die Fehlerlinie fällt. Wann wird sie flach?',
     vis: { type: 'cycle', items: [['🤔', 'raten'], ['✅', 'vergleichen'], ['🔧', 'korrigieren']], loop: true }

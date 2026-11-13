@@ -56,7 +56,8 @@ const NetView = (() => {
     /* ---- Geometrie + Neuronenliste (wird bei jedem Zeichnen neu gelegt, damit Resize trägt) ---- */
     function build() {
       const net = N(), f = opts.getForward(), probs = opts.getProbs();
-      const C = net.C, d = net.d, H = net.H, inDim = C * d;
+      /* B = Zahlenblöcke am Eingang: C Kontextwörter (+ 1 für die Frage, wenn das Netz einen Frage-Eingang hat). */
+      const C = net.C, d = net.d, H = net.H, inDim = net.inDim || C * d, B = inDim / d;
       const top = 58, bot = Math.max(top + 80, ch - 30);
       const span = bot - top;
       /* Schmal (Reiter rechts, ~330 px): kleinere Wortkästen, Ausgabe näher an den rechten Rand. */
@@ -67,7 +68,7 @@ const NetView = (() => {
       const hidX = (inX + outX) / 2;
 
       const GAP = 1.8;  /* Lücke zwischen den Zahlenblöcken zweier Kontextwörter (in Punktabständen) */
-      const sIn = span / Math.max(1, (inDim - 1) + (C - 1) * GAP);
+      const sIn = span / Math.max(1, (inDim - 1) + (B - 1) * GAP);
       const rIn = Math.max(2.2, Math.min(4.4, sIn * 0.42));
       inN = [];
       for (let i = 0; i < inDim; i++) {
@@ -91,7 +92,7 @@ const NetView = (() => {
         ? { layer: 'rest', i: -1, x: outX, y: top + (rows - 1) * sO, r: 5, v: 0, count: probs.length - ids.length, mass: Math.max(0, 1 - mass) }
         : null;
 
-      G = { C, d, H, inDim, top, bot, wordR, inX, hidX, outX, sIn, GAP, probs, f, narrow };
+      G = { C, B, d, H, inDim, top, bot, wordR, inX, hidX, outX, sIn, GAP, probs, f, narrow };
       return G;
     }
 
@@ -213,7 +214,7 @@ const NetView = (() => {
 
       /* ---- Kontextwörter links + Klammer zu ihrem Zahlenblock ---- */
       const ctx = opts.getCtxIds ? opts.getCtxIds() : [];
-      for (let c = 0; c < g.C; c++) {
+      for (let c = 0; c < g.B; c++) {
         const first = inN[c * g.d], last = inN[c * g.d + g.d - 1];
         const my = (first.y + last.y) / 2;
         cx.strokeStyle = cIn; cx.globalAlpha = 0.5; cx.lineWidth = 1.2;
@@ -222,7 +223,8 @@ const NetView = (() => {
         cx.moveTo(g.inX - 12, my); cx.lineTo(g.wordR + 4, my);
         cx.stroke(); cx.globalAlpha = 1;
 
-        const w = ctx.length ? wl(D().vocab[ctx[c]]) : '…';
+        const isQ = c >= g.C;
+        const w = isQ ? '⭐ ' + (opts.getTopicLabel ? opts.getTopicLabel() || 'keine Frage' : 'Frage') : (ctx.length ? wl(D().vocab[ctx[c]]) : '…');
         const bw = g.narrow ? 60 : 94, bh = 26, bx = g.narrow ? 4 : 10, by = my - bh / 2;
         cx.beginPath();
         if (cx.roundRect) cx.roundRect(bx, by, bw, bh, 7); else cx.rect(bx, by, bw, bh);
@@ -233,7 +235,7 @@ const NetView = (() => {
         while (cx.measureText(t).width > bw - 14 && t.length > 2) t = t.slice(0, -2) + '…';
         cx.fillText(t, bx + 7, my);
         cx.fillStyle = muted; cx.font = '10px ' + fb;
-        cx.fillText(String(c + 1) + '.', bx + 1, my - bh / 2 - 6);
+        cx.fillText(isQ ? 'Frage' : String(c + 1) + '.', bx + 1, my - bh / 2 - 6);
       }
 
       /* ---- Spaltenköpfe ---- */
@@ -243,11 +245,11 @@ const NetView = (() => {
         cx.fillStyle = muted; cx.font = '10px ' + fb; cx.fillText(t2, x, 38);
       };
       if (g.narrow) {
-        head(g.inX, cIn, de(g.inDim) + ' rein', g.C + ' × ' + g.d + ' Zahlen');
+        head(g.inX, cIn, de(g.inDim) + ' rein', g.B + ' × ' + g.d + ' Zahlen');
         head(g.hidX, cHid, de(g.H) + ' Hidden', 'Neuronen');
         head(Math.min(g.outX + 20, cw - 46), cOut, de(V) + ' raus', 'die ' + outN.length + ' stärksten');
       } else {
-        head(g.inX, cIn, de(g.inDim) + ' Eingangs-Zahlen', g.C + ' Wörter × ' + g.d + ' Zahlen');
+        head(g.inX, cIn, de(g.inDim) + ' Eingangs-Zahlen', g.C + ' Wörter' + (g.B > g.C ? ' + Frage' : '') + ' × ' + g.d + ' Zahlen');
         head(g.hidX, cHid, de(g.H) + ' Hidden-Neuronen', 'tanh');
         head(g.outX, cOut, de(V) + ' Ausgabe-Neuronen', 'die ' + outN.length + ' stärksten · Softmax');
       }
@@ -324,8 +326,9 @@ const NetView = (() => {
     function renderDetail() {
       if (!detailEl) return;
       detailEl.replaceChildren();
-      const net = N(), data = D(), V = net.vocabSize, H = net.H, inDim = net.C * net.d;
+      const net = N(), data = D(), V = net.vocabSize, H = net.H, inDim = net.inDim || net.C * net.d;
       const nd = find(sel);
+      const qLab = () => '⭐ Frage' + (opts.getTopicLabel && opts.getTopicLabel() ? ' (' + opts.getTopicLabel() + ')' : '');
       if (!nd) {
         detailEl.appendChild(el('p', 'card-empty', '👆 Tipp einen Punkt im Bild an – dann siehst du seine echten Zahlen.'));
         return;
@@ -333,10 +336,13 @@ const NetView = (() => {
       const card = el('div', 'net-detail');
 
       if (nd.layer === 'in') {
+        const isQ = nd.c >= net.C;
         const word = data.vocab[(opts.getCtxIds ? opts.getCtxIds() : [])[nd.c]];
         card.appendChild(el('p', 'eyebrow', 'Eingangs-Neuron'));
-        card.appendChild(el('p', 'net-title', 'Zahl ' + (nd.j + 1) + ' von ' + net.d + ' für „' + wl(word) + '“'));
-        card.appendChild(el('p', 'small muted', 'Kontextwort ' + (nd.c + 1) + ' · Wert gerade jetzt: ' + sgn(nd.v) + ' (kommt direkt aus der Embedding-Tabelle)'));
+        card.appendChild(el('p', 'net-title', 'Zahl ' + (nd.j + 1) + ' von ' + net.d + ' für ' + (isQ ? qLab() : '„' + wl(word) + '“')));
+        card.appendChild(el('p', 'small muted', isQ
+          ? 'Wert gerade jetzt: ' + sgn(nd.v) + ' (der Mittelpunkt der Fragewörter in der Embedding-Tabelle). Die Frage geht zusätzlich direkt zu den Ausgabe-Wörtern.'
+          : 'Kontextwort ' + (nd.c + 1) + ' · Wert gerade jetzt: ' + sgn(nd.v) + ' (kommt direkt aus der Embedding-Tabelle)'));
         const ks = topK(H, k => Math.abs(net.W1[nd.i * H + k]), 6);
         const mx = Math.abs(net.W1[nd.i * H + ks[0]]);
         card.appendChild(sec('Stärkste Kanten in die Hidden-Schicht (' + de(H) + ' insgesamt)',
@@ -352,7 +358,7 @@ const NetView = (() => {
         card.appendChild(sec('Was am stärksten hineinkommt',
           rows(is.map(i => {
             const c = Math.floor(i / net.d), j = i % net.d;
-            return { label: '„' + wl(data.vocab[ctx[c]]) + '“ · Zahl ' + (j + 1), v: net.W1[i * H + k] };
+            return { label: (c >= net.C ? qLab() : '„' + wl(data.vocab[ctx[c]]) + '“') + ' · Zahl ' + (j + 1), v: net.W1[i * H + k] };
           }), mi)));
         const up = topK(V, v => net.W2[k * V + v], 5);
         const down = topK(V, v => -net.W2[k * V + v], 5);
@@ -380,9 +386,9 @@ const NetView = (() => {
     }
 
     function factsBox() {
-      const net = N(), data = D(), V = net.vocabSize, inDim = net.C * net.d;
-      const emb = V * net.d, w1 = inDim * net.H, w2 = net.H * V;
-      const total = emb + w1 + net.H + w2 + V;
+      const net = N(), data = D(), V = net.vocabSize, inDim = net.inDim || net.C * net.d;
+      const emb = V * net.d, w1 = inDim * net.H, w2 = net.H * V, wq = net.WQ ? net.WQ.length : 0;
+      const total = emb + w1 + net.H + w2 + V + wq;
       const box = el('div', 'net-facts');
       const put = (k, v, sub) => {
         const r = el('div', 'net-fact');
@@ -391,11 +397,12 @@ const NetView = (() => {
         if (sub) r.appendChild(el('span', 'net-fact-s', sub));
         box.appendChild(r);
       };
-      put('Eingangs-Neuronen', de(inDim), net.C + ' Kontextwörter × ' + net.d + ' Zahlen');
+      put('Eingangs-Neuronen', de(inDim), net.C + ' Kontextwörter' + (net.T ? ' + 1 Frage' : '') + ' × ' + net.d + ' Zahlen');
       put('Hidden-Neuronen', de(net.H), 'Aktivierung: tanh');
       put('Ausgabe-Neuronen', de(V), 'eins pro Wort im Vokabular');
       put('Kanten Eingang→Hidden', de(w1), inDim + ' × ' + net.H);
       put('Kanten Hidden→Ausgabe', de(w2), net.H + ' × ' + de(V));
+      if (wq) put('Kanten Frage→Ausgabe', de(wq), net.d + ' × ' + de(V) + ' · nicht gezeichnet');
       put('Embedding-Tabelle', de(emb), de(V) + ' Wörter × ' + net.d + ' Zahlen');
       put('Schwellen (Bias)', de(net.H + V), net.H + ' + ' + de(V));
       put('Zahlen insgesamt', de(total), 'alle werden beim Training verändert');

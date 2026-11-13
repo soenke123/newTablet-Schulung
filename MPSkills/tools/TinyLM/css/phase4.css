@@ -84,3 +84,9 @@
 /* Dunkel: Training-Magenta ist dort hell → dunkle Schrift statt weißer */
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .btn.primary.train-btn:not(.playing) { color: var(--bg); } }
 :root[data-theme="dark"] .btn.primary.train-btn:not(.playing) { color: var(--bg); }
+
+/* Frage als eigener Eingang (13.11.2026): Übungsfrage im Trainingsbeispiel, Mittelpunkt im Embedding,
+   „Deine Frage schiebt direkt hoch“ unter den Kandidaten. */
+.ctxtok.p4-qtok { background: var(--cat-embed-tint, var(--soft)); border-style: dashed; white-space: nowrap; }
+.embrow.p4-qmean .embrow-w { font-weight: 700; color: var(--cat-embed, var(--ink)); }
+.p4-qpush { margin-top: 6px; }

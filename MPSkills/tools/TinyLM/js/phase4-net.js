@@ -4,7 +4,15 @@
    blieb der Fehler bei etwa 2,1 hängen und stieg danach sogar wieder — die Schritte waren zu grob,
    um die feinen Unterschiede zwischen den Wortfolgen zu lernen. Jetzt 0,15 → nach 4 Durchgängen halb
    so groß → mindestens 0,01: nach 10 Durchgängen Fehler etwa 1,3–1,5, nach 20 etwa 0,4–0,7
-   (3–5 Kontextwörter, Standard-Textwelten, gemessen 15.10.2026). */
+   (3–5 Kontextwörter, Standard-Textwelten, gemessen 15.10.2026).
+   Frage-Eingang (13.11.2026, opts.topic): zusätzlich zu den C Kontextwörtern bekommt das Netz einen
+   (C+1)-ten Eingang „Frage“ = der Mittelpunkt der Embeddings der Fragewörter (wie der ★ in der
+   Wortwolke von Phase 3). Im Training ist die „Frage“ 1–3 zufällige Inhaltswörter aus demselben Text
+   (pair.topic), manchmal leer (dann Nullen) – so lernt das Netz, beim Thema der Frage zu bleiben,
+   auch wenn die Frage längst aus dem Fenster der letzten C Wörter gerutscht ist.
+   Die Frage geht ZWEIMAL ein: in die Hidden-Schicht (über W1) und direkt zu den Wörtern (WQ, d × V).
+   Nur über die Hidden-Schicht lernte das Netz, die Frage zu überhören (beim Thema: 20 % wie ohne
+   Frage); mit dem direkten Weg 46 % (gemessen 13.11.2026, 40 s, 3 Wörter, 8 Fragen). */
 function mulberry32(a) {
   return function () {
     a |= 0; a = a + 0x6D2B79F5 | 0;
@@ -24,26 +32,37 @@ function createNet(vocabSize, C, opts) {
     for (let i = 0; i < n; i++) arr[i] = (rnd() * 2 - 1) * scale;
     return arr;
   }
-  const d = o.d, H = o.H, inDim = C * d;
+  const d = o.d, H = o.H, T = o.topic ? 1 : 0, inDim = (C + T) * d;
   return {
-    vocabSize, C, d, H, lr: o.lr, lr0: o.lr, lrMin: o.lrMin, lrHalf: o.lrHalf, clip: o.clip,
+    vocabSize, C, d, H, T, inDim, lr: o.lr, lr0: o.lr, lrMin: o.lrMin, lrHalf: o.lrHalf, clip: o.clip,
     embed: randInit(vocabSize * d, d),
     W1: randInit(inDim * H, inDim),
     b1: new Float64Array(H),
     W2: randInit(H * vocabSize, H),
     b2: new Float64Array(vocabSize),
+    WQ: T ? new Float64Array(d * vocabSize) : null,
     step: 0, lossHistory: [], diverged: false
   };
 }
 
-function forward(net, ctxIds) {
+/* Frage-Eingang: Mittelpunkt der Embeddings der Fragewörter (leer = Nullen). */
+function topicVec(net, topicIds, out, off) {
+  const d = net.d, n = topicIds ? topicIds.length : 0;
+  for (let j = 0; j < d; j++) out[off + j] = 0;
+  if (!n) return;
+  for (let t = 0; t < n; t++) { const id = topicIds[t]; for (let j = 0; j < d; j++) out[off + j] += net.embed[id * d + j]; }
+  for (let j = 0; j < d; j++) out[off + j] /= n;
+}
+
+function forward(net, ctxIds, topicIds) {
   const { d, H, vocabSize, C } = net;
-  const inDim = C * d;
+  const inDim = net.inDim;
   const x = new Float64Array(inDim);
   for (let c = 0; c < C; c++) {
     const id = ctxIds[c];
     for (let j = 0; j < d; j++) x[c * d + j] = net.embed[id * d + j];
   }
+  if (net.T) topicVec(net, topicIds, x, C * d);
   const h = new Float64Array(H);
   for (let k = 0; k < H; k++) {
     let s = net.b1[k];
@@ -54,6 +73,7 @@ function forward(net, ctxIds) {
   for (let v = 0; v < vocabSize; v++) {
     let s = net.b2[v];
     for (let k = 0; k < H; k++) s += net.W2[k * vocabSize + v] * h[k];
+    if (net.T) for (let j = 0, off = C * d; j < d; j++) s += net.WQ[j * vocabSize + v] * x[off + j];
     logits[v] = s;
   }
   return { x, h, logits };
@@ -71,10 +91,10 @@ function softmaxTemp(logits, temp) {
   return out;
 }
 
-function trainStep(net, ctxIds, targetId) {
+function trainStep(net, ctxIds, targetId, topicIds) {
   const { d, H, vocabSize, C, lr, clip } = net;
-  const inDim = C * d;
-  const { x, h, logits } = forward(net, ctxIds);
+  const inDim = net.inDim;
+  const { x, h, logits } = forward(net, ctxIds, topicIds);
 
   let mx = -Infinity;
   for (let v = 0; v < vocabSize; v++) if (logits[v] > mx) mx = logits[v];
@@ -110,6 +130,19 @@ function trainStep(net, ctxIds, targetId) {
     for (let k = 0; k < H; k++) s += net.W1[i * H + k] * dHPre[k];
     dx[i] = s;
   }
+  /* Direkter Weg Frage → Wörter. */
+  if (net.T && topicIds && topicIds.length) {
+    const off = C * d;
+    for (let j = 0; j < d; j++) {
+      const xj = x[off + j];
+      let g = 0;
+      for (let v = 0; v < vocabSize; v++) {
+        g += net.WQ[j * vocabSize + v] * dLogits[v];
+        net.WQ[j * vocabSize + v] -= lr * clampG(xj * dLogits[v], clip);
+      }
+      dx[off + j] += g;
+    }
+  }
   for (let i = 0; i < inDim; i++) {
     for (let k = 0; k < H; k++) {
       net.W1[i * H + k] -= lr * clampG(x[i] * dHPre[k], clip);
@@ -123,12 +156,29 @@ function trainStep(net, ctxIds, targetId) {
       net.embed[id * d + j] -= lr * clampG(dx[c * d + j], clip);
     }
   }
+  /* Der Frage-Eingang ist ein Mittelwert: jedes Fragewort bekommt seinen Anteil am Fehler. */
+  if (net.T && topicIds && topicIds.length) {
+    const n = topicIds.length, off = C * d;
+    for (let t = 0; t < n; t++) {
+      const id = topicIds[t];
+      for (let j = 0; j < d; j++) net.embed[id * d + j] -= lr * clampG(dx[off + j] / n, clip);
+    }
+  }
   return loss;
 }
 
 /* Lernrate nach so vielen Durchgängen durch alle Beispiele: nach lrHalf Durchgängen halb so groß,
    nie kleiner als lrMin. */
 function lrAt(net, epoch) { return Math.max(net.lrMin, net.lr0 / (1 + epoch / net.lrHalf)); }
+
+/* Übungs-„Frage“ für ein Trainingsbeispiel: 1–3 zufällige Inhaltswörter aus seinem Text,
+   in einem von fünf Fällen keine (das Netz soll auch ohne Frage schreiben können). */
+function drawTopic(pool) {
+  if (!pool || !pool.length || Math.random() < 0.2) return null;
+  const k = 1 + Math.floor(Math.random() * Math.min(3, pool.length)), out = [];
+  for (let i = 0; i < k; i++) out.push(pool[Math.floor(Math.random() * pool.length)]);
+  return out;
+}
 
 /* Trainiert, bis das Zeitbudget (ms) aufgebraucht ist. Bricht bei NaN/Inf sofort ab (net.diverged). */
 function trainBudget(net, pairs, budgetMs) {
@@ -138,7 +188,7 @@ function trainBudget(net, pairs, budgetMs) {
   while (performance.now() - start < budgetMs) {
     if ((n & 63) === 0) net.lr = lrAt(net, net.step / pairs.length);
     const p = pairs[Math.floor(Math.random() * pairs.length)];
-    const loss = trainStep(net, p.ctx, p.target);
+    const loss = trainStep(net, p.ctx, p.target, net.T ? drawTopic(p.topic) : null);
     if (!isFinite(loss)) { nanHit = true; net.diverged = true; break; }
     lossSum += loss; n++; net.step++;
   }
