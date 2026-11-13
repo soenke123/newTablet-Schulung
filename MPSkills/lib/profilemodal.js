@@ -159,7 +159,9 @@
 
       <section class="card">
         <h2 class="card-h">Passwort ändern</h2>
-        <form class="prof-form" id="pwForm" autocomplete="off" novalidate>
+        <form class="prof-form" id="pwForm" novalidate>
+          <!-- Accountname für den Passwort-Speicher (iPad: sonst landet das neue Passwort beim falschen Namen) -->
+          <input type="text" name="username" autocomplete="username" value="${esc(s.account_name || '')}" readonly tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0" />
           <div class="msg msg--err" id="pwErr" hidden></div>
           <div class="msg msg--ok"  id="pwOk"  hidden></div>
           <label class="field">Neues Passwort

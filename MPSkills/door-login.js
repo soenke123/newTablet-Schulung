@@ -83,14 +83,14 @@
           <label class="field" data-dl-school hidden>Schule
             <select id="dlRegSchool"></select>
           </label>
+          <label class="field">Anzeigename
+            <input type="text" id="dlRegDisplay" autocomplete="nickname" required />
+            <span class="rule">Den sieht die Klasse.</span>
+          </label>
           <label class="field">Name zum Anmelden
             <input type="text" id="dlRegAccount" autocomplete="username"
                    autocapitalize="none" autocorrect="off" spellcheck="false" required />
             <span class="rule">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ -</span>
-          </label>
-          <label class="field">Anzeigename
-            <input type="text" id="dlRegDisplay" autocomplete="name" required />
-            <span class="rule">Den sieht die Klasse.</span>
           </label>
           <label class="field">Passwort
             <input type="password" id="dlRegPw" autocomplete="new-password" required />
@@ -134,7 +134,7 @@
       $('dlTabLogin').classList.toggle('btn--primary', open === 'login');
       $('dlTabReg').classList.toggle('btn--primary', open === 'reg');
       showErr('');
-      if (open) setTimeout(() => $(open === 'login' ? 'dlAccount' : 'dlRegAccount').focus(), 30);
+      if (open) setTimeout(() => $(open === 'login' ? 'dlAccount' : 'dlRegDisplay').focus(), 30);
     }
     $('dlTabLogin').addEventListener('click', () => setOpen('login'));
     $('dlTabReg').addEventListener('click', () => setOpen('reg'));

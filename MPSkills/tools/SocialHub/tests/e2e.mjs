@@ -7,7 +7,8 @@
    übersteht einen Zustandswechsel), postet, legt ein zweites Konto an,
    liked, kommentiert, folgt → Leon kommt nur über „anderes Tablet“
    hinein → Einstellungen, SQL (INSERT mit PASSWORD_HASH), Diagramm →
-   Lehrkraft setzt das Admin-Passwort zurück, Testkonto. Bildschirmfotos landen in SH_SHOTS (Standard:
+   Lehrkraft setzt das Admin-Passwort zurück, Testkonto → … → Ida meldet
+   sich mit ihrem MPSkills-Konto an (0289). Bildschirmfotos landen in SH_SHOTS (Standard:
    tests/shots, nicht im Repo).
 
    Aufruf:  node MPSkills/tools/SocialHub/tests/e2e.mjs */
@@ -53,6 +54,12 @@ await db.query(`insert into _who values ($1)`, [T1]);
 const CODE = (await db.query(`select skill_room_create('socialhub', 'Info 9a', false, '{}'::jsonb) v`)).rows[0].v.code;
 const ROOM = (await db.query(`select id from skill_rooms where code = $1`, [CODE])).rows[0].id;
 await db.query(`insert into skill_participants (room_id, token, seat, name) values ($1, 'tokMia', 1, 'Mia'), ($1, 'tokLeon', 2, 'Leon')`, [ROOM]);
+// Ida ist in MPSkills angemeldet (0289) – auf zwei Tablets
+const IDA = 'e0000000-0000-4000-8000-0000000000f2';
+await db.query(`insert into auth.users (id) values ($1)`, [IDA]);
+await db.query(`insert into profiles (id, school_id, account_name, display_name, status) values ($1, $2, 'ida-k', 'Ida K.', 'active')`, [IDA, SCHOOL]);
+await db.query(`insert into skill_participants (room_id, token, seat, name, user_id) values ($1, 'tokIda', 3, 'Ida', $2), ($1, 'tokIda2', 4, 'Ida', null)`, [ROOM, IDA]);
+const MPS_UID = { tokIda: IDA, tokIda2: IDA };
 
 let lock = Promise.resolve();
 function rpcAs(who, fn, args) {
@@ -60,7 +67,7 @@ function rpcAs(who, fn, args) {
     await db.exec(`delete from _who`);
     const a = Object.assign({}, args);
     if (who === 'teacher') { await db.query(`insert into _who values ($1)`, [T1]); a.p_code = CODE; }
-    else a.p_token = who;
+    else { a.p_token = who; if (MPS_UID[who]) await db.query(`insert into _who values ($1)`, [MPS_UID[who]]); }
     const keys = Object.keys(a);
     const vals = keys.map(k => (a[k] !== null && typeof a[k] === 'object') ? JSON.stringify(a[k]) : a[k]);
     const sql = `select ${fn}(${keys.map((k, i) => `${k} => $${i + 1}` + ((a[k] !== null && typeof a[k] === 'object') ? '::jsonb' : '')).join(', ')}) v`;
@@ -1055,6 +1062,41 @@ try {
   await t.app.locator('.ov--wb .wb-page').waitFor();
   ok('11 Anzeige antippen → eigene Seite, Knopf führt nirgendwohin', await t.app.locator('.ov--wb .wb-page button.btn[disabled]').count() === 1);
   await shot(t.page, '11f-anzeige-seite');
+
+  // 12) MPSkills-Konto (0289): Ida registriert sich im Klassen-Netz ohne eigenes Passwort
+  const ida = await open('tokIda');
+  await ida.app.locator('.class-sec .net-tile').click();
+  await ida.app.locator('#rForm input[name=mps]').waitFor({ state: 'attached' });
+  ok('12 Registrieren: „Daten aus MPSkills übernehmen“ angehakt, Name + Anzeigename übernommen, Passwort ausgegraut',
+     await ida.app.locator('input[name=mps]').isChecked() && await ida.app.locator('input[name=user]').inputValue() === 'ida-k'
+     && await ida.app.locator('input[name=name]').inputValue() === 'Ida K.' && await ida.app.locator('input[name=pw]').isDisabled()
+     && /über MPSkills/.test(await ida.app.locator('input[name=pw]').getAttribute('placeholder')));
+  ok('12 iPad: unsichtbarer Benutzername direkt vor dem Passwort', await ida.app.locator('input[name=umirror]').inputValue() === 'ida-k'
+     && await ida.app.locator('input[name=umirror]').getAttribute('autocomplete') === 'username');
+  await shot(ida.page, '12a-mpskills-registrieren');
+  await ida.app.locator('input[name=mps]').evaluate(el => el.click());
+  ok('12 Haken weg: Felder wieder frei, Name wieder leer', !(await ida.app.locator('input[name=pw]').isDisabled()) && await ida.app.locator('input[name=user]').inputValue() === '');
+  await ida.app.locator('input[name=mps]').evaluate(el => el.click());
+  await ida.app.locator('#rForm button[type=submit]').click();
+  await ida.app.locator('.hub-top .chip', { hasText: '@ida-k' }).waitFor();
+  const idaRow = (await db.query(`select u.mps_user, u.password from sh_users u join sh_hubs h on h.id = u.hub_id where h.class and u.username = 'ida-k'`)).rows[0];
+  ok('12 im Klassen-Netz als @ida-k, verknüpft, Platzhalter statt Passwort', idaRow && idaRow.mps_user === IDA && idaRow.password === '(MPSkills-Konto)', JSON.stringify(idaRow));
+  // abmelden → nicht gleich wieder angemeldet, sondern Knopf „Mit MPSkills anmelden“
+  await ida.app.locator('[data-tab="profile"]').click();
+  await ida.app.locator('#pOut').click();
+  await ida.app.locator('#lo1').click();
+  await ida.app.locator('#mpsGo').waitFor();
+  ok('12 nach „Abmelden“: Knopf „Mit MPSkills anmelden als @ida-k“', /@ida-k/.test(await ida.app.locator('#mpsGo').textContent()));
+  await shot(ida.page, '12b-mpskills-anmelden-knopf');
+  await ida.app.locator('#mpsGo').click();
+  await ida.app.locator('.hub-top .chip', { hasText: '@ida-k' }).waitFor();
+  ok('12 Knopf meldet ohne Passwort an', true);
+  // zweites Tablet: Klassen-Netz öffnen = sofort angemeldet
+  const ida2 = await open('tokIda2');
+  await ida2.app.locator('.class-sec .net-tile').click();
+  await ida2.app.locator('.hub-top .chip', { hasText: '@ida-k' }).waitFor();
+  ok('12 anderes Tablet: Klassen-Netz öffnen = gleich angemeldet', await ida2.app.locator('#rForm, #lForm').count() === 0);
+  await shot(ida2.page, '12c-zweites-tablet');
 } catch (e) {
   fails++;
   console.error('ABBRUCH:', e.message);

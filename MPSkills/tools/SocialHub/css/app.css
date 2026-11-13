@@ -353,6 +353,21 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .login .form { text-align: left; }
 .login .form label input { margin-top: 2px; }
 
+/* MPSkills-Konto (0289): Anmelden per Knopf, Daten übernehmen */
+.mps-slot:empty { display: none; }
+.mps-slot { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; text-align: left; }
+.mps-btn { width: 100%; justify-content: center; flex-wrap: wrap; white-space: normal; text-align: center; }
+.mps-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.mps-as { font-weight: 500; opacity: .85; }
+.mps-lead { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; color: var(--muted); }
+.mps-lead svg { width: 18px; height: 18px; fill: none; stroke: var(--hub); stroke-width: 2; stroke-linecap: round; flex: none; }
+.mps-or { display: flex; align-items: center; gap: 10px; margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.mps-or::before, .mps-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.mps-txt { font-style: normal; }
+.mps-txt small { color: var(--muted); font-size: 12px; }
+.mps-take { background: var(--soft); border-radius: 10px; padding: 10px 12px; }
+.form input:disabled { opacity: .55; cursor: not-allowed; }
+
 .center { height: 100%; display: grid; place-items: center; padding: 16px; }
 .card-box { max-width: 420px; text-align: center; padding: 24px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
 

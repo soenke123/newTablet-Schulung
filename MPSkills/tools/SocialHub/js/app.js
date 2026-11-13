@@ -158,6 +158,7 @@
     lock: '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>',
     unlock: '<svg viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 7.6-1.7"/></svg>',
     trash: '<svg viewBox="0 0 24 24"><path d="M4.5 7h15M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/></svg>',
+    link: '<svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
     key: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l2.5 2.5M14 9l2 2"/></svg>',
     image: '<svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.8"/><path d="m4 18 5.5-5 4 3.5 2.5-2 4 3.5"/></svg>',
     gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4 5.3 5.3"/></svg>',
@@ -830,11 +831,12 @@
   function renderNetLogin() {
     S.screen = 'netlogin';
     app.innerHTML = '<div class="home"><header class="home-top"><button class="icon-btn" id="back" title="Zurück">' + IC.back + '</button>' + brandHtml() + '</header>' +
-      '<form class="form card-form" id="nlForm" autocomplete="off"><h2>In dein Netzwerk anmelden</h2>' +
+      '<form class="form card-form" id="nlForm"><h2>In dein Netzwerk anmelden</h2>' +
       '<p class="muted small">Für ein Netzwerk, das auf einem anderen Tablet erstellt wurde.</p>' +
-      '<label>Name des Netzwerks<input name="net" required maxlength="30" placeholder="z. B. Pixelwelt"></label>' +
-      '<label>Benutzername<input name="user" required autocapitalize="off" value="admin"></label>' +
-      '<label>Passwort<input name="pw" type="password" required></label>' +
+      '<div class="mps-slot" id="mpsSlot"></div>' +
+      '<label>Name des Netzwerks<input name="net" required maxlength="30" placeholder="z. B. Pixelwelt" autocomplete="off"></label>' +
+      '<label>Benutzername<input name="user" required autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" value="admin"></label>' +
+      '<label>Passwort<input name="pw" type="password" required autocomplete="current-password"></label>' +
       keepHtml() +
       '<button class="btn btn--accent btn--big">Anmelden</button>' +
       '<p class="muted small">Passwort vergessen? Die Lehrkraft kann das Admin-Passwort zurücksetzen.</p></form></div>';
@@ -847,13 +849,46 @@
       A.session.set(r.hub, r.session, f.keep.checked);
       openHub(r.hub);
     };
+    // verknüpfte Netzwerke (0289): ohne Netzwerk-Namen und Passwort
+    mpsMe(true).then(m => {
+      const slot = $('#mpsSlot');
+      if (!slot || S.screen !== 'netlogin' || !m || !(m.nets || []).length) return;
+      slot.innerHTML = '<p class="mps-lead">' + IC.link + '<span>Mit deinem MPSkills-Konto <b>' + esc(m.account) + '</b></span></p>' +
+        m.nets.map(n => '<button type="button" class="btn btn--accent mps-btn" data-mh="' + esc(n.hub) + '">' + esc(n.name) +
+          ' <span class="mps-as">als @' + esc(n.username) + '</span></button>').join('') +
+        '<p class="mps-or"><span>oder mit Passwort</span></p>';
+      $$('[data-mh]', slot).forEach(b => b.onclick = () => mpsLogin(b.dataset.mh, $('#nlForm').keep.checked));
+    });
+  }
+
+  /* ── MPSkills-Konto (Migration 0289) ──────────────────────
+     Wer in MPSkills angemeldet ist, kann sein Netzwerk-Konto damit
+     verknüpfen: Registrieren übernimmt Accountname + Anzeigename, ohne
+     eigenes Passwort (das MPSkills-Passwort wird nie kopiert – Admins
+     lesen die Spalte password per SQL). Danach Anmelden per Knopf bzw.
+     beim Öffnen von selbst (nach „Abmelden“ nicht mehr, S.noAutoMps). */
+  let mpsCache = null;
+  async function mpsMe(force) {
+    if (A.DEMO) return null;
+    if (mpsCache && !force) return mpsCache;
+    const r = await A.call('sh_mps_me', {});
+    mpsCache = (r && r.ok && r.signed_in) ? r : null;
+    return mpsCache;
+  }
+  const mpsNet = (m, hub) => m ? (m.nets || []).find(n => n.hub === hub) || null : null;
+  async function mpsLogin(hub, keep, quiet) {
+    const r = await A.call('sh_login_mps', { p_hub: hub });
+    if (!r || !r.ok) { if (!quiet) fail(r); return false; }
+    A.session.set(hub, r.session, keep);
+    await openHub(hub, { noMps: true });
+    return true;
   }
 
   const keepHtml = () => T ? '<input type="checkbox" name="keep" checked hidden>' :
     '<label class="check"><input type="checkbox" name="keep"' + (A.session.keepDefault() ? ' checked' : '') + '><span></span>Angemeldet bleiben</label>';
 
   /* ══ Netzwerk betreten ═════════════════════════════════════ */
-  async function openHub(id) {
+  async function openHub(id, opt) {
     const sess = A.session.get(id);
     const r = await A.call('sh_enter', { p_hub: id, p_session: sess });
     if (!r || !r.ok) {
@@ -873,7 +908,12 @@
     S.adminTab = 'sql';
     if (r.needs_admin) renderLogin('admin');
     // Lehrkraft schaut ohne Konto zu (Admin), kann sich aber oben anmelden
-    else if (!r.me && !T) renderLogin(r.hub.class && !sess ? 'reg' : 'login');
+    else if (!r.me && !T) {
+      // mit MPSkills verknüpft (0289): gleich anmelden, außer nach „Abmelden“
+      if (!(opt && opt.noMps) && !S.noAutoMps && mpsNet(await mpsMe(true), id)
+          && await mpsLogin(id, A.session.keepDefault(), true)) return;
+      renderLogin(r.hub.class && !sess ? 'reg' : 'login');
+    }
     else renderHub();
   }
 
@@ -909,23 +949,28 @@
       (isAdmin ? '<p class="login-sub">Leg dein Admin-Konto an. Alles außer Benutzername und Passwort ist Deko – und darf ausgedacht sein.</p>'
         : canReg ? '<div class="seg"><button type="button" data-m="login"' + (mode === 'login' ? ' class="on"' : '') + '>Anmelden</button>' +
                    '<button type="button" data-m="reg"' + (mode === 'reg' ? ' class="on"' : '') + '>Registrieren</button></div>' : '') +
+      '<div class="mps-slot" id="mpsSlot"></div>' +
       (mode === 'login'
-        ? '<form class="form" id="lForm" autocomplete="off"><input name="user" placeholder="Benutzername" autocapitalize="off" required>' +
-          '<input name="pw" type="password" placeholder="Passwort" required>' + keepHtml() +
+        ? '<form class="form" id="lForm"><input name="user" placeholder="Benutzername" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" required>' +
+          '<input name="pw" type="password" placeholder="Passwort" autocomplete="current-password" required>' + keepHtml() +
+          '<div id="mpsLinkSlot"></div>' +
           '<button class="btn btn--accent btn--big" type="submit">Anmelden</button>' +
           '<p class="muted small center-t">Passwort vergessen? ' + (T ? 'Als Lehrkraft bist du hier ohnehin Admin.' : h.class ? 'Frag die Lehrkraft.' : 'Die Lehrkraft kann das Admin-Passwort zurücksetzen.') + '</p>' +
           (A.APP ? '<p class="muted small center-t">Noch kein Konto? Das legst du im Unterricht im Raum an.</p><p class="center-t">' + installHtml() + '</p>' : '') + '</form>'
-        : '<form class="form" id="rForm" autocomplete="off">' +
-          '<label>Benutzername<input name="user" placeholder="a–z, 0–9, . _" maxlength="24" autocapitalize="off" required' + (isAdmin ? ' value="admin"' : '') + '></label>' +
-          '<div class="f2"><input name="name" placeholder="Name" maxlength="40">' + genderSel + '</div>' +
-          '<input name="email" type="email" placeholder="E-Mail (ausgedacht)" maxlength="100">' +
-          '<div class="f2"><label class="small">Geburtstag<input name="bday" type="date"></label><label class="small">Größe in cm<input name="cm" type="number" min="50" max="250" inputmode="numeric"></label></div>' +
-          '<div class="f2"><label class="small">Wohnort<input name="city" maxlength="60"></label><label class="small">Land<input name="country" maxlength="60" placeholder="z. B. Deutschland"></label></div>' +
-          '<textarea name="bio" rows="2" maxlength="160" placeholder="Über mich"></textarea>' +
+        : '<form class="form" id="rForm">' +
+          '<div id="mpsTakeSlot"></div>' +
+          '<label>Benutzername<input name="user" placeholder="a–z, 0–9, . _ -" maxlength="24" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="username" required' + (isAdmin ? ' value="admin"' : '') + '></label>' +
+          '<div class="f2"><input name="name" placeholder="Name" maxlength="40" autocomplete="off">' + genderSel + '</div>' +
+          '<input name="email" type="email" placeholder="E-Mail (ausgedacht)" maxlength="100" autocomplete="off">' +
+          '<div class="f2"><label class="small">Geburtstag<input name="bday" type="date" autocomplete="off"></label><label class="small">Größe in cm<input name="cm" type="number" min="50" max="250" inputmode="numeric" autocomplete="off"></label></div>' +
+          '<div class="f2"><label class="small">Wohnort<input name="city" maxlength="60" autocomplete="off"></label><label class="small">Land<input name="country" maxlength="60" placeholder="z. B. Deutschland" autocomplete="off"></label></div>' +
+          '<textarea name="bio" rows="2" maxlength="160" placeholder="Über mich" autocomplete="off"></textarea>' +
+          // Passwort-Speicher (iPad) nimmt das Textfeld direkt vor dem Passwort als Namen → hier der Benutzername noch einmal, unsichtbar
+          '<input name="umirror" type="text" autocomplete="username" tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0"' + (isAdmin ? ' value="admin"' : '') + '>' +
           '<div class="f2"><input name="pw" type="password" placeholder="Passwort" maxlength="60" required autocomplete="new-password">' +
           '<input name="pw2" type="password" placeholder="Passwort wiederholen" maxlength="60" required autocomplete="new-password"></div>' +
           keepHtml() +
-          '<p class="hint">Nimm kein echtes Passwort. Damit meldest du dich auch an anderen Geräten an.</p>' +
+          '<p class="hint" id="pwHint">Nimm kein echtes Passwort. Damit meldest du dich auch an anderen Geräten an.</p>' +
           '<button class="btn btn--accent btn--big" type="submit">' + (isAdmin ? 'Netzwerk starten' : 'Konto erstellen') + '</button></form>') +
       '</div></div>';
     // Lehrkraft zurück ins Netzwerk (sie ist dort ohnehin Admin), sonst zur Startseite
@@ -937,21 +982,82 @@
       const r = await A.call('sh_login', { p_hub: h.id, p_username: f.user.value.trim(), p_password: f.pw.value });
       if (!r || !r.ok) { fail(r); return; }
       A.session.set(h.id, r.session, f.keep.checked);
-      openHub(h.id);
+      if (f.mpslink && f.mpslink.checked) {
+        const l = await A.call('sh_mps_link', { p_hub: h.id, p_session: r.session });
+        if (l && l.ok) toast('Verknüpft – nächstes Mal ohne Passwort.'); else fail(l);
+      }
+      S.noAutoMps = false;
+      openHub(h.id, { noMps: true });
     };
     if ($('#rForm')) $('#rForm').onsubmit = async (e) => {
       e.preventDefault();
       const f = e.target;
-      if (f.pw.value !== f.pw2.value) { fail({ error: 'pw_mismatch' }); f.pw2.focus(); return; }
-      const r = await A.call('sh_register', { p_hub: h.id, p_username: f.user.value.trim().toLowerCase(), p_password: f.pw.value,
+      const viaMps = !!(f.mps && f.mps.checked);
+      if (!viaMps && f.pw.value !== f.pw2.value) { fail({ error: 'pw_mismatch' }); f.pw2.focus(); return; }
+      const r = await A.call('sh_register', { p_hub: h.id, p_username: f.user.value.trim().toLowerCase(),
+        p_password: viaMps ? null : f.pw.value, p_mps: viaMps,
         p_name: f.name.value.trim() || null, p_email: f.email.value.trim() || null, p_birthday: f.bday.value || null,
         p_city: f.city.value.trim() || null, p_gender: f.gender.value || null, p_bio: f.bio.value.trim() || null,
         p_country: f.country.value.trim() || null, p_centimeter: f.cm.value ? Math.round(+f.cm.value) : null });
       if (!r || !r.ok) { fail(r); return; }
       A.session.set(h.id, r.session, f.keep.checked);
       toast(r.admin ? 'Dein Netzwerk ist online!' : 'Willkommen!');
-      openHub(h.id);
+      S.noAutoMps = false;
+      openHub(h.id, { noMps: true });
     };
+    if ($('#rForm')) { const f = $('#rForm'); f.user.addEventListener('input', () => { f.umirror.value = f.user.value; }); }
+    mpsMe(true).then(m => { if (m && S.screen === 'login' && S.hub && S.hub.hub.id === h.id) paintMps(m, h, isAdmin); });
+  }
+
+  // MPSkills-Teil des Anmelde-/Registrier-Formulars (0289)
+  function paintMps(m, h, isAdmin) {
+    const slot = $('#mpsSlot');
+    const linked = mpsNet(m, h.id);
+    if (linked && slot) {
+      slot.innerHTML = '<button type="button" class="btn btn--accent btn--big mps-btn" id="mpsGo">' + IC.link +
+        '<span>Mit MPSkills anmelden <span class="mps-as">als @' + esc(linked.username) + '</span></span></button>' +
+        '<p class="mps-or"><span>oder</span></p>';
+      $('#mpsGo').onclick = () => {
+        const f = $('#lForm') || $('#rForm');
+        S.noAutoMps = false;
+        mpsLogin(h.id, f && f.keep ? f.keep.checked : A.session.keepDefault());
+      };
+      return;
+    }
+    const lf = $('#lForm');
+    if (lf && $('#mpsLinkSlot')) {
+      $('#mpsLinkSlot').innerHTML = '<label class="check"><input type="checkbox" name="mpslink"' + (T ? '' : ' checked') + '><span></span>' +
+        '<em class="mps-txt">Mit meinem MPSkills-Konto <b>' + esc(m.account) + '</b> verknüpfen – danach ohne Passwort</em></label>';
+      return;
+    }
+    const f = $('#rForm');
+    if (!f || !$('#mpsTakeSlot')) return;
+    $('#mpsTakeSlot').innerHTML = '<label class="check mps-take"><input type="checkbox" name="mps"' + (T ? '' : ' checked') + '><span></span>' +
+      '<em class="mps-txt">Daten aus MPSkills übernehmen <small>(' + esc(m.account) + ' · ' + esc(m.display) + ')</small></em></label>';
+    const startUser = f.user.value;
+    let autoUser = null, autoName = null;
+    const apply = (on) => {
+      if (on) {
+        if (!f.user.value || f.user.value === startUser) { f.user.value = autoUser = String(m.account || '').slice(0, 24); }
+        if (!f.name.value) { f.name.value = autoName = String(m.display || '').slice(0, 40); }
+      } else {
+        if (autoUser !== null && f.user.value === autoUser) f.user.value = startUser;
+        if (autoName !== null && f.name.value === autoName) f.name.value = '';
+        autoUser = autoName = null;
+      }
+      f.umirror.value = f.user.value;
+      [f.pw, f.pw2].forEach(i => {
+        i.disabled = on; i.required = !on;
+        if (on) i.value = '';
+        i.placeholder = on ? 'Passwort: über MPSkills' : (i === f.pw ? 'Passwort' : 'Passwort wiederholen');
+      });
+      $('#pwHint').textContent = on
+        ? 'Du meldest dich mit deinem MPSkills-Konto an – ohne eigenes Passwort, auch an anderen Tablets.'
+        : 'Nimm kein echtes Passwort. Damit meldest du dich auch an anderen Geräten an.';
+    };
+    f.mps.onchange = () => apply(f.mps.checked);
+    // Lehrkraft legt hier meist Testkonten an → bei ihr nicht vorbelegt
+    if (f.mps.checked) apply(true);
   }
 
   /* ══ Klassen-Netz als App (0275) ══════════════════════════════
@@ -1641,8 +1747,9 @@
       A.session.set(S.hub.hub.id, null);
       sh.close();
       toast('Abgemeldet');
-      // zurück zur Anmeldung dieses Netzwerks
+      // zurück zur Anmeldung dieses Netzwerks (ohne gleich wieder über MPSkills anzumelden)
       S.session = null;
+      S.noAutoMps = true;
       openHub(S.hub.hub.id);
     };
     $('#lo1', sh.el).onclick = () => go(false);

@@ -59,13 +59,26 @@
     });
   }
 
+  // MPSkills-Anmeldung desselben Browsers (session.js, Schlüssel 'lernwelt-auth') – nur für
+  // die MPSkills-Verknüpfung (0289); abgelaufen = wie ohne Konto (die App frischt nichts auf)
+  function userToken() {
+    try {
+      const s = JSON.parse(localStorage.getItem('lernwelt-auth') || 'null');
+      const t = s && (s.access_token || (s.currentSession && s.currentSession.access_token));
+      const exp = s && (s.expires_at || (s.currentSession && s.currentSession.expires_at));
+      return t && (!exp || Date.now() / 1000 < exp - 30) ? t : null;
+    } catch (e) { return null; }
+  }
+  const MPS_FN = /^sh_(mps_me|login_mps|mps_link)$/;
+
   // App-Adresse: direkt an Supabase (wie lib/room.js), ohne Konto
   async function direct(fn, args) {
     if (!/^sh_[a-z_]+$/.test(fn) || !window.SUPABASE_URL) return { ok: false, error: 'network' };
+    const bearer = (MPS_FN.test(fn) && userToken()) || window.SUPABASE_ANON_KEY;
     try {
       const res = await fetch(window.SUPABASE_URL + '/rest/v1/rpc/' + fn, {
         method: 'POST',
-        headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + window.SUPABASE_ANON_KEY,
+        headers: { apikey: window.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + bearer,
                    'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(Object.assign({}, args || {}, fn === 'sh_app_info' ? { p_key: APP } : { p_token: 'app:' + APP }))
       });
@@ -127,7 +140,11 @@
 
   const ERR = {
     invalid_name: 'Der Name braucht 2 bis 30 Zeichen.',
-    invalid_username: 'Benutzername: 3 bis 24 Zeichen, nur a–z, 0–9, Punkt und Unterstrich.',
+    invalid_username: 'Benutzername: 2 bis 24 Zeichen, nur a–z, 0–9, Punkt, Unterstrich und Bindestrich.',
+    not_signed_in: 'Du bist in MPSkills nicht (mehr) angemeldet.',
+    mps_linked: 'Mit deinem MPSkills-Konto gibt es hier schon ein Konto – melde dich damit an.',
+    mps_not_linked: 'Mit deinem MPSkills-Konto ist hier noch kein Konto verknüpft.',
+    mps_other: 'Dieses Konto ist schon mit einem anderen MPSkills-Konto verknüpft.',
     invalid_password: 'Das Passwort braucht 4 bis 60 Zeichen.',
     invalid_birthday: 'Das Geburtsdatum stimmt nicht.',
     invalid_logo: 'Bitte wähle ein Logo.',

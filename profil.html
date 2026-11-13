@@ -711,7 +711,9 @@
     <!-- ─── Passwort ändern ─────────────────────────── -->
     <section class="card">
       <h2>Passwort ändern</h2>
-      <form class="pw-form" id="pwForm" autocomplete="off">
+      <form class="pw-form" id="pwForm">
+        <!-- Accountname für den Passwort-Speicher (iPad: sonst landet das neue Passwort beim falschen Namen) -->
+        <input type="text" id="pwUser" name="username" autocomplete="username" readonly tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0" />
         <div>
           <label for="pwNew">Neues Passwort</label>
           <input type="password" id="pwNew" name="pwNew" minlength="6" required autocomplete="new-password" />
@@ -850,6 +852,7 @@
       renderTopbarAuth(user);
       document.getElementById('infoDisplayName').textContent = user.display_name || '–';
       document.getElementById('infoAccountName').textContent = user.account_name  || '–';
+      document.getElementById('pwUser').defaultValue = user.account_name || '';
       document.getElementById('infoSchool').textContent      = user.school_name   || '–';
       document.getElementById('infoCluster').textContent     = user.cluster_name  || 'Kein Kurs zugewiesen';
       document.getElementById('infoSeason').textContent      = user.season ?? 0;
