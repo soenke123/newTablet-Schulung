@@ -192,7 +192,7 @@
           + '<code>192.168.1.12</code>, <code>192.168.1.13</code> und <code>192.168.1.14</code>. Zwei Geräte mit derselben Adresse '
           + 'stören sich. Prüfe mit Pings, dass jedes Gerät jedes andere erreicht.' },
         { typ: 'benutzen', text: 'Schau dem Switch beim <strong>Lernen</strong> zu: Baue ein <strong>neues Gerät</strong> (E6) an den Switch, '
-          + 'gib ihm eine freie Adresse, schalte auf <em>Aktion</em> und drehe unten das <strong>Tempo</strong> auf <em>Zeitlupe</em>. '
+          + 'gib ihm eine freie Adresse, schalte auf <em>Aktion</em> und drehe oben das <strong>Tempo</strong> auf <em>Zeitlupe</em>. '
           + 'Schick von E6 einen Ping an E1 und sieh dir an, wohin die Nachricht läuft. Beim ersten Mal weiß E6 noch nicht, an welcher '
           + 'MAC-Adresse E1 zu finden ist, und ruft deshalb in den Raum: „Wer hat diese Adresse?“ Wohin schickt der Switch diesen '
           + 'Rundruf — und was merkt er sich dabei über E6? Schick den Ping gleich noch einmal: Was ist jetzt anders?' }
@@ -210,7 +210,7 @@
           + 'Ein Switch <em>lernt</em>: Bei jeder Nachricht merkt er sich, an welcher Buchse der Absender hängt. Kennt er das Ziel noch nicht, '
           + 'schickt er die Nachricht an alle — danach nur noch dorthin, wo das Ziel steckt. Einen <em>Rundruf</em> („Wer hat …?“) '
           + 'bekommen immer alle.' },
-        { begriff: 'Tempo', text: 'Der Regler unten in der Mitte stellt ein, wie schnell die Nachrichten über die Kabel laufen. '
+        { begriff: 'Tempo', text: 'Der Regler oben in der Mitte, neben <em>❚❚</em> und <em>↺</em>, stellt ein, wie schnell die Nachrichten über die Kabel laufen. '
           + 'Auf <em>Zeitlupe</em> siehst du jede Nachricht einzeln wandern.' },
         { begriff: 'Was der Switch gelernt hat', text: 'Wer es genau sehen will: <em>Ansicht &amp; Tools → Geräte-Lerninformationen</em> einschalten und den Switch '
           + 'antippen. Dort steht, welches Gerät an welcher Buchse hängt.' }
