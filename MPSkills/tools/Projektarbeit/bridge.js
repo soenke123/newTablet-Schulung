@@ -48,6 +48,7 @@
   let items = {};           // 'task:t3' → { kind, id, v, data }
   let pending = {};         // 'task:t3' → { op, kind, id, data }
   let inflight = false;
+  let recent = {};          // 'goal:main' → { v, data, g, t }: gerade selbst gespeichert
   let rid = 0;
   const waiting = {};
 
@@ -124,8 +125,26 @@
     PA.render();
   }
 
+  /* Eine Ansicht kann älter sein als das eben Gespeicherte: geholt, bevor
+     das Speichern ankam, und bis zum Verlassen des Feldes in `deferred`
+     gelegen. Dann sprang z. B. das Projektziel für ein paar Sekunden auf
+     den alten Text zurück. Kurz gilt deshalb die eigene, neuere Fassung
+     (nur für dieselbe Gruppe). */
+  const RECENT_MS = 10000;
+  const groupOf = x => (x && x.group ? x.group.id : null);
+  function keepNewer(v) {
+    const now = Date.now(), g = groupOf(v);
+    Object.keys(recent).forEach(k => { if (now - recent[k].t > RECENT_MS) delete recent[k]; });
+    if (!Array.isArray(v.items) || !Object.keys(recent).length) return;
+    v.items = v.items.map(it => {
+      const r = recent[keyOf(it.kind, it.id)];
+      return (r && r.g === g && r.v > it.v) ? { kind: it.kind, id: it.id, v: r.v, data: r.data } : it;
+    });
+  }
+
   function offer(v, forFocus) {
     if (!v) return;
+    keepNewer(v);
     if (inflight || Object.keys(pending).length || typing()) { deferred = v; deferredFor = forFocus; return; }
     deferred = null;
     apply(v, forFocus);
@@ -215,6 +234,8 @@
       (res.items || []).forEach(it => {
         const k = keyOf(it.kind, it.id);
         setVer(it.kind, it.id, it.deleted ? null : it.v, it.data);
+        if (it.deleted) delete recent[k];
+        else recent[k] = { v: it.v, data: it.data, g: groupOf(view), t: Date.now() };
         if (it.deleted) { if (!pending[k]) delete items[k]; return; }
         // Was der Server ergänzt (Urheber, Zeitstempel, Fixierung) übernehmen —
         // außer, auf dem Gerät ist schon die nächste Änderung unterwegs.
@@ -261,7 +282,7 @@
   PA.setFocus = function (group) {
     if (PA.focus === group) return;
     PA.focus = group || null;
-    items = {}; pending = {}; deferred = null;
+    items = {}; pending = {}; deferred = null; recent = {};
     if (view) { view = Object.assign({}, view, { items: [], group: null }); }
     PA.viewFor = undefined;   // noch keine Ansicht für den neuen Raum
     if (DEMO) { PA.refresh(); return; }

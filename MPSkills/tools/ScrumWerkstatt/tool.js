@@ -46,7 +46,7 @@
   const MIN = 460;
 
   let root = null, frame = null, ctx = null, role = null;
-  let ready = false, destroyed = false, busy = false;
+  let ready = false, destroyed = false, busy = false, rerun = false;
   let lastSig = null, pollTimer = null, onResize = null, onMsg = null;
   let cache = {};          // 'story:u3' → { v, data }
   let lastView = null;
@@ -81,7 +81,10 @@
 
   /* ─── Eigener Takt ──────────────────────────────────────── */
   async function tick(force) {
-    if (destroyed || busy || !ready) return;
+    if (destroyed || !ready) return;
+    // Läuft gerade ein Takt, geht ein erzwungener (refresh nach dem
+    // Speichern) nicht verloren, sondern kommt gleich danach.
+    if (busy) { if (force) rerun = true; return; }
     if (!force && document.hidden) return;
     busy = true;
     try {
@@ -114,6 +117,7 @@
       post({ type: 'view', view: v });
     } finally {
       busy = false;
+      if (rerun && !destroyed) { rerun = false; lastSig = null; tick(true); }
     }
   }
 
@@ -151,7 +155,7 @@
 
       // Im Schaufenster ohne Raum: das Beispielprojekt, und nichts
       // bleibt hängen (?demo=1, siehe bridge.js).
-      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261108';
+      const q = (ctx.preview ? '?demo=1&' : '?') + 'v=20261113a';
       root.innerHTML =
         '<div class="sw-host">' +
           '<iframe class="sw-frame" src="tools/ScrumWerkstatt/index.html' + q + '" ' +
@@ -184,7 +188,7 @@
       document.body.classList.remove('tool-fill');
       pollTimer = onResize = onMsg = null;
       frame = root = ctx = role = null;
-      ready = false; busy = false; lastSig = null; cache = {}; lastView = null;
+      ready = false; busy = false; rerun = false; lastSig = null; cache = {}; lastView = null;
     }
   });
 })();

@@ -58,6 +58,7 @@
   let inflight = false;  // ein scrum_save ist unterwegs
   let again = false;     // währenddessen kam noch eine Änderung dazu
   let deferred = null;   // Ansicht, die auf ein Ende des Tippens wartet
+  let recent = {};       // 'product:goal' → { v, data, t }: gerade selbst gespeichert
   let rid = 0;
   const waiting = {};    // rid → resolve
 
@@ -122,8 +123,12 @@
     const act = sprints.find(s => s.status === 'active');
     return {
       // Alte Räume haben das Goal noch in 'main'; das Goal-Objekt hat Vorrang.
-      product: prod ? Object.assign({ images: [] }, prod.data, goal ? goal.data : {})
-                    : JSON.parse(JSON.stringify(DEFAULT_PRODUCT)),
+      // Das Goal-Objekt gilt auch, wenn es 'main' (noch) nicht gibt: Wer in
+      // einem neuen Raum zuerst das Goal schreibt, legt nur product/goal an.
+      // Früher fiel das Goal dann auf jedem Gerät auf leer zurück und tauchte
+      // nur beim Antippen des Feldes (Sperre holt den Stand) kurz wieder auf.
+      product: Object.assign(JSON.parse(JSON.stringify(DEFAULT_PRODUCT)),
+                             prod ? prod.data : {}, goal ? goal.data : {}),
       team: (view.members || []).map(m => ({
         id: m.id, name: m.name, role: m.role, label: m.label || '',
         // Profilbild des MPSkills-Kontos (0281); ohne Konto: Buchstaben.
@@ -214,7 +219,25 @@
     if (typeof global.swLive === 'function') global.swLive();
   }
 
+  /* Eine Ansicht kann älter sein als das, was dieses Gerät gerade selbst
+     gespeichert hat: Sie wurde geholt, bevor das Speichern ankam, und lag
+     dann z. B. bis zum Verlassen des Feldes in `deferred`. Dann zeigt sie
+     für ein paar Sekunden den alten Text (das Goal „springt zurück“).
+     Für kurze Zeit gilt deshalb die eigene, neuere Fassung. */
+  const RECENT_MS = 10000;
+  function keepNewer(view) {
+    const now = Date.now();
+    Object.keys(recent).forEach(k => { if (now - recent[k].t > RECENT_MS) delete recent[k]; });
+    if (!Array.isArray(view.items) || !Object.keys(recent).length) return view;
+    view.items = view.items.map(it => {
+      const r = recent[keyOf(it.kind, it.id)];
+      return (r && r.v > it.v) ? { kind: it.kind, id: it.id, v: r.v, data: r.data } : it;
+    });
+    return view;
+  }
+
   function offer(view) {
+    keepNewer(view);
     live(view);
     if (inflight || again) { deferred = view; return; }
     if (typing()) { deferred = view; return; }
@@ -243,6 +266,13 @@
     const sp = splitProduct(S.product);
     put('product', 'main', sp.main);
     put('product', 'goal', sp.goal);
+    // Goal ohne 'main' auf dem Server: 'main' gleich mit anlegen. Sonst
+    // fehlt das Goal im Backup (scrum_snapshot hängt es an 'main').
+    if (ops.some(o => o.kind === 'product' && o.id === 'goal')
+        && !ops.some(o => o.kind === 'product' && o.id === 'main')
+        && !verOf('product', 'main')) {
+      ops.push({ op: 'put', kind: 'product', id: 'main', v: 0, data: sp.main });
+    }
     S.stories.forEach(s => put('story', s.id, s));
     S.sprints.forEach(s => put('sprint', s.id, s));
     Object.keys(known).forEach(k => {
@@ -300,7 +330,7 @@
       const cur = global.swGetS();
       (res.items || []).forEach(it => {
         const k = keyOf(it.kind, it.id);
-        if (it.deleted) { delete known[k]; return; }
+        if (it.deleted) { delete known[k]; delete recent[k]; return; }
         const fresh = it.kind === 'product' ? it.data : Object.assign({}, it.data, { id: it.id });
         // Was der Server ergänzt (Nummer, Schlüssel, Name eines neuen
         // Sprints), ins Gerät übernehmen. Alles andere bleibt, wie es
@@ -314,6 +344,7 @@
           });
         }
         known[k] = { v: it.v, json: canon(fresh) };
+        recent[k] = { v: it.v, data: it.data, t: Date.now() };
         if (lastView) {
           const li = lastView.items.find(i => i.kind === it.kind && i.id === it.id);
           if (li) { li.v = it.v; li.data = it.data; }
@@ -438,6 +469,7 @@
       p_items: items, p_seq_story: (seq && seq.story) || 0, p_seq_sprint: (seq && seq.sprint) || 0
     });
     if (!res || !res.ok) { global.toast(SW.msg(res && res.error)); return false; }
+    recent = {};   // alles neu: die eigenen Fassungen von eben gelten nicht mehr
     SW.refresh();
     return true;
   };
