@@ -94,6 +94,11 @@ html[data-motion="low"] *, html[data-motion="low"] *::before, html[data-motion="
   font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
 .lwm-pop[hidden] { display: none; }
 .lwm-pop p { margin: 0 0 10px; color: #c9ccd6; }
+.lwm-leaf { flex: none; width: 30px; height: 30px; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  cursor: pointer; border: 1px solid rgba(127,127,127,.35); background: rgba(127,127,127,.12); color: #8a8f98;
+  transition: background .14s ease, color .14s ease; }
+.lwm-leaf svg { width: 17px; height: 17px; }
+.lwm-leaf[aria-pressed="true"] { background: #2f7d4f; border-color: #2f7d4f; color: #fff; }
 .lwm-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px;
   cursor: pointer; font: inherit; }
 .lwm-switch input { width: 20px; height: 20px; accent-color: #2f7d4f; margin: 0; flex: none; }
@@ -251,6 +256,7 @@ html[data-motion="low"] *, html[data-motion="low"] *::before, html[data-motion="
     const b = e.target.closest && e.target.closest('[data-lwm]');
     if (!b) return;
     const v = b.getAttribute('data-lwm');
+    if (v === 'flip') { set(isLow() ? 'full' : 'low'); return; }
     if (v === 'low') set('low');
     else if (v === 'full') set('full');
     if (ask) ask.hidden = true;
@@ -267,6 +273,10 @@ html[data-motion="low"] *, html[data-motion="low"] *::before, html[data-motion="
     if (low && ask) ask.hidden = true;
     if (!low && pop) pop.hidden = true;
     document.querySelectorAll('input[data-lwm-toggle]').forEach((i) => { i.checked = low; });
+    document.querySelectorAll('[data-lwm="flip"]').forEach((b) => {
+      b.setAttribute('aria-pressed', String(low));
+      b.title = low ? 'Sparmodus an' : 'Sparmodus aus';
+    });
   }
 
   function fire() {
@@ -374,6 +384,14 @@ html[data-motion="low"] *, html[data-motion="low"] *::before, html[data-motion="
       return '<label class="lwm-switch"><span>' + (label || 'Animationen reduzieren')
         + '<small>Für Tablets, die ruckeln. Bilder bleiben.</small></span>'
         + '<input type="checkbox" data-lwm-toggle' + (isLow() ? ' checked' : '') + '></label>';
+    },
+    /** Menüzeile wie „Ansicht“ (MPSkills lib/userbar.js): „Sparmodus“ +
+        Blatt-Knopf, grau = aus, grün = an. Erklärt wird am Blatt unten links. */
+    menuHTML() {
+      const low = isLow();
+      return '<span class="ub-theme-l">Sparmodus</span>'
+        + '<button type="button" class="lwm-leaf" data-lwm="flip" aria-pressed="' + low + '"'
+        + ' title="' + (low ? 'Sparmodus an' : 'Sparmodus aus') + '" aria-label="Sparmodus">' + LEAF + '</button>';
     },
     /** Bildrate für eigene Schleifen: im Sparmodus halbiert. */
     fps(base) { return isLow() ? Math.max(20, Math.round((base || 60) / 2)) : (base || 60); },

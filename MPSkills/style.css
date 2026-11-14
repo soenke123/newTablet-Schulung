@@ -4108,6 +4108,9 @@ body.inselseite--voll { overflow: hidden; }
 .door-login form[hidden] { display: none; }
 #themeOpen[hidden] { display: none; }
 
-/* Sparmodus-Schalter im Profil-Menü (lib/userbar.js → ../motion.js) */
-.ub-motion { padding: 8px 12px; border-bottom: 1px solid var(--line, rgba(127,127,127,.2)); font-size: 14px; color: var(--ink, inherit); }
-.ub-motion .lwm-switch small { color: var(--muted, inherit); }
+/* Sparmodus im Profil-Menü (lib/userbar.js → ../motion.js): dieselbe
+   Zeile wie „Ansicht“ (.ub-theme), rechts der Blatt-Knopf .lwm-leaf. */
+.ub-menu .lwm-leaf { display: grid; place-items: center; flex: none; width: 30px; height: 26px; padding: 0;
+  border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--paper); color: var(--ink-faint); }
+.ub-menu .lwm-leaf:hover { color: var(--ink); }
+.ub-menu .lwm-leaf[aria-pressed="true"] { background: #2f7d4f; border-color: #2f7d4f; color: #fff; }

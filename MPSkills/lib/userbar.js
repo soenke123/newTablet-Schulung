@@ -194,7 +194,8 @@
      Gerät wie Hell/Dunkel; data-ub="motion" hält das Menü offen. */
   function motionHTML() {
     if (!window.LWMotion) return '';
-    return '<div class="ub-motion" data-ub="motion">' + window.LWMotion.toggleHTML() + '</div>';
+    if (!window.LWMotion.menuHTML) return '';
+    return '<div class="ub-theme ub-motion" data-ub="motion">' + window.LWMotion.menuHTML() + '</div>';
   }
 
   function menuEl() { return document.querySelector('[data-ub-menu]'); }
