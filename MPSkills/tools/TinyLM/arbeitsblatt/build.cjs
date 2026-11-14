@@ -1,4 +1,5 @@
-/* Baut die Arbeitsblätter zu Tiny LM (eins je Phase) und den Begleitzettel für Lehrkräfte als Word-Dateien.
+/* KURZE FASSUNG (höchstens eine Doppelseite je Phase). Die lange Fassung baut build-lang.cjs nach lang/.
+   Baut die Arbeitsblätter zu Tiny LM (eins je Phase) und den Begleitzettel für Lehrkräfte als Word-Dateien.
    Aufruf: node build.cjs   (Bilder vorher: node screenshots.cjs · node schaubilder.cjs · python3 nummern.py)
    Aufbau jedes Arbeitsblatts nach Use – Modify – Create:
      Kennenlernen (Phase und Funktionen entdecken) → Verändern (Regler, Quellen gezielt manipulieren)
@@ -90,8 +91,10 @@ function imgRow(items, o = {}) {
   })], items.map(() => w));
 }
 // Bild links, Inhalt rechts
+let WIDTH = CW;   // Breite für fill()/lines(); side() setzt sie für die rechte Spalte
 function side(file, imgDxa, children, o = {}) {
   const right = CW - imgDxa;
+  if (typeof children === 'function') { WIDTH = right - 160; children = children(); WIDTH = CW; }
   return grid([new TableRow({
     children: [
       cell([img(file, PX(imgDxa) - 16, { align: AlignmentType.LEFT, after: 0 }), ...(o.cap ? [caption(o.cap)] : [])], { w: imgDxa, pl: 0, pr: 120 }),
@@ -125,7 +128,8 @@ function head(kicker, title, sub, steps) {
     })], steps.map(() => w)));
     out.push(gap(60));
   }
-  out.push(p('Name: ________________________________     Kurs: __________     Datum: ______________', { size: 18, color: C.muted, before: 80, after: 160 }));
+  if (steps) out.push(p('Name: ________________________________     Kurs: __________     Datum: ______________', { size: 18, color: C.muted, before: 80, after: 160 }));
+  else out.push(gap(80));
   return out;
 }
 
@@ -159,16 +163,16 @@ function lines(n = 3) {
   const rows = [];
   for (let i = 0; i < n; i++) rows.push(new TableRow({
     height: { value: 440, rule: HeightRule.EXACT }, cantSplit: true,
-    children: [cell(p(' ', { after: 0 }), { w: CW, pt: 0, pb: 0, pl: 0, pr: 0, borders: { top: NONE, left: NONE, right: NONE, bottom: dot } })],
+    children: [cell(p(' ', { after: 0 }), { w: WIDTH, pt: 0, pb: 0, pl: 0, pr: 0, borders: { top: NONE, left: NONE, right: NONE, bottom: dot } })],
   }));
-  return [grid(rows, [CW]), gap(60)];
+  return [grid(rows, [WIDTH]), gap(60)];
 }
 // Tabelle zum Ausfüllen: head = Spaltenköpfe, rows = Zeilen (Strings, '' = leer zum Schreiben)
 function fill(headRow, rows, widths, o = {}) {
   const tint = o.tint || C.lav, color = o.color || C.violetDark;
   const total = widths.reduce((a, b) => a + b, 0);
-  const ws = widths.map(w => Math.round(w / total * CW));
-  ws[ws.length - 1] += CW - ws.reduce((a, b) => a + b, 0);
+  const ws = widths.map(w => Math.round(w / total * WIDTH));
+  ws[ws.length - 1] += WIDTH - ws.reduce((a, b) => a + b, 0);
   const hr = new TableRow({
     tableHeader: true,
     children: headRow.map((h, i) => cell(p(h, { size: 18, bold: true, color, after: 0 }), { w: ws[i], fill: tint, borders: allThin(C.lavLine), pt: 60, pb: 60 })),
@@ -211,409 +215,220 @@ async function save(name, d) {
 }
 
 /* =====================================================================
-   Arbeitsblatt Phase 1 · Frei schreiben
+   KURZE FASSUNG: höchstens eine Doppelseite je Phase (Sönke 14.11.2026: „maximal eine Doppelseite pro Phase“).
+   Seite 1 = Kennenlernen, Seite 2 = Verändern + Erschaffen/Reflektieren. Die lange Fassung: build-lang.cjs → lang/.
    ===================================================================== */
+const half = (CW - 200) / 2;
+
+/* ---------- Arbeitsblatt Phase 1 · Frei schreiben ---------- */
 function ab1() {
   taskNo = 0;
   return [
-    ...head('TINY LM · ARBEITSBLATT 1 VON 4', 'Phase 1 · Frei schreiben', 'Wie schreibt eine Maschine, die nur zählen kann?', [
-      ['use', 'Handy und Spalten entdecken'], ['mod', 'Regler drehen, Texte ausschalten'], ['cre', 'Tiny gezielt manipulieren'],
+    ...head('TINY LM · ARBEITSBLATT 1', 'Phase 1 · Frei schreiben', 'Wie schreibt eine Maschine, die nur zählen kann?', [
+      ['use', 'Spalten entdecken'], ['mod', 'Regler drehen'], ['cre', 'Tiny über die Quellen manipulieren'],
     ]),
-    p('Tiny ist ein Mini-Sprachmodell. Es kennt nur **90 kurze Texte** – und schreibt trotzdem. Links siehst du das Handy (so wie jeder Chatbot von außen aussieht), rechts kannst du Tiny **auseinandernehmen**.', { after: 120 }),
-    img('p1-gesamt-nr.png', FULL),
-    caption('① Handy  ② Kandidaten  ③ Kontextfenster  ④ Quellen  ⑤ Alle Quellen (die 90 Texte)'),
+    ...stage('use', 'Lerne Handy und Spalten kennen.'),
+    side('p1-gesamt-nr.png', 5200, () => [
+      task('Drück ▶ **Schreiben**. Schließ alle Spalten (⌄) und öffne ②, ③, ④ **einzeln**. Was zeigt jede Spalte im Handy?'),
+      ...fill(['Spalte', 'Das sehe ich im Handy'], [['② Kandidaten', ''], ['③ Kontextfenster', ''], ['④ Quellen', '']], [2.2, 4], { h: 520 }),
+    ], { cap: '① Handy ② Kandidaten ③ Kontextfenster ④ Quellen ⑤ Alle Quellen' }),
+    img('d-p1-ablauf.png', 560, { after: 60 }),
+    task('Tippe im Handy auf ein Wort – die Spalten zeigen genau diesen Schritt. Erkläre mit dem Schaubild, **warum** Tiny dieses Wort geschrieben hat.'),
+    ...lines(3),
+    ...merke('Tiny versteht kein Wort. Es schaut auf die letzten Wörter (**Kontextfenster**), zählt, was in den Quellen danach kam (**Kandidaten**), und würfelt.'),
 
-    ...stage('use', 'Lerne die Phase und ihre Spalten kennen.'),
-    task('Drück im Handy auf **▶ Schreiben**. Schließe dann alle Spalten rechts (Pfeil ⌄) und öffne sie **einzeln** wieder. Was verändert sich jedes Mal im Handy?'),
-    ...fill(['Spalte', 'Welche Frage beantwortet sie?', 'Das sehe ich dann im Handy'], [
-      ['② Kandidaten', '', ''], ['③ Kontextfenster', '', ''], ['④ Quellen', '', ''],
-    ], [2, 4, 4]),
-    img('d-p1-ablauf.png', FULL - 40, { keepNext: false }),
-    task('Tippe im Handy auf ein beliebiges Wort. Die Spalten zeigen jetzt genau diesen Schritt. Erkläre mit dem Schaubild oben in 2–3 Sätzen, **warum Tiny genau dieses Wort** geschrieben hat.'),
-    ...lines(3),
-    ...merke('Tiny versteht kein einziges Wort. Es schaut auf die letzten Wörter (**Kontextfenster**), zählt, was in den Quellen danach kam (**Kandidaten**), und würfelt nach diesen Häufigkeiten. Jedes Wort und jedes Satzzeichen ist ein **Token**.'),
-
-    ...stage('mod', 'Dreh an den Reglern und verändere die Quellen.'),
-    task('Stell den Regler **N-Gramm** (Spalte Kontextfenster) auf 1, 3, 5 und 7. Lass Tiny jedes Mal neu schreiben (↺, dann ▶).'),
-    imgRow([['p1-handy-1gramm.png', '1-Gramm: Tiny schaut auf kein Wort davor'], ['p1-handy-6gramm.png', '6-Gramm: Tiny schaut auf 5 Wörter davor']], { width: 200 }),
-    ...fill(['N-Gramm', 'So klingt der Text (++ / + / – / – –)', 'Aus wie vielen Quellen kommt ein Satz? (④)'], [
-      ['1-Gramm', '', ''], ['3-Gramm', '', ''], ['5-Gramm', '', ''], ['7-Gramm', '', ''],
-    ], [2, 4, 4], { h: 460 }),
-    img('d-p1-fenster.png', FULL - 60),
-    task('Bei 7-Gramm klingen die Sätze am besten. Erkläre mit dem Schaubild, **warum** – und warum das trotzdem **kein gutes Zeichen** für ein Sprachmodell ist.'),
-    ...lines(3),
-    task('Stell die **Temperatur** (Spalte Kandidaten) einmal auf 0,2 und einmal auf 2,0. Was passiert mit den Balken? Wann wiederholt sich Tiny, wann schreibt es Unsinn?'),
-    imgRow([['p1-kandidaten-sicher.png', 'Temperatur 0,2 – sicher'], ['p1-kandidaten-wild.png', 'Temperatur 2,0 – wild']], { width: 210 }),
-    ...lines(3),
-    task('Öffne oben rechts **📚 Alle Quellen** und schalte eine ganze Textwelt aus (Häkchen am Reiter). Lass Tiny neu schreiben. Welche Wörter kommen nicht mehr vor? Was bedeutet das für eine KI, die nur mit einseitigen Texten gelernt hat?'),
-    ...lines(3),
-    tip('In „Alle Quellen“ kannst du jeden Text anklicken und **bearbeiten**. „↺ Zurücksetzen“ holt das Original zurück.'),
+    ...stage('mod', 'Dreh an den Reglern.'),
+    side('k-p1-ngramm.png', 3600, () => [
+      task('Stell **N-Gramm** (Spalte ③) auf 1, 3 und 7 und lass Tiny neu schreiben (↺, ▶).'),
+      ...fill(['N', 'So klingt der Text', 'Wie viele Quellen pro Satz?'], [['1', '', ''], ['3', '', ''], ['7', '', '']], [0.7, 3, 2.6], { h: 480 }),
+      p('Bei 7 klingt es am besten. Warum ist das **kein** gutes Zeichen?', { size: 20, before: 40 }),
+      ...lines(2),
+    ], { cap: '1-Gramm · 6-Gramm' }),
+    task('Stell die **Temperatur** (Spalte ②) auf 0,2 und auf 2,0. Was passiert mit den Balken – und mit dem Text?'),
+    ...lines(2),
 
     ...stage('cre', 'Ihr bestimmt, was Tiny schreibt – nur über die Quellen.'),
-    task('**Mission Manipulation.** Wählt zu zweit eine Mission:'),
-    bullet('**a)** Tiny soll den Satz „Der Hund fliegt mit einer Rakete zum Mars.“ schreiben.'),
-    bullet('**b)** Tiny soll behaupten, dass Hausaufgaben verboten sind.'),
-    bullet('**c)** Eure eigene Idee: ______________________________________________'),
-    p('**Regeln:** Ihr dürft Texte bearbeiten, ausschalten und eigene Texte schreiben. N-Gramm und Temperatur dürft ihr frei einstellen. Ihr dürft aber nicht einfach den ganzen Satz einmal hineinkopieren und 7-Gramm wählen – das wäre Abschreiben.', { size: 20, before: 60 }),
-    ...fill(['Versuch', 'Was haben wir an den Quellen geändert?', 'N-Gramm / Temp.', 'Geklappt? Wie oft?'], [
-      ['1', '', '', ''], ['2', '', '', ''], ['3', '', '', ''],
-    ], [1.2, 5, 1.8, 2], { h: 700 }),
-    task('Wie viele Stellen musstet ihr ändern, bis Tiny „mitgespielt“ hat? Echte Sprachmodelle lernen aus Milliarden Texten aus dem Internet. Könnte jemand sie auf dieselbe Art manipulieren? Begründet.'),
-    ...lines(4),
+    task('**Mission Manipulation:** Bringt Tiny dazu, „**Der Hund fliegt mit einer Rakete zum Mars.**“ zu schreiben (oder eine eigene Behauptung). Ihr dürft in 📚 **Alle Quellen** Texte bearbeiten, ausschalten und eigene schreiben – aber nicht einfach den Satz einmal hineinkopieren.'),
+    ...fill(['Versuch', 'Was haben wir an den Quellen geändert?', 'Geklappt?'], [['1', '', ''], ['2', '', '']], [1, 6, 1.6], { h: 640 }),
+    task('Echte Chatbots lernen aus Texten aus dem Internet. Könnte man sie genauso manipulieren? Begründet.'),
+    ...lines(2),
   ];
 }
 
-/* =====================================================================
-   Arbeitsblatt Phase 2 · Frage & Antwort
-   ===================================================================== */
+/* ---------- Arbeitsblatt Phase 2 · Frage & Antwort ---------- */
 function ab2() {
   taskNo = 0;
   return [
-    ...head('TINY LM · ARBEITSBLATT 2 VON 4', 'Phase 2 · Frage & Antwort', 'Tiny schlägt nach, bevor es schreibt', [
-      ['use', 'Suche und Quellen verfolgen'], ['mod', 'Fragen und Quellen verändern'], ['ref', 'Halluzinieren und Quellen bewerten'],
+    ...head('TINY LM · ARBEITSBLATT 2', 'Phase 2 · Frage & Antwort', 'Tiny schlägt nach, bevor es schreibt', [
+      ['use', 'Suche verfolgen'], ['mod', 'Fragen verändern, Fallen testen'], ['ref', 'Quellen bewerten'],
     ]),
-    p('Jetzt kannst du Tiny **Fragen stellen**. Tiny sucht zuerst die passendsten Texte heraus – und schreibt dann wie in Phase 1, aber nur noch mit diesen Texten.', { after: 120 }),
-    img('p2-gesamt-nr.png', FULL),
-    caption('① Chat im Handy  ② Frage zerlegen  ③ Kandidaten  ④ Kontextfenster  ⑤ Quellen'),
-
     ...stage('use', 'Verfolge, wie aus einer Frage eine Antwort wird.'),
-    img('d-p2-ablauf.png', FULL - 40),
-    task('Frag Tiny: „**Was frisst ein Hund?**“ Öffne ② **Frage zerlegen**. Trag ein:'),
-    side('p2-frage-zerlegen.png', 3000, [
-      ...fill(['', ''], [
-        ['Diese Wörter werden gesucht:', ''], ['Diese Wörter werden gestrichen:', ''], ['Text A:', ''], ['Text B:', ''], ['Text C:', ''],
-      ], [4, 5], { h: 520 }),
+    img('d-p2-ablauf.png', 600, { after: 60 }),
+    side('p2-frage-zerlegen.png', 2600, () => [
+      task('Frag Tiny „**Was frisst ein Hund?**“ und öffne **Frage zerlegen**.'),
+      ...fill(['', ''], [['Gesucht werden:', ''], ['Gestrichen werden:', ''], ['Gewählte Texte A · B · C:', '']], [2.4, 4], { h: 520 }),
       p('Warum streicht Tiny manche Wörter?', { size: 20, before: 40 }),
       ...lines(2),
     ]),
-    task('Öffne ⑤ **Quellen**. Im Handy hat jetzt jedes Wort die Farbe seines Textes (A, B oder C). Was ist anders als beim freien Schreiben in Phase 1?'),
+    task('Öffne **Quellen**: Jedes Wort im Handy hat jetzt die Farbe seines Textes. Was ist anders als in Phase 1?'),
     ...lines(2),
 
-    ...stage('mod', 'Verändere Fragen und Quellen gezielt.'),
-    task('Stell dieselbe Frage in anderen Worten. Welche Texte findet Tiny – und passt die Antwort?'),
-    ...fill(['Frage', 'Gefundene Texte A · B · C', 'Antwort passt? ✓ / ✗'], [
-      ['Was frisst ein Hund?', '', ''], ['Was frisst ein Welpe?', '', ''], ['Was mag ein Hund am liebsten essen?', '', ''], ['', '', ''],
-    ], [3.5, 4.5, 2]),
-    p('Warum klappt es bei manchen Formulierungen schlechter, obwohl die Frage dasselbe meint?', { size: 20 }),
-    ...lines(2),
-    side('p2-handy-eiffelturm.png', 2700, [
-      task('Frag: „**Wie hoch ist der Eiffelturm?**“ In keinem der 90 Texte steht etwas über den Eiffelturm. Woher kommen dann die Wörter der Antwort?'),
-      ...lines(3),
-      p('Warum ist eine sicher klingende, erfundene Antwort gefährlicher als „Das weiß ich nicht“?', { size: 20 }),
-      ...lines(3),
-    ], { cap: 'Tiny halluziniert' }),
-    gap(80),
-    side('p2-handy-erde.png', 2700, [
-      task('Unter Tinys 90 Texten stecken **zwei Falschnachrichten** (Tipp: Textwelt Sonnensystem). Findet sie in 📚 Alle Quellen.'),
+    ...stage('mod', 'Formuliere um und stell Tiny Fallen.'),
+    task('Stell dieselbe Frage anders. Passt die Antwort noch?'),
+    ...fill(['Frage', 'Texte A · B · C', '✓ / ✗'], [['Was frisst ein Welpe?', '', ''], ['Was mag ein Hund am liebsten essen?', '', '']], [3.6, 4.6, 1], { h: 520 }),
+    side('k-p2-fallen.png', 3500, () => [
+      task('Frag „**Wie hoch ist der Eiffelturm?**“ – davon steht nichts in den Texten. Woher kommen die Wörter der Antwort? Wie nennt man das?'),
       ...lines(2),
-      p('Frag „**Ist die Erde eine Scheibe?**“ und „**Ist Pluto ein Planet?**“. Wer gewinnt – Wahrheit oder Falschnachricht? Was ändert sich, wenn ihr eine Falschnachricht ausschaltet oder sie dreimal als eigenen Text hinzufügt?', { size: 20 }),
-      ...lines(3),
-    ], { cap: 'Welche Quellen nutzt Tiny?' }),
-    task('Stell im ④ **Kontextfenster** den N-Gramm-Regler auf 2 und auf 6 und frag dasselbe. Werden die Antworten dadurch **richtiger** – oder nur **abgeschriebener**?'),
-    ...lines(2),
+      task('Frag „**Ist Pluto ein Planet?**“ In den Texten steckt eine Falschnachricht. Wer gewinnt – und was ändert sich, wenn ihr sie ausschaltet?'),
+      ...lines(2),
+    ], { cap: 'Eiffelturm · Erde' }),
 
-    ...stage('ref', 'Bewerte, was Nachschlagen kann – und was nicht.'),
-    task('**Tiny etwas beibringen:** Schreibt in 📚 Alle Quellen einen eigenen Text, sodass Tiny die Eiffelturm-Frage richtig beantwortet. Klappt es? Ist Tiny dadurch **schlauer** geworden? Begründet.'),
-    ...lines(3),
-    task('Viele echte Chatbots machen es genauso: Sie suchen zuerst im Internet oder in Dokumenten und schreiben dann (Fachbegriff: **Retrieval**). Nenne je zwei Vorteile und Gefahren.'),
-    ...fill(['Vorteile', 'Gefahren'], [['', ''], ['', '']], [1, 1], { boldFirst: false, h: 620 }),
-    ...merke('Nachschlagen macht Antworten passender und zeigt die **Quellen**. Aber Tiny prüft nicht, ob eine Quelle stimmt. Und wenn nichts passt, setzt es trotzdem Wörter zusammen – es **halluziniert**.'),
+    ...stage('ref', 'Bewerte das Nachschlagen.'),
+    task('Viele echte Chatbots suchen auch zuerst im Internet und schreiben dann. Nenne einen Vorteil und eine Gefahr.'),
+    ...fill(['Vorteil', 'Gefahr'], [['', '']], [1, 1], { boldFirst: false, h: 700 }),
+    ...merke('Nachschlagen macht Antworten passender und Quellen sichtbar. Aber Tiny prüft nicht, ob eine Quelle **stimmt** – und wenn nichts passt, erfindet es: **Halluzinieren**.'),
   ];
 }
 
-/* =====================================================================
-   Arbeitsblatt Phase 3 · Wörter als Punkte
-   ===================================================================== */
+/* ---------- Arbeitsblatt Phase 3 · Wörter als Punkte ---------- */
 function ab3() {
   taskNo = 0;
   return [
-    ...head('TINY LM · ARBEITSBLATT 3 VON 4', 'Phase 3 · Wörter als Punkte', 'Tiny sucht nach Bedeutung statt nach Buchstaben', [
-      ['use', 'Die Wortwolke erkunden'], ['mod', 'Sprünge und Quellen verändern'], ['ref', 'Was heißt „Bedeutung“ für eine Maschine?'],
+    ...head('TINY LM · ARBEITSBLATT 3', 'Phase 3 · Wörter als Punkte', 'Tiny sucht nach Bedeutung statt nach gleichen Wörtern', [
+      ['use', 'Wortwolke erkunden'], ['mod', 'Sprünge verändern'], ['ref', 'Was heißt „Bedeutung“?'],
     ]),
-    p('In Phase 2 hat Tiny nur gleiche Wörter gefunden. Jetzt wird jedes Wort zu einem **Punkt**. Wörter, die oft an ähnlichen Stellen stehen, liegen **nah beieinander**.', { after: 120 }),
-    img('d-p3-wolke.png', FULL - 40),
-
     ...stage('use', 'Erkunde die Wortwolke.'),
-    img('p3-gesamt-nr.png', FULL - 80, { after: 40 }),
-    caption('① Chat im Handy  ② Frage als Punkt  ③ Kandidaten  ④ Kontextfenster  · weiter unten: Wolken-Sprung und Wortwolke'),
-    task('Öffne die **Wortwolke** und dreh sie mit dem Finger. Such die Wörter unten (Feld „Wort suchen“) und tippe sie an. Welche Nachbarn haben sie?'),
-    ...fill(['Wort', 'Die 3 nächsten Nachbarn', 'Was haben sie gemeinsam?'], [
-      ['Hund', '', ''], ['Mars', '', ''], ['Lehrerin', '', ''], ['frisst', '', ''],
-    ], [1.6, 4, 4]),
-    task('Stell die Frage „**Was frisst ein Welpe?**“ in Phase 2 und in Phase 3. Vergleiche die gefundenen Texte.'),
-    side('p3-frage-punkt.png', 3300, [
-      ...fill(['', 'Gefundene Texte A · B · C'], [
-        ['Phase 2 (gleiche Wörter)', ''], ['Phase 3 (nahe Punkte)', ''],
-      ], [2, 5], { h: 900 }),
-      p('Warum findet Phase 3 den Text „Der Hund“, obwohl dort nie „Welpe“ steht?', { size: 20, before: 40 }),
-      ...lines(3),
+    img('d-p3-wolke.png', 600, { after: 60 }),
+    task('Öffne die **Wortwolke**, dreh sie und such die Wörter („Wort suchen“). Welche Nachbarn haben sie – und was haben sie gemeinsam?'),
+    ...fill(['Wort', 'Nachbarn', 'Gemeinsam?'], [['Hund', '', ''], ['Mars', '', ''], ['frisst', '', '']], [1.4, 4, 4], { h: 480 }),
+    side('p3-frage-punkt.png', 3000, () => [
+      task('Frag „**Was frisst ein Welpe?**“ in Phase 2 und in Phase 3.'),
+      ...fill(['', 'Gefundene Texte'], [['Phase 2', ''], ['Phase 3', '']], [1.4, 4], { h: 620 }),
+      p('Warum findet Phase 3 „Der Hund“, obwohl dort nie „Welpe“ steht?', { size: 20, before: 40 }),
+      ...lines(2),
     ]),
 
-    ...stage('mod', 'Verändere Sprünge und Quellen.'),
-    side('p3-sprung.png', 2900, [
-      task('Manchmal **springt** Tiny in der Wolke: Es tauscht ein Wort gegen einen Nachbarn. Stell die **Sprungwahrscheinlichkeit** (Spalte Wolken-Sprung) auf 0 %, auf ≈ 9 % und ganz nach rechts. Frag jedes Mal dasselbe.'),
-      ...fill(['Sprung', 'Beispielsatz von Tiny'], [['0 %', ''], ['≈ 9 %', ''], ['ganz hoch', '']], [1.4, 5], { h: 640 }),
-    ], { cap: 'Wolken-Sprung: Fleisch → Fisch' }),
-    task('Sucht einen **guten** und einen **schlechten** Sprung (Spalte Wolken-Sprung zeigt alle). Warum hat der eine gepasst, der andere nicht?'),
-    ...fill(['', 'von → nach', 'Warum gut / schlecht?'], [['guter Sprung', '', ''], ['schlechter Sprung', '', '']], [2, 2.5, 5]),
-    task('Schalte in 📚 Alle Quellen die Textwelt **Haustiere** aus. Wo liegt „Welpe“ jetzt, welche Nachbarn hat „Hund“? Was folgt daraus: **Woher** bekommt ein Wort für Tiny seine Bedeutung?'),
-    ...lines(3),
+    ...stage('mod', 'Lass Tiny springen.'),
+    side('p3-sprung.png', 2800, () => [
+      task('Stell die **Sprungwahrscheinlichkeit** (Spalte Wolken-Sprung) auf 0 %, ≈ 9 % und ganz hoch. Frag jedes Mal dasselbe.'),
+      ...fill(['Sprung', 'Tinys Antwort'], [['0 %', ''], ['≈ 9 %', ''], ['hoch', '']], [1, 5], { h: 560 }),
+      p('Notiere einen **guten** und einen **schlechten** Sprung:', { size: 20, before: 40 }),
+      ...lines(2),
+    ], { cap: 'Wolken-Sprung' }),
 
-    ...stage('ref', 'Denke über Bedeutung und Ähnlichkeit nach.'),
-    task('„Nah in der Wolke“ heißt **nicht** „kommt als Nächstes“. Erkläre den Unterschied an einem Beispiel aus der Wolke.'),
-    ...lines(3),
-    task('Ein Sprung kann eine Antwort retten – oder eine falsche Tatsache erschaffen („Ein Welpe frisst Fisch“). Ist das auch **Halluzinieren**? Diskutiert und haltet eure Meinung fest.'),
-    ...lines(3),
-    task('Die Wolke zeigt nur **3 Richtungen**, Tiny rechnet aber mit **20 Zahlen** pro Wort (siehe Satz unter der Wolke). Was geht im Bild verloren?'),
+    ...stage('ref', 'Denk über Bedeutung nach.'),
+    task('„Nah in der Wolke“ heißt nicht „kommt als Nächstes“. Erkläre den Unterschied an einem Beispiel.'),
     ...lines(2),
-    ...merke('Jedes Wort wird zu einer Liste von Zahlen – Fachbegriff **Embedding**. Wörter, die an ähnlichen Stellen stehen, bekommen ähnliche Zahlen und liegen nah. Echte Sprachmodelle rechnen mit Hunderten bis Tausenden solcher Zahlen pro Token.'),
+    task('„Ein Welpe frisst Fisch“ – entstanden durch einen Sprung. Ist das auch Halluzinieren? Begründe.'),
+    ...lines(2),
+    ...merke('Jedes Wort wird zu einer Liste von Zahlen (**Embedding**). Wörter, die an ähnlichen Stellen stehen, bekommen ähnliche Zahlen und liegen nah.'),
   ];
 }
 
-/* =====================================================================
-   Arbeitsblatt Phase 4 · Echtes Netz
-   ===================================================================== */
+/* ---------- Arbeitsblatt Phase 4 · Echtes Netz ---------- */
 function ab4() {
   taskNo = 0;
   return [
-    ...head('TINY LM · ARBEITSBLATT 4 VON 4', 'Phase 4 · Echtes Netz', 'Tiny lernt – und braucht die Texte danach nicht mehr', [
-      ['use', 'Training beobachten'], ['mod', 'Netz und Frage verändern'], ['ref', 'Phasen vergleichen, Grenzen und Gefahren'],
+    ...head('TINY LM · ARBEITSBLATT 4', 'Phase 4 · Echtes Netz', 'Tiny lernt – und braucht die Texte danach nicht mehr', [
+      ['use', 'Training beobachten'], ['mod', 'Frage-Stärke verändern'], ['ref', 'Phasen vergleichen, Grenzen'],
     ]),
-    p('Jetzt zählt Tiny nicht mehr. Ein kleines **neuronales Netz** lernt aus den Texten, welches Wort wahrscheinlich als Nächstes kommt. Danach steckt das Wissen **in Zahlen**.', { after: 120 }),
-    img('d-p4-netz.png', FULL - 40),
-
     ...stage('use', 'Beobachte, wie das Netz lernt.'),
-    img('p4-gesamt-nr.png', FULL - 80, { after: 40 }),
-    caption('① Chat im Handy  ② Training  ③ Frage  ④ Kandidaten  ⑤ Kontextfenster  · unten: Das Netz von innen'),
-    task('Stell Tiny **vor dem Training** die Frage „Was frisst ein Hund?“. Starte dann das **Training** und lass es mindestens **3 Minuten** laufen. Frag danach noch einmal (↻ Nochmal).'),
-    ...fill(['', 'Antwort von Tiny', 'Fehler'], [['vor dem Training', '', '–'], ['nach 1 Minute', '', ''], ['nach 3 Minuten', '', '']], [2.2, 6, 1.4]),
-    img('d-p4-training.png', FULL - 60),
-    img('p4-training.png', FULL - 60),
-    task('Beobachte die **Fehlerlinie**. Beschreibe, was sie zeigt, und erkläre mit dem Schaubild, was beim Training mit den Zahlen im Netz passiert.'),
+    img('d-p4-netz.png', 560, { after: 60 }),
+    task('Frag „**Was frisst ein Hund?**“ – erst **vor** dem Training, dann nach **3 Minuten** Training.'),
+    ...fill(['', 'Antwort von Tiny'], [['vorher', ''], ['nachher', '']], [1.3, 7], { h: 520 }),
+    task('Beobachte die **Fehlerlinie** und öffne **Das Netz von innen**. Was passiert beim Training mit den Zahlen im Netz? Wo steckt danach das Wissen?'),
     ...lines(3),
-    task('Öffne unten **Das Netz von innen** und „Wie viele Zahlen sind das?“. Tippe ein orangefarbenes Hidden-Neuron an.'),
-    img('p4-netz.png', FULL - 160),
-    ...fill(['', ''], [['So viele Zahlen hat Tiny:', ''], ['Mein Neuron schiebt diese Wörter an:', ''], ['… und bremst diese:', '']], [4, 6], { h: 560 }),
+    ...stage('mod', 'Verändere die Frage-Stärke.'),
+    side('k-p4-fragestaerke.png', 3200, () => [
+      task('Stell die **Frage-Stärke** (Spalte Frage) auf 0, 1 und 3. Was passiert? Warum ziehen Thema und Satzbau gegeneinander?'),
+      ...lines(4),
+    ], { cap: 'Frage-Stärke 1× · 3×' }),
 
-    ...stage('mod', 'Verändere Netz, Frage und Quellen.'),
-    task('Wähle im ⑤ **Kontextfenster** nacheinander **3, 4 und 5 Wörter**. Jede Wahl ist ein eigenes Netz – trainiere jedes etwa 2 Minuten.'),
-    ...fill(['Kontextfenster', 'Fehler nach 2 Min.', 'Antwort auf „Was frisst ein Hund?“'], [['3 Wörter', '', ''], ['4 Wörter', '', ''], ['5 Wörter', '', '']], [2, 2, 6]),
-    task('Stell im ③ **Frage**-Reiter die **Frage-Stärke** auf 0, 1 und 3. Was passiert mit der Antwort? Warum ziehen **Thema** und **Satzbau** gegeneinander?'),
-    imgRow([['p4-handy.png', 'Frage-Stärke 1×'], ['p4-handy-fragestaerke3.png', 'Frage-Stärke 3×']], { width: 190 }),
-    ...lines(3),
-    task('Ändere in 📚 Alle Quellen einen Text oder schalte eine Textwelt aus. Was meldet das Handy? Warum reicht es nicht, nur den Text zu ändern?'),
-    ...lines(2),
-
-    ...stage('ref', 'Vergleiche alle vier Phasen – und frag nach Grenzen.'),
-    img('d-vergleich-phasen.png', FULL - 40),
-    task('Fülle die Tabelle aus. Nutze deine Notizen von allen vier Arbeitsblättern.'),
-    ...fill(['', '1 · Frei schreiben', '2 · Frage & Antwort', '3 · Wörter als Punkte', '4 · Echtes Netz'], [
-      ['So entsteht das nächste Wort', '', '', '', ''],
-      ['Wie weit schaut Tiny zurück?', '', '', '', ''],
-      ['Woher kommt das Wissen?', '', '', '', ''],
+    ...stage('ref', 'Vergleiche alle vier Phasen.'),
+    task('Fülle die Tabelle mit deinen Erfahrungen aus allen Phasen.'),
+    ...fill(['', '1 · Zählen', '2 · Nachschlagen', '3 · Bedeutung', '4 · Netz'], [
+      ['Woher kommt das nächste Wort?', '', '', '', ''],
       ['Kann Tiny die Quelle zeigen?', '', '', '', ''],
       ['Typischer Fehler', '', '', '', ''],
-    ], [2.2, 2, 2, 2, 2], { h: 820 }),
-    img('d-vergleich-fenster.png', FULL - 40),
-    task('**Kontextfenster.**'),
-    bullet('**a)** Warum wurde es mit N-Grammen (Phase 1–3) bei einem langen Kontextfenster schwierig? (Denk an AB 1, Aufgabe 4.)'),
-    ...lines(2),
-    bullet('**b)** Warum kann ein neuronales Netz besser mit Wörtern umgehen, die es so noch nie hintereinander gesehen hat?'),
-    ...lines(2),
-    bullet('**c)** Echte Chatbots haben Kontextfenster mit über 100.000 Tokens. Warum ist das wichtig – z. B. in einem langen Gespräch oder mit einem hochgeladenen PDF?'),
-    ...lines(2),
-    task('**Warum ist Tiny (noch) kein echter Chatbot?** Was haben echte Chatbots zusätzlich?'),
-    ...box('Wortspeicher', 'Trainingsdaten (Milliarden Texte) · Milliarden Zahlen statt 163.000 · Aufmerksamkeit / Attention (Transformer) · großes Kontextfenster · Feinabstimmung mit menschlichem Feedback · Sicherheitsregeln · Suche im Internet · Rechenzentren', { fill: C.yellowT, color: C.mod }),
-    ...fill(['Das kann Tiny schon', 'Das fehlt Tiny'], [['', ''], ['', ''], ['', '']], [1, 1], { boldFirst: false, h: 520 }),
-    task('**Gefahren.** Sammelt aus allen vier Phasen, was schiefgehen kann.'),
-    ...fill(['Gefahr', 'Wo hast du es bei Tiny gesehen?', 'Gilt das auch für echte Chatbots? Warum?'], [
-      ['Halluzinieren', '', ''], ['Falschnachrichten in den Trainingsdaten', '', ''], ['Vorurteile (Tipp: Textwelt Berufe in Phase 1)', '', ''],
-      ['Keine Quellenangabe', '', ''], ['', '', ''],
-    ], [2.4, 3.5, 4], { h: 720 }),
-    ...merke('Ein neuronales Netz speichert keine Texte, sondern **Zahlen (Gewichte)**. Darum kann es Neues kombinieren und mit ähnlichen Wörtern umgehen – aber es kann nicht mehr sagen, **woher** es etwas weiß. Ein kleiner Fehler beim Training heißt nur: Es sagt die Trainingstexte gut voraus – nicht, dass seine Antworten stimmen.'),
+    ], [2.2, 2, 2, 2, 2], { h: 680 }),
+    img('d-vergleich-fenster.png', 470, { after: 40 }),
+    task('**Kontextfenster:** Warum wurde ein langes Fenster mit N-Grammen schwierig? Und warum braucht ein Chatbot ein großes (langes Gespräch, hochgeladenes PDF)?'),
+    ...lines(3),
+    task('Was fehlt Tiny zum echten Chatbot – und welche Gefahren bleiben auch bei echten Chatbots?'),
+    ...fill(['Das fehlt Tiny', 'Diese Gefahren bleiben'], [['', '']], [1, 1], { boldFirst: false, h: 1000 }),
   ];
 }
 
-/* =====================================================================
-   Begleitzettel für Lehrkräfte
-   ===================================================================== */
+/* ---------- Begleitzettel: eine Seite je Phase ---------- */
 function sec(title, color) {
-  return [gap(80), p([new TextRun({ text: title, font: FONT, size: 30, bold: true, color: color || C.violet })], { after: 80, keepNext: true })];
+  return [p([new TextRun({ text: title, font: FONT, size: 28, bold: true, color: color || C.violet })], { before: 0, after: 60, keepNext: true })];
 }
 function sub(title, color) {
-  return p([new TextRun({ text: title.toUpperCase(), font: FONT, size: 18, bold: true, color: color || C.violetDark, characterSpacing: 20 })], { before: 120, after: 50, keepNext: true });
+  return p([new TextRun({ text: title.toUpperCase(), font: FONT, size: 17, bold: true, color: color || C.violetDark, characterSpacing: 20 })], { before: 100, after: 30, keepNext: true });
 }
-// Zwei Spalten: links Ziele, rechts Grenzen des Modells
-function twoCol(lt, litems, rt, ritems, lc, rc) {
+const b = t => new Paragraph({ children: runs(t, { size: 19 }), numbering: { reference: 'dots', level: 0 }, spacing: { after: 30 } });
+function twoCol(litems, ritems) {
   const w = Math.floor(CW / 2);
   const col = (t, items, color, fillC) => cell([
-    p([new TextRun({ text: t, font: FONT, size: 20, bold: true, color })], { after: 60 }),
-    ...items.map(i => bullet(i, { size: 19 })),
-  ], { w, fill: fillC, pt: 110, pb: 110, pl: 180, pr: 180, borders: { top: NONE, bottom: NONE, left: { style: BorderStyle.SINGLE, size: 30, color }, right: { style: BorderStyle.SINGLE, size: 40, color: 'FFFFFF' } } });
-  return [grid([new TableRow({ cantSplit: false, children: [col(lt, litems, lc || C.use, C.useT), col(rt, ritems, rc || C.cand, 'FDECEA')] })], [w, CW - w]), gap(60)];
+    p([new TextRun({ text: t, font: FONT, size: 19, bold: true, color })], { after: 40 }),
+    ...items.map(b),
+  ], { w, fill: fillC, pt: 90, pb: 90, pl: 160, pr: 160, borders: { top: NONE, bottom: NONE, left: { style: BorderStyle.SINGLE, size: 30, color }, right: { style: BorderStyle.SINGLE, size: 40, color: 'FFFFFF' } } });
+  return [grid([new TableRow({ children: [col('Ziele – die SuS können …', litems, C.use, C.useT), col('Grenzen des Modells', ritems, C.cand, 'FDECEA')] })], [w, CW - w]), gap(40)];
+}
+function phase(title, color, ziele, grenzen, stolper, impulse, erwartung, extra = []) {
+  return [
+    ...sec(title, color),
+    ...twoCol(ziele, grenzen),
+    sub('Stolpersteine und Grenzfragen an Tiny'), ...stolper.map(b),
+    sub('Diskussionsimpulse'), ...impulse.map(b),
+    sub('Erwartungshorizont'), ...erwartung.map(b),
+    ...extra,
+  ];
 }
 
 function lehrkraft() {
   return [
-    ...head('TINY LM · FÜR LEHRKRÄFTE', 'Begleitzettel zu den vier Phasen', 'Ziele, Grenzen des Modells, Diskussionsimpulse und Erwartungshorizont'),
-    p('Die Schülerinnen und Schüler lernen in vier Phasen, wie ein Chatbot aufgebaut ist – vom Wörterzählen bis zum neuronalen Netz. Jedes Arbeitsblatt folgt **Kennenlernen → Verändern → Erschaffen/Reflektieren**. In Phase 1 liegt der Schwerpunkt auf dem gezielten Manipulieren der Quellen, danach wird es zunehmend reflektierend; Phase 4 vergleicht alle Phasen.', { after: 120 }),
-    img('d-vergleich-phasen.png', FULL - 60),
-    ...fill(['Phase', 'Kernfrage', 'Zeit', 'Schwerpunkt', 'Schlüsselbegriffe'], [
-      ['1 · Frei schreiben', 'Wie schreibt eine Maschine, die nur zählt?', '2 Std.', 'Use · Modify · **Create**: Quellen manipulieren', 'Token, N-Gramm, Kontextfenster, Wahrscheinlichkeit, Temperatur, Trainingsdaten'],
-      ['2 · Frage & Antwort', 'Wie beantwortet ein Modell Fragen?', '1–2 Std.', 'Use · Modify · Reflexion', 'Retrieval, Quelle, Halluzinieren, Falschnachricht'],
-      ['3 · Wörter als Punkte', 'Wie kommt Bedeutung in Zahlen?', '1 Std.', 'Use · Modify · Reflexion', 'Embedding, Ähnlichkeit, Vektor, Dimension'],
-      ['4 · Echtes Netz', 'Was ändert ein neuronales Netz – und was fehlt noch?', '2 Std.', 'Use · Modify · **viel Reflexion**, Vergleich', 'Training, Fehler (Loss), Gewichte, Neuron, Kontextfenster, Skip-Verbindung'],
-    ], [2, 3, 1, 2.6, 3.4], { h: 500 }),
-    ...box('Vorbereitung im Raum', [
-      bullet('Raum mit Tiny LM anlegen. Jede Phase wird **einzeln geteilt** (Teilen-Symbol neben dem Reiter oben). Ohne geteilte Phase sehen die Tablets „Gleich geht’s los“.', { size: 19 }),
-      bullet('Alles, was die Klasse an den Quellen ändert, bleibt **nur auf dem jeweiligen Tablet** (im Browser). „↺ Zurücksetzen“ in 📚 Alle Quellen holt das Original zurück. Am Beamer sieht die Klasse Ihren eigenen Stand.', { size: 19 }),
-      bullet('Phase 4: Das Training läuft im Browser und braucht **3–4 Minuten**, bis die Antworten passen. Früh starten lassen; es läuft weiter, während man in Phase 4 andere Spalten öffnet. Das trainierte Netz bleibt beim Phasenwechsel erhalten, geänderte Quellen verlangen „Netz neu bauen“.', { size: 19 }),
-      bullet('Jedes Tablet würfelt anders – unterschiedliche Ergebnisse sind gewollt und gutes Gesprächsmaterial.', { size: 19 }),
-    ]),
-
-    /* ---------- Phase 1 ---------- */
-    pageBreak(),
-    ...sec('Phase 1 · Frei schreiben', C.use),
-    ...twoCol('Ziele – die SuS können …', [
-      'erklären, dass ein Sprachmodell **Token für Token** das nächste Wort aus Wahrscheinlichkeiten wählt,',
-      'Kontextfenster (N-Gramm) und Temperatur beschreiben und ihre Wirkung vorhersagen,',
-      'zeigen, dass die Ausgabe **direkt von den Trainingsdaten** abhängt – und sie gezielt manipulieren.',
-    ], 'Grenzen von Tiny in dieser Phase', [
-      'Tiny versteht nichts, es findet nur **exakt gleiche Wortfolgen**.',
-      'Tiny kann kein Wort schreiben, das in keiner Quelle steht.',
-      'Langes Fenster → Tiny **schreibt ab** (Auswendiglernen statt Verallgemeinern).',
-      'Tokens sind hier ganze Wörter; echte Modelle zerlegen in Wortteile.',
-    ]),
-    sub('Eingebaute Stolpersteine'),
-    bullet('1-Gramm = Wortsalat (nur Häufigkeit zählt), 7-Gramm = Abschreiben (die Quellen-Spalte zeigt dann meist nur einen Text).'),
-    bullet('Echte Zahlen (Schaubild AB 1): „frisst“ 22× mit vielen Fortsetzungen · „Hund frisst“ 2× → immer „Fleisch“ · „der Hund frisst“ 1× → Kopie.'),
-    bullet('Textwelt **Berufe** ist absichtlich einseitig (die Chefin, die Ärztin, der Krankenpfleger) – Tiny übernimmt das ungefragt.'),
-    bullet('Zwei Falschnachrichten im Sonnensystem (flache Erde, Pluto) – Material für Phase 2.'),
-    sub('Grenzfragen an Tiny'),
-    bullet('„Kann Tiny ein Wort erfinden?“ – Nein, alles stammt aus den Quellen. Was heißt das für „Kreativität“?'),
-    bullet('„Gibt es eine Einstellung, bei der Tiny flüssig **und** neu schreibt?“ – Kaum: Kurz = neu, aber holprig; lang = flüssig, aber kopiert. Genau dieses Dilemma lösen erst Netze (Phase 4).'),
-    sub('Diskussionsimpulse'),
-    bullet('Tiny kopiert bei 7-Gramm einen Satz 1:1. **Wem gehört der Satz?** (Urheberrecht, Trainingsdaten)'),
-    bullet('Ist ein Text gut, nur weil er flüssig klingt?'),
-    bullet('Wer entscheidet, mit welchen Texten eine KI lernt – und was fehlt dann?'),
-    bullet('Ist Würfeln (Temperatur) schon Kreativität?'),
-    sub('Erwartungshorizont (Auszug)'),
-    bullet('**A1:** Kandidaten – welches Wort kommt? (?-Kachel im Handy) · Kontextfenster – worauf schaut Tiny? (Rahmen um die letzten Wörter) · Quellen – aus welchem Text? (Farben + Legende).'),
-    bullet('**A3/A4:** Kleines N → viele Quellen pro Satz, grammatisch kaputt; großes N → eine Quelle, Satz abgeschrieben. Lange Wortfolgen kommen in 90 Texten fast nie zweimal vor → keine Auswahl.'),
-    bullet('**A5:** Niedrige Temperatur → immer das häufigste Wort, Schleifen; hohe → seltene Wörter, Unsinn.'),
-    bullet('**A7/A8:** Mehrere Texte mit derselben Wortfolge erhöhen die Wahrscheinlichkeit; schon wenige gezielte Änderungen reichen, wenn ein Thema selten ist. Übertragung: **Data Poisoning** – manipulierte Webseiten können Trainingsdaten echter Modelle vergiften.'),
-
-    /* ---------- Phase 2 ---------- */
-    pageBreak(),
-    ...sec('Phase 2 · Frage & Antwort', C.ask),
-    ...twoCol('Ziele – die SuS können …', [
-      'den Ablauf **Suchen → Schreiben** (Retrieval) beschreiben,',
-      'Grenzen einer Stichwortsuche benennen (Synonyme, Umformulierungen),',
-      'erklären, wie **Halluzinationen** entstehen, und Quellen kritisch prüfen.',
-    ], 'Grenzen von Tiny in dieser Phase', [
-      'Die Suche vergleicht nur **Wortstämme**, keine Bedeutung („Welpe“ ≠ „Hund“).',
-      'Tiny prüft nicht, ob eine Quelle **stimmt** – die Mehrheit der Texte gewinnt.',
-      'Die Antwort ist weiter N-Gramm-Text: Sie kann vom Thema abdriften.',
-      'Wenn nichts passt, rät Tiny trotzdem (mit Warnhinweis im Chat).',
-    ], C.use),
-    sub('Eingebaute Stolpersteine'),
-    bullet('„**Wie hoch ist der Eiffelturm?**“ → Tiny beginnt „Der Eiffelturm ist …“ und setzt Wörter aus fremden Texten zusammen; Hinweis „Ausgedacht!“.'),
-    bullet('„**Ist die Erde eine Scheibe?**“ → Der Text „Die geheime Wahrheit über die Erde“ steht gegen mehrere Texte mit „Die Erde ist eine Kugel“ und verliert meistens.'),
-    bullet('„**Pluto ist ein …**“ → „echter“ 3× gegen „Zwergplanet“ 2×: **Die Falschnachricht gewinnt**, weil das Thema selten ist. Mehrheit ≠ Wahrheit.'),
-    bullet('„Wie lange dauert eine Reise zum Mars?“ findet auch das Interview mit einer Ärztin (wegen „lange“, „dauert“) – Grenzen der Stichwortsuche, Brücke zu Phase 3.'),
-    sub('Grenzfragen an Tiny'),
-    bullet('„**Was frisst ein Hund nicht?**“ – Achtet Tiny auf das „nicht“? (Kleine Wörter werden oft gestrichen.)'),
-    bullet('Zweimal dieselbe Frage: gleiche Antwort? Warum nicht?'),
-    bullet('Frage zu einem Thema mit nur einem Text: Wie stark hängt die Antwort an diesem einen Text?'),
-    sub('Diskussionsimpulse'),
-    bullet('Warum klingt eine Halluzination genauso sicher wie eine richtige Antwort?'),
-    bullet('Sollte ein Chatbot öfter „Das weiß ich nicht“ sagen? Warum tun es viele selten?'),
-    bullet('Ein Chatbot nennt eine Quelle – ist die Antwort damit richtig? Wie prüft man das?'),
-    bullet('Wer haftet, wenn ein Chatbot mit einer falschen Quelle falsch berät?'),
-    sub('Erwartungshorizont (Auszug)'),
-    bullet('**A1:** gesucht „frisst“, „Hund“; gestrichen „was“, „ein“ (Füllwörter tragen keine Information, sie stehen in fast jedem Text).'),
-    bullet('**A3:** „Welpe“ steht kaum in den Texten → andere Texte werden gewählt. Gleiche Bedeutung ≠ gleiche Wörter.'),
-    bullet('**A7:** Tiny ist nicht schlauer, nur besser **versorgt** – das Wissen liegt in den Quellen, nicht im Modell.'),
-    bullet('**A8:** Vorteile: aktuelle Informationen, nachprüfbare Quellen, weniger Erfinden. Gefahren: falsche/manipulierte Quellen, Quelle wird falsch zusammengefasst, Scheinsicherheit.'),
-
-    /* ---------- Phase 3 ---------- */
-    pageBreak(),
-    ...sec('Phase 3 · Wörter als Punkte', C.ask),
-    p('Hinweis: Phase 3 ist noch ein **Prototyp**. Bitte vorher einmal selbst durchklicken.', { size: 19, color: C.muted }),
-    ...twoCol('Ziele – die SuS können …', [
-      'erklären, dass Wörter als **Zahlenlisten (Embeddings)** dargestellt werden,',
-      'beschreiben, dass Nähe = **ähnlicher Gebrauch** im Text bedeutet,',
-      'Suche nach Bedeutung und Stichwortsuche vergleichen,',
-      'erkennen, dass ein 3D-Bild nur einen Teil der Information zeigt.',
-    ], 'Grenzen von Tiny in dieser Phase', [
-      'Die Wolke stammt aus nur 90 Texten – Nähe ist oft eher **Thema** als Bedeutung.',
-      'Das Bild zeigt 3 von 20 Richtungen; nur etwa ein Drittel der Nachbarn bleibt im Bild nah.',
-      'Der Wolken-Sprung ist **nachgebaut** – in echten Netzen passiert er von selbst (ähnliche Zahlen → ähnliche Vorhersage).',
-      'Nach einem Sprung passt der Artikel nicht immer.',
-    ], C.use),
-    sub('Eingebaute Stolpersteine'),
-    bullet('„Was frisst ein Welpe?“ → findet „Der Hund“, obwohl „Welpe“ dort nicht vorkommt.'),
-    bullet('Sprünge wie Fleisch → Fisch oder Körner erzeugen **plausible, aber falsche** Tatsachen.'),
-    bullet('Sprungwahrscheinlichkeit 0 = reines N-Gramm wie in Phase 2.'),
-    sub('Grenzfragen an Tiny'),
-    bullet('„**Was frisst ein Planet?**“ – Tiny antwortet trotzdem. Woran liegt das?'),
-    bullet('Liegen „Lehrer“ und „Lehrerin“ nah? Und „Chefin“ und „Krankenpfleger“? Was verraten die Nachbarn über die Texte?'),
-    sub('Diskussionsimpulse'),
-    bullet('Was „bedeutet“ ein Wort für eine Maschine, die nur Nachbarn zählt? Ist das Verstehen?'),
-    bullet('Echte Modelle lernen Nähe aus Internettexten: Welche Vorurteile könnten dabei in die Zahlen wandern?'),
-    bullet('Ist der Sprung kreativ – oder gefährlich?'),
-    sub('Erwartungshorizont (Auszug)'),
-    bullet('**A1:** Hund – Katze, Welpe, Hamster (Haustiere); Mars – Jupiter, Saturn (Planeten); Nachbarn stehen in ähnlichen Sätzen.'),
-    bullet('**A5:** Ohne Haustier-Texte fehlen die gemeinsamen Satzumgebungen – „Welpe“ verliert seine Nachbarn. Bedeutung entsteht aus dem **Kontext in den Daten**.'),
-    bullet('**A6:** Nah = austauschbar an derselben Stelle („Hund“/„Katze“), nicht Fortsetzung („Hund“ → „frisst“).'),
-    bullet('**A7:** Ja, in der Wirkung: eine sicher formulierte, nicht belegte Aussage. Unterschied: Hier ist der Sprung sichtbar.'),
-
-    /* ---------- Phase 4 ---------- */
-    pageBreak(),
-    ...sec('Phase 4 · Echtes Netz', C.cre),
-    ...twoCol('Ziele – die SuS können …', [
-      'den Aufbau **Eingang → Hidden-Schicht → Ausgang** beschreiben,',
-      'Training als schrittweise **Fehlerverkleinerung** erklären,',
-      'erklären, warum das Wissen nach dem Training in **Gewichten** steckt und Quellen nicht mehr sichtbar sind,',
-      'alle Phasen vergleichen und die Bedeutung großer **Kontextfenster** begründen,',
-      'Unterschiede zu echten Chatbots und deren Gefahren benennen.',
-    ], 'Grenzen von Tiny in dieser Phase', [
-      'Eine Hidden-Schicht, rund **163.000 Zahlen** – echte Modelle haben Milliarden.',
-      '**Keine Aufmerksamkeit (Attention)**: Tiny sieht nur 3–5 Wörter + Frage.',
-      'Trainiert auf 90 Texten im Browser – die Sätze bleiben holprig.',
-      'Artikel + Nomen der Frage werden als Antwortanfang übernommen (gestrichelte Kacheln) – eine Hilfskonstruktion.',
-      'Der Fehler steigt teils, weil das Netz auch Antwortanfänge üben muss: **kleiner Fehler ≠ gute Antwort**.',
-    ], C.use),
-    sub('Eingebaute Stolpersteine'),
-    bullet('Untrainiert: alle 1.243 Wörter fast gleich wahrscheinlich – reiner Zufall.'),
-    bullet('Frage-Stärke 3× → „frisst frisst frisst“: Thema schlägt Grammatik. Die **Abkürzung (Skip-Verbindung)** gibt es auch in großen Modellen (Residualverbindungen).'),
-    bullet('Spalte Quellen: „Das fertige Netz braucht die Quellen nicht mehr.“ – Kernsatz für die Reflexion.'),
-    bullet('Quellen ändern → „Netz neu bauen“: Neues Wissen braucht neues Training.'),
-    sub('Grenzfragen an Tiny'),
-    bullet('Frage zu einem Thema, das in keinem Text vorkommt: Was macht das Netz? Kann es jetzt noch „Ausgedacht!“ melden?'),
-    bullet('Frag nach dem Training nach einem Text, den du vorher geändert hast: Weiß das Netz davon?'),
-    bullet('Woher weiß das Netz, welche Quelle stimmt? (Gar nicht – es mittelt.)'),
-    sub('Diskussionsimpulse'),
-    bullet('**Kontextfenster:** Warum gehen 100.000 Tokens mit N-Grammen nicht? (So lange Folgen kommen nie zweimal vor.) Warum schafft es ein Netz? (Ähnliche Wörter → ähnliche Zahlen, es verallgemeinert; echte Modelle gewichten mit Attention, welche Wörter im Fenster wichtig sind.)'),
-    bullet('Wenn das Wissen in Zahlen steckt: Kann man einen einzelnen Text wieder **löschen** (Recht auf Vergessen, Urheberrecht)?'),
-    bullet('Warum können echte Chatbots ihre Quellen oft nicht nennen – und warum suchen viele deshalb zusätzlich (Phase 2)?'),
-    bullet('Tiny trainiert 3 Minuten auf einem Tablet; große Modelle Monate auf Tausenden Grafikkarten. Was heißt das für **Energie, Kosten und Macht**?'),
-    bullet('Was fehlt Tiny zum Chatbot? Datenmenge, Modellgröße, Attention/Transformer, Feinabstimmung auf Gespräche mit menschlichem Feedback, Sicherheitsregeln, Werkzeuge (Suche, Rechner).'),
-    sub('Erwartungshorizont: Vergleichstabelle (A7)'),
-    ...fill(['', '1 · Frei schreiben', '2 · Frage & Antwort', '3 · Wörter als Punkte', '4 · Echtes Netz'], [
-      ['Nächstes Wort', 'zählen + würfeln', 'erst 3 Texte suchen, darin zählen', 'nach Bedeutung suchen, zählen, manchmal springen', 'Netz rechnet Wahrscheinlichkeiten aus'],
-      ['Zurückschauen', '0–6 Wörter (N-Gramm)', '0–6 Wörter + Frage nur zur Suche', '0–6 Wörter + Wolke', '3–5 Wörter + Frage als eigener Eingang'],
-      ['Wissen', 'in den Quellen', 'in 3 ausgewählten Quellen', 'Quellen + Wortpunkte', 'in den Gewichten (Zahlen)'],
-      ['Quelle zeigen?', 'ja, jedes Wort', 'ja, A · B · C', 'ja (Sprünge markiert)', 'nein'],
-      ['Typischer Fehler', 'Wortsalat oder Kopie', 'Halluzinieren, falsche Quellen', 'falsche Sprünge', 'holprige Sätze, Wiederholung, keine Quelle'],
-    ], [2, 2, 2, 2, 2], { h: 420 }),
-    sub('Erwartungshorizont (weitere Aufgaben)'),
-    bullet('**A1/A2:** Vor dem Training Zufallswörter; die Fehlerlinie fällt; bei jedem Beispiel werden alle Gewichte ein kleines Stück so verschoben, dass das richtige Wort wahrscheinlicher wird.'),
-    bullet('**A4:** Mehr Wörter → oft niedrigerer Fehler, aber mehr Auswendiglernen und langsameres Training.'),
-    bullet('**A5:** Die Frage zieht zum Thema, der Kontext sorgt für den Satzbau; ist die Frage zu stark, gewinnt nur noch das Thema.'),
-    bullet('**A6:** Die Gewichte enthalten das alte Wissen; neue Daten erfordern neues Training.'),
-    bullet('**A9:** Tiny kann: Wahrscheinlichkeiten lernen, Fragen berücksichtigen, verallgemeinern. Fehlt: riesige Datenmenge, Milliarden Parameter, Attention, langes Kontextfenster, Feinabstimmung auf Dialoge, Sicherheitsregeln, Werkzeuge.'),
-    bullet('**A10:** Halluzinieren, Falschnachrichten und Vorurteile in den Daten, fehlende Quellen – alles gilt auch für echte Chatbots, nur schwerer zu sehen.'),
+    ...head('TINY LM · FÜR LEHRKRÄFTE', 'Begleitzettel', 'Ziele, Grenzen, Impulse und Erwartungen je Phase'),
+    ...fill(['Phase', 'Kernfrage', 'Zeit', 'Begriffe'], [
+      ['1 · Frei schreiben', 'Wie schreibt eine Maschine, die nur zählt? (**Create:** Quellen manipulieren)', '2 Std.', 'Token, N-Gramm, Kontextfenster, Temperatur, Trainingsdaten'],
+      ['2 · Frage & Antwort', 'Wie beantwortet ein Modell Fragen?', '1 Std.', 'Retrieval, Quelle, Halluzinieren'],
+      ['3 · Wörter als Punkte', 'Wie kommt Bedeutung in Zahlen? (Prototyp)', '1 Std.', 'Embedding, Ähnlichkeit'],
+      ['4 · Echtes Netz', 'Was ändert ein Netz – und was fehlt zum Chatbot?', '2 Std.', 'Training, Fehler, Gewichte, Kontextfenster'],
+    ], [2, 4.6, 0.9, 3.6], { h: 360 }),
+    p('**Im Raum:** Phasen einzeln teilen (Symbol neben dem Reiter). Geänderte Quellen bleiben nur auf dem jeweiligen Tablet („↺ Zurücksetzen“ in Alle Quellen). Tiny würfelt – jedes Tablet schreibt anders, das ist gewollt.', { size: 19, after: 120 }),
+    ...phase('Phase 1 · Frei schreiben', C.use,
+      ['erklären, dass ein Sprachmodell **Token für Token** nach Wahrscheinlichkeit wählt,', 'Kontextfenster und Temperatur in ihrer Wirkung beschreiben,', 'zeigen, dass die Ausgabe **direkt an den Trainingsdaten** hängt.'],
+      ['Tiny findet nur **exakt gleiche** Wortfolgen, versteht nichts.', 'Es kann kein Wort schreiben, das in keiner Quelle steht.', 'Langes Fenster → Tiny **schreibt ab**.'],
+      ['1-Gramm = Wortsalat, 7-Gramm = Kopie (Quellen-Spalte zeigt nur noch einen Text). Echte Zahlen: „frisst“ 22×, „Hund frisst“ 2×, „der Hund frisst“ 1×.', 'Textwelt **Berufe** ist absichtlich einseitig (die Chefin, die Ärztin, der Krankenpfleger).', 'Grenzfrage: „Kann Tiny ein Wort erfinden?“ – Nein. Flüssig **und** neu geht mit Zählen kaum.'],
+      ['Tiny kopiert einen Satz 1:1 – **wem gehört** er?', 'Ist ein Text gut, nur weil er flüssig klingt?', 'Wer entscheidet, mit welchen Texten eine KI lernt?'],
+      ['**A1:** Kandidaten = ?-Kachel, Kontextfenster = Rahmen um die letzten Wörter, Quellen = Farben.', '**A3:** Kleines N → viele Quellen, holprig; großes N → eine Quelle, kopiert (lange Folgen kommen nur einmal vor).', '**A4:** 0,2 → immer das häufigste Wort, Schleifen; 2,0 → Unsinn.', '**A5/A6:** Mehrfache gleiche Wortfolgen erhöhen die Wahrscheinlichkeit; seltene Themen kippen schnell. Übertragung: **Data Poisoning**.']),
+    gap(120),
+    ...phase('Phase 2 · Frage & Antwort', C.ask,
+      ['den Ablauf **Suchen → Schreiben** (Retrieval) beschreiben,', 'Grenzen einer Stichwortsuche benennen,', 'erklären, wie **Halluzinationen** entstehen, und Quellen prüfen.'],
+      ['Suche nur nach gleichen Wortstämmen („Welpe“ ≠ „Hund“).', 'Tiny prüft nicht, ob eine Quelle stimmt.', 'Antwort bleibt N-Gramm-Text und kann abdriften.'],
+      ['Eiffelturm → Tiny antwortet trotzdem, Hinweis „Ausgedacht!“.', 'Pluto: „echter (Planet)“ 3× gegen „Zwergplanet“ 2× – **die Falschnachricht gewinnt**, weil das Thema selten ist. Bei der flachen Erde verliert sie gegen viele Texte.', 'Grenzfrage: „Was frisst ein Hund **nicht**?“ – das „nicht“ wird gestrichen.'],
+      ['Warum klingt eine Halluzination so sicher wie eine richtige Antwort?', 'Sollte ein Chatbot öfter „Weiß ich nicht“ sagen?', 'Ein Chatbot nennt eine Quelle – ist die Antwort damit richtig?'],
+      ['**A1:** gesucht „frisst“, „Hund“; gestrichen „was“, „ein“ – Füllwörter stehen in jedem Text.', '**A3:** „Welpe“ steht kaum in den Texten → andere Texte. Gleiche Bedeutung ≠ gleiche Wörter.', '**A4:** Wörter aus fremden Texten zusammengesetzt = Halluzinieren.', '**A6:** Vorteil: aktuell, nachprüfbar. Gefahr: falsche Quellen, Scheinsicherheit.']),
+    gap(120),
+    ...phase('Phase 3 · Wörter als Punkte', C.ask,
+      ['erklären, dass Wörter als **Zahlenlisten (Embeddings)** dargestellt werden,', 'Nähe als ähnlichen Gebrauch deuten,', 'Bedeutungssuche und Stichwortsuche vergleichen.'],
+      ['Wolke aus 90 Texten – Nähe ist oft eher **Thema** als Bedeutung.', 'Bild zeigt 3 von 20 Richtungen.', 'Der Sprung ist nachgebaut; in echten Netzen passiert er von selbst.'],
+      ['„Welpe“ findet „Der Hund“, obwohl das Wort dort fehlt.', 'Sprünge wie Fleisch → Fisch erzeugen **plausible, falsche** Aussagen.', 'Grenzfrage: „Was frisst ein Planet?“ – Tiny antwortet trotzdem.'],
+      ['Ist Nachbarn-Zählen schon „Verstehen“?', 'Welche Vorurteile könnten aus Internettexten in die Zahlen wandern?', 'Ist der Sprung kreativ oder gefährlich?'],
+      ['**A1:** Hund – Katze, Welpe; Mars – Jupiter, Saturn: stehen in ähnlichen Sätzen.', '**A2:** Welpe liegt nah bei Hund → Text „Der Hund“ liegt nah an der Frage.', '**A4:** Nah = austauschbar an derselben Stelle, nicht Fortsetzung.', '**A5:** Ja, in der Wirkung – aber hier ist der Sprung sichtbar.']),
+    gap(120),
+    ...phase('Phase 4 · Echtes Netz', C.cre,
+      ['Aufbau Eingang → Hidden → Ausgang und Training als **Fehlerverkleinerung** beschreiben,', 'erklären, warum das Wissen in **Gewichten** steckt und keine Quelle mehr sichtbar ist,', 'alle Phasen vergleichen und die Rolle großer **Kontextfenster** begründen.'],
+      ['Rund 163.000 Zahlen statt Milliarden; **keine Attention**, nur 3–5 Wörter + Frage.', '90 Texte, Training im Browser (3–4 Min.) – Sätze bleiben holprig.', '**Kleiner Fehler ≠ gute Antwort** (Tiny sagt die Trainingstexte voraus).'],
+      ['Training früh starten; ohne Training reiner Zufall.', 'Frage-Stärke 3× → „frisst frisst frisst“: Thema schlägt Grammatik.', 'Grenzfrage: Frage zu einem Thema ohne Text – das Netz kann kein „Ausgedacht!“ mehr melden.'],
+      ['Warum gehen 100.000 Tokens nicht mit N-Grammen, aber mit Netzen?', 'Wissen steckt in Zahlen: Kann man einen Text wieder **löschen**?', 'Tiny: 3 Min. Tablet – große Modelle: Monate in Rechenzentren. Energie, Kosten, Macht?'],
+      ['**A2:** Gewichte werden bei jedem Beispiel ein Stück verschoben; das Wissen steckt danach in den Zahlen, nicht in den Texten.', '**A3:** Frage zieht zum Thema, Kontext sorgt für Satzbau; zu stark → nur noch Thema.', '**A5:** Lange Folgen kommen in Texten nie zweimal vor → keine Auswahl/Kopie. Netz verallgemeinert über ähnliche Zahlen; ein Chatbot muss das ganze Gespräch/PDF sehen.', '**A6:** Fehlt: Datenmenge, Größe, Attention, Feinabstimmung auf Gespräche, Sicherheitsregeln. Gefahren: Halluzinieren, Vorurteile, Falschnachrichten, keine Quelle.'],
+      [sub('Lösung Vergleichstabelle (A4)'),
+        ...fill(['', '1 · Zählen', '2 · Nachschlagen', '3 · Bedeutung', '4 · Netz'], [
+          ['Nächstes Wort', 'zählen + würfeln', '3 Texte suchen, darin zählen', 'nach Bedeutung suchen, springen', 'Netz rechnet'],
+          ['Quelle zeigen?', 'ja', 'ja, A · B · C', 'ja', 'nein'],
+          ['Typ. Fehler', 'Salat / Kopie', 'Halluzinieren', 'falsche Sprünge', 'holprig, keine Quelle'],
+        ], [1.6, 2, 2.2, 2.2, 2], { h: 300 })]),
   ];
 }
 
