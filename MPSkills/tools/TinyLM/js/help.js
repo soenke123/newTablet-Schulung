@@ -169,7 +169,7 @@ const HELP = {
   },
   hidden: {
     title: 'Hidden-Schicht', icon: '💡', cat: 'hidden',
-    text: ['Hier mischt das Netz die Zahlen aller Wörter zu 40 neuen Zahlen – den Neuronen. Jedes Kästchen ist ein Neuron: je kräftiger die Farbe, desto stärker ist es gerade an.',
+    text: ['Hier mischt das Netz die Zahlen aller Wörter zu 60 neuen Zahlen – den Neuronen. Jedes Kästchen ist ein Neuron: je kräftiger die Farbe, desto stärker ist es gerade an.',
       'Niemand hat den Neuronen gesagt, was sie tun sollen – das lernen sie beim Training selbst. Darunter steht, welche Wörter die gerade stärksten Neuronen nach oben schieben.'],
     try: 'Vor dem Training schieben die Neuronen wahllose Wörter. Trainiere eine Weile – passen die Wörter jetzt zusammen?',
     vis: { type: 'swatch', label: '?', values: [0.3, -0.7, 0.9, 0.1, -0.2, 0.5, -0.9, 0.4, 0.7, -0.3, 0.2, -0.5] }

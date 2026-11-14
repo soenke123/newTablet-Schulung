@@ -35,6 +35,10 @@ const P4_CTX_KEY = 'tinylm-p4-kontext';
    Satzfluss (Dreiwortfolgen, die so in den Texten stehen) +15–25 Punkte. Mehr Hidden-Neuronen (80+)
    helfen erst nach 2–3 Minuten Training, vorher schaden sie. */
 const P4_D = 32;
+/* 60 statt 40 Hidden-Neuronen (14.11.2026): nach kurzem Training gleich, nach längerem geradere Sätze
+   (Satzfluss 72–75 % statt 64–70 % nach 60 s offline, drei Läufe); 2 Hidden-Schichten lernten viel
+   langsamer (Fehler 2,6 statt 0,9 nach gleicher Zeit) und wurden verworfen. */
+const P4_H = 60;
 const P4_TEMP = 0.6;
 const P4_SUGGEST = ['Was frisst ein Hund?', 'Welche Planeten haben Ringe?', 'Wie lernt eine KI?', 'Was macht man in der Pause?', 'Wo arbeitet eine Tierärztin?'];
 function deInt(n) { return n.toLocaleString('de-DE'); }
@@ -46,7 +50,7 @@ function valueColor(v, scale) {
 }
 function renderSwatch(values, scale) {
   const row = el('div', 'swatchrow');
-  /* 32 Zahlen je Wort → zwei Reihen à 16; 40 Neuronen → zwei Reihen à 20. */
+  /* 32 Zahlen je Wort → zwei Reihen à 16; 60 Neuronen → drei Reihen à 20. */
   row.style.setProperty('--cols', String(values.length === 32 ? 16 : Math.min(values.length, 20)));
   values.forEach(v => {
     const cell = el('span', 'swatchcell');
@@ -396,7 +400,7 @@ Phases.register(4, {
     }
     function reinitNet() {
       pauseTraining();
-      net = createNet(data.vocab.length, data.C, { topic: true, d: P4_D });
+      net = createNet(data.vocab.length, data.C, { topic: true, d: P4_D, H: P4_H });
       const q = genSession.question;
       if (q) ask(q); else resetGen();
       stopGenPlay();
@@ -801,7 +805,7 @@ Phases.register(4, {
         data = slot.data; net = slot.net; genSession = slot.genSession;
       } else {
         data = buildPhase4Data(texts, { vocabCap: 600, C: ctxLen });
-        net = createNet(data.vocab.length, data.C, { topic: true, d: P4_D });
+        net = createNet(data.vocab.length, data.C, { topic: true, d: P4_D, H: P4_H });
         /* Andere Fenstergröße, gleiche Frage: das neue Netz bekommt sie auch. */
         genSession = freshGenSession(genSession && genSession.question);
       }
