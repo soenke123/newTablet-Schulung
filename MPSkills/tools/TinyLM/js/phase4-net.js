@@ -54,7 +54,11 @@ function topicVec(net, topicIds, out, off) {
   for (let j = 0; j < d; j++) out[off + j] /= n;
 }
 
-function forward(net, ctxIds, topicIds) {
+/* qs = Frage-Stärke beim Antworten (Regler in Phase 4): verstärkt nur den direkten Weg Frage → Wörter.
+   Im Training immer 1. Gemessen 14.11.2026: ×2 hebt das Thema von ~60 % auf ~75 %, der Satzfluss
+   fällt aber von ~62 % auf ~43 % („maus maus katze“) — Thema und saubere Sätze ziehen gegeneinander. */
+function forward(net, ctxIds, topicIds, qs) {
+  const q = qs == null ? 1 : qs;
   const { d, H, vocabSize, C } = net;
   const inDim = net.inDim;
   const x = new Float64Array(inDim);
@@ -73,7 +77,7 @@ function forward(net, ctxIds, topicIds) {
   for (let v = 0; v < vocabSize; v++) {
     let s = net.b2[v];
     for (let k = 0; k < H; k++) s += net.W2[k * vocabSize + v] * h[k];
-    if (net.T) for (let j = 0, off = C * d; j < d; j++) s += net.WQ[j * vocabSize + v] * x[off + j];
+    if (net.T && q) for (let j = 0, off = C * d; j < d; j++) s += q * net.WQ[j * vocabSize + v] * x[off + j];
     logits[v] = s;
   }
   return { x, h, logits };

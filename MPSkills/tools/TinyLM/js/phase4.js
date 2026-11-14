@@ -30,6 +30,12 @@
    neue Textauswahl („Netz neu bauen“) wirft sie weg. Wahl gemerkt in localStorage tinylm-p4-kontext. */
 const P4_CTX = [3, 4, 5];
 const P4_CTX_KEY = 'tinylm-p4-kontext';
+/* 14.11.2026 (Sönke: „funktioniert nicht richtig gut“), gemessen offline, 30 s Training: 32 statt 16
+   Zahlen je Wort + nur die Nomen der Frage → Thema ~53 % → ~60–67 %; Temperatur 0,6 statt 1 →
+   Satzfluss (Dreiwortfolgen, die so in den Texten stehen) +15–25 Punkte. Mehr Hidden-Neuronen (80+)
+   helfen erst nach 2–3 Minuten Training, vorher schaden sie. */
+const P4_D = 32;
+const P4_TEMP = 0.6;
 const P4_SUGGEST = ['Was frisst ein Hund?', 'Welche Planeten haben Ringe?', 'Wie lernt eine KI?', 'Was macht man in der Pause?', 'Wo arbeitet eine Tierärztin?'];
 function deInt(n) { return n.toLocaleString('de-DE'); }
 function valueColor(v, scale) {
@@ -40,7 +46,8 @@ function valueColor(v, scale) {
 }
 function renderSwatch(values, scale) {
   const row = el('div', 'swatchrow');
-  row.style.setProperty('--cols', String(Math.min(values.length, 20)));
+  /* 32 Zahlen je Wort → zwei Reihen à 16; 40 Neuronen → zwei Reihen à 20. */
+  row.style.setProperty('--cols', String(values.length === 32 ? 16 : Math.min(values.length, 20)));
   values.forEach(v => {
     const cell = el('span', 'swatchcell');
     cell.style.background = valueColor(v, scale);
@@ -79,7 +86,7 @@ function renderSparkline(history, w, h) {
 Phases.register(4, {
   mount(host) {
     let data, net, genSession, lastForward, netView = null;
-    let temp = 1, training = false, trainRAF = null, lastUIRefresh = 0;
+    let temp = P4_TEMP, qStrength = 1, training = false, trainRAF = null, lastUIRefresh = 0;
     let genPlaying = false, genTimer = null;
     let textEl, cursor, screen, genPlayBtn, bannerEl, placeholder, sayEl, focusHost, neuronHost;
     let phoneEl = null, Z = null;
@@ -104,10 +111,16 @@ Phases.register(4, {
       const startId = data.toId('.');
       const S = { ctxIds: Array(data.C).fill(startId), words: [], steps: [], sentences: 0, question: question || null, qwords: [], topicIds: [] };
       if (question) {
-        const unk = data.toId(data.UNK), ids = new Set();
-        tokenize(question).filter(t => !t.punct).forEach(t => {
+        /* Gezählt werden die Nomen der Frage (großgeschrieben, nicht das erste Wort); Wörter wie
+           „macht“ oder „lange“ verwässern den Mittelpunkt. Ohne Nomen: alle Inhaltswörter. */
+        const unk = data.toId(data.UNK);
+        const toks = tokenize(question).filter(t => !t.punct);
+        const isNoun = (t, i) => i > 0 && isContentTok(t) && /^[A-ZÄÖÜ]/.test(t.raw);
+        const useNouns = toks.some(isNoun);
+        const ids = new Set();
+        toks.forEach((t, i) => {
           let kind = 'off';
-          if (isContentTok(t)) { const id = data.toId(t.t); kind = id === unk ? 'unknown' : 'known'; if (id !== unk) ids.add(id); }
+          if (useNouns ? isNoun(t, i) : isContentTok(t)) { const id = data.toId(t.t); kind = id === unk ? 'unknown' : 'known'; if (id !== unk) ids.add(id); }
           S.qwords.push({ raw: t.raw, kind });
         });
         S.topicIds = [...ids];
@@ -116,7 +129,7 @@ Phases.register(4, {
     }
     const topic = () => genSession.topicIds;
     function topicLabel() { return genSession.topicIds.map(id => data.display(data.vocab[id])).join(' · '); }
-    function fwd() { return forward(net, genSession.ctxIds, topic()); }
+    function fwd() { return forward(net, genSession.ctxIds, topic(), qStrength); }
 
     function wordLabel(w) { return w === data.UNK ? '[unbekannt]' : (w === '.' ? '(Satzende)' : showWord(w)); }
     function tokLabel(w) { return w === data.UNK ? '…' : w === '.' ? '·' : w === ',' ? ',' : data.display(w); }
@@ -262,6 +275,10 @@ Phases.register(4, {
       focus = null;
       lastForward = fwd();
       const probsT = softmaxTemp(lastForward.logits, temp);
+      /* „[unbekannt]“ (alle seltenen Wörter zusammen) wird nie gezogen – echte Sprachmodelle geben so
+         etwas auch nicht aus. Bei Temperatur 0,6 stand sonst oft „… …“ im Text (14.11.2026). */
+      const unkId = data.toId(data.UNK), z = 1 - probsT[unkId];
+      if (z > 1e-9) { probsT[unkId] = 0; for (let i = 0; i < probsT.length; i++) probsT[i] /= z; }
       let id;
       if (temp <= 0.001) {
         let bi = 0, bv = -1;
@@ -379,7 +396,7 @@ Phases.register(4, {
     }
     function reinitNet() {
       pauseTraining();
-      net = createNet(data.vocab.length, data.C, { topic: true });
+      net = createNet(data.vocab.length, data.C, { topic: true, d: P4_D });
       const q = genSession.question;
       if (q) ask(q); else resetGen();
       stopGenPlay();
@@ -414,6 +431,7 @@ Phases.register(4, {
         bar.appendChild(fill);
         row.append(el('span', 'cword', wordLabel(data.vocab[i])), bar, el('span', 'cp', fmtP(p)), el('span', 'cn', ''));
         if (i === v.chosen) row.appendChild(el('span', 'ctag', '🎲 gezogen'));
+        else if (data.vocab[i] === data.UNK) { row.appendChild(el('span', 'ctag', '⏭ wird übersprungen')); row.title = 'Sammelbecken für alle seltenen Wörter – Tiny zieht es nie'; }
         li.appendChild(row);
         list.appendChild(li);
       });
@@ -435,7 +453,7 @@ Phases.register(4, {
     /* Welche Wörter die Frage über ihren direkten Weg (WQ) am stärksten nach oben schiebt — ohne
        Satzzeichen und <unk>, erst nach etwas Training (vorher Zufall). */
     function questionPush(k) {
-      if (!net.T || !genSession.topicIds.length || !net.step) return [];
+      if (!net.T || !genSession.topicIds.length || !net.step || !qStrength) return [];
       const V = data.vocab.length, d = net.d, q = new Float64Array(d);
       genSession.topicIds.forEach(id => { for (let j = 0; j < d; j++) q[j] += net.embed[id * d + j] / genSession.topicIds.length; });
       const best = [];
@@ -443,7 +461,7 @@ Phases.register(4, {
         const w = data.vocab[v];
         if (isPunct(w) || w === data.UNK || STOP.has(w)) continue;
         let c = 0;
-        for (let j = 0; j < d; j++) c += net.WQ[j * V + v] * q[j];
+        for (let j = 0; j < d; j++) c += qStrength * net.WQ[j * V + v] * q[j];
         if (best.length < k || c > best[best.length - 1][1]) { best.push([v, c]); best.sort((a, e) => e[1] - a[1]); if (best.length > k) best.pop(); }
       }
       return best.filter(x => x[1] > 0).map(([v]) => wordLabel(data.vocab[v]));
@@ -486,7 +504,7 @@ Phases.register(4, {
         if (genSession.topicIds.length > 1) {
           const row = el('div', 'embrow p4-qmean');
           row.appendChild(el('span', 'embrow-w', '⭐ Mittelpunkt'));
-          const f = forward(net, v.ctxIds, topic());
+          const f = forward(net, v.ctxIds, topic(), qStrength);
           row.appendChild(renderSwatch(Array.from(f.x.slice(net.C * net.d)), 1.5));
           b.appendChild(row);
         }
@@ -770,7 +788,7 @@ Phases.register(4, {
     function render(fresh) {
       pauseTraining();
       stopGenPlay();
-      temp = 1;
+      temp = P4_TEMP;
       focus = null;
       live.train = live.net = null;
       cardTrain = null;
@@ -783,7 +801,7 @@ Phases.register(4, {
         data = slot.data; net = slot.net; genSession = slot.genSession;
       } else {
         data = buildPhase4Data(texts, { vocabCap: 600, C: ctxLen });
-        net = createNet(data.vocab.length, data.C, { topic: true });
+        net = createNet(data.vocab.length, data.C, { topic: true, d: P4_D });
         /* Andere Fenstergröße, gleiche Frage: das neue Netz bekommt sie auch. */
         genSession = freshGenSession(genSession && genSession.question);
       }
@@ -849,6 +867,19 @@ Phases.register(4, {
         }
       });
       Z.cols.cand.tools.appendChild(tsl.el);
+      /* Frage-Stärke: wie stark die Frage die Wörter direkt nach oben schiebt (nur beim Antworten). */
+      const qsl = Info.slider({
+        label: '⭐ Frage-Stärke', min: 0, max: 3, step: 0.5, value: qStrength, spot: 'qstrength', help: 'fragestaerke',
+        fmt: v => (Math.round(v * 10) / 10).toLocaleString('de-DE') + '×', ends: ['aus', 'nur noch Thema'],
+        onInput: v => {
+          qStrength = Math.round(v * 10) / 10;
+          if (genSession) lastForward = fwd();
+          if (Z.isOpen('cand')) paintCand(view());
+          if (live.net && Z.isOpen('net')) live.net();
+          updateSay();
+        }
+      });
+      Z.cols.cand.tools.appendChild(qsl.el);
       Z.cols.embed.tools.appendChild(ctxPicker());
 
       grid.append(left, right);

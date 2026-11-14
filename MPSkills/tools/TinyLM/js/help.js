@@ -147,16 +147,22 @@ const HELP = {
       'Deine Frage bekommt das Netz bei jedem Wort als eigenen Eingang dazu – so bleibt es beim Thema, auch wenn die Frage längst nicht mehr in den letzten Wörtern steht.'],
     vis: { type: 'cycle', items: [['📚', 'Texte'], ['🔢', 'Zahlen'], ['🧠', 'Netz'], ['💬', 'Wort']] }
   },
+  fragestaerke: {
+    title: 'Frage-Stärke', icon: '⭐', cat: 'candidates',
+    text: ['Wie stark schiebt deine Frage die passenden Wörter nach oben? Bei 1× so, wie das Netz es gelernt hat. Mehr = mehr Thema, aber die Sätze zerfallen, weil die Frage die letzten Wörter übertönt.'],
+    try: 'Stell den Regler auf 3× und lass Tiny schreiben. Und dann auf 0×. Was passiert?',
+    vis: { type: 'bars', items: [['Hund', 55], ['frisst', 30], ['der', 15]] }
+  },
   frage4: {
     title: 'Die Frage als Eingang', icon: '⭐', cat: 'embed',
-    text: ['Die Wörter deiner Frage werden zu Zahlen, und das Netz nimmt ihren Mittelpunkt – wie der Stern in der Wortwolke. Diese 16 Zahlen bekommt es bei JEDEM Wort zusätzlich zu den letzten Wörtern.',
+    text: ['Die Wörter deiner Frage werden zu Zahlen, und das Netz nimmt ihren Mittelpunkt – wie der Stern in der Wortwolke. Gezählt werden die Nomen der Frage. Ihre Zahlen bekommt das Netz bei JEDEM Wort zusätzlich zu den letzten Wörtern.',
       'Geübt hat es das im Training: zu jedem Beispiel gab es ein paar Wörter aus demselben Text als Übungsfrage.'],
     try: 'Stell dieselbe Frage mit einem anderen Tier oder Planeten. Ändern sich die Kandidaten?',
     vis: { type: 'tokens', items: [['⭐ Hund · frisst', 'win'], ['der', 'win'], ['Hund', 'win'], ['frisst', 'win'], ['?', 'next']] }
   },
   embedding: {
     title: 'Embedding', icon: '🔢', cat: 'embed',
-    text: ['Ein Netz kann keine Buchstaben lesen. Jedes Wort im Kontextfenster wird deshalb zu einer festen Reihe aus 16 Zahlen: rot = plus, blau = minus.',
+    text: ['Ein Netz kann keine Buchstaben lesen. Jedes Wort im Kontextfenster wird deshalb zu einer festen Reihe aus 32 Zahlen: rot = plus, blau = minus.',
       'Wie viele Wörter das Netz sieht, stellst du oben in dieser Spalte ein (3 · 4 · 5). Jede Länge ist ein eigenes Netz, das eigenes Training braucht.'],
     try: 'Trainiere ein bisschen und schau, wie sich die Farben der Wörter verändern.',
     vis: { type: 'swatch', label: 'Hund', values: [0.9, -0.4, 0.2, -0.9, 0.6, 0.1, -0.2, 0.8, -0.6, 0.3, 0, -0.8] }
