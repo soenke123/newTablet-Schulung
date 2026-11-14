@@ -168,7 +168,22 @@ Phases.register(2, {
       });
       cursor.classList.toggle('sel', focus == null && session.steps.length > 0);
       textEl.appendChild(cursor);
+      markWindow();
       if (focus == null) screen.scrollTop = screen.scrollHeight;
+    }
+
+    /* Kontextfenster im Handy umranden wie in Phase 1 — nur mit offenem Reiter Kontextfenster:
+       die letzten Wörter vor dem „?“, beim angetippten Wort die Wörter, auf die Tiny damals schaute. */
+    function markWindow() {
+      textEl.querySelectorAll('.srcword.win').forEach(s => s.classList.remove('win'));
+      if (!Z.isOpen('gram') || !asked || !session) return;
+      const v = view();
+      if (!v || !v.C || v.C.uni || !v.ctx || !v.ctx.length) return;
+      const end = v.idx == null ? session.steps.length : v.idx;
+      for (let i = Math.max(0, end - v.ctx.length); i < end; i++) {
+        const sp = textEl.querySelector('.srcword[data-i="' + i + '"]');
+        if (sp) sp.classList.add('win');
+      }
     }
 
     /* Die Frage im Handy: jedes Wort mit seiner Rolle — sichtbar erst mit offener Spalte „Frage zerlegen“. */
@@ -584,6 +599,7 @@ Phases.register(2, {
 
     function paintCols() {
       const v = view();
+      markWindow();
       paintFocus(v);
       if (Z.isOpen('cand')) paintCand(v); else Z.cols.cand.body.replaceChildren();
       if (Z.isOpen('ask')) paintAsk(); else { Z.cols.ask.body.replaceChildren(); askKey = null; }
