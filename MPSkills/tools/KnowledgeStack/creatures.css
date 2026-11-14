@@ -1517,3 +1517,34 @@
   .creature-svg .pp, .creature-svg [class*="q-"] { animation: none !important; }
   .creature-svg .gum { opacity: 1; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   SPARMODUS „Animationen reduzieren“ (../../../motion.js)
+   ══════════════════════════════════════════════════════════════
+   Für Tablets, die bei vielen Wesen ruckeln. Die Wesen bleiben,
+   wie sie sind (Zeichnung, Farbe, Gesicht) — nur die Bewegung wird
+   einfach:
+     · in Ruhe: gar keine Bewegung (kein Atmen, Blinzeln, Kleinkram)
+     · Emote: EINE Bewegung des ganzen Wesens (.cr-root), 2–3 Mal,
+       dann Stillstand. Statt 10–20 einzelner Teile (Ohren, Schweif,
+       Flügel, Augen …) wird nur eine Gruppe verschoben.
+   Gesichtsausdruck (state-sad, state-sleep …) und das Emote-Zeichen
+   in der Sprechblase bleiben — man sieht weiter, wer was tut.
+   Spezifität bewusst höher als die globale Regel in motion.js
+   (animation-iteration-count: 1 !important). */
+html[data-motion="low"] .creature-svg *,
+html[data-motion="low"] .creature-svg { animation: none !important; }
+html[data-motion="low"] .creature-svg .face { transition: none !important; }
+
+html[data-motion="low"] .creature-svg.state-cheer .cr-root,
+html[data-motion="low"] .creature-svg.state-clap .cr-root { animation: lwks-hop .5s ease-in-out 3 !important; }
+html[data-motion="low"] .creature-svg.state-jump .cr-root { animation: lwks-jump .8s ease-in-out 2 !important; }
+html[data-motion="low"] .creature-svg.state-dance .cr-root { animation: lwks-sway .6s ease-in-out 3 alternate !important; }
+html[data-motion="low"] .creature-svg.state-wave .cr-root { animation: lwks-tilt .7s ease-in-out 2 alternate !important; }
+html[data-motion="low"] .creature-svg.state-sad .cr-root { animation: lwks-sink .6s ease-out 1 forwards !important; }
+
+@keyframes lwks-hop  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes lwks-jump { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-18px); } }
+@keyframes lwks-sway { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+@keyframes lwks-tilt { from { transform: rotate(0deg); } to { transform: rotate(-9deg); } }
+@keyframes lwks-sink { to { transform: translateY(3px) scaleY(.93); } }

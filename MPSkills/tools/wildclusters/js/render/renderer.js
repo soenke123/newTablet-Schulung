@@ -64,7 +64,7 @@
     var width = Math.max(1, Math.round(rect.width));
     var height = Math.max(1, Math.round(rect.height));
     // Pixeldichte deckeln: auf Handys sonst unnoetig teuer.
-    this.dpr = Math.min(global.devicePixelRatio || 1, 2);
+    this.dpr = (global.LWMotion && global.LWMotion.low) ? 1 : Math.min(global.devicePixelRatio || 1, 2);   // Sparmodus: Pixeldichte 1
 
     this.canvas.width = Math.round(width * this.dpr);
     this.canvas.height = Math.round(height * this.dpr);

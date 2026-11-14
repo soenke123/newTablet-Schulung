@@ -2,6 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
+<script src="motion.js?v=20261114"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Profil · Tablet Schulung</title>
   <link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png" />
@@ -707,6 +708,18 @@
         <dt>Status</dt>     <dd><span class="badge-status" id="infoStatus">–</span></dd>
       </dl>
     </section>
+
+    <!-- ─── Darstellung: Sparmodus (motion.js, gilt fürs Gerät) ─── -->
+    <section class="card">
+      <h2>Darstellung</h2>
+      <div id="motionToggle" class="motion-toggle"></div>
+    </section>
+    <script>
+      (function () {
+        var el = document.getElementById('motionToggle');
+        if (el && window.LWMotion) el.innerHTML = window.LWMotion.toggleHTML('Animationen reduzieren (nur dieses Gerät)');
+      })();
+    </script>
 
     <!-- ─── Passwort ändern ─────────────────────────── -->
     <section class="card">

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
 <script src="../pause.js?v=20261001"></script>
+<script src="../../motion.js?v=20261114"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>FokusFlow</title>
     <link rel="icon" type="image/png" sizes="64x64" href="../../icons/favicon-64.png" />
@@ -427,6 +428,9 @@
             border: 2px solid rgba(255,255,255,.2);
         }
         .balloon:active { transform: scale(.88); }
+        /* Sparmodus: Ballons ohne Schatten — sie bewegen sich ständig,
+           und jeder Schatten müsste in jedem Bild neu gemalt werden. */
+        html[data-motion="low"] .balloon { box-shadow: none !important; }
         .balloon.wrong {
             animation: shake .4s;
             border-color: #ef4444 !important;
@@ -2444,14 +2448,23 @@
 
         // ── Render loop ───────────────────────────────────────────
 
+        // Sparmodus (../../motion.js): nur jedes zweite Bild zeichnen,
+        // dafür zwei Schritte auf einmal — die Ballons bleiben gleich
+        // schnell, das Spiel gleich schwer.
+        let lowSkip = false;
         function update() {
             if (!gameActive) return;
+            const low = !!(window.LWMotion && window.LWMotion.low);
+            if (low && (lowSkip = !lowSkip)) { requestAnimationFrame(update); return; }
+            const steps = low ? 2 : 1;
             timerDisplay.innerText = ((Date.now() - startTime) / 1000).toFixed(2);
             const w = areaW(), h = areaH();
             balloons.forEach(b => {
-                b.x += b.vx; b.y += b.vy;
-                if (b.x <= 0 || b.x >= w - b.size) b.vx *= -1;
-                if (b.y <= 0 || b.y >= h - b.size) b.vy *= -1;
+                for (let k = 0; k < steps; k++) {
+                    b.x += b.vx; b.y += b.vy;
+                    if (b.x <= 0 || b.x >= w - b.size) b.vx *= -1;
+                    if (b.y <= 0 || b.y >= h - b.size) b.vy *= -1;
+                }
                 b.element.style.left = `${b.x}px`;
                 b.element.style.top  = `${b.y}px`;
             });

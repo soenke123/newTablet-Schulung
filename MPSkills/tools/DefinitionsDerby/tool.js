@@ -976,7 +976,10 @@
       if (nb) nb.classList.add('dd-in');
     }, still() ? 150 : 560);
   }
-  const still = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  /* Ruhige Fassung: Gerät mit „Bewegung reduzieren“ ODER Sparmodus
+     „Animationen reduzieren“ (../../../motion.js). */
+  const lowMotion = () => !!(window.LWMotion && window.LWMotion.low);
+  const still = () => lowMotion() || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   /* ─── Übersicht / Glossar ─── */
   function ovCards() {
@@ -2367,7 +2370,7 @@
     if (!cv) return;
     fitStage();
     const r = cv.getBoundingClientRect();
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = lowMotion() ? 1 : Math.min(2, window.devicePixelRatio || 1);
     isl.W = r.width; isl.H = r.height; isl.dpr = dpr;
     cv.width = Math.max(1, Math.round(r.width * dpr));
     cv.height = Math.max(1, Math.round(r.height * dpr));
@@ -2639,6 +2642,7 @@
   function islFrame(now) {
     if (!isl || !root) return;
     isl.raf = requestAnimationFrame(islFrame);
+    if (lowMotion() && now - isl.last < 32) return;   // Sparmodus: höchstens ~30 Bilder/s
     const dt = Math.min(0.1, (now - isl.last) / 1000);
     isl.last = now;
     if (document.hidden) return;

@@ -2480,3 +2480,33 @@ html, body {
 .modal-manage__btn--confirm:hover:not(:disabled) { background: var(--red); filter: brightness(.92); }
 .modal-manage__note { flex-basis: 100%; font-size: 12px; color: #888; }
 .modal-manage__note--warn { color: var(--red); font-weight: 700; }
+
+/* ══════════════════════════════════════════════════════════════
+   Sparmodus „Animationen reduzieren“ (../../motion.js)
+   ══════════════════════════════════════════════════════════════
+   Spät im Spiel stehen viele Tiere auf der Serverfarm und viele
+   Knöpfe pulsieren gleichzeitig — jedes Pulsieren ist ein animierter
+   Leuchtschatten und lässt das Tablet jedes Bild neu malen.
+   Im Sparmodus:
+     · Tiere bleiben, stehen aber still und ohne Schatten-Filter
+     · „Achtung/bereit“-Pulsieren → fester farbiger Ring: die
+       Auskunft (jetzt ernten, Server voll …) bleibt sichtbar
+   Die Uhr (js/clock.js) läuft dann mit ~16 statt 60 Takten/s. */
+html[data-motion="low"] .farm-animal { filter: none !important; animation: none !important; }
+
+html[data-motion="low"] .farm-harvest-btn.is-ready,
+html[data-motion="low"] .rt-trend-harvest--full:not(:disabled) { animation: none !important; box-shadow: 0 0 0 3px rgba(244,197,66,.95) !important; }
+html[data-motion="low"] .mk-collect-btn.is-ready,
+html[data-motion="low"] .rt-btn-tt--collect,
+html[data-motion="low"] .rt-online-btn { animation: none !important; box-shadow: 0 0 0 3px rgba(34,197,94,.95) !important; }
+html[data-motion="low"] .farm-upkeep-btn,
+html[data-motion="low"] .farm-upkeep-btn--plant.is-due,
+html[data-motion="low"] .farm-upkeep-badge.is-due .farm-upkeep-badge__ring { animation: none !important; box-shadow: 0 0 0 3px rgba(56,189,248,.9) !important; }
+html[data-motion="low"] .rt-tt-node--ready,
+html[data-motion="low"] .rt-events-btn.is-due,
+html[data-motion="low"] .b-badge { animation: none !important; box-shadow: 0 0 0 3px rgba(245,158,11,.95) !important; }
+html[data-motion="low"] #res-servercap-wrap.res-cap-full,
+html[data-motion="low"] .rt-resource--critical,
+html[data-motion="low"] .rt-srv-tier.is-trouble,
+html[data-motion="low"] .rt-resource--money-negative,
+html[data-motion="low"] .rt-account-badge.is-conflict { animation: none !important; box-shadow: 0 0 0 3px rgba(220,38,38,.9) !important; }

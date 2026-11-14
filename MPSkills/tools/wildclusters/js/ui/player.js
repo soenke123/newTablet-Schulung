@@ -56,6 +56,11 @@
     function tick(ms) {
       frame = 0;
       if (!playing || held) return;
+      // Sparmodus (motion.js): höchstens 30 Bilder/s, die Zeit läuft über dt gleich schnell
+      if (global.LWMotion && global.LWMotion.low && lastMs && ms - lastMs < 32) {
+        frame = global.requestAnimationFrame(tick);
+        return;
+      }
       var dt = lastMs ? Math.min(0.25, (ms - lastMs) / 1000) : 0;
       lastMs = ms;
       time += dt * speed;

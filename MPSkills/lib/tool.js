@@ -71,6 +71,8 @@
   // nicht aus der ID: so lässt sich ein Werkzeug umbenennen, ohne
   // dass bestehende Räume ihre tool_id verlieren.
   function load(id, folder) {
+    // Sparmodus-Frage: „einmal pro Spiel“ heißt hier einmal pro Skill.
+    try { window.LWMotion && window.LWMotion.setGame('mps:' + id); } catch (e) { /* egal */ }
     if (registry[id]) return Promise.resolve(registry[id]);
     if (loading[id])  return loading[id];
 
@@ -105,7 +107,7 @@
        neue Reliefkarte von Wordisland unter — der Umbau war fertig,
        auf dem Bildschirm stand die alte Karte, und es sah aus, als
        wäre nichts geschehen. */
-    const v = '?v=20261113d';
+    const v = '?v=20261114m';
 
     loading[id] = new Promise((resolve, reject) => {
       // Das Stylesheet wird nicht abgewartet: ein Werkzeug, das auf

@@ -12,7 +12,8 @@
   const view = { W: 0, H: 0, U: 0, DPR: 1, canvas, ctx };
 
   function resize(){
-    view.DPR = Math.min(window.devicePixelRatio || 1, 2);
+    // Sparmodus (../../motion.js): weniger Pixel, Text bleibt lesbar
+    view.DPR = Math.min(window.devicePixelRatio || 1, (window.LWMotion && window.LWMotion.low) ? 1.5 : 2);
     const r = stage.getBoundingClientRect();
     view.W = r.width; view.H = r.height;
     view.U = Math.min(view.W, view.H);

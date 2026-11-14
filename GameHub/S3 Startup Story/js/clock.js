@@ -7,6 +7,13 @@
   function frame(t) {
     if (!running) return;
     var now = performance.now();
+    // Sparmodus (../../motion.js): ~16 Takte/s statt 60. Die Spiel-
+    // logik rechnet mit dt weiter, nur Fortschrittsbalken & Zahlen
+    // werden seltener neu gemalt.
+    if (lastFrame && window.LWMotion && window.LWMotion.low && now - lastFrame < 60) {
+      requestAnimationFrame(frame);
+      return;
+    }
     if (lastFrame === 0) lastFrame = now;
     var dt = now - lastFrame;
     if (dt > 1000) dt = 1000; // cap: verhindert Riesen-Sprünge nach Tab-Wechsel

@@ -218,8 +218,15 @@
   }
 
   // ---------------------------------------------------------------- Zeichnen
+  /* Sparmodus (../../../motion.js): Pixeldichte 1, höchstens 20 Bilder/s,
+     kleineres Rechenbudget je Bild — die Simulation läuft dann auf
+     schwachen Tablets langsamer, aber das Bild bleibt bedienbar. */
+  function lowMotion() { return !!(global.LWMotion && global.LWMotion.low); }
+  var lastDraw = 0;
+  global.addEventListener('lernwelt:motion', function () { resize(); });
+
   function resize() {
-    dpr = global.devicePixelRatio || 1;
+    dpr = lowMotion() ? 1 : (global.devicePixelRatio || 1);
     var rect = canvas.getBoundingClientRect();
     canvas.width = Math.max(1, Math.round(rect.width * dpr));
     canvas.height = Math.max(1, Math.round(rect.height * dpr));
@@ -379,14 +386,16 @@
         var t0 = global.performance.now();
         var dayBefore = sim.day;
         // Rechnen mit Zeitbudget: reicht die Zeit nicht, laeuft es langsamer, aber gleich
-        while (tickAcc >= 1 && global.performance.now() - t0 < 30) { sim.step(); tickAcc -= 1; }
+        var budget = lowMotion() ? 14 : 30;
+        while (tickAcc >= 1 && global.performance.now() - t0 < budget) { sim.step(); tickAcc -= 1; }
         if (tickAcc > 1) tickAcc = 1;
         if (sim.day !== dayBefore) updatePanel(false);
       }
       lastFrame = now;
       dirty = true;
     }
-    if (dirty && world && camera && cache) {
+    if (dirty && world && camera && cache && (!lowMotion() || now - lastDraw >= 48)) {
+      lastDraw = now;
       dirty = false;
       var alpha = lastAlpha = running && tickRate() <= 90 ? Math.min(1, tickAcc) : 1;
       trackFollow(alpha);

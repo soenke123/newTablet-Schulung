@@ -899,6 +899,12 @@
   let FLACH = false;
   const FB = n => FLACH ? null : F(n);
 
+  /* Sparmodus (../../../motion.js, „Animationen reduzieren“): dann
+     auch am Beamer und im Solo die flache Karte ohne Filter, Canvas
+     mit Pixeldichte 1 und 30 Bildern/s, kein Glühen/Funkeln. */
+  const lowMotion = () => !!(window.LWMotion && window.LWMotion.low);
+  const canvasDpr = () => lowMotion() ? 1 : Math.min(2, window.devicePixelRatio || 1);
+
   function buildDefs(svg, mini) {
     const defs = el('defs', {}, svg);
     const filt = (id, attrs, kinder) => {
@@ -5356,7 +5362,7 @@ ${LEAVE_HTML}
          Pult in einem schmalen Fenster ist immer noch ein Rechner
          mit einem Beamer daran, und ein iPad im Querformat ist immer
          noch ein iPad. */
-      buildMap(els.map, cells, v.map_key, { mini: role !== 'presenter' });
+      buildMap(els.map, cells, v.map_key, { mini: role !== 'presenter' || lowMotion() });
       mapKey = v.map_key;
     } else if (v.map_key && v.map_key !== mapKey) {
       // Neue Insel, aber wir haben nur die Besitzverhältnisse: die
@@ -6917,7 +6923,7 @@ ${LEAVE_HTML}
     const r = els.stage.getBoundingClientRect();
     if (!r.width || !r.height) return;
     sicht.w = r.width; sicht.h = r.height;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = canvasDpr();
     els.cvs.width = Math.round(r.width * dpr);
     els.cvs.height = Math.round(r.height * dpr);
     els.cvs.style.width = r.width + 'px';
@@ -7438,10 +7444,21 @@ ${LEAVE_HTML}
     return null;
   }
 
+  /* Sparmodus mitten im Spiel umgeschaltet: Canvas neu vermessen
+     (Pixeldichte) und im Raum die Karte neu holen (flach ↔ reich). */
+  function aufSparmodus() {
+    if (destroyed) return;
+    try { passeAn(); buehneMessen(); } catch (e) { /* egal */ }
+    if (role !== 'solo' && mapKey) { mapKey = null; setTimeout(() => tick(true), 0); }
+  }
+
   function zeichne(now) {
     if (destroyed || role !== 'solo') { raf = 0; return; }
     raf = requestAnimationFrame(zeichne);
     if (!sprites || !welt.isl) return;
+    // Sparmodus: höchstens 30 Bilder/s (die Bewegung rechnet mit dt weiter).
+    const LOW = lowMotion();
+    if (LOW && letzterT && now - letzterT < 30) return;
 
     /* Die Bühne kann beim Aufbau noch keine Größe haben: lib/tool.js
        wartet bewusst NICHT auf das Stylesheet des Werkzeugs
@@ -7597,7 +7614,7 @@ ${LEAVE_HTML}
     // braucht der Finger (tierBei).
     sichtbar = zuMalen;
 
-    const glow = nacht * GLOW_STAERKE;
+    const glow = LOW ? 0 : nacht * GLOW_STAERKE;
 
     // 1 · Lichtschein auf dem Boden — VOR den Tieren, sonst läge das
     //     Licht auf dem Tier statt unter ihm.
@@ -7693,7 +7710,7 @@ ${LEAVE_HTML}
            viertausend Kleinteile, die verwaltet werden wollen —
            gerechnet kosten sie eine Zeile. */
     let funkelt = glow > .01;
-    if (!funkelt) {
+    if (!funkelt && !LOW) {
       for (const t of zuMalen) if (t.stufe >= 4 && !t.schlaeft) { funkelt = true; break; }
     }
     if (funkelt) {
@@ -8605,7 +8622,7 @@ ${LEAVE_HTML}
     const dicht = welt.archipele.some(a => a.zellen.length > 1100);
     const wach = new Set(welt.archipele.filter(a => a.wach).map(a => a.nr));
     welt.isl = buildMap(els.map, list, 'solo' + solo.seed, {
-      solo: true, dicht,
+      solo: true, dicht, mini: lowMotion(),
       heimVonFeld: welt.archipelVonFeld,
       wach,
       /* Für die Brandung: liegt dieser Punkt an einem wachen
@@ -11198,7 +11215,7 @@ ${LEAVE_HTML}
     if (!c || !els.cheer || els.cheer.hidden) return;
     const r = els.cheer.getBoundingClientRect();
     if (!r.width || !r.height) return;
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const dpr = canvasDpr();
     const w = Math.round(r.width * dpr), h = Math.round(r.height * dpr);
     if (c.width === w && c.height === h) return;
     c.width = w; c.height = h;
@@ -11662,6 +11679,7 @@ ${LEAVE_HTML}
       startTimer();
       pollTimer = setInterval(() => tick(false), POLL_MS[role] || 4000);
       tick(true);
+      window.addEventListener('lernwelt:motion', aufSparmodus);
     },
 
     // Der Seiten-Poller hat etwas Neues gesehen. Für uns meist
@@ -11670,6 +11688,7 @@ ${LEAVE_HTML}
 
     unmount() {
       destroyed = true;
+      window.removeEventListener('lernwelt:motion', aufSparmodus);
       if (pollTimer) clearInterval(pollTimer);
       pollTimer = null;
       stopTimer();

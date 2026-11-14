@@ -4036,3 +4036,11 @@ body.cm-locked { overflow: hidden; }
   .cm-phero .cm-pherounit img { height: auto; max-height: 100%; }
   .cm-phero .cm-pherostats { justify-content: center; }
 }
+
+/* ─── Sparmodus „Animationen reduzieren“ (../../../motion.js) ───
+   Die Figuren bleiben, sie stehen nur still: kein Wandern, kein
+   Atmen, kein Schlagschatten-Filter je Figur (der kostet auf dem
+   Tablet bei 20 Figuren am meisten). Funken & Co. regeln schon die
+   prefers-reduced-motion-Blöcke oben — motion.js schaltet sie mit ein. */
+html[data-motion="low"] .cm-spriteinner { filter: none !important; animation: none !important; }
+html[data-motion="low"] .cm-podpic img { filter: none !important; animation: none !important; }

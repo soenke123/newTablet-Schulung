@@ -145,6 +145,7 @@
         </button>
         <div class="ub-menu" data-ub-menu hidden>
           ${themeHTML()}
+          ${motionHTML()}
           ${isAdmin ? '<a class="ub-admin" href="../admin/index.html">Admin-Bereich</a>' : ''}
           <button type="button" data-ub="profile"${isProfilActive ? ' class="is-active"' : ''}>Profil<span class="ub-new" data-ub-new hidden></span></button>
           ${canFeedback(s) ? '<button type="button" data-ub="feedback">Feedback &amp; Fragen</button>' : ''}
@@ -187,6 +188,13 @@
     return window.MPTheme.segmentHTML(tone === 'bar'
       ? { tone: 'bar' }
       : { label: 'Ansicht' });
+  }
+
+  /* Sparmodus „Animationen reduzieren“ (../motion.js). Gilt fürs
+     Gerät wie Hell/Dunkel; data-ub="motion" hält das Menü offen. */
+  function motionHTML() {
+    if (!window.LWMotion) return '';
+    return '<div class="ub-motion" data-ub="motion">' + window.LWMotion.toggleHTML() + '</div>';
   }
 
   function menuEl() { return document.querySelector('[data-ub-menu]'); }
@@ -276,6 +284,7 @@
            Umschalten will man sehen, was passiert, und notfalls
            sofort zurück. */
         case 'theme':
+        case 'motion':
           break;
         case 'feedback':
           closeMenu();
