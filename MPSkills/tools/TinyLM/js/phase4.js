@@ -39,6 +39,13 @@ const P4_D = 32;
    (Satzfluss 72–75 % statt 64–70 % nach 60 s offline, drei Läufe); 2 Hidden-Schichten lernten viel
    langsamer (Fehler 2,6 statt 0,9 nach gleicher Zeit) und wurden verworfen. */
 const P4_H = 60;
+/* Vokabular-Obergrenze 1300 statt 600 (Sönke 14.11.2026): die 90 Standardtexte haben 1 243 verschiedene
+   Wörter → alle passen hinein, kein „[unbekannt]“ mehr; die Plätze bis 1300 nutzen nur eigene Texte
+   (buildPhase4Data nimmt nie mehr Wörter, als es gibt). Preis: jedes Wort hat ein Ausgabe-Neuron, also
+   etwa halb so viele Durchgänge in derselben Zeit — nach kurzem Training schwächer, nach längerem
+   geradere Sätze (offline 60 s: Satzfluss 83 % statt 70 %, 90 s: 94 % statt 77 %; Thema etwas
+   niedriger, ~48–50 % statt ~51–59 %). Im Browser 3+ Minuten trainieren. */
+const P4_VOCAB = 1300;
 const P4_TEMP = 0.6;
 const P4_SUGGEST = ['Was frisst ein Hund?', 'Welche Planeten haben Ringe?', 'Wie lernt eine KI?', 'Was macht man in der Pause?', 'Wo arbeitet eine Tierärztin?'];
 function deInt(n) { return n.toLocaleString('de-DE'); }
@@ -804,7 +811,7 @@ Phases.register(4, {
       if (slot && slot.version === State.corpusVersion) {
         data = slot.data; net = slot.net; genSession = slot.genSession;
       } else {
-        data = buildPhase4Data(texts, { vocabCap: 600, C: ctxLen });
+        data = buildPhase4Data(texts, { vocabCap: P4_VOCAB, C: ctxLen });
         net = createNet(data.vocab.length, data.C, { topic: true, d: P4_D, H: P4_H });
         /* Andere Fenstergröße, gleiche Frage: das neue Netz bekommt sie auch. */
         genSession = freshGenSession(genSession && genSession.question);
