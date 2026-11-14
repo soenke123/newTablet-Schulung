@@ -110,3 +110,7 @@
 .p4-delta span { padding: 2px 9px; border-radius: 99px; font-size: 0.84rem; font-weight: 600; }
 .p4-up { background: color-mix(in srgb, var(--ok, #2e9d5b) 18%, var(--surface)); color: color-mix(in srgb, var(--ok, #2e9d5b) 85%, var(--ink)); }
 .p4-down { background: color-mix(in srgb, var(--bad) 14%, var(--surface)); color: var(--bad); }
+
+/* Antwortanfang aus der Frage („Die Kornnatter …“, answerLead in phase4.js): gestrichelter Rand in der
+   Farbe der Frage, damit man sieht, dass Tiny diese Wörter nicht selbst gewählt hat. */
+.phone-screen .tok.fromq { border: 2px dashed var(--cat-ask); }

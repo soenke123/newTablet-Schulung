@@ -17,7 +17,8 @@
    Erst aufklappen, dann im Handy sichtbar (wie Phase 1):
      Embedding      → die letzten Token, die das Netz sieht, sind umrandet
      Kandidaten     → „?“-Baustein für das nächste Wort, Tiny sagt, was am ehesten kommt
-     Frage          → die Wörter der Frage im Handy: gezählte Nomen farbig, der Rest durchgestrichen
+     Frage          → die Wörter der Frage im Handy: gezählte Inhaltswörter (Nomen, Verben) farbig, der Rest durchgestrichen;
+                    die ersten Wörter der Antwort („Die Kornnatter“) übernimmt Tiny aus der Frage (answerLead, .tok.fromq)
    Ein Wort im Handy antippen = genau diesen Schritt zerlegen: je Wort merkt sich doGenStep, was das
    Netz damals sah und rechnete (ctxIds, logits, h). Offen/zu je Gerät in tinylm-p4-offen.
 
@@ -117,24 +118,42 @@ Phases.register(4, {
     const isPunct = w => w === '.' || w === ',';
     const fmtP = p => p >= 0.005 ? Math.round(p * 100) + ' %' : '<1 %';
 
+    /* Antwortanfang aus der Frage (14.11.2026): Artikel + Nomen, „Wo schläft die Kornnatter?“ → „Die
+       Kornnatter …“ – wie man in der Schule im ganzen Satz antwortet. Ab da weiß das Netz Bescheid; mit
+       leerem Fenster fand es den Satz oft nicht (offline: Nomen + Verb in der Antwort 66 % → 94 %).
+       Nur der/die/das/ein/eine direkt vor einem Nomen, nicht nach einer Präposition („in der Pause“
+       ergäbe „Der Pause …“); sonst kein Anfang. Bei mehreren das letzte („Monde … der Mars“ → „Der Mars“). */
+    const P4_ART = new Set(['der', 'die', 'das', 'ein', 'eine']);
+    const P4_PREP = new Set(['in', 'im', 'an', 'am', 'auf', 'aus', 'bei', 'beim', 'mit', 'nach', 'von', 'vom', 'zu', 'zum', 'zur', 'für', 'über', 'unter', 'um', 'vor', 'hinter', 'neben', 'durch', 'gegen', 'ohne', 'bis', 'seit', 'wegen']);
+    function answerLead(toks) {
+      const unk = data.toId(data.UNK);
+      for (let i = toks.length - 1; i > 0; i--) {
+        const t = toks[i], a = toks[i - 1];
+        if (!/^[A-ZÄÖÜ]/.test(t.raw) || !isContentTok(t) || !P4_ART.has(a.t)) continue;
+        if (i >= 2 && P4_PREP.has(toks[i - 2].t)) continue;
+        if (data.toId(t.t) === unk || data.toId(a.t) === unk) return [];
+        return [data.toId(a.t), data.toId(t.t)];
+      }
+      return [];
+    }
     /* Eine Antwort-Sitzung; question = null, solange noch nicht gefragt ist. qwords: die Wörter der
        Frage (kind: off = Füllwort, known = kennt das Netz, unknown = zu selten, nicht im Vokabular). */
     function freshGenSession(question) {
       const startId = data.toId('.');
-      const S = { ctxIds: Array(data.C).fill(startId), words: [], steps: [], sentences: 0, question: question || null, qwords: [], topicIds: [] };
+      const S = { ctxIds: Array(data.C).fill(startId), words: [], steps: [], sentences: 0, question: question || null, qwords: [], topicIds: [], lead: [] };
       if (question) {
-        /* Gezählt werden die Nomen der Frage (großgeschrieben, nicht das erste Wort); Wörter wie
-           „macht“ oder „lange“ verwässern den Mittelpunkt. Ohne Nomen: alle Inhaltswörter. */
+        /* Gezählt werden die Inhaltswörter der Frage: Nomen UND Verben (14.11.2026; bis dahin nur Nomen –
+           dann kam auf „Was frisst ein Hund?“ „Der Hund schläft in seinem Korb“). Das Training übt genau
+           das: Nomen + Verb aus demselben Satz (drawTopic in phase4-net.js). */
         const unk = data.toId(data.UNK);
         const toks = tokenize(question).filter(t => !t.punct);
-        const isNoun = (t, i) => i > 0 && isContentTok(t) && /^[A-ZÄÖÜ]/.test(t.raw);
-        const useNouns = toks.some(isNoun);
         const ids = new Set();
-        toks.forEach((t, i) => {
+        toks.forEach(t => {
           let kind = 'off';
-          if (useNouns ? isNoun(t, i) : isContentTok(t)) { const id = data.toId(t.t); kind = id === unk ? 'unknown' : 'known'; if (id !== unk) ids.add(id); }
+          if (isContentTok(t)) { const id = data.toId(t.t); kind = id === unk ? 'unknown' : 'known'; if (id !== unk) ids.add(id); }
           S.qwords.push({ raw: t.raw, kind });
         });
+        S.lead = answerLead(toks);
         S.topicIds = [...ids];
       }
       return S;
@@ -172,9 +191,10 @@ Phases.register(4, {
         let txt = tokLabel(w);
         if (!isPunct(w) && prev === '.') txt = txt.charAt(0).toUpperCase() + txt.slice(1);
         if (idx > 0) textEl.appendChild(document.createTextNode(' '));
-        const span = el('span', 'tok' + (isPunct(w) ? ' punct' : ''), txt);
+        const fromQ = genSession.steps[idx] && genSession.steps[idx].lead;
+        const span = el('span', 'tok' + (isPunct(w) ? ' punct' : '') + (fromQ ? ' fromq' : ''), txt);
         span.dataset.i = String(idx);
-        span.title = 'Antippen zum Zerlegen';
+        span.title = fromQ ? 'Aus deiner Frage übernommen · antippen zum Zerlegen' : 'Antippen zum Zerlegen';
         if (idx === focus) span.classList.add('sel');
         textEl.appendChild(span);
         prev = w;
@@ -260,6 +280,7 @@ Phases.register(4, {
         : ['Fehler ', [L], ' – ich habe einiges gelernt! Frag mich etwas.'];
       else if (!genSession.words.length) parts = ['Drück auf ▶ – ich antworte Wort für Wort.'];
       else if (!peek) parts = [genPlaying ? 'Ich schreibe …' : 'Soll ich weiterschreiben? Rechts kannst du nachsehen, wie ich das mache.'];
+      else if (focus != null && genSession.steps[focus].lead) parts = ['„', [wordLabel(data.vocab[genSession.steps[focus].id])], '“ habe ich aus deiner Frage übernommen. Rechts siehst du, was ich selbst gewählt hätte.'];
       else if (focus != null) parts = ['Rechts siehst du, wie ich auf „', [wordLabel(data.vocab[genSession.steps[focus].id])], '“ gekommen bin.'];
       else {
         const probs = softmaxTemp(lastForward.logits, temp);
@@ -286,8 +307,12 @@ Phases.register(4, {
          etwas auch nicht aus. Bei Temperatur 0,6 stand sonst oft „… …“ im Text (14.11.2026). */
       const unkId = data.toId(data.UNK), z = 1 - probsT[unkId];
       if (z > 1e-9) { probsT[unkId] = 0; for (let i = 0; i < probsT.length; i++) probsT[i] /= z; }
+      /* Die ersten Wörter übernimmt Tiny aus der Frage (answerLead) – gerechnet wird trotzdem, damit man
+         sie antippen und zerlegen kann. */
+      const lead = genSession.lead && genSession.steps.length < genSession.lead.length ? genSession.lead[genSession.steps.length] : null;
       let id;
-      if (temp <= 0.001) {
+      if (lead != null) id = lead;
+      else if (temp <= 0.001) {
         let bi = 0, bv = -1;
         for (let i = 0; i < probsT.length; i++) if (probsT[i] > bv) { bv = probsT[i]; bi = i; }
         id = bi;
@@ -296,7 +321,7 @@ Phases.register(4, {
         for (let i = 0; i < probsT.length; i++) { acc += probsT[i]; if (r <= acc) { id = i; break; } }
       }
       /* Für das Zerlegen merken, was das Netz für genau dieses Wort gerechnet hat. */
-      genSession.steps.push({ id, ctxIds: genSession.ctxIds.slice(), logits: Float32Array.from(lastForward.logits), h: Float32Array.from(lastForward.h) });
+      genSession.steps.push({ id, ctxIds: genSession.ctxIds.slice(), logits: Float32Array.from(lastForward.logits), h: Float32Array.from(lastForward.h), lead: lead != null });
       genSession.ctxIds = genSession.ctxIds.slice(1).concat([id]);
       const word = data.vocab[id];
       genSession.words.push(word);
@@ -488,11 +513,11 @@ Phases.register(4, {
       const d = net.d, C = net.C, V = data.vocab.length, H = net.H;
       const sub = (n, t) => { const p = el('p', 'p1-sub p4-fstep'); p.append(el('span', 'p4-fnum', n), document.createTextNode(t)); b.appendChild(p); };
 
-      sub('1', 'Die Nomen der Frage werden zu Zahlen');
+      sub('1', 'Die wichtigen Wörter der Frage werden zu Zahlen');
       const qt = el('div', 'gram p4-qtoks');
       S.qwords.forEach(w => qt.appendChild(el('span', 'gtok p4-q-' + w.kind, w.raw)));
       b.appendChild(qt);
-      if (!S.topicIds.length) { b.appendChild(el('p', 'p1-line', 'Kein Nomen der Frage kennt das Netz – dann sind es ' + d + ' Nullen.')); return; }
+      if (!S.topicIds.length) { b.appendChild(el('p', 'p1-line', 'Kein Wort der Frage kennt das Netz – dann sind es ' + d + ' Nullen.')); return; }
       S.topicIds.forEach(id => { const vals = []; for (let j = 0; j < d; j++) vals.push(net.embed[id * d + j]); b.appendChild(swatchRow(wordLabel(data.vocab[id]), vals)); });
 
       sub('2', S.topicIds.length > 1 ? 'Ihr Mittelpunkt ist der Frage-Eingang' : 'Das ist der Frage-Eingang');
@@ -670,7 +695,7 @@ Phases.register(4, {
       strip.append(el('span', 'ctxtok p4-qtok', '⭐ Frage'), el('span', 'flow-arrow', '→'), el('span', 'ctxtok next', '?'));
       what.appendChild(strip);
       const whatLine = el('p', 'card-line');
-      whatLine.append(el('b', null, net.C + ' Wörter'), document.createTextNode(' + eine Übungsfrage aus demselben Text → das nächste raten · '),
+      whatLine.append(el('b', null, net.C + ' Wörter'), document.createTextNode(' + eine Übungsfrage zu diesem Satz → das nächste raten · '),
         el('b', null, deInt(data.pairs.length)), document.createTextNode(' Beispiele'));
       what.appendChild(whatLine);
 

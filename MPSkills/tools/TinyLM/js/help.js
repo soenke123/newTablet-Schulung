@@ -160,7 +160,8 @@ const HELP = {
   },
   frage4: {
     title: 'Frage', icon: '⭐', cat: 'ask',
-    text: ['Die Nomen deiner Frage werden zu Zahlen, und das Netz nimmt ihren Mittelpunkt – wie der Stern in der Wortwolke. Diese Zahlen bekommt es bei JEDEM Wort zusätzlich zu den letzten Wörtern.',
+    text: ['Die wichtigen Wörter deiner Frage (Nomen und Verben) werden zu Zahlen, und das Netz nimmt ihren Mittelpunkt – wie der Stern in der Wortwolke. Diese Zahlen bekommt es bei JEDEM Wort zusätzlich zu den letzten Wörtern.',
+      'Geübt hat es das im Training: Zu jedem Satz bekam es eine Übungsfrage mit den Wörtern dieses Satzes. Und Tiny beginnt die Antwort mit dem Nomen deiner Frage („Die Kornnatter …“) – wie du in der Schule im ganzen Satz antwortest.',
       'Sie gehen zwei Wege: in die Hidden-Schicht und über eine Abkürzung an ihr vorbei direkt zu den Wörtern. Im Training hat das Netz gelernt, vor allem die Abkürzung zu nutzen.',
       'So eine Abkürzung heißt Skip-Verbindung. Es gibt sie in fast allen großen Sprachmodellen: Dort wird in jeder Schicht die Eingabe am Block vorbei weitergereicht.'],
     try: 'Tipp im Handy ein Wort an und schau unter ④: Welche Wörter hat die Frage hochgeschoben?',
@@ -200,7 +201,8 @@ const HELP = {
   },
   fehler: {
     title: 'Fehlerlinie', icon: '📉', cat: 'train',
-    text: 'Wie sehr lag das Netz daneben? Fällt die Linie, dann lernt es.',
+    text: ['Wie sehr lag das Netz daneben? Fällt die Linie, dann lernt es.',
+      'Aber Achtung: Ein kleiner Fehler heißt nur, dass das Netz die Texte gut nachsprechen kann. Ob es gut auf Fragen antwortet, zeigt erst das Ausprobieren. Hier übt es auch Satzanfänge, bei denen es nur deine Frage hat – das ist schwer, darum bleibt der Fehler etwas höher.'],
     vis: { type: 'line' }
   },
   netz: {

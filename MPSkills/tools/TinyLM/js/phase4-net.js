@@ -175,12 +175,23 @@ function trainStep(net, ctxIds, targetId, topicIds) {
    nie kleiner als lrMin. */
 function lrAt(net, epoch) { return Math.max(net.lrMin, net.lr0 / (1 + epoch / net.lrHalf)); }
 
-/* Übungs-„Frage“ für ein Trainingsbeispiel: 1–3 zufällige Inhaltswörter aus seinem Text,
-   in einem von fünf Fällen keine (das Netz soll auch ohne Frage schreiben können). */
-function drawTopic(pool) {
-  if (!pool || !pool.length || Math.random() < 0.2) return null;
-  const k = 1 + Math.floor(Math.random() * Math.min(3, pool.length)), out = [];
-  for (let i = 0; i < k; i++) out.push(pool[Math.floor(Math.random() * pool.length)]);
+/* Übungs-„Frage“ für ein Trainingsbeispiel – so, wie eine echte Frage zu SEINEM Satz aussähe
+   (14.11.2026, Begründung und Messung in phase4-data.js): immer ein Nomen des Satzes (sn), oft ein
+   Verb/anderes Inhaltswort desselben Satzes (so), manchmal noch ein Wort aus dem Text; in einem von
+   zehn Fällen keine Frage. Satz ohne Nomen: 1–3 zufällige Inhaltswörter des Textes (wie früher). */
+function drawTopic(p) {
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  if (!p || Math.random() < 0.1) return null;
+  if (!p.sn || !p.sn.length) {
+    const pool = p.topic;
+    if (!pool || !pool.length) return null;
+    const k = 1 + Math.floor(Math.random() * Math.min(3, pool.length)), out = [];
+    for (let i = 0; i < k; i++) out.push(pick(pool));
+    return out;
+  }
+  const out = [pick(p.sn)];
+  if (p.so && p.so.length && Math.random() < 0.6) out.push(pick(p.so));
+  if (p.topic && p.topic.length && Math.random() < 0.5) { const o = pick(p.topic); if (!out.includes(o)) out.push(o); }
   return out;
 }
 
@@ -192,7 +203,7 @@ function trainBudget(net, pairs, budgetMs) {
   while (performance.now() - start < budgetMs) {
     if ((n & 63) === 0) net.lr = lrAt(net, net.step / pairs.length);
     const p = pairs[Math.floor(Math.random() * pairs.length)];
-    const loss = trainStep(net, p.ctx, p.target, net.T ? drawTopic(p.topic) : null);
+    const loss = trainStep(net, p.ctx, p.target, net.T ? drawTopic(p) : null);
     if (!isFinite(loss)) { nanHit = true; net.diverged = true; break; }
     lossSum += loss; n++; net.step++;
   }
