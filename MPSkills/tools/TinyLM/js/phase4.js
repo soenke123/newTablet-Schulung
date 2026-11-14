@@ -579,6 +579,13 @@ Phases.register(4, {
       if (Z.isOpen('cand')) paintCand(v); else Z.cols.cand.body.replaceChildren();
       if (Z.isOpen('embed')) paintEmbed(v); else Z.cols.embed.body.replaceChildren();
       if (Z.isOpen('frage')) paintFrage(v); else Z.cols.frage.body.replaceChildren();
+      if (Z.isOpen('src')) paintSrc(); else Z.cols.src.body.replaceChildren();
+    }
+    /* Quellen: das Netz schreibt ohne Texte – die Quellen waren nur zum Training da. */
+    function paintSrc() {
+      Z.cols.src.body.replaceChildren(
+        el('p', 'p1-line', 'Diese Texte werden gebraucht, um das neuronale Netz zu trainieren.'),
+        el('p', 'p1-line', 'Das fertige Netz braucht die Quellen nicht mehr.'));
     }
     function paintFocus() {
       let hint = '';
@@ -860,10 +867,15 @@ Phases.register(4, {
 
       right.appendChild(Z.column('train', 'train', '🏋️', 'Training', 'Erst lernen, dann vorhersagen', 'training', { wide: true }));
       const row = el('div', 'p1-cols');
-      row.append(
-        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'ausgabe'),
+      /* Reihenfolge wie Phase 2/3 (Sönke 14.11.2026): Frage · Kandidaten · Kontextfenster über Quellen. */
+      const stack = el('div', 'p1-stack');
+      stack.append(
         Z.column('embed', 'embed', '🔢', 'Kontextfenster', 'Was sieht das Netz?', 'embedding'),
-        Z.column('frage', 'ask', '⭐', 'Frage', 'Was macht die Frage?', 'frage4'));
+        Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen4'));
+      row.append(
+        Z.column('frage', 'ask', '⭐', 'Frage', 'Was macht die Frage?', 'frage4'),
+        Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'ausgabe'),
+        stack);
       right.appendChild(row);
       right.appendChild(Z.column('net', 'net', '🕸️', 'Das Netz von innen', 'Alle Neuronen und Gewichte', 'netz', { wide: true }));
 

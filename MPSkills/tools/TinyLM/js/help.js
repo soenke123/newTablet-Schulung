@@ -88,6 +88,11 @@ const HELP = {
     try: 'Stell eine andere Frage: Wechseln die Quellen?',
     vis: { type: 'abc' }
   },
+  quellen4: {
+    title: 'Quellen', icon: '📑', cat: 'origin',
+    text: ['Die Texte werden gebraucht, um das neuronale Netz zu trainieren.',
+      'Das fertige Netz braucht die Quellen nicht mehr: Es schreibt nur aus seinen gelernten Zahlen.']
+  },
   wortfuerwort: {
     title: 'Kandidaten', icon: '📊', cat: 'candidates',
     text: ['Wie in Phase 1: Diese Wörter standen in den Quellen hinter den letzten Wörtern. Je länger der Balken, desto wahrscheinlicher.',
