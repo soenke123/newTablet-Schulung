@@ -10,13 +10,14 @@
    rät das Netz nur), darunter dieselben drei Spalten wie in Phase 1/2 (gleiche Plätze, Farben):
      Kandidaten     (③ Prozent für jedes Wort — Temperatur im festen Kopf)
      Embedding      (① was das Netz sieht — Wahl 3 · 4 · 5 Wörter im festen Kopf)
-     Hidden-Schicht (② die Neuronen)
+     Frage          (⭐ wie aus der Frage der Frage-Eingang wird und was er gerade ändert — Frage-Stärke im
+                    Kopf; ersetzt seit 14.11.2026 die Spalte Hidden-Schicht, die steht unten im Netz-Bild)
    und unten breit „Das Netz von innen“ (netview.js).
 
    Erst aufklappen, dann im Handy sichtbar (wie Phase 1):
      Embedding      → die letzten Token, die das Netz sieht, sind umrandet
      Kandidaten     → „?“-Baustein für das nächste Wort, Tiny sagt, was am ehesten kommt
-     Hidden-Schicht → eine Leiste mit den Neuronen im Handy
+     Frage          → die Wörter der Frage im Handy: gezählte Nomen farbig, der Rest durchgestrichen
    Ein Wort im Handy antippen = genau diesen Schritt zerlegen: je Wort merkt sich doGenStep, was das
    Netz damals sah und rechnete (ctxIds, logits, h). Offen/zu je Gerät in tinylm-p4-offen.
 
@@ -99,7 +100,7 @@ Phases.register(4, {
     let data, net, genSession, lastForward, netView = null;
     let temp = P4_TEMP, qStrength = 1, training = false, trainRAF = null, lastUIRefresh = 0;
     let genPlaying = false, genTimer = null;
-    let textEl, cursor, screen, genPlayBtn, bannerEl, placeholder, sayEl, focusHost, neuronHost;
+    let textEl, cursor, screen, genPlayBtn, bannerEl, placeholder, sayEl, focusHost;
     let phoneEl = null, Z = null;
     let askedEl, answerEl, metaEl, askBox, input, controls;
     let focus = null;   /* null = nächstes Wort, sonst Index in genSession.steps */
@@ -142,7 +143,12 @@ Phases.register(4, {
     function topicLabel() { return genSession.topicIds.map(id => data.display(data.vocab[id])).join(' · '); }
     function fwd() { return forward(net, genSession.ctxIds, topic(), qStrength); }
 
-    function wordLabel(w) { return w === data.UNK ? '[unbekannt]' : (w === '.' ? '(Satzende)' : showWord(w)); }
+    function wordLabel(w) {
+      if (w === data.UNK) return '[unbekannt]';
+      if (w === '.') return '(Satzende)';
+      const x = data.display(w);   /* Schreibweise aus den Texten („KI“, nicht „Ki“) */
+      return x.charAt(0).toUpperCase() + x.slice(1);
+    }
     function tokLabel(w) { return w === data.UNK ? '…' : w === '.' ? '·' : w === ',' ? ',' : data.display(w); }
 
     /* Was die Spalten zeigen: das nächste Wort oder ein angetipptes (mit den Zahlen von damals). */
@@ -190,21 +196,12 @@ Phases.register(4, {
       }
     }
 
-    /* Mit offener Hidden-Schicht: die Neuronen als Leiste im Handy. */
-    function paintNeurons() {
-      if (!neuronHost || !Z.isOpen('hidden')) return;
-      const v = view();
-      neuronHost.replaceChildren(el('span', 'phone-neurons-lab', '💡 ' + net.H + ' Neuronen'), renderSwatch(Array.from(v.h), 1));
-    }
-
     function syncLayers() {
       if (!phoneEl) return;
       phoneEl.classList.toggle('show-ctx', Z.isOpen('embed'));
-      phoneEl.classList.toggle('show-ask', Z.isOpen('embed'));
+      phoneEl.classList.toggle('show-ask', Z.isOpen('frage'));
       phoneEl.classList.toggle('show-cand', Z.isOpen('cand'));
-      phoneEl.classList.toggle('show-hidden', Z.isOpen('hidden'));
       updateGenText();
-      paintNeurons();
       lastSay = '';
       updateSay();
     }
@@ -214,7 +211,6 @@ Phases.register(4, {
       syncTrainUI();
       if (live.train && Z.isOpen('train')) live.train();
       paintBodies();
-      paintNeurons();
       if (live.net && Z.isOpen('net')) live.net();
     }
 
@@ -453,12 +449,6 @@ Phases.register(4, {
       }
       const rest = arr.slice(MAX).reduce((s, x) => s + x[1], 0);
       b.appendChild(el('p', 'p1-more', '… und ' + deInt(arr.length - MAX) + ' weitere Wörter mit zusammen ' + fmtP(rest)));
-      const pushed = questionPush(3);
-      if (pushed.length) {
-        const qp = el('p', 'p1-line p4-qpush');
-        qp.append(document.createTextNode('⭐ Deine Frage schiebt direkt hoch: '), el('b', null, pushed.join(' · ')));
-        b.appendChild(qp);
-      }
     }
 
     /* Welche Wörter die Frage über ihren direkten Weg (WQ) am stärksten nach oben schiebt — ohne
@@ -478,6 +468,77 @@ Phases.register(4, {
       return best.filter(x => x[1] > 0).map(([v]) => wordLabel(data.vocab[v]));
     }
 
+    /* ⭐ Frage (Sönke 14.11.2026: „die Frage-Input-Neuronen sind irgendwie mit nichts verbunden – haben die
+       wirklich einen Einfluss?“): wie aus der Frage der Frage-Eingang wird und was er gerade bewirkt.
+       ① Nomen → je d Zahlen · ② Mittelpunkt = ⭐ Frage-Eingang · ③ zwei Wege (in die Hidden-Schicht: im
+       Training schwach geworden; direkt zu den Wörtern: hier wirkt sie) · ④ dieser Schritt mit und ohne
+       Frage gerechnet. */
+    function swatchRow(label, vals, cls) {
+      const row = el('div', 'embrow' + (cls ? ' ' + cls : ''));
+      row.append(el('span', 'embrow-w', label), renderSwatch(vals, 1.5));
+      return row;
+    }
+    function paintFrage(v) {
+      const b = Z.cols.frage.body;
+      b.replaceChildren();
+      if (!data.pairs.length) { noTexts(b); return; }
+      const S = genSession;
+      if (!S.question) { b.appendChild(el('p', 'p1-line', 'Noch keine Frage – dann bekommt das Netz hier ' + net.d + ' Nullen.')); return; }
+      const d = net.d, C = net.C, V = data.vocab.length, H = net.H;
+      const sub = (n, t) => { const p = el('p', 'p1-sub p4-fstep'); p.append(el('span', 'p4-fnum', n), document.createTextNode(t)); b.appendChild(p); };
+
+      sub('1', 'Die Nomen der Frage werden zu Zahlen');
+      const qt = el('div', 'gram p4-qtoks');
+      S.qwords.forEach(w => qt.appendChild(el('span', 'gtok p4-q-' + w.kind, w.raw)));
+      b.appendChild(qt);
+      if (!S.topicIds.length) { b.appendChild(el('p', 'p1-line', 'Kein Nomen der Frage kennt das Netz – dann sind es ' + d + ' Nullen.')); return; }
+      S.topicIds.forEach(id => { const vals = []; for (let j = 0; j < d; j++) vals.push(net.embed[id * d + j]); b.appendChild(swatchRow(wordLabel(data.vocab[id]), vals)); });
+
+      sub('2', S.topicIds.length > 1 ? 'Ihr Mittelpunkt ist der Frage-Eingang' : 'Das ist der Frage-Eingang');
+      const qv = new Float64Array(d);
+      S.topicIds.forEach(id => { for (let j = 0; j < d; j++) qv[j] += net.embed[id * d + j] / S.topicIds.length; });
+      b.appendChild(swatchRow('⭐ Frage', Array.from(qv), 'p4-qmean'));
+      b.appendChild(el('p', 'mini-legend', d + ' Zahlen · bei JEDEM Wort dabei, egal wie lang die Antwort schon ist'));
+
+      sub('3', 'Zwei Wege ins Netz');
+      let sc = 0, sq = 0;
+      for (let i = 0; i < C * d * H; i++) sc += Math.abs(net.W1[i]);
+      for (let i = C * d * H; i < net.inDim * H; i++) sq += Math.abs(net.W1[i]);
+      const ratio = (sq / (d * H)) / ((sc / (C * d * H)) || 1);
+      const ways = el('div', 'p4-ways');
+      const way = (icon, title, txt) => { const r = el('div', 'p4-way'); r.append(el('b', null, icon + ' ' + title), el('span', null, txt)); ways.appendChild(r); };
+      way('↘', 'in die Hidden-Schicht', net.step
+        ? 'Gewichte im Schnitt ' + (ratio < 1 ? ratio.toFixed(1).replace('.', ',') + '× so stark wie bei den Wörtern' : 'so stark wie bei den Wörtern') + (ratio < 0.5 ? ' – das Netz hat gelernt, sie hier kaum zu nutzen.' : '.')
+        : 'noch untrainiert');
+      const pushed = questionPush(4);
+      way('→', 'direkt zu den Wörtern', pushed.length ? 'schiebt hoch: ' + pushed.join(' · ') : (qStrength ? 'noch untrainiert' : 'aus (Frage-Stärke 0×)'));
+      b.appendChild(ways);
+
+      sub('4', v.idx == null ? 'Was ändert die Frage beim nächsten Wort?' : 'Was änderte die Frage bei „' + wordLabel(data.vocab[v.chosen]) + '“?');
+      if (!net.step) { b.appendChild(el('p', 'p1-line', 'Erst trainieren – vorher ist alles Zufall.')); return; }
+      const pNo = softmaxTemp(forward(net, v.ctxIds, null, 0).logits, temp);
+      const pYes = softmaxTemp(forward(net, v.ctxIds, topic(), qStrength).logits, temp);
+      const best = p => { let bi = 0; for (let i = 1; i < V; i++) if (p[i] > p[bi]) bi = i; return bi; };
+      const cmp = el('div', 'p4-cmp');
+      const col = (title, p) => { const c = el('div', 'p4-cmpcol'); c.appendChild(el('span', 'p4-cmph', title)); const i = best(p); c.appendChild(el('b', null, wordLabel(data.vocab[i]) + ' ' + fmtP(p[i]))); cmp.appendChild(c); };
+      col('ohne Frage am ehesten', pNo);
+      col('mit Frage am ehesten', pYes);
+      b.appendChild(cmp);
+      const diff = [];
+      for (let i = 0; i < V; i++) { const w = data.vocab[i]; if (w === data.UNK) continue; diff.push([i, pYes[i] - pNo[i]]); }
+      diff.sort((a, c) => c[1] - a[1]);
+      const fmtD = x => (x > 0 ? '+' : '−') + Math.max(1, Math.round(Math.abs(x) * 100)) + ' %';
+      const up = diff.filter(x => x[1] > 0.005).slice(0, 4), down = diff.filter(x => x[1] < -0.005).slice(-3).reverse();
+      if (!up.length && !down.length) b.appendChild(el('p', 'p1-line', 'Hier ändert die Frage kaum etwas – die letzten Wörter entscheiden.'));
+      else {
+        const list = el('div', 'p4-delta');
+        up.forEach(([i, x]) => list.appendChild(el('span', 'p4-up', wordLabel(data.vocab[i]) + ' ' + fmtD(x))));
+        down.forEach(([i, x]) => list.appendChild(el('span', 'p4-down', wordLabel(data.vocab[i]) + ' ' + fmtD(x))));
+        b.appendChild(list);
+        b.appendChild(el('p', 'mini-legend', 'grün = durch die Frage wahrscheinlicher · rot = unwahrscheinlicher'));
+      }
+    }
+
     /* ① Embedding: worauf das Netz schaut und die Zahlen dieser Wörter. */
     function paintEmbed(v) {
       const b = Z.cols.embed.body;
@@ -495,31 +556,8 @@ Phases.register(4, {
       });
       g.appendChild(el('span', 'gtok ' + (v.idx == null ? 'next' : 'chosen'), v.idx == null ? '?' : tokLabel(data.vocab[v.chosen])));
       now.appendChild(g);
-      now.appendChild(el('p', 'p1-count', data.C + ' Token + Frage → je ' + net.d + ' Zahlen = ' + net.inDim + ' Zahlen gehen ins Netz'));
+      now.appendChild(el('p', 'p1-count', data.C + ' Token + ⭐ Frage → je ' + net.d + ' Zahlen = ' + net.inDim + ' Zahlen gehen ins Netz'));
       b.appendChild(now);
-      /* Die Frage: Mittelpunkt ihrer Wörter (wie der Stern in der Wortwolke). */
-      const qh = el('p', 'p1-sub', '⭐ Dazu bei jedem Wort: deine Frage ');
-      qh.appendChild(Help.btn('frage4', 'sm'));
-      b.appendChild(qh);
-      if (!genSession.question) b.appendChild(el('p', 'p1-line', 'Noch keine Frage – dann sind es ' + net.d + ' Nullen.'));
-      else if (!genSession.topicIds.length) b.appendChild(el('p', 'p1-line', 'Kein Wort der Frage kennt das Netz – dann sind es ' + net.d + ' Nullen.'));
-      else {
-        genSession.topicIds.forEach(id => {
-          const row = el('div', 'embrow');
-          row.appendChild(el('span', 'embrow-w', wordLabel(data.vocab[id])));
-          const vals = [];
-          for (let j = 0; j < net.d; j++) vals.push(net.embed[id * net.d + j]);
-          row.appendChild(renderSwatch(vals, 1.5));
-          b.appendChild(row);
-        });
-        if (genSession.topicIds.length > 1) {
-          const row = el('div', 'embrow p4-qmean');
-          row.appendChild(el('span', 'embrow-w', '⭐ Mittelpunkt'));
-          const f = forward(net, v.ctxIds, topic(), qStrength);
-          row.appendChild(renderSwatch(Array.from(f.x.slice(net.C * net.d)), 1.5));
-          b.appendChild(row);
-        }
-      }
       b.appendChild(el('p', 'p1-sub', 'Die letzten Wörter'));
       const seen = new Set();
       v.ctxIds.forEach(id => {
@@ -535,51 +573,16 @@ Phases.register(4, {
       b.appendChild(el('p', 'mini-legend', 'je Wort ' + net.d + ' Zahlen · rot = plus · blau = minus' + (net.step ? '' : ' · noch Zufall')));
     }
 
-    /* ② Hidden-Schicht: alle Neuronen als Kästchen und lesbar die drei gerade stärksten: welche Wörter
-       schieben sie nach oben? (Beitrag = Wert des Neurons × Gewicht zum Wort) */
-    function topNeurons(h, k) {
-      const V = data.vocab.length;
-      const idx = Array.from(h, (x, i) => i).sort((a, c) => Math.abs(h[c]) - Math.abs(h[a])).slice(0, k);
-      return idx.map(n => {
-        const best = [];
-        for (let v = 0; v < V; v++) {
-          const w = data.vocab[v];
-          if (isPunct(w) || w === data.UNK) continue;
-          const c = h[n] * net.W2[n * V + v];
-          if (best.length < 3 || c > best[2][1]) { best.push([v, c]); best.sort((a, d) => d[1] - a[1]); if (best.length > 3) best.pop(); }
-        }
-        return { n, value: h[n], words: best.map(([v]) => wordLabel(data.vocab[v])) };
-      });
-    }
-    function paintHidden(v) {
-      const b = Z.cols.hidden.body;
-      b.replaceChildren();
-      if (!data.pairs.length) { noTexts(b); return; }
-      b.appendChild(el('p', 'p1-line', 'Das Netz mischt die ' + net.inDim + ' Zahlen (Wörter + Frage) zu ' + net.H + ' neuen – den Neuronen:'));
-      b.appendChild(renderSwatch(Array.from(v.h), 1));
-      b.appendChild(el('p', 'mini-legend', net.H + ' Neuronen · kräftig = stark an'));
-      b.appendChild(el('p', 'p1-sub', net.step ? 'Gerade am stärksten an' : 'Am stärksten an (noch untrainiert – Zufall)'));
-      const list = el('div', 'neurons');
-      topNeurons(v.h, 3).forEach(t => {
-        const row = el('div', 'neuron-row');
-        const tag = el('span', 'neuron-tag', 'Neuron ' + (t.n + 1));
-        tag.style.background = valueColor(t.value, 1);
-        row.append(tag, el('span', 'neuron-arrow', 'schiebt hoch →'), el('span', 'neuron-words', t.words.join(' · ')));
-        list.appendChild(row);
-      });
-      b.appendChild(list);
-    }
-
     function paintBodies() {
       const v = view();
       if (Z.isOpen('cand')) paintCand(v); else Z.cols.cand.body.replaceChildren();
       if (Z.isOpen('embed')) paintEmbed(v); else Z.cols.embed.body.replaceChildren();
-      if (Z.isOpen('hidden')) paintHidden(v); else Z.cols.hidden.body.replaceChildren();
+      if (Z.isOpen('frage')) paintFrage(v); else Z.cols.frage.body.replaceChildren();
     }
     function paintFocus() {
       let hint = '';
       if (!genSession.words.length) hint = '';
-      else if (!['cand', 'embed', 'hidden'].some(Z.isOpen)) hint = 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.';
+      else if (!['cand', 'embed', 'frage'].some(Z.isOpen)) hint = 'Öffne rechts eine Spalte – dann siehst du auch im Handy, was dahintersteckt.';
       Zerlegen.focusBanner(focusHost, focus, focus != null ? wordLabel(data.vocab[genSession.steps[focus].id]) : '', () => setFocus(null), hint);
     }
     function setFocus(i) {
@@ -588,7 +591,6 @@ Phases.register(4, {
       updateGenText();
       paintFocus();
       paintBodies();
-      paintNeurons();
       updateSay();
     }
 
@@ -754,7 +756,6 @@ Phases.register(4, {
         if (ev.target.closest('.cursor')) setFocus(null);
       });
 
-      neuronHost = el('div', 'phone-neurons');
 
       const sayBox = el('div', 'phone-say');
       sayEl = el('p', 'tiny-bubble');
@@ -791,7 +792,7 @@ Phases.register(4, {
       askBox.append(sugg, form);
       if (!data.pairs.length) { input.disabled = send.disabled = true; sugg.querySelectorAll('button').forEach(b => { b.disabled = true; }); }
 
-      phoneEl.append(neuronHost, sayBox, controls, askBox);
+      phoneEl.append(sayBox, controls, askBox);
       syncChat();
       return phoneEl;
     }
@@ -861,7 +862,7 @@ Phases.register(4, {
       row.append(
         Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'ausgabe'),
         Z.column('embed', 'embed', '🔢', 'Embedding', 'Was sieht das Netz?', 'embedding'),
-        Z.column('hidden', 'hidden', '💡', 'Hidden-Schicht', 'Was passiert innen?', 'hidden'));
+        Z.column('frage', 'ask', '⭐', 'Frage', 'Was macht die Frage?', 'frage4'));
       right.appendChild(row);
       right.appendChild(Z.column('net', 'net', '🕸️', 'Das Netz von innen', 'Alle Neuronen und Gewichte', 'netz', { wide: true }));
 
@@ -885,12 +886,12 @@ Phases.register(4, {
         onInput: v => {
           qStrength = Math.round(v * 10) / 10;
           if (genSession) lastForward = fwd();
-          if (Z.isOpen('cand')) paintCand(view());
+          paintBodies();
           if (live.net && Z.isOpen('net')) live.net();
           updateSay();
         }
       });
-      Z.cols.cand.tools.appendChild(qsl.el);
+      Z.cols.frage.tools.appendChild(qsl.el);
       Z.cols.embed.tools.appendChild(ctxPicker());
 
       grid.append(left, right);

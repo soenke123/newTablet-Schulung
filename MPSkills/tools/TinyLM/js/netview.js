@@ -153,6 +153,29 @@ const NetView = (() => {
         });
         if (any) { cx.globalAlpha = LV[l][0] + 0.06; cx.lineWidth = LV[l][1]; cx.strokeStyle = s ? neg : pos; cx.stroke(); }
       }
+      /* ---- Frage → Ausgabe direkt (net.WQ), gestrichelt: über diesen Weg wirkt die Frage vor allem
+         (14.11.2026: ohne ihn sahen die Frage-Neuronen unverbunden aus — ihre Kanten in die
+         Hidden-Schicht sind schwach und fallen unter die Schwelle). Eigene Schwelle, weil die Gewichte
+         kleiner sind; gezeichnet wird Gewicht × Wert des Frage-Neurons = was gerade wirklich ankommt. */
+      if (net.WQ && g.B > g.C) {
+        const off = g.C * g.d;
+        const sq = stats(g.d * outN.length, i => Math.abs(net.WQ[(i % g.d) * V + outN[Math.floor(i / g.d)].i] * inN[off + (i % g.d)].v));
+        cx.setLineDash([4, 4]);
+        for (let s = 0; s < 2; s++) for (let l = 0; l < 4; l++) {
+          cx.beginPath();
+          let any = false;
+          outN.forEach(o => {
+            for (let j = 0; j < g.d; j++) {
+              const a = inN[off + j], w = net.WQ[j * V + o.i] * a.v, m = Math.abs(w);
+              if (!m || m < sq.thr || (w < 0) !== (s === 1) || level(m / sq.max) !== l) continue;
+              cx.moveTo(a.x, a.y); cx.lineTo(o.x, o.y);
+              any = true;
+            }
+          });
+          if (any) { cx.globalAlpha = LV[l][0] + 0.1; cx.lineWidth = LV[l][1]; cx.strokeStyle = s ? neg : pos; cx.stroke(); }
+        }
+        cx.setLineDash([]);
+      }
       cx.globalAlpha = 1;
 
       /* ---- Kanten des gewählten Neurons kräftig darüber ---- */
@@ -168,6 +191,14 @@ const NetView = (() => {
           let mx = 0;
           for (let k = 0; k < g.H; k++) mx = Math.max(mx, Math.abs(net.W1[foc.i * g.H + k]));
           for (let k = 0; k < g.H; k++) strong(foc.x, foc.y, hidN[k].x, hidN[k].y, net.W1[foc.i * g.H + k], mx);
+          if (net.WQ && foc.c >= g.C) {
+            const j = foc.i - g.C * g.d;
+            let mq = 0;
+            outN.forEach(o => { mq = Math.max(mq, Math.abs(net.WQ[j * V + o.i])); });
+            cx.setLineDash([4, 4]);
+            outN.forEach(o => strong(foc.x, foc.y, o.x, o.y, net.WQ[j * V + o.i], mq));
+            cx.setLineDash([]);
+          }
         } else if (foc.layer === 'hid') {
           let mx = 0;
           for (let i = 0; i < g.inDim; i++) mx = Math.max(mx, Math.abs(net.W1[i * g.H + foc.i]));
@@ -347,6 +378,15 @@ const NetView = (() => {
         const mx = Math.abs(net.W1[nd.i * H + ks[0]]);
         card.appendChild(sec('Stärkste Kanten in die Hidden-Schicht (' + de(H) + ' insgesamt)',
           rows(ks.map(k => ({ label: 'Hidden-Neuron ' + (k + 1), v: net.W1[nd.i * H + k] })), mx)));
+        if (isQ && net.WQ) {
+          const j = nd.i - net.C * net.d;
+          const up = topK(V, v => net.WQ[j * V + v], 5), down = topK(V, v => -net.WQ[j * V + v], 3);
+          const mq = Math.max(Math.abs(net.WQ[j * V + up[0]]), Math.abs(net.WQ[j * V + down[0]])) || 1;
+          card.appendChild(sec('Direkt zu den Wörtern (gestrichelt) – schiebt nach oben',
+            rows(up.map(v => ({ label: '„' + wl(data.vocab[v]) + '“', v: net.WQ[j * V + v] })), mq)));
+          card.appendChild(sec('… und nach unten',
+            rows(down.map(v => ({ label: '„' + wl(data.vocab[v]) + '“', v: net.WQ[j * V + v] })), mq)));
+        }
       } else if (nd.layer === 'hid') {
         const k = nd.i;
         card.appendChild(el('p', 'eyebrow', 'Hidden-Neuron'));
@@ -402,7 +442,7 @@ const NetView = (() => {
       put('Ausgabe-Neuronen', de(V), 'eins pro Wort im Vokabular');
       put('Kanten Eingang→Hidden', de(w1), inDim + ' × ' + net.H);
       put('Kanten Hidden→Ausgabe', de(w2), net.H + ' × ' + de(V));
-      if (wq) put('Kanten Frage→Ausgabe', de(wq), net.d + ' × ' + de(V) + ' · nicht gezeichnet');
+      if (wq) put('Kanten Frage→Ausgabe', de(wq), net.d + ' × ' + de(V) + ' · gestrichelt');
       put('Embedding-Tabelle', de(emb), de(V) + ' Wörter × ' + net.d + ' Zahlen');
       put('Schwellen (Bias)', de(net.H + V), net.H + ' + ' + de(V));
       put('Zahlen insgesamt', de(total), 'alle werden beim Training verändert');
@@ -470,9 +510,9 @@ const NetView = (() => {
 
       const lg = el('div', 'srcchips');
       [['var(--src-a)', 'plus / schiebt an'], ['var(--src-b)', 'minus / bremst'], ['var(--cat-embed)', 'Eingang'],
-        ['var(--cat-hidden)', 'Hidden'], ['var(--cat-candidates)', 'Ausgabe']].forEach(([c, t]) => {
+        ['var(--cat-hidden)', 'Hidden'], ['var(--cat-candidates)', 'Ausgabe']].concat(N().WQ ? [['dash', '- - - Frage direkt → Wörter']] : []).forEach(([c, t]) => {
         const chip = el('span', 'srcchip');
-        const d = el('i', 'dot'); d.style.background = c;
+        const d = el('i', 'dot'); if (c === 'dash') d.hidden = true; else d.style.background = c;
         chip.append(d, el('span', 'srcchip-t', t));
         lg.appendChild(chip);
       });

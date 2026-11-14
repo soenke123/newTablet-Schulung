@@ -154,10 +154,10 @@ const HELP = {
     vis: { type: 'bars', items: [['Hund', 55], ['frisst', 30], ['der', 15]] }
   },
   frage4: {
-    title: 'Die Frage als Eingang', icon: '⭐', cat: 'embed',
-    text: ['Die Wörter deiner Frage werden zu Zahlen, und das Netz nimmt ihren Mittelpunkt – wie der Stern in der Wortwolke. Gezählt werden die Nomen der Frage. Ihre Zahlen bekommt das Netz bei JEDEM Wort zusätzlich zu den letzten Wörtern.',
-      'Geübt hat es das im Training: zu jedem Beispiel gab es ein paar Wörter aus demselben Text als Übungsfrage.'],
-    try: 'Stell dieselbe Frage mit einem anderen Tier oder Planeten. Ändern sich die Kandidaten?',
+    title: 'Frage', icon: '⭐', cat: 'ask',
+    text: ['Die Nomen deiner Frage werden zu Zahlen, und das Netz nimmt ihren Mittelpunkt – wie der Stern in der Wortwolke. Diese Zahlen bekommt es bei JEDEM Wort zusätzlich zu den letzten Wörtern.',
+      'Sie gehen zwei Wege: in die Hidden-Schicht und direkt zu den Wörtern. Im Training hat das Netz gelernt, vor allem den direkten Weg zu nutzen.'],
+    try: 'Tipp im Handy ein Wort an und schau unter ④: Welche Wörter hat die Frage hochgeschoben?',
     vis: { type: 'tokens', items: [['⭐ Hund · frisst', 'win'], ['der', 'win'], ['Hund', 'win'], ['frisst', 'win'], ['?', 'next']] }
   },
   embedding: {

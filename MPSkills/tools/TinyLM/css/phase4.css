@@ -90,3 +90,23 @@
 .ctxtok.p4-qtok { background: var(--cat-embed-tint, var(--soft)); border-style: dashed; white-space: nowrap; }
 .embrow.p4-qmean .embrow-w { font-weight: 700; color: var(--cat-embed, var(--ink)); }
 .p4-qpush { margin-top: 6px; }
+
+/* Spalte „⭐ Frage“ (14.11.2026): vier nummerierte Schritte, zwei Wege, mit/ohne Frage. */
+.p4-fstep { display: flex; align-items: center; gap: 6px; }
+.p4-fnum { width: 1.3rem; height: 1.3rem; border-radius: 50%; display: inline-grid; place-items: center; flex: none;
+  background: var(--cat-ask); color: #fff; font-size: 0.72rem; font-weight: 700; }
+.p4-qtoks { flex-wrap: wrap; }
+.p4-qtoks .gtok.p4-q-off { opacity: .55; text-decoration: line-through; }
+.p4-qtoks .gtok.p4-q-known { background: color-mix(in srgb, var(--cat-ask) 70%, #fff); color: var(--ink); font-weight: 700; }
+.p4-qtoks .gtok.p4-q-unknown { border-style: dashed; border-color: var(--bad); color: var(--bad); }
+.p4-ways { display: flex; flex-direction: column; gap: 6px; }
+.p4-way { display: flex; flex-direction: column; gap: 2px; background: var(--soft); border-radius: 10px; padding: 6px 10px; font-size: 0.84rem; }
+.p4-way b { font-family: var(--font-display); font-weight: 600; }
+.p4-cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.p4-cmpcol { background: var(--soft); border-radius: 10px; padding: 6px 10px; display: flex; flex-direction: column; min-width: 0; }
+.p4-cmpcol b { font-family: var(--font-display); overflow-wrap: anywhere; }
+.p4-cmph { font-size: 0.72rem; color: var(--muted); }
+.p4-delta { display: flex; flex-wrap: wrap; gap: 5px; }
+.p4-delta span { padding: 2px 9px; border-radius: 99px; font-size: 0.84rem; font-weight: 600; }
+.p4-up { background: color-mix(in srgb, var(--ok, #2e9d5b) 18%, var(--surface)); color: color-mix(in srgb, var(--ok, #2e9d5b) 85%, var(--ink)); }
+.p4-down { background: color-mix(in srgb, var(--bad) 14%, var(--surface)); color: var(--bad); }

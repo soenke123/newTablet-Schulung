@@ -10,16 +10,23 @@ function buildPhase4Data(texts, opts) {
 
   /* Schreibweise für die Anzeige: das Netz rechnet mit kleingeschriebenen Wörtern, im Text soll
      "Mars" aber groß stehen. Gezählt wird nur mitten im Satz (am Satzanfang ist alles groß). */
-  const caps = new Map();
+  const caps = new Map(), forms = new Map();
   docs.forEach(toks => toks.forEach(t => {
     if (t.punct || t.start) return;
     const c = caps.get(t.t) || [0, 0];
     if (t.raw[0] !== t.raw[0].toLowerCase()) c[0]++; else c[1]++;
     caps.set(t.t, c);
+    /* häufigste Großschreibung merken („KI“ statt „Ki“) */
+    const f = forms.get(t.t) || new Map();
+    f.set(t.raw, (f.get(t.raw) || 0) + 1);
+    forms.set(t.t, f);
   }));
   function display(w) {
     const c = caps.get(w);
-    return c && c[0] > c[1] ? w.charAt(0).toUpperCase() + w.slice(1) : w;
+    if (!c || c[0] <= c[1]) return w;
+    let best = null, bn = 0;
+    forms.get(w).forEach((n, raw) => { if (raw[0] !== raw[0].toLowerCase() && n > bn) { bn = n; best = raw; } });
+    return best || w.charAt(0).toUpperCase() + w.slice(1);
   }
 
   const sorted = [...freq.entries()].sort((a, b) => b[1] - a[1]).map(([w]) => w);
