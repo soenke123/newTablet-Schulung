@@ -762,7 +762,7 @@ Phases.register(3, {
       const row = el('div', 'p3-cols');
       const stack = el('div', 'p1-stack');
       stack.append(
-        Z.column('gram', 'context', '👀', 'N-Gramme', 'Wo steht das?', 'ngramme2'),
+        Z.column('gram', 'context', '👀', 'Kontextfenster', 'Wo steht das?', 'ngramme2'),
         Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'));
       row.append(
         Z.column('mean', 'ask', '⭐', 'Frage als Punkt', 'Welche Texte liegen nah?', 'bedeutung'),

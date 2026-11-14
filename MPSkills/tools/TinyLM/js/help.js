@@ -75,7 +75,7 @@ const HELP = {
     vis: { type: 'tokens', items: [['Was', 'dim'], ['frisst', 'win'], ['ein', 'dim'], ['Welpe', 'win'], ['?', 'dim']] }
   },
   ngramme2: {
-    title: 'N-Gramme', icon: '👀', cat: 'context',
+    title: 'Kontextfenster', icon: '👀', cat: 'context',
     text: ['Wie in Phase 1: Tiny schaut auf die Wörter davor (Regler N-Gramm) und sucht in den Quellen, was dahinter stand.',
       'Darunter: wie oft das in welchem Text steht. Tipp einen Text an – alle Fundstellen sind markiert.'],
     try: 'Stell den Regler auf 7-Gramm: Schreibt Tiny dann ganze Sätze aus einer Quelle ab?',
@@ -162,8 +162,8 @@ const HELP = {
     vis: { type: 'tokens', items: [['⭐ Hund · frisst', 'win'], ['der', 'win'], ['Hund', 'win'], ['frisst', 'win'], ['?', 'next']] }
   },
   embedding: {
-    title: 'Embedding', icon: '🔢', cat: 'embed',
-    text: ['Ein Netz kann keine Buchstaben lesen. Jedes Wort im Kontextfenster wird deshalb zu einer festen Reihe aus 32 Zahlen: rot = plus, blau = minus.',
+    title: 'Kontextfenster', icon: '🔢', cat: 'embed',
+    text: ['Ein Netz kann keine Buchstaben lesen. Jedes Wort im Kontextfenster wird deshalb zu einer festen Reihe aus 32 Zahlen: rot = plus, blau = minus. Diese Zahlen heißen Embedding.',
       'Wie viele Wörter das Netz sieht, stellst du oben in dieser Spalte ein (3 · 4 · 5). Jede Länge ist ein eigenes Netz, das eigenes Training braucht.'],
     try: 'Trainiere ein bisschen und schau, wie sich die Farben der Wörter verändern.',
     vis: { type: 'swatch', label: 'Hund', values: [0.9, -0.4, 0.2, -0.9, 0.6, 0.1, -0.2, 0.8, -0.6, 0.3, 0, -0.8] }

@@ -57,7 +57,7 @@ No phase uses `Panel.mount` any more (all three use the phone view); `panel.js` 
 
 | Step | Phase 1 | Phase 2 | Phase 3 | Color (`CAT` in `panel.js`, `--cat-*` in `tokens.css`) |
 |---|---|---|---|---|
-| ① what the AI looks at | Kontextfenster | Frage zerlegen | Embedding | teal family: `context` / `ask` (cyan) / `embed` (petrol) |
+| ① what the AI looks at | Kontextfenster (Reiter in P2/P3/P4 heißen seit 14.11.2026 alle so; P4 = id embed, zeigt die Embeddings) | Frage zerlegen | Embedding | teal family: `context` / `ask` (cyan) / `embed` (petrol) |
 | ② where the word comes from | Quellen | Quellen | Hidden-Schicht | amber family: `origin` / `hidden` (bronze — knowledge now lives in numbers) |
 | ③ | Kandidaten | Kandidaten | Kandidaten | `candidates` coral |
 | ④ | Zufall | Zufall | Zufall | `random` violet |

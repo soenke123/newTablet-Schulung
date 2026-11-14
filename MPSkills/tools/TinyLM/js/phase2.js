@@ -339,7 +339,7 @@ Phases.register(2, {
         const li = el('li');
         const row = el('button', 'crow' + (a.word === v.chosen ? ' chosen' : '') + (a.word === pick ? ' picked' : ''));
         row.type = 'button';
-        row.title = 'Wo steht das? (bei den N-Grammen)';
+        row.title = 'Wo steht das? (im Kontextfenster)';
         const bar = el('span', 'cbar');
         const fill = el('i');
         fill.style.width = Math.max(2, a.p * 100) + '%';
@@ -716,7 +716,7 @@ Phases.register(2, {
          (zwei Reiter untereinander: N-Gramme grün wie das Kontextfenster, Quellen gelb wie in Phase 1). */
       const stack = el('div', 'p1-stack');
       stack.append(
-        Z.column('gram', 'context', '👀', 'N-Gramme', 'Wo steht das?', 'ngramme2'),
+        Z.column('gram', 'context', '👀', 'Kontextfenster', 'Wo steht das?', 'ngramme2'),
         Z.column('src', 'origin', '📑', 'Quellen', 'Aus welchen Texten?', 'quellen'));
       row.append(
         Z.column('ask', 'ask', '🔎', 'Frage zerlegen', 'Was sucht Tiny?', 'nachschlagen'),

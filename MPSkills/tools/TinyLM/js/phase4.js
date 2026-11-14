@@ -185,7 +185,7 @@ Phases.register(4, {
       if (focus == null) screen.scrollTop = screen.scrollHeight;
     }
 
-    /* Kontextfenster im Handy umranden — nur mit offenem Embedding: die letzten C Token vor dem „?“
+    /* Kontextfenster im Handy umranden — nur mit offenem Kontextfenster (Spalte embed): die letzten C Token vor dem „?“
        (beim angetippten Wort: die C Token davor). */
     function markWindow() {
       if (!Z.isOpen('embed')) return;
@@ -243,7 +243,7 @@ Phases.register(4, {
 
     /* Tiny sagt in einem Satz, wie es um das Netz steht — nur Text, nichts wird neu gebaut.
        Wie in Phase 1: „ich sehe … am ehesten …“ ist schon Zerlegen und kommt erst mit offenen
-       Kandidaten oder offenem Embedding. */
+       Kandidaten oder offenem Kontextfenster. */
     let lastSay = '';
     function updateSay() {
       if (!sayEl) return;
@@ -862,7 +862,7 @@ Phases.register(4, {
       const row = el('div', 'p1-cols');
       row.append(
         Z.column('cand', 'candidates', '🎲', 'Kandidaten', 'Welches Wort kommt?', 'ausgabe'),
-        Z.column('embed', 'embed', '🔢', 'Embedding', 'Was sieht das Netz?', 'embedding'),
+        Z.column('embed', 'embed', '🔢', 'Kontextfenster', 'Was sieht das Netz?', 'embedding'),
         Z.column('frage', 'ask', '⭐', 'Frage', 'Was macht die Frage?', 'frage4'));
       right.appendChild(row);
       right.appendChild(Z.column('net', 'net', '🕸️', 'Das Netz von innen', 'Alle Neuronen und Gewichte', 'netz', { wide: true }));
