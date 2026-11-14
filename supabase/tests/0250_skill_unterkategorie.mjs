@@ -59,7 +59,7 @@ ok('1  derby heißt How to Fachbegriffe', derby.title === 'How to Fachbegriffe',
 ok('1  Kachel-Text: Kistenturm, Duell', /Kistenturm/.test(derby.blurb) && !/Kistensturm/.test(derby.blurb) && /Duell/.test(derby.blurb));
 
 const ki = (await db.query(`select id from skill_tools where subcategory = 'Künstliche Intelligenz' and subject = 'Informatik' order by id`)).rows.map(r => r.id);
-ok('2  KI-Skills', JSON.stringify(ki) === JSON.stringify(['neurolab', 'reinforce', 'tinylm', 'wildclusters']), JSON.stringify(ki));
+ok('2  KI-Skills', JSON.stringify(ki) === JSON.stringify(['nebeltal', 'neurolab', 'reinforce', 'tinylm', 'wildclusters']), JSON.stringify(ki));
 ok('2  SYNIR ohne Unterkategorie', (await one(`select subcategory s from skill_tools where id = 'synir'`)).s === null);
 
 const T = 'e0000000-0000-4000-8000-0000000000d1';

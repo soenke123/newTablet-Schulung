@@ -1,0 +1,30 @@
+/* ══════════════════════════════════════════════════════════════
+   MPSkills — Skill „Nebeltal"  ·  tool.css
+   ══════════════════════════════════════════════════════════════
+   Nur der Rahmen (wie Reinforce Yourself); alles Sichtbare steht in
+   index.html nebenan.
+   ══════════════════════════════════════════════════════════════ */
+
+.nt-host {
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg, 18px);
+  overflow: hidden;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.nt-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  height: 70vh;        /* bis zur ersten Messung (tool.js fit) */
+}
+
+@media (max-width: 640px) {
+  .nt-host {
+    margin: 0 -12px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+}
