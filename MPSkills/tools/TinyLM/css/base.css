@@ -131,6 +131,21 @@ button.chip:hover:not(:disabled) { border-color: var(--accent); background: var(
   .phases { order: 3; width: 100%; justify-content: space-between; }
   .phase-btn { flex: 1 1 0; justify-content: center; padding: 4px 6px; gap: 6px; min-height: 40px; }
 }
+/* Gleiches per JS (app.js fitTabs), sobald die Reiter nicht in die Leiste passen – auch über 1000 px,
+   denn die Unterzeile der Marke ist je Phase verschieden lang und die Lehrkraft hat Teilen-Knöpfe.
+   Stufe 1 .tabs-compact: ohne „Phase n“ und schmaler; Stufe 2 .tabs-wrap: Reiter in eigener Zeile. */
+.topbar.tabs-compact .phase-kicker { display: none; }
+.topbar.tabs-compact .phase-btn { padding: 4px 10px 4px 6px; gap: 6px; }
+.topbar.tabs-wrap { flex-wrap: wrap; gap: 8px; }
+.topbar.tabs-wrap .phases { order: 3; width: 100%; justify-content: space-between; }
+.topbar.tabs-wrap .phase-btn { flex: 1 1 0; justify-content: center; padding: 4px 6px; gap: 6px; min-height: 40px; }
+/* In eigener Zeile dürfen die Namen umbrechen, statt aus der Box zu ragen. */
+.topbar.tabs-wrap .phase-btn { min-width: 0; }
+.topbar.tabs-wrap .phase-name { white-space: normal; }
+@media (max-width: 1000px) {
+  .phase-btn { min-width: 0; }
+  .phase-name { white-space: normal; }
+}
 @media (max-width: 760px) {
   /* Auf dem Handy wäre eine klebende Kopfzeile ein Viertel des Bildschirms. */
   .shell { position: relative; }

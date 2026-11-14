@@ -148,6 +148,7 @@ const App = (() => {
     } else if (waitEl) waitEl.hidden = true;
   }
 
+  let remeasureHead = null;
   function renderShell() {
     syncTheme();
     const root = $('app-root');
@@ -231,10 +232,24 @@ const App = (() => {
     root.appendChild(main);
 
     /* Höhe der klebenden Kopfzeile als Variable — die Zentrum-Karte klebt direkt darunter. */
-    const measure = () => document.documentElement.style.setProperty('--head-h',
-      (getComputedStyle(head).position === 'sticky' ? head.offsetHeight : 0) + 'px');
+    /* Reiter müssen ganz in ihre Box passen: sonst erst kompakter, dann eigene Zeile. */
+    const fitTabs = () => {
+      topbar.classList.remove('tabs-compact', 'tabs-wrap');
+      const over = () => phasesNav.scrollWidth > phasesNav.clientWidth + 1;
+      if (!over()) return;
+      topbar.classList.add('tabs-compact');
+      if (over()) topbar.classList.add('tabs-wrap');
+    };
+    const measure = () => {
+      fitTabs();
+      document.documentElement.style.setProperty('--head-h',
+        (getComputedStyle(head).position === 'sticky' ? head.offsetHeight : 0) + 'px');
+    };
     measure();
-    if (window.ResizeObserver) new ResizeObserver(measure).observe(head);
+    remeasureHead = measure;
+    if (window.ResizeObserver) new ResizeObserver(measure).observe(topbar);
+    else window.addEventListener('resize', measure);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(measure);
 
     if (STUDENT) showWait(true);
     else goPhase(savedPhase(), true);
@@ -278,6 +293,7 @@ const App = (() => {
     }
     updateTabs();
     if (brandSub) brandSub.textContent = PHASE_META[n].sub;
+    if (remeasureHead) remeasureHead();
     if (!initial) window.scrollTo({ top: 0, behavior: 'auto' });
   }
 

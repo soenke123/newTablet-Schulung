@@ -72,6 +72,11 @@
 }
 
 /* Schmal: Reiter + Teilen-Knöpfe müssen nebeneinander in eine Zeile passen */
+@media (max-width: 480px) {
+  /* Lehrkraft am Handy: neben den Teilen-Knöpfen ist für die Nummer kein Platz mehr. */
+  .phases:has(.phase-share) .phase-btn .n { display: none; }
+  .phases:has(.phase-share) .phase-btn { padding: 4px 2px; }
+}
 @media (max-width: 560px) {
   .phases { gap: 2px; }
   .phase-btn { padding: 4px 4px; gap: 4px; min-width: 0; }
