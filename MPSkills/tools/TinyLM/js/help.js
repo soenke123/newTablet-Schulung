@@ -156,7 +156,8 @@ const HELP = {
   frage4: {
     title: 'Frage', icon: '⭐', cat: 'ask',
     text: ['Die Nomen deiner Frage werden zu Zahlen, und das Netz nimmt ihren Mittelpunkt – wie der Stern in der Wortwolke. Diese Zahlen bekommt es bei JEDEM Wort zusätzlich zu den letzten Wörtern.',
-      'Sie gehen zwei Wege: in die Hidden-Schicht und direkt zu den Wörtern. Im Training hat das Netz gelernt, vor allem den direkten Weg zu nutzen.'],
+      'Sie gehen zwei Wege: in die Hidden-Schicht und über eine Abkürzung an ihr vorbei direkt zu den Wörtern. Im Training hat das Netz gelernt, vor allem die Abkürzung zu nutzen.',
+      'So eine Abkürzung heißt Skip-Verbindung. Es gibt sie in fast allen großen Sprachmodellen: Dort wird in jeder Schicht die Eingabe am Block vorbei weitergereicht.'],
     try: 'Tipp im Handy ein Wort an und schau unter ④: Welche Wörter hat die Frage hochgeschoben?',
     vis: { type: 'tokens', items: [['⭐ Hund · frisst', 'win'], ['der', 'win'], ['Hund', 'win'], ['frisst', 'win'], ['?', 'next']] }
   },

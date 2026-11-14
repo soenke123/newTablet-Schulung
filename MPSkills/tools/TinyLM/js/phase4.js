@@ -471,7 +471,8 @@ Phases.register(4, {
     /* ⭐ Frage (Sönke 14.11.2026: „die Frage-Input-Neuronen sind irgendwie mit nichts verbunden – haben die
        wirklich einen Einfluss?“): wie aus der Frage der Frage-Eingang wird und was er gerade bewirkt.
        ① Nomen → je d Zahlen · ② Mittelpunkt = ⭐ Frage-Eingang · ③ zwei Wege (in die Hidden-Schicht: im
-       Training schwach geworden; direkt zu den Wörtern: hier wirkt sie) · ④ dieser Schritt mit und ohne
+       Training schwach geworden; Abkürzung = Skip-Verbindung zu den Wörtern: hier wirkt sie — wie die direkten
+       Verbindungen bei Bengio 2003 und die Residual-Verbindungen in jedem Transformer, Sönke 14.11.2026) · ④ dieser Schritt mit und ohne
        Frage gerechnet. */
     function swatchRow(label, vals, cls) {
       const row = el('div', 'embrow' + (cls ? ' ' + cls : ''));
@@ -511,7 +512,7 @@ Phases.register(4, {
         ? 'Gewichte im Schnitt ' + (ratio < 1 ? ratio.toFixed(1).replace('.', ',') + '× so stark wie bei den Wörtern' : 'so stark wie bei den Wörtern') + (ratio < 0.5 ? ' – das Netz hat gelernt, sie hier kaum zu nutzen.' : '.')
         : 'noch untrainiert');
       const pushed = questionPush(4);
-      way('→', 'direkt zu den Wörtern', pushed.length ? 'schiebt hoch: ' + pushed.join(' · ') : (qStrength ? 'noch untrainiert' : 'aus (Frage-Stärke 0×)'));
+      way('↷', 'Abkürzung zu den Wörtern (Skip-Verbindung)', pushed.length ? 'schiebt hoch: ' + pushed.join(' · ') : (qStrength ? 'noch untrainiert' : 'aus (Frage-Stärke 0×)'));
       b.appendChild(ways);
 
       sub('4', v.idx == null ? 'Was ändert die Frage beim nächsten Wort?' : 'Was änderte die Frage bei „' + wordLabel(data.vocab[v.chosen]) + '“?');
@@ -686,7 +687,7 @@ Phases.register(4, {
       const archRow = el('div', 'net-arch');
       const arch = el('span', 'arch-num', inDim + ' → ' + net.H + ' → ' + deInt(data.vocab.length));
       arch.title = inDim + ' Eingabe-Zahlen (' + net.C + ' Wörter + Frage, je ' + net.d + ') → ' + net.H + ' Hidden-Neuronen → ' + deInt(data.vocab.length) + ' Ausgabe-Neuronen (eins je Wort)';
-      archRow.append(arch, el('span', 'arch-lab', 'Eingabe → Hidden → Wörter · die Frage auch direkt → Wörter · ' + deInt(paramCount) + ' Zahlen'));
+      archRow.append(arch, el('span', 'arch-lab', 'Eingabe → Hidden → Wörter · Frage zusätzlich per Abkürzung → Wörter · ' + deInt(paramCount) + ' Zahlen'));
       build.appendChild(archRow);
       const resetBtn = el('button', 'btn sm', '↺ Netz zurücksetzen');
       resetBtn.type = 'button';

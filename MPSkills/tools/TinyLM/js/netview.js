@@ -372,7 +372,7 @@ const NetView = (() => {
         card.appendChild(el('p', 'eyebrow', 'Eingangs-Neuron'));
         card.appendChild(el('p', 'net-title', 'Zahl ' + (nd.j + 1) + ' von ' + net.d + ' für ' + (isQ ? qLab() : '„' + wl(word) + '“')));
         card.appendChild(el('p', 'small muted', isQ
-          ? 'Wert gerade jetzt: ' + sgn(nd.v) + ' (der Mittelpunkt der Fragewörter in der Embedding-Tabelle). Die Frage geht zusätzlich direkt zu den Ausgabe-Wörtern.'
+          ? 'Wert gerade jetzt: ' + sgn(nd.v) + ' (der Mittelpunkt der Fragewörter in der Embedding-Tabelle). Die Frage geht zusätzlich über eine Abkürzung (Skip-Verbindung) an der Hidden-Schicht vorbei zu den Ausgabe-Wörtern.'
           : 'Kontextwort ' + (nd.c + 1) + ' · Wert gerade jetzt: ' + sgn(nd.v) + ' (kommt direkt aus der Embedding-Tabelle)'));
         const ks = topK(H, k => Math.abs(net.W1[nd.i * H + k]), 6);
         const mx = Math.abs(net.W1[nd.i * H + ks[0]]);
@@ -382,7 +382,7 @@ const NetView = (() => {
           const j = nd.i - net.C * net.d;
           const up = topK(V, v => net.WQ[j * V + v], 5), down = topK(V, v => -net.WQ[j * V + v], 3);
           const mq = Math.max(Math.abs(net.WQ[j * V + up[0]]), Math.abs(net.WQ[j * V + down[0]])) || 1;
-          card.appendChild(sec('Direkt zu den Wörtern (gestrichelt) – schiebt nach oben',
+          card.appendChild(sec('Abkürzung zu den Wörtern (gestrichelt) – schiebt nach oben',
             rows(up.map(v => ({ label: '„' + wl(data.vocab[v]) + '“', v: net.WQ[j * V + v] })), mq)));
           card.appendChild(sec('… und nach unten',
             rows(down.map(v => ({ label: '„' + wl(data.vocab[v]) + '“', v: net.WQ[j * V + v] })), mq)));
@@ -442,7 +442,7 @@ const NetView = (() => {
       put('Ausgabe-Neuronen', de(V), 'eins pro Wort im Vokabular');
       put('Kanten Eingang→Hidden', de(w1), inDim + ' × ' + net.H);
       put('Kanten Hidden→Ausgabe', de(w2), net.H + ' × ' + de(V));
-      if (wq) put('Kanten Frage→Ausgabe', de(wq), net.d + ' × ' + de(V) + ' · gestrichelt');
+      if (wq) put('Abkürzung Frage→Ausgabe', de(wq), net.d + ' × ' + de(V) + ' · Skip-Verbindung, gestrichelt');
       put('Embedding-Tabelle', de(emb), de(V) + ' Wörter × ' + net.d + ' Zahlen');
       put('Schwellen (Bias)', de(net.H + V), net.H + ' + ' + de(V));
       put('Zahlen insgesamt', de(total), 'alle werden beim Training verändert');
@@ -510,7 +510,7 @@ const NetView = (() => {
 
       const lg = el('div', 'srcchips');
       [['var(--src-a)', 'plus / schiebt an'], ['var(--src-b)', 'minus / bremst'], ['var(--cat-embed)', 'Eingang'],
-        ['var(--cat-hidden)', 'Hidden'], ['var(--cat-candidates)', 'Ausgabe']].concat(N().WQ ? [['dash', '- - - Frage direkt → Wörter']] : []).forEach(([c, t]) => {
+        ['var(--cat-hidden)', 'Hidden'], ['var(--cat-candidates)', 'Ausgabe']].concat(N().WQ ? [['dash', '- - - Abkürzung (Skip-Verbindung): Frage → Wörter']] : []).forEach(([c, t]) => {
         const chip = el('span', 'srcchip');
         const d = el('i', 'dot'); if (c === 'dash') d.hidden = true; else d.style.background = c;
         chip.append(d, el('span', 'srcchip-t', t));
