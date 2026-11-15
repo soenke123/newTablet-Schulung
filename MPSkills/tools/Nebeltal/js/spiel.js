@@ -32,24 +32,27 @@
 
   const LEVELS = [
     { id: 1, name: 'Im Nebel', short: 'Frei suchen – nur mit dem Höhenmesser',
-      mode: 'walk', arrow: false, time: 60, fog: 9,
-      intro: 'Irgendwo in diesem Tal liegt der <b>tiefste Punkt</b>. Du siehst nur den Boden direkt um dich herum. ' +
-             'Links zeigt dir der Höhenmesser, wie hoch du gerade stehst.<br><br>' +
-             'Finde in <b>60 Sekunden</b> die tiefste Stelle und tippe auf <b>„Hier bleibe ich“</b>.',
+      mode: 'walk', arrow: false, time: 75, fog: 9, plain: true, physics: false,
+      intro: 'Irgendwo in diesem großen Tal liegt der <b>tiefste Punkt</b>. Du siehst nur den Boden direkt um dich herum – ' +
+             'keine Farben, keine Höhenlinien. Nur der Höhenmesser links verrät, wie hoch du gerade stehst.<br><br>' +
+             'Vorsicht: Es gibt viele Mulden, aber nur eine ist die tiefste. ' +
+             'Finde sie in <b>75 Sekunden</b> und tippe auf <b>„Hier bleibe ich“</b>.',
       outro: 'So geht es einer KI beim Lernen: Sie kennt nur den <b>Fehler an der Stelle, an der sie gerade steht</b>. ' +
              'Die ganze Landschaft hat nie jemand gesehen. Frei herumsuchen dauert ewig – die KI braucht einen besseren Hinweis …' },
     { id: 2, name: 'Der Bergab-Pfeil', short: 'Ein Pfeil zeigt, wo es bergab geht',
-      mode: 'walk', arrow: true, time: 45, fog: 9,
-      intro: 'Jetzt hast du ein Werkzeug: Ein <b>Pfeil</b> unter deinen Füßen zeigt, wo es am steilsten bergab geht. ' +
-             'Je länger der Pfeil, desto steiler der Hang.<br><br>' +
-             'Genau diesen Pfeil hat auch eine KI beim Lernen. Diesmal hast du <b>45 Sekunden</b>.',
+      mode: 'walk', arrow: true, time: 60, fog: 9, physics: true,
+      intro: 'Jetzt hast du Werkzeuge: Ein <b>Pfeil</b> unter deinen Füßen zeigt, wo es am steilsten bergab geht – ' +
+             'je länger, desto steiler. Dazu verraten <b>Farben und Höhenlinien</b> die Höhe, und bergab läufst du schneller.<br><br>' +
+             'Genau diesen Pfeil hat auch eine KI beim Lernen. Aber Achtung: Er kennt nur den Weg zur <b>nächsten</b> Mulde. Du hast <b>60 Sekunden</b>.',
       outro: 'Der Pfeil ist das Einzige, was eine KI beim Lernen ausrechnen kann: <b>In welche Richtung wird mein Fehler kleiner?</b> ' +
              'Man nennt ihn <b>Gradient</b> (genauer: er zeigt gegen den Gradienten). Ein neuronales Netz rechnet ihn für jedes seiner Gewichte aus – das heißt Backpropagation.' },
     { id: 3, name: 'Sprünge', short: 'Lernrate = wie weit du springst',
-      mode: 'jump', jumps: 12, fog: 13, lr: { min: 0.5, max: 60, def: 5, d: 1 },
+      mode: 'jump', jumps: 20, fog: 13, lr: { min: 0.5, max: 60, def: 5, d: 1 },
       intro: 'Eine KI läuft nicht herum. Sie <b>springt</b> – immer in Pfeilrichtung.<br><br>' +
              'Wie weit, bestimmst du mit der <b>Lernrate</b>:<br><span class="formula">Sprungweite = Lernrate × Steilheit</span>' +
-             'Der Ring zeigt, wo du landen würdest. Du hast <b>12 Sprünge</b>. Achtung, hier gibt es viele kleine Mulden.',
+             'An flachen Stellen werden die Sprünge also von selbst kürzer, an steilen länger – genau wie beim echten Training. ' +
+             'Der Ring zeigt, wo du landen würdest.<br><br>' +
+             'Du hast <b>20 Sprünge</b> – jeder Sprung kostet eine KI Rechenzeit, unendlich viele gibt es nicht. Achtung, hier gibt es viele kleine Mulden.',
       outro: 'Die Sprungweite heißt <b>Lernrate</b>. Zu klein: Du kommst kaum voran oder bleibst in der ersten Mulde hängen. ' +
              'Zu groß: Du springst über das Tal hinweg oder fliegst raus. Beim echten Training startet man oft mit großen Sprüngen und wird dann kleiner.' },
     { id: 4, name: 'Das Tal ist ein Modell', short: 'Hinter der Landschaft steckt eine KI',
@@ -467,14 +470,14 @@
     if (ml > 0.01) {
       const ux = mx / ml, uz = mz / ml;
       const s = g[0] * ux + g[1] * uz;            // > 0 = bergauf
-      const f = clamp(1 - 0.45 * s, 0.35, 1.5);
+      const f = S.lvl.physics ? clamp(1 - 0.45 * s, 0.35, 1.5) : 1;
       const sp = 8.5 * Math.min(1, ml) * f;
       tvx = ux * sp; tvz = uz * sp;
       p.yaw += angDiff(Math.atan2(ux, uz), p.yaw) * (1 - Math.exp(-10 * dt));
     }
     const k = 1 - Math.exp(-7 * dt);
     p.vx = lerp(p.vx, tvx, k); p.vz = lerp(p.vz, tvz, k);
-    if (gl > 0.75) {                              // rutschen
+    if (S.lvl.physics && gl > 0.75) {             // rutschen (nicht in Level 1)
       const a = (gl - 0.75) * 5;
       p.vx -= g[0] / gl * a * dt * 6; p.vz -= g[1] / gl * a * dt * 6;
     }
@@ -586,7 +589,7 @@
     let fogR = S.fogR;
     if (S.reveal) {
       const t = ease(clamp(S.reveal.t / 2.4, 0, 1));
-      fogR = lerp(S.reveal.fog0, 320, t * t);
+      fogR = lerp(S.reveal.fog0, 320 * w.W / 50, t * t);
       const c0 = S.reveal.cam0 || cam;
       const over = overview();
       cam = { eye: c0.eye.map((v, i) => lerp(v, over.eye[i], t)), at: c0.at.map((v, i) => lerp(v, over.at[i], t)) };
@@ -625,6 +628,7 @@
         for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2; ring.push([q.x + Math.cos(a) * 0.95, q.z + Math.sin(a) * 0.95, 0.13]); }
         objs.push({ type: 'strip', pts: ring, closed: true, color: [1, 1, 1], glow: 0.75, lift: 0.12 });
         const d = Math.hypot(q.x - p.x, q.z - p.z), peak = 0.8 + Math.min(9, d * 0.22);
+        showDist(d);
         const y0 = ground, y1 = w.h(q.x, q.z);
         for (let i = 1; i < 8; i++) {
           const t = i / 8, x = lerp(p.x, q.x, t), z = lerp(p.z, q.z, t);
@@ -632,6 +636,7 @@
         }
       } else {
         $('#lrWarn').hidden = false;
+        showDist(Infinity);
       }
       if (!q.out) $('#lrWarn').hidden = true;
     } else $('#lrWarn').hidden = true;
@@ -643,19 +648,35 @@
     }
 
     const dpr = low ? 1 : Math.min(window.devicePixelRatio || 1, 1.6);
-    const sc = { cam, fogR, dpr, objects: objs, playerColor: acc,
+    // Level 1: eine Farbe, keine Höhenlinien – erst beim Auflösen kommen sie
+    const plain = L && L.plain ? (S.reveal ? 1 - ease(clamp((S.reveal.t - 0.6) / 1.6, 0, 1)) : 1) : 0;
+    const sc = { cam, fogR, dpr, objects: objs, playerColor: acc, plain,
       player: { x: p.x, y, z: p.z, ground, yaw: p.yaw, tilt: p.tilt, squash: p.squash, hidden: false } };
     G.frame(sc);
     labels(sc);
+  }
+
+  // Sprungweite = Lernrate × Steilheit, live unter der Lernrate
+  let distTxt = '';
+  function showDist(d) {
+    const el = $('#lrDist'); if (!el) return;
+    let t = '';
+    if (S.world.kind !== 'model') {
+      const g = S.world.grad(S.p.x, S.p.z), st = Math.hypot(g[0], g[1]);
+      t = isFinite(d)
+        ? fmt(S.lr, S.lvl.lr.d) + ' × ' + fmt(st, 2) + ' = <b>' + fmt(d, 1) + ' m</b>'
+        : fmt(S.lr, S.lvl.lr.d) + ' × ' + fmt(st, 2) + ' = <b>zu weit</b>';
+    }
+    if (t !== distTxt) { distTxt = t; el.innerHTML = t; el.hidden = !t; }
   }
 
   function overview() {
     const w = S.world;
     // Breiter Bildschirm: Ergebniskarte steht rechts, Welt rückt nach links
     // (Kamera schaut nach +z, rechts auf dem Bild = −x).
-    const wide = window.innerWidth >= 900;
-    const at = [wide ? -15 : 0, (w.min.h + w.h(0, 0)) / 2, wide ? 2 : 14];
-    return { eye: [at[0], at[1] + 92, at[2] - 86], at };
+    const wide = window.innerWidth >= 900, k = w.W / 50;
+    const at = [(wide ? -15 : 0) * k, (w.min.h + w.h(0, 0)) / 2, (wide ? 2 : 14) * k];
+    return { eye: [at[0], at[1] + 92 * k, at[2] - 86 * k], at };
   }
 
   // Beschriftungen nach dem Auflösen
