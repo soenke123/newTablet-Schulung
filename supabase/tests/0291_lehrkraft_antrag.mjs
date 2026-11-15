@@ -10,6 +10,7 @@
      6. my_email_get/set: Lehrkraft ja, Schüler not_teacher.
      7. admin_teacher_requests: nur Admins, Schuladmin nur eigene Schule.
     7b. 0292: Admins tragen ihre Adresse ein, Panel zeigt sie, Reset bleibt zu.
+    7c. 0293: Antrags-Mail an bestätigte Adressen der Volladmins (+ admin_email).
      8. teacher_request_store (Signup-Weg) für ein frisches Konto.
      9. Passwort vergessen: nur bestätigte Adresse, nicht für Admins,
         per Accountname oder E-Mail, falsche Schule nichts; Token einmal.
@@ -163,6 +164,20 @@ ok('7b Panel zeigt die Adresse des Admins', r.rows.some(x => x.user_id === SA &&
 await db.exec(`update notify_email set verified_at = now() where user_id = '${SA}'`);
 r = await call(`pw_reset_request('aaa', 'schuladmin', '10.0.0.99')`);
 ok('7b Passwort-Reset für Admin bleibt gesperrt', r.ok && r.targets.length === 0, JSON.stringify(r));
+
+/* 7c · 0293: Empfänger = bestätigte Adressen der Volladmins (+ admin_email) */
+await db.exec(`update mail_settings set admin_email = ''`);
+ok('7c ohne Volladmin-Adresse: niemand', await call(`mps_admin_mail_to()`) === '');
+await as(VA);
+await call(`my_email_set('Chef@Web.de')`);
+ok('7c unbestätigt zählt nicht', await call(`mps_admin_mail_to()`) === '');
+await db.exec(`update notify_email set verified_at = now() where user_id = '${VA}'`);
+ok('7c bestätigt: Volladmin bekommt sie', await call(`mps_admin_mail_to()`) === 'chef@web.de');
+ok('7c Schuladmin nicht dabei', !(await call(`mps_admin_mail_to()`)).includes('schuladmin'));
+await db.exec(`update mail_settings set admin_email = 'chef@web.de, extra@x.de'`);
+ok('7c Zusatzadresse, doppelte nur einmal', await call(`mps_admin_mail_to()`) === 'chef@web.de, extra@x.de');
+await db.exec(`delete from notify_email where user_id = '${VA}'`);
+await db.exec(`update mail_settings set admin_email = 'chef@example.org'`);
 
 /* 8 */
 await db.query(`insert into auth.users (id) values ($1)`, [id(9)]);

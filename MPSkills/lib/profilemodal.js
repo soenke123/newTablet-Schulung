@@ -185,7 +185,8 @@
             <label class="field">E-Mail-Adresse
               <input type="email" id="mailInput" maxlength="120" autocomplete="email" inputmode="email" spellcheck="false" />
               <span class="rule">${isAdm
-                ? 'Als Admin kannst du dein Passwort damit nicht zurücksetzen (Schutz des Admin-Kontos) — die Adresse steht trotzdem im Admin-Panel.'
+                ? (s.is_superadmin ? 'Hierhin kommt die Mail, wenn eine Lehrkraft einen Account beantragt (erst nach dem Bestätigen). ' : '')
+                + 'Dein Passwort setzt du als Admin damit nicht zurück (Schutz des Admin-Kontos).'
                 : 'Damit setzt du dein Passwort zurück („Passwort vergessen?“ beim Anmelden). Nach dem Speichern kommt ein Link zum Bestätigen.'}</span>
             </label>
             <div class="actions">

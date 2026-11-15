@@ -87,13 +87,13 @@ Wer die Mails bekommt, entscheidet nur `pa_room_teachers(room_id)` (heute: der B
 Dieselbe Mail-Kette verschickt jetzt drei weitere Dinge:
 
 1. **Bestätigung der E-Mail-Adresse** — wie bisher, aber für jede Adresse (nicht mehr nur `@mps-ki.de`). Neue Lehrkräfte geben die Adresse beim Registrieren an, alte tragen sie im Profil nach.
-2. **Mail an den Volladmin bei jedem neuen Lehrkraft-Antrag** — ohne Name, Schule oder Nachricht, nur „Eine Lehrkraft möchte einen Account“ und der Link ins Admin-Panel. Adresse eintragen (mehrere mit Komma):
+2. **Mail an die Volladmins bei jedem neuen Lehrkraft-Antrag** — ohne Name, Schule oder Nachricht, nur „Eine Lehrkraft möchte einen Account“ und der Link ins Admin-Panel. Seit Migration 0293 geht sie an die **bestätigte** E-Mail-Adresse jedes Volladmins (MPSkills → Profil → Karte „Passwort“ → eintragen, Link in der Mail anklicken). Zusätzliche Adressen optional (mehrere mit Komma):
 
    ```sql
-   update mail_settings set admin_email = 'du@beispiel.de';
+   update mail_settings set admin_email = 'weitere@beispiel.de';
    ```
 
-   Ohne Adresse geht keine Mail; Anträge älter als 7 Tage werden später nicht mehr nachgeschickt.
+   Ohne bestätigte Adresse geht keine Mail; Anträge älter als 7 Tage werden später nicht mehr nachgeschickt.
 3. **Passwort zurücksetzen** — `/api/notify_email?f=reset` schickt den Link direkt (nicht über den Minutentakt), Seite `MPSkills/passwort.html#<token>`.
 
 **Wichtig:** Mails an Adressen außerhalb von IServ (z. B. Gmail) verlassen den Schulserver. Ob der Funktionsaccount nach außen senden darf, beim IServ-Admin klären — sonst kommen sie nicht an. `SMTP_FROM` am besten auf `"MPSkills" <antraege@mps-ki.de>` setzen.

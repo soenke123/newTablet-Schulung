@@ -133,6 +133,7 @@ const ERLAUBT = new Set([
   'board_claim_reward', 'board_get', 'wc_get', 'account_lifecycle', 'join_open_cluster',
   'teacher_request_store', 'pw_reset_request',                  // 0291: schließen Admins AUS, geben nichts frei
   'my_email_get', 'my_email_set', 'admin_teacher_requests',     // 0292: nur die eigene Adresse / Liste hinter is_any_admin()
+  'mps_admin_mail_to',                                          // 0293: Empfänger der Antrags-Mail, nur service_role/cron
 ]);
 const fns = (await db.query(`select p.proname, pg_get_functiondef(p.oid) src
                                from pg_proc p join pg_namespace n on n.oid = p.pronamespace
