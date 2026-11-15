@@ -26,7 +26,8 @@
 
 import { createClient } from '@supabase/supabase-js';
 import { readJsonBody, validatePassword } from './_utils.js';
-import { makeTransport, mailFrom, siteUrl, smtpReady } from './_mail.js';
+import { makeTransport, mailFrom, siteUrl, smtpReady, sendPretty,
+         mailHtml, mailP, mailButton, mailEsc } from './_mail.js';
 
 const TOKEN_RE = /^[0-9a-f]{48}$/;
 
@@ -43,15 +44,23 @@ function page(res, status, title, body) {
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(title)}</title>
 <style>
-  body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:#f4f1ea;color:#1f2a2a}
-  main{max-width:460px;margin:12vh auto 0;padding:28px 24px;background:#fff;border-radius:14px;box-shadow:0 6px 24px rgba(0,0,0,.08)}
-  h1{font-size:20px;margin:0 0 10px;color:#1d5955}
+  body{margin:0;font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif;background:#f2f5f3;color:#1d2724}
+  .brand{display:flex;align-items:center;gap:10px;max-width:460px;margin:10vh auto 14px;padding:0 6px;font-weight:700;font-size:21px;letter-spacing:-.01em}
+  .brand img{width:40px;height:40px}
+  .brand span{color:#00b37e}
+  main{max-width:460px;margin:0 auto 40px;padding:26px 26px 22px;background:#fff;border:1px solid #e3e9e6;border-top:4px solid #00b37e;border-radius:16px;box-shadow:0 6px 24px rgba(0,0,0,.06)}
+  h1{font-size:21px;margin:0 0 10px}
   p{margin:0 0 14px}
-  button{font:inherit;font-weight:600;padding:10px 18px;border:0;border-radius:9px;background:#1d5955;color:#fff;cursor:pointer}
-  button.warn{background:#a0442f}
-  a{color:#1d5955}
+  button{font:inherit;font-weight:600;padding:12px 22px;border:0;border-radius:10px;background:#00b37e;color:#fff;cursor:pointer}
+  button.warn{background:#b8452f}
+  a{color:#00714f}
+  @media (prefers-color-scheme: dark){
+    body{background:#141917;color:#e7eeeb} main{background:#1d2422;border-color:#2c3633;border-top-color:#00b37e} a{color:#4fd6a6}
+  }
+  @media (max-width:500px){ .brand,main{margin-left:16px;margin-right:16px} .brand{margin-top:6vh} }
 </style></head>
-<body><main><h1>${esc(title)}</h1>${body}</main></body></html>`);
+<body><div class="brand"><img src="/MPSkills/icons/icon-192.png" alt=""><b>MP<span>Skills</span></b></div>
+<main><h1>${esc(title)}</h1>${body}</main></body></html>`);
 }
 
 // Formular-POST: Vercel parst x-www-form-urlencoded meist schon selbst.
@@ -83,6 +92,7 @@ function json(res, status, body) {
 
 function resetMail(site, t) {
   const name = t.display_name || t.account_name;
+  const href = `${site}/MPSkills/passwort.html#${t.token}`;
   return {
     subject: 'MPSkills: Passwort zurücksetzen',
     text:
@@ -91,12 +101,22 @@ function resetMail(site, t) {
 für dein MPSkills-Konto „${t.account_name}“ wurde ein neues Passwort angefordert.
 
 Neues Passwort festlegen (der Link gilt 30 Minuten und nur einmal):
-${site}/MPSkills/passwort.html#${t.token}
+${href}
 
 Warst du das nicht? Dann ignoriere diese Mail — dein Passwort bleibt, wie es ist.
 
 --
-MPSkills · automatisch verschickt`
+MPSkills · automatisch verschickt`,
+    html: mailHtml({
+      preheader: 'Der Link gilt 30 Minuten und nur einmal.',
+      title: 'Neues Passwort festlegen',
+      body:
+        mailP(`Hallo ${mailEsc(name)},`) +
+        mailP(`für dein MPSkills-Konto <b>„${mailEsc(t.account_name)}“</b> wurde ein neues Passwort angefordert.`) +
+        mailButton(href, 'Neues Passwort festlegen') +
+        mailP('<span style="color:#5b6863;font-size:13px">Der Knopf gilt 30 Minuten und nur einmal.</span>'),
+      footer: 'Warst du das nicht? Dann ignoriere diese Mail — dein Passwort bleibt, wie es ist.'
+    })
   };
 }
 
@@ -128,7 +148,7 @@ async function handleReset(req, res, f) {
       const transport = makeTransport();
       for (const t of targets) {
         try {
-          await transport.sendMail({ from: mailFrom(), to: t.email, ...resetMail(site, t) });
+          await sendPretty(transport, { from: mailFrom(), to: t.email, ...resetMail(site, t) });
         } catch (e) {
           console.warn('[notify_email] Reset-Mail fehlgeschlagen:', e.message);
         }

@@ -84,7 +84,7 @@ Wer die Mails bekommt, entscheidet nur `pa_room_teachers(room_id)` (heute: der B
 
 ## Seit Migration 0291: Lehrkraft-Anträge und Passwort vergessen
 
-Dieselbe Mail-Kette verschickt jetzt drei weitere Dinge:
+Dieselbe Mail-Kette verschickt jetzt weitere Dinge (alle Mails seit 15.11.2026 als gestaltetes HTML mit Logo und Knöpfen, dazu eine Text-Fassung):
 
 1. **Bestätigung der E-Mail-Adresse** — wie bisher, aber für jede Adresse (nicht mehr nur `@mps-ki.de`). Neue Lehrkräfte geben die Adresse beim Registrieren an, alte tragen sie im Profil nach.
 2. **Mail an die Volladmins bei jedem neuen Lehrkraft-Antrag** — ohne Name, Schule oder Nachricht, nur „Eine Lehrkraft möchte einen Account“ und der Link ins Admin-Panel. Seit Migration 0293 geht sie an die **bestätigte** E-Mail-Adresse jedes Volladmins (MPSkills → Profil → Karte „Passwort“ → eintragen, Link in der Mail anklicken). Zusätzliche Adressen optional (mehrere mit Komma):
@@ -94,7 +94,8 @@ Dieselbe Mail-Kette verschickt jetzt drei weitere Dinge:
    ```
 
    Ohne bestätigte Adresse geht keine Mail; Anträge älter als 7 Tage werden später nicht mehr nachgeschickt.
-3. **Passwort zurücksetzen** — `/api/notify_email?f=reset` schickt den Link direkt (nicht über den Minutentakt), Seite `MPSkills/passwort.html#<token>`.
+3. **Willkommens-Mail** (Migration 0294) — sobald eine Lehrkraft im Admin-Panel freigegeben wird: „Herzlich willkommen“ mit Knopf „Räume entdecken“ an die Adresse aus dem Antrag (auch wenn sie noch nicht bestätigt ist; dann steht der Bestätigungslink mit drin). Bei Ablehnung geht keine Mail.
+4. **Passwort zurücksetzen** — `/api/notify_email?f=reset` schickt den Link direkt (nicht über den Minutentakt), Seite `MPSkills/passwort.html#<token>`.
 
 **Wichtig:** Mails an Adressen außerhalb von IServ (z. B. Gmail) verlassen den Schulserver. Ob der Funktionsaccount nach außen senden darf, beim IServ-Admin klären — sonst kommen sie nicht an. `SMTP_FROM` am besten auf `"MPSkills" <antraege@mps-ki.de>` setzen.
 

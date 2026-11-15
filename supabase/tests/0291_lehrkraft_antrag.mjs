@@ -11,6 +11,7 @@
      7. admin_teacher_requests: nur Admins, Schuladmin nur eigene Schule.
     7b. 0292: Admins tragen ihre Adresse ein, Panel zeigt sie, Reset bleibt zu.
     7c. 0293: Antrags-Mail an bestätigte Adressen der Volladmins (+ admin_email).
+    7d. 0294: Willkommens-Mail bei Freischaltung (auch unbestätigt, nicht bei Ablehnung).
      8. teacher_request_store (Signup-Weg) für ein frisches Konto.
      9. Passwort vergessen: nur bestätigte Adresse, nicht für Admins,
         per Accountname oder E-Mail, falsche Schule nichts; Token einmal.
@@ -178,6 +179,37 @@ await db.exec(`update mail_settings set admin_email = 'chef@web.de, extra@x.de'`
 ok('7c Zusatzadresse, doppelte nur einmal', await call(`mps_admin_mail_to()`) === 'chef@web.de, extra@x.de');
 await db.exec(`delete from notify_email where user_id = '${VA}'`);
 await db.exec(`update mail_settings set admin_email = 'chef@example.org'`);
+
+/* 7d · 0294: Willkommens-Mail bei Freischaltung */
+{
+  const wm = async () => (await db.query(`select user_id, sent_at, note from teacher_welcome_mail order by id`)).rows;
+  // ST hat einen offenen Antrag mit Adresse (unbestätigt)
+  await db.exec(`update profiles set teacher_status = 'approved' where id = '${ST}'`);
+  ok('7d Freigabe legt eine Willkommens-Mail an', (await wm()).filter(x => x.user_id === ST).length === 1);
+  await db.exec(`update profiles set teacher_status = 'approved', display_name = 'Frau M' where id = '${ST}'`);
+  ok('7d nochmal approved → keine zweite', (await wm()).filter(x => x.user_id === ST).length === 1);
+  ok('7d mail_due sieht sie', await call(`mail_due()`) === true);
+  let c = await call(`mps_mail_claim()`);
+  const w = (c.welcome || []).find(x => x.email === 'frau.muster@gmail.com');
+  ok('7d claim: Adresse, Name, Account, Schule, Bestätigungstoken (unbestätigt)',
+     w && w.name === 'Frau M' && w.account === 'mia' && w.school === 'Schule A' && w.verified === false && /^[0-9a-f]{48}$/.test(w.verify_token || ''),
+     JSON.stringify(w));
+  await call(`mps_mail_done($1)`, [{ admin: null, welcome: [{ id: w.id, ok: true }] }]);
+  ok('7d gesendet', (await wm()).find(x => x.user_id === ST).note === 'gesendet');
+  // Ohne Adresse: kein_empfaenger; Ablehnung: nichts
+  await db.exec(`update profiles set teacher_status = 'approved' where id = '${OLD}'`).catch(() => {});
+  await db.exec(`insert into profiles (id, school_id, account_name, display_name, status, teacher_status) values ('${OLD}', '${S1}', 'alt', 'alt', 'mpskills', 'pending') on conflict (id) do nothing`);
+  await db.exec(`update profiles set teacher_status = 'approved' where id = '${OLD}'`);
+  c = await call(`mps_mail_claim()`);
+  ok('7d ohne Adresse: kein_empfaenger', (await wm()).find(x => x.user_id === OLD)?.note === 'kein_empfaenger' && !(c.welcome || []).length);
+  const vorher = (await wm()).length;
+  await db.exec(`update profiles set teacher_status = 'rejected' where id = '${NEU}'`);
+  ok('7d Ablehnung: keine Mail', (await wm()).length === vorher);
+  // zurück auf den alten Stand für die Abschnitte danach
+  await db.exec(`update profiles set teacher_status = 'pending' where id = '${ST}'`);
+  await db.exec(`update profiles set teacher_status = 'none' where id = '${NEU}'`);
+  await db.exec(`update teacher_request_mail set sent_at = now() where sent_at is null`);
+}
 
 /* 8 */
 await db.query(`insert into auth.users (id) values ($1)`, [id(9)]);
