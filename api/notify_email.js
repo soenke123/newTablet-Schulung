@@ -54,8 +54,13 @@ function page(res, status, title, body) {
   button{font:inherit;font-weight:600;padding:12px 22px;border:0;border-radius:10px;background:#00b37e;color:#fff;cursor:pointer}
   button.warn{background:#b8452f}
   a{color:#00714f}
+  ul.checks{list-style:none;margin:0 0 16px;padding:0}
+  ul.checks li{position:relative;padding:0 0 0 26px;margin:0 0 9px}
+  ul.checks li::before{content:"✓";position:absolute;left:3px;top:0;color:#00b37e;font-weight:700}
+  .calm{background:#e8f8f1;border-radius:10px;padding:11px 14px;font-size:15px}
+  button.wide{width:100%;margin-top:4px}
   @media (prefers-color-scheme: dark){
-    body{background:#141917;color:#e7eeeb} main{background:#1d2422;border-color:#2c3633;border-top-color:#00b37e} a{color:#4fd6a6}
+    body{background:#141917;color:#e7eeeb} .calm{background:#173a2d} main{background:#1d2422;border-color:#2c3633;border-top-color:#00b37e} a{color:#4fd6a6}
   }
   @media (max-width:500px){ .brand,main{margin-left:16px;margin-right:16px} .brand{margin-top:6vh} }
 </style></head>
@@ -211,10 +216,15 @@ export default async function handler(req, res) {
 
   if (req.method === 'GET') {
     return action === 'verify'
-      ? page(res, 200, 'Adresse bestätigen',
-          `<p>Ist das deine Adresse für MPSkills? Darüber kannst du dein Passwort zurücksetzen und auf Wunsch Mails über Anträge in der Projektarbeit bekommen.</p>
+      ? page(res, 200, 'Deine E-Mail-Adresse bestätigen?',
+          `<p>Wir brauchen deine Adresse nur für zwei Dinge:</p>
+           <ul class="checks">
+             <li><b>Passwort zurücksetzen</b>, falls du es einmal vergisst</li>
+             <li><b>Mails aus einzelnen Räumen</b>, z.&nbsp;B. neue Anträge in der Projektarbeit – nur wenn du sie dort einschaltest</li>
+           </ul>
+           <p class="calm">Es gibt <b>keinen Newsletter</b> und keine Werbung oder sonstigen Mails.</p>
            <form method="post"><input type="hidden" name="verify" value="${esc(token)}">
-           <button type="submit">Ja, bestätigen</button></form>`)
+           <button type="submit" class="wide">Bestätigen</button></form>`)
       : page(res, 200, 'Keine Mails mehr?',
           `<p>Die Adresse wird gelöscht. Danach kommen <b>in keinem Raum</b> mehr Mails über Anträge.
            Wieder einschalten geht jederzeit im Raum unter 🔔.</p>
