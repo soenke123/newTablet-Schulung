@@ -1,10 +1,12 @@
 # Tiny LM – Arbeitsblätter (14.11.2026)
 
+**Alle Versionen auf einen Blick:** `kurz/` = aktuelle Fassung (je Phase eine Doppelseite) · `lang/` = erster Entwurf (4–7 Seiten je Blatt). Der ganze Ordner steht in `.vercelignore`, ist also nur im Repository, nicht auf der Webseite.
+
 Vier Arbeitsblätter (eins je Phase, **höchstens eine Doppelseite**: Seite 1 Kennenlernen, Seite 2 Verändern + Erschaffen/Reflektieren) nach Use – Modify – Create und ein Begleitzettel für Lehrkräfte (≈ 2½ Seiten), als Word-Dateien. Nicht auf Vercel (`.vercelignore`).
 
-**Lange Fassung** (erster Entwurf, 4–7 Seiten je Blatt, als Ideensammlung aufgehoben): `lang/`, gebaut von `build-lang.cjs`. Sönke: „viel zu viel … maximal eine Doppelseite pro Phase“.
+**Lange Fassung** (erster Entwurf, als Ideensammlung aufgehoben): `lang/`, gebaut von `build-lang.cjs`. Sönke: „viel zu viel … maximal eine Doppelseite pro Phase“.
 
-| Datei (kurz) | Inhalt |
+| Datei (in `kurz/`, gleiche Namen in `lang/`) | Inhalt |
 |---|---|
 | `TinyLM_AB1_Frei_schreiben.docx` | Spalten kennenlernen, Wort zerlegen · N-Gramm 1/3/7, Temperatur · **Erschaffen: Tiny über die Quellen manipulieren** |
 | `TinyLM_AB2_Frage_und_Antwort.docx` | Frage zerlegen, Quellenfarben · umformulieren, Eiffelturm, Pluto · Reflexion Retrieval |
@@ -19,7 +21,7 @@ node screenshots.cjs        # App-Screenshots nach bilder/ (file://, ?demo=1; Ph
 node schaubilder.cjs        # Schaubilder aus diagramme.html → bilder/d-*.png
 python3 nummern.py          # nummerierte Kreise auf bilder/p*-gesamt.png → *-gesamt-nr.png (Koordinaten von Hand)
 python3 kombi.py            # zwei Handys nebeneinander → bilder/k-*.png
-node build.cjs              # kurze Word-Dateien (Texte stehen hier)
+node build.cjs              # kurze Word-Dateien nach kurz/ (Texte stehen hier)
 node build-lang.cjs         # lange Fassung nach lang/
 ```
 

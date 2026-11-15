@@ -1,4 +1,4 @@
-/* KURZE FASSUNG (höchstens eine Doppelseite je Phase). Die lange Fassung baut build-lang.cjs nach lang/.
+/* KURZE FASSUNG (höchstens eine Doppelseite je Phase, nach kurz/). Die lange Fassung baut build-lang.cjs nach lang/.
    Baut die Arbeitsblätter zu Tiny LM (eins je Phase) und den Begleitzettel für Lehrkräfte als Word-Dateien.
    Aufruf: node build.cjs   (Bilder vorher: node screenshots.cjs · node schaubilder.cjs · python3 nummern.py)
    Aufbau jedes Arbeitsblatts nach Use – Modify – Create:
@@ -210,7 +210,7 @@ function doc(footerText, children) {
 }
 async function save(name, d) {
   const buf = await Packer.toBuffer(d);
-  fs.writeFileSync(path.join(DIR, name), buf);
+  fs.writeFileSync(path.join(DIR, 'kurz', name), buf);
   console.log('geschrieben', name, Math.round(buf.length / 1024) + ' KB');
 }
 
