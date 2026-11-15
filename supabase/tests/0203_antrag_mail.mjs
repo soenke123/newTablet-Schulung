@@ -98,9 +98,10 @@ await call(`pa_group_rename('t1', 'Füchse')`);   // seit 0204 benennt die Grupp
 
 /* ══ 1. Adresse ══════════════════════════════════════════════════ */
 let r = await nget();
-ok('1  am Anfang: keine Adresse, kein Haken', r.ok && r.email === null && !r.enabled && !r.verified && r.domain === 'mps-ki.de');
-ok('1  fremde Domain: email_domain', (await nset('lehrer@gmail.com')).error === 'email_domain');
-ok('1  Domain nur als Endung zählt: email_domain', (await nset('x@mps-ki.de.evil.com')).error === 'email_domain');
+ok('1  am Anfang: keine Adresse, kein Haken', r.ok && r.email === null && !r.enabled && !r.verified && r.domain === null);   // seit 0291 jede Domain
+// Seit 0291 ist jede Domain erlaubt (Lehrkräfte anderer Schulen).
+ok('1  fremde Domain ist gültig (0291)', (await call(`notify_email_valid('lehrer@gmail.com')`)) === true);
+ok('1  ohne Endung ungültig', (await call(`notify_email_valid('x@mps-ki')`)) === false);
 ok('1  kaputte Adresse: email_invalid', (await nset('a b@mps-ki.de')).error === 'email_invalid');
 r = await nset('  Max.Muster@MPS-KI.de ', true);
 ok('1  gültig: klein geschrieben, unbestätigt, Haken gesetzt',

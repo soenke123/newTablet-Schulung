@@ -19,7 +19,8 @@
          Räume 2/10/30/90/180 Tage ab Erstellung, beim Anlegen gewählt, Vorgabe je Skill → 0284/0285
          (vorher 30 Tage → 0085, Projektarbeit 1 Jahr → 0202); Verlängern höchstens 1 Jahr ab heute
          Fotos → 0206, 30 Tage nach Projektende gelöscht → 0227 (pa_photo_cleanup),
-         Einwilligungsstufe → 0201, Antrags-Mails → 0203
+         Einwilligungsstufe → 0201, Antrags-Mails → 0203,
+         E-Mail jede Domain + Antrags-Nachricht + Passwort-Reset (pw_resets 2 Tage, IP 1 Tag) → 0291
          Jeder Lauf protokolliert (nur Zahlen) → cleanup_runs (0227), Admin-Panel „Löschläufe“
          Vercel in Frankfurt → vercel.json, Supabase in Frankfurt → supabase/SETUP.md
 
@@ -117,7 +118,7 @@
   <section class="card kurz" aria-labelledby="kurzTitel">
     <h2 id="kurzTitel">Das Wichtigste in Kürze</h2>
     <ul>
-      <li>Für ein Konto brauchst du <strong>keine E-Mail-Adresse</strong>, nur einen Benutzernamen und ein Passwort.</li>
+      <li>Für ein Schülerkonto brauchst du <strong>keine E-Mail-Adresse</strong>, nur einen Benutzernamen und ein Passwort. Lehrkräfte geben eine E-Mail-Adresse an, damit sie ihr Passwort selbst zurücksetzen können.</li>
       <li>In MPSkills machst du <strong>ohne Konto</strong> mit. Gespeichert wird der Name, den du eingibst, und was du im Raum schreibst.</li>
       <li><strong>Keine Werbung, kein Tracking, keine Analyse-Werkzeuge.</strong> Schriften und Programmteile kommen von unserem eigenen Server, nicht von Google oder anderen.</li>
       <li>Die Daten liegen auf Servern in <strong>Frankfurt am Main</strong>.</li>
@@ -219,7 +220,9 @@
   <h3>Für Lehrkräfte</h3>
   <ul>
     <li><strong>Stapel in How to Fachbegriffe:</strong> Titel, Fach, Thema, Klassenstufe und die Karten (Begriff, Definition, auf Wunsch ein Bild). Sie liegen in deinem Konto, bis du sie löschst, und werden anders als der Lernstand nicht nach einem Jahr zurückgesetzt, weil sie Unterrichtsmaterial sind. Bitte lege dort keine Fotos von Personen an.</li>
-    <li>Wer möchte, hinterlegt eine <strong>dienstliche E-Mail-Adresse</strong> (nur <code>@mps-ki.de</code>, per Link bestätigt), um über neue Anträge informiert zu werden. Abbestellen geht über den Link in jeder Mail.</li>
+    <li><strong>E-Mail-Adresse</strong> (seit 15.11.2026 Pflicht für neue Lehrkraft-Konten, ältere Konten freiwillig; jede Adresse, per Link bestätigt): zum Zurücksetzen des Passworts und, wer möchte, für Mails über neue Anträge in der Projektarbeit. Ändern oder löschen im Profil, Abbestellen über den Link in jeder Mail.</li>
+    <li><strong>Nachricht zum Antrag:</strong> was du beim Beantragen eines Lehrkraft-Kontos an den Admin schreibst (z. B. wer du bist, an welcher Schule du unterrichtest, woher du MPSkills kennst). Nur Admins sehen sie im Admin-Panel. Der Admin bekommt bei einem neuen Antrag eine Mail <strong>ohne</strong> Namen oder Nachricht, nur mit dem Hinweis, dass ein Antrag wartet.</li>
+    <li><strong>Passwort zurücksetzen:</strong> Der Link aus der Mail wird nur als Prüfwert gespeichert, gilt 30 Minuten und nur einmal (Einträge nach 2 Tagen gelöscht). Zum Schutz vor Missbrauch wird die IP-Adresse der Anfrage 1 Tag gespeichert.</li>
   </ul>
 
   <h3>Technisch nötige Daten</h3>
@@ -272,7 +275,7 @@
         </tr>
         <tr>
           <td>IServ (Schulserver)</td>
-          <td>Versand der Benachrichtigungs-Mails an Lehrkräfte über den Mailserver der Schule.</td>
+          <td>Versand der Mails an Lehrkräfte (Adresse bestätigen, Passwort zurücksetzen, Benachrichtigungen) über den Mailserver der Schule. Liegt die Adresse nicht bei IServ, geht die Mail von dort an den Mail-Anbieter der Lehrkraft.</td>
         </tr>
       </tbody>
     </table>
@@ -291,7 +294,7 @@
     <table>
       <thead><tr><th>Daten</th><th>Gelöscht</th></tr></thead>
       <tbody>
-        <tr><td>Spielstände, Münzen, Wesen, Beiträge, Lernstand in How to Fachbegriffe, Feedback, Mail-Adresse für Benachrichtigungen</td><td>wenn das Konto <strong>1 Jahr</strong> nicht online war. Konto, Kurs und Highscores bleiben, die Handouts sind weiter erreichbar.</td></tr>
+        <tr><td>Spielstände, Münzen, Wesen, Beiträge, Lernstand in How to Fachbegriffe, Feedback, E-Mail-Adresse, Nachricht zum Lehrkraft-Antrag</td><td>wenn das Konto <strong>1 Jahr</strong> nicht online war. Konto, Kurs und Highscores bleiben, die Handouts sind weiter erreichbar.</td></tr>
         <tr><td>Das ganze Konto mit Highscores</td><td>wenn das Konto <strong>4 Jahre</strong> nicht online war</td></tr>
         <tr><td>MPSkills-Räume mit allen Namen und Beiträgen (bei der Projektarbeit mit Dokumentation, Anträgen und Backups)</td><td>je nach Raum <strong>2, 10, 30, 90 oder 180 Tage</strong> nach dem Anlegen – die Lehrkraft wählt das beim Anlegen. Sie kann den Raum früher löschen oder verlängern, aber nie weiter als ein Jahr im Voraus.</td></tr>
         <tr><td>Fotos in der Dokumentation der Projektarbeit</td><td><strong>30 Tage</strong> nach Projektende (Fertig-Datum im Projektziel, sonst letzte Nutzung des Raums). Die Lehrkraft kann Fotos jederzeit früher löschen.</td></tr>

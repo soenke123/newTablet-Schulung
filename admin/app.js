@@ -3619,10 +3619,36 @@ async function loadTeachers() {
       + 'teacher_status,teacher_requested_at,teacher_decided_at'
       + '&teacher_status=neq.none'
       + '&order=teacher_requested_at.asc.nullslast,account_name.asc');
+    // Nachricht + E-Mail zum Antrag (Migration 0291). Eigene Tabelle,
+    // nur über diese RPC lesbar; fehlt sie, bleibt die Spalte leer.
+    teacherReq = {};
+    try {
+      const r = await api('POST', 'rpc/admin_teacher_requests', {});
+      for (const x of (r && r.rows) || []) teacherReq[x.user_id] = x;
+    } catch (e) {
+      console.warn('[admin] admin_teacher_requests:', e.message);
+    }
     renderTeachers();
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="6" class="empty">Fehler: ${escapeHtml(err.message)}</td></tr>`;
   }
+}
+
+let teacherReq = {};   // user_id → { note, email, verified } (0291)
+
+// Nachricht und Adresse unter dem Namen. Ohne Nachricht: alter Antrag
+// von vor dem 15.11.2026 — damals gab es kein Feld dafür.
+function teacherReqHtml(u) {
+  const r = teacherReq[u.id];
+  const mail = r && r.email
+    ? `<span class="t-mail">✉ ${escapeHtml(r.email)} ${r.verified
+        ? '<span class="badge active">bestätigt</span>'
+        : '<span class="badge pending">nicht bestätigt</span>'}</span>`
+    : '<span class="t-mail t-none">keine E-Mail</span>';
+  const note = r && r.note
+    ? `<div class="t-note">„${escapeHtml(r.note)}“</div>`
+    : (u.teacher_status === 'pending' ? '<div class="t-note t-none">(keine Nachricht — Antrag von vor dem 15.11.2026)</div>' : '');
+  return `<div class="t-req">${note}${mail}</div>`;
 }
 
 function teacherStatusBadge(st) {
@@ -3657,7 +3683,7 @@ function renderTeachers() {
 
   thead.innerHTML = '<tr>'
     + '<th>Account</th>'
-    + '<th>Anzeigename</th>'
+    + '<th>Anzeigename · Nachricht</th>'
     + (showSchool ? '<th>Schule</th>' : '')
     + '<th>Beantragt</th>'
     + '<th>MPSkills</th>'
@@ -3671,7 +3697,9 @@ function renderTeachers() {
   if (q) rows = rows.filter(r =>
     (r.account_name || '').toLowerCase().includes(q) ||
     (r.display_name || '').toLowerCase().includes(q) ||
-    (schoolById[r.school_id] || '').toLowerCase().includes(q));
+    (schoolById[r.school_id] || '').toLowerCase().includes(q) ||
+    (teacherReq[r.id]?.note || '').toLowerCase().includes(q) ||
+    (teacherReq[r.id]?.email || '').toLowerCase().includes(q));
 
   if (rows.length === 0) {
     const msg = filter === 'pending'
@@ -3705,7 +3733,7 @@ function renderTeachers() {
 
     return `<tr>
       <td>${escapeHtml(u.account_name)}</td>
-      <td>${escapeHtml(u.display_name || '—')}</td>
+      <td>${escapeHtml(u.display_name || '—')}${teacherReqHtml(u)}</td>
       ${showSchool ? `<td>${escapeHtml(schoolById[u.school_id] || '—')}</td>` : ''}
       <td>${teacherWaited(u.teacher_requested_at)}</td>
       <td>${teacherStatusBadge(st)}</td>

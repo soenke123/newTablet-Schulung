@@ -756,26 +756,149 @@ a.btn {
 }
 .access-panel[hidden] { display: none; }
 
-.access-cols {
+/* Seit 15.11.2026 (Migration 0291): oben zwei Spalten Schüler |
+   Lehrkraft, darunter Anmelden für beide. Die Trennlinie zwischen
+   den Spalten nur, wenn sie wirklich nebeneinander stehen. */
+.access-two {
   display: grid;
   gap: 26px 34px;
   grid-template-columns: repeat(auto-fit, minmax(268px, 1fr));
 }
-/* Auf zwei Spalten eine Trennlinie zwischen den Wegen — sie sind
-   Alternativen, keine Fortsetzung. Auf einer Spalte wäre sie eine
-   Linie quer durch nichts. */
 @media (min-width: 700px) {
-  .access-slot + .access-slot {
+  .access-two > .access-col + .access-col {
     border-left: 1px solid var(--line-soft);
     padding-left: 34px;
   }
 }
+.access-slot--login {
+  margin-top: 26px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line-soft);
+}
+.login-row {
+  display: grid;
+  gap: 0 14px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  align-items: end;
+}
+.login-row .btn { margin-bottom: 14px; }
+.forgot-line { margin: 2px 0 0; font-size: .86rem; }
 
-/* Ist die Spalte gerade im Modal, verschwindet ihr Fach mitsamt der
-   Trennlinie — sonst stünde im Kasten dahinter eine leere Rasterzelle
-   mit einem Strich daneben. */
+.access-can {
+  margin: 0 0 14px;
+  padding: 0;
+  list-style: none;
+  font-size: .9rem;
+  color: var(--ink-soft);
+}
+.access-can li {
+  position: relative;
+  padding-left: 22px;
+  margin-bottom: 5px;
+}
+.access-can li::before {
+  content: "✓";
+  position: absolute;
+  left: 2px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Umschalter Neues Konto | Schülerkonto hochstufen */
+.seg {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+}
+.seg-btn {
+  flex: 1;
+  font: inherit;
+  font-size: .84rem;
+  font-weight: 600;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.seg-btn[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+fieldset.tm { border: 0; margin: 0; padding: 0; min-width: 0; }
+fieldset.tm[hidden] { display: none; }
+
+label.field textarea {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  font: inherit;
+  font-size: .95rem;
+  font-weight: 400;
+  color: var(--ink);
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  resize: vertical;
+  min-height: 92px;
+}
+label.field textarea:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+  background: var(--surface);
+}
+
+/* Schülerkonto → Lehrkraft: zugeklappt im Zustandskasten */
+.upgrade {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.upgrade summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--accent-ink, var(--ink));
+}
+.upgrade form { margin-top: 12px; max-width: 520px; }
+.state .upgrade .hint { border-top: 0; padding-top: 0; margin-top: 10px; }
+
+/* Hinweis „E-Mail nachtragen" für Lehrkräfte (0291) */
+.mailhint {
+  margin: 0 0 22px;
+  padding: 14px 18px;
+  border: 1px solid var(--wait-edge, var(--line));
+  border-left: 4px solid var(--wait, var(--accent));
+  border-radius: 14px;
+  background: var(--wait-dim, var(--surface));
+  font-size: .9rem;
+}
+.mailhint p { margin: 0 0 10px; }
+.mailhint p:last-child { margin-bottom: 0; }
+.mailhint-form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.mailhint-form input {
+  flex: 1 1 220px;
+  min-width: 0;
+  font: inherit;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+}
+#mailHint:empty { display: none; }
+
+.pwpage { padding-top: 32px; }
+
+/* Ist die Spalte gerade im Modal, verschwindet ihr Fach. */
 .access-slot.is-away { display: none; }
-.access-slot.is-away + .access-slot { border-left: 0; padding-left: 0; }
+.access-slot.is-away + .access-slot--login { border-top: 0; margin-top: 0; padding-top: 0; }
 
 .access-col h3 { margin: 0 0 6px; font-size: 1rem; letter-spacing: -0.01em; }
 
@@ -4114,3 +4237,4 @@ body.inselseite--voll { overflow: hidden; }
   border: 1px solid var(--line); border-radius: var(--r-pill); background: var(--paper); color: var(--ink-faint); }
 .ub-menu .lwm-leaf:hover { color: var(--ink); }
 .ub-menu .lwm-leaf[aria-pressed="true"] { background: #2f7d4f; border-color: #2f7d4f; color: #fff; }
+.state + #mailHint .mailhint { margin-top: 16px; }

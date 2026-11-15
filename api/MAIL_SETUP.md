@@ -79,3 +79,28 @@ Fehler beim Versand (z. B. falsches SMTP-Passwort) stehen in den Vercel-Logs unt
 ## Später: mehrere Lehrkräfte pro Raum
 
 Wer die Mails bekommt, entscheidet nur `pa_room_teachers(room_id)` (heute: der Besitzer). Kommen weitere Lehrkräfte in einen Raum, wird nur diese Funktion erweitert. Adresse und Haken je Raum sind schon pro Lehrkraft gespeichert.
+
+---
+
+## Seit Migration 0291: Lehrkraft-Anträge und Passwort vergessen
+
+Dieselbe Mail-Kette verschickt jetzt drei weitere Dinge:
+
+1. **Bestätigung der E-Mail-Adresse** — wie bisher, aber für jede Adresse (nicht mehr nur `@mps-ki.de`). Neue Lehrkräfte geben die Adresse beim Registrieren an, alte tragen sie im Profil nach.
+2. **Mail an den Volladmin bei jedem neuen Lehrkraft-Antrag** — ohne Name, Schule oder Nachricht, nur „Eine Lehrkraft möchte einen Account“ und der Link ins Admin-Panel. Adresse eintragen (mehrere mit Komma):
+
+   ```sql
+   update mail_settings set admin_email = 'du@beispiel.de';
+   ```
+
+   Ohne Adresse geht keine Mail; Anträge älter als 7 Tage werden später nicht mehr nachgeschickt.
+3. **Passwort zurücksetzen** — `/api/notify_email?f=reset` schickt den Link direkt (nicht über den Minutentakt), Seite `MPSkills/passwort.html#<token>`.
+
+**Wichtig:** Mails an Adressen außerhalb von IServ (z. B. Gmail) verlassen den Schulserver. Ob der Funktionsaccount nach außen senden darf, beim IServ-Admin klären — sonst kommen sie nicht an. `SMTP_FROM` am besten auf `"MPSkills" <antraege@mps-ki.de>` setzen.
+
+Prüfen:
+
+```sql
+select id, created_at, sent_at, attempts, note from teacher_request_mail order by id desc limit 10;
+select created_at, expires_at, used_at from pw_resets order by id desc limit 10;
+```

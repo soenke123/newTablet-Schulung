@@ -1392,9 +1392,9 @@ body.ro .postit,body.ro .pchip{cursor:default}
       <button class="m-x" data-close="mNotify" aria-label="Schließen"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="m-b">
-      <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:var(--ink-2)">Stellt eine Gruppe einen Antrag, bekommst du eine Mail — gesammelt nach 5 Minuten, mit Gruppe und Datum, ohne Schülernamen. Die Adresse gilt für alle deine Räume, den Haken setzt du je Raum.</p>
-      <label for="ntMail" style="display:block;font-size:12.5px;font-weight:700;margin-bottom:5px">Deine IServ-Adresse</label>
-      <input type="email" id="ntMail" maxlength="120" placeholder="vorname.nachname@mps-ki.de" autocomplete="email" inputmode="email">
+      <p style="margin:0 0 12px;font-size:13px;line-height:1.55;color:var(--ink-2)">Stellt eine Gruppe einen Antrag, bekommst du eine Mail — gesammelt nach 5 Minuten, mit Gruppe und Datum, ohne Schülernamen. Die Adresse gilt für alle deine Räume (und fürs Zurücksetzen deines Passworts), den Haken setzt du je Raum.</p>
+      <label for="ntMail" style="display:block;font-size:12.5px;font-weight:700;margin-bottom:5px">Deine E-Mail-Adresse</label>
+      <input type="email" id="ntMail" maxlength="120" placeholder="vorname.nachname@schule.de" autocomplete="email" inputmode="email">
       <div class="nt-state" id="ntState"></div>
       <label class="nt-on"><input type="checkbox" id="ntOn"><span>Für <b>diesen Raum</b> Mails schicken</span></label>
     </div>
@@ -1486,7 +1486,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
 <div class="pickbar" id="pickBar" hidden><span id="pickTxt"></span><button class="btn onDark sm" id="pickCancel">Abbrechen</button></div>
 <div class="toast" id="toast"><span id="toastT"></span></div>
 
-<script src="bridge.js?v=20261113b"></script>
-<script src="app.js?v=20261113b"></script>
+<script src="bridge.js?v=20261115a"></script>
+<script src="app.js?v=20261115a"></script>
 </body>
 </html>

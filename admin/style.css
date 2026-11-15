@@ -1164,3 +1164,9 @@ tr.row-muted td { opacity: 0.55; }
 .cleanup-warn { margin: 0 0 8px; color: #ffb347; }
 .cleanup-warn code, #cleanupStatus .panel-sub code { color: var(--a-text); }
 #cleanupStatus .panel-sub { margin: 8px 0; }
+
+/* Lehrkraft-Antrag: Nachricht + E-Mail unter dem Namen (Migration 0291) */
+.t-req { margin-top: 6px; max-width: 46ch; font-size: .85em; line-height: 1.4; }
+.t-note { white-space: pre-wrap; margin-bottom: 4px; }
+.t-mail { color: var(--a-muted); }
+.t-none { color: var(--a-muted); font-style: italic; }

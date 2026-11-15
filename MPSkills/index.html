@@ -8,7 +8,7 @@
 <meta name="description" content="Skills und Spiele für den Unterricht. Lehrkräfte schalten frei, Klassen machen mit." />
 <meta name="robots" content="noindex" />
 <link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261114n" />
+<link rel="stylesheet" href="style.css?v=20261115a" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -167,104 +167,168 @@
        der Rolle, und die kennt erst das Skript. -->
   <div id="stateHost"></div>
 
-  <!-- ─── 2. Zugang für Lehrkräfte ─────────────────────────────
-       Zugeklappt, weil es die Frage der Minderheit ist. Aufgeklappt
-       stehen beide Wege NEBENEINANDER statt hintereinander: „habe
-       ich schon ein Konto?" ist die einzige Frage, die hier
-       entschieden werden muss, und zwei Spalten stellen sie, ohne
-       sie zu stellen.
+  <!-- ─── 2. Konto: Schüler | Lehrkraft (seit 15.11.2026) ───────
+       Bis dahin stellte JEDE Registrierung hier einen Antrag auf die
+       Lehrkraft-Rolle — und Schüler legten sich so versehentlich
+       „Lehrer-Konten" an, bei denen niemand wusste, wer dahintersteckt.
+       Jetzt zwei Spalten nebeneinander, jede mit dem, was man damit
+       kann. Ein Lehrkraft-Antrag braucht eine Nachricht an den Admin
+       und eine E-Mail (Migration 0291); ein Schülerkonto stellt nie
+       einen Antrag. Anmelden steht darunter und gilt für beide.
 
-       Die Felder stehen hier IN der Seite, direkt unter der
-       Erklärung, warum man sie ausfüllt. Dieselben Felder gibt es
-       zusätzlich als Modal für die Knöpfe oben rechts — dort weiß
-       man schon, was man will, und braucht die Erklärung nicht. -->
+       Die Fächer (.access-slot) gibt es weiter, weil die Knöpfe oben
+       rechts dieselben Formulare als Modal zeigen: verschoben, nicht
+       verdoppelt (homeAuth() in app.js). -->
   <section class="access" id="accessSection" hidden>
-    <h2 class="access-h">Möchtest du selbst Skills bereitstellen?</h2>
+    <h2 class="access-h">Ein Konto für MPSkills</h2>
     <p class="access-lead">
-      Als Lehrkraft öffnest du einen Skill für eine Klasse und bekommst einen Code samt
-      QR-Code. Deine Schülerinnen und Schüler machen ohne Konto mit — sie scannen und sind drin.
-      Du brauchst dafür ein Konto und einmalig die Freischaltung durch einen Admin.
+      Zum Mitmachen brauchst du <strong>kein</strong> Konto — der Code von der Tafel reicht.
+      Mit Konto findest du deine Räume auf jedem Gerät wieder. Als Lehrkraft eröffnest du
+      selbst Räume für deine Klassen.
     </p>
     <button type="button" class="btn btn--primary" id="accessToggle"
-            aria-expanded="false" aria-controls="accessPanel">Zugang bekommen</button>
+            aria-expanded="false" aria-controls="accessPanel">Konto anlegen oder anmelden</button>
 
-    <!-- Die beiden Spalten stehen in „Fächern" (.access-slot), weil es
-         sie an ZWEI Orten gibt: hier in der Seite, und einzeln in
-         einem Modal, wenn jemand oben rechts auf Einloggen oder
-         Registrieren drückt.
-
-         Verschoben statt verdoppelt: zwei Formulare mit denselben
-         Feldern wären zwei Stellen, an denen dieselbe Regel gepflegt
-         werden muss — und eine davon wird beim nächsten Mal
-         vergessen. Ein DOM-Knoten behält beim Umhängen seine
-         Listener, also gibt es die Formulare genau einmal.
-         Zurückgehängt wird beim Schließen (siehe homeAuth() in
-         app.js), damit hier nie ein Loch bleibt. -->
     <div class="access-panel" id="accessPanel" hidden>
-      <div class="access-cols">
 
-        <!-- a) schon ein Konto -->
-        <div class="access-slot" id="slotLogin"><section class="access-col" id="colLogin">
-          <h3>Du hast schon ein Konto</h3>
-          <p class="access-note">
-            Hier oder in der Tablet-Schulung — es ist dasselbe Konto. Melde dich an, dann
-            geht der Antrag auf den Zugang direkt mit raus.
-          </p>
+      <div class="access-slot" id="slotRegister"><div class="access-two" id="colRegister">
 
-          <div class="msg msg--err" id="loginError" hidden></div>
+        <!-- a) Schüleraccount -->
+        <section class="access-col access-col--student" id="colStudent">
+          <h3>Schüleraccount erstellen</h3>
+          <ul class="access-can">
+            <li>Räumen beitreten</li>
+            <li>Deine Räume auf jedem Gerät wiederfinden</li>
+            <li>Profilbilder sammeln</li>
+          </ul>
 
-          <form id="loginForm" novalidate>
+          <div class="msg msg--err" id="stuError" hidden></div>
+          <div class="msg msg--ok"  id="stuSuccess" hidden></div>
+
+          <form id="stuForm" novalidate>
             <label class="field">Schule
-              <select id="loginSchool" required></select>
+              <select id="stuSchool" required></select>
+            </label>
+            <!-- Anzeigename VOR dem Accountnamen: Safari speichert das
+                 Textfeld direkt vor dem Passwort als Benutzernamen. -->
+            <label class="field">Anzeigename
+              <input type="text" id="stuDisplayName" autocomplete="nickname" required />
+              <span class="rule">Was die anderen im Raum sehen.</span>
             </label>
             <label class="field">Accountname
-              <input type="text" id="loginAccount" autocomplete="username"
-                     autocapitalize="none" spellcheck="false" required />
+              <input type="text" id="stuAccount" autocomplete="username"
+                     autocapitalize="none" autocorrect="off" spellcheck="false" required
+                     aria-describedby="stuAccountHint" />
+              <span class="rule" id="stuAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</span>
             </label>
             <label class="field">Passwort
-              <input type="password" id="loginPassword" autocomplete="current-password" required />
+              <input type="password" id="stuPassword" autocomplete="new-password" required />
+              <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
             </label>
-            <button type="submit" class="btn btn--primary btn--wide" id="loginSubmit">Anmelden</button>
+            <label class="field">Passwort wiederholen
+              <input type="password" id="stuPassword2" autocomplete="new-password" required />
+            </label>
+            <button type="submit" class="btn btn--wide" id="stuSubmit">Schülerkonto anlegen</button>
           </form>
-        </section></div>
+        </section>
 
-        <!-- b) noch kein Konto -->
-        <div class="access-slot" id="slotRegister"><section class="access-col" id="colRegister">
-          <h3>Noch kein Konto</h3>
-          <p class="access-note">
-            Leg eins an — der Antrag auf den Zugang geht dabei mit raus. Dieses Konto führt
-            <strong>nicht</strong> in eine Schulung, auch dann nicht, wenn gerade eine läuft.
-          </p>
+        <!-- b) Lehreraccount -->
+        <section class="access-col access-col--teacher" id="colTeacher">
+          <h3>Lehreraccount</h3>
+          <ul class="access-can">
+            <li>Räume für deine Klassen erstellen — mit Code und QR-Code</li>
+            <li>Räume verwalten, verlängern und Kolleg:innen einladen</li>
+            <li>Arbeitsmaterial und Ergebnisse der Klasse ansehen</li>
+            <li>Passwort selbst per E-Mail zurücksetzen</li>
+          </ul>
+          <p class="access-note">Ein Admin liest deine Nachricht und schaltet dich von Hand frei.</p>
+
+          <div class="seg" role="radiogroup" aria-label="Neues Konto oder Schülerkonto hochstufen">
+            <button type="button" class="seg-btn" data-tmode="new" aria-pressed="true">Neues Konto</button>
+            <button type="button" class="seg-btn" data-tmode="up" aria-pressed="false">Schülerkonto hochstufen</button>
+          </div>
 
           <div class="msg msg--err" id="registerError" hidden></div>
           <div class="msg msg--ok"  id="registerSuccess" hidden></div>
 
           <form id="registerForm" novalidate>
-            <label class="field">Schule
-              <select id="regSchool" required></select>
-            </label>
-            <label class="field">Anzeigename
-              <input type="text" id="regDisplayName" autocomplete="nickname" required />
-              <span class="rule">Was die Klasse sieht — z. B. dein Kürzel.</span>
-            </label>
-            <label class="field">Accountname
-              <input type="text" id="regAccount" autocomplete="username"
-                     autocapitalize="none" autocorrect="off" spellcheck="false" required
-                     aria-describedby="regAccountHint" />
-              <span class="rule" id="regAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</span>
-            </label>
-            <label class="field">Passwort
-              <input type="password" id="regPassword" autocomplete="new-password" required />
-              <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
-            </label>
-            <label class="field">Passwort wiederholen
-              <input type="password" id="regPassword2" autocomplete="new-password" required />
-            </label>
-            <button type="submit" class="btn btn--primary btn--wide" id="registerSubmit">Konto anlegen</button>
-          </form>
-        </section></div>
+            <fieldset class="tm" data-tm="new">
+              <label class="field">Schule
+                <select id="regSchool" required></select>
+              </label>
+              <label class="field">Anzeigename
+                <input type="text" id="regDisplayName" autocomplete="nickname" required />
+                <span class="rule">Was die Klasse sieht — z. B. dein Kürzel.</span>
+              </label>
+              <label class="field">Accountname
+                <input type="text" id="regAccount" autocomplete="username"
+                       autocapitalize="none" autocorrect="off" spellcheck="false" required
+                       aria-describedby="regAccountHint" />
+                <span class="rule" id="regAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</span>
+              </label>
+              <label class="field">Passwort
+                <input type="password" id="regPassword" autocomplete="new-password" required />
+                <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
+              </label>
+              <label class="field">Passwort wiederholen
+                <input type="password" id="regPassword2" autocomplete="new-password" required />
+              </label>
+            </fieldset>
 
-      </div>
+            <fieldset class="tm" data-tm="up" hidden disabled>
+              <p class="access-note">Melde dich mit deinem bisherigen Konto an — es bleibt dasselbe, mit allen Räumen und Profilbildern.</p>
+              <label class="field">Schule
+                <select id="upSchool" required></select>
+              </label>
+              <label class="field">Accountname
+                <input type="text" id="upAccount" autocomplete="username"
+                       autocapitalize="none" spellcheck="false" required />
+              </label>
+              <label class="field">Passwort
+                <input type="password" id="upPassword" autocomplete="current-password" required />
+              </label>
+            </fieldset>
+
+            <label class="field">E-Mail-Adresse
+              <input type="email" id="regEmail" autocomplete="email" inputmode="email"
+                     maxlength="120" spellcheck="false" required />
+              <span class="rule">Zum Zurücksetzen deines Passworts. Du bekommst einen Link zum Bestätigen.</span>
+            </label>
+            <label class="field">Nachricht an den Admin
+              <textarea id="regNote" rows="4" maxlength="600" required
+                        placeholder="Wer bist du, an welcher Schule unterrichtest du, und wie hast du von MPSkills erfahren?"></textarea>
+            </label>
+            <button type="submit" class="btn btn--primary btn--wide" id="registerSubmit">Lehrer-Konto beantragen</button>
+          </form>
+        </section>
+
+      </div></div>
+
+      <!-- c) Anmelden — für beide -->
+      <div class="access-slot access-slot--login" id="slotLogin"><section class="access-col" id="colLogin">
+        <h3>Du hast schon ein Konto?</h3>
+        <p class="access-note">Hier oder in der Tablet-Schulung — es ist dasselbe Konto.</p>
+
+        <div class="msg msg--err" id="loginError" hidden></div>
+
+        <form id="loginForm" class="login-row" novalidate>
+          <label class="field">Schule
+            <select id="loginSchool" required></select>
+          </label>
+          <label class="field">Accountname
+            <input type="text" id="loginAccount" autocomplete="username"
+                   autocapitalize="none" spellcheck="false" required />
+          </label>
+          <label class="field">Passwort
+            <input type="password" id="loginPassword" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="btn btn--primary" id="loginSubmit">Anmelden</button>
+        </form>
+        <p class="forgot-line">
+          <button type="button" class="btn--link" id="forgotOpen">Passwort vergessen?</button>
+        </p>
+      </section></div>
+
     </div>
   </section>
 
@@ -448,7 +512,7 @@
 
     <p class="about-foot">
       Für den Zugang brauchst du ein Konto und die Freischaltung durch einen Admin —
-      der Weg dahin steht auf dieser Seite unter „Zugang bekommen".
+      der Weg dahin steht auf dieser Seite unter „Konto anlegen oder anmelden" (Spalte Lehreraccount).
     </p>
   </div>
 </div>
@@ -465,6 +529,33 @@
     <button type="button" class="modal-close" data-close="authModal" aria-label="Schließen">×</button>
     <div id="authBody"></div>
     <p class="switch-line" id="authSwitch"></p>
+  </div>
+</div>
+
+<!-- ─── Passwort vergessen (Migration 0291) ──────────────────
+     Nur für Lehrkräfte mit bestätigter E-Mail. Die Antwort ist immer
+     dieselbe, ob es das Konto gibt oder nicht — sonst ließe sich hier
+     abfragen, wer ein Konto hat. -->
+<div class="overlay" id="forgotModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="forgotTitle">
+    <button type="button" class="modal-close" data-close="forgotModal" aria-label="Schließen">×</button>
+    <h2 id="forgotTitle">Passwort vergessen</h2>
+    <p class="sub">
+      Für Lehrkräfte mit bestätigter E-Mail-Adresse: du bekommst einen Link, mit dem du ein
+      neues Passwort festlegst. Schülerinnen und Schüler fragen ihre Lehrkraft.
+    </p>
+    <div class="msg msg--err" id="forgotError" hidden></div>
+    <div class="msg msg--ok"  id="forgotSuccess" hidden></div>
+    <form id="forgotForm" novalidate>
+      <label class="field">Schule
+        <select id="forgotSchool" required></select>
+      </label>
+      <label class="field">Accountname oder E-Mail-Adresse
+        <input type="text" id="forgotLogin" autocomplete="username"
+               autocapitalize="none" spellcheck="false" required maxlength="120" />
+      </label>
+      <button type="submit" class="btn btn--primary btn--wide" id="forgotSubmit">Link schicken</button>
+    </form>
   </div>
 </div>
 
@@ -544,7 +635,7 @@
 <script src="../avatars.js?v=20261028a"></script>
 <script src="../account-name.js?v=20260930"></script>
 <script src="lib/userbar.js?v=20261114n"></script>
-<script src="lib/profilemodal.js?v=20261113a"></script>
+<script src="lib/profilemodal.js?v=20261115a"></script>
 <script src="lib/room.js?v=20261024b"></script>
 <script src="lib/icons.js?v=20261030c"></script>
 <!-- Auf der Landing läuft kein Werkzeug, und seit der „Testen"-Knopf
@@ -576,6 +667,6 @@
 <script src="preview/derby.js?v=20261030a"></script>
 <script src="preview/diagramm.js?v=20261103c"></script>
 <script src="preview/socialhub.js?v=20261109a"></script>
-<script src="app.js?v=20261111b"></script>
+<script src="app.js?v=20261115a"></script>
 </body>
 </html>

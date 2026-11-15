@@ -131,6 +131,7 @@ const ERLAUBT = new Set([
   'can_send_feedback', 'get_my_cluster_pause',                  // Admin = darf Feedback / keine Pause
   'get_game_leaderboard', 'get_hub_leaderboard', 'check_and_grant_cluster_legi',
   'board_claim_reward', 'board_get', 'wc_get', 'account_lifecycle', 'join_open_cluster',
+  'teacher_request_store', 'pw_reset_request',                  // 0291: schließen Admins AUS, geben nichts frei
 ]);
 const fns = (await db.query(`select p.proname, pg_get_functiondef(p.oid) src
                                from pg_proc p join pg_namespace n on n.oid = p.pronamespace

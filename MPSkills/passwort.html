@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<script src="../motion.js?v=20261114n"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neues Passwort · MPSkills</title>
+<meta name="robots" content="noindex" />
+<!-- Der Token steht hinter # und geht so nie in ein Server-Log oder
+     einen Referer. Kein Supabase-Client auf dieser Seite: gesetzt wird
+     über /api/notify_email?f=reset_set (Migration 0291). -->
+<meta name="referrer" content="no-referrer" />
+<link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=20261115a" />
+<script src="lib/theme.js?v=20260819d"></script>
+<link rel="icon" type="image/png" sizes="64x64" href="icons/favicon-64.png" />
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<script src="../viewport.js?v=20260820"></script>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="wordmark" href="index.html"><img class="wordmark-logo" src="../LogoMPSkills.png" alt="" /><span class="wordmark-text">MP<span>Skills</span></span></a>
+  <div class="topbar-spacer"></div>
+</header>
+
+<main class="wrap wrap--narrow pwpage">
+  <section class="access">
+    <h2 class="access-h">Neues Passwort festlegen</h2>
+    <p class="access-lead" id="pwLead">Einen Moment, der Link wird geprüft …</p>
+
+    <div class="msg msg--err" id="pwError" hidden></div>
+    <div class="msg msg--ok"  id="pwSuccess" hidden></div>
+
+    <form id="pwForm" novalidate hidden>
+      <!-- Unsichtbarer Accountname: damit der Passwort-Manager weiß,
+           zu welchem Konto das neue Passwort gehört. -->
+      <input type="text" id="pwUser" autocomplete="username" hidden />
+      <label class="field">Neues Passwort
+        <input type="password" id="pw1" autocomplete="new-password" required />
+        <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
+      </label>
+      <label class="field">Passwort wiederholen
+        <input type="password" id="pw2" autocomplete="new-password" required />
+      </label>
+      <button type="submit" class="btn btn--primary btn--wide" id="pwSubmit">Passwort speichern</button>
+    </form>
+
+    <p class="forgot-line" id="pwBack" hidden><a href="index.html">Zu MPSkills und anmelden</a></p>
+  </section>
+</main>
+
+<script>
+(function () {
+  const token = location.hash.replace(/^#/, '');
+  // Aus der Adresszeile nehmen: wer den Bildschirm sieht oder die
+  // Adresse teilt, soll den Link nicht mitbekommen.
+  try { history.replaceState(null, '', location.pathname); } catch (e) { /* egal */ }
+
+  const $ = (id) => document.getElementById(id);
+  const lead = $('pwLead'), form = $('pwForm'), err = $('pwError'), ok = $('pwSuccess');
+
+  const dead = (msg) => {
+    lead.textContent = msg || 'Dieser Link gilt nicht mehr — er war 30 Minuten gültig und nur einmal. '
+      + 'Fordere beim Anmelden über „Passwort vergessen?" einen neuen an.';
+    form.hidden = true;
+    $('pwBack').hidden = false;
+  };
+
+  const post = async (f, body) => {
+    const res = await fetch('/api/notify_email?f=' + f, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    let data = {};
+    try { data = await res.json(); } catch (e) { /* leer */ }
+    return data;
+  };
+
+  if (!/^[0-9a-f]{48}$/.test(token)) { dead('Der Link ist unvollständig. Bitte den ganzen Link aus der Mail öffnen.'); return; }
+
+  post('reset_chk', { token }).then((d) => {
+    if (!d.ok || !d.valid) { dead(); return; }
+    lead.textContent = 'Wähle ein neues Passwort für dein MPSkills-Konto.';
+    form.hidden = false;
+    $('pw1').focus();
+  }).catch(() => dead('Keine Verbindung. Bitte die Seite neu laden.'));
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    err.hidden = true;
+    const p1 = $('pw1').value, p2 = $('pw2').value;
+    let msg = null;
+    if (p1.length < 8) msg = 'Das Passwort braucht mindestens 8 Zeichen.';
+    else if (!/[a-zA-Z]/.test(p1) || !/[0-9]/.test(p1)) msg = 'Das Passwort braucht mindestens einen Buchstaben und eine Zahl.';
+    else if (p1 !== p2) msg = 'Die beiden Passwörter stimmen nicht überein.';
+    if (msg) { err.textContent = msg; err.hidden = false; return; }
+
+    $('pwSubmit').disabled = true;
+    try {
+      const d = await post('reset_set', { token, password: p1 });
+      if (d.ok) {
+        if (d.account_name) $('pwUser').value = d.account_name;
+        form.hidden = true;
+        lead.textContent = '';
+        ok.textContent = 'Gespeichert. Du kannst dich jetzt mit dem neuen Passwort anmelden'
+          + (d.account_name ? ` (Accountname: ${d.account_name}).` : '.');
+        ok.hidden = false;
+        $('pwBack').hidden = false;
+      } else if (d.error === 'invalid') {
+        dead();
+      } else {
+        err.textContent = d.message || 'Das hat nicht geklappt. Bitte noch einmal.';
+        err.hidden = false;
+        $('pwSubmit').disabled = false;
+      }
+    } catch (ex) {
+      err.textContent = 'Keine Verbindung. Bitte noch einmal.';
+      err.hidden = false;
+      $('pwSubmit').disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

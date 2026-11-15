@@ -1,7 +1,8 @@
 // ══════════════════════════════════════════════════════════════
 // POST /api/signup
 // ══════════════════════════════════════════════════════════════
-// Body: { school_slug, account_name, display_name, password, context? }
+// Body: { school_slug, account_name, display_name, password, context?,
+//         teacher_request?, teacher_note?, teacher_email? }   (0291)
 //
 // context steuert, WOFÜR das Konto angelegt wird:
 //   'schulung' (default) — Tablet-Schulung. Verhalten wie bisher:
@@ -9,7 +10,8 @@
 //                          User aktiv und bekommt die Starthilfe.
 //   'mpskills'           — MPSkills (Migration 0077). Bekommt NIE einen
 //                          Kurs, auch wenn gerade einer offen ist, und
-//                          dafür teacher_status='pending'.
+//                          Lehrkraft-Antrag nur mit teacher_request:true
+//                          + teacher_note + teacher_email (Migration 0291).
 //
 // Warum kein zweiter Endpunkt: Namensregeln, Schimpfwortprüfung,
 // Passwort-Policy, Rate-Limit, Duplikatprüfung und das Rollback nach
@@ -76,6 +78,9 @@ const ACCOUNT_NAME_RE = /^[a-z0-9._-]{2,20}$/;
 // Anzeigename: Buchstaben (inkl. Umlaute/ß), Ziffern, Leerzeichen, . _ - · 2–24 Zeichen
 // Bewusst Groß-/Kleinschreibung erlaubt (Lehrer-Kürzel wie "BK", "Sn").
 const DISPLAY_NAME_RE = /^[A-Za-zÄÖÜäöüß0-9 ._-]{2,24}$/;
+
+// Wie notify_email_valid() in Migration 0291.
+const EMAIL_RE = /^[a-z0-9][a-z0-9._%+-]*@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
 
 function validatePassword(pw) {
   if (typeof pw !== 'string' || pw.length < 8) return 'Passwort muss mindestens 8 Zeichen haben.';
@@ -185,6 +190,28 @@ export default async function handler(req, res) {
     return fail(400, { error: 'password_policy', message: pwErr });
   }
 
+  // Lehrkraft-Antrag (0291): Nachricht + E-Mail VOR dem Anlegen prüfen,
+  // damit kein halbes Konto entsteht. Die Regeln selbst stehen in
+  // teacher_request_store — hier nur dieselben Grenzen, damit die
+  // Fehlermeldung kommt, bevor ein Konto existiert.
+  const teacherRequest = context === 'mpskills' && body.teacher_request === true;
+  const teacher_note  = String(body.teacher_note ?? '').trim();
+  const teacher_email = String(body.teacher_email ?? '').trim().toLowerCase();
+  if (teacherRequest) {
+    if (teacher_note.length < 10) {
+      return fail(400, { error: 'note_short', message: 'Bitte schreib ein paar Sätze an den Admin (mindestens 10 Zeichen).' });
+    }
+    if (teacher_note.length > 600) {
+      return fail(400, { error: 'note_long', message: 'Die Nachricht ist zu lang (höchstens 600 Zeichen).' });
+    }
+    if (!teacher_email) {
+      return fail(400, { error: 'email_required', message: 'Für ein Lehrkraft-Konto brauchen wir deine E-Mail-Adresse.' });
+    }
+    if (teacher_email.length > 120 || !EMAIL_RE.test(teacher_email)) {
+      return fail(400, { error: 'email_invalid', message: 'Diese E-Mail-Adresse sieht nicht richtig aus.' });
+    }
+  }
+
   // 2) Schimpfwort-Prüfung (beide Namen)
   for (const [field, val] of [['account_name', account_name], ['display_name', display_name]]) {
     const { data, error } = await admin.rpc('contains_blacklisted_word', { input: val });
@@ -252,13 +279,15 @@ export default async function handler(req, res) {
   const status     = cluster ? 'active'    : (context === 'mpskills' ? 'mpskills' : 'pending');
   const cluster_id = cluster ? cluster.id  : null;
 
-  // MPSkills-Anmeldung = Antrag auf die Lehrkraft-Rolle (Migration 0077).
-  // Den Zeitstempel setzt der Trigger profiles_teacher_stamp_trg.
-  // teacher_request:false (Registrierung auf der Beitrittsseite j.html,
-  // meist Schüler) stellt keinen Antrag, das Konto steht trotzdem auf
-  // 'mpskills'.
-  const teacher_status = context === 'mpskills' && body.teacher_request !== false
-    ? 'pending' : 'none';
+  // Lehrkraft-Antrag nur noch ausdrücklich (Migration 0291): bis dahin
+  // war JEDE MPSkills-Registrierung ein Antrag, und Schüler legten sich
+  // so versehentlich „Lehrer-Konten" an. Ein Antrag braucht jetzt
+  // teacher_request:true, eine Nachricht an den Admin und eine E-Mail.
+  // Das Profil entsteht erst mit teacher_status='none'; den Antrag
+  // stellt danach teacher_request_store (dieselben Regeln wie beim
+  // Hochstufen eines Schülerkontos). Den Zeitstempel setzt weiter der
+  // Trigger profiles_teacher_stamp_trg (0077).
+  const teacher_status = 'none';
 
   // 5) Fake-Mail
   const email = `${account_name}@${school.slug}.${FAKE_EMAIL_DOMAIN}`;
@@ -294,6 +323,25 @@ export default async function handler(req, res) {
     console.error('[signup] profile insert:', profileErr);
     await admin.auth.admin.deleteUser(user_id).catch(() => {});
     return res.status(500).json({ ok: false, error: 'profile_create_failed' });
+  }
+
+  // 7b) Lehrkraft-Antrag (0291). Schlägt er fehl, wird das Konto wieder
+  //     gelöscht: ein Konto ohne Antrag wäre genau das Schülerkonto, das
+  //     die Person nicht wollte.
+  let final_teacher_status = teacher_status;
+  if (teacherRequest) {
+    const { data: tr, error: trErr } = await admin.rpc('teacher_request_store', {
+      p_uid: user_id, p_note: teacher_note, p_email: teacher_email
+    });
+    if (trErr || !tr?.ok) {
+      console.error('[signup] teacher_request_store:', trErr?.message || tr);
+      await admin.auth.admin.deleteUser(user_id).catch(() => {});
+      if (tr?.error === 'email_invalid' || tr?.error === 'note_short' || tr?.error === 'note_long') {
+        return fail(400, { error: tr.error });
+      }
+      return res.status(500).json({ ok: false, error: 'profile_create_failed' });
+    }
+    final_teacher_status = tr.status || 'pending';
   }
 
   // 8) Cluster-Starthilfe (Bonus) ausschütten — best-effort.
@@ -335,7 +383,7 @@ export default async function handler(req, res) {
     cluster_id,
     season: cluster?.season ?? 0,
     context,
-    teacher_status,
+    teacher_status: final_teacher_status,
     bonus,
     bonus_error
   });

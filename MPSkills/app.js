@@ -93,7 +93,7 @@ async function fillSchoolSelects() {
   const html = schools
     .map(s => `<option value="${esc(s.slug)}"${s.slug === DEFAULT_SCHOOL_SLUG ? ' selected' : ''}>${esc(s.name)}</option>`)
     .join('');
-  for (const id of ['loginSchool', 'regSchool']) {
+  for (const id of ['loginSchool', 'regSchool', 'stuSchool', 'upSchool', 'forgotSchool']) {
     const el = document.getElementById(id);
     if (!el) continue;
     el.innerHTML = html;
@@ -371,20 +371,12 @@ function accessOpen() {
   return document.getElementById('accessPanel')?.hidden === false;
 }
 
-/* Wer sich HIER anmeldet, hat vorher „Zugang bekommen" gedrückt und
-   in einem Kasten getippt, über dem steht, wofür. Danach noch einen
-   Knopf „Zugang beantragen" zu verlangen, fragt dasselbe ein zweites
-   Mal. Also stellt die Seite den Antrag selbst.
-
-   Das Merkmal ist der WEG, nicht die Anmeldung: wer schon angemeldet
-   ankommt (etwa mit einem Schulungs-Konto, weil ein Kind das Tablet
-   vorher benutzt hat), bekommt weiter den Knopf. Sonst stellte ein
-   Seitenaufruf einen Antrag, den niemand gestellt hat.
-
-   Nur aus 'none' heraus — 'rejected' bleibt beim Knopf. Da hat ein
-   Admin entschieden; diese Entscheidung darf nicht nebenbei
-   umgestoßen werden, ohne dass der Grund überhaupt gelesen wurde. */
-let requestAfterLogin = false;
+/* Bis zum 15.11.2026 stellte schon das ANMELDEN in diesem Kasten
+   einen Lehrkraft-Antrag (requestAfterLogin). Zusammen mit der
+   Registrierung, die ebenfalls immer ein Antrag war, kamen so
+   Schülerkonten ohne jede Angabe als „Lehrkraft" an. Seit Migration
+   0291 gibt es einen Antrag nur noch ausdrücklich: mit Nachricht an
+   den Admin und E-Mail (requestAccess unten). */
 let requesting = false;
 
 async function openAccess() {
@@ -450,6 +442,8 @@ async function openAuth(which) {
   document.getElementById('authSwitch').innerHTML = which === 'register'
     ? 'Schon ein Konto? <button type="button" class="btn--link" data-auth="login">Anmelden</button>'
     : 'Noch kein Konto? <button type="button" class="btn--link" data-auth="register">Konto anlegen</button>';
+  // Registrieren zeigt beide Spalten (Schüler | Lehrkraft) — breit.
+  document.querySelector('#authModal .modal')?.classList.toggle('modal--wide', which === 'register');
 
   // Die Schulliste VOR dem Aufmachen, nicht danach: sonst steht das
   // Formular offen, während das Auswahlfeld noch leer ist — und wer
@@ -457,7 +451,7 @@ async function openAuth(which) {
   await fillSchoolSelects();
   document.getElementById('authModal').hidden = false;
   setTimeout(() => {
-    document.getElementById(which === 'register' ? 'regAccount' : 'loginAccount')?.focus();
+    if (which === 'login') document.getElementById('loginAccount')?.focus();
   }, 60);
 }
 
@@ -480,7 +474,7 @@ function openInfo(which) {
 }
 
 function closeInfos() {
-  for (const id of ['privacyModal', 'aboutModal']) {
+  for (const id of ['privacyModal', 'aboutModal', 'forgotModal']) {
     const el = document.getElementById(id);
     if (el) el.hidden = true;
   }
@@ -1289,10 +1283,6 @@ function renderState() {
   const role = roleOf(s);
   const acts = (role === 'teacher' || role === 'admin');
 
-  // Die Fahne gilt genau dem einen Fall, für den sie gesetzt wurde.
-  // Wer sich anmeldet und schon freigeschaltet ist (oder schon
-  // wartet), hat nichts zu beantragen.
-  if (role !== 'noRole') requestAfterLogin = false;
 
   // Die Kopfzeile pflegt sich seit lib/userbar.js selbst — sie hängt
   // am selben session-changed-Event wie diese Funktion.
@@ -1404,6 +1394,7 @@ function renderState() {
             : ''}
         </p>
       </section>
+      <div id="mailHint"></div>
 
       <div class="tabs" role="tablist">
         <button type="button" class="tab" role="tab" data-tab="rooms"
@@ -1425,6 +1416,7 @@ function renderState() {
     // der Moment, in dem man etwas sucht.
     renderRooms();
     renderTools(document.getElementById('paneTools'), false);
+    if (role === 'teacher') loadMailHint();
     return;
   }
 
@@ -1440,103 +1432,163 @@ function renderState() {
           In der Tablet-Schulung ist dein Konto davon unberührt: dort bist du ein
           gewöhnlicher Zugang und kannst ganz normal an einer Schulung teilnehmen.
         </p>
-      </div>`;
-    return;
-  }
-
-  if (role === 'rejected') {
-    host.innerHTML = `
-      <div class="state state--no">
-        <h2><span class="ic">✕</span> Dein Antrag wurde abgelehnt</h2>
-        <p>
-          Für MPSkills bist du nicht freigeschaltet. Wenn das ein Missverständnis ist,
-          sprich mit der Schulleitung oder der Schulung — danach kannst du erneut beantragen.
-        </p>
-        <div class="actions">
-          <button type="button" class="btn" id="ctaRequest">Erneut beantragen</button>
-        </div>
-      </div>`;
-    document.getElementById('ctaRequest').addEventListener('click', requestRole);
-    return;
-  }
-
-  // noRole — angemeldeter Schulungs-Account ohne Lehrkraft-Bezug.
-
-  // Kam die Anmeldung gerade aus dem Zugangs-Kasten, ist der Antrag
-  // schon gestellt worden — die Seite zeigt so lange denselben
-  // Warte-Zustand, in dem sie gleich stehen bleibt. Schlägt der RPC
-  // fehl, fällt sie auf den Knopf darunter zurück.
-  if (requestAfterLogin) {
-    requestAfterLogin = false;
-    host.innerHTML = `
-      <div class="state state--wait">
-        <h2><span class="ic">⏳</span> Dein Zugang wird beantragt …</h2>
-      </div>`;
-    requestRole();
-    return;
-  }
-
-  host.innerHTML = `
-    <div class="state state--invite">
-      <h2><span class="ic">🔑</span> Du brauchst noch den Zugang</h2>
-      <p>
-        Du bist angemeldet, aber für MPSkills noch nicht freigeschaltet. Wenn du an dieser
-        Schule unterrichtest, beantrage den Zugang — ein Admin schaltet dich dann frei.
-      </p>
-      <div class="actions">
-        <button type="button" class="btn btn--primary" id="ctaRequest">Zugang beantragen</button>
       </div>
-      <p class="hint">
-        Bist du Schülerin oder Schüler? Dann brauchst du hier nichts zu beantragen —
-        du bekommst von deiner Lehrkraft einen Code.
-      </p>
+      <div id="mailHint"></div>`;
+    loadMailHint();
+    return;
+  }
+
+  /* ─── Abgelehnt / angemeldet ohne Lehrkraft-Rolle ──────
+     Ein Schülerkonto (oder ein Schulungs-Konto) ist hier richtig und
+     braucht nichts — es tritt Räumen per Code bei. Das Hochstufen
+     steht darunter, zugeklappt, mit denselben Pflichtfeldern wie ein
+     neues Lehrkraft-Konto (Migration 0291). */
+  const rejected = role === 'rejected';
+  host.innerHTML = `
+    <div class="state ${rejected ? 'state--no' : 'state--invite'}">
+      ${rejected
+        ? `<h2><span class="ic">✕</span> Dein Antrag wurde abgelehnt</h2>
+           <p>Für MPSkills bist du nicht als Lehrkraft freigeschaltet. Wenn das ein Missverständnis
+              ist, stell den Antrag noch einmal und schreib dazu, wer du bist.</p>`
+        : `<h2><span class="ic">🎒</span> Du bist mit einem Schülerkonto angemeldet</h2>
+           <p>Damit trittst du Räumen bei — tipp oben den Code von der Tafel ein. Deine Räume
+              findest du auf jedem Gerät wieder, auf dem du angemeldet bist.</p>`}
+      <details class="upgrade" ${rejected ? 'open' : ''}>
+        <summary>Du bist Lehrkraft? ${rejected ? 'Erneut beantragen' : 'Konto hochstufen'}</summary>
+        <p class="hint">Dein Konto bleibt dasselbe. Ein Admin liest deine Nachricht und schaltet dich frei.</p>
+        <div class="msg msg--err" id="upgradeError" hidden></div>
+        <form id="upgradeForm" novalidate>
+          <label class="field">E-Mail-Adresse
+            <input type="email" id="upgEmail" autocomplete="email" inputmode="email"
+                   maxlength="120" spellcheck="false" required />
+            <span class="rule">Zum Zurücksetzen deines Passworts. Du bekommst einen Link zum Bestätigen.</span>
+          </label>
+          <label class="field">Nachricht an den Admin
+            <textarea id="upgNote" rows="4" maxlength="600" required
+                      placeholder="Wer bist du, an welcher Schule unterrichtest du, und wie hast du von MPSkills erfahren?"></textarea>
+          </label>
+          <button type="submit" class="btn btn--primary" id="upgSubmit">Lehrer-Konto beantragen</button>
+        </form>
+      </details>
     </div>`;
-  document.getElementById('ctaRequest').addEventListener('click', requestRole);
+  document.getElementById('upgradeForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById('upgradeError');
+    const btn = document.getElementById('upgSubmit');
+    errBox.hidden = true;
+    const note  = document.getElementById('upgNote').value;
+    const email = document.getElementById('upgEmail').value;
+    const bad = checkTeacherFields(note, email);
+    if (bad) { errBox.textContent = bad; errBox.hidden = false; return; }
+    btn.disabled = true;
+    const err = await requestAccess(note, email);
+    btn.disabled = false;
+    if (err) { errBox.textContent = err; errBox.hidden = false; }
+  });
 }
 
-/* ─── Zugang beantragen ───────────────────────────────── */
-// RPC request_teacher_role (0077). Es gibt keine Policy, die einen User
-// sein eigenes Profil schreiben lässt — deshalb eine RPC und kein PATCH.
-// Wird aus zwei Richtungen gerufen: vom Knopf, und von der
-// Rollenweiche direkt nach einer Anmeldung im Zugangs-Kasten. Beim
-// zweiten Weg gibt es keinen Knopf — deshalb ist er überall optional.
-async function requestRole() {
-  if (requesting) return;
-  requesting = true;
-  const btn = document.getElementById('ctaRequest');
-  if (btn) btn.disabled = true;
-  try {
-    const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/request_teacher_role`, {
-      method: 'POST',
-      headers: {
-        apikey: window.SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${window.__accessToken}`,
-        'Content-Type': 'application/json',
-        Accept: 'application/json'
-      },
-      body: '{}'
-    });
-    if (!res.ok) throw new Error(`rpc ${res.status}: ${await res.text()}`);
-    const data = await res.json();
-    if (!data?.ok) throw new Error(data?.error || 'unbekannt');
+/* ─── Lehrkraft-Antrag (Migration 0291) ───────────────── */
+const TEACHER_ERRORS = {
+  note_short:      'Bitte schreib ein paar Sätze an den Admin (mindestens 10 Zeichen): wer du bist und an welcher Schule du unterrichtest.',
+  note_long:       'Die Nachricht ist zu lang (höchstens 600 Zeichen).',
+  email_required:  'Für ein Lehrkraft-Konto brauchen wir deine E-Mail-Adresse.',
+  email_invalid:   'Diese E-Mail-Adresse sieht nicht richtig aus.',
+  too_soon:        'Du hast die Adresse gerade erst geändert. Bitte in einer Minute noch einmal.',
+  already_admin:   'Als Admin hast du den Zugang schon.',
+  not_teacher:     'Das geht nur mit einem Lehrkraft-Konto.'
+};
+const EMAIL_RE = /^[a-z0-9][a-z0-9._%+-]*@[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)*\.[a-z]{2,}$/;
 
+// Gleiche Grenzen wie teacher_request_store — nur, damit die Meldung
+// kommt, bevor etwas abgeschickt wird.
+function checkTeacherFields(note, email) {
+  const n = String(note || '').trim();
+  const m = String(email || '').trim().toLowerCase();
+  if (!m) return TEACHER_ERRORS.email_required;
+  if (m.length > 120 || !EMAIL_RE.test(m)) return TEACHER_ERRORS.email_invalid;
+  if (n.length < 10) return TEACHER_ERRORS.note_short;
+  if (n.length > 600) return TEACHER_ERRORS.note_long;
+  return null;
+}
+
+// Antrag aus einem bestehenden Konto. Rückgabe: Fehlertext oder null.
+async function requestAccess(note, email) {
+  if (requesting) return null;
+  requesting = true;
+  try {
+    const data = await rpc('request_teacher_access', {
+      p_note: String(note).trim(), p_email: String(email).trim()
+    });
+    if (!data?.ok) return TEACHER_ERRORS[data?.error] || ('Antrag fehlgeschlagen: ' + (data?.error || 'unbekannt'));
     // Lokalen Session-Cache nachziehen, damit die Seite sofort den
     // Warte-Zustand zeigt. Ein Reload würde denselben Wert liefern.
     const s = window.getSessionUser?.();
     if (s) s.teacher_status = data.status;
-    requesting = false;
     renderState();
-    toast('Antrag gestellt. Ein Admin schaltet dich frei.');
+    toast(data.status === 'approved'
+      ? 'Du bist schon freigeschaltet.'
+      : 'Antrag gestellt. Bitte bestätige noch deine E-Mail-Adresse über den Link in der Mail.');
+    return null;
   } catch (e) {
-    console.error('[mpskills] request_teacher_role:', e);
+    console.error('[mpskills] request_teacher_access:', e);
+    return 'Antrag fehlgeschlagen: ' + e.message;
+  } finally {
     requesting = false;
-    if (btn) btn.disabled = false;
-    toast('Antrag fehlgeschlagen: ' + e.message, 'error');
-    // Ohne Knopf lief der Aufruf automatisch — dann muss die Seite
-    // neu gezeichnet werden, sonst bliebe „wird beantragt …" stehen
-    // und niemand käme mehr an den Antrag heran.
-    if (!btn) renderState();
   }
+}
+
+/* ─── Hinweis: E-Mail nachtragen (Migration 0291) ───────
+   Lehrkräfte von vor dem 15.11.2026 haben keine Adresse. Sie
+   bekommen hier einen Hinweis, dass sie jetzt eine eintragen
+   können — freiwillig, „Später" blendet ihn 14 Tage aus. Ist eine
+   Adresse da, aber unbestätigt, steht dort, dass der Link fehlt. */
+const MAILHINT_KEY = 'mps.mailhint.later';
+async function loadMailHint() {
+  const box = document.getElementById('mailHint');
+  if (!box) return;
+  let st;
+  try { st = await rpc('my_email_get', {}); } catch { return; }   // Migration fehlt → still
+  if (!st?.ok || !st.allowed || st.verified) { box.innerHTML = ''; return; }
+  if (!st.email) {
+    let later = 0;
+    try { later = Number(localStorage.getItem(MAILHINT_KEY) || 0); } catch { /* egal */ }
+    if (later && Date.now() - later < 14 * 86400000) return;
+  }
+  box.innerHTML = st.email
+    ? `<div class="mailhint">
+         <p><strong>E-Mail noch nicht bestätigt.</strong> Wir haben an <b>${esc(st.email)}</b> einen Link
+            geschickt. Erst danach kannst du dein Passwort per Mail zurücksetzen.</p>
+         <div class="actions"><button type="button" class="btn btn--sm" id="mhResend">Link noch einmal schicken</button></div>
+       </div>`
+    : `<div class="mailhint">
+         <p><strong>Neu: Passwort selbst zurücksetzen.</strong> Trag deine E-Mail-Adresse ein — dann
+            kannst du dir bei „Passwort vergessen?" einen Link schicken lassen.</p>
+         <form class="mailhint-form" id="mhForm" novalidate>
+           <input type="email" id="mhMail" autocomplete="email" inputmode="email" maxlength="120"
+                  spellcheck="false" placeholder="deine@adresse.de" aria-label="E-Mail-Adresse" />
+           <button type="submit" class="btn btn--sm btn--primary">Speichern</button>
+           <button type="button" class="btn btn--sm" id="mhLater">Später</button>
+         </form>
+       </div>`;
+  document.getElementById('mhResend')?.addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    const r = await rpc('my_email_set', { p_resend: true }).catch(() => null);
+    toast(r?.ok ? 'Der Link ist noch einmal unterwegs.' : (TEACHER_ERRORS[r?.error] || 'Das hat nicht geklappt.'),
+          r?.ok ? undefined : 'error');
+  });
+  document.getElementById('mhLater')?.addEventListener('click', () => {
+    try { localStorage.setItem(MAILHINT_KEY, String(Date.now())); } catch { /* egal */ }
+    box.innerHTML = '';
+  });
+  document.getElementById('mhForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const m = document.getElementById('mhMail').value.trim().toLowerCase();
+    if (!EMAIL_RE.test(m)) { toast(TEACHER_ERRORS.email_invalid, 'error'); return; }
+    const r = await rpc('my_email_set', { p_email: m }).catch(() => null);
+    if (!r?.ok) { toast(TEACHER_ERRORS[r?.error] || 'Das hat nicht geklappt.', 'error'); return; }
+    toast(`Bestätigungslink an ${m} ist unterwegs.`);
+    loadMailHint();
+  });
 }
 
 /* ─── Anmelden ────────────────────────────────────────── */
@@ -1570,19 +1622,14 @@ async function doLogin(e) {
   const btn = document.getElementById('loginSubmit');
   btn.disabled = true;
   try {
-    // VOR dem Anmelden setzen: das session-changed-Event kann durch
-    // sein, bevor await zurückkehrt — dann liefe renderState an einer
-    // Fahne vorbei, die erst danach gesetzt wird.
-    requestAfterLogin = true;
     const { error } = await window.supabaseClient.auth.signInWithPassword({ email, password });
     if (error) {
-      requestAfterLogin = false;
       errBox.textContent = 'Anmeldung fehlgeschlagen. Accountname, Schule oder Passwort stimmt nicht.';
       errBox.hidden = false;
       return;
     }
-    // renderState läuft über das session-changed-Event, räumt den
-    // Zugang weg und stellt den Antrag, falls noch keiner vorliegt.
+    // renderState läuft über das session-changed-Event und räumt den
+    // Kasten weg. Ein Antrag entsteht beim Anmelden NICHT (0291).
   } catch (ex) {
     errBox.textContent = 'Fehler bei der Anmeldung: ' + (ex?.message ?? ex);
     errBox.hidden = false;
@@ -1607,23 +1654,38 @@ const SIGNUP_ERRORS = {
   blacklist_check_failed:'Server-Prüfung fehlgeschlagen. Bitte später erneut.'
 };
 
-async function doRegister(e) {
+// Ein Aufruf von /api/signup. Rückgabe { ok, email } oder { error: Text, field }.
+async function postSignup(payload) {
+  const res = await fetch('/api/signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    // context='mpskills' — der eine Unterschied zur Schulungs-Anmeldung.
+    body: JSON.stringify({ ...payload, context: 'mpskills' })
+  });
+  let body = null;
+  const raw = await res.text();
+  try { body = raw ? JSON.parse(raw) : {}; } catch { body = { _raw: raw }; }
+  if (res.ok && body?.ok) return { ok: true, email: body.email };
+  const mapped = SIGNUP_ERRORS[body?.error] || TEACHER_ERRORS[body?.error]
+    || (body?.error === 'password_policy' ? (body.message || 'Passwort erfüllt die Anforderungen nicht.') : null);
+  return {
+    error: mapped || `Anmeldung fehlgeschlagen (HTTP ${res.status}${body?.error ? ' · ' + body.error : ''}).`,
+    field: body?.error || ''
+  };
+}
+
+/* ─── Schülerkonto ─────────────────────────────────────── */
+async function doStudentRegister(e) {
   e.preventDefault();
-  const errBox = document.getElementById('registerError');
-  const okBox  = document.getElementById('registerSuccess');
-  const btn    = document.getElementById('registerSubmit');
+  const errBox = document.getElementById('stuError');
+  const okBox  = document.getElementById('stuSuccess');
+  const btn    = document.getElementById('stuSubmit');
   errBox.hidden = true;
   okBox.hidden  = true;
 
-  const school_slug  = document.getElementById('regSchool').value;
-  const account_name = document.getElementById('regAccount').value.trim().toLowerCase();
-  const display_name = document.getElementById('regDisplayName').value.trim();
-  const password     = document.getElementById('regPassword').value;
-  const password2    = document.getElementById('regPassword2').value;
-
-  if (!regAccountCheck.check()) return;
-
-  if (password !== password2) {
+  const password = document.getElementById('stuPassword').value;
+  if (!stuAccountCheck.check()) return;
+  if (password !== document.getElementById('stuPassword2').value) {
     errBox.textContent = 'Die beiden Passwörter stimmen nicht überein.';
     errBox.hidden = false;
     return;
@@ -1631,49 +1693,181 @@ async function doRegister(e) {
 
   btn.disabled = true;
   try {
-    const res = await fetch('/api/signup', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      // context='mpskills' — der eine Unterschied zur Schulungs-Anmeldung.
-      body: JSON.stringify({
-        school_slug, account_name, display_name, password,
-        context: 'mpskills'
-      })
+    const r = await postSignup({
+      school_slug:  document.getElementById('stuSchool').value,
+      account_name: document.getElementById('stuAccount').value.trim().toLowerCase(),
+      display_name: document.getElementById('stuDisplayName').value.trim(),
+      password
     });
-
-    let body = null;
-    const raw = await res.text();
-    try { body = raw ? JSON.parse(raw) : {}; } catch { body = { _raw: raw }; }
-
-    if (!res.ok || !body?.ok) {
-      const mapped = SIGNUP_ERRORS[body?.error]
-        || (body?.error === 'password_policy' ? (body.message || 'Passwort erfüllt die Anforderungen nicht.') : null);
-      errBox.textContent = mapped
-        || `Anmeldung fehlgeschlagen (HTTP ${res.status}${body?.error ? ' · ' + body.error : ''}).`;
+    if (!r.ok) {
+      errBox.textContent = r.error;
       errBox.hidden = false;
+      if (r.field.startsWith('account_name_')) stuAccountCheck.showProblem(r.error);
       btn.disabled = false;
-      // Liegt's am Accountnamen, das Feld selbst rot markieren
-      if (body?.error?.startsWith('account_name_')) regAccountCheck.showProblem(errBox.textContent);
       return;
     }
-
-    okBox.textContent = 'Konto angelegt. Du wirst angemeldet — ein Admin schaltet dich für MPSkills frei.';
+    okBox.textContent = 'Konto angelegt. Du wirst angemeldet.';
     okBox.hidden = false;
-
-    const { error: loginErr } = await window.supabaseClient.auth.signInWithPassword({
-      email: body.email, password
-    });
-    if (loginErr) {
-      errBox.textContent = 'Konto angelegt, aber die Anmeldung schlug fehl: ' + loginErr.message;
+    const { error } = await window.supabaseClient.auth.signInWithPassword({ email: r.email, password });
+    if (error) {
+      errBox.textContent = 'Konto angelegt, aber die Anmeldung schlug fehl: ' + error.message;
       errBox.hidden = false;
       btn.disabled = false;
     }
-    // Bei Erfolg übernimmt session-changed → renderState: der Zugang
-    // klappt weg, an seiner Stelle steht der Warte-Zustand.
   } catch (ex) {
-    console.error('[mpskills] signup:', ex);
+    console.error('[mpskills] signup (Schüler):', ex);
     errBox.textContent = 'Netzwerkfehler: ' + (ex?.message ?? ex);
     errBox.hidden = false;
+    btn.disabled = false;
+  }
+}
+
+/* ─── Lehreraccount: neu oder hochstufen ──────────────── */
+let teacherMode = 'new';
+function setTeacherMode(mode) {
+  teacherMode = mode === 'up' ? 'up' : 'new';
+  document.querySelectorAll('#colTeacher [data-tmode]').forEach(b =>
+    b.setAttribute('aria-pressed', String(b.dataset.tmode === teacherMode)));
+  // disabled, nicht nur hidden: sonst füllt der Passwort-Manager die
+  // unsichtbaren Felder und „required" hält das Formular auf.
+  document.querySelectorAll('#registerForm fieldset[data-tm]').forEach(f => {
+    const on = f.dataset.tm === teacherMode;
+    f.hidden = !on;
+    f.disabled = !on;
+  });
+  document.getElementById('registerSubmit').textContent =
+    teacherMode === 'up' ? 'Konto hochstufen' : 'Lehrer-Konto beantragen';
+  document.getElementById('registerError').hidden = true;
+}
+
+async function doRegister(e) {
+  e.preventDefault();
+  const errBox = document.getElementById('registerError');
+  const okBox  = document.getElementById('registerSuccess');
+  const btn    = document.getElementById('registerSubmit');
+  errBox.hidden = true;
+  okBox.hidden  = true;
+  const fail = (msg) => { errBox.textContent = msg; errBox.hidden = false; btn.disabled = false; };
+
+  const note  = document.getElementById('regNote').value.trim();
+  const email = document.getElementById('regEmail').value.trim().toLowerCase();
+
+  /* Hochstufen: erst anmelden, dann der Antrag aus dem Konto heraus.
+     Schlägt der Antrag fehl, bleibt man angemeldet — die Seite zeigt
+     dann dasselbe Formular im Schülerkonto-Zustand. */
+  if (teacherMode === 'up') {
+    const slug    = document.getElementById('upSchool').value;
+    const account = document.getElementById('upAccount').value.trim().toLowerCase();
+    const pw      = document.getElementById('upPassword').value;
+    if (!slug || !account || !pw) return fail('Bitte Schule, Accountname und Passwort eintragen.');
+    const bad = checkTeacherFields(note, email);
+    if (bad) return fail(bad);
+    btn.disabled = true;
+    try {
+      // Erst auf session-changed warten: dann steht der Token für rpc()
+      // und das Profil ist geladen. Sonst könnte das frisch geladene
+      // Profil (noch 'none') den Antrag gleich wieder übermalen.
+      const changed = new Promise(res => {
+        window.addEventListener('lernwelt:session-changed', res, { once: true });
+        setTimeout(res, 8000);
+      });
+      const { error } = await window.supabaseClient.auth.signInWithPassword({
+        email: `${account}@${slug}.${window.FAKE_EMAIL_DOMAIN}`, password: pw
+      });
+      if (error) return fail('Anmeldung fehlgeschlagen. Accountname, Schule oder Passwort stimmt nicht.');
+      await changed;
+      const err = await requestAccess(note, email);
+      if (err) toast(err, 'error');
+    } catch (ex) {
+      fail('Fehler: ' + (ex?.message ?? ex));
+    }
+    return;
+  }
+
+  const password = document.getElementById('regPassword').value;
+  if (!regAccountCheck.check()) return;
+  if (password !== document.getElementById('regPassword2').value) {
+    return fail('Die beiden Passwörter stimmen nicht überein.');
+  }
+  const bad = checkTeacherFields(note, email);
+  if (bad) return fail(bad);
+
+  btn.disabled = true;
+  try {
+    const r = await postSignup({
+      school_slug:  document.getElementById('regSchool').value,
+      account_name: document.getElementById('regAccount').value.trim().toLowerCase(),
+      display_name: document.getElementById('regDisplayName').value.trim(),
+      password,
+      teacher_request: true,
+      teacher_note:  note,
+      teacher_email: email
+    });
+    if (!r.ok) {
+      fail(r.error);
+      if (r.field.startsWith('account_name_')) regAccountCheck.showProblem(r.error);
+      return;
+    }
+    okBox.textContent = `Konto angelegt. Bitte bestätige deine E-Mail über den Link, den wir an ${email} geschickt haben. Ein Admin schaltet dich frei.`;
+    okBox.hidden = false;
+    const { error: loginErr } = await window.supabaseClient.auth.signInWithPassword({
+      email: r.email, password
+    });
+    if (loginErr) fail('Konto angelegt, aber die Anmeldung schlug fehl: ' + loginErr.message);
+    // Bei Erfolg übernimmt session-changed → renderState: der Kasten
+    // klappt weg, an seiner Stelle steht der Warte-Zustand.
+  } catch (ex) {
+    console.error('[mpskills] signup (Lehrkraft):', ex);
+    fail('Netzwerkfehler: ' + (ex?.message ?? ex));
+  }
+}
+
+/* ─── Passwort vergessen (Migration 0291) ─────────────── */
+async function openForgot() {
+  closeAuth();
+  await fillSchoolSelects();
+  const login = document.getElementById('loginAccount')?.value || '';
+  const school = document.getElementById('loginSchool')?.value;
+  if (school) document.getElementById('forgotSchool').value = school;
+  document.getElementById('forgotLogin').value = login;
+  document.getElementById('forgotError').hidden = true;
+  document.getElementById('forgotSuccess').hidden = true;
+  document.getElementById('forgotForm').hidden = false;
+  document.getElementById('forgotModal').hidden = false;
+  setTimeout(() => document.getElementById('forgotLogin').focus(), 60);
+}
+
+async function doForgot(e) {
+  e.preventDefault();
+  const errBox = document.getElementById('forgotError');
+  const okBox  = document.getElementById('forgotSuccess');
+  const btn    = document.getElementById('forgotSubmit');
+  errBox.hidden = true;
+  const school_slug = document.getElementById('forgotSchool').value;
+  const login = document.getElementById('forgotLogin').value.trim();
+  if (!school_slug || !login) {
+    errBox.textContent = 'Bitte Schule und Accountname oder E-Mail eintragen.';
+    errBox.hidden = false;
+    return;
+  }
+  btn.disabled = true;
+  try {
+    const res = await fetch('/api/notify_email?f=reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ school_slug, login })
+    });
+    if (res.status === 429) throw new Error('Zu viele Versuche. Bitte in einer Stunde noch einmal.');
+    if (!res.ok) throw new Error('Das hat nicht geklappt. Bitte später noch einmal.');
+    okBox.textContent = 'Wenn es zu diesen Angaben ein Lehrkraft-Konto mit bestätigter E-Mail gibt, '
+      + 'ist jetzt eine Mail mit einem Link unterwegs (gilt 30 Minuten). Schau auch im Spam-Ordner nach. '
+      + 'Kommt nichts, wende dich an den Admin.';
+    okBox.hidden = false;
+    document.getElementById('forgotForm').hidden = true;
+  } catch (ex) {
+    errBox.textContent = ex.message;
+    errBox.hidden = false;
+  } finally {
     btn.disabled = false;
   }
 }
@@ -1688,7 +1882,18 @@ document.getElementById('loginForm').addEventListener('submit', doLogin);
 const regAccountCheck = AccountName.attach(
   document.getElementById('regAccount'),
   document.getElementById('regAccountHint'));
+const stuAccountCheck = AccountName.attach(
+  document.getElementById('stuAccount'),
+  document.getElementById('stuAccountHint'));
 document.getElementById('registerForm').addEventListener('submit', doRegister);
+document.getElementById('stuForm').addEventListener('submit', doStudentRegister);
+document.getElementById('colTeacher').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tmode]');
+  if (b) setTeacherMode(b.dataset.tmode);
+});
+setTeacherMode('new');
+document.getElementById('forgotOpen').addEventListener('click', openForgot);
+document.getElementById('forgotForm').addEventListener('submit', doForgot);
 
 // Ein Listener am Kasten statt an jedem Reiter — EINMAL, außerhalb
 // von renderState: der Kasten bleibt stehen, sein Inhalt wird
@@ -1710,7 +1915,7 @@ document.getElementById('infobar').addEventListener('click', (e) => {
 document.getElementById('skillsOpen').addEventListener('click', openSkills);
 
 // Klick auf den dunklen Grund schließt — aber nur dort, nicht im Kasten.
-for (const id of ['privacyModal', 'aboutModal', 'authModal', 'skillsModal']) {
+for (const id of ['privacyModal', 'aboutModal', 'authModal', 'skillsModal', 'forgotModal']) {
   const el = document.getElementById(id);
   el.addEventListener('click', (e) => {
     if (e.target !== el && !e.target.closest('[data-close]')) return;

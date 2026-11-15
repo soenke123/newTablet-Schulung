@@ -71,3 +71,14 @@ export function requireAal2(jwt, res) {
   });
   return false;
 }
+
+// Passwortregel — dieselbe wie in signup.js und admin_reset_password.js
+// (dort je eine eigene Kopie). Genutzt vom Passwort-Reset per Mail
+// (notify_email.js, Migration 0291).
+export function validatePassword(pw) {
+  if (typeof pw !== 'string' || pw.length < 8) return 'Passwort muss mindestens 8 Zeichen haben.';
+  if (pw.length > 72)                          return 'Passwort darf höchstens 72 Zeichen haben.';
+  if (!/[a-zA-Z]/.test(pw))                    return 'Passwort muss mindestens einen Buchstaben enthalten.';
+  if (!/[0-9]/.test(pw))                       return 'Passwort muss mindestens eine Zahl enthalten.';
+  return null;
+}

@@ -156,6 +156,21 @@
         </form>
         <p class="prof-note">${role.text}</p>
       </section>
+      ${(s.teacher_status === 'approved' || s.teacher_status === 'pending') && !s.is_admin && !s.is_superadmin ? `
+      <section class="card" id="mailCard">
+        <h2 class="card-h">E-Mail-Adresse</h2>
+        <p class="prof-note" id="mailState">Wird geladen …</p>
+        <form class="prof-form" id="mailForm" novalidate>
+          <label class="field">E-Mail-Adresse
+            <input type="email" id="mailInput" maxlength="120" autocomplete="email" inputmode="email" spellcheck="false" />
+            <span class="rule">Damit setzt du dein Passwort zurück („Passwort vergessen?“ beim Anmelden). Nach dem Speichern kommt ein Link zum Bestätigen.</span>
+          </label>
+          <div class="actions">
+            <button type="submit" class="btn btn--primary" id="mailSave">Speichern</button>
+            <button type="button" class="btn" id="mailResend" hidden>Link noch einmal schicken</button>
+          </div>
+        </form>
+      </section>` : ''}
 
       <section class="card">
         <h2 class="card-h">Passwort ändern</h2>
@@ -199,6 +214,57 @@
     $('nameCancel').addEventListener('click', closeNameForm);
     $('nameForm').addEventListener('submit', saveName);
     $('pwForm').addEventListener('submit', changePassword);
+    if ($('mailCard')) {
+      $('mailForm').addEventListener('submit', saveMail);
+      $('mailResend').addEventListener('click', () => mailCall({ p_resend: true }, 'Der Link ist noch einmal unterwegs.'));
+      mailCall(null);
+    }
+  }
+
+  /* ─── E-Mail-Adresse (Migration 0291) ───────────────────────
+     Dieselbe Adresse wie für die Antrags-Mails der Projektarbeit.
+     Nur Lehrkräfte (approved/pending); my_email_set prüft das selbst. */
+  const MAIL_ERRORS = {
+    email_invalid: 'Diese E-Mail-Adresse sieht nicht richtig aus.',
+    too_soon:      'Gerade erst geändert — bitte in einer Minute noch einmal.',
+    not_teacher:   'Das geht nur mit einem Lehrkraft-Konto.'
+  };
+  async function mailCall(args, say) {
+    const fn = args ? 'my_email_set' : 'my_email_get';
+    let r = null;
+    try {
+      const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+        method: 'POST',
+        headers: {
+          apikey: window.SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${window.__accessToken}`,
+          'Content-Type': 'application/json',
+          Accept: 'application/json'
+        },
+        body: JSON.stringify(args || {})
+      });
+      r = await res.json().catch(() => null);
+    } catch { r = null; }
+    const st = $('mailState');
+    if (!st) return;
+    if (!r || !r.ok) {
+      if (args) toast(MAIL_ERRORS[r?.error] || 'Speichern fehlgeschlagen.', 'error');
+      else st.textContent = 'Konnte nicht geladen werden.';
+      return;
+    }
+    $('mailInput').value = r.email || '';
+    $('mailResend').hidden = !(r.email && !r.verified);
+    st.textContent = !r.email
+      ? 'Noch keine Adresse eingetragen — ohne sie kannst du dein Passwort nicht selbst zurücksetzen.'
+      : r.verified ? `✓ ${r.email} ist bestätigt.`
+      : `Bestätigung offen: an ${r.email} ging ein Link. Erst nach dem Klick darauf gilt die Adresse.`;
+    if (say) toast(say);
+  }
+  function saveMail(ev) {
+    ev.preventDefault();
+    const m = $('mailInput').value.trim().toLowerCase();
+    if (!m) { toast('Bitte eine Adresse eintragen.', 'error'); return; }
+    mailCall({ p_email: m }, `Bestätigungslink an ${m} ist unterwegs.`);
   }
 
   /* ─── Fenster ───────────────────────────────────────────────

@@ -1,8 +1,16 @@
 // ══════════════════════════════════════════════════════════════
-// GET/POST /api/notify_email   — Links aus den Antrags-Mails (0203)
+// GET/POST /api/notify_email   — Links aus den Mails (0203, 0291)
 // ══════════════════════════════════════════════════════════════
 //   ?verify=<token>   Adresse bestätigen
 //   ?stop=<token>     Adresse löschen (keine Mails mehr, alle Räume)
+//
+// Passwort vergessen (Migration 0291) — JSON, aus MPSkills gerufen.
+// Hier statt in einer eigenen Datei: api/ hat schon 12 Functions.
+//   POST ?f=reset      { school_slug, login }  → Link per Mail
+//        Antwort IMMER { ok:true } (verrät nicht, ob es das Konto gibt),
+//        außer bei der Bremse (429).
+//   POST ?f=reset_chk  { token }               → { ok, valid }
+//   POST ?f=reset_set  { token, password }     → { ok } | { ok:false, error, message }
 //
 // GET zeigt nur eine Seite mit einem Knopf; erst der Knopf (POST)
 // tut etwas. Mail-Programme und Virenscanner öffnen Links in Mails
@@ -17,6 +25,8 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
+import { readJsonBody, validatePassword } from './_utils.js';
+import { makeTransport, mailFrom, siteUrl, smtpReady } from './_mail.js';
 
 const TOKEN_RE = /^[0-9a-f]{48}$/;
 
@@ -58,7 +68,110 @@ async function readForm(req) {
   return Object.fromEntries(new URLSearchParams(raw));
 }
 
+function clientIp(req) {
+  const xff = req.headers['x-forwarded-for'];
+  if (typeof xff === 'string' && xff) return xff.split(',')[0].trim();
+  const real = req.headers['x-real-ip'];
+  return typeof real === 'string' && real ? real.trim() : 'unknown';
+}
+
+function json(res, status, body) {
+  res.status(status);
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json(body);
+}
+
+function resetMail(site, t) {
+  const name = t.display_name || t.account_name;
+  return {
+    subject: 'MPSkills: Passwort zurücksetzen',
+    text:
+`Hallo ${name},
+
+für dein MPSkills-Konto „${t.account_name}“ wurde ein neues Passwort angefordert.
+
+Neues Passwort festlegen (der Link gilt 30 Minuten und nur einmal):
+${site}/MPSkills/passwort.html#${t.token}
+
+Warst du das nicht? Dann ignoriere diese Mail — dein Passwort bleibt, wie es ist.
+
+--
+MPSkills · automatisch verschickt`
+  };
+}
+
+async function handleReset(req, res, f) {
+  if (req.method !== 'POST') return json(res, 405, { ok: false, error: 'method_not_allowed' });
+  const url         = process.env.SUPABASE_URL;
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRole) return json(res, 500, { ok: false, error: 'server_misconfigured' });
+  const admin = createClient(url, serviceRole, { auth: { persistSession: false } });
+  const body = (await readJsonBody(req)) || {};
+
+  if (f === 'reset') {
+    const school = String(body.school_slug ?? '').trim().toLowerCase().slice(0, 60);
+    const login  = String(body.login ?? '').trim().toLowerCase().slice(0, 120);
+    if (!school || !login) return json(res, 400, { ok: false, error: 'missing' });
+    const { data, error } = await admin.rpc('pw_reset_request', {
+      p_school: school, p_login: login, p_ip: clientIp(req)
+    });
+    if (error) {
+      console.error('[notify_email] pw_reset_request:', error.message);
+      return json(res, 500, { ok: false, error: 'server' });
+    }
+    if (data && data.error === 'rate_limit') {
+      return json(res, 429, { ok: false, error: 'rate_limit' });
+    }
+    const targets = (data && data.targets) || [];
+    if (targets.length && smtpReady()) {
+      const site = siteUrl(req);
+      const transport = makeTransport();
+      for (const t of targets) {
+        try {
+          await transport.sendMail({ from: mailFrom(), to: t.email, ...resetMail(site, t) });
+        } catch (e) {
+          console.warn('[notify_email] Reset-Mail fehlgeschlagen:', e.message);
+        }
+      }
+      try { transport.close(); } catch { /* egal */ }
+    } else if (targets.length) {
+      console.error('[notify_email] SMTP nicht eingerichtet — Reset-Mail nicht verschickt.');
+    }
+    return json(res, 200, { ok: true });
+  }
+
+  const token = String(body.token ?? '');
+  if (!TOKEN_RE.test(token)) return json(res, 200, { ok: false, valid: false, error: 'invalid' });
+
+  if (f === 'reset_chk') {
+    const { data, error } = await admin.rpc('pw_reset_check', { p_token: token });
+    if (error) return json(res, 500, { ok: false, error: 'server' });
+    return json(res, 200, { ok: true, valid: !!(data && data.ok) });
+  }
+
+  // reset_set
+  const password = String(body.password ?? '');
+  const pwErr = validatePassword(password);
+  if (pwErr) return json(res, 400, { ok: false, error: 'password_policy', message: pwErr });
+  const { data, error } = await admin.rpc('pw_reset_take', { p_token: token });
+  if (error) {
+    console.error('[notify_email] pw_reset_take:', error.message);
+    return json(res, 500, { ok: false, error: 'server' });
+  }
+  if (!data || !data.ok) return json(res, 200, { ok: false, error: 'invalid' });
+  const { error: upErr } = await admin.auth.admin.updateUserById(data.user_id, { password });
+  if (upErr) {
+    console.error('[notify_email] updateUserById:', upErr.message);
+    return json(res, 500, { ok: false, error: 'server',
+      message: 'Das Passwort konnte nicht gesetzt werden. Bitte einen neuen Link anfordern.' });
+  }
+  return json(res, 200, { ok: true, account_name: data.account_name });
+}
+
 export default async function handler(req, res) {
+  const f = typeof req.query?.f === 'string' ? req.query.f : '';
+  if (f === 'reset' || f === 'reset_chk' || f === 'reset_set') return handleReset(req, res, f);
+
   if (req.method !== 'GET' && req.method !== 'POST') {
     res.setHeader('Allow', 'GET, POST');
     return page(res, 405, 'Nicht erlaubt', '<p>Diese Adresse nimmt nur Links aus Mails an.</p>');
@@ -79,7 +192,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     return action === 'verify'
       ? page(res, 200, 'Adresse bestätigen',
-          `<p>Sollen Mails über neue Anträge in der Projektarbeit an diese Adresse gehen?</p>
+          `<p>Ist das deine Adresse für MPSkills? Darüber kannst du dein Passwort zurücksetzen und auf Wunsch Mails über Anträge in der Projektarbeit bekommen.</p>
            <form method="post"><input type="hidden" name="verify" value="${esc(token)}">
            <button type="submit">Ja, bestätigen</button></form>`)
       : page(res, 200, 'Keine Mails mehr?',
@@ -106,12 +219,13 @@ export default async function handler(req, res) {
   if (!data || !data.ok) {
     return page(res, 404, 'Link nicht mehr gültig',
       action === 'verify'
-        ? '<p>Dieser Link gilt nicht mehr — vermutlich wurde inzwischen eine andere Adresse eingetragen. Im Raum unter 🔔 lässt sich die Bestätigung neu anfordern.</p>'
+        ? '<p>Dieser Link gilt nicht mehr — vermutlich wurde inzwischen eine andere Adresse eingetragen. In MPSkills unter „Profil“ lässt sich die Bestätigung neu anfordern.</p>'
         : '<p>Diese Adresse ist schon abgemeldet.</p>');
   }
   return action === 'verify'
     ? page(res, 200, 'Bestätigt',
-        `<p><b>${esc(data.email)}</b> ist bestätigt. Ab jetzt kommt eine Mail, wenn in einem Raum mit eingeschalteter 🔔 ein neuer Antrag gestellt wird.</p>`)
+        `<p><b>${esc(data.email)}</b> ist bestätigt. Darüber kannst du jetzt dein Passwort zurücksetzen („Passwort vergessen?“ beim Anmelden). Mails über Anträge in der Projektarbeit kommen nur aus Räumen mit eingeschalteter 🔔.</p>
+         <p><a href="/MPSkills/index.html">Zu MPSkills</a></p>`)
     : page(res, 200, 'Abgemeldet',
-        `<p><b>${esc(data.email)}</b> ist gelöscht. Es kommen keine Mails über Anträge mehr.</p>`);
+        `<p><b>${esc(data.email)}</b> ist gelöscht. Es kommen keine Mails mehr.</p>`);
 }

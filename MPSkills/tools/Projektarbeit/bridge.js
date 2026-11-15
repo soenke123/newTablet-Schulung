@@ -486,7 +486,7 @@
         g2: { t: 'Projektziel fixiert. Hannah braucht noch die Einverständniserklärung.', by: 'Herr Kollege', at: day(-1) + 'T12:45:00Z', l: 'Schulgarten-App (Noah, Hannah)' } } }
     ];
     const noteOf = id => { for (const g in notes) { const n = notes[g].find(x => x.id === id); if (n) return n; } return null; };
-    const notify = { domain: 'mps-ki.de', email: null, verified: false, pending: false, enabled: false };
+    const notify = { domain: null, email: null, verified: false, pending: false, enabled: false };
     // Demo-Raum: der Stand der Beispielklasse, solange der Tab offen ist.
     const KEEP = 'pa_demo_rollen';
     const MIA = 'p1';
@@ -723,8 +723,7 @@
         if (typeof a.p_email === 'string') {
           const m = a.p_email.trim().toLowerCase();
           if (!m) Object.assign(notify, { email: null, verified: false, pending: false });
-          else if (!/@mps-ki\.de$/.test(m)) return { ok: false, error: 'email_domain' };
-          else if (!/^[a-z0-9][a-z0-9._%+-]*@mps-ki\.de$/.test(m)) return { ok: false, error: 'email_invalid' };
+          else if (!/^[a-z0-9][a-z0-9._%+-]*@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/.test(m)) return { ok: false, error: 'email_invalid' };
           else if (m !== notify.email) Object.assign(notify, { email: m, verified: false, pending: true });
         }
         if (typeof a.p_on === 'boolean') notify.enabled = a.p_on;

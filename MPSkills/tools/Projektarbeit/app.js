@@ -2435,7 +2435,7 @@ function wire() {
   // Mail bei neuen Anträgen
   $('#ntSave').addEventListener('click', async () => {
     const mail = $('#ntMail').value.trim();
-    if (!mail) { toast('Bitte deine IServ-Adresse eintragen.'); return; }
+    if (!mail) { toast('Bitte deine E-Mail-Adresse eintragen.'); return; }
     const on = $('#ntOn').checked;
     const changed = !notify || mail.toLowerCase() !== (notify.email || '');
     if (await saveNotify({ p_email: mail, p_on: on }, changed ? null : (on ? 'Mails für diesen Raum sind an.' : 'Mails für diesen Raum sind aus.'))) {
@@ -2465,8 +2465,8 @@ async function setConsent(id, n, say) {
 
 /* ── Mail bei neuen Anträgen (0203) ──────────────────────────
    Die Adresse gilt je Lehrkraft (einmal eintragen, per Link aus der
-   ersten Mail bestätigen), der Haken je Raum. Nur @mps-ki.de — die
-   Mails bleiben in IServ. Verschickt wird 5 Minuten gebündelt. */
+   ersten Mail bestätigen), der Haken je Raum. Seit Migration 0291 jede
+   Adresse (dieselbe dient auch dem Passwort-Reset). Verschickt wird 5 Minuten gebündelt. */
 let notify = null, notifyLoading = false, notifyTried = false;
 
 function notifyBtn() {

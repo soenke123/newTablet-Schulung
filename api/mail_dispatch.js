@@ -11,7 +11,9 @@
 // Flow:
 //   1) Geheimnis prüfen
 //   2) pa_mail_claim(): Bestätigungsmails + fällige Räume (5 Min.
-//      gebündelt), als „in Arbeit" markiert
+//      gebündelt), als „in Arbeit" markiert; mps_mail_claim() (0291):
+//      neue Lehrkraft-Anträge → eine Mail ohne Personendaten an
+//      mail_settings.admin_email
 //   3) Über den IServ-Account per SMTP verschicken — je Empfänger
 //      eine eigene Mail (persönlicher Abmelde-Link)
 //   4) pa_mail_done(): was rausging, was nicht (→ nächster Lauf)
@@ -29,8 +31,8 @@
 // ══════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
-import nodemailer from 'nodemailer';
 import { timingSafeEqual } from 'node:crypto';
+import { makeTransport, siteUrl, smtpReady } from './_mail.js';
 
 const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
@@ -48,21 +50,17 @@ function sameSecret(a, b) {
   return x.length > 0 && x.length === y.length && timingSafeEqual(x, y);
 }
 
-function siteUrl(req) {
-  const env = (process.env.SITE_URL || '').replace(/\/+$/, '');
-  if (env) return env;
-  const host = req.headers['x-forwarded-host'] || req.headers.host;
-  return host ? `https://${host}` : '';
-}
-
+// Seit 0291 gilt die Adresse für mehr als die Projektarbeit: Antrag
+// auf ein Lehrkraft-Konto, Passwort zurücksetzen, Antrags-Mails.
 function verifyMail(site, v) {
   return {
-    subject: 'Bitte bestätigen: Mails zu Anträgen in der Projektarbeit',
+    subject: 'Bitte bestätige deine E-Mail-Adresse für MPSkills',
     text:
 `Hallo,
 
-für diese Adresse wurden Benachrichtigungen über neue Anträge in der
-Projektarbeit (MPSkills) eingerichtet.
+diese Adresse wurde bei MPSkills für ein Lehrkraft-Konto eingetragen.
+Damit kannst du dein Passwort selbst zurücksetzen und auf Wunsch
+Mails über neue Anträge in der Projektarbeit bekommen.
 
 Bitte bestätige die Adresse mit diesem Link:
 ${site}/api/notify_email?verify=${v.token}
@@ -71,7 +69,27 @@ Warst du das nicht? Dann diesen Link öffnen — die Adresse wird gelöscht:
 ${site}/api/notify_email?stop=${v.stop}
 
 --
-MPS Tablet-Schulung · automatisch verschickt`
+MPSkills · automatisch verschickt`
+  };
+}
+
+// Mail an den Volladmin (0291). Bewusst OHNE Name, Schule oder
+// Nachricht: die stehen im Admin-Panel hinter Anmeldung + 2FA.
+function adminMail(site, a) {
+  const n = a.count || 1;
+  return {
+    subject: n === 1 ? 'MPSkills: Eine Lehrkraft möchte einen Account'
+                     : `MPSkills: ${n} Lehrkräfte möchten einen Account`,
+    text:
+`Hallo,
+
+${n === 1 ? 'eine Lehrkraft möchte' : n + ' Lehrkräfte möchten'} einen Account bei MPSkills.
+
+Freigeben oder ablehnen im Admin-Panel unter „Lehrkräfte“:
+${site}/admin/index.html
+
+--
+MPSkills · automatisch verschickt`
   };
 }
 
@@ -112,7 +130,7 @@ export default async function handler(req, res) {
   const url         = process.env.SUPABASE_URL;
   const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const smtpUser    = process.env.SMTP_USER;
-  if (!url || !serviceRole || !process.env.SMTP_HOST || !smtpUser || !process.env.SMTP_PASS) {
+  if (!url || !serviceRole || !smtpReady()) {
     console.error('[mail_dispatch] Env unvollständig (SUPABASE_*, SMTP_HOST/USER/PASS).');
     return res.status(500).json({ ok: false, error: 'server_misconfigured' });
   }
@@ -126,21 +144,21 @@ export default async function handler(req, res) {
   }
   const verify = job.verify || [];
   const rooms  = job.rooms || [];
-  if (!verify.length && !rooms.length) {
+
+  // Lehrkraft-Anträge an den Volladmin (0291). Fehlt die Migration,
+  // läuft der Rest wie bisher.
+  let adminJob = null;
+  {
+    const { data: mj, error: mjErr } = await admin.rpc('mps_mail_claim');
+    if (mjErr) console.warn('[mail_dispatch] mps_mail_claim:', mjErr.message);
+    else adminJob = mj?.admin || null;
+  }
+
+  if (!verify.length && !rooms.length && !adminJob) {
     return res.status(200).json({ ok: true, sent: 0 });
   }
 
-  const port = Number(process.env.SMTP_PORT || 587);
-  const transport = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port,
-    secure: port === 465,          // 587 → STARTTLS
-    requireTLS: port !== 465,
-    auth: { user: smtpUser, pass: process.env.SMTP_PASS },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
-  });
+  const transport = makeTransport();
   const from = process.env.SMTP_FROM || `"MPS Projektarbeit" <${smtpUser}>`;
   const bcc  = process.env.MAIL_BCC_SELF === '1' ? smtpUser : undefined;
 
@@ -176,6 +194,21 @@ export default async function handler(req, res) {
       }
     }
     result.rooms.push({ ids: room.ids, ok: sentTo.length > 0, sent_to: sentTo, error: errors.join('; ').slice(0, 250) });
+  }
+
+  if (adminJob) {
+    const to = String(adminJob.to || '').split(',').map(x => x.trim()).filter(Boolean);
+    let res2 = { ids: adminJob.ids, ok: false, error: '' };
+    try {
+      await transport.sendMail({ from, to, bcc, ...adminMail(site, adminJob) });
+      res2.ok = true;
+      sent++;
+    } catch (e) {
+      console.warn('[mail_dispatch] Admin-Mail fehlgeschlagen:', e.message);
+      res2.error = String(e.message || '').slice(0, 250);
+    }
+    const { error: mdErr } = await admin.rpc('mps_mail_done', { p_res: { admin: res2 } });
+    if (mdErr) console.error('[mail_dispatch] mps_mail_done:', mdErr.message);
   }
 
   try { transport.close(); } catch { /* egal */ }
