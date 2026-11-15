@@ -806,9 +806,9 @@ a.btn {
 
 /* Spalten: nur Stichpunkte + Knöpfe; Knöpfe unten auf gleicher Höhe */
 .access-two > .access-col { display: flex; flex-direction: column; }
-.access-two > .access-col > .btn,
-.access-two > .access-col > .access-btns { margin-top: auto; }
-.access-btns { display: grid; gap: 10px; }
+.access-two > .access-col > .btn { margin-top: auto; }
+.access-slot[hidden] { display: none; }
+.tch-switch { margin: -8px 0 16px; text-align: left; }
 fieldset.tm { border: 0; margin: 0; padding: 0; min-width: 0; }
 fieldset.tm[hidden] { display: none; }
 

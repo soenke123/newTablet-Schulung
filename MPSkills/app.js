@@ -1728,7 +1728,12 @@ let teacherMode = 'new';
 function setTeacherMode(mode) {
   teacherMode = mode === 'up' ? 'up' : 'new';
   document.getElementById('tchTitle').textContent =
-    teacherMode === 'up' ? 'Schülerkonto hochstufen' : 'Neues Lehrer-Konto';
+    teacherMode === 'up' ? 'Schülerkonto hochstufen' : 'Lehrkräfteaccount beantragen';
+  // Ein Knopf auf der Seite; wer schon ein Schülerkonto hat, schaltet
+  // hier im Fenster um.
+  document.getElementById('tchSwitch').innerHTML = teacherMode === 'up'
+    ? 'Noch kein Konto? <button type="button" class="btn--link" data-open="new">Neues Konto anlegen</button>'
+    : 'Du hast schon ein Schülerkonto? <button type="button" class="btn--link" data-open="up">Dieses hochstufen</button>';
   document.getElementById('tchSub').textContent = teacherMode === 'up'
     ? 'Melde dich mit deinem Schülerkonto an — es bleibt dasselbe, mit allen Räumen und Profilbildern. Ein Admin liest deine Nachricht und schaltet dich frei.'
     : 'Ein Admin liest deine Nachricht und schaltet dich von Hand frei.';

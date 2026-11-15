@@ -113,8 +113,9 @@
       host.innerHTML = `
         <div class="ub ub--guest">
           ${themeHTML('bar')}
-          <button type="button" class="btn btn--ghost btn--sm" data-ub="login">Einloggen</button>
-          <button type="button" class="btn btn--primary btn--sm" data-ub="register">Registrieren</button>
+          <!-- Nur Einloggen (15.11.2026): Konten legt man auf der
+               MPSkills-Startseite unter „Konto anlegen" an. -->
+          <button type="button" class="btn btn--primary btn--sm" data-ub="login">Einloggen</button>
         </div>`;
       return;
     }

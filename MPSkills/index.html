@@ -8,7 +8,7 @@
 <meta name="description" content="Skills und Spiele für den Unterricht. Lehrkräfte schalten frei, Klassen machen mit." />
 <meta name="robots" content="noindex" />
 <link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261115b" />
+<link rel="stylesheet" href="style.css?v=20261115c" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -183,11 +183,9 @@
     <h2 class="access-h">Ein Konto für MPSkills</h2>
     <p class="access-lead">
       Zum Mitmachen brauchst du <strong>kein</strong> Konto — der Code von der Tafel reicht.
-      Mit Konto findest du deine Räume auf jedem Gerät wieder. Als Lehrkraft eröffnest du
-      selbst Räume für deine Klassen.
     </p>
     <button type="button" class="btn btn--primary" id="accessToggle"
-            aria-expanded="false" aria-controls="accessPanel">Konto anlegen oder anmelden</button>
+            aria-expanded="false" aria-controls="accessPanel">Konto anlegen</button>
 
     <div class="access-panel" id="accessPanel" hidden>
 
@@ -213,22 +211,22 @@
             <li>Räume verwalten, Kolleg:innen einladen</li>
             <li>Passwort per E-Mail zurücksetzen</li>
           </ul>
-          <div class="access-btns">
-            <button type="button" class="btn btn--primary btn--wide" data-open="new">Neues Lehrer-Konto</button>
-            <button type="button" class="btn btn--wide" data-open="up">Schülerkonto hochstufen</button>
-          </div>
+          <button type="button" class="btn btn--primary btn--wide" data-open="new">Lehrkräfteaccount beantragen</button>
         </section>
 
       </div></div>
 
-      <!-- c) Anmelden — für beide -->
-      <div class="access-slot access-slot--login" id="slotLogin"><section class="access-col" id="colLogin">
+      <!-- c) Anmelden — steht NICHT mehr auf der Seite (15.11.2026),
+           nur noch als Fenster über „Einloggen" oben rechts. Das Fach
+           bleibt, weil openAuth()/homeAuth() die Spalte hin- und
+           zurückhängen. -->
+      <div class="access-slot access-slot--login" id="slotLogin" hidden><section class="access-col" id="colLogin">
         <h3>Du hast schon ein Konto?</h3>
         <p class="access-note">Hier oder in der Tablet-Schulung — es ist dasselbe Konto.</p>
 
         <div class="msg msg--err" id="loginError" hidden></div>
 
-        <form id="loginForm" class="login-row" novalidate>
+        <form id="loginForm" novalidate>
           <label class="field">Schule
             <select id="loginSchool" required></select>
           </label>
@@ -429,7 +427,7 @@
 
     <p class="about-foot">
       Für den Zugang brauchst du ein Konto und die Freischaltung durch einen Admin —
-      der Weg dahin steht auf dieser Seite unter „Konto anlegen oder anmelden" (Spalte Lehreraccount).
+      der Weg dahin steht auf dieser Seite unter „Konto anlegen" → „Lehrkräfteaccount beantragen".
     </p>
   </div>
 </div>
@@ -495,6 +493,7 @@
     <button type="button" class="modal-close" data-close="tchModal" aria-label="Schließen">×</button>
     <h2 id="tchTitle">Neues Lehrer-Konto</h2>
     <p class="sub" id="tchSub">Ein Admin liest deine Nachricht und schaltet dich von Hand frei.</p>
+    <p class="switch-line tch-switch" id="tchSwitch"></p>
 
 
             <div class="msg msg--err" id="registerError" hidden></div>
@@ -654,7 +653,7 @@
 <script src="../session.js?v=20260817"></script>
 <script src="../avatars.js?v=20261028a"></script>
 <script src="../account-name.js?v=20260930"></script>
-<script src="lib/userbar.js?v=20261114n"></script>
+<script src="lib/userbar.js?v=20261115a"></script>
 <script src="lib/profilemodal.js?v=20261115a"></script>
 <script src="lib/room.js?v=20261024b"></script>
 <script src="lib/icons.js?v=20261030c"></script>
@@ -687,6 +686,6 @@
 <script src="preview/derby.js?v=20261030a"></script>
 <script src="preview/diagramm.js?v=20261103c"></script>
 <script src="preview/socialhub.js?v=20261109a"></script>
-<script src="app.js?v=20261115b"></script>
+<script src="app.js?v=20261115c"></script>
 </body>
 </html>
