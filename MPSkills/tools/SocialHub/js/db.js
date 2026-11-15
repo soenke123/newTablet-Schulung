@@ -235,9 +235,9 @@
 
     host.innerHTML =
       '<div class="db">' +
-        '<div class="db-bar">' +
+        // nur für Meldungen (lädt …, Fehler); kein „Neu laden“ mehr – run() holt den Stand selbst
+        '<div class="db-bar" id="dbBar" hidden>' +
           '<span class="db-state" id="dbState"></span>' +
-          '<button type="button" class="btn btn--ghost btn--s" id="dbReload" title="Neuen Stand aus dem Netzwerk holen">↻ Neu laden</button>' +
         '</div>' +
         '<div class="db-tables" id="dbTables"></div>' +
         // 1× Tabelle antippen = ihre Attribute hier, 2× = SELECT * FROM … ausführen
@@ -275,12 +275,12 @@
       toast,
       errText: window.SHApi && window.SHApi.errText
     }) : null;
-    $('#dbReload').addEventListener('click', () => load(true));
 
     function state(t, bad) {
       const el = $('#dbState');
       el.textContent = t || '';
       el.className = 'db-state' + (bad ? ' bad' : '');
+      $('#dbBar').hidden = !t;
     }
 
     function show(t) {
@@ -345,12 +345,14 @@
     /* ── Schnappschuss → SQLite ─────────────────────────────── */
     // Während des Ladens wartet run() – sonst vergleicht ein Schreiben mit dem alten Stand
     let loading = null;
-    function load(manual) {
-      loading = loadNow(manual).finally(() => { loading = null; });
+    let loadedAt = 0;              // wann die Kopie zuletzt vom Server kam
+    const FRESH_MS = 3000;         // jünger = vor dem Ausführen nicht nochmal holen
+    function load(quiet) {
+      loading = loadNow(quiet).finally(() => { loading = null; });
       return loading;
     }
-    async function loadNow(manual) {
-      state('lädt …');
+    async function loadNow(quiet) {
+      if (!quiet) state('lädt …');
       const res = await api('sh_db_snapshot', {});
       if (!res || !res.ok) { state(res && res.error === 'not_admin' ? 'Nur für Admins.' : 'Konnte das Netzwerk nicht laden.', true); return false; }
       const b = buildScript(res.tables || {});
@@ -361,7 +363,8 @@
         schema = o.schema;
         await readBase();
         paintTables();
-        state(manual ? 'Neu geladen.' : '');
+        loadedAt = Date.now();
+        state('');
         if (tab === 'diagram') drawDiagram();
         return true;
       } catch (e) {
@@ -429,6 +432,8 @@
       if (!sql.trim()) return;
       busy = true;
       if (loading) { try { await loading; } catch (e) { /* zeigt state */ } }
+      // Stand der anderen (neue Likes, Posts …) vor jedem Ausführen holen – ersetzt „Neu laden“
+      else if (Date.now() - loadedAt > FRESH_MS) { try { await load(true); } catch (e) { /* zeigt state */ } }
       editor.clearMark();
       $('#dbRun').disabled = true;
       try {
@@ -447,11 +452,11 @@
               state('');
               toast('Netzwerk geändert');
               opts.onChanged && opts.onChanged();
-              await load(false);
+              await load(true);
             } else {
               html = '<div class="res res--bad"><b>Das Netzwerk hat die Änderung abgelehnt:</b> ' +
                 esc((res && (res.message || res.error)) || 'unbekannt') + '<div class="res-hint">Nichts wurde geändert. Die Kopie wird neu geladen.</div></div>' + html;
-              await load(false);
+              await load(true);
             }
           }
         }
@@ -469,7 +474,7 @@
     load(false);
     return {
       show,
-      reload: () => load(true),
+      reload: () => load(false),
       destroy: () => { W.stop(); if (cmds) cmds.destroy(); }
     };
   }
