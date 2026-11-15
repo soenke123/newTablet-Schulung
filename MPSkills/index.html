@@ -8,7 +8,7 @@
 <meta name="description" content="Skills und Spiele für den Unterricht. Lehrkräfte schalten frei, Klassen machen mit." />
 <meta name="robots" content="noindex" />
 <link href="../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=20261115a" />
+<link rel="stylesheet" href="style.css?v=20261115b" />
 <!-- Blockierend und VOR dem <body>: setzt data-theme, bevor der
      Browser zeichnet. Steht sie weiter unten, blitzt die helle
      Seite auf. Siehe Kopf von lib/theme.js. -->
@@ -202,104 +202,21 @@
             <li>Profilbilder sammeln</li>
           </ul>
 
-          <div class="msg msg--err" id="stuError" hidden></div>
-          <div class="msg msg--ok"  id="stuSuccess" hidden></div>
-
-          <form id="stuForm" novalidate>
-            <label class="field">Schule
-              <select id="stuSchool" required></select>
-            </label>
-            <!-- Anzeigename VOR dem Accountnamen: Safari speichert das
-                 Textfeld direkt vor dem Passwort als Benutzernamen. -->
-            <label class="field">Anzeigename
-              <input type="text" id="stuDisplayName" autocomplete="nickname" required />
-              <span class="rule">Was die anderen im Raum sehen.</span>
-            </label>
-            <label class="field">Accountname
-              <input type="text" id="stuAccount" autocomplete="username"
-                     autocapitalize="none" autocorrect="off" spellcheck="false" required
-                     aria-describedby="stuAccountHint" />
-              <span class="rule" id="stuAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</span>
-            </label>
-            <label class="field">Passwort
-              <input type="password" id="stuPassword" autocomplete="new-password" required />
-              <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
-            </label>
-            <label class="field">Passwort wiederholen
-              <input type="password" id="stuPassword2" autocomplete="new-password" required />
-            </label>
-            <button type="submit" class="btn btn--wide" id="stuSubmit">Schülerkonto anlegen</button>
-          </form>
+          <button type="button" class="btn btn--primary btn--wide" data-open="stu">Schülerkonto anlegen</button>
         </section>
 
         <!-- b) Lehreraccount -->
         <section class="access-col access-col--teacher" id="colTeacher">
           <h3>Lehreraccount</h3>
           <ul class="access-can">
-            <li>Räume für deine Klassen erstellen — mit Code und QR-Code</li>
-            <li>Räume verwalten, verlängern und Kolleg:innen einladen</li>
-            <li>Arbeitsmaterial und Ergebnisse der Klasse ansehen</li>
-            <li>Passwort selbst per E-Mail zurücksetzen</li>
+            <li>Räume für Klassen erstellen</li>
+            <li>Räume verwalten, Kolleg:innen einladen</li>
+            <li>Passwort per E-Mail zurücksetzen</li>
           </ul>
-          <p class="access-note">Ein Admin liest deine Nachricht und schaltet dich von Hand frei.</p>
-
-          <div class="seg" role="radiogroup" aria-label="Neues Konto oder Schülerkonto hochstufen">
-            <button type="button" class="seg-btn" data-tmode="new" aria-pressed="true">Neues Konto</button>
-            <button type="button" class="seg-btn" data-tmode="up" aria-pressed="false">Schülerkonto hochstufen</button>
+          <div class="access-btns">
+            <button type="button" class="btn btn--primary btn--wide" data-open="new">Neues Lehrer-Konto</button>
+            <button type="button" class="btn btn--wide" data-open="up">Schülerkonto hochstufen</button>
           </div>
-
-          <div class="msg msg--err" id="registerError" hidden></div>
-          <div class="msg msg--ok"  id="registerSuccess" hidden></div>
-
-          <form id="registerForm" novalidate>
-            <fieldset class="tm" data-tm="new">
-              <label class="field">Schule
-                <select id="regSchool" required></select>
-              </label>
-              <label class="field">Anzeigename
-                <input type="text" id="regDisplayName" autocomplete="nickname" required />
-                <span class="rule">Was die Klasse sieht — z. B. dein Kürzel.</span>
-              </label>
-              <label class="field">Accountname
-                <input type="text" id="regAccount" autocomplete="username"
-                       autocapitalize="none" autocorrect="off" spellcheck="false" required
-                       aria-describedby="regAccountHint" />
-                <span class="rule" id="regAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</span>
-              </label>
-              <label class="field">Passwort
-                <input type="password" id="regPassword" autocomplete="new-password" required />
-                <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
-              </label>
-              <label class="field">Passwort wiederholen
-                <input type="password" id="regPassword2" autocomplete="new-password" required />
-              </label>
-            </fieldset>
-
-            <fieldset class="tm" data-tm="up" hidden disabled>
-              <p class="access-note">Melde dich mit deinem bisherigen Konto an — es bleibt dasselbe, mit allen Räumen und Profilbildern.</p>
-              <label class="field">Schule
-                <select id="upSchool" required></select>
-              </label>
-              <label class="field">Accountname
-                <input type="text" id="upAccount" autocomplete="username"
-                       autocapitalize="none" spellcheck="false" required />
-              </label>
-              <label class="field">Passwort
-                <input type="password" id="upPassword" autocomplete="current-password" required />
-              </label>
-            </fieldset>
-
-            <label class="field">E-Mail-Adresse
-              <input type="email" id="regEmail" autocomplete="email" inputmode="email"
-                     maxlength="120" spellcheck="false" required />
-              <span class="rule">Zum Zurücksetzen deines Passworts. Du bekommst einen Link zum Bestätigen.</span>
-            </label>
-            <label class="field">Nachricht an den Admin
-              <textarea id="regNote" rows="4" maxlength="600" required
-                        placeholder="Wer bist du, an welcher Schule unterrichtest du, und wie hast du von MPSkills erfahren?"></textarea>
-            </label>
-            <button type="submit" class="btn btn--primary btn--wide" id="registerSubmit">Lehrer-Konto beantragen</button>
-          </form>
         </section>
 
       </div></div>
@@ -532,6 +449,109 @@
   </div>
 </div>
 
+<!-- ─── Konto-Formulare als Fenster (15.11.2026) ─────────────
+     Die Spalten auf der Seite tragen nur Stichpunkte und Knöpfe; die
+     Felder stehen hier. Ein Knopf (data-open) öffnet das passende
+     Fenster: Schülerkonto, neues Lehrer-Konto oder Hochstufen
+     (setTeacherMode in app.js schaltet die Felder im Lehrer-Fenster). -->
+<div class="overlay" id="stuModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="stuTitle">
+    <button type="button" class="modal-close" data-close="stuModal" aria-label="Schließen">×</button>
+    <h2 id="stuTitle">Schülerkonto anlegen</h2>
+    <p class="sub">Damit trittst du Räumen bei und findest sie auf jedem Gerät wieder.</p>
+            <div class="msg msg--err" id="stuError" hidden></div>
+            <div class="msg msg--ok"  id="stuSuccess" hidden></div>
+
+            <form id="stuForm" novalidate>
+              <label class="field">Schule
+                <select id="stuSchool" required></select>
+              </label>
+              <!-- Anzeigename VOR dem Accountnamen: Safari speichert das
+                   Textfeld direkt vor dem Passwort als Benutzernamen. -->
+              <label class="field">Anzeigename
+                <input type="text" id="stuDisplayName" autocomplete="nickname" required />
+                <span class="rule">Was die anderen im Raum sehen.</span>
+              </label>
+              <label class="field">Accountname
+                <input type="text" id="stuAccount" autocomplete="username"
+                       autocapitalize="none" autocorrect="off" spellcheck="false" required
+                       aria-describedby="stuAccountHint" />
+                <span class="rule" id="stuAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</span>
+              </label>
+              <label class="field">Passwort
+                <input type="password" id="stuPassword" autocomplete="new-password" required />
+                <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
+              </label>
+              <label class="field">Passwort wiederholen
+                <input type="password" id="stuPassword2" autocomplete="new-password" required />
+              </label>
+              <button type="submit" class="btn btn--wide" id="stuSubmit">Schülerkonto anlegen</button>
+            </form>
+  </div>
+</div>
+
+<div class="overlay" id="tchModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="tchTitle">
+    <button type="button" class="modal-close" data-close="tchModal" aria-label="Schließen">×</button>
+    <h2 id="tchTitle">Neues Lehrer-Konto</h2>
+    <p class="sub" id="tchSub">Ein Admin liest deine Nachricht und schaltet dich von Hand frei.</p>
+
+
+            <div class="msg msg--err" id="registerError" hidden></div>
+            <div class="msg msg--ok"  id="registerSuccess" hidden></div>
+
+            <form id="registerForm" novalidate>
+              <fieldset class="tm" data-tm="new">
+                <label class="field">Schule
+                  <select id="regSchool" required></select>
+                </label>
+                <label class="field">Anzeigename
+                  <input type="text" id="regDisplayName" autocomplete="nickname" required />
+                  <span class="rule">Was die Klasse sieht — z. B. dein Kürzel.</span>
+                </label>
+                <label class="field">Accountname
+                  <input type="text" id="regAccount" autocomplete="username"
+                         autocapitalize="none" autocorrect="off" spellcheck="false" required
+                         aria-describedby="regAccountHint" />
+                  <span class="rule" id="regAccountHint">2–20 Zeichen · nur Kleinbuchstaben (a–z), Ziffern und . _ - · keine Großbuchstaben, Umlaute oder Leerzeichen</span>
+                </label>
+                <label class="field">Passwort
+                  <input type="password" id="regPassword" autocomplete="new-password" required />
+                  <span class="rule">Mindestens 8 Zeichen, mit Buchstabe und Zahl.</span>
+                </label>
+                <label class="field">Passwort wiederholen
+                  <input type="password" id="regPassword2" autocomplete="new-password" required />
+                </label>
+              </fieldset>
+
+              <fieldset class="tm" data-tm="up" hidden disabled>
+                
+                <label class="field">Schule
+                  <select id="upSchool" required></select>
+                </label>
+                <label class="field">Accountname
+                  <input type="text" id="upAccount" autocomplete="username"
+                         autocapitalize="none" spellcheck="false" required />
+                </label>
+                <label class="field">Passwort
+                  <input type="password" id="upPassword" autocomplete="current-password" required />
+                </label>
+              </fieldset>
+
+              <label class="field">E-Mail-Adresse
+                <input type="email" id="regEmail" autocomplete="email" inputmode="email"
+                       maxlength="120" spellcheck="false" required />
+                <span class="rule">Zum Zurücksetzen deines Passworts. Du bekommst einen Link zum Bestätigen.</span>
+              </label>
+              <label class="field">Nachricht an den Admin
+                <textarea id="regNote" rows="4" maxlength="600" required
+                          placeholder="Wer bist du, an welcher Schule unterrichtest du, und wie hast du von MPSkills erfahren?"></textarea>
+              </label>
+              <button type="submit" class="btn btn--primary btn--wide" id="registerSubmit">Lehrer-Konto beantragen</button>
+            </form>
+  </div>
+</div>
+
 <!-- ─── Passwort vergessen (Migration 0291) ──────────────────
      Nur für Lehrkräfte mit bestätigter E-Mail. Die Antwort ist immer
      dieselbe, ob es das Konto gibt oder nicht — sonst ließe sich hier
@@ -667,6 +687,6 @@
 <script src="preview/derby.js?v=20261030a"></script>
 <script src="preview/diagramm.js?v=20261103c"></script>
 <script src="preview/socialhub.js?v=20261109a"></script>
-<script src="app.js?v=20261115a"></script>
+<script src="app.js?v=20261115b"></script>
 </body>
 </html>

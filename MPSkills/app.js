@@ -1362,6 +1362,7 @@ function renderState() {
     // wäre nach dem Abmelden verschwunden.
     closeAuth();
     closeAccess();
+    closeForms();
   }
   if (access) access.hidden = (role !== 'guest');
 
@@ -1726,8 +1727,11 @@ async function doStudentRegister(e) {
 let teacherMode = 'new';
 function setTeacherMode(mode) {
   teacherMode = mode === 'up' ? 'up' : 'new';
-  document.querySelectorAll('#colTeacher [data-tmode]').forEach(b =>
-    b.setAttribute('aria-pressed', String(b.dataset.tmode === teacherMode)));
+  document.getElementById('tchTitle').textContent =
+    teacherMode === 'up' ? 'Schülerkonto hochstufen' : 'Neues Lehrer-Konto';
+  document.getElementById('tchSub').textContent = teacherMode === 'up'
+    ? 'Melde dich mit deinem Schülerkonto an — es bleibt dasselbe, mit allen Räumen und Profilbildern. Ein Admin liest deine Nachricht und schaltet dich frei.'
+    : 'Ein Admin liest deine Nachricht und schaltet dich von Hand frei.';
   // disabled, nicht nur hidden: sonst füllt der Passwort-Manager die
   // unsichtbaren Felder und „required" hält das Formular auf.
   document.querySelectorAll('#registerForm fieldset[data-tm]').forEach(f => {
@@ -1738,6 +1742,31 @@ function setTeacherMode(mode) {
   document.getElementById('registerSubmit').textContent =
     teacherMode === 'up' ? 'Konto hochstufen' : 'Lehrer-Konto beantragen';
   document.getElementById('registerError').hidden = true;
+  document.getElementById('registerSuccess').hidden = true;
+}
+
+/* Die Spalten tragen nur Knöpfe (15.11.2026); die Felder stehen in
+   eigenen Fenstern. Die Spalten können selbst im Anmelde-Fenster der
+   Kopfzeile stehen — das geht dann zu, das Formular-Fenster auf. */
+async function openForm(which) {
+  closeAuth();
+  await fillSchoolSelects();
+  if (which === 'stu') {
+    document.getElementById('stuError').hidden = true;
+    document.getElementById('stuSuccess').hidden = true;
+    document.getElementById('stuModal').hidden = false;
+    setTimeout(() => document.getElementById('stuDisplayName')?.focus(), 60);
+  } else {
+    setTeacherMode(which);
+    document.getElementById('tchModal').hidden = false;
+    setTimeout(() => document.getElementById(which === 'up' ? 'upAccount' : 'regDisplayName')?.focus(), 60);
+  }
+}
+function closeForms() {
+  for (const id of ['stuModal', 'tchModal']) {
+    const el = document.getElementById(id);
+    if (el) el.hidden = true;
+  }
 }
 
 async function doRegister(e) {
@@ -1887,9 +1916,11 @@ const stuAccountCheck = AccountName.attach(
   document.getElementById('stuAccountHint'));
 document.getElementById('registerForm').addEventListener('submit', doRegister);
 document.getElementById('stuForm').addEventListener('submit', doStudentRegister);
-document.getElementById('colTeacher').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-tmode]');
-  if (b) setTeacherMode(b.dataset.tmode);
+// Delegiert am document: die Knöpfe wandern mit ihrer Spalte ins
+// Anmelde-Fenster der Kopfzeile und zurück.
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-open]');
+  if (b) openForm(b.dataset.open);
 });
 setTeacherMode('new');
 document.getElementById('forgotOpen').addEventListener('click', openForgot);
@@ -1915,12 +1946,13 @@ document.getElementById('infobar').addEventListener('click', (e) => {
 document.getElementById('skillsOpen').addEventListener('click', openSkills);
 
 // Klick auf den dunklen Grund schließt — aber nur dort, nicht im Kasten.
-for (const id of ['privacyModal', 'aboutModal', 'authModal', 'skillsModal', 'forgotModal']) {
+for (const id of ['privacyModal', 'aboutModal', 'authModal', 'skillsModal', 'forgotModal', 'stuModal', 'tchModal']) {
   const el = document.getElementById(id);
   el.addEventListener('click', (e) => {
     if (e.target !== el && !e.target.closest('[data-close]')) return;
     if (id === 'authModal') closeAuth();
     else if (id === 'skillsModal') closeSkills();
+    else if (id === 'stuModal' || id === 'tchModal') closeForms();
     else closeInfos();
   });
 }
@@ -1964,6 +1996,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   closeInfos();
   closeAuth();
+  closeForms();
   closeRowMenus();
 
   // Die Liste nur dann, wenn nicht gerade eine Vorstellung darüber

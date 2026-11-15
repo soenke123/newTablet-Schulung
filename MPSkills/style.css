@@ -804,33 +804,11 @@ a.btn {
   font-weight: 700;
 }
 
-/* Umschalter Neues Konto | Schülerkonto hochstufen */
-.seg {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  margin: 0 0 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--paper);
-}
-.seg-btn {
-  flex: 1;
-  font: inherit;
-  font-size: .84rem;
-  font-weight: 600;
-  padding: 7px 10px;
-  border: 0;
-  border-radius: 9px;
-  background: transparent;
-  color: var(--ink-soft);
-  cursor: pointer;
-}
-.seg-btn[aria-pressed="true"] {
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow);
-}
+/* Spalten: nur Stichpunkte + Knöpfe; Knöpfe unten auf gleicher Höhe */
+.access-two > .access-col { display: flex; flex-direction: column; }
+.access-two > .access-col > .btn,
+.access-two > .access-col > .access-btns { margin-top: auto; }
+.access-btns { display: grid; gap: 10px; }
 fieldset.tm { border: 0; margin: 0; padding: 0; min-width: 0; }
 fieldset.tm[hidden] { display: none; }
 
