@@ -259,7 +259,7 @@
       getSchema: () => schema,
       onRun: () => run()
     });
-    editor.value = 'SELECT * FROM users;';
+    editor.value = 'SELECT * FROM users';
 
     $('#dbRun').addEventListener('click', () => run());
 
@@ -299,7 +299,7 @@
         return '<button type="button" class="db-tbl" data-tbl="' + esc(t) + '"><b>' + esc(t) + '</b><span>' + n + '</span></button>';
       }).join('');
       host.querySelectorAll('.db-tbl').forEach(b => b.addEventListener('click', () => {
-        editor.value = 'SELECT * FROM ' + b.dataset.tbl + ';';
+        editor.value = 'SELECT * FROM ' + b.dataset.tbl;
         run();
       }));
     }
