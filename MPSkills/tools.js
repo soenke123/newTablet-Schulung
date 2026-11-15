@@ -160,6 +160,13 @@ window.TOOLS_OVERLAY = {
   // war die Kachel weg und das Anlegen schlug fehl). Schaufenster:
   // preview/socialhub.js (echte App mit ?demo=1, js/demo.js spielt den Server).
   socialhub: { ready: true, subtitle: 'Eigenes soziales Netzwerk & Datenbank', beta: true },
+  // Neunzehnter Skill (Migration 0290) — Nebeltal: Prototyp zum
+  // Gradientenabstieg. Im Nebel den tiefsten Punkt einer 3D-Landschaft
+  // suchen, vom freien Laufen bis zum Training eines Modells mit
+  // Lernrate. Eingerahmt wie Reinforce Yourself (tools/Nebeltal/index.html,
+  // eigenes WebGL ohne Bibliothek). Nur für Admins (skill_tools.admin_only),
+  // `adminOnly` setzt das Schild. Noch kein Schaufenster (preview/).
+  nebeltal: { ready: true, subtitle: 'Gradientenabstieg · Lernrate', learning: true, beta: true, adminOnly: true },
   // Stufe 6 — der Beweis, dass ein Tool ohne Migration dazukommt.
   // hidden (26.09.2026): Sönke will Kachel und Verlinkung weg, die
   // Datenbankzeile und der Ordner aber stehen lassen. `hidden` blendet

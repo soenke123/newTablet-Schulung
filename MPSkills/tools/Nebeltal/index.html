@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<script src="../../../motion.js?v=20261114n"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nebeltal</title>
+<link href="../../../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
+<style>
+/* Farben wie MPSkills (MPSkills/style.css); Hell/Dunkel kommt im Raum
+   vom Rahmen (data-theme), allein vom Gerät. --orange = die Figur. */
+:root {
+  --paper:#eef2f1; --surface:#ffffff; --surface-2:#f7faf9; --line:#dfe7e5;
+  --ink:#0d1a17; --ink-soft:#475853; --ink-faint:#7b8a86;
+  --accent:#00b37e; --accent-ink:#00714f; --accent-dim:#d6f5e8; --on-accent:#fff;
+  --orange:#f2711c; --gold:#e0a210; --warn:#d43a52; --blue:#2f7fe6;
+  --glass:rgba(255,255,255,.86);
+  --shadow:0 2px 4px rgba(13,26,23,.05), 0 12px 28px -12px rgba(13,26,23,.28);
+  color-scheme:light;
+}
+html[data-theme="dark"] {
+  --paper:#0a0b10; --surface:#12141b; --surface-2:#171a22; --line:#2a2e3d;
+  --ink:#edeff5; --ink-soft:#a4a9bd; --ink-faint:#71768c;
+  --accent:#2ad49a; --accent-ink:#5ee6b6; --accent-dim:#123a2e; --on-accent:#05140f;
+  --orange:#ff9d4d; --gold:#f4c13d; --warn:#ff6b81; --blue:#6aa8ff;
+  --glass:rgba(18,20,27,.86);
+  --shadow:0 2px 4px rgba(0,0,0,.2), 0 14px 30px -12px rgba(0,0,0,.6);
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --paper:#0a0b10; --surface:#12141b; --surface-2:#171a22; --line:#2a2e3d;
+    --ink:#edeff5; --ink-soft:#a4a9bd; --ink-faint:#71768c;
+    --accent:#2ad49a; --accent-ink:#5ee6b6; --accent-dim:#123a2e; --on-accent:#05140f;
+    --orange:#ff9d4d; --gold:#f4c13d; --warn:#ff6b81; --blue:#6aa8ff;
+    --glass:rgba(18,20,27,.86);
+    --shadow:0 2px 4px rgba(0,0,0,.2), 0 14px 30px -12px rgba(0,0,0,.6);
+    color-scheme:dark;
+  }
+}
+* { box-sizing:border-box; }
+[hidden] { display:none !important; }
+html, body { margin:0; height:100%; background:var(--paper); color:var(--ink);
+  font-family:Outfit, system-ui, sans-serif; overflow:hidden; -webkit-user-select:none; user-select:none;
+  -webkit-tap-highlight-color:transparent; }
+#app { position:relative; width:100%; height:100%; overflow:hidden; }
+#welt { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+button { font:inherit; color:inherit; }
+.btn { border:1px solid var(--line); background:var(--surface); border-radius:12px; padding:10px 16px;
+  font-weight:600; font-size:15px; cursor:pointer; box-shadow:var(--shadow); }
+.btn:hover { border-color:var(--accent); }
+.btn.primary { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+.glass { background:var(--glass); border:1px solid var(--line); border-radius:14px; box-shadow:var(--shadow);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+
+/* ── Menü ── */
+#menu { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:16px; overflow:auto; }
+.menu-in { width:min(560px, 100%); padding:24px 24px 20px; }
+.proto { display:inline-block; font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--orange); border:1px solid currentColor; border-radius:99px; padding:2px 9px; }
+#menu h1 { font-size:34px; margin:8px 0 2px; letter-spacing:-.01em; }
+#menu .sub { margin:0 0 14px; color:var(--ink-soft); font-size:16px; line-height:1.45; }
+#levels { display:grid; gap:8px; margin:14px 0; }
+.lv { display:flex; align-items:center; gap:14px; text-align:left; width:100%; padding:12px 14px; cursor:pointer;
+  border:1px solid var(--line); background:var(--surface); border-radius:12px; }
+.lv:hover { border-color:var(--accent); }
+.lv-n { flex:none; width:36px; height:36px; border-radius:50%; display:grid; place-items:center;
+  background:var(--accent-dim); color:var(--accent-ink); font-weight:700; font-size:17px; }
+.lv-t { flex:1; display:flex; flex-direction:column; }
+.lv-t b { font-size:16px; } .lv-t small { color:var(--ink-faint); font-size:13.5px; }
+.stars i { font-style:normal; color:var(--line); font-size:18px; }
+.stars i.on { color:var(--gold); }
+.stars.empty { width:54px; }
+.seedrow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:var(--ink-soft); font-size:14px; }
+.seedrow input { width:86px; font:inherit; font-size:16px; font-weight:600; padding:7px 9px; border-radius:10px;
+  border:1px solid var(--line); background:var(--surface); color:var(--ink); text-align:center; }
+.seedrow .btn { padding:7px 12px; font-size:14px; box-shadow:none; }
+.seedrow small { flex-basis:100%; color:var(--ink-faint); }
+
+/* ── Karte (Intro/Ergebnis) ── */
+#card { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:16px;
+  background:rgba(10,15,20,.18); overflow:auto; }
+#card.result { align-items:flex-end; background:none; pointer-events:none; }
+@media (min-width: 900px) { #card.result { align-items:center; justify-content:flex-end; padding-right:24px; } #card.result .card-in { width:430px; } }
+#card.result .card-in { pointer-events:auto; }
+.card-in { width:min(520px, 100%); padding:22px 22px 18px; background:var(--surface); border:1px solid var(--line);
+  border-radius:16px; box-shadow:var(--shadow); max-height:100%; overflow:auto; }
+.card-kicker { font-size:12.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--accent-ink); }
+.card-in h2 { margin:4px 0 10px; font-size:26px; }
+.card-in p { margin:0 0 12px; line-height:1.5; font-size:16px; color:var(--ink-soft); }
+.card-in p b { color:var(--ink); }
+.formula { display:block; margin:8px 0 10px; padding:8px 12px; border-radius:10px; background:var(--accent-dim);
+  color:var(--accent-ink); font-weight:700; text-align:center; }
+.ctrl { font-size:14px !important; padding-top:10px; border-top:1px solid var(--line); }
+.kbd { color:var(--ink-faint); font-size:13px; }
+.card-btns { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.res-head { display:flex; align-items:center; gap:14px; margin:6px 0 10px; }
+.res-head .stars i { font-size:30px; }
+.res-head p { margin:0; font-size:17px; }
+.note { background:var(--surface-2); border-radius:10px; padding:10px 12px; font-size:15px !important; }
+.ki { border-left:4px solid var(--accent); padding:2px 0 2px 12px; margin:6px 0 12px; }
+.ki-tag { font-size:12.5px; font-weight:700; color:var(--accent-ink); text-transform:uppercase; letter-spacing:.05em; }
+.ki p { margin:4px 0 0; }
+
+/* ── HUD ── */
+#hud { position:absolute; inset:0; pointer-events:none; }
+#hud > * { pointer-events:auto; }
+.hud-top { position:absolute; left:12px; right:12px; top:12px; display:flex; gap:8px; align-items:center; pointer-events:none; }
+.hud-top > * { pointer-events:auto; }
+.chip { padding:8px 13px; font-weight:600; font-size:15px; }
+.chip.btn { box-shadow:var(--shadow); }
+#counter { margin-left:auto; font-variant-numeric:tabular-nums; min-width:92px; text-align:center; }
+#counter.warn { color:var(--warn); }
+
+#gauge { position:absolute; left:12px; top:66px; bottom:96px; width:74px; display:flex; flex-direction:column; align-items:center;
+  padding:10px 6px; gap:6px; max-height:360px; }
+#gLbl { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); }
+#gVal { font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.g-bar { position:relative; flex:1; width:10px; margin:6px 0 14px; border-radius:6px;
+  background:linear-gradient(to top, #2b8c86, #78b660 40%, #cbb784 75%, #efe9dc); opacity:.9; }
+#gNow { position:absolute; left:50%; width:26px; height:26px; margin:0 0 -13px -13px; border-radius:50%;
+  background:var(--orange); border:3px solid var(--surface); box-shadow:var(--shadow); transition:bottom .12s linear; }
+#gBest { position:absolute; left:-7px; right:-7px; height:3px; margin-bottom:-1.5px; background:var(--ink); border-radius:2px; }
+.g-best-l { font-size:11px; color:var(--ink-faint); text-align:center; line-height:1.2; }
+
+#joy { position:absolute; width:120px; height:120px; margin:-60px 0 0 -60px; border-radius:50%;
+  border:2px solid rgba(255,255,255,.7); background:rgba(255,255,255,.18); pointer-events:none; }
+#joyKnob { position:absolute; left:50%; top:50%; width:52px; height:52px; border-radius:50%;
+  background:rgba(255,255,255,.85); box-shadow:0 2px 8px rgba(0,0,0,.25); transform:translate(-50%,-50%); }
+html[data-theme="dark"] #joy { border-color:rgba(255,255,255,.35); background:rgba(255,255,255,.08); }
+
+.hud-bottom { position:absolute; left:12px; right:12px; bottom:12px; display:flex; align-items:flex-end; gap:10px;
+  justify-content:center; pointer-events:none; flex-wrap:wrap; }
+.hud-bottom > * { pointer-events:auto; }
+#btnStay { font-size:16px; padding:12px 20px; }
+body[data-mode="walk"] #btnStay { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+#lrBox { display:none; align-items:center; gap:10px; padding:10px 12px; flex-wrap:wrap; justify-content:center; }
+body[data-mode="jump"] #lrBox { display:flex; }
+.lr-l { display:flex; flex-direction:column; line-height:1.1; }
+.lr-l small { font-size:12px; color:var(--ink-faint); font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+#lrVal { font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; min-width:62px; }
+#lr { width:min(240px, 40vw); accent-color:var(--orange); height:28px; }
+.lr-pm { width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:var(--surface); font-size:20px;
+  font-weight:700; cursor:pointer; line-height:1; }
+#btnJump { background:var(--orange); color:#fff; border-color:var(--orange); font-size:17px; padding:12px 22px; }
+#btnAuto.on { background:var(--warn); color:#fff; border-color:var(--warn); }
+body.auto #btnJump, body.auto .lr-pm { opacity:.4; pointer-events:none; }
+#lrWarn { position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); white-space:nowrap;
+  background:var(--warn); color:#fff; font-size:13px; font-weight:600; padding:4px 10px; border-radius:8px; }
+#lrBox { position:relative; }
+
+#curveBox { position:absolute; right:12px; top:66px; width:200px; padding:8px 10px 6px; }
+.box-t { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); }
+#curve { width:100%; height:70px; display:block; }
+#modelBox { position:absolute; right:12px; top:170px; width:250px; padding:8px 10px 8px; }
+#plot { width:100%; height:150px; display:block; }
+.mvals { display:grid; grid-template-columns:auto 1fr; gap:1px 8px; font-size:13.5px; color:var(--ink-soft); }
+.mvals b { color:var(--ink); font-variant-numeric:tabular-nums; }
+
+#toast { position:absolute; left:50%; top:66px; transform:translate(-50%, -10px); opacity:0; transition:.25s;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:9px 14px; font-size:15px;
+  box-shadow:var(--shadow); pointer-events:none; max-width:min(440px, 80vw); text-align:center; }
+#toast.on { opacity:1; transform:translate(-50%, 0); }
+
+#labels { position:absolute; inset:0; pointer-events:none; }
+.lbl { position:absolute; left:0; top:0; padding:4px 10px; border-radius:99px; font-size:14px; font-weight:700;
+  background:var(--surface); border:1px solid var(--line); box-shadow:var(--shadow); white-space:nowrap; }
+.lbl.gold { background:var(--gold); color:#2a1e00; border-color:var(--gold); }
+.lbl.me { background:var(--orange); color:#fff; border-color:var(--orange); }
+.lbl.start { color:var(--ink-soft); font-weight:600; font-size:12.5px; }
+
+body[data-state="reveal"] .hud-bottom, body[data-state="result"] .hud-bottom,
+body[data-state="reveal"] #gauge, body[data-state="result"] #gauge { opacity:0; pointer-events:none; transition:opacity .4s; }
+body[data-state="intro"] .hud-bottom { opacity:.0; pointer-events:none; }
+
+#nogl { position:absolute; inset:0; display:grid; place-items:center; padding:24px; text-align:center; font-size:17px; }
+
+/* Schmale Geräte: Kästen kleiner, Modell unten links */
+@media (max-width: 700px) {
+  #curveBox { width:150px; top:62px; }
+  #curve { height:52px; }
+  #modelBox { top:auto; bottom:150px; right:12px; width:190px; }
+  #plot { height:110px; }
+  #gauge { width:62px; }
+  .chip { font-size:13.5px; padding:7px 10px; }
+}
+@media (max-height: 560px) {
+  #modelBox { top:62px; right:224px; }
+  body[data-lvl="4"] #curveBox { width:200px; }
+}
+html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; background:var(--surface) !important; }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="welt" aria-label="3D-Landschaft im Nebel"></canvas>
+  <div id="labels"></div>
+
+  <div id="hud" hidden>
+    <div class="hud-top">
+      <button id="btnMenu" class="chip btn" type="button">‹ Übersicht</button>
+      <div id="lvlName" class="chip glass"></div>
+      <div id="counter" class="chip glass"></div>
+    </div>
+
+    <div id="gauge" class="glass" aria-live="polite">
+      <div id="gLbl">Höhe</div>
+      <div id="gVal">–</div>
+      <div class="g-bar"><div id="gBest"></div><div id="gNow"></div></div>
+      <div class="g-best-l">tiefste bisher<br><b id="gBestV">–</b></div>
+    </div>
+
+    <div id="curveBox" class="glass" hidden>
+      <div class="box-t">Lernkurve</div>
+      <canvas id="curve"></canvas>
+    </div>
+
+    <div id="modelBox" class="glass" hidden>
+      <div class="box-t">Das Modell</div>
+      <canvas id="plot"></canvas>
+      <div class="mvals">
+        <span>Steigung w</span><b><span id="mW">–</span> cm pro Woche</b>
+        <span>Höhe b</span><b><span id="mB">–</span> cm in Woche 5</b>
+        <span>Fehler</span><b id="mL">–</b>
+      </div>
+    </div>
+
+    <div id="joy" hidden><div id="joyKnob"></div></div>
+    <div id="toast"></div>
+
+    <div class="hud-bottom">
+      <div id="lrBox" class="glass">
+        <div id="lrWarn" hidden>Damit fliegst du aus der Welt!</div>
+        <div class="lr-l"><small>Lernrate</small><span id="lrVal">–</span></div>
+        <button id="lrMinus" class="lr-pm" type="button" aria-label="Lernrate kleiner">−</button>
+        <input id="lr" type="range" min="0" max="1000" value="500" aria-label="Lernrate">
+        <button id="lrPlus" class="lr-pm" type="button" aria-label="Lernrate größer">+</button>
+        <button id="btnJump" class="btn" type="button">Springen</button>
+        <button id="btnAuto" class="btn" type="button" hidden>Training starten</button>
+      </div>
+      <button id="btnStay" class="btn" type="button">Hier bleibe ich!</button>
+    </div>
+  </div>
+
+  <div id="menu" hidden>
+    <div class="menu-in glass">
+      <span class="proto">Prototyp</span>
+      <h1>Nebeltal</h1>
+      <p class="sub">Wie lernt eine KI? Sie sucht im Nebel den tiefsten Punkt einer Landschaft – und sieht dabei nur die Stelle, an der sie gerade steht.</p>
+      <div id="levels"></div>
+      <div class="seedrow">
+        <label for="seed">Welt-Nummer</label>
+        <input id="seed" type="number" min="1000" max="9999" inputmode="numeric">
+        <button id="seedDice" class="btn" type="button">Neue Welt</button>
+        <small>Gleiche Nummer = gleiche Landschaft. Spielt alle dieselbe Welt: Wer kommt am tiefsten?</small>
+      </div>
+    </div>
+  </div>
+
+  <div id="card" class="card" hidden></div>
+  <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
+</div>
+
+<script src="js/welt.js?v=20261114a"></script>
+<script src="js/grafik.js?v=20261114a"></script>
+<script src="js/spiel.js?v=20261114a"></script>
+</body>
+</html>
