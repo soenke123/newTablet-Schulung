@@ -68,10 +68,11 @@ window.NTGrafik = (function () {
     uniform vec3 uLight; uniform vec2 uPlayer; uniform float uFogR; uniform vec3 uFog;
     uniform float uH0; uniform float uH1; uniform float uStep;
     uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3;
-    uniform float uAmb;
+    uniform float uAmb; uniform float uPlain;
     void main(){
       float t=clamp((vPos.y-uH0)/(uH1-uH0),0.0,1.0);
       vec3 c = t<0.33 ? mix(uC0,uC1,t/0.33) : (t<0.66 ? mix(uC1,uC2,(t-0.33)/0.33) : mix(uC2,uC3,(t-0.66)/0.34));
+      c=mix(c,mix(uC1,uC2,0.35),uPlain);
       vec3 n=normalize(vNor);
       float l=uAmb+(1.0-uAmb)*max(dot(n,uLight),0.0);
       c*=l;
@@ -82,7 +83,7 @@ window.NTGrafik = (function () {
       #else
       float line=1.0-smoothstep(0.0,0.06,abs(fract(q+0.5)-0.5));
       #endif
-      c=mix(c,c*0.72,line*0.55);
+      c=mix(c,c*0.72,line*0.55*(1.0-uPlain));
       float d=distance(vPos.xz,uPlayer);
       float f=smoothstep(uFogR*0.45,uFogR,d);
       gl_FragColor=vec4(mix(c,uFog,f),1.0);
@@ -199,7 +200,7 @@ window.NTGrafik = (function () {
 
     function setWorld(w, theme) {
       world = w;
-      const N = 140, Wd = w.W;
+      const Wd = w.W, N = Math.min(250, Math.round(140 * Wd / 50));   // Uint16-Indizes: höchstens 65 535 Ecken
       const pos = [], nor = [], idx = [];
       let h0 = Infinity, h1 = -Infinity;
       for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) {
@@ -298,6 +299,7 @@ window.NTGrafik = (function () {
       gl.uniform3fv(u.uC0, pal.c[0]); gl.uniform3fv(u.uC1, pal.c[1]);
       gl.uniform3fv(u.uC2, pal.c[2]); gl.uniform3fv(u.uC3, pal.c[3]);
       gl.uniform1f(u.uAmb, pal.amb);
+      gl.uniform1f(u.uPlain, sc.plain || 0);
       bind(terrain);
       gl.drawElements(gl.TRIANGLES, terrain.n, gl.UNSIGNED_SHORT, 0);
 

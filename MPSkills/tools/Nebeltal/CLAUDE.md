@@ -7,7 +7,9 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 ## Dateien
 
 - `index.html` – Oberfläche (HUD, Menü, Karten), Farben wie MPSkills, Hell/Dunkel vom Rahmen
-- `js/welt.js` – Landschaften: `hills(seed, level)` (Mulden = lokale Minima, Rand ringsum),
+- `js/welt.js` – Landschaften: `hills(seed, level)` (Mulden = lokale Minima, Rand ringsum; Größe und
+  Schwierigkeit je Level in `CFG`: Level 1/2 W 85 mit ~20 Mulden, die tiefste schmal und abseits
+  der Mitte; Level 3 W 50),
   `model(seed)` (Fehler einer Geraden y = w·(x−5) + b durch 9 Messpunkte; Schritte in w/b,
   Höhe gestaucht mit 1−e^(−L/L0), Richtung bleibt gleich)
 - `js/grafik.js` – reines WebGL 1 ohne Bibliothek (CSP/Datenschutz): Gitter, Kugel/Kegel/Kasten,
@@ -17,11 +19,15 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 
 ## Level
 
-1. **Im Nebel** – frei laufen (Joystick links / WASD), 60 s, nur Höhenmesser. Steile Hänge
-   lassen einen rutschen (Gefühl für den Hang), sanfte nicht (sonst fände Stehenbleiben das Minimum).
-2. **Der Bergab-Pfeil** – wie 1, Pfeil unter den Füßen, 45 s.
+1. **Im Nebel** – große Welt, frei laufen (Joystick links / WASD), 75 s, NUR Höhenmesser:
+   Boden einfarbig ohne Höhenlinien (`plain`, Shader-Uniform uPlain, Farben kommen erst beim
+   Auflösen), keine Hang-Physik (`physics: false`: gleich schnell bergauf/bergab, kein Rutschen).
+2. **Der Bergab-Pfeil** – gleich große Welt, Pfeil unter den Füßen + Farben/Höhenlinien +
+   Hang-Physik (bergauf langsamer, steile Hänge rutschen), 60 s.
 3. **Sprünge** – kein Laufen mehr: Sprung in Pfeilrichtung, Weite = Lernrate × Steilheit
-   (echter Gradientenschritt), 12 Sprünge, Ring = Landepunkt, zu weit = aus der Welt.
+   (echter Gradientenschritt – an flachen Stellen also kürzer bei gleicher Lernrate; die Rechnung
+   steht live unter dem Regler, `#lrDist`), 20 Sprünge (= begrenzte Rechenzeit; ohne Grenze wäre
+   eine winzige Lernrate nie ein Problem), Ring = Landepunkt, zu weit = aus der Welt.
 4. **Das Tal ist ein Modell** – die Welt ist der Fehler einer Geraden; „Training starten“ springt
    mit fester Lernrate von selbst (30 Schritte). Ab Lernrate ≈ 0,15 explodiert es.
 

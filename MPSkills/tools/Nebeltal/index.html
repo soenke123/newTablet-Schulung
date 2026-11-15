@@ -148,6 +148,10 @@ body.auto #btnJump, body.auto .lr-pm { opacity:.4; pointer-events:none; }
 #lrWarn { position:absolute; bottom:calc(100% + 6px); left:50%; transform:translateX(-50%); white-space:nowrap;
   background:var(--warn); color:#fff; font-size:13px; font-weight:600; padding:4px 10px; border-radius:8px; }
 #lrBox { position:relative; }
+#lrDistRow { flex-basis:100%; text-align:center; font-size:14px; color:var(--ink-soft); font-variant-numeric:tabular-nums; margin-top:-2px; }
+#lrDistRow small { font-size:12px; color:var(--ink-faint); font-weight:700; }
+#lrDistRow b { color:var(--ink); }
+body[data-lvl="4"] #lrDistRow { display:none; }
 
 #curveBox { position:absolute; right:12px; top:66px; width:200px; padding:8px 10px 6px; }
 .box-t { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); }
@@ -237,6 +241,7 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
         <button id="lrPlus" class="lr-pm" type="button" aria-label="Lernrate größer">+</button>
         <button id="btnJump" class="btn" type="button">Springen</button>
         <button id="btnAuto" class="btn" type="button" hidden>Training starten</button>
+        <div id="lrDistRow"><small>Sprungweite = Lernrate × Steilheit:</small> <span id="lrDist" hidden></span></div>
       </div>
       <button id="btnStay" class="btn" type="button">Hier bleibe ich!</button>
     </div>
@@ -261,8 +266,8 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
   <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
 </div>
 
-<script src="js/welt.js?v=20261114a"></script>
-<script src="js/grafik.js?v=20261114a"></script>
-<script src="js/spiel.js?v=20261114a"></script>
+<script src="js/welt.js?v=20261115a"></script>
+<script src="js/grafik.js?v=20261115a"></script>
+<script src="js/spiel.js?v=20261115a"></script>
 </body>
 </html>
