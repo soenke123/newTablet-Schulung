@@ -504,6 +504,15 @@ try {
   // 5) SQL und Diagramm
   await mia.app.locator('.subtabs [data-at="sql"]').click();
   await mia.app.locator('.db-tbl', { hasText: 'users' }).waitFor();
+  // 1× antippen = Attribute darunter, 2× = SELECT * FROM users ausgeführt
+  await mia.app.locator('.db-tbl', { hasText: 'users' }).click();
+  await mia.app.locator('#dbCols:not([hidden]) .db-col').first().waitFor();
+  const colTxt = await mia.app.locator('#dbCols').textContent();
+  ok('5  Tabelle 1× antippen zeigt Attribute', /username/.test(colTxt) && /centimeter/.test(colTxt) && await mia.app.locator('.ed-ta').inputValue() === 'SELECT * FROM users', colTxt);
+  await mia.app.locator('.db-tbl', { hasText: 'users' }).click();
+  await mia.app.locator('#dbOut .grid').first().waitFor();
+  ok('5  2× antippen führt SELECT * FROM users aus', await mia.app.locator('.ed-ta').inputValue() === 'SELECT * FROM users');
+  await shot(mia.page, '5-attribute');
   await mia.app.locator('.ed-ta').fill("SELECT username, country, centimeter FROM users WHERE role = 'admin';");
   await mia.app.locator('#dbRun').click();
   await mia.app.locator('.grid').first().waitFor();

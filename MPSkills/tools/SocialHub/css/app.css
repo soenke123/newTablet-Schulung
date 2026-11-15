@@ -518,6 +518,16 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .db-tbl { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line2); background: var(--soft); border-radius: 99px; padding: 4px 11px; white-space: nowrap; font-family: var(--font-mono); font-size: 13px; }
 .db-tbl b { color: var(--t-tbl); }
 .db-tbl span { color: var(--muted); font-size: 11px; }
+.db-tbl.on { border-color: var(--t-tbl); background: var(--surface); box-shadow: inset 0 0 0 1px var(--t-tbl); }
+/* Attribute der angetippten Tabelle: schmale Zeile unter den Tabellen */
+.db-cols { display: flex; align-items: center; gap: 5px; padding: 5px 12px; overflow-x: auto; flex: none; border-bottom: 1px solid var(--line); font-family: var(--font-mono); font-size: 12px; white-space: nowrap; }
+.db-cols[hidden] { display: none; }
+.db-cols-t { color: var(--t-tbl); font-weight: 700; margin-right: 2px; }
+.db-col { display: inline-flex; align-items: baseline; gap: 4px; color: var(--t-col); background: var(--soft); border-radius: 6px; padding: 2px 7px; }
+.db-col.is-pk { font-weight: 700; }
+.db-col i { font-style: normal; font-size: 9px; font-weight: 700; color: var(--muted); }
+.db-col small { color: var(--muted); font-size: 10px; }
+.db-cols-h { color: var(--muted); font-family: var(--font-body, inherit); font-size: 11px; margin-left: 6px; }
 .db-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .db-pane--dg { position: relative; }
 /* SQL: die ganze Fläche scrollt (Befehl rollt nach oben weg, unten nur die Daten),

@@ -231,6 +231,7 @@
     let tab = opts.tab === 'diagram' ? 'diagram' : 'sql';
     let busy = false;
     let diagram = null;
+    let openTbl = null;            // Tabelle, deren Attribute unter der Leiste stehen
 
     host.innerHTML =
       '<div class="db">' +
@@ -239,6 +240,8 @@
           '<button type="button" class="btn btn--ghost btn--s" id="dbReload" title="Neuen Stand aus dem Netzwerk holen">↻ Neu laden</button>' +
         '</div>' +
         '<div class="db-tables" id="dbTables"></div>' +
+        // 1× Tabelle antippen = ihre Attribute hier, 2× = SELECT * FROM … ausführen
+        '<div class="db-cols" id="dbCols" hidden></div>' +
         '<section class="db-pane db-pane--sql" data-p="sql">' +
           '<div class="db-main">' +
             '<div class="db-tools">' +
@@ -284,6 +287,7 @@
       tab = t === 'diagram' ? 'diagram' : 'sql';
       host.querySelectorAll('.db-pane').forEach(p => { p.hidden = p.dataset.p !== tab; });
       $('#dbTables').hidden = tab !== 'sql';
+      $('#dbCols').hidden = tab !== 'sql' || !openTbl;
       if (tab === 'diagram') drawDiagram();
     }
 
@@ -293,15 +297,36 @@
       diagram.render(schema, null);
     }
 
+    function paintCols() {
+      const el = $('#dbCols');
+      const t = openTbl && schema && schema.tables.find(x => x.name === openTbl);
+      if (!t) { openTbl = null; el.hidden = true; el.innerHTML = ''; return; }
+      el.innerHTML = '<span class="db-cols-t">' + esc(t.name) + ':</span>' + t.columns.map(c =>
+        '<span class="db-col' + (c.pk ? ' is-pk' : '') + '" title="' + esc(c.type || '') + '">' +
+          (c.pk ? '<i>PK</i>' : c.fk ? '<i>FK</i>' : '') + esc(c.name) +
+          (c.type ? '<small>' + esc(String(c.type).toLowerCase()) + '</small>' : '') +
+        '</span>').join('') +
+        '<span class="db-cols-h">nochmal antippen = alle Zeilen</span>';
+      el.hidden = tab !== 'sql';
+    }
+
     function paintTables() {
       $('#dbTables').innerHTML = tables.map(t => {
         const n = base && base[t] ? base[t].size : 0;
-        return '<button type="button" class="db-tbl" data-tbl="' + esc(t) + '"><b>' + esc(t) + '</b><span>' + n + '</span></button>';
+        return '<button type="button" class="db-tbl' + (t === openTbl ? ' on' : '') + '" data-tbl="' + esc(t) + '"><b>' + esc(t) + '</b><span>' + n + '</span></button>';
       }).join('');
       host.querySelectorAll('.db-tbl').forEach(b => b.addEventListener('click', () => {
-        editor.value = 'SELECT * FROM ' + b.dataset.tbl;
+        const t = b.dataset.tbl;
+        if (openTbl !== t) {
+          openTbl = t;
+          host.querySelectorAll('.db-tbl').forEach(x => x.classList.toggle('on', x === b));
+          paintCols();
+          return;
+        }
+        editor.value = 'SELECT * FROM ' + t;
         run();
       }));
+      paintCols();
     }
 
     function resultHtml(r) {
