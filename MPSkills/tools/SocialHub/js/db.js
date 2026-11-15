@@ -302,10 +302,9 @@
       const t = openTbl && schema && schema.tables.find(x => x.name === openTbl);
       if (!t) { openTbl = null; el.hidden = true; el.innerHTML = ''; return; }
       el.innerHTML = '<span class="db-cols-t">' + esc(t.name) + ':</span>' + t.columns.map(c =>
-        '<span class="db-col' + (c.pk ? ' is-pk' : '') + '" title="' + esc(c.type || '') + '">' +
-          (c.pk ? '<i>PK</i>' : c.fk ? '<i>FK</i>' : '') + esc(c.name) +
-          (c.type ? '<small>' + esc(String(c.type).toLowerCase()) + '</small>' : '') +
-        '</span>').join('') +
+        // Schreibweise aus dem Unterricht: Primärschlüssel unterstrichen, Fremdschlüssel mit ↑ dahinter
+        '<span class="db-col' + (c.pk ? ' is-pk' : '') + '"' + (c.fk ? ' title="→ ' + esc(c.fk.table) + '"' : '') + '>' +
+          esc(c.name) + (c.fk ? '<i class="db-fk">↑</i>' : '') + '</span>').join('') +
         '<span class="db-cols-h">nochmal antippen = alle Zeilen</span>';
       el.hidden = tab !== 'sql';
     }

@@ -513,6 +513,10 @@ try {
   await mia.app.locator('#dbOut .grid').first().waitFor();
   ok('5  2× antippen führt SELECT * FROM users aus', await mia.app.locator('.ed-ta').inputValue() === 'SELECT * FROM users');
   await shot(mia.page, '5-attribute');
+  await mia.app.locator('.db-tbl', { hasText: 'likes' }).click();
+  await mia.app.locator('#dbCols .db-fk').first().waitFor();
+  ok('5  Attribute: PK unterstrichen, FK mit ↑', await mia.app.locator('#dbCols .db-col.is-pk').count() >= 1 && /user_id↑/.test(await mia.app.locator('#dbCols').textContent()), await mia.app.locator('#dbCols').textContent());
+  await shot(mia.page, '5-attribute-fk');
   await mia.app.locator('.ed-ta').fill("SELECT username, country, centimeter FROM users WHERE role = 'admin';");
   await mia.app.locator('#dbRun').click();
   await mia.app.locator('.grid').first().waitFor();
