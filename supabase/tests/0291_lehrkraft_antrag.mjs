@@ -9,6 +9,7 @@
         entschiedene Anträge fallen heraus.
      6. my_email_get/set: Lehrkraft ja, Schüler not_teacher.
      7. admin_teacher_requests: nur Admins, Schuladmin nur eigene Schule.
+    7b. 0292: Admins tragen ihre Adresse ein, Panel zeigt sie, Reset bleibt zu.
      8. teacher_request_store (Signup-Weg) für ein frisches Konto.
      9. Passwort vergessen: nur bestätigte Adresse, nicht für Admins,
         per Accountname oder E-Mail, falsche Schule nichts; Token einmal.
@@ -149,6 +150,19 @@ await as(SA);
 r = await call(`admin_teacher_requests()`);
 ok('7  Schuladmin: fremde Schule nicht', r.ok && !r.rows.some(x => x.user_id === ST));
 await db.exec(`update profiles set school_id = '${S1}' where id = '${ST}'`);
+
+/* 7b · 0292: Admins tragen ihre Adresse ein und sehen sie im Panel */
+await as(SA);
+r = await call(`my_email_get()`);
+ok('7b Admin darf Adresse eintragen', r.ok && r.allowed === true && r.admin === true);
+r = await call(`my_email_set('schuladmin@web.de')`);
+ok('7b Admin: gespeichert', r.ok && r.email === 'schuladmin@web.de', JSON.stringify(r));
+await as(VA);
+r = await call(`admin_teacher_requests()`);
+ok('7b Panel zeigt die Adresse des Admins', r.rows.some(x => x.user_id === SA && x.email === 'schuladmin@web.de'));
+await db.exec(`update notify_email set verified_at = now() where user_id = '${SA}'`);
+r = await call(`pw_reset_request('aaa', 'schuladmin', '10.0.0.99')`);
+ok('7b Passwort-Reset für Admin bleibt gesperrt', r.ok && r.targets.length === 0, JSON.stringify(r));
 
 /* 8 */
 await db.query(`insert into auth.users (id) values ($1)`, [id(9)]);

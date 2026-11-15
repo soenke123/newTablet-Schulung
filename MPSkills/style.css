@@ -750,9 +750,7 @@ a.btn {
 .access-lead { margin: 0 0 18px; color: var(--ink-soft); max-width: 64ch; }
 
 .access-panel {
-  margin-top: 24px;
-  padding-top: 22px;
-  border-top: 1px solid var(--line-soft);
+  margin-top: 6px;
 }
 .access-panel[hidden] { display: none; }
 
@@ -4216,3 +4214,12 @@ body.inselseite--voll { overflow: hidden; }
 .ub-menu .lwm-leaf:hover { color: var(--ink); }
 .ub-menu .lwm-leaf[aria-pressed="true"] { background: #2f7d4f; border-color: #2f7d4f; color: #fff; }
 .state + #mailHint .mailhint { margin-top: 16px; }
+
+/* Profil, Karte „Passwort“: darunter die E-Mail für „Passwort
+   vergessen?“ (Migration 0291/0292) */
+.prof-sub {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-soft);
+}
+.card-h3 { margin: 0 0 6px; font-size: .98rem; letter-spacing: -0.01em; }

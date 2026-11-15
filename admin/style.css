@@ -1170,3 +1170,5 @@ tr.row-muted td { opacity: 0.55; }
 .t-note { white-space: pre-wrap; margin-bottom: 4px; }
 .t-mail { color: var(--a-muted); }
 .t-none { color: var(--a-muted); font-style: italic; }
+/* E-Mail im User-Reiter unter dem Anzeigenamen (Migration 0292) */
+td > .t-mail { margin-top: 4px; font-size: .82em; }

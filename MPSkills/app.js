@@ -394,12 +394,9 @@ async function openAccess() {
   panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
-function closeAccess() {
-  const panel  = document.getElementById('accessPanel');
-  const toggle = document.getElementById('accessToggle');
-  if (panel) panel.hidden = true;
-  toggle?.setAttribute('aria-expanded', 'false');
-}
+// Seit 15.11.2026 steht der Kasten immer offen (kein Knopf
+// „Konto anlegen" mehr davor); geschlossen wird nur noch das Modal.
+function closeAccess() {}
 
 /* ─── Dieselben Formulare als Modal ───────────────────────────
    Die Knöpfe oben rechts meinen genau eines von beidem. Sie
@@ -1909,9 +1906,6 @@ async function doForgot(e) {
 /* ─── Verdrahtung ─────────────────────────────────────── */
 wireJoinForm();
 
-document.getElementById('accessToggle').addEventListener('click', () => {
-  if (accessOpen()) closeAccess(); else openAccess();
-});
 document.getElementById('loginForm').addEventListener('submit', doLogin);
 const regAccountCheck = AccountName.attach(
   document.getElementById('regAccount'),

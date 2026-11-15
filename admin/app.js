@@ -1482,16 +1482,18 @@ async function ensureViewData() {
 async function loadUsers() {
   const tbody = document.getElementById('userTbody');
   try {
-    const [rows, rooms] = await Promise.all([
+    const [rows, rooms, mails] = await Promise.all([
       api('GET',
         // teacher_requested_at wird nicht angezeigt, entscheidet aber beim
         // Entziehen zwischen 'none' und 'rejected' — siehe teacherRevokeStatus().
         `profiles?select=id,account_name,display_name,display_name_locked,status,cluster_id,is_admin,is_superadmin,teacher_status,teacher_requested_at,avatar_id,created_at`
         + `&school_id=eq.${currentSchoolId}`),
-      loadUserRooms()
+      loadUserRooms(),
+      loadUserMails()
     ]);
     userCache = rows;
     userRooms = rooms;
+    userMails = mails;
 
     // Bei aktiver Progress-View direkt mitziehen
     await ensureViewData();
@@ -1512,6 +1514,22 @@ async function loadUserRooms() {
   } catch (err) {
     console.warn('[admin] admin_user_rooms:', err.message);
     return null;
+  }
+}
+
+// E-Mail-Adressen der Lehrkräfte und Admins (Migration 0291/0292).
+// Dieselbe RPC wie im Reiter Lehrkräfte; fehlt sie, bleibt es leer.
+let userMails = {};   // user_id → { email, verified }
+async function loadUserMails() {
+  try {
+    const res = await api('POST', 'rpc/admin_teacher_requests',
+      { p_school: isVolladmin ? (currentSchoolId || null) : null });
+    const out = {};
+    for (const x of (res && res.rows) || []) if (x.email) out[x.user_id] = x;
+    return out;
+  } catch (err) {
+    console.warn('[admin] admin_teacher_requests:', err.message);
+    return {};
   }
 }
 
@@ -1865,7 +1883,8 @@ function renderUsers() {
   });
   if (q) rows = rows.filter(r =>
     (r.account_name || '').toLowerCase().includes(q) ||
-    (r.display_name || '').toLowerCase().includes(q));
+    (r.display_name || '').toLowerCase().includes(q) ||
+    (userMails[r.id]?.email || '').toLowerCase().includes(q));
   rows = sortRows(rows, uiState.sort);
 
   const colspan = cols.length + 1;
@@ -2025,7 +2044,13 @@ function renderCell(u, col) {
       const lock = u.display_name_locked
         ? '<span class="name-lock-icon" title="Anzeigename gesperrt">🔒</span>'
         : '';
-      return `<td>${name}${lock}</td>`;
+      const m = userMails[u.id];
+      const mail = m
+        ? `<div class="t-mail">✉ ${escapeHtml(m.email)} ${m.verified
+            ? '<span class="badge active">bestätigt</span>'
+            : '<span class="badge pending">nicht bestätigt</span>'}</div>`
+        : '';
+      return `<td>${name}${lock}${mail}</td>`;
     }
     case 'status': {
       // Nur der Schulungs-Status. Die Rolle steht eine Spalte weiter —

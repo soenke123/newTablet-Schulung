@@ -99,6 +99,22 @@ html[data-motion="low"] *, html[data-motion="low"] *::before, html[data-motion="
   transition: background .14s ease, color .14s ease; }
 .lwm-leaf svg { width: 17px; height: 17px; }
 .lwm-leaf[aria-pressed="true"] { background: #2f7d4f; border-color: #2f7d4f; color: #fff; }
+.lwm-line { display: flex; align-items: center; gap: 8px; }
+.lwm-name { font-weight: 600; }
+.lwm-gap { flex: 1; }
+.lwm-i { flex: none; width: 20px; height: 20px; padding: 0; border-radius: 50%; cursor: pointer;
+  border: 1px solid rgba(127,127,127,.45); background: transparent; color: inherit; opacity: .75;
+  font: italic 700 12px/1 Georgia, "Times New Roman", serif; display: grid; place-items: center; }
+.lwm-i:hover { opacity: 1; }
+.lwm-modal { position: fixed; inset: 0; z-index: 2147483600; background: rgba(10,12,18,.55);
+  display: grid; place-items: center; padding: 16px; }
+.lwm-modal[hidden] { display: none; }
+.lwm-box { width: min(420px, 100%); box-sizing: border-box; padding: 18px 20px 16px; border-radius: 16px;
+  background: #1f2330; color: #f4f5f8; border: 1px solid rgba(255,255,255,.14); box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; text-align: left; }
+.lwm-box > b { display: block; font-size: 17px; margin: 0 0 8px; }
+.lwm-box p { margin: 0 0 10px; color: #c9ccd6; font-size: 14px; }
+.lwm-box .lwm-inl { color: #f4f5f8; }
 .lwm-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px;
   cursor: pointer; font: inherit; }
 .lwm-switch input { width: 20px; height: 20px; accent-color: #2f7d4f; margin: 0; flex: none; }
@@ -256,6 +272,8 @@ html[data-motion="low"] *, html[data-motion="low"] *::before, html[data-motion="
     const b = e.target.closest && e.target.closest('[data-lwm]');
     if (!b) return;
     const v = b.getAttribute('data-lwm');
+    if (v === 'info') { showInfo(); return; }
+    if (v === 'close-info') { if (info) info.hidden = true; return; }
     if (v === 'flip') { set(isLow() ? 'full' : 'low'); return; }
     if (v === 'low') set('low');
     else if (v === 'full') set('full');
@@ -266,6 +284,29 @@ html[data-motion="low"] *, html[data-motion="low"] *::before, html[data-motion="
     const t = e.target;
     if (t && t.matches && t.matches('input[data-lwm-toggle]')) set(t.checked ? 'low' : 'full');
   });
+
+  /* Erklär-Fenster zum i (toggleHTML). Eigenes kleines Modal, weil
+     motion.js auf jeder Seite läuft und keine Seiten-Stile kennt. */
+  let info = null;
+  function showInfo() {
+    if (!info) {
+      injectCss();
+      info = document.createElement('div');
+      info.className = 'lwm-modal';
+      info.hidden = true;
+      info.innerHTML = '<div class="lwm-box" role="dialog" aria-modal="true" aria-labelledby="lwmInfoH">'
+        + '<b id="lwmInfoH">Sparmodus</b>'
+        + '<p>Für Tablets, die ruckeln. Bilder und Spiele bleiben genau gleich — nur Effekte wie Glühen, Schatten, '
+        + 'Weichzeichner und kleine Dauer-Bewegungen fallen weg. So hat das Gerät weniger zu tun und läuft flüssiger.</p>'
+        + '<p>Gilt nur für <b class="lwm-inl">dieses Gerät</b>, nicht für dein Konto. An ist er, wenn das Blatt grün ist; '
+        + 'dann steht unten links ein kleines Blatt-Symbol.</p>'
+        + '<div class="lwm-row"><button type="button" class="lwm-btn lwm-yes" data-lwm="close-info">Verstanden</button></div></div>';
+      info.addEventListener('click', (e) => { if (e.target === info) info.hidden = true; });
+      document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && info && !info.hidden) info.hidden = true; });
+      document.body.appendChild(info);
+    }
+    info.hidden = false;
+  }
 
   function sync() {
     const low = isLow();
@@ -379,11 +420,16 @@ html[data-motion="low"] *, html[data-motion="low"] *::before, html[data-motion="
       stop();
       start();
     },
-    /** Schalter-Zeile für Menüs/Profil (Markup, Wirkung hier). */
-    toggleHTML(label) {
-      return '<label class="lwm-switch"><span>' + (label || 'Animationen reduzieren')
-        + '<small>Für Tablets, die ruckeln. Bilder bleiben.</small></span>'
-        + '<input type="checkbox" data-lwm-toggle' + (isLow() ? ' checked' : '') + '></label>';
+    /** Zeile fürs Profil (profil.html, seit 15.11.2026 wie im Menü):
+        „Sparmodus“ + kleines i (Fenster mit der Erklärung) + Blatt-Knopf.
+        label ist nur noch für alte Aufrufe da und wird nicht gezeigt. */
+    toggleHTML() {
+      const low = isLow();
+      return '<div class="lwm-line"><span class="lwm-name">Sparmodus</span>'
+        + '<button type="button" class="lwm-i" data-lwm="info" aria-label="Was ist der Sparmodus?" title="Was ist der Sparmodus?">i</button>'
+        + '<span class="lwm-gap"></span>'
+        + '<button type="button" class="lwm-leaf" data-lwm="flip" aria-pressed="' + low + '"'
+        + ' title="' + (low ? 'Sparmodus an' : 'Sparmodus aus') + '" aria-label="Sparmodus">' + LEAF + '</button></div>';
     },
     /** Menüzeile wie „Ansicht“ (MPSkills lib/userbar.js): „Sparmodus“ +
         Blatt-Knopf, grau = aus, grün = an. Erklärt wird am Blatt unten links. */

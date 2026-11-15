@@ -119,6 +119,8 @@
      (Überschrift, Schließen) ist verschieden. */
   function bodyHTML(s) {
     const role = roleState(s);
+    const isAdm  = !!(s.is_admin || s.is_superadmin);
+    const mailOk = isAdm || s.teacher_status === 'approved' || s.teacher_status === 'pending';
     const avatarSrc = window.getAvatarUrl
       ? window.getAvatarUrl(s.avatar_id || window.DEFAULT_AVATAR_ID, '../')
       : '';
@@ -156,24 +158,8 @@
         </form>
         <p class="prof-note">${role.text}</p>
       </section>
-      ${(s.teacher_status === 'approved' || s.teacher_status === 'pending') && !s.is_admin && !s.is_superadmin ? `
-      <section class="card" id="mailCard">
-        <h2 class="card-h">E-Mail-Adresse</h2>
-        <p class="prof-note" id="mailState">Wird geladen …</p>
-        <form class="prof-form" id="mailForm" novalidate>
-          <label class="field">E-Mail-Adresse
-            <input type="email" id="mailInput" maxlength="120" autocomplete="email" inputmode="email" spellcheck="false" />
-            <span class="rule">Damit setzt du dein Passwort zurück („Passwort vergessen?“ beim Anmelden). Nach dem Speichern kommt ein Link zum Bestätigen.</span>
-          </label>
-          <div class="actions">
-            <button type="submit" class="btn btn--primary" id="mailSave">Speichern</button>
-            <button type="button" class="btn" id="mailResend" hidden>Link noch einmal schicken</button>
-          </div>
-        </form>
-      </section>` : ''}
-
       <section class="card">
-        <h2 class="card-h">Passwort ändern</h2>
+        <h2 class="card-h">Passwort</h2>
         <form class="prof-form" id="pwForm" novalidate>
           <!-- Accountname für den Passwort-Speicher (iPad: sonst landet das neue Passwort beim falschen Namen) -->
           <input type="text" name="username" autocomplete="username" value="${esc(s.account_name || '')}" readonly tabindex="-1" aria-hidden="true" style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;border:0;padding:0" />
@@ -190,6 +176,24 @@
             <button type="submit" class="btn btn--primary" id="pwSubmit">Passwort speichern</button>
           </div>
         </form>
+        ${mailOk ? `
+        <!-- Passwort vergessen: E-Mail zum Zurücksetzen (0291, Admins seit 0292) -->
+        <div class="prof-sub" id="mailCard">
+          <h3 class="card-h3">E-Mail für „Passwort vergessen?“</h3>
+          <p class="prof-note" id="mailState">Wird geladen …</p>
+          <form class="prof-form" id="mailForm" novalidate>
+            <label class="field">E-Mail-Adresse
+              <input type="email" id="mailInput" maxlength="120" autocomplete="email" inputmode="email" spellcheck="false" />
+              <span class="rule">${isAdm
+                ? 'Als Admin kannst du dein Passwort damit nicht zurücksetzen (Schutz des Admin-Kontos) — die Adresse steht trotzdem im Admin-Panel.'
+                : 'Damit setzt du dein Passwort zurück („Passwort vergessen?“ beim Anmelden). Nach dem Speichern kommt ein Link zum Bestätigen.'}</span>
+            </label>
+            <div class="actions">
+              <button type="submit" class="btn btn--primary" id="mailSave">E-Mail speichern</button>
+              <button type="button" class="btn" id="mailResend" hidden>Link noch einmal schicken</button>
+            </div>
+          </form>
+        </div>` : ''}
       </section>`;
   }
 
@@ -223,7 +227,8 @@
 
   /* ─── E-Mail-Adresse (Migration 0291) ───────────────────────
      Dieselbe Adresse wie für die Antrags-Mails der Projektarbeit.
-     Nur Lehrkräfte (approved/pending); my_email_set prüft das selbst. */
+     Lehrkräfte (approved/pending) und Admins (0292); my_email_set
+     prüft das selbst. Steht in der Karte „Passwort“. */
   const MAIL_ERRORS = {
     email_invalid: 'Diese E-Mail-Adresse sieht nicht richtig aus.',
     too_soon:      'Gerade erst geändert — bitte in einer Minute noch einmal.',
@@ -255,7 +260,8 @@
     $('mailInput').value = r.email || '';
     $('mailResend').hidden = !(r.email && !r.verified);
     st.textContent = !r.email
-      ? 'Noch keine Adresse eingetragen — ohne sie kannst du dein Passwort nicht selbst zurücksetzen.'
+      ? (r.admin ? 'Noch keine Adresse eingetragen.'
+                 : 'Noch keine Adresse eingetragen — ohne sie kannst du dein Passwort nicht selbst zurücksetzen.')
       : r.verified ? `✓ ${r.email} ist bestätigt.`
       : `Bestätigung offen: an ${r.email} ging ein Link. Erst nach dem Klick darauf gilt die Adresse.`;
     if (say) toast(say);
