@@ -328,10 +328,28 @@
       paintCols();
     }
 
+    // Oberer Schieberegler: leere Leiste so breit wie die Tabelle, scrollt mit dem Kasten mit
+    function wireScroll(out) {
+      out.querySelectorAll('.res-scroll').forEach(box => {
+        const top = box.previousElementSibling;
+        if (!top || !top.classList.contains('res-top')) return;
+        const fit = () => {
+          top.firstChild.style.width = box.scrollWidth + 'px';
+          top.hidden = box.scrollWidth <= box.clientWidth + 1;
+        };
+        top.addEventListener('scroll', () => { if (box.scrollLeft !== top.scrollLeft) box.scrollLeft = top.scrollLeft; });
+        box.addEventListener('scroll', () => { if (top.scrollLeft !== box.scrollLeft) top.scrollLeft = box.scrollLeft; });
+        fit();
+        if (window.ResizeObserver) new ResizeObserver(fit).observe(box);
+      });
+    }
+
     function resultHtml(r) {
       if (r.kind === 'rows') {
         if (!r.rows.length) return '<div class="res"><p class="muted">Keine Zeilen.</p></div>';
         return '<div class="res"><div class="res-n">' + r.rows.length + (r.truncated ? '+' : '') + ' Zeile' + (r.rows.length === 1 ? '' : 'n') + '</div>' +
+          // Schieberegler zusätzlich oben (wireScroll), Kopfzeile bleibt im Kasten stehen
+          '<div class="res-top" hidden><div></div></div>' +
           '<div class="res-scroll"><table class="grid"><thead><tr>' + r.columns.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
           r.rows.map(row => '<tr>' + row.map(v => v === null ? '<td class="null">NULL</td>' : '<td>' + esc(v) + '</td>').join('') + '</tr>').join('') +
           '</tbody></table></div></div>';
@@ -461,6 +479,7 @@
           }
         }
         $('#dbOut').innerHTML = html || '<p class="muted">Nichts zu tun.</p>';
+        wireScroll($('#dbOut'));
         paintTables();
       } catch (e) {
         $('#dbOut').innerHTML = '<div class="res res--bad">' + esc(e.message) + '</div>';

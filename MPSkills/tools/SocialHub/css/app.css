@@ -530,8 +530,8 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .db-cols-h { color: var(--muted); font-family: var(--font-body, inherit); font-size: 11px; margin-left: 6px; }
 .db-pane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
 .db-pane--dg { position: relative; }
-/* SQL: die ganze Fläche scrollt (Befehl rollt nach oben weg, unten nur die Daten),
-   kein eigener Scrollkasten fürs Ergebnis; Ergebnis mindestens so hoch wie die Fläche */
+/* SQL: die ganze Fläche scrollt (Befehl rollt nach oben weg, unten nur die Daten);
+   Ergebnis mindestens so hoch wie die Fläche, jede Tabelle darin höchstens so hoch (.res-scroll) */
 .db-pane--sql { overflow-y: auto; overscroll-behavior: contain; container-type: size; }
 .db-main { flex: 1 0 auto; min-width: 0; display: flex; flex-direction: column; }
 .db-tools { display: flex; align-items: center; gap: 8px; padding: 8px 12px; flex-wrap: wrap; flex: none; }
@@ -544,7 +544,12 @@ code { font-family: var(--font-mono); font-size: .9em; }
 .res--bad { border-color: rgba(255,92,108,.45); background: var(--bad-dim); }
 .res-hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
 .res-n { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-.res-scroll { overflow-x: auto; overflow-y: hidden; }
+.res-scroll { overflow: auto; max-height: calc(100cqh - 80px); overscroll-behavior: contain; }
+/* Kopfzeile bleibt im Kasten oben stehen; oberer Schieberegler (wireScroll in db.js) */
+.res-scroll .grid th { z-index: 1; box-shadow: 0 1px 0 var(--line); }
+.res-top { overflow-x: auto; overflow-y: hidden; margin-bottom: 4px; }
+.res-top[hidden] { display: none; }
+.res-top > div { height: 1px; }
 .grid { border-collapse: collapse; font: 13px var(--font-mono); }
 .grid th, .grid td { border: 1px solid var(--line); padding: 5px 9px; text-align: left; white-space: nowrap; max-width: 420px; overflow: hidden; text-overflow: ellipsis; }
 .grid th { background: var(--soft); position: sticky; top: 0; color: var(--t-col); }
