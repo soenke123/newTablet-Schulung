@@ -127,7 +127,7 @@ window.NTWelt = (function () {
     const W = Wl;
 
     return {
-      kind: 'hills', W, seed, level,
+      kind: 'hills', W, seed, level, dec: 1,
       h,
       grad: (x, z) => numGrad(h, x, z),
       step(p, lr) {
@@ -191,7 +191,7 @@ window.NTWelt = (function () {
     const s = starts[Math.floor(r() * starts.length)];
 
     return {
-      kind: 'model', W, seed, level: 4,
+      kind: 'model', W, seed, level: 4, dec: 0,
       h,
       grad: (x, z) => numGrad(h, x, z),
       step(p, lr) {
@@ -209,5 +209,85 @@ window.NTWelt = (function () {
     };
   }
 
-  return { W, hills, model, rng };
+  /* ── Level 5: ein Neuron sortiert Pinguine ─────────────────
+     Echte Messdaten (Palmer Penguins, Antarktis 2007–2009, frei
+     nutzbar CC0): Schnabellänge und Schnabelhöhe in mm von 68
+     Adeliepinguinen (gleichmäßig aus 151 gezogen) und allen 68
+     Zügelpinguinen. Ein Neuron mit Sigmoid sagt, wie sicher es
+     „Zügelpinguin“ meint: p = σ(w₁·x₁ + w₂·x₂). x₁, x₂ sind die
+     Messwerte zentriert und auf gleiche Streuung gebracht, darum
+     braucht es keinen Bias (die Linie geht durch die Mitte der
+     Daten). Rechts/links = w₁ (Länge), vor/zurück = w₂ (Höhe).
+     Höhe der Welt = mittlerer Log-Fehler (Kreuzentropie), gestaucht.
+     Richtung vom Mittelpunkt = Winkel der Trennlinie, Abstand =
+     wie scharf das Neuron entscheidet. Die Arten überlappen kaum,
+     das Tal liegt deshalb weit draußen am Ende einer langen Rinne. */
+  const PENG_A = '39.1,18.7;40.3,18;39.3,20.6;39.2,19.6;42,20.2;41.1,17.6;34.6,21.1;38.7,19;34.4,18.4;37.8,18.3;38.2,18.1;35.3,18.9;40.5,17.9;40.5,18.9;39.5,17.8;36.4,17;38.8,20;37.6,19.3;36.5,18;44.1,19.7;39.6,18.8;37.5,18.9;42.3,21.2;35,17.9;34.5,18.1;39,17.5;36.5,16.6;35.7,16.9;41.1,18.2;41.6,18;41.1,19.1;41.8,19.4;39.6,17.2;35.5,17.5;40.9,16.8;36.2,16.1;34.6,17.2;35.1,19.4;41.3,20.3;36.9,18.6;38.9,18.8;34,17.1;36.2,17.3;38.1,18.6;33.1,16.1;35,17.9;37.8,20;39.7,18.9;38.2,20;43.2,19;39.7,17.7;39.6,20.7;38.6,17;35.7,17;36.2,17.2;41.4,18.5;40.6,19;41.5,18.3;44.1,18;36.8,18.5;38.1,17.6;35.6,17.5;37,16.5;40.2,17.1;40.7,17;39,18.7;36.6,18.4;37.8,18.1';
+  const PENG_C = '46.5,17.9;50,19.5;51.3,19.2;45.4,18.7;52.7,19.8;45.2,17.8;46.1,18.2;51.3,18.2;46,18.9;51.3,19.9;46.6,17.8;51.7,20.3;47,17.3;52,18.1;45.9,17.1;50.5,19.6;50.3,20;58,17.8;46.4,18.6;49.2,18.2;42.4,17.3;48.5,17.5;43.2,16.6;50.6,19.4;46.7,17.9;52,19;50.5,18.4;49.5,19;46.4,17.8;52.8,20;40.9,16.6;54.2,20.8;42.5,16.7;51,18.8;49.7,18.6;47.5,16.8;47.6,18.3;52,20.7;46.9,16.6;53.5,19.9;49,19.5;46.2,17.5;50.9,19.1;45.5,17;50.9,17.9;50.8,18.5;50.1,17.9;49,19.6;51.5,18.7;49.8,17.3;48.1,16.4;51.4,19;45.7,17.3;50.7,19.7;42.5,17.3;52.2,18.8;45.2,16.6;49.3,19.9;50.2,18.8;45.6,19.4;51.9,19.5;46.8,16.5;45.7,17;55.8,19.8;43.5,18.1;49.6,18.2;50.8,19;50.2,18.7';
+  function penguins(seed) {
+    const raw = [];
+    for (const [s, y] of [[PENG_A, 0], [PENG_C, 1]])
+      for (const q of s.split(';')) { const [l, d] = q.split(',').map(Number); raw.push({ len: l, dep: d, y }); }
+    const n = raw.length;
+    const m1 = raw.reduce((a, p) => a + p.len, 0) / n, m2 = raw.reduce((a, p) => a + p.dep, 0) / n;
+    const s1 = Math.sqrt(raw.reduce((a, p) => a + (p.len - m1) ** 2, 0) / n);
+    const s2 = Math.sqrt(raw.reduce((a, p) => a + (p.dep - m2) ** 2, 0) / n);
+    const pts = raw.map(p => ({ len: p.len, dep: p.dep, y: p.y, a: (p.len - m1) / s1, b: (p.dep - m2) / s2 }));
+    const R = 20;                                   // Gewichte von −20 bis +20 (Tal bei ≈ 15,9)
+    const toW = x => x / W * R, toX = w => w / R * W;
+    const sig = z => 1 / (1 + Math.exp(-z));
+    const softplus = z => z > 30 ? z : Math.log1p(Math.exp(z));
+    function loss(w1, w2) {
+      let s = 0;
+      for (const p of pts) { const z = w1 * p.a + w2 * p.b; s += p.y ? softplus(-z) : softplus(z); }
+      return s / n;
+    }
+    function lossGrad(w1, w2) {
+      let g1 = 0, g2 = 0;
+      for (const p of pts) { const e = sig(w1 * p.a + w2 * p.b) - p.y; g1 += e * p.a; g2 += e * p.b; }
+      return [g1 / n, g2 / n];
+    }
+    const wrong = (w1, w2) => pts.reduce((c, p) => c + ((w1 * p.a + w2 * p.b > 0) !== (p.y === 1) ? 1 : 0), 0);
+    const H = 24, L0 = 2;
+    const lift = L => H * (1 - Math.exp(-L / L0));
+    const h = (x, z) => lift(loss(toW(x), toW(z)));
+
+    // tiefster Punkt: Newton-Schritte vom Mittelpunkt aus
+    let a = 0, b = 0;
+    for (let k = 0; k < 60; k++) {
+      let g1 = 0, g2 = 0, h11 = 0, h12 = 0, h22 = 0;
+      for (const p of pts) {
+        const q = sig(a * p.a + b * p.b), e = q - p.y, v = q * (1 - q);
+        g1 += e * p.a; g2 += e * p.b; h11 += v * p.a * p.a; h12 += v * p.a * p.b; h22 += v * p.b * p.b;
+      }
+      const det = h11 * h22 - h12 * h12;
+      if (!(det > 1e-12)) break;
+      a -= (h22 * g1 - h12 * g2) / det; b -= (h11 * g2 - h12 * g1) / det;
+    }
+    const min = { x: toX(a), z: toX(b), h: h(toX(a), toX(b)), w1: a, w2: b };
+
+    // Start: Linie falsch herum (oder quer), mittel bis weit draußen
+    const r = rng(seed * 6007 + 5);
+    const ang0 = Math.atan2(b, a), ang = ang0 + Math.PI * (0.55 + r() * 0.9) * (r() < 0.5 ? -1 : 1);
+    const rad = (0.45 + r() * 0.3) * R;
+    const start = { x: toX(Math.cos(ang) * rad), z: toX(Math.sin(ang) * rad) };
+
+    return {
+      kind: 'penguin', W, seed, level: 5, dec: 2,
+      h,
+      grad: (x, z) => numGrad(h, x, z),
+      step(p, lr) {
+        const w1 = toW(p.x), w2 = toW(p.z);
+        const g = lossGrad(w1, w2);
+        const x = toX(w1 - lr * g[0]), z = toX(w2 - lr * g[1]);
+        return { x, z, out: Math.abs(x) > W || Math.abs(z) > W };
+      },
+      min, start,
+      show: v => -L0 * Math.log(Math.max(1e-9, 1 - v / H)),
+      unit: '', label: 'Fehler',
+      pts, toW, loss, wrong, sig, m1, m2, s1, s2
+    };
+  }
+
+  return { W, hills, model, penguins, rng };
 })();

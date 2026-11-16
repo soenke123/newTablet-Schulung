@@ -11,7 +11,10 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Schwierigkeit je Level in `CFG`: Level 1/2 W 85 mit ~20 Mulden, die tiefste schmal und abseits
   der Mitte; Level 3 W 50),
   `model(seed)` (Fehler einer Geraden y = w·(x−5) + b durch 9 Messpunkte; Schritte in w/b,
-  Höhe gestaucht mit 1−e^(−L/L0), Richtung bleibt gleich)
+  Höhe gestaucht mit 1−e^(−L/L0), Richtung bleibt gleich),
+  `penguins(seed)` (Level 5: echte Palmer-Penguins-Daten CC0, 68 Adelie + 68 Zügel, Schnabellänge/-höhe
+  standardisiert, Sigmoid-Neuron ohne Bias, Höhe = Log-Fehler gestaucht, Gewichte ±20, Tal bei
+  w ≈ (15,2 | −4,6) mit 1 Fehler; Seed wählt nur den Start, Daten bleiben gleich)
 - `js/grafik.js` – reines WebGL 1 ohne Bibliothek (CSP/Datenschutz): Gitter, Kugel/Kegel/Kasten,
   Nebel hängt an der Figur (uFogR), nicht an der Kamera; Höhenlinien im Shader
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm
@@ -30,6 +33,13 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    eine winzige Lernrate nie ein Problem), Ring = Landepunkt, zu weit = aus der Welt.
 4. **Das Tal ist ein Modell** – die Welt ist der Fehler einer Geraden; „Training starten“ springt
    mit fester Lernrate von selbst (30 Schritte). Ab Lernrate ≈ 0,15 explodiert es.
+5. **Pinguine sortieren** – die Welt ist der Fehler EINES Neurons, das Adelie- und Zügelpinguine
+   trennt (x = w₁ Länge, z = w₂ Höhe). Laufen UND Springen/„Training starten“ (`walk: true` im
+   Sprung-Level), 40 Schritte, Lernrate 0,2–50 (ab ≈ 35 fliegt man raus). Rechts `#pengBox`:
+   Mini-Neuron (Kantendicke/-farbe = Gewicht) + „Bild A“ (Messpunkte, Hintergrund = Ausgabe,
+   Linie = 50 %, falsch sortierte rot umkreist) – live beim Laufen. Wertung nach falsch sortierten
+   Pinguinen. Richtung vom Mittelpunkt = Winkel der Trennlinie, Abstand = Sicherheit; falsche Seite
+   ist eine flache Hochebene, die richtige eine lange Rinne.
 
 Am Ende jedes Levels lichtet sich der Nebel (Weg, Start, Flagge am tiefsten Punkt), dann
 Sterne + „Und die KI?“-Text. Welt-Nummer (Seed 1000–9999) = gleiche Landschaft auf allen
@@ -44,5 +54,7 @@ localStorage `nt.best.<level>.<seed>`, Welt in `nt.seed`.
 
 - Klassen-Wettkampf über den Raum (Lehrkraft gibt Welt vor, Beamer zeigt alle Figuren, gemeinsames Auflösen)
 - Schwung (Momentum), wackeliger Kompass (Mini-Batches), Lernrate unterwegs verkleinern
+- Level 5: Landschaft eines einzelnen Pinguins zeigen (Summe = große Landschaft), Schalter
+  „Stufe / weich“ (Perzeptron-Terrassen ohne Pfeil), später größeres Netz (z. B. Korbwurf)
 - Schaufenster `preview/nebeltal.js`, Freigabe für alle: `update skill_tools set admin_only = false where id = 'nebeltal'`
 - Prüfstand: `supabase/tests/0290_nebeltal.mjs`

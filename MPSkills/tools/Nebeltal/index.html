@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<script src="../../../motion.js?v=20261115a"></script>
+<script src="../../../motion.js?v=20261116a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Nebeltal</title>
 <link href="../../../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
@@ -158,6 +158,12 @@ body[data-lvl="4"] #lrDistRow { display:none; }
 #curve { width:100%; height:70px; display:block; }
 #modelBox { position:absolute; right:12px; top:170px; width:250px; padding:8px 10px 8px; }
 #plot { width:100%; height:150px; display:block; }
+#pengBox { position:absolute; right:12px; top:170px; width:270px; padding:8px 10px 8px; }
+#pnet { width:100%; height:64px; display:block; }
+#pplot { width:100%; height:160px; display:block; }
+.plegend { display:flex; gap:12px; font-size:12.5px; font-weight:600; margin:2px 0 4px; }
+.plegend .pa { color:#2f80ed; } .plegend .pc { color:#f27828; }
+body[data-lvl="5"] #lrDistRow { display:none; }
 .mvals { display:grid; grid-template-columns:auto 1fr; gap:1px 8px; font-size:13.5px; color:var(--ink-soft); }
 .mvals b { color:var(--ink); font-variant-numeric:tabular-nums; }
 
@@ -184,12 +190,14 @@ body[data-state="intro"] .hud-bottom { opacity:.0; pointer-events:none; }
   #curveBox { width:150px; top:62px; }
   #curve { height:52px; }
   #modelBox { top:auto; bottom:150px; right:12px; width:190px; }
+  #pengBox { top:auto; bottom:150px; right:12px; width:220px; }
+  #pplot { height:120px; } #pnet { height:54px; }
   #plot { height:110px; }
   #gauge { width:62px; }
   .chip { font-size:13.5px; padding:7px 10px; }
 }
 @media (max-height: 560px) {
-  #modelBox { top:62px; right:224px; }
+  #modelBox, #pengBox { top:62px; right:224px; }
   body[data-lvl="4"] #curveBox { width:200px; }
 }
 html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; background:var(--surface) !important; }
@@ -217,6 +225,19 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
     <div id="curveBox" class="glass" hidden>
       <div class="box-t">Lernkurve</div>
       <canvas id="curve"></canvas>
+    </div>
+
+    <div id="pengBox" class="glass" hidden>
+      <div class="box-t">Das Neuron</div>
+      <canvas id="pnet"></canvas>
+      <div class="box-t" style="margin-top:4px">So sortiert es gerade</div>
+      <canvas id="pplot"></canvas>
+      <div class="plegend"><span class="pa">● Adeliepinguin</span><span class="pc">▲ Zügelpinguin</span></div>
+      <div class="mvals">
+        <span>w₁ Länge</span><b id="pW1">–</b>
+        <span>w₂ Höhe</span><b id="pW2">–</b>
+        <span>falsch sortiert</span><b id="pWrong">–</b>
+      </div>
     </div>
 
     <div id="modelBox" class="glass" hidden>
@@ -266,8 +287,8 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
   <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
 </div>
 
-<script src="js/welt.js?v=20261115a"></script>
-<script src="js/grafik.js?v=20261115a"></script>
-<script src="js/spiel.js?v=20261115a"></script>
+<script src="js/welt.js?v=20261116a"></script>
+<script src="js/grafik.js?v=20261116a"></script>
+<script src="js/spiel.js?v=20261116a"></script>
 </body>
 </html>

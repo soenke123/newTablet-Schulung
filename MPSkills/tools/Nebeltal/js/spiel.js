@@ -61,7 +61,18 @@
              'Wo du stehst, bestimmt die Gerade: <b>links/rechts = Steigung w</b>, <b>vor/zurück = Höhe b</b>. Die Höhe der Landschaft ist der <b>Fehler</b> der Geraden.<br><br>' +
              'Bergab heißt also: Die Gerade wird besser. Das ist <b>Training</b>! Wähle eine Lernrate und tippe <b>„Training starten“</b> – oder springe selbst.',
       outro: 'Die Landschaft war die ganze Zeit der <b>Fehler der Geraden</b>. Genau so lernt ein neuronales Netz: Es springt mit seiner Lernrate bergab, Schritt für Schritt, ganz von selbst. ' +
-             'Nur hat ein echtes Netz nicht 2 Richtungen (w und b), sondern <b>Millionen</b> – und die Landschaft entsteht aus seinen Trainingsdaten.' }
+             'Nur hat ein echtes Netz nicht 2 Richtungen (w und b), sondern <b>Millionen</b> – und die Landschaft entsteht aus seinen Trainingsdaten.' },
+    { id: 5, name: 'Pinguine sortieren', short: 'Ein Neuron lernt zwei Arten zu trennen',
+      mode: 'jump', walk: true, jumps: 40, fog: 14, auto: true, world: 'penguin', lr: { min: 0.2, max: 50, def: 1.5, d: 1 },
+      intro: 'Forschende haben in der Antarktis Pinguine vermessen. Rechts siehst du <b>Adeliepinguine</b> (●) und <b>Zügelpinguine</b> (▲), ' +
+             'jeweils mit Schnabellänge und Schnabelhöhe – echte Messwerte.<br><br>' +
+             'Ein einzelnes <b>Neuron</b> soll sie auseinanderhalten. Es hat zwei Gewichte: <b>w₁</b> für die Länge, <b>w₂</b> für die Höhe. ' +
+             'Wo du stehst, <b>sind</b> diese beiden Gewichte: links/rechts = w₁, vor/zurück = w₂. Jeder Ort in dieser Welt ist also ein anderes Neuron – ' +
+             'rechts siehst du, wie es gerade sortiert. Die Höhe ist sein <b>Fehler</b> über alle 136 Pinguine.<br><br>' +
+             'Lauf herum und schau, wie sich die Trennlinie dreht. Dann wähle eine Lernrate und tippe <b>„Training starten“</b>.',
+      outro: 'Das war echtes Training eines Neurons: Jeder Sprung verändert die beiden Gewichte ein Stück bergab, bis die Trennlinie die Pinguine sortiert. ' +
+             'Die Richtung vom Mittelpunkt der Welt bestimmt, <b>wie die Linie liegt</b>, der Abstand, <b>wie sicher</b> das Neuron entscheidet. ' +
+             'Ein großes Netz besteht aus Tausenden solcher Neuronen hintereinander – und seine Landschaft hat so viele Richtungen, wie es Gewichte hat.' }
   ];
 
   /* ── Grundzustand ── */
@@ -154,7 +165,7 @@
   function openLevel(id) {
     const L = LEVELS.find(l => l.id === id);
     S.lvl = L;
-    S.world = L.world === 'model' ? NTWelt.model(seed) : NTWelt.hills(seed, id);
+    S.world = L.world === 'model' ? NTWelt.model(seed) : L.world === 'penguin' ? NTWelt.penguins(seed) : NTWelt.hills(seed, id);
     G.setWorld(S.world, theme);
     resetPlayer();
     S.state = 'intro';
@@ -164,6 +175,8 @@
       '<h2>' + L.name + '</h2><p>' + L.intro + '</p>' +
       '<p class="ctrl">' + (L.mode === 'walk'
         ? '<b>Steuerung:</b> links auf dem Bild ziehen = laufen · rechts ziehen = umschauen<br><span class="kbd">Tastatur: WASD oder Pfeile · Q/E drehen</span>'
+        : L.walk
+        ? '<b>Steuerung:</b> links auf dem Bild ziehen = laufen · rechts ziehen = umschauen · <b>Springen</b> = ein Lernschritt<br><span class="kbd">Tastatur: WASD laufen · Leertaste springt · Q/E drehen</span>'
         : '<b>Steuerung:</b> Lernrate einstellen, dann <b>Springen</b> · ziehen = umschauen<br><span class="kbd">Tastatur: Leertaste springt · Q/E drehen</span>') + '</p>',
       [['Los geht’s', startLevel, 'primary'], ['Übersicht', toMenu]]);
   }
@@ -191,6 +204,7 @@
     hudFor(S.lvl);
     updateHud();
     if (S.lvl.mode === 'walk') toast(S.lvl.arrow ? 'Folge dem Pfeil – oder auch nicht.' : 'Wo geht es nach unten?');
+    if (S.world.kind === 'penguin') toast('Lauf los und schau rechts auf die Trennlinie.');
   }
 
   /* ── Karte (Intro / Ergebnis) ── */
@@ -222,6 +236,7 @@
     $('#btnStay').textContent = L.mode === 'walk' ? 'Hier bleibe ich!' : 'Fertig';
     $('#btnAuto').hidden = !L.auto;
     $('#modelBox').hidden = !(S.world && S.world.kind === 'model');
+    $('#pengBox').hidden = !(S.world && S.world.kind === 'penguin');
     $('#curveBox').hidden = L.mode !== 'jump';
     if (L.lr) {
       $('#lr').min = 0; $('#lr').max = 1000;
@@ -234,22 +249,23 @@
     if (!L) return;
     const v = w.show(H());
     if (S.state === 'play' && v < S.best) S.best = v;
-    $('#gVal').textContent = fmt(v, w.kind === 'model' ? 0 : 1) + (w.unit ? ' ' + w.unit : '');
+    $('#gVal').textContent = fmt(v, w.dec) + (w.unit ? ' ' + w.unit : '');
     // Höhenmesser: Skala von der Starthöhe bis etwas darunter, nicht bis zum echten Minimum (das verriete es)
     const top = Math.max(S.curve[0], v) + 1, bot = Math.min(S.curve[0] * 0.15, S.best - 1, v - 1);
     const pos = x => clamp((x - bot) / (top - bot), 0, 1) * 100;
     $('#gNow').style.bottom = pos(v) + '%';
     $('#gBest').style.bottom = pos(S.best) + '%';
-    $('#gBestV').textContent = fmt(S.best, w.kind === 'model' ? 0 : 1);
+    $('#gBestV').textContent = fmt(S.best, w.dec);
     if (L.mode === 'walk') {
       const s = Math.ceil(Math.max(0, S.left));
       $('#counter').textContent = '⏱ ' + s + ' s';
       $('#counter').classList.toggle('warn', s <= 10);
     } else {
-      $('#counter').textContent = (w.kind === 'model' ? 'Schritte' : 'Sprünge') + ': ' + S.jumpsLeft;
+      $('#counter').textContent = (w.kind === 'hills' ? 'Sprünge' : 'Schritte') + ': ' + S.jumpsLeft;
       $('#counter').classList.toggle('warn', S.jumpsLeft <= 3);
     }
     if (w.kind === 'model') drawModel();
+    if (w.kind === 'penguin') drawPenguins();
     if (L.mode === 'jump') drawCurve();
   }
 
@@ -339,7 +355,12 @@
     const w = S.world, L = S.lvl;
     const mine = w.show(H()), best = w.show(w.min.h);
     let n, line;
-    if (w.kind === 'model') {
+    if (w.kind === 'penguin') {
+      const nw = w.wrong(w.toW(S.p.x), w.toW(S.p.z)), nb = w.wrong(w.min.w1, w.min.w2), d = nw - nb;
+      n = d <= 0 && mine < best * 1.6 ? 3 : d <= 2 ? 2 : d <= 8 ? 1 : 0;
+      line = 'Dein Neuron sortiert <b>' + nw + ' von ' + w.pts.length + '</b> Pinguinen falsch' +
+        ' · bestes Neuron: <b>' + nb + '</b> falsch<br><small>Fehler ' + fmt(mine, 2) + ' · kleinstmöglich ' + fmt(best, 2) + '</small>';
+    } else if (w.kind === 'model') {
       const r = mine / best;
       n = r < 1.05 ? 3 : r < 1.3 ? 2 : r < 2.2 ? 1 : 0;
       line = 'Dein Fehler: <b>' + fmt(mine, 1) + '</b> · kleinstmöglicher Fehler: <b>' + fmt(best, 1) + '</b>';
@@ -361,7 +382,7 @@
       if (zig && n < 3) notes.push('Du bist im Zickzack hin und her gesprungen: Du bist über das Tal hinweggesprungen. Etwas <b>kleinere Lernrate</b> hilft.');
       if (!S.outs && !zig && n < 2 && steep > 0.15) notes.push('Du warst noch mitten am Hang, als die Sprünge alle waren: Die <b>Lernrate war zu klein</b>.');
     }
-    if (w.kind !== 'model' && n < 3 && steep < 0.12) notes.push('Du stehst in einer Mulde – aber nicht in der tiefsten. Das nennt man ein <b>lokales Minimum</b>. Von dort aus geht es in keiner Richtung bergab.');
+    if (w.kind === 'hills' && n < 3 && steep < 0.12) notes.push('Du stehst in einer Mulde – aber nicht in der tiefsten. Das nennt man ein <b>lokales Minimum</b>. Von dort aus geht es in keiner Richtung bergab.');
 
     const next = LEVELS.find(l => l.id === L.id + 1);
     const btns = [['Nochmal', () => openLevel(L.id)]];
@@ -416,7 +437,7 @@
     if (S.state !== 'play') return;
     const r = canvas.getBoundingClientRect();
     const left = (e.clientX - r.left) < r.width * 0.55;
-    if (S.lvl.mode === 'walk' && left && !joy.active) {
+    if ((S.lvl.mode === 'walk' || (S.lvl.walk && !S.auto)) && left && !joy.active) {
       Object.assign(joy, { active: true, id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0 });
       const j = $('#joy');
       j.style.left = (e.clientX - r.left) + 'px'; j.style.top = (e.clientY - r.top) + 'px';
@@ -533,8 +554,11 @@
         S.left -= dt;
         if (S.left <= 0) { S.left = 0; toast('Zeit um!'); finish(); }
       } else {
-        // Kamera schaut langsam in Sprungrichtung
-        if (!S.jump && !S.fly && look.id === null) {
+        const walking = L.walk && !S.jump && !S.fly && !S.auto;
+        if (walking) walk(dt);
+        // Kamera schaut langsam in Sprungrichtung (nicht, solange man selbst läuft)
+        const moving = walking && (joy.active || ['w', 's', 'a', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some(k => keys.has(k)) || Math.hypot(p.vx, p.vz) > 0.3);
+        if (!S.jump && !S.fly && look.id === null && !moving) {
           const g = w.grad(p.x, p.z);
           if (Math.hypot(g[0], g[1]) > 1e-4) {
             const a = Math.atan2(-g[0], -g[1]);
@@ -661,7 +685,7 @@
   function showDist(d) {
     const el = $('#lrDist'); if (!el) return;
     let t = '';
-    if (S.world.kind !== 'model') {
+    if (S.world.kind === 'hills') {
       const g = S.world.grad(S.p.x, S.p.z), st = Math.hypot(g[0], g[1]);
       t = isFinite(d)
         ? fmt(S.lr, S.lvl.lr.d) + ' × ' + fmt(st, 2) + ' = <b>' + fmt(d, 1) + ' m</b>'
@@ -754,6 +778,95 @@
     $('#mW').textContent = fmt(wv, 1);
     $('#mB').textContent = fmt(bv, 0);
     $('#mL').textContent = fmt(w.loss(wv, bv), 0);
+  }
+
+  /* ── Level 5: Pinguine + Neuron ──
+     Oben das Neuron (Kantendicke = Größe des Gewichts, orange = positiv,
+     blau = negativ), darunter „Bild A“: Messwerte, Hintergrund = was das
+     Neuron an dieser Stelle sagt, Linie = 50 %. */
+  function drawPenguins() {
+    const w = S.world, w1 = w.toW(S.p.x), w2 = w.toW(S.p.z);
+    const css = getComputedStyle(document.documentElement);
+    const ink = css.getPropertyValue('--ink').trim(), soft = css.getPropertyValue('--ink-faint').trim();
+    const red = css.getPropertyValue('--warn').trim();
+    const cA = [47, 128, 237], cC = [242, 120, 40];            // Adelie blau, Zügel orange
+    const rgb = (c, a) => 'rgba(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + a + ')';
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const prep = c => {
+      const Wd = c.clientWidth, Hh = c.clientHeight, x = c.getContext('2d');
+      if (c.width !== Wd * dpr) { c.width = Wd * dpr; c.height = Hh * dpr; }
+      x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, Wd, Hh);
+      return [x, Wd, Hh];
+    };
+
+    // Neuron
+    {
+      const [x, Wd, Hh] = prep($('#pnet'));
+      const ix = 62, nx = Wd - 70, ny = Hh / 2, ins = [[Hh * 0.27, 'Länge', w1], [Hh * 0.73, 'Höhe', w2]];
+      x.font = '600 12px Outfit, sans-serif'; x.textBaseline = 'middle';
+      for (const [iy, name, wv] of ins) {
+        x.strokeStyle = rgb(wv >= 0 ? cC : cA, 0.9);
+        x.lineWidth = 1 + Math.min(9, Math.abs(wv) * 0.5);
+        x.beginPath(); x.moveTo(ix, iy); x.lineTo(nx - 18, ny); x.stroke();
+        x.fillStyle = ink; x.textAlign = 'right'; x.fillText(name, ix - 8, iy);
+        x.beginPath(); x.arc(ix, iy, 5, 0, 7); x.fill();
+        const mx = (ix + nx - 18) / 2, my = (iy + ny) / 2 + (iy < ny ? -9 : 9);
+        x.textAlign = 'center'; x.fillStyle = rgb(wv >= 0 ? cC : cA, 1);
+        x.fillText((iy < ny ? 'w₁ ' : 'w₂ ') + fmt(wv, 1), mx, my);
+      }
+      x.fillStyle = css.getPropertyValue('--surface').trim() || '#fff';
+      x.strokeStyle = ink; x.lineWidth = 2;
+      x.beginPath(); x.arc(nx, ny, 18, 0, 7); x.fill(); x.stroke();
+      x.fillStyle = ink; x.textAlign = 'center'; x.font = '700 15px Outfit, sans-serif'; x.fillText('σ', nx, ny + 1);
+      x.lineWidth = 2; x.beginPath(); x.moveTo(nx + 18, ny); x.lineTo(Wd - 8, ny); x.stroke();
+      x.beginPath(); x.moveTo(Wd - 8, ny); x.lineTo(Wd - 14, ny - 4); x.lineTo(Wd - 14, ny + 4); x.fill();
+      x.font = '600 11px Outfit, sans-serif'; x.fillStyle = soft; x.fillText('▲?', Wd - 22, ny - 12);
+    }
+
+    // Bild A
+    const [x, Wd, Hh] = prep($('#pplot'));
+    const L0 = 30, R0 = 6, T0 = 6, B0 = 22;
+    const lx0 = 32, lx1 = 60, dy0 = 15.5, dy1 = 22;
+    const X = v => L0 + (v - lx0) / (lx1 - lx0) * (Wd - L0 - R0), Y = v => T0 + (1 - (v - dy0) / (dy1 - dy0)) * (Hh - T0 - B0);
+    const prob = (len, dep) => w.sig(w1 * (len - w.m1) / w.s1 + w2 * (dep - w.m2) / w.s2);
+    const NX = 30, NY = 18, cw = (Wd - L0 - R0) / NX, ch = (Hh - T0 - B0) / NY;
+    for (let i = 0; i < NX; i++) for (let j = 0; j < NY; j++) {
+      const len = lx0 + (i + 0.5) / NX * (lx1 - lx0), dep = dy1 - (j + 0.5) / NY * (dy1 - dy0);
+      const q = prob(len, dep);
+      x.fillStyle = rgb(q > 0.5 ? cC : cA, Math.abs(q - 0.5) * 0.55);
+      x.fillRect(L0 + i * cw, T0 + j * ch, cw + 0.6, ch + 0.6);
+    }
+    // Trennlinie (p = 50 %): w1·(len−m1)/s1 + w2·(dep−m2)/s2 = 0
+    x.save(); x.beginPath(); x.rect(L0, T0, Wd - L0 - R0, Hh - T0 - B0); x.clip();
+    x.strokeStyle = ink; x.lineWidth = 2; x.setLineDash([5, 4]);
+    x.beginPath();
+    if (Math.abs(w2) > Math.abs(w1) * 1e-3 || Math.abs(w1) < 1e-6) {
+      const dep = len => w.m2 - (w1 / (w2 || 1e-9)) * (len - w.m1) / w.s1 * w.s2;
+      x.moveTo(X(lx0), Y(dep(lx0))); x.lineTo(X(lx1), Y(dep(lx1)));
+    } else { x.moveTo(X(w.m1), Y(dy0)); x.lineTo(X(w.m1), Y(dy1)); }
+    x.stroke(); x.setLineDash([]); x.restore();
+    // Achsen
+    x.strokeStyle = soft; x.lineWidth = 1; x.fillStyle = soft; x.font = '10px Outfit, sans-serif'; x.textAlign = 'left'; x.textBaseline = 'alphabetic';
+    x.beginPath(); x.moveTo(L0, T0); x.lineTo(L0, Hh - B0); x.lineTo(Wd - R0, Hh - B0); x.stroke();
+    for (const v of [35, 40, 45, 50, 55]) x.fillText(String(v), X(v) - 5, Hh - B0 + 11);
+    for (const v of [16, 18, 20]) x.fillText(String(v), 6, Y(v) + 3);
+    x.fillText('Schnabellänge (mm)', Wd - R0 - 92, Hh - 2);
+    x.save(); x.translate(10, T0 + 2); x.rotate(Math.PI / 2); x.fillText('Höhe', 0, 0); x.restore();
+    // Pinguine
+    let wrong = 0;
+    for (const p of w.pts) {
+      const px = X(p.len), py = Y(p.dep), bad = (prob(p.len, p.dep) > 0.5) !== (p.y === 1);
+      if (bad) wrong++;
+      x.fillStyle = rgb(p.y ? cC : cA, 1);
+      x.beginPath();
+      if (p.y) { x.moveTo(px, py - 4); x.lineTo(px + 3.6, py + 2.6); x.lineTo(px - 3.6, py + 2.6); x.closePath(); }
+      else x.arc(px, py, 3, 0, 7);
+      x.fill();
+      if (bad) { x.strokeStyle = red; x.lineWidth = 1.6; x.beginPath(); x.arc(px, py, 6, 0, 7); x.stroke(); }
+    }
+    $('#pW1').textContent = fmt(w1, 1);
+    $('#pW2').textContent = fmt(w2, 1);
+    $('#pWrong').textContent = wrong + ' von ' + w.pts.length;
   }
 
   window.addEventListener('resize', () => { if (S.lvl) updateHud(); });
