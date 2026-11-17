@@ -19,11 +19,15 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 - `js/welt.js` – Landschaften: `hills(seed, level)` (Mulden = lokale Minima, Rand ringsum; Größe und
   Schwierigkeit je Level in `CFG`; seit 17.11.2026 größer und abwechslungsreicher: je Welt ein
   Gebirge (Grat mit Pass), eine Schlucht (Rinne, Boden fällt zu einem Ende ab = lange Falle) und eine
-  tiefere Ebene (abgesenkter Kreis mit Stufe); Grundform Kegel + Schüssel, der Kegel (`tilt`) hält
-  jede Stelle etwas schräg – sonst kam man in Level 3 auf flachen Ebenen mit Sprüngen nicht mehr weg.
-  Level 1/2 W 110, ~17 Mulden, tiefste schmal und abseits; Level 3 W 64, tilt 0,55, tiefste nahe der
-  Mitte, Start nie auf einer Kuppe (Gefälle > 0,6·tilt). Simuliert (60 Welten, 25 Sprünge): Lernrate
-  3 → fast nie am Ziel, 6 → ~50 %, 10 → ~60 %, erst 15 dann kleiner → ~80 %; `NTWelt.CFG` nur für
+  tiefere Ebene (abgesenkter Kreis mit Stufe). Grundform (Sönke 17.11.2026: „organischer, nicht immer
+  direkt zur Mitte“): mehrere große Becken (`basins`, Kegel weich verschmolzen, Koordinaten leicht
+  verbogen), das Hauptbecken bei (cx, cz), die anderen `basinUp` höher = weitere Minima; die Kegel
+  (`tilt`) halten jede Stelle etwas schräg – sonst kam man in Level 3 auf flachen Ebenen mit Sprüngen
+  nicht weg. Level 1 und 2 = derselbe Generator und dieselbe CFG, aber je Level anders gewürfelt
+  (andere Welt, anderer tiefster Punkt – gewollt). Level 1/2 W 110, ~17 Mulden, tiefste schmal und
+  abseits; Level 3 W 66, tilt 0,55, tiefste nahe dem Hauptbecken, Start nie auf einer Kuppe
+  (Gefälle > 0,6·tilt, Abstand > 0,5·W). Simuliert (40 Welten, 25 Sprünge, feste Lernrate): 3 → 20 %,
+  6 → 40 %, 10 → 48 %, 15 → 30 % am tiefsten Punkt (Lernrate muss nicht perfekt sein); `NTWelt.CFG` nur für
   Prüf-Skripte),
   `model(seed)` (Level 4 „Wie schwer ist der Pinguin?“: alle 342 Palmer-Pinguine mit Flosse (cm) und
   Gewicht (kg), `MASS` in welt.js; Neuron ohne σ Gewicht = w·(Flosse − 20 cm) + b, w −1…2, b 1,4…7;

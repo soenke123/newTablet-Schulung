@@ -81,9 +81,11 @@ window.NTWelt = (function () {
      Alles wird mit k = W/50 mitskaliert, damit Hänge gleich steil bleiben. */
   const CFG = {
     1: { W: 110, pits: 17, hills: 13, tilt: 0.05, bowl: 0.0016, deep: [5.5, 2.5], deepOff: true, decoy: [3, 4], ps: [3.2, 4.5], hs: [6, 9],
-         ridge: [7, 5], canyon: [4, 1.5], plain: [4.5, 1.5] },
-    3: { W: 64, pits: 7, hills: 5, tilt: 0.55, bowl: 0.0012, deep: [5, 2], deepOff: false, decoy: [2, 3], ps: [3.2, 3.5], hs: [5, 7],
-         ridge: [4, 2], canyon: [2.5, 1], plain: [2.5, 1] }   // simuliert: Lernrate 3 → 3 %, 6 → 46 %, 10 → 54 %, 15 → 33 % am Ziel (25 Sprünge)
+         ridge: [7, 5], canyon: [4, 1.5], plain: [4.5, 1.5], basins: 3, basinUp: [1, 2] },
+    3: { W: 66, pits: 7, hills: 5, tilt: 0.55, bowl: 0.001, deep: [5, 2], deepOff: false, decoy: [2.5, 3], ps: [3.2, 3.5], hs: [5, 7],
+         ridge: [4, 2], canyon: [3, 1], plain: [3, 1], basins: 3, basinUp: [3, 3], startD: 0.5 }
+    // Level 3 simuliert (40 Welten, 25 Sprünge, feste Lernrate): 3 → 20 %, 6 → 40 %, 10 → 48 %, 15 → 30 % am
+    // tiefsten Punkt; mit Lernrate 10 landen ~70 % in einem tiefen Becken (≤ 5 m darüber)
   };
   CFG[2] = CFG[1];
 
@@ -145,10 +147,25 @@ window.NTWelt = (function () {
     const plain = { x: Math.cos(ang) * er, z: Math.sin(ang) * er, R: (12 + r() * 7) * k, a: C.plain[0] + r() * C.plain[1] };
     const p1 = r() * 6.28, p2 = r() * 6.28, f1 = (0.13 + r() * 0.08) / sk, f2 = (0.11 + r() * 0.08) / sk;
     const bowl = C.bowl / (k * k), tilt = C.tilt, c0 = 10 * k;
+    // Gefälle „organisch“ (Sönke 17.11.2026): nicht EIN Trichter zur Mitte, sondern mehrere große
+    // Becken (Kegel, weich verschmolzen), das Hauptbecken bei (cx, cz), die anderen höher gelegen
+    // = weitere Minima; die Koordinaten werden dafür leicht verbogen (warp), damit die Hänge geschwungen sind.
+    const basins = [{ x: cx, z: cz, o: 0 }];
+    for (let i = 1; i < C.basins; i++) {
+      const a = r() * 6.28, d = (0.35 + r() * 0.3) * Wl;
+      basins.push({ x: clampW(cx + Math.cos(a) * d, Wl), z: clampW(cz + Math.sin(a) * d, Wl), o: (C.basinUp[0] + r() * C.basinUp[1]) * k });
+    }
+    const wA = 7 * k, wF = 0.045 / sk, wp1 = r() * 6.28, wp2 = r() * 6.28, sm = 2.5 * k * tilt + 0.3;
 
     function h(x, z) {
       const dx = x - cx, dz = z - cz, d2 = dx * dx + dz * dz;
-      let v = bowl * d2 + tilt * Math.sqrt(d2 + c0 * c0);
+      const ux = x + wA * Math.sin(z * wF + wp1), uz = z + wA * Math.sin(x * wF * 1.3 + wp2);
+      let sum = 0;
+      for (const b of basins) {
+        const ex = ux - b.x, ez = uz - b.z;
+        sum += Math.exp(-(tilt * Math.sqrt(ex * ex + ez * ez + c0 * c0) + b.o) / sm);
+      }
+      let v = bowl * d2 - sm * Math.log(sum);     // weiches Minimum der Becken
       // steiler Rand ganz außen, damit man drin bleibt
       const e = Math.max(Math.abs(x), Math.abs(z)) - (Wl - 7);
       if (e > 0) v += 0.18 * e * e;
@@ -180,7 +197,7 @@ window.NTWelt = (function () {
       const x = (r() * 2 - 1) * 0.76 * Wl, z = (r() * 2 - 1) * 0.76 * Wl;
       const d = Math.hypot(x - min.x, z - min.z);
       // Level 3 (Springen): nicht auf einer Kuppe starten – dort ist es flach und die Sprünge winzig
-      if (d > 0.64 * Wl && (C.tilt < 0.3 || Math.hypot(...numGrad(h, x, z)) > 0.6 * C.tilt)) cand.push({ x, z, v: h(x, z) });
+      if (d > (C.startD || 0.64) * Wl && (C.tilt < 0.3 || Math.hypot(...numGrad(h, x, z)) > 0.6 * C.tilt)) cand.push({ x, z, v: h(x, z) });
     }
     cand.sort((a, b) => b.v - a.v);
     const top = cand.slice(0, Math.max(1, Math.floor(cand.length * 0.3)));
