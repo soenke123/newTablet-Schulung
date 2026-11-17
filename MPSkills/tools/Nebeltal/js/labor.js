@@ -73,7 +73,7 @@
 
   /* ── Zustand ── */
   const S = { mode: 'own', mid: 1, ord: [0, 1, 2], W: [], lr: 4, auto: false, wait: 0, trail: [], show: [true, true, true],
-              yaw: 0.75, pitch: 0.38, rot: null, idle: 0, g: null };
+              yaw: 0.75, pitch: 0.38, rot: null, idle: 0, g: null, hist: [] };
   const zahl = () => S.mode === 'zahl';
   const nNeur = () => zahl() ? 4 : 3;
   const colOf = k => zahl() ? (k === 3 ? OUT : HID[k]) : SPC[k];
@@ -95,7 +95,14 @@
     const a = MODES[S.mode].init;
     S.W = Array.from({ length: nNeur() }, () => [0, 1, 2, 3].map(() => (Math.random() * 2 - 1) * a));
     S.trail = S.W.map(() => []);
+    S.hist = [];
     dirtyAll();
+    record();
+  }
+  // Lernkurve: nach jedem Lernschritt Fehler + Lernrate merken
+  function record() {
+    S.hist.push({ L: lossAll(S.W), lr: S.lr });
+    if (S.hist.length > 400) S.hist.shift();
   }
 
   /* ── Rechnen ── */
@@ -204,7 +211,7 @@
   // Ist der Unterschied wirklich klein, sagt es ein Hinweis (c.flat).
   function heat(c) {
     const pal = (dark() ? PAL_D : PAL_L).map(hex);
-    const f = sliceFn(c), d = c.img.data, band = new Int16Array(G * G), Ls = new Float32Array(G * G);
+    const f = sliceFn(c), d = c.img.data, band = new Float32Array(G * G), Ls = new Float32Array(G * G);
     let mn = Infinity, mx = -Infinity;
     for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
       const L = Math.max(f(((x + 0.5) / G * 2 - 1) * R, (1 - (y + 0.5) / G * 2) * R), 1e-6);
@@ -215,16 +222,36 @@
     for (let q = 0; q < G * G; q++) {
       const col = color(Ls[q], pal, lo, hi), o = q * 4;
       d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255;
-      band[q] = Math.floor((Math.log(Ls[q]) - lo) / (hi - lo) * 12);
+      band[q] = (Math.log(Ls[q]) - lo) / (hi - lo) * 12;
     }
-    for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
-      const b0 = band[y * G + x];
-      if ((x + 1 < G && band[y * G + x + 1] !== b0) || (y + 1 < G && band[(y + 1) * G + x] !== b0)) {
-        const o = (y * G + x) * 4; d[o] = Math.min(255, d[o] * 1.12 + 10); d[o + 1] = Math.min(255, d[o + 1] * 1.12 + 10); d[o + 2] = Math.min(255, d[o + 2] * 1.12 + 10);   // dunkle Palette: helle Höhenlinien
-      }
-    }
+    c.segs = contours(band);
     c.off.getContext('2d').putImageData(c.img, 0, 0);
     c.dirty = false;
+  }
+  // Höhenlinien als glatte Linien (Marching Squares, Sönke 17.11.2026: die Pixel-Kanten
+  // sahen auf großen Kacheln verpixelt aus). v = Höhe in Stufen 0…12, Linien bei 1…11.
+  // Ergebnis: Strecken in 0…1 (Anteil der Kachel), gezeichnet in jeder Größe scharf.
+  function contours(v) {
+    const out = [];
+    const P = (x, y) => [(x + 0.5) / G, (y + 0.5) / G];
+    for (let y = 0; y < G - 1; y++) for (let x = 0; x < G - 1; x++) {
+      const a = v[y * G + x], b = v[y * G + x + 1], cc = v[(y + 1) * G + x + 1], dd = v[(y + 1) * G + x];
+      const mn = Math.min(a, b, cc, dd), mx = Math.max(a, b, cc, dd);
+      for (let k = Math.max(1, Math.ceil(mn)); k <= Math.min(11, mx); k++) {
+        if (k === mn) continue;
+        const pts = [];
+        const cut = (v0, v1, x0, y0, x1, y1) => {
+          if ((v0 < k) === (v1 < k)) return;
+          const t = (k - v0) / (v1 - v0);
+          pts.push(P(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t));
+        };
+        cut(a, b, x, y, x + 1, y); cut(b, cc, x + 1, y, x + 1, y + 1);
+        cut(cc, dd, x + 1, y + 1, x, y + 1); cut(dd, a, x, y + 1, x, y);
+        if (pts.length >= 2) out.push(pts[0][0], pts[0][1], pts[1][0], pts[1][1]);
+        if (pts.length === 4) out.push(pts[2][0], pts[2][1], pts[3][0], pts[3][1]);
+      }
+    }
+    return out;
   }
   function drawCell(c, budget) {
     if (c.dirty && budget.left > 0) { heat(c); budget.left--; }
@@ -236,6 +263,12 @@
     x.setTransform(dpr, 0, 0, dpr, 0, 0);
     x.imageSmoothingEnabled = true;
     x.drawImage(c.off, 0, 0, W, H);
+    if (c.segs) {
+      x.strokeStyle = 'rgba(235,245,255,.32)'; x.lineWidth = 1; x.lineCap = 'round';
+      x.beginPath();
+      for (let q = 0; q < c.segs.length; q += 4) { x.moveTo(c.segs[q] * W, c.segs[q + 1] * H); x.lineTo(c.segs[q + 2] * W, c.segs[q + 3] * H); }
+      x.stroke();
+    }
     x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 1; x.setLineDash([3, 4]);
     x.beginPath(); x.moveTo(W / 2, 0); x.lineTo(W / 2, H); x.moveTo(0, H / 2); x.lineTo(W, H / 2); x.stroke(); x.setLineDash([]);
     const pr = pairsOf(c.k)[c.pr], [i, j] = pr.idx;
@@ -272,6 +305,7 @@
       return w.map((v, j) => clamp(v - S.lr * g[k][j], -R, R));
     });
     dirtyAll();
+    record();
   }
   function setAuto(on) {
     S.auto = on;
@@ -431,7 +465,8 @@
     }
     NTNetz.draw($('#net'), { biasInside: true,
       nodes: [...ins,
-        ...[0, 1, 2].map(k => ({ id: 'h' + k, kind: 'n', x: 0.46, y: ys[k], group: HID[k], label: nameOf(k), ...bias(k, HID[k]) })),
+        ...[0, 1, 2].map(k => ({ id: 'h' + k, kind: 'n', x: 0.46, y: ys[k], group: HID[k], label: nameOf(k), ...bias(k, HID[k]),
+          act: EX.i >= 0 ? sig(zz(S.W[k], P.pts[EX.i].x)) : null })),
         { id: 'z', kind: 'n', x: 0.8, y: 0.5, group: OUT, sym: 'Σ', label: 'Zahl', ...bias(3, OUT) },
         { id: 'o', kind: 'out', x: 0.93, y: 0.5, label: 'Art' }],
       edges: [
@@ -447,6 +482,120 @@
     $('#hits').innerHTML = '<span>erkannt:</span>' + [0, 1, 2].map(k => '<span style="color:' + SPC[k] + '">' + pimg(k) + '<b>' + NAMES[k] + '</b> ' + hit[k] + '/' + counts[k] + '</span>').join('');
     $('#sWrong').textContent = (N - hit[0] - hit[1] - hit[2]) + ' von ' + N;
     $('#sLoss').textContent = fmt(lossAll(S.W), 2);
+  }
+
+  /* ── Pinguin für Pinguin (Level 8, Sönke 17.11.2026, wie Level 5) ──
+     Alle 1,6 s ein anderer echter Pinguin: Messwerte → was A, B, C sagen →
+     die Zahl → Zahlenstrahl mit den drei Köpfen. Die gewählte Art ist
+     hervorgehoben (grün richtig, rot falsch), bei falsch die echte gestrichelt. */
+  const EX = { order: null, i: -1 };
+  const SPN = ['adelie', 'chin', 'gentoo'];
+  const exT = (id, x, y, size, w, anchor, fill, txt, cls) => '<text' + (id ? ' id="' + id + '"' : '') + (cls ? ' class="' + cls + '"' : '') +
+    ' x="' + x + '" y="' + y + '" font-size="' + size + '" font-weight="' + w + '" text-anchor="' + anchor + '" fill="' + fill + '">' + (txt || '') + '</text>';
+  const NX0 = 262, NX1 = 416, NV0 = -0.5, NV1 = 2.5;           // Zahlenstrahl
+  const NX = v => NX0 + (clamp(v, NV0, NV1) - NV0) / (NV1 - NV0) * (NX1 - NX0);
+  function exBuild() {
+    const el = $('#ex');
+    if (!el || el.dataset.ok) return;
+    el.dataset.ok = '1';
+    const arrow = (x0, x1, y) => '<line x1="' + x0 + '" y1="' + y + '" x2="' + (x1 - 5) + '" y2="' + y + '" stroke="var(--ink-faint)" stroke-width="1.6"/>' +
+      '<path d="M' + x1 + ',' + y + ' L' + (x1 - 6) + ',' + (y - 4) + ' L' + (x1 - 6) + ',' + (y + 4) + 'Z" fill="var(--ink-faint)"/>';
+    let h = '<g id="exPg"></g>' + exT('exName', 28, 10, 10, 700, 'middle', 'var(--ink-soft)');
+    ['Länge', 'Höhe', 'Flosse'].forEach((t, k) => {
+      h += exT('', 64, 22 + k * 26, 9.5, 600, 'start', 'var(--ink-faint)', t) + exT('exV' + k, 64, 34 + k * 26, 12, 700, 'start', 'var(--ink)', '', 'mono');
+    });
+    h += arrow(118, 132, 50);
+    [0, 1, 2].forEach(k => {
+      h += '<rect x="136" y="' + (16 + k * 26) + '" width="58" height="20" rx="10" fill="' + HID[k] + '" fill-opacity=".18" stroke="' + HID[k] + '" stroke-width="1.4"/>' +
+        exT('', 145, 30 + k * 26, 11, 800, 'start', HID[k], nameOf(k)) + exT('exH' + k, 189, 30 + k * 26, 11.5, 700, 'end', 'var(--ink)', '', 'mono');
+    });
+    h += arrow(198, 212, 50);
+    h += '<circle cx="232" cy="50" r="19" fill="var(--surface)" stroke="' + OUT + '" stroke-width="2.4"/>' +
+      exT('', 232, 44, 11, 700, 'middle', 'var(--ink)', 'Σ') + exT('exZ', 232, 58, 12, 800, 'middle', OUT, '', 'mono') +
+      exT('', 232, 84, 9.5, 600, 'middle', 'var(--ink-faint)', 'Zahl');
+    // Zahlenstrahl: drei Bereiche mit Köpfen
+    const cut = [NV0, 0.5, 1.5, NV1];
+    [0, 1, 2].forEach(n => {
+      const a = NX(cut[n]) + 1.5, b = NX(cut[n + 1]) - 1.5, sp = S.ord.indexOf(n), cx = (a + b) / 2;
+      h += '<rect id="exR' + n + '" x="' + a + '" y="4" width="' + (b - a) + '" height="66" rx="10" fill="none" stroke-width="2"/>' +
+        NTBild.head(SPN[sp], cx, 25, 15) +
+        exT('', cx, 54, 10, 700, 'middle', SPC[sp], NAMES[sp]) +
+        exT('', cx, 65, 8.5, 600, 'middle', 'var(--ink-faint)', ['unter 0,5', '0,5 – 1,5', 'über 1,5'][n]) +
+        '<g id="exB' + n + '"></g>';
+    });
+    h += '<line x1="' + NX0 + '" y1="80" x2="' + NX1 + '" y2="80" stroke="var(--ink-faint)" stroke-width="1.4"/>';
+    for (const v of [0, 1, 2]) h += '<line x1="' + NX(v) + '" y1="77" x2="' + NX(v) + '" y2="83" stroke="var(--ink-faint)" stroke-width="1.4"/>' +
+      exT('', NX(v), 93, 9, 600, 'middle', 'var(--ink-faint)', String(v), 'mono');
+    h += '<path d="M' + (252) + ',50 C' + 256 + ',50 ' + 256 + ',80 ' + NX0 + ',80" fill="none" stroke="' + OUT + '" stroke-width="1.6" stroke-dasharray="3 3"/>';
+    h += '<g id="exM"><path d="M0,74 L-6,64 L6,64Z" fill="' + OUT + '"/></g>';
+    el.innerHTML = h;
+  }
+  function exPick() {
+    if (!EX.order) {
+      const o = P.pts.map((p, i) => i);
+      for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+      EX.order = o;
+    }
+    return EX.order[Math.floor(performance.now() / 1600) % EX.order.length];
+  }
+  function drawEx() {
+    if (!zahl() || EX.i < 0) return;
+    exBuild();
+    const p = P.pts[EX.i], hv = [0, 1, 2].map(k => sig(zz(S.W[k], p.x))), z = zz(S.W[3], hv);
+    const n = clamp(Math.round(z), 0, 2), pick = S.ord.indexOf(n), ok = pick === p.y;
+    const raw = [p.len, p.dep, p.fl];
+    if ($('#exPg').dataset.i !== String(EX.i)) {
+      $('#exPg').dataset.i = String(EX.i);
+      $('#exPg').innerHTML = NTBild.peng({ sp: SPN[p.y], x: 28, y: 94, s: 0.74 });
+      $('#exName').textContent = NAMES[p.y];
+      $('#exName').setAttribute('fill', SPC[p.y]);
+      [0, 1, 2].forEach(k => { $('#exV' + k).textContent = fmt(raw[k], k === 2 ? 0 : 1) + ' mm'; });
+    }
+    hv.forEach((v, k) => { $('#exH' + k).textContent = Math.round(v * 100) + ' %'; });
+    $('#exZ').textContent = fmt(z, 2);
+    $('#exM').setAttribute('transform', 'translate(' + NX(z).toFixed(1) + ' 0)');
+    for (const q of [0, 1, 2]) {
+      const sp = S.ord.indexOf(q), on = q === n, echt = !ok && sp === p.y, r = $('#exR' + q);
+      r.setAttribute('fill', on ? (ok ? 'rgba(92,242,196,.16)' : 'rgba(255,107,139,.16)') : 'none');
+      r.setAttribute('stroke', on ? (ok ? 'var(--accent)' : 'var(--warn)') : echt ? 'var(--accent)' : 'transparent');
+      r.setAttribute('stroke-dasharray', echt ? '4 3' : 'none');
+      const xr = +r.getAttribute('x') + +r.getAttribute('width');
+      $('#exB' + q).innerHTML = on
+        ? '<circle cx="' + (xr - 4) + '" cy="10" r="8" fill="' + (ok ? 'var(--accent)' : 'var(--warn)') + '"/>' +
+          '<text x="' + (xr - 4) + '" y="14" font-size="11" font-weight="800" text-anchor="middle" fill="#04201a">' + (ok ? '✓' : '✗') + '</text>'
+        : echt ? '<rect x="' + (xr - 32) + '" y="5" width="28" height="12" rx="6" fill="var(--accent)"/>' +
+          '<text x="' + (xr - 18) + '" y="14" font-size="8.5" font-weight="800" text-anchor="middle" fill="#04201a">ECHT</text>' : '';
+    }
+  }
+
+  /* ── Lernkurve: Fehler nach jedem Lernschritt; ändert sich die Lernrate,
+     steht dort ein Strich mit der neuen Lernrate ── */
+  function drawCurve() {
+    const cv = $('#lcurve');
+    const c = prepCanvas(cv);
+    if (!c) return;
+    const { x, W, H } = c, v = S.hist;
+    const n = Math.max(30, v.length), lo = 0, hi = Math.max(...v.map(h => h.L), 1e-3) * 1.08;
+    const X = i => 4 + i / (n - 1) * (W - 8), Y = L => 3 + (1 - (L - lo) / (hi - lo)) * (H - 7);
+    x.strokeStyle = css('--ink-faint'); x.globalAlpha = 0.4; x.lineWidth = 1;
+    x.beginPath(); x.moveTo(4, H - 4); x.lineTo(W - 4, H - 4); x.stroke(); x.globalAlpha = 1;
+    x.font = '700 9.5px JetBrains Mono, monospace'; x.textBaseline = 'top';
+    let lastLr = null, lastLab = -99;
+    v.forEach((h, i) => {
+      if (h.lr !== lastLr) {
+        const px = X(i);
+        x.strokeStyle = css('--orange'); x.globalAlpha = 0.55; x.setLineDash([2, 3]);
+        x.beginPath(); x.moveTo(px, 0); x.lineTo(px, H - 4); x.stroke(); x.setLineDash([]); x.globalAlpha = 1;
+        if (px - lastLab > 34) { x.fillStyle = css('--orange'); x.textAlign = 'left'; x.fillText(fmt(h.lr, h.lr < 1 ? 2 : 1), px + 2, 0); lastLab = px; }
+        lastLr = h.lr;
+      }
+    });
+    x.strokeStyle = '#5cf2c4'; x.lineWidth = 2; x.lineJoin = 'round';
+    x.beginPath();
+    v.forEach((h, i) => i ? x.lineTo(X(i), Y(h.L)) : x.moveTo(X(i), Y(h.L)));
+    x.stroke();
+    if (v.length) { x.fillStyle = '#5cf2c4'; x.beginPath(); x.arc(X(v.length - 1), Y(v[v.length - 1].L), 3, 0, 7); x.fill(); }
+    x.textBaseline = 'alphabetic';
   }
 
   /* ── Steuerung ── */
@@ -527,7 +676,10 @@
     const budget = { left: 4 };
     for (const c of cells) drawCell(c, budget);
     drawClouds();
-    if (S.changed) { drawNet(); table(); S.changed = false; }
+    const ei = zahl() ? exPick() : -1;
+    if (ei !== EX.i) { EX.i = ei; S.exNew = true; }
+    if (S.changed || S.exNew) { drawNet(); drawEx(); S.exNew = false; }
+    if (S.changed) { table(); drawCurve(); S.changed = false; }
   }
 
   setMid(1);

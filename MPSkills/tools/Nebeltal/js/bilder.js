@@ -46,6 +46,18 @@ window.NTBild = (function () {
       '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" preserveAspectRatio="xMidYMax meet"' +
       (o.flip ? ' transform="translate(' + (2 * x) + ' 0) scale(-1 1)"' : '') + '/>';
   }
+  // Kopf einer Art im Kreis (Level 5/8: „Was sagt das Netz?“), Mitte cx/cy, Radius r.
+  // Ausschnitt je Bild in Bildpunkten (Bilder 420 hoch): Mitte des Kopfes + Seitenlänge.
+  const HEAD = { adelie: [284, 104, 60, 128], chin: [282, 128, 60, 124], gentoo: [316, 118, 64, 130] };
+  let headN = 0;
+  function head(sp, cx, cy, r) {
+    const h = HEAD[sp] || HEAD.adelie, id = 'ntHd' + (++headN), q = h[3] / 2;
+    return '<clipPath id="' + id + '"><circle cx="' + cx + '" cy="' + cy + '" r="' + r + '"/></clipPath>' +
+      '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="#dfe9f7"/>' +
+      '<g clip-path="url(#' + id + ')"><svg x="' + (cx - r) + '" y="' + (cy - r) + '" width="' + 2 * r + '" height="' + 2 * r + '" viewBox="' +
+      (h[1] - q) + ' ' + (h[2] - q) + ' ' + h[3] + ' ' + h[3] + '">' +
+      '<image href="' + IMG + sp + '_1.webp" x="0" y="0" width="' + h[0] + '" height="420"/></svg></g>';
+  }
   // Nest als Bild: 'nest' (leer), 'mama', 'papa', 'beide'; unten Mitte bei (x, y), Breite w
   const NEST_R = { nest: 0.41, mama: 0.39, papa: 0.46, beide: 0.46 };
   function nestImg(kind, x, y, w) {
@@ -353,5 +365,5 @@ window.NTBild = (function () {
     return '';
   }
 
-  return { peng, nestImg, nestKind, icon, SP, IMG, scene: id => (SCENES[id] ? SCENES[id]() : '') };
+  return { peng, head, nestImg, nestKind, icon, SP, IMG, scene: id => (SCENES[id] ? SCENES[id]() : '') };
 })();

@@ -46,6 +46,7 @@ window.NTZwei = (function () {
       '<div class="hud-top"><button id="zMenu" class="chip btn" type="button">‹ Übersicht</button>' +
       '<div id="zName" class="chip glass"></div><div id="zCount" class="chip glass"></div></div>' +
       '<div id="zPanel" class="glass"><div class="box-t">Das ganze Netz</div><canvas id="znet"></canvas>' +
+      '<div class="zfix"><i></i>grau = steht fest: Bias −3 in A und B, Gewichte 8 und Bias −5 am Ausgang. Lernen tun nur die farbigen Kanten.</div>' +
       '<div class="box-t" style="margin-top:4px">Die vier Nester · jedes Neuron = eine Gerade</div><canvas id="zplot" class="nplot"></canvas><div class="zrow"><span>Fehler <b id="zErr">–</b></span><span>richtig <b id="zRight">–</b></span></div></div>' +
       '<div class="zbottom"><div class="zlr glass"><div class="lr-l"><small>Lernrate</small><span id="zLrV">–</span></div>' +
       '<input id="zLr" type="range" min="0" max="1000" aria-label="Lernrate">' +
@@ -288,15 +289,15 @@ window.NTZwei = (function () {
     NTNetz.draw($('#znet'), {
       nodes: [
         { id: 's1', kind: 'in', x: 0.04, y: 0.2, label: 'Mama' }, { id: 's2', kind: 'in', x: 0.04, y: 0.8, label: 'Papa' },
-        { id: 'A', kind: 'n', x: 0.48, y: 0.2, label: 'A', group: 'a', bias: -3 },
-        { id: 'B', kind: 'n', x: 0.48, y: 0.8, label: 'B', group: 'b', bias: -3 },
+        { id: 'A', kind: 'n', x: 0.48, y: 0.2, label: 'A', group: 'a', bias: -3, labelPos: 'above' },
+        { id: 'B', kind: 'n', x: 0.48, y: 0.8, label: 'B', group: 'b', bias: -3, labelPos: 'above' },
         { id: 'o', kind: 'n', x: 0.8, y: 0.5, bias: -5 },
         { id: 'l', kind: 'out', x: 0.92, y: 0.5, label: 'Ei ok?' }],
       edges: [
         // gerade Kanten in der Mitte beschriften, gekreuzte nah am Eingang – so überlappt nichts
         { from: 's1', to: 'A', w: w[0], group: 'a', labelAt: 0.55 }, { from: 's2', to: 'A', w: w[1], group: 'a', labelAt: 0.26 },
         { from: 's1', to: 'B', w: w[2], group: 'b', labelAt: 0.26 }, { from: 's2', to: 'B', w: w[3], group: 'b', labelAt: 0.55 },
-        { from: 'A', to: 'o', w: 8, group: 'fix', fixed: true }, { from: 'B', to: 'o', w: 8, group: 'fix', fixed: true },
+        { from: 'A', to: 'o', w: 8, group: 'fix', fixed: true, labelAt: 0.5 }, { from: 'B', to: 'o', w: 8, group: 'fix', fixed: true, labelAt: 0.5 },
         { from: 'o', to: 'l', w: 1, group: 'fix', fixed: true, noLabel: true }]
     });
     const sg = z => 1 / (1 + Math.exp(-z));

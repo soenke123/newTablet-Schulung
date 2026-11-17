@@ -67,7 +67,22 @@ table.w tr.sub th { padding-top:8px; }
 /* Leinwand absolut im Rahmen – sonst wächst sie mit ihrer eigenen Pixelgröße immer weiter */
 .netwrap { position:relative; flex:1; min-height:190px; }
 #net { position:absolute; inset:0; width:100%; height:100%; display:block; }
-body[data-mode="zahl"] .netwrap { min-height:220px; }
+body[data-mode="zahl"] .netwrap { min-height:140px; }
+body[data-mode="zahl"] .top { flex:1.55; }
+body[data-mode="zahl"] #ordSeg { display:none; }          /* steht jetzt im Zahlenstrahl unter dem Netz */
+body[data-mode="zahl"] .hits { flex-wrap:nowrap; gap:4px 9px; font-size:12.5px; white-space:nowrap; }
+body[data-mode="zahl"] .hits .pi { height:20px; }
+/* Pinguin für Pinguin (nur Level 8 / Zahl-Neuron) */
+.exbox { display:none; margin-top:4px; }
+body[data-mode="zahl"] .exbox { display:block; }
+#ex { width:100%; height:auto; max-height:110px; display:block; }
+#ex text { font-family:var(--font); }
+#ex .mono { font-family:var(--mono); }
+/* Lernkurve in der Steuerleiste */
+.lcbox { display:flex; flex-direction:column; line-height:1.1; }
+.lcbox small { font-size:11px; color:var(--ink-faint); font-weight:700; text-transform:uppercase; letter-spacing:.05em; }
+#lcurve { width:min(250px, 21vw); height:46px; display:block; }
+body[data-mode="zahl"] #lr { width:min(220px, 17vw); }
 .hits { font-size:13px; color:var(--ink-soft); display:flex; flex-wrap:wrap; gap:4px 12px; font-variant-numeric:tabular-nums; }
 .hits b { font-weight:700; }
 .cloudnote { font-size:12px; color:var(--ink-faint); }
@@ -152,6 +167,10 @@ ol.steps li::before { content:counter(st); position:absolute; left:0; top:0; wid
       <div class="box-t" id="netTitle">Das Netz</div>
       <div class="netwrap"><canvas id="net"></canvas></div>
       <div class="hits" id="hits"></div>
+      <div class="exbox">
+        <div class="box-t">Pinguin für Pinguin – so rechnet das Netz</div>
+        <svg id="ex" viewBox="0 0 420 96" aria-label="Ein Pinguin nach dem anderen: Messwerte, Antworten von A, B, C, Zahl und welche Art das Netz wählt"></svg>
+      </div>
     </section>
   </div>
   <div class="ctrl glass">
@@ -161,14 +180,15 @@ ol.steps li::before { content:counter(st); position:absolute; left:0; top:0; wid
     <button id="auto" class="btn" type="button">Training starten</button>
     <button id="rnd" class="btn" type="button">Neu würfeln</button>
     <div class="seg" id="mode"><button type="button" data-m="own">3 Neuronen</button><button type="button" data-m="zahl">+ Zahl-Neuron</button></div>
+    <div class="lcbox"><small>Lernkurve · Fehler je Schritt</small><canvas id="lcurve" aria-label="Fehler nach jedem Lernschritt, Striche = Lernrate geändert"></canvas></div>
     <div class="ordfix" id="ordSeg" title="Fest: Zügel liegt in der Wolke zwischen Adelie und Esel"><b>0</b> Adelie · <b>1</b> Zügel · <b>2</b> Esel</div>
   </div>
   <div class="grid" id="grid"></div>
 </div>
 <div id="card" hidden></div>
-<script src="js/welt.js?v=20261117l"></script>
-<script src="js/bilder.js?v=20261117m"></script>
-<script src="js/netz.js?v=20261117m"></script>
-<script src="js/labor.js?v=20261117m"></script>
+<script src="js/welt.js?v=20261117n"></script>
+<script src="js/bilder.js?v=20261117n"></script>
+<script src="js/netz.js?v=20261117n"></script>
+<script src="js/labor.js?v=20261117n"></script>
 </body>
 </html>

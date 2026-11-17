@@ -185,6 +185,11 @@ body:not([data-lvl="3"]) #lrDistRow { display:none; }
 #mrow { width:100%; height:auto; display:block; }
 #xorBox { position:absolute; right:12px; top:170px; width:300px; padding:8px 10px 8px; }
 #xnet { width:100%; height:92px; display:block; }
+/* Level 6: Bias-Regler direkt am Kasten (Sönke 17.11.2026) – verschiebt die Gerade, Welt baut sich neu */
+.biasrow { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--ink-soft); }
+.biasrow input { flex:1; min-width:0; accent-color:#5cf2c4; height:26px; }
+.biasrow b { font-family:var(--mono); color:var(--ink); min-width:38px; text-align:right; font-variant-numeric:tabular-nums; }
+.biasnote { font-size:11.5px; color:var(--ink-faint); margin:-2px 0 2px; }
 /* Die vier Nester als Diagramm (NTNetz.nestPlot): Mama → rechts, Papa → oben, Gerade = Neuron */
 canvas.nplot { width:100%; aspect-ratio:1 / 0.92; height:auto; display:block; margin:2px 0 4px; }
 .ca { color:#f27828; } .cb { color:#8b5cf6; }
@@ -217,6 +222,8 @@ table.lights .ic { display:inline-block; vertical-align:middle; }
 #zCount.warn { color:var(--warn); }
 #zPanel { position:absolute; left:50%; top:62px; transform:translateX(-50%); width:300px; padding:8px 10px; }
 #znet { width:100%; height:132px; display:block; }
+.zfix { display:flex; gap:6px; align-items:baseline; font-size:11.5px; line-height:1.35; color:var(--ink-faint); margin:0 0 2px; }
+.zfix i { flex:none; width:16px; border-top:2px dashed var(--ink-faint); transform:translateY(-3px); }
 .zrow { display:flex; justify-content:space-between; font-size:13.5px; color:var(--ink-soft); }
 .zrow b { color:var(--ink); font-variant-numeric:tabular-nums; }
 .zbottom { position:absolute; left:12px; right:12px; bottom:12px; display:flex; justify-content:center; align-items:flex-end; gap:10px; pointer-events:none; }
@@ -378,7 +385,7 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 
     <div id="pengBox" class="glass" hidden>
       <div class="box-t">Das Neuron – Pinguin für Pinguin</div>
-      <svg id="prow" viewBox="0 0 280 108" aria-label="Das Neuron schätzt die Art des gezeigten Pinguins"></svg>
+      <svg id="prow" viewBox="0 0 302 108" aria-label="Das Neuron schätzt die Art des gezeigten Pinguins"></svg>
       <div class="box-t" style="margin-top:2px">Alle 136 – so sortiert es gerade</div>
       <canvas id="pplot"></canvas>
       <div class="plegend"><span class="pa">● Adeliepinguin</span><span class="pc">▲ Zügelpinguin</span></div>
@@ -392,6 +399,8 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
     <div id="xorBox" class="glass" hidden>
       <div class="box-t">Das Neuron</div>
       <canvas id="xnet"></canvas>
+      <div class="biasrow"><span>Bias</span><input id="xBias" type="range" min="-40" max="40" step="1" value="0" aria-label="Bias des Neurons"><b id="xBiasV">0,0</b></div>
+      <div class="biasnote">stellst du selbst ein · lernt beim Training nicht mit</div>
       <div class="box-t" style="margin-top:4px">Die vier Nester · dein Neuron = eine Gerade</div>
       <canvas id="xplot" class="nplot" aria-label="Die vier Nester als Diagramm: Mama und Papa am Nest oder beim Fischen, die Gerade des Neurons teilt das Feld"></canvas>
       <div class="mvals"><span>richtig beurteilt</span><b id="xRight">–</b></div>
@@ -449,12 +458,12 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
   <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
 </div>
 
-<script src="js/welt.js?v=20261117l"></script>
-<script src="js/bilder.js?v=20261117m"></script>
+<script src="js/welt.js?v=20261117n"></script>
+<script src="js/bilder.js?v=20261117n"></script>
 <script src="js/grafik.js?v=20261117m"></script>
 <script src="js/schnee.js?v=20261117j"></script>
-<script src="js/netz.js?v=20261117m"></script>
-<script src="js/zwei.js?v=20261117m"></script>
-<script src="js/spiel.js?v=20261117m"></script>
+<script src="js/netz.js?v=20261117n"></script>
+<script src="js/zwei.js?v=20261117n"></script>
+<script src="js/spiel.js?v=20261117n"></script>
 </body>
 </html>

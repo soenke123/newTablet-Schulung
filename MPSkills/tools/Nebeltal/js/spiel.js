@@ -95,16 +95,19 @@
         'Dem Ei geht es nur gut, wenn <b>genau einer</b> am Nest ist. Sind beide weg, kühlt es aus. Sind beide da, holt keiner Futter.',
         'Ein einzelnes Neuron soll das lernen. Eingänge: <b>Mama am Nest?</b> und <b>Papa am Nest?</b> (ja/nein), dazu zwei Gewichte <b>w₁</b> und <b>w₂</b>.',
         'Wie immer: <b>links/rechts = w₁</b>, <b>vor/zurück = w₂</b>, Höhe = Fehler. Rechts siehst du alle vier Nester.',
-        'Such das Neuron, das alle vier Nester richtig beurteilt – laufend oder mit <b>„Training starten“</b>.'],
+        'Such das Neuron, das alle vier Nester richtig beurteilt – laufend oder mit <b>„Training starten“</b>.',
+        'Rechts am Kasten gibt es einen Regler für den <b>Bias</b>. Er verschiebt die Gerade. Hilft das?'],
       outro: 'Egal, wie lange man sucht: <b>Ein einzelnes Neuron schafft das nicht.</b> Es kann die vier Nester nur mit einer geraden Linie trennen, ' +
              '„genau einer da“ liegt aber über Kreuz. Der tiefste Punkt ist die Mitte – dort sagt das Neuron bei jedem Nest <b>50 %</b>, also „ich weiß es nicht“. ' +
+             'Mit dem <b>Bias</b> verschiebst du die Gerade: Dann stimmen höchstens <b>3 von 4</b> – nie alle. ' +
              'Das war lange ein echtes Problem der KI-Forschung (es heißt XOR). Die Lösung: ein zweites Neuron dazwischen. Das probierst du im nächsten Level.' },
     { id: 7, name: 'Zwei Neuronen, zwei Welten', short: 'Das Nest mit zwei Neuronen – jede Welt ein Neuron',
       two: true, jumps: 40, fog: 14, lr: { min: 0.2, max: 30, def: 4, d: 1 },
       lead: 'Jetzt hat das Netz <b>zwei Neuronen A und B</b> zwischen Mama/Papa und „Ei ok?“.',
       steps: [
         'Das Netz hat damit <b>vier Gewichte</b>, die es lernen kann – zu viele für eine Welt. Darum gibt es <b>zwei Welten</b>.',
-        '<b class="ca">Welt A</b> = die beiden Kanten in Neuron A, <b class="cb">Welt B</b> = die beiden Kanten in Neuron B. Die grauen Kanten stehen fest.',
+        '<b class="ca">Welt A</b> = die beiden Kanten in Neuron A, <b class="cb">Welt B</b> = die beiden Kanten in Neuron B.',
+        'Alles Graue <b>steht fest</b>: die Biase (−3 in A und B, −5 am Ausgang) und die Gewichte 8 zum Ausgang. Anders als eben gibt es hier <b>keinen Bias-Regler</b> – gelernt werden nur die vier farbigen Kanten.',
         'Beide Figuren gehören zu <b>einem</b> Netz – darum stehen sie immer auf derselben Höhe. Bewegt sich die eine, verbiegt sich die Welt der anderen.',
         'Spielt zu zweit (jede Person eine Seite) oder allein mit zwei Daumen. Oder startet das Training.'],
       outro: 'Mit zwei Neuronen klappt es: Eines lernt „<b>nur Mama am Nest</b>“, das andere „<b>nur Papa am Nest</b>“ – das Ei ist versorgt, wenn eines von beiden anschlägt. ' +
@@ -279,6 +282,8 @@
     S.best = S.curve[0]; S.lrs = []; S.outs = 0; S.reveal = null;
     S.left = L.time || 0; S.jumpsLeft = L.jumps || 0;
     if (L.lr) setLR(L.lr.def);
+    if (w.setBias && w.bias() !== 0) setBias(0);
+    else if (w.setBias) { $('#xBias').value = 0; $('#xBiasV').textContent = '0,0'; }
     addDot(S.p.x, S.p.z, true);
   }
 
@@ -374,6 +379,19 @@
   $('#lrMinus').addEventListener('click', () => S.lvl && S.lvl.lr && !S.auto && setLR(S.lr / 1.25));
   $('#lrPlus').addEventListener('click', () => S.lvl && S.lvl.lr && !S.auto && setLR(S.lr * 1.25));
 
+  // Level 6: Bias-Regler. Die Welt ist der Fehler bei diesem Bias → Gitter neu bauen (gedrosselt)
+  let biasT = 0;
+  function setBias(v) {
+    const w = S.world;
+    if (!w || !w.setBias) return;
+    w.setBias(v);
+    $('#xBias').value = Math.round(v * 10);
+    $('#xBiasV').textContent = (v > 0 ? '+' : '') + fmt(v, 1);
+    if (!biasT) biasT = setTimeout(() => { biasT = 0; if (S.world === w) G.setWorld(w, theme); }, 90);
+  }
+  $('#xBias').addEventListener('input', e => setBias(e.target.value / 10));
+  $('#xBias').addEventListener('change', e => e.target.blur());   // Pfeiltasten wieder fürs Laufen
+
   $('#btnJump').addEventListener('click', () => doJump());
   $('#btnStay').addEventListener('click', () => { if (S.state === 'play' && !S.jump && !S.fly) finish(); });
   $('#btnAuto').addEventListener('click', () => {
@@ -456,7 +474,8 @@
       n = d < 0.02 ? 3 : d < 0.15 ? 2 : d < 0.5 ? 1 : 0;
       const cs = w.cases(S.p.x, S.p.z);
       line = 'Dein Neuron beurteilt <b>' + w.right(cs) + ' von 4</b> Nestern richtig' +
-        '<br><small>Fehler ' + fmt(mine, 2) + ' · kleinstmöglich ' + fmt(best, 2) + ' (= überall 50 %)</small>';
+        '<br><small>Fehler ' + fmt(mine, 2) + ' · kleinstmöglich ' + fmt(best, 2) +
+        (w.bias() ? ' bei Bias ' + fmt(w.bias(), 1) + ' · ohne Bias ' + fmt(Math.LN2, 2) + ' (= überall 50 %)' : ' (= überall 50 %)') + '</small>';
     } else if (w.kind === 'penguin') {
       const nw = w.wrong(w.toW(S.p.x), w.toW(S.p.z)), nb = w.wrong(w.min.w1, w.min.w2), d = nw - nb;
       n = d <= 0 && mine < best * 1.6 ? 3 : d <= 2 ? 2 : d <= 8 ? 1 : 0;
@@ -975,9 +994,15 @@
       '<circle cx="183" cy="59" r="17" fill="var(--surface)" stroke="#f27828" stroke-width="2.4"/>' +
       t('', 183, 64.5, 16, 700, 'middle', 'var(--ink)', 'σ') +
       '<line x1="200" y1="59" x2="210" y2="59" stroke="var(--ink)" stroke-width="2"/><path d="M216,59 L208,54.5 L208,63.5Z" fill="var(--ink)"/>' +
-      t('', 278, 24, 10.5, 600, 'end', 'var(--ink-soft)', 'Zügel?') +
-      t('pOut', 278, 44, 17, 700, 'end', 'var(--ink)') + t('pSays', 278, 60, 11, 700, 'end', 'var(--ink-soft)') +
-      t('pReal', 278, 78, 11, 600, 'end', 'var(--ink-soft)') + t('pOk', 278, 94, 11.5, 700, 'end', 'var(--ink)');
+      // Was sagt das Neuron? Zwei Köpfe mit Prozent, die Wahl hervorgehoben (grün richtig, rot falsch),
+      // bei falscher Wahl die echte Art gestrichelt mit „echt“ (Sönke 17.11.2026)
+      t('', 262, 11, 10, 700, 'middle', 'var(--ink-faint)', 'NEURON SAGT') +
+      [['adelie', 'Adelie', 36], ['chin', 'Zügel', 80]].map(([sp, nm, y], k) =>
+        '<rect id="pR' + k + '" x="222" y="' + (y - 20) + '" width="78" height="40" rx="10" fill="none" stroke-width="2"/>' +
+        NTBild.head(sp, 240, y, 14) +
+        t('', 259, y - 4, 10, 700, 'start', 'var(--ink-soft)', nm) + t('pP' + k, 259, y + 11, 13.5, 700, 'start', 'var(--ink)') +
+        '<g id="pB' + k + '"></g>').join('') +
+      '';
   }
   function prowPick(w) {
     if (!PROW.order || PROW.seed !== w.seed) {
@@ -986,6 +1011,25 @@
       PROW.order = o; PROW.seed = w.seed; PROW.idx = -1;
     }
     return PROW.order[Math.floor(performance.now() / 1600) % PROW.order.length];
+  }
+
+  /* Köpfe „Was sagt das Neuron?“ füllen: pre = Präfix der ids (pR0, pP0, pB0 …),
+     ps = Anteile je Art, pick = gewählte Art, real = echte Art */
+  function verdict(pre, ps, pick, real) {
+    ps.forEach((v, k) => {
+      const r = $('#' + pre + 'R' + k), on = k === pick, ok = pick === real, echt = !ok && k === real;
+      r.setAttribute('fill', on ? (ok ? 'rgba(92,242,196,.16)' : 'rgba(255,107,139,.16)') : 'none');
+      r.setAttribute('stroke', on ? (ok ? 'var(--accent)' : 'var(--warn)') : echt ? 'var(--accent)' : 'transparent');
+      r.setAttribute('stroke-dasharray', echt ? '4 3' : 'none');
+      $('#' + pre + 'P' + k).textContent = Math.round(v * 100) + ' %';
+      $('#' + pre + 'P' + k).setAttribute('fill', on ? 'var(--ink)' : 'var(--ink-faint)');
+      const x = +r.getAttribute('x') + +r.getAttribute('width'), y = +r.getAttribute('y');
+      $('#' + pre + 'B' + k).innerHTML = on
+        ? '<circle cx="' + (x - 2) + '" cy="' + (y + 2) + '" r="8" fill="' + (ok ? 'var(--accent)' : 'var(--warn)') + '"/>' +
+          '<text x="' + (x - 2) + '" y="' + (y + 6) + '" font-size="11" font-weight="800" text-anchor="middle" fill="#04201a">' + (ok ? '✓' : '✗') + '</text>'
+        : echt ? '<rect x="' + (x - 30) + '" y="' + (y - 6) + '" width="28" height="12" rx="6" fill="var(--accent)"/>' +
+          '<text x="' + (x - 16) + '" y="' + (y + 3) + '" font-size="8.5" font-weight="800" text-anchor="middle" fill="#04201a">ECHT</text>' : '';
+    });
   }
 
   /* ── Level 5: Pinguine + Neuron ──
@@ -1017,7 +1061,6 @@
       $('#pName').textContent = NTBild.SP[sp].name;
       $('#pLen').textContent = fmt(cur.len, 1) + ' mm';
       $('#pDep').textContent = fmt(cur.dep, 1) + ' mm';
-      $('#pReal').textContent = 'echt: ' + (cur.y ? 'Zügel' : 'Adelie');
     }
     const q = w.sig(w1 * cur.a + w2 * cur.b), right = (q > 0.5) === (cur.y === 1);
     for (const [id, wv, lid] of [['#pE1', w1, '#pL1'], ['#pE2', w2, '#pL2']]) {
@@ -1026,10 +1069,7 @@
       $(id).setAttribute('stroke', c);
       $(lid).textContent = '· ' + fmt(wv, 1); $(lid).setAttribute('fill', c);
     }
-    $('#pOut').textContent = Math.round(q * 100) + ' %';
-    $('#pSays').textContent = q > 0.5 ? '→ Zügel' : '→ Adelie';
-    $('#pOk').textContent = right ? '✓ richtig' : '✗ falsch';
-    $('#pOk').setAttribute('fill', right ? 'var(--accent-ink)' : 'var(--warn)');
+    verdict('p', [1 - q, q], q > 0.5 ? 1 : 0, cur.y);
 
     // Bild A
     const [x, Wd, Hh] = prep($('#pplot'));
@@ -1082,15 +1122,17 @@
 
   /* ── Level 6: ein Neuron, das Nest ── */
   function drawXor1() {
-    const w = S.world, w1 = w.toW(S.p.x), w2 = w.toW(S.p.z);
-    NTNetz.draw($('#xnet'), {
+    const w = S.world, w1 = w.toW(S.p.x), w2 = w.toW(S.p.z), b = w.bias();
+    NTNetz.draw($('#xnet'), { biasInside: true,
       nodes: [{ id: 's1', kind: 'in', x: 0.04, y: 0.2, label: 'Mama' }, { id: 's2', kind: 'in', x: 0.04, y: 0.8, label: 'Papa' },
-              { id: 'n', kind: 'n', x: 0.56, y: 0.5, group: 'a' }, { id: 'l', kind: 'out', x: 0.76, y: 0.5, label: 'Ei ok?' }],
+              { id: 'n', kind: 'n', x: 0.56, y: 0.5, group: 'a', bias: b, biasD: 1, biasGroup: '#5cf2c4' },
+              { id: 'l', kind: 'out', x: 0.76, y: 0.5, label: 'Ei ok?' }],
       edges: [{ from: 's1', to: 'n', w: w1, group: 'a' }, { from: 's2', to: 'n', w: w2, group: 'a' }]
     });
     const cs = w.cases(S.p.x, S.p.z), sg = z => 1 / (1 + Math.exp(-z));
-    NTNetz.nestPlot($('#xplot'), { cases: cs, out: (m, p) => sg(w1 * m + w2 * p),
-      lines: [{ a: w1, b: w2, c: 0, col: '#5cf2c4', name: 'dein Neuron' }] });
+    // Gerade: w₁·Mama + w₂·Papa + b = 0  →  c = −b
+    NTNetz.nestPlot($('#xplot'), { cases: cs, out: (m, p) => sg(w1 * m + w2 * p + b),
+      lines: [{ a: w1, b: w2, c: -b, col: '#5cf2c4', name: 'dein Neuron' }] });
     $('#xRight').textContent = w.right(cs) + ' von 4';
   }
 

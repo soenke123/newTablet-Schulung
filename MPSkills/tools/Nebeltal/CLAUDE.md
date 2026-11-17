@@ -174,14 +174,26 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    Futter) = XOR. Ein Neuron soll es lernen und kann es nicht: tiefster Punkt = Mitte, überall 50 %.
    Rechts `#xorBox`: Neuron (Mama/Papa → σ → Ei ok?) + die vier Nester als Diagramm `#xplot`
    (NTNetz.nestPlot: die Gerade des Neurons dreht sich mit, wenn man läuft). Wertung: wie nah am
-   (unvermeidlichen) Minimum.
+   (unvermeidlichen) Minimum. Bias-Regler direkt am Kasten (`#xBias`, −4…4, Sönke 17.11.2026, bewusst
+   „nicht ganz sauber“, fürs Verständnis): verschiebt die Gerade, lernt beim Training NICHT mit; die
+   Welt ist dann der Fehler bei diesem Bias (`xor().one().setBias`, Gitter wird gedrosselt neu gebaut).
+   Tal bleibt in der Mitte, mit Bias gehen höchstens 3 von 4.
 7. **Zwei Neuronen, zwei Welten** – `js/zwei.js`: Welt A = Kanten in Neuron A, Welt B = Kanten in
    Neuron B; beide Figuren immer auf derselben Höhe (ein Netz), die Welt der einen verbiegt sich,
-   wenn die andere läuft. Mitte oben `#zPanel`: das ganze Netz + Nest-Diagramm `#zplot` mit den Geraden A (orange) und B (violett). Wertung:
+   wenn die andere läuft. Mitte oben `#zPanel`: das ganze Netz (Namen A/B über den Neuronen, `labelPos: 'above'` – rechts oben
+   verdeckten sie die 8 der Ausgangskante) + Satz „grau = steht fest: Bias −3, Gewichte 8, Bias −5“ (`.zfix`,
+   auch in der Erklärkarte: hier kein Bias-Regler) + Nest-Diagramm `#zplot` mit den Geraden A (orange) und B (violett). Wertung:
    4 von 4 Nestern richtig (3 Sterne bei Fehler < 0,15); bei 3 von 4 erklärt das Ergebnis „beide
    haben dasselbe gelernt“ (eines muss „nur Mama am Nest“, das andere „nur Papa am Nest“ lernen). Am Ende Flagge am tiefsten Punkt des jeweiligen Schnitts.
    Ergebnis-Knopf „Weiter: Pinguine in 3D“.
 8. **Pinguine in 3D** – das Labor im Modus „+ Zahl-Neuron“ (labor.html?level=8), s. Dateien.
+   Seit 17.11.2026 abends: Höhenlinien der Welten als Vektorlinien (Marching Squares `contours()` in
+   labor.js, vorher Pixel-Kanten = verpixelt); Lernkurve in der Steuerleiste (`#lcurve`: Fehler je
+   Lernschritt, orange Striche = Lernrate geändert, mit Wert); „Pinguin für Pinguin“ unter dem Netz
+   (`#ex`, nur Zahl-Modus): alle 1,6 s ein echter Pinguin → Messwerte → A/B/C in % (füllt auch die
+   Neuronen im Netz, NTNetz-Option `act`) → Zahl → Zahlenstrahl mit drei Köpfen (`NTBild.head`),
+   gewählte Art grün ✓ / rot ✗, bei falsch die echte gestrichelt mit „ECHT“. Dasselbe Prinzip mit
+   zwei Köpfen jetzt auch in Level 5 (`verdict()` in spiel.js, ersetzt „Zügel? 0 % → Adelie, echt: …“).
 
 Ab Level 4 gilt überall: eine Welt = ein echtes Modell, das ganze Netz ist zu sehen, Laufen UND
 Training im selben Level.

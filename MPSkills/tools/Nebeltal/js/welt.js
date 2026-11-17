@@ -424,11 +424,12 @@ window.NTWelt = (function () {
       }
       return g.map(v => v / 4);
     }
-    function fwd1(w1, w2) { return CASES.map(([s1, s2, y]) => ({ s1, s2, y, o: sig(w1 * s1 + w2 * s2) })); }
-    function loss1(w1, w2) { return fwd1(w1, w2).reduce((t, c) => t + ce(c.o, c.y), 0) / 4; }
-    function grad1(w1, w2) {
+    // Level 6: b = Bias, stellt man am Regler selbst ein (lernt nicht mit, Sönke 17.11.2026)
+    function fwd1(w1, w2, b) { b = b || 0; return CASES.map(([s1, s2, y]) => ({ s1, s2, y, o: sig(w1 * s1 + w2 * s2 + b) })); }
+    function loss1(w1, w2, b) { return fwd1(w1, w2, b).reduce((t, c) => t + ce(c.o, c.y), 0) / 4; }
+    function grad1(w1, w2, b) {
       let g1 = 0, g2 = 0;
-      for (const c of fwd1(w1, w2)) { g1 += (c.o - c.y) * c.s1; g2 += (c.o - c.y) * c.s2; }
+      for (const c of fwd1(w1, w2, b)) { g1 += (c.o - c.y) * c.s1; g2 += (c.o - c.y) * c.s2; }
       return [g1 / 4, g2 / 4];
     }
     const right = cs => cs.filter(c => (c.o > 0.5) === (c.y === 1)).length;
@@ -438,21 +439,29 @@ window.NTWelt = (function () {
 
     // Level 6: eine Welt, ein Neuron
     function one() {
-      const h = (x, z) => lift(loss1(toW(x), toW(z)));
+      // Bias am Regler: Die Welt ist dann der Schnitt bei diesem Bias. Mit Bias ≠ 0 verschiebt sich
+      // die Gerade – 3 von 4 Nestern gehen, alle 4 nie.
+      let b = 0;
+      const h = (x, z) => lift(loss1(toW(x), toW(z), b));
       let st;
       do { st = { x: toX(rnd()), z: toX(rnd()) }; } while (Math.hypot(st.x, st.z) < 0.35 * W);
-      return {
+      const w = {
         kind: 'xor1', W, seed, level: 6, dec: 2, h,
         grad: (x, z) => numGrad(h, x, z),
         step(p, lr) {
-          const w1 = toW(p.x), w2 = toW(p.z), g = grad1(w1, w2);
+          const w1 = toW(p.x), w2 = toW(p.z), g = grad1(w1, w2, b);
           const x = toX(w1 - lr * g[0]), z = toX(w2 - lr * g[1]);
           return { x, z, out: Math.abs(x) > W || Math.abs(z) > W };
         },
         min: { x: 0, z: 0, h: h(0, 0) }, start: st,
         show, unit: '', label: 'Fehler',
-        toW, cases: (x, z) => fwd1(toW(x), toW(z)), right
+        toW, cases: (x, z) => fwd1(toW(x), toW(z), b), right,
+        bias: () => b,
+        // Tal bleibt bei jedem Bias in der Mitte (w = 0: Gradient dort immer 0, Fehler konvex) –
+        // nur seine Höhe ändert sich. 3 von 4 richtig gibt es nur abseits davon, mit mehr Fehler.
+        setBias(v) { b = v; w.min = { x: 0, z: 0, h: h(0, 0) }; }
       };
+      return w;
     }
 
     // Level 7: zwei Welten, ein Netz. Jede Welt ist ein Schnitt: Welt A

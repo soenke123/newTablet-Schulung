@@ -9,7 +9,7 @@
    Die Dicke wächst mit der Größe des Gewichts.
 
    NTNetz.draw(canvas, net)
-     net = { nodes: [{ id, x, y, label, kind: 'in'|'n'|'out', sym, bias, group }],
+     net = { nodes: [{ id, x, y, label, kind: 'in'|'n'|'out', sym, bias, group, act (0…1 Füllung), labelPos ('above') }],
              edges: [{ from, to, w, group, fixed }] }
      x, y in 0…1 (Anteil der Zeichenfläche)
 
@@ -80,7 +80,10 @@ window.NTNetz = (function () {
         x.fillText(n.label, px + 12, py + 0.5);
       } else {
         x.fillStyle = surf; x.strokeStyle = n.group ? col(n.group) : ink; x.lineWidth = n.group ? 2.6 : 2;
-        x.beginPath(); x.arc(px, py, R, 0, 7); x.fill(); x.stroke();
+        x.beginPath(); x.arc(px, py, R, 0, 7); x.fill();
+        // n.act (0…1): wie stark das Neuron gerade „ja“ sagt – füllt es in seiner Farbe (Level 8, Pinguin für Pinguin)
+        if (n.act != null) { x.globalAlpha = 0.08 + 0.62 * Math.max(0, Math.min(1, n.act)); x.fillStyle = col(n.group); x.fill(); x.globalAlpha = 1; }
+        x.stroke();
         x.fillStyle = ink; x.textAlign = 'center';
         // Bias im Neuron (net.biasInside): Zeichen oben, Bias-Zahl darunter
         const inside = net.biasInside && n.bias != null;
@@ -91,7 +94,13 @@ window.NTNetz = (function () {
           x.fillStyle = n.biasGroup ? col(n.biasGroup) : soft;
           x.fillText((n.bias > 0 ? '+' : '') + fmt(n.bias, n.biasD || 0), px, py + R * 0.42);
         }
-        if (n.label) { x.font = '700 12px Outfit, sans-serif'; x.fillStyle = n.group ? col(n.group) : soft; x.textAlign = 'left'; x.fillText(n.label, px + R + 4, py - R + 3); x.textAlign = 'center'; }
+        if (n.label) {
+          x.font = '700 12px Outfit, sans-serif'; x.fillStyle = n.group ? col(n.group) : soft;
+          // labelPos 'above': mittig über dem Neuron – rechts oben läge die Zahl der Kante zum Ausgang
+          if (n.labelPos === 'above') { x.textAlign = 'center'; x.fillText(n.label, px, py - R - 6); }
+          else { x.textAlign = 'left'; x.fillText(n.label, px + R + 4, py - R + 3); }
+          x.textAlign = 'center';
+        }
         if (n.bias != null && !net.biasInside) {
           x.font = (n.biasD ? '700 11.5px' : '600 10.5px') + ' Outfit, sans-serif'; x.fillStyle = n.biasGroup ? col(n.biasGroup) : soft;
           x.fillText((n.biasName ? n.biasName + ' ' : 'Bias ') + (n.bias > 0 ? '+' : '') + fmt(n.bias, n.biasD || 0), px, py + R + 9);
