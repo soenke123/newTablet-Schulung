@@ -77,6 +77,29 @@ localStorage `nt.best.<level>.<seed>`, Welt in `nt.seed`.
 
 `LWMotion.low`: dpr 1 und 30 B/s; Glas-Kästen ohne Weichzeichner.
 
+## Plan: „Gemeinsam ein Netz“ im Raum (Sönke 17.11.2026: „das kann eine richtig schöne runde Stunde sein“)
+
+Ablauf der Stunde: (1) jeder gegen jeden in Level 1–3 mit gleicher Welt-Nummer → (2) ein Neuron
+verstehen (Pinguine, Treppenhaus-Licht mit einem Neuron) → (3) die Klasse IST ein Netz und trainiert
+es gemeinsam.
+
+- **Ein Gerät = ein Neuron** (nicht „zwei Kanten“): eigene Welt = Gewichtspaar des eigenen Neurons,
+  Bias lernt automatisch mit (sichtbar). Nichts im Netz steht fest – alles, was kein Gerät hat,
+  lernt beim gemeinsamen Lernschritt mit (eigene Farbe „lernt automatisch“).
+- **Aufgabe, die mit der Neuronenzahl wächst: Zielscheibe** (Punkte im Kreis = Treffer). Jedes
+  versteckte Neuron = eine gerade Linie; Lampe an, wenn ein Punkt auf der richtigen Seite aller
+  Linien liegt. Beamer zeigt die Linien in der Farbe ihres Geräts: 3 Neuronen = Dreieck, 5 =
+  Fünfeck, 8 ≈ Kreis. Kleine Gruppen auch Treppenhaus-Licht (2-2-1 = 9 Werte).
+- **Klassengröße 5–30 Geräte:** 3–9 Geräte = ein Netz für alle; ab ~10 Gruppen à 4–7, jede Gruppe
+  ein eigenes Netz für dieselbe Aufgabe, Beamer zeigt alle Netze nebeneinander (Wettlauf). Kein
+  Netz mit 30 Neuronen – muss lesbar bleiben (Grundsatz: immer das ganze Netz sehen).
+- Ablauf im Raum: erst frei laufen (Welten wackeln, wenn andere laufen), dann „gemeinsamer
+  Lernschritt“ der Lehrkraft = alle springen gleichzeitig (echter Gradient über alle Gewichte).
+- Technik: Migration für den Netz-Zustand je Raum/Gruppe, Beamer-Ansicht der Lehrkraft, Tablets
+  melden ihre Position 2–3× pro Sekunde; Rechnen/Zeichnen gibt es schon (welt.js, netz.js, zwei.js).
+- Vorstufe allein am Tablet (Level 7 „Variante A“): alle 9 Werte des Treppenhaus-Netzes lernen,
+  zwei Welten frei wählbar (Kanten im Netz antippen), Rest lernt automatisch mit.
+
 ## Offen (nach dem ersten Ausprobieren ordnen)
 
 - Klassen-Wettkampf über den Raum (Lehrkraft gibt Welt vor, Beamer zeigt alle Figuren, gemeinsames Auflösen)
