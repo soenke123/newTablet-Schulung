@@ -83,12 +83,21 @@ window.NTGrafik = (function () {
     uniform vec3 uLight; uniform vec2 uPlayer; uniform float uFogR; uniform vec3 uFog;
     uniform float uH0; uniform float uH1; uniform float uStep;
     uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3;
-    uniform float uAmb; uniform float uPlain;
+    uniform float uAmb; uniform float uPlain; uniform vec3 uPlainC;
+    uniform float uIce; uniform vec3 uIceC;
     void main(){
       float t=clamp((vPos.y-uH0)/(uH1-uH0),0.0,1.0);
       vec3 c = t<0.33 ? mix(uC0,uC1,t/0.33) : (t<0.66 ? mix(uC1,uC2,(t-0.33)/0.33) : mix(uC2,uC3,(t-0.66)/0.34));
-      c=mix(c,mix(uC1,uC2,0.35),uPlain);
+      c=mix(c,uPlainC,uPlain);
       vec3 n=normalize(vNor);
+      // Eiswelt (nur mit eigener Palette, uIce > 0): steile Hänge = blankes Eis, Schnee mit Korn
+      if(uIce>0.0){
+        float sl=1.0-n.y;
+        c=mix(c,uIceC,smoothstep(0.12,0.45,sl)*uIce);
+        // Sastrugi: vom Wind geformte Schneerippen, weich statt Pixel-Korn
+        float rip=sin(vPos.x*1.9+vPos.z*0.5+sin(vPos.z*0.37+vPos.x*0.11)*3.0);
+        c*=1.0+rip*0.035*uIce*(1.0-uPlain*0.4);
+      }
       float l=uAmb+(1.0-uAmb)*max(dot(n,uLight),0.0);
       c*=l;
       float q=vPos.y/uStep;
@@ -356,11 +365,21 @@ window.NTGrafik = (function () {
     }
 
     function hex(s) { const n = parseInt(s.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; }
+    let custom = null;
     function setTheme(theme) {
       const dark = theme === 'dark';
-      pal = dark ? palDark : palLight;
+      pal = custom || (dark ? palDark : palLight);
+    }
+    /* Eigene Palette (Showroom Eiswelt): {fog, c:[4 hex], amb, light, ice, iceC, plainC, dark}.
+       null = wieder die normale hell/dunkel-Palette. */
+    function setPalette(p, theme) {
+      custom = p ? { fog: hex(p.fog), c: p.c.map(hex), amb: p.amb == null ? 0.45 : p.amb,
+        light: norm(p.light || [-0.45, 0.8, 0.4]), ice: p.ice || 0, iceC: hex(p.iceC || '#9cc6e0'),
+        plainC: p.plainC ? hex(p.plainC) : null, dark: !!p.dark } : null;
+      setTheme(theme);
     }
     const palDark = {
+      dark: true,
       fog: hex('#141a2b'), c: ['#1f5f66', '#3f7d4f', '#7d7a5c', '#a7a6b4'].map(hex), amb: 0.38,
       light: norm([-0.4, 0.8, 0.45])
     }, palLight = {
@@ -436,6 +455,9 @@ window.NTGrafik = (function () {
       gl.uniform3fv(u.uC2, pal.c[2]); gl.uniform3fv(u.uC3, pal.c[3]);
       gl.uniform1f(u.uAmb, pal.amb);
       gl.uniform1f(u.uPlain, sc.plain || 0);
+      gl.uniform3fv(u.uPlainC, pal.plainC || pal.c[1].map((v, i) => v + (pal.c[2][i] - v) * 0.35));
+      gl.uniform1f(u.uIce, pal.ice || 0);
+      gl.uniform3fv(u.uIceC, pal.iceC || [0.6, 0.78, 0.88]);
       bind(terrain);
       gl.drawElements(gl.TRIANGLES, terrain.n, gl.UNSIGNED_SHORT, 0);
 
@@ -490,7 +512,7 @@ window.NTGrafik = (function () {
       const breathe = 1 + Math.sin(now * 2.4) * 0.016 * (1 - walk);
       const blink = (now % 3.9) < 0.13 ? 0.1 : 1;
       const S = 0.9;
-      const fog = fogColor(), dark = pal === palDark;
+      const fog = fogColor(), dark = !!pal.dark;
       const c = progC.u;
       gl.useProgram(progC.p);
       gl.uniformMatrix4fv(c.uVP, false, vp);
@@ -590,7 +612,7 @@ window.NTGrafik = (function () {
       return { x: (x / ww * 0.5 + 0.5) * w, y: (1 - (y / ww * 0.5 + 0.5)) * h };
     }
 
-    return { setWorld, setTheme, frame, project, gl };
+    return { setWorld, setTheme, setPalette, frame, project, gl };
   }
 
   return { create };

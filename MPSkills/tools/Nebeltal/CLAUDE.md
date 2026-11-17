@@ -86,6 +86,16 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   (uPat 4, Blending mit blendFuncSeparate – sonst schreibt er Alpha in die Leinwand und leuchtet hell).
   Watscheln über `player.phase` + `player.walk` (0–1, im Sprung 0): Rollen, freier Fuß hebt ab,
   Flossen gegengleich, Körper federt, Schalzipfel schwingen; im Sprung Flossen aus; im Stehen atmen + blinzeln
+- `showroom.html` – Showroom „Eiswelt“ (17.11.2026, Link unten im Menü): eigener Look weg vom
+  MPSkills-Grün + Schneesturm in der Antarktis, drei Varianten zur Auswahl: A Whiteout (heller Sturm,
+  Expeditions-Look Signal-Orange/Monospace, Höhe als Gerät oben mittig) · B Polarnacht (dunkel,
+  Polarlicht, Glas mit Türkis/Violett, Höhe schwebt über dem Pinguin) · C Eisscholle (Gletschertürkis,
+  Eisblock-Knöpfe, Fredoka, Höhe als Plakette unten neben „Hier bleibe ich“). Echte Welt Level 1/2
+  (laufen per Wischen/WASD), Menü und Erklärkarte je Variante; Höhenleiste am Rand entfällt.
+  Technik: `G.setPalette({fog, c, plainC, amb, light, ice, iceC, dark})` in grafik.js (null = normale
+  Palette; `ice` > 0 = steile Hänge blankes Eis + Schneerippen „Sastrugi“), Schnee als 2D-Canvas
+  darüber, Böen verkleinern die Sicht (fogR) und legen einen Schleier über das Bild. Noch nicht
+  im Spiel: Erklärbilder (bilder.js) sind noch grün/braun.
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm
 - `tool.js`/`tool.css` – nur der iframe-Rahmen (wie Reinforce Yourself), noch kein Austausch mit dem Raum
 
