@@ -8,17 +8,23 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 
 - `index.html` – Oberfläche (HUD, Menü, Karten), eigener Look „Eiswelt“ (17.11.2026, Showroom-Variante B
   Polarnacht: Space Grotesk/Unbounded/JetBrains Mono, Glas, Türkis→Violett-Verlauf; dunkel = Polarnacht,
-  hell = Polartag), Hell/Dunkel vom Rahmen. Level 1/2 (`night: true` in LEVELS) sind IMMER Polarnacht:
+  hell = Polartag), Hell/Dunkel vom Rahmen. Level 1–3 (`night: true` in LEVELS) sind IMMER Polarnacht:
   spiel.js `applyLook()` setzt `html[data-night]` + `G.setPalette(NIGHT)`; Menü-Welt = NIGHT/DAY je
-  Hell/Dunkel; Level 3–7 noch mit der alten grünen Palette (setPalette(null)), werden später angepasst.
+  Hell/Dunkel; Level 4–7 noch mit der alten grünen Palette (setPalette(null)), werden später angepasst.
   Ebenen über der Welt: `#aurora` (Polarlicht, auch im dunklen Menü), `#snow`, `#gust` (Böen-Schleier),
   `#frost` (Rand) – nur mit data-night
 - `js/schnee.js` – Schneesturm (2D-Canvas): hängt nur am Bildschirm, fällt immer gleich schnell, egal
   wohin man läuft/dreht (Sönke 17.11.2026); Böen verkleinern die Sicht (fogR × (1 − 0,3·Böe));
   Sparmodus: kein Schnee
 - `js/welt.js` – Landschaften: `hills(seed, level)` (Mulden = lokale Minima, Rand ringsum; Größe und
-  Schwierigkeit je Level in `CFG`: Level 1/2 W 85 mit ~20 Mulden, die tiefste schmal und abseits
-  der Mitte; Level 3 W 50),
+  Schwierigkeit je Level in `CFG`; seit 17.11.2026 größer und abwechslungsreicher: je Welt ein
+  Gebirge (Grat mit Pass), eine Schlucht (Rinne, Boden fällt zu einem Ende ab = lange Falle) und eine
+  tiefere Ebene (abgesenkter Kreis mit Stufe); Grundform Kegel + Schüssel, der Kegel (`tilt`) hält
+  jede Stelle etwas schräg – sonst kam man in Level 3 auf flachen Ebenen mit Sprüngen nicht mehr weg.
+  Level 1/2 W 110, ~17 Mulden, tiefste schmal und abseits; Level 3 W 64, tilt 0,55, tiefste nahe der
+  Mitte, Start nie auf einer Kuppe (Gefälle > 0,6·tilt). Simuliert (60 Welten, 25 Sprünge): Lernrate
+  3 → fast nie am Ziel, 6 → ~50 %, 10 → ~60 %, erst 15 dann kleiner → ~80 %; `NTWelt.CFG` nur für
+  Prüf-Skripte),
   `model(seed)` (Level 4 „Wie schwer ist der Pinguin?“: alle 342 Palmer-Pinguine mit Flosse (cm) und
   Gewicht (kg), `MASS` in welt.js; Neuron ohne σ Gewicht = w·(Flosse − 20 cm) + b, w −1…2, b 1,4…7;
   Höhe = mittleres Fehlerquadrat gestaucht (L0 3), angezeigt wird die Wurzel = „± kg im Schnitt“;
@@ -29,7 +35,7 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   `xor(seed).one()` / `.two()` (Level 6/7: „Das Nest“ = XOR – Pinguin-Eltern wechseln sich ab, dem Ei
   geht es nur gut, wenn GENAU EINER am Nest ist; Eingänge Mama/Papa am Nest ±1 (im Code s1/s2);
   one = ein Neuron σ(w₁·Mama + w₂·Papa), Tal in der Mitte = überall 50 %; two = Neuronen A/B mit festem Bias −3, Lampe
-  σ(8A + 8B − 5), lernbar a₁ a₂ b₁ b₂ ±8, `h(k, x, z, andere)` = Schnitt; ~80 % der Welten lernen
+  σ(8A + 8B − 5), lernbar a₁ a₂ b₁ b₂ ±6 (bis 17.11.2026 ±8: zu viele flache Terrassen), `h(k, x, z, andere)` = Schnitt; ~80 % der Welten lernen
   es mit Lernrate 4 in 40 Schritten, ~20 % bleiben bei 3 von 4 hängen – gewollt, s. Ergebnistext)
 - `js/netz.js` – kleine Netze IMMER ganz zeichnen (`NTNetz.draw`): Kanten mit Zahl, Farbe = wer sie
   bewegt (orange Welt A, violett Welt B, grau gestrichelt = fest), Dicke = Größe; `NTNetz.lights` =
@@ -118,9 +124,10 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 2. **Der Bergab-Pfeil** – sieht genauso aus wie Level 1 (einfarbig, kein Höhenmesser), einziger
    Unterschied: der Pfeil (türkis) unter den Füßen; dazu Hang-Physik (bergauf langsamer, steile
    Hänge rutschen), 60 s.
-3. **Sprünge** – kein Laufen mehr: Sprung in Pfeilrichtung, Weite = Lernrate × Steilheit
+3. **Sprünge** – seit 17.11.2026 auch Polarnacht (einfarbig, Schneesturm, kein Höhenmesser – die
+   Lernkurve oben rechts bleibt). Kein Laufen mehr: Sprung in Pfeilrichtung, Weite = Lernrate × Steilheit
    (echter Gradientenschritt – an flachen Stellen also kürzer bei gleicher Lernrate; die Rechnung
-   steht live unter dem Regler, `#lrDist`), 20 Sprünge (= begrenzte Rechenzeit; ohne Grenze wäre
+   steht live unter dem Regler, `#lrDist`), 25 Sprünge (= begrenzte Rechenzeit; ohne Grenze wäre
    eine winzige Lernrate nie ein Problem), Ring = Landepunkt, zu weit = aus der Welt.
 4. **Wie schwer ist der Pinguin?** (bis 17.11.2026 „Die Sonnenblume“) – ein Neuron OHNE σ schätzt
    aus der Flosse das Gewicht (Gewicht = w · (Flosse − 20 cm) + b), 342 echte Pinguine; Welt = sein

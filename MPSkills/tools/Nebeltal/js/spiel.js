@@ -56,13 +56,13 @@
       outro: 'Der Pfeil ist das Einzige, was eine KI beim Lernen ausrechnen kann: <b>In welche Richtung wird mein Fehler kleiner?</b> ' +
              'Man nennt ihn <b>Gradient</b> (genauer: er zeigt gegen den Gradienten). Ein neuronales Netz rechnet ihn für jedes seiner Gewichte aus – das heißt Backpropagation.' },
     { id: 3, name: 'Sprünge', short: 'Lernrate = wie weit du springst',
-      mode: 'jump', jumps: 20, fog: 13, lr: { min: 0.5, max: 60, def: 5, d: 1 },
+      mode: 'jump', jumps: 25, fog: 13, plain: true, night: true, lr: { min: 0.5, max: 60, def: 5, d: 1 },
       lead: 'Eine KI läuft nicht herum. Sie <b>springt</b> – immer in Pfeilrichtung.',
       formula: 'Sprungweite = Lernrate × Steilheit',
       steps: [
         'Wie weit, stellst du mit der <b>Lernrate</b> ein. An flachen Stellen werden die Sprünge von selbst kürzer, an steilen länger.',
         'Der <b>Ring</b> zeigt, wo du landen würdest.',
-        'Du hast <b>20 Sprünge</b> – Rechenzeit ist nicht unendlich. Hier gibt es viele kleine Mulden.'],
+        'Du hast <b>25 Sprünge</b> – Rechenzeit ist nicht unendlich. Unterwegs warten Mulden, eine Schlucht und ein Gebirge.'],
       outro: 'Die Sprungweite heißt <b>Lernrate</b>. Zu klein: Du kommst kaum voran oder bleibst in der ersten Mulde hängen. ' +
              'Zu groß: Du springst über das Tal hinweg oder fliegst raus. Beim echten Training startet man oft mit großen Sprüngen und wird dann kleiner.' },
     { id: 4, name: 'Wie schwer ist der Pinguin?', short: 'Ein Neuron schätzt das Gewicht aus der Flosse',

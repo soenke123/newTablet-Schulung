@@ -52,7 +52,7 @@ window.NTWelt = (function () {
   function findMin(h, Wl) {
     const W = Wl || 50;
     let best = { x: 0, z: 0, h: Infinity };
-    const N = Math.round(220 * W / 50);
+    const N = Math.min(320, Math.round(220 * W / 50));   // große Welten (Level 1/2) etwas gröber, das Nachrutschen findet den Boden
     for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) {
       const x = -W + 2 * W * i / N, z = -W + 2 * W * j / N, v = h(x, z);
       if (v < best.h) best = { x, z, h: v };
@@ -66,41 +66,89 @@ window.NTWelt = (function () {
   }
 
   /* ── Hügel-Landschaft ──────────────────────────────────────
-     Je Level eigene Größe und Schwierigkeit (CFG). Level 1 + 2: große
-     Welt (W 85), viele Mulden fast so tief wie die tiefste (Fallen),
-     die tiefste ist schmal und liegt NICHT in der Mitte der großen
-     Schüssel. Level 3: kleinere Welt, viele kleine Mulden (Fallen für
-     zu kleine Lernraten). Alles wird mit k = W/50 mitskaliert, damit
-     Hänge gleich steil bleiben. */
+     Je Level eigene Größe und Schwierigkeit (CFG). Seit 17.11.2026
+     größer und abwechslungsreicher (Sönke): außer Mulden und Hügeln je
+     Welt ein GEBIRGE (Grat mit einem Pass), eine SCHLUCHT (schmale
+     Rinne, deren Boden zu einem Ende abfällt – eine lange Falle) und
+     eine TIEFERE EBENE (abgesenkte Fläche mit Stufe am Rand).
+     Grundform: Kegel (überall etwa gleich steil, tilt) + Schüssel um
+     (cx, cz). Der Kegel sorgt dafür, dass es auch weit weg vom Ziel
+     NIE ganz flach ist – sonst kommt man in Level 3 mit Sprüngen dort
+     nicht mehr weg (Sprungweite = Lernrate × Steilheit).
+     Level 1 + 2: die tiefste Mulde schmal und abseits der Mitte (Laufen).
+     Level 3: die tiefste Mulde nahe der Mitte – mit guter Lernrate
+     erreichbar, zu kleine bleibt in den Fallen hängen, zu große fliegt raus.
+     Alles wird mit k = W/50 mitskaliert, damit Hänge gleich steil bleiben. */
   const CFG = {
-    1: { W: 85, pits: 13, hills: 10, bowl: 0.0024, deep: [5, 2.5], decoy: [3, 4], ps: [3.2, 4.5], hs: [6, 9] },
-    2: { W: 85, pits: 13, hills: 10, bowl: 0.0024, deep: [5, 2.5], decoy: [3, 4], ps: [3.2, 4.5], hs: [6, 9] },
-    3: { W: 50, pits: 8, hills: 5, bowl: 0.0034, deep: [2.5, 7], decoy: [2.5, 4.5], ps: [3.5, 5], hs: [5, 8] }
+    1: { W: 110, pits: 17, hills: 13, tilt: 0.05, bowl: 0.0016, deep: [5.5, 2.5], deepOff: true, decoy: [3, 4], ps: [3.2, 4.5], hs: [6, 9],
+         ridge: [7, 5], canyon: [4, 1.5], plain: [4.5, 1.5] },
+    3: { W: 64, pits: 7, hills: 5, tilt: 0.55, bowl: 0.0012, deep: [5, 2], deepOff: false, decoy: [2, 3], ps: [3.2, 3.5], hs: [5, 7],
+         ridge: [4, 2], canyon: [2.5, 1], plain: [2.5, 1] }   // simuliert: Lernrate 3 → 3 %, 6 → 46 %, 10 → 54 %, 15 → 33 % am Ziel (25 Sprünge)
   };
+  CFG[2] = CFG[1];
+
+  // Abstand von (x, z) zu einem Linienzug pts → [Abstand, t entlang 0…1]
+  function polyDist(pts, x, z) {
+    let best = Infinity, bt = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const ax = pts[i][0], az = pts[i][1], dx = pts[i + 1][0] - ax, dz = pts[i + 1][1] - az;
+      const l2 = dx * dx + dz * dz || 1;
+      const u = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / l2));
+      const qx = ax + u * dx - x, qz = az + u * dz - z, d = qx * qx + qz * qz;
+      if (d < best) { best = d; bt = (i + u) / (pts.length - 1); }
+    }
+    return [Math.sqrt(best), bt];
+  }
+  // geschwungene Linie (quadratische Bézier) als Punkte + Rahmen zum schnellen Aussortieren
+  function curve(r, Wl, len) {
+    const ang = r() * Math.PI * 2, mx = (r() * 2 - 1) * 0.45 * Wl, mz = (r() * 2 - 1) * 0.45 * Wl;
+    const hx = Math.cos(ang) * len / 2, hz = Math.sin(ang) * len / 2;
+    const bend = (r() * 2 - 1) * len * 0.35;
+    const p0 = [mx - hx, mz - hz], p2 = [mx + hx, mz + hz], p1 = [mx - hz / (len / 2) * bend, mz + hx / (len / 2) * bend];
+    const pts = [];
+    for (let i = 0; i <= 24; i++) {
+      const t = i / 24, a = (1 - t) * (1 - t), b = 2 * t * (1 - t), c = t * t;
+      pts.push([clampW(a * p0[0] + b * p1[0] + c * p2[0], Wl + 6), clampW(a * p0[1] + b * p1[1] + c * p2[1], Wl + 6)]);
+    }
+    const xs = pts.map(p => p[0]), zs = pts.map(p => p[1]);
+    return { pts, box: [Math.min(...xs), Math.max(...xs), Math.min(...zs), Math.max(...zs)] };
+  }
+  const inBox = (bx, x, z, m) => x > bx[0] - m && x < bx[1] + m && z > bx[2] - m && z < bx[3] + m;
+
   function hills(seed, level) {
-    const C = CFG[level] || CFG[3], Wl = C.W, k = Wl / 50;
+    const C = CFG[level] || CFG[3], Wl = C.W, k = Wl / 50, sk = Math.sqrt(k);
     const r = rng(seed * 7919 + level * 104729);
     const bumps = [];
     const cx = (r() * 2 - 1) * 12 * k, cz = (r() * 2 - 1) * 12 * k;
     for (let i = 0; i < C.pits; i++) {
       const ang = r() * Math.PI * 2;
-      // die tiefste Mulde weg von der Mitte, die anderen überall
-      const rad = i === 0 && k > 1 ? (0.35 + r() * 0.3) * Wl : (8 + r() * 32) * k;
-      const ox = i === 0 && k > 1 ? cx : 0, oz = i === 0 && k > 1 ? cz : 0;
+      const far = i === 0 && C.deepOff;
+      // die tiefste Mulde: Level 1/2 weg von der Mitte, Level 3 nah an der Mitte
+      const rad = far ? (0.35 + r() * 0.3) * Wl : i === 0 ? r() * 6 * k : (8 + r() * 34) * k;
+      const ox = i === 0 ? cx : 0, oz = i === 0 ? cz : 0;
       const a = i === 0 ? C.deep[0] + r() * C.deep[1] : C.decoy[0] + r() * C.decoy[1];
-      const sz = i === 0 && k > 1 ? 3.5 + r() * 2 : C.ps[0] + r() * C.ps[1] * k;
+      const sz = far ? 3.5 + r() * 2 : i === 0 ? 6 + r() * 2 : C.ps[0] + r() * C.ps[1] * sk;
       bumps.push({ x: clampW(ox + Math.cos(ang) * rad, Wl), z: clampW(oz + Math.sin(ang) * rad, Wl), a: -a, s: sz });
     }
     for (let i = 0; i < C.hills; i++) {
       bumps.push({ x: (r() * 2 - 1) * 40 * k, z: (r() * 2 - 1) * 40 * k,
-                   a: 3 + r() * 5, s: (C.hs[0] + r() * C.hs[1]) * Math.sqrt(k) });
+                   a: 3 + r() * 5, s: (C.hs[0] + r() * C.hs[1]) * sk });
     }
-    const p1 = r() * 6.28, p2 = r() * 6.28, f1 = (0.13 + r() * 0.08) / Math.sqrt(k), f2 = (0.11 + r() * 0.08) / Math.sqrt(k);
-    const bowl = C.bowl / (k * k);
+    // Gebirge: Grat mit Zacken und einem Pass
+    const ridge = curve(r, Wl, (0.9 + r() * 0.5) * Wl), rA = C.ridge[0] + r() * C.ridge[1], rS = (3.5 + r() * 1.5) * sk,
+      rPass = 0.25 + r() * 0.5, rPh = r() * 6.28;
+    // Schlucht: schmal, Boden fällt zu einem Ende ab
+    const canyon = curve(r, Wl, (0.7 + r() * 0.4) * Wl), cA = C.canyon[0] + r() * C.canyon[1], cS = (1.6 + r() * 0.6) * sk,
+      cDir = r() < 0.5 ? 0 : 1;
+    // tiefere Ebene: Kreis, abgesenkt, mit weicher Stufe
+    const ang = r() * 6.28, er = (0.25 + r() * 0.35) * Wl;
+    const plain = { x: Math.cos(ang) * er, z: Math.sin(ang) * er, R: (12 + r() * 7) * k, a: C.plain[0] + r() * C.plain[1] };
+    const p1 = r() * 6.28, p2 = r() * 6.28, f1 = (0.13 + r() * 0.08) / sk, f2 = (0.11 + r() * 0.08) / sk;
+    const bowl = C.bowl / (k * k), tilt = C.tilt, c0 = 10 * k;
 
     function h(x, z) {
-      const dx = x - cx, dz = z - cz;
-      let v = bowl * (dx * dx + dz * dz);
+      const dx = x - cx, dz = z - cz, d2 = dx * dx + dz * dz;
+      let v = bowl * d2 + tilt * Math.sqrt(d2 + c0 * c0);
       // steiler Rand ganz außen, damit man drin bleibt
       const e = Math.max(Math.abs(x), Math.abs(z)) - (Wl - 7);
       if (e > 0) v += 0.18 * e * e;
@@ -108,6 +156,19 @@ window.NTWelt = (function () {
         const qx = x - b.x, qz = z - b.z;
         v += b.a * Math.exp(-(qx * qx + qz * qz) / (2 * b.s * b.s));
       }
+      if (inBox(ridge.box, x, z, rS * 4)) {
+        const [d, t] = polyDist(ridge.pts, x, z);
+        const pass = 1 - 0.8 * Math.exp(-((t - rPass) ** 2) / 0.006);
+        const ends = Math.min(1, t * 6, (1 - t) * 6);
+        v += rA * pass * ends * (1 + 0.28 * Math.sin(t * 23 + rPh)) * Math.exp(-(d * d) / (2 * rS * rS));
+      }
+      if (inBox(canyon.box, x, z, cS * 4)) {
+        const [d, t] = polyDist(canyon.pts, x, z);
+        const along = cDir ? t : 1 - t, ends = Math.min(1, t * 8, (1 - t) * 8);
+        v -= cA * (0.55 + 0.45 * along) * ends * Math.exp(-(d * d) / (2 * cS * cS));
+      }
+      const pd = Math.hypot(x - plain.x, z - plain.z);
+      v -= plain.a / (1 + Math.exp((pd - plain.R) / (1.6 * sk)));
       v += 0.7 * Math.sin(f1 * x + p1) * Math.cos(f2 * z + p2);
       return v;
     }
@@ -118,7 +179,8 @@ window.NTWelt = (function () {
     for (let i = 0; i < 500; i++) {
       const x = (r() * 2 - 1) * 0.76 * Wl, z = (r() * 2 - 1) * 0.76 * Wl;
       const d = Math.hypot(x - min.x, z - min.z);
-      if (d > 0.64 * Wl) cand.push({ x, z, v: h(x, z) });
+      // Level 3 (Springen): nicht auf einer Kuppe starten – dort ist es flach und die Sprünge winzig
+      if (d > 0.64 * Wl && (C.tilt < 0.3 || Math.hypot(...numGrad(h, x, z)) > 0.6 * C.tilt)) cand.push({ x, z, v: h(x, z) });
     }
     cand.sort((a, b) => b.v - a.v);
     const top = cand.slice(0, Math.max(1, Math.floor(cand.length * 0.3)));
@@ -380,6 +442,10 @@ window.NTWelt = (function () {
     // zeigt den Fehler über a₁/a₂, während b₁/b₂ dort stehen, wo die
     // Figur in Welt B gerade steht (und umgekehrt).
     function two() {
+      // Gewichte hier nur ±6 statt ±8 (Sönke 17.11.2026): bei ±8 waren die versteckten Neuronen
+      // oft „satt“ (σ ganz 0 oder 1) → breite flache Terrassen, Sprünge von 0,1 m. Mit ±6 halb so
+      // viele flache Stellen, ~80 % lernen es mit Lernrate 4 weiter, ~20 % bleiben bei 3 von 4 hängen.
+      const R = 6, toW = x => x / W * R, toX = w => w / R * W, rnd = () => (r() * 2 - 1) * 0.7 * R;
       let A0, B0, tries = 0;
       do {
         A0 = [rnd(), rnd()]; B0 = [rnd(), rnd()]; tries++;
@@ -439,5 +505,5 @@ window.NTWelt = (function () {
       names: ['Adelie', 'Zügel', 'Esel'], feat: ['Länge', 'Höhe', 'Flosse'] };
   }
 
-  return { W, hills, model, penguins, penguins3, xor, rng };
+  return { W, hills, model, penguins, penguins3, xor, rng, CFG };   // CFG nur für Prüf-Skripte
 })();
