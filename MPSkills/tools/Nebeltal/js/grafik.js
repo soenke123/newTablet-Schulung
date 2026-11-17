@@ -2,7 +2,8 @@
    Nebeltal — js/grafik.js   ·   3D-Bild mit reinem WebGL 1
    ══════════════════════════════════════════════════════════════
    Keine Bibliothek (kein three.js im vendor/ nötig): ein Gitter für
-   die Landschaft, ein paar Grundkörper (Kugel, Kegel, Kasten), alles
+   die Landschaft, ein paar Grundkörper (Kugel, Kegel, Kasten) und daraus die
+   Pinguin-Figur (drawPenguin), alles
    mit demselben Nebel. Der Nebel hängt NICHT an der Kamera, sondern
    an der Figur: sichtbar ist nur ein Kreis um die Stelle, an der man
    steht (uFogR). Zum Auflösen am Ende wird uFogR groß.
@@ -10,7 +11,7 @@
      const g = NTGrafik.create(canvas)
      g.setWorld(welt, theme)       Gitter bauen
      g.frame(scene)                ein Bild zeichnen, scene = {
-        cam:{eye,at}, player:{x,y,z,yaw,tilt,squash}, fogR, objects:[…] }
+        cam:{eye,at}, player:{x,y,z,ground,yaw,tilt,squash,phase,walk}, fogR, objects:[…] }
    ══════════════════════════════════════════════════════════════ */
 
 window.NTGrafik = (function () {
@@ -51,7 +52,10 @@ window.NTGrafik = (function () {
               r01 * sy, r11 * sy, r21 * sy, 0,
               r02 * sz, r12 * sz, r22 * sz, 0,
               x, y, z, 1];
-    }
+    },
+    rx(a) { const c = Math.cos(a), s = Math.sin(a); return [1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]; },
+    rz(a) { const c = Math.cos(a), s = Math.sin(a); return [c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]; },
+    scl(x, y, z) { return [x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1]; }
   };
 
   const VS_T = `
@@ -191,7 +195,7 @@ window.NTGrafik = (function () {
       o.ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, o.ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(m.idx), gl.STATIC_DRAW);
       return o;
     }
-    const meshes = { sphere: upload(sphere(14)), cone: upload(cone(18)), box: upload(box()), cloth: upload(flagCloth()) };
+    const meshes = { sphere: upload(sphere(14)), ball: upload(sphere(30)), cone: upload(cone(18)), box: upload(box()), cloth: upload(flagCloth()) };
 
     // Dynamisches Band auf dem Boden (Pfeil, Ring) – jedes Bild neu
     const dyn = { vb: gl.createBuffer(), nb: gl.createBuffer(), ib: gl.createBuffer(), n: 0 };
@@ -337,22 +341,60 @@ window.NTGrafik = (function () {
         }
       }
 
-      // Figur: Kegel-Körper + Kopf, kippt mit dem Hang, staucht beim Landen
-      if (P && !P.hidden) {
-        const sq = P.squash || 1, col = sc.playerColor || [1, 0.55, 0.2];
-        const tilt = P.tilt || 0, yaw = P.yaw || 0;
-        draw('sphere', M.trs(P.x, P.ground + 0.03, P.z, 0, 0, 0.62, 0.03, 0.62), [0.16, 0.2, 0.18], 0.6);   // Schatten
-        draw('cone', M.trs(P.x, P.y, P.z, yaw, tilt, 0.62 / Math.sqrt(sq), 1.5 * sq, 0.62 / Math.sqrt(sq)), col, 0.1);
-        const hx = P.x + Math.sin(yaw) * Math.sin(tilt) * 1.55 * sq, hz = P.z + Math.cos(yaw) * Math.sin(tilt) * 1.55 * sq;
-        const hy = P.y + Math.cos(tilt) * 1.75 * sq;
-        draw('sphere', M.trs(hx, hy, hz, 0, 0, 0.46, 0.46, 0.46), col, 0.15);
-        // Augen in Blickrichtung
-        for (const s of [-1, 1]) {
-          const ex = hx + Math.sin(yaw) * 0.38 + Math.cos(yaw) * 0.17 * s;
-          const ez = hz + Math.cos(yaw) * 0.38 - Math.sin(yaw) * 0.17 * s;
-          draw('sphere', M.trs(ex, hy + 0.08, ez, 0, 0, 0.1, 0.12, 0.1), [0.08, 0.08, 0.1], 0);
-        }
+      // Figur: kleiner Pinguin. Kippt mit dem Hang, staucht beim Landen,
+      // watschelt beim Laufen (Rollen links/rechts, Füße abwechselnd,
+      // Flossen schwingen), blinzelt im Stehen. Schal = playerColor.
+      if (P && !P.hidden) drawPenguin(P, sc.playerColor || [1, 0.55, 0.2], draw);
+    }
+
+    function drawPenguin(P, col, draw) {
+      const sq = P.squash || 1, walk = Math.max(0, Math.min(1, P.walk || 0));
+      const ph = (P.phase || 0) * 2.2, now = performance.now() / 1000;
+      const air = Math.max(0, Math.min(1, ((P.y || 0) - (P.ground || 0) - 0.25) / 1.2));
+      const sw = Math.sin(ph);
+      const roll = sw * 0.2 * walk;                       // watscheln
+      const wob = Math.cos(ph) * 0.1 * walk;              // Hüfte dreht leicht mit
+      const breathe = 1 + Math.sin(now * 2.4) * 0.018 * (1 - walk);
+      const blink = (now % 3.7) < 0.12 ? 0.12 : 1;
+      draw('ball', M.trs(P.x, P.ground + 0.06, P.z, 0, 0, 0.66, 0.03, 0.66), [0.16, 0.2, 0.18], 0.6);   // Schatten
+      const base = M.mul(M.trs(P.x, P.y, P.z, (P.yaw || 0) + wob, P.tilt || 0, 1, 1, 1),
+        M.mul(M.rz(roll), M.scl(1 / Math.sqrt(sq), sq * breathe, 1 / Math.sqrt(sq))));
+      const part = (mesh, m, c, glow) => draw(mesh, M.mul(base, m), c, glow);
+      const T = (x, y, z, sx, sy, sz) => M.trs(x, y, z, 0, 0, sx, sy, sz);
+
+      const dark = [0.2, 0.25, 0.38], white = [0.98, 0.97, 0.93], beak = [1, 0.72, 0.18],
+        feet = [0.98, 0.56, 0.14], eye = [0.06, 0.06, 0.09], blush = [1, 0.62, 0.66];
+
+      // Füße: der gerade freie Fuß hebt ab und schwingt nach vorn
+      for (const s of [-1, 1]) {
+        const up = Math.max(0, s * sw) * walk, fwd = s * sw * 0.18 * walk;
+        part('ball', T(0.27 * s, 0.07 + up * 0.22, 0.24 + fwd, 0.22, 0.08, 0.32), feet, 0.12);
       }
+      // Körper, Bauch, Schwänzchen
+      part('cone', M.mul(M.trs(0, 0.28, -0.5, 0, 0, 1, 1, 1), M.mul(M.rx(-2.1), M.scl(0.2, 0.32, 0.1))), dark, 0.12);
+      part('ball', T(0, 0.98, 0, 0.7, 0.95, 0.64), dark, 0.12);
+      part('ball', T(0, 0.86, 0.3, 0.52, 0.74, 0.4), white, 0.1);
+      // Flossen: schwingen beim Laufen, breiten sich im Sprung aus
+      for (const s of [-1, 1]) {
+        const a = 0.22 + walk * 0.18 * (0.6 + 0.4 * Math.sin(ph * 2 + (s > 0 ? 0 : Math.PI))) + air * 1.0;
+        part('ball', M.mul(M.trs(0.6 * s, 1.35, 0, 0, 0, 1, 1, 1),
+          M.mul(M.rz(a * s), T(0, -0.42, 0, 0.13, 0.5, 0.3))), dark, 0.12);
+      }
+      // Schal in der Farbe des Spielers, ein Zipfel hängt hinten herunter
+      part('ball', T(0, 1.58, 0.02, 0.6, 0.15, 0.56), col, 0.15);
+      part('box', M.mul(M.trs(0.12, 1.3, -0.5, 0, 0, 1, 1, 1), M.mul(M.rz(0.15 + roll * 1.5), M.scl(0.11, 0.26, 0.05))), col, 0.15);
+      // Kopf (groß = niedlich), helles Gesicht
+      const hy = 2.0;
+      part('ball', T(0, hy, 0.02, 0.56, 0.52, 0.54), dark, 0.12);
+      part('ball', T(0, hy - 0.04, 0.22, 0.42, 0.38, 0.36), white, 0.1);
+      // Augen mit Glanzpunkt, Bäckchen
+      for (const s of [-1, 1]) {
+        part('ball', T(0.17 * s, hy + 0.04, 0.53, 0.085, 0.11 * blink, 0.07), eye, 0);
+        if (blink === 1) part('ball', T(0.15 * s + 0.03, hy + 0.09, 0.59, 0.03, 0.03, 0.02), [1, 1, 1], 1);
+        part('ball', T(0.31 * s, hy - 0.12, 0.46, 0.09, 0.05, 0.04), blush, 0.5);
+      }
+      // Schnabel nach vorn
+      part('cone', M.mul(M.trs(0, hy - 0.1, 0.52, 0, 0, 1, 1, 1), M.mul(M.rx(Math.PI / 2), M.scl(0.13, 0.26, 0.09))), beak, 0.2);
     }
 
     // Bildschirmposition eines Weltpunkts (für Beschriftungen in HTML)
