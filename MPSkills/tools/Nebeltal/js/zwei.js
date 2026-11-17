@@ -432,7 +432,8 @@ window.NTZwei = (function () {
     }
     const dpr = api.low() ? 1 : Math.min(window.devicePixelRatio || 1, 1.4);
     G[k].frame({ cam, fogR, dpr, objects: objs, playerColor: col, plain: 0,
-      player: { x: f.x, y, z: f.z, ground, yaw: f.yaw, tilt: f.tilt, squash: f.squash, hidden: false } });
+      player: { x: f.x, y, z: f.z, ground, yaw: f.yaw, tilt: f.tilt, squash: f.squash, hidden: false,
+        phase: f.phase, walk: st.jump ? 0 : clamp(Math.hypot(f.vx, f.vz) / SPEED, 0, 1) } });
   }
 
   return { open, close };

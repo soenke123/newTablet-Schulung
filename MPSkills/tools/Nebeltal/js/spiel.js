@@ -723,7 +723,8 @@
     // Level 1: eine Farbe, keine Höhenlinien – erst beim Auflösen kommen sie
     const plain = L && L.plain ? (S.reveal ? 1 - ease(clamp((S.reveal.t - 0.6) / 1.6, 0, 1)) : 1) : 0;
     const sc = { cam, fogR, dpr, objects: objs, playerColor: acc, plain,
-      player: { x: p.x, y, z: p.z, ground, yaw: p.yaw, tilt: p.tilt, squash: p.squash, hidden: false } };
+      player: { x: p.x, y, z: p.z, ground, yaw: p.yaw, tilt: p.tilt, squash: p.squash, hidden: false,
+        phase: p.phase, walk: (p.air || S.fly || S.jump) ? 0 : clamp(Math.hypot(p.vx, p.vz) / 8.5, 0, 1) } };
     G.frame(sc);
     labels(sc);
   }

@@ -2,7 +2,8 @@
    Nebeltal — js/grafik.js   ·   3D-Bild mit reinem WebGL 1
    ══════════════════════════════════════════════════════════════
    Keine Bibliothek (kein three.js im vendor/ nötig): ein Gitter für
-   die Landschaft, ein paar Grundkörper (Kugel, Kegel, Kasten), alles
+   die Landschaft, ein paar Grundkörper (Kugel, Kegel, Kasten) und daraus die
+   Pinguin-Figur (drawPenguin), alles
    mit demselben Nebel. Der Nebel hängt NICHT an der Kamera, sondern
    an der Figur: sichtbar ist nur ein Kreis um die Stelle, an der man
    steht (uFogR). Zum Auflösen am Ende wird uFogR groß.
@@ -10,13 +11,24 @@
      const g = NTGrafik.create(canvas)
      g.setWorld(welt, theme)       Gitter bauen
      g.frame(scene)                ein Bild zeichnen, scene = {
-        cam:{eye,at}, player:{x,y,z,yaw,tilt,squash}, fogR, objects:[…] }
+        cam:{eye,at}, player:{x,y,z,ground,yaw,tilt,squash,phase,walk}, fogR, objects:[…] }
    ══════════════════════════════════════════════════════════════ */
 
 window.NTGrafik = (function () {
   'use strict';
 
   /* ── kleine Matrix-Mathematik (spaltenweise wie OpenGL) ── */
+  // Normalen-Matrix = (obere 3×3 von m)⁻¹ᵀ, damit gestauchte Kugeln richtig beleuchtet werden
+  function normalMat(m) {
+    const a = m[0], b = m[1], c = m[2], d = m[4], e = m[5], f = m[6], g = m[8], h = m[9], i = m[10];
+    const A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
+    const det = a * A + b * B + c * C || 1e-9;
+    // Kofaktoren / det = (M⁻¹)ᵀ, spaltenweise
+    return [A / det, B / det, C / det,
+      -(b * i - c * h) / det, (a * i - c * g) / det, -(a * h - b * g) / det,
+      (b * f - c * e) / det, -(a * f - c * d) / det, (a * e - b * d) / det];
+  }
+
   const M = {
     persp(fov, asp, n, f) {
       const t = 1 / Math.tan(fov / 2), d = 1 / (n - f);
@@ -51,7 +63,10 @@ window.NTGrafik = (function () {
               r01 * sy, r11 * sy, r21 * sy, 0,
               r02 * sz, r12 * sz, r22 * sz, 0,
               x, y, z, 1];
-    }
+    },
+    rx(a) { const c = Math.cos(a), s = Math.sin(a); return [1,0,0,0, 0,c,s,0, 0,-s,c,0, 0,0,0,1]; },
+    rz(a) { const c = Math.cos(a), s = Math.sin(a); return [c,s,0,0, -s,c,0,0, 0,0,1,0, 0,0,0,1]; },
+    scl(x, y, z) { return [x,0,0,0, 0,y,0,0, 0,0,z,0, 0,0,0,1]; }
   };
 
   const VS_T = `
@@ -104,6 +119,79 @@ window.NTGrafik = (function () {
       vec3 c=mix(uColor*l,uColor,uGlow);
       float d=distance(vPos.xz,uPlayer);
       float f=smoothstep(uFogR*0.45,uFogR,d)*(1.0-uGlow*0.6);
+      gl_FragColor=vec4(mix(c,uFog,f),1.0);
+    }`;
+
+  /* Figur: weiches Licht (umschlingend), Randlicht, Glanz; Muster aus der
+     Objekt-Position (vLoc) gerechnet, damit Bauch/Gesicht scharf und ohne
+     aufgeklebte Teile sind.  uPat: 0 = einfarbig, 1 = Pinguin-Körper,
+     2 = Strickschal (Ring), 3 = Schal-Zipfel, 4 = weicher Schatten */
+  const VS_C = `
+    attribute vec3 aPos; attribute vec3 aNor;
+    uniform mat4 uVP; uniform mat4 uM; uniform mat3 uN;
+    varying vec3 vPos; varying vec3 vNor; varying vec3 vLoc;
+    void main(){ vec4 w=uM*vec4(aPos,1.0); vPos=w.xyz; vLoc=aPos; vNor=uN*aNor; gl_Position=uVP*w; }`;
+  const FS_C = `
+    #ifdef GL_OES_standard_derivatives
+    #extension GL_OES_standard_derivatives : enable
+    #endif
+    precision mediump float;
+    varying vec3 vPos; varying vec3 vNor; varying vec3 vLoc;
+    uniform vec3 uLight; uniform vec3 uEye; uniform vec2 uPlayer; uniform float uFogR; uniform vec3 uFog;
+    uniform vec3 uColor; uniform vec3 uColor2; uniform float uGlow; uniform float uPat; uniform float uSpec;
+    uniform float uAlpha; uniform float uAmb; uniform float uDarkTheme;
+    float inside(float d){
+      #ifdef GL_OES_standard_derivatives
+      float w=fwidth(d)*0.9+0.0015;
+      #else
+      float w=0.015;
+      #endif
+      return 1.0-smoothstep(-w,w,d);
+    }
+    float smin(float a,float b,float k){ float h=clamp(0.5+0.5*(b-a)/k,0.0,1.0); return mix(b,a,h)-k*h*(1.0-h); }
+    void main(){
+      vec3 c=uColor;
+      if(uPat>3.5){                                   // Schatten
+        float r=length(vLoc.xz);
+        gl_FragColor=vec4(uColor,uAlpha*(1.0-smoothstep(0.15,1.0,r)));
+        return;
+      }
+      if(uPat>0.5 && uPat<1.5){                        // Körper
+        float phi=atan(vLoc.x,vLoc.z), y=vLoc.y;
+        float sb=phi*0.78, sf=phi*0.66;
+        float belly=length(vec2(sb/0.6,(y-0.78)/0.7))-1.0;
+        float lobe=length(vec2(abs(sf)-0.19,(y-1.99)*1.05))-0.255;
+        float chin=length(vec2(sf/0.40,(y-1.74)/0.19))-1.0;
+        float face=smin(lobe,chin*0.2,0.07);
+        float wM=max(inside(belly*0.3),inside(face));
+        vec3 white=mix(vec3(0.93,0.9,0.84),vec3(1.0,0.99,0.96),clamp((y-0.2)/1.2,0.0,1.0));
+        c=mix(uColor,white,wM);
+        float bl=length(vec2(abs(sf)-0.35,(y-1.79)*1.2));
+        c=mix(c,vec3(1.0,0.6,0.65),(1.0-smoothstep(0.04,0.12,bl))*0.85*inside(face));
+      } else if(uPat>1.5 && uPat<2.5){                 // Schal: Rippen + helle Streifen
+        float a=atan(vLoc.x,vLoc.z);
+        float st=fract(a*5.0/6.2832);
+        c=mix(uColor,uColor2,step(0.82,st));
+        c*=0.86+0.14*(0.5+0.5*sin(a*70.0));
+      } else if(uPat>2.5){                             // Zipfel: Querstreifen + Fransen-Kante
+        float st=fract(vLoc.y*1.6+0.2);
+        c=mix(uColor,uColor2,step(0.72,st));
+        c*=0.88+0.12*(0.5+0.5*sin(vLoc.x*40.0));
+      }
+      vec3 n=normalize(vNor), v=normalize(uEye-vPos);
+      float nd=dot(n,uLight);
+      float wrap=clamp((nd+0.5)/1.5,0.0,1.0); wrap*=wrap;
+      vec3 sky=mix(vec3(0.82,0.88,1.0),vec3(0.55,0.62,0.85),uDarkTheme);
+      vec3 gnd=mix(vec3(0.62,0.56,0.48),vec3(0.3,0.3,0.34),uDarkTheme);
+      vec3 hemi=mix(gnd,sky,n.y*0.5+0.5);
+      vec3 lit=c*(hemi*(uAmb+0.18)+wrap*(1.0-uAmb)*vec3(1.0,0.97,0.92));
+      float fr=1.0-max(dot(n,v),0.0);
+      lit+=pow(fr,3.0)*0.32*mix(vec3(1.0),sky,0.4);
+      vec3 h=normalize(uLight+v);
+      lit+=pow(max(dot(n,h),0.0),uSpec>0.6?90.0:32.0)*uSpec*vec3(1.0,0.98,0.95);
+      c=mix(lit,c,uGlow);
+      float d=distance(vPos.xz,uPlayer);
+      float f=smoothstep(uFogR*0.45,uFogR,d);
       gl_FragColor=vec4(mix(c,uFog,f),1.0);
     }`;
 
@@ -177,12 +265,57 @@ window.NTGrafik = (function () {
     return { pos: [0,0,0, 1.6,-0.5,0, 0,-1,0], nor: [0,0,1, 0,0,1, 0,0,1], idx: [0,1,2, 0,2,1] };
   }
 
+  /* Gitterfläche f(u, v) → Punkt; Normalen aus den Nachbarn */
+  function grid(f, nu, nv) {
+    const P = [];
+    for (let i = 0; i <= nv; i++) for (let j = 0; j <= nu; j++) P.push(f(j / nu, i / nv));
+    const pos = [], nor = [], idx = [];
+    const at = (i, j) => P[Math.max(0, Math.min(nv, i)) * (nu + 1) + ((j + nu) % nu)];
+    for (let i = 0; i <= nv; i++) for (let j = 0; j <= nu; j++) {
+      const p = P[i * (nu + 1) + j];
+      const a = at(i, j + 1), b = at(i, j - 1), c = at(i + 1, j), d = at(i - 1, j);
+      const du = [a[0] - b[0], a[1] - b[1], a[2] - b[2]], dv = [c[0] - d[0], c[1] - d[1], c[2] - d[2]];
+      let n = [du[1] * dv[2] - du[2] * dv[1], du[2] * dv[0] - du[0] * dv[2], du[0] * dv[1] - du[1] * dv[0]];
+      let l = Math.hypot(...n);
+      if (l < 1e-6) n = [0, i === 0 ? -1 : 1, 0], l = 1;
+      pos.push(...p); nor.push(n[0] / l, n[1] / l, n[2] / l);
+    }
+    for (let i = 0; i < nv; i++) for (let j = 0; j < nu; j++) {
+      const a = i * (nu + 1) + j, b = a + nu + 1;
+      idx.push(a, a + 1, b, b, a + 1, b + 1);
+    }
+    return { pos, nor, idx };
+  }
+  // Pinguin-Körper: Bauch-Ei + Kopf, weich verschmolzen; vorn = +z, Boden y = 0
+  const PB = { by: 0.83, bry: 0.83, brx: 0.8, hy: 1.93, hr: 0.66, top: 2.59 };
+  function penguinBody() {
+    const smax = (a, b, k) => { const h = Math.max(k - Math.abs(a - b), 0) / k; return Math.max(a, b) + h * h * k * 0.25; };
+    const prof = y => {
+      const rb = PB.brx * Math.sqrt(Math.max(0, 1 - ((y - PB.by) / PB.bry) ** 2));
+      const rh = PB.hr * Math.sqrt(Math.max(0, 1 - ((y - PB.hy) / PB.hr) ** 2));
+      return smax(rb, rh, 0.16);
+    };
+    return grid((u, v) => {
+      const y = PB.top * (1 - Math.cos(Math.PI * v)) / 2;
+      const r = (v <= 0 || v >= 1) ? 0 : prof(y);
+      const a = u * Math.PI * 2, dz = y < 1.45 ? 0.9 : 0.95;
+      return [Math.sin(a) * r, y, Math.cos(a) * r * dz];
+    }, 64, 90);
+  }
+  function torus(R, r) {
+    return grid((u, v) => {
+      const a = u * Math.PI * 2, b = v * Math.PI * 2;
+      return [Math.sin(a) * (R + r * Math.cos(b)), r * Math.sin(b), Math.cos(a) * (R + r * Math.cos(b))];
+    }, 72, 16);
+  }
+
   function create(canvas) {
     const gl = canvas.getContext('webgl', { antialias: true }) || canvas.getContext('experimental-webgl');
     if (!gl) return null;
     gl.getExtension('OES_standard_derivatives');
     const progT = compile(gl, VS_T, FS_T);
     const progO = compile(gl, VS_O, FS_O);
+    const progC = compile(gl, VS_C, FS_C);
 
     function upload(m) {
       const o = { n: m.idx.length };
@@ -191,7 +324,7 @@ window.NTGrafik = (function () {
       o.ib = gl.createBuffer(); gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, o.ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(m.idx), gl.STATIC_DRAW);
       return o;
     }
-    const meshes = { sphere: upload(sphere(14)), cone: upload(cone(18)), box: upload(box()), cloth: upload(flagCloth()) };
+    const meshes = { sphere: upload(sphere(14)), ball: upload(sphere(32)), body: upload(penguinBody()), ring: upload(torus(1, 0.15)), cone: upload(cone(18)), box: upload(box()), cloth: upload(flagCloth()) };
 
     // Dynamisches Band auf dem Boden (Pfeil, Ring) – jedes Bild neu
     const dyn = { vb: gl.createBuffer(), nb: gl.createBuffer(), ib: gl.createBuffer(), n: 0 };
@@ -225,14 +358,15 @@ window.NTGrafik = (function () {
     function hex(s) { const n = parseInt(s.slice(1), 16); return [(n >> 16 & 255) / 255, (n >> 8 & 255) / 255, (n & 255) / 255]; }
     function setTheme(theme) {
       const dark = theme === 'dark';
-      pal = dark ? {
-        fog: hex('#141a2b'), c: ['#1f5f66', '#3f7d4f', '#7d7a5c', '#a7a6b4'].map(hex), amb: 0.38,
-        light: norm([-0.4, 0.8, 0.45])
-      } : {
-        fog: hex('#dfe6ea'), c: ['#2b8c86', '#78b660', '#cbb784', '#efe9dc'].map(hex), amb: 0.45,
-        light: norm([-0.45, 0.8, 0.4])
-      };
+      pal = dark ? palDark : palLight;
     }
+    const palDark = {
+      fog: hex('#141a2b'), c: ['#1f5f66', '#3f7d4f', '#7d7a5c', '#a7a6b4'].map(hex), amb: 0.38,
+      light: norm([-0.4, 0.8, 0.45])
+    }, palLight = {
+      fog: hex('#dfe6ea'), c: ['#2b8c86', '#78b660', '#cbb784', '#efe9dc'].map(hex), amb: 0.45,
+      light: norm([-0.45, 0.8, 0.4])
+    };
     function norm(v) { const l = Math.hypot(...v); return v.map(x => x / l); }
     const fogColor = () => pal ? pal.fog : [0.87, 0.9, 0.92];
 
@@ -337,21 +471,111 @@ window.NTGrafik = (function () {
         }
       }
 
-      // Figur: Kegel-Körper + Kopf, kippt mit dem Hang, staucht beim Landen
-      if (P && !P.hidden) {
-        const sq = P.squash || 1, col = sc.playerColor || [1, 0.55, 0.2];
-        const tilt = P.tilt || 0, yaw = P.yaw || 0;
-        draw('sphere', M.trs(P.x, P.ground + 0.03, P.z, 0, 0, 0.62, 0.03, 0.62), [0.16, 0.2, 0.18], 0.6);   // Schatten
-        draw('cone', M.trs(P.x, P.y, P.z, yaw, tilt, 0.62 / Math.sqrt(sq), 1.5 * sq, 0.62 / Math.sqrt(sq)), col, 0.1);
-        const hx = P.x + Math.sin(yaw) * Math.sin(tilt) * 1.55 * sq, hz = P.z + Math.cos(yaw) * Math.sin(tilt) * 1.55 * sq;
-        const hy = P.y + Math.cos(tilt) * 1.75 * sq;
-        draw('sphere', M.trs(hx, hy, hz, 0, 0, 0.46, 0.46, 0.46), col, 0.15);
-        // Augen in Blickrichtung
-        for (const s of [-1, 1]) {
-          const ex = hx + Math.sin(yaw) * 0.38 + Math.cos(yaw) * 0.17 * s;
-          const ez = hz + Math.cos(yaw) * 0.38 - Math.sin(yaw) * 0.17 * s;
-          draw('sphere', M.trs(ex, hy + 0.08, ez, 0, 0, 0.1, 0.12, 0.1), [0.08, 0.08, 0.1], 0);
+      // Figur: kleiner Pinguin (eigenes Programm progC)
+      if (P && !P.hidden) drawPenguin(P, sc.playerColor || [1, 0.55, 0.2], vp, sc);
+    }
+
+    /* Der Pinguin. Körper und Kopf sind EIN Drehkörper, Bauch/Gesicht/
+       Bäckchen malt der Shader. Watscheln: Rollen links/rechts im Schritt,
+       der freie Fuß hebt ab, Flossen schwingen gegengleich, Körper federt;
+       im Sprung Flossen ausgebreitet; im Stehen atmen + blinzeln. */
+    function drawPenguin(P, col, vp, sc) {
+      const sq = P.squash || 1, walk = Math.max(0, Math.min(1, P.walk || 0));
+      const ph = (P.phase || 0) * 2.2, now = performance.now() / 1000;
+      const air = Math.max(0, Math.min(1, ((P.y || 0) - (P.ground || 0) - 0.25) / 1.2));
+      const sw = Math.sin(ph);
+      const roll = sw * 0.17 * walk;
+      const wob = Math.cos(ph) * 0.09 * walk;
+      const bounce = 1 - Math.abs(Math.cos(ph)) * 0.05 * walk;
+      const breathe = 1 + Math.sin(now * 2.4) * 0.016 * (1 - walk);
+      const blink = (now % 3.9) < 0.13 ? 0.1 : 1;
+      const S = 0.9;
+      const fog = fogColor(), dark = pal === palDark;
+      const c = progC.u;
+      gl.useProgram(progC.p);
+      gl.uniformMatrix4fv(c.uVP, false, vp);
+      gl.uniform3fv(c.uLight, pal.light);
+      gl.uniform3fv(c.uEye, sc.cam.eye);
+      gl.uniform2f(c.uPlayer, sc.fogAt ? sc.fogAt[0] : P.x, sc.fogAt ? sc.fogAt[1] : P.z);
+      gl.uniform1f(c.uFogR, sc.fogR);
+      gl.uniform3fv(c.uFog, fog);
+      gl.uniform1f(c.uAmb, pal.amb);
+      gl.uniform1f(c.uDarkTheme, dark ? 1 : 0);
+      const draw = (mesh, m, color, o) => {
+        o = o || {};
+        gl.uniformMatrix4fv(c.uM, false, m);
+        gl.uniformMatrix3fv(c.uN, false, normalMat(m));
+        gl.uniform3fv(c.uColor, color);
+        gl.uniform3fv(c.uColor2, o.c2 || color);
+        gl.uniform1f(c.uGlow, o.glow || 0);
+        gl.uniform1f(c.uPat, o.pat || 0);
+        gl.uniform1f(c.uSpec, o.spec == null ? 0.18 : o.spec);
+        gl.uniform1f(c.uAlpha, o.alpha || 0);
+        bind(meshes[mesh]);
+        gl.drawElements(gl.TRIANGLES, meshes[mesh].n, gl.UNSIGNED_SHORT, 0);
+      };
+
+      // weicher Schatten, liegt auf dem Hang
+      const g = world.grad(P.x, P.z), sr = 0.95 * S / (1 + air * 0.8);
+      gl.enable(gl.BLEND); gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE); gl.depthMask(false);
+      draw('ball', [sr, g[0] * sr, 0, 0, 0, 0.01, 0, 0, 0, g[1] * sr, sr, 0, P.x, P.ground + 0.07, P.z, 1],
+        dark ? [0.02, 0.03, 0.06] : [0.12, 0.14, 0.1], { pat: 4, alpha: (dark ? 0.55 : 0.38) * (1 - air * 0.5) });
+      gl.disable(gl.BLEND); gl.depthMask(true);
+
+      const base = M.mul(M.trs(P.x, P.y, P.z, (P.yaw || 0) + wob, P.tilt || 0, 1, 1, 1),
+        M.mul(M.rz(roll), M.scl(S / Math.sqrt(sq), S * sq * breathe * bounce, S / Math.sqrt(sq))));
+      const part = (mesh, m, color, o) => draw(mesh, M.mul(base, m), color, o);
+      const T = (x, y, z, sx, sy, sz) => M.trs(x, y, z, 0, 0, sx, sy, sz);
+      const chain = (...ms) => ms.reduce((a, b) => M.mul(a, b));
+
+      const navy = dark ? [0.2, 0.25, 0.4] : [0.16, 0.2, 0.32];
+      const orange = [1, 0.6, 0.16], beakC = [1, 0.74, 0.2];
+      const cream = [1, 0.96, 0.86];
+
+      // Füße (Schwimmfüße mit drei Zehen-Wülsten); der freie hebt ab
+      for (const s of [-1, 1]) {
+        const up = Math.max(0, s * sw) * walk, fwd = s * sw * 0.16 * walk;
+        const F = chain(M.trs(0.3 * s, 0.05 + up * 0.2, 0.2 + fwd, 0.18 * s, -up * 0.5, 1, 1, 1));
+        part('ball', M.mul(F, T(0, 0, 0.06, 0.2, 0.075, 0.24)), orange, { spec: 0.3 });
+        for (const t of [-1, 0, 1]) part('ball', M.mul(F, T(t * 0.11, -0.005, 0.27 - Math.abs(t) * 0.03, 0.075, 0.06, 0.1)), orange, { spec: 0.3 });
+      }
+      // Körper + Kopf aus einem Guss
+      part('body', M.scl(1, 1, 1), navy, { pat: 1, spec: 0.22 });
+      // Schwänzchen
+      part('cone', chain(M.trs(0, 0.3, -0.5, 0, 0, 1, 1, 1), M.rx(-2.25), M.scl(0.2, 0.26, 0.07)), navy, { spec: 0.1 });
+      // Flossen: gegengleich im Schritt, im Sprung ausgebreitet
+      for (const s of [-1, 1]) {
+        const flap = 0.2 + walk * (0.12 + 0.14 * Math.sin(ph + (s > 0 ? 0 : Math.PI))) + air * 1.05;
+        part('ball', chain(M.trs(0.7 * s, 1.36, -0.02, 0, 0, 1, 1, 1), M.rz(flap * s), M.rx(0.12),
+          T(0, -0.4, 0, 0.1, 0.46, 0.25)), navy, { spec: 0.2 });
+      }
+      // Augen: groß, glänzend, mit zwei Lichtpunkten
+      for (const s of [-1, 1]) {
+        const ph2 = 0.34 * s, el = 0.1, R = PB.hr;
+        const ex = Math.sin(ph2) * Math.cos(el) * R * 0.97, ey = PB.hy + Math.sin(el) * R * 0.97, ez = Math.cos(ph2) * Math.cos(el) * R * 0.95 * 0.97;
+        part('ball', chain(M.trs(ex, ey, ez, ph2, -el, 1, 1, 1), M.scl(0.105, 0.135 * blink, 0.07)), [0.04, 0.04, 0.07], { spec: 1 });
+        if (blink === 1) {
+          part('ball', M.trs(ex + 0.035 * s * 0.3 - 0.02, ey + 0.05, ez + 0.06, 0, 0, 0.034, 0.034, 0.02), [1, 1, 1], { glow: 1 });
+          part('ball', M.trs(ex + 0.03, ey - 0.045, ez + 0.06, 0, 0, 0.016, 0.016, 0.01), [1, 1, 1], { glow: 1 });
+        } else {
+          part('ball', chain(M.trs(ex, ey - 0.005, ez + 0.01, ph2, -el, 1, 1, 1), M.scl(0.1, 0.018, 0.07)), navy, {});
         }
+      }
+      // Schnabel: kleiner runder Kegel, leicht nach unten
+      part('cone', chain(M.trs(0, PB.hy - 0.08, PB.hr * 0.95 * 0.96, 0, 0, 1, 1, 1), M.rx(Math.PI / 2 + 0.22), M.scl(0.14, 0.22, 0.1)), beakC, { spec: 0.5 });
+      // Haarbüschel oben
+      for (const [t, h, lean] of [[-0.05, 0.15, -0.5], [0.01, 0.2, 0.0], [0.06, 0.13, 0.55]]) {
+        part('cone', chain(M.trs(t, PB.top - 0.06, 0.02, 0, 0, 1, 1, 1), M.rz(-lean), M.rx(-0.3), M.scl(0.06, h, 0.055)), navy, { spec: 0.05 });
+      }
+      // Strickschal in Spielerfarbe, Knoten vorn seitlich, zwei Zipfel wehen mit
+      const light = col.map(v => v + (1 - v) * 0.72);
+      part('ring', chain(M.trs(0, 1.5, 0.02, 0, 0.12, 1, 1, 1), M.scl(0.6, 0.75, 0.57)), col, { pat: 2, c2: light, spec: 0.08 });
+      const kn = [0.3, 1.42, 0.5];
+      part('ball', T(kn[0], kn[1], kn[2], 0.12, 0.11, 0.09), col, { pat: 2, c2: light, spec: 0.08 });
+      for (const [k, sway0] of [[0, 0.18], [1, -0.08]]) {
+        const sway = sway0 + roll * 1.6 + Math.sin(now * 3 + k) * 0.04 + walk * 0.1 * Math.sin(ph * 2 + k);
+        part('ball', chain(M.trs(kn[0] + k * 0.05, kn[1] - 0.02, kn[2] + 0.02 - k * 0.04, 0, -0.18 - walk * 0.25, 1, 1, 1),
+          M.rz(sway), T(0, -0.3, 0, 0.12, 0.32, 0.035)), col, { pat: 3, c2: light, spec: 0.05 });
       }
     }
 
