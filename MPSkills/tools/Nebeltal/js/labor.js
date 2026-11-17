@@ -408,50 +408,41 @@
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
   }
 
-  /* ── Netz + Werte ── */
+  /* ── Netz: alle Werte direkt an den Kanten, Bias unter dem Neuron ── */
+  // Die Zahl steht bei zwei Dritteln der Kante (labelAt 0,66): dort liegen
+  // die 9 Zahlen einer Schicht in einer sauberen Spalte untereinander.
+  // Der Bias steht IM Neuron unter dem σ (biasInside).
   function drawNet() {
-    const ins = [{ id: 'i0', kind: 'in', x: 0.04, y: 0.12, label: 'Länge' }, { id: 'i1', kind: 'in', x: 0.04, y: 0.5, label: 'Höhe' },
-                 { id: 'i2', kind: 'in', x: 0.04, y: 0.88, label: 'Flosse' }];
-    const ys = [0.12, 0.5, 0.88];
+    const ys = [0.1, 0.5, 0.9];
+    const ins = [0, 1, 2].map(i => ({ id: 'i' + i, kind: 'in', x: 0.04, y: ys[i], label: ['Länge', 'Höhe', 'Flosse'][i] }));
+    const bias = (k, col) => ({ bias: S.W[k][3], biasD: 1, biasGroup: col });
     if (!zahl()) {
-      NTNetz.draw($('#net'), {
+      NTNetz.draw($('#net'), { biasInside: true,
         nodes: [...ins,
-          ...[0, 1, 2].map(k => ({ id: 'n' + k, kind: 'n', x: 0.66, y: ys[k], group: SPC[k] })),
-          ...[0, 1, 2].map(k => ({ id: 'o' + k, kind: 'out', x: 0.84, y: ys[k], label: NAMES[k] + '?' }))],
+          ...[0, 1, 2].map(k => ({ id: 'n' + k, kind: 'n', x: 0.7, y: ys[k], group: SPC[k], ...bias(k, SPC[k]) })),
+          ...[0, 1, 2].map(k => ({ id: 'o' + k, kind: 'out', x: 0.86, y: ys[k], label: NAMES[k] + '?' }))],
         edges: [
-          ...[0, 1, 2].flatMap(k => [0, 1, 2].map(i => ({ from: 'i' + i, to: 'n' + k, w: S.W[k][i], group: SPC[k], noLabel: true }))),
+          ...[0, 1, 2].flatMap(k => [0, 1, 2].map(i => ({ from: 'i' + i, to: 'n' + k, w: S.W[k][i], group: SPC[k], labelAt: 0.66 }))),
           ...[0, 1, 2].map(k => ({ from: 'n' + k, to: 'o' + k, w: 1, group: 'fix', fixed: true, noLabel: true }))]
       });
       return;
     }
-    NTNetz.draw($('#net'), {
+    NTNetz.draw($('#net'), { biasInside: true,
       nodes: [...ins,
-        ...[0, 1, 2].map(k => ({ id: 'h' + k, kind: 'n', x: 0.42, y: ys[k], group: HID[k], label: nameOf(k) })),
-        { id: 'z', kind: 'n', x: 0.76, y: 0.5, group: OUT, sym: 'Σ', label: 'Zahl' },
-        { id: 'o', kind: 'out', x: 0.9, y: 0.5, label: 'Art' }],
+        ...[0, 1, 2].map(k => ({ id: 'h' + k, kind: 'n', x: 0.46, y: ys[k], group: HID[k], label: nameOf(k), ...bias(k, HID[k]) })),
+        { id: 'z', kind: 'n', x: 0.8, y: 0.5, group: OUT, sym: 'Σ', label: 'Zahl', ...bias(3, OUT) },
+        { id: 'o', kind: 'out', x: 0.93, y: 0.5, label: 'Art' }],
       edges: [
-        ...[0, 1, 2].flatMap(k => [0, 1, 2].map(i => ({ from: 'i' + i, to: 'h' + k, w: S.W[k][i], group: HID[k], noLabel: true }))),
-        ...[0, 1, 2].map(k => ({ from: 'h' + k, to: 'z', w: S.W[3][k], group: OUT, noLabel: true })),
+        ...[0, 1, 2].flatMap(k => [0, 1, 2].map(i => ({ from: 'i' + i, to: 'h' + k, w: S.W[k][i], group: HID[k], labelAt: 0.66 }))),
+        ...[0, 1, 2].map(k => ({ from: 'h' + k, to: 'z', w: S.W[3][k], group: OUT, labelAt: 0.62 })),
         { from: 'z', to: 'o', w: 1, group: 'fix', fixed: true, noLabel: true }]
     });
   }
-  const cell = (v, cls) => '<td class="' + cls + '">' + (v > 0 ? '+' : '') + fmt(v, 1) + '</td>';
   function table() {
     const H = zahl() ? hidden(S.W) : null;
     const hit = [0, 0, 0];
     P.pts.forEach((p, i) => { if (predict(S.W, i, H) === p.y) hit[p.y]++; });
-    let h = '<tr><th>Neuron</th><th>Länge</th><th>Höhe</th><th>Flosse</th><th>Bias</th><th>' + (zahl() ? '' : 'erkannt') + '</th></tr>';
-    for (let k = 0; k < 3; k++) {
-      h += '<tr style="--c:' + colOf(k) + '"><td>' + nameOf(k) + (zahl() ? '' : '?') + '</td>' +
-        S.W[k].map((v, j) => cell(v, j < 2 ? 'w1' : 'w2')).join('') +
-        '<td class="ok">' + (zahl() ? '' : hit[k] + '/' + counts[k]) + '</td></tr>';
-    }
-    if (zahl()) {
-      h += '<tr class="sub"><th>Ausgang</th><th>von A</th><th>von B</th><th>von C</th><th>Bias</th><th>erkannt</th></tr>';
-      h += '<tr style="--c:' + OUT + '"><td>Zahl</td>' + S.W[3].map((v, j) => cell(v, j < 2 ? 'w1' : 'w2')).join('') +
-        '<td class="ok">' + (hit[0] + hit[1] + hit[2]) + '/' + N + '</td></tr>';
-    }
-    $('#wtab').innerHTML = h;
+    $('#hits').innerHTML = '<span>erkannt:</span>' + [0, 1, 2].map(k => '<span style="color:' + SPC[k] + '"><b>' + NAMES[k] + '</b> ' + hit[k] + '/' + counts[k] + '</span>').join('');
     $('#sWrong').textContent = (N - hit[0] - hit[1] - hit[2]) + ' von ' + N;
     $('#sLoss').textContent = fmt(lossAll(S.W), 2);
   }
@@ -476,7 +467,7 @@
     if (zahl()) {
       const by = [0, 1, 2].map(n => NAMES[S.ord.indexOf(n)]);
       $('#legend2').innerHTML = '<span class="chip" style="--c:' + OUT + '"><i></i>Was das Zahl-Neuron sieht</span>' +
-        '<small>unter 0,5 = ' + by[0] + ' · bis 1,5 = ' + by[1] + ' · darüber = ' + by[2] + '</small>';
+        '<small>unter 0,5 = ' + by[0] + ' · bis 1,5 = ' + by[1] + ' · darüber = ' + by[2] + '<br>an der Wand = das Neuron ist sich sicher (0 % oder 100 %)</small>';
     }
     $('#netTitle').textContent = zahl() ? 'Das Netz · 3 Eingänge → A, B, C → Zahl-Neuron' : 'Das Netz · 3 Eingänge → 3 Neuronen';
   }

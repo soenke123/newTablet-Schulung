@@ -54,6 +54,13 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Farbskala JE WELT (tiefster bis höchster Punkt, log) – mit gemeinsamer Skala wirkten die Welten
   von A/B/C flach; ist der Unterschied wirklich klein (max − min < 0,03 oder max/min < 1,15),
   steht „fast flach – dieses Neuron zählt gerade kaum“ in der Welt.
+  Netz ohne Tabelle (Sönke 17.11.2026): jedes Gewicht steht an seiner Kante (labelAt 0,66 → die
+  Zahlen einer Schicht stehen in einer Spalte), der Bias IM Neuron unter σ/Σ (NTNetz-Option
+  `biasInside`), darunter nur „erkannt: Adelie x/151 · …“. Leinwand in `.netwrap` absolut – eine
+  Canvas mit flex:1 wuchs mit ihrer eigenen Pixelgröße und drückte im Hochformat die Wolken weg.
+  Wolke 2: Pinguine kleben oft an Würfelwänden/-kanten – richtig so, σ-Neuronen sind sich meist
+  sicher (0 %/100 %); weiter innen = unsicher, dort liegen die Fehler. Nicht künstlich spreizen,
+  sonst wären die beiden Ebenen des Zahl-Neurons keine Ebenen mehr.
 - `js/grafik.js` – reines WebGL 1 ohne Bibliothek (CSP/Datenschutz): Gitter, Kugel/Kegel/Kasten,
   Nebel hängt an der Figur (uFogR), nicht an der Kamera; Höhenlinien im Shader
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm

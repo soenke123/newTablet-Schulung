@@ -62,7 +62,7 @@ button { font:inherit; color:inherit; }
 .cloud { flex:1; min-height:0; width:100%; display:block; touch-action:none; cursor:grab; }
 #cloud2Box { display:none; }
 body[data-mode="zahl"] #cloud2Box { display:flex; }
-body[data-mode="zahl"] .top { grid-template-columns:1fr 1fr 1fr; }
+body[data-mode="zahl"] .top { grid-template-columns:1fr 1fr 1.2fr; }
 body:not([data-mode="zahl"]) #ordSeg { display:none; }
 .seg { display:flex; align-items:center; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
 .seg span { padding:0 8px; font-size:13px; font-weight:700; color:var(--ink-faint); }
@@ -79,7 +79,13 @@ table.w tr.sub th { padding-top:8px; }
 .legend button i { display:inline-block; width:9px; height:9px; border-radius:50%; background:var(--c); margin-right:5px; }
 .legend button.off { opacity:.4; }
 .legend small { color:var(--ink-faint); font-size:12.5px; align-self:center; margin-left:auto; }
-#net { width:100%; height:150px; display:block; flex:none; }
+/* Leinwand absolut im Rahmen – sonst wächst sie mit ihrer eigenen Pixelgröße immer weiter */
+.netwrap { position:relative; flex:1; min-height:190px; }
+#net { position:absolute; inset:0; width:100%; height:100%; display:block; }
+body[data-mode="zahl"] .netwrap { min-height:220px; }
+.hits { font-size:13px; color:var(--ink-soft); display:flex; flex-wrap:wrap; gap:4px 12px; font-variant-numeric:tabular-nums; }
+.hits b { font-weight:700; }
+.cloudnote { font-size:12px; color:var(--ink-faint); }
 table.w { width:100%; border-collapse:collapse; font-size:13.5px; font-variant-numeric:tabular-nums; }
 table.w th { font-size:11px; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; font-weight:700; padding:3px 4px; text-align:right; }
 table.w th:first-child, table.w td:first-child { text-align:left; }
@@ -105,9 +111,9 @@ table.w td.ok { color:var(--ink-faint); font-weight:600; }
   .top { grid-template-columns:1fr; grid-template-rows:1.3fr auto; flex:1.5; }
   body[data-mode="zahl"] .top { grid-template-columns:1fr 1fr; grid-template-rows:1fr auto; }
   body[data-mode="zahl"] .top > section:last-child { grid-column:1 / -1; }
-  #net { height:120px; }
+  .netwrap { min-height:230px; }
 }
-@media (max-height: 700px) and (orientation: landscape) { #net { height:110px; } }
+@media (max-height: 700px) and (orientation: landscape) { .netwrap { min-height:170px; } }
 </style>
 </head>
 <body>
@@ -128,8 +134,8 @@ table.w td.ok { color:var(--ink-faint); font-weight:600; }
     </section>
     <section class="glass">
       <div class="box-t" id="netTitle">Das Netz</div>
-      <canvas id="net"></canvas>
-      <table class="w" id="wtab"></table>
+      <div class="netwrap"><canvas id="net"></canvas></div>
+      <div class="hits" id="hits"></div>
     </section>
   </div>
   <div class="ctrl glass">
@@ -143,8 +149,8 @@ table.w td.ok { color:var(--ink-faint); font-weight:600; }
   </div>
   <div class="grid" id="grid"></div>
 </div>
-<script src="js/welt.js?v=20261117c"></script>
-<script src="js/netz.js?v=20261117c"></script>
-<script src="js/labor.js?v=20261117c"></script>
+<script src="js/welt.js?v=20261117e"></script>
+<script src="js/netz.js?v=20261117e"></script>
+<script src="js/labor.js?v=20261117e"></script>
 </body>
 </html>

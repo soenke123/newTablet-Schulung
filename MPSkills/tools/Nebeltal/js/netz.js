@@ -35,7 +35,7 @@ window.NTNetz = (function () {
     const ink = css.getPropertyValue('--ink').trim() || '#222';
     const soft = css.getPropertyValue('--ink-faint').trim() || '#888';
     const surf = css.getPropertyValue('--surface').trim() || '#fff';
-    const pad = 14, R = Math.max(12, Math.min(19, H * 0.12));
+    const pad = 14, R = net.biasInside ? Math.max(17, Math.min(23, H * 0.11)) : Math.max(12, Math.min(19, H * 0.12));
     const P = n => [pad + 34 + n.x * (W - 2 * pad - 68), pad + n.y * (H - 2 * pad)];
     const byId = {};
     for (const n of net.nodes) byId[n.id] = n;
@@ -82,12 +82,19 @@ window.NTNetz = (function () {
         x.fillStyle = surf; x.strokeStyle = n.group ? col(n.group) : ink; x.lineWidth = n.group ? 2.6 : 2;
         x.beginPath(); x.arc(px, py, R, 0, 7); x.fill(); x.stroke();
         x.fillStyle = ink; x.textAlign = 'center';
-        x.font = '700 ' + Math.round(R * 0.8) + 'px Outfit, sans-serif';
-        x.fillText(n.sym || 'σ', px, py + 1);
+        // Bias im Neuron (net.biasInside): Zeichen oben, Bias-Zahl darunter
+        const inside = net.biasInside && n.bias != null;
+        x.font = '700 ' + Math.round(R * (inside ? 0.62 : 0.8)) + 'px Outfit, sans-serif';
+        x.fillText(n.sym || 'σ', px, inside ? py - R * 0.3 : py + 1);
+        if (inside) {
+          x.font = '700 ' + Math.round(Math.min(12, R * 0.52)) + 'px Outfit, sans-serif';
+          x.fillStyle = n.biasGroup ? col(n.biasGroup) : soft;
+          x.fillText((n.bias > 0 ? '+' : '') + fmt(n.bias, n.biasD || 0), px, py + R * 0.42);
+        }
         if (n.label) { x.font = '700 12px Outfit, sans-serif'; x.fillStyle = n.group ? col(n.group) : soft; x.textAlign = 'left'; x.fillText(n.label, px + R + 4, py - R + 3); x.textAlign = 'center'; }
-        if (n.bias != null) {
-          x.font = '600 10.5px Outfit, sans-serif'; x.fillStyle = n.biasGroup ? col(n.biasGroup) : soft;
-          x.fillText((n.biasName ? n.biasName + ' ' : 'Bias ') + (n.bias > 0 ? '+' : '') + fmt(n.bias, n.biasGroup ? 0 : 0), px, py + R + 9);
+        if (n.bias != null && !net.biasInside) {
+          x.font = (n.biasD ? '700 11.5px' : '600 10.5px') + ' Outfit, sans-serif'; x.fillStyle = n.biasGroup ? col(n.biasGroup) : soft;
+          x.fillText((n.biasName ? n.biasName + ' ' : 'Bias ') + (n.bias > 0 ? '+' : '') + fmt(n.bias, n.biasD || 0), px, py + R + 9);
         }
       }
     }
