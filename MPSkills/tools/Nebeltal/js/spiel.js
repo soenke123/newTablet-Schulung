@@ -916,9 +916,41 @@
     $('#mL').textContent = '± ' + fmt(Math.sqrt(w.loss(wv, bv)), 2) + ' kg';
   }
 
+  /* Pinguin für Pinguin (Level 5): gleiches Prinzip wie #mrow in Level 4 */
+  const PROW = { order: null, seed: 0, idx: -1 };
+  function prowBuild() {
+    const el = $('#prow');
+    if (el.dataset.ok) return;
+    el.dataset.ok = '1';
+    const t = (id, x, y, size, w, anchor, fill, txt) => '<text' + (id ? ' id="' + id + '"' : '') + ' x="' + x + '" y="' + y + '" font-size="' + size +
+      '" font-weight="' + w + '" text-anchor="' + anchor + '" fill="' + fill + '">' + (txt || '') + '</text>';
+    el.innerHTML =
+      '<g id="pPg"></g>' + t('pName', 34, 12, 11, 700, 'middle', 'var(--ink-faint)') +
+      t('', 120, 26, 10.5, 600, 'end', 'var(--ink-soft)', 'Länge') + t('pLen', 120, 40, 12.5, 700, 'end', 'var(--ink)') +
+      t('', 120, 72, 10.5, 600, 'end', 'var(--ink-soft)', 'Höhe') + t('pDep', 120, 86, 12.5, 700, 'end', 'var(--ink)') +
+      '<circle cx="130" cy="36" r="4" fill="var(--ink)"/><circle cx="130" cy="82" r="4" fill="var(--ink)"/>' +
+      '<line id="pE1" x1="134" y1="36" x2="166" y2="54" stroke-linecap="round"/>' +
+      '<line id="pE2" x1="134" y1="82" x2="166" y2="64" stroke-linecap="round"/>' +
+      t('pL1', 150, 30, 11, 700, 'middle', '#f27828') + t('pL2', 150, 98, 11, 700, 'middle', '#f27828') +
+      '<circle cx="183" cy="59" r="17" fill="var(--surface)" stroke="#f27828" stroke-width="2.4"/>' +
+      t('', 183, 64.5, 16, 700, 'middle', 'var(--ink)', 'σ') +
+      '<line x1="200" y1="59" x2="210" y2="59" stroke="var(--ink)" stroke-width="2"/><path d="M216,59 L208,54.5 L208,63.5Z" fill="var(--ink)"/>' +
+      t('', 278, 24, 10.5, 600, 'end', 'var(--ink-soft)', 'Zügel?') +
+      t('pOut', 278, 44, 17, 700, 'end', 'var(--ink)') + t('pSays', 278, 60, 11, 700, 'end', 'var(--ink-soft)') +
+      t('pReal', 278, 78, 11, 600, 'end', 'var(--ink-soft)') + t('pOk', 278, 94, 11.5, 700, 'end', 'var(--ink)');
+  }
+  function prowPick(w) {
+    if (!PROW.order || PROW.seed !== w.seed) {
+      const r = NTWelt.rng(w.seed * 89 + 7), o = w.pts.map((p, i) => i);
+      for (let i = o.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [o[i], o[j]] = [o[j], o[i]]; }
+      PROW.order = o; PROW.seed = w.seed; PROW.idx = -1;
+    }
+    return PROW.order[Math.floor(performance.now() / 1600) % PROW.order.length];
+  }
+
   /* ── Level 5: Pinguine + Neuron ──
-     Oben das Neuron (Kantendicke = Größe des Gewichts, orange = positiv,
-     blau = negativ), darunter „Bild A“: Messwerte, Hintergrund = was das
+     Oben das Neuron bei der Arbeit, Pinguin für Pinguin (Kantendicke = Größe
+     des Gewichts, orange = positiv, blau = negativ), darunter „Bild A“: Messwerte, Hintergrund = was das
      Neuron an dieser Stelle sagt, Linie = 50 %. */
   function drawPenguins() {
     const w = S.world, w1 = w.toW(S.p.x), w2 = w.toW(S.p.z);
@@ -935,29 +967,29 @@
       return [x, Wd, Hh];
     };
 
-    // Neuron
-    {
-      const [x, Wd, Hh] = prep($('#pnet'));
-      const ix = 62, nx = Wd - 70, ny = Hh / 2, ins = [[Hh * 0.27, 'Länge', w1], [Hh * 0.73, 'Höhe', w2]];
-      x.font = '600 12px Outfit, sans-serif'; x.textBaseline = 'middle';
-      for (const [iy, name, wv] of ins) {
-        x.strokeStyle = rgb(wv >= 0 ? cC : cA, 0.9);
-        x.lineWidth = 1 + Math.min(9, Math.abs(wv) * 0.5);
-        x.beginPath(); x.moveTo(ix, iy); x.lineTo(nx - 18, ny); x.stroke();
-        x.fillStyle = ink; x.textAlign = 'right'; x.fillText(name, ix - 8, iy);
-        x.beginPath(); x.arc(ix, iy, 5, 0, 7); x.fill();
-        const mx = (ix + nx - 18) / 2, my = (iy + ny) / 2 + (iy < ny ? -9 : 9);
-        x.textAlign = 'center'; x.fillStyle = rgb(wv >= 0 ? cC : cA, 1);
-        x.fillText((iy < ny ? 'w₁ ' : 'w₂ ') + fmt(wv, 1), mx, my);
-      }
-      x.fillStyle = css.getPropertyValue('--surface').trim() || '#fff';
-      x.strokeStyle = ink; x.lineWidth = 2;
-      x.beginPath(); x.arc(nx, ny, 18, 0, 7); x.fill(); x.stroke();
-      x.fillStyle = ink; x.textAlign = 'center'; x.font = '700 15px Outfit, sans-serif'; x.fillText('σ', nx, ny + 1);
-      x.lineWidth = 2; x.beginPath(); x.moveTo(nx + 18, ny); x.lineTo(Wd - 8, ny); x.stroke();
-      x.beginPath(); x.moveTo(Wd - 8, ny); x.lineTo(Wd - 14, ny - 4); x.lineTo(Wd - 14, ny + 4); x.fill();
-      x.font = '600 11px Outfit, sans-serif'; x.fillStyle = soft; x.fillText('▲?', Wd - 22, ny - 12);
+    // Neuron bei der Arbeit: Pinguin für Pinguin
+    prowBuild();
+    const ci = prowPick(w), cur = w.pts[ci];
+    if (ci !== PROW.idx) {
+      PROW.idx = ci;
+      const sp = cur.y ? 'chin' : 'adelie';
+      $('#pPg').innerHTML = NTBild.peng({ sp, x: 32, y: 104, s: 0.62 });
+      $('#pName').textContent = NTBild.SP[sp].name;
+      $('#pLen').textContent = fmt(cur.len, 1) + ' mm';
+      $('#pDep').textContent = fmt(cur.dep, 1) + ' mm';
+      $('#pReal').textContent = 'echt: ' + (cur.y ? 'Zügel' : 'Adelie');
     }
+    const q = w.sig(w1 * cur.a + w2 * cur.b), right = (q > 0.5) === (cur.y === 1);
+    for (const [id, wv, lid] of [['#pE1', w1, '#pL1'], ['#pE2', w2, '#pL2']]) {
+      const c = wv >= 0 ? '#f27828' : '#2f80ed';
+      $(id).setAttribute('stroke-width', (1.2 + Math.min(8, Math.abs(wv) * 0.45)).toFixed(1));
+      $(id).setAttribute('stroke', c);
+      $(lid).textContent = '· ' + fmt(wv, 1); $(lid).setAttribute('fill', c);
+    }
+    $('#pOut').textContent = Math.round(q * 100) + ' %';
+    $('#pSays').textContent = q > 0.5 ? '→ Zügel' : '→ Adelie';
+    $('#pOk').textContent = right ? '✓ richtig' : '✗ falsch';
+    $('#pOk').setAttribute('fill', right ? 'var(--accent-ink)' : 'var(--warn)');
 
     // Bild A
     const [x, Wd, Hh] = prep($('#pplot'));
@@ -1000,6 +1032,9 @@
       x.fill();
       if (bad) { x.strokeStyle = red; x.lineWidth = 1.6; x.beginPath(); x.arc(px, py, 6, 0, 7); x.stroke(); }
     }
+    // der Pinguin von oben
+    x.strokeStyle = ink; x.lineWidth = 2.2;
+    x.beginPath(); x.arc(X(cur.len), Y(cur.dep), 8, 0, 7); x.stroke();
     $('#pW1').textContent = fmt(w1, 1);
     $('#pW2').textContent = fmt(w2, 1);
     $('#pWrong').textContent = wrong + ' von ' + w.pts.length;

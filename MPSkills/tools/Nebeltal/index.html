@@ -230,9 +230,9 @@ body[data-state="result"] #zPanel { opacity:.25; }
   #zPanel { left:auto; right:12px; transform:none; width:270px; }
 }
 
-#pengBox { position:absolute; right:12px; top:170px; width:270px; padding:8px 10px 8px; }
-#pnet { width:100%; height:64px; display:block; }
-#pplot { width:100%; height:160px; display:block; }
+#pengBox { position:absolute; right:12px; top:170px; width:290px; padding:8px 10px 8px; }
+#prow { width:100%; height:auto; display:block; }
+#pplot { width:100%; height:150px; display:block; }
 .plegend { display:flex; gap:12px; font-size:12.5px; font-weight:600; margin:2px 0 4px; }
 .plegend .pa { color:#2f80ed; } .plegend .pc { color:#f27828; }
 .plegend .pe { color:#12a37a; }
@@ -262,8 +262,8 @@ body[data-state="intro"] .hud-bottom { opacity:.0; pointer-events:none; }
   #curveBox { width:150px; top:62px; }
   #curve { height:52px; }
   #modelBox { top:auto; bottom:150px; right:12px; width:230px; }
-  #pengBox { top:auto; bottom:150px; right:12px; width:220px; }
-  #pplot { height:120px; } #pnet { height:54px; }
+  #pengBox { top:auto; bottom:150px; right:12px; width:230px; }
+  #pplot { height:100px; }
   #plot { height:96px; }
   #gauge { width:62px; }
   .chip { font-size:13.5px; padding:7px 10px; }
@@ -301,9 +301,9 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
     </div>
 
     <div id="pengBox" class="glass" hidden>
-      <div class="box-t">Das Neuron</div>
-      <canvas id="pnet"></canvas>
-      <div class="box-t" style="margin-top:4px">So sortiert es gerade</div>
+      <div class="box-t">Das Neuron – Pinguin für Pinguin</div>
+      <svg id="prow" viewBox="0 0 280 108" aria-label="Das Neuron schätzt die Art des gezeigten Pinguins"></svg>
+      <div class="box-t" style="margin-top:2px">Alle 136 – so sortiert es gerade</div>
       <canvas id="pplot"></canvas>
       <div class="plegend"><span class="pa">● Adeliepinguin</span><span class="pc">▲ Zügelpinguin</span></div>
       <div class="mvals">
@@ -372,11 +372,11 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
   <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
 </div>
 
-<script src="js/welt.js?v=20261117g"></script>
-<script src="js/bilder.js?v=20261117g"></script>
-<script src="js/grafik.js?v=20261117g"></script>
-<script src="js/netz.js?v=20261117g"></script>
-<script src="js/zwei.js?v=20261117g"></script>
-<script src="js/spiel.js?v=20261117g"></script>
+<script src="js/welt.js?v=20261117h"></script>
+<script src="js/bilder.js?v=20261117h"></script>
+<script src="js/grafik.js?v=20261117h"></script>
+<script src="js/netz.js?v=20261117h"></script>
+<script src="js/zwei.js?v=20261117h"></script>
+<script src="js/spiel.js?v=20261117h"></script>
 </body>
 </html>

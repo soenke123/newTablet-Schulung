@@ -111,8 +111,11 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 5. **Pinguine sortieren** – die Welt ist der Fehler EINES Neurons, das Adelie- und Zügelpinguine
    trennt (x = w₁ Länge, z = w₂ Höhe). Laufen UND Springen/„Training starten“ (`walk: true` im
    Sprung-Level), 40 Schritte, Lernrate 0,2–50 (ab ≈ 35 fliegt man raus). Rechts `#pengBox`:
-   Mini-Neuron (Kantendicke/-farbe = Gewicht) + „Bild A“ (Messpunkte, Hintergrund = Ausgabe,
-   Linie = 50 %, falsch sortierte rot umkreist) – live beim Laufen. Wertung nach falsch sortierten
+   oben `#prow` (SVG) „Pinguin für Pinguin“ wie Level 4 – alle 1,6 s ein anderer der 136 Pinguine
+   (Bild seiner Art, Länge/Höhe in mm → · w₁/· w₂ (Kantendicke/-farbe = Gewicht, orange +, blau −)
+   → σ → „Zügel? 87 % → Zügel“, echte Art, ✓ richtig / ✗ falsch), darunter „Bild A“ (Messpunkte,
+   Hintergrund = Ausgabe, Linie = 50 %, falsch sortierte rot umkreist, der Pinguin von oben schwarz
+   umkreist) – live beim Laufen. Wertung nach falsch sortierten
    Pinguinen. Richtung vom Mittelpunkt = Winkel der Trennlinie, Abstand = Sicherheit; falsche Seite
    ist eine flache Hochebene, die richtige eine lange Rinne.
 6. **Das Nest** (bis 17.11.2026 „Das Treppenhaus-Licht“) – Pinguin-Eltern wechseln sich ab; dem Ei
