@@ -21,7 +21,7 @@ window.NTNetz = (function () {
   'use strict';
 
   const fmt = (v, d = 1) => v.toLocaleString('de-DE', { minimumFractionDigits: d, maximumFractionDigits: d });
-  const COL = { a: '#f27828', b: '#8b5cf6', fix: null };
+  const COL = { a: '#f27828', b: '#8b5cf6', fix: null, c0: '#2f80ed', c1: '#f27828', c2: '#12a37a' };   // c0–c2: Labor (Adelie, Zügel, Esel)
 
   function draw(c, net) {
     const dpr = Math.min(2, window.devicePixelRatio || 1);

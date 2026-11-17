@@ -74,6 +74,9 @@ button { font:inherit; color:inherit; }
 .seedrow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:var(--ink-soft); font-size:14px; }
 .seedrow input { width:86px; font:inherit; font-size:16px; font-weight:600; padding:7px 9px; border-radius:10px;
   border:1px solid var(--line); background:var(--surface); color:var(--ink); text-align:center; }
+.lablink { display:block; margin-top:12px; padding:9px 12px; border-radius:12px; border:1px dashed var(--line);
+  color:var(--accent-ink); font-weight:600; font-size:14.5px; text-decoration:none; text-align:center; }
+.lablink:hover { border-color:var(--accent); }
 .seedrow .btn { padding:7px 12px; font-size:14px; box-shadow:none; }
 .seedrow small { flex-basis:100%; color:var(--ink-faint); }
 
@@ -352,6 +355,7 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
         <button id="seedDice" class="btn" type="button">Neue Welt</button>
         <small>Gleiche Nummer = gleiche Landschaft. Spielt alle dieselbe Welt: Wer kommt am tiefsten?</small>
       </div>
+      <a class="lablink" href="labor.html">Labor: Pinguine in 3D – 3 Neuronen, 6 Welten (Test)</a>
     </div>
   </div>
 

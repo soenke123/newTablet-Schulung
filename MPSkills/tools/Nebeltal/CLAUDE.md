@@ -29,6 +29,18 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   feste Farbskala `hRange`); Pfeil je Welt = ihr Anteil am 4D-Gradienten; ein Lernschritt springt
   beide. spiel.js übergibt über `openTwo` (S.state 'zwei' = spiel.js zeichnet nicht) und bekommt
   card/toMenu/stars zurückgereicht
+- `labor.html` + `js/labor.js` – „Labor: Pinguine in 3D“ (Test für EIN Gerät, Link unten im Menü):
+  `NTWelt.penguins3()` = alle 342 Pinguine (151 Adelie, 68 Zügel, 123 Esel), Eingänge Schnabellänge,
+  Schnabelhöhe, Flossenlänge (standardisiert), 3 Neuronen „Bin das ich?“ (σ, je 3 Kanten + Bias =
+  12 Werte), größtes p gewinnt; Fehler = Summe der 3 Log-Fehler + λ = 0,002 · Gewichte² (sonst liegt
+  das Esel-Tal im Unendlichen). Oben links die Wolke (Canvas 2D, eigene Projektion, ziehen = drehen,
+  dreht sich nach 2,5 s von selbst; je Neuron eine Ebene = 50 %-Grenze mit Pfeil zur Ja-Seite,
+  Legende schaltet Ebenen; falsch sortierte rot umkreist), oben rechts Netz (NTNetz, Farben c0–c2)
+  + Tabelle aller 12 Werte mit „erkannt x/y“, unten 2 × 3 Welten (Spalte = Neuron, oben Länge/Höhe,
+  unten Flosse/Bias; Farbe = Fehler DIESES Neurons, log-Skala 0,02–7, Höhenlinien; Punkt ziehen =
+  Werte setzen, Pfeil = −Gradient, weiße Spur). Die Neuronen hängen im Fehler nicht voneinander ab –
+  nur die beiden Welten eines Neurons verbiegen sich gegenseitig. Lernrate 4: nach ~30 Schritten
+  5–10 von 342 falsch, bestes Netz 5 falsch.
 - `js/grafik.js` – reines WebGL 1 ohne Bibliothek (CSP/Datenschutz): Gitter, Kugel/Kegel/Kasten,
   Nebel hängt an der Figur (uFogR), nicht an der Kamera; Höhenlinien im Shader
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm
@@ -79,9 +91,12 @@ localStorage `nt.best.<level>.<seed>`, Welt in `nt.seed`.
 
 ## Plan: „Gemeinsam ein Netz“ im Raum (Sönke 17.11.2026: „das kann eine richtig schöne runde Stunde sein“)
 
-Ablauf der Stunde: (1) jeder gegen jeden in Level 1–3 mit gleicher Welt-Nummer → (2) ein Neuron
-verstehen (Pinguine, Treppenhaus-Licht mit einem Neuron) → (3) die Klasse IST ein Netz und trainiert
-es gemeinsam.
+Ablauf der Stunde (Sönke 17.11.2026): kurz Level 1–3 als Einstieg (jeder gegen jeden, gleiche
+Welt-Nummer) → Sonnenblume (ein Neuron rechnet) → Pinguine (ein Neuron sortiert) → Treppenhaus-
+Licht mit einem Neuron (scheitern) → zwei Neuronen → Abschluss: die Klasse trainiert in Gruppen
+à 6 Geräten gemeinsam die Pinguin-Klassifizierung in 3D (3 Eingänge → 3 Neuronen = 12 Werte = 6
+Welten, Zweierteam je Neuron; Einzelgerät-Vorstufe = labor.html). Bei weniger Geräten bekommen
+manche 2 Welten.
 
 - **Ein Gerät = ein Neuron** (nicht „zwei Kanten“): eigene Welt = Gewichtspaar des eigenen Neurons,
   Bias lernt automatisch mit (sichtbar). Nichts im Netz steht fest – alles, was kein Gerät hat,
