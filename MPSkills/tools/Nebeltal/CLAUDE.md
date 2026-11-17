@@ -63,9 +63,15 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   sonst wären die beiden Ebenen des Zahl-Neurons keine Ebenen mehr.
 - `js/grafik.js` – reines WebGL 1 ohne Bibliothek (CSP/Datenschutz): Gitter, Kugel/Kegel/Kasten,
   Nebel hängt an der Figur (uFogR), nicht an der Kamera; Höhenlinien im Shader
-  Figur = kleiner Pinguin (`drawPenguin`, Sönke 17.11.2026) aus Kugeln/Kegeln: Schal in `playerColor`
-  (Level 7: orange A / violett B), watschelt über `player.phase` + `player.walk` (0–1, im Sprung 0):
-  Rollen links/rechts, Füße abwechselnd, Flossen schwingen, im Sprung ausgebreitet; im Stehen atmen + blinzeln
+  Figur = kleiner Pinguin (`drawPenguin`, Sönke 17.11.2026, 2. Fassung), eigenes Programm `progC`:
+  Körper + Kopf = EIN Drehkörper (`penguinBody`, Maße in `PB`), Bauch/Herz-Gesicht/Bäckchen malt der
+  Shader aus der Objekt-Position (uPat 1, scharf per fwidth) – keine aufgeklebten Kugeln (Z-Flackern);
+  weiches Umschlingungs-Licht + Himmel/Boden-Licht + Randlicht + Glanz; Normalen über `normalMat`
+  (inverse Transponierte, sonst sind gestauchte Kugeln falsch hell); Strickschal in `playerColor`
+  (Ring uPat 2, Zipfel uPat 3; Level 7: orange A / violett B); weicher Schatten liegt auf dem Hang
+  (uPat 4, Blending mit blendFuncSeparate – sonst schreibt er Alpha in die Leinwand und leuchtet hell).
+  Watscheln über `player.phase` + `player.walk` (0–1, im Sprung 0): Rollen, freier Fuß hebt ab,
+  Flossen gegengleich, Körper federt, Schalzipfel schwingen; im Sprung Flossen aus; im Stehen atmen + blinzeln
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm
 - `tool.js`/`tool.css` – nur der iframe-Rahmen (wie Reinforce Yourself), noch kein Austausch mit dem Raum
 
