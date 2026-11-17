@@ -489,6 +489,7 @@ try {
   await mia.app.locator('.subtabs [data-at="sql"].on').waitFor();
   ok('5  Adminbereich: SQL zuerst, Einstellungen rechts', (await mia.app.locator('.subtabs [data-at]').evaluateAll(b => b.map(x => x.dataset.at))).join() === 'sql,diagram,settings');
   await mia.app.locator('.db-tbl').first().waitFor();
+  ok('5  SQL: kein Knopf „Neu laden“', await mia.app.locator('#dbReload').count() === 0);
   ok('5  SQL: keine Beispiele, kein Warnsatz', await mia.app.locator('.db-exi, .db-side, #dbEx').count() === 0 && !/echte Netzwerk/.test(await mia.app.locator('.db-tools').textContent()));
   await mia.app.locator('.subtabs [data-at="settings"]').click();
   await mia.app.locator('[data-sc="light"]').waitFor();
@@ -523,8 +524,8 @@ try {
   ok('5  SELECT mit country/centimeter', /Deutschland/.test(await mia.app.locator('#dbOut').textContent()) && /158/.test(await mia.app.locator('#dbOut').textContent()));
   // Text eines Users mit \ am Ende darf in der Kopie nicht aus dem String ausbrechen
   await db.query(`update sh_users set bio = $1 where username = 'admin' and hub_id = (select id from sh_hubs where name = 'Pixelwelt')`, ["x\\', 1, 2); DELETE FROM users; --"]);
-  await mia.app.locator('#dbReload').click();
-  await mia.app.locator('.db-state', { hasText: 'Neu geladen' }).waitFor();
+  // kein „Neu laden“ mehr: Ausführen holt den Stand selbst, wenn die Kopie älter als 3 s ist
+  await wait(3200);
   await mia.app.locator('.ed-ta').fill('SELECT COUNT(*) AS n, MAX(bio) AS bio FROM users;');
   await mia.app.locator('#dbRun').click();
   // auf DIESES Ergebnis warten (Spalte bio), nicht auf die Tabelle vom Befehl davor
@@ -532,9 +533,8 @@ try {
   const bc = await mia.app.locator('.grid td').allTextContents();
   ok('5  Backslash im Text: keine Injektion in die Kopie', bc[0] === '2' && bc[1] === "x\\', 1, 2); DELETE FROM users; --", bc.join(' | '));
   await db.query(`update sh_users set bio = null where username = 'admin'`);
-  await mia.app.locator('#dbState').evaluate(e => { e.textContent = ''; });
-  await mia.app.locator('#dbReload').click();
-  await mia.app.locator('.db-state', { hasText: 'Neu geladen' }).waitFor();
+  // kein „Neu laden“ mehr: Ausführen holt den Stand selbst, wenn die Kopie älter als 3 s ist
+  await wait(3200);
   await mia.app.locator('.ed-ta').fill('SELECT * FROM users;');
   await mia.app.locator('#dbRun').click();
   // auf DIESES Ergebnis warten (Spalte password), nicht auf die Tabelle davor

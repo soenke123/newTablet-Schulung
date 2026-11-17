@@ -382,8 +382,7 @@ try {
   // Analytics: was in sessions steht
   await t.app.locator('.subtabs [data-at="sql"]').click();
   await t.app.locator('.ed-ta').waitFor();
-  await t.app.locator('#dbReload').click().catch(() => {});
-  await wait(1500);
+  await wait(3200);   // Ausführen holt dann den neuen Stand selbst
   await t.app.locator('.ed-ta').fill('SELECT * FROM sessions\nORDER BY id DESC\nLIMIT 8;');
   await t.app.locator('#dbRun').click();
   await t.app.locator('.grid th', { hasText: 'browser' }).first().waitFor({ timeout: 15000 }).catch(() => {});

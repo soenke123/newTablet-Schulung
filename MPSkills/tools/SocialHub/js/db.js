@@ -235,9 +235,9 @@
 
     host.innerHTML =
       '<div class="db">' +
-        '<div class="db-bar">' +
+        // nur für Meldungen (lädt …, Fehler); kein „Neu laden“ mehr – run() holt den Stand selbst
+        '<div class="db-bar" id="dbBar" hidden>' +
           '<span class="db-state" id="dbState"></span>' +
-          '<button type="button" class="btn btn--ghost btn--s" id="dbReload" title="Neuen Stand aus dem Netzwerk holen">↻ Neu laden</button>' +
         '</div>' +
         '<div class="db-tables" id="dbTables"></div>' +
         // 1× Tabelle antippen = ihre Attribute hier, 2× = SELECT * FROM … ausführen
@@ -275,12 +275,12 @@
       toast,
       errText: window.SHApi && window.SHApi.errText
     }) : null;
-    $('#dbReload').addEventListener('click', () => load(true));
 
     function state(t, bad) {
       const el = $('#dbState');
       el.textContent = t || '';
       el.className = 'db-state' + (bad ? ' bad' : '');
+      $('#dbBar').hidden = !t;
     }
 
     function show(t) {
@@ -328,10 +328,28 @@
       paintCols();
     }
 
+    // Oberer Schieberegler: leere Leiste so breit wie die Tabelle, scrollt mit dem Kasten mit
+    function wireScroll(out) {
+      out.querySelectorAll('.res-scroll').forEach(box => {
+        const top = box.previousElementSibling;
+        if (!top || !top.classList.contains('res-top')) return;
+        const fit = () => {
+          top.firstChild.style.width = box.scrollWidth + 'px';
+          top.hidden = box.scrollWidth <= box.clientWidth + 1;
+        };
+        top.addEventListener('scroll', () => { if (box.scrollLeft !== top.scrollLeft) box.scrollLeft = top.scrollLeft; });
+        box.addEventListener('scroll', () => { if (top.scrollLeft !== box.scrollLeft) top.scrollLeft = box.scrollLeft; });
+        fit();
+        if (window.ResizeObserver) new ResizeObserver(fit).observe(box);
+      });
+    }
+
     function resultHtml(r) {
       if (r.kind === 'rows') {
         if (!r.rows.length) return '<div class="res"><p class="muted">Keine Zeilen.</p></div>';
         return '<div class="res"><div class="res-n">' + r.rows.length + (r.truncated ? '+' : '') + ' Zeile' + (r.rows.length === 1 ? '' : 'n') + '</div>' +
+          // Schieberegler zusätzlich oben (wireScroll), Kopfzeile bleibt im Kasten stehen
+          '<div class="res-top" hidden><div></div></div>' +
           '<div class="res-scroll"><table class="grid"><thead><tr>' + r.columns.map(c => '<th>' + esc(c) + '</th>').join('') + '</tr></thead><tbody>' +
           r.rows.map(row => '<tr>' + row.map(v => v === null ? '<td class="null">NULL</td>' : '<td>' + esc(v) + '</td>').join('') + '</tr>').join('') +
           '</tbody></table></div></div>';
@@ -345,12 +363,14 @@
     /* ── Schnappschuss → SQLite ─────────────────────────────── */
     // Während des Ladens wartet run() – sonst vergleicht ein Schreiben mit dem alten Stand
     let loading = null;
-    function load(manual) {
-      loading = loadNow(manual).finally(() => { loading = null; });
+    let loadedAt = 0;              // wann die Kopie zuletzt vom Server kam
+    const FRESH_MS = 3000;         // jünger = vor dem Ausführen nicht nochmal holen
+    function load(quiet) {
+      loading = loadNow(quiet).finally(() => { loading = null; });
       return loading;
     }
-    async function loadNow(manual) {
-      state('lädt …');
+    async function loadNow(quiet) {
+      if (!quiet) state('lädt …');
       const res = await api('sh_db_snapshot', {});
       if (!res || !res.ok) { state(res && res.error === 'not_admin' ? 'Nur für Admins.' : 'Konnte das Netzwerk nicht laden.', true); return false; }
       const b = buildScript(res.tables || {});
@@ -361,7 +381,8 @@
         schema = o.schema;
         await readBase();
         paintTables();
-        state(manual ? 'Neu geladen.' : '');
+        loadedAt = Date.now();
+        state('');
         if (tab === 'diagram') drawDiagram();
         return true;
       } catch (e) {
@@ -429,6 +450,8 @@
       if (!sql.trim()) return;
       busy = true;
       if (loading) { try { await loading; } catch (e) { /* zeigt state */ } }
+      // Stand der anderen (neue Likes, Posts …) vor jedem Ausführen holen – ersetzt „Neu laden“
+      else if (Date.now() - loadedAt > FRESH_MS) { try { await load(true); } catch (e) { /* zeigt state */ } }
       editor.clearMark();
       $('#dbRun').disabled = true;
       try {
@@ -447,15 +470,16 @@
               state('');
               toast('Netzwerk geändert');
               opts.onChanged && opts.onChanged();
-              await load(false);
+              await load(true);
             } else {
               html = '<div class="res res--bad"><b>Das Netzwerk hat die Änderung abgelehnt:</b> ' +
                 esc((res && (res.message || res.error)) || 'unbekannt') + '<div class="res-hint">Nichts wurde geändert. Die Kopie wird neu geladen.</div></div>' + html;
-              await load(false);
+              await load(true);
             }
           }
         }
         $('#dbOut').innerHTML = html || '<p class="muted">Nichts zu tun.</p>';
+        wireScroll($('#dbOut'));
         paintTables();
       } catch (e) {
         $('#dbOut').innerHTML = '<div class="res res--bad">' + esc(e.message) + '</div>';
@@ -469,7 +493,7 @@
     load(false);
     return {
       show,
-      reload: () => load(true),
+      reload: () => load(false),
       destroy: () => { W.stop(); if (cmds) cmds.destroy(); }
     };
   }
