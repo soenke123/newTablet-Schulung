@@ -51,6 +51,9 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Simulation (30 Netze): Zügel = 1 → nach 60 Schritten ~13, nach 200 ~9 falsch; Adelie = 1 → nach
   200 ~9; Esel = 1 → ~28 – die Reihenfolge ist nicht egal (Arten sind keine Zahlen). Gut zu sehen:
   Hat ein verstecktes Neuron kaum Gewicht zum Zahl-Neuron, ist seine Welt flach – es ist egal.
+  Farbskala JE WELT (tiefster bis höchster Punkt, log) – mit gemeinsamer Skala wirkten die Welten
+  von A/B/C flach; ist der Unterschied wirklich klein (max − min < 0,03 oder max/min < 1,15),
+  steht „fast flach – dieses Neuron zählt gerade kaum“ in der Welt.
 - `js/grafik.js` – reines WebGL 1 ohne Bibliothek (CSP/Datenschutz): Gitter, Kugel/Kegel/Kasten,
   Nebel hängt an der Figur (uFogR), nicht an der Kamera; Höhenlinien im Shader
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm

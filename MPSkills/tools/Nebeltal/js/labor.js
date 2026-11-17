@@ -168,7 +168,6 @@
   // Farbe aus dem Fehler (logarithmisch), Palette wie die 3D-Landschaft
   const PAL_L = ['#2b8c86', '#78b660', '#cbb784', '#efe9dc'], PAL_D = ['#1f5f66', '#3f7d4f', '#7d7a5c', '#a7a6b4'];
   const hex = s => { const n = parseInt(s.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
-  const scale = () => zahl() ? [Math.log(0.008), Math.log(4)] : [Math.log(0.02), Math.log(7)];
   function color(L, pal, lo, hi) {
     const t = clamp((Math.log(Math.max(L, 1e-4)) - lo) / (hi - lo), 0, 1);
     const f = t * 3, i = Math.min(2, Math.floor(f)), q = f - i;
@@ -198,14 +197,23 @@
       return s / (2 * N);
     };
   }
+  // Jede Welt bekommt ihre eigene Farbskala (tiefster bis höchster Punkt,
+  // logarithmisch) – sonst wirken Welten mit kleinem Unterschied flach.
+  // Ist der Unterschied wirklich klein, sagt es ein Hinweis (c.flat).
   function heat(c) {
-    const pal = (dark() ? PAL_D : PAL_L).map(hex), [lo, hi] = scale();
-    const f = sliceFn(c), d = c.img.data, band = new Int16Array(G * G);
+    const pal = (dark() ? PAL_D : PAL_L).map(hex);
+    const f = sliceFn(c), d = c.img.data, band = new Int16Array(G * G), Ls = new Float32Array(G * G);
+    let mn = Infinity, mx = -Infinity;
     for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
-      const L = f(((x + 0.5) / G * 2 - 1) * R, (1 - (y + 0.5) / G * 2) * R);
-      const col = color(L, pal, lo, hi), o = (y * G + x) * 4;
+      const L = Math.max(f(((x + 0.5) / G * 2 - 1) * R, (1 - (y + 0.5) / G * 2) * R), 1e-6);
+      Ls[y * G + x] = L; if (L < mn) mn = L; if (L > mx) mx = L;
+    }
+    const lo = Math.log(mn), hi = Math.max(Math.log(mx), lo + 1e-3);
+    c.flat = mx - mn < 0.03 || mx / mn < 1.15;
+    for (let q = 0; q < G * G; q++) {
+      const col = color(Ls[q], pal, lo, hi), o = q * 4;
       d[o] = col[0]; d[o + 1] = col[1]; d[o + 2] = col[2]; d[o + 3] = 255;
-      band[y * G + x] = Math.floor((Math.log(Math.max(L, 1e-4)) - lo) / (hi - lo) * 14);
+      band[q] = Math.floor((Math.log(Ls[q]) - lo) / (hi - lo) * 12);
     }
     for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
       const b0 = band[y * G + x];
@@ -245,7 +253,13 @@
       x.beginPath(); x.moveTo(hx, hy); x.lineTo(hx - ux * 9 - uy * 6, hy - uy * 9 + ux * 6); x.lineTo(hx - ux * 9 + uy * 6, hy - uy * 9 - ux * 6); x.fill();
     }
     x.fillStyle = colOf(c.k); x.strokeStyle = '#fff'; x.lineWidth = 2.5;
-    x.beginPath(); x.arc(px, py, 8, 0, 7); x.fill(); x.stroke();
+    x.beginPath(); x.arc(px, py, 8, 0, 7); x.fill(); x.stroke();    if (c.flat) {
+      const t = 'fast flach – dieses Neuron zählt gerade kaum';
+      x.font = '700 12px Outfit, sans-serif'; x.textAlign = 'center';
+      const w = x.measureText(t).width + 14;
+      x.fillStyle = css('--surface'); x.globalAlpha = 0.88; x.fillRect(W / 2 - w / 2, H * 0.28 - 11, w, 20); x.globalAlpha = 1;
+      x.fillStyle = css('--ink-soft'); x.fillText(t, W / 2, H * 0.28 + 3);
+    }
   }
 
   /* ── Lernen: alle Werte springen gleichzeitig ── */
