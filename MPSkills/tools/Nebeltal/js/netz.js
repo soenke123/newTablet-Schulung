@@ -13,8 +13,8 @@
              edges: [{ from, to, w, group, fixed }] }
      x, y in 0…1 (Anteil der Zeichenfläche)
 
-   NTNetz.lights(el, cases, opts)   Wahrheitstabelle Treppenhaus-Licht
-     cases = [{ s1, s2, y, o, A?, B? }], opts.hidden = A/B-Spalten zeigen
+   NTNetz.lights(el, cases, opts)   die vier Nester (Level 6/7, braucht js/bilder.js)
+     cases = [{ s1 = Mama, s2 = Papa (±1), y = Ei ok, o, A?, B? }], opts.hidden = A/B-Spalten zeigen
    ══════════════════════════════════════════════════════════════ */
 
 window.NTNetz = (function () {
@@ -107,20 +107,22 @@ window.NTNetz = (function () {
     x.lineTo(l, t + r); x.quadraticCurveTo(l, t, l + r, t);
   }
 
-  // Schalter als kleine Wippe: oben = an
-  const sw = s => '<span class="sw ' + (s > 0 ? 'up' : 'dn') + '" title="' + (s > 0 ? 'oben' : 'unten') + '"><i></i></span>';
-  const lamp = (v, cls) => '<span class="lamp ' + (cls || '') + '" style="--on:' + v.toFixed(3) + '"></span>';
+  // Das Nest: Elternteil am Nest = kleiner Pinguin, weg = Welle mit Fisch;
+  // „soll“ = Haken/Kreuz, „Netz“ = Ei, je grüner, desto sicherer „gut versorgt“.
   const pct = v => Math.round(v * 100) + ' %';
+  const who = (s, scarf, name) => '<span class="who" title="' + name + (s > 0 ? ' am Nest' : ' fischt') + '">' +
+    (s > 0 ? NTBild.icon('peng', scarf) : NTBild.icon('away')) + '</span>';
 
   function lights(el, cases, opts) {
     opts = opts || {};
-    let h = '<table class="lights"><thead><tr><th>S1</th><th>S2</th><th>soll</th>' +
-      (opts.hidden ? '<th class="ha">A</th><th class="hb">B</th>' : '') + '<th>Netz</th></tr></thead><tbody>';
+    let h = '<table class="lights"><thead><tr><th>Mama</th><th>Papa</th><th>soll</th>' +
+      (opts.hidden ? '<th class="ha">A</th><th class="hb">B</th>' : '') + '<th>Netz: Ei ok?</th></tr></thead><tbody>';
     for (const c of cases) {
       const ok = (c.o > 0.5) === (c.y === 1);
-      h += '<tr class="' + (ok ? 'ok' : 'bad') + '"><td>' + sw(c.s1) + '</td><td>' + sw(c.s2) + '</td><td>' + lamp(c.y, 'soll') + '</td>' +
+      h += '<tr class="' + (ok ? 'ok' : 'bad') + '"><td>' + who(c.s1, '#12a37a', 'Mama') + '</td><td>' + who(c.s2, '#e0a210', 'Papa') + '</td>' +
+        '<td>' + NTBild.icon('ok', c.y === 1) + '</td>' +
         (opts.hidden ? '<td class="ha">' + pct(c.A) + '</td><td class="hb">' + pct(c.B) + '</td>' : '') +
-        '<td class="net">' + lamp(c.o) + '<b>' + pct(c.o) + '</b></td></tr>';
+        '<td class="net">' + NTBild.icon('egg', c.o) + '<b>' + pct(c.o) + '</b></td></tr>';
     }
     el.innerHTML = h + '</tbody></table>';
   }

@@ -16,7 +16,7 @@
 (function () {
   'use strict';
 
-  const V = '20261117a';
+  const V = '20261117g';
   let root = null, frame = null, ctx = null, onResize = null;
 
   const GAP = 12, MIN = 460;

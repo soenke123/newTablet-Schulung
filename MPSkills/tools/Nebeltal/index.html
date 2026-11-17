@@ -15,6 +15,7 @@
   --accent:#00b37e; --accent-ink:#00714f; --accent-dim:#d6f5e8; --on-accent:#fff;
   --orange:#f2711c; --gold:#e0a210; --warn:#d43a52; --blue:#2f7fe6;
   --glass:rgba(255,255,255,.86);
+  --ice:#e6f0f6; --sea:#3d8fb8; --fog:#eef2f1; --peng-edge:none;
   --shadow:0 2px 4px rgba(13,26,23,.05), 0 12px 28px -12px rgba(13,26,23,.28);
   color-scheme:light;
 }
@@ -24,6 +25,7 @@ html[data-theme="dark"] {
   --accent:#2ad49a; --accent-ink:#5ee6b6; --accent-dim:#123a2e; --on-accent:#05140f;
   --orange:#ff9d4d; --gold:#f4c13d; --warn:#ff6b81; --blue:#6aa8ff;
   --glass:rgba(18,20,27,.86);
+  --ice:#1c2532; --sea:#5fa9d4; --fog:#171a22; --peng-edge:rgba(255,255,255,.4);
   --shadow:0 2px 4px rgba(0,0,0,.2), 0 14px 30px -12px rgba(0,0,0,.6);
   color-scheme:dark;
 }
@@ -34,6 +36,7 @@ html[data-theme="dark"] {
     --accent:#2ad49a; --accent-ink:#5ee6b6; --accent-dim:#123a2e; --on-accent:#05140f;
     --orange:#ff9d4d; --gold:#f4c13d; --warn:#ff6b81; --blue:#6aa8ff;
     --glass:rgba(18,20,27,.86);
+  --ice:#1c2532; --sea:#5fa9d4; --fog:#171a22; --peng-edge:rgba(255,255,255,.4);
     --shadow:0 2px 4px rgba(0,0,0,.2), 0 14px 30px -12px rgba(0,0,0,.6);
     color-scheme:dark;
   }
@@ -86,12 +89,20 @@ button { font:inherit; color:inherit; }
 #card.result { align-items:flex-end; background:none; pointer-events:none; }
 @media (min-width: 900px) { #card.result { align-items:center; justify-content:flex-end; padding-right:24px; } #card.result .card-in { width:430px; } }
 #card.result .card-in { pointer-events:auto; }
-.card-in { width:min(520px, 100%); padding:22px 22px 18px; background:var(--surface); border:1px solid var(--line);
+.card-in { width:min(620px, 100%); padding:22px 22px 18px; background:var(--surface); border:1px solid var(--line);
   border-radius:16px; box-shadow:var(--shadow); max-height:100%; overflow:auto; }
 .card-kicker { font-size:12.5px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--accent-ink); }
 .card-in h2 { margin:4px 0 10px; font-size:26px; }
 .card-in p { margin:0 0 12px; line-height:1.5; font-size:16px; color:var(--ink-soft); }
 .card-in p b { color:var(--ink); }
+.card-in p.lead { font-size:17px; color:var(--ink); margin-bottom:10px; }
+.illwrap { margin:0 0 12px; border-radius:12px; overflow:hidden; border:1px solid var(--line); background:var(--surface-2); }
+.ill { display:block; width:100%; height:auto; }
+ol.steps { list-style:none; counter-reset:st; margin:0 0 10px; padding:0; display:grid; gap:8px; }
+ol.steps li { counter-increment:st; position:relative; padding:2px 0 2px 36px; line-height:1.45; font-size:15.5px; color:var(--ink-soft); }
+ol.steps li::before { content:counter(st); position:absolute; left:0; top:0; width:26px; height:26px; border-radius:50%;
+  display:grid; place-items:center; background:var(--accent-dim); color:var(--accent-ink); font-weight:700; font-size:14px; }
+ol.steps li b { color:var(--ink); }
 .formula { display:block; margin:8px 0 10px; padding:8px 12px; border-radius:10px; background:var(--accent-dim);
   color:var(--accent-ink); font-weight:700; text-align:center; }
 .ctrl { font-size:14px !important; padding-top:10px; border-top:1px solid var(--line); }
@@ -159,28 +170,24 @@ body:not([data-lvl="3"]) #lrDistRow { display:none; }
 #curveBox { position:absolute; right:12px; top:66px; width:200px; padding:8px 10px 6px; }
 .box-t { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); }
 #curve { width:100%; height:70px; display:block; }
-#modelBox { position:absolute; right:12px; top:170px; width:250px; padding:8px 10px 8px; }
-#plot { width:100%; height:150px; display:block; }
-#mnet { width:100%; height:58px; display:block; }
+#modelBox { position:absolute; right:12px; top:170px; width:290px; padding:8px 10px 8px; }
+#plot { width:100%; height:140px; display:block; }
+#mrow { width:100%; height:auto; display:block; }
 #xorBox { position:absolute; right:12px; top:170px; width:260px; padding:8px 10px 8px; }
 #xnet { width:100%; height:92px; display:block; }
 .ca { color:#f27828; } .cb { color:#8b5cf6; }
 
-/* Wahrheitstabelle Treppenhaus-Licht (js/netz.js) */
+/* Die vier Nester (js/netz.js lights) */
 table.lights { width:100%; border-collapse:collapse; font-size:13px; margin:2px 0 4px; }
 table.lights th { font-size:11px; font-weight:700; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; padding:2px 3px; text-align:center; }
-table.lights td { padding:3px 3px; text-align:center; font-variant-numeric:tabular-nums; border-top:1px solid var(--line); }
+table.lights td { padding:2px 3px; text-align:center; font-variant-numeric:tabular-nums; border-top:1px solid var(--line); vertical-align:middle; }
 table.lights td.net { text-align:left; white-space:nowrap; }
 table.lights td.net b { margin-left:6px; font-weight:700; }
 table.lights tr.bad td.net b { color:var(--warn); }
 table.lights tr.ok td.net b { color:var(--accent-ink); }
 table.lights .ha { color:#f27828; font-weight:600; } table.lights .hb { color:#8b5cf6; font-weight:600; }
-.sw { display:inline-block; width:14px; height:22px; border-radius:5px; border:1.5px solid var(--ink-soft); position:relative; vertical-align:middle; }
-.sw i { position:absolute; left:2px; right:2px; height:8px; border-radius:2px; background:var(--ink-soft); }
-.sw.up i { top:2px; } .sw.dn i { bottom:2px; }
-.lamp { display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:middle; border:1.5px solid var(--ink-faint);
-  background:rgba(255, 200, 40, var(--on)); box-shadow:0 0 calc(var(--on) * 12px) rgba(255, 190, 30, calc(var(--on) * .9)); }
-html[data-motion="low"] .lamp { box-shadow:none; }
+table.lights .ic { display:inline-block; vertical-align:middle; }
+.who { display:inline-flex; width:26px; height:26px; align-items:center; justify-content:center; }
 
 /* Level 7: zwei Welten (js/zwei.js) */
 #zwei { position:absolute; inset:0; background:var(--paper); }
@@ -228,6 +235,7 @@ body[data-state="result"] #zPanel { opacity:.25; }
 #pplot { width:100%; height:160px; display:block; }
 .plegend { display:flex; gap:12px; font-size:12.5px; font-weight:600; margin:2px 0 4px; }
 .plegend .pa { color:#2f80ed; } .plegend .pc { color:#f27828; }
+.plegend .pe { color:#12a37a; }
 .mvals { display:grid; grid-template-columns:auto 1fr; gap:1px 8px; font-size:13.5px; color:var(--ink-soft); }
 .mvals b { color:var(--ink); font-variant-numeric:tabular-nums; }
 
@@ -253,10 +261,10 @@ body[data-state="intro"] .hud-bottom { opacity:.0; pointer-events:none; }
 @media (max-width: 700px) {
   #curveBox { width:150px; top:62px; }
   #curve { height:52px; }
-  #modelBox { top:auto; bottom:150px; right:12px; width:190px; }
+  #modelBox { top:auto; bottom:150px; right:12px; width:230px; }
   #pengBox { top:auto; bottom:150px; right:12px; width:220px; }
   #pplot { height:120px; } #pnet { height:54px; }
-  #plot { height:110px; }
+  #plot { height:96px; }
   #gauge { width:62px; }
   .chip { font-size:13.5px; padding:7px 10px; }
 }
@@ -308,19 +316,20 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
     <div id="xorBox" class="glass" hidden>
       <div class="box-t">Das Neuron</div>
       <canvas id="xnet"></canvas>
-      <div class="box-t" style="margin-top:4px">Die vier Fälle</div>
+      <div class="box-t" style="margin-top:4px">Die vier Nester</div>
       <div id="xtab"></div>
-      <div class="mvals"><span>richtig geschaltet</span><b id="xRight">–</b></div>
+      <div class="mvals"><span>richtig beurteilt</span><b id="xRight">–</b></div>
     </div>
 
     <div id="modelBox" class="glass" hidden>
-      <div class="box-t">Das Neuron</div>
-      <canvas id="mnet"></canvas>
-      <div class="box-t" style="margin-top:4px">Was es vorhersagt</div>
+      <div class="box-t">Das Neuron – Pinguin für Pinguin</div>
+      <svg id="mrow" viewBox="0 0 280 100" aria-label="Das Neuron schätzt das Gewicht des gezeigten Pinguins"></svg>
+      <div class="box-t" style="margin-top:2px">Alle 342 Pinguine</div>
       <canvas id="plot"></canvas>
+      <div class="plegend"><span class="pa">● Adelie</span><span class="pc">● Zügel</span><span class="pe">● Esel</span></div>
       <div class="mvals">
-        <span>Gewicht w</span><b><span id="mW">–</span> cm pro Woche</b>
-        <span>Bias b</span><b><span id="mB">–</span> cm in Woche 5</b>
+        <span>Gewicht w</span><b><span id="mW">–</span> kg pro cm Flosse</b>
+        <span>Bias b</span><b><span id="mB">–</span> kg bei 20 cm</b>
         <span>Fehler</span><b id="mL">–</b>
       </div>
     </div>
@@ -363,10 +372,11 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
   <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
 </div>
 
-<script src="js/welt.js?v=20261117a"></script>
-<script src="js/grafik.js?v=20261117a"></script>
-<script src="js/netz.js?v=20261117a"></script>
-<script src="js/zwei.js?v=20261117a"></script>
-<script src="js/spiel.js?v=20261117a"></script>
+<script src="js/welt.js?v=20261117g"></script>
+<script src="js/bilder.js?v=20261117g"></script>
+<script src="js/grafik.js?v=20261117g"></script>
+<script src="js/netz.js?v=20261117g"></script>
+<script src="js/zwei.js?v=20261117g"></script>
+<script src="js/spiel.js?v=20261117g"></script>
 </body>
 </html>

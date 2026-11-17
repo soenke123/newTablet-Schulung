@@ -10,18 +10,32 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 - `js/welt.js` – Landschaften: `hills(seed, level)` (Mulden = lokale Minima, Rand ringsum; Größe und
   Schwierigkeit je Level in `CFG`: Level 1/2 W 85 mit ~20 Mulden, die tiefste schmal und abseits
   der Mitte; Level 3 W 50),
-  `model(seed)` (Fehler einer Geraden y = w·(x−5) + b durch 9 Messpunkte; Schritte in w/b,
-  Höhe gestaucht mit 1−e^(−L/L0), Richtung bleibt gleich),
+  `model(seed)` (Level 4 „Wie schwer ist der Pinguin?“: alle 342 Palmer-Pinguine mit Flosse (cm) und
+  Gewicht (kg), `MASS` in welt.js; Neuron ohne σ Gewicht = w·(Flosse − 20 cm) + b, w −1…2, b 1,4…7;
+  Höhe = mittleres Fehlerquadrat gestaucht (L0 3), angezeigt wird die Wurzel = „± kg im Schnitt“;
+  bestes Neuron w ≈ 0,50, b ≈ 4,16, ± 0,39 kg; ab Lernrate ≈ 0,5 explodiert es; Seed wählt nur den Start),
   `penguins(seed)` (Level 5: echte Palmer-Penguins-Daten CC0, 68 Adelie + 68 Zügel, Schnabellänge/-höhe
   standardisiert, Sigmoid-Neuron ohne Bias, Höhe = Log-Fehler gestaucht, Gewichte ±20, Tal bei
   w ≈ (15,2 | −4,6) mit 1 Fehler; Seed wählt nur den Start, Daten bleiben gleich),
-  `xor(seed).one()` / `.two()` (Level 6/7: Treppenhaus-Licht = XOR, Schalter ±1; one = ein Neuron
-  σ(w₁S1 + w₂S2), Tal in der Mitte = überall 50 %; two = Neuronen A/B mit festem Bias −3, Lampe
+  `xor(seed).one()` / `.two()` (Level 6/7: „Das Nest“ = XOR – Pinguin-Eltern wechseln sich ab, dem Ei
+  geht es nur gut, wenn GENAU EINER am Nest ist; Eingänge Mama/Papa am Nest ±1 (im Code s1/s2);
+  one = ein Neuron σ(w₁·Mama + w₂·Papa), Tal in der Mitte = überall 50 %; two = Neuronen A/B mit festem Bias −3, Lampe
   σ(8A + 8B − 5), lernbar a₁ a₂ b₁ b₂ ±8, `h(k, x, z, andere)` = Schnitt; ~80 % der Welten lernen
   es mit Lernrate 4 in 40 Schritten, ~20 % bleiben bei 3 von 4 hängen – gewollt, s. Ergebnistext)
 - `js/netz.js` – kleine Netze IMMER ganz zeichnen (`NTNetz.draw`): Kanten mit Zahl, Farbe = wer sie
   bewegt (orange Welt A, violett Welt B, grau gestrichelt = fest), Dicke = Größe; `NTNetz.lights` =
-  Wahrheitstabelle mit Schaltern und Lampen (Spalten A/B optional)
+  die vier Nester (Mama/Papa als kleiner Pinguin oder Welle mit Fisch, soll = Haken/Kreuz, Netz = Ei,
+  je grüner desto sicherer; Spalten A/B optional; braucht js/bilder.js)
+- `js/bilder.js` – alle Bilder als SVG-Text (Farben über CSS-Variablen, hell/dunkel; `--ice`, `--sea`,
+  `--fog`, `--peng-edge` = Umriss nur im Dunkeln): `NTBild.peng({sp: adelie|chin|gentoo, x, y, s, scarf})`
+  Pinguin von vorn (Arten erkennbar: Adelie weißer Augenring, Zügel weißes Gesicht mit schwarzem
+  „Zügel“, Esel weißer Stirnstreifen + oranger Schnabel), `NTBild.icon` (peng/away/egg/ok für Tabellen),
+  `NTBild.scene(level)` = Bild der Erklärkarte (1 Nebel mit Höhenmesser, 2 Pfeil bergab + kleine/tiefste
+  Mulde, 3 drei Täler Lernrate zu klein/gut/zu groß, 4 Pinguin mit Lineal an der Flosse + Neuron +
+  Formel + Weltkarte, 5 Adelie/Zügel + Schnabel messen + Neuron, 6 die vier Nester + Neuron, 7 Netz mit
+  A/B + Welt A/B); Weltkarte `karte()` = Raute mit Mulde, Achsen in Gewichtsfarbe, Pinguin, Flagge.
+  Erklärkarte (`introHtml` in spiel.js, auch für zwei.js): `lead` (ein Satz Kontext) → Bild →
+  `formula` (optional) → `steps` (nummeriert, je Schritt EIN Gedanke) → Steuerung
 - `js/zwei.js` – Level 7 komplett: zwei Canvas/zwei NTGrafik (quer nebeneinander, hoch übereinander),
   Kamera fest (rechts = erstes Gewicht größer, oben = zweites), Hälfte ziehen = Figur dieser Welt
   (zwei Daumen/zwei Personen), WASD = A, Pfeile = B, Leertaste = Lernschritt; Schnitt der einen
@@ -43,7 +57,7 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   5–10 von 342 falsch, bestes Netz 5 falsch.
   Schalter „+ Zahl-Neuron“ (Sönke 17.11.2026, Modus `zahl`): A, B, C werden zur versteckten Schicht
   (eigene Farben, NICHT die Artfarben – ihre Bedeutung lernt das Netz selbst), dahinter EIN Neuron
-  ohne σ wie die Sonnenblume: Zahl < 0,5 / bis 1,5 / darüber = Art mit 0/1/2; welche Art die 1
+  ohne σ wie in Level 4 (Pinguin wiegen): Zahl < 0,5 / bis 1,5 / darüber = Art mit 0/1/2; welche Art die 1
   bekommt, ist FEST Zügel (Sönke 17.11.2026; vorher wählbar, `#ordSeg` ist nur noch Anzeige). 16 Werte = 8 Welten (2 × 4), Fehler = ½ · mittleres
   Abstandsquadrat, ALLE Welten hängen voneinander ab. Zweite Wolke „Was das Zahl-Neuron sieht“:
   Pinguine an ihren Antworten (A, B, C je 0–100 %), zwei parallele Ebenen bei 0,5 und 1,5 = drei
@@ -86,10 +100,14 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    (echter Gradientenschritt – an flachen Stellen also kürzer bei gleicher Lernrate; die Rechnung
    steht live unter dem Regler, `#lrDist`), 20 Sprünge (= begrenzte Rechenzeit; ohne Grenze wäre
    eine winzige Lernrate nie ein Problem), Ring = Landepunkt, zu weit = aus der Welt.
-4. **Die Sonnenblume** – ein Neuron OHNE σ (Höhe = w · Woche + b) sagt eine Zahl voraus; Welt =
-   sein Fehler (glatte Schüssel). Rechts `#modelBox`: Mini-Neuron (`#mnet`) + Gerade über den
-   Messpunkten. Laufen + „Training starten“ (30 Schritte). Ab Lernrate ≈ 0,15 explodiert es –
-   Lernziel hier ist die Lernrate.
+4. **Wie schwer ist der Pinguin?** (bis 17.11.2026 „Die Sonnenblume“) – ein Neuron OHNE σ schätzt
+   aus der Flosse das Gewicht (Gewicht = w · (Flosse − 20 cm) + b), 342 echte Pinguine; Welt = sein
+   Fehler (glatte Schüssel). Rechts `#modelBox`: oben `#mrow` (SVG) „Pinguin für Pinguin“ – alle 1,6 s
+   ein anderer echter Pinguin (Bild seiner Art, Flosse → · w → Σ + b → ≈ Schätzung, echtes Gewicht,
+   „x kg zu leicht/schwer“), darunter alle 342 als Punktwolke (Artfarben wie im Labor) mit der Geraden,
+   der Pinguin von oben umkreist + roter Fehlerstrich. Laufen + „Training starten“ (30 Schritte),
+   Lernrate 0,01–1, Start 0,03, ab ≈ 0,5 explodiert es – Lernziel hier ist die Lernrate. Sterne nach
+   Verhältnis zum besten Fehler (< 1,02 / 1,15 / 1,6).
 5. **Pinguine sortieren** – die Welt ist der Fehler EINES Neurons, das Adelie- und Zügelpinguine
    trennt (x = w₁ Länge, z = w₂ Höhe). Laufen UND Springen/„Training starten“ (`walk: true` im
    Sprung-Level), 40 Schritte, Lernrate 0,2–50 (ab ≈ 35 fliegt man raus). Rechts `#pengBox`:
@@ -97,14 +115,16 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    Linie = 50 %, falsch sortierte rot umkreist) – live beim Laufen. Wertung nach falsch sortierten
    Pinguinen. Richtung vom Mittelpunkt = Winkel der Trennlinie, Abstand = Sicherheit; falsche Seite
    ist eine flache Hochebene, die richtige eine lange Rinne.
-6. **Das Treppenhaus-Licht** – ein Neuron soll die Wechselschaltung (XOR) lernen und kann es nicht:
-   tiefster Punkt = Mitte, überall 50 %. Rechts `#xorBox`: Neuron + vier Fälle mit Lampen. Wertung:
-   wie nah am (unvermeidlichen) Minimum.
+6. **Das Nest** (bis 17.11.2026 „Das Treppenhaus-Licht“) – Pinguin-Eltern wechseln sich ab; dem Ei
+   geht es nur gut, wenn genau einer am Nest ist (beide weg: Ei kühlt aus, beide da: keiner holt
+   Futter) = XOR. Ein Neuron soll es lernen und kann es nicht: tiefster Punkt = Mitte, überall 50 %.
+   Rechts `#xorBox`: Neuron (Mama/Papa → σ → Ei ok?) + die vier Nester. Wertung: wie nah am
+   (unvermeidlichen) Minimum.
 7. **Zwei Neuronen, zwei Welten** – `js/zwei.js`: Welt A = Kanten in Neuron A, Welt B = Kanten in
    Neuron B; beide Figuren immer auf derselben Höhe (ein Netz), die Welt der einen verbiegt sich,
    wenn die andere läuft. Mitte oben `#zPanel`: das ganze Netz + Tabelle mit A/B-Werten. Wertung:
-   4 von 4 richtig (3 Sterne bei Fehler < 0,15); bei 3 von 4 erklärt das Ergebnis „beide haben
-   dasselbe gelernt“. Am Ende Flagge am tiefsten Punkt des jeweiligen Schnitts.
+   4 von 4 Nestern richtig (3 Sterne bei Fehler < 0,15); bei 3 von 4 erklärt das Ergebnis „beide
+   haben dasselbe gelernt“ (eines muss „nur Mama am Nest“, das andere „nur Papa am Nest“ lernen). Am Ende Flagge am tiefsten Punkt des jeweiligen Schnitts.
 
 Ab Level 4 gilt überall: eine Welt = ein echtes Modell, das ganze Netz ist zu sehen, Laufen UND
 Training im selben Level.
@@ -121,8 +141,8 @@ localStorage `nt.best.<level>.<seed>`, Welt in `nt.seed`.
 ## Plan: „Gemeinsam ein Netz“ im Raum (Sönke 17.11.2026: „das kann eine richtig schöne runde Stunde sein“)
 
 Ablauf der Stunde (Sönke 17.11.2026): kurz Level 1–3 als Einstieg (jeder gegen jeden, gleiche
-Welt-Nummer) → Sonnenblume (ein Neuron rechnet) → Pinguine (ein Neuron sortiert) → Treppenhaus-
-Licht mit einem Neuron (scheitern) → zwei Neuronen → Abschluss: die Klasse trainiert in Gruppen
+Welt-Nummer) → Pinguin wiegen (ein Neuron rechnet) → Pinguine (ein Neuron sortiert) → Das Nest
+mit einem Neuron (scheitern) → zwei Neuronen → Abschluss: die Klasse trainiert in Gruppen
 à 6 Geräten gemeinsam die Pinguin-Klassifizierung in 3D (3 Eingänge → 3 Neuronen = 12 Werte = 6
 Welten, Zweierteam je Neuron; Einzelgerät-Vorstufe = labor.html). Bei weniger Geräten bekommen
 manche 2 Welten.
@@ -133,7 +153,7 @@ manche 2 Welten.
 - **Aufgabe, die mit der Neuronenzahl wächst: Zielscheibe** (Punkte im Kreis = Treffer). Jedes
   versteckte Neuron = eine gerade Linie; Lampe an, wenn ein Punkt auf der richtigen Seite aller
   Linien liegt. Beamer zeigt die Linien in der Farbe ihres Geräts: 3 Neuronen = Dreieck, 5 =
-  Fünfeck, 8 ≈ Kreis. Kleine Gruppen auch Treppenhaus-Licht (2-2-1 = 9 Werte).
+  Fünfeck, 8 ≈ Kreis. Kleine Gruppen auch das Nest (2-2-1 = 9 Werte).
 - **Klassengröße 5–30 Geräte:** 3–9 Geräte = ein Netz für alle; ab ~10 Gruppen à 4–7, jede Gruppe
   ein eigenes Netz für dieselbe Aufgabe, Beamer zeigt alle Netze nebeneinander (Wettlauf). Kein
   Netz mit 30 Neuronen – muss lesbar bleiben (Grundsatz: immer das ganze Netz sehen).
@@ -141,7 +161,7 @@ manche 2 Welten.
   Lernschritt“ der Lehrkraft = alle springen gleichzeitig (echter Gradient über alle Gewichte).
 - Technik: Migration für den Netz-Zustand je Raum/Gruppe, Beamer-Ansicht der Lehrkraft, Tablets
   melden ihre Position 2–3× pro Sekunde; Rechnen/Zeichnen gibt es schon (welt.js, netz.js, zwei.js).
-- Vorstufe allein am Tablet (Level 7 „Variante A“): alle 9 Werte des Treppenhaus-Netzes lernen,
+- Vorstufe allein am Tablet (Level 7 „Variante A“): alle 9 Werte des Nest-Netzes lernen,
   zwei Welten frei wählbar (Kanten im Netz antippen), Rest lernt automatisch mit.
 
 ## Offen (nach dem ersten Ausprobieren ordnen)

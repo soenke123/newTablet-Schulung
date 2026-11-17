@@ -8,7 +8,7 @@
                         gewinnt; 12 Werte = 6 Welten (2 × 3).
    „+ Zahl-Neuron“ (zahl) die drei σ-Neuronen A, B, C werden zur
                         versteckten Schicht, dahinter EIN Neuron ohne σ
-                        (wie die Sonnenblume) rechnet eine Zahl:
+                        (wie das Gewichts-Neuron in Level 4) rechnet eine Zahl:
                         unter 0,5 = Art mit 0, bis 1,5 = Art mit 1,
                         darüber = Art mit 2 (welche Art die 1 bekommt,
                         ist wählbar – und nicht egal). 16 Werte = 8

@@ -1,7 +1,7 @@
 /* ══════════════════════════════════════════════════════════════
    Nebeltal — js/zwei.js   ·   Level 7: zwei Welten, ein Netz
    ══════════════════════════════════════════════════════════════
-   Das Treppenhaus-Licht mit zwei Neuronen A und B. Lernbar sind vier
+   Das Nest (Mama/Papa am Nest → Ei ok?, XOR) mit zwei Neuronen A und B. Lernbar sind vier
    Kanten: a₁, a₂ (in Neuron A) und b₁, b₂ (in Neuron B). Darum zwei
    Welten nebeneinander (Hochformat: übereinander):
 
@@ -145,11 +145,9 @@ window.NTZwei = (function () {
     refreshAuto();
     panel();
     if (!running) { running = true; last = performance.now(); raf = requestAnimationFrame(tick); }
-    api.card(
-      '<div class="card-kicker">Level ' + L.id + ' · Welt ' + seed + '</div>' +
-      '<h2>' + L.name + '</h2><p>' + L.intro + '</p>' +
-      '<p class="ctrl"><b>Steuerung:</b> in der einen Hälfte ziehen = Figur A, in der anderen = Figur B · ' +
-      '<b>Ein Lernschritt</b> bewegt beide gleichzeitig<br><span class="kbd">Tastatur: WASD = A · Pfeile = B · Leertaste = Lernschritt</span></p>',
+    api.card(api.introHtml(L, seed,
+      '<b>Steuerung:</b> in der einen Hälfte ziehen = Figur A, in der anderen = Figur B · ' +
+      '<b>Ein Lernschritt</b> bewegt beide gleichzeitig<br><span class="kbd">Tastatur: WASD = A · Pfeile = B · Leertaste = Lernschritt</span>'),
       [['Los geht’s', start, 'primary'], ['Übersicht', api.toMenu]]);
   }
 
@@ -158,7 +156,7 @@ window.NTZwei = (function () {
     api.playing();
     $('#card').hidden = true;
     document.body.dataset.state = 'play';
-    toast('Bewegt die Figuren – und schaut auf die Lampen im Netz.');
+    toast('Bewegt die Figuren – und schaut oben auf die vier Nester.');
   }
 
   function close() {
@@ -287,13 +285,13 @@ window.NTZwei = (function () {
     const w = all(), cs = X.fwd(...w);
     NTNetz.draw($('#znet'), {
       nodes: [
-        { id: 's1', kind: 'in', x: 0, y: 0.2, label: 'S1' }, { id: 's2', kind: 'in', x: 0, y: 0.8, label: 'S2' },
+        { id: 's1', kind: 'in', x: 0.04, y: 0.2, label: 'Mama' }, { id: 's2', kind: 'in', x: 0.04, y: 0.8, label: 'Papa' },
         { id: 'A', kind: 'n', x: 0.48, y: 0.2, label: 'A', group: 'a', bias: -3 },
         { id: 'B', kind: 'n', x: 0.48, y: 0.8, label: 'B', group: 'b', bias: -3 },
         { id: 'o', kind: 'n', x: 0.8, y: 0.5, bias: -5 },
-        { id: 'l', kind: 'out', x: 0.98, y: 0.5, label: '💡' }],
+        { id: 'l', kind: 'out', x: 0.92, y: 0.5, label: 'Ei ok?' }],
       edges: [
-        // gerade Kanten in der Mitte beschriften, gekreuzte nah am Schalter – so überlappt nichts
+        // gerade Kanten in der Mitte beschriften, gekreuzte nah am Eingang – so überlappt nichts
         { from: 's1', to: 'A', w: w[0], group: 'a', labelAt: 0.55 }, { from: 's2', to: 'A', w: w[1], group: 'a', labelAt: 0.26 },
         { from: 's1', to: 'B', w: w[2], group: 'b', labelAt: 0.26 }, { from: 's2', to: 'B', w: w[3], group: 'b', labelAt: 0.55 },
         { from: 'A', to: 'o', w: 8, group: 'fix', fixed: true }, { from: 'B', to: 'o', w: 8, group: 'fix', fixed: true },
@@ -341,13 +339,13 @@ window.NTZwei = (function () {
     if (r === 3) {
       const same = Math.sign(w[0] - w[1]) === Math.sign(w[2] - w[3]);
       notes.push(same
-        ? 'Beide Neuronen haben <b>dasselbe gelernt</b> – darum fehlt ein Fall. Ein Neuron muss „S1 oben, S2 unten“ erkennen, das andere „S2 oben, S1 unten“.'
+        ? 'Beide Neuronen haben <b>dasselbe gelernt</b> – darum fehlt ein Nest. Ein Neuron muss „nur Mama am Nest“ erkennen, das andere „nur Papa am Nest“.'
         : 'Ein Fall fehlt noch. Mit ein paar Schritten mehr oder einer anderen Lernrate klappt es vielleicht.');
     }
     if (st.outs) notes.push('Mindestens ein Schritt ging ins Leere – da war die <b>Lernrate zu groß</b>.');
     api.card(
       '<div class="card-kicker">Level ' + L.id + ' · Welt ' + st.seed + '</div>' +
-      '<div class="res-head">' + api.stars(n) + '<p>Das Netz schaltet die Lampe in <b>' + r + ' von 4</b> Fällen richtig' +
+      '<div class="res-head">' + api.stars(n) + '<p>Das Netz beurteilt <b>' + r + ' von 4</b> Nestern richtig' +
       '<br><small>Fehler ' + api.fmt(Lv, 2) + '</small></p></div>' +
       (notes.length ? '<p class="note">' + notes.join(' ') + '</p>' : '') +
       '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',

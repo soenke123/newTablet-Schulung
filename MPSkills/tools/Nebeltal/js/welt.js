@@ -18,11 +18,11 @@
      hills(seed, n)  Hügel mit Mulden – Level 1–3. Mehrere Mulden =
                      lokale Minima, ein Rand ringsum hält einen drin.
      model(seed)     Level 4: die Welt IST der Fehler eines Modells.
-                     Eine Gerade y = w·(x−5) + b soll durch Messpunkte
-                     (Sonnenblume: Höhe nach Wochen). Rechts/links = w,
-                     vor/zurück = b, Höhe = mittlerer quadratischer
-                     Fehler (gestaucht, damit der Rand nicht in den
-                     Himmel wächst – die Richtung bleibt dieselbe).
+                     Ein Neuron ohne σ schätzt das Gewicht eines Pinguins
+                     aus seiner Flosse: Gewicht = w·(Flosse − 20) + b.
+                     Rechts/links = w, vor/zurück = b, Höhe = mittlerer
+                     quadratischer Fehler (gestaucht, damit der Rand nicht
+                     in den Himmel wächst – die Richtung bleibt dieselbe).
                      Geschritten wird in w und b, wie im echten Training.
    ══════════════════════════════════════════════════════════════ */
 
@@ -141,57 +141,66 @@ window.NTWelt = (function () {
     };
   }
 
-  /* ── Level 4: der Fehler eines Modells ──────────────────────
-     Sonnenblume, Höhe in cm nach Woche 1 … 9. Modell
-     y = w·(x − 5) + b: w = Wachstum pro Woche, b = Höhe in Woche 5.
-     (x − 5) statt x: so liegen w und b nicht auf einer schrägen
-     Rinne, das Tal wird nur länglich – in echt nennt man das
-     „Daten zentrieren“.) */
+  /* ── Level 4: Wie schwer ist der Pinguin? ───────────────────
+     Echte Messdaten (Palmer Penguins, Antarktis 2007–2009, CC0): alle
+     342 Pinguine mit Flossenlänge (mm) und Körpergewicht (g) –
+     151 Adelie, 68 Zügel, 123 Esel. Ein Neuron OHNE σ schätzt das
+     Gewicht aus der Flosse:  Gewicht = w·(Flosse − 20 cm) + b.
+     w = kg pro cm Flosse, b = Gewicht eines Pinguins mit 20-cm-Flosse.
+     (− 20 cm: so liegen w und b nicht auf einer schrägen Rinne – in
+     echt nennt man das „Daten zentrieren“.) Rechts/links = w,
+     vor/zurück = b, Höhe = mittlerer quadratischer Fehler (gestaucht).
+     Angezeigt wird die Wurzel daraus: „so viele kg liegt das Neuron im
+     Schnitt daneben“. Bestes Neuron: w ≈ 0,50, b ≈ 4,16, ± 0,39 kg.
+     Ab Lernrate ≈ 0,5 explodiert das Training (größter Eigenwert der
+     Krümmung ≈ 4). Der Seed wählt nur den Start, die Daten bleiben. */
+  const MASS = ["181,3.75;186,3.8;195,3.25;193,3.45;190,3.65;181,3.625;195,4.675;193,3.475;190,4.25;186,3.3;180,3.7;182,3.2;191,3.8;198,4.4;185,3.7;195,3.45;197,4.5;184,3.325;194,4.2;174,3.4;180,3.6;189,3.8;185,3.95;180,3.8;187,3.8;183,3.55;187,3.2;172,3.15;180,3.95;178,3.25;178,3.9;188,3.3;184,3.9;195,3.325;196,4.15;190,3.95;180,3.55;181,3.3;184,4.65;182,3.15;195,3.9;186,3.1;196,4.4;185,3;190,4.6;182,3.425;179,2.975;190,3.45;191,4.15;186,3.5;188,4.3;190,3.45;200,4.05;187,2.9;191,3.7;186,3.55;193,3.8;181,2.85;194,3.75;185,3.15;195,4.4;185,3.6;192,4.05;184,2.85;192,3.95;195,3.35;188,4.1;190,3.05;198,4.45;190,3.6;190,3.9;196,3.55;197,4.15;190,3.7;195,4.25;191,3.7;184,3.9;187,3.55;195,4;189,3.2;196,4.7;187,3.8;193,4.2;191,3.35;194,3.55;190,3.8;189,3.5;189,3.95;190,3.6;202,3.55;205,4.3;185,3.4;186,4.45;187,3.3;208,4.3;190,3.7;196,4.35;178,2.9;192,4.1;192,3.725;203,4.725;183,3.075;190,4.25;193,2.925;184,3.55;199,3.75;190,3.9;181,3.175;197,4.775;198,3.825;191,4.6;193,3.2;197,4.275;191,3.9;196,4.075;188,2.9;199,3.775;189,3.35;189,3.325;187,3.15;198,3.5;176,3.45;202,3.875;186,3.05;199,4;191,3.275;195,4.3;191,3.05;210,4;190,3.325;197,3.5;193,3.5;199,4.475;187,3.425;190,3.9;191,3.175;200,3.975;185,3.4;193,4.25;193,3.4;187,3.475;188,3.05;190,3.725;192,3;185,3.65;190,4.25;184,3.475;195,3.45;193,3.75;187,3.7;201,4", "192,3.5;196,3.9;193,3.65;188,3.525;197,3.725;198,3.95;178,3.25;197,3.75;195,4.15;198,3.7;193,3.8;194,3.775;185,3.7;201,4.05;190,3.575;201,4.05;197,3.3;181,3.7;190,3.45;195,4.4;181,3.6;191,3.4;187,2.9;193,3.8;195,3.3;197,4.15;200,3.4;200,3.8;191,3.7;205,4.55;187,3.2;201,4.3;187,3.35;203,4.1;195,3.6;199,3.9;195,3.85;210,4.8;192,2.7;205,4.5;210,3.95;187,3.65;196,3.55;196,3.5;196,3.675;201,4.45;190,3.4;212,4.3;187,3.25;198,3.675;199,3.325;201,3.95;193,3.6;203,4.05;187,3.35;197,3.45;191,3.25;203,4.05;202,3.8;194,3.525;206,3.95;189,3.65;195,3.65;207,4;202,3.4;193,3.775;210,4.1;198,3.775", "211,4.5;230,5.7;210,4.45;218,5.7;215,5.4;210,4.55;211,4.8;219,5.2;209,4.4;215,5.15;214,4.65;216,5.55;214,4.65;213,5.85;210,4.2;217,5.85;210,4.15;221,6.3;209,4.8;222,5.35;218,5.7;215,5;213,4.4;215,5.05;215,5;215,5.1;216,4.1;215,5.65;210,4.6;220,5.55;222,5.25;209,4.7;207,5.05;230,6.05;220,5.15;220,5.4;213,4.95;219,5.25;208,4.35;208,5.35;208,3.95;225,5.7;210,4.3;216,4.75;222,5.55;217,4.9;210,4.2;225,5.4;213,5.1;215,5.3;210,4.85;220,5.3;210,4.4;225,5;217,4.9;220,5.05;208,4.3;220,5;208,4.45;224,5.55;208,4.2;221,5.3;214,4.4;231,5.65;219,4.7;230,5.7;214,4.65;229,5.8;220,4.7;223,5.55;216,4.75;221,5;221,5.1;217,5.2;216,4.7;230,5.8;209,4.6;220,6;215,4.75;223,5.95;212,4.625;221,5.45;212,4.725;224,5.35;212,4.75;228,5.6;218,4.6;218,5.3;212,4.875;230,5.55;218,4.95;228,5.4;212,4.75;224,5.65;214,4.85;226,5.2;216,4.925;222,4.875;203,4.625;225,5.25;219,4.85;228,5.6;215,4.975;228,5.5;216,4.725;215,5.5;210,4.7;219,5.5;208,4.575;209,5.5;216,5;229,5.95;213,4.65;230,5.5;217,4.375;230,5.85;217,4.875;222,6;214,4.925;215,4.85;222,5.75;212,5.2;213,5.4"];
+  const MASS_SP = ['adelie', 'chin', 'gentoo'];
   function model(seed) {
     const r = rng(seed * 31337 + 4);
-    const wTrue = 9 + r() * 6, bTrue = 50 + r() * 25;
     const pts = [];
-    for (let x = 1; x <= 9; x++) {
-      const noise = (r() + r() + r() - 1.5) * 12;
-      pts.push({ x, y: Math.max(2, wTrue * (x - 5) + bTrue + noise) });
-    }
-    const W0 = -10, W1 = 30, B0 = 0, B1 = 130;
+    MASS.forEach((str, k) => {
+      for (const q of str.split(';')) { const [f, m] = q.split(',').map(Number); pts.push({ x: f / 10, y: m, sp: MASS_SP[k] }); }
+    });
+    const X0 = 20;                                    // Flosse wird um 20 cm zentriert
+    const W0 = -1, W1 = 2, B0 = 1.4, B1 = 7;
     const toW = x => W0 + (x + W) / (2 * W) * (W1 - W0);
     const toB = z => B0 + (z + W) / (2 * W) * (B1 - B0);
     const toX = w => (w - W0) / (W1 - W0) * 2 * W - W;
     const toZ = b => (b - B0) / (B1 - B0) * 2 * W - W;
+    const pred = (w, b, x) => w * (x - X0) + b;
 
     function loss(w, b) {
       let s = 0;
-      for (const p of pts) { const d = w * (p.x - 5) + b - p.y; s += d * d; }
+      for (const p of pts) { const d = pred(w, b, p.x) - p.y; s += d * d; }
       return s / pts.length;
     }
     function lossGrad(w, b) {
       let gw = 0, gb = 0;
       for (const p of pts) {
-        const d = w * (p.x - 5) + b - p.y;
-        gw += 2 * d * (p.x - 5); gb += 2 * d;
+        const d = pred(w, b, p.x) - p.y;
+        gw += 2 * d * (p.x - X0); gb += 2 * d;
       }
       return [gw / pts.length, gb / pts.length];
     }
-    const H = 24, L0 = 1600;
+    const H = 24, L0 = 3;
     const lift = L => H * (1 - Math.exp(-L / L0));
     const h = (x, z) => lift(loss(toW(x), toB(z)));
 
     // Kleinster Fehler exakt (lineare Regression)
     let mx = 0, my = 0;
-    for (const p of pts) { mx += p.x - 5; my += p.y; }
+    for (const p of pts) { mx += p.x - X0; my += p.y; }
     mx /= pts.length; my /= pts.length;
     let sxy = 0, sxx = 0;
-    for (const p of pts) { sxy += (p.x - 5 - mx) * (p.y - my); sxx += (p.x - 5 - mx) ** 2; }
+    for (const p of pts) { sxy += (p.x - X0 - mx) * (p.y - my); sxx += (p.x - X0 - mx) ** 2; }
     const wBest = sxy / sxx, bBest = my - wBest * mx;
     const min = { x: toX(wBest), z: toZ(bBest), h: h(toX(wBest), toZ(bBest)), w: wBest, b: bBest };
 
-    const starts = [[26, 8], [-6, 120], [27, 118], [-7, 12]];
+    const starts = [[1.75, 1.9], [-0.75, 6.5], [1.8, 6.4], [-0.7, 2.0], [0.5, 6.7], [0.4, 1.7]];
     const s = starts[Math.floor(r() * starts.length)];
 
     return {
-      kind: 'model', W, seed, level: 4, dec: 0,
+      kind: 'model', W, seed, level: 4, dec: 2,
       h,
       grad: (x, z) => numGrad(h, x, z),
       step(p, lr) {
@@ -202,10 +211,10 @@ window.NTWelt = (function () {
         return { x, z, out: Math.abs(x) > W || Math.abs(z) > W };
       },
       min, start: { x: toX(s[0]), z: toZ(s[1]) },
-      // angezeigt wird der echte Fehler, nicht die gestauchte Höhe
-      show: v => -L0 * Math.log(Math.max(1e-9, 1 - v / H)),
-      unit: '', label: 'Fehler',
-      pts, toW, toB, loss
+      // angezeigt wird der echte Fehler in kg (Wurzel des mittleren Quadrats), nicht die gestauchte Höhe
+      show: v => Math.sqrt(-L0 * Math.log(Math.max(1e-9, 1 - v / H))),
+      unit: 'kg', label: 'Fehler',
+      pts, toW, toB, loss, pred, X0
     };
   }
 
@@ -289,12 +298,15 @@ window.NTWelt = (function () {
     };
   }
 
-  /* ── Level 6/7: Treppenhaus-Licht (Wechselschaltung = XOR) ──
-     Zwei Schalter, oben = +1, unten = −1. Das Licht brennt, wenn die
-     Schalter VERSCHIEDEN stehen (so ist ein Treppenhaus verdrahtet).
+  /* ── Level 6/7: Das Nest (XOR) ──────────────────────────────
+     Pinguin-Eltern wechseln sich ab: einer brütet, der andere fischt.
+     Eingänge Mama/Papa am Nest: ja = +1, nein = −1. Dem Ei geht es gut,
+     wenn GENAU EINER am Nest ist (beide weg: Ei kühlt aus/Raubmöwe;
+     beide da: niemand holt Futter) – das ist XOR. In den Formeln
+     unten steht S1 = Mama, S2 = Papa, „Licht“ = Ei gut versorgt.
      Lernen über die vier Fälle, Fehler = mittlerer Log-Fehler.
 
-     Level 6 – EIN Neuron:  Licht = σ(w₁·S1 + w₂·S2)
+     Level 6 – EIN Neuron:  Ei = σ(w₁·Mama + w₂·Papa)
        Ein Neuron zieht nur eine gerade Grenze; „verschieden“ liegt
        aber über Kreuz. Tiefster Punkt ist die Mitte (w = 0): dort sagt
        es überall 50 % – das Beste, was es kann, ist „weiß nicht“.
@@ -305,7 +317,7 @@ window.NTWelt = (function () {
        Lernbar sind nur die vier Kanten in A und B (a₁, a₂ = Welt A,
        b₁, b₂ = Welt B); Biase und die Kanten zur Lampe stehen fest
        (8, −3, −5), damit man das ganze Netz lesen kann. Lösung: A
-       erkennt „nur S1 oben“ (a ≈ (+5, −5)), B „nur S2 oben“ – oder
+       erkennt „nur Mama da“ (a ≈ (+5, −5)), B „nur Papa da“ – oder
        umgekehrt. Zwei gleich gute Täler; lernen beide dasselbe, hängt
        man fest (3 von 4 richtig). */
   function xor(seed) {
