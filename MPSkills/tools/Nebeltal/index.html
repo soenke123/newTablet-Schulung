@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<script src="../../../motion.js?v=20261116a"></script>
+<script src="../../../motion.js?v=20261115a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Nebeltal</title>
 <link href="../../../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
@@ -151,19 +151,80 @@ body.auto #btnJump, body.auto .lr-pm { opacity:.4; pointer-events:none; }
 #lrDistRow { flex-basis:100%; text-align:center; font-size:14px; color:var(--ink-soft); font-variant-numeric:tabular-nums; margin-top:-2px; }
 #lrDistRow small { font-size:12px; color:var(--ink-faint); font-weight:700; }
 #lrDistRow b { color:var(--ink); }
-body[data-lvl="4"] #lrDistRow { display:none; }
+body:not([data-lvl="3"]) #lrDistRow { display:none; }
 
 #curveBox { position:absolute; right:12px; top:66px; width:200px; padding:8px 10px 6px; }
 .box-t { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-faint); }
 #curve { width:100%; height:70px; display:block; }
 #modelBox { position:absolute; right:12px; top:170px; width:250px; padding:8px 10px 8px; }
 #plot { width:100%; height:150px; display:block; }
+#mnet { width:100%; height:58px; display:block; }
+#xorBox { position:absolute; right:12px; top:170px; width:260px; padding:8px 10px 8px; }
+#xnet { width:100%; height:92px; display:block; }
+.ca { color:#f27828; } .cb { color:#8b5cf6; }
+
+/* Wahrheitstabelle Treppenhaus-Licht (js/netz.js) */
+table.lights { width:100%; border-collapse:collapse; font-size:13px; margin:2px 0 4px; }
+table.lights th { font-size:11px; font-weight:700; color:var(--ink-faint); text-transform:uppercase; letter-spacing:.04em; padding:2px 3px; text-align:center; }
+table.lights td { padding:3px 3px; text-align:center; font-variant-numeric:tabular-nums; border-top:1px solid var(--line); }
+table.lights td.net { text-align:left; white-space:nowrap; }
+table.lights td.net b { margin-left:6px; font-weight:700; }
+table.lights tr.bad td.net b { color:var(--warn); }
+table.lights tr.ok td.net b { color:var(--accent-ink); }
+table.lights .ha { color:#f27828; font-weight:600; } table.lights .hb { color:#8b5cf6; font-weight:600; }
+.sw { display:inline-block; width:14px; height:22px; border-radius:5px; border:1.5px solid var(--ink-soft); position:relative; vertical-align:middle; }
+.sw i { position:absolute; left:2px; right:2px; height:8px; border-radius:2px; background:var(--ink-soft); }
+.sw.up i { top:2px; } .sw.dn i { bottom:2px; }
+.lamp { display:inline-block; width:16px; height:16px; border-radius:50%; vertical-align:middle; border:1.5px solid var(--ink-faint);
+  background:rgba(255, 200, 40, var(--on)); box-shadow:0 0 calc(var(--on) * 12px) rgba(255, 190, 30, calc(var(--on) * .9)); }
+html[data-motion="low"] .lamp { box-shadow:none; }
+
+/* Level 7: zwei Welten (js/zwei.js) */
+#zwei { position:absolute; inset:0; background:var(--paper); }
+#zwei .zcv { position:absolute; top:0; bottom:0; width:50%; height:100%; display:block; touch-action:none; }
+#zwei #zA { left:0; } #zwei #zB { right:0; left:auto; }
+#zwei .zcv + .zcv { border-left:2px solid var(--line); }
+.ztag { position:absolute; bottom:96px; padding:5px 11px; border-radius:99px; font-weight:700; font-size:14px; color:#fff; pointer-events:none; }
+.ztag.a { left:12px; background:#f27828; } .ztag.b { right:12px; background:#8b5cf6; }
+.zjoy { position:absolute; width:120px; height:120px; margin:-60px 0 0 -60px; border-radius:50%; pointer-events:none;
+  border:2px solid rgba(0,0,0,.18); background:rgba(255,255,255,.18); }
+.zjoy i { position:absolute; left:50%; top:50%; width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.75);
+  box-shadow:0 2px 8px rgba(0,0,0,.25); transform:translate(-50%,-50%); }
+#zwei .hud-top { pointer-events:none; }
+#zCount { margin-left:auto; font-variant-numeric:tabular-nums; min-width:92px; text-align:center; }
+#zCount.warn { color:var(--warn); }
+#zPanel { position:absolute; left:50%; top:62px; transform:translateX(-50%); width:300px; padding:8px 10px; }
+#znet { width:100%; height:132px; display:block; }
+.zrow { display:flex; justify-content:space-between; font-size:13.5px; color:var(--ink-soft); }
+.zrow b { color:var(--ink); font-variant-numeric:tabular-nums; }
+.zbottom { position:absolute; left:12px; right:12px; bottom:12px; display:flex; justify-content:center; align-items:flex-end; gap:10px; pointer-events:none; }
+.zbottom > * { pointer-events:auto; }
+.zlr { display:flex; align-items:center; gap:10px; padding:10px 12px; flex-wrap:wrap; justify-content:center; }
+#zLrV { font-size:20px; font-weight:700; font-variant-numeric:tabular-nums; min-width:46px; }
+#zLr { width:min(200px, 30vw); accent-color:var(--orange); height:28px; }
+#zJump { background:var(--orange); color:#fff; border-color:var(--orange); }
+#zAuto.on { background:var(--warn); color:#fff; border-color:var(--warn); }
+#zJump:disabled { opacity:.4; }
+#zToast { position:absolute; left:50%; bottom:96px; transform:translate(-50%, 10px); opacity:0; transition:.25s;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:9px 14px; font-size:15px;
+  box-shadow:var(--shadow); pointer-events:none; max-width:min(440px, 80vw); text-align:center; }
+#zToast.on { opacity:1; transform:translate(-50%, 0); }
+body[data-state="reveal"] #zwei .zbottom, body[data-state="result"] #zwei .zbottom,
+body[data-state="intro"] #zwei .zbottom { opacity:0; pointer-events:none; }
+body[data-state="result"] #zPanel { opacity:.25; }
+@media (orientation: portrait) {
+  #zwei .zcv { width:100%; height:50%; }
+  #zwei #zA { left:0; top:0; bottom:auto; } #zwei #zB { left:0; right:auto; top:50%; bottom:auto; }
+  #zwei .zcv + .zcv { border-left:0; border-top:2px solid var(--line); }
+  .ztag.a { bottom:auto; top:calc(50% - 40px); } .ztag.b { right:auto; left:12px; bottom:auto; top:calc(50% + 10px); }
+  #zPanel { left:auto; right:12px; transform:none; width:270px; }
+}
+
 #pengBox { position:absolute; right:12px; top:170px; width:270px; padding:8px 10px 8px; }
 #pnet { width:100%; height:64px; display:block; }
 #pplot { width:100%; height:160px; display:block; }
 .plegend { display:flex; gap:12px; font-size:12.5px; font-weight:600; margin:2px 0 4px; }
 .plegend .pa { color:#2f80ed; } .plegend .pc { color:#f27828; }
-body[data-lvl="5"] #lrDistRow { display:none; }
 .mvals { display:grid; grid-template-columns:auto 1fr; gap:1px 8px; font-size:13.5px; color:var(--ink-soft); }
 .mvals b { color:var(--ink); font-variant-numeric:tabular-nums; }
 
@@ -207,6 +268,7 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 <div id="app">
   <canvas id="welt" aria-label="3D-Landschaft im Nebel"></canvas>
   <div id="labels"></div>
+  <div id="zwei" hidden></div>
 
   <div id="hud" hidden>
     <div class="hud-top">
@@ -240,12 +302,22 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
       </div>
     </div>
 
+    <div id="xorBox" class="glass" hidden>
+      <div class="box-t">Das Neuron</div>
+      <canvas id="xnet"></canvas>
+      <div class="box-t" style="margin-top:4px">Die vier Fälle</div>
+      <div id="xtab"></div>
+      <div class="mvals"><span>richtig geschaltet</span><b id="xRight">–</b></div>
+    </div>
+
     <div id="modelBox" class="glass" hidden>
-      <div class="box-t">Das Modell</div>
+      <div class="box-t">Das Neuron</div>
+      <canvas id="mnet"></canvas>
+      <div class="box-t" style="margin-top:4px">Was es vorhersagt</div>
       <canvas id="plot"></canvas>
       <div class="mvals">
-        <span>Steigung w</span><b><span id="mW">–</span> cm pro Woche</b>
-        <span>Höhe b</span><b><span id="mB">–</span> cm in Woche 5</b>
+        <span>Gewicht w</span><b><span id="mW">–</span> cm pro Woche</b>
+        <span>Bias b</span><b><span id="mB">–</span> cm in Woche 5</b>
         <span>Fehler</span><b id="mL">–</b>
       </div>
     </div>
@@ -287,8 +359,10 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
   <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
 </div>
 
-<script src="js/welt.js?v=20261116a"></script>
-<script src="js/grafik.js?v=20261116a"></script>
-<script src="js/spiel.js?v=20261116a"></script>
+<script src="js/welt.js?v=20261117a"></script>
+<script src="js/grafik.js?v=20261117a"></script>
+<script src="js/netz.js?v=20261117a"></script>
+<script src="js/zwei.js?v=20261117a"></script>
+<script src="js/spiel.js?v=20261117a"></script>
 </body>
 </html>

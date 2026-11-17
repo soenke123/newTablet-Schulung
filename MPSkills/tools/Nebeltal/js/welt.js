@@ -289,5 +289,103 @@ window.NTWelt = (function () {
     };
   }
 
-  return { W, hills, model, penguins, rng };
+  /* ── Level 6/7: Treppenhaus-Licht (Wechselschaltung = XOR) ──
+     Zwei Schalter, oben = +1, unten = −1. Das Licht brennt, wenn die
+     Schalter VERSCHIEDEN stehen (so ist ein Treppenhaus verdrahtet).
+     Lernen über die vier Fälle, Fehler = mittlerer Log-Fehler.
+
+     Level 6 – EIN Neuron:  Licht = σ(w₁·S1 + w₂·S2)
+       Ein Neuron zieht nur eine gerade Grenze; „verschieden“ liegt
+       aber über Kreuz. Tiefster Punkt ist die Mitte (w = 0): dort sagt
+       es überall 50 % – das Beste, was es kann, ist „weiß nicht“.
+
+     Level 7 – ZWEI Neuronen A und B dazwischen:
+       A = σ(a₁·S1 + a₂·S2 − 3),  B = σ(b₁·S1 + b₂·S2 − 3)
+       Licht = σ(8·A + 8·B − 5)
+       Lernbar sind nur die vier Kanten in A und B (a₁, a₂ = Welt A,
+       b₁, b₂ = Welt B); Biase und die Kanten zur Lampe stehen fest
+       (8, −3, −5), damit man das ganze Netz lesen kann. Lösung: A
+       erkennt „nur S1 oben“ (a ≈ (+5, −5)), B „nur S2 oben“ – oder
+       umgekehrt. Zwei gleich gute Täler; lernen beide dasselbe, hängt
+       man fest (3 von 4 richtig). */
+  function xor(seed) {
+    const CASES = [[1, 1, 0], [1, -1, 1], [-1, 1, 1], [-1, -1, 0]];
+    const C = 3, V = 8, D = 5, R = 8;
+    const sig = z => 1 / (1 + Math.exp(-z));
+    const ce = (o, y) => -(y ? Math.log(Math.max(o, 1e-12)) : Math.log(Math.max(1 - o, 1e-12)));
+    const toW = x => x / W * R, toX = w => w / R * W;
+    const H = 24, L0 = 0.8;
+    const lift = L => H * (1 - Math.exp(-L / L0));
+    const show = v => -L0 * Math.log(Math.max(1e-9, 1 - v / H));
+
+    function fwd2(a1, a2, b1, b2) {
+      return CASES.map(([s1, s2, y]) => {
+        const A = sig(a1 * s1 + a2 * s2 - C), B = sig(b1 * s1 + b2 * s2 - C);
+        return { s1, s2, y, A, B, o: sig(V * A + V * B - D) };
+      });
+    }
+    function loss2(a1, a2, b1, b2) { return fwd2(a1, a2, b1, b2).reduce((t, c) => t + ce(c.o, c.y), 0) / 4; }
+    function grad2(a1, a2, b1, b2) {
+      const g = [0, 0, 0, 0];
+      for (const c of fwd2(a1, a2, b1, b2)) {
+        const e = c.o - c.y, dA = e * V * c.A * (1 - c.A), dB = e * V * c.B * (1 - c.B);
+        g[0] += dA * c.s1; g[1] += dA * c.s2; g[2] += dB * c.s1; g[3] += dB * c.s2;
+      }
+      return g.map(v => v / 4);
+    }
+    function fwd1(w1, w2) { return CASES.map(([s1, s2, y]) => ({ s1, s2, y, o: sig(w1 * s1 + w2 * s2) })); }
+    function loss1(w1, w2) { return fwd1(w1, w2).reduce((t, c) => t + ce(c.o, c.y), 0) / 4; }
+    function grad1(w1, w2) {
+      let g1 = 0, g2 = 0;
+      for (const c of fwd1(w1, w2)) { g1 += (c.o - c.y) * c.s1; g2 += (c.o - c.y) * c.s2; }
+      return [g1 / 4, g2 / 4];
+    }
+    const right = cs => cs.filter(c => (c.o > 0.5) === (c.y === 1)).length;
+
+    const r = rng(seed * 4241 + 6);
+    const rnd = () => (r() * 2 - 1) * 0.7 * R;
+
+    // Level 6: eine Welt, ein Neuron
+    function one() {
+      const h = (x, z) => lift(loss1(toW(x), toW(z)));
+      let st;
+      do { st = { x: toX(rnd()), z: toX(rnd()) }; } while (Math.hypot(st.x, st.z) < 0.35 * W);
+      return {
+        kind: 'xor1', W, seed, level: 6, dec: 2, h,
+        grad: (x, z) => numGrad(h, x, z),
+        step(p, lr) {
+          const w1 = toW(p.x), w2 = toW(p.z), g = grad1(w1, w2);
+          const x = toX(w1 - lr * g[0]), z = toX(w2 - lr * g[1]);
+          return { x, z, out: Math.abs(x) > W || Math.abs(z) > W };
+        },
+        min: { x: 0, z: 0, h: h(0, 0) }, start: st,
+        show, unit: '', label: 'Fehler',
+        toW, cases: (x, z) => fwd1(toW(x), toW(z)), right
+      };
+    }
+
+    // Level 7: zwei Welten, ein Netz. Jede Welt ist ein Schnitt: Welt A
+    // zeigt den Fehler über a₁/a₂, während b₁/b₂ dort stehen, wo die
+    // Figur in Welt B gerade steht (und umgekehrt).
+    function two() {
+      let A0, B0, tries = 0;
+      do {
+        A0 = [rnd(), rnd()]; B0 = [rnd(), rnd()]; tries++;
+      } while (tries < 50 && (right(fwd2(A0[0], A0[1], B0[0], B0[1])) > 2 || Math.hypot(A0[0] - B0[0], A0[1] - B0[1]) < 3));
+      const sol = [[5, -5, -5, 5], [-5, 5, 5, -5]];
+      return {
+        kind: 'xor2', W, seed, level: 7, dec: 2, R, toW, toX, lift, show,
+        H, start: [{ x: toX(A0[0]), z: toX(A0[1]) }, { x: toX(B0[0]), z: toX(B0[1]) }],
+        loss: loss2, grad: grad2, fwd: fwd2, right, sol,
+        // Höhe in Welt k bei (x, z), die andere Welt steht bei o = {x, z}
+        h(k, x, z, o) {
+          const a = k === 0 ? [toW(x), toW(z), toW(o.x), toW(o.z)] : [toW(o.x), toW(o.z), toW(x), toW(z)];
+          return lift(loss2(a[0], a[1], a[2], a[3]));
+        }
+      };
+    }
+    return { one, two };
+  }
+
+  return { W, hills, model, penguins, xor, rng };
 })();

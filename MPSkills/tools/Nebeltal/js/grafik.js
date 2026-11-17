@@ -200,7 +200,7 @@ window.NTGrafik = (function () {
 
     function setWorld(w, theme) {
       world = w;
-      const Wd = w.W, N = Math.min(250, Math.round(140 * Wd / 50));   // Uint16-Indizes: höchstens 65 535 Ecken
+      const Wd = w.W, N = w.meshN || Math.min(250, Math.round(140 * Wd / 50));   // Uint16-Indizes: höchstens 65 535 Ecken
       const pos = [], nor = [], idx = [];
       let h0 = Infinity, h1 = -Infinity;
       for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) {
@@ -217,6 +217,8 @@ window.NTGrafik = (function () {
       if (terrain) { gl.deleteBuffer(terrain.vb); gl.deleteBuffer(terrain.nb); gl.deleteBuffer(terrain.ib); }
       terrain = upload({ pos, nor, idx });
       terrain.h0 = h0; terrain.h1 = Math.min(h1, h0 + (w.kind === 'model' ? 24 : 26));
+      // Welten, die sich verformen (Level 7), behalten ihre Farbskala
+      if (w.hRange) { terrain.h0 = w.hRange[0]; terrain.h1 = w.hRange[1]; }
       setTheme(theme);
     }
 
