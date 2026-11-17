@@ -5,7 +5,7 @@
    Nummer = gleiche Landschaft auf jedem Tablet – so kann die Klasse
    schon jetzt gegeneinander spielen, ganz ohne Server):
 
-     1 Im Nebel         frei laufen, nur der Höhenmesser hilft
+     1 Im Schneesturm   frei laufen, ganz ohne Hilfe (Polarnacht, kein Höhenmesser)
      2 Bergab-Pfeil     frei laufen, Pfeil unter den Füßen = Gradient
      3 Sprünge          nicht mehr laufen: springen in Pfeilrichtung,
                         Weite = Lernrate × Steilheit (Gradientenabstieg)
@@ -37,21 +37,21 @@
   /* Erklärkarte: Bild aus js/bilder.js (NTBild.scene) + kurze Schritte.
      steps = Sätze neben nummerierten Kreisen, je Schritt EIN Gedanke. */
   const LEVELS = [
-    { id: 1, name: 'Im Nebel', short: 'Frei suchen – nur mit dem Höhenmesser',
-      mode: 'walk', arrow: false, time: 75, fog: 9, plain: true, physics: false,
-      lead: 'Irgendwo in diesem Tal liegt der <b>tiefste Punkt</b>. Finde ihn!',
+    { id: 1, name: 'Im Schneesturm', short: 'Frei suchen – ganz ohne Hilfe',
+      mode: 'walk', arrow: false, time: 75, fog: 9, plain: true, physics: false, night: true,
+      lead: 'Irgendwo in dieser Eiswüste liegt der <b>tiefste Punkt</b>. Finde ihn!',
       steps: [
-        'Du siehst nur den Boden direkt um dich herum – <b>keine Farben, keine Höhenlinien</b>.',
-        'Nur der <b>Höhenmesser</b> links verrät, wie hoch du gerade stehst.',
+        'Im Schneesturm siehst du nur den Schnee direkt um dich herum – <b>keine Farben, keine Höhenlinien, kein Höhenmesser</b>.',
+        'Ob es bergauf oder bergab geht, musst du <b>selbst herausfinden</b>. Das ist schwer!',
         'Es gibt viele Mulden, aber nur eine ist die tiefste. Du hast <b>75 Sekunden</b>, dann tippe <b>„Hier bleibe ich“</b>.'],
       outro: 'So geht es einer KI beim Lernen: Sie kennt nur den <b>Fehler an der Stelle, an der sie gerade steht</b>. ' +
              'Die ganze Landschaft hat nie jemand gesehen. Frei herumsuchen dauert ewig – die KI braucht einen besseren Hinweis …' },
     { id: 2, name: 'Der Bergab-Pfeil', short: 'Ein Pfeil zeigt, wo es bergab geht',
-      mode: 'walk', arrow: true, time: 60, fog: 9, physics: true,
-      lead: 'Jetzt hast du Werkzeuge – genau die, die auch eine KI beim Lernen hat.',
+      mode: 'walk', arrow: true, time: 60, fog: 9, plain: true, physics: true, night: true,
+      lead: 'Jetzt hast du ein Werkzeug – genau das, das auch eine KI beim Lernen hat.',
       steps: [
-        'Ein <b>blauer Pfeil</b> unter deinen Füßen zeigt, wo es am steilsten bergab geht. Je länger, desto steiler.',
-        '<b>Farben und Höhenlinien</b> verraten die Höhe. Bergab läufst du schneller, steile Hänge rutschst du hinunter.',
+        'Ein <b>leuchtender Pfeil</b> unter deinen Füßen zeigt, wo es am steilsten bergab geht. Je länger, desto steiler.',
+        'Sonst ist alles wie eben: Schneesturm, kein Höhenmesser. Bergab läufst du schneller, steile Hänge rutschst du hinunter.',
         'Achtung: Der Pfeil kennt nur den Weg zur <b>nächsten</b> Mulde. Du hast <b>60 Sekunden</b>.'],
       outro: 'Der Pfeil ist das Einzige, was eine KI beim Lernen ausrechnen kann: <b>In welche Richtung wird mein Fehler kleiner?</b> ' +
              'Man nennt ihn <b>Gradient</b> (genauer: er zeigt gegen den Gradienten). Ein neuronales Netz rechnet ihn für jedes seiner Gewichte aus – das heißt Backpropagation.' },
@@ -133,6 +133,7 @@
   window.addEventListener('lernwelt:motion', () => { low = !!(window.LWMotion && LWMotion.low); });
 
   let theme = 'light';
+  let onThemeChange = () => {};
   function readTheme() {
     const t = document.documentElement.getAttribute('data-theme');
     if (t === 'dark' || t === 'light') return t;
@@ -148,7 +149,7 @@
         else document.documentElement.removeAttribute('data-theme');
       }
       const nt = readTheme();
-      if (nt !== theme) { theme = nt; G.setTheme(theme); }
+      if (nt !== theme) { theme = nt; G.setTheme(theme); onThemeChange(); }
     };
     apply();
     if (pd) { try { new MutationObserver(apply).observe(pd, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) { /* egal */ } }
@@ -169,6 +170,28 @@
     curve: [], best: Infinity, lrs: [], outs: 0,
     reveal: null, cam: null, startPos: null
   };
+
+  /* ── Eiswelt-Look (17.11.2026) ──
+     Level 1/2 (L.night) sind immer Polarnacht: html[data-night], Schneesturm
+     (js/schnee.js), einfarbiger Boden mit flachem Licht (plainAmb) – man soll
+     kaum sehen, ob es bergauf oder bergab geht. Menü: Polarnacht im Dunkel-,
+     Polartag im Hellmodus. Level 3–7 vorerst mit der alten Palette. */
+  const NIGHT = { fog: '#0c1526', c: ['#123a57', '#2d6688', '#86a9c2', '#dfeaf3'], plainC: '#4a6e8a', plainAmb: 0.84,
+    amb: 0.4, ice: 1, iceC: '#2fa3bf', light: [-0.35, 0.7, 0.55], dark: true };
+  const DAY = { fog: '#e7edf1', c: ['#6f9cc0', '#b2cde0', '#e1eaf1', '#ffffff'], plainC: '#e9f0f5', amb: 0.55,
+    ice: 1, iceC: '#8dbbdc', light: [-0.5, 0.75, 0.35] };
+  const MINT = [0.36, 0.95, 0.77];
+  let night = false;
+  function applyLook() {
+    const L = S.lvl, inLvl = S.state !== 'menu' && L;
+    night = !!(inLvl && L.night);
+    document.documentElement.toggleAttribute('data-night', night);
+    if (night) G.setPalette(NIGHT, 'dark');
+    else if (!inLvl) G.setPalette(theme === 'dark' ? NIGHT : DAY, theme);
+    else G.setPalette(null, theme);
+  }
+  onThemeChange = applyLook;
+  const snow = NTSchnee.create($('#snow'));
 
   /* ── Welt-Nummer ── */
   function setSeed(n) {
@@ -205,6 +228,7 @@
   function toMenu() {
     if (window.NTZwei) NTZwei.close();
     S.state = 'menu'; S.auto = false;
+    applyLook();
     renderMenu();
     show('#menu');
     hudFor(null);
@@ -221,6 +245,7 @@
     G.setWorld(S.world, theme);
     resetPlayer();
     S.state = 'intro';
+    applyLook();
     hudFor(L);
     card(introHtml(L, seed, L.mode === 'walk'
         ? '<b>Steuerung:</b> links auf dem Bild ziehen = laufen · rechts ziehen = umschauen<br><span class="kbd">Tastatur: WASD oder Pfeile · Q/E drehen</span>'
@@ -610,6 +635,8 @@
     if (!S.world) { G.frame({ cam: { eye: [0, 10, -10], at: [0, 0, 0] }, player: null, fogR: 1, objects: [] }); return; }
     if (S.state === 'zwei') return;                 // Level 7 zeichnet selbst (js/zwei.js)
     step(dt);
+    const g = snow.frame(dt, now / 1000, night);
+    $('#gust').style.opacity = (g * 0.45).toFixed(3);
     render();
   }
 
@@ -678,6 +705,7 @@
     const y = ground + (p.air || 0) + bob;
     let cam = camFollow(1 / 60, ground);
     let fogR = S.fogR;
+    if (night) fogR *= 1 - 0.3 * snow.gust;      // Böe = Sicht schrumpft
     if (S.reveal) {
       const t = ease(clamp(S.reveal.t / 2.4, 0, 1));
       fogR = lerp(S.reveal.fog0, 320 * w.W / 50, t * t);
@@ -688,8 +716,9 @@
     S.cam = cam;
 
     const objs = [];
-    const acc = theme === 'dark' ? [1, 0.62, 0.3] : [0.98, 0.45, 0.12];
-    const trail = theme === 'dark' ? [1, 0.85, 0.55] : [0.85, 0.35, 0.1];
+    const acc = night ? MINT : theme === 'dark' ? [1, 0.62, 0.3] : [0.98, 0.45, 0.12];
+    const trail = night ? [0.55, 0.8, 1] : theme === 'dark' ? [1, 0.85, 0.55] : [0.85, 0.35, 0.1];
+    const arrowC = night ? MINT : [0.2, 0.55, 1], arrowG = night ? 0.6 : 0.55;
     for (const d of S.dots) {
       const dy = d.air ? d.y : w.h(d.x, d.z) + 0.08;
       const rr = S.reveal ? d.r * (1 + (d.air ? 1.2 : 1.6) * ease(clamp(S.reveal.t / 2.4, 0, 1))) : d.r;
@@ -704,11 +733,11 @@
         const len = clamp(1.2 + gl * 3.2, 1.4, 7);
         const pts = [];
         for (let i = 0; i <= 8; i++) { const s = 0.9 + (len - 0.9) * i / 8 * 0.78; pts.push([p.x + ux * s, p.z + uz * s, 0.2]); }
-        objs.push({ type: 'strip', pts, color: [0.2, 0.55, 1], glow: 0.55, lift: 0.14 });
+        objs.push({ type: 'strip', pts, color: arrowC, glow: arrowG, lift: 0.14 });
         const hs = 0.9 + (len - 0.9) * 0.78;
         const head = [];
         for (let i = 0; i <= 6; i++) { const s = hs + (len - hs) * i / 6; head.push([p.x + ux * s, p.z + uz * s, 0.62 * (1 - i / 6) + 0.02]); }
-        objs.push({ type: 'strip', pts: head, color: [0.2, 0.55, 1], glow: 0.55, lift: 0.15 });
+        objs.push({ type: 'strip', pts: head, color: arrowC, glow: arrowG, lift: 0.15 });
       }
     }
     // Landepunkt (Ring) beim Springen
@@ -1056,6 +1085,7 @@
   /* ── Level 7: Übergabe an js/zwei.js ── */
   function openTwo(L) {
     S.lvl = L; S.state = 'zwei'; S.auto = false;   // spiel.js zeichnet nicht mehr, bis toMenu
+    applyLook();
     hudFor(null);
     NTZwei.open(L, seed, {
       theme: () => theme, low: () => low, fmt, stars, LS, bestKey,
@@ -1072,6 +1102,7 @@
   renderMenu();
   show('#menu');
   hudFor(null);
+  applyLook();
   // Hintergrund im Menü: eine Welt im Nebel, langsam kreisend
   S.world = NTWelt.hills(seed, 1);
   G.setWorld(S.world, theme);

@@ -6,7 +6,16 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 
 ## Dateien
 
-- `index.html` – Oberfläche (HUD, Menü, Karten), Farben wie MPSkills, Hell/Dunkel vom Rahmen
+- `index.html` – Oberfläche (HUD, Menü, Karten), eigener Look „Eiswelt“ (17.11.2026, Showroom-Variante B
+  Polarnacht: Space Grotesk/Unbounded/JetBrains Mono, Glas, Türkis→Violett-Verlauf; dunkel = Polarnacht,
+  hell = Polartag), Hell/Dunkel vom Rahmen. Level 1/2 (`night: true` in LEVELS) sind IMMER Polarnacht:
+  spiel.js `applyLook()` setzt `html[data-night]` + `G.setPalette(NIGHT)`; Menü-Welt = NIGHT/DAY je
+  Hell/Dunkel; Level 3–7 noch mit der alten grünen Palette (setPalette(null)), werden später angepasst.
+  Ebenen über der Welt: `#aurora` (Polarlicht, auch im dunklen Menü), `#snow`, `#gust` (Böen-Schleier),
+  `#frost` (Rand) – nur mit data-night
+- `js/schnee.js` – Schneesturm (2D-Canvas): hängt nur am Bildschirm, fällt immer gleich schnell, egal
+  wohin man läuft/dreht (Sönke 17.11.2026); Böen verkleinern die Sicht (fogR × (1 − 0,3·Böe));
+  Sparmodus: kein Schnee
 - `js/welt.js` – Landschaften: `hills(seed, level)` (Mulden = lokale Minima, Rand ringsum; Größe und
   Schwierigkeit je Level in `CFG`: Level 1/2 W 85 mit ~20 Mulden, die tiefste schmal und abseits
   der Mitte; Level 3 W 50),
@@ -95,17 +104,20 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Technik: `G.setPalette({fog, c, plainC, amb, light, ice, iceC, dark})` in grafik.js (null = normale
   Palette; `ice` > 0 = steile Hänge blankes Eis + Schneerippen „Sastrugi“), Schnee als 2D-Canvas
   darüber, Böen verkleinern die Sicht (fogR) und legen einen Schleier über das Bild. Noch nicht
-  im Spiel: Erklärbilder (bilder.js) sind noch grün/braun.
+  im Spiel: Erklärbilder (bilder.js) ab Level 3 sind noch grün/braun. Seit 17.11.2026 ist B im Spiel (Level 1/2 + Menü).
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm
 - `tool.js`/`tool.css` – nur der iframe-Rahmen (wie Reinforce Yourself), noch kein Austausch mit dem Raum
 
 ## Level
 
-1. **Im Nebel** – große Welt, frei laufen (Joystick links / WASD), 75 s, NUR Höhenmesser:
-   Boden einfarbig ohne Höhenlinien (`plain`, Shader-Uniform uPlain, Farben kommen erst beim
-   Auflösen), keine Hang-Physik (`physics: false`: gleich schnell bergauf/bergab, kein Rutschen).
-2. **Der Bergab-Pfeil** – gleich große Welt, Pfeil unter den Füßen + Farben/Höhenlinien +
-   Hang-Physik (bergauf langsamer, steile Hänge rutschen), 60 s.
+1. **Im Schneesturm** (bis 17.11.2026 „Im Nebel“) – große Welt, frei laufen (Joystick links / WASD), 75 s,
+   OHNE Höhenmesser (Sönke 17.11.2026: soll wirklich schwer sein, man soll kaum merken, ob es bergauf
+   oder bergab geht): Boden einfarbig ohne Höhenlinien und ohne Eisfärbung an Steilhängen (`plain`,
+   uPlain), flaches Licht (`plainAmb` 0,84 in der NIGHT-Palette), Farben kommen erst beim Auflösen;
+   keine Hang-Physik (`physics: false`).
+2. **Der Bergab-Pfeil** – sieht genauso aus wie Level 1 (einfarbig, kein Höhenmesser), einziger
+   Unterschied: der Pfeil (türkis) unter den Füßen; dazu Hang-Physik (bergauf langsamer, steile
+   Hänge rutschen), 60 s.
 3. **Sprünge** – kein Laufen mehr: Sprung in Pfeilrichtung, Weite = Lernrate × Steilheit
    (echter Gradientenschritt – an flachen Stellen also kürzer bei gleicher Lernrate; die Rechnung
    steht live unter dem Regler, `#lrDist`), 20 Sprünge (= begrenzte Rechenzeit; ohne Grenze wäre
@@ -149,7 +161,7 @@ localStorage `nt.best.<level>.<seed>`, Welt in `nt.seed`.
 
 ## Sparmodus
 
-`LWMotion.low`: dpr 1 und 30 B/s; Glas-Kästen ohne Weichzeichner.
+`LWMotion.low`: dpr 1 und 30 B/s; Glas-Kästen ohne Weichzeichner; kein Schnee, Polarlicht steht still.
 
 ## Plan: „Gemeinsam ein Netz“ im Raum (Sönke 17.11.2026: „das kann eine richtig schöne runde Stunde sein“)
 

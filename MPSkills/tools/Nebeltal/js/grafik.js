@@ -84,7 +84,7 @@ window.NTGrafik = (function () {
     uniform float uH0; uniform float uH1; uniform float uStep;
     uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3;
     uniform float uAmb; uniform float uPlain; uniform vec3 uPlainC;
-    uniform float uIce; uniform vec3 uIceC;
+    uniform float uIce; uniform vec3 uIceC; uniform float uPlainAmb;
     void main(){
       float t=clamp((vPos.y-uH0)/(uH1-uH0),0.0,1.0);
       vec3 c = t<0.33 ? mix(uC0,uC1,t/0.33) : (t<0.66 ? mix(uC1,uC2,(t-0.33)/0.33) : mix(uC2,uC3,(t-0.66)/0.34));
@@ -93,12 +93,13 @@ window.NTGrafik = (function () {
       // Eiswelt (nur mit eigener Palette, uIce > 0): steile Hänge = blankes Eis, Schnee mit Korn
       if(uIce>0.0){
         float sl=1.0-n.y;
-        c=mix(c,uIceC,smoothstep(0.12,0.45,sl)*uIce);
+        c=mix(c,uIceC,smoothstep(0.12,0.45,sl)*uIce*(1.0-uPlain));   // einfarbig = auch kein Eis an Steilhängen
         // Sastrugi: vom Wind geformte Schneerippen, weich statt Pixel-Korn
         float rip=sin(vPos.x*1.9+vPos.z*0.5+sin(vPos.z*0.37+vPos.x*0.11)*3.0);
         c*=1.0+rip*0.035*uIce*(1.0-uPlain*0.4);
       }
-      float l=uAmb+(1.0-uAmb)*max(dot(n,uLight),0.0);
+      float am=mix(uAmb,uPlainAmb,uPlain);   // einfarbig = flaches Licht, Hänge kaum zu erkennen
+      float l=am+(1.0-am)*max(dot(n,uLight),0.0);
       c*=l;
       float q=vPos.y/uStep;
       #ifdef GL_OES_standard_derivatives
@@ -375,7 +376,7 @@ window.NTGrafik = (function () {
     function setPalette(p, theme) {
       custom = p ? { fog: hex(p.fog), c: p.c.map(hex), amb: p.amb == null ? 0.45 : p.amb,
         light: norm(p.light || [-0.45, 0.8, 0.4]), ice: p.ice || 0, iceC: hex(p.iceC || '#9cc6e0'),
-        plainC: p.plainC ? hex(p.plainC) : null, dark: !!p.dark } : null;
+        plainC: p.plainC ? hex(p.plainC) : null, plainAmb: p.plainAmb, dark: !!p.dark } : null;
       setTheme(theme);
     }
     const palDark = {
@@ -457,6 +458,7 @@ window.NTGrafik = (function () {
       gl.uniform1f(u.uPlain, sc.plain || 0);
       gl.uniform3fv(u.uPlainC, pal.plainC || pal.c[1].map((v, i) => v + (pal.c[2][i] - v) * 0.35));
       gl.uniform1f(u.uIce, pal.ice || 0);
+      gl.uniform1f(u.uPlainAmb, pal.plainAmb == null ? pal.amb : pal.plainAmb);
       gl.uniform3fv(u.uIceC, pal.iceC || [0.6, 0.78, 0.88]);
       bind(terrain);
       gl.drawElements(gl.TRIANGLES, terrain.n, gl.UNSIGNED_SHORT, 0);

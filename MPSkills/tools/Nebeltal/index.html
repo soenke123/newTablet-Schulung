@@ -5,46 +5,56 @@
 <script src="../../../motion.js?v=20261115a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Nebeltal</title>
-<link href="../../../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
+<link href="../../../fonts/spacegrotesk-jetbrainsmono-unbounded-9f6dea.css" rel="stylesheet">
 <style>
-/* Farben wie MPSkills (MPSkills/style.css); Hell/Dunkel kommt im Raum
-   vom Rahmen (data-theme), allein vom Gerät. --orange = die Figur. */
+/* Eigener Look „Eiswelt“ (17.11.2026, weg vom MPSkills-Grün; Showroom-Variante B):
+   dunkel = Polarnacht (Glas, Türkis/Violett, Polarlicht), hell = Polartag.
+   Hell/Dunkel kommt im Raum vom Rahmen (data-theme), allein vom Gerät.
+   Level 1/2 sind IMMER Polarnacht (html[data-night], spiel.js).
+   --orange = die Figur. */
 :root {
-  --paper:#eef2f1; --surface:#ffffff; --surface-2:#f7faf9; --line:#dfe7e5;
-  --ink:#0d1a17; --ink-soft:#475853; --ink-faint:#7b8a86;
-  --accent:#00b37e; --accent-ink:#00714f; --accent-dim:#d6f5e8; --on-accent:#fff;
+  --paper:#e8f0f7; --surface:#ffffff; --surface-2:#f1f6fb; --line:#cfdcea; --line-soft:#dfe8f2;
+  --ink:#0b1a33; --ink-soft:#3e5577; --ink-faint:#7487a5;
+  --accent:#0b9db3; --accent-ink:#06707f; --accent-dim:#d4f1f6; --on-accent:#fff; --violet:#7c5cff;
+  --grad:linear-gradient(120deg, #0b9db3, #3b82f6 60%, #7c5cff); --on-grad:#fff;
   --orange:#f2711c; --gold:#e0a210; --warn:#d43a52; --blue:#2f7fe6;
-  --glass:rgba(255,255,255,.86);
-  --ice:#e6f0f6; --sea:#3d8fb8; --fog:#eef2f1; --peng-edge:none;
-  --shadow:0 2px 4px rgba(13,26,23,.05), 0 12px 28px -12px rgba(13,26,23,.28);
+  --glass:rgba(255,255,255,.84);
+  --ice:#dbe9f4; --sea:#2c7fb0; --fog:#e8f0f7; --peng-edge:none; --snow:#8fb0d0;
+  --shadow:0 2px 4px rgba(11,26,51,.05), 0 14px 30px -14px rgba(11,26,51,.3);
+  --glow:0 0 18px -6px rgba(11,157,179,.45);
+  --font:'Space Grotesk', system-ui, sans-serif; --head:'Unbounded', 'Space Grotesk', sans-serif; --mono:'JetBrains Mono', monospace;
   color-scheme:light;
 }
-html[data-theme="dark"] {
-  --paper:#0a0b10; --surface:#12141b; --surface-2:#171a22; --line:#2a2e3d;
-  --ink:#edeff5; --ink-soft:#a4a9bd; --ink-faint:#71768c;
-  --accent:#2ad49a; --accent-ink:#5ee6b6; --accent-dim:#123a2e; --on-accent:#05140f;
-  --orange:#ff9d4d; --gold:#f4c13d; --warn:#ff6b81; --blue:#6aa8ff;
-  --glass:rgba(18,20,27,.86);
-  --ice:#1c2532; --sea:#5fa9d4; --fog:#171a22; --peng-edge:rgba(255,255,255,.4);
-  --shadow:0 2px 4px rgba(0,0,0,.2), 0 14px 30px -12px rgba(0,0,0,.6);
+html[data-theme="dark"], html[data-night] {
+  --paper:#070d1a; --surface:#0f1b31; --surface-2:#16243e; --line:#26406a; --line-soft:rgba(140,170,220,.2);
+  --ink:#e8f1ff; --ink-soft:#a9bad6; --ink-faint:#6f82a3;
+  --accent:#5cf2c4; --accent-ink:#7ff7d3; --accent-dim:rgba(92,242,196,.14); --on-accent:#04201a; --violet:#a98bff;
+  --grad:linear-gradient(120deg, #5cf2c4, #62d2ff 60%, #a98bff); --on-grad:#04201a;
+  --orange:#ff9d4d; --gold:#ffd166; --warn:#ff6b8b; --blue:#6aa8ff;
+  --glass:rgba(12,22,40,.78);
+  --ice:#1b2c46; --sea:#4fb3d9; --fog:#101a2c; --peng-edge:rgba(255,255,255,.45); --snow:#cfe0f5;
+  --shadow:0 0 0 1px rgba(92,242,196,.08), 0 18px 40px -18px rgba(0,0,0,.8);
+  --glow:0 0 22px -6px rgba(92,242,196,.6);
   color-scheme:dark;
 }
 @media (prefers-color-scheme: dark) {
   html:not([data-theme]) {
-    --paper:#0a0b10; --surface:#12141b; --surface-2:#171a22; --line:#2a2e3d;
-    --ink:#edeff5; --ink-soft:#a4a9bd; --ink-faint:#71768c;
-    --accent:#2ad49a; --accent-ink:#5ee6b6; --accent-dim:#123a2e; --on-accent:#05140f;
-    --orange:#ff9d4d; --gold:#f4c13d; --warn:#ff6b81; --blue:#6aa8ff;
-    --glass:rgba(18,20,27,.86);
-  --ice:#1c2532; --sea:#5fa9d4; --fog:#171a22; --peng-edge:rgba(255,255,255,.4);
-    --shadow:0 2px 4px rgba(0,0,0,.2), 0 14px 30px -12px rgba(0,0,0,.6);
+    --paper:#070d1a; --surface:#0f1b31; --surface-2:#16243e; --line:#26406a; --line-soft:rgba(140,170,220,.2);
+    --ink:#e8f1ff; --ink-soft:#a9bad6; --ink-faint:#6f82a3;
+    --accent:#5cf2c4; --accent-ink:#7ff7d3; --accent-dim:rgba(92,242,196,.14); --on-accent:#04201a; --violet:#a98bff;
+    --grad:linear-gradient(120deg, #5cf2c4, #62d2ff 60%, #a98bff); --on-grad:#04201a;
+    --orange:#ff9d4d; --gold:#ffd166; --warn:#ff6b8b; --blue:#6aa8ff;
+    --glass:rgba(12,22,40,.78);
+    --ice:#1b2c46; --sea:#4fb3d9; --fog:#101a2c; --peng-edge:rgba(255,255,255,.45); --snow:#cfe0f5;
+    --shadow:0 0 0 1px rgba(92,242,196,.08), 0 18px 40px -18px rgba(0,0,0,.8);
+    --glow:0 0 22px -6px rgba(92,242,196,.6);
     color-scheme:dark;
   }
 }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
 html, body { margin:0; height:100%; background:var(--paper); color:var(--ink);
-  font-family:Outfit, system-ui, sans-serif; overflow:hidden; -webkit-user-select:none; user-select:none;
+  font-family:var(--font); overflow:hidden; -webkit-user-select:none; user-select:none;
   -webkit-tap-highlight-color:transparent; }
 #app { position:relative; width:100%; height:100%; overflow:hidden; }
 #welt { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
@@ -272,12 +282,72 @@ body[data-state="intro"] .hud-bottom { opacity:.0; pointer-events:none; }
   #modelBox, #pengBox { top:62px; right:224px; }
   body[data-lvl="4"] #curveBox { width:200px; }
 }
+
+/* ── Eiswelt-Look (17.11.2026) ── */
+.btn { border-radius:14px; }
+.btn:hover { border-color:var(--accent); box-shadow:var(--shadow), var(--glow); }
+.btn.primary { background:var(--grad); color:var(--on-grad); border-color:transparent; box-shadow:var(--glow); }
+.glass { border-radius:16px; -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); }
+.menu-in { padding:26px 26px 22px; }
+.kick { display:block; font-family:var(--mono); font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); }
+#menu h1 { font-family:var(--head); font-weight:600; font-size:38px; line-height:1.05; margin:8px 0 4px;
+  background:linear-gradient(100deg, var(--ink), var(--accent) 55%, var(--violet)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+.lv { background:var(--surface-2); border-color:var(--line-soft); border-radius:14px; }
+html[data-theme="dark"] .lv { background:rgba(255,255,255,.03); }
+.lv:hover { border-color:var(--accent); box-shadow:var(--glow); }
+.lv-n { background:transparent; border:1px solid var(--accent); color:var(--accent-ink); font-family:var(--mono); font-size:16px;
+  box-shadow:inset 0 0 10px var(--accent-dim); }
+.lv:nth-child(n+4) .lv-n { border-color:var(--violet); color:var(--violet); }
+.lv-t b { font-family:var(--head); font-weight:600; font-size:15.5px; }
+.seedrow input { font-family:var(--mono); border-radius:12px; }
+.lablink { border-radius:14px; }
+.proto { font-family:var(--mono); }
+.card-in { border-radius:20px; background:var(--glass); -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); }
+.card-kicker { font-family:var(--mono); letter-spacing:.12em; font-size:11.5px; }
+.card-in h2 { font-family:var(--head); font-weight:600; font-size:26px; }
+.illwrap { border-radius:14px; border-color:var(--line-soft); }
+ol.steps li::before { background:transparent; border:1px solid var(--accent); color:var(--accent-ink); font-family:var(--mono); }
+.formula { font-family:var(--mono); }
+.chip { font-family:var(--font); }
+#lvlName { font-family:var(--head); font-weight:600; font-size:14px; }
+#counter, #gVal, #lrVal { font-family:var(--mono); }
+#joy { border-color:rgba(92,242,196,.5); background:rgba(92,242,196,.08); }
+#joyKnob { background:rgba(92,242,196,.75); box-shadow:0 0 18px rgba(92,242,196,.6); }
+html:not([data-theme="dark"]):not([data-night]) #joy { border-color:rgba(11,157,179,.6); background:rgba(255,255,255,.25); }
+html:not([data-theme="dark"]):not([data-night]) #joyKnob { background:rgba(11,157,179,.8); }
+.lbl { font-family:var(--font); }
+
+/* Schneesturm-Ebenen (Level 1/2; Polarlicht auch im dunklen Menü) */
+#aurora, #snow, #gust, #frost { position:absolute; inset:0; pointer-events:none; display:none; }
+#snow { width:100%; height:100%; }
+html[data-night] #snow, html[data-night] #gust, html[data-night] #frost { display:block; }
+#aurora { height:55%; mix-blend-mode:screen; opacity:.5; overflow:hidden;
+  -webkit-mask-image:linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%); mask-image:linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%); }
+html[data-night] #aurora, html[data-theme="dark"] body[data-state="menu"] #aurora { display:block; }
+@media (prefers-color-scheme: dark) { html:not([data-theme]) body[data-state="menu"] #aurora { display:block; } }
+#aurora i { position:absolute; left:-20%; right:-20%; height:70%; top:-10%; border-radius:50%; filter:blur(30px);
+  animation:aur 14s ease-in-out infinite alternate; }
+#aurora i:nth-child(1) { background:radial-gradient(60% 40% at 30% 60%, rgba(92,242,196,.9), transparent 70%); }
+#aurora i:nth-child(2) { background:radial-gradient(50% 35% at 70% 50%, rgba(169,139,255,.8), transparent 70%); animation-duration:19s; animation-delay:-6s; }
+#aurora i:nth-child(3) { background:radial-gradient(40% 25% at 50% 70%, rgba(80,200,255,.6), transparent 70%); animation-duration:23s; animation-delay:-11s; }
+@keyframes aur { from { transform:translateX(-8%) skewX(-8deg) scaleY(.9); } to { transform:translateX(8%) skewX(10deg) scaleY(1.15); } }
+#frost { background:radial-gradient(120% 95% at 50% 50%, transparent 55%, rgba(3,7,16,.65) 100%); }
+#gust { opacity:0; background:linear-gradient(100deg, rgba(20,34,60,0), rgba(120,150,200,.35) 45%, rgba(20,34,60,.2)); }
+body[data-state="reveal"] #gust, body[data-state="result"] #gust { opacity:0 !important; transition:opacity 1s; }
+/* Level 1/2: kein Höhenmesser – man soll es spüren, nicht ablesen */
+body[data-lvl="1"] #gauge, body[data-lvl="2"] #gauge { display:none; }
+html[data-motion="low"] #aurora i { animation:none; }
+html[data-motion="low"] .card-in { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; background:var(--surface) !important; }
 html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; background:var(--surface) !important; }
 </style>
 </head>
 <body>
 <div id="app">
-  <canvas id="welt" aria-label="3D-Landschaft im Nebel"></canvas>
+  <canvas id="welt" aria-label="3D-Landschaft im Schneesturm"></canvas>
+  <div id="aurora"><i></i><i></i><i></i></div>
+  <canvas id="snow"></canvas>
+  <div id="gust"></div>
+  <div id="frost"></div>
   <div id="labels"></div>
   <div id="zwei" hidden></div>
 
@@ -354,9 +424,9 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 
   <div id="menu" hidden>
     <div class="menu-in glass">
-      <span class="proto">Prototyp</span>
+      <span class="kick">Expedition 2026 · Polarlicht</span>
       <h1>Nebeltal</h1>
-      <p class="sub">Wie lernt eine KI? Sie sucht im Nebel den tiefsten Punkt einer Landschaft – und sieht dabei nur die Stelle, an der sie gerade steht.</p>
+      <p class="sub">Wie lernt eine KI? Sie sucht im Schneesturm den tiefsten Punkt einer Landschaft – und sieht dabei nur die Stelle, an der sie gerade steht.</p>
       <div id="levels"></div>
       <div class="seedrow">
         <label for="seed">Welt-Nummer</label>
@@ -374,10 +444,11 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 </div>
 
 <script src="js/welt.js?v=20261117h"></script>
-<script src="js/bilder.js?v=20261117h"></script>
-<script src="js/grafik.js?v=20261117i"></script>
+<script src="js/bilder.js?v=20261117j"></script>
+<script src="js/grafik.js?v=20261117j"></script>
+<script src="js/schnee.js?v=20261117j"></script>
 <script src="js/netz.js?v=20261117h"></script>
 <script src="js/zwei.js?v=20261117h"></script>
-<script src="js/spiel.js?v=20261117h"></script>
+<script src="js/spiel.js?v=20261117j"></script>
 </body>
 </html>

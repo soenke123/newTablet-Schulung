@@ -160,7 +160,19 @@ window.NTBild = (function () {
   }
   const hillsFn = t => 0.62 + 0.18 * Math.sin(t * 15) * (1 - t * 0.4) - 0.5 * Math.exp(-((t - 0.78) ** 2) / 0.004) + 0.15 * Math.cos(t * 5);
 
-  const svg = (vb, body, label) => '<svg class="ill" viewBox="' + vb + '" role="img" aria-label="' + label + '" xmlns="http://www.w3.org/2000/svg" font-family="Outfit, system-ui, sans-serif">' + body + '</svg>';
+  const svg = (vb, body, label) => '<svg class="ill" viewBox="' + vb + '" role="img" aria-label="' + label + '" xmlns="http://www.w3.org/2000/svg" style="font-family:var(--font, Outfit, system-ui, sans-serif)">' + body + '</svg>';
+
+  /* ── Schneestreifen (fest gewürfelt, gleiches Bild bei jedem Aufruf) ── */
+  function snowfall(W, H, k) {
+    let r = 7, h = '';
+    const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < Math.round(70 * k); i++) {
+      const x = rnd() * W, y = rnd() * H, z = 0.35 + rnd() * 0.65, l = 4 + z * 9;
+      h += '<line x1="' + x.toFixed(0) + '" y1="' + y.toFixed(0) + '" x2="' + (x - l).toFixed(0) + '" y2="' + (y - l * 0.35).toFixed(0) +
+        '" stroke="var(--snow, #cfe0f5)" stroke-opacity="' + (0.35 + z * 0.5).toFixed(2) + '" stroke-width="' + (z * 1.8).toFixed(1) + '" stroke-linecap="round"/>';
+    }
+    return h;
+  }
 
   /* ── die Bilder je Level ── */
   const SCENES = {
@@ -177,23 +189,18 @@ window.NTBild = (function () {
       b += '<rect width="560" height="200" fill="url(#ntFog1)"/>';
       b += peng({ sp: 'adelie', x: pg[0], y: pg[1] + 2, s: 0.5, scarf: ORANGE });
       b += '<g transform="translate(' + (pg[0] + 26) + ' ' + (pg[1] - 62) + ')"><rect x="0" y="-16" width="26" height="24" rx="8" fill="var(--surface)" stroke="var(--line)"/>' + T(13, 2, '?', { size: 16, w: 700 }) + '</g>';
-      // Höhenmesser
-      b += '<g transform="translate(14 22)"><rect width="40" height="120" rx="10" fill="var(--surface)" stroke="var(--line)"/>' +
-        '<rect x="16" y="14" width="8" height="92" rx="4" fill="url(#ntBar)"/><circle cx="20" cy="46" r="8" fill="' + ORANGE + '" stroke="var(--surface)" stroke-width="2.5"/></g>' +
-        '<defs><linearGradient id="ntBar" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2b8c86"/><stop offset=".45" stop-color="#78b660"/><stop offset=".8" stop-color="#cbb784"/><stop offset="1" stop-color="#efe9dc"/></linearGradient></defs>';
-      b += T(34, 160, 'Höhe', { size: 11.5, col: 'var(--ink-faint)', w: 700 });
-      b += T(fl[0] - 10, fl[1] - 36, 'tiefste Mulde – irgendwo im Nebel', { size: 12, col: 'var(--ink-faint)' });
-      return svg('0 0 560 200', b, 'Pinguin im Nebel auf einem Hügel, irgendwo liegt die tiefste Mulde');
+      b += snowfall(560, 200, 1);
+      b += T(fl[0] - 10, fl[1] - 36, 'tiefste Mulde – irgendwo im Sturm', { size: 12, col: 'var(--ink-faint)' });
+      return svg('0 0 560 200', b, 'Pinguin im Schneesturm auf einem Hügel, irgendwo liegt die tiefste Mulde');
     },
     2() {
       const fn = hillsFn, base = 178, at = t => [30 + 500 * t, base - fn(t) * 120];
-      let b = '<defs><linearGradient id="ntG2" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#2b8c86"/><stop offset=".45" stop-color="#78b660"/><stop offset=".8" stop-color="#cbb784"/><stop offset="1" stop-color="#efe9dc"/></linearGradient></defs>';
-      b += '<rect width="560" height="200" fill="var(--surface-2)"/>';
-      b += '<path d="' + profile(fn, 30, 530, base, 120, 120) + ' L530,200 L30,200Z" fill="url(#ntG2)" opacity=".85" stroke="var(--ink-faint)" stroke-width="2"/>';
+      let b = '<rect width="560" height="200" fill="var(--surface-2)"/>';
+      b += '<path d="' + profile(fn, 30, 530, base, 120, 120) + ' L530,200 L30,200Z" fill="var(--ice)" stroke="var(--ink-faint)" stroke-width="2"/>';
       const t0 = 0.19, pg = at(t0), q = at(t0 + 0.05);
       const ang = Math.atan2(q[1] - pg[1], q[0] - pg[0]);
       const ex = pg[0] + Math.cos(ang) * 46, ey = pg[1] + Math.sin(ang) * 46;
-      b += '<line x1="' + pg[0] + '" y1="' + (pg[1] - 2) + '" x2="' + ex + '" y2="' + (ey - 2) + '" stroke="' + BLUE + '" stroke-width="5" stroke-linecap="round"/>' + arrowHead(ex + Math.cos(ang) * 6, ey - 2 + Math.sin(ang) * 6, BLUE, ang);
+      b += '<line x1="' + pg[0] + '" y1="' + (pg[1] - 2) + '" x2="' + ex + '" y2="' + (ey - 2) + '" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>' + arrowHead(ex + Math.cos(ang) * 6, ey - 2 + Math.sin(ang) * 6, 'var(--accent)', ang);
       b += peng({ sp: 'adelie', x: pg[0], y: pg[1] + 2, s: 0.46, scarf: ORANGE });
       // lokale vs. tiefste Mulde
       let lo = 0.33, lv = 9; for (let t = 0.26; t < 0.45; t += 0.002) if (fn(t) < lv) { lv = fn(t); lo = t; }
@@ -201,8 +208,9 @@ window.NTBild = (function () {
       b += T(lm[0], lm[1] + 20, 'kleine Mulde', { size: 12, col: 'var(--ink-soft)', w: 700 });
       b += '<path d="M' + fl[0] + ',' + fl[1] + ' l0,-26 l16,6 l-16,6" fill="#f4c13d" stroke="#b88a00"/>';
       b += T(fl[0] + 8, fl[1] - 34, 'tiefste Mulde', { size: 12, col: 'var(--ink)', w: 700 });
-      b += T(ex + 4, ey - 22, 'bergab', { size: 12.5, col: BLUE, w: 700, a: 'start' });
-      return svg('0 0 560 200', b, 'Ein blauer Pfeil unter dem Pinguin zeigt bergab, zur nächsten Mulde');
+      b += snowfall(560, 200, 0.6);
+      b += T(ex + 4, ey - 22, 'bergab', { size: 12.5, col: 'var(--accent-ink)', w: 700, a: 'start' });
+      return svg('0 0 560 200', b, 'Ein leuchtender Pfeil unter dem Pinguin zeigt bergab, zur nächsten Mulde');
     },
     3() {
       let b = '<rect width="560" height="200" fill="var(--surface-2)"/>';
