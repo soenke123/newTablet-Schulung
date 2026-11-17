@@ -41,6 +41,16 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Werte setzen, Pfeil = −Gradient, weiße Spur). Die Neuronen hängen im Fehler nicht voneinander ab –
   nur die beiden Welten eines Neurons verbiegen sich gegenseitig. Lernrate 4: nach ~30 Schritten
   5–10 von 342 falsch, bestes Netz 5 falsch.
+  Schalter „+ Zahl-Neuron“ (Sönke 17.11.2026, Modus `zahl`): A, B, C werden zur versteckten Schicht
+  (eigene Farben, NICHT die Artfarben – ihre Bedeutung lernt das Netz selbst), dahinter EIN Neuron
+  ohne σ wie die Sonnenblume: Zahl < 0,5 / bis 1,5 / darüber = Art mit 0/1/2; welche Art die 1
+  bekommt, ist wählbar (`#ordSeg`, Vorgabe Zügel). 16 Werte = 8 Welten (2 × 4), Fehler = ½ · mittleres
+  Abstandsquadrat, ALLE Welten hängen voneinander ab. Zweite Wolke „Was das Zahl-Neuron sieht“:
+  Pinguine an ihren Antworten (A, B, C je 0–100 %), zwei parallele Ebenen bei 0,5 und 1,5 = drei
+  Scheiben. Lernrate 0,05–4, Start 1 (ab ≈ 2 explodiert es, Ausgang ohne σ), Startwerte ±2.
+  Simulation (30 Netze): Zügel = 1 → nach 60 Schritten ~13, nach 200 ~9 falsch; Adelie = 1 → nach
+  200 ~9; Esel = 1 → ~28 – die Reihenfolge ist nicht egal (Arten sind keine Zahlen). Gut zu sehen:
+  Hat ein verstecktes Neuron kaum Gewicht zum Zahl-Neuron, ist seine Welt flach – es ist egal.
 - `js/grafik.js` – reines WebGL 1 ohne Bibliothek (CSP/Datenschutz): Gitter, Kugel/Kegel/Kasten,
   Nebel hängt an der Figur (uFogR), nicht an der Kamera; Höhenlinien im Shader
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm

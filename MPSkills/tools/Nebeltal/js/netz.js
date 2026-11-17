@@ -39,7 +39,7 @@ window.NTNetz = (function () {
     const P = n => [pad + 34 + n.x * (W - 2 * pad - 68), pad + n.y * (H - 2 * pad)];
     const byId = {};
     for (const n of net.nodes) byId[n.id] = n;
-    const col = g => COL[g] || soft;
+    const col = g => COL[g] || (g && g[0] === '#' ? g : soft);   // Gruppe oder direkt eine Farbe
 
     // Kanten
     const labels = [];
