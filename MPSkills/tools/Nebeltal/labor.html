@@ -64,6 +64,8 @@ button { font:inherit; color:inherit; }
 body[data-mode="zahl"] #cloud2Box { display:flex; }
 body[data-mode="zahl"] .top { grid-template-columns:1fr 1fr 1.2fr; }
 body:not([data-mode="zahl"]) #ordSeg { display:none; }
+.ordfix { font-size:13px; color:var(--ink-faint); white-space:nowrap; }
+.ordfix b { color:var(--ink); }
 .seg { display:flex; align-items:center; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
 .seg span { padding:0 8px; font-size:13px; font-weight:700; color:var(--ink-faint); }
 .seg button { border:0; border-left:1px solid var(--line); background:var(--surface); padding:8px 11px; font-weight:600; font-size:14px; cursor:pointer; }
@@ -145,12 +147,12 @@ table.w td.ok { color:var(--ink-faint); font-weight:600; }
     <button id="auto" class="btn" type="button">Training starten</button>
     <button id="rnd" class="btn" type="button">Neu würfeln</button>
     <div class="seg" id="mode"><button type="button" data-m="own">3 Neuronen</button><button type="button" data-m="zahl">+ Zahl-Neuron</button></div>
-    <div class="seg" id="ordSeg"><span>1 =</span><button type="button" data-o="0">Adelie</button><button type="button" data-o="1">Zügel</button><button type="button" data-o="2">Esel</button></div>
+    <div class="ordfix" id="ordSeg" title="Fest: Zügel liegt in der Wolke zwischen Adelie und Esel"><b>0</b> Adelie · <b>1</b> Zügel · <b>2</b> Esel</div>
   </div>
   <div class="grid" id="grid"></div>
 </div>
-<script src="js/welt.js?v=20261117e"></script>
-<script src="js/netz.js?v=20261117e"></script>
-<script src="js/labor.js?v=20261117e"></script>
+<script src="js/welt.js?v=20261117f"></script>
+<script src="js/netz.js?v=20261117f"></script>
+<script src="js/labor.js?v=20261117f"></script>
 </body>
 </html>

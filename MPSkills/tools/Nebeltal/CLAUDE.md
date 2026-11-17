@@ -44,7 +44,7 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Schalter „+ Zahl-Neuron“ (Sönke 17.11.2026, Modus `zahl`): A, B, C werden zur versteckten Schicht
   (eigene Farben, NICHT die Artfarben – ihre Bedeutung lernt das Netz selbst), dahinter EIN Neuron
   ohne σ wie die Sonnenblume: Zahl < 0,5 / bis 1,5 / darüber = Art mit 0/1/2; welche Art die 1
-  bekommt, ist wählbar (`#ordSeg`, Vorgabe Zügel). 16 Werte = 8 Welten (2 × 4), Fehler = ½ · mittleres
+  bekommt, ist FEST Zügel (Sönke 17.11.2026; vorher wählbar, `#ordSeg` ist nur noch Anzeige). 16 Werte = 8 Welten (2 × 4), Fehler = ½ · mittleres
   Abstandsquadrat, ALLE Welten hängen voneinander ab. Zweite Wolke „Was das Zahl-Neuron sieht“:
   Pinguine an ihren Antworten (A, B, C je 0–100 %), zwei parallele Ebenen bei 0,5 und 1,5 = drei
   Scheiben. Lernrate 0,05–4, Start 1 (ab ≈ 2 explodiert es, Ausgang ohne σ), Startwerte ±2.

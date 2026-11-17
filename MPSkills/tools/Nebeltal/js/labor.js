@@ -82,8 +82,9 @@
     ? [{ idx: [0, 1], lab: ['von A', 'von B'] }, { idx: [2, 3], lab: ['von C', 'Bias'] }]
     : [{ idx: [0, 1], lab: ['Länge', 'Höhe'] }, { idx: [2, 3], lab: ['Flosse', 'Bias'] }];
 
-  // Welche Art bekommt welche Zahl? Die Art in der Mitte bekommt die 1,
-  // die beiden anderen in ihrer Reihenfolge 0 und 2.
+  // Welche Art bekommt welche Zahl? Fest: Zügel = 1 (Adelie 0, Esel 2). Zügel liegt in der
+  // Wolke zwischen den beiden (Schnabel lang wie Esel, hoch wie Adelie, Flosse dazwischen) und
+  // lernt in kurzer Zeit am besten; Esel in der Mitte klappt kaum (Simulation 17.11.2026).
   function setMid(m) {
     S.mid = m;
     const rest = [0, 1, 2].filter(k => k !== m);
@@ -490,12 +491,6 @@
     $('#auto').addEventListener('click', () => setAuto(!S.auto));
     $('#rnd').addEventListener('click', () => { setAuto(false); rnd(); });
     for (const b of document.querySelectorAll('#mode button')) b.addEventListener('click', () => setMode(b.dataset.m));
-    for (const b of document.querySelectorAll('#ordSeg button')) b.addEventListener('click', () => {
-      setMid(+b.dataset.o);
-      for (const o of document.querySelectorAll('#ordSeg button')) o.classList.toggle('on', o === b);
-      legends(); dirtyAll();
-    });
-    document.querySelector('#ordSeg button[data-o="1"]').classList.add('on');
   }
 
   /* ── Bild für Bild ── */
