@@ -183,8 +183,10 @@ body:not([data-lvl="3"]) #lrDistRow { display:none; }
 #modelBox { position:absolute; right:12px; top:170px; width:290px; padding:8px 10px 8px; }
 #plot { width:100%; height:140px; display:block; }
 #mrow { width:100%; height:auto; display:block; }
-#xorBox { position:absolute; right:12px; top:170px; width:260px; padding:8px 10px 8px; }
+#xorBox { position:absolute; right:12px; top:170px; width:300px; padding:8px 10px 8px; }
 #xnet { width:100%; height:92px; display:block; }
+/* Die vier Nester als Diagramm (NTNetz.nestPlot): Mama → rechts, Papa → oben, Gerade = Neuron */
+canvas.nplot { width:100%; aspect-ratio:1 / 0.92; height:auto; display:block; margin:2px 0 4px; }
 .ca { color:#f27828; } .cb { color:#8b5cf6; }
 
 /* Die vier Nester (js/netz.js lights) */
@@ -317,10 +319,14 @@ html:not([data-theme="dark"]):not([data-night]) #joy { border-color:rgba(11,157,
 html:not([data-theme="dark"]):not([data-night]) #joyKnob { background:rgba(11,157,179,.8); }
 .lbl { font-family:var(--font); }
 
-/* Schneesturm-Ebenen (Level 1/2; Polarlicht auch im dunklen Menü) */
+/* Polarnacht in allen Leveln (data-night), Schneesturm nur Level 1–3 (data-snow); Polarlicht auch im dunklen Menü */
+html[data-night] .g-bar { background:linear-gradient(to top, #0b6e6a, #2b78b0 35%, #6d5fd0 68%, #c9b6f2); }
+/* Sönkes Pinguin-Bilder (js/bilder.js): im Dunkeln ein heller Hauch um den Umriss */
+html[data-night] .pg, html[data-theme="dark"] .pg { filter:drop-shadow(0 0 1.4px rgba(220,235,255,.55)); }
+@media (prefers-color-scheme: dark) { html:not([data-theme]) .pg { filter:drop-shadow(0 0 1.4px rgba(220,235,255,.55)); } }
 #aurora, #snow, #gust, #frost { position:absolute; inset:0; pointer-events:none; display:none; }
 #snow { width:100%; height:100%; }
-html[data-night] #snow, html[data-night] #gust, html[data-night] #frost { display:block; }
+html[data-snow] #snow, html[data-snow] #gust, html[data-night] #frost { display:block; }
 #aurora { height:55%; mix-blend-mode:screen; opacity:.5; overflow:hidden;
   -webkit-mask-image:linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%); mask-image:linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%); }
 html[data-night] #aurora, html[data-theme="dark"] body[data-state="menu"] #aurora { display:block; }
@@ -386,8 +392,8 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
     <div id="xorBox" class="glass" hidden>
       <div class="box-t">Das Neuron</div>
       <canvas id="xnet"></canvas>
-      <div class="box-t" style="margin-top:4px">Die vier Nester</div>
-      <div id="xtab"></div>
+      <div class="box-t" style="margin-top:4px">Die vier Nester · dein Neuron = eine Gerade</div>
+      <canvas id="xplot" class="nplot" aria-label="Die vier Nester als Diagramm: Mama und Papa am Nest oder beim Fischen, die Gerade des Neurons teilt das Feld"></canvas>
       <div class="mvals"><span>richtig beurteilt</span><b id="xRight">–</b></div>
     </div>
 
@@ -434,7 +440,7 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
         <button id="seedDice" class="btn" type="button">Neue Welt</button>
         <small>Gleiche Nummer = gleiche Landschaft. Spielt alle dieselbe Welt: Wer kommt am tiefsten?</small>
       </div>
-      <a class="lablink" href="labor.html">Labor: Pinguine in 3D – 3 Neuronen, 6 Welten (Test)</a>
+      <a class="lablink" href="labor.html">Labor: Pinguine in 3D frei ausprobieren (3 Neuronen oder + Zahl-Neuron)</a>
       <a class="lablink" href="showroom.html">Showroom: Eiswelt – drei Looks zur Auswahl</a>
     </div>
   </div>
@@ -444,11 +450,11 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 </div>
 
 <script src="js/welt.js?v=20261117l"></script>
-<script src="js/bilder.js?v=20261117j"></script>
-<script src="js/grafik.js?v=20261117j"></script>
+<script src="js/bilder.js?v=20261117m"></script>
+<script src="js/grafik.js?v=20261117m"></script>
 <script src="js/schnee.js?v=20261117j"></script>
-<script src="js/netz.js?v=20261117h"></script>
-<script src="js/zwei.js?v=20261117h"></script>
-<script src="js/spiel.js?v=20261117k"></script>
+<script src="js/netz.js?v=20261117m"></script>
+<script src="js/zwei.js?v=20261117m"></script>
+<script src="js/spiel.js?v=20261117m"></script>
 </body>
 </html>

@@ -19,63 +19,45 @@
 window.NTBild = (function () {
   'use strict';
 
-  const DARK = '#232838', BELLY = '#ffffff', FOOT = '#f59a23';
-  // Umriss nur im Dunkelmodus sichtbar (--peng-edge), sonst verschwindet der Pinguin im dunklen Eis
-  const EDGE = ' stroke="var(--peng-edge)" stroke-width="2.4" vector-effect="non-scaling-stroke"';
-  const SP = {
+    const SP = {
     adelie: { name: 'Adeliepinguin', short: 'Adelie', col: '#2f80ed' },
     chin:   { name: 'Zügelpinguin',  short: 'Zügel',  col: '#f27828' },
     gentoo: { name: 'Eselspinguin',  short: 'Esel',   col: '#12a37a' }
   };
   const ORANGE = '#f27828', VIOLET = '#8b5cf6', BLUE = '#2f7fe6', GREEN = '#12a37a', RED = '#d43a52';
 
-  /* ── Pinguin von vorn, Füße bei (x, y), Höhe ≈ 100·s ── */
+  /* ── Pinguin als Bild (Sönkes Zeichnungen, freigestellt in img/frei/) ──
+     Füße bei (x, y), Höhe ≈ 100·s. o.sp adelie|chin|gentoo, o.v 1|2 = Variante.
+     Mit o.scarf (oder o.sp 'main') ist es der Spieler: der Pinguin mit Schal –
+     o.team 'a' = Schal orange (Figur A), 'b' = violett (Figur B), sonst türkis. */
+  const IMG = 'img/frei/';
+  const RATIO = { adelie_1: 0.68, adelie_2: 0.85, chin_1: 0.67, chin_2: 0.66, gentoo_1: 0.75, gentoo_2: 0.85,
+    main: 0.68, main_a: 0.68, main_b: 0.68 };
+  function pengFile(o) {
+    if (o.scarf || o.sp === 'main') return o.team === 'a' ? 'main_a' : o.team === 'b' ? 'main_b' : 'main';
+    return (SP[o.sp] ? o.sp : 'adelie') + '_' + (o.v === 2 ? 2 : 1);
+  }
   function peng(o) {
     o = o || {};
-    const sp = o.sp || 'adelie', s = o.s || 1, x = o.x || 0, y = o.y || 0;
-    let head = '', bellyTop = -66;
-    const eye = (ex, ey, ring) => (ring ? '<circle cx="' + ex + '" cy="' + ey + '" r="5.4" fill="#fff"/>' : '') +
-      '<circle cx="' + ex + '" cy="' + ey + '" r="2.6" fill="' + DARK + '"/><circle cx="' + (ex + 0.9) + '" cy="' + (ey - 0.9) + '" r="0.9" fill="#fff"/>';
-    if (sp === 'chin') {
-      bellyTop = -86;
-      head = '<path d="M-17,-78 C-15,-90 15,-90 17,-78 C10,-83 -10,-83 -17,-78Z" fill="' + DARK + '"/>' +
-        '<path d="M-19,-69 Q0,-57 19,-69" fill="none" stroke="' + DARK + '" stroke-width="2.6" stroke-linecap="round"/>' +
-        eye(-7, -78, false) + eye(7, -78, false) +
-        '<path d="M-3.5,-74 L3.5,-74 L0,-68Z" fill="' + DARK + '"/>';
-    } else if (sp === 'gentoo') {
-      head = '<path d="M-13,-80 Q0,-93 13,-80" fill="none" stroke="#fff" stroke-width="4.2" stroke-linecap="round"/>' +
-        eye(-9, -79, true) + eye(9, -79, true) +
-        '<path d="M-4.5,-74 L4.5,-74 L0,-66Z" fill="' + ORANGE + '"/>';
-    } else {
-      head = eye(-9, -79, true) + eye(9, -79, true) +
-        '<path d="M-4,-74 L4,-74 L0,-67Z" fill="#4a3a3a"/>';
-    }
-    const belly = sp === 'chin'
-      ? '<path d="M0,' + bellyTop + ' C17,' + bellyTop + ' 23,-58 23,-38 C23,-16 13,-8 0,-8 C-13,-8 -23,-16 -23,-38 C-23,-58 -17,' + bellyTop + ' 0,' + bellyTop + 'Z" fill="' + BELLY + '"/>'
-      : '<path d="M0,' + bellyTop + ' C9,' + bellyTop + ' 22,-60 22,-38 C22,-16 13,-8 0,-8 C-13,-8 -22,-16 -22,-38 C-22,-60 -9,' + bellyTop + ' 0,' + bellyTop + 'Z" fill="' + BELLY + '"/>';
-    const scarf = o.scarf
-      ? '<path d="M-26,-66 Q0,-55 26,-66 L26,-58 Q0,-47 -26,-58Z" fill="' + o.scarf + '"/>' +
-        '<path d="M12,-57 L20,-36 L13,-35 L7,-55Z" fill="' + o.scarf + '"/>'
-      : '';
-    const fl = (o.flipper ? ' fill="' + o.flipper + '"' : ' fill="' + DARK + '"') + EDGE;
-    return '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')">' +
-      '<ellipse cx="0" cy="-2" rx="28" ry="4" fill="#000" opacity=".12"/>' +
-      '<ellipse cx="-11" cy="-4" rx="9" ry="4.2" fill="' + FOOT + '"/><ellipse cx="11" cy="-4" rx="9" ry="4.2" fill="' + FOOT + '"/>' +
-      '<path d="M-27,-62 Q-44,-38 -37,-20 Q-30,-32 -25,-48Z"' + fl + '/>' +
-      '<path d="M27,-62 Q44,-38 37,-20 Q30,-32 25,-48Z"' + fl + '/>' +
-      '<path d="M0,-98 C22,-98 31,-76 31,-46 C31,-16 20,-5 0,-5 C-20,-5 -31,-16 -31,-46 C-31,-76 -22,-98 0,-98Z" fill="' + DARK + '"' + EDGE + '/>' +
-      belly + head + scarf + '</g>';
+    const s = o.s || 1, x = o.x || 0, y = o.y || 0, f = pengFile(o);
+    const h = 104 * s, w = h * (RATIO[f] || 0.75);
+    return '<ellipse cx="' + x + '" cy="' + (y - 2 * s) + '" rx="' + (w * 0.42).toFixed(1) + '" ry="' + (4 * s).toFixed(1) + '" fill="#000" opacity=".16"/>' +
+      '<image class="pg" href="' + IMG + f + '.webp" x="' + (x - w / 2).toFixed(1) + '" y="' + (y - h).toFixed(1) +
+      '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" preserveAspectRatio="xMidYMax meet"' +
+      (o.flip ? ' transform="translate(' + (2 * x) + ' 0) scale(-1 1)"' : '') + '/>';
   }
+  // Nest als Bild: 'nest' (leer), 'mama', 'papa', 'beide'; unten Mitte bei (x, y), Breite w
+  const NEST_R = { nest: 0.41, mama: 0.39, papa: 0.46, beide: 0.46 };
+  function nestImg(kind, x, y, w) {
+    const f = kind === 'nest' ? 'nest' : 'nest_' + kind, h = w * (NEST_R[kind] || 0.45);
+    return '<image class="pg" href="' + IMG + f + '.webp" x="' + (x - w / 2).toFixed(1) + '" y="' + (y - h).toFixed(1) +
+      '" width="' + w.toFixed(1) + '" height="' + h.toFixed(1) + '" preserveAspectRatio="xMidYMax meet"/>';
+  }
+  const nestKind = (m, p) => m > 0 && p > 0 ? 'beide' : m > 0 ? 'mama' : p > 0 ? 'papa' : 'nest';
 
   const egg = (x, y, s, fill, stroke) =>
     '<path transform="translate(' + x + ' ' + y + ') scale(' + (s || 1) + ')" d="M0,-14 C7,-14 10,-4 10,2 C10,9 5,13 0,13 C-5,13 -10,9 -10,2 C-10,-4 -7,-14 0,-14Z" fill="' +
     (fill || '#fbf3e4') + '" stroke="' + (stroke || 'var(--ink-soft)') + '" stroke-width="' + (1.4 / (s || 1)) + '"/>';
-  const nest = (x, y, s) => {
-    let h = '<g transform="translate(' + x + ' ' + y + ') scale(' + (s || 1) + ')">';
-    const st = [[-26, 2, 6], [-16, 6, 6.5], [-4, 8, 7], [9, 7, 6.5], [21, 4, 6], [29, 0, 5], [-32, -2, 5]];
-    for (const [sx, sy, r] of st) h += '<circle cx="' + sx + '" cy="' + sy + '" r="' + r + '" fill="#9aa3ad" stroke="#7d8792" stroke-width="1"/>';
-    return h + '</g>';
-  };
   const wave = (x, y, s) => '<g transform="translate(' + x + ' ' + y + ') scale(' + (s || 1) + ')" fill="none" stroke="' + BLUE + '" stroke-width="2.6" stroke-linecap="round">' +
     '<path d="M-16,0 q4,-6 8,0 t8,0 t8,0 t8,0"/><path d="M-12,8 q4,-6 8,0 t8,0 t8,0" opacity=".6"/></g>';
   const fish = (x, y, s) => '<g transform="translate(' + x + ' ' + y + ') scale(' + (s || 1) + ')"><path d="M-8,0 Q0,-6 7,0 Q0,6 -8,0Z M7,0 L12,-4 L12,4Z" fill="' + BLUE + '"/></g>';
@@ -147,7 +129,7 @@ window.NTBild = (function () {
     h += T(bm[0] + 10, bm[1] + 22, o.zl, { col, w: 700, size: 19, a: 'start' });
     // Pinguin steht auf seinem Neuron
     const pp = P(o.pu != null ? o.pu : -0.55, o.pv != null ? o.pv : 0.35);
-    h += peng({ sp: 'adelie', x: pp[0], y: pp[1] + 4, s: 0.42, scarf: o.scarf || ORANGE });
+    h += peng({ sp: 'main', team: o.team, x: pp[0], y: pp[1] + 4, s: 0.46 });
     if (o.title) h += T(116, 12, o.title, { size: 18, col: 'var(--ink-faint)', w: 700 });
     return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')">' + h + '</g>';
   }
@@ -187,7 +169,7 @@ window.NTBild = (function () {
       const fl = at(0.78);
       b += '<path d="M' + fl[0] + ',' + fl[1] + ' l0,-26 l16,6 l-16,6" fill="#f4c13d" stroke="#b88a00"/>';
       b += '<rect width="560" height="200" fill="url(#ntFog1)"/>';
-      b += peng({ sp: 'adelie', x: pg[0], y: pg[1] + 2, s: 0.5, scarf: ORANGE });
+      b += peng({ sp: 'main', x: pg[0], y: pg[1] + 2, s: 0.56 });
       b += '<g transform="translate(' + (pg[0] + 26) + ' ' + (pg[1] - 62) + ')"><rect x="0" y="-16" width="26" height="24" rx="8" fill="var(--surface)" stroke="var(--line)"/>' + T(13, 2, '?', { size: 16, w: 700 }) + '</g>';
       b += snowfall(560, 200, 1);
       b += T(fl[0] - 10, fl[1] - 36, 'tiefste Mulde – irgendwo im Sturm', { size: 12, col: 'var(--ink-faint)' });
@@ -201,7 +183,7 @@ window.NTBild = (function () {
       const ang = Math.atan2(q[1] - pg[1], q[0] - pg[0]);
       const ex = pg[0] + Math.cos(ang) * 46, ey = pg[1] + Math.sin(ang) * 46;
       b += '<line x1="' + pg[0] + '" y1="' + (pg[1] - 2) + '" x2="' + ex + '" y2="' + (ey - 2) + '" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>' + arrowHead(ex + Math.cos(ang) * 6, ey - 2 + Math.sin(ang) * 6, 'var(--accent)', ang);
-      b += peng({ sp: 'adelie', x: pg[0], y: pg[1] + 2, s: 0.46, scarf: ORANGE });
+      b += peng({ sp: 'main', x: pg[0], y: pg[1] + 2, s: 0.52 });
       // lokale vs. tiefste Mulde
       let lo = 0.33, lv = 9; for (let t = 0.26; t < 0.45; t += 0.002) if (fn(t) < lv) { lv = fn(t); lo = t; }
       const lm = at(lo), fl = at(0.78);
@@ -229,7 +211,7 @@ window.NTBild = (function () {
           h += '<circle cx="' + x1 + '" cy="' + y1 + '" r="3.2" fill="' + col + '"/>';
           prev = t;
         }
-        h += peng({ sp: 'adelie', x: X(jumps[0]), y: Y(jumps[0]) + 1, s: 0.26, scarf: ORANGE });
+        h += peng({ sp: 'main', x: X(jumps[0]), y: Y(jumps[0]) + 1, s: 0.3 });
         h += '<path d="M' + X(0.5) + ',' + Y(0.5) + ' l0,-16 l10,4 l-10,4" fill="#f4c13d" stroke="#b88a00"/>';
         h += T(ox + 90, 24, title, { size: 14, w: 700, col });
         h += T(ox + 90, 178, note, { size: 12, col: 'var(--ink-soft)' });
@@ -244,7 +226,7 @@ window.NTBild = (function () {
       let b = '<rect width="560" height="210" fill="var(--surface-2)"/>';
       // Forschungsstation: Pinguin mit Lineal an der Flosse, Waage mit „?“
       b += '<rect x="10" y="10" width="150" height="190" rx="12" fill="var(--ice)"/>';
-      b += peng({ sp: 'gentoo', x: 72, y: 170, s: 1.22, flipper: '#3a4152' });
+      b += peng({ sp: 'gentoo', x: 70, y: 170, s: 1.22, flip: true });
       b += '<g transform="translate(118 90) rotate(64)"><rect x="0" y="-5" width="66" height="10" rx="2" fill="#f4c13d" stroke="#b88a00"/>' +
         [0, 1, 2, 3, 4, 5, 6].map(i => '<line x1="' + (4 + i * 9.6) + '" y1="-5" x2="' + (4 + i * 9.6) + '" y2="' + (i % 2 ? -1 : 1) + '" stroke="#6b5200" stroke-width="1"/>').join('') + '</g>';
       b += T(85, 30, 'Flosse: 21 cm', { size: 13, w: 700, col: ORANGE });
@@ -266,12 +248,11 @@ window.NTBild = (function () {
     5() {
       let b = '<rect width="560" height="210" fill="var(--surface-2)"/>';
       b += '<rect x="10" y="10" width="178" height="190" rx="12" fill="var(--ice)"/>';
-      b += peng({ sp: 'adelie', x: 52, y: 150, s: 0.95 });
-      b += peng({ sp: 'chin', x: 140, y: 150, s: 0.95 });
+      b += peng({ sp: 'adelie', x: 54, y: 156, s: 1.1 });
+      b += peng({ sp: 'chin', x: 142, y: 156, s: 1.1 });
       b += '<circle cx="52" cy="167" r="5" fill="' + SP.adelie.col + '"/>' + T(52, 190, 'Adelie', { size: 12.5, w: 700, col: SP.adelie.col });
       b += '<path d="M140,161 l5.5,9 l-11,0Z" fill="' + SP.chin.col + '"/>' + T(140, 190, 'Zügel', { size: 12.5, w: 700, col: SP.chin.col });
-      b += T(140, 30, 'schwarzer „Zügel“', { size: 11, col: 'var(--ink-soft)' });
-      b += '<line x1="140" y1="34" x2="140" y2="78" stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="2 2"/>';
+      b += T(142, 30, 'schwarzer „Zügel“', { size: 11, col: 'var(--ink-soft)' });
       // Schnabel vermessen
       b += '<g transform="translate(232 40)"><path d="M0,0 L58,10 L0,22Z" fill="#6b5656"/>' +
         '<line x1="0" y1="32" x2="58" y2="32" stroke="' + ORANGE + '" stroke-width="2"/>' + T(29, 46, 'Länge', { size: 12, w: 700, col: ORANGE }) +
@@ -312,9 +293,30 @@ window.NTBild = (function () {
       b += T(270, 66, 'fest', { size: 11, col: 'var(--ink-faint)' });
       b += T(200, 196, 'Kanten in A = Welt A · Kanten in B = Welt B', { size: 12, col: 'var(--ink-soft)' });
       b += T(200, 214, 'ein Netz → beide Figuren immer auf derselben Höhe', { size: 12, col: 'var(--ink-soft)' });
-      b += karte(410, 4, { xl: 'a₁', zl: 'a₂', col: ORANGE, title: 'Welt A', mu: 0.4, mv: -0.3, scarf: ORANGE, k: 0.62 });
-      b += karte(410, 116, { xl: 'b₁', zl: 'b₂', col: VIOLET, title: 'Welt B', mu: -0.3, mv: 0.35, pu: 0.5, pv: 0.5, scarf: VIOLET, k: 0.62 });
+      b += karte(410, 4, { xl: 'a₁', zl: 'a₂', col: ORANGE, title: 'Welt A', mu: 0.4, mv: -0.3, team: 'a', k: 0.62 });
+      b += karte(410, 116, { xl: 'b₁', zl: 'b₂', col: VIOLET, title: 'Welt B', mu: -0.3, mv: 0.35, pu: 0.5, pv: 0.5, team: 'b', k: 0.62 });
       return svg('0 0 560 230', b, 'Das Netz mit zwei Neuronen A und B, daneben ihre beiden Welten');
+    },
+    8() {
+      let b = '<rect width="560" height="230" fill="var(--surface-2)"/>';
+      // drei Arten, echte Bilder
+      b += '<rect x="10" y="10" width="236" height="210" rx="12" fill="var(--ice)"/>';
+      [['adelie', 52, 0], ['chin', 128, 1], ['gentoo', 204, 2]].forEach(([sp, x, n]) => {
+        b += peng({ sp, x, y: 168, s: 1.18 });
+        b += T(x, 190, SP[sp].short, { size: 13, w: 700, col: SP[sp].col });
+        b += T(x, 208, 'Zahl ' + n, { size: 11.5, w: 700, col: 'var(--ink-soft)' });
+      });
+      // Netz: 3 Eingänge → A, B, C → Zahl
+      const ins = [[300, 50, 'Länge'], [300, 112, 'Höhe'], [300, 174, 'Flosse']], H3 = [[400, 50, 'A', '#8b5cf6'], [400, 112, 'B', '#d9468f'], [400, 174, 'C', '#0ea5b7']], Z = [488, 112];
+      for (const [ix, iy] of ins) for (const [hx, hy, , c] of H3) b += '<line x1="' + ix + '" y1="' + iy + '" x2="' + (hx - 15) + '" y2="' + hy + '" stroke="' + c + '" stroke-width="2" opacity=".75"/>';
+      for (const [hx, hy] of H3) b += '<line x1="' + (hx + 15) + '" y1="' + hy + '" x2="' + (Z[0] - 17) + '" y2="' + Z[1] + '" stroke="#c99400" stroke-width="2.6"/>';
+      for (const [ix, iy, l] of ins) b += '<circle cx="' + ix + '" cy="' + iy + '" r="4.5" fill="var(--ink)"/>' + T(ix - 8, iy + 4.5, l, { a: 'end', size: 12 });
+      for (const [hx, hy, l, c] of H3) b += '<circle cx="' + hx + '" cy="' + hy + '" r="15" fill="var(--surface)" stroke="' + c + '" stroke-width="2.6"/>' + T(hx, hy + 5, l, { size: 14, w: 700, col: c });
+      b += '<circle cx="' + Z[0] + '" cy="' + Z[1] + '" r="17" fill="var(--surface)" stroke="#c99400" stroke-width="2.6"/>' + T(Z[0], Z[1] + 5.5, 'Σ', { size: 15, w: 700 });
+      b += '<line x1="' + (Z[0] + 17) + '" y1="' + Z[1] + '" x2="' + (Z[0] + 40) + '" y2="' + Z[1] + '" stroke="var(--ink)" stroke-width="2"/>' + arrowHead(Z[0] + 46, Z[1], 'var(--ink)');
+      b += T(Z[0] + 30, Z[1] - 14, 'Zahl', { size: 12, w: 700 });
+      b += T(400, 212, '4 Neuronen · 16 Werte · 8 Welten', { size: 12, w: 700, col: 'var(--ink-soft)' });
+      return svg('0 0 560 230', b, 'Adelie-, Zügel- und Eselspinguin, daneben ein Netz mit drei versteckten Neuronen A, B, C und einem Zahl-Neuron');
     }
   };
 
@@ -326,11 +328,11 @@ window.NTBild = (function () {
     CASES.forEach(([m, p, ok, txt], i) => {
       const cx = x + (i % 2) * (cw + 8), cy = y + Math.floor(i / 2) * (ch + 8);
       b += '<rect x="' + cx + '" y="' + cy + '" width="' + cw + '" height="' + ch + '" rx="10" fill="var(--ice)" stroke="' + (ok ? GREEN : 'var(--line)') + '" stroke-width="' + (ok ? 2 : 1) + '"/>';
-      const nx = cx + cw / 2, ny = cy + ch - 26;
-      b += nest(nx, ny + 4, 0.75) + egg(nx, ny - 3, 0.75);
-      b += m ? peng({ sp: 'adelie', x: nx - 36, y: ny + 8, s: 0.42, scarf: GREEN }) : wave(nx - 38, ny - 14, 0.8) + fish(nx - 32, ny - 1, 0.8);
-      b += p ? peng({ sp: 'adelie', x: nx + 36, y: ny + 8, s: 0.42, scarf: '#e0a210' }) : wave(nx + 34, ny - 14, 0.8) + fish(nx + 40, ny - 1, 0.8);
-      b += T(nx - 36, cy + ch - 4, 'Mama', { size: 10.5, col: 'var(--ink-faint)', w: 700 }) + T(nx + 36, cy + ch - 4, 'Papa', { size: 10.5, col: 'var(--ink-faint)', w: 700 });
+      const nx = cx + cw / 2, ny = cy + ch - 8;
+      b += nestImg(nestKind(m, p), nx, ny, cw * 0.74);
+      // wer fischt, ist weg: Welle mit Fisch auf seiner Seite (Papa links, Mama rechts – wie auf den Bildern)
+      if (!p) b += wave(cx + 20, cy + ch * 0.42, 0.6) + fish(cx + 24, cy + ch * 0.42 + 10, 0.6);
+      if (!m) b += wave(cx + cw - 22, cy + ch * 0.42, 0.6) + fish(cx + cw - 18, cy + ch * 0.42 + 10, 0.6);
       b += check(cx + cw - 14, cy + 14, ok, 0.9);
       b += T(nx, cy + 15, txt, { size: 10.5, col: 'var(--ink-soft)' });
     });
@@ -351,5 +353,5 @@ window.NTBild = (function () {
     return '';
   }
 
-  return { peng, icon, SP, scene: id => (SCENES[id] ? SCENES[id]() : '') };
+  return { peng, nestImg, nestKind, icon, SP, IMG, scene: id => (SCENES[id] ? SCENES[id]() : '') };
 })();

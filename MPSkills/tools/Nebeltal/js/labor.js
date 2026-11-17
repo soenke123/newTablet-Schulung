@@ -54,22 +54,22 @@
     let pd = null;
     try { pd = window.parent !== window ? window.parent.document.documentElement : null; } catch (e) { pd = null; }
     const apply = () => {
-      if (pd) {
-        const t = pd.getAttribute('data-theme');
-        if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
-        else document.documentElement.removeAttribute('data-theme');
-      }
       dirtyAll();
     };
     apply();
     if (pd) { try { new MutationObserver(apply).observe(pd, { attributes: true, attributeFilter: ['data-theme'] }); } catch (e) { /* egal */ } }
     matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', apply);
   }
-  const dark = () => {
-    const t = document.documentElement.getAttribute('data-theme');
-    return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-  };
+  const dark = () => true;                     // Labor/Level 8: immer Polarnacht wie das Spiel
   const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+  // Sönkes Pinguin-Bilder (img/frei/) neben den Namen
+  const SPK = ['adelie', 'chin', 'gentoo'];
+  const pimg = (k, cls) => '<img class="' + (cls || 'pi') + '" src="img/frei/' + SPK[k] + '_1.webp" alt="">';
+
+  // Level 8 (labor.html?level=8): ein Netz mit 4 Neuronen = 8 Welten, Erklärkarte vorweg
+  const LEVEL8 = /[?&]level=8\b/.test(location.search);
+  if (LEVEL8) document.body.dataset.level = '8';
 
   /* ── Zustand ── */
   const S = { mode: 'own', mid: 1, ord: [0, 1, 2], W: [], lr: 4, auto: false, wait: 0, trail: [], show: [true, true, true],
@@ -167,7 +167,8 @@
   function dirtyAll() { for (const c of cells) c.dirty = true; S.changed = true; }
 
   // Farbe aus dem Fehler (logarithmisch), Palette wie die 3D-Landschaft
-  const PAL_L = ['#2b8c86', '#78b660', '#cbb784', '#efe9dc'], PAL_D = ['#1f5f66', '#3f7d4f', '#7d7a5c', '#a7a6b4'];
+  // Polarnacht-Palette NET wie die 3D-Welten ab Level 4 (spiel.js): Tal Türkis, oben Flieder
+  const PAL_L = ['#0b6e6a', '#2b78b0', '#6d5fd0', '#c9b6f2'], PAL_D = PAL_L;
   const hex = s => { const n = parseInt(s.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; };
   function color(L, pal, lo, hi) {
     const t = clamp((Math.log(Math.max(L, 1e-4)) - lo) / (hi - lo), 0, 1);
@@ -219,7 +220,7 @@
     for (let y = 0; y < G; y++) for (let x = 0; x < G; x++) {
       const b0 = band[y * G + x];
       if ((x + 1 < G && band[y * G + x + 1] !== b0) || (y + 1 < G && band[(y + 1) * G + x] !== b0)) {
-        const o = (y * G + x) * 4; d[o] *= 0.8; d[o + 1] *= 0.8; d[o + 2] *= 0.8;
+        const o = (y * G + x) * 4; d[o] = Math.min(255, d[o] * 1.12 + 10); d[o + 1] = Math.min(255, d[o + 1] * 1.12 + 10); d[o + 2] = Math.min(255, d[o + 2] * 1.12 + 10);   // dunkle Palette: helle Höhenlinien
       }
     }
     c.off.getContext('2d').putImageData(c.img, 0, 0);
@@ -238,7 +239,7 @@
     x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 1; x.setLineDash([3, 4]);
     x.beginPath(); x.moveTo(W / 2, 0); x.lineTo(W / 2, H); x.moveTo(0, H / 2); x.lineTo(W, H / 2); x.stroke(); x.setLineDash([]);
     const pr = pairsOf(c.k)[c.pr], [i, j] = pr.idx;
-    x.font = '700 12px Outfit, sans-serif'; x.fillStyle = dark() ? 'rgba(255,255,255,.8)' : 'rgba(0,0,0,.6)';
+    x.font = '700 12px Space Grotesk, sans-serif'; x.fillStyle = 'rgba(255,255,255,.85)';
     x.textAlign = 'right'; x.fillText(pr.lab[0] + ' →', W - 6, H / 2 - 5);
     x.textAlign = 'left'; x.fillText('↑ ' + pr.lab[1], W / 2 + 5, H - 8);
     const toPx = (a, b) => [(a / R + 1) / 2 * W, (1 - b / R) / 2 * H];
@@ -248,7 +249,7 @@
     const [px, py] = toPx(S.W[c.k][i], S.W[c.k][j]);
     if (gl > 1e-5) {
       const len = clamp(10 + gl * 60, 12, Math.min(W, H) * 0.35), ux = gx / gl, uy = -gy / gl;
-      x.strokeStyle = '#2f6fe0'; x.fillStyle = '#2f6fe0'; x.lineWidth = 3;
+      x.strokeStyle = '#5cf2c4'; x.fillStyle = '#5cf2c4'; x.lineWidth = 3;
       x.beginPath(); x.moveTo(px + ux * 10, py + uy * 10); x.lineTo(px + ux * len, py + uy * len); x.stroke();
       const hx = px + ux * (len + 7), hy = py + uy * (len + 7);
       x.beginPath(); x.moveTo(hx, hy); x.lineTo(hx - ux * 9 - uy * 6, hy - uy * 9 + ux * 6); x.lineTo(hx - ux * 9 + uy * 6, hy - uy * 9 - ux * 6); x.fill();
@@ -443,7 +444,7 @@
     const H = zahl() ? hidden(S.W) : null;
     const hit = [0, 0, 0];
     P.pts.forEach((p, i) => { if (predict(S.W, i, H) === p.y) hit[p.y]++; });
-    $('#hits').innerHTML = '<span>erkannt:</span>' + [0, 1, 2].map(k => '<span style="color:' + SPC[k] + '"><b>' + NAMES[k] + '</b> ' + hit[k] + '/' + counts[k] + '</span>').join('');
+    $('#hits').innerHTML = '<span>erkannt:</span>' + [0, 1, 2].map(k => '<span style="color:' + SPC[k] + '">' + pimg(k) + '<b>' + NAMES[k] + '</b> ' + hit[k] + '/' + counts[k] + '</span>').join('');
     $('#sWrong').textContent = (N - hit[0] - hit[1] - hit[2]) + ' von ' + N;
     $('#sLoss').textContent = fmt(lossAll(S.W), 2);
   }
@@ -456,7 +457,7 @@
   }
   function setLR(v) { S.lr = v; $('#lrV').textContent = fmt(v, v < 1 ? 2 : 1); }
   function legends() {
-    const chip = (k, shape) => '<span class="chip" style="--c:' + SPC[k] + '"><i class="' + shape + '"></i>' + NAMES[k] + ' (' + counts[k] + ')</span>';
+    const chip = (k, shape) => '<span class="chip" style="--c:' + SPC[k] + '">' + pimg(k, 'img') + '<i class="' + shape + '"></i>' + NAMES[k] + ' (' + counts[k] + ')</span>';
     const shapes = ['', 'tri', ''];
     const pts = [0, 1, 2].map(k => chip(k, shapes[k])).join('');
     const btns = [0, 1, 2].map(k => '<button type="button" data-k="' + k + '" class="' + (S.show[k] ? '' : 'off') + '" style="--c:' + colOf(k) + '"><i></i>' +
@@ -493,6 +494,27 @@
     for (const b of document.querySelectorAll('#mode button')) b.addEventListener('click', () => setMode(b.dataset.m));
   }
 
+  /* ── Level 8: Erklärkarte ── */
+  function intro() {
+    $('.head h1').textContent = 'Level 8 · Pinguine in 3D';
+    $('.head a.btn').textContent = '‹ Übersicht';
+    const steps = [
+      'Jetzt sortiert ein Netz <b>alle drei Arten</b>: Adelie, Zügel und Esel – 342 echte Pinguine, gemessen an Schnabellänge, Schnabelhöhe und Flosse.',
+      'Drei versteckte Neuronen <b>A, B, C</b> schauen sich die Messwerte an. Was sie erkennen, lernen sie selbst.',
+      'Dahinter rechnet das <b>Zahl-Neuron</b> eine Zahl: unter 0,5 = Adelie, bis 1,5 = Zügel, darüber = Esel.',
+      '4 Neuronen mit je 4 Werten = 16 Werte = <b>8 Welten</b> unten. Jede Welt hängt von allen anderen ab: Ziehst du in einer, verbiegen sich die anderen.',
+      'Zieh die Punkte selbst bergab – oder starte das Training. Oben siehst du, wie die Ebenen die Pinguine trennen.'];
+    const c = $('#card');
+    c.innerHTML = '<div class="card-in"><div class="card-kicker">Level 8</div><h2>Pinguine in 3D</h2>' +
+      '<p>Ein ganzes Netz – zum ersten Mal mit <b>vier Neuronen</b>.</p>' +
+      (window.NTBild ? '<div class="illwrap">' + NTBild.scene(8) + '</div>' : '') +
+      '<ol class="steps">' + steps.map(t => '<li>' + t + '</li>').join('') + '</ol>' +
+      '<div class="card-btns"><button class="btn primary" type="button" id="go">Los geht’s</button>' +
+      '<a class="btn" href="index.html">Übersicht</a></div></div>';
+    c.hidden = false;
+    $('#go').addEventListener('click', () => { c.hidden = true; S.changed = true; });
+  }
+
   /* ── Bild für Bild ── */
   let last = performance.now();
   function tick(now) {
@@ -512,7 +534,8 @@
   controls();
   cloudInput($('#cloud'));
   cloudInput($('#cloud2'));
-  setMode('own');
+  setMode(LEVEL8 ? 'zahl' : 'own');
+  if (LEVEL8) intro();
   syncTheme();
   window.addEventListener('resize', () => { S.changed = true; });
   requestAnimationFrame(tick);

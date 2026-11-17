@@ -84,7 +84,7 @@ window.NTGrafik = (function () {
     uniform float uH0; uniform float uH1; uniform float uStep;
     uniform vec3 uC0; uniform vec3 uC1; uniform vec3 uC2; uniform vec3 uC3;
     uniform float uAmb; uniform float uPlain; uniform vec3 uPlainC;
-    uniform float uIce; uniform vec3 uIceC; uniform float uPlainAmb;
+    uniform float uIce; uniform vec3 uIceC; uniform float uPlainAmb; uniform float uLineK;
     void main(){
       float t=clamp((vPos.y-uH0)/(uH1-uH0),0.0,1.0);
       vec3 c = t<0.33 ? mix(uC0,uC1,t/0.33) : (t<0.66 ? mix(uC1,uC2,(t-0.33)/0.33) : mix(uC2,uC3,(t-0.66)/0.34));
@@ -108,7 +108,7 @@ window.NTGrafik = (function () {
       #else
       float line=1.0-smoothstep(0.0,0.06,abs(fract(q+0.5)-0.5));
       #endif
-      c=mix(c,c*0.72,line*0.55*(1.0-uPlain));
+      c=mix(c,c*uLineK+(uLineK>1.0?vec3(0.05):vec3(0.0)),line*0.55*(1.0-uPlain));   // dunkle Palette: helle Höhenlinien
       float d=distance(vPos.xz,uPlayer);
       float f=smoothstep(uFogR*0.45,uFogR,d);
       gl_FragColor=vec4(mix(c,uFog,f),1.0);
@@ -376,7 +376,7 @@ window.NTGrafik = (function () {
     function setPalette(p, theme) {
       custom = p ? { fog: hex(p.fog), c: p.c.map(hex), amb: p.amb == null ? 0.45 : p.amb,
         light: norm(p.light || [-0.45, 0.8, 0.4]), ice: p.ice || 0, iceC: hex(p.iceC || '#9cc6e0'),
-        plainC: p.plainC ? hex(p.plainC) : null, plainAmb: p.plainAmb, dark: !!p.dark } : null;
+        plainC: p.plainC ? hex(p.plainC) : null, plainAmb: p.plainAmb, lineK: p.lineK, dark: !!p.dark } : null;
       setTheme(theme);
     }
     const palDark = {
@@ -459,6 +459,7 @@ window.NTGrafik = (function () {
       gl.uniform3fv(u.uPlainC, pal.plainC || pal.c[1].map((v, i) => v + (pal.c[2][i] - v) * 0.35));
       gl.uniform1f(u.uIce, pal.ice || 0);
       gl.uniform1f(u.uPlainAmb, pal.plainAmb == null ? pal.amb : pal.plainAmb);
+      if (u.uLineK) gl.uniform1f(u.uLineK, pal.lineK || 0.72);
       gl.uniform3fv(u.uIceC, pal.iceC || [0.6, 0.78, 0.88]);
       bind(terrain);
       gl.drawElements(gl.TRIANGLES, terrain.n, gl.UNSIGNED_SHORT, 0);

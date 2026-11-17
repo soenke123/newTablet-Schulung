@@ -46,7 +46,7 @@ window.NTZwei = (function () {
       '<div class="hud-top"><button id="zMenu" class="chip btn" type="button">‹ Übersicht</button>' +
       '<div id="zName" class="chip glass"></div><div id="zCount" class="chip glass"></div></div>' +
       '<div id="zPanel" class="glass"><div class="box-t">Das ganze Netz</div><canvas id="znet"></canvas>' +
-      '<div id="ztab"></div><div class="zrow"><span>Fehler <b id="zErr">–</b></span><span>richtig <b id="zRight">–</b></span></div></div>' +
+      '<div class="box-t" style="margin-top:4px">Die vier Nester · jedes Neuron = eine Gerade</div><canvas id="zplot" class="nplot"></canvas><div class="zrow"><span>Fehler <b id="zErr">–</b></span><span>richtig <b id="zRight">–</b></span></div></div>' +
       '<div class="zbottom"><div class="zlr glass"><div class="lr-l"><small>Lernrate</small><span id="zLrV">–</span></div>' +
       '<input id="zLr" type="range" min="0" max="1000" aria-label="Lernrate">' +
       '<button id="zJump" class="btn" type="button">Ein Lernschritt</button>' +
@@ -56,6 +56,8 @@ window.NTZwei = (function () {
     G[0] = NTGrafik.create($('#zA'));
     G[1] = NTGrafik.create($('#zB'));
     if (!G[0] || !G[1]) return false;
+    // Polarnacht ohne Schnee wie Level 4–6 (Palette NET aus spiel.js)
+    if (window.NT_NET) { G[0].setPalette(NT_NET, 'dark'); G[1].setPalette(NT_NET, 'dark'); }
 
     $('#zMenu').addEventListener('click', () => api && api.toMenu());
     $('#zJump').addEventListener('click', () => { if (st && st.state === 'play' && !st.auto) jump(); });
@@ -297,7 +299,11 @@ window.NTZwei = (function () {
         { from: 'A', to: 'o', w: 8, group: 'fix', fixed: true }, { from: 'B', to: 'o', w: 8, group: 'fix', fixed: true },
         { from: 'o', to: 'l', w: 1, group: 'fix', fixed: true, noLabel: true }]
     });
-    NTNetz.lights($('#ztab'), cs, { hidden: true });
+    const sg = z => 1 / (1 + Math.exp(-z));
+    NTNetz.nestPlot($('#zplot'), { cases: cs,
+      out: (m, p) => sg(8 * sg(w[0] * m + w[1] * p - 3) + 8 * sg(w[2] * m + w[3] * p - 3) - 5),
+      lines: [{ a: w[0], b: w[1], c: 3, col: '#ff9d4d', team: 'a', name: 'A', end: 1 },
+              { a: w[2], b: w[3], c: 3, col: '#a98bff', team: 'b', name: 'B', end: 0 }] });
     $('#zErr').textContent = api.fmt(X.loss(...w), 2);
     $('#zRight').textContent = X.right(cs) + ' von 4';
     $('#zCount').textContent = 'Schritte: ' + st.jumpsLeft;
@@ -349,7 +355,11 @@ window.NTZwei = (function () {
       '<br><small>Fehler ' + api.fmt(Lv, 2) + '</small></p></div>' +
       (notes.length ? '<p class="note">' + notes.join(' ') + '</p>' : '') +
       '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
-      [['Nochmal', api.again, 'primary'], ['Neue Welt', api.newWorld], ['Übersicht', api.toMenu]], 'result');
+      (() => {
+        const b = [['Nochmal', api.again], ['Neue Welt', api.newWorld], ['Übersicht', api.toMenu]], nx = api.next();
+        if (nx) b.unshift(['Weiter: ' + nx.name, () => api.open(nx.id), 'primary']); else b[0].push('primary');
+        return b;
+      })(), 'result');
     document.body.dataset.state = 'result';
   }
 
@@ -420,8 +430,8 @@ window.NTZwei = (function () {
         const pts = [], head = [], hs = 0.9 + (len - 0.9) * 0.78;
         for (let i = 0; i <= 8; i++) { const q = 0.9 + (len - 0.9) * i / 8 * 0.78; pts.push([f.x + ux * q, f.z + uz * q, 0.2]); }
         for (let i = 0; i <= 6; i++) { const q = hs + (len - hs) * i / 6; head.push([f.x + ux * q, f.z + uz * q, 0.62 * (1 - i / 6) + 0.02]); }
-        objs.push({ type: 'strip', pts, color: [0.2, 0.55, 1], glow: 0.55, lift: 0.14 });
-        objs.push({ type: 'strip', pts: head, color: [0.2, 0.55, 1], glow: 0.55, lift: 0.15 });
+        objs.push({ type: 'strip', pts, color: [0.36, 0.95, 0.77], glow: 0.6, lift: 0.14 });
+        objs.push({ type: 'strip', pts: head, color: [0.36, 0.95, 0.77], glow: 0.6, lift: 0.15 });
       }
     }
     if (st.reveal && st.flags) {

@@ -8,11 +8,14 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 
 - `index.html` – Oberfläche (HUD, Menü, Karten), eigener Look „Eiswelt“ (17.11.2026, Showroom-Variante B
   Polarnacht: Space Grotesk/Unbounded/JetBrains Mono, Glas, Türkis→Violett-Verlauf; dunkel = Polarnacht,
-  hell = Polartag), Hell/Dunkel vom Rahmen. Level 1–3 (`night: true` in LEVELS) sind IMMER Polarnacht:
-  spiel.js `applyLook()` setzt `html[data-night]` + `G.setPalette(NIGHT)`; Menü-Welt = NIGHT/DAY je
-  Hell/Dunkel; Level 4–7 noch mit der alten grünen Palette (setPalette(null)), werden später angepasst.
-  Ebenen über der Welt: `#aurora` (Polarlicht, auch im dunklen Menü), `#snow`, `#gust` (Böen-Schleier),
-  `#frost` (Rand) – nur mit data-night
+  hell = Polartag), Hell/Dunkel vom Rahmen. ALLE Level sind Polarnacht (Sönke 17.11.2026: „alle anderen
+  Level übernehmen die UI aus den ersten drei, allerdings ohne Schnee“): spiel.js `applyLook()` setzt
+  `html[data-night]`; Level 1–3 (`snow: true` in LEVELS) zusätzlich `html[data-snow]` + Palette NIGHT
+  (einfarbig, Schneesturm); ab Level 4 Palette `NET` (Tal Türkis → Blau → Violett → Flieder oben, NICHT
+  Weiß – man startet meist oben), helle Höhenlinien (`lineK` 1,5 in grafik.js), Höhenmesser links mit
+  derselben Farbleiste, Pfeil Mint. Level 7 (zwei.js) holt `window.NT_NET`. Menü-Welt = NIGHT/DAY je
+  Hell/Dunkel. Ebenen über der Welt: `#aurora` (Polarlicht, auch im dunklen Menü), `#frost` (Rand) mit
+  data-night; `#snow`, `#gust` (Böen-Schleier) nur mit data-snow
 - `js/schnee.js` – Schneesturm (2D-Canvas): hängt nur am Bildschirm, fällt immer gleich schnell, egal
   wohin man läuft/dreht (Sönke 17.11.2026); Böen verkleinern die Sicht (fogR × (1 − 0,3·Böe));
   Sparmodus: kein Schnee
@@ -43,16 +46,27 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   es mit Lernrate 4 in 40 Schritten, ~20 % bleiben bei 3 von 4 hängen – gewollt, s. Ergebnistext)
 - `js/netz.js` – kleine Netze IMMER ganz zeichnen (`NTNetz.draw`): Kanten mit Zahl, Farbe = wer sie
   bewegt (orange Welt A, violett Welt B, grau gestrichelt = fest), Dicke = Größe; `NTNetz.lights` =
-  die vier Nester (Mama/Papa als kleiner Pinguin oder Welle mit Fisch, soll = Haken/Kreuz, Netz = Ei,
-  je grüner desto sicherer; Spalten A/B optional; braucht js/bilder.js)
-- `js/bilder.js` – alle Bilder als SVG-Text (Farben über CSS-Variablen, hell/dunkel; `--ice`, `--sea`,
-  `--fog`, `--peng-edge` = Umriss nur im Dunkeln): `NTBild.peng({sp: adelie|chin|gentoo, x, y, s, scarf})`
-  Pinguin von vorn (Arten erkennbar: Adelie weißer Augenring, Zügel weißes Gesicht mit schwarzem
-  „Zügel“, Esel weißer Stirnstreifen + oranger Schnabel), `NTBild.icon` (peng/away/egg/ok für Tabellen),
+  die vier Nester als Tabelle (wird nicht mehr benutzt); `NTNetz.nestPlot(canvas, {cases, out(m, p), lines})`
+  (Sönke 17.11.2026, ersetzt die Tabelle in Level 6/7): Diagramm x = Mama (fischt ← → am Nest),
+  y = Papa, in den Ecken die Nest-Bilder, grüner Rahmen = so soll es sein (genau einer da), Plakette
+  = was das Netz sagt (grün richtig, rot falsch), Hintergrund = Ausgabe des Netzes an jeder Stelle
+  (grün „Ei ok“, rot nicht). Jedes Neuron = eine GERADE a·Mama + b·Papa = c mit Pfeil zur „an“-Seite
+  und der Spielfigur (main/main_a/main_b) am Ende, das weiter von den Nestern weg liegt. Level 6:
+  eine Gerade durch die Mitte (kein Bias) – sie kann die zwei grünen Nester nie von den anderen
+  trennen; Level 7: Geraden A/B mit c = 3 (fester Bias −3), jede schneidet ein Nest ab
+- `img/` – Sönkes Zeichnungen (17.11.2026): je Art ein PNG mit 2 Varianten, „Pinguin Main“ = DER Spieler
+  (Pinguin mit Schal; immer wenn ein Bild den Spieler meint), vier Nester (leer, nur Mama, nur Papa,
+  beide; Papa sitzt links, Mama rechts). Freigestellt + verkleinert in `img/frei/*.webp` von
+  `img/freistellen.py` (adelie_1/2, chin_1/2, gentoo_1/2, main, main_a = Schal orange, main_b = violett,
+  nest, nest_mama, nest_papa, nest_beide); Originale bleiben liegen
+- `js/bilder.js` – alle Bilder als SVG-Text (Farben über CSS-Variablen): `NTBild.peng({sp: adelie|chin|gentoo|main,
+  v: 1|2, team: a|b, x, y, s, flip})` = `<image class="pg">` aus img/frei (Füße bei x/y, Höhe ≈ 104·s; mit `scarf`
+  oder sp 'main' der Spieler, team a/b = Schal orange/violett), `NTBild.nestImg(kind, x, y, w)`,
+  `.pg` bekommt im Dunkeln einen hellen Hauch (drop-shadow in index.html/labor.html), `NTBild.icon` (peng/away/egg/ok für Tabellen),
   `NTBild.scene(level)` = Bild der Erklärkarte (1 Nebel mit Höhenmesser, 2 Pfeil bergab + kleine/tiefste
   Mulde, 3 drei Täler Lernrate zu klein/gut/zu groß, 4 Pinguin mit Lineal an der Flosse + Neuron +
-  Formel + Weltkarte, 5 Adelie/Zügel + Schnabel messen + Neuron, 6 die vier Nester + Neuron, 7 Netz mit
-  A/B + Welt A/B); Weltkarte `karte()` = Raute mit Mulde, Achsen in Gewichtsfarbe, Pinguin, Flagge.
+  Formel + Weltkarte, 5 Adelie/Zügel + Schnabel messen + Neuron, 6 die vier Nester (Nest-Bilder) + Neuron, 7 Netz mit
+  A/B + Welt A/B, 8 drei Arten + Netz 3 → A/B/C → Zahl); Weltkarte `karte()` = Raute mit Mulde, Achsen in Gewichtsfarbe, Pinguin, Flagge.
   Erklärkarte (`introHtml` in spiel.js, auch für zwei.js): `lead` (ein Satz Kontext) → Bild →
   `formula` (optional) → `steps` (nummeriert, je Schritt EIN Gedanke) → Steuerung
 - `js/zwei.js` – Level 7 komplett: zwei Canvas/zwei NTGrafik (quer nebeneinander, hoch übereinander),
@@ -62,7 +76,11 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   feste Farbskala `hRange`); Pfeil je Welt = ihr Anteil am 4D-Gradienten; ein Lernschritt springt
   beide. spiel.js übergibt über `openTwo` (S.state 'zwei' = spiel.js zeichnet nicht) und bekommt
   card/toMenu/stars zurückgereicht
-- `labor.html` + `js/labor.js` – „Labor: Pinguine in 3D“ (Test für EIN Gerät, Link unten im Menü):
+- `labor.html` + `js/labor.js` – „Labor: Pinguine in 3D“ (Test für EIN Gerät, Link unten im Menü), seit
+  17.11.2026 auch **Level 8** (`labor.html?level=8`, Eintrag `href` in LEVELS, spiel.js springt hin):
+  fest „+ Zahl-Neuron“ = 4 Neuronen, 8 Welten, Moduswahl versteckt, Erklärkarte vorweg (`intro()`,
+  NTBild.scene(8)), „‹ Übersicht“ zurück; keine Sterne. Labor immer Polarnacht (Eiswelt-Farben/-Schriften,
+  Welten-Palette = NET, helle Höhenlinien, Pfeil Mint), Arten mit Sönkes Bildern in Legende und „erkannt“:
   `NTWelt.penguins3()` = alle 342 Pinguine (151 Adelie, 68 Zügel, 123 Esel), Eingänge Schnabellänge,
   Schnabelhöhe, Flossenlänge (standardisiert), 3 Neuronen „Bin das ich?“ (σ, je 3 Kanten + Bias =
   12 Werte), größtes p gewinnt; Fehler = Summe der 3 Log-Fehler + λ = 0,002 · Gewichte² (sonst liegt
@@ -154,13 +172,16 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 6. **Das Nest** (bis 17.11.2026 „Das Treppenhaus-Licht“) – Pinguin-Eltern wechseln sich ab; dem Ei
    geht es nur gut, wenn genau einer am Nest ist (beide weg: Ei kühlt aus, beide da: keiner holt
    Futter) = XOR. Ein Neuron soll es lernen und kann es nicht: tiefster Punkt = Mitte, überall 50 %.
-   Rechts `#xorBox`: Neuron (Mama/Papa → σ → Ei ok?) + die vier Nester. Wertung: wie nah am
+   Rechts `#xorBox`: Neuron (Mama/Papa → σ → Ei ok?) + die vier Nester als Diagramm `#xplot`
+   (NTNetz.nestPlot: die Gerade des Neurons dreht sich mit, wenn man läuft). Wertung: wie nah am
    (unvermeidlichen) Minimum.
 7. **Zwei Neuronen, zwei Welten** – `js/zwei.js`: Welt A = Kanten in Neuron A, Welt B = Kanten in
    Neuron B; beide Figuren immer auf derselben Höhe (ein Netz), die Welt der einen verbiegt sich,
-   wenn die andere läuft. Mitte oben `#zPanel`: das ganze Netz + Tabelle mit A/B-Werten. Wertung:
+   wenn die andere läuft. Mitte oben `#zPanel`: das ganze Netz + Nest-Diagramm `#zplot` mit den Geraden A (orange) und B (violett). Wertung:
    4 von 4 Nestern richtig (3 Sterne bei Fehler < 0,15); bei 3 von 4 erklärt das Ergebnis „beide
    haben dasselbe gelernt“ (eines muss „nur Mama am Nest“, das andere „nur Papa am Nest“ lernen). Am Ende Flagge am tiefsten Punkt des jeweiligen Schnitts.
+   Ergebnis-Knopf „Weiter: Pinguine in 3D“.
+8. **Pinguine in 3D** – das Labor im Modus „+ Zahl-Neuron“ (labor.html?level=8), s. Dateien.
 
 Ab Level 4 gilt überall: eine Welt = ein echtes Modell, das ganze Netz ist zu sehen, Laufen UND
 Training im selben Level.

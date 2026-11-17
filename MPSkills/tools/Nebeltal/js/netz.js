@@ -127,5 +127,131 @@ window.NTNetz = (function () {
     el.innerHTML = h + '</tbody></table>';
   }
 
-  return { draw, lights };
+  /* ── Die vier Nester als Diagramm (Level 6 und 7, Sönke 17.11.2026) ──
+     x = Mama (links fischt, rechts am Nest), y = Papa (unten fischt, oben am Nest).
+     In den vier Ecken die echten Nester (Bilder), Hintergrund = was das Netz an
+     jeder Stelle sagt (grün = „Ei ok“, rot = „nicht ok“). Jedes versteckte
+     Neuron ist eine GERADE: a·Mama + b·Papa = c, Pfeil zur Seite, auf der es
+     „an“ ist; am Ende der Geraden steht die Figur, die dieses Neuron IST.
+       o = { cases, out(m, p) → 0…1, lines: [{ a, b, c, col, team, name }] } */
+  const IMGS = {};
+  let plotAgain = null;
+  function img(name) {
+    if (IMGS[name]) return IMGS[name];
+    const im = new Image();
+    im.onload = () => { im.ok = true; if (plotAgain) plotAgain(); };
+    im.src = (window.NTBild ? NTBild.IMG : 'img/frei/') + name + '.webp';
+    return (IMGS[name] = im);
+  }
+  ['nest', 'nest_mama', 'nest_papa', 'nest_beide', 'main', 'main_a', 'main_b'].forEach(img);
+  const NESTF = (m, p) => m > 0 && p > 0 ? 'nest_beide' : m > 0 ? 'nest_mama' : p > 0 ? 'nest_papa' : 'nest';
+
+  function nestPlot(cv, o) {
+    plotAgain = () => nestPlot(cv, o);
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const W = cv.clientWidth, H = cv.clientHeight;
+    if (!W || !H) return;
+    if (cv.width !== Math.round(W * dpr) || cv.height !== Math.round(H * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
+    const x = cv.getContext('2d');
+    x.setTransform(dpr, 0, 0, dpr, 0, 0);
+    x.clearRect(0, 0, W, H);
+    const cs = getComputedStyle(document.documentElement);
+    const ink = cs.getPropertyValue('--ink').trim() || '#222', soft = cs.getPropertyValue('--ink-faint').trim() || '#888';
+    const okC = cs.getPropertyValue('--accent-ink').trim() || '#12a37a', bad = cs.getPropertyValue('--warn').trim() || '#d43a52';
+    const L = 18, B = 18, T = 2, R = 2, S = 1.75;                 // Rand, Bereich −S…S
+    const pw = W - L - R, ph = H - T - B;
+    const X = m => L + (m + S) / (2 * S) * pw, Y = p => T + (1 - (p + S) / (2 * S)) * ph;
+
+    // Hintergrund: was das Netz sagt
+    const N = 36, cw = pw / N, ch = ph / N;
+    for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+      const m = -S + (i + 0.5) / N * 2 * S, p = S - (j + 0.5) / N * 2 * S, v = o.out(m, p);
+      x.fillStyle = v > 0.5 ? 'rgba(18,190,130,' + ((v - 0.5) * 0.7).toFixed(3) + ')' : 'rgba(225,70,95,' + ((0.5 - v) * 0.55).toFixed(3) + ')';
+      x.fillRect(L + i * cw, T + j * ch, cw + 0.6, ch + 0.6);
+    }
+    x.strokeStyle = soft; x.globalAlpha = 0.5; x.lineWidth = 1; x.setLineDash([3, 4]);
+    x.beginPath(); x.moveTo(X(0), T); x.lineTo(X(0), T + ph); x.moveTo(L, Y(0)); x.lineTo(L + pw, Y(0)); x.stroke();
+    x.setLineDash([]); x.globalAlpha = 1;
+    x.strokeStyle = soft; x.strokeRect(L + 0.5, T + 0.5, pw - 1, ph - 1);
+
+    // Achsen
+    x.fillStyle = soft; x.font = '600 10.5px Space Grotesk, Outfit, sans-serif'; x.textBaseline = 'alphabetic';
+    x.textAlign = 'center';
+    x.fillText('fischt', X(-1), H - 5); x.fillText('am Nest', X(1), H - 5);
+    x.font = '700 10.5px Space Grotesk, Outfit, sans-serif'; x.fillText('Mama →', X(0), H - 5);
+    x.save(); x.translate(12, 0); x.rotate(-Math.PI / 2);
+    x.font = '600 10.5px Space Grotesk, Outfit, sans-serif';
+    x.fillText('fischt', -Y(-1), 0); x.fillText('am Nest', -Y(1), 0);
+    x.font = '700 10.5px Space Grotesk, Outfit, sans-serif'; x.fillText('Papa →', -Y(0), 0);
+    x.restore();
+
+    // die Nester
+    const nw = Math.min(pw, ph) * 0.4;
+    for (const c of o.cases) {
+      const cx = X(c.s1), cy = Y(c.s2), im = img(NESTF(c.s1, c.s2));
+      const want = c.y === 1, right = (c.o > 0.5) === want;
+      if (want) {                                    // so soll es sein: grüner Rahmen
+        x.strokeStyle = okC; x.lineWidth = 2.2;
+        x.beginPath(); rr(x, cx - nw * 0.56, cy - nw * 0.36, nw * 1.12, nw * 0.62, 10); x.stroke();
+      }
+      if (im.ok) {
+        const h = nw * im.naturalHeight / im.naturalWidth;
+        x.drawImage(im, cx - nw / 2, cy + nw * 0.14 - h, nw, h);
+      }
+      x.font = '700 11.5px JetBrains Mono, monospace'; x.textAlign = 'center';
+      const t = Math.round(c.o * 100) + ' %', ty = cy + nw * 0.14 + 12;
+      const tw = x.measureText(t).width + 10;
+      x.fillStyle = right ? 'rgba(18,163,122,.92)' : 'rgba(212,58,82,.92)';
+      x.beginPath(); rr(x, cx - tw / 2, ty - 10.5, tw, 14, 7); x.fill();
+      x.fillStyle = '#fff'; x.fillText(t, cx, ty);
+    }
+
+    // die Geraden der Neuronen
+    const figs = [];
+    x.save(); x.beginPath(); x.rect(L, T, pw, ph); x.clip();
+    for (const ln of o.lines || []) {
+      const n = Math.hypot(ln.a, ln.b);
+      if (n < 0.08) continue;                        // fast 0: das Neuron sagt überall dasselbe
+      // Schnitt der Geraden a·m + b·p = c mit dem Rand des Bereichs
+      const pts = [];
+      const add = (m, p) => { if (m >= -S - 1e-6 && m <= S + 1e-6 && p >= -S - 1e-6 && p <= S + 1e-6) pts.push([m, p]); };
+      if (Math.abs(ln.b) > 1e-6) { add(-S, (ln.c + ln.a * S) / ln.b); add(S, (ln.c - ln.a * S) / ln.b); }
+      if (Math.abs(ln.a) > 1e-6) { add((ln.c + ln.b * S) / ln.a, -S); add((ln.c - ln.b * S) / ln.a, S); }
+      if (pts.length < 2) continue;
+      pts.sort((u, v) => u[0] - v[0] || u[1] - v[1]);
+      const p0 = pts[0], p1 = pts[pts.length - 1];
+      x.strokeStyle = ln.col; x.lineWidth = 3.2; x.lineCap = 'round';
+      x.shadowColor = ln.col; x.shadowBlur = 8;
+      x.beginPath(); x.moveTo(X(p0[0]), Y(p0[1])); x.lineTo(X(p1[0]), Y(p1[1])); x.stroke();
+      x.shadowBlur = 0;
+      // Pfeil zur „an“-Seite (dorthin, wo a·m + b·p größer wird)
+      const mm = (p0[0] + p1[0]) / 2, mp = (p0[1] + p1[1]) / 2, ux = ln.a / n, uy = ln.b / n;
+      const ax = X(mm), ay = Y(mp), bx = ax + ux * 22, by = ay - uy * 22;
+      x.lineWidth = 2.4; x.beginPath(); x.moveTo(ax, ay); x.lineTo(bx, by); x.stroke();
+      const ang = Math.atan2(by - ay, bx - ax);
+      x.fillStyle = ln.col; x.beginPath();
+      x.moveTo(bx + Math.cos(ang) * 6, by + Math.sin(ang) * 6);
+      x.lineTo(bx + Math.cos(ang + 2.4) * 7, by + Math.sin(ang + 2.4) * 7);
+      x.lineTo(bx + Math.cos(ang - 2.4) * 7, by + Math.sin(ang - 2.4) * 7); x.fill();
+      // die Figur am Ende der Geraden = dieses Neuron (gezeichnet nach dem Zuschnitt, s. unten)
+      // an das Ende, das weiter weg von den Nestern liegt (sonst verdeckt die Figur ein Nest)
+      const far = q => Math.min(...[[1, 1], [1, -1], [-1, 1], [-1, -1]].map(c => Math.hypot(q[0] - c[0], q[1] - c[1])));
+      const e = Math.abs(far(p0) - far(p1)) > 0.15 ? (far(p0) > far(p1) ? p0 : p1) : (ln.end === 0 ? p0 : p1);
+      figs.push({ team: ln.team, x: X(e[0]) + (X(mm) - X(e[0])) * 0.2, y: Y(e[1]) + (Y(mp) - Y(e[1])) * 0.2 });
+      if (ln.name) {
+        x.font = '700 12px Space Grotesk, Outfit, sans-serif'; x.fillStyle = ln.col; x.textAlign = 'center';
+        x.fillText(ln.name, bx + ux * 12, by - uy * 12 + 4);
+      }
+    }
+    x.restore();
+    for (const f of figs) {
+      const pi = img(f.team === 'a' ? 'main_a' : f.team === 'b' ? 'main_b' : 'main');
+      if (!pi.ok) continue;
+      const h = 40, w = h * pi.naturalWidth / pi.naturalHeight;
+      x.drawImage(pi, Math.max(L + 2, Math.min(L + pw - w - 2, f.x - w / 2)), Math.max(T + 2, Math.min(T + ph - h - 2, f.y - h * 0.6)), w, h);
+    }
+  }
+  function rr(x, l, t, w, h, r) { roundRect(x, l, t, w, h, r); }
+
+  return { draw, lights, nestPlot };
 })();

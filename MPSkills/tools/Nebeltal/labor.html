@@ -1,47 +1,30 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <script src="../../../motion.js?v=20261115a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Nebeltal Labor</title>
-<link href="../../../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
+<link href="../../../fonts/spacegrotesk-jetbrainsmono-unbounded-9f6dea.css" rel="stylesheet">
 <style>
-/* Farben wie MPSkills (MPSkills/style.css); Hell/Dunkel kommt im Raum
-   vom Rahmen (data-theme), allein vom Gerät. --orange = die Figur. */
+/* Look „Eiswelt“ wie das Spiel (index.html): immer Polarnacht – Level 8 ist ein Level wie die
+   anderen (Sönke 17.11.2026: alle Level übernehmen die UI aus Level 1–3, ohne Schnee). */
 :root {
-  --paper:#eef2f1; --surface:#ffffff; --surface-2:#f7faf9; --line:#dfe7e5;
-  --ink:#0d1a17; --ink-soft:#475853; --ink-faint:#7b8a86;
-  --accent:#00b37e; --accent-ink:#00714f; --accent-dim:#d6f5e8; --on-accent:#fff;
-  --orange:#f2711c; --gold:#e0a210; --warn:#d43a52; --blue:#2f7fe6;
-  --glass:rgba(255,255,255,.86);
-  --shadow:0 2px 4px rgba(13,26,23,.05), 0 12px 28px -12px rgba(13,26,23,.28);
-  color-scheme:light;
-}
-html[data-theme="dark"] {
-  --paper:#0a0b10; --surface:#12141b; --surface-2:#171a22; --line:#2a2e3d;
-  --ink:#edeff5; --ink-soft:#a4a9bd; --ink-faint:#71768c;
-  --accent:#2ad49a; --accent-ink:#5ee6b6; --accent-dim:#123a2e; --on-accent:#05140f;
-  --orange:#ff9d4d; --gold:#f4c13d; --warn:#ff6b81; --blue:#6aa8ff;
-  --glass:rgba(18,20,27,.86);
-  --shadow:0 2px 4px rgba(0,0,0,.2), 0 14px 30px -12px rgba(0,0,0,.6);
+  --paper:#070d1a; --surface:#0f1b31; --surface-2:#16243e; --line:#26406a; --line-soft:rgba(140,170,220,.2);
+  --ink:#e8f1ff; --ink-soft:#a9bad6; --ink-faint:#6f82a3;
+  --accent:#5cf2c4; --accent-ink:#7ff7d3; --accent-dim:rgba(92,242,196,.14); --on-accent:#04201a; --violet:#a98bff;
+  --grad:linear-gradient(120deg, #5cf2c4, #62d2ff 60%, #a98bff); --on-grad:#04201a;
+  --orange:#ff9d4d; --gold:#ffd166; --warn:#ff6b8b; --blue:#6aa8ff;
+  --glass:rgba(12,22,40,.78); --ice:#1b2c46; --fog:#101a2c;
+  --shadow:0 0 0 1px rgba(92,242,196,.08), 0 18px 40px -18px rgba(0,0,0,.8);
+  --glow:0 0 22px -6px rgba(92,242,196,.6);
+  --font:'Space Grotesk', system-ui, sans-serif; --head:'Unbounded', 'Space Grotesk', sans-serif; --mono:'JetBrains Mono', monospace;
   color-scheme:dark;
-}
-@media (prefers-color-scheme: dark) {
-  html:not([data-theme]) {
-    --paper:#0a0b10; --surface:#12141b; --surface-2:#171a22; --line:#2a2e3d;
-    --ink:#edeff5; --ink-soft:#a4a9bd; --ink-faint:#71768c;
-    --accent:#2ad49a; --accent-ink:#5ee6b6; --accent-dim:#123a2e; --on-accent:#05140f;
-    --orange:#ff9d4d; --gold:#f4c13d; --warn:#ff6b81; --blue:#6aa8ff;
-    --glass:rgba(18,20,27,.86);
-    --shadow:0 2px 4px rgba(0,0,0,.2), 0 14px 30px -12px rgba(0,0,0,.6);
-    color-scheme:dark;
-  }
 }
 * { box-sizing:border-box; }
 [hidden] { display:none !important; }
-html, body { margin:0; height:100%; background:var(--paper); color:var(--ink);
-  font-family:Outfit, system-ui, sans-serif; overflow:hidden; -webkit-user-select:none; user-select:none;
+html, body { margin:0; height:100%; background:radial-gradient(120% 80% at 50% 0%, #10203d 0%, var(--paper) 60%); color:var(--ink);
+  font-family:var(--font); overflow:hidden; -webkit-user-select:none; user-select:none;
   -webkit-tap-highlight-color:transparent; }
 button { font:inherit; color:inherit; }
 .btn { border:1px solid var(--line); background:var(--surface); border-radius:12px; padding:9px 14px;
@@ -116,6 +99,37 @@ table.w td.ok { color:var(--ink-faint); font-weight:600; }
   .netwrap { min-height:230px; }
 }
 @media (max-height: 700px) and (orientation: landscape) { .netwrap { min-height:170px; } }
+/* Eiswelt */
+.btn { border-radius:14px; background:var(--surface-2); text-decoration:none; }
+.btn:hover { box-shadow:var(--glow); }
+.glass { background:var(--glass); border-color:var(--line-soft); border-radius:16px;
+  -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); }
+html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; background:var(--surface) !important; }
+.head h1 { font-family:var(--head); font-weight:600; font-size:16px; }
+.head .proto { font-family:var(--mono); }
+.stat b, #lrV { font-family:var(--mono); }
+#step { background:var(--orange); color:#2a1400; border-color:var(--orange); }
+.seg button.on { background:var(--grad); color:var(--on-grad); }
+.hits .pi { height:26px; vertical-align:middle; margin-right:3px; filter:drop-shadow(0 0 1.2px rgba(220,235,255,.55)); }
+.legend .chip img { height:24px; margin-right:4px; filter:drop-shadow(0 0 1.2px rgba(220,235,255,.55)); }
+/* Level 8 (labor.html?level=8): fest „+ Zahl-Neuron“, Erklärkarte vorweg */
+body[data-level="8"] #mode, body[data-level="8"] .head .proto { display:none; }
+#card { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(3,7,16,.55); overflow:auto; z-index:5; }
+.card-in { width:min(640px, 100%); padding:22px 22px 18px; background:var(--glass); border:1px solid var(--line); border-radius:20px;
+  box-shadow:var(--shadow); max-height:100%; overflow:auto; -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px); }
+.card-kicker { font-family:var(--mono); font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); }
+.card-in h2 { margin:4px 0 10px; font-family:var(--head); font-weight:600; font-size:24px; }
+.card-in p { margin:0 0 12px; line-height:1.5; font-size:16px; color:var(--ink-soft); }
+.card-in p b, ol.steps li b { color:var(--ink); }
+.illwrap { margin:0 0 12px; border-radius:14px; overflow:hidden; border:1px solid var(--line-soft); background:var(--surface-2); }
+.ill { display:block; width:100%; height:auto; }
+.pg { filter:drop-shadow(0 0 1.4px rgba(220,235,255,.55)); }
+ol.steps { list-style:none; counter-reset:st; margin:0 0 10px; padding:0; display:grid; gap:8px; }
+ol.steps li { counter-increment:st; position:relative; padding:2px 0 2px 36px; line-height:1.45; font-size:15.5px; color:var(--ink-soft); }
+ol.steps li::before { content:counter(st); position:absolute; left:0; top:0; width:26px; height:26px; border-radius:50%; display:grid; place-items:center;
+  border:1px solid var(--accent); color:var(--accent-ink); font-weight:700; font-size:14px; font-family:var(--mono); }
+.card-btns { display:flex; gap:8px; flex-wrap:wrap; }
+.btn.primary { background:var(--grad); color:var(--on-grad); border-color:transparent; box-shadow:var(--glow); }
 </style>
 </head>
 <body>
@@ -151,8 +165,10 @@ table.w td.ok { color:var(--ink-faint); font-weight:600; }
   </div>
   <div class="grid" id="grid"></div>
 </div>
+<div id="card" hidden></div>
 <script src="js/welt.js?v=20261117l"></script>
-<script src="js/netz.js?v=20261117g"></script>
-<script src="js/labor.js?v=20261117g"></script>
+<script src="js/bilder.js?v=20261117m"></script>
+<script src="js/netz.js?v=20261117m"></script>
+<script src="js/labor.js?v=20261117m"></script>
 </body>
 </html>

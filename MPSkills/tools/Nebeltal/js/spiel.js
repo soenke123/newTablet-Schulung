@@ -38,7 +38,7 @@
      steps = Sätze neben nummerierten Kreisen, je Schritt EIN Gedanke. */
   const LEVELS = [
     { id: 1, name: 'Im Schneesturm', short: 'Frei suchen – ganz ohne Hilfe',
-      mode: 'walk', arrow: false, time: 75, fog: 9, plain: true, physics: false, night: true,
+      mode: 'walk', arrow: false, time: 75, fog: 9, plain: true, physics: false, snow: true,
       lead: 'Irgendwo in dieser Eiswüste liegt der <b>tiefste Punkt</b>. Finde ihn!',
       steps: [
         'Im Schneesturm siehst du nur den Schnee direkt um dich herum – <b>keine Farben, keine Höhenlinien, kein Höhenmesser</b>.',
@@ -47,7 +47,7 @@
       outro: 'So geht es einer KI beim Lernen: Sie kennt nur den <b>Fehler an der Stelle, an der sie gerade steht</b>. ' +
              'Die ganze Landschaft hat nie jemand gesehen. Frei herumsuchen dauert ewig – die KI braucht einen besseren Hinweis …' },
     { id: 2, name: 'Der Bergab-Pfeil', short: 'Ein Pfeil zeigt, wo es bergab geht',
-      mode: 'walk', arrow: true, time: 60, fog: 9, plain: true, physics: true, night: true,
+      mode: 'walk', arrow: true, time: 60, fog: 9, plain: true, physics: true, snow: true,
       lead: 'Jetzt hast du ein Werkzeug – genau das, das auch eine KI beim Lernen hat.',
       steps: [
         'Ein <b>leuchtender Pfeil</b> unter deinen Füßen zeigt, wo es am steilsten bergab geht. Je länger, desto steiler.',
@@ -56,7 +56,7 @@
       outro: 'Der Pfeil ist das Einzige, was eine KI beim Lernen ausrechnen kann: <b>In welche Richtung wird mein Fehler kleiner?</b> ' +
              'Man nennt ihn <b>Gradient</b> (genauer: er zeigt gegen den Gradienten). Ein neuronales Netz rechnet ihn für jedes seiner Gewichte aus – das heißt Backpropagation.' },
     { id: 3, name: 'Sprünge', short: 'Lernrate = wie weit du springst',
-      mode: 'jump', jumps: 25, fog: 13, plain: true, night: true, lr: { min: 0.5, max: 60, def: 5, d: 1 },
+      mode: 'jump', jumps: 25, fog: 13, plain: true, snow: true, lr: { min: 0.5, max: 60, def: 5, d: 1 },
       lead: 'Eine KI läuft nicht herum. Sie <b>springt</b> – immer in Pfeilrichtung.',
       formula: 'Sprungweite = Lernrate × Steilheit',
       steps: [
@@ -110,7 +110,9 @@
       outro: 'Mit zwei Neuronen klappt es: Eines lernt „<b>nur Mama am Nest</b>“, das andere „<b>nur Papa am Nest</b>“ – das Ei ist versorgt, wenn eines von beiden anschlägt. ' +
              'Welches Neuron welche Aufgabe übernimmt, ist egal: Es gibt <b>zwei gleich gute Lösungen</b>. ' +
              'Lernen beide Neuronen dasselbe, bleibt das Netz bei 3 von 4 hängen. Echte Netze starten deshalb mit <b>zufälligen</b> Gewichten. ' +
-             'Und weil die Gewichte voneinander abhängen, hat sich deine Welt verbogen, sobald die andere Figur lief.' }
+             'Und weil die Gewichte voneinander abhängen, hat sich deine Welt verbogen, sobald die andere Figur lief.' },
+    // Level 8 = das Labor (eigene Seite labor.html, Sönke 17.11.2026): 4 Neuronen, 8 Welten
+    { id: 8, name: 'Pinguine in 3D', short: 'Ein Netz mit 4 Neuronen sortiert drei Arten', href: 'labor.html?level=8' }
   ];
 
   /* Erklärkarte bauen (auch von js/zwei.js benutzt) */
@@ -172,23 +174,31 @@
   };
 
   /* ── Eiswelt-Look (17.11.2026) ──
-     Level 1/2 (L.night) sind immer Polarnacht: html[data-night], Schneesturm
-     (js/schnee.js), einfarbiger Boden mit flachem Licht (plainAmb) – man soll
-     kaum sehen, ob es bergauf oder bergab geht. Menü: Polarnacht im Dunkel-,
-     Polartag im Hellmodus. Level 3–7 vorerst mit der alten Palette. */
+     Alle Level sind Polarnacht (html[data-night]); Level 1–3 (L.snow) dazu im
+     Schneesturm (html[data-snow], js/schnee.js) mit einfarbigem Boden und flachem
+     Licht – man soll kaum sehen, ob es bergauf oder bergab geht. Ab Level 4
+     (neuronale Netze, keine „Spielwiese“ mehr): kein Schnee, dafür Höhenfarben,
+     helle Höhenlinien und der Höhenmesser links (Palette NET).
+     Menü: Polarnacht im Dunkel-, Polartag im Hellmodus. */
   const NIGHT = { fog: '#0c1526', c: ['#123a57', '#2d6688', '#86a9c2', '#dfeaf3'], plainC: '#4a6e8a', plainAmb: 0.84,
     amb: 0.4, ice: 1, iceC: '#2fa3bf', light: [-0.35, 0.7, 0.55], dark: true };
+  // Tal = Türkis (gut), Hang = Blau/Violett, oben = Flieder (großer Fehler; nicht Weiß – man startet meist oben
+  // und soll die Farben auch dort sehen); Farben wie die Höhenleiste
+  const NET = { fog: '#0c1526', c: ['#0b6e6a', '#2b78b0', '#6d5fd0', '#c9b6f2'], amb: 0.42, ice: 0.25, iceC: '#4f8fc0',
+    light: [-0.35, 0.7, 0.55], lineK: 1.5, dark: true };
+  window.NT_NET = NET;                          // auch für js/zwei.js
   const DAY = { fog: '#e7edf1', c: ['#6f9cc0', '#b2cde0', '#e1eaf1', '#ffffff'], plainC: '#e9f0f5', amb: 0.55,
     ice: 1, iceC: '#8dbbdc', light: [-0.5, 0.75, 0.35] };
   const MINT = [0.36, 0.95, 0.77];
-  let night = false;
+  let night = false, snowy = false;
   function applyLook() {
     const L = S.lvl, inLvl = S.state !== 'menu' && L;
-    night = !!(inLvl && L.night);
+    night = !!inLvl;
+    snowy = !!(inLvl && L.snow);
     document.documentElement.toggleAttribute('data-night', night);
-    if (night) G.setPalette(NIGHT, 'dark');
-    else if (!inLvl) G.setPalette(theme === 'dark' ? NIGHT : DAY, theme);
-    else G.setPalette(null, theme);
+    document.documentElement.toggleAttribute('data-snow', snowy);
+    if (inLvl) G.setPalette(snowy ? NIGHT : NET, 'dark');
+    else G.setPalette(theme === 'dark' ? NIGHT : DAY, theme);
   }
   onThemeChange = applyLook;
   const snow = NTSchnee.create($('#snow'));
@@ -238,6 +248,7 @@
   /* ── Level öffnen ── */
   function openLevel(id) {
     const L = LEVELS.find(l => l.id === id);
+    if (L.href) { location.href = L.href; return; }
     S.lvl = L;
     if (L.two) { openTwo(L); return; }
     S.world = L.world === 'model' ? NTWelt.model(seed) : L.world === 'penguin' ? NTWelt.penguins(seed)
@@ -635,7 +646,7 @@
     if (!S.world) { G.frame({ cam: { eye: [0, 10, -10], at: [0, 0, 0] }, player: null, fogR: 1, objects: [] }); return; }
     if (S.state === 'zwei') return;                 // Level 7 zeichnet selbst (js/zwei.js)
     step(dt);
-    const g = snow.frame(dt, now / 1000, night);
+    const g = snow.frame(dt, now / 1000, snowy);
     $('#gust').style.opacity = (g * 0.45).toFixed(3);
     render();
   }
@@ -705,7 +716,7 @@
     const y = ground + (p.air || 0) + bob;
     let cam = camFollow(1 / 60, ground);
     let fogR = S.fogR;
-    if (night) fogR *= 1 - 0.3 * snow.gust;      // Böe = Sicht schrumpft
+    if (snowy) fogR *= 1 - 0.3 * snow.gust;      // Böe = Sicht schrumpft
     if (S.reveal) {
       const t = ease(clamp(S.reveal.t / 2.4, 0, 1));
       fogR = lerp(S.reveal.fog0, 320 * w.W / 50, t * t);
@@ -857,7 +868,7 @@
     el.dataset.ok = '1';
     el.innerHTML =
       '<g id="mPg"></g>' +
-      '<text id="mName" x="34" y="12" font-size="11" font-weight="700" text-anchor="middle" fill="var(--ink-faint)"></text>' +
+      '<text id="mName" x="0" y="12" font-size="11" font-weight="700" text-anchor="start" fill="var(--ink-faint)"></text>' +
       '<text x="96" y="32" font-size="11" font-weight="600" text-anchor="middle" fill="var(--ink-soft)">Flosse</text>' +
       '<text id="mF" x="96" y="47" font-size="13" font-weight="700" text-anchor="middle" fill="var(--ink)"></text>' +
       '<circle cx="96" cy="60" r="4" fill="var(--ink)"/>' +
@@ -954,7 +965,7 @@
     const t = (id, x, y, size, w, anchor, fill, txt) => '<text' + (id ? ' id="' + id + '"' : '') + ' x="' + x + '" y="' + y + '" font-size="' + size +
       '" font-weight="' + w + '" text-anchor="' + anchor + '" fill="' + fill + '">' + (txt || '') + '</text>';
     el.innerHTML =
-      '<g id="pPg"></g>' + t('pName', 34, 12, 11, 700, 'middle', 'var(--ink-faint)') +
+      '<g id="pPg"></g>' + t('pName', 0, 12, 11, 700, 'start', 'var(--ink-faint)') +
       t('', 120, 26, 10.5, 600, 'end', 'var(--ink-soft)', 'Länge') + t('pLen', 120, 40, 12.5, 700, 'end', 'var(--ink)') +
       t('', 120, 72, 10.5, 600, 'end', 'var(--ink-soft)', 'Höhe') + t('pDep', 120, 86, 12.5, 700, 'end', 'var(--ink)') +
       '<circle cx="130" cy="36" r="4" fill="var(--ink)"/><circle cx="130" cy="82" r="4" fill="var(--ink)"/>' +
@@ -1077,8 +1088,9 @@
               { id: 'n', kind: 'n', x: 0.56, y: 0.5, group: 'a' }, { id: 'l', kind: 'out', x: 0.76, y: 0.5, label: 'Ei ok?' }],
       edges: [{ from: 's1', to: 'n', w: w1, group: 'a' }, { from: 's2', to: 'n', w: w2, group: 'a' }]
     });
-    const cs = w.cases(S.p.x, S.p.z);
-    NTNetz.lights($('#xtab'), cs);
+    const cs = w.cases(S.p.x, S.p.z), sg = z => 1 / (1 + Math.exp(-z));
+    NTNetz.nestPlot($('#xplot'), { cases: cs, out: (m, p) => sg(w1 * m + w2 * p),
+      lines: [{ a: w1, b: w2, c: 0, col: '#5cf2c4', name: 'dein Neuron' }] });
     $('#xRight').textContent = w.right(cs) + ' von 4';
   }
 
@@ -1090,7 +1102,7 @@
     NTZwei.open(L, seed, {
       theme: () => theme, low: () => low, fmt, stars, LS, bestKey,
       card, toMenu, introHtml,
-      next: () => null,
+      next: () => LEVELS.find(l => l.id === L.id + 1) || null, open: openLevel,
       again: () => openLevel(L.id),
       newWorld: () => { setSeed(1000 + Math.floor(Math.random() * 9000)); openLevel(L.id); },
       playing: () => { S.state = 'zwei'; }
