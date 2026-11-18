@@ -516,6 +516,10 @@ window.NTGrafik = (function () {
       const bounce = 1 - Math.abs(Math.cos(ph)) * 0.05 * walk;
       const breathe = 1 + Math.sin(now * 2.4) * 0.016 * (1 - walk);
       const blink = (now % 3.9) < 0.13 ? 0.1 : 1;
+      // Upgrade 18.11.2026: steht er still, winkt er ab und zu mit der rechten Flosse; im Sprung geht der Schnabel auf
+      const idle = (1 - walk) * (1 - air), wt = ((now + 2.3 + (P.seed ? 0 : Math.abs(P.x * 0.37 + P.z * 0.53))) % 8.5 + 8.5) % 8.5;   // ohne seed: Ort versetzt, damit nicht alle zugleich winken
+      const wave = idle * (wt < 1.5 ? Math.sin(Math.PI * wt / 1.5) : 0);
+      const open = Math.max(air, wave * 0.45);
       const S = 0.9 * (P.scale || 1);          // scale: größere Pinguine auf der Karte der Lehrkraft (mehr.js)
       const fog = fogColor(), dark = !!pal.dark;
       const c = progC.u;
@@ -572,8 +576,9 @@ window.NTGrafik = (function () {
       part('cone', chain(M.trs(0, 0.3, -0.5, 0, 0, 1, 1, 1), M.rx(-2.25), M.scl(0.2, 0.26, 0.07)), navy, { spec: 0.1 });
       // Flossen: gegengleich im Schritt, im Sprung ausgebreitet
       for (const s of [-1, 1]) {
-        const flap = 0.2 + walk * (0.12 + 0.14 * Math.sin(ph + (s > 0 ? 0 : Math.PI))) + air * 1.05;
-        part('ball', chain(M.trs(0.7 * s, 1.36, -0.02, 0, 0, 1, 1, 1), M.rz(flap * s), M.rx(0.12),
+        const wv = s > 0 ? wave * (2.35 + 0.35 * Math.sin(wt * 13)) : 0;
+        const flap = 0.2 + walk * (0.12 + 0.14 * Math.sin(ph + (s > 0 ? 0 : Math.PI))) + air * 1.05 + wv;
+        part('ball', chain(M.trs(0.7 * s, 1.36, -0.02, 0, 0, 1, 1, 1), M.rz(flap * s), M.rx(0.12 - wv * 0.25),
           T(0, -0.4, 0, 0.1, 0.46, 0.25)), navy, { spec: 0.2 });
       }
       // Augen: groß, glänzend, mit zwei Lichtpunkten
@@ -588,8 +593,11 @@ window.NTGrafik = (function () {
           part('ball', chain(M.trs(ex, ey - 0.005, ez + 0.01, ph2, -el, 1, 1, 1), M.scl(0.1, 0.018, 0.07)), navy, {});
         }
       }
-      // Schnabel: kleiner runder Kegel, leicht nach unten
-      part('cone', chain(M.trs(0, PB.hy - 0.08, PB.hr * 0.95 * 0.96, 0, 0, 1, 1, 1), M.rx(Math.PI / 2 + 0.22), M.scl(0.14, 0.22, 0.1)), beakC, { spec: 0.5 });
+      // Schnabel: Ober- und Unterschnabel, leicht nach unten; im Sprung (und beim Winken) geht er auf
+      const bz = PB.hr * 0.95 * 0.96, by = PB.hy - 0.08;
+      if (open > 0.08) part('ball', T(0, by - 0.035, bz - 0.01, 0.07, 0.06 * open + 0.02, 0.05), [0.45, 0.08, 0.12], { spec: 0.2 });
+      part('cone', chain(M.trs(0, by + 0.012, bz, 0, 0, 1, 1, 1), M.rx(Math.PI / 2 + 0.2 - open * 0.18), M.scl(0.14, 0.23, 0.075)), beakC, { spec: 0.55 });
+      part('cone', chain(M.trs(0, by - 0.04, bz - 0.01, 0, 0, 1, 1, 1), M.rx(Math.PI / 2 + 0.36 + open * 0.7), M.scl(0.105, 0.16, 0.05)), orange, { spec: 0.35 });
       // Haarbüschel oben
       for (const [t, h, lean] of [[-0.05, 0.15, -0.5], [0.01, 0.2, 0.0], [0.06, 0.13, 0.55]]) {
         part('cone', chain(M.trs(t, PB.top - 0.06, 0.02, 0, 0, 1, 1, 1), M.rz(-lean), M.rx(-0.3), M.scl(0.06, h, 0.055)), navy, { spec: 0.05 });
@@ -601,8 +609,10 @@ window.NTGrafik = (function () {
       part('ball', T(kn[0], kn[1], kn[2], 0.12, 0.11, 0.09), col, { pat: 2, c2: light, spec: 0.08 });
       for (const [k, sway0] of [[0, 0.18], [1, -0.08]]) {
         const sway = sway0 + roll * 1.6 + Math.sin(now * 3 + k) * 0.04 + walk * 0.1 * Math.sin(ph * 2 + k);
-        part('ball', chain(M.trs(kn[0] + k * 0.05, kn[1] - 0.02, kn[2] + 0.02 - k * 0.04, 0, -0.18 - walk * 0.25, 1, 1, 1),
-          M.rz(sway), T(0, -0.3, 0, 0.12, 0.32, 0.035)), col, { pat: 3, c2: light, spec: 0.05 });
+        const Z = chain(M.trs(kn[0] + k * 0.05, kn[1] - 0.02, kn[2] + 0.02 - k * 0.04, 0, -0.18 - walk * 0.25, 1, 1, 1), M.rz(sway));
+        part('ball', M.mul(Z, T(0, -0.3, 0, 0.12, 0.32, 0.035)), col, { pat: 3, c2: light, spec: 0.05 });
+        // Fransen am Ende des Zipfels
+        for (const fx of [-0.07, 0, 0.07]) part('ball', M.mul(Z, T(fx, -0.64 - Math.abs(fx) * 0.3, 0, 0.022, 0.07, 0.02)), light, { spec: 0.02 });
       }
     }
 

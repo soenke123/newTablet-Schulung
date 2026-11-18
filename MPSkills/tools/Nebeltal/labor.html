@@ -188,7 +188,7 @@ ol.steps li::before { content:counter(st); position:absolute; left:0; top:0; wid
 #endbar { position:fixed; left:50%; transform:translateX(-50%); bottom:10px; width:min(1000px, calc(100% - 20px)); z-index:6;
   display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; padding:9px 12px; }
 #endbar[hidden] { display:none; }
-body.has-endbar { padding-bottom:96px; }
+body.has-endbar { padding-bottom:calc(var(--ebh, 76px) + 20px); }
 .eb-res { display:flex; align-items:center; gap:10px; flex:1 1 300px; min-width:0; }
 .eb-kick { font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); }
 .eb-line { font-size:15px; line-height:1.35; color:var(--ink-soft); } .eb-line b { color:var(--ink); }
@@ -244,7 +244,7 @@ body.wk .top > section:last-child { height:100%; }
 }
 </style>
 <link href="karte.css?v=20261118a" rel="stylesheet">
-<link href="mehr.css?v=20261118o" rel="stylesheet">
+<link href="mehr.css?v=20261118t" rel="stylesheet">
 </head>
 <body>
 <div id="lab">
@@ -291,9 +291,9 @@ body.wk .top > section:last-child { height:100%; }
 <script src="js/welt.js?v=20261118a"></script>
 <script src="js/bilder.js?v=20261118f"></script>
 <script src="js/netz.js?v=20261118d"></script>
-<script src="js/grafik.js?v=20261118n"></script>
-<script src="js/raum.js?v=20261118o"></script>
+<script src="js/grafik.js?v=20261118t"></script>
+<script src="js/raum.js?v=20261118t"></script>
 <script>window.NT_NET = { fog: '#0c1526', c: ['#0b6e6a', '#2b78b0', '#6d5fd0', '#c9b6f2'], amb: 0.42, ice: 0.25, iceC: '#4f8fc0', light: [-0.35, 0.7, 0.55], lineK: 1.5, dark: true };</script>
-<script src="js/labor.js?v=20261118o"></script>
+<script src="js/labor.js?v=20261118t"></script>
 </body>
 </html>

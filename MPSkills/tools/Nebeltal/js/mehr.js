@@ -479,7 +479,7 @@ window.NTMehr = (function () {
   function resultCard(st, again) {
     if (!st || document.body.classList.contains('post')) return;
     const me = st.me || {}, lv = st.level, L = lvInfo(lv);
-    let head = '', mine = '', top = '';
+    let head = '', mine = '', top = '', team = false;
     if (again) M.resKey = '';
     if (lv <= 6) {
       const rank = st.people.filter(p => p.in && p.res && isFinite(p.res.s)).sort((a, b) => a.res.s - b.res.s);
@@ -502,14 +502,16 @@ window.NTMehr = (function () {
       const i = rank.findIndex(r => r.t === me.t), r = rank[i];
       head = rank.length > 1 && i >= 0 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : '';
       mine = r ? 'Euer Netz: <b>' + r.sc.right + ' von 4</b> Nestern richtig <small>· Fehler ' + fmt(r.sc.loss, 2) + '</small>' : '';
-      top = rank.slice(0, 3).map((x, j) => '<li' + (x.t === me.t ? ' class="me"' : '') + '><span class="n">' + (j + 1) + '</span><b>' +
-        x.members.map(p => esc(p.n)).join(' + ') + '</b><small>' + x.sc.right + ' von 4 · ' + fmt(x.sc.loss, 2) + '</small></li>').join('');
+      // Team-Spiel: alle Teams mit ihren Punkten, gleich offen (Sönke 18.11.2026: „die User sollen auch die Punkte sehen“)
+      top = rank.map((x, j) => '<li' + (x.t === me.t ? ' class="me"' : '') + ' style="--tc:' + R.teamColor(x.i) + '"><span class="n">' + (j + 1) + '</span><b class="tn">' + R.teamName(x.i) + '</b><em>' +
+        x.members.map(p => R.pingu(p.c) + esc(p.n)).join(' ') + '</em><small><b>' + x.sc.right + ' von 4</b> Nestern · Fehler ' + fmt(x.sc.loss, 2) + '</small></li>').join('');
+      team = true;
     }
     // ohne „Weiter trainieren“ und „Und die KI?“ (Sönke 18.11.2026), die Top 3 bleiben zum Aufklappen
     SP.endBar({
       kick: 'Level ' + lv + ' · Runde vorbei · gleich startet deine Lehrkraft die nächste',
       place: head || 'Runde vorbei', line: mine,
-      more: top ? '<ol class="mprank">' + top + '</ol>' : '', moreLabel: 'Top 3',
+      more: top ? '<ol class="mprank' + (team ? ' teamrank' : '') + '">' + top + '</ol>' : '', moreLabel: team ? 'Rangliste' : 'Top 3', open: team,
       btns: []
     });
   }
@@ -549,11 +551,12 @@ window.NTMehr = (function () {
     const lv = st.level;
     const teams = lv >= 7 ? teamsOfLobby(st) : [];
     const key = JSON.stringify([lv, st.seed, st.secs, st.team_size, M.sel, here.map(p => [p.id, p.n, p.c, p.t, p.d, p.s])]);
-    if (key === M.sideKey) return;
+    if (key === M.sideKey || M.drag) return;
     M.sideKey = key;
     let h = '<div class="mps-h"><div><b>Gemeinsam spielen</b><small>' + here.length + ' ' + (here.length === 1 ? 'Pinguin' : 'Pinguine') +
       ' in der Lobby</small></div><button class="btn sm" type="button" data-a="off">Beenden</button></div>';
-    h += '<div class="mps-t">Level wählen</div><div class="mps-lv">' + [1, 2, 3, 4, 5, 6, 7, 8].map(id => {
+    // ist ein Level gewählt, schrumpfen die Kacheln auf eine Reihe – Platz für die Teams
+    h += '<div class="mps-t">Level wählen</div><div class="mps-lv' + (lv ? ' compact' : '') + '">' + [1, 2, 3, 4, 5, 6, 7, 8].map(id => {
       const L = lvInfo(id);
       return '<button type="button" data-lv="' + id + '" class="' + (id === lv ? 'on' : '') + '" title="' + esc(L.name) + '">' +
         '<span class="im">' + (window.NTBild ? NTBild.tile(id) : '') + '<span class="nr">' + id + '</span></span><small>' + esc(L.name) + '</small></button>';
@@ -573,19 +576,32 @@ window.NTMehr = (function () {
           '<button type="button" data-size="' + n + '" class="' + (n === st.team_size ? 'on' : '') + '">' + n + '</button>').join('') + '</div></div>';
       }
       if (lv >= 7) {
+        // Teams als Karten in Teamfarbe, Personen als Pinguine; Level 8 zeigt die 8 Welten des Teams als Leiste
         h += '<div class="mps-t">Teams <button class="btn sm" type="button" data-a="balance">Angleichen</button></div><div class="mps-teams">' +
-          teams.map(x => '<div class="mpt" data-team="' + x.t + '"><div class="mpt-h">Team ' + (x.i + 1) +
-            '<small>' + x.members.length + (x.members.length === 1 ? ' Person' : ' Personen') + '</small></div>' +
+          teams.map(x => '<div class="mpt" data-team="' + x.t + '" style="--tc:' + R.teamColor(x.i) + '"><div class="mpt-h"><span class="mpt-nm">' + R.teamName(x.i) + '</span>' +
+            '<small>' + x.members.length + (x.members.length === 1 ? ' Person' : ' Personen') + '</small>' + slotBar(x.members, lv) + '</div>' +
             x.members.map(p => chip(p, lv)).join('') + '</div>').join('') +
           '<div class="mpt new" data-team="-1"><div class="mpt-h">+ neues Team</div></div></div>' +
-          '<p class="mps-hint">Person antippen, dann ein Team (verschieben) oder eine Person (tauschen).' +
+          '<p class="mps-hint">Pinguin auf ein Team <b>ziehen</b> – oder antippen und dann das Team antippen. Auf einen anderen Pinguin = tauschen.' +
           (lv === 8 ? ' <b>×2</b> = bekommt zuerst die übrigen Welten.' : ' Allein = spielt beide Welten.') + '</p>';
       }
-      h += '<button class="btn primary big" type="button" data-a="start"' + (here.length ? '' : ' disabled') + '>Start · Level ' + lv + '</button>';
+      // Start-Knopf klebt unten am Kasten – nie mehr hinscrollen (Sönke 18.11.2026)
+      h += '<div class="mps-foot"><button class="btn primary big" type="button" data-a="start"' + (here.length ? '' : ' disabled') + '>Start · Level ' + lv +
+        (lv >= 7 && teams.length ? ' · ' + teams.length + (teams.length === 1 ? ' Team' : ' Teams') : '') + '</button></div>';
     } else {
       h += '<p class="mps-hint">Alle Tablets im Raum sind jetzt hier. Wähle ein Level – alle spielen dieselbe Welt.</p>';
     }
+    const top = box.scrollTop;
     box.innerHTML = h;
+    box.scrollTop = top;
+  }
+  // Level 8: die 8 Welten des Teams als Kästchen in der Schalfarbe ihrer Person (leer = noch frei)
+  function slotBar(members, lv) {
+    const n = lv === 8 ? 8 : 2, own = {};
+    for (const p of members) for (const sl of p.s || []) own[sl] = p;
+    let h = '<span class="mpt-sl" title="Welten des Teams">';
+    for (let s = 0; s < n; s++) h += '<i' + (own[s] ? ' style="background:' + R.color(own[s].c) + '"' : ' class="free"') + '></i>';
+    return h + '</span>';
   }
   function teamsOfLobby(st) {
     const m = new Map();
@@ -596,12 +612,61 @@ window.NTMehr = (function () {
     const n = (p.s || []).length;
     const w = lv === 7 ? (n === 2 ? 'A + B' : n ? (p.s[0] === 0 ? 'Welt A' : 'Welt B') : '–') : (n === 1 ? '1 Welt' : n + ' Welten');
     return '<button type="button" class="mpc' + (M.sel === p.id ? ' sel' : '') + '" data-pid="' + p.id + '">' +
-      '<i style="background:' + R.color(p.c) + '"></i><span>' + esc(p.n) + '</span><small>' + w + '</small>' +
+      R.pingu(p.c) + '<span>' + esc(p.n) + '</span><small>' + w + '</small>' +
       (lv === 8 ? '<span class="dbl' + (p.d ? ' on' : '') + '" data-dbl="' + p.id + '" title="spielt 2 (bekommt zuerst übrige Welten)">×2</span>' : '') + '</button>';
   }
+  // Pinguin ziehen: auf ein Team = verschieben, auf einen Pinguin eines anderen Teams = tauschen
+  // (Antippen wie bisher geht weiter; ein Zug ab 8 px verschluckt den Klick danach)
+  $('#mpSide').addEventListener('pointerdown', e => {
+    const c = e.target.closest('.mpc');
+    if (!c || e.target.closest('.dbl') || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    M.drag = { id: c.dataset.pid, el: c, x: e.clientX, y: e.clientY, pid: e.pointerId, on: false, ghost: null };
+  });
+  window.addEventListener('pointermove', e => {
+    const d = M.drag; if (!d || e.pointerId !== d.pid) return;
+    if (!d.on) {
+      if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8) return;
+      d.on = true;
+      const r = d.el.getBoundingClientRect();
+      d.ox = e.clientX - r.left; d.oy = e.clientY - r.top;
+      d.ghost = d.el.cloneNode(true); d.ghost.classList.add('mpc-ghost');
+      d.ghost.style.width = r.width + 'px';
+      document.body.appendChild(d.ghost);
+      d.el.classList.add('dragging');
+      $('#mpSide').classList.add('dragging');
+    }
+    e.preventDefault();
+    d.ghost.style.transform = 'translate(' + (e.clientX - d.ox) + 'px,' + (e.clientY - d.oy) + 'px)';
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    const tgt = under && (under.closest('#mpSide .mpc:not(.dragging)') || under.closest('#mpSide .mpt'));
+    for (const x of document.querySelectorAll('#mpSide .drop')) if (x !== tgt) x.classList.remove('drop');
+    if (tgt) tgt.classList.add('drop');
+    d.tgt = tgt;
+  }, { passive: false });
+  const dragEnd = e => {
+    const d = M.drag; if (!d || e.pointerId !== d.pid) return;
+    M.drag = null;
+    if (!d.on) return;
+    d.ghost.remove(); d.el.classList.remove('dragging'); $('#mpSide').classList.remove('dragging');
+    for (const x of document.querySelectorAll('#mpSide .drop')) x.classList.remove('drop');
+    M.noClick = performance.now();
+    const st = M.st, t = e.type === 'pointerup' ? d.tgt : null;
+    M.sel = null; M.sideKey = '';
+    if (t && t.classList.contains('mpc')) {
+      const a = st.people.find(p => p.id === d.id), b = st.people.find(p => p.id === t.dataset.pid);
+      if (a && b && a.t !== b.t) { act('swap', { a: a.id, b: b.id }); return; }
+    } else if (t && t.dataset.team) {
+      const a = st.people.find(p => p.id === d.id);
+      if (a && String(a.t) !== t.dataset.team) { act('move', { pid: d.id, team: +t.dataset.team }); return; }
+    }
+    side(st);
+  };
+  window.addEventListener('pointerup', dragEnd);
+  window.addEventListener('pointercancel', dragEnd);
   $('#mpSide').addEventListener('click', e => {
     const t = e.target.closest('[data-lv],[data-a],[data-size],[data-dbl],[data-pid],[data-team]');
     if (!t || t.tagName === 'SELECT') return;
+    if (M.noClick && performance.now() - M.noClick < 350) return;   // Klick nach dem Ziehen
     const st = M.st;
     if (t.dataset.lv) { act('level', { n: +t.dataset.lv }); return; }
     if (t.dataset.size) { act('size', { n: +t.dataset.size }); return; }
@@ -675,9 +740,17 @@ window.NTMehr = (function () {
       const r = inR.filter(p => p.r).length;
       $('#mpStN').textContent = r + ' von ' + inR.length + ' bereit';
       const ul = $('#mpReady');
-      const h = inR.map(p => '<li class="' + (p.r ? 'ok' : '') + (p.on ? '' : ' off') + '"><i style="background:' + R.color(p.c) + '"></i>' + esc(p.n) +
-        (lv >= 7 ? '<small>Team ' + (teamIndex(st, p.t) + 1) + '</small>' : '') + '<b>' + (p.r ? '✓' : '…') + '</b></li>').join('');
-      if (ul && ul.dataset.h !== h) { ul.innerHTML = h; ul.dataset.h = h; }
+      const li = p => '<li class="' + (p.r ? 'ok' : '') + (p.on ? '' : ' off') + '">' + R.pingu(p.c) + '<span>' + esc(p.n) + '</span>' +
+        (lv === 8 ? '<small>' + (p.s || []).length + ((p.s || []).length === 1 ? ' Welt' : ' Welten') + '</small>' : '') + '<b>' + (p.r ? '✓' : '…') + '</b></li>';
+      // Level 7/8: je Team ein Kasten in Teamfarbe statt „Team 1“ hinter jedem Namen
+      const h = lv >= 7
+        ? teamsOf(st).map(x => {
+            const r = x.members.filter(p => p.r).length;
+            return '<li class="mprt' + (r === x.members.length ? ' all' : '') + '" style="--tc:' + R.teamColor(x.i) + '"><div class="mprt-h"><b>' + R.teamName(x.i) + '</b>' +
+              (lv === 8 ? slotBar(x.members, 8) : '') + '<small>' + r + '/' + x.members.length + ' bereit</small></div><ul>' + x.members.map(li).join('') + '</ul></li>';
+          }).join('')
+        : inR.map(li).join('');
+      if (ul && ul.dataset.h !== h) { ul.innerHTML = h; ul.dataset.h = h; ul.classList.toggle('byteam', lv >= 7); }
     } else if (ph === 'running') {
       const nt = teamsOf(st).length;
       $('#mpStN').textContent = lv <= 6 ? done + ' von ' + inR.length + ' fertig' : nt + (nt === 1 ? ' Team' : ' Teams');
@@ -687,7 +760,6 @@ window.NTMehr = (function () {
       endBoard(st, inR);
     }
   }
-  const teamIndex = (st, t) => teamsOf(st).findIndex(x => x.t === t);
 
   function runBoard(st, inR) {
     const box = $('#mpRun'); if (!box) return;
@@ -710,9 +782,9 @@ window.NTMehr = (function () {
     const sig = teams.map(x => x.t + ':' + x.members.map(p => p.id + (p.on ? 1 : 0)).join()).join('|');
     if (box.dataset.sig !== sig) {
       box.dataset.sig = sig;
-      box.innerHTML = teams.map(x => '<div class="mptc" data-t="' + x.t + '"><div class="mptc-h">Team ' + (x.i + 1) +
+      box.innerHTML = teams.map(x => '<div class="mptc" data-t="' + x.t + '" style="--tc:' + R.teamColor(x.i) + '"><div class="mptc-h">' + R.teamName(x.i) +
         (lv === 8 ? '<button class="btn sm" type="button" data-watch="' + x.t + '">Beobachten</button>' : '') + '</div>' +
-        '<div class="mptc-m">' + x.members.map(p => '<span class="' + (p.on ? '' : 'off') + '"><i style="background:' + R.color(p.c) + '"></i>' + esc(p.n) +
+        '<div class="mptc-m">' + x.members.map(p => '<span class="' + (p.on ? '' : 'off') + '">' + R.pingu(p.c) + esc(p.n) +
           '<small>' + (lv === 7 ? ((p.s || []).length === 2 ? 'A+B' : (p.s || [])[0] === 0 ? 'A' : 'B') : (p.s || []).length) + '</small></span>').join('') + '</div>' +
         (lv === 7 ? '<canvas class="nplot mptc-plot"></canvas>' : '<div class="mptc-hits"></div>') +
         '<div class="mptc-s"></div></div>').join('');
@@ -778,8 +850,8 @@ window.NTMehr = (function () {
     }
     const rank = lv === 7 ? teamRank7(st) : teamRank8(st);
     if (M.sel7 === null || !rank.some(x => x.t === M.sel7)) M.sel7 = rank.length ? rank[0].t : null;
-    const h = rank.map((x, j) => '<li data-t="' + x.t + '" class="' + (x.t === M.sel7 ? 'sel' : '') + '"><span class="n">' + (j + 1) + '</span><b>Team ' + (x.i + 1) + '</b>' +
-      '<em>' + x.members.map(p => esc(p.n)).join(', ') + '</em><small>' +
+    const h = rank.map((x, j) => '<li data-t="' + x.t + '" class="' + (x.t === M.sel7 ? 'sel' : '') + '" style="--tc:' + R.teamColor(x.i) + '"><span class="n">' + (j + 1) + '</span><b class="tn">' + R.teamName(x.i) + '</b>' +
+      '<em>' + x.members.map(p => R.pingu(p.c) + esc(p.n)).join(' ') + '</em><small>' +
       (lv === 7 ? x.sc.right + ' von 4 Nestern · Fehler ' + fmt(x.sc.loss, 2) : (x.sc.n - x.sc.wrong) + ' von ' + x.sc.n + ' richtig · Fehler ' + fmt(x.sc.loss, 3)) + '</small></li>').join('');
     const ol = $('#mpTop');
     if (ol.dataset.h !== h) {

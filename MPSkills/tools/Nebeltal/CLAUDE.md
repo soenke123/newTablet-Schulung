@@ -358,6 +358,21 @@ zeigt sie groß + wer bereit ist → „Los!“ → 3-2-1 (`countdown_ends_at`, 
   Erklärkarte Level 8: EIN Satz zum Thema („alle drei Pinguinarten an Schnabel und Flosse erkennen“). Welt s = Neuron floor(s/2),
   gerade = Werte 0/1, ungerade = 2/3; wer zwei Welten hat, hat ein ganzes Neuron. Beamer: Teams mit erkannt je Art,
   „Beobachten“ = `labor.html?level=8&mp=1&team=<t>` (live, nichts ziehbar, „‹ Übersicht“ zurück).
+- **Level 8 am Tablet nach der Runde** (Sönke 18.11.2026 nachts: „die User sollen auch die Punkte sehen … die Übersichtswelt
+  wie die Lehrkräfte, nur dass sie nichts ändern können“): `mp8Result` schaltet die 3D-Welt ab (`wkView(false)`, `body.mp8-end`)
+  → Wolken, alle 8 Welten mit Namen, Netz wie bei der Lehrkraft, Kästen antippen = groß; ziehen geht nicht (`mp8Done()` in
+  `mp8Mine`). Leiste: Platz + eigener Satz + **Rangliste aller Teams** als Chips (`.eb-rank`, Teamfarbe, Pinguine, Punkte =
+  richtig sortierte Pinguine; eigenes Team „Ihr“) + Knopf „Deine Welt(en) in 3D“ ↔ „Ganzes Netz ansehen“. Höhe der Leiste
+  → `--ebh` (ResizeObserver), damit sie nichts verdeckt. Level 7 am Tablet: Rangliste aller Teams gleich offen (`open`).
+- **Teams sichtbar** (Sönke 18.11.2026: Lobby „nicht perfekt“, zum Start scrollen ging nicht, „überall steht Team 1 hinter“):
+  `NTRaum.teamColor(i)` / `teamName(i)` / `pingu(c)` (kleiner SVG-Pinguin mit Schalfarbe) in raum.js. Lobby der Lehrkraft:
+  Team-Karten in Teamfarbe, Personen als Pinguin-Chips, Level 8 mit Leiste der 8 Welten (`slotBar`, Kästchen in der
+  Schalfarbe der Person, leer = frei); Pinguin **ziehen** auf ein Team (verschieben) oder einen Pinguin (tauschen), Antippen
+  geht weiter; während des Ziehens wird der Kasten nicht neu gebaut (`M.drag`), Scrollstand bleibt beim Neubau. Start-Knopf
+  klebt unten (`.mps-foot`, sticky). Ist ein Level gewählt, werden die Level-Kacheln eine schmale Reihe (`.mps-lv.compact`);
+  Teams in Spalten, wenn Platz ist. Bereit-Liste auf dem Beamer und Erklärkarte am Tablet nach Teams statt „Team 1“ je Name.
+- **Figur** (18.11.2026): Ober-/Unterschnabel (geht im Sprung auf), Fransen am Schal-Zipfel, im Stehen winkt der Pinguin
+  alle ~8,5 s mit der rechten Flosse (`wave` in drawPenguin).
 - Rangliste nur am Ende der Runde, nichts wird aufgehoben (neue Runde löscht res/vals/info).
 - Server (0296): `nt_rounds` (Phase off/lobby/intro/countdown/running/ended, Level, Welt, Teamgröße, Zeit) und
   `nt_players`; anwesend = 20 s; Tablets sehen Werte nur des eigenen Teams und fremde Endstände erst am Ende.

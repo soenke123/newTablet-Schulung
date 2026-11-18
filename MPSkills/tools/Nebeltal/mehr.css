@@ -110,7 +110,7 @@ body[data-state="wait"] .hud-bottom, body[data-state="wait"] #gauge { opacity:0;
 .mpst-n { font-size:15px; color:var(--ink-soft); font-weight:700; }
 .mpst-btns { display:flex; gap:8px; }
 .mpst-lead { margin:0; color:var(--ink-soft); font-size:15px; }
-.mpst-intro { display:grid; grid-template-columns:minmax(0, 1fr) 260px; gap:14px; min-height:0; flex:1; }
+.mpst-intro { display:grid; grid-template-columns:minmax(0, 1fr) 300px; gap:14px; min-height:0; flex:1; }
 .mpst-card { width:auto !important; max-height:none !important; }
 .mpst-ready ul { list-style:none; margin:6px 0 0; padding:0; display:flex; flex-direction:column; gap:4px; max-height:60vh; overflow:auto; }
 .mpst-ready li { display:flex; align-items:center; gap:7px; padding:5px 9px; border-radius:10px; background:var(--surface-2); font-weight:600; font-size:14px; }
@@ -234,3 +234,95 @@ body.mp8 .cell:not(.mine) canvas { cursor:default; }
 
 html[data-motion="low"] .mpdots i, html[data-motion="low"] #mpCount.pop { animation:none; }
 html[data-motion="low"] #mpStage { background:rgba(3,7,16,.6); }
+
+/* ── Teams sichtbar (Sönke 18.11.2026: „besser und visueller“) ──
+   Pinguin-Symbol statt Farbpunkt, Team-Karten in Teamfarbe (--tc), 8 Welten als Leiste,
+   Ziehen per Finger/Maus, Start-Knopf klebt unten im Kasten */
+.pgi { width:18px; height:22px; flex:none; display:inline-block; vertical-align:middle; filter:drop-shadow(0 1px 1px rgba(0,0,0,.35)); }
+#mpSide { overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+.mps-foot { position:sticky; bottom:-16px; margin:auto -14px -16px; padding:10px 14px 14px; z-index:2;
+  background:linear-gradient(to bottom, transparent, var(--surface) 34%); }
+.mps-foot .btn { width:100%; }
+.mpt { --tc:var(--line); position:relative; border:2px solid color-mix(in srgb, var(--tc) 55%, transparent); padding:9px 9px 10px 14px;
+  background:linear-gradient(135deg, color-mix(in srgb, var(--tc) 14%, var(--surface-2)), var(--surface-2) 60%); transition:border-color .15s, transform .15s; }
+.mpt::before { content:""; position:absolute; left:0; top:8px; bottom:8px; width:5px; border-radius:0 4px 4px 0; background:var(--tc); }
+.mpt.new { --tc:var(--line); background:none; border:2px dashed var(--line); padding:9px; }
+.mpt.new::before { display:none; }
+.mpt-h { align-items:center; }
+.mpt-nm { color:var(--tc); font-family:var(--head); font-size:15px; }
+.mpt.new .mpt-nm, .mpt.new .mpt-h { color:var(--ink-faint); }
+.mpt-sl { margin-left:auto; display:inline-flex; gap:2px; }
+.mpt-sl i { width:9px; height:14px; border-radius:3px; box-shadow:inset 0 0 0 1px rgba(0,0,0,.25); }
+.mpt-sl i.free { background:none; box-shadow:inset 0 0 0 1.5px var(--line); }
+.mpc { padding:4px 8px 4px 5px; touch-action:none; -webkit-touch-callout:none; }
+.mpc .pgi { width:20px; height:24px; }
+#mpSide.dragging .mpt:not(.new), #mpSide.dragging .mpt.new { border-style:dashed; }
+.mpt.drop { border-style:solid !important; border-color:var(--tc) !important; transform:scale(1.015); box-shadow:0 0 0 3px color-mix(in srgb, var(--tc) 35%, transparent); }
+.mpt.new.drop { --tc:var(--accent); }
+.mpc.drop { border-color:var(--accent); box-shadow:0 0 0 3px var(--accent); }
+.mpc.dragging { opacity:.3; }
+.mpc-ghost { position:fixed !important; left:0; top:0; z-index:50; pointer-events:none !important; opacity:.95; box-shadow:0 10px 26px rgba(0,0,0,.45);
+  border-color:var(--accent) !important; background:var(--surface) !important; }
+
+/* Bereit-Liste der Lehrkraft nach Teams */
+.mpst-ready ul.byteam { gap:8px; }
+.mpst-ready li.mprt { flex-direction:column; align-items:stretch; gap:6px; padding:8px 9px 9px 13px; position:relative; border:2px solid color-mix(in srgb, var(--tc) 50%, transparent);
+  background:linear-gradient(135deg, color-mix(in srgb, var(--tc) 14%, var(--surface-2)), var(--surface-2) 65%); }
+.mpst-ready li.mprt::before { content:""; position:absolute; left:0; top:8px; bottom:8px; width:5px; border-radius:0 4px 4px 0; background:var(--tc); }
+.mpst-ready li.mprt.all { border-color:var(--tc); }
+.mprt-h { display:flex; align-items:center; gap:8px; }
+.mprt-h b { margin:0 !important; color:var(--tc) !important; font-family:var(--head); font-size:15px; }
+.mprt-h small { margin-left:auto; }
+.mprt-h .mpt-sl { margin-left:0; }
+.mpst-ready li.mprt ul { display:flex; flex-direction:row; flex-wrap:wrap; gap:4px; margin:0; max-height:none; overflow:visible; }
+.mpst-ready li.mprt li { padding:3px 8px 3px 4px; border-radius:99px; background:var(--surface); font-size:13px; gap:5px; }
+.mpst-ready li.mprt li b { margin-left:2px; }
+.mpst-ready li .pgi { width:18px; height:22px; }
+
+/* Ranglisten in Teamfarbe */
+.mprank li .tn { color:var(--tc, var(--ink)); font-family:var(--head); }
+.mprank li[style*="--tc"] { border-left:5px solid var(--tc); }
+.mprank li em .pgi { width:15px; height:18px; margin:0 1px 0 4px; }
+.mprank li em .pgi:first-child { margin-left:0; }
+.mptc { border-top:4px solid var(--tc, var(--line-soft)); }
+.mptc-h { color:var(--tc, var(--ink)); }
+.mptc-m .pgi { width:16px; height:19px; }
+.eb-more .teamrank li small b { color:var(--ink); }
+
+/* Level 8 am Tablet nach der Runde: Rangliste in der Leiste, Netz ansehen (nichts ziehbar) */
+.eb-rank { flex-basis:100%; list-style:none; margin:0; padding:0; display:flex; flex-wrap:wrap; gap:6px; }
+.eb-rank li { display:inline-flex; align-items:center; gap:6px; padding:4px 10px 4px 5px; border-radius:99px; background:var(--surface-2);
+  border:1.5px solid color-mix(in srgb, var(--tc) 55%, transparent); font-size:13.5px; }
+.eb-rank li .n { width:21px; height:21px; border-radius:50%; display:grid; place-items:center; font:800 11.5px var(--mono); background:var(--tc); color:#04121f; }
+.eb-rank li .tn { color:var(--tc); font-weight:700; }
+.eb-rank li .pgs { display:inline-flex; }
+.eb-rank li .pgs .pgi { width:13px; height:16px; margin-left:-3px; }
+.eb-rank li .pgs .pgi:first-child { margin-left:0; }
+.eb-rank li b.pt { font-family:var(--mono); color:var(--ink); }
+.eb-rank li small { color:var(--ink-faint); font-size:11.5px; }
+.eb-rank li.me { border-color:var(--tc); box-shadow:0 0 0 2px color-mix(in srgb, var(--tc) 40%, transparent); background:color-mix(in srgb, var(--tc) 16%, var(--surface-2)); }
+body.mp8-end .cell canvas { cursor:default !important; }
+/* Erklärkarte Level 8: das eigene Team als Pinguine */
+.mp8team { display:flex; flex-wrap:wrap; gap:5px; align-items:center; margin:4px 0 0; }
+.mp8team .tn { font-family:var(--head); font-weight:600; color:var(--tc); margin-right:4px; }
+.mp8team span.p { display:inline-flex; align-items:center; gap:5px; padding:3px 9px 3px 4px; border-radius:99px; background:var(--surface-2);
+  border:1px solid var(--line-soft); font-size:13.5px; font-weight:600; }
+.mp8team span.p.me { border-color:var(--tc); }
+.mp8team span.p small { color:var(--ink-faint); font-size:11px; }
+.mp8team .pgi { width:18px; height:22px; }
+html[data-motion="low"] .mpt.drop { transform:none; }
+/* Level gewählt: Kacheln als eine schmale Reihe (Name steht darunter im Kasten) */
+.mps-lv.compact { grid-template-columns:repeat(8, 1fr); gap:4px; }
+.mps-lv.compact small { display:none; }
+.mps-lv.compact .im { aspect-ratio:4 / 3; }
+.mps-lv.compact .nr { left:2px; top:2px; min-width:17px; height:17px; font-size:10.5px; }
+.mps-teams { display:grid; grid-template-columns:repeat(auto-fill, minmax(290px, 1fr)); gap:7px; }
+@media (max-width: 899px) {
+  #mpSide { max-height:68%; }
+}
+.mprt-h b { white-space:nowrap; }
+.mprt-h small { white-space:nowrap; }
+.mpst-ready .mprt-h .mpt-sl i { width:8px; height:13px; border-radius:3px; }
+.mpst-ready .mprt-h .mpt-sl i.free { background:none; }
+.mpt.new { align-items:center; justify-content:center; min-height:44px; }
+.mpt.new .mpt-h { justify-content:center; color:var(--ink-soft); }

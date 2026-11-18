@@ -666,7 +666,9 @@
     ? { watch: NTRaum.isTeacher ? (parseInt(MQ.get('team'), 10) || 0) : null, st: null, seed: 0, run: 0,
         dirty: false, sent: '', last: 0, busy: false, phase: '', shown: '', team: null, mine: new Set(), names: {}, rec: 0 }
     : null;
-  function mp8Mine(c) { return !!MP8 && MP8.watch === null && MP8.mine.has(c.k * 2 + c.pr); }
+  function mp8Mine(c) { return !!MP8 && MP8.watch === null && MP8.mine.has(c.k * 2 + c.pr) && !mp8Done(); }
+  // Runde vorbei am Tablet: nur noch ansehen (Wolken drehen, Kästen groß), nichts mehr ändern
+  function mp8Done() { return !!MP8 && MP8.st && MP8.st.phase === 'ended'; }
   function mp8Vals() {
     const v = {};
     for (const s of MP8.mine) { const q = NTRaum.l8.idx(s); v[s] = [+S.W[q.k][q.i[0]].toFixed(4), +S.W[q.k][q.i[1]].toFixed(4)]; }
@@ -693,7 +695,7 @@
       '<p class="lead">Euer Team trainiert <b>ein Netz</b>, das <b>alle drei Pinguinarten</b> an Schnabel und Flosse erkennen soll.</p></div>' +
       '<div class="i-pic">' + (window.NTBild ? '<div class="illwrap">' + NTBild.scene(8) + '</div>' : '') + '</div>' +
       '<div class="i-txt"><ol class="steps">' + steps.map(t => '<li>' + t + '</li>').join('') + '</ol>' +
-      '<p class="ctrl">' + esc(mp8TeamTxt()) + '</p></div>',
+      mp8TeamHtml() + '</div>',
       MP8.watch !== null ? [['‹ Übersicht', mp8Back]] : ready ? [['Warte auf den Start …', () => {}, 'wait']]
         : [['Bereit!', () => { MP8.ready = true; mp8Intro(true); mp8Send({ ready: true }); }, 'primary']]);
   }
@@ -701,11 +703,21 @@
   function mp8Label(t) {
     const st = MP8.st;
     const ids = st ? [...new Set(st.people.filter(p => p.in && p.t !== null).map(p => p.t))].sort((a, b) => a - b) : [];
-    return 'Team ' + (Math.max(0, ids.indexOf(t)) + 1);
+    return NTRaum.teamName(Math.max(0, ids.indexOf(t)));
   }
-  function mp8TeamTxt() {
-    const t = MP8.team || [];
-    return (MP8.watch !== null ? mp8Label(MP8.watch) + ': ' : 'Dein Team: ') + t.map(p => p.n + ' (' + p.s.length + ')').join(', ');
+  function mp8TeamIdx(t) {
+    const st = MP8.st;
+    const ids = st ? [...new Set(st.people.filter(p => p.in && p.t !== null).map(p => p.t))].sort((a, b) => a - b) : [];
+    return Math.max(0, ids.indexOf(t));
+  }
+  // das eigene Team als Pinguine mit Schalfarbe und Zahl der Welten (statt „Mia (2), Leon (2)“)
+  function mp8TeamHtml(center) {
+    const t = MP8.team || [], myT = MP8.watch !== null ? MP8.watch : MP8.st && MP8.st.me && MP8.st.me.t, i = mp8TeamIdx(myT);
+    const meId = MP8.st && MP8.st.me && MP8.st.me.id;
+    return '<div class="mp8team" style="--tc:' + NTRaum.teamColor(i) + (center ? ';justify-content:center;margin-top:12px' : '') + '"><span class="tn">' +
+      (MP8.watch !== null ? mp8Label(myT) : 'Dein Team') + '</span>' +
+      t.map(p => '<span class="p' + (p.id === meId ? ' me' : '') + '">' + NTRaum.pingu(p.c) + esc(p.id === meId ? 'Du' : p.n) +
+        '<small>' + p.s.length + (p.s.length === 1 ? ' Welt' : ' Welten') + '</small></span>').join('') + '</div>';
   }
   function mp8Back() { location.href = 'index.html'; }
   function mp8Apply(st) {
@@ -754,7 +766,7 @@
     if (ph === 'intro') { if (MP8.shown !== 'intro' + MP8.ready) { MP8.shown = 'intro' + MP8.ready; mp8Intro(MP8.ready); } }
     else if (ph === 'countdown') {
       const n = Math.max(1, Math.ceil(NTRaum.left(st.countdown_ends_at) || 0));
-      if (MP8.shown !== 'cd' + n) { MP8.shown = 'cd' + n; mp8Card('<div class="cdown">' + n + '</div><p class="cdl">' + esc(mp8TeamTxt()) + '</p>', []); }
+      if (MP8.shown !== 'cd' + n) { MP8.shown = 'cd' + n; mp8Card('<div class="cdown">' + n + '</div>' + mp8TeamHtml(true), []); }
     } else if (ph === 'running') {
       if (MP8.shown !== 'run') { MP8.shown = 'run'; $('#card').hidden = true; }
     } else if (ph === 'ended') {
@@ -775,10 +787,33 @@
     dirtyAll();
     MP8.end = { place: rank.length > 1 && i >= 0 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : 'Geschafft!',
       line: (MP8.watch !== null ? mp8Label(myT) : 'Euer Netz') + ' sortiert <b>' + (me ? me.sc.n - me.sc.wrong : 0) + ' von ' + (me ? me.sc.n : 342) +
-        '</b> Pinguinen richtig <small>· Fehler ' + fmt(me ? me.sc.loss : 0, 3) + '</small>', steps: S.hist.length };
+        '</b> Pinguinen richtig <small>· Fehler ' + fmt(me ? me.sc.loss : 0, 3) + '</small>', steps: S.hist.length, myT,
+      // Punkte aller Teams (Sönke 18.11.2026: „die User sollen auch die Punkte sehen“)
+      rank: rank.length > 1 ? rank.map((r, j) => {
+        const ti = mp8TeamIdx(r.t);
+        return '<li class="' + (r.t === myT ? 'me' : '') + '" style="--tc:' + NTRaum.teamColor(ti) + '"><span class="n">' + (j + 1) + '</span><span class="tn">' +
+          (r.t === myT && MP8.watch === null ? 'Ihr' : NTRaum.teamName(ti)) + '</span><span class="pgs">' + teams[r.t].map(p => NTRaum.pingu(p.c)).join('') +
+          '</span><b class="pt">' + (r.sc.n - r.sc.wrong) + '</b><small>von ' + r.sc.n + '</small></li>';
+      }).join('') : '' };
     $('#card').hidden = true;
-    if (WK.on) { wkStop(); }
-    else if (MP8.watch !== null) mp8Free(true);   // Lehrkraft: jetzt selbst trainieren / neu würfeln
+    if (MP8.watch !== null) { if (!WK.on) mp8Free(true); }   // Lehrkraft: jetzt selbst trainieren / neu würfeln
+    else {
+      // Tablet: wie die Lehrkraft das ganze Netz sehen – Wolken, alle 8 Welten, Netz –, nur ansehen
+      // (Sönke 18.11.2026: „ihr eigenes trainiertes Netz analysieren“); „Deine Welt“ holt die 3D-Welt zurück
+      document.body.classList.add('mp8-end');
+      if (WK.on) { wkStop(); wkView(false); }
+    }
+    mp8Bar();
+  }
+  // Tablet nach der Runde: zwischen ganzem Netz (Übersicht) und der eigenen 3D-Welt umschalten
+  function wkView(on) {
+    if (!WK.list.length) return;
+    WK.on = on;
+    document.body.classList.toggle('wk', on);
+    $('#wk').hidden = !on;
+    if (on) { bigSet(null); $('#netTitle').textContent = 'Dein Teil des Netzes'; for (const wv of WK.list) wv.sig = ''; }
+    else legends();
+    dirtyAll(); S.changed = true;
     mp8Bar();
   }
   function mp8Bar() {
@@ -789,14 +824,19 @@
       const sc = NTRaum.l8.score(MP8.seed, null, S.W);
       now = '<br><small>weiter trainiert (+' + more + ', zählt nicht mehr):</small> <b>' + (sc.n - sc.wrong) + ' von ' + sc.n + '</b> richtig';
     }
+    const tip = MP8.watch === null && !WK.on ? '<br><small>Euer Netz zum Ansehen: Kästen antippen = groß, Wolken drehen.</small>' : '';
     b.innerHTML = '<div class="eb-res"><div class="eb-place">' + e.place + '</div><div class="eb-txt"><div class="eb-kick">Level 8 · Runde vorbei</div>' +
-      '<div class="eb-line">' + e.line + now + '</div></div></div><div class="eb-btns"></div>';
+      '<div class="eb-line">' + e.line + now + tip + '</div></div></div><div class="eb-btns"></div>' + (e.rank ? '<ol class="eb-rank">' + e.rank + '</ol>' : '');
     const box = b.querySelector('.eb-btns');
     const add = (label, fn, kind) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'btn ' + (kind || ''); x.textContent = label; x.addEventListener('click', fn); box.appendChild(x); return x; };
     // Sönke 18.11.2026: kein „Und die KI?“, kein „Weiter trainieren“ am Tablet; die Lehrkraft kann im
     // Netz eines Teams nach der Runde selbst trainieren und neu würfeln (mp8Free, Knöpfe in der Leiste oben)
     if (MP8.watch !== null) add('‹ Übersicht', mp8Back, 'primary');
+    else if (WK.list.length) add(WK.on ? 'Ganzes Netz ansehen' : (WK.list.length > 1 ? 'Deine Welten' : 'Deine Welt') + ' in 3D', () => wkView(!WK.on), WK.on ? 'primary' : '');
     b.hidden = false;
+    // Platz unten so hoch wie die Leiste (mit Rangliste ist sie höher als früher)
+    if (!MP8.ro && window.ResizeObserver) { MP8.ro = new ResizeObserver(() => document.body.style.setProperty('--ebh', b.offsetHeight + 'px')); MP8.ro.observe(b); }
+    document.body.style.setProperty('--ebh', b.offsetHeight + 'px');
     document.body.classList.add('has-endbar');
   }
   // nach der Runde frei: alle Welten ziehbar, Lernschritt/Training/Lernrate wieder da, nichts geht mehr an den Server
@@ -804,6 +844,7 @@
     MP8.free = on;
     document.body.classList.toggle('mp8-free', on);
     if (!on) {
+      document.body.classList.remove('mp8-end');
       if (S.auto) setAuto(false);
       MP8.end = null;
       $('#endbar').hidden = true; document.body.classList.remove('has-endbar');
