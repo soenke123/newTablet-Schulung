@@ -467,14 +467,17 @@
     }
     // Zahl-Modus: Messwerte links (#exL) und Zahlenstrahl rechts (#exR) stehen neben der Leinwand
     const act = k => EX.i >= 0 ? sig(zz(S.W[k], P.pts[EX.i].x)) : null;
-    NTNetz.draw($('#net'), { biasInside: true,
+    // Level 8 gemeinsam am Tablet: nur die eigenen Werte hell mit Zahl, der Rest zurückgenommen
+    const F = WK.on ? WK.focus : null, own = (k, i) => !F || F.has(k * 4 + i);
+    const ownN = k => !F || [0, 1, 2, 3].some(i => F.has(k * 4 + i)) || (k < 3 && F.has(12 + k));
+    NTNetz.draw($('#net'), { biasInside: true, big: BIG.k === 'net',
       nodes: [...ins.map(n => ({ ...n, x: 0, label: '' })),
         ...[0, 1, 2].map(k => ({ id: 'h' + k, kind: 'n', x: 0.56, y: ys[k], group: HID[k], ...bias(k, HID[k]),
-          label: nameOf(k) + (act(k) != null ? ' ' + Math.round(act(k) * 100) + ' %' : ''), act: act(k) })),
-        { id: 'z', kind: 'n', x: 0.97, y: 0.5, group: OUT, sym: 'Σ', ...bias(3, OUT) }],
+          label: nameOf(k) + (act(k) != null ? ' ' + Math.round(act(k) * 100) + ' %' : ''), act: act(k), dim: !ownN(k), biasHide: !own(k, 3) })),
+        { id: 'z', kind: 'n', x: 0.97, y: 0.5, group: OUT, sym: 'Σ', ...bias(3, OUT), dim: !ownN(3), biasHide: !own(3, 3) }],
       edges: [
-        ...[0, 1, 2].flatMap(k => [0, 1, 2].map(i => ({ from: 'i' + i, to: 'h' + k, w: S.W[k][i], group: HID[k], labelAt: 0.6 }))),
-        ...[0, 1, 2].map(k => ({ from: 'h' + k, to: 'z', w: S.W[3][k], group: OUT, labelAt: 0.66 }))]
+        ...[0, 1, 2].flatMap(k => [0, 1, 2].map(i => ({ from: 'i' + i, to: 'h' + k, w: S.W[k][i], group: HID[k], labelAt: 0.6, dim: !own(k, i) }))),
+        ...[0, 1, 2].map(k => ({ from: 'h' + k, to: 'z', w: S.W[3][k], group: OUT, labelAt: 0.66, dim: !own(3, k) }))]
     });
   }
   function table() {
@@ -643,7 +646,7 @@
       '16 Werte = <b>8 Welten</b>. Ziehst du in einer, verbiegen sich die anderen.'];
     const c = $('#card');
     c.innerHTML = '<div class="card-in is-intro"><div class="i-head"><div class="card-kicker">Level 8</div><h2>Pinguine in 3D</h2>' +
-      '<p class="lead">Ein Netz mit <b>vier Neuronen</b> sortiert alle <b>drei Arten</b>.</p></div>' +
+      '<p class="lead">Jetzt soll ein ganzes Netz <b>alle drei Pinguinarten</b> – Adelie, Zügel und Esel – nur an <b>Schnabel und Flosse</b> erkennen.</p></div>' +
       '<div class="i-pic">' + (window.NTBild ? '<div class="illwrap">' + NTBild.scene(8) + '</div>' : '') + '</div>' +
       '<div class="i-txt"><ol class="steps">' + steps.map(t => '<li>' + t + '</li>').join('') + '</ol></div>' +
       '<div class="card-btns"><button class="btn primary" type="button" id="go">Los geht’s</button>' +
@@ -683,11 +686,11 @@
   function mp8Intro(ready) {
     const steps = [
       'Euer Team ist <b>ein Netz</b>: drei Neuronen A, B, C und das Zahl-Neuron – 16 Werte, <b>8 Welten</b>.',
-      MP8.mine.size ? 'Du ziehst den Punkt in <b>deinen ' + (MP8.mine.size === 1 ? 'Welt' : MP8.mine.size + ' Welten') +
-        '</b> (hell umrandet). Die anderen Welten bewegt dein Team.' : 'Du schaust zu.',
-      'Ziehst du, verbiegen sich alle Welten. <b>Sprecht euch ab!</b> Am Ende zählt, wie viele Pinguine euer Netz richtig sortiert.'];
+      MP8.mine.size ? 'Du läufst in <b>' + (MP8.mine.size === 1 ? 'deiner Welt' : 'deinen ' + MP8.mine.size + ' Welten') +
+        '</b> und suchst den tiefsten Punkt. Die anderen Welten bewegt dein Team.' : 'Du schaust zu.',
+      'Läuft jemand, verbiegt sich deine Welt. <b>Sprecht euch ab!</b> Am Ende zählt, wie viele Pinguine euer Netz richtig sortiert.'];
     mp8Card('<div class="i-head"><div class="card-kicker">Level 8 · gemeinsam · Welt ' + MP8.seed + '</div><h2>Pinguine in 3D</h2>' +
-      '<p class="lead">Ein Netz mit <b>vier Neuronen</b> sortiert alle <b>drei Arten</b> – im Team.</p></div>' +
+      '<p class="lead">Euer Team trainiert <b>ein Netz</b>, das <b>alle drei Pinguinarten</b> an Schnabel und Flosse erkennen soll.</p></div>' +
       '<div class="i-pic">' + (window.NTBild ? '<div class="illwrap">' + NTBild.scene(8) + '</div>' : '') + '</div>' +
       '<div class="i-txt"><ol class="steps">' + steps.map(t => '<li>' + t + '</li>').join('') + '</ol>' +
       '<p class="ctrl">' + esc(mp8TeamTxt()) + '</p></div>',
@@ -722,6 +725,7 @@
       mp8Free(false);
       S.W = NTRaum.l8.W(st.seed, NTRaum.teamVals(MP8.team));
       S.trail = S.W.map(() => []); S.hist = []; record();
+      if (MP8.watch === null && MP8.mine.size) wkStart(); else wkOff();
       for (const c of cells) {
         const sl = c.k * 2 + c.pr, el = c.cv.parentElement, who = el.querySelector('.who'), p = MP8.names[sl];
         el.classList.toggle('mine', mp8Mine(c));
@@ -738,6 +742,7 @@
         const v = tv[sl]; if (!Array.isArray(v)) continue;
         const q = NTRaum.l8.idx(sl), w = S.W[q.k];
         if (Math.abs(w[q.i[0]] - v[0]) > 1e-4 || Math.abs(w[q.i[1]] - v[1]) > 1e-4) {
+          WK.ext = true;
           S.trail[q.k].push(w.slice()); if (S.trail[q.k].length > 60) S.trail[q.k].shift();
           w[q.i[0]] = v[0]; w[q.i[1]] = v[1]; ch = true;
         }
@@ -772,6 +777,8 @@
       line: (MP8.watch !== null ? mp8Label(myT) : 'Euer Netz') + ' sortiert <b>' + (me ? me.sc.n - me.sc.wrong : 0) + ' von ' + (me ? me.sc.n : 342) +
         '</b> Pinguinen richtig <small>· Fehler ' + fmt(me ? me.sc.loss : 0, 3) + '</small>', steps: S.hist.length };
     $('#card').hidden = true;
+    if (WK.on) { wkStop(); }
+    else if (MP8.watch !== null) mp8Free(true);   // Lehrkraft: jetzt selbst trainieren / neu würfeln
     mp8Bar();
   }
   function mp8Bar() {
@@ -783,13 +790,11 @@
       now = '<br><small>weiter trainiert (+' + more + ', zählt nicht mehr):</small> <b>' + (sc.n - sc.wrong) + ' von ' + sc.n + '</b> richtig';
     }
     b.innerHTML = '<div class="eb-res"><div class="eb-place">' + e.place + '</div><div class="eb-txt"><div class="eb-kick">Level 8 · Runde vorbei</div>' +
-      '<div class="eb-line">' + e.line + now + '</div></div></div><div class="eb-btns"></div>' +
-      '<div class="eb-more" hidden><div class="ki"><span class="ki-tag">Und die KI?</span><p>Ihr wart zusammen <b>ein Netz</b>: Jede Welt ist ein Paar Gewichte. ' +
-      'Ein echtes Netz bewegt alle Gewichte gleichzeitig – genau in Pfeilrichtung, Schritt für Schritt. Das heißt <b>Training</b>.</p></div></div>';
+      '<div class="eb-line">' + e.line + now + '</div></div></div><div class="eb-btns"></div>';
     const box = b.querySelector('.eb-btns');
     const add = (label, fn, kind) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'btn ' + (kind || ''); x.textContent = label; x.addEventListener('click', fn); box.appendChild(x); return x; };
-    const ki = add('Und die KI?', () => { const m = b.querySelector('.eb-more'); m.hidden = !m.hidden; ki.setAttribute('aria-expanded', String(!m.hidden)); }, 'ebki');
-    if (!MP8.free) add('Weiter trainieren', () => { mp8Free(true); mp8Bar(); });
+    // Sönke 18.11.2026: kein „Und die KI?“, kein „Weiter trainieren“ am Tablet; die Lehrkraft kann im
+    // Netz eines Teams nach der Runde selbst trainieren und neu würfeln (mp8Free, Knöpfe in der Leiste oben)
     if (MP8.watch !== null) add('‹ Übersicht', mp8Back, 'primary');
     b.hidden = false;
     document.body.classList.add('has-endbar');
@@ -841,6 +846,187 @@
     mp8Send();
   }
 
+
+  /* ── Level 8 gemeinsam am Tablet (Sönke 18.11.2026): „wie eine ganz normale Welt“ ──
+     Statt Wolken + 8 Kacheln sieht die Schülerin nur IHRE Welt(en) als 3D-Landschaft wie in
+     Level 7 und läuft darin (Joystick/WASD, Pfeile = 2. Welt). Ort = ihre zwei Werte, Höhe =
+     Fehler des ganzen Netzes (log, gleiche Höhe in allen Welten), Pfeil = bergab. Läuft jemand
+     aus dem Team, verbiegt sich die Welt (Neubau höchstens alle 250 ms). Dazu nur der Netz-Kasten:
+     eigene Kanten/Bias hell mit Zahl, der Rest zurückgenommen (WK.focus), unten „erkannt“. */
+  const WK = { on: false, list: [], focus: null, keys: new Set(), ext: false };
+  const WWD = 50, WSPEED = 8.5;
+  const toWv = x => clamp(x / WWD * R, -R, R), toXv = w => clamp(w / R * WWD, -WWD + 1.5, WWD - 1.5);
+  const liftL = L => Math.max(0, 5 * Math.log(Math.max(L, 1e-4) / 0.03));
+  const angD = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
+  function wkWorld(s) {
+    const f = sliceFn({ k: s >> 1, pr: s & 1 });
+    const h = (x, z) => liftL(f(toWv(x), toWv(-z)));
+    const e = 0.06;
+    return { kind: 'l8', W: WWD, h, grad: (x, z) => [(h(x + e, z) - h(x - e, z)) / (2 * e), (h(x, z + e) - h(x, z - e)) / (2 * e)],
+             meshN: low ? 36 : 52 };
+  }
+  // alle Werte außer dem eigenen Paar dieser Welt (ändert sich davon etwas, wird die Welt neu gebaut)
+  function wkSig(s) {
+    const k = s >> 1, ij = pairsOf(k)[s & 1].idx;
+    return S.W.map((w, q) => w.map((v, i) => (q === k && ij.includes(i)) ? '' : v.toFixed(2)).join(',')).join('|');
+  }
+  function wkBuild() {
+    const box = $('#wkWorlds');
+    box.innerHTML = '';
+    WK.list.forEach((wv, n) => {
+      const el = document.createElement('div');
+      el.className = 'wkcell';
+      const k = wv.s >> 1, lab = pairsOf(k)[wv.s & 1].lab;
+      el.innerHTML = '<canvas data-n="' + n + '"></canvas><span class="wktag" style="--c:' + colOf(k) + '">' + (WK.list.length > 1 ? (n ? 'Pfeile · ' : 'WASD · ') : '') +
+        'Neuron ' + nameOf(k) + ' · ' + lab[0] + ' / ' + lab[1] + '</span>';
+      box.appendChild(el);
+      wv.cv = el.querySelector('canvas');
+      wv.G = NTGrafik.create(wv.cv);
+      if (wv.G && window.NT_NET) wv.G.setPalette(NT_NET, 'dark');
+      wv.cv.addEventListener('pointerdown', wkDown);
+      wv.cv.addEventListener('pointermove', wkMove);
+      wv.cv.addEventListener('pointerup', wkUp);
+      wv.cv.addEventListener('pointercancel', wkUp);
+    });
+    box.dataset.n = WK.list.length;
+  }
+  function wkPos(wv) { const k = wv.s >> 1, [i, j] = pairsOf(k)[wv.s & 1].idx; wv.f.x = toXv(S.W[k][i]); wv.f.z = -toXv(S.W[k][j]); }
+  function wkStart() {
+    if (!window.NTGrafik) return;
+    WK.list = [...MP8.mine].sort((a, b) => a - b).slice(0, 2).map(s => ({ s, f: { x: 0, z: 0, vx: 0, vz: 0, yaw: Math.PI, tilt: 0, squash: 1, phase: 0 },
+      dots: [], tr: 0, sig: '', built: 0, world: null, joy: { id: null, ox: 0, oy: 0, x: 0, y: 0 }, live: true }));
+    WK.focus = new Set();
+    for (const s of WK.list.map(w => w.s)) { const k = s >> 1; for (const i of pairsOf(k)[s & 1].idx) WK.focus.add(k * 4 + i); }
+    WK.on = true;
+    document.body.classList.add('wk');
+    $('#wk').hidden = false;
+    wkBuild();
+    for (const wv of WK.list) { wkPos(wv); wv.dots = [{ x: wv.f.x, z: wv.f.z, big: true }]; }
+    WK.color = st8Color();
+    $('#netTitle').textContent = 'Dein Teil des Netzes';
+    S.changed = true;
+  }
+  function wkOff() {
+    if (!WK.on) return;
+    WK.on = false;
+    document.body.classList.remove('wk');
+    $('#wk').hidden = true;
+    legends();
+    dirtyAll();
+  }
+  function wkStop() { for (const wv of WK.list) { wv.live = false; wv.joy.id = null; wv.f.vx = wv.f.vz = 0; } $('#wkJoy').hidden = true; }
+  function st8Color() { const me = MP8.st && MP8.st.me; return me ? NTRaum.rgb(me.c) : [1, 0.55, 0.2]; }
+  const wkPlaying = () => MP8 && MP8.st && MP8.st.phase === 'running';
+  function wkDown(e) {
+    const n = +e.currentTarget.dataset.n, wv = WK.list[n];
+    if (!wv || !wkPlaying() || !wv.live || wv.joy.id !== null) return;
+    Object.assign(wv.joy, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0 });
+    const j = $('#wkJoy'), r = $('#wk').getBoundingClientRect();
+    j.style.left = (e.clientX - r.left) + 'px'; j.style.top = (e.clientY - r.top) + 'px'; j.firstChild.style.transform = 'translate(-50%,-50%)'; j.hidden = false;
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (er) { /* egal */ }
+  }
+  function wkMove(e) {
+    for (const wv of WK.list) {
+      if (wv.joy.id !== e.pointerId) continue;
+      let dx = e.clientX - wv.joy.ox, dy = e.clientY - wv.joy.oy;
+      const l = Math.hypot(dx, dy), JR = 56;
+      if (l > JR) { dx *= JR / l; dy *= JR / l; }
+      wv.joy.x = dx / JR; wv.joy.y = -dy / JR;
+      $('#wkJoy i').style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
+    }
+  }
+  function wkUp(e) { for (const wv of WK.list) if (wv.joy.id === e.pointerId) { Object.assign(wv.joy, { id: null, x: 0, y: 0 }); $('#wkJoy').hidden = true; } }
+  window.addEventListener('keydown', e => { if (WK.on && !(e.target && e.target.tagName === 'INPUT')) WK.keys.add(e.key.toLowerCase()); });
+  window.addEventListener('keyup', e => WK.keys.delete(e.key.toLowerCase()));
+  window.addEventListener('blur', () => WK.keys.clear());
+  function wkWalk(wv, n, dt) {
+    const f = wv.f;
+    let ix = wv.joy.x, iy = wv.joy.y;
+    const one = WK.list.length === 1;
+    const K = n === 0 ? ['w', 's', 'a', 'd'] : ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
+    const K2 = one ? ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'] : [];
+    const has = i => WK.keys.has(K[i]) || (K2.length && WK.keys.has(K2[i]));
+    if (wv.live && wkPlaying()) { if (has(0)) iy += 1; if (has(1)) iy -= 1; if (has(2)) ix -= 1; if (has(3)) ix += 1; }
+    else { ix = iy = 0; }
+    const il = Math.hypot(ix, iy); if (il > 1) { ix /= il; iy /= il; }
+    const tvx = ix * WSPEED, tvz = -iy * WSPEED, q = 1 - Math.exp(-7 * dt);
+    f.vx += (tvx - f.vx) * q; f.vz += (tvz - f.vz) * q;
+    if (Math.hypot(tvx, tvz) > 0.3) f.yaw += angD(Math.atan2(tvx, tvz), f.yaw) * (1 - Math.exp(-10 * dt));
+    const lim = WWD - 1.5, nx = clamp(f.x + f.vx * dt, -lim, lim), nz = clamp(f.z + f.vz * dt, -lim, lim), moved = Math.hypot(nx - f.x, nz - f.z);
+    f.x = nx; f.z = nz;
+    const sp = Math.hypot(f.vx, f.vz);
+    f.phase += sp * dt * 1.3; f.tilt += (clamp(sp / WSPEED, 0, 1.2) * 0.22 - f.tilt) * q;
+    if (moved > 1e-4) {
+      const k = wv.s >> 1, [i, j] = pairsOf(k)[wv.s & 1].idx;
+      S.W[k][i] = toWv(f.x); S.W[k][j] = toWv(-f.z);
+      S.changed = true; MP8.dirty = true;
+      wv.tr += moved;
+      if (wv.tr > 1.5) { wv.tr = 0; wv.dots.push({ x: f.x, z: f.z }); if (wv.dots.length > 400) wv.dots.splice(1, 1); }
+    }
+  }
+  function wkTick(dt, now) {
+    WK.list.forEach((wv, n) => wkWalk(wv, n, dt));
+    // fremde Werte vom Server: Figuren der eigenen Welten bleiben, wo sie sind
+    WK.ext = false;
+    for (const wv of WK.list) {
+      if (!wv.G) continue;
+      const sg = wkSig(wv.s);
+      if (!wv.world || (sg !== wv.sig && now - wv.built > 250)) {
+        wv.sig = sg; wv.built = now; wv.world = wkWorld(wv.s);
+        wv.G.setWorld(wv.world, 'dark');
+      }
+      wkDraw(wv);
+    }
+  }
+  function wkDraw(wv) {
+    const f = wv.f, w = wv.world, ground = w.h(f.x, f.z);
+    const y = ground + Math.abs(Math.sin(f.phase * 2.2)) * 0.12 * clamp(Math.hypot(f.vx, f.vz) / WSPEED, 0, 1);
+    const cam = { eye: [f.x, y + 9, f.z + 13], at: [f.x, y + 1, f.z - 1.5] };
+    const objs = [];
+    for (const d of wv.dots) objs.push({ type: 'dot', x: d.x, y: w.h(d.x, d.z) + 0.08, z: d.z, r: 0.16, flat: 0.18, color: [0.55, 0.8, 1], glow: 0.2 });
+    if (wv.live && wkPlaying()) {
+      const g = w.grad(f.x, f.z), gl = Math.hypot(g[0], g[1]);
+      if (gl > 0.01) {
+        const ux = -g[0] / gl, uz = -g[1] / gl, len = clamp(1.2 + gl * 3.2, 1.4, 7), pts = [], head = [], hs = 0.9 + (len - 0.9) * 0.78;
+        for (let i = 0; i <= 8; i++) { const q = 0.9 + (len - 0.9) * i / 8 * 0.78; pts.push([f.x + ux * q, f.z + uz * q, 0.2]); }
+        for (let i = 0; i <= 6; i++) { const q = hs + (len - hs) * i / 6; head.push([f.x + ux * q, f.z + uz * q, 0.62 * (1 - i / 6) + 0.02]); }
+        objs.push({ type: 'strip', pts, color: [0.36, 0.95, 0.77], glow: 0.6, lift: 0.14 });
+        objs.push({ type: 'strip', pts: head, color: [0.36, 0.95, 0.77], glow: 0.6, lift: 0.15 });
+      }
+    }
+    wv.G.frame({ cam, fogR: 16, dpr: low ? 1 : Math.min(window.devicePixelRatio || 1, 1.4), objects: objs, playerColor: WK.color, plain: 0,
+      player: { x: f.x, y, z: f.z, ground, yaw: f.yaw, tilt: f.tilt, squash: 1, hidden: false, phase: f.phase,
+        walk: clamp(Math.hypot(f.vx, f.vz) / WSPEED, 0, 1) } });
+  }
+
+  /* ── Allein und Lehrkraft (Sönke 18.11.2026): die drei Kästen oben antippen = groß in die Mitte,
+     nochmal antippen, daneben tippen oder Esc = zurück. Ziehen in einer Wolke dreht weiter. ── */
+  const BIG = { k: null, moved: 0, x: 0, y: 0 };
+  function bigInit() {
+    const secs = [...document.querySelectorAll('.top > section')];
+    const keys = ['c1', 'c2', 'net'];
+    secs.forEach((sec, i) => {
+      sec.classList.add('bigable');
+      sec.insertAdjacentHTML('beforeend', '<span class="bigico" aria-hidden="true">⤢</span>');
+      sec.addEventListener('pointerdown', e => { BIG.moved = 0; BIG.x = e.clientX; BIG.y = e.clientY; }, true);
+      sec.addEventListener('pointermove', e => { BIG.moved = Math.max(BIG.moved, Math.hypot(e.clientX - BIG.x, e.clientY - BIG.y)); }, true);
+      sec.addEventListener('click', e => {
+        if (WK.on || BIG.moved > 6 || (e.target.closest && e.target.closest('button'))) return;
+        bigSet(BIG.k === keys[i] ? null : keys[i], sec);
+      });
+    });
+    $('#bigBack').addEventListener('click', () => bigSet(null));
+    window.addEventListener('keydown', e => { if (e.key === 'Escape' && BIG.k) bigSet(null); });
+  }
+  function bigSet(k, sec) {
+    for (const s of document.querySelectorAll('.top > section')) s.classList.remove('big');
+    BIG.k = k;
+    if (k && sec) sec.classList.add('big');
+    $('#bigBack').hidden = !k;
+    document.body.classList.toggle('has-big', !!k);
+    S.changed = true; S.exNew = true;
+  }
+
   /* ── Bild für Bild ── */
   let last = performance.now();
   function tick(now) {
@@ -850,10 +1036,13 @@
     if (S.auto) { S.wait -= dt; if (S.wait <= 0) { S.wait = zahl() ? 0.2 : 0.15; step(); } }
     if (!S.rot && !low) { S.idle += dt; if (S.idle > 2.5) S.yaw += dt * 0.12; }
     if (S.changed || !S.g) S.g = gradAll(S.W);
-    // Fehlerkarten sind teuer: höchstens 4 pro Bild neu rechnen
-    const budget = { left: 4 };
-    for (const c of cells) drawCell(c, budget);
-    drawClouds();
+    if (WK.on) wkTick(dt, now);
+    else {
+      // Fehlerkarten sind teuer: höchstens 4 pro Bild neu rechnen
+      const budget = { left: 4 };
+      for (const c of cells) drawCell(c, budget);
+      drawClouds();
+    }
     const ei = zahl() ? exPick() : -1;
     if (ei !== EX.i) { EX.i = ei; S.exNew = true; }
     if (S.changed || S.exNew) { drawNet(); drawEx(); S.exNew = false; }
@@ -862,6 +1051,7 @@
 
   setMid(1);
   controls();
+  bigInit();
   cloudInput($('#cloud'));
   cloudInput($('#cloud2'));
   setMode(LEVEL8 ? 'zahl' : 'own');

@@ -505,14 +505,12 @@ window.NTMehr = (function () {
       top = rank.slice(0, 3).map((x, j) => '<li' + (x.t === me.t ? ' class="me"' : '') + '><span class="n">' + (j + 1) + '</span><b>' +
         x.members.map(p => esc(p.n)).join(' + ') + '</b><small>' + x.sc.right + ' von 4 · ' + fmt(x.sc.loss, 2) + '</small></li>').join('');
     }
-    const btns = [];
-    if (lv <= 6 && SP.canPost()) btns.push(['Weiter trainieren', SP.postStart]);
+    // ohne „Weiter trainieren“ und „Und die KI?“ (Sönke 18.11.2026), die Top 3 bleiben zum Aufklappen
     SP.endBar({
       kick: 'Level ' + lv + ' · Runde vorbei · gleich startet deine Lehrkraft die nächste',
       place: head || 'Runde vorbei', line: mine,
-      more: (top ? '<ol class="mprank">' + top + '</ol>' : '') +
-        '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
-      btns
+      more: top ? '<ol class="mprank">' + top + '</ol>' : '', moreLabel: 'Top 3',
+      btns: []
     });
   }
 

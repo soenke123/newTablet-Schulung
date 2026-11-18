@@ -84,14 +84,8 @@ button { font:inherit; color:inherit; }
 .stars i { font-style:normal; color:var(--line); font-size:18px; }
 .stars i.on { color:var(--gold); }
 .stars.empty { width:54px; }
-.seedrow { display:flex; align-items:center; gap:8px; flex-wrap:wrap; color:var(--ink-soft); font-size:14px; }
-.seedrow input { width:86px; font:inherit; font-size:16px; font-weight:600; padding:7px 9px; border-radius:10px;
   border:1px solid var(--line); background:var(--surface); color:var(--ink); text-align:center; }
-.lablink { display:block; margin-top:12px; padding:9px 12px; border-radius:12px; border:1px dashed var(--line);
   color:var(--accent-ink); font-weight:600; font-size:14.5px; text-decoration:none; text-align:center; }
-.lablink:hover { border-color:var(--accent); }
-.seedrow .btn { padding:7px 12px; font-size:14px; box-shadow:none; }
-.seedrow small { flex-basis:100%; color:var(--ink-faint); }
 
 /* ── Karte (Intro/Ergebnis) ── */
 #card { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:16px;
@@ -321,8 +315,6 @@ html[data-theme="dark"] .lv { background:rgba(255,255,255,.03); }
   box-shadow:inset 0 0 10px var(--accent-dim); }
 .lv:nth-child(n+4) .lv-n { border-color:var(--violet); color:var(--violet); }
 .lv-t b { font-family:var(--head); font-weight:600; font-size:15.5px; }
-.seedrow input { font-family:var(--mono); border-radius:12px; }
-.lablink { border-radius:14px; }
 .proto { font-family:var(--mono); }
 .card-in { border-radius:20px; background:var(--glass); -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); }
 .card-kicker { font-family:var(--mono); letter-spacing:.12em; font-size:11.5px; }
@@ -423,12 +415,18 @@ body.info-min #modelBox, body.info-min #pengBox, body.info-min #xorBox, body.inf
 #lvlName, #zName { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 #btnJump, #btnAuto, #btnStay, #zJump, #zAuto, #zDone { white-space:nowrap; }
 #modelBox, #pengBox, #xorBox { max-height:calc(100% - 182px - var(--hb, 90px)); overflow:auto; }
+/* Level 4–6 (Sönke 18.11.2026): Lernkurve und Kasten als EINE Spalte gleicher Breite – der Kasten steht
+   genau unter der Lernkurve, nicht breiter */
+@media (min-width: 701px) and (min-height: 561px) {
+  body[data-panel] #curveBox { width:290px; }
+}
 
 /* PC: Kästen größer (sonst wirken sie am großen Bildschirm verloren) */
 @media (min-width: 1280px) and (min-height: 760px) {
   #curveBox { width:240px; }
   #curve { height:84px; }
-  #modelBox, #pengBox, #xorBox { width:370px; top:186px; max-height:calc(100% - 198px - var(--hb, 90px)); }
+  #modelBox, #pengBox, #xorBox { width:320px; top:186px; max-height:calc(100% - 198px - var(--hb, 90px)); }
+  body[data-panel] #curveBox { width:320px; }
   #pplot { height:200px; } #plot { height:190px; }
   .box-t { font-size:12.5px; }
   .mvals { font-size:14.5px; }
@@ -568,7 +566,7 @@ body.post #zwei .zbottom > * { pointer-events:auto; }
 body[data-state="result"] #zPanel { opacity:1; }
 body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:grab; touch-action:none; }
 </style>
-<link href="mehr.css?v=20261118n" rel="stylesheet">
+<link href="mehr.css?v=20261118o" rel="stylesheet">
 </head>
 <body>
 <div id="app">
@@ -616,7 +614,7 @@ body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:g
     <div id="xorBox" class="glass" hidden>
       <div class="box-t">Das Neuron – Nest für Nest</div>
       <svg id="xrow" viewBox="0 0 302 108" aria-label="Das Neuron beurteilt das gezeigte Nest"></svg>
-      <div class="biasrow"><span>Bias</span><input id="xBias" type="range" min="-40" max="40" step="1" value="0" aria-label="Bias des Neurons"><b id="xBiasV">0,0</b><label class="blearn"><input id="xBiasL" type="checkbox">lernt mit</label></div>
+      <div class="biasrow"><span>Bias</span><input id="xBias" type="range" min="-40" max="40" step="1" value="0" aria-label="Bias des Neurons (−2 bis 2)"><b id="xBiasV">0,00</b><label class="blearn"><input id="xBiasL" type="checkbox">lernt mit</label></div>
       <div class="box-t" style="margin-top:4px">Die vier Nester · dein Neuron = eine Gerade</div>
       <canvas id="xplot" class="nplot" aria-label="Die vier Nester als Diagramm: Mama und Papa am Nest oder beim Fischen, die Gerade des Neurons teilt das Feld"></canvas>
       <div class="mvals"><span>richtig beurteilt</span><b id="xRight">–</b></div>
@@ -665,14 +663,6 @@ body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:g
       </div>
       <p id="noShare" class="noshare" hidden>Deine Lehrkraft hat noch kein Level freigegeben.</p>
       <div id="levels"></div>
-      <div class="seedrow">
-        <label for="seed">Welt-Nummer</label>
-        <input id="seed" type="number" min="1000" max="9999" inputmode="numeric">
-        <button id="seedDice" class="btn" type="button">Neue Welt</button>
-        <small>Gleiche Nummer = auf allen Tablets dieselben Welten.</small>
-      </div>
-      <a class="lablink" href="labor.html">Labor: Pinguine in 3D</a>
-      <a class="lablink" href="showroom.html">Showroom: Eiswelt</a>
     </div>
   </div>
 
@@ -690,14 +680,14 @@ body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:g
 </div>
 
 <script src="js/welt.js?v=20261118a"></script>
-<script src="js/bilder.js?v=20261118e"></script>
+<script src="js/bilder.js?v=20261118f"></script>
 <script src="js/grafik.js?v=20261118n"></script>
 <script src="js/orbit.js?v=20261118a"></script>
 <script src="js/schnee.js?v=20261117j"></script>
-<script src="js/netz.js?v=20261118b"></script>
-<script src="js/raum.js?v=20261118n"></script>
-<script src="js/zwei.js?v=20261118n"></script>
-<script src="js/spiel.js?v=20261118n"></script>
-<script src="js/mehr.js?v=20261118n"></script>
+<script src="js/netz.js?v=20261118c"></script>
+<script src="js/raum.js?v=20261118o"></script>
+<script src="js/zwei.js?v=20261118o"></script>
+<script src="js/spiel.js?v=20261118o"></script>
+<script src="js/mehr.js?v=20261118o"></script>
 </body>
 </html>

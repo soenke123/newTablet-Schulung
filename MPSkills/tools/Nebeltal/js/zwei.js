@@ -450,17 +450,13 @@ window.NTZwei = (function () {
     document.body.dataset.state = 'result';
   }
   function resultBar() {
-    const R0 = st.res, now = st.postN ? rate() : null, nx = api.next();
-    const btns = [];
-    if (nx) btns.push(['Weiter: ' + nx.name, () => api.open(nx.id), 'primary']);
-    btns.push(['Weiter trainieren', postStart]);
-    btns.push(['Nochmal', api.again], ['Neue Welt', api.newWorld], ['Übersicht', api.toMenu]);
+    const R0 = st.res, now = st.postN ? rate() : null;
+    // Sönke 18.11.2026: kein „Weiter“, kein „Weiter trainieren“, kein „Und die KI?“ – Übersicht hervorgehoben
     api.endBar({
       kick: 'Level ' + L.id + ' · Welt ' + st.seed + (now ? ' · weiter trainiert: +' + st.postN + ' Schritte' : ''),
-      stars: api.stars(now ? now.n : R0.n), line: now ? now.line : R0.line,
-      more: (R0.notes.length ? '<p class="note">' + R0.notes.join(' ') + '</p>' : '') +
-        '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
-      btns
+      stars: api.stars(now ? now.n : R0.n),
+      line: (now ? now.line : R0.line) + (R0.notes.length ? ' <small>· ' + R0.notes[0] + '</small>' : ''),
+      btns: [['Nochmal', api.again], ['Neue Welt', api.newWorld], ['Übersicht', api.toMenu, 'primary']]
     });
   }
   // Weiter trainieren: Lernschritte ohne Grenze, Netz und Nester laufen mit, Karten bleiben frei drehbar

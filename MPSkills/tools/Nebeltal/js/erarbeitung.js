@@ -8,8 +8,9 @@
      1 Raten        Pinguin (Umriss) → zwei Messwerte → · w₁, · w₂ → σ → „x % Zügel“
      2 Vergleichen  Art aufdecken, Soll vs. Ist, Abstand = Fehler
      3 Anpassen     jedes Gewicht rückt ein Stück, die Antwort rückt näher ans Soll
-     4 Ins Tal      alle 136 Pinguine zusammen = ein Sprung bergab;
-                    Karte der ECHTEN Fehler-Landschaft über (w₁, w₂)
+     4 Ins Tal      (3. Fassung 18.11.2026) links dasselbe Bild wie „Anpassen“, rechts die
+                    Karte der ECHTEN Fehler-Landschaft über (w₁, w₂); jeder „Sprung“ =
+                    neuer Pinguin testen + einmal anpassen = ein Sprung auf der Karte
 
    Das Neuron ist genau das aus Level 5 (NTWelt.penguins: 68 Adelie +
    68 Zügel, Schnabel standardisiert, σ ohne Bias) – die Karte in
@@ -34,13 +35,8 @@
   /* ── Daten + Neuron (wie Level 5) ── */
   const WP = NTWelt.penguins(1000), PTS = WP.pts, N = PTS.length, R = 20;
   const out = (w, q) => sig(w[0] * q.a + w[1] * q.b);
-  function batchStep(w, lr) {            // ein Sprung mit allen 136 (= Level 5)
-    let g1 = 0, g2 = 0;
-    for (const q of PTS) { const e = q.y - out(w, q); g1 += e * q.a; g2 += e * q.b; }
-    return [w[0] + lr * g1 / N, w[1] + lr * g2 / N];
-  }
   const START = [-3, 2.5];               // sortiert fast alles falsch herum
-  const S = { step: 1, w: START.slice(), oi: 0, cyc: null, lr: 3, trail: [], losses: [], training: 0, drag: false };
+  const S = { step: 1, w: START.slice(), oi: 0, cyc: null, lr: 3, trail: [], losses: [], n: 0, drag: false };
   const order = (() => { const r = NTWelt.rng(42), a = PTS.map((q, i) => i); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; })();
   // erster Pinguin: ein Zügel, den das Startneuron für einen Adelie hält
   // (beide Messwerte deutlich ≠ 0, sonst ändert sich beim Anpassen kaum etwas)
@@ -82,7 +78,9 @@
   function drawStage() {
     const box = $('#stage').getBoundingClientRect();
     lay = box.height > box.width * 0.95 ? LAY.v : LAY.h;
-    const L = lay, st = S.step, c = S.cyc, q = c.pt, hide = st === 1;
+    const L = lay, c = S.cyc, q = c.pt, hide = S.step === 1;
+    // Schritt 4 zeigt das Bild aus „Anpassen“ (letzter Test); nach „Lernen zurücksetzen“ wie „Vergleichen“
+    const st = S.step === 4 ? (c.applied ? 3 : 2) : S.step;
     const w = st === 3 ? c.after : c.before;
     let h = '';
     // Pinguin
@@ -91,6 +89,9 @@
     h += '<g class="' + (hide ? 'hide' : '') + '"><image class="pgimg" href="img/frei/' + file + '.webp" x="' + (px - ph * 0.42) + '" y="' + (pb - ph) + '" width="' + ph * 0.84 + '" height="' + ph + '" preserveAspectRatio="xMidYMax meet"/></g>';
     if (hide) h += T(px + ph * 0.34, pb - ph + 30, '?', 34, COL.faint, 700);
     h += T(L.name[0], L.name[1], hide ? 'Welche Art?' : (q.y ? 'Zügelpinguin' : 'Adeliepinguin'), 19, hide ? COL.soft : COL.ink, 700);
+    h += T(L.name[0], L.name[1] + 22, 'antippen = anderer Pinguin', 12.5, COL.faint, 600);
+    // Trefferfläche: Pinguin antippen = ein anderer Pinguin mit anderen Werten (Sönke 18.11.2026)
+    h += '<rect class="pghit" x="' + (px - ph * 0.5) + '" y="' + (pb - ph - 10) + '" width="' + ph + '" height="' + (ph + 52) + '" fill="transparent"/>';
     // Kanten Eingang → Neuron
     const [nx, ny, nr] = L.n;
     for (let k = 0; k < 2; k++) {
@@ -118,6 +119,11 @@
     // Neuron
     h += '<circle cx="' + nx + '" cy="' + ny + '" r="' + nr + '" fill="#0f1b31" stroke="' + COL.mint + '" stroke-width="3"/>';
     h += T(nx, ny + 12, 'σ', 34, COL.ink, 700);
+    // ab „Vergleichen“: was σ genau rechnet (Ist nachvollziehbar)
+    if (st >= 2) {
+      const z = w[0] * q.a + w[1] * q.b;
+      h += T(nx, ny + nr + 26, 'σ(' + f(z, 2) + ') = ' + f(sig(z), 2), 16, COL.mint, 700);
+    }
     // Pfeil zum Ausgang
     const [[ax0, ay0], [ax1, ay1]] = L.arr, ang = Math.atan2(ay1 - ay0, ax1 - ax0);
     h += '<line x1="' + ax0 + '" y1="' + ay0 + '" x2="' + (ax1 - 8 * Math.cos(ang)) + '" y2="' + (ay1 - 8 * Math.sin(ang)) + '" stroke="' + COL.ink + '" stroke-width="2.5"/>' +
@@ -206,42 +212,27 @@
       x.fillStyle = '#fff';
       for (const t of S.trail) { const p = toPx(t); x.beginPath(); x.arc(p[0], p[1], 2.2, 0, 7); x.fill(); }
     }
-    // Pfeil + Ring = nächster Sprung
-    const cur = toPx(S.w), land = toPx(batchStep(S.w, S.lr)), dx = land[0] - cur[0], dy = land[1] - cur[1];
-    if (Math.hypot(dx, dy) > 4) {
-      const a = Math.atan2(dy, dx);
-      x.strokeStyle = COL.mint; x.fillStyle = COL.mint; x.lineWidth = 4; x.lineCap = 'round';
-      x.beginPath(); x.moveTo(cur[0], cur[1]); x.lineTo(land[0] - 8 * Math.cos(a), land[1] - 8 * Math.sin(a)); x.stroke();
-      x.beginPath(); x.moveTo(land[0], land[1]);
-      x.lineTo(land[0] - 14 * Math.cos(a - 0.45), land[1] - 14 * Math.sin(a - 0.45)); x.lineTo(land[0] - 14 * Math.cos(a + 0.45), land[1] - 14 * Math.sin(a + 0.45)); x.fill();
-      x.lineWidth = 2.2; x.beginPath(); x.ellipse(land[0], land[1], 12, 6, 0, 0, 7); x.stroke();
+    // Pfeil = der letzte Sprung (alt → neu, genau die Zahlen links an den Kanten)
+    const cur = toPx(S.w);
+    if (S.cyc.applied) {
+      const from = toPx(S.cyc.before), dx = cur[0] - from[0], dy = cur[1] - from[1];
+      if (Math.hypot(dx, dy) > 4) {
+        const a = Math.atan2(dy, dx);
+        x.strokeStyle = COL.mint; x.fillStyle = COL.mint; x.lineWidth = 4; x.lineCap = 'round';
+        x.beginPath(); x.moveTo(from[0], from[1]); x.lineTo(cur[0] - 8 * Math.cos(a), cur[1] - 8 * Math.sin(a)); x.stroke();
+        x.beginPath(); x.moveTo(cur[0], cur[1]);
+        x.lineTo(cur[0] - 14 * Math.cos(a - 0.45), cur[1] - 14 * Math.sin(a - 0.45)); x.lineTo(cur[0] - 14 * Math.cos(a + 0.45), cur[1] - 14 * Math.sin(a + 0.45)); x.fill();
+      }
     }
     if (peng.complete && peng.naturalWidth) {
       const ph = Math.max(34, Z * 0.09), pw = ph * peng.naturalWidth / peng.naturalHeight;
       x.drawImage(peng, cur[0] - pw / 2, cur[1] - ph + 4, pw, ph);
     }
   }
-  function drawCurve() {
-    const cv = $('#curve'); if (!cv) return;
-    const dpr = low ? 1 : Math.min(2, window.devicePixelRatio || 1), W = cv.clientWidth, H = cv.clientHeight;
-    if (!W || !H) return;
-    if (cv.width !== Math.round(W * dpr)) { cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); }
-    const x = cv.getContext('2d'); x.setTransform(dpr, 0, 0, dpr, 0, 0); x.clearRect(0, 0, W, H);
-    const a = S.losses, mx = Math.max(...a, 0.5), n = Math.max(20, a.length - 1);
-    x.strokeStyle = 'rgba(140,170,220,.25)'; x.beginPath(); x.moveTo(0, H - 1); x.lineTo(W, H - 1); x.stroke();
-    x.strokeStyle = COL.mint; x.lineWidth = 2; x.beginPath();
-    a.forEach((v, i) => { const px = i / n * (W - 4) + 2, py = H - 4 - v / mx * (H - 10); i ? x.lineTo(px, py) : x.moveTo(px, py); });
-    x.stroke();
-  }
   function sideHtml() {
     const right = N - WP.wrong(S.w[0], S.w[1]);
-    return '<div class="box glass"><div class="box-t">Wie im Nebeltal</div><div class="br">' +
-        '<b>Ort</b><span>die zwei Gewichte w₁, w₂</span>' +
-        '<b>Höhe</b><span>Fehler über alle 136 Pinguine</span>' +
-        '<b>Pfeil</b><span>wohin der Fehler kleiner wird</span>' +
-        '<b>Sprung</b><span>ein Lernschritt</span></div></div>' +
-      '<div class="box glass"><div class="box-t">Richtig sortiert</div><div class="score">' + right + ' <small>von ' + N + '</small></div></div>' +
-      '<div class="box glass"><div class="box-t">Lernkurve</div><canvas id="curve"></canvas></div>';
+    return '<span><b>Ort</b> = w₁, w₂</span><span><b>Höhe</b> = Fehler aller 136</span><span><b>Pfeil</b> = letzter Sprung</span>' +
+      '<span class="sc">richtig sortiert <b>' + right + '</b> von ' + N + '</span>';
   }
   function bindMap() {
     const cv = $('#map');
@@ -249,9 +240,10 @@
       const r = cv.getBoundingClientRect();
       S.w = [clamp(((ev.clientX - r.left) / r.width * 2 - 1) * R, -R, R), clamp((1 - (ev.clientY - r.top) / r.height * 2) * R, -R, R)];
       S.trail = [S.w.slice()]; S.losses = [WP.loss(S.w[0], S.w[1])];
-      drawTal();
+      newCycle(); S.n = 0;
+      drawTal(); drawStage(); $('#explain').innerHTML = explain();
     };
-    cv.addEventListener('pointerdown', ev => { S.drag = true; stopTrain(); try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* egal */ } set(ev); });
+    cv.addEventListener('pointerdown', ev => { S.drag = true; try { cv.setPointerCapture(ev.pointerId); } catch (e) { /* egal */ } set(ev); });
     cv.addEventListener('pointermove', ev => { if (S.drag) set(ev); });
     const up = () => { S.drag = false; };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
@@ -259,30 +251,47 @@
   bindMap();
   function drawTal() {
     $('#side').innerHTML = sideHtml();
-    drawMap(); drawCurve();
+    drawMap();
   }
-  function jump() { S.w = batchStep(S.w, S.lr); record(); drawTal(); }
-  function stopTrain() { if (S.training) { clearInterval(S.training); S.training = 0; const b = $('#bTrain'); if (b) b.textContent = '▶ Training'; } }
-  function toggleTrain() {
-    if (S.training) { stopTrain(); return; }
-    let k = 0;
-    S.training = setInterval(() => { jump(); if (++k >= 60) stopTrain(); }, low ? 160 : 110);
-    $('#bTrain').textContent = '⏸ Anhalten';
+  // Ins Tal: neuer Pinguin testen + einmal anpassen = ein Sprung auf der Karte
+  function hop() {
+    S.oi++; newCycle();
+    S.w = S.cyc.after.slice(); S.cyc.applied = true; record(); S.n++;
+    render();
   }
+  function resetLearn() {
+    S.w = START.slice(); S.trail = []; S.losses = []; record(); S.n = 0;
+    newCycle();
+    render();
+  }
+  // Pinguin antippen = ein anderer Pinguin (in „Anpassen“ mit seiner eigenen Anpassung)
+  function otherPeng() {
+    if (S.step === 4) { hop(); return; }
+    const c = S.cyc;
+    if (c.applied) { S.w = c.before.slice(); S.trail.pop(); S.losses.pop(); }
+    S.oi++; newCycle();
+    if (S.step === 3) { S.w = S.cyc.after.slice(); S.cyc.applied = true; record(); }
+    render();
+  }
+  $('#stage').addEventListener('click', e => { if (e.target.closest && e.target.closest('.pghit')) otherPeng(); });
 
   /* ── Text + Knöpfe ── */
   const STEPS = ['Raten', 'Vergleichen', 'Anpassen', 'Ins Tal'];
   function explain() {
-    const c = S.cyc;
+    const c = S.cyc, q = c.pt, z = c.before[0] * q.a + c.before[1] * q.b;
     switch (S.step) {
       case 1: return '<p>Das Neuron sieht kein Foto – nur <b>zwei Zahlen</b> vom Schnabel. Es rechnet sie mal seine <b>Gewichte</b> w₁, w₂ und sagt: <b>' + pct(c.y) + ' Zügel</b>.</p>' +
         '<span class="f">Länge · w₁ + Höhe · w₂ → σ → %</span>';
       case 2: return '<p>Es ist ein <b>' + (c.pt.y ? 'Zügelpinguin' : 'Adeliepinguin') + '</b>. Das Neuron lag um <b>' + f(Math.abs(c.err), 2) + '</b> daneben – das ist der <b>Fehler</b>.</p>' +
+        '<span class="f">Ist = σ(' + f(q.a, 2) + ' · ' + f(c.before[0], 2) + ' + ' + f(q.b, 2) + ' · ' + f(c.before[1], 2) + ') = σ(' + f(z, 2) + ') = ' + f(c.y, 2) + '</span> ' +
         '<span class="f">Fehler = Soll − Ist = ' + c.pt.y + ' − ' + f(c.y, 2) + ' = ' + sf(c.err, 2) + '</span>';
       case 3: return '<p>Jedes Gewicht rückt ein Stück – so, dass der Fehler <b>kleiner</b> wird. Jetzt sagt das Neuron <b>' + pct(c.yAfter) + ' Zügel</b>' +
         (Math.abs(c.pt.y - c.yAfter) < Math.abs(c.err) ? ' – näher dran.' : ' – zu weit! Lernrate zu groß.') + '</p>' +
         '<span class="f">neu = alt + Lernrate × Fehler × Eingang</span>';
-      default: return '<p>Alle 136 Pinguine zusammen zeigen eine Richtung: <b>bergab</b>. Ein Lernschritt ist ein <b>Sprung</b> – wie in Level 3.</p>';
+      default: return c.applied
+        ? '<p><b>Test ' + (S.n + 1) + ':</b> ' + (q.y ? 'Zügelpinguin' : 'Adeliepinguin') + ' – das Neuron sagte <b>' + pct(c.y) + ' Zügel</b>, Fehler <b>' + sf(c.err, 2) + '</b>. ' +
+          'Einmal angepasst = <b>ein Sprung</b> auf der Karte.</p><span class="f">neu = alt + Lernrate × Fehler × Eingang</span>'
+        : '<p>Jeder <b>Sprung</b>: einen neuen Pinguin testen, den Fehler messen, die Gewichte <b>einmal anpassen</b>.</p>';
     }
   }
   const lrPos = v => Math.round(Math.log(v / 0.5) / Math.log(60) * 100);   // 0,5 … 30
@@ -291,18 +300,18 @@
     const st = S.step, back = st > 1 ? '<button class="btn" id="bBack" type="button">‹</button>' : '';
     if (st === 1) return '<button class="btn primary" id="bNext" type="button">Auflösen ›</button>';
     if (st === 2) return back + '<button class="btn primary" id="bNext" type="button">Gewichte anpassen ›</button>';
-    if (st === 3) return back + '<button class="btn" id="bAgain" type="button">↻ Nächster Pinguin</button><button class="btn primary" id="bNext" type="button">Viele Pinguine ›</button>';
+    if (st === 3) return back + '<button class="btn" id="bAgain" type="button">↻ Nächster Pinguin</button><button class="btn primary" id="bNext" type="button">Ins Tal ›</button>';
     return back + '<label class="lr">Lernrate <input id="lr" type="range" min="0" max="100" value="' + lrPos(S.lr) + '"><b id="lrV">' + f(S.lr, S.lr < 1 ? 2 : 1) + '</b></label>' +
-      '<button class="btn" id="bJump" type="button">Ein Sprung</button><button class="btn" id="bTrain" type="button">▶ Training</button>' +
-      '<a class="btn primary" href="index.html?lv=4">Weiter: Level 4 ›</a>';
+      '<button class="btn" id="bReset" type="button">Lernen zurücksetzen</button>' +
+      '<button class="btn primary" id="bJump" type="button">Neuer Pinguin · Sprung ›</button>';
   }
 
-  function drawAll() { if (S.step === 4) drawTal(); else drawStage(); }
+  function drawAll() { drawStage(); if (S.step === 4) drawTal(); }
   function render() {
     const st = S.step;
     $('#steps').innerHTML = STEPS.map((s, i) => '<button class="stp' + (i + 1 === st ? ' on' : i + 1 < st ? ' done' : '') + '" data-s="' + (i + 1) + '" type="button"><i>' + (i + 1) + '</i><span>' + s + '</span></button>').join('');
     $('#steps').querySelectorAll('.stp').forEach(b => b.addEventListener('click', () => go(+b.dataset.s)));
-    $('#stage').toggleAttribute('hidden', st === 4);
+    document.body.classList.toggle('s4', st === 4);
     $('#tal').hidden = st !== 4;
     $('#explain').innerHTML = explain();
     $('#ctrl').innerHTML = ctrlHtml();
@@ -310,16 +319,15 @@
     on('#bBack', () => go(st - 1));
     on('#bNext', () => go(st + 1));
     on('#bAgain', () => { S.oi++; newCycle(); go(1, true); });
-    on('#bJump', () => { stopTrain(); jump(); });
-    on('#bTrain', toggleTrain);
+    on('#bJump', hop);
+    on('#bReset', resetLearn);
     const lr = $('#lr');
-    if (lr) lr.addEventListener('input', () => { S.lr = +lrVal(+lr.value).toFixed(1); $('#lrV').textContent = f(S.lr, S.lr < 1 ? 2 : 1); plan(); drawMap(); });
+    if (lr) lr.addEventListener('input', () => { S.lr = +lrVal(+lr.value).toFixed(1); $('#lrV').textContent = f(S.lr, S.lr < 1 ? 2 : 1); if (!S.cyc.applied) plan(); });
     requestAnimationFrame(drawAll);
   }
   // Schritt wechseln: 3 übernimmt die neuen Gewichte, zurück davor nimmt sie wieder weg
   function go(n, keep) {
     n = clamp(n, 1, 4);
-    stopTrain();
     const from = S.step, c = S.cyc;
     if (n === 3 && !c.applied) { plan(); S.w = c.after.slice(); c.applied = true; record(); }
     if (n < 3 && c.applied && !keep) { S.w = c.before.slice(); c.applied = false; S.trail.pop(); S.losses.pop(); }

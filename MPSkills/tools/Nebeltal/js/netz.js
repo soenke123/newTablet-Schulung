@@ -11,6 +11,8 @@
    NTNetz.draw(canvas, net)
      net = { nodes: [{ id, x, y, label, kind: 'in'|'n'|'out', sym, bias, group, act (0…1 Füllung), labelPos ('above') }],
              edges: [{ from, to, w, group, fixed }] }
+     dim: true an Kante/Knoten = zurückgenommen (blass, ohne Zahl) – Level 8 gemeinsam: nur der eigene Teil
+     des Netzes ist hell; biasHide am Knoten = Bias-Zahl nicht zeigen
      x, y in 0…1 (Anteil der Zeichenfläche)
 
    NTNetz.lights(el, cases, opts)   die vier Nester (Level 6/7, braucht js/bilder.js)
@@ -35,7 +37,9 @@ window.NTNetz = (function () {
     const ink = css.getPropertyValue('--ink').trim() || '#222';
     const soft = css.getPropertyValue('--ink-faint').trim() || '#888';
     const surf = css.getPropertyValue('--surface').trim() || '#fff';
-    const pad = 14, R = net.biasInside ? Math.max(17, Math.min(23, H * 0.11)) : Math.max(12, Math.min(19, H * 0.12));
+    // net.big (Level 8, Kasten groß in der Mitte): Kreise und Zahlen größer
+    const fz = net.big ? 1.4 : 1, F = n => Math.round(n * fz * 10) / 10 + 'px';
+    const pad = 14, R = net.biasInside ? Math.max(17, Math.min(net.big ? 36 : 23, H * 0.11)) : Math.max(12, Math.min(19, H * 0.12));
     const P = n => [pad + 34 + n.x * (W - 2 * pad - 68), pad + n.y * (H - 2 * pad)];
     const byId = {};
     for (const n of net.nodes) byId[n.id] = n;
@@ -51,18 +55,19 @@ window.NTNetz = (function () {
       x.strokeStyle = col(e.group);
       x.lineWidth = e.fixed ? 1.6 : 1.2 + Math.min(7, Math.abs(e.w) * 0.75);
       x.setLineDash(e.fixed ? [4, 4] : []);
-      x.globalAlpha = e.fixed ? 0.75 : 0.95;
+      x.globalAlpha = e.dim ? 0.16 : e.fixed ? 0.75 : 0.95;
+      if (e.dim) x.lineWidth = Math.min(x.lineWidth, 2.4);
       x.beginPath(); x.moveTo(x0 + ux * r0, y0 + uy * r0); x.lineTo(x1 - ux * r1, y1 - uy * r1); x.stroke();
       x.setLineDash([]); x.globalAlpha = 1;
       // Zahl etwas vor der Mitte, auf der Seite des Ziels versetzt
       const t = e.labelAt || 0.42;
-      if (!e.noLabel) labels.push({ x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, txt: (e.w > 0 && !e.fixed ? '+' : '') + fmt(e.w, e.fixed ? 0 : 1), color: col(e.group), fixed: e.fixed });
+      if (!e.noLabel && !e.dim) labels.push({ x: x0 + (x1 - x0) * t, y: y0 + (y1 - y0) * t, txt: (e.w > 0 && !e.fixed ? '+' : '') + fmt(e.w, e.fixed ? 0 : 1), color: col(e.group), fixed: e.fixed });
     }
-    x.font = '700 11.5px Outfit, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.font = '700 ' + F(11.5) + ' Outfit, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
     for (const l of labels) {
-      const w = x.measureText(l.txt).width + 8;
+      const w = x.measureText(l.txt).width + 8 * fz;
       x.fillStyle = surf; x.globalAlpha = 0.92;
-      x.beginPath(); roundRect(x, l.x - w / 2, l.y - 8, w, 16, 5); x.fill();
+      x.beginPath(); roundRect(x, l.x - w / 2, l.y - 8 * fz, w, 16 * fz, 5); x.fill();
       x.globalAlpha = 1; x.fillStyle = l.fixed ? soft : l.color;
       x.fillText(l.txt, l.x, l.y + 0.5);
     }
@@ -70,9 +75,10 @@ window.NTNetz = (function () {
     // Knoten
     for (const n of net.nodes) {
       const [px, py] = P(n);
+      x.globalAlpha = n.dim ? 0.4 : 1;
       if (n.kind === 'in') {
         x.fillStyle = ink; x.beginPath(); x.arc(px, py, 5, 0, 7); x.fill();
-        x.font = '600 12px Outfit, sans-serif'; x.textAlign = 'right'; x.fillStyle = ink;
+        x.font = '600 ' + F(12) + ' Outfit, sans-serif'; x.textAlign = 'right'; x.fillStyle = ink;
         x.fillText(n.label, px - 9, py + 0.5);
       } else if (n.kind === 'out') {
         x.fillStyle = ink; x.beginPath(); x.moveTo(px + 8, py); x.lineTo(px - 4, py - 6); x.lineTo(px - 4, py + 6); x.fill();
@@ -82,31 +88,32 @@ window.NTNetz = (function () {
         x.fillStyle = surf; x.strokeStyle = n.group ? col(n.group) : ink; x.lineWidth = n.group ? 2.6 : 2;
         x.beginPath(); x.arc(px, py, R, 0, 7); x.fill();
         // n.act (0…1): wie stark das Neuron gerade „ja“ sagt – füllt es in seiner Farbe (Level 8, Pinguin für Pinguin)
-        if (n.act != null) { x.globalAlpha = 0.08 + 0.62 * Math.max(0, Math.min(1, n.act)); x.fillStyle = col(n.group); x.fill(); x.globalAlpha = 1; }
+        if (n.act != null) { x.globalAlpha = 0.08 + 0.62 * Math.max(0, Math.min(1, n.act)); x.fillStyle = col(n.group); x.fill(); x.globalAlpha = n.dim ? 0.4 : 1; }
         x.stroke();
         x.fillStyle = ink; x.textAlign = 'center';
         // Bias im Neuron (net.biasInside): Zeichen oben, Bias-Zahl darunter
-        const inside = net.biasInside && n.bias != null;
+        const inside = net.biasInside && n.bias != null && !n.biasHide;
         x.font = '700 ' + Math.round(R * (inside ? 0.62 : 0.8)) + 'px Outfit, sans-serif';
         x.fillText(n.sym || 'σ', px, inside ? py - R * 0.3 : py + 1);
         if (inside) {
-          x.font = '700 ' + Math.round(Math.min(12, R * 0.52)) + 'px Outfit, sans-serif';
+          x.font = '700 ' + Math.round(Math.min(12 * fz, R * 0.52)) + 'px Outfit, sans-serif';
           x.fillStyle = n.biasGroup ? col(n.biasGroup) : soft;
           x.fillText((n.bias > 0 ? '+' : '') + fmt(n.bias, n.biasD || 0), px, py + R * 0.42);
         }
         if (n.label) {
-          x.font = '700 12px Outfit, sans-serif'; x.fillStyle = n.group ? col(n.group) : soft;
+          x.font = '700 ' + F(12) + ' Outfit, sans-serif'; x.fillStyle = n.group ? col(n.group) : soft;
           // labelPos 'above': mittig über dem Neuron – rechts oben läge die Zahl der Kante zum Ausgang
           if (n.labelPos === 'above') { x.textAlign = 'center'; x.fillText(n.label, px, py - R - 6); }
           else { x.textAlign = 'left'; x.fillText(n.label, px + R + 4, py - R + 3); }
           x.textAlign = 'center';
         }
-        if (n.bias != null && !net.biasInside) {
+        if (n.bias != null && !net.biasInside && !n.biasHide) {
           x.font = (n.biasD ? '700 11.5px' : '600 10.5px') + ' Outfit, sans-serif'; x.fillStyle = n.biasGroup ? col(n.biasGroup) : soft;
           x.fillText((n.biasName ? n.biasName + ' ' : 'Bias ') + (n.bias > 0 ? '+' : '') + fmt(n.bias, n.biasD || 0), px, py + R + 9);
         }
       }
     }
+    x.globalAlpha = 1;
   }
 
   function roundRect(x, l, t, w, h, r) {

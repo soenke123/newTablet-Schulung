@@ -123,16 +123,7 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   (uPat 4, Blending mit blendFuncSeparate – sonst schreibt er Alpha in die Leinwand und leuchtet hell).
   Watscheln über `player.phase` + `player.walk` (0–1, im Sprung 0): Rollen, freier Fuß hebt ab,
   Flossen gegengleich, Körper federt, Schalzipfel schwingen; im Sprung Flossen aus; im Stehen atmen + blinzeln
-- `showroom.html` – Showroom „Eiswelt“ (17.11.2026, Link unten im Menü): eigener Look weg vom
-  MPSkills-Grün + Schneesturm in der Antarktis, drei Varianten zur Auswahl: A Whiteout (heller Sturm,
-  Expeditions-Look Signal-Orange/Monospace, Höhe als Gerät oben mittig) · B Polarnacht (dunkel,
-  Polarlicht, Glas mit Türkis/Violett, Höhe schwebt über dem Pinguin) · C Eisscholle (Gletschertürkis,
-  Eisblock-Knöpfe, Fredoka, Höhe als Plakette unten neben „Hier bleibe ich“). Echte Welt Level 1/2
-  (laufen per Wischen/WASD), Menü und Erklärkarte je Variante; Höhenleiste am Rand entfällt.
-  Technik: `G.setPalette({fog, c, plainC, amb, light, ice, iceC, dark})` in grafik.js (null = normale
-  Palette; `ice` > 0 = steile Hänge blankes Eis + Schneerippen „Sastrugi“), Schnee als 2D-Canvas
-  darüber, Böen verkleinern die Sicht (fogR) und legen einen Schleier über das Bild. Noch nicht
-  im Spiel: Erklärbilder (bilder.js) ab Level 3 sind noch grün/braun. Seit 17.11.2026 ist B im Spiel (Level 1/2 + Menü).
+- (`showroom.html` „Eiswelt“ gelöscht 18.11.2026 – Variante B ist im Spiel; `G.setPalette` in grafik.js bleibt)
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm
 - **Übersicht** (Sönke 18.11.2026: „Landing führt durch die Stunde, visueller“): `renderMenu` in spiel.js zeigt
   `PHASES` als Reihen mit Bild-Kacheln (`NTBild.tile(key)` in bilder.js, viewBox 240 × 150, immer Polarnacht):
@@ -141,8 +132,9 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   (`href`, `tag` statt Nummer). Kachelbilder: 1 Spieler im Schneesturm, 2 `img/frei/kompass.webp`
   (Sönkes „Pingu mit Kompass.png“, freistellen.py), 3 Sprungbögen + Ring, 4 Zügel + „Gewicht?“-Schild,
   5 Adelie | Zügel mit Trennlinie, 6 Nest mit beiden Eltern + „?“, 7 main_a/main_b + Neuronen A/B,
-  8 drei Köpfe, Erarbeitung = Tafel mit EINEM Neuron (w₁, w₂ → σ) und Fehler-Pfeil rückwärts. Level 3 → Knopf
-  „Weiter: Erarbeitung“; `index.html?lv=4` öffnet direkt ein Level (Einsprung aus dem Tafelbild).
+  8 drei Köpfe, Erarbeitung = Tafel mit EINEM Neuron (w₁, w₂ → σ) und Fehler-Pfeil rückwärts. Kacheln nur mit Titel
+  (Untertitel `short` nur noch als title-Text, Sönke 18.11.2026); keine Welt-Nummer-Zeile, keine Labor-/Showroom-Links mehr
+  (Welt-Nummer intern in `nt.seed`, „Neue Welt“ am Levelende würfelt sie). `index.html?lv=4` öffnet direkt ein Level.
 - `erarbeitung.html` + `js/erarbeitung.js` – **Erarbeitung** (Phase 1, nach Level 3). 2. Fassung 18.11.2026 (Sönke: „viel zu
   kompliziert und überladen … so versteht das keiner“): EIN Neuron statt Netz 2-2-1, EIN Gedanke je Schritt, Bühne groß in
   der Mitte (SVG, quer `LAY.h` / hochkant `LAY.v` je nach Seitenverhältnis), darunter EIN Satz + Formel-Chip + Knöpfe.
@@ -152,9 +144,12 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   2 Vergleichen (Art aufgedeckt, SOLL-Ring, roter Abstand = Fehler = Soll − Ist) ·
   3 Anpassen (Kanten „alt → neu“, Antwort rückt ans Soll; `neu = alt + Lernrate × Fehler × Eingang`, exakt für σ +
   Log-Fehler; „↻ Nächster Pinguin“ oder „Viele Pinguine“) ·
-  4 Ins Tal (Karte der ECHTEN Fehler-Landschaft über (w₁, w₂) ±20 = Level 5 von oben, Farben wie NET, Höhenlinien,
-  Spur, Pfeil + Ring = nächster Sprung mit allen 136, Pinguin ziehen = Gewichte setzen; daneben „Wie im Nebeltal“
-  Ort/Höhe/Pfeil/Sprung, „richtig sortiert x/136“, Lernkurve; Lernrate 0,5–30, Start 3; „Weiter: Level 4“ → index.html?lv=4).
+  4 Ins Tal (3. Fassung 18.11.2026, Sönke: „zu losgelöst“): links DASSELBE Bild wie „Anpassen“ (body.s4), rechts die Karte
+  der ECHTEN Fehler-Landschaft über (w₁, w₂) ±20 (= Level 5 von oben); jeder Klick „Neuer Pinguin · Sprung“ (`hop`) = neuen
+  Pinguin testen + einmal anpassen (dieselbe Regel wie Schritt 3) = ein Sprung, Pfeil auf der Karte = letzter Sprung alt → neu;
+  „Lernen zurücksetzen“ (`resetLearn`) = Start; kein Training, kein Knopf zu Level 4; Lernrate 0,5–30, Start 3).
+  Ab „Vergleichen“ steht unter dem Neuron σ(z) = Ist, im Satz die ganze Rechnung `Ist = σ(Länge · w₁ + Höhe · w₂)`.
+  Pinguin links antippen (`.pghit`, `otherPeng`) = anderer Pinguin mit anderen Werten (in „Anpassen“ mit seiner Anpassung).
   Weggefallen: versteckte Schicht, Bias, Anteile/Backprop-Formel, σ-Kurve, Regel-Kasten, Brücken-Tabelle mit 6 Zeilen.
 - `karte.css` – Erklärkarte vor jedem Level (index.html + labor.html, 18.11.2026: „ohne Scrollen auf einen Bildschirm“):
   `.card-in.is-intro` mit `.i-head` (Kicker, Titel, EIN Satz) · `.i-pic` (Bild, Formel) · `.i-txt` (höchstens 3 kurze
@@ -232,7 +227,7 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    auch in der Erklärkarte: hier kein Bias-Regler) + Nest-Diagramm `#zplot` mit den Geraden A (orange) und B (violett). Wertung:
    4 von 4 Nestern richtig (3 Sterne bei Fehler < 0,15); bei 3 von 4 erklärt das Ergebnis „beide
    haben dasselbe gelernt“ (eines muss „nur Mama am Nest“, das andere „nur Papa am Nest“ lernen). Am Ende Flagge am tiefsten Punkt des jeweiligen Schnitts.
-   Ergebnis-Knopf „Weiter: Pinguine in 3D“.
+   Name „Das Nest mit zwei Neuronen“, Erklärkarte beginnt mit „Wieder das Nest aus Level 6“ (Sönke 18.11.2026).
 8. **Pinguine in 3D** – das Labor im Modus „+ Zahl-Neuron“ (labor.html?level=8), s. Dateien.
    Seit 17.11.2026 abends: Höhenlinien der Welten als Vektorlinien (Marching Squares `contours()` in
    labor.js, vorher Pixel-Kanten = verpixelt); Lernkurve in der Steuerleiste (`#lcurve`: Fehler je
@@ -263,6 +258,14 @@ Am Ende jedes Levels lichtet sich der Nebel (Weg, Start, Flagge am tiefsten Punk
 Sterne + „Und die KI?“-Text. Welt-Nummer (Seed 1000–9999) = gleiche Landschaft auf allen
 Tablets → Klasse kann schon jetzt gegeneinander spielen. Sterne je Level und Welt in
 localStorage `nt.best.<level>.<seed>`, Welt in `nt.seed`.
+
+**Levelende, 2. Fassung** (Sönke 18.11.2026 abends): Leiste nur noch Nochmal · Neue Welt · **Übersicht** (hervorgehoben) –
+kein „Weiter: nächstes Level“ (sonst kam man an nicht freigegebene Level), kein „Weiter trainieren“, kein „Und die KI?“ (auch
+gemeinsam nicht; dort klappt „Top 3“ die Rangliste auf, `moreLabel`), kein Hinweis „Karte ziehen = drehen“. Level 7 hängt bei
+3 von 4 den einen Hinweis klein an die Zeile. Erklärkarten Level 1–5 kürzer und spielerischer (Sturm zieht auf, Kompass,
+nicht mehr laufen), Level 2 mit Sönkes Kompass-Pingu. Level 4–6: Lernkurve und Kasten eine Spalte gleicher Breite
+(`body[data-panel] #curveBox`). Level 6: Bias-Regler −2…2 in 0,05-Schritten. Der Code für „Weiter trainieren“ (`postStart`,
+`S.post`) bleibt, ist aber an keinem Knopf mehr.
 
 **Levelende ohne Karte** (Sönke 18.11.2026: „die Endkarte ganz wegnehmen, unten eine Leiste mit den wichtigsten
 Knöpfen und wie gut man war, damit man die Karte und die Daten weiter betrachten kann“): statt `#card.result`
@@ -324,9 +327,19 @@ zeigt sie groß + wer bereit ist → „Los!“ → 3-2-1 (`countdown_ends_at`, 
   Uhr oben, wer nur eine Welt hat, steuert sie mit dem ganzen Bildschirm und WASD+Pfeilen). Werte `vals`
   ~4×/s. Beamer: Paare mit Nest-Diagramm live; Ende nach Zeit; Rangliste (Nester richtig, dann Fehler), Team
   antippen = Netz + Nester vergleichen.
-- **Level 8** im Team: Tablets wechseln auf `labor.html?level=8&mp=1` (labor.js `MP8`): eigene Welten hell
-  umrandet mit „Du“, fremde mit Namen und nicht ziehbar, Werte der anderen live, keine Lernschritt-/Training-Knöpfe,
-  Lernkurve sekündlich, Uhr in `#mpChip`; Ende → „Platz x von y · n von 342 richtig“. Welt s = Neuron floor(s/2),
+- **Level 8** im Team: Tablets wechseln auf `labor.html?level=8&mp=1` (labor.js `MP8`). Seit 18.11.2026 abends
+  (Sönke: „soll wie eine ganz normale Welt aussehen“) sieht das Tablet NUR seine Welt(en) als 3D-Landschaft wie Level 7
+  (`WK` in labor.js, `body.wk`, `#wk`: grafik.js, Joystick/WASD, Pfeile = 2. Welt; Ort = die zwei eigenen Werte, Höhe =
+  `liftL` = 5·ln(Fehler/0,03) des ganzen Netzes, Pfeil = bergab; Welt wird höchstens alle 250 ms neu gebaut, wenn sich
+  ein fremder Wert ändert, `wkSig`) + nur den Netz-Kasten oben rechts „Dein Teil des Netzes“: eigene Kanten/Bias hell mit
+  Zahl, Rest blass (NTNetz `dim`/`biasHide`, `WK.focus`), Pinguin für Pinguin + „erkannt“ unten. Wolken, 8 Kacheln,
+  Steuerleiste und Fehler-Anzeige sind weg. Uhr in `#mpChip`; Ende → „Platz x von y · n von 342 richtig“, Laufen stoppt,
+  kein „Weiter trainieren“.
+  Lehrkraft („Beobachten“, `&team=`) behält die große Ansicht; nach der Runde (`mp8Result`) automatisch `mp8Free`:
+  Lernschritt, Training, Lernrate und „Neu würfeln“ für dieses Team-Netz (zählt nicht), zum gemeinsamen Besprechen.
+  Allein und Lehrkraft: die drei Kästen oben (Wolke, Wolke 2, Netz) antippen = groß in die Mitte (`BIG`, `section.big`,
+  `#bigBack`; Netz dann mit `big: true` = größere Kreise/Zahlen), nochmal antippen/daneben/Esc = zurück; Ziehen dreht weiter.
+  Erklärkarte Level 8: EIN Satz zum Thema („alle drei Pinguinarten an Schnabel und Flosse erkennen“). Welt s = Neuron floor(s/2),
   gerade = Werte 0/1, ungerade = 2/3; wer zwei Welten hat, hat ein ganzes Neuron. Beamer: Teams mit erkannt je Art,
   „Beobachten“ = `labor.html?level=8&mp=1&team=<t>` (live, nichts ziehbar, „‹ Übersicht“ zurück).
 - Rangliste nur am Ende der Runde, nichts wird aufgehoben (neue Runde löscht res/vals/info).

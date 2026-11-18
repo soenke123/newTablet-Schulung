@@ -236,14 +236,16 @@ await shot(S[0], '16_tablet_level8_erklaerkarte');
 await until('5  alle bereit', async () => fr(T).evaluate(() => /3 von 3 bereit/.test(document.querySelector('#mpStN').textContent)));
 await fr(T).click('#mpStBtns .btn.primary');
 await until('5  Level 8 läuft', async () => fr(S[0]).evaluate(() => document.querySelector('#card').hidden), 9000);
-const mineCells = await fr(S[0]).evaluate(() => document.querySelectorAll('.cell.mine').length);
-ok('5  Mia hat eigene Welten (2 oder 3)', mineCells >= 2 && mineCells <= 3, String(mineCells));
-const cell = await fr(S[0]).$('.cell.mine canvas');
-const bb = await cell.boundingBox();
+// Tablet: die eigenen Welten als 3D-Landschaft (body.wk), nur der Netz-Kasten darüber
+const wkWorlds = await fr(S[0]).evaluate(() => document.body.classList.contains('wk') ? document.querySelectorAll('.wkcell').length : 0);
+ok('5  Mia läuft in ihren Welten (3D, 1 oder 2)', wkWorlds >= 1 && wkWorlds <= 2, String(wkWorlds));
 const leonBefore = await fr(S[1]).evaluate(() => document.querySelector('#sLoss').textContent);
-await S[0].mouse.move(bb.x + bb.width * 0.5, bb.y + bb.height * 0.5);
+const wcv = await fr(S[0]).$('.wkcell canvas');
+const bb = await wcv.boundingBox();
+await S[0].mouse.move(bb.x + bb.width * 0.4, bb.y + bb.height * 0.6);
 await S[0].mouse.down();
-await S[0].mouse.move(bb.x + bb.width * 0.8, bb.y + bb.height * 0.25, { steps: 8 });
+await S[0].mouse.move(bb.x + bb.width * 0.4 + 50, bb.y + bb.height * 0.6 - 30, { steps: 5 });
+await sleep(1800);
 await S[0].mouse.up();
 await sleep(2000);
 const leonAfter = await fr(S[1]).evaluate(() => document.querySelector('#sLoss').textContent);
@@ -261,11 +263,17 @@ await until('5  zurück in der Übersicht', async () => /index\.html/.test(fr(T)
 await fr(T).click('#mpStBtns .btn');                                // Runde beenden
 await until('5  Rangliste Level 8', async () => fr(T).evaluate(() => document.querySelectorAll('#mpTop li').length === 1));
 await until('5  Tablet: Ergebnis im Labor', async () => fr(S[0]).evaluate(() => /Pinguinen richtig/.test(document.querySelector('#endbar').textContent)), 9000);
-await fr(S[0]).click('#endbar >> text=Weiter trainieren');
-await fr(S[0]).click('#step'); await fr(S[0]).click('#step');
-await until('5  Tablet: nach der Runde weiter trainiert', async () => fr(S[0]).evaluate(() => /weiter trainiert \(\+2/.test(document.querySelector('#endbar').textContent)), 5000);
+ok('5  Tablet: kein „Weiter trainieren“', await fr(S[0]).evaluate(() => !/Weiter trainieren/.test(document.querySelector('#endbar').textContent)));
 await shot(T, '20_lehrkraft_level8_ergebnis');
 await shot(S[0], '21_tablet_level8_ergebnis');
+// Lehrkraft schaut nach der Runde ins Netz und trainiert selbst weiter
+await fr(T).click('#mpWatch');
+await until('5  Lehrkraft im Netz nach der Runde', async () => /team=/.test(fr(T).url()) && await fr(T).evaluate(() => document.body.classList.contains('mp8-free')), 9000);
+await fr(T).click('#step'); await fr(T).click('#step');
+await until('5  Lehrkraft: weiter trainiert', async () => fr(T).evaluate(() => /weiter trainiert \(\+\d/.test(document.querySelector('#endbar').textContent)), 5000);
+await shot(T, '21b_lehrkraft_level8_nachher_trainiert');
+await fr(T).click('.head a.btn');
+await until('5  zurück in der Übersicht (Ende)', async () => /index\.html/.test(fr(T).url()) && await fr(T).evaluate(() => !!document.querySelector('#mpStBtns')), 9000);
 
 /* 6 zurück und aus */
 await fr(T).click('#mpStBtns .btn:not(.primary)');

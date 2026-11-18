@@ -201,9 +201,50 @@ body.has-endbar { padding-bottom:96px; }
 .eb-more p { margin:4px 0 0; font-size:14.5px; line-height:1.45; color:var(--ink-soft); }
 .ki-tag { font-size:12px; font-weight:700; color:var(--accent-ink); text-transform:uppercase; letter-spacing:.05em; }
 @media (max-width: 600px) { .eb-line { font-size:13.5px; } .eb-place { font-size:17px; } .eb-btns .btn { padding:7px 10px; font-size:13px; } }
+
+/* Kästen oben antippen = groß in die Mitte (Sönke 18.11.2026, allein + Lehrkraft) */
+.top > section.bigable { position:relative; cursor:zoom-in; }
+.bigico { position:absolute; right:8px; top:6px; font-size:15px; color:var(--ink-faint); pointer-events:none; }
+.top > section.big { position:fixed; inset:5vh 5vw; z-index:9; cursor:zoom-out; background:var(--surface); padding:14px 18px; }
+.top > section.big .bigico { font-size:18px; }
+.top > section.big .netwrap { min-height:0; }
+body[data-mode="zahl"] .top > section.big #exL { width:150px; }
+body[data-mode="zahl"] .top > section.big #exR { max-width:150px; }
+#bigBack { position:fixed; inset:0; z-index:8; border:0; background:rgba(3,7,16,.66); cursor:zoom-out; }
+body.wk .bigico { display:none; }
+body.wk .top > section.bigable { cursor:default; }
+
+/* Level 8 gemeinsam am Tablet (body.wk): die eigenen Welten als 3D-Landschaft, nur der Netz-Kasten darüber */
+#wk { position:fixed; inset:0; z-index:0; }
+#wkWorlds { position:absolute; inset:0; display:grid; grid-template-columns:repeat(var(--n, 1), 1fr); }
+#wkWorlds[data-n="2"] { --n:2; }
+.wkcell { position:relative; min-width:0; min-height:0; }
+.wkcell + .wkcell { border-left:2px solid var(--line); }
+.wkcell canvas { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+.wktag { position:absolute; left:12px; bottom:14px; padding:5px 11px; border-radius:99px; background:var(--c); color:#fff; font-weight:700; font-size:13.5px; pointer-events:none; }
+.wkjoy { position:absolute; width:120px; height:120px; margin:-60px 0 0 -60px; border-radius:50%; pointer-events:none;
+  border:2px solid rgba(255,255,255,.45); background:rgba(255,255,255,.08); }
+.wkjoy i { position:absolute; left:50%; top:50%; width:52px; height:52px; border-radius:50%; background:rgba(255,255,255,.75); transform:translate(-50%,-50%); }
+body.wk #lab { position:relative; z-index:1; pointer-events:none; }
+body.wk .head, body.wk .top { pointer-events:auto; }
+body.wk .head { background:var(--glass); border-radius:16px; padding:6px 10px; align-self:flex-start; max-width:100%; flex-wrap:wrap; }
+body.wk .stat { display:none; }   /* „erkannt“ im Netz-Kasten zeigt, wie gut das Netz ist */
+body.wk .ctrl, body.wk .grid, body.wk .top > section:not(:last-child) { display:none !important; }
+body.wk .top { position:fixed; right:12px; top:12px; width:min(500px, calc(100vw - 24px)); height:min(300px, 46vh); display:block; flex:none; z-index:2; }
+body.wk .top > section:last-child { height:100%; }
+@media (orientation: portrait) {
+  #wkWorlds[data-n="2"] { grid-template-columns:1fr; grid-template-rows:1fr 1fr; }
+  .wkcell + .wkcell { border-left:0; border-top:2px solid var(--line); }
+  body.wk .top { top:auto; bottom:12px; right:12px; height:min(280px, 40vh); }
+  .wktag { bottom:auto; top:12px; left:auto; right:12px; }
+}
+@media (max-width: 600px), (max-height: 500px) {
+  body.wk, body.wk html { overflow:hidden; height:100%; }
+  body.wk .top { height:min(240px, 44vh); }
+}
 </style>
 <link href="karte.css?v=20261118a" rel="stylesheet">
-<link href="mehr.css?v=20261118n" rel="stylesheet">
+<link href="mehr.css?v=20261118o" rel="stylesheet">
 </head>
 <body>
 <div id="lab">
@@ -243,12 +284,16 @@ body.has-endbar { padding-bottom:96px; }
   </div>
   <div class="grid" id="grid"></div>
 </div>
+<div id="wk" hidden><div id="wkWorlds"></div><div id="wkJoy" class="wkjoy" hidden><i></i></div></div>
+<button id="bigBack" type="button" hidden aria-label="Zurück zur Übersicht der Kästen"></button>
 <div id="card" hidden></div>
 <div id="endbar" class="glass" hidden aria-live="polite"></div>
 <script src="js/welt.js?v=20261118a"></script>
-<script src="js/bilder.js?v=20261118e"></script>
-<script src="js/netz.js?v=20261118b"></script>
-<script src="js/raum.js?v=20261118n"></script>
-<script src="js/labor.js?v=20261118n"></script>
+<script src="js/bilder.js?v=20261118f"></script>
+<script src="js/netz.js?v=20261118c"></script>
+<script src="js/grafik.js?v=20261118n"></script>
+<script src="js/raum.js?v=20261118o"></script>
+<script>window.NT_NET = { fog: '#0c1526', c: ['#0b6e6a', '#2b78b0', '#6d5fd0', '#c9b6f2'], amb: 0.42, ice: 0.25, iceC: '#4f8fc0', light: [-0.35, 0.7, 0.55], lineK: 1.5, dark: true };</script>
+<script src="js/labor.js?v=20261118o"></script>
 </body>
 </html>

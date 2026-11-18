@@ -218,6 +218,7 @@ body.mp-on #card { z-index:7; }
 body.mp8 #step, body.mp8 #auto, body.mp8 #rnd, body.mp8 #lr, body.mp8 .ctrl .lr { display:none; }
 /* nach der Runde „Weiter trainieren“ (labor.js mp8Free): Lernschritt, Training, Lernrate wieder da */
 body.mp8.mp8-free #step, body.mp8.mp8-free #auto, body.mp8.mp8-free #lr, body.mp8.mp8-free .ctrl .lr { display:revert; }
+body.mp8.mp8-watch.mp8-free #rnd { display:revert; }   /* Lehrkraft nach der Runde: auch neu würfeln */
 body.mp8.mp8-free .cell canvas { cursor:crosshair; }
 .cell .who { position:absolute; right:6px; top:5px; padding:2px 9px; border-radius:99px; background:var(--pc, #fff); color:#04121f;
   font-size:12px; font-weight:800; pointer-events:none; }

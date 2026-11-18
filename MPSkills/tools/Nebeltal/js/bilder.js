@@ -196,7 +196,8 @@ window.NTBild = (function () {
       const ang = Math.atan2(q[1] - pg[1], q[0] - pg[0]);
       const ex = pg[0] + Math.cos(ang) * 46, ey = pg[1] + Math.sin(ang) * 46;
       b += '<line x1="' + pg[0] + '" y1="' + (pg[1] - 2) + '" x2="' + ex + '" y2="' + (ey - 2) + '" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>' + arrowHead(ex + Math.cos(ang) * 6, ey - 2 + Math.sin(ang) * 6, 'var(--accent)', ang);
-      b += peng({ sp: 'main', x: pg[0], y: pg[1] + 2, s: 0.52 });
+      // Sönke 18.11.2026: der Pingu mit dem Kompass (wie die Kachel)
+      b += tImg('kompass', pg[0] - 4, pg[1] + 6, 96, 0.695);
       // lokale vs. tiefste Mulde
       let lo = 0.33, lv = 9; for (let t = 0.26; t < 0.45; t += 0.002) if (fn(t) < lv) { lv = fn(t); lo = t; }
       const lm = at(lo), fl = at(0.78);
@@ -205,7 +206,7 @@ window.NTBild = (function () {
       b += T(fl[0] + 8, fl[1] - 34, 'tiefste Mulde', { size: 12, col: 'var(--ink)', w: 700 });
       b += snowfall(560, 200, 0.6);
       b += T(ex + 4, ey - 22, 'bergab', { size: 12.5, col: 'var(--accent-ink)', w: 700, a: 'start' });
-      return svg('0 0 560 200', b, 'Ein leuchtender Pfeil unter dem Pinguin zeigt bergab, zur nächsten Mulde');
+      return svg('0 0 560 200', b, 'Der Pinguin mit dem Kompass – ein leuchtender Pfeil zeigt bergab, zur nächsten Mulde');
     },
     3() {
       let b = '<rect width="560" height="200" fill="var(--surface-2)"/>';

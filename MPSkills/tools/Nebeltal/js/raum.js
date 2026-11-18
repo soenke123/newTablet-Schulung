@@ -160,8 +160,7 @@ window.NTRaum = (function () {
 
   /* Gemeinsam spielen läuft auf index.html (Lobby, Level 1–7) bzw. labor.html?level=8&mp=1.
      Wer gerade woanders ist (Labor allein, Erarbeitung), kommt in die Lobby. */
-  const page = /labor\.html$/.test(location.pathname) ? 'labor' : /erarbeitung\.html$/.test(location.pathname) ? 'erarb'
-    : /showroom\.html$/.test(location.pathname) ? 'show' : 'index';
+  const page = /labor\.html$/.test(location.pathname) ? 'labor' : /erarbeitung\.html$/.test(location.pathname) ? 'erarb' : 'index';
   subs.push(() => {
     if (S.mp && page !== 'index' && !(page === 'labor' && qs.get('mp') === '1')) location.href = 'index.html';
   });
