@@ -185,7 +185,7 @@ const paths = await db.query(`select res->>'p' p from nt_players where room_id =
 ok('3  Weg mitgeschickt (res.p)', paths.rows.every(r => r.p && r.p.length >= 8 && r.p.length % 4 === 0), paths.rows.map(r => (r.p || '').length).join());
 await until('3  Lehrkraft: 3D-Karte mit Namen', async () => fr(T).evaluate(() => !!document.querySelector('#mpMapW #mpMap3') && document.querySelectorAll('#mpMapW .mml.pl').length === 3));
 await fr(T).click('#mpTop li');
-ok('3  Lehrkraft: Name antippen = Weg hervorheben', await fr(T).evaluate(() => !!document.querySelector('#mpTop li.sel') && !!document.querySelector('#mpMapW .mml.sel')));
+await until('3  Lehrkraft: Name antippen = Weg hervorheben', async () => fr(T).evaluate(() => !!document.querySelector('#mpTop li.sel') && !!document.querySelector('#mpMapW .mml.sel')), 5000);
 await sleep(800);
 await shot(T, '09_lehrkraft_ergebnis_karte');
 await shot(S[0], '10_tablet_platz');
