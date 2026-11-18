@@ -498,6 +498,8 @@ window.NTGrafik = (function () {
 
       // Figur: kleiner Pinguin (eigenes Programm progC)
       if (P && !P.hidden) drawPenguin(P, sc.playerColor || [1, 0.55, 0.2], vp, sc);
+      // weitere Pinguine (Lobby von „Gemeinsam spielen“, js/mehr.js): je eigene Schalfarbe
+      for (const q of sc.others || []) drawPenguin(q, q.color || [1, 0.55, 0.2], vp, sc);
     }
 
     /* Der Pinguin. Körper und Kopf sind EIN Drehkörper, Bauch/Gesicht/
@@ -506,7 +508,7 @@ window.NTGrafik = (function () {
        im Sprung Flossen ausgebreitet; im Stehen atmen + blinzeln. */
     function drawPenguin(P, col, vp, sc) {
       const sq = P.squash || 1, walk = Math.max(0, Math.min(1, P.walk || 0));
-      const ph = (P.phase || 0) * 2.2, now = performance.now() / 1000;
+      const ph = (P.phase || 0) * 2.2, now = performance.now() / 1000 + (P.seed || 0);
       const air = Math.max(0, Math.min(1, ((P.y || 0) - (P.ground || 0) - 0.25) / 1.2));
       const sw = Math.sin(ph);
       const roll = sw * 0.17 * walk;
@@ -615,7 +617,23 @@ window.NTGrafik = (function () {
       return { x: (x / ww * 0.5 + 0.5) * w, y: (1 - (y / ww * 0.5 + 0.5)) * h };
     }
 
-    return { setWorld, setTheme, setPalette, frame, project, gl };
+    // Umkehrung: Bildschirmpunkt → Punkt auf der Ebene y = y0 (Lobby: dahin laufen, wo man tippt)
+    function unproject(sc, sx, sy, y0) {
+      const w = canvas.clientWidth, h = canvas.clientHeight, e = sc.cam.eye, a = sc.cam.at;
+      let f = [a[0] - e[0], a[1] - e[1], a[2] - e[2]];
+      const fl = Math.hypot(f[0], f[1], f[2]) || 1; f = f.map(v => v / fl);
+      let r = [f[1] * 0 - f[2] * 1, f[2] * 0 - f[0] * 0, f[0] * 1 - f[1] * 0];      // f × (0,1,0)
+      const rl = Math.hypot(r[0], r[1], r[2]) || 1; r = r.map(v => v / rl);
+      const u = [r[1] * f[2] - r[2] * f[1], r[2] * f[0] - r[0] * f[2], r[0] * f[1] - r[1] * f[0]];
+      const t = Math.tan((sc.fov || 0.95) / 2), nx = (sx / w) * 2 - 1, ny = 1 - (sy / h) * 2;
+      const d = [0, 1, 2].map(i => f[i] + r[i] * nx * t * (w / h) + u[i] * ny * t);
+      if (Math.abs(d[1]) < 1e-6) return null;
+      const k = ((y0 || 0) - e[1]) / d[1];
+      if (k <= 0) return null;
+      return { x: e[0] + d[0] * k, z: e[2] + d[2] * k };
+    }
+
+    return { setWorld, setTheme, setPalette, frame, project, unproject, gl };
   }
 
   return { create };

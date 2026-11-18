@@ -1,4 +1,4 @@
-# Nebeltal (MPSkill, Migration 0290, Prototyp, nur Admins)
+# Nebeltal (MPSkill, Migration 0290, Prototyp, nur Admins · gemeinsam spielen: Migration 0296)
 
 Wie lernt ein neuronales Netz? Man sucht im Nebel den tiefsten Punkt einer
 3D-Landschaft und sieht nur die Stelle, an der man steht. Höhe = Fehler,
@@ -160,11 +160,21 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   `.card-in.is-intro` mit `.i-head` (Kicker, Titel, EIN Satz) · `.i-pic` (Bild, Formel) · `.i-txt` (höchstens 3 kurze
   Schritte, Steuerung) · `.card-btns`; quer Bild links/Text rechts, hochkant untereinander (Bild ≤ 26vh), Schriften mit
   clamp(…vh); Tastenkürzel (`.kbd`) nur mit Maus. Neue Texte KURZ halten – geprüft bei 390×760, 800×370, 1024×700, 1440×860.
-- `tool.js`/`tool.css` – nur der iframe-Rahmen (wie Reinforce Yourself), noch kein Austausch mit dem Raum
+- `tool.js`/`tool.css` – iframe-Rahmen (wie Reinforce Yourself) und Brücke zum Raum (s. „Im Raum“ unten):
+  reicht `data.levels`/`data.mp` hinein, setzt Freigaben über skill_room_set_state und führt die RPCs
+  `nt_play` (Tablet) bzw. `nt_room_get`/`nt_room_act` (Lehrkraft) für die Seite im Rahmen aus
+- `js/raum.js` – Gegenstück im iframe (index/labor/erarbeitung): Rolle (?raum=…, beim Seitenwechsel aus
+  sessionStorage `nt.raum`, nur im iframe), Freigaben, `rpc()`, Serveruhr, Schalfarben (`COLORS`, 16), Wertung
+  Level 7 (`l7.score`: Paar aus vals, fehlende Welt = Start) und Level 8 (`l8.init(seed)` = gleicher Start für alle
+  Teams, `l8.score` = falsch/Fehler wie labor.js Zahl-Modus); schickt Tablets bei `mp` von Labor/Erarbeitung in die Lobby
+- `js/mehr.js` + `mehr.css` – „Gemeinsam spielen“ (Lobby, Kasten/Bühne der Lehrkraft, Warte-/Ergebniskarten, s. unten)
+- `tests/gemeinsam.e2e.mjs` – Lehrkraft + 3 Tablets im Browser (Playwright) gegen die echte SQL-Kette in pglite:
+  Freigabe, Lobby, Level 2 (jeder gegen jeden), Level 7 (Paar + allein), Level 8 (Team, Beobachten), Aus.
+  `node MPSkills/tools/Nebeltal/tests/gemeinsam.e2e.mjs [Bildordner]` (dauert ~3 Min.)
 
 ## Level
 
-1. **Im Schneesturm** (bis 17.11.2026 „Im Nebel“) – große Welt, frei laufen (Joystick links / WASD), 75 s,
+1. **Im Schneesturm** (bis 17.11.2026 „Im Nebel“) – große Welt, frei laufen (Joystick links / WASD), 60 s (bis 18.11.2026 75 s),
    OHNE Höhenmesser (Sönke 17.11.2026: soll wirklich schwer sein, man soll kaum merken, ob es bergauf
    oder bergab geht): Boden einfarbig ohne Höhenlinien und ohne Eisfärbung an Steilhängen (`plain`,
    uPlain), flaches Licht (`plainAmb` 0,84 in der NIGHT-Palette), Farben kommen erst beim Auflösen;
@@ -258,6 +268,48 @@ localStorage `nt.best.<level>.<seed>`, Welt in `nt.seed`.
 
 `LWMotion.low`: dpr 1 und 30 B/s; Glas-Kästen ohne Weichzeichner; kein Schnee, Polarlicht steht still.
 
+## Im Raum (Sönke 18.11.2026, Migration 0296)
+
+**Freigaben:** Lehrkraft teilt jede Kachel einzeln (Teilen-Symbol oben rechts an der Kachel, `toggleShare` in
+spiel.js) → `skill_room_state.data.levels` = `[1, 2, 'erarb', 8 …]`. Fehlt = nichts frei; Tablets sehen
+gesperrte Kacheln mit Schloss („Noch nicht freigegeben“), ohne Labor-/Showroom-Links; `index.html?lv=n` nur,
+wenn freigegeben. Ohne Raum (allein, Schaufenster) ist alles offen.
+
+**Gemeinsam spielen** (Knopf `#mpGo` in der Übersicht, nur Lehrkraft): `nt_room_act('on')` → `data.mp = 1` →
+alle Tablets (auch wer gerade spielt oder später kommt) in die **Lobby** (`NTSpiel.lobby`, eigene Schneefläche `LW`
+in mehr.js, gleiche WebGL-Leinwand wie das Spiel, Schnee an): jede Person ein Pinguin mit automatischer
+Schalfarbe (`nt_players.color`, kleinste freie von 16), antippen = dorthin laufen (`G.unproject`), WASD/Pfeile;
+Namen als HTML darüber; andere laufen weich zu ihrer gemeldeten Position (`pos` 0…1). Lehrkraft: Kasten rechts
+(`#mpSide`) mit allen 8 Leveln (unabhängig von der Freigabe), Welt-Nummer + „Neue Welt“, Level 7/8: Zeit
+(1–10 min, Vorgabe 2 bzw. 3), Level 8: Teamgröße 2–8 (Vorgabe 8 = erst ab 9 Personen ein zweites Team), Teams
+(Person antippen → Team antippen = verschieben, Person antippen = tauschen, „+ neues Team“, **×2** = bekommt
+zuerst die übrigen Welten, „Angleichen“ = `nt_balance`: so wenige Teams wie möglich, gleich groß, reihum nach
+Sitzplatz; Spätzugang ins kleinste Team mit Platz). Start → Erklärkarte auf den Tablets mit „Bereit!“, Beamer
+zeigt sie groß + wer bereit ist → „Los!“ → 3-2-1 (`countdown_ends_at`, Serveruhr) → Runde.
+- **Level 1–6** jeder gegen jeden: `NTSpiel.mpOpen(id, seed, o)` spielt das Level wie allein (Welt der Runde,
+  eigene Schalfarbe, kein „Übersicht“/„Nochmal“). Fertig (Zeit, Sprünge, „Hier bleibe ich“) → `res`
+  `{s, t, x, z …}` an den Server (`mpRes`: s = m über dem tiefsten Punkt bzw. Fehler, kleiner = besser; Endstand,
+  nicht der beste Punkt unterwegs), Karte „Warte auf die anderen · x von y fertig“. Beamer: Warteschirm (fertig ✓ /
+  Sprünge übrig / offline, Zeit). Ende = alle fertig (Server) oder „Runde beenden“; ein ausgefallenes Gerät hält die
+  Runde offen, bis es wieder da ist (Fortschritt `info` alle ~1,5 s, nach Neuladen geht es an derselben Stelle weiter).
+  Dann Tablets: Nebel lichtet sich (`mpReveal`), Karte mit eigenem Platz + Top 3; Beamer: Top 5 + Karte von oben
+  (`drawMap`: Höhenfarben NET, Start, tiefster Punkt, alle Pinguine, Top 5 groß mit Platz).
+- **Level 7** zu zweit (`nt_slots`: je eine Welt, bei ungerader Zahl eine Person beide): `NTSpiel.mpTwo` →
+  zwei.js mit `mp` (`ctl` = eigene Welt, die andere Figur folgt `remote(k)`, nur laufen – keine Lernrate/Sprünge,
+  Uhr oben, wer nur eine Welt hat, steuert sie mit dem ganzen Bildschirm und WASD+Pfeilen). Werte `vals`
+  ~4×/s. Beamer: Paare mit Nest-Diagramm live; Ende nach Zeit; Rangliste (Nester richtig, dann Fehler), Team
+  antippen = Netz + Nester vergleichen.
+- **Level 8** im Team: Tablets wechseln auf `labor.html?level=8&mp=1` (labor.js `MP8`): eigene Welten hell
+  umrandet mit „Du“, fremde mit Namen und nicht ziehbar, Werte der anderen live, keine Lernschritt-/Training-Knöpfe,
+  Lernkurve sekündlich, Uhr in `#mpChip`; Ende → „Platz x von y · n von 342 richtig“. Welt s = Neuron floor(s/2),
+  gerade = Werte 0/1, ungerade = 2/3; wer zwei Welten hat, hat ein ganzes Neuron. Beamer: Teams mit erkannt je Art,
+  „Beobachten“ = `labor.html?level=8&mp=1&team=<t>` (live, nichts ziehbar, „‹ Übersicht“ zurück).
+- Rangliste nur am Ende der Runde, nichts wird aufgehoben (neue Runde löscht res/vals/info).
+- Server (0296): `nt_rounds` (Phase off/lobby/intro/countdown/running/ended, Level, Welt, Teamgröße, Zeit) und
+  `nt_players`; anwesend = 20 s; Tablets sehen Werte nur des eigenen Teams und fremde Endstände erst am Ende.
+  Takt: Tablet Lobby 1 s (beim Laufen 0,25 s), Level 7 0,25 s, sonst 0,8–1,5 s; Lehrkraft 0,6–2 s.
+  Prüfstand `supabase/tests/0296_nebeltal_gemeinsam.mjs`, Browser `tests/gemeinsam.e2e.mjs`.
+
 ## Plan: „Gemeinsam ein Netz“ im Raum (Sönke 17.11.2026: „das kann eine richtig schöne runde Stunde sein“)
 
 Ablauf der Stunde (Sönke 17.11.2026): kurz Level 1–3 als Einstieg (jeder gegen jeden, gleiche
@@ -286,11 +338,9 @@ manche 2 Welten.
 
 ## Offen (nach dem ersten Ausprobieren ordnen)
 
-- Klassen-Wettkampf über den Raum (Lehrkraft gibt Welt vor, Beamer zeigt alle Figuren, gemeinsames Auflösen)
 - Schwung (Momentum), wackeliger Kompass (Mini-Batches), Lernrate unterwegs verkleinern
 - Weitere Beispiel-Level: Ebbe und Flut (Welle, Wellblech-Welt mit lokalen Minima), Wurf-Roboter,
   zwei Gruppen finden (Clustering), Finale Ziffern-Erkenner (Schnitt durch ein großes Netz)
-- Level 7 zu zweit über den Raum (jede Person eine Welt auf ihrem Tablet)
 - Level 5: Landschaft eines einzelnen Pinguins zeigen (Summe = große Landschaft), Schalter
   „Stufe / weich“ (Perzeptron-Terrassen ohne Pfeil), später größeres Netz (z. B. Korbwurf)
 - Schaufenster `preview/nebeltal.js`, Freigabe für alle: `update skill_tools set admin_only = false where id = 'nebeltal'`

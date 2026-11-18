@@ -148,19 +148,20 @@
       const el = document.createElement('div');
       const lab = pairsOf(k)[pr].lab;
       el.className = 'cell'; el.style.setProperty('--c', colOf(k));
-      el.innerHTML = '<canvas></canvas><span class="t">' + nameOf(k) + ' · ' + lab[0] + ' / ' + lab[1] + '</span>';
+      el.innerHTML = '<canvas></canvas><span class="t">' + nameOf(k) + ' · ' + lab[0] + ' / ' + lab[1] + '</span><span class="who" hidden></span>';
       g.appendChild(el);
       const cv = el.querySelector('canvas');
       const off = document.createElement('canvas'); off.width = G; off.height = G;
       const c = { k, pr, cv, off, img: off.getContext('2d').createImageData(G, G), dirty: true, drag: null };
       cells.push(c);
-      cv.addEventListener('pointerdown', e => { if (S.auto) return; c.drag = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } setFrom(c, e); });
+      cv.addEventListener('pointerdown', e => { if (S.auto || (MP8 && !mp8Mine(c))) return; c.drag = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } setFrom(c, e); });
       cv.addEventListener('pointermove', e => { if (c.drag === e.pointerId) setFrom(c, e); });
       const up = e => { if (c.drag === e.pointerId) c.drag = null; };
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     }
   }
   function setFrom(c, e) {
+    if (MP8 && !mp8Mine(c)) return;
     const r = c.cv.getBoundingClientRect();
     const u = clamp((e.clientX - r.left) / r.width, 0, 1), v = clamp((e.clientY - r.top) / r.height, 0, 1);
     const [i, j] = pairsOf(c.k)[c.pr].idx;
@@ -170,6 +171,7 @@
     if (zahl()) { for (const o of cells) if (o !== c) o.dirty = true; }
     else for (const o of cells) if (o.k === c.k && o.pr !== c.pr) o.dirty = true;
     S.changed = true;
+    if (MP8) MP8.dirty = true;
   }
   function dirtyAll() { for (const c of cells) c.dirty = true; S.changed = true; }
 
@@ -650,11 +652,170 @@
     $('#go').addEventListener('click', () => { c.hidden = true; S.changed = true; });
   }
 
+  /* ── Level 8 gemeinsam (js/mehr.js, Migration 0296) ──
+     labor.html?level=8&mp=1 im Raum: ein Team = ein Netz. Jede Person zieht nur in IHREN Welten
+     (slots vom Server, Welt s = Neuron floor(s/2), oben/unten = s gerade/ungerade); die anderen
+     Welten bewegen die Mitspielenden live. Kein Lernschritt, kein Training – nur laufen, Ende nach
+     Zeit. Start für alle Teams gleich (NTRaum.l8.init aus der Welt-Nummer der Runde).
+     Lehrkraft: &team=n = dieses Team beobachten (nichts ziehbar), „‹ Übersicht“ zurück. */
+  const MQ = new URLSearchParams(location.search);
+  const MP8 = LEVEL8 && MQ.get('mp') === '1' && window.NTRaum && NTRaum.inRoom
+    ? { watch: NTRaum.isTeacher ? (parseInt(MQ.get('team'), 10) || 0) : null, st: null, seed: 0, run: 0,
+        dirty: false, sent: '', last: 0, busy: false, phase: '', shown: '', team: null, mine: new Set(), names: {}, rec: 0 }
+    : null;
+  function mp8Mine(c) { return !!MP8 && MP8.watch === null && MP8.mine.has(c.k * 2 + c.pr); }
+  function mp8Vals() {
+    const v = {};
+    for (const s of MP8.mine) { const q = NTRaum.l8.idx(s); v[s] = [+S.W[q.k][q.i[0]].toFixed(4), +S.W[q.k][q.i[1]].toFixed(4)]; }
+    return v;
+  }
+  function mp8Card(html, btns) {
+    const c = $('#card');
+    c.innerHTML = '<div class="card-in' + (html.indexOf('i-head') >= 0 ? ' is-intro' : '') + '">' + html + '<div class="card-btns"></div></div>';
+    const box = c.querySelector('.card-btns');
+    for (const [label, fn, kind] of btns || []) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn ' + (kind || ''); b.textContent = label;
+      b.addEventListener('click', fn); box.appendChild(b);
+    }
+    c.hidden = false;
+  }
+  const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+  function mp8Intro(ready) {
+    const steps = [
+      'Euer Team ist <b>ein Netz</b>: drei Neuronen A, B, C und das Zahl-Neuron – 16 Werte, <b>8 Welten</b>.',
+      MP8.mine.size ? 'Du ziehst den Punkt in <b>deinen ' + (MP8.mine.size === 1 ? 'Welt' : MP8.mine.size + ' Welten') +
+        '</b> (hell umrandet). Die anderen Welten bewegt dein Team.' : 'Du schaust zu.',
+      'Ziehst du, verbiegen sich alle Welten. <b>Sprecht euch ab!</b> Am Ende zählt, wie viele Pinguine euer Netz richtig sortiert.'];
+    mp8Card('<div class="i-head"><div class="card-kicker">Level 8 · gemeinsam · Welt ' + MP8.seed + '</div><h2>Pinguine in 3D</h2>' +
+      '<p class="lead">Ein Netz mit <b>vier Neuronen</b> sortiert alle <b>drei Arten</b> – im Team.</p></div>' +
+      '<div class="i-pic">' + (window.NTBild ? '<div class="illwrap">' + NTBild.scene(8) + '</div>' : '') + '</div>' +
+      '<div class="i-txt"><ol class="steps">' + steps.map(t => '<li>' + t + '</li>').join('') + '</ol>' +
+      '<p class="ctrl">' + esc(mp8TeamTxt()) + '</p></div>',
+      MP8.watch !== null ? [['‹ Übersicht', mp8Back]] : ready ? [['Warte auf den Start …', () => {}, 'wait']]
+        : [['Bereit!', () => { MP8.ready = true; mp8Intro(true); mp8Send({ ready: true }); }, 'primary']]);
+  }
+  // Teams heißen nach ihrer Reihenfolge (Team 1, 2, …), wie in der Übersicht der Lehrkraft
+  function mp8Label(t) {
+    const st = MP8.st;
+    const ids = st ? [...new Set(st.people.filter(p => p.in && p.t !== null).map(p => p.t))].sort((a, b) => a - b) : [];
+    return 'Team ' + (Math.max(0, ids.indexOf(t)) + 1);
+  }
+  function mp8TeamTxt() {
+    const t = MP8.team || [];
+    return (MP8.watch !== null ? mp8Label(MP8.watch) + ': ' : 'Dein Team: ') + t.map(p => p.n + ' (' + p.s.length + ')').join(', ');
+  }
+  function mp8Back() { location.href = 'index.html'; }
+  function mp8Apply(st) {
+    MP8.st = st;
+    NTRaum.clock(st);
+    if (st.phase === 'off' || st.phase === 'lobby' || st.level !== 8) { mp8Back(); return; }
+    const myT = MP8.watch !== null ? MP8.watch : st.me && st.me.t;
+    const inRound = MP8.watch !== null || (st.me && st.me.in);
+    if (!inRound) { mp8Back(); return; }
+    MP8.team = st.people.filter(p => p.in && p.t === myT);
+    if (MP8.watch === null) MP8.mine = new Set((st.me && st.me.s) || []);
+    MP8.names = {};
+    for (const p of MP8.team) for (const sl of p.s) MP8.names[sl] = p;
+    // neue Runde / erste Antwort: Startwerte aus der Welt-Nummer, eigene Werte vom Server übernehmen
+    if (MP8.run !== st.run || MP8.seed !== st.seed) {
+      MP8.run = st.run; MP8.seed = st.seed; MP8.dirty = false; MP8.shown = ''; MP8.ready = !!(st.me && st.me.r);
+      S.W = NTRaum.l8.W(st.seed, NTRaum.teamVals(MP8.team));
+      S.trail = S.W.map(() => []); S.hist = []; record();
+      for (const c of cells) {
+        const sl = c.k * 2 + c.pr, el = c.cv.parentElement, who = el.querySelector('.who'), p = MP8.names[sl];
+        el.classList.toggle('mine', mp8Mine(c));
+        who.hidden = !p;
+        if (p) { who.textContent = mp8Mine(c) ? 'Du' : p.n; who.style.setProperty('--pc', NTRaum.color(p.c)); }
+      }
+      dirtyAll();
+    } else {
+      // Werte der anderen übernehmen (eigene nur, solange man selbst nicht zieht)
+      const tv = NTRaum.teamVals(MP8.team);
+      let ch = false;
+      for (let sl = 0; sl < 8; sl++) {
+        if (MP8.watch === null && MP8.mine.has(sl)) continue;
+        const v = tv[sl]; if (!Array.isArray(v)) continue;
+        const q = NTRaum.l8.idx(sl), w = S.W[q.k];
+        if (Math.abs(w[q.i[0]] - v[0]) > 1e-4 || Math.abs(w[q.i[1]] - v[1]) > 1e-4) {
+          S.trail[q.k].push(w.slice()); if (S.trail[q.k].length > 60) S.trail[q.k].shift();
+          w[q.i[0]] = v[0]; w[q.i[1]] = v[1]; ch = true;
+        }
+      }
+      if (ch) dirtyAll();
+    }
+    const ph = st.phase;
+    $('#mpChip').hidden = false;
+    if (ph === 'intro') { if (MP8.shown !== 'intro' + MP8.ready) { MP8.shown = 'intro' + MP8.ready; mp8Intro(MP8.ready); } }
+    else if (ph === 'countdown') {
+      const n = Math.max(1, Math.ceil(NTRaum.left(st.countdown_ends_at) || 0));
+      if (MP8.shown !== 'cd' + n) { MP8.shown = 'cd' + n; mp8Card('<div class="cdown">' + n + '</div><p class="cdl">' + esc(mp8TeamTxt()) + '</p>', []); }
+    } else if (ph === 'running') {
+      if (MP8.shown !== 'run') { MP8.shown = 'run'; $('#card').hidden = true; }
+    } else if (ph === 'ended') {
+      if (MP8.shown !== 'end') { MP8.shown = 'end'; mp8Result(); }
+    }
+  }
+  function mp8Result() {
+    const st = MP8.st, teams = {};
+    for (const p of st.people) if (p.in && p.t !== null) (teams[p.t] = teams[p.t] || []).push(p);
+    const rank = Object.keys(teams).map(t => ({ t: +t, sc: NTRaum.l8.score(st.seed, NTRaum.teamVals(teams[t])) }))
+      .sort((a, b) => a.sc.wrong - b.sc.wrong || a.sc.loss - b.sc.loss);
+    const myT = MP8.watch !== null ? MP8.watch : st.me && st.me.t;
+    const i = rank.findIndex(r => r.t === myT), me = rank[i];
+    if (me) S.W = me.sc.W;
+    dirtyAll();
+    mp8Card('<div class="card-kicker">Level 8 · Runde vorbei</div>' +
+      '<div class="res-head"><div class="place">' + (rank.length > 1 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : 'Geschafft!') + '</div>' +
+      '<p>' + (MP8.watch !== null ? mp8Label(myT) : 'Euer Netz') + ' sortiert <b>' + (me ? me.sc.n - me.sc.wrong : 0) + ' von ' + (me ? me.sc.n : 342) +
+      '</b> Pinguinen richtig<br><small>Fehler ' + fmt(me ? me.sc.loss : 0, 3) + '</small></p></div>' +
+      '<div class="ki"><span class="ki-tag">Und die KI?</span><p>Ihr wart zusammen <b>ein Netz</b>: Jede Welt ist ein Paar Gewichte. ' +
+      'Ein echtes Netz bewegt alle Gewichte gleichzeitig – genau in Pfeilrichtung, Schritt für Schritt. Das heißt <b>Training</b>.</p></div>',
+      MP8.watch !== null ? [['‹ Übersicht', mp8Back, 'primary'], ['Netz ansehen', () => { $('#card').hidden = true; }]]
+        : [['Netz ansehen', () => { $('#card').hidden = true; }]]);
+  }
+  async function mp8Send(extra) {
+    if (MP8.busy) return;
+    MP8.busy = true;
+    let res;
+    if (MP8.watch !== null) res = await NTRaum.rpc('get');
+    else {
+      const p = Object.assign({}, extra || {});
+      if (MP8.dirty && MP8.st && MP8.st.phase === 'running') { p.vals = mp8Vals(); MP8.dirty = false; }
+      res = await NTRaum.rpc('play', { p });
+    }
+    MP8.busy = false; MP8.last = performance.now();
+    if (res && res.ok) mp8Apply(res);
+  }
+  function mp8Tick(now) {
+    const st = MP8.st, ph = st ? st.phase : '';
+    const every = ph === 'running' ? (MP8.dirty ? 220 : 450) : ph === 'countdown' ? 300 : 900;
+    if (!MP8.busy && now - MP8.last > every) mp8Send();
+    if (ph === 'countdown') mp8Apply(st);
+    if (st) {
+      const s = ph === 'running' ? Math.ceil(NTRaum.left(st.ends_at) || 0) : null;
+      const txt = (s != null ? '⏱ ' + s + ' s · ' : '') + (MP8.watch !== null ? mp8Label(MP8.watch) : 'gemeinsam');
+      if ($('#mpChip').textContent !== txt) $('#mpChip').textContent = txt;
+      $('#mpChip').classList.toggle('warn', s != null && s <= 10);
+      if (ph === 'running' && now - MP8.rec > 1000) { MP8.rec = now; record(); S.changed = true; }
+    }
+  }
+  function mp8Start() {
+    document.body.classList.add('mp8');
+    if (MP8.watch !== null) document.body.classList.add('mp8-watch');
+    $('.head h1').textContent = 'Level 8 · Pinguine in 3D';
+    const a = $('.head a.btn');
+    a.textContent = '‹ Übersicht';
+    if (MP8.watch === null) a.hidden = true;
+    mp8Card('<div class="cdl">Verbinde mit dem Raum …</div>', []);
+    mp8Send();
+  }
+
   /* ── Bild für Bild ── */
   let last = performance.now();
   function tick(now) {
     requestAnimationFrame(tick);
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (MP8) mp8Tick(now);
     if (S.auto) { S.wait -= dt; if (S.wait <= 0) { S.wait = zahl() ? 0.2 : 0.15; step(); } }
     if (!S.rot && !low) { S.idle += dt; if (S.idle > 2.5) S.yaw += dt * 0.12; }
     if (S.changed || !S.g) S.g = gradAll(S.W);
@@ -673,7 +834,7 @@
   cloudInput($('#cloud'));
   cloudInput($('#cloud2'));
   setMode(LEVEL8 ? 'zahl' : 'own');
-  if (LEVEL8) intro();
+  if (LEVEL8) { if (MP8) mp8Start(); else intro(); }
   syncTheme();
   window.addEventListener('resize', () => { S.changed = true; });
   requestAnimationFrame(tick);

@@ -517,6 +517,7 @@ body.info-min #modelBox, body.info-min #pengBox, body.info-min #xorBox, body.inf
 }
 </style>
 <link href="karte.css?v=20261118a" rel="stylesheet">
+<link href="mehr.css?v=20261118m" rel="stylesheet">
 </head>
 <body>
 <div id="app">
@@ -606,6 +607,12 @@ body.info-min #modelBox, body.info-min #pengBox, body.info-min #xorBox, body.inf
       <span class="kick">Expedition 2026 · Polarlicht</span>
       <h1>Nebeltal</h1>
       <p class="sub">Wie lernt eine KI? Sie sucht den tiefsten Punkt einer Landschaft – und sieht nur, wo sie gerade steht.</p>
+      <div id="mpBar" class="mpbar" hidden>
+        <button id="mpGo" class="btn primary" type="button">Gemeinsam spielen</button>
+        <span>Alle Tablets kommen in die Lobby, ihr spielt dieselbe Welt gegeneinander – Level 7 zu zweit, Level 8 im Team.
+          Teilen-Symbol an einer Kachel = Level zum Allein-Spielen freigeben.</span>
+      </div>
+      <p id="noShare" class="noshare" hidden>Deine Lehrkraft hat noch kein Level freigegeben.</p>
       <div id="levels"></div>
       <div class="seedrow">
         <label for="seed">Welt-Nummer</label>
@@ -619,15 +626,25 @@ body.info-min #modelBox, body.info-min #pengBox, body.info-min #xorBox, body.inf
   </div>
 
   <div id="card" class="card" hidden></div>
+  <div id="mp" hidden>
+    <div id="mpNames"></div>
+    <div id="mpBanner" class="glass" hidden></div>
+    <div id="mpSide" class="glass" hidden></div>
+    <div id="mpStage" hidden></div>
+    <div id="mpCount" hidden></div>
+    <div id="mpToast"></div>
+  </div>
   <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
 </div>
 
 <script src="js/welt.js?v=20261118a"></script>
 <script src="js/bilder.js?v=20261118e"></script>
-<script src="js/grafik.js?v=20261117m"></script>
+<script src="js/grafik.js?v=20261118m"></script>
 <script src="js/schnee.js?v=20261117j"></script>
 <script src="js/netz.js?v=20261118b"></script>
-<script src="js/zwei.js?v=20261118c"></script>
-<script src="js/spiel.js?v=20261118e"></script>
+<script src="js/raum.js?v=20261118m"></script>
+<script src="js/zwei.js?v=20261118m"></script>
+<script src="js/spiel.js?v=20261118m"></script>
+<script src="js/mehr.js?v=20261118m"></script>
 </body>
 </html>

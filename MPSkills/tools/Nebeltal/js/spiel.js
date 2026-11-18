@@ -38,12 +38,12 @@
      steps = Sätze neben nummerierten Kreisen, je Schritt EIN Gedanke. */
   const LEVELS = [
     { id: 1, name: 'Im Schneesturm', short: 'Frei suchen – ganz ohne Hilfe',
-      mode: 'walk', arrow: false, time: 75, fog: 9, plain: true, physics: false, snow: true,
+      mode: 'walk', arrow: false, time: 60, fog: 9, plain: true, physics: false, snow: true,
       lead: 'Irgendwo in dieser Eiswüste liegt der <b>tiefste Punkt</b>. Finde ihn!',
       steps: [
         'Du siehst nur, wo du gerade stehst – <b>keine Farben, kein Höhenmesser</b>.',
         'Viele Mulden, aber nur eine ist die tiefste.',
-        '<b>75 Sekunden</b>, dann „Hier bleibe ich!“.'],
+        '<b>60 Sekunden</b>, dann „Hier bleibe ich!“.'],
       outro: 'So geht es einer KI beim Lernen: Sie kennt nur den <b>Fehler an der Stelle, an der sie gerade steht</b>. ' +
              'Frei herumsuchen dauert ewig – sie braucht einen besseren Hinweis.' },
     { id: 2, name: 'Der Bergab-Pfeil', short: 'Ein Pfeil zeigt, wo es bergab geht',
@@ -159,6 +159,7 @@
     return 1000 + (h % 9000);
   }
 
+  const MP = { on: false, o: null, frame: null, res: null };   // Gemeinsam spielen (js/mehr.js)
   const S = {
     state: 'menu', lvl: null, world: null,
     p: { x: 0, z: 0, vx: 0, vz: 0, yaw: 0, tilt: 0, squash: 1, phase: 0 },
@@ -226,17 +227,39 @@
     { t: 'Sicherung', sub: 'Ein ganzes Netz', items: ['sich', 8] }
   ];
 
+  /* Im Raum (js/raum.js): Lehrkraft teilt jede Kachel einzeln (Symbol oben rechts an der Kachel),
+     die Klasse sieht nicht geteilte Kacheln mit Schloss. Ohne Raum ist alles offen. */
+  const R = window.NTRaum || { inRoom: false, isTeacher: false, isStudent: false, shared: () => true, on() {} };
+  const SHARE_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>';
+  const LOCK_SVG = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
+  function toggleShare(key) {
+    const cur = (R.levels || []).slice(), i = cur.findIndex(x => String(x) === String(key));
+    if (i >= 0) cur.splice(i, 1); else cur.push(key);
+    R.setLevels(cur);
+  }
+  R.on(() => { if (S.state === 'menu') renderMenu(); });
+
   function renderMenu() {
     $('#seed').value = seed;
+    document.body.classList.toggle('in-room', R.inRoom);
+    document.body.classList.toggle('is-teacher', R.isTeacher);
+    document.body.classList.toggle('is-student', R.isStudent);
     const tileHtml = key => {
       const L = typeof key === 'number' ? LEVELS.find(l => l.id === key) : EXTRA[key];
       const b = typeof key === 'number' ? parseInt(LS.get(bestKey(key)), 10) : NaN;
-      const attr = L.soon ? ' disabled aria-disabled="true"' : typeof key === 'number' ? ' data-lv="' + key + '"' : ' data-href="' + L.href + '"';
-      return '<button class="tile' + (L.soon ? ' soon' : '') + (typeof key === 'number' ? '' : ' extra') + '" type="button"' + attr + '>' +
+      const lock = !L.soon && R.isStudent && !R.shared(key);
+      const shared = R.inRoom && !L.soon && (R.levels || []).some(x => String(x) === String(key));
+      const attr = L.soon || lock ? ' disabled aria-disabled="true"' : typeof key === 'number' ? ' data-lv="' + key + '"' : ' data-href="' + L.href + '"';
+      return '<div class="tcell' + (shared ? ' is-shared' : '') + '">' +
+        '<button class="tile' + (L.soon ? ' soon' : '') + (lock ? ' locked' : '') + (typeof key === 'number' ? '' : ' extra') + '" type="button"' + attr + '>' +
         '<span class="tile-img">' + (window.NTBild ? NTBild.tile(key) : '') +
           '<span class="tile-n">' + (typeof key === 'number' ? key : L.tag) + '</span>' +
-          (b >= 0 ? stars(b) : '') + '</span>' +
-        '<span class="tile-t"><b>' + L.name + '</b><small>' + L.short + '</small></span></button>';
+          (b >= 0 ? stars(b) : '') + (lock ? '<span class="tile-lock">' + LOCK_SVG + '</span>' : '') + '</span>' +
+        '<span class="tile-t"><b>' + L.name + '</b><small>' + (lock ? 'Noch nicht freigegeben' : L.short) + '</small></span></button>' +
+        (R.isTeacher && !L.soon ? '<button class="tshare" type="button" data-share="' + key + '" aria-pressed="' + shared + '" title="' +
+          (shared ? 'Für die Klasse freigegeben – antippen zum Entziehen' : 'Mit der Klasse teilen') + '">' + SHARE_SVG +
+          '<span>' + (shared ? 'geteilt' : 'teilen') + '</span></button>' : '') +
+        '</div>';
     };
     $('#levels').innerHTML = PHASES.map((P, i) =>
       '<section class="phase">' +
@@ -244,6 +267,9 @@
         '<div class="phase-row">' + P.items.map(tileHtml).join('') + '</div>' +
       '</section>').join('');
     document.querySelectorAll('#levels .tile[data-lv]').forEach(b => b.addEventListener('click', () => openLevel(+b.dataset.lv)));
+    document.querySelectorAll('#levels .tshare').forEach(b => b.addEventListener('click', () => toggleShare(b.dataset.share === 'erarb' ? 'erarb' : +b.dataset.share)));
+    const none = R.isStudent && R.got && !LEVELS.some(l => R.shared(l.id)) && !R.shared('erarb');
+    $('#noShare').hidden = !none;
     document.querySelectorAll('#levels .tile[data-href]').forEach(b => b.addEventListener('click', () => { location.href = b.dataset.href; }));
   }
 
@@ -254,6 +280,11 @@
 
   function toMenu() {
     if (window.NTZwei) NTZwei.close();
+    if (MP.on) {
+      MP.on = false; MP.o = null; MP.frame = null;
+      document.body.classList.remove('mp');
+      S.world = NTWelt.hills(seed, 1); G.setWorld(S.world, theme); S.lvl = null;
+    }
     S.state = 'menu'; S.auto = false;
     applyLook();
     renderMenu();
@@ -282,19 +313,24 @@
     S.lvl = L;
     if (L.two) { openTwo(L); return; }
     const ws = lvSeed(id);
-    S.world = L.world === 'model' ? NTWelt.model(ws) : L.world === 'penguin' ? NTWelt.penguins(ws)
-      : L.world === 'xor1' ? NTWelt.xor(ws).one() : NTWelt.hills(ws, id);
+    S.world = worldFor(L, ws);
     G.setWorld(S.world, theme);
     resetPlayer();
     S.state = 'intro';
     applyLook();
     hudFor(L);
-    card(introHtml(L, ws, L.mode === 'walk'
-        ? 'Links ziehen = laufen · rechts ziehen = umschauen<span class="kbd"> · WASD, Q/E</span>'
-        : L.walk
-        ? 'Links ziehen = laufen · rechts ziehen = umschauen<span class="kbd"> · WASD, Leertaste = springen</span>'
-        : 'Ziehen = umschauen<span class="kbd"> · Leertaste = springen</span>'),
-      [['Los geht’s', startLevel, 'primary'], ['Übersicht', toMenu]]);
+    card(introHtml(L, ws, ctrlText(L)), [['Los geht’s', startLevel, 'primary'], ['Übersicht', toMenu]]);
+  }
+  function worldFor(L, ws) {
+    return L.world === 'model' ? NTWelt.model(ws) : L.world === 'penguin' ? NTWelt.penguins(ws)
+      : L.world === 'xor1' ? NTWelt.xor(ws).one() : NTWelt.hills(ws, L.id);
+  }
+  function ctrlText(L) {
+    return L.mode === 'walk'
+      ? 'Links ziehen = laufen · rechts ziehen = umschauen<span class="kbd"> · WASD, Q/E</span>'
+      : L.walk
+      ? 'Links ziehen = laufen · rechts ziehen = umschauen<span class="kbd"> · WASD, Leertaste = springen</span>'
+      : 'Ziehen = umschauen<span class="kbd"> · Leertaste = springen</span>';
   }
 
   function resetPlayer() {
@@ -490,6 +526,7 @@
   /* ── Ende: Nebel lichtet sich ── */
   function finish() {
     if (S.state !== 'play') return;
+    if (MP.on) { mpDone(); return; }
     S.state = 'reveal'; S.auto = false; refreshAuto();
     joy.active = false; $('#joy').hidden = true;
     S.p.vx = S.p.vz = 0;
@@ -500,6 +537,7 @@
 
   function showResult() {
     S.state = 'result';
+    if (MP.on) { document.body.dataset.state = 'result'; if (MP.o.onResult) MP.o.onResult(); return; }
     const w = S.world, L = S.lvl;
     const mine = w.show(H()), best = w.show(w.min.h);
     let n, line;
@@ -699,6 +737,12 @@
     last = now;
     if (!S.world) { G.frame({ cam: { eye: [0, 10, -10], at: [0, 0, 0] }, player: null, fogR: 1, objects: [] }); return; }
     if (S.state === 'zwei') return;                 // Level 7 zeichnet selbst (js/zwei.js)
+    if (S.state === 'mp') {                         // Lobby von „Gemeinsam spielen“ (js/mehr.js)
+      const gs = snow.frame(dt, now / 1000, snowy);
+      $('#gust').style.opacity = (gs * 0.45).toFixed(3);
+      if (MP.frame) MP.frame(dt, now);
+      return;
+    }
     step(dt);
     const g = snow.frame(dt, now / 1000, snowy);
     $('#gust').style.opacity = (g * 0.45).toFixed(3);
@@ -835,7 +879,7 @@
     const dpr = low ? 1 : Math.min(window.devicePixelRatio || 1, 1.6);
     // Level 1: eine Farbe, keine Höhenlinien – erst beim Auflösen kommen sie
     const plain = L && L.plain ? (S.reveal ? 1 - ease(clamp((S.reveal.t - 0.6) / 1.6, 0, 1)) : 1) : 0;
-    const sc = { cam, fogR, dpr, objects: objs, playerColor: acc, plain,
+    const sc = { cam, fogR, dpr, objects: objs, playerColor: MP.on && MP.o.color ? MP.o.color : acc, plain,
       player: { x: p.x, y, z: p.z, ground, yaw: p.yaw, tilt: p.tilt, squash: p.squash, hidden: false,
         phase: p.phase, walk: (p.air || S.fly || S.jump) ? 0 : clamp(Math.hypot(p.vx, p.vz) / 8.5, 0, 1) } };
     G.frame(sc);
@@ -1236,19 +1280,126 @@
   }
 
   /* ── Level 7: Übergabe an js/zwei.js ── */
-  function openTwo(L) {
+  function openTwo(L, ws, mp) {
     S.lvl = L; S.state = 'zwei'; S.auto = false;   // spiel.js zeichnet nicht mehr, bis toMenu
     applyLook();
     hudFor(null);
-    NTZwei.open(L, lvSeed(L.id), {
+    NTZwei.open(L, ws || lvSeed(L.id), {
       theme: () => theme, low: () => low, fmt, stars, LS, bestKey,
       card, toMenu, toggleInfo, introHtml, verdict, eggIcon, NEST_TXT,
       next: () => LEVELS.find(l => l.id === L.id + 1) || null, open: openLevel,
       again: () => openLevel(L.id),
       newWorld: () => { setSeed(1000 + Math.floor(Math.random() * 9000)); openLevel(L.id); },
       playing: () => { S.state = 'zwei'; }
-    });
+    }, mp);
   }
+
+  /* ── Gemeinsam spielen (js/mehr.js, Migration 0296) ──
+     mehr.js steuert die Runde, spiel.js spielt das Level wie allein – mit vorgegebener Welt,
+     eigener Schalfarbe, ohne Übersicht/Nochmal. Ablauf:
+       mpOpen(id, ws, o)   Erklärkarte mit o.intro-Knöpfen (z. B. „Bereit“)
+       mpStart(left)       los (left = Restzeit vom Server bei Lauf-Leveln)
+       … Spieler fertig    → o.onDone(res) und warten (state 'wait')
+       mpReveal()          Runde vorbei: wer noch spielt, ist jetzt fertig; Nebel lichtet sich
+       … danach            → o.onResult() statt der Sternekarte
+     o = { color: [r,g,b], intro: [[label, fn, kind]…], onDone(res), onResult(), resume: {x, z, j} } */
+  function mpRes() {
+    const w = S.world, mine = w.show(H()), best = w.show(w.min.h);
+    const r = { x: Math.round(S.p.x * 100) / 100, z: Math.round(S.p.z * 100) / 100 };
+    if (w.kind === 'hills') {
+      const d = Math.max(0, mine - best);
+      r.s = Math.round(d * 1000) / 1000;
+      r.t = d < 0.05 ? 'am tiefsten Punkt' : fmt(d, 1) + ' m über dem tiefsten Punkt';
+    } else if (w.kind === 'model') {
+      r.s = Math.round(mine * 10000) / 10000; r.t = '± ' + fmt(mine, 2) + ' kg daneben';
+    } else if (w.kind === 'penguin') {
+      const nw = w.wrong(w.toW(S.p.x), w.toW(S.p.z));
+      r.s = Math.round(mine * 10000) / 10000; r.w = nw; r.t = nw + ' von ' + w.pts.length + ' falsch · Fehler ' + fmt(mine, 2);
+    } else if (w.kind === 'xor1') {
+      const rt = w.right(w.cases(S.p.x, S.p.z));
+      r.s = Math.round(mine * 10000) / 10000; r.n = rt; r.b = Math.round(w.bias() * 10) / 10;
+      r.t = rt + ' von 4 Nestern · Fehler ' + fmt(mine, 2);
+    }
+    return r;
+  }
+  function mpDone() {
+    S.auto = false; refreshAuto();
+    joy.active = false; $('#joy').hidden = true;
+    S.p.vx = S.p.vz = 0;
+    S.state = 'wait';
+    document.body.dataset.state = 'wait';
+    const r = mpRes();
+    MP.res = r;
+    if (MP.o.onDone) MP.o.onDone(r);
+  }
+  const NTSpiel = window.NTSpiel = {
+    LEVELS, G, introHtml, ctrlText, worldFor, fmt, card, toMenu, verdict, eggIcon, NEST_TXT, stars,
+    state: () => S.state,
+    theme: () => theme, low: () => low,
+    // Lobby: spiel.js zeichnet nicht, ruft aber frame(dt) jedes Bild (Schnee läuft weiter)
+    lobby(frame) {
+      if (window.NTZwei) NTZwei.close();
+      MP.on = true; MP.o = {}; MP.frame = frame;
+      S.state = 'mp'; S.lvl = null; S.auto = false;
+      document.body.classList.add('mp');
+      $('#menu').hidden = true; $('#card').hidden = true; $('#labels').innerHTML = '';
+      hudFor(null);
+      night = true; snowy = !low;
+      document.documentElement.setAttribute('data-night', '');
+      document.documentElement.toggleAttribute('data-snow', snowy);
+      G.setPalette(NIGHT, 'dark');
+      document.body.dataset.state = 'mp';
+    },
+    mpOpen(id, ws, o) {
+      if (window.NTZwei) NTZwei.close();
+      const L = LEVELS.find(l => l.id === id);
+      MP.on = true; MP.o = o || {}; MP.frame = null; MP.res = null;
+      document.body.classList.add('mp');
+      S.lvl = L;
+      S.world = worldFor(L, ws);
+      G.setWorld(S.world, theme);
+      resetPlayer();
+      const rs = MP.o.resume;
+      if (rs && isFinite(rs.x) && isFinite(rs.z)) {
+        S.p.x = rs.x; S.p.z = rs.z; S.dots = []; addDot(S.p.x, S.p.z, true);
+        if (rs.j >= 0) S.jumpsLeft = rs.j;
+      }
+      S.state = 'intro';
+      applyLook();
+      hudFor(L);
+      $('#labels').innerHTML = '';
+      if (MP.o.intro) card(introHtml(L, ws, ctrlText(L)), MP.o.intro);
+      else { $('#card').hidden = true; document.body.dataset.state = 'intro'; }
+    },
+    mpStart(left) {
+      if (!MP.on || S.state !== 'intro') return;
+      startLevel();
+      if (S.lvl.mode === 'walk' && left != null) S.left = Math.max(1, left);
+    },
+    mpInfo() {
+      if (!MP.on || !S.lvl) return null;
+      return { j: S.jumpsLeft, x: Math.round(S.p.x * 10) / 10, z: Math.round(S.p.z * 10) / 10,
+               h: Math.round(S.world.show(H()) * 100) / 100 };
+    },
+    mpReveal() {
+      if (!MP.on || !S.lvl) return;
+      if (S.state === 'play' || S.state === 'intro') mpDone();
+      if (S.state !== 'wait') return;
+      S.state = 'reveal';
+      S.reveal = { t: 0, fog0: S.fogR, cam0: S.cam ? { eye: S.cam.eye.slice(), at: S.cam.at.slice() } : null };
+      $('#card').hidden = true;
+      document.body.dataset.state = 'reveal';
+    },
+    mpResult: () => MP.res,
+    mpStop() { if (MP.on && S.state === 'play') mpDone(); },
+    // Level 7 gemeinsam: mp = Optionen für js/zwei.js
+    mpTwo(ws, mp) {
+      MP.on = true; MP.o = {}; MP.frame = null;
+      document.body.classList.add('mp');
+      openTwo(LEVELS.find(l => l.id === 7), ws, mp);
+    },
+    leave() { toMenu(); }
+  };
 
   window.addEventListener('resize', () => { if (S.lvl) updateHud(); });
 
@@ -1276,5 +1427,8 @@
   requestAnimationFrame(tick);
   // Einsprung von außen (erarbeitung.html „Weiter: Level 4“): index.html?lv=4
   const lvQ = parseInt(new URLSearchParams(location.search).get('lv'), 10);
-  if (LEVELS.some(l => l.id === lvQ && !l.href)) openLevel(lvQ);
+  if (LEVELS.some(l => l.id === lvQ && !l.href)) {
+    // im Raum erst die Freigaben abwarten (kommen vom Rahmen)
+    (R.ready ? R.ready(2500) : Promise.resolve()).then(() => { if (S.state === 'menu' && R.shared(lvQ)) openLevel(lvQ); });
+  }
 })();

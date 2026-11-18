@@ -33,7 +33,10 @@ window.NTZwei = (function () {
   let api = null, L = null, X = null, root = null, G = [null, null];
   let figs = [], built = false, raf = 0, running = false, last = 0, acc = 0;
   let st = null;                         // Spielstand
+  let mp = null;                         // gemeinsam (js/mehr.js): { ctl:[bool,bool], names, intro, left(), remote(k), onMove(vals), onResult() }
   const keys = new Set();
+  const ctl = k => !mp || !!mp.ctl[k];
+  const mine = () => [0, 1].filter(ctl);
 
   /* ── Oberfläche einmal bauen ── */
   function build() {
@@ -86,7 +89,7 @@ window.NTZwei = (function () {
     window.addEventListener('keydown', e => {
       if (!st || st.state !== 'play' || (e.target && e.target.tagName === 'INPUT')) return;
       keys.add(e.key.toLowerCase());
-      if (e.key === ' ') { e.preventDefault(); if (!st.auto) jump(); }
+      if (e.key === ' ') { e.preventDefault(); if (!st.auto && !mp) jump(); }
     });
     window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
     window.addEventListener('blur', () => keys.clear());
@@ -129,8 +132,8 @@ window.NTZwei = (function () {
   }
 
   /* ── öffnen / schließen ── */
-  function open(level, seed, a) {
-    api = a; L = level;
+  function open(level, seed, a, m) {
+    api = a; L = level; mp = m || null;
     if (!build()) { a.toMenu(); return; }
     X = NTWelt.xor(seed).two();
     X.W = NTWelt.W;
@@ -146,12 +149,27 @@ window.NTZwei = (function () {
     $('#zLr').value = Math.round(Math.log(st.lr / L.lr.min) / Math.log(L.lr.max / L.lr.min) * 1000);
     $('#zLrV').textContent = api.fmt(st.lr, L.lr.d);
     $('#zName').textContent = 'Level ' + L.id + ' · ' + L.name;
+    root.classList.toggle('is-mp', !!mp);
+    root.querySelector('.ztag.a').textContent = 'Welt A · Neuron A' + (mp ? ' · ' + mp.names[0] : '');
+    root.querySelector('.ztag.b').textContent = 'Welt B · Neuron B' + (mp ? ' · ' + mp.names[1] : '');
+    root.querySelector('.ztag.a').classList.toggle('mine', !!mp && ctl(0));
+    root.querySelector('.ztag.b').classList.toggle('mine', !!mp && ctl(1));
+    $('#zMenu').hidden = !!mp;
     root.hidden = false;
     document.body.dataset.state = 'intro';
     document.body.dataset.lvl = L.id;
     refreshAuto();
     panel();
     if (!running) { running = true; last = performance.now(); raf = requestAnimationFrame(tick); }
+    if (mp) {
+      const one = mine().length === 1;
+      api.card(api.introHtml(L, seed, one
+        ? 'Du steuerst <b>Welt ' + (ctl(0) ? 'A' : 'B') + '</b>, ' + mp.names[ctl(0) ? 1 : 0] + ' die andere. Nur laufen, kein Springen.' +
+          '<span class="kbd"> · WASD oder Pfeile</span>'
+        : 'Du steuerst <b>beide Welten</b>: eine Hälfte ziehen = Figur A, die andere = Figur B. Nur laufen.<span class="kbd"> · WASD = A, Pfeile = B</span>'),
+        mp.intro || []);
+      return;
+    }
     api.card(api.introHtml(L, seed,
       'Eine Hälfte ziehen = Figur A, die andere = Figur B<span class="kbd"> · WASD = A, Pfeile = B, Leertaste = Lernschritt</span>'),
       [['Los geht’s', start, 'primary'], ['Übersicht', api.toMenu]]);
@@ -168,7 +186,7 @@ window.NTZwei = (function () {
     if (!root) return;
     running = false; cancelAnimationFrame(raf);
     root.hidden = true;
-    st = null;
+    st = null; mp = null;
     keys.clear();
     for (const j of root.querySelectorAll('.zjoy')) j.hidden = true;
   }
@@ -176,7 +194,9 @@ window.NTZwei = (function () {
   /* ── Eingabe ── */
   function down(e) {
     if (!st || st.state !== 'play' || st.auto || st.jump) return;
-    const k = +e.currentTarget.dataset.k, j = st.joy[k];
+    let k = +e.currentTarget.dataset.k;
+    if (!ctl(k)) { if (mine().length) k = mine()[0]; else return; }
+    const j = st.joy[k];
     if (j.id !== null) return;
     Object.assign(j, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0 });
     const r = root.getBoundingClientRect(), el = root.querySelector('.zjoy[data-k="' + k + '"]');
@@ -212,8 +232,10 @@ window.NTZwei = (function () {
     const f = figs[k], j = st.joy[k];
     let ix = j.x, iy = j.y;
     const K = k === 0 ? ['w', 's', 'a', 'd'] : ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'];
-    if (keys.has(K[0])) iy += 1; if (keys.has(K[1])) iy -= 1;
-    if (keys.has(K[2])) ix -= 1; if (keys.has(K[3])) ix += 1;
+    const K2 = mp && mine().length === 1 ? (k === 0 ? ['arrowup', 'arrowdown', 'arrowleft', 'arrowright'] : ['w', 's', 'a', 'd']) : [];
+    const has = i => keys.has(K[i]) || (K2.length && keys.has(K2[i]));
+    if (has(0)) iy += 1; if (has(1)) iy -= 1;
+    if (has(2)) ix -= 1; if (has(3)) ix += 1;
     const il = Math.hypot(ix, iy);
     if (il > 1) { ix /= il; iy /= il; }
     // feste Kamera: rechts = +x, oben = −z
@@ -229,6 +251,25 @@ window.NTZwei = (function () {
     f.phase += sp * dt * 1.3;
     f.tilt = lerp(f.tilt, clamp(sp / SPEED, 0, 1.2) * 0.22, q);
     st.trail[k] += moved;
+    if (st.trail[k] > 1.5) { st.trail[k] = 0; addDot(k, false); }
+  }
+  /* Gemeinsam: die Figur der anderen Person läuft zu ihrem gemeldeten Ort (alle ~0,4 s neu) */
+  function follow(k, dt) {
+    const f = figs[k], t = mp.remote(k);
+    if (!t) { f.vx = f.vz = 0; return; }
+    const q = posOf(t[0], t[1]), dx = q.x - f.x, dz = q.z - f.z, d = Math.hypot(dx, dz);
+    if (d > 14) { f.x = q.x; f.z = q.z; f.vx = f.vz = 0; addDot(k, true); return; }
+    const sp = Math.min(SPEED * 1.4, d * 5);
+    const tvx = d > 0.05 ? dx / d * sp : 0, tvz = d > 0.05 ? dz / d * sp : 0;
+    const a = 1 - Math.exp(-8 * dt);
+    f.vx = lerp(f.vx, tvx, a); f.vz = lerp(f.vz, tvz, a);
+    const step = Math.min(d, Math.hypot(f.vx, f.vz) * dt);
+    if (d > 1e-4) { f.x += dx / d * step; f.z += dz / d * step; }
+    if (Math.hypot(tvx, tvz) > 0.3) f.yaw += angDiff(Math.atan2(tvx, tvz), f.yaw) * (1 - Math.exp(-10 * dt));
+    const v = Math.hypot(f.vx, f.vz);
+    f.phase += v * dt * 1.3;
+    f.tilt = lerp(f.tilt, clamp(v / SPEED, 0, 1.2) * 0.22, a);
+    st.trail[k] += step;
     if (st.trail[k] > 1.5) { st.trail[k] = 0; addDot(k, false); }
   }
   const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
@@ -334,8 +375,14 @@ window.NTZwei = (function () {
               { a: w[2], b: w[3], c: 3, col: '#a98bff', team: 'b', name: 'B', end: 0 }] });
     $('#zErr').textContent = api.fmt(X.loss(...w), 2);
     $('#zRight').textContent = X.right(cs) + ' von 4';
-    $('#zCount').textContent = 'Schritte: ' + st.jumpsLeft;
-    $('#zCount').classList.toggle('warn', st.jumpsLeft <= 3);
+    if (mp) {
+      const s = Math.ceil(mp.left() || 0);
+      $('#zCount').textContent = '⏱ ' + s + ' s';
+      $('#zCount').classList.toggle('warn', s <= 10);
+    } else {
+      $('#zCount').textContent = 'Schritte: ' + st.jumpsLeft;
+      $('#zCount').classList.toggle('warn', st.jumpsLeft <= 3);
+    }
   }
 
   let toastT = 0;
@@ -365,6 +412,7 @@ window.NTZwei = (function () {
   }
   function result() {
     st.state = 'result';
+    if (mp) { document.body.dataset.state = 'result'; if (mp.onResult) mp.onResult(); return; }
     const w = all(), cs = X.fwd(...w), r = X.right(cs), Lv = X.loss(...w);
     const n = r === 4 && Lv < 0.15 ? 3 : r === 4 ? 2 : r === 3 ? 1 : 0;
     const old = parseInt(api.LS.get(api.bestKey(L.id)), 10);
@@ -413,7 +461,11 @@ window.NTZwei = (function () {
         J.air = lerp(J.y0, J.y1, t) + 4 * J.peak * t * (1 - t);
         if (t >= 1) landed();
       } else {
-        if (!st.auto) { walk(0, dt); walk(1, dt); }
+        if (mp) {
+          for (const k of [0, 1]) { if (ctl(k)) walk(k, dt); else follow(k, dt); }
+          if (mp.onMove) { const v = {}; for (const k of mine()) v[k] = wOf(figs[k]); mp.onMove(v); }
+          if (Math.floor(now / 250) !== st.sec) { st.sec = Math.floor(now / 250); panel(); }
+        } else if (!st.auto) { walk(0, dt); walk(1, dt); }
         else {
           st.autoWait -= dt;
           if (st.autoWait <= 0) { st.autoWait = 0.12; if (st.jumpsLeft > 0) jump(); else { st.auto = false; refreshAuto(); } }
@@ -472,5 +524,16 @@ window.NTZwei = (function () {
         phase: f.phase, walk: st.jump ? 0 : clamp(Math.hypot(f.vx, f.vz) / SPEED, 0, 1) } });
   }
 
-  return { open, close };
+  return {
+    open, close,
+    // gemeinsam: los / Runde vorbei (Nebel lichtet sich, dann mp.onResult)
+    start() { if (st && st.state === 'intro') start(); },
+    reveal() { if (st && (st.state === 'play' || st.state === 'intro')) finish(); },
+    vals() { if (!st) return null; const v = {}; for (const k of [0, 1]) v[k] = wOf(figs[k]); return v; },
+    setVals(v) {     // eigener Stand vom Server (nach Neuladen)
+      if (!st || !v) return;
+      for (const k of mine()) if (Array.isArray(v[k])) { const q = posOf(v[k][0], v[k][1]); figs[k].x = q.x; figs[k].z = q.z; }
+      rebuild(0, true); rebuild(1, true);
+    }
+  };
 })();
