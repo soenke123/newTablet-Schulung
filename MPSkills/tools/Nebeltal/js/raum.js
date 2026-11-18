@@ -128,8 +128,8 @@ window.NTRaum = (function () {
     }
     return W;
   }
-  function l8score(seed, vals) {
-    const W = l8W(seed, vals), p = P();
+  function l8score(seed, vals, W0) {             // W0: fertige Werte (labor.js „Weiter trainieren“ nach der Runde)
+    const W = W0 || l8W(seed, vals), p = P();
     let s = 0, wrong = 0;
     const hit = [0, 0, 0];
     for (const q of p.pts) {

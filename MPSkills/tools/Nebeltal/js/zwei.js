@@ -33,6 +33,8 @@ window.NTZwei = (function () {
   let api = null, L = null, X = null, root = null, G = [null, null];
   let figs = [], built = false, raf = 0, running = false, last = 0, acc = 0;
   let st = null;                         // Spielstand
+  let orb = [null, null];                // Karte am Ende frei drehen (js/orbit.js), je Welt eine
+  const live = () => st && (st.state === 'play' || st.post);
   let mp = null;                         // gemeinsam (js/mehr.js): { ctl:[bool,bool], names, intro, left(), remote(k), onMove(vals), onResult() }
   const keys = new Set();
   const ctl = k => !mp || !!mp.ctl[k];
@@ -63,17 +65,21 @@ window.NTZwei = (function () {
     G[0] = NTGrafik.create($('#zA'));
     G[1] = NTGrafik.create($('#zB'));
     if (!G[0] || !G[1]) return false;
+    orb = [NTOrbit.create($('#zA')), NTOrbit.create($('#zB'))];
     // Polarnacht ohne Schnee wie Level 4–6 (Palette NET aus spiel.js)
     if (window.NT_NET) { G[0].setPalette(NT_NET, 'dark'); G[1].setPalette(NT_NET, 'dark'); }
 
     $('#zMenu').addEventListener('click', () => api && api.toMenu());
     $('#zInfo').addEventListener('click', () => api && api.toggleInfo());
-    $('#zJump').addEventListener('click', () => { if (st && st.state === 'play' && !st.auto) jump(); });
+    $('#zJump').addEventListener('click', () => { if (live() && !st.auto) jump(); });
     $('#zAuto').addEventListener('click', () => {
-      if (!st || st.state !== 'play') return;
+      if (!live()) return;
       st.auto = !st.auto; st.autoWait = 0; refreshAuto();
     });
-    $('#zDone').addEventListener('click', () => { if (st && st.state === 'play' && !st.jump) finish(); });
+    $('#zDone').addEventListener('click', () => {
+      if (st && st.post) { if (!st.jump) postStop(); return; }
+      if (st && st.state === 'play' && !st.jump) finish();
+    });
     $('#zLr').addEventListener('input', e => {
       const R = L.lr;
       st.lr = +(R.min * Math.pow(R.max / R.min, e.target.value / 1000)).toFixed(R.d);
@@ -87,8 +93,8 @@ window.NTZwei = (function () {
       cv.addEventListener('pointercancel', up);
     }
     window.addEventListener('keydown', e => {
-      if (!st || st.state !== 'play' || (e.target && e.target.tagName === 'INPUT')) return;
-      keys.add(e.key.toLowerCase());
+      if (!live() || (e.target && e.target.tagName === 'INPUT')) return;
+      if (st.state === 'play') keys.add(e.key.toLowerCase());
       if (e.key === ' ') { e.preventDefault(); if (!st.auto && !mp) jump(); }
     });
     window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -142,6 +148,7 @@ window.NTZwei = (function () {
       state: 'intro', seed, lr: L.lr.def, auto: false, autoWait: 0, jump: null,
       jumpsLeft: L.jumps, slices: [null, null], built: [0, 0], dots: [[], []], trail: [0, 0],
       start: figs.map(f => ({ x: f.x, z: f.z })), curve: [lossNow()], outs: 0, reveal: null, theme: api.theme(),
+      post: false, postN: 0, cams: [null, null],
       joy: [{ id: null, ox: 0, oy: 0, x: 0, y: 0 }, { id: null, ox: 0, oy: 0, x: 0, y: 0 }]
     };
     for (const f of figs) addDot(figs.indexOf(f), true);
@@ -150,6 +157,9 @@ window.NTZwei = (function () {
     $('#zLrV').textContent = api.fmt(st.lr, L.lr.d);
     $('#zName').textContent = 'Level ' + L.id + ' · ' + L.name;
     root.classList.toggle('is-mp', !!mp);
+    orb[0].on = orb[1].on = false;
+    document.body.classList.remove('post');
+    $('#zDone').textContent = 'Fertig';
     root.querySelector('.ztag.a').textContent = 'Welt A · Neuron A' + (mp ? ' · ' + mp.names[0] : '');
     root.querySelector('.ztag.b').textContent = 'Welt B · Neuron B' + (mp ? ' · ' + mp.names[1] : '');
     root.querySelector('.ztag.a').classList.toggle('mine', !!mp && ctl(0));
@@ -186,6 +196,8 @@ window.NTZwei = (function () {
     if (!root) return;
     running = false; cancelAnimationFrame(raf);
     root.hidden = true;
+    if (orb[0]) orb[0].on = orb[1].on = false;
+    document.body.classList.remove('post');
     st = null; mp = null;
     keys.clear();
     for (const j of root.querySelectorAll('.zjoy')) j.hidden = true;
@@ -283,10 +295,10 @@ window.NTZwei = (function () {
 
   /* ── ein Lernschritt: beide Figuren springen gleichzeitig ── */
   function jump() {
-    if (!st || st.state !== 'play' || st.jump || st.jumpsLeft <= 0) return;
+    if (!live() || st.jump || (!st.post && st.jumpsLeft <= 0)) return;
     const w = all(), g = X.grad(...w);
     const n = w.map((v, i) => v - st.lr * g[i]);
-    st.jumpsLeft--;
+    if (st.post) st.postN++; else st.jumpsLeft--;
     if (n.some(v => Math.abs(v) > X.R)) {
       st.outs++;
       toast('Zu weit! <b>Lernrate</b> zu groß.');
@@ -375,13 +387,13 @@ window.NTZwei = (function () {
               { a: w[2], b: w[3], c: 3, col: '#a98bff', team: 'b', name: 'B', end: 0 }] });
     $('#zErr').textContent = api.fmt(X.loss(...w), 2);
     $('#zRight').textContent = X.right(cs) + ' von 4';
-    if (mp) {
+    if (mp && !st.postN) {
       const s = Math.ceil(mp.left() || 0);
       $('#zCount').textContent = '⏱ ' + s + ' s';
       $('#zCount').classList.toggle('warn', s <= 10);
     } else {
-      $('#zCount').textContent = 'Schritte: ' + st.jumpsLeft;
-      $('#zCount').classList.toggle('warn', st.jumpsLeft <= 3);
+      $('#zCount').textContent = st.post || st.postN ? 'weiter trainiert: +' + st.postN + ' Schritte' : 'Schritte: ' + st.jumpsLeft;
+      $('#zCount').classList.toggle('warn', !st.postN && st.jumpsLeft <= 3);
     }
   }
 
@@ -410,33 +422,62 @@ window.NTZwei = (function () {
       return best;
     });
   }
+  function rate() {
+    const w = all(), r = X.right(X.fwd(...w)), Lv = X.loss(...w);
+    return { r, Lv, n: r === 4 && Lv < 0.15 ? 3 : r === 4 ? 2 : r === 3 ? 1 : 0,
+             line: 'Das Netz beurteilt <b>' + r + ' von 4</b> Nestern richtig <small>· Fehler ' + api.fmt(Lv, 2) + '</small>' };
+  }
   function result() {
     st.state = 'result';
+    // beide Karten frei drehbar, vom Ende des Auflösens aus
+    for (const k of [0, 1]) if (st.cams[k]) { orb[k].set(st.cams[k]); orb[k].limit = X.W; orb[k].minD = 6; orb[k].maxD = 400; orb[k].on = true;
+      orb[k].floor = (x, z) => (Math.abs(x) < X.W && Math.abs(z) < X.W ? st.slices[k].h(x, z) : -Infinity); }
+    panel();
     if (mp) { document.body.dataset.state = 'result'; if (mp.onResult) mp.onResult(); return; }
-    const w = all(), cs = X.fwd(...w), r = X.right(cs), Lv = X.loss(...w);
-    const n = r === 4 && Lv < 0.15 ? 3 : r === 4 ? 2 : r === 3 ? 1 : 0;
+    const w = all(), q = rate();
     const old = parseInt(api.LS.get(api.bestKey(L.id)), 10);
-    if (!(old >= n)) api.LS.set(api.bestKey(L.id), String(n));
+    if (!(old >= q.n)) api.LS.set(api.bestKey(L.id), String(q.n));
     const notes = [];
-    if (r === 3) {
+    if (q.r === 3) {
       const same = Math.sign(w[0] - w[1]) === Math.sign(w[2] - w[3]);
       notes.push(same
         ? 'Beide Neuronen haben <b>dasselbe gelernt</b> – darum fehlt ein Nest. Ein Neuron muss „nur Mama am Nest“ erkennen, das andere „nur Papa am Nest“.'
         : 'Ein Fall fehlt noch. Mit ein paar Schritten mehr oder einer anderen Lernrate klappt es vielleicht.');
     }
     if (st.outs) notes.push('Mindestens ein Schritt ging ins Leere – da war die <b>Lernrate zu groß</b>.');
-    api.card(
-      '<div class="card-kicker">Level ' + L.id + ' · Welt ' + st.seed + '</div>' +
-      '<div class="res-head">' + api.stars(n) + '<p>Das Netz beurteilt <b>' + r + ' von 4</b> Nestern richtig' +
-      '<br><small>Fehler ' + api.fmt(Lv, 2) + '</small></p></div>' +
-      (notes.length ? '<p class="note">' + notes.join(' ') + '</p>' : '') +
-      '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
-      (() => {
-        const b = [['Nochmal', api.again], ['Neue Welt', api.newWorld], ['Übersicht', api.toMenu]], nx = api.next();
-        if (nx) b.unshift(['Weiter: ' + nx.name, () => api.open(nx.id), 'primary']); else b[0].push('primary');
-        return b;
-      })(), 'result');
+    st.res = { n: q.n, line: q.line, notes };
+    resultBar();
     document.body.dataset.state = 'result';
+  }
+  function resultBar() {
+    const R0 = st.res, now = st.postN ? rate() : null, nx = api.next();
+    const btns = [];
+    if (nx) btns.push(['Weiter: ' + nx.name, () => api.open(nx.id), 'primary']);
+    btns.push(['Weiter trainieren', postStart]);
+    btns.push(['Nochmal', api.again], ['Neue Welt', api.newWorld], ['Übersicht', api.toMenu]);
+    api.endBar({
+      kick: 'Level ' + L.id + ' · Welt ' + st.seed + (now ? ' · weiter trainiert: +' + st.postN + ' Schritte' : ''),
+      stars: api.stars(now ? now.n : R0.n), line: now ? now.line : R0.line,
+      more: (R0.notes.length ? '<p class="note">' + R0.notes.join(' ') + '</p>' : '') +
+        '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
+      btns
+    });
+  }
+  // Weiter trainieren: Lernschritte ohne Grenze, Netz und Nester laufen mit, Karten bleiben frei drehbar
+  function postStart() {
+    if (!st || st.state !== 'result') return;
+    st.post = true; st.auto = false; refreshAuto();
+    document.body.classList.add('post');
+    api.endHide();
+    $('#zDone').textContent = 'Zum Ergebnis';
+    panel();
+  }
+  function postStop() {
+    st.post = false; st.auto = false; refreshAuto();
+    document.body.classList.remove('post');
+    $('#zDone').textContent = 'Fertig';
+    if (mp) { if (mp.onResult) mp.onResult(true); return; }
+    resultBar();
   }
 
   /* ── Bild für Bild ── */
@@ -474,6 +515,20 @@ window.NTZwei = (function () {
         if (Math.hypot(figs[0].vx, figs[0].vz) + Math.hypot(figs[1].vx, figs[1].vz) > 0.2 || zCase() !== zIdx) panel();
       }
     }
+    if (st.post) {                      // weiter trainieren nach dem Ende
+      if (st.jump) {
+        const J = st.jump;
+        J.t += dt;
+        const t = clamp(J.t / J.T, 0, 1);
+        figs.forEach((f, k) => { f.x = lerp(J.from[k].x, J.to[k].x, t); f.z = lerp(J.from[k].z, J.to[k].z, t); });
+        J.air = lerp(J.y0, J.y1, t) + 4 * J.peak * t * (1 - t);
+        if (t >= 1) landed();
+      } else if (st.auto) {
+        st.autoWait -= dt;
+        if (st.autoWait <= 0) { st.autoWait = 0.12; jump(); }
+      }
+    }
+    if (st.state === 'result' && Math.floor(now / 400) !== st.sec) { st.sec = Math.floor(now / 400); panel(); }   // „Nest für Nest“ läuft weiter
     if (st.reveal) {
       st.reveal.t += dt;
       if (st.reveal.t > 2.9 && st.state === 'reveal') result();
@@ -494,14 +549,16 @@ window.NTZwei = (function () {
       const mid = X.lift(0.6);
       const over = { eye: [0, mid + 88, 80], at: [0, mid, 0] };
       cam = { eye: cam.eye.map((v, i) => lerp(v, over.eye[i], t)), at: cam.at.map((v, i) => lerp(v, over.at[i], t)) };
+      if (orb[k].on) cam = orb[k].cam();
     }
+    st.cams[k] = cam;
     const col = COLS[k];
     const objs = [];
     for (const d of st.dots[k]) {
       objs.push({ type: 'dot', x: d.x, y: s.h(d.x, d.z) + 0.08, z: d.z, r: st.reveal ? d.r * (1 + 1.4 * ease(clamp(st.reveal.t / 2.4, 0, 1))) : d.r, flat: 0.18, color: col, glow: st.reveal ? 0.6 : 0.2 });
     }
     // Pfeil: der Anteil des 4D-Gradienten, der in dieser Welt liegt
-    if (st.state === 'play' && !st.jump) {
+    if (live() && !st.jump) {
       const g = X.grad(...all()), gx = g[2 * k], gw2 = g[2 * k + 1];
       const dx = -gx, dz = gw2;                  // −Gradient; z = −w₂
       const gl = Math.hypot(dx, dz);

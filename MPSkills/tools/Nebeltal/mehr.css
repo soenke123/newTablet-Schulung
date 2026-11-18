@@ -141,9 +141,25 @@ body[data-state="wait"] .hud-bottom, body[data-state="wait"] #gauge { opacity:0;
 .mptc-hits { display:flex; flex-wrap:wrap; gap:4px 10px; font-size:12.5px; font-weight:600; }
 .mptc-hits.big { font-size:15px; }
 .mptc-hits img { height:22px; vertical-align:middle; margin-right:3px; filter:drop-shadow(0 0 1.2px rgba(220,235,255,.55)); }
-.mpst-end { display:grid; grid-template-columns:minmax(0, 1.25fr) minmax(280px, 1fr); gap:16px; flex:1; min-height:0; }
+.mpst-end { display:grid; grid-template-columns:minmax(0, 1.7fr) minmax(280px, 1fr); gap:16px; flex:1; min-height:0; }
 .mpst-end.t { grid-template-columns:minmax(280px, 1fr) minmax(0, 1.2fr); }
-.mpst-mapw { position:relative; min-height:320px; }
+.mpst-mapw { position:relative; min-height:320px; border-radius:14px; overflow:hidden; }
+/* 3D-Karte am Rundenende (mehr.js map3) */
+.mpmap3 { position:absolute; inset:0; width:100%; height:100%; display:block; cursor:grab; touch-action:none; }
+.mpmap3:active { cursor:grabbing; }
+.mpmaplab { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.mml { position:absolute; left:0; top:0; white-space:nowrap; padding:3px 9px; border-radius:99px; font-size:12.5px; font-weight:700;
+  background:rgba(7,13,26,.78); color:#fff; border:2px solid var(--pc, rgba(255,255,255,.4)); display:inline-flex; align-items:center; gap:5px; }
+.mml.top { font-size:14px; }
+.mml.sel { font-size:15px; box-shadow:0 0 0 3px rgba(255,255,255,.25); }
+.mml.dim { opacity:.35; }
+.mml .n { width:19px; height:19px; border-radius:50%; display:grid; place-items:center; background:var(--pc, #fff); color:#04121f; font:800 11.5px var(--mono); }
+.mml.gold { background:#ffd166; color:#2a1e00; border-color:#ffd166; }
+.mml.start { font-weight:600; color:rgba(255,255,255,.85); }
+.mpmaphint { position:absolute; left:10px; bottom:8px; font-size:11.5px; color:rgba(230,240,255,.75); background:rgba(7,13,26,.55);
+  padding:3px 8px; border-radius:8px; pointer-events:none; }
+.mprank li[data-id] { cursor:pointer; }
+.mprank li.sel { border-color:var(--accent); box-shadow:0 0 0 2px var(--accent-dim, rgba(92,242,196,.25)); }
 #mpMap { position:absolute; inset:0; width:100%; height:100%; display:block; }
 .mpst-top { display:flex; flex-direction:column; gap:6px; min-height:0; }
 .mpall summary { cursor:pointer; color:var(--ink-soft); font-size:13.5px; margin-top:6px; }
@@ -200,6 +216,9 @@ body.mp-on #card { z-index:7; }
   color:var(--accent-ink); background:var(--accent-dim); white-space:nowrap; }
 .mpchip.warn { border-color:var(--warn); color:var(--warn); }
 body.mp8 #step, body.mp8 #auto, body.mp8 #rnd, body.mp8 #lr, body.mp8 .ctrl .lr { display:none; }
+/* nach der Runde „Weiter trainieren“ (labor.js mp8Free): Lernschritt, Training, Lernrate wieder da */
+body.mp8.mp8-free #step, body.mp8.mp8-free #auto, body.mp8.mp8-free #lr, body.mp8.mp8-free .ctrl .lr { display:revert; }
+body.mp8.mp8-free .cell canvas { cursor:crosshair; }
 .cell .who { position:absolute; right:6px; top:5px; padding:2px 9px; border-radius:99px; background:var(--pc, #fff); color:#04121f;
   font-size:12px; font-weight:800; pointer-events:none; }
 .cell.mine { box-shadow:0 0 0 3px #fff, 0 0 18px rgba(255,255,255,.45); }

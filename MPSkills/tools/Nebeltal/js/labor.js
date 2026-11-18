@@ -154,14 +154,14 @@
       const off = document.createElement('canvas'); off.width = G; off.height = G;
       const c = { k, pr, cv, off, img: off.getContext('2d').createImageData(G, G), dirty: true, drag: null };
       cells.push(c);
-      cv.addEventListener('pointerdown', e => { if (S.auto || (MP8 && !mp8Mine(c))) return; c.drag = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } setFrom(c, e); });
+      cv.addEventListener('pointerdown', e => { if (S.auto || (MP8 && !MP8.free && !mp8Mine(c))) return; c.drag = e.pointerId; try { cv.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } setFrom(c, e); });
       cv.addEventListener('pointermove', e => { if (c.drag === e.pointerId) setFrom(c, e); });
       const up = e => { if (c.drag === e.pointerId) c.drag = null; };
       cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     }
   }
   function setFrom(c, e) {
-    if (MP8 && !mp8Mine(c)) return;
+    if (MP8 && !MP8.free && !mp8Mine(c)) return;
     const r = c.cv.getBoundingClientRect();
     const u = clamp((e.clientX - r.left) / r.width, 0, 1), v = clamp((e.clientY - r.top) / r.height, 0, 1);
     const [i, j] = pairsOf(c.k)[c.pr].idx;
@@ -719,6 +719,7 @@
     // neue Runde / erste Antwort: Startwerte aus der Welt-Nummer, eigene Werte vom Server übernehmen
     if (MP8.run !== st.run || MP8.seed !== st.seed) {
       MP8.run = st.run; MP8.seed = st.seed; MP8.dirty = false; MP8.shown = ''; MP8.ready = !!(st.me && st.me.r);
+      mp8Free(false);
       S.W = NTRaum.l8.W(st.seed, NTRaum.teamVals(MP8.team));
       S.trail = S.W.map(() => []); S.hist = []; record();
       for (const c of cells) {
@@ -728,7 +729,7 @@
         if (p) { who.textContent = mp8Mine(c) ? 'Du' : p.n; who.style.setProperty('--pc', NTRaum.color(p.c)); }
       }
       dirtyAll();
-    } else {
+    } else if (!MP8.free) {
       // Werte der anderen übernehmen (eigene nur, solange man selbst nicht zieht)
       const tv = NTRaum.teamVals(MP8.team);
       let ch = false;
@@ -755,6 +756,8 @@
       if (MP8.shown !== 'end') { MP8.shown = 'end'; mp8Result(); }
     }
   }
+  // Runde vorbei: Leiste unten statt Karte (Sönke 18.11.2026) – das Netz bleibt zu sehen, und mit
+  // „Weiter trainieren“ (Lernschritt/Training wie allein, zählt nicht mehr) sieht man, wie gut es noch wird.
   function mp8Result() {
     const st = MP8.st, teams = {};
     for (const p of st.people) if (p.in && p.t !== null) (teams[p.t] = teams[p.t] || []).push(p);
@@ -763,15 +766,43 @@
     const myT = MP8.watch !== null ? MP8.watch : st.me && st.me.t;
     const i = rank.findIndex(r => r.t === myT), me = rank[i];
     if (me) S.W = me.sc.W;
+    S.trail = S.W.map(() => []);
     dirtyAll();
-    mp8Card('<div class="card-kicker">Level 8 · Runde vorbei</div>' +
-      '<div class="res-head"><div class="place">' + (rank.length > 1 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : 'Geschafft!') + '</div>' +
-      '<p>' + (MP8.watch !== null ? mp8Label(myT) : 'Euer Netz') + ' sortiert <b>' + (me ? me.sc.n - me.sc.wrong : 0) + ' von ' + (me ? me.sc.n : 342) +
-      '</b> Pinguinen richtig<br><small>Fehler ' + fmt(me ? me.sc.loss : 0, 3) + '</small></p></div>' +
-      '<div class="ki"><span class="ki-tag">Und die KI?</span><p>Ihr wart zusammen <b>ein Netz</b>: Jede Welt ist ein Paar Gewichte. ' +
-      'Ein echtes Netz bewegt alle Gewichte gleichzeitig – genau in Pfeilrichtung, Schritt für Schritt. Das heißt <b>Training</b>.</p></div>',
-      MP8.watch !== null ? [['‹ Übersicht', mp8Back, 'primary'], ['Netz ansehen', () => { $('#card').hidden = true; }]]
-        : [['Netz ansehen', () => { $('#card').hidden = true; }]]);
+    MP8.end = { place: rank.length > 1 && i >= 0 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : 'Geschafft!',
+      line: (MP8.watch !== null ? mp8Label(myT) : 'Euer Netz') + ' sortiert <b>' + (me ? me.sc.n - me.sc.wrong : 0) + ' von ' + (me ? me.sc.n : 342) +
+        '</b> Pinguinen richtig <small>· Fehler ' + fmt(me ? me.sc.loss : 0, 3) + '</small>', steps: S.hist.length };
+    $('#card').hidden = true;
+    mp8Bar();
+  }
+  function mp8Bar() {
+    const e = MP8.end; if (!e) return;
+    const more = S.hist.length - e.steps, b = $('#endbar');
+    let now = '';
+    if (MP8.free && more > 0) {
+      const sc = NTRaum.l8.score(MP8.seed, null, S.W);
+      now = '<br><small>weiter trainiert (+' + more + ', zählt nicht mehr):</small> <b>' + (sc.n - sc.wrong) + ' von ' + sc.n + '</b> richtig';
+    }
+    b.innerHTML = '<div class="eb-res"><div class="eb-place">' + e.place + '</div><div class="eb-txt"><div class="eb-kick">Level 8 · Runde vorbei</div>' +
+      '<div class="eb-line">' + e.line + now + '</div></div></div><div class="eb-btns"></div>' +
+      '<div class="eb-more" hidden><div class="ki"><span class="ki-tag">Und die KI?</span><p>Ihr wart zusammen <b>ein Netz</b>: Jede Welt ist ein Paar Gewichte. ' +
+      'Ein echtes Netz bewegt alle Gewichte gleichzeitig – genau in Pfeilrichtung, Schritt für Schritt. Das heißt <b>Training</b>.</p></div></div>';
+    const box = b.querySelector('.eb-btns');
+    const add = (label, fn, kind) => { const x = document.createElement('button'); x.type = 'button'; x.className = 'btn ' + (kind || ''); x.textContent = label; x.addEventListener('click', fn); box.appendChild(x); return x; };
+    const ki = add('Und die KI?', () => { const m = b.querySelector('.eb-more'); m.hidden = !m.hidden; ki.setAttribute('aria-expanded', String(!m.hidden)); }, 'ebki');
+    if (!MP8.free) add('Weiter trainieren', () => { mp8Free(true); mp8Bar(); });
+    if (MP8.watch !== null) add('‹ Übersicht', mp8Back, 'primary');
+    b.hidden = false;
+    document.body.classList.add('has-endbar');
+  }
+  // nach der Runde frei: alle Welten ziehbar, Lernschritt/Training/Lernrate wieder da, nichts geht mehr an den Server
+  function mp8Free(on) {
+    MP8.free = on;
+    document.body.classList.toggle('mp8-free', on);
+    if (!on) {
+      if (S.auto) setAuto(false);
+      MP8.end = null;
+      $('#endbar').hidden = true; document.body.classList.remove('has-endbar');
+    }
   }
   async function mp8Send(extra) {
     if (MP8.busy) return;
@@ -826,7 +857,7 @@
     const ei = zahl() ? exPick() : -1;
     if (ei !== EX.i) { EX.i = ei; S.exNew = true; }
     if (S.changed || S.exNew) { drawNet(); drawEx(); S.exNew = false; }
-    if (S.changed) { table(); drawCurve(); S.changed = false; }
+    if (S.changed) { table(); drawCurve(); S.changed = false; if (MP8 && MP8.free && MP8.end && now - (MP8.barAt || 0) > 400) { MP8.barAt = now; mp8Bar(); } }
   }
 
   setMid(1);

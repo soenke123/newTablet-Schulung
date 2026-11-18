@@ -254,7 +254,6 @@ table.lights .ic { display:inline-block; vertical-align:middle; }
 #zToast.on { opacity:1; transform:translate(-50%, 0); }
 body[data-state="reveal"] #zwei .zbottom, body[data-state="result"] #zwei .zbottom,
 body[data-state="intro"] #zwei .zbottom { opacity:0; pointer-events:none; }
-body[data-state="result"] #zPanel { opacity:.25; }
 @media (orientation: portrait) {
   #zwei .zcv { width:100%; height:50%; }
   #zwei #zA { left:0; top:0; bottom:auto; } #zwei #zB { left:0; right:auto; top:50%; bottom:auto; }
@@ -348,6 +347,9 @@ html[data-night] .pg, html[data-theme="dark"] .pg { filter:drop-shadow(0 0 1.4px
 #aurora, #snow, #gust, #frost { position:absolute; inset:0; pointer-events:none; display:none; }
 #snow { width:100%; height:100%; }
 html[data-snow] #snow, html[data-snow] #gust, html[data-night] #frost { display:block; }
+/* Levelende: Schnee legt sich, damit man die Karte in Ruhe ansehen kann */
+#snow { transition:opacity 1.2s; }
+body[data-state="result"] #snow { opacity:0; }
 #aurora { height:55%; mix-blend-mode:screen; opacity:.5; overflow:hidden;
   -webkit-mask-image:linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%); mask-image:linear-gradient(to bottom, #000 0%, #000 35%, transparent 100%); }
 html[data-night] #aurora, html[data-theme="dark"] body[data-state="menu"] #aurora { display:block; }
@@ -517,7 +519,56 @@ body.info-min #modelBox, body.info-min #pengBox, body.info-min #xorBox, body.inf
 }
 </style>
 <link href="karte.css?v=20261118a" rel="stylesheet">
-<link href="mehr.css?v=20261118m" rel="stylesheet">
+<style>
+/* ── Leiste am Levelende (Sönke 18.11.2026: statt Ergebniskarte – Karte und Daten bleiben sichtbar,
+   Karte frei drehbar über js/orbit.js; Level 4–7 „Weiter trainieren“ = body.post) ── */
+#endbar { position:absolute; left:50%; transform:translateX(-50%); bottom:12px; width:min(1000px, calc(100% - 24px));
+  display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; padding:9px 12px; }
+#endbar[hidden] { display:none; }
+.eb-res { display:flex; align-items:center; gap:10px; flex:1 1 300px; min-width:0; }
+.eb-res .stars i { font-size:24px; }
+.eb-txt { min-width:0; }
+.eb-kick { font-family:var(--mono, monospace); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); }
+.eb-line { font-size:15px; line-height:1.35; color:var(--ink-soft); }
+.eb-line b { color:var(--ink); }
+.eb-line small { color:var(--ink-faint); font-size:12.5px; }
+.eb-place { font-family:var(--head, inherit); font-size:20px; font-weight:700; white-space:nowrap; color:var(--ink); }
+.eb-place b { color:var(--gold); }
+.eb-btns { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+.eb-btns .btn { padding:8px 12px; font-size:14px; white-space:nowrap; }
+.eb-btns .btn.ebki[aria-expanded="true"] { border-color:var(--accent); color:var(--accent-ink); }
+.eb-more { flex-basis:100%; display:grid; gap:8px; max-height:34vh; overflow:auto; border-top:1px solid var(--line); padding-top:8px; }
+.eb-more[hidden] { display:none; }
+.eb-more p { margin:0; font-size:14.5px; line-height:1.45; color:var(--ink-soft); }
+.eb-more p b { color:var(--ink); }
+.eb-more .ki { margin:0; }
+.eb-more ol.mprank { margin:0; }
+.eb-hint { flex-basis:100%; font-size:11.5px; color:var(--ink-faint); text-align:center; margin-top:-4px; }
+@media (min-width: 900px) {
+  body[data-panel]:not(.info-min) #endbar { left:12px; transform:none; width:auto; right:318px; }
+}
+@media (min-width: 1280px) and (min-height: 760px) {
+  body[data-panel]:not(.info-min) #endbar { right:398px; }
+}
+@media (max-width: 600px) {
+  #endbar { bottom:8px; width:calc(100% - 16px); padding:7px 9px; gap:6px 8px; }
+  .eb-res .stars i { font-size:18px; } .eb-line { font-size:13.5px; } .eb-place { font-size:17px; }
+  .eb-btns { justify-content:flex-start; } .eb-btns .btn { padding:7px 10px; font-size:13px; }
+  .eb-hint { display:none; }
+}
+@media (max-height: 500px) and (min-width: 601px) {
+  #endbar { bottom:8px; padding:6px 10px; } .eb-hint { display:none; }
+  body[data-panel]:not(.info-min) #endbar { left:8px; transform:none; width:auto; right:296px; }
+}
+/* Weiter trainieren: Leiste mit Lernrate kommt zurück, Karte bleibt frei drehbar */
+body.post .hud-bottom, body.post #gauge { opacity:1 !important; pointer-events:auto !important; }
+body.post[data-mode="jump"] #gauge { display:none; }
+body.post #zwei .zbottom { opacity:1 !important; pointer-events:none !important; }
+body.post #zwei .zbottom > * { pointer-events:auto; }
+body[data-state="result"] #zPanel { opacity:1; }
+body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:grab; touch-action:none; }
+</style>
+<link href="mehr.css?v=20261118n" rel="stylesheet">
 </head>
 <body>
 <div id="app">
@@ -626,6 +677,7 @@ body.info-min #modelBox, body.info-min #pengBox, body.info-min #xorBox, body.inf
   </div>
 
   <div id="card" class="card" hidden></div>
+  <div id="endbar" class="glass" hidden aria-live="polite"></div>
   <div id="mp" hidden>
     <div id="mpNames"></div>
     <div id="mpBanner" class="glass" hidden></div>
@@ -639,12 +691,13 @@ body.info-min #modelBox, body.info-min #pengBox, body.info-min #xorBox, body.inf
 
 <script src="js/welt.js?v=20261118a"></script>
 <script src="js/bilder.js?v=20261118e"></script>
-<script src="js/grafik.js?v=20261118m"></script>
+<script src="js/grafik.js?v=20261118n"></script>
+<script src="js/orbit.js?v=20261118a"></script>
 <script src="js/schnee.js?v=20261117j"></script>
 <script src="js/netz.js?v=20261118b"></script>
-<script src="js/raum.js?v=20261118m"></script>
-<script src="js/zwei.js?v=20261118m"></script>
-<script src="js/spiel.js?v=20261118m"></script>
-<script src="js/mehr.js?v=20261118m"></script>
+<script src="js/raum.js?v=20261118n"></script>
+<script src="js/zwei.js?v=20261118n"></script>
+<script src="js/spiel.js?v=20261118n"></script>
+<script src="js/mehr.js?v=20261118n"></script>
 </body>
 </html>

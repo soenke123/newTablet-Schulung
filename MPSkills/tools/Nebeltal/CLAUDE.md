@@ -264,6 +264,31 @@ Sterne + „Und die KI?“-Text. Welt-Nummer (Seed 1000–9999) = gleiche Landsc
 Tablets → Klasse kann schon jetzt gegeneinander spielen. Sterne je Level und Welt in
 localStorage `nt.best.<level>.<seed>`, Welt in `nt.seed`.
 
+**Levelende ohne Karte** (Sönke 18.11.2026: „die Endkarte ganz wegnehmen, unten eine Leiste mit den wichtigsten
+Knöpfen und wie gut man war, damit man die Karte und die Daten weiter betrachten kann“): statt `#card.result`
+die Leiste `#endbar` (`endBar(o)`/`endHide()` in spiel.js, auch über die api für zwei.js und als `NTSpiel.endBar`
+für mehr.js; labor.js baut im Level 8 gemeinsam dieselbe Leiste selbst) = Sterne/Platz + EIN Satz + Knöpfe
+(Weiter · Weiter trainieren · Nochmal · Neue Welt · Übersicht); „Und die KI?“ klappt Hinweise + Outro (+ Top 3)
+über der Leiste auf. Kästen rechts und Lernkurve bleiben und laufen weiter, `--hb` folgt der Leiste, Schnee legt
+sich. Karte frei drehen: `js/orbit.js` (`NTOrbit.create(el)`: ziehen = drehen/kippen, zwei Finger = zoomen +
+schieben, Mausrad = zoomen; `floor(x, z)` hält die Kamera über dem Boden, `spin` = dreht sich, bis jemand
+anfasst), in spiel.js `orb` auf `#welt`, in zwei.js je Welt eine (`orb[k]`), Start = Kamera am Ende des Auflösens.
+**Weiter trainieren** (Level 4–7, `canPost`): `S.post`/`st.post` + `body.post` – Lernrate-Leiste und
+Lernschritt/„Training starten“ kommen zurück, ohne Schrittgrenze (`postN` zählt, Chip „weiter trainiert: +n“),
+Karte bleibt frei drehbar, kein Laufen; „Zum Ergebnis“ (btnStay/zDone) holt die Leiste mit dem neuen Stand
+(`rate()`; Sterne werden nur beim echten Ende gespeichert). Gemeinsam: Tablets Level 4–6 dürfen nach der Runde
+weiter trainieren (zählt nicht, nichts geht an den Server); Level 8 (`mp8Free`): alle Welten ziehbar,
+Lernschritt/Training/Lernrate wieder da, Werte der anderen werden nicht mehr übernommen (`l8score(seed, null, W)`).
+
+**Wege für die Lehrkraft** (gemeinsam, Level 1–6): `mpRes` schickt den Weg mit – `res.p` = Spur (`S.dots`
+ohne Sprungbögen + Endpunkt), höchstens 100 Punkte, je Punkt 4 Zeichen (x, z je 12 Bit über ±W,
+`pathCode`/`pathDecode` in spiel.js), wird ausgedünnt, bis `res` ≤ 590 Byte (Server-Grenze 600, Migration 0296
+unverändert). Beamer am Rundenende: `map3` in mehr.js = eigene WebGL-Leinwand `#mpMap3` (bleibt bestehen, wird
+bei jedem Neuaufbau der Bühne wieder eingehängt), dieselbe Welt (`NTSpiel.palette(level)`), jeder Weg als
+Band in der Schalfarbe (lange Sprünge unterteilt, damit er auf dem Boden liegt), Endpunkt = Pinguin
+(`others`, `scale`) mit Ring, Top 5 groß, Start + Flagge (`flag.s`), Namen als HTML (`.mml`); Name in der
+Rangliste antippen = nur dieser Weg hell (`MAP.sel`). Ohne zweites WebGL: alte Karte von oben (`drawMap`).
+
 ## Sparmodus
 
 `LWMotion.low`: dpr 1 und 30 B/s; Glas-Kästen ohne Weichzeichner; kein Schnee, Polarlicht steht still.
@@ -293,7 +318,7 @@ zeigt sie groß + wer bereit ist → „Los!“ → 3-2-1 (`countdown_ends_at`, 
   Sprünge übrig / offline, Zeit). Ende = alle fertig (Server) oder „Runde beenden“; ein ausgefallenes Gerät hält die
   Runde offen, bis es wieder da ist (Fortschritt `info` alle ~1,5 s, nach Neuladen geht es an derselben Stelle weiter).
   Dann Tablets: Nebel lichtet sich (`mpReveal`), Karte mit eigenem Platz + Top 3; Beamer: Top 5 + Karte von oben
-  (`drawMap`: Höhenfarben NET, Start, tiefster Punkt, alle Pinguine, Top 5 groß mit Platz).
+  (`drawMap`: Höhenfarben NET, Start, tiefster Punkt, alle Pinguine, Top 5 groß mit Platz). Seit 18.11.2026: drehbare 3D-Karte mit den Wegen aller (s. „Wege für die Lehrkraft“), Tablets: Leiste statt Karte.
 - **Level 7** zu zweit (`nt_slots`: je eine Welt, bei ungerader Zahl eine Person beide): `NTSpiel.mpTwo` →
   zwei.js mit `mp` (`ctl` = eigene Welt, die andere Figur folgt `remote(k)`, nur laufen – keine Lernrate/Sprünge,
   Uhr oben, wer nur eine Welt hat, steuert sie mit dem ganzen Bildschirm und WASD+Pfeilen). Werte `vals`

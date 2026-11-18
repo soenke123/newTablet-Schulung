@@ -180,7 +180,12 @@ await shot(S[0], '08_tablet_warten');
 await fr(S[1]).click('#btnStay');
 await fr(S[2]).click('#btnStay');
 await until('3  alle fertig → Rangliste beim Beamer', async () => fr(T).evaluate(() => document.querySelectorAll('#mpTop li').length === 3));
-await until('3  Tablet: eigener Platz', async () => fr(S[0]).evaluate(() => /Platz\s*\d\s*von 3/.test(document.querySelector('#card').textContent)), 60000);
+await until('3  Tablet: eigener Platz (Leiste unten)', async () => fr(S[0]).evaluate(() => !document.querySelector('#endbar').hidden && /Platz\s*\d\s*von 3/.test(document.querySelector('#endbar').textContent)), 60000);
+const paths = await db.query(`select res->>'p' p from nt_players where room_id = $1`, [ROOM]);
+ok('3  Weg mitgeschickt (res.p)', paths.rows.every(r => r.p && r.p.length >= 8 && r.p.length % 4 === 0), paths.rows.map(r => (r.p || '').length).join());
+await until('3  Lehrkraft: 3D-Karte mit Namen', async () => fr(T).evaluate(() => !!document.querySelector('#mpMapW #mpMap3') && document.querySelectorAll('#mpMapW .mml.pl').length === 3));
+await fr(T).click('#mpTop li');
+ok('3  Lehrkraft: Name antippen = Weg hervorheben', await fr(T).evaluate(() => !!document.querySelector('#mpTop li.sel') && !!document.querySelector('#mpMapW .mml.sel')));
 await sleep(800);
 await shot(T, '09_lehrkraft_ergebnis_karte');
 await shot(S[0], '10_tablet_platz');
@@ -212,7 +217,7 @@ await shot(pb, '12_tablet_level7_partner');
 await shot(T, '13_lehrkraft_level7_uebersicht');
 await fr(T).click('#mpStBtns .btn');                                // Runde beenden
 await until('4  Rangliste der Teams', async () => fr(T).evaluate(() => document.querySelectorAll('#mpTop li').length === 2));
-await until('4  Tablet: Platz des Teams', async () => fr(pa).evaluate(() => /Euer Netz/.test(document.querySelector('#card').textContent)), 60000);
+await until('4  Tablet: Platz des Teams', async () => fr(pa).evaluate(() => /Euer Netz/.test(document.querySelector('#endbar').textContent)), 60000);
 await sleep(600);
 await shot(T, '14_lehrkraft_level7_ergebnis');
 await shot(pa, '15_tablet_level7_platz');
@@ -255,7 +260,10 @@ await fr(T).click('.head a.btn');
 await until('5  zurück in der Übersicht', async () => /index\.html/.test(fr(T).url()) && await fr(T).evaluate(() => !!document.querySelector('#mpRun')), 9000);
 await fr(T).click('#mpStBtns .btn');                                // Runde beenden
 await until('5  Rangliste Level 8', async () => fr(T).evaluate(() => document.querySelectorAll('#mpTop li').length === 1));
-await until('5  Tablet: Ergebnis im Labor', async () => fr(S[0]).evaluate(() => /Pinguinen richtig/.test(document.querySelector('#card').textContent)), 9000);
+await until('5  Tablet: Ergebnis im Labor', async () => fr(S[0]).evaluate(() => /Pinguinen richtig/.test(document.querySelector('#endbar').textContent)), 9000);
+await fr(S[0]).click('#endbar >> text=Weiter trainieren');
+await fr(S[0]).click('#step'); await fr(S[0]).click('#step');
+await until('5  Tablet: nach der Runde weiter trainiert', async () => fr(S[0]).evaluate(() => /weiter trainiert \(\+2/.test(document.querySelector('#endbar').textContent)), 5000);
 await shot(T, '20_lehrkraft_level8_ergebnis');
 await shot(S[0], '21_tablet_level8_ergebnis');
 

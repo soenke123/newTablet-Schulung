@@ -118,6 +118,8 @@
   const canvas = $('#welt');
   const G = NTGrafik.create(canvas);
   if (!G) { $('#nogl').hidden = false; return; }
+  // Am Levelende: Karte frei drehen/zoomen (js/orbit.js)
+  const orb = NTOrbit.create(canvas);
 
   let low = !!(window.LWMotion && LWMotion.low);
   window.addEventListener('lernwelt:motion', () => { low = !!(window.LWMotion && LWMotion.low); });
@@ -167,8 +169,10 @@
     t0: 0, left: 0, jumpsLeft: 0, dots: [], trailD: 0,
     jump: null, fly: null, lr: 1, auto: false, autoWait: 0,
     curve: [], best: Infinity, lrs: [], outs: 0,
-    reveal: null, cam: null, startPos: null
+    reveal: null, cam: null, startPos: null,
+    post: false, postN: 0, res: null          // Weiter trainieren nach dem Levelende (Level 4–6)
   };
+  const live = () => S.state === 'play' || S.post;   // springen/trainieren erlaubt
 
   /* ── Eiswelt-Look (17.11.2026) ──
      Alle Level sind Polarnacht (html[data-night]); Level 1–3 (L.snow) dazu im
@@ -280,6 +284,7 @@
 
   function toMenu() {
     if (window.NTZwei) NTZwei.close();
+    endReset();
     if (MP.on) {
       MP.on = false; MP.o = null; MP.frame = null;
       document.body.classList.remove('mp');
@@ -301,9 +306,15 @@
   }
   $('#btnInfo').addEventListener('click', toggleInfo);
   // Höhe der Leiste unten → CSS-Variable --hb (Kästen enden darüber)
+  // (am Levelende die Leiste #endbar statt der Lernrate-Leiste)
+  const hbEl = document.querySelector('.hud-bottom');
+  function syncHb() {
+    const eb = $('#endbar'), h = !eb.hidden ? eb.offsetHeight + 4 : hbEl.offsetHeight;
+    $('#hud').style.setProperty('--hb', h + 'px');
+  }
   if (window.ResizeObserver) {
-    const hb = document.querySelector('.hud-bottom');
-    new ResizeObserver(() => { $('#hud').style.setProperty('--hb', hb.offsetHeight + 'px'); }).observe(hb);
+    const ro = new ResizeObserver(syncHb);
+    ro.observe(hbEl); ro.observe($('#endbar'));
   }
 
   /* ── Level öffnen ── */
@@ -344,6 +355,7 @@
     S.dots = []; S.trailD = 0; S.jump = null; S.fly = null; S.auto = false; S.autoWait = 0;
     S.curve = [w.show(w.h(S.p.x, S.p.z))];
     S.best = S.curve[0]; S.lrs = []; S.outs = 0; S.reveal = null;
+    endReset();
     S.left = L.time || 0; S.jumpsLeft = L.jumps || 0;
     if (L.lr) setLR(L.lr.def);
     if (w.setBias && w.bias() !== 0) setBias(0);
@@ -375,7 +387,45 @@
     }
     c.hidden = false;
     $('#menu').hidden = true;
+    endHide();
     document.body.dataset.state = S.state;
+  }
+
+  /* ── Leiste am Levelende (Sönke 18.11.2026: „die Endkarte ganz wegnehmen, unten eine Leiste mit den
+     wichtigsten Knöpfen und wie gut man war, damit man die Karte und die Daten weiter betrachten kann“).
+     o = { kick, stars (html), line (html), place (html), more (html: Hinweise + „Und die KI?“), btns: [[label, fn, kind]…] }
+     Auch für js/zwei.js (Level 7) und js/mehr.js (gemeinsam). */
+  function endBar(o) {
+    const b = $('#endbar');
+    b.innerHTML = '<div class="eb-res">' + (o.place ? '<div class="eb-place">' + o.place + '</div>' : '') + (o.stars || '') +
+      '<div class="eb-txt">' + (o.kick ? '<div class="eb-kick">' + o.kick + '</div>' : '') + '<div class="eb-line">' + (o.line || '') + '</div></div></div>' +
+      '<div class="eb-btns"></div>' +
+      (o.more ? '<div class="eb-more" hidden>' + o.more + '</div>' : '') +
+      '<div class="eb-hint">Karte ziehen = drehen · zwei Finger oder Mausrad = zoomen</div>';
+    const box = b.querySelector('.eb-btns');
+    const add = (label, fn, kind) => {
+      const x = document.createElement('button');
+      x.type = 'button'; x.className = 'btn ' + (kind || ''); x.textContent = label;
+      x.addEventListener('click', fn); box.appendChild(x); return x;
+    };
+    if (o.more) {
+      const k = add('Und die KI?', () => {
+        const m = b.querySelector('.eb-more'); m.hidden = !m.hidden;
+        k.setAttribute('aria-expanded', String(!m.hidden)); syncHb();
+      }, 'ebki');
+      k.setAttribute('aria-expanded', 'false');
+      if (o.open) { b.querySelector('.eb-more').hidden = false; k.setAttribute('aria-expanded', 'true'); }
+    }
+    for (const [label, fn, kind] of o.btns || []) add(label, fn, kind);
+    b.hidden = false;
+    $('#card').hidden = true;
+    syncHb();
+  }
+  function endHide() { const b = $('#endbar'); if (!b.hidden) { b.hidden = true; syncHb(); } }
+  function endReset() {
+    endHide();
+    orb.on = false; S.post = false; S.postN = 0; S.res = null;
+    document.body.classList.remove('post');
   }
 
   /* ── HUD ── */
@@ -414,12 +464,13 @@
     $('#gBest').style.bottom = pos(S.best) + '%';
     $('#gBestV').textContent = fmt(S.best, w.dec);
     if (L.mode === 'walk') {
-      const s = Math.ceil(Math.max(0, S.left));
-      $('#counter').textContent = '⏱ ' + s + ' s';
-      $('#counter').classList.toggle('warn', s <= 10);
+      const s = Math.ceil(Math.max(0, S.left)), done = S.state === 'result' || S.state === 'reveal';
+      $('#counter').textContent = done ? '⏱ fertig' : '⏱ ' + s + ' s';
+      $('#counter').classList.toggle('warn', !done && s <= 10);
     } else {
-      $('#counter').textContent = (w.kind === 'hills' ? 'Sprünge' : 'Schritte') + ': ' + S.jumpsLeft;
-      $('#counter').classList.toggle('warn', S.jumpsLeft <= 3);
+      $('#counter').textContent = S.post || S.postN ? 'weiter trainiert: +' + S.postN + ' Schritte'
+        : (w.kind === 'hills' ? 'Sprünge' : 'Schritte') + ': ' + S.jumpsLeft;
+      $('#counter').classList.toggle('warn', !S.postN && !S.post && S.jumpsLeft <= 3);
     }
     if (w.kind === 'model') drawModel();
     if (w.kind === 'penguin') drawPenguins();
@@ -462,9 +513,12 @@
   $('#xBiasL').addEventListener('change', e => { setBiasLearn(e.target.checked); e.target.blur(); });
 
   $('#btnJump').addEventListener('click', () => doJump());
-  $('#btnStay').addEventListener('click', () => { if (S.state === 'play' && !S.jump && !S.fly) finish(); });
+  $('#btnStay').addEventListener('click', () => {
+    if (S.post) { if (!S.jump && !S.fly) postStop(); return; }
+    if (S.state === 'play' && !S.jump && !S.fly) finish();
+  });
   $('#btnAuto').addEventListener('click', () => {
-    if (S.state !== 'play') return;
+    if (!live()) return;
     S.auto = !S.auto; S.autoWait = 0.2;
     refreshAuto();
   });
@@ -477,13 +531,13 @@
 
   /* ── Springen = ein Schritt Gradientenabstieg ── */
   function doJump() {
-    if (S.state !== 'play' || S.lvl.mode !== 'jump' || S.jump || S.fly || S.jumpsLeft <= 0) return;
+    if (!live() || S.lvl.mode !== 'jump' || S.jump || S.fly || (!S.post && S.jumpsLeft <= 0)) return;
     const w = S.world, from = { x: S.p.x, z: S.p.z };
     const q = w.step(from, S.lr);
     if (q.b !== undefined && !q.out) setBias(q.b);    // Level 6: Bias lernt mit
     const dist = Math.hypot(q.x - from.x, q.z - from.z);
     S.lrs.push(S.lr);
-    S.jumpsLeft--;
+    if (S.post) S.postN++; else S.jumpsLeft--;
     if (q.out) {
       // raus aus der Welt: in Sprungrichtung davonfliegen, dann zurück
       const d = Math.max(1e-6, dist);
@@ -535,24 +589,22 @@
     document.body.dataset.state = 'reveal';
   }
 
-  function showResult() {
-    S.state = 'result';
-    if (MP.on) { document.body.dataset.state = 'result'; if (MP.o.onResult) MP.o.onResult(); return; }
-    const w = S.world, L = S.lvl;
+  // Wie gut steht man gerade? (Ergebnis am Ende und nach „Weiter trainieren“)
+  function rate() {
+    const w = S.world;
     const mine = w.show(H()), best = w.show(w.min.h);
     let n, line;
     if (w.kind === 'xor1') {
       const d = mine - best;
       n = d < 0.02 ? 3 : d < 0.15 ? 2 : d < 0.5 ? 1 : 0;
-      const cs = w.cases(S.p.x, S.p.z);
-      line = 'Dein Neuron beurteilt <b>' + w.right(cs) + ' von 4</b> Nestern richtig' +
-        '<br><small>Fehler ' + fmt(mine, 2) + ' · kleinstmöglich ' + fmt(best, 2) +
+      line = 'Dein Neuron beurteilt <b>' + w.right(w.cases(S.p.x, S.p.z)) + ' von 4</b> Nestern richtig' +
+        ' <small>· Fehler ' + fmt(mine, 2) + ' · kleinstmöglich ' + fmt(best, 2) +
         (w.bias() ? ' bei Bias ' + fmt(w.bias(), 1) + ' · ohne Bias ' + fmt(Math.LN2, 2) + ' (= überall 50 %)' : ' (= überall 50 %)') + '</small>';
     } else if (w.kind === 'penguin') {
       const nw = w.wrong(w.toW(S.p.x), w.toW(S.p.z)), nb = w.wrong(w.min.w1, w.min.w2), d = nw - nb;
       n = d <= 0 && mine < best * 1.6 ? 3 : d <= 2 ? 2 : d <= 8 ? 1 : 0;
       line = 'Dein Neuron sortiert <b>' + nw + ' von ' + w.pts.length + '</b> Pinguinen falsch' +
-        ' · bestes Neuron: <b>' + nb + '</b> falsch<br><small>Fehler ' + fmt(mine, 2) + ' · kleinstmöglich ' + fmt(best, 2) + '</small>';
+        ' · bestes Neuron: <b>' + nb + '</b> <small>· Fehler ' + fmt(mine, 2) + ' · kleinstmöglich ' + fmt(best, 2) + '</small>';
     } else if (w.kind === 'model') {
       const r = mine / best;
       n = r < 1.02 ? 3 : r < 1.15 ? 2 : r < 1.6 ? 1 : 0;
@@ -563,6 +615,21 @@
       line = d < 0.05 ? 'Du stehst <b>genau am tiefsten Punkt</b>!'
         : 'Du stehst <b>' + fmt(d, 1) + ' m</b> über dem tiefsten Punkt.';
     }
+    return { n, line };
+  }
+  const canPost = () => !!(S.lvl && S.world && ['model', 'penguin', 'xor1'].includes(S.world.kind));
+
+  function showResult() {
+    S.state = 'result';
+    // Karte frei drehbar: vom Ende des Auflösens aus
+    if (S.cam) {
+      const w = S.world, E = w.W;
+      orb.set(S.cam); orb.limit = E; orb.minD = 6; orb.maxD = E * 4; orb.on = true;
+      orb.floor = (x, z) => (Math.abs(x) < E && Math.abs(z) < E ? w.h(x, z) : -Infinity);
+    }
+    if (MP.on) { document.body.dataset.state = 'result'; if (MP.o.onResult) MP.o.onResult(); return; }
+    const w = S.world, L = S.lvl;
+    const { n, line } = rate();
     const old = parseInt(LS.get(bestKey(L.id)), 10);
     if (!(old >= n)) LS.set(bestKey(L.id), String(n));
 
@@ -576,19 +643,47 @@
       if (!S.outs && !zig && n < 2 && steep > 0.15) notes.push('Du warst noch mitten am Hang, als die Sprünge alle waren: Die <b>Lernrate war zu klein</b>.');
     }
     if (w.kind === 'hills' && n < 3 && steep < 0.12) notes.push('Du stehst in einer Mulde – aber nicht in der tiefsten. Das nennt man ein <b>lokales Minimum</b>. Von dort aus geht es in keiner Richtung bergab.');
-
+    S.res = { n, line, notes };
+    resultBar();
+    document.body.dataset.state = 'result';
+  }
+  function resultBar() {
+    const w = S.world, L = S.lvl, R0 = S.res;
+    const now = S.postN ? rate() : null;
     const next = LEVELS.find(l => l.id === L.id + 1);
-    const btns = [['Nochmal', () => openLevel(L.id)]];
-    if (L.id === 3) btns.unshift(['Weiter: Erarbeitung', () => { location.href = EXTRA.erarb.href; }, 'primary']);   // Phase 1 endet mit dem Tafelbild
-    else if (next) btns.unshift(['Weiter: ' + next.name, () => openLevel(next.id), 'primary']);
+    const btns = [];
+    if (L.id === 3) btns.push(['Weiter: Erarbeitung', () => { location.href = EXTRA.erarb.href; }, 'primary']);   // Phase 1 endet mit dem Tafelbild
+    else if (next) btns.push(['Weiter: ' + next.name, () => openLevel(next.id), 'primary']);
+    if (canPost()) btns.push(['Weiter trainieren', postStart]);
+    btns.push(['Nochmal', () => openLevel(L.id)]);
     btns.push(['Neue Welt', () => { setSeed(1000 + Math.floor(Math.random() * 9000)); openLevel(L.id); }]);
     btns.push(['Übersicht', toMenu]);
-    card(
-      '<div class="card-kicker">Level ' + L.id + ' · Welt ' + w.seed + '</div>' +
-      '<div class="res-head">' + stars(n) + '<p>' + line + '</p></div>' +
-      (notes.length ? '<p class="note">' + notes.join(' ') + '</p>' : '') +
-      '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
-      btns, 'result');
+    endBar({
+      kick: 'Level ' + L.id + ' · Welt ' + w.seed + (now ? ' · weiter trainiert: +' + S.postN + ' Schritte' : ''),
+      stars: stars(now ? now.n : R0.n), line: now ? now.line : R0.line,
+      more: (R0.notes.length ? '<p class="note">' + R0.notes.join(' ') + '</p>' : '') +
+        '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
+      btns
+    });
+  }
+
+  /* Weiter trainieren (Level 4–6, auch gemeinsam nach der Runde – zählt nicht mehr für die Wertung):
+     ohne Grenze springen/„Training starten“, Kästen und Lernkurve laufen mit, die Karte bleibt frei drehbar.
+     „Zum Ergebnis“ (btnStay) holt die Leiste zurück, jetzt mit dem neuen Stand. */
+  function postStart() {
+    if (S.state !== 'result' || !canPost()) return;
+    S.post = true; S.auto = false; refreshAuto();
+    document.body.classList.add('post');
+    endHide();
+    $('#btnStay').textContent = 'Zum Ergebnis';
+    updateHud();
+  }
+  function postStop() {
+    S.post = false; S.auto = false; refreshAuto();
+    document.body.classList.remove('post');
+    $('#btnStay').textContent = 'Fertig';
+    if (MP.on) { if (MP.o.onResult) MP.o.onResult(true); return; }
+    resultBar();
   }
 
   function zigzag() {
@@ -618,7 +713,7 @@
   window.addEventListener('keydown', e => {
     if (e.target && (e.target.tagName === 'INPUT')) return;
     keys.add(e.key.toLowerCase());
-    if (e.key === ' ' && S.state === 'play') { e.preventDefault(); doJump(); }
+    if (e.key === ' ' && live()) { e.preventDefault(); doJump(); }
     if (e.key === 'Enter' && S.state === 'play' && S.lvl.mode === 'walk') finish();
   });
   window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -777,7 +872,13 @@
         }
       }
       updateHud();
-    }
+    } else if (S.post) {
+      if (S.auto && !S.jump && !S.fly) {
+        S.autoWait -= dt;
+        if (S.autoWait <= 0) { S.autoWait = 0.15; doJump(); }
+      }
+      updateHud();
+    } else if (S.state === 'result') updateHud();   // Kästen laufen weiter („Pinguin für Pinguin“)
     if (S.jump) {
       const J = S.jump;
       J.t += dt;
@@ -821,6 +922,7 @@
       const c0 = S.reveal.cam0 || cam;
       const over = overview();
       cam = { eye: c0.eye.map((v, i) => lerp(v, over.eye[i], t)), at: c0.at.map((v, i) => lerp(v, over.at[i], t)) };
+      if (orb.on) cam = orb.cam();
     }
     S.cam = cam;
 
@@ -834,7 +936,7 @@
       objs.push({ type: 'dot', x: d.x, y: dy, z: d.z, r: rr, flat: d.air ? 1 : 0.18, color: d.big ? acc : trail, glow: S.reveal ? 0.6 : 0.2 });
     }
     // Pfeil = Gegenrichtung des Gradienten
-    const showArrow = L && S.state === 'play' && (L.arrow || L.mode === 'jump') && !S.jump && !S.fly;
+    const showArrow = L && live() && (L.arrow || L.mode === 'jump') && !S.jump && !S.fly;
     if (showArrow) {
       const g = w.grad(p.x, p.z), gl = Math.hypot(g[0], g[1]);
       if (gl > 0.01) {
@@ -850,7 +952,7 @@
       }
     }
     // Landepunkt (Ring) beim Springen
-    if (L && L.mode === 'jump' && S.state === 'play' && !S.jump && !S.fly && S.jumpsLeft > 0) {
+    if (L && L.mode === 'jump' && live() && !S.jump && !S.fly && (S.post || S.jumpsLeft > 0)) {
       const q = w.step({ x: p.x, z: p.z }, S.lr);
       if (!q.out) {
         const ring = [];
@@ -902,10 +1004,10 @@
 
   function overview() {
     const w = S.world;
-    // Breiter Bildschirm: Ergebniskarte steht rechts, Welt rückt nach links
+    // Kasten rechts (Level 4–6, breiter Bildschirm): Welt rückt nach links, unten steht die Leiste
     // (Kamera schaut nach +z, rechts auf dem Bild = −x).
-    const wide = window.innerWidth >= 900, k = w.W / 50;
-    const at = [(wide ? -15 : 0) * k, (w.min.h + w.h(0, 0)) / 2, (wide ? 2 : 14) * k];
+    const wide = window.innerWidth >= 900 && document.body.dataset.panel && !document.body.classList.contains('info-min'), k = w.W / 50;
+    const at = [(wide ? -12 : 0) * k, (w.min.h + w.h(0, 0)) / 2, 6 * k];
     return { eye: [at[0], at[1] + 92 * k, at[2] - 86 * k], at };
   }
 
@@ -1286,7 +1388,7 @@
     hudFor(null);
     NTZwei.open(L, ws || lvSeed(L.id), {
       theme: () => theme, low: () => low, fmt, stars, LS, bestKey,
-      card, toMenu, toggleInfo, introHtml, verdict, eggIcon, NEST_TXT,
+      card, toMenu, toggleInfo, introHtml, verdict, eggIcon, NEST_TXT, endBar, endHide,
       next: () => LEVELS.find(l => l.id === L.id + 1) || null, open: openLevel,
       again: () => openLevel(L.id),
       newWorld: () => { setSeed(1000 + Math.floor(Math.random() * 9000)); openLevel(L.id); },
@@ -1320,7 +1422,35 @@
       r.s = Math.round(mine * 10000) / 10000; r.n = rt; r.b = Math.round(w.bias() * 10) / 10;
       r.t = rt + ' von 4 Nestern · Fehler ' + fmt(mine, 2);
     }
+    // Weg für die 3D-Karte der Lehrkraft (mehr.js): Spur + Endpunkt, kompakt als Text (Server: res ≤ 600 Byte)
+    const pts = S.dots.filter(d => !d.air).map(d => [d.x, d.z]);
+    pts.push([S.p.x, S.p.z]);
+    for (let max = 100; max >= 8; max = Math.floor(max * 0.8)) {
+      r.p = pathCode(pts, w.W, max);
+      if (JSON.stringify(r).length <= 590) break;
+    }
     return r;
+  }
+  // Weg ↔ Text: je Punkt x und z als zwei Zeichen (64² Stufen über die ganze Welt)
+  const PC = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  function pathCode(pts, W, max) {
+    let use = pts;
+    if (pts.length > max) {                         // gleichmäßig ausdünnen, Anfang und Ende bleiben
+      use = [];
+      for (let i = 0; i < max; i++) use.push(pts[Math.round(i * (pts.length - 1) / (max - 1))]);
+    }
+    const q = v => { const n = clamp(Math.round((v / W * 0.5 + 0.5) * 4095), 0, 4095); return PC[n >> 6] + PC[n & 63]; };
+    return use.map(p => q(p[0]) + q(p[1])).join('');
+  }
+  function pathDecode(str, W) {
+    const out = [];
+    if (typeof str !== 'string') return out;
+    const v = (a, b) => { const n = PC.indexOf(a) * 64 + PC.indexOf(b); return (n / 4095 - 0.5) * 2 * W; };
+    for (let i = 0; i + 3 < str.length; i += 4) {
+      if ([0, 1, 2, 3].some(k => PC.indexOf(str[i + k]) < 0)) break;
+      out.push([v(str[i], str[i + 1]), v(str[i + 2], str[i + 3])]);
+    }
+    return out;
   }
   function mpDone() {
     S.auto = false; refreshAuto();
@@ -1334,11 +1464,14 @@
   }
   const NTSpiel = window.NTSpiel = {
     LEVELS, G, introHtml, ctrlText, worldFor, fmt, card, toMenu, verdict, eggIcon, NEST_TXT, stars,
+    endBar, endHide, pathDecode, rate: () => (S.world ? rate() : null), canPost, postStart,
+    postN: () => S.postN, palette: id => (LEVELS.find(l => l.id === id) || {}).snow ? NIGHT : NET,
     state: () => S.state,
     theme: () => theme, low: () => low,
     // Lobby: spiel.js zeichnet nicht, ruft aber frame(dt) jedes Bild (Schnee läuft weiter)
     lobby(frame) {
       if (window.NTZwei) NTZwei.close();
+      endReset();
       MP.on = true; MP.o = {}; MP.frame = frame;
       S.state = 'mp'; S.lvl = null; S.auto = false;
       document.body.classList.add('mp');

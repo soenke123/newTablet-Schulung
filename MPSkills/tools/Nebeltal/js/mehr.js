@@ -420,7 +420,7 @@ window.NTMehr = (function () {
       SP.mpOpen(lv, st.seed, {
         color: R.rgb(me.c), intro: ph === 'intro' ? introBtns() : null, resume: ph !== 'intro' ? inf : null,
         onDone(res) { M.res = res; M.resPending = true; M.waiting = true; poll(); waitCard(M.st, true); },
-        onResult() { M.resultShown = true; M.resKey = ''; resultCard(M.st); }
+        onResult(again) { M.resultShown = true; M.resKey = ''; resultCard(M.st, again); }
       });
       if (me.f) M.waiting = true;
     } else if (lv === 7) {
@@ -475,19 +475,23 @@ window.NTMehr = (function () {
       '<p class="mpwait"><span class="mpdots"><i></i><i></i><i></i></span> Warte auf die anderen · <b>' + done + ' von ' + inR.length + '</b> fertig</p>', []);
   }
 
-  function resultCard(st) {
-    if (!st) return;
+  // Ende der Runde am Tablet: Leiste unten statt Karte (Sönke 18.11.2026), Karte bleibt frei drehbar
+  function resultCard(st, again) {
+    if (!st || document.body.classList.contains('post')) return;
     const me = st.me || {}, lv = st.level, L = lvInfo(lv);
     let head = '', mine = '', top = '';
+    if (again) M.resKey = '';
     if (lv <= 6) {
       const rank = st.people.filter(p => p.in && p.res && isFinite(p.res.s)).sort((a, b) => a.res.s - b.res.s);
-      const k = 'r' + rank.length;
+      const k = 'r' + rank.length + '.' + SP.postN();
       if (M.resKey === k) return;
       M.resKey = k;
       const i = rank.findIndex(p => p.id === me.id);
-      head = rank.length > 1 && i >= 0 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : 'Runde vorbei';
+      head = rank.length > 1 && i >= 0 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : '';
       const r = (i >= 0 ? rank[i].res : M.res) || {};
       mine = 'Du: ' + esc(r.t || '');
+      const now = SP.postN() ? SP.rate() : null;
+      if (now) mine += '<br><small>weiter trainiert (+' + SP.postN() + ', zählt nicht mehr):</small> ' + now.line;
       top = rank.slice(0, 3).map((p, j) => '<li' + (p.id === me.id ? ' class="me"' : '') + '><span class="n">' + (j + 1) + '</span><i style="background:' +
         R.color(p.c) + '"></i><b>' + esc(p.n) + '</b><small>' + esc(p.res.t) + '</small></li>').join('');
     } else {
@@ -496,16 +500,20 @@ window.NTMehr = (function () {
       if (M.resKey === k) return;
       M.resKey = k;
       const i = rank.findIndex(r => r.t === me.t), r = rank[i];
-      head = rank.length > 1 && i >= 0 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : 'Runde vorbei';
-      mine = r ? 'Euer Netz: <b>' + r.sc.right + ' von 4</b> Nestern richtig · Fehler ' + fmt(r.sc.loss, 2) : '';
+      head = rank.length > 1 && i >= 0 ? 'Platz <b>' + (i + 1) + '</b> von ' + rank.length : '';
+      mine = r ? 'Euer Netz: <b>' + r.sc.right + ' von 4</b> Nestern richtig <small>· Fehler ' + fmt(r.sc.loss, 2) + '</small>' : '';
       top = rank.slice(0, 3).map((x, j) => '<li' + (x.t === me.t ? ' class="me"' : '') + '><span class="n">' + (j + 1) + '</span><b>' +
         x.members.map(p => esc(p.n)).join(' + ') + '</b><small>' + x.sc.right + ' von 4 · ' + fmt(x.sc.loss, 2) + '</small></li>').join('');
     }
-    SP.card('<div class="card-kicker">Level ' + lv + ' · Runde vorbei</div>' +
-      '<div class="res-head"><div class="place">' + head + '</div><p>' + mine + '</p></div>' +
-      (top ? '<ol class="mprank">' + top + '</ol>' : '') +
-      '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>' +
-      '<p class="mpnote">Gleich geht es weiter – deine Lehrkraft startet die nächste Runde.</p>', [], 'result');
+    const btns = [];
+    if (lv <= 6 && SP.canPost()) btns.push(['Weiter trainieren', SP.postStart]);
+    SP.endBar({
+      kick: 'Level ' + lv + ' · Runde vorbei · gleich startet deine Lehrkraft die nächste',
+      place: head || 'Runde vorbei', line: mine,
+      more: (top ? '<ol class="mprank">' + top + '</ol>' : '') +
+        '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
+      btns
+    });
   }
 
   /* ══ Wertung Level 7 / 8 ═══════════════════════════════════ */
@@ -648,7 +656,7 @@ window.NTMehr = (function () {
       } else if (ph === 'running') {
         body = '<p class="mpst-lead">' + (L.lead || '') + '</p><div id="mpRun" class="mpst-run lv' + (lv >= 7 ? lv : 'x') + '"></div>';
       } else if (ph === 'ended') {
-        body = lv <= 6 ? '<div class="mpst-end"><div class="mpst-mapw"><canvas id="mpMap"></canvas></div><div class="mpst-top"><div class="mps-t">Top 5</div><ol id="mpTop" class="mprank big"></ol>' +
+        body = lv <= 6 ? '<div class="mpst-end"><div class="mpst-mapw" id="mpMapW"></div><div class="mpst-top"><div class="mps-t">Top 5</div><ol id="mpTop" class="mprank big"></ol>' +
                          '<details class="mpall"><summary>Alle Ergebnisse</summary><ol id="mpAll" class="mprank"></ol></details></div></div>'
           : '<div class="mpst-end t"><div class="mpst-top"><div class="mps-t">Rangliste</div><ol id="mpTop" class="mprank big teams"></ol></div>' +
             '<div class="mpst-net" id="mpNet"></div></div>';
@@ -756,13 +764,18 @@ window.NTMehr = (function () {
     if (lv <= 6) {
       const rank = inR.filter(p => p.res && isFinite(p.res.s)).sort((a, b) => a.res.s - b.res.s);
       const rest = inR.filter(p => !(p.res && isFinite(p.res.s)));
-      const li = (p, j) => '<li><span class="n">' + (j + 1) + '</span><i style="background:' + R.color(p.c) + '"></i><b>' + esc(p.n) + '</b><small>' + esc(p.res.t) + '</small></li>';
+      const li = (p, j) => '<li data-id="' + esc(p.id) + '" class="' + (MAP.sel === p.id ? 'sel' : '') + '"><span class="n">' + (j + 1) + '</span><i style="background:' + R.color(p.c) + '"></i><b>' + esc(p.n) + '</b><small>' + esc(p.res.t) + '</small></li>';
       const top = rank.slice(0, 5).map(li).join('') || '<li class="empty">Noch keine Ergebnisse</li>';
       const all = rank.map(li).join('') + rest.map(p => '<li class="off"><span class="n">–</span><i style="background:' + R.color(p.c) + '"></i><b>' + esc(p.n) + '</b><small>kein Ergebnis</small></li>').join('');
       if ($('#mpTop').dataset.h !== top) { $('#mpTop').innerHTML = top; $('#mpTop').dataset.h = top; }
       if ($('#mpAll').dataset.h !== all) { $('#mpAll').innerHTML = all; $('#mpAll').dataset.h = all; }
+      for (const li of document.querySelectorAll('#mpTop li[data-id], #mpAll li[data-id]')) {
+        if (li.dataset.on) continue;
+        li.dataset.on = '1';
+        li.addEventListener('click', () => { MAP.sel = MAP.sel === li.dataset.id ? null : li.dataset.id; selMark(); });
+      }
       const mk = st.run + '.' + rank.map(p => p.id + p.res.s).join();
-      if (M.mapKey !== mk) { M.mapKey = mk; drawMap($('#mpMap'), st, rank); }
+      if (M.mapKey !== mk) { M.mapKey = mk; map3(st, rank); }
       return;
     }
     const rank = lv === 7 ? teamRank7(st) : teamRank8(st);
@@ -789,6 +802,127 @@ window.NTMehr = (function () {
         '<p class="mps-hint">Das ganze Netz mit allen 8 Welten:</p><button class="btn primary" type="button" id="mpWatch">Netz von Team ' + (x.i + 1) + ' ansehen</button>';
       $('#mpWatch').addEventListener('click', () => { location.href = 'labor.html?level=8&mp=1&team=' + x.t; });
     }
+  }
+
+  /* 3D-Karte der Lehrkraft am Rundenende (Sönke 18.11.2026: „die Lehrkraft braucht auch 3D-Karten, die gedreht
+     werden können, die Wege der User mit eindeutigem Endpunkt“): dieselbe Welt wie auf den Tablets, Nebel weg,
+     jeder Weg in der Schalfarbe (res.p, spiel.js pathCode), am Ende der Pinguin mit Ring, Top 5 groß mit Platz.
+     Ziehen = drehen, zwei Finger/Mausrad = zoomen (js/orbit.js), dreht sich langsam, bis jemand anfasst.
+     Name in der Liste antippen = nur dieser Weg hell. Ohne zweites WebGL: die Karte von oben (drawMap). */
+  const MAP = { cv: null, G: null, orb: null, lab: null, wkey: '', w: null, k: 1, list: [], sel: null, raf: 0, st: null, failed: false };
+  function map3(st, rank) {
+    const wrap = $('#mpMapW'); if (!wrap) return;
+    if (!MAP.cv && !MAP.failed) {
+      MAP.cv = document.createElement('canvas'); MAP.cv.id = 'mpMap3'; MAP.cv.className = 'mpmap3';
+      MAP.G = window.NTOrbit ? NTGrafik.create(MAP.cv) : null;
+      if (!MAP.G) { MAP.failed = true; MAP.cv = null; }
+      else {
+        MAP.orb = NTOrbit.create(MAP.cv); MAP.orb.on = true;
+        MAP.lab = document.createElement('div'); MAP.lab.className = 'mpmaplab';
+      }
+    }
+    if (MAP.failed) {
+      if (!$('#mpMap')) wrap.innerHTML = '<canvas id="mpMap"></canvas>';
+      drawMap($('#mpMap'), st, rank); return;
+    }
+    if (MAP.cv.parentNode !== wrap) {
+      wrap.innerHTML = '';
+      wrap.appendChild(MAP.cv); wrap.appendChild(MAP.lab);
+      const h = document.createElement('div'); h.className = 'mpmaphint'; h.textContent = 'ziehen = drehen · zwei Finger / Mausrad = zoomen · Name antippen = nur dieser Weg';
+      wrap.appendChild(h);
+      MAP.lab.innerHTML = '';
+    }
+    const wkey = st.level + '.' + st.seed + '.' + st.run;
+    if (MAP.wkey !== wkey) {
+      MAP.wkey = wkey; MAP.sel = null;
+      const w = MAP.w = SP.worldFor(LV(st.level), st.seed), k = MAP.k = w.W / 50;
+      MAP.G.setPalette(SP.palette(st.level), 'dark');
+      MAP.G.setWorld(w, SP.theme());
+      const at = [0, (w.min.h + w.h(0, 0)) / 2, 4 * k];
+      MAP.orb.set({ eye: [at[0], at[1] + 96 * k, at[2] - 92 * k], at });
+      MAP.orb.limit = w.W; MAP.orb.minD = 8 * k; MAP.orb.maxD = 260 * k; MAP.orb.spin = 0.05;
+      MAP.orb.floor = (x, z) => (Math.abs(x) < w.W && Math.abs(z) < w.W ? w.h(x, z) : -Infinity);
+      MAP.lab.innerHTML = '';
+    }
+    const w = MAP.w, k = MAP.k, E = w.W - 0.5;
+    MAP.st = st;
+    MAP.list = rank.map((p, j) => {
+      let pts = SP.pathDecode(p.res.p, w.W);
+      if (!pts.length && isFinite(p.res.x)) pts = [[p.res.x, p.res.z]];
+      pts = pts.map(q => [clamp(q[0], -E, E), clamp(q[1], -E, E)]);
+      // lange Sprünge unterteilen, damit der Weg auf dem Boden liegt
+      const fine = [];
+      pts.forEach((q, i) => {
+        if (i) {
+          const o = pts[i - 1], d = Math.hypot(q[0] - o[0], q[1] - o[1]), n = Math.ceil(d / (0.9 * k));
+          for (let m = 1; m < n; m++) fine.push([lerp(o[0], q[0], m / n), lerp(o[1], q[1], m / n)]);
+        }
+        fine.push(q);
+      });
+      const e = fine[fine.length - 1] || [0, 0], f = fine[Math.max(0, fine.length - 2)] || e;
+      return { id: String(p.id), n: p.n, j, col: R.rgb(p.c), css: R.color(p.c), pts: fine, end: e,
+               yaw: Math.hypot(e[0] - f[0], e[1] - f[1]) > 1e-3 ? Math.atan2(e[0] - f[0], e[1] - f[1]) : Math.PI };
+    });
+    MAP.lab.innerHTML = '';
+    selMark();
+    if (!MAP.raf) MAP.raf = requestAnimationFrame(map3Frame);
+  }
+  function selMark() {
+    for (const li of document.querySelectorAll('#mpTop li[data-id], #mpAll li[data-id]')) li.classList.toggle('sel', li.dataset.id === MAP.sel);
+  }
+  function map3Frame() {
+    MAP.raf = 0;
+    if (!MAP.cv || !MAP.cv.isConnected || !M.on || !MAP.w) { MAP.lab && (MAP.lab.innerHTML = ''); return; }
+    MAP.raf = requestAnimationFrame(map3Frame);
+    const w = MAP.w, k = MAP.k, objs = [], others = [];
+    const grey = [0.55, 0.6, 0.7], many = MAP.list.length > 14;
+    // erst die anderen, dann Top 5, dann der gewählte – oben liegt, was zählt
+    const order = [...MAP.list].sort((a, b) => (a.id === MAP.sel) - (b.id === MAP.sel) || b.j - a.j);
+    for (const p of order) {
+      const sel = MAP.sel === p.id, dim = MAP.sel && !sel;
+      const col = dim ? p.col.map((v, i) => v * 0.35 + grey[i] * 0.25) : p.col;
+      const wd = (sel ? 0.42 : p.j < 5 ? 0.28 : 0.18) * k;
+      if (p.pts.length > 1) {
+        for (let i = 0; i < p.pts.length - 1; i += 240) {   // Uint16-Index: in Stücken zeichnen
+          objs.push({ type: 'strip', pts: p.pts.slice(i, i + 241).map(q => [q[0], q[1], wd]), color: col, glow: dim ? 0.1 : 0.45, lift: 0.14 + (sel ? 0.05 : 0) });
+        }
+      }
+      const ring = [], rr = (p.j < 5 || sel ? 1.5 : 1.1) * k;
+      for (let i = 0; i < 28; i++) { const a = i / 28 * Math.PI * 2; ring.push([p.end[0] + Math.cos(a) * rr, p.end[1] + Math.sin(a) * rr, 0.16 * k]); }
+      objs.push({ type: 'strip', pts: ring, closed: true, color: col, glow: dim ? 0.15 : 0.8, lift: 0.2 });
+      const g = w.h(p.end[0], p.end[1]);
+      others.push({ x: p.end[0], y: g, z: p.end[1], ground: g, yaw: p.yaw, tilt: 0, squash: 1, phase: 0, walk: 0,
+                    scale: (p.j < 5 || sel ? 1.25 : 0.9) * k, color: col, seed: p.j * 1.7, hidden: false });
+    }
+    const s0 = w.start;
+    objs.push({ type: 'dot', x: s0.x, y: w.h(s0.x, s0.z) + 0.1, z: s0.z, r: 1.1 * k, flat: 0.25, color: [0.85, 0.9, 1], glow: 0.6 });
+    objs.push({ type: 'flag', x: w.min.x, z: w.min.z, color: [1, 0.78, 0.15], yaw: -Math.PI / 2, s: Math.max(1, k * 0.9) });
+    const low = SP.low();
+    const sc = { cam: MAP.orb.cam(), fogR: w.W * 9, fogAt: [0, 0], dpr: low ? 1 : Math.min(window.devicePixelRatio || 1, 1.5),
+                 objects: objs, plain: 0, player: { hidden: true, x: 0, z: 0 }, others };
+    MAP.G.frame(sc);
+    // Beschriftungen: Start, tiefster Punkt, Namen (Top 5 mit Platz; alle, wenn es nicht zu viele sind)
+    const items = [{ key: 'min', p: [w.min.x, w.min.h + 6 * Math.max(1, k * 0.9), w.min.z], h: 'tiefster Punkt', c: 'gold' },
+                   { key: 'start', p: [s0.x, w.h(s0.x, s0.z) + 1.6 * k, s0.z], h: 'Start', c: 'start' }];
+    for (const p of MAP.list) {
+      if (!(p.j < 5 || !many || MAP.sel === p.id)) continue;
+      items.push({ key: 'p' + p.id, p: [p.end[0], w.h(p.end[0], p.end[1]) + 2.6 * k, p.end[1]],
+                   h: (p.j < 5 ? '<span class="n">' + (p.j + 1) + '</span>' : '') + esc(p.n), c: 'pl' + (p.j < 5 ? ' top' : '') + (MAP.sel === p.id ? ' sel' : '') + (MAP.sel && MAP.sel !== p.id ? ' dim' : ''), css: p.css });
+    }
+    const seen = new Set();
+    for (const it of items) {
+      seen.add(it.key);
+      let el = MAP.lab.querySelector('[data-k="' + it.key + '"]');
+      if (!el) { el = document.createElement('span'); el.dataset.k = it.key; MAP.lab.appendChild(el); }
+      const cls = 'mml ' + it.c;
+      if (el.className !== cls) el.className = cls;
+      if (el.dataset.h !== it.h) { el.innerHTML = it.h; el.dataset.h = it.h; if (it.css) el.style.setProperty('--pc', it.css); }
+      const q = MAP.G.project(sc, it.p);
+      if (!q) { el.style.display = 'none'; continue; }
+      el.style.display = '';
+      el.style.transform = 'translate(' + q.x.toFixed(1) + 'px,' + q.y.toFixed(1) + 'px) translate(-50%,-100%)';
+    }
+    for (const el of [...MAP.lab.children]) if (!seen.has(el.dataset.k)) el.remove();
   }
 
   // Karte von oben: wer steht wo (Level 1–6)

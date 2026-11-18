@@ -489,10 +489,10 @@ window.NTGrafik = (function () {
           gl.uniform3fv(o.uColor, ob.color); gl.uniform1f(o.uGlow, ob.glow || 0);
           drawDyn(groundStrip(ob.pts, ob.closed, ob.lift || 0.12));
         } else if (ob.type === 'flag') {
-          const y = world.h(ob.x, ob.z);
-          draw('box', M.trs(ob.x, y + 2.2, ob.z, 0, 0, 0.09, 2.2, 0.09), [0.95, 0.95, 0.95], 0.2);
-          draw('cloth', M.trs(ob.x, y + 4.4, ob.z, ob.yaw || 0, 0, 1.4, 1.4, 1.4), ob.color, 0.35);
-          draw('sphere', M.trs(ob.x, y, ob.z, 0, 0, 0.6, 0.18, 0.6), ob.color, 0.5);
+          const y = world.h(ob.x, ob.z), k = ob.s || 1;
+          draw('box', M.trs(ob.x, y + 2.2 * k, ob.z, 0, 0, 0.09 * k, 2.2 * k, 0.09 * k), [0.95, 0.95, 0.95], 0.2);
+          draw('cloth', M.trs(ob.x, y + 4.4 * k, ob.z, ob.yaw || 0, 0, 1.4 * k, 1.4 * k, 1.4 * k), ob.color, 0.35);
+          draw('sphere', M.trs(ob.x, y, ob.z, 0, 0, 0.6 * k, 0.18 * k, 0.6 * k), ob.color, 0.5);
         }
       }
 
@@ -516,7 +516,7 @@ window.NTGrafik = (function () {
       const bounce = 1 - Math.abs(Math.cos(ph)) * 0.05 * walk;
       const breathe = 1 + Math.sin(now * 2.4) * 0.016 * (1 - walk);
       const blink = (now % 3.9) < 0.13 ? 0.1 : 1;
-      const S = 0.9;
+      const S = 0.9 * (P.scale || 1);          // scale: größere Pinguine auf der Karte der Lehrkraft (mehr.js)
       const fog = fogColor(), dark = !!pal.dark;
       const c = progC.u;
       gl.useProgram(progC.p);

@@ -183,9 +183,27 @@ ol.steps li::before { content:counter(st); position:absolute; left:0; top:0; wid
   body[data-mode="zahl"] .top > section:last-child { grid-column:auto; }
   .grid { grid-template-columns:repeat(var(--cols, 3), 1fr); grid-auto-rows:140px; }
 }
+
+/* Leiste am Rundenende (gemeinsam, Sönke 18.11.2026) – wie #endbar in index.html */
+#endbar { position:fixed; left:50%; transform:translateX(-50%); bottom:10px; width:min(1000px, calc(100% - 20px)); z-index:6;
+  display:flex; align-items:center; flex-wrap:wrap; gap:8px 14px; padding:9px 12px; }
+#endbar[hidden] { display:none; }
+body.has-endbar { padding-bottom:96px; }
+.eb-res { display:flex; align-items:center; gap:10px; flex:1 1 300px; min-width:0; }
+.eb-kick { font-family:var(--mono); font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); }
+.eb-line { font-size:15px; line-height:1.35; color:var(--ink-soft); } .eb-line b { color:var(--ink); }
+.eb-line small { color:var(--ink-faint); font-size:12.5px; }
+.eb-place { font-family:var(--head); font-size:20px; font-weight:700; white-space:nowrap; } .eb-place b { color:var(--gold, #ffd166); }
+.eb-btns { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+.eb-btns .btn { padding:8px 12px; font-size:14px; white-space:nowrap; }
+.eb-more { flex-basis:100%; border-top:1px solid var(--line); padding-top:8px; }
+.eb-more[hidden] { display:none; }
+.eb-more p { margin:4px 0 0; font-size:14.5px; line-height:1.45; color:var(--ink-soft); }
+.ki-tag { font-size:12px; font-weight:700; color:var(--accent-ink); text-transform:uppercase; letter-spacing:.05em; }
+@media (max-width: 600px) { .eb-line { font-size:13.5px; } .eb-place { font-size:17px; } .eb-btns .btn { padding:7px 10px; font-size:13px; } }
 </style>
 <link href="karte.css?v=20261118a" rel="stylesheet">
-<link href="mehr.css?v=20261118m" rel="stylesheet">
+<link href="mehr.css?v=20261118n" rel="stylesheet">
 </head>
 <body>
 <div id="lab">
@@ -226,10 +244,11 @@ ol.steps li::before { content:counter(st); position:absolute; left:0; top:0; wid
   <div class="grid" id="grid"></div>
 </div>
 <div id="card" hidden></div>
+<div id="endbar" class="glass" hidden aria-live="polite"></div>
 <script src="js/welt.js?v=20261118a"></script>
 <script src="js/bilder.js?v=20261118e"></script>
 <script src="js/netz.js?v=20261118b"></script>
-<script src="js/raum.js?v=20261118m"></script>
-<script src="js/labor.js?v=20261118m"></script>
+<script src="js/raum.js?v=20261118n"></script>
+<script src="js/labor.js?v=20261118n"></script>
 </body>
 </html>
