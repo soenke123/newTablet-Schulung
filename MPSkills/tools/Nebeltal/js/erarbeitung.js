@@ -88,7 +88,11 @@
     // Pinguin
     const [px, pb, ph] = L.peng, file = (q.y ? 'chin_' : 'adelie_') + ((S.oi % 2) + 1);
     h += '<ellipse cx="' + px + '" cy="' + (pb - 2) + '" rx="' + ph * 0.3 + '" ry="7" fill="#000" opacity=".35"/>';
-    h += '<g class="' + (hide ? 'hide' : '') + '"><image class="pgimg" href="img/frei/' + file + '.webp" x="' + (px - ph * 0.42) + '" y="' + (pb - ph) + '" width="' + ph * 0.84 + '" height="' + ph + '" preserveAspectRatio="xMidYMax meet"/></g>';
+    // Raten: schwarze Silhouette mit weißem Rand als SVG-Filter (CSS-filter an <image> kann Safari/iPad nicht)
+    h += '<defs><filter id="sil" x="-10%" y="-10%" width="120%" height="120%"><feMorphology in="SourceAlpha" operator="dilate" radius="2.5" result="d"/>' +
+      '<feFlood flood-color="#eef4fb"/><feComposite in2="d" operator="in" result="rand"/><feFlood flood-color="#05080f"/><feComposite in2="SourceAlpha" operator="in" result="sw"/>' +
+      '<feMerge><feMergeNode in="rand"/><feMergeNode in="sw"/></feMerge></filter></defs>';
+    h += '<g' + (hide ? ' filter="url(#sil)"' : '') + '><image class="pgimg" href="img/frei/' + file + '.webp" x="' + (px - ph * 0.42) + '" y="' + (pb - ph) + '" width="' + ph * 0.84 + '" height="' + ph + '" preserveAspectRatio="xMidYMax meet"/></g>';
     if (hide) h += T(px + ph * 0.34, pb - ph + 30, '?', 34, COL.faint, 700);
     h += T(L.name[0], L.name[1], hide ? 'Welche Art?' : (q.y ? 'Zügelpinguin' : 'Adeliepinguin'), 19, hide ? COL.soft : COL.ink, 700);
     h += T(L.name[0], L.name[1] + 22, 'antippen = anderer Pinguin', 12.5, COL.faint, 600);
@@ -310,8 +314,7 @@
     if (st === 1) return '<button class="btn primary" id="bNext" type="button">Auflösen ›</button>';
     if (st === 2) return back + '<button class="btn primary" id="bNext" type="button">Gewichte anpassen ›</button>';
     if (st === 3) return back + '<button class="btn" id="bAgain" type="button">↻ Nächster Pinguin</button><button class="btn primary" id="bNext" type="button">Ins Tal ›</button>';
-    return back + '<label class="lr">Lernrate <input id="lr" type="range" min="0" max="100" value="' + lrPos(S.lr) + '"><b id="lrV">' + f(S.lr, S.lr < 1 ? 2 : 1) + '</b></label>' +
-      '<button class="btn" id="bReset" type="button">Lernen zurücksetzen</button>' +
+    return back + '<button class="btn" id="bReset" type="button">Lernen zurücksetzen</button>' +
       '<button class="btn primary" id="bJump" type="button">Neuer Pinguin · Sprung ›</button>';
   }
 
@@ -322,6 +325,10 @@
     $('#steps').querySelectorAll('.stp').forEach(b => b.addEventListener('click', () => go(+b.dataset.s)));
     document.body.classList.toggle('s4', st === 4);
     $('#tal').hidden = st !== 4;
+    // Lernrate oben über dem Netz, ab „Anpassen“ und bleibt in „Ins Tal“ (Sönke 18.11.2026)
+    document.body.classList.toggle('lrOn', st >= 3);
+    $('#lrBox').hidden = st < 3;
+    $('#lr').value = lrPos(S.lr); $('#lrV').textContent = f(S.lr, S.lr < 1 ? 2 : 1);
     $('#explain').innerHTML = explain();
     $('#ctrl').innerHTML = ctrlHtml();
     const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
@@ -330,8 +337,6 @@
     on('#bAgain', () => { S.oi++; newCycle(); go(1, true); });
     on('#bJump', hop);
     on('#bReset', resetLearn);
-    const lr = $('#lr');
-    if (lr) lr.addEventListener('input', () => { S.lr = +lrVal(+lr.value).toFixed(1); $('#lrV').textContent = f(S.lr, S.lr < 1 ? 2 : 1); if (!S.cyc.applied) plan(); });
     requestAnimationFrame(drawAll);
   }
   // Schritt wechseln: 3 übernimmt die neuen Gewichte, zurück davor nimmt sie wieder weg
@@ -344,6 +349,12 @@
     S.step = n;
     render();
   }
+  // Lernrate ändern: in „Anpassen“ rechnet derselbe Pinguin die Anpassung neu (Bild + Formel), in „Ins Tal“ gilt sie ab dem nächsten Sprung
+  $('#lr').addEventListener('input', () => {
+    S.lr = +lrVal(+$('#lr').value).toFixed(1); $('#lrV').textContent = f(S.lr, S.lr < 1 ? 2 : 1);
+    if (S.step === 3) { S.trail.pop(); S.losses.pop(); plan(); S.w = S.cyc.after.slice(); record(); drawStage(); $('#explain').innerHTML = explain(); }
+    else if (S.step === 4 && !S.cyc.applied) plan();
+  });
   window.addEventListener('resize', drawAll);
   window.addEventListener('keydown', e => {
     if (e.key === 'ArrowRight' && S.step < 4) go(S.step + 1);

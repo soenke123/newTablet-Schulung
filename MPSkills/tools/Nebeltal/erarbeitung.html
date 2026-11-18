@@ -60,7 +60,6 @@ main { flex:1; min-height:0; position:relative; padding:0 14px; }
 .pill rect { fill:#0b1528; stroke-width:1.6; }
 .pill text { font-family:var(--mono) !important; font-weight:700; fill:var(--ink); }
 .pgimg { transition:filter .6s; }
-.hide .pgimg { filter:brightness(0) drop-shadow(0 0 2px rgba(207,224,245,.85)); }
 .mk { transition:transform .7s cubic-bezier(.3,1.3,.5,1); }
 html[data-motion="low"] .mk, html[data-motion="low"] .pgimg { transition:none; }
 
@@ -74,6 +73,15 @@ body.s4 #stage { width:calc(54% - 21px); }
 #side { display:flex; flex-wrap:wrap; gap:4px 14px; justify-content:center; font-size:13.5px; color:var(--ink-soft); }
 #side b { color:var(--accent-ink); font-family:var(--head); font-weight:600; }
 #side .sc { color:var(--ink); } #side .sc b { color:var(--ink); }
+
+/* Lernrate oben über dem Netz (ab Schritt 3) */
+#lrBox { position:absolute; top:0; left:14px; width:calc(100% - 28px); display:flex; justify-content:center; z-index:2; }
+body.s4 #lrBox { width:calc(54% - 21px); }
+#lrBox .lr { padding:6px 14px; border-radius:99px; font-size:15px; }
+#lrBox .lr b { font-size:17px; color:var(--accent-ink); }
+#lrBox .lr input { width:160px; }
+body.lrOn #stage { top:48px; height:calc(100% - 48px); }
+body.lrOn #tal { top:48px; }
 
 /* ── Fuß: ein Satz + Knöpfe ── */
 footer { flex:none; display:flex; flex-wrap:wrap; gap:12px 16px; align-items:center; margin:10px 14px 12px; padding:14px 16px; }
@@ -95,12 +103,14 @@ footer { flex:none; display:flex; flex-wrap:wrap; gap:12px 16px; align-items:cen
   #explain { flex:none; }
   #ctrl { justify-content:flex-start; }
   /* Ins Tal hochkant: das Bild bleibt hochkant wie in „Anpassen“ (links), die Karte rechts daneben */
-  body.s4 #stage { width:calc(42% - 21px); }
+  body.s4 #stage, body.s4 #lrBox { width:calc(42% - 21px); }
   #tal { inset:0 14px 0 calc(42% + 7px); }
 }
 @media (max-width: 520px) {
   body.s4 #stage { width:calc(100% - 16px); height:55%; }
-  #tal { inset:55% 8px 0 8px; }
+  body.s4.lrOn #stage { height:calc(55% - 48px); }
+  body.s4 #lrBox { width:calc(100% - 16px); left:8px; }
+  #tal, body.lrOn #tal { inset:55% 8px 0 8px; }
 }
 @media (max-width: 480px) {
   header { gap:8px; padding:8px 10px; }
@@ -128,6 +138,7 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 </header>
 
 <main>
+  <div id="lrBox" hidden><label class="lr glass">Lernrate <input id="lr" type="range" min="0" max="100" aria-label="Lernrate"><b id="lrV"></b></label></div>
   <svg id="stage" role="img" aria-label="Ein Neuron: zwei Messwerte des Schnabels, zwei Gewichte, Ausgang Zügelpinguin ja oder nein"></svg>
   <div id="tal" hidden>
     <div id="mapWrap"><canvas id="map" aria-label="Fehler-Landschaft über die zwei Gewichte, der Pinguin steht beim jetzigen Neuron"></canvas></div>
@@ -143,6 +154,6 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 <script src="js/welt.js?v=20261118a"></script>
 <script src="js/bilder.js?v=20261118f"></script>
 <script src="js/raum.js?v=20261118o"></script>
-<script src="js/erarbeitung.js?v=20261118d"></script>
+<script src="js/erarbeitung.js?v=20261118e"></script>
 </body>
 </html>

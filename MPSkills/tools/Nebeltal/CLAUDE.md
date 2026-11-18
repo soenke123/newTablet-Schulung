@@ -154,6 +154,10 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Kanten in „Anpassen“ mit 2 Nachkommastellen); w₂ rechnet die Klasse selbst nach (Sönke 18.11.2026). Quer/hochkant
   entscheidet die GANZE Bühne (`main`), nicht `#stage` – sonst kippte das Bild in „Ins Tal“ (schmalere Bühne) auf hochkant;
   „Ins Tal“ hochkant = Bild links (42 %), Karte rechts, nur ≤ 520 px untereinander.
+  Raten: Pinguin als schwarze Silhouette mit weißem Rand über einen SVG-Filter `#sil` (feMorphology) – CSS-`filter` an
+  SVG-`<image>` greift in Safari/iPad nicht, dort war der Pinguin zu erkennen. Lernrate (`#lrBox`, Regler) steht ab „Anpassen“
+  OBEN über dem Netz und bleibt in „Ins Tal“ dort (`body.lrOn`); in „Anpassen“ rechnet ein neuer Wert die Anpassung desselben
+  Pinguins sofort neu (Kanten, Antwort, Formel), in „Ins Tal“ gilt er ab dem nächsten Sprung (Sönke 18.11.2026).
   Weggefallen: versteckte Schicht, Bias, Anteile/Backprop-Formel, σ-Kurve, Regel-Kasten, Brücken-Tabelle mit 6 Zeilen.
 - `karte.css` – Erklärkarte vor jedem Level (index.html + labor.html, 18.11.2026: „ohne Scrollen auf einen Bildschirm“):
   `.card-in.is-intro` mit `.i-head` (Kicker, Titel, EIN Satz) · `.i-pic` (Bild, Formel) · `.i-txt` (höchstens 3 kurze
