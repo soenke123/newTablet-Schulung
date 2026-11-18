@@ -184,7 +184,8 @@ body:not([data-lvl="3"]) #lrDistRow { display:none; }
 #plot { width:100%; height:140px; display:block; }
 #mrow { width:100%; height:auto; display:block; }
 #xorBox { position:absolute; right:12px; top:170px; width:300px; padding:8px 10px 8px; }
-#xnet { width:100%; height:92px; display:block; }
+#xrow, #mrow, #prow { overflow:visible; }
+#xrow { width:100%; height:auto; display:block; margin-bottom:2px; }
 /* Level 6: Bias-Regler direkt am Kasten (Sönke 17.11.2026) – verschiebt die Gerade, Welt baut sich neu */
 .biasrow { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--ink-soft); }
 .biasrow input { flex:1; min-width:0; accent-color:#5cf2c4; height:26px; }
@@ -399,8 +400,8 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
     </div>
 
     <div id="xorBox" class="glass" hidden>
-      <div class="box-t">Das Neuron</div>
-      <canvas id="xnet"></canvas>
+      <div class="box-t">Das Neuron – Nest für Nest</div>
+      <svg id="xrow" viewBox="0 0 302 108" aria-label="Das Neuron beurteilt das gezeigte Nest"></svg>
       <div class="biasrow"><span>Bias</span><input id="xBias" type="range" min="-40" max="40" step="1" value="0" aria-label="Bias des Neurons"><b id="xBiasV">0,0</b><label class="blearn"><input id="xBiasL" type="checkbox">lernt mit</label></div>
       <div class="biasnote" id="xBiasNote">stellst du selbst ein · lernt beim Training nicht mit</div>
       <div class="box-t" style="margin-top:4px">Die vier Nester · dein Neuron = eine Gerade</div>
@@ -410,7 +411,7 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 
     <div id="modelBox" class="glass" hidden>
       <div class="box-t">Das Neuron – Pinguin für Pinguin</div>
-      <svg id="mrow" viewBox="0 0 280 100" aria-label="Das Neuron schätzt das Gewicht des gezeigten Pinguins"></svg>
+      <svg id="mrow" viewBox="0 0 302 110" aria-label="Das Neuron schätzt das Gewicht des gezeigten Pinguins"></svg>
       <div class="box-t" style="margin-top:2px">Alle 342 Pinguine</div>
       <canvas id="plot"></canvas>
       <div class="plegend"><span class="pa">● Adelie</span><span class="pc">● Zügel</span><span class="pe">● Esel</span></div>
@@ -464,8 +465,8 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 <script src="js/bilder.js?v=20261118a"></script>
 <script src="js/grafik.js?v=20261117m"></script>
 <script src="js/schnee.js?v=20261117j"></script>
-<script src="js/netz.js?v=20261118a"></script>
+<script src="js/netz.js?v=20261118b"></script>
 <script src="js/zwei.js?v=20261118a"></script>
-<script src="js/spiel.js?v=20261118a"></script>
+<script src="js/spiel.js?v=20261118b"></script>
 </body>
 </html>

@@ -142,7 +142,7 @@ window.NTNetz = (function () {
      jeder Stelle sagt (grün = „Ei ok“, rot = „nicht ok“). Jedes versteckte
      Neuron ist eine GERADE: a·Mama + b·Papa = c, Pfeil zur Seite, auf der es
      „an“ ist; am Ende der Geraden steht die Figur, die dieses Neuron IST.
-       o = { cases, out(m, p) → 0…1, lines: [{ a, b, c, col, team, name }] } */
+       o = { cases, out(m, p) → 0…1, lines: [{ a, b, c, col, team, name }], hi = Index des umkreisten Nests } */
   const IMGS = {};
   let plotAgain = null;
   function img(name) {
@@ -196,8 +196,14 @@ window.NTNetz = (function () {
 
     // die Nester
     const nw = Math.min(pw, ph) * 0.4;
-    for (const c of o.cases) {
+    o.cases.forEach((c, ci) => {
       const cx = X(c.s1), cy = Y(c.s2), im = img(NESTF(c.s1, c.s2));
+      if (ci === o.hi) {                             // das Nest, das oben gerade durchs Neuron geht
+        x.strokeStyle = ink; x.lineWidth = 2.4; x.setLineDash([5, 3]);
+        const l = Math.max(L + 2, cx - nw * 0.6), r = Math.min(L + pw - 2, cx + nw * 0.6);
+        const t = Math.max(T + 2, cy - nw * 0.42), bo = Math.min(T + ph - 2, cy + nw * 0.14 + 18);
+        x.beginPath(); rr(x, l, t, r - l, bo - t, 12); x.stroke(); x.setLineDash([]);
+      }
       const want = c.y === 1, right = (c.o > 0.5) === want;
       if (want) {                                    // so soll es sein: grüner Rahmen
         x.strokeStyle = okC; x.lineWidth = 2.2;
@@ -213,7 +219,7 @@ window.NTNetz = (function () {
       x.fillStyle = right ? 'rgba(18,163,122,.92)' : 'rgba(212,58,82,.92)';
       x.beginPath(); rr(x, cx - tw / 2, ty - 10.5, tw, 14, 7); x.fill();
       x.fillStyle = '#fff'; x.fillText(t, cx, ty);
-    }
+    });
 
     // die Geraden der Neuronen
     const figs = [];

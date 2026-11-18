@@ -891,25 +891,37 @@
      Darunter alle 342 Pinguine (Flosse → Gewicht) mit der Geraden des
      Neurons; der Pinguin von oben ist umkreist, rot = sein Fehler. */
   const MROW = { order: null, seed: 0, idx: -1 };
+  // Aufbau wie Level 5 (Sönke 18.11.2026): links der Pinguin mit seinem Messwert, Mitte das Neuron,
+  // rechts „NEURON SAGT“ mit senkrechter kg-Skala (Punkt = Schätzung, Ring = echt, rot = Fehler) und ✓/✗
+  const MK0 = 26, MK1 = 98, MV0 = 2, MV1 = 7, MKX = 222;           // kg-Skala: oben 7 kg, unten 2 kg
+  const MKY = v => MK0 + (MV1 - Math.max(MV0, Math.min(MV1, v))) / (MV1 - MV0) * (MK1 - MK0);
   function mrowBuild() {
     const el = $('#mrow');
     if (el.dataset.ok) return;
     el.dataset.ok = '1';
+    const t = (id, x, y, size, w, anchor, fill, txt) => '<text' + (id ? ' id="' + id + '"' : '') + ' x="' + x + '" y="' + y + '" font-size="' + size +
+      '" font-weight="' + w + '" text-anchor="' + anchor + '" fill="' + fill + '">' + (txt || '') + '</text>';
+    let ticks = '';
+    for (const v of [2, 3, 4, 5, 6, 7]) ticks += '<line x1="' + (MKX - 3) + '" y1="' + MKY(v) + '" x2="' + (MKX + 3) + '" y2="' + MKY(v) + '" stroke="var(--ink-faint)" stroke-width="1"/>' +
+      (v % 2 === 0 || v === 7 ? t('', MKX - 5, MKY(v) + 3, 8, 600, 'end', 'var(--ink-faint)', v) : '');
     el.innerHTML =
-      '<g id="mPg"></g>' +
-      '<text id="mName" x="0" y="12" font-size="11" font-weight="700" text-anchor="start" fill="var(--ink-faint)"></text>' +
-      '<text x="96" y="32" font-size="11" font-weight="600" text-anchor="middle" fill="var(--ink-soft)">Flosse</text>' +
-      '<text id="mF" x="96" y="47" font-size="13" font-weight="700" text-anchor="middle" fill="var(--ink)"></text>' +
-      '<circle cx="96" cy="60" r="4" fill="var(--ink)"/>' +
-      '<line id="mEdge" x1="100" y1="60" x2="158" y2="60" stroke="#f27828" stroke-linecap="round"/>' +
-      '<text id="mWl" x="130" y="78" font-size="12" font-weight="700" text-anchor="middle" fill="#f27828"></text>' +
-      '<circle cx="176" cy="60" r="18" fill="var(--surface)" stroke="#f27828" stroke-width="2.4"/>' +
-      '<text x="176" y="59" font-size="13" font-weight="700" text-anchor="middle" fill="var(--ink)">Σ</text>' +
-      '<text id="mBl" x="176" y="71" font-size="9.5" font-weight="700" text-anchor="middle" fill="#f27828"></text>' +
-      '<line x1="194" y1="60" x2="206" y2="60" stroke="var(--ink)" stroke-width="2"/><path d="M212,60 L204,55.5 L204,64.5Z" fill="var(--ink)"/>' +
-      '<text id="mOut" x="276" y="52" font-size="15" font-weight="700" text-anchor="end" fill="var(--ink)"></text>' +
-      '<text id="mReal" x="276" y="68" font-size="11" font-weight="600" text-anchor="end" fill="var(--ink-soft)"></text>' +
-      '<text id="mDiff" x="276" y="84" font-size="11" font-weight="700" text-anchor="end"></text>';
+      '<g id="mPg"></g>' + t('mName', 0, 12, 11, 700, 'start', 'var(--ink-faint)') +
+      t('', 116, 50, 10.5, 600, 'end', 'var(--ink-soft)', 'Flosse') + t('mF', 116, 64, 12.5, 700, 'end', 'var(--ink)') +
+      '<circle cx="124" cy="59" r="4" fill="var(--ink)"/>' +
+      '<line id="mEdge" x1="128" y1="59" x2="150" y2="59" stroke="#f27828" stroke-linecap="round"/>' +
+      t('mWl', 139, 46, 11, 700, 'middle', '#f27828') +
+      '<circle cx="167" cy="59" r="17" fill="var(--surface)" stroke="#f27828" stroke-width="2.4"/>' +
+      t('', 167, 58, 13, 700, 'middle', 'var(--ink)', 'Σ') + t('mBl', 167, 70, 9, 700, 'middle', '#f27828') +
+      '<line x1="184" y1="59" x2="194" y2="59" stroke="var(--ink)" stroke-width="2"/><path d="M200,59 L192,54.5 L192,63.5Z" fill="var(--ink)"/>' +
+      t('', 254, 11, 10, 700, 'middle', 'var(--ink-faint)', 'NEURON SAGT') +
+      '<rect id="mBox" x="206" y="17" width="94" height="90" rx="10" stroke-width="2"/>' +
+      '<line x1="' + MKX + '" y1="' + MK0 + '" x2="' + MKX + '" y2="' + MK1 + '" stroke="var(--ink-faint)" stroke-width="1.4"/>' + ticks +
+      '<line id="mErr" x1="' + MKX + '" x2="' + MKX + '" stroke="var(--warn)" stroke-width="3" stroke-linecap="round"/>' +
+      '<circle id="mRealM" cx="' + MKX + '" r="5" fill="none" stroke="var(--ink)" stroke-width="2"/>' +
+      '<circle id="mOutM" cx="' + MKX + '" r="3.6" fill="#f27828"/>' +
+      t('', 230, 32, 9.5, 600, 'start', 'var(--ink-faint)', 'Neuron') + t('mOut', 230, 46, 12.5, 700, 'start', 'var(--ink)') +
+      t('', 230, 62, 9.5, 600, 'start', 'var(--ink-faint)', 'echt') + t('mReal', 230, 75, 12, 700, 'start', 'var(--ink-soft)') +
+      t('mDiff', 230, 96, 8.8, 700, 'start', 'var(--warn)') + '<g id="mBadge"></g>';
   }
   function mrowPick(w) {
     if (!MROW.order || MROW.seed !== w.seed) {
@@ -927,21 +939,28 @@
     const i = mrowPick(w), cur = w.pts[i];
     if (i !== MROW.idx) {
       MROW.idx = i;
-      $('#mPg').innerHTML = NTBild.peng({ sp: cur.sp, x: 34, y: 96, s: 0.62 });
+      $('#mPg').innerHTML = NTBild.peng({ sp: cur.sp, x: 32, y: 104, s: 0.62 });
       $('#mName').textContent = NTBild.SP[cur.sp].name;
       $('#mF').textContent = fmt(cur.x, 1) + ' cm';
-      $('#mReal').textContent = 'echt ' + fmt(cur.y, 2) + ' kg';
+      $('#mReal').textContent = fmt(cur.y, 2) + ' kg';
+      $('#mRealM').setAttribute('cy', MKY(cur.y));
     }
-    const est = w.pred(wv, bv, cur.x), diff = est - cur.y;
+    const est = w.pred(wv, bv, cur.x), diff = est - cur.y, ad = Math.abs(diff), ok = ad < 0.25;
+    const ec = wv >= 0 ? '#f27828' : '#2f80ed';
     $('#mEdge').setAttribute('stroke-width', (1.4 + Math.min(7, Math.abs(wv) * 4)).toFixed(1));
-    $('#mEdge').setAttribute('stroke', wv >= 0 ? '#f27828' : '#2f80ed');
+    $('#mEdge').setAttribute('stroke', ec);
     $('#mWl').textContent = '· ' + fmt(wv, 2);
-    $('#mWl').setAttribute('fill', wv >= 0 ? '#f27828' : '#2f80ed');
+    $('#mWl').setAttribute('fill', ec);
     $('#mBl').textContent = (bv >= 0 ? '+' : '') + fmt(bv, 2);
     $('#mOut').textContent = '≈ ' + fmt(est, 2) + ' kg';
-    const ad = Math.abs(diff);
-    $('#mDiff').textContent = ad < 0.05 ? 'fast genau!' : fmt(ad, 2) + ' kg ' + (diff > 0 ? 'zu schwer' : 'zu leicht');
-    $('#mDiff').setAttribute('fill', ad < 0.25 ? 'var(--accent-ink)' : 'var(--warn)');
+    $('#mOutM').setAttribute('cy', MKY(est));
+    $('#mErr').setAttribute('y1', MKY(est)); $('#mErr').setAttribute('y2', MKY(cur.y));
+    $('#mDiff').textContent = ad < 0.05 ? 'fast genau!' : fmt(ad, 2) + ' ' + (diff > 0 ? 'zu schwer' : 'zu leicht');
+    $('#mDiff').setAttribute('fill', ok ? 'var(--accent-ink)' : 'var(--warn)');
+    $('#mBox').setAttribute('fill', ok ? 'rgba(92,242,196,.16)' : 'rgba(255,107,139,.16)');
+    $('#mBox').setAttribute('stroke', ok ? 'var(--accent)' : 'var(--warn)');
+    $('#mBadge').innerHTML = '<circle cx="298" cy="19" r="8" fill="' + (ok ? 'var(--accent)' : 'var(--warn)') + '"/>' +
+      '<text x="298" y="23" font-size="11" font-weight="800" text-anchor="middle" fill="#04201a">' + (ok ? '✓' : '✗') + '</text>';
 
     // alle Pinguine
     const c = $('#plot'), x = c.getContext('2d');
@@ -1130,18 +1149,63 @@
     $('#pWrong').textContent = wrong + ' von ' + w.pts.length;
   }
 
-  /* ── Level 6: ein Neuron, das Nest ── */
+  /* ── Level 6: ein Neuron, das Nest ──
+     Aufbau wie Level 5 (Sönke 18.11.2026): links ein Nest (alle 1,6 s das nächste der vier),
+     Mama/Papa als Eingänge (+1 am Nest, −1 fischt), σ mit Bias, rechts „NEURON SAGT“:
+     Ei ok / Ei nicht ok mit Prozent, ✓/✗ und ECHT. Im Diagramm darunter ist das Nest umkreist. */
+  const NEST_TXT = { beide: 'Beide am Nest', mama: 'Nur Mama da', papa: 'Nur Papa da', nest: 'Beide fischen' };
+  const eggIcon = (x, y, bad) =>
+    '<path transform="translate(' + x + ' ' + y + ') scale(0.82)" d="M0,-14 C7,-14 10,-4 10,2 C10,9 5,13 0,13 C-5,13 -10,9 -10,2 C-10,-4 -7,-14 0,-14Z" fill="' +
+    (bad ? '#9aa6b8' : '#fbf3e4') + '" stroke="var(--ink-soft)" stroke-width="1.6"/>' +
+    (bad ? '<path transform="translate(' + x + ' ' + y + ') scale(0.82)" d="M-9,-1 L-4,3 L0,-3 L4,3 L9,-1" fill="none" stroke="#3a4558" stroke-width="2" stroke-linejoin="round"/>' : '');
+  function xrowBuild() {
+    const el = $('#xrow');
+    if (el.dataset.ok) return;
+    el.dataset.ok = '1';
+    const t = (id, x, y, size, w, anchor, fill, txt) => '<text' + (id ? ' id="' + id + '"' : '') + ' x="' + x + '" y="' + y + '" font-size="' + size +
+      '" font-weight="' + w + '" text-anchor="' + anchor + '" fill="' + fill + '">' + (txt || '') + '</text>';
+    el.innerHTML =
+      '<g id="xNest"></g>' + t('xName', 0, 12, 11, 700, 'start', 'var(--ink-faint)') +
+      t('', 120, 26, 10.5, 600, 'end', 'var(--ink-soft)', 'Mama') + t('xS1', 120, 40, 12, 700, 'end', 'var(--ink)') +
+      t('', 120, 72, 10.5, 600, 'end', 'var(--ink-soft)', 'Papa') + t('xS2', 120, 86, 12, 700, 'end', 'var(--ink)') +
+      '<circle cx="130" cy="36" r="4" fill="var(--ink)"/><circle cx="130" cy="82" r="4" fill="var(--ink)"/>' +
+      '<line id="xE1" x1="134" y1="36" x2="166" y2="54" stroke-linecap="round"/>' +
+      '<line id="xE2" x1="134" y1="82" x2="166" y2="64" stroke-linecap="round"/>' +
+      t('xL1', 150, 30, 11, 700, 'middle', '#f27828') + t('xL2', 150, 98, 11, 700, 'middle', '#f27828') +
+      '<circle cx="183" cy="59" r="17" fill="var(--surface)" stroke="#f27828" stroke-width="2.4"/>' +
+      t('', 183, 59, 14, 700, 'middle', 'var(--ink)', 'σ') + t('xBl', 183, 70.5, 9, 700, 'middle', '#5cf2c4') +
+      '<line x1="200" y1="59" x2="210" y2="59" stroke="var(--ink)" stroke-width="2"/><path d="M216,59 L208,54.5 L208,63.5Z" fill="var(--ink)"/>' +
+      t('', 262, 11, 10, 700, 'middle', 'var(--ink-faint)', 'NEURON SAGT') +
+      [['Ei ok', 36, false], ['nicht ok', 80, true]].map(([nm, y, bad], k) =>
+        '<rect id="xR' + k + '" x="222" y="' + (y - 20) + '" width="78" height="40" rx="10" fill="none" stroke-width="2"/>' +
+        eggIcon(239, y, bad) +
+        t('', 254, y - 4, 10, 700, 'start', 'var(--ink-soft)', nm) + t('xP' + k, 254, y + 11, 13.5, 700, 'start', 'var(--ink)') +
+        '<g id="xB' + k + '"></g>').join('');
+  }
+  const XROW = { idx: -1 };
   function drawXor1() {
     const w = S.world, w1 = w.toW(S.p.x), w2 = w.toW(S.p.z), b = w.bias();
-    NTNetz.draw($('#xnet'), { biasInside: true,
-      nodes: [{ id: 's1', kind: 'in', x: 0.04, y: 0.2, label: 'Mama' }, { id: 's2', kind: 'in', x: 0.04, y: 0.8, label: 'Papa' },
-              { id: 'n', kind: 'n', x: 0.56, y: 0.5, group: 'a', bias: b, biasD: 1, biasGroup: '#5cf2c4' },
-              { id: 'l', kind: 'out', x: 0.76, y: 0.5, label: 'Ei ok?' }],
-      edges: [{ from: 's1', to: 'n', w: w1, group: 'a' }, { from: 's2', to: 'n', w: w2, group: 'a' }]
-    });
     const cs = w.cases(S.p.x, S.p.z), sg = z => 1 / (1 + Math.exp(-z));
+    xrowBuild();
+    const ci = Math.floor(performance.now() / 1600) % 4, cur = cs[ci];
+    if (ci !== XROW.idx) {
+      XROW.idx = ci;
+      const kind = NTBild.nestKind(cur.s1, cur.s2);
+      $('#xNest').innerHTML = NTBild.nestImg(kind, 40, 84, 86);
+      $('#xName').textContent = NEST_TXT[kind];
+      $('#xS1').textContent = cur.s1 > 0 ? 'am Nest +1' : 'fischt −1';
+      $('#xS2').textContent = cur.s2 > 0 ? 'am Nest +1' : 'fischt −1';
+    }
+    for (const [id, wv, lid] of [['#xE1', w1, '#xL1'], ['#xE2', w2, '#xL2']]) {
+      const c = wv >= 0 ? '#f27828' : '#2f80ed';
+      $(id).setAttribute('stroke-width', (1.2 + Math.min(7, Math.abs(wv) * 1.6)).toFixed(1));
+      $(id).setAttribute('stroke', c);
+      $(lid).textContent = '· ' + (wv > 0 ? '+' : '') + fmt(wv, 1); $(lid).setAttribute('fill', c);
+    }
+    $('#xBl').textContent = (b > 0 ? '+' : '') + fmt(b, 1);
+    verdict('x', [cur.o, 1 - cur.o], cur.o > 0.5 ? 0 : 1, cur.y === 1 ? 0 : 1);
     // Gerade: w₁·Mama + w₂·Papa + b = 0  →  c = −b
-    NTNetz.nestPlot($('#xplot'), { cases: cs, out: (m, p) => sg(w1 * m + w2 * p + b),
+    NTNetz.nestPlot($('#xplot'), { cases: cs, out: (m, p) => sg(w1 * m + w2 * p + b), hi: ci,
       lines: [{ a: w1, b: w2, c: -b, col: '#5cf2c4', name: 'dein Neuron' }] });
     $('#xRight').textContent = w.right(cs) + ' von 4';
   }

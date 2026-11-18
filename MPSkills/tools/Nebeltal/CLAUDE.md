@@ -169,6 +169,11 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    umkreist) – live beim Laufen. Wertung nach falsch sortierten
    Pinguinen. Richtung vom Mittelpunkt = Winkel der Trennlinie, Abstand = Sicherheit; falsche Seite
    ist eine flache Hochebene, die richtige eine lange Rinne.
+   Gleicher Aufbau „Beispiel links · Neuron · NEURON SAGT rechts“ (18.11.2026) auch in Level 4
+   (`#mrow`: Pinguin + Flosse → Σ → Kasten mit senkrechter kg-Skala 2–7, Punkt = Schätzung,
+   Ring = echt, rot = Fehler, ✓ unter 0,25 kg) und Level 6 (`#xrow`: alle 1,6 s eines der vier
+   Nester, Mama/Papa ±1 → σ mit Bias → „Ei ok“/„nicht ok“ mit %, ✓/✗/ECHT über `verdict('x', …)`;
+   im Nest-Diagramm ist dieses Nest gestrichelt umrahmt, `nestPlot({ hi })`).
 6. **Das Nest** (bis 17.11.2026 „Das Treppenhaus-Licht“) – Pinguin-Eltern wechseln sich ab; dem Ei
    geht es nur gut, wenn genau einer am Nest ist (beide weg: Ei kühlt aus, beide da: keiner holt
    Futter) = XOR. Ein Neuron soll es lernen und kann es nicht: tiefster Punkt = Mitte, überall 50 %.
