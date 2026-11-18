@@ -346,7 +346,7 @@ zeigt sie groß + wer bereit ist → „Los!“ → 3-2-1 (`countdown_ends_at`, 
 - **Level 8** im Team: Tablets wechseln auf `labor.html?level=8&mp=1` (labor.js `MP8`). Seit 18.11.2026 abends
   (Sönke: „soll wie eine ganz normale Welt aussehen“) sieht das Tablet NUR seine Welt(en) als 3D-Landschaft wie Level 7
   (`WK` in labor.js, `body.wk`, `#wk`: grafik.js, Joystick/WASD, Pfeile = 2. Welt; Ort = die zwei eigenen Werte, Höhe =
-  log-Fehler des ganzen Netzes JE WELT gestreckt auf 0…22 (`wkRange`, Spanne mind. 0,35 in ln, gleitet über `wv.rng`; bis 18.11.2026 `liftL` = 5·ln(Fehler/0,03) für alle gleich – im Sichtkreis oft nur 0,5–4 hoch = topfeben), Pfeil = bergab; Welt wird höchstens alle 250 ms neu gebaut, wenn sich
+  log-Fehler des ganzen Netzes JE WELT gestreckt auf 0…22 (`wkRange`, Spanne mind. 0,35 in ln, gleitet über `wv.rng`; bis 18.11.2026 `liftL` = 5·ln(Fehler/0,03) für alle gleich – im Sichtkreis oft nur 0,5–4 hoch = topfeben), Pfeil = bergab; Kamera drehbar wie in Level 1–6: zweiter Finger ziehen bzw. Q/E (2. Welt , / .), je Welt `wv.cy`, Laufen relativ zur Kamera; Kamera tastet den Sichtstrahl ab und hebt sich über steile Hänge (`wv.ey`, hoch schnell, runter langsam) – vorher steckte sie bei großer Steilheit im Boden; Welt wird höchstens alle 250 ms neu gebaut, wenn sich
   ein fremder Wert ändert, `wkSig`) + nur den Netz-Kasten oben rechts „Dein Teil des Netzes“: eigene Kanten/Bias hell mit
   Zahl, Rest blass (NTNetz `dim`/`biasHide`, `WK.focus`), Pinguin für Pinguin + „erkannt“ unten. Wolken, 8 Kacheln,
   Steuerleiste und Fehler-Anzeige sind weg. Uhr in `#mpChip`; Ende → „Platz x von y · n von 342 richtig“, Laufen stoppt,

@@ -911,7 +911,7 @@
   function wkStart() {
     if (!window.NTGrafik) return;
     WK.list = [...MP8.mine].sort((a, b) => a - b).slice(0, 2).map(s => ({ s, f: { x: 0, z: 0, vx: 0, vz: 0, yaw: Math.PI, tilt: 0, squash: 1, phase: 0 },
-      dots: [], tr: 0, sig: '', built: 0, world: null, joy: { id: null, ox: 0, oy: 0, x: 0, y: 0 }, live: true }));
+      dots: [], tr: 0, sig: '', built: 0, world: null, joy: { id: null, ox: 0, oy: 0, x: 0, y: 0 }, look: { id: null, lx: 0 }, cy: Math.PI, ey: null, live: true }));
     WK.focus = new Set();
     for (const s of WK.list.map(w => w.s)) { const k = s >> 1; for (const i of pairsOf(k)[s & 1].idx) WK.focus.add(k * 4 + i); }
     WK.on = true;
@@ -936,7 +936,12 @@
   const wkPlaying = () => MP8 && MP8.st && MP8.st.phase === 'running';
   function wkDown(e) {
     const n = +e.currentTarget.dataset.n, wv = WK.list[n];
-    if (!wv || !wkPlaying() || !wv.live || wv.joy.id !== null) return;
+    if (!wv) return;
+    // zweiter Finger (oder Joystick gerade nicht möglich) = Kamera drehen wie in den anderen Leveln
+    if (wv.joy.id !== null || !wkPlaying() || !wv.live) {
+      if (wv.look.id === null) { wv.look.id = e.pointerId; wv.look.lx = e.clientX; try { e.currentTarget.setPointerCapture(e.pointerId); } catch (er) { /* egal */ } }
+      return;
+    }
     Object.assign(wv.joy, { id: e.pointerId, ox: e.clientX, oy: e.clientY, x: 0, y: 0 });
     const j = $('#wkJoy'), r = $('#wk').getBoundingClientRect();
     j.style.left = (e.clientX - r.left) + 'px'; j.style.top = (e.clientY - r.top) + 'px'; j.firstChild.style.transform = 'translate(-50%,-50%)'; j.hidden = false;
@@ -944,6 +949,7 @@
   }
   function wkMove(e) {
     for (const wv of WK.list) {
+      if (wv.look.id === e.pointerId) { wv.cy -= (e.clientX - wv.look.lx) * 0.0065; wv.look.lx = e.clientX; continue; }
       if (wv.joy.id !== e.pointerId) continue;
       let dx = e.clientX - wv.joy.ox, dy = e.clientY - wv.joy.oy;
       const l = Math.hypot(dx, dy), JR = 56;
@@ -952,7 +958,7 @@
       $('#wkJoy i').style.transform = 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))';
     }
   }
-  function wkUp(e) { for (const wv of WK.list) if (wv.joy.id === e.pointerId) { Object.assign(wv.joy, { id: null, x: 0, y: 0 }); $('#wkJoy').hidden = true; } }
+  function wkUp(e) { for (const wv of WK.list) if (wv.look.id === e.pointerId) wv.look.id = null; else if (wv.joy.id === e.pointerId) { Object.assign(wv.joy, { id: null, x: 0, y: 0 }); $('#wkJoy').hidden = true; } }
   window.addEventListener('keydown', e => { if (WK.on && !(e.target && e.target.tagName === 'INPUT')) WK.keys.add(e.key.toLowerCase()); });
   window.addEventListener('keyup', e => WK.keys.delete(e.key.toLowerCase()));
   window.addEventListener('blur', () => WK.keys.clear());
@@ -966,7 +972,12 @@
     if (wv.live && wkPlaying()) { if (has(0)) iy += 1; if (has(1)) iy -= 1; if (has(2)) ix -= 1; if (has(3)) ix += 1; }
     else { ix = iy = 0; }
     const il = Math.hypot(ix, iy); if (il > 1) { ix /= il; iy /= il; }
-    const tvx = ix * WSPEED, tvz = -iy * WSPEED, q = 1 - Math.exp(-7 * dt);
+    // Kamera drehen: Q/E (Welt 1), , / . (Welt 2); Laufen relativ zur Kamera
+    const RK = n === 0 ? ['q', 'e'] : [',', '.'];
+    const rot = (WK.keys.has(RK[0]) ? 1 : 0) - (WK.keys.has(RK[1]) ? 1 : 0);
+    if (rot) wv.cy += rot * 1.8 * dt;
+    const fx = Math.sin(wv.cy), fz = Math.cos(wv.cy), rx = -fz, rz = fx;
+    const tvx = (fx * iy + rx * ix) * WSPEED, tvz = (fz * iy + rz * ix) * WSPEED, q = 1 - Math.exp(-7 * dt);
     f.vx += (tvx - f.vx) * q; f.vz += (tvz - f.vz) * q;
     if (Math.hypot(tvx, tvz) > 0.3) f.yaw += angD(Math.atan2(tvx, tvz), f.yaw) * (1 - Math.exp(-10 * dt));
     const lim = WWD - 1.5, nx = clamp(f.x + f.vx * dt, -lim, lim), nz = clamp(f.z + f.vz * dt, -lim, lim), moved = Math.hypot(nx - f.x, nz - f.z);
@@ -998,7 +1009,24 @@
   function wkDraw(wv) {
     const f = wv.f, w = wv.world, ground = w.h(f.x, f.z);
     const y = ground + Math.abs(Math.sin(f.phase * 2.2)) * 0.12 * clamp(Math.hypot(f.vx, f.vz) / WSPEED, 0, 1);
-    const cam = { eye: [f.x, y + 9, f.z + 13], at: [f.x, y + 1, f.z - 1.5] };
+    // Kamera hinter der Figur (Richtung wv.cy); bei steilen Hängen nicht in den Boden:
+    // den ganzen Sichtstrahl Figur → Kamera abtasten und die Kamera darüber heben,
+    // nach oben schnell, nach unten langsam (sonst zittert sie über Kanten)
+    const fx = Math.sin(wv.cy), fz = Math.cos(wv.cy), D = 13, at = [f.x + fx * 1.5, y + 1, f.z + fz * 1.5];
+    const ex = f.x - fx * D, ez = f.z - fz * D;
+    let need = y + 9;
+    for (let i = 1; i <= 8; i++) {
+      const t = i / 8, gx = f.x + (ex - f.x) * t, gz = f.z + (ez - f.z) * t;
+      const g = w.h(clamp(gx, -w.W, w.W), clamp(gz, -w.W, w.W)) + 1.6;
+      // Strahl von at (Höhe y+1) zur Kamera muss bei t über g liegen
+      const req = (y + 1) + (g - (y + 1)) / t;
+      if (req > need) need = req;
+    }
+    need = Math.min(need, y + 40);
+    if (wv.ey === null || need > wv.ey) wv.ey = wv.ey === null ? need : wv.ey + (need - wv.ey) * 0.5;
+    else wv.ey += (need - wv.ey) * 0.08;
+    if (wv.ey < need - 0.3) wv.ey = need - 0.3;
+    const cam = { eye: [ex, wv.ey, ez], at };
     const objs = [];
     for (const d of wv.dots) objs.push({ type: 'dot', x: d.x, y: w.h(d.x, d.z) + 0.08, z: d.z, r: 0.16, flat: 0.18, color: [0.55, 0.8, 1], glow: 0.2 });
     if (wv.live && wkPlaying()) {
