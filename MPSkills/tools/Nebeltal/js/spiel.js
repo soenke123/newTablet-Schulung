@@ -223,16 +223,37 @@
   const stars = n => '<span class="stars" aria-label="' + n + ' von 3 Sternen">' +
     [1, 2, 3].map(i => '<i class="' + (i <= n ? 'on' : '') + '">★</i>').join('') + '</span>';
 
+  /* Übersicht = Ablauf der Stunde (Sönke 18.11.2026): je Reihe eine Phase, Kacheln mit Bild
+     (NTBild.tile). Neben den Leveln: Erarbeitung (Tafelbild erarbeitung.html) und Sicherung (kommt noch). */
+  const EXTRA = {
+    erarb: { name: 'Erarbeitung', short: 'Tafelbild: Wie lernt ein neuronales Netz?', href: 'erarbeitung.html', tag: 'Tafel' },
+    sich: { name: 'Sicherung', short: 'Kommt bald', soon: true, tag: '–' }
+  };
+  const PHASES = [
+    { t: 'Einstieg', sub: 'Den tiefsten Punkt suchen – und verstehen, was das mit Lernen zu tun hat', items: [1, 2, 3, 'erarb'] },
+    { t: 'Neuronen trainieren', sub: 'Hinter jeder Welt steckt jetzt ein echtes Neuron', items: [4, 5, 6, 7] },
+    { t: 'Sicherung', sub: 'Alles zusammen: ein ganzes Netz', items: ['sich', 8] }
+  ];
+
   function renderMenu() {
     $('#seed').value = seed;
-    $('#levels').innerHTML = LEVELS.map(L => {
-      const b = parseInt(LS.get(bestKey(L.id)), 10);
-      return '<button class="lv" data-lv="' + L.id + '">' +
-        '<span class="lv-n">' + L.id + '</span>' +
-        '<span class="lv-t"><b>' + L.name + '</b><small>' + L.short + '</small></span>' +
-        (b >= 0 ? stars(b) : '<span class="stars empty"></span>') + '</button>';
-    }).join('');
-    document.querySelectorAll('#levels .lv').forEach(b => b.addEventListener('click', () => openLevel(+b.dataset.lv)));
+    const tileHtml = key => {
+      const L = typeof key === 'number' ? LEVELS.find(l => l.id === key) : EXTRA[key];
+      const b = typeof key === 'number' ? parseInt(LS.get(bestKey(key)), 10) : NaN;
+      const attr = L.soon ? ' disabled aria-disabled="true"' : typeof key === 'number' ? ' data-lv="' + key + '"' : ' data-href="' + L.href + '"';
+      return '<button class="tile' + (L.soon ? ' soon' : '') + (typeof key === 'number' ? '' : ' extra') + '" type="button"' + attr + '>' +
+        '<span class="tile-img">' + (window.NTBild ? NTBild.tile(key) : '') +
+          '<span class="tile-n">' + (typeof key === 'number' ? key : L.tag) + '</span>' +
+          (b >= 0 ? stars(b) : '') + '</span>' +
+        '<span class="tile-t"><b>' + L.name + '</b><small>' + L.short + '</small></span></button>';
+    };
+    $('#levels').innerHTML = PHASES.map((P, i) =>
+      '<section class="phase">' +
+        '<div class="phase-h"><span class="phase-n">Phase ' + (i + 1) + '</span><b>' + P.t + '</b><small>' + P.sub + '</small></div>' +
+        '<div class="phase-row">' + P.items.map(tileHtml).join('') + '</div>' +
+      '</section>').join('');
+    document.querySelectorAll('#levels .tile[data-lv]').forEach(b => b.addEventListener('click', () => openLevel(+b.dataset.lv)));
+    document.querySelectorAll('#levels .tile[data-href]').forEach(b => b.addEventListener('click', () => { location.href = b.dataset.href; }));
   }
 
   function show(id) {
@@ -517,7 +538,8 @@
 
     const next = LEVELS.find(l => l.id === L.id + 1);
     const btns = [['Nochmal', () => openLevel(L.id)]];
-    if (next) btns.unshift(['Weiter: ' + next.name, () => openLevel(next.id), 'primary']);
+    if (L.id === 3) btns.unshift(['Weiter: Erarbeitung', () => { location.href = EXTRA.erarb.href; }, 'primary']);   // Phase 1 endet mit dem Tafelbild
+    else if (next) btns.unshift(['Weiter: ' + next.name, () => openLevel(next.id), 'primary']);
     btns.push(['Neue Welt', () => { setSeed(1000 + Math.floor(Math.random() * 9000)); openLevel(L.id); }]);
     btns.push(['Übersicht', toMenu]);
     card(
@@ -1249,4 +1271,7 @@
     };
   })();
   requestAnimationFrame(tick);
+  // Einsprung von außen (erarbeitung.html „Weiter: Level 4“): index.html?lv=4
+  const lvQ = parseInt(new URLSearchParams(location.search).get('lv'), 10);
+  if (LEVELS.some(l => l.id === lvQ && !l.href)) openLevel(lvQ);
 })();

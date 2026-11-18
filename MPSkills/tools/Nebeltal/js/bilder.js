@@ -13,6 +13,7 @@
                          o.x, o.y = Füße, o.s Größe, o.scarf Farbe)
    NTBild.icon(kind)     kleines <svg> für Tabellen: 'peng', 'away', 'egg'
    NTBild.scene(id)      großes Bild für die Erklärkarte von Level id
+   NTBild.tile(key)      Kachelbild der Übersicht (Level-Nummer, 'erarb', 'sich')
    NTBild.SP             Namen/Farben der drei Arten
    ══════════════════════════════════════════════════════════════ */
 
@@ -332,6 +333,118 @@ window.NTBild = (function () {
     }
   };
 
+
+  /* ── Kacheln der Übersicht (18.11.2026): kleine Bilder je Level, immer Polarnacht ──
+     viewBox 0 0 240 150; key = Level-Nummer oder 'erarb' / 'sich'. */
+  const TN = { sky0: '#0a1730', sky1: '#16305a', ice: '#27466e', ice2: '#1d3658', snow: '#cfe0f5', mint: '#5cf2c4', vio: '#a98bff' };
+  let tileN = 0;
+  function tileBg(id, ground) {
+    let b = '<defs><linearGradient id="' + id + 's" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + TN.sky0 + '"/><stop offset="1" stop-color="' + TN.sky1 + '"/></linearGradient>' +
+      '<radialGradient id="' + id + 'a" cx=".3" cy="0" r=".9"><stop offset="0" stop-color="#5cf2c4" stop-opacity=".28"/><stop offset=".6" stop-color="#a98bff" stop-opacity=".08"/><stop offset="1" stop-color="#a98bff" stop-opacity="0"/></radialGradient></defs>' +
+      '<rect width="240" height="150" fill="url(#' + id + 's)"/><rect width="240" height="150" fill="url(#' + id + 'a)"/>';
+    if (ground !== false) b += '<path d="' + profile(t => 0.5 + 0.16 * Math.sin(t * 9 + 1) + 0.08 * Math.cos(t * 23), 0, 240, 150, 70, 60) + ' L240,150 L0,150Z" fill="' + TN.ice + '"/>';
+    return b;
+  }
+  function tileSnow(k) {
+    let r = 11, h = '';
+    const rnd = () => (r = (r * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < Math.round(46 * k); i++) {
+      const x = rnd() * 260, y = rnd() * 150, z = 0.35 + rnd() * 0.65, l = 3 + z * 8;
+      h += '<line x1="' + x.toFixed(0) + '" y1="' + y.toFixed(0) + '" x2="' + (x - l).toFixed(0) + '" y2="' + (y - l * 0.35).toFixed(0) +
+        '" stroke="' + TN.snow + '" stroke-opacity="' + (0.3 + z * 0.55).toFixed(2) + '" stroke-width="' + (z * 1.7).toFixed(1) + '" stroke-linecap="round"/>';
+    }
+    return h;
+  }
+  const tImg = (f, x, y, h, r) => '<image class="pg" href="' + IMG + f + '.webp" x="' + (x - h * r / 2).toFixed(1) + '" y="' + (y - h).toFixed(1) +
+    '" width="' + (h * r).toFixed(1) + '" height="' + h + '" preserveAspectRatio="xMidYMax meet"/>';
+  const tT = (x, y, txt, o) => T(x, y, txt, Object.assign({ col: TN.snow }, o || {}));
+  const TILES = {
+    1(id) {
+      return tileBg(id) + tImg('main', 120, 140, 104, 0.68) +
+        '<rect width="240" height="150" fill="url(#' + id + 'f)"/>' +
+        '<defs><radialGradient id="' + id + 'f" cx=".5" cy=".55" r=".55"><stop offset=".35" stop-color="#0c1526" stop-opacity="0"/><stop offset="1" stop-color="#0c1526" stop-opacity=".85"/></radialGradient></defs>' +
+        tileSnow(1.4);
+    },
+    2(id) {
+      return tileBg(id) + tImg('kompass', 120, 146, 120, 0.695) + tileSnow(0.9);
+    },
+    3(id) {
+      const fn = t => 0.5 + 0.2 * Math.sin(t * 7 + 0.6) - 0.28 * Math.exp(-((t - 0.78) ** 2) / 0.006);
+      const at = t => [240 * t, 150 - fn(t) * 90];
+      let b = tileBg(id, false) + '<path d="' + profile(fn, 0, 240, 150, 90, 80) + ' L240,150 L0,150Z" fill="' + TN.ice + '"/>';
+      const hops = [0.12, 0.34, 0.55, 0.76];
+      for (let i = 0; i < hops.length - 1; i++) {
+        const a = at(hops[i]), c = at(hops[i + 1]), mx = (a[0] + c[0]) / 2, my = Math.min(a[1], c[1]) - 34;
+        b += '<path d="M' + a[0].toFixed(1) + ',' + (a[1] - 4).toFixed(1) + ' Q' + mx.toFixed(1) + ',' + my.toFixed(1) + ' ' + c[0].toFixed(1) + ',' + (c[1] - 4).toFixed(1) +
+          '" fill="none" stroke="' + TN.mint + '" stroke-width="2.4" stroke-dasharray="5 5" stroke-linecap="round" opacity="' + (0.5 + i * 0.2) + '"/>';
+      }
+      const l = at(0.76);
+      b += '<ellipse cx="' + l[0].toFixed(1) + '" cy="' + (l[1] - 2).toFixed(1) + '" rx="14" ry="5" fill="none" stroke="' + TN.mint + '" stroke-width="2.4"/>';
+      const p = at(0.34);
+      b += tImg('main', p[0] + 26, p[1] - 22, 62, 0.68);
+      return b + tileSnow(0.7);
+    },
+    4(id) {
+      let b = tileBg(id) + tImg('chin_1', 82, 142, 112, 0.67);
+      // Waage-Schild
+      b += '<g transform="translate(150 50)"><rect x="0" y="0" width="74" height="46" rx="10" fill="rgba(12,22,40,.8)" stroke="' + TN.mint + '" stroke-width="1.6"/>' +
+        tT(37, 20, 'Gewicht?', { size: 11, w: 600 }) + tT(37, 38, '≈ 3,9 kg', { size: 15, w: 700, col: TN.mint }) + '</g>';
+      b += '<line x1="104" y1="96" x2="150" y2="80" stroke="' + TN.mint + '" stroke-width="1.6" stroke-dasharray="3 4"/>';
+      return b;
+    },
+    5(id) {
+      let b = tileBg(id) + tImg('adelie_1', 66, 142, 104, 0.68) + tImg('chin_2', 176, 142, 104, 0.66);
+      b += '<line x1="122" y1="12" x2="118" y2="146" stroke="' + TN.mint + '" stroke-width="2.6" stroke-dasharray="7 6" stroke-linecap="round"/>';
+      b += tT(34, 24, '●', { size: 16, col: '#6aa8ff' }) + tT(210, 24, '▲', { size: 15, col: '#ff9d4d' });
+      return b;
+    },
+    6(id) {
+      let b = tileBg(id) + nestImg('beide', 120, 136, 176);
+      b += '<g transform="translate(196 34)"><circle r="17" fill="rgba(255,107,139,.18)" stroke="#ff6b8b" stroke-width="2"/>' + tT(0, 7, '?', { size: 21, w: 700, col: '#ff6b8b' }) + '</g>';
+      return b;
+    },
+    7(id) {
+      let b = tileBg(id) + tImg('main_a', 72, 142, 98, 0.68) + tImg('main_b', 168, 142, 98, 0.68);
+      b += '<g transform="translate(120 28)"><circle cx="-16" r="12" fill="rgba(255,157,77,.18)" stroke="#ff9d4d" stroke-width="2"/><circle cx="16" r="12" fill="rgba(169,139,255,.18)" stroke="' + TN.vio + '" stroke-width="2"/>' +
+        tT(-16, 4.5, 'A', { size: 12, w: 700, col: '#ff9d4d' }) + tT(16, 4.5, 'B', { size: 12, w: 700, col: TN.vio }) + '</g>';
+      return b;
+    },
+    8(id) {
+      let b = tileBg(id);
+      b += head('adelie', 54, 70, 30) + head('chin', 120, 70, 30) + head('gentoo', 186, 70, 30);
+      b += tT(54, 122, 'Adelie', { size: 11 }) + tT(120, 122, 'Zügel', { size: 11 }) + tT(186, 122, 'Esel', { size: 11 });
+      return b;
+    },
+    erarb() {
+      // Tafel: Netz 2 → 2 → 1, Kreide
+      let b = '<rect width="240" height="150" fill="#13261f"/><rect x="5" y="5" width="230" height="140" rx="6" fill="none" stroke="#3d5a4c" stroke-width="2"/>';
+      const I = [[52, 66], [52, 118]], Hd = [[128, 50], [128, 120]], O = [202, 85];
+      const ch = 'rgba(235,245,238,.85)';
+      I.forEach(a => Hd.forEach(h => { b += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + h[0] + '" y2="' + h[1] + '" stroke="' + ch + '" stroke-width="1.8" stroke-linecap="round"/>'; }));
+      Hd.forEach(h => { b += '<line x1="' + h[0] + '" y1="' + h[1] + '" x2="' + O[0] + '" y2="' + O[1] + '" stroke="' + ch + '" stroke-width="1.8"/>'; });
+      // Fehler fließt zurück
+      b += '<path d="M196,104 Q172,132 144,128" fill="none" stroke="#ff9d4d" stroke-width="2.2" stroke-dasharray="4 4"/><path d="M142,128 l9,-6 l0,11z" fill="#ff9d4d"/>';
+      for (const p of [...I, ...Hd, O]) b += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="13" fill="#13261f" stroke="' + ch + '" stroke-width="2"/>';
+      b += T(128, 54.5, 'A', { size: 12, col: ch }) + T(128, 124.5, 'B', { size: 12, col: ch }) + T(202, 89.5, 'σ', { size: 13, col: ch });
+      b += T(196, 138, 'Fehler', { size: 10.5, col: '#ff9d4d', w: 700 });
+      return b;
+    },
+    sich() {
+      let b = tileBg('ntTs', false);
+      [0, 1, 2].forEach(i => {
+        const y = 42 + i * 32;
+        b += '<rect x="64" y="' + (y - 11) + '" width="22" height="22" rx="5" fill="none" stroke="' + TN.snow + '" stroke-opacity=".6" stroke-width="2"/>' +
+          '<rect x="98" y="' + (y - 4) + '" width="' + (86 - i * 18) + '" height="8" rx="4" fill="' + TN.snow + '" fill-opacity=".35"/>';
+      });
+      return b;
+    }
+  };
+  function tile(key) {
+    const id = 'ntT' + (++tileN);
+    const f = TILES[key];
+    return f ? '<svg class="tile-svg" viewBox="0 0 240 150" preserveAspectRatio="xMidYMid slice" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" style="font-family:var(--font, system-ui, sans-serif)">' + f(id) + '</svg>' : '';
+  }
+
   /* ── die vier Nest-Fälle (Level 6) ── */
   const CASES = [[1, 1, 0, 'keiner holt Futter'], [1, 0, 1, 'Papa fischt'], [0, 1, 1, 'Mama fischt'], [0, 0, 0, 'Ei kühlt aus']];
   function cases(x, y, w, h) {
@@ -365,5 +478,5 @@ window.NTBild = (function () {
     return '';
   }
 
-  return { peng, head, nestImg, nestKind, icon, SP, IMG, scene: id => (SCENES[id] ? SCENES[id]() : '') };
+  return { peng, head, nestImg, nestKind, icon, tile, SP, IMG, scene: id => (SCENES[id] ? SCENES[id]() : '') };
 })();

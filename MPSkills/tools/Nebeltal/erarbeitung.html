@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="de" data-night>
+<head>
+<meta charset="UTF-8">
+<script src="../../../motion.js?v=20261115a"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nebeltal · Erarbeitung</title>
+<link href="../../../fonts/spacegrotesk-jetbrainsmono-unbounded-9f6dea.css" rel="stylesheet">
+<style>
+/* Erarbeitung (Sönke 18.11.2026): interaktives Tafelbild „Wie lernt ein neuronales Netz?“
+   zwischen Level 3 und Level 4. Immer Polarnacht wie die Level. */
+:root {
+  color-scheme:dark;
+  --paper:#070d1a; --surface:#0f1b31; --surface-2:#16243e; --line:#26406a; --line-soft:rgba(140,170,220,.2);
+  --ink:#e8f1ff; --ink-soft:#a9bad6; --ink-faint:#6f82a3;
+  --accent:#5cf2c4; --accent-ink:#7ff7d3; --accent-dim:rgba(92,242,196,.14); --on-accent:#04201a; --violet:#a98bff;
+  --grad:linear-gradient(120deg, #5cf2c4, #62d2ff 60%, #a98bff); --on-grad:#04201a;
+  --orange:#ff9d4d; --gold:#ffd166; --warn:#ff6b8b; --blue:#6aa8ff; --pos:#ff9d4d; --neg:#6aa8ff;
+  --glass:rgba(12,22,40,.78);
+  --ice:#1b2c46; --sea:#4fb3d9; --fog:#101a2c; --snow:#cfe0f5;
+  --shadow:0 0 0 1px rgba(92,242,196,.08), 0 18px 40px -18px rgba(0,0,0,.8);
+  --glow:0 0 22px -6px rgba(92,242,196,.6);
+  --font:'Space Grotesk', system-ui, sans-serif; --head:'Unbounded', 'Space Grotesk', sans-serif; --mono:'JetBrains Mono', monospace;
+}
+* { box-sizing:border-box; }
+html, body { margin:0; height:100%; background:var(--paper); color:var(--ink); font-family:var(--font);
+  -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; }
+body { display:flex; flex-direction:column; overflow:hidden;
+  background:radial-gradient(90% 60% at 20% -10%, rgba(92,242,196,.10), transparent 60%),
+             radial-gradient(70% 50% at 90% 0%, rgba(169,139,255,.10), transparent 60%), var(--paper); }
+button { font:inherit; color:inherit; }
+.btn { border:1px solid var(--line); background:var(--surface); border-radius:14px; padding:9px 15px; font-weight:600; font-size:15px; cursor:pointer;
+  box-shadow:var(--shadow); text-decoration:none; display:inline-flex; align-items:center; gap:6px; white-space:nowrap; }
+.btn:hover { border-color:var(--accent); box-shadow:var(--shadow), var(--glow); }
+.btn.primary { background:var(--grad); color:var(--on-grad); border-color:transparent; box-shadow:var(--glow); }
+.btn[disabled] { opacity:.45; cursor:default; }
+.btn.sm { padding:6px 11px; font-size:13.5px; border-radius:11px; }
+.glass { background:var(--glass); border:1px solid var(--line-soft); border-radius:16px; box-shadow:var(--shadow);
+  -webkit-backdrop-filter:blur(14px) saturate(1.3); backdrop-filter:blur(14px) saturate(1.3); }
+b { font-weight:700; }
+
+/* ── Kopf ── */
+header { flex:none; display:flex; align-items:center; gap:12px; padding:10px 14px; flex-wrap:wrap; }
+.ttl { display:flex; flex-direction:column; min-width:0; }
+.ttl small { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); }
+.ttl b { font-family:var(--head); font-weight:600; font-size:17px; line-height:1.15; }
+#steps { margin-left:auto; display:flex; gap:4px; flex-wrap:wrap; }
+.stp { border:1px solid var(--line-soft); background:rgba(255,255,255,.03); border-radius:99px; padding:6px 11px 6px 6px; cursor:pointer;
+  display:flex; align-items:center; gap:7px; font-size:13px; font-weight:600; color:var(--ink-soft); }
+.stp i { font-style:normal; width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font-family:var(--mono); font-size:12px;
+  border:1px solid var(--line); color:var(--ink-soft); }
+.stp.on { border-color:var(--accent); color:var(--ink); box-shadow:var(--glow); }
+.stp.on i { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+.stp.done i { border-color:var(--accent); color:var(--accent-ink); }
+
+/* ── Tafel ── */
+main { flex:1; min-height:0; display:grid; grid-template-columns:250px minmax(0, 1fr) 280px; gap:12px; padding:0 14px; }
+.side { min-height:0; overflow:auto; display:flex; flex-direction:column; gap:10px; }
+.box { padding:12px 14px; }
+.box-t { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); margin-bottom:6px; }
+#netBox { position:relative; min-height:0; display:flex; flex-direction:column; padding:6px 8px 8px;
+  background:linear-gradient(180deg, rgba(22,36,62,.55), rgba(15,27,49,.35)); border:1px solid var(--line-soft); border-radius:18px; }
+#netBox::before { content:''; position:absolute; inset:0; border-radius:18px; pointer-events:none; opacity:.5;
+  background-image:linear-gradient(rgba(140,170,220,.06) 1px, transparent 1px), linear-gradient(90deg, rgba(140,170,220,.06) 1px, transparent 1px);
+  background-size:28px 28px; }
+#net { position:relative; flex:1; min-height:0; width:100%; display:block; }
+#netNote { position:relative; text-align:center; font-size:13px; color:var(--ink-faint); min-height:18px; }
+#netNote b { color:var(--ink-soft); }
+
+/* Netz-SVG */
+.edge { fill:none; stroke-linecap:round; transition:stroke-width .5s; }
+.edge-hit { fill:none; stroke:transparent; stroke-width:26; cursor:pointer; }
+.pill rect { fill:#0b1528; stroke:var(--line); stroke-width:1.2; }
+.pill.sel rect { stroke:var(--accent); stroke-width:2; }
+.pill.axx rect { stroke:var(--accent); stroke-width:2.4; }
+.pill.axy rect { stroke:var(--violet); stroke-width:2.4; }
+.pill text { font-family:var(--mono); font-weight:700; font-size:14px; fill:var(--ink); }
+.node-c { fill:#0f1b31; stroke-width:2.4; }
+.node-t { font-family:var(--font); font-weight:700; fill:var(--ink); text-anchor:middle; }
+.nlab { font-family:var(--font); font-size:13.5px; font-weight:600; fill:var(--ink-soft); text-anchor:middle; }
+.tag rect { stroke-width:1.4; }
+.tag text { font-family:var(--mono); font-weight:700; font-size:12.5px; text-anchor:middle; }
+.clickable { cursor:pointer; }
+
+/* Pinguin-Karte */
+.pimg { position:relative; height:150px; border-radius:12px; background:radial-gradient(70% 70% at 50% 70%, #1d3658, #0f1b31); overflow:hidden; display:grid; place-items:end center; }
+.pimg img { height:138px; transition:filter .6s; }
+.pimg.hide img { filter:brightness(0) drop-shadow(0 0 1.5px rgba(207,224,245,.8)); }
+.pimg .q { position:absolute; top:8px; right:10px; font-family:var(--head); font-size:24px; color:var(--ink-faint); }
+.pname { margin:8px 0 4px; font-family:var(--head); font-weight:600; font-size:15px; min-height:20px; }
+.meas { display:grid; grid-template-columns:1fr auto; gap:4px 8px; font-size:13.5px; color:var(--ink-soft); align-items:baseline; }
+.meas b { font-family:var(--mono); color:var(--ink); font-size:13.5px; text-align:right; }
+.meas .x { grid-column:1 / -1; font-family:var(--mono); font-size:12.5px; color:var(--accent-ink); margin:-2px 0 4px; }
+.soll { margin-top:8px; padding:8px 10px; border-radius:10px; border:1px dashed var(--line); font-size:13.5px; color:var(--ink-soft); }
+.soll b { color:var(--ink); }
+.muted { color:var(--ink-faint); font-size:13px; line-height:1.4; }
+
+/* Ausgang */
+.big { font-family:var(--head); font-size:30px; font-weight:600; line-height:1; }
+.big small { font-family:var(--font); font-size:14px; color:var(--ink-soft); font-weight:600; }
+#outBar { width:100%; height:auto; display:block; margin:6px 0 2px; }
+.calc { font-family:var(--mono); font-size:13px; line-height:1.55; color:var(--ink-soft); background:rgba(255,255,255,.03); border:1px solid var(--line-soft);
+  border-radius:10px; padding:8px 10px; margin-top:8px; overflow-wrap:anywhere; }
+.calc b { color:var(--ink); }
+.calc .r { color:var(--warn); } .calc .g { color:var(--accent-ink); } .calc .o { color:var(--orange); }
+.rule { border:1px solid rgba(255,157,77,.45); }
+.rule ol { margin:4px 0 0; padding-left:20px; font-size:13.5px; line-height:1.45; color:var(--ink-soft); }
+.rule li { margin-bottom:5px; } .rule li b { color:var(--ink); }
+.rule code { font-family:var(--mono); font-size:12.5px; color:var(--orange); display:block; margin-top:2px; }
+
+/* Brücke */
+table.br { width:100%; border-collapse:collapse; font-size:12.5px; line-height:1.3; }
+table.br td { padding:4px 4px; border-top:1px solid var(--line-soft); vertical-align:top; color:var(--ink-soft); }
+table.br td:first-child { color:var(--accent-ink); font-weight:700; width:44%; }
+table.br tr.hl td { background:rgba(92,242,196,.07); }
+#curve { width:100%; height:64px; display:block; }
+.kv { display:flex; justify-content:space-between; font-size:13.5px; color:var(--ink-soft); margin-top:4px; }
+.kv b { font-family:var(--mono); color:var(--ink); }
+#map { width:100%; aspect-ratio:1; display:block; border-radius:12px; touch-action:none; }
+.legend { display:flex; justify-content:space-between; font-size:12px; color:var(--ink-faint); margin-top:4px; }
+.lgbar { flex:1; height:8px; margin:4px 8px 0; border-radius:4px; background:linear-gradient(90deg, #0b6e6a, #2b78b0 35%, #6d5fd0 68%, #c9b6f2); }
+
+/* ── Fuß: Erklärung ── */
+footer { flex:none; display:flex; gap:14px; align-items:stretch; margin:10px 14px 12px; padding:12px 14px; }
+#explain { flex:1; min-width:0; }
+#explain h2 { margin:0 0 4px; font-family:var(--head); font-weight:600; font-size:18px; }
+#explain h2 span { font-family:var(--mono); font-size:13px; color:var(--accent-ink); margin-right:8px; }
+#explain p { margin:0; font-size:15px; line-height:1.45; color:var(--ink-soft); }
+#explain p b { color:var(--ink); }
+#explain .f { display:inline-block; margin-top:6px; font-family:var(--mono); font-size:14px; padding:5px 10px; border-radius:9px;
+  background:rgba(92,242,196,.08); border:1px solid rgba(92,242,196,.35); color:var(--ink); }
+#ctrl { flex:none; display:flex; flex-direction:column; justify-content:center; gap:8px; align-items:flex-end; }
+#ctrl .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+.lr { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-soft); }
+.lr input { width:130px; accent-color:var(--accent); }
+.lr b { font-family:var(--mono); color:var(--ink); min-width:34px; }
+
+/* schmal / hochkant: untereinander, Seite scrollt */
+@media (max-width: 920px), (orientation: portrait) {
+  body { overflow:auto; height:auto; min-height:100%; }
+  main { grid-template-columns:1fr 1fr; grid-template-areas:'net net' 'l r'; align-content:start; }
+  #netBox { grid-area:net; height:min(58vh, 440px); }
+  #left { grid-area:l; } #right { grid-area:r; }
+  .side { overflow:visible; }
+  footer { flex-direction:column; }
+  #ctrl { align-items:stretch; } #ctrl .row { justify-content:flex-start; }
+  #steps { margin-left:0; }
+  .stp span { display:none; } .stp { padding-right:6px; }
+}
+@media (max-width: 560px) { main { grid-template-columns:1fr; grid-template-areas:'net' 'l' 'r'; } }
+@media (max-height: 640px) and (orientation: landscape) {
+  .pimg { height:110px; } .pimg img { height:100px; }
+  #explain p { font-size:14px; }
+}
+html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdrop-filter:none !important; background:var(--surface) !important; }
+html[data-motion="low"] .edge, html[data-motion="low"] .pimg img { transition:none !important; }
+</style>
+</head>
+<body>
+<header>
+  <a class="btn sm" href="index.html">‹ Übersicht</a>
+  <div class="ttl"><small>Phase 1 · Erarbeitung</small><b>Wie lernt ein neuronales Netz?</b></div>
+  <nav id="steps" aria-label="Schritte"></nav>
+</header>
+
+<main>
+  <div id="left" class="side"></div>
+  <div id="netBox">
+    <svg id="net" viewBox="0 0 620 380" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Neuronales Netz: zwei Eingänge, zwei Neuronen A und B, ein Ausgang"></svg>
+    <div id="netNote"></div>
+  </div>
+  <div id="right" class="side"></div>
+</main>
+
+<footer class="glass">
+  <div id="explain" aria-live="polite"></div>
+  <div id="ctrl"></div>
+</footer>
+
+<script src="js/welt.js?v=20261118a"></script>
+<script src="js/bilder.js?v=20261118d"></script>
+<script src="js/erarbeitung.js?v=20261118a"></script>
+</body>
+</html>

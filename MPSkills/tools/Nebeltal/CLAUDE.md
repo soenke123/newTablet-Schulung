@@ -134,6 +134,32 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   darüber, Böen verkleinern die Sicht (fogR) und legen einen Schleier über das Bild. Noch nicht
   im Spiel: Erklärbilder (bilder.js) ab Level 3 sind noch grün/braun. Seit 17.11.2026 ist B im Spiel (Level 1/2 + Menü).
 - `js/spiel.js` – Ablauf menu → intro → play → reveal → result, Steuerung, Lernkurve, Modell-Diagramm
+- **Übersicht** (Sönke 18.11.2026: „Landing führt durch die Stunde, visueller“): `renderMenu` in spiel.js zeigt
+  `PHASES` als Reihen mit Bild-Kacheln (`NTBild.tile(key)` in bilder.js, viewBox 240 × 150, immer Polarnacht):
+  Phase 1 Einstieg = Level 1–3 + Erarbeitung · Phase 2 Neuronen trainieren = Level 4–7 · Phase 3 Sicherung =
+  Kachel „Sicherung“ (kommt noch, `EXTRA.sich.soon`, ausgegraut) + Level 8. Extra-Kacheln in `EXTRA`
+  (`href`, `tag` statt Nummer). Kachelbilder: 1 Spieler im Schneesturm, 2 `img/frei/kompass.webp`
+  (Sönkes „Pingu mit Kompass.png“, freistellen.py), 3 Sprungbögen + Ring, 4 Zügel + „Gewicht?“-Schild,
+  5 Adelie | Zügel mit Trennlinie, 6 Nest mit beiden Eltern + „?“, 7 main_a/main_b + Neuronen A/B,
+  8 drei Köpfe, Erarbeitung = Tafel mit 2-2-1-Netz und Fehler-Pfeil rückwärts. Level 3 → Knopf
+  „Weiter: Erarbeitung“; `index.html?lv=4` öffnet direkt ein Level (Einsprung aus dem Tafelbild).
+- `erarbeitung.html` + `js/erarbeitung.js` – **Erarbeitung** (Phase 1, nach Level 3, 18.11.2026): interaktives
+  Tafelbild „Wie lernt ein neuronales Netz?“, Netz 2 → 2 → 1 (Schnabel-Länge/-Höhe standardisiert → A, B →
+  Ausgang „Zügel?“), 136 echte Pinguine aus `NTWelt.penguins`, 9 lernbare Werte (6 Kanten + 3 Bias, Start
+  fest `START`, erster Pinguin ein Zügel, den das Startnetz falsch hat). Sechs Schritte (Leiste oben, ← →):
+  1 Daten rein (Pinguin als Umriss, Messwerte → x₁/x₂) · 2 Vorwärts (Impulse laufen die Kanten entlang,
+  Neuron antippen = Rechnung + kleine σ-Kurve) · 3 Vergleichen (Soll/Ist-Leiste mit Köpfen, Fehler) ·
+  4 Rückwärts (Anteile an A/B, Neuron antippen = Rechnung) · 5 Anpassen (jede Kante „alt → neu“, grün größer/
+  rot kleiner, Kante/b antippen = Rechnung, Lernrate-Regler, „Anpassen“, dann „Nächster Pinguin“) ·
+  6 Ins Tal = Brücke zum Nebeltal (Tabelle Ort/Höhe/Pfeil/Sprungweite/Sprung ↔ Netz, Lernkurve, „richtig
+  sortiert“, Karte der Fehler-Landschaft über ZWEI der 9 Werte – Kanten/b im Netz antippen = Achsen, die
+  übrigen stehen beim aktuellen Netz; Farben wie NET, Höhenlinien, weiße Spur, Pfeil + Ring = nächster
+  Sprung mit allen 136, Pinguin ziehen = Werte setzen; Knöpfe 1 Pinguin · 1 Sprung (alle 136) · Training
+  (150 Sprünge) · Netz neu würfeln; „Weiter: Level 4“ → index.html?lv=4).
+  Lernregel EXAKT (σ am Ausgang + Log-Fehler, darum fällt dort die σ-Ableitung weg): Fehler = Soll − Ist;
+  Anteil(Ausgang) = Fehler; Anteil(A) = Fehler × Gewicht A→Aus × A·(1−A) („Empfindlichkeit“);
+  neu = alt + Lernrate × Anteil(Ziel) × Eingang (Bias: Eingang 1). Lernrate 0,2–20 (log), Start 1:
+  Training mit allen 136 → nach ~100 Sprüngen 134/136 richtig. Immer Polarnacht, hochkant untereinander.
 - `tool.js`/`tool.css` – nur der iframe-Rahmen (wie Reinforce Yourself), noch kein Austausch mit dem Raum
 
 ## Level

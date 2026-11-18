@@ -90,3 +90,6 @@ for nm, hue, sm, vm in [('main_a', 0.07, 1.6, 1.12), ('main_b', 0.73, 1.0, 1.0)]
     nr, ng, nb = rgb2(nh, ns, nv)
     o = np.dstack([nr, ng, nb, a]) * 255
     save(Image.fromarray(o.astype(np.uint8), 'RGBA'), nm)
+
+# Pinguin mit Kompass (Kachel Level 2, 18.11.2026): PNG ist schon freigestellt, nur zuschneiden + verkleinern
+save(Image.open(os.path.join(SRC, 'Pingu mit Kompass.png')).convert('RGBA'), 'kompass')
