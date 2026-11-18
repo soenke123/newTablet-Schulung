@@ -76,10 +76,7 @@ window.NTZwei = (function () {
       if (!live()) return;
       st.auto = !st.auto; st.autoWait = 0; refreshAuto();
     });
-    $('#zDone').addEventListener('click', () => {
-      if (st && st.post) { if (!st.jump) postStop(); return; }
-      if (st && st.state === 'play' && !st.jump) finish();
-    });
+    $('#zDone').addEventListener('click', stay);
     $('#zLr').addEventListener('input', e => {
       const R = L.lr;
       st.lr = +(R.min * Math.pow(R.max / R.min, e.target.value / 1000)).toFixed(R.d);
@@ -325,6 +322,15 @@ window.NTZwei = (function () {
     st.curve.push(lossNow());
     afterStep();
   }
+  /* Fertig/Zum Ergebnis: hält ein laufendes Training an; mitten im Sprung geht es nach der Landung weiter */
+  function stay() {
+    if (!st) return;
+    if (st.auto) { st.auto = false; refreshAuto(); }
+    if (st.jump) { st.stayReq = true; return; }
+    st.stayReq = false;
+    if (st.post) { postStop(); return; }
+    if (st.state === 'play') finish();
+  }
   function afterStep() {
     panel();
     if (st.jumpsLeft <= 0) setTimeout(() => { if (st && st.state === 'play') finish(); }, 600);
@@ -529,6 +535,7 @@ window.NTZwei = (function () {
       st.reveal.t += dt;
       if (st.reveal.t > 2.9 && st.state === 'reveal') result();
     }
+    if (st.stayReq && !st.jump) stay();
     figs.forEach(f => { f.squash = lerp(f.squash, 1, 1 - Math.exp(-9 * dt)); });
     draw(0); draw(1);
   }

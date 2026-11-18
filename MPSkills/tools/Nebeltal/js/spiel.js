@@ -344,7 +344,7 @@
     S.camYaw = S.p.yaw; S.camYawT = null;
     S.startPos = { x: w.start.x, z: w.start.z };
     S.fogR = L.fog;
-    S.dots = []; S.trailD = 0; S.jump = null; S.fly = null; S.auto = false; S.autoWait = 0;
+    S.dots = []; S.trailD = 0; S.jump = null; S.fly = null; S.auto = false; S.autoWait = 0; S.stayReq = false;
     S.curve = [w.show(w.h(S.p.x, S.p.z))];
     S.best = S.curve[0]; S.lrs = []; S.outs = 0; S.reveal = null;
     endReset();
@@ -504,10 +504,16 @@
   $('#xBiasL').addEventListener('change', e => { setBiasLearn(e.target.checked); e.target.blur(); });
 
   $('#btnJump').addEventListener('click', () => doJump());
-  $('#btnStay').addEventListener('click', () => {
-    if (S.post) { if (!S.jump && !S.fly) postStop(); return; }
-    if (S.state === 'play' && !S.jump && !S.fly) finish();
-  });
+  /* Fertig/Hier bleibe ich/Zum Ergebnis: hält ein laufendes Training an; ist gerade ein Sprung in der Luft,
+     geht es direkt nach der Landung weiter (S.stayReq, step()) – vorher wurde der Klick dann verschluckt */
+  function stay() {
+    if (S.auto) { S.auto = false; refreshAuto(); }
+    if (S.jump || S.fly) { S.stayReq = true; return; }
+    S.stayReq = false;
+    if (S.post) { postStop(); return; }
+    if (S.state === 'play') finish();
+  }
+  $('#btnStay').addEventListener('click', stay);
   $('#btnAuto').addEventListener('click', () => {
     if (!live()) return;
     S.auto = !S.auto; S.autoWait = 0.2;
@@ -863,6 +869,7 @@
         if (S.auto) { S.auto = false; refreshAuto(); }
       }
     } else p.air = 0;
+    if (S.stayReq && !S.jump && !S.fly) stay();
     p.squash = lerp(p.squash, 1, 1 - Math.exp(-9 * dt));
     if (S.reveal) {
       S.reveal.t += dt;

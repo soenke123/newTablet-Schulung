@@ -80,6 +80,7 @@ footer { flex:none; display:flex; flex-wrap:wrap; gap:12px 16px; align-items:cen
 #explain { flex:1 1 340px; min-width:0; }
 #explain p { margin:0; font-size:clamp(15px, 2.3vh, 18px); line-height:1.45; color:var(--ink-soft); }
 #explain p b { color:var(--ink); }
+#explain .f b { color:var(--accent-ink); }
 #explain .f { display:inline-block; margin-top:8px; font-family:var(--mono); font-size:clamp(13px, 2vh, 15px); padding:5px 10px; border-radius:9px;
   background:rgba(92,242,196,.08); border:1px solid rgba(92,242,196,.35); color:var(--ink); }
 #ctrl { flex:none; display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
@@ -93,8 +94,13 @@ footer { flex:none; display:flex; flex-wrap:wrap; gap:12px 16px; align-items:cen
   footer { flex-direction:column; align-items:stretch; gap:10px; }
   #explain { flex:none; }
   #ctrl { justify-content:flex-start; }
-  body.s4 #stage { width:calc(100% - 28px); height:50%; }
-  #tal { inset:50% 14px 0 14px; }
+  /* Ins Tal hochkant: das Bild bleibt hochkant wie in „Anpassen“ (links), die Karte rechts daneben */
+  body.s4 #stage { width:calc(42% - 21px); }
+  #tal { inset:0 14px 0 calc(42% + 7px); }
+}
+@media (max-width: 520px) {
+  body.s4 #stage { width:calc(100% - 16px); height:55%; }
+  #tal { inset:55% 8px 0 8px; }
 }
 @media (max-width: 480px) {
   header { gap:8px; padding:8px 10px; }
@@ -137,6 +143,6 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 <script src="js/welt.js?v=20261118a"></script>
 <script src="js/bilder.js?v=20261118f"></script>
 <script src="js/raum.js?v=20261118o"></script>
-<script src="js/erarbeitung.js?v=20261118c"></script>
+<script src="js/erarbeitung.js?v=20261118d"></script>
 </body>
 </html>

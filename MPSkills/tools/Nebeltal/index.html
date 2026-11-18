@@ -84,8 +84,6 @@ button { font:inherit; color:inherit; }
 .stars i { font-style:normal; color:var(--line); font-size:18px; }
 .stars i.on { color:var(--gold); }
 .stars.empty { width:54px; }
-  border:1px solid var(--line); background:var(--surface); color:var(--ink); text-align:center; }
-  color:var(--accent-ink); font-weight:600; font-size:14.5px; text-decoration:none; text-align:center; }
 
 /* ── Karte (Intro/Ergebnis) ── */
 #card { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; padding:16px;
@@ -367,6 +365,10 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 #menu .menu-in { margin:auto; }   /* mittig, aber bei wenig Höhe oben anfangen (sonst schneidet flex den Kopf ab) */
 #menu .sub { max-width:640px; }
 #levels { display:flex; flex-direction:column; gap:16px; margin:16px 0; }
+.src { margin:18px 0 0; padding-top:12px; border-top:1px solid var(--line-soft); font-size:13px; line-height:1.5; color:var(--ink-faint); }
+.src-h { font-weight:700; color:var(--ink-soft); margin-right:4px; }
+.src b { color:var(--ink-soft); font-weight:600; }
+.src a { color:var(--accent-ink); }
 .phase { display:grid; grid-template-columns:170px 1fr; gap:14px; align-items:stretch; }
 .phase-h { display:flex; flex-direction:column; gap:3px; padding:10px 12px 10px 0; border-right:1px solid var(--line-soft); }
 .phase-n { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); }
@@ -663,6 +665,13 @@ body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:g
       </div>
       <p id="noShare" class="noshare" hidden>Deine Lehrkraft hat noch kein Level freigegeben.</p>
       <div id="levels"></div>
+      <p class="src"><span class="src-h">❤️ Echte Pinguine</span>
+        Die Messdaten stammen aus <a href="https://allisonhorst.github.io/palmerpenguins/" target="_blank" rel="noopener noreferrer">Palmer Penguins</a>
+        (Gorman, Williams &amp; Fraser, Palmer Station, Antarktis 2007–2009, frei nutzbar CC0;
+        <a href="https://doi.org/10.1371/journal.pone.0090081" target="_blank" rel="noopener noreferrer">Studie</a>).
+        Sie stecken in <b>Level 4</b> (alle 342: Flosse → Gewicht), <b>Level 5</b> und der <b>Erarbeitung</b>
+        (68 Adelie + 68 Zügel: Schnabel-Länge und -Höhe) und <b>Level 8</b> (alle 342: Schnabel und Flosse).
+        Das Nest in Level 6 und 7 ist ausgedacht.</p>
     </div>
   </div>
 
@@ -684,10 +693,10 @@ body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:g
 <script src="js/grafik.js?v=20261118n"></script>
 <script src="js/orbit.js?v=20261118a"></script>
 <script src="js/schnee.js?v=20261117j"></script>
-<script src="js/netz.js?v=20261118c"></script>
+<script src="js/netz.js?v=20261118d"></script>
 <script src="js/raum.js?v=20261118o"></script>
-<script src="js/zwei.js?v=20261118o"></script>
-<script src="js/spiel.js?v=20261118o"></script>
+<script src="js/zwei.js?v=20261118p"></script>
+<script src="js/spiel.js?v=20261118p"></script>
 <script src="js/mehr.js?v=20261118o"></script>
 </body>
 </html>

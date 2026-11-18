@@ -63,7 +63,7 @@
   const LAY = {
     h: { vb: [960, 400], peng: [110, 300, 210], name: [110, 336], in: [[310, 128], [310, 278]], n: [610, 203, 50],
          arr: [[662, 203], [706, 203]], outT: [822, 64], big: [822, 122], bar: [760, 885, 205], heads: 26, lab: 254, err: 300 },
-    v: { vb: [440, 726], peng: [220, 168, 150], name: [220, 194], in: [[118, 270], [322, 270]], n: [220, 462, 46],
+    v: { vb: [440, 726], peng: [220, 160, 142], name: [220, 186], in: [[118, 270], [322, 270]], n: [220, 462, 46],
          arr: [[220, 510], [220, 542]], outT: [220, 570], big: [220, 616], bar: [92, 348, 668], heads: 24, lab: 712, err: null }
   };
   let lay = LAY.h;
@@ -76,7 +76,9 @@
     '" text-anchor="' + (anchor || 'middle') + '">' + txt + '</text>';
 
   function drawStage() {
-    const box = $('#stage').getBoundingClientRect();
+    // quer/hochkant nach der GANZEN Bühne (main) – in „Ins Tal“ ist #stage schmaler, das Bild soll aber
+    // genauso stehen wie in „Anpassen“ (Sönke 18.11.2026: „nicht drehen“)
+    const box = $('main').getBoundingClientRect();
     lay = box.height > box.width * 0.95 ? LAY.v : LAY.h;
     const L = lay, c = S.cyc, q = c.pt, hide = S.step === 1;
     // Schritt 4 zeigt das Bild aus „Anpassen“ (letzter Test); nach „Lernen zurücksetzen“ wie „Vergleichen“
@@ -102,7 +104,7 @@
     for (let k = 0; k < 2; k++) {
       const [ix, iy] = L.in[k], x0 = lay === LAY.h ? ix + 60 : ix, y0 = lay === LAY.h ? iy : iy + 58;
       const t = lay === LAY.h ? 0.5 : 0.32, mx = x0 + (nx - x0) * t, my = y0 + (ny - y0) * t, wv = w[k];
-      const txt = st === 3 ? f(c.before[k]) + (lay === LAY.h ? ' → ' : '→') + '<tspan fill="' + (c.after[k] >= c.before[k] ? COL.mint : COL.red) + '">' + f(c.after[k]) + '</tspan>'
+      const txt = st === 3 ? f(c.before[k]) + (lay === LAY.h ? ' → ' : '→') + '<tspan fill="' + (c.after[k] >= c.before[k] ? COL.mint : COL.red) + '">' + f(c.after[k], 2) + '</tspan>'
                            : '· ' + f(wv);
       h += pill(mx, my, txt, wv >= 0 ? COL.pos : COL.neg, st === 3);
       if (lay === LAY.h) h += T(mx, my + (k ? 36 : -26), 'w' + (k ? '₂' : '₁'), 14, COL.faint, 700);
@@ -122,7 +124,8 @@
     // ab „Vergleichen“: was σ genau rechnet (Ist nachvollziehbar)
     if (st >= 2) {
       const z = w[0] * q.a + w[1] * q.b;
-      h += T(nx, ny + nr + 26, 'σ(' + f(z, 2) + ') = ' + f(sig(z), 2), 16, COL.mint, 700);
+      if (lay === LAY.h) h += T(nx, ny + nr + 26, 'σ(' + f(z, 2) + ') = ' + f(sig(z), 2), 16, COL.mint, 700);
+      else h += T(nx + nr + 12, ny + 6, 'σ(' + f(z, 2) + ')', 15, COL.mint, 700, 'start') + T(nx + nr + 12, ny + 26, '= ' + f(sig(z), 2), 15, COL.mint, 700, 'start');
     }
     // Pfeil zum Ausgang
     const [[ax0, ay0], [ax1, ay1]] = L.arr, ang = Math.atan2(ay1 - ay0, ax1 - ax0);
@@ -277,6 +280,12 @@
 
   /* ── Text + Knöpfe ── */
   const STEPS = ['Raten', 'Vergleichen', 'Anpassen', 'Ins Tal'];
+  // die Lernregel einmal mit Zahlen – für das obere Gewicht w₁ (w₂ rechnet die Klasse selbst nach)
+  const par = v => v < 0 ? '(' + f(v, 2) + ')' : f(v, 2);
+  function w1Rule(c) {
+    return '<span class="f">w₁ neu = ' + f(c.before[0], 2) + ' + ' + f(S.lr, S.lr < 1 ? 2 : 1) + ' × ' + par(c.err) + ' × ' + par(c.pt.a) +
+      ' ≈ <b>' + f(c.after[0], 2) + '</b></span>';
+  }
   function explain() {
     const c = S.cyc, q = c.pt, z = c.before[0] * q.a + c.before[1] * q.b;
     switch (S.step) {
@@ -287,10 +296,10 @@
         '<span class="f">Fehler = Soll − Ist = ' + c.pt.y + ' − ' + f(c.y, 2) + ' = ' + sf(c.err, 2) + '</span>';
       case 3: return '<p>Jedes Gewicht rückt ein Stück – so, dass der Fehler <b>kleiner</b> wird. Jetzt sagt das Neuron <b>' + pct(c.yAfter) + ' Zügel</b>' +
         (Math.abs(c.pt.y - c.yAfter) < Math.abs(c.err) ? ' – näher dran.' : ' – zu weit! Lernrate zu groß.') + '</p>' +
-        '<span class="f">neu = alt + Lernrate × Fehler × Eingang</span>';
+        '<span class="f">neu = alt + Lernrate × Fehler × Eingang</span> ' + w1Rule(c);
       default: return c.applied
         ? '<p><b>Test ' + (S.n + 1) + ':</b> ' + (q.y ? 'Zügelpinguin' : 'Adeliepinguin') + ' – das Neuron sagte <b>' + pct(c.y) + ' Zügel</b>, Fehler <b>' + sf(c.err, 2) + '</b>. ' +
-          'Einmal angepasst = <b>ein Sprung</b> auf der Karte.</p><span class="f">neu = alt + Lernrate × Fehler × Eingang</span>'
+          'Einmal angepasst = <b>ein Sprung</b> auf der Karte.</p><span class="f">neu = alt + Lernrate × Fehler × Eingang</span> ' + w1Rule(c)
         : '<p>Jeder <b>Sprung</b>: einen neuen Pinguin testen, den Fehler messen, die Gewichte <b>einmal anpassen</b>.</p>';
     }
   }

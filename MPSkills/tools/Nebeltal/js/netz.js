@@ -229,17 +229,17 @@ window.NTNetz = (function () {
     });
 
     // die Geraden der Neuronen
-    const figs = [];
+    const figs = [], gone = [];
     x.save(); x.beginPath(); x.rect(L, T, pw, ph); x.clip();
     for (const ln of o.lines || []) {
       const n = Math.hypot(ln.a, ln.b);
-      if (n < 0.08) continue;                        // fast 0: das Neuron sagt überall dasselbe
+      if (n < 0.08) { gone.push('zero'); continue; }  // fast 0: das Neuron sagt überall dasselbe
       // Schnitt der Geraden a·m + b·p = c mit dem Rand des Bereichs
       const pts = [];
       const add = (m, p) => { if (m >= -S - 1e-6 && m <= S + 1e-6 && p >= -S - 1e-6 && p <= S + 1e-6) pts.push([m, p]); };
       if (Math.abs(ln.b) > 1e-6) { add(-S, (ln.c + ln.a * S) / ln.b); add(S, (ln.c - ln.a * S) / ln.b); }
       if (Math.abs(ln.a) > 1e-6) { add((ln.c + ln.b * S) / ln.a, -S); add((ln.c - ln.b * S) / ln.a, S); }
-      if (pts.length < 2) continue;
+      if (pts.length < 2) { gone.push('out'); continue; }   // Gerade liegt außerhalb (Bias groß)
       pts.sort((u, v) => u[0] - v[0] || u[1] - v[1]);
       const p0 = pts[0], p1 = pts[pts.length - 1];
       x.strokeStyle = ln.col; x.lineWidth = 3.2; x.lineCap = 'round';
@@ -266,6 +266,14 @@ window.NTNetz = (function () {
       }
     }
     x.restore();
+    // keine Gerade zu sehen? Sagen, warum (Sönke 18.11.2026: „die Linie verschwindet am Tiefpunkt“)
+    if (gone.length && gone.length === (o.lines || []).length) {
+      const t = gone[0] === 'zero' ? 'Gewichte ≈ 0 → keine Linie, überall dieselbe Antwort' : 'Linie liegt außerhalb – alle auf einer Seite';
+      x.font = '700 11.5px Space Grotesk, Outfit, sans-serif'; x.textAlign = 'center';
+      const tw = x.measureText(t).width + 16, cx = L + pw / 2, cy = T + ph / 2;
+      x.fillStyle = 'rgba(8,14,28,.82)'; x.beginPath(); rr(x, cx - tw / 2, cy - 11, tw, 22, 11); x.fill();
+      x.fillStyle = '#e8f1ff'; x.fillText(t, cx, cy + 4);
+    }
     for (const f of figs) {
       const pi = img(f.team === 'a' ? 'main_a' : f.team === 'b' ? 'main_b' : 'main');
       if (!pi.ok) continue;

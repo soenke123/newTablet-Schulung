@@ -150,6 +150,10 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   „Lernen zurücksetzen“ (`resetLearn`) = Start; kein Training, kein Knopf zu Level 4; Lernrate 0,5–30, Start 3).
   Ab „Vergleichen“ steht unter dem Neuron σ(z) = Ist, im Satz die ganze Rechnung `Ist = σ(Länge · w₁ + Höhe · w₂)`.
   Pinguin links antippen (`.pghit`, `otherPeng`) = anderer Pinguin mit anderen Werten (in „Anpassen“ mit seiner Anpassung).
+  Lernregel einmal mit Zahlen für das obere Gewicht (`w1Rule`, Schritt 3 und 4: „w₁ neu = −3,00 + 3,0 × 0,93 × 1,30 ≈ 0,61“,
+  Kanten in „Anpassen“ mit 2 Nachkommastellen); w₂ rechnet die Klasse selbst nach (Sönke 18.11.2026). Quer/hochkant
+  entscheidet die GANZE Bühne (`main`), nicht `#stage` – sonst kippte das Bild in „Ins Tal“ (schmalere Bühne) auf hochkant;
+  „Ins Tal“ hochkant = Bild links (42 %), Karte rechts, nur ≤ 520 px untereinander.
   Weggefallen: versteckte Schicht, Bias, Anteile/Backprop-Formel, σ-Kurve, Regel-Kasten, Brücken-Tabelle mit 6 Zeilen.
 - `karte.css` – Erklärkarte vor jedem Level (index.html + labor.html, 18.11.2026: „ohne Scrollen auf einen Bildschirm“):
   `.card-in.is-intro` mit `.i-head` (Kicker, Titel, EIN Satz) · `.i-pic` (Bild, Formel) · `.i-txt` (höchstens 3 kurze
@@ -216,7 +220,9 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    (unvermeidlichen) Minimum. Bias-Regler direkt am Kasten (`#xBias`, −4…4, Sönke 17.11.2026, bewusst
    „nicht ganz sauber“, fürs Verständnis): verschiebt die Gerade, lernt beim Training NICHT mit; die
    Welt ist dann der Fehler bei diesem Bias (`xor().one().setBias`, Gitter wird gedrosselt neu gebaut).
-   Tal bleibt in der Mitte, mit Bias gehen höchstens 3 von 4. Haken „lernt mit“ (`#xBiasL`, 18.11.2026):
+   Tal bleibt in der Mitte, mit Bias gehen höchstens 3 von 4. Am Tiefpunkt sind beide Gewichte ≈ 0 → a·Mama + b·Papa = c hat
+   keine Gerade mehr (nestPlot lässt sie bei |(a, b)| < 0,08 weg) – das Neuron sagt überall dasselbe; nestPlot schreibt dann
+   „Gewichte ≈ 0 → keine Linie“ in die Mitte (bzw. „Linie liegt außerhalb“, wenn der Bias sie aus dem Bild schiebt). Haken „lernt mit“ (`#xBiasL`, 18.11.2026):
    dann springt der Bias mit (`step()` liefert `b`, spiel.js `doJump` → `setBias`) und läuft zurück auf 0 –
    Fehler ist konvex in (w₁, w₂, b), bestes Neuron = überall 50 %. Gewichte hier nur ±4 (vorher ±8: σ
    fast immer satt, Nest-Karte nur grün oder rot), Lernrate 0,1–20, Start 1.
@@ -242,6 +248,12 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 
 Ab Level 4 gilt überall: eine Welt = ein echtes Modell, das ganze Netz ist zu sehen, Laufen UND
 Training im selben Level.
+
+**Fertig-Knopf** (`stay()` in spiel.js und zwei.js): hält „Training starten“ an; ist gerade ein Sprung in der Luft, merkt er
+sich den Klick (`stayReq`) und beendet nach der Landung – vorher wurde der Klick während des Trainings verschluckt.
+
+**Erklärkarte mittig**: zwei verwaiste CSS-Zeilen vor `#card` (Reste gelöschter Regeln) hatten die `#card`-Regel geschluckt –
+die Karte klebte oben links. Bei CSS-Löschungen immer ganze Regeln entfernen.
 
 **Bildschirmgrößen** (18.11.2026): Knopf „Infos“ oben (`#btnInfo`, Level 7 `#zInfo`, `toggleInfo` in spiel.js) blendet
 die Kästen rechts aus (`body.info-min`), `body[data-panel]` = Level hat einen Kasten. Handy hochkant (≤ 600 px): Kasten
