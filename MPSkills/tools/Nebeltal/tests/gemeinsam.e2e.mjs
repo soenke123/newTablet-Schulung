@@ -128,6 +128,10 @@ const S = [];
 for (let i = 0; i < KIDS.length; i++) S.push(await device('schueler', 'tok' + i, 1024, 700));
 await until('Übersicht steht überall', async () => (await Promise.all([T, ...S].map(p => fr(p) && fr(p).evaluate(() => document.body.dataset.state === 'menu')))).every(Boolean));
 
+// Bilder pro Sekunde (Software-WebGL mit 4 Seiten ist langsam – Wartezeiten unten danach)
+const fps = await fr(S[0]).evaluate(() => new Promise(r => { let n = 0; const t0 = performance.now(); const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else r(n / 2); }; requestAnimationFrame(f); }));
+console.log('      (Tablet zeichnet ' + fps.toFixed(1) + ' Bilder/s)');
+
 /* 1 Freigabe */
 await fr(T).click('.tshare[data-share="1"]');
 await until('1  Level 1 geteilt (data.levels)', async () => JSON.stringify((await view()).state.data.levels) === '[1]');
@@ -144,7 +148,7 @@ await until('2  Lehrkraft sieht 3 Pinguine', async () => fr(T).evaluate(() => do
 // Mia tippt in den Schnee → läuft hin → Position kommt beim Server an
 const before = (await one(`select pos from nt_players p join skill_participants s on s.id = p.participant_id where s.token = 'tok0'`)).pos;
 await S[0].mouse.click(250, 520);
-await sleep(2500);
+await sleep(6000);
 const after = (await one(`select pos from nt_players p join skill_participants s on s.id = p.participant_id where s.token = 'tok0'`)).pos;
 ok('2  Antippen = Pinguin läuft (Position beim Server)', Math.hypot(after[0] - before[0], after[1] - before[1]) > 0.05, JSON.stringify([before, after]));
 await shot(T, '03_lehrkraft_lobby');
@@ -176,7 +180,7 @@ await shot(S[0], '08_tablet_warten');
 await fr(S[1]).click('#btnStay');
 await fr(S[2]).click('#btnStay');
 await until('3  alle fertig → Rangliste beim Beamer', async () => fr(T).evaluate(() => document.querySelectorAll('#mpTop li').length === 3));
-await until('3  Tablet: eigener Platz', async () => fr(S[0]).evaluate(() => /Platz\s*\d\s*von 3/.test(document.querySelector('#card').textContent)), 9000);
+await until('3  Tablet: eigener Platz', async () => fr(S[0]).evaluate(() => /Platz\s*\d\s*von 3/.test(document.querySelector('#card').textContent)), 60000);
 await sleep(800);
 await shot(T, '09_lehrkraft_ergebnis_karte');
 await shot(S[0], '10_tablet_platz');
@@ -208,7 +212,7 @@ await shot(pb, '12_tablet_level7_partner');
 await shot(T, '13_lehrkraft_level7_uebersicht');
 await fr(T).click('#mpStBtns .btn');                                // Runde beenden
 await until('4  Rangliste der Teams', async () => fr(T).evaluate(() => document.querySelectorAll('#mpTop li').length === 2));
-await until('4  Tablet: Platz des Teams', async () => fr(pa).evaluate(() => /Euer Netz/.test(document.querySelector('#card').textContent)), 9000);
+await until('4  Tablet: Platz des Teams', async () => fr(pa).evaluate(() => /Euer Netz/.test(document.querySelector('#card').textContent)), 60000);
 await sleep(600);
 await shot(T, '14_lehrkraft_level7_ergebnis');
 await shot(pa, '15_tablet_level7_platz');

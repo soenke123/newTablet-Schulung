@@ -65,10 +65,10 @@ window.NTMehr = (function () {
 
   /* ══ Lobby: Schneefläche mit Pinguinen ══════════════════════ */
   const LW = (function () {
-    const W = 40;
+    const W = 64;
     const h = (x, z) => 0.5 * Math.sin(x * 0.21 + 1.3) * Math.cos(z * 0.17) + 0.3 * Math.sin(x * 0.47 - z * 0.39) + 0.0015 * (x * x + z * z);
     return { kind: 'lobby', W, h, grad: (x, z) => [(h(x + 0.05, z) - h(x - 0.05, z)) / 0.1, (h(x, z + 0.05) - h(x, z - 0.05)) / 0.1],
-             meshN: 96, min: { x: 0, z: 0, h: 0 }, start: { x: 0, z: 0 } };
+             meshN: 120, min: { x: 0, z: 0, h: 0 }, start: { x: 0, z: 0 } };
   })();
   const A = 17;                                        // Spielfeld ±A (Bildschirm: rechts = −x, oben = +z)
   const toWorld = (px, py) => ({ x: (0.5 - px) * 2 * A, z: (0.5 - py) * 2 * A });
@@ -147,7 +147,7 @@ window.NTMehr = (function () {
       objs.push({ type: 'strip', pts: ring, closed: true, color: M.me.color, glow: 0.7, lift: 0.1 });
     }
     const low = SP.low();
-    const sc = { cam, fogR: 400, fogAt: [0, 0], dpr: low ? 1 : Math.min(window.devicePixelRatio || 1, 1.5), objects: objs,
+    const sc = { cam, fogR: 48, fogAt: [0, 0], dpr: low ? 1 : Math.min(window.devicePixelRatio || 1, 1.5), objects: objs,
                  playerColor: M.me.color, plain: 0.45,
                  player: showMe ? pengObj(M.me) : { hidden: true, x: 0, z: 0 }, others };
     M.sc = sc;
@@ -673,7 +673,8 @@ window.NTMehr = (function () {
         (lv >= 7 ? '<small>Team ' + (teamIndex(st, p.t) + 1) + '</small>' : '') + '<b>' + (p.r ? '✓' : '…') + '</b></li>').join('');
       if (ul && ul.dataset.h !== h) { ul.innerHTML = h; ul.dataset.h = h; }
     } else if (ph === 'running') {
-      $('#mpStN').textContent = lv <= 6 ? done + ' von ' + inR.length + ' fertig' : teamsOf(st).length + ' Teams';
+      const nt = teamsOf(st).length;
+      $('#mpStN').textContent = lv <= 6 ? done + ' von ' + inR.length + ' fertig' : nt + (nt === 1 ? ' Team' : ' Teams');
       runBoard(st, inR);
     } else if (ph === 'ended') {
       $('#mpStN').textContent = lv <= 6 ? done + ' von ' + inR.length + ' fertig' : '';
@@ -805,17 +806,29 @@ window.NTMehr = (function () {
     hi = Math.min(hi, lo + 26);
     const off = document.createElement('canvas'); off.width = N; off.height = N;
     const ctx = off.getContext('2d'), img = ctx.createImageData(N, N), d = img.data;
-    const band = q => Math.floor(clamp((hs[q] - lo) / (hi - lo), 0, 0.999) * 14);
+    const v = new Float32Array(N * N);
     for (let q = 0; q < N * N; q++) {
       const t = clamp((hs[q] - lo) / (hi - lo), 0, 1), f = t * 3, k = Math.min(2, Math.floor(f)), u = f - k;
-      let c = [0, 1, 2].map(m => PAL[k][m] + (PAL[k + 1][m] - PAL[k][m]) * u);
-      const i = q % N, j = (q / N) | 0;
-      const edge = (i < N - 1 && band(q) !== band(q + 1)) || (j < N - 1 && band(q) !== band(q + N));
-      if (edge) c = c.map(v => v + (255 - v) * 0.28);
+      const c = [0, 1, 2].map(m => PAL[k][m] + (PAL[k + 1][m] - PAL[k][m]) * u);
       d[q * 4] = c[0]; d[q * 4 + 1] = c[1]; d[q * 4 + 2] = c[2]; d[q * 4 + 3] = 255;
+      v[q] = t * 14;
     }
     ctx.putImageData(img, 0, 0);
-    M.mapImg = { key, off, w, E };
+    // Höhenlinien als Strecken (Marching Squares wie labor.js), in jeder Größe scharf
+    const segs = [], P = (x, y) => [(x + 0.5) / N, (y + 0.5) / N];
+    for (let y = 0; y < N - 1; y++) for (let x = 0; x < N - 1; x++) {
+      const a = v[y * N + x], b = v[y * N + x + 1], c2 = v[(y + 1) * N + x + 1], d2 = v[(y + 1) * N + x];
+      const mn = Math.min(a, b, c2, d2), mx = Math.max(a, b, c2, d2);
+      for (let k = Math.max(1, Math.ceil(mn)); k <= Math.min(13, mx); k++) {
+        if (k === mn) continue;
+        const pts = [];
+        const cut = (v0, v1, x0, y0, x1, y1) => { if ((v0 < k) === (v1 < k)) return; const t = (k - v0) / (v1 - v0); pts.push(P(x0 + (x1 - x0) * t, y0 + (y1 - y0) * t)); };
+        cut(a, b, x, y, x + 1, y); cut(b, c2, x + 1, y, x + 1, y + 1); cut(c2, d2, x + 1, y + 1, x, y + 1); cut(d2, a, x, y + 1, x, y);
+        if (pts.length >= 2) segs.push(pts[0][0], pts[0][1], pts[1][0], pts[1][1]);
+        if (pts.length === 4) segs.push(pts[2][0], pts[2][1], pts[3][0], pts[3][1]);
+      }
+    }
+    M.mapImg = { key, off, w, E, segs };
     return M.mapImg;
   }
   function drawMap(cvs, st, rank) {
@@ -830,7 +843,10 @@ window.NTMehr = (function () {
     const S = Math.min(W, H), ox = (W - S) / 2, oy = (H - S) / 2;
     x.imageSmoothingEnabled = true;
     x.save(); x.beginPath(); x.roundRect ? x.roundRect(ox, oy, S, S, 14) : x.rect(ox, oy, S, S); x.clip();
-    x.drawImage(mi.off, ox, oy, S, S); x.restore();
+    x.drawImage(mi.off, ox, oy, S, S);
+    x.strokeStyle = 'rgba(235,245,255,.3)'; x.lineWidth = 1; x.beginPath();
+    for (let i = 0; i < mi.segs.length; i += 4) { x.moveTo(ox + mi.segs[i] * S, oy + mi.segs[i + 1] * S); x.lineTo(ox + mi.segs[i + 2] * S, oy + mi.segs[i + 3] * S); }
+    x.stroke(); x.restore();
     const P = (wx, wz) => [ox + (wx + E) / (2 * E) * S, oy + (E - wz) / (2 * E) * S];
     // Start und tiefster Punkt
     const s = P(w.start.x, w.start.z);
