@@ -856,11 +856,28 @@
   const WK = { on: false, list: [], focus: null, keys: new Set(), ext: false };
   const WWD = 50, WSPEED = 8.5;
   const toWv = x => clamp(x / WWD * R, -R, R), toXv = w => clamp(w / R * WWD, -WWD + 1.5, WWD - 1.5);
-  const liftL = L => Math.max(0, 5 * Math.log(Math.max(L, 1e-4) / 0.03));
   const angD = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
-  function wkWorld(s) {
+  // Höhe JE WELT gestreckt (Sönke 18.11.2026: „sehr flach, keine Berge und Täler“): vorher
+  // 5·ln(L/0,03) für alle Welten gleich – im Sichtkreis oft nur 0,5–4 Einheiten Unterschied
+  // (andere Level ~24). Jetzt log-Fehler von tiefstem bis höchstem Punkt der Welt → 0…WH.
+  // Spanne mindestens WMIN (ln), damit eine wirklich fast flache Welt (Neuron zählt kaum)
+  // flach bleibt statt Rauschen zu Bergen aufzublasen. Die Spanne gleitet (wv.rng), damit die
+  // Welt beim Neubau (andere laufen) nicht springt.
+  const WH = 22, WMIN = 0.35;
+  function wkRange(f) {
+    let lo = Infinity, hi = -Infinity;
+    for (let i = 0; i <= 20; i++) for (let j = 0; j <= 20; j++) {
+      const v = Math.log(Math.max(f(-R + 2 * R * i / 20, -R + 2 * R * j / 20), 1e-6));
+      if (v < lo) lo = v; if (v > hi) hi = v;
+    }
+    return [lo, hi];
+  }
+  function wkWorld(s, wv) {
     const f = sliceFn({ k: s >> 1, pr: s & 1 });
-    const h = (x, z) => liftL(f(toWv(x), toWv(-z)));
+    const r = wkRange(f);
+    if (wv) wv.rng = wv.rng ? [wv.rng[0] + (r[0] - wv.rng[0]) * 0.5, wv.rng[1] + (r[1] - wv.rng[1]) * 0.5] : r;
+    const rg = wv ? wv.rng : r, lo = rg[0], sp = Math.max(rg[1] - rg[0], WMIN);
+    const h = (x, z) => Math.max(0, (Math.log(Math.max(f(toWv(x), toWv(-z)), 1e-6)) - lo) / sp * WH);
     const e = 0.06;
     return { kind: 'l8', W: WWD, h, grad: (x, z) => [(h(x + e, z) - h(x - e, z)) / (2 * e), (h(x, z + e) - h(x, z - e)) / (2 * e)],
              meshN: low ? 36 : 52 };
@@ -972,7 +989,7 @@
       if (!wv.G) continue;
       const sg = wkSig(wv.s);
       if (!wv.world || (sg !== wv.sig && now - wv.built > 250)) {
-        wv.sig = sg; wv.built = now; wv.world = wkWorld(wv.s);
+        wv.sig = sg; wv.built = now; wv.world = wkWorld(wv.s, wv);
         wv.G.setWorld(wv.world, 'dark');
       }
       wkDraw(wv);
