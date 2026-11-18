@@ -1217,7 +1217,7 @@
     hudFor(null);
     NTZwei.open(L, seed, {
       theme: () => theme, low: () => low, fmt, stars, LS, bestKey,
-      card, toMenu, introHtml,
+      card, toMenu, introHtml, verdict, eggIcon, NEST_TXT,
       next: () => LEVELS.find(l => l.id === L.id + 1) || null, open: openLevel,
       again: () => openLevel(L.id),
       newWorld: () => { setSeed(1000 + Math.floor(Math.random() * 9000)); openLevel(L.id); },

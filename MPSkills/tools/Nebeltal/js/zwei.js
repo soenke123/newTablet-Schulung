@@ -45,7 +45,10 @@ window.NTZwei = (function () {
       '<div class="zjoy" data-k="0" hidden><i></i></div><div class="zjoy" data-k="1" hidden><i></i></div>' +
       '<div class="hud-top"><button id="zMenu" class="chip btn" type="button">‹ Übersicht</button>' +
       '<div id="zName" class="chip glass"></div><div id="zCount" class="chip glass"></div></div>' +
-      '<div id="zPanel" class="glass"><div class="box-t">Das ganze Netz</div><canvas id="znet"></canvas>' +
+      '<div id="zPanel" class="glass"><div class="box-t">Das ganze Netz · Nest für Nest <span id="zNName"></span></div>' +
+      '<div class="zex"><div id="zL"><svg class="zNest" viewBox="0 0 80 40"><g id="zNest"></g></svg>' +
+      ['Mama', 'Papa'].map((t, k) => '<div class="zV" style="top:calc(14px + ' + (k ? 0.8 : 0.2) + ' * (100% - 28px))"><small>' + t + '</small><b id="zS' + k + '"></b></div>').join('') +
+      '</div><div class="znetw"><canvas id="znet"></canvas></div><svg id="zR" viewBox="0 0 84 150"></svg></div>' +
       '<div class="zfix"><i></i>grau = steht fest: Bias −3 in A und B, Gewichte 8 und Bias −5 am Ausgang. Lernen tun nur die farbigen Kanten.</div>' +
       '<div class="box-t" style="margin-top:4px">Die vier Nester · jedes Neuron = eine Gerade</div><canvas id="zplot" class="nplot"></canvas><div class="zrow"><span>Fehler <b id="zErr">–</b></span><span>richtig <b id="zRight">–</b></span></div></div>' +
       '<div class="zbottom"><div class="zlr glass"><div class="lr-l"><small>Lernrate</small><span id="zLrV">–</span></div>' +
@@ -284,26 +287,51 @@ window.NTZwei = (function () {
   }
 
   /* ── Anzeige: das ganze Netz + die vier Fälle ── */
+  /* Nest für Nest (Sönke 18.11.2026, wie Level 5/6): links eines der vier Nester mit Mama/Papa
+     auf Höhe der Eingänge, A und B füllen sich mit ihrer Antwort, rechts „NEURON SAGT“ mit ✓/✗/ECHT */
+  let zIdx = -1;
+  const zCase = () => Math.floor(performance.now() / 1600) % 4;
+  function zBuild() {
+    const R = $('#zR');
+    if (R.dataset.ok) return;
+    R.dataset.ok = '1';
+    R.innerHTML = '<text x="42" y="30" font-size="9.5" font-weight="700" text-anchor="middle" fill="var(--ink-faint)">NEURON SAGT</text>' +
+      [['Ei ok', 56, false], ['nicht ok', 100, true]].map(([nm, y, bad], k) =>
+        '<rect id="zR' + k + '" x="4" y="' + (y - 19) + '" width="78" height="38" rx="10" fill="none" stroke-width="2"/>' +
+        api.eggIcon(21, y, bad) +
+        '<text x="35" y="' + (y - 4) + '" font-size="10" font-weight="700" fill="var(--ink-soft)">' + nm + '</text>' +
+        '<text id="zP' + k + '" x="35" y="' + (y + 11) + '" font-size="13.5" font-weight="700" fill="var(--ink)"></text><g id="zB' + k + '"></g>').join('');
+  }
   function panel() {
     const w = all(), cs = X.fwd(...w);
+    zBuild();
+    const ci = zCase(), cur = cs[ci];
+    if (ci !== zIdx) {
+      zIdx = ci;
+      const kind = NTBild.nestKind(cur.s1, cur.s2);
+      $('#zNest').innerHTML = NTBild.nestImg(kind, 40, 38, 78);
+      $('#zNName').textContent = '· ' + api.NEST_TXT[kind];
+      $('#zS0').textContent = cur.s1 > 0 ? 'am Nest +1' : 'fischt −1';
+      $('#zS1').textContent = cur.s2 > 0 ? 'am Nest +1' : 'fischt −1';
+    }
+    api.verdict('z', [cur.o, 1 - cur.o], cur.o > 0.5 ? 0 : 1, cur.y === 1 ? 0 : 1);
+    const pc = v => ' ' + Math.round(v * 100) + ' %';
     NTNetz.draw($('#znet'), {
       nodes: [
-        { id: 's1', kind: 'in', x: 0.04, y: 0.2, label: 'Mama' }, { id: 's2', kind: 'in', x: 0.04, y: 0.8, label: 'Papa' },
-        { id: 'A', kind: 'n', x: 0.48, y: 0.2, label: 'A', group: 'a', bias: -3, labelPos: 'above' },
-        { id: 'B', kind: 'n', x: 0.48, y: 0.8, label: 'B', group: 'b', bias: -3, labelPos: 'above' },
-        { id: 'o', kind: 'n', x: 0.8, y: 0.5, bias: -5 },
-        { id: 'l', kind: 'out', x: 0.92, y: 0.5, label: 'Ei ok?' }],
+        { id: 's1', kind: 'in', x: 0, y: 0.2, label: '' }, { id: 's2', kind: 'in', x: 0, y: 0.8, label: '' },
+        { id: 'A', kind: 'n', x: 0.5, y: 0.2, label: 'A' + pc(cur.A), group: 'a', bias: -3, labelPos: 'above', act: cur.A },
+        { id: 'B', kind: 'n', x: 0.5, y: 0.8, label: 'B' + pc(cur.B), group: 'b', bias: -3, labelPos: 'above', act: cur.B },
+        { id: 'o', kind: 'n', x: 0.97, y: 0.5, bias: -5 }],
       edges: [
         // gerade Kanten in der Mitte beschriften, gekreuzte nah am Eingang – so überlappt nichts
         { from: 's1', to: 'A', w: w[0], group: 'a', labelAt: 0.55 }, { from: 's2', to: 'A', w: w[1], group: 'a', labelAt: 0.26 },
         { from: 's1', to: 'B', w: w[2], group: 'b', labelAt: 0.26 }, { from: 's2', to: 'B', w: w[3], group: 'b', labelAt: 0.55 },
-        { from: 'A', to: 'o', w: 8, group: 'fix', fixed: true, labelAt: 0.5 }, { from: 'B', to: 'o', w: 8, group: 'fix', fixed: true, labelAt: 0.5 },
-        { from: 'o', to: 'l', w: 1, group: 'fix', fixed: true, noLabel: true }]
+        { from: 'A', to: 'o', w: 8, group: 'fix', fixed: true, labelAt: 0.5 }, { from: 'B', to: 'o', w: 8, group: 'fix', fixed: true, labelAt: 0.5 }]
     });
     const sg = z => 1 / (1 + Math.exp(-z));
     NTNetz.nestPlot($('#zplot'), { cases: cs,
       out: (m, p) => sg(8 * sg(w[0] * m + w[1] * p - 3) + 8 * sg(w[2] * m + w[3] * p - 3) - 5),
-      lines: [{ a: w[0], b: w[1], c: 3, col: '#ff9d4d', team: 'a', name: 'A', end: 1 },
+      hi: ci, lines: [{ a: w[0], b: w[1], c: 3, col: '#ff9d4d', team: 'a', name: 'A', end: 1 },
               { a: w[2], b: w[3], c: 3, col: '#a98bff', team: 'b', name: 'B', end: 0 }] });
     $('#zErr').textContent = api.fmt(X.loss(...w), 2);
     $('#zRight').textContent = X.right(cs) + ' von 4';
@@ -392,7 +420,7 @@ window.NTZwei = (function () {
           if (st.autoWait <= 0) { st.autoWait = 0.12; if (st.jumpsLeft > 0) jump(); else { st.auto = false; refreshAuto(); } }
         }
         rebuild(0, false); rebuild(1, false);
-        if (Math.hypot(figs[0].vx, figs[0].vz) + Math.hypot(figs[1].vx, figs[1].vz) > 0.2) panel();
+        if (Math.hypot(figs[0].vx, figs[0].vz) + Math.hypot(figs[1].vx, figs[1].vz) > 0.2 || zCase() !== zIdx) panel();
       }
     }
     if (st.reveal) {
