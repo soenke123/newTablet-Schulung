@@ -463,16 +463,16 @@
       });
       return;
     }
+    // Zahl-Modus: Messwerte links (#exL) und Zahlenstrahl rechts (#exR) stehen neben der Leinwand
+    const act = k => EX.i >= 0 ? sig(zz(S.W[k], P.pts[EX.i].x)) : null;
     NTNetz.draw($('#net'), { biasInside: true,
-      nodes: [...ins,
-        ...[0, 1, 2].map(k => ({ id: 'h' + k, kind: 'n', x: 0.46, y: ys[k], group: HID[k], label: nameOf(k), ...bias(k, HID[k]),
-          act: EX.i >= 0 ? sig(zz(S.W[k], P.pts[EX.i].x)) : null })),
-        { id: 'z', kind: 'n', x: 0.8, y: 0.5, group: OUT, sym: 'Σ', label: 'Zahl', ...bias(3, OUT) },
-        { id: 'o', kind: 'out', x: 0.93, y: 0.5, label: 'Art' }],
+      nodes: [...ins.map(n => ({ ...n, x: 0, label: '' })),
+        ...[0, 1, 2].map(k => ({ id: 'h' + k, kind: 'n', x: 0.56, y: ys[k], group: HID[k], ...bias(k, HID[k]),
+          label: nameOf(k) + (act(k) != null ? ' ' + Math.round(act(k) * 100) + ' %' : ''), act: act(k) })),
+        { id: 'z', kind: 'n', x: 0.97, y: 0.5, group: OUT, sym: 'Σ', ...bias(3, OUT) }],
       edges: [
-        ...[0, 1, 2].flatMap(k => [0, 1, 2].map(i => ({ from: 'i' + i, to: 'h' + k, w: S.W[k][i], group: HID[k], labelAt: 0.66 }))),
-        ...[0, 1, 2].map(k => ({ from: 'h' + k, to: 'z', w: S.W[3][k], group: OUT, labelAt: 0.62 })),
-        { from: 'z', to: 'o', w: 1, group: 'fix', fixed: true, noLabel: true }]
+        ...[0, 1, 2].flatMap(k => [0, 1, 2].map(i => ({ from: 'i' + i, to: 'h' + k, w: S.W[k][i], group: HID[k], labelAt: 0.6 }))),
+        ...[0, 1, 2].map(k => ({ from: 'h' + k, to: 'z', w: S.W[3][k], group: OUT, labelAt: 0.66 }))]
     });
   }
   function table() {
@@ -484,51 +484,40 @@
     $('#sLoss').textContent = fmt(lossAll(S.W), 2);
   }
 
-  /* ── Pinguin für Pinguin (Level 8, Sönke 17.11.2026, wie Level 5) ──
-     Alle 1,6 s ein anderer echter Pinguin: Messwerte → was A, B, C sagen →
-     die Zahl → Zahlenstrahl mit den drei Köpfen. Die gewählte Art ist
-     hervorgehoben (grün richtig, rot falsch), bei falsch die echte gestrichelt. */
+  /* ── Pinguin für Pinguin (Level 8, Sönke 17./18.11.2026, wie Level 5) ──
+     Alle 1,6 s ein anderer echter Pinguin. Wie in Level 5 rund ums Netz:
+     links der Pinguin mit seinen Messwerten (je Wert auf Höhe seines Eingangs),
+     in den Neuronen A, B, C ihre Antwort in %, rechts der Zahlenstrahl
+     senkrecht mit den drei Köpfen. Gewählte Art grün ✓ / rot ✗, bei falsch
+     die echte gestrichelt mit „ECHT“. */
   const EX = { order: null, i: -1 };
   const SPN = ['adelie', 'chin', 'gentoo'];
+  const IN_Y = [0.1, 0.5, 0.9];
   const exT = (id, x, y, size, w, anchor, fill, txt, cls) => '<text' + (id ? ' id="' + id + '"' : '') + (cls ? ' class="' + cls + '"' : '') +
     ' x="' + x + '" y="' + y + '" font-size="' + size + '" font-weight="' + w + '" text-anchor="' + anchor + '" fill="' + fill + '">' + (txt || '') + '</text>';
-  const NX0 = 262, NX1 = 416, NV0 = -0.5, NV1 = 2.5;           // Zahlenstrahl
-  const NX = v => NX0 + (clamp(v, NV0, NV1) - NV0) / (NV1 - NV0) * (NX1 - NX0);
+  const NY0 = 30, NY1 = 250, NV0 = -0.5, NV1 = 2.5, LX = 16;   // Zahlenstrahl senkrecht: oben 2,5, unten −0,5
+  const NY = v => NY0 + (NV1 - clamp(v, NV0, NV1)) / (NV1 - NV0) * (NY1 - NY0);
   function exBuild() {
-    const el = $('#ex');
-    if (!el || el.dataset.ok) return;
-    el.dataset.ok = '1';
-    const arrow = (x0, x1, y) => '<line x1="' + x0 + '" y1="' + y + '" x2="' + (x1 - 5) + '" y2="' + y + '" stroke="var(--ink-faint)" stroke-width="1.6"/>' +
-      '<path d="M' + x1 + ',' + y + ' L' + (x1 - 6) + ',' + (y - 4) + ' L' + (x1 - 6) + ',' + (y + 4) + 'Z" fill="var(--ink-faint)"/>';
-    let h = '<g id="exPg"></g>' + exT('exName', 28, 10, 10, 700, 'middle', 'var(--ink-soft)');
-    ['Länge', 'Höhe', 'Flosse'].forEach((t, k) => {
-      h += exT('', 64, 22 + k * 26, 9.5, 600, 'start', 'var(--ink-faint)', t) + exT('exV' + k, 64, 34 + k * 26, 12, 700, 'start', 'var(--ink)', '', 'mono');
-    });
-    h += arrow(118, 132, 50);
-    [0, 1, 2].forEach(k => {
-      h += '<rect x="136" y="' + (16 + k * 26) + '" width="58" height="20" rx="10" fill="' + HID[k] + '" fill-opacity=".18" stroke="' + HID[k] + '" stroke-width="1.4"/>' +
-        exT('', 145, 30 + k * 26, 11, 800, 'start', HID[k], nameOf(k)) + exT('exH' + k, 189, 30 + k * 26, 11.5, 700, 'end', 'var(--ink)', '', 'mono');
-    });
-    h += arrow(198, 212, 50);
-    h += '<circle cx="232" cy="50" r="19" fill="var(--surface)" stroke="' + OUT + '" stroke-width="2.4"/>' +
-      exT('', 232, 44, 11, 700, 'middle', 'var(--ink)', 'Σ') + exT('exZ', 232, 58, 12, 800, 'middle', OUT, '', 'mono') +
-      exT('', 232, 84, 9.5, 600, 'middle', 'var(--ink-faint)', 'Zahl');
-    // Zahlenstrahl: drei Bereiche mit Köpfen
+    const L = $('#exL'), R = $('#exR');
+    if (!L || L.dataset.ok) return;
+    L.dataset.ok = '1';
+    L.innerHTML = '<div class="exPg"><b id="exName"></b><svg viewBox="0 0 60 112" id="exPg"></svg></div>' +
+      ['Länge', 'Höhe', 'Flosse'].map((t, k) => '<div class="exV" style="top:calc(14px + ' + IN_Y[k] + ' * (100% - 28px))"><small>' + t + '</small><b id="exV' + k + '"></b></div>').join('');
+    let h = exT('', 2, 13, 11, 700, 'start', 'var(--ink-faint)', 'Zahl') + exT('exZ', 112, 13, 13, 800, 'end', OUT, '', 'mono');
     const cut = [NV0, 0.5, 1.5, NV1];
     [0, 1, 2].forEach(n => {
-      const a = NX(cut[n]) + 1.5, b = NX(cut[n + 1]) - 1.5, sp = S.ord.indexOf(n), cx = (a + b) / 2;
-      h += '<rect id="exR' + n + '" x="' + a + '" y="4" width="' + (b - a) + '" height="66" rx="10" fill="none" stroke-width="2"/>' +
-        NTBild.head(SPN[sp], cx, 25, 15) +
-        exT('', cx, 54, 10, 700, 'middle', SPC[sp], NAMES[sp]) +
-        exT('', cx, 65, 8.5, 600, 'middle', 'var(--ink-faint)', ['unter 0,5', '0,5 – 1,5', 'über 1,5'][n]) +
+      const top = NY(cut[n + 1]) + 1.5, bot = NY(cut[n]) - 1.5, sp = S.ord.indexOf(n), cy = (top + bot) / 2;
+      h += '<rect id="exR' + n + '" x="24" y="' + top + '" width="90" height="' + (bot - top) + '" rx="10" fill="none" stroke-width="2"/>' +
+        NTBild.head(SPN[sp], 50, cy - 9, 15) +
+        exT('', 50, cy + 18, 10, 700, 'middle', SPC[sp], NAMES[sp]) +
+        exT('', 50, cy + 29, 8.5, 600, 'middle', 'var(--ink-faint)', ['unter 0,5', '0,5 – 1,5', 'über 1,5'][n]) +
         '<g id="exB' + n + '"></g>';
     });
-    h += '<line x1="' + NX0 + '" y1="80" x2="' + NX1 + '" y2="80" stroke="var(--ink-faint)" stroke-width="1.4"/>';
-    for (const v of [0, 1, 2]) h += '<line x1="' + NX(v) + '" y1="77" x2="' + NX(v) + '" y2="83" stroke="var(--ink-faint)" stroke-width="1.4"/>' +
-      exT('', NX(v), 93, 9, 600, 'middle', 'var(--ink-faint)', String(v), 'mono');
-    h += '<path d="M' + (252) + ',50 C' + 256 + ',50 ' + 256 + ',80 ' + NX0 + ',80" fill="none" stroke="' + OUT + '" stroke-width="1.6" stroke-dasharray="3 3"/>';
-    h += '<g id="exM"><path d="M0,74 L-6,64 L6,64Z" fill="' + OUT + '"/></g>';
-    el.innerHTML = h;
+    h += '<line x1="' + LX + '" y1="' + NY0 + '" x2="' + LX + '" y2="' + NY1 + '" stroke="var(--ink-faint)" stroke-width="1.4"/>';
+    for (const v of [0, 1, 2]) h += '<line x1="' + (LX - 3) + '" y1="' + NY(v) + '" x2="' + (LX + 3) + '" y2="' + NY(v) + '" stroke="var(--ink-faint)" stroke-width="1.4"/>' +
+      exT('', LX - 5, NY(v) + 3.5, 9, 600, 'end', 'var(--ink-faint)', String(v), 'mono');
+    h += '<g id="exM"><path d="M' + (LX + 1) + ',0 L' + (LX - 9) + ',-6 L' + (LX - 9) + ',6Z" fill="' + OUT + '"/></g>';
+    R.innerHTML = h;
   }
   function exPick() {
     if (!EX.order) {
@@ -546,25 +535,24 @@
     const raw = [p.len, p.dep, p.fl];
     if ($('#exPg').dataset.i !== String(EX.i)) {
       $('#exPg').dataset.i = String(EX.i);
-      $('#exPg').innerHTML = NTBild.peng({ sp: SPN[p.y], x: 28, y: 94, s: 0.74 });
+      $('#exPg').innerHTML = NTBild.peng({ sp: SPN[p.y], x: 30, y: 110, s: 1.02 });
       $('#exName').textContent = NAMES[p.y];
-      $('#exName').setAttribute('fill', SPC[p.y]);
+      $('#exName').style.color = SPC[p.y];
       [0, 1, 2].forEach(k => { $('#exV' + k).textContent = fmt(raw[k], k === 2 ? 0 : 1) + ' mm'; });
     }
-    hv.forEach((v, k) => { $('#exH' + k).textContent = Math.round(v * 100) + ' %'; });
     $('#exZ').textContent = fmt(z, 2);
-    $('#exM').setAttribute('transform', 'translate(' + NX(z).toFixed(1) + ' 0)');
+    $('#exM').setAttribute('transform', 'translate(0 ' + NY(z).toFixed(1) + ')');
     for (const q of [0, 1, 2]) {
       const sp = S.ord.indexOf(q), on = q === n, echt = !ok && sp === p.y, r = $('#exR' + q);
       r.setAttribute('fill', on ? (ok ? 'rgba(92,242,196,.16)' : 'rgba(255,107,139,.16)') : 'none');
       r.setAttribute('stroke', on ? (ok ? 'var(--accent)' : 'var(--warn)') : echt ? 'var(--accent)' : 'transparent');
       r.setAttribute('stroke-dasharray', echt ? '4 3' : 'none');
-      const xr = +r.getAttribute('x') + +r.getAttribute('width');
+      const xr = 114, yt = +r.getAttribute('y');
       $('#exB' + q).innerHTML = on
-        ? '<circle cx="' + (xr - 4) + '" cy="10" r="8" fill="' + (ok ? 'var(--accent)' : 'var(--warn)') + '"/>' +
-          '<text x="' + (xr - 4) + '" y="14" font-size="11" font-weight="800" text-anchor="middle" fill="#04201a">' + (ok ? '✓' : '✗') + '</text>'
-        : echt ? '<rect x="' + (xr - 32) + '" y="5" width="28" height="12" rx="6" fill="var(--accent)"/>' +
-          '<text x="' + (xr - 18) + '" y="14" font-size="8.5" font-weight="800" text-anchor="middle" fill="#04201a">ECHT</text>' : '';
+        ? '<circle cx="' + (xr - 10) + '" cy="' + (yt + 10) + '" r="8" fill="' + (ok ? 'var(--accent)' : 'var(--warn)') + '"/>' +
+          '<text x="' + (xr - 10) + '" y="' + (yt + 14) + '" font-size="11" font-weight="800" text-anchor="middle" fill="#04201a">' + (ok ? '✓' : '✗') + '</text>'
+        : echt ? '<rect x="' + (xr - 34) + '" y="' + (yt + 4) + '" width="28" height="12" rx="6" fill="var(--accent)"/>' +
+          '<text x="' + (xr - 20) + '" y="' + (yt + 13) + '" font-size="8.5" font-weight="800" text-anchor="middle" fill="#04201a">ECHT</text>' : '';
     }
   }
 

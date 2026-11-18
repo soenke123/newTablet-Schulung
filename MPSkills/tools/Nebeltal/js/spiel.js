@@ -89,17 +89,19 @@
              'Die Richtung vom Mittelpunkt der Welt bestimmt, <b>wie die Linie liegt</b>, der Abstand, <b>wie sicher</b> das Neuron entscheidet. ' +
              'Ein großes Netz besteht aus Tausenden solcher Neuronen hintereinander – und seine Landschaft hat so viele Richtungen, wie es Gewichte hat.' },
     { id: 6, name: 'Das Nest', short: 'Ein Neuron reicht nicht',
-      mode: 'jump', walk: true, jumps: 30, fog: 14, auto: true, world: 'xor1', lr: { min: 0.2, max: 40, def: 2, d: 1 },
+      mode: 'jump', walk: true, jumps: 30, fog: 14, auto: true, world: 'xor1', lr: { min: 0.1, max: 20, def: 1, d: 1 },
       lead: 'Pinguin-Eltern <b>wechseln sich ab</b>: Einer brütet, der andere geht fischen.',
       steps: [
         'Dem Ei geht es nur gut, wenn <b>genau einer</b> am Nest ist. Sind beide weg, kühlt es aus. Sind beide da, holt keiner Futter.',
         'Ein einzelnes Neuron soll das lernen. Eingänge: <b>Mama am Nest?</b> und <b>Papa am Nest?</b> (ja/nein), dazu zwei Gewichte <b>w₁</b> und <b>w₂</b>.',
         'Wie immer: <b>links/rechts = w₁</b>, <b>vor/zurück = w₂</b>, Höhe = Fehler. Rechts siehst du alle vier Nester.',
         'Such das Neuron, das alle vier Nester richtig beurteilt – laufend oder mit <b>„Training starten“</b>.',
-        'Rechts am Kasten gibt es einen Regler für den <b>Bias</b>. Er verschiebt die Gerade. Hilft das?'],
+        'Rechts am Kasten gibt es einen Regler für den <b>Bias</b>. Er verschiebt die Gerade. Hilft das?',
+        'Hak <b>„lernt mit“</b> an, dann springt beim Training auch der Bias. Wohin läuft er?'],
       outro: 'Egal, wie lange man sucht: <b>Ein einzelnes Neuron schafft das nicht.</b> Es kann die vier Nester nur mit einer geraden Linie trennen, ' +
              '„genau einer da“ liegt aber über Kreuz. Der tiefste Punkt ist die Mitte – dort sagt das Neuron bei jedem Nest <b>50 %</b>, also „ich weiß es nicht“. ' +
              'Mit dem <b>Bias</b> verschiebst du die Gerade: Dann stimmen höchstens <b>3 von 4</b> – nie alle. ' +
+             'Lernt der Bias mit, läuft er zurück auf <b>0</b>: Auch er findet nichts Besseres als „überall 50 %“. ' +
              'Das war lange ein echtes Problem der KI-Forschung (es heißt XOR). Die Lösung: ein zweites Neuron dazwischen. Das probierst du im nächsten Level.' },
     { id: 7, name: 'Zwei Neuronen, zwei Welten', short: 'Das Nest mit zwei Neuronen – jede Welt ein Neuron',
       two: true, jumps: 40, fog: 14, lr: { min: 0.2, max: 30, def: 4, d: 1 },
@@ -284,6 +286,7 @@
     if (L.lr) setLR(L.lr.def);
     if (w.setBias && w.bias() !== 0) setBias(0);
     else if (w.setBias) { $('#xBias').value = 0; $('#xBiasV').textContent = '0,0'; }
+    if (w.learnBias) setBiasLearn(false);
     addDot(S.p.x, S.p.z, true);
   }
 
@@ -391,6 +394,12 @@
   }
   $('#xBias').addEventListener('input', e => setBias(e.target.value / 10));
   $('#xBias').addEventListener('change', e => e.target.blur());   // Pfeiltasten wieder fürs Laufen
+  function setBiasLearn(on) {
+    $('#xBiasL').checked = on;
+    $('#xBiasNote').textContent = on ? 'lernt beim Training mit – wohin läuft er?' : 'stellst du selbst ein · lernt beim Training nicht mit';
+    if (S.world && S.world.learnBias) S.world.learnBias(on);
+  }
+  $('#xBiasL').addEventListener('change', e => { setBiasLearn(e.target.checked); e.target.blur(); });
 
   $('#btnJump').addEventListener('click', () => doJump());
   $('#btnStay').addEventListener('click', () => { if (S.state === 'play' && !S.jump && !S.fly) finish(); });
@@ -411,6 +420,7 @@
     if (S.state !== 'play' || S.lvl.mode !== 'jump' || S.jump || S.fly || S.jumpsLeft <= 0) return;
     const w = S.world, from = { x: S.p.x, z: S.p.z };
     const q = w.step(from, S.lr);
+    if (q.b !== undefined && !q.out) setBias(q.b);    // Level 6: Bias lernt mit
     const dist = Math.hypot(q.x - from.x, q.z - from.z);
     S.lrs.push(S.lr);
     S.jumpsLeft--;

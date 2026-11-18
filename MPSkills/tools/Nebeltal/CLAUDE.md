@@ -177,7 +177,10 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    (unvermeidlichen) Minimum. Bias-Regler direkt am Kasten (`#xBias`, −4…4, Sönke 17.11.2026, bewusst
    „nicht ganz sauber“, fürs Verständnis): verschiebt die Gerade, lernt beim Training NICHT mit; die
    Welt ist dann der Fehler bei diesem Bias (`xor().one().setBias`, Gitter wird gedrosselt neu gebaut).
-   Tal bleibt in der Mitte, mit Bias gehen höchstens 3 von 4.
+   Tal bleibt in der Mitte, mit Bias gehen höchstens 3 von 4. Haken „lernt mit“ (`#xBiasL`, 18.11.2026):
+   dann springt der Bias mit (`step()` liefert `b`, spiel.js `doJump` → `setBias`) und läuft zurück auf 0 –
+   Fehler ist konvex in (w₁, w₂, b), bestes Neuron = überall 50 %. Gewichte hier nur ±4 (vorher ±8: σ
+   fast immer satt, Nest-Karte nur grün oder rot), Lernrate 0,1–20, Start 1.
 7. **Zwei Neuronen, zwei Welten** – `js/zwei.js`: Welt A = Kanten in Neuron A, Welt B = Kanten in
    Neuron B; beide Figuren immer auf derselben Höhe (ein Netz), die Welt der einen verbiegt sich,
    wenn die andere läuft. Mitte oben `#zPanel`: das ganze Netz (Namen A/B über den Neuronen, `labelPos: 'above'` – rechts oben
@@ -191,7 +194,10 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
    labor.js, vorher Pixel-Kanten = verpixelt); Lernkurve in der Steuerleiste (`#lcurve`: Fehler je
    Lernschritt, orange Striche = Lernrate geändert, mit Wert); „Pinguin für Pinguin“ unter dem Netz
    (`#ex`, nur Zahl-Modus): alle 1,6 s ein echter Pinguin → Messwerte → A/B/C in % (füllt auch die
-   Neuronen im Netz, NTNetz-Option `act`) → Zahl → Zahlenstrahl mit drei Köpfen (`NTBild.head`),
+   Neuronen im Netz, NTNetz-Option `act`) → Zahl → Zahlenstrahl mit drei Köpfen (`NTBild.head`).
+   Seit 18.11.2026 wie Level 5 RUND UMS Netz (`.netrow`): links `#exL` Pinguin + Messwerte je auf Höhe
+   ihres Eingangs (Eingänge ohne Leinwand-Beschriftung, x 0), A/B/C mit % am Neuron, rechts `#exR`
+   Zahlenstrahl SENKRECHT (oben 2 Esel, unten 0 Adelie) mit Marker; Netz-Spalte breiter (0,85/0,85/1,7),
    gewählte Art grün ✓ / rot ✗, bei falsch die echte gestrichelt mit „ECHT“. Dasselbe Prinzip mit
    zwei Köpfen jetzt auch in Level 5 (`verdict()` in spiel.js, ersetzt „Zügel? 0 % → Adelie, echt: …“).
 

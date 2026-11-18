@@ -189,6 +189,8 @@ body:not([data-lvl="3"]) #lrDistRow { display:none; }
 .biasrow { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:var(--ink-soft); }
 .biasrow input { flex:1; min-width:0; accent-color:#5cf2c4; height:26px; }
 .biasrow b { font-family:var(--mono); color:var(--ink); min-width:38px; text-align:right; font-variant-numeric:tabular-nums; }
+.blearn { display:flex; align-items:center; gap:4px; font-size:12px; font-weight:700; color:var(--ink-soft); white-space:nowrap; cursor:pointer; }
+.blearn input { accent-color:#5cf2c4; width:16px; height:16px; margin:0; }
 .biasnote { font-size:11.5px; color:var(--ink-faint); margin:-2px 0 2px; }
 /* Die vier Nester als Diagramm (NTNetz.nestPlot): Mama → rechts, Papa → oben, Gerade = Neuron */
 canvas.nplot { width:100%; aspect-ratio:1 / 0.92; height:auto; display:block; margin:2px 0 4px; }
@@ -399,8 +401,8 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
     <div id="xorBox" class="glass" hidden>
       <div class="box-t">Das Neuron</div>
       <canvas id="xnet"></canvas>
-      <div class="biasrow"><span>Bias</span><input id="xBias" type="range" min="-40" max="40" step="1" value="0" aria-label="Bias des Neurons"><b id="xBiasV">0,0</b></div>
-      <div class="biasnote">stellst du selbst ein · lernt beim Training nicht mit</div>
+      <div class="biasrow"><span>Bias</span><input id="xBias" type="range" min="-40" max="40" step="1" value="0" aria-label="Bias des Neurons"><b id="xBiasV">0,0</b><label class="blearn"><input id="xBiasL" type="checkbox">lernt mit</label></div>
+      <div class="biasnote" id="xBiasNote">stellst du selbst ein · lernt beim Training nicht mit</div>
       <div class="box-t" style="margin-top:4px">Die vier Nester · dein Neuron = eine Gerade</div>
       <canvas id="xplot" class="nplot" aria-label="Die vier Nester als Diagramm: Mama und Papa am Nest oder beim Fischen, die Gerade des Neurons teilt das Feld"></canvas>
       <div class="mvals"><span>richtig beurteilt</span><b id="xRight">–</b></div>
@@ -458,12 +460,12 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
   <div id="nogl" hidden>Dieses Gerät kann leider kein 3D (WebGL) anzeigen.</div>
 </div>
 
-<script src="js/welt.js?v=20261117n"></script>
-<script src="js/bilder.js?v=20261117n"></script>
+<script src="js/welt.js?v=20261118a"></script>
+<script src="js/bilder.js?v=20261118a"></script>
 <script src="js/grafik.js?v=20261117m"></script>
 <script src="js/schnee.js?v=20261117j"></script>
-<script src="js/netz.js?v=20261117n"></script>
-<script src="js/zwei.js?v=20261117n"></script>
-<script src="js/spiel.js?v=20261117n"></script>
+<script src="js/netz.js?v=20261118a"></script>
+<script src="js/zwei.js?v=20261118a"></script>
+<script src="js/spiel.js?v=20261118a"></script>
 </body>
 </html>

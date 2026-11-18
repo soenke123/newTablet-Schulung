@@ -441,17 +441,24 @@ window.NTWelt = (function () {
     function one() {
       // Bias am Regler: Die Welt ist dann der Schnitt bei diesem Bias. Mit Bias ≠ 0 verschiebt sich
       // die Gerade – 3 von 4 Nestern gehen, alle 4 nie.
-      let b = 0;
+      // Gewichte nur ±4 (Sönke 18.11.2026): bei ±8 war das σ fast immer satt → Nest-Karte nur
+      // grün ODER rot. Mit ±4 sieht man den Übergang 0 % … 100 % als Band im Diagramm.
+      const R = 4, toW = x => x / W * R, toX = w => w / R * W, rnd = () => (r() * 2 - 1) * 0.7 * R;
+      let b = 0, learnB = false;
       const h = (x, z) => lift(loss1(toW(x), toW(z), b));
       let st;
       do { st = { x: toX(rnd()), z: toX(rnd()) }; } while (Math.hypot(st.x, st.z) < 0.35 * W);
+      const clampB = v => Math.max(-4, Math.min(4, v));
       const w = {
         kind: 'xor1', W, seed, level: 6, dec: 2, h,
         grad: (x, z) => numGrad(h, x, z),
         step(p, lr) {
           const w1 = toW(p.x), w2 = toW(p.z), g = grad1(w1, w2, b);
           const x = toX(w1 - lr * g[0]), z = toX(w2 - lr * g[1]);
-          return { x, z, out: Math.abs(x) > W || Math.abs(z) > W };
+          // Bias lernt mit (Schalter am Kasten): eigener Gradient = mittlerer Fehler (o − y);
+          // die Welt ist danach der Schnitt beim neuen Bias (spiel.js baut sie neu)
+          const nb = learnB ? clampB(b - lr * fwd1(w1, w2, b).reduce((t, c) => t + c.o - c.y, 0) / 4) : undefined;
+          return { x, z, b: nb, out: Math.abs(x) > W || Math.abs(z) > W };
         },
         min: { x: 0, z: 0, h: h(0, 0) }, start: st,
         show, unit: '', label: 'Fehler',
@@ -459,7 +466,9 @@ window.NTWelt = (function () {
         bias: () => b,
         // Tal bleibt bei jedem Bias in der Mitte (w = 0: Gradient dort immer 0, Fehler konvex) –
         // nur seine Höhe ändert sich. 3 von 4 richtig gibt es nur abseits davon, mit mehr Fehler.
-        setBias(v) { b = v; w.min = { x: 0, z: 0, h: h(0, 0) }; }
+        setBias(v) { b = v; w.min = { x: 0, z: 0, h: h(0, 0) }; },
+        // Konvex in (w₁, w₂, b): lernt der Bias mit, läuft alles zurück auf 0 = überall 50 %
+        learnBias(on) { learnB = !!on; }
       };
       return w;
     }
