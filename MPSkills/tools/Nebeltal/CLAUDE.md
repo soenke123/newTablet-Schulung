@@ -67,8 +67,8 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Mulde, 3 drei Täler Lernrate zu klein/gut/zu groß, 4 Pinguin mit Lineal an der Flosse + Neuron +
   Formel + Weltkarte, 5 Adelie/Zügel + Schnabel messen + Neuron, 6 die vier Nester (Nest-Bilder) + Neuron, 7 Netz mit
   A/B + Welt A/B, 8 drei Arten + Netz 3 → A/B/C → Zahl); Weltkarte `karte()` = Raute mit Mulde, Achsen in Gewichtsfarbe, Pinguin, Flagge.
-  Erklärkarte (`introHtml` in spiel.js, auch für zwei.js): `lead` (ein Satz Kontext) → Bild →
-  `formula` (optional) → `steps` (nummeriert, je Schritt EIN Gedanke) → Steuerung
+  Erklärkarte (`introHtml` in spiel.js, auch für zwei.js, Aufbau in karte.css): `lead` (ein Satz) → Bild →
+  `formula` (optional) → `steps` (höchstens 3, je Schritt EIN kurzer Satz) → Steuerung (eine Zeile)
 - `js/zwei.js` – Level 7 komplett: zwei Canvas/zwei NTGrafik (quer nebeneinander, hoch übereinander),
   Kamera fest (rechts = erstes Gewicht größer, oben = zweites), Hälfte ziehen = Figur dieser Welt
   (zwei Daumen/zwei Personen), WASD = A, Pfeile = B, Leertaste = Lernschritt; Schnitt der einen
@@ -141,25 +141,25 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   (`href`, `tag` statt Nummer). Kachelbilder: 1 Spieler im Schneesturm, 2 `img/frei/kompass.webp`
   (Sönkes „Pingu mit Kompass.png“, freistellen.py), 3 Sprungbögen + Ring, 4 Zügel + „Gewicht?“-Schild,
   5 Adelie | Zügel mit Trennlinie, 6 Nest mit beiden Eltern + „?“, 7 main_a/main_b + Neuronen A/B,
-  8 drei Köpfe, Erarbeitung = Tafel mit 2-2-1-Netz und Fehler-Pfeil rückwärts. Level 3 → Knopf
+  8 drei Köpfe, Erarbeitung = Tafel mit EINEM Neuron (w₁, w₂ → σ) und Fehler-Pfeil rückwärts. Level 3 → Knopf
   „Weiter: Erarbeitung“; `index.html?lv=4` öffnet direkt ein Level (Einsprung aus dem Tafelbild).
-- `erarbeitung.html` + `js/erarbeitung.js` – **Erarbeitung** (Phase 1, nach Level 3, 18.11.2026): interaktives
-  Tafelbild „Wie lernt ein neuronales Netz?“, Netz 2 → 2 → 1 (Schnabel-Länge/-Höhe standardisiert → A, B →
-  Ausgang „Zügel?“), 136 echte Pinguine aus `NTWelt.penguins`, 9 lernbare Werte (6 Kanten + 3 Bias, Start
-  fest `START`, erster Pinguin ein Zügel, den das Startnetz falsch hat). Sechs Schritte (Leiste oben, ← →):
-  1 Daten rein (Pinguin als Umriss, Messwerte → x₁/x₂) · 2 Vorwärts (Impulse laufen die Kanten entlang,
-  Neuron antippen = Rechnung + kleine σ-Kurve) · 3 Vergleichen (Soll/Ist-Leiste mit Köpfen, Fehler) ·
-  4 Rückwärts (Anteile an A/B, Neuron antippen = Rechnung) · 5 Anpassen (jede Kante „alt → neu“, grün größer/
-  rot kleiner, Kante/b antippen = Rechnung, Lernrate-Regler, „Anpassen“, dann „Nächster Pinguin“) ·
-  6 Ins Tal = Brücke zum Nebeltal (Tabelle Ort/Höhe/Pfeil/Sprungweite/Sprung ↔ Netz, Lernkurve, „richtig
-  sortiert“, Karte der Fehler-Landschaft über ZWEI der 9 Werte – Kanten/b im Netz antippen = Achsen, die
-  übrigen stehen beim aktuellen Netz; Farben wie NET, Höhenlinien, weiße Spur, Pfeil + Ring = nächster
-  Sprung mit allen 136, Pinguin ziehen = Werte setzen; Knöpfe 1 Pinguin · 1 Sprung (alle 136) · Training
-  (150 Sprünge) · Netz neu würfeln; „Weiter: Level 4“ → index.html?lv=4).
-  Lernregel EXAKT (σ am Ausgang + Log-Fehler, darum fällt dort die σ-Ableitung weg): Fehler = Soll − Ist;
-  Anteil(Ausgang) = Fehler; Anteil(A) = Fehler × Gewicht A→Aus × A·(1−A) („Empfindlichkeit“);
-  neu = alt + Lernrate × Anteil(Ziel) × Eingang (Bias: Eingang 1). Lernrate 0,2–20 (log), Start 1:
-  Training mit allen 136 → nach ~100 Sprüngen 134/136 richtig. Immer Polarnacht, hochkant untereinander.
+- `erarbeitung.html` + `js/erarbeitung.js` – **Erarbeitung** (Phase 1, nach Level 3). 2. Fassung 18.11.2026 (Sönke: „viel zu
+  kompliziert und überladen … so versteht das keiner“): EIN Neuron statt Netz 2-2-1, EIN Gedanke je Schritt, Bühne groß in
+  der Mitte (SVG, quer `LAY.h` / hochkant `LAY.v` je nach Seitenverhältnis), darunter EIN Satz + Formel-Chip + Knöpfe.
+  Das Neuron ist genau das aus Level 5 (`NTWelt.penguins`, 136 Pinguine, σ ohne Bias, Start `START` = (−3 | 2,5) sortiert
+  fast alles falsch, erster Pinguin ein Zügel mit beiden Messwerten deutlich ≠ 0). Vier Schritte:
+  1 Raten (Umriss, zwei Messwerte → · w₁ · w₂ → σ → „x % Zügel“, Leiste Adelie 0 … Zügel 1) ·
+  2 Vergleichen (Art aufgedeckt, SOLL-Ring, roter Abstand = Fehler = Soll − Ist) ·
+  3 Anpassen (Kanten „alt → neu“, Antwort rückt ans Soll; `neu = alt + Lernrate × Fehler × Eingang`, exakt für σ +
+  Log-Fehler; „↻ Nächster Pinguin“ oder „Viele Pinguine“) ·
+  4 Ins Tal (Karte der ECHTEN Fehler-Landschaft über (w₁, w₂) ±20 = Level 5 von oben, Farben wie NET, Höhenlinien,
+  Spur, Pfeil + Ring = nächster Sprung mit allen 136, Pinguin ziehen = Gewichte setzen; daneben „Wie im Nebeltal“
+  Ort/Höhe/Pfeil/Sprung, „richtig sortiert x/136“, Lernkurve; Lernrate 0,5–30, Start 3; „Weiter: Level 4“ → index.html?lv=4).
+  Weggefallen: versteckte Schicht, Bias, Anteile/Backprop-Formel, σ-Kurve, Regel-Kasten, Brücken-Tabelle mit 6 Zeilen.
+- `karte.css` – Erklärkarte vor jedem Level (index.html + labor.html, 18.11.2026: „ohne Scrollen auf einen Bildschirm“):
+  `.card-in.is-intro` mit `.i-head` (Kicker, Titel, EIN Satz) · `.i-pic` (Bild, Formel) · `.i-txt` (höchstens 3 kurze
+  Schritte, Steuerung) · `.card-btns`; quer Bild links/Text rechts, hochkant untereinander (Bild ≤ 26vh), Schriften mit
+  clamp(…vh); Tastenkürzel (`.kbd`) nur mit Maus. Neue Texte KURZ halten – geprüft bei 390×760, 800×370, 1024×700, 1440×860.
 - `tool.js`/`tool.css` – nur der iframe-Rahmen (wie Reinforce Yourself), noch kein Austausch mit dem Raum
 
 ## Level
@@ -237,6 +237,17 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 
 Ab Level 4 gilt überall: eine Welt = ein echtes Modell, das ganze Netz ist zu sehen, Laufen UND
 Training im selben Level.
+
+**Bildschirmgrößen** (18.11.2026): Knopf „Infos“ oben (`#btnInfo`, Level 7 `#zInfo`, `toggleInfo` in spiel.js) blendet
+die Kästen rechts aus (`body.info-min`), `body[data-panel]` = Level hat einen Kasten. Handy hochkant (≤ 600 px): Kasten
+volle Breite unten über der Leiste (`--hb` = Höhe der Leiste, ResizeObserver), Lernkurve dann weg, Lernrate-Leiste als
+Raster ohne ±; Handy quer (≤ 500 px hoch): Kasten rechts über die ganze Höhe, Leiste links daneben; PC (≥ 1280 × 760):
+Kästen breiter (370 px). Labor/Level 8 auf dem Handy: Seite scrollt (feste Höhen für Wolken, Netz, Welten).
+Hinweis-Toasts beim Start gibt es nicht mehr (Sönke: zu viele kleine Erklärungen).
+
+**Welt je Level** (18.11.2026: „jedes Level ein neuer Seed“): `lvSeed(id)` in spiel.js würfelt aus der Welt-Nummer der
+Übersicht je Level eine eigene Nummer (steht in der Erklärkarte „Level n · Welt …“); gleiche Welt-Nummer = auf allen
+Tablets dieselben Welten, aber Level 1 und 2 nie gleich. Sterne bleiben unter der Welt-Nummer der Übersicht.
 
 Am Ende jedes Levels lichtet sich der Nebel (Weg, Start, Flagge am tiefsten Punkt), dann
 Sterne + „Und die KI?“-Text. Welt-Nummer (Seed 1000–9999) = gleiche Landschaft auf allen

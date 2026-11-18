@@ -408,7 +408,115 @@ html[data-theme="dark"] .tile { background:rgba(255,255,255,.03); }
 }
 html[data-motion="low"] .tile { transition:none; }
 html[data-motion="low"] .tile:hover { transform:none; }
+
+/* ── Infos ein-/ausklappen und Handy (Sönke 18.11.2026: „Tablet und PC müssen laufen, Handy soll
+   funktionieren, UI-Elemente minimieren“). Knopf „Infos“ oben (#btnInfo, Level 7 #zInfo) blendet
+   die Kästen rechts aus (body.info-min); --hb = Höhe der Leiste unten (ResizeObserver in spiel.js). ── */
+.infotog { display:inline-flex; align-items:center; gap:6px; }
+.infotog::before { content:''; width:9px; height:9px; border-right:2px solid currentColor; border-bottom:2px solid currentColor;
+  transform:rotate(45deg) translate(-2px, -2px); transition:transform .2s; }
+body.info-min .infotog::before { transform:rotate(-45deg); }
+body.info-min .infotog { color:var(--accent-ink); border-color:var(--accent); }
+body.info-min #modelBox, body.info-min #pengBox, body.info-min #xorBox, body.info-min #curveBox, body.info-min #zPanel { display:none !important; }
+#lvlName, #zName { min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+#btnJump, #btnAuto, #btnStay, #zJump, #zAuto, #zDone { white-space:nowrap; }
+#modelBox, #pengBox, #xorBox { max-height:calc(100% - 182px - var(--hb, 90px)); overflow:auto; }
+
+/* PC: Kästen größer (sonst wirken sie am großen Bildschirm verloren) */
+@media (min-width: 1280px) and (min-height: 760px) {
+  #curveBox { width:240px; }
+  #curve { height:84px; }
+  #modelBox, #pengBox, #xorBox { width:370px; top:186px; max-height:calc(100% - 198px - var(--hb, 90px)); }
+  #pplot { height:200px; } #plot { height:190px; }
+  .box-t { font-size:12.5px; }
+  .mvals { font-size:14.5px; }
+  #gauge { width:84px; max-height:420px; }
+  #zPanel { width:460px; }
+  .zex { height:170px; } #zR { height:170px; }
+  #zPanel canvas.nplot { max-width:360px; }
+}
+
+/* Ergebnis-Karte bei wenig Höhe kompakter */
+@media (max-height: 500px) {
+  #card { padding:8px; }
+  #card.result .card-in { padding:12px 16px; }
+  .res-head { margin:2px 0 6px; } .res-head .stars i { font-size:22px; } .res-head p { font-size:15px; }
+  .card-in p { font-size:14px; margin-bottom:8px; } .ki { margin:4px 0 8px; } .note { padding:7px 10px; }
+}
+
+/* Handy hochkant */
+@media (max-width: 600px) {
+  .hud-top { left:8px; right:8px; top:8px; gap:6px; }
+  .chip { font-size:13px !important; padding:7px 10px !important; }
+  #btnMenu .long, #zMenu .long { display:none; }
+  #lvlName { font-size:12.5px !important; flex:1 1 auto; }
+  #counter, #zCount { min-width:0; margin-left:0; flex:none; }
+  #gauge { left:8px; top:56px; bottom:auto; height:min(200px, 26vh); width:54px; padding:8px 4px; }
+  #zName { font-size:12.5px !important; flex:1 1 auto; }
+  #gLbl { font-size:10px; } #gVal { font-size:13px; } .g-best-l { display:none; }
+  #curveBox { top:56px; right:8px; width:132px; padding:6px 8px 4px; }
+  #curve { height:46px; }
+  body[data-panel] #curveBox { display:none; }
+  #modelBox, #pengBox, #xorBox { left:8px; right:8px; width:auto; top:auto; bottom:calc(var(--hb, 120px) + 14px);
+    max-height:calc(100% - 64px - var(--hb, 120px) - 14px); padding:6px 8px; }
+  #pplot { height:110px; } #plot { height:100px; }
+  .hud-bottom { left:8px; right:8px; bottom:8px; gap:6px; }
+  #lrBox { width:100%; padding:8px 10px; gap:8px; display:none; }
+  body[data-mode="jump"] #lrBox { display:grid; grid-template-columns:auto 1fr auto; }
+  #lrBox .lr-pm { display:none; }
+  #lr { width:100%; }
+  #lrVal { font-size:17px; min-width:0; }
+  #btnJump { padding:10px 14px; font-size:15px; }
+  #btnAuto { grid-column:1 / -1; padding:9px; font-size:14px; }
+  #lrDistRow { grid-column:1 / -1; }
+  #btnStay { padding:10px 18px; font-size:15px; }
+  body[data-mode="jump"] .hud-bottom { flex-wrap:nowrap; align-items:stretch; }
+  body[data-mode="jump"] #btnStay { flex:none; align-self:flex-end; padding:10px 12px; }
+  #toast { top:56px; max-width:calc(100% - 140px); font-size:13.5px; }
+  /* Level 7 */
+  #zPanel { left:8px !important; right:8px !important; width:auto !important; top:56px; transform:none !important;
+    max-height:calc(50% - 64px); overflow:auto; padding:6px 8px; }
+  .zex { height:120px; } #zR { height:120px; }
+  .zbottom { left:8px; right:8px; bottom:8px; gap:6px; }
+  .zbottom { flex-wrap:nowrap; align-items:flex-end; }
+  .zlr { flex:1; display:grid; grid-template-columns:auto 1fr; padding:8px 10px; gap:8px; }
+  #zLr { width:100%; }
+  #zJump, #zAuto { padding:9px 10px; font-size:14px; }
+  #zDone { flex:none; padding:10px 12px; font-size:14px; }
+  .ztag { font-size:12px; padding:4px 9px; }
+}
+/* Handy quer (wenig Höhe): Kasten rechts über die ganze Höhe, Leiste unten links daneben */
+@media (max-height: 500px) and (min-width: 601px) {
+  .hud-top { top:8px; left:8px; right:8px; }
+  .chip { font-size:13px !important; padding:6px 10px !important; }
+  #gauge { left:8px; top:50px; bottom:auto; height:calc(100% - 58px - var(--hb, 70px) - 8px); max-height:none; width:56px; padding:6px 4px; }
+  #gLbl { font-size:10px; } #gVal { font-size:13px; } .g-best-l { display:none; }
+  #curveBox { top:50px; right:8px; width:150px; padding:5px 8px 3px; }
+  #curve { height:40px; }
+  body[data-panel] #curveBox { display:none; }
+  #modelBox, #pengBox, #xorBox { top:50px !important; right:8px !important; bottom:8px; width:280px; max-height:none; padding:6px 8px; }
+  #pplot, #plot { height:96px; }
+  .hud-bottom { left:8px; bottom:8px; right:8px; justify-content:flex-start; flex-wrap:nowrap; gap:6px; }
+  body[data-panel]:not(.info-min) .hud-bottom { right:296px; }
+  #lrBox { padding:6px 8px; gap:6px; flex-wrap:nowrap; }
+  #lrBox .lr-pm { display:none; }
+  #lr { width:min(130px, 16vw); }
+  #lrVal { font-size:16px; min-width:40px; }
+  .lr-l small { font-size:10px; }
+  #btnJump, #btnAuto, #btnStay { padding:8px 12px; font-size:14px; }
+  #lrDistRow { display:none !important; }
+  #zPanel { top:50px; left:auto !important; right:8px; transform:none !important; width:330px !important; bottom:8px; overflow:auto; padding:6px 8px; }
+  .zex { height:118px; } #zR { height:118px; }
+  .zbottom { left:8px; right:346px; bottom:8px; justify-content:flex-start; flex-wrap:nowrap; gap:6px; }
+  #zJump, #zAuto, #zDone { padding:8px 12px; font-size:14px; }
+  body.info-min .zbottom { right:8px; }
+  .zlr { padding:6px 8px; gap:6px; flex-wrap:nowrap; }
+  #zLr { width:min(130px, 16vw); }
+  .ztag { bottom:auto; top:50px; }
+  .ztag.b { right:auto; left:calc(50% + 8px); }
+}
 </style>
+<link href="karte.css?v=20261118a" rel="stylesheet">
 </head>
 <body>
 <div id="app">
@@ -422,8 +530,9 @@ html[data-motion="low"] .tile:hover { transform:none; }
 
   <div id="hud" hidden>
     <div class="hud-top">
-      <button id="btnMenu" class="chip btn" type="button">‹ Übersicht</button>
+      <button id="btnMenu" class="chip btn" type="button" aria-label="Übersicht">‹<span class="long"> Übersicht</span></button>
       <div id="lvlName" class="chip glass"></div>
+      <button id="btnInfo" class="chip btn infotog" type="button" aria-pressed="true" hidden>Infos</button>
       <div id="counter" class="chip glass"></div>
     </div>
 
@@ -456,7 +565,6 @@ html[data-motion="low"] .tile:hover { transform:none; }
       <div class="box-t">Das Neuron – Nest für Nest</div>
       <svg id="xrow" viewBox="0 0 302 108" aria-label="Das Neuron beurteilt das gezeigte Nest"></svg>
       <div class="biasrow"><span>Bias</span><input id="xBias" type="range" min="-40" max="40" step="1" value="0" aria-label="Bias des Neurons"><b id="xBiasV">0,0</b><label class="blearn"><input id="xBiasL" type="checkbox">lernt mit</label></div>
-      <div class="biasnote" id="xBiasNote">stellst du selbst ein · lernt beim Training nicht mit</div>
       <div class="box-t" style="margin-top:4px">Die vier Nester · dein Neuron = eine Gerade</div>
       <canvas id="xplot" class="nplot" aria-label="Die vier Nester als Diagramm: Mama und Papa am Nest oder beim Fischen, die Gerade des Neurons teilt das Feld"></canvas>
       <div class="mvals"><span>richtig beurteilt</span><b id="xRight">–</b></div>
@@ -497,16 +605,16 @@ html[data-motion="low"] .tile:hover { transform:none; }
     <div class="menu-in glass">
       <span class="kick">Expedition 2026 · Polarlicht</span>
       <h1>Nebeltal</h1>
-      <p class="sub">Wie lernt eine KI? Sie sucht im Schneesturm den tiefsten Punkt einer Landschaft – und sieht dabei nur die Stelle, an der sie gerade steht. Die Stunde geht Reihe für Reihe von links nach rechts.</p>
+      <p class="sub">Wie lernt eine KI? Sie sucht den tiefsten Punkt einer Landschaft – und sieht nur, wo sie gerade steht.</p>
       <div id="levels"></div>
       <div class="seedrow">
         <label for="seed">Welt-Nummer</label>
         <input id="seed" type="number" min="1000" max="9999" inputmode="numeric">
         <button id="seedDice" class="btn" type="button">Neue Welt</button>
-        <small>Gleiche Nummer = gleiche Landschaft. Spielt alle dieselbe Welt: Wer kommt am tiefsten?</small>
+        <small>Gleiche Nummer = auf allen Tablets dieselben Welten.</small>
       </div>
-      <a class="lablink" href="labor.html">Labor: Pinguine in 3D frei ausprobieren (3 Neuronen oder + Zahl-Neuron)</a>
-      <a class="lablink" href="showroom.html">Showroom: Eiswelt – drei Looks zur Auswahl</a>
+      <a class="lablink" href="labor.html">Labor: Pinguine in 3D</a>
+      <a class="lablink" href="showroom.html">Showroom: Eiswelt</a>
     </div>
   </div>
 
@@ -515,11 +623,11 @@ html[data-motion="low"] .tile:hover { transform:none; }
 </div>
 
 <script src="js/welt.js?v=20261118a"></script>
-<script src="js/bilder.js?v=20261118d"></script>
+<script src="js/bilder.js?v=20261118e"></script>
 <script src="js/grafik.js?v=20261117m"></script>
 <script src="js/schnee.js?v=20261117j"></script>
 <script src="js/netz.js?v=20261118b"></script>
-<script src="js/zwei.js?v=20261118b"></script>
-<script src="js/spiel.js?v=20261118d"></script>
+<script src="js/zwei.js?v=20261118c"></script>
+<script src="js/spiel.js?v=20261118e"></script>
 </body>
 </html>

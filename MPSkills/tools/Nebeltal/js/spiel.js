@@ -41,94 +41,77 @@
       mode: 'walk', arrow: false, time: 75, fog: 9, plain: true, physics: false, snow: true,
       lead: 'Irgendwo in dieser Eiswüste liegt der <b>tiefste Punkt</b>. Finde ihn!',
       steps: [
-        'Im Schneesturm siehst du nur den Schnee direkt um dich herum – <b>keine Farben, keine Höhenlinien, kein Höhenmesser</b>.',
-        'Ob es bergauf oder bergab geht, musst du <b>selbst herausfinden</b>. Das ist schwer!',
-        'Es gibt viele Mulden, aber nur eine ist die tiefste. Du hast <b>75 Sekunden</b>, dann tippe <b>„Hier bleibe ich“</b>.'],
+        'Du siehst nur, wo du gerade stehst – <b>keine Farben, kein Höhenmesser</b>.',
+        'Viele Mulden, aber nur eine ist die tiefste.',
+        '<b>75 Sekunden</b>, dann „Hier bleibe ich!“.'],
       outro: 'So geht es einer KI beim Lernen: Sie kennt nur den <b>Fehler an der Stelle, an der sie gerade steht</b>. ' +
-             'Die ganze Landschaft hat nie jemand gesehen. Frei herumsuchen dauert ewig – die KI braucht einen besseren Hinweis …' },
+             'Frei herumsuchen dauert ewig – sie braucht einen besseren Hinweis.' },
     { id: 2, name: 'Der Bergab-Pfeil', short: 'Ein Pfeil zeigt, wo es bergab geht',
       mode: 'walk', arrow: true, time: 60, fog: 9, plain: true, physics: true, snow: true,
-      lead: 'Jetzt hast du ein Werkzeug – genau das, das auch eine KI beim Lernen hat.',
+      lead: 'Jetzt hast du das Werkzeug, das auch eine KI hat.',
       steps: [
-        'Ein <b>leuchtender Pfeil</b> unter deinen Füßen zeigt, wo es am steilsten bergab geht. Je länger, desto steiler.',
-        'Sonst ist alles wie eben: Schneesturm, kein Höhenmesser. Bergab läufst du schneller, steile Hänge rutschst du hinunter.',
-        'Achtung: Der Pfeil kennt nur den Weg zur <b>nächsten</b> Mulde. Du hast <b>60 Sekunden</b>.'],
-      outro: 'Der Pfeil ist das Einzige, was eine KI beim Lernen ausrechnen kann: <b>In welche Richtung wird mein Fehler kleiner?</b> ' +
-             'Man nennt ihn <b>Gradient</b> (genauer: er zeigt gegen den Gradienten). Ein neuronales Netz rechnet ihn für jedes seiner Gewichte aus – das heißt Backpropagation.' },
+        'Der <b>Pfeil</b> unter deinen Füßen zeigt bergab. Je länger, desto steiler.',
+        'Er kennt nur den Weg zur <b>nächsten</b> Mulde.',
+        '<b>60 Sekunden</b>.'],
+      outro: 'Der Pfeil ist das, was eine KI ausrechnen kann: <b>In welche Richtung wird mein Fehler kleiner?</b> ' +
+             'Er heißt <b>Gradient</b>. Ein neuronales Netz rechnet ihn für jedes seiner Gewichte aus.' },
     { id: 3, name: 'Sprünge', short: 'Lernrate = wie weit du springst',
       mode: 'jump', jumps: 25, fog: 13, plain: true, snow: true, lr: { min: 0.5, max: 60, def: 5, d: 1 },
-      lead: 'Eine KI läuft nicht herum. Sie <b>springt</b> – immer in Pfeilrichtung.',
+      lead: 'Eine KI läuft nicht. Sie <b>springt</b> – immer in Pfeilrichtung.',
       formula: 'Sprungweite = Lernrate × Steilheit',
       steps: [
-        'Wie weit, stellst du mit der <b>Lernrate</b> ein. An flachen Stellen werden die Sprünge von selbst kürzer, an steilen länger.',
-        'Der <b>Ring</b> zeigt, wo du landen würdest.',
-        'Du hast <b>25 Sprünge</b> – Rechenzeit ist nicht unendlich. Unterwegs warten Mulden, eine Schlucht und ein Gebirge.'],
-      outro: 'Die Sprungweite heißt <b>Lernrate</b>. Zu klein: Du kommst kaum voran oder bleibst in der ersten Mulde hängen. ' +
-             'Zu groß: Du springst über das Tal hinweg oder fliegst raus. Beim echten Training startet man oft mit großen Sprüngen und wird dann kleiner.' },
+        'Die <b>Lernrate</b> stellst du ein. Der <b>Ring</b> zeigt, wo du landest.',
+        '<b>25 Sprünge</b> – Rechenzeit ist nicht unendlich.'],
+      outro: 'Zu kleine Lernrate: Du kommst kaum voran oder bleibst in der ersten Mulde hängen. ' +
+             'Zu große: Du springst über das Tal hinweg oder fliegst raus.' },
     { id: 4, name: 'Wie schwer ist der Pinguin?', short: 'Ein Neuron schätzt das Gewicht aus der Flosse',
       mode: 'jump', walk: true, jumps: 30, fog: 14, auto: true, world: 'model', lr: { min: 0.01, max: 1, def: 0.03, d: 2 },
-      lead: 'Forschende in der Antarktis haben <b>342 echte Pinguine</b> vermessen. Einen Pinguin auf dem Eis zu wiegen ist mühsam – seine Flosse kann man auf einem Foto messen.',
+      lead: '<b>342 echte Pinguine</b> wurden vermessen. Ein <b>Neuron</b> soll aus der Flosse das Gewicht schätzen.',
       steps: [
-        'Ab jetzt steckt hinter jeder Welt ein echtes <b>Neuron</b>. Dieses schätzt aus der <b>Flosse</b> das <b>Gewicht</b>. Es hat zwei Werte, die es lernen kann: <b>w</b> und <b>b</b>.',
-        'Wo du stehst, <b>sind</b> w und b: <b>links/rechts = w</b>, <b>vor/zurück = b</b>. Jeder Ort ist ein anderes Neuron.',
-        'Die Höhe ist der <b>Fehler</b>: um wie viele kg das Neuron im Schnitt danebenliegt – über alle 342 Pinguine.',
-        'Lauf herum und schau rechts zu, wie das Neuron Pinguin für Pinguin schätzt. Dann Lernrate wählen und <b>„Training starten“</b>. Achtung: Die Lernrate ist hier heikel!'],
-      outro: 'Ein Neuron ohne Aktivierungsfunktion ist einfach eine <b>Gerade</b>: Gewicht mal Eingang plus Bias. Die Landschaft war sein Fehler – eine glatte Schüssel mit genau einem Tal. ' +
-             'Besser als ± 0,4 kg geht es mit der Flosse allein nicht: Pinguine mit gleicher Flosse sind eben verschieden schwer. ' +
-             'Trotzdem kann man das Tal verpassen: Ist die Lernrate zu groß, springt man immer weiter darüber hinaus, und das Training <b>explodiert</b>. ' +
-             'Im nächsten Level kommt hinter das Σ noch ein <b>σ</b> – und schon kann dasselbe Neuron sortieren statt schätzen.' },
+        'Wo du stehst, <b>sind</b> die zwei Werte des Neurons: <b>links/rechts = w</b>, <b>vor/zurück = b</b>.',
+        'Höhe = <b>Fehler</b>: so viele kg liegt es im Schnitt daneben.',
+        'Laufen oder <b>„Training starten“</b>. Vorsicht mit der Lernrate!'],
+      outro: 'Ein Neuron ohne σ ist eine <b>Gerade</b>: Gewicht mal Eingang plus Bias. Seine Landschaft ist eine glatte Schüssel. ' +
+             'Ist die Lernrate zu groß, springt man immer weiter darüber hinaus – das Training <b>explodiert</b>.' },
     { id: 5, name: 'Pinguine sortieren', short: 'Ein Neuron lernt zwei Arten zu trennen',
       mode: 'jump', walk: true, jumps: 40, fog: 14, auto: true, world: 'penguin', lr: { min: 0.2, max: 50, def: 1.5, d: 1 },
-      lead: 'Dieselben Forschenden wollen wissen: <b>Welche Art ist das?</b> Adeliepinguin (●) oder Zügelpinguin (▲)?',
+      lead: 'Adelie- oder Zügelpinguin? Ein Neuron soll es am <b>Schnabel</b> erkennen.',
       steps: [
-        'Gemessen wurde der <b>Schnabel</b>: Länge und Höhe in mm – echte Messwerte von 136 Pinguinen.',
-        'Ein Neuron mit <b>σ</b> soll sie auseinanderhalten. σ macht aus der Summe eine Zahl zwischen 0 und 100 %: <b>wie sicher „Zügel“</b>.',
-        'Wo du stehst, <b>sind</b> die zwei Gewichte: <b>links/rechts = w₁</b> (Länge), <b>vor/zurück = w₂</b> (Höhe). Höhe = Fehler.',
-        'Lauf herum und schau rechts, wie sich die Trennlinie dreht. Dann Lernrate wählen und <b>„Training starten“</b>.'],
-      outro: 'Das war echtes Training eines Neurons: Jeder Sprung verändert die beiden Gewichte ein Stück bergab, bis die Trennlinie die Pinguine sortiert. ' +
-             'Die Richtung vom Mittelpunkt der Welt bestimmt, <b>wie die Linie liegt</b>, der Abstand, <b>wie sicher</b> das Neuron entscheidet. ' +
-             'Ein großes Netz besteht aus Tausenden solcher Neuronen hintereinander – und seine Landschaft hat so viele Richtungen, wie es Gewichte hat.' },
+        '<b>σ</b> macht aus der Summe 0 bis 100 %: wie sicher „Zügel“.',
+        'Ort = die zwei Gewichte: <b>links/rechts = w₁</b> (Länge), <b>vor/zurück = w₂</b> (Höhe).',
+        'Rechts siehst du, wie sich die Trennlinie dreht.'],
+      outro: 'Jeder Sprung dreht die Trennlinie ein Stück, bis sie die Pinguine sortiert. ' +
+             'Ein großes Netz hat Tausende solcher Neuronen – und eine Landschaft mit so vielen Richtungen, wie es Gewichte hat.' },
     { id: 6, name: 'Das Nest', short: 'Ein Neuron reicht nicht',
       mode: 'jump', walk: true, jumps: 30, fog: 14, auto: true, world: 'xor1', lr: { min: 0.1, max: 20, def: 1, d: 1 },
-      lead: 'Pinguin-Eltern <b>wechseln sich ab</b>: Einer brütet, der andere geht fischen.',
+      lead: 'Dem Ei geht es nur gut, wenn <b>genau ein</b> Elternteil am Nest ist.',
       steps: [
-        'Dem Ei geht es nur gut, wenn <b>genau einer</b> am Nest ist. Sind beide weg, kühlt es aus. Sind beide da, holt keiner Futter.',
-        'Ein einzelnes Neuron soll das lernen. Eingänge: <b>Mama am Nest?</b> und <b>Papa am Nest?</b> (ja/nein), dazu zwei Gewichte <b>w₁</b> und <b>w₂</b>.',
-        'Wie immer: <b>links/rechts = w₁</b>, <b>vor/zurück = w₂</b>, Höhe = Fehler. Rechts siehst du alle vier Nester.',
-        'Such das Neuron, das alle vier Nester richtig beurteilt – laufend oder mit <b>„Training starten“</b>.',
-        'Rechts am Kasten gibt es einen Regler für den <b>Bias</b>. Er verschiebt die Gerade. Hilft das?',
-        'Hak <b>„lernt mit“</b> an, dann springt beim Training auch der Bias. Wohin läuft er?'],
-      outro: 'Egal, wie lange man sucht: <b>Ein einzelnes Neuron schafft das nicht.</b> Es kann die vier Nester nur mit einer geraden Linie trennen, ' +
-             '„genau einer da“ liegt aber über Kreuz. Der tiefste Punkt ist die Mitte – dort sagt das Neuron bei jedem Nest <b>50 %</b>, also „ich weiß es nicht“. ' +
-             'Mit dem <b>Bias</b> verschiebst du die Gerade: Dann stimmen höchstens <b>3 von 4</b> – nie alle. ' +
-             'Lernt der Bias mit, läuft er zurück auf <b>0</b>: Auch er findet nichts Besseres als „überall 50 %“. ' +
-             'Das war lange ein echtes Problem der KI-Forschung (es heißt XOR). Die Lösung: ein zweites Neuron dazwischen. Das probierst du im nächsten Level.' },
+        'Eingänge: <b>Mama am Nest?</b> und <b>Papa am Nest?</b> Ort = w₁ und w₂.',
+        'Schaffst du alle vier Nester?',
+        'Der <b>Bias</b>-Regler verschiebt die Gerade. Hilft das?'],
+      outro: '<b>Ein Neuron schafft das nicht.</b> Seine Gerade kann die Nester nicht trennen – „genau einer da“ liegt über Kreuz. ' +
+             'Bestenfalls sagt es überall 50 %, mit Bias stimmen höchstens 3 von 4. Die Lösung: ein zweites Neuron.' },
     { id: 7, name: 'Zwei Neuronen, zwei Welten', short: 'Das Nest mit zwei Neuronen – jede Welt ein Neuron',
       two: true, jumps: 40, fog: 14, lr: { min: 0.2, max: 30, def: 4, d: 1 },
-      lead: 'Jetzt hat das Netz <b>zwei Neuronen A und B</b> zwischen Mama/Papa und „Ei ok?“.',
+      lead: 'Jetzt hat das Netz <b>zwei Neuronen</b>: A und B.',
       steps: [
-        'Das Netz hat damit <b>vier Gewichte</b>, die es lernen kann – zu viele für eine Welt. Darum gibt es <b>zwei Welten</b>.',
-        '<b class="ca">Welt A</b> = die beiden Kanten in Neuron A, <b class="cb">Welt B</b> = die beiden Kanten in Neuron B.',
-        'Alles Graue <b>steht fest</b>: die Biase (−3 in A und B, −5 am Ausgang) und die Gewichte 8 zum Ausgang. Anders als eben gibt es hier <b>keinen Bias-Regler</b> – gelernt werden nur die vier farbigen Kanten.',
-        'Beide Figuren gehören zu <b>einem</b> Netz – darum stehen sie immer auf derselben Höhe. Bewegt sich die eine, verbiegt sich die Welt der anderen.',
-        'Spielt zu zweit (jede Person eine Seite) oder allein mit zwei Daumen. Oder startet das Training.'],
-      outro: 'Mit zwei Neuronen klappt es: Eines lernt „<b>nur Mama am Nest</b>“, das andere „<b>nur Papa am Nest</b>“ – das Ei ist versorgt, wenn eines von beiden anschlägt. ' +
-             'Welches Neuron welche Aufgabe übernimmt, ist egal: Es gibt <b>zwei gleich gute Lösungen</b>. ' +
-             'Lernen beide Neuronen dasselbe, bleibt das Netz bei 3 von 4 hängen. Echte Netze starten deshalb mit <b>zufälligen</b> Gewichten. ' +
-             'Und weil die Gewichte voneinander abhängen, hat sich deine Welt verbogen, sobald die andere Figur lief.' },
+        '<b class="ca">Welt A</b> = die Kanten in A, <b class="cb">Welt B</b> = die Kanten in B. Grau steht fest.',
+        'Ein Netz: Läuft die eine Figur, verbiegt sich die Welt der anderen.',
+        'Zu zweit, mit zwei Daumen oder „Training starten“.'],
+      outro: 'Mit zwei Neuronen klappt es: Eines lernt „<b>nur Mama am Nest</b>“, das andere „<b>nur Papa am Nest</b>“. ' +
+             'Lernen beide dasselbe, bleibt das Netz bei 3 von 4 hängen – darum starten echte Netze mit <b>zufälligen</b> Gewichten.' },
     // Level 8 = das Labor (eigene Seite labor.html, Sönke 17.11.2026): 4 Neuronen, 8 Welten
     { id: 8, name: 'Pinguine in 3D', short: 'Ein Netz mit 4 Neuronen sortiert drei Arten', href: 'labor.html?level=8' }
   ];
 
   /* Erklärkarte bauen (auch von js/zwei.js benutzt) */
-  function introHtml(L, seed, ctrl) {
-    return '<div class="card-kicker">Level ' + L.id + ' · Welt ' + seed + '</div>' +
-      '<h2>' + L.name + '</h2>' +
-      '<p class="lead">' + L.lead + '</p>' +
-      (window.NTBild ? '<div class="illwrap">' + NTBild.scene(L.id) + '</div>' : '') +
-      (L.formula ? '<span class="formula">' + L.formula + '</span>' : '') +
-      '<ol class="steps">' + L.steps.map(s => '<li>' + s + '</li>').join('') + '</ol>' +
-      '<p class="ctrl">' + ctrl + '</p>';
+  function introHtml(L, ws, ctrl) {
+    return '<div class="i-head"><div class="card-kicker">Level ' + L.id + ' · Welt ' + ws + '</div>' +
+      '<h2>' + L.name + '</h2><p class="lead">' + L.lead + '</p></div>' +
+      '<div class="i-pic">' + (window.NTBild ? '<div class="illwrap">' + NTBild.scene(L.id) + '</div>' : '') +
+      (L.formula ? '<span class="formula">' + L.formula + '</span>' : '') + '</div>' +
+      '<div class="i-txt"><ol class="steps">' + L.steps.map(s => '<li>' + s + '</li>').join('') + '</ol>' +
+      '<p class="ctrl">' + ctrl + '</p></div>';
   }
 
   /* ── Grundzustand ── */
@@ -167,6 +150,14 @@
 
   let seed = parseInt(LS.get('nt.seed'), 10);
   if (!(seed >= 1000 && seed <= 9999)) seed = 1000 + Math.floor(Math.random() * 9000);
+  /* Jedes Level eine eigene Welt (Sönke 18.11.2026: „Level 1 und 2 sollen unterschiedlich sein“):
+     aus der Welt-Nummer der Übersicht wird je Level eine eigene Nummer gewürfelt – gleiche
+     Welt-Nummer = auf allen Tablets dieselben Welten, aber keine zwei Level gleich. */
+  function lvSeed(id) {
+    let h = (Math.imul(seed, 2654435761) ^ Math.imul(id + 7, 40503)) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 2246822519) >>> 0; h = (h ^ (h >>> 13)) >>> 0;
+    return 1000 + (h % 9000);
+  }
 
   const S = {
     state: 'menu', lvl: null, world: null,
@@ -226,13 +217,13 @@
   /* Übersicht = Ablauf der Stunde (Sönke 18.11.2026): je Reihe eine Phase, Kacheln mit Bild
      (NTBild.tile). Neben den Leveln: Erarbeitung (Tafelbild erarbeitung.html) und Sicherung (kommt noch). */
   const EXTRA = {
-    erarb: { name: 'Erarbeitung', short: 'Tafelbild: Wie lernt ein neuronales Netz?', href: 'erarbeitung.html', tag: 'Tafel' },
+    erarb: { name: 'Erarbeitung', short: 'Wie lernt ein Neuron?', href: 'erarbeitung.html', tag: 'Tafel' },
     sich: { name: 'Sicherung', short: 'Kommt bald', soon: true, tag: '–' }
   };
   const PHASES = [
-    { t: 'Einstieg', sub: 'Den tiefsten Punkt suchen – und verstehen, was das mit Lernen zu tun hat', items: [1, 2, 3, 'erarb'] },
-    { t: 'Neuronen trainieren', sub: 'Hinter jeder Welt steckt jetzt ein echtes Neuron', items: [4, 5, 6, 7] },
-    { t: 'Sicherung', sub: 'Alles zusammen: ein ganzes Netz', items: ['sich', 8] }
+    { t: 'Einstieg', sub: 'Den tiefsten Punkt suchen', items: [1, 2, 3, 'erarb'] },
+    { t: 'Neuronen trainieren', sub: 'Jede Welt ist ein echtes Neuron', items: [4, 5, 6, 7] },
+    { t: 'Sicherung', sub: 'Ein ganzes Netz', items: ['sich', 8] }
   ];
 
   function renderMenu() {
@@ -271,24 +262,38 @@
   }
   $('#btnMenu').addEventListener('click', toMenu);
 
+  /* Infos ein-/ausklappen (Kästen rechts, Level 7 #zPanel) – vor allem fürs Handy */
+  function toggleInfo() {
+    const min = document.body.classList.toggle('info-min');
+    for (const b of document.querySelectorAll('.infotog')) b.setAttribute('aria-pressed', String(!min));
+    if (!min && S.lvl) updateHud();
+  }
+  $('#btnInfo').addEventListener('click', toggleInfo);
+  // Höhe der Leiste unten → CSS-Variable --hb (Kästen enden darüber)
+  if (window.ResizeObserver) {
+    const hb = document.querySelector('.hud-bottom');
+    new ResizeObserver(() => { $('#hud').style.setProperty('--hb', hb.offsetHeight + 'px'); }).observe(hb);
+  }
+
   /* ── Level öffnen ── */
   function openLevel(id) {
     const L = LEVELS.find(l => l.id === id);
     if (L.href) { location.href = L.href; return; }
     S.lvl = L;
     if (L.two) { openTwo(L); return; }
-    S.world = L.world === 'model' ? NTWelt.model(seed) : L.world === 'penguin' ? NTWelt.penguins(seed)
-      : L.world === 'xor1' ? NTWelt.xor(seed).one() : NTWelt.hills(seed, id);
+    const ws = lvSeed(id);
+    S.world = L.world === 'model' ? NTWelt.model(ws) : L.world === 'penguin' ? NTWelt.penguins(ws)
+      : L.world === 'xor1' ? NTWelt.xor(ws).one() : NTWelt.hills(ws, id);
     G.setWorld(S.world, theme);
     resetPlayer();
     S.state = 'intro';
     applyLook();
     hudFor(L);
-    card(introHtml(L, seed, L.mode === 'walk'
-        ? '<b>Steuerung:</b> links auf dem Bild ziehen = laufen · rechts ziehen = umschauen<br><span class="kbd">Tastatur: WASD oder Pfeile · Q/E drehen</span>'
+    card(introHtml(L, ws, L.mode === 'walk'
+        ? 'Links ziehen = laufen · rechts ziehen = umschauen<span class="kbd"> · WASD, Q/E</span>'
         : L.walk
-        ? '<b>Steuerung:</b> links auf dem Bild ziehen = laufen · rechts ziehen = umschauen · <b>Springen</b> = ein Lernschritt<br><span class="kbd">Tastatur: WASD laufen · Leertaste springt · Q/E drehen</span>'
-        : '<b>Steuerung:</b> Lernrate einstellen, dann <b>Springen</b> · ziehen = umschauen<br><span class="kbd">Tastatur: Leertaste springt · Q/E drehen</span>'),
+        ? 'Links ziehen = laufen · rechts ziehen = umschauen<span class="kbd"> · WASD, Leertaste = springen</span>'
+        : 'Ziehen = umschauen<span class="kbd"> · Leertaste = springen</span>'),
       [['Los geht’s', startLevel, 'primary'], ['Übersicht', toMenu]]);
   }
 
@@ -317,17 +322,13 @@
     $('#card').hidden = true;
     hudFor(S.lvl);
     updateHud();
-    if (S.lvl.mode === 'walk') toast(S.lvl.arrow ? 'Folge dem Pfeil – oder auch nicht.' : 'Wo geht es nach unten?');
-    if (S.world.kind === 'penguin') toast('Lauf los und schau rechts auf die Trennlinie.');
-    if (S.world.kind === 'model') toast('Lauf los und schau rechts, wie gut das Neuron schätzt.');
-    if (S.world.kind === 'xor1') toast('Lauf los und schau rechts auf die vier Nester.');
   }
 
   /* ── Karte (Intro / Ergebnis) ── */
   function card(html, buttons, cls) {
     const c = $('#card');
     c.className = 'card ' + (cls || '');
-    c.innerHTML = '<div class="card-in">' + html + '<div class="card-btns"></div></div>';
+    c.innerHTML = '<div class="card-in' + (html.indexOf('class="i-head"') >= 0 ? ' is-intro' : '') + '">' + html + '<div class="card-btns"></div></div>';
     const box = c.querySelector('.card-btns');
     for (const [label, fn, kind] of buttons) {
       const b = document.createElement('button');
@@ -346,7 +347,7 @@
     document.body.dataset.mode = L ? L.mode : '';
     document.body.dataset.lvl = L ? L.id : '';
     $('#hud').hidden = !L;
-    if (!L) return;
+    if (!L) { delete document.body.dataset.panel; return; }
     $('#lvlName').textContent = 'Level ' + L.id + ' · ' + L.name;
     $('#gLbl').textContent = S.world.label;
     $('#btnStay').textContent = L.mode === 'walk' ? 'Hier bleibe ich!' : 'Fertig';
@@ -355,6 +356,9 @@
     $('#pengBox').hidden = !(S.world && S.world.kind === 'penguin');
     $('#xorBox').hidden = !(S.world && S.world.kind === 'xor1');
     $('#curveBox').hidden = L.mode !== 'jump';
+    const panel = !!(S.world && ['model', 'penguin', 'xor1'].includes(S.world.kind));
+    if (panel) document.body.dataset.panel = '1'; else delete document.body.dataset.panel;
+    $('#btnInfo').hidden = !(panel || L.mode === 'jump');
     if (L.lr) {
       $('#lr').min = 0; $('#lr').max = 1000;
     }
@@ -417,7 +421,6 @@
   $('#xBias').addEventListener('change', e => e.target.blur());   // Pfeiltasten wieder fürs Laufen
   function setBiasLearn(on) {
     $('#xBiasL').checked = on;
-    $('#xBiasNote').textContent = on ? 'lernt beim Training mit – wohin läuft er?' : 'stellst du selbst ein · lernt beim Training nicht mit';
     if (S.world && S.world.learnBias) S.world.learnBias(on);
   }
   $('#xBiasL').addEventListener('change', e => { setBiasLearn(e.target.checked); e.target.blur(); });
@@ -543,7 +546,7 @@
     btns.push(['Neue Welt', () => { setSeed(1000 + Math.floor(Math.random() * 9000)); openLevel(L.id); }]);
     btns.push(['Übersicht', toMenu]);
     card(
-      '<div class="card-kicker">Level ' + L.id + ' · Welt ' + seed + '</div>' +
+      '<div class="card-kicker">Level ' + L.id + ' · Welt ' + w.seed + '</div>' +
       '<div class="res-head">' + stars(n) + '<p>' + line + '</p></div>' +
       (notes.length ? '<p class="note">' + notes.join(' ') + '</p>' : '') +
       '<div class="ki"><span class="ki-tag">Und die KI?</span><p>' + L.outro + '</p></div>',
@@ -746,7 +749,7 @@
       p.air = F.t * F.t * 40 + F.t * 8;
       if (F.t > 1.1) {
         p.x = F.from.x; p.z = F.from.z; p.air = 0; S.fly = null;
-        toast('Zu weit! Die <b>Lernrate</b> war zu groß – du bist aus der Welt geflogen.');
+        toast('Zu weit! <b>Lernrate</b> zu groß.');
         S.curve.push(w.show(H()));
         updateHud();
         if (S.jumpsLeft <= 0) setTimeout(() => { if (S.state === 'play') finish(); }, 800);
@@ -1237,9 +1240,9 @@
     S.lvl = L; S.state = 'zwei'; S.auto = false;   // spiel.js zeichnet nicht mehr, bis toMenu
     applyLook();
     hudFor(null);
-    NTZwei.open(L, seed, {
+    NTZwei.open(L, lvSeed(L.id), {
       theme: () => theme, low: () => low, fmt, stars, LS, bestKey,
-      card, toMenu, introHtml, verdict, eggIcon, NEST_TXT,
+      card, toMenu, toggleInfo, introHtml, verdict, eggIcon, NEST_TXT,
       next: () => LEVELS.find(l => l.id === L.id + 1) || null, open: openLevel,
       again: () => openLevel(L.id),
       newWorld: () => { setSeed(1000 + Math.floor(Math.random() * 9000)); openLevel(L.id); },

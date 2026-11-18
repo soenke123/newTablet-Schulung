@@ -1,0 +1,40 @@
+/* ══════════════════════════════════════════════════════════════
+   Nebeltal — karte.css · Erklärkarte vor jedem Level (index.html + labor.html)
+   Sönke 18.11.2026: „Die Info-Modale sollen ohne Scrollen auf einen Bildschirm passen.“
+   Aufbau (introHtml in spiel.js, intro() in labor.js):
+     .card-in.is-intro > .i-head (Kicker, Titel, ein Satz) · .i-pic (Bild, Formel) · .i-txt (Schritte, Steuerung) · .card-btns
+   Quer: Bild links, Text rechts. Hochkant: untereinander, Bild höchstens ~ein Viertel der Höhe.
+   Schriften wachsen mit der Bildschirmhöhe (clamp mit vh), damit auch das Handy quer passt.
+   ══════════════════════════════════════════════════════════════ */
+#card .card-in.is-intro { width:min(600px, 100%); display:grid; grid-template-columns:minmax(0, 1fr);
+  grid-template-areas:'head' 'pic' 'txt' 'btns'; row-gap:clamp(6px, 1.4vh, 12px); padding:clamp(12px, 2.4vh, 22px) clamp(14px, 2.6vw, 24px); }
+.is-intro .i-head { grid-area:head; }
+.is-intro .i-pic { grid-area:pic; min-width:0; }
+.is-intro .i-txt { grid-area:txt; min-width:0; }
+.is-intro .card-btns { grid-area:btns; margin-top:0; }
+.is-intro .card-kicker { font-size:11px; }
+.is-intro h2 { margin:2px 0 4px !important; font-size:clamp(19px, 3.6vh, 26px) !important; line-height:1.15; }
+.is-intro p.lead { margin:0 !important; font-size:clamp(14px, 2.3vh, 17px) !important; line-height:1.4 !important; color:var(--ink) !important; }
+.is-intro .illwrap { margin:0 !important; display:flex; justify-content:center; }
+.is-intro .ill { width:100%; height:auto; max-height:min(26vh, 230px); }
+.is-intro .formula { margin:8px 0 0 !important; padding:6px 10px !important; font-size:clamp(13px, 2vh, 15px); }
+.is-intro ol.steps { margin:0 !important; gap:clamp(4px, 1vh, 8px) !important; }
+.is-intro ol.steps li { font-size:clamp(13.5px, 2.15vh, 15.5px) !important; line-height:1.38 !important; padding:1px 0 1px 32px !important; }
+.is-intro ol.steps li::before { width:23px !important; height:23px !important; font-size:12.5px !important; }
+.is-intro .ctrl { margin:clamp(6px, 1.2vh, 10px) 0 0 !important; padding-top:clamp(5px, 1vh, 8px) !important; font-size:13px !important; color:var(--ink-faint) !important; }
+.is-intro .card-btns .btn { padding:clamp(7px, 1.3vh, 10px) 16px; }
+/* Tastenkürzel nur mit Maus/Tastatur */
+@media (pointer: coarse) { .kbd { display:none; } }
+
+/* Quer: Bild links, Text rechts */
+@media (min-aspect-ratio: 5/4) and (min-width: 620px) {
+  #card .card-in.is-intro { width:min(980px, 100%); grid-template-columns:minmax(0, 1.08fr) minmax(0, 1fr);
+    grid-template-areas:'head head' 'pic txt' 'pic btns'; column-gap:clamp(14px, 2.2vw, 26px); align-items:start; }
+  .is-intro .ill { max-height:min(52vh, 330px); }
+  .is-intro .card-btns { align-self:end; }
+}
+/* sehr flach (Handy quer): Titel und Satz kleiner */
+@media (max-height: 460px) {
+  .is-intro .card-kicker { display:none; }
+  .is-intro .ctrl { display:none; }
+}

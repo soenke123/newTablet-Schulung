@@ -289,7 +289,7 @@
     }
     x.fillStyle = colOf(c.k); x.strokeStyle = '#fff'; x.lineWidth = 2.5;
     x.beginPath(); x.arc(px, py, 8, 0, 7); x.fill(); x.stroke();    if (c.flat) {
-      const t = 'fast flach – dieses Neuron zählt gerade kaum';
+      const t = 'fast flach';
       x.font = '700 12px Outfit, sans-serif'; x.textAlign = 'center';
       const w = x.measureText(t).width + 14;
       x.fillStyle = css('--surface'); x.globalAlpha = 0.88; x.fillRect(W / 2 - w / 2, H * 0.28 - 11, w, 20); x.globalAlpha = 1;
@@ -606,7 +606,7 @@
     if (zahl()) {
       const by = [0, 1, 2].map(n => NAMES[S.ord.indexOf(n)]);
       $('#legend2').innerHTML = '<span class="chip" style="--c:' + OUT + '"><i></i>Was das Zahl-Neuron sieht</span>' +
-        '<small>unter 0,5 = ' + by[0] + ' · bis 1,5 = ' + by[1] + ' · darüber = ' + by[2] + '<br>an der Wand = das Neuron ist sich sicher (0 % oder 100 %)</small>';
+        '<small>unter 0,5 = ' + by[0] + ' · bis 1,5 = ' + by[1] + ' · darüber = ' + by[2] + '</small>';
     }
     $('#netTitle').textContent = zahl() ? 'Das Netz · 3 Eingänge → A, B, C → Zahl-Neuron' : 'Das Netz · 3 Eingänge → 3 Neuronen';
   }
@@ -636,16 +636,14 @@
     $('.head h1').textContent = 'Level 8 · Pinguine in 3D';
     $('.head a.btn').textContent = '‹ Übersicht';
     const steps = [
-      'Jetzt sortiert ein Netz <b>alle drei Arten</b>: Adelie, Zügel und Esel – 342 echte Pinguine, gemessen an Schnabellänge, Schnabelhöhe und Flosse.',
-      'Drei versteckte Neuronen <b>A, B, C</b> schauen sich die Messwerte an. Was sie erkennen, lernen sie selbst.',
-      'Dahinter rechnet das <b>Zahl-Neuron</b> eine Zahl: unter 0,5 = Adelie, bis 1,5 = Zügel, darüber = Esel.',
-      '4 Neuronen mit je 4 Werten = 16 Werte = <b>8 Welten</b> unten. Jede Welt hängt von allen anderen ab: Ziehst du in einer, verbiegen sich die anderen.',
-      'Zieh die Punkte selbst bergab – oder starte das Training. Oben siehst du, wie die Ebenen die Pinguine trennen.'];
+      'Drei Neuronen <b>A, B, C</b> schauen auf Schnabel und Flosse. Was sie erkennen, lernen sie selbst.',
+      'Das <b>Zahl-Neuron</b> rechnet daraus: unter 0,5 = Adelie, bis 1,5 = Zügel, darüber = Esel.',
+      '16 Werte = <b>8 Welten</b>. Ziehst du in einer, verbiegen sich die anderen.'];
     const c = $('#card');
-    c.innerHTML = '<div class="card-in"><div class="card-kicker">Level 8</div><h2>Pinguine in 3D</h2>' +
-      '<p>Ein ganzes Netz – zum ersten Mal mit <b>vier Neuronen</b>.</p>' +
-      (window.NTBild ? '<div class="illwrap">' + NTBild.scene(8) + '</div>' : '') +
-      '<ol class="steps">' + steps.map(t => '<li>' + t + '</li>').join('') + '</ol>' +
+    c.innerHTML = '<div class="card-in is-intro"><div class="i-head"><div class="card-kicker">Level 8</div><h2>Pinguine in 3D</h2>' +
+      '<p class="lead">Ein Netz mit <b>vier Neuronen</b> sortiert alle <b>drei Arten</b>.</p></div>' +
+      '<div class="i-pic">' + (window.NTBild ? '<div class="illwrap">' + NTBild.scene(8) + '</div>' : '') + '</div>' +
+      '<div class="i-txt"><ol class="steps">' + steps.map(t => '<li>' + t + '</li>').join('') + '</ol></div>' +
       '<div class="card-btns"><button class="btn primary" type="button" id="go">Los geht’s</button>' +
       '<a class="btn" href="index.html">Übersicht</a></div></div>';
     c.hidden = false;

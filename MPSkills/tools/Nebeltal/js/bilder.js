@@ -416,17 +416,18 @@ window.NTBild = (function () {
       return b;
     },
     erarb() {
-      // Tafel: Netz 2 → 2 → 1, Kreide
+      // Tafel: EIN Neuron (2 Eingänge → σ), Fehler fließt zurück auf die Gewichte (Erarbeitung, 2. Fassung)
       let b = '<rect width="240" height="150" fill="#13261f"/><rect x="5" y="5" width="230" height="140" rx="6" fill="none" stroke="#3d5a4c" stroke-width="2"/>';
-      const I = [[52, 66], [52, 118]], Hd = [[128, 50], [128, 120]], O = [202, 85];
+      const I = [[58, 52], [58, 112]], O = [150, 82];
       const ch = 'rgba(235,245,238,.85)';
-      I.forEach(a => Hd.forEach(h => { b += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + h[0] + '" y2="' + h[1] + '" stroke="' + ch + '" stroke-width="1.8" stroke-linecap="round"/>'; }));
-      Hd.forEach(h => { b += '<line x1="' + h[0] + '" y1="' + h[1] + '" x2="' + O[0] + '" y2="' + O[1] + '" stroke="' + ch + '" stroke-width="1.8"/>'; });
+      I.forEach(a => { b += '<line x1="' + a[0] + '" y1="' + a[1] + '" x2="' + O[0] + '" y2="' + O[1] + '" stroke="' + ch + '" stroke-width="2.2" stroke-linecap="round"/>'; });
+      b += '<line x1="169" y1="82" x2="200" y2="82" stroke="' + ch + '" stroke-width="2"/><path d="M206,82 l-8,-5 l0,10z" fill="' + ch + '"/>';
       // Fehler fließt zurück
-      b += '<path d="M196,104 Q172,132 144,128" fill="none" stroke="#ff9d4d" stroke-width="2.2" stroke-dasharray="4 4"/><path d="M142,128 l9,-6 l0,11z" fill="#ff9d4d"/>';
-      for (const p of [...I, ...Hd, O]) b += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="13" fill="#13261f" stroke="' + ch + '" stroke-width="2"/>';
-      b += T(128, 54.5, 'A', { size: 12, col: ch }) + T(128, 124.5, 'B', { size: 12, col: ch }) + T(202, 89.5, 'σ', { size: 13, col: ch });
-      b += T(196, 138, 'Fehler', { size: 10.5, col: '#ff9d4d', w: 700 });
+      b += '<path d="M188,100 Q160,134 112,112" fill="none" stroke="#ff9d4d" stroke-width="2.2" stroke-dasharray="4 4"/><path d="M109,110 l10,-3 l-3,10z" fill="#ff9d4d"/>';
+      for (const p of I) b += '<rect x="' + (p[0] - 17) + '" y="' + (p[1] - 12) + '" width="34" height="24" rx="7" fill="#13261f" stroke="' + ch + '" stroke-width="2"/>';
+      b += '<circle cx="' + O[0] + '" cy="' + O[1] + '" r="18" fill="#13261f" stroke="' + ch + '" stroke-width="2"/>';
+      b += T(150, 87.5, 'σ', { size: 16, col: ch }) + T(100, 58, 'w₁', { size: 11, col: ch }) + T(100, 114, 'w₂', { size: 11, col: ch });
+      b += T(178, 138, 'Fehler', { size: 10.5, col: '#ff9d4d', w: 700 });
       return b;
     },
     sich() {

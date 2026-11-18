@@ -43,13 +43,13 @@ window.NTZwei = (function () {
       '<canvas id="zA" class="zcv" data-k="0"></canvas><canvas id="zB" class="zcv" data-k="1"></canvas>' +
       '<div class="ztag a">Welt A · Neuron A</div><div class="ztag b">Welt B · Neuron B</div>' +
       '<div class="zjoy" data-k="0" hidden><i></i></div><div class="zjoy" data-k="1" hidden><i></i></div>' +
-      '<div class="hud-top"><button id="zMenu" class="chip btn" type="button">‹ Übersicht</button>' +
-      '<div id="zName" class="chip glass"></div><div id="zCount" class="chip glass"></div></div>' +
+      '<div class="hud-top"><button id="zMenu" class="chip btn" type="button" aria-label="Übersicht">‹<span class="long"> Übersicht</span></button>' +
+      '<div id="zName" class="chip glass"></div><button id="zInfo" class="chip btn infotog" type="button" aria-pressed="true">Infos</button><div id="zCount" class="chip glass"></div></div>' +
       '<div id="zPanel" class="glass"><div class="box-t">Das ganze Netz · Nest für Nest <span id="zNName"></span></div>' +
       '<div class="zex"><div id="zL"><svg class="zNest" viewBox="0 0 80 40"><g id="zNest"></g></svg>' +
       ['Mama', 'Papa'].map((t, k) => '<div class="zV" style="top:calc(14px + ' + (k ? 0.8 : 0.2) + ' * (100% - 28px))"><small>' + t + '</small><b id="zS' + k + '"></b></div>').join('') +
       '</div><div class="znetw"><canvas id="znet"></canvas></div><svg id="zR" viewBox="0 0 84 150"></svg></div>' +
-      '<div class="zfix"><i></i>grau = steht fest: Bias −3 in A und B, Gewichte 8 und Bias −5 am Ausgang. Lernen tun nur die farbigen Kanten.</div>' +
+      '<div class="zfix"><i></i>grau = steht fest, farbig = lernt</div>' +
       '<div class="box-t" style="margin-top:4px">Die vier Nester · jedes Neuron = eine Gerade</div><canvas id="zplot" class="nplot"></canvas><div class="zrow"><span>Fehler <b id="zErr">–</b></span><span>richtig <b id="zRight">–</b></span></div></div>' +
       '<div class="zbottom"><div class="zlr glass"><div class="lr-l"><small>Lernrate</small><span id="zLrV">–</span></div>' +
       '<input id="zLr" type="range" min="0" max="1000" aria-label="Lernrate">' +
@@ -64,6 +64,7 @@ window.NTZwei = (function () {
     if (window.NT_NET) { G[0].setPalette(NT_NET, 'dark'); G[1].setPalette(NT_NET, 'dark'); }
 
     $('#zMenu').addEventListener('click', () => api && api.toMenu());
+    $('#zInfo').addEventListener('click', () => api && api.toggleInfo());
     $('#zJump').addEventListener('click', () => { if (st && st.state === 'play' && !st.auto) jump(); });
     $('#zAuto').addEventListener('click', () => {
       if (!st || st.state !== 'play') return;
@@ -152,8 +153,7 @@ window.NTZwei = (function () {
     panel();
     if (!running) { running = true; last = performance.now(); raf = requestAnimationFrame(tick); }
     api.card(api.introHtml(L, seed,
-      '<b>Steuerung:</b> in der einen Hälfte ziehen = Figur A, in der anderen = Figur B · ' +
-      '<b>Ein Lernschritt</b> bewegt beide gleichzeitig<br><span class="kbd">Tastatur: WASD = A · Pfeile = B · Leertaste = Lernschritt</span>'),
+      'Eine Hälfte ziehen = Figur A, die andere = Figur B<span class="kbd"> · WASD = A, Pfeile = B, Leertaste = Lernschritt</span>'),
       [['Los geht’s', start, 'primary'], ['Übersicht', api.toMenu]]);
   }
 
@@ -162,7 +162,6 @@ window.NTZwei = (function () {
     api.playing();
     $('#card').hidden = true;
     document.body.dataset.state = 'play';
-    toast('Bewegt die Figuren – und schaut oben auf die vier Nester.');
   }
 
   function close() {
@@ -249,7 +248,7 @@ window.NTZwei = (function () {
     st.jumpsLeft--;
     if (n.some(v => Math.abs(v) > X.R)) {
       st.outs++;
-      toast('Zu weit! Mit dieser <b>Lernrate</b> würde eine Figur aus ihrer Welt fliegen.');
+      toast('Zu weit! <b>Lernrate</b> zu groß.');
       if (st.auto) { st.auto = false; refreshAuto(); }
       st.curve.push(lossNow());
       afterStep();
