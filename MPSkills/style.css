@@ -1974,6 +1974,59 @@ label.field textarea:focus {
 }
 
 /* ═══════════════════════════════════════════════════════
+   Standbild Nebeltal  (preview/nebeltal.js)
+   ═══════════════════════════════════════════════════════
+   Querschnitt einer Landschaft in der Polarnacht (wie die App):
+   Höhe = Fehler, der Pinguin sieht im Nebel nur seine Stelle und den
+   Bergab-Pfeil. Beim Darüberfahren lichtet sich der Nebel, die
+   Sprungbögen zeichnen sich, der Pinguin hüpft ins Tal (Keyframes
+   ntp-hop kommen aus nebeltal.js) und die Fehlerkurve fällt.
+   Hell = Dämmerung, dunkel = Nacht. */
+.tprev--nt {
+  --nt-sky0: #9fb8d8; --nt-sky1: #dfe9f4; --nt-land0: #f4f8fc; --nt-land1: #b9cbe0;
+  --nt-ridge: #6f8db3; --nt-fog: #eef3f9; --nt-aur: #3fcf9f; --nt-ink: #1d2a3d; --nt-chip: rgba(255,255,255,.82);
+  --nt-hop: #f27828; --nt-arrow: #e2483d; --nt-goal: #12a37a;
+  background: var(--nt-sky1);
+  padding: 0;
+}
+:root[data-theme="dark"] .tprev--nt {
+  --nt-sky0: #060b1c; --nt-sky1: #1a2c4e; --nt-land0: #cfdcec; --nt-land1: #5d7698;
+  --nt-ridge: #e8f0fa; --nt-fog: #c3d2e6; --nt-aur: #4ff0b4; --nt-ink: #e8eef7; --nt-chip: rgba(12,20,40,.72);
+  --nt-hop: #ffa152; --nt-arrow: #ff6a5c; --nt-goal: #36d6a0;
+  background: var(--nt-sky1);
+}
+.ntp { width: 100%; height: 100%; display: block; font-family: 'Outfit', system-ui, sans-serif; }
+.ntp-sky0 { stop-color: var(--nt-sky0); } .ntp-sky1 { stop-color: var(--nt-sky1); }
+.ntp-land0 { stop-color: var(--nt-land0); } .ntp-land1 { stop-color: var(--nt-land1); }
+.ntp-aurora { fill: var(--nt-aur); opacity: .22; }
+.ntp-stars circle { fill: #fff; opacity: .75; }
+.ntp-ridge { fill: none; stroke: var(--nt-ridge); stroke-width: 1.4; stroke-linejoin: round; opacity: .8; }
+.ntp-fog { fill: var(--nt-fog); opacity: .93; transition: opacity .6s ease; }
+.ntp-arrow path { fill: none; stroke: var(--nt-arrow); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ntp-arrow { transition: opacity .3s ease; }
+.ntp-arcs { fill: none; stroke: var(--nt-hop); stroke-width: 1.6; stroke-dasharray: 100; stroke-dashoffset: 100;
+  transition: stroke-dashoffset 2.2s ease .15s; }
+.ntp-dot { fill: var(--nt-hop); opacity: 0; transition: opacity .2s ease; }
+.ntp-goal circle { fill: none; stroke: var(--nt-goal); stroke-width: 1.6; stroke-dasharray: 2.5 2; opacity: 0; transition: opacity .4s ease 2.2s; }
+.ntp-chips rect, .ntp-err rect { fill: var(--nt-chip); stroke: rgba(127,150,180,.35); }
+.ntp-chips text { font-size: 9.5px; font-weight: 700; fill: var(--nt-ink); }
+.ntp-err-t { font-size: 9px; font-weight: 700; fill: var(--nt-ink); }
+.ntp-axis { stroke: rgba(127,150,180,.6); stroke-width: 1; }
+.ntp-curve { fill: none; stroke: var(--nt-arrow); stroke-width: 2; stroke-linecap: round;
+  stroke-dasharray: 100; stroke-dashoffset: 100; transition: stroke-dashoffset 2.2s ease .15s; }
+@media (hover: hover) {
+  .tile--peek:hover .ntp-fog { opacity: .18; }
+  .tile--peek:hover .ntp-arrow { opacity: 0; }
+  .tile--peek:hover .ntp-arcs, .tile--peek:hover .ntp-curve { stroke-dashoffset: 0; }
+  .tile--peek:hover .ntp-dot, .tile--peek:hover .ntp-goal circle { opacity: 1; }
+  .tile--peek:hover .ntp-peng { animation: ntp-hop 2.5s ease-in-out .1s forwards; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ntp-fog, .ntp-arcs, .ntp-curve, .ntp-dot, .ntp-goal circle { transition: none; }
+  .tile--peek:hover .ntp-peng { animation-duration: .01s; animation-delay: 0s; }
+}
+
+/* ═══════════════════════════════════════════════════════
    Standbild Reinforce Yourself  (preview/reinforce.js)
    ═══════════════════════════════════════════════════════
    Perspektivwechsel: links „Du trainierst die KI", rechts „Du bist

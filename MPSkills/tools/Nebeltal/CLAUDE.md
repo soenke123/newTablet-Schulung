@@ -1,4 +1,4 @@
-# Nebeltal (MPSkill, Migration 0290, Prototyp, nur Admins · gemeinsam spielen: Migration 0296)
+# Nebeltal (MPSkill, Migration 0290, Beta · seit Migration 0298 für alle Lehrkräfte · gemeinsam spielen: Migration 0296)
 
 Wie lernt ein neuronales Netz? Man sucht im Nebel den tiefsten Punkt einer
 3D-Landschaft und sieht nur die Stelle, an der man steht. Höhe = Fehler,
@@ -419,5 +419,12 @@ manche 2 Welten.
   zwei Gruppen finden (Clustering), Finale Ziffern-Erkenner (Schnitt durch ein großes Netz)
 - Level 5: Landschaft eines einzelnen Pinguins zeigen (Summe = große Landschaft), Schalter
   „Stufe / weich“ (Perzeptron-Terrassen ohne Pfeil), später größeres Netz (z. B. Korbwurf)
-- Schaufenster `preview/nebeltal.js`, Freigabe für alle: `update skill_tools set admin_only = false where id = 'nebeltal'`
-- Prüfstand: `supabase/tests/0290_nebeltal.mjs`
+- Prüfstände: `supabase/tests/0290_nebeltal.mjs` (Kette bis 0290), `0298_nebeltal_fuer_alle.mjs`
+
+## Schaufenster (seit 19.11.2026, Migration 0298)
+
+- `MPSkills/preview/nebeltal.js`: Kachel-Standbild (Querschnitt im Nebel, Pinguin Main aus img/frei/main.webp,
+  Keyframes ntp-hop werden aus denselben Sprungpunkten gerechnet, CSS .ntp-* in MPSkills/style.css) und Drehbuch
+  mit ?demo=1: Level 3 (Springen, Lernrate +) → Level 5 (Training starten). Klickt nur auf feste ids/data-lv –
+  ids `#btnJump #lrPlus #btnStay #btnMenu #btnAuto` und `#levels .tile[data-lv]` nicht umbenennen.
+- Im Demo hält `LS` in js/spiel.js Bestwerte/Welt-Nummer nur im Arbeitsspeicher.

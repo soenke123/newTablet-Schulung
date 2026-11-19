@@ -42,7 +42,7 @@ const mig = f => readFileSync(`${REPO}/supabase/migrations/${f}`, 'utf8');
 const BEKANNT = new Set(['0087']);
 
 await db.exec(STUBS);
-const FILES = readdirSync(`${REPO}/supabase/migrations`).filter(f => f.endsWith('.sql')).sort();
+const FILES = readdirSync(`${REPO}/supabase/migrations`).filter(f => f.endsWith('.sql') && f.slice(0, 4) <= '0290').sort();   // seit 0298 frei – Kette bis 0290
 for (const f of FILES) {
   try { await db.exec(mig(f)); }
   catch (e) {

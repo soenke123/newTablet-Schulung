@@ -29,7 +29,13 @@
   const ease = t => t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
   const angDiff = (a, b) => { let d = a - b; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; return d; };
 
-  const LS = {
+  // Im Schaufenster (?demo=1) nur im Arbeitsspeicher: die Vorschau startet frisch
+  // und überschreibt nicht die Bestwerte, mit denen jemand auf diesem Gerät spielt.
+  const DEMO = new URLSearchParams(location.search).has('demo'), MEM = {};
+  const LS = DEMO ? {
+    get(k) { return k in MEM ? MEM[k] : null; },
+    set(k, v) { MEM[k] = String(v); }
+  } : {
     get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
     set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* egal */ } }
   };
