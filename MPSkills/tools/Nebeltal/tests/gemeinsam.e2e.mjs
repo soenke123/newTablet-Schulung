@@ -140,6 +140,14 @@ await until('1  Tablet: Level 1 offen, Level 2 gesperrt', async () => fr(S[0]).e
 await shot(T, '01_lehrkraft_uebersicht');
 await shot(S[0], '02_tablet_uebersicht');
 
+/* 1b Ansicht: Vorgabe Lernpfad, Lehrkraft schaltet auf „Freie Nutzung“ (data.view), Tablets folgen */
+ok('1b Lernpfad ist Vorgabe (Lehrkraft)', await fr(T).evaluate(() => document.body.classList.contains('v-pfad') && !!document.querySelector('.pfad')));
+ok('1b Tablet: Lernpfad, ohne Umschalter', await fr(S[0]).evaluate(() => !!document.querySelector('.pfad') && document.querySelector('#viewSw').hidden));
+await fr(T).click('#viewSw [data-view="frei"]');
+await until('1b data.view = frei', async () => (await view()).state.data.view === 'frei');
+await until('1b Tablet zeigt Phasen-Reihen', async () => fr(S[0]).evaluate(() => !document.querySelector('.pfad') && !!document.querySelector('.phase')));
+ok('1b Freigabe bleibt (data.levels)', JSON.stringify((await view()).state.data.levels) === '[1]');
+
 /* 2 Lobby */
 await fr(T).click('#mpGo');
 await until('2  Lehrkraft in der Lobby', async () => fr(T).evaluate(() => document.body.classList.contains('mp-on') && !document.querySelector('#mpSide').hidden));
@@ -281,6 +289,43 @@ for (const p of S) await until('6  Tablet aus dem Labor zurück in der Lobby', a
 await fr(T).click('#mpSide [data-a="off"]');
 for (const p of S) await until('6  aus: Tablet wieder in der Übersicht', async () => fr(p).evaluate(() => document.body.dataset.state === 'menu' && !document.body.classList.contains('mp-on')), 9000);
 
+
+/* 6b Lernpfad: Halt „Einstieg“ startet gemeinsam, „Weiter: Level 3“, nach Level 3 aus, Level frei zum Allein-Spielen */
+await fr(T).click('#viewSw [data-view="pfad"]');
+await until('6b data.view = pfad', async () => (await view()).state.data.view === 'pfad');
+await until('6b Tablet: Lernpfad', async () => fr(S[0]).evaluate(() => !!document.querySelector('.pfad .pst.cur')));
+await shot(T, '22a_lehrkraft_lernpfad');
+await shot(S[0], '22b_tablet_lernpfad');
+const go = await fr(T).evaluate(() => document.querySelector('.pst [data-go]').dataset.go);
+ok('6b Halt 1: nächstes ungespieltes Level', go === '2', go);
+await fr(T).click('.pst [data-go]');
+for (const p of S) await until('6b Tablet in der Lobby', async () => fr(p).evaluate(() => document.body.dataset.state === 'mp'), 9000);
+await until('6b Lobby: Weg 1 › 2 › 3 statt freier Wahl, Level 2 gewählt', async () => fr(T).evaluate(() =>
+  document.querySelectorAll('#mpSide .mps-path [data-lv]').length === 3 && !!document.querySelector('#mpSide .mps-path [data-lv="2"].on')));
+await shot(T, '22c_lehrkraft_lobby_lernpfad');
+async function playRound(lv) {
+  await fr(T).click(lv === 2 ? '#mpSide [data-a="start"]' : '#mpStBtns .btn.primary');
+  await until('6b Erklärkarte Level ' + lv, async () => fr(T).evaluate(n => /Los!/.test(document.querySelector('#mpStBtns').textContent) &&
+    new RegExp('Level ' + n + ' ·').test(document.querySelector('.mpst-h small').textContent), lv), 9000);
+  await fr(T).click('#mpStBtns .btn.primary');
+  for (const p of S) await until('6b Tablet spielt Level ' + lv, async () => fr(p).evaluate(() => document.body.dataset.state === 'play'), 9000);
+  for (const p of S) await fr(p).click('#btnStay');
+  await until('6b Level ' + lv + ' vorbei', async () => fr(T).evaluate(() => document.querySelectorAll('#mpTop li').length === 3), 30000);
+}
+await playRound(2);
+await until('6b nach der Runde: Level 2 frei zum Allein-Spielen', async () => (await view()).state.data.levels.includes(2));
+ok('6b Knopf „Weiter: Level 3“', await fr(T).evaluate(() => /Weiter: Level 3/.test(document.querySelector('#mpStBtns .btn.primary').textContent)));
+await playRound(3);
+ok('6b Knopf „Weiter zur Erarbeitung“', await fr(T).evaluate(() => /Erarbeitung/.test(document.querySelector('#mpStBtns .btn.primary').textContent)));
+await shot(T, '22d_lehrkraft_nach_level3');
+await fr(T).click('#mpStBtns .btn.primary');
+await until('6b aus: data.mp = 0, Level 3 frei', async () => { const d = (await view()).state.data; return !d.mp && d.levels.includes(3); });
+for (const p of S) await until('6b Tablet zurück im Lernpfad, Pinguin bei der Erarbeitung', async () => fr(p).evaluate(() =>
+  document.body.dataset.state === 'menu' && document.querySelector('.pst.cur') && document.querySelector('.pst.cur').dataset.st === '1'), 9000);
+ok('6b Tablet: Level 3 jetzt offen', await fr(S[0]).evaluate(() => !!document.querySelector('.tile[data-lv="3"]:not([disabled])')));
+await shot(S[0], '22e_tablet_lernpfad_erarbeitung');
+await fr(T).click('#viewSw [data-view="frei"]');
+await until('6b zurück auf freie Nutzung', async () => (await view()).state.data.view === 'frei');
 
 /* 7 Lehrkraft geht (Migration 0297): roter Countdown in der Lobby, nach 3 Min. zurück zu den Leveln */
 await fr(T).click('#mpGo');

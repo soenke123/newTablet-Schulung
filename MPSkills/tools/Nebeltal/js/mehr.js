@@ -534,8 +534,21 @@ window.NTMehr = (function () {
   }
 
   /* ══ Lehrkraft ═════════════════════════════════════════════ */
+  /* Lernpfad (js/pfad.js, Sönke 19.11.2026): ein gemeinsam gespieltes Level ist danach für alle
+     zum Allein-Spielen frei (data.levels) – so wandert auch der Pinguin auf dem Pfad weiter. */
+  const onPath = () => R.view === 'pfad';
+  const PATH_RUNS = [[1, 2, 3], [8]];
+  function unlockPlayed(st) {
+    if (st.phase !== 'ended' || !onPath() || !st.level) return;
+    const k = st.run + '.' + st.level;
+    if (M.unl === k) return;
+    M.unl = k;
+    const cur = (R.levels || []).slice();
+    if (!cur.includes(st.level)) R.setLevels(cur.concat([st.level]));
+  }
   function teacher(st) {
     const ph = st.phase;
+    unlockPlayed(st);
     if (ph === 'lobby') {
       toLobby();
       side(st);
@@ -552,17 +565,31 @@ window.NTMehr = (function () {
     const here = st.people.filter(p => p.on);
     const lv = st.level;
     const teams = lv >= 7 ? teamsOfLobby(st) : [];
-    const key = JSON.stringify([lv, st.seed, st.secs, st.team_size, M.sel, here.map(p => [p.id, p.n, p.c, p.t, p.d, p.s])]);
+    const path = onPath() && !M.freeLv ? PATH_RUNS.find(r => r.includes(lv)) || (lv ? null : PATH_RUNS[0]) : null;
+    const key = JSON.stringify([lv, st.seed, st.secs, st.team_size, M.sel, here.map(p => [p.id, p.n, p.c, p.t, p.d, p.s]), path, R.levels]);
     if (key === M.sideKey || M.drag) return;
     M.sideKey = key;
     let h = '<div class="mps-h"><div><b>Gemeinsam spielen</b><small>' + here.length + ' ' + (here.length === 1 ? 'Pinguin' : 'Pinguine') +
       ' in der Lobby</small></div><button class="btn sm" type="button" data-a="off">Beenden</button></div>';
     // ist ein Level gewählt, schrumpfen die Kacheln auf eine Reihe – Platz für die Teams
-    h += '<div class="mps-t">Level wählen</div><div class="mps-lv' + (lv ? ' compact' : '') + '">' + [1, 2, 3, 4, 5, 6, 7, 8].map(id => {
-      const L = lvInfo(id);
-      return '<button type="button" data-lv="' + id + '" class="' + (id === lv ? 'on' : '') + '" title="' + esc(L.name) + '">' +
-        '<span class="im">' + (window.NTBild ? NTBild.tile(id) : '') + '<span class="nr">' + id + '</span></span><small>' + esc(L.name) + '</small></button>';
-    }).join('') + '</div>';
+    if (path) {
+      // Lernpfad: nur die Level dieses Halts in ihrer Reihenfolge, ✓ = schon gemeinsam gespielt
+      const done = id => (R.levels || []).includes(id);
+      h += '<div class="mps-t">Lernpfad · ' + (path[0] === 8 ? 'Finale' : 'Einstieg') + '</div><div class="mps-path">' + path.map((id, i) => {
+        const L = lvInfo(id);
+        return (i ? '<span class="arr" aria-hidden="true">›</span>' : '') +
+          '<button type="button" data-lv="' + id + '" class="' + (id === lv ? 'on' : '') + '" title="' + esc(L.name) + '">' +
+          '<span class="im">' + (window.NTBild ? NTBild.tile(id) : '') + '</span>' + (done(id) ? '<span class="ok">✓</span>' : '') +
+          '<small>' + id + ' · ' + esc(L.name) + '</small></button>';
+      }).join('') + '</div><button class="mps-free" type="button" data-a="freelv">Anderes Level wählen</button>';
+    } else {
+      h += '<div class="mps-t">Level wählen' + (onPath() ? ' <button class="mps-free" type="button" data-a="freelv">Zurück zum Lernpfad</button>' : '') +
+        '</div><div class="mps-lv' + (lv ? ' compact' : '') + '">' + [1, 2, 3, 4, 5, 6, 7, 8].map(id => {
+        const L = lvInfo(id);
+        return '<button type="button" data-lv="' + id + '" class="' + (id === lv ? 'on' : '') + '" title="' + esc(L.name) + '">' +
+          '<span class="im">' + (window.NTBild ? NTBild.tile(id) : '') + '<span class="nr">' + id + '</span></span><small>' + esc(L.name) + '</small></button>';
+      }).join('') + '</div>';
+    }
     if (lv) {
       const L = lvInfo(lv);
       h += '<div class="mps-sel"><b>Level ' + lv + ' · ' + esc(L.name) + '</b><small>' + esc(L.short) + '</small>' +
@@ -680,6 +707,7 @@ window.NTMehr = (function () {
     }
     if (t.dataset.a) {
       if (t.dataset.a === 'off') { act('off'); return; }
+      if (t.dataset.a === 'freelv') { M.freeLv = !M.freeLv; M.sideKey = ''; side(st); return; }
       act(t.dataset.a);
       return;
     }
@@ -707,7 +735,7 @@ window.NTMehr = (function () {
     el.hidden = false;
     document.body.classList.add('mp-stage');
     const inR = st.people.filter(p => p.in);
-    const key = ph + '.' + st.run + '.' + lv + (ph === 'ended' ? '.' + M.sel7 : '');
+    const key = ph + '.' + st.run + '.' + lv + (ph === 'ended' ? '.' + M.sel7 + '.' + onPath() : '');
     const head = '<div class="mpst-h"><div><small>Level ' + lv + ' · Welt ' + st.seed + '</small><b>' + esc(L.name) + '</b></div>' +
       '<span id="mpTime" class="mpst-time"></span><span class="mpst-n" id="mpStN"></span><div class="mpst-btns" id="mpStBtns"></div></div>';
     if (M.stageKey !== key) {
@@ -734,6 +762,13 @@ window.NTMehr = (function () {
       };
       if (ph === 'intro') { add('Los! (3 · 2 · 1)', 'go', 'primary'); add('Abbrechen', 'stop'); }
       else if (ph === 'running') add('Runde beenden', 'stop', 'warnb');
+      else if (ph === 'ended' && onPath() && (lv === 1 || lv === 2)) {
+        add('Weiter: Level ' + (lv + 1), () => nextLevel(lv + 1), 'primary'); add('Nochmal', 'start'); add('Zur Lobby', 'lobby');
+      } else if (ph === 'ended' && onPath() && lv === 3) {
+        add('Weiter zur Erarbeitung', () => pathOff(), 'primary'); add('Nochmal', 'start'); add('Zur Lobby', 'lobby');
+      } else if (ph === 'ended' && onPath() && lv === 8) {
+        add('Lernpfad abschließen', () => pathOff(), 'primary'); add('Nochmal', 'start'); add('Zur Lobby', 'lobby');
+      }
       else if (ph === 'ended') { add('Nochmal (gleiche Welt)', 'start', 'primary'); add('Zur Lobby', 'lobby'); }
     }
     // laufend aktualisieren
@@ -1087,6 +1122,25 @@ window.NTMehr = (function () {
     for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? R2 : R1; x.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
     x.closePath();
   }
+  // Lernpfad: nächstes Level gleich mit Erklärkarte starten (Level 1–6 brauchen keine Teams)
+  async function nextLevel(n) {
+    const r = await act('level', { n });
+    if (r && r.ok) await act('start');
+  }
+  // Nach Level 3 / Level 8: Runde für alle beenden – alle Tablets zurück in die Übersicht (Lernpfad)
+  async function pathOff() {
+    if (M.st) unlockPlayed(M.st);
+    await act('off');
+  }
+  // Halt „Gemeinsam spielen · Level n“ im Lernpfad (js/pfad.js)
+  async function go(n) {
+    M.flagOff = false; M.freeLv = false;
+    const r = await act('on');
+    if (!(r && r.ok)) return;
+    enter();
+    if (n) await act('level', { n });
+  }
+
   window.addEventListener('resize', () => { M.mapKey = ''; M.sideKey = ''; });
 
   /* ══ Start ═════════════════════════════════════════════════ */
@@ -1110,5 +1164,5 @@ window.NTMehr = (function () {
   R.on(sync);
   R.ready(3000).then(sync);
 
-  return { get on() { return M.on; } };
+  return { get on() { return M.on; }, go };
 })();

@@ -135,6 +135,29 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   8 drei Köpfe, Erarbeitung = Tafel mit EINEM Neuron (w₁, w₂ → σ) und Fehler-Pfeil rückwärts. Kacheln nur mit Titel
   (Untertitel `short` nur noch als title-Text, Sönke 18.11.2026); keine Welt-Nummer-Zeile, keine Labor-/Showroom-Links mehr
   (Welt-Nummer intern in `nt.seed`, „Neue Welt“ am Levelende würfelt sie). `index.html?lv=4` öffnet direkt ein Level.
+- **Zwei Ansichten der Übersicht** (Sönke 19.11.2026): Umschalter `#viewSw` „Lernpfad | Freie Nutzung“ oben im Menü.
+  „Freie Nutzung“ = die Phasen-Reihen oben (`PHASES`), „Lernpfad“ (Vorgabe) = `js/pfad.js` + `pfad.css`. Im Raum entscheidet
+  die Lehrkraft (`skill_room_state.data.view` = 'pfad' | 'frei', fehlt = pfad; über `nt:view` → tool.js `setPatch`, die Tablets
+  folgen und haben keinen Umschalter); allein merkt sich das Gerät die Wahl (`nt.view`). Im Lernpfad ist `#mpBar` weg – gemeinsam
+  gespielt wird über den Halt.
+- **Lernpfad** (`NTPfad.render(el, api)`, api aus spiel.js renderMenu: `R`, `tileHtml`, `doneLocal`, `mehr`, `share`): die Stunde
+  als Abstieg ins Tal – fünf Halte (`STATIONS`) als Treppe von oben links nach unten rechts, dahinter ein SVG (`draw`): Berg links
+  vom Weg mit Höhenlinien und Schneekuppe, Nebel oben (nur auf dem Berg, weg wenn alles geschafft), Weg gestrichelt, bis zum
+  aktuellen Halt durchgezogen; Pinguin Main (`img/frei/main.webp`) steht am aktuellen Halt, Flagge am Finale. Halte:
+  1 Einstieg (Level 1–3, gemeinsam) · 2 Erarbeitung (Tafel) · 3 Übung (Level 4–7 allein + Arbeitsblatt PDF/Word, nicht für
+  Tablets im Raum; Lehrkraft „Level 4–7 freigeben“) · 4 Sicherung (kommt noch) · 5 Finale (Level 8, Team). KEINE Zeitangaben
+  (60- und 90-Minuten-Stunden, Sönke). Je Halt Sozialform als Symbol + Text; „i“ nur für Lehrkraft und allein = Fenster mit Ziel,
+  „So läuft es“, Impuls (`#pInfo` direkt an `<body>` – im Glaskasten mit backdrop-filter klebt position:fixed sonst am Kasten).
+  Aktueller Halt: im Raum aus `data.levels` (Halt mit etwas Freigegebenem = erreicht, ganz frei = weiter zum nächsten), allein
+  aus dem Gerät (`doneLocal`: Sterne irgendeiner Welt, `nt.done.erarb` setzt erarbeitung.js, `nt.done.8` beim Öffnen von Level 8).
+  Gemeinsame Halte: Lehrkraft-Knopf „Gemeinsam spielen · Level n“ (n = erstes noch nicht gespieltes) → `NTMehr.go(n)` =
+  `on` + `level`; ganz gespielt → „Nochmal gemeinsam“. Tablets sehen dort „Spielt ihr gemeinsam – danach hier frei zum Üben.“
+- **Lobby im Lernpfad** (mehr.js, `onPath()`): statt „Level wählen“ nur der Weg des Halts (`PATH_RUNS` [1, 2, 3] bzw. [8],
+  `.mps-path`, ✓ = schon gespielt), „Anderes Level wählen“ (`M.freeLv`) holt die freie Wahl. Rundenende: Level 1/2 →
+  „Weiter: Level n+1“ (`nextLevel` = `level` + `start`, gleich die Erklärkarte); Level 3 → „Weiter zur Erarbeitung“ und Level 8 →
+  „Lernpfad abschließen“ (`pathOff` = `off`: alle Tablets zurück in den Lernpfad). Jedes im Lernpfad gemeinsam gespielte Level
+  wird am Rundenende für alle zum Allein-Spielen freigegeben (`unlockPlayed` → `data.levels`) – dadurch wandert auch der Pinguin.
+  Alles ohne Migration. Browser-Test `tests/gemeinsam.e2e.mjs` Punkte 1b und 6b.
 - `erarbeitung.html` + `js/erarbeitung.js` – **Erarbeitung** (Phase 1, nach Level 3). 2. Fassung 18.11.2026 (Sönke: „viel zu
   kompliziert und überladen … so versteht das keiner“): EIN Neuron statt Netz 2-2-1, EIN Gedanke je Schritt, Bühne groß in
   der Mitte (SVG, quer `LAY.h` / hochkant `LAY.v` je nach Seitenverhältnis), darunter EIN Satz + Formel-Chip + Knöpfe.
@@ -165,7 +188,8 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   clamp(…vh); Tastenkürzel (`.kbd`) nur mit Maus. Neue Texte KURZ halten – geprüft bei 390×760, 800×370, 1024×700, 1440×860.
 - `arbeitsblatt/` – Arbeitsblatt „Wie ein neuronales Netz lernt“ (19.11.2026, nach der Erarbeitung, Level 4–7 allein, 2 Seiten:
   Lernkreislauf mit den 5 Begriffen, ein Lernschritt von Hand, Rechnung = Sprung, Fragen je Level); Word + PDF, Quelle in
-  `arbeitsblatt/quelle/` (bilder.mjs → PNGs, blatt.cjs → docx, Lösungen in LIESMICH.md); noch nirgends verlinkt
+  `arbeitsblatt/quelle/` (bilder.mjs → PNGs, blatt.cjs → docx, Lösungen in LIESMICH.md); verlinkt im Lernpfad am Halt „Übung“
+  (seit 19.11.2026, nur Lehrkraft und allein)
 - `tool.js`/`tool.css` – iframe-Rahmen (wie Reinforce Yourself) und Brücke zum Raum (s. „Im Raum“ unten):
   reicht `data.levels`/`data.mp` hinein, setzt Freigaben über skill_room_set_state und führt die RPCs
   `nt_play` (Tablet) bzw. `nt_room_get`/`nt_room_act` (Lehrkraft) für die Seite im Rahmen aus

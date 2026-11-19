@@ -5,9 +5,10 @@
    stecken im Raum in einem <iframe> (tools/Nebeltal/tool.js), der
    Rahmen spricht mit dem Server. Hier nur die Brücke:
 
-     hinein   { type: 'nt:cmd', levels: [1, 2, 'erarb', …], mp: 0|1 }
+     hinein   { type: 'nt:cmd', levels: [1, 2, 'erarb', …], mp: 0|1, view: 'pfad'|'frei' }
      heraus   { type: 'nt:ready' }                 Seite steht
               { type: 'nt:levels', levels: […] }   Lehrkraft teilt/entzieht
+              { type: 'nt:view', view }            Lehrkraft schaltet Lernpfad ↔ freie Nutzung
               { type: 'nt:rpc', id, fn, args }     fn: play (Tablet) · get/act (Lehrkraft)
      zurück   { type: 'nt:res', id, res }
 
@@ -36,7 +37,7 @@ window.NTRaum = (function () {
   } catch (e) { /* ohne sessionStorage: nur mit Parameter */ }
   if (!role && framed && (qs.get('raum') === 'lehrer' || qs.get('raum') === 'schueler')) role = qs.get('raum');
 
-  const S = { levels: null, mp: 0, got: false };
+  const S = { levels: null, mp: 0, view: 'pfad', got: false };
   const subs = [];
   const pend = new Map();
   let seq = 0;
@@ -51,8 +52,9 @@ window.NTRaum = (function () {
     const m = e.data || {};
     if (m.type === 'nt:cmd') {
       const lv = Array.isArray(m.levels) ? m.levels.map(x => (x === 'erarb' ? x : +x)).filter(x => x === 'erarb' || (x >= 1 && x <= 8)) : [];
-      const changed = !S.got || JSON.stringify(lv) !== JSON.stringify(S.levels) || (m.mp ? 1 : 0) !== S.mp;
-      S.levels = lv; S.mp = m.mp ? 1 : 0; S.got = true;
+      const vw = m.view === 'frei' ? 'frei' : 'pfad';   // fehlt = Lernpfad
+      const changed = !S.got || JSON.stringify(lv) !== JSON.stringify(S.levels) || (m.mp ? 1 : 0) !== S.mp || vw !== S.view;
+      S.levels = lv; S.mp = m.mp ? 1 : 0; S.view = vw; S.got = true;
       if (changed) for (const f of subs.slice()) { try { f(); } catch (err) { console.error(err); } }
     } else if (m.type === 'nt:res' && pend.has(m.id)) {
       const p = pend.get(m.id); pend.delete(m.id);
@@ -212,10 +214,11 @@ window.NTRaum = (function () {
 
   return {
     role, inRoom: !!role, isTeacher: role === 'lehrer', isStudent: role === 'schueler',
-    get levels() { return S.levels; }, get mp() { return S.mp; }, get got() { return S.got; },
+    get levels() { return S.levels; }, get mp() { return S.mp; }, get got() { return S.got; }, get view() { return S.view; },
     on(f) { subs.push(f); },
     rpc, ready, post,
     setLevels(list) { S.levels = list.slice(); post({ type: 'nt:levels', levels: list }); for (const f of subs.slice()) f(); },
+    setView(v) { S.view = v === 'frei' ? 'frei' : 'pfad'; post({ type: 'nt:view', view: S.view }); for (const f of subs.slice()) f(); },
     shared: key => !role || role === 'lehrer' || !!(S.levels && S.levels.includes(key)),
     COLORS, color, rgb, teamColor, teamName, pingu,
     l7: { X: l7X, start: l7start, W: l7W, score: l7score },

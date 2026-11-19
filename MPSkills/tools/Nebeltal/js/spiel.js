@@ -241,6 +241,24 @@
   }
   R.on(() => { if (S.state === 'menu') renderMenu(); });
 
+  /* Zwei Ansichten der Übersicht (Sönke 19.11.2026): „Lernpfad“ (js/pfad.js, Vorgabe) = der Weg
+     der Stunde ins Tal, und „Freie Nutzung“ = die Phasen-Reihen von vorher. Im Raum entscheidet die
+     Lehrkraft (data.view, die Tablets folgen), allein merkt sich das Gerät die Wahl (nt.view). */
+  const viewNow = () => (R.inRoom ? R.view : LS.get('nt.view')) === 'frei' ? 'frei' : 'pfad';
+  function setView(v) {
+    if (R.inRoom) { if (R.isTeacher) R.setView(v); return; }
+    LS.set('nt.view', v); renderMenu();
+  }
+  document.querySelectorAll('#viewSw [data-view]').forEach(b => b.addEventListener('click', () => setView(b.dataset.view)));
+  // allein: geschafft = irgendeine Welt dieses Levels mit Sternen (bzw. Erarbeitung/Level 8 einmal geöffnet)
+  function doneLocal(key) {
+    if (typeof key !== 'number' || key === 8) return LS.get('nt.done.' + key) === '1';
+    if (DEMO) return parseInt(LS.get(bestKey(key)), 10) >= 0;
+    try { for (let i = 0; i < localStorage.length; i++) if (localStorage.key(i).indexOf('nt.best.' + key + '.') === 0) return true; }
+    catch (e) { /* ohne Speicher: nichts geschafft */ }
+    return false;
+  }
+
   function renderMenu() {
     document.body.classList.toggle('in-room', R.inRoom);
     document.body.classList.toggle('is-teacher', R.isTeacher);
@@ -263,15 +281,25 @@
           '<span>' + (shared ? 'geteilt' : 'teilen') + '</span></button>' : '') +
         '</div>';
     };
-    $('#levels').innerHTML = PHASES.map((P, i) =>
-      '<section class="phase">' +
-        '<div class="phase-h"><span class="phase-n">Phase ' + (i + 1) + '</span><b>' + P.t + '</b><small>' + P.sub + '</small></div>' +
-        '<div class="phase-row">' + P.items.map(tileHtml).join('') + '</div>' +
-      '</section>').join('');
+    const vw = window.NTPfad ? viewNow() : 'frei';
+    document.body.classList.toggle('v-pfad', vw === 'pfad');
+    document.querySelectorAll('#viewSw [data-view]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.view === vw)));
+    $('#viewSw').hidden = R.isStudent || !window.NTPfad;
+    if (vw === 'pfad') {
+      NTPfad.render($('#levels'), { R, tileHtml, doneLocal, mehr: () => window.NTMehr || null,
+        share: list => R.setLevels(list) });
+    } else {
+      if (window.NTPfad) NTPfad.clear();
+      $('#levels').innerHTML = PHASES.map((P, i) =>
+        '<section class="phase">' +
+          '<div class="phase-h"><span class="phase-n">Phase ' + (i + 1) + '</span><b>' + P.t + '</b><small>' + P.sub + '</small></div>' +
+          '<div class="phase-row">' + P.items.map(tileHtml).join('') + '</div>' +
+        '</section>').join('');
+    }
     document.querySelectorAll('#levels .tile[data-lv]').forEach(b => b.addEventListener('click', () => openLevel(+b.dataset.lv)));
     document.querySelectorAll('#levels .tshare').forEach(b => b.addEventListener('click', () => toggleShare(b.dataset.share === 'erarb' ? 'erarb' : +b.dataset.share)));
     const none = R.isStudent && R.got && !LEVELS.some(l => R.shared(l.id)) && !R.shared('erarb');
-    $('#noShare').hidden = !none;
+    $('#noShare').hidden = !none || vw === 'pfad';
     document.querySelectorAll('#levels .tile[data-href]').forEach(b => b.addEventListener('click', () => { location.href = b.dataset.href; }));
   }
 
@@ -318,7 +346,7 @@
   /* ── Level öffnen ── */
   function openLevel(id) {
     const L = LEVELS.find(l => l.id === id);
-    if (L.href) { location.href = L.href; return; }
+    if (L.href) { if (id === 8) LS.set('nt.done.8', '1'); location.href = L.href; return; }
     S.lvl = L;
     if (L.two) { openTwo(L); return; }
     const ws = lvSeed(id);

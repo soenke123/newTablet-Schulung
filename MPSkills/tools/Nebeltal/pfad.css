@@ -1,0 +1,126 @@
+/* ══════════════════════════════════════════════════════════════
+   Nebeltal — pfad.css · Übersicht als Lernpfad (js/pfad.js, 19.11.2026)
+   Halte als Treppe vom Gipfel (oben links) ins Tal (unten rechts),
+   dahinter Berg + Weg als SVG, oben Nebel, der nach unten aufklart.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Umschalter Lernpfad | Freie Nutzung */
+.vsw { display:inline-flex; gap:2px; padding:3px; margin:0 0 14px; border-radius:99px; border:1px solid var(--line); background:var(--surface-2); }
+.vsw button { border:0; background:none; padding:7px 15px; border-radius:99px; font-weight:600; font-size:14px; color:var(--ink-soft); cursor:pointer; }
+.vsw button[aria-pressed="true"] { background:var(--accent); color:var(--on-accent); }
+html[data-theme="dark"] .vsw { background:rgba(255,255,255,.04); }
+body.v-pfad #mpBar { display:none !important; }   /* im Lernpfad startet „Gemeinsam spielen“ am Halt */
+
+.pfad { position:relative; display:flex; flex-direction:column; gap:22px; padding:18px 0 26px;
+  --step:7%; --mk:52px; }
+.pfad-bg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; overflow:visible;
+  -webkit-mask-image:linear-gradient(to bottom, #000 82%, transparent); mask-image:linear-gradient(to bottom, #000 82%, transparent); }
+.pf-mt { stroke:none; }
+.pfad-bg .s0 { stop-color:#b8d0e4; }
+.pfad-bg .s1 { stop-color:#8fb2cf; }
+.pfad-bg .f0 { stop-color:var(--fog); stop-opacity:.95; }
+.pfad-bg .f1 { stop-color:var(--fog); stop-opacity:0; }
+.pf-ct { fill:none; stroke:#ffffff; stroke-width:1.4; }
+.pf-cap { fill:#ffffff; opacity:.9; }
+.pf-line { fill:none; stroke:var(--ink-faint); stroke-width:3; stroke-dasharray:2 9; stroke-linecap:round; opacity:.9; }
+.pf-walk { fill:none; stroke:var(--accent); stroke-width:4; stroke-linecap:round; filter:drop-shadow(0 0 6px var(--accent-dim)); }
+html[data-theme="dark"] .pfad-bg .s0 { stop-color:#2f5079; }
+html[data-theme="dark"] .pfad-bg .s1 { stop-color:#172f50; }
+html[data-theme="dark"] .pf-ct { stroke:#7fa6d6; }
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) .pfad-bg .s0 { stop-color:#2f5079; }
+  html:not([data-theme]) .pfad-bg .s1 { stop-color:#172f50; }
+  html:not([data-theme]) .pf-ct { stroke:#7fa6d6; }
+}
+/* alles geschafft: Nebel weg */
+.pfad.all .pfad-bg .f0 { stop-opacity:0; }
+
+/* ein Halt: Einrückung · Marke · Karte */
+.pst { position:relative; z-index:1; display:grid; grid-template-columns:calc(var(--i) * var(--step)) var(--mk) minmax(0, 1fr); gap:0 14px; align-items:start; }
+.pst-mark { grid-column:2; position:relative; height:var(--mk); margin-top:14px; display:grid; place-items:center; }
+.pst-n { width:var(--mk); height:var(--mk); border-radius:50%; display:grid; place-items:center; font-family:var(--mono); font-weight:700; font-size:19px;
+  background:var(--surface); border:2px solid var(--line); color:var(--ink-faint); box-shadow:var(--shadow); }
+.pst.done .pst-n { background:var(--accent); border-color:var(--accent); color:var(--on-accent); }
+.pst.cur .pst-n { border-color:var(--accent); color:var(--accent-ink); box-shadow:0 0 0 6px var(--accent-dim), var(--glow); }
+.pst .pic { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; flex:none; }
+.pst .pic.ck { width:26px; height:26px; stroke-width:3; }
+.pst .pic.sm { width:16px; height:16px; fill:currentColor; stroke:none; }
+.pst-main { position:absolute; left:50%; bottom:calc(100% - 10px); width:54px; transform:translateX(-62%); pointer-events:none;
+  filter:drop-shadow(0 4px 6px rgba(0,0,0,.3)); animation:pstHop 2.6s ease-in-out infinite; }
+@keyframes pstHop { 0%, 70%, 100% { transform:translateX(-62%) translateY(0); } 80% { transform:translateX(-62%) translateY(-9px); } 90% { transform:translateX(-62%) translateY(0) scaleY(.94); } }
+.pst-flag { position:absolute; left:58%; bottom:calc(100% - 14px); width:26px; height:36px; pointer-events:none; }
+.pst-flag path { fill:none; stroke:var(--ink-soft); stroke-width:2.2; stroke-linecap:round; }
+.pst-flag .fl { fill:var(--gold); stroke:none; }
+
+.pst-card { grid-column:3; min-width:0; max-width:720px; padding:14px 16px 16px; border-radius:18px; border:1px solid var(--line);
+  background:var(--glass); box-shadow:var(--shadow); -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px); }
+.pst.cur .pst-card { border-color:var(--accent); box-shadow:var(--shadow), var(--glow); }
+.pst.fut .pst-card { opacity:.82; }
+.pst.soon .pst-card { border-style:dashed; }
+.pst-h { display:flex; align-items:center; gap:10px 14px; flex-wrap:wrap; margin-bottom:12px; }
+.pst-tt { display:flex; flex-direction:column; gap:2px; min-width:0; margin-right:auto; }
+.pst-k { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); }
+.pst-tt b { font-family:var(--head); font-weight:600; font-size:17px; line-height:1.2; }
+.pst-meta { display:inline-flex; align-items:center; gap:10px; flex:none; max-width:100%; }
+.pst-so { display:inline-flex; align-items:center; gap:7px; padding:5px 11px 5px 8px; border-radius:99px; font-size:13px; font-weight:600;
+  color:var(--ink-soft); background:var(--surface-2); border:1px solid var(--line-soft); }
+html[data-theme="dark"] .pst-so { background:rgba(255,255,255,.05); }
+.pst-i { flex:none; width:30px; height:30px; border-radius:50%; border:1.5px solid var(--accent); background:transparent; color:var(--accent-ink);
+  font:italic 700 16px/1 Georgia, serif; cursor:pointer; }
+.pst-i:hover { background:var(--accent-dim); }
+
+.pst-row { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+.pst-row.n3 { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+.pst-row.n1 { grid-template-columns:minmax(0, 260px); }
+.pst-sheet { display:flex; align-items:center; gap:8px 10px; flex-wrap:wrap; margin-top:12px; padding:9px 12px; border-radius:14px;
+  border:1px dashed var(--line); color:var(--ink-soft); font-size:13.5px; }
+.pst-sheet b { color:var(--ink); }
+.pst-sheet span { margin-right:auto; }
+.pst-sheet a { text-decoration:none; }
+.pst-note { margin:10px 0 0; font-size:13px; color:var(--ink-faint); }
+.pst-act { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+.pst-act .btn { display:inline-flex; align-items:center; gap:8px; }
+
+/* Hinweise der Lehrkraft */
+.pinfo { position:fixed; inset:0; z-index:50; display:grid; place-items:center; padding:16px; background:rgba(4,9,20,.45); }
+.pinfo-in { width:min(520px, 100%); max-height:calc(100% - 32px); overflow:auto; padding:18px 20px 20px; }
+.pinfo-h { position:relative; display:flex; flex-direction:column; gap:3px; padding-right:40px; }
+.pinfo-h b { font-family:var(--head); font-weight:600; font-size:20px; }
+.pinfo-x { position:absolute; right:-4px; top:-4px; width:36px; height:36px; border-radius:50%; border:1px solid var(--line); background:var(--surface);
+  font-size:22px; line-height:1; cursor:pointer; }
+.pinfo-so { display:inline-flex; align-items:center; gap:7px; margin:10px 0 2px; font-size:13.5px; font-weight:600; color:var(--ink-soft); }
+.pinfo-so .pic { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+.pinfo h4 { margin:14px 0 4px; font-size:12px; font-family:var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--accent-ink); }
+.pinfo p, .pinfo li { margin:0; font-size:15px; line-height:1.45; color:var(--ink); }
+.pinfo ol { margin:0; padding-left:20px; display:grid; gap:4px; }
+.pinfo-q { font-style:italic; color:var(--ink-soft) !important; }
+
+@media (max-width: 860px) {
+  .pfad { --step:3%; --mk:44px; }
+  .pst-row, .pst-row.n3 { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .pfad { --step:0px; --mk:36px; gap:18px; }
+  .pst { gap:0 10px; }
+  .pst-n { font-size:15px; }
+  .pst-main { width:40px; }
+  .pst-so span { display:none; }      /* nur das Symbol, Text als title */
+  .pst-card { padding:12px; }
+  .pst-row.n1 { grid-template-columns:minmax(0, 1fr); }
+}
+html[data-motion="low"] .pst-main { animation:none; }
+html[data-motion="low"] .pst-card { -webkit-backdrop-filter:none; backdrop-filter:none; background:var(--surface); }
+@media (prefers-reduced-motion: reduce) { .pst-main { animation:none; } }
+
+/* ── Lobby im Lernpfad (js/mehr.js side): Weg statt freier Wahl ── */
+.mps-path { display:flex; align-items:stretch; gap:6px; margin:6px 0 4px; }
+.mps-path button { flex:1; min-width:0; display:flex; flex-direction:column; gap:4px; padding:5px; border-radius:12px; border:1px solid var(--line-soft);
+  background:var(--surface-2); cursor:pointer; text-align:left; position:relative; }
+.mps-path button.on { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+.mps-path button .im { position:relative; display:block; aspect-ratio:16/10; border-radius:8px; overflow:hidden; background:#0a1730; }
+.mps-path button .im svg { position:absolute; inset:0; width:100%; height:100%; }
+.mps-path button small { font-size:12px; font-weight:600; line-height:1.2; }
+.mps-path button .ok { position:absolute; right:8px; top:8px; width:20px; height:20px; border-radius:50%; display:grid; place-items:center;
+  background:var(--accent); color:var(--on-accent); font-size:12px; font-weight:800; }
+.mps-path .arr { align-self:center; color:var(--ink-faint); font-size:18px; }
+.mps-free { background:none; border:0; padding:4px 0; color:var(--accent-ink); font:600 13px var(--font); cursor:pointer; text-decoration:underline; }

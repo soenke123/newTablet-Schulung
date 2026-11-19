@@ -20,6 +20,8 @@
 (function () {
   'use strict';
   const $ = s => document.querySelector(s);
+  // Lernpfad allein (js/pfad.js): Erarbeitung einmal geöffnet = dieser Halt ist geschafft
+  if (!/[?&]demo=/.test(location.search)) { try { localStorage.setItem('nt.done.erarb', '1'); } catch (e) { /* egal */ } }
   let low = !!(window.LWMotion && LWMotion.low);
   window.addEventListener('lernwelt:motion', () => { low = !!(window.LWMotion && LWMotion.low); drawAll(); });
 

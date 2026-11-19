@@ -568,7 +568,8 @@ body.post #zwei .zbottom > * { pointer-events:auto; }
 body[data-state="result"] #zPanel { opacity:1; }
 body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:grab; touch-action:none; }
 </style>
-<link href="mehr.css?v=20261118t" rel="stylesheet">
+<link href="mehr.css?v=20261119a" rel="stylesheet">
+<link href="pfad.css?v=20261119a" rel="stylesheet">
 </head>
 <body>
 <div id="app">
@@ -658,6 +659,10 @@ body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:g
       <span class="kick">Expedition 2026 · Polarlicht</span>
       <h1>Nebeltal</h1>
       <p class="sub">Wie lernt eine KI? Sie sucht den tiefsten Punkt einer Landschaft – und sieht nur, wo sie gerade steht.</p>
+      <div id="viewSw" class="vsw" role="group" aria-label="Ansicht der Übersicht" hidden>
+        <button type="button" data-view="pfad" aria-pressed="true">Lernpfad</button>
+        <button type="button" data-view="frei" aria-pressed="false">Freie Nutzung</button>
+      </div>
       <div id="mpBar" class="mpbar" hidden>
         <button id="mpGo" class="btn primary" type="button">Gemeinsam spielen</button>
         <span>Alle Tablets kommen in die Lobby, ihr spielt dieselbe Welt gegeneinander – Level 7 zu zweit, Level 8 im Team.
@@ -694,9 +699,10 @@ body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:g
 <script src="js/orbit.js?v=20261118a"></script>
 <script src="js/schnee.js?v=20261117j"></script>
 <script src="js/netz.js?v=20261118d"></script>
-<script src="js/raum.js?v=20261119a"></script>
+<script src="js/raum.js?v=20261119b"></script>
 <script src="js/zwei.js?v=20261118p"></script>
-<script src="js/spiel.js?v=20261119a"></script>
-<script src="js/mehr.js?v=20261119a"></script>
+<script src="js/pfad.js?v=20261119a"></script>
+<script src="js/spiel.js?v=20261119b"></script>
+<script src="js/mehr.js?v=20261119b"></script>
 </body>
 </html>

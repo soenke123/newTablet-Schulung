@@ -12,13 +12,16 @@
    · Freigaben (Migration 0290, ohne Tabelle): skill_room_state.data.levels
      = [1, 2, 'erarb', 8 …], gesetzt von der Lehrkraft über das
      Teilen-Symbol an der Kachel. Fehlt = nichts freigegeben.
+   · Ansicht der Übersicht (ohne Migration, 19.11.2026): data.view =
+     'pfad' (Lernpfad, Vorgabe) | 'frei' (freie Nutzung), die Lehrkraft
+     schaltet um, die Tablets folgen.
    · Gemeinsam spielen (Migration 0296): data.mp = 1 setzt der Server
      (nt_room_act 'on'/'off'). Danach fragt die Seite im Rahmen selbst
      nach (nt_play bzw. nt_room_get/nt_room_act) – über diese Brücke,
      weil nur der Rahmen Token bzw. Raum-Code kennt.
 
-     hinein   { type: 'nt:cmd', levels, mp }
-     heraus   { type: 'nt:ready' } · { type: 'nt:levels', levels }
+     hinein   { type: 'nt:cmd', levels, mp, view }
+     heraus   { type: 'nt:ready' } · { type: 'nt:levels', levels } · { type: 'nt:view', view }
               { type: 'nt:rpc', id, fn: 'play'|'get'|'act', args }
      zurück   { type: 'nt:res', id, res }
 
@@ -28,9 +31,9 @@
 (function () {
   'use strict';
 
-  const V = '20261119b';
+  const V = '20261119c';
   let root = null, frame = null, ctx = null, view = null, onResize = null, onMsg = null;
-  let ready = false, lastSent = '', levels = null;
+  let ready = false, lastSent = '', levels = null, vw = null;
 
   const GAP = 12, MIN = 460;
   const isPresenter = () => !!ctx && ctx.role === 'presenter';
@@ -42,7 +45,7 @@
 
   function post(force) {
     if (!ready || !frame || !frame.contentWindow) return;
-    const msg = { type: 'nt:cmd', levels: currentLevels(), mp: data().mp ? 1 : 0 };
+    const msg = { type: 'nt:cmd', levels: currentLevels(), mp: data().mp ? 1 : 0, view: vw || (data().view === 'frei' ? 'frei' : 'pfad') };
     const key = JSON.stringify(msg);
     if (key === lastSent && !force) return;
     lastSent = key;
@@ -51,16 +54,18 @@
 
   /* skill_room_set_state ersetzt `data` als GANZES – darum geht der ganze
      Stand hinaus (mp bleibt so, wie der Server es zuletzt gesagt hat). */
-  async function setLevels(list) {
-    levels = list;
+  async function setPatch(patch) {
+    if ('levels' in patch) levels = patch.levels;
+    if ('view' in patch) vw = patch.view;
     post();
-    const next = Object.assign({}, data(), { levels: list });
+    const next = Object.assign({}, data(), patch);
     if (view) view.state = Object.assign({}, view.state || {}, { data: next });
     const res = await ctx.actions.setData(next);
     if (res && !res.ok && res.error !== 'network') ctx.toast(ctx.errText(res.error));
-    levels = null;
+    levels = null; vw = null;
     ctx.refresh();
   }
+  const setLevels = list => setPatch({ levels: list });
 
   async function rpc(m) {
     const a = m.args || {};
@@ -121,6 +126,7 @@
         const m = e.data || {};
         if (m.type === 'nt:ready') { ready = true; post(true); }
         else if (m.type === 'nt:levels' && isPresenter() && !ctx.preview && Array.isArray(m.levels)) setLevels(norm(m.levels));
+        else if (m.type === 'nt:view' && isPresenter() && !ctx.preview) setPatch({ view: m.view === 'frei' ? 'frei' : 'pfad' });
         else if (m.type === 'nt:rpc' && m.id) rpc(m);
       };
       window.addEventListener('message', onMsg);
@@ -141,7 +147,7 @@
       onMsg = onResize = null;
       document.body.classList.remove('tool-fill');
       frame = root = ctx = view = null;
-      levels = null;
+      levels = null; vw = null;
     }
   });
 })();
