@@ -378,6 +378,10 @@ zeigt sie groß + wer bereit ist → „Los!“ → 3-2-1 (`countdown_ends_at`, 
   `nt_players`; anwesend = 20 s; Tablets sehen Werte nur des eigenen Teams und fremde Endstände erst am Ende.
   Takt: Tablet Lobby 1 s (beim Laufen 0,25 s), Level 7 0,25 s, sonst 0,8–1,5 s; Lehrkraft 0,6–2 s.
   Prüfstand `supabase/tests/0296_nebeltal_gemeinsam.mjs`, Browser `tests/gemeinsam.e2e.mjs`.
+- Ohne Lehrkraft aus (Migration 0297, Sönke 19.11.2026): `nt_rounds.teacher_seen_at` = letztes `nt_room_get`
+  (oder „Gemeinsam spielen“). Älter als 60 s (Countdown/laufende Runde: 3 Min.) → `nt_advance` beim nächsten
+  `nt_play` setzt phase 'off' + data.mp = 0, die Tablets kommen zurück zu den Leveln. Kein Cron.
+  Prüfstand `supabase/tests/0297_nebeltal_ohne_lehrkraft_aus.mjs`.
 
 ## Plan: „Gemeinsam ein Netz“ im Raum (Sönke 17.11.2026: „das kann eine richtig schöne runde Stunde sein“)
 
