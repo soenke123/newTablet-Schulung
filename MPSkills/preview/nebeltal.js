@@ -208,17 +208,12 @@
     wide: true,
     fade: false,
     blurb: `
-      <p><strong>Wie lernt ein neuronales Netz?</strong> Die Klasse sucht im Nebel den tiefsten
-         Punkt einer 3D-Landschaft – und sieht nur die Stelle, an der sie gerade steht. Genau so
-         geht es einer KI beim Lernen: Die <strong>Höhe ist ihr Fehler</strong>, der
-         <strong>Bergab-Pfeil der Gradient</strong> und die <strong>Sprungweite die Lernrate</strong>
-         (Gradient Descent).</p>
-      <p>Acht Level in einer Pinguin-Geschichte: vom freien Suchen im Schneesturm über den
-         Bergab-Pfeil und das Springen mit Lernrate bis zu echten Modellen – ein Neuron schätzt das
-         Gewicht von Pinguinen, sortiert zwei Arten, scheitert am Nest (XOR) und schafft es mit
-         zwei Neuronen. Die Messdaten stammen von 342 echten Pinguinen.</p>
-      <p>Die Lehrkraft gibt die Level einzeln frei oder startet <strong>„Gemeinsam spielen“</strong>:
-         Alle Tablets laufen in derselben Welt um die Wette, am Ende zeigt der Beamer die Wege
-         aller. Der Skill ist noch in der <strong>Beta</strong>.</p>`
+      <p><strong>Wie lernt ein neuronales Netz?</strong> Im Nebel den tiefsten Punkt einer
+         Landschaft suchen: Die <strong>Höhe ist der Fehler</strong>, der <strong>Bergab-Pfeil der
+         Gradient</strong>, die <strong>Sprungweite die Lernrate</strong> – vom Schneesturm bis zu
+         echten Modellen mit Daten von 342 Pinguinen.</p>
+      <p>Füllt <strong>1–2 Unterrichtsstunden</strong> mit <strong>Einstieg, Erarbeitung und
+         Sicherung</strong>, dazu gibt es <strong>Arbeitsmaterial</strong>. Allein spielen oder
+         gemeinsam um die Wette. Noch in der <strong>Beta</strong>.</p>`
   });
 })();
