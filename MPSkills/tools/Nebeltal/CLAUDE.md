@@ -163,6 +163,9 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   `.card-in.is-intro` mit `.i-head` (Kicker, Titel, EIN Satz) · `.i-pic` (Bild, Formel) · `.i-txt` (höchstens 3 kurze
   Schritte, Steuerung) · `.card-btns`; quer Bild links/Text rechts, hochkant untereinander (Bild ≤ 26vh), Schriften mit
   clamp(…vh); Tastenkürzel (`.kbd`) nur mit Maus. Neue Texte KURZ halten – geprüft bei 390×760, 800×370, 1024×700, 1440×860.
+- `arbeitsblatt/` – Arbeitsblatt „Wie ein neuronales Netz lernt“ (19.11.2026, nach der Erarbeitung, Level 4–7 allein, 2 Seiten:
+  Lernkreislauf mit den 5 Begriffen, ein Lernschritt von Hand, Rechnung = Sprung, Fragen je Level); Word + PDF, Quelle in
+  `arbeitsblatt/quelle/` (bilder.mjs → PNGs, blatt.cjs → docx, Lösungen in LIESMICH.md); noch nirgends verlinkt
 - `tool.js`/`tool.css` – iframe-Rahmen (wie Reinforce Yourself) und Brücke zum Raum (s. „Im Raum“ unten):
   reicht `data.levels`/`data.mp` hinein, setzt Freigaben über skill_room_set_state und führt die RPCs
   `nt_play` (Tablet) bzw. `nt_room_get`/`nt_room_act` (Lehrkraft) für die Seite im Rahmen aus
