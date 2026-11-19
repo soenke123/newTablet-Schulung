@@ -179,6 +179,28 @@ window.NTRaum = (function () {
   const now = () => Date.now() + off;
   const left = iso => iso ? Math.max(0, (Date.parse(iso) - now()) / 1000) : null;
 
+  /* ── Lehrkraft weg (Migration 0297): kleiner roter Countdown für die Tablets ──
+     st.off_at kommt vom Server, solange die Lehrkraft fehlt und Lobby/Erklärkarte (3 Min.)
+     oder Rangliste (1 Min.) zu sehen sind; danach geht „gemeinsam spielen“ von selbst aus.
+     In der laufenden Runde ist off_at null (die Runde läuft bis zum Ende). away(null) = weg. */
+  let awayEl = null;
+  function away(st) {
+    const s = st && role === 'schueler' && st.phase !== 'off' ? left(st.off_at) : null;
+    if (s == null) { if (awayEl) awayEl.style.display = 'none'; return; }
+    if (!awayEl) {
+      awayEl = document.createElement('div');
+      awayEl.id = 'ntAway';
+      awayEl.setAttribute('role', 'status');
+      awayEl.style.cssText = 'position:fixed;top:12px;right:12px;z-index:60;display:flex;align-items:center;gap:7px;' +
+        'padding:6px 12px;border-radius:99px;background:#d62839;color:#fff;font:600 13px/1.2 system-ui,sans-serif;' +
+        'box-shadow:0 2px 10px rgba(0,0,0,.35);pointer-events:none;font-variant-numeric:tabular-nums';
+      document.body.appendChild(awayEl);
+    }
+    const n = Math.ceil(s), t = 'Lehrkraft nicht da · zurück zu den Leveln in ' + Math.floor(n / 60) + ':' + String(n % 60).padStart(2, '0');
+    if (awayEl.textContent !== t) awayEl.textContent = t;
+    awayEl.style.display = 'flex';
+  }
+
   /* Gemeinsam spielen läuft auf index.html (Lobby, Level 1–7) bzw. labor.html?level=8&mp=1.
      Wer gerade woanders ist (Labor allein, Erarbeitung), kommt in die Lobby. */
   const page = /labor\.html$/.test(location.pathname) ? 'labor' : /erarbeitung\.html$/.test(location.pathname) ? 'erarb' : 'index';
@@ -198,6 +220,6 @@ window.NTRaum = (function () {
     COLORS, color, rgb, teamColor, teamName, pingu,
     l7: { X: l7X, start: l7start, W: l7W, score: l7score },
     l8: { init: l8init, idx: l8idx, W: l8W, score: l8score },
-    teamVals, clock, now, left
+    teamVals, clock, now, left, away
   };
 })();

@@ -242,6 +242,7 @@ window.NTMehr = (function () {
     $('#mpCount').hidden = true; $('#mpBanner').hidden = true;
     document.body.classList.remove('mp-on', 'mp-t', 'mp-stage');
     SP.leave();
+    R.away(null);
   }
   function toLobby(force) {
     if (M.view === 'lobby' && !force) return;
@@ -337,6 +338,7 @@ window.NTMehr = (function () {
   // Countdown, Uhren
   function tickUi() {
     const st = M.st;
+    R.away(M.on ? st : null);
     const c = $('#mpCount');
     if (st && st.phase === 'countdown') {
       const n = Math.ceil(R.left(st.countdown_ends_at) || 0);

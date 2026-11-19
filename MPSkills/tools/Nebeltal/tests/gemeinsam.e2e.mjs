@@ -1,4 +1,4 @@
-/* Nebeltal · Gemeinsam spielen – Ende-zu-Ende im Browser (Migration 0296)
+/* Nebeltal · Gemeinsam spielen – Ende-zu-Ende im Browser (Migrationen 0296, 0297)
    Lehrkraft + 3 Tablets als eigene Browser-Kontexte. Jede Seite ist ein Ersatz-Raum
    (MPSkills/__h.html), der die echte tool.js lädt; deren RPCs laufen über Playwright
    gegen die echte SQL-Kette 0001…0296 in pglite.
@@ -280,6 +280,21 @@ await fr(T).click('#mpStBtns .btn:not(.primary)');
 for (const p of S) await until('6  Tablet aus dem Labor zurück in der Lobby', async () => /index\.html/.test(fr(p).url()) && await fr(p).evaluate(() => document.body.dataset.state === 'mp'), 9000);
 await fr(T).click('#mpSide [data-a="off"]');
 for (const p of S) await until('6  aus: Tablet wieder in der Übersicht', async () => fr(p).evaluate(() => document.body.dataset.state === 'menu' && !document.body.classList.contains('mp-on')), 9000);
+
+
+/* 7 Lehrkraft geht (Migration 0297): roter Countdown in der Lobby, nach 3 Min. zurück zu den Leveln */
+await fr(T).click('#mpGo');
+for (const p of S) await until('7  wieder an: Tablet in der Lobby', async () => fr(p).evaluate(() => document.body.dataset.state === 'mp'), 9000);
+ok('7  Lehrkraft da: kein roter Countdown', await fr(S[0]).evaluate(() => { const e = document.querySelector('#ntAway'); return !e || e.style.display === 'none'; }));
+await T.close();
+await until('7  Lehrkraft weg: roter Countdown am Tablet', async () => fr(S[0]).evaluate(() => {
+  const e = document.querySelector('#ntAway');
+  return !!e && e.style.display !== 'none' && /Lehrkraft nicht da .* [23]:\d\d$/.test(e.textContent);
+}), 20000);
+await shot(S[0], '22_tablet_lehrkraft_weg');
+await db.query(`update nt_rounds set teacher_seen_at = now() - interval '181 seconds'`);
+for (const p of S) await until('7  nach 3 Min.: Tablet wieder in der Übersicht', async () => fr(p).evaluate(() =>
+  document.body.dataset.state === 'menu' && !document.body.classList.contains('mp-on') && document.querySelector('#ntAway').style.display === 'none'), 9000);
 
 await browser.close();
 server.close();

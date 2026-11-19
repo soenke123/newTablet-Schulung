@@ -865,6 +865,7 @@
   }
   function mp8Tick(now) {
     const st = MP8.st, ph = st ? st.phase : '';
+    NTRaum.away(MP8.watch === null ? st : null);
     const every = ph === 'running' ? (MP8.dirty ? 220 : 450) : ph === 'countdown' ? 300 : 900;
     if (!MP8.busy && now - MP8.last > every) mp8Send();
     if (ph === 'countdown') mp8Apply(st);

@@ -1,11 +1,12 @@
 /* Prüfstand für Migration 0297 — Nebeltal: gemeinsam spielen endet ohne Lehrkraft.
    Echt gerechnet in pglite auf der ganzen Kette 0001…0297.
 
-     1. Lehrkraft fragt regelmäßig ab → Lobby bleibt, auch wenn Tablets lange spielen.
-     2. 60 s ohne Lebenszeichen in der Lobby → nächstes nt_play: phase off, data.mp = 0.
-     3. Laufende Runde: nach 61 s noch nicht aus, nach 3 Min. schon.
-     4. Neu „an“ nach dem Aus klappt sofort (frisches Lebenszeichen).
-     5. Eingeladene Lehrkraft hält den Raum genauso offen.
+     1. Lehrkraft fragt regelmäßig ab → Lobby bleibt, off_at = null.
+     2. Lobby ohne Lehrkraft: off_at = letztes Lebenszeichen + 3 Min.; danach aus (data.mp = 0).
+     3. Laufende Runde: geht nie von selbst aus, läuft bis zum Ende (Level 3: ohne Lehrkraft
+        zählen nur anwesende Tablets); Rangliste danach 1 Min., dann aus.
+     4. Neu „an“ nach dem Aus klappt sofort.
+     5. Nur die Raum-Besitzerin zählt: eine andere Lehrkraft hält den Raum nicht offen.
      6. 0297 läuft ein zweites Mal durch.
 
    Aufruf:  node supabase/tests/0297_nebeltal_ohne_lehrkraft_aus.mjs */
@@ -79,49 +80,73 @@ for (let i = 1; i <= 3; i++) {
 const age = async s => db.query(`update nt_rounds set teacher_seen_at = now() - make_interval(secs => $2) where room_id = $1`, [ROOM, s]);
 const mpFlag = async () => (await one(`select data from skill_room_state where room_id = $1`, [ROOM])).data.mp;
 
+const phaseOf = async () => (await one(`select phase from nt_rounds where room_id = $1`, [ROOM])).phase;
+const sec = iso => (Date.parse(iso) - Date.now()) / 1000;
+
 /* 1 */
 let r = await act('on');
 ok('1  an: Lobby', r.ok && r.phase === 'lobby');
 for (let i = 1; i <= 3; i++) await play(TOK[i]);
 await age(50); await get();
 let v = await play(TOK[1]);
-ok('1  Lehrkraft fragt ab → Lobby bleibt', v.phase === 'lobby', v.phase);
-const seen = (await one(`select teacher_seen_at > now() - interval '5 seconds' f from nt_rounds where room_id = $1`, [ROOM])).f;
-ok('1  nt_room_get frischt teacher_seen_at auf', seen);
+ok('1  Lehrkraft fragt ab → Lobby, off_at = null', v.phase === 'lobby' && v.off_at === null, v.phase + ' ' + v.off_at);
 
 /* 2 */
-await age(59);
+await age(30);
 v = await play(TOK[1]);
-ok('2  59 s: noch Lobby', v.phase === 'lobby', v.phase);
-await age(61);
+ok('2  Lobby 30 s ohne Lehrkraft: off_at in ~150 s', v.phase === 'lobby' && Math.abs(sec(v.off_at) - 150) < 5, v.off_at);
+await age(170);
+v = await play(TOK[1]);
+ok('2  170 s: noch Lobby', v.phase === 'lobby', v.phase);
+await age(181);
 v = await play(TOK[2]);
-ok('2  61 s ohne Lehrkraft: Tablet bekommt phase off', v.ok && v.phase === 'off', JSON.stringify(v).slice(0, 120));
+ok('2  3 Min. ohne Lehrkraft: phase off', v.ok && v.phase === 'off', JSON.stringify(v).slice(0, 120));
 ok('2  data.mp = 0', (await mpFlag()) === 0);
-ok('2  Runde steht auf off', (await one(`select phase from nt_rounds where room_id = $1`, [ROOM])).phase === 'off');
 
-/* 3 */
+/* 4 */
 r = await act('on');
 ok('4  wieder an: Lobby, data.mp = 1', r.ok && r.phase === 'lobby' && (await mpFlag()) === 1);
+
+/* 3 */
 for (let i = 1; i <= 3; i++) await play(TOK[i]);
 await act('level', { n: 3 });
 await act('start');
 r = await act('go');
-ok('3  Runde im Countdown', r.phase === 'countdown', r.phase);
 await db.query(`update nt_rounds set countdown_ends_at = now() - interval '1 second' where room_id = $1`, [ROOM]);
-await age(61);
+await age(600);
 v = await play(TOK[1]);
-ok('3  laufende Runde nach 61 s: läuft weiter', v.phase === 'running', v.phase);
-await age(181);
+ok('3  10 Min. ohne Lehrkraft: Runde läuft weiter, off_at = null', v.phase === 'running' && v.off_at === null, v.phase);
+await play(TOK[1], { res: { s: 1 } });
+await play(TOK[2], { res: { s: 2 } });
+ok('3  Kind 3 noch nicht fertig: läuft', (await phaseOf()) === 'running');
+await db.query(`update nt_players set seen_at = now() - interval '1 minute' where participant_id = (select id from skill_participants where token = $1)`, [TOK[3]]);
 v = await play(TOK[1]);
-ok('3  laufende Runde nach 3 Min.: aus', v.phase === 'off' && (await mpFlag()) === 0, v.phase);
+ok('3  Kind 3 ausgefallen, ohne Lehrkraft: Runde endet', v.phase === 'ended', v.phase);
+ok('3  Rangliste: off_at = Rundenende + 60 s', Math.abs(sec(v.off_at) - 60) < 5, v.off_at);
+await db.query(`update nt_rounds set ended_at = now() - interval '55 seconds' where room_id = $1`, [ROOM]);
+v = await play(TOK[1]);
+ok('3  55 s nach Ende: Rangliste steht noch', v.phase === 'ended', v.phase);
+await db.query(`update nt_rounds set ended_at = now() - interval '61 seconds' where room_id = $1`, [ROOM]);
+v = await play(TOK[1]);
+ok('3  1 Min. nach Ende: aus', v.phase === 'off' && (await mpFlag()) === 0, v.phase);
+
+/* 3b mit Lehrkraft: ausgefallenes Gerät hält Level 3 offen (wie 0296) */
+await act('on');
+for (let i = 1; i <= 3; i++) await play(TOK[i]);
+await act('start'); await act('go');
+await db.query(`update nt_rounds set countdown_ends_at = now() - interval '1 second' where room_id = $1`, [ROOM]);
+await play(TOK[1], { res: { s: 1 } }); await play(TOK[2], { res: { s: 2 } });
+await db.query(`update nt_players set seen_at = now() - interval '1 minute' where participant_id = (select id from skill_participants where token = $1)`, [TOK[3]]);
+await get();
+ok('3  mit Lehrkraft: ausgefallenes Gerät hält die Runde offen', (await phaseOf()) === 'running');
+await act('stop'); await act('lobby');
 
 /* 5 */
 await db.query(`insert into skill_room_teachers (room_id, user_id) values ($1, $2) on conflict do nothing`, [ROOM, B]);
-await act('on');
-await age(70);
+await age(200);
 await as(B); await one(`select nt_room_get($1) v`, [CODE]);
 v = await play(TOK[1]);
-ok('5  eingeladene Lehrkraft hält die Lobby offen', v.phase === 'lobby', v.phase);
+ok('5  andere Lehrkraft hält die Lobby nicht offen', v.phase === 'off', v.phase);
 
 /* 6 */
 try { await db.exec(mig('0297_nebeltal_ohne_lehrkraft_aus.sql')); ok('6  0297 läuft ein zweites Mal durch', true); }
