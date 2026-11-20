@@ -15,7 +15,7 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `start.css` | Startseite, Neuronen-Seite, Schicht-Spalte, fester Ausgang, Druckauswahl, Greifvogel-Diagramm |
 | `app.js` | das Feld: Zustand, Rechnen, Backprop, Szenarien, Lernfenster, Druck, Speicher, `window.NLApp` |
 | `js/start.js` | Startseite, Freigaben im Raum, Navigation (`html[data-view]` = home · neuron · lab) |
-| `js/neuron.js` | Bereich 1: „So rechnet ein Neuron“ (7 Schritte, Blackbox wird aufgedeckt) + „Alle Neuronen“ (nutzt `activations`/`fmt` aus app.js) |
+| `js/neuron.js` | Bereich 1: „Wie arbeitet ein Neuron?“ (7 Schritte, `makeNeuron` mit − / + an jedem Wert, Rechnung `calcHTML`, Ebene `makePlane`) + „Alle Neuronen“ (nutzt `activations`/`fmt` aus app.js) |
 | `js/daten.js` | Greifvögel (echte Messwerte) |
 | `neuron.png` | altes Bild des Neurons – seit 20.11.2026 (2. Fassung) nicht mehr eingebunden |
 | `Regen und Sonne.csv` | Beispiel-CSV fürs Hochladen (auch im Layout-Prüfstand) |
@@ -25,22 +25,24 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 
 ## Drei Bereiche (Startseite)
 
-1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` und `n-typen`. `n-wie` = „So rechnet ein Neuron“ in **sieben
-   Schritten** (3. Fassung, Sönke 20.11.2026: „ein Neuron betrachten, ein Teil ist geblackboxt, jeder Schritt deckt einen
-   Teil auf“; die Balken x·w waren verwirrend und sind weg; nur EIN Typ = Perceptron/Treppe, Bias = Schwelle, ab der es
-   feuert). Leiste `.nn-step[data-step]`, Weiter/Zurück unten. 1 `bio` Nervenzelle (`bioSVG`) ↔ Neuron (`stageSVG`
-   ganz offen), Teil antippen = beide Seiten hervorgehoben (`data-k`: in · w · sum · b · f · out) · ab Schritt 2 steht
-   EIN Neuron (`stageSVG`, `show` 1–4) immer an derselben Stelle, Ungeklärtes ist eine dunkle Blackbox (`.nn-bbox`),
-   rechts kommt trotzdem immer 1 „feuert!“ (gelb, Strahlen) oder 0 heraus: 2 `in` Eingänge (Kommazahlen −5…5), Rumpf
-   Blackbox · 3 `w` Gewichte: Leitung dick/dünn (|w|), rot = negativ, gestrichelt = 0, Kästchen am Ende = x·w · 4 `b`
-   Summe offen, Bias von unten, Aktivierung noch Blackbox; Schwellen-Messer `meterSVG` (Summe als Punkt, Fahne
-   „Schwelle = −b“, gelb = feuert) · 5 `act` Treppe offen + Kurve (`curveSVG('perceptron', z)`), Hinweis auf „Alle
-   Neuronen“ · 6 `line` Ebene (`drawPlane`: gelb = feuert, Gerade, Pfeil zur Feuer-Seite, grüner Punkt = Eingänge
-   ziehbar) mit Reglern w/b · 7 `data` Daten trennen: `DS` = Sperber (90 echte Eckschwanzsperber ♂/♀ aus
-   `NLData.VOEGEL` Gruppe 0/1, Flügel + Schwanz in cm, mit einer Geraden 90/90 trennbar), UND, XOR; die Gerade hängt
-   an zwei blauen Griffen (`d.h`), `dsNeuron` rechnet daraus w/b (größtes |w| = 1), „Feuer-Seite tauschen“ (`d.flip`),
-   Punkt antippen = dieser Datensatz geht ins Neuron, „x von n richtig“, XOR geht nicht → Netz; darunter „Das Wichtigste“.
-   Schritte 2–6 teilen sich EIN Neuron (`st`), Schritt 7 hat je Datensatz seine Gerade. Und `n-typen`
+1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` und `n-typen`. `n-wie` = **„Wie arbeitet ein Neuron?“** (4. Fassung,
+   Sönke 20.11.2026 abends) in sieben Schritten, Leiste `.nn-step[data-step]`, Weiter/Zurück unten. Grundsatz: EIN Neuron
+   (Perceptron) als Komponente `makeNeuron` (HTML über einem SVG für Leitungen, Fläche 720 × 285, Schrift wächst mit `cqw`),
+   **keine Schieberegler daneben**: jeder Wert (x₁ x₂ w₁ w₂ b) hat am Neuron ein **− und +** (gedrückt halten = weiter), die
+   Zahl antippen öffnet **direkt am Feld** einen kleinen Regler (`.nw-pop`, schließt beim Tippen daneben). Darunter **immer die
+   Rechnung** (`calcHTML`): oben die Buchstaben, darunter an derselben Stelle die Zahlen, Formel-Schrift KaTeX (lokal
+   `fonts/katex-math-3f1a2b.css`), Farben wie im Neuron: x orange `--in` · w türkis `--accent` · b indigo `--bias` (neu in
+   style.css) · y gold. Die „Blackbox“ ist nur ein Bild: Noch nicht Aufgedecktes ist **da, aber grau und im Nebel**
+   (`data-show` 1–4, `data-part` an den Teilen, CSS-Übergang; beim Wechsel wird vom vorigen Stand aus aufgedeckt, `lastShow`),
+   Leitungen sind immer gezeichnet, rechts kommt immer 1 „feuert!“ oder 0 heraus. Schritte: 1 `bio` Nervenzelle ↔ dasselbe
+   Neuron nur zum Ansehen (`fixed`, Teil antippen = beide Seiten hervorgehoben, `data-k`: in · w · sum · b · f · out) ·
+   2 `in` Eingänge · 3 `w` Gewichte (Leitung dick/dünn, rot = negativ, gestrichelt = 0) · 4 `b` Summe & Bias (**kein
+   Schwellen-Messer mehr**: b wird einfach dazugezählt, negativ = schwerer zu feuern) · 5 `act` Treppe mit Punkt bei z ·
+   6 `line` Neuron links, Ebene rechts (`makePlane`, −5…5): Punkt ziehen = Eingänge, Gerade schieben = Bias, runde Griffe
+   drehen = Gewichte (|w| bleibt, Feuer-Seite dreht mit → kein „Feuer-Seite tauschen“) · 7 `data` Punkte trennen: 10
+   gleichmäßige Punkte in zwei Häufchen (`PTS0`, „Neue Punkte“ würfelt trennbare, `newPoints`), Punkt antippen = Eingabe,
+   „x von 10 richtig“, darunter „Das Wichtigste“ mit Übergang zu „Netze bauen“. **Keine Logik-Gatter (UND/XOR) und keine
+   Sperber mehr auf dieser Seite** (XOR ist ein Szenario zum Trainieren). Alle Schritte teilen sich EIN Neuron (`st`). Und `n-typen`
    (alle Neuronen: Perceptron, Linear, ReLU, Sigmoid, Tanh — gezeichnet wie im Feld, Formel, Kurve mit
    z-Regler, wofür/Achtung). Neue Typen kommen automatisch dazu, wenn sie in `activations` stehen und in
    `ORDER`/`INFO` (js/neuron.js) eingetragen werden.

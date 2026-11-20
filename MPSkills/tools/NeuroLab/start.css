@@ -248,7 +248,7 @@ body.out-picking .neuron-card .neuron-body { stroke-dasharray: 5 3; }
 .neuron-svg .out-port:hover { stroke: var(--accent); }
 body.print-mode .out-x, body.print-mode .out-hint { display: none; }
 
-/* ── „So rechnet ein Neuron“ in sechs Schritten ── */
+/* ── „Wie arbeitet ein Neuron?“ in sieben Schritten ── */
 .nn-steps { max-width: 1100px; margin: 0 auto; display: flex; gap: 6px; flex-wrap: wrap; }
 .nn-step { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-soft);
   font: inherit; font-weight: 700; font-size: .85rem; padding: 6px 12px 6px 6px; border-radius: 999px; cursor: pointer; }
@@ -263,8 +263,6 @@ body.print-mode .out-x, body.print-mode .out-hint { display: none; }
 .nn-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
 .nn-btn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 700; color: var(--ink); cursor: pointer; }
 .nn-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.nn-ctl-h { font-size: .78rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
-.nn-slider-x input { accent-color: var(--accent); }
 
 /* Schritt 1: Nervenzelle ↔ künstliches Neuron */
 .nn-two { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: center; }
@@ -281,13 +279,6 @@ body.print-mode .out-x, body.print-mode .out-hint { display: none; }
 .nn-bio[data-hl] g[data-k] { opacity: .35; transition: opacity .15s; }
 .nn-bio[data-hl="in"] g[data-k="in"], .nn-bio[data-hl="w"] g[data-k="w"], .nn-bio[data-hl="sum"] g[data-k="sum"],
 .nn-bio[data-hl="b"] g[data-k="b"], .nn-bio[data-hl="f"] g[data-k="f"], .nn-bio[data-hl="out"] g[data-k="out"] { opacity: 1; }
-.nn-col-kn .nn-svg [data-k] { cursor: pointer; }
-.nn-col-kn .nn-svg[data-hl="in"] [data-k="in"], .nn-col-kn .nn-svg[data-hl="w"] [data-k="w"],
-.nn-col-kn .nn-svg[data-hl="sum"] [data-k="sum"], .nn-col-kn .nn-svg[data-hl="b"] [data-k="b"],
-.nn-col-kn .nn-svg[data-hl="f"] [data-k="f"], .nn-col-kn .nn-svg[data-hl="out"] [data-k="out"] {
-  stroke: var(--bio) !important; stroke-width: 4 !important; stroke-opacity: 1 !important;
-}
-.nn-col-kn .nn-svg[data-hl="sum"] [data-k="sum"], .nn-col-kn .nn-svg[data-hl="f"] [data-k="f"] { fill: color-mix(in srgb, var(--bio) 12%, transparent) !important; }
 .nn-pairs { display: flex; flex-wrap: wrap; gap: 6px; }
 .nn-pair { display: inline-flex; gap: 6px; align-items: center; border: 1.5px solid var(--bio-line); background: var(--bio-dim); border-radius: 999px;
   padding: 5px 12px; font: inherit; font-size: .84rem; color: var(--bio-ink); cursor: pointer; }
@@ -297,26 +288,12 @@ body.print-mode .out-x, body.print-mode .out-hint { display: none; }
 .nn-pair.on b, .nn-pair.on i { color: var(--on-accent); }
 .nn-pair-info { min-height: 3em; background: var(--bio-dim); border-radius: 10px; padding: 8px 12px; }
 
-/* Schritt 2: Beiträge als Balken */
-.nn-stage .nn-bbox { fill: var(--ink); stroke: var(--ink); stroke-width: 2; }
-.nn-stage .nn-bbox-q { fill: var(--surface-2); }
-.nn-stage .nn-bbox-t { fill: var(--ink-faint); letter-spacing: .08em; text-transform: uppercase; }
-.nn-calc[hidden] { display: none; }
-.nn-meter svg { width: 100%; max-width: 760px; height: auto; display: block; }
-.nn-curve svg { width: 100%; max-width: 320px; height: auto; display: block; }
-
-/* Schritt 5/6: Ebene */
-.nn-line-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.nn-plane { position: relative; aspect-ratio: 1 / 0.85; max-height: 440px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line); touch-action: none; }
-.nn-plane canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
-.nn-plane-sm { max-height: 340px; }
-.nn-line-side, .nn-task-left { display: grid; gap: 10px; align-content: start; }
 .nn-summary { background: var(--accent-dim); border-radius: 12px; padding: 12px 16px; color: var(--accent-ink); }
 .nn-summary ul { margin: 6px 0 0 18px; display: grid; gap: 4px; }
 .nn-summary li { color: var(--accent-ink) !important; }
 
 @media (max-width: 760px) {
-  .nn-two, .nn-line-grid, .nn-play-grid { grid-template-columns: minmax(0, 1fr); }
+  .nn-two, .nn-play-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 
@@ -490,10 +467,6 @@ body.learn-phase .output-layer .col-name { color: var(--ink-faint); }
 .nn-pill.on { background: var(--ink); border-color: var(--ink); color: var(--surface); }
 .nn-slider output, .nn-type-out { font-family: var(--mono); }
 .nn-f { background: var(--surface-2); color: var(--ink); }
-.nn-stage .nn-bbox { fill: #1e293b; stroke: #0f172a; }
-html[data-theme="dark"] .nn-stage .nn-bbox { fill: #050a14; stroke: var(--line); }
-@media (prefers-color-scheme: dark) { html:not([data-theme]) .nn-stage .nn-bbox { fill: #050a14; stroke: var(--line); } }
-.nn-plane { border: 1px solid var(--line); }
 .nn-svg { overflow: visible; }
 
 /* ── Druckansicht: immer hell, auf Weiß ── */
@@ -510,3 +483,153 @@ body.print-mode main#network { background: #fff; }
 body.print-mode .col { border-left: 0; }
 body.print-mode .neuron-body { stroke: var(--ink-soft); }
 .nn-num { font-family: var(--mono); }
+
+/* ══════════════════════════════════════════════════════════════
+   „Wie arbeitet ein Neuron?“ – das Neuron als Komponente (.nw, 4. Fassung)
+   Fläche 720 × 330, Teile in Prozent darüber, Schrift wächst mit (cqw).
+   Farben: x orange (--in) · w türkis (--accent) · b indigo (--bias) · y gold.
+   Noch nicht Aufgedecktes (data-part > data-show) ist grau und im Nebel.
+   ══════════════════════════════════════════════════════════════ */
+.nn-page svg, .nw { -webkit-user-select: none; user-select: none; }
+.nw { container-type: inline-size; position: relative; }
+.nw-in { position: relative; aspect-ratio: 720 / 285; --u: calc(100cqw / 720); font-size: max(11px, calc(15 * var(--u))); }
+.nw-wires { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.nw-edge { stroke: var(--accent); stroke-linecap: round; transition: stroke .5s, stroke-width .25s, opacity .5s; }
+.nw-edge.is-neg { stroke: var(--neg); }
+.nw-edge.is-zero { stroke: var(--ink-faint); stroke-dasharray: 6 5; stroke-width: 2 !important; }
+.nw[data-show="1"] .nw-edge { stroke: var(--ink-faint); opacity: .55; }
+.nw-bline { stroke: var(--bias); stroke-width: 3; transition: opacity .7s; }
+.nw-barrow { fill: var(--bias); transition: opacity .7s; }
+.nw-owire { stroke: var(--line); stroke-width: 3; transition: stroke .3s; }
+.nw.is-fire .nw-owire { stroke: var(--gold); stroke-width: 5; }
+
+.nw-node, .nw-wpill, .nw-bias { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: .3em;
+  border-radius: 999px; background: var(--surface); padding: .2em .25em .2em .7em; border: 1.5px solid var(--c-line); white-space: nowrap;
+  transition: opacity .7s, filter .7s; }
+.nw-node { --c-line: var(--in-line); background: color-mix(in srgb, var(--in) 13%, var(--surface)); border-width: 2px; padding: .35em .35em .35em .9em; font-size: 1.12em; }
+.nw-wpill { --c-line: var(--accent-line); }
+.nw-bias { --c-line: var(--bias); }
+.nw-node > i.m { color: var(--in-ink); font-size: 1.15em; }
+.nw-wpill > i.m { color: var(--accent-ink); font-size: 1.1em; }
+.nw-bias > i.m { color: var(--bias); font-size: 1.1em; }
+.nw-q { display: none; font-family: var(--mono); font-weight: 700; color: var(--ink-faint); padding-right: .6em; }
+
+.nw-val { display: inline-flex; align-items: center; gap: .1em; border-radius: 999px; }
+.nw-val.c-x { --c: var(--in); --c-dim: var(--surface); --c-ink: var(--in-ink); }
+.nw-val.c-w { --c: var(--accent); --c-dim: var(--accent-dim); --c-ink: var(--accent-ink); }
+.nw-val.c-b { --c: var(--bias); --c-dim: var(--bias-dim); --c-ink: var(--bias); }
+.nw-pm { width: 1.75em; height: 1.75em; border-radius: 50%; border: 0; background: var(--c-dim); color: var(--c-ink); font: 700 1em/1 var(--font);
+  display: grid; place-items: center; cursor: pointer; touch-action: manipulation; padding: 0; }
+.nw-pm:hover { background: var(--c); color: var(--surface); }
+.nw-num { min-width: 2.7em; border: 0; background: transparent; font: 700 1.05em var(--mono); color: var(--c-ink); cursor: pointer; padding: .15em .2em;
+  border-radius: 6px; text-align: center; }
+.nw-num:hover, .nw-val.is-open .nw-num { background: var(--c-dim); box-shadow: inset 0 -2px 0 var(--c); }
+.nw.is-fixed .nw-pm { display: none; }
+.nw.is-fixed .nw-num { pointer-events: none; min-width: 0; }
+.nw.is-fixed .nw-node, .nw.is-fixed .nw-wpill, .nw.is-fixed .nw-bias { padding-right: .6em; }
+
+.nw-body { position: absolute; display: grid; grid-template-columns: 1fr 1fr; border: 2px solid var(--line); border-radius: 14px;
+  background: var(--surface); box-shadow: var(--shadow); transition: border-color .7s; }
+.nw-half { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .15em; padding: .3em; }
+.nw-half + .nw-half { border-left: 1.5px solid var(--line-soft); }
+.nw-sigma { font: 600 2.1em/1 var(--font); color: var(--ink); }
+.nw-z { font-size: 1em; color: var(--ink); }
+.nw-z b { font-family: var(--mono); font-weight: 700; font-size: .95em; }
+.nw-stepfn { width: 74%; height: auto; overflow: visible; }
+.nw-stepfn .ax { stroke: var(--line); stroke-width: 1.5; }
+.nw-stepfn .st { fill: none; stroke: var(--ink-soft); stroke-width: 4; stroke-linejoin: round; stroke-linecap: round; }
+.nw-stepfn .dot { fill: var(--surface); stroke: var(--ink); stroke-width: 3; transition: cx .25s, cy .25s; }
+.nw.is-fire .nw-stepfn .dot { fill: var(--gold); stroke: var(--gold); }
+.nw-fz { font-size: .95em; color: var(--ink-soft); }
+.nw-half > :not(.nw-fog) { transition: opacity .7s; }
+.nw-fog { position: absolute; inset: 4px; border-radius: 10px; display: grid; place-items: center; opacity: 0; pointer-events: none;
+  font: 700 1.8em var(--mono); color: var(--ink-faint); transition: opacity .8s;
+  background: repeating-linear-gradient(135deg, var(--surface-2) 0 7px, var(--line-soft) 7px 9px); }
+
+.nw-out { position: absolute; display: grid; place-items: center; align-content: center; gap: .05em; border: 2px solid var(--line);
+  border-radius: 14px; background: var(--surface-2); color: var(--ink-faint); transition: background .3s, border-color .3s, color .3s; }
+.nw-y { font: 700 2em/1 var(--mono); }
+.nw-ytxt { font-size: .8em; font-weight: 700; }
+.nw.is-fire .nw-out { background: var(--gold-dim); border-color: var(--gold); color: var(--gold); }
+.nw-rays i { position: absolute; width: 3px; height: .9em; border-radius: 2px; background: var(--gold); opacity: 0; transition: opacity .3s; }
+.nw.is-fire .nw-rays i { opacity: 1; }
+.nw-rays i:nth-child(1) { left: 50%; top: -1.4em; }
+.nw-rays i:nth-child(2) { left: 50%; bottom: -1.4em; }
+.nw-rays i:nth-child(3) { left: -.6em; top: -.9em; transform: rotate(-45deg); }
+.nw-rays i:nth-child(4) { right: -.6em; top: -.9em; transform: rotate(45deg); }
+.nw-rays i:nth-child(5) { left: -.6em; bottom: -.9em; transform: rotate(45deg); }
+.nw-rays i:nth-child(6) { right: -.6em; bottom: -.9em; transform: rotate(-45deg); }
+
+/* Aufdecken: was noch nicht dran war, ist grau und im Nebel */
+.nw[data-show="1"] [data-part="2"], .nw[data-show="1"] .nw-bias, .nw[data-show="2"] .nw-bias { opacity: .4; filter: grayscale(1); pointer-events: none; }
+.nw[data-show="1"] [data-part="2"] .nw-val, .nw[data-show="1"] .nw-bias .nw-val, .nw[data-show="2"] .nw-bias .nw-val { display: none; }
+.nw[data-show="1"] [data-part="2"] .nw-q, .nw[data-show="1"] .nw-bias .nw-q, .nw[data-show="2"] .nw-bias .nw-q { display: inline; }
+.nw[data-show="1"] .nw-bline, .nw[data-show="1"] .nw-barrow, .nw[data-show="2"] .nw-bline, .nw[data-show="2"] .nw-barrow { opacity: .25; }
+.nw[data-show="1"] .nw-sum > :not(.nw-fog), .nw[data-show="2"] .nw-sum > :not(.nw-fog),
+.nw:is([data-show="1"], [data-show="2"], [data-show="3"]) .nw-f > :not(.nw-fog) { opacity: 0; }
+.nw[data-show="1"] .nw-sum .nw-fog, .nw[data-show="2"] .nw-sum .nw-fog,
+.nw:is([data-show="1"], [data-show="2"], [data-show="3"]) .nw-f .nw-fog { opacity: 1; }
+.nw:is([data-show="1"], [data-show="2"]) .nw-body { border-style: dashed; border-color: var(--ink-faint); box-shadow: none; }
+
+/* Schritt 1: Teil antippen = beide Seiten hervorgehoben */
+.nw.is-fixed [data-k] { cursor: pointer; }
+.nw[data-hl] .nw-in > [data-k], .nw[data-hl] .nw-wires [data-k], .nw[data-hl] .nw-half { opacity: .25; transition: opacity .15s; }
+.nw[data-hl="in"] [data-k="in"], .nw[data-hl="w"] [data-k="w"], .nw[data-hl="b"] [data-k="b"], .nw[data-hl="out"] [data-k="out"],
+.nw[data-hl="sum"] .nw-sum, .nw[data-hl="f"] .nw-f { opacity: 1 !important; }
+.nw[data-hl="sum"] .nw-body, .nw[data-hl="f"] .nw-body { opacity: 1 !important; }
+.nw[data-hl="sum"] .nw-sum, .nw[data-hl="f"] .nw-f { background: var(--bio-dim); border-radius: 10px; }
+.nw[data-hl] .nw-in > [data-k]:is(.nw-node, .nw-wpill, .nw-bias, .nw-out) { transition: opacity .15s, box-shadow .15s; }
+.nw[data-hl="in"] .nw-node, .nw[data-hl="w"] .nw-wpill, .nw[data-hl="b"] .nw-bias, .nw[data-hl="out"] .nw-out { box-shadow: 0 0 0 3px var(--bio); }
+
+/* Regler am Feld */
+.nw-pop { position: absolute; z-index: 5; width: 230px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: var(--shadow); padding: 8px 12px 10px; display: grid; gap: 4px; font-size: 14px; }
+.nw-pop[hidden] { display: none; }
+.nw-pop label { display: flex; justify-content: space-between; align-items: baseline; }
+.nw-pop output { font: 700 15px var(--mono); color: var(--ink); }
+.nw-pop input { width: 100%; }
+.nw-pop input.r-x { accent-color: var(--in); } .nw-pop input.r-w { accent-color: var(--accent); } .nw-pop input.r-b { accent-color: var(--bias); }
+
+/* Formel-Schrift */
+.m { font-family: 'KaTeX Main', 'Cambria Math', 'Times New Roman', serif; font-style: normal; }
+i.m, .m i { font-family: 'KaTeX Math', 'Cambria Math', 'Times New Roman', serif; font-style: italic; font-weight: 400; }
+.m sub, i.m sub { font-family: 'KaTeX Main', serif; font-style: normal; font-size: .7em; }
+.t-x { color: var(--in-ink); } .t-w { color: var(--accent-ink); } .t-b { color: var(--bias); } .t-y { color: var(--gold); } .t-neg { color: var(--neg); }
+
+/* Die Rechnung: oben Buchstaben, darunter an derselben Stelle die Zahlen */
+.nw-calc { display: grid; gap: 10px; justify-content: center; padding: 14px 16px; background: var(--surface-2); border-radius: 12px;
+  font-size: 1.3rem; overflow-x: auto; }
+.mrow { display: flex; align-items: stretch; gap: 2px; }
+.mc { display: inline-grid; grid-template-rows: auto auto; justify-items: center; align-items: center; padding: 1px 4px; border-radius: 6px;
+  color: var(--cc, var(--ink)); }
+.mc > span:first-child { font-size: .8em; opacity: .8; min-height: 1.4em; }
+.mc > span:last-child { white-space: nowrap; }
+.mc.c-x { --cc: var(--in-ink); } .mc.c-w { --cc: var(--accent-ink); } .mc.c-b { --cc: var(--bias); }
+.mc.c-z, .mc.c-f { --cc: var(--ink); } .mc.c-y { --cc: var(--gold); }
+.mc.res > span:last-child { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line); border-radius: 6px; padding: 0 6px; }
+.mc.c-y.res > span:last-child { background: var(--gold-dim); box-shadow: inset 0 0 0 1px var(--gold); }
+.mc.mo { color: var(--ink-faint); padding: 1px 1px; }
+.mc.is-ghost { --cc: var(--ink-faint); }
+.mc .q { font-family: var(--mono); font-weight: 700; }
+.mwhy { align-self: flex-end; margin-left: 10px; font: 600 .62em var(--font); color: var(--ink-soft); padding-bottom: 4px; }
+.mwhy i { font-size: 1.15em; }
+
+.nw-stage { width: 100%; max-width: 860px; margin: 0 auto; }
+
+/* Schritt 6/7: Neuron links, Ebene rechts */
+.nw-split { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.nw-left, .nw-right { display: grid; gap: 12px; align-content: start; }
+.nw-left .nw-calc { font-size: 1.1rem; }
+.nw-plane { position: relative; aspect-ratio: 1; width: 100%; max-width: 420px; justify-self: center; border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--line); touch-action: none; background: var(--surface); }
+.nw-plane canvas { width: 100%; height: 100%; display: block; }
+.nw-legend { font-size: .8rem; color: var(--ink-soft); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; justify-content: center; }
+.nw-legend > span { white-space: nowrap; display: inline-flex; align-items: center; gap: 5px; }
+.nw-legend i { display: inline-block; }
+.lg-pt { width: 12px; height: 12px; border-radius: 50%; border: 2.5px solid var(--in); }
+.lg-line { width: 18px; height: 3px; background: var(--ink); border-radius: 2px; }
+.lg-rot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
+.nw-taskrow { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.nw-taskrow .nn-task-msg { flex: 1; margin: 0; }
+@media (max-width: 1100px) { .nw-split { grid-template-columns: minmax(0, 1fr); } .nw-left { max-width: 820px; width: 100%; justify-self: center; } }
+@media (max-width: 560px) { .nw-calc { font-size: 1rem; } }

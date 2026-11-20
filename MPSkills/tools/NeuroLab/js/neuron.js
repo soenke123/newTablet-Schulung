@@ -2,12 +2,12 @@
    NeuroLab · neuron.js — Bereich „Wie funktioniert ein Neuron?“
    ══════════════════════════════════════════════════════════════
    Zwei Kacheln (= zwei Reiter, die Lehrkraft gibt jede einzeln frei):
-     n-wie    So rechnet ein Neuron in sieben Schritten (20.11.2026, 3. Fassung):
-              Nervenzelle ↔ Neuron · dann EIN Neuron (Perceptron), Teil für Teil
-              aus der Blackbox aufgedeckt: Eingänge · Gewichte (Leitung dick/dünn)
-              · Summe & Bias (= Schwelle, Messer) · Aktivierung (Treppe) · Eine
-              Gerade (Ebene, ziehbarer Punkt) · Daten trennen (Sperber ♂/♀,
-              UND, XOR: Gerade an zwei Griffen) + „Das Wichtigste“
+     n-wie    Wie arbeitet ein Neuron? in sieben Schritten (20.11.2026, 4. Fassung):
+              Nervenzelle ↔ Neuron · dann EIN Neuron (Perceptron, makeNeuron),
+              das sich Schritt für Schritt aus dem Grau ausbreitet: Eingänge ·
+              Gewichte · Summe & Bias · Aktivierung · Eine Gerade · Punkte trennen.
+              Jeder Wert mit − / + am Neuron, Zahl antippen = Regler am Feld;
+              darunter immer die Rechnung (calcHTML) in Formel-Schrift.
      n-typen  Alle Neuronen: die fünf Typen aus dem Feld (activations in
               app.js) mit Formel, Kurve und Regler
    Gezeichnet wie die Neuronen im Feld (Σ | f, Typ-Farbe, Bias-Pfeil,
@@ -142,237 +142,343 @@
     row.set = v => { inp.value = v; out.textContent = de(v); };
     return row;
   }
-  const d2 = v => de(Math.round(v * 100) / 100).replace('-', '−');
 
-  /* ── Reiter 1: So rechnet ein Neuron (3. Fassung, 20.11.2026) ─────────
-     EIN Neuron (Perceptron) steht in jedem Schritt an derselben Stelle.
-     Was noch nicht dran war, ist eine dunkle Blackbox – trotzdem kommt
-     rechts immer etwas heraus (feuert / feuert nicht). Je Schritt wird ein
-     Teil aufgedeckt: Eingänge → Gewichte (Leitung dick/dünn) → Summe &
-     Bias (= Schwelle) → Aktivierung → Gerade → Daten trennen. */
+  /* ── Reiter 1: Wie arbeitet ein Neuron? (4. Fassung, 20.11.2026) ──────
+     EIN Neuron (Perceptron) als feste Komponente (makeNeuron): Eingänge,
+     Leitungen, Gewichte, Rumpf (Σ | f), Bias, Ausgabe. Jeder Wert hat ein
+     − und + daneben, Antippen der Zahl öffnet am Feld einen kleinen Regler
+     (Sönke: „keine Schieberegler daneben, die Werte direkt im Neuron
+     ändern“). Was noch nicht dran war, ist da, aber ausgegraut und im
+     Nebel – mit jedem Schritt breitet sich das Neuron aus (CSS-Übergang,
+     data-show 1–4). Darunter immer die Rechnung in Formel-Schrift (KaTeX),
+     Farben wie im Neuron: x orange, w türkis, b indigo, y gold.
+     Kein Schwellen-Messer mehr: der Bias wird einfach dazugezählt. */
   const st = { x: [2, 1], w: [1, 0.5], b: -2 };
+  const LIM = { x: [-5, 5, 0.5, 0.1], w: [-3, 3, 0.5, 0.05], b: [-8, 8, 0.5, 0.1] };   // min, max, ±, Reglerschritt
   const STEPS = [
     { id: 'bio', kurz: 'Nervenzelle', title: 'Vom Gehirn zum künstlichen Neuron' },
-    { id: 'in', kurz: 'Eingänge', title: 'Zahlen hinein – etwas kommt heraus', show: 1 },
+    { id: 'in', kurz: 'Eingänge', title: 'Zahlen hinein – eine Antwort heraus', show: 1 },
     { id: 'w', kurz: 'Gewichte', title: 'Gewichte: Wie wichtig ist ein Eingang?', show: 2 },
-    { id: 'b', kurz: 'Bias', title: 'Summe und Bias: Ab wann feuert das Neuron?', show: 3 },
-    { id: 'act', kurz: 'Aktivierung', title: 'Die Aktivierungsfunktion: feuern oder nicht', show: 4 },
+    { id: 'b', kurz: 'Summe & Bias', title: 'Zusammenzählen – und der Bias kommt dazu', show: 3 },
+    { id: 'act', kurz: 'Aktivierung', title: 'Die Aktivierung entscheidet: feuern oder nicht', show: 4 },
     { id: 'line', kurz: 'Eine Gerade', title: 'Ein Neuron zieht eine Gerade', show: 4 },
-    { id: 'data', kurz: 'Daten trennen', title: 'Ein Neuron trennt Daten', show: 4 },
+    { id: 'data', kurz: 'Punkte trennen', title: 'Ein Neuron trennt Punkte', show: 4 },
   ];
-  let step = 'bio';
+  let step = 'bio', lastShow = 0;
 
-  /* Das Neuron der Schritte. o = { x, w, b, show (1–4), names } */
-  function stageSVG(o) {
-    const C = '#10b981';   // positive Gewichte: Akzent (wie im Feld)
-    const show = o.show || 4;
-    const W = 580, H = 250, BX = 236, BY = 76, BW = 190, BH = 94, cy = BY + BH / 2;
-    const sum = o.x[0] * o.w[0] + o.x[1] * o.w[1];
-    const z = sum + o.b, fire = z > 0;
-    const s = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'nn-svg nn-stage' });
-    s.style.setProperty('--type-color', C);
-    const names = o.names || ['x₁', 'x₂'];
-    [[0, 58], [1, 192]].forEach(([i, iy]) => {
-      const w = o.w[i], ex = BX, ey = cy + (i ? 20 : -20), x0 = 74;
-      let sw = 3, col = '#cbd5e1', dash = 'none', op = 1;
-      if (show >= 2) {
-        sw = Math.max(1.5, Math.min(1.5 + Math.abs(w) * 3.2, 13));
-        col = w < 0 ? '#dc2626' : C;
-        if (Math.abs(w) < 0.01) { sw = 1.5; dash = '5 4'; op = 0.6; col = '#94a3b8'; }
-      }
-      s.appendChild(el('line', { 'data-k': 'w', x1: x0, y1: iy, x2: ex, y2: ey, stroke: col, 'stroke-width': sw, 'stroke-linecap': 'round', 'stroke-dasharray': dash, 'stroke-opacity': op }));
-      s.appendChild(el('circle', { 'data-k': 'in', cx: 46, cy: iy, r: 28, fill: '#fffbeb', stroke: '#f59e0b', 'stroke-width': 2 }));
-      s.appendChild(el('text', { x: 46, y: iy + 6, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 700, fill: '#b45309', class: 'nn-num' }, d2(o.x[i])));
-      s.appendChild(el('text', { x: 46, y: iy + (i ? 46 : -36), 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#64748b' }, names[i]));
-      if (show >= 2) {
-        const at = t => [x0 + (ex - x0) * t, iy + (ey - iy) * t];
-        const [lx, ly] = at(0.4);
-        s.appendChild(el('rect', { 'data-k': 'w', x: lx - 36, y: ly - 11, width: 72, height: 21, rx: 10, fill: '#fff', stroke: col, 'stroke-width': 1.5 }));
-        s.appendChild(el('text', { x: lx, y: ly + 4.5, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 800, fill: col === '#94a3b8' ? '#64748b' : col }, `w${i ? '₂' : '₁'} = ${d2(w)}`));
-        const [px, py] = at(0.82);
-        const pv = o.x[i] * w;
-        s.appendChild(el('rect', { x: px - 24, y: py - 10, width: 48, height: 19, rx: 4, fill: '#f8fafc', stroke: '#cbd5e1' }));
-        s.appendChild(el('text', { x: px, y: py + 4, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#334155', class: 'nn-num' }, d2(pv)));
-      }
-    });
-    const box = (x, y, w, hh, big, small) => {
-      s.appendChild(el('rect', { x, y, width: w, height: hh, rx: 12, class: 'nn-bbox' }));
-      s.appendChild(el('text', { x: x + w / 2, y: y + hh / 2 + (small ? 4 : 11), 'text-anchor': 'middle', 'font-size': big ? 34 : 26, 'font-weight': 800, class: 'nn-bbox-q' }, '?'));
-      if (small) s.appendChild(el('text', { x: x + w / 2, y: y + hh - 10, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, class: 'nn-bbox-t' }, small));
+  const r2 = v => Math.round(v * 100) / 100;
+  const num = v => String(r2(v)).replace('.', ',').replace('-', '−');
+  const clampK = (k, v) => { const L = LIM[k[0]]; return Math.max(L[0], Math.min(L[1], v)); };
+  const getV = k => k === 'b' ? st.b : st[k[0]][+k[1] - 1];
+  const setV = (k, v) => { v = r2(clampK(k, v)); if (k === 'b') st.b = v; else st[k[0]][+k[1] - 1] = v; };
+  const zOf = () => st.x[0] * st.w[0] + st.x[1] * st.w[1] + st.b;
+  const SUB = { x1: 'x<sub>1</sub>', x2: 'x<sub>2</sub>', w1: 'w<sub>1</sub>', w2: 'w<sub>2</sub>', b: 'b' };
+
+  /* Ein Wert mit − und + (Zahl antippen = Regler am Feld) */
+  const stepper = (k, cls) => `<span class="nw-val ${cls}" data-v="${k}">
+      <button type="button" class="nw-pm" data-d="-1" aria-label="${k} kleiner">−</button>
+      <button type="button" class="nw-num" aria-label="${k} einstellen"></button>
+      <button type="button" class="nw-pm" data-d="1" aria-label="${k} größer">+</button></span>`;
+
+  /* Die Neuron-Komponente. Koordinaten in einer gedachten Fläche 720 × 330;
+     die HTML-Teile liegen in Prozent darüber, Schrift wächst mit (cqw).
+     o = { fixed: true } → nur ansehen (Schritt 1), sonst onChange() nach jeder Änderung */
+  function makeNeuron(o = {}) {
+    const OY = 45, HH = 285;   // sichtbarer Ausschnitt y 45 … 330
+    const P = (x, y) => `left:${x / 7.2}%;top:${(y - OY) / HH * 100}%`;
+    const root = h(`<div class="nw${o.fixed ? ' is-fixed' : ''}"><div class="nw-in">
+      <svg class="nw-wires" viewBox="0 45 720 285">
+        <line class="nw-edge" data-k="w" data-e="0" x1="80" y1="85" x2="300" y2="146"/>
+        <line class="nw-edge" data-k="w" data-e="1" x1="80" y1="245" x2="300" y2="184"/>
+        <line class="nw-bline" data-k="b" x1="355" y1="268" x2="355" y2="232"/>
+        <path class="nw-barrow" data-k="b" d="M347 236 L355 226 L363 236 Z"/>
+        <line class="nw-owire" data-k="out" x1="500" y1="165" x2="560" y2="165"/>
+      </svg>
+      <div class="nw-node nw-x" data-k="in" style="${P(80, 85)}"><i class="m">x<sub>1</sub></i>${stepper('x1', 'c-x')}</div>
+      <div class="nw-node nw-x" data-k="in" style="${P(80, 245)}"><i class="m">x<sub>2</sub></i>${stepper('x2', 'c-x')}</div>
+      <div class="nw-wpill" data-k="w" data-part="2" style="${P(222, 124)}"><i class="m">w<sub>1</sub></i><span class="nw-q">?</span>${stepper('w1', 'c-w')}</div>
+      <div class="nw-wpill" data-k="w" data-part="2" style="${P(222, 206)}"><i class="m">w<sub>2</sub></i><span class="nw-q">?</span>${stepper('w2', 'c-w')}</div>
+      <div class="nw-body" style="left:${300 / 7.2}%;top:${(105 - OY) / HH * 100}%;width:${200 / 7.2}%;height:${120 / HH * 100}%">
+        <div class="nw-half nw-sum" data-k="sum" data-part="3"><b class="nw-sigma">Σ</b><span class="nw-z m"><i>z</i> = <b></b></span><span class="nw-fog">?</span></div>
+        <div class="nw-half nw-f" data-k="f" data-part="4"><svg viewBox="0 0 100 60" class="nw-stepfn"><line x1="6" y1="50" x2="94" y2="50" class="ax"/><line x1="50" y1="6" x2="50" y2="56" class="ax"/><path class="st" d="M6 50 H50 V12 H94"/><circle class="dot" r="5.5"/></svg><span class="nw-fz m"><i>f</i>(<i>z</i>)</span><span class="nw-fog">?</span></div>
+      </div>
+      <div class="nw-bias" data-k="b" data-part="3" style="${P(355, 292)}"><i class="m">b</i><span class="nw-q">?</span>${stepper('b', 'c-b')}</div>
+      <div class="nw-out" data-k="out" style="left:${560 / 7.2}%;top:${(125 - OY) / HH * 100}%;width:${124 / 7.2}%;height:${80 / HH * 100}%">
+        <span class="nw-rays"><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <b class="nw-y"></b><span class="nw-ytxt"></span></div>
+      <div class="nw-pop" hidden><label><span class="m"></span><output></output></label><input type="range"></div>
+    </div></div>`);
+    const $ = s => root.querySelector(s), $$ = s => [...root.querySelectorAll(s)];
+    const pop = $('.nw-pop'), range = pop.querySelector('input');
+    let popK = null;
+
+    function update() {
+      $$('.nw-val').forEach(v => { v.querySelector('.nw-num').textContent = num(getV(v.dataset.v)); });
+      const show = +root.dataset.show || 4;
+      $$('.nw-edge').forEach(e => {
+        const w = st.w[+e.dataset.e];
+        const known = show >= 2;
+        e.setAttribute('stroke-width', known ? Math.max(1.5, Math.min(2 + Math.abs(w) * 4, 14)) : 3);
+        e.classList.toggle('is-neg', known && w < 0);
+        e.classList.toggle('is-zero', known && Math.abs(w) < 0.005);
+      });
+      const z = zOf(), fire = z > 0;
+      $('.nw-z b').textContent = num(z);
+      const zc = Math.max(-4, Math.min(4, z));
+      const dot = $('.nw-stepfn .dot');
+      dot.setAttribute('cx', 50 + zc * 11); dot.setAttribute('cy', fire ? 12 : 50);
+      root.classList.toggle('is-fire', fire);
+      $('.nw-y').textContent = fire ? '1' : '0';
+      $('.nw-ytxt').textContent = o.outText ? o.outText(fire) : (fire ? 'feuert!' : 'feuert nicht');
+      if (popK) { range.value = getV(popK); pop.querySelector('output').textContent = num(getV(popK)); }
+    }
+    function change(k, v) { setV(k, v); update(); if (o.onChange) o.onChange(k); }
+
+    if (!o.fixed) {
+      // − / + (gedrückt halten = weiterzählen)
+      $$('.nw-pm').forEach(b => {
+        let t1 = 0, t2 = 0;
+        const k = b.closest('.nw-val').dataset.v, d = +b.dataset.d;
+        const bump = () => change(k, getV(k) + d * LIM[k[0]][2]);
+        const stop = () => { clearTimeout(t1); clearInterval(t2); };
+        b.addEventListener('pointerdown', e => { e.preventDefault(); bump(); t1 = setTimeout(() => { t2 = setInterval(bump, 110); }, 420); });
+        ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+        b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bump(); } });
+      });
+      // Zahl antippen → Regler direkt am Feld
+      $$('.nw-num').forEach(b => b.addEventListener('click', e => {
+        e.stopPropagation();
+        const k = b.closest('.nw-val').dataset.v;
+        if (popK === k && !pop.hidden) { closePop(); return; }
+        popK = k;
+        const L = LIM[k[0]];
+        Object.assign(range, { min: L[0], max: L[1], step: L[3] });
+        range.className = 'r-' + k[0];
+        pop.querySelector('.m').innerHTML = `<i>${SUB[k]}</i> =`;
+        pop.hidden = false;
+        const rb = b.getBoundingClientRect(), rr = root.querySelector('.nw-in').getBoundingClientRect();
+        const cx = rb.left + rb.width / 2 - rr.left;
+        pop.style.left = Math.max(0, Math.min(rr.width - pop.offsetWidth, cx - pop.offsetWidth / 2)) + 'px';
+        const below = rb.bottom - rr.top + 6;
+        pop.style.top = (below + pop.offsetHeight > rr.height + 40 ? rb.top - rr.top - pop.offsetHeight - 6 : below) + 'px';
+        $$('.nw-val').forEach(v => v.classList.toggle('is-open', v.dataset.v === k));
+        update();
+      }));
+      range.addEventListener('input', () => change(popK, +range.value));
+      const closePop = () => { pop.hidden = true; popK = null; $$('.nw-val').forEach(v => v.classList.remove('is-open')); };
+      document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.nw-val')) closePop(); }, true);
+      document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+    }
+    return { el: root, update, setShow(n) { root.dataset.show = n; update(); } };
+  }
+
+  /* Die Rechnung unter dem Neuron: oben die Buchstaben, darunter dieselbe
+     Stelle mit Zahlen – jede Größe in ihrer Farbe. Noch nicht Aufgedecktes
+     steht grau als „?“ da. */
+  function calcHTML(show) {
+    const z = zOf(), fire = z > 0;
+    const par = v => v < 0 ? `(${num(v)})` : num(v);
+    const g = (ok, html) => ok ? html : '<span class="q">?</span>';
+    const cell = (cls, top, bot, ok = true) => `<span class="mc ${cls}${ok ? '' : ' is-ghost'}"><span>${top}</span><span>${g(ok, bot)}</span></span>`;
+    const op = s => `<span class="mc mo"><span>${s}</span><span>${s}</span></span>`;
+    const W = show >= 2, B = show >= 3, F = show >= 4;
+    const zRow = [
+      cell('c-z', '<i>z</i>', '<i>z</i>'), op('='),
+      cell('c-x', '<i>x</i><sub>1</sub>', par(st.x[0])), op('·'), cell('c-w', '<i>w</i><sub>1</sub>', par(st.w[0]), W), op('+'),
+      cell('c-x', '<i>x</i><sub>2</sub>', par(st.x[1])), op('·'), cell('c-w', '<i>w</i><sub>2</sub>', par(st.w[1]), W), op('+'),
+      cell('c-b', '<i>b</i>', par(st.b), B), op('='), cell('c-z res', '', `<b>${num(z)}</b>`, B),
+    ].join('');
+    const yRow = [
+      cell('c-y', '<i>y</i>', '<i>y</i>'), op('='), cell('c-f', '<i>f</i>(<i>z</i>)', `<i>f</i>(${num(z)})`, F), op('='),
+      cell('c-y res', '', `<b>${fire ? 1 : 0}</b>`), F ? `<span class="mwhy">weil <i>z</i> ${fire ? '&gt;' : '≤'} 0</span>` : '',
+    ].join('');
+    return `<div class="mrow">${zRow}</div><div class="mrow">${yRow}</div>`;
+  }
+
+  const TEXT = {
+    in: { p: 'Wir schauen uns <b>ein</b> künstliches Neuron an. Noch ist das meiste grau – das decken wir Stück für Stück auf. Klar ist schon: Links gehen zwei <b class="t-x">Eingänge</b> hinein, beliebige Zahlen. Rechts kommt eine Antwort heraus: <b class="t-y">1 = feuert</b> oder <b>0 = feuert nicht</b>.',
+      t: 'Ändere die Eingänge mit <b>−</b> und <b>+</b> oder tippe auf die Zahl. Wann feuert das Neuron?' },
+    w: { p: 'Jede Leitung hat ein <b class="t-w">Gewicht w</b>. Der Eingang wird damit malgenommen. Großes Gewicht = <b>dicke Leitung</b> = der Eingang ist wichtig. Gewicht 0 = der Eingang ist egal. Negatives Gewicht = <b class="t-neg">rote Leitung</b> = der Eingang bremst.',
+      t: 'Stell <i class="m">w</i><sub>2</sub> auf 0. Was bewirkt <i class="m">x</i><sub>2</sub> jetzt noch?' },
+    b: { p: 'Im Neuron wird alles <b>zusammengezählt</b> (Σ) – und der <b class="t-b">Bias b</b> kommt noch dazu. Das Ergebnis heißt <i class="m">z</i>. Der Bias ist die Grundeinstellung des Neurons: Ein negativer Bias macht es schwerer zu feuern, ein positiver leichter.',
+      t: 'Stell den Bias so ein, dass das Neuron gerade eben noch feuert.' },
+    act: { p: 'Zum Schluss entscheidet die <b>Aktivierungsfunktion</b> <i class="m">f</i>: Ist <i class="m">z</i> größer als 0, kommt <b class="t-y">1</b> heraus, sonst <b>0</b>. Unser Neuron nimmt dafür eine <b>Treppe</b> – der Punkt zeigt, wo <i class="m">z</i> gerade liegt. Andere Neuronen haben weichere Kurven: siehe „Alle Neuronen“.',
+      t: 'Jetzt ist das Neuron ganz aufgedeckt. Rechne einmal selbst nach – stimmt die Rechnung unten?' },
+  };
+
+  /* Ebene für Schritt 6/7: x₁ nach rechts, x₂ nach oben, je −5 … 5.
+     Gelb = hier feuert das Neuron. Ziehen: Punkt = Eingänge, Gerade = Bias
+     (parallel schieben), runde Griffe = Gewichte (drehen). */
+  const R = 5;
+  function makePlane(o) {
+    const wrap = h('<div class="nw-plane"><canvas></canvas></div>');
+    const cv = wrap.querySelector('canvas');
+    let G = null, drag = null;
+    const css = n => NLTheme.var(n) || '#888';
+    const pivotOf = () => { const q = st.w[0] ** 2 + st.w[1] ** 2 || 1; return [-st.b * st.w[0] / q, -st.b * st.w[1] / q]; };
+    const handles = P => {
+      const L = Math.hypot(...st.w) || 1, d = [-st.w[1] / L, st.w[0] / L];
+      return [[P[0] + d[0] * 2.6, P[1] + d[1] * 2.6], [P[0] - d[0] * 2.6, P[1] - d[1] * 2.6]];
     };
-    if (show < 3) {
-      box(BX, BY, BW, BH, true, 'Blackbox');
-    } else {
-      s.appendChild(el('rect', { x: BX, y: BY, width: BW, height: BH, rx: 12, class: 'neuron-body' }));
-      s.appendChild(el('rect', { 'data-k': 'sum', x: BX + 3, y: BY + 3, width: BW / 2 - 6, height: BH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
-      s.appendChild(el('line', { x1: BX + BW / 2, y1: BY + 6, x2: BX + BW / 2, y2: BY + BH - 6, class: 'neuron-divider' }));
-      const lx = BX + BW / 4, rx = BX + BW * 3 / 4;
-      s.appendChild(el('text', { x: lx, y: cy - 4, 'text-anchor': 'middle', 'font-size': 24, class: 'neuron-sigma' }, 'Σ'));
-      s.appendChild(el('text', { x: lx, y: cy + 22, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#334155', class: 'nn-num' }, `z = ${d2(z)}`));
-      // Bias von unten
-      const by0 = BY + BH, by1 = by0 + 30;
-      s.appendChild(el('line', { 'data-k': 'b', x1: lx, y1: by1, x2: lx, y2: by0 + 8, class: 'bias-line' }));
-      s.appendChild(el('polygon', { points: `${lx},${by0} ${lx - 5},${by0 + 9} ${lx + 5},${by0 + 9}`, fill: '#64748b' }));
-      s.appendChild(el('text', { x: lx, y: by1 + 16, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 800, fill: '#475569', class: 'nn-num' }, `b = ${d2(o.b)}`));
-      if (show < 4) box(BX + BW / 2 + 4, BY + 4, BW / 2 - 8, BH - 8, false, 'Blackbox');
-      else {
-        s.appendChild(el('rect', { 'data-k': 'f', x: BX + BW / 2 + 3, y: BY + 3, width: BW / 2 - 6, height: BH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
-        // kleine Treppe
-        const gx = rx - 30, gy = cy - 4;
-        s.appendChild(el('path', { d: `M${gx} ${gy + 12} H${gx + 30} V${gy - 14} H${gx + 60}`, fill: 'none', stroke: '#475569', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
-        s.appendChild(el('text', { x: rx, y: cy + 30, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 800, fill: '#334155' }, 'z > 0 ?'));
+    function draw() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      const Wc = cv.clientWidth || 360, Hc = cv.clientHeight || 360;
+      cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr);
+      const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const pad = 30, S = Math.min(Wc, Hc) - pad - 10, ox = pad, oy = 8;
+      const X = v => ox + (v + R) / (2 * R) * S, Y = v => oy + (R - v) / (2 * R) * S;
+      const iX = px => (px - ox) / S * 2 * R - R, iY = py => R - (py - oy) / S * 2 * R;
+      G = { X, Y, iX, iY };
+      const [w1, w2] = st.w, b = st.b, zf = (a, d) => w1 * a + w2 * d + b;
+      // Flächen
+      const step = 3;
+      for (let px = ox; px < ox + S; px += step) for (let py = oy; py < oy + S; py += step) {
+        c.fillStyle = zf(iX(px + step / 2), iY(py + step / 2)) > 0 ? css('gold-dim') : css('surface-2');
+        c.fillRect(px, py, step + 0.4, step + 0.4);
       }
+      // Raster und Achsen
+      c.lineWidth = 1; c.strokeStyle = css('line-soft');
+      for (let v = -R; v <= R; v++) {
+        c.beginPath(); c.moveTo(X(v), oy); c.lineTo(X(v), oy + S); c.stroke();
+        c.beginPath(); c.moveTo(ox, Y(v)); c.lineTo(ox + S, Y(v)); c.stroke();
+      }
+      c.strokeStyle = css('ink-faint'); c.lineWidth = 1.2;
+      c.beginPath(); c.moveTo(X(-R), Y(0)); c.lineTo(X(R), Y(0)); c.moveTo(X(0), Y(-R)); c.lineTo(X(0), Y(R)); c.stroke();
+      c.fillStyle = css('ink-faint'); c.font = '11px "JetBrains Mono", monospace'; c.textAlign = 'center';
+      [-4, -2, 2, 4].forEach(v => { c.fillText(num(v), X(v), Y(0) + 14); });
+      c.textAlign = 'right'; [-4, -2, 2, 4].forEach(v => c.fillText(num(v), X(0) - 5, Y(v) + 4));
+      c.fillStyle = css('in-ink'); c.font = 'italic 16px "KaTeX Math", serif';
+      c.textAlign = 'right'; c.fillText('x₁', ox + S - 4, Y(0) - 8);
+      c.textAlign = 'left'; c.fillText('x₂', X(0) + 8, oy + 16);
+      // Gerade z = 0
+      const pts = [];
+      if (Math.abs(w2) > 1e-9) [-R, R].forEach(a => { const d = -(w1 * a + b) / w2; if (Math.abs(d) <= R + 1e-9) pts.push([a, d]); });
+      if (Math.abs(w1) > 1e-9) [-R, R].forEach(d => { const a = -(w2 * d + b) / w1; if (Math.abs(a) <= R + 1e-9) pts.push([a, d]); });
+      const ink = css('ink');
+      if (pts.length >= 2) {
+        c.strokeStyle = ink; c.lineWidth = drag && drag.m === 'shift' ? 5 : 3.5; c.lineCap = 'round';
+        c.beginPath(); c.moveTo(X(pts[0][0]), Y(pts[0][1])); c.lineTo(X(pts[1][0]), Y(pts[1][1])); c.stroke();
+        // Pfeil zur Feuer-Seite
+        const P = drag && drag.P || pivotOf();
+        const inBox = Math.abs(P[0]) <= R && Math.abs(P[1]) <= R;
+        const M = inBox ? P : [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2];
+        const L = Math.hypot(w1, w2) || 1, nx = w1 / L * 32, ny = -w2 / L * 32;
+        const mx = X(M[0]), my = Y(M[1]);
+        c.strokeStyle = css('gold'); c.fillStyle = css('gold'); c.lineWidth = 3;
+        c.beginPath(); c.moveTo(mx, my); c.lineTo(mx + nx, my + ny); c.stroke();
+        const an = Math.atan2(ny, nx);
+        c.beginPath(); c.moveTo(mx + nx * 1.3, my + ny * 1.3);
+        c.lineTo(mx + nx - 8 * Math.sin(an), my + ny + 8 * Math.cos(an));
+        c.lineTo(mx + nx + 8 * Math.sin(an), my + ny - 8 * Math.cos(an)); c.closePath(); c.fill();
+        // Dreh-Griffe
+        handles(P).forEach(([a, d]) => {
+          if (Math.abs(a) > R || Math.abs(d) > R) return;
+          c.beginPath(); c.arc(X(a), Y(d), 9, 0, Math.PI * 2);
+          c.fillStyle = css('accent'); c.fill(); c.lineWidth = 2.5; c.strokeStyle = css('surface'); c.stroke();
+          c.beginPath(); c.arc(X(a), Y(d), 4.5, 0.4, Math.PI * 1.6); c.strokeStyle = css('on-accent'); c.lineWidth = 1.6; c.stroke();
+        });
+      }
+      // Datenpunkte
+      (o.points ? o.points() : []).forEach(p => {
+        const ok = (zf(p.x[0], p.x[1]) > 0 ? 1 : 0) === p.soll;
+        c.beginPath(); c.arc(X(p.x[0]), Y(p.x[1]), 8, 0, Math.PI * 2);
+        c.fillStyle = p.soll ? css('gold') : css('surface'); c.fill();
+        c.lineWidth = 2.5; c.strokeStyle = p.soll ? css('gold') : css('ink-faint'); c.stroke();
+        if (!ok) { c.beginPath(); c.arc(X(p.x[0]), Y(p.x[1]), 12.5, 0, Math.PI * 2); c.strokeStyle = css('neg'); c.lineWidth = 2; c.stroke(); }
+      });
+      // Eingänge als Punkt
+      const [a, d] = st.x;
+      c.strokeStyle = css('in'); c.lineWidth = 3;
+      c.beginPath(); c.arc(X(a), Y(d), 11, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.moveTo(X(a) - 16, Y(d)); c.lineTo(X(a) - 6, Y(d)); c.moveTo(X(a) + 6, Y(d)); c.lineTo(X(a) + 16, Y(d));
+      c.moveTo(X(a), Y(d) - 16); c.lineTo(X(a), Y(d) - 6); c.moveTo(X(a), Y(d) + 6); c.lineTo(X(a), Y(d) + 16); c.stroke();
+      c.fillStyle = css('in-ink'); c.font = '600 12px "JetBrains Mono", monospace';
+      c.textAlign = X(a) > ox + S - 90 ? 'right' : 'left';
+      c.fillText(`(${num(a)} | ${num(d)})`, X(a) + (c.textAlign === 'left' ? 15 : -15), Y(d) - 14);
     }
-    // Ausgabe – kommt immer heraus
-    const ox = BX + BW + 34;
-    s.appendChild(el('line', { 'data-k': 'out', x1: BX + BW, y1: cy, x2: ox, y2: cy, stroke: fire ? '#eab308' : '#94a3b8', 'stroke-width': fire ? 4 : 2 }));
-    if (fire) [[-1, -1], [0, -1.35], [1, -1], [-1, 1], [0, 1.35], [1, 1]].forEach(([dx, dy]) =>
-      s.appendChild(el('line', { x1: ox + 52 + dx * 50, y1: cy + dy * 34, x2: ox + 52 + dx * 62, y2: cy + dy * 44, stroke: '#eab308', 'stroke-width': 3, 'stroke-linecap': 'round' })));
-    s.appendChild(el('rect', { 'data-k': 'out', x: ox, y: cy - 30, width: 104, height: 60, rx: 12, fill: fire ? '#fef9c3' : '#f8fafc', stroke: fire ? '#eab308' : '#cbd5e1', 'stroke-width': 2.5 }));
-    s.appendChild(el('text', { x: ox + 52, y: cy + 4, 'text-anchor': 'middle', 'font-size': 24, 'font-weight': 800, fill: fire ? '#854d0e' : '#94a3b8' }, fire ? '1' : '0'));
-    s.appendChild(el('text', { x: ox + 52, y: cy + 21, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 800, fill: fire ? '#854d0e' : '#94a3b8' }, o.outText ? o.outText(fire) : (fire ? 'feuert!' : 'feuert nicht')));
-    return s;
-  }
-
-  /* Schwellen-Messer: Summe der Eingänge als Punkt, Schwelle = −b als Fahne */
-  function meterSVG(sum, b) {
-    const T = -b;
-    const R = Math.max(8, Math.ceil(Math.max(Math.abs(sum), Math.abs(T))) + 1);
-    const X = v => 24 + (v + R) / (2 * R) * 552;
-    const xt = Math.max(24, Math.min(576, X(T))), fire = sum - T > 0;
-    let ticks = '';
-    for (let v = -R; v <= R; v++) if (v % 2 === 0) ticks += `<line x1="${X(v)}" y1="62" x2="${X(v)}" y2="${v ? 68 : 72}" stroke="#94a3b8"/><text x="${X(v)}" y="86" text-anchor="middle" font-size="11" fill="#64748b">${String(v).replace('-', '−')}</text>`;
-    return `<svg viewBox="0 0 600 140">
-      <rect x="24" y="40" width="${xt - 24}" height="22" fill="#f1f5f9"/>
-      <rect x="${xt}" y="40" width="${576 - xt}" height="22" fill="#fef9c3"/>
-      <text x="${(24 + xt) / 2}" y="55" text-anchor="middle" font-size="12" font-weight="700" fill="#94a3b8">${xt - 24 > 90 ? 'feuert nicht' : ''}</text>
-      <text x="${(xt + 576) / 2}" y="55" text-anchor="middle" font-size="12" font-weight="800" fill="#854d0e">${576 - xt > 70 ? 'feuert' : ''}</text>
-      <line x1="24" y1="62" x2="576" y2="62" stroke="#94a3b8"/>${ticks}
-      <line x1="${xt}" y1="14" x2="${xt}" y2="64" stroke="#475569" stroke-width="3"/>
-      <path d="M${xt} 14 h${xt > 470 ? -96 : 96} v20 h${xt > 470 ? 96 : -96} z" fill="#475569"/>
-      <text x="${xt + (xt > 470 ? -48 : 48)}" y="28.5" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">Schwelle ${d2(T)}</text>
-      <circle cx="${Math.max(24, Math.min(576, X(sum)))}" cy="62" r="10" fill="${fire ? '#eab308' : '#fff'}" stroke="#0f172a" stroke-width="3"/>
-      <text x="${Math.max(60, Math.min(540, X(sum)))}" y="112" text-anchor="middle" font-size="13" font-weight="800" fill="#0f172a">Summe = ${d2(sum)}</text>
-      <text x="300" y="134" text-anchor="middle" font-size="11.5" fill="#64748b">Summe = x₁·w₁ + x₂·w₂ · Schwelle = −b</text></svg>`;
-  }
-
-  /* ── Ebene ─────────────────────────────────────────────────
-     o = { w, b, xr:[lo,hi], yr:[lo,hi], labels, point, points:[{x, soll}],
-           handles:[[a,b],[c,d]], sel, flip }
-     Hintergrund: wo das Neuron feuert (hell in Typfarbe), dicke Linie = Gerade
-     (Summe = Schwelle), Pfeil zur Feuer-Seite. Gibt {toData, toPx} zurück. */
-  function drawPlane(cv, o) {
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const Wc = cv.clientWidth || 360, Hc = cv.clientHeight || 300;
-    cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr);
-    const g = cv.getContext('2d');
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const PL = 40, PB = 36, PT = 10, PR = 10;
-    const [x0, x1] = o.xr, [y0, y1] = o.yr;
-    const X = v => PL + (v - x0) / (x1 - x0) * (Wc - PL - PR);
-    const Y = v => Hc - PB - (v - y0) / (y1 - y0) * (Hc - PB - PT);
-    const iX = px => x0 + (px - PL) / (Wc - PL - PR) * (x1 - x0);
-    const iY = py => y0 + (Hc - PB - py) / (Hc - PB - PT) * (y1 - y0);
-    const [w1, w2] = o.w, b = o.b;
-    const zf = (a, c) => w1 * a + w2 * c + b;
-    const st5 = 4;
-    for (let px = PL; px < Wc - PR; px += st5) for (let py = PT; py < Hc - PB; py += st5) {
-      g.fillStyle = zf(iX(px + st5 / 2), iY(py + st5 / 2)) > 0 ? NLTheme.c('#fdecc0', 0) : NLTheme.c('#eef2f6', 0);
-      g.fillRect(px, py, st5 + 0.5, st5 + 0.5);
-    }
-    // Raster + Achsen
-    const nice = span => { const r = span / 6, p = Math.pow(10, Math.floor(Math.log10(r))); return [1, 2, 5, 10].map(k => k * p).find(k => k >= r); };
-    g.strokeStyle = 'rgba(100,116,139,.25)'; g.lineWidth = 1;
-    g.font = '11px system-ui, sans-serif'; g.fillStyle = NLTheme.c('#64748b', 1);
-    const sx = nice(x1 - x0), sy = nice(y1 - y0);
-    g.textAlign = 'center';
-    for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx) {
-      g.beginPath(); g.moveTo(X(v), PT); g.lineTo(X(v), Hc - PB); g.stroke();
-      g.fillText(de(Math.round(v * 100) / 100), X(v), Hc - PB + 14);
-    }
-    g.textAlign = 'right';
-    for (let v = Math.ceil(y0 / sy) * sy; v <= y1 + 1e-9; v += sy) {
-      g.beginPath(); g.moveTo(PL, Y(v)); g.lineTo(Wc - PR, Y(v)); g.stroke();
-      g.fillText(de(Math.round(v * 100) / 100), PL - 5, Y(v) + 4);
-    }
-    const lab = o.labels || ['x₁', 'x₂'];
-    g.fillStyle = NLTheme.c('#334155', 1); g.font = 'bold 12px system-ui, sans-serif';
-    g.textAlign = 'right'; g.fillText(lab[0] + ' →', Wc - PR, Hc - 4);
-    g.save(); g.translate(12, PT + 4); g.rotate(-Math.PI / 2); g.textAlign = 'right'; g.fillText(lab[1] + ' →', 0, 0); g.restore();
-    // Gerade = Rand des Feuer-Bereichs, im Kasten abgeschnitten
-    const cut = [];
-    if (Math.abs(w2) > 1e-9) [x0, x1].forEach(a => { const c = -(w1 * a + b) / w2; if (c >= y0 - 1e-9 && c <= y1 + 1e-9) cut.push([a, c]); });
-    if (Math.abs(w1) > 1e-9) [y0, y1].forEach(c => { const a = -(w2 * c + b) / w1; if (a >= x0 - 1e-9 && a <= x1 + 1e-9) cut.push([a, c]); });
-    if (cut.length >= 2) {
-      const [p, q] = cut;
-      g.strokeStyle = NLTheme.c('#0f172a', 2); g.lineWidth = 3;
-      g.beginPath(); g.moveTo(X(p[0]), Y(p[1])); g.lineTo(X(q[0]), Y(q[1])); g.stroke();
-      // Pfeil zur Feuer-Seite (in Bildschirm-Pixeln senkrecht)
-      const mx = (X(p[0]) + X(q[0])) / 2, my = (Y(p[1]) + Y(q[1])) / 2;
-      const nx = w1 * (x1 - x0) / (Wc - PL - PR), ny = -w2 * (y1 - y0) / (Hc - PB - PT);
-      const len = Math.hypot(nx, ny) || 1;
-      const dx = nx / len * 30, dy = ny / len * 30;
-      g.lineWidth = 2.5; g.beginPath(); g.moveTo(mx, my); g.lineTo(mx + dx, my + dy); g.stroke();
-      const an = Math.atan2(dy, dx);
-      g.beginPath(); g.moveTo(mx + dx, my + dy);
-      g.lineTo(mx + dx - 9 * Math.cos(an - 0.45), my + dy - 9 * Math.sin(an - 0.45));
-      g.lineTo(mx + dx - 9 * Math.cos(an + 0.45), my + dy - 9 * Math.sin(an + 0.45));
-      g.closePath(); g.fillStyle = NLTheme.c('#0f172a', 0); g.fill();
-      g.font = 'bold 11px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = NLTheme.c('#b45309', 1);
-      g.fillText('feuert', mx + dx * 1.9, my + dy * 1.9 + 4);
-    }
-    // Datenpunkte
-    const many = (o.points || []).length > 8, r = many ? 6 : 12;
-    (o.points || []).forEach((p, i) => {
-      const ok = (zf(p.x[0], p.x[1]) > 0 ? 1 : 0) === p.soll;
-      g.beginPath(); g.arc(X(p.x[0]), Y(p.x[1]), r, 0, Math.PI * 2);
-      g.fillStyle = p.soll ? NLTheme.c('#f59e0b', 0) : NLTheme.c('#fff', 0); g.fill();
-      g.lineWidth = many ? 2 : 3; g.strokeStyle = ok ? NLTheme.c('#059669', 2) : NLTheme.c('#dc2626', 2); g.stroke();
-      if (i === o.sel) { g.beginPath(); g.arc(X(p.x[0]), Y(p.x[1]), r + 5, 0, Math.PI * 2); g.lineWidth = 2.5; g.strokeStyle = NLTheme.c('#2563eb', 2); g.stroke(); }
-      if (!many) { g.fillStyle = p.soll ? NLTheme.c('#fff', 1) : NLTheme.c('#334155', 1); g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(String(p.soll), X(p.x[0]), Y(p.x[1]) + 4); }
-    });
-    (o.handles || []).forEach(([a, c]) => {
-      g.beginPath(); g.arc(X(a), Y(c), 11, 0, Math.PI * 2);
-      g.fillStyle = NLTheme.c('#1d4ed8', 0); g.fill(); g.lineWidth = 3; g.strokeStyle = NLTheme.c('#fff', 2); g.stroke();
-    });
-    if (o.point) {
-      const [a, c] = o.point;
-      g.beginPath(); g.arc(X(a), Y(c), 10, 0, Math.PI * 2);
-      g.fillStyle = NLTheme.c('#4caf8a', 0); g.fill(); g.lineWidth = 3; g.strokeStyle = NLTheme.c('#fff', 2); g.stroke();
-      g.fillStyle = NLTheme.c('#065f46', 1); g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'left';
-      g.fillText(`(${de(a)} | ${de(c)})`, Math.min(X(a) + 13, Wc - 74), Math.max(Y(c) - 11, 20));
-    }
-    return { toData: (px, py) => [iX(px), iY(py)], toPx: (a, c) => [X(a), Y(c)] };
-  }
-
-  /* Ziehen auf der Ebene: Zeiger → fn(px, py, start) */
-  function planeDrag(cv, onDown, onMove) {
-    let on = false;
     const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    cv.addEventListener('pointerdown', e => { on = onDown(...pos(e)) !== false; if (on) cv.setPointerCapture(e.pointerId); });
-    cv.addEventListener('pointermove', e => { if (on) onMove(...pos(e)); });
-    const end = () => { on = false; };
+    const near = (px, py, a, d, r) => Math.hypot(G.X(a) - px, G.Y(d) - py) < r;
+    const lineDist = (px, py) => { const L = Math.hypot(...st.w) || 1; return Math.abs(st.w[0] * G.iX(px) + st.w[1] * G.iY(py) + st.b) / L / (2 * R) * (cv.clientHeight - 18); };
+    function hover(px, py) {
+      if (!G) return '';
+      if (near(px, py, st.x[0], st.x[1], 20)) return 'move';
+      if (handles(pivotOf()).some(([a, d]) => near(px, py, a, d, 18))) return 'grab';
+      if (lineDist(px, py) < 12) return 'ns-resize';
+      return o.points ? 'pointer' : 'crosshair';
+    }
+    cv.addEventListener('pointermove', e => {
+      const [px, py] = pos(e);
+      if (!drag) { cv.style.cursor = hover(px, py); return; }
+      const a = G.iX(px), d = G.iY(py);
+      if (drag.m === 'pt') st.x = [clampK('x', Math.round(a * 2) / 2), clampK('x', Math.round(d * 2) / 2)];
+      else if (drag.m === 'shift') st.b = r2(clampK('b', drag.b0 - st.w[0] * (a - drag.a0) - st.w[1] * (d - drag.d0)));
+      else if (drag.m === 'rot') {
+        const vx = (a - drag.P[0]) * drag.sg, vy = (d - drag.P[1]) * drag.sg, L = Math.hypot(vx, vy);
+        if (L < 0.3) return;
+        st.w = [r2(clampK('w', vy / L * drag.len)), r2(clampK('w', -vx / L * drag.len))];
+        st.b = r2(clampK('b', -(st.w[0] * drag.P[0] + st.w[1] * drag.P[1])));
+      }
+      o.onChange();
+    });
+    cv.addEventListener('pointerdown', e => {
+      if (!G) return;
+      const [px, py] = pos(e);
+      const a = G.iX(px), d = G.iY(py);
+      const P = pivotOf(), hs = handles(P), hi = hs.findIndex(([ha, hd]) => near(px, py, ha, hd, 18));
+      if (near(px, py, st.x[0], st.x[1], 20)) drag = { m: 'pt' };
+      else if (hi >= 0) drag = { m: 'rot', P, sg: hi ? -1 : 1, len: Math.max(0.2, Math.hypot(...st.w)) };
+      else if (lineDist(px, py) < 12) drag = { m: 'shift', b0: st.b, a0: a, d0: d };
+      else if (o.points) {
+        let best = null, bd = 22;
+        o.points().forEach(p => { const dd = Math.hypot(G.X(p.x[0]) - px, G.Y(p.x[1]) - py); if (dd < bd) { bd = dd; best = p; } });
+        if (best) { st.x = best.x.slice(); o.onChange(); }
+        return;
+      } else { drag = { m: 'pt' }; st.x = [clampK('x', Math.round(a * 2) / 2), clampK('x', Math.round(d * 2) / 2)]; o.onChange(); }
+      cv.setPointerCapture(e.pointerId);
+      if (drag.m === 'rot') cv.style.cursor = 'grabbing';
+    });
+    const end = () => { if (drag) { drag = null; draw(); } };
     cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    new ResizeObserver(() => { if (cv.isConnected) draw(); }).observe(cv);
+    document.addEventListener('nl:theme-redraw', () => { if (cv.isConnected) draw(); });
+    return { el: wrap, draw };
   }
 
-  /* Regler-Spalte für die Schritte */
-  function ctlX(upd) {
-    return [h('<b class="nn-ctl-h">Eingänge</b>'),
-      ...[0, 1].map(i => { const r = slider(`x${i ? '₂' : '₁'}`, -5, 5, 0.5, st.x[i], v => { st.x[i] = v; upd(); }); r.classList.add('nn-slider-x'); return r; })];
+  /* Punkte für Schritt 7: zwei gleichmäßige Häufchen, mit einer Geraden trennbar.
+     Gold = hier soll das Neuron feuern. Erste Runde fest, „Neue Punkte“ würfelt. */
+  const PTS0 = [[2, -3, 1], [3, -2, 1], [3.5, -3.5, 1], [2, -1.5, 1], [4, -2.5, 1],
+    [-2, 2, 0], [-3, 3, 0], [-1.5, 3.5, 0], [-3.5, 1.5, 0], [-1, 2.5, 0]];
+  let pts = PTS0.map(p => ({ x: [p[0], p[1]], soll: p[2] }));
+  function newPoints() {
+    for (;;) {
+      const t = Math.random() * Math.PI * 2, n = [Math.cos(t), Math.sin(t)];
+      const m = [Math.random() * 2 - 1, Math.random() * 2 - 1];
+      const out = [], seen = new Set();
+      for (let g = 0; g < 2 && out.length < 20; g++) {
+        const s = g ? -1 : 1, c = [m[0] + n[0] * 2.4 * s, m[1] + n[1] * 2.4 * s];
+        let tries = 0, k = 0;
+        while (k < 5 && tries++ < 200) {
+          const r = Math.sqrt(Math.random()) * 1.6, a = Math.random() * Math.PI * 2;
+          const p = [Math.round((c[0] + r * Math.cos(a)) * 2) / 2, Math.round((c[1] + r * Math.sin(a)) * 2) / 2];
+          const side = (p[0] - m[0]) * n[0] + (p[1] - m[1]) * n[1];
+          if (Math.abs(p[0]) > 4.5 || Math.abs(p[1]) > 4.5 || side * s < 0.7 || seen.has(p + '')) continue;
+          seen.add(p + ''); out.push({ x: p, soll: g ? 0 : 1 }); k++;
+        }
+      }
+      const right = out.filter(p => ((st.w[0] * p.x[0] + st.w[1] * p.x[1] + st.b > 0) ? 1 : 0) === p.soll).length;
+      if (out.length === 10 && right < 9) return out;
+    }
   }
-  function ctlW(upd) {
-    return [h('<b class="nn-ctl-h">Gewichte</b>'), ...[0, 1].map(i => slider(`w${i ? '₂' : '₁'}`, -3, 3, 0.1, st.w[i], v => { st.w[i] = v; upd(); }))];
-  }
-  const ctlB = upd => [h('<b class="nn-ctl-h">Bias</b>'), slider('b', -6, 6, 0.1, st.b, v => { st.b = v; upd(); }, 'nn-slider-b')];
 
   const PAIRS = [
     { k: 'in', bio: 'Dendriten', kn: 'Eingänge x', t: 'Die Dendriten nehmen Signale anderer Zellen auf. Beim künstlichen Neuron kommen hier Zahlen herein: x₁, x₂ …' },
-    { k: 'w', bio: 'Synapsen', kn: 'Gewichte w', t: 'Manche Synapsen leiten stark, manche schwach, manche hemmen. Das Gewicht sagt, wie wichtig ein Eingang ist – im Bild: dicke Leitung = wichtig, rot = bremst.' },
+    { k: 'w', bio: 'Synapsen', kn: 'Gewichte w', t: 'Manche Synapsen leiten stark, manche schwach, manche hemmen. Das Gewicht sagt, wie wichtig ein Eingang ist – dicke Leitung = wichtig, rot = bremst.' },
     { k: 'sum', bio: 'Zellkörper', kn: 'Summe Σ', t: 'Im Zellkörper laufen alle Signale zusammen. Das Neuron zählt alle Eingänge × Gewichte zusammen.' },
-    { k: 'b', bio: 'Reizschwelle', kn: 'Bias b', t: 'Eine Nervenzelle feuert erst, wenn genug Reiz zusammenkommt. Der Bias legt diese Schwelle fest.' },
-    { k: 'f', bio: 'Axonhügel', kn: 'Aktivierung', t: 'Am Axonhügel wird entschieden: feuern oder nicht. Beim künstlichen Neuron macht das die Aktivierungsfunktion.' },
-    { k: 'out', bio: 'Axon', kn: 'Ausgabe', t: 'Das Axon leitet das Signal an die nächsten Zellen weiter. Die Ausgabe wird zum Eingang der nächsten Neuronen.' },
+    { k: 'b', bio: 'Reizschwelle', kn: 'Bias b', t: 'Manche Nervenzellen feuern leicht, manche brauchen viel Reiz. Beim künstlichen Neuron stellt das der Bias ein – er wird zur Summe dazugezählt.' },
+    { k: 'f', bio: 'Axonhügel', kn: 'Aktivierung f', t: 'Am Axonhügel wird entschieden: feuern oder nicht. Beim künstlichen Neuron macht das die Aktivierungsfunktion.' },
+    { k: 'out', bio: 'Axon', kn: 'Ausgabe y', t: 'Das Axon leitet das Signal an die nächsten Zellen weiter. Die Ausgabe wird zum Eingang der nächsten Neuronen.' },
   ];
+
   function bioSVG() {
     const s = el('svg', { viewBox: '0 0 520 250', class: 'nn-bio' });
     s.innerHTML = `
@@ -396,201 +502,88 @@
     return s;
   }
 
-  /* Datensätze für „Daten trennen“: ein Neuron, zwei Griffe an der Geraden */
-  function sperber() {
-    const V = window.NLData.VOEGEL;
-    return [0, 1].flatMap(g => V[g].map(v => ({ x: [v[0] / 10, v[2] / 10], soll: g })));
-  }
-  const DS = {
-    sperber: { name: 'Sperber', xr: [15, 21.5], yr: [11.5, 17.5], labels: ['Flügel (cm)', 'Schwanz (cm)'], names: ['Flügel', 'Schwanz'],
-      text: '90 echte Eckschwanzsperber (vermessen am Lake MacBride, USA): <b>orange = Weibchen</b>, weiß = Männchen. Das Neuron bekommt Flügel- und Schwanzlänge und soll bei jedem Weibchen <b>feuern</b>.',
-      out: f => f ? 'Weibchen' : 'Männchen', h: [[15.5, 14], [21, 15.5]], flip: 1, pts: null },
-    und: { name: 'UND', xr: [-0.5, 1.5], yr: [-0.5, 1.5], labels: ['x₁', 'x₂'], names: ['x₁', 'x₂'],
-      text: 'Ein Türsteher mit zwei Bedingungen: Das Neuron soll nur feuern, wenn x₁ = 1 <b>und</b> x₂ = 1 ist (orange Punkt).',
-      h: [[-0.3, 1.2], [1.2, -0.3]], flip: 1, pts: [[0, 0, 0], [0, 1, 0], [1, 0, 0], [1, 1, 1]] },
-    xor: { name: 'XOR', xr: [-0.5, 1.5], yr: [-0.5, 1.5], labels: ['x₁', 'x₂'], names: ['x₁', 'x₂'],
-      text: 'Jetzt soll das Neuron feuern, wenn <b>genau einer</b> der Eingänge 1 ist (die beiden orangen Punkte).',
-      h: [[-0.3, 1.2], [1.2, -0.3]], flip: 1, pts: [[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]] },
-  };
-  let dsKey = 'sperber', dsSel = 0;
-  const dsPoints = d => d.pts ? d.pts.map(p => ({ x: [p[0], p[1]], soll: p[2] })) : (d._p || (d._p = sperber()));
-  /* Gerade durch die Griffe → Gewichte und Bias (größtes Gewicht = 1) */
-  function dsNeuron(d) {
-    const [[a, c], [e, f]] = d.h;
-    let w1 = f - c, w2 = -(e - a);
-    const k = Math.max(Math.abs(w1), Math.abs(w2)) || 1;
-    w1 = w1 / k * d.flip; w2 = w2 / k * d.flip;
-    return { w: [w1, w2], b: -(w1 * a + w2 * c) };
-  }
 
-  const BUILD = {
-    bio(card) {
-      card.appendChild(h(`<p class="nn-lead-p">Dein Gehirn hat rund <b>86 Milliarden Nervenzellen</b>. Jede bekommt Signale von anderen Zellen, „entscheidet“, ob sie selbst <b>feuert</b>, und gibt ihr Signal weiter. Ein <b>künstliches Neuron</b> ist ein stark vereinfachtes Rechenmodell davon. <b>Tippe auf ein Teil</b> – du siehst, was ihm im künstlichen Neuron entspricht. In den nächsten Schritten schauen wir uns das künstliche Neuron Teil für Teil an.</p>`));
-      const grid = h('<div class="nn-two"><div class="nn-col-bio"></div><div class="nn-col-kn"></div></div>');
-      const bio = bioSVG();
-      const kn = stageSVG({ x: [2, 1], w: [1, 0.5], b: -2, show: 4 });
-      grid.children[0].appendChild(bio);
-      grid.children[1].appendChild(kn);
-      card.appendChild(grid);
-      const chips = h('<div class="nn-pairs"></div>');
-      const info = h('<p class="nn-pair-info">Noch nichts gewählt.</p>');
-      const pick = k => {
-        bio.dataset.hl = k; kn.dataset.hl = k;
-        chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
-        const p = PAIRS.find(x => x.k === k);
-        info.innerHTML = `<b>${p.bio} → ${p.kn}:</b> ${p.t}`;
-      };
-      PAIRS.forEach(p => {
-        const b = h(`<button type="button" class="nn-pair" data-k="${p.k}"><span>${p.bio}</span><i>→</i><b>${p.kn}</b></button>`);
-        b.addEventListener('click', () => pick(p.k));
-        chips.appendChild(b);
-      });
-      [bio, kn].forEach(svg => svg.addEventListener('click', e => { const t = e.target.closest('[data-k]'); if (t) pick(t.dataset.k); }));
-      card.append(chips, info);
-    },
-
-    in(card, stage, ctl, upd) {
-      card.insertBefore(h(`<p class="nn-lead-p">Wir schauen uns <b>ein</b> Neuron an. Was drin passiert, ist noch eine <b>Blackbox</b>. Klar ist nur: Links gehen <b>Zahlen</b> hinein – beliebige Kommazahlen, z. B. eine Temperatur oder die Länge eines Flügels. Rechts kommt immer etwas heraus: Das Neuron <b>feuert (1)</b> oder <b>feuert nicht (0)</b>.</p>`), card.lastChild);
-      ctl.append(...ctlX(upd));
-      return '<b>Probier:</b> Finde Eingaben, bei denen das Neuron feuert – und welche, bei denen es still bleibt. Ist dir x₁ oder x₂ wichtiger?';
-    },
-
-    w(card, stage, ctl, upd) {
-      card.insertBefore(h(`<p class="nn-lead-p">Der erste Teil der Blackbox: Jeder Eingang hat ein <b>Gewicht w</b>. Auf seiner Leitung wird der Eingang mit dem Gewicht malgenommen – im grauen Kästchen kommt <b>x · w</b> an. <b>Dicke Leitung</b> = großes Gewicht = wichtig, <b>dünne Leitung</b> = fast egal, <b>rote Leitung</b> = negatives Gewicht = bremst.</p>`), card.lastChild);
-      ctl.append(...ctlW(upd), ...ctlX(upd));
-      return '<b>Probier:</b> Stelle w₂ auf 0 – was ändert x₂ dann noch? Und was passiert, wenn w₁ rot wird?';
-    },
-
-    b(card, stage, ctl, upd) {
-      card.insertBefore(h(`<p class="nn-lead-p">Im Neuron wird alles <b>zusammengezählt</b>: die <b>Summe</b> = x₁·w₁ + x₂·w₂. Das Neuron <b>feuert erst, wenn die Summe über einer Schwelle liegt</b> – wie eine Nervenzelle, die genug Reiz braucht. Diese Schwelle steckt im <b>Bias b</b>: <b>b = −2</b> heißt <b>Schwelle 2</b>. Das Neuron rechnet z = Summe + b und schaut, ob z über 0 liegt – das ist dasselbe.</p>`), card.lastChild);
-      const meter = h('<div class="nn-meter"></div>');
-      ctl.append(...ctlB(upd), ...ctlX(upd));
-      card.appendChild(meter);
-      stage.meter = meter;
-      return '<b>Probier:</b> Mach den Bias stark negativ – wie viel Reiz braucht das Neuron jetzt? Und bei positivem Bias?';
-    },
-
-    act(card, stage, ctl, upd) {
-      card.insertBefore(h(`<p class="nn-lead-p">Der letzte Kasten ist offen: die <b>Aktivierungsfunktion</b>. Sie macht aus z die Ausgabe. Unser Neuron nimmt die <b>Treppe</b>: Ist z größer als 0, kommt <b>1</b> heraus (feuert), sonst <b>0</b>. Es gibt auch weichere Funktionen, die „wie sicher“ sagen (z. B. Sigmoid) – die findest du in der Kachel <b>„Alle Neuronen“</b>.</p>`), card.lastChild);
-      const curve = h('<div class="nn-curve"></div>');
-      ctl.append(h('<b class="nn-ctl-h">Treppe: z → Ausgabe</b>'), curve, ...ctlB(upd), ...ctlX(upd));
-      stage.curve = curve;
-      return '<b>Jetzt ist die Blackbox ganz offen:</b> Eingänge × Gewichte, zusammenzählen, Bias dazu, Treppe – fertig ist das Neuron.';
-    },
-  };
-
-  /* Schritte mit der Bühne links und Reglern rechts */
-  function stepCard(card, id) {
-    const S = STEPS.find(s => s.id === id);
-    const grid = h('<div class="nn-play-grid"><div class="nn-play-pic"></div><div class="nn-play-ctl"></div></div>');
-    const pic = grid.children[0], ctl = grid.children[1];
-    const calc = h('<div class="nn-calc"></div>');
-    card.append(grid);
-    const ext = {};
-    const upd = () => {
-      pic.innerHTML = '';
-      pic.appendChild(stageSVG({ x: st.x, w: st.w, b: st.b, show: S.show }));
-      const sum = st.x[0] * st.w[0] + st.x[1] * st.w[1], z = sum + st.b;
-      if (ext.meter) ext.meter.innerHTML = meterSVG(sum, st.b);
-      if (ext.curve) { ext.curve.innerHTML = ''; ext.curve.appendChild(curveSVG('perceptron', z)); }
-      const L = [];
-      if (S.show >= 2) L.push(`Summe = ${d2(st.x[0])}·${d2(st.w[0])} + ${d2(st.x[1])}·${d2(st.w[1])} = <b>${d2(sum)}</b>`);
-      if (S.show >= 3) L.push(`z = Summe + b = ${d2(sum)} + (${d2(st.b)}) = <b>${d2(z)}</b> → ${z > 0 ? 'über 0: <b>feuert</b>' : 'nicht über 0: <b>feuert nicht</b>'}`);
-      calc.innerHTML = L.map(l => `<div>${l}</div>`).join('');
-      calc.hidden = !L.length;
+  /* Schritt 1: Nervenzelle ↔ dasselbe Neuron, ganz aufgedeckt, nur ansehen */
+  function buildBio(card) {
+    card.appendChild(h(`<p class="nn-lead-p">Dein Gehirn hat rund <b>86 Milliarden Nervenzellen</b>. Jede bekommt Signale von anderen Zellen, „entscheidet“, ob sie selbst <b>feuert</b>, und gibt ihr Signal weiter. Ein <b>künstliches Neuron</b> ist ein stark vereinfachtes Rechenmodell davon. <b>Tippe auf ein Teil</b> – links oder rechts.</p>`));
+    const grid = h('<div class="nn-two"><div class="nn-col-bio"></div><div class="nn-col-kn"></div></div>');
+    const bio = bioSVG();
+    const N = makeNeuron({ fixed: true });
+    N.setShow(4);
+    grid.children[0].appendChild(bio);
+    grid.children[1].appendChild(N.el);
+    card.appendChild(grid);
+    const chips = h('<div class="nn-pairs"></div>');
+    const info = h('<p class="nn-pair-info">Noch nichts gewählt.</p>');
+    const pick = k => {
+      bio.dataset.hl = k; N.el.dataset.hl = k;
+      chips.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+      const p = PAIRS.find(x => x.k === k);
+      info.innerHTML = `<b>${p.bio} → ${p.kn}:</b> ${p.t}`;
     };
-    const tip = BUILD[id](card, ext, ctl, upd);
-    card.append(calc, h(`<p class="nn-try">${tip}</p>`));
-    upd();
-  }
-
-  function buildLine(card) {
-    card.appendChild(h(`<p class="nn-lead-p">Mit zwei Eingängen ist jede Eingabe ein <b>Punkt</b> (x₁ | x₂). Für jeden Punkt der Ebene können wir fragen: Feuert das Neuron hier? Die <b>gelbe Fläche</b> zeigt, wo es feuert. Die Grenze ist immer eine <b>Gerade</b> – genau dort ist die Summe gleich der Schwelle. Die <b>Gewichte drehen</b> die Gerade, der <b>Bias verschiebt</b> sie. <b>Ziehe den grünen Punkt</b> – das sind die Eingänge.</p>`));
-    const grid = h('<div class="nn-line-grid"><div class="nn-plane"><canvas></canvas></div><div class="nn-line-side"><div class="nn-line-pic"></div></div></div>');
-    const cv = grid.querySelector('canvas'), pic = grid.querySelector('.nn-line-pic'), side = grid.querySelector('.nn-line-side');
-    const calc = h('<div class="nn-calc"></div>');
-    let P = null;
-    function upd() {
-      pic.innerHTML = '';
-      pic.appendChild(stageSVG({ x: st.x, w: st.w, b: st.b, show: 4 }));
-      P = drawPlane(cv, { w: st.w, b: st.b, xr: [-5, 5], yr: [-5, 5], point: st.x });
-      const z = st.x[0] * st.w[0] + st.x[1] * st.w[1] + st.b;
-      calc.innerHTML = `<div>Gerade: ${d2(st.w[0])}·x₁ + ${d2(st.w[1])}·x₂ + (${d2(st.b)}) = 0</div>
-        <div>Punkt (${d2(st.x[0])} | ${d2(st.x[1])}): z = ${d2(z)} → ${z > 0 ? '<b>feuert</b> (gelbe Seite)' : '<b>feuert nicht</b> (graue Seite)'}</div>`;
-    }
-    side.append(...ctlW(upd), ...ctlB(upd));
-    card.append(grid, calc, h('<p class="nn-try"><b>Probier:</b> Stelle w₁ = 0 – wie liegt die Gerade jetzt? Was passiert, wenn du nur den Bias änderst? Und wenn beide Gewichte das Vorzeichen wechseln?</p>'));
-    const setPt = (px, py) => {
-      if (!P) return false;
-      const [a, c] = P.toData(px, py);
-      st.x = [Math.max(-5, Math.min(5, Math.round(a * 2) / 2)), Math.max(-5, Math.min(5, Math.round(c * 2) / 2))];
-      upd();
-    };
-    planeDrag(cv, (px, py) => setPt(px, py) !== false, setPt);
-    upd();
-    requestAnimationFrame(upd);
-    new ResizeObserver(() => { if (cv.isConnected) upd(); }).observe(cv);
-  }
-
-  function buildData(card) {
-    card.appendChild(h(`<p class="nn-lead-p">Jetzt hat das Neuron eine echte Aufgabe: <b>Daten in zwei Gruppen trennen</b>. Statt an Reglern zu drehen, schiebst du direkt die <b>Gerade</b> – an den zwei <b>blauen Griffen</b>. Das Neuron rechts zeigt dir, welche Gewichte und welcher Bias dazu gehören. <b>Tippe einen Punkt an</b>, dann siehst du, was das Neuron mit ihm macht.</p>`));
-    const pick = h('<div class="nn-task-pick"></div>');
-    Object.entries(DS).forEach(([k, d]) => {
-      const b = h(`<button type="button" class="nn-pill${dsKey === k ? ' on' : ''}" data-ds="${k}">${d.name}</button>`);
-      b.addEventListener('click', () => { dsKey = k; dsSel = 0; pick.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); upd(); });
-      pick.appendChild(b);
+    PAIRS.forEach(p => {
+      const b = h(`<button type="button" class="nn-pair" data-k="${p.k}"><span>${p.bio}</span><i>→</i><b>${p.kn}</b></button>`);
+      b.addEventListener('click', () => pick(p.k));
+      chips.appendChild(b);
     });
-    const text = h('<p class="nn-task-text"></p>');
-    const grid = h('<div class="nn-line-grid"><div class="nn-plane"><canvas></canvas></div><div class="nn-line-side"><div class="nn-line-pic"></div></div></div>');
-    const cv = grid.querySelector('canvas'), pic = grid.querySelector('.nn-line-pic'), side = grid.querySelector('.nn-line-side');
-    const flip = h('<button type="button" class="nn-btn">⇄ Feuer-Seite tauschen</button>');
-    flip.addEventListener('click', () => { DS[dsKey].flip *= -1; upd(); });
+    [bio, N.el].forEach(x => x.addEventListener('click', e => { const t = e.target.closest('[data-k]'); if (t) pick(t.dataset.k); }));
+    card.append(chips, info);
+  }
+
+  /* Schritte 2–5: Neuron in der Mitte, Rechnung darunter */
+  function buildReveal(card, S) {
+    const T = TEXT[S.id];
+    card.appendChild(h(`<p class="nn-lead-p">${T.p}</p>`));
+    const calc = h('<div class="nw-calc m"></div>');
+    const N = makeNeuron({ onChange: () => { calc.innerHTML = calcHTML(S.show); } });
+    // Vom letzten Stand aus aufdecken, damit man sieht, was neu dazukommt
+    N.setShow(Math.min(lastShow || S.show, S.show));
+    requestAnimationFrame(() => requestAnimationFrame(() => N.setShow(S.show)));
+    lastShow = S.show;
+    calc.innerHTML = calcHTML(S.show);
+    card.append(h('<div class="nw-stage"></div>'), calc, h(`<p class="nn-try"><b>Probier:</b> ${T.t}</p>`));
+    card.querySelector('.nw-stage').appendChild(N.el);
+  }
+
+  /* Schritte 6–7: Neuron links, Ebene rechts – beides verändert dasselbe */
+  function buildPlane(card, S) {
+    const isData = S.id === 'data';
+    card.appendChild(h(isData
+      ? '<p class="nn-lead-p">Die <b class="t-y">goldenen Punkte</b> sollen das Neuron zum Feuern bringen, die <b>weißen</b> nicht. Stell das Neuron so ein, dass die Gerade die beiden Gruppen trennt – am Neuron mit − und + oder direkt auf dem Feld. <b>Tippe einen Punkt an</b>: Dann geht er als Eingabe ins Neuron.</p>'
+      : '<p class="nn-lead-p">Mit zwei Eingängen ist jede Eingabe ein <b class="t-x">Punkt</b> (<i class="m">x</i><sub>1</sub> | <i class="m">x</i><sub>2</sub>). Für jeden Punkt kann man fragen: Feuert das Neuron hier? <b class="t-y">Gelb</b> = ja. Die Grenze ist immer eine <b>Gerade</b> – genau dort ist <i class="m">z</i> = 0. Die <b class="t-w">Gewichte drehen</b> die Gerade, der <b class="t-b">Bias schiebt</b> sie.</p>'));
+    const calc = h('<div class="nw-calc m"></div>');
     const msg = h('<p class="nn-task-msg"></p>');
-    side.append(flip, msg);
-    card.append(pick, text, grid);
-    card.appendChild(h(`<div class="nn-summary"><b>Das Wichtigste</b><ul>
-      <li>Ein Neuron nimmt jeden <b>Eingang</b> mal sein <b>Gewicht</b> und zählt alles zusammen.</li>
-      <li>Der <b>Bias</b> legt die Schwelle fest: Erst wenn die Summe darüber liegt, <b>feuert</b> das Neuron (Aktivierung).</li>
-      <li>Mit zwei Eingängen zieht ein Neuron <b>eine Gerade</b> und trennt so Daten in zwei Gruppen.</li>
-      <li>Mehr als eine Gerade kann ein Neuron nicht. Für XOR braucht man <b>mehrere Neuronen</b> – ein <b>Netz</b>. Das baust du im Bereich „Netze bauen“.</li></ul></div>`));
-    let P = null, grab = -1;
-    function upd() {
-      const d = DS[dsKey], pts = dsPoints(d), N = dsNeuron(d);
-      if (dsSel >= pts.length) dsSel = 0;
-      text.innerHTML = d.text;
-      const p = pts[dsSel];
-      pic.innerHTML = '';
-      pic.appendChild(stageSVG({ x: p.x, w: N.w, b: N.b, show: 4, names: d.names, outText: d.out }));
-      P = drawPlane(cv, { w: N.w, b: N.b, xr: d.xr, yr: d.yr, labels: d.labels, points: pts, handles: d.h, sel: dsSel });
-      const ok = pts.filter(q => (N.w[0] * q.x[0] + N.w[1] * q.x[1] + N.b > 0 ? 1 : 0) === q.soll).length;
-      const all = ok === pts.length;
-      msg.className = 'nn-task-msg' + (all ? ' ok' : '');
-      msg.innerHTML = `<b>${ok} von ${pts.length}</b> richtig.<br>` + (all
-        ? (dsKey === 'xor' ? 'Wirklich? Schau genau hin …' : 'Geschafft – eine Gerade reicht hier.')
-        : dsKey === 'xor' ? '<b>Denkanstoß:</b> Kannst du die beiden orangen Punkte mit <i>einer</i> Geraden von den weißen trennen? Was bräuchte man dafür?'
-          : 'Schiebe die Griffe. Liegt die gelbe Fläche auf der falschen Seite? Dann tausche die Feuer-Seite.');
+    let N = null, PL = null;
+    const sync = () => {
+      N.update(); PL.draw(); calc.innerHTML = calcHTML(4);
+      if (!isData) return;
+      const ok = pts.filter(p => ((st.w[0] * p.x[0] + st.w[1] * p.x[1] + st.b > 0) ? 1 : 0) === p.soll).length;
+      msg.className = 'nn-task-msg' + (ok === pts.length ? ' ok' : '');
+      msg.innerHTML = ok === pts.length ? `<b>${ok} von ${pts.length} richtig</b> – eine Gerade trennt die beiden Gruppen.`
+        : `<b>${ok} von ${pts.length} richtig.</b> Rot umkreiste Punkte liegen auf der falschen Seite.`;
+    };
+    N = makeNeuron({ onChange: () => sync() });
+    N.setShow(4); lastShow = 4;
+    PL = makePlane({ onChange: () => sync(), points: isData ? () => pts : null });
+    const grid = h('<div class="nw-split"><div class="nw-left"></div><div class="nw-right"></div></div>');
+    grid.children[0].append(N.el, calc);
+    grid.children[1].append(PL.el, h(`<p class="nw-legend"><span><i class="lg-pt"></i>Punkt ziehen = Eingänge</span><span><i class="lg-line"></i>Gerade schieben = Bias</span><span><i class="lg-rot"></i>Griff drehen = Gewichte</span></p>`));
+    if (isData) {
+      const again = h('<button type="button" class="nn-btn">Neue Punkte</button>');
+      again.addEventListener('click', () => { pts = newPoints(); st.x = pts[0].x.slice(); sync(); });
+      const row = h('<div class="nw-taskrow"></div>');
+      row.append(msg, again);
+      grid.children[1].appendChild(row);
     }
-    planeDrag(cv, (px, py) => {
-      if (!P) return false;
-      const d = DS[dsKey];
-      grab = d.h.findIndex(([a, c]) => { const [hx, hy] = P.toPx(a, c); return Math.hypot(hx - px, hy - py) < 24; });
-      if (grab >= 0) return true;
-      // sonst nächsten Datenpunkt wählen
-      let best = -1, bd = 26;
-      dsPoints(d).forEach((q, i) => { const [qx, qy] = P.toPx(q.x[0], q.x[1]); const dd = Math.hypot(qx - px, qy - py); if (dd < bd) { bd = dd; best = i; } });
-      if (best >= 0) { dsSel = best; upd(); }
-      return false;
-    }, (px, py) => {
-      const d = DS[dsKey];
-      const [a, c] = P.toData(px, py);
-      d.h[grab] = [Math.max(d.xr[0], Math.min(d.xr[1], a)), Math.max(d.yr[0], Math.min(d.yr[1], c))];
-      const o = d.h[1 - grab];
-      if (Math.hypot((d.h[grab][0] - o[0]) / (d.xr[1] - d.xr[0]), (d.h[grab][1] - o[1]) / (d.yr[1] - d.yr[0])) < 0.04) return;
-      upd();
-    });
-    upd();
-    requestAnimationFrame(upd);
-    new ResizeObserver(() => { if (cv.isConnected) upd(); }).observe(cv);
+    card.append(grid);
+    if (isData) card.appendChild(h(`<div class="nn-summary"><b>Das Wichtigste</b><ul>
+      <li>Ein Neuron nimmt jeden <b>Eingang</b> mal sein <b>Gewicht</b>, zählt alles zusammen und den <b>Bias</b> dazu: <i class="m">z</i>.</li>
+      <li>Die <b>Aktivierung</b> entscheidet: Ist <i class="m">z</i> größer als 0, feuert das Neuron.</li>
+      <li>Mit zwei Eingängen zieht ein Neuron <b>eine Gerade</b> – und trennt so Punkte in zwei Gruppen.</li>
+      <li>Mehr als eine Gerade kann ein einzelnes Neuron nicht. Was mehrere Neuronen zusammen können, probierst du in <b>„Netze bauen“</b>.</li></ul></div>`));
+    else card.appendChild(h('<p class="nn-try"><b>Probier:</b> Stell <i class="m">w</i><sub>1</sub> auf 0 – wie liegt die Gerade jetzt? Und was passiert, wenn du nur den Bias änderst?</p>'));
+    sync();
+    requestAnimationFrame(sync);
   }
 
   function renderWie(page) {
@@ -600,12 +593,11 @@
       b.addEventListener('click', () => { step = s.id; again(); });
       nav.appendChild(b);
     });
-    const i = STEPS.findIndex(s => s.id === step);
-    const card = h(`<section class="nn-card nn-stepcard"><p class="nn-kicker">Schritt ${i + 1} von ${STEPS.length}</p><h2>${STEPS[i].title}</h2></section>`);
-    if (step === 'bio') BUILD.bio(card);
-    else if (step === 'line') buildLine(card);
-    else if (step === 'data') buildData(card);
-    else stepCard(card, step);
+    const i = STEPS.findIndex(s => s.id === step), S = STEPS[i];
+    const card = h(`<section class="nn-card nn-stepcard"><p class="nn-kicker">Schritt ${i + 1} von ${STEPS.length}</p><h2>${S.title}</h2></section>`);
+    if (step === 'bio') buildBio(card);
+    else if (step === 'line' || step === 'data') buildPlane(card, S);
+    else buildReveal(card, S);
     const foot = h('<div class="nn-foot"></div>');
     if (i > 0) { const b = h(`<button type="button" class="nn-btn">‹ ${STEPS[i - 1].kurz}</button>`); b.onclick = () => { step = STEPS[i - 1].id; again(); }; foot.appendChild(b); }
     foot.appendChild(h('<span></span>'));

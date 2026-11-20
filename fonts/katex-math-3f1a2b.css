@@ -1,0 +1,5 @@
+/* KaTeX-Schriften (MIT, Khan Academy, katex@0.16.11) – lokal für Formeln.
+   'KaTeX Math' = kursive Variablen (x, w, b, z, y, f), 'KaTeX Main' = Ziffern, Klammern, Operatoren. */
+@font-face { font-family: 'KaTeX Math'; font-style: italic; font-weight: 400; font-display: swap; src: url(files/katex_math-italic.woff2) format('woff2'); }
+@font-face { font-family: 'KaTeX Main'; font-style: normal; font-weight: 400; font-display: swap; src: url(files/katex_main-regular.woff2) format('woff2'); }
+@font-face { font-family: 'KaTeX Main'; font-style: normal; font-weight: 700; font-display: swap; src: url(files/katex_main-bold.woff2) format('woff2'); }

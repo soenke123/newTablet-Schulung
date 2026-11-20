@@ -48,7 +48,7 @@
   const AREAS = [
     { id: 'neuron', title: 'Wie funktioniert ein Neuron?', text: 'Was in einem Neuron passiert – und welche Neuronen es gibt.',
       items: [
-        { id: 'n-wie', title: 'So rechnet ein Neuron', text: 'Ein Neuron Schritt für Schritt aufdecken: Eingänge, Gewichte, Bias, Aktivierung – bis es Daten trennt.' },
+        { id: 'n-wie', title: 'Wie arbeitet ein Neuron?', text: 'Ein Neuron Stück für Stück aufdecken: Eingänge, Gewichte, Bias, Aktivierung – bis es Punkte trennt.' },
         { id: 'n-typen', title: 'Alle Neuronen', text: 'Perceptron, Linear, ReLU, Sigmoid und Tanh im Überblick.' },
       ] },
     { id: 'bauen', title: 'Netze bauen', text: 'Ein Netz frei zusammenklicken, Werte festlegen und sehen, was am Ende herauskommt.',
