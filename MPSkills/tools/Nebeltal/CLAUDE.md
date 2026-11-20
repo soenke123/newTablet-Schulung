@@ -152,6 +152,12 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   aus dem Gerät (`doneLocal`: Sterne irgendeiner Welt, `nt.done.erarb` setzt erarbeitung.js, `nt.done.8` beim Öffnen von Level 8).
   Gemeinsame Halte: Lehrkraft-Knopf „Gemeinsam spielen · Level n“ (n = erstes noch nicht gespieltes) → `NTMehr.go(n)` =
   `on` + `level`; ganz gespielt → „Nochmal gemeinsam“. Tablets sehen dort „Spielt ihr gemeinsam – danach hier frei zum Üben.“
+  **Nebel für die Klasse** (Sönke 20.11.2026: „die Schritte, die noch nicht sichtbar sind, wirklich im Nebel … der Nebel sinkt“):
+  Tablets im Raum (nicht Lehrkraft, nicht allein, nicht wenn alles geschafft) sehen nur bis zum aktuellen Halt; darunter
+  `.pfad-mist` (z-index über den Karten, Wolken `<i>` treiben, Ränder per mask weich, Farbe `--mist`), spätere Halte `.hid`
+  (inert, verschwommen) – der nächste schimmert nur durch. Der Nebel auf der Bergkuppe ist dann aus (oben klar). Rückt die
+  Klasse weiter (`nt.fogAt` im Gerät < aktueller Halt), startet die Nebelbank an der alten Stelle und sinkt in ~3 s
+  (`placeMist` in `draw`); Sparmodus: ohne Bewegung.
 - **Lobby im Lernpfad** (mehr.js, `onPath()`): statt „Level wählen“ nur der Weg des Halts (`PATH_RUNS` [1, 2, 3] bzw. [8],
   `.mps-path`, ✓ = schon gespielt), „Anderes Level wählen“ (`M.freeLv`) holt die freie Wahl. Rundenende: Level 1/2 →
   „Weiter: Level n+1“ (`nextLevel` = `level` + `start`, gleich die Erklärkarte); Level 3 → „Weiter zur Erarbeitung“ und Level 8 →

@@ -73,7 +73,7 @@ window.NTPfad = (function () {
   const svg = (k, cls) => '<svg class="' + (cls || 'pic') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICON[k] + '</svg>';
   const SHEET = 'arbeitsblatt/Nebeltal_Arbeitsblatt';
 
-  let ro = null;
+  let ro = null, mistFrom = null;
 
   /* ── Wo steht die Klasse? ── */
   function progress(api) {
@@ -90,6 +90,16 @@ window.NTPfad = (function () {
   function render(el, api) {
     const R = api.R, T = R.isTeacher, ST = R.isStudent, P = progress(api);
     const showInfo = T || !R.inRoom;
+    /* Nebel für die Klasse (Sönke 20.11.2026: „die Schritte, die noch nicht sichtbar sind, wirklich im Nebel –
+       man sieht das Ende nicht, der Nebel sinkt“): Tablets im Raum sehen nur bis zum aktuellen Halt, darunter
+       liegt eine Nebelbank. Rückt die Klasse weiter, sinkt sie sichtbar (ab der alten Stelle, nt.fogAt). */
+    const fogged = ST && R.inRoom && !P.allDone;
+    mistFrom = null;
+    if (fogged) {
+      let was = -1;
+      try { was = parseInt(localStorage.getItem('nt.fogAt'), 10); localStorage.setItem('nt.fogAt', String(P.cur)); } catch (e) { /* egal */ }
+      if (was >= 0 && was < P.cur) mistFrom = was;
+    }
     const html = STATIONS.map((s, i) => {
       const st = P.allDone || i < P.cur ? 'done' : i === P.cur ? 'cur' : 'fut';
       const so = SO[s.so];
@@ -108,7 +118,8 @@ window.NTPfad = (function () {
       const sheet = s.sheet && !ST ? '<div class="pst-sheet">' + svg('doc') + '<b>Arbeitsblatt</b><span>zu Level 4–7</span>' +
         '<a class="btn sm" href="' + SHEET + '.pdf" target="_blank" rel="noopener">PDF</a>' +
         '<a class="btn sm" href="' + SHEET + '.docx" download>Word</a></div>' : '';
-      return '<section class="pst ' + st + (s.soon ? ' soon' : '') + (s.goal ? ' goal' : '') + '" style="--i:' + i + '" data-st="' + i + '">' +
+      const hid = fogged && i > P.cur;
+      return '<section class="pst ' + st + (s.soon ? ' soon' : '') + (s.goal ? ' goal' : '') + (hid ? ' hid" inert aria-hidden="true' : '') + '" style="--i:' + i + '" data-st="' + i + '">' +
         '<div class="pst-mark" aria-hidden="true"><span class="pst-n">' + (st === 'done' ? svg('check', 'pic ck') : i + 1) + '</span>' +
           (st === 'cur' && !P.allDone ? '<img class="pst-main" src="img/frei/main.webp" alt="">' : '') +
           (s.goal ? '<svg class="pst-flag" viewBox="0 0 30 40"><path d="M6 38V3"/><path class="fl" d="M7 4h18l-5 6 5 6H7z"/></svg>' : '') +
@@ -122,7 +133,8 @@ window.NTPfad = (function () {
           sheet + note + (act ? '<div class="pst-act">' + act + '</div>' : '') +
         '</div></section>';
     }).join('');
-    el.innerHTML = '<div class="pfad' + (P.allDone ? ' all' : '') + '"><svg class="pfad-bg" aria-hidden="true"></svg>' + html + '</div>';
+    el.innerHTML = '<div class="pfad' + (P.allDone ? ' all' : '') + (fogged ? ' fogged' : '') + '"><svg class="pfad-bg" aria-hidden="true"></svg>' + html +
+      (fogged ? '<div class="pfad-mist" aria-hidden="true"><i></i><i></i><i></i></div>' : '') + '</div>';
 
     el.querySelectorAll('[data-info]').forEach(b => b.addEventListener('click', () => info(+b.dataset.info)));
     el.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
@@ -142,8 +154,33 @@ window.NTPfad = (function () {
   /* ── Berg + Weg hinter den Halten (SVG, nach dem Layout) ──
      Weg = weiche Kurve durch die Marken; Berg = alles links vom Weg (oben schmaler Gipfel,
      unten breit) mit Talboden rechts unten. Bis zum aktuellen Halt durchgezogen, danach gestrichelt. */
+  // Nebelbank: Oberkante knapp unter der Karte des Halts k
+  function mistTop(pf, k) {
+    const s = pf.querySelector('.pst[data-st="' + k + '"] .pst-card');
+    if (!s) return 0;
+    const box = pf.getBoundingClientRect(), r = s.getBoundingClientRect();
+    return r.bottom - box.top + 4;
+  }
+  function placeMist(pf) {
+    const m = pf.querySelector('.pfad-mist');
+    if (!m) return;
+    const curI = [...pf.querySelectorAll('.pst')].findIndex(s => s.classList.contains('cur'));
+    const to = mistTop(pf, curI);
+    if (mistFrom != null && !(window.LWMotion && LWMotion.low)) {
+      // sinkt: erst an der alten Stelle, dann langsam hinunter
+      m.style.transition = 'none';
+      m.style.top = mistTop(pf, mistFrom) + 'px';
+      void m.offsetHeight;
+      m.style.transition = '';
+      m.classList.add('sinking');
+    }
+    mistFrom = null;
+    m.style.top = to + 'px';
+  }
+
   function draw(pf) {
     if (!pf || !pf.isConnected) return;
+    placeMist(pf);
     const bg = pf.querySelector('.pfad-bg'), box = pf.getBoundingClientRect();
     const W = box.width, H = box.height;
     if (!W || !H) return;
