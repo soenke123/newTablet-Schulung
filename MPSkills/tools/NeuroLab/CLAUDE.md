@@ -20,6 +20,8 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `neuron.png` | altes Bild des Neurons – seit 20.11.2026 (2. Fassung) nicht mehr eingebunden |
 | `Regen und Sonne.csv` | Beispiel-CSV fürs Hochladen (auch im Layout-Prüfstand) |
 | `tool.js` | Brücke zum Raum (iframe, Höhe, Freigaben) |
+| `js/theme.js` | Hell/Dunkel für gezeichnete Teile: setzt feste SVG-Farben (fill/stroke-Attribute) per Beobachter auf `var(--…)` um, `NLTheme.c('#hex', rolle)` für Canvas, Ereignis `nl:theme-redraw` |
+| `showroom-optik.html` | Showroom der Optik (Heute · Vorschlag A · Vorschlag B, Zustände, Feld mit echtem XOR-Training) — A ist umgesetzt |
 
 ## Drei Bereiche (Startseite)
 
@@ -120,9 +122,32 @@ Eingabewerte; „Ausblenden“ nimmt die Leiste fürs Bildschirmfoto weg.
 
 **Inline editing** uses a single shared `<input id="inline-input">` that is repositioned via `getBoundingClientRect()` and committed on Enter/blur.
 
-## Neuron-Typen
+## Aussehen (20.11.2026, „Vorschlag A“ aus showroom-optik.html)
 
-Rumpf leicht in der Typ-Farbe getönt (`.neuron-body` fill color-mix 10 %, Sönke 20.11.2026).
+- **Farben und Schriften wie Nebeltal** (Variablen in `style.css :root`: `--paper --surface --surface-2 --line --ink*
+  --accent* --in* --neg* --gold* --bio*`; Space Grotesk, Zahlen in JetBrains Mono, beides lokal aus `fonts/`).
+  Ein Akzent (Türkis hell / Mint dunkel); Orange = Eingänge, Rot = negative Gewichte, Gold = „feuert“ auf der
+  Neuronen-Seite, Lila = Nervenzelle. Alte Namen (`--build-color`, `--learn-color` …) zeigen auf die neuen.
+- **Hell/Dunkel:** im Raum vom Rahmen (`data-theme` am `<html>` des Rahmens, Skript im `<head>` von index.html
+  übernimmt es und beobachtet Änderungen), allein vom Gerät (`prefers-color-scheme`). **Druckansicht immer hell**
+  (`body.print-mode` setzt die hellen Werte). Neue feste Farben in CSS: immer als `var(--…)`. In JS-SVGs dürfen
+  Hex-Farben stehen, wenn sie in der Tabelle von `js/theme.js` stehen (sonst bleiben sie fest); Canvas über `NLTheme.c`.
+- **Das Neuron** (`buildNeuronSVG`, gemeinsames Innenleben `appendNeuronFace`/`paintNeuronFace`, auch in
+  `js/neuron.js` „Alle Neuronen“): weißer Kasten, Typ-Name klein darüber (Mono, Versalien),
+  Trennlinie bei 40 % (`SPLIT_X`): links Σ und `z = …`, rechts die **Kurve des Typs mit einem Punkt an der Stelle z**
+  (z von −4 bis 4, Wertebereich `actRange`) und darunter `y′ = …`. **Die Formel steht nicht mehr im Neuron**, sondern
+  im Fenster beim Antippen (und in der Druckansicht, dort weiter Σ | f(z) in zwei Hälften). Wert-Kästchen rechts
+  füllt sich mit dem Wert (`outFrac`), `is-hot` (Wert über der Mitte, `isHot`) = Rand im Akzent, im Dunkeln leichtes
+  Leuchten. Ausgang beim Lernen: Rahmen in der Fehlerfarbe (`errColor`), Name darüber.
+- **Zahlen im Neuron, an den Kanten und in den Ausgängen:** `fmtV` = höchstens zwei Nachkommastellen, aber 1 statt
+  1,00 und 1,3 statt 1,30, mit Komma und echtem Minus (Sönke 20.11.2026). `fmt` (Punkt, 4 Stellen) bleibt für
+  Eingabefelder, Fenster und Lernfenster.
+- **Kanten:** Farbe = Vorzeichen (Akzent +, Rot −, grau gestrichelt ≈ 0), Dicke = |w|; Beschriftung als Pille.
+- **Feld:** Punktpapier, Spalten als Bahnen (nur Kopf in Mono-Versalien und feine Trennlinie), Ausgänge und
+  Datentabelle bleiben Karten. Startseite: Bereiche nummeriert wie der Lernpfad in Nebeltal (CSS-Zähler), Kachel =
+  Symbol im getönten Feld + Text.
+
+## Neuron-Typen
 
 `activations` in `app.js` — je Eintrag `fn`, `formula`, `apply`, `shortLines`, `fullName`, `color`, `derivative`.
 

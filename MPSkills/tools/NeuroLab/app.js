@@ -2644,9 +2644,9 @@ function updateVoegelPlot() {
   }
   g.globalAlpha = 1;
   // Achsen
-  g.strokeStyle = '#94a3b8'; g.lineWidth = 1;
+  g.strokeStyle = NLTheme.c('#94a3b8', 2); g.lineWidth = 1;
   g.beginPath(); g.moveTo(L, T); g.lineTo(L, H - B); g.lineTo(W - R, H - B); g.stroke();
-  g.fillStyle = '#64748b'; g.font = '10px system-ui, sans-serif'; g.textAlign = 'center';
+  g.fillStyle = NLTheme.c('#64748b', 1); g.font = '10px system-ui, sans-serif'; g.textAlign = 'center';
   for (let x = 2; x <= 4.5; x += 0.5) g.fillText(String(x).replace('.', ','), px(x), H - B + 12);
   g.fillText('Flügel (dm)', (L + W) / 2, H - 2);
   g.textAlign = 'right';
@@ -2661,12 +2661,12 @@ function updateVoegelPlot() {
     if (ok) right++;
     g.beginPath(); g.arc(px(d.inputs[0]), py(d.inputs[1]), 3.2, 0, 7);
     g.fillStyle = VOGEL_ARTEN[art].color; g.fill();
-    g.lineWidth = ok ? 0.8 : 2; g.strokeStyle = ok ? '#fff' : '#111'; g.stroke();
+    g.lineWidth = ok ? 0.8 : 2; g.strokeStyle = ok ? NLTheme.c('#fff', 2) : NLTheme.c('#111', 2); g.stroke();
   }
   const ls = state.learn.lastSample;
   if (ls && ls.inputs) {
     g.beginPath(); g.arc(px(ls.inputs[0]), py(ls.inputs[1]), 7, 0, 7);
-    g.lineWidth = 2; g.strokeStyle = '#111'; g.stroke();
+    g.lineWidth = 2; g.strokeStyle = NLTheme.c('#111', 2); g.stroke();
   }
   const acc = document.getElementById('vogel-acc');
   if (acc) acc.innerHTML = `Richtig erkannt: <b>${right} von ${sc.data.length}</b> (${Math.round(right / sc.data.length * 100)} %) · schwarzer Rand = falsch`;
@@ -3092,8 +3092,12 @@ const VB_W = 268, VB_H = 160;
 const NB_X = 10, NB_Y = 22, NB_W = 180, NB_H = 72;
 const NB_CX = NB_X + NB_W / 2;      // 100
 const NB_CY = NB_Y + NB_H / 2;      // 58
-const LHX   = NB_X + NB_W / 4;      // 55  (Σ half center)
-const RHX   = NB_X + NB_W * 3 / 4;  // 145 (activation half center)
+/* Σ-Teil schmaler (40 %), Aktivierung breiter: dort steht seit 20.11.2026
+   (Showroom „Vorschlag A“) keine Formel mehr, sondern die Kurve mit einem
+   Punkt an der Stelle z. Die Formel steht im Fenster beim Antippen. */
+const SPLIT_X = NB_X + 72;          // 82  Trennlinie Σ | f
+const LHX   = (NB_X + SPLIT_X) / 2; // 46  (Σ half center)
+const RHX   = (SPLIT_X + NB_X + NB_W) / 2; // 136 (activation half center)
 const BIAS_Y_TOP = NB_Y + NB_H;     // 94
 const BIAS_X     = LHX;             // 55
 const BIAS_Y_BOT = 118;
@@ -3103,6 +3107,86 @@ const OL_X2 = OL_X1 + 16;          // 206  (line end)
 const OB_X  = OL_X2 + 2;           // 208  (box left)
 const OB_W  = 56, OB_H = 22;
 const OB_CX = OB_X + OB_W / 2;     // 236
+
+// ── Zahlen und Kurve im Neuron ─────────────────────────────────────────────
+/* Höchstens zwei Nachkommastellen, aber nichts Überflüssiges: 1 statt 1,00,
+   1,3 statt 1,30. Mit Komma und echtem Minus. */
+function fmtV(n) {
+  if (n === undefined || n === null || !isFinite(n)) return '–';
+  let r = Math.round(n * 100) / 100;
+  if (Object.is(r, -0)) r = 0;
+  return String(r).replace('.', ',').replace('-', '−');
+}
+
+/* Wertebereich für Kurve und Füllstand des Wert-Kästchens */
+function actRange(type) {
+  return ({ perceptron: [0, 1], sigmoid: [0, 1], tanh: [-1, 1], relu: [0, 4] }[type]) || [-4, 4];
+}
+/* „Aktiv“: Wert über der Mitte (bzw. über 0 bei Linear/ReLU) */
+function isHot(type, y) {
+  const [lo, hi] = actRange(type);
+  return y > (lo < 0 || type === 'relu' ? 0 : (lo + hi) / 2);
+}
+const Z_SPAN = 4;   // die Kurve zeigt z von −4 bis 4
+function curvePath(type, x0, y0, w, h) {
+  const fn = activations[type].fn, [lo, hi] = actRange(type);
+  let d = '';
+  for (let i = 0; i <= 48; i++) {
+    const z = -Z_SPAN + 2 * Z_SPAN * i / 48;
+    const v = Math.max(lo, Math.min(hi, fn(z)));
+    d += (i ? 'L' : 'M') + (x0 + w * i / 48).toFixed(1) + ',' + (y0 + h - h * (v - lo) / (hi - lo)).toFixed(1);
+  }
+  return d;
+}
+function curveDotAt(type, z, x0, y0, w, h) {
+  const [lo, hi] = actRange(type);
+  const zc = Math.max(-Z_SPAN, Math.min(Z_SPAN, z));
+  const v = Math.max(lo, Math.min(hi, activations[type].fn(zc)));
+  return [x0 + w * (zc + Z_SPAN) / (2 * Z_SPAN), y0 + h - h * (v - lo) / (hi - lo)];
+}
+
+/* Das Innere eines Neurons: Σ mit z links, Kurve mit Punkt und y′ rechts.
+   Gemeinsam für das Feld (buildNeuronSVG) und js/neuron.js.
+   o = { x, y, w, h, split, type, z?, hidden?, sigmaSize? } — ohne z: nur Σ und Kurve.
+   Gibt die Teile zurück, die sich später live ändern (paintNeuronFace). */
+function appendNeuronFace(svg, o) {
+  const make = (tag, a) => { const e = svgEl(tag, a); svg.appendChild(e); return e; };
+  const vals = o.z !== undefined;
+  const lx = (o.x + o.split) / 2;
+  const cx0 = o.split + 10, cw = o.x + o.w - 10 - cx0;
+  const cy0 = o.y + (vals ? 10 : 14), ch = o.h - (vals ? 34 : 28);
+  const [lo] = actRange(o.type);
+  const zeroY = lo < 0 ? cy0 + ch / 2 : cy0 + ch;
+  make('line', { x1: o.split, y1: o.y + 8, x2: o.split, y2: o.y + o.h - 8, class: 'neuron-divider' });
+  make('text', { x: lx, y: o.y + (vals ? o.h / 2 + 2 : o.h / 2 + 8), class: 'neuron-sigma', 'text-anchor': 'middle', 'font-size': o.sigmaSize || 22 }).textContent = 'Σ';
+  make('line', { x1: cx0, y1: zeroY, x2: cx0 + cw, y2: zeroY, class: 'neuron-axis' });
+  make('line', { x1: cx0 + cw / 2, y1: cy0, x2: cx0 + cw / 2, y2: cy0 + ch, class: 'neuron-axis' });
+  make('path', { d: curvePath(o.type, cx0, cy0, cw, ch), class: 'neuron-curve' });
+  const parts = { box: [cx0, cy0, cw, ch] };
+  if (vals) {
+    parts.dot = make('circle', { cx: 0, cy: 0, r: 4.2, class: 'neuron-dot' });
+    parts.z = make('text', { x: lx, y: o.y + o.h - 10, class: 'neuron-val', 'text-anchor': 'middle', 'data-z-display': '' });
+    parts.y = make('text', { x: (o.split + o.x + o.w) / 2, y: o.y + o.h - 10, class: 'neuron-val neuron-val-y', 'text-anchor': 'middle', 'data-y-display': '' });
+  }
+  return parts;
+}
+function paintNeuronFace(parts, type, z, hidden) {
+  if (!parts.z) return;
+  const y = activations[type].fn(z);
+  parts.z.textContent = hidden ? 'z = ?' : `z = ${fmtV(z)}`;
+  parts.y.textContent = hidden ? 'y′ = ?' : `y′ = ${fmtV(y)}`;
+  if (hidden) { parts.dot.setAttribute('display', 'none'); return; }
+  const [dx, dy] = curveDotAt(type, z, ...parts.box);
+  parts.dot.removeAttribute('display');
+  parts.dot.setAttribute('cx', dx.toFixed(1));
+  parts.dot.setAttribute('cy', dy.toFixed(1));
+  parts.dot.classList.toggle('neg', y < 0);
+}
+/* Füllstand des Wert-Kästchens (Anteil im Wertebereich) */
+function outFrac(type, y) {
+  const [lo, hi] = actRange(type);
+  return Math.max(0, Math.min(1, (y - lo) / (hi - lo)));
+}
 
 // ── LocalStorage persistence ───────────────────────────────────────────────
 const STORAGE_KEY = 'neuron-sim-v2';
@@ -3250,14 +3334,18 @@ function updateNeuronDisplays() {
       const neuron = layer.neurons[ni];
       const { z, y } = computeNeuronOutput(neuron, inputs);
       const hidden = state.layerHidden[li];
-      const zEl = svg.querySelector('[data-z-display]');
-      if (zEl) zEl.textContent = hidden ? 'z = ?' : `z=${fmt(z)}`;
-      const yEl = svg.querySelector('[data-y-display]');
-      if (yEl) yEl.textContent = hidden ? 'y′ = ?' : `y′=${fmt(y)}`;
+      if (svg._face) paintNeuronFace(svg._face, neuron.type, z, hidden);
+      svg.classList.toggle('is-hot', !hidden && isHot(neuron.type, y));
       const outEl = svg.querySelector('[data-out-display]');
-      if (outEl) outEl.textContent = hidden ? '?' : fmt(y);
+      if (outEl) outEl.textContent = hidden ? '?' : fmtV(y);
+      const fillEl = svg.querySelector('[data-out-fill]');
+      if (fillEl) {
+        const fr = hidden ? 0 : outFrac(neuron.type, y), H = 25;
+        fillEl.setAttribute('y', (NB_CY - 12.5 + H * (1 - fr)).toFixed(1));
+        fillEl.setAttribute('height', (H * fr).toFixed(1));
+      }
       const biasEl = svg.querySelector('[data-bias-display]');
-      if (biasEl) biasEl.textContent = `b = ${fmt(neuron.bias)}`;
+      if (biasEl) biasEl.textContent = `b = ${fmtV(neuron.bias)}`;
     });
   }
   if (state.phase === 'learn') {
@@ -3269,12 +3357,12 @@ function updateNeuronDisplays() {
       const m = state.outMap[t];
       if (!m) return;
       const v = state.learn.lastPredictions[t];
-      el.textContent = v !== undefined ? fmt(v) : fmt(computeNeuronOutput(state.layers[m.li].neurons[m.ni], getLayerInputs(m.li)).y);
+      el.textContent = v !== undefined ? fmtV(v) : fmtV(computeNeuronOutput(state.layers[m.li].neurons[m.ni], getLayerInputs(m.li)).y);
     });
     document.querySelectorAll('[data-target-idx]').forEach(el => {
       const ni = parseInt(el.dataset.targetIdx);
       const tgt = state.learn.lastTargets[ni];
-      el.textContent = tgt !== undefined ? fmt(tgt) : '–';
+      el.textContent = tgt !== undefined ? fmtV(tgt) : '–';
     });
     // 7-Segment-Anzeige aktualisieren
     if (state.learn.scenario === 'seg7') {
@@ -3303,9 +3391,11 @@ function updateNeuronDisplays() {
       const tgt  = state.learn.lastTargets[ti];
       if (pred === undefined || tgt === undefined) return;
       const { color, fill } = errColor(Math.abs(pred - tgt) / maxT);
-      rect.setAttribute('fill', fill);
       rect.setAttribute('stroke', color);
-      rect.closest('svg').querySelectorAll(`[data-out-color-el="${ti}"]`).forEach(el => {
+      const svgN = rect.closest('svg');
+      const fr = svgN.querySelector('[data-out-fill]');
+      if (fr) fr.setAttribute('fill', fill);
+      svgN.querySelectorAll(`.neuron-out-name[data-out-color-el="${ti}"]`).forEach(el => {
         el.setAttribute('fill', color);
       });
     });
@@ -4068,7 +4158,7 @@ function renderOutputsCol() {
     const tgt  = state.learn.lastTargets[t];
     slot.innerHTML = `<b class="out-name">${esc(label)}</b>`
       + (m ? `<span class="out-from">aus Schicht ${m.li + 1} · Neuron ${m.ni + 1}</span>` : '<span class="out-from">kein Neuron – antippen</span>')
-      + `<span class="out-vals"><span>Wert <i data-slot-val="${t}">${m && pred !== undefined ? fmt(pred) : '–'}</i></span><span>Soll <i data-target-idx="${t}">${tgt !== undefined ? fmt(tgt) : '–'}</i></span></span>`
+      + `<span class="out-vals"><span>Wert <i data-slot-val="${t}">${m && pred !== undefined ? fmtV(pred) : '–'}</i></span><span>Soll <i data-target-idx="${t}">${tgt !== undefined ? fmtV(tgt) : '–'}</i></span></span>`
       + (m ? '<button class="out-x" title="Verbindung lösen">×</button>' : '');
     slot.addEventListener('pointerdown', e => e.stopPropagation());
     slot.addEventListener('click', e => {
@@ -4126,24 +4216,24 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
   svg.setAttribute('class', 'neuron-svg');
   svg.style.setProperty('--type-color', act.color);
 
-  // ── 1. Body rect + divider ────────────────────────────────────────────────
+  // ── 1. Rumpf ──────────────────────────────────────────────────────────────
   svg.appendChild(svgEl('rect', { x: NB_X, y: NB_Y, width: NB_W, height: NB_H, rx: 12, class: 'neuron-body' }));
-  svg.appendChild(svgEl('line', { x1: NB_CX, y1: NB_Y + 6, x2: NB_CX, y2: NB_Y + NB_H - 6, class: 'neuron-divider' }));
 
   // ── Print mode: generic labels ───────────────────────────────────────────
   /* Was zu sehen ist, steht in printOpts (Auswahl oben in der Druckansicht):
      Aktivierung echt oder nur „f(z)“, Bias als Zahl/Lücke/ohne, Typname,
-     Werte z und y′ der aktuellen Eingaben. */
+     Werte z und y′ der aktuellen Eingaben. Aufs Blatt gehört die Formel. */
   if (printMode) {
+    svg.appendChild(svgEl('line', { x1: NB_CX, y1: NB_Y + 6, x2: NB_CX, y2: NB_Y + NB_H - 6, class: 'neuron-divider' }));
     const vals = printOpts.values;
-    const sigma = svgEl('text', { x: LHX, y: NB_CY, class: 'neuron-sigma', 'text-anchor': 'middle', 'font-size': '22' });
+    const sigma = svgEl('text', { x: NB_X + NB_W / 4, y: NB_CY, class: 'neuron-sigma', 'text-anchor': 'middle', 'font-size': '22' });
     sigma.textContent = 'Σ';
     svg.appendChild(sigma);
-    const zLabel = svgEl('text', { x: LHX, y: NB_CY + 18, 'text-anchor': 'middle', 'font-size': '10', fill: '#64748b', 'font-weight': '700' });
+    const zLabel = svgEl('text', { x: NB_X + NB_W / 4, y: NB_CY + 18, 'text-anchor': 'middle', 'font-size': '10', fill: '#64748b', 'font-weight': '700' });
     zLabel.textContent = vals ? `z = ${fmt(z)}` : '= z';
     svg.appendChild(zLabel);
 
-    const fo = svgEl('foreignObject', { x: RHX - 38, y: 34, width: 76, height: 44 });
+    const fo = svgEl('foreignObject', { x: NB_X + NB_W * 3 / 4 - 38, y: 34, width: 76, height: 44 });
     const fDiv = document.createElement('div');
     fDiv.className = 'svg-math';
     fDiv.innerHTML = printOpts.fz
@@ -4190,62 +4280,31 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
     return svg;
   }
 
-  // ── 2. Interior text ──────────────────────────────────────────────────────
-  const formulas = act.shortLines;
-  const twoLines = formulas.length > 1;
-
+  // ── 2. Innen: Σ und z | Kurve mit Punkt und y′ ──────────────────────────
+  const layerIsHidden = isRun && state.layerHidden[layerIdx];
+  const face = appendNeuronFace(svg, {
+    x: NB_X, y: NB_Y, w: NB_W, h: NB_H, split: SPLIT_X, type: neuron.type,
+    z: isRun ? z : undefined,
+  });
+  svg._face = face;
   if (isRun) {
-    const layerIsHidden = state.layerHidden[layerIdx];
-    const sigma = svgEl('text', { x: LHX, y: NB_CY - 6, class: 'neuron-sigma', 'text-anchor': 'middle', 'font-size': '20' });
-    sigma.textContent = 'Σ';
-    svg.appendChild(sigma);
-    const zVal = svgEl('text', { x: LHX, y: NB_CY + 17, 'text-anchor': 'middle', 'font-size': '10', fill: layerIsHidden ? '#94a3b8' : '#444', 'font-weight': '700', 'data-z-display': '' });
-    zVal.textContent = layerIsHidden ? 'z = ?' : `z=${fmt(z)}`;
-    svg.appendChild(zVal);
-    {
-      const foW = 76, foH = twoLines ? 26 : 22;
-      const fo = svgEl('foreignObject', { x: RHX - foW / 2, y: 38, width: foW, height: foH });
-      const fDiv = document.createElement('div');
-      fDiv.className = 'svg-math';
-      fDiv.innerHTML = formulas.map(f => `<span>${f}</span>`).join('');
-      fo.appendChild(fDiv);
-      svg.appendChild(fo);
-    }
-    const yVal = svgEl('text', { x: RHX, y: NB_CY + (twoLines ? 18 : 12), 'text-anchor': 'middle', 'font-size': '10', fill: layerIsHidden ? '#94a3b8' : act.color, 'font-weight': '700', 'data-y-display': '' });
-    yVal.textContent = layerIsHidden ? 'y′ = ?' : `y′=${fmt(y)}`;
-    svg.appendChild(yVal);
-  } else {
-    const sigma = svgEl('text', { x: LHX, y: NB_CY + 8, class: 'neuron-sigma', 'text-anchor': 'middle', 'font-size': '22' });
-    sigma.textContent = 'Σ';
-    svg.appendChild(sigma);
-    {
-      const foW = 76, foH = twoLines ? 28 : 22;
-      const fo = svgEl('foreignObject', { x: RHX - foW / 2, y: twoLines ? 44 : 47, width: foW, height: foH });
-      const fDiv = document.createElement('div');
-      fDiv.className = 'svg-math';
-      fDiv.innerHTML = formulas.map(f => `<span>${f}</span>`).join('');
-      fo.appendChild(fDiv);
-      svg.appendChild(fo);
-    }
+    paintNeuronFace(face, neuron.type, z, layerIsHidden);
+    svg.classList.toggle('is-hot', !layerIsHidden && isHot(neuron.type, y));
   }
 
-  // ── 3. Type name (informational) ──────────────────────────────────────────
-  const nameLabel = svgEl('text', {
-    x: NB_CX, y: NB_Y - 7,
-    'text-anchor': 'middle', 'font-size': '11', 'font-weight': '700', fill: act.color,
-  });
-  nameLabel.textContent = act.fullName;
+  // ── 3. Typ ────────────────────────────────────────────────────────────────
+  const nameLabel = svgEl('text', { x: NB_X + 2, y: NB_Y - 8, class: 'neuron-type' });
+  nameLabel.textContent = act.fullName.toUpperCase();
   svg.appendChild(nameLabel);
 
-  // ── 4. Bias line + arrow ──────────────────────────────────────────────────
-  svg.appendChild(svgEl('line', { x1: BIAS_X, y1: BIAS_Y_BOT, x2: BIAS_X, y2: BIAS_Y_TOP + 8, class: 'bias-line' }));
-  svg.appendChild(svgEl('polygon', {
-    points: `${BIAS_X},${BIAS_Y_TOP} ${BIAS_X - 4},${BIAS_Y_TOP + 8} ${BIAS_X + 4},${BIAS_Y_TOP + 8}`,
-    fill: '#888',
+  // ── 4. Bias ───────────────────────────────────────────────────────────────
+  svg.appendChild(svgEl('line', { x1: BIAS_X, y1: BIAS_Y_BOT, x2: BIAS_X, y2: BIAS_Y_TOP + 5, class: 'bias-line' }));
+  svg.appendChild(svgEl('path', {
+    d: `M${BIAS_X - 4},${BIAS_Y_TOP + 7} L${BIAS_X},${BIAS_Y_TOP + 2} L${BIAS_X + 4},${BIAS_Y_TOP + 7}`, class: 'bias-line',
   }));
   if (state.phase === 'build') {
-    const bLabel = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 4, 'font-size': '8', 'font-weight': '700', fill: '#94a3b8', 'text-anchor': 'middle' });
-    bLabel.textContent = 'Bias';
+    const bLabel = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 4, class: 'bias-cap', 'text-anchor': 'middle' });
+    bLabel.textContent = 'BIAS';
     svg.appendChild(bLabel);
     const bFo = makeSVGInput(neuron.bias, v => { neuron.bias = v; });
     bFo.setAttribute('x', BIAS_X - 22);
@@ -4254,96 +4313,52 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
     bFo.setAttribute('height', '22');
     svg.appendChild(bFo);
   } else {
-    const bText = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 14, class: 'bias-label', 'text-anchor': 'middle', 'font-size': '10', 'data-bias-display': '' });
-    bText.textContent = `b = ${fmt(neuron.bias)}`;
+    const bText = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 14, class: 'bias-label', 'text-anchor': 'middle', 'data-bias-display': '' });
+    bText.textContent = `b = ${fmtV(neuron.bias)}`;
     svg.appendChild(bText);
   }
 
-  // ── 5. Output indicator: line + box ──────────────────────────────────────
-  svg.appendChild(svgEl('line', { x1: OL_X1, y1: NB_CY, x2: OL_X2, y2: NB_CY, stroke: '#94a3b8', 'stroke-width': '1.5' }));
+  // ── 5. Wert-Kästchen rechts ───────────────────────────────────────────────
+  svg.appendChild(svgEl('line', { x1: OL_X1, y1: NB_CY, x2: OL_X2, y2: NB_CY, class: 'neuron-wire' }));
+  const OBH = 28, OBY = NB_CY - OBH / 2;
+  /* Kästchen mit Füllstand (Anteil des Werts im Wertebereich des Typs) */
+  const valueBox = (opts = {}) => {
+    const rect = svgEl('rect', { x: OB_X, y: OBY, width: OB_W, height: OBH, rx: 8, class: 'neuron-out' + (opts.cls ? ' ' + opts.cls : ''), ...(opts.attrs || {}) });
+    if (opts.stroke) rect.setAttribute('stroke', opts.stroke);
+    svg.appendChild(rect);
+    if (opts.fill !== false) {
+      const fr = layerIsHidden ? 0 : outFrac(neuron.type, y);
+      const fill = svgEl('rect', { x: OB_X + 1.5, y: OBY + 1.5 + (OBH - 3) * (1 - fr), width: OB_W - 3, height: (OBH - 3) * fr, rx: 6.5, class: 'neuron-out-fill', 'data-out-fill': '', style: 'pointer-events:none' });
+      if (opts.fillColor) fill.setAttribute('fill', opts.fillColor);
+      svg.appendChild(fill);
+    }
+    const t = svgEl('text', { x: OB_CX, y: NB_CY + 4.5, 'text-anchor': 'middle', class: 'neuron-out-txt' + (opts.txtCls ? ' ' + opts.txtCls : ''), style: 'pointer-events:none', ...(opts.txtAttrs || {}) });
+    t.textContent = opts.text !== undefined ? opts.text : (layerIsHidden ? '?' : fmtV(y));
+    svg.appendChild(t);
+    return rect;
+  };
   if (isRun) {
-    const layerIsHidden = state.layerHidden[layerIdx];
-    const termIdx  = state.phase === 'learn' ? slotOf(layerIdx, neuronIdx) : -1;
-    let outColor, outFill;
-    if (state.phase === 'learn' && termIdx >= 0) {
+    const termIdx = state.phase === 'learn' ? slotOf(layerIdx, neuronIdx) : -1;
+    let outColor = null, outFill = null;
+    if (termIdx >= 0) {
       const pred = state.learn.lastPredictions[termIdx];
       const tgt  = state.learn.lastTargets[termIdx];
       if (pred !== undefined && tgt !== undefined) {
         const sc   = getScenarioData();
         const maxT = sc ? Math.max(...sc.data.flatMap(d => d.targets).map(Math.abs), 1) : 1;
-        const err  = Math.abs(pred - tgt) / maxT;
-        ({ color: outColor, fill: outFill } = errColor(err));
-      } else {
-        outColor = '#10b981'; outFill = '#d1fae5';
+        ({ color: outColor, fill: outFill } = errColor(Math.abs(pred - tgt) / maxT));
       }
-    } else if (state.phase === 'learn') {
-      outColor = '#10b981'; outFill = '#d1fae5';
-    } else {
-      outColor = '#f59e0b'; outFill = '#fffbeb';
     }
-    // In learn mode, non-last-layer neurons: show clickable OUT toggle (like build mode)
-    /* Früher ließ sich beim Lernen jedes Neuron per OUT-Knopf zum Ausgang
-       machen — die Ausgaben hingen dann an der Reihenfolge der Neuronen
-       (AND, OR, NOT A in Schicht 1, XOR in Schicht 2). Seit 20.11.2026 ist der
-       Ausgang die feste letzte Spalte; dazwischen gibt es nur Neuronen. */
-    const learnMidLayer = false;
-    if (learnMidLayer) {
-      const isOut = isOutputNeuron(layerIdx, neuronIdx);
-      const doToggle = e => {
-        e.stopPropagation();
-        const nowOut = isOutputNeuron(layerIdx, neuronIdx);
-        state.layers[layerIdx + 1].neurons.forEach(n => {
-          if (!n.disabled) n.disabled = Array(n.weights.length).fill(false);
-          n.disabled[neuronIdx] = !nowOut;
-        });
-        state.learn.topologyDirty = true;
-        render();
-      };
-      if (isOut && termIdx >= 0 && state.outputLabels[termIdx]) {
-        const boxH = 54, boxTop = NB_CY - boxH / 2;
-        const rect = svgEl('rect', {
-          x: OB_X, y: boxTop, width: OB_W, height: boxH, rx: 4,
-          fill: outFill, stroke: outColor, 'stroke-width': '1.5', style: 'cursor:pointer',
-          'data-out-rect': String(termIdx),
-        });
-        rect.addEventListener('pointerdown', doToggle);
-        svg.appendChild(rect);
-        const lblTxt = svgEl('text', { x: OB_CX, y: boxTop + 14, 'text-anchor': 'middle', 'font-size': '8', fill: outColor, 'font-weight': '700', 'data-out-color-el': String(termIdx) });
-        lblTxt.textContent = state.outputLabels[termIdx];
-        svg.appendChild(lblTxt);
-        const valTxt = svgEl('text', { x: OB_CX, y: boxTop + 30, 'text-anchor': 'middle', 'font-size': '13', fill: outColor, 'font-weight': '700', 'data-out-display': '', 'data-out-color-el': String(termIdx) });
-        valTxt.textContent = layerIsHidden ? '?' : fmt(y);
-        svg.appendChild(valTxt);
-        const tgt = state.learn.lastTargets[termIdx];
-        const sollLbl = svgEl('text', { x: OB_X + 5, y: boxTop + 46, 'font-size': '7', fill: '#6366f1', 'font-weight': '700' });
-        sollLbl.textContent = 'Soll';
-        svg.appendChild(sollLbl);
-        const sollVal = svgEl('text', { x: OB_X + OB_W - 5, y: boxTop + 46, 'text-anchor': 'end', 'font-size': '7', fill: '#3730a3', 'font-weight': '700', 'data-target-idx': String(termIdx) });
-        sollVal.textContent = tgt !== undefined ? fmt(tgt) : '–';
-        svg.appendChild(sollVal);
-      } else {
-        const boxFill2   = isOut ? '#d1fae5' : '#f8fafc';
-        const boxStroke2 = isOut ? '#10b981' : '#d1d5db';
-        const rect = svgEl('rect', {
-          x: OB_X, y: NB_CY - OB_H / 2, width: OB_W, height: OB_H, rx: 4,
-          fill: boxFill2, stroke: boxStroke2, 'stroke-width': isOut ? '1.5' : '1', style: 'cursor:pointer',
-        });
-        rect.addEventListener('pointerdown', doToggle);
-        svg.appendChild(rect);
-        const outTxt = svgEl('text', { x: OB_CX, y: NB_CY + 5, 'text-anchor': 'middle', 'font-size': '11', fill: isOut ? '#10b981' : '#d1d5db', 'font-weight': '700' });
-        outTxt.textContent = isOut ? 'OUT' : '–';
-        svg.appendChild(outTxt);
-      }
-    } else if (isLearnArea() && !layerIsHidden) {
+    if (isLearnArea() && !layerIsHidden) {
       /* Lernen: Wert-Kästchen; hängt das Neuron an einem Ausgang, steht dessen
          Name darüber und der Rahmen zeigt den Fehler. Antippen = mit einem
          Ausgang verbinden. */
       const on = termIdx >= 0;
-      const rect = svgEl('rect', {
-        x: OB_X, y: NB_CY - 15, width: OB_W, height: 30, rx: 4,
-        fill: on ? outFill : '#f8fafc', stroke: on ? outColor : '#cbd5e1', 'stroke-width': on ? '1.8' : '1',
-        style: 'cursor:pointer', class: 'out-port',
-        ...(on ? { 'data-out-rect': String(termIdx) } : {}),
+      const rect = valueBox({
+        cls: 'out-port' + (on ? ' is-linked' : ''),
+        stroke: on ? outColor : null, fillColor: on ? outFill : null,
+        attrs: { style: 'cursor:pointer', ...(on ? { 'data-out-rect': String(termIdx) } : {}) },
+        txtAttrs: { 'data-out-display': '', ...(on ? { 'data-out-color-el': String(termIdx) } : {}) },
       });
       const pick = e => {
         e.stopPropagation();
@@ -4353,61 +4368,40 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
       };
       rect.addEventListener('pointerdown', e => e.stopPropagation());
       rect.addEventListener('click', pick);
-      svg.appendChild(rect);
       if (on) {
-        const lbl = svgEl('text', { x: OB_CX, y: NB_CY - 19, 'text-anchor': 'middle', 'font-size': '9', fill: outColor, 'font-weight': '800', 'data-out-color-el': String(termIdx) });
+        const lbl = svgEl('text', { x: OB_CX, y: OBY - 6, 'text-anchor': 'middle', class: 'neuron-out-name', 'data-out-color-el': String(termIdx) });
+        if (outColor) lbl.setAttribute('fill', outColor);
         lbl.textContent = '→ ' + (state.outputLabels[termIdx] || '');
         svg.appendChild(lbl);
       }
-      const valTxt = svgEl('text', { x: OB_CX, y: NB_CY + 5, 'text-anchor': 'middle', 'font-size': '12', fill: on ? outColor : '#64748b', 'font-weight': '700', 'data-out-display': '', style: 'pointer-events:none', ...(on ? { 'data-out-color-el': String(termIdx) } : {}) });
-      valTxt.textContent = fmt(y);
-      svg.appendChild(valTxt);
     } else if (termIdx >= 0 && !layerIsHidden) {
-      // 3-Zeilen-Box: Label / Wert / Soll
+      // 3-Zeilen-Box: Name / Wert / Soll
       const boxH = 54, boxTop = NB_CY - boxH / 2;
-      svg.appendChild(svgEl('rect', {
-        x: OB_X, y: boxTop, width: OB_W, height: boxH, rx: 4,
-        fill: outFill, stroke: outColor, 'stroke-width': '1.5',
-        'data-out-rect': String(termIdx),
-      }));
-      const lblTxt = svgEl('text', { x: OB_CX, y: boxTop + 14, 'text-anchor': 'middle', 'font-size': '8', fill: outColor, 'font-weight': '700', 'data-out-color-el': String(termIdx) });
+      const r = svgEl('rect', { x: OB_X, y: boxTop, width: OB_W, height: boxH, rx: 8, class: 'neuron-out', 'data-out-rect': String(termIdx) });
+      if (outColor) r.setAttribute('stroke', outColor);
+      svg.appendChild(r);
+      const lblTxt = svgEl('text', { x: OB_CX, y: boxTop + 14, 'text-anchor': 'middle', class: 'neuron-out-name', 'data-out-color-el': String(termIdx) });
       lblTxt.textContent = state.outputLabels[termIdx] || '';
       svg.appendChild(lblTxt);
-      const valTxt = svgEl('text', { x: OB_CX, y: boxTop + 30, 'text-anchor': 'middle', 'font-size': '13', fill: outColor, 'font-weight': '700', 'data-out-display': '', 'data-out-color-el': String(termIdx) });
-      valTxt.textContent = fmt(y);
+      const valTxt = svgEl('text', { x: OB_CX, y: boxTop + 31, 'text-anchor': 'middle', class: 'neuron-out-txt', 'data-out-display': '' });
+      valTxt.textContent = fmtV(y);
       svg.appendChild(valTxt);
       const tgt = state.learn.lastTargets[termIdx];
-      const sollLbl = svgEl('text', { x: OB_X + 5, y: boxTop + 46, 'font-size': '7', fill: '#6366f1', 'font-weight': '700' });
+      const sollLbl = svgEl('text', { x: OB_X + 6, y: boxTop + 46, class: 'neuron-out-soll' });
       sollLbl.textContent = 'Soll';
       svg.appendChild(sollLbl);
-      const sollVal = svgEl('text', { x: OB_X + OB_W - 5, y: boxTop + 46, 'text-anchor': 'end', 'font-size': '7', fill: '#3730a3', 'font-weight': '700', 'data-target-idx': String(termIdx) });
-      sollVal.textContent = tgt !== undefined ? fmt(tgt) : '–';
+      const sollVal = svgEl('text', { x: OB_X + OB_W - 6, y: boxTop + 46, 'text-anchor': 'end', class: 'neuron-out-soll', 'data-target-idx': String(termIdx) });
+      sollVal.textContent = tgt !== undefined ? fmtV(tgt) : '–';
       svg.appendChild(sollVal);
     } else {
-      svg.appendChild(svgEl('rect', {
-        x: OB_X, y: NB_CY - OB_H / 2, width: OB_W, height: OB_H, rx: 4,
-        fill: layerIsHidden ? '#f8fafc' : outFill,
-        stroke: layerIsHidden ? '#94a3b8' : outColor,
-        'stroke-width': '1.5',
-      }));
-      const outTxt = svgEl('text', { x: OB_CX, y: NB_CY + 4, 'text-anchor': 'middle', 'font-size': layerIsHidden ? '14' : '10', fill: layerIsHidden ? '#94a3b8' : outColor, 'font-weight': '700', 'data-out-display': '' });
-      outTxt.textContent = layerIsHidden ? '?' : fmt(y);
-      svg.appendChild(outTxt);
+      valueBox({ cls: layerIsHidden ? 'is-hidden' : '', txtAttrs: { 'data-out-display': '' } });
     }
   } else {
-    // Build-Modus: für nicht-letzte Schichten ist die Output-Box anklickbar
+    // Build-Modus: für nicht-letzte Schichten ist das Kästchen ein OUT-Schalter
     const isLastLayer = layerIdx === lastActiveLayerIdx();
     if (!isLastLayer) {
-      const isOut    = isOutputNeuron(layerIdx, neuronIdx);
-      const boxFill   = isOut ? '#fffbeb' : '#f8fafc';
-      const boxStroke = isOut ? '#f59e0b' : '#d1d5db';
-      const boxSW     = isOut ? '1.5' : '1';
-      const boxText   = isOut ? 'OUT' : '–';
-      const boxColor  = isOut ? '#f59e0b' : '#d1d5db';
-      const rect = svgEl('rect', {
-        x: OB_X, y: NB_CY - OB_H / 2, width: OB_W, height: OB_H, rx: 4,
-        fill: boxFill, stroke: boxStroke, 'stroke-width': boxSW, style: 'cursor:pointer',
-      });
+      const isOut = isOutputNeuron(layerIdx, neuronIdx);
+      const rect = valueBox({ cls: 'out-toggle' + (isOut ? ' is-out' : ''), fill: false, text: isOut ? 'OUT' : '–', attrs: { style: 'cursor:pointer' } });
       rect.addEventListener('pointerdown', e => {
         e.stopPropagation();
         const nowOut = isOutputNeuron(layerIdx, neuronIdx);
@@ -4417,18 +4411,8 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
         });
         render();
       });
-      svg.appendChild(rect);
-      const outTxt = svgEl('text', { x: OB_CX, y: NB_CY + 5, 'text-anchor': 'middle', 'font-size': '11', fill: boxColor, 'font-weight': '700' });
-      outTxt.textContent = boxText;
-      svg.appendChild(outTxt);
     } else {
-      svg.appendChild(svgEl('rect', {
-        x: OB_X, y: NB_CY - OB_H / 2, width: OB_W, height: OB_H, rx: 4,
-        fill: '#f8fafc', stroke: '#d1d5db', 'stroke-width': '1',
-      }));
-      const outTxt = svgEl('text', { x: OB_CX, y: NB_CY + 5, 'text-anchor': 'middle', 'font-size': '14', fill: '#d1d5db' });
-      outTxt.textContent = '–';
-      svg.appendChild(outTxt);
+      valueBox({ cls: 'is-empty', fill: false, text: 'y′', txtCls: 'is-faint' });
     }
   }
 
@@ -4455,7 +4439,7 @@ function placeEdgeLabels(edges, obstacles = []) {
   const placed = obstacles.map(box => ({ box }));
   const order = edges.slice().sort((a, b) => Math.abs(b.w) - Math.abs(a.w));
   for (const e of order) {
-    const label = printMode && printOpts.weights === 'gap' ? GAP : fmt(e.w);
+    const label = printMode && printOpts.weights === 'gap' ? GAP : fmtV(e.w);
     const w = label.length * 6 + 7, h = 13, pad = 1;
     for (const t of EDGE_LABEL_T) {
       const x = e.src.x + (e.tgt.x - e.src.x) * t;
@@ -4541,8 +4525,10 @@ function drawEdgeOverlay(net) {
       const tgt = svgPt(targetSvg, VB_IN_X, VB_MID_Y);
       sources.forEach((src, si) => {
         if (neuron.disabled?.[si]) return;
-        edges.push({ src, tgt, w: neuron.weights[si] ?? 1,
-                     color: activations[neuron.type].color });
+        /* Farbe = Vorzeichen (türkis +, rot −), Dicke = Stärke — wie überall
+           in NeuroLab und Nebeltal. theme.js setzt die Farben fürs Thema um. */
+        const w = neuron.weights[si] ?? 1;
+        edges.push({ src, tgt, w, color: Math.abs(w) < 0.01 ? '#94a3b8' : w < 0 ? '#dc2626' : '#10b981' });
       });
     });
   }
@@ -4618,15 +4604,15 @@ function drawEdgeOverlay(net) {
   for (const p of (printMode && printOpts.weights === 'off' ? [] : placeEdgeLabels(edges, obstacles))) {
     const g = svgEl('g', { class: 'edge-label' });
     g.appendChild(svgEl('rect', {
-      x: p.x - p.w / 2, y: p.y - 7, width: p.w, height: 13, rx: 3,
-      fill: 'white', 'fill-opacity': '0.9',
+      x: p.x - p.w / 2, y: p.y - 7, width: p.w, height: 13, rx: 6.5,
+      fill: 'white', 'fill-opacity': '0.94', stroke: '#e2e8f0', 'stroke-width': '0.8',
     }));
     /* 10 px, nicht 16: das Gewicht an der Kante ist nicht wichtiger als die
        Zahlen IM Neuron (z und y′ stehen auf 10). */
     const t = svgEl('text', {
       x: p.x, y: p.y + 3.5,
-      'text-anchor': 'middle', 'font-size': '10', 'font-weight': '700',
-      'font-family': 'monospace', fill: p.color,
+      'text-anchor': 'middle', 'font-size': '9.5', 'font-weight': '700',
+      class: 'edge-label-txt', fill: p.color,
     });
     t.textContent = p.label;
     g.appendChild(t);
@@ -4637,7 +4623,7 @@ function drawEdgeOverlay(net) {
     const mx = (o.a.x + o.b.x) / 2;
     lineLayer.appendChild(svgEl('path', {
       d: `M${o.a.x},${o.a.y} C${mx},${o.a.y} ${mx},${o.b.y} ${o.b.x},${o.b.y}`,
-      fill: 'none', stroke: '#0d9488', 'stroke-opacity': '0.85', 'stroke-linecap': 'round',
+      fill: 'none', stroke: '#0d9488', 'stroke-opacity': '0.8', 'stroke-linecap': 'round',
       class: 'out-line', style: 'stroke-width: max(2.5px, calc(var(--nl-edge-min, 1px) * var(--nl-inv, 1) * 1.5))',
     }));
   }

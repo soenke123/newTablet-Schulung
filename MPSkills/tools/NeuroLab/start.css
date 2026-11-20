@@ -26,19 +26,19 @@ body:not(.area-bauen) .build-area-only { display: none !important; }
 header { gap: 0.9rem; flex-wrap: wrap; }
 .home-btn {
   padding: 0.35rem 0.8rem;
-  border: 1.5px solid #e5e7eb;
-  background: #fff;
-  color: #334155;
+  border: 1.5px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
   border-radius: 6px;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
 }
-.home-btn:hover { background: #f1f5f9; }
-.brand { font-weight: 800; color: #1e293b; letter-spacing: .01em; }
-.area-title { font-size: 0.85rem; font-weight: 700; color: #64748b; }
+.home-btn:hover { background: var(--surface-2); }
+.brand { font-weight: 800; color: var(--ink); letter-spacing: .01em; }
+.area-title { font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); }
 .area-title:empty { display: none; }
-.brand + .area-title::before { content: '·'; margin-right: .6rem; color: #cbd5e1; }
+.brand + .area-title::before { content: '·'; margin-right: .6rem; color: var(--ink-faint); }
 html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
 
 /* ── Startseite ── */
@@ -48,19 +48,19 @@ html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
   text-align: center;
   display: grid;
   gap: 6px;
-  color: #475569;
-  background: #fff;
-  border: 1.5px solid #e5e7eb;
+  color: var(--ink-soft);
+  background: var(--surface);
+  border: 1.5px solid var(--line);
   border-radius: 14px;
   padding: 26px;
 }
-.wait b { font-size: 1.1rem; color: #1e293b; }
+.wait b { font-size: 1.1rem; color: var(--ink); }
 
 #areas { max-width: 1100px; margin: 0 auto; display: grid; gap: 22px; }
 .area { display: grid; gap: 10px; }
 .area-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.area-head h2 { font-size: 1.15rem; color: #1e293b; }
-.area-head p { font-size: 0.88rem; color: #64748b; margin-top: 2px; }
+.area-head h2 { font-size: 1.15rem; color: var(--ink); }
+.area-head p { font-size: 0.88rem; color: var(--ink-soft); margin-top: 2px; }
 .area-neuron    { --area: #3b82f6; }
 .area-bauen     { --area: #f59e0b; }
 .area-trainieren{ --area: #10b981; }
@@ -71,8 +71,8 @@ html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
   display: flex;
   flex-direction: column;
   gap: 10px;
-  background: #fff;
-  border: 1.5px solid #e5e7eb;
+  background: var(--surface);
+  border: 1.5px solid var(--line);
   border-top: 4px solid var(--area);
   border-radius: 14px;
   padding: 14px 14px 12px;
@@ -91,9 +91,9 @@ html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
 .tile-art svg .fill { fill: currentColor; }
 .tile-art .t-big { font-size: 1.35rem; font-weight: 800; letter-spacing: .04em; }
 .tile-body { display: grid; gap: 4px; }
-.tile-body b { font-size: 1rem; color: #1e293b; }
-.tile-body span { font-size: 0.84rem; color: #64748b; line-height: 1.4; }
-.lock { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; color: #94a3b8; }
+.tile-body b { font-size: 1rem; color: var(--ink); }
+.tile-body span { font-size: 0.84rem; color: var(--ink-soft); line-height: 1.4; }
+.lock { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; color: var(--ink-faint); }
 .lock svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; }
 
 .share {
@@ -101,26 +101,26 @@ html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
   align-self: flex-start;
   margin-top: auto;
   padding: 5px 10px;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--line);
   border-radius: 999px;
-  background: #fff;
-  color: #64748b;
+  background: var(--surface);
+  color: var(--ink-soft);
   font: inherit; font-size: 0.8rem; font-weight: 700;
   cursor: pointer;
 }
 .share svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.2; }
-.share.on { background: var(--area, #10b981); border-color: var(--area, #10b981); color: #fff; }
+.share.on { background: var(--area, var(--accent)); border-color: var(--area, var(--accent)); color: var(--on-accent); }
 .area-share { margin-top: 0; align-self: auto; }
 
 /* ── Neuronen-Seite ── */
-.nn-tabs { max-width: 1100px; margin: 0 auto 14px; display: flex; gap: 6px; background: #e8edf3; padding: 4px; border-radius: 10px; width: fit-content; max-width: 100%; flex-wrap: wrap; }
-.nn-tab { border: none; background: transparent; color: #475569; font: inherit; font-weight: 700; font-size: 0.9rem; padding: 7px 14px; border-radius: 7px; cursor: pointer; }
-.nn-tab.on { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.nn-tabs { max-width: 1100px; margin: 0 auto 14px; display: flex; gap: 6px; background: var(--surface-2); padding: 4px; border-radius: 10px; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+.nn-tab { border: none; background: transparent; color: var(--ink-soft); font: inherit; font-weight: 700; font-size: 0.9rem; padding: 7px 14px; border-radius: 7px; cursor: pointer; }
+.nn-tab.on { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
 .nn-page { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; }
-.nn-card { background: #fff; border: 1.5px solid #e5e7eb; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
-.nn-card h2 { font-size: 1.1rem; color: #1e293b; margin-bottom: 8px; }
-.nn-card p, .nn-card li { font-size: 0.92rem; line-height: 1.55; color: #334155; }
-.nn-f { font-family: 'Cambria Math', 'Times New Roman', serif; font-style: italic; background: #f1f5f9; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+.nn-card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+.nn-card h2 { font-size: 1.1rem; color: var(--ink); margin-bottom: 8px; }
+.nn-card p, .nn-card li { font-size: 0.92rem; line-height: 1.55; color: var(--ink); }
+.nn-f { font-family: 'Cambria Math', 'Times New Roman', serif; font-style: italic; background: var(--surface-2); padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
 .nn-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: center; }
 .nn-intro-img img { width: 100%; height: auto; display: block; }
 .nn-intro ol { margin: 8px 0 0 20px; display: grid; gap: 4px; }
@@ -129,45 +129,41 @@ html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
 .nn-play-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: center; }
 @media (max-width: 760px) { .nn-play-grid { grid-template-columns: 1fr; } }
 .nn-svg { width: 100%; height: auto; display: block; }
-.nn-svg .neuron-body { fill: #fff; stroke: var(--type-color); stroke-width: 2.5; }
-.nn-svg .neuron-divider { stroke: #e8edf2; stroke-width: 1.5; }
-.nn-svg .neuron-sigma { fill: #475569; }
-.nn-svg .bias-line { stroke: #888; stroke-width: 1.5; }
 .nn-play-ctl { display: grid; gap: 10px; }
 .nn-types { display: flex; flex-wrap: wrap; gap: 6px; }
 .nn-xs { display: flex; gap: 14px; flex-wrap: wrap; }
-.nn-x { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #2e7d5e; }
+.nn-x { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: var(--accent-ink); }
 .nn-x span { margin-right: 4px; }
-.nn-x button { width: 34px; height: 30px; border: 1.5px solid #d1d5db; background: #fff; border-radius: 6px; font: inherit; font-weight: 700; cursor: pointer; color: #475569; }
-.nn-x button.on { background: #4caf8a; border-color: #4caf8a; color: #fff; }
-.nn-slider { display: grid; grid-template-columns: 2.2em 1fr 3.4em; align-items: center; gap: 8px; font-weight: 700; color: #334155; }
-.nn-slider input { width: 100%; accent-color: #3b82f6; }
-.nn-slider-b input { accent-color: #64748b; }
-.nn-slider output { font-family: monospace; text-align: right; }
-.nn-calc { margin-top: 12px; padding: 10px 12px; background: #f8fafc; border-radius: 10px; font-size: 0.92rem; color: #334155; display: grid; gap: 4px; overflow-x: auto; }
+.nn-x button { width: 34px; height: 30px; border: 1.5px solid var(--line); background: var(--surface); border-radius: 6px; font: inherit; font-weight: 700; cursor: pointer; color: var(--ink-soft); }
+.nn-x button.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.nn-slider { display: grid; grid-template-columns: 2.2em 1fr 3.4em; align-items: center; gap: 8px; font-weight: 700; color: var(--ink); }
+.nn-slider input { width: 100%; accent-color: var(--accent); }
+.nn-slider-b input { accent-color: var(--ink-soft); }
+.nn-slider output { font-family: var(--mono); text-align: right; }
+.nn-calc { margin-top: 12px; padding: 10px 12px; background: var(--surface-2); border-radius: 10px; font-size: 0.92rem; color: var(--ink); display: grid; gap: 4px; overflow-x: auto; }
 
 .nn-task-pick { display: flex; gap: 6px; margin-bottom: 8px; }
-.nn-pill { border: 1.5px solid #d1d5db; background: #fff; border-radius: 999px; padding: 4px 14px; font: inherit; font-weight: 700; font-size: 0.85rem; color: #475569; cursor: pointer; }
-.nn-pill.on { background: #1e293b; border-color: #1e293b; color: #fff; }
-.nn-task-msg { padding: 8px 12px; border-radius: 10px; background: #f8fafc; }
-.nn-task-msg.ok { background: #ecfdf5; color: #065f46; font-weight: 700; }
+.nn-pill { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 4px 14px; font: inherit; font-weight: 700; font-size: 0.85rem; color: var(--ink-soft); cursor: pointer; }
+.nn-pill.on { background: var(--ink); border-color: var(--ink); color: var(--on-accent); }
+.nn-task-msg { padding: 8px 12px; border-radius: 10px; background: var(--surface-2); }
+.nn-task-msg.ok { background: var(--accent-dim); color: var(--accent-ink); font-weight: 700; }
 
 .nn-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
 .nn-type { border-top: 4px solid var(--type-color); display: grid; gap: 8px; align-content: start; }
 .nn-type-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .nn-type-head h3 { color: var(--type-color); font-size: 1.1rem; }
-.nn-type-out { font-size: 0.8rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 999px; }
+.nn-type-out { font-size: 0.8rem; font-weight: 700; color: var(--ink-soft); background: var(--surface-2); padding: 2px 8px; border-radius: 999px; }
 .nn-type-pics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; }
 .curve-svg { width: 100%; height: auto; display: block; }
-.nn-type-formula { font-size: 0.95rem; color: #334155; }
-.nn-type-apply { font-size: 0.85rem; color: #334155; margin-top: 4px; min-height: 2.2em; }
+.nn-type-formula { font-size: 0.95rem; color: var(--ink); }
+.nn-type-apply { font-size: 0.85rem; color: var(--ink); margin-top: 4px; min-height: 2.2em; }
 .nn-type p { font-size: 0.88rem; }
-.nn-type-warn { color: #92400e !important; background: #fffbeb; padding: 6px 10px; border-radius: 8px; }
+.nn-type-warn { color: var(--in-ink) !important; background: var(--in-dim); padding: 6px 10px; border-radius: 8px; }
 
 /* ── Feld: Schicht dazu / weg, fester Ausgang ── */
 .col-addlayer {
   background: transparent;
-  border: 2px dashed #cbd5e1;
+  border: 2px dashed var(--line);
   box-shadow: none;
   justify-content: center;
   align-items: center;
@@ -176,21 +172,21 @@ html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
 }
 .addlayer-btn {
   display: flex; flex-direction: column; align-items: center; gap: 2px;
-  border: none; background: transparent; color: #64748b;
+  border: none; background: transparent; color: var(--ink-soft);
   font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 10px;
 }
 .addlayer-btn span { font-size: 1.6rem; line-height: 1; }
-.addlayer-btn:hover { color: #1e293b; }
+.addlayer-btn:hover { color: var(--ink); }
 .col-remove-btn {
   margin-top: 6px;
-  border: 1.5px solid #e5e7eb; background: #fff; color: #94a3b8;
+  border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-faint);
   border-radius: 6px; font: inherit; font-size: 0.72rem; font-weight: 700;
   padding: 3px 8px; cursor: pointer;
 }
-.col-remove-btn:hover { color: #dc2626; border-color: #fca5a5; }
-body.learn-phase .output-layer { border-color: #10b981; box-shadow: 0 1px 8px rgba(16,185,129,.18); }
-body.learn-phase .output-layer .col-header { background: #ecfdf5; border-bottom-color: #a7f3d0; }
-body.learn-phase .output-layer .col-name { color: #065f46; }
+.col-remove-btn:hover { color: var(--neg); border-color: var(--neg-line); }
+body.learn-phase .output-layer { border-color: var(--accent); box-shadow: 0 1px 8px color-mix(in srgb, var(--accent) 18%, transparent); }
+body.learn-phase .output-layer .col-header { background: var(--accent-dim); border-bottom-color: var(--accent-line); }
+body.learn-phase .output-layer .col-name { color: var(--accent-ink); }
 body.print-mode .col-addlayer, body.print-mode .col-remove-btn { display: none; }
 body.print-no-inputs .node-run-input-field { visibility: hidden; }
 
@@ -198,20 +194,20 @@ body.print-no-inputs .node-run-input-field { visibility: hidden; }
 .print-opts {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
   padding: 7px 14px;
-  background: #f0fdf4; border-bottom: 1px solid #bbf7d0;
-  font-size: 0.82rem; color: #166534;
+  background: var(--accent-dim); border-bottom: 1px solid var(--accent-line);
+  font-size: 0.82rem; color: var(--accent-ink);
   flex-shrink: 0;
 }
 .print-opts[hidden] { display: none; }
 .print-opts label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
-.print-opts select { font: inherit; padding: 2px 4px; border-radius: 5px; border: 1px solid #86efac; background: #fff; }
-.print-opts button { margin-left: auto; font: inherit; font-weight: 700; border: 1.5px solid #86efac; background: #fff; color: #166534; border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+.print-opts select { font: inherit; padding: 2px 4px; border-radius: 5px; border: 1px solid var(--accent-line); background: var(--surface); }
+.print-opts button { margin-left: auto; font: inherit; font-weight: 700; border: 1.5px solid var(--accent-line); background: var(--surface); color: var(--accent-ink); border-radius: 6px; padding: 2px 10px; cursor: pointer; }
 
 /* ── Greifvögel im Info-Kasten ── */
-.vogel-legend { display: grid; gap: 2px; font-size: 0.72rem; color: #475569; margin: 6px 0; }
+.vogel-legend { display: grid; gap: 2px; font-size: 0.72rem; color: var(--ink-soft); margin: 6px 0; }
 .vogel-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
-.vogel-plot { width: 100%; height: auto; display: block; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
-.vogel-acc { font-size: 0.75rem; color: #334155; margin: 6px 0; }
+.vogel-plot { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.vogel-acc { font-size: 0.75rem; color: var(--ink); margin: 6px 0; }
 #learn-info-panel:has(.vogel-plot) { width: 300px; }
 
 @media (max-width: 640px) {
@@ -223,65 +219,65 @@ body.print-no-inputs .node-run-input-field { visibility: hidden; }
 body.print-mode #learn-group { display: none; }
 
 /* ── Ausgänge beim Lernen (eigene Spalte rechts, Steckplätze) ── */
-.col-outputs { min-width: 150px; border-color: #14b8a6; box-shadow: 0 1px 8px rgba(20,184,166,.18); flex-shrink: 0; }
-.col-outputs .col-header { background: #f0fdfa; border-bottom-color: #99f6e4; }
-.col-outputs .col-name { color: #115e59; }
-.col-lock { font-size: .75rem; font-weight: 800; color: #0f766e; background: #ccfbf1; border-radius: 999px; padding: 1px 8px; }
+.col-outputs { min-width: 150px; border-color: var(--accent); box-shadow: 0 1px 8px color-mix(in srgb, var(--accent) 18%, transparent); flex-shrink: 0; }
+.col-outputs .col-header { background: var(--accent-dim); border-bottom-color: var(--accent-line); }
+.col-outputs .col-name { color: var(--accent-ink); }
+.col-lock { font-size: .75rem; font-weight: 800; color: var(--accent-ink); background: var(--accent-dim); border-radius: 999px; padding: 1px 8px; }
 .col-outputs .col-body { gap: 12px; justify-content: center; }
 .out-slot {
   position: relative; display: flex; flex-direction: column; gap: 2px;
   margin: 0 10px; padding: 8px 26px 8px 10px; border-radius: 10px;
-  border: 2px solid #14b8a6; background: #fff; cursor: pointer; text-align: left;
+  border: 2px solid var(--accent); background: var(--surface); cursor: pointer; text-align: left;
 }
-.out-slot.empty { border-style: dashed; border-color: #94a3b8; background: #f8fafc; }
-.out-slot.picking, .out-slot.target { box-shadow: 0 0 0 3px #fde68a; border-color: #f59e0b; }
-.out-name { font-size: .95rem; color: #0f172a; }
-.out-from { font-size: .68rem; color: #64748b; }
-.out-vals { display: flex; gap: 10px; font-size: .72rem; color: #475569; }
-.out-vals i { font-style: normal; font-weight: 800; font-family: monospace; color: #0f172a; }
+.out-slot.empty { border-style: dashed; border-color: var(--ink-faint); background: var(--surface-2); }
+.out-slot.picking, .out-slot.target { box-shadow: 0 0 0 3px var(--in-line); border-color: var(--in); }
+.out-name { font-size: .95rem; color: var(--ink); }
+.out-from { font-size: .68rem; color: var(--ink-soft); }
+.out-vals { display: flex; gap: 10px; font-size: .72rem; color: var(--ink-soft); }
+.out-vals i { font-style: normal; font-weight: 800; font-family: var(--mono); color: var(--ink); }
 .out-x {
   position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%;
-  border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: .9rem; line-height: 1;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink-faint); font-size: .9rem; line-height: 1;
   cursor: pointer; padding: 0;
 }
-.out-x:hover { color: #dc2626; border-color: #fca5a5; }
-.out-hint { position: absolute; left: 8px; right: 8px; top: 44px; z-index: 3; margin: 0; font-size: .72rem; font-weight: 700; color: #b45309; background: #fffbeb; border-radius: 8px; padding: 6px 8px; text-align: center; }
+.out-x:hover { color: var(--neg); border-color: var(--neg-line); }
+.out-hint { position: absolute; left: 8px; right: 8px; top: 44px; z-index: 3; margin: 0; font-size: .72rem; font-weight: 700; color: var(--in-ink); background: var(--in-dim); border-radius: 8px; padding: 6px 8px; text-align: center; }
 body.out-picking .neuron-card { cursor: copy; }
 body.out-picking .neuron-card .neuron-body { stroke-dasharray: 5 3; }
-.neuron-card.out-from .neuron-body { stroke: #f59e0b !important; stroke-width: 3; }
-.neuron-svg .out-port:hover { stroke: #0d9488; }
+.neuron-card.out-from .neuron-body { stroke: var(--in) !important; stroke-width: 3; }
+.neuron-svg .out-port:hover { stroke: var(--accent); }
 body.print-mode .out-x, body.print-mode .out-hint { display: none; }
 
 /* ── „So rechnet ein Neuron“ in sechs Schritten ── */
 .nn-steps { max-width: 1100px; margin: 0 auto; display: flex; gap: 6px; flex-wrap: wrap; }
-.nn-step { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+.nn-step { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink-soft);
   font: inherit; font-weight: 700; font-size: .85rem; padding: 6px 12px 6px 6px; border-radius: 999px; cursor: pointer; }
-.nn-step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: #e2e8f0; display: grid; place-items: center; font-size: .78rem; }
-.nn-step.on { border-color: #1d4ed8; color: #1d4ed8; }
-.nn-step.on i { background: #1d4ed8; color: #fff; }
+.nn-step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: var(--line-soft); display: grid; place-items: center; font-size: .78rem; }
+.nn-step.on { border-color: var(--accent); color: var(--accent); }
+.nn-step.on i { background: var(--accent); color: var(--on-accent); }
 .nn-stepcard { display: grid; gap: 12px; }
 .nn-stepcard h2 { margin-bottom: 0; }
-.nn-kicker { font-size: .75rem !important; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #64748b !important; }
+.nn-kicker { font-size: .75rem !important; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft) !important; }
 .nn-lead-p { max-width: 75ch; }
-.nn-try { font-size: .88rem !important; background: #eff6ff; border-radius: 10px; padding: 8px 12px; color: #1e3a8a !important; }
-.nn-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid #eef2f6; padding-top: 12px; }
-.nn-btn { border: 1.5px solid #d1d5db; background: #fff; border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 700; color: #334155; cursor: pointer; }
-.nn-btn.primary { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
-.nn-ctl-h { font-size: .78rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
-.nn-slider-x input { accent-color: #4caf8a; }
+.nn-try { font-size: .88rem !important; background: var(--accent-dim); border-radius: 10px; padding: 8px 12px; color: var(--accent-ink) !important; }
+.nn-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid var(--line-soft); padding-top: 12px; }
+.nn-btn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 700; color: var(--ink); cursor: pointer; }
+.nn-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.nn-ctl-h { font-size: .78rem; color: var(--ink-soft); text-transform: uppercase; letter-spacing: .05em; }
+.nn-slider-x input { accent-color: var(--accent); }
 
 /* Schritt 1: Nervenzelle ↔ künstliches Neuron */
 .nn-two { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: center; }
 .nn-bio { width: 100%; height: auto; display: block; cursor: pointer; }
-.nn-bio .bio-part path, .nn-bio .bio-axon path { fill: none; stroke: #c084fc; stroke-width: 6; stroke-linecap: round; }
-.nn-bio .bio-syn circle, .nn-bio .bio-axon circle { fill: #f0abfc; stroke: #a855f7; stroke-width: 2; }
-.nn-bio .bio-axon rect { fill: #fde68a; stroke: #f59e0b; stroke-width: 1.5; }
-.nn-bio .bio-soma { fill: #e9d5ff; stroke: #a855f7; stroke-width: 3; }
-.nn-bio .bio-nuc { fill: #a855f7; }
-.nn-bio .bio-thr { stroke: #64748b; stroke-width: 2; fill: none; }
-.nn-bio .bio-hill { fill: #d8b4fe; stroke: #a855f7; stroke-width: 2; }
-.nn-bio .bio-tl { font-size: 11px; fill: #64748b; font-weight: 700; }
-.nn-bio .bio-cap { font-size: 12px; fill: #94a3b8; }
+.nn-bio .bio-part path, .nn-bio .bio-axon path { fill: none; stroke: var(--bio); stroke-width: 6; stroke-linecap: round; }
+.nn-bio .bio-syn circle, .nn-bio .bio-axon circle { fill: var(--bio-dim); stroke: var(--bio); stroke-width: 2; }
+.nn-bio .bio-axon rect { fill: var(--in-dim); stroke: var(--in); stroke-width: 1.5; }
+.nn-bio .bio-soma { fill: var(--bio-dim); stroke: var(--bio); stroke-width: 3; }
+.nn-bio .bio-nuc { fill: var(--bio); }
+.nn-bio .bio-thr { stroke: var(--ink-soft); stroke-width: 2; fill: none; }
+.nn-bio .bio-hill { fill: var(--bio-dim); stroke: var(--bio); stroke-width: 2; }
+.nn-bio .bio-tl { font-size: 11px; fill: var(--ink-soft); font-weight: 700; }
+.nn-bio .bio-cap { font-size: 12px; fill: var(--ink-faint); }
 .nn-bio[data-hl] g[data-k] { opacity: .35; transition: opacity .15s; }
 .nn-bio[data-hl="in"] g[data-k="in"], .nn-bio[data-hl="w"] g[data-k="w"], .nn-bio[data-hl="sum"] g[data-k="sum"],
 .nn-bio[data-hl="b"] g[data-k="b"], .nn-bio[data-hl="f"] g[data-k="f"], .nn-bio[data-hl="out"] g[data-k="out"] { opacity: 1; }
@@ -289,39 +285,228 @@ body.print-mode .out-x, body.print-mode .out-hint { display: none; }
 .nn-col-kn .nn-svg[data-hl="in"] [data-k="in"], .nn-col-kn .nn-svg[data-hl="w"] [data-k="w"],
 .nn-col-kn .nn-svg[data-hl="sum"] [data-k="sum"], .nn-col-kn .nn-svg[data-hl="b"] [data-k="b"],
 .nn-col-kn .nn-svg[data-hl="f"] [data-k="f"], .nn-col-kn .nn-svg[data-hl="out"] [data-k="out"] {
-  stroke: #a855f7 !important; stroke-width: 4 !important; stroke-opacity: 1 !important;
+  stroke: var(--bio) !important; stroke-width: 4 !important; stroke-opacity: 1 !important;
 }
-.nn-col-kn .nn-svg[data-hl="sum"] [data-k="sum"], .nn-col-kn .nn-svg[data-hl="f"] [data-k="f"] { fill: rgba(168,85,247,.12) !important; }
+.nn-col-kn .nn-svg[data-hl="sum"] [data-k="sum"], .nn-col-kn .nn-svg[data-hl="f"] [data-k="f"] { fill: color-mix(in srgb, var(--bio) 12%, transparent) !important; }
 .nn-pairs { display: flex; flex-wrap: wrap; gap: 6px; }
-.nn-pair { display: inline-flex; gap: 6px; align-items: center; border: 1.5px solid #e9d5ff; background: #faf5ff; border-radius: 999px;
-  padding: 5px 12px; font: inherit; font-size: .84rem; color: #6b21a8; cursor: pointer; }
-.nn-pair i { font-style: normal; color: #a855f7; }
-.nn-pair b { color: #334155; }
-.nn-pair.on { background: #a855f7; border-color: #a855f7; color: #fff; }
-.nn-pair.on b, .nn-pair.on i { color: #fff; }
-.nn-pair-info { min-height: 3em; background: #faf5ff; border-radius: 10px; padding: 8px 12px; }
+.nn-pair { display: inline-flex; gap: 6px; align-items: center; border: 1.5px solid var(--bio-line); background: var(--bio-dim); border-radius: 999px;
+  padding: 5px 12px; font: inherit; font-size: .84rem; color: var(--bio-ink); cursor: pointer; }
+.nn-pair i { font-style: normal; color: var(--bio); }
+.nn-pair b { color: var(--ink); }
+.nn-pair.on { background: var(--bio); border-color: var(--bio); color: var(--on-accent); }
+.nn-pair.on b, .nn-pair.on i { color: var(--on-accent); }
+.nn-pair-info { min-height: 3em; background: var(--bio-dim); border-radius: 10px; padding: 8px 12px; }
 
 /* Schritt 2: Beiträge als Balken */
-.nn-stage .nn-bbox { fill: #1e293b; stroke: #0f172a; stroke-width: 2; }
-.nn-stage .nn-bbox-q { fill: #f8fafc; }
-.nn-stage .nn-bbox-t { fill: #94a3b8; letter-spacing: .08em; text-transform: uppercase; }
+.nn-stage .nn-bbox { fill: var(--ink); stroke: var(--ink); stroke-width: 2; }
+.nn-stage .nn-bbox-q { fill: var(--surface-2); }
+.nn-stage .nn-bbox-t { fill: var(--ink-faint); letter-spacing: .08em; text-transform: uppercase; }
 .nn-calc[hidden] { display: none; }
 .nn-meter svg { width: 100%; max-width: 760px; height: auto; display: block; }
 .nn-curve svg { width: 100%; max-width: 320px; height: auto; display: block; }
 
 /* Schritt 5/6: Ebene */
 .nn-line-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-.nn-plane { position: relative; aspect-ratio: 1 / 0.85; max-height: 440px; border-radius: 12px; overflow: hidden; border: 1.5px solid #e2e8f0; touch-action: none; }
+.nn-plane { position: relative; aspect-ratio: 1 / 0.85; max-height: 440px; border-radius: 12px; overflow: hidden; border: 1.5px solid var(--line); touch-action: none; }
 .nn-plane canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
 .nn-plane-sm { max-height: 340px; }
 .nn-line-side, .nn-task-left { display: grid; gap: 10px; align-content: start; }
-.nn-summary { background: #ecfdf5; border-radius: 12px; padding: 12px 16px; color: #065f46; }
+.nn-summary { background: var(--accent-dim); border-radius: 12px; padding: 12px 16px; color: var(--accent-ink); }
 .nn-summary ul { margin: 6px 0 0 18px; display: grid; gap: 4px; }
-.nn-summary li { color: #065f46 !important; }
+.nn-summary li { color: var(--accent-ink) !important; }
 
 @media (max-width: 760px) {
   .nn-two, .nn-line-grid, .nn-play-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
-/* Neuronen leicht in ihrer Typ-Farbe getönt (Feld und Neuron-Seite) */
-.neuron-body, .nn-svg .neuron-body { fill: #fff; fill: color-mix(in srgb, var(--type-color) 10%, #fff); }
+
+/* ══════════════════════════════════════════════════════════════
+   Anstrich 20.11.2026 („Vorschlag A“ aus showroom-optik.html)
+   Ruhig und aufgeräumt, Farben und Schriften wie Nebeltal, Hell/Dunkel.
+   Ein Akzent (Türkis/Mint) statt Blau, Grün, Orange, Lila nebeneinander;
+   Orange bleibt den Eingängen, Rot den negativen Gewichten.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Kopfzeile ── */
+header { background: var(--surface); border-bottom: 1px solid var(--line); box-shadow: none; padding: 0.55rem 1.1rem; }
+.brand { font-weight: 700; font-size: 1.02rem; letter-spacing: 0; }
+.area-title { font-weight: 600; color: var(--ink-faint); }
+.home-btn, .reset-btn, .print-btn {
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface);
+  color: var(--ink-soft); font-weight: 600; font-size: 0.85rem; padding: 0.38rem 0.85rem;
+}
+.home-btn:hover, .print-btn:hover { border-color: var(--accent); color: var(--accent-ink); background: var(--surface); }
+.reset-btn:hover { border-color: var(--neg-line); color: var(--neg); background: var(--surface); }
+.print-btn.active { border-color: var(--accent); color: var(--accent-ink); background: var(--accent-dim); }
+.phase-toggle { background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.phase-btn { border-radius: 7px; color: var(--ink-soft); font-weight: 600; }
+.phase-btn.active, body.run-phase .phase-btn.active, body.learn-phase .phase-btn.active {
+  background: var(--accent); color: var(--on-accent); box-shadow: none;
+}
+body.run-phase .phase-btn.active { background: var(--in); color: var(--surface); }
+.phase-hint-text { color: var(--ink-faint); }
+
+/* ── Feld: Punktpapier, Spalten als Bahnen ── */
+main#network {
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.3px);
+  background-size: 20px 20px;
+}
+.col { background: transparent; border: 0; border-left: 1px solid var(--line-soft); border-radius: 0; box-shadow: none; overflow: visible; }
+.col-inputs { border-left: 0; }
+.col-header { background: transparent; border-bottom: 0; padding: 8px 10px 4px; }
+.col-name { font-family: var(--mono); font-size: 0.68rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+.output-layer, body.learn-phase .output-layer { border-color: var(--line-soft); box-shadow: none; }
+.output-layer .col-header, body.learn-phase .output-layer .col-header { background: transparent; }
+.output-layer .col-name { color: var(--in-ink); }
+body.learn-phase .output-layer .col-name { color: var(--ink-faint); }
+.counter-btn, .eye-btn {
+  width: 24px; height: 24px; border: 1px solid var(--line); border-radius: 7px;
+  background: var(--surface); color: var(--ink-soft);
+}
+.counter-btn:hover:not(:disabled), .eye-btn:hover { border-color: var(--accent); color: var(--accent-ink); background: var(--surface); }
+.counter-val { font-family: var(--mono); color: var(--ink); }
+.eye-btn.eye-closed { border-color: var(--neg-line); color: var(--neg); background: var(--neg-dim); }
+.random-btn { background: transparent; border: 1px dashed var(--in-line); border-radius: 10px; color: var(--in-ink); margin: 2px 8px 0; width: auto; }
+.random-btn:hover, .random-btn:active { background: var(--in-dim); }
+
+/* Eingänge: orange Pillen wie bisher */
+.node-run-input { border: 1.5px solid var(--in); border-radius: 999px; background: var(--in-dim); padding: 4px 6px 4px 12px; }
+.node-run-input-label { color: var(--ink); font-weight: 600; }
+.node-run-input-field { color: var(--in-ink); font-family: var(--mono); }
+.node-run-input:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--in) 25%, transparent); }
+.node-circle { border-width: 1.5px; }
+.node-circle.active-node { border-color: var(--in); color: var(--in-ink); background: var(--in-dim); }
+
+/* Schicht dazu */
+.col-addlayer { border: 1.5px dashed var(--line); border-radius: 14px; background: transparent; }
+.addlayer-btn { color: var(--ink-faint); font-weight: 600; }
+.addlayer-btn:hover { color: var(--accent-ink); }
+
+/* Ausgänge und Datentabelle bleiben Karten */
+.col-outputs, .data-table-col { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+.col-outputs { border-color: var(--accent-line); }
+.col-outputs .col-header, .data-table-col .col-header { background: transparent; border-bottom: 1px solid var(--line-soft); }
+.col-outputs .col-name, .data-table-col .col-name { color: var(--accent-ink); }
+.col-lock { font-family: var(--mono); background: var(--accent-dim); color: var(--accent-ink); }
+.out-slot { border: 1.5px solid var(--accent); border-radius: 12px; background: var(--surface); }
+.out-name { font-weight: 700; color: var(--ink); }
+.out-vals i { font-family: var(--mono); }
+.out-slot.empty { border-color: var(--line); background: var(--surface-2); }
+.out-slot.picking, .out-slot.target { box-shadow: 0 0 0 3px var(--in-dim); border-color: var(--in); }
+.dt-th { background: var(--surface-2); font-family: var(--mono); font-size: 10px; letter-spacing: .06em; }
+.dt-th-in { color: var(--in-ink); }
+.dt-th-out { color: var(--accent-ink); }
+.dt-td-out { color: var(--accent-ink); }
+.dt-row-active .dt-td-in { background: var(--accent-dim); }
+.dt-td.dt-cell-correct { background: var(--accent-dim); color: var(--accent-ink); }
+.dt-td.dt-cell-close   { background: var(--gold-dim); color: var(--gold); }
+.dt-td.dt-cell-off     { background: var(--in-dim); color: var(--in-ink); }
+.dt-td.dt-cell-wrong   { background: var(--neg-dim); color: var(--neg); }
+
+/* Lupenknöpfe */
+.net-zoom button { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink-soft); box-shadow: var(--shadow); }
+.net-zoom button:hover { border-color: var(--accent); color: var(--accent-ink); background: var(--surface); }
+
+/* ── Lernfenster ── */
+#learn-panel, #learn-info-panel { border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); background: var(--surface); }
+.learn-panel-header { border-bottom: 1px solid var(--line-soft); }
+.learn-section-title, .popup-section-title { font-family: var(--mono); font-weight: 800; letter-spacing: .12em; color: var(--ink-faint); }
+.learn-label { color: var(--ink-soft); }
+.learn-value-display { color: var(--ink); }
+.learn-stats-label { color: var(--ink-faint); }
+.learn-btn { border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink-soft); font-weight: 600; }
+.learn-btn:hover { border-color: var(--accent); color: var(--accent-ink); background: var(--surface); }
+.learn-btn-start { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.learn-btn-start:hover, .learn-btn-start.active { background: var(--accent); color: var(--on-accent); filter: brightness(1.05); }
+.learn-btn-empty, .learn-btn-config { border-color: var(--accent); color: var(--accent-ink); }
+.learn-btn-example { color: var(--ink-soft); }
+.learn-btn-reset.needs-reset { border-color: var(--in); color: var(--in-ink); }
+.learn-custom-select-btn { border: 1px solid var(--line); border-radius: 9px; background-color: var(--surface-2); color: var(--ink); }
+.learn-custom-select-list { background: var(--surface); }
+.learn-info-gate-name { color: var(--accent-ink); }
+.learn-info-table th { background: var(--surface-2); }
+#loss-graph-svg { background: var(--surface-2); border: 1px solid var(--line-soft); border-radius: 10px; }
+.learn-info-toggle-btn { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+
+/* ── Fenster beim Antippen eines Neurons ── */
+#popup-overlay { background: color-mix(in srgb, var(--paper) 55%, transparent); backdrop-filter: blur(2px); }
+#popup { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+#popup-title { color: var(--ink); font-size: 1rem; }
+.popup-type-btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); }
+.popup-type-btn.selected { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.popup-weight-input { border: 1px solid var(--line); border-radius: 8px; background: var(--surface-2); color: var(--ink); font-family: var(--mono); }
+.popup-weight-input:focus { border-color: var(--accent); }
+.popup-formula { background: var(--accent-dim); color: var(--ink); font-family: var(--mono); border-radius: 10px; }
+.popup-result { color: var(--accent-ink); }
+.svg-prop-input { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-family: var(--mono); }
+
+/* ── Startseite: nummerierte Bereiche wie der Lernpfad in Nebeltal ── */
+#areas { counter-reset: area; gap: 28px; }
+.area-head h2 { font-size: 1.12rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.area-head h2::before {
+  counter-increment: area; content: counter(area);
+  display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+  border: 1px solid var(--accent); color: var(--accent-ink); font: 800 12px var(--mono);
+}
+.area-head p { margin-left: 34px; color: var(--ink-soft); }
+.area-neuron, .area-trainieren { --area: var(--accent); --area-dim: var(--accent-dim); --area-ink: var(--accent-ink); }
+.area-bauen { --area: var(--in); --area-dim: var(--in-dim); --area-ink: var(--in-ink); }
+.tiles { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+.tile {
+  display: grid; grid-template-columns: 52px minmax(0, 1fr); align-content: start; gap: 6px 14px;
+  border: 1px solid var(--line); border-top: 1px solid var(--line); border-radius: 16px;
+  background: var(--surface); box-shadow: none; padding: 14px; min-height: 0;
+  transition: border-color .15s, transform .15s;
+}
+.tile:hover { transform: translateY(-1px); box-shadow: none; border-color: var(--area); }
+.tile.locked:hover { border-color: var(--line); }
+.tile-art {
+  grid-row: span 2; width: 52px; height: 52px; border-radius: 13px; justify-content: center;
+  background: var(--area-dim); color: var(--area-ink);
+}
+.tile-art svg { height: 30px; max-width: 40px; stroke-width: 2.6; }
+.tile-art .t-big { font-family: var(--mono); font-size: 0.8rem; font-weight: 800; letter-spacing: 0; }
+.tile-body b { font-weight: 700; }
+.tile-body span { color: var(--ink-soft); }
+.tile .share { grid-column: 2; }
+.share { border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); font-weight: 600; }
+.share.on { background: var(--area); border-color: var(--area); color: var(--surface); }
+.area-share { margin-left: 34px; }
+.wait { border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+
+/* ── Neuronen-Seite: dieselbe Sprache ── */
+.nn-tabs { background: var(--surface); border: 1px solid var(--line); }
+.nn-tab { color: var(--ink-soft); font-weight: 600; }
+.nn-tab.on { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.nn-card { border: 1px solid var(--line); border-radius: 16px; box-shadow: none; background: var(--surface); }
+.nn-step { border: 1px solid var(--line); background: var(--surface); font-weight: 600; }
+.nn-step i { font-family: var(--mono); background: var(--surface-2); }
+.nn-step.on { border-color: var(--accent); color: var(--accent-ink); }
+.nn-step.on i { background: var(--accent); color: var(--on-accent); }
+.nn-kicker { font-family: var(--mono); letter-spacing: .12em !important; color: var(--accent-ink) !important; }
+.nn-btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); font-weight: 600; }
+.nn-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.nn-pill.on { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.nn-slider output, .nn-type-out { font-family: var(--mono); }
+.nn-f { background: var(--surface-2); color: var(--ink); }
+.nn-stage .nn-bbox { fill: #1e293b; stroke: #0f172a; }
+html[data-theme="dark"] .nn-stage .nn-bbox { fill: #050a14; stroke: var(--line); }
+@media (prefers-color-scheme: dark) { html:not([data-theme]) .nn-stage .nn-bbox { fill: #050a14; stroke: var(--line); } }
+.nn-plane { border: 1px solid var(--line); }
+.nn-svg { overflow: visible; }
+
+/* ── Druckansicht: immer hell, auf Weiß ── */
+body.print-mode {
+  --paper:#ffffff; --surface:#ffffff; --surface-2:#f4f8fb; --line:#cbd5e1; --line-soft:#e3ebf4;
+  --ink:#0b1a33; --ink-soft:#3e5577; --ink-faint:#7487a5;
+  --accent:#0b9db3; --accent-ink:#06707f; --accent-dim:#d8f1f5; --accent-line:#9fdbe5; --on-accent:#ffffff;
+  --in:#e0780f; --in-ink:#a3530a; --in-dim:#fdeedb; --in-line:#f6c894;
+  --neg:#d43a52; --neg-dim:#fbe3e7; --neg-line:#f2a6b3; --gold:#c98f06; --gold-dim:#fbf1d2;
+  --grid:transparent; --glow:none; --shadow:none;
+  color-scheme: light;
+}
+body.print-mode main#network { background: #fff; }
+body.print-mode .col { border-left: 0; }
+body.print-mode .neuron-body { stroke: var(--ink-soft); }
+.nn-num { font-family: var(--mono); }

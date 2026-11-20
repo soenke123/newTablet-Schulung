@@ -186,6 +186,14 @@
     else { setView('home'); renderHome(); }
   }
 
+  /* Hell/Dunkel gewechselt: was mit Canvas gezeichnet ist, neu zeichnen
+     (SVG und CSS folgen von selbst, js/theme.js). */
+  window.addEventListener('nl:theme-redraw', () => {
+    if (!booted) return;
+    if (where.view === 'neuron') renderNeuron();
+    else if (where.view === 'lab') App.render();
+  });
+
   window.NLStart = { usable, goHome, open, get parts() { return parts; } };
 
   setView('home');

@@ -64,42 +64,40 @@
       [[0, 40], [1, 170]].forEach(([i, iy]) => {
         const w = o.w[i];
         const sw = Math.max(1, Math.min(Math.abs(w) * 2, 6));
-        const col = w < 0 ? '#dc2626' : act.color;
+        const col = w < 0 ? '#dc2626' : '#10b981';
         s.appendChild(el('line', { 'data-k': 'w', x1: 56, y1: iy, x2: ox, y2: cy + (i ? 14 : -14), stroke: col, 'stroke-width': sw, 'stroke-opacity': Math.abs(w) < 0.01 ? 0.3 : 0.75, 'stroke-dasharray': Math.abs(w) < 0.01 ? '4 3' : 'none' }));
-        s.appendChild(el('circle', { 'data-k': 'in', cx: 34, cy: iy, r: 22, fill: '#fff', stroke: '#4caf8a', 'stroke-width': 2.5 }));
-        s.appendChild(el('text', { x: 34, y: iy + 5, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 700, fill: '#2e7d5e' }, `${de(o.x[i])}`));
+        s.appendChild(el('circle', { 'data-k': 'in', cx: 34, cy: iy, r: 22, fill: '#fffbeb', stroke: '#f59e0b', 'stroke-width': 1.8 }));
+        s.appendChild(el('text', { x: 34, y: iy + 5, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: '#b45309', class: 'nn-num' }, `${fmtV(o.x[i])}`));
         s.appendChild(el('text', { x: 34, y: iy + (i ? 38 : -28), 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#64748b' }, `x${i + 1}`));
         const mx = (56 + ox) / 2, my = (iy + cy + (i ? 14 : -14)) / 2;
-        s.appendChild(el('rect', { 'data-k': 'w', x: mx - 28, y: my - 9, width: 56, height: 17, rx: 4, fill: '#fff', 'fill-opacity': 0.92, stroke: 'transparent' }));
-        s.appendChild(el('text', { x: mx, y: my + 4, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, 'font-family': 'monospace', fill: col }, `w${i + 1}=${de(w)}`));
+        s.appendChild(el('rect', { 'data-k': 'w', x: mx - 30, y: my - 9, width: 60, height: 17, rx: 8.5, fill: '#fff', stroke: '#e2e8f0' }));
+        s.appendChild(el('text', { x: mx, y: my + 4, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, class: 'nn-num', fill: col }, `w${i + 1} = ${fmtV(w)}`));
       });
     }
     s.appendChild(el('rect', { x: ox, y: NBY, width: NBW, height: NBH, rx: 12, class: 'neuron-body' }));
-    s.appendChild(el('rect', { 'data-k': 'sum', x: ox + 3, y: NBY + 3, width: NBW / 2 - 6, height: NBH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
-    s.appendChild(el('rect', { 'data-k': 'f', x: ox + NBW / 2 + 3, y: NBY + 3, width: NBW / 2 - 6, height: NBH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
-    s.appendChild(el('line', { x1: ox + NBW / 2, y1: NBY + 6, x2: ox + NBW / 2, y2: NBY + NBH - 6, class: 'neuron-divider' }));
-    s.appendChild(el('text', { x: ox + NBW / 2, y: NBY - 8, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: act.color }, act.fullName));
-    const lx = ox + NBW / 4, rx = ox + NBW * 3 / 4;
-    s.appendChild(el('text', { x: lx, y: cy + (withIn ? -4 : 8), 'text-anchor': 'middle', 'font-size': 22, class: 'neuron-sigma' }, 'Σ'));
-    if (withIn) s.appendChild(el('text', { x: lx, y: cy + 20, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#444' }, `z=${de(z)}`));
-    const two = act.shortLines.length > 1;
-    const fo = el('foreignObject', { x: rx - 38, y: cy - (two ? 16 : 13) - (withIn ? 6 : 0), width: 76, height: two ? 30 : 24 });
-    const fDiv = document.createElement('div');
-    fDiv.className = 'svg-math';
-    fDiv.innerHTML = act.shortLines.map(f => `<span>${f}</span>`).join('');
-    fo.appendChild(fDiv);
-    s.appendChild(fo);
-    if (withIn) s.appendChild(el('text', { x: rx, y: cy + (two ? 24 : 20), 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: act.color }, `y′=${de(y)}`));
+    /* Gleiches Innenleben wie im Feld (app.js appendNeuronFace): Σ und z
+       links, Kurve mit Punkt und y′ rechts. */
+    const split = ox + 72;
+    s.appendChild(el('rect', { 'data-k': 'sum', x: ox + 3, y: NBY + 3, width: split - ox - 6, height: NBH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
+    s.appendChild(el('rect', { 'data-k': 'f', x: split + 3, y: NBY + 3, width: ox + NBW - split - 6, height: NBH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
+    const face = appendNeuronFace(s, { x: ox, y: NBY, w: NBW, h: NBH, split, type: o.type, z: withIn ? z : undefined });
+    if (withIn) { paintNeuronFace(face, o.type, z, false); if (isHot(o.type, y)) s.classList.add('is-hot'); }
+    s.appendChild(el('text', { x: ox + 2, y: NBY - 8, class: 'neuron-type' }, act.fullName.toUpperCase()));
+    const lx = (ox + split) / 2;
     // Bias
     const bx = lx, by0 = NBY + NBH, by1 = by0 + 26;
-    s.appendChild(el('line', { 'data-k': 'b', x1: bx, y1: by1, x2: bx, y2: by0 + 8, class: 'bias-line' }));
-    s.appendChild(el('polygon', { points: `${bx},${by0} ${bx - 4},${by0 + 8} ${bx + 4},${by0 + 8}`, fill: '#888' }));
-    s.appendChild(el('text', { x: bx, y: by1 + 14, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#64748b' }, withIn ? `b = ${de(o.b)}` : 'b'));
+    s.appendChild(el('line', { 'data-k': 'b', x1: bx, y1: by1, x2: bx, y2: by0 + 5, class: 'bias-line' }));
+    s.appendChild(el('path', { d: `M${bx - 4},${by0 + 7} L${bx},${by0 + 2} L${bx + 4},${by0 + 7}`, class: 'bias-line' }));
+    s.appendChild(el('text', { x: bx, y: by1 + 14, 'text-anchor': 'middle', class: 'bias-label' }, withIn ? `b = ${fmtV(o.b)}` : 'b'));
     // Ausgabe
-    const ol = ox + NBW;
-    s.appendChild(el('line', { 'data-k': 'out', x1: ol, y1: cy, x2: ol + 16, y2: cy, stroke: '#94a3b8', 'stroke-width': 1.5 }));
-    s.appendChild(el('rect', { 'data-k': 'out', x: ol + 18, y: cy - 13, width: withIn ? 70 : 56, height: 26, rx: 4, fill: withIn ? '#fffbeb' : '#f8fafc', stroke: withIn ? '#f59e0b' : '#d1d5db', 'stroke-width': 1.5 }));
-    s.appendChild(el('text', { x: ol + 18 + (withIn ? 35 : 28), y: cy + 5, 'text-anchor': 'middle', 'font-size': withIn ? 13 : 12, 'font-weight': 700, fill: withIn ? '#b45309' : '#94a3b8' }, withIn ? de(y) : 'y′'));
+    const ol = ox + NBW, bw = withIn ? 60 : 56;
+    s.appendChild(el('line', { 'data-k': 'out', x1: ol, y1: cy, x2: ol + 16, y2: cy, class: 'neuron-wire' }));
+    s.appendChild(el('rect', { 'data-k': 'out', x: ol + 18, y: cy - 14, width: bw, height: 28, rx: 8, class: 'neuron-out' + (withIn ? '' : ' is-empty') }));
+    if (withIn) {
+      const fr = outFrac(o.type, y);
+      s.appendChild(el('rect', { x: ol + 19.5, y: cy - 12.5 + 25 * (1 - fr), width: bw - 3, height: 25 * fr, rx: 6.5, class: 'neuron-out-fill' }));
+    }
+    s.appendChild(el('text', { x: ol + 18 + bw / 2, y: cy + 4.5, 'text-anchor': 'middle', class: 'neuron-out-txt' + (withIn ? '' : ' is-faint') }, withIn ? fmtV(y) : 'y′'));
     return s;
   }
 
@@ -166,7 +164,7 @@
 
   /* Das Neuron der Schritte. o = { x, w, b, show (1–4), names } */
   function stageSVG(o) {
-    const C = activations.perceptron.color;
+    const C = '#10b981';   // positive Gewichte: Akzent (wie im Feld)
     const show = o.show || 4;
     const W = 580, H = 250, BX = 236, BY = 76, BW = 190, BH = 94, cy = BY + BH / 2;
     const sum = o.x[0] * o.w[0] + o.x[1] * o.w[1];
@@ -183,8 +181,8 @@
         if (Math.abs(w) < 0.01) { sw = 1.5; dash = '5 4'; op = 0.6; col = '#94a3b8'; }
       }
       s.appendChild(el('line', { 'data-k': 'w', x1: x0, y1: iy, x2: ex, y2: ey, stroke: col, 'stroke-width': sw, 'stroke-linecap': 'round', 'stroke-dasharray': dash, 'stroke-opacity': op }));
-      s.appendChild(el('circle', { 'data-k': 'in', cx: 46, cy: iy, r: 28, fill: '#fff', stroke: '#4caf8a', 'stroke-width': 3 }));
-      s.appendChild(el('text', { x: 46, y: iy + 6, 'text-anchor': 'middle', 'font-size': 17, 'font-weight': 800, fill: '#2e7d5e' }, d2(o.x[i])));
+      s.appendChild(el('circle', { 'data-k': 'in', cx: 46, cy: iy, r: 28, fill: '#fffbeb', stroke: '#f59e0b', 'stroke-width': 2 }));
+      s.appendChild(el('text', { x: 46, y: iy + 6, 'text-anchor': 'middle', 'font-size': 16, 'font-weight': 700, fill: '#b45309', class: 'nn-num' }, d2(o.x[i])));
       s.appendChild(el('text', { x: 46, y: iy + (i ? 46 : -36), 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: '#64748b' }, names[i]));
       if (show >= 2) {
         const at = t => [x0 + (ex - x0) * t, iy + (ey - iy) * t];
@@ -194,7 +192,7 @@
         const [px, py] = at(0.82);
         const pv = o.x[i] * w;
         s.appendChild(el('rect', { x: px - 24, y: py - 10, width: 48, height: 19, rx: 4, fill: '#f8fafc', stroke: '#cbd5e1' }));
-        s.appendChild(el('text', { x: px, y: py + 4, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#334155', 'font-family': 'monospace' }, d2(pv)));
+        s.appendChild(el('text', { x: px, y: py + 4, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 700, fill: '#334155', class: 'nn-num' }, d2(pv)));
       }
     });
     const box = (x, y, w, hh, big, small) => {
@@ -210,29 +208,29 @@
       s.appendChild(el('line', { x1: BX + BW / 2, y1: BY + 6, x2: BX + BW / 2, y2: BY + BH - 6, class: 'neuron-divider' }));
       const lx = BX + BW / 4, rx = BX + BW * 3 / 4;
       s.appendChild(el('text', { x: lx, y: cy - 4, 'text-anchor': 'middle', 'font-size': 24, class: 'neuron-sigma' }, 'Σ'));
-      s.appendChild(el('text', { x: lx, y: cy + 22, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#334155' }, `z = ${d2(z)}`));
+      s.appendChild(el('text', { x: lx, y: cy + 22, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 800, fill: '#334155', class: 'nn-num' }, `z = ${d2(z)}`));
       // Bias von unten
       const by0 = BY + BH, by1 = by0 + 30;
       s.appendChild(el('line', { 'data-k': 'b', x1: lx, y1: by1, x2: lx, y2: by0 + 8, class: 'bias-line' }));
       s.appendChild(el('polygon', { points: `${lx},${by0} ${lx - 5},${by0 + 9} ${lx + 5},${by0 + 9}`, fill: '#64748b' }));
-      s.appendChild(el('text', { x: lx, y: by1 + 16, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 800, fill: '#475569' }, `b = ${d2(o.b)}`));
+      s.appendChild(el('text', { x: lx, y: by1 + 16, 'text-anchor': 'middle', 'font-size': 12.5, 'font-weight': 800, fill: '#475569', class: 'nn-num' }, `b = ${d2(o.b)}`));
       if (show < 4) box(BX + BW / 2 + 4, BY + 4, BW / 2 - 8, BH - 8, false, 'Blackbox');
       else {
         s.appendChild(el('rect', { 'data-k': 'f', x: BX + BW / 2 + 3, y: BY + 3, width: BW / 2 - 6, height: BH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
         // kleine Treppe
         const gx = rx - 30, gy = cy - 4;
-        s.appendChild(el('path', { d: `M${gx} ${gy + 12} H${gx + 30} V${gy - 14} H${gx + 60}`, fill: 'none', stroke: C, 'stroke-width': 3.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
+        s.appendChild(el('path', { d: `M${gx} ${gy + 12} H${gx + 30} V${gy - 14} H${gx + 60}`, fill: 'none', stroke: '#475569', 'stroke-width': 3, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }));
         s.appendChild(el('text', { x: rx, y: cy + 30, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 800, fill: '#334155' }, 'z > 0 ?'));
       }
     }
     // Ausgabe – kommt immer heraus
     const ox = BX + BW + 34;
-    s.appendChild(el('line', { 'data-k': 'out', x1: BX + BW, y1: cy, x2: ox, y2: cy, stroke: fire ? '#f59e0b' : '#94a3b8', 'stroke-width': fire ? 4 : 2 }));
+    s.appendChild(el('line', { 'data-k': 'out', x1: BX + BW, y1: cy, x2: ox, y2: cy, stroke: fire ? '#eab308' : '#94a3b8', 'stroke-width': fire ? 4 : 2 }));
     if (fire) [[-1, -1], [0, -1.35], [1, -1], [-1, 1], [0, 1.35], [1, 1]].forEach(([dx, dy]) =>
-      s.appendChild(el('line', { x1: ox + 52 + dx * 50, y1: cy + dy * 34, x2: ox + 52 + dx * 62, y2: cy + dy * 44, stroke: '#f59e0b', 'stroke-width': 3, 'stroke-linecap': 'round' })));
-    s.appendChild(el('rect', { 'data-k': 'out', x: ox, y: cy - 30, width: 104, height: 60, rx: 12, fill: fire ? '#fef3c7' : '#f8fafc', stroke: fire ? '#f59e0b' : '#cbd5e1', 'stroke-width': 2.5 }));
-    s.appendChild(el('text', { x: ox + 52, y: cy + 4, 'text-anchor': 'middle', 'font-size': 24, 'font-weight': 800, fill: fire ? '#b45309' : '#94a3b8' }, fire ? '1' : '0'));
-    s.appendChild(el('text', { x: ox + 52, y: cy + 21, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 800, fill: fire ? '#b45309' : '#94a3b8' }, o.outText ? o.outText(fire) : (fire ? 'feuert!' : 'feuert nicht')));
+      s.appendChild(el('line', { x1: ox + 52 + dx * 50, y1: cy + dy * 34, x2: ox + 52 + dx * 62, y2: cy + dy * 44, stroke: '#eab308', 'stroke-width': 3, 'stroke-linecap': 'round' })));
+    s.appendChild(el('rect', { 'data-k': 'out', x: ox, y: cy - 30, width: 104, height: 60, rx: 12, fill: fire ? '#fef9c3' : '#f8fafc', stroke: fire ? '#eab308' : '#cbd5e1', 'stroke-width': 2.5 }));
+    s.appendChild(el('text', { x: ox + 52, y: cy + 4, 'text-anchor': 'middle', 'font-size': 24, 'font-weight': 800, fill: fire ? '#854d0e' : '#94a3b8' }, fire ? '1' : '0'));
+    s.appendChild(el('text', { x: ox + 52, y: cy + 21, 'text-anchor': 'middle', 'font-size': 11.5, 'font-weight': 800, fill: fire ? '#854d0e' : '#94a3b8' }, o.outText ? o.outText(fire) : (fire ? 'feuert!' : 'feuert nicht')));
     return s;
   }
 
@@ -246,14 +244,14 @@
     for (let v = -R; v <= R; v++) if (v % 2 === 0) ticks += `<line x1="${X(v)}" y1="62" x2="${X(v)}" y2="${v ? 68 : 72}" stroke="#94a3b8"/><text x="${X(v)}" y="86" text-anchor="middle" font-size="11" fill="#64748b">${String(v).replace('-', '−')}</text>`;
     return `<svg viewBox="0 0 600 140">
       <rect x="24" y="40" width="${xt - 24}" height="22" fill="#f1f5f9"/>
-      <rect x="${xt}" y="40" width="${576 - xt}" height="22" fill="#fef3c7"/>
+      <rect x="${xt}" y="40" width="${576 - xt}" height="22" fill="#fef9c3"/>
       <text x="${(24 + xt) / 2}" y="55" text-anchor="middle" font-size="12" font-weight="700" fill="#94a3b8">${xt - 24 > 90 ? 'feuert nicht' : ''}</text>
-      <text x="${(xt + 576) / 2}" y="55" text-anchor="middle" font-size="12" font-weight="800" fill="#b45309">${576 - xt > 70 ? 'feuert' : ''}</text>
+      <text x="${(xt + 576) / 2}" y="55" text-anchor="middle" font-size="12" font-weight="800" fill="#854d0e">${576 - xt > 70 ? 'feuert' : ''}</text>
       <line x1="24" y1="62" x2="576" y2="62" stroke="#94a3b8"/>${ticks}
       <line x1="${xt}" y1="14" x2="${xt}" y2="64" stroke="#475569" stroke-width="3"/>
       <path d="M${xt} 14 h${xt > 470 ? -96 : 96} v20 h${xt > 470 ? 96 : -96} z" fill="#475569"/>
       <text x="${xt + (xt > 470 ? -48 : 48)}" y="28.5" text-anchor="middle" font-size="12" font-weight="800" fill="#fff">Schwelle ${d2(T)}</text>
-      <circle cx="${Math.max(24, Math.min(576, X(sum)))}" cy="62" r="10" fill="${fire ? '#f59e0b' : '#fff'}" stroke="#0f172a" stroke-width="3"/>
+      <circle cx="${Math.max(24, Math.min(576, X(sum)))}" cy="62" r="10" fill="${fire ? '#eab308' : '#fff'}" stroke="#0f172a" stroke-width="3"/>
       <text x="${Math.max(60, Math.min(540, X(sum)))}" y="112" text-anchor="middle" font-size="13" font-weight="800" fill="#0f172a">Summe = ${d2(sum)}</text>
       <text x="300" y="134" text-anchor="middle" font-size="11.5" fill="#64748b">Summe = x₁·w₁ + x₂·w₂ · Schwelle = −b</text></svg>`;
   }
@@ -279,13 +277,13 @@
     const zf = (a, c) => w1 * a + w2 * c + b;
     const st5 = 4;
     for (let px = PL; px < Wc - PR; px += st5) for (let py = PT; py < Hc - PB; py += st5) {
-      g.fillStyle = zf(iX(px + st5 / 2), iY(py + st5 / 2)) > 0 ? '#fdecc0' : '#eef2f6';
+      g.fillStyle = zf(iX(px + st5 / 2), iY(py + st5 / 2)) > 0 ? NLTheme.c('#fdecc0', 0) : NLTheme.c('#eef2f6', 0);
       g.fillRect(px, py, st5 + 0.5, st5 + 0.5);
     }
     // Raster + Achsen
     const nice = span => { const r = span / 6, p = Math.pow(10, Math.floor(Math.log10(r))); return [1, 2, 5, 10].map(k => k * p).find(k => k >= r); };
     g.strokeStyle = 'rgba(100,116,139,.25)'; g.lineWidth = 1;
-    g.font = '11px system-ui, sans-serif'; g.fillStyle = '#64748b';
+    g.font = '11px system-ui, sans-serif'; g.fillStyle = NLTheme.c('#64748b', 1);
     const sx = nice(x1 - x0), sy = nice(y1 - y0);
     g.textAlign = 'center';
     for (let v = Math.ceil(x0 / sx) * sx; v <= x1 + 1e-9; v += sx) {
@@ -298,7 +296,7 @@
       g.fillText(de(Math.round(v * 100) / 100), PL - 5, Y(v) + 4);
     }
     const lab = o.labels || ['x₁', 'x₂'];
-    g.fillStyle = '#334155'; g.font = 'bold 12px system-ui, sans-serif';
+    g.fillStyle = NLTheme.c('#334155', 1); g.font = 'bold 12px system-ui, sans-serif';
     g.textAlign = 'right'; g.fillText(lab[0] + ' →', Wc - PR, Hc - 4);
     g.save(); g.translate(12, PT + 4); g.rotate(-Math.PI / 2); g.textAlign = 'right'; g.fillText(lab[1] + ' →', 0, 0); g.restore();
     // Gerade = Rand des Feuer-Bereichs, im Kasten abgeschnitten
@@ -307,7 +305,7 @@
     if (Math.abs(w1) > 1e-9) [y0, y1].forEach(c => { const a = -(w2 * c + b) / w1; if (a >= x0 - 1e-9 && a <= x1 + 1e-9) cut.push([a, c]); });
     if (cut.length >= 2) {
       const [p, q] = cut;
-      g.strokeStyle = '#0f172a'; g.lineWidth = 3;
+      g.strokeStyle = NLTheme.c('#0f172a', 2); g.lineWidth = 3;
       g.beginPath(); g.moveTo(X(p[0]), Y(p[1])); g.lineTo(X(q[0]), Y(q[1])); g.stroke();
       // Pfeil zur Feuer-Seite (in Bildschirm-Pixeln senkrecht)
       const mx = (X(p[0]) + X(q[0])) / 2, my = (Y(p[1]) + Y(q[1])) / 2;
@@ -319,8 +317,8 @@
       g.beginPath(); g.moveTo(mx + dx, my + dy);
       g.lineTo(mx + dx - 9 * Math.cos(an - 0.45), my + dy - 9 * Math.sin(an - 0.45));
       g.lineTo(mx + dx - 9 * Math.cos(an + 0.45), my + dy - 9 * Math.sin(an + 0.45));
-      g.closePath(); g.fillStyle = '#0f172a'; g.fill();
-      g.font = 'bold 11px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#b45309';
+      g.closePath(); g.fillStyle = NLTheme.c('#0f172a', 0); g.fill();
+      g.font = 'bold 11px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = NLTheme.c('#b45309', 1);
       g.fillText('feuert', mx + dx * 1.9, my + dy * 1.9 + 4);
     }
     // Datenpunkte
@@ -328,20 +326,20 @@
     (o.points || []).forEach((p, i) => {
       const ok = (zf(p.x[0], p.x[1]) > 0 ? 1 : 0) === p.soll;
       g.beginPath(); g.arc(X(p.x[0]), Y(p.x[1]), r, 0, Math.PI * 2);
-      g.fillStyle = p.soll ? '#f59e0b' : '#fff'; g.fill();
-      g.lineWidth = many ? 2 : 3; g.strokeStyle = ok ? '#059669' : '#dc2626'; g.stroke();
-      if (i === o.sel) { g.beginPath(); g.arc(X(p.x[0]), Y(p.x[1]), r + 5, 0, Math.PI * 2); g.lineWidth = 2.5; g.strokeStyle = '#2563eb'; g.stroke(); }
-      if (!many) { g.fillStyle = p.soll ? '#fff' : '#334155'; g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(String(p.soll), X(p.x[0]), Y(p.x[1]) + 4); }
+      g.fillStyle = p.soll ? NLTheme.c('#f59e0b', 0) : NLTheme.c('#fff', 0); g.fill();
+      g.lineWidth = many ? 2 : 3; g.strokeStyle = ok ? NLTheme.c('#059669', 2) : NLTheme.c('#dc2626', 2); g.stroke();
+      if (i === o.sel) { g.beginPath(); g.arc(X(p.x[0]), Y(p.x[1]), r + 5, 0, Math.PI * 2); g.lineWidth = 2.5; g.strokeStyle = NLTheme.c('#2563eb', 2); g.stroke(); }
+      if (!many) { g.fillStyle = p.soll ? NLTheme.c('#fff', 1) : NLTheme.c('#334155', 1); g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'center'; g.fillText(String(p.soll), X(p.x[0]), Y(p.x[1]) + 4); }
     });
     (o.handles || []).forEach(([a, c]) => {
       g.beginPath(); g.arc(X(a), Y(c), 11, 0, Math.PI * 2);
-      g.fillStyle = '#1d4ed8'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke();
+      g.fillStyle = NLTheme.c('#1d4ed8', 0); g.fill(); g.lineWidth = 3; g.strokeStyle = NLTheme.c('#fff', 2); g.stroke();
     });
     if (o.point) {
       const [a, c] = o.point;
       g.beginPath(); g.arc(X(a), Y(c), 10, 0, Math.PI * 2);
-      g.fillStyle = '#4caf8a'; g.fill(); g.lineWidth = 3; g.strokeStyle = '#fff'; g.stroke();
-      g.fillStyle = '#065f46'; g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'left';
+      g.fillStyle = NLTheme.c('#4caf8a', 0); g.fill(); g.lineWidth = 3; g.strokeStyle = NLTheme.c('#fff', 2); g.stroke();
+      g.fillStyle = NLTheme.c('#065f46', 1); g.font = 'bold 12px system-ui, sans-serif'; g.textAlign = 'left';
       g.fillText(`(${de(a)} | ${de(c)})`, Math.min(X(a) + 13, Wc - 74), Math.max(Y(c) - 11, 20));
     }
     return { toData: (px, py) => [iX(px), iY(py)], toPx: (a, c) => [X(a), Y(c)] };
