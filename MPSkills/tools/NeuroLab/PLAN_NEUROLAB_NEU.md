@@ -1,5 +1,11 @@
 # NeuroLab neu — Konzept (Entwurf 20.11.2026)
 
+> **Stand 20.11.2026: Etappen 1–3 gebaut** (siehe CLAUDE.md). Entscheidungen von Sönke:
+> statt Fischen/Sternen **echte Greifvögel** (trennbar mit 1, 2, 3 Geraden bzw. Ebenen im Raum);
+> Lehrkraft gibt **Bereiche und einzelne Aufgaben** frei (kein Gruppenpuzzle); **kein CSV-Upload** mehr;
+> Druckansicht bleibt für Lehrkräfte, mit Auswahl, was aufs Blatt kommt.
+> Offen: Etappe 4 (Klassenblick mit Migration, Arbeitsblatt, Avatare), Lernpfad/Freie Nutzung als zwei Ansichten.
+
 Ziel: NeuroLab auf das Niveau von Nebeltal / Reinforce Yourself / Tiny LM bringen.
 Mehr Struktur, die die Lehrkraft vorgibt, neue Szenarien, klare Trennung von
 **Aufbau** und **Training**, und eine eigene Seite zum Neuron.
@@ -101,9 +107,8 @@ Bonus-Wertung „mit wie wenigen Neuronen?“.
 
 ### 6a. Neu: „Arten trennen“ (Trennlinien) — Herzstück
 Wie „Pinguine sortieren“ in Nebeltal, aber andere Tiere, damit es eine Verbindung gibt
-und keine Wiederholung ist. **Vorschlag: Fische** (echte Daten, öffentlicher Datensatz
-„Fish Catch“, 159 Fische aus einem finnischen See, 7 Arten mit Länge, Höhe, Breite, Gewicht).
-Brücke zu Nebeltal: „Pinguin Main hat Hunger — welcher Fisch ist welcher?“
+und keine Wiederholung ist. **Umgesetzt: Greifvögel** (echte Daten „Hawks“, Lake MacBride/Iowa: Eckschwanzsperber ♂/♀,
+Rundschwanzsperber, Rotschwanzbussard; Flügel, Gewicht, Schwanz).
 
 Bildschirm zweigeteilt:
 - links das Netz (wie heute, mit festen Ausgängen „Hecht“ / „Brasse“ / …)
