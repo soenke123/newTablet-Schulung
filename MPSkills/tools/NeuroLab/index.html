@@ -1,32 +1,51 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-view="home">
 <head>
   <meta charset="UTF-8">
 <script src="../../../motion.js?v=20261115a"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Neuron-Simulator</title>
-  <link rel="stylesheet" href="style.css?v=20261101">
+  <title>NeuroLab</title>
+  <link rel="stylesheet" href="style.css?v=20261120b">
+  <link rel="stylesheet" href="start.css?v=20261120b">
 
 <!-- Sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen. -->
 <script src="../../../viewport.js?v=20260820"></script>
 </head>
 <body>
 
+  <!-- Drei Ansichten (html[data-view]): home = Startseite mit den drei
+       Bereichen · neuron = „Wie funktioniert ein Neuron?“ · lab = das Feld
+       (Netze bauen oder Netze trainieren). js/start.js schaltet um. -->
   <header>
-    <div class="phase-toggle">
+    <button id="btn-home" class="home-btn" title="Zur Übersicht">&#8249; Übersicht</button>
+    <span class="brand">NeuroLab</span>
+    <span id="area-title" class="area-title"></span>
+    <div class="phase-toggle lab-only build-area-only">
       <button id="btn-build" class="phase-btn active">Build</button>
       <button id="btn-run" class="phase-btn">Run</button>
-      <button id="btn-learn" class="phase-btn">Lernen</button>
     </div>
-    <span class="phase-hint-text" id="phase-hint-text"></span>
-    <button id="btn-reset" class="reset-btn" title="Alles zurücksetzen">&#8635; Reset</button>
-    <button id="btn-print" class="print-btn" title="Druckansicht umschalten">Druck</button>
+    <span class="phase-hint-text lab-only" id="phase-hint-text"></span>
+    <button id="btn-reset" class="reset-btn lab-only" title="Alles zurücksetzen">&#8635; Reset</button>
+    <button id="btn-print" class="print-btn lab-only" title="Druckansicht umschalten">Druck</button>
   </header>
+
+  <!-- Startseite -->
+  <section id="home" class="page">
+    <div id="wait" class="wait" hidden>
+      <b>Gleich geht es los.</b>
+      <span>Deine Lehrkraft hat noch nichts freigegeben.</span>
+    </div>
+    <div id="areas"></div>
+  </section>
+
+  <!-- Bereich 1: Wie funktioniert ein Neuron? -->
+  <section id="neuron-page" class="page"></section>
 
   <!-- Das Feld ist ein Fenster (#network), in dem eine Tafel (#net-stage)
        verschoben und gezoomt wird. Die Tafel baut app.js bei jedem render()
        neu; die Lupenknöpfe stehen hier, weil sie zum Fenster gehören und den
        Neuaufbau überleben müssen. -->
+  <div id="print-opts" class="print-opts" hidden></div>
   <main id="network">
     <!-- #net-stage wird von app.js eingehängt -->
     <div class="net-zoom">
@@ -44,6 +63,9 @@
     </div>
   </div>
 
-  <script src="app.js?v=20261101"></script>
+  <script src="js/daten.js?v=20261120b"></script>
+  <script src="app.js?v=20261120b"></script>
+  <script src="js/neuron.js?v=20261120b"></script>
+  <script src="js/start.js?v=20261120b"></script>
 </body>
 </html>

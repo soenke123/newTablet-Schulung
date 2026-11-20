@@ -38,38 +38,45 @@ const SIZES = [
 ];
 
 /* Jeder Aufbau ist Code, der IN der Seite läuft (state, render … sind dort
-   global). Danach wird gemessen. */
-const FULL = `(n) => { for (let l = 0; l < 4; l++) { const L = state.layers[l];
+   global). Danach wird gemessen. BU/LE öffnen den Bereich „Netze bauen“
+   bzw. „Netze trainieren“ (seit 20.11.2026 gibt es eine Startseite davor). */
+const BU = `document.documentElement.dataset.view = 'lab'; state.area = 'bauen'; resetState();`;
+const LE = `document.documentElement.dataset.view = 'lab'; state.area = 'lernen'; resetState();`;
+const FULL = `(n) => { state.layers = n.map(() => ({ count: 0, neurons: [] }));
+  for (let l = 0; l < n.length; l++) { const L = state.layers[l];
   L.count = n[l]; L.neurons = [];
   for (let i = 0; i < n[l]; i++) L.neurons.push(makeNeuron(l === 0 ? state.numInputs : n[l - 1])); } }`;
 const CSV = fs.readFileSync(path.join(HERE, '..', 'Regen und Sonne.csv'), 'utf8');
 
 const SETUPS = {
-  'build-start':  `resetState(); state.phase = 'build'; render();`,
-  'gatter':       `resetState(); state.phase = 'learn'; applyScenario('gates'); render();`,
-  'gatter-info-zu': `resetState(); state.phase = 'learn'; applyScenario('gates'); state.learn.infoPanelOpen = false; render();`,
-  '7-segment':    `resetState(); state.phase = 'learn'; applyScenario('seg7'); render();`,
-  'zielscheibe':  `resetState(); state.phase = 'learn'; applyScenario('zielscheibe'); render();`,
-  'zielscheibe-build': `resetState(); state.phase = 'learn'; applyScenario('zielscheibe'); state.phase = 'build'; render();`,
-  'eigene-csv':   `resetState(); state.phase = 'learn'; state.learn.customData = parseCustomCSV(${JSON.stringify(CSV)});
+  'build-start':  `${BU} state.phase = 'build'; render();`,
+  'gatter':       `${LE} applyScenario('gates'); render();`,
+  'gatter-info-zu': `${LE} applyScenario('gates'); state.learn.infoPanelOpen = false; render();`,
+  '7-segment':    `${LE} applyScenario('seg7'); render();`,
+  'zielscheibe':  `${LE} applyScenario('zielscheibe'); render();`,
+  'voegel':       `${LE} applyScenario('voegel'); render();`,
+  'eigene-csv':   `${LE} state.learn.customData = parseCustomCSV(${JSON.stringify(CSV)});
                    state.learn.scenario = 'custom'; applyCustomScenarioInputsOnly(); render();`,
-  'gross-run':    `resetState(); state.numInputs = 10; (${FULL})([10, 10, 10, 10]); state.phase = 'run'; render();`,
-  'gross-build':  `resetState(); state.numInputs = 10; (${FULL})([10, 10, 10, 10]); state.phase = 'build'; render();`,
+  'gross-run':    `${BU} state.numInputs = 10; (${FULL})([10, 10, 10, 10]); state.phase = 'run'; render();`,
+  'gross-build':  `${BU} state.numInputs = 10; (${FULL})([10, 10, 10, 10]); state.phase = 'build'; render();`,
+  'sechs-schichten': `${BU} state.numInputs = 4; (${FULL})([6, 6, 6, 6, 6, 2]); state.phase = 'run'; render();`,
+  /* Leere Spalte mitten im Netz: die Kanten springen darüber hinweg. */
+  'luecke':       `${BU} state.numInputs = 3; (${FULL})([3, 0, 2, 0]); resyncAll(); state.phase = 'run'; render();`,
   /* Gewichte genau 0 und knapp daneben — früher verschwanden diese Kanten. */
-  'gewichte-null': `resetState(); state.numInputs = 3; (${FULL})([3, 2, 0, 0]);
+  'gewichte-null': `${BU} state.numInputs = 3; (${FULL})([3, 2, 0, 0]);
                    state.layers[0].neurons.forEach(n => n.weights = [0, 0.004, -0.009]);
                    state.layers[1].neurons.forEach(n => n.weights = [0, 0, 0.5]); state.phase = 'run'; render();`,
   /* Alter Stand: Kästen weit aus der Spalte verschoben, Panel weit rechts. */
-  'verschoben':   `resetState(); state.phase = 'learn'; applyScenario('gates');
+  'verschoben':   `${LE} applyScenario('gates');
                    state.inputSpacing[0] = 3000; state.inputSpacing[1] = -3000;
-                   state.layers[0].neurons[0].spacing = -5000; state.layers[0].neurons[5].spacing = 5000;
+                   state.layers[0].neurons[0].spacing = -5000; state.layers[0].neurons[3].spacing = 5000;
                    state.learn.panelX = 5000; state.learn.panelY = 5000; render();`,
-  'trainiert':    `resetState(); state.phase = 'learn'; applyScenario('seg7'); render();
+  'trainiert':    `${LE} applyScenario('seg7'); render();
                    state.learn.speed = 50; for (let i = 0; i < 40; i++) trainTick(); render();`,
-  'herausgezoomt': `resetState(); state.numInputs = 10; (${FULL})([10, 10, 10, 10]); state.phase = 'run'; render();
+  'herausgezoomt': `${BU} state.numInputs = 10; (${FULL})([10, 10, 10, 10]); state.phase = 'run'; render();
                    zoomBy(1 / 4);`,
-  'herangezoomt': `resetState(); state.phase = 'learn'; applyScenario('seg7'); render(); zoomBy(3);`,
-  'druck':        `resetState(); state.phase = 'learn'; applyScenario('gates'); printMode = true; render();`,
+  'herangezoomt': `${LE} applyScenario('seg7'); render(); zoomBy(3);`,
+  'druck':        `${LE} applyScenario('gates'); printMode = true; render();`,
 };
 
 /* Läuft in der Seite und gibt eine Liste von Fehlern zurück. */
@@ -107,10 +114,10 @@ function measure() {
 
   // 3. Jede Verbindung hat eine sichtbare Linie
   let expected = 0;
-  for (let li = 0; li < 4; li++) {
+  for (let li = 0; li < state.layers.length; li++) {
     const L = state.layers[li];
     if (!L.count) continue;
-    const nSrc = li === 0 ? state.numInputs : state.layers[li - 1].count;
+    const nSrc = inCountOf(li);
     L.neurons.forEach(n => { for (let si = 0; si < nSrc; si++) if (!n.disabled?.[si]) expected++; });
   }
   const lines = [...document.querySelectorAll('.edge-overlay line')];
@@ -165,7 +172,7 @@ for (const [w, h] of SIZES) {
     // ResizeObserver und Schrift sind einen Frame später dran.
     await page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
     const errs = await page.evaluate(measure);
-    await page.evaluate(() => { printMode = false; });
+    await page.evaluate(() => { printMode = false; stopTraining(); view.touched = false; });
     runs++;
     if (errs.length || pageErrors.length) {
       failed++;

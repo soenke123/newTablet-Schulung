@@ -2,12 +2,9 @@
    MPSkills — Skill „NeuroLab"  ·  tool.css
    ══════════════════════════════════════════════════════════════
    Sehr wenig, und das ist der Punkt: alles, was man sieht, steht in
-   style.css NEBENAN und gehört der Anwendung selbst. Hier steht nur,
-   wie ihr Rahmen in der Seite sitzt.
-
-   Der Rahmen kippt mit dem Kleid der Seite (Kante, Ecken, Grund),
-   der Inhalt darin nicht — siehe Kopfkommentar in tool.js. Deshalb
-   nimmt er die MPSkills-Variablen und schreibt keine Farbe hin.
+   css/nl.css NEBENAN und gehört der Anwendung selbst. Hier steht nur,
+   wie ihr Rahmen in der Seite sitzt. Hell/Dunkel übernimmt die
+   Anwendung vom Rahmen (data-theme).
    ══════════════════════════════════════════════════════════════ */
 
 .nl-host {

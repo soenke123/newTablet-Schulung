@@ -2,12 +2,18 @@
 
 // ── State ──────────────────────────────────────────────────────────────────
 const state = {
+  /* Bereich (20.11.2026): 'bauen' = Build · Run, frei, ohne Szenario;
+     'lernen' = Lernen mit Szenario (Ein- und Ausgänge stehen fest, Schichten
+     dazwischen frei). Jeder Bereich hat seinen eigenen Speicher. */
+  area: null,
   phase: 'build',
   numInputs: 3,
   inputs: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   inputSpacing: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   colOffsets: [0, 0, 0, 0, 0, 0],
   layerHidden: [false, false, false, false],
+  /* Mehr als vier Schichten (bis MAX_LAYERS): state.layers ist jetzt
+     beliebig lang. Leere Schichten werden übersprungen (prevActive). */
   inputLabels:  ['x1','x2','x3','x4','x5','x6','x7','x8','x9','x10'],
   outputLabels: [],
   learn: {
@@ -41,6 +47,12 @@ const state = {
 };
 
 let printMode = false;
+/* Druckansicht (nur Lehrkraft / allein): was aufs Blatt kommt. Gemerkt je
+   Gerät unter nl.print. weights/bias: 'num' Zahl · 'gap' Lücke · 'off' ohne. */
+const PRINT_DEFAULT = { weights: 'num', bias: 'num', fz: true, names: true, values: false, inputs: true };
+let printOpts = Object.assign({}, PRINT_DEFAULT);
+try { Object.assign(printOpts, JSON.parse(localStorage.getItem('nl.print') || '{}')); } catch (e) { /* egal */ }
+const GAP = '_____';
 
 // ── Activation functions ───────────────────────────────────────────────────
 const activations = {
@@ -98,12 +110,10 @@ const SCENARIOS = {
     numInputs: 2,
     inputLabels:  ['Eingang A', 'Eingang B'],
     outputLabels: ['AND', 'OR', 'NOT A', 'XOR'],
-    topology: [
-      { count: 6, type: 'sigmoid', outputIndices: [0, 1, 2] },
-      { count: 1, type: 'sigmoid' },
-      { count: 0 }, { count: 0 },
-    ],
-    // li-first ordering: L0N0=AND, L0N1=OR, L0N2=NOT A, L1N0=XOR
+    /* Bsp. Netz: nur die Schichten DAZWISCHEN — der Ausgang (eine Spalte mit
+       je einem Neuron pro Ausgabe, in dieser Reihenfolge) steht fest. */
+    hidden:  [{ count: 4, type: 'tanh' }],
+    outType: 'sigmoid',
     data: [
       { inputs: [0, 0], targets: [0, 0, 1, 0] },
       { inputs: [0, 1], targets: [0, 1, 1, 1] },
@@ -116,11 +126,8 @@ const SCENARIOS = {
     numInputs: 7,
     inputLabels:  ['Seg. a', 'Seg. b', 'Seg. c', 'Seg. d', 'Seg. e', 'Seg. f', 'Seg. g'],
     outputLabels: ['Ziffer (0-9)'],
-    topology: [
-      { count: 10, type: 'sigmoid' },
-      { count: 1,  type: 'linear'  },
-      { count: 0  }, { count: 0 },
-    ],
+    hidden:  [{ count: 10, type: 'sigmoid' }],
+    outType: 'linear',
     data: [
       { inputs: [1,1,1,1,1,1,0], targets: [0] },
       { inputs: [0,1,1,0,0,0,0], targets: [1] },
@@ -139,12 +146,8 @@ const SCENARIOS = {
     numInputs: 2,
     inputLabels:  ['x (normiert)', 'y (normiert)'],
     outputLabels: ['Punkte'],
-    topology: [
-      { count: 10, type: 'relu'   },
-      { count: 10, type: 'relu'   },
-      { count: 1,  type: 'linear' },
-      { count: 0 },
-    ],
+    hidden:  [{ count: 10, type: 'relu' }, { count: 10, type: 'relu' }],
+    outType: 'linear',
     data: [
   {inputs:[0.2629,-0.1344],targets:[0.1]},
   {inputs:[0.9164,0.4413],targets:[0]},
@@ -1650,6 +1653,52 @@ const SCENARIOS = {
   },
 };
 
+/* ── Greifvögel (20.11.2026) ──
+   Echte Messwerte (js/daten.js, Datensatz „Hawks“, Lake MacBride, Iowa):
+   vier Gruppen, die wie Perlen auf einer Kette nach Größe liegen. Zwei
+   Eingänge (Flügel in dm, Gewicht in kg), damit das Diagramm im Info-Kasten
+   zeigt, wie die Neuronen die Fläche aufteilen. Ausgang: je Gruppe ein
+   Neuron (1 = diese Art). */
+const VOGEL_ARTEN = [
+  { name: 'Eckschwanzsperber ♂', kurz: 'Sperber ♂', color: '#3f8fe0' },
+  { name: 'Eckschwanzsperber ♀', kurz: 'Sperber ♀', color: '#8d63d2' },
+  { name: 'Rundschwanzsperber',  kurz: 'Rundschwanz', color: '#e39a2d' },
+  { name: 'Rotschwanzbussard',   kurz: 'Bussard', color: '#d64b4b' },
+];
+if (window.NLData && window.NLData.VOEGEL) {
+  const data = [];
+  window.NLData.VOEGEL.forEach((grp, g) => grp.forEach(([wing, weight]) => {
+    data.push({
+      inputs:  [Math.round(wing / 10) / 10, Math.round(weight) / 1000],
+      targets: VOGEL_ARTEN.map((_, k) => (k === g ? 1 : 0)),
+    });
+  }));
+  SCENARIOS.voegel = {
+    name: 'Greifvögel',
+    numInputs: 2,
+    inputLabels:  ['Flügel (dm)', 'Gewicht (kg)'],
+    outputLabels: VOGEL_ARTEN.map(a => a.kurz),
+    hidden:  [{ count: 3, type: 'tanh' }],
+    outType: 'sigmoid',
+    data,
+  };
+}
+
+/* Szenarien in der Reihenfolge der Auswahl. id = Freigabe im Raum
+   (skill_room_state.data.parts) — nie umbenennen. */
+const SCENARIO_LIST = [
+  { key: 'gates',       id: 'sc-gatter', name: 'Logik-Gatter' },
+  { key: 'seg7',        id: 'sc-ziffer', name: '7-Segment-Ziffer' },
+  { key: 'zielscheibe', id: 'sc-ziel',   name: 'Zielscheibe' },
+  { key: 'voegel',      id: 'sc-vogel',  name: 'Greifvögel' },
+  { key: 'custom',      id: 'sc-eigene', name: 'Eigene Daten' },
+];
+// Darf diese Person das Szenario wählen? (Freigaben aus js/start.js)
+function scenarioAllowed(key) {
+  const e = SCENARIO_LIST.find(x => x.key === key);
+  return !e || !window.NLStart || window.NLStart.usable(e.id);
+}
+
 // ── Custom CSV parsing ─────────────────────────────────────────────────────
 function parseCustomCSV(text) {
   const sep = text.includes(';') ? ';' : (text.includes(',') ? ',' : null);
@@ -1714,13 +1763,41 @@ function makeNeuron(inCount) {
   return { type: 'sigmoid', weights: Array(n).fill(1), disabled: Array(n).fill(false), bias: 0, spacing: 0 };
 }
 
+const MAX_LAYERS = 8;
+
+/* Vorige Schicht MIT Neuronen (-1 = Eingänge). Eine leere Spalte dazwischen
+   ist nur ein Platzhalter und wird übersprungen. */
+function prevActive(li) {
+  for (let i = li - 1; i >= 0; i--) if (state.layers[i] && state.layers[i].count > 0) return i;
+  return -1;
+}
+function nextActive(li) {
+  for (let i = li + 1; i < state.layers.length; i++) if (state.layers[i].count > 0) return i;
+  return -1;
+}
+function inCountOf(li) {
+  const p = prevActive(li);
+  return p < 0 ? state.numInputs : state.layers[p].count;
+}
+// Im Lernbereich ist die LETZTE Spalte der feste Ausgang des Szenarios.
+function isLearnArea() { return state.area === 'lernen'; }
+function outLayerIdx() { return state.layers.length - 1; }
+function initWeight(n, inCount) {
+  const k = Math.max(inCount, 1);
+  const scale = n.type === 'relu' ? Math.sqrt(2 / k) : 1 / Math.sqrt(k);
+  return (Math.random() - 0.5) * 2 * scale;
+}
+function resyncAll() {
+  for (let li = 0; li < state.layers.length; li++) resyncWeights(li);
+}
+
 function resyncWeights(layerIdx) {
   if (layerIdx < 0 || layerIdx >= state.layers.length) return;
-  const inCount = layerIdx === 0
-    ? state.numInputs
-    : state.layers[layerIdx - 1].count;
+  const inCount = inCountOf(layerIdx);
   state.layers[layerIdx].neurons.forEach(n => {
-    while (n.weights.length < inCount) n.weights.push(1);
+    // Beim Lernen kommt eine neue Verbindung mit einem kleinen Zufallsgewicht
+    // dazu (eine 1 überall machte alle Neuronen gleich), beim Bauen mit 1.
+    while (n.weights.length < inCount) n.weights.push(isLearnArea() ? initWeight(n, inCount) : 1);
     if (n.weights.length > inCount) n.weights.length = inCount;
     if (!n.disabled) n.disabled = [];
     while (n.disabled.length < inCount) n.disabled.push(false);
@@ -1784,7 +1861,7 @@ function addPointerDrag(el, getVal, setVal, onClick) {
 
 function applyColumnOffsets(offsets) {
   state.colOffsets = offsets;
-  const cols = [...document.querySelectorAll('#net-stage > .col')];
+  const cols = [...document.querySelectorAll('#net-stage > .col:not(.col-addlayer)')];
   cols.forEach((col, i) => { col.style.left = `${offsets[i] || 0}px`; });
   syncStagePad();
   redrawEdges();
@@ -1795,7 +1872,7 @@ function addColumnDrag(header, colIdx) {
   header.addEventListener('pointerdown', e => {
     if (e.target.closest('button, input')) return;
     startX = e.clientX;
-    startOffsets = [...state.colOffsets];
+    startOffsets = Array.from({ length: state.layers.length + 2 }, (_, i) => state.colOffsets[i] || 0);
     active = true;
     didDrag = false;
     header.setPointerCapture(e.pointerId);
@@ -1820,8 +1897,9 @@ function addColumnDrag(header, colIdx) {
 
 // ── Computation ────────────────────────────────────────────────────────────
 function getLayerInputs(layerIdx) {
-  if (layerIdx === 0) return state.inputs.slice(0, state.numInputs);
-  return getNonTerminalOutputs(layerIdx - 1);
+  const p = prevActive(layerIdx);
+  if (p < 0) return state.inputs.slice(0, state.numInputs);
+  return getNonTerminalOutputs(p);
 }
 
 function computeNeuronOutput(neuron, inputs) {
@@ -1847,14 +1925,22 @@ function getNonTerminalOutputs(layerIdx) {
 }
 
 function isOutputNeuron(li, ni) {
+  /* Lernen: Ausgang ist genau die letzte Spalte — fest, beschriftet, in der
+     Reihenfolge des Szenarios. Damit kann kein Neuron „aus Versehen“ zum
+     Ausgang werden, und AND/XOR landen immer an ihrem Platz. */
+  if (isLearnArea()) return li === outLayerIdx();
   const L = lastActiveLayerIdx();
   if (li >= L) return true;
-  const next = state.layers[li + 1];
-  if (!next || next.count === 0) return true;
-  return next.neurons.every(n => n.disabled?.[ni] ?? false);
+  const nx = nextActive(li);
+  if (nx < 0) return true;
+  return state.layers[nx].neurons.every(n => n.disabled?.[ni] ?? false);
 }
 
 function getOutputNeurons() {
+  if (isLearnArea()) {
+    const li = outLayerIdx();
+    return state.layers[li].neurons.map((neuron, ni) => ({ li, ni, neuron }));
+  }
   const L = lastActiveLayerIdx();
   const result = [];
   for (let li = 0; li <= L; li++)
@@ -1905,10 +1991,12 @@ function backwardPass(cache, targets) {
       if (isOutputNeuron(li, ni)) continue;
       const neuron = state.layers[li].neurons[ni];
       const { z, y } = cache[li][ni];
+      const nx = nextActive(li);
+      if (nx < 0) continue;
       let sum = 0;
-      for (let k = 0; k < state.layers[li + 1].count; k++) {
-        if (!state.layers[li + 1].neurons[k].disabled?.[ni])
-          sum += (state.layers[li + 1].neurons[k].weights[ni] ?? 0) * deltas[li + 1][k];
+      for (let k = 0; k < state.layers[nx].count; k++) {
+        if (!state.layers[nx].neurons[k].disabled?.[ni])
+          sum += (state.layers[nx].neurons[k].weights[ni] ?? 0) * deltas[nx][k];
       }
       deltas[li][ni] = activations[neuron.type].derivative(y, z) * sum;
     }
@@ -1919,9 +2007,10 @@ function backwardPass(cache, targets) {
 function applyGradients(cache, deltas, lr) {
   const L = lastActiveLayerIdx();
   for (let li = 0; li <= L; li++) {
-    const prevOutputs = li === 0
+    const p = prevActive(li);
+    const prevOutputs = p < 0
       ? state.inputs.slice(0, state.numInputs)
-      : cache[li - 1].map(c => c.y);
+      : cache[p].map(c => c.y);
     for (let ni = 0; ni < state.layers[li].count; ni++) {
       const neuron = state.layers[li].neurons[ni];
       const d = deltas[li][ni];
@@ -2012,14 +2101,16 @@ function trainTick() {
   updateLossPanelDisplay();
   updateLossGraph();
   updateNeuronDisplays();
+  updateVoegelPlot();
 }
 
 // ── Scenario application ───────────────────────────────────────────────────
-function applyScenario(key) {
-  const sc = SCENARIOS[key];
-  if (!sc) return;
+/* Ein Szenario legt EIN- und AUSGÄNGE fest (20.11.2026): Eingänge = Spalte
+   links (gesperrt), Ausgänge = letzte Spalte mit je einem beschrifteten
+   Neuron pro Ausgabe (Anzahl gesperrt, Typ frei). Wie viele Schichten
+   dazwischen und wie viele Neuronen je Schicht, entscheiden die Schüler. */
+function resetLearnRun() {
   stopTraining();
-  state.learn.scenario        = key;
   state.learn.epoch           = 0;
   state.learn.loss            = 0;
   state.learn.lossHistory     = [];
@@ -2029,126 +2120,82 @@ function applyScenario(key) {
   state.learn.lastPredictions = [];
   state.learn.shuffledData    = [];
   state.learn.topologyDirty   = false;
-  state.numInputs         = sc.numInputs;
-  state.inputLabels       = [...sc.inputLabels, ...state.inputLabels.slice(sc.inputLabels.length)];
-  state.outputLabels      = [...sc.outputLabels];
-  for (let li = 0; li < 4; li++) {
-    const topo = sc.topology[li];
-    if (!topo || topo.count === 0) {
-      state.layers[li].count   = 0;
-      state.layers[li].neurons = [];
-    } else {
-      const inCount = li === 0 ? sc.numInputs : state.layers[li - 1].count;
-      const prevOutputSet = new Set(li > 0 ? (sc.topology[li - 1]?.outputIndices ?? []) : []);
-      const activeCount = Math.max(inCount - prevOutputSet.size, 1);
-      // He-Init für ReLU, Xavier für Sigmoid/Tanh
-      const scale = topo.type === 'relu'
-        ? Math.sqrt(2 / activeCount)
-        : 1 / Math.sqrt(activeCount);
-      state.layers[li].count   = topo.count;
-      state.layers[li].neurons = Array.from({ length: topo.count }, () => {
-        const disabled = Array(inCount).fill(false).map((_, wi) => prevOutputSet.has(wi));
-        const weights  = Array(inCount).fill(0).map((_, wi) =>
-          prevOutputSet.has(wi) ? 0 : (Math.random() - 0.5) * 2 * scale
-        );
-        return { type: topo.type, weights, disabled, bias: 0, spacing: 0 };
-      });
-    }
-  }
-  for (let li = 0; li < 4; li++) resyncWeights(li);
+}
 
-  // Für lineare Output-Neuronen: Bias auf Mittelwert der Targets setzen (seg7)
-  const outLi = lastActiveLayerIdx();
-  const allTargets = sc.data.flatMap(d => d.targets);
-  const meanTarget = allTargets.reduce((a, b) => a + b, 0) / allTargets.length;
-  state.layers[outLi].neurons.forEach(n => {
-    if (n.type === 'linear') {
-      n.weights = n.weights.map(() => (Math.random() - 0.5) * 0.2);
-      n.bias = meanTarget;
-    }
+function defaultOutType(sc) {
+  if (sc.outType) return sc.outType;
+  const t = sc.data.flatMap(d => d.targets);
+  return t.every(v => v >= 0 && v <= 1) ? 'sigmoid' : 'linear';
+}
+
+// Gerüst: Eingänge + Beschriftungen + Ausgangs-Spalte, dazwischen `hidden`.
+function setupScenarioShape(sc, hidden) {
+  resetLearnRun();
+  state.numInputs    = sc.numInputs;
+  state.inputLabels  = [...sc.inputLabels, ...state.inputLabels.slice(sc.inputLabels.length)];
+  state.outputLabels = [...sc.outputLabels];
+  const outType = defaultOutType(sc);
+  const mk = (count, type) => ({
+    count,
+    neurons: Array.from({ length: count }, () => ({ type, weights: [], disabled: [], bias: 0, spacing: 0 })),
   });
+  state.layers = [
+    ...(hidden.length ? hidden.map(h => mk(h.count, h.type)) : [mk(0, 'sigmoid')]),
+    mk(sc.outputLabels.length, outType),
+  ];
+  state.layerHidden = [];
+  state.colOffsets  = [];
+  resyncAll();
+  resetWeightsOnly();
+}
+
+function applyScenario(key) {
+  const sc = SCENARIOS[key];
+  if (!sc) return;
+  state.learn.scenario = key;
+  setupScenarioShape(sc, sc.hidden || []);
 }
 
 // ── Scenario: inputs only (user builds topology) ──────────────────────────
 function applyScenarioInputsOnly(key) {
   const sc = SCENARIOS[key];
   if (!sc) return;
-  stopTraining();
-  state.learn.scenario        = key;
-  state.learn.epoch           = 0;
-  state.learn.loss            = 0;
-  state.learn.lossHistory     = [];
-  state.learn.sampleIdx       = 0;
-  state.learn.lastTargets     = [];
-  state.learn.lastSample      = null;
-  state.learn.lastPredictions = [];
-  state.learn.shuffledData    = [];
-  state.learn.topologyDirty   = false;
-  state.numInputs     = sc.numInputs;
-  state.inputLabels   = [...sc.inputLabels, ...state.inputLabels.slice(sc.inputLabels.length)];
-  state.outputLabels  = [...sc.outputLabels];
-  for (let li = 0; li < 4; li++) {
-    state.layers[li].count   = 0;
-    state.layers[li].neurons = [];
-  }
+  state.learn.scenario = key;
+  setupScenarioShape(sc, []);
 }
 
 function applyCustomScenarioInputsOnly() {
   const cd = state.learn.customData;
   if (!cd) return;
-  stopTraining();
-  state.learn.epoch           = 0;
-  state.learn.loss            = 0;
-  state.learn.lossHistory     = [];
-  state.learn.sampleIdx       = 0;
-  state.learn.lastTargets     = [];
-  state.learn.lastSample      = null;
-  state.learn.lastPredictions = [];
-  state.learn.shuffledData    = [];
-  state.learn.topologyDirty   = false;
-  state.numInputs    = cd.numInputs;
-  state.inputLabels  = [...cd.inputLabels, ...state.inputLabels.slice(cd.inputLabels.length)];
-  state.outputLabels = [...cd.outputLabels];
-  for (let li = 0; li < 4; li++) {
-    state.layers[li].count   = 0;
-    state.layers[li].neurons = [];
-  }
+  setupScenarioShape(cd, []);
+}
+
+// Passen Ein-/Ausgänge des Netzes noch zum gewählten Szenario?
+function shapeMatchesScenario() {
+  const sc = getScenarioData();
+  if (!sc) return false;
+  const out = state.layers[outLayerIdx()];
+  return state.numInputs === sc.numInputs && out && out.count === sc.outputLabels.length;
 }
 
 // ── Weight-only reset (keeps topology) ────────────────────────────────────
 function resetWeightsOnly() {
-  stopTraining();
-  state.learn.epoch           = 0;
-  state.learn.loss            = 0;
-  state.learn.lossHistory     = [];
-  state.learn.sampleIdx       = 0;
-  state.learn.lastTargets     = [];
-  state.learn.lastSample      = null;
-  state.learn.lastPredictions = [];
-  state.learn.shuffledData    = [];
-  state.learn.topologyDirty   = false;
-
+  resetLearnRun();
   const sc  = getScenarioData();
-  const L   = lastActiveLayerIdx();
-  for (let li = 0; li <= L; li++) {
+  for (let li = 0; li < state.layers.length; li++) {
     state.layers[li].neurons.forEach(n => {
       const activeCount = Math.max(n.weights.filter((_, i) => !n.disabled?.[i]).length, 1);
-      const scale = n.type === 'relu'
-        ? Math.sqrt(2 / activeCount) : 1 / Math.sqrt(activeCount);
-      n.weights = n.weights.map((_, i) =>
-        n.disabled?.[i] ? 0 : (Math.random() - 0.5) * 2 * scale
-      );
+      n.weights = n.weights.map((_, i) => n.disabled?.[i] ? 0 : initWeight(n, activeCount));
       n.bias = 0;
     });
   }
-  if (sc) {
-    const allTargets  = sc.data.flatMap(d => d.targets);
-    const meanTarget  = allTargets.reduce((a, b) => a + b, 0) / allTargets.length;
-    state.layers[L].neurons.forEach(n => {
-      if (n.type === 'linear') {
-        n.weights = n.weights.map((_, i) => n.disabled?.[i] ? 0 : (Math.random() - 0.5) * 0.2);
-        n.bias = meanTarget;
-      }
+  // Lineare Ausgänge: Bias auf den Mittelwert der Zielwerte (7-Segment, Zielscheibe)
+  if (sc && isLearnArea()) {
+    state.layers[outLayerIdx()].neurons.forEach((n, k) => {
+      if (n.type !== 'linear') return;
+      const t = sc.data.map(d => d.targets[k] ?? 0);
+      n.weights = n.weights.map((_, i) => n.disabled?.[i] ? 0 : (Math.random() - 0.5) * 0.2);
+      n.bias = t.reduce((a, b) => a + b, 0) / Math.max(t.length, 1);
     });
   }
 }
@@ -2226,6 +2273,7 @@ function renderLearnInfoPanel() {
   if (state.learn.scenario === 'gates') renderGatesInfo(panel);
   else if (state.learn.scenario === 'seg7') renderSeg7Info(panel);
   else if (state.learn.scenario === 'zielscheibe') renderZielscheibeInfo(panel);
+  else if (state.learn.scenario === 'voegel') renderVoegelInfo(panel);
   else if (state.learn.scenario === 'custom') renderCustomDataInfo(panel);
   return panel;
 }
@@ -2463,6 +2511,108 @@ function renderZielscheibeInfo(panel) {
   panel.appendChild(note);
 }
 
+/* ── Greifvögel: Diagramm Flügel × Gewicht ──
+   Jeder Punkt ist ein echter Vogel (Farbe = Art). Die Fläche dahinter ist
+   eingefärbt nach der Art, die das Netz an dieser Stelle sagen würde
+   (stärkster Ausgang). Beim Training sieht man die Grenzen wandern. */
+const VOGEL_BOX = { x0: 1.2, x1: 4.8, y0: 0, y1: 2.1 };
+function renderVoegelInfo(panel) {
+  const title = document.createElement('div');
+  title.className = 'learn-info-title';
+  title.textContent = 'Greifvögel';
+  panel.appendChild(title);
+
+  const desc = document.createElement('div');
+  desc.className = 'learn-info-desc';
+  desc.textContent = '180 echte Greifvögel aus Iowa (USA), gefangen, vermessen und wieder freigelassen. '
+    + 'Eingaben: Flügellänge und Gewicht. Das Netz soll die Art erkennen – je Art ein Ausgang.';
+  panel.appendChild(desc);
+
+  const legend = document.createElement('div');
+  legend.className = 'vogel-legend';
+  legend.innerHTML = VOGEL_ARTEN.map(a => `<span><i style="background:${a.color}"></i>${a.name}</span>`).join('');
+  panel.appendChild(legend);
+
+  const cv = document.createElement('canvas');
+  cv.id = 'vogel-plot';
+  cv.width = 440; cv.height = 300;
+  cv.className = 'vogel-plot';
+  panel.appendChild(cv);
+
+  const acc = document.createElement('div');
+  acc.className = 'vogel-acc';
+  acc.id = 'vogel-acc';
+  panel.appendChild(acc);
+
+  const tip = document.createElement('div');
+  tip.className = 'learn-info-desc';
+  tip.innerHTML = '<b>Denkanstoß:</b> Wie viele Neuronen braucht man mindestens, um vier Arten zu trennen, die nebeneinander liegen?';
+  panel.appendChild(tip);
+  requestAnimationFrame(updateVoegelPlot);
+}
+
+// Vorhersage für einen Punkt ohne die Anzeige anzufassen (state.inputs bleibt).
+function predictAt(inputs) {
+  const saved = state.inputs.slice();
+  const cache = forwardPass(inputs);
+  const out = getOutputNeurons().map(({ li, ni }) => cache[li][ni].y);
+  saved.forEach((v, i) => { state.inputs[i] = v; });
+  return out;
+}
+const argmax = a => a.reduce((m, v, i) => (v > a[m] ? i : m), 0);
+
+let vogelPlotT = 0;
+function updateVoegelPlot() {
+  const cv = document.getElementById('vogel-plot');
+  if (!cv || state.learn.scenario !== 'voegel' || !shapeMatchesScenario()) return;
+  const now = performance.now();
+  if (now - vogelPlotT < 120) return;          // höchstens ~8× je Sekunde
+  vogelPlotT = now;
+  const sc = SCENARIOS.voegel;
+  const g = cv.getContext('2d');
+  const W = cv.width, H = cv.height, L = 34, B = 26, T = 6, R = 6;
+  const { x0, x1, y0, y1 } = VOGEL_BOX;
+  const px = x => L + (x - x0) / (x1 - x0) * (W - L - R);
+  const py = y => H - B - (y - y0) / (y1 - y0) * (H - B - T);
+  g.clearRect(0, 0, W, H);
+  // Fläche: 44 × 30 Kacheln
+  const NX = 44, NY = 30, cw = (W - L - R) / NX, ch = (H - B - T) / NY;
+  g.globalAlpha = 0.22;
+  for (let i = 0; i < NX; i++) for (let j = 0; j < NY; j++) {
+    const x = x0 + (i + 0.5) / NX * (x1 - x0), y = y1 - (j + 0.5) / NY * (y1 - y0);
+    g.fillStyle = VOGEL_ARTEN[argmax(predictAt([x, y]))].color;
+    g.fillRect(L + i * cw, T + j * ch, cw + 0.6, ch + 0.6);
+  }
+  g.globalAlpha = 1;
+  // Achsen
+  g.strokeStyle = '#94a3b8'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(L, T); g.lineTo(L, H - B); g.lineTo(W - R, H - B); g.stroke();
+  g.fillStyle = '#64748b'; g.font = '10px system-ui, sans-serif'; g.textAlign = 'center';
+  for (let x = 2; x <= 4.5; x += 0.5) g.fillText(String(x).replace('.', ','), px(x), H - B + 12);
+  g.fillText('Flügel (dm)', (L + W) / 2, H - 2);
+  g.textAlign = 'right';
+  for (let y = 0; y <= 2; y += 0.5) g.fillText(String(y).replace('.', ','), L - 4, py(y) + 3);
+  g.save(); g.translate(9, (T + H - B) / 2); g.rotate(-Math.PI / 2); g.textAlign = 'center';
+  g.fillText('Gewicht (kg)', 0, 0); g.restore();
+  // Vögel
+  let right = 0;
+  for (const d of sc.data) {
+    const art = argmax(d.targets);
+    const ok = argmax(predictAt(d.inputs)) === art;
+    if (ok) right++;
+    g.beginPath(); g.arc(px(d.inputs[0]), py(d.inputs[1]), 3.2, 0, 7);
+    g.fillStyle = VOGEL_ARTEN[art].color; g.fill();
+    g.lineWidth = ok ? 0.8 : 2; g.strokeStyle = ok ? '#fff' : '#111'; g.stroke();
+  }
+  const ls = state.learn.lastSample;
+  if (ls && ls.inputs) {
+    g.beginPath(); g.arc(px(ls.inputs[0]), py(ls.inputs[1]), 7, 0, 7);
+    g.lineWidth = 2; g.strokeStyle = '#111'; g.stroke();
+  }
+  const acc = document.getElementById('vogel-acc');
+  if (acc) acc.innerHTML = `Richtig erkannt: <b>${right} von ${sc.data.length}</b> (${Math.round(right / sc.data.length * 100)} %) · schwarzer Rand = falsch`;
+}
+
 function renderCustomDataInfo(panel) {
   const title = document.createElement('div');
   title.className = 'learn-info-title';
@@ -2561,6 +2711,19 @@ function renderCustomDataInfo(panel) {
   }
 }
 
+// Szenario wählen = sofort Ein- und Ausgänge setzen (leeres Netz dazwischen).
+function selectScenario(key) {
+  stopTraining();
+  state.learn.scenario = key;
+  if (key) state.learn.infoPanelOpen = true;
+  if (key === 'custom') {
+    if (state.learn.customData) applyCustomScenarioInputsOnly(); else resetLearnRun();
+  } else if (key) {
+    applyScenarioInputsOnly(key);
+  }
+  saveState();
+}
+
 // ── Learn panel ────────────────────────────────────────────────────────────
 function renderLearnPanel() {
   const panel = document.createElement('div');
@@ -2582,7 +2745,9 @@ function renderLearnPanel() {
   const scLabel = document.createElement('span');
   scLabel.className = 'learn-label';
   scLabel.textContent = 'Szenario';
-  const scOptions = [['', '– wählen –'], ['gates', 'Logik-Gatter'], ['seg7', '7-Segment-Ziffer'], ['zielscheibe', 'Zielscheibe'], ['custom', 'Eigene Daten']];
+  // Nur was die Lehrkraft freigegeben hat (allein: alles).
+  const scOptions = [['', '– wählen –'],
+    ...SCENARIO_LIST.filter(e => scenarioAllowed(e.key) && (e.key === 'custom' || SCENARIOS[e.key])).map(e => [e.key, e.name])];
   const scSel = { value: state.learn.scenario || '' };
 
   const scDrop = document.createElement('div');
@@ -2602,10 +2767,7 @@ function renderLearnPanel() {
     item.className = 'learn-custom-select-item' + (v === scSel.value ? ' selected' : '');
     item.textContent = t;
     item.addEventListener('click', () => {
-      scSel.value = v;
-      state.learn.scenario = v || null;
-      if (state.learn.scenario) state.learn.infoPanelOpen = true;
-      saveState();
+      selectScenario(v || null);
       render();
     });
     scDropList.appendChild(item);
@@ -2885,6 +3047,11 @@ const OB_CX = OB_X + OB_W / 2;     // 236
 
 // ── LocalStorage persistence ───────────────────────────────────────────────
 const STORAGE_KEY = 'neuron-sim-v2';
+/* Je Bereich ein eigener Stand: das freie Netz aus „Netze bauen“ bleibt
+   liegen, während man im Lernbereich ein Szenario trainiert. Der alte
+   Schlüssel bleibt der des Baubereichs — wer schon ein Netz hatte, findet
+   es dort wieder. */
+const storageKey = () => (state.area === 'lernen' ? STORAGE_KEY + '-lernen' : STORAGE_KEY);
 
 /* Schaufenster-Modus (MPSkills). Wird von tools/NeuroLab/tool.js an den
    <iframe> gehängt, wenn NeuroLab in der Vorschau der Landing läuft und
@@ -2898,8 +3065,8 @@ const STORAGE_KEY = 'neuron-sim-v2';
 const DEMO = new URLSearchParams(location.search).has('demo');
 
 function saveState() {
-  if (DEMO) return;
-  localStorage.setItem(STORAGE_KEY, JSON.stringify({
+  if (DEMO || !state.area) return;
+  try { localStorage.setItem(storageKey(), JSON.stringify({
     phase: state.phase,
     numInputs: state.numInputs,
     inputs: state.inputs,
@@ -2932,22 +3099,23 @@ function saveState() {
         spacing: n.spacing || 0,
       })),
     })),
-  }));
+  })); } catch (e) { /* Speicher voll oder gesperrt: dann eben nicht */ }
 }
 
 function loadState() {
   try {
-    const data = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    const data = JSON.parse(localStorage.getItem(storageKey()));
     if (!data) return false;
-    state.phase = data.phase || 'build';
+    // Bauen kennt nur Build/Run, Lernen nur Lernen (alte Stände hatten alle drei).
+    state.phase = state.area === 'lernen' ? 'learn' : (data.phase === 'run' ? 'run' : 'build');
     state.numInputs = data.numInputs ?? 2;
     if (Array.isArray(data.inputs))       data.inputs.forEach((v, i)       => { state.inputs[i] = v; });
     if (Array.isArray(data.inputSpacing)) data.inputSpacing.forEach((v, i) => { state.inputSpacing[i] = v; });
     if (Array.isArray(data.colOffsets))   data.colOffsets.forEach((v, i)   => { state.colOffsets[i] = v; });
     if (Array.isArray(data.layerHidden))  data.layerHidden.forEach((v, i)  => { state.layerHidden[i] = !!v; });
-    if (Array.isArray(data.layers)) {
-      data.layers.forEach((l, i) => {
-        if (!state.layers[i]) return;
+    if (Array.isArray(data.layers) && data.layers.length) {
+      state.layers = data.layers.slice(0, MAX_LAYERS).map(() => ({ count: 0, neurons: [] }));
+      data.layers.slice(0, MAX_LAYERS).forEach((l, i) => {
         state.layers[i].count = l.count || 0;
         state.layers[i].neurons = (l.neurons || []).map(n => ({
           type: n.type || 'perceptron',
@@ -2983,12 +3151,12 @@ function loadState() {
       state.learn.customError    = null;
     }
     // Migration: terminal flag → disabled outgoing connections
-    for (let li = 0; li < 4; li++) {
+    for (let li = 0; li < state.layers.length; li++) {
       const layer = state.layers[li];
       if (layer.count === 0) continue;
       const terminalIndices = layer.neurons
         .map((n, i) => (n._legacyTerminal ? i : -1)).filter(i => i >= 0);
-      if (terminalIndices.length > 0 && li + 1 < 4 && state.layers[li + 1].count > 0) {
+      if (terminalIndices.length > 0 && li + 1 < state.layers.length && state.layers[li + 1].count > 0) {
         const nextLayer = state.layers[li + 1];
         const ntIndices = layer.neurons.map((n, i) => n._legacyTerminal ? -1 : i).filter(i => i >= 0);
         nextLayer.neurons.forEach(n => {
@@ -3001,7 +3169,7 @@ function loadState() {
       }
       layer.neurons.forEach(n => { delete n._legacyTerminal; });
     }
-    for (let li = 0; li < 4; li++) resyncWeights(li);
+    resyncAll();
     return true;
   } catch (e) {
     return false;
@@ -3009,7 +3177,7 @@ function loadState() {
 }
 
 function updateNeuronDisplays() {
-  for (let li = 0; li < 4; li++) {
+  for (let li = 0; li < state.layers.length; li++) {
     const layer = state.layers[li];
     if (layer.count === 0) continue;
     const inputs = getLayerInputs(li);
@@ -3336,10 +3504,14 @@ function render() {
   /* ⚠️ Die Zeile setzt die Klassen NEU und wischt dabei alles weg, was
      jemand sonst am <body> anhängt — deshalb steht demo-mode hier und
      nicht einmalig beim Start. */
+  if (!state.area) return;
   document.body.className = state.phase + '-phase'
+    + ' area-' + state.area
     + (printMode ? ' print-mode' : '')
+    + (printMode && !printOpts.inputs ? ' print-no-inputs' : '')
     + (DEMO ? ' demo-mode' : '');
   renderHeader();
+  renderPrintOpts();
   renderNetwork();
   if (state.phase === 'learn') updateLossPanelDisplay();
   saveState();
@@ -3348,8 +3520,7 @@ function render() {
 function renderHeader() {
   document.getElementById('btn-build').classList.toggle('active', state.phase === 'build');
   document.getElementById('btn-run').classList.toggle('active', state.phase === 'run');
-  document.getElementById('btn-learn').classList.toggle('active', state.phase === 'learn');
-  const hints = { build: 'Verbindungen & Typ konfigurieren', run: 'Eingaben setzen & berechnen', learn: 'Szenario wählen & Netz trainieren' };
+  const hints = { build: 'Neuronen, Verbindungen & Typ einstellen', run: 'Eingaben setzen & berechnen', learn: 'Szenario wählen, Netz bauen & trainieren' };
   document.getElementById('phase-hint-text').textContent = hints[state.phase] || '';
 }
 
@@ -3367,7 +3538,7 @@ function renderDataTableCol() {
   title.textContent = 'Trainingsdaten';
   hdr.appendChild(title);
   col.appendChild(hdr);
-  addColumnDrag(hdr, 5);
+  addColumnDrag(hdr, state.layers.length + 1);
 
   if (!sc) return col;
 
@@ -3433,14 +3604,18 @@ function renderNetwork() {
   const inputCol = renderInputsCol();
   inputCol.style.left = '0px';
   stage.appendChild(inputCol);
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < state.layers.length; i++) {
     const layerCol = renderLayerCol(i);
     layerCol.style.left = `${state.colOffsets[i + 1] || 0}px`;
     stage.appendChild(layerCol);
   }
+  // Schicht dazu (Bauen: hinten, Lernen: vor dem festen Ausgang)
+  if (!printMode && state.phase !== 'run' && state.layers.length < MAX_LAYERS) {
+    stage.appendChild(renderAddLayerCol());
+  }
   if (state.phase === 'learn' && state.learn.scenario) {
     const dataCol = renderDataTableCol();
-    dataCol.style.left = `${state.colOffsets[5] || 0}px`;
+    dataCol.style.left = `${state.colOffsets[state.layers.length + 1] || 0}px`;
     stage.appendChild(dataCol);
   }
 
@@ -3645,23 +3820,66 @@ function renderInputsCol() {
 }
 
 // ── Layer column ───────────────────────────────────────────────────────────
-const LAYER_NAMES = ['Eingabe-Layer', 'Hidden 1', 'Hidden 2', 'Ausgabe-Layer'];
+/* Namen nach Lage: erste Spalte „Eingabe-Layer“, letzte „Ausgabe-Layer“,
+   dazwischen „Hidden n“ — wie bisher, nur für beliebig viele Spalten. Beim
+   Lernen ist die erste Spalte schon verdeckt (die Eingänge liefert das
+   Szenario), die letzte der feste Ausgang. */
+function layerName(li) {
+  const n = state.layers.length;
+  if (li === n - 1 && n > 1) return 'Ausgabe-Layer';
+  if (isLearnArea()) return n === 1 ? 'Ausgabe-Layer' : `Hidden ${li + 1}`;
+  if (li === 0) return 'Eingabe-Layer';
+  return `Hidden ${li}`;
+}
+
+// Spalte „+ Schicht“ ganz rechts (beim Lernen vor dem Ausgang eingefügt).
+function renderAddLayerCol() {
+  const col = document.createElement('div');
+  col.className = 'col col-addlayer';
+  const btn = document.createElement('button');
+  btn.className = 'addlayer-btn';
+  btn.id = 'btn-add-layer';
+  btn.title = 'Neue Schicht';
+  btn.innerHTML = '<span>+</span>Schicht';
+  btn.addEventListener('click', () => {
+    if (state.layers.length >= MAX_LAYERS) return;
+    const at = isLearnArea() ? outLayerIdx() : state.layers.length;
+    state.layers.splice(at, 0, { count: 0, neurons: [] });
+    state.layerHidden.splice(at, 0, false);
+    state.colOffsets = [];
+    if (isLearnArea()) state.learn.topologyDirty = true;
+    render();
+  });
+  col.appendChild(btn);
+  return col;
+}
+
+function removeLayer(li) {
+  if (state.layers.length <= 1 || state.layers[li].count > 0) return;
+  if (isLearnArea() && li === outLayerIdx()) return;
+  state.layers.splice(li, 1);
+  state.layerHidden.splice(li, 1);
+  state.colOffsets = [];
+  resyncAll();
+  render();
+}
 
 function renderLayerCol(layerIdx) {
   const layer = state.layers[layerIdx];
-  const isOutput = layerIdx === lastActiveLayerIdx();
-  const inCount = layerIdx === 0 ? state.numInputs : state.layers[layerIdx - 1].count;
+  const fixedOut = isLearnArea() && layerIdx === outLayerIdx();
+  const isOutput = fixedOut || (!isLearnArea() && layerIdx === lastActiveLayerIdx());
+  const inCount = inCountOf(layerIdx);
 
   const col = document.createElement('div');
-  col.className = 'col col-layer' + (isOutput ? ' output-layer' : '');
+  col.className = 'col col-layer' + (isOutput ? ' output-layer' : '') + (fixedOut ? ' fixed-out' : '');
   col.dataset.layer = layerIdx;
 
-  const layerHdr = makeColHeader(LAYER_NAMES[layerIdx], layer.count,
+  const layerHdr = makeColHeader(layerName(layerIdx), layer.count,
     () => {
       if (layer.count > 0) {
         layer.count--;
         layer.neurons.pop();
-        resyncWeights(layerIdx + 1);
+        resyncAll();
         if (state.phase === 'learn') state.learn.topologyDirty = true;
         render();
       }
@@ -3676,12 +3894,13 @@ function renderLayerCol(layerIdx) {
         }
         layer.count++;
         layer.neurons.push(newNeuron);
-        resyncWeights(layerIdx + 1);
+        resyncAll();
         if (state.phase === 'learn') state.learn.topologyDirty = true;
         render();
       }
     },
-    state.phase === 'run'
+    // Der Ausgang beim Lernen hat so viele Neuronen, wie das Szenario Ausgaben hat.
+    state.phase === 'run' || fixedOut
   );
   col.appendChild(layerHdr);
   addColumnDrag(layerHdr, layerIdx + 1);
@@ -3707,6 +3926,14 @@ function renderLayerCol(layerIdx) {
     ph.className = 'col-empty';
     ph.textContent = 'Leer';
     body.appendChild(ph);
+    // Leere Schicht wieder weg (nicht der feste Ausgang, nicht die letzte Spalte)
+    if (!printMode && state.phase !== 'run' && state.layers.length > 1 && !fixedOut) {
+      const rm = document.createElement('button');
+      rm.className = 'col-remove-btn';
+      rm.textContent = '× Schicht entfernen';
+      rm.addEventListener('click', e => { e.stopPropagation(); removeLayer(layerIdx); });
+      body.appendChild(rm);
+    }
   } else {
     const inputs = getLayerInputs(layerIdx);
     layer.neurons.forEach((neuron, ni) => {
@@ -3775,45 +4002,61 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
   svg.appendChild(svgEl('line', { x1: NB_CX, y1: NB_Y + 6, x2: NB_CX, y2: NB_Y + NB_H - 6, class: 'neuron-divider' }));
 
   // ── Print mode: generic labels ───────────────────────────────────────────
+  /* Was zu sehen ist, steht in printOpts (Auswahl oben in der Druckansicht):
+     Aktivierung echt oder nur „f(z)“, Bias als Zahl/Lücke/ohne, Typname,
+     Werte z und y′ der aktuellen Eingaben. */
   if (printMode) {
+    const vals = printOpts.values;
     const sigma = svgEl('text', { x: LHX, y: NB_CY, class: 'neuron-sigma', 'text-anchor': 'middle', 'font-size': '22' });
     sigma.textContent = 'Σ';
     svg.appendChild(sigma);
     const zLabel = svgEl('text', { x: LHX, y: NB_CY + 18, 'text-anchor': 'middle', 'font-size': '10', fill: '#64748b', 'font-weight': '700' });
-    zLabel.textContent = '= z';
+    zLabel.textContent = vals ? `z = ${fmt(z)}` : '= z';
     svg.appendChild(zLabel);
 
-    const fo = svgEl('foreignObject', { x: RHX - 38, y: 38, width: 76, height: 40 });
+    const fo = svgEl('foreignObject', { x: RHX - 38, y: 34, width: 76, height: 44 });
     const fDiv = document.createElement('div');
     fDiv.className = 'svg-math';
-    fDiv.innerHTML = '<span style="font-size:7px;font-weight:400;color:#64748b">Aktivierungsfunktion</span><span style="font-size:12px">f(z)</span>';
+    fDiv.innerHTML = printOpts.fz
+      ? '<span style="font-size:7px;font-weight:400;color:#64748b">Aktivierungsfunktion</span><span style="font-size:12px">f(z)</span>'
+      : act.shortLines.map(f => `<span>${f}</span>`).join('');
     fo.appendChild(fDiv);
     svg.appendChild(fo);
 
-    svg.appendChild(svgEl('line', { x1: BIAS_X, y1: BIAS_Y_BOT, x2: BIAS_X, y2: BIAS_Y_TOP + 8, class: 'bias-line' }));
-    svg.appendChild(svgEl('polygon', {
-      points: `${BIAS_X},${BIAS_Y_TOP} ${BIAS_X - 4},${BIAS_Y_TOP + 8} ${BIAS_X + 4},${BIAS_Y_TOP + 8}`,
-      fill: '#888',
-    }));
-    const bLabel = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 13, 'text-anchor': 'middle', 'font-size': '11', fill: '#64748b', 'font-weight': '700', 'data-bias-display': '' });
-    bLabel.textContent = `b = ${fmt(neuron.bias)}`;
-    svg.appendChild(bLabel);
+    if (printOpts.bias !== 'off') {
+      svg.appendChild(svgEl('line', { x1: BIAS_X, y1: BIAS_Y_BOT, x2: BIAS_X, y2: BIAS_Y_TOP + 8, class: 'bias-line' }));
+      svg.appendChild(svgEl('polygon', {
+        points: `${BIAS_X},${BIAS_Y_TOP} ${BIAS_X - 4},${BIAS_Y_TOP + 8} ${BIAS_X + 4},${BIAS_Y_TOP + 8}`,
+        fill: '#888',
+      }));
+      const bLabel = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 13, 'text-anchor': 'middle', 'font-size': '11', fill: '#64748b', 'font-weight': '700', 'data-bias-display': '' });
+      bLabel.textContent = printOpts.bias === 'gap' ? `b = ${GAP}` : `b = ${fmt(neuron.bias)}`;
+      svg.appendChild(bLabel);
+    }
 
     svg.appendChild(svgEl('line', { x1: OL_X1, y1: NB_CY, x2: OL_X2, y2: NB_CY, stroke: '#94a3b8', 'stroke-width': '1.5' }));
     svg.appendChild(svgEl('rect', {
       x: OB_X, y: NB_CY - OB_H / 2, width: OB_W, height: OB_H, rx: 4,
       fill: '#f8fafc', stroke: '#d1d5db', 'stroke-width': '1',
     }));
-    const outTxt = svgEl('text', { x: OB_CX, y: NB_CY + 5, 'text-anchor': 'middle', 'font-size': '12', fill: '#94a3b8', 'font-weight': '700' });
-    outTxt.textContent = 'y′';
+    const outTxt = svgEl('text', { x: OB_CX, y: NB_CY + 5, 'text-anchor': 'middle', 'font-size': vals ? '10' : '12', fill: vals ? '#334155' : '#94a3b8', 'font-weight': '700' });
+    outTxt.textContent = vals ? fmt(y) : 'y′';
     svg.appendChild(outTxt);
+    const outName = isLearnArea() && layerIdx === outLayerIdx() ? state.outputLabels[neuronIdx] : '';
+    if (outName) {
+      const on = svgEl('text', { x: OB_CX, y: NB_CY - 15, 'text-anchor': 'middle', 'font-size': '8', fill: '#334155', 'font-weight': '700' });
+      on.textContent = outName;
+      svg.appendChild(on);
+    }
 
-    const printNameLabel = svgEl('text', {
-      x: NB_CX, y: NB_Y - 7,
-      'text-anchor': 'middle', 'font-size': '11', 'font-weight': '700', fill: act.color,
-    });
-    printNameLabel.textContent = act.fullName;
-    svg.appendChild(printNameLabel);
+    if (printOpts.names) {
+      const printNameLabel = svgEl('text', {
+        x: NB_CX, y: NB_Y - 7,
+        'text-anchor': 'middle', 'font-size': '11', 'font-weight': '700', fill: act.color,
+      });
+      printNameLabel.textContent = act.fullName;
+      svg.appendChild(printNameLabel);
+    }
 
     return svg;
   }
@@ -3912,7 +4155,11 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
       outColor = '#f59e0b'; outFill = '#fffbeb';
     }
     // In learn mode, non-last-layer neurons: show clickable OUT toggle (like build mode)
-    const learnMidLayer = state.phase === 'learn' && layerIdx !== lastActiveLayerIdx();
+    /* Früher ließ sich beim Lernen jedes Neuron per OUT-Knopf zum Ausgang
+       machen — die Ausgaben hingen dann an der Reihenfolge der Neuronen
+       (AND, OR, NOT A in Schicht 1, XOR in Schicht 2). Seit 20.11.2026 ist der
+       Ausgang die feste letzte Spalte; dazwischen gibt es nur Neuronen. */
+    const learnMidLayer = false;
     if (learnMidLayer) {
       const isOut = isOutputNeuron(layerIdx, neuronIdx);
       const doToggle = e => {
@@ -4053,7 +4300,7 @@ function placeEdgeLabels(edges, obstacles = []) {
   const placed = obstacles.map(box => ({ box }));
   const order = edges.slice().sort((a, b) => Math.abs(b.w) - Math.abs(a.w));
   for (const e of order) {
-    const label = fmt(e.w);
+    const label = printMode && printOpts.weights === 'gap' ? GAP : fmt(e.w);
     const w = label.length * 6 + 7, h = 13, pad = 1;
     for (const t of EDGE_LABEL_T) {
       const x = e.src.x + (e.tgt.x - e.src.x) * t;
@@ -4113,12 +4360,13 @@ function drawEdgeOverlay(net) {
      gemeinsam verteilt (siehe placeEdgeLabels), und dafür muss jede Kante
      schon bekannt sein. */
   const edges = [];
-  for (let li = 0; li < 4; li++) {
+  for (let li = 0; li < state.layers.length; li++) {
     const layer = state.layers[li];
     if (layer.count === 0) continue;
 
     let sources;
-    if (li === 0) {
+    const pli = prevActive(li);
+    if (pli < 0) {
       /* Am rechten Rand des Eingangs, auch im Build-Modus: ein langer Name
          macht aus dem Kreis eine Pille, und aus deren Mitte liefe die Kante
          quer durch die Schrift. */
@@ -4127,7 +4375,7 @@ function drawEdgeOverlay(net) {
         return toNet(r.right, (r.top + r.bottom) / 2);
       });
     } else {
-      const prevSvgs = Array.from(net.querySelectorAll(`[data-layer="${li - 1}"] .neuron-svg`));
+      const prevSvgs = Array.from(net.querySelectorAll(`[data-layer="${pli}"] .neuron-svg`));
       if (!prevSvgs.length) continue;
       sources = prevSvgs.map(el => svgPt(el, VB_OUT_X, VB_MID_Y));
     }
@@ -4198,7 +4446,7 @@ function drawEdgeOverlay(net) {
       }
       return { l: a.x, r: b.x, t: a.y, b: b.y };
     });
-  for (const p of placeEdgeLabels(edges, obstacles)) {
+  for (const p of (printMode && printOpts.weights === 'off' ? [] : placeEdgeLabels(edges, obstacles))) {
     const g = svgEl('g', { class: 'edge-label' });
     g.appendChild(svgEl('rect', {
       x: p.x - p.w / 2, y: p.y - 7, width: p.w, height: 13, rx: 3,
@@ -4233,8 +4481,9 @@ function showNeuronPopup(neuron, layerIdx, neuronIdx, inputs, z, y) {
   contentEl.innerHTML = '';
   popupDirty = false;
 
+  const outName = isLearnArea() && layerIdx === outLayerIdx() ? state.outputLabels[neuronIdx] : '';
   document.getElementById('popup-title').textContent =
-    `${LAYER_NAMES[layerIdx]} · Neuron ${neuronIdx + 1}`;
+    `${layerName(layerIdx)} · ${outName ? 'Ausgang „' + outName + '“' : 'Neuron ' + (neuronIdx + 1)}`;
 
   if (state.phase === 'build') {
     buildBuildPopupContent(contentEl, neuron, layerIdx);
@@ -4548,19 +4797,19 @@ document.getElementById('popup-overlay').addEventListener('click', e => {
 });
 
 // ── Phase buttons ──────────────────────────────────────────────────────────
+// Nur im Bereich „Netze bauen“ sichtbar; beim Lernen gibt es nur „Lernen“.
 document.getElementById('btn-build').addEventListener('click', () => { stopTraining(); state.phase = 'build'; render(); });
 document.getElementById('btn-run').addEventListener('click', () => { stopTraining(); state.phase = 'run'; render(); });
-document.getElementById('btn-learn').addEventListener('click', () => { state.phase = 'learn'; render(); });
 
 // ── Reset ──────────────────────────────────────────────────────────────────
 function resetState() {
   stopTraining();
-  state.phase = 'build';
+  state.phase = state.area === 'lernen' ? 'learn' : 'build';
   state.numInputs = 2;
   state.inputs.fill(0);
   state.inputSpacing.fill(0);
-  state.colOffsets.fill(0);
-  state.layerHidden.fill(false);
+  state.colOffsets = [];
+  state.layerHidden = [];
   state.inputLabels  = ['x1','x2','x3','x4','x5','x6','x7','x8','x9','x10'];
   state.outputLabels = [];
   state.learn.scenario     = null;
@@ -4580,14 +4829,48 @@ function resetState() {
   state.learn.customData     = null;
   state.learn.customError    = null;
   state.learn.customFileName = null;
-  for (let i = 0; i < state.layers.length; i++) {
-    state.layers[i].count = 0;
-    state.layers[i].neurons = [];
+  if (state.area === 'lernen') {
+    // Lernen startet mit dem ersten freigegebenen Szenario, leeres Netz dazwischen.
+    state.layers = [{ count: 0, neurons: [] }];
+    const first = SCENARIO_LIST.find(e => e.key !== 'custom' && SCENARIOS[e.key] && scenarioAllowed(e.key));
+    if (first) selectScenario(first.key);
+    return;
   }
+  // Bauen: vier Spalten wie immer, vorne ein Perceptron mit zwei Eingängen.
+  state.layers = Array.from({ length: 4 }, () => ({ count: 0, neurons: [] }));
   state.layers[0].count = 1;
   state.layers[0].neurons = [{ type: 'perceptron', weights: [1, 1], disabled: [false, false], bias: 0, spacing: 0 }];
 }
-document.getElementById('btn-reset').addEventListener('click', () => { resetState(); render(); });
+document.getElementById('btn-reset').addEventListener('click', () => { resetState(); view.touched = false; render(); });
+
+// ── Druckansicht ───────────────────────────────────────────────────────────
+/* Knopf „Druck“ (nur Lehrkraft und allein, siehe js/start.js). Die Spalten
+   verschwinden, alles liegt auf einer weißen Fläche — für Bildschirmfotos
+   und Arbeitsblätter. Oben eine Leiste mit der Auswahl, was zu sehen ist
+   (#print-opts, steht nicht auf dem Foto, wenn man sie einklappt). */
+function renderPrintOpts() {
+  const box = document.getElementById('print-opts');
+  if (!box) return;
+  box.hidden = !printMode;
+  if (!printMode) return;
+  const sel = (k, label, opts) => `<label>${label} <select data-k="${k}">${
+    opts.map(([v, t]) => `<option value="${v}"${printOpts[k] === v ? ' selected' : ''}>${t}</option>`).join('')}</select></label>`;
+  const chk = (k, label) => `<label><input type="checkbox" data-k="${k}"${printOpts[k] ? ' checked' : ''}> ${label}</label>`;
+  box.innerHTML = `<b>Aufs Blatt:</b>
+    ${sel('weights', 'Gewichte', [['num', 'Zahlen'], ['gap', 'Lücken'], ['off', 'ohne']])}
+    ${sel('bias', 'Bias', [['num', 'Zahlen'], ['gap', 'Lücken'], ['off', 'ohne']])}
+    ${chk('fz', 'Aktivierung nur als f(z)')}
+    ${chk('names', 'Neuronen-Typ')}
+    ${chk('values', 'Werte z und y′')}
+    ${chk('inputs', 'Eingabewerte')}
+    <button type="button" id="print-opts-close" title="Leiste ausblenden (für das Foto)">Ausblenden</button>`;
+  box.querySelectorAll('[data-k]').forEach(el => el.addEventListener('change', () => {
+    printOpts[el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value;
+    try { localStorage.setItem('nl.print', JSON.stringify(printOpts)); } catch (e) { /* egal */ }
+    render();
+  }));
+  document.getElementById('print-opts-close').addEventListener('click', () => { box.hidden = true; });
+}
 document.getElementById('btn-print').addEventListener('click', () => {
   printMode = !printMode;
   document.getElementById('btn-print').classList.toggle('active', printMode);
@@ -4649,48 +4932,66 @@ const DEMO_DATA = {
 const DEMO_SHAPE = [3, 3, 1, 0];
 
 function demoState() {
+  /* Bauen: das Anfangsnetz. Lernen: XOR als „Eigene Daten“ (siehe oben),
+     Ausgang fest, 3 → 3 tanh dazwischen. */
   resetState();
-  state.phase        = 'learn';
-  state.numInputs    = DEMO_DATA.numInputs;
-  state.inputLabels  = [...DEMO_DATA.inputLabels, ...state.inputLabels.slice(DEMO_DATA.inputLabels.length)];
-  state.outputLabels = [...DEMO_DATA.outputLabels];
-
+  if (state.area !== 'lernen') return;
   state.learn.scenario       = 'custom';
   state.learn.customData     = DEMO_DATA;
   state.learn.customFileName = 'XOR (Beispiel)';
+  setupScenarioShape(DEMO_DATA, [{ count: 3, type: 'tanh' }, { count: 3, type: 'tanh' }]);
   state.learn.learningRate   = 0.6;
   state.learn.speed          = 60;
-  /* Der Info-Kasten erklärt, wie man eine CSV-Datei hochlädt — in der
-     Stunde die richtige Auskunft, in der Auslage eine Wand quer über
-     dem Netz. Er hängt außerdem LINKS am Lernpanel und schöbe es aus
-     dem Rahmen hinaus, und damit läge ausgerechnet die Verlaufskurve
-     draußen. Eingeklappt ist er einen Klick auf ▶ entfernt. */
   state.learn.infoPanelOpen  = false;
-
-  for (let li = 0; li < state.layers.length; li++) {
-    const inCount = li === 0 ? state.numInputs : DEMO_SHAPE[li - 1];
-    const isOut   = DEMO_SHAPE[li] > 0 && !DEMO_SHAPE[li + 1];
-    state.layers[li].count   = DEMO_SHAPE[li];
-    state.layers[li].neurons = Array.from({ length: DEMO_SHAPE[li] }, () => ({
-      // Ausgang sigmoid, weil die Zielwerte 0 und 1 sind; dahinter tanh,
-      // weil sigmoid in den verdeckten Schichten XOR nicht lernt (s. o.).
-      type: isOut ? 'sigmoid' : 'tanh',
-      weights:  Array(inCount).fill(0),
-      disabled: Array(inCount).fill(false),
-      bias: 0, spacing: 0,
-    }));
-  }
-  // Die Startgewichte kommen aus derselben Funktion wie der ↺-Knopf im
-  // Lernpanel — dann ist der erste Durchgang der Vorschau derselbe Vorgang
-  // wie jeder weitere.
-  resetWeightsOnly();
 }
 
+// ── Bereiche ───────────────────────────────────────────────────────────────
+/* js/start.js öffnet einen Bereich (Startseite → Kachel) und schließt ihn
+   wieder. app.js zeichnet nur, solange ein Bereich offen ist. */
+const demoMem = {};
+function enterArea(area, scenarioKey) {
+  stopTraining();
+  closePopupSilently();
+  state.area = area;
+  view.touched = false;
+  const loaded = DEMO ? (demoMem[area] ? (Object.assign(state, JSON.parse(demoMem[area])), true) : false) : loadState();
+  if (!loaded) { if (DEMO) demoState(); else resetState(); }
+  if (area === 'lernen') {
+    state.phase = 'learn';
+    if (scenarioKey && scenarioKey !== state.learn.scenario) selectScenario(scenarioKey);
+    else if (state.learn.scenario && !scenarioAllowed(state.learn.scenario)) resetState();
+    else if (state.learn.scenario && state.learn.scenario !== 'custom' && !shapeMatchesScenario()) applyScenarioInputsOnly(state.learn.scenario);
+    // Eigene Daten: Info-Kasten mit dem Hochladen gleich offen (nicht im Schaufenster, da verdeckt er das Netz)
+    if (scenarioKey === 'custom' && !DEMO) state.learn.infoPanelOpen = true;
+  } else if (state.phase === 'learn') {
+    state.phase = 'build';
+  }
+  render();
+}
+function leaveArea() {
+  stopTraining();
+  closePopupSilently();
+  if (printMode) { printMode = false; document.getElementById('btn-print').classList.remove('active'); }
+  if (DEMO && state.area) {
+    const { learn, ...rest } = state;
+    demoMem[state.area] = JSON.stringify({ ...rest, learn: { ...learn, intervalId: null, isTraining: false } });
+  }
+  saveState();
+  state.area = null;
+}
+function closePopupSilently() {
+  document.getElementById('popup-overlay').classList.add('hidden');
+  popupDirty = false;
+}
+window.NLApp = {
+  enterArea, leaveArea, render, startTraining, stopTraining, selectScenario,
+  get state() { return state; },
+  scenarios: () => SCENARIO_LIST.filter(e => e.key === 'custom' || SCENARIOS[e.key]),
+};
+
 // ── Init ───────────────────────────────────────────────────────────────────
-if (DEMO) demoState();
-else if (!loadState()) resetState();
+/* Kein render() beim Laden: zuerst kommt die Startseite (js/start.js). */
 initNetGestures();
-render();
-window.addEventListener('resize', render);
+window.addEventListener('resize', () => { if (state.area) render(); });
 // Erst mit der fertigen Schrift stimmen die Maße der Kästen.
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(relayout);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (state.area) relayout(); });
