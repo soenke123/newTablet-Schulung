@@ -1,10 +1,13 @@
 # NeuroLab neu — Konzept (Entwurf 20.11.2026)
 
-> **Stand 20.11.2026: Etappen 1–3 gebaut** (siehe CLAUDE.md). Entscheidungen von Sönke:
-> statt Fischen/Sternen **echte Greifvögel** (trennbar mit 1, 2, 3 Geraden bzw. Ebenen im Raum);
-> Lehrkraft gibt **Bereiche und einzelne Aufgaben** frei (kein Gruppenpuzzle); **kein CSV-Upload** mehr;
-> Druckansicht bleibt für Lehrkräfte, mit Auswahl, was aufs Blatt kommt.
-> Offen: Etappe 4 (Klassenblick mit Migration, Arbeitsblatt, Avatare), Lernpfad/Freie Nutzung als zwei Ansichten.
+> **Abgelöst (20.11.2026, abends).** Die Neufassung nach diesem Plan (eigenes Feld, viele feste
+> Aufgaben, Andocken, Stationen) war Sönke zu weit weg vom alten NeuroLab und zu gesteuert. Stattdessen
+> ist das **alte NeuroLab zurück und verbessert** (siehe CLAUDE.md): Startseite mit drei Bereichen —
+> „Wie funktioniert ein Neuron?“ (kurz: Bild, Ausprobieren, EINE Impulsaufgabe + Liste aller
+> Neuronen-Typen) · „Netze bauen“ (freies Feld, Build · Run, keine Szenarien) · „Netze trainieren“
+> (Szenario legt Ein-/Ausgänge fest, Schichten/Neuronen frei, verschiebbares Lernfenster, CSV-Upload
+> bleibt). Übernommen aus diesem Plan: Freigaben je Bereich/Kachel, Greifvögel, Druckauswahl.
+> Der Rest unten ist nur noch Hintergrund.
 
 Ziel: NeuroLab auf das Niveau von Nebeltal / Reinforce Yourself / Tiny LM bringen.
 Mehr Struktur, die die Lehrkraft vorgibt, neue Szenarien, klare Trennung von

@@ -1,16 +1,13 @@
 // Browser-Prüfstand für NeuroLab (Playwright, ohne Server-Datenbank).
 //   node MPSkills/tools/NeuroLab/tests/raum.e2e.mjs        (FOTOS=1 legt Bilder in tests/fotos/ ab, nicht einchecken)
-// Prüft: Freigaben im Raum (Lehrkraft teilt → nl:parts, Klasse sieht nur Geteiltes),
-// Andocken per Ziehen und per Antippen, Testen mit Wertetabelle, Training bis zum Ziel,
-// Zeitlupe, Druckansicht, und den Ablauf des Schaufensters (preview/neurolab.js).
+// Prüft: Freigaben im Raum (Lehrkraft teilt → nl:parts, Klasse sieht nur Geteiltes,
+// Szenario-Auswahl nur Freigegebenes), Bereiche öffnen, Lernen mit festem Ausgang
+// (Gatter inkl. XOR, Greifvögel), Schicht dazu/weg, Druckansicht, keine Konsolenfehler.
 import { createRequire } from 'module';
 import http from 'http'; import fs from 'fs'; import path from 'path'; import { fileURLToPath } from 'url';
-import { execSync } from 'child_process';
 
 const require = createRequire(import.meta.url);
-let chromium;
-try { ({ chromium } = require('playwright')); }
-catch (e) { ({ chromium } = createRequire(execSync('npm root -g').toString().trim() + '/')('playwright')); }
+const { chromium } = require('playwright');
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../../../..');
@@ -60,19 +57,24 @@ const shot = async (pg, n) => { if (FOTOS) await pg.screenshot({ path: path.join
 /* 1. Klasse: nur geteilte Bereiche/Kacheln */
 {
   const pg = await page();
-  await pg.goto(BASE + '/host?rolle=schueler&parts=' + encodeURIComponent(JSON.stringify(['neuron', 'n1', 'n2', 'bauen', 'b-xor'])));
+  await pg.goto(BASE + '/host?rolle=schueler&parts=' + encodeURIComponent(JSON.stringify(['neuron', 'n-wie', 'trainieren', 'sc-vogel'])));
   const fr = pg.frameLocator('#f');
-  await fr.locator('.tile[data-id="n1"]').waitFor();
+  await fr.locator('.tile[data-id="n-wie"]').waitFor();
   ok(await fr.locator('.area').count() === 2, 'Klasse sieht nur die zwei geteilten Bereiche');
-  ok(await fr.locator('.tile.locked').count() === 4 + 9, 'nicht geteilte Kacheln sind gesperrt');
+  ok(await fr.locator('.tile.locked').count() === 1 + 4, 'nicht geteilte Kacheln sind gesperrt');
   ok(await fr.locator('.share').count() === 0, 'Klasse sieht keine Teilen-Knöpfe');
-  await pg.evaluate(() => push(['neuron', 'n1']));
-  await pg.waitForTimeout(150);
-  ok(await fr.locator('.area').count() === 1, 'Entziehen wirkt sofort');
+  ok(await fr.locator('#btn-print').isHidden(), 'Klasse hat keinen Druck-Knopf');
+  await fr.locator('.tile[data-id="sc-vogel"]').click();
+  await fr.locator('#learn-scenario-select').waitFor();
+  await fr.locator('.learn-custom-select-btn').click();
+  const items = await fr.locator('.learn-custom-select-item').allTextContents();
+  ok(JSON.stringify(items) === JSON.stringify(['– wählen –', 'Greifvögel']), 'Szenario-Auswahl zeigt nur Freigegebenes: ' + items.join(', '));
+  await pg.evaluate(() => push(['neuron', 'n-wie']));
+  await pg.waitForTimeout(200);
+  ok(await fr.locator('.area').count() === 1 && await fr.locator('#home').isVisible(), 'Entziehen wirkt sofort (zurück zur Übersicht)');
   await pg.evaluate(() => push([]));
   await pg.waitForTimeout(150);
   ok(await fr.locator('#wait').isVisible(), 'ohne Freigabe: Wartehinweis');
-  await shot(pg, 'klasse');
   await pg.close();
 }
 
@@ -81,79 +83,85 @@ const shot = async (pg, n) => { if (FOTOS) await pg.screenshot({ path: path.join
   const pg = await page();
   await pg.goto(BASE + '/host?rolle=lehrer&parts=null');
   const fr = pg.frameLocator('#f');
-  await fr.locator('.tile[data-id="b-xor"]').waitFor();
-  await fr.locator('.area').nth(1).locator('.area-tools .share').click();
+  await fr.locator('.tile[data-id="sc-gatter"]').waitFor();
+  ok(!(await fr.locator('#wait').isVisible()), 'Lehrkraft sieht keinen Wartehinweis');
+  await fr.locator('.area[data-area="trainieren"] .area-share').click();
   await pg.waitForTimeout(150);
   const sent = await pg.evaluate(() => window.sent);
-  ok(sent.length === 1 && sent[0].includes('bauen') && sent[0].includes('b-xor'), 'Bereich teilen nimmt seine Kacheln mit');
-  await fr.locator('.tile[data-id="b-xor"] .share').click();
+  ok(sent.length === 1 && sent[0].includes('trainieren') && sent[0].includes('sc-eigene'), 'Bereich teilen nimmt seine Kacheln mit');
+  await fr.locator('.tile[data-id="sc-eigene"] .share').click();
   await pg.waitForTimeout(150);
   const s2 = await pg.evaluate(() => window.sent.at(-1));
-  ok(!s2.includes('b-xor') && s2.includes('bauen'), 'einzelne Kachel entziehen');
-  await fr.locator('.tile[data-id="b-xor"] .info-i').click();
-  ok(await fr.locator('#dlg[open]').isVisible(), 'Lehrkraft-Info („i“) öffnet sich');
+  ok(!s2.includes('sc-eigene') && s2.includes('trainieren'), 'einzelne Kachel entziehen');
   await pg.close();
 }
 
-/* 3. Bauen: Andocken, Testen */
+/* 3. Allein: Bereiche, Bauen, Lernen */
 const pg = await page();
-await pg.goto(BASE + '/MPSkills/tools/NeuroLab/index.html?demo=1');
-await pg.evaluate(() => NL.openScenario('b-gatter', false));
-async function drag(a, z) {
-  const A = await a.boundingBox(), B = await z.boundingBox();
-  await pg.mouse.move(A.x + A.width / 2, A.y + A.height / 2); await pg.mouse.down();
-  await pg.mouse.move(A.x + 50, A.y + 20, { steps: 4 }); await pg.mouse.move(B.x + B.width / 2, B.y + B.height / 2, { steps: 8 });
-  await pg.mouse.up(); await pg.waitForTimeout(120);
-}
-await pg.evaluate(() => { NL.ws.net.outputs.forEach(o => { o.src = null; }); NL.refresh(); });
-await drag((await pg.$$('.knob-hit'))[2], (await pg.$$('.slot .sbody'))[0]);
-await (await pg.$$('.knob-hit'))[0].click();
-await (await pg.$$('.slot .sbody'))[1].click({ force: true });
-await drag((await pg.$$('.knob-hit'))[1], (await pg.$$('.slot .sbody'))[2]);
-const src = await pg.evaluate(() => NL.ws.net.outputs.map(o => o.src && o.src.n));
-ok(JSON.stringify(src) === '[2,0,1]', 'Andocken per Ziehen und per Antippen: ' + JSON.stringify(src));
-await pg.click('#steps button[data-step="1"]');
-await pg.waitForTimeout(200);
-ok((await pg.textContent('.score')).startsWith('4 von 4'), 'Testen: Wertetabelle 4 von 4 (Neuronen in beliebiger Reihenfolge)');
-await shot(pg, 'bauen-testen');
+await pg.goto(BASE + '/MPSkills/tools/NeuroLab/index.html');
+await pg.evaluate(() => localStorage.clear());
+await pg.reload();
+ok(await pg.locator('.tile').count() === 2 + 1 + 5, 'allein: alle Kacheln offen');
+await pg.click('.tile[data-id="n-typen"]');
+ok(await pg.locator('.nn-type').count() === 5, 'Alle Neuronen: fünf Typen');
+await pg.click('.nn-tab[data-id="n-wie"]');
+ok(await pg.locator('.nn-truth tbody tr').count() === 4, 'Impulsaufgabe mit Wahrheitstafel');
+await pg.click('#btn-home');
 
-/* 4. Trainieren: Vogel in der Mitte, Zeitlupe */
-await pg.evaluate(() => NL.openScenario('t-vogel2', false));
-ok(await pg.isDisabled('#steps button[data-step="1"]') === false, 'Schaufenster startet fertig aufgebaut');
-await pg.click('#steps button[data-step="1"]');
-await pg.evaluate(() => { NL.ws.speed = 5; });
-await pg.click('#train-go');
-await pg.waitForFunction(() => parseInt(document.getElementById('stat-test')?.textContent || '0', 10) >= 93, null, { timeout: 15000 }).catch(() => {});
-ok(parseInt(await pg.textContent('#stat-test'), 10) >= 93, 'Training erreicht das Ziel bei den Testvögeln');
-await pg.click('#train-go');
-await pg.click('#slow-btn');
-ok(await pg.isVisible('#slow-next'), 'Zeitlupe zeigt den Lernschritt');
-await pg.click('#slow-next');
-ok((await pg.textContent('.slow h3')).includes('Schritt 2'), 'Zeitlupe wendet die Änderung an');
-await shot(pg, 'trainieren');
+await pg.click('.tile[data-id="b-frei"]');
+ok(await pg.locator('#btn-build').isVisible() && await pg.locator('#btn-run').isVisible(), 'Bauen: Build und Run');
+await pg.click('#btn-add-layer');
+ok(await pg.evaluate(() => NLApp.state.layers.length) === 5, 'Schicht dazu');
+await pg.locator('.col-remove-btn').first().click();
+ok(await pg.evaluate(() => NLApp.state.layers.length) === 4, 'leere Schicht wieder weg');
+await pg.click('#btn-home');
 
-/* 5. Druckansicht */
+await pg.click('.tile[data-id="sc-gatter"]');
+await pg.locator('#learn-btn-start').waitFor();
+ok(await pg.locator('#btn-build').isHidden(), 'Lernen: kein Build/Run');
+const outCol = pg.locator('.col-layer.fixed-out');
+ok(await outCol.locator('.neuron-card').count() === 4, 'Gatter: fester Ausgang mit 4 Neuronen');
+ok(await outCol.locator('.counter-btn').first().isDisabled(), 'Ausgang: Anzahl gesperrt');
+await pg.click('#btn-add-layer');
+await pg.locator('.col-layer[data-layer="0"] .counter-btn').nth(1).click();
+await pg.locator('.col-layer[data-layer="0"] .counter-btn').nth(1).click();
+await pg.locator('.col-layer[data-layer="0"] .counter-btn').nth(1).click();
+ok(await pg.evaluate(() => NLApp.state.layers.map(l => l.count).join()) === '3,0,4', 'selbst gebaut: 3 Neuronen, leere Schicht, Ausgang');
+await pg.click('#learn-apply-topology');
+await pg.evaluate(() => { NLApp.state.learn.speed = 300; NLApp.state.learn.learningRate = 0.5; });
+await pg.click('#learn-btn-start');
+await pg.waitForFunction(() => NLApp.state.learn.epoch > 400 && NLApp.state.learn.loss < 0.01, null, { timeout: 20000 }).catch(() => {});
+await pg.click('#learn-btn-pause');
+const L = await pg.evaluate(() => NLApp.state.learn.loss);
+ok(L < 0.01, 'Gatter (inkl. XOR) gelernt, Verlust ' + L.toFixed(4));
+await shot(pg, 'gatter');
+
+await pg.click('#btn-home');
+await pg.click('.tile[data-id="sc-vogel"]');
+await pg.click('#learn-apply-topology');
+await pg.evaluate(() => { NLApp.state.learn.speed = 300; NLApp.state.learn.learningRate = 0.5; });
+await pg.click('#learn-btn-start');
+await pg.waitForFunction(() => /(\d+) %/.test(document.getElementById('vogel-acc')?.textContent || '') && +RegExp.$1 >= 93, null, { timeout: 25000 }).catch(() => {});
+await pg.click('#learn-btn-pause');
+const acc = await pg.textContent('#vogel-acc');
+ok(+(acc.match(/(\d+) %/) || [0, 0])[1] >= 93, 'Greifvögel: ' + acc);
+await shot(pg, 'voegel');
+
 await pg.click('#btn-print');
-ok(await pg.isVisible('#print-sheet svg'), 'Druckansicht zeigt das Netz');
+ok(await pg.locator('#print-opts').isVisible(), 'Druckansicht mit Auswahl');
 await pg.selectOption('#print-opts select[data-k="weights"]', 'gap');
-ok((await pg.textContent('#print-sheet')).includes('____'), 'Gewichte als Lücken');
+ok((await pg.locator('.edge-label text').first().textContent()).includes('___'), 'Gewichte als Lücken');
 await shot(pg, 'druck');
-await pg.click('#pr-close');
+await pg.click('#btn-print');
 
-/* 6. Das Neuron: Station 5 lösen */
-await pg.evaluate(() => NL.openNeuron('n5'));
-await pg.evaluate(() => {
-  const r = document.querySelectorAll('#st-card input[type=range]');
-  const set = (i, v) => { r[i].value = v; r[i].dispatchEvent(new Event('input')); };
-  set(0, 1); set(1, 1); set(2, -1.5);
-});
-ok(await pg.isVisible('.st-task.ok'), 'Station 5: Gerade trennt alle Punkte → ✓');
-await shot(pg, 'neuron');
+// Stand je Bereich bleibt erhalten
+await pg.click('#btn-home');
+await pg.click('.tile[data-id="b-frei"]');
+ok(await pg.evaluate(() => NLApp.state.layers.length) === 4 && await pg.evaluate(() => NLApp.state.phase) !== 'learn', 'Bauen behält sein eigenes Netz');
 
-/* 7. Schmal (Tablet hochkant) */
+/* 4. Schmal (Tablet hochkant) */
 const pt = await page({ width: 768, height: 1024 });
 await pt.goto(BASE + '/MPSkills/tools/NeuroLab/index.html?demo=1');
-await pt.evaluate(() => NL.openScenario('t-vogel3d', false));
 const over = await pt.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1);
 ok(!over, 'hochkant kein seitliches Scrollen');
 await shot(pt, 'hochkant');

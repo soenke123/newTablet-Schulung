@@ -1,92 +1,71 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="de" data-view="home">
 <head>
-<meta charset="UTF-8">
+  <meta charset="UTF-8">
 <script src="../../../motion.js?v=20261115a"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NeuroLab</title>
-<link href="../../../fonts/outfit-inter-jetbrainsmono-985fda.css" rel="stylesheet">
-<link rel="stylesheet" href="css/nl.css?v=20261120a">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroLab</title>
+  <link rel="stylesheet" href="style.css?v=20261120b">
+  <link rel="stylesheet" href="start.css?v=20261120b">
+
+<!-- Sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen. -->
 <script src="../../../viewport.js?v=20260820"></script>
 </head>
-<body data-screen="home">
+<body>
 
-<!-- Kopfzeile: Startseite = Name; in einer Aufgabe „‹ Übersicht“, Bereich · Titel,
-     die zwei Schritte (Aufbauen → Testen / Trainieren) und rechts Aufgabe/Druck. -->
-<header class="nl-head" id="head">
-  <button class="nl-brand" id="brand" type="button" title="Zur Übersicht">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="7" r="2.2"/><circle cx="5" cy="17" r="2.2"/><circle cx="19" cy="12" r="2.6"/><path d="M7 7.6 16.6 11.2M7 16.4l9.6-3.6"/></svg>
-    <span>NeuroLab</span>
-  </button>
-  <button class="nl-back" id="back" type="button" hidden>‹ Übersicht</button>
-  <div class="nl-crumb" id="crumb" hidden><small id="crumb-area"></small><b id="crumb-title"></b></div>
-  <div class="nl-steps" id="steps" hidden>
-    <button type="button" data-step="0"><i>1</i><span id="step0">Aufbauen</span></button>
-    <span class="nl-arrow">→</span>
-    <button type="button" data-step="1"><i>2</i><span id="step1">Testen</span></button>
-  </div>
-  <div class="nl-headr">
-    <button class="nl-pill" id="btn-task" type="button" hidden>Aufgabe</button>
-    <button class="nl-pill" id="btn-print" type="button" hidden title="Druckansicht für Arbeitsblätter">Druck</button>
-  </div>
-</header>
-
-<!-- ── Startseite ───────────────────────────────────────── -->
-<main class="screen" id="screen-home">
-  <section class="nl-hero">
-    <div>
-      <p class="kicker">MPSkills · Informatik · Künstliche Intelligenz</p>
-      <h1>NeuroLab</h1>
-      <p class="lead">Neuronale Netze zum Anfassen: erst das <b>Neuron</b> verstehen, dann <b>Netze bauen</b> und die Gewichte selbst einstellen, zum Schluss <b>Netze trainieren</b> und zusehen, wie sie aus Beispielen lernen.</p>
+  <!-- Drei Ansichten (html[data-view]): home = Startseite mit den drei
+       Bereichen · neuron = „Wie funktioniert ein Neuron?“ · lab = das Feld
+       (Netze bauen oder Netze trainieren). js/start.js schaltet um. -->
+  <header>
+    <button id="btn-home" class="home-btn" title="Zur Übersicht">&#8249; Übersicht</button>
+    <span class="brand">NeuroLab</span>
+    <span id="area-title" class="area-title"></span>
+    <div class="phase-toggle lab-only build-area-only">
+      <button id="btn-build" class="phase-btn active">Build</button>
+      <button id="btn-run" class="phase-btn">Run</button>
     </div>
-    <img src="neuron.png" alt="Ein künstliches Neuron: Eingaben mal Gewichte, Summe plus Bias, Aktivierungsfunktion, Ausgabe" class="hero-img">
-  </section>
-  <p class="nl-wait" id="wait" hidden>Deine Lehrkraft hat noch nichts freigegeben. Sobald sie einen Bereich teilt, erscheint er hier.</p>
-  <div id="areas"></div>
-</main>
+    <span class="phase-hint-text lab-only" id="phase-hint-text"></span>
+    <button id="btn-reset" class="reset-btn lab-only" title="Alles zurücksetzen">&#8635; Reset</button>
+    <button id="btn-print" class="print-btn lab-only" title="Druckansicht umschalten">Druck</button>
+  </header>
 
-<!-- ── Bereich 1: Das Neuron ────────────────────────────── -->
-<main class="screen" id="screen-neuron">
-  <nav class="st-nav" id="st-nav"></nav>
-  <article class="st-card" id="st-card"></article>
-</main>
-
-<!-- ── Bereich 2/3: Arbeitsfläche ───────────────────────── -->
-<main class="screen" id="screen-work">
-  <div class="work">
-    <div class="stage" id="stage">
-      <svg id="net" class="net" preserveAspectRatio="xMidYMid meet"></svg>
-      <p class="stage-hint" id="stage-hint"></p>
+  <!-- Startseite -->
+  <section id="home" class="page">
+    <div id="wait" class="wait" hidden>
+      <b>Gleich geht es los.</b>
+      <span>Deine Lehrkraft hat noch nichts freigegeben.</span>
     </div>
-    <aside class="side" id="side"></aside>
-  </div>
-  <!-- Neuron bearbeiten: schwebt über der Seitenleiste, das Netz bleibt sichtbar -->
-  <section class="editor" id="editor" hidden>
-    <button class="x" id="ed-close" type="button" aria-label="Schließen">×</button>
-    <div id="ed-body"></div>
+    <div id="areas"></div>
   </section>
-</main>
 
-<!-- ── Druckansicht (nur Lehrkraft / allein) ────────────── -->
-<div class="print-wrap" id="print-wrap" hidden>
-  <aside class="print-opts" id="print-opts"></aside>
-  <div class="print-scroll"><div class="print-sheet" id="print-sheet"></div></div>
-</div>
+  <!-- Bereich 1: Wie funktioniert ein Neuron? -->
+  <section id="neuron-page" class="page"></section>
 
-<dialog class="nl-dlg" id="dlg">
-  <div id="dlg-body"></div>
-  <div class="dlg-foot"><button class="btn primary" id="dlg-ok" type="button">Alles klar</button></div>
-</dialog>
+  <!-- Das Feld ist ein Fenster (#network), in dem eine Tafel (#net-stage)
+       verschoben und gezoomt wird. Die Tafel baut app.js bei jedem render()
+       neu; die Lupenknöpfe stehen hier, weil sie zum Fenster gehören und den
+       Neuaufbau überleben müssen. -->
+  <div id="print-opts" class="print-opts" hidden></div>
+  <main id="network">
+    <!-- #net-stage wird von app.js eingehängt -->
+    <div class="net-zoom">
+      <button id="btn-zoom-out" title="Herauszoomen">&minus;</button>
+      <button id="btn-zoom-fit" title="Ganzes Netz zeigen">&#10530;</button>
+      <button id="btn-zoom-in"  title="Heranzoomen">+</button>
+    </div>
+  </main>
 
-<div class="toast" id="toast" hidden></div>
+  <div id="popup-overlay" class="hidden">
+    <div id="popup">
+      <button id="popup-close">&times;</button>
+      <h3 id="popup-title"></h3>
+      <div id="popup-content"></div>
+    </div>
+  </div>
 
-<script src="js/netz.js?v=20261120a"></script>
-<script src="js/daten.js?v=20261120a"></script>
-<script src="js/szenarien.js?v=20261120a"></script>
-<script src="js/feld.js?v=20261120a"></script>
-<script src="js/plot.js?v=20261120a"></script>
-<script src="js/neuron.js?v=20261120a"></script>
-<script src="js/druck.js?v=20261120a"></script>
-<script src="js/app.js?v=20261120a"></script>
+  <script src="js/daten.js?v=20261120b"></script>
+  <script src="app.js?v=20261120b"></script>
+  <script src="js/neuron.js?v=20261120b"></script>
+  <script src="js/start.js?v=20261120b"></script>
 </body>
 </html>

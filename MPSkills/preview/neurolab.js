@@ -1,19 +1,17 @@
 /* ══════════════════════════════════════════════════════════════
    MPSkills — preview/neurolab.js   ·   Schaufenster für NeuroLab
    ══════════════════════════════════════════════════════════════
-   NeuroLab wurde am 20.11.2026 neu gebaut: drei Bereiche (Das Neuron ·
-   Netze bauen · Netze trainieren), feste Ausgänge zum Andocken, echte
-   Greifvogel-Daten zum Trennen mit Geraden und Ebenen.
+   NeuroLab (überarbeitet 20.11.2026): Startseite mit drei Bereichen –
+   „Wie funktioniert ein Neuron?“ (So rechnet ein Neuron · Alle Neuronen),
+   „Netze bauen“ (das freie Feld, Build · Run) und „Netze trainieren“
+   (Szenario legt Ein- und Ausgänge fest, dazwischen baut man frei; das
+   verschiebbare Lernfenster mit Lernrate).
 
    Im Modal läuft das ECHTE NeuroLab im <iframe> mit ?demo=1: nichts wird
-   gespeichert, und zwei Szenarien starten fertig aufgebaut (sc.demo in
-   tools/NeuroLab/js/szenarien.js). Der Regisseur klickt nur über feste
-   ids und Kacheln (.tile[data-id]) — nie in Eingabefelder.
-
-   Ablauf: Übersicht → Netze bauen „UND, ODER, NICHT“ (Neuronen hängen
-   absichtlich nicht in der Reihenfolge der Ausgänge, Testen zeigt ✓) →
-   Netze trainieren „Der Vogel in der Mitte“ (zwei Geraden wandern, bis
-   die Testvögel stimmen) → Zeitlupe (ein Lernschritt) → zurück.
+   gespeichert, alles ist offen, „Netze trainieren“ startet mit XOR als
+   „Eigene Daten“ und einem fertigen Netz 2 → 3 → 3 → 1 (demoState in
+   tools/NeuroLab/app.js). Der Regisseur klickt nur über feste ids und
+   Kacheln (.tile[data-id]) — nie in Eingabefelder.
    ══════════════════════════════════════════════════════════════ */
 
 (function () {
@@ -33,46 +31,43 @@
   }
 
   async function play(api) {
-    if (!await api.waitFor('.tile[data-id="b-gatter"]', 6000)) return;
-    api.caption('Drei Bereiche: das Neuron verstehen · Netze bauen · Netze trainieren');
+    if (!await api.waitFor('.tile[data-id="n-typen"]', 6000)) return;
+    api.caption('Drei Bereiche: das Neuron verstehen · Netze frei bauen · Netze trainieren');
     if (!await api.wait(2600)) return;
 
-    // Netze bauen: feste Ausgänge, die Reihenfolge der Neuronen ist egal
-    api.click('.tile[data-id="b-gatter"]');
-    if (!await api.waitFor('#steps', 3000)) return;
-    api.caption('Netze bauen: Neuronen an feste Ausgänge andocken, Gewichte von Hand');
-    if (!await api.wait(2600)) return;
-    api.click('#steps button[data-step="1"]');
-    api.caption('Testen: jede Zeile der Wertetabelle bekommt ✓ oder ✗');
-    if (!await api.wait(3200)) return;
+    api.click('.tile[data-id="n-typen"]');
+    if (!await api.waitFor('.nn-type', 3000)) return;
+    api.caption('Alle Neuronen: Perceptron, Linear, ReLU, Sigmoid, Tanh – mit Formel und Kurve');
+    if (!await api.wait(3000)) return;
 
-    // Netze trainieren: echte Greifvögel
-    api.click('#back');
-    if (!await api.waitFor('.tile[data-id="t-vogel2"]', 3000)) return;
-    api.click('.tile[data-id="t-vogel2"]');
-    if (!await api.waitFor('#steps', 3000)) return;
-    api.caption('Netze trainieren: 180 echte Greifvögel — wer ist der Vogel in der Mitte?');
-    if (!await api.wait(2200)) return;
-    api.click('#steps button[data-step="1"]');
-    if (!await api.waitFor('#train-go', 3000)) return;
-    api.click('#train-go');
-    api.caption('Das Training verschiebt zwei Geraden, bis sie die Arten trennen');
-    for (let t = 0; t < 16000; t += 600) {
-      if (!await api.wait(600)) return;
-      const v = parseInt(api.text('#stat-test') || '0', 10);
-      if (v >= 95 && t > 3000) break;
+    api.click('#btn-home');
+    if (!await api.waitFor('.tile[data-id="b-frei"]', 3000)) return;
+    api.click('.tile[data-id="b-frei"]');
+    if (!await api.waitFor('#btn-run', 3000)) return;
+    api.caption('Netze bauen: Schichten und Neuronen setzen, Gewichte und Bias festlegen');
+    if (!await api.wait(2600)) return;
+    api.click('#btn-run');
+    api.caption('Run: Eingaben ändern und sehen, was am Ende herauskommt');
+    if (!await api.wait(2400)) return;
+
+    api.click('#btn-home');
+    if (!await api.waitFor('.tile[data-id="sc-eigene"]', 3000)) return;
+    api.click('.tile[data-id="sc-eigene"]');
+    if (!await api.waitFor('#learn-btn-start', 3000)) return;
+    api.caption('Netze trainieren: Ein- und Ausgänge stehen fest, dazwischen baut man selbst');
+    if (!await api.wait(2400)) return;
+    api.click('#learn-btn-start');
+    api.caption('Das Netz lernt XOR – die Kanten ändern sich, bis die Ausgabe stimmt');
+    for (let t = 0; t < 14000; t += 500) {
+      if (!await api.wait(500)) return;
+      const l = parseFloat(api.text('#learn-loss-display') || '1');
+      if (t > 2500 && l < 0.02) break;
     }
-    api.click('#train-go');
-    if (!await api.wait(1500)) return;
-
-    api.caption('Zeitlupe: ein Beispiel, der Fehler läuft rückwärts, jedes Gewicht rückt ein Stück');
-    api.click('#slow-btn');
-    if (!await api.wait(3000)) return;
-    api.click('#slow-next');
-    if (!await api.wait(3000)) return;
+    api.click('#learn-btn-pause');
+    if (!await api.wait(2200)) return;
 
     api.caption('');
-    api.click('#back');
+    api.click('#btn-home');
     await api.wait(1500);
   }
 
@@ -130,16 +125,16 @@
     wide: true,
     fade: false,
     blurb: `
-      <p>Neuronale Netze in drei Schritten: Im Bereich <strong>Das Neuron</strong>
-         erarbeitet die Klasse an sechs Stationen Gewichte, Summe, Bias und
-         Aktivierungsfunktion. Bei <strong>Netze bauen</strong> stellt sie Gewichte
-         von Hand ein, bis Rätsel wie UND, XOR oder der Halbaddierer stimmen. Die
-         Ausgänge stehen fest, die Neuronen werden angedockt.</p>
-      <p>Bei <strong>Netze trainieren</strong> findet das Netz die Gewichte selbst –
-         an echten Greifvögeln. Ein Neuron zieht eine Gerade, zwei trennen den Vogel
-         in der Mitte, mit drei Eingängen werden es Ebenen im Raum. Eine Zeitlupe
-         zeigt einen einzelnen Lernschritt.</p>
-      <p>Die Lehrkraft gibt Bereiche und einzelne Aufgaben frei. Für Arbeitsblätter
-         gibt es eine Druckansicht, in der man wählt, was auf dem Blatt steht.</p>`
+      <p>Neuronale Netze in drei Bereichen: <strong>Wie funktioniert ein Neuron?</strong>
+         erklärt Gewichte, Summe, Bias und Aktivierung zum Ausprobieren, mit einer
+         Impulsaufgabe und einer Übersicht aller Neuronen-Typen.</p>
+      <p>Bei <strong>Netze bauen</strong> klickt die Klasse ein Netz frei zusammen,
+         legt Gewichte und Bias fest und sieht, was herauskommt. Bei
+         <strong>Netze trainieren</strong> gibt ein Szenario Ein- und Ausgänge vor
+         (Logik-Gatter, 7-Segment-Ziffer, Zielscheibe, echte Greifvögel oder eigene
+         CSV-Daten), Schichten und Neuronen dazwischen wählt man selbst – dann lernt
+         das Netz mit einstellbarer Lernrate.</p>
+      <p>Die Lehrkraft gibt Bereiche und einzelne Szenarien frei. Für Arbeitsblätter
+         gibt es eine Druckansicht mit Auswahl, was auf dem Blatt steht.</p>`
   });
 })();

@@ -1,16 +1,16 @@
 /* ══════════════════════════════════════════════════════════════
    MPSkills — Skill „NeuroLab"  ·  tool.js
    ══════════════════════════════════════════════════════════════
-   Neu gebaut 20.11.2026 (ohne Migration). NeuroLab ist eine eigene Seite
-   (index.html + js/ + css/) im <iframe>, eingerahmt wie Reinforce
+   Überarbeitet 20.11.2026 (ohne Migration). NeuroLab ist eine eigene Seite
+   (index.html + app.js + js/) im <iframe>, eingerahmt wie Reinforce
    Yourself. Jede Person baut und trainiert ihre eigenen Netze, der Stand
-   liegt im Gerät (localStorage nl.*).
+   liegt im Gerät (localStorage neuron-sim-v2 / -lernen, nl.*).
 
    Geteilt wird nur, WAS die Klasse öffnen darf:
-     skill_room_state.data.parts = ['neuron', 'n1', …, 'bauen', 'b-xor', …]
+     skill_room_state.data.parts = ['neuron', 'n-wie', …, 'bauen', 'b-frei', 'trainieren', 'sc-gatter', …]
    Bereichs-ids (neuron · bauen · trainieren) und Kachel-ids aus
-   js/szenarien.js. Eine Kachel ist offen, wenn Bereich UND Kachel geteilt
-   sind. Fehlt parts: nur „Das Neuron“ mit allen Stationen. Keine eigenen
+   js/start.js. Eine Kachel ist offen, wenn Bereich UND Kachel geteilt
+   sind. Fehlt parts: nur „Wie funktioniert ein Neuron?“. Keine eigenen
    Tabellen, skill_room_set_state reicht.
 
    Der Rahmen bekommt ?raum=lehrer bzw. ?raum=schueler, im Schaufenster
@@ -24,14 +24,14 @@
 (function () {
   'use strict';
 
-  const V = '20261120a';
+  const V = '20261120b';
 
   let root = null, frame = null, ctx = null, view = null;
   let onResize = null, onMsg = null;
   let ready = false, lastSent = '';
   let parts = null;        // Lehrkraft: eigener Stand, bis der Server ihn bestätigt
 
-  const DEFAULT = ['neuron', 'n1', 'n2', 'n3', 'n4', 'n5', 'n6'];
+  const DEFAULT = ['neuron', 'n-wie', 'n-typen'];
   const isPresenter = () => !!ctx && ctx.role === 'presenter';
   function data() { return (view && view.state && view.state.data) || {}; }
   function serverParts() {

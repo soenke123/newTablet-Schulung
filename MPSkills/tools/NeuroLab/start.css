@@ -1,0 +1,229 @@
+/* ══════════════════════════════════════════════════════════════
+   NeuroLab · start.css — Startseite, Neuronen-Seite, Ergänzungen
+   (20.11.2026). Das Feld behält sein Aussehen aus style.css; hier steht
+   nur, was neu dazugekommen ist — in denselben Farben und Schriften.
+   ══════════════════════════════════════════════════════════════ */
+
+/* ── Ansichten ── */
+html[data-view="home"] main#network,
+html[data-view="neuron"] main#network,
+html:not([data-view="lab"]) .lab-only,
+html:not([data-view="lab"]) #print-opts { display: none !important; }
+html:not([data-view="home"]) #home { display: none; }
+html:not([data-view="neuron"]) #neuron-page { display: none; }
+html[data-view="home"] #btn-home { display: none; }
+body:not(.area-bauen) .build-area-only { display: none !important; }
+
+.page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 18px clamp(12px, 3vw, 32px) 40px;
+}
+
+/* ── Kopfzeile ── */
+header { gap: 0.9rem; flex-wrap: wrap; }
+.home-btn {
+  padding: 0.35rem 0.8rem;
+  border: 1.5px solid #e5e7eb;
+  background: #fff;
+  color: #334155;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.home-btn:hover { background: #f1f5f9; }
+.brand { font-weight: 800; color: #1e293b; letter-spacing: .01em; }
+.area-title { font-size: 0.85rem; font-weight: 700; color: #64748b; }
+.area-title:empty { display: none; }
+.brand + .area-title::before { content: '·'; margin-right: .6rem; color: #cbd5e1; }
+html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
+
+/* ── Startseite ── */
+.wait {
+  max-width: 520px;
+  margin: 12vh auto 0;
+  text-align: center;
+  display: grid;
+  gap: 6px;
+  color: #475569;
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 26px;
+}
+.wait b { font-size: 1.1rem; color: #1e293b; }
+
+#areas { max-width: 1100px; margin: 0 auto; display: grid; gap: 22px; }
+.area { display: grid; gap: 10px; }
+.area-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.area-head h2 { font-size: 1.15rem; color: #1e293b; }
+.area-head p { font-size: 0.88rem; color: #64748b; margin-top: 2px; }
+.area-neuron    { --area: #3b82f6; }
+.area-bauen     { --area: #f59e0b; }
+.area-trainieren{ --area: #10b981; }
+
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  border-top: 4px solid var(--area);
+  border-radius: 14px;
+  padding: 14px 14px 12px;
+  box-shadow: 0 1px 4px rgba(0,0,0,.05);
+  cursor: pointer;
+  transition: transform .12s, box-shadow .12s;
+  min-height: 150px;
+}
+.tile:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+.tile:focus-visible { outline: 3px solid var(--area); outline-offset: 2px; }
+.tile.locked { cursor: default; opacity: .55; }
+.tile.locked:hover { transform: none; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+.tile-art { height: 44px; display: flex; align-items: center; color: var(--area); }
+.tile-art svg { height: 44px; width: auto; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.tile-art svg .hl { stroke-width: 3.4; }
+.tile-art svg .fill { fill: currentColor; }
+.tile-art .t-big { font-size: 1.35rem; font-weight: 800; letter-spacing: .04em; }
+.tile-body { display: grid; gap: 4px; }
+.tile-body b { font-size: 1rem; color: #1e293b; }
+.tile-body span { font-size: 0.84rem; color: #64748b; line-height: 1.4; }
+.lock { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; color: #94a3b8; }
+.lock svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 2; }
+
+.share {
+  display: inline-flex; align-items: center; gap: 6px;
+  align-self: flex-start;
+  margin-top: auto;
+  padding: 5px 10px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 999px;
+  background: #fff;
+  color: #64748b;
+  font: inherit; font-size: 0.8rem; font-weight: 700;
+  cursor: pointer;
+}
+.share svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+.share.on { background: var(--area, #10b981); border-color: var(--area, #10b981); color: #fff; }
+.area-share { margin-top: 0; align-self: auto; }
+
+/* ── Neuronen-Seite ── */
+.nn-tabs { max-width: 1100px; margin: 0 auto 14px; display: flex; gap: 6px; background: #e8edf3; padding: 4px; border-radius: 10px; width: fit-content; max-width: 100%; flex-wrap: wrap; }
+.nn-tab { border: none; background: transparent; color: #475569; font: inherit; font-weight: 700; font-size: 0.9rem; padding: 7px 14px; border-radius: 7px; cursor: pointer; }
+.nn-tab.on { background: #fff; color: #1d4ed8; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.nn-page { max-width: 1100px; margin: 0 auto; display: grid; gap: 16px; }
+.nn-card { background: #fff; border: 1.5px solid #e5e7eb; border-radius: 14px; padding: 16px 18px; box-shadow: 0 1px 4px rgba(0,0,0,.05); }
+.nn-card h2 { font-size: 1.1rem; color: #1e293b; margin-bottom: 8px; }
+.nn-card p, .nn-card li { font-size: 0.92rem; line-height: 1.55; color: #334155; }
+.nn-f { font-family: 'Cambria Math', 'Times New Roman', serif; font-style: italic; background: #f1f5f9; padding: 1px 6px; border-radius: 5px; white-space: nowrap; }
+.nn-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: center; }
+.nn-intro-img img { width: 100%; height: auto; display: block; }
+.nn-intro ol { margin: 8px 0 0 20px; display: grid; gap: 4px; }
+@media (max-width: 760px) { .nn-intro { grid-template-columns: 1fr; } }
+
+.nn-play-grid { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 16px; align-items: center; }
+@media (max-width: 760px) { .nn-play-grid { grid-template-columns: 1fr; } }
+.nn-svg { width: 100%; height: auto; display: block; }
+.nn-svg .neuron-body { fill: #fff; stroke: var(--type-color); stroke-width: 2.5; }
+.nn-svg .neuron-divider { stroke: #e8edf2; stroke-width: 1.5; }
+.nn-svg .neuron-sigma { fill: #475569; }
+.nn-svg .bias-line { stroke: #888; stroke-width: 1.5; }
+.nn-play-ctl { display: grid; gap: 10px; }
+.nn-types { display: flex; flex-wrap: wrap; gap: 6px; }
+.nn-xs { display: flex; gap: 14px; flex-wrap: wrap; }
+.nn-x { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #2e7d5e; }
+.nn-x span { margin-right: 4px; }
+.nn-x button { width: 34px; height: 30px; border: 1.5px solid #d1d5db; background: #fff; border-radius: 6px; font: inherit; font-weight: 700; cursor: pointer; color: #475569; }
+.nn-x button.on { background: #4caf8a; border-color: #4caf8a; color: #fff; }
+.nn-slider { display: grid; grid-template-columns: 2.2em 1fr 3.4em; align-items: center; gap: 8px; font-weight: 700; color: #334155; }
+.nn-slider input { width: 100%; accent-color: #3b82f6; }
+.nn-slider-b input { accent-color: #64748b; }
+.nn-slider output { font-family: monospace; text-align: right; }
+.nn-calc { margin-top: 12px; padding: 10px 12px; background: #f8fafc; border-radius: 10px; font-size: 0.92rem; color: #334155; display: grid; gap: 4px; overflow-x: auto; }
+
+.nn-task-pick { display: flex; gap: 6px; margin-bottom: 8px; }
+.nn-pill { border: 1.5px solid #d1d5db; background: #fff; border-radius: 999px; padding: 4px 14px; font: inherit; font-weight: 700; font-size: 0.85rem; color: #475569; cursor: pointer; }
+.nn-pill.on { background: #1e293b; border-color: #1e293b; color: #fff; }
+.nn-truth { border-collapse: collapse; margin: 10px 0; font-size: 0.9rem; }
+.nn-truth th, .nn-truth td { padding: 4px 12px; text-align: center; border-bottom: 1px solid #eef2f6; }
+.nn-truth th { color: #64748b; font-size: 0.8rem; }
+.nn-truth td:nth-child(3), .nn-truth td:nth-child(4) { font-family: monospace; }
+.nn-truth tr.ok td:last-child { color: #059669; font-weight: 800; }
+.nn-truth tr.bad td:last-child { color: #dc2626; font-weight: 800; }
+.nn-task-msg { padding: 8px 12px; border-radius: 10px; background: #f8fafc; }
+.nn-task-msg.ok { background: #ecfdf5; color: #065f46; font-weight: 700; }
+
+.nn-type-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.nn-type { border-top: 4px solid var(--type-color); display: grid; gap: 8px; align-content: start; }
+.nn-type-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.nn-type-head h3 { color: var(--type-color); font-size: 1.1rem; }
+.nn-type-out { font-size: 0.8rem; font-weight: 700; color: #64748b; background: #f1f5f9; padding: 2px 8px; border-radius: 999px; }
+.nn-type-pics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; align-items: center; }
+.curve-svg { width: 100%; height: auto; display: block; }
+.nn-type-formula { font-size: 0.95rem; color: #334155; }
+.nn-type-apply { font-size: 0.85rem; color: #334155; margin-top: 4px; min-height: 2.2em; }
+.nn-type p { font-size: 0.88rem; }
+.nn-type-warn { color: #92400e !important; background: #fffbeb; padding: 6px 10px; border-radius: 8px; }
+
+/* ── Feld: Schicht dazu / weg, fester Ausgang ── */
+.col-addlayer {
+  background: transparent;
+  border: 2px dashed #cbd5e1;
+  box-shadow: none;
+  justify-content: center;
+  align-items: center;
+  min-width: 64px;
+  flex-shrink: 0;
+}
+.addlayer-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  border: none; background: transparent; color: #64748b;
+  font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 10px;
+}
+.addlayer-btn span { font-size: 1.6rem; line-height: 1; }
+.addlayer-btn:hover { color: #1e293b; }
+.col-remove-btn {
+  margin-top: 6px;
+  border: 1.5px solid #e5e7eb; background: #fff; color: #94a3b8;
+  border-radius: 6px; font: inherit; font-size: 0.72rem; font-weight: 700;
+  padding: 3px 8px; cursor: pointer;
+}
+.col-remove-btn:hover { color: #dc2626; border-color: #fca5a5; }
+body.learn-phase .output-layer { border-color: #10b981; box-shadow: 0 1px 8px rgba(16,185,129,.18); }
+body.learn-phase .output-layer .col-header { background: #ecfdf5; border-bottom-color: #a7f3d0; }
+body.learn-phase .output-layer .col-name { color: #065f46; }
+body.print-mode .col-addlayer, body.print-mode .col-remove-btn { display: none; }
+body.print-no-inputs .node-run-input-field { visibility: hidden; }
+
+/* ── Druckauswahl ── */
+.print-opts {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px;
+  padding: 7px 14px;
+  background: #f0fdf4; border-bottom: 1px solid #bbf7d0;
+  font-size: 0.82rem; color: #166534;
+  flex-shrink: 0;
+}
+.print-opts[hidden] { display: none; }
+.print-opts label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.print-opts select { font: inherit; padding: 2px 4px; border-radius: 5px; border: 1px solid #86efac; background: #fff; }
+.print-opts button { margin-left: auto; font: inherit; font-weight: 700; border: 1.5px solid #86efac; background: #fff; color: #166534; border-radius: 6px; padding: 2px 10px; cursor: pointer; }
+
+/* ── Greifvögel im Info-Kasten ── */
+.vogel-legend { display: grid; gap: 2px; font-size: 0.72rem; color: #475569; margin: 6px 0; }
+.vogel-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
+.vogel-plot { width: 100%; height: auto; display: block; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; }
+.vogel-acc { font-size: 0.75rem; color: #334155; margin: 6px 0; }
+#learn-info-panel:has(.vogel-plot) { width: 300px; }
+
+@media (max-width: 640px) {
+  header { gap: 0.5rem; padding: 0.5rem 0.8rem; }
+  .phase-hint-text { display: none; }
+}
+.wait[hidden] { display: none; }
+/* Druckansicht: das Lernfenster gehört nicht aufs Blatt */
+body.print-mode #learn-group { display: none; }

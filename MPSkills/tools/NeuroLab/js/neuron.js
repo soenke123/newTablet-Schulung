@@ -1,310 +1,270 @@
 /* ══════════════════════════════════════════════════════════════
-   NeuroLab · neuron.js — Bereich 1 „Das Neuron“: sechs Stationen
+   NeuroLab · neuron.js — Bereich „Wie funktioniert ein Neuron?“
    ══════════════════════════════════════════════════════════════
-   Jede Station: kurzer Text, ein Ding zum Ausprobieren, eine kleine
-   Aufgabe, die sich selbst prüft (✓ → app.markDone). Die Lehrkraft gibt
-   jede Station einzeln frei (ids n1 … n6 in data.parts).
-
-   NLNeuron.render(nav, card, api)
-     api = { id, usable(id), isDone(id), markDone(id), go(id), toArea(id) }
+   Zwei Kacheln (= zwei Reiter, die Lehrkraft gibt jede einzeln frei):
+     n-wie    So rechnet ein Neuron: Bild (neuron.png), ein Neuron zum
+              Ausprobieren, EINE Impulsaufgabe (UND · ODER · XOR)
+     n-typen  Alle Neuronen: die fünf Typen aus dem Feld (activations in
+              app.js) mit Formel, Kurve und Regler
+   Gezeichnet wie die Neuronen im Feld (Σ | f, Typ-Farbe, Bias-Pfeil,
+   Ausgabe-Kästchen), damit man sie dort wiedererkennt.
+   Nutzt aus app.js: activations, fmt.
    ══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
-  const N = window.NLNetz;
-  const F = window.NLFeld;
-  const fmt = F.fmt;
   const NS = 'http://www.w3.org/2000/svg';
+  const ORDER = ['perceptron', 'linear', 'relu', 'sigmoid', 'tanh'];
 
-  const STATIONS = [
-    { id: 'n1', title: 'Vom Gehirn zum Neuron', kurz: 'Nervenzelle' },
-    { id: 'n2', title: 'Eingänge und Gewichte', kurz: 'Gewichte' },
-    { id: 'n3', title: 'Summe und Bias', kurz: 'Summe & Bias' },
-    { id: 'n4', title: 'Die Aktivierungsfunktion', kurz: 'Aktivierung' },
-    { id: 'n5', title: 'Ein Neuron zieht eine Gerade', kurz: 'Gerade' },
-    { id: 'n6', title: 'Vom Neuron zum Netz', kurz: 'Netz' }
-  ];
-
-  function h(html) { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
-  function slider(label, min, max, step, val, on) {
-    const row = h(`<div class="slider"><span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"><output>${fmt(val, 2)}</output></div>`);
-    const inp = row.querySelector('input'), out = row.querySelector('output');
-    inp.addEventListener('input', () => { out.textContent = fmt(+inp.value, 2); on(+inp.value); });
-    return row;
-  }
-  function toggle01(val, on) {
-    const t = h('<span class="toggle01"><button type="button">0</button><button type="button">1</button></span>');
-    const [b0, b1] = t.querySelectorAll('button');
-    const set = v => { b0.classList.toggle('on', v === 0); b1.classList.toggle('on', v === 1); };
-    set(val);
-    b0.onclick = () => { set(0); on(0); }; b1.onclick = () => { set(1); on(1); };
-    return t;
-  }
-
-  /* Mini-Neuron als SVG: zwei Eingänge, Gewichte, Σ, f, Ausgabe */
-  function miniNeuron(o) {
-    const s = document.createElementNS(NS, 'svg');
-    s.setAttribute('viewBox', '0 0 460 210');
-    const x = o.x, w = o.w;
-    const z = x[0] * w[0] + x[1] * w[1] + (o.b || 0);
-    const act = N.ACTS[o.act || 'step'];
-    const y = act.f(z);
-    const col = v => (v >= 0 ? 'var(--pos)' : 'var(--neg)');
-    s.innerHTML = `
-      <path d="M92 55 C160 55 160 92 220 96" fill="none" stroke="${col(w[0])}" stroke-width="${1.5 + Math.min(4, Math.abs(w[0])) * 1.6}"/>
-      <path d="M92 155 C160 155 160 120 220 116" fill="none" stroke="${col(w[1])}" stroke-width="${1.5 + Math.min(4, Math.abs(w[1])) * 1.6}"/>
-      <rect x="128" y="38" width="62" height="22" rx="6" fill="var(--surface)" stroke="var(--line)"/>
-      <text x="159" y="54" text-anchor="middle" font-size="13" font-weight="700" fill="${col(w[0])}">w₁ = ${fmt(w[0], 1)}</text>
-      <rect x="128" y="150" width="62" height="22" rx="6" fill="var(--surface)" stroke="var(--line)"/>
-      <text x="159" y="166" text-anchor="middle" font-size="13" font-weight="700" fill="${col(w[1])}">w₂ = ${fmt(w[1], 1)}</text>
-      <rect x="20" y="33" width="72" height="44" rx="22" fill="var(--surface)" stroke="#e3a008" stroke-width="2"/>
-      <text x="56" y="61" text-anchor="middle" font-size="15" font-weight="700">x₁ = ${x[0]}</text>
-      <rect x="20" y="133" width="72" height="44" rx="22" fill="var(--surface)" stroke="#e3a008" stroke-width="2"/>
-      <text x="56" y="161" text-anchor="middle" font-size="15" font-weight="700">x₂ = ${x[1]}</text>
-      <rect x="220" y="70" width="140" height="70" rx="16" fill="var(--surface)" stroke="var(--act-${o.act || 'step'})" stroke-width="2.6"/>
-      <line x1="290" y1="76" x2="290" y2="134" stroke="var(--line)" stroke-width="1.5"/>
-      <text x="255" y="102" text-anchor="middle" font-size="22">Σ</text>
-      <text x="255" y="126" text-anchor="middle" font-size="12" font-family="JetBrains Mono">z=${fmt(z, 2)}</text>
-      <path d="${F.ACT_PATH[o.act || 'step']}" transform="translate(305,84)" fill="none" stroke="var(--act-${o.act || 'step'})" stroke-width="2.6"/>
-      <text x="325" y="126" text-anchor="middle" font-size="12" font-family="JetBrains Mono">y=${fmt(y, 2)}</text>
-      ${o.b != null ? `<line x1="255" y1="140" x2="255" y2="160" stroke="var(--ink-faint)" stroke-width="1.5"/><text x="255" y="176" text-anchor="middle" font-size="13" font-family="JetBrains Mono" font-weight="600">b = ${fmt(o.b, 1)}</text>` : ''}
-      <line x1="360" y1="105" x2="400" y2="105" stroke="var(--wire)" stroke-width="3"/>
-      <circle cx="420" cy="105" r="20" fill="${y >= 0.5 ? 'var(--accent)' : 'var(--paper-2)'}" stroke="var(--wire)" stroke-width="2"/>
-      <text x="420" y="110" text-anchor="middle" font-size="14" font-weight="700">${fmt(y, 1)}</text>`;
-    return { svg: s, z, y };
-  }
-
-  function taskBox(text, ok) {
-    return h(`<div class="st-task${ok ? ' ok' : ''}"><span class="ico">${ok ? '✓' : '✎'}</span><div><b>Aufgabe:</b> ${text}</div></div>`);
-  }
-
-  /* ── Stationen ──────────────────────────────────────────── */
-  const BUILD = {
-    n1(card, api) {
-      card.append(h(`<p class="st-text">Dein Gehirn besteht aus rund <b>86 Milliarden Nervenzellen</b>. Jede empfängt Signale von anderen Zellen, „entscheidet“, ob sie selbst feuert, und gibt ihr Signal weiter. Ein <b>künstliches Neuron</b> ist ein stark vereinfachtes Rechenmodell davon.</p>`));
-      const PAIRS = [
-        { bio: 'Dendriten', bioT: 'nehmen Signale anderer Zellen auf', kn: 'Eingänge x', knT: 'Zahlen, die ins Neuron gehen', k: 'in' },
-        { bio: 'Synapsen', bioT: 'mal stärker, mal schwächer', kn: 'Gewichte w', knT: 'wie wichtig ein Eingang ist', k: 'w' },
-        { bio: 'Zellkörper', bioT: 'sammelt alle Signale', kn: 'Summe Σ', knT: 'alle Eingänge × Gewichte addiert', k: 'sum' },
-        { bio: 'Schwelle', bioT: 'feuert erst ab genug Reiz', kn: 'Aktivierung f', knT: 'macht aus der Summe die Ausgabe', k: 'f' },
-        { bio: 'Axon', bioT: 'leitet das Signal weiter', kn: 'Ausgabe y', knT: 'geht zum nächsten Neuron', k: 'out' }
-      ];
-      const seen = new Set();
-      const grid = h('<div class="st-grid"></div>');
-      const left = h(`<div class="mini"><svg viewBox="0 0 420 200">
-        <g stroke="var(--ink-soft)" stroke-width="3" fill="none" stroke-linecap="round">
-          <path data-k="in" d="M40 40 L110 85 M30 100 L105 100 M45 165 L110 115 M60 20 L80 55 M20 140 L60 150"/>
-          <circle data-k="w" cx="40" cy="40" r="7" fill="var(--paper-2)"/><circle data-k="w" cx="30" cy="100" r="7" fill="var(--paper-2)"/><circle data-k="w" cx="45" cy="165" r="7" fill="var(--paper-2)"/>
-          <path data-k="out" d="M170 100 C230 100 260 100 330 100 M330 100 L360 80 M330 100 L365 100 M330 100 L360 122"/>
-          <path data-k="f" d="M170 80 L170 120" stroke-width="6"/>
-        </g>
-        <ellipse data-k="sum" cx="138" cy="100" rx="34" ry="30" fill="var(--accent-dim)" stroke="var(--ink-soft)" stroke-width="3"/>
-        <circle cx="138" cy="100" r="9" fill="var(--ink-soft)"/>
-        <text x="210" y="190" text-anchor="middle" font-size="13" fill="var(--ink-faint)">Nervenzelle (vereinfacht)</text>
-      </svg></div>`);
-      const right = h('<div><p class="muted">Tippe auf ein Teil der Nervenzelle (links) — rechts siehst du, was ihm im künstlichen Neuron entspricht.</p><div class="parts"></div></div>');
-      const parts = right.querySelector('.parts');
-      const draw = (sel) => {
-        parts.innerHTML = '';
-        PAIRS.forEach(p => {
-          const b = h(`<button class="part${sel === p.k ? ' on' : ''}" type="button"><b>${p.bio} → ${p.kn}</b><small>${p.bioT} · ${p.knT}</small></button>`);
-          b.onclick = () => pick(p.k);
-          parts.append(b);
-        });
-        left.querySelectorAll('[data-k]').forEach(e => { e.style.stroke = e.dataset.k === sel ? 'var(--accent)' : ''; });
-      };
-      const pick = k => { seen.add(k); draw(k); if (seen.size === PAIRS.length && !api.isDone('n1')) { api.markDone('n1'); refreshTask(); } };
-      left.querySelectorAll('[data-k]').forEach(e => { e.style.cursor = 'pointer'; e.addEventListener('click', () => pick(e.dataset.k)); });
-      draw(null);
-      grid.append(left, right);
-      card.append(grid);
-      const tb = () => taskBox('Finde zu allen fünf Teilen der Nervenzelle das Gegenstück im künstlichen Neuron.', api.isDone('n1'));
-      let task = tb(); card.append(task);
-      const refreshTask = () => { const t = tb(); task.replaceWith(t); task = t; };
-    },
-
-    n2(card, api) {
-      card.append(h(`<p class="st-text">Jeder Eingang <b>x</b> wird mit seinem <b>Gewicht w</b> malgenommen. Ein großes Gewicht heißt: Dieser Eingang ist <b>wichtig</b>. Ein negatives Gewicht <b>hemmt</b>. Ein Gewicht von 0 heißt: Der Eingang ist <b>egal</b>.</p>`));
-      const st = { x: [1, 1], w: [1, 1] };
-      const grid = h('<div class="st-grid"></div>');
-      const pic = h('<div class="mini"></div>');
-      const ctl = h('<div></div>');
-      const calc = h('<div class="calc"></div>');
-      const draw = () => {
-        const m = miniNeuron({ x: st.x, w: st.w, act: 'linear' });
-        pic.innerHTML = ''; pic.append(m.svg);
-        calc.innerHTML = `x₁·w₁ = ${st.x[0]}·${fmt(st.w[0], 1)} = ${fmt(st.x[0] * st.w[0], 1)}<br>x₂·w₂ = ${st.x[1]}·${fmt(st.w[1], 1)} = ${fmt(st.x[1] * st.w[1], 1)}`;
-        const ok = st.w[0] > 0 && Math.abs(st.w[1] - 2 * st.w[0]) < 0.01;
-        if (ok && !api.isDone('n2')) { api.markDone('n2'); }
-        task.replaceWith(task = taskBox('Stelle die Gewichte so ein, dass Eingang 2 <b>doppelt so wichtig</b> ist wie Eingang 1 (beide positiv).', api.isDone('n2')));
-      };
-      let task = h('<div></div>');
-      ctl.append(h('<div class="row" style="margin-bottom:8px"></div>'));
-      const r = ctl.firstChild;
-      r.append('x₁ ', toggle01(1, v => { st.x[0] = v; draw(); }), '  x₂ ', toggle01(1, v => { st.x[1] = v; draw(); }));
-      ctl.append(slider('Gewicht w₁', -3, 3, 0.5, 1, v => { st.w[0] = v; draw(); }));
-      ctl.append(slider('Gewicht w₂', -3, 3, 0.5, 1, v => { st.w[1] = v; draw(); }));
-      ctl.append(calc);
-      grid.append(pic, ctl); card.append(grid, task);
-      draw();
-    },
-
-    n3(card, api) {
-      card.append(h(`<p class="st-text">Das Neuron <b>addiert</b> alle Produkte: z = x₁·w₁ + x₂·w₂ + <b>b</b>. Der <b>Bias b</b> ist eine feste Zahl, die immer dazukommt. Er bestimmt, wie leicht das Neuron „anspringt“: großer Bias = schon mit wenig Reiz, negativer Bias = braucht viel Reiz.</p>`));
-      const st = { x: [1, 1], w: [1.5, 1], b: 0 };
-      const grid = h('<div class="st-grid"></div>');
-      const pic = h('<div class="mini"></div>'), ctl = h('<div></div>');
-      const calc = h('<div class="calc"></div>');
-      let task = h('<div></div>');
-      const draw = () => {
-        const m = miniNeuron({ x: st.x, w: st.w, b: st.b, act: 'linear' });
-        pic.innerHTML = ''; pic.append(m.svg);
-        calc.innerHTML = `z = ${st.x[0]}·${fmt(st.w[0], 1)} + ${st.x[1]}·${fmt(st.w[1], 1)} + (${fmt(st.b, 1)}) = <b>${fmt(m.z, 2)}</b>`;
-        const ok = st.x[0] === 1 && st.x[1] === 1 && Math.abs(m.z) < 0.01 && st.w[0] !== 0 && st.w[1] !== 0;
-        if (ok && !api.isDone('n3')) api.markDone('n3');
-        task.replaceWith(task = taskBox('Bei x₁ = 1 und x₂ = 1 soll die Summe z <b>genau 0</b> sein — ohne ein Gewicht auf 0 zu setzen.', api.isDone('n3')));
-      };
-      const r = h('<div class="row" style="margin-bottom:8px"></div>');
-      r.append('x₁ ', toggle01(1, v => { st.x[0] = v; draw(); }), '  x₂ ', toggle01(1, v => { st.x[1] = v; draw(); }));
-      ctl.append(r, slider('Gewicht w₁', -3, 3, 0.5, 1.5, v => { st.w[0] = v; draw(); }),
-        slider('Gewicht w₂', -3, 3, 0.5, 1, v => { st.w[1] = v; draw(); }),
-        slider('Bias b', -5, 5, 0.5, 0, v => { st.b = v; draw(); }), calc);
-      grid.append(pic, ctl); card.append(grid, task);
-      draw();
-    },
-
-    n4(card, api) {
-      card.append(h(`<p class="st-text">Die Summe z kann jede Zahl sein. Die <b>Aktivierungsfunktion f</b> macht daraus die Ausgabe y. Die <b>Stufe</b> sagt nur ja (1) oder nein (0). <b>Sigmoid</b> sagt „wie sicher“ zwischen 0 und 1 — das braucht man zum Trainieren. <b>ReLU</b> lässt nur Positives durch.</p>`));
-      const st = { act: 'step', z: 1 };
-      const grid = h('<div class="st-grid"></div>');
-      const pic = h('<div class="mini"></div>'), ctl = h('<div></div>');
-      const chips = h('<div class="chips" style="margin-bottom:10px"></div>');
-      const calc = h('<div class="calc"></div>');
-      let task = h('<div></div>');
-      ['step', 'sigmoid', 'relu', 'tanh'].forEach(a => {
-        const c = h(`<button class="chip" type="button">${N.ACTS[a].name}</button>`);
-        c.onclick = () => { st.act = a; draw(); };
-        chips.append(c);
-      });
-      const draw = () => {
-        chips.querySelectorAll('.chip').forEach((c, i) => c.classList.toggle('on', ['step', 'sigmoid', 'relu', 'tanh'][i] === st.act));
-        const f = N.ACTS[st.act].f;
-        const W = 420, H = 240, X = v => 30 + (v + 6) / 12 * (W - 50), Y = v => H - 30 - (v + 1.2) / 4.4 * (H - 50);
-        let d = '';
-        for (let i = 0; i <= 240; i++) { const v = -6 + i / 20; d += (i ? 'L' : 'M') + X(v).toFixed(1) + ' ' + Y(Math.min(3.1, f(v))).toFixed(1); }
-        const y = f(st.z);
-        pic.innerHTML = `<svg viewBox="0 0 ${W} ${H}">
-          <line x1="${X(-6)}" y1="${Y(0)}" x2="${X(6)}" y2="${Y(0)}" stroke="var(--line)" stroke-width="1.5"/>
-          <line x1="${X(0)}" y1="${Y(-1.2)}" x2="${X(0)}" y2="${Y(3.1)}" stroke="var(--line)" stroke-width="1.5"/>
-          <line x1="${X(-6)}" y1="${Y(1)}" x2="${X(6)}" y2="${Y(1)}" stroke="var(--line)" stroke-dasharray="4 4"/>
-          <text x="${X(6) - 4}" y="${Y(0) + 16}" text-anchor="end" font-size="12" fill="var(--ink-faint)">z</text>
-          <text x="${X(0) + 6}" y="${Y(3.1) + 12}" font-size="12" fill="var(--ink-faint)">y</text>
-          <text x="${X(0) - 6}" y="${Y(1) + 4}" text-anchor="end" font-size="11" fill="var(--ink-faint)">1</text>
-          <path d="${d}" fill="none" stroke="var(--act-${st.act})" stroke-width="3.5"/>
-          <line x1="${X(st.z)}" y1="${Y(0)}" x2="${X(st.z)}" y2="${Y(Math.min(3.1, y))}" stroke="var(--ink-faint)" stroke-dasharray="3 3"/>
-          <circle cx="${X(st.z)}" cy="${Y(Math.min(3.1, y))}" r="8" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>
-        </svg>`;
-        calc.innerHTML = `z = ${fmt(st.z, 2)}  →  y = ${N.ACTS[st.act].name}(z) = <b>${fmt(y, 3)}</b>`;
-        const ok = st.act === 'sigmoid' && Math.abs(y - 0.9) < 0.02;
-        if (ok && !api.isDone('n4')) api.markDone('n4');
-        task.replaceWith(task = taskBox('Wähle <b>Sigmoid</b> und finde eine Summe z, bei der das Neuron zu <b>90 % sicher</b> ist (y ≈ 0,9).', api.isDone('n4')));
-      };
-      ctl.append(chips, slider('Summe z', -6, 6, 0.1, 1, v => { st.z = v; draw(); }), calc);
-      grid.append(pic, ctl); card.append(grid, task);
-      draw();
-    },
-
-    n5(card, api) {
-      card.append(h(`<p class="st-text">Hat ein Neuron zwei Eingänge, kann man jedes Beispiel als <b>Punkt</b> zeichnen. Überall, wo w₁·x₁ + w₂·x₂ + b = 0 ist, kippt die Entscheidung — das ist eine <b>Gerade</b>. Die Gewichte <b>drehen</b> sie, der Bias <b>verschiebt</b> sie. Der kleine Pfeil zeigt auf die Seite, auf der das Neuron 1 sagt.</p>`));
-      const rows = [[0.2, 0.3, 0], [0.5, 0.2, 0], [0.3, 0.7, 0], [0.1, 0.9, 0], [0.7, 0.4, 0], [0.4, 0.45, 0],
-        [0.9, 0.8, 1], [1.2, 0.5, 1], [0.8, 1.2, 1], [1.4, 1.1, 1], [1.1, 0.9, 1], [0.6, 1.4, 1]]
-        .map(r => ({ x: [r[0], r[1]], t: [r[2]] }));
-      const sc = { inputs: [{ label: 'x₁' }, { label: 'x₂' }], plot: { type: '2d', ax: [0, 1] }, rows };
-      const net = { inputs: [{}, {}], layers: [[{ act: 'step', w: [1, -1], b: 0 }]], outputs: [{ src: { l: 0, n: 0 } }] };
-      const grid = h('<div class="st-grid"></div>');
-      const box = h('<div class="plotbox tall"><canvas></canvas><div class="legend"><span><i style="background:#5c7cfa"></i>soll 0</span><span><i style="background:#f08c00"></i>soll 1</span><span>roter Ring = falsch</span></div></div>');
-      const ctl = h('<div></div>');
-      const calc = h('<div class="calc"></div>');
-      let task = h('<div></div>');
-      const draw = () => {
-        window.NLPlot.draw(box.querySelector('canvas'), { sc, net, rows });
-        const ev = N.evaluate(net, rows);
-        calc.innerHTML = `Gerade: ${fmt(net.layers[0][0].w[0], 1)}·x₁ + ${fmt(net.layers[0][0].w[1], 1)}·x₂ + (${fmt(net.layers[0][0].b, 1)}) = 0<br>richtig: <b>${Math.round(ev.acc * rows.length)} von ${rows.length}</b>`;
-        if (ev.acc === 1 && !api.isDone('n5')) api.markDone('n5');
-        task.replaceWith(task = taskBox('Drehe und verschiebe die Gerade so, dass <b>alle 12 Punkte</b> richtig liegen.', api.isDone('n5')));
-      };
-      const nr = net.layers[0][0];
-      ctl.append(slider('Gewicht w₁', -3, 3, 0.1, 1, v => { nr.w[0] = v; draw(); }),
-        slider('Gewicht w₂', -3, 3, 0.1, -1, v => { nr.w[1] = v; draw(); }),
-        slider('Bias b', -4, 4, 0.1, 0, v => { nr.b = v; draw(); }), calc);
-      grid.append(box, ctl); card.append(grid, task);
-      requestAnimationFrame(draw);
-    },
-
-    n6(card, api) {
-      card.append(h(`<p class="st-text">Ein Neuron kann nur <b>eine</b> Gerade ziehen. Viele Aufgaben brauchen mehr: Dann schaltet man Neuronen hintereinander. Die Ausgaben der ersten <b>Schicht</b> sind die Eingänge der nächsten. So entsteht ein <b>neuronales Netz</b>. Die Schichten zwischen Eingang und Ausgang heißen <b>versteckte Schichten</b>.</p>`));
-      const grid = h('<div class="st-grid"></div>');
-      const pic = h(`<div class="mini"><svg viewBox="0 0 420 220">
-        ${[60, 160].map(y => `<rect x="10" y="${y - 20}" width="60" height="40" rx="20" fill="var(--surface)" stroke="#e3a008" stroke-width="2"/>`).join('')}
-        ${[40, 110, 180].map(y => [60, 160].map(y0 => `<line x1="70" y1="${y0}" x2="170" y2="${y}" stroke="var(--pos)" stroke-width="2"/>`).join('')).join('')}
-        ${[40, 110, 180].map(y => `<line x1="230" y1="${y}" x2="310" y2="110" stroke="var(--pos)" stroke-width="2"/><rect x="170" y="${y - 22}" width="60" height="44" rx="12" fill="var(--surface)" stroke="var(--act-sigmoid)" stroke-width="2.4"/><text x="200" y="${y + 6}" text-anchor="middle" font-size="16">Σ|f</text>`).join('')}
-        <rect x="310" y="88" width="60" height="44" rx="12" fill="var(--surface)" stroke="var(--act-sigmoid)" stroke-width="2.4"/><text x="340" y="116" text-anchor="middle" font-size="16">Σ|f</text>
-        <line x1="370" y1="110" x2="405" y2="110" stroke="var(--wire)" stroke-width="3"/>
-        <text x="40" y="214" text-anchor="middle" font-size="12" fill="var(--ink-faint)">Eingänge</text>
-        <text x="200" y="214" text-anchor="middle" font-size="12" fill="var(--ink-faint)">versteckte Schicht</text>
-        <text x="345" y="214" text-anchor="middle" font-size="12" fill="var(--ink-faint)">Ausgang</text>
-      </svg></div>`);
-      const Q = [
-        { q: 'Was stellt das Training eines Netzes ein?', a: ['die Eingänge', 'die Gewichte und Biases', 'die Anzahl der Schichten'], r: 1 },
-        { q: 'Wie viele Geraden kann EIN Neuron mit zwei Eingängen ziehen?', a: ['eine', 'zwei', 'beliebig viele'], r: 0 },
-        { q: 'Wozu braucht man versteckte Schichten?', a: ['damit das Netz schneller rechnet', 'um mehrere Geraden zu verknüpfen', 'damit man die Eingänge nicht sieht'], r: 1 }
-      ];
-      const quiz = h('<div></div>');
-      const got = new Set();
-      Q.forEach((q, qi) => {
-        const b = h(`<div class="quiz"><p>${qi + 1}. ${q.q}</p><div class="chips"></div></div>`);
-        q.a.forEach((a, ai) => {
-          const c = h(`<button class="chip" type="button">${a}</button>`);
-          c.onclick = () => {
-            b.querySelectorAll('.chip').forEach(x => x.classList.remove('right', 'wrong'));
-            c.classList.add(ai === q.r ? 'right' : 'wrong');
-            if (ai === q.r) got.add(qi); else got.delete(qi);
-            if (got.size === Q.length && !api.isDone('n6')) api.markDone('n6');
-            task.replaceWith(task = taskBox('Beantworte die drei Fragen richtig. Danach geht es weiter mit <b>Netze bauen</b>.', api.isDone('n6')));
-          };
-          b.querySelector('.chips').append(c);
-        });
-        quiz.append(b);
-      });
-      let task = taskBox('Beantworte die drei Fragen richtig. Danach geht es weiter mit <b>Netze bauen</b>.', api.isDone('n6'));
-      grid.append(pic, quiz); card.append(grid, task);
-    }
+  const INFO = {
+    perceptron: { out: '0 oder 1', was: 'Schaltet hart um: Ist z größer als 0, feuert das Neuron (1), sonst nicht (0) – wie ein Lichtschalter.',
+      wofuer: 'Ja/Nein-Entscheidungen, logische Gatter. Das erste künstliche Neuron (Rosenblatt, 1958).',
+      achtung: 'Die Kurve ist überall flach oder springt – beim Training fehlt die Steigung. NeuroLab nimmt dann die Perceptron-Lernregel.' },
+    linear: { out: 'jede Zahl', was: 'Gibt z unverändert weiter.',
+      wofuer: 'Als Ausgang, wenn eine Zahl herauskommen soll (Ziffer, Punkte, Preis).',
+      achtung: 'Nur lineare Neuronen hintereinander rechnen zusammen wieder nur eine Gerade – Schichten bringen dann nichts.' },
+    relu: { out: '0 bis beliebig groß', was: 'Negatives wird 0, Positives bleibt, wie es ist.',
+      wofuer: 'Verdeckte Schichten in großen Netzen (Bilderkennung, Sprachmodelle) – schnell zu rechnen.',
+      achtung: 'Ist z immer negativ, gibt das Neuron immer 0 aus und lernt nicht mehr („totes Neuron“).' },
+    sigmoid: { out: 'zwischen 0 und 1', was: 'Weiche Stufe: kleine z → fast 0, große z → fast 1, bei z = 0 genau 0,5.',
+      wofuer: 'Ausgang für Ja/Nein mit Sicherheit („zu 90 % ein Bussard“).',
+      achtung: 'Weit außen ist die Kurve fast flach – dann lernt das Neuron nur noch langsam.' },
+    tanh: { out: 'zwischen −1 und 1', was: 'Wie Sigmoid, aber von −1 bis 1 und mit der Mitte bei 0.',
+      wofuer: 'Verdeckte Schichten: Weil die Mitte bei 0 liegt, lernen die Neuronen dahinter oft schneller.',
+      achtung: 'Weit außen ebenfalls flach.' },
   };
 
-  function render(nav, card, api) {
-    nav.innerHTML = '';
-    STATIONS.forEach((s, i) => {
-      const b = h(`<button type="button"><i>${api.isDone(s.id) ? '✓' : i + 1}</i>${s.kurz}</button>`);
-      b.classList.toggle('on', s.id === api.id);
-      b.classList.toggle('done', api.isDone(s.id));
-      b.disabled = !api.usable(s.id);
-      b.onclick = () => api.go(s.id);
-      nav.append(b);
-    });
-    card.innerHTML = '';
-    const i = STATIONS.findIndex(s => s.id === api.id);
-    const s = STATIONS[i];
-    card.append(h(`<p class="kicker">Station ${i + 1} von ${STATIONS.length}</p>`), h(`<h2>${s.title}</h2>`));
-    BUILD[s.id](card, api);
-    const foot = h('<div class="st-foot"></div>');
-    const prev = STATIONS.slice(0, i).reverse().find(x => api.usable(x.id));
-    const next = STATIONS.slice(i + 1).find(x => api.usable(x.id));
-    const pb = h(`<button class="btn" type="button">‹ ${prev ? prev.kurz : 'Übersicht'}</button>`);
-    pb.onclick = () => (prev ? api.go(prev.id) : api.home());
-    const nb = h(`<button class="btn primary" type="button">${next ? next.kurz + ' ›' : 'Zur Übersicht'}</button>`);
-    nb.onclick = () => (next ? api.go(next.id) : api.home());
-    foot.append(pb, nb);
-    card.append(foot);
+  const el = (tag, attrs = {}, html) => {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  };
+  const h = html => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; };
+  const de = v => fmt(v).replace('.', ',');
+
+  /* ── Neuron im Stil des Feldes ─────────────────────────────
+     o = { type, x:[x1,x2], w:[w1,w2], b, compact } → SVG */
+  function neuronSVG(o) {
+    const act = activations[o.type];
+    const z = o.x ? o.x[0] * o.w[0] + o.x[1] * o.w[1] + o.b : 0;
+    const y = act.fn(z);
+    const withIn = !!o.x;
+    const ox = withIn ? 120 : 10;                  // linke Kante des Rumpfs
+    const W = withIn ? 470 : 290, H = withIn ? 210 : 150;
+    const NBY = withIn ? 60 : 30, NBW = 180, NBH = 72, cy = NBY + NBH / 2;
+    const s = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'nn-svg' });
+    s.style.setProperty('--type-color', act.color);
+    if (withIn) {
+      [[0, 40], [1, 170]].forEach(([i, iy]) => {
+        const w = o.w[i];
+        const sw = Math.max(1, Math.min(Math.abs(w) * 2, 6));
+        s.appendChild(el('line', { x1: 56, y1: iy, x2: ox, y2: cy + (i ? 14 : -14), stroke: act.color, 'stroke-width': sw, 'stroke-opacity': Math.abs(w) < 0.01 ? 0.3 : 0.75, 'stroke-dasharray': Math.abs(w) < 0.01 ? '4 3' : 'none' }));
+        s.appendChild(el('circle', { cx: 34, cy: iy, r: 22, fill: '#fff', stroke: '#4caf8a', 'stroke-width': 2.5 }));
+        s.appendChild(el('text', { x: 34, y: iy + 5, 'text-anchor': 'middle', 'font-size': 14, 'font-weight': 700, fill: '#2e7d5e' }, `${de(o.x[i])}`));
+        s.appendChild(el('text', { x: 34, y: iy + (i ? 38 : -28), 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#64748b' }, `x${i + 1}`));
+        const mx = (56 + ox) / 2, my = (iy + cy + (i ? 14 : -14)) / 2;
+        s.appendChild(el('rect', { x: mx - 26, y: my - 9, width: 52, height: 17, rx: 4, fill: '#fff', 'fill-opacity': 0.92 }));
+        s.appendChild(el('text', { x: mx, y: my + 4, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, 'font-family': 'monospace', fill: act.color }, `w${i + 1}=${de(w)}`));
+      });
+    }
+    s.appendChild(el('rect', { x: ox, y: NBY, width: NBW, height: NBH, rx: 12, class: 'neuron-body' }));
+    s.appendChild(el('line', { x1: ox + NBW / 2, y1: NBY + 6, x2: ox + NBW / 2, y2: NBY + NBH - 6, class: 'neuron-divider' }));
+    s.appendChild(el('text', { x: ox + NBW / 2, y: NBY - 8, 'text-anchor': 'middle', 'font-size': 12, 'font-weight': 700, fill: act.color }, act.fullName));
+    const lx = ox + NBW / 4, rx = ox + NBW * 3 / 4;
+    s.appendChild(el('text', { x: lx, y: cy + (withIn ? -4 : 8), 'text-anchor': 'middle', 'font-size': 22, class: 'neuron-sigma' }, 'Σ'));
+    if (withIn) s.appendChild(el('text', { x: lx, y: cy + 20, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#444' }, `z=${de(z)}`));
+    const two = act.shortLines.length > 1;
+    const fo = el('foreignObject', { x: rx - 38, y: cy - (two ? 16 : 13) - (withIn ? 6 : 0), width: 76, height: two ? 30 : 24 });
+    const fDiv = document.createElement('div');
+    fDiv.className = 'svg-math';
+    fDiv.innerHTML = act.shortLines.map(f => `<span>${f}</span>`).join('');
+    fo.appendChild(fDiv);
+    s.appendChild(fo);
+    if (withIn) s.appendChild(el('text', { x: rx, y: cy + (two ? 24 : 20), 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: act.color }, `y′=${de(y)}`));
+    // Bias
+    const bx = lx, by0 = NBY + NBH, by1 = by0 + 26;
+    s.appendChild(el('line', { x1: bx, y1: by1, x2: bx, y2: by0 + 8, class: 'bias-line' }));
+    s.appendChild(el('polygon', { points: `${bx},${by0} ${bx - 4},${by0 + 8} ${bx + 4},${by0 + 8}`, fill: '#888' }));
+    s.appendChild(el('text', { x: bx, y: by1 + 14, 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#64748b' }, withIn ? `b = ${de(o.b)}` : 'b'));
+    // Ausgabe
+    const ol = ox + NBW;
+    s.appendChild(el('line', { x1: ol, y1: cy, x2: ol + 16, y2: cy, stroke: '#94a3b8', 'stroke-width': 1.5 }));
+    s.appendChild(el('rect', { x: ol + 18, y: cy - 13, width: withIn ? 70 : 56, height: 26, rx: 4, fill: withIn ? '#fffbeb' : '#f8fafc', stroke: withIn ? '#f59e0b' : '#d1d5db', 'stroke-width': 1.5 }));
+    s.appendChild(el('text', { x: ol + 18 + (withIn ? 35 : 28), y: cy + 5, 'text-anchor': 'middle', 'font-size': withIn ? 13 : 12, 'font-weight': 700, fill: withIn ? '#b45309' : '#94a3b8' }, withIn ? de(y) : 'y′'));
+    return s;
   }
 
-  window.NLNeuron = { STATIONS, render };
+  /* ── Kurve f(z) mit Markierung ─────────────────────────── */
+  function curveSVG(type, zMark) {
+    const act = activations[type];
+    const W = 260, H = 150, Z = 4;
+    const yr = type === 'linear' || type === 'relu' ? [-4, 4] : type === 'tanh' ? [-1.3, 1.3] : [-0.3, 1.3];
+    const px = z => 24 + (z + Z) / (2 * Z) * (W - 34);
+    const py = v => 10 + (yr[1] - v) / (yr[1] - yr[0]) * (H - 30);
+    const s = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'curve-svg' });
+    s.appendChild(el('line', { x1: px(-Z), y1: py(0), x2: px(Z), y2: py(0), stroke: '#cbd5e1' }));
+    s.appendChild(el('line', { x1: px(0), y1: py(yr[0]), x2: px(0), y2: py(yr[1]), stroke: '#cbd5e1' }));
+    s.appendChild(el('text', { x: px(Z) - 2, y: py(0) + 14, 'text-anchor': 'end', 'font-size': 10, fill: '#94a3b8' }, 'z'));
+    s.appendChild(el('text', { x: px(0) + 5, y: 18, 'font-size': 10, fill: '#94a3b8' }, 'y′'));
+    [1, -1].concat(type === 'linear' || type === 'relu' ? [2, -2, 3, -3] : []).forEach(v => {
+      if (v < yr[0] || v > yr[1]) return;
+      s.appendChild(el('text', { x: px(0) - 4, y: py(v) + 3, 'text-anchor': 'end', 'font-size': 9, fill: '#94a3b8' }, String(v).replace('-', '−')));
+    });
+    let d = '';
+    for (let i = 0; i <= 200; i++) {
+      const z = -Z + i / 200 * 2 * Z;
+      const v = Math.max(yr[0], Math.min(yr[1], act.fn(z)));
+      // Sprung beim Perceptron nicht als schräge Linie zeichnen
+      const jump = type === 'perceptron' && i > 0 && (act.fn(z) !== act.fn(-Z + (i - 1) / 200 * 2 * Z));
+      d += (i === 0 || jump ? 'M' : 'L') + px(z).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';
+    }
+    s.appendChild(el('path', { d, fill: 'none', stroke: act.color, 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    if (zMark !== undefined) {
+      const v = act.fn(zMark);
+      s.appendChild(el('line', { x1: px(zMark), y1: py(0), x2: px(zMark), y2: py(Math.max(yr[0], Math.min(yr[1], v))), stroke: '#334155', 'stroke-dasharray': '3 3' }));
+      s.appendChild(el('circle', { cx: px(zMark), cy: py(Math.max(yr[0], Math.min(yr[1], v))), r: 5, fill: '#fff', stroke: '#334155', 'stroke-width': 2 }));
+    }
+    return s;
+  }
+
+  function slider(label, min, max, step, val, on, cls = '') {
+    const row = h(`<label class="nn-slider ${cls}"><span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"><output>${de(val)}</output></label>`);
+    const inp = row.querySelector('input'), out = row.querySelector('output');
+    inp.addEventListener('input', () => { out.textContent = de(+inp.value); on(+inp.value); });
+    return row;
+  }
+
+  /* ── Reiter 1: So rechnet ein Neuron ───────────────────── */
+  const st = { type: 'perceptron', x: [1, 0], w: [1, 1], b: 0, task: 'und' };
+  const TASKS = {
+    und: { name: 'UND', soll: [0, 0, 0, 1], text: 'nur dann 1 ausgibt, wenn x₁ = 1 <b>und</b> x₂ = 1 ist' },
+    oder: { name: 'ODER', soll: [0, 1, 1, 1], text: '1 ausgibt, sobald <b>mindestens einer</b> der Eingänge 1 ist' },
+    xor: { name: 'XOR', soll: [0, 1, 1, 0], text: '1 ausgibt, wenn <b>genau einer</b> der Eingänge 1 ist' },
+  };
+
+  function renderWie(page) {
+    page.appendChild(h(`<section class="nn-card nn-intro">
+      <div class="nn-intro-img"><img src="neuron.png" alt="Ein künstliches Neuron: Eingaben x mit Gewichten w, Summe plus Bias, Aktivierungsfunktion f, Ausgabe y′"></div>
+      <div class="nn-intro-text">
+        <h2>So rechnet ein Neuron</h2>
+        <p>Eine Nervenzelle im Gehirn bekommt Signale von anderen Zellen. Kommt genug zusammen, „feuert“ sie und gibt selbst ein Signal weiter. Ein künstliches Neuron macht das mit Zahlen:</p>
+        <ol>
+          <li><b>Eingaben</b> x₁, x₂ … kommen herein.</li>
+          <li>Jede wird mit ihrem <b>Gewicht</b> w malgenommen – das Gewicht sagt, wie wichtig die Eingabe ist (negativ = bremst).</li>
+          <li>Alles wird zusammengezählt, dazu kommt der <b>Bias</b> b: <span class="nn-f">z = w₁·x₁ + w₂·x₂ + b</span></li>
+          <li>Die <b>Aktivierungsfunktion</b> f macht aus z die <b>Ausgabe</b> y′ = f(z).</li>
+        </ol>
+      </div>
+    </section>`));
+
+    const play = h(`<section class="nn-card nn-play"><h2>Probier es aus</h2><div class="nn-play-grid"><div class="nn-play-pic"></div><div class="nn-play-ctl"></div></div><div class="nn-calc"></div></section>`);
+    const pic = play.querySelector('.nn-play-pic'), ctl = play.querySelector('.nn-play-ctl'), calc = play.querySelector('.nn-calc');
+    const types = h('<div class="nn-types"></div>');
+    ORDER.forEach(k => {
+      const b = h(`<button type="button" class="popup-type-btn${st.type === k ? ' selected' : ''}" style="--btn-color:${activations[k].color}">${activations[k].fullName}</button>`);
+      b.addEventListener('click', () => { st.type = k; types.querySelectorAll('button').forEach(x => x.classList.toggle('selected', x === b)); upd(); });
+      types.appendChild(b);
+    });
+    ctl.appendChild(types);
+    const xs = h('<div class="nn-xs"></div>');
+    [0, 1].forEach(i => {
+      const t = h(`<div class="nn-x"><span>x${i + 1}</span><button type="button" data-v="0">0</button><button type="button" data-v="1">1</button></div>`);
+      t.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { st.x[i] = +b.dataset.v; upd(); }));
+      xs.appendChild(t);
+    });
+    ctl.appendChild(xs);
+    ctl.appendChild(slider('w₁', -3, 3, 0.1, st.w[0], v => { st.w[0] = v; upd(); }));
+    ctl.appendChild(slider('w₂', -3, 3, 0.1, st.w[1], v => { st.w[1] = v; upd(); }));
+    ctl.appendChild(slider('b', -3, 3, 0.1, st.b, v => { st.b = v; upd(); }, 'nn-slider-b'));
+    page.appendChild(play);
+
+    const task = h(`<section class="nn-card nn-task"><h2>Impulsaufgabe: Ein Neuron als Türsteher</h2>
+      <div class="nn-task-pick"></div><p class="nn-task-text"></p>
+      <table class="nn-truth"><thead><tr><th>x₁</th><th>x₂</th><th>z</th><th>y′</th><th>soll</th><th></th></tr></thead><tbody></tbody></table>
+      <p class="nn-task-msg"></p></section>`);
+    const pick = task.querySelector('.nn-task-pick');
+    Object.entries(TASKS).forEach(([k, t]) => {
+      const b = h(`<button type="button" class="nn-pill${st.task === k ? ' on' : ''}">${t.name}</button>`);
+      b.addEventListener('click', () => { st.task = k; pick.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); upd(); });
+      pick.appendChild(b);
+    });
+    page.appendChild(task);
+
+    function upd() {
+      const act = activations[st.type];
+      pic.innerHTML = '';
+      pic.appendChild(neuronSVG({ type: st.type, x: st.x, w: st.w, b: st.b }));
+      xs.querySelectorAll('.nn-x').forEach((t, i) => t.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.v === st.x[i])));
+      const z = st.x[0] * st.w[0] + st.x[1] * st.w[1] + st.b;
+      calc.innerHTML = `<div>z = w₁·x₁ + w₂·x₂ + b = ${de(st.w[0])}·${de(st.x[0])} + ${de(st.w[1])}·${de(st.x[1])} + (${de(st.b)}) = <b>${de(z)}</b></div>
+        <div>y′ = ${act.apply(z).replace(/\./g, ',')}</div>`;
+      // Wahrheitstafel: zählt als 1, wenn y′ ≥ 0,5
+      const T = TASKS[st.task];
+      task.querySelector('.nn-task-text').innerHTML = `Stelle w₁, w₂ und b oben so ein, dass das Neuron ${T.text}.`;
+      let all = true;
+      task.querySelector('tbody').innerHTML = [[0, 0], [0, 1], [1, 0], [1, 1]].map(([a, b], r) => {
+        const zz = a * st.w[0] + b * st.w[1] + st.b, yy = act.fn(zz);
+        const ok = (yy >= 0.5 ? 1 : 0) === T.soll[r];
+        all = all && ok;
+        return `<tr class="${ok ? 'ok' : 'bad'}"><td>${a}</td><td>${b}</td><td>${de(zz)}</td><td>${de(yy)}</td><td>${T.soll[r]}</td><td>${ok ? '✓' : '✗'}</td></tr>`;
+      }).join('');
+      const msg = task.querySelector('.nn-task-msg');
+      msg.className = 'nn-task-msg' + (all ? ' ok' : '');
+      msg.innerHTML = all
+        ? (st.task === 'xor' ? '✓ Wirklich? Dann schau genau hin …' : `✓ Geschafft! Weiter: Klappt das auch für ${st.task === 'und' ? 'ODER' : 'XOR'}?`)
+        : (st.task === 'xor'
+          ? '<b>Denkanstoß:</b> Findest du Werte? Zeichne die vier Fälle als Punkte auf ein Blatt: Kannst du die 1en mit <i>einer</i> Geraden von den 0en trennen? Was bräuchte man dafür?'
+          : 'Tipp: y′ zählt als 1, wenn es mindestens 0,5 ist. Ändere zuerst den Bias.');
+    }
+    upd();
+  }
+
+  /* ── Reiter 2: Alle Neuronen ───────────────────────────── */
+  function renderTypen(page) {
+    page.appendChild(h(`<section class="nn-card nn-lead"><h2>Alle Neuronen</h2>
+      <p>Alle Neuronen rechnen zuerst gleich: <span class="nn-f">z = w₁·x₁ + w₂·x₂ + … + b</span>. Sie unterscheiden sich nur in der <b>Aktivierungsfunktion</b> f – also darin, was sie aus z machen. Schiebe z und schau, was herauskommt.</p></section>`));
+    const grid = h('<div class="nn-type-grid"></div>');
+    ORDER.forEach(k => {
+      const act = activations[k], I = INFO[k];
+      const card = h(`<section class="nn-card nn-type" style="--type-color:${act.color}">
+        <div class="nn-type-head"><h3>${act.fullName}</h3><span class="nn-type-out">Ausgabe: ${I.out}</span></div>
+        <div class="nn-type-pics"><div class="nn-type-neuron"></div><div class="nn-type-curve"></div></div>
+        <div class="nn-type-formula">${act.formula}</div>
+        <div class="nn-type-z"></div>
+        <p>${I.was}</p>
+        <p><b>Wofür?</b> ${I.wofuer}</p>
+        <p class="nn-type-warn"><b>Achtung:</b> ${I.achtung}</p>
+      </section>`);
+      card.querySelector('.nn-type-neuron').appendChild(neuronSVG({ type: k }));
+      const cv = card.querySelector('.nn-type-curve');
+      const zBox = card.querySelector('.nn-type-z');
+      let z = 1;
+      const out = h('<div class="nn-type-apply"></div>');
+      const draw = () => { cv.innerHTML = ''; cv.appendChild(curveSVG(k, z)); out.innerHTML = act.apply(z).replace(/(\d)\.(\d)/g, '$1,$2'); };
+      zBox.appendChild(slider('z', -4, 4, 0.1, z, v => { z = v; draw(); }));
+      zBox.appendChild(out);
+      draw();
+      grid.appendChild(card);
+    });
+    page.appendChild(grid);
+  }
+
+  /* ── Seite ─────────────────────────────────────────────── */
+  function render(root, api) {
+    root.innerHTML = '';
+    const tabs = h('<nav class="nn-tabs"></nav>');
+    api.tabs.forEach(t => {
+      const b = h(`<button type="button" class="nn-tab${t.id === api.current ? ' on' : ''}" data-id="${t.id}">${t.title}</button>`);
+      b.addEventListener('click', () => api.go(t.id));
+      tabs.appendChild(b);
+    });
+    root.appendChild(tabs);
+    const page = h('<div class="nn-page"></div>');
+    root.appendChild(page);
+    if (api.current === 'n-typen') renderTypen(page);
+    else if (api.current === 'n-wie') renderWie(page);
+    root.scrollTop = 0;
+  }
+
+  window.NLNeuron = { render, neuronSVG, curveSVG };
 })();

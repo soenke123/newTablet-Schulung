@@ -1,77 +1,114 @@
 # NeuroLab — CLAUDE.md
 
-Neuronale Netze zum Anfassen (MPSkills, Informatik · Künstliche Intelligenz).
-**Neu gebaut am 20.11.2026**: Das alte Einzelprogramm (Build · Run · Lernen, `app.js` mit 4 700 Zeilen,
-CSV-Upload) ist ersetzt. Plan und Begründung stehen in `PLAN_NEUROLAB_NEU.md`.
+Neuronale Netze zum Anfassen (MPSkills, Informatik · Künstliche Intelligenz). Das **gewachsene NeuroLab**
+(ein Feld mit Spalten, Neuronen als Σ | f-Kästen, Build · Run · Lernen, Zoom, verschiebbares Lernfenster,
+CSV-Upload) — am 20.11.2026 **verbessert, nicht ersetzt**. Eine Neufassung mit eigenem Feld und vielen festen
+Aufgaben war am selben Tag kurz online und wurde auf Sönkes Wunsch zurückgenommen (zu gesteuert, zu weit
+weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 
-## Aufbau
-
-Eigene Seite im `<iframe>` (wie Reinforce Yourself), `tool.js` ist nur die Brücke zum Raum.
+## Dateien
 
 | Datei | Inhalt |
 |---|---|
-| `index.html` | Gerüst: Kopfzeile, drei Bildschirme (home · neuron · work), Editor, Druckansicht, Dialog |
-| `css/nl.css` | ganzes Aussehen, MPSkills-Farben, Hell/Dunkel vom Rahmen (`data-theme`), `@media print` |
-| `js/netz.js` | Rechenmodell **ohne DOM**: forward, gradients, apply, evaluate, randomize (läuft auch unter Node) |
-| `js/daten.js` | Greifvögel (echte Messwerte) und Zielscheibe |
-| `js/szenarien.js` | Bereiche (`AREAS`) und alle Aufgaben (`S`) |
-| `js/feld.js` | das Netz als SVG: Kanten, Neuronen, feste Ausgänge, Andocken, Bau-Knöpfe |
-| `js/plot.js` | Diagramme: Fläche (2D, eine Gerade je Neuron), Würfel (3D, Ebenen, drehbar), Kurve, Fehlerkurve |
-| `js/neuron.js` | Bereich 1 „Das Neuron“: sechs Stationen mit Aufgabe, die sich selbst prüft |
-| `js/druck.js` | Druckansicht (nur Lehrkraft/allein) mit Auswahl, was aufs Blatt kommt |
-| `js/app.js` | Startseite, Freigaben, Arbeitsfläche, Editor, Testen, Training, Zeitlupe, Speicher |
+| `index.html` | Kopfzeile (‹ Übersicht · Bereich · Build/Run · Reset · Druck), Startseite `#home`, Neuronen-Seite `#neuron-page`, Feld `#network`, Druckauswahl `#print-opts`, Popup |
+| `style.css` | Aussehen des Feldes (wie immer) |
+| `start.css` | Startseite, Neuronen-Seite, Schicht-Spalte, fester Ausgang, Druckauswahl, Greifvogel-Diagramm |
+| `app.js` | das Feld: Zustand, Rechnen, Backprop, Szenarien, Lernfenster, Druck, Speicher, `window.NLApp` |
+| `js/start.js` | Startseite, Freigaben im Raum, Navigation (`html[data-view]` = home · neuron · lab) |
+| `js/neuron.js` | Bereich 1: „So rechnet ein Neuron“ + „Alle Neuronen“ (nutzt `activations`/`fmt` aus app.js) |
+| `js/daten.js` | Greifvögel (echte Messwerte) |
+| `neuron.png` | Bild des Neurons (Eingabe, Gewichte, Σ + Bias, f, Ausgabe) |
+| `Regen und Sonne.csv` | Beispiel-CSV fürs Hochladen (auch im Layout-Prüfstand) |
+| `tool.js` | Brücke zum Raum (iframe, Höhe, Freigaben) |
 
-## Drei Bereiche
+## Drei Bereiche (Startseite)
 
-1. **Das Neuron** (`n1`–`n6`): Nervenzelle → Neuron · Gewichte · Summe & Bias · Aktivierung · Gerade · Netz (Quiz).
-2. **Netze bauen** (`b-*`): Schritt *Aufbauen* (Neuronen/Schichten, Gewichte, Andocken) → *Testen*
-   (Werte fließen, Wertetabelle mit ✓/✗ bzw. Trefferquote). Gewichte stellt man von Hand ein, in beiden Schritten.
-   Vorgaben je Aufgabe in `rules`: `acts` (erlaubte Aktivierung), `maxNeurons`, `maxLayers`, `fixed` (Aufbau steht).
-3. **Netze trainieren** (`t-*`): Schritt *Aufbauen* (nur Aufbau + Aktivierung + Andocken, Gewichte gewürfelt) →
-   *Trainieren* (Lernrate, Tempo, Fehlerkurve, Training/Test richtig, Zeitlupe). Jede Bau-Änderung würfelt neu.
+1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` (Bild, ein Neuron zum Ausprobieren mit allen fünf Typen,
+   EINE Impulsaufgabe „Türsteher“ UND · ODER · XOR mit Wahrheitstafel und Denkanstoß) und `n-typen`
+   (alle Neuronen: Perceptron, Linear, ReLU, Sigmoid, Tanh — gezeichnet wie im Feld, Formel, Kurve mit
+   z-Regler, wofür/Achtung). Neue Typen kommen automatisch dazu, wenn sie in `activations` stehen und in
+   `ORDER`/`INFO` (js/neuron.js) eingetragen werden.
+2. **Netze bauen** — Kachel `b-frei`: das freie Feld, **Build · Run**, keine Szenarien. Eingänge 0–10,
+   beliebig viele Schichten (bis `MAX_LAYERS` = 8, Spalte „+ Schicht“, leere Schicht „× Schicht entfernen“).
+3. **Netze trainieren** — Kacheln = Szenarien (`sc-gatter`, `sc-ziffer`, `sc-ziel`, `sc-vogel`, `sc-eigene`).
+   Nur Phase **Lernen**. Das Szenario legt **Eingänge** (Spalte links, gesperrt) und **Ausgänge** fest: die
+   **letzte Spalte** ist der feste Ausgang, je Ausgabe ein beschriftetes Neuron in der Reihenfolge des
+   Szenarios (Anzahl gesperrt, Typ frei). Schichten und Neuronen dazwischen bauen die Schüler selbst
+   („Leeres Netz“ = direkt Eingänge → Ausgang, „Bsp. Netz“ = `hidden` aus dem Szenario). Damit ist das alte
+   XOR/AND-Problem weg (früher waren Ausgänge alle Neuronen ohne Nachfolger, in Neuronen-Reihenfolge,
+   OUT-Knöpfe — im Lernbereich abgeschaltet, `learnMidLayer = false`). Lernfenster frei verschiebbar wie immer.
+   **Greifvögel** (`voegel`, neu): 180 echte Vögel (Datensatz „Hawks“, Lake MacBride, Iowa), Eingänge Flügel (dm)
+   und Gewicht (kg), vier Ausgänge (je Art); Info-Kasten mit Diagramm, Fläche nach der Antwort des Netzes
+   eingefärbt, „Richtig erkannt x von 180“.
 
-**Feste Ausgänge**: Jede Aufgabe legt `outputs` fest. Im Netz hängt `outputs[k].src = { l, n }` — die Reihenfolge
-der Neuronen ist egal (das war das Problem bei XOR/AND im alten NeuroLab). Andocken: Punkt rechts am Neuron
-auf den Ausgang ziehen, ODER Punkt antippen und dann Ausgang antippen, ODER im Editor „An Ausgang andocken“.
-Ein Neuron hängt höchstens an einem Ausgang, darf aber zugleich weiterleiten. Fehler/Training nur an
-angeschlossenen Ausgängen.
-
-**Greifvögel** (`daten.js`): Datensatz „Hawks“ (Cornell College, Lake MacBride, Iowa; R-Paket Stat2Data),
-45 je Gruppe, Messfehler entfernt. Gruppen: Eckschwanzsperber ♂ · ♀ · Rundschwanzsperber · Rotschwanzbussard —
-sie liegen wie Perlen auf einer Kette, deshalb: 1 Gerade (Bussard/Sperber), 2 Geraden (Vogel in der Mitte),
-3 Geraden (vier Gruppen), mit Schwanzlänge Ebenen im Raum. Jeder vierte Vogel ist Testvogel (`test: true`),
-bei Trainings-Aufgaben zählt für den Stern die Test-Trefferquote.
+**Leere Spalten** werden übersprungen (`prevActive`/`nextActive`): Kanten, Rechnen und Backprop gehen von der
+vorigen Spalte MIT Neuronen aus. Nach jeder Änderung an der Anzahl `resyncAll()`.
 
 ## Raum und Freigaben
 
-`?raum=lehrer|schueler` (sonst allein, alles offen), `?demo=1` = Schaufenster (alles offen, Speicher nur im
-Arbeitsspeicher, `sc.demo()` liefert fertig aufgebaute Netze).
-`skill_room_state.data.parts` = Bereichs-ids + Kachel-ids. Offen für die Klasse, wenn Bereich UND Kachel geteilt
-sind. Fehlt `parts`: nur „Das Neuron“. Bereich teilen nimmt alle seine Kacheln mit, wenn noch keine geteilt ist.
-Botschaften: `nl:ready` (heraus), `nl:cmd {parts}` (hinein), `nl:parts {parts}` (Lehrkraft teilt). Keine Migration.
-**Kachel-ids nie umbenennen** — sie stehen in laufenden Räumen.
+`?raum=lehrer|schueler` (sonst allein, alles offen), `?demo=1` = Schaufenster (alles offen, nichts gespeichert;
+Lernen startet mit XOR als „Eigene Daten“, 2 → 3 → 3 → 1 tanh/sigmoid, `demoState`).
+`skill_room_state.data.parts` = Bereichs-ids (`neuron` · `bauen` · `trainieren`) + Kachel-ids. Offen für die
+Klasse, wenn Bereich UND Kachel geteilt sind; Bereich teilen nimmt alle Kacheln mit, wenn noch keine geteilt
+ist. Fehlt `parts`: nur „Wie funktioniert ein Neuron?“. Die Szenario-Auswahl im Lernfenster zeigt nur
+Freigegebenes (`scenarioAllowed`). Druck-Knopf nicht für Schüler. Botschaften: `nl:ready` (heraus),
+`nl:cmd {parts}` (hinein), `nl:parts {parts}` (Lehrkraft teilt). Keine Migration.
+**ids nie umbenennen** — sie stehen in laufenden Räumen.
 
 ## Speicher (je Gerät)
 
-`nl.sc.<id>` Netz + Schritt + Trainingsstand · `nl.done` Sterne · `nl.where` letzte Seite · `nl.seen.<id>`
-Aufgabe gezeigt · `nl.print` Druck-Auswahl. Der alte Schlüssel `neuron-sim-v2` wird nicht mehr gelesen.
+`neuron-sim-v2` = Netz aus „Netze bauen“ (der alte Schlüssel — wer schon ein Netz hatte, findet es dort),
+`neuron-sim-v2-lernen` = Lernbereich, `nl.where` letzte Seite, `nl.print` Druckauswahl.
 
 ## Druckansicht
 
-Knopf „Druck“ (nicht für Schüler). Auswahl: Überschrift, Aufgabentext, Gewichte (Zahlen · Lücken · ohne),
-Bias (dto.), Aktivierung (echte Funktion · nur „f(z)“), Ausgänge/Leitungen, Eingabewerte, Werte z/y der
-ausgewählten Zeile, Schwarz-weiß, Wertetabelle (Spalte „ist“ leer/ausgefüllt/ohne), Diagramm. A4 über `@media print`.
+Knopf „Druck“ (Lehrkraft/allein): Spalten unsichtbar, alles auf Weiß, Lernfenster weg. Leiste „Aufs Blatt“:
+Gewichte und Bias je als Zahl · Lücke · ohne, Aktivierung nur als „f(z)“ oder echt, Neuronen-Typ, Werte z/y′,
+Eingabewerte; „Ausblenden“ nimmt die Leiste fürs Bildschirmfoto weg.
 
-## Neue Aufgabe
+## Das Feld (Technik, unverändert)
 
-Eintrag in `szenarien.js` mit `add({...})` und die id in `AREAS[..].items`; `art` = Kachelbild (in `app.js art()`).
-Für Trainings-Aufgaben in `tests/netz.test.mjs` eine `train(...)`-Zeile ergänzen, damit das Ziel erreichbar bleibt.
+**Single source of truth:** the `state` object in `app.js`. Every interaction mutates state and calls `render()`, which fully rebuilds the SVG and DOM from scratch (no partial updates).
+
+**Two phases** (toggled via header buttons):
+- `build` — edit weights, bias, connection topology, neuron type
+- `run` — edit input values; neuron computes output automatically
+
+**SVG neuron** is built entirely in JS (`renderSVG()`). Layout uses fixed logical coordinates (viewBox `0 0 500 380`). The ellipse has two clickable hit-areas (Σ left half, activation function right half) that open calculation popups.
+
+**Feld = Fenster + Tafel (2026-08-19).** `#network` ist das Fenster (feste Höhe, `overflow:hidden`, fängt die Gesten), `#net-stage` die Tafel darin (`transform: translate()+scale()`, `transform-origin: 0 0`). Bewegt wird immer nur die Tafel als Ganzes.
+
+*Warum keine Spalte mehr scrollt:* die Kanten liegen als **ein** SVG (`drawEdgeOverlay`) über der ganzen Tafel. Scrollte eine Spalte für sich, wanderten ihre Neuronen und die Kanten blieben liegen — die Linien zeigten ins Leere. Und weil `.col-body` seinen Inhalt zentriert, war der Überschuss oben durch Scrollen **grundsätzlich** nicht erreichbar: die ersten Neuronen einer vollen Schicht flogen aus dem Bild. Beides löst dieselbe Änderung — die Spalten wachsen mit ihrem Inhalt (kein `overflow`), die Tafel mit den Spalten, und die Ansicht zoomt darauf. Einzige Ausnahme: `.data-table-col .col-body` behält seine Leiste (an einer Tabelle hängt keine Kante, und 1500 CSV-Zeilen zögen die Tafel sonst meterhoch).
+
+*Maßstab:* Anfang ist immer der volle Überblick, und solange `view.touched === false` zieht jedes `render()` nach — wer eine Schicht auf zehn Neuronen stellt, sieht danach das ganze Netz. Ab dem ersten eigenen Zoom gilt die eigene Wahl. Herauszoomen endet beim Überblick, `fitScale()` ist nach oben auf 1 gedeckelt (ein einzelnes Neuron wird nicht aufgeblasen). `syncStageHeight()` gibt der Tafel die Höhe, die nach dem Verkleinern gerade das Fenster ergibt — sonst schwebten die Spaltenkarten mit grauen Bändern darüber und darunter.
+
+*Gesten:* zwei Finger schieben und zoomen zugleich (der Punkt zwischen den Fingern bleibt zwischen den Fingern), ein Finger schiebt nur auf freier Fläche (`isFieldBackground` — Neuronen und Spaltenköpfe behalten ihre eigene Geste), Strg/⌘ + Rad zoomt, das Rad allein schiebt und nur dann, wenn es etwas zu schieben gibt. Knöpfe − ⤢ + unten rechts.
+
+⚠️ **Alle Zeiger-Listener der Gesten hängen in der CAPTURE-Phase.** Im Neuron sitzen Schaltflächen, die ihr `pointerdown` mit `stopPropagation()` abfangen (OUT-Umschalter, Eingabefelder) — beim Hochlaufen käme die Geste dort nie an, und das Feld ließe sich überall aufziehen außer dort, wo ein Neuron steht. Das war beim Bauen zweimal die Ursache.
+
+⚠️ **`drawEdgeOverlay(net)` bekommt die TAFEL, nicht das Fenster.** Die Kanten liegen mit auf ihr und werden vom `transform` mitgezoomt — deshalb müssen sie beim Verschieben und Zoomen nicht neu gezeichnet werden. Gemessen wird in Bildschirmkoordinaten (`getBoundingClientRect`), umgerechnet über die Tafelecke und `view.scale`; Breite/Höhe des Overlays kommen aus `offsetWidth/offsetHeight` (ungezoomt). Wer dort etwas ändert, teilt Zeiger-Deltas ebenfalls durch `view.scale` — siehe `addPointerDrag` und `addColumnDrag`.
+
+**`#learn-group` hängt am FENSTER, nicht an der Tafel** (`renderNetwork` hängt es an `#network` an). Es ist ein Bedienfeld wie die Kopfzeile; beim Herauszoomen wären seine Knöpfe nicht mehr zu treffen. Ein `position: fixed` innerhalb eines `transform()`-Elements wäre außerdem nicht mehr am Bildschirm, sondern an der Tafel festgemacht.
+
+**Kästen und Kanten bleiben sichtbar (2026-11-01).** Prüfstand `tests/layout.test.mjs` (Playwright, 7 Bildschirmgrößen × 17 Aufbauten): Kästen in ihrer Spalte, Lernpanel im Bild, jede eingeschaltete Verbindung hat eine Linie ≥ 1 px auf dem Schirm, die an ihren Kästen hängt, keine überdeckten Gewichts-Beschriftungen. Vor jeder Änderung am Feld laufen lassen: `node MPSkills/tools/NeuroLab/tests/layout.test.mjs` (`FOTOS=1` legt Bildschirmfotos in `tests/fotos/` ab, nicht einchecken).
+- *Kanten:* jede Verbindung wird gezeichnet, Gewicht < 0,01 gestrichelt und blass (vorher fiel sie weg). Strichstärke hat eine Untergrenze in Bildschirm-Pixeln: `--nl-edge-min` auf `#net-stage`, geteilt durch den Maßstab über `--nl-inv` (pflegt `applyView`). Beschriftungen verteilt `placeEdgeLabels` ohne Überdeckung (Neuronen/Eingänge sind Hindernisse, große Gewichte zuerst, kein Platz = keine Zahl); unter Maßstab 0,6 ausgeblendet (`.edge-labels-off`), in der Druckansicht immer an.
+- *Nachmessen:* `observeLayout` hängt einen ResizeObserver an Fenster und Tafel, `relayout()` passt ein und zeichnet die Kanten neu (Schrift fertig geladen, Rahmenhöhe in MPSkills, vorher unsichtbarer Reiter).
+- *In der Spalte:* `clampSpacings` zieht nach jedem Aufbau verschobene Neuronen/Eingänge (spacing, translateY) zurück in den Spaltenkörper. Eingangsspalte bis 190 px, lange Namen gekürzt mit Tooltip, im Build-Modus Pille statt Kreis.
+- *Lernpanel:* `placeLearnGroup` hält die Gruppe ganz im Bild (ohne eigene Position rechtsbündig), Höhe endet am unteren Rand (`--lg-max`), der Rest scrollt.
+
+**Inline editing** uses a single shared `<input id="inline-input">` that is repositioned via `getBoundingClientRect()` and committed on Enter/blur.
+
+## Neuron-Typen
+
+`activations` in `app.js` — je Eintrag `fn`, `formula`, `apply`, `shortLines`, `fullName`, `color`, `derivative`.
 
 ## Prüfstände
 
-- `node MPSkills/tools/NeuroLab/tests/netz.test.mjs` — Rechenmodell, Andocken, alle Trainings-Ziele erreichbar
-- `node MPSkills/tools/NeuroLab/tests/raum.e2e.mjs` — Browser: Freigaben Lehrkraft/Klasse, Andocken (Ziehen +
-  Antippen), Testen, Training, Zeitlupe, Druck, Station 5, hochkant (`FOTOS=1` → `tests/fotos/`, nicht einchecken)
+- `node MPSkills/tools/NeuroLab/tests/layout.test.mjs` — Kästen/Kanten/Lernfenster in 7 Größen × 17 Aufbauten
+  (auch 6 Schichten, leere Spalte dazwischen, Greifvögel)
+- `node MPSkills/tools/NeuroLab/tests/raum.e2e.mjs` — Freigaben Lehrkraft/Klasse, Szenario-Auswahl gefiltert,
+  Schicht dazu/weg, fester Ausgang, Gatter inkl. XOR lernen, Greifvögel ≥ 93 %, Druckauswahl, Speicher je Bereich
 
-Schaufenster: `MPSkills/preview/neurolab.js` (klickt nur über `.tile[data-id]`, `#steps`, `#train-go`,
-`#slow-btn`, `#slow-next`, `#back`, liest `#stat-test` — diese ids nicht umbenennen).
+`FOTOS=1` legt Bildschirmfotos in `tests/fotos/` ab (nicht einchecken).
+Schaufenster: `MPSkills/preview/neurolab.js` (klickt `.tile[data-id]`, `#btn-home`, `#btn-run`,
+`#learn-btn-start`/`-pause`, liest `#learn-loss-display` — diese ids nicht umbenennen).
