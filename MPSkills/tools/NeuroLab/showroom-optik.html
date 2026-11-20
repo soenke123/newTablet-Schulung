@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NeuroLab · Showroom Optik</title>
+<link href="../../../fonts/spacegrotesk-jetbrainsmono-unbounded-9f6dea.css" rel="stylesheet">
+<style>
+/* ───────────────────────────────────────────────────────────────────────────
+   Showroom: wie NeuroLab aussehen könnte. Nur zum Anschauen, nichts davon ist
+   im Skill eingebaut. Farben bewusst aus Nebeltal (index.html :root) übernommen,
+   damit beide KI-Skills wie eine Familie wirken.
+   ─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --paper:#eef3f8; --surface:#ffffff; --surface-2:#f4f8fb; --line:#d4e0ec; --line-soft:#e3ebf4;
+  --ink:#0b1a33; --ink-soft:#3e5577; --ink-faint:#7487a5;
+  --accent:#0b9db3; --accent-ink:#06707f; --accent-dim:#d8f1f5; --on-accent:#fff;
+  --in:#e0780f; --in-dim:#fdeedb;            /* Eingänge: orange wie heute */
+  --neg:#d43a52; --neg-dim:#fbe3e7;          /* negative Gewichte */
+  --fire:#e0a210;
+  --grid:rgba(11,26,51,.07);
+  --shadow:0 1px 2px rgba(11,26,51,.05), 0 10px 24px -14px rgba(11,26,51,.28);
+  --glow:none;
+  --font:'Space Grotesk', system-ui, sans-serif; --head:'Unbounded','Space Grotesk',sans-serif; --mono:'JetBrains Mono', ui-monospace, monospace;
+  color-scheme:light;
+}
+html[data-theme="dark"] {
+  --paper:#070d1a; --surface:#0f1b31; --surface-2:#142441; --line:#26406a; --line-soft:rgba(140,170,220,.16);
+  --ink:#e8f1ff; --ink-soft:#a9bad6; --ink-faint:#6f82a3;
+  --accent:#5cf2c4; --accent-ink:#7ff7d3; --accent-dim:rgba(92,242,196,.13); --on-accent:#04201a;
+  --in:#ff9d4d; --in-dim:rgba(255,157,77,.14);
+  --neg:#ff6b8b; --neg-dim:rgba(255,107,139,.14);
+  --fire:#ffd166;
+  --grid:rgba(160,190,240,.07);
+  --shadow:0 0 0 1px rgba(92,242,196,.05), 0 16px 34px -18px rgba(0,0,0,.8);
+  --glow:drop-shadow(0 0 10px rgba(92,242,196,.35));
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-theme]) {
+    --paper:#070d1a; --surface:#0f1b31; --surface-2:#142441; --line:#26406a; --line-soft:rgba(140,170,220,.16);
+    --ink:#e8f1ff; --ink-soft:#a9bad6; --ink-faint:#6f82a3;
+    --accent:#5cf2c4; --accent-ink:#7ff7d3; --accent-dim:rgba(92,242,196,.13); --on-accent:#04201a;
+    --in:#ff9d4d; --in-dim:rgba(255,157,77,.14);
+    --neg:#ff6b8b; --neg-dim:rgba(255,107,139,.14);
+    --fire:#ffd166;
+    --grid:rgba(160,190,240,.07);
+    --shadow:0 0 0 1px rgba(92,242,196,.05), 0 16px 34px -18px rgba(0,0,0,.8);
+    --glow:drop-shadow(0 0 10px rgba(92,242,196,.35));
+    color-scheme:dark;
+  }
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:var(--font); background:var(--paper); color:var(--ink); line-height:1.45; font-size:15px; }
+.wrap { max-width:1180px; margin:0 auto; padding:28px 16px 80px; }
+.kick { font-family:var(--mono); font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--accent-ink); }
+h1 { font-family:var(--head); font-weight:800; font-size:clamp(28px,4vw,40px); line-height:1.05; margin:6px 0 6px; letter-spacing:-.01em; }
+h2 { font-weight:700; font-size:21px; margin:4px 0 4px; }
+.lead { color:var(--ink-soft); max-width:760px; }
+.sec { margin-top:44px; }
+.sec > p.lead { margin-bottom:16px; }
+
+.top { display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; }
+.seg { display:inline-flex; background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:3px; gap:2px; }
+.seg button { font:600 13px var(--font); color:var(--ink-soft); background:none; border:0; border-radius:999px; padding:6px 14px; cursor:pointer; }
+.seg button.on { background:var(--accent); color:var(--on-accent); }
+
+.card { background:var(--surface); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); }
+.note { font-size:13px; color:var(--ink-faint); }
+
+/* ── Vergleich der Neuronen ─────────────────────────────────────────────── */
+.ctrl { display:flex; flex-wrap:wrap; gap:14px 26px; align-items:center; padding:14px 18px; margin-bottom:14px; }
+.ctrl label { display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-soft); font-weight:600; }
+.ctrl output { font-family:var(--mono); color:var(--ink); min-width:44px; font-size:13px; }
+input[type=range] { accent-color:var(--accent); width:130px; }
+select { font:600 13px var(--font); color:var(--ink); background:var(--surface-2); border:1px solid var(--line); border-radius:8px; padding:5px 8px; }
+
+.cmp { display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+@media (max-width:900px) { .cmp { grid-template-columns:1fr; } }
+.cmp .card { padding:16px 16px 14px; display:flex; flex-direction:column; }
+.cmp h3 { font-size:16px; font-weight:700; display:flex; align-items:baseline; gap:8px; }
+.cmp h3 .kick { font-size:10px; }
+.cmp .stage { margin:12px 0 10px; border-radius:12px; background-color:var(--paper);
+  background-image:radial-gradient(var(--grid) 1.2px, transparent 1.3px); background-size:18px 18px;
+  display:grid; place-items:center; padding:10px 4px; }
+.cmp .stage svg { width:100%; height:auto; max-width:340px; }
+.cmp ul { list-style:none; font-size:13px; color:var(--ink-soft); display:grid; gap:4px; }
+.cmp li::before { content:'–'; color:var(--ink-faint); margin-right:6px; }
+.cmp .card.today .stage { background:#f4f6f9; background-image:none; }
+
+/* Zustände */
+.states { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+@media (max-width:900px) { .states { grid-template-columns:repeat(2,1fr); } }
+.states .card { padding:12px; }
+.states .stage { border-radius:10px; background-color:var(--paper); background-image:radial-gradient(var(--grid) 1.2px, transparent 1.3px); background-size:18px 18px; padding:6px; }
+.states svg { width:100%; height:auto; }
+.states b { display:block; font-size:14px; margin-top:8px; }
+.states span { font-size:12.5px; color:var(--ink-soft); }
+
+/* ── SVG-Neuron: Klassen ────────────────────────────────────────────────── */
+.n-box { fill:var(--surface); stroke:var(--line); stroke-width:1.4; }
+.n-split { stroke:var(--line); stroke-width:1.2; }
+.n-sig { fill:var(--ink); font:600 21px var(--font); }
+.n-z { fill:var(--ink-soft); font:800 10.5px var(--mono); }
+.n-type { fill:var(--ink-faint); font:800 9.5px var(--mono); letter-spacing:.12em; }
+.n-axis { stroke:var(--line); stroke-width:1; }
+.n-curve { fill:none; stroke:var(--ink-soft); stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.n-dot { fill:var(--accent); stroke:var(--surface); stroke-width:1.5; }
+.n-out { fill:var(--surface); stroke:var(--accent); stroke-width:1.4; }
+.n-outfill { fill:var(--accent-dim); }
+.n-outtxt { fill:var(--ink); font:800 12px var(--mono); }
+.n-wire { stroke:var(--accent); stroke-width:1.6; }
+.n-bias { stroke:var(--ink-faint); stroke-width:1.3; }
+.n-biastxt { fill:var(--ink-faint); font:800 10px var(--mono); }
+.n-port { fill:var(--surface); stroke:var(--line); stroke-width:1.3; }
+.n-sel { fill:none; stroke:var(--accent); stroke-width:2; stroke-dasharray:4 4; }
+.n-ring { fill:none; stroke:var(--accent); stroke-width:2; }
+.is-hot .n-box { stroke:var(--accent); }
+.is-hot { filter:var(--glow); }
+.is-neg .n-dot { fill:var(--neg); }
+
+/* Variante B: Nebeltal-nah — getönte Kurve, kräftigere Linien */
+.vB .n-box { fill:var(--surface); stroke:var(--line); stroke-width:1.6; }
+.vB .n-fpart { fill:var(--accent-dim); }
+.vB .n-curve { stroke:var(--accent-ink); stroke-width:2.2; }
+.vB .n-type { fill:var(--accent-ink); }
+.vB .n-out { fill:var(--accent); stroke:none; }
+.vB .n-outfill { fill:transparent; }
+.vB .n-outtxt { fill:var(--on-accent); }
+.vB .n-outbar { fill:var(--on-accent); opacity:.35; }
+
+/* Heute: feste Farben wie style.css, kein Dark Mode */
+.today-svg text { font-family:'Segoe UI', system-ui, sans-serif; }
+
+/* ── Feld (Mock des ganzen Skills) ──────────────────────────────────────── */
+.app { overflow:hidden; border-radius:18px; }
+.bar { display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--line); background:var(--surface); flex-wrap:wrap; }
+.btn { font:600 13px var(--font); color:var(--ink-soft); background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:6px 12px; cursor:pointer; white-space:nowrap; }
+.btn:hover { border-color:var(--accent); color:var(--accent-ink); }
+.btn.pri { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
+.bar .name { font-weight:700; font-size:16px; }
+.bar .where { font-size:13px; color:var(--ink-faint); }
+.bar .sp { flex:1; }
+.bar .seg { border-radius:10px; }
+.bar .seg button { border-radius:8px; padding:5px 12px; }
+
+.field { display:grid; grid-template-columns:1fr 290px; min-height:470px; }
+@media (max-width:900px) { .field { grid-template-columns:1fr; } }
+.board { position:relative; background-color:var(--paper);
+  background-image:radial-gradient(var(--grid) 1.2px, transparent 1.3px); background-size:20px 20px; overflow:hidden; }
+.board svg { display:block; width:100%; height:auto; }
+.lane-h { fill:var(--ink-faint); font:800 10px var(--mono); letter-spacing:.14em; }
+.lane-n { fill:var(--ink-soft); font:600 12px var(--font); }
+.lane { fill:none; stroke:var(--line-soft); stroke-width:1; }
+.pm { cursor:pointer; }
+.pm rect { fill:var(--surface); stroke:var(--line); }
+.pm text { fill:var(--ink-soft); font:700 13px var(--font); }
+.pm:hover rect { stroke:var(--accent); }
+.edge { fill:none; stroke-linecap:round; }
+.edge-pos { stroke:var(--accent); }
+.edge-neg { stroke:var(--neg); }
+.wtag rect { fill:var(--surface); stroke:var(--line); }
+.wtag text { font:800 9.5px var(--mono); }
+.wtag.pos text { fill:var(--accent-ink); }
+.wtag.neg text { fill:var(--neg); }
+.inp { cursor:pointer; }
+.inp rect.b { fill:var(--in-dim); stroke:var(--in); stroke-width:1.4; }
+.inp text.l { fill:var(--ink); font:600 12.5px var(--font); }
+.inp text.v { fill:var(--in); font:800 13px var(--mono); }
+.outslot rect.b { fill:var(--surface); stroke:var(--accent); stroke-width:1.4; }
+.outslot text.t { fill:var(--ink); font:700 14px var(--font); }
+.outslot text.s { fill:var(--ink-faint); font:600 11px var(--font); }
+.outslot text.m { fill:var(--ink-soft); font:800 11px var(--mono); }
+.outslot .okc { fill:var(--accent); }
+.outslot .bad { fill:var(--neg); }
+.addcol rect { fill:none; stroke:var(--line); stroke-dasharray:5 5; }
+.addcol text { fill:var(--ink-faint); font:600 12px var(--font); }
+.ncell { cursor:pointer; }
+
+.side { border-left:1px solid var(--line); background:var(--surface); padding:16px; display:flex; flex-direction:column; gap:14px; }
+@media (max-width:900px) { .side { border-left:0; border-top:1px solid var(--line); } }
+.side h4 { font-size:15px; font-weight:700; display:flex; justify-content:space-between; align-items:baseline; }
+.row { display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; color:var(--ink-soft); font-weight:600; }
+.row b { font-family:var(--mono); color:var(--ink); font-size:13px; }
+.row input[type=range] { flex:1; width:auto; }
+.btns { display:flex; gap:8px; }
+.btns .btn { flex:1; }
+.loss { background:var(--surface-2); border:1px solid var(--line-soft); border-radius:10px; height:104px; }
+.loss svg { width:100%; height:100%; display:block; }
+.loss .lc { fill:none; stroke:var(--accent); stroke-width:2; }
+.loss .la { fill:var(--accent-dim); }
+.truth { width:100%; border-collapse:collapse; font-size:12.5px; }
+.truth th { font:800 10px var(--mono); letter-spacing:.1em; color:var(--ink-faint); text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); }
+.truth td { padding:5px 6px; font-family:var(--mono); border-bottom:1px solid var(--line-soft); color:var(--ink); }
+.truth tr.cur td { background:var(--accent-dim); }
+.truth td.ok { color:var(--accent-ink); } .truth td.no { color:var(--neg); }
+
+/* ── Startseite ─────────────────────────────────────────────────────────── */
+.home { padding:22px; }
+.home h5 { font-weight:700; font-size:17px; margin-top:18px; }
+.home h5:first-of-type { margin-top:6px; }
+.home .sub { font-size:13px; color:var(--ink-soft); margin-bottom:10px; }
+.tiles { display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:12px; }
+.tile { align-content:start; background:var(--surface); border:1px solid var(--line); border-radius:14px; padding:14px; display:grid; grid-template-columns:44px 1fr; gap:4px 12px; cursor:pointer; transition:border-color .15s, transform .15s; }
+.tile:hover { border-color:var(--accent); transform:translateY(-1px); }
+.tile .ic { grid-row:span 2; width:44px; height:44px; border-radius:11px; background:var(--accent-dim); display:grid; place-items:center; }
+.tile .ic svg { width:28px; height:28px; stroke:var(--accent-ink); fill:none; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+.tile.b .ic { background:var(--in-dim); } .tile.b .ic svg { stroke:var(--in); }
+.tile b { font-size:15px; font-weight:700; line-height:1.25; }
+.tile span { font-size:12.5px; color:var(--ink-soft); }
+.tile .lock { grid-column:2; font:800 10px var(--mono); letter-spacing:.1em; color:var(--ink-faint); text-transform:uppercase; }
+.home .num { display:inline-grid; place-items:center; width:22px; height:22px; border-radius:50%; border:1px solid var(--accent); color:var(--accent-ink); font:800 11px var(--mono); margin-right:8px; vertical-align:2px; }
+
+/* ── Regeln ─────────────────────────────────────────────────────────────── */
+.rules { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+@media (max-width:800px) { .rules { grid-template-columns:1fr; } }
+.rules .card { padding:18px; }
+.rules ul { list-style:none; display:grid; gap:8px; margin-top:8px; font-size:14px; color:var(--ink-soft); }
+.rules li { padding-left:18px; position:relative; }
+.rules li::before { content:''; position:absolute; left:2px; top:.6em; width:7px; height:7px; border-radius:50%; background:var(--accent); }
+.rules .chg li::before { background:var(--in); }
+.sw { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.sw div { display:flex; align-items:center; gap:7px; font-size:12px; color:var(--ink-soft); background:var(--surface-2); border:1px solid var(--line-soft); border-radius:999px; padding:4px 10px 4px 4px; }
+.sw i { width:18px; height:18px; border-radius:50%; border:1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <div class="kick">NeuroLab · Showroom</div>
+      <h1>Ein neuer Anstrich</h1>
+      <p class="lead">Das Neuron bleibt, was es ist: ein Kasten mit Σ links und Aktivierung rechts, Bias von unten, Wert rechts daneben. Neu sind ruhigere Linien, Farben und Schriften aus Nebeltal und ein Dark Mode.</p>
+    </div>
+    <div class="seg" id="theme">
+      <button data-t="auto" class="on">Auto</button><button data-t="light">Hell</button><button data-t="dark">Dunkel</button>
+    </div>
+  </div>
+
+  <!-- ═══ 1 Das Neuron im Vergleich ═══ -->
+  <section class="sec">
+    <div class="kick">1 · Das Neuron</div>
+    <h2>Heute und zwei Vorschläge</h2>
+    <p class="lead">Alle drei rechnen dasselbe. Regler bewegen, Typ wechseln: der Punkt auf der Kurve zeigt, wo das Neuron gerade steht.</p>
+
+    <div class="card ctrl">
+      <label>Typ <select id="cType">
+        <option value="perceptron">Perceptron</option><option value="linear">Linear</option>
+        <option value="relu">ReLU</option><option value="sigmoid" selected>Sigmoid</option><option value="tanh">Tanh</option>
+      </select></label>
+      <label>x₁ <input type="range" id="cX1" min="-2" max="2" step="0.1" value="1"><output id="oX1"></output></label>
+      <label>w₁ <input type="range" id="cW1" min="-3" max="3" step="0.1" value="1.2"><output id="oW1"></output></label>
+      <label>x₂ <input type="range" id="cX2" min="-2" max="2" step="0.1" value="0.5"><output id="oX2"></output></label>
+      <label>w₂ <input type="range" id="cW2" min="-3" max="3" step="0.1" value="-0.6"><output id="oW2"></output></label>
+      <label>b <input type="range" id="cB" min="-3" max="3" step="0.1" value="0.2"><output id="oB"></output></label>
+    </div>
+
+    <div class="cmp">
+      <div class="card today">
+        <h3>Heute <span class="kick">kein Dark Mode</span></h3>
+        <div class="stage" id="nToday"></div>
+        <ul><li>Formel als Text im Kasten, schwer lesbar</li><li>Farben fest, im Dunkeln hell</li><li>Gewichte als Zahl an jeder Kante</li></ul>
+      </div>
+      <div class="card">
+        <h3>Vorschlag A <span class="kick">sachlich</span></h3>
+        <div class="stage" id="nA"></div>
+        <ul><li>Kurve statt Formel, Punkt = aktueller Wert</li><li>Weißer Kasten, Farbe nur für Daten</li><li>Wert-Kästchen füllt sich mit dem Wert</li><li>Formel beim Antippen im Bearbeiten-Fenster</li></ul>
+      </div>
+      <div class="card">
+        <h3>Vorschlag B <span class="kick">nebeltal-nah</span></h3>
+        <div class="stage vB" id="nB"></div>
+        <ul><li>Aktivierungsteil leicht getönt</li><li>Wert als volles Akzent-Kästchen</li><li>Im Dunkeln leichtes Leuchten, wenn es feuert</li><li>Etwas kräftiger, gut am Beamer</li></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 2 Zustände ═══ -->
+  <section class="sec">
+    <div class="kick">2 · Zustände</div>
+    <h2>Was ein Neuron zeigen muss</h2>
+    <p class="lead">Jeder Zustand bekommt genau ein Merkmal: kein Mix aus Rahmen, Farbe und Schatten gleichzeitig.</p>
+    <div class="states" id="states"></div>
+  </section>
+
+  <!-- ═══ 3 Das Feld ═══ -->
+  <section class="sec">
+    <div class="kick">3 · Das ganze Feld</div>
+    <h2>Netze trainieren: XOR, es lernt wirklich</h2>
+    <p class="lead">Spalten sind keine Kästen mehr, sondern Bahnen auf Punktpapier. Gewichte stehen nur am gewählten Neuron (antippen), sonst zeigt die Linie sie: Dicke = Stärke, Farbe = Vorzeichen. Eingänge antippen schaltet 0 ↔ 1.</p>
+
+    <div class="card app">
+      <div class="bar">
+        <button class="btn">‹ Übersicht</button>
+        <span class="name">NeuroLab</span><span class="where">Netze trainieren · Logik-Gatter</span>
+        <span class="sp"></span>
+        <div class="seg" id="fieldVar"><button data-v="A" class="on">Vorschlag A</button><button data-v="B">Vorschlag B</button></div>
+        <button class="btn">Reset</button><button class="btn">Druck</button>
+      </div>
+      <div class="field">
+        <div class="board" id="board"></div>
+        <aside class="side">
+          <h4>Lernen <span class="kick" id="epoch">Epoche 0</span></h4>
+          <div class="row">Lernrate <input type="range" id="lr" min="0.05" max="2" step="0.05" value="0.8"><b id="lrV">0,80</b></div>
+          <div class="btns"><button class="btn pri" id="go">Start</button><button class="btn" id="step">Schritt</button><button class="btn" id="reinit">Neu</button></div>
+          <div class="row">Fehler <b id="lossV">–</b></div>
+          <div class="loss"><svg id="lossSvg" viewBox="0 0 260 100" preserveAspectRatio="none"></svg></div>
+          <table class="truth" id="truth"></table>
+          <p class="note">Das Lernfenster bleibt verschiebbar wie heute; hier nur angedockt, damit der Showroom ruhig bleibt.</p>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 4 Startseite ═══ -->
+  <section class="sec">
+    <div class="kick">4 · Startseite</div>
+    <h2>Dieselben drei Bereiche, gleiche Sprache wie Nebeltal</h2>
+    <p class="lead">Kein farbiger Balken oben an jeder Kachel mehr; Symbol in einem getönten Feld, Nummer am Bereich wie im Lernpfad von Nebeltal.</p>
+    <div class="card home">
+      <h5><span class="num">1</span>Wie funktioniert ein Neuron?</h5><div class="sub">Was in einem Neuron passiert – und welche Neuronen es gibt.</div>
+      <div class="tiles">
+        <div class="tile"><div class="ic" data-ic="neuron"></div><b>So rechnet ein Neuron</b><span>In sieben Schritten aufdecken.</span></div>
+        <div class="tile"><div class="ic" data-ic="curves"></div><b>Alle Neuronen</b><span>Perceptron, Linear, ReLU, Sigmoid, Tanh.</span></div>
+      </div>
+      <h5><span class="num">2</span>Netze bauen</h5><div class="sub">Ein Netz frei zusammenklicken und rechnen lassen.</div>
+      <div class="tiles">
+        <div class="tile b"><div class="ic" data-ic="net"></div><b>Freies Bauen</b><span>Build · Run</span></div>
+      </div>
+      <h5><span class="num">3</span>Netze trainieren</h5><div class="sub">Ein- und Ausgänge gibt das Szenario vor.</div>
+      <div class="tiles">
+        <div class="tile"><div class="ic" data-ic="gate"></div><b>Logik-Gatter</b><span>AND, OR, NOT A, XOR.</span></div>
+        <div class="tile"><div class="ic" data-ic="seg"></div><b>7-Segment-Ziffer</b><span>Welche Ziffer ist das?</span></div>
+        <div class="tile"><div class="ic" data-ic="target"></div><b>Zielscheibe</b><span>Wo trifft der Pfeil?</span></div>
+        <div class="tile"><div class="ic" data-ic="bird"></div><b>Greifvögel</b><span>Aus Flügel und Gewicht die Art.</span><div class="lock">nicht geteilt</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 5 Regeln ═══ -->
+  <section class="sec">
+    <div class="kick">5 · Spielregeln</div>
+    <h2>Was bleibt, was sich ändert</h2>
+    <div class="rules">
+      <div class="card">
+        <b>Bleibt wie heute</b>
+        <ul>
+          <li>Neuron = Kasten mit Σ | Aktivierung, Bias-Pfeil von unten, Wert-Kästchen rechts</li>
+          <li>Spalten von links nach rechts, „+ Schicht“ vor den Ausgängen</li>
+          <li>Eingänge orange, Ausgänge als eigene Spalte mit Steckplätzen</li>
+          <li>Typ-Name über dem Neuron, Zahlen mit Komma</li>
+          <li>Build · Run · Lernen, Zoom, verschiebbares Lernfenster</li>
+        </ul>
+      </div>
+      <div class="card chg">
+        <b>Ändert sich</b>
+        <ul>
+          <li>Farben und Schriften aus Nebeltal (Space Grotesk, Zahlen in JetBrains Mono)</li>
+          <li>Hell und Dunkel, im Raum vom Rahmen (<code>data-theme</code>), allein vom Gerät</li>
+          <li>Kurve mit Punkt statt Formeltext im Neuron</li>
+          <li>Kanten: Dicke = |w|, türkis = positiv, rot = negativ; Zahlen nur am gewählten Neuron</li>
+          <li>Spalten als Bahnen auf Punktpapier statt weißer Kästen</li>
+          <li>Ein Akzent (türkis/mint) statt Blau, Grün, Orange, Lila nebeneinander</li>
+        </ul>
+        <div class="sw" id="swatches"></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+'use strict';
+const NS = 'http://www.w3.org/2000/svg';
+const fmt = (v, d = 2) => (Math.round(v * 10 ** d) / 10 ** d).toFixed(d).replace('.', ',').replace(/^-/, '−');
+const ACT = {
+  perceptron: { fn: z => z > 0 ? 1 : 0, lo: 0, hi: 1, name: 'PERCEPTRON', f: 'z > 0 ?' },
+  linear:     { fn: z => z, lo: -4, hi: 4, name: 'LINEAR', f: 'y = z' },
+  relu:       { fn: z => Math.max(0, z), lo: 0, hi: 4, name: 'RELU', f: 'max(0, z)' },
+  sigmoid:    { fn: z => 1 / (1 + Math.exp(-z)), lo: 0, hi: 1, name: 'SIGMOID', f: '1 / (1+e⁻ᶻ)' },
+  tanh:       { fn: z => Math.tanh(z), lo: -1, hi: 1, name: 'TANH', f: 'tanh(z)' },
+};
+
+/* ── Theme ─────────────────────────────────────────────────────────────── */
+const themeSeg = document.getElementById('theme');
+themeSeg.onclick = e => {
+  const t = e.target.dataset.t; if (!t) return;
+  [...themeSeg.children].forEach(b => b.classList.toggle('on', b === e.target));
+  if (t === 'auto') document.documentElement.removeAttribute('data-theme');
+  else document.documentElement.dataset.theme = t;
+};
+
+/* ── Neuron (Vorschlag A/B) als SVG-Text ───────────────────────────────────
+   Ursprung = linke obere Ecke des Kastens. Breite 150, Höhe 56.
+   o: {type, z, b, hot, sel, neg, showBias, label, ports} */
+function curvePath(type, x0, y0, w, h) {
+  const a = ACT[type], pts = [];
+  for (let i = 0; i <= 40; i++) {
+    const z = -4 + 8 * i / 40;
+    let y = a.fn(z); y = Math.max(a.lo, Math.min(a.hi, y));
+    const px = x0 + w * i / 40, py = y0 + h - h * (y - a.lo) / (a.hi - a.lo);
+    pts.push((i ? 'L' : 'M') + px.toFixed(1) + ',' + py.toFixed(1));
+  }
+  return pts.join('');
+}
+function curveDot(type, z, x0, y0, w, h) {
+  const a = ACT[type], zc = Math.max(-4, Math.min(4, z));
+  let y = a.fn(zc); y = Math.max(a.lo, Math.min(a.hi, y));
+  return [x0 + w * (zc + 4) / 8, y0 + h - h * (y - a.lo) / (a.hi - a.lo)];
+}
+function neuronSVG(o) {
+  const a = ACT[o.type], y = a.fn(o.z);
+  const W = 150, H = 56, SX = 60;                 // SX = Trennlinie Σ | f
+  const cx = SX + 10, cy = 10, cw = W - SX - 20, ch = H - 20;
+  const [dx, dy] = curveDot(o.type, o.z, cx, cy, cw, ch);
+  // Füllstand des Wert-Kästchens: Anteil zwischen lo und hi
+  const frac = Math.max(0, Math.min(1, (Math.max(a.lo, Math.min(a.hi, y)) - a.lo) / (a.hi - a.lo)));
+  const zero = a.lo < 0 ? cy + ch - ch * (0 - a.lo) / (a.hi - a.lo) : cy + ch;
+  let s = `<g class="${o.hot ? 'is-hot ' : ''}${y < 0 ? 'is-neg' : ''}">`;
+  if (o.label !== false) s += `<text class="n-type" x="0" y="-8">${a.name}</text>`;
+  if (o.sel) s += `<rect class="n-sel" x="-6" y="-6" width="${W + 62}" height="${H + 12}" rx="16"/>`;
+  s += `<rect class="n-box" x="0" y="0" width="${W}" height="${H}" rx="12"/>`;
+  s += `<path class="n-fpart" fill="none" d="M${SX},0 H${W - 12} a12,12 0 0 1 12,12 V${H - 12} a12,12 0 0 1 -12,12 H${SX} Z"/>`;
+  s += `<line class="n-split" x1="${SX}" y1="8" x2="${SX}" y2="${H - 8}"/>`;
+  s += `<text class="n-sig" x="${SX / 2}" y="29" text-anchor="middle">Σ</text>`;
+  s += `<text class="n-z" x="${SX / 2}" y="45" text-anchor="middle">z = ${fmt(o.z, 1)}</text>`;
+  s += `<line class="n-axis" x1="${cx}" y1="${zero}" x2="${cx + cw}" y2="${zero}"/>`;
+  s += `<line class="n-axis" x1="${cx + cw / 2}" y1="${cy}" x2="${cx + cw / 2}" y2="${cy + ch}"/>`;
+  s += `<path class="n-curve" d="${curvePath(o.type, cx, cy, cw, ch)}"/>`;
+  s += `<circle class="n-dot" cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="4.2"/>`;
+  // Wert
+  s += `<line class="n-wire" x1="${W}" y1="${H / 2}" x2="${W + 10}" y2="${H / 2}"/>`;
+  s += `<rect class="n-out" x="${W + 10}" y="${H / 2 - 14}" width="46" height="28" rx="8"/>`;
+  s += `<rect class="n-outfill" x="${W + 11}" y="${H / 2 - 13 + 26 * (1 - frac)}" width="44" height="${26 * frac}" rx="7"/>`;
+  s += `<rect class="n-outbar" fill="none" x="${W + 14}" y="${H / 2 + 9}" width="${38 * frac}" height="2.5" rx="1"/>`;
+  s += `<text class="n-outtxt" x="${W + 33}" y="${H / 2 + 4}" text-anchor="middle">${fmt(y, 2)}</text>`;
+  // Bias
+  if (o.showBias !== false) {
+    s += `<line class="n-bias" x1="${SX / 2}" y1="${H + 16}" x2="${SX / 2}" y2="${H + 3}"/>`;
+    s += `<path d="M${SX / 2 - 3.5},${H + 7} L${SX / 2},${H + 2} L${SX / 2 + 3.5},${H + 7}" fill="none" class="n-bias"/>`;
+    s += `<text class="n-biastxt" x="${SX / 2}" y="${H + 28}" text-anchor="middle">b = ${fmt(o.b, 1)}</text>`;
+  }
+  // Eingangs-Ports links
+  (o.ports || []).forEach(py => { s += `<circle class="n-port" cx="0" cy="${py}" r="3"/>`; });
+  return s + '</g>';
+}
+
+/* Heute: Nachbau nach style.css (feste Farben) */
+function todaySVG(type, z, b) {
+  const y = ACT[type].fn(z);
+  const formula = { perceptron: ['z > 0 → 1', ''], linear: ['y = z', ''], relu: ['max(0, z)', ''], sigmoid: ['1', '1 + e⁻ᶻ'], tanh: ['tanh(z)', ''] }[type];
+  return `<g class="today-svg">
+    <text x="76" y="-6" text-anchor="middle" font-size="10" font-weight="700" fill="#2a8aa3">${type[0].toUpperCase() + type.slice(1)}</text>
+    <rect x="0" y="0" width="152" height="60" rx="8" fill="#eef5f7" stroke="#4a8fa3" stroke-width="2"/>
+    <line x1="76" y1="0" x2="76" y2="60" stroke="#c9dde3"/>
+    <text x="38" y="30" text-anchor="middle" font-size="22" fill="#33525c">Σ</text>
+    <text x="38" y="50" text-anchor="middle" font-size="9" font-weight="700" fill="#222">z=${fmt(z, 1)}</text>
+    <text x="114" y="24" text-anchor="middle" font-size="9" fill="#33525c">${formula[0]}</text>
+    ${formula[1] ? `<line x1="96" y1="28" x2="132" y2="28" stroke="#33525c" stroke-width=".8"/><text x="114" y="37" text-anchor="middle" font-size="8" fill="#33525c">${formula[1]}</text>` : ''}
+    <text x="114" y="50" text-anchor="middle" font-size="8.5" fill="#33525c">y'=${fmt(y, 1)}</text>
+    <text x="172" y="20" text-anchor="middle" font-size="8" font-weight="700" fill="#10b981">→ y</text>
+    <line x1="152" y1="30" x2="166" y2="30" stroke="#4a8fa3" stroke-width="2"/>
+    <rect x="166" y="18" width="46" height="26" rx="4" fill="#d1fae5" stroke="#10b981" stroke-width="1.5"/>
+    <text x="189" y="35" text-anchor="middle" font-size="11" font-weight="700" fill="#2e7d5e">${fmt(y, 1)}</text>
+    <line x1="38" y1="78" x2="38" y2="64" stroke="#7a8794" stroke-width="1.2"/><path d="M34.5,68 L38,63 L41.5,68" fill="#7a8794"/>
+    <text x="38" y="90" text-anchor="middle" font-size="9.5" fill="#444">b = ${fmt(b, 0)}</text></g>`;
+}
+
+/* Kleines Eingangs-Gespann für den Vergleich: zwei Eingänge → Neuron */
+function demoBlock(variant, p) {
+  const z = p.x1 * p.w1 + p.x2 * p.w2 + p.b;
+  const edge = (y1, w, x) => {
+    const cls = w < 0 ? 'edge edge-neg' : 'edge edge-pos';
+    const sw = (1 + 3 * Math.min(Math.abs(w), 3) / 3).toFixed(1);
+    const dash = w === 0 ? ' stroke-dasharray="3 4"' : '';
+    return `<path class="${cls}" stroke-width="${sw}"${dash} opacity="${(0.45 + 0.5 * Math.min(Math.abs(w), 3) / 3).toFixed(2)}" d="M66,${y1} C100,${y1} 104,${y1 < 70 ? 62 : 78} 132,${y1 < 70 ? 62 : 78}"/>
+      <g class="wtag ${w < 0 ? 'neg' : 'pos'}"><rect x="78" y="${(y1 + (y1 < 70 ? 62 : 78)) / 2 - 9}" width="40" height="15" rx="7.5"/><text x="98" y="${(y1 + (y1 < 70 ? 62 : 78)) / 2 + 2}" text-anchor="middle">${fmt(w, 1)}</text></g>`;
+  };
+  const inp = (y, l, v) => `<g class="inp"><rect class="b" x="4" y="${y - 13}" width="62" height="26" rx="13"/><text class="l" x="16" y="${y + 4}">${l}</text><text class="v" x="58" y="${y + 4}" text-anchor="end">${fmt(v, 1)}</text></g>`;
+  let s = `<svg viewBox="0 0 360 150" xmlns="${NS}">`;
+  s += edge(44, p.w1) + edge(104, p.w2);
+  s += inp(44, 'x₁', p.x1) + inp(104, 'x₂', p.x2);
+  if (variant === 'today') s += `<g transform="translate(132,40)">${todaySVG(p.type, z, p.b)}</g>`;
+  else s += `<g transform="translate(132,42)">${neuronSVG({ type: p.type, z, b: p.b, hot: ACT[p.type].fn(z) > 0.5, ports: [20, 36] })}</g>`;
+  return s + '</svg>';
+}
+
+const C = id => document.getElementById(id);
+function readCtrl() {
+  return { type: C('cType').value, x1: +C('cX1').value, w1: +C('cW1').value, x2: +C('cX2').value, w2: +C('cW2').value, b: +C('cB').value };
+}
+function paintCmp() {
+  const p = readCtrl();
+  C('oX1').textContent = fmt(p.x1, 1); C('oW1').textContent = fmt(p.w1, 1);
+  C('oX2').textContent = fmt(p.x2, 1); C('oW2').textContent = fmt(p.w2, 1); C('oB').textContent = fmt(p.b, 1);
+  C('nToday').innerHTML = demoBlock('today', p);
+  C('nA').innerHTML = demoBlock('A', p);
+  C('nB').innerHTML = demoBlock('B', p);
+}
+document.querySelectorAll('.ctrl input, .ctrl select').forEach(el => el.addEventListener('input', paintCmp));
+paintCmp();
+
+/* ── Zustände ──────────────────────────────────────────────────────────── */
+(function states() {
+  const list = [
+    { t: 'Ruhe', d: 'Kein Signal: grauer Rand, Punkt links unten.', o: { type: 'sigmoid', z: -2.6, b: 0 } },
+    { t: 'Feuert', d: 'Wert hoch: Rand im Akzent, Kästchen gefüllt. Im Dunkeln leichtes Leuchten.', o: { type: 'sigmoid', z: 2.4, b: 0.5, hot: true } },
+    { t: 'Gewählt', d: 'Angetippt zum Bearbeiten: gestrichelter Rahmen, sonst nichts.', o: { type: 'relu', z: 1.1, b: -0.3, sel: true } },
+    { t: 'Negativ', d: 'Tanh unter null: Punkt rot, Kästchen bleibt leer.', o: { type: 'tanh', z: -1.4, b: 0 } },
+  ];
+  C('states').innerHTML = list.map(s => `<div class="card"><div class="stage"><svg viewBox="-12 -20 236 112">${neuronSVG(s.o)}</svg></div><b>${s.t}</b><span>${s.d}</span></div>`).join('');
+})();
+
+/* ── Feld mit echtem Training (XOR, 2 → 3 → 1) ─────────────────────────── */
+const DATA = [[0, 0, 0], [0, 1, 1], [1, 0, 1], [1, 1, 0]];
+let net, epoch = 0, running = false, lossHist = [], cur = 1, selN = { li: 0, ni: 1 }, fieldVar = 'A';
+let seed = 7;
+const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+function initNet() {
+  seed = 7 + Math.floor(Math.random() * 1000);
+  net = [
+    { type: 'tanh', n: Array.from({ length: 3 }, () => ({ w: [rnd() * 2 - 1, rnd() * 2 - 1], b: rnd() * 2 - 1 })) },
+    { type: 'sigmoid', n: [{ w: [rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1], b: 0 }] },
+  ];
+  epoch = 0; lossHist = [];
+}
+const dAct = { tanh: y => 1 - y * y, sigmoid: y => y * (1 - y) };
+function forward(x) {
+  const zs = [], ys = [];
+  let inp = x;
+  for (const L of net) {
+    const z = L.n.map(n => n.b + n.w.reduce((s, w, i) => s + w * inp[i], 0));
+    const y = z.map(v => ACT[L.type].fn(v));
+    zs.push(z); ys.push(y); inp = y;
+  }
+  return { zs, ys };
+}
+function trainEpoch(lr) {
+  let loss = 0;
+  for (const [a, b, t] of DATA) {
+    const x = [a, b], { ys } = forward(x);
+    const out = ys[1][0], e = out - t; loss += e * e;
+    const d2 = e * dAct.sigmoid(out);
+    const d1 = net[0].n.map((n, i) => d2 * net[1].n[0].w[i] * dAct.tanh(ys[0][i]));
+    net[1].n[0].w = net[1].n[0].w.map((w, i) => w - lr * d2 * ys[0][i]);
+    net[1].n[0].b -= lr * d2;
+    net[0].n.forEach((n, i) => { n.w = n.w.map((w, j) => w - lr * d1[i] * x[j]); n.b -= lr * d1[i]; });
+  }
+  epoch++;
+  return loss / DATA.length;
+}
+
+// Lage im Feld (viewBox 900 × 470)
+const COLX = { in: 30, h: 270, o: 540, out: 830 };
+const POS = {
+  in: [175, 295],
+  h: [110, 235, 360],
+  o: [235],
+};
+function edgeSVG(x1, y1, x2, y2, w, label) {
+  const cls = w < 0 ? 'edge edge-neg' : 'edge edge-pos';
+  const a = Math.min(Math.abs(w), 4) / 4;
+  const sw = (0.8 + 4.2 * a).toFixed(1), op = (0.25 + 0.6 * a).toFixed(2);
+  const mx = (x1 + x2) / 2;
+  let s = `<path class="${cls}" stroke-width="${sw}" opacity="${op}" d="M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}"/>`;
+  if (label) {
+    const lx = x1 + (x2 - x1) * 0.62, ly = y1 + (y2 - y1) * 0.62 + (y2 > y1 ? 2 : -2);
+    s += `<g class="wtag ${w < 0 ? 'neg' : 'pos'}"><rect x="${lx - 22}" y="${ly - 8}" width="44" height="16" rx="8"/><text x="${lx}" y="${ly + 3.5}" text-anchor="middle">${fmt(w, 2)}</text></g>`;
+  }
+  return s;
+}
+function paintField() {
+  const x = DATA[cur].slice(0, 2), { zs, ys } = forward(x);
+  const NW = 150, NH = 56;
+  let s = `<svg viewBox="0 0 1000 470" xmlns="${NS}" class="${fieldVar === 'B' ? 'vB' : ''}">`;
+  // Bahnen
+  const lanes = [[COLX.in - 14, 'EINGABEN', '2'], [COLX.h - 22, 'SCHICHT 1', '3 Neuronen'], [COLX.o - 22, 'SCHICHT 2', '1 Neuron'], [COLX.out - 14, 'AUSGÄNGE', '1']];
+  lanes.forEach(([lx, h, n], i) => {
+    s += `<text class="lane-h" x="${lx + 4}" y="30">${h}</text><text class="lane-n" x="${lx + 4}" y="47">${n}</text>`;
+    if (i === 1 || i === 2) s += `<g class="pm"><rect x="${lx + 150}" y="20" width="24" height="24" rx="7"/><text x="${lx + 162}" y="37" text-anchor="middle">−</text></g><g class="pm"><rect x="${lx + 178}" y="20" width="24" height="24" rx="7"/><text x="${lx + 190}" y="37" text-anchor="middle">+</text></g>`;
+    if (i) s += `<line class="lane" x1="${lx - 18}" y1="16" x2="${lx - 18}" y2="456"/>`;
+  });
+  // "+ Schicht"
+  s += `<g class="addcol"><rect x="${COLX.out - 82}" y="120" width="54" height="80" rx="12"/><text x="${COLX.out - 55}" y="158" text-anchor="middle">+</text><text x="${COLX.out - 55}" y="174" text-anchor="middle" font-size="10">Schicht</text></g>`;
+  // Kanten Eingang → Schicht 1
+  net[0].n.forEach((n, i) => n.w.forEach((w, j) => {
+    s += edgeSVG(COLX.in + 110, POS.in[j], COLX.h, POS.h[i] - NH / 2 + 20 + j * 16, w, selN.li === 0 && selN.ni === i);
+  }));
+  // Schicht 1 → Schicht 2
+  net[1].n[0].w.forEach((w, i) => {
+    s += edgeSVG(COLX.h + NW + 56, POS.h[i], COLX.o, POS.o[0] - NH / 2 + 14 + i * 14, w, selN.li === 1);
+  });
+  // Ausgang-Leitung
+  const yo = ys[1][0], ok = Math.round(yo) === DATA[cur][2];
+  s += `<path class="edge edge-pos" stroke-width="2" d="M${COLX.o + NW + 56},${POS.o[0]} C${COLX.out - 20},${POS.o[0]} ${COLX.out - 20},${POS.o[0]} ${COLX.out},${POS.o[0]}"/>`;
+  // Eingänge
+  x.forEach((v, j) => {
+    s += `<g class="inp" data-in="${j}"><rect class="b" x="${COLX.in}" y="${POS.in[j] - 16}" width="110" height="32" rx="16"/><text class="l" x="${COLX.in + 14}" y="${POS.in[j] + 4.5}">Eingang ${'AB'[j]}</text><text class="v" x="${COLX.in + 96}" y="${POS.in[j] + 4.5}" text-anchor="end">${v}</text></g>`;
+  });
+  // Neuronen
+  const put = (li, ni, cx, cy) => {
+    const L = net[li], n = L.n[ni], z = zs[li][ni];
+    const ports = n.w.map((_, j) => li === 0 ? 20 + j * 16 : 14 + j * 14);
+    s += `<g class="ncell" data-li="${li}" data-ni="${ni}" transform="translate(${cx},${cy - NH / 2})">${neuronSVG({ type: L.type, z, b: n.b, hot: ACT[L.type].fn(z) > 0.5, sel: selN.li === li && selN.ni === ni, ports })}</g>`;
+  };
+  net[0].n.forEach((_, i) => put(0, i, COLX.h, POS.h[i]));
+  put(1, 0, COLX.o, POS.o[0]);
+  // Ausgang-Steckplatz
+  const oy = POS.o[0];
+  s += `<g class="outslot"><rect class="b" x="${COLX.out}" y="${oy - 38}" width="150" height="76" rx="12"/>
+    <text class="t" x="${COLX.out + 14}" y="${oy - 14}">XOR</text>
+    <text class="s" x="${COLX.out + 14}" y="${oy + 2}">aus Schicht 2 · Neuron 1</text>
+    <text class="m" x="${COLX.out + 14}" y="${oy + 22}">Wert ${fmt(yo, 2)} · Soll ${DATA[cur][2]}</text>
+    <circle class="${ok ? 'okc' : 'bad'}" cx="${COLX.out + 134}" cy="${oy - 19}" r="5"/></g>`;
+  // Hinweis
+  s += `<text class="lane-n" x="30" y="452" fill-opacity=".8">Neuron antippen = Gewichte zeigen · Eingang antippen = 0 ↔ 1</text>`;
+  C('board').innerHTML = s + '</svg>';
+
+  // Seitenleiste
+  C('epoch').textContent = 'Epoche ' + epoch;
+  const last = lossHist[lossHist.length - 1];
+  C('lossV').textContent = last == null ? '–' : fmt(last, 4);
+  const pts = lossHist.length > 1 ? lossHist : [0.25, 0.25];
+  const mx = Math.max(0.3, ...pts), n = pts.length;
+  const line = pts.map((v, i) => `${(i / (n - 1) * 260).toFixed(1)},${(96 - v / mx * 88).toFixed(1)}`).join(' ');
+  C('lossSvg').innerHTML = `<polygon class="la" points="0,100 ${line} 260,100"/><polyline class="lc" points="${line}"/>`;
+  C('truth').innerHTML = '<tr><th>A</th><th>B</th><th>Soll</th><th>Netz</th></tr>' + DATA.map((d, i) => {
+    const y = forward([d[0], d[1]]).ys[1][0], good = Math.round(y) === d[2];
+    return `<tr class="${i === cur ? 'cur' : ''}" data-row="${i}"><td>${d[0]}</td><td>${d[1]}</td><td>${d[2]}</td><td class="${good ? 'ok' : 'no'}">${fmt(y, 2)}</td></tr>`;
+  }).join('');
+}
+C('board').addEventListener('click', e => {
+  const inp = e.target.closest('[data-in]');
+  if (inp) {
+    const j = +inp.dataset.in, x = DATA[cur].slice(0, 2); x[j] = 1 - x[j];
+    cur = DATA.findIndex(d => d[0] === x[0] && d[1] === x[1]); paintField(); return;
+  }
+  const n = e.target.closest('.ncell');
+  if (n) { selN = { li: +n.dataset.li, ni: +n.dataset.ni }; paintField(); }
+});
+C('truth').addEventListener('click', e => { const r = e.target.closest('[data-row]'); if (r) { cur = +r.dataset.row; paintField(); } });
+C('lr').oninput = () => { C('lrV').textContent = fmt(+C('lr').value, 2); };
+C('go').onclick = () => { running = !running; C('go').textContent = running ? 'Pause' : 'Start'; if (running) loop(); };
+C('step').onclick = () => { lossHist.push(trainEpoch(+C('lr').value)); paintField(); };
+C('reinit').onclick = () => { initNet(); paintField(); };
+C('fieldVar').onclick = e => {
+  const v = e.target.dataset.v; if (!v) return; fieldVar = v;
+  [...C('fieldVar').children].forEach(b => b.classList.toggle('on', b === e.target)); paintField();
+};
+let lastPaint = 0;
+function loop(t = 0) {
+  if (!running) return;
+  for (let i = 0; i < 4; i++) { const l = trainEpoch(+C('lr').value); if (epoch % 4 === 0) lossHist.push(l); }
+  if (lossHist.length > 400) lossHist = lossHist.filter((_, i) => i % 2 === 0);
+  if (t - lastPaint > 60) { paintField(); lastPaint = t; }
+  if (lossHist[lossHist.length - 1] < 0.002) { running = false; C('go').textContent = 'Start'; paintField(); return; }
+  requestAnimationFrame(loop);
+}
+initNet(); paintField();
+
+/* ── Symbole der Startseite ────────────────────────────────────────────── */
+const ICONS = {
+  neuron: '<circle cx="5" cy="9" r="2.4"/><circle cx="5" cy="19" r="2.4"/><path d="M7.3 9.6 12 13M7.3 18.4 12 15"/><rect x="12" y="10" width="10" height="8" rx="3"/><path d="M22 14h3"/>',
+  curves: '<path d="M3 22h22M14 4v20"/><path d="M4 21c6 0 6-14 10-14s4 0 10 0" />',
+  net: '<circle cx="5" cy="8" r="2.2"/><circle cx="5" cy="20" r="2.2"/><rect x="11" y="4" width="6" height="5" rx="2"/><rect x="11" y="12" width="6" height="5" rx="2"/><rect x="11" y="20" width="6" height="5" rx="2"/><rect x="21" y="12" width="5" height="5" rx="2"/><path d="M7 8l4-1.5M7 8l4 6M7 20l4-6M7 20l4 2.5M17 6.5l4 7M17 14.5h4M17 22.5l4-7"/>',
+  gate: '<path d="M5 7h7a7 7 0 0 1 0 14H5z"/><path d="M2 11h3M2 17h3M19 14h5"/>',
+  seg: '<path d="M10 5h8M9 7v6M19 7v6M10 14h8M9 16v6M19 16v6M10 23h8"/>',
+  target: '<circle cx="14" cy="14" r="10"/><circle cx="14" cy="14" r="5.5"/><circle cx="14" cy="14" r="1.6"/>',
+  bird: '<path d="M3 13c4-4 7-4 11 0 4-4 7-4 11 0"/><path d="M8 17c2.5-1.5 4-1.5 6 0 2-1.5 3.5-1.5 6 0"/>',
+};
+document.querySelectorAll('[data-ic]').forEach(el => { el.innerHTML = `<svg viewBox="0 0 28 28">${ICONS[el.dataset.ic]}</svg>`; });
+
+/* ── Farbmuster ────────────────────────────────────────────────────────── */
+C('swatches').innerHTML = [['--accent', 'Akzent / positiv'], ['--neg', 'negativ'], ['--in', 'Eingang'], ['--paper', 'Papier'], ['--surface', 'Fläche'], ['--ink', 'Schrift']]
+  .map(([v, l]) => `<div><i style="background:var(${v})"></i>${l}</div>`).join('');
+</script>
+</body>
+</html>
