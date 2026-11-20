@@ -69,6 +69,7 @@
 
   // Level 8 (labor.html?level=8): ein Netz mit 4 Neuronen = 8 Welten, Erklärkarte vorweg
   const LEVEL8 = /[?&]level=8\b/.test(location.search);
+  let EARNED8 = false;
   if (LEVEL8) document.body.dataset.level = '8';
 
   /* ── Zustand ── */
@@ -486,6 +487,8 @@
     P.pts.forEach((p, i) => { if (predict(S.W, i, H) === p.y) hit[p.y]++; });
     $('#hits').innerHTML = '<span>erkannt:</span>' + [0, 1, 2].map(k => '<span style="color:' + SPC[k] + '">' + pimg(k) + '<b>' + NAMES[k] + '</b> ' + hit[k] + '/' + counts[k] + '</span>').join('');
     $('#sWrong').textContent = (N - hit[0] - hit[1] - hit[2]) + ' von ' + N;
+    // Profilbild Eselspinguin (Migration 0299): Level 8 allein = das Netz sortiert mind. 300 von 342 richtig
+    if (LEVEL8 && !MP8 && !EARNED8 && hit[0] + hit[1] + hit[2] >= 300 && window.NTRaum && NTRaum.inRoom) { EARNED8 = true; NTRaum.earn(8); }
     $('#sLoss').textContent = fmt(lossAll(S.W), 2);
   }
 

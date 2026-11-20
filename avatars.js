@@ -89,7 +89,9 @@
     { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature',
       hint: 'Spiel ein Szenario, das deine Lehrkraft mit der Klasse teilt — dann bekommst du die Figuren, die darin vorkommen. Das klappt nur, wenn du angemeldet bist.' },
     { id: 'mps_derby',          skill: 'derby',          folder: 'Definitions Derby',    label: 'How to Fachbegriffe',
-      hint: 'Lass auf der Insel deine Wesen schlüpfen und wachsen — jede Form, die eines deiner Wesen erreicht, kannst du als Profilbild nehmen. Gewinnst du mit deinem Team den Kistenturm, bekommst du eure Teamfigur. Das klappt nur, wenn du angemeldet bist.' }
+      hint: 'Lass auf der Insel deine Wesen schlüpfen und wachsen — jede Form, die eines deiner Wesen erreicht, kannst du als Profilbild nehmen. Gewinnst du mit deinem Team den Kistenturm, bekommst du eure Teamfigur. Das klappt nur, wenn du angemeldet bist.' },
+    { id: 'mps_nebeltal',       skill: 'nebeltal',       folder: 'Nebeltal',             label: 'Nebeltal',
+      hint: 'Schaff Level 1, 2 oder 3 — dann bekommst du Pinguin Main mit Schal. Level 5 bringt Adelie- und Zügelpinguin, Level 8 den Eselspinguin. Spielst du eine Runde „Gemeinsam spielen“ mit, bekommst du den 3D-Pinguin. Das klappt nur, wenn du angemeldet bist.' }
   ];
 
   const AVATAR_GROUPS = [
@@ -267,6 +269,13 @@
      '<gruppe>_<endung>' — darf sich nie mehr ändern, sie steht in
      profiles.avatar_id. */
   const MPS_CATALOG = {
+    mps_nebeltal: [
+      ['main',      'main_avatar.png',      'Pinguin Main'],
+      ['adelie',    'adelie_avatar.png',    'Adeliepinguin'],
+      ['zuegel',    'zuegel_avatar.png',    'Zügelpinguin'],
+      ['esel',      'esel_avatar.png',      'Eselspinguin'],
+      ['pinguin3d', 'pinguin3d_avatar.png', '3D-Pinguin']
+    ],
     mps_knowledgestack: [
       ['puddl',   '00_Puddl_avatar.png',   'Puddl'],
       ['spark',   '01_Spark_avatar.png',   'Spark'],

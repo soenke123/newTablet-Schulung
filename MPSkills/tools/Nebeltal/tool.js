@@ -15,6 +15,8 @@
    · Ansicht der Übersicht (ohne Migration, 19.11.2026): data.view =
      'pfad' (Lernpfad, Vorgabe) | 'frei' (freie Nutzung), die Lehrkraft
      schaltet um, die Tablets folgen.
+   · Profilbilder (Migration 0299): ein geschafftes Level meldet die Seite
+     mit fn 'earn' → nt_earn (Tablet) bzw. nt_room_earn (Lehrkraft).
    · Gemeinsam spielen (Migration 0296): data.mp = 1 setzt der Server
      (nt_room_act 'on'/'off'). Danach fragt die Seite im Rahmen selbst
      nach (nt_play bzw. nt_room_get/nt_room_act) – über diese Brücke,
@@ -31,7 +33,7 @@
 (function () {
   'use strict';
 
-  const V = '20261120a';
+  const V = '20261120b';
   let root = null, frame = null, ctx = null, view = null, onResize = null, onMsg = null;
   let ready = false, lastSent = '', levels = null, vw = null;
 
@@ -74,6 +76,15 @@
     else if (m.fn === 'play' && !isPresenter()) res = await ctx.actions.call('nt_play', { p: a.p || {} });
     else if (m.fn === 'get' && isPresenter()) res = await ctx.actions.call('nt_room_get', {});
     else if (m.fn === 'act' && isPresenter()) res = await ctx.actions.call('nt_room_act', { p_act: String(a.act || ''), p_args: a.args || {} });
+    else if (m.fn === 'earn') {
+      // Level geschafft → Profilbilder (Migration 0299); neue Bilder: Hinweis + Punkt am Profilbild
+      const lv = Math.round(+a.level) || 0;
+      res = await ctx.actions.call(isPresenter() ? 'nt_room_earn' : 'nt_earn', { p_level: lv });
+      if (res && res.ok && Array.isArray(res.new) && res.new.length) {
+        ctx.toast(res.new.length === 1 ? 'Neues Profilbild freigeschaltet!' : res.new.length + ' neue Profilbilder freigeschaltet!');
+        if (window.loadMpskillsUnlocks) window.loadMpskillsUnlocks();
+      }
+    }
     else res = { ok: false, error: 'not_allowed' };
     // Gemeinsam-Signal geändert (an/aus): sofort den Raum nachladen statt bis zum nächsten Takt
     if (m.fn === 'act' && (a.act === 'on' || a.act === 'off') && res && res.ok) {

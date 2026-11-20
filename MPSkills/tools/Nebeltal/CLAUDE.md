@@ -335,6 +335,21 @@ Band in der Schalfarbe (lange Sprünge unterteilt, damit er auf dem Boden liegt)
 (`others`, `scale`) mit Ring, Top 5 groß, Start + Flagge (`flag.s`), Namen als HTML (`.mml`); Name in der
 Rangliste antippen = nur dieser Weg hell (`MAP.sel`). Ohne zweites WebGL: alte Karte von oben (`drawMap`).
 
+## Profilbilder (Migration 0299, Sönke 20.11.2026)
+
+Fünf Bilder in „avatare MPSkills/Nebeltal/“, Gruppe `mps_nebeltal` in avatars.js (ids `mps_nebeltal_<x>` nie ändern),
+entlang des Lernpfads: Level 1, 2 oder 3 geschafft → `main` (Pinguin Main mit Schal) · Level 5 → `adelie` + `zuegel` ·
+Level 8 → `esel` · eine Runde „Gemeinsam spielen“ mitgespielt → `pinguin3d` (die Figur aus grafik.js). Nur mit Konto.
+- Allein: spiel.js `showResult` (nicht gemeinsam) bzw. labor.js (Level 8 allein: Netz sortiert ≥ 300 von 342, einmal je
+  Seitenaufruf) → `NTRaum.earn(level)` → Brücke fn `earn` → tool.js ruft `nt_earn(p_token, p_level)` (Tablet; zählt nur
+  freigegebene Level, sonst `not_shared`) bzw. `nt_room_earn(p_code, p_level)` (Lehrkraft, aufs eigene Konto). Neue Bilder:
+  Hinweis „Neues Profilbild freigeschaltet!“ + `loadMpskillsUnlocks()` (blauer Punkt am Profilbild).
+- Gemeinsam: Trigger `nt_rounds_end_avatars` (Phase → ended) gibt allen mit `nt_players.run` = Runde `mp` + das Level.
+- Ohne Konto merkt `nt_earned` (je Teilnehmer, CASCADE mit dem Raum), was geschafft ist; Anmeldung im Raum (user_id) holt
+  die Bilder nach (`nt_participant_login_avatars`). Prüfstand `supabase/tests/0299_nebeltal_avatare.mjs`.
+- Bilder neu bauen: `img/avatar3d.cjs` (Figur vor Schwarz/Weiß, Playwright) + `img/avatare.py` (Büste um den Kopf aus Sönkes
+  Originalen in voller Auflösung, 3D per Differenz freigestellt), Aufruf oben in avatare.py.
+
 ## Sparmodus
 
 `LWMotion.low`: dpr 1 und 30 B/s; Glas-Kästen ohne Weichzeichner; kein Schnee, Polarlicht steht still.

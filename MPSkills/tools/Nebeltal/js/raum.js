@@ -9,7 +9,7 @@
      heraus   { type: 'nt:ready' }                 Seite steht
               { type: 'nt:levels', levels: […] }   Lehrkraft teilt/entzieht
               { type: 'nt:view', view }            Lehrkraft schaltet Lernpfad ↔ freie Nutzung
-              { type: 'nt:rpc', id, fn, args }     fn: play (Tablet) · get/act (Lehrkraft)
+              { type: 'nt:rpc', id, fn, args }     fn: play (Tablet) · get/act (Lehrkraft) · earn (beide, 0299)
      zurück   { type: 'nt:res', id, res }
 
    Rolle: ?raum=lehrer|schueler (tool.js hängt es an). Beim Wechsel
@@ -217,6 +217,8 @@ window.NTRaum = (function () {
     get levels() { return S.levels; }, get mp() { return S.mp; }, get got() { return S.got; }, get view() { return S.view; },
     on(f) { subs.push(f); },
     rpc, ready, post,
+    // Level geschafft → Profilbilder (Migration 0299); der Rahmen meldet neue Bilder selbst
+    earn(level) { if (role) rpc('earn', { level }); },
     setLevels(list) { S.levels = list.slice(); post({ type: 'nt:levels', levels: list }); for (const f of subs.slice()) f(); },
     setView(v) { S.view = v === 'frei' ? 'frei' : 'pfad'; post({ type: 'nt:view', view: S.view }); for (const f of subs.slice()) f(); },
     shared: key => !role || role === 'lehrer' || !!(S.levels && S.levels.includes(key)),

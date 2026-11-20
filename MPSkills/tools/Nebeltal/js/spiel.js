@@ -663,6 +663,7 @@
     const { n, line } = rate();
     const old = parseInt(LS.get(bestKey(L.id)), 10);
     if (!(old >= n)) LS.set(bestKey(L.id), String(n));
+    if (R.inRoom && R.earn) R.earn(L.id);          // Profilbilder (Migration 0299), zählt nur Level 1–3 und 5
 
     S.res = { n, line };
     resultBar();
