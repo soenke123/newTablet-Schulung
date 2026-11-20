@@ -140,20 +140,17 @@ html[data-theme="dark"] .pfad { --mist:color-mix(in srgb, var(--fog) 74%, #a9c2e
           mask-image:linear-gradient(to bottom, transparent 0, #000 150px), linear-gradient(to right, #000 0, #000 92%, transparent);
   -webkit-mask-composite:source-in; mask-composite:intersect;
   transition:top 3.2s cubic-bezier(.45, 0, .2, 1); }
-.pfad-mist::before { content:''; position:absolute; left:-10%; right:-10%; top:120px; height:150px;
-  background:radial-gradient(80px 55px at 50% 100%, color-mix(in srgb, var(--mist) 85%, transparent) 55%, transparent 72%) 0 0 / 180px 100% repeat-x,
-             radial-gradient(110px 65px at 50% 100%, color-mix(in srgb, var(--mist) 70%, transparent) 50%, transparent 72%) 90px 30px / 250px 100% repeat-x;
-  filter:blur(10px); animation:mistDrift 26s ease-in-out infinite alternate; }
-.pfad-mist i { position:absolute; width:62%; height:240px; border-radius:50%; filter:blur(30px);
-  background:radial-gradient(closest-side, color-mix(in srgb, var(--mist) 85%, #ffffff 15%), transparent);
-  opacity:.8; animation:mistDrift 24s ease-in-out infinite alternate; }
-.pfad-mist i:nth-child(1) { left:-14%; top:170px; }
-.pfad-mist i:nth-child(2) { left:40%; top:290px; animation-duration:31s; animation-delay:-9s; }
-.pfad-mist i:nth-child(3) { left:6%; top:500px; width:72%; animation-duration:37s; animation-delay:-17s; }
+/* (Wolkenkante ::before entfernt 20.11.2026: abgeschnittene Ellipsen = Halbkreise + harte Linie) */
+.pfad-mist i { position:absolute; width:90%; height:260px; border-radius:50%;
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--mist) 70%, #ffffff 30%), transparent);
+  opacity:.55; animation:mistDrift 24s ease-in-out infinite alternate; }
+.pfad-mist i:nth-child(1) { left:-30%; top:140px; }
+.pfad-mist i:nth-child(2) { left:35%; top:260px; animation-duration:31s; animation-delay:-9s; }
+.pfad-mist i:nth-child(3) { left:-5%; top:460px; width:110%; animation-duration:37s; animation-delay:-17s; }
 @keyframes mistDrift { from { transform:translateX(-7%); } to { transform:translateX(9%); } }
 .pst.hid .pst-card { filter:blur(6px); opacity:.45; }
 .pst.hid .pst-mark { filter:blur(3px); opacity:.3; }
 .pst.hid ~ .pst.hid .pst-card, .pst.hid ~ .pst.hid .pst-mark { opacity:.15; }   /* nur der nächste Halt schimmert durch */
-html[data-motion="low"] .pfad-mist::before, html[data-motion="low"] .pfad-mist i { animation:none; filter:none; }
+html[data-motion="low"] .pfad-mist i { animation:none; }
 html[data-motion="low"] .pfad-mist { transition:none; }
-@media (prefers-reduced-motion: reduce) { .pfad-mist::before, .pfad-mist i { animation:none; } .pfad-mist { transition:none; } }
+@media (prefers-reduced-motion: reduce) { .pfad-mist i { animation:none; } .pfad-mist { transition:none; } }

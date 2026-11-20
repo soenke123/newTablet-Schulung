@@ -160,7 +160,7 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   `.pfad-mist` (z-index über den Karten, Wolken `<i>` treiben, Ränder per mask weich, Farbe `--mist`), spätere Halte `.hid`
   (inert, verschwommen) – der nächste schimmert nur durch, die weiteren fast gar nicht. Die Nebelbank beginnt `MIST_PAD` (150 px)
   über der dichten Stelle und blendet dort per mask weich ein (vorher schnitt overflow:hidden die Wolken oben gerade ab, und
-  links blieb der Berg klar). Der Nebel auf der Bergkuppe ist dann aus (oben klar). Rückt die
+  links blieb der Berg klar). Keine Wolkenkante aus abgeschnittenen Ellipsen mehr (gab Halbkreise), nur drei große weiche Schwaden `<i>`. Der Nebel auf der Bergkuppe ist dann aus (oben klar). Rückt die
   Klasse weiter (`nt.fogAt` im Gerät < aktueller Halt), startet die Nebelbank an der alten Stelle und sinkt in ~3 s
   (`placeMist` in `draw`); Sparmodus: ohne Bewegung.
 - **Lobby im Lernpfad** (mehr.js, `onPath()`): statt „Level wählen“ nur der Weg des Halts (`PATH_RUNS` [1, 2, 3] bzw. [8],
