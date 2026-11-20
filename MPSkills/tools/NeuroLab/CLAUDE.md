@@ -47,7 +47,7 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
    `../Nebeltal/img/frei/`, Pinguin antippen = Eingabe, „x von 30 richtig“, „Das Wichtigste“, darunter Karte `.nn-next`
    „Das war das einfachste Neuron: das Perzeptron – welche gibt es noch?“ mit Knopf zu `n-typen` (nur wenn freigegeben).
    **Keine Logik-Gatter (UND/XOR) und keine Sperber auf dieser Seite.** `n-typen` „Alle Neuronen“: Übersicht = je Typ eine
-   Karte `.nt-card` (große Kurve `bigCurve` mit Achsen und Werten, Ausgabe, EIN Satz `KURZ`, „Für komplexe Netze“ = `DEEP` mit 0–3 Punkten + Wort; der Satz dazu nur im Detail, Sönke: Übersicht sonst zu viel Text); antippen = Detail wie Schritt 7 mit diesem Typ (`PENG.type`,
+   Karte `.nt-card` (große Kurve `bigCurve` mit Achsen und Werten, Ausgabe, Formel der Aktivierung groß `.nt-formula` aus `F_TXT`, EIN Satz `KURZ`; nichts zum Einsatz – „Für komplexe Netze“ `DEEP` (0–3 Punkte + Satz) steht nur im Detail; Sönke: Übersicht sonst zu viel Text). Detail: Formel groß im Kasten `.nt-fbox` zwischen Neuron und Rechnung (nicht mehr klein neben der Rechnung); antippen = Detail wie Schritt 7 mit diesem Typ (`PENG.type`,
    Neuron `typed`: Typ-Name + Kurve in Typ-Farbe, Ausgabe als Zahl, Sigmoid „x % Zügel“; Ebene färbt nach der Ausgabe:
    gold = positiv, grau = negativ, Stärke = Größe), oben Chips zum Umschalten (Gewichte bleiben → Unterschied sehen),
    Text `ANDERS` je Typ (die Gerade ist bei allen dieselbe, anders ist, was herauskommt) + Wofür/Achtung aus `INFO`.

@@ -249,11 +249,14 @@
   /* Die Rechnung unter dem Neuron: oben die Buchstaben, darunter dieselbe
      Stelle mit Zahlen – jede Größe in ihrer Farbe. Noch nicht Aufgedecktes
      steht grau als „?“ da. */
+  const FL = '<span class="fl"><i>f</i>(<i>z</i>) =</span> ';
+  const FRAC = (a, b) => `<span class="math-frac"><span class="mnum">${a}</span><span class="mden">${b}</span></span>`;
   const F_TXT = {
-    linear: '<i>f</i>(<i>z</i>) = <i>z</i>',
-    relu: '<i>f</i>(<i>z</i>) = max(0, <i>z</i>)',
-    sigmoid: '<i>f</i>(<i>z</i>) = <span class="math-frac"><span class="mnum">1</span><span class="mden">1 + e<sup>−<i>z</i></sup></span></span>',
-    tanh: '<i>f</i>(<i>z</i>) = tanh(<i>z</i>)',
+    perceptron: FL + '<span class="mcases"><span class="mbrace">{</span><span class="mcl"><span>1, wenn <i>z</i> &gt; 0</span><span>0, sonst</span></span></span>',
+    linear: FL + '<i>z</i>',
+    relu: FL + 'max(0, <i>z</i>)',
+    sigmoid: FL + `${FRAC('1', '1 + e<sup>−<i>z</i></sup>')}`,
+    tanh: FL + `${FRAC('e<sup><i>z</i></sup> − e<sup>−<i>z</i></sup>', 'e<sup><i>z</i></sup> + e<sup>−<i>z</i></sup>')}`,
   };
   function calcHTML(m, show) {
     const z = zOf(m), fire = z > 0, t = m.type;
@@ -269,7 +272,7 @@
       cell('c-b', '<i>b</i>', par(m.b), B), op('='), cell('c-z res', '', `<b>${num(z)}</b>`, B),
     ].join('');
     const yv = t === 'perceptron' ? (fire ? 1 : 0) : num(yOf(m, z));
-    const why = !F ? '' : t === 'perceptron' ? `<span class="mwhy">weil <i>z</i> ${fire ? '&gt;' : '≤'} 0</span>` : `<span class="mwhy">mit ${F_TXT[t]}</span>`;
+    const why = !F ? '' : t === 'perceptron' ? `<span class="mwhy">weil <i>z</i> ${fire ? '&gt;' : '≤'} 0</span>` : '';
     const yRow = [
       cell('c-y', '<i>y</i>', '<i>y</i>'), op('='), cell('c-f', '<i>f</i>(<i>z</i>)', `<i>f</i>(${num(z)})`, F), op('='),
       cell('c-y res', '', `<b>${yv}</b>`), why,
@@ -500,7 +503,9 @@
     N.setShow(4);
     PL = makePlane(m, { onChange: sync });
     const grid = h('<div class="nw-split"><div class="nw-left"></div><div class="nw-right"></div></div>');
-    grid.children[0].append(N.el, calc);
+    grid.children[0].append(N.el);
+    if (o.typed) grid.children[0].append(h(`<div class="nt-fbox"><span class="nt-fk">Aktivierungsfunktion</span><span class="m">${F_TXT[m.type]}</span></div>`));
+    grid.children[0].append(calc);
     grid.children[1].append(PL.el);
     if (m.points) grid.children[1].append(h(pengLegend()), msg);
     grid.children[1].append(h(dragLegend));
@@ -688,8 +693,8 @@
         <span class="nt-head"><b>${act.fullName}</b>${k === 'perceptron' ? '<span class="nt-badge">kennst du schon</span>' : ''}</span>
         ${bigCurve(k)}
         <span class="nt-out">Ausgabe: <b>${INFO[k].out}</b></span>
+        <span class="nt-formula m">${F_TXT[k]}</span>
         <span class="nt-txt">${KURZ[k]}</span>
-        ${deepHTML(k)}
         <span class="nt-go">Ausprobieren ›</span></button>`);
       c.addEventListener('click', () => { typSel = k; page.innerHTML = ''; renderTyp(page, api); page.closest('#neuron-page').scrollTop = 0; });
       grid.appendChild(c);
