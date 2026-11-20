@@ -57,7 +57,7 @@ function kreislauf() {
   v += peng('gentoo_2', 905, 228, 100, true);
   s += card(660, 20, 320, 250, '2', v, 'Ist und Soll nebeneinander');
   // 3 rückwärts
-  s += card(660, 330, 320, 250, '3', net(700, 420, 'back') + `<text x="760" y="413" font-size="15" font-weight="700" fill="${C.red}">?</text><text x="760" y="508" font-size="15" font-weight="700" fill="${C.red}">?</text>`, 'Wer hatte wie viel Anteil am Fehler?');
+  s += card(660, 330, 320, 250, '3', net(700, 420, 'back') + `<text x="760" y="413" font-size="15" font-weight="700" fill="${C.red}">?</text><text x="760" y="508" font-size="15" font-weight="700" fill="${C.red}">?</text>`, 'Wer war wie stark schuld am Fehler?');
   // 4 Abstieg: Profil einer Mulde
   let p = '';
   const px = x => 40 + x, py = t => t;
@@ -91,7 +91,7 @@ function neuron() {
   const W = 1080, H = 300;
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Inter" fill="${C.ink}">${arrowDefs}`;
   s += peng('gentoo_1', 62, 250, 170);
-  const ins = [[390, 60, sub('x','1') + ' = 2', 'Flosse − 20 cm'], [390, 150, sub('x','2') + ' = 1', 'Schnabelhöhe − 14 mm'], [390, 240, '1', 'immer 1 (Bias-Eingang)']];
+  const ins = [[390, 60, sub('x','1') + ' = 2', 'Flosse − 20 cm'], [390, 150, sub('x','2') + ' = 1', 'Schnabelhöhe − 14 mm'], [390, 240, '1', 'Bias: Eingang immer 1']];
   const n = [700, 150];
   const wl = [sub('w','1') + ' = 0,5', sub('w','2') + ' = 0,3', 'b = 3,0'];
   ins.forEach(([x, y, lab, cap], i) => {
@@ -104,46 +104,50 @@ function neuron() {
   s += `<circle cx="${n[0]}" cy="${n[1]}" r="46" fill="${C.accD}" stroke="${C.ink}" stroke-width="3"/><text x="${n[0]}" y="${n[1]+14}" text-anchor="middle" font-size="40" font-weight="800">Σ</text>`;
   s += `<line x1="${n[0]+48}" y1="${n[1]}" x2="${n[0]+130}" y2="${n[1]}" stroke="${C.acc}" stroke-width="4" marker-end="url(#ah)"/>`;
   s += `<rect x="${n[0]+140}" y="${n[1]-36}" width="210" height="72" rx="14" fill="#fff" stroke="${C.acc}" stroke-width="3"/>`;
-  s += `<text x="${n[0]+245}" y="${n[1]-6}" text-anchor="middle" font-size="18" font-weight="700">Schätzung ŷ = ? kg</text><text x="${n[0]+245}" y="${n[1]+22}" text-anchor="middle" font-size="16" fill="${C.green}" font-weight="700">echt: y = 5,1 kg</text>`;
-  s += `<text x="${n[0]}" y="${n[1]+78}" text-anchor="middle" font-size="15" fill="${C.soft}">Neuron ohne σ (wie Level 4)</text>`;
+  s += `<text x="${n[0]+245}" y="${n[1]-6}" text-anchor="middle" font-size="18" font-weight="700">Schätzung = ? kg</text><text x="${n[0]+245}" y="${n[1]+22}" text-anchor="middle" font-size="16" fill="${C.green}" font-weight="700">echt: 5,1 kg</text>`;
+  s += `<text x="${n[0]}" y="${n[1]+78}" text-anchor="middle" font-size="15" fill="${C.soft}">Neuron wie in Level 4</text>`;
   s += `</svg>`; return s;
 }
-// Welt (w1 | b) mit w2 = 0,3 fest
+// Welt (w1 | w2), b = 3,0 fest: Fehler für fünf Pinguine zusammen = Mulde
+// Pinguine (x1, x2): (2,1) (0,2) (3,0) (1,3) (4,2), echt = 0,9·x1 + 0,3·x2 + 3,0 → tiefste Stelle (0,9 | 0,3)
 function welt() {
   const W = 1000, H = 520, L = 90, R = 960, T = 30, B = 450;
-  const x0 = 0, x1 = 2.5, y0 = 2.6, y1 = 4.2;
+  const x0 = 0, x1 = 2.5, y0 = -0.7, y1 = 1.3;
   const X = v => L + (v - x0) / (x1 - x0) * (R - L), Y = v => B - (v - y0) / (y1 - y0) * (B - T);
+  const A = [[6, 2.6], [2.6, 3.6]], M = [0.9, 0.3];
+  const Q = (u, v) => { const a = u - M[0], c = v - M[1]; return 0.5 * (A[0][0]*a*a + 2*A[0][1]*a*c + A[1][1]*c*c); };
   let s = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" font-family="Inter" fill="${C.ink}">${arrowDefs}`;
-  s += `<clipPath id="cp"><rect x="${L}" y="${T}" width="${R-L}" height="${B-T}"/></clipPath>`;
-  // Färbung: Höhe = 1/2 (4,8 - 2 w1 - b)^2, Bänder
-  const band = c => { // Streifen um Linie 2w1+b=c
-    const pts = [[x0, c - 2*x0], [x1, c - 2*x1]];
-    return pts;
-  };
-  s += `<g clip-path="url(#cp)"><rect x="${L}" y="${T}" width="${R-L}" height="${B-T}" fill="#fff"/>`;
-  for (let c = 1.6; c <= 10; c += 0.4) {
-    const d = Math.abs(c - 4.8); const t = Math.min(1, d / 3.2);
-    const col = `hsl(${190 + 80*t}, ${55}%, ${93 - 18*t}%)`;
-    const a = c - 0.2, b2 = c + 0.2;
-    s += `<polygon points="${X(x0)},${Y(a-2*x0)} ${X(x1)},${Y(a-2*x1)} ${X(x1)},${Y(b2-2*x1)} ${X(x0)},${Y(b2-2*x0)}" fill="${col}"/>`;
+  s += `<clipPath id="cp"><rect x="${L}" y="${T}" width="${R-L}" height="${B-T}"/></clipPath><g clip-path="url(#cp)">`;
+  const st = 5;
+  for (let px = L; px < R; px += st) for (let py = T; py < B; py += st) {
+    const u = x0 + (px + st/2 - L) / (R - L) * (x1 - x0), v = y1 - (py + st/2 - T) / (B - T) * (y1 - y0);
+    const t = Math.min(1, Math.sqrt(Q(u, v) / 9));
+    s += `<rect x="${px}" y="${py}" width="${st+0.6}" height="${st+0.6}" fill="hsl(${190 + 80*t}, 55%, ${95 - 22*t}%)"/>`;
   }
   // Gitter
-  for (let v = 0; v <= 2.5001; v += 0.1) s += `<line x1="${X(v)}" y1="${T}" x2="${X(v)}" y2="${B}" stroke="#fff" stroke-opacity="${Math.abs(v*2 - Math.round(v*2))<1e-6?0.95:0.55}" stroke-width="${Math.abs(v*2-Math.round(v*2))<1e-6?1.6:0.8}"/>`;
-  for (let v = 2.6; v <= 4.2001; v += 0.1) s += `<line x1="${L}" y1="${Y(v)}" x2="${R}" y2="${Y(v)}" stroke="#fff" stroke-opacity="${Math.abs(v*2-Math.round(v*2))<1e-6?0.95:0.55}" stroke-width="${Math.abs(v*2-Math.round(v*2))<1e-6?1.6:0.8}"/>`;
-  // Höhenlinien
-  for (let c = 2.4; c <= 9.6; c += 0.8) if (Math.abs(c-4.8) > 0.01) s += `<line x1="${X(x0)}" y1="${Y(c-2*x0)}" x2="${X(x1)}" y2="${Y(c-2*x1)}" stroke="${C.soft}" stroke-opacity=".45" stroke-width="1.5"/>`;
-  s += `<line x1="${X(x0)}" y1="${Y(4.8-2*x0)}" x2="${X(x1)}" y2="${Y(4.8-2*x1)}" stroke="${C.acc}" stroke-width="3.5" stroke-dasharray="10 7"/>`;
+  for (let v = 0; v <= 2.5001; v += 0.1) { const m = Math.abs(v*2 - Math.round(v*2)) < 1e-6; s += `<line x1="${X(v)}" y1="${T}" x2="${X(v)}" y2="${B}" stroke="#fff" stroke-opacity="${m?0.95:0.5}" stroke-width="${m?1.6:0.8}"/>`; }
+  for (let v = -0.7; v <= 1.3001; v += 0.1) { const m = Math.abs(v*2 - Math.round(v*2)) < 1e-6; s += `<line x1="${L}" y1="${Y(v)}" x2="${R}" y2="${Y(v)}" stroke="#fff" stroke-opacity="${m?0.95:0.5}" stroke-width="${m?1.6:0.8}"/>`; }
+  // Höhenlinien (Ellipsen)
+  const tr = A[0][0] + A[1][1], det = A[0][0]*A[1][1] - A[0][1]**2, l1 = tr/2 + Math.sqrt(tr*tr/4 - det), l2 = tr/2 - Math.sqrt(tr*tr/4 - det);
+  const e1 = [A[0][1], l1 - A[0][0]], n1 = Math.hypot(...e1); e1[0] /= n1; e1[1] /= n1; const e2 = [-e1[1], e1[0]];
+  for (const c of [0.05, 0.2, 0.5, 1, 1.8, 3, 4.5, 6.5, 9, 12]) {
+    const r1 = Math.sqrt(2*c/l1), r2 = Math.sqrt(2*c/l2); let d = '';
+    for (let k = 0; k <= 96; k++) { const a = k / 96 * 2 * Math.PI, p = r1*Math.cos(a), q = r2*Math.sin(a);
+      d += (k ? 'L' : 'M') + X(M[0] + p*e1[0] + q*e2[0]).toFixed(1) + ',' + Y(M[1] + p*e1[1] + q*e2[1]).toFixed(1); }
+    s += `<path d="${d}z" fill="none" stroke="${C.soft}" stroke-opacity=".45" stroke-width="1.5"/>`;
+  }
   s += `</g><rect x="${L}" y="${T}" width="${R-L}" height="${B-T}" fill="none" stroke="${C.ink}" stroke-width="2"/>`;
-  s += `<text x="${X(0.95)+8}" y="${Y(2.9)}" text-anchor="end" dy="-10" font-size="16" font-weight="700" fill="${C.acc}" transform="rotate(${Math.atan2(Y(4.8-2*1)-Y(4.8-2*0.5), X(1)-X(0.5))*180/Math.PI} ${X(0.95)+8} ${Y(2.9)})">tiefste Stelle (Fehler 0)</text>`;
+  // tiefste Stelle
+  s += `<circle cx="${X(M[0])}" cy="${Y(M[1])}" r="6" fill="${C.acc}"/><text x="${X(M[0])}" y="${Y(M[1])+28}" text-anchor="middle" font-size="16" font-weight="700" fill="${C.acc}">tiefste Stelle</text>`;
   // Achsen
   for (let v = 0; v <= 2.5001; v += 0.5) s += `<text x="${X(v)}" y="${B+26}" text-anchor="middle" font-size="17">${v.toFixed(1).replace('.', ',')}</text>`;
-  for (let v = 2.6; v <= 4.2001; v += 0.2) s += `<text x="${L-10}" y="${Y(v)+6}" text-anchor="end" font-size="17">${v.toFixed(1).replace('.', ',')}</text>`;
-  s += `<text x="${(L+R)/2}" y="${B+58}" text-anchor="middle" font-size="20" font-weight="800" fill="${C.or}">${sub('w','1')} →</text>`;
-  s += `<text x="26" y="${(T+B)/2}" text-anchor="middle" font-size="20" font-weight="800" fill="${C.vi}" transform="rotate(-90 26 ${(T+B)/2})">b →</text>`;
+  for (let v = -0.6; v <= 1.2001; v += 0.2) s += `<text x="${L-10}" y="${Y(v)+6}" text-anchor="end" font-size="17">${(Math.abs(v)<1e-9?0:v).toFixed(1).replace('.', ',').replace('-', '−')}</text>`;
+  s += `<text x="${(L+R)/2}" y="${B+58}" text-anchor="middle" font-size="20" font-weight="800" fill="${C.or}">${sub('w','1')} (Flosse) →</text>`;
+  s += `<text x="26" y="${(T+B)/2}" text-anchor="middle" font-size="20" font-weight="800" fill="${C.or}" transform="rotate(-90 26 ${(T+B)/2})">${sub('w','2')} (Schnabel) →</text>`;
   // Start
-  s += `<circle cx="${X(0.5)}" cy="${Y(3.0)}" r="8" fill="${C.ink}"/>` + peng('main', X(0.5), Y(3.0) - 6, 62);
-  s += `<rect x="${X(0.5)+14}" y="${Y(3.0)-2}" width="86" height="26" rx="6" fill="#fff" opacity=".9"/><text x="${X(0.5)+20}" y="${Y(3.0)+17}" font-size="16" font-weight="700">Start</text>`;
-  s += `<rect x="${R-226}" y="${T+10}" width="216" height="30" rx="8" fill="#fff" stroke="${C.line}"/><text x="${R-118}" y="${T+31}" text-anchor="middle" font-size="16" font-weight="700" fill="${C.soft}">fest: ${sub('w','2')} = 0,3</text>`;
+  s += `<circle cx="${X(0.5)}" cy="${Y(0.3)}" r="8" fill="${C.ink}"/>` + peng('main', X(0.5), Y(0.3) - 6, 62);
+  s += `<rect x="${X(0.5)-110}" y="${Y(0.3)-2}" width="86" height="26" rx="6" fill="#fff" opacity=".9"/><text x="${X(0.5)-104}" y="${Y(0.3)+17}" font-size="16" font-weight="700">Start</text>`;
+  s += `<rect x="${R-226}" y="${T+10}" width="216" height="30" rx="8" fill="#fff" stroke="${C.line}"/><text x="${R-118}" y="${T+31}" text-anchor="middle" font-size="16" font-weight="700" fill="${C.soft}">fest: Bias b = 3,0</text>`;
   s += `</svg>`; return s;
 }
 // Nest-Diagramm

@@ -7,5 +7,15 @@ Neu bauen (vom Repo-Wurzelordner):
     NODE_PATH=$(npm root -g) node MPSkills/tools/Nebeltal/arbeitsblatt/quelle/bilder.mjs   # Bilder (*.png) aus img/frei
     node MPSkills/tools/Nebeltal/arbeitsblatt/quelle/blatt.cjs                              # ../Nebeltal_Arbeitsblatt.docx
 
-Lösungen B: ŷ = 4,3 · e = 0,8, L = 0,32 · Gradienten −1,6 / −0,8 / −0,8 · w₁ 0,66, w₂ 0,38, b 3,08 ·
-Kontrolle ŷ = 4,78, L ≈ 0,05. C 2 (η = 1): w₁ 2,1, w₂ 1,1, b 3,8 → ŷ 9,1, e −4, L 8 (übersprungen; schlechter ab η > 1/3).
+Stand 20.11.2026 (aus Sönkes reduzierter Fassung „meine version“): ohne Loss, Anteile und griechische Buchstaben;
+A = Tabelle mit fertiger Kurz-Erklärung je Begriff + Spalte „In Nebeltal sieht man …“ (Begriffe deutsch);
+B = Lernregel der Erarbeitung (neu = alt + Lernrate · Fehler · Eingang); C = Karte über w₁/w₂ (b = 3,0 fest)
+als Mulde aus fünf Pinguinen (2,1) (0,2) (3,0) (1,3) (4,2), echt = 0,9·x₁ + 0,3·x₂ + 3,0 → tiefste Stelle (0,9 | 0,3).
+
+Lösungen A 1: ① Vorwärtspropagierung · ② Fehlerberechnung · ③ Rückwärtspropagierung · ④ Gradientenabstieg · ⑤ Lernrate.
+Lösungen B: a) Schätzung = 2·0,5 + 1·0,3 + 3,0 = 4,3 · b) Fehler = 5,1 − 4,3 = 0,8 ·
+c) Fehler · Eingang: w₁ 1,6, w₂ 0,8, b 0,8 · d) w₁ 0,66, w₂ 0,38, b 3,08 ·
+e) Schätzung 4,78, Fehler 0,32 (kleiner, von 0,8 auf 0,32).
+C 1: (0,66 | 0,38) liegt tiefer als der Start. C 2 (Lernrate 1): w₁ 2,1, w₂ 1,1 → weit über die Mulde
+hinaus, viel höher als vorher (übersprungen). C 4: Für einen Pinguin ist jeder Ort mit 2·w₁ + w₂ = 2,1 genau
+richtig – das ist eine ganze Linie (Rinne); erst mehrere Pinguine legen einen einzigen Punkt fest.

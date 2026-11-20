@@ -198,7 +198,9 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Schritte, Steuerung) · `.card-btns`; quer Bild links/Text rechts, hochkant untereinander (Bild ≤ 26vh), Schriften mit
   clamp(…vh); Tastenkürzel (`.kbd`) nur mit Maus. Neue Texte KURZ halten – geprüft bei 390×760, 800×370, 1024×700, 1440×860.
 - `arbeitsblatt/` – Arbeitsblatt „Wie ein neuronales Netz lernt“ (19.11.2026, nach der Erarbeitung, Level 4–7 allein, 2 Seiten:
-  Lernkreislauf mit den 5 Begriffen, ein Lernschritt von Hand, Rechnung = Sprung, Fragen je Level); Word + PDF, Quelle in
+  Lernkreislauf mit den 5 Begriffen, ein Lernschritt von Hand, Rechnung = Sprung, Fragen je Level; seit 20.11.2026 nach Sönkes
+  reduzierter Fassung: kein Loss/keine Anteile/keine griechischen Buchstaben, Begriffe deutsch mit fertiger Kurz-Erklärung,
+  Lernregel wie in der Erarbeitung, Karte in C = Mulde über w₁/w₂ aus fünf Pinguinen, Knobelfrage „warum Rinne bei einem?“); Word + PDF, Quelle in
   `arbeitsblatt/quelle/` (bilder.mjs → PNGs, blatt.cjs → docx, Lösungen in LIESMICH.md); verlinkt im Lernpfad am Halt „Übung“
   (seit 19.11.2026) und in der Freien Nutzung als Kachel (20.11.2026), beides nur Lehrkraft und allein, mit Hinweis
   `NTPfad.SHEET_NOTE` „Bekommt die Klasse nicht über diese Plattform – bitte austeilen.“
