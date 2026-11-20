@@ -15,7 +15,7 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `start.css` | Startseite, Neuronen-Seite, Schicht-Spalte, fester Ausgang, Druckauswahl, Greifvogel-Diagramm |
 | `app.js` | das Feld: Zustand, Rechnen, Backprop, Szenarien, Lernfenster, Druck, Speicher, `window.NLApp` |
 | `js/start.js` | Startseite, Freigaben im Raum, Navigation (`html[data-view]` = home · neuron · lab) |
-| `js/neuron.js` | Bereich 1: „So rechnet ein Neuron“ (6 Schritte) + „Alle Neuronen“ (nutzt `activations`/`fmt` aus app.js) |
+| `js/neuron.js` | Bereich 1: „So rechnet ein Neuron“ (7 Schritte, Blackbox wird aufgedeckt) + „Alle Neuronen“ (nutzt `activations`/`fmt` aus app.js) |
 | `js/daten.js` | Greifvögel (echte Messwerte) |
 | `neuron.png` | altes Bild des Neurons – seit 20.11.2026 (2. Fassung) nicht mehr eingebunden |
 | `Regen und Sonne.csv` | Beispiel-CSV fürs Hochladen (auch im Layout-Prüfstand) |
@@ -23,15 +23,22 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 
 ## Drei Bereiche (Startseite)
 
-1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` und `n-typen`. `n-wie` = „So rechnet ein Neuron“ in **sechs
-   Schritten** (Sönke 20.11.2026: Anfang war zu kurz, das Bild unklar; Leiste `.nn-step[data-step]`, Weiter/Zurück unten):
-   1 `bio` Nervenzelle (SVG `bioSVG`) ↔ künstliches Neuron, Teil antippen = beide Seiten hervorgehoben (`data-k` in
-   `neuronSVG`: in · w · sum · b · f · out) · 2 `in` Eingänge als Kommazahlen (−5…5, nicht nur 0/1) und Gewichte, Beiträge
-   als Balken · 3 `sum` Summe und Bias, Zahlenstrahl mit den drei Teilen bis z · 4 `act` Aktivierung: Typ wählen, Kurve mit
-   z-Marke · 5 `line` Ein Neuron = eine Gerade: Ebene (`drawPlane`, Canvas) eingefärbt nach y′, dicke Linie z = 0, Pfeil
-   zur Seite mit großem z, grüner Eingabepunkt ziehbar, Neuron daneben mit umschaltbarem Typ · 6 `task` Impulsaufgabe
-   „Türsteher“ UND · ODER · XOR mit Wahrheitstafel + die vier Fälle als Punkte in der Ebene, darunter „Das Wichtigste“.
-   Schritte 2–5 teilen sich EIN Neuron (`st`), die Aufgabe hat ihr eigenes (`ts`). Und `n-typen`
+1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` und `n-typen`. `n-wie` = „So rechnet ein Neuron“ in **sieben
+   Schritten** (3. Fassung, Sönke 20.11.2026: „ein Neuron betrachten, ein Teil ist geblackboxt, jeder Schritt deckt einen
+   Teil auf“; die Balken x·w waren verwirrend und sind weg; nur EIN Typ = Perceptron/Treppe, Bias = Schwelle, ab der es
+   feuert). Leiste `.nn-step[data-step]`, Weiter/Zurück unten. 1 `bio` Nervenzelle (`bioSVG`) ↔ Neuron (`stageSVG`
+   ganz offen), Teil antippen = beide Seiten hervorgehoben (`data-k`: in · w · sum · b · f · out) · ab Schritt 2 steht
+   EIN Neuron (`stageSVG`, `show` 1–4) immer an derselben Stelle, Ungeklärtes ist eine dunkle Blackbox (`.nn-bbox`),
+   rechts kommt trotzdem immer 1 „feuert!“ (gelb, Strahlen) oder 0 heraus: 2 `in` Eingänge (Kommazahlen −5…5), Rumpf
+   Blackbox · 3 `w` Gewichte: Leitung dick/dünn (|w|), rot = negativ, gestrichelt = 0, Kästchen am Ende = x·w · 4 `b`
+   Summe offen, Bias von unten, Aktivierung noch Blackbox; Schwellen-Messer `meterSVG` (Summe als Punkt, Fahne
+   „Schwelle = −b“, gelb = feuert) · 5 `act` Treppe offen + Kurve (`curveSVG('perceptron', z)`), Hinweis auf „Alle
+   Neuronen“ · 6 `line` Ebene (`drawPlane`: gelb = feuert, Gerade, Pfeil zur Feuer-Seite, grüner Punkt = Eingänge
+   ziehbar) mit Reglern w/b · 7 `data` Daten trennen: `DS` = Sperber (90 echte Eckschwanzsperber ♂/♀ aus
+   `NLData.VOEGEL` Gruppe 0/1, Flügel + Schwanz in cm, mit einer Geraden 90/90 trennbar), UND, XOR; die Gerade hängt
+   an zwei blauen Griffen (`d.h`), `dsNeuron` rechnet daraus w/b (größtes |w| = 1), „Feuer-Seite tauschen“ (`d.flip`),
+   Punkt antippen = dieser Datensatz geht ins Neuron, „x von n richtig“, XOR geht nicht → Netz; darunter „Das Wichtigste“.
+   Schritte 2–6 teilen sich EIN Neuron (`st`), Schritt 7 hat je Datensatz seine Gerade. Und `n-typen`
    (alle Neuronen: Perceptron, Linear, ReLU, Sigmoid, Tanh — gezeichnet wie im Feld, Formel, Kurve mit
    z-Regler, wofür/Achtung). Neue Typen kommen automatisch dazu, wenn sie in `activations` stehen und in
    `ORDER`/`INFO` (js/neuron.js) eingetragen werden.

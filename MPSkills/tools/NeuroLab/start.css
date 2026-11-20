@@ -149,12 +149,6 @@ html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
 .nn-task-pick { display: flex; gap: 6px; margin-bottom: 8px; }
 .nn-pill { border: 1.5px solid #d1d5db; background: #fff; border-radius: 999px; padding: 4px 14px; font: inherit; font-weight: 700; font-size: 0.85rem; color: #475569; cursor: pointer; }
 .nn-pill.on { background: #1e293b; border-color: #1e293b; color: #fff; }
-.nn-truth { border-collapse: collapse; margin: 10px 0; font-size: 0.9rem; }
-.nn-truth th, .nn-truth td { padding: 4px 12px; text-align: center; border-bottom: 1px solid #eef2f6; }
-.nn-truth th { color: #64748b; font-size: 0.8rem; }
-.nn-truth td:nth-child(3), .nn-truth td:nth-child(4) { font-family: monospace; }
-.nn-truth tr.ok td:last-child { color: #059669; font-weight: 800; }
-.nn-truth tr.bad td:last-child { color: #dc2626; font-weight: 800; }
 .nn-task-msg { padding: 8px 12px; border-radius: 10px; background: #f8fafc; }
 .nn-task-msg.ok { background: #ecfdf5; color: #065f46; font-weight: 700; }
 
@@ -308,17 +302,11 @@ body.print-mode .out-x, body.print-mode .out-hint { display: none; }
 .nn-pair-info { min-height: 3em; background: #faf5ff; border-radius: 10px; padding: 8px 12px; }
 
 /* Schritt 2: Beiträge als Balken */
-.nn-bars { display: grid; gap: 6px; }
-.nn-bar { display: grid; grid-template-columns: 13em 1fr 4em; gap: 10px; align-items: center; font-size: .85rem; color: #334155; }
-.nn-bar b { font-family: monospace; text-align: right; }
-.nn-bar-track { position: relative; height: 14px; background: #f1f5f9; border-radius: 7px; }
-.nn-bar-track i { position: absolute; top: 0; bottom: 0; border-radius: 7px; }
-.nn-bar-track i.pos { background: #3b82f6; }
-.nn-bar-track i.neg { background: #dc2626; }
-.nn-bar-track em { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: #94a3b8; }
-
-/* Schritt 3: Zahlenstrahl */
-.nn-zline svg { width: 100%; max-width: 760px; height: auto; display: block; }
+.nn-stage .nn-bbox { fill: #1e293b; stroke: #0f172a; stroke-width: 2; }
+.nn-stage .nn-bbox-q { fill: #f8fafc; }
+.nn-stage .nn-bbox-t { fill: #94a3b8; letter-spacing: .08em; text-transform: uppercase; }
+.nn-calc[hidden] { display: none; }
+.nn-meter svg { width: 100%; max-width: 760px; height: auto; display: block; }
 .nn-curve svg { width: 100%; max-width: 320px; height: auto; display: block; }
 
 /* Schritt 5/6: Ebene */
@@ -333,8 +321,6 @@ body.print-mode .out-x, body.print-mode .out-hint { display: none; }
 
 @media (max-width: 760px) {
   .nn-two, .nn-line-grid, .nn-play-grid { grid-template-columns: minmax(0, 1fr); }
-  .nn-bar { grid-template-columns: 1fr; gap: 3px; }
-  .nn-bar b { text-align: left; }
 }
 
 /* Neuronen leicht in ihrer Typ-Farbe getönt (Feld und Neuron-Seite) */

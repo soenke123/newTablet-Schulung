@@ -105,11 +105,20 @@ ok(await pg.locator('.tile').count() === 2 + 1 + 5, 'allein: alle Kacheln offen'
 await pg.click('.tile[data-id="n-typen"]');
 ok(await pg.locator('.nn-type').count() === 5, 'Alle Neuronen: fünf Typen');
 await pg.click('.nn-tab[data-id="n-wie"]');
-ok(await pg.locator('.nn-step').count() === 6, 'So rechnet ein Neuron: sechs Schritte');
+ok(await pg.locator('.nn-step').count() === 7, 'So rechnet ein Neuron: sieben Schritte');
+await pg.click('.nn-step[data-step="in"]');
+ok(await pg.locator('.nn-stage .nn-bbox').count() === 1, 'Schritt Eingänge: Neuron als Blackbox');
+await pg.click('.nn-step[data-step="b"]');
+ok(await pg.locator('.nn-stage .nn-bbox').count() === 1 && await pg.locator('.nn-meter svg').count() === 1, 'Schritt Bias: Summe offen, Aktivierung noch Blackbox, Schwellen-Messer');
 await pg.click('.nn-step[data-step="line"]');
 ok(await pg.locator('.nn-plane canvas').count() === 1, 'Schritt Gerade: Ebene');
-await pg.click('.nn-step[data-step="task"]');
-ok(await pg.locator('.nn-truth tbody tr').count() === 4, 'Impulsaufgabe mit Wahrheitstafel');
+await pg.click('.nn-step[data-step="data"]');
+const vorher = await pg.locator('.nn-task-msg b').first().textContent();
+ok(/von 90/.test(vorher), 'Daten trennen: 90 Sperber');
+await pg.click('text=Feuer-Seite tauschen');
+ok((await pg.locator('.nn-task-msg b').first().textContent()) !== vorher, 'Feuer-Seite tauschen ändert die Trefferzahl');
+await pg.click('.nn-pill[data-ds="xor"]');
+ok(/von 4/.test(await pg.locator('.nn-task-msg b').first().textContent()), 'XOR mit vier Punkten');
 await pg.click('#btn-home');
 
 await pg.click('.tile[data-id="b-frei"]');
