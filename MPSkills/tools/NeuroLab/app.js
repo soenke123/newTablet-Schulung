@@ -3109,11 +3109,13 @@ const OB_W  = 56, OB_H = 22;
 const OB_CX = OB_X + OB_W / 2;     // 236
 
 // ── Zahlen und Kurve im Neuron ─────────────────────────────────────────────
-/* Höchstens zwei Nachkommastellen, aber nichts Überflüssiges: 1 statt 1,00,
-   1,3 statt 1,30. Mit Komma und echtem Minus. */
-function fmtV(n) {
+/* Im Feld höchstens vier Nachkommastellen (wie früher), aber nichts
+   Überflüssiges: 1 statt 1,0000, 1,3 statt 1,3000. Mit Komma und echtem
+   Minus. Die Neuronen-Seite (js/neuron.js) nimmt zwei: fmtV(x, 2). */
+function fmtV(n, d = 4) {
   if (n === undefined || n === null || !isFinite(n)) return '–';
-  let r = Math.round(n * 100) / 100;
+  const k = 10 ** d;
+  let r = Math.round(n * k) / k;
   if (Object.is(r, -0)) r = 0;
   return String(r).replace('.', ',').replace('-', '−');
 }
@@ -4594,10 +4596,11 @@ function drawEdgeOverlay(net) {
       const r = el.getBoundingClientRect();
       const a = toNet(r.left, r.top), b = toNet(r.right, r.bottom);
       if (el.classList.contains('neuron-svg')) {
-        // Nur die obere Zone mit Rumpf und Ausgabe (viewBox y 14 … 100);
-        // darunter steht nur der Bias, durch den Kanten nicht laufen.
+        // Rumpf, Ausgabe UND Bias-Zeile (viewBox y 14 … 140): seit vier
+        // Nachkommastellen sind die Kanten-Zahlen so breit, dass sie sonst
+        // über „b = …“ fielen.
         const h = b.y - a.y;
-        return { l: a.x, r: b.x, t: a.y + h * 14 / VB_H_REF, b: a.y + h * 100 / VB_H_REF };
+        return { l: a.x, r: b.x, t: a.y + h * 14 / VB_H_REF, b: a.y + h * 140 / VB_H_REF };
       }
       return { l: a.x, r: b.x, t: a.y, b: b.y };
     });

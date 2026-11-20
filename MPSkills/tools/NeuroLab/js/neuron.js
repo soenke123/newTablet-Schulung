@@ -67,11 +67,11 @@
         const col = w < 0 ? '#dc2626' : '#10b981';
         s.appendChild(el('line', { 'data-k': 'w', x1: 56, y1: iy, x2: ox, y2: cy + (i ? 14 : -14), stroke: col, 'stroke-width': sw, 'stroke-opacity': Math.abs(w) < 0.01 ? 0.3 : 0.75, 'stroke-dasharray': Math.abs(w) < 0.01 ? '4 3' : 'none' }));
         s.appendChild(el('circle', { 'data-k': 'in', cx: 34, cy: iy, r: 22, fill: '#fffbeb', stroke: '#f59e0b', 'stroke-width': 1.8 }));
-        s.appendChild(el('text', { x: 34, y: iy + 5, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: '#b45309', class: 'nn-num' }, `${fmtV(o.x[i])}`));
+        s.appendChild(el('text', { x: 34, y: iy + 5, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: '#b45309', class: 'nn-num' }, `${fmtV(o.x[i], 2)}`));
         s.appendChild(el('text', { x: 34, y: iy + (i ? 38 : -28), 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#64748b' }, `x${i + 1}`));
         const mx = (56 + ox) / 2, my = (iy + cy + (i ? 14 : -14)) / 2;
         s.appendChild(el('rect', { 'data-k': 'w', x: mx - 30, y: my - 9, width: 60, height: 17, rx: 8.5, fill: '#fff', stroke: '#e2e8f0' }));
-        s.appendChild(el('text', { x: mx, y: my + 4, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, class: 'nn-num', fill: col }, `w${i + 1} = ${fmtV(w)}`));
+        s.appendChild(el('text', { x: mx, y: my + 4, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, class: 'nn-num', fill: col }, `w${i + 1} = ${fmtV(w, 2)}`));
       });
     }
     s.appendChild(el('rect', { x: ox, y: NBY, width: NBW, height: NBH, rx: 12, class: 'neuron-body' }));
@@ -88,7 +88,7 @@
     const bx = lx, by0 = NBY + NBH, by1 = by0 + 26;
     s.appendChild(el('line', { 'data-k': 'b', x1: bx, y1: by1, x2: bx, y2: by0 + 5, class: 'bias-line' }));
     s.appendChild(el('path', { d: `M${bx - 4},${by0 + 7} L${bx},${by0 + 2} L${bx + 4},${by0 + 7}`, class: 'bias-line' }));
-    s.appendChild(el('text', { x: bx, y: by1 + 14, 'text-anchor': 'middle', class: 'bias-label' }, withIn ? `b = ${fmtV(o.b)}` : 'b'));
+    s.appendChild(el('text', { x: bx, y: by1 + 14, 'text-anchor': 'middle', class: 'bias-label' }, withIn ? `b = ${fmtV(o.b, 2)}` : 'b'));
     // Ausgabe
     const ol = ox + NBW, bw = withIn ? 60 : 56;
     s.appendChild(el('line', { 'data-k': 'out', x1: ol, y1: cy, x2: ol + 16, y2: cy, class: 'neuron-wire' }));
@@ -97,7 +97,7 @@
       const fr = outFrac(o.type, y);
       s.appendChild(el('rect', { x: ol + 19.5, y: cy - 12.5 + 25 * (1 - fr), width: bw - 3, height: 25 * fr, rx: 6.5, class: 'neuron-out-fill' }));
     }
-    s.appendChild(el('text', { x: ol + 18 + bw / 2, y: cy + 4.5, 'text-anchor': 'middle', class: 'neuron-out-txt' + (withIn ? '' : ' is-faint') }, withIn ? fmtV(y) : 'y′'));
+    s.appendChild(el('text', { x: ol + 18 + bw / 2, y: cy + 4.5, 'text-anchor': 'middle', class: 'neuron-out-txt' + (withIn ? '' : ' is-faint') }, withIn ? fmtV(y, 2) : 'y′'));
     return s;
   }
 

@@ -139,9 +139,10 @@ Eingabewerte; „Ausblenden“ nimmt die Leiste fürs Bildschirmfoto weg.
   im Fenster beim Antippen (und in der Druckansicht, dort weiter Σ | f(z) in zwei Hälften). Wert-Kästchen rechts
   füllt sich mit dem Wert (`outFrac`), `is-hot` (Wert über der Mitte, `isHot`) = Rand im Akzent, im Dunkeln leichtes
   Leuchten. Ausgang beim Lernen: Rahmen in der Fehlerfarbe (`errColor`), Name darüber.
-- **Zahlen im Neuron, an den Kanten und in den Ausgängen:** `fmtV` = höchstens zwei Nachkommastellen, aber 1 statt
-  1,00 und 1,3 statt 1,30, mit Komma und echtem Minus (Sönke 20.11.2026). `fmt` (Punkt, 4 Stellen) bleibt für
-  Eingabefelder, Fenster und Lernfenster.
+- **Zahlen im Neuron, an den Kanten und in den Ausgängen:** `fmtV(n, d = 4)` = im Feld höchstens vier
+  Nachkommastellen (wie früher), aber 1 statt 1,0000 und 1,3 statt 1,3000, mit Komma und echtem Minus (Sönke
+  20.11.2026); auf der Neuronen-Seite `fmtV(x, 2)`. `fmt` (Punkt, 4 Stellen) bleibt für Eingabefelder, Fenster und
+  Lernfenster. Kanten-Zahlen weichen Rumpf, Wert UND Bias-Zeile aus (Hindernis bis viewBox-y 140).
 - **Kanten:** Farbe = Vorzeichen (Akzent +, Rot −, grau gestrichelt ≈ 0), Dicke = |w|; Beschriftung als Pille.
 - **Feld:** Punktpapier, Spalten als Bahnen (nur Kopf in Mono-Versalien und feine Trennlinie), Ausgänge und
   Datentabelle bleiben Karten. Startseite: Bereiche nummeriert wie der Lernpfad in Nebeltal (CSS-Zähler), Kachel =

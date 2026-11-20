@@ -509,7 +509,7 @@ body.print-mode #net-stage.edge-labels-off .edge-label { display: inline; }
 .neuron-curve   { fill: none; stroke: var(--ink-soft); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .neuron-dot     { fill: var(--accent); stroke: var(--surface); stroke-width: 1.6; }
 .neuron-dot.neg { fill: var(--neg); }
-.neuron-val     { font-family: var(--mono); font-size: 10px; font-weight: 700; fill: var(--ink-soft); user-select: none; }
+.neuron-val     { font-family: var(--mono); font-size: 9.5px; letter-spacing: -.02em; font-weight: 700; fill: var(--ink-soft); user-select: none; }
 .neuron-type    { font-family: var(--mono); font-size: 9.5px; font-weight: 800; letter-spacing: .12em; fill: var(--ink-faint); user-select: none; }
 .neuron-func-label { font-weight: 700; fill: var(--type-color); user-select: none; }
 .bias-line      { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
