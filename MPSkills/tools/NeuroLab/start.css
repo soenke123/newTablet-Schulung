@@ -653,7 +653,7 @@ i.m, .m i { font-family: 'KaTeX Math', 'Cambria Math', 'Times New Roman', serif;
 
 /* Alle Neuronen: Übersicht + Detail */
 .nn-zf { font-size: 1.15em; white-space: nowrap; }
-.nt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 12px; }
+.nt-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .nt-card { display: grid; gap: 8px; align-content: start; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
   border-top: 4px solid var(--type-color); transition: transform .15s, box-shadow .15s; }
 .nt-card:hover { transform: translateY(-2px); box-shadow: 0 0 0 2px var(--type-color), var(--shadow); }
@@ -665,7 +665,7 @@ i.m, .m i { font-family: 'KaTeX Math', 'Cambria Math', 'Times New Roman', serif;
 .nt-curve .gr { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }
 .nt-curve .tk { font: 700 10px var(--mono); fill: var(--ink-soft); }
 .nt-curve .al { font: italic 700 10px var(--mono); fill: var(--ink-soft); }
-.nt-curve path { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.nt-curve path { fill: none; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
 .nt-out b { color: var(--ink); }
 .nt-deep { display: flex; flex-direction: column; gap: 2px; font-size: .82rem; line-height: 1.35; color: var(--ink-soft); padding-top: 6px; border-top: 1px solid var(--line); }
 .nt-deep b { color: var(--ink); }
@@ -707,4 +707,14 @@ i.m, .m i { font-family: 'KaTeX Math', 'Cambria Math', 'Times New Roman', serif;
 .nt-formula .math-frac, .nt-fbox .math-frac { vertical-align: middle; }
 .nt-formula sup, .nt-fbox sup { font-size: .65em; }
 .nt-formula > *, .nt-fbox .m > * { white-space: nowrap; }
-.nt-formula { font-size: 1.15rem; }
+.nt-formula { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+
+/* Detail: Formel klein unter der Aktivierung, Neuron leicht in der Typ-Farbe */
+.nw.is-typed .nw-body { background: color-mix(in srgb, var(--tc) 9%, var(--surface)); }
+.nw-fform { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: .2em; white-space: nowrap;
+  font-size: 1.15em; color: var(--tc); padding: .2em .6em; border-radius: 10px; border: 1.5px solid var(--tc);
+  background: color-mix(in srgb, var(--tc) 9%, var(--surface)); }
+.nw-fform .mcl { font-size: .7em; }
+.nw-fform sup { font-size: .65em; }
+.nt-intro h2 { margin: 0 0 6px; }
+.nt-intro .nn-lead-p { margin: 0; }

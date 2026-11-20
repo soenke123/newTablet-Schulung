@@ -141,6 +141,7 @@
         <div class="nw-half nw-sum" data-k="sum" data-part="3"><b class="nw-sigma">Σ</b><span class="nw-z m"><i>z</i> = <b></b></span><span class="nw-fog">?</span></div>
         <div class="nw-half nw-f" data-k="f" data-part="4"><svg viewBox="0 0 100 60" class="nw-stepfn"><line x1="6" y1="50" x2="94" y2="50" class="ax hx"/><line x1="50" y1="6" x2="50" y2="56" class="ax"/><path class="st"/><circle class="dot" r="5.5"/></svg><span class="nw-fz m"><i>f</i>(<i>z</i>)</span><span class="nw-fog">?</span></div>
       </div>
+      ${o.typed ? `<div class="nw-fform m" data-k="f" style="${P(505, 292)}"></div>` : ''}
       <div class="nw-bias" data-k="b" data-part="3" style="${P(355, 292)}"><i class="m">b</i><span class="nw-q">?</span>${stepper('b', 'c-b')}</div>
       <div class="nw-out" data-k="out" style="left:${560 / 7.2}%;top:${(125 - OY) / HH * 100}%;width:${124 / 7.2}%;height:${80 / HH * 100}%">
         ${m.ocap ? `<span class="nw-ocap">${m.ocap}</span>` : ''}
@@ -170,6 +171,7 @@
         $('.nw-stepfn .hx').setAttribute('y1', hy); $('.nw-stepfn .hx').setAttribute('y2', hy);
         root.style.setProperty('--tc', act.color);
         $('.nw-tname').textContent = o.typed ? act.fullName : '';
+        if (o.typed) $('.nw-fform').innerHTML = F_TXT[t];
       }
       $$('.nw-edge').forEach(e => {
         const w = m.w[+e.dataset.e] ?? 1;
@@ -503,9 +505,7 @@
     N.setShow(4);
     PL = makePlane(m, { onChange: sync });
     const grid = h('<div class="nw-split"><div class="nw-left"></div><div class="nw-right"></div></div>');
-    grid.children[0].append(N.el);
-    if (o.typed) grid.children[0].append(h(`<div class="nt-fbox"><span class="nt-fk">Aktivierungsfunktion</span><span class="m">${F_TXT[m.type]}</span></div>`));
-    grid.children[0].append(calc);
+    grid.children[0].append(N.el, calc);
     grid.children[1].append(PL.el);
     if (m.points) grid.children[1].append(h(pengLegend()), msg);
     grid.children[1].append(h(dragLegend));
@@ -700,6 +700,13 @@
       grid.appendChild(c);
     });
     page.appendChild(grid);
+    const fit = () => grid.querySelectorAll('.nt-formula').forEach(f => {
+      let px = 19; f.style.fontSize = px + 'px';
+      while (f.scrollWidth > f.clientWidth + 1 && px > 10) f.style.fontSize = (--px) + 'px';
+    });
+    requestAnimationFrame(fit);
+    if (document.fonts) document.fonts.ready.then(fit);
+    new ResizeObserver(fit).observe(grid);
   }
   function renderTyp(page, api) {
     const k = typSel, act = activations[k], I = INFO[k];
@@ -713,10 +720,11 @@
     });
     page.appendChild(head);
     const outText = k === 'sigmoid' ? (fire, y) => `${Math.round(y * 100)} % Zügel` : null;
-    const card = h(`<section class="nn-card nn-stepcard nt-detail" style="--type-color:${act.color}">
-      <h2>Das <span class="nt-name">${act.fullName}</span>-Neuron</h2>
-      <p class="nn-lead-p">${KURZ[k]} <b>Ausgabe:</b> ${I.out}. ${ANDERS[k]}</p></section>`);
-    card.appendChild(splitView(PENG, { typed: true, outText }));
+    const card = h(`<section class="nn-card nn-stepcard nt-detail" style="--type-color:${act.color}"></section>`);
+    const sv = splitView(PENG, { typed: true, outText });
+    sv.children[0].prepend(h(`<div class="nt-intro"><h2>Das <span class="nt-name">${act.fullName}</span>-Neuron</h2>
+      <p class="nn-lead-p">${KURZ[k]} <b>Ausgabe:</b> ${I.out}. ${ANDERS[k]}</p></div>`));
+    card.appendChild(sv);
     card.appendChild(h(`<div class="nt-facts"><p><b>Wofür?</b> ${I.wofuer}</p><p>${deepHTML(k, true)}</p><p class="nn-type-warn"><b>Achtung:</b> ${I.achtung}</p></div>`));
     page.appendChild(card);
   }
