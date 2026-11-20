@@ -39,7 +39,7 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
    (Schritt 7 + „Alle Neuronen“: **30 echte Adelie-/Zügelpinguine**, Schnabellänge/-höhe in mm aus Nebeltal
    `js/welt.js` PENG_A/PENG_C, ausgesucht, dass eine Gerade sie trennt, z. B. w = (1, −1), b = −25; die Länge allein
    reicht nicht; Start w = (0,5; 0,5), b = −30 → 25 von 30). Schritte: 1 `bio` Nervenzelle ↔ Neuron nur zum Ansehen
-   (`fixed`, Teil antippen = beide Seiten hervorgehoben) · 2 `in` · 3 `w` („multipliziert“, Leitung dick/dünn, rot =
+   (`fixed` + `many`: vier Eingänge x₁–x₄ und „⋮“ ohne Zahlen, gerechnet wird nur mit x₁/x₂; Teil antippen = beide Seiten hervorgehoben) · 2 `in` (Text: „als Beispiel nur zwei Eingänge“) · 3 `w` („multipliziert“, Leitung dick/dünn, rot =
    negativ) · 4 `b` Summe & Bias (dazugezählt, kein Schwellen-Messer) · 5 `act` Treppe mit Punkt bei z · 6 `line`
    Neuron links, Ebene rechts (`makePlane(m)`: Punkt ziehen = Eingänge, Gerade schieben = Bias, runde Griffe drehen =
    Gewichte; gerechnet in Einheiten je Achse, damit es auch bei ungleich langen Achsen stimmt) · 7 `data` „Ein Neuron
@@ -47,11 +47,11 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
    `../Nebeltal/img/frei/`, Pinguin antippen = Eingabe, „x von 30 richtig“, „Das Wichtigste“, darunter Karte `.nn-next`
    „Das war das einfachste Neuron: das Perzeptron – welche gibt es noch?“ mit Knopf zu `n-typen` (nur wenn freigegeben).
    **Keine Logik-Gatter (UND/XOR) und keine Sperber auf dieser Seite.** `n-typen` „Alle Neuronen“: Übersicht = je Typ eine
-   kleine Karte `.nt-card` (Kurve, Ausgabe, EIN Satz `KURZ`); antippen = Detail wie Schritt 7 mit diesem Typ (`PENG.type`,
+   Karte `.nt-card` (große Kurve `bigCurve` mit Achsen und Werten, Ausgabe, EIN Satz `KURZ`, „Für komplexe Netze“ = `DEEP` mit 0–3 Punkten + Wort; der Satz dazu nur im Detail, Sönke: Übersicht sonst zu viel Text); antippen = Detail wie Schritt 7 mit diesem Typ (`PENG.type`,
    Neuron `typed`: Typ-Name + Kurve in Typ-Farbe, Ausgabe als Zahl, Sigmoid „x % Zügel“; Ebene färbt nach der Ausgabe:
    gold = positiv, grau = negativ, Stärke = Größe), oben Chips zum Umschalten (Gewichte bleiben → Unterschied sehen),
    Text `ANDERS` je Typ (die Gerade ist bei allen dieselbe, anders ist, was herauskommt) + Wofür/Achtung aus `INFO`.
-   Neue Typen: in `activations`, `ORDER`, `INFO`, `KURZ`, `ANDERS`, `FY`/`F_TXT` (js/neuron.js) eintragen.
+   Neue Typen: in `activations`, `ORDER`, `INFO`, `KURZ`, `ANDERS`, `DEEP`, `FY`/`F_TXT` (js/neuron.js) eintragen.
 2. **Netze bauen** — Kachel `b-frei`: das freie Feld, **Build · Run**, keine Szenarien. Eingänge 0–10,
    beliebig viele Schichten (bis `MAX_LAYERS` = 8, Spalte „+ Schicht“, leere Schicht „× Schicht entfernen“).
 3. **Netze trainieren** — Kacheln = Szenarien (`sc-gatter`, `sc-ziffer`, `sc-ziel`, `sc-vogel`, `sc-eigene`).

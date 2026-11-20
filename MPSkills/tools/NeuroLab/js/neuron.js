@@ -120,18 +120,22 @@
     const OY = 45, HH = 285;
     const P = (x, y) => `left:${x / 7.2}%;top:${(y - OY) / HH * 100}%`;
     const cap = i => m.caps ? `<span class="nw-cap">${m.caps[i]}</span>` : '';
-    const root = h(`<div class="nw${o.fixed ? ' is-fixed' : ''}${o.typed ? ' is-typed' : ''}"><div class="nw-in">
+    // o.many (Schritt 1): vier Eingänge und „⋮“ – ein echtes Neuron hat viele;
+    // gerechnet wird weiter nur mit x₁ und x₂, die übrigen sind nur Bild.
+    const IN = o.many ? [52, 112, 172, 232] : [85, 245], IE = o.many ? [134, 152, 170, 188] : [146, 184];
+    const MORE = 284, MORE_E = 204;
+    const root = h(`<div class="nw${o.fixed ? ' is-fixed' : ''}${o.many ? ' is-many' : ''}${o.typed ? ' is-typed' : ''}"><div class="nw-in">
       <svg class="nw-wires" viewBox="0 45 720 285">
-        <line class="nw-edge" data-k="w" data-e="0" x1="80" y1="85" x2="300" y2="146"/>
-        <line class="nw-edge" data-k="w" data-e="1" x1="80" y1="245" x2="300" y2="184"/>
+        ${IN.map((y, i) => `<line class="nw-edge" data-k="w" data-e="${i}" x1="80" y1="${y}" x2="300" y2="${IE[i]}"/>`).join('')}
+        ${o.many ? `<line class="nw-more" data-k="w" x1="80" y1="${MORE}" x2="300" y2="${MORE_E}"/>` : ''}
         <line class="nw-bline" data-k="b" x1="355" y1="268" x2="355" y2="232"/>
         <path class="nw-barrow" data-k="b" d="M347 236 L355 226 L363 236 Z"/>
         <line class="nw-owire" data-k="out" x1="500" y1="165" x2="560" y2="165"/>
       </svg>
-      <div class="nw-node nw-x" data-k="in" style="${P(80, 85)}">${cap(0)}<i class="m">x<sub>1</sub></i>${stepper('x1', 'c-x')}</div>
-      <div class="nw-node nw-x nw-x2" data-k="in" style="${P(80, 245)}">${cap(1)}<i class="m">x<sub>2</sub></i>${stepper('x2', 'c-x')}</div>
-      <div class="nw-wpill" data-k="w" data-part="2" style="${P(222, 124)}"><i class="m">w<sub>1</sub></i><span class="nw-q">?</span>${stepper('w1', 'c-w')}</div>
-      <div class="nw-wpill" data-k="w" data-part="2" style="${P(222, 206)}"><i class="m">w<sub>2</sub></i><span class="nw-q">?</span>${stepper('w2', 'c-w')}</div>
+      ${IN.map((y, i) => `<div class="nw-node nw-x${i === 1 && !o.many ? ' nw-x2' : ''}" data-k="in" style="${P(80, y)}">${i < 2 ? cap(i) : ''}<i class="m">x<sub>${i + 1}</sub></i>${i < 2 && !o.many ? stepper('x' + (i + 1), 'c-x') : ''}</div>`).join('')}
+      ${IN.map((y, i) => { const f = o.many ? 0.4 : 0.645, x = 80 + f * 220, yy = y + f * (IE[i] - y);
+        return `<div class="nw-wpill" data-k="w" data-part="2" style="${P(x, yy)}"><i class="m">w<sub>${i + 1}</sub></i>${i < 2 && !o.many ? `<span class="nw-q">?</span>${stepper('w' + (i + 1), 'c-w')}` : ''}</div>`; }).join('')}
+      ${o.many ? `<div class="nw-xmore" data-k="in" style="${P(80, MORE)}">⋮</div>` : ''}
       <div class="nw-body" style="left:${300 / 7.2}%;top:${(105 - OY) / HH * 100}%;width:${200 / 7.2}%;height:${120 / HH * 100}%">
         <span class="nw-tname"></span>
         <div class="nw-half nw-sum" data-k="sum" data-part="3"><b class="nw-sigma">Σ</b><span class="nw-z m"><i>z</i> = <b></b></span><span class="nw-fog">?</span></div>
@@ -168,7 +172,7 @@
         $('.nw-tname').textContent = o.typed ? act.fullName : '';
       }
       $$('.nw-edge').forEach(e => {
-        const w = m.w[+e.dataset.e];
+        const w = m.w[+e.dataset.e] ?? 1;
         const known = show >= 2;
         e.setAttribute('stroke-width', known ? Math.max(1.5, Math.min(2 + Math.abs(w) * 4, 14)) : 3);
         e.classList.toggle('is-neg', known && w < 0);
@@ -274,7 +278,7 @@
   }
 
   const TEXT = {
-    in: { p: 'Wir schauen uns <b>ein</b> künstliches Neuron an. Noch ist das meiste grau – das decken wir Stück für Stück auf. Klar ist schon: Links gehen zwei <b class="t-x">Eingänge</b> hinein, beliebige Zahlen. Rechts kommt eine Antwort heraus: <b class="t-y">1 = feuert</b> oder <b>0 = feuert nicht</b>.',
+    in: { p: 'Wir schauen uns <b>ein</b> künstliches Neuron an. Noch ist das meiste grau – das decken wir Stück für Stück auf. Klar ist schon: Links gehen <b class="t-x">Eingänge</b> hinein, beliebige Zahlen. Ein echtes Neuron hat oft sehr viele Eingänge – <b>als Beispiel schauen wir uns hier nur zwei an</b>: <i class="m">x</i><sub>1</sub> und <i class="m">x</i><sub>2</sub>. Rechts kommt eine Antwort heraus: <b class="t-y">1 = feuert</b> oder <b>0 = feuert nicht</b>.',
       t: 'Ändere die Eingänge mit <b>+</b> und <b>−</b> oder tippe auf die Zahl. Wann feuert das Neuron?' },
     w: { p: 'Jede Leitung hat ein <b class="t-w">Gewicht w</b>. Der Eingang wird mit dem Gewicht <b>multipliziert</b>. Großes Gewicht = <b>dicke Leitung</b> = der Eingang ist wichtig. Gewicht 0 = der Eingang ist egal. Negatives Gewicht = <b class="t-neg">rote Leitung</b> = der Eingang bremst.',
       t: 'Stell <i class="m">w</i><sub>2</sub> auf 0. Was bewirkt <i class="m">x</i><sub>2</sub> jetzt noch?' },
@@ -543,7 +547,7 @@
     const grid = h('<div class="nn-two"><div class="nn-col-bio"></div><div class="nn-col-kn"></div></div>');
     const bio = bioSVG();
     ABS.type = 'perceptron';
-    const N = makeNeuron(ABS, { fixed: true });
+    const N = makeNeuron(ABS, { fixed: true, many: true });
     N.setShow(4);
     grid.children[0].appendChild(bio);
     grid.children[1].appendChild(N.el);
@@ -647,9 +651,30 @@
     sigmoid: 'Die Gerade ist dieselbe – dort ist die Ausgabe genau 0,5. Nah an der Geraden ist sich das Neuron unsicher (blasses Gelb), weit weg ganz sicher.',
     tanh: 'Die Gerade ist dieselbe – dort ist die Ausgabe 0. Auf der einen Seite geht sie bis 1, auf der anderen bis −1 (grau).',
   };
+  /* Für komplexe (tiefe) Netze geeignet? 0 = kaum … 3 = sehr gut */
+  const DEEP = {
+    perceptron: [0, 'kaum', 'Die Treppe ist überall flach – daran kann ein großes Netz nicht lernen.'],
+    linear: [1, 'nur als Ausgang', 'Viele davon hintereinander rechnen nicht mehr als ein einziges.'],
+    relu: [3, 'sehr gut', 'Der Standard in großen Netzen – schnell und lernt auch über viele Schichten.'],
+    sigmoid: [1, 'eher als Ausgang', 'Gut für die letzte Antwort, in vielen Schichten lernt es langsam.'],
+    tanh: [2, 'gut', 'Gut in verdeckten Schichten, besser als Sigmoid.'],
+  };
+  const deepHTML = (k, full) => { const [n, w, t] = DEEP[k];
+    return `<span class="nt-deep" data-lvl="${n}"><b>Für komplexe Netze: <span class="nt-dots">${[1, 2, 3].map(i => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span> ${w}</b>${full ? `<span>${t}</span>` : ''}</span>`; };
   let typSel = null;
-  function miniCurve(k) {
-    return `<svg viewBox="0 0 100 60" class="nt-curve"><line x1="6" y1="${fY(k, 0)}" x2="94" y2="${fY(k, 0)}" class="ax"/><line x1="50" y1="6" x2="50" y2="56" class="ax"/><path d="${fPath(k)}" style="stroke:${activations[k].color}"/></svg>`;
+  /* Große Kurve für die Karten: Achsen mit z und f(z), Werte an der y-Achse */
+  function bigCurve(k) {
+    const [lo, hi] = FY[k], X = z => 22 + (z + 4) / 8 * 140, Y = v => 10 + (hi - Math.max(lo, Math.min(hi, v))) / (hi - lo) * 74;
+    let d = '';
+    if (k === 'perceptron') d = `M${X(-4)} ${Y(0)} H${X(0)} V${Y(1)} H${X(4)}`;
+    else for (let i = 0; i <= 64; i++) { const z = -4 + i / 8; d += (i ? 'L' : 'M') + X(z).toFixed(1) + ' ' + Y(activations[k].fn(z)).toFixed(1); }
+    const ticks = [...new Set([hi, 0, lo])].filter(v => v >= lo && v <= hi);
+    const lab = v => num(v);
+    return `<svg viewBox="0 0 170 100" class="nt-curve">
+      ${ticks.map(v => `<line x1="${X(-4)}" x2="${X(4)}" y1="${Y(v)}" y2="${Y(v)}" class="${v === 0 ? 'ax' : 'gr'}"/><text x="16" y="${Y(v) + 3.5}" text-anchor="end" class="tk">${lab(v)}</text>`).join('')}
+      <line x1="${X(0)}" y1="6" x2="${X(0)}" y2="88" class="ax"/>
+      <text x="${X(4) + 2}" y="${Y(0) - 4}" text-anchor="end" class="al">z</text>
+      <path d="${d}" style="stroke:${activations[k].color}"/></svg>`;
   }
   function renderTypen(page, api) {
     if (typSel) return renderTyp(page, api);
@@ -661,9 +686,10 @@
       const act = activations[k];
       const c = h(`<button type="button" class="nn-card nt-card" data-type="${k}" style="--type-color:${act.color}">
         <span class="nt-head"><b>${act.fullName}</b>${k === 'perceptron' ? '<span class="nt-badge">kennst du schon</span>' : ''}</span>
-        ${miniCurve(k)}
-        <span class="nt-out">Ausgabe: ${INFO[k].out}</span>
+        ${bigCurve(k)}
+        <span class="nt-out">Ausgabe: <b>${INFO[k].out}</b></span>
         <span class="nt-txt">${KURZ[k]}</span>
+        ${deepHTML(k)}
         <span class="nt-go">Ausprobieren ›</span></button>`);
       c.addEventListener('click', () => { typSel = k; page.innerHTML = ''; renderTyp(page, api); page.closest('#neuron-page').scrollTop = 0; });
       grid.appendChild(c);
@@ -686,7 +712,7 @@
       <h2>Das <span class="nt-name">${act.fullName}</span>-Neuron</h2>
       <p class="nn-lead-p">${KURZ[k]} <b>Ausgabe:</b> ${I.out}. ${ANDERS[k]}</p></section>`);
     card.appendChild(splitView(PENG, { typed: true, outText }));
-    card.appendChild(h(`<div class="nt-facts"><p><b>Wofür?</b> ${I.wofuer}</p><p class="nn-type-warn"><b>Achtung:</b> ${I.achtung}</p></div>`));
+    card.appendChild(h(`<div class="nt-facts"><p><b>Wofür?</b> ${I.wofuer}</p><p>${deepHTML(k, true)}</p><p class="nn-type-warn"><b>Achtung:</b> ${I.achtung}</p></div>`));
     page.appendChild(card);
   }
 

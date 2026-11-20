@@ -653,16 +653,29 @@ i.m, .m i { font-family: 'KaTeX Math', 'Cambria Math', 'Times New Roman', serif;
 
 /* Alle Neuronen: Übersicht + Detail */
 .nn-zf { font-size: 1.15em; white-space: nowrap; }
-.nt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.nt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(172px, 1fr)); gap: 12px; }
 .nt-card { display: grid; gap: 8px; align-content: start; text-align: left; font: inherit; color: var(--ink); cursor: pointer;
   border-top: 4px solid var(--type-color); transition: transform .15s, box-shadow .15s; }
 .nt-card:hover { transform: translateY(-2px); box-shadow: 0 0 0 2px var(--type-color), var(--shadow); }
 .nt-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
 .nt-head b { color: var(--type-color); font-size: 1.1rem; }
 .nt-badge { font-size: .7rem; font-weight: 700; color: var(--ink-soft); background: var(--surface-2); border-radius: 999px; padding: 2px 8px; }
-.nt-curve { width: 100%; height: auto; background: var(--surface-2); border-radius: 10px; overflow: visible; }
-.nt-curve .ax { stroke: var(--line); stroke-width: 1.2; }
-.nt-curve path { fill: none; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.nt-curve { width: 100%; height: auto; background: var(--surface-2); border-radius: 10px; overflow: visible; border: 2px solid color-mix(in srgb, var(--type-color) 35%, transparent); }
+.nt-curve .ax { stroke: var(--ink-soft); stroke-width: 1.3; }
+.nt-curve .gr { stroke: var(--line); stroke-width: 1; stroke-dasharray: 3 3; }
+.nt-curve .tk { font: 700 10px var(--mono); fill: var(--ink-soft); }
+.nt-curve .al { font: italic 700 10px var(--mono); fill: var(--ink-soft); }
+.nt-curve path { fill: none; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+.nt-out b { color: var(--ink); }
+.nt-deep { display: flex; flex-direction: column; gap: 2px; font-size: .82rem; line-height: 1.35; color: var(--ink-soft); padding-top: 6px; border-top: 1px solid var(--line); }
+.nt-deep b { color: var(--ink); }
+.nt-dots { display: inline-flex; gap: 3px; margin: 0 3px; vertical-align: middle; }
+.nw.is-many .nw-node { font-size: .95em; }
+.nt-dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--line); }
+.nt-dots i.on { background: var(--type-color, var(--accent)); }
+.nt-facts .nt-deep { border-top: 0; padding-top: 0; font-size: inherit; }
+.nw-more { stroke: var(--ink-faint); stroke-width: 3; stroke-dasharray: 2 7; stroke-linecap: round; }
+.nw-xmore { position: absolute; transform: translate(-50%, -50%); font-size: 1.9em; line-height: 1; font-weight: 700; color: var(--ink-faint); }
 .nt-out { font-size: .8rem; font-weight: 700; color: var(--ink-soft); }
 .nt-txt { font-size: .9rem; line-height: 1.4; }
 .nt-go { font-weight: 700; font-size: .85rem; color: var(--type-color); }
