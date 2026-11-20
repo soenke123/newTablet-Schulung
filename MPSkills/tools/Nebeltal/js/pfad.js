@@ -34,11 +34,11 @@ window.NTPfad = (function () {
   };
   const STATIONS = [
     { k: 'ein', t: 'Einstieg', sub: 'Den tiefsten Punkt im Nebel suchen', items: [1, 2, 3], so: 'mp', mp: true,
-      info: { ziel: 'Erleben, wie schwer es ist, ohne Überblick den tiefsten Punkt zu finden – und wie Pfeil und Sprungweite helfen.',
+      info: { ziel: 'Spielerischer Einstieg: Wer findet im Nebel den tiefsten Punkt? Von KI ist hier noch keine Rede – die Klasse spielt um die Wette und merkt nebenbei, was hilft: der Pfeil bergab und die richtige Sprungweite.',
         tun: ['„Gemeinsam spielen“ – alle Tablets kommen in die Lobby.',
-              'Level 1 → 2 → 3 nacheinander. Nach jeder Runde kurz die Karte mit allen Wegen ansehen.',
+              'Level 1 → 2 → 3 nacheinander. Nach jeder Runde kurz die Karte mit allen Wegen ansehen: Wer kam am tiefsten – und wie?',
               'Nach Level 3 „Weiter zur Erarbeitung“: Die Runde endet für alle, Level 1–3 sind danach zum Allein-Spielen frei.'],
-        impuls: 'Woher weiß eine KI, wo es bergab geht – und wie weit sie springen soll?' } },
+        impuls: 'Stellt eine Vermutung auf: Was hat ein Pinguin, der im Nebel das tiefste Tal sucht, mit dem Lernen eines neuronalen Netzes zu tun? Begründet eure Vermutung mit dem, was euch in Level 1–3 geholfen hat.' } },
     { k: 'erarb', t: 'Erarbeitung', sub: 'Wie lernt ein Neuron?', items: ['erarb'], so: 'tafel',
       info: { ziel: 'Die Lernregel verstehen: raten, mit dem Soll vergleichen, Gewichte anpassen – jede Anpassung ist ein Sprung ins Tal.',
         tun: ['Erarbeitung am Beamer öffnen, die vier Schritte gemeinsam durchgehen.',
