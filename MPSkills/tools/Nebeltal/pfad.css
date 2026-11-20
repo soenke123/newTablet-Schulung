@@ -77,6 +77,7 @@ html[data-theme="dark"] .pst-so { background:rgba(255,255,255,.05); }
 .pst-sheet b { color:var(--ink); }
 .pst-sheet span { margin-right:auto; }
 .pst-sheet a { text-decoration:none; }
+.pst-sheet-note { flex-basis:100%; font-size:12.5px; color:var(--ink-faint); }
 .pst-note { margin:10px 0 0; font-size:13px; color:var(--ink-faint); }
 .pst-act { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
 .pst-act .btn { display:inline-flex; align-items:center; gap:8px; }
@@ -130,25 +131,29 @@ html[data-motion="low"] .pst-card { -webkit-backdrop-filter:none; backdrop-filte
 html[data-theme="dark"] .pfad { --mist:color-mix(in srgb, var(--fog) 74%, #a9c2e2); }
 @media (prefers-color-scheme: dark) { html:not([data-theme]) .pfad { --mist:color-mix(in srgb, var(--fog) 74%, #a9c2e2); } }
 .pfad.fogged .pfad-bg .f0 { stop-opacity:0; }          /* oben klar: der Nebel liegt jetzt unten */
-.pfad-mist { position:absolute; left:0; right:0; top:100%; bottom:0; z-index:3; pointer-events:none; overflow:hidden;
-  background:linear-gradient(to bottom, transparent 0, color-mix(in srgb, var(--mist) 55%, transparent) 90px,
-             color-mix(in srgb, var(--mist) 88%, transparent) 240px, color-mix(in srgb, var(--mist) 96%, transparent) 100%);
-  -webkit-mask-image:linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
-          mask-image:linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+/* Die Nebelbank beginnt MIST_PAD px über ihrer Oberkante (js/pfad.js): dort weich ausgeblendet per mask –
+   vorher schnitt overflow:hidden die weichgezeichneten Wolken oben gerade ab, und links blieb der Berg klar. */
+.pfad-mist { position:absolute; left:-8px; right:-8px; top:100%; bottom:0; z-index:3; pointer-events:none; overflow:hidden;
+  background:linear-gradient(to bottom, transparent 0, transparent 110px, color-mix(in srgb, var(--mist) 62%, transparent) 230px,
+             color-mix(in srgb, var(--mist) 92%, transparent) 400px, color-mix(in srgb, var(--mist) 97%, transparent) 100%);
+  -webkit-mask-image:linear-gradient(to bottom, transparent 0, #000 150px), linear-gradient(to right, #000 0, #000 92%, transparent);
+          mask-image:linear-gradient(to bottom, transparent 0, #000 150px), linear-gradient(to right, #000 0, #000 92%, transparent);
+  -webkit-mask-composite:source-in; mask-composite:intersect;
   transition:top 3.2s cubic-bezier(.45, 0, .2, 1); }
-.pfad-mist::before { content:''; position:absolute; left:-10%; right:-10%; top:20px; height:120px;
-  background:radial-gradient(70px 50px at 50% 100%, color-mix(in srgb, var(--mist) 80%, transparent) 55%, transparent 72%) 0 0 / 170px 100% repeat-x,
-             radial-gradient(100px 60px at 50% 100%, color-mix(in srgb, var(--mist) 65%, transparent) 50%, transparent 72%) 80px 24px / 240px 100% repeat-x;
-  filter:blur(8px); animation:mistDrift 26s ease-in-out infinite alternate; }
-.pfad-mist i { position:absolute; width:60%; height:220px; border-radius:50%; filter:blur(28px);
+.pfad-mist::before { content:''; position:absolute; left:-10%; right:-10%; top:120px; height:150px;
+  background:radial-gradient(80px 55px at 50% 100%, color-mix(in srgb, var(--mist) 85%, transparent) 55%, transparent 72%) 0 0 / 180px 100% repeat-x,
+             radial-gradient(110px 65px at 50% 100%, color-mix(in srgb, var(--mist) 70%, transparent) 50%, transparent 72%) 90px 30px / 250px 100% repeat-x;
+  filter:blur(10px); animation:mistDrift 26s ease-in-out infinite alternate; }
+.pfad-mist i { position:absolute; width:62%; height:240px; border-radius:50%; filter:blur(30px);
   background:radial-gradient(closest-side, color-mix(in srgb, var(--mist) 85%, #ffffff 15%), transparent);
-  opacity:.75; animation:mistDrift 24s ease-in-out infinite alternate; }
-.pfad-mist i:nth-child(1) { left:-12%; top:60px; }
-.pfad-mist i:nth-child(2) { left:38%; top:200px; animation-duration:31s; animation-delay:-9s; }
-.pfad-mist i:nth-child(3) { left:8%; top:420px; width:70%; animation-duration:37s; animation-delay:-17s; }
+  opacity:.8; animation:mistDrift 24s ease-in-out infinite alternate; }
+.pfad-mist i:nth-child(1) { left:-14%; top:170px; }
+.pfad-mist i:nth-child(2) { left:40%; top:290px; animation-duration:31s; animation-delay:-9s; }
+.pfad-mist i:nth-child(3) { left:6%; top:500px; width:72%; animation-duration:37s; animation-delay:-17s; }
 @keyframes mistDrift { from { transform:translateX(-7%); } to { transform:translateX(9%); } }
-.pst.hid .pst-card { filter:blur(4px); opacity:.5; }
-.pst.hid .pst-mark { opacity:.35; }
+.pst.hid .pst-card { filter:blur(6px); opacity:.45; }
+.pst.hid .pst-mark { filter:blur(3px); opacity:.3; }
+.pst.hid ~ .pst.hid .pst-card, .pst.hid ~ .pst.hid .pst-mark { opacity:.15; }   /* nur der nächste Halt schimmert durch */
 html[data-motion="low"] .pfad-mist::before, html[data-motion="low"] .pfad-mist i { animation:none; filter:none; }
 html[data-motion="low"] .pfad-mist { transition:none; }
 @media (prefers-reduced-motion: reduce) { .pfad-mist::before, .pfad-mist i { animation:none; } .pfad-mist { transition:none; } }

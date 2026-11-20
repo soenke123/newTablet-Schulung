@@ -223,11 +223,15 @@
     erarb: { name: 'Erarbeitung', short: 'Wie lernt ein Neuron?', href: 'erarbeitung.html', tag: 'Tafel' },
     sich: { name: 'Sicherung', short: 'Kommt bald', soon: true, tag: '–' }
   };
-  const PHASES = [
-    { t: 'Einstieg', sub: 'Den tiefsten Punkt suchen', items: [1, 2, 3, 'erarb'] },
-    { t: 'Neuronen trainieren', sub: 'Jede Welt ist ein echtes Neuron', items: [4, 5, 6, 7] },
-    { t: 'Sicherung', sub: 'Ein ganzes Netz', items: ['sich', 8] }
+  /* Freie Nutzung (Sönke 20.11.2026): dieselben fünf Halte wie im Lernpfad (Namen aus NTPfad.STATIONS),
+     aber als volle Kachel-Reihen (bis zu 5 je Reihe), der Name des Halts steht als Klammer über seinen Kacheln.
+     'blatt' = Arbeitsblatt (nur Lehrkraft und allein, wie im Lernpfad). */
+  const ROWS = [
+    [{ st: 0, items: [1, 2, 3] }, { st: 1, items: ['erarb'] }],
+    [{ st: 2, items: [4, 5, 6, 7, 'blatt'] }],
+    [{ st: 3, items: ['sich'] }, { st: 4, items: [8] }]
   ];
+  const ST_NAME = ['Einstieg', 'Erarbeitung', 'Übung', 'Sicherung', 'Finale'];
 
   /* Im Raum (js/raum.js): Lehrkraft teilt jede Kachel einzeln (Symbol oben rechts an der Kachel),
      die Klasse sieht nicht geteilte Kacheln mit Schloss. Ohne Raum ist alles offen. */
@@ -290,11 +294,21 @@
         share: list => R.setLevels(list) });
     } else {
       if (window.NTPfad) NTPfad.clear();
-      $('#levels').innerHTML = PHASES.map((P, i) =>
-        '<section class="phase">' +
-          '<div class="phase-h"><span class="phase-n">Phase ' + (i + 1) + '</span><b>' + P.t + '</b><small>' + P.sub + '</small></div>' +
-          '<div class="phase-row">' + P.items.map(tileHtml).join('') + '</div>' +
-        '</section>').join('');
+      const P = window.NTPfad;
+      const sheetTile = () => '<div class="tcell sheet">' +
+        '<a class="tile extra" href="' + P.SHEET + '.pdf" target="_blank" rel="noopener" title="Arbeitsblatt als PDF öffnen">' +
+          '<span class="tile-img">' + (window.NTBild ? NTBild.tile('blatt') : '') + '<span class="tile-n">Blatt</span></span>' +
+          '<span class="tile-t"><b>Arbeitsblatt</b><small>' + P.SHEET_NOTE + '</small></span></a>' +
+        '<span class="tsheet"><a href="' + P.SHEET + '.pdf" target="_blank" rel="noopener">PDF</a><a href="' + P.SHEET + '.docx" download>Word</a></span>' +
+        '</div>';
+      $('#levels').innerHTML = ROWS.map(row =>
+        '<div class="frow">' + row.map(g => {
+          const items = g.items.filter(k => k !== 'blatt' || (P && !R.isStudent));
+          const name = (P && P.STATIONS[g.st] && P.STATIONS[g.st].t) || ST_NAME[g.st];
+          return '<section class="fgrp" data-st="' + g.st + '" style="--n:' + items.length + '">' +
+            '<div class="fgrp-h"><span class="fgrp-n">' + (g.st + 1) + '</span><b>' + name + '</b></div>' +
+            '<div class="fgrp-row">' + items.map(k => k === 'blatt' ? sheetTile() : tileHtml(k)).join('') + '</div></section>';
+        }).join('') + '</div>').join('');
     }
     document.querySelectorAll('#levels .tile[data-lv]').forEach(b => b.addEventListener('click', () => openLevel(+b.dataset.lv)));
     document.querySelectorAll('#levels .tshare').forEach(b => b.addEventListener('click', () => toggleShare(b.dataset.share === 'erarb' ? 'erarb' : +b.dataset.share)));

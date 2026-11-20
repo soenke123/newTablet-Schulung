@@ -72,6 +72,8 @@ window.NTPfad = (function () {
   };
   const svg = (k, cls) => '<svg class="' + (cls || 'pic') + '" viewBox="0 0 24 24" aria-hidden="true">' + ICON[k] + '</svg>';
   const SHEET = 'arbeitsblatt/Nebeltal_Arbeitsblatt';
+  // Sönke 20.11.2026: die Klasse bekommt das Blatt nicht über die Plattform (Tablets sehen es nie)
+  const SHEET_NOTE = 'Bekommt die Klasse nicht über diese Plattform – bitte austeilen.';
 
   let ro = null, mistFrom = null;
 
@@ -117,7 +119,7 @@ window.NTPfad = (function () {
         : s.mp && !R.inRoom ? '<p class="pst-note">Im Raum gemeinsam, hier allein.</p>' : '';
       const sheet = s.sheet && !ST ? '<div class="pst-sheet">' + svg('doc') + '<b>Arbeitsblatt</b><span>zu Level 4–7</span>' +
         '<a class="btn sm" href="' + SHEET + '.pdf" target="_blank" rel="noopener">PDF</a>' +
-        '<a class="btn sm" href="' + SHEET + '.docx" download>Word</a></div>' : '';
+        '<a class="btn sm" href="' + SHEET + '.docx" download>Word</a><i class="pst-sheet-note">' + SHEET_NOTE + '</i></div>' : '';
       const hid = fogged && i > P.cur;
       return '<section class="pst ' + st + (s.soon ? ' soon' : '') + (s.goal ? ' goal' : '') + (hid ? ' hid" inert aria-hidden="true' : '') + '" style="--i:' + i + '" data-st="' + i + '">' +
         '<div class="pst-mark" aria-hidden="true"><span class="pst-n">' + (st === 'done' ? svg('check', 'pic ck') : i + 1) + '</span>' +
@@ -154,12 +156,13 @@ window.NTPfad = (function () {
   /* ── Berg + Weg hinter den Halten (SVG, nach dem Layout) ──
      Weg = weiche Kurve durch die Marken; Berg = alles links vom Weg (oben schmaler Gipfel,
      unten breit) mit Talboden rechts unten. Bis zum aktuellen Halt durchgezogen, danach gestrichelt. */
-  // Nebelbank: Oberkante knapp unter der Karte des Halts k
+  // Nebelbank: dichter Nebel knapp unter der Karte des Halts k; das Element beginnt MIST_PAD höher (weicher Übergang, pfad.css)
+  const MIST_PAD = 150;
   function mistTop(pf, k) {
     const s = pf.querySelector('.pst[data-st="' + k + '"] .pst-card');
     if (!s) return 0;
     const box = pf.getBoundingClientRect(), r = s.getBoundingClientRect();
-    return r.bottom - box.top + 4;
+    return r.bottom - box.top + 4 - MIST_PAD;
   }
   function placeMist(pf) {
     const m = pf.querySelector('.pfad-mist');
@@ -246,5 +249,5 @@ window.NTPfad = (function () {
 
   function clear() { if (ro) { ro.disconnect(); ro = null; } }
 
-  return { render, clear, STATIONS };
+  return { render, clear, STATIONS, SHEET, SHEET_NOTE };
 })();

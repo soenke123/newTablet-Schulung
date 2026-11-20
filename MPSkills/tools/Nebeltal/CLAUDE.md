@@ -136,7 +136,10 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   (Untertitel `short` nur noch als title-Text, Sönke 18.11.2026); keine Welt-Nummer-Zeile, keine Labor-/Showroom-Links mehr
   (Welt-Nummer intern in `nt.seed`, „Neue Welt“ am Levelende würfelt sie). `index.html?lv=4` öffnet direkt ein Level.
 - **Zwei Ansichten der Übersicht** (Sönke 19.11.2026): Umschalter `#viewSw` „Lernpfad | Freie Nutzung“ oben im Menü.
-  „Freie Nutzung“ = die Phasen-Reihen oben (`PHASES`), „Lernpfad“ (Vorgabe) = `js/pfad.js` + `pfad.css`. Im Raum entscheidet
+  „Freie Nutzung“ = Kachel-Reihen (bis zu 5 je Reihe, `ROWS` in spiel.js, seit 20.11.2026 statt `PHASES`): dieselben fünf Halte
+  wie im Lernpfad (Name aus `NTPfad.STATIONS`, Nummer im Kreis + Klammer über den Kacheln der Gruppe, `.frow/.fgrp`):
+  Einstieg 1–3 + Erarbeitung · Übung 4–7 + Kachel Arbeitsblatt (`NTBild.tile('blatt')`, PDF/Word, nur Lehrkraft und allein) ·
+  Sicherung + Finale 8; „Gemeinsam spielen“ (`#mpBar`) bleibt oben, „Lernpfad“ (Vorgabe) = `js/pfad.js` + `pfad.css`. Im Raum entscheidet
   die Lehrkraft (`skill_room_state.data.view` = 'pfad' | 'frei', fehlt = pfad; über `nt:view` → tool.js `setPatch`, die Tablets
   folgen und haben keinen Umschalter); allein merkt sich das Gerät die Wahl (`nt.view`). Im Lernpfad ist `#mpBar` weg – gemeinsam
   gespielt wird über den Halt.
@@ -155,7 +158,9 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   **Nebel für die Klasse** (Sönke 20.11.2026: „die Schritte, die noch nicht sichtbar sind, wirklich im Nebel … der Nebel sinkt“):
   Tablets im Raum (nicht Lehrkraft, nicht allein, nicht wenn alles geschafft) sehen nur bis zum aktuellen Halt; darunter
   `.pfad-mist` (z-index über den Karten, Wolken `<i>` treiben, Ränder per mask weich, Farbe `--mist`), spätere Halte `.hid`
-  (inert, verschwommen) – der nächste schimmert nur durch. Der Nebel auf der Bergkuppe ist dann aus (oben klar). Rückt die
+  (inert, verschwommen) – der nächste schimmert nur durch, die weiteren fast gar nicht. Die Nebelbank beginnt `MIST_PAD` (150 px)
+  über der dichten Stelle und blendet dort per mask weich ein (vorher schnitt overflow:hidden die Wolken oben gerade ab, und
+  links blieb der Berg klar). Der Nebel auf der Bergkuppe ist dann aus (oben klar). Rückt die
   Klasse weiter (`nt.fogAt` im Gerät < aktueller Halt), startet die Nebelbank an der alten Stelle und sinkt in ~3 s
   (`placeMist` in `draw`); Sparmodus: ohne Bewegung.
 - **Lobby im Lernpfad** (mehr.js, `onPath()`): statt „Level wählen“ nur der Weg des Halts (`PATH_RUNS` [1, 2, 3] bzw. [8],
@@ -195,7 +200,8 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
 - `arbeitsblatt/` – Arbeitsblatt „Wie ein neuronales Netz lernt“ (19.11.2026, nach der Erarbeitung, Level 4–7 allein, 2 Seiten:
   Lernkreislauf mit den 5 Begriffen, ein Lernschritt von Hand, Rechnung = Sprung, Fragen je Level); Word + PDF, Quelle in
   `arbeitsblatt/quelle/` (bilder.mjs → PNGs, blatt.cjs → docx, Lösungen in LIESMICH.md); verlinkt im Lernpfad am Halt „Übung“
-  (seit 19.11.2026, nur Lehrkraft und allein)
+  (seit 19.11.2026) und in der Freien Nutzung als Kachel (20.11.2026), beides nur Lehrkraft und allein, mit Hinweis
+  `NTPfad.SHEET_NOTE` „Bekommt die Klasse nicht über diese Plattform – bitte austeilen.“
 - `tool.js`/`tool.css` – iframe-Rahmen (wie Reinforce Yourself) und Brücke zum Raum (s. „Im Raum“ unten):
   reicht `data.levels`/`data.mp` hinein, setzt Freigaben über skill_room_set_state und führt die RPCs
   `nt_play` (Tablet) bzw. `nt_room_get`/`nt_room_act` (Lehrkraft) für die Seite im Rahmen aus

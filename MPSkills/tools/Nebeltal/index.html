@@ -369,14 +369,23 @@ html[data-motion="low"] .glass { -webkit-backdrop-filter:none !important; backdr
 .src-h { font-weight:700; color:var(--ink-soft); margin-right:4px; }
 .src b { color:var(--ink-soft); font-weight:600; }
 .src a { color:var(--accent-ink); }
-.phase { display:grid; grid-template-columns:170px 1fr; gap:14px; align-items:stretch; }
-.phase-h { display:flex; flex-direction:column; gap:3px; padding:10px 12px 10px 0; border-right:1px solid var(--line-soft); }
-.phase-n { font-family:var(--mono); font-size:11px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); }
-.phase:nth-child(2) .phase-n { color:var(--violet); }
-.phase:nth-child(3) .phase-n { color:var(--gold); }
-.phase-h b { font-family:var(--head); font-weight:600; font-size:17px; line-height:1.2; }
-.phase-h small { color:var(--ink-faint); font-size:13px; line-height:1.35; }
-.phase-row { display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:10px; }
+/* Freie Nutzung (20.11.2026): Reihen mit bis zu 5 Kacheln, je Halt des Lernpfads eine Gruppe mit Klammer + Name darüber */
+.frow { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:10px 14px; align-items:start; }
+.fgrp { grid-column:span var(--n); min-width:0; display:flex; flex-direction:column; gap:8px; }
+.fgrp-h { display:flex; align-items:center; gap:8px; min-width:0; }
+.fgrp-h b { font-family:var(--head); font-weight:600; font-size:15px; white-space:nowrap; }
+.fgrp-h::after { content:''; flex:1; min-width:12px; height:9px; margin-top:8px; border:2px solid var(--line); border-bottom:0; border-left:0; border-radius:0 8px 0 0; opacity:.9; }
+.fgrp-n { flex:none; width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-family:var(--mono); font-weight:700; font-size:13px;
+  color:var(--accent-ink); border:2px solid var(--accent); background:var(--surface); }
+.fgrp-row { display:grid; grid-template-columns:repeat(var(--n), minmax(0, 1fr)); gap:10px; }
+.fgrp[data-st="2"] .tile-n { color:#c6b3ff; border-color:rgba(169,139,255,.8); }
+.fgrp[data-st="3"] .tile-n, .fgrp[data-st="4"] .tile-n { color:#ffd166; border-color:rgba(255,209,102,.8); }
+.tcell.sheet { position:relative; display:flex; }
+.tcell.sheet .tile { flex:1; text-decoration:none; color:inherit; }
+.tcell.sheet .tile-t small { font-size:11.5px; }
+.tsheet { position:absolute; right:7px; top:7px; display:flex; gap:4px; }
+.tsheet a { padding:3px 8px; border-radius:99px; font:700 11px var(--mono); text-decoration:none; color:#fff; background:rgba(7,13,26,.72); border:1px solid rgba(255,255,255,.35); }
+.tsheet a:hover { border-color:var(--accent); color:var(--accent); }
 .tile { display:flex; flex-direction:column; text-align:left; padding:0; cursor:pointer; overflow:hidden;
   border:1px solid var(--line-soft); background:var(--surface-2); border-radius:14px; transition:transform .15s, box-shadow .15s, border-color .15s; }
 html[data-theme="dark"] .tile { background:rgba(255,255,255,.03); }
@@ -385,8 +394,6 @@ html[data-theme="dark"] .tile { background:rgba(255,255,255,.03); }
 .tile-svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
 .tile-n { position:absolute; left:8px; top:8px; min-width:28px; height:28px; padding:0 7px; border-radius:99px; display:grid; place-items:center;
   font-family:var(--mono); font-weight:700; font-size:14px; color:#7ff7d3; background:rgba(7,13,26,.72); border:1px solid rgba(92,242,196,.7); }
-.phase:nth-child(2) .tile-n { color:#c6b3ff; border-color:rgba(169,139,255,.8); }
-.phase:nth-child(3) .tile-n { color:#ffd166; border-color:rgba(255,209,102,.8); }
 .tile.extra .tile-n { font-size:11px; letter-spacing:.06em; text-transform:uppercase; }
 .tile-img .stars { position:absolute; right:7px; top:6px; padding:1px 6px; border-radius:99px; background:rgba(7,13,26,.72); }
 .tile-img .stars i { font-size:14px; color:rgba(255,255,255,.25); }
@@ -398,9 +405,11 @@ html[data-theme="dark"] .tile { background:rgba(255,255,255,.03); }
 .tile.soon { cursor:default; opacity:.55; }
 .tile.soon:hover { transform:none; box-shadow:none; border-color:var(--line-soft); }
 @media (max-width: 860px) {
-  .phase { grid-template-columns:1fr; gap:8px; }
-  .phase-h { border-right:0; padding:0; }
-  .phase-row { grid-template-columns:repeat(2, minmax(0, 1fr)); }
+  .frow { display:flex; flex-direction:column; align-items:stretch; gap:14px; }
+  .fgrp-row { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+  .fgrp-row { grid-template-columns:repeat(2, minmax(0, 1fr)); }
 }
 html[data-motion="low"] .tile { transition:none; }
 html[data-motion="low"] .tile:hover { transform:none; }
@@ -569,7 +578,7 @@ body[data-state="result"] #zPanel { opacity:1; }
 body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:grab; touch-action:none; }
 </style>
 <link href="mehr.css?v=20261119a" rel="stylesheet">
-<link href="pfad.css?v=20261120b" rel="stylesheet">
+<link href="pfad.css?v=20261120c" rel="stylesheet">
 </head>
 <body>
 <div id="app">
@@ -694,15 +703,15 @@ body[data-state="result"] #welt, body[data-state="result"] #zwei .zcv { cursor:g
 </div>
 
 <script src="js/welt.js?v=20261118a"></script>
-<script src="js/bilder.js?v=20261118f"></script>
+<script src="js/bilder.js?v=20261120a"></script>
 <script src="js/grafik.js?v=20261118t"></script>
 <script src="js/orbit.js?v=20261118a"></script>
 <script src="js/schnee.js?v=20261117j"></script>
 <script src="js/netz.js?v=20261118d"></script>
 <script src="js/raum.js?v=20261120a"></script>
 <script src="js/zwei.js?v=20261118p"></script>
-<script src="js/pfad.js?v=20261120b"></script>
-<script src="js/spiel.js?v=20261120a"></script>
+<script src="js/pfad.js?v=20261120c"></script>
+<script src="js/spiel.js?v=20261120b"></script>
 <script src="js/mehr.js?v=20261119b"></script>
 </body>
 </html>

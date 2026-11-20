@@ -13,7 +13,7 @@
                          o.x, o.y = Füße, o.s Größe, o.scarf Farbe)
    NTBild.icon(kind)     kleines <svg> für Tabellen: 'peng', 'away', 'egg'
    NTBild.scene(id)      großes Bild für die Erklärkarte von Level id
-   NTBild.tile(key)      Kachelbild der Übersicht (Level-Nummer, 'erarb', 'sich')
+   NTBild.tile(key)      Kachelbild der Übersicht (Level-Nummer, 'erarb', 'sich', 'blatt')
    NTBild.SP             Namen/Farben der drei Arten
    ══════════════════════════════════════════════════════════════ */
 
@@ -430,6 +430,19 @@ window.NTBild = (function () {
       b += T(150, 87.5, 'σ', { size: 16, col: ch }) + T(100, 58, 'w₁', { size: 11, col: ch }) + T(100, 114, 'w₂', { size: 11, col: ch });
       b += T(178, 138, 'Fehler', { size: 10.5, col: '#ff9d4d', w: 700 });
       return b;
+    },
+    blatt(id) {
+      // Arbeitsblatt (Freie Nutzung, 20.11.2026): zwei Blätter auf dem Eis, vorn Sprungbögen ins Tal wie Level 3
+      let b = tileBg(id);
+      b += '<g transform="rotate(-7 96 78)"><rect x="52" y="18" width="88" height="116" rx="5" fill="#cfe0f5" fill-opacity=".4"/></g>';
+      b += '<g transform="rotate(4 132 76)"><rect x="86" y="14" width="96" height="124" rx="5" fill="#eef4fb"/>' +
+        '<rect x="96" y="26" width="52" height="7" rx="3.5" fill="#16305a"/>' +
+        [42, 52].map(y => '<rect x="96" y="' + y + '" width="' + (y === 42 ? 74 : 60) + '" height="4" rx="2" fill="#16305a" fill-opacity=".35"/>').join('') +
+        '<path d="M96,112 C112,70 126,74 136,100 S160,118 172,82" fill="none" stroke="#16305a" stroke-opacity=".55" stroke-width="2"/>' +
+        '<path d="M100,98 Q110,72 120,92 Q128,78 136,100" fill="none" stroke="#0aa68a" stroke-width="2" stroke-dasharray="3.5 3.5" stroke-linecap="round"/>' +
+        '<ellipse cx="136" cy="102" rx="7" ry="2.6" fill="none" stroke="#0aa68a" stroke-width="1.8"/>' +
+        [120, 128].map(y => '<rect x="96" y="' + y + '" width="' + (y === 120 ? 70 : 46) + '" height="4" rx="2" fill="#16305a" fill-opacity=".3"/>').join('') + '</g>';
+      return b + tImg('main', 206, 146, 66, 0.68);
     },
     sich() {
       let b = tileBg('ntTs', false);
