@@ -80,7 +80,7 @@ for (const [i, u] of U.entries()) {
   if (t[i] === 1) ok(`1  Sieger s${i} bekommt Magic Ghost`, JSON.stringify(m) === '["mps_derby_kt_ghost"]', JSON.stringify(m));
   else ok(`1  Verlierer s${i} bekommt nichts`, m.length === 0, JSON.stringify(m));
 }
-const all = (await one(`select count(*)::int n from mps_avatar_unlocks where avatar_id like 'mps_derby_kt_%'`)).n;
+const all = (await one(`select count(*)::int n from mps_avatar_unlocks where avatar_id like 'mps_derby_kt_%' and user_id <> $1`, [T])).n;  // 0300: Lehrkraft bekommt eigenes
 ok('1  Gäste ohne Konto bekommen nichts (nur Konten in der Tabelle)', all === t.filter(x => x === 1).length);
 
 /* 2 Gleichstand beim Beenden: beide Teams, Figuren 5 und 1 */
@@ -100,7 +100,7 @@ await call(`dd_storm_room_reset($1)`, [CODE]);
 await call(`dd_storm_room_figs($1, '[2, 3]'::jsonb)`, [CODE]);
 await start();
 await call(`dd_storm_room_stop($1)`, [CODE]);
-const any23 = (await one(`select count(*)::int n from mps_avatar_unlocks where avatar_id in ('mps_derby_kt_lauch', 'mps_derby_kt_gameboy')`)).n;
+const any23 = (await one(`select count(*)::int n from mps_avatar_unlocks where avatar_id in ('mps_derby_kt_lauch', 'mps_derby_kt_gameboy') and user_id <> $1`, [T])).n;  // 0300: ohne Lehrkraft
 ok('3  ohne Kisten kein Sieger, nichts frei', any23 === 0);
 
 /* 4 mps_my_avatars liefert die eigenen */

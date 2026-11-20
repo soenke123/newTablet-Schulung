@@ -17,6 +17,10 @@
         in mps_avatar_unlocks (Migration 0214, Beispiel Kingdoms of Mathoria)
         — der Client lädt das mit loadMpskillsUnlocks(). Reine Client-Regeln
         gehen in MPS_UNLOCKERS. Den Satz für den Picker in MPS_GROUPS.hint.
+     5) Wettkampf-Skill (nur die Klasse gewinnt)? Dann auch die Lehrkräfte
+        bedenken: Migration 0300 gibt ihnen je Runde EIN Bild (erst normal,
+        dann Gold) über mps_teacher_round_avatar — neuen Trigger dort anlegen.
+        Der Volladmin hat ohnehin alles (mps_my_avatars → all).
 
    Bild-Katalog:
      Eier              → group 'egg',  immer freigeschaltet
@@ -79,17 +83,17 @@
      (so geschrieben, wie er auf der Platte heißt). */
   const MPS_GROUPS = [
     { id: 'mps_knowledgestack', skill: 'knowledgestack', folder: 'KnowlegeStack',        label: 'Knowledge Stack', gold: true,
-      hint: 'Spiel ein Quiz bis zum Ende — dann bekommst du das Wesen, mit dem du gespielt hast. Wer Platz 1 holt, bekommt es zusätzlich in Gold. Das klappt nur, wenn du beim Spielen angemeldet bist.' },
+      hint: 'Spiel ein Quiz bis zum Ende — dann bekommst du das Wesen, mit dem du gespielt hast. Wer Platz 1 holt, bekommt es zusätzlich in Gold. Das klappt nur, wenn du beim Spielen angemeldet bist. Lehrkräfte bekommen je gespieltem Quiz ein Wesen, sind alle da, kommen die goldenen.' },
     { id: 'mps_wordisland',     skill: 'wordisland',     folder: 'Wordisland',           label: 'Wordisland',
-      hint: 'Gewinne mit deinem Volk im Teamspiel — dann bekommst du es. Beim zweiten Sieg mit demselben Volk kommt die große Figur dazu, in Gold, wenn du auf deiner eigenen Insel schon einmal Level 5 erreicht hast. Echsen bekommst du, sobald eine auf deiner Insel so weit gewachsen ist. Das klappt nur, wenn du angemeldet bist.' },
+      hint: 'Gewinne mit deinem Volk im Teamspiel — dann bekommst du es. Beim zweiten Sieg mit demselben Volk kommt die große Figur dazu, in Gold, wenn du auf deiner eigenen Insel schon einmal Level 5 erreicht hast. Echsen bekommst du, sobald eine auf deiner Insel so weit gewachsen ist. Das klappt nur, wenn du angemeldet bist. Lehrkräfte bekommen je gespielter Teamrunde ein Volk, zuletzt in Gold.' },
     { id: 'mps_clash-of-math',  skill: 'clash-of-math',  folder: 'Kingdoms of Mathoria', label: 'Kingdoms of Mathoria',
-      hint: 'Gewinne mit deinem Team eine Partie — dann bekommst du das Bild deines Volkes. Das klappt nur, wenn du beim Spielen angemeldet bist.' },
+      hint: 'Gewinne mit deinem Team eine Partie — dann bekommst du das Bild deines Volkes. Das klappt nur, wenn du beim Spielen angemeldet bist. Lehrkräfte bekommen je gespielter Partie ein Volk.' },
     { id: 'mps_wildclusters',   skill: 'wildclusters',   folder: 'Wildclusters',         label: 'Wild Clusters',
       hint: 'Sobald eure Lehrkraft die Auflösung (Phase 3) startet, bekommst du alle Tiere. Das klappt nur, wenn du angemeldet bist.' },
     { id: 'mps_balance',        skill: 'balance',        folder: 'Balance of Nature',    label: 'Balance of Nature',
       hint: 'Spiel ein Szenario, das deine Lehrkraft mit der Klasse teilt — dann bekommst du die Figuren, die darin vorkommen. Das klappt nur, wenn du angemeldet bist.' },
     { id: 'mps_derby',          skill: 'derby',          folder: 'Definitions Derby',    label: 'How to Fachbegriffe',
-      hint: 'Lass auf der Insel deine Wesen schlüpfen und wachsen — jede Form, die eines deiner Wesen erreicht, kannst du als Profilbild nehmen. Gewinnst du mit deinem Team den Kistenturm, bekommst du eure Teamfigur. Das klappt nur, wenn du angemeldet bist.' },
+      hint: 'Lass auf der Insel deine Wesen schlüpfen und wachsen — jede Form, die eines deiner Wesen erreicht, kannst du als Profilbild nehmen. Gewinnst du mit deinem Team den Kistenturm, bekommst du eure Teamfigur. Das klappt nur, wenn du angemeldet bist. Lehrkräfte bekommen je gespieltem Kistenturm eine Teamfigur.' },
     { id: 'mps_nebeltal',       skill: 'nebeltal',       folder: 'Nebeltal',             label: 'Nebeltal',
       hint: 'Schaff Level 1, 2 oder 3 — dann bekommst du Pinguin Main mit Schal. Level 5 bringt Adelie- und Zügelpinguin, Level 8 den Eselspinguin. Spielst du eine Runde „Gemeinsam spielen“ mit, bekommst du den 3D-Pinguin. Das klappt nur, wenn du angemeldet bist.' }
   ];
@@ -554,6 +558,8 @@
           (id → Zeitpunkt in ms). Bis das geladen ist, ist dort nichts frei.
        2) Client-Regeln je Skill: MPS_UNLOCKERS[skill](avatar) → bool. */
   const _mpsOwned = new Map();
+  // Volladmin (mps_my_avatars → all, Migration 0300): jedes Bild beider Welten frei.
+  let _allUnlocked = false;
   const MPS_UNLOCKERS = {
     // knowledgestack: (a) => …,
   };
@@ -573,7 +579,7 @@
     return _mpsLoading;
   }
   async function _fetchMpskillsUnlocks() {
-    if (!window.__accessToken || !window.SUPABASE_URL) { _mpsOwned.clear(); return; }
+    if (!window.__accessToken || !window.SUPABASE_URL) { _mpsOwned.clear(); _allUnlocked = false; return; }
     try {
       const res = await fetch(`${window.SUPABASE_URL}/rest/v1/rpc/mps_my_avatars`, {
         method: 'POST',
@@ -588,6 +594,7 @@
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body?.ok) return;
       _mpsOwned.clear();
+      _allUnlocked = body.all === true;
       for (const x of body.avatars || []) {
         if (_byId.has(x.id)) _mpsOwned.set(x.id, new Date(x.at).getTime() || 0);
       }
@@ -598,6 +605,7 @@
     const seen = getSeenCreatures();
     const variant = getKatzeVariant();
     const unlocked = new Set();
+    if (_allUnlocked) { for (const a of AVATARS) unlocked.add(a.id); return unlocked; }
     for (const a of AVATARS) {
       if (a.world === 'mpskills') { if (isMpskillsUnlocked(a)) unlocked.add(a.id); continue; }
       if (a.group === 'egg') { unlocked.add(a.id); continue; }

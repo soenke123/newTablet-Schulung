@@ -131,7 +131,8 @@ await answer(pA); await answer(pB); await answer(pG);
 await db.query(`update ks_boards set phase = 'ended' where room_id = $1`, [K]);
 ok('3  A bekommt sein Wesen', JSON.stringify(await mine(A)) === '["mps_knowledgestack_puddl"]', JSON.stringify(await mine(A)));
 ok('3  B bekommt Howl', JSON.stringify(await mine(B)) === '["mps_knowledgestack_howl"]');
-ok('3  nie geantwortet: nichts', (await mine(T)).length === 0);
+// 0300: T ist auch Besitzerin → ein Lehrkraft-Bild je Runde, aber nichts als Spieler (Nubi nur, falls gezogen)
+ok('3  nie geantwortet: nur das Lehrkraft-Bild (0300)', (await mine(T)).length === 1, JSON.stringify(await mine(T)));
 ok('3  Gast gewinnt: kein Gold für jemand anderen', (await one(`select count(*)::int n from mps_avatar_unlocks where avatar_id like '%_gold'`)).n === 0);
 
 await db.query(`update ks_boards set phase = 'lobby' where room_id = $1`, [K]);

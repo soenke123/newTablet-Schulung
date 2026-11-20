@@ -125,7 +125,7 @@ await db.query(`update skill_participants set user_id = null where token = 'tok-
 /* 4 */
 await as(LK);
 r = (await one(`select nt_room_earn($1, 5) v`, [CODE])).v;
-ok('4  Lehrkraft Level 5 → Adelie + Zügel aufs Konto', r.ok && r.new.length === 2 && (await mine(LK)) === 'adelie,zuegel', JSON.stringify(r));
+ok('4  Lehrkraft Level 5 → Adelie + Zügel aufs Konto', r.ok && r.new.length === 2 && (await mine(LK)) === 'adelie,main,pinguin3d,zuegel', JSON.stringify(r));  // 0300: main + 3D-Pinguin aus der gemeinsamen Runde (Level 2)
 await as(LK2);
 r = (await one(`select nt_room_earn($1, 5) v`, [CODE])).v;
 ok('4  fremde Lehrkraft: not_found', !r.ok && r.error === 'not_found', JSON.stringify(r));

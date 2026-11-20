@@ -88,7 +88,8 @@ await R1.seat(3, null, 0);   // Gast
 await db.query(`update clash_boards set winner_team = 0, phase = 'ended' where room_id = $1`, [R1.r]);
 ok('1  Sieger A bekommt das blaue Reich', JSON.stringify(await mine(A)) === '["mps_clash-of-math_blue"]', JSON.stringify(await mine(A)));
 ok('2  Verlierer B bekommt nichts', (await mine(B)).length === 0);
-ok('2  Gast ohne Konto: keine Zeile ohne user_id', (await one(`select count(*)::int n from mps_avatar_unlocks`)).n === 1);
+// 0300: die Lehrkraft (Besitzerin) bekommt je Runde ein eigenes Bild – hier nicht mitzählen
+ok('2  Gast ohne Konto: keine Zeile ohne user_id', (await one(`select count(*)::int n from mps_avatar_unlocks where user_id <> $1`, [T])).n === 1);
 await db.query(`update clash_boards set winner_team = null where room_id = $1`, [R1.r]);
 await db.query(`update clash_boards set winner_team = 0 where room_id = $1`, [R1.r]);
 ok('3  Zweiter Sieg: keine Dublette', (await one(`select count(*)::int n from mps_avatar_unlocks where user_id = $1`, [A])).n === 1);
