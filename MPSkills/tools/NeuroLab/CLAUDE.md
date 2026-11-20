@@ -15,7 +15,7 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `start.css` | Startseite, Neuronen-Seite, Schicht-Spalte, fester Ausgang, Druckauswahl, Greifvogel-Diagramm |
 | `app.js` | das Feld: Zustand, Rechnen, Backprop, Szenarien, Lernfenster, Druck, Speicher, `window.NLApp` |
 | `js/start.js` | Startseite, Freigaben im Raum, Navigation (`html[data-view]` = home · neuron · lab) |
-| `js/neuron.js` | Bereich 1: „Wie arbeitet ein Neuron?“ (7 Schritte, `makeNeuron` mit − / + an jedem Wert, Rechnung `calcHTML`, Ebene `makePlane`) + „Alle Neuronen“ (nutzt `activations`/`fmt` aus app.js) |
+| `js/neuron.js` | Bereich 1: „Wie arbeitet ein Neuron?“ (7 Schritte, `makeNeuron` mit + / − an jedem Wert, Rechnung `calcHTML`, Ebene `makePlane`, Modelle `ABS`/`PENG`) + „Alle Neuronen“ (Karten + Detail an den Pinguinen, nutzt `activations` aus app.js) |
 | `js/daten.js` | Greifvögel (echte Messwerte) |
 | `neuron.png` | altes Bild des Neurons – seit 20.11.2026 (2. Fassung) nicht mehr eingebunden |
 | `Regen und Sonne.csv` | Beispiel-CSV fürs Hochladen (auch im Layout-Prüfstand) |
@@ -25,27 +25,33 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 
 ## Drei Bereiche (Startseite)
 
-1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` und `n-typen`. `n-wie` = **„Wie arbeitet ein Neuron?“** (4. Fassung,
+1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` und `n-typen`. `n-wie` = **„Wie arbeitet ein Neuron?“** (5. Fassung,
    Sönke 20.11.2026 abends) in sieben Schritten, Leiste `.nn-step[data-step]`, Weiter/Zurück unten. Grundsatz: EIN Neuron
-   (Perceptron) als Komponente `makeNeuron` (HTML über einem SVG für Leitungen, Fläche 720 × 285, Schrift wächst mit `cqw`),
-   **keine Schieberegler daneben**: jeder Wert (x₁ x₂ w₁ w₂ b) hat am Neuron ein **− und +** (gedrückt halten = weiter), die
-   Zahl antippen öffnet **direkt am Feld** einen kleinen Regler (`.nw-pop`, schließt beim Tippen daneben). Darunter **immer die
-   Rechnung** (`calcHTML`): oben die Buchstaben, darunter an derselben Stelle die Zahlen, Formel-Schrift KaTeX (lokal
-   `fonts/katex-math-3f1a2b.css`), Farben wie im Neuron: x orange `--in` · w türkis `--accent` · b indigo `--bias` (neu in
-   style.css) · y gold. Die „Blackbox“ ist nur ein Bild: Noch nicht Aufgedecktes ist **da, aber grau und im Nebel**
-   (`data-show` 1–4, `data-part` an den Teilen, CSS-Übergang; beim Wechsel wird vom vorigen Stand aus aufgedeckt, `lastShow`),
-   Leitungen sind immer gezeichnet, rechts kommt immer 1 „feuert!“ oder 0 heraus. Schritte: 1 `bio` Nervenzelle ↔ dasselbe
-   Neuron nur zum Ansehen (`fixed`, Teil antippen = beide Seiten hervorgehoben, `data-k`: in · w · sum · b · f · out) ·
-   2 `in` Eingänge · 3 `w` Gewichte (Leitung dick/dünn, rot = negativ, gestrichelt = 0) · 4 `b` Summe & Bias (**kein
-   Schwellen-Messer mehr**: b wird einfach dazugezählt, negativ = schwerer zu feuern) · 5 `act` Treppe mit Punkt bei z ·
-   6 `line` Neuron links, Ebene rechts (`makePlane`, −5…5): Punkt ziehen = Eingänge, Gerade schieben = Bias, runde Griffe
-   drehen = Gewichte (|w| bleibt, Feuer-Seite dreht mit → kein „Feuer-Seite tauschen“) · 7 `data` Punkte trennen: 10
-   gleichmäßige Punkte in zwei Häufchen (`PTS0`, „Neue Punkte“ würfelt trennbare, `newPoints`), Punkt antippen = Eingabe,
-   „x von 10 richtig“, darunter „Das Wichtigste“ mit Übergang zu „Netze bauen“. **Keine Logik-Gatter (UND/XOR) und keine
-   Sperber mehr auf dieser Seite** (XOR ist ein Szenario zum Trainieren). Alle Schritte teilen sich EIN Neuron (`st`). Und `n-typen`
-   (alle Neuronen: Perceptron, Linear, ReLU, Sigmoid, Tanh — gezeichnet wie im Feld, Formel, Kurve mit
-   z-Regler, wofür/Achtung). Neue Typen kommen automatisch dazu, wenn sie in `activations` stehen und in
-   `ORDER`/`INFO` (js/neuron.js) eingetragen werden.
+   als Komponente `makeNeuron(m, o)` (HTML über einem SVG für Leitungen, Fläche 720 × 285, Schrift wächst mit `cqw`),
+   **keine Schieberegler daneben**: jeder Wert (x₁ x₂ w₁ w₂ b) hat rechts neben der Zahl ein kleines **+ über −**
+   (`.nw-pms`, gedrückt halten = weiter); die Zahl antippen öffnet **direkt daneben einen senkrechten Regler** (`.nw-pop`
+   mit `.nw-vs`, selbst gebaut: ziehen/antippen, Pfeiltasten = Reglerschritt, Bild auf/ab = ±-Schritt; schließt beim
+   Tippen daneben). Darunter **immer die Rechnung** (`calcHTML(m, show)`): oben die Buchstaben, darunter an derselben
+   Stelle die Zahlen, Formel-Schrift KaTeX (lokal `fonts/katex-math-3f1a2b.css`), Farben wie im Neuron: x orange `--in` ·
+   w türkis `--accent` · b indigo `--bias` · y gold. Die „Blackbox“ ist nur ein Bild: Noch nicht Aufgedecktes ist **da,
+   aber grau und im Nebel** (`data-show` 1–4, `data-part`, CSS-Übergang, vom vorigen Stand aus aufgedeckt, `lastShow`).
+   **Zwei Modelle** (Zustand + Grenzen `lim` + Ebene `dom/ticks/snap`): `ABS` (Schritte 1–6, Zahlen −5 … 5) und `PENG`
+   (Schritt 7 + „Alle Neuronen“: **30 echte Adelie-/Zügelpinguine**, Schnabellänge/-höhe in mm aus Nebeltal
+   `js/welt.js` PENG_A/PENG_C, ausgesucht, dass eine Gerade sie trennt, z. B. w = (1, −1), b = −25; die Länge allein
+   reicht nicht; Start w = (0,5; 0,5), b = −30 → 25 von 30). Schritte: 1 `bio` Nervenzelle ↔ Neuron nur zum Ansehen
+   (`fixed`, Teil antippen = beide Seiten hervorgehoben) · 2 `in` · 3 `w` („multipliziert“, Leitung dick/dünn, rot =
+   negativ) · 4 `b` Summe & Bias (dazugezählt, kein Schwellen-Messer) · 5 `act` Treppe mit Punkt bei z · 6 `line`
+   Neuron links, Ebene rechts (`makePlane(m)`: Punkt ziehen = Eingänge, Gerade schieben = Bias, runde Griffe drehen =
+   Gewichte; gerechnet in Einheiten je Achse, damit es auch bei ungleich langen Achsen stimmt) · 7 `data` „Ein Neuron
+   trifft eine Entscheidung“: Pinguine (Zügel = goldenes Dreieck, soll feuern; Adelie = Kreis), Bilder aus
+   `../Nebeltal/img/frei/`, Pinguin antippen = Eingabe, „x von 30 richtig“, „Das Wichtigste“, darunter Karte `.nn-next`
+   „Das war das einfachste Neuron: das Perzeptron – welche gibt es noch?“ mit Knopf zu `n-typen` (nur wenn freigegeben).
+   **Keine Logik-Gatter (UND/XOR) und keine Sperber auf dieser Seite.** `n-typen` „Alle Neuronen“: Übersicht = je Typ eine
+   kleine Karte `.nt-card` (Kurve, Ausgabe, EIN Satz `KURZ`); antippen = Detail wie Schritt 7 mit diesem Typ (`PENG.type`,
+   Neuron `typed`: Typ-Name + Kurve in Typ-Farbe, Ausgabe als Zahl, Sigmoid „x % Zügel“; Ebene färbt nach der Ausgabe:
+   gold = positiv, grau = negativ, Stärke = Größe), oben Chips zum Umschalten (Gewichte bleiben → Unterschied sehen),
+   Text `ANDERS` je Typ (die Gerade ist bei allen dieselbe, anders ist, was herauskommt) + Wofür/Achtung aus `INFO`.
+   Neue Typen: in `activations`, `ORDER`, `INFO`, `KURZ`, `ANDERS`, `FY`/`F_TXT` (js/neuron.js) eintragen.
 2. **Netze bauen** — Kachel `b-frei`: das freie Feld, **Build · Run**, keine Szenarien. Eingänge 0–10,
    beliebig viele Schichten (bis `MAX_LAYERS` = 8, Spalte „+ Schicht“, leere Schicht „× Schicht entfernen“).
 3. **Netze trainieren** — Kacheln = Szenarien (`sc-gatter`, `sc-ziffer`, `sc-ziel`, `sc-vogel`, `sc-eigene`).
@@ -134,8 +140,7 @@ Eingabewerte; „Ausblenden“ nimmt die Leiste fürs Bildschirmfoto weg.
   übernimmt es und beobachtet Änderungen), allein vom Gerät (`prefers-color-scheme`). **Druckansicht immer hell**
   (`body.print-mode` setzt die hellen Werte). Neue feste Farben in CSS: immer als `var(--…)`. In JS-SVGs dürfen
   Hex-Farben stehen, wenn sie in der Tabelle von `js/theme.js` stehen (sonst bleiben sie fest); Canvas über `NLTheme.c`.
-- **Das Neuron** (`buildNeuronSVG`, gemeinsames Innenleben `appendNeuronFace`/`paintNeuronFace`, auch in
-  `js/neuron.js` „Alle Neuronen“): weißer Kasten, Typ-Name klein darüber (Mono, Versalien),
+- **Das Neuron** (`buildNeuronSVG`, gemeinsames Innenleben `appendNeuronFace`/`paintNeuronFace`): weißer Kasten, Typ-Name klein darüber (Mono, Versalien),
   Trennlinie bei 40 % (`SPLIT_X`): links Σ und `z = …`, rechts die **Kurve des Typs mit einem Punkt an der Stelle z**
   (z von −4 bis 4, Wertebereich `actRange`) und darunter `y′ = …`. **Die Formel steht nicht mehr im Neuron**, sondern
   im Fenster beim Antippen (und in der Druckansicht, dort weiter Σ | f(z) in zwei Hälften). Wert-Kästchen rechts

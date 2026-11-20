@@ -2,17 +2,15 @@
    NeuroLab · neuron.js — Bereich „Wie funktioniert ein Neuron?“
    ══════════════════════════════════════════════════════════════
    Zwei Kacheln (= zwei Reiter, die Lehrkraft gibt jede einzeln frei):
-     n-wie    Wie arbeitet ein Neuron? in sieben Schritten (20.11.2026, 4. Fassung):
+     n-wie    Wie arbeitet ein Neuron? in sieben Schritten (20.11.2026, 5. Fassung):
               Nervenzelle ↔ Neuron · dann EIN Neuron (Perceptron, makeNeuron),
               das sich Schritt für Schritt aus dem Grau ausbreitet: Eingänge ·
-              Gewichte · Summe & Bias · Aktivierung · Eine Gerade · Punkte trennen.
-              Jeder Wert mit − / + am Neuron, Zahl antippen = Regler am Feld;
+              Gewichte · Summe & Bias · Aktivierung · Eine Gerade · Punkte trennen
+              (echte Pinguine). Jeder Wert mit + / − am Neuron, Zahl antippen = Regler am Feld;
               darunter immer die Rechnung (calcHTML) in Formel-Schrift.
-     n-typen  Alle Neuronen: die fünf Typen aus dem Feld (activations in
-              app.js) mit Formel, Kurve und Regler
-   Gezeichnet wie die Neuronen im Feld (Σ | f, Typ-Farbe, Bias-Pfeil,
-   Ausgabe-Kästchen), damit man sie dort wiedererkennt.
-   Nutzt aus app.js: activations, fmt.
+     n-typen  Alle Neuronen: kleine Karte je Typ (Kurve, Ausgabe, ein Satz),
+              antippen = Schritt 7 (Pinguine) mit diesem Typ, oben umschaltbar
+   Nutzt aus app.js: activations.
    ══════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
@@ -30,7 +28,7 @@
       wofuer: 'Verdeckte Schichten in großen Netzen (Bilderkennung, Sprachmodelle) – schnell zu rechnen.',
       achtung: 'Ist z immer negativ, gibt das Neuron immer 0 aus und lernt nicht mehr („totes Neuron“).' },
     sigmoid: { out: 'zwischen 0 und 1', was: 'Weiche Stufe: kleine z → fast 0, große z → fast 1, bei z = 0 genau 0,5.',
-      wofuer: 'Ausgang für Ja/Nein mit Sicherheit („zu 90 % ein Bussard“).',
+      wofuer: 'Ausgang für Ja/Nein mit Sicherheit („zu 90 % ein Zügelpinguin“).',
       achtung: 'Weit außen ist die Kurve fast flach – dann lernt das Neuron nur noch langsam.' },
     tanh: { out: 'zwischen −1 und 1', was: 'Wie Sigmoid, aber von −1 bis 1 und mit der Mitte bei 0.',
       wofuer: 'Verdeckte Schichten: Weil die Mitte bei 0 liegt, lernen die Neuronen dahinter oft schneller.',
@@ -44,117 +42,38 @@
     return e;
   };
   const h = html => { const d = document.createElement('div'); d.innerHTML = html.trim(); return d.firstElementChild; };
-  const de = v => fmt(v).replace('.', ',');
 
-  /* ── Neuron im Stil des Feldes ─────────────────────────────
-     o = { type, x:[x1,x2], w:[w1,w2], b, compact } → SVG
-     Teile tragen data-k (in · w · sum · b · f · out), damit Schritt 1 sie
-     zusammen mit der Nervenzelle hervorheben kann. */
-  function neuronSVG(o) {
-    const act = activations[o.type];
-    const z = o.x ? o.x[0] * o.w[0] + o.x[1] * o.w[1] + o.b : 0;
-    const y = act.fn(z);
-    const withIn = !!o.x;
-    const ox = withIn ? 120 : 10;                  // linke Kante des Rumpfs
-    const W = withIn ? 470 : 290, H = withIn ? 210 : 150;
-    const NBY = withIn ? 60 : 30, NBW = 180, NBH = 72, cy = NBY + NBH / 2;
-    const s = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'nn-svg' });
-    s.style.setProperty('--type-color', act.color);
-    if (withIn) {
-      [[0, 40], [1, 170]].forEach(([i, iy]) => {
-        const w = o.w[i];
-        const sw = Math.max(1, Math.min(Math.abs(w) * 2, 6));
-        const col = w < 0 ? '#dc2626' : '#10b981';
-        s.appendChild(el('line', { 'data-k': 'w', x1: 56, y1: iy, x2: ox, y2: cy + (i ? 14 : -14), stroke: col, 'stroke-width': sw, 'stroke-opacity': Math.abs(w) < 0.01 ? 0.3 : 0.75, 'stroke-dasharray': Math.abs(w) < 0.01 ? '4 3' : 'none' }));
-        s.appendChild(el('circle', { 'data-k': 'in', cx: 34, cy: iy, r: 22, fill: '#fffbeb', stroke: '#f59e0b', 'stroke-width': 1.8 }));
-        s.appendChild(el('text', { x: 34, y: iy + 5, 'text-anchor': 'middle', 'font-size': 13, 'font-weight': 700, fill: '#b45309', class: 'nn-num' }, `${fmtV(o.x[i], 2)}`));
-        s.appendChild(el('text', { x: 34, y: iy + (i ? 38 : -28), 'text-anchor': 'middle', 'font-size': 11, 'font-weight': 700, fill: '#64748b' }, `x${i + 1}`));
-        const mx = (56 + ox) / 2, my = (iy + cy + (i ? 14 : -14)) / 2;
-        s.appendChild(el('rect', { 'data-k': 'w', x: mx - 30, y: my - 9, width: 60, height: 17, rx: 8.5, fill: '#fff', stroke: '#e2e8f0' }));
-        s.appendChild(el('text', { x: mx, y: my + 4, 'text-anchor': 'middle', 'font-size': 10.5, 'font-weight': 700, class: 'nn-num', fill: col }, `w${i + 1} = ${fmtV(w, 2)}`));
-      });
-    }
-    s.appendChild(el('rect', { x: ox, y: NBY, width: NBW, height: NBH, rx: 12, class: 'neuron-body' }));
-    /* Gleiches Innenleben wie im Feld (app.js appendNeuronFace): Σ und z
-       links, Kurve mit Punkt und y′ rechts. */
-    const split = ox + 72;
-    s.appendChild(el('rect', { 'data-k': 'sum', x: ox + 3, y: NBY + 3, width: split - ox - 6, height: NBH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
-    s.appendChild(el('rect', { 'data-k': 'f', x: split + 3, y: NBY + 3, width: ox + NBW - split - 6, height: NBH - 6, rx: 9, fill: 'transparent', stroke: 'transparent' }));
-    const face = appendNeuronFace(s, { x: ox, y: NBY, w: NBW, h: NBH, split, type: o.type, z: withIn ? z : undefined });
-    if (withIn) { paintNeuronFace(face, o.type, z, false); if (isHot(o.type, y)) s.classList.add('is-hot'); }
-    s.appendChild(el('text', { x: ox + 2, y: NBY - 8, class: 'neuron-type' }, act.fullName.toUpperCase()));
-    const lx = (ox + split) / 2;
-    // Bias
-    const bx = lx, by0 = NBY + NBH, by1 = by0 + 26;
-    s.appendChild(el('line', { 'data-k': 'b', x1: bx, y1: by1, x2: bx, y2: by0 + 5, class: 'bias-line' }));
-    s.appendChild(el('path', { d: `M${bx - 4},${by0 + 7} L${bx},${by0 + 2} L${bx + 4},${by0 + 7}`, class: 'bias-line' }));
-    s.appendChild(el('text', { x: bx, y: by1 + 14, 'text-anchor': 'middle', class: 'bias-label' }, withIn ? `b = ${fmtV(o.b, 2)}` : 'b'));
-    // Ausgabe
-    const ol = ox + NBW, bw = withIn ? 60 : 56;
-    s.appendChild(el('line', { 'data-k': 'out', x1: ol, y1: cy, x2: ol + 16, y2: cy, class: 'neuron-wire' }));
-    s.appendChild(el('rect', { 'data-k': 'out', x: ol + 18, y: cy - 14, width: bw, height: 28, rx: 8, class: 'neuron-out' + (withIn ? '' : ' is-empty') }));
-    if (withIn) {
-      const fr = outFrac(o.type, y);
-      s.appendChild(el('rect', { x: ol + 19.5, y: cy - 12.5 + 25 * (1 - fr), width: bw - 3, height: 25 * fr, rx: 6.5, class: 'neuron-out-fill' }));
-    }
-    s.appendChild(el('text', { x: ol + 18 + bw / 2, y: cy + 4.5, 'text-anchor': 'middle', class: 'neuron-out-txt' + (withIn ? '' : ' is-faint') }, withIn ? fmtV(y, 2) : 'y′'));
-    return s;
-  }
-
-  /* ── Kurve f(z) mit Markierung ─────────────────────────── */
-  function curveSVG(type, zMark) {
-    const act = activations[type];
-    const W = 260, H = 150, Z = 4;
-    const yr = type === 'linear' || type === 'relu' ? [-4, 4] : type === 'tanh' ? [-1.3, 1.3] : [-0.3, 1.3];
-    const px = z => 24 + (z + Z) / (2 * Z) * (W - 34);
-    const py = v => 10 + (yr[1] - v) / (yr[1] - yr[0]) * (H - 30);
-    const s = el('svg', { viewBox: `0 0 ${W} ${H}`, class: 'curve-svg' });
-    s.appendChild(el('line', { x1: px(-Z), y1: py(0), x2: px(Z), y2: py(0), stroke: '#cbd5e1' }));
-    s.appendChild(el('line', { x1: px(0), y1: py(yr[0]), x2: px(0), y2: py(yr[1]), stroke: '#cbd5e1' }));
-    s.appendChild(el('text', { x: px(Z) - 2, y: py(0) + 14, 'text-anchor': 'end', 'font-size': 10, fill: '#94a3b8' }, 'z'));
-    s.appendChild(el('text', { x: px(0) + 5, y: 18, 'font-size': 10, fill: '#94a3b8' }, 'y′'));
-    [1, -1].concat(type === 'linear' || type === 'relu' ? [2, -2, 3, -3] : []).forEach(v => {
-      if (v < yr[0] || v > yr[1]) return;
-      s.appendChild(el('text', { x: px(0) - 4, y: py(v) + 3, 'text-anchor': 'end', 'font-size': 9, fill: '#94a3b8' }, String(v).replace('-', '−')));
-    });
-    let d = '';
-    for (let i = 0; i <= 200; i++) {
-      const z = -Z + i / 200 * 2 * Z;
-      const v = Math.max(yr[0], Math.min(yr[1], act.fn(z)));
-      // Sprung beim Perceptron nicht als schräge Linie zeichnen
-      const jump = type === 'perceptron' && i > 0 && (act.fn(z) !== act.fn(-Z + (i - 1) / 200 * 2 * Z));
-      d += (i === 0 || jump ? 'M' : 'L') + px(z).toFixed(1) + ' ' + py(v).toFixed(1) + ' ';
-    }
-    s.appendChild(el('path', { d, fill: 'none', stroke: act.color, 'stroke-width': 3, 'stroke-linecap': 'round' }));
-    if (zMark !== undefined) {
-      const zc = Math.max(-Z, Math.min(Z, zMark));
-      const v = act.fn(zMark);
-      s.appendChild(el('line', { x1: px(zc), y1: py(0), x2: px(zc), y2: py(Math.max(yr[0], Math.min(yr[1], v))), stroke: '#334155', 'stroke-dasharray': '3 3' }));
-      s.appendChild(el('circle', { cx: px(zc), cy: py(Math.max(yr[0], Math.min(yr[1], v))), r: 5, fill: '#fff', stroke: '#334155', 'stroke-width': 2 }));
-    }
-    return s;
-  }
-
-  function slider(label, min, max, step, val, on, cls = '') {
-    const row = h(`<label class="nn-slider ${cls}"><span>${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${val}"><output>${de(val)}</output></label>`);
-    const inp = row.querySelector('input'), out = row.querySelector('output');
-    inp.addEventListener('input', () => { out.textContent = de(+inp.value); on(+inp.value); });
-    row.set = v => { inp.value = v; out.textContent = de(v); };
-    return row;
-  }
-
-  /* ── Reiter 1: Wie arbeitet ein Neuron? (4. Fassung, 20.11.2026) ──────
-     EIN Neuron (Perceptron) als feste Komponente (makeNeuron): Eingänge,
-     Leitungen, Gewichte, Rumpf (Σ | f), Bias, Ausgabe. Jeder Wert hat ein
-     − und + daneben, Antippen der Zahl öffnet am Feld einen kleinen Regler
-     (Sönke: „keine Schieberegler daneben, die Werte direkt im Neuron
-     ändern“). Was noch nicht dran war, ist da, aber ausgegraut und im
-     Nebel – mit jedem Schritt breitet sich das Neuron aus (CSS-Übergang,
-     data-show 1–4). Darunter immer die Rechnung in Formel-Schrift (KaTeX),
+  /* ── Reiter 1: Wie arbeitet ein Neuron? (5. Fassung, 20.11.2026) ──────
+     EIN Neuron als feste Komponente (makeNeuron): Eingänge, Leitungen,
+     Gewichte, Rumpf (Σ | f), Bias, Ausgabe. Jeder Wert hat ein kleines
+     + und − übereinander daneben, Antippen der Zahl öffnet am Feld einen
+     senkrechten Regler. Was noch nicht dran war, ist da, aber ausgegraut
+     und im Nebel – mit jedem Schritt breitet sich das Neuron aus
+     (data-show 1–4). Darunter immer die Rechnung in Formel-Schrift (KaTeX),
      Farben wie im Neuron: x orange, w türkis, b indigo, y gold.
-     Kein Schwellen-Messer mehr: der Bias wird einfach dazugezählt. */
-  const st = { x: [2, 1], w: [1, 0.5], b: -2 };
-  const LIM = { x: [-5, 5, 0.5, 0.1], w: [-3, 3, 0.5, 0.05], b: [-8, 8, 0.5, 0.1] };   // min, max, ±, Reglerschritt
+     Zwei Modelle (= Zustand + Grenzen + Ebene):
+       ABS   Schritte 2–6, Zahlen −5 … 5
+       PENG  Schritt 7 und „Alle Neuronen“: echte Adelie- und Zügelpinguine
+             (Schnabellänge/-höhe in mm, aus Nebeltal js/welt.js PENG_A/PENG_C),
+             30 Stück, mit einer Geraden trennbar (z. B. w = (1, −1), b = −25). */
+  const ABS = {
+    x: [2, 1], w: [1, 0.5], b: -2, type: 'perceptron',
+    lim: { x1: [-5, 5, 0.5, 0.1], x2: [-5, 5, 0.5, 0.1], w: [-3, 3, 0.5, 0.05], b: [-8, 8, 0.5, 0.1] },
+    dom: [[-5, 5], [-5, 5]], ticks: [[1, 2], [1, 2]], snap: 0.5,
+  };
+  const PENG_PTS = [
+    [33.1, 16.1, 0], [34.6, 17.2, 0], [35.1, 19.4, 0], [35.7, 17, 0], [36.8, 18.5, 0], [37.6, 19.3, 0], [38.1, 17.6, 0], [38.7, 19, 0],
+    [39.5, 17.8, 0], [40.5, 17.9, 0], [41.1, 18.2, 0], [41.5, 18.3, 0], [42.3, 21.2, 0], [42, 20.2, 0], [43.2, 19, 0],
+    [42.5, 16.7, 1], [43.2, 16.6, 1], [45.5, 17, 1], [45.9, 17.1, 1], [46.4, 17.8, 1], [46.8, 16.5, 1], [47.6, 18.3, 1], [49, 19.6, 1],
+    [49.6, 18.2, 1], [50.1, 17.9, 1], [50.8, 18.5, 1], [51.5, 18.7, 1], [52, 19, 1], [52.8, 20, 1], [58, 17.8, 1],
+  ].map(p => ({ x: [p[0], p[1]], soll: p[2] }));
+  const PENG = {
+    x: [39.5, 17.8], w: [0.5, 0.5], b: -30, type: 'perceptron',
+    lim: { x1: [30, 60, 0.5, 0.1], x2: [15, 22, 0.5, 0.1], w: [-3, 3, 0.25, 0.05], b: [-60, 20, 1, 0.5] },
+    dom: [[30, 60], [15, 22]], ticks: [[5, 5], [1, 1]], snap: 0.1,
+    axes: ['Schnabellänge in mm', 'Schnabelhöhe in mm'], caps: ['Schnabellänge', 'Schnabelhöhe'],
+    ocap: 'Zügelpinguin?', yes: 'Zügel', no: 'Adelie', points: PENG_PTS,
+  };
   const STEPS = [
     { id: 'bio', kurz: 'Nervenzelle', title: 'Vom Gehirn zum künstlichen Neuron' },
     { id: 'in', kurz: 'Eingänge', title: 'Zahlen hinein – eine Antwort heraus', show: 1 },
@@ -162,31 +81,46 @@
     { id: 'b', kurz: 'Summe & Bias', title: 'Zusammenzählen – und der Bias kommt dazu', show: 3 },
     { id: 'act', kurz: 'Aktivierung', title: 'Die Aktivierung entscheidet: feuern oder nicht', show: 4 },
     { id: 'line', kurz: 'Eine Gerade', title: 'Ein Neuron zieht eine Gerade', show: 4 },
-    { id: 'data', kurz: 'Punkte trennen', title: 'Ein Neuron trennt Punkte', show: 4 },
+    { id: 'data', kurz: 'Punkte trennen', title: 'Ein Neuron trifft eine Entscheidung', show: 4 },
   ];
   let step = 'bio', lastShow = 0;
 
   const r2 = v => Math.round(v * 100) / 100;
-  const num = v => String(r2(v)).replace('.', ',').replace('-', '−');
-  const clampK = (k, v) => { const L = LIM[k[0]]; return Math.max(L[0], Math.min(L[1], v)); };
-  const getV = k => k === 'b' ? st.b : st[k[0]][+k[1] - 1];
-  const setV = (k, v) => { v = r2(clampK(k, v)); if (k === 'b') st.b = v; else st[k[0]][+k[1] - 1] = v; };
-  const zOf = () => st.x[0] * st.w[0] + st.x[1] * st.w[1] + st.b;
+  const num = v => { let r = r2(v); if (Object.is(r, -0)) r = 0; return String(r).replace('.', ',').replace('-', '−'); };
+  const limOf = (m, k) => m.lim[k[0] === 'x' ? k : k[0]];
+  const clampK = (m, k, v) => { const L = limOf(m, k); return Math.max(L[0], Math.min(L[1], v)); };
+  const getV = (m, k) => k === 'b' ? m.b : m[k[0]][+k[1] - 1];
+  const setV = (m, k, v) => { v = r2(clampK(m, k, v)); if (k === 'b') m.b = v; else m[k[0]][+k[1] - 1] = v; };
+  const zOf = (m, x = m.x) => x[0] * m.w[0] + x[1] * m.w[1] + m.b;
+  const yOf = (m, z) => activations[m.type].fn(z);
   const SUB = { x1: 'x<sub>1</sub>', x2: 'x<sub>2</sub>', w1: 'w<sub>1</sub>', w2: 'w<sub>2</sub>', b: 'b' };
 
-  /* Ein Wert mit − und + (Zahl antippen = Regler am Feld) */
-  const stepper = (k, cls) => `<span class="nw-val ${cls}" data-v="${k}">
-      <button type="button" class="nw-pm" data-d="-1" aria-label="${k} kleiner">−</button>
-      <button type="button" class="nw-num" aria-label="${k} einstellen"></button>
-      <button type="button" class="nw-pm" data-d="1" aria-label="${k} größer">+</button></span>`;
+  /* Kurve der Aktivierung im Kästchen 100 × 60 (rechte Hälfte des Rumpfs) */
+  const FY = { perceptron: [0, 1], sigmoid: [0, 1], tanh: [-1, 1], relu: [-1, 4], linear: [-4, 4] };
+  const fX = z => 50 + Math.max(-4, Math.min(4, z)) * 11;
+  const fY = (t, v) => { const [lo, hi] = FY[t]; return 50 - (Math.max(lo, Math.min(hi, v)) - lo) / (hi - lo) * 38; };
+  function fPath(t) {
+    if (t === 'perceptron') return 'M6 50 H50 V12 H94';
+    let d = '';
+    for (let i = 0; i <= 40; i++) { const z = -4 + i / 5; d += (i ? 'L' : 'M') + fX(z).toFixed(1) + ' ' + fY(t, activations[t].fn(z)).toFixed(1); }
+    return d;
+  }
 
-  /* Die Neuron-Komponente. Koordinaten in einer gedachten Fläche 720 × 330;
-     die HTML-Teile liegen in Prozent darüber, Schrift wächst mit (cqw).
-     o = { fixed: true } → nur ansehen (Schritt 1), sonst onChange() nach jeder Änderung */
-  function makeNeuron(o = {}) {
-    const OY = 45, HH = 285;   // sichtbarer Ausschnitt y 45 … 330
+  /* Ein Wert: Zahl, daneben klein + über − (Zahl antippen = Regler am Feld) */
+  const stepper = (k, cls) => `<span class="nw-val ${cls}" data-v="${k}">
+      <button type="button" class="nw-num" aria-label="${k} einstellen"></button>
+      <span class="nw-pms"><button type="button" class="nw-pm" data-d="1" aria-label="${k} größer">+</button><button type="button" class="nw-pm" data-d="-1" aria-label="${k} kleiner">−</button></span></span>`;
+
+  /* Die Neuron-Komponente. Koordinaten in einer gedachten Fläche 720 × 285
+     (y 45 … 330); die HTML-Teile liegen in Prozent darüber, Schrift wächst
+     mit (cqw). o = { fixed: true } → nur ansehen (Schritt 1), sonst
+     onChange() nach jeder Änderung; o.typed → Rumpf zeigt Typ und Kurve in
+     Typ-Farbe, Ausgabe als Zahl. */
+  function makeNeuron(m, o = {}) {
+    const OY = 45, HH = 285;
     const P = (x, y) => `left:${x / 7.2}%;top:${(y - OY) / HH * 100}%`;
-    const root = h(`<div class="nw${o.fixed ? ' is-fixed' : ''}"><div class="nw-in">
+    const cap = i => m.caps ? `<span class="nw-cap">${m.caps[i]}</span>` : '';
+    const root = h(`<div class="nw${o.fixed ? ' is-fixed' : ''}${o.typed ? ' is-typed' : ''}"><div class="nw-in">
       <svg class="nw-wires" viewBox="0 45 720 285">
         <line class="nw-edge" data-k="w" data-e="0" x1="80" y1="85" x2="300" y2="146"/>
         <line class="nw-edge" data-k="w" data-e="1" x1="80" y1="245" x2="300" y2="184"/>
@@ -194,80 +128,116 @@
         <path class="nw-barrow" data-k="b" d="M347 236 L355 226 L363 236 Z"/>
         <line class="nw-owire" data-k="out" x1="500" y1="165" x2="560" y2="165"/>
       </svg>
-      <div class="nw-node nw-x" data-k="in" style="${P(80, 85)}"><i class="m">x<sub>1</sub></i>${stepper('x1', 'c-x')}</div>
-      <div class="nw-node nw-x" data-k="in" style="${P(80, 245)}"><i class="m">x<sub>2</sub></i>${stepper('x2', 'c-x')}</div>
+      <div class="nw-node nw-x" data-k="in" style="${P(80, 85)}">${cap(0)}<i class="m">x<sub>1</sub></i>${stepper('x1', 'c-x')}</div>
+      <div class="nw-node nw-x nw-x2" data-k="in" style="${P(80, 245)}">${cap(1)}<i class="m">x<sub>2</sub></i>${stepper('x2', 'c-x')}</div>
       <div class="nw-wpill" data-k="w" data-part="2" style="${P(222, 124)}"><i class="m">w<sub>1</sub></i><span class="nw-q">?</span>${stepper('w1', 'c-w')}</div>
       <div class="nw-wpill" data-k="w" data-part="2" style="${P(222, 206)}"><i class="m">w<sub>2</sub></i><span class="nw-q">?</span>${stepper('w2', 'c-w')}</div>
       <div class="nw-body" style="left:${300 / 7.2}%;top:${(105 - OY) / HH * 100}%;width:${200 / 7.2}%;height:${120 / HH * 100}%">
+        <span class="nw-tname"></span>
         <div class="nw-half nw-sum" data-k="sum" data-part="3"><b class="nw-sigma">Σ</b><span class="nw-z m"><i>z</i> = <b></b></span><span class="nw-fog">?</span></div>
-        <div class="nw-half nw-f" data-k="f" data-part="4"><svg viewBox="0 0 100 60" class="nw-stepfn"><line x1="6" y1="50" x2="94" y2="50" class="ax"/><line x1="50" y1="6" x2="50" y2="56" class="ax"/><path class="st" d="M6 50 H50 V12 H94"/><circle class="dot" r="5.5"/></svg><span class="nw-fz m"><i>f</i>(<i>z</i>)</span><span class="nw-fog">?</span></div>
+        <div class="nw-half nw-f" data-k="f" data-part="4"><svg viewBox="0 0 100 60" class="nw-stepfn"><line x1="6" y1="50" x2="94" y2="50" class="ax hx"/><line x1="50" y1="6" x2="50" y2="56" class="ax"/><path class="st"/><circle class="dot" r="5.5"/></svg><span class="nw-fz m"><i>f</i>(<i>z</i>)</span><span class="nw-fog">?</span></div>
       </div>
       <div class="nw-bias" data-k="b" data-part="3" style="${P(355, 292)}"><i class="m">b</i><span class="nw-q">?</span>${stepper('b', 'c-b')}</div>
       <div class="nw-out" data-k="out" style="left:${560 / 7.2}%;top:${(125 - OY) / HH * 100}%;width:${124 / 7.2}%;height:${80 / HH * 100}%">
+        ${m.ocap ? `<span class="nw-ocap">${m.ocap}</span>` : ''}
         <span class="nw-rays"><i></i><i></i><i></i><i></i><i></i><i></i></span>
         <b class="nw-y"></b><span class="nw-ytxt"></span></div>
-      <div class="nw-pop" hidden><label><span class="m"></span><output></output></label><input type="range"></div>
+      <div class="nw-pop" hidden><span class="nw-pop-k m"></span><b class="nw-pop-v"></b>
+        <span class="nw-pop-lim"></span><div class="nw-vs" tabindex="0" role="slider"><i class="nw-vs-fill"></i><i class="nw-vs-th"></i></div><span class="nw-pop-lim"></span></div>
     </div></div>`);
     const $ = s => root.querySelector(s), $$ = s => [...root.querySelectorAll(s)];
-    const pop = $('.nw-pop'), range = pop.querySelector('input');
-    let popK = null;
+    const pop = $('.nw-pop'), vs = $('.nw-vs');
+    let popK = null, lastType = null;
 
+    function paintPop() {
+      if (!popK) return;
+      const L = limOf(m, popK), v = getV(m, popK), fr = (v - L[0]) / (L[1] - L[0]);
+      pop.querySelector('.nw-pop-v').textContent = num(v);
+      vs.querySelector('.nw-vs-th').style.bottom = vs.querySelector('.nw-vs-fill').style.height = (fr * 100) + '%';
+      vs.setAttribute('aria-valuenow', v);
+    }
     function update() {
-      $$('.nw-val').forEach(v => { v.querySelector('.nw-num').textContent = num(getV(v.dataset.v)); });
-      const show = +root.dataset.show || 4;
+      $$('.nw-val').forEach(v => { v.querySelector('.nw-num').textContent = num(getV(m, v.dataset.v)); });
+      const show = +root.dataset.show || 4, t = m.type, act = activations[t];
+      if (t !== lastType) {
+        lastType = t;
+        $('.nw-stepfn .st').setAttribute('d', fPath(t));
+        const hy = fY(t, 0);
+        $('.nw-stepfn .hx').setAttribute('y1', hy); $('.nw-stepfn .hx').setAttribute('y2', hy);
+        root.style.setProperty('--tc', act.color);
+        $('.nw-tname').textContent = o.typed ? act.fullName : '';
+      }
       $$('.nw-edge').forEach(e => {
-        const w = st.w[+e.dataset.e];
+        const w = m.w[+e.dataset.e];
         const known = show >= 2;
         e.setAttribute('stroke-width', known ? Math.max(1.5, Math.min(2 + Math.abs(w) * 4, 14)) : 3);
         e.classList.toggle('is-neg', known && w < 0);
         e.classList.toggle('is-zero', known && Math.abs(w) < 0.005);
       });
-      const z = zOf(), fire = z > 0;
+      const z = zOf(m), y = yOf(m, z), fire = z > 0;
       $('.nw-z b').textContent = num(z);
-      const zc = Math.max(-4, Math.min(4, z));
       const dot = $('.nw-stepfn .dot');
-      dot.setAttribute('cx', 50 + zc * 11); dot.setAttribute('cy', fire ? 12 : 50);
+      dot.setAttribute('cx', fX(z)); dot.setAttribute('cy', fY(t, y));
       root.classList.toggle('is-fire', fire);
-      $('.nw-y').textContent = fire ? '1' : '0';
-      $('.nw-ytxt').textContent = o.outText ? o.outText(fire) : (fire ? 'feuert!' : 'feuert nicht');
-      if (popK) { range.value = getV(popK); pop.querySelector('output').textContent = num(getV(popK)); }
+      $('.nw-y').textContent = t === 'perceptron' ? (fire ? '1' : '0') : num(y);
+      $('.nw-ytxt').textContent = o.outText ? o.outText(fire, y) : m.yes ? (fire ? m.yes : m.no) : (fire ? 'feuert!' : 'feuert nicht');
+      paintPop();
     }
-    function change(k, v) { setV(k, v); update(); if (o.onChange) o.onChange(k); }
+    function change(k, v) { setV(m, k, v); update(); if (o.onChange) o.onChange(k); }
 
     if (!o.fixed) {
-      // − / + (gedrückt halten = weiterzählen)
+      // + / − (gedrückt halten = weiterzählen)
       $$('.nw-pm').forEach(b => {
         let t1 = 0, t2 = 0;
         const k = b.closest('.nw-val').dataset.v, d = +b.dataset.d;
-        const bump = () => change(k, getV(k) + d * LIM[k[0]][2]);
+        const bump = () => change(k, getV(m, k) + d * limOf(m, k)[2]);
         const stop = () => { clearTimeout(t1); clearInterval(t2); };
         b.addEventListener('pointerdown', e => { e.preventDefault(); bump(); t1 = setTimeout(() => { t2 = setInterval(bump, 110); }, 420); });
         ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
         b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); bump(); } });
       });
-      // Zahl antippen → Regler direkt am Feld
+      const closePop = () => { pop.hidden = true; popK = null; $$('.nw-val').forEach(v => v.classList.remove('is-open')); };
+      // Zahl antippen → senkrechter Regler direkt neben dem Feld
       $$('.nw-num').forEach(b => b.addEventListener('click', e => {
         e.stopPropagation();
         const k = b.closest('.nw-val').dataset.v;
         if (popK === k && !pop.hidden) { closePop(); return; }
         popK = k;
-        const L = LIM[k[0]];
-        Object.assign(range, { min: L[0], max: L[1], step: L[3] });
-        range.className = 'r-' + k[0];
-        pop.querySelector('.m').innerHTML = `<i>${SUB[k]}</i> =`;
+        const L = limOf(m, k);
+        pop.className = 'nw-pop r-' + k[0];
+        pop.querySelector('.nw-pop-k').innerHTML = `<i>${SUB[k]}</i>`;
+        const lims = pop.querySelectorAll('.nw-pop-lim');
+        lims[0].textContent = num(L[1]); lims[1].textContent = num(L[0]);
+        vs.setAttribute('aria-valuemin', L[0]); vs.setAttribute('aria-valuemax', L[1]); vs.setAttribute('aria-label', k);
         pop.hidden = false;
-        const rb = b.getBoundingClientRect(), rr = root.querySelector('.nw-in').getBoundingClientRect();
-        const cx = rb.left + rb.width / 2 - rr.left;
-        pop.style.left = Math.max(0, Math.min(rr.width - pop.offsetWidth, cx - pop.offsetWidth / 2)) + 'px';
-        const below = rb.bottom - rr.top + 6;
-        pop.style.top = (below + pop.offsetHeight > rr.height + 40 ? rb.top - rr.top - pop.offsetHeight - 6 : below) + 'px';
+        const rv = b.closest('.nw-val').getBoundingClientRect(), rr = $('.nw-in').getBoundingClientRect();
+        const pw = pop.offsetWidth, ph = pop.offsetHeight;
+        let left = rv.right - rr.left + 6;
+        if (left + pw > rr.width + 4) left = rv.left - rr.left - pw - 6;
+        pop.style.left = left + 'px';
+        pop.style.top = Math.max(-30, Math.min(rr.height - ph + 30, rv.top - rr.top + rv.height / 2 - ph / 2)) + 'px';
         $$('.nw-val').forEach(v => v.classList.toggle('is-open', v.dataset.v === k));
         update();
+        vs.focus({ preventScroll: true });
       }));
-      range.addEventListener('input', () => change(popK, +range.value));
-      const closePop = () => { pop.hidden = true; popK = null; $$('.nw-val').forEach(v => v.classList.remove('is-open')); };
-      document.addEventListener('pointerdown', e => { if (!pop.hidden && !pop.contains(e.target) && !e.target.closest('.nw-val')) closePop(); }, true);
-      document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+      const fromY = cy => {
+        const r = vs.getBoundingClientRect(), L = limOf(m, popK);
+        const fr = Math.max(0, Math.min(1, 1 - (cy - r.top) / r.height));
+        change(popK, Math.round((L[0] + fr * (L[1] - L[0])) / L[3]) * L[3]);
+      };
+      let dragging = false;
+      vs.addEventListener('pointerdown', e => { e.preventDefault(); dragging = true; vs.setPointerCapture(e.pointerId); fromY(e.clientY); });
+      vs.addEventListener('pointermove', e => { if (dragging) fromY(e.clientY); });
+      ['pointerup', 'pointercancel'].forEach(ev => vs.addEventListener(ev, () => { dragging = false; }));
+      vs.addEventListener('keydown', e => {
+        if (!popK) return;
+        const L = limOf(m, popK), v = getV(m, popK);
+        const nv = { ArrowUp: v + L[3], ArrowRight: v + L[3], ArrowDown: v - L[3], ArrowLeft: v - L[3], PageUp: v + L[2], PageDown: v - L[2], Home: L[0], End: L[1] }[e.key];
+        if (nv === undefined) return;
+        e.preventDefault(); change(popK, nv);
+      });
+      document.addEventListener('pointerdown', e => { if (root.isConnected && !pop.hidden && !pop.contains(e.target) && !e.target.closest('.nw-val')) closePop(); }, true);
+      document.addEventListener('keydown', e => { if (root.isConnected && e.key === 'Escape') closePop(); });
     }
     return { el: root, update, setShow(n) { root.dataset.show = n; update(); } };
   }
@@ -275,8 +245,14 @@
   /* Die Rechnung unter dem Neuron: oben die Buchstaben, darunter dieselbe
      Stelle mit Zahlen – jede Größe in ihrer Farbe. Noch nicht Aufgedecktes
      steht grau als „?“ da. */
-  function calcHTML(show) {
-    const z = zOf(), fire = z > 0;
+  const F_TXT = {
+    linear: '<i>f</i>(<i>z</i>) = <i>z</i>',
+    relu: '<i>f</i>(<i>z</i>) = max(0, <i>z</i>)',
+    sigmoid: '<i>f</i>(<i>z</i>) = <span class="math-frac"><span class="mnum">1</span><span class="mden">1 + e<sup>−<i>z</i></sup></span></span>',
+    tanh: '<i>f</i>(<i>z</i>) = tanh(<i>z</i>)',
+  };
+  function calcHTML(m, show) {
+    const z = zOf(m), fire = z > 0, t = m.type;
     const par = v => v < 0 ? `(${num(v)})` : num(v);
     const g = (ok, html) => ok ? html : '<span class="q">?</span>';
     const cell = (cls, top, bot, ok = true) => `<span class="mc ${cls}${ok ? '' : ' is-ghost'}"><span>${top}</span><span>${g(ok, bot)}</span></span>`;
@@ -284,85 +260,122 @@
     const W = show >= 2, B = show >= 3, F = show >= 4;
     const zRow = [
       cell('c-z', '<i>z</i>', '<i>z</i>'), op('='),
-      cell('c-x', '<i>x</i><sub>1</sub>', par(st.x[0])), op('·'), cell('c-w', '<i>w</i><sub>1</sub>', par(st.w[0]), W), op('+'),
-      cell('c-x', '<i>x</i><sub>2</sub>', par(st.x[1])), op('·'), cell('c-w', '<i>w</i><sub>2</sub>', par(st.w[1]), W), op('+'),
-      cell('c-b', '<i>b</i>', par(st.b), B), op('='), cell('c-z res', '', `<b>${num(z)}</b>`, B),
+      cell('c-x', '<i>x</i><sub>1</sub>', par(m.x[0])), op('·'), cell('c-w', '<i>w</i><sub>1</sub>', par(m.w[0]), W), op('+'),
+      cell('c-x', '<i>x</i><sub>2</sub>', par(m.x[1])), op('·'), cell('c-w', '<i>w</i><sub>2</sub>', par(m.w[1]), W), op('+'),
+      cell('c-b', '<i>b</i>', par(m.b), B), op('='), cell('c-z res', '', `<b>${num(z)}</b>`, B),
     ].join('');
+    const yv = t === 'perceptron' ? (fire ? 1 : 0) : num(yOf(m, z));
+    const why = !F ? '' : t === 'perceptron' ? `<span class="mwhy">weil <i>z</i> ${fire ? '&gt;' : '≤'} 0</span>` : `<span class="mwhy">mit ${F_TXT[t]}</span>`;
     const yRow = [
       cell('c-y', '<i>y</i>', '<i>y</i>'), op('='), cell('c-f', '<i>f</i>(<i>z</i>)', `<i>f</i>(${num(z)})`, F), op('='),
-      cell('c-y res', '', `<b>${fire ? 1 : 0}</b>`), F ? `<span class="mwhy">weil <i>z</i> ${fire ? '&gt;' : '≤'} 0</span>` : '',
+      cell('c-y res', '', `<b>${yv}</b>`), why,
     ].join('');
     return `<div class="mrow">${zRow}</div><div class="mrow">${yRow}</div>`;
   }
 
   const TEXT = {
     in: { p: 'Wir schauen uns <b>ein</b> künstliches Neuron an. Noch ist das meiste grau – das decken wir Stück für Stück auf. Klar ist schon: Links gehen zwei <b class="t-x">Eingänge</b> hinein, beliebige Zahlen. Rechts kommt eine Antwort heraus: <b class="t-y">1 = feuert</b> oder <b>0 = feuert nicht</b>.',
-      t: 'Ändere die Eingänge mit <b>−</b> und <b>+</b> oder tippe auf die Zahl. Wann feuert das Neuron?' },
-    w: { p: 'Jede Leitung hat ein <b class="t-w">Gewicht w</b>. Der Eingang wird damit malgenommen. Großes Gewicht = <b>dicke Leitung</b> = der Eingang ist wichtig. Gewicht 0 = der Eingang ist egal. Negatives Gewicht = <b class="t-neg">rote Leitung</b> = der Eingang bremst.',
+      t: 'Ändere die Eingänge mit <b>+</b> und <b>−</b> oder tippe auf die Zahl. Wann feuert das Neuron?' },
+    w: { p: 'Jede Leitung hat ein <b class="t-w">Gewicht w</b>. Der Eingang wird mit dem Gewicht <b>multipliziert</b>. Großes Gewicht = <b>dicke Leitung</b> = der Eingang ist wichtig. Gewicht 0 = der Eingang ist egal. Negatives Gewicht = <b class="t-neg">rote Leitung</b> = der Eingang bremst.',
       t: 'Stell <i class="m">w</i><sub>2</sub> auf 0. Was bewirkt <i class="m">x</i><sub>2</sub> jetzt noch?' },
     b: { p: 'Im Neuron wird alles <b>zusammengezählt</b> (Σ) – und der <b class="t-b">Bias b</b> kommt noch dazu. Das Ergebnis heißt <i class="m">z</i>. Der Bias ist die Grundeinstellung des Neurons: Ein negativer Bias macht es schwerer zu feuern, ein positiver leichter.',
       t: 'Stell den Bias so ein, dass das Neuron gerade eben noch feuert.' },
-    act: { p: 'Zum Schluss entscheidet die <b>Aktivierungsfunktion</b> <i class="m">f</i>: Ist <i class="m">z</i> größer als 0, kommt <b class="t-y">1</b> heraus, sonst <b>0</b>. Unser Neuron nimmt dafür eine <b>Treppe</b> – der Punkt zeigt, wo <i class="m">z</i> gerade liegt. Andere Neuronen haben weichere Kurven: siehe „Alle Neuronen“.',
+    act: { p: 'Zum Schluss entscheidet die <b>Aktivierungsfunktion</b> <i class="m">f</i>: Ist <i class="m">z</i> größer als 0, kommt <b class="t-y">1</b> heraus, sonst <b>0</b>. Unser Neuron nimmt dafür eine <b>Treppe</b> – der Punkt zeigt, wo <i class="m">z</i> gerade liegt.',
       t: 'Jetzt ist das Neuron ganz aufgedeckt. Rechne einmal selbst nach – stimmt die Rechnung unten?' },
   };
 
-  /* Ebene für Schritt 6/7: x₁ nach rechts, x₂ nach oben, je −5 … 5.
-     Gelb = hier feuert das Neuron. Ziehen: Punkt = Eingänge, Gerade = Bias
-     (parallel schieben), runde Griffe = Gewichte (drehen). */
-  const R = 5;
-  function makePlane(o) {
+  /* Ebene: x₁ nach rechts, x₂ nach oben (Bereich m.dom). Gelb = hier feuert
+     das Neuron; bei weichen Typen zeigt die Stärke der Farbe die Ausgabe.
+     Ziehen: Punkt = Eingänge, Gerade = Bias (parallel schieben), runde
+     Griffe = Gewichte (drehen). Gerechnet wird in „Einheiten“ u = −1 … 1
+     je Achse, damit Griffe und Abstände auf dem Bild stimmen, auch wenn
+     die Achsen verschieden lang sind (Pinguine: 30 mm breit, 9 mm hoch). */
+  function makePlane(m, o) {
     const wrap = h('<div class="nw-plane"><canvas></canvas></div>');
     const cv = wrap.querySelector('canvas');
     let G = null, drag = null;
     const css = n => NLTheme.var(n) || '#888';
-    const pivotOf = () => { const q = st.w[0] ** 2 + st.w[1] ** 2 || 1; return [-st.b * st.w[0] / q, -st.b * st.w[1] / q]; };
+    const off = document.createElement('canvas');
+    const C = [0, 1].map(i => (m.dom[i][0] + m.dom[i][1]) / 2), H = [0, 1].map(i => (m.dom[i][1] - m.dom[i][0]) / 2);
+    const toU = p => [(p[0] - C[0]) / H[0], (p[1] - C[1]) / H[1]];
+    const fromU = u => [C[0] + u[0] * H[0], C[1] + u[1] * H[1]];
+    const lineU = () => { const a = m.w[0] * H[0], c = m.w[1] * H[1]; return [a, c, m.w[0] * C[0] + m.w[1] * C[1] + m.b]; };
+    const pivotOf = () => { const [a, c, d] = lineU(), q = a * a + c * c || 1; return fromU([-d * a / q, -d * c / q]); };
     const handles = P => {
-      const L = Math.hypot(...st.w) || 1, d = [-st.w[1] / L, st.w[0] / L];
-      return [[P[0] + d[0] * 2.6, P[1] + d[1] * 2.6], [P[0] - d[0] * 2.6, P[1] - d[1] * 2.6]];
+      const [a, c] = lineU(), L = Math.hypot(a, c) || 1, d = [-c / L, a / L], u = toU(P);
+      return [fromU([u[0] + d[0] * 0.52, u[1] + d[1] * 0.52]), fromU([u[0] - d[0] * 0.52, u[1] - d[1] * 0.52])];
     };
+    const inDom = p => p[0] >= m.dom[0][0] - 1e-9 && p[0] <= m.dom[0][1] + 1e-9 && p[1] >= m.dom[1][0] - 1e-9 && p[1] <= m.dom[1][1] + 1e-9;
+    const snap = v => Math.round(v / m.snap) * m.snap;
+    const clampX = p => [clampK(m, 'x1', r2(snap(p[0]))), clampK(m, 'x2', r2(snap(p[1])))];
     function draw() {
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const Wc = cv.clientWidth || 360, Hc = cv.clientHeight || 360;
       cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr);
       const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const pad = 30, S = Math.min(Wc, Hc) - pad - 10, ox = pad, oy = 8;
-      const X = v => ox + (v + R) / (2 * R) * S, Y = v => oy + (R - v) / (2 * R) * S;
-      const iX = px => (px - ox) / S * 2 * R - R, iY = py => R - (py - oy) / S * 2 * R;
-      G = { X, Y, iX, iY };
-      const [w1, w2] = st.w, b = st.b, zf = (a, d) => w1 * a + w2 * d + b;
-      // Flächen
-      const step = 3;
-      for (let px = ox; px < ox + S; px += step) for (let py = oy; py < oy + S; py += step) {
-        c.fillStyle = zf(iX(px + step / 2), iY(py + step / 2)) > 0 ? css('gold-dim') : css('surface-2');
-        c.fillRect(px, py, step + 0.4, step + 0.4);
+      const named = !!m.axes;
+      const padL = named ? 44 : 30, padB = named ? 36 : 10, oy = 8;
+      const S = Math.min(Wc - padL - 10, Hc - padB - oy), ox = padL;
+      const X = v => ox + (v - m.dom[0][0]) / (2 * H[0]) * S, Y = v => oy + (m.dom[1][1] - v) / (2 * H[1]) * S;
+      const iX = px => m.dom[0][0] + (px - ox) / S * 2 * H[0], iY = py => m.dom[1][1] - (py - oy) / S * 2 * H[1];
+      G = { X, Y, iX, iY, S };
+      const t = m.type, zf = (a, d) => m.w[0] * a + m.w[1] * d + m.b;
+      // Flächen: klein vorrechnen, weich hochskaliert (keine Nähte)
+      const n = Math.max(8, Math.round(S / 3)), img = new ImageData(n, n);
+      const bc = css('surface-2'), base = rgbOf(bc), gd = rgbOf(css('gold'), bc), gdim = rgbOf(css('gold-dim'), bc), ng = rgbOf(css('ink-faint'), bc);
+      const corners = [[0, 0], [0, 1], [1, 0], [1, 1]].map(([i, j]) => Math.abs(zf(m.dom[0][i], m.dom[1][j])));
+      const zMax = Math.max(1, ...corners);
+      for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+        const z = zf(m.dom[0][0] + (i + 0.5) / n * 2 * H[0], m.dom[1][1] - (j + 0.5) / n * 2 * H[1]);
+        let col = base, a = 0;
+        if (t === 'perceptron') { if (z > 0) { col = gdim; a = 1; } }
+        else {
+          const y = activations[t].fn(z), fr = t === 'sigmoid' || t === 'tanh' ? y : y / zMax;
+          a = Math.min(1, Math.abs(fr)) * (fr > 0 ? 0.42 : 0.3); col = fr > 0 ? gd : ng;
+        }
+        const k = (j * n + i) * 4;
+        for (let q = 0; q < 3; q++) img.data[k + q] = Math.round(base[q] + (col[q] - base[q]) * a);
+        img.data[k + 3] = 255;
       }
-      // Raster und Achsen
+      off.width = off.height = n; off.getContext('2d').putImageData(img, 0, 0);
+      c.imageSmoothingEnabled = t !== 'perceptron';
+      c.drawImage(off, ox, oy, S, S);
+      c.imageSmoothingEnabled = true;
+      // Raster, Achsen, Zahlen
       c.lineWidth = 1; c.strokeStyle = css('line-soft');
-      for (let v = -R; v <= R; v++) {
-        c.beginPath(); c.moveTo(X(v), oy); c.lineTo(X(v), oy + S); c.stroke();
-        c.beginPath(); c.moveTo(ox, Y(v)); c.lineTo(ox + S, Y(v)); c.stroke();
+      const tk = (i, f) => { for (let v = Math.ceil(m.dom[i][0] / m.ticks[i][0]) * m.ticks[i][0]; v <= m.dom[i][1] + 1e-9; v += m.ticks[i][0]) f(r2(v)); };
+      tk(0, v => { c.beginPath(); c.moveTo(X(v), oy); c.lineTo(X(v), oy + S); c.stroke(); });
+      tk(1, v => { c.beginPath(); c.moveTo(ox, Y(v)); c.lineTo(ox + S, Y(v)); c.stroke(); });
+      c.fillStyle = css('ink-faint'); c.font = '11px "JetBrains Mono", monospace';
+      const lab = (i, v) => v !== 0 && Math.abs(v / m.ticks[i][1] - Math.round(v / m.ticks[i][1])) < 1e-6;
+      if (named) {
+        c.strokeStyle = css('ink-faint'); c.lineWidth = 1.2; c.strokeRect(ox, oy, S, S);
+        c.textAlign = 'center'; tk(0, v => { if (lab(0, v)) c.fillText(num(v), X(v), oy + S + 14); });
+        c.textAlign = 'right'; tk(1, v => { if (lab(1, v)) c.fillText(num(v), ox - 5, Y(v) + 4); });
+        c.fillStyle = css('in-ink'); c.font = '600 12px "Nunito", system-ui, sans-serif';
+        c.textAlign = 'center'; c.fillText(m.axes[0] + '  (x₁)', ox + S / 2, oy + S + 30);
+        c.save(); c.translate(13, oy + S / 2); c.rotate(-Math.PI / 2); c.fillText(m.axes[1] + '  (x₂)', 0, 0); c.restore();
+      } else {
+        c.strokeStyle = css('ink-faint'); c.lineWidth = 1.2;
+        c.beginPath(); c.moveTo(X(m.dom[0][0]), Y(0)); c.lineTo(X(m.dom[0][1]), Y(0)); c.moveTo(X(0), Y(m.dom[1][0])); c.lineTo(X(0), Y(m.dom[1][1])); c.stroke();
+        c.textAlign = 'center'; tk(0, v => { if (lab(0, v)) c.fillText(num(v), X(v), Y(0) + 14); });
+        c.textAlign = 'right'; tk(1, v => { if (lab(1, v)) c.fillText(num(v), X(0) - 5, Y(v) + 4); });
+        c.fillStyle = css('in-ink'); c.font = 'italic 16px "KaTeX Math", serif';
+        c.textAlign = 'right'; c.fillText('x₁', ox + S - 4, Y(0) - 8);
+        c.textAlign = 'left'; c.fillText('x₂', X(0) + 8, oy + 16);
       }
-      c.strokeStyle = css('ink-faint'); c.lineWidth = 1.2;
-      c.beginPath(); c.moveTo(X(-R), Y(0)); c.lineTo(X(R), Y(0)); c.moveTo(X(0), Y(-R)); c.lineTo(X(0), Y(R)); c.stroke();
-      c.fillStyle = css('ink-faint'); c.font = '11px "JetBrains Mono", monospace'; c.textAlign = 'center';
-      [-4, -2, 2, 4].forEach(v => { c.fillText(num(v), X(v), Y(0) + 14); });
-      c.textAlign = 'right'; [-4, -2, 2, 4].forEach(v => c.fillText(num(v), X(0) - 5, Y(v) + 4));
-      c.fillStyle = css('in-ink'); c.font = 'italic 16px "KaTeX Math", serif';
-      c.textAlign = 'right'; c.fillText('x₁', ox + S - 4, Y(0) - 8);
-      c.textAlign = 'left'; c.fillText('x₂', X(0) + 8, oy + 16);
       // Gerade z = 0
-      const pts = [];
-      if (Math.abs(w2) > 1e-9) [-R, R].forEach(a => { const d = -(w1 * a + b) / w2; if (Math.abs(d) <= R + 1e-9) pts.push([a, d]); });
-      if (Math.abs(w1) > 1e-9) [-R, R].forEach(d => { const a = -(w2 * d + b) / w1; if (Math.abs(a) <= R + 1e-9) pts.push([a, d]); });
-      const ink = css('ink');
+      const [w1, w2] = m.w, b = m.b, pts = [];
+      if (Math.abs(w2) > 1e-9) m.dom[0].forEach(a => { const d = -(w1 * a + b) / w2; if (inDom([a, d])) pts.push([a, d]); });
+      if (Math.abs(w1) > 1e-9) m.dom[1].forEach(d => { const a = -(w2 * d + b) / w1; if (inDom([a, d])) pts.push([a, d]); });
+      c.save(); c.beginPath(); c.rect(ox, oy, S, S); c.clip();
       if (pts.length >= 2) {
-        c.strokeStyle = ink; c.lineWidth = drag && drag.m === 'shift' ? 5 : 3.5; c.lineCap = 'round';
+        c.strokeStyle = css('ink'); c.lineWidth = drag && drag.m === 'shift' ? 5 : 3.5; c.lineCap = 'round';
         c.beginPath(); c.moveTo(X(pts[0][0]), Y(pts[0][1])); c.lineTo(X(pts[1][0]), Y(pts[1][1])); c.stroke();
-        // Pfeil zur Feuer-Seite
+        // Pfeil zur Feuer-Seite (Richtung auf dem Bild)
         const P = drag && drag.P || pivotOf();
-        const inBox = Math.abs(P[0]) <= R && Math.abs(P[1]) <= R;
-        const M = inBox ? P : [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2];
-        const L = Math.hypot(w1, w2) || 1, nx = w1 / L * 32, ny = -w2 / L * 32;
+        const M = inDom(P) ? P : [(pts[0][0] + pts[1][0]) / 2, (pts[0][1] + pts[1][1]) / 2];
+        const [a, cc] = lineU(), L = Math.hypot(a, cc) || 1, nx = a / L * 32, ny = -cc / L * 32;
         const mx = X(M[0]), my = Y(M[1]);
         c.strokeStyle = css('gold'); c.fillStyle = css('gold'); c.lineWidth = 3;
         c.beginPath(); c.moveTo(mx, my); c.lineTo(mx + nx, my + ny); c.stroke();
@@ -370,53 +383,58 @@
         c.beginPath(); c.moveTo(mx + nx * 1.3, my + ny * 1.3);
         c.lineTo(mx + nx - 8 * Math.sin(an), my + ny + 8 * Math.cos(an));
         c.lineTo(mx + nx + 8 * Math.sin(an), my + ny - 8 * Math.cos(an)); c.closePath(); c.fill();
-        // Dreh-Griffe
-        handles(P).forEach(([a, d]) => {
-          if (Math.abs(a) > R || Math.abs(d) > R) return;
-          c.beginPath(); c.arc(X(a), Y(d), 9, 0, Math.PI * 2);
+        handles(P).forEach(q => {
+          if (!inDom(q)) return;
+          c.beginPath(); c.arc(X(q[0]), Y(q[1]), 9, 0, Math.PI * 2);
           c.fillStyle = css('accent'); c.fill(); c.lineWidth = 2.5; c.strokeStyle = css('surface'); c.stroke();
-          c.beginPath(); c.arc(X(a), Y(d), 4.5, 0.4, Math.PI * 1.6); c.strokeStyle = css('on-accent'); c.lineWidth = 1.6; c.stroke();
+          c.beginPath(); c.arc(X(q[0]), Y(q[1]), 4.5, 0.4, Math.PI * 1.6); c.strokeStyle = css('on-accent'); c.lineWidth = 1.6; c.stroke();
         });
       }
-      // Datenpunkte
-      (o.points ? o.points() : []).forEach(p => {
-        const ok = (zf(p.x[0], p.x[1]) > 0 ? 1 : 0) === p.soll;
-        c.beginPath(); c.arc(X(p.x[0]), Y(p.x[1]), 8, 0, Math.PI * 2);
+      // Datenpunkte: soll feuern = goldenes Dreieck, soll nicht = weißer Kreis
+      (m.points || []).forEach(p => {
+        const ok = (zf(p.x[0], p.x[1]) > 0 ? 1 : 0) === p.soll, px = X(p.x[0]), py = Y(p.x[1]);
+        c.beginPath();
+        if (p.soll) { c.moveTo(px, py - 8.5); c.lineTo(px + 8, py + 6); c.lineTo(px - 8, py + 6); c.closePath(); }
+        else c.arc(px, py, 6.5, 0, Math.PI * 2);
         c.fillStyle = p.soll ? css('gold') : css('surface'); c.fill();
-        c.lineWidth = 2.5; c.strokeStyle = p.soll ? css('gold') : css('ink-faint'); c.stroke();
-        if (!ok) { c.beginPath(); c.arc(X(p.x[0]), Y(p.x[1]), 12.5, 0, Math.PI * 2); c.strokeStyle = css('neg'); c.lineWidth = 2; c.stroke(); }
+        c.lineWidth = 2; c.strokeStyle = p.soll ? css('surface') : css('ink-soft'); c.stroke();
+        if (!ok) { c.beginPath(); c.arc(px, py, 12, 0, Math.PI * 2); c.strokeStyle = css('neg'); c.lineWidth = 2.2; c.stroke(); }
       });
+      c.restore();
       // Eingänge als Punkt
-      const [a, d] = st.x;
+      const [ax, ay] = [X(m.x[0]), Y(m.x[1])];
       c.strokeStyle = css('in'); c.lineWidth = 3;
-      c.beginPath(); c.arc(X(a), Y(d), 11, 0, Math.PI * 2); c.stroke();
-      c.beginPath(); c.moveTo(X(a) - 16, Y(d)); c.lineTo(X(a) - 6, Y(d)); c.moveTo(X(a) + 6, Y(d)); c.lineTo(X(a) + 16, Y(d));
-      c.moveTo(X(a), Y(d) - 16); c.lineTo(X(a), Y(d) - 6); c.moveTo(X(a), Y(d) + 6); c.lineTo(X(a), Y(d) + 16); c.stroke();
+      c.beginPath(); c.arc(ax, ay, 11, 0, Math.PI * 2); c.stroke();
+      c.beginPath(); c.moveTo(ax - 16, ay); c.lineTo(ax - 6, ay); c.moveTo(ax + 6, ay); c.lineTo(ax + 16, ay);
+      c.moveTo(ax, ay - 16); c.lineTo(ax, ay - 6); c.moveTo(ax, ay + 6); c.lineTo(ax, ay + 16); c.stroke();
       c.fillStyle = css('in-ink'); c.font = '600 12px "JetBrains Mono", monospace';
-      c.textAlign = X(a) > ox + S - 90 ? 'right' : 'left';
-      c.fillText(`(${num(a)} | ${num(d)})`, X(a) + (c.textAlign === 'left' ? 15 : -15), Y(d) - 14);
+      c.textAlign = ax > ox + S - 100 ? 'right' : 'left';
+      c.fillText(`(${num(m.x[0])} | ${num(m.x[1])})`, ax + (c.textAlign === 'left' ? 15 : -15), ay < oy + 24 ? ay + 26 : ay - 14);
     }
     const pos = e => { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; };
-    const near = (px, py, a, d, r) => Math.hypot(G.X(a) - px, G.Y(d) - py) < r;
-    const lineDist = (px, py) => { const L = Math.hypot(...st.w) || 1; return Math.abs(st.w[0] * G.iX(px) + st.w[1] * G.iY(py) + st.b) / L / (2 * R) * (cv.clientHeight - 18); };
+    const near = (px, py, q, r) => Math.hypot(G.X(q[0]) - px, G.Y(q[1]) - py) < r;
+    const lineDist = (px, py) => { const [a, c, d] = lineU(), u = toU([G.iX(px), G.iY(py)]); return Math.abs(a * u[0] + c * u[1] + d) / (Math.hypot(a, c) || 1) * G.S / 2; };
     function hover(px, py) {
       if (!G) return '';
-      if (near(px, py, st.x[0], st.x[1], 20)) return 'move';
-      if (handles(pivotOf()).some(([a, d]) => near(px, py, a, d, 18))) return 'grab';
+      if (near(px, py, m.x, 20)) return 'move';
+      if (handles(pivotOf()).some(q => near(px, py, q, 18))) return 'grab';
       if (lineDist(px, py) < 12) return 'ns-resize';
-      return o.points ? 'pointer' : 'crosshair';
+      return m.points ? 'pointer' : 'crosshair';
     }
     cv.addEventListener('pointermove', e => {
       const [px, py] = pos(e);
       if (!drag) { cv.style.cursor = hover(px, py); return; }
       const a = G.iX(px), d = G.iY(py);
-      if (drag.m === 'pt') st.x = [clampK('x', Math.round(a * 2) / 2), clampK('x', Math.round(d * 2) / 2)];
-      else if (drag.m === 'shift') st.b = r2(clampK('b', drag.b0 - st.w[0] * (a - drag.a0) - st.w[1] * (d - drag.d0)));
+      if (drag.m === 'pt') m.x = clampX([a, d]);
+      else if (drag.m === 'shift') m.b = r2(clampK(m, 'b', drag.b0 - m.w[0] * (a - drag.a0) - m.w[1] * (d - drag.d0)));
       else if (drag.m === 'rot') {
-        const vx = (a - drag.P[0]) * drag.sg, vy = (d - drag.P[1]) * drag.sg, L = Math.hypot(vx, vy);
-        if (L < 0.3) return;
-        st.w = [r2(clampK('w', vy / L * drag.len)), r2(clampK('w', -vx / L * drag.len))];
-        st.b = r2(clampK('b', -(st.w[0] * drag.P[0] + st.w[1] * drag.P[1])));
+        // Gerade durch den Drehpunkt und den Finger, |w| bleibt
+        const vx = (a - drag.P[0]) * drag.sg, vy = (d - drag.P[1]) * drag.sg;
+        const uL = Math.hypot(vx / H[0], vy / H[1]);
+        if (uL < 0.06) return;
+        const L = Math.hypot(vx, vy);
+        m.w = [r2(clampK(m, 'w', vy / L * drag.len)), r2(clampK(m, 'w', -vx / L * drag.len))];
+        m.b = r2(clampK(m, 'b', -(m.w[0] * drag.P[0] + m.w[1] * drag.P[1])));
       }
       o.onChange();
     });
@@ -424,16 +442,16 @@
       if (!G) return;
       const [px, py] = pos(e);
       const a = G.iX(px), d = G.iY(py);
-      const P = pivotOf(), hs = handles(P), hi = hs.findIndex(([ha, hd]) => near(px, py, ha, hd, 18));
-      if (near(px, py, st.x[0], st.x[1], 20)) drag = { m: 'pt' };
-      else if (hi >= 0) drag = { m: 'rot', P, sg: hi ? -1 : 1, len: Math.max(0.2, Math.hypot(...st.w)) };
-      else if (lineDist(px, py) < 12) drag = { m: 'shift', b0: st.b, a0: a, d0: d };
-      else if (o.points) {
+      const P = pivotOf(), hi = handles(P).findIndex(q => near(px, py, q, 18));
+      if (near(px, py, m.x, 20)) drag = { m: 'pt' };
+      else if (hi >= 0) drag = { m: 'rot', P, sg: hi ? -1 : 1, len: Math.max(0.2, Math.hypot(...m.w)) };
+      else if (lineDist(px, py) < 12) drag = { m: 'shift', b0: m.b, a0: a, d0: d };
+      else if (m.points) {
         let best = null, bd = 22;
-        o.points().forEach(p => { const dd = Math.hypot(G.X(p.x[0]) - px, G.Y(p.x[1]) - py); if (dd < bd) { bd = dd; best = p; } });
-        if (best) { st.x = best.x.slice(); o.onChange(); }
+        m.points.forEach(p => { const dd = Math.hypot(G.X(p.x[0]) - px, G.Y(p.x[1]) - py); if (dd < bd) { bd = dd; best = p; } });
+        if (best) { m.x = best.x.slice(); o.onChange(); }
         return;
-      } else { drag = { m: 'pt' }; st.x = [clampK('x', Math.round(a * 2) / 2), clampK('x', Math.round(d * 2) / 2)]; o.onChange(); }
+      } else { drag = { m: 'pt' }; m.x = clampX([a, d]); o.onChange(); }
       cv.setPointerCapture(e.pointerId);
       if (drag.m === 'rot') cv.style.cursor = 'grabbing';
     });
@@ -444,36 +462,53 @@
     return { el: wrap, draw };
   }
 
-  /* Punkte für Schritt 7: zwei gleichmäßige Häufchen, mit einer Geraden trennbar.
-     Gold = hier soll das Neuron feuern. Erste Runde fest, „Neue Punkte“ würfelt. */
-  const PTS0 = [[2, -3, 1], [3, -2, 1], [3.5, -3.5, 1], [2, -1.5, 1], [4, -2.5, 1],
-    [-2, 2, 0], [-3, 3, 0], [-1.5, 3.5, 0], [-3.5, 1.5, 0], [-1, 2.5, 0]];
-  let pts = PTS0.map(p => ({ x: [p[0], p[1]], soll: p[2] }));
-  function newPoints() {
-    for (;;) {
-      const t = Math.random() * Math.PI * 2, n = [Math.cos(t), Math.sin(t)];
-      const m = [Math.random() * 2 - 1, Math.random() * 2 - 1];
-      const out = [], seen = new Set();
-      for (let g = 0; g < 2 && out.length < 20; g++) {
-        const s = g ? -1 : 1, c = [m[0] + n[0] * 2.4 * s, m[1] + n[1] * 2.4 * s];
-        let tries = 0, k = 0;
-        while (k < 5 && tries++ < 200) {
-          const r = Math.sqrt(Math.random()) * 1.6, a = Math.random() * Math.PI * 2;
-          const p = [Math.round((c[0] + r * Math.cos(a)) * 2) / 2, Math.round((c[1] + r * Math.sin(a)) * 2) / 2];
-          const side = (p[0] - m[0]) * n[0] + (p[1] - m[1]) * n[1];
-          if (Math.abs(p[0]) > 4.5 || Math.abs(p[1]) > 4.5 || side * s < 0.7 || seen.has(p + '')) continue;
-          seen.add(p + ''); out.push({ x: p, soll: g ? 0 : 1 }); k++;
-        }
-      }
-      const right = out.filter(p => ((st.w[0] * p.x[0] + st.w[1] * p.x[1] + st.b > 0) ? 1 : 0) === p.soll).length;
-      if (out.length === 10 && right < 9) return out;
-    }
+  /* CSS-Farbe → [r, g, b] über einer Grundfarbe (1×1-Canvas, versteht hex, rgb(a), Namen) */
+  const rgbCv = document.createElement('canvas'); rgbCv.width = rgbCv.height = 1;
+  const rgbCache = {};
+  function rgbOf(col, under = '#fff') {
+    const key = col + '|' + under;
+    if (rgbCache[key]) return rgbCache[key];
+    const c = rgbCv.getContext('2d', { willReadFrequently: true });
+    c.clearRect(0, 0, 1, 1); c.fillStyle = under; c.fillRect(0, 0, 1, 1); c.fillStyle = col; c.fillRect(0, 0, 1, 1);
+    const d = c.getImageData(0, 0, 1, 1).data;
+    return (rgbCache[key] = [d[0], d[1], d[2]]);
+  }
+  const rightOf = m => (m.points || []).filter(p => ((zOf(m, p.x) > 0) ? 1 : 0) === p.soll).length;
+  const PENG_IMG = '../Nebeltal/img/frei/';
+  const pengLegend = () => `<p class="nw-legend nw-peng"><span><img src="${PENG_IMG}chin_1.webp" alt=""><i class="lg-tri"></i><span><b>Zügelpinguin</b><br>soll feuern</span></span><span><img src="${PENG_IMG}adelie_1.webp" alt=""><i class="lg-dot"></i><span><b>Adeliepinguin</b><br>soll nicht feuern</span></span></p>`;
+  const dragLegend = '<p class="nw-legend"><span><i class="lg-pt"></i>Punkt ziehen = Eingänge</span><span><i class="lg-line"></i>Gerade schieben = Bias</span><span><i class="lg-rot"></i>Griff drehen = Gewichte</span></p>';
+
+  /* Neuron links (mit Rechnung), Ebene rechts – beides verändert dasselbe.
+     Für Schritt 6/7 und die Detailseite von „Alle Neuronen“. */
+  function splitView(m, o = {}) {
+    const calc = h('<div class="nw-calc m"></div>');
+    const msg = h('<p class="nn-task-msg"></p>');
+    let N = null, PL = null;
+    const sync = () => {
+      N.update(); PL.draw(); calc.innerHTML = calcHTML(m, 4);
+      if (!m.points) return;
+      const ok = rightOf(m), n = m.points.length;
+      msg.className = 'nn-task-msg' + (ok === n ? ' ok' : '');
+      msg.innerHTML = ok === n ? `<b>${ok} von ${n} richtig</b> – das Neuron hält alle Pinguine auseinander.`
+        : `<b>${ok} von ${n} richtig.</b> Rot umkreiste Pinguine landen auf der falschen Seite.`;
+    };
+    N = makeNeuron(m, { onChange: sync, typed: o.typed, outText: o.outText });
+    N.setShow(4);
+    PL = makePlane(m, { onChange: sync });
+    const grid = h('<div class="nw-split"><div class="nw-left"></div><div class="nw-right"></div></div>');
+    grid.children[0].append(N.el, calc);
+    grid.children[1].append(PL.el);
+    if (m.points) grid.children[1].append(h(pengLegend()), msg);
+    grid.children[1].append(h(dragLegend));
+    requestAnimationFrame(sync);
+    sync();
+    return grid;
   }
 
   const PAIRS = [
     { k: 'in', bio: 'Dendriten', kn: 'Eingänge x', t: 'Die Dendriten nehmen Signale anderer Zellen auf. Beim künstlichen Neuron kommen hier Zahlen herein: x₁, x₂ …' },
     { k: 'w', bio: 'Synapsen', kn: 'Gewichte w', t: 'Manche Synapsen leiten stark, manche schwach, manche hemmen. Das Gewicht sagt, wie wichtig ein Eingang ist – dicke Leitung = wichtig, rot = bremst.' },
-    { k: 'sum', bio: 'Zellkörper', kn: 'Summe Σ', t: 'Im Zellkörper laufen alle Signale zusammen. Das Neuron zählt alle Eingänge × Gewichte zusammen.' },
+    { k: 'sum', bio: 'Zellkörper', kn: 'Summe Σ', t: 'Im Zellkörper laufen alle Signale zusammen. Das Neuron multipliziert jeden Eingang mit seinem Gewicht und zählt alles zusammen.' },
     { k: 'b', bio: 'Reizschwelle', kn: 'Bias b', t: 'Manche Nervenzellen feuern leicht, manche brauchen viel Reiz. Beim künstlichen Neuron stellt das der Bias ein – er wird zur Summe dazugezählt.' },
     { k: 'f', bio: 'Axonhügel', kn: 'Aktivierung f', t: 'Am Axonhügel wird entschieden: feuern oder nicht. Beim künstlichen Neuron macht das die Aktivierungsfunktion.' },
     { k: 'out', bio: 'Axon', kn: 'Ausgabe y', t: 'Das Axon leitet das Signal an die nächsten Zellen weiter. Die Ausgabe wird zum Eingang der nächsten Neuronen.' },
@@ -502,13 +537,13 @@
     return s;
   }
 
-
   /* Schritt 1: Nervenzelle ↔ dasselbe Neuron, ganz aufgedeckt, nur ansehen */
   function buildBio(card) {
     card.appendChild(h(`<p class="nn-lead-p">Dein Gehirn hat rund <b>86 Milliarden Nervenzellen</b>. Jede bekommt Signale von anderen Zellen, „entscheidet“, ob sie selbst <b>feuert</b>, und gibt ihr Signal weiter. Ein <b>künstliches Neuron</b> ist ein stark vereinfachtes Rechenmodell davon. <b>Tippe auf ein Teil</b> – links oder rechts.</p>`));
     const grid = h('<div class="nn-two"><div class="nn-col-bio"></div><div class="nn-col-kn"></div></div>');
     const bio = bioSVG();
-    const N = makeNeuron({ fixed: true });
+    ABS.type = 'perceptron';
+    const N = makeNeuron(ABS, { fixed: true });
     N.setShow(4);
     grid.children[0].appendChild(bio);
     grid.children[1].appendChild(N.el);
@@ -535,58 +570,36 @@
     const T = TEXT[S.id];
     card.appendChild(h(`<p class="nn-lead-p">${T.p}</p>`));
     const calc = h('<div class="nw-calc m"></div>');
-    const N = makeNeuron({ onChange: () => { calc.innerHTML = calcHTML(S.show); } });
+    const N = makeNeuron(ABS, { onChange: () => { calc.innerHTML = calcHTML(ABS, S.show); } });
     // Vom letzten Stand aus aufdecken, damit man sieht, was neu dazukommt
     N.setShow(Math.min(lastShow || S.show, S.show));
     requestAnimationFrame(() => requestAnimationFrame(() => N.setShow(S.show)));
     lastShow = S.show;
-    calc.innerHTML = calcHTML(S.show);
+    calc.innerHTML = calcHTML(ABS, S.show);
     card.append(h('<div class="nw-stage"></div>'), calc, h(`<p class="nn-try"><b>Probier:</b> ${T.t}</p>`));
     card.querySelector('.nw-stage').appendChild(N.el);
   }
 
-  /* Schritte 6–7: Neuron links, Ebene rechts – beides verändert dasselbe */
+  /* Schritt 6: die Gerade (Zahlen −5 … 5) · Schritt 7: echte Pinguine */
   function buildPlane(card, S) {
-    const isData = S.id === 'data';
-    card.appendChild(h(isData
-      ? '<p class="nn-lead-p">Die <b class="t-y">goldenen Punkte</b> sollen das Neuron zum Feuern bringen, die <b>weißen</b> nicht. Stell das Neuron so ein, dass die Gerade die beiden Gruppen trennt – am Neuron mit − und + oder direkt auf dem Feld. <b>Tippe einen Punkt an</b>: Dann geht er als Eingabe ins Neuron.</p>'
-      : '<p class="nn-lead-p">Mit zwei Eingängen ist jede Eingabe ein <b class="t-x">Punkt</b> (<i class="m">x</i><sub>1</sub> | <i class="m">x</i><sub>2</sub>). Für jeden Punkt kann man fragen: Feuert das Neuron hier? <b class="t-y">Gelb</b> = ja. Die Grenze ist immer eine <b>Gerade</b> – genau dort ist <i class="m">z</i> = 0. Die <b class="t-w">Gewichte drehen</b> die Gerade, der <b class="t-b">Bias schiebt</b> sie.</p>'));
-    const calc = h('<div class="nw-calc m"></div>');
-    const msg = h('<p class="nn-task-msg"></p>');
-    let N = null, PL = null;
-    const sync = () => {
-      N.update(); PL.draw(); calc.innerHTML = calcHTML(4);
-      if (!isData) return;
-      const ok = pts.filter(p => ((st.w[0] * p.x[0] + st.w[1] * p.x[1] + st.b > 0) ? 1 : 0) === p.soll).length;
-      msg.className = 'nn-task-msg' + (ok === pts.length ? ' ok' : '');
-      msg.innerHTML = ok === pts.length ? `<b>${ok} von ${pts.length} richtig</b> – eine Gerade trennt die beiden Gruppen.`
-        : `<b>${ok} von ${pts.length} richtig.</b> Rot umkreiste Punkte liegen auf der falschen Seite.`;
-    };
-    N = makeNeuron({ onChange: () => sync() });
-    N.setShow(4); lastShow = 4;
-    PL = makePlane({ onChange: () => sync(), points: isData ? () => pts : null });
-    const grid = h('<div class="nw-split"><div class="nw-left"></div><div class="nw-right"></div></div>');
-    grid.children[0].append(N.el, calc);
-    grid.children[1].append(PL.el, h(`<p class="nw-legend"><span><i class="lg-pt"></i>Punkt ziehen = Eingänge</span><span><i class="lg-line"></i>Gerade schieben = Bias</span><span><i class="lg-rot"></i>Griff drehen = Gewichte</span></p>`));
-    if (isData) {
-      const again = h('<button type="button" class="nn-btn">Neue Punkte</button>');
-      again.addEventListener('click', () => { pts = newPoints(); st.x = pts[0].x.slice(); sync(); });
-      const row = h('<div class="nw-taskrow"></div>');
-      row.append(msg, again);
-      grid.children[1].appendChild(row);
+    lastShow = 4;
+    if (S.id === 'line') {
+      card.appendChild(h('<p class="nn-lead-p">Mit zwei Eingängen ist jede Eingabe ein <b class="t-x">Punkt</b> (<i class="m">x</i><sub>1</sub> | <i class="m">x</i><sub>2</sub>). Für jeden Punkt kann man fragen: Feuert das Neuron hier? <b class="t-y">Gelb</b> = ja. Die Grenze ist immer eine <b>Gerade</b> – genau dort ist <i class="m">z</i> = 0. Die <b class="t-w">Gewichte drehen</b> die Gerade, der <b class="t-b">Bias schiebt</b> sie.</p>'));
+      card.appendChild(splitView(ABS));
+      card.appendChild(h('<p class="nn-try"><b>Probier:</b> Stell <i class="m">w</i><sub>1</sub> auf 0 – wie liegt die Gerade jetzt? Und was passiert, wenn du nur den Bias änderst?</p>'));
+      return;
     }
-    card.append(grid);
-    if (isData) card.appendChild(h(`<div class="nn-summary"><b>Das Wichtigste</b><ul>
-      <li>Ein Neuron nimmt jeden <b>Eingang</b> mal sein <b>Gewicht</b>, zählt alles zusammen und den <b>Bias</b> dazu: <i class="m">z</i>.</li>
+    PENG.type = 'perceptron';
+    card.appendChild(h(`<p class="nn-lead-p">Jetzt mit <b>echten Werten</b>: 30 Pinguine aus der Antarktis wurden vermessen – <b class="t-x">Schnabellänge</b> und <b class="t-x">Schnabelhöhe</b> in Millimetern. Jeder Pinguin ist ein Punkt. Das Neuron soll entscheiden: <b class="t-y">Zügelpinguin</b> (feuert) oder <b>Adeliepinguin</b> (feuert nicht)? Mit den <b class="t-w">richtigen Gewichten</b> und dem <b class="t-b">richtigen Bias</b> schafft es das – und trennt so zwei Arten. <b>Tippe einen Pinguin an</b>: Dann geht er als Eingabe ins Neuron.</p>`));
+    card.appendChild(splitView(PENG));
+    card.appendChild(h(`<div class="nn-summary"><b>Das Wichtigste</b><ul>
+      <li>Ein Neuron <b>multipliziert</b> jeden <b>Eingang</b> mit seinem <b>Gewicht</b>, zählt alles zusammen und den <b>Bias</b> dazu: <i class="m">z</i>.</li>
       <li>Die <b>Aktivierung</b> entscheidet: Ist <i class="m">z</i> größer als 0, feuert das Neuron.</li>
-      <li>Mit zwei Eingängen zieht ein Neuron <b>eine Gerade</b> – und trennt so Punkte in zwei Gruppen.</li>
-      <li>Mehr als eine Gerade kann ein einzelnes Neuron nicht. Was mehrere Neuronen zusammen können, probierst du in <b>„Netze bauen“</b>.</li></ul></div>`));
-    else card.appendChild(h('<p class="nn-try"><b>Probier:</b> Stell <i class="m">w</i><sub>1</sub> auf 0 – wie liegt die Gerade jetzt? Und was passiert, wenn du nur den Bias änderst?</p>'));
-    sync();
-    requestAnimationFrame(sync);
+      <li>Mit zwei Eingängen zieht ein Neuron <b>eine Gerade</b>. Mit den richtigen Gewichten und dem richtigen Bias trennt sie zwei Gruppen – das Neuron trifft eine <b>Entscheidung</b>.</li>
+      <li>Die Schnabellänge allein reicht hier nicht: Erst <b>beide Eingänge zusammen</b> trennen alle Pinguine.</li></ul></div>`));
   }
 
-  function renderWie(page) {
+  function renderWie(page, api) {
     const nav = h('<nav class="nn-steps"></nav>');
     STEPS.forEach((s, i) => {
       const b = h(`<button type="button" class="nn-step${s.id === step ? ' on' : ''}" data-step="${s.id}"><i>${i + 1}</i>${s.kurz}</button>`);
@@ -604,37 +617,77 @@
     if (i < STEPS.length - 1) { const b = h(`<button type="button" class="nn-btn primary">${STEPS[i + 1].kurz} ›</button>`); b.onclick = () => { step = STEPS[i + 1].id; again(); }; foot.appendChild(b); }
     card.appendChild(foot);
     page.append(nav, card);
-    function again() { page.innerHTML = ''; renderWie(page); page.closest('#neuron-page').scrollTop = 0; }
+    // Übergang: das Perzeptron war das einfachste Neuron – welche gibt es noch?
+    if (step === 'data') {
+      const canTypen = api.tabs.some(t => t.id === 'n-typen');
+      const nx = h(`<section class="nn-card nn-next"><div><h3>Das war das einfachste Neuron: das <span class="t-perc">Perzeptron</span>.</h3>
+        <p>Es kennt nur 0 oder 1. Welche Neuronen gibt es noch – und was machen sie mit denselben Pinguinen anders?</p></div></section>`);
+      if (canTypen) { const b = h('<button type="button" class="nn-btn primary">Alle Neuronen ›</button>'); b.onclick = () => { typSel = null; api.go('n-typen'); }; nx.appendChild(b); }
+      else nx.querySelector('p').insertAdjacentHTML('beforeend', ' <i>(Gibt deine Lehrkraft frei.)</i>');
+      page.appendChild(nx);
+    }
+    function again() { page.innerHTML = ''; renderWie(page, api); page.closest('#neuron-page').scrollTop = 0; }
   }
 
-  /* ── Reiter 2: Alle Neuronen ───────────────────────────── */
-  function renderTypen(page) {
+  /* ── Reiter 2: Alle Neuronen (20.11.2026) ────────────────────
+     Übersicht: je Typ eine kleine Karte (Kurve, Ausgabe, ein Satz).
+     Antippen = derselbe Aufbau wie Schritt 7 (Pinguine) mit diesem Typ;
+     oben umschalten, die Gewichte bleiben – so sieht man den Unterschied. */
+  const KURZ = {
+    perceptron: 'Schaltet hart um: 1, wenn z > 0, sonst 0 – wie ein Lichtschalter.',
+    linear: 'Gibt z unverändert weiter – jede Zahl kann herauskommen.',
+    relu: 'Negatives wird 0, Positives bleibt, wie es ist.',
+    sigmoid: 'Eine weiche Stufe von 0 bis 1 – zeigt, wie sicher sich das Neuron ist.',
+    tanh: 'Wie Sigmoid, aber von −1 bis 1 und mit der Mitte bei 0.',
+  };
+  const ANDERS = {
+    perceptron: 'Das kennst du schon: Gelb oder nicht gelb, dazwischen gibt es nichts.',
+    linear: 'Die Gerade ist dieselbe. Aber die Ausgabe ist einfach <i class="m">z</i>: je weiter ein Pinguin von der Geraden weg ist, desto größer die Zahl – auf der anderen Seite negativ (grau).',
+    relu: 'Die Gerade ist dieselbe. Auf der einen Seite kommt immer 0 heraus, auf der anderen wächst die Zahl, je weiter der Pinguin von der Geraden weg ist.',
+    sigmoid: 'Die Gerade ist dieselbe – dort ist die Ausgabe genau 0,5. Nah an der Geraden ist sich das Neuron unsicher (blasses Gelb), weit weg ganz sicher.',
+    tanh: 'Die Gerade ist dieselbe – dort ist die Ausgabe 0. Auf der einen Seite geht sie bis 1, auf der anderen bis −1 (grau).',
+  };
+  let typSel = null;
+  function miniCurve(k) {
+    return `<svg viewBox="0 0 100 60" class="nt-curve"><line x1="6" y1="${fY(k, 0)}" x2="94" y2="${fY(k, 0)}" class="ax"/><line x1="50" y1="6" x2="50" y2="56" class="ax"/><path d="${fPath(k)}" style="stroke:${activations[k].color}"/></svg>`;
+  }
+  function renderTypen(page, api) {
+    if (typSel) return renderTyp(page, api);
     page.appendChild(h(`<section class="nn-card nn-lead"><h2>Alle Neuronen</h2>
-      <p>Alle Neuronen rechnen zuerst gleich: <span class="nn-f">z = w₁·x₁ + w₂·x₂ + … + b</span>. Sie unterscheiden sich nur in der <b>Aktivierungsfunktion</b> f – also darin, was sie aus z machen. Schiebe z und schau, was herauskommt.</p></section>`));
-    const grid = h('<div class="nn-type-grid"></div>');
+      <p>Alle Neuronen rechnen zuerst gleich: <span class="m nn-zf"><i class="t-z">z</i> = <i class="t-x">x</i><sub>1</sub>·<i class="t-w">w</i><sub>1</sub> + <i class="t-x">x</i><sub>2</sub>·<i class="t-w">w</i><sub>2</sub> + <i class="t-b">b</i></span>.
+      Sie unterscheiden sich nur in der <b>Aktivierung</b> <i class="m">f</i> – also darin, was sie aus <i class="m">z</i> machen. <b>Tippe ein Neuron an</b> und probier es an den Pinguinen aus.</p></section>`));
+    const grid = h('<div class="nt-grid"></div>');
     ORDER.forEach(k => {
-      const act = activations[k], I = INFO[k];
-      const card = h(`<section class="nn-card nn-type" style="--type-color:${act.color}">
-        <div class="nn-type-head"><h3>${act.fullName}</h3><span class="nn-type-out">Ausgabe: ${I.out}</span></div>
-        <div class="nn-type-pics"><div class="nn-type-neuron"></div><div class="nn-type-curve"></div></div>
-        <div class="nn-type-formula">${act.formula}</div>
-        <div class="nn-type-z"></div>
-        <p>${I.was}</p>
-        <p><b>Wofür?</b> ${I.wofuer}</p>
-        <p class="nn-type-warn"><b>Achtung:</b> ${I.achtung}</p>
-      </section>`);
-      card.querySelector('.nn-type-neuron').appendChild(neuronSVG({ type: k }));
-      const cv = card.querySelector('.nn-type-curve');
-      const zBox = card.querySelector('.nn-type-z');
-      let z = 1;
-      const out = h('<div class="nn-type-apply"></div>');
-      const draw = () => { cv.innerHTML = ''; cv.appendChild(curveSVG(k, z)); out.innerHTML = act.apply(z).replace(/(\d)\.(\d)/g, '$1,$2'); };
-      zBox.appendChild(slider('z', -4, 4, 0.1, z, v => { z = v; draw(); }));
-      zBox.appendChild(out);
-      draw();
-      grid.appendChild(card);
+      const act = activations[k];
+      const c = h(`<button type="button" class="nn-card nt-card" data-type="${k}" style="--type-color:${act.color}">
+        <span class="nt-head"><b>${act.fullName}</b>${k === 'perceptron' ? '<span class="nt-badge">kennst du schon</span>' : ''}</span>
+        ${miniCurve(k)}
+        <span class="nt-out">Ausgabe: ${INFO[k].out}</span>
+        <span class="nt-txt">${KURZ[k]}</span>
+        <span class="nt-go">Ausprobieren ›</span></button>`);
+      c.addEventListener('click', () => { typSel = k; page.innerHTML = ''; renderTyp(page, api); page.closest('#neuron-page').scrollTop = 0; });
+      grid.appendChild(c);
     });
     page.appendChild(grid);
+  }
+  function renderTyp(page, api) {
+    const k = typSel, act = activations[k], I = INFO[k];
+    PENG.type = k;
+    const head = h('<div class="nt-bar"><button type="button" class="nn-btn nt-back">‹ Alle Neuronen</button><div class="nt-chips"></div></div>');
+    head.querySelector('.nt-back').onclick = () => { typSel = null; page.innerHTML = ''; renderTypen(page, api); };
+    ORDER.forEach(t => {
+      const b = h(`<button type="button" class="nt-chip${t === k ? ' on' : ''}" data-type="${t}" style="--type-color:${activations[t].color}">${activations[t].fullName}</button>`);
+      b.onclick = () => { typSel = t; page.innerHTML = ''; renderTyp(page, api); };
+      head.querySelector('.nt-chips').appendChild(b);
+    });
+    page.appendChild(head);
+    const outText = k === 'sigmoid' ? (fire, y) => `${Math.round(y * 100)} % Zügel` : null;
+    const card = h(`<section class="nn-card nn-stepcard nt-detail" style="--type-color:${act.color}">
+      <h2>Das <span class="nt-name">${act.fullName}</span>-Neuron</h2>
+      <p class="nn-lead-p">${KURZ[k]} <b>Ausgabe:</b> ${I.out}. ${ANDERS[k]}</p></section>`);
+    card.appendChild(splitView(PENG, { typed: true, outText }));
+    card.appendChild(h(`<div class="nt-facts"><p><b>Wofür?</b> ${I.wofuer}</p><p class="nn-type-warn"><b>Achtung:</b> ${I.achtung}</p></div>`));
+    page.appendChild(card);
   }
 
   /* ── Seite ─────────────────────────────────────────────── */
@@ -649,10 +702,10 @@
     root.appendChild(tabs);
     const page = h('<div class="nn-page"></div>');
     root.appendChild(page);
-    if (api.current === 'n-typen') renderTypen(page);
-    else if (api.current === 'n-wie') renderWie(page);
+    if (api.current === 'n-typen') renderTypen(page, api);
+    else if (api.current === 'n-wie') renderWie(page, api);
     root.scrollTop = 0;
   }
 
-  window.NLNeuron = { render, neuronSVG, curveSVG };
+  window.NLNeuron = { render };
 })();
