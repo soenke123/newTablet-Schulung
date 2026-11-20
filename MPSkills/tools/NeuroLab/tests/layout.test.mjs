@@ -69,7 +69,7 @@ const SETUPS = {
   /* Alter Stand: Kästen weit aus der Spalte verschoben, Panel weit rechts. */
   'verschoben':   `${LE} applyScenario('gates');
                    state.inputSpacing[0] = 3000; state.inputSpacing[1] = -3000;
-                   state.layers[0].neurons[0].spacing = -5000; state.layers[0].neurons[3].spacing = 5000;
+                   state.layers[0].neurons[0].spacing = -5000; state.layers[0].neurons[2].spacing = 5000;
                    state.learn.panelX = 5000; state.learn.panelY = 5000; render();`,
   'trainiert':    `${LE} applyScenario('seg7'); render();
                    state.learn.speed = 50; for (let i = 0; i < 40; i++) trainTick(); render();`,

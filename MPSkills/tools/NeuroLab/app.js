@@ -16,6 +16,9 @@ const state = {
      beliebig lang. Leere Schichten werden übersprungen (prevActive). */
   inputLabels:  ['x1','x2','x3','x4','x5','x6','x7','x8','x9','x10'],
   outputLabels: [],
+  /* Lernen: welche Neuronen an welchem Ausgang hängen (je Ausgang {li, ni}
+     oder null). Die Ausgänge stehen als eigene Spalte rechts. */
+  outMap: [],
   learn: {
     scenario:      null,
     learningRate:  0.1,
@@ -113,6 +116,12 @@ const SCENARIOS = {
     /* Bsp. Netz: nur die Schichten DAZWISCHEN — der Ausgang (eine Spalte mit
        je einem Neuron pro Ausgabe, in dieser Reihenfolge) steht fest. */
     hidden:  [{ count: 4, type: 'tanh' }],
+    /* Bsp. Netz: AND, OR und NOT A kommen direkt aus Schicht 1, XOR braucht
+       eine zweite Schicht und baut auf den Neuronen davor auf. */
+    example: {
+      layers: [{ count: 3, type: 'sigmoid' }, { count: 1, type: 'sigmoid' }],
+      map: [[0, 0], [0, 1], [0, 2], [1, 0]],
+    },
     outType: 'sigmoid',
     data: [
       { inputs: [0, 0], targets: [0, 0, 1, 0] },
@@ -1861,8 +1870,9 @@ function addPointerDrag(el, getVal, setVal, onClick) {
 
 function applyColumnOffsets(offsets) {
   state.colOffsets = offsets;
-  const cols = [...document.querySelectorAll('#net-stage > .col:not(.col-addlayer)')];
-  cols.forEach((col, i) => { col.style.left = `${offsets[i] || 0}px`; });
+  document.querySelectorAll('#net-stage > .col[data-off]').forEach(col => {
+    col.style.left = `${offsets[+col.dataset.off] || 0}px`;
+  });
   syncStagePad();
   redrawEdges();
 }
@@ -1924,11 +1934,39 @@ function getNonTerminalOutputs(layerIdx) {
   return layer.neurons.map(n => computeNeuronOutput(n, inputs).y);
 }
 
+/* ── Ausgänge beim Lernen (20.11.2026, 2. Fassung) ──
+   Das Szenario legt die Ausgänge fest (AND, OR, …). Sie stehen als eigene
+   Spalte rechts von allen Schichten. Jedes Neuron aus JEDER Schicht kann an
+   einen Ausgang gehängt werden: AND aus Schicht 1, XOR aus Schicht 2. Ein
+   Ausgang nimmt genau ein Neuron, ein Neuron hängt an höchstens einem
+   Ausgang. state.outMap[t] = { li, ni } | null. */
+function slotOf(li, ni) {
+  return (state.outMap || []).findIndex(m => m && m.li === li && m.ni === ni);
+}
+function setOutMap(t, li, ni) {
+  const n = state.outputLabels.length;
+  while (state.outMap.length < n) state.outMap.push(null);
+  const old = slotOf(li, ni);
+  if (old >= 0) state.outMap[old] = null;
+  state.outMap[t] = { li, ni };
+  state.learn.topologyDirty = true;
+}
+// Nach Änderungen an Schichten: Zuordnungen, deren Neuron fehlt, lösen
+function cleanOutMap() {
+  const n = state.outputLabels.length;
+  state.outMap = (state.outMap || []).slice(0, n);
+  while (state.outMap.length < n) state.outMap.push(null);
+  state.outMap = state.outMap.map(m => (m && state.layers[m.li] && m.ni < state.layers[m.li].count ? m : null));
+}
+// Vorgabe: die letzte Schicht mit Neuronen der Reihe nach an die Ausgänge
+function defaultOutMap() {
+  const n = state.outputLabels.length;
+  const L = lastActiveLayerIdx();
+  state.outMap = Array.from({ length: n }, (_, t) => (L >= 0 && t < state.layers[L].count ? { li: L, ni: t } : null));
+}
+
 function isOutputNeuron(li, ni) {
-  /* Lernen: Ausgang ist genau die letzte Spalte — fest, beschriftet, in der
-     Reihenfolge des Szenarios. Damit kann kein Neuron „aus Versehen“ zum
-     Ausgang werden, und AND/XOR landen immer an ihrem Platz. */
-  if (isLearnArea()) return li === outLayerIdx();
+  if (isLearnArea()) return slotOf(li, ni) >= 0;
   const L = lastActiveLayerIdx();
   if (li >= L) return true;
   const nx = nextActive(li);
@@ -1938,15 +1976,20 @@ function isOutputNeuron(li, ni) {
 
 function getOutputNeurons() {
   if (isLearnArea()) {
-    const li = outLayerIdx();
-    return state.layers[li].neurons.map((neuron, ni) => ({ li, ni, neuron }));
+    // In der Reihenfolge der Ausgänge; t = Nummer des Ausgangs (Zielwert)
+    const res = [];
+    (state.outMap || []).forEach((m, t) => {
+      if (m && state.layers[m.li] && m.ni < state.layers[m.li].count)
+        res.push({ li: m.li, ni: m.ni, neuron: state.layers[m.li].neurons[m.ni], t });
+    });
+    return res;
   }
   const L = lastActiveLayerIdx();
   const result = [];
   for (let li = 0; li <= L; li++)
     for (let ni = 0; ni < state.layers[li].count; ni++)
       if (isOutputNeuron(li, ni))
-        result.push({ li, ni, neuron: state.layers[li].neurons[ni] });
+        result.push({ li, ni, neuron: state.layers[li].neurons[ni], t: result.length });
   return result;
 }
 
@@ -1974,31 +2017,34 @@ function forwardPass(inputValues) {
 }
 
 function backwardPass(cache, targets) {
+  /* Ein Neuron kann Ausgang sein UND weitergeben (AND in Schicht 1 hängt am
+     Ausgang und liefert zugleich an XOR in Schicht 2). Sein Fehlersignal ist
+     dann die Summe aus beidem. */
   const L = lastActiveLayerIdx();
   const deltas = [];
-  for (let li = 0; li <= L; li++) deltas[li] = new Array(state.layers[li].count).fill(0);
-
-  // Phase 1: delta für Output-Neuronen direkt aus Zielwert
-  getOutputNeurons().forEach(({ li, ni }, tIdx) => {
-    const neuron = state.layers[li].neurons[ni];
-    const { z, y } = cache[li][ni];
-    deltas[li][ni] = (y - (targets[tIdx] ?? 0)) * activations[neuron.type].derivative(y, z);
+  const direct = [];
+  for (let li = 0; li <= L; li++) {
+    deltas[li] = new Array(state.layers[li].count).fill(0);
+    direct[li] = new Array(state.layers[li].count).fill(0);
+  }
+  getOutputNeurons().forEach(({ li, ni, t }) => {
+    direct[li][ni] += cache[li][ni].y - (targets[t] ?? 0);
   });
-
-  // Phase 2: delta für interne Neuronen per Backprop durch nächste Schicht
-  for (let li = L - 1; li >= 0; li--) {
+  const learnMode = isLearnArea();
+  for (let li = L; li >= 0; li--) {
+    const nx = nextActive(li);
     for (let ni = 0; ni < state.layers[li].count; ni++) {
-      if (isOutputNeuron(li, ni)) continue;
       const neuron = state.layers[li].neurons[ni];
       const { z, y } = cache[li][ni];
-      const nx = nextActive(li);
-      if (nx < 0) continue;
-      let sum = 0;
-      for (let k = 0; k < state.layers[nx].count; k++) {
-        if (!state.layers[nx].neurons[k].disabled?.[ni])
-          sum += (state.layers[nx].neurons[k].weights[ni] ?? 0) * deltas[nx][k];
+      let g = direct[li][ni];
+      // Bauen (alte Regel): ein Ausgang gibt nichts weiter
+      if (nx >= 0 && (learnMode || !isOutputNeuron(li, ni))) {
+        for (let k = 0; k < state.layers[nx].count; k++) {
+          if (!state.layers[nx].neurons[k].disabled?.[ni])
+            g += (state.layers[nx].neurons[k].weights[ni] ?? 0) * deltas[nx][k];
+        }
       }
-      deltas[li][ni] = activations[neuron.type].derivative(y, z) * sum;
+      deltas[li][ni] = activations[neuron.type].derivative(y, z) * g;
     }
   }
   return deltas;
@@ -2030,8 +2076,8 @@ function computeAndStoreLoss() {
   let mse = 0;
   for (const sample of sc.data) {
     const cache = forwardPass(sample.inputs);
-    termNeurons.forEach(({ li, ni }, tIdx) => {
-      const diff = cache[li][ni].y - (sample.targets[tIdx] ?? 0);
+    termNeurons.forEach(({ li, ni, t }) => {
+      const diff = cache[li][ni].y - (sample.targets[t] ?? 0);
       mse += diff * diff;
     });
   }
@@ -2087,7 +2133,7 @@ function trainTick() {
     state.learn.lastTargets     = sample.targets;
     state.learn.lastSample      = sample;
     const cache  = forwardPass(sample.inputs);
-    state.learn.lastPredictions = getOutputNeurons().map(({li, ni}) => cache[li][ni].y);
+    state.learn.lastPredictions = slotValues(cache);
     const deltas = backwardPass(cache, sample.targets);
     applyGradients(cache, deltas, state.learn.learningRate);
     state.learn.sampleIdx++;
@@ -2139,12 +2185,19 @@ function setupScenarioShape(sc, hidden) {
     count,
     neurons: Array.from({ length: count }, () => ({ type, weights: [], disabled: [], bias: 0, spacing: 0 })),
   });
-  state.layers = [
-    ...(hidden.length ? hidden.map(h => mk(h.count, h.type)) : [mk(0, 'sigmoid')]),
+  /* Schichten = hidden + eine Schicht mit je einem Neuron pro Ausgang, die
+     der Reihe nach an den Ausgängen hängt. Ein Beispiel-Netz kann eigene
+     Schichten und eine eigene Zuordnung mitbringen (sc.example). */
+  const ex = hidden === 'example' && sc.example ? sc.example : null;
+  if (ex) state.layers = ex.layers.map(h => mk(h.count, h.type));
+  else state.layers = [
+    ...(hidden && hidden.length ? hidden.map(h => mk(h.count, h.type)) : []),
     mk(sc.outputLabels.length, outType),
   ];
   state.layerHidden = [];
   state.colOffsets  = [];
+  if (ex) state.outMap = ex.map.map(([li, ni]) => ({ li, ni }));
+  else defaultOutMap();
   resyncAll();
   resetWeightsOnly();
 }
@@ -2153,7 +2206,7 @@ function applyScenario(key) {
   const sc = SCENARIOS[key];
   if (!sc) return;
   state.learn.scenario = key;
-  setupScenarioShape(sc, sc.hidden || []);
+  setupScenarioShape(sc, sc.example ? 'example' : (sc.hidden || []));
 }
 
 // ── Scenario: inputs only (user builds topology) ──────────────────────────
@@ -2174,8 +2227,8 @@ function applyCustomScenarioInputsOnly() {
 function shapeMatchesScenario() {
   const sc = getScenarioData();
   if (!sc) return false;
-  const out = state.layers[outLayerIdx()];
-  return state.numInputs === sc.numInputs && out && out.count === sc.outputLabels.length;
+  return state.numInputs === sc.numInputs && state.outputLabels.length === sc.outputLabels.length
+    && (state.outMap || []).length === sc.outputLabels.length;
 }
 
 // ── Weight-only reset (keeps topology) ────────────────────────────────────
@@ -2191,7 +2244,7 @@ function resetWeightsOnly() {
   }
   // Lineare Ausgänge: Bias auf den Mittelwert der Zielwerte (7-Segment, Zielscheibe)
   if (sc && isLearnArea()) {
-    state.layers[outLayerIdx()].neurons.forEach((n, k) => {
+    getOutputNeurons().forEach(({ neuron: n, t: k }) => {
       if (n.type !== 'linear') return;
       const t = sc.data.map(d => d.targets[k] ?? 0);
       n.weights = n.weights.map((_, i) => n.disabled?.[i] ? 0 : (Math.random() - 0.5) * 0.2);
@@ -2552,10 +2605,16 @@ function renderVoegelInfo(panel) {
 }
 
 // Vorhersage für einen Punkt ohne die Anzeige anzufassen (state.inputs bleibt).
+// Werte je Ausgang (leerer Ausgang = undefined)
+function slotValues(cache) {
+  const out = new Array(state.outputLabels.length).fill(undefined);
+  getOutputNeurons().forEach(({ li, ni, t }) => { out[t] = cache[li][ni].y; });
+  return out;
+}
 function predictAt(inputs) {
   const saved = state.inputs.slice();
   const cache = forwardPass(inputs);
-  const out = getOutputNeurons().map(({ li, ni }) => cache[li][ni].y);
+  const out = slotValues(cache).map(v => v ?? 0);
   saved.forEach((v, i) => { state.inputs[i] = v; });
   return out;
 }
@@ -3075,6 +3134,7 @@ function saveState() {
     layerHidden: state.layerHidden,
     inputLabels: state.inputLabels,
     outputLabels: state.outputLabels,
+    outMap: state.outMap,
     learn: {
       scenario:     state.learn.scenario,
       learningRate: state.learn.learningRate,
@@ -3130,6 +3190,9 @@ function loadState() {
     if (Array.isArray(data.inputLabels))
       data.inputLabels.forEach((v, i) => { state.inputLabels[i] = v || `x${i + 1}`; });
     if (Array.isArray(data.outputLabels)) state.outputLabels = [...data.outputLabels];
+    if (Array.isArray(data.outMap)) state.outMap = data.outMap.map(m => (m && Number.isInteger(m.li) && Number.isInteger(m.ni) ? { li: m.li, ni: m.ni } : null));
+    // Alte Stände (fester Ausgang = letzte Schicht): so wie vorher zuordnen
+    else if (state.area === 'lernen') defaultOutMap();
     if (data.learn) {
       state.learn.scenario     = data.learn.scenario     ?? null;
       state.learn.learningRate = data.learn.learningRate ?? 0.1;
@@ -3170,6 +3233,7 @@ function loadState() {
       layer.neurons.forEach(n => { delete n._legacyTerminal; });
     }
     resyncAll();
+    if (state.area === 'lernen') cleanOutMap();
     return true;
   } catch (e) {
     return false;
@@ -3199,6 +3263,13 @@ function updateNeuronDisplays() {
   if (state.phase === 'learn') {
     document.querySelectorAll('.node-run-input-field').forEach((field, i) => {
       field.value = state.inputs[i] ?? 0;
+    });
+    document.querySelectorAll('[data-slot-val]').forEach(el => {
+      const t = +el.dataset.slotVal;
+      const m = state.outMap[t];
+      if (!m) return;
+      const v = state.learn.lastPredictions[t];
+      el.textContent = v !== undefined ? fmt(v) : fmt(computeNeuronOutput(state.layers[m.li].neurons[m.ni], getLayerInputs(m.li)).y);
     });
     document.querySelectorAll('[data-target-idx]').forEach(el => {
       const ni = parseInt(el.dataset.targetIdx);
@@ -3370,7 +3441,7 @@ function zoomBy(k) {
    sonst nichts zu tun hätte. Neuronen, Spaltenköpfe und alles Bedienbare
    behalten ihre eigene Geste. */
 function isFieldBackground(t) {
-  return !t.closest('.col-header, .neuron-card, .input-node-row, ' +
+  return !t.closest('.col-header, .neuron-card, .input-node-row, .out-slot, ' +
                     '.data-table-col, #learn-group, .net-zoom, ' +
                     'button, input, select, textarea, a');
 }
@@ -3505,7 +3576,10 @@ function render() {
      jemand sonst am <body> anhängt — deshalb steht demo-mode hier und
      nicht einmalig beim Start. */
   if (!state.area) return;
+  if (isLearnArea()) cleanOutMap();
+  if (outPick && !isLearnArea()) outPick = null;
   document.body.className = state.phase + '-phase'
+    + (outPick ? ' out-picking' : '')
     + ' area-' + state.area
     + (printMode ? ' print-mode' : '')
     + (printMode && !printOpts.inputs ? ' print-no-inputs' : '')
@@ -3601,23 +3675,17 @@ function renderNetwork() {
   stage.id = 'net-stage';
   net.appendChild(stage);
 
-  const inputCol = renderInputsCol();
-  inputCol.style.left = '0px';
-  stage.appendChild(inputCol);
-  for (let i = 0; i < state.layers.length; i++) {
-    const layerCol = renderLayerCol(i);
-    layerCol.style.left = `${state.colOffsets[i + 1] || 0}px`;
-    stage.appendChild(layerCol);
-  }
-  // Schicht dazu (Bauen: hinten, Lernen: vor dem festen Ausgang)
-  if (!printMode && state.phase !== 'run' && state.layers.length < MAX_LAYERS) {
-    stage.appendChild(renderAddLayerCol());
-  }
-  if (state.phase === 'learn' && state.learn.scenario) {
-    const dataCol = renderDataTableCol();
-    dataCol.style.left = `${state.colOffsets[state.layers.length + 1] || 0}px`;
-    stage.appendChild(dataCol);
-  }
+  /* data-off = welcher Spalten-Versatz gilt (colOffsets). „+ Schicht“ und
+     die Ausgänge wandern mit der letzten Schicht mit — vorher blieb
+     „+ Schicht“ stehen, wenn man die Schichten davor verschob. */
+  const L = state.layers.length;
+  const put = (col, off) => { col.dataset.off = off; col.style.left = `${state.colOffsets[off] || 0}px`; stage.appendChild(col); };
+  put(renderInputsCol(), 0);
+  for (let i = 0; i < L; i++) put(renderLayerCol(i), i + 1);
+  // Schicht dazu: immer hinter der letzten Schicht (beim Lernen vor den Ausgängen)
+  if (!printMode && state.phase !== 'run' && L < MAX_LAYERS) put(renderAddLayerCol(), L);
+  if (isLearnArea() && state.outputLabels.length) put(renderOutputsCol(), L);
+  if (state.phase === 'learn' && state.learn.scenario) put(renderDataTableCol(), L + 1);
 
   /* Reihenfolge: erst die Tafel vermessen und einpassen, dann die Kanten
      zeichnen — drawEdgeOverlay rechnet Bildschirm- in Tafelkoordinaten um
@@ -3826,8 +3894,9 @@ function renderInputsCol() {
    Szenario), die letzte der feste Ausgang. */
 function layerName(li) {
   const n = state.layers.length;
+  // Lernen: alle Spalten sind Schichten, die Ausgänge stehen extra
+  if (isLearnArea()) return `Schicht ${li + 1}`;
   if (li === n - 1 && n > 1) return 'Ausgabe-Layer';
-  if (isLearnArea()) return n === 1 ? 'Ausgabe-Layer' : `Hidden ${li + 1}`;
   if (li === 0) return 'Eingabe-Layer';
   return `Hidden ${li}`;
 }
@@ -3843,7 +3912,7 @@ function renderAddLayerCol() {
   btn.innerHTML = '<span>+</span>Schicht';
   btn.addEventListener('click', () => {
     if (state.layers.length >= MAX_LAYERS) return;
-    const at = isLearnArea() ? outLayerIdx() : state.layers.length;
+    const at = state.layers.length;
     state.layers.splice(at, 0, { count: 0, neurons: [] });
     state.layerHidden.splice(at, 0, false);
     state.colOffsets = [];
@@ -3856,8 +3925,9 @@ function renderAddLayerCol() {
 
 function removeLayer(li) {
   if (state.layers.length <= 1 || state.layers[li].count > 0) return;
-  if (isLearnArea() && li === outLayerIdx()) return;
   state.layers.splice(li, 1);
+  // Ausgänge hinter der entfernten Schicht rücken mit
+  (state.outMap || []).forEach(m => { if (m && m.li > li) m.li--; });
   state.layerHidden.splice(li, 1);
   state.colOffsets = [];
   resyncAll();
@@ -3866,8 +3936,8 @@ function removeLayer(li) {
 
 function renderLayerCol(layerIdx) {
   const layer = state.layers[layerIdx];
-  const fixedOut = isLearnArea() && layerIdx === outLayerIdx();
-  const isOutput = fixedOut || (!isLearnArea() && layerIdx === lastActiveLayerIdx());
+  const fixedOut = false;
+  const isOutput = !isLearnArea() && layerIdx === lastActiveLayerIdx();
   const inCount = inCountOf(layerIdx);
 
   const col = document.createElement('div');
@@ -3947,8 +4017,17 @@ function renderLayerCol(layerIdx) {
       addPointerDrag(card,
         () => neuron.spacing || 0,
         v => { neuron.spacing = v; },
-        () => { if (!printMode) showNeuronPopup(neuron, layerIdx, ni, inputs, z, y); }
+        () => {
+          if (printMode) return;
+          if (outPick && outPick.slot != null) { setOutMap(outPick.slot, layerIdx, ni); outPick = null; render(); return; }
+          showNeuronPopup(neuron, layerIdx, ni, inputs, z, y);
+        }
       );
+      if (isLearnArea()) {
+        const t = slotOf(layerIdx, ni);
+        if (t >= 0) card.classList.add('is-out');
+        if (outPick && outPick.li === layerIdx && outPick.ni === ni) card.classList.add('out-from');
+      }
       body.appendChild(card);
     });
   }
@@ -3956,6 +4035,56 @@ function renderLayerCol(layerIdx) {
   col.appendChild(body);
   return col;
 }
+
+// ── Ausgänge (nur Lernen) ───────────────────────────────────────────────────
+/* Eigene Spalte rechts: je Ausgang des Szenarios ein Steckplatz mit Name,
+   Wert, Soll. Verbinden am Tablet in zwei Tipps: Ausgang antippen → Neuron
+   antippen (oder umgekehrt: am Neuron auf „→ Ausgang“ und dann den Ausgang).
+   × löst die Verbindung. */
+let outPick = null;   // { slot } = Ausgang gewählt · { li, ni } = Neuron gewählt
+function renderOutputsCol() {
+  const col = document.createElement('div');
+  col.className = 'col col-outputs';
+  const hdr = document.createElement('div');
+  hdr.className = 'col-header';
+  hdr.innerHTML = '<span class="col-name">Ausgänge</span><span class="col-lock" title="Gibt das Szenario vor">' + state.outputLabels.length + '</span>';
+  col.appendChild(hdr);
+  const body = document.createElement('div');
+  body.className = 'col-body';
+  if (outPick) {
+    const hint = document.createElement('div');
+    hint.className = 'out-hint';
+    hint.textContent = outPick.slot != null ? 'Jetzt ein Neuron antippen' : 'Jetzt einen Ausgang antippen';
+    body.appendChild(hint);
+  }
+  state.outputLabels.forEach((label, t) => {
+    const m = state.outMap[t];
+    const slot = document.createElement('div');
+    slot.className = 'out-slot' + (m ? ' on' : ' empty') + (outPick && outPick.slot === t ? ' picking' : '')
+      + (outPick && outPick.li != null ? ' target' : '');
+    slot.dataset.slot = t;
+    let pred = state.learn.lastPredictions[t];
+    if (pred === undefined && m) pred = computeNeuronOutput(state.layers[m.li].neurons[m.ni], getLayerInputs(m.li)).y;
+    const tgt  = state.learn.lastTargets[t];
+    slot.innerHTML = `<b class="out-name">${esc(label)}</b>`
+      + (m ? `<span class="out-from">aus Schicht ${m.li + 1} · Neuron ${m.ni + 1}</span>` : '<span class="out-from">kein Neuron – antippen</span>')
+      + `<span class="out-vals"><span>Wert <i data-slot-val="${t}">${m && pred !== undefined ? fmt(pred) : '–'}</i></span><span>Soll <i data-target-idx="${t}">${tgt !== undefined ? fmt(tgt) : '–'}</i></span></span>`
+      + (m ? '<button class="out-x" title="Verbindung lösen">×</button>' : '');
+    slot.addEventListener('pointerdown', e => e.stopPropagation());
+    slot.addEventListener('click', e => {
+      if (e.target.closest('.out-x')) {
+        state.outMap[t] = null; state.learn.topologyDirty = true; outPick = null; render(); return;
+      }
+      if (outPick && outPick.li != null) { setOutMap(t, outPick.li, outPick.ni); outPick = null; }
+      else outPick = outPick && outPick.slot === t ? null : { slot: t };
+      render();
+    });
+    body.appendChild(slot);
+  });
+  col.appendChild(body);
+  return col;
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 // ── Column header with counter ─────────────────────────────────────────────
 function makeColHeader(name, count, onMinus, onPlus, locked) {
@@ -4042,7 +4171,7 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
     const outTxt = svgEl('text', { x: OB_CX, y: NB_CY + 5, 'text-anchor': 'middle', 'font-size': vals ? '10' : '12', fill: vals ? '#334155' : '#94a3b8', 'font-weight': '700' });
     outTxt.textContent = vals ? fmt(y) : 'y′';
     svg.appendChild(outTxt);
-    const outName = isLearnArea() && layerIdx === outLayerIdx() ? state.outputLabels[neuronIdx] : '';
+    const outName = isLearnArea() && slotOf(layerIdx, neuronIdx) >= 0 ? state.outputLabels[slotOf(layerIdx, neuronIdx)] : '';
     if (outName) {
       const on = svgEl('text', { x: OB_CX, y: NB_CY - 15, 'text-anchor': 'middle', 'font-size': '8', fill: '#334155', 'font-weight': '700' });
       on.textContent = outName;
@@ -4134,9 +4263,7 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
   svg.appendChild(svgEl('line', { x1: OL_X1, y1: NB_CY, x2: OL_X2, y2: NB_CY, stroke: '#94a3b8', 'stroke-width': '1.5' }));
   if (isRun) {
     const layerIsHidden = state.layerHidden[layerIdx];
-    const termIdx  = state.phase === 'learn'
-      ? getTerminalNeurons().findIndex(t => t.li === layerIdx && t.ni === neuronIdx)
-      : -1;
+    const termIdx  = state.phase === 'learn' ? slotOf(layerIdx, neuronIdx) : -1;
     let outColor, outFill;
     if (state.phase === 'learn' && termIdx >= 0) {
       const pred = state.learn.lastPredictions[termIdx];
@@ -4207,6 +4334,34 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
         outTxt.textContent = isOut ? 'OUT' : '–';
         svg.appendChild(outTxt);
       }
+    } else if (isLearnArea() && !layerIsHidden) {
+      /* Lernen: Wert-Kästchen; hängt das Neuron an einem Ausgang, steht dessen
+         Name darüber und der Rahmen zeigt den Fehler. Antippen = mit einem
+         Ausgang verbinden. */
+      const on = termIdx >= 0;
+      const rect = svgEl('rect', {
+        x: OB_X, y: NB_CY - 15, width: OB_W, height: 30, rx: 4,
+        fill: on ? outFill : '#f8fafc', stroke: on ? outColor : '#cbd5e1', 'stroke-width': on ? '1.8' : '1',
+        style: 'cursor:pointer', class: 'out-port',
+        ...(on ? { 'data-out-rect': String(termIdx) } : {}),
+      });
+      const pick = e => {
+        e.stopPropagation();
+        if (outPick && outPick.slot != null) setOutMap(outPick.slot, layerIdx, neuronIdx), outPick = null;
+        else outPick = outPick && outPick.li === layerIdx && outPick.ni === neuronIdx ? null : { li: layerIdx, ni: neuronIdx };
+        render();
+      };
+      rect.addEventListener('pointerdown', e => e.stopPropagation());
+      rect.addEventListener('click', pick);
+      svg.appendChild(rect);
+      if (on) {
+        const lbl = svgEl('text', { x: OB_CX, y: NB_CY - 19, 'text-anchor': 'middle', 'font-size': '9', fill: outColor, 'font-weight': '800', 'data-out-color-el': String(termIdx) });
+        lbl.textContent = '→ ' + (state.outputLabels[termIdx] || '');
+        svg.appendChild(lbl);
+      }
+      const valTxt = svgEl('text', { x: OB_CX, y: NB_CY + 5, 'text-anchor': 'middle', 'font-size': '12', fill: on ? outColor : '#64748b', 'font-weight': '700', 'data-out-display': '', style: 'pointer-events:none', ...(on ? { 'data-out-color-el': String(termIdx) } : {}) });
+      valTxt.textContent = fmt(y);
+      svg.appendChild(valTxt);
     } else if (termIdx >= 0 && !layerIsHidden) {
       // 3-Zeilen-Box: Label / Wert / Soll
       const boxH = 54, boxTop = NB_CY - boxH / 2;
@@ -4392,6 +4547,20 @@ function drawEdgeOverlay(net) {
     });
   }
 
+  // Lernen: Leitungen vom Neuron zu seinem Ausgang
+  const outLines = [];
+  if (isLearnArea()) {
+    (state.outMap || []).forEach((m, t) => {
+      if (!m) return;
+      const nsvg = net.querySelectorAll(`[data-layer="${m.li}"] .neuron-svg`)[m.ni];
+      const slot = net.querySelector(`.out-slot[data-slot="${t}"]`);
+      if (!nsvg || !slot) return;
+      const a = svgPt(nsvg, OB_X + OB_W, VB_MID_Y);
+      const r = slot.getBoundingClientRect();
+      outLines.push({ a, b: toNet(r.left, (r.top + r.bottom) / 2) });
+    });
+  }
+
   /* ── Linien ──
      JEDE eingeschaltete Verbindung bekommt eine Linie. Früher fielen zwei
      Fälle weg, und beide sahen aus, als wäre die Verbindung gelöscht:
@@ -4464,6 +4633,14 @@ function drawEdgeOverlay(net) {
     labelLayer.appendChild(g);
   }
 
+  for (const o of outLines) {
+    const mx = (o.a.x + o.b.x) / 2;
+    lineLayer.appendChild(svgEl('path', {
+      d: `M${o.a.x},${o.a.y} C${mx},${o.a.y} ${mx},${o.b.y} ${o.b.x},${o.b.y}`,
+      fill: 'none', stroke: '#0d9488', 'stroke-opacity': '0.85', 'stroke-linecap': 'round',
+      class: 'out-line', style: 'stroke-width: max(2.5px, calc(var(--nl-edge-min, 1px) * var(--nl-inv, 1) * 1.5))',
+    }));
+  }
   overlaySvg.append(lineLayer, labelLayer);
   net.insertBefore(overlaySvg, net.firstChild);
 }
@@ -4481,7 +4658,7 @@ function showNeuronPopup(neuron, layerIdx, neuronIdx, inputs, z, y) {
   contentEl.innerHTML = '';
   popupDirty = false;
 
-  const outName = isLearnArea() && layerIdx === outLayerIdx() ? state.outputLabels[neuronIdx] : '';
+  const outName = isLearnArea() && slotOf(layerIdx, neuronIdx) >= 0 ? state.outputLabels[slotOf(layerIdx, neuronIdx)] : '';
   document.getElementById('popup-title').textContent =
     `${layerName(layerIdx)} · ${outName ? 'Ausgang „' + outName + '“' : 'Neuron ' + (neuronIdx + 1)}`;
 
@@ -4812,6 +4989,8 @@ function resetState() {
   state.layerHidden = [];
   state.inputLabels  = ['x1','x2','x3','x4','x5','x6','x7','x8','x9','x10'];
   state.outputLabels = [];
+  state.outMap = [];
+  outPick = null;
   state.learn.scenario     = null;
   state.learn.learningRate = 0.1;
   state.learn.speed        = 5;

@@ -227,3 +227,115 @@ body.print-no-inputs .node-run-input-field { visibility: hidden; }
 .wait[hidden] { display: none; }
 /* Druckansicht: das Lernfenster gehört nicht aufs Blatt */
 body.print-mode #learn-group { display: none; }
+
+/* ── Ausgänge beim Lernen (eigene Spalte rechts, Steckplätze) ── */
+.col-outputs { min-width: 150px; border-color: #14b8a6; box-shadow: 0 1px 8px rgba(20,184,166,.18); flex-shrink: 0; }
+.col-outputs .col-header { background: #f0fdfa; border-bottom-color: #99f6e4; }
+.col-outputs .col-name { color: #115e59; }
+.col-lock { font-size: .75rem; font-weight: 800; color: #0f766e; background: #ccfbf1; border-radius: 999px; padding: 1px 8px; }
+.col-outputs .col-body { gap: 12px; justify-content: center; }
+.out-slot {
+  position: relative; display: flex; flex-direction: column; gap: 2px;
+  margin: 0 10px; padding: 8px 26px 8px 10px; border-radius: 10px;
+  border: 2px solid #14b8a6; background: #fff; cursor: pointer; text-align: left;
+}
+.out-slot.empty { border-style: dashed; border-color: #94a3b8; background: #f8fafc; }
+.out-slot.picking, .out-slot.target { box-shadow: 0 0 0 3px #fde68a; border-color: #f59e0b; }
+.out-name { font-size: .95rem; color: #0f172a; }
+.out-from { font-size: .68rem; color: #64748b; }
+.out-vals { display: flex; gap: 10px; font-size: .72rem; color: #475569; }
+.out-vals i { font-style: normal; font-weight: 800; font-family: monospace; color: #0f172a; }
+.out-x {
+  position: absolute; top: 4px; right: 4px; width: 20px; height: 20px; border-radius: 50%;
+  border: 1px solid #e2e8f0; background: #fff; color: #94a3b8; font-size: .9rem; line-height: 1;
+  cursor: pointer; padding: 0;
+}
+.out-x:hover { color: #dc2626; border-color: #fca5a5; }
+.out-hint { position: absolute; left: 8px; right: 8px; top: 44px; z-index: 3; margin: 0; font-size: .72rem; font-weight: 700; color: #b45309; background: #fffbeb; border-radius: 8px; padding: 6px 8px; text-align: center; }
+body.out-picking .neuron-card { cursor: copy; }
+body.out-picking .neuron-card .neuron-body { stroke-dasharray: 5 3; }
+.neuron-card.out-from .neuron-body { stroke: #f59e0b !important; stroke-width: 3; }
+.neuron-svg .out-port:hover { stroke: #0d9488; }
+body.print-mode .out-x, body.print-mode .out-hint { display: none; }
+
+/* ── „So rechnet ein Neuron“ in sechs Schritten ── */
+.nn-steps { max-width: 1100px; margin: 0 auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.nn-step { display: inline-flex; align-items: center; gap: 7px; border: 1.5px solid #e2e8f0; background: #fff; color: #475569;
+  font: inherit; font-weight: 700; font-size: .85rem; padding: 6px 12px 6px 6px; border-radius: 999px; cursor: pointer; }
+.nn-step i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: #e2e8f0; display: grid; place-items: center; font-size: .78rem; }
+.nn-step.on { border-color: #1d4ed8; color: #1d4ed8; }
+.nn-step.on i { background: #1d4ed8; color: #fff; }
+.nn-stepcard { display: grid; gap: 12px; }
+.nn-stepcard h2 { margin-bottom: 0; }
+.nn-kicker { font-size: .75rem !important; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #64748b !important; }
+.nn-lead-p { max-width: 75ch; }
+.nn-try { font-size: .88rem !important; background: #eff6ff; border-radius: 10px; padding: 8px 12px; color: #1e3a8a !important; }
+.nn-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid #eef2f6; padding-top: 12px; }
+.nn-btn { border: 1.5px solid #d1d5db; background: #fff; border-radius: 10px; padding: 8px 14px; font: inherit; font-weight: 700; color: #334155; cursor: pointer; }
+.nn-btn.primary { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.nn-ctl-h { font-size: .78rem; color: #64748b; text-transform: uppercase; letter-spacing: .05em; }
+.nn-slider-x input { accent-color: #4caf8a; }
+
+/* Schritt 1: Nervenzelle ↔ künstliches Neuron */
+.nn-two { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; align-items: center; }
+.nn-bio { width: 100%; height: auto; display: block; cursor: pointer; }
+.nn-bio .bio-part path, .nn-bio .bio-axon path { fill: none; stroke: #c084fc; stroke-width: 6; stroke-linecap: round; }
+.nn-bio .bio-syn circle, .nn-bio .bio-axon circle { fill: #f0abfc; stroke: #a855f7; stroke-width: 2; }
+.nn-bio .bio-axon rect { fill: #fde68a; stroke: #f59e0b; stroke-width: 1.5; }
+.nn-bio .bio-soma { fill: #e9d5ff; stroke: #a855f7; stroke-width: 3; }
+.nn-bio .bio-nuc { fill: #a855f7; }
+.nn-bio .bio-thr { stroke: #64748b; stroke-width: 2; fill: none; }
+.nn-bio .bio-hill { fill: #d8b4fe; stroke: #a855f7; stroke-width: 2; }
+.nn-bio .bio-tl { font-size: 11px; fill: #64748b; font-weight: 700; }
+.nn-bio .bio-cap { font-size: 12px; fill: #94a3b8; }
+.nn-bio[data-hl] g[data-k] { opacity: .35; transition: opacity .15s; }
+.nn-bio[data-hl="in"] g[data-k="in"], .nn-bio[data-hl="w"] g[data-k="w"], .nn-bio[data-hl="sum"] g[data-k="sum"],
+.nn-bio[data-hl="b"] g[data-k="b"], .nn-bio[data-hl="f"] g[data-k="f"], .nn-bio[data-hl="out"] g[data-k="out"] { opacity: 1; }
+.nn-col-kn .nn-svg [data-k] { cursor: pointer; }
+.nn-col-kn .nn-svg[data-hl="in"] [data-k="in"], .nn-col-kn .nn-svg[data-hl="w"] [data-k="w"],
+.nn-col-kn .nn-svg[data-hl="sum"] [data-k="sum"], .nn-col-kn .nn-svg[data-hl="b"] [data-k="b"],
+.nn-col-kn .nn-svg[data-hl="f"] [data-k="f"], .nn-col-kn .nn-svg[data-hl="out"] [data-k="out"] {
+  stroke: #a855f7 !important; stroke-width: 4 !important; stroke-opacity: 1 !important;
+}
+.nn-col-kn .nn-svg[data-hl="sum"] [data-k="sum"], .nn-col-kn .nn-svg[data-hl="f"] [data-k="f"] { fill: rgba(168,85,247,.12) !important; }
+.nn-pairs { display: flex; flex-wrap: wrap; gap: 6px; }
+.nn-pair { display: inline-flex; gap: 6px; align-items: center; border: 1.5px solid #e9d5ff; background: #faf5ff; border-radius: 999px;
+  padding: 5px 12px; font: inherit; font-size: .84rem; color: #6b21a8; cursor: pointer; }
+.nn-pair i { font-style: normal; color: #a855f7; }
+.nn-pair b { color: #334155; }
+.nn-pair.on { background: #a855f7; border-color: #a855f7; color: #fff; }
+.nn-pair.on b, .nn-pair.on i { color: #fff; }
+.nn-pair-info { min-height: 3em; background: #faf5ff; border-radius: 10px; padding: 8px 12px; }
+
+/* Schritt 2: Beiträge als Balken */
+.nn-bars { display: grid; gap: 6px; }
+.nn-bar { display: grid; grid-template-columns: 13em 1fr 4em; gap: 10px; align-items: center; font-size: .85rem; color: #334155; }
+.nn-bar b { font-family: monospace; text-align: right; }
+.nn-bar-track { position: relative; height: 14px; background: #f1f5f9; border-radius: 7px; }
+.nn-bar-track i { position: absolute; top: 0; bottom: 0; border-radius: 7px; }
+.nn-bar-track i.pos { background: #3b82f6; }
+.nn-bar-track i.neg { background: #dc2626; }
+.nn-bar-track em { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: #94a3b8; }
+
+/* Schritt 3: Zahlenstrahl */
+.nn-zline svg { width: 100%; max-width: 760px; height: auto; display: block; }
+.nn-curve svg { width: 100%; max-width: 320px; height: auto; display: block; }
+
+/* Schritt 5/6: Ebene */
+.nn-line-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.nn-plane { position: relative; aspect-ratio: 1 / 0.85; max-height: 440px; border-radius: 12px; overflow: hidden; border: 1.5px solid #e2e8f0; touch-action: none; }
+.nn-plane canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+.nn-plane-sm { max-height: 340px; }
+.nn-line-side, .nn-task-left { display: grid; gap: 10px; align-content: start; }
+.nn-summary { background: #ecfdf5; border-radius: 12px; padding: 12px 16px; color: #065f46; }
+.nn-summary ul { margin: 6px 0 0 18px; display: grid; gap: 4px; }
+.nn-summary li { color: #065f46 !important; }
+
+@media (max-width: 760px) {
+  .nn-two, .nn-line-grid, .nn-play-grid { grid-template-columns: minmax(0, 1fr); }
+  .nn-bar { grid-template-columns: 1fr; gap: 3px; }
+  .nn-bar b { text-align: left; }
+}
+
+/* Neuronen leicht in ihrer Typ-Farbe getönt (Feld und Neuron-Seite) */
+.neuron-body, .nn-svg .neuron-body { fill: #fff; fill: color-mix(in srgb, var(--type-color) 10%, #fff); }

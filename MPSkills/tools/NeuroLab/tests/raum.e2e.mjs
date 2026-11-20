@@ -105,6 +105,10 @@ ok(await pg.locator('.tile').count() === 2 + 1 + 5, 'allein: alle Kacheln offen'
 await pg.click('.tile[data-id="n-typen"]');
 ok(await pg.locator('.nn-type').count() === 5, 'Alle Neuronen: fünf Typen');
 await pg.click('.nn-tab[data-id="n-wie"]');
+ok(await pg.locator('.nn-step').count() === 6, 'So rechnet ein Neuron: sechs Schritte');
+await pg.click('.nn-step[data-step="line"]');
+ok(await pg.locator('.nn-plane canvas').count() === 1, 'Schritt Gerade: Ebene');
+await pg.click('.nn-step[data-step="task"]');
 ok(await pg.locator('.nn-truth tbody tr').count() === 4, 'Impulsaufgabe mit Wahrheitstafel');
 await pg.click('#btn-home');
 
@@ -119,14 +123,20 @@ await pg.click('#btn-home');
 await pg.click('.tile[data-id="sc-gatter"]');
 await pg.locator('#learn-btn-start').waitFor();
 ok(await pg.locator('#btn-build').isHidden(), 'Lernen: kein Build/Run');
-const outCol = pg.locator('.col-layer.fixed-out');
-ok(await outCol.locator('.neuron-card').count() === 4, 'Gatter: fester Ausgang mit 4 Neuronen');
-ok(await outCol.locator('.counter-btn').first().isDisabled(), 'Ausgang: Anzahl gesperrt');
+// Ausgänge = eigene Spalte mit Steckplätzen; leeres Netz hängt sie an Schicht 1
+ok(await pg.locator('.col-outputs .out-slot').count() === 4, 'Gatter: vier Ausgänge als Steckplätze');
+ok(await pg.evaluate(() => NLApp.state.outMap.every(m => m && m.li === 0)), 'leeres Netz: alle Ausgänge an Schicht 1');
+// Schicht 2 mit einem Neuron, XOR dorthin umstecken (Ausgang antippen → Neuron antippen)
 await pg.click('#btn-add-layer');
-await pg.locator('.col-layer[data-layer="0"] .counter-btn').nth(1).click();
-await pg.locator('.col-layer[data-layer="0"] .counter-btn').nth(1).click();
-await pg.locator('.col-layer[data-layer="0"] .counter-btn').nth(1).click();
-ok(await pg.evaluate(() => NLApp.state.layers.map(l => l.count).join()) === '3,0,4', 'selbst gebaut: 3 Neuronen, leere Schicht, Ausgang');
+ok((await pg.evaluate(() => [...document.querySelectorAll('#net-stage > .col')].map(c => c.className.split(' ')[1]).join())).includes('col-layer,col-addlayer,col-outputs'), '+ Schicht steht vor den Ausgängen');
+await pg.locator('.col-layer[data-layer="1"] .counter-btn').nth(1).click();
+await pg.locator('.col-layer[data-layer="0"] .counter-btn').nth(0).click();
+await pg.click('.out-slot[data-slot="3"]');
+await pg.waitForTimeout(400);
+await pg.click('.col-layer[data-layer="1"] .neuron-card');
+await pg.waitForTimeout(200);
+ok(await pg.evaluate(() => JSON.stringify(NLApp.state.outMap)) === '[{"li":0,"ni":0},{"li":0,"ni":1},{"li":0,"ni":2},{"li":1,"ni":0}]', 'XOR an Schicht 2, AND/OR/NOT A an Schicht 1');
+ok(await pg.locator('.edge-overlay .out-line').count() === 4, 'vier Leitungen zu den Ausgängen');
 await pg.click('#learn-apply-topology');
 await pg.evaluate(() => { NLApp.state.learn.speed = 300; NLApp.state.learn.learningRate = 0.5; });
 await pg.click('#learn-btn-start');

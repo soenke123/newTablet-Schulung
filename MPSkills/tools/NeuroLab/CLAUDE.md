@@ -15,28 +15,43 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `start.css` | Startseite, Neuronen-Seite, Schicht-Spalte, fester Ausgang, Druckauswahl, Greifvogel-Diagramm |
 | `app.js` | das Feld: Zustand, Rechnen, Backprop, Szenarien, Lernfenster, Druck, Speicher, `window.NLApp` |
 | `js/start.js` | Startseite, Freigaben im Raum, Navigation (`html[data-view]` = home · neuron · lab) |
-| `js/neuron.js` | Bereich 1: „So rechnet ein Neuron“ + „Alle Neuronen“ (nutzt `activations`/`fmt` aus app.js) |
+| `js/neuron.js` | Bereich 1: „So rechnet ein Neuron“ (6 Schritte) + „Alle Neuronen“ (nutzt `activations`/`fmt` aus app.js) |
 | `js/daten.js` | Greifvögel (echte Messwerte) |
-| `neuron.png` | Bild des Neurons (Eingabe, Gewichte, Σ + Bias, f, Ausgabe) |
+| `neuron.png` | altes Bild des Neurons – seit 20.11.2026 (2. Fassung) nicht mehr eingebunden |
 | `Regen und Sonne.csv` | Beispiel-CSV fürs Hochladen (auch im Layout-Prüfstand) |
 | `tool.js` | Brücke zum Raum (iframe, Höhe, Freigaben) |
 
 ## Drei Bereiche (Startseite)
 
-1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` (Bild, ein Neuron zum Ausprobieren mit allen fünf Typen,
-   EINE Impulsaufgabe „Türsteher“ UND · ODER · XOR mit Wahrheitstafel und Denkanstoß) und `n-typen`
+1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` und `n-typen`. `n-wie` = „So rechnet ein Neuron“ in **sechs
+   Schritten** (Sönke 20.11.2026: Anfang war zu kurz, das Bild unklar; Leiste `.nn-step[data-step]`, Weiter/Zurück unten):
+   1 `bio` Nervenzelle (SVG `bioSVG`) ↔ künstliches Neuron, Teil antippen = beide Seiten hervorgehoben (`data-k` in
+   `neuronSVG`: in · w · sum · b · f · out) · 2 `in` Eingänge als Kommazahlen (−5…5, nicht nur 0/1) und Gewichte, Beiträge
+   als Balken · 3 `sum` Summe und Bias, Zahlenstrahl mit den drei Teilen bis z · 4 `act` Aktivierung: Typ wählen, Kurve mit
+   z-Marke · 5 `line` Ein Neuron = eine Gerade: Ebene (`drawPlane`, Canvas) eingefärbt nach y′, dicke Linie z = 0, Pfeil
+   zur Seite mit großem z, grüner Eingabepunkt ziehbar, Neuron daneben mit umschaltbarem Typ · 6 `task` Impulsaufgabe
+   „Türsteher“ UND · ODER · XOR mit Wahrheitstafel + die vier Fälle als Punkte in der Ebene, darunter „Das Wichtigste“.
+   Schritte 2–5 teilen sich EIN Neuron (`st`), die Aufgabe hat ihr eigenes (`ts`). Und `n-typen`
    (alle Neuronen: Perceptron, Linear, ReLU, Sigmoid, Tanh — gezeichnet wie im Feld, Formel, Kurve mit
    z-Regler, wofür/Achtung). Neue Typen kommen automatisch dazu, wenn sie in `activations` stehen und in
    `ORDER`/`INFO` (js/neuron.js) eingetragen werden.
 2. **Netze bauen** — Kachel `b-frei`: das freie Feld, **Build · Run**, keine Szenarien. Eingänge 0–10,
    beliebig viele Schichten (bis `MAX_LAYERS` = 8, Spalte „+ Schicht“, leere Schicht „× Schicht entfernen“).
 3. **Netze trainieren** — Kacheln = Szenarien (`sc-gatter`, `sc-ziffer`, `sc-ziel`, `sc-vogel`, `sc-eigene`).
-   Nur Phase **Lernen**. Das Szenario legt **Eingänge** (Spalte links, gesperrt) und **Ausgänge** fest: die
-   **letzte Spalte** ist der feste Ausgang, je Ausgabe ein beschriftetes Neuron in der Reihenfolge des
-   Szenarios (Anzahl gesperrt, Typ frei). Schichten und Neuronen dazwischen bauen die Schüler selbst
-   („Leeres Netz“ = direkt Eingänge → Ausgang, „Bsp. Netz“ = `hidden` aus dem Szenario). Damit ist das alte
-   XOR/AND-Problem weg (früher waren Ausgänge alle Neuronen ohne Nachfolger, in Neuronen-Reihenfolge,
-   OUT-Knöpfe — im Lernbereich abgeschaltet, `learnMidLayer = false`). Lernfenster frei verschiebbar wie immer.
+   Nur Phase **Lernen**. Das Szenario legt **Eingänge** (Spalte links, gesperrt) und **Ausgänge** fest.
+   **Ausgänge = eigene Spalte `.col-outputs` rechts** (2. Fassung 20.11.2026, Sönke: „ich will Input und Output haben und
+   dazwischen die Schichten anlegen und dann ein Neuron an einen Out legen – AND aus Schicht 1, XOR aus Schicht 2“): je
+   Ausgabe ein Steckplatz `.out-slot` (Name, Wert, Soll, × = lösen). Alle Spalten dazwischen sind gleichwertige
+   Schichten („Schicht n“, Anzahl frei). Verbinden in zwei Tipps: Ausgang antippen → Neuron antippen, oder Wert-Kästchen
+   am Neuron (`.out-port`) → Ausgang (`outPick`). Zuordnung `state.outMap[t] = {li, ni} | null` (gespeichert; alte Stände
+   ohne outMap: letzte Schicht der Reihe nach, `defaultOutMap`), `cleanOutMap()` bei jedem render löst Verbindungen zu
+   gelöschten Neuronen, `removeLayer` rückt sie nach. Ein Neuron hängt an höchstens einem Ausgang, kann aber zugleich
+   weitergeben: `backwardPass` addiert Ausgangsfehler und Rückfluss aus der nächsten Schicht. Leitungen Neuron → Ausgang
+   zeichnet `drawEdgeOverlay` (`.out-line`). „Leeres Netz“ = eine Schicht mit je einem Neuron pro Ausgang;
+   „Bsp. Netz“ = `sc.example` (Schichten + Zuordnung, Gatter: AND/OR/NOT A aus Schicht 1, XOR aus Schicht 2) oder
+   `hidden` + Ausgangsschicht. „+ Schicht“ steht immer hinter der letzten Schicht, vor den Ausgängen, und wandert mit
+   dem Spaltenversatz (`data-off` an jeder Spalte, `applyColumnOffsets`). `.out-slot` zählt nicht als freie Fläche
+   (`isFieldBackground`), sonst schluckt die Verschiebe-Geste den Tipp. Lernfenster frei verschiebbar wie immer.
    **Greifvögel** (`voegel`, neu): 180 echte Vögel (Datensatz „Hawks“, Lake MacBride, Iowa), Eingänge Flügel (dm)
    und Gewicht (kg), vier Ausgänge (je Art); Info-Kasten mit Diagramm, Fläche nach der Antwort des Netzes
    eingefärbt, „Richtig erkannt x von 180“.
@@ -99,6 +114,8 @@ Eingabewerte; „Ausblenden“ nimmt die Leiste fürs Bildschirmfoto weg.
 **Inline editing** uses a single shared `<input id="inline-input">` that is repositioned via `getBoundingClientRect()` and committed on Enter/blur.
 
 ## Neuron-Typen
+
+Rumpf leicht in der Typ-Farbe getönt (`.neuron-body` fill color-mix 10 %, Sönke 20.11.2026).
 
 `activations` in `app.js` — je Eintrag `fn`, `formula`, `apply`, `shortLines`, `fullName`, `color`, `derivative`.
 
