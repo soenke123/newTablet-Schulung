@@ -119,7 +119,10 @@ window.NTPfad = (function () {
         : s.mp && !R.inRoom ? '<p class="pst-note">Im Raum gemeinsam, hier allein.</p>' : '';
       const sheet = s.sheet && !ST ? '<div class="pst-sheet">' + svg('doc') + '<b>Arbeitsblatt</b><span>zu Level 4–7</span>' +
         '<a class="btn sm" href="' + SHEET + '.pdf" target="_blank" rel="noopener">PDF</a>' +
-        '<a class="btn sm" href="' + SHEET + '.docx" download>Word</a><i class="pst-sheet-note">' + SHEET_NOTE + '</i></div>' : '';
+        '<a class="btn sm" href="' + SHEET + '.docx" download>Word</a>' +
+        '<span class="pst-sol"><b>Lösung</b>' +
+        '<a class="btn sm" href="' + SHEET + '_Loesung.pdf" target="_blank" rel="noopener">PDF</a>' +
+        '<a class="btn sm" href="' + SHEET + '_Loesung.docx" download>Word</a></span><i class="pst-sheet-note">' + SHEET_NOTE + '</i></div>' : '';
       const hid = fogged && i > P.cur;
       return '<section class="pst ' + st + (s.soon ? ' soon' : '') + (s.goal ? ' goal' : '') + (hid ? ' hid" inert aria-hidden="true' : '') + '" style="--i:' + i + '" data-st="' + i + '">' +
         '<div class="pst-mark" aria-hidden="true"><span class="pst-n">' + (st === 'done' ? svg('check', 'pic ck') : i + 1) + '</span>' +

@@ -299,7 +299,7 @@
         '<a class="tile extra" href="' + P.SHEET + '.pdf" target="_blank" rel="noopener" title="Arbeitsblatt als PDF öffnen">' +
           '<span class="tile-img">' + (window.NTBild ? NTBild.tile('blatt') : '') + '<span class="tile-n">Blatt</span></span>' +
           '<span class="tile-t"><b>Arbeitsblatt</b><small>' + P.SHEET_NOTE + '</small></span></a>' +
-        '<span class="tsheet"><a href="' + P.SHEET + '.pdf" target="_blank" rel="noopener">PDF</a><a href="' + P.SHEET + '.docx" download>Word</a></span>' +
+        '<span class="tsheet"><a href="' + P.SHEET + '.pdf" target="_blank" rel="noopener">PDF</a><a href="' + P.SHEET + '.docx" download>Word</a><a href="' + P.SHEET + '_Loesung.pdf" target="_blank" rel="noopener">Lösung</a></span>' +
         '</div>';
       $('#levels').innerHTML = ROWS.map(row =>
         '<div class="frow">' + row.map(g => {

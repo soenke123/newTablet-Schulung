@@ -201,7 +201,8 @@ Position = Gewichte, Bergab-Pfeil = (negativer) Gradient, Sprungweite = Lernrate
   Lernkreislauf mit den 5 Begriffen, ein Lernschritt von Hand, Rechnung = Sprung, Fragen je Level; seit 20.11.2026 nach Sönkes
   reduzierter Fassung: kein Loss/keine Anteile/keine griechischen Buchstaben, Begriffe deutsch mit fertiger Kurz-Erklärung,
   Lernregel wie in der Erarbeitung, Karte in C = Mulde über w₁/w₂ aus fünf Pinguinen, Knobelfrage „warum Rinne bei einem?“); Word + PDF, Quelle in
-  `arbeitsblatt/quelle/` (bilder.mjs → PNGs, blatt.cjs → docx, Lösungen in LIESMICH.md); verlinkt im Lernpfad am Halt „Übung“
+  `arbeitsblatt/quelle/` (bilder.mjs → PNGs; seit 21.11.2026 ist Sönkes von Hand bearbeitete docx maßgeblich, blatt.cjs NICHT mehr laufen lassen;
+  Musterlösung `Nebeltal_Arbeitsblatt_Loesung.docx/.pdf` aus loesung.cjs, Knopf „Lösung“ neben PDF/Word); verlinkt im Lernpfad am Halt „Übung“
   (seit 19.11.2026) und in der Freien Nutzung als Kachel (20.11.2026), beides nur Lehrkraft und allein, mit Hinweis
   `NTPfad.SHEET_NOTE` „Bekommt die Klasse nicht über diese Plattform – bitte austeilen.“
 - `tool.js`/`tool.css` – iframe-Rahmen (wie Reinforce Yourself) und Brücke zum Raum (s. „Im Raum“ unten):
