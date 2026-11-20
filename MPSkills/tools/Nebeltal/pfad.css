@@ -124,3 +124,31 @@ html[data-motion="low"] .pst-card { -webkit-backdrop-filter:none; backdrop-filte
   background:var(--accent); color:var(--on-accent); font-size:12px; font-weight:800; }
 .mps-path .arr { align-self:center; color:var(--ink-faint); font-size:18px; }
 .mps-free { background:none; border:0; padding:4px 0; color:var(--accent-ink); font:600 13px var(--font); cursor:pointer; text-decoration:underline; }
+
+/* ── Nebel für die Klasse (20.11.2026): Halte, die noch kommen, liegen in einer Nebelbank, die mit der Klasse sinkt ── */
+.pfad { --mist:color-mix(in srgb, var(--fog) 70%, #ffffff); }
+html[data-theme="dark"] .pfad { --mist:color-mix(in srgb, var(--fog) 74%, #a9c2e2); }
+@media (prefers-color-scheme: dark) { html:not([data-theme]) .pfad { --mist:color-mix(in srgb, var(--fog) 74%, #a9c2e2); } }
+.pfad.fogged .pfad-bg .f0 { stop-opacity:0; }          /* oben klar: der Nebel liegt jetzt unten */
+.pfad-mist { position:absolute; left:0; right:0; top:100%; bottom:0; z-index:3; pointer-events:none; overflow:hidden;
+  background:linear-gradient(to bottom, transparent 0, color-mix(in srgb, var(--mist) 55%, transparent) 90px,
+             color-mix(in srgb, var(--mist) 88%, transparent) 240px, color-mix(in srgb, var(--mist) 96%, transparent) 100%);
+  -webkit-mask-image:linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+          mask-image:linear-gradient(to right, transparent, #000 7%, #000 93%, transparent);
+  transition:top 3.2s cubic-bezier(.45, 0, .2, 1); }
+.pfad-mist::before { content:''; position:absolute; left:-10%; right:-10%; top:20px; height:120px;
+  background:radial-gradient(70px 50px at 50% 100%, color-mix(in srgb, var(--mist) 80%, transparent) 55%, transparent 72%) 0 0 / 170px 100% repeat-x,
+             radial-gradient(100px 60px at 50% 100%, color-mix(in srgb, var(--mist) 65%, transparent) 50%, transparent 72%) 80px 24px / 240px 100% repeat-x;
+  filter:blur(8px); animation:mistDrift 26s ease-in-out infinite alternate; }
+.pfad-mist i { position:absolute; width:60%; height:220px; border-radius:50%; filter:blur(28px);
+  background:radial-gradient(closest-side, color-mix(in srgb, var(--mist) 85%, #ffffff 15%), transparent);
+  opacity:.75; animation:mistDrift 24s ease-in-out infinite alternate; }
+.pfad-mist i:nth-child(1) { left:-12%; top:60px; }
+.pfad-mist i:nth-child(2) { left:38%; top:200px; animation-duration:31s; animation-delay:-9s; }
+.pfad-mist i:nth-child(3) { left:8%; top:420px; width:70%; animation-duration:37s; animation-delay:-17s; }
+@keyframes mistDrift { from { transform:translateX(-7%); } to { transform:translateX(9%); } }
+.pst.hid .pst-card { filter:blur(4px); opacity:.5; }
+.pst.hid .pst-mark { opacity:.35; }
+html[data-motion="low"] .pfad-mist::before, html[data-motion="low"] .pfad-mist i { animation:none; filter:none; }
+html[data-motion="low"] .pfad-mist { transition:none; }
+@media (prefers-reduced-motion: reduce) { .pfad-mist::before, .pfad-mist i { animation:none; } .pfad-mist { transition:none; } }
