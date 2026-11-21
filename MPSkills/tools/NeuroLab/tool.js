@@ -7,7 +7,7 @@
    liegt im Gerät (localStorage neuron-sim-v2 / -lernen, nl.*).
 
    Geteilt wird nur, WAS die Klasse öffnen darf:
-     skill_room_state.data.parts = ['neuron', 'n-wie', …, 'bauen', 'b-frei', 'trainieren', 'sc-gatter', …]
+     skill_room_state.data.parts = ['neuron', 'n-wie', 'n-typen', 'bauen', 'v-revier', 'v-rechnen', 'b-frei', 'trainieren', 'sc-gatter', …]
    Bereichs-ids (neuron · bauen · trainieren) und Kachel-ids aus
    js/start.js. Eine Kachel ist offen, wenn Bereich UND Kachel geteilt
    sind. Fehlt parts: nur „Wie funktioniert ein Neuron?“. Keine eigenen
@@ -24,7 +24,7 @@
 (function () {
   'use strict';
 
-  const V = '20261120b';
+  const V = '20261121a';
 
   let root = null, frame = null, ctx = null, view = null;
   let onResize = null, onMsg = null;

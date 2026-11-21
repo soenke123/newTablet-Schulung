@@ -7,10 +7,12 @@
 /* ── Ansichten ── */
 html[data-view="home"] main#network,
 html[data-view="neuron"] main#network,
+html[data-view="netz"] main#network,
 html:not([data-view="lab"]) .lab-only,
 html:not([data-view="lab"]) #print-opts { display: none !important; }
 html:not([data-view="home"]) #home { display: none; }
 html:not([data-view="neuron"]) #neuron-page { display: none; }
+html:not([data-view="netz"]) #netz-page { display: none; }
 html[data-view="home"] #btn-home { display: none; }
 body:not(.area-bauen) .build-area-only { display: none !important; }
 
