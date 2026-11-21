@@ -17,13 +17,26 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `js/start.js` | Startseite, Freigaben im Raum, Navigation (`html[data-view]` = home · neuron · lab) |
 | `js/neuron.js` | Bereich 1: „Wie arbeitet ein Neuron?“ (7 Schritte, `makeNeuron` mit + / − an jedem Wert, Rechnung `calcHTML`, Ebene `makePlane`, Modelle `ABS`/`PENG`) + „Alle Neuronen“ (Karten + Detail an den Pinguinen, nutzt `activations` aus app.js) |
 | `js/daten.js` | Greifvögel (echte Messwerte) |
+| `js/karte.js` | Bereich 2: Tal 12 × 10 km für „Das Revier der Wildkatzen“ – Grenzen `TRUTH`, Kameras `YEAR1`/`ALL`/`NOISY`/`TEST`, Kims Netz `kim`, `makeMap` (Canvas: Gitter, Kameras, Geraden mit Pfeil, Bleistiftlinie, Fläche, Punkte antippen, gemalte Landschaft `reveal`) |
+| `js/revier.js` | Bereich 2: „Das Revier der Wildkatzen“ (Kachel `v-revier`, 4 Schritte, Arbeitsblatt) |
+| `js/rechnen.js` | Bereich 2: „Netz durchrechnen“ (Kachel `v-rechnen`, wie Sönkes AB, Drucken) |
+| `netz.css` | Übersicht-Ergänzungen, Szenario-Wahl, Revier, Rechnen, Druck der Blätter |
 | `neuron.png` | altes Bild des Neurons – seit 20.11.2026 (2. Fassung) nicht mehr eingebunden |
 | `Regen und Sonne.csv` | Beispiel-CSV fürs Hochladen (auch im Layout-Prüfstand) |
 | `tool.js` | Brücke zum Raum (iframe, Höhe, Freigaben) |
 | `js/theme.js` | Hell/Dunkel für gezeichnete Teile: setzt feste SVG-Farben (fill/stroke-Attribute) per Beobachter auf `var(--…)` um, `NLTheme.c('#hex', rolle)` für Canvas, Ereignis `nl:theme-redraw` |
 | `showroom-optik.html` | Showroom der Optik (Heute · Vorschlag A · Vorschlag B, Zustände, Feld mit echtem XOR-Training) — A ist umgesetzt |
 
-## Drei Bereiche (Startseite)
+## Drei Bereiche (Startseite, Übersicht neu 21.11.2026)
+
+Die Übersicht (Sönke 21.11.2026): **1** eine Kachel „Wie arbeitet ein Neuron?“ mit dem Knopf „Alle Neuronen ›“
+darauf (`.tile-sub[data-open="n-typen"]`; `n-typen` hat keine eigene Kachel, `usable('n-typen')` = `usable('n-wie')`,
+Teilen von `n-wie` teilt/entzieht beide) · **2** „Vom Neuron zum Netz“ (Bereichs-id bleibt `bauen`): Revier der
+Wildkatzen · Netz durchrechnen · Freies Bauen · **3** „Netze trainieren“ als EIN Knopf `.tile[data-id="trainieren"]`
+(zählt für die Lehrkraft „x von 5 Szenarien geteilt“); die Szenarien wählt man im Modus (`#scen-picker`, Karten
+`.tile[data-id="sc-…"]`, dort auch Teilen je Szenario; Knopf „Szenario wählen“ `#btn-scen` in der Kopfzeile; vom
+Übersichts-Knopf aus erscheint die Wahl immer, beim Wiederherstellen nicht; `where.sc` merkt das letzte).
+Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
 
 1. **Wie funktioniert ein Neuron?** — Kacheln `n-wie` und `n-typen`. `n-wie` = **„Wie arbeitet ein Neuron?“** (5. Fassung,
    Sönke 20.11.2026 abends) in sieben Schritten, Leiste `.nn-step[data-step]`, Weiter/Zurück unten. Grundsatz: EIN Neuron
@@ -52,9 +65,32 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
    gold = positiv, grau = negativ, Stärke = Größe), oben Chips zum Umschalten (Gewichte bleiben → Unterschied sehen),
    Text `ANDERS` je Typ (die Gerade ist bei allen dieselbe, anders ist, was herauskommt) + Wofür/Achtung aus `INFO`.
    Neue Typen: in `activations`, `ORDER`, `INFO`, `KURZ`, `ANDERS`, `DEEP`, `FY`/`F_TXT` (js/neuron.js) eintragen.
-2. **Netze bauen** — Kachel `b-frei`: das freie Feld, **Build · Run**, keine Szenarien. Eingänge 0–10,
+2. **Vom Neuron zum Netz** (21.11.2026) — Grundsatz (Sönke): nicht ziehen und probieren, sondern **rechnen und
+   sehen, was wo zusammenhängt**; keine UND/XOR-Begriffe (die gehören zu „Netze trainieren“).
+   - `v-revier` **„Das Revier der Wildkatzen“** (`js/revier.js` + `js/karte.js`, Stand `localStorage nl.revier`):
+     Försterin Jana, Wildtierkameras auf ganzen km (x₁ Osten, x₂ Norden), gold = Wildkatze gesehen.
+     Wirklichkeit: Fluss x₂ = ½x₁ + 2 (Revier nördlich), Stadtrand x₁ + x₂ = 15, Landstraße x₂ = 3x₁ − 3; keine
+     Kamera liegt genau auf einer Grenze. Schritte: **1 Kameras prüfen** (Janas Neuron w = (1, 1), b = −8; z für
+     A (3|2), B (4|6), C (5|3) selbst rechnen + feuert ja/nein, C hat z = 0; dann erscheint die Gerade, 18 von 27) ·
+     **2 Der Fluss** (27 Kameras in der Mitte; zwei Gitterpunkte antippen = Bleistiftlinie, Rezept w₁ = −m, w₂ = 1,
+     b = −n zum Aufklappen, Zahlen eintippen (auch −1/2), Gerade erst bei „Prüfen“; Prüfliste: durch P und Q? falsche
+     Seite → mal −1; x von 27) · **3 Die Stadt** (79 Kameras im ganzen Tal; „＋ Perzeptron“ hineinziehen oder
+     antippen, max. 6, jedes bringt seine Gerade in seiner Farbe; Punkte wählen je Neuron; Gewichte NUR als Zahlen,
+     Gerade folgt live; Ausgangsneuron mit v₁…vₙ und b, Fläche = wo das Netz feuert; alle 79 richtig → Karte deckt
+     sich auf (`S.revealed`, gemalt in karte.js `paintLand`: Wiese, Felder, Wald im Revier, Fluss mit Brücke,
+     Landstraße, Stadt mit Umgehungsstraße und Häusern, drei Wildkatzen); „Musterlösung laden“) ·
+     **4 Ein Jahr später** (Overfitting: 5 Ausreißer `OUTLIERS` mit Geschichte zum Antippen; „Dein Netz“ vs.
+     „Kims Netz“ = nächste Kamera + Blase r 0,85 um jeden Ausreißer, 79/79; Frage „Welches würdest du Jana
+     geben?“, dann neue Kameras `TEST` (Rauten, halbe km) → Musterlösung 70/70, Kim 59/70; Kasten Overfitting/
+     Testdaten). Knopf **„Arbeitsblatt“** (nicht Schüler): 3 Seiten (Karte ohne Landschaft + Aufgaben 1–4 +
+     Lösungsseite mit aufgedeckter Karte), `#rv-print` + `html.rv-print-on`, Bilder immer hell.
+   - `v-rechnen` **„Netz durchrechnen“** (`js/rechnen.js`, wie Sönkes AB): Stufen „Ein Neuron“ (3 Eingänge,
+     Perzeptron/Linear/ReLU) · „Ein Netz“ (3 → 3 → 1: Perzeptron, Sigmoid, ReLU gemischt, Ausgang linear, manchmal
+     fehlt eine Leitung) · „Rückwärts“ (lineares Neuron, z gegeben, ein Gewicht „?“). Ganze Zahlen; Sigmoid ± 0,01,
+     Ausgang dahinter ± 0,02. Prüfen · Lösung zeigen · Neue Aufgabe · Drucken (nicht Schüler, leere Felder).
+   - `b-frei` **Freies Bauen** — das freie Feld, **Build · Run**, keine Szenarien. Eingänge 0–10,
    beliebig viele Schichten (bis `MAX_LAYERS` = 8, Spalte „+ Schicht“, leere Schicht „× Schicht entfernen“).
-3. **Netze trainieren** — Kacheln = Szenarien (`sc-gatter`, `sc-ziffer`, `sc-ziel`, `sc-vogel`, `sc-eigene`).
+3. **Netze trainieren** — ein Knopf, Szenarien (`sc-gatter`, `sc-ziffer`, `sc-ziel`, `sc-vogel`, `sc-eigene`) in der Szenario-Wahl im Modus.
    Nur Phase **Lernen**. Das Szenario legt **Eingänge** (Spalte links, gesperrt) und **Ausgänge** fest.
    **Ausgänge = eigene Spalte `.col-outputs` rechts** (2. Fassung 20.11.2026, Sönke: „ich will Input und Output haben und
    dazwischen die Schichten anlegen und dann ein Neuron an einen Out legen – AND aus Schicht 1, XOR aus Schicht 2“): je
@@ -80,7 +116,9 @@ vorigen Spalte MIT Neuronen aus. Nach jeder Änderung an der Anzahl `resyncAll()
 
 `?raum=lehrer|schueler` (sonst allein, alles offen), `?demo=1` = Schaufenster (alles offen, nichts gespeichert;
 Lernen startet mit XOR als „Eigene Daten“, 2 → 3 → 3 → 1 tanh/sigmoid, `demoState`).
-`skill_room_state.data.parts` = Bereichs-ids (`neuron` · `bauen` · `trainieren`) + Kachel-ids. Offen für die
+`skill_room_state.data.parts` = Bereichs-ids (`neuron` · `bauen` · `trainieren`) + Kachel-ids (`n-wie` `n-typen` ·
+`v-revier` `v-rechnen` `b-frei` · `sc-*`). Räume, die vor dem 21.11.2026 nur `bauen` + `b-frei` geteilt hatten,
+sehen Revier und Rechnen gesperrt, bis die Lehrkraft sie teilt. Offen für die
 Klasse, wenn Bereich UND Kachel geteilt sind; Bereich teilen nimmt alle Kacheln mit, wenn noch keine geteilt
 ist. Fehlt `parts`: nur „Wie funktioniert ein Neuron?“. Die Szenario-Auswahl im Lernfenster zeigt nur
 Freigegebenes (`scenarioAllowed`). Druck-Knopf nicht für Schüler. Botschaften: `nl:ready` (heraus),
@@ -90,7 +128,8 @@ Freigegebenes (`scenarioAllowed`). Druck-Knopf nicht für Schüler. Botschaften:
 ## Speicher (je Gerät)
 
 `neuron-sim-v2` = Netz aus „Netze bauen“ (der alte Schlüssel — wer schon ein Netz hatte, findet es dort),
-`neuron-sim-v2-lernen` = Lernbereich, `nl.where` letzte Seite, `nl.print` Druckauswahl.
+`neuron-sim-v2-lernen` = Lernbereich, `nl.where` letzte Seite (+ `sc` letztes Szenario), `nl.print` Druckauswahl,
+`nl.revier` Stand im Revier der Wildkatzen.
 
 ## Druckansicht
 
@@ -163,9 +202,12 @@ Eingabewerte; „Ausblenden“ nimmt die Leiste fürs Bildschirmfoto weg.
 
 - `node MPSkills/tools/NeuroLab/tests/layout.test.mjs` — Kästen/Kanten/Lernfenster in 7 Größen × 17 Aufbauten
   (auch 6 Schichten, leere Spalte dazwischen, Greifvögel)
-- `node MPSkills/tools/NeuroLab/tests/raum.e2e.mjs` — Freigaben Lehrkraft/Klasse, Szenario-Auswahl gefiltert,
+- `node MPSkills/tools/NeuroLab/tests/raum.e2e.mjs` — Freigaben Lehrkraft/Klasse (n-typen hängt an n-wie, Szenario-Wahl
+  im Modus), Revier der Wildkatzen ganz durch (rechnen, falsche Seite, Netz, Karte, Overfitting 70 > 59), Netz
+  durchrechnen, Szenario-Auswahl gefiltert,
   Schicht dazu/weg, fester Ausgang, Gatter inkl. XOR lernen, Greifvögel ≥ 93 %, Druckauswahl, Speicher je Bereich
 
 `FOTOS=1` legt Bildschirmfotos in `tests/fotos/` ab (nicht einchecken).
-Schaufenster: `MPSkills/preview/neurolab.js` (klickt `.tile[data-id]`, `#btn-home`, `#btn-run`,
+Schaufenster: `MPSkills/preview/neurolab.js` (klickt `.tile[data-id]`, `.tile-sub[data-open="n-typen"]`,
+`#scen-picker .tile[data-id]`, `.nn-step[data-step]`, `#btn-home`, `#btn-run`,
 `#learn-btn-start`/`-pause`, liest `#learn-loss-display` — diese ids nicht umbenennen).

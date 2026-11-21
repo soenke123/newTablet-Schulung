@@ -1,11 +1,11 @@
 /* ══════════════════════════════════════════════════════════════
    MPSkills — preview/neurolab.js   ·   Schaufenster für NeuroLab
    ══════════════════════════════════════════════════════════════
-   NeuroLab (überarbeitet 20.11.2026): Startseite mit drei Bereichen –
-   „Wie funktioniert ein Neuron?“ (So rechnet ein Neuron · Alle Neuronen),
-   „Netze bauen“ (das freie Feld, Build · Run) und „Netze trainieren“
-   (Szenario legt Ein- und Ausgänge fest, dazwischen baut man frei; das
-   verschiebbare Lernfenster mit Lernrate).
+   NeuroLab (Übersicht neu 21.11.2026): drei Bereiche –
+   „Wie funktioniert ein Neuron?“ (Kachel mit Knopf „Alle Neuronen“),
+   „Vom Neuron zum Netz“ (Revier der Wildkatzen · Netz durchrechnen ·
+   Freies Bauen) und „Netze trainieren“ (ein Knopf, Szenario wählt man im
+   Modus: #scen-picker .tile[data-id="sc-…"]).
 
    Im Modal läuft das ECHTE NeuroLab im <iframe> mit ?demo=1: nichts wird
    gespeichert, alles ist offen, „Netze trainieren“ startet mit XOR als
@@ -31,14 +31,32 @@
   }
 
   async function play(api) {
-    if (!await api.waitFor('.tile[data-id="n-typen"]', 6000)) return;
-    api.caption('Drei Bereiche: das Neuron verstehen · Netze frei bauen · Netze trainieren');
+    if (!await api.waitFor('.tile-sub[data-open="n-typen"]', 6000)) return;
+    api.caption('Drei Bereiche: das Neuron verstehen · vom Neuron zum Netz · Netze trainieren');
     if (!await api.wait(2600)) return;
 
-    api.click('.tile[data-id="n-typen"]');
-    if (!await api.waitFor('.nn-type', 3000)) return;
+    api.click('.tile-sub[data-open="n-typen"]');
+    if (!await api.waitFor('.nt-card', 3000)) return;
     api.caption('Alle Neuronen: Perceptron, Linear, ReLU, Sigmoid, Tanh – mit Formel und Kurve');
     if (!await api.wait(3000)) return;
+
+    api.click('#btn-home');
+    if (!await api.waitFor('.tile[data-id="v-revier"]', 3000)) return;
+    api.click('.tile[data-id="v-revier"]');
+    if (!await api.waitFor('.rv-map canvas', 3000)) return;
+    api.caption('Das Revier der Wildkatzen: Jede Grenze ist ein Neuron – erst rechnen, dann sehen');
+    if (!await api.wait(3000)) return;
+    api.click('.nn-step[data-step="jahr"]');
+    if (!await api.waitFor('.rv-need, .rv-cmp', 3000)) return;
+    api.caption('Aus Geraden wird ein Netz – und am Ende: Was ist Overfitting?');
+    if (!await api.wait(2400)) return;
+
+    api.click('#btn-home');
+    if (!await api.waitFor('.tile[data-id="v-rechnen"]', 3000)) return;
+    api.click('.tile[data-id="v-rechnen"]');
+    if (!await api.waitFor('.rc-net', 3000)) return;
+    api.caption('Netz durchrechnen: z und y′ jedes Neurons selbst ausrechnen');
+    if (!await api.wait(2600)) return;
 
     api.click('#btn-home');
     if (!await api.waitFor('.tile[data-id="b-frei"]', 3000)) return;
@@ -51,8 +69,12 @@
     if (!await api.wait(2400)) return;
 
     api.click('#btn-home');
-    if (!await api.waitFor('.tile[data-id="sc-eigene"]', 3000)) return;
-    api.click('.tile[data-id="sc-eigene"]');
+    if (!await api.waitFor('.tile[data-id="trainieren"]', 3000)) return;
+    api.click('.tile[data-id="trainieren"]');
+    if (!await api.waitFor('#scen-picker .tile[data-id="sc-eigene"]', 3000)) return;
+    api.caption('Netze trainieren: erst das Szenario wählen');
+    if (!await api.wait(1800)) return;
+    api.click('#scen-picker .tile[data-id="sc-eigene"]');
     if (!await api.waitFor('#learn-btn-start', 3000)) return;
     api.caption('Netze trainieren: Ein- und Ausgänge stehen fest, dazwischen baut man selbst');
     if (!await api.wait(2400)) return;
@@ -128,13 +150,18 @@
       <p>Neuronale Netze in drei Bereichen: <strong>Wie funktioniert ein Neuron?</strong>
          erklärt Gewichte, Summe, Bias und Aktivierung zum Ausprobieren, mit einer
          Impulsaufgabe und einer Übersicht aller Neuronen-Typen.</p>
-      <p>Bei <strong>Netze bauen</strong> klickt die Klasse ein Netz frei zusammen,
-         legt Gewichte und Bias fest und sieht, was herauskommt. Bei
+      <p><strong>Vom Neuron zum Netz</strong>: Im <em>Revier der Wildkatzen</em>
+         rechnet die Klasse aus Wildtierkameras Geraden aus, jede Gerade ist ein
+         Perzeptron, zusammen ergeben sie ein Netz – am Ende deckt sich die Karte auf,
+         und ein Vergleich zeigt, was Overfitting ist. <em>Netz durchrechnen</em> übt
+         z und y′ an festen Netzen, im <em>Freien Bauen</em> klickt man ein Netz selbst
+         zusammen. Bei
          <strong>Netze trainieren</strong> gibt ein Szenario Ein- und Ausgänge vor
          (Logik-Gatter, 7-Segment-Ziffer, Zielscheibe, echte Greifvögel oder eigene
          CSV-Daten), Schichten und Neuronen dazwischen wählt man selbst – dann lernt
          das Netz mit einstellbarer Lernrate.</p>
-      <p>Die Lehrkraft gibt Bereiche und einzelne Szenarien frei. Für Arbeitsblätter
-         gibt es eine Druckansicht mit Auswahl, was auf dem Blatt steht.</p>`
+      <p>Die Lehrkraft gibt Bereiche, Kacheln und einzelne Szenarien frei. Arbeitsblätter
+         druckt sie direkt: das Revier mit Lösungsseite, Netz-Aufgaben und die
+         Druckansicht des freien Feldes.</p>`
   });
 })();
