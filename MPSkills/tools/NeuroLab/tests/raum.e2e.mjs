@@ -178,18 +178,21 @@ await pg.click('#btn-home');
 /* Revier der Wildkatzen */
 await pg.evaluate(() => { window.confirm = () => true; });
 await pg.click('.tile[data-id="v-revier"]');
-ok(await pg.locator('.rv-probe').count() === 3 && await pg.locator('.rv-map canvas').count() === 1, 'Revier: drei Kameras prüfen, Karte');
+ok(await pg.locator('.rv-cam').count() === 3 && await pg.locator('.rv-map canvas').count() === 1 && await pg.locator('.rv-split .nw').count() === 1, 'Revier: drei Kameras prüfen, Neuron wie in Teil 1, Karte');
+ok(await pg.locator('.nw.is-secret').count() === 1, 'Ergebnis im Neuron verdeckt, bis selbst gerechnet');
 for (const [l, zz, f] of [['A', '-3', 0], ['B', '2', 1], ['C', '0', 0]]) {
-  await pg.fill(`.rv-probe[data-l="${l}"] input`, l === 'C' ? '1' : zz);
-  await pg.click(`.rv-probe[data-l="${l}"] [data-yn="${f}"]`);
-  await pg.click(`.rv-probe[data-l="${l}"] .rv-chk`);
+  ok(await pg.locator(`.rv-cam.on[data-l="${l}"]`).count() === 1, `Kamera ${l} ist dran`);
+  await pg.fill('.rv-zin', l === 'C' ? '1' : zz);
+  await pg.click(`[data-yn="${f}"]`);
+  await pg.click('.rv-chk');
   if (l === 'C') {
-    ok(/nochmal/i.test(await pg.locator('.rv-probe[data-l="C"] .rv-msg').textContent()), 'falsches z wird nicht angenommen');
-    await pg.fill('.rv-probe[data-l="C"] input', '0'); await pg.click('.rv-probe[data-l="C"] [data-yn="1"]'); await pg.click('.rv-probe[data-l="C"] .rv-chk');
-    ok(/nicht größer/.test(await pg.locator('.rv-probe[data-l="C"] .rv-msg').textContent()), 'z = 0 feuert nicht');
-    await pg.click('.rv-probe[data-l="C"] [data-yn="0"]'); await pg.click('.rv-probe[data-l="C"] .rv-chk');
+    ok(/nochmal/i.test(await pg.locator('.rv-ctl .rv-msg').textContent()), 'falsches z wird nicht angenommen');
+    await pg.fill('.rv-zin', '0'); await pg.click('[data-yn="1"]'); await pg.click('.rv-chk');
+    ok(/nicht größer/.test(await pg.locator('.rv-ctl .rv-msg').textContent()), 'z = 0 feuert nicht');
+    await pg.click('[data-yn="0"]'); await pg.click('.rv-chk');
   }
 }
+ok(await pg.locator('.nw.is-secret').count() === 0, 'danach zeigt das Neuron sein Ergebnis');
 ok(/18 von 27/.test(await pg.locator('.rv-result').textContent()), 'Janas Neuron: 18 von 27 Kameras');
 const at = async (a, d) => pg.evaluate(([a, d]) => { const c = document.querySelector('.rv-map canvas'), r = c.getBoundingClientRect(); const W = c.clientWidth, H = c.clientHeight, s = Math.min((W - 58) / 12, (H - 50) / 10), ox = 46 + ((W - 58) - 12 * s) / 2; return [r.left + ox + a * s, r.top + 10 + (10 - d) * s]; }, [a, d]);
 await pg.click('.rv-next');
@@ -201,11 +204,13 @@ await pg.fill('[data-f="w1"]', '-0,5'); await pg.fill('[data-f="w2"]', '1'); awa
 await pg.click('.rv-check');
 ok(/27 von 27/.test(await pg.locator('.rv-result').textContent()) && /durch P und Q/.test(await pg.locator('.rv-result').textContent()), 'Fluss: Gerade durch P und Q, alle Kameras richtig');
 await pg.click('.rv-next');
-ok(await pg.locator('.rv-hcard').count() === 1, 'Stadt: Fluss-Neuron ist schon im Netz');
-await pg.click('.rv-chip'); await pg.click('.rv-chip');
-ok(await pg.locator('.rv-hcard').count() === 3 && await pg.locator('.rv-ocard').count() === 1, 'Perzeptrons dazu, Ausgangsneuron da');
-const hc = i => pg.locator('.rv-hcard').nth(i).locator('input');
-for (const [i, v] of [[1, ['3', '-1', '-3']], [2, ['-1', '-1', '15']]]) for (let k = 0; k < 3; k++) await hc(i).nth(k).fill(v[k]);
+ok(await pg.locator('.rv-hn:not(.rv-add)').count() === 1, 'Stadt: Fluss-Neuron ist schon im Netz');
+for (const v of [['3', '-1', '-3'], ['-1', '-1', '15']]) {
+  await pg.click('.rv-add');
+  for (let k = 0; k < 3; k++) await pg.locator('.rv-hcard input').nth(k).fill(v[k]);
+}
+ok(await pg.locator('.rv-hn:not(.rv-add)').count() === 3 && await pg.locator('.rv-on').count() === 1, 'Perzeptrons dazu, Ausgang da');
+await pg.click('.rv-on');
 const oc = pg.locator('.rv-ocard input');
 for (const [k, v] of ['1', '1', '1', '-2,5'].entries()) await oc.nth(k).fill(v);
 await pg.waitForTimeout(100);
@@ -215,7 +220,7 @@ ok(await pg.evaluate(() => JSON.parse(localStorage.getItem('nl.revier')).reveale
 await shot(pg, 'revier-karte');
 await pg.click('.rv-next');
 await pg.click('[data-c="kim"]'); await pg.click('.rv-run');
-const cards = await pg.locator('.rv-test-res .rv-big').allTextContents();
+const cards = await pg.locator('.rv-cmp .rv-big').allTextContents();
 const [mine, kimT] = cards.map(t => +t.split('/')[0]);
 ok(mine > kimT, `Overfitting: eigenes Netz ${mine}, Kims Netz ${kimT} bei neuen Kameras`);
 ok(await pg.locator('.rv-sum').isVisible(), 'Erklärung Overfitting');

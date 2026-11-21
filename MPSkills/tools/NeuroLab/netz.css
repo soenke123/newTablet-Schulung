@@ -36,153 +36,152 @@
 
 /* ── gemeinsame Teile der Seiten in Bereich 2 ── */
 #netz-page { padding-top: 14px; }
-.rv-top { max-width: 1180px; margin: 0 auto 12px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
-.rv-card, .rc-card { max-width: 1180px; margin: 0 auto; }
-.nn-kicker { font-size: .78rem; font-weight: 700; color: var(--ink-faint); text-transform: uppercase; letter-spacing: .05em; }
-.rv-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.12fr); gap: 18px; align-items: start; margin-top: 6px; }
-.rv-left { display: grid; gap: 12px; min-width: 0; }
-.rv-right { position: sticky; top: 0; display: grid; gap: 6px; min-width: 0; }
-@media (max-width: 880px) { .rv-split { grid-template-columns: 1fr; } .rv-right { position: static; order: -1; } }
-.rv-map { width: 100%; }
-.rv-map canvas { display: block; width: 100%; aspect-ratio: 12.6 / 11; touch-action: manipulation; border-radius: 12px; }
-.rv-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .8rem; color: var(--ink-soft); margin: 0; }
-.rv-legend span { display: inline-flex; align-items: center; gap: 6px; }
-.lg-cam { width: 14px; height: 10px; border-radius: 3px; border: 1.6px solid var(--ink-soft); background: var(--surface); display: inline-block; }
-.lg-cam.on { background: var(--gold); border-color: #4a3605; }
-.lg-cam.test { transform: rotate(45deg); width: 10px; height: 10px; border-radius: 1px; }
-.lg-ring { width: 14px; height: 14px; border-radius: 50%; border: 2.2px solid var(--neg); display: inline-block; }
-
-.rv-sub { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; background: var(--surface-2); display: grid; gap: 8px; }
-.rv-sub h3 { font-size: .98rem; color: var(--ink); display: flex; align-items: center; gap: 8px; }
-.rv-sub h3 i { font-style: normal; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); color: var(--on-accent); display: inline-grid; place-items: center; font: 800 .78rem var(--mono); }
-.rv-sub p { font-size: .9rem; color: var(--ink); line-height: 1.5; margin: 0; }
-.rv-pq { font-family: var(--mono); font-size: .85rem; color: var(--ink-soft); min-height: 1.2em; }
-.rv-how { margin: 0; padding-left: 20px; display: grid; gap: 4px; font-size: .9rem; color: var(--ink); line-height: 1.45; }
-
-/* Zahlenfelder */
-.rv-fields { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-.rv-f { display: inline-flex; align-items: center; gap: 6px; font-size: .95rem; color: var(--ink); }
-.rv-f > span { white-space: nowrap; }
+.rc-card { max-width: 1180px; margin: 0 auto; }
 .rv-f input, .rc-ans input, .rc-wans input {
-  width: 78px; padding: 7px 8px; border: 1.5px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink);
+  width: 74px; padding: 6px 8px; border: 1.5px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--ink);
   font: 600 .95rem var(--mono); text-align: center;
 }
-.rv-f.c-w input { border-color: var(--accent-line); }
-.rv-f.c-b input { border-color: color-mix(in srgb, var(--bias) 50%, var(--line)); }
-.rv-f.c-z input { border-color: var(--line); }
 .rv-f input:focus, .rc-ans input:focus, .rc-wans input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-.rv-fields.sm .rv-f input { width: 62px; padding: 5px 6px; font-size: .88rem; }
-.rv-fields.col { flex-direction: column; align-items: stretch; }
-.rv-fields.col .rv-f { justify-content: space-between; }
 
-/* Schritt 1 */
-.rv-task p { font-size: .9rem; line-height: 1.5; color: var(--ink); }
-.rv-probes { display: grid; gap: 8px; margin-top: 8px; }
-.rv-probe { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
-.rv-probe.ok { border-color: var(--accent-line); background: var(--accent-dim); }
-.rv-pl { width: 26px; height: 26px; border-radius: 50%; background: var(--ink); color: var(--surface); display: grid; place-items: center; font-weight: 800; }
-.rv-pp { font-family: var(--mono); color: var(--ink-soft); font-size: .88rem; }
-.rv-yn { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
-.rv-yn button { border: 0; background: var(--surface); color: var(--ink-soft); font: inherit; font-size: .86rem; font-weight: 700; padding: 7px 10px; cursor: pointer; }
+/* ══ Das Revier der Wildkatzen (2. Fassung): dieselbe Sprache wie „Wie arbeitet ein Neuron?“ ══
+   Aufbau: .nn-page > .nn-steps + .nn-card.nn-stepcard; darin .nw-split (Neuron links, Karte rechts). */
+.rv-split { margin-top: 2px; }
+.rv-right { position: sticky; top: 8px; }
+@media (max-width: 1100px) { .rv-right { position: static; order: -1; } }
+.rv-map { width: 100%; max-width: 480px; justify-self: center; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.rv-map canvas { display: block; width: 100%; aspect-ratio: 12.6 / 11; touch-action: manipulation; }
+.rv-legend { gap: 4px 12px; }
+.lg-gold { width: 14px; height: 12px; border-radius: 3px; background: var(--gold-dim); border: 1px solid var(--gold); }
+.lg-ring { width: 13px; height: 13px; border-radius: 50%; border: 2.2px solid var(--neg); }
+.rv-legend em { font-style: normal; }
+.rv-result p { margin: 0; }
+.rv-result p + p { margin-top: 6px; }
+.rv-result.ok { font-weight: 400; }
+.nw-right .rv-result { text-align: left; }
+
+/* Zahlenfelder in den Farben des Neurons */
+.rv-fields { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.rv-f { display: inline-flex; align-items: center; gap: 6px; font-size: 1.05rem; color: var(--ink); }
+.rv-f > span { white-space: nowrap; display: inline-flex; align-items: center; gap: 4px; }
+.rv-f.c-w > span { color: var(--accent-ink); }
+.rv-f.c-b > span { color: var(--bias); }
+.rv-f.c-w input { border-color: var(--accent-line); }
+.rv-f.c-b input { border-color: color-mix(in srgb, var(--bias) 45%, var(--line)); }
+.rv-f input:disabled { background: var(--surface-2); border-style: dashed; }
+.rv-link { border: 0; background: none; padding: 0 2px; font: inherit; font-size: .85rem; font-weight: 700; color: var(--accent-ink); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.rv-pq { font-size: .95rem; color: var(--in-ink); white-space: nowrap; }
+
+/* Schritt 1: Kamera wählen, Ergebnis selbst eintragen */
+.rv-camsel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; justify-content: center; }
+.rv-camsel[hidden] { display: none; }
+.rv-camsel-t { font-size: .85rem; color: var(--ink-soft); margin-right: 4px; }
+.rv-cam { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft);
+  border-radius: 999px; padding: 4px 12px 4px 4px; font: inherit; font-size: .88rem; cursor: pointer; }
+.rv-cam b { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-2); color: var(--ink); font: 700 .8rem var(--mono); }
+.rv-cam.on { border-color: var(--in); color: var(--in-ink); }
+.rv-cam.on b { background: var(--in); color: #fff; }
+.rv-cam.ok i { font-style: normal; color: var(--accent-ink); font-weight: 800; }
+.rv-zin { width: 3.4em; font: 700 .95em var(--mono); text-align: center; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line);
+  border-radius: 6px; padding: 0 4px; }
+.rv-zin:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.rv-frow { align-items: flex-end; }
+.rv-yn { display: inline-flex; justify-self: start; align-self: flex-end; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; margin-left: 4px; }
+.rv-yn button { border: 0; background: var(--surface); color: var(--ink-soft); font: 600 .62em var(--font); padding: 7px 10px; cursor: pointer; }
 .rv-yn button + button { border-left: 1px solid var(--line); }
-.rv-yn button.on { background: var(--accent); color: var(--on-accent); }
-.rv-yn.big button { padding: 10px 18px; font-size: .95rem; }
-.rv-msg { font-size: .86rem; color: var(--ink-soft); }
+.rv-yn button.on { background: var(--gold-dim); color: var(--gold); box-shadow: inset 0 0 0 2px var(--gold); }
+.rv-yn button[data-yn="0"].on { background: var(--surface-2); color: var(--ink); box-shadow: inset 0 0 0 2px var(--ink-soft); }
+.rv-yn.big { margin: 6px 0 0; font-size: 1.4rem; align-self: flex-start; }
+.rv-yn.big button.on { background: var(--accent); color: var(--on-accent); box-shadow: none; }
+.rv-ctl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.rv-ctl[hidden] { display: none; }
+.rv-msg { font-size: .88rem; color: var(--ink-soft); }
 .rv-msg.bad { color: var(--neg); }
-.rv-msg.good { color: var(--accent-ink); font-weight: 800; }
 
-/* Ergebnis */
-.rv-result { border-radius: 14px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); display: grid; gap: 6px; }
-.rv-result[hidden] { display: none; }
-.rv-result p { font-size: .9rem; line-height: 1.5; color: var(--ink); margin: 0; }
-.rv-score b { font-family: var(--mono); }
-.rv-yay { color: var(--accent-ink) !important; }
-.rv-think { background: var(--gold-dim); border-radius: 10px; padding: 8px 10px; }
-.rv-checks { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: .9rem; }
-.rv-checks li { padding-left: 24px; position: relative; color: var(--ink); line-height: 1.45; }
+/* Schritt 2: nummerierte Aufgabe, jeweils nur der aktuelle Teil hell */
+.rv-task { display: grid; gap: 8px; }
+.nw-calc[hidden] { display: none; }
+.rv-task[hidden] { display: none; }
+.rv-row { display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); }
+.rv-row > i { font-style: normal; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 700 .8rem var(--mono);
+  background: var(--line-soft); color: var(--ink-soft); }
+.rv-row.on > i { background: var(--accent); color: var(--on-accent); }
+.rv-row.ok > i { background: var(--accent-dim); color: var(--accent-ink); }
+.rv-row.ok > i { font-size: 0; } .rv-row.ok > i::after { content: '✓'; font-size: .85rem; }
+.rv-row > div { display: grid; gap: 6px; font-size: .92rem; line-height: 1.45; color: var(--ink); }
+.rv-row.off { opacity: .5; }
+.rv-checks { margin: 0; padding: 0; list-style: none; display: grid; gap: 3px; }
+.rv-checks li { padding-left: 22px; position: relative; line-height: 1.45; }
 .rv-checks li::before { position: absolute; left: 2px; font-weight: 800; }
 .rv-checks li.good::before { content: '✓'; color: var(--accent-ink); }
 .rv-checks li.bad::before { content: '✗'; color: var(--neg); }
-.rv-reveal-msg { background: var(--accent-dim); border-radius: 10px; padding: 8px 10px; }
-.rv-muster { font-size: .82rem; color: var(--ink-faint); margin: 0; }
+.rv-recipe { border-top: 1px solid var(--line); padding-top: 6px; }
+.rv-recipe summary { cursor: pointer; font-weight: 700; color: var(--accent-ink); font-size: .86rem; }
+.rv-recipe ol { margin: 8px 0 4px; padding-left: 20px; display: grid; gap: 6px; font-size: .88rem; line-height: 1.5; color: var(--ink); }
+.rv-recipe p { font-size: .84rem; color: var(--ink-soft); margin: 4px 0 0; }
+
+/* Schritt 3: das Netz als Bild – Nummer und Farbe = Gerade auf der Karte */
+.rv-net { position: relative; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px 34px; align-items: center; justify-items: center;
+  padding: 16px 20px; border-radius: 14px; background: var(--surface-2); min-height: 170px; transition: background .15s, box-shadow .15s; }
+.rv-net.drop-on { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-dim); }
+.rv-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.rv-edges line { stroke-width: 2; opacity: .35; }
+.rv-edges line.on { stroke-width: 3; opacity: .95; }
+.rv-col { position: relative; display: grid; gap: 10px; align-content: center; justify-items: center; }
+.rv-chid { gap: 12px; }
+.rv-inode { display: inline-flex; align-items: center; padding: .35em .9em; border-radius: 999px; border: 2px solid var(--in-line);
+  background: color-mix(in srgb, var(--in) 13%, var(--surface)); color: var(--in-ink); font-size: 1.15rem; }
+.rv-hn, .rv-on { position: relative; display: grid; place-items: center; gap: 2px; width: 70px; height: 46px; padding: 0; border-radius: 12px;
+  border: 2px solid var(--c, var(--line)); background: var(--surface); cursor: pointer; font: inherit; color: var(--ink); box-shadow: var(--shadow); }
+.rv-hn svg, .rv-on svg { width: 40px; height: 24px; }
+.rv-hn svg line, .rv-on svg line { stroke: var(--line); stroke-width: 1.5; }
+.rv-hn svg path, .rv-on svg path { fill: none; stroke: var(--ink-soft); stroke-width: 2.4; stroke-linejoin: round; }
+.rv-hn svg text, .rv-on svg text { font: 600 14px var(--font); fill: var(--ink); }
+.rv-hn > b { position: absolute; top: -9px; left: -9px; width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: #fff;
+  display: grid; place-items: center; font: 700 .75rem var(--mono); border: 2px solid var(--surface); }
+.rv-hn.open { border-style: dashed; }
+.rv-hn.open svg { opacity: .4; }
+.rv-hn.on, .rv-on.on { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c, var(--gold)) 30%, transparent); }
+.rv-on { --c: var(--gold); width: 84px; height: 64px; }
+.rv-on span { font-size: .72rem; font-weight: 700; color: var(--gold); }
+.rv-add { --c: var(--line); border-style: dashed; box-shadow: none; background: transparent; color: var(--accent-ink); touch-action: none; }
+.rv-add b { position: static; width: auto; height: auto; background: none; border: 0; color: var(--accent-ink); font: 700 1.2rem var(--font); }
+.rv-add { grid-auto-flow: column; gap: 3px; width: auto; height: 34px; padding: 0 10px; }
+.rv-add span { font-size: .72rem; font-weight: 700; }
+.rv-add:hover { border-color: var(--accent); background: var(--accent-dim); }
+.rv-ghost { position: fixed; z-index: 80; pointer-events: none; transform: translate(-50%, -50%) rotate(-4deg); background: var(--surface); }
+.rv-edit { display: grid; }
+.rv-ebox { display: grid; gap: 8px; padding: 12px 14px; border-radius: 12px; border: 2px solid var(--c); background: color-mix(in srgb, var(--c) 6%, var(--surface)); }
+.rv-ebox p { margin: 0; font-size: .92rem; line-height: 1.45; }
+.rv-ehead { display: flex; align-items: center; gap: 8px; font-size: 1rem; }
+.rv-ehead .rv-del { margin-left: auto; color: var(--ink-faint); }
+.rv-num { width: 24px; height: 24px; border-radius: 50%; background: var(--c); color: #fff; display: grid; place-items: center; font: 700 .78rem var(--mono); }
+.rv-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); display: inline-block; flex: none; }
+.rv-ocard .rv-f.c-w > span { color: var(--ink); }
+.rv-hint { margin: 0; font-size: .92rem; color: var(--ink-soft); text-align: center; }
+.rv-muster { margin: 0; font-size: .82rem; }
+.rv-muster[hidden] { display: none; }
+.rv-reveal-msg { color: var(--accent-ink); }
 .rv-need { display: grid; gap: 10px; padding: 14px; border: 1px dashed var(--line); border-radius: 14px; }
 .rv-need p { margin: 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-.rv-recipe { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 8px 12px; }
-.rv-recipe summary { cursor: pointer; font-weight: 700; color: var(--accent-ink); font-size: .9rem; }
-.rv-recipe ol { margin: 8px 0 4px; padding-left: 20px; display: grid; gap: 6px; font-size: .88rem; line-height: 1.5; color: var(--ink); }
-.rv-recipe p { font-size: .84rem; color: var(--ink-soft); }
-
-/* Ein Neuron als Bild */
-.rv-npic { position: relative; width: 100%; max-width: 420px; aspect-ratio: 320 / 120; container-type: inline-size; }
-.rv-npic svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.rv-npic line, .rv-npic rect, .rv-npic path { fill: none; stroke: var(--c); stroke-width: 2.4; stroke-linecap: round; }
-.rv-npic rect { fill: var(--surface); }
-.rv-npic .sep { stroke: var(--line); stroke-width: 1.4; }
-.rv-npic .bl { stroke: var(--bias); }
-.rv-npic .ow { stroke: var(--ink-faint); }
-.rv-npic > span { position: absolute; transform: translateY(-50%); font-size: max(11px, 3.6cqw); white-space: nowrap; color: var(--ink); }
-.rv-in { display: grid; line-height: 1.1; color: var(--in-ink) !important; font-weight: 700; }
-.rv-in small { font-size: .7em; color: var(--ink-faint); font-weight: 600; }
-.rv-w { background: var(--surface); padding: 0 4px; border-radius: 6px; color: var(--accent-ink) !important; }
-.rv-w b, .rv-b b { font-family: var(--mono); }
-.rv-b { color: var(--bias) !important; }
-.rv-sig { font-size: max(14px, 6cqw) !important; color: var(--ink-soft) !important; }
-.rv-o { font-weight: 700; color: var(--ink-soft) !important; }
-
-/* Netz-Baukasten (Schritt 3) */
-.rv-netbox { display: grid; gap: 8px; }
-.rv-palette { display: flex; align-items: center; gap: 10px; font-size: .84rem; color: var(--ink-soft); }
-.rv-chip, .rv-ghost {
-  display: inline-flex; align-items: center; gap: 4px; padding: 8px 14px; border-radius: 12px; cursor: grab; user-select: none; touch-action: none;
-  background: var(--accent); color: var(--on-accent); font-weight: 800; font-size: .9rem; box-shadow: var(--shadow);
-}
-.rv-ghost { position: fixed; z-index: 80; pointer-events: none; transform: translate(-50%, -50%) rotate(-3deg); opacity: .92; }
-.rv-net {
-  position: relative; display: grid; grid-template-columns: 78px minmax(0, 1fr) minmax(118px, .62fr); gap: 34px; align-items: center;
-  border: 1px dashed var(--line); border-radius: 16px; padding: 14px 12px; min-height: 220px;
-  background-image: radial-gradient(var(--grid) 1.2px, transparent 1.2px); background-size: 16px 16px;
-}
-.rv-net.drop-on { border-color: var(--accent); background-color: var(--accent-dim); }
-.rv-edges { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.rv-edges line { stroke-width: 2; opacity: .55; }
-.rv-col { position: relative; display: grid; gap: 10px; align-content: center; }
-.rv-inode {
-  display: grid; justify-items: center; line-height: 1.1; padding: 8px 4px; border-radius: 999px; border: 1.6px solid var(--in);
-  background: var(--in-dim); color: var(--in-ink); font-weight: 700; font-size: .95rem;
-}
-.rv-inode small { font-size: .68rem; color: var(--ink-soft); font-weight: 600; }
-.rv-hcard, .rv-ocard { position: relative; border: 2px solid var(--c, var(--line)); border-radius: 14px; background: var(--surface); padding: 8px 10px; display: grid; gap: 6px; }
-.rv-hcard.picking { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 25%, transparent); }
-.rv-ocard { --c: var(--gold); }
-.rv-hhead { display: flex; align-items: center; gap: 6px; font-size: .88rem; color: var(--ink); }
-.rv-hhead span { color: var(--ink-soft); font-size: .8rem; }
-.rv-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); display: inline-block; flex: none; }
-.rv-pick { margin-left: auto; border: 1px solid var(--c); color: var(--ink); background: color-mix(in srgb, var(--c) 12%, var(--surface)); border-radius: 8px; padding: 3px 8px; font: inherit; font-size: .76rem; font-weight: 700; cursor: pointer; }
-.rv-del { border: 0; background: none; color: var(--ink-faint); font-size: 1.1rem; cursor: pointer; padding: 0 4px; }
-.rv-hcard .rv-pq { font-size: .76rem; min-height: 1em; }
-.rv-ocard .rv-f > span { display: inline-flex; align-items: center; gap: 5px; }
-.rv-drop { border: 2px dashed var(--line); border-radius: 14px; padding: 22px 10px; text-align: center; color: var(--ink-faint); font-size: .86rem; }
-@media (max-width: 560px) {
-  .rv-net { grid-template-columns: 1fr; gap: 12px; }
-  .rv-cin { grid-auto-flow: column; }
-  .rv-edges { display: none; }
-}
-
 /* Schritt 4 */
 .rv-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.rv-net-card {
-  border: 1.5px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px 12px; display: grid; gap: 2px;
-  text-align: left; font: inherit; color: var(--ink); cursor: pointer;
-}
-.rv-net-card.static { cursor: default; }
+.rv-net-card { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px 14px; display: grid; gap: 1px;
+  text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
 .rv-net-card.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
 .rv-net-card span { font-size: .8rem; color: var(--ink-soft); }
-.rv-net-card .rv-big { font: 800 1.45rem var(--mono); color: var(--ink); }
-.rv-why { font-size: .88rem; color: var(--ink); background: var(--in-dim); border-radius: 10px; padding: 8px 10px; margin: 0; }
-.rv-test-res { display: grid; gap: 8px; }
-.rv-test-res p { font-size: .9rem; }
-.rv-sum[hidden] { display: none; }
+.rv-net-card .rv-big { font: 700 1.45rem var(--mono); color: var(--ink); margin-top: 4px; }
+.rv-why { font-size: .9rem; color: var(--ink); background: var(--in-dim); border-radius: 10px; padding: 8px 12px; margin: 0; }
+.rv-why[hidden], .rv-sum[hidden], .rv-test-msg[hidden] { display: none; }
+.rv-test-msg { margin: 0; }
+.rv-test-msg.ok { font-weight: 400; }
+
+@media (max-width: 560px) {
+  .rv-net { grid-template-columns: 1fr; gap: 14px; }
+  .rv-cin { grid-auto-flow: column; }
+  .rv-edges { display: none; }
+  .rv-cmp { grid-template-columns: 1fr; }
+}
 
 /* ── Netz durchrechnen ── */
 .rc-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

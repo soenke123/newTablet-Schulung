@@ -24,7 +24,7 @@
 (function () {
   'use strict';
 
-  const V = '20261121a';
+  const V = '20261121b';
 
   let root = null, frame = null, ctx = null, view = null;
   let onResize = null, onMsg = null;

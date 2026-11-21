@@ -11,10 +11,11 @@
    gefunden ist (reveal 0 … 1) – vorher ist es nur ein Gitter.
 
    makeMap(o) → { el, set(opts), draw() }  opts:
-     cams     [{p, soll, mark, label, test}]  test = Kamera aus dem nächsten Jahr (Raute)
+     cams     [{p, soll, mark, label}]  Dreieck = Katze gesehen, Kreis = keine (wie Teil 1)
      judge    p → 0|1   was das Netz an diesem Ort sagt (rote Ringe bei Fehlern)
      region   p → 0|1   Fläche, auf der das Netz feuert (gold getönt)
-     lines    [{w, b, color, dash, faint}]   Geraden z = 0, Pfeil zur feuernden Seite
+     lines    [{w, b, color, dash, faint, width, num, arrow}]   Geraden z = 0 (num = Nummer des Neurons)
+     at       [x₁, x₂]  Eingabe des Neurons (oranges Fadenkreuz wie in Teil 1)
      pencil   [{P, Q, color}]   Bleistiftlinie durch zwei gewählte Punkte
      pick     fn(p)  Gitterpunkt antippen (Punkte wählen)
      reveal   0 … 1
@@ -197,22 +198,19 @@
     const fs = Math.max(11, s * 0.36);
     label('Fluss', [10.2, 7.55], -Math.atan2(0.5 * s, s), fs);
     label('Landstraße', [1.55, 1.65], -Math.atan2(3 * s, s), fs * 0.85);
-    label('Stadt', [10.7, 9.25], 0, fs * 1.2);
+    label('Stadt', [10.45, 9.6], 0, fs * 1.2);
     c.restore();
     return cv;
   }
 
-  function camGlyph(c, x, y, r, soll, test) {
-    c.save(); c.translate(x, y);
-    const fill = soll ? css('gold') : css('surface');
-    c.fillStyle = fill; c.strokeStyle = soll ? '#4a3605' : css('ink-soft'); c.lineWidth = 1.8;
-    if (test) { c.beginPath(); c.moveTo(0, -r * 1.15); c.lineTo(r * 1.15, 0); c.lineTo(0, r * 1.15); c.lineTo(-r * 1.15, 0); c.closePath(); c.fill(); c.stroke(); }
-    else {
-      const w = r * 1.7, hh = r * 1.25;
-      c.beginPath(); c.roundRect ? c.roundRect(-w / 2, -hh / 2, w, hh, 3) : c.rect(-w / 2, -hh / 2, w, hh); c.fill(); c.stroke();
-      c.beginPath(); c.arc(0, 0, r * 0.38, 0, Math.PI * 2); c.fillStyle = soll ? '#4a3605' : css('ink-faint'); c.fill();
-    }
-    c.restore();
+  /* Kamera wie die Punkte in „Wie arbeitet ein Neuron?“: Katze gesehen =
+     goldenes Dreieck (soll feuern), keine Katze = weißer Kreis */
+  function camGlyph(c, x, y, r, soll, onLand) {
+    c.beginPath();
+    if (soll) { c.moveTo(x, y - r * 1.15); c.lineTo(x + r * 1.08, y + r * 0.8); c.lineTo(x - r * 1.08, y + r * 0.8); c.closePath(); }
+    else c.arc(x, y, r * 0.85, 0, Math.PI * 2);
+    c.fillStyle = soll ? css('gold') : css('surface'); c.fill();
+    c.lineWidth = 2; c.strokeStyle = soll ? (onLand ? '#5a4206' : css('surface')) : css('ink-soft'); c.stroke();
   }
 
   function makeMap(o = {}) {
@@ -246,20 +244,20 @@
       c.save(); c.beginPath(); c.rect(ox, oy, 12 * s, 10 * s); c.clip();
       // Fläche, auf der das Netz feuert
       if (opts.region) {
-        const nx = Math.max(24, Math.round(12 * s / 4)), ny = Math.round(nx * 10 / 12);
+        const nx = Math.max(48, Math.round(12 * s / 2)), ny = Math.round(nx * 10 / 12);
         const img = new ImageData(nx, ny);
-        const gd = rgbOf(css('gold'));
+        const gd = rgbOf(rv > 0 ? css('gold') : css('gold-dim'));
         for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
           const p = [(i + 0.5) / nx * 12, 10 - (j + 0.5) / ny * 10];
           const k = (j * nx + i) * 4;
-          if (opts.region(p)) { img.data[k] = gd[0]; img.data[k + 1] = gd[1]; img.data[k + 2] = gd[2]; img.data[k + 3] = rv > 0 ? 105 : 62; }
+          if (opts.region(p)) { img.data[k] = gd[0]; img.data[k + 1] = gd[1]; img.data[k + 2] = gd[2]; img.data[k + 3] = rv > 0 ? 110 : 255; }
         }
         off.width = nx; off.height = ny; off.getContext('2d').putImageData(img, 0, 0);
         c.imageSmoothingEnabled = false; c.drawImage(off, ox, oy, 12 * s, 10 * s); c.imageSmoothingEnabled = true;
       }
       // Gitter
       c.lineWidth = 1;
-      for (let v = 0; v <= 12; v++) { c.strokeStyle = rv > 0.5 ? 'rgba(255,255,255,.28)' : css('line'); c.beginPath(); c.moveTo(X(v), oy); c.lineTo(X(v), oy + 10 * s); c.stroke(); }
+      for (let v = 0; v <= 12; v++) { c.strokeStyle = rv > 0.5 ? 'rgba(255,255,255,.28)' : css('line-soft'); c.beginPath(); c.moveTo(X(v), oy); c.lineTo(X(v), oy + 10 * s); c.stroke(); }
       for (let v = 0; v <= 10; v++) { c.beginPath(); c.moveTo(ox, Y(v)); c.lineTo(ox + 12 * s, Y(v)); c.stroke(); }
       // Bleistift
       (opts.pencil || []).forEach(pc => {
@@ -292,7 +290,16 @@
         c.beginPath(); c.moveTo(X(A[0]), Y(A[1])); c.lineTo(X(B[0]), Y(B[1])); c.stroke();
         c.strokeStyle = L.color; c.lineWidth = L.width || 3.4; if (L.dash) c.setLineDash(L.dash);
         c.beginPath(); c.moveTo(X(A[0]), Y(A[1])); c.lineTo(X(B[0]), Y(B[1])); c.stroke(); c.setLineDash([]);
-        if (!L.faint && !L.noArrow) {
+        if (L.num) {
+          // Nummer des Neurons an der Geraden (Farbe = Neuron im Netz)
+          // am Rand, wo die Gerade in die Karte kommt – 24 px nach innen
+          const len = Math.hypot(X(B[0]) - X(A[0]), Y(B[1]) - Y(A[1])) || 1, f = Math.min(0.5, 24 / len);
+          const bx = X(A[0]) + f * (X(B[0]) - X(A[0])), by = Y(A[1]) + f * (Y(B[1]) - Y(A[1]));
+          c.globalAlpha = 1; c.beginPath(); c.arc(bx, by, 10, 0, Math.PI * 2); c.fillStyle = L.color; c.fill();
+          c.lineWidth = 2; c.strokeStyle = css('surface'); c.stroke();
+          c.fillStyle = '#fff'; c.font = '700 12px "JetBrains Mono", monospace'; c.textAlign = 'center'; c.fillText(L.num, bx, by + 4); c.textAlign = 'left';
+        }
+        if (!L.faint && L.arrow) {
           // Pfeil zur feuernden Seite (Richtung auf dem Bild: Normale (w₁, −w₂))
           const mx = (X(A[0]) + X(B[0])) / 2 + (L.shift || 0) * (X(B[0]) - X(A[0])), my = (Y(A[1]) + Y(B[1])) / 2 + (L.shift || 0) * (Y(B[1]) - Y(A[1]));
           const nl = Math.hypot(w1, w2) || 1, nx = w1 / nl * 26, ny = -w2 / nl * 26;
@@ -310,17 +317,25 @@
         c.globalAlpha = 1;
       });
       // Kameras
-      const r = Math.max(5.5, Math.min(8, s * 0.2));
+      const r = Math.max(6, Math.min(8, s * 0.22));
       (opts.cams || []).forEach(cm => {
         const x = X(cm.p[0]), y = Y(cm.p[1]);
-        camGlyph(c, x, y, r, cm.soll, cm.test);
-        if (opts.judge && opts.judge(cm.p) !== cm.soll) { c.beginPath(); c.arc(x, y, r * 1.75, 0, Math.PI * 2); c.strokeStyle = css('neg'); c.lineWidth = 2.4; c.stroke(); }
-        if (cm.mark) { c.beginPath(); c.arc(x, y, r * 2.2, 0, Math.PI * 2); c.strokeStyle = cm.markColor || css('accent'); c.lineWidth = 3; c.stroke(); }
+        camGlyph(c, x, y, r, cm.soll, rv > 0.3);
+        if (opts.judge && !cm.mark && opts.judge(cm.p) !== cm.soll) { c.beginPath(); c.arc(x, y, r * 1.6, 0, Math.PI * 2); c.strokeStyle = css('neg'); c.lineWidth = 2.2; c.stroke(); }
+        if (cm.mark) { c.beginPath(); c.arc(x, y, r * 2.1, 0, Math.PI * 2); c.strokeStyle = cm.markColor || css('in'); c.lineWidth = 3; c.stroke(); }
         if (cm.label) {
           c.font = '800 14px "Space Grotesk", sans-serif'; c.lineWidth = 3.5; c.strokeStyle = css('surface'); c.fillStyle = css('ink');
           c.strokeText(cm.label, x + r + 3, y - r - 2); c.fillText(cm.label, x + r + 3, y - r - 2);
         }
       });
+      // Eingabe des Neurons (wie in Teil 1: oranges Fadenkreuz)
+      if (opts.at) {
+        const ax = X(opts.at[0]), ay = Y(opts.at[1]);
+        c.strokeStyle = css('in'); c.lineWidth = 3;
+        c.beginPath(); c.arc(ax, ay, 12, 0, Math.PI * 2); c.stroke();
+        c.beginPath(); c.moveTo(ax - 17, ay); c.lineTo(ax - 7, ay); c.moveTo(ax + 7, ay); c.lineTo(ax + 17, ay);
+        c.moveTo(ax, ay - 17); c.lineTo(ax, ay - 7); c.moveTo(ax, ay + 7); c.lineTo(ax, ay + 17); c.stroke();
+      }
       // Antippen-Hilfe
       if (opts.pick && hoverP) {
         c.beginPath(); c.arc(X(hoverP[0]), Y(hoverP[1]), 9, 0, Math.PI * 2);

@@ -180,13 +180,15 @@
         e.classList.toggle('is-neg', known && w < 0);
         e.classList.toggle('is-zero', known && Math.abs(w) < 0.005);
       });
-      const z = zOf(m), y = yOf(m, z), fire = z > 0;
+      const secret = root.classList.contains('is-secret');
+      const z = zOf(m), y = yOf(m, z), fire = z > 0 && !secret;
       $('.nw-z b').textContent = num(z);
       const dot = $('.nw-stepfn .dot');
-      dot.setAttribute('cx', fX(z)); dot.setAttribute('cy', fY(t, y));
+      dot.setAttribute('cx', secret ? 50 : fX(z)); dot.setAttribute('cy', secret ? fY(t, 0) : fY(t, y));
       root.classList.toggle('is-fire', fire);
-      $('.nw-y').textContent = t === 'perceptron' ? (fire ? '1' : '0') : num(y);
-      $('.nw-ytxt').textContent = o.outText ? o.outText(fire, y) : m.yes ? (fire ? m.yes : m.no) : (fire ? 'feuert!' : 'feuert nicht');
+      $('.nw-y').textContent = secret ? '?' : t === 'perceptron' ? (fire ? '1' : '0') : num(y);
+      if (secret) $('.nw-z b').textContent = '?';
+      $('.nw-ytxt').textContent = secret ? '' : o.outText ? o.outText(fire, y) : m.yes ? (fire ? m.yes : m.no) : (fire ? 'feuert!' : 'feuert nicht');
       paintPop();
     }
     function change(k, v) { setV(m, k, v); update(); if (o.onChange) o.onChange(k); }
@@ -245,7 +247,8 @@
       document.addEventListener('pointerdown', e => { if (root.isConnected && !pop.hidden && !pop.contains(e.target) && !e.target.closest('.nw-val')) closePop(); }, true);
       document.addEventListener('keydown', e => { if (root.isConnected && e.key === 'Escape') closePop(); });
     }
-    return { el: root, update, setShow(n) { root.dataset.show = n; update(); } };
+    return { el: root, update, setShow(n) { root.dataset.show = n; update(); },
+      setSecret(on) { root.classList.toggle('is-secret', !!on); update(); } };
   }
 
   /* Die Rechnung unter dem Neuron: oben die Buchstaben, darunter dieselbe
@@ -746,5 +749,6 @@
     root.scrollTop = 0;
   }
 
-  window.NLNeuron = { render };
+  /* Bausteine auch für Bereich 2 (js/revier.js): dasselbe Neuron, dieselbe Rechnung */
+  window.NLNeuron = { render, makeNeuron, calcHTML, num };
 })();

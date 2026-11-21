@@ -17,8 +17,8 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `js/start.js` | Startseite, Freigaben im Raum, Navigation (`html[data-view]` = home · neuron · lab) |
 | `js/neuron.js` | Bereich 1: „Wie arbeitet ein Neuron?“ (7 Schritte, `makeNeuron` mit + / − an jedem Wert, Rechnung `calcHTML`, Ebene `makePlane`, Modelle `ABS`/`PENG`) + „Alle Neuronen“ (Karten + Detail an den Pinguinen, nutzt `activations` aus app.js) |
 | `js/daten.js` | Greifvögel (echte Messwerte) |
-| `js/karte.js` | Bereich 2: Tal 12 × 10 km für „Das Revier der Wildkatzen“ – Grenzen `TRUTH`, Kameras `YEAR1`/`ALL`/`NOISY`/`TEST`, Kims Netz `kim`, `makeMap` (Canvas: Gitter, Kameras, Geraden mit Pfeil, Bleistiftlinie, Fläche, Punkte antippen, gemalte Landschaft `reveal`) |
-| `js/revier.js` | Bereich 2: „Das Revier der Wildkatzen“ (Kachel `v-revier`, 4 Schritte, Arbeitsblatt) |
+| `js/karte.js` | Bereich 2: Tal 12 × 10 km für „Das Revier der Wildkatzen“ – Grenzen `TRUTH`, Kameras `YEAR1`/`ALL`/`NOISY`/`TEST`, Kims Netz `kim`, `makeMap` (Canvas: Gitter, Kameras als Dreieck/Kreis wie Teil 1, Geraden mit Nummer `num`, Fadenkreuz `at`, Bleistiftlinie, gelbe Fläche, Punkte antippen, gemalte Landschaft `reveal`) |
+| `js/revier.js` | Bereich 2: „Das Revier der Wildkatzen“ (Kachel `v-revier`, 4 Schritte, Arbeitsblatt; nutzt `NLNeuron.makeNeuron`/`calcHTML` aus neuron.js) |
 | `js/rechnen.js` | Bereich 2: „Netz durchrechnen“ (Kachel `v-rechnen`, wie Sönkes AB, Drucken) |
 | `netz.css` | Übersicht-Ergänzungen, Szenario-Wahl, Revier, Rechnen, Druck der Blätter |
 | `neuron.png` | altes Bild des Neurons – seit 20.11.2026 (2. Fassung) nicht mehr eingebunden |
@@ -68,22 +68,33 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
 2. **Vom Neuron zum Netz** (21.11.2026) — Grundsatz (Sönke): nicht ziehen und probieren, sondern **rechnen und
    sehen, was wo zusammenhängt**; keine UND/XOR-Begriffe (die gehören zu „Netze trainieren“).
    - `v-revier` **„Das Revier der Wildkatzen“** (`js/revier.js` + `js/karte.js`, Stand `localStorage nl.revier`):
-     Försterin Jana, Wildtierkameras auf ganzen km (x₁ Osten, x₂ Norden), gold = Wildkatze gesehen.
+     Försterin Jana, Wildtierkameras auf ganzen km (x₁ Osten, x₂ Norden).
+     **2. Fassung (21.11.2026 abends, Sönke: „soll zu Teil 1 passen, klarer“): dieselben Bausteine wie „Wie arbeitet
+     ein Neuron?“** – Seite `.nn-page` mit `.nn-steps`, Karte `.nn-stepcard`, darin `.nw-split` (links das echte
+     Neuron `NLNeuron.makeNeuron(m, {fixed:true})` + Rechnung `NLNeuron.calcHTML`, rechts die Karte); Karte wie die
+     Ebene in Schritt 6/7: Katze gesehen = goldenes Dreieck (soll feuern), keine = Kreis, Gelb (`--gold-dim`) = hier
+     feuert das Neuron/Netz, rote Ringe = falsch, oranges Fadenkreuz `at` = Eingabe des Neurons, keine Pfeile mehr.
+     `makeNeuron` kann das Ergebnis verdecken (`setSecret(true)`: z, Punkt auf der Treppe und Ausgabe = „?“).
+     Pro Schritt nur EINE Aufgabe sichtbar.
      Wirklichkeit: Fluss x₂ = ½x₁ + 2 (Revier nördlich), Stadtrand x₁ + x₂ = 15, Landstraße x₂ = 3x₁ − 3; keine
-     Kamera liegt genau auf einer Grenze. Schritte: **1 Kameras prüfen** (Janas Neuron w = (1, 1), b = −8; z für
-     A (3|2), B (4|6), C (5|3) selbst rechnen + feuert ja/nein, C hat z = 0; dann erscheint die Gerade, 18 von 27) ·
-     **2 Der Fluss** (27 Kameras in der Mitte; zwei Gitterpunkte antippen = Bleistiftlinie, Rezept w₁ = −m, w₂ = 1,
-     b = −n zum Aufklappen, Zahlen eintippen (auch −1/2), Gerade erst bei „Prüfen“; Prüfliste: durch P und Q? falsche
-     Seite → mal −1; x von 27) · **3 Die Stadt** (79 Kameras im ganzen Tal; „＋ Perzeptron“ hineinziehen oder
-     antippen, max. 6, jedes bringt seine Gerade in seiner Farbe; Punkte wählen je Neuron; Gewichte NUR als Zahlen,
-     Gerade folgt live; Ausgangsneuron mit v₁…vₙ und b, Fläche = wo das Netz feuert; alle 79 richtig → Karte deckt
-     sich auf (`S.revealed`, gemalt in karte.js `paintLand`: Wiese, Felder, Wald im Revier, Fluss mit Brücke,
-     Landstraße, Stadt mit Umgehungsstraße und Häusern, drei Wildkatzen); „Musterlösung laden“) ·
-     **4 Ein Jahr später** (Overfitting: 5 Ausreißer `OUTLIERS` mit Geschichte zum Antippen; „Dein Netz“ vs.
-     „Kims Netz“ = nächste Kamera + Blase r 0,85 um jeden Ausreißer, 79/79; Frage „Welches würdest du Jana
-     geben?“, dann neue Kameras `TEST` (Rauten, halbe km) → Musterlösung 70/70, Kim 59/70; Kasten Overfitting/
-     Testdaten). Knopf **„Arbeitsblatt“** (nicht Schüler): 3 Seiten (Karte ohne Landschaft + Aufgaben 1–4 +
-     Lösungsseite mit aufgedeckter Karte), `#rv-print` + `html.rv-print-on`, Bilder immer hell.
+     Kamera liegt genau auf einer Grenze. Schritte: **1 Kameras prüfen** (Janas Neuron w = (1, 1), b = −8; Chips
+     A (3|2), B (4|6), C (5|3) `.rv-cam`, Rechnung mit Eingabefeld `.rv-zin` am Ende + `[data-yn]` 1 · feuert / 0 ·
+     feuert nicht, `.rv-chk`; C hat z = 0; danach Gerade + Gelb, 18 von 27, Kameras antippen = Neuron rechnet sie) ·
+     **2 Der Fluss** (27 Kameras; nummerierte Zeilen `.rv-row`: ① zwei Gitterpunkte antippen = Bleistiftlinie ②
+     w₁/w₂/b eintippen (auch −1/2), Rezept zum Aufklappen, `.rv-check`; Neuron grau mit „?“ bis „Prüfen“; Prüfliste:
+     durch P und Q? falsche Seite → mal −1; x von 27) · **3 Die Stadt** (79 Kameras; Netz-Bild `.rv-net`: Eingänge →
+     Perzeptrons `.rv-hn` untereinander mit Nummer in ihrer Farbe → Ausgang `.rv-on`; „＋ Perzeptron“ `.rv-add`
+     antippen oder ins Netz ziehen, max. 6; ein Knoten antippen = darunter EIN Bearbeiten-Kasten `.rv-ebox`
+     (`.rv-hcard` Punkte + w₁/w₂/b, `.rv-ocard` v₁…vₙ + b); Karte: Geraden mit Nummer am Rand, die gewählte dick,
+     nur ihre Seite gelb; Ausgang gewählt = Fläche des Netzes + rote Ringe; alle 79 richtig → Karte deckt sich auf
+     (`S.revealed`, gemalt in karte.js `paintLand`: Wiese, Felder, Wald im Revier, Fluss mit Brücke, Landstraße, Stadt
+     mit Umgehungsstraße und Häusern, drei Wildkatzen); „Musterlösung laden“ als kleiner Link) ·
+     **4 Ein Jahr später** (Landschaft blass `reveal 0.45`; 5 Ausreißer `OUTLIERS` orange umkreist, antippen = Geschichte;
+     Karten „Dein Netz“ / „Kims Netz“ `.rv-net-card` umschaltbar (Kim = nächste Kamera + Blase r 0,85 um jeden
+     Ausreißer, 79/79); Frage „Welches würdest du Jana geben?“, dann „Neue Kameras aufstellen“ `.rv-run` → nur noch
+     die `TEST`-Kameras, Zahlen in den Karten wechseln auf neue Kameras (Musterlösung 70/70, Kim 59/70), Kasten
+     Overfitting). Knopf **„Arbeitsblatt“** unten in der Mitte (nicht Schüler): 3 Seiten (Karte ohne Landschaft +
+     Aufgaben 1–4 + Lösungsseite mit aufgedeckter Karte), `#rv-print` + `html.rv-print-on`, Bilder immer hell.
    - `v-rechnen` **„Netz durchrechnen“** (`js/rechnen.js`, wie Sönkes AB): Stufen „Ein Neuron“ (3 Eingänge,
      Perzeptron/Linear/ReLU) · „Ein Netz“ (3 → 3 → 1: Perzeptron, Sigmoid, ReLU gemischt, Ausgang linear, manchmal
      fehlt eine Leitung) · „Rückwärts“ (lineares Neuron, z gegeben, ein Gewicht „?“). Ganze Zahlen; Sigmoid ± 0,01,
