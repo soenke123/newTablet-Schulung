@@ -27,7 +27,16 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `js/theme.js` | Hell/Dunkel für gezeichnete Teile: setzt feste SVG-Farben (fill/stroke-Attribute) per Beobachter auf `var(--…)` um, `NLTheme.c('#hex', rolle)` für Canvas, Ereignis `nl:theme-redraw` |
 | `showroom-optik.html` | Showroom der Optik (Heute · Vorschlag A · Vorschlag B, Zustände, Feld mit echtem XOR-Training) — A ist umgesetzt |
 
-## Drei Bereiche (Startseite, Übersicht neu 21.11.2026)
+## Startseite: vier Kacheln (22.11.2026, ersetzt die drei Bereiche unten)
+
+**Neuronen** (`n-wie` + Knopf „Alle Neuronen“) · **Wildkatzen** (`v-revier`) · **Lernen** (`trainieren`, Szenarien Gatter/Ziffer/Zielscheibe/Vögel
+in `#scen-picker`, ohne CSV) · **Frei** (`b-frei`: Lernfeld mit Szenario `custom`, also freie Schichten + CSV-Upload + Training; eigener Stand
+`neuron-sim-v2-frei`, `freeMode` in app.js; `scenarioAllowed` trennt: Lernen nie `custom`, Frei nur `custom`; Freigabe hängt an `b-frei`).
+„Netz durchrechnen“ (`v-rechnen`, js/rechnen.js) hat KEINE Kachel mehr (Sönke: nur Übung auf dem Arbeitsblatt); Datei bleibt. Build/Run ohne Szenario
+ist nicht mehr erreichbar (Area `bauen` im Feld bleibt im Code). `sc-eigene` ist aus dem Szenario-Wahl-Fenster entfernt. ⚠️ `tests/raum.e2e.mjs`
+kennt noch die alte Startseite (v-rechnen, b-frei als Build/Run, sc-eigene) und muss angepasst werden.
+
+## Drei Bereiche (alter Stand der Startseite, Übersicht neu 21.11.2026)
 
 Die Übersicht (Sönke 21.11.2026): **1** eine Kachel „Wie arbeitet ein Neuron?“ mit dem Knopf „Alle Neuronen ›“
 darauf (`.tile-sub[data-open="n-typen"]`; `n-typen` hat keine eigene Kachel, `usable('n-typen')` = `usable('n-wie')`,

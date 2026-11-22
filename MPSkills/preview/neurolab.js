@@ -32,7 +32,7 @@
 
   async function play(api) {
     if (!await api.waitFor('.tile-sub[data-open="n-typen"]', 6000)) return;
-    api.caption('Drei Bereiche: das Neuron verstehen · vom Neuron zum Netz · Netze trainieren');
+    api.caption('Vier Kacheln: Neuronen · Wildkatzen · Lernen · Frei');
     if (!await api.wait(2600)) return;
 
     api.click('.tile-sub[data-open="n-typen"]');
@@ -52,31 +52,16 @@
     if (!await api.wait(2400)) return;
 
     api.click('#btn-home');
-    if (!await api.waitFor('.tile[data-id="v-rechnen"]', 3000)) return;
-    api.click('.tile[data-id="v-rechnen"]');
-    if (!await api.waitFor('.rc-net', 3000)) return;
-    api.caption('Netz durchrechnen: z und y′ jedes Neurons selbst ausrechnen');
-    if (!await api.wait(2600)) return;
-
+    if (!await api.waitFor('.tile[data-id="trainieren"]', 3000)) return;
+    api.click('.tile[data-id="trainieren"]');
+    if (!await api.waitFor('#scen-picker .tile[data-id="sc-gatter"]', 3000)) return;
+    api.caption('Lernen: erst das Szenario wählen');
+    if (!await api.wait(1800)) return;
     api.click('#btn-home');
     if (!await api.waitFor('.tile[data-id="b-frei"]', 3000)) return;
     api.click('.tile[data-id="b-frei"]');
-    if (!await api.waitFor('#btn-run', 3000)) return;
-    api.caption('Netze bauen: Schichten und Neuronen setzen, Gewichte und Bias festlegen');
-    if (!await api.wait(2600)) return;
-    api.click('#btn-run');
-    api.caption('Run: Eingaben ändern und sehen, was am Ende herauskommt');
-    if (!await api.wait(2400)) return;
-
-    api.click('#btn-home');
-    if (!await api.waitFor('.tile[data-id="trainieren"]', 3000)) return;
-    api.click('.tile[data-id="trainieren"]');
-    if (!await api.waitFor('#scen-picker .tile[data-id="sc-eigene"]', 3000)) return;
-    api.caption('Netze trainieren: erst das Szenario wählen');
-    if (!await api.wait(1800)) return;
-    api.click('#scen-picker .tile[data-id="sc-eigene"]');
     if (!await api.waitFor('#learn-btn-start', 3000)) return;
-    api.caption('Netze trainieren: Ein- und Ausgänge stehen fest, dazwischen baut man selbst');
+    api.caption('Frei: eigene Daten (hier XOR), dazwischen baut man selbst');
     if (!await api.wait(2400)) return;
     api.click('#learn-btn-start');
     api.caption('Das Netz lernt XOR – die Kanten ändern sich, bis die Ausgabe stimmt');
@@ -150,16 +135,14 @@
       <p>Neuronale Netze in drei Bereichen: <strong>Wie funktioniert ein Neuron?</strong>
          erklärt Gewichte, Summe, Bias und Aktivierung zum Ausprobieren, mit einer
          Impulsaufgabe und einer Übersicht aller Neuronen-Typen.</p>
-      <p><strong>Vom Neuron zum Netz</strong>: Im <em>Revier der Wildkatzen</em>
+      <p><strong>Wildkatzen</strong>: Im <em>Revier der Wildkatzen</em>
          rechnet die Klasse aus Wildtierkameras Geraden aus, jede Gerade ist ein
          Perzeptron, zusammen ergeben sie ein Netz – am Ende deckt sich die Karte auf,
-         und ein Vergleich zeigt, was Overfitting ist. <em>Netz durchrechnen</em> übt
-         z und y′ an festen Netzen, im <em>Freien Bauen</em> klickt man ein Netz selbst
-         zusammen. Bei
-         <strong>Netze trainieren</strong> gibt ein Szenario Ein- und Ausgänge vor
-         (Logik-Gatter, 7-Segment-Ziffer, Zielscheibe, echte Greifvögel oder eigene
-         CSV-Daten), Schichten und Neuronen dazwischen wählt man selbst – dann lernt
-         das Netz mit einstellbarer Lernrate.</p>
+         und ein Vergleich zeigt, was Overfitting ist. Bei <strong>Lernen</strong>
+         gibt ein Szenario Ein- und Ausgänge vor (Logik-Gatter, 7-Segment-Ziffer,
+         Zielscheibe, echte Greifvögel), Schichten und Neuronen dazwischen wählt man
+         selbst – dann lernt das Netz mit einstellbarer Lernrate. <strong>Frei</strong>
+         ist die offene Werkstatt: alles selbst bauen und eine eigene CSV-Tabelle laden.</p>
       <p>Die Lehrkraft gibt Bereiche, Kacheln und einzelne Szenarien frei. Arbeitsblätter
          druckt sie direkt: das Revier mit Lösungsseite, Netz-Aufgaben und die
          Druckansicht des freien Feldes.</p>`

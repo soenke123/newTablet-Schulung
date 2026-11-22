@@ -34,6 +34,7 @@
     bauen: '<svg viewBox="0 0 64 40"><circle cx="8" cy="12" r="5"/><circle cx="8" cy="28" r="5"/><rect x="26" y="5" width="12" height="10" rx="4"/><rect x="26" y="25" width="12" height="10" rx="4"/><rect x="48" y="15" width="12" height="10" rx="4"/><path d="M13 12 L26 10 M13 12 L26 30 M13 28 L26 10 M13 28 L26 30 M38 10 L48 20 M38 30 L48 20"/></svg>',
     trainieren: '<svg viewBox="0 0 64 40"><path d="M4 6 V36 H60"/><path d="M8 10 C18 12 20 28 30 30 S50 33 58 33" class="hl"/></svg>',
     'v-revier': '<svg viewBox="0 0 64 40"><path d="M4 30 L60 14" class="hl"/><path d="M4 8 L40 36" /><rect x="40" y="4" width="14" height="10" rx="2"/><circle cx="47" cy="9" r="2.5" class="fill"/><rect x="10" y="22" width="12" height="9" rx="2"/></svg>',
+    frei: '<svg viewBox="0 0 64 40"><circle cx="8" cy="12" r="5"/><circle cx="8" cy="28" r="5"/><rect x="28" y="14" width="12" height="10" rx="4"/><rect x="48" y="14" width="12" height="10" rx="4"/><path d="M13 12 L28 17 M13 28 L28 21 M40 19 H48"/><text x="26" y="8" font-size="8" font-weight="800" stroke="none" fill="currentColor">CSV</text></svg>',
     'v-rechnen': '<svg viewBox="0 0 64 40"><rect x="4" y="6" width="14" height="8" rx="3"/><rect x="4" y="26" width="14" height="8" rx="3"/><path d="M18 10 L30 20 M18 30 L30 20"/><rect x="30" y="12" width="16" height="16" rx="5"/><path d="M46 20 H52"/><text x="56" y="25" font-size="13" font-weight="800" stroke="none" fill="currentColor">=</text></svg>',
   };
   const SC_ICON = {
@@ -41,14 +42,12 @@
     seg7: '<svg viewBox="0 0 30 46"><path class="hl" d="M7 4 H23 M25 6 V21 M25 25 V40 M7 42 H23 M5 25 V40 M5 6 V21 M7 23 H23"/></svg>',
     zielscheibe: '<svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="20"/><circle cx="23" cy="23" r="12"/><circle cx="23" cy="23" r="4" class="fill"/></svg>',
     voegel: '<svg viewBox="0 0 60 40"><path class="hl" d="M4 22 C14 10 22 12 30 20 C38 12 46 10 56 22 C46 18 38 20 30 28 C22 20 14 18 4 22 Z"/></svg>',
-    custom: '<b class="t-big">CSV</b>',
   };
   const SC_TEXT = {
     gates: 'AND, OR, NOT A und XOR gleichzeitig lernen – XOR geht nicht mit einer Schicht.',
     seg7: 'Welche Ziffer zeigt die 7-Segment-Anzeige? Sieben Eingänge, eine Zahl als Ausgabe.',
     zielscheibe: 'Wo trifft der Pfeil? Aus (x, y) die Punkte vorhersagen – 1500 Würfe.',
     voegel: '180 echte Greifvögel: Aus Flügel und Gewicht die Art erkennen.',
-    custom: 'Eigene Tabelle als CSV hochladen: Spalten „input“ und „output“.',
   };
 
   const AREAS = [
@@ -58,16 +57,22 @@
         // ohne eigene Kachel: Knopf auf n-wie, wird immer mit n-wie geteilt
         { id: 'n-typen', title: 'Alle Neuronen', text: 'Perceptron, Linear, ReLU, Sigmoid und Tanh im Überblick.', with: 'n-wie' },
       ] },
-    { id: 'bauen', title: 'Vom Neuron zum Netz', text: 'Aus Geraden wird ein Netz: erst rechnen und verstehen, dann frei bauen.',
+    { id: 'bauen', title: 'Vom Neuron zum Netz', text: 'Aus Geraden wird ein Netz – und am Ende baust du frei.',
       items: [
-        { id: 'v-revier', title: 'Das Revier der Wildkatzen', text: 'Wildtierkameras im Tal: Jede Grenze ist ein Neuron – rechne die Geraden aus und schließ sie zu einem Netz zusammen.' },
-        { id: 'v-rechnen', title: 'Netz durchrechnen', text: 'Ein Netz mit festen Zahlen: z und y′ jedes Neurons selbst ausrechnen – oder ein fehlendes Gewicht finden.' },
-        { id: 'b-frei', title: 'Freies Bauen', text: 'Schichten und Neuronen setzen, Typ wählen, Gewichte und Bias festlegen (Build) – dann Eingaben ändern und rechnen lassen (Run).' },
+        { id: 'v-revier', title: 'Wildkatzen', text: 'Wildtierkameras im Tal: Jede Grenze ist ein Neuron – rechne die Geraden aus und schließ sie zu einem Netz zusammen.' },
+        { id: 'b-frei', title: 'Frei', text: 'Alles selbst: Schichten und Neuronen setzen, eigene CSV-Tabelle hineinladen und das Netz lernen lassen.' },
       ] },
-    { id: 'trainieren', title: 'Netze trainieren', text: 'Das Netz findet die Gewichte selbst. Das Szenario wählst du im Modus.',
-      items: App.scenarios().map(e => ({ id: e.id, key: e.key, title: e.name, text: SC_TEXT[e.key] || '' })) },
+    { id: 'trainieren', title: 'Lernen', text: 'Das Netz findet die Gewichte selbst. Das Szenario wählst du im Modus.',
+      items: App.scenarios().filter(e => e.key !== 'custom').map(e => ({ id: e.id, key: e.key, title: e.name, text: SC_TEXT[e.key] || '' })) },
   ];
   const ALL_PARTS = AREAS.flatMap(a => [a.id, ...a.items.map(i => i.id)]);
+  /* Startseite = vier Kacheln: Neuronen · Wildkatzen · Lernen · Frei */
+  const HOME = [
+    { id: 'n-wie', area: 'neuron', title: 'Neuronen', text: 'Ein Neuron Stück für Stück aufdecken – und alle Neuronen im Überblick.', art: 'neuron' },
+    { id: 'v-revier', area: 'bauen', title: 'Wildkatzen', text: 'Wildtierkameras im Tal: Aus Geraden wird ein Netz – erst rechnen, dann sehen.', art: 'v-revier' },
+    { id: 'trainieren', area: 'trainieren', title: 'Lernen', text: 'Szenario wählen, Schichten dazwischen bauen – und zusehen, wie das Netz lernt.', art: 'trainieren' },
+    { id: 'b-frei', area: 'bauen', title: 'Frei', text: 'Komplett frei bauen und eine eigene CSV-Tabelle hineinladen.', art: 'frei' },
+  ];
   const DEFAULT_PARTS = ['neuron', 'n-wie', 'n-typen'];
 
   /* ── Freigaben ───────────────────────────────────────────── */
@@ -80,6 +85,7 @@
     const a = areaOf(id);
     return !!a && shared(a.id) && (id === a.id || shared(id));
   }
+  const tileOn = t => usable(t.id) && (!parts || (t.id === 'trainieren' ? shared('trainieren') : shared(t.id) && shared(t.area)));
   function sendUp(m) { if (window.parent === window) return; try { window.parent.postMessage(m, location.origin); } catch (e) { /* zu */ } }
   function setParts(list, fromServer) {
     parts = (list || []).filter(x => ALL_PARTS.includes(x));
@@ -89,6 +95,7 @@
     if (STUDENT && where.id && !usable(where.id)) goHome();
     else if (where.view === 'home') renderHome();
     else if (where.view === 'neuron') renderNeuron();
+    else if (where.view === 'lab' && where.area === 'lernen' && where.id === 'b-frei') App.render();
     else if (where.view === 'lab' && where.area === 'lernen') {
       App.render();
       if (!$('scen-picker').hidden || (STUDENT && where.sc && !usable(where.sc))) showPicker();
@@ -99,6 +106,11 @@
     const a = AREAS.find(x => x.id === id);
     let next;
     const ids = id === 'n-wie' ? ['n-wie', 'n-typen'] : [id];
+    const ht = HOME.find(t => t.id === id && t.id !== 'trainieren');
+    if (ht) {   // Kachel der Startseite: Teil + sein Bereich zusammen
+      next = shared(id) ? parts.filter(x => !ids.includes(x)) : parts.concat(ids.concat(ht.area).filter(x => !parts.includes(x)));
+      setParts(next, false); return;
+    }
     if (shared(id)) next = parts.filter(x => !ids.includes(x));
     else if (a && !a.items.some(i => shared(i.id))) next = parts.concat(id, a.items.map(i => i.id));
     else next = parts.concat(ids.filter(x => !parts.includes(x)));
@@ -123,33 +135,26 @@
     document.documentElement.dataset.view = v;
     $('area-title').textContent = title || '';
     $('btn-print').hidden = STUDENT;
-    $('btn-scen').hidden = v !== 'lab' || !where || where.area !== 'lernen';
+    $('btn-scen').hidden = v !== 'lab' || !where || where.area !== 'lernen' || where.id === 'b-frei';
     if (v !== 'lab') document.body.className = DEMO ? 'demo-mode' : '';
   }
 
   function renderHome() {
     const box = $('areas');
-    const visible = AREAS.filter(a => !STUDENT || DEMO || shared(a.id));
+    const visible = HOME.filter(t => !STUDENT || DEMO || usable(t.id) && (t.id !== 'trainieren' || AREAS[2].items.some(i => usable(i.id))));
     $('wait').hidden = visible.length > 0;
-    box.innerHTML = visible.map(a => {
-      const tiles = a.id === 'trainieren' ? trainTile(a) : a.items.filter(it => !it.with).map(it => {
-        const ok = usable(it.id);
-        const art = ICON[it.id] || ICON[a.id];
-        const share = TEACHER ? `<button class="share${shared(it.id) ? ' on' : ''}" data-share="${it.id}" title="${shared(it.id) ? 'Geteilt – antippen zum Entziehen' : 'Mit der Klasse teilen'}">${SHARE_SVG}<span>${shared(it.id) ? 'Geteilt' : 'Teilen'}</span></button>` : '';
-        // Abkürzung auf der Kachel: „Alle Neuronen“ direkt öffnen
-        const sub = a.items.filter(x => x.with === it.id).map(x => `<button type="button" class="tile-sub" data-open="${x.id}"${ok ? '' : ' disabled'}>${esc(x.title)} ›</button>`).join('');
-        return `<div class="tile${ok ? '' : ' locked'}" data-id="${it.id}" role="button" tabindex="0">
-          <div class="tile-art">${art}</div>
-          <div class="tile-body"><b>${esc(it.title)}</b><span>${esc(it.text)}</span>${sub ? `<span class="tile-subs">${sub}</span>` : ''}</div>
-          ${ok ? '' : `<span class="lock">${LOCK_SVG}</span>`}${share}
-        </div>`;
-      }).join('');
-      const share = TEACHER ? `<button class="share area-share${shared(a.id) ? ' on' : ''}" data-share="${a.id}">${SHARE_SVG}<span>${shared(a.id) ? 'Bereich geteilt' : 'Bereich teilen'}</span></button>` : '';
-      return `<section class="area area-${a.id}" data-area="${a.id}">
-        <div class="area-head"><div><h2>${esc(a.title)}</h2><p>${esc(a.text)}</p></div>${share}</div>
-        <div class="tiles">${tiles}</div>
-      </section>`;
-    }).join('');
+    box.innerHTML = '<div class="tiles tiles-four">' + visible.map(t => {
+      const ok = usable(t.id) && (t.id !== 'trainieren' || AREAS[2].items.some(i => usable(i.id)));
+      const on = TEACHER && shared(t.id) && (t.id === 'trainieren' || shared(t.area));
+      const share = TEACHER ? `<button class="share${on ? ' on' : ''}" data-share="${t.id}" title="${on ? 'Geteilt – antippen zum Entziehen' : 'Mit der Klasse teilen'}">${SHARE_SVG}<span>${on ? 'Geteilt' : 'Teilen'}</span></button>` : '';
+      const sub = t.id === 'n-wie' ? `<span class="tile-subs"><button type="button" class="tile-sub" data-open="n-typen"${ok ? '' : ' disabled'}>Alle Neuronen ›</button></span>` : '';
+      const note = TEACHER && t.id === 'trainieren' ? `<span class="tile-note">${AREAS[2].items.filter(i => shared(i.id)).length} von ${AREAS[2].items.length} Szenarien geteilt – einzeln teilen im Modus</span>` : '';
+      return `<div class="tile area-${t.area}${ok ? '' : ' locked'}" data-id="${t.id}" role="button" tabindex="0">
+        <div class="tile-art">${ICON[t.art] || ''}</div>
+        <div class="tile-body"><b>${esc(t.title)}</b><span>${esc(t.text)}</span>${note}${sub}</div>
+        ${ok ? '' : `<span class="lock">${LOCK_SVG}</span>`}${share}
+      </div>`;
+    }).join('') + '</div>';
     box.querySelectorAll('[data-share]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); toggleShare(b.dataset.share); }));
     box.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); open(b.dataset.open); }));
     box.querySelectorAll('.tile').forEach(t => {
@@ -157,19 +162,6 @@
       t.addEventListener('click', go);
       t.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     });
-  }
-
-  /* „Netze trainieren“ = EIN Knopf. Zählt für die Lehrkraft, wie viele
-     Szenarien geteilt sind; die Szenarien selbst stehen im Modus. */
-  function trainTile(a) {
-    const scs = a.items, ok = usable(a.id) && scs.some(i => usable(i.id));
-    const n = scs.filter(i => shared(i.id)).length;
-    const info = TEACHER ? `<span class="tile-note">${n} von ${scs.length} Szenarien geteilt – einzeln teilen im Modus</span>` : '';
-    return `<div class="tile tile-wide${ok ? '' : ' locked'}" data-id="${a.id}" role="button" tabindex="0">
-      <div class="tile-art">${ICON.trainieren}</div>
-      <div class="tile-body"><b>Netze trainieren</b><span>Szenario wählen (${scs.map(i => esc(i.title)).join(' · ')}), Schichten dazwischen bauen – und zusehen, wie das Netz lernt.</span>${info}</div>
-      ${ok ? '' : `<span class="lock">${LOCK_SVG}</span>`}
-    </div>`;
   }
 
   /* Szenario-Wahl im Modus „Netze trainieren“ (#scen-picker) */
@@ -211,8 +203,9 @@
     if (!a) return;
     $('scen-picker').hidden = true;
     if (a.id === 'neuron') { where = { view: 'neuron', id }; renderNeuron(); }
-    else if (id === 'v-revier' || id === 'v-rechnen') { where = { view: 'netz', id }; renderNetz(); }
-    else if (a.id === 'bauen') { where = { view: 'lab', area: 'bauen', id }; setView('lab', 'Freies Bauen'); App.enterArea('bauen'); }
+    else if (id === 'v-revier') { where = { view: 'netz', id }; renderNetz(); }
+    else if (id === 'b-frei') { where = { view: 'lab', area: 'lernen', id, sc: 'sc-eigene' }; setView('lab', 'Frei'); App.enterArea('lernen', 'custom'); }
+    else if (a.id === 'bauen') return;
     else {
       // Kachel „Netze trainieren“ (id = Bereich) oder direkt ein Szenario
       let it = a.items.find(i => i.id === id);
@@ -228,11 +221,9 @@
   }
 
   function renderNetz() {
-    const it = AREAS[1].items.find(i => i.id === where.id);
-    setView('netz', it ? it.title : '');
+    setView('netz', 'Wildkatzen');
     const pg = $('netz-page');
-    if (where.id === 'v-revier') window.NLRevier.render(pg, {});
-    else window.NLRechnen.render(pg);
+    window.NLRevier.render(pg, {});
     pg.scrollTop = 0;
   }
 

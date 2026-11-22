@@ -1703,9 +1703,13 @@ const SCENARIO_LIST = [
   { key: 'custom',      id: 'sc-eigene', name: 'Eigene Daten' },
 ];
 // Darf diese Person das Szenario wählen? (Freigaben aus js/start.js)
+/* „Lernen“ zeigt die festen Szenarien, „Frei“ nur die eigene CSV (freeMode,
+   gesetzt von enterArea). Die Freigabe der eigenen Daten hängt an der Kachel „Frei“. */
+let freeMode = false;
 function scenarioAllowed(key) {
+  if ((key === 'custom') !== freeMode) return false;
   const e = SCENARIO_LIST.find(x => x.key === key);
-  return !e || !window.NLStart || window.NLStart.usable(e.id);
+  return !e || !window.NLStart || window.NLStart.usable(key === 'custom' ? 'b-frei' : e.id);
 }
 
 // ── Custom CSV parsing ─────────────────────────────────────────────────────
@@ -3196,7 +3200,7 @@ const STORAGE_KEY = 'neuron-sim-v2';
    liegen, während man im Lernbereich ein Szenario trainiert. Der alte
    Schlüssel bleibt der des Baubereichs — wer schon ein Netz hatte, findet
    es dort wieder. */
-const storageKey = () => (state.area === 'lernen' ? STORAGE_KEY + '-lernen' : STORAGE_KEY);
+const storageKey = () => (state.area === 'lernen' ? STORAGE_KEY + (freeMode ? '-frei' : '-lernen') : STORAGE_KEY);
 
 /* Schaufenster-Modus (MPSkills). Wird von tools/NeuroLab/tool.js an den
    <iframe> gehängt, wenn NeuroLab in der Vorschau der Landing läuft und
@@ -5103,7 +5107,7 @@ function demoState() {
   /* Bauen: das Anfangsnetz. Lernen: XOR als „Eigene Daten“ (siehe oben),
      Ausgang fest, 3 → 3 tanh dazwischen. */
   resetState();
-  if (state.area !== 'lernen') return;
+  if (state.area !== 'lernen' || !freeMode) return;
   state.learn.scenario       = 'custom';
   state.learn.customData     = DEMO_DATA;
   state.learn.customFileName = 'XOR (Beispiel)';
@@ -5121,8 +5125,10 @@ function enterArea(area, scenarioKey) {
   stopTraining();
   closePopupSilently();
   state.area = area;
+  freeMode = area === 'lernen' && scenarioKey === 'custom';
   view.touched = false;
-  const loaded = DEMO ? (demoMem[area] ? (Object.assign(state, JSON.parse(demoMem[area])), true) : false) : loadState();
+  const memKey = area + (freeMode ? '-frei' : '');
+  const loaded = DEMO ? (demoMem[memKey] ? (Object.assign(state, JSON.parse(demoMem[memKey])), true) : false) : loadState();
   if (!loaded) { if (DEMO) demoState(); else resetState(); }
   if (area === 'lernen') {
     state.phase = 'learn';
@@ -5130,7 +5136,7 @@ function enterArea(area, scenarioKey) {
     else if (state.learn.scenario && !scenarioAllowed(state.learn.scenario)) resetState();
     else if (state.learn.scenario && state.learn.scenario !== 'custom' && !shapeMatchesScenario()) applyScenarioInputsOnly(state.learn.scenario);
     // Eigene Daten: Info-Kasten mit dem Hochladen gleich offen (nicht im Schaufenster, da verdeckt er das Netz)
-    if (scenarioKey === 'custom' && !DEMO) state.learn.infoPanelOpen = true;
+    if (freeMode && !DEMO) state.learn.infoPanelOpen = true;
   } else if (state.phase === 'learn') {
     state.phase = 'build';
   }
@@ -5142,7 +5148,7 @@ function leaveArea() {
   if (printMode) { printMode = false; document.getElementById('btn-print').classList.remove('active'); }
   if (DEMO && state.area) {
     const { learn, ...rest } = state;
-    demoMem[state.area] = JSON.stringify({ ...rest, learn: { ...learn, intervalId: null, isTraining: false } });
+    demoMem[state.area + (freeMode ? '-frei' : '')] = JSON.stringify({ ...rest, learn: { ...learn, intervalId: null, isTraining: false } });
   }
   saveState();
   state.area = null;
