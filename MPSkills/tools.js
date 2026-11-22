@@ -61,7 +61,7 @@ window.TOOLS_OVERLAY = {
   // Großschreibung, weil der Ordner so aus seinem eigenen Repository
   // kam; dass die id davon abweichen darf, ist genau der Grund für
   // die folder-Spalte in skill_tools.
-  neurolab:  { ready: true, subtitle: 'Überwachtes Lernen · Neuronale Netze', learning: true },
+  neurolab:  { ready: true, subtitle: 'Überwachtes Lernen · Neuronale Netze', learning: true, beta: true },
   // Dritter Skill (Migration 0092). Liegt unter tools/Caesercode/ —
   // wieder ein Ordner, dessen Name nicht die id ist, diesmal wegen
   // eines Drehers darin. Anders als NeuroLab ist die Scheibe
@@ -89,7 +89,7 @@ window.TOOLS_OVERLAY = {
   // beta: zeigt einen „Beta"-Sticker auf der Kachel (26.09.2026) — der
   // Skill läuft, ist aber noch nicht rund; das ist eine Auskunft über die
   // Auslieferung, nicht über die Datenbankzeile, gehört also hierher.
-  knowledgestack: { ready: true, subtitle: 'Klassenquiz', beta: true, editor: 'quiz.html' },
+  knowledgestack: { ready: true, subtitle: 'Klassenquiz', editor: 'quiz.html' },
   // Achter Skill (Migration 0180) — Netzwerksimulator, dritter
   // eingerahmter nach NeuroLab und Wild Clusters. Die Lehrkraft gibt
   // Szenarien frei, holt Netze auf den Beamer und schaltet die
@@ -137,7 +137,7 @@ window.TOOLS_OVERLAY = {
   // gebaut (tools/DefinitionsDerby/tool.js, kein iframe). Seit Migration
   // 0237 für alle Lehrkräfte sichtbar (vorher nur Admins), Schaufenster:
   // preview/derby.js. beta: Lernformen kommen noch dazu (29.10.2026).
-  derby: { ready: true, subtitle: 'Fachbegriffe vielseitig üben', beta: true, editor: 'derby.html', editorLabel: 'Stapel-Editor' },
+  derby: { ready: true, subtitle: 'Fachbegriffe vielseitig üben', editor: 'derby.html', editorLabel: 'Stapel-Editor' },
   // Sechzehnter Skill (Migration 0242) — Reinforce Yourself: kam aus dem
   // GameHub (S2), ohne Begleiter, Quizze und Punkte. Vier Phasen
   // (Gegen die KI · Training · zwei Umgebungen · Sandbox), eingerahmt wie Tiny LM
@@ -159,7 +159,7 @@ window.TOOLS_OVERLAY = {
   // Seit Migration 0283 für alle Lehrkräfte (vorher admin_only – ohne 2FA
   // war die Kachel weg und das Anlegen schlug fehl). Schaufenster:
   // preview/socialhub.js (echte App mit ?demo=1, js/demo.js spielt den Server).
-  socialhub: { ready: true, subtitle: 'Eigenes soziales Netzwerk & Datenbank', beta: true },
+  socialhub: { ready: true, subtitle: 'Eigenes soziales Netzwerk & Datenbank' },
   // Neunzehnter Skill (Migration 0290) — Nebeltal: Prototyp zum
   // Gradientenabstieg. Im Nebel den tiefsten Punkt einer 3D-Landschaft
   // suchen, vom freien Laufen bis zum Training eines Modells mit
