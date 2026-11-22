@@ -1418,3 +1418,31 @@ body.print-mode .random-btn {
    sind es vier XOR-Zeilen, die vollständig dastehen sollen. */
 body.demo-mode .net-zoom { display: none; }
 body.demo-mode .data-table-col .col-body { overflow: hidden; max-height: none; }
+
+/* ── Wert mit − / + und Eintippen (Build: Kante, Bias · Test: Eingaben) ── */
+.nl-pm { display: flex; align-items: stretch; width: 100%; height: 100%; box-sizing: border-box;
+  border: 1.5px solid var(--line); border-radius: 9px; background: var(--surface); overflow: hidden;
+  font-family: var(--mono); }
+.nl-pm-btn { flex: 0 0 22px; border: 0; background: var(--surface-2); color: var(--ink); font: 700 13px/1 var(--mono);
+  padding: 0; cursor: pointer; touch-action: manipulation; }
+.nl-pm-btn:active { background: var(--accent-dim, var(--line)); }
+.nl-pm-val { flex: 1 1 auto; min-width: 0; width: 100%; border: 0; background: transparent; color: var(--ink);
+  text-align: center; font: 700 11px var(--mono); padding: 0; }
+.nl-pm-val:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
+.nl-pm-edge { border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.nl-pm-edge .nl-pm-btn { flex-basis: 18px; font-size: 12px; }
+.nl-pm-edge .nl-pm-val { font-size: 10.5px; }
+.nl-pm-bias .nl-pm-val { font-size: 12px; }
+.nl-pm-in { height: 30px; min-width: 96px; }
+.nl-pm-in .nl-pm-val { font-size: 13px; }
+.learn-scenario-name { font-weight: 700; color: var(--ink); }
+.edge-label-edit { cursor: pointer; }
+.edge-label-edit rect { stroke: var(--accent) !important; stroke-width: 1.2 !important; }
+.bias-edit-box { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+.bias-edit:hover .bias-edit-box { stroke: var(--accent); }
+.nl-vpop { position: fixed; z-index: 3000; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px;
+  background: var(--surface); border: 1.5px solid var(--accent); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.22); }
+.nl-vpop-title { font: 700 .68rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
+.nl-pm-big { width: 170px; height: 40px; border-radius: 10px; }
+.nl-pm-big .nl-pm-btn { flex-basis: 44px; font-size: 20px; }
+.nl-pm-big .nl-pm-val { font-size: 16px; }

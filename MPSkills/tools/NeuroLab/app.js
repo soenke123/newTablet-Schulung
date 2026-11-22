@@ -2847,7 +2847,10 @@ function renderLearnPanel() {
   });
 
   scDrop.append(scDropBtn, scDropList);
-  scRow.append(scLabel, scDrop);
+  const scName = document.createElement('b');
+  scName.className = 'learn-scenario-name';
+  scName.textContent = scOptions.find(([v]) => v === scSel.value)?.[1] ?? '–';
+  scRow.append(scLabel, scName);
   panel.appendChild(scRow);
 
   const btnRow = document.createElement('div');
@@ -3074,6 +3077,70 @@ function svgEl(tag, attrs = {}) {
   return el;
 }
 
+/* Wert mit − und + und zum Eintippen (keine Schieberegler): wie im Bereich
+   „Wie arbeitet ein Neuron?“. onCommit(v) kommt bei − / + und beim Verlassen
+   des Feldes (Enter/Tab). Der Rahmen schluckt die Zeiger-Ereignisse, damit
+   das Feld darunter nicht verschoben wird. */
+function pmFmt(v) { return String(+Number(v).toFixed(4)).replace('.', ','); }
+function makePM(value, onCommit, opts = {}) {
+  const step = opts.step ?? 0.1;
+  const box = document.createElement('div');
+  box.className = 'nl-pm' + (opts.cls ? ' ' + opts.cls : '');
+  const mk = (t, title) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'nl-pm-btn'; b.textContent = t; b.title = title;
+    return b;
+  };
+  const minus = mk('−', 'weniger'), plus = mk('+', 'mehr');
+  const inp = document.createElement('input');
+  inp.type = 'text'; inp.inputMode = 'decimal'; inp.className = 'nl-pm-val';
+  inp.value = pmFmt(value);
+  const read = () => parseFloat(String(inp.value).replace(',', '.'));
+  const commit = v => {
+    if (isNaN(v)) { inp.value = pmFmt(value); return; }
+    v = Math.round(v * 1e4) / 1e4;
+    value = v; inp.value = pmFmt(v); onCommit(v);
+  };
+  minus.addEventListener('click', e => { e.stopPropagation(); commit((isNaN(read()) ? value : read()) - step); });
+  plus.addEventListener('click',  e => { e.stopPropagation(); commit((isNaN(read()) ? value : read()) + step); });
+  inp.addEventListener('change', () => commit(read()));
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); e.stopPropagation(); });
+  inp.addEventListener('focus', () => inp.select());
+  for (const ev of ['pointerdown', 'pointerup', 'click', 'dblclick']) box.addEventListener(ev, e => e.stopPropagation());
+  box.append(minus, inp, plus);
+  return box;
+}
+function makePMObject(x, y, w, h, value, onCommit, opts) {
+  const fo = svgEl('foreignObject', { x, y, width: w, height: h, class: 'nl-pm-fo' });
+  fo.appendChild(makePM(value, onCommit, opts));
+  return fo;
+}
+
+/* Antippen einer Zahl (Kante, Bias) öffnet DIREKT daneben ein Feld mit − / +
+   und Eintippen. Es hängt am <body> des Rahmens, damit es beim Zoomen der
+   Tafel nicht mitschrumpft. Es bleibt offen, bis man daneben tippt. */
+let vpop = null;
+function closeValuePop() { if (vpop) { vpop.remove(); vpop = null; document.removeEventListener('pointerdown', vpopAway, true); } }
+function vpopAway(e) { if (vpop && !vpop.contains(e.target)) closeValuePop(); }
+function openValuePop(anchor, title, value, onCommit, step = 0.1) {
+  closeValuePop();
+  const r = anchor.getBoundingClientRect();
+  vpop = document.createElement('div');
+  vpop.className = 'nl-vpop';
+  const t = document.createElement('span');
+  t.className = 'nl-vpop-title'; t.textContent = title;
+  const pm = makePM(value, onCommit, { step, cls: 'nl-pm-big' });
+  vpop.append(t, pm);
+  document.body.appendChild(vpop);
+  const w = vpop.offsetWidth, h = vpop.offsetHeight;
+  const x = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2));
+  let y = r.top - h - 8;
+  if (y < 6) y = r.bottom + 8;
+  vpop.style.left = x + 'px'; vpop.style.top = y + 'px';
+  setTimeout(() => document.addEventListener('pointerdown', vpopAway, true), 0);
+  const inp = pm.querySelector('input'); if (inp) { inp.focus(); inp.select(); }
+}
+
 function makeSVGInput(value, onChange) {
   const fo = svgEl('foreignObject', { x: 0, y: 0, width: 1, height: 1 });
   const inp = document.createElement('input');
@@ -3200,7 +3267,10 @@ const STORAGE_KEY = 'neuron-sim-v2';
    liegen, während man im Lernbereich ein Szenario trainiert. Der alte
    Schlüssel bleibt der des Baubereichs — wer schon ein Netz hatte, findet
    es dort wieder. */
-const storageKey = () => (state.area === 'lernen' ? STORAGE_KEY + (freeMode ? '-frei' : '-lernen') : STORAGE_KEY);
+/* Jedes Szenario (und „Frei“) hat sein eigenes gemerktes Netz: wer zwischen
+   den Szenarien wechselt, findet jedes so wieder, wie er es verlassen hat. */
+let scKey = null;
+const storageKey = () => (state.area === 'lernen' ? STORAGE_KEY + '-sc-' + (scKey || 'none') : STORAGE_KEY);
 
 /* Schaufenster-Modus (MPSkills). Wird von tools/NeuroLab/tool.js an den
    <iframe> gehängt, wenn NeuroLab in der Vorschau der Landing läuft und
@@ -3257,7 +3327,7 @@ function loadState() {
     const data = JSON.parse(localStorage.getItem(storageKey()));
     if (!data) return false;
     // Bauen kennt nur Build/Run, Lernen nur Lernen (alte Stände hatten alle drei).
-    state.phase = state.area === 'lernen' ? 'learn' : (data.phase === 'run' ? 'run' : 'build');
+    state.phase = data.phase === 'run' ? 'run' : (data.phase === 'learn' && state.area === 'lernen' ? 'learn' : 'build');
     state.numInputs = data.numInputs ?? 2;
     if (Array.isArray(data.inputs))       data.inputs.forEach((v, i)       => { state.inputs[i] = v; });
     if (Array.isArray(data.inputSpacing)) data.inputSpacing.forEach((v, i) => { state.inputSpacing[i] = v; });
@@ -3538,7 +3608,7 @@ function zoomBy(k) {
    behalten ihre eigene Geste. */
 function isFieldBackground(t) {
   return !t.closest('.col-header, .neuron-card, .input-node-row, .out-slot, ' +
-                    '.data-table-col, #learn-group, .net-zoom, ' +
+                    '.data-table-col, #learn-group, .net-zoom, .edge-label-edit, .bias-edit, ' +
                     'button, input, select, textarea, a');
 }
 
@@ -3690,7 +3760,10 @@ function render() {
 function renderHeader() {
   document.getElementById('btn-build').classList.toggle('active', state.phase === 'build');
   document.getElementById('btn-run').classList.toggle('active', state.phase === 'run');
-  const hints = { build: 'Neuronen, Verbindungen & Typ einstellen', run: 'Eingaben setzen & berechnen', learn: 'Szenario wählen, Netz bauen & trainieren' };
+  const bl = document.getElementById('btn-learn');
+  bl.hidden = !isLearnArea();
+  bl.classList.toggle('active', state.phase === 'learn');
+  const hints = { build: 'Netz bauen: Neuronen, Gewichte und Bias einstellen', run: 'Test: Eingaben ändern und das Ergebnis sehen', learn: 'Lernen: zusehen, wie das Netz mit den Daten trainiert' };
   document.getElementById('phase-hint-text').textContent = hints[state.phase] || '';
 }
 
@@ -3779,7 +3852,7 @@ function renderNetwork() {
   put(renderInputsCol(), 0);
   for (let i = 0; i < L; i++) put(renderLayerCol(i), i + 1);
   // Schicht dazu: immer hinter der letzten Schicht (beim Lernen vor den Ausgängen)
-  if (!printMode && state.phase !== 'run' && L < MAX_LAYERS) put(renderAddLayerCol(), L);
+  if (!printMode && state.phase === 'build' && L < MAX_LAYERS) put(renderAddLayerCol(), L);
   if (isLearnArea() && state.outputLabels.length) put(renderOutputsCol(), L);
   if (state.phase === 'learn' && state.learn.scenario) put(renderDataTableCol(), L + 1);
 
@@ -3913,7 +3986,7 @@ function renderInputsCol() {
   const inputHdr = makeColHeader('Eingaben', state.numInputs,
     () => { if (state.numInputs > 0) { state.numInputs--; resyncWeights(0); render(); } },
     () => { if (state.numInputs < 10) { state.numInputs++; resyncWeights(0); render(); } },
-    state.phase !== 'build'
+    state.phase !== 'build' || isLearnArea()
   );
   col.appendChild(inputHdr);
   if (state.phase === 'run' || state.phase === 'learn') {
@@ -3944,6 +4017,7 @@ function renderInputsCol() {
       const lbl = document.createElement('span');
       lbl.className = 'node-run-input-label';
       lbl.textContent = state.inputLabels[i] || `x${i + 1}`;
+      const pm = state.phase === 'run' ? makePM(state.inputs[i], v => { state.inputs[i] = v; updateNeuronDisplays(); }, { step: 1, cls: 'nl-pm-in' }) : null;
       const inp = document.createElement('input');
       inp.type = 'number';
       inp.className = 'node-run-input-field';
@@ -3965,7 +4039,7 @@ function renderInputsCol() {
         }
       });
       inp.addEventListener('pointerdown', e => e.stopPropagation());
-      rect.append(lbl, inp);
+      if (pm) rect.append(lbl, pm); else rect.append(lbl, inp);
       row.appendChild(rect);
     } else {
       const circle = document.createElement('div');
@@ -4053,7 +4127,7 @@ function renderLayerCol(layerIdx) {
     () => {
       if (layer.count < 10) {
         const newNeuron = makeNeuron(inCount);
-        if (state.phase === 'learn' && inCount > 0) {
+        if (isLearnArea() && inCount > 0) {
           const scale = newNeuron.type === 'relu'
             ? Math.sqrt(2 / inCount) : 1 / Math.sqrt(inCount);
           newNeuron.weights = newNeuron.weights.map(() => (Math.random() - 0.5) * 2 * scale);
@@ -4066,7 +4140,7 @@ function renderLayerCol(layerIdx) {
       }
     },
     // Der Ausgang beim Lernen hat so viele Neuronen, wie das Szenario Ausgaben hat.
-    state.phase === 'run' || fixedOut
+    state.phase !== 'build' || fixedOut
   );
   col.appendChild(layerHdr);
   addColumnDrag(layerHdr, layerIdx + 1);
@@ -4093,7 +4167,7 @@ function renderLayerCol(layerIdx) {
     ph.textContent = 'Leer';
     body.appendChild(ph);
     // Leere Schicht wieder weg (nicht der feste Ausgang, nicht die letzte Spalte)
-    if (!printMode && state.phase !== 'run' && state.layers.length > 1 && !fixedOut) {
+    if (!printMode && state.phase === 'build' && state.layers.length > 1 && !fixedOut) {
       const rm = document.createElement('button');
       rm.className = 'col-remove-btn';
       rm.textContent = '× Schicht entfernen';
@@ -4312,12 +4386,17 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
     const bLabel = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 4, class: 'bias-cap', 'text-anchor': 'middle' });
     bLabel.textContent = 'BIAS';
     svg.appendChild(bLabel);
-    const bFo = makeSVGInput(neuron.bias, v => { neuron.bias = v; });
-    bFo.setAttribute('x', BIAS_X - 22);
-    bFo.setAttribute('y', BIAS_Y_BOT + 8);
-    bFo.setAttribute('width', '44');
-    bFo.setAttribute('height', '22');
-    svg.appendChild(bFo);
+    const bBtn = svgEl('g', { class: 'bias-edit', style: 'cursor:pointer' });
+    bBtn.appendChild(svgEl('rect', { x: BIAS_X - 34, y: BIAS_Y_BOT + 8, width: 68, height: 20, rx: 8, class: 'bias-edit-box' }));
+    const bTxt = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 22, 'text-anchor': 'middle', class: 'bias-label', 'data-bias-display': '' });
+    bTxt.textContent = `b = ${fmtV(neuron.bias)}`;
+    bBtn.appendChild(bTxt);
+    bBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      openValuePop(bBtn, 'Bias', neuron.bias, v => { neuron.bias = v; updateNeuronDisplays(); });
+    });
+    bBtn.addEventListener('pointerdown', e => e.stopPropagation());
+    svg.appendChild(bBtn);
   } else {
     const bText = svgEl('text', { x: BIAS_X, y: BIAS_Y_BOT + 14, class: 'bias-label', 'text-anchor': 'middle', 'data-bias-display': '' });
     bText.textContent = `b = ${fmtV(neuron.bias)}`;
@@ -4446,14 +4525,22 @@ function placeEdgeLabels(edges, obstacles = []) {
   const order = edges.slice().sort((a, b) => Math.abs(b.w) - Math.abs(a.w));
   for (const e of order) {
     const label = printMode && printOpts.weights === 'gap' ? GAP : fmtV(e.w);
-    const w = label.length * 6 + 7, h = 13, pad = 1;
+    const editing = state.phase === 'build' && !printMode;
+    const w = label.length * 6 + 7 + (editing ? 6 : 0), h = editing ? 15 : 13, pad = 1;
+    let done = false;
     for (const t of EDGE_LABEL_T) {
       const x = e.src.x + (e.tgt.x - e.src.x) * t;
       const y = e.src.y + (e.tgt.y - e.src.y) * t;
       const box = { l: x - w / 2 - pad, r: x + w / 2 + pad, t: y - 7 - pad, b: y - 7 + h + pad };
       if (placed.some(o => box.l < o.box.r && box.r > o.box.l && box.t < o.box.b && box.b > o.box.t)) continue;
-      placed.push({ x, y, w, label, color: e.color, box });
+      placed.push({ x, y, w, label, color: e.color, box, edge: e });
+      done = true;
       break;
+    }
+    // Beim Bauen bekommt JEDE Kante ihr Eingabefeld, auch wenn es eng wird
+    if (!done && editing) {
+      const x = (e.src.x + e.tgt.x) / 2, y = (e.src.y + e.tgt.y) / 2;
+      placed.push({ x, y, w, label, color: e.color, box: { l: x - w / 2, r: x + w / 2, t: y - 7, b: y - 7 + h }, edge: e });
     }
   }
   return placed.filter(p => p.label !== undefined);
@@ -4534,7 +4621,7 @@ function drawEdgeOverlay(net) {
         /* Farbe = Vorzeichen (türkis +, rot −), Dicke = Stärke — wie überall
            in NeuroLab und Nebeltal. theme.js setzt die Farben fürs Thema um. */
         const w = neuron.weights[si] ?? 1;
-        edges.push({ src, tgt, w, color: Math.abs(w) < 0.01 ? '#94a3b8' : w < 0 ? '#dc2626' : '#10b981' });
+        edges.push({ neuron, si, src, tgt, w, color: Math.abs(w) < 0.01 ? '#94a3b8' : w < 0 ? '#dc2626' : '#10b981' });
       });
     });
   }
@@ -4568,6 +4655,7 @@ function drawEdgeOverlay(net) {
           werden beim Herauszoomen nie dünner als die Untergrenze. */
   const lineLayer  = svgEl('g', { class: 'edge-lines' });
   const labelLayer = svgEl('g', { class: 'edge-labels' });
+  if (state.phase === 'build' && !printMode) labelLayer.style.pointerEvents = 'all';
   for (const e of edges) {
     const zero = Math.abs(e.w) < 0.01;
     const sw = printMode ? 2 : (zero ? 0.5 : Math.max(0.5, Math.min(Math.abs(e.w) * 2, 6)));
@@ -4610,6 +4698,18 @@ function drawEdgeOverlay(net) {
     });
   for (const p of (printMode && printOpts.weights === 'off' ? [] : placeEdgeLabels(edges, obstacles))) {
     const g = svgEl('g', { class: 'edge-label' });
+    if (p.edge && state.phase === 'build' && !printMode) {
+      g.setAttribute('class', 'edge-label edge-label-edit');
+      g.addEventListener('click', ev => {
+        ev.stopPropagation();
+        const e = p.edge;
+        openValuePop(g, 'Gewicht', e.neuron.weights[e.si] ?? 1, v => {
+          e.neuron.weights[e.si] = v;
+          updateNeuronDisplays();
+          redrawEdges();
+        });
+      });
+    }
     g.appendChild(svgEl('rect', {
       x: p.x - p.w / 2, y: p.y - 7, width: p.w, height: 13, rx: 6.5,
       fill: 'white', 'fill-opacity': '0.94', stroke: '#e2e8f0', 'stroke-width': '0.8',
@@ -4970,11 +5070,12 @@ document.getElementById('popup-overlay').addEventListener('click', e => {
 // Nur im Bereich „Netze bauen“ sichtbar; beim Lernen gibt es nur „Lernen“.
 document.getElementById('btn-build').addEventListener('click', () => { stopTraining(); state.phase = 'build'; render(); });
 document.getElementById('btn-run').addEventListener('click', () => { stopTraining(); state.phase = 'run'; render(); });
+document.getElementById('btn-learn').addEventListener('click', () => { stopTraining(); state.phase = 'learn'; render(); });
 
 // ── Reset ──────────────────────────────────────────────────────────────────
 function resetState() {
   stopTraining();
-  state.phase = state.area === 'lernen' ? 'learn' : 'build';
+  state.phase = 'build';
   state.numInputs = 2;
   state.inputs.fill(0);
   state.inputSpacing.fill(0);
@@ -5115,6 +5216,7 @@ function demoState() {
   state.learn.learningRate   = 0.6;
   state.learn.speed          = 60;
   state.learn.infoPanelOpen  = false;
+  state.phase = 'learn';
 }
 
 // ── Bereiche ───────────────────────────────────────────────────────────────
@@ -5126,12 +5228,13 @@ function enterArea(area, scenarioKey) {
   closePopupSilently();
   state.area = area;
   freeMode = area === 'lernen' && scenarioKey === 'custom';
+  scKey = area === 'lernen' ? (scenarioKey || null) : null;
   view.touched = false;
-  const memKey = area + (freeMode ? '-frei' : '');
+  const memKey = area + '-' + (scKey || '');
   const loaded = DEMO ? (demoMem[memKey] ? (Object.assign(state, JSON.parse(demoMem[memKey])), true) : false) : loadState();
   if (!loaded) { if (DEMO) demoState(); else resetState(); }
   if (area === 'lernen') {
-    state.phase = 'learn';
+    if (!['build', 'learn', 'run'].includes(state.phase)) state.phase = 'build';
     if (scenarioKey && scenarioKey !== state.learn.scenario) selectScenario(scenarioKey);
     else if (state.learn.scenario && !scenarioAllowed(state.learn.scenario)) resetState();
     else if (state.learn.scenario && state.learn.scenario !== 'custom' && !shapeMatchesScenario()) applyScenarioInputsOnly(state.learn.scenario);
@@ -5148,7 +5251,7 @@ function leaveArea() {
   if (printMode) { printMode = false; document.getElementById('btn-print').classList.remove('active'); }
   if (DEMO && state.area) {
     const { learn, ...rest } = state;
-    demoMem[state.area + (freeMode ? '-frei' : '')] = JSON.stringify({ ...rest, learn: { ...learn, intervalId: null, isTraining: false } });
+    demoMem[state.area + '-' + (scKey || '')] = JSON.stringify({ ...rest, learn: { ...learn, intervalId: null, isTraining: false } });
   }
   saveState();
   state.area = null;

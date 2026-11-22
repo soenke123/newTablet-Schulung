@@ -185,7 +185,8 @@
         if (!usable(t.dataset.id)) return;
         const it = a.items.find(i => i.id === t.dataset.id);
         box.hidden = true;
-        if (it.key !== cur) { App.selectScenario(it.key); if (it.key === 'custom') App.state.learn.infoPanelOpen = true; App.render(); }
+        // Jedes Szenario hat sein eigenes gemerktes Netz: Feld verlassen, das andere betreten
+        if (it.key !== cur) { App.leaveArea(); App.enterArea('lernen', it.key); }
         where.sc = it.id; saveWhere();
       };
       t.addEventListener('click', go);

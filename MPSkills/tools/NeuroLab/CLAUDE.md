@@ -36,6 +36,14 @@ in `#scen-picker`, ohne CSV) · **Frei** (`b-frei`: Lernfeld mit Szenario `custo
 ist nicht mehr erreichbar (Area `bauen` im Feld bleibt im Code). `sc-eigene` ist aus dem Szenario-Wahl-Fenster entfernt. ⚠️ `tests/raum.e2e.mjs`
 kennt noch die alte Startseite (v-rechnen, b-frei als Build/Run, sc-eigene) und muss angepasst werden.
 
+## Phasen Build · Learn · Test (22.11.2026, Stufe 1)
+
+Lernen und Frei (Area `lernen`) haben jetzt dieselben drei Phasen: **Build** (Schichten/Neuronen, Typ; Gewicht an der Kante und Bias antippen = `openValuePop`,
+Feld mit − / + und Eintippen, keine Regler; `makePM`) · **Learn** (nur Training, Struktur gesperrt, Eingänge/Ausgänge vom Szenario) · **Test** (Eingaben mit
+`makePM`, Schritt 1). Kopf: `#btn-build/#btn-learn/#btn-run` (Run heißt „Test“). Kein Szenario-Menü mehr im Lernfenster; Wechsel nur über „Szenario wählen“
+(`start.js`: leaveArea + enterArea). Jedes Szenario hat sein Netz: `localStorage neuron-sim-v2-sc-<key>` (`scKey`, Frei = `custom`).
+**Stufe 2 (offen):** „An Lehrkraft senden“ + Eingang (Migration, RPCs, Brücke tool.js), Beamer-Ansicht, zeigen/löschen.
+
 ## Drei Bereiche (alter Stand der Startseite, Übersicht neu 21.11.2026)
 
 Die Übersicht (Sönke 21.11.2026): **1** eine Kachel „Wie arbeitet ein Neuron?“ mit dem Knopf „Alle Neuronen ›“

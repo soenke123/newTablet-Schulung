@@ -14,7 +14,7 @@ html:not([data-view="home"]) #home { display: none; }
 html:not([data-view="neuron"]) #neuron-page { display: none; }
 html:not([data-view="netz"]) #netz-page { display: none; }
 html[data-view="home"] #btn-home { display: none; }
-body:not(.area-bauen) .build-area-only { display: none !important; }
+body:not(.area-bauen):not(.area-lernen) .build-area-only { display: none !important; }
 
 .page {
   flex: 1;
@@ -720,3 +720,4 @@ i.m, .m i { font-family: 'KaTeX Math', 'Cambria Math', 'Times New Roman', serif;
 .nw-fform sup { font-size: .65em; }
 .nt-intro h2 { margin: 0 0 6px; }
 .nt-intro .nn-lead-p { margin: 0; }
+.phase-btn[hidden] { display: none; }
