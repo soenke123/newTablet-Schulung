@@ -249,6 +249,9 @@ const ICO = {
   phone: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>',
   mail: '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>',
   expert: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="8" r="4"/><path d="M3 20.5a7 7 0 0 1 11.2-5.6"/><path d="M17.5 13.5l1.3 2.6 2.9.4-2.1 2 .5 2.9-2.6-1.4-2.6 1.4.5-2.9-2.1-2 2.9-.4z"/></svg>',
+  check: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  bell: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
+  belloff: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/><path d="M4 4l16 16"/></svg>',
   key: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/></svg>',
   unlock: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.8-1.2"/></svg>'
 };
@@ -592,7 +595,7 @@ function renderOverview() {
     helpBox('ov', [
       ['people', 'Gruppen bilden', 'Eine Person aus <b>„Schüler ohne Gruppe“</b> auf eine andere ziehen = neue Gruppe, auf eine Gruppe = dazu. Am Tablet: antippen, dann das Ziel antippen.'],
       ['target', 'Planungsraum', 'Mit dem <b>Kompass</b> eröffnet ihr den Planungsraum — für eine Gruppe oder eine Einzelperson.'],
-      ['check', 'Einwilligungen', 'Oben <b>„Einwilligungen ändern“</b> aufschließen, dann <b>✗ / ✓ / ✓✓</b> am Namen antippen = nächste Stufe. <b>„SuS-Codes anzeigen“</b> zeigt dort stattdessen die persönlichen Codes.'],
+      ['check', 'Einwilligungen', 'Oben das <b>Schloss</b> aufschließen, dann <b>✗ / ✓ / ✓✓</b> am Namen antippen = nächste Stufe. Oben bei <b>„Am Namen“</b> auf <b>„SuS-Codes“</b> umschalten = dort stehen die persönlichen Codes.'],
       ['cal', 'Wer ist heute weg?', 'Wer heute einen Antrag hat, steht im <b>Rahmen</b>: <b>gelb</b> = nicht genehmigt, <b>grün</b> = genehmigt. Die rote Zahl = offene Anträge.'],
       ['book', 'Tätigkeitsbuch', 'Rechts haltet ihr fest, <b>was in der Stunde los war</b> — „Neu“, dann je Gruppe schreiben. So setzt die nächste Lehrkraft an. Schüler sehen es nicht.']
     ]);
@@ -607,9 +610,16 @@ function renderOverview() {
 
   $('#ovStats').innerHTML =
     `${openReq ? `<span class="badge bg-no">${openReq} offene${openReq === 1 ? 'r' : ''} Antrag${openReq === 1 ? '' : 'e'}</span>` : ''}
-     ${notifyBtn()}
-     <button class="btn sm${consentEdit ? ' on' : ''}" data-clock aria-pressed="${consentEdit}" title="${consentEdit ? 'Einwilligungen wieder sperren' : 'Einwilligungen zum Ändern aufschließen'}">${consentEdit ? ICO.unlock : ICO.lock} ${consentEdit ? 'Einwilligungen sperren' : 'Einwilligungen ändern'}</button>
-     <button class="btn sm${codeShow ? ' on' : ''}" data-codeshow aria-pressed="${codeShow}" title="${codeShow ? 'Wieder die Einwilligungen am Namen zeigen' : 'Persönliche Codes am Namen zeigen'}">${ICO.key} ${codeShow ? 'SuS-Codes ausblenden' : 'SuS-Codes anzeigen'}</button>`;
+     <div class="ovtools">
+       <span class="ovt-l">Am Namen</span>
+       <div class="seg" role="group" aria-label="Was steht am Namen?">
+         <button data-codeshow="0" aria-pressed="${!codeShow}" title="Einwilligungen der Eltern am Namen zeigen">${ICO.check} Einwilligung</button>
+         <button data-codeshow="1" aria-pressed="${codeShow}" title="Persönliche Codes der Schüler am Namen zeigen">${ICO.key} SuS-Codes</button>
+       </div>
+       ${`<button class="ovt-i${consentEdit ? ' on' : ''}" data-clock${codeShow ? ' disabled' : ''} aria-pressed="${consentEdit}" title="${consentEdit ? 'Einwilligungen wieder sperren' : 'Einwilligungen ändern (aufschließen)'}" aria-label="${consentEdit ? 'Einwilligungen sperren' : 'Einwilligungen ändern'}">${consentEdit ? ICO.unlock : ICO.lock}</button>`}
+       <span class="ovt-sep"></span>
+       ${notifyBtn()}
+     </div>`;
   if (!notify && !notifyTried) loadNotify();
 
   $('#groupGrid').innerHTML = groups.map(g => {
@@ -2228,12 +2238,12 @@ function wire() {
     }
     if ((b = t.closest('[data-cyc]'))) {
       if (!PA.owner) return;
-      if (b.dataset.ov && !consentEdit) { toast('Zum Ändern der Einwilligungen oben „Einwilligungen ändern“ antippen.'); return; }
+      if (b.dataset.ov && !consentEdit) { toast('Zum Ändern der Einwilligungen oben das Schloss antippen.'); return; }
       const p = person(b.dataset.cyc); if (!p) return;
       setConsent(p.id, ((+p.consent || 0) + 1) % 3, true); return;
     }
     if ((b = t.closest('[data-codeshow]'))) {
-      codeShow = !codeShow;
+      codeShow = b.dataset.codeshow === '1';
       if (codeShow) consentEdit = false;
       renderOverview(); return;
     }
@@ -2487,11 +2497,12 @@ let notify = null, notifyLoading = false, notifyTried = false;
 function notifyBtn() {
   const n = notify;
   const on = n && n.enabled && n.email;
+  const st = !n ? '' : on && n.verified ? 'on' : on ? 'wait' : 'off';
   const lbl = !n ? 'Mail bei Anträgen'
-    : on && n.verified ? 'Mail bei Anträgen: an'
-    : on ? 'Mail: Bestätigung offen'
+    : st === 'on' ? 'Mail bei Anträgen: an'
+    : st === 'wait' ? 'Mail bei Anträgen: Bestätigung der Adresse offen'
     : 'Mail bei Anträgen: aus';
-  return `<button class="btn sm${on && n.verified ? ' primary' : ''}" data-notify title="Eine Mail bekommen, wenn eine Gruppe einen Antrag stellt">${on ? '🔔' : '🔕'} ${lbl}</button>`;
+  return `<button class="ovt-i bell ${st}" data-notify title="${lbl} — antippen zum Einstellen" aria-label="${lbl}">${st === 'off' ? ICO.belloff : ICO.bell}<i></i></button>`;
 }
 
 async function loadNotify() {
