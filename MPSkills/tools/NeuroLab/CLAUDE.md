@@ -122,9 +122,12 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      **2 Ein Jahr später** (80 Kameras `ALL`; Straße und Stadt kommen dazu, die Katzen halten 2 km Abstand: Stadt gemalt ab
      x₁ + x₂ > 17, das Revier endet bei 15): dieselbe Aufgabe dreimal. **4. Fassung (22.11.2026 abends):** oben die Geraden aller
      Perzeptrons als Gleichungen (`.rv-eqrow` in ihrer Farbe, antippen = auswählen → Griffe P/Q auf der Karte, Steigung/n + „entfernen“),
-     darunter das Netz `.rv-net2`: jedes Perzeptron `.rv-hn2` trägt w₁ w₂ b direkt als `miniVal` (antippen = eintippen, auch
-     Brüche, + / −), KEIN großes Neuron mehr in Schritt 2; der Ausgang `.rv-on2` zeigt v₁ … vₙ (je eine Leitung vom Perzeptron
-     zu seinem v) und b immer sichtbar + „Tipp“. EIN „Prüfen“ für alle (`checkHid`: alle Dreiecke auf der gelben Seite, ≥ 3 Kreise
+     darunter das Netz **als Bild wie „Wie arbeitet ein Neuron?“** (5. Fassung, Sönke: „ein neuronales Netz zeichnen, Eingabe direkt
+     an den Kanten“): `.nw.rv-nn` mit Fläche 760 × (36 + n·175), Eingänge x₁ x₂ → Leitungen mit Gewichts-Pille `.rv-wp` (w₁/w₂ als
+     `miniVal`, eintippen auch Brüche, + / −) → Perzeptron `.rv-nb` (Σ | Treppe, Nummer, ✓, Bias-Pille `.rv-bp` mit Pfeil darunter) →
+     Leitung mit `.rv-vp` (v₁ … vₙ) → Ausgang `.rv-ob2` mit Bias `.rv-obp`; Leitungen in Perzeptron-Farbe, Dicke = |Gewicht|,
+     gestrichelt = negativ (`paintNet`); Kamera angetippt → x-Werte an den Eingängen, z und Treppe in jedem Neuron, feuernde gold.
+     KEIN großes Neuron mehr in Schritt 2. „＋ Perzeptron“ + „Tipp zum Ausgang“ unter dem Bild (`.rv-addrow`). EIN „Prüfen“ für alle (`checkHid`: alle Dreiecke auf der gelben Seite, ≥ 3 Kreise
      abgetrennt; P/Q zählen nicht), Rückmeldung je Perzeptron. Kamera antippen: mit gewähltem Perzeptron rechnet es sie vor
      (calcHTML), sonst rechnet der Ausgang (`.rv-ocalc`: welche 1/0 kommen an, z = Σ v·y + b). „＋ Perzeptron“ antippen oder
      hineinziehen, max. 6. Das Fluss-Neuron aus Schritt 1 ist schon dabei, wenn es auch hier passt. Alle 80 richtig → Karte deckt

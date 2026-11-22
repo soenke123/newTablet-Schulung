@@ -330,17 +330,17 @@
     card.appendChild(h(`<p class="nn-lead-p">Ein Jahr später: Jana hat jetzt <b>im ganzen Tal</b> Kameras aufgestellt. Im Westen und im Nordosten sieht keine mehr eine Katze – dort kommt etwas dazu: eine <b>Straße</b> und eine <b>Stadt</b>. Die Wildkatzen halten <b>Abstand</b> zu beiden.
       Mit einer Geraden kommst du nicht mehr aus: Du brauchst <b>drei</b>. Für jede machst du dasselbe wie am Fluss – Gerade ziehen, umstellen, die Zahlen <b>direkt im Netz</b> in ihr Perzeptron eintragen, prüfen. Der <b>Ausgang</b> fasst sie zusammen.</p>`));
     const eqs = h('<div class="rv-eqs"></div>');
-    const net = h(`<div class="rv-net rv-net2"><svg class="rv-edges"></svg>
-      <div class="rv-col rv-cin"><span class="rv-inode">${xs('x', 1)}</span><span class="rv-inode">${xs('x', 2)}</span></div>
-      <div class="rv-col rv-chid"></div><div class="rv-col rv-cout"></div></div>`);
+    // Das Netz als Bild wie „Wie arbeitet ein Neuron?“: Eingänge → Leitungen mit Gewicht → Perzeptrons (Bias darunter) → Ausgang
+    const net = h('<div class="nw rv-nn"><div class="nw-in rv-nn-in"></div></div>');
+    const addRow = h('<div class="rv-addrow"></div>');
     const ctl = h('<div class="rv-ctl"><button type="button" class="nn-btn primary rv-check">Prüfen</button><button type="button" class="nn-btn rv-help-b">Hilfe: Beispiel</button></div>');
     const fb = h('<div class="rv-fb"></div>');
     const help = helpPanel();
     const calc = h('<div class="nw-calc m rv-calc2" hidden></div>');
     const msg = msgEl();
     const mu = h(`<p class="rv-muster"><button type="button" class="rv-link rv-lsg">Musterlösung laden</button></p>`);
-    split(card, [eqs, net, ctl, fb, help, calc, mu], [h(legend('das Netz')), msg]);
-    const hidCol = net.querySelector('.rv-chid'), outCol = net.querySelector('.rv-cout'), svg = net.querySelector('.rv-edges');
+    split(card, [eqs, net, addRow, ctl, fb, help, calc, mu], [h(legend('das Netz')), msg]);
+    const inner = net.querySelector('.rv-nn-in');
     ctl.querySelector('.rv-help-b').addEventListener('click', () => { help.hidden = !help.hidden; });
     ctl.querySelector('.rv-check').addEventListener('click', checkAll);
     // ausgewählt: Index eines Perzeptrons (seine Griffe liegen auf der Karte) oder −1 = ganzes Netz
@@ -361,47 +361,104 @@
     }
     function changed(x) {
       x.ok = false; save(); fb.innerHTML = '';
-      const nd = hidCol.querySelector(`[data-i="${st.hid.indexOf(x)}"]`);
-      if (nd) { nd.classList.add("open"); nd.querySelector(".rv-hok").textContent = ""; }
+      const nd = inner.querySelector(`.rv-nb[data-i="${st.hid.indexOf(x)}"]`);
+      if (nd) { nd.classList.add('open'); nd.querySelector('.rv-hok').textContent = ''; }
       paint();
     }
+    /* Lage im Bild (Fläche NW × H, wie makeNeuron in Prozent darüber gelegt) */
+    const NW = 760, SP = 175, TOP = 36;
+    function geo() {
+      const n = Math.max(1, st.hid.length), H = TOP + n * SP;
+      const hy = i => TOP + 40 + i * SP;
+      const cy = (hy(0) + hy(n - 1)) / 2, d = n === 1 ? 50 : 72;
+      return { H, hy, cy, xin: [cy - d, cy + d], vy: i => cy + (i - (st.hid.length - 1) / 2) * 46 };
+    }
+    const GLYPH = '<svg viewBox="0 0 100 60" class="nw-stepfn"><line x1="6" y1="50" x2="94" y2="50" class="ax"/><line x1="50" y1="6" x2="50" y2="56" class="ax"/><path class="st" d="M6 50 H50 V12 H94"/><circle class="dot" r="6" cx="50" cy="50"/></svg>';
+    const body = (cls, inner2) => `<div class="nw-half nw-sum"><b class="nw-sigma">Σ</b><span class="nw-z m" hidden><i>z</i> = <b></b></span></div><div class="nw-half nw-f">${GLYPH}</div>${inner2 || ''}`;
     function build() {
       paintEqs();
-      hidCol.innerHTML = '';
+      const G = geo(), P = (x, y) => `left:${x / NW * 100}%;top:${y / G.H * 100}%`;
+      const box = (x, y, w, hh) => `left:${x / NW * 100}%;top:${y / G.H * 100}%;width:${w / NW * 100}%;height:${hh / G.H * 100}%`;
+      inner.style.aspectRatio = `${NW} / ${G.H}`;
+      inner.style.setProperty('--u', `calc(100cqw / ${NW})`);
+      inner.innerHTML = `<svg class="nw-wires rv-wires" viewBox="0 0 ${NW} ${G.H}" preserveAspectRatio="none"></svg>`;
+      [1, 2].forEach(k => inner.appendChild(h(`<div class="nw-node rv-xn" style="${P(58, G.xin[k - 1])}"><i class="m">x<sub>${k}</sub></i><b class="rv-xv"></b></div>`)));
       st.hid.forEach((x, i) => {
-        const node = h(`<div class="rv-hn2${sel === i ? ' on' : ''}${x.ok ? '' : ' open'}" data-i="${i}" style="--c:${x.col}"><button type="button" class="rv-hb" title="Perzeptron ${i + 1}: Gerade auf der Karte ziehen"><b>${i + 1}</b></button></div>`);
-        node.querySelector('.rv-hb').addEventListener('click', () => select(i));
-        [['w', 0, 'w', 1, W_OPT], ['w', 1, 'w', 2, W_OPT], ['b', 2, null, null, B_OPT]].forEach(([cls, j, l, sub, opt]) => {
-          const f = h(`<span class="rv-hv c-${cls}">${l ? xs(l, sub) : '<i class="m">b</i>'}</span>`);
-          f.appendChild(miniVal(() => x.w[j], v => { x.w[j] = v; changed(x); }, 'c-' + cls, Object.assign({ k: cls === 'b' ? 'b' : 'w' + sub }, opt)));
-          node.appendChild(f);
+        const y = G.hy(i);
+        const nb = h(`<div class="nw-body rv-nb${sel === i ? ' on' : ''}${x.ok ? '' : ' open'}" data-i="${i}" role="button" tabindex="0" title="Perzeptron ${i + 1}: Gerade auf der Karte ziehen" style="${box(372, y - 35, 110, 70)};--c:${x.col}">${body()}<span class="rv-nbadge">${i + 1}</span><span class="rv-hok">${x.ok ? '✓' : ''}</span></div>`);
+        nb.addEventListener('click', () => select(i));
+        nb.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(i); } });
+        inner.appendChild(nb);
+        [0, 1].forEach(j => {
+          const pill = h(`<div class="nw-wpill rv-wp" data-i="${i}" style="${P(268, y + (j ? 21 : -21))};--c:${x.col}"><i class="m">w<sub>${j + 1}</sub></i></div>`);
+          pill.appendChild(miniVal(() => x.w[j], v => { x.w[j] = v; changed(x); }, 'c-w', Object.assign({ k: 'w' + (j + 1) }, W_OPT)));
+          inner.appendChild(pill);
         });
-        node.appendChild(h(`<span class="rv-hok" title="${x.ok ? 'geprüft' : 'noch nicht geprüft'}">${x.ok ? '✓' : ''}</span>`));
-        hidCol.appendChild(node);
+        const bp = h(`<div class="nw-bias rv-bp" data-i="${i}" style="${P(427, y + 76)}"><i class="m">b</i></div>`);
+        bp.appendChild(miniVal(() => x.w[2], v => { x.w[2] = v; changed(x); }, 'c-b', Object.assign({ k: 'b' }, B_OPT)));
+        inner.appendChild(bp);
       });
+      if (st.hid.length) {
+        const ob = h(`<div class="nw-body rv-ob2${sel < 0 ? ' on' : ''}" role="button" tabindex="0" title="ganzes Netz auf der Karte zeigen" style="${box(664, G.cy - 38, 90, 76)}">${body()}</div>`);
+        ob.addEventListener('click', () => { sel = -1; camP = null; build(); });
+        inner.appendChild(ob);
+        inner.appendChild(h(`<span class="rv-ocap" style="${P(709, G.cy - 54)}">Revier?</span>`));
+        st.hid.forEach((x, i) => {
+          const vp = h(`<div class="nw-wpill rv-vp" data-i="${i}" style="${P(580, G.vy(i))};--c:${x.col}"><i class="m">v<sub>${i + 1}</sub></i></div>`);
+          vp.appendChild(miniVal(() => st.out.v[i] ?? 0, v => { st.out.v[i] = v; save(); paint(); }, 'c-w', { step: 1, min: -6, max: 6 }));
+          inner.appendChild(vp);
+        });
+        const obp = h(`<div class="nw-bias rv-obp" style="${P(709, G.cy + 78)}"><i class="m">b</i></div>`);
+        obp.appendChild(miniVal(() => st.out.b, v => { st.out.b = v; save(); paint(); }, 'c-b', { step: 0.5, min: -20, max: 20 }));
+        inner.appendChild(obp);
+      } else inner.appendChild(h(`<p class="rv-nn-empty" style="${P(427, G.hy(0))}">Noch kein Perzeptron – tippe auf <b>＋ Perzeptron</b>.</p>`));
+      addRow.innerHTML = '';
       if (st.hid.length < MAX_HID) {
         const add = h('<button type="button" class="rv-hn rv-add" title="Perzeptron hineinziehen oder antippen"><b>＋</b><span>Perzeptron</span></button>');
         add.addEventListener('pointerdown', e => dragAdd(e, add));
         add.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addHid(); } });
-        hidCol.appendChild(add);
+        addRow.appendChild(add);
       }
-      outCol.innerHTML = '';
-      if (st.hid.length) {
-        const o = h(`<div class="rv-on2${sel < 0 ? ' on' : ''}"><button type="button" class="rv-ob" title="ganzes Netz auf der Karte zeigen"><span>Ausgang</span></button></div>`);
-        o.querySelector('.rv-ob').addEventListener('click', () => { sel = -1; camP = null; build(); });
-        st.hid.forEach((x, i) => {
-          const f = h(`<span class="rv-ov" data-i="${i}" style="--c:${x.col}"><i class="rv-dot"></i>${xs('v', i + 1)}</span>`);
-          f.appendChild(miniVal(() => st.out.v[i] ?? 0, v => { st.out.v[i] = v; save(); paint(); }, 'c-w', { step: 1, min: -6, max: 6 }));
-          o.appendChild(f);
-        });
-        const fbias = h('<span class="rv-ov rv-ovb"><i class="m">b</i></span>');
-        fbias.appendChild(miniVal(() => st.out.b, v => { st.out.b = v; save(); paint(); }, 'c-b', { step: 0.5, min: -20, max: 20 }));
-        o.appendChild(fbias);
-        o.appendChild(h(`<details class="rv-recipe"><summary>Tipp</summary><p>Jedes Perzeptron schickt eine <b>1</b> („Revier“) oder eine <b>0</b>. Der Ausgang soll nur feuern, wenn <b>alle</b> 1 schicken. Mit allen <i class="m">v</i> = 1 ist die Summe höchstens ${st.hid.length}: Der Bias muss so liegen, dass nur ${st.hid.length} über 0 kommt, ${st.hid.length - 1} aber nicht.</p></details>`));
-        outCol.appendChild(o);
-      }
-      requestAnimationFrame(edges);
+      if (st.hid.length) addRow.appendChild(h(`<details class="rv-recipe"><summary>Tipp zum Ausgang</summary><p>Jedes Perzeptron schickt eine <b>1</b> („Revier“) oder eine <b>0</b> über seine Leitung. Der Ausgang soll nur feuern, wenn <b>alle</b> 1 schicken. Mit allen <i class="m">v</i> = 1 ist die Summe höchstens ${st.hid.length}: Der Bias muss so liegen, dass nur ${st.hid.length} über 0 kommt, ${st.hid.length - 1} aber nicht.</p></details>`));
       paint();
+    }
+    /* Leitungen (Dicke = Gewicht, gestrichelt = negativ) und – nach Antippen einer Kamera – was jedes Neuron rechnet */
+    function paintNet() {
+      const svgEl = inner.querySelector('.rv-wires'); if (!svgEl) return;
+      const G = geo(), L = [];
+      const ln = (x1, y1, x2, y2, col, w, cls = '') => L.push(`<line class="rv-w ${cls}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" style="stroke:${col};stroke-width:${w}"/>`);
+      const wcls = w => Math.abs(w) < 0.005 ? 'is-zero' : w < 0 ? 'is-neg' : '';
+      const ww = w => Math.max(1.6, Math.min(2 + Math.abs(w) * 1.6, 9));
+      const ys = camP ? st.hid.map(q => fire(zOf(neuronOf(q.w), camP))) : null;
+      st.hid.forEach((x, i) => {
+        const y = G.hy(i), dim = sel >= 0 && sel !== i ? ' dim' : '';
+        [0, 1].forEach(j => {
+          const py = y + (j ? 21 : -21);
+          ln(96, G.xin[j], 268, py, x.col, ww(x.w[j]), wcls(x.w[j]) + dim);
+          ln(268, py, 372, py, x.col, ww(x.w[j]), wcls(x.w[j]) + dim);
+        });
+        L.push(`<line class="rv-bl${dim}" x1="427" y1="${y + 60}" x2="427" y2="${y + 42}"/><path class="rv-ba${dim}" d="M420 ${y + 45} L427 ${y + 36} L434 ${y + 45} Z"/>`);
+        if (st.hid.length) {
+          const v = Number(st.out.v[i] ?? 0), hot = ys && ys[i] ? ' hot' : '', odim = sel >= 0 ? ' dim' : '';
+          ln(482, y, 580, G.vy(i), x.col, ww(v), wcls(v) + odim + hot);
+          ln(580, G.vy(i), 664, G.vy(i), x.col, ww(v), wcls(v) + odim + hot);
+        }
+      });
+      if (st.hid.length) L.push(`<line class="rv-bl" x1="709" y1="${G.cy + 62}" x2="709" y2="${G.cy + 45}"/><path class="rv-ba" d="M702 ${G.cy + 48} L709 ${G.cy + 39} L716 ${G.cy + 48} Z"/>`);
+      svgEl.innerHTML = L.join('');
+      // Werte an den Knoten: Kamera angetippt → x, z und Treppe wie im einzelnen Neuron
+      inner.querySelectorAll('.rv-xv').forEach((e, k) => { e.textContent = camP ? num(camP[k]) : ''; });
+      const setBody = (el, z) => {
+        const zs = el.querySelector('.nw-z'), dot = el.querySelector('.dot');
+        zs.hidden = z === null; el.querySelector('.nw-sigma').classList.toggle('small', z !== null);
+        if (z !== null) zs.querySelector('b').textContent = num(z);
+        el.classList.toggle('is-fire', z !== null && fire(z) === 1);
+        dot.setAttribute('cx', z === null ? 50 : Math.max(6, Math.min(94, 50 + z * 11)));
+        dot.setAttribute('cy', z !== null && fire(z) ? 12 : 50);
+      };
+      inner.querySelectorAll('.rv-nb').forEach(el => { const x = st.hid[+el.dataset.i]; setBody(el, camP ? zOf(neuronOf(x.w), camP) : null); });
+      const ob = inner.querySelector('.rv-ob2');
+      if (ob) setBody(ob, ys ? ys.reduce((s2, y, i) => s2 + Number(st.out.v[i] ?? 0) * y, 0) + Number(st.out.b) : null);
     }
     function checkAll() {
       if (!st.hid.length) return;
@@ -428,23 +485,6 @@
       sel = st.hid.length - 1; camP = null;
       save(); build();
     }
-    function edges() {
-      if (!net.isConnected) return;
-      const r = net.getBoundingClientRect();
-      svg.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`);
-      svg.innerHTML = '';
-      const ins = [...net.querySelectorAll('.rv-inode')].map(e => e.getBoundingClientRect());
-      const hs = [...hidCol.querySelectorAll('.rv-hn2')];
-      const line = (a, b, col, on) => { const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        l.setAttribute('x1', a[0] - r.left); l.setAttribute('y1', a[1] - r.top); l.setAttribute('x2', b[0] - r.left); l.setAttribute('y2', b[1] - r.top);
-        l.setAttribute('style', `stroke:${col}`); if (on) l.setAttribute('class', 'on'); svg.appendChild(l); };
-      hs.forEach((hc, i) => {
-        const b = hc.getBoundingClientRect(), col = hc.style.getPropertyValue('--c');
-        ins.forEach(a => line([a.right, a.top + a.height / 2], [b.left, b.top + b.height / 2], col, sel === i));
-        const v = outCol.querySelector(`.rv-ov[data-i="${i}"]`);
-        if (v) { const vb = v.getBoundingClientRect(); line([b.right, b.top + b.height / 2], [vb.left, vb.top + vb.height / 2], col, sel < 0); }
-      });
-    }
     /* Kamera antippen: gewähltes Perzeptron rechnet sie vor (wie in Teil 1) – sonst rechnet der Ausgang */
     function paintCalc() {
       calc.hidden = !camP;
@@ -468,7 +508,7 @@
         region: cur ? (curN ? p => fire(zOf(curN, p)) : null) : (n ? n.judge : null),
         judge: n && !cur ? n.judge : null,
       });
-      paintCalc();
+      paintCalc(); paintNet();
       mu.hidden = st.done;
       const lg = card.querySelector('.rv-lg-gold em');
       if (lg) lg.textContent = cur ? `hier feuert Perzeptron ${sel + 1}` : 'hier feuert das Netz';
@@ -507,7 +547,6 @@
       };
       window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
     }
-    new ResizeObserver(() => edges()).observe(net);
     mu.querySelector('.rv-lsg').addEventListener('click', () => { if (!confirm('Dein Netz durch die Musterlösung ersetzen?')) return; S.s3 = MUSTER(); save(); render(page, api); });
     build();
   }

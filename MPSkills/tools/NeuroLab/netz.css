@@ -440,22 +440,42 @@ html[data-motion="low"] .hs-pulse, html[data-motion="low"] .hs-flow, html[data-m
 .rv-eqb .m { font-size: 1.1rem; }
 .rv-eqb .rv-eq-s { flex-basis: 100%; padding-left: 34px; }
 .rv-eqrow .rv-del { color: var(--ink-faint); font-size: .82rem; }
-.rv-net2 { grid-template-columns: auto auto auto; justify-content: space-between; gap: 10px 26px; }
-.rv-hn2 { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border-radius: 12px;
-  border: 2px solid var(--c); background: var(--surface); box-shadow: var(--shadow); }
-.rv-hn2.open { border-style: dashed; }
-.rv-hn2.on { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 30%, transparent); }
-.rv-hb { width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0; background: var(--c); color: #fff; font: 700 .85rem var(--mono); cursor: pointer; flex: none; }
-.rv-hv { display: inline-flex; align-items: center; gap: 3px; font-size: 1rem; white-space: nowrap; }
-.rv-hv.c-w > .xs { color: var(--accent-ink); } .rv-hv.c-b > i { color: var(--bias); }
-.rv-hok { width: 1em; font-weight: 700; color: var(--accent-ink); }
-.rv-on2 { display: grid; gap: 6px; padding: 8px 10px; border-radius: 12px; border: 2px solid var(--gold); background: var(--surface); box-shadow: var(--shadow); }
-.rv-on2.on { box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 30%, transparent); }
-.rv-ob { background: none; border: 0; padding: 0 0 2px; font: 700 .8rem var(--font); color: var(--gold); text-transform: uppercase; letter-spacing: .04em; cursor: pointer; text-align: left; }
-.rv-ov { display: inline-flex; align-items: center; gap: 4px; font-size: 1rem; white-space: nowrap; }
-.rv-ovb { border-top: 1px solid var(--line); padding-top: 6px; } .rv-ovb > i { color: var(--bias); }
-.rv-on2 .rv-recipe { max-width: 210px; }
-.rv-on2 .rv-recipe p { font-size: .8rem; }
 .rv-calc2 { font-size: 1rem; }
 .rv-ocalc { display: grid; gap: 4px; font-size: .95rem; color: var(--ink); text-align: left; }
-@media (max-width: 760px) { .rv-net2 { grid-template-columns: 1fr; justify-items: start; } .rv-net2 .rv-cin { grid-auto-flow: column; } .rv-net2 .rv-edges { display: none; } }
+
+/* ── Revier, 5. Fassung (22.11.2026 nachts): das Netz als Bild wie „Wie arbeitet ein Neuron?“ –
+      Gewichte direkt an den Leitungen, Bias unter jedem Neuron, Ausgang mit v₁ … vₙ an seinen Leitungen ── */
+.rv-nn { background: var(--surface-2); border-radius: 14px; padding: 10px 8px; transition: background .15s, box-shadow .15s; }
+.rv-nn.drop-on { box-shadow: inset 0 0 0 2px var(--accent); background: var(--accent-dim); }
+.rv-nn-in { font-size: max(10px, calc(14 * var(--u))); }
+.rv-w { stroke-linecap: round; opacity: .9; transition: opacity .2s, stroke-width .2s; }
+.rv-w.is-neg { stroke-dasharray: 7 5; }
+.rv-w.is-zero { stroke: var(--ink-faint) !important; stroke-dasharray: 3 5; stroke-width: 1.6 !important; opacity: .7; }
+.rv-w.dim, .rv-bl.dim, .rv-ba.dim { opacity: .25; }
+.rv-w.hot { filter: drop-shadow(0 0 3px var(--gold)); }
+.rv-bl { stroke: var(--bias); stroke-width: 2.5; } .rv-ba { fill: var(--bias); }
+.rv-xn { padding: .35em .9em; }
+.rv-xv { font: 700 .95em var(--mono); color: var(--in-ink); }
+.rv-xv:empty { display: none; }
+.rv-wp { border-color: var(--c); }
+.rv-wp > i.m, .rv-vp > i.m { color: var(--c); }
+.rv-vp { border-color: var(--c); }
+.rv-nb, .rv-ob2 { cursor: pointer; border-color: var(--c, var(--gold)); }
+.rv-nb.open { border-style: dashed; }
+.rv-nb.on, .rv-ob2.on { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c, var(--gold)) 30%, transparent), var(--shadow); }
+.rv-ob2 { --c: var(--gold); }
+.rv-nb .nw-sigma, .rv-ob2 .nw-sigma { font-size: 1.7em; }
+.rv-nb .nw-sigma.small, .rv-ob2 .nw-sigma.small { font-size: 1.1em; }
+.rv-nb .nw-z, .rv-ob2 .nw-z { font-size: .85em; }
+.rv-nb .nw-z[hidden], .rv-ob2 .nw-z[hidden] { display: none; }
+.rv-nb.is-fire .dot, .rv-ob2.is-fire .dot { fill: var(--gold); stroke: var(--gold); }
+.rv-nb.is-fire, .rv-ob2.is-fire { background: color-mix(in srgb, var(--gold) 14%, var(--surface)); }
+.rv-nbadge { position: absolute; top: -.75em; left: -.75em; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--c); color: #fff;
+  display: grid; place-items: center; font: 700 .8em var(--mono); border: 2px solid var(--surface); }
+.rv-hok { position: absolute; top: -.7em; right: -.5em; font-weight: 700; color: var(--accent-ink); background: var(--surface); border-radius: 50%;
+  width: 1.4em; height: 1.4em; display: grid; place-items: center; border: 1.5px solid var(--accent-line); }
+.rv-hok:empty { display: none; }
+.rv-ocap { position: absolute; transform: translate(-50%, -50%); font: 700 .78em var(--font); color: var(--gold); text-transform: uppercase; letter-spacing: .04em; white-space: nowrap; }
+.rv-nn-empty { position: absolute; transform: translate(-50%, -50%); margin: 0; color: var(--ink-soft); white-space: nowrap; }
+.rv-addrow { display: flex; align-items: flex-start; gap: 14px; flex-wrap: wrap; }
+.rv-addrow .rv-recipe { flex: 1; min-width: 220px; border-top: 0; padding-top: 6px; }

@@ -199,20 +199,21 @@ await pg.click('.rv-help-b');
 ok(await pg.locator('.rv-help:not([hidden]) .nw').count() === 1, 'Hilfe zeigt ein Beispiel mit Neuron');
 await shot(pg, 'revier-fluss');
 await pg.click('.rv-next');
-ok(await pg.locator('.rv-hn2').count() === 1 && await pg.locator('.rv-eqrow').count() === 1, 'Stadt: Fluss-Neuron ist schon im Netz, seine Gleichung steht oben');
-ok(await pg.locator('.nw-left > .nw').count() === 0, 'Stadt: kein großes Neuron – die Zahlen stehen direkt im Netz');
+ok(await pg.locator('.rv-nb').count() === 1 && await pg.locator('.rv-eqrow').count() === 1, 'Stadt: Fluss-Neuron ist schon im Netz, seine Gleichung steht oben');
+ok(await pg.locator('.nw-left > .nw:not(.rv-nn)').count() === 0, 'Stadt: kein großes Neuron – die Zahlen stehen direkt im Netz');
 const netIn = async (sel, v) => { await pg.click(`${sel} .nw-num`); await pg.fill('.rv-mini-in', v); await pg.press('.rv-mini-in', 'Enter'); };
 for (const [i, P, Q, P0, Q0, w] of [[1, [5, 10], [12, 3], [1, 2], [3, 8], ['-1', '-1', '15']], [2, [1, 0], [4, 9], [6, 10], [12, 4], ['3', '-1', '-3']]]) {
   await pg.click('.rv-add');
   await dragTo(P0, P); await dragTo(Q0, Q);
-  for (const [j, k] of [[0, 'w1'], [1, 'w2'], [2, 'b']]) await netIn(`.rv-hn2[data-i="${i}"] .nw-val[data-v="${k}"]`, w[j]);
+  for (const [j, k] of [[0, 'w1'], [1, 'w2']]) await netIn(`.rv-wp[data-i="${i}"] .nw-val[data-v="${k}"]`, w[j]);
+  await netIn(`.rv-bp[data-i="${i}"] .nw-val`, w[2]);
 }
 ok(/x2 = −x1 \+ 15/.test((await pg.locator('.rv-eqrow').nth(1).textContent()).replace(/\s+/g, ' ')), 'Gleichung des zweiten Perzeptrons steht oben');
 await pg.click('.rv-check');
-ok(await pg.locator('.rv-hn2:not(.open)').count() === 3 && await pg.locator('.rv-on2').count() === 1, 'drei Perzeptrons geprüft, Ausgang da');
-ok(await pg.locator('.rv-on2 .nw-val').count() === 4, 'Ausgang zeigt v₁ … v₃ und b im Netz');
-for (let i = 0; i < 3; i++) await netIn(`.rv-ov[data-i="${i}"] .nw-val`, '1');
-await netIn('.rv-ovb .nw-val', '-5/2');
+ok(await pg.locator('.rv-nb:not(.open)').count() === 3 && await pg.locator('.rv-ob2').count() === 1, 'drei Perzeptrons geprüft, Ausgang da');
+ok(await pg.locator('.rv-vp .nw-val').count() === 3 && await pg.locator('.rv-obp .nw-val').count() === 1 && await pg.locator('.rv-wires line').count() > 12, 'Netz als Bild: Gewichte an den Leitungen, v₁ … v₃ und b am Ausgang');
+for (let i = 0; i < 3; i++) await netIn(`.rv-vp[data-i="${i}"] .nw-val`, '1');
+await netIn('.rv-obp .nw-val', '-5/2');
 await pg.waitForTimeout(100);
 ok(/80 von 80/.test(await pg.locator('.rv-result').textContent()), 'Stadt: Netz aus drei Geraden findet das Revier');
 await pg.waitForTimeout(1600);
