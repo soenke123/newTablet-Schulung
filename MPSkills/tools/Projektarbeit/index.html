@@ -479,23 +479,25 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 
 /* Klassenübersicht: eine Leiste statt loser Knöpfe */
 .helpq.qonly{width:34px;height:34px;padding:0;justify-content:center;border-radius:50%;font-size:16px;font-weight:800}
-.ovtools{display:inline-flex;align-items:center;gap:6px;background:var(--paper-up);border:1px solid var(--line);border-radius:12px;padding:3px 4px 3px 10px;box-shadow:var(--sh-1)}
-.ovt-l{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin-right:2px}
-.seg{display:inline-flex;background:rgba(27,26,22,.05);border-radius:9px;padding:2px}
-.seg button{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--ink-2);padding:4px 10px;border-radius:7px;cursor:pointer}
-.seg button[aria-pressed="true"]{background:#fff;color:var(--petrol);box-shadow:0 1px 2px rgba(0,0,0,.12)}
-.ovt-i{position:relative;display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--ink-2);cursor:pointer}
-.ovt-i:hover{background:rgba(27,26,22,.06)}
-.ovt-i.on{background:var(--petrol);color:#fff}
-.ovt-i:disabled{opacity:.3;cursor:default;background:transparent}
-.ovt-i *{pointer-events:none}
-.ovt-sep{width:1px;height:20px;background:var(--line)}
-.bell.off{color:var(--ink-3)}
-.bell.on{color:var(--petrol)}
-.bell i{position:absolute;top:5px;right:5px;width:7px;height:7px;border-radius:50%;display:none;box-shadow:0 0 0 2px var(--paper-up)}
-.bell.on i{display:block;background:var(--st-done)}
-.bell.wait i{display:block;background:var(--marker)}
-@media (max-width:640px){ .ovt-l{display:none} }
+/* Anträge oben rechts: Zahl + Glocke (Mail bei Anträgen) in einer Plakette */
+.reqpill{display:inline-flex;align-items:center;gap:4px;background:var(--paper-up);border:1px solid var(--line);border-radius:99px;padding:2px 3px 2px 12px;box-shadow:var(--sh-1);font-size:12.5px;font-weight:700;color:var(--ink-3)}
+.reqpill.has{color:var(--st-block);border-color:#eac3bd;background:#fdf3f1}
+.reqpill .rp-t{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.reqpill .rp-t i{width:7px;height:7px;border-radius:50%;background:currentColor}
+.rp-bell{position:relative;display:inline-grid;place-items:center;width:30px;height:30px;border:0;border-left:1px solid var(--line);border-radius:0 99px 99px 0;background:transparent;color:var(--ink-2);cursor:pointer;margin-left:4px}
+.reqpill.has .rp-bell{border-left-color:#eac3bd}
+.rp-bell:hover{background:rgba(27,26,22,.06)}
+.rp-bell *{pointer-events:none}
+.rp-bell.off{color:var(--ink-3)}
+.rp-bell.on{color:var(--petrol)}
+.rp-bell i{position:absolute;top:5px;right:6px;width:7px;height:7px;border-radius:50%;display:none;box-shadow:0 0 0 2px var(--paper-up)}
+.rp-bell.on i{display:block;background:var(--st-done)}
+.rp-bell.wait i{display:block;background:var(--marker)}
+/* Über den Schülern: Einwilligungen / Codes */
+.ov-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:-6px}
+.btn.ovb{background:transparent;box-shadow:none;border-color:var(--line);color:var(--ink-2)}
+.btn.ovb:hover{background:var(--paper-up)}
+.btn.ovb.on{background:var(--petrol-wash);border-color:var(--petrol);color:var(--petrol)}
 /* Handy: kurzer Text statt nur Icon, Kacheln kompakt untereinander */
 @media (max-width:640px){
   .helpq .hl{display:none} .helpq .hs{display:inline}
@@ -1030,6 +1032,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
     <div class="gbox" id="ovHelp" hidden></div>
     <div class="ov">
       <div class="ov-main">
+        <div class="ov-bar" id="ovBar"></div>
         <div class="panel lobby" id="lobby" data-drop="lobby">
           <div class="lobby-h">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" style="color:var(--petrol)"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M17 8v6M14 11h6"/></svg>

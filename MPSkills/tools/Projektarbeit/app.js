@@ -595,7 +595,7 @@ function renderOverview() {
     helpBox('ov', [
       ['people', 'Gruppen bilden', 'Eine Person aus <b>„Schüler ohne Gruppe“</b> auf eine andere ziehen = neue Gruppe, auf eine Gruppe = dazu. Am Tablet: antippen, dann das Ziel antippen.'],
       ['target', 'Planungsraum', 'Mit dem <b>Kompass</b> eröffnet ihr den Planungsraum — für eine Gruppe oder eine Einzelperson.'],
-      ['check', 'Einwilligungen', 'Oben das <b>Schloss</b> aufschließen, dann <b>✗ / ✓ / ✓✓</b> am Namen antippen = nächste Stufe. Oben bei <b>„Am Namen“</b> auf <b>„SuS-Codes“</b> umschalten = dort stehen die persönlichen Codes.'],
+      ['check', 'Einwilligungen', 'Über den Schülern <b>„Einwilligungen ändern“</b> aufschließen, dann <b>✗ / ✓ / ✓✓</b> am Namen antippen = nächste Stufe. <b>„SuS-Codes anzeigen“</b> zeigt dort stattdessen die persönlichen Codes.'],
       ['cal', 'Wer ist heute weg?', 'Wer heute einen Antrag hat, steht im <b>Rahmen</b>: <b>gelb</b> = nicht genehmigt, <b>grün</b> = genehmigt. Die rote Zahl = offene Anträge.'],
       ['book', 'Tätigkeitsbuch', 'Rechts haltet ihr fest, <b>was in der Stunde los war</b> — „Neu“, dann je Gruppe schreiben. So setzt die nächste Lehrkraft an. Schüler sehen es nicht.']
     ]);
@@ -608,18 +608,16 @@ function renderOverview() {
   $('#lobbyList').innerHTML = lobby.length ? lobby.map(p => pchip(p, true)).join('')
     : people.length ? '' : '<div class="lobby-empty">Noch niemand da. Wer mit dem Raum-Code beitritt, erscheint hier.</div>';
 
+  // Oben rechts: Anträge + Glocke (Mail bei Anträgen) als ein Stück.
   $('#ovStats').innerHTML =
-    `${openReq ? `<span class="badge bg-no">${openReq} offene${openReq === 1 ? 'r' : ''} Antrag${openReq === 1 ? '' : 'e'}</span>` : ''}
-     <div class="ovtools">
-       <span class="ovt-l">Am Namen</span>
-       <div class="seg" role="group" aria-label="Was steht am Namen?">
-         <button data-codeshow="0" aria-pressed="${!codeShow}" title="Einwilligungen der Eltern am Namen zeigen">${ICO.check} Einwilligung</button>
-         <button data-codeshow="1" aria-pressed="${codeShow}" title="Persönliche Codes der Schüler am Namen zeigen">${ICO.key} SuS-Codes</button>
-       </div>
-       ${`<button class="ovt-i${consentEdit ? ' on' : ''}" data-clock${codeShow ? ' disabled' : ''} aria-pressed="${consentEdit}" title="${consentEdit ? 'Einwilligungen wieder sperren' : 'Einwilligungen ändern (aufschließen)'}" aria-label="${consentEdit ? 'Einwilligungen sperren' : 'Einwilligungen ändern'}">${consentEdit ? ICO.unlock : ICO.lock}</button>`}
-       <span class="ovt-sep"></span>
+    `<span class="reqpill${openReq ? ' has' : ''}">
+       <span class="rp-t">${openReq ? `<i></i>${openReq} offene${openReq === 1 ? 'r' : ''} Antrag${openReq === 1 ? '' : 'e'}` : 'Keine offenen Anträge'}</span>
        ${notifyBtn()}
-     </div>`;
+     </span>`;
+  // Über den Schülern: was am Namen steht (Einwilligung oder Code).
+  $('#ovBar').innerHTML =
+    `<button class="btn sm ovb${consentEdit ? ' on' : ''}" data-clock aria-pressed="${consentEdit}" title="${consentEdit ? 'Einwilligungen wieder sperren' : 'Einwilligungen zum Ändern aufschließen'}">${consentEdit ? ICO.unlock : ICO.lock} ${consentEdit ? 'Einwilligungen sperren' : 'Einwilligungen ändern'}</button>
+     <button class="btn sm ovb${codeShow ? ' on' : ''}" data-codeshow aria-pressed="${codeShow}" title="${codeShow ? 'Wieder die Einwilligungen am Namen zeigen' : 'Persönliche Codes am Namen zeigen'}">${ICO.key} ${codeShow ? 'SuS-Codes ausblenden' : 'SuS-Codes anzeigen'}</button>`;
   if (!notify && !notifyTried) loadNotify();
 
   $('#groupGrid').innerHTML = groups.map(g => {
@@ -2238,12 +2236,12 @@ function wire() {
     }
     if ((b = t.closest('[data-cyc]'))) {
       if (!PA.owner) return;
-      if (b.dataset.ov && !consentEdit) { toast('Zum Ändern der Einwilligungen oben das Schloss antippen.'); return; }
+      if (b.dataset.ov && !consentEdit) { toast('Zum Ändern der Einwilligungen über den Schülern „Einwilligungen ändern“ antippen.'); return; }
       const p = person(b.dataset.cyc); if (!p) return;
       setConsent(p.id, ((+p.consent || 0) + 1) % 3, true); return;
     }
     if ((b = t.closest('[data-codeshow]'))) {
-      codeShow = b.dataset.codeshow === '1';
+      codeShow = !codeShow;
       if (codeShow) consentEdit = false;
       renderOverview(); return;
     }
@@ -2502,7 +2500,7 @@ function notifyBtn() {
     : st === 'on' ? 'Mail bei Anträgen: an'
     : st === 'wait' ? 'Mail bei Anträgen: Bestätigung der Adresse offen'
     : 'Mail bei Anträgen: aus';
-  return `<button class="ovt-i bell ${st}" data-notify title="${lbl} — antippen zum Einstellen" aria-label="${lbl}">${st === 'off' ? ICO.belloff : ICO.bell}<i></i></button>`;
+  return `<button class="rp-bell ${st}" data-notify title="${lbl} — antippen zum Einstellen" aria-label="${lbl}">${st === 'off' ? ICO.belloff : ICO.bell}<i></i></button>`;
 }
 
 async function loadNotify() {
