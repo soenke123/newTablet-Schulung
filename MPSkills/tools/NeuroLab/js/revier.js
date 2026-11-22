@@ -1,27 +1,33 @@
 /* ══════════════════════════════════════════════════════════════
    NeuroLab · revier.js — „Das Revier der Wildkatzen“ (Kachel v-revier)
    ══════════════════════════════════════════════════════════════
-   Bereich 2 „Vom Neuron zum Netz“ (21.11.2026, 2. Fassung am selben Abend:
-   „soll zu Teil 1 passen und klarer sein“). Försterin Jana hat im Tal
-   Wildtierkameras aufgestellt. Gesucht ist das Revier. Grundsatz (Sönke):
-   NICHT ziehen und probieren, sondern rechnen und sehen, was wo zusammenhängt.
+   Bereich 2 „Vom Neuron zum Netz“ (21.11.2026; 3. Fassung 22.11.2026 nach
+   Sönkes Rückmeldung). Försterin Jana hat im Tal Wildtierkameras aufgestellt.
+   Gesucht ist das Revier. Grundsatz: NICHT ziehen und probieren, sondern
+   rechnen und sehen, was wo zusammenhängt.
 
-   Dieselben Bausteine wie „Wie arbeitet ein Neuron?“ (js/neuron.js):
-   Neuron links (makeNeuron, nur ansehen), darunter die Rechnung in
-   Formel-Schrift, Karte rechts; Gelb = hier feuert das Neuron, goldenes
-   Dreieck = Katze gesehen (soll feuern), Kreis = keine Katze, oranges
-   Fadenkreuz = Eingabe des Neurons. Pro Schritt nur EINE Aufgabe sichtbar.
-     1 Kameras prüfen   Janas Neuron, z für A, B, C selbst ausrechnen
-                        (Ergebnis im Neuron verdeckt, bis es stimmt)
-     2 Der Fluss        ① zwei Gitterpunkte antippen ② w₁, w₂, b ausrechnen;
-                        das Neuron füllt sich erst bei „Prüfen“
-     3 Die Stadt        Netz-Bild: Eingänge → Perzeptrons (Nummer + Farbe = ihre
-                        Gerade auf der Karte) → Ausgang; ＋ hineinziehen oder
-                        antippen; EIN Neuron antippen = darunter bearbeiten,
-                        auf der Karte nur seine Seite gelb; alles richtig →
-                        die Karte deckt sich auf
-     4 Ein Jahr später  Ausreißer · Dein Netz ↔ Kims Netz · neue Kameras →
-                        Overfitting (Landschaft blass, damit die Punkte zählen)
+   Dieselben Bausteine UND dieselbe Bedienung wie „Wie arbeitet ein Neuron?“
+   (js/neuron.js): Neuron links (makeNeuron, w₁ w₂ b mit + / − und Regler am
+   Zahlenfeld – kein eigenes Eingabefeld), darunter die Rechnung, Karte rechts;
+   Gelb = hier feuert das Neuron, goldenes Dreieck = Katze gesehen, Kreis =
+   keine Katze, oranges Fadenkreuz = Eingabe des Neurons.
+
+     1 Der Fluss        weit verteilte Kameras, im Süden kein Revier. Die Kinder
+                        ziehen die Punkte P und Q auf der Karte; die Funktions-
+                        gleichung x₂ = m·x₁ + n steht sofort daneben. Daraus
+                        rechnen sie w₁, w₂, b (Umstellen) und stellen sie im
+                        Neuron ein. „Prüfen“: Die Gerade des Perzeptrons wird
+                        NUR eingezeichnet, wenn die Werte stimmen (alle Kameras
+                        richtig UND die Gerade geht durch P und Q). „Hilfe“ =
+                        durchgerechnetes Beispiel mit Neuron.
+     2 Ein Jahr später  Straße und Stadt kommen dazu (die Katzen halten zwei
+                        Kilometer Abstand zur Stadt). Dasselbe dreimal: Gerade
+                        ziehen, Gleichung, Neuron einstellen, prüfen; die
+                        geprüften Perzeptrons kommen ins Netz (Eingänge →
+                        Perzeptrons → Ausgang). Alles richtig → Karte deckt sich auf.
+     3 Zu genau gelernt Overfitting zum Anfassen: Jeder Ausreißer bekommt ein
+                        Zusatz-Neuron („Merk-Neuron“). Alte Kameras → 80/80,
+                        neue Kameras → schlechter. Kurve beider Werte.
    Keine UND/XOR-Begriffe hier (die stehen bei „Netze trainieren“).
    Stand je Gerät: localStorage nl.revier (Schaufenster: nur Arbeitsspeicher).
    Karte und Daten: js/karte.js (NLKarte).
@@ -34,14 +40,19 @@
   const STUDENT = Q.get('raum') === 'schueler';
   const COLS = ['#2f80ed', '#e5484d', '#8e44ad', '#0f9d58', '#e67e22', '#00838f'];
   const MAX_HID = 6;
+  const VERSION = 3;
+  /* nur fürs Arbeitsblatt: Janas Neuron und drei Kameras zum Nachrechnen */
   const JANA = { w: [1, 1], b: -8 };
-  const PROBE = [{ label: 'A', p: [3, 2] }, { label: 'B', p: [4, 6] }, { label: 'C', p: [5, 3] }];
+  const PROBE = [{ label: 'A', p: [3, 3] }, { label: 'B', p: [5, 5] }, { label: 'C', p: [3, 5] }];
+  /* Hilfe-Beispiel: Gerade durch (2|6) und (6|2) */
+  const EX = { P: [2, 6], Q: [6, 2], w: [1, 1], b: -8 };
+  const DEF_PQ = [[[1, 3], [11, 8]], [[1, 2], [3, 8]], [[6, 10], [12, 4]], [[0, 5], [12, 5]], [[4, 0], [4, 10]], [[0, 0], [12, 10]]];
   const STEPS = [
-    { id: 'pruefen', kurz: 'Kameras prüfen', title: 'Ein Neuron prüft Kameras' },
     { id: 'fluss', kurz: 'Der Fluss', title: 'Die erste Grenze: der Fluss' },
-    { id: 'stadt', kurz: 'Die Stadt', title: 'Mehr Kameras – mehr Grenzen' },
-    { id: 'jahr', kurz: 'Ein Jahr später', title: 'Welches Netz ist besser?' },
+    { id: 'stadt', kurz: 'Ein Jahr später', title: 'Ein Jahr später: mehr Kameras, mehr Grenzen' },
+    { id: 'jahr', kurz: 'Zu genau gelernt', title: 'Ein Netz, das sich alles merkt' },
   ];
+  const BUBBLE = 0.85;                       // Merk-Neuron: kleiner Kreis um den Ausreißer (km)
 
   /* ── Speicher ── */
   const mem = {};
@@ -50,15 +61,15 @@
     set(k, v) { if (DEMO) { mem[k] = v; return; } try { localStorage.setItem(k, v); } catch (e) { /* egal */ } },
   };
   const fresh = () => ({
-    step: 'pruefen',
-    s1: { A: { z: '', f: null }, B: { z: '', f: null }, C: { z: '', f: null } },
-    s2: { P: null, Q: null, w: ['', '', ''], checked: false, done: false },
-    s3: { hid: [], out: { v: [], b: '' }, done: false, seen: false },
+    v: VERSION,
+    step: 'fluss',
+    s2: { P: [2, 2], Q: [10, 6], w: [0, 0, 0], done: false },
+    s3: { hid: [], out: { v: [], b: 0 }, done: false, seen: false },
     revealed: false,
-    s4: { view: 'mine', choice: null, tested: false },
+    s4: { mem: [], view: 'mem', choice: null, tested: false },
   });
   let S = fresh();
-  try { const x = JSON.parse(store.get('nl.revier') || 'null'); if (x && x.s1) S = Object.assign(fresh(), x); } catch (e) { /* egal */ }
+  try { const x = JSON.parse(store.get('nl.revier') || 'null'); if (x && x.v === VERSION) S = Object.assign(fresh(), x); } catch (e) { /* egal */ }
   const save = () => store.set('nl.revier', JSON.stringify(S));
 
   /* ── Hilfen ── */
@@ -71,45 +82,105 @@
     if (fr) { const d = parseFloat(fr[2]); return d ? parseFloat(fr[1]) / d : null; }
     return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(s) ? parseFloat(s) : null;
   }
-  const same = (a, b) => Math.abs(a - b) < 1e-6;
   const zOf = (n, p) => n.w[0] * p[0] + n.w[1] * p[1] + n.b;
   const fire = z => z > 1e-9 ? 1 : 0;
-  const neuronOf = f => { const v = f.map(parseNum); return v.every(x => x !== null) ? { w: [v[0], v[1]], b: v[2] } : null; };
+  const neuronOf = a => ({ w: [a[0], a[1]], b: a[2] });
   const pt = p => p ? `(${num(p[0])} | ${num(p[1])})` : '';
   const xs = (k, sub) => `<span class="xs"><i class="m">${k}</i><sub>${sub}</sub></span>`;
   const css = n => (window.NLTheme && NLTheme.var(n)) || '#888';
   const eqP = (a, b) => !!(a && b && a[0] === b[0] && a[1] === b[1]);
-  const esc = v => String(v ?? '').replace(/"/g, '&quot;');
+  const distTo = (n, p) => Math.abs(zOf(n, p)) / (Math.hypot(n.w[0], n.w[1]) || 1);   // Abstand des Punkts von der Geraden z = 0 (km)
+  const gcd = (a, b) => b ? gcd(b, a % b) : Math.abs(a);
 
-  /* Zahlenfeld in der Farbe der Größe (kein Regler, kein Ziehen) */
-  const field = (key, val, cls, label) => `<label class="rv-f ${cls}"><span>${label}</span><input type="text" inputmode="decimal" autocomplete="off" spellcheck="false" data-f="${key}" value="${esc(val)}"></label>`;
+  /* Funktionsgleichung durch P und Q: x₂ = m·x₁ + n (als Bruch, wenn es keine glatte Zahl ist) */
+  function frac(n, d) {
+    if (d < 0) { n = -n; d = -d; }
+    const g = gcd(n, d) || 1; n /= g; d /= g;
+    return d === 1 ? { t: num(n), v: n, exact: true } : { t: `${num(n)}/${d}`, v: n / d, exact: false };
+  }
+  function eqOf(P, Q) {
+    const dx = Q[0] - P[0], dy = Q[1] - P[1];
+    if (dx === 0) return { vertical: true, main: `${xs('x', 1)} = ${P[0]}`, sub: 'Eine senkrechte Gerade hat keine Steigung. Hier ist <i class="m">w</i><sub>2</sub> = 0 – schreib die Gleichung als <span class="m">1·x₁ + 0·x₂ − ' + P[0] + ' = 0</span>.' };
+    const m = frac(dy, dx), n = frac(P[1] * dx - dy * P[0], dx);
+    const dec = f => f.exact ? '' : ` <span class="rv-approx">≈ ${num(f.v)}</span>`;
+    const mTxt = m.v === 0 ? '' : `${m.t === '1' ? '' : m.t === '−1' ? '−' : m.t + ' · '}${xs('x', 1)}`;
+    const nTxt = n.v === 0 ? '' : (mTxt ? ` ${n.v < 0 ? '−' : '+'} ${frac(Math.abs(P[1] * dx - dy * P[0]), Math.abs(dx)).t}` : n.t);
+    return { vertical: false, m, n, main: `${xs('x', 2)} = ${mTxt}${nTxt}` || `${xs('x', 2)} = 0`,
+      sub: `Steigung <i class="m">m</i> = ${m.t}${dec(m)} · Achsenabschnitt <i class="m">n</i> = ${n.t}${dec(n)}` };
+  }
+  const eqBox = (P, Q) => { const e = eqOf(P, Q); return `<span class="rv-eq-l">Funktionsgleichung der Geraden</span><b class="rv-eq-m m">${e.main}</b><span class="rv-eq-s">${e.sub}</span>`; };
 
-  /* Das Modell für makeNeuron (js/neuron.js): Lage auf der Karte als Eingänge */
-  const model = (n, x) => ({
-    x: (x || [5, 5]).slice(), w: n ? n.w.slice() : [0, 0], b: n ? n.b : 0, type: 'perceptron',
-    lim: { x1: [0, 12, 1, 1], x2: [0, 10, 1, 1], w: [-50, 50, 1, 0.5], b: [-99, 99, 1, 0.5] },
+  /* Liegen die Kameras auf zwei Seiten der Bleistiftlinie durch P und Q? (Anzahl Fehler bei der besseren Seite) */
+  function penErrors(P, Q, cams) {
+    const side = p => (Q[0] - P[0]) * (p[1] - P[1]) - (Q[1] - P[1]) * (p[0] - P[0]);
+    let a = 0, b = 0;
+    cams.forEach(c => { const s = side(c.p) > 0 ? 1 : 0; if (s === c.soll) a++; else b++; });
+    return Math.min(a, b);
+  }
+
+  /* Das Modell für makeNeuron (js/neuron.js): Zahlen wie in Teil 1 mit + / − und Regler, Lage der Kamera als Eingänge */
+  const model = (a, x) => ({
+    x: (x || [5, 5]).slice(), w: a ? [a[0], a[1]] : [0, 0], b: a ? a[2] : 0, type: 'perceptron',
+    lim: { x1: [0, 12, 1, 1], x2: [0, 10, 1, 1], w: [-4, 4, 0.5, 0.05], b: [-30, 30, 1, 0.25] },
     caps: ['km nach Osten', 'km nach Norden'], ocap: 'Revier?', yes: 'Revier', no: 'kein Revier',
   });
   const NL = () => window.NLNeuron;
   const legend = who => `<p class="nw-legend rv-legend"><span><i class="lg-tri"></i>Katze gesehen</span><span><i class="lg-dot"></i>keine Katze</span><span class="rv-lg-gold"><i class="lg-gold"></i><em>hier feuert ${who}</em></span><span><i class="lg-ring"></i>liegt falsch</span></p>`;
 
-  /* Netz aus Stufe 3 auswerten */
+  /* Zahlenfeld wie im Neuron (Zahl antippen = direkt eintippen, + / − daneben), für den Ausgang mit n Eingängen */
+  function miniVal(get, set, cls, o = {}) {
+    const step = o.step || 1, lo = o.min ?? -99, hi = o.max ?? 99;
+    const el = h(`<span class="nw-val ${cls}"><button type="button" class="nw-num"></button><span class="nw-pms"><button type="button" class="nw-pm" data-d="1" aria-label="größer">+</button><button type="button" class="nw-pm" data-d="-1" aria-label="kleiner">−</button></span></span>`);
+    let btn = el.querySelector('.nw-num');
+    const paint = () => { btn.textContent = num(get()); };
+    const put = v => { set(Math.max(lo, Math.min(hi, Math.round(v * 100) / 100))); paint(); };
+    el.querySelectorAll('.nw-pm').forEach(b => {
+      let t1 = 0, t2 = 0;
+      const bump = () => put(get() + (+b.dataset.d) * step), stop = () => { clearTimeout(t1); clearInterval(t2); };
+      b.addEventListener('pointerdown', e => { e.preventDefault(); bump(); t1 = setTimeout(() => { t2 = setInterval(bump, 110); }, 420); });
+      ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, stop));
+    });
+    btn.addEventListener('click', () => {
+      const inp = document.createElement('input');
+      inp.type = 'text'; inp.inputMode = 'decimal'; inp.className = 'rv-mini-in'; inp.autocomplete = 'off'; inp.value = String(get()).replace('.', ',');
+      btn.replaceWith(inp); inp.focus(); inp.select();
+      let esc = false;
+      inp.addEventListener('blur', () => { const v = parseNum(inp.value); if (v !== null && !esc) put(v); inp.replaceWith(btn); paint(); }, { once: true });
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); if (e.key === 'Escape') { esc = true; inp.blur(); } });
+    });
+    paint();
+    return el;
+  }
+
+  /* Netz aus Stufe 2 auswerten: alle Perzeptrons müssen geprüft sein */
   function netOf(st) {
-    const hid = st.hid.map(x => neuronOf(x.w));
-    if (!hid.length || hid.some(x => !x)) return null;
-    const v = st.out.v.slice(0, hid.length).map(parseNum), b = parseNum(st.out.b);
-    if (v.length < hid.length || v.some(x => x === null) || b === null) return null;
+    if (!st.hid.length || st.hid.some(x => !x.ok)) return null;
+    const hid = st.hid.map(x => neuronOf(x.w)), v = st.out.v.slice(0, hid.length).map(Number), b = Number(st.out.b);
+    if (v.length < hid.length || v.some(x => !isFinite(x))) return null;
     return { hid, v, b, judge: p => fire(hid.reduce((s, n, i) => s + v[i] * fire(zOf(n, p)), 0) + b) };
   }
+  /* Prüfung eines Perzeptrons für das Netz: alle Dreiecke auf der gelben Seite, mindestens drei Kreise abgetrennt, Gerade durch P und Q */
+  function checkHid(x) {
+    const n = neuronOf(x.w), tri = K.ALL.filter(c => c.soll);
+    const wrongTri = tri.filter(c => !fire(zOf(n, c.p))).length;
+    const cut = K.ALL.filter(c => !c.soll && !fire(zOf(n, c.p))).length;
+    const through = (n.w[0] !== 0 || n.w[1] !== 0) && distTo(n, x.P) < 0.45 && distTo(n, x.Q) < 0.45;
+    return { wrongTri, cut, tri: tri.length, through, flip: wrongTri > tri.length / 2, pass: wrongTri === 0 && cut >= 3 && through };
+  }
   const MUSTER = () => ({
-    hid: K.TRUTH.map((t, i) => ({ P: null, Q: null, w: [num(t.w[0]), num(t.w[1]), num(t.b)].map(x => x.replace('−', '-')), col: COLS[i] })),
-    out: { v: ['1', '1', '1'], b: '-2,5' }, done: true, seen: true,
+    hid: [
+      { P: [0, 2], Q: [12, 8], w: [-0.5, 1, -2] },          // Fluss  x₂ = ½·x₁ + 2
+      { P: [5, 10], Q: [12, 3], w: [-1, -1, 15] },          // Stadtrand  x₂ = −x₁ + 15
+      { P: [1, 0], Q: [4, 9], w: [3, -1, -3] },             // Landstraße  x₂ = 3·x₁ − 3
+    ].map((x, i) => Object.assign(x, { col: COLS[i], ok: true })),
+    out: { v: [1, 1, 1], b: -2.5 }, done: true, seen: true,
   });
 
   /* ── Seite ── */
   let page = null, api = null, map = null;
   function render(root, a) {
     page = root; api = a || {};
+    if (!STEPS.some(s => s.id === S.step)) S.step = 'fluss';
     root.innerHTML = '';
     const wrap = h('<div class="nn-page rv-page"></div>');
     const nav = h('<nav class="nn-steps"></nav>');
@@ -125,7 +196,7 @@
     root.appendChild(wrap);
     map = K.makeMap();
     map.set({ reveal: S.revealed ? 1 : 0 });
-    ({ pruefen: stepPruefen, fluss: stepFluss, stadt: stepStadt, jahr: stepJahr })[S.step](card);
+    ({ fluss: stepFluss, stadt: stepStadt, jahr: stepJahr })[S.step](card);
     const foot = h('<div class="nn-foot"></div>');
     if (i > 0) { const b = h(`<button type="button" class="nn-btn">‹ ${STEPS[i - 1].kurz}</button>`); b.onclick = () => go(STEPS[i - 1].id); foot.appendChild(b); }
     else foot.appendChild(h('<span></span>'));
@@ -146,180 +217,102 @@
   }
   const msgEl = () => h('<div class="nn-task-msg rv-result" hidden></div>');
   const setMsg = (el, html, ok) => { el.hidden = !html; el.className = 'nn-task-msg rv-result' + (ok ? ' ok' : ''); el.innerHTML = html || ''; };
+  const row = (n, cls, inner) => h(`<div class="rv-row ${cls}"><i>${n}</i><div>${inner}</div></div>`);
+  const checks = items => `<ul class="rv-checks">${items.map(([g, t]) => `<li class="${g ? 'good' : 'bad'}">${t}</li>`).join('')}</ul>`;
 
-  /* ── Schritt 1: Kameras prüfen ─────────────────────────── */
-  function stepPruefen(card) {
-    card.appendChild(h(`<p class="nn-lead-p">Försterin <b>Jana</b> hat im Tal <b>Wildtierkameras</b> aufgestellt. Ein <b class="t-y">goldenes Dreieck</b> heißt: Diese Kamera hat eine <b>Wildkatze</b> gesehen. Wo ist ihr <b>Revier</b>? Ein Neuron soll für jeden Ort entscheiden. Seine <b class="t-x">Eingänge</b> sind die Lage auf der Karte: ${xs('x', 1)} = km nach Osten, ${xs('x', 2)} = km nach Norden.</p>`));
-    const done = l => !!S.s1[l].ok;
-    const allDone = () => PROBE.every(pr => done(pr.label));
-    let cur = (PROBE.find(pr => !done(pr.label)) || PROBE[0]).label;
-    let at = PROBE.find(x => x.label === cur).p.slice();
-    const m = model(JANA, at);
+  /* Hilfe: durchgerechnetes Beispiel mit einem Neuron, in dem die Werte schon stehen */
+  function helpPanel() {
+    const e = eqOf(EX.P, EX.Q);
+    const box = h(`<div class="rv-help" hidden><div class="rv-help-h"><b>Beispiel: so wird aus einer Geraden ein Neuron</b><button type="button" class="rv-link rv-help-x">schließen</button></div>
+      <ol>
+        <li>Zwei Punkte der Geraden: <span class="m rv-pq">P = ${pt(EX.P)}</span> und <span class="m rv-pq">Q = ${pt(EX.Q)}</span>.</li>
+        <li>Steigung <span class="m">m = (q₂ − p₂) : (q₁ − p₁) = (${EX.Q[1]} − ${EX.P[1]}) : (${EX.Q[0]} − ${EX.P[0]}) = −1</span>.
+          Dann <span class="m">n</span> aus einem Punkt: <span class="m">${EX.P[1]} = −1 · ${EX.P[0]} + n</span>, also <span class="m">n = 8</span>.</li>
+        <li>Funktionsgleichung: <b class="m">${e.main}</b></li>
+        <li>Umstellen, bis rechts <b>0</b> steht: <span class="m">x₁ + x₂ − 8 = 0</span>. Vergleiche mit <span class="m">z = w₁·x₁ + w₂·x₂ + b</span>:
+          <b class="t-w">w₁ = 1</b>, <b class="t-w">w₂ = 1</b>, <b class="t-b">b = −8</b>.</li>
+        <li>Feuert das Neuron auf der richtigen Seite? Prüfe ein Dreieck: Ist dort <span class="m">z &gt; 0</span>? Wenn nicht, rechne <b>alle drei Zahlen mal −1</b>.</li>
+      </ol><div class="rv-help-n"></div>
+      <p class="rv-help-t">Allgemein: <span class="m">m·x₁ − x₂ + n = 0</span> → <span class="m">w₁ = m, w₂ = −1, b = n</span> (oder alles mal −1). Senkrechte Gerade <span class="m">x₁ = c</span> → <span class="m">w₁ = 1, w₂ = 0, b = −c</span>.</p></div>`);
+    const m = model([EX.w[0], EX.w[1], EX.b], [5, 5]);
     const N = NL().makeNeuron(m, { fixed: true });
     N.setShow(4);
-    const sel = h('<div class="rv-camsel"></div>');
-    const calc = h('<div class="nw-calc m"></div>');
-    const ctl = h('<div class="rv-ctl"></div>');
-    const msg = msgEl();
-    const tip = h('<p class="nn-try" hidden><b>Probier:</b> Tippe auf der Karte irgendeine Kamera an – das Neuron rechnet sie aus.</p>');
-    split(card, [N.el, sel, calc, ctl], [h(legend('Janas Neuron')), msg, tip]);
-
-    function paintSel() {
-      sel.innerHTML = '<span class="rv-camsel-t">Rechne für die Kameras</span>' + PROBE.map(pr => `<button type="button" class="rv-cam${pr.label === cur ? ' on' : ''}${done(pr.label) ? ' ok' : ''}" data-l="${pr.label}"><b>${pr.label}</b><span class="m">${pt(pr.p)}</span>${done(pr.label) ? '<i>✓</i>' : ''}</button>`).join('');
-      sel.querySelectorAll('[data-l]').forEach(b => b.addEventListener('click', () => { cur = b.dataset.l; at = PROBE.find(x => x.label === cur).p.slice(); paint(); }));
-    }
-    /* Die Rechnung wie in Teil 1 – nur das Ergebnis schreibt man selbst hinein */
-    function askCalc(pr) {
-      const st = S.s1[pr.label];
-      const par = v => v < 0 ? `(${num(v)})` : num(v);
-      const cell = (cls, top, bot) => `<span class="mc ${cls}"><span>${top}</span><span>${bot}</span></span>`;
-      const op = s => `<span class="mc mo"><span>${s}</span><span>${s}</span></span>`;
-      calc.innerHTML = `<div class="mrow">${[cell('c-z', '<i>z</i>', '<i>z</i>'), op('='), cell('c-x', '<i>x</i><sub>1</sub>', par(pr.p[0])), op('·'), cell('c-w', '<i>w</i><sub>1</sub>', par(JANA.w[0])), op('+'),
-        cell('c-x', '<i>x</i><sub>2</sub>', par(pr.p[1])), op('·'), cell('c-w', '<i>w</i><sub>2</sub>', par(JANA.w[1])), op('+'), cell('c-b', '<i>b</i>', par(JANA.b)), op('='),
-        `<span class="mc c-z"><span></span><span><input class="rv-zin" type="text" inputmode="decimal" autocomplete="off" aria-label="z" value="${esc(st.z)}"></span></span>`].join('')}</div>
-        <div class="mrow rv-frow">${[cell('c-y', '<i>y</i>', '<i>y</i>'), op('='), cell('c-f', '<i>f</i>(<i>z</i>)', '<i>f</i>(<i>z</i>)'), op('=')].join('')}
-        <span class="rv-yn" role="group"><button type="button" data-yn="1">1 · feuert</button><button type="button" data-yn="0">0 · feuert nicht</button></span></div>`;
-      ctl.innerHTML = `<button type="button" class="nn-btn primary rv-chk">Prüfen</button><span class="rv-msg">Das Neuron feuert, wenn <i class="m">z</i> größer als 0 ist.</span>`;
-      const inp = calc.querySelector('.rv-zin'), m2 = ctl.querySelector('.rv-msg');
-      const showYN = () => calc.querySelectorAll('[data-yn]').forEach(b => b.classList.toggle('on', st.f !== null && +b.dataset.yn === st.f));
-      inp.addEventListener('input', () => { st.z = inp.value; save(); });
-      inp.addEventListener('keydown', e => { if (e.key === 'Enter') ctl.querySelector('.rv-chk').click(); });
-      calc.querySelectorAll('[data-yn]').forEach(b => b.addEventListener('click', () => { st.f = +b.dataset.yn; save(); showYN(); }));
-      showYN();
-      ctl.querySelector('.rv-chk').addEventListener('click', () => {
-        const z = zOf(JANA, pr.p), v = parseNum(st.z);
-        const bad = t => { m2.innerHTML = t; m2.className = 'rv-msg bad'; };
-        if (v === null) return bad('Erst <i class="m">z</i> ausrechnen und eintragen.');
-        if (!same(v, z)) return bad(`Rechne nochmal nach: ${num(pr.p[0])} · ${num(JANA.w[0])} + ${num(pr.p[1])} · ${num(JANA.w[1])} + (${num(JANA.b)}) = ?`);
-        if (st.f === null) { m2.innerHTML = '<i class="m">z</i> stimmt! Feuert das Neuron?'; m2.className = 'rv-msg'; return; }
-        if (st.f !== fire(z)) return bad(same(z, 0) ? '<i class="m">z</i> ist genau 0 – das ist <b>nicht größer</b> als 0.' : `<i class="m">z</i> = ${num(z)} – ist das größer als 0?`);
-        st.ok = true; save();
-        const next = PROBE.find(x => !done(x.label));
-        if (next) { cur = next.label; at = next.p.slice(); }
-        paint();
-      });
-    }
-    function paint() {
-      const all = allDone(), pr = PROBE.find(x => x.label === cur), open = !done(cur);
-      paintSel();
-      m.x = at.slice();
-      N.setSecret(open);
-      if (open) askCalc(pr);
-      else { calc.innerHTML = NL().calcHTML(m, 4); ctl.innerHTML = ''; }
-      ctl.hidden = !ctl.innerHTML;
-      sel.hidden = all;
-      tip.hidden = !all;
-      map.set({
-        cams: K.YEAR1.map(c => { const p = PROBE.find(x => eqP(x.p, c.p)); return p && !all ? Object.assign({}, c, { label: p.label }) : c; }),
-        at,
-        lines: all ? [{ w: JANA.w, b: JANA.b, color: css('ink') }] : [],
-        region: all ? p => fire(zOf(JANA, p)) : null,
-        judge: all ? p => fire(zOf(JANA, p)) : null,
-        pick: all ? p => { if (K.YEAR1.some(c => eqP(c.p, p))) { at = p; paint(); } } : null,
-      });
-      if (all) {
-        const ok = K.YEAR1.filter(c => fire(zOf(JANA, c.p)) === c.soll).length;
-        setMsg(msg, `Alle Orte mit <i class="m">z</i> = 0 liegen auf <b>einer Geraden</b>. Gelb ist, wo Janas Neuron feuert. Es liegt bei <b>${ok} von ${K.YEAR1.length}</b> Kameras richtig – rot umkreist irrt es sich. Das geht besser: Im nächsten Schritt stellst du es selbst ein.`);
-      } else setMsg(msg, '');
-    }
-    paint();
+    box.querySelector('.rv-help-n').appendChild(N.el);
+    box.querySelector('.rv-help-x').addEventListener('click', () => { box.hidden = true; });
+    return box;
   }
 
-  /* ── Schritt 2: Der Fluss ──────────────────────────────── */
-  const RECIPE = `<details class="rv-recipe"><summary>Wie geht das? So wird aus einer Geraden ein Neuron</summary>
-    <ol><li>Durch P und Q geht die Gerade <span class="m">x₂ = m · x₁ + n</span> – wie in Mathe. Steigung: <span class="m">m = (q₂ − p₂) : (q₁ − p₁)</span></li>
-    <li>Auf der Geraden soll das Neuron <span class="m">z = 0</span> rechnen. Das klappt mit
-      <b class="t-w">w₁ = −m</b>, <b class="t-w">w₂ = 1</b>, <b class="t-b">b = −n</b>, denn dann ist <span class="m">z = x₂ − (m·x₁ + n)</span>.</li>
-    <li>Feuert das Neuron auf der falschen Seite? Dann <b>alle drei Zahlen mal −1</b>.</li>
-    <li>Senkrechte Gerade (p₁ = q₁)? Dann <span class="m">w₁ = 1</span>, <span class="m">w₂ = 0</span>, <span class="m">b = −p₁</span>.</li></ol>
-    <p>Brüche darfst du so eintippen: <span class="m">-1/2</span> oder <span class="m">-0,5</span>.</p></details>`;
-
+  /* ── Schritt 1: Der Fluss ──────────────────────────────── */
   function stepFluss(card) {
     const st = S.s2;
-    card.appendChild(h(`<p class="nn-lead-p">Im ersten Jahr stehen die Kameras nur in der Mitte des Tals. Irgendwo verläuft eine <b>Grenze</b>, über die keine Wildkatze geht. Stell selbst ein Neuron auf, das genau diese Grenze zieht – <b>nicht probieren, sondern rechnen</b>.</p>`));
-    let at = [5, 5];
-    const m = model(null, at);
-    const N = NL().makeNeuron(m, { fixed: true });
-    const task = h('<div class="rv-task"></div>');
-    const calc = h('<div class="nw-calc m" hidden></div>');
+    card.appendChild(h(`<p class="nn-lead-p">Försterin <b>Jana</b> hat im Tal <b>Wildtierkameras</b> aufgestellt. Ein <b class="t-y">goldenes Dreieck</b> heißt: Diese Kamera hat eine <b>Wildkatze</b> gesehen. Ein Neuron soll für jeden Ort entscheiden: Revier oder nicht? Seine <b class="t-x">Eingänge</b> sind die Lage auf der Karte: ${xs('x', 1)} = km nach Osten, ${xs('x', 2)} = km nach Norden.
+      Im Süden sieht keine Kamera eine Katze – hier verläuft eine <b>Grenze</b>. Du ziehst sie ein und <b>rechnest</b> sie dann in ein Neuron um.</p>`));
+    const m = model(st.w, [5, 5]);
+    const N = NL().makeNeuron(m, { onChange: k => {
+      if (k[0] === 'x') { paint(); return; }
+      st.w = [m.w[0], m.w[1], m.b]; st.done = false; save(); paint();
+    } });
+    N.setShow(4);
+    const eq = h('<div class="rv-eq"></div>');
+    const r1 = row(1, 'on', '<b>Ziehe die Grenze</b><span>Zieh <b>P</b> und <b>Q</b> auf der Karte, bis die Gerade zwischen den Dreiecken und den Kreisen verläuft. Die Funktionsgleichung ändert sich dabei sofort.</span>');
+    r1.lastElementChild.appendChild(eq);
+    const r2 = row(2, 'on', '<b>Rechne das Neuron aus</b><span>Stell die Gleichung so um, dass rechts <b>0</b> steht, und lies <span class="t-w">w₁</span>, <span class="t-w">w₂</span> und <span class="t-b">b</span> ab. Tipp die Zahl im Neuron an (Regler) oder nimm + und −.</span>');
+    const calc = h('<div class="nw-calc m"></div>');
+    const ctl = h('<div class="rv-ctl"><button type="button" class="nn-btn primary rv-check">Prüfen</button><button type="button" class="nn-btn rv-help-b">Hilfe: Beispiel</button></div>');
+    const help = helpPanel();
     const msg = msgEl();
     const tip = h('<p class="nn-try" hidden><b>Probier:</b> Tippe Kameras an – das Neuron rechnet sie aus. Wo ist <i class="m">z</i> groß, wo fast 0?</p>');
-    split(card, [N.el, task, calc], [h(legend('dein Neuron')), msg, tip]);
-    const nOk = () => st.checked ? neuronOf(st.w) : null;
+    split(card, [r1, r2, N.el, calc, ctl, help], [h(legend('dein Neuron')), msg, tip]);
+    ctl.querySelector('.rv-help-b').addEventListener('click', () => { help.hidden = !help.hidden; });
+    ctl.querySelector('.rv-check').addEventListener('click', check);
+    const nOf = () => neuronOf(st.w);
 
-    function paintTask() {
-      const pq = !!(st.P && st.Q);
-      task.innerHTML = `<div class="rv-row${pq ? ' ok' : ' on'}"><i>1</i><div><b>Wo verläuft die Grenze?</b>
-          ${pq ? `<span><span class="m rv-pq">P = ${pt(st.P)} · Q = ${pt(st.Q)}</span> <button type="button" class="rv-link rv-repick">neu wählen</button></span>`
-            : `<span>Tippe auf der Karte zwei Gitterpunkte an, durch die deine Grenze geht – zwischen den Dreiecken und den Kreisen.</span>${st.P ? `<span class="m rv-pq">P = ${pt(st.P)} · jetzt Q antippen</span>` : ''}`}</div></div>
-        <div class="rv-row${pq ? (st.done ? ' ok' : ' on') : ' off'}"><i>2</i><div><b>Rechne das Neuron aus</b>
-          <div class="rv-fields">${field('w1', st.w[0], 'c-w', xs('w', 1) + ' =')}${field('w2', st.w[1], 'c-w', xs('w', 2) + ' =')}${field('b', st.w[2], 'c-b', '<i class="m">b</i> =')}
-          <button type="button" class="nn-btn primary rv-check">Prüfen</button></div>${RECIPE}</div></div>`;
-      const rp = task.querySelector('.rv-repick');
-      if (rp) rp.addEventListener('click', () => { st.P = st.Q = null; st.checked = false; st.done = false; save(); paintTask(); paint(); });
-      task.querySelectorAll('input').forEach((inp, i) => {
-        inp.disabled = !pq;
-        inp.addEventListener('input', () => { st.w[i] = inp.value; if (st.checked) { st.checked = false; save(); paint(); } else save(); });
-        inp.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
-      });
-      const cb = task.querySelector('.rv-check');
-      cb.disabled = !pq;
-      cb.addEventListener('click', check);
-    }
-    function check() { st.checked = true; save(); paint(); task.querySelector('.rv-row:last-child').className = 'rv-row ' + (st.done ? 'ok' : 'on'); }
     function paint() {
-      const n = nOk();
-      if (n) { m.w = n.w.slice(); m.b = n.b; }
-      m.x = at.slice();
-      N.setShow(n ? 4 : 1);
-      N.setSecret(!n);
-      calc.hidden = !n;
-      if (n) calc.innerHTML = NL().calcHTML(m, 4);
-      tip.hidden = !(n && st.done);
+      eq.innerHTML = eqBox(st.P, st.Q);
+      calc.innerHTML = NL().calcHTML(m, 4);
+      const n = st.done ? nOf() : null;
+      tip.hidden = !st.done;
       map.set({
-        cams: K.YEAR1,
-        at: n ? at : null,
-        pencil: [{ P: st.P, Q: st.Q, color: css('ink-soft') }],
-        pick: !(st.P && st.Q)
-          ? p => { if (!st.P) st.P = p; else if (!eqP(p, st.P)) st.Q = p; st.checked = false; save(); paintTask(); paint(); }
-          : n ? p => { if (K.YEAR1.some(c => eqP(c.p, p))) { at = p; paint(); } } : null,
-        lines: n ? [{ w: n.w, b: n.b, color: css('ink') }] : [],
-        region: n ? p => fire(zOf(n, p)) : null,
-        judge: n ? p => fire(zOf(n, p)) : null,
+        cams: K.YEAR1, at: m.x.slice(),
+        handles: { P: st.P, Q: st.Q, color: css('accent'), onMove: (P, Q) => { st.P = P; st.Q = Q; if (st.done) { st.done = false; save(); setMsg(msg, ''); } else save(); eq.innerHTML = eqBox(st.P, st.Q); paintMap(); } },
+        tapCam: p => { m.x = p.slice(); N.update(); paint(); },
+        lines: n ? [{ w: n.w, b: n.b, color: css('ink') }] : [], region: n ? p => fire(zOf(n, p)) : null, judge: n ? p => fire(zOf(n, p)) : null,
       });
-      if (!st.checked) { setMsg(msg, ''); return; }
-      if (!n) { setMsg(msg, 'Trag alle drei Zahlen ein.'); return; }
+    }
+    function paintMap() {
+      const n = st.done ? nOf() : null;
+      map.set({ lines: n ? [{ w: n.w, b: n.b, color: css('ink') }] : [], region: n ? p => fire(zOf(n, p)) : null, judge: n ? p => fire(zOf(n, p)) : null });
+    }
+    function check() {
+      const n = nOf();
+      if (!n.w[0] && !n.w[1]) { setMsg(msg, '<ul class="rv-checks"><li class="bad">Stell erst die Zahlen im Neuron ein: <span class="t-w">w₁</span>, <span class="t-w">w₂</span> und <span class="t-b">b</span> sind noch 0.</li></ul>'); return; }
       const items = [];
-      if (st.P && st.Q) {
-        const onP = same(zOf(n, st.P), 0), onQ = same(zOf(n, st.Q), 0);
-        items.push([onP && onQ, onP && onQ ? 'Die Gerade geht durch P und Q.' : `Die Gerade geht nicht durch ${!onP && !onQ ? 'P und Q' : !onP ? 'P' : 'Q'}: Dort ist z = ${num(zOf(n, !onP ? st.P : st.Q))}, nicht 0. Rechne nochmal nach.`]);
-      }
+      const through = distTo(n, st.P) < 0.45 && distTo(n, st.Q) < 0.45;
+      items.push([through, through ? 'Die Gerade deines Neurons geht durch <b>P</b> und <b>Q</b>.' : `Die Gerade deines Neurons geht <b>nicht</b> durch P und Q (bei P ist <i class="m">z</i> = ${num(zOf(n, st.P))}, bei Q ${num(zOf(n, st.Q))} – beides müsste 0 sein). Stell die Gleichung nochmal um.`]);
+      const pe = penErrors(st.P, st.Q, K.YEAR1);
+      if (pe > 0) items.push([false, `Deine Bleistiftlinie liegt noch nicht zwischen allen Dreiecken und Kreisen (${pe} ${pe === 1 ? 'Kamera' : 'Kameras'} auf der falschen Seite). Zieh P und Q anders.`]);
       const ok = K.YEAR1.filter(c => fire(zOf(n, c.p)) === c.soll).length, all = ok === K.YEAR1.length;
       const goldOk = K.YEAR1.filter(c => c.soll && fire(zOf(n, c.p))).length;
       const flip = !all && goldOk === 0 && K.YEAR1.filter(c => !c.soll && !fire(zOf(n, c.p))).length === 0;
       if (flip) items.push([false, 'Die Gerade passt – aber das Neuron feuert auf der <b>falschen Seite</b>. Nimm alle drei Zahlen mal −1.']);
-      items.push([all, `<b>${ok} von ${K.YEAR1.length}</b> Kameras richtig.${all || flip ? '' : ' Liegt deine Bleistiftlinie wirklich zwischen Dreiecken und Kreisen?'}`]);
-      if (st.done !== all) { st.done = all; save(); }
-      tip.hidden = !all;
-      setMsg(msg, `<ul class="rv-checks">${items.map(([g, t]) => `<li class="${g ? 'good' : 'bad'}">${t}</li>`).join('')}</ul>` +
-        (all ? '<p><b>Geschafft!</b> Dein Neuron hat die Grenze gefunden. Was dort wirklich ist, siehst du erst am Ende.</p>' : ''), all);
+      items.push([all, `<b>${ok} von ${K.YEAR1.length}</b> Kameras richtig.`]);
+      st.done = all && through; save();
+      paintMap(); tip.hidden = !st.done;
+      setMsg(msg, checks(items) + (st.done ? '<p><b>Geschafft!</b> Die Gerade deines Neurons ist jetzt eingezeichnet – gelb ist, wo es feuert. Was dort wirklich ist, siehst du erst am Ende.</p>' : '<p class="rv-hint2">Die Gerade deines Neurons wird erst eingezeichnet, wenn die Zahlen stimmen.</p>'), st.done);
     }
-    paintTask();
     paint();
   }
 
-  /* ── Schritt 3: Die Stadt (Netz) ───────────────────────── */
+  /* ── Schritt 2: Ein Jahr später (Netz) ─────────────────── */
   function stepStadt(card) {
     const st = S.s3;
     if (!st.seen) {
       st.seen = true;
-      if (!st.hid.length && S.s2.done) st.hid.push({ P: S.s2.P, Q: S.s2.Q, w: S.s2.w.slice(), col: COLS[0] });
+      if (!st.hid.length && S.s2.done) { const x = { P: S.s2.P.slice(), Q: S.s2.Q.slice(), w: S.s2.w.slice(), col: COLS[0], ok: false }; x.ok = checkHid(x).pass; st.hid.push(x); st.out.v.push(0); }
       save();
     }
-    const flussN = S.s2.done ? neuronOf(S.s2.w) : null;
-    const flussOk = flussN ? K.ALL.filter(c => fire(zOf(flussN, c.p)) === c.soll).length : null;
-    card.appendChild(h(`<p class="nn-lead-p">Jana stellt jetzt <b>im ganzen Tal</b> Kameras auf. Im Westen und im Nordosten sieht keine mehr eine Katze – dort muss noch etwas sein.
-      ${flussOk !== null ? `Dein Fluss-Neuron schafft nur noch <b>${flussOk} von ${K.ALL.length}</b>.` : ''} <b>Eine Gerade reicht nicht mehr – du baust ein Netz:</b> Jedes Perzeptron bringt seine eigene Gerade mit, der Ausgang fasst sie zusammen.</p>`));
+    card.appendChild(h(`<p class="nn-lead-p">Ein Jahr später: Jana hat jetzt <b>im ganzen Tal</b> Kameras aufgestellt. Im Westen und im Nordosten sieht keine mehr eine Katze – dort kommt etwas dazu: eine <b>Straße</b> und eine <b>Stadt</b>. Die Wildkatzen halten <b>Abstand</b> zu beiden.
+      Mit einer Geraden kommst du nicht mehr aus: Du brauchst <b>drei</b>. Für jede machst du dasselbe wie am Fluss – Gerade ziehen, Gleichung umstellen, Neuron einstellen, prüfen. Die geprüften Perzeptrons stecken in einem <b>Netz</b>, der Ausgang fasst sie zusammen.</p>`));
     const net = h(`<div class="rv-net"><svg class="rv-edges"></svg>
       <div class="rv-col rv-cin"><span class="rv-inode">${xs('x', 1)}</span><span class="rv-inode">${xs('x', 2)}</span></div>
       <div class="rv-col rv-chid"></div><div class="rv-col rv-cout"></div></div>`);
@@ -329,15 +322,28 @@
     split(card, [net, edit, mu], [h(legend('das Netz')), msg]);
     const hidCol = net.querySelector('.rv-chid'), outCol = net.querySelector('.rv-cout'), svg = net.querySelector('.rv-edges');
     // Ausgewählt: Index eines Perzeptrons oder 'out'
-    let sel = st.hid.findIndex(x => !neuronOf(x.w));
+    let sel = st.hid.findIndex(x => !x.ok);
     if (sel < 0) sel = st.hid.length ? 'out' : -1;
+    // Ein Neuron für alle Perzeptrons (wird beim Wechsel umgefüllt)
+    const m = model([0, 0, 0], [5, 5]);
+    const curX = () => typeof sel === 'number' ? st.hid[sel] : null;
+    let eqEl = null, calcEl = null, fbEl = null, helpEl = null;
+    const N = NL().makeNeuron(m, { onChange: k => {
+      const x = curX(); if (!x) return;
+      if (k[0] === 'x') { if (calcEl) calcEl.innerHTML = NL().calcHTML(m, 4); paint(); return; }
+      x.w = [m.w[0], m.w[1], m.b]; x.ok = false; save();
+      hidCol.querySelector(`[data-i="${sel}"]`)?.classList.add('open');
+      if (fbEl) fbEl.innerHTML = '';
+      if (calcEl) calcEl.innerHTML = NL().calcHTML(m, 4);
+      paint();
+    } });
+    N.setShow(4);
 
     const glyph = '<svg viewBox="0 0 40 24" aria-hidden="true"><line x1="20" y1="3" x2="20" y2="21"/><text x="10" y="17" text-anchor="middle">Σ</text><path d="M24 17 H29 V7 H36"/></svg>';
     function build() {
       hidCol.innerHTML = '';
       st.hid.forEach((x, i) => {
-        const ok = !!neuronOf(x.w);
-        const b = h(`<button type="button" class="rv-hn${sel === i ? ' on' : ''}${ok ? '' : ' open'}" data-i="${i}" style="--c:${x.col}"><b>${i + 1}</b>${glyph}</button>`);
+        const b = h(`<button type="button" class="rv-hn${sel === i ? ' on' : ''}${x.ok ? '' : ' open'}" data-i="${i}" style="--c:${x.col}"><b>${i + 1}</b>${glyph}</button>`);
         b.addEventListener('click', () => { sel = i; build(); });
         hidCol.appendChild(b);
       });
@@ -358,41 +364,66 @@
       paint();
     }
     function buildEdit() {
-      edit.innerHTML = '';
+      edit.innerHTML = ''; eqEl = calcEl = fbEl = helpEl = null;
       if (!st.hid.length) { edit.appendChild(h('<p class="rv-hint">Tippe auf <b>＋ Perzeptron</b> oder zieh es ins Netz.</p>')); return; }
       if (sel === 'out') {
         edit.style.setProperty('--c', 'var(--gold)');
-        edit.appendChild(h(`<div class="rv-ebox rv-ocard"><div class="rv-ehead"><b>Ausgang</b></div>
-          <p>Er bekommt von jedem Perzeptron eine <b>1</b> („Revier“) oder eine <b>0</b>. Er soll nur feuern, wenn <b>alle</b> „Revier“ sagen. Welche Gewichte <i class="m">v</i> und welchen Bias <i class="m">b</i> braucht er?</p>
-          <div class="rv-fields">${st.hid.map((x, i) => `<label class="rv-f c-w" style="--c:${x.col}"><span><i class="rv-dot"></i>${xs('v', i + 1)} =</span><input type="text" inputmode="decimal" autocomplete="off" data-v="${i}" value="${esc(st.out.v[i])}"></label>`).join('')}
-          ${field('ob', st.out.b, 'c-b', '<i class="m">b</i> =')}</div>
-          <details class="rv-recipe"><summary>Tipp</summary><p>Mit allen <i class="m">v</i> = 1 ist die Summe höchstens ${st.hid.length}. Der Bias muss so liegen, dass nur die volle Summe ${st.hid.length} über 0 kommt – ${st.hid.length - 1} aber nicht.</p></details></div>`));
-        edit.querySelectorAll('[data-v]').forEach(inp => inp.addEventListener('input', () => { st.out.v[+inp.dataset.v] = inp.value; save(); paint(); }));
-        edit.querySelector('[data-f="ob"]').addEventListener('input', e => { st.out.b = e.target.value; save(); paint(); });
+        const box = h(`<div class="rv-ebox rv-ocard"><div class="rv-ehead"><b>Ausgang</b></div>
+          <p>Er bekommt von jedem Perzeptron eine <b>1</b> („Revier“) oder eine <b>0</b>. Er soll nur feuern, wenn <b>alle</b> „Revier“ sagen. Welche Gewichte <i class="m">v</i> und welchen Bias <i class="m">b</i> braucht er? Tipp eine Zahl an, um sie einzutippen.</p>
+          <div class="rv-fields rv-ofields"></div>
+          <details class="rv-recipe"><summary>Tipp</summary><p>Mit allen <i class="m">v</i> = 1 ist die Summe höchstens ${st.hid.length}. Der Bias muss so liegen, dass nur die volle Summe ${st.hid.length} über 0 kommt – ${st.hid.length - 1} aber nicht.</p></details></div>`);
+        const fl = box.querySelector('.rv-ofields');
+        st.hid.forEach((x, i) => {
+          const lab = h(`<label class="rv-f c-w" style="--c:${x.col}"><span><i class="rv-dot"></i>${xs('v', i + 1)} =</span></label>`);
+          lab.appendChild(miniVal(() => st.out.v[i] ?? 0, v => { st.out.v[i] = v; save(); paint(); }, 'c-w', { step: 1, min: -6, max: 6 }));
+          fl.appendChild(lab);
+        });
+        const lb = h('<label class="rv-f c-b"><span><i class="m">b</i> =</span></label>');
+        lb.appendChild(miniVal(() => st.out.b, v => { st.out.b = v; save(); paint(); }, 'c-b', { step: 0.5, min: -20, max: 20 }));
+        fl.appendChild(lb);
+        edit.appendChild(box);
         return;
       }
       const x = st.hid[sel]; if (!x) return;
       edit.style.setProperty('--c', x.col);
-      const pq = x.P && x.Q;
+      m.w = [x.w[0], x.w[1]]; m.b = x.w[2];
       const box = h(`<div class="rv-ebox rv-hcard"><div class="rv-ehead"><span class="rv-num">${sel + 1}</span><b>Perzeptron ${sel + 1}</b><button type="button" class="rv-link rv-del">entfernen</button></div>
-        <p class="rv-pqline">${pq ? `<span class="m rv-pq">P = ${pt(x.P)} · Q = ${pt(x.Q)}</span> <button type="button" class="rv-link rv-repick">neu wählen</button>`
-          : `Tippe auf der Karte zwei Gitterpunkte für seine Gerade an. <span class="m rv-pq">${x.P ? `P = ${pt(x.P)} · jetzt Q` : ''}</span>`}</p>
-        <div class="rv-fields">${field('w1', x.w[0], 'c-w', xs('w', 1) + ' =')}${field('w2', x.w[1], 'c-w', xs('w', 2) + ' =')}${field('b', x.w[2], 'c-b', '<i class="m">b</i> =')}</div>
-        ${RECIPE}</div>`);
+        <div class="rv-row on"><i>1</i><div><b>Ziehe seine Gerade</b><span>Zieh <b>P</b> und <b>Q</b> auf der Karte (in der Farbe dieses Perzeptrons).</span><div class="rv-eq"></div></div></div>
+        <div class="rv-row on"><i>2</i><div><b>Rechne das Neuron aus</b><span>Gleichung umstellen, <span class="t-w">w₁</span>, <span class="t-w">w₂</span>, <span class="t-b">b</span> im Neuron einstellen.</span></div></div>
+        <div class="rv-nslot"></div><div class="nw-calc m"></div>
+        <div class="rv-ctl"><button type="button" class="nn-btn primary rv-check">Prüfen</button><button type="button" class="nn-btn rv-help-b">Hilfe: Beispiel</button></div>
+        <div class="rv-fb"></div></div>`);
+      eqEl = box.querySelector('.rv-eq'); calcEl = box.querySelector('.nw-calc'); fbEl = box.querySelector('.rv-fb');
+      eqEl.innerHTML = eqBox(x.P, x.Q);
+      box.querySelector('.rv-nslot').appendChild(N.el);
+      N.update();
+      calcEl.innerHTML = NL().calcHTML(m, 4);
+      helpEl = helpPanel(); box.appendChild(helpEl);
+      box.querySelector('.rv-help-b').addEventListener('click', () => { helpEl.hidden = !helpEl.hidden; });
+      box.querySelector('.rv-check').addEventListener('click', () => checkNow(x));
       box.querySelector('.rv-del').addEventListener('click', () => { st.hid.splice(sel, 1); st.out.v.splice(sel, 1); sel = st.hid.length ? Math.min(sel, st.hid.length - 1) : -1; save(); build(); });
-      const rp = box.querySelector('.rv-repick');
-      if (rp) rp.addEventListener('click', () => { x.P = x.Q = null; save(); buildEdit(); paint(); });
-      box.querySelectorAll('input').forEach((inp, k) => inp.addEventListener('input', () => {
-        x.w[k] = inp.value; save();
-        const b = hidCol.querySelector(`[data-i="${sel}"]`); if (b) b.classList.toggle('open', !neuronOf(x.w));
-        paint();
-      }));
       edit.appendChild(box);
+      if (x.ok) fbEl.innerHTML = '<p class="rv-ok2">✓ Geprüft – die Gerade ist eingezeichnet.</p>';
+    }
+    function checkNow(x) {
+      const c = checkHid(x), n = neuronOf(x.w);
+      if (!n.w[0] && !n.w[1]) { fbEl.innerHTML = checks([[false, 'Stell erst die Zahlen im Neuron ein: <span class="t-w">w₁</span>, <span class="t-w">w₂</span> und <span class="t-b">b</span> sind noch 0.']]); return; }
+      const items = [];
+      items.push([c.through, c.through ? 'Die Gerade geht durch <b>P</b> und <b>Q</b>.' : `Die Gerade des Neurons geht <b>nicht</b> durch P und Q (bei P ist <i class="m">z</i> = ${num(zOf(n, x.P))}, bei Q ${num(zOf(n, x.Q))}). Stell die Gleichung nochmal um.`]);
+      if (c.wrongTri === 0) items.push([true, 'Alle Dreiecke liegen auf der gelben Seite.']);
+      else items.push([false, c.flip ? 'Das Neuron feuert auf der <b>falschen Seite</b> – nimm alle drei Zahlen mal −1.' : `${c.wrongTri} ${c.wrongTri === 1 ? 'Dreieck liegt' : 'Dreiecke liegen'} nicht auf der gelben Seite. Deine Gerade schneidet in das Revier hinein.`]);
+      items.push([c.cut >= 3, c.cut >= 3 ? `Sie trennt <b>${c.cut}</b> Kreise ab.` : 'Diese Gerade trennt kaum etwas ab. Zieh sie dorthin, wo die Katzen-Kameras aufhören.']);
+      x.ok = c.pass; save();
+      fbEl.innerHTML = checks(items) + (c.pass ? '<p class="rv-ok2">Geschafft – die Gerade ist jetzt eingezeichnet.</p>' : '');
+      hidCol.querySelector(`[data-i="${sel}"]`)?.classList.toggle('open', !x.ok);
+      paint();
     }
     function addHid() {
       if (st.hid.length >= MAX_HID) return;
       const used = st.hid.map(x => x.col), col = COLS.find(c => !used.includes(c)) || COLS[st.hid.length % COLS.length];
-      st.hid.push({ P: null, Q: null, w: ['', '', ''], col });
+      const [P, Q] = DEF_PQ[st.hid.length % DEF_PQ.length];
+      st.hid.push({ P: P.slice(), Q: Q.slice(), w: [0, 0, 0], col, ok: false });
+      st.out.v.push(0);
       sel = st.hid.length - 1;
       save(); build();
     }
@@ -413,18 +444,14 @@
       });
     }
     function paint() {
-      const ns = st.hid.map(x => neuronOf(x.w));
-      const n = netOf(st), cur = typeof sel === 'number' ? st.hid[sel] : null, curN = cur ? ns[sel] : null;
-      const picking = !!cur && !(cur.P && cur.Q);
+      const cur = curX();
+      const ns = st.hid.map(x => x.ok ? neuronOf(x.w) : null);
+      const n = netOf(st), curN = cur && cur.ok ? ns[sel] : null;
       map.set({
-        cams: K.ALL,
-        pencil: cur ? [{ P: cur.P, Q: cur.Q, color: cur.col }] : [],
-        pick: picking ? p => {
-          if (!cur.P) cur.P = p; else if (!eqP(p, cur.P)) cur.Q = p;
-          save(); buildEdit(); paint();
-        } : null,
-        pickColor: cur ? cur.col : null,
-        lines: ns.map((m, i) => m && { w: m.w, b: m.b, color: st.hid[i].col, num: String(i + 1), shift: i * 0.11, width: sel === i ? 4.4 : 2.6, faint: !!cur && sel !== i }).filter(Boolean),
+        cams: K.ALL, at: cur ? m.x.slice() : null,
+        handles: cur ? { P: cur.P, Q: cur.Q, color: cur.col, onMove: (P, Q) => { cur.P = P; cur.Q = Q; cur.ok = false; save(); if (eqEl) eqEl.innerHTML = eqBox(P, Q); if (fbEl) fbEl.innerHTML = ''; hidCol.querySelector(`[data-i="${sel}"]`)?.classList.add('open'); paintLines(); } } : null,
+        tapCam: cur ? p => { m.x = p.slice(); N.update(); if (calcEl) calcEl.innerHTML = NL().calcHTML(m, 4); paint(); } : null,
+        lines: ns.map((q, i) => q && { w: q.w, b: q.b, color: st.hid[i].col, num: String(i + 1), width: sel === i ? 4.4 : 2.6, faint: !!cur && sel !== i }).filter(Boolean),
         region: cur ? (curN ? p => fire(zOf(curN, p)) : null) : (n ? n.judge : null),
         judge: n && !cur ? n.judge : null,
       });
@@ -432,8 +459,8 @@
       const lg = card.querySelector('.rv-lg-gold em');
       if (lg) lg.textContent = cur ? `hier feuert Perzeptron ${sel + 1}` : 'hier feuert das Netz';
       if (!st.hid.length) { setMsg(msg, ''); return; }
-      const miss = ns.findIndex(m => !m);
-      if (miss >= 0) { setMsg(msg, `Perzeptron ${miss + 1}: Punkte wählen und ${xs('w', 1)}, ${xs('w', 2)}, <i class="m">b</i> ausrechnen – dann erscheint seine Gerade.`); return; }
+      const open = st.hid.findIndex(x => !x.ok);
+      if (open >= 0) { setMsg(msg, `Perzeptron ${open + 1}: Gerade ziehen, ${xs('w', 1)}, ${xs('w', 2)}, <i class="m">b</i> ausrechnen und <b>Prüfen</b> – dann erscheint seine Gerade.`); return; }
       if (!n) { setMsg(msg, 'Alle Geraden stehen. Tippe im Netz auf den <b>Ausgang</b> und stell ihn ein.'); return; }
       const ok = K.ALL.filter(c => n.judge(c.p) === c.soll).length, all = ok === K.ALL.length;
       if (st.done !== all) { st.done = all; save(); mu.hidden = all; }
@@ -445,6 +472,7 @@
         map.reveal(() => { const r = msg.querySelector('.rv-reveal-msg'); if (r) r.innerHTML = revealText(); });
       } else msg.insertAdjacentHTML('beforeend', `<p>${revealText()}</p>`);
     }
+    function paintLines() { paint(); }
     // ＋ Perzeptron: antippen oder ins Netz ziehen (Zeiger-Ereignisse, am Tablet genauso)
     function dragAdd(e, chip) {
       e.preventDefault();
@@ -470,71 +498,104 @@
     mu.querySelector('.rv-lsg').addEventListener('click', () => { if (!confirm('Dein Netz durch die Musterlösung ersetzen?')) return; S.s3 = MUSTER(); save(); render(page, api); });
     build();
   }
-  const revealText = () => `<b>Jetzt siehst du die Landschaft:</b> Im Süden fließt der <b>Fluss</b>, im Westen führt die <b>Landstraße</b> vorbei, im Nordosten liegt die <b>Stadt</b>. Dazwischen ist Wald – das Revier. Jede Grenze ist ein Perzeptron, der Ausgang fasst sie zusammen: <b>Das ist ein neuronales Netz.</b>`;
+  const revealText = () => `<b>Jetzt siehst du die Landschaft:</b> Im Süden fließt der <b>Fluss</b>, im Westen führt die <b>Landstraße</b> vorbei, im Nordosten liegt die <b>Stadt</b> – und die Wildkatzen halten <b>zwei Kilometer Abstand</b> davon. Dazwischen ist Wald – das Revier. Jede Grenze ist ein Perzeptron, der Ausgang fasst sie zusammen: <b>Das ist ein neuronales Netz.</b>`;
 
-  /* ── Schritt 4: Ein Jahr später (Overfitting) ──────────── */
+  /* ── Schritt 3: Zu genau gelernt (Overfitting zum Anfassen) ── */
   function stepJahr(card) {
     const st = S.s4;
     const n = S.s3.done ? netOf(S.s3) : null;
     if (!n) {
-      card.appendChild(h(`<div class="rv-need"><p>Hier geht es mit deinem Netz aus <b>„Die Stadt“</b> weiter – das ist noch nicht fertig.</p>
-        <p><button type="button" class="nn-btn rv-go3">‹ Zur Stadt</button> <button type="button" class="nn-btn rv-lsg">Mit der Musterlösung weitermachen</button></p></div>`));
+      card.appendChild(h(`<div class="rv-need"><p>Hier geht es mit deinem Netz aus <b>„Ein Jahr später“</b> weiter – das ist noch nicht fertig.</p>
+        <p><button type="button" class="nn-btn rv-go3">‹ Zurück</button> <button type="button" class="nn-btn rv-lsg">Mit der Musterlösung weitermachen</button></p></div>`));
       card.querySelector('.rv-go3').onclick = () => go('stadt');
       card.querySelector('.rv-lsg').onclick = () => { S.s3 = MUSTER(); S.revealed = true; save(); render(page, api); };
       return;
     }
     if (!S.revealed) { S.revealed = true; save(); }
-    const N = K.NOISY.length, T = K.TEST.length;
-    const mineOk = K.NOISY.filter(c => n.judge(c.p) === c.soll).length;
-    const mineT = K.TEST.filter(c => n.judge(c.p) === c.soll).length, kimT = K.TEST.filter(c => K.kim(c.p) === c.soll).length;
-    card.appendChild(h(`<p class="nn-lead-p">Jana hat alle Bilder noch einmal durchgesehen. Fünf Kameras passen nicht ins Bild – <b>Ausreißer</b> (orange umkreist). Ihr Kollege <b>Kim</b> hat ein riesiges Netz mit 40 Neuronen lange trainiert. Es liegt bei <b>allen</b> Kameras richtig, auch bei den Ausreißern.</p>`));
+    const outs = K.NOISY.filter(c => c.out), N = K.NOISY.length, T = K.TEST.length;
+    /* das Netz mit k Merk-Neuronen: in einem kleinen Kreis um den Ausreißer gilt dessen Antwort */
+    const judgeWith = list => p => { for (const i of list) { const o = outs[i]; if (Math.hypot(o.p[0] - p[0], o.p[1] - p[1]) < BUBBLE) return o.soll; } return n.judge(p); };
+    const acc = (cams, j) => cams.filter(c => j(c.p) === c.soll).length;
+    const seqAll = () => st.mem.concat(outs.map((_, i) => i).filter(i => !st.mem.includes(i)));
+    card.appendChild(h(`<p class="nn-lead-p">Jana hat die Bilder noch einmal durchgesehen. <b>Fünf Kameras</b> passen nicht ins Bild – <b>Ausreißer</b> (orange umkreist). Dein Netz liegt dort falsch. Kannst du es <b>perfekt</b> machen? Jeder Ausreißer bekommt ein <b>Merk-Neuron</b>: ein winziges Zusatz-Neuron, das nur diesen einen Ort kennt.</p>`));
     const cmp = h('<div class="rv-cmp"></div>');
+    const chips = h('<div class="rv-chips"></div>');
     const why = h('<p class="rv-why"></p>');
-    const q = h(`<div class="rv-task"><div class="rv-row on"><i>?</i><div><b>Welches Netz würdest du Jana geben?</b>
-      <span class="rv-yn big"><button type="button" data-c="mine">Mein Netz</button><button type="button" data-c="kim">Kims Netz</button></span></div></div></div>`);
-    const test = h(`<div class="rv-task rv-test" hidden><div class="rv-row on"><i>!</i><div><b>Der Test</b><span>Ein Jahr später stellt Jana <b>${T} neue Kameras</b> auf – dort, wo noch keine stand. Das Revier ist dasselbe. Welches Netz liegt bei Kameras richtig, die es noch nie gesehen hat?</span>
+    const q = h(`<div class="rv-task rv-q" hidden><div class="rv-row on"><i>?</i><div><b>Und bei Kameras, die das Netz noch nie gesehen hat?</b><span>Ein Jahr später stellt Jana neue Kameras auf. Wird dein „perfektes“ Netz dort auch perfekt sein?</span>
+      <span class="rv-yn big"><button type="button" data-c="gut">Ja, auch dort</button><button type="button" data-c="schlecht">Nein, schlechter</button></span></div></div></div>`);
+    const test = h(`<div class="rv-task rv-test" hidden><div class="rv-row on"><i>!</i><div><b>Der Test</b><span>Jana stellt <b>${T} neue Kameras</b> auf – dort, wo noch keine stand. Das Revier ist dasselbe.</span>
       <span><button type="button" class="nn-btn primary rv-run">Neue Kameras aufstellen</button></span></div></div></div>`);
     const res = h('<p class="nn-task-msg rv-test-msg" hidden></p>');
+    const curve = h('<div class="rv-curve" hidden></div>');
     const sum = h(`<div class="nn-summary rv-sum" hidden><b>Overfitting</b><ul>
-      <li>Kims Netz hat sich <b>jede einzelne Kamera gemerkt</b> – auch die Ausreißer. Bei den Trainingsdaten ist es perfekt.</li>
-      <li>Bei <b>neuen Daten</b> liegt es daneben: Um jeden Ausreißer hat es eine kleine Insel gebaut, die es in Wirklichkeit nicht gibt.</li>
-      <li>Das heißt <b>Overfitting</b> (Überanpassung): Ein Netz lernt die Trainingsdaten auswendig statt der Regel dahinter.</li>
+      <li>Mit jedem Merk-Neuron wird das Netz bei den <b>alten Kameras</b> besser – am Ende ist es perfekt.</li>
+      <li>Aber jedes Merk-Neuron hat nur einen <b>Einzelfall</b> auswendig gelernt. Bei <b>neuen Kameras</b> in der Nähe sagt es dasselbe – und liegt daneben.</li>
+      <li>Das heißt <b>Overfitting</b> (Überanpassung): Das Netz lernt die Beispiele auswendig statt der Regel dahinter.</li>
       <li>Darum prüft man ein Netz immer mit <b>Testdaten</b>, die es beim Lernen nicht gesehen hat. Ein einfaches Netz ist oft das bessere.</li></ul></div>`);
-    split(card, [cmp, why, q, test, res], [h(legend('das gewählte Netz'))]);
+    split(card, [cmp, chips, why, q, test, res, curve], [h(legend('das gewählte Netz'))]);
     card.querySelector('.rv-split').after(sum);
-    const judge = () => st.view === 'kim' ? K.kim : n.judge;
+    const judge = () => st.view === 'mine' ? n.judge : judgeWith(st.mem);
+
+    function drawCurve() {
+      const seq = seqAll(), W = 320, H = 160, L = 38, R = 12, Tt = 28, B = 30;
+      const pts = cams => [0, 1, 2, 3, 4, 5].map(k => acc(cams, judgeWith(seq.slice(0, k))) / cams.length);
+      const a = pts(K.NOISY), b = pts(K.TEST);
+      const lo = Math.floor(Math.min(...a, ...b) * 20) / 20 - 0.05, hi = 1;
+      const X = k => L + k / 5 * (W - L - R), Y = v => Tt + (1 - (v - lo) / (hi - lo)) * (H - Tt - B);
+      const path = arr => arr.map((v, k) => (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
+      const k = st.mem.length;
+      curve.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Alte und neue Kameras je Anzahl der Merk-Neuronen">
+        <line class="ax" x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}"/><line class="ax" x1="${L}" y1="${Tt}" x2="${L}" y2="${H - B}"/>
+        ${[0, 1, 2, 3, 4, 5].map(i => `<text class="tk" x="${X(i)}" y="${H - B + 14}" text-anchor="middle">${i}</text>`).join('')}
+        <text class="tk" x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">Anzahl Merk-Neuronen</text>
+        <text class="tk" x="${L - 4}" y="${Y(1) + 4}" text-anchor="end">100 %</text><text class="tk" x="${L - 4}" y="${Y(lo) + 4}" text-anchor="end">${Math.round(lo * 100)} %</text>
+        <path class="c-old" d="${path(a)}"/><path class="c-new" d="${path(b)}"/>
+        ${[a, b].map((arr, j) => `<circle class="${j ? 'd-new' : 'd-old'}" cx="${X(k)}" cy="${Y(arr[k])}" r="5.5"/>`).join('')}
+        <text class="lab c-old-t" x="${X(5)}" y="${Y(a[5]) - 7}" text-anchor="end">alte Kameras</text><text class="lab c-new-t" x="${X(5)}" y="${Y(b[5]) + 15}" text-anchor="end">neue Kameras</text></svg>`;
+    }
     function paint() {
-      const tested = st.tested;
+      const tested = st.tested, k = st.mem.length, jm = judgeWith(st.mem);
+      const mineOk = acc(K.NOISY, n.judge), memOk = acc(K.NOISY, jm), mineT = acc(K.TEST, n.judge), memT = acc(K.TEST, jm);
       cmp.innerHTML = `<button type="button" class="rv-net-card${st.view === 'mine' ? ' on' : ''}" data-v="mine"><b>Dein Netz</b><span>${S.s3.hid.length} Perzeptrons + Ausgang</span>
           <span class="rv-big">${tested ? mineT : mineOk} / ${tested ? T : N}</span><span>${tested ? 'neue' : 'alte'} Kameras richtig</span></button>
-        <button type="button" class="rv-net-card${st.view === 'kim' ? ' on' : ''}" data-v="kim"><b>Kims Netz</b><span>40 Neuronen, lange trainiert</span>
-          <span class="rv-big">${tested ? kimT : N} / ${tested ? T : N}</span><span>${tested ? 'neue' : 'alte'} Kameras richtig</span></button>`;
+        <button type="button" class="rv-net-card${st.view === 'mem' ? ' on' : ''}" data-v="mem"><b>Mit Merk-Neuronen</b><span>${k} Zusatz-${k === 1 ? 'Neuron' : 'Neuronen'}</span>
+          <span class="rv-big">${tested ? memT : memOk} / ${tested ? T : N}</span><span>${tested ? 'neue' : 'alte'} Kameras richtig</span></button>`;
       cmp.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { st.view = b.dataset.v; save(); paint(); }));
-      q.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === st.choice));
-      test.hidden = !st.choice || tested;
-      res.hidden = sum.hidden = !tested;
+      chips.innerHTML = '<span class="rv-camsel-t">Merk-Neuron für:</span>' + outs.map((o, i) => `<button type="button" class="rv-cam rv-oc${st.mem.includes(i) ? ' on' : ''}" data-i="${i}"><b>${i + 1}</b><span class="m">${pt(o.p)}</span>${st.mem.includes(i) ? '<i>✓</i>' : ''}</button>`).join('');
+      chips.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', () => toggle(+b.dataset.i)));
+      q.hidden = !(k >= 1) || !!st.choice || tested;
+      test.hidden = !(k >= 1 && st.choice) || tested;
+      res.hidden = sum.hidden = curve.hidden = !tested;
       why.hidden = tested;
+      q.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === st.choice));
       if (tested) {
-        res.className = 'nn-task-msg rv-test-msg' + (mineT > kimT ? ' ok' : '');
-        res.innerHTML = `Bei den neuen Kameras: dein Netz <b>${mineT} von ${T}</b>, Kims Netz <b>${kimT} von ${T}</b>. ${st.choice === 'mine' ? '<b>Gut eingeschätzt!</b>' : '<b>Überraschung!</b>'} Tippe oben auf „Kims Netz“: Wo hat es Inseln gebaut?`;
+        res.className = 'nn-task-msg rv-test-msg' + (memT < mineT ? ' ok' : '');
+        res.innerHTML = `Alte Kameras: mit ${k} Merk-Neuron${k === 1 ? '' : 'en'} <b>${memOk} von ${N}</b> (vorher ${mineOk}). Neue Kameras: nur noch <b>${memT} von ${T}</b> (dein Netz ohne Merk-Neuronen: ${mineT}). ${st.choice === 'schlecht' ? '<b>Gut eingeschätzt!</b>' : '<b>Überraschung!</b>'} Probier es aus: Nimm Merk-Neuronen weg oder dazu – die Punkte wandern auf den Kurven. Tippe auf „Mit Merk-Neuronen“: Wo hat das Netz Inseln gebaut?`;
+        drawCurve();
       }
       const lg = card.querySelector('.rv-lg-gold em');
-      if (lg) lg.textContent = st.view === 'kim' ? 'hier feuert Kims Netz' : 'hier feuert dein Netz';
+      if (lg) lg.textContent = st.view === 'mine' ? 'hier feuert dein Netz' : 'hier feuert dein Netz mit Merk-Neuronen';
       map.set({
         reveal: 0.45,
         cams: tested ? K.TEST : K.NOISY.map(c => c.out ? Object.assign({}, c, { mark: true }) : c),
         judge: judge(), region: judge(),
-        lines: st.view === 'mine' ? n.hid.map((m, i) => ({ w: m.w, b: m.b, color: S.s3.hid[i].col, width: 2, faint: true })) : [],
-        pick: tested ? null : p => {
-          const c = K.NOISY.find(x => x.out && eqP(x.p, p));
-          if (c) why.innerHTML = `<b>Kamera ${pt(c.p)}:</b> ${c.out}`;
-        },
-        pickColor: css('in'),
+        lines: [], rings: st.view === 'mem' ? st.mem.map(i => ({ p: outs[i].p, r: BUBBLE, color: css('in') })) : [],
+        tapCam: tested ? null : p => { const i = outs.findIndex(o => eqP(o.p, p)); if (i >= 0) toggle(i); },
+        pick: null,
       });
+    }
+    function toggle(i) {
+      const at = st.mem.indexOf(i);
+      if (at >= 0) st.mem.splice(at, 1); else st.mem.push(i);
+      st.view = 'mem';
+      const o = outs[i];
+      why.innerHTML = `<b>Kamera ${pt(o.p)}:</b> ${o.out} ${st.mem.includes(i) ? 'Das Merk-Neuron sagt jetzt für den kleinen Kreis um sie herum ' + (o.soll ? '„Revier“' : '„kein Revier“') + '.' : 'Das Merk-Neuron ist wieder weg.'}`;
+      if (!st.mem.length) { st.choice = null; st.tested = false; }
+      save(); paint();
     }
     q.querySelectorAll('[data-c]').forEach(b => b.addEventListener('click', () => { st.choice = b.dataset.c; save(); paint(); }));
     test.querySelector('.rv-run').addEventListener('click', () => { st.tested = true; save(); paint(); });
-    why.innerHTML = 'Tippe auf der Karte eine <b>orange umkreiste</b> Kamera an: Was ist dort passiert?';
+    why.innerHTML = 'Tippe auf der Karte eine <b>orange umkreiste</b> Kamera an (oder oben auf ihre Nummer): Was ist dort passiert – und bekommt sie ein Merk-Neuron?';
     paint();
   }
 
@@ -563,12 +624,12 @@
       Ein Neuron bekommt zwei Eingänge: x₁ = km nach Osten, x₂ = km nach Norden. Es rechnet <b>z = x₁·w₁ + x₂·w₂ + b</b> und feuert („Revier“), wenn z &gt; 0 ist.</p>
       <img src="${img1}" alt="Karte mit Kameras">
       <h2>1 · Ein Neuron prüft Kameras</h2>
-      <p>Janas Neuron: w₁ = 1, w₂ = 1, b = −8. Berechne z für die Kameras A (3|2), B (4|6) und C (5|3). Feuert das Neuron?</p>
+      <p>Janas Neuron: w₁ = 1, w₂ = 1, b = −8. Berechne z für die Kameras A (3|3), B (5|5) und C (3|5). Feuert das Neuron? Hat die Kamera wirklich eine Katze gesehen (▲)?</p>
       <table><tr><th>Kamera</th><th>Rechnung</th><th>z</th><th>feuert?</th><th>richtig?</th></tr>${['A', 'B', 'C'].map(line).join('')}</table>
       </section><section class="sheet">
       <h2>2 · Die Grenzen finden</h2>
       <p>Zeichne mit dem Lineal <b>drei Geraden</b> ein, die die Dreiecke von den Kreisen trennen (eine im Süden, eine im Westen, eine im Nordosten).
-      Wähle auf jeder Geraden zwei Gitterpunkte P und Q.</p>
+      Wähle auf jeder Geraden zwei Gitterpunkte P und Q. Die Wildkatzen halten außerdem Abstand zur Stadt.</p>
       <p class="tip"><b>So geht's:</b> Gerade x₂ = m·x₁ + n mit m = (q₂ − p₂) : (q₁ − p₁). Dann ist w₁ = −m, w₂ = 1, b = −n.
       Prüfe ein Dreieck: Ist dort z &gt; 0? Wenn nicht, alle drei Zahlen mal −1.</p>
       <table><tr><th>Perzeptron</th><th>P</th><th>Q</th><th>m und n</th><th>w₁ · w₂ · b</th></tr>${['1 (Süden)', '2 (Westen)', '3 (Nordosten)'].map(line).join('')}</table>
@@ -582,7 +643,7 @@
       </section><section class="sheet solution">
       <header><b>Lösung</b><span>(für die Lehrkraft)</span></header>
       <img src="${img2}" alt="Aufgelöste Karte">
-      <p><b>1:</b> A: z = 3 + 2 − 8 = −3 → feuert nicht (richtig) · B: z = 4 + 6 − 8 = 2 → feuert (richtig) · C: z = 5 + 3 − 8 = 0 → feuert nicht, denn 0 ist nicht größer als 0 (richtig).</p>
+      <p><b>1:</b> ${PROBE.map(pr => { const z = JANA.w[0] * pr.p[0] + JANA.w[1] * pr.p[1] + JANA.b, soll = K.ALL.find(c => eqP(c.p, pr.p)).soll; return `${pr.label}: z = ${pr.p[0]} + ${pr.p[1]} − 8 = ${num(z)} → ${z > 0 ? 'feuert' : 'feuert nicht' + (z === 0 ? ', denn 0 ist nicht größer als 0' : '')} (Kamera ${soll ? 'hat eine Katze gesehen' : 'hat keine Katze gesehen'} → ${fire(z) === soll ? 'richtig' : 'Janas Neuron irrt sich'})`; }).join(' · ')}.</p>
       <p><b>2</b> (eine mögliche Lösung): Fluss x₂ = ½x₁ + 2 → w₁ = −0,5, w₂ = 1, b = −2 · Landstraße x₂ = 3x₁ − 3 → w₁ = −3, w₂ = 1, b = 3, feuert auf der falschen Seite → w₁ = 3, w₂ = −1, b = −3 ·
       Stadtrand x₂ = −x₁ + 15 → w₁ = 1, w₂ = 1, b = −15, falsche Seite → w₁ = −1, w₂ = −1, b = 15. Andere Geraden sind richtig, wenn sie alle Kameras trennen.</p>
       <p><b>3:</b> Summe 3 → feuern, Summe 2 → nicht: −3 &lt; b ≤ −2, z. B. b = −2,5.</p>

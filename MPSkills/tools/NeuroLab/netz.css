@@ -259,3 +259,39 @@ input.bad { border-color: var(--neg) !important; background: var(--neg-dim) !imp
 }
 
 .xs { white-space: nowrap; }
+
+/* ── Revier, 3. Fassung (22.11.2026): ziehbare Gerade, Gleichung, Hilfe, Merk-Neuronen ── */
+.rv-eq { display: grid; gap: 2px; padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1.5px dashed var(--accent-line); }
+.rv-eq-l { font-size: .74rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+.rv-eq-m { font-size: 1.25rem; color: var(--ink); font-weight: 700; }
+.rv-eq-s { font-size: .84rem; color: var(--ink-soft); }
+.rv-approx { color: var(--ink-faint); font-family: var(--mono); }
+.rv-help { border: 1.5px solid var(--accent-line); border-radius: 12px; background: var(--accent-dim); padding: 12px 14px; display: grid; gap: 8px; }
+.rv-help[hidden] { display: none; }
+.rv-help-h { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.rv-help ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: .9rem; line-height: 1.5; }
+.rv-help-t { margin: 0; font-size: .84rem; color: var(--ink-soft); }
+.rv-help-n { max-width: 420px; }
+.rv-nslot { min-width: 0; }
+.rv-hint2 { font-size: .86rem; color: var(--ink-soft); }
+.rv-ok2 { margin: 4px 0 0; font-weight: 700; color: var(--accent-ink); }
+.rv-fb:empty { display: none; }
+.rv-hcard { gap: 10px; }
+.rv-ofields { gap: 10px 18px; }
+.rv-f .nw-val { font-size: 1.05rem; }
+.rv-mini-in { width: 3.4em; font: 700 1.05em var(--mono); text-align: center; color: var(--ink); background: var(--surface); border: 1.5px solid var(--accent); border-radius: 8px; padding: .15em .2em; }
+.rv-mini-in:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.rv-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.rv-oc.on { border-color: var(--in); background: var(--in-dim); }
+.rv-oc.on b { background: var(--in); }
+.rv-q[hidden] { display: none; }
+.rv-curve { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
+.rv-curve[hidden] { display: none; }
+.rv-curve svg { width: 100%; max-width: 380px; display: block; margin: 0 auto; }
+.rv-curve .ax { stroke: var(--ink-faint); stroke-width: 1.2; }
+.rv-curve .tk { font: 10px var(--mono); fill: var(--ink-soft); }
+.rv-curve .lab { font: 700 11px var(--font); }
+.rv-curve .c-old, .rv-curve .c-new { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.rv-curve .c-old { stroke: var(--accent); } .rv-curve .c-new { stroke: var(--neg); }
+.rv-curve .d-old { fill: var(--accent); stroke: var(--surface); stroke-width: 2; } .rv-curve .d-new { fill: var(--neg); stroke: var(--surface); stroke-width: 2; }
+.rv-curve .c-old-t { fill: var(--accent-ink); } .rv-curve .c-new-t { fill: var(--neg); }
