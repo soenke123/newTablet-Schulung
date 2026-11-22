@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NeuroLab Startseite</title>
+<!-- Showroom (22.11.2026): drei Entwürfe für die Übersicht von NeuroLab.
+     Nur zum Anschauen – nichts davon ist in start.js eingebaut. -->
+<link rel="stylesheet" href="../../../fonts/spacegrotesk-jetbrainsmono-unbounded-9f6dea.css">
+<link rel="stylesheet" href="style.css?v=20261120k">
+<style>
+  body { min-height: 100vh; }
+  .bar { position: sticky; top: 0; z-index: 9; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); }
+  .bar b { margin-right: 8px; }
+  .bar button { font: inherit; font-weight: 600; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--surface); color: var(--ink); cursor: pointer; }
+  .bar button.on { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .bar .sp { flex: 1; }
+  .v { display: none; } .v.on { display: block; }
+  .hint { max-width: 1120px; margin: 18px auto 0; padding: 0 16px; color: var(--ink-faint); font-size: .85rem; }
+
+  /* ── gemeinsame Bilder (SVG-Szenen) ─────────────────────────── */
+  .scene { position: relative; overflow: hidden; }
+  .scene svg { display: block; width: 100%; height: 100%; }
+  .s-line { fill: none; stroke: var(--line); stroke-width: 2; }
+  .s-acc  { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+  .s-in   { fill: none; stroke: var(--in); stroke-width: 3; stroke-linecap: round; }
+  .s-node { fill: var(--surface); stroke: var(--accent); stroke-width: 2.5; }
+  .s-nodeI{ fill: var(--surface); stroke: var(--in); stroke-width: 2.5; }
+  .s-hot  { fill: var(--accent); }
+  .s-txt  { font-family: var(--mono); font-weight: 700; fill: var(--ink-soft); }
+  .s-grid { stroke: var(--grid); stroke-width: 1; }
+  .pulse { animation: pulse 2.4s ease-in-out infinite; }
+  .pulse.d2 { animation-delay: .6s; } .pulse.d3 { animation-delay: 1.2s; }
+  @keyframes pulse { 0%,100% { opacity: .25 } 50% { opacity: 1 } }
+  .flow { stroke-dasharray: 6 10; animation: flow 1.6s linear infinite; }
+  @keyframes flow { to { stroke-dashoffset: -32; } }
+  .draw { stroke-dasharray: 300; stroke-dashoffset: 300; animation: draw 3.5s ease-out infinite; }
+  @keyframes draw { 0% { stroke-dashoffset: 300 } 60%,100% { stroke-dashoffset: 0 } }
+  @media (prefers-reduced-motion: reduce) { .pulse, .flow, .draw { animation: none; opacity: 1; stroke-dashoffset: 0; } }
+
+  .share { display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: .8rem; font-weight: 700;
+    padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); cursor: pointer; }
+  .share svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2.2; }
+  .share.on { background: var(--in); border-color: var(--in); color: #fff; }
+
+  /* ═════════ A · Lernweg ═════════ */
+  .A { max-width: 1120px; margin: 0 auto; padding: 28px 16px 48px; }
+  .A-hero { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 26px; }
+  .A-hero h1 { font-size: clamp(1.7rem, 3.4vw, 2.5rem); line-height: 1.1; letter-spacing: -.02em; }
+  .A-hero h1 em { font-style: normal; color: var(--accent-ink); }
+  .A-hero p { color: var(--ink-soft); margin-top: 6px; max-width: 46ch; }
+  .A-path { position: relative; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+  .A-path::before { content: ''; position: absolute; left: 8%; right: 8%; top: 92px; border-top: 3px dashed var(--accent-line); z-index: 0; }
+  .A-card { position: relative; z-index: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 22px;
+    box-shadow: var(--shadow); overflow: hidden; cursor: pointer; transition: transform .2s, border-color .2s; display: flex; flex-direction: column; }
+  .A-card:hover { transform: translateY(-4px); border-color: var(--accent-line); }
+  .A-card .scene { height: 184px; background: var(--surface-2); border-bottom: 1px solid var(--line-soft); }
+  .A-num { position: absolute; top: 14px; left: 14px; z-index: 2; width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-weight: 700; font-family: var(--mono); }
+  .A-card .share { position: absolute; top: 14px; right: 14px; z-index: 2; }
+  .A-body { padding: 16px 18px 18px; display: grid; gap: 6px; flex: 1; }
+  .A-kick { font-family: var(--mono); font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); }
+  .A-body h3 { font-size: 1.25rem; }
+  .A-body p { color: var(--ink-soft); font-size: .92rem; line-height: 1.45; }
+  .A-foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; align-items: center; }
+  .chip { font-size: .78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--accent-dim); color: var(--accent-ink); }
+  .chip.grey { background: var(--surface-2); color: var(--ink-faint); border: 1px solid var(--line); }
+  .go { margin-left: auto; font-weight: 700; color: var(--accent-ink); }
+  .A-free { margin-top: 26px; display: grid; grid-template-columns: 260px 1fr auto; gap: 22px; align-items: center;
+    background: var(--in-dim); border: 1px dashed var(--in-line); border-radius: 22px; padding: 14px 22px 14px 14px; cursor: pointer; }
+  .A-free .scene { height: 120px; border-radius: 14px; background: var(--surface); }
+  .A-free h3 { font-size: 1.15rem; } .A-free p { color: var(--ink-soft); font-size: .92rem; margin-top: 4px; }
+  .A-free .A-kick { color: var(--in-ink); }
+  @media (max-width: 860px) {
+    .A-path { grid-template-columns: 1fr; } .A-path::before { display: none; }
+    .A-free { grid-template-columns: 1fr; }
+  }
+
+  /* ═════════ B · Labor (dunkler Kopf, große Bühne) ═════════ */
+  .B-top { background: radial-gradient(1200px 400px at 70% -10%, #0e3a4a, #070d1a 70%); color: #e8f1ff; padding: 34px 16px 90px; position: relative; overflow: hidden; }
+  .B-top svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; }
+  .B-top .in { max-width: 1120px; margin: 0 auto; position: relative; }
+  .B-top h1 { font-size: clamp(2rem, 4.5vw, 3.2rem); letter-spacing: -.03em; line-height: 1.02; }
+  .B-top h1 span { color: #5cf2c4; }
+  .B-top p { color: #a9bad6; margin-top: 10px; max-width: 48ch; font-size: 1.02rem; }
+  .B-grid { max-width: 1120px; margin: -64px auto 48px; padding: 0 16px; display: grid; gap: 18px;
+    grid-template-columns: 1.35fr 1fr; grid-template-rows: auto auto; position: relative; }
+  .B-card { background: var(--surface); border-radius: 20px; border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden;
+    display: grid; cursor: pointer; transition: transform .2s; position: relative; }
+  .B-card:hover { transform: translateY(-3px); }
+  .B-card .scene { background: var(--surface-2); }
+  .B-big { grid-row: span 2; grid-template-rows: 1fr auto; }
+  .B-big .scene { min-height: 300px; }
+  .B-small { grid-template-columns: 240px 1fr; }
+  .B-small .scene { border-right: 1px solid var(--line-soft); }
+  .B-body { padding: 16px 18px; display: grid; gap: 6px; align-content: center; }
+  .B-body h3 { font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
+  .B-body p { color: var(--ink-soft); font-size: .9rem; line-height: 1.45; }
+  .B-tag { font-family: var(--mono); font-size: .7rem; font-weight: 700; padding: 3px 8px; border-radius: 6px; background: var(--accent-dim); color: var(--accent-ink); }
+  .B-tag.o { background: var(--in-dim); color: var(--in-ink); }
+  .B-card .share { position: absolute; top: 12px; right: 12px; }
+  .B-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+  @media (max-width: 860px) { .B-grid { grid-template-columns: 1fr; } .B-big { grid-row: auto; } .B-small { grid-template-columns: 1fr; } .B-small .scene { height: 140px; border-right: 0; } }
+
+  /* ═════════ C · Ein Netz als Menü ═════════ */
+  .C { max-width: 1120px; margin: 0 auto; padding: 26px 16px 48px; }
+  .C h1 { font-size: 1.6rem; } .C > p { color: var(--ink-soft); margin: 4px 0 18px; }
+  .C-stage { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow);
+    aspect-ratio: 16 / 8; min-height: 420px; overflow: hidden;
+    background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px); background-size: 28px 28px; }
+  .C-stage > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .C-node { position: absolute; transform: translate(-50%, -50%); width: 220px; text-align: center; cursor: pointer; }
+  .C-ball { width: 92px; height: 92px; margin: 0 auto 10px; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent);
+    display: grid; place-items: center; box-shadow: 0 0 0 8px var(--accent-dim); transition: transform .2s, box-shadow .2s; }
+  .C-node:hover .C-ball { transform: scale(1.07); box-shadow: 0 0 0 14px var(--accent-dim); }
+  .C-ball svg { width: 54px; height: 54px; fill: none; stroke: var(--accent-ink); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .C-node.o .C-ball { border-color: var(--in); box-shadow: 0 0 0 8px var(--in-dim); } .C-node.o .C-ball svg { stroke: var(--in-ink); }
+  .C-node h3 { font-size: 1.1rem; } .C-node p { font-size: .84rem; color: var(--ink-soft); line-height: 1.4; margin-top: 2px; }
+  .C-node .share { margin-top: 8px; }
+  .C-w { font-family: var(--mono); font-size: 12px; font-weight: 700; fill: var(--ink-faint); }
+  @media (max-width: 860px) { .C-stage { aspect-ratio: auto; min-height: 0; display: grid; gap: 22px; padding: 22px; }
+    .C-stage > svg { display: none; } .C-node { position: static; transform: none; width: auto; } }
+</style>
+</head>
+<body>
+<div class="bar">
+  <b>NeuroLab · Startseite</b>
+  <button data-v="A" class="on">A · Lernweg</button>
+  <button data-v="B">B · Labor</button>
+  <button data-v="C">C · Netz als Menü</button>
+  <span class="sp"></span>
+  <button id="teach">Lehrkraft-Ansicht</button>
+  <button id="theme">Hell / Dunkel</button>
+</div>
+
+<!-- Szenen, mehrfach benutzt -->
+<template id="sc-neuron">
+  <svg viewBox="0 0 320 184" preserveAspectRatio="xMidYMid slice">
+    <g class="s-grid"><path d="M0 46H320M0 92H320M0 138H320M64 0V184M128 0V184M192 0V184M256 0V184"/></g>
+    <image href="../Nebeltal/img/frei/chin_1.webp" x="14" y="22" width="56" height="56"/>
+    <image href="../Nebeltal/img/frei/adelie_1.webp" x="14" y="106" width="56" height="56"/>
+    <path class="s-acc flow" d="M72 50 C110 50 120 86 150 90"/><path class="s-in flow" d="M72 134 C110 134 120 98 150 96"/>
+    <text class="s-txt" x="96" y="44" font-size="11">w₁</text><text class="s-txt" x="96" y="152" font-size="11">w₂</text>
+    <circle class="s-node" cx="186" cy="92" r="34"/><text x="186" y="101" text-anchor="middle" font-size="26" font-weight="700" fill="var(--ink)">Σ</text>
+    <path class="s-acc" d="M220 92 H252"/>
+    <circle class="s-hot pulse" cx="268" cy="92" r="14"/><text class="s-txt" x="268" y="128" text-anchor="middle" font-size="11">y′</text>
+  </svg>
+</template>
+<template id="sc-katze">
+  <svg viewBox="0 0 320 184" preserveAspectRatio="xMidYMid slice">
+    <defs><linearGradient id="gk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--accent-dim)"/><stop offset="1" stop-color="var(--in-dim)"/></linearGradient></defs>
+    <rect width="320" height="184" fill="url(#gk)"/>
+    <path d="M0 140 C60 120 90 150 150 128 S260 100 320 118 V184 H0Z" fill="var(--accent)" opacity=".12"/>
+    <path d="M-10 60 C80 40 140 110 330 70" fill="none" stroke="var(--accent)" stroke-width="10" opacity=".18"/>
+    <path class="s-in draw" d="M20 168 L300 24"/>
+    <path class="s-acc draw" style="animation-delay:.8s" d="M30 20 L290 170"/>
+    <g fill="var(--in)"><path d="M210 52 l9 -15 9 15z"/><path d="M250 76 l9 -15 9 15z"/><path d="M232 100 l9 -15 9 15z"/><path d="M270 40 l9 -15 9 15z"/></g>
+    <g fill="none" stroke="var(--ink-faint)" stroke-width="2.5"><circle cx="60" cy="80" r="7"/><circle cx="96" cy="120" r="7"/><circle cx="140" cy="150" r="7"/><circle cx="50" cy="140" r="7"/><circle cx="110" cy="60" r="7"/></g>
+    <g transform="translate(150 70)"><rect width="30" height="22" rx="5" fill="var(--surface)" stroke="var(--ink-soft)" stroke-width="2"/><circle cx="15" cy="11" r="5" fill="var(--ink-soft)"/><circle class="pulse" cx="25" cy="5" r="2.5" fill="var(--neg)"/></g>
+  </svg>
+</template>
+<template id="sc-lernen">
+  <svg viewBox="0 0 320 184" preserveAspectRatio="xMidYMid slice">
+    <g class="s-grid"><path d="M0 46H320M0 92H320M0 138H320M64 0V184M128 0V184M192 0V184M256 0V184"/></g>
+    <path d="M30 20 V160 H300" fill="none" stroke="var(--ink-faint)" stroke-width="2"/>
+    <path d="M34 30 C70 34 80 110 120 120 S200 142 296 146 V160 H34Z" fill="var(--accent)" opacity=".12"/>
+    <path class="s-acc draw" d="M34 30 C70 34 80 110 120 120 S200 142 296 146"/>
+    <text class="s-txt" x="40" y="18" font-size="11">Fehler</text><text class="s-txt" x="296" y="176" font-size="11" text-anchor="end">Training →</text>
+    <g transform="translate(196 22)">
+      <rect x="-10" y="-8" width="112" height="76" rx="12" fill="var(--surface)" stroke="var(--line)"/>
+      <path d="M8 14 L46 10 M8 14 L46 46 M8 46 L46 10 M8 46 L46 46 M46 10 L84 28 M46 46 L84 28" stroke="var(--accent-line)" stroke-width="2"/>
+      <circle class="s-nodeI" cx="8" cy="14" r="7"/><circle class="s-nodeI" cx="8" cy="46" r="7"/>
+      <circle class="s-node pulse" cx="46" cy="10" r="7"/><circle class="s-node pulse d2" cx="46" cy="46" r="7"/><circle class="s-hot pulse d3" cx="84" cy="28" r="7"/>
+    </g>
+  </svg>
+</template>
+<template id="sc-frei">
+  <svg viewBox="0 0 320 184" preserveAspectRatio="xMidYMid slice">
+    <g transform="translate(22 36)">
+      <rect width="104" height="112" rx="10" fill="var(--surface)" stroke="var(--in-line)" stroke-width="2"/>
+      <rect width="104" height="24" rx="10" fill="var(--in-dim)"/><text class="s-txt" x="52" y="17" font-size="11" text-anchor="middle" fill="var(--in-ink)">daten.csv</text>
+      <g stroke="var(--line)" stroke-width="1.5"><path d="M0 46H104M0 68H104M0 90H104M36 24V112M70 24V112"/></g>
+      <g class="s-txt" font-size="10"><text x="9" y="40">0.2</text><text x="44" y="40">1.0</text><text x="80" y="40">1</text><text x="9" y="62">0.8</text><text x="44" y="62">0.1</text><text x="80" y="62">0</text><text x="9" y="84">0.5</text><text x="44" y="84">0.7</text><text x="80" y="84">1</text></g>
+    </g>
+    <path class="s-in flow" d="M132 92 H176"/>
+    <path d="M190 64 L236 50 M190 64 L236 92 M190 64 L236 134 M190 120 L236 50 M190 120 L236 92 M190 120 L236 134 M236 50 L286 92 M236 92 L286 92 M236 134 L286 92" stroke="var(--line)" stroke-width="2"/>
+    <circle class="s-nodeI" cx="190" cy="64" r="9"/><circle class="s-nodeI" cx="190" cy="120" r="9"/>
+    <circle class="s-node" cx="236" cy="50" r="9"/><circle class="s-node" cx="236" cy="92" r="9"/><circle class="s-node" cx="236" cy="134" r="9"/>
+    <circle class="s-hot pulse" cx="286" cy="92" r="10"/>
+    <text x="236" y="174" text-anchor="middle" font-size="22" font-weight="700" fill="var(--in)">+</text>
+  </svg>
+</template>
+
+<!-- ═════════ A ═════════ -->
+<div class="v on" id="v-A"><div class="A">
+  <div class="A-hero">
+    <div><h1>Wie lernt eine <em>Maschine</em>?</h1><p>In drei Schritten vom einzelnen Neuron zum Netz, das selbst lernt.</p></div>
+  </div>
+  <div class="A-path">
+    <div class="A-card"><span class="A-num">1</span><span class="share t-only">SHARE</span>
+      <div class="scene" data-sc="neuron"></div>
+      <div class="A-body"><span class="A-kick">Ein Neuron</span><h3>Neuronen</h3>
+        <p>Eingänge, Gewichte, Bias, Aktivierung – Stück für Stück aufgedeckt, bis es Pinguine sortiert.</p>
+        <div class="A-foot"><span class="chip">7 Schritte</span><span class="chip grey">Alle Neuronen ›</span><span class="go">Los →</span></div></div></div>
+    <div class="A-card"><span class="A-num">2</span><span class="share t-only">SHARE</span>
+      <div class="scene" data-sc="katze"></div>
+      <div class="A-body"><span class="A-kick">Vom Neuron zum Netz</span><h3>Wildkatzen</h3>
+        <p>Wildtierkameras im Tal: Jede Grenze ist eine Gerade – erst rechnen, dann aufdecken.</p>
+        <div class="A-foot"><span class="chip">Arbeitsblatt</span><span class="go">Los →</span></div></div></div>
+    <div class="A-card"><span class="A-num">3</span><span class="share t-only">SHARE</span>
+      <div class="scene" data-sc="lernen"></div>
+      <div class="A-body"><span class="A-kick">Das Netz lernt selbst</span><h3>Lernen</h3>
+        <p>Szenario wählen, Schichten bauen – und zusehen, wie der Fehler fällt.</p>
+        <div class="A-foot"><span class="chip">4 Szenarien</span><span class="chip grey t-only">0 von 4 geteilt</span><span class="go">Los →</span></div></div></div>
+  </div>
+  <div class="A-free"><div class="scene" data-sc="frei"></div>
+    <div><span class="A-kick">Spielwiese</span><h3>Frei bauen</h3><p>Ohne Vorgaben: eigene Schichten, eigene CSV-Tabelle, eigenes Training.</p></div>
+    <span class="share t-only on">SHARE</span></div>
+</div></div>
+
+<!-- ═════════ B ═════════ -->
+<div class="v" id="v-B">
+  <div class="B-top">
+    <svg class="bg" viewBox="0 0 1200 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <g stroke="#5cf2c4" stroke-opacity=".18" stroke-width="1.5">
+        <path d="M700 60 L860 30 M700 60 L860 130 M700 60 L860 230 M700 180 L860 30 M700 180 L860 130 M700 180 L860 230 M860 30 L1020 80 M860 130 L1020 80 M860 230 L1020 80 M860 30 L1020 200 M860 130 L1020 200 M860 230 L1020 200 M1020 80 L1140 140 M1020 200 L1140 140"/>
+      </g>
+      <g fill="#070d1a" stroke="#5cf2c4" stroke-width="2.5">
+        <circle cx="700" cy="60" r="12" class="pulse"/><circle cx="700" cy="180" r="12" class="pulse d2"/>
+        <circle cx="860" cy="30" r="12" class="pulse d3"/><circle cx="860" cy="130" r="12" class="pulse"/><circle cx="860" cy="230" r="12" class="pulse d2"/>
+        <circle cx="1020" cy="80" r="12" class="pulse d3"/><circle cx="1020" cy="200" r="12" class="pulse"/>
+      </g>
+      <circle cx="1140" cy="140" r="16" fill="#5cf2c4" class="pulse d2"/>
+    </svg>
+    <div class="in"><h1>Neuro<span>Lab</span></h1><p>Bau dir ein künstliches Gehirn – vom einzelnen Neuron bis zum Netz, das selbst lernt.</p></div>
+  </div>
+  <div class="B-grid">
+    <div class="B-card B-big"><span class="share t-only">SHARE</span>
+      <div class="scene" data-sc="neuron"></div>
+      <div class="B-body"><h3>Neuronen <span class="B-tag">Start hier</span></h3>
+        <p>Ein Neuron Stück für Stück aufdecken: Eingänge, Gewichte, Bias, Aktivierung – bis es echte Pinguine sortiert.</p>
+        <div class="B-row"><span class="chip">7 Schritte</span><span class="chip grey">Alle Neuronen ›</span></div></div></div>
+    <div class="B-card B-small"><span class="share t-only">SHARE</span><div class="scene" data-sc="katze"></div>
+      <div class="B-body"><h3>Wildkatzen</h3><p>Aus Geraden wird ein Netz – erst rechnen, dann sehen.</p></div></div>
+    <div class="B-card B-small"><span class="share t-only">SHARE</span><div class="scene" data-sc="lernen"></div>
+      <div class="B-body"><h3>Lernen</h3><p>Szenario wählen und zusehen, wie das Netz lernt.</p><div class="B-row t-only"><span class="chip grey">0 von 4 Szenarien geteilt</span></div></div></div>
+    <div class="B-card B-small" style="grid-column:1 / -1"><span class="share t-only on">SHARE</span><div class="scene" data-sc="frei"></div>
+      <div class="B-body"><h3>Frei <span class="B-tag o">CSV</span></h3><p>Komplett frei bauen und eine eigene Tabelle hineinladen.</p></div></div>
+  </div>
+</div>
+
+<!-- ═════════ C ═════════ -->
+<div class="v" id="v-C"><div class="C">
+  <h1>NeuroLab</h1><p>Folge dem Signal: von links nach rechts wird aus einem Neuron ein lernendes Netz.</p>
+  <div class="C-stage">
+    <svg viewBox="0 0 1000 500" preserveAspectRatio="none" aria-hidden="true">
+      <path class="s-acc flow" d="M200 150 C330 150 370 250 500 250"/>
+      <path class="s-acc flow" d="M500 250 C630 250 670 150 800 150"/>
+      <path class="s-in flow" style="opacity:.6" d="M200 150 C300 300 400 380 500 390"/>
+      <path class="s-in flow" style="opacity:.6" d="M500 390 C620 380 700 260 800 150"/>
+      <text class="C-w" x="330" y="180">w = 0.8</text><text class="C-w" x="640" y="180">w = 1.2</text><text class="C-w" x="330" y="360">w = 0.3</text>
+    </svg>
+    <div class="C-node" style="left:20%;top:32%"><div class="C-ball"><svg viewBox="0 0 64 40"><circle cx="10" cy="10" r="6"/><circle cx="10" cy="30" r="6"/><path d="M16 11 L28 18 M16 29 L28 22"/><rect x="28" y="11" width="22" height="18" rx="9"/><path d="M50 20 H60"/></svg></div>
+      <h3>Neuronen</h3><p>Ein Neuron Stück für Stück aufdecken.</p><span class="share t-only">SHARE</span></div>
+    <div class="C-node" style="left:50%;top:52%"><div class="C-ball"><svg viewBox="0 0 64 40"><path d="M4 30 L60 14"/><path d="M4 8 L40 36"/><rect x="40" y="4" width="14" height="10" rx="2"/></svg></div>
+      <h3>Wildkatzen</h3><p>Aus Geraden wird ein Netz.</p><span class="share t-only">SHARE</span></div>
+    <div class="C-node" style="left:80%;top:32%"><div class="C-ball"><svg viewBox="0 0 64 40"><path d="M4 6 V36 H60"/><path d="M8 10 C18 12 20 28 30 30 S50 33 58 33"/></svg></div>
+      <h3>Lernen</h3><p>Zusehen, wie das Netz lernt.</p><span class="share t-only">SHARE</span></div>
+    <div class="C-node o" style="left:50%;top:82%"><div class="C-ball" style="width:64px;height:64px"><svg viewBox="0 0 64 40" style="width:40px"><circle cx="8" cy="12" r="5"/><circle cx="8" cy="28" r="5"/><rect x="28" y="14" width="12" height="10" rx="4"/><path d="M13 12 L28 17 M13 28 L28 21 M40 19 H56"/></svg></div>
+      <h3>Frei</h3><span class="share t-only on">SHARE</span></div>
+  </div>
+</div></div>
+
+<p class="hint">Showroom – nur zum Vergleichen. Szenen sind SVG, Pinguine aus Nebeltal; Bewegungen fallen bei „Animationen reduzieren“ weg.</p>
+
+<script>
+  const SHARE = '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
+  document.querySelectorAll('.share').forEach(s => { s.innerHTML = SHARE + '<span>' + (s.classList.contains('on') ? 'Geteilt' : 'Teilen') + '</span>';
+    s.addEventListener('click', e => { e.stopPropagation(); s.classList.toggle('on'); s.querySelector('span').textContent = s.classList.contains('on') ? 'Geteilt' : 'Teilen'; }); });
+  document.querySelectorAll('[data-sc]').forEach(el => { el.appendChild(document.getElementById('sc-' + el.dataset.sc).content.cloneNode(true)); if (el.closest('.B-small')) el.querySelector('svg').setAttribute('preserveAspectRatio', 'xMidYMid meet'); });
+  // Verläufe brauchen eindeutige ids, sonst greift nur der erste
+  document.querySelectorAll('[data-sc="katze"]').forEach((el, i) => { const g = el.querySelector('linearGradient'); g.id = 'gk' + i; el.querySelector('rect').setAttribute('fill', 'url(#gk' + i + ')'); });
+  const Qs = new URLSearchParams(location.search);
+  let teach = Qs.has('lehrer');
+  const paintTeach = () => { document.querySelectorAll('.t-only').forEach(e => e.style.display = teach ? '' : 'none'); document.getElementById('teach').classList.toggle('on', teach); };
+  document.getElementById('teach').onclick = () => { teach = !teach; paintTeach(); }; paintTeach();
+  const show = v => { document.querySelectorAll('.bar [data-v]').forEach(b => b.classList.toggle('on', b.dataset.v === v)); document.querySelectorAll('.v').forEach(x => x.classList.toggle('on', x.id === 'v-' + v)); };
+  document.querySelectorAll('.bar [data-v]').forEach(b => b.onclick = () => show(b.dataset.v));
+  if (Qs.get('v')) show(Qs.get('v'));
+  document.getElementById('theme').onclick = () => { const h = document.documentElement; h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark'; };
+  if (Qs.get('t')) document.documentElement.dataset.theme = Qs.get('t');
+</script>
+</body>
+</html>

@@ -26,8 +26,17 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `tool.js` | Brücke zum Raum (iframe, Höhe, Freigaben) |
 | `js/theme.js` | Hell/Dunkel für gezeichnete Teile: setzt feste SVG-Farben (fill/stroke-Attribute) per Beobachter auf `var(--…)` um, `NLTheme.c('#hex', rolle)` für Canvas, Ereignis `nl:theme-redraw` |
 | `showroom-optik.html` | Showroom der Optik (Heute · Vorschlag A · Vorschlag B, Zustände, Feld mit echtem XOR-Training) — A ist umgesetzt |
+| `showroom-start.html` | Showroom der Startseite (22.11.2026: A Lernweg · B Labor · C Netz als Menü) — umgesetzt ist A mit dem dunklen Kopf aus B |
+| `img/` | Sönkes Wildkatzen (`katze_steht/_sitzt/_laeuft.png` Original, `img/frei/*.webp` zugeschnitten); `katze_laeuft` auf der Startseite, die anderen für das Revier gedacht |
 
 ## Startseite: vier Kacheln (22.11.2026, ersetzt die drei Bereiche unten)
+
+**Aussehen (22.11.2026 abends, `showroom-start.html`, Sönke: „Kopf von B, sonst A“):** dunkler Kopf „NeuroLab“ mit leuchtendem Netz
+(bleibt in Hell UND Dunkel dunkel, Kopfzeile geht auf der Startseite mit, `.brand` dort ausgeblendet) · darunter, in den Kopf hineinragend,
+der Lernweg 1 → 2 → 3 (Neuronen · Wildkatzen · Lernen) als Karten mit SVG-Bild oben (`SCENE` in start.js, Farben über `.hs-*` in netz.css,
+Bewegung aus bei reduzierten Animationen/`data-motion="low"`), Kicker, Text, Chips, „Los →“; Teilen-Knopf oben rechts im Bild · „Frei bauen“
+quer und orange als Spielwiese darunter. Keine Pinguine auf der Startseite; Karte 2 zeigt Sönkes laufende Wildkatze. Karten bleiben
+`.tile[data-id]`, „Alle Neuronen“ bleibt `.tile-sub[data-open="n-typen"]` (Schaufenster/Tests). Nummern 1–3 stehen fest, auch wenn ein Schüler nur einen Teil sieht.
 
 **Neuronen** (`n-wie` + Knopf „Alle Neuronen“) · **Wildkatzen** (`v-revier`) · **Lernen** (`trainieren`, Szenarien Gatter/Ziffer/Zielscheibe/Vögel
 in `#scen-picker`, ohne CSV) · **Frei** (`b-frei`: Lernfeld mit Szenario `custom`, also freie Schichten + CSV-Upload + Training; eigener Stand

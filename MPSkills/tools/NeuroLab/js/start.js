@@ -68,10 +68,10 @@
   const ALL_PARTS = AREAS.flatMap(a => [a.id, ...a.items.map(i => i.id)]);
   /* Startseite = vier Kacheln: Neuronen · Wildkatzen · Lernen · Frei */
   const HOME = [
-    { id: 'n-wie', area: 'neuron', title: 'Neuronen', text: 'Ein Neuron Stück für Stück aufdecken – und alle Neuronen im Überblick.', art: 'neuron' },
-    { id: 'v-revier', area: 'bauen', title: 'Wildkatzen', text: 'Wildtierkameras im Tal: Aus Geraden wird ein Netz – erst rechnen, dann sehen.', art: 'v-revier' },
-    { id: 'trainieren', area: 'trainieren', title: 'Lernen', text: 'Szenario wählen, Schichten dazwischen bauen – und zusehen, wie das Netz lernt.', art: 'trainieren' },
-    { id: 'b-frei', area: 'bauen', title: 'Frei', text: 'Komplett frei bauen und eine eigene CSV-Tabelle hineinladen.', art: 'frei' },
+    { id: 'n-wie', area: 'neuron', title: 'Neuronen', text: 'Eingänge, Gewichte, Bias, Aktivierung – ein Neuron Stück für Stück aufgedeckt.', art: 'neuron' },
+    { id: 'v-revier', area: 'bauen', title: 'Wildkatzen', text: 'Wildtierkameras im Tal: Jede Grenze ist eine Gerade – erst rechnen, dann aufdecken.', art: 'v-revier' },
+    { id: 'trainieren', area: 'trainieren', title: 'Lernen', text: 'Szenario wählen, Schichten bauen – und zusehen, wie der Fehler fällt.', art: 'trainieren' },
+    { id: 'b-frei', area: 'bauen', title: 'Frei bauen', text: 'Ohne Vorgaben: eigene Schichten, eigene CSV-Tabelle, eigenes Training.', art: 'frei' },
   ];
   const DEFAULT_PARTS = ['neuron', 'n-wie', 'n-typen'];
 
@@ -139,22 +139,89 @@
     if (v !== 'lab') document.body.className = DEMO ? 'demo-mode' : '';
   }
 
+  /* Startseite (22.11.2026, showroom-start.html: Kopf aus „B · Labor“, Lernweg aus „A“):
+     dunkler Kopf · drei nummerierte Karten mit Bild (Neuronen → Wildkatzen → Lernen) · „Frei“ als Spielwiese darunter.
+     Die Karten bleiben .tile[data-id] (preview/neurolab.js, tests klicken sie). */
+  const SCENE = {
+    'n-wie': `<svg viewBox="0 0 320 184" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <path class="hs-grid" d="M0 46H320M0 92H320M0 138H320M64 0V184M128 0V184M192 0V184M256 0V184"/>
+      <path class="hs-in hs-flow" d="M88 62 C120 62 128 88 154 90"/><path class="hs-in hs-flow" d="M88 136 C120 136 128 98 154 95"/>
+      <circle class="hs-x" cx="70" cy="62" r="17"/><circle class="hs-x" cx="70" cy="136" r="17"/>
+      <text class="hs-xt" x="70" y="67" text-anchor="middle">x₁</text><text class="hs-xt" x="70" y="141" text-anchor="middle">x₂</text>
+      <text class="hs-t" x="112" y="60">w₁</text><text class="hs-t" x="112" y="148">w₂</text>
+      <circle class="hs-node" cx="188" cy="92" r="34"/><text class="hs-sig" x="188" y="102" text-anchor="middle">Σ</text>
+      <path class="hs-acc" d="M222 92 H250"/>
+      <circle class="hs-hot hs-pulse" cx="268" cy="92" r="15"/><text class="hs-t" x="268" y="130" text-anchor="middle">y′</text></svg>`,
+    'v-revier': `<svg viewBox="0 0 320 184" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <rect class="hs-land" width="320" height="184"/>
+      <path class="hs-hill" d="M0 150 C60 128 96 156 152 136 S262 108 320 124 V184 H0Z"/>
+      <path class="hs-river" d="M-10 54 C80 34 150 104 330 64"/>
+      <path class="hs-in hs-draw" d="M10 176 L300 18"/>
+      <g class="hs-cat-tri"><path d="M226 40 l8 -14 8 14z"/><path d="M262 64 l8 -14 8 14z"/><path d="M286 34 l8 -14 8 14z"/></g>
+      <g class="hs-cat-dot"><circle cx="52" cy="70" r="6"/><circle cx="90" cy="104" r="6"/><circle cx="40" cy="128" r="6"/><circle cx="120" cy="62" r="6"/></g>
+      <g transform="translate(168 50)"><rect class="hs-cam" width="30" height="22" rx="5"/><circle class="hs-lens" cx="15" cy="11" r="5"/><circle class="hs-rec hs-pulse" cx="25" cy="5" r="2.5"/></g>
+      <image href="img/frei/katze_laeuft.webp" x="150" y="86" width="140" height="95"/></svg>`,
+    trainieren: `<svg viewBox="0 0 320 184" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+      <path class="hs-grid" d="M0 46H320M0 92H320M0 138H320M64 0V184M128 0V184M192 0V184M256 0V184"/>
+      <path class="hs-axis" d="M30 26 V160 H300"/>
+      <path class="hs-area" d="M34 34 C70 38 80 112 120 122 S200 142 296 146 V160 H34Z"/>
+      <path class="hs-acc hs-draw" d="M34 34 C70 38 80 112 120 122 S200 142 296 146"/>
+      <text class="hs-t" x="38" y="20">Fehler</text><text class="hs-t" x="296" y="177" text-anchor="end">Training →</text>
+      <g transform="translate(196 30)"><rect class="hs-box" x="-10" y="-10" width="112" height="76" rx="12"/>
+        <path class="hs-edge" d="M8 14 L46 10 M8 14 L46 46 M8 46 L46 10 M8 46 L46 46 M46 10 L84 28 M46 46 L84 28"/>
+        <circle class="hs-nodeI" cx="8" cy="14" r="7"/><circle class="hs-nodeI" cx="8" cy="46" r="7"/>
+        <circle class="hs-node hs-pulse" cx="46" cy="10" r="7"/><circle class="hs-node hs-pulse d2" cx="46" cy="46" r="7"/><circle class="hs-hot hs-pulse d3" cx="84" cy="28" r="7"/></g></svg>`,
+    'b-frei': `<svg viewBox="0 0 320 184" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <g transform="translate(22 36)"><rect class="hs-sheet" width="104" height="112" rx="10"/><rect class="hs-sheet-h" width="104" height="24" rx="10"/>
+        <text class="hs-t hs-tin" x="52" y="17" text-anchor="middle">daten.csv</text>
+        <path class="hs-edge" d="M0 46H104M0 68H104M0 90H104M36 24V112M70 24V112"/>
+        <g class="hs-t hs-small"><text x="9" y="40">0,2</text><text x="44" y="40">1,0</text><text x="80" y="40">1</text><text x="9" y="62">0,8</text><text x="44" y="62">0,1</text><text x="80" y="62">0</text><text x="9" y="84">0,5</text><text x="44" y="84">0,7</text><text x="80" y="84">1</text></g></g>
+      <path class="hs-in hs-flow" d="M134 92 H174"/>
+      <path class="hs-edge" d="M190 64 L236 50 M190 64 L236 92 M190 64 L236 134 M190 120 L236 50 M190 120 L236 92 M190 120 L236 134 M236 50 L286 92 M236 92 L286 92 M236 134 L286 92"/>
+      <circle class="hs-nodeI" cx="190" cy="64" r="9"/><circle class="hs-nodeI" cx="190" cy="120" r="9"/>
+      <circle class="hs-node" cx="236" cy="50" r="9"/><circle class="hs-node" cx="236" cy="92" r="9"/><circle class="hs-node" cx="236" cy="134" r="9"/>
+      <circle class="hs-hot hs-pulse" cx="286" cy="92" r="10"/></svg>`,
+  };
+  const HOME_INFO = {
+    'n-wie': { kick: 'Ein Neuron', chips: ['7 Schritte'] },
+    'v-revier': { kick: 'Vom Neuron zum Netz', chips: ['3 Schritte'] },
+    trainieren: { kick: 'Das Netz lernt selbst', chips: [AREAS[2].items.length + ' Szenarien'] },
+    'b-frei': { kick: 'Spielwiese', chips: [] },
+  };
+  const HERO_NET = `<svg class="hm-net" viewBox="0 0 600 300" preserveAspectRatio="xMaxYMid slice" aria-hidden="true">
+    <path class="hm-net-e" d="M120 70 L280 40 M120 70 L280 140 M120 70 L280 240 M120 200 L280 40 M120 200 L280 140 M120 200 L280 240 M280 40 L440 90 M280 140 L440 90 M280 240 L440 90 M280 40 L440 210 M280 140 L440 210 M280 240 L440 210 M440 90 L560 150 M440 210 L560 150"/>
+    <g class="hm-net-n"><circle cx="120" cy="70" r="12" class="hs-pulse"/><circle cx="120" cy="200" r="12" class="hs-pulse d2"/><circle cx="280" cy="40" r="12" class="hs-pulse d3"/><circle cx="280" cy="140" r="12" class="hs-pulse"/><circle cx="280" cy="240" r="12" class="hs-pulse d2"/><circle cx="440" cy="90" r="12" class="hs-pulse d3"/><circle cx="440" cy="210" r="12" class="hs-pulse"/></g>
+    <circle class="hm-net-o hs-pulse d2" cx="560" cy="150" r="16"/></svg>`;
+
   function renderHome() {
     const box = $('areas');
-    const visible = HOME.filter(t => !STUDENT || DEMO || usable(t.id) && (t.id !== 'trainieren' || AREAS[2].items.some(i => usable(i.id))));
+    const trainOk = () => AREAS[2].items.some(i => usable(i.id));
+    const okOf = t => usable(t.id) && (t.id !== 'trainieren' || trainOk());
+    const visible = HOME.filter(t => !STUDENT || DEMO || okOf(t));
     $('wait').hidden = visible.length > 0;
-    box.innerHTML = '<div class="tiles tiles-four">' + visible.map(t => {
-      const ok = usable(t.id) && (t.id !== 'trainieren' || AREAS[2].items.some(i => usable(i.id)));
+    const card = (t, num) => {
+      const ok = okOf(t), info = HOME_INFO[t.id] || { chips: [] };
       const on = TEACHER && shared(t.id) && (t.id === 'trainieren' || shared(t.area));
       const share = TEACHER ? `<button class="share${on ? ' on' : ''}" data-share="${t.id}" title="${on ? 'Geteilt – antippen zum Entziehen' : 'Mit der Klasse teilen'}">${SHARE_SVG}<span>${on ? 'Geteilt' : 'Teilen'}</span></button>` : '';
-      const sub = t.id === 'n-wie' ? `<span class="tile-subs"><button type="button" class="tile-sub" data-open="n-typen"${ok ? '' : ' disabled'}>Alle Neuronen ›</button></span>` : '';
-      const note = TEACHER && t.id === 'trainieren' ? `<span class="tile-note">${AREAS[2].items.filter(i => shared(i.id)).length} von ${AREAS[2].items.length} Szenarien geteilt – einzeln teilen im Modus</span>` : '';
-      return `<div class="tile area-${t.area}${ok ? '' : ' locked'}" data-id="${t.id}" role="button" tabindex="0">
-        <div class="tile-art">${ICON[t.art] || ''}</div>
-        <div class="tile-body"><b>${esc(t.title)}</b><span>${esc(t.text)}</span>${note}${sub}</div>
-        ${ok ? '' : `<span class="lock">${LOCK_SVG}</span>`}${share}
+      const chips = info.chips.map(c => `<span class="hm-chip">${esc(c)}</span>`).join('');
+      const sub = t.id === 'n-wie' ? `<button type="button" class="tile-sub" data-open="n-typen"${ok ? '' : ' disabled'}>Alle Neuronen ›</button>` : '';
+      const note = TEACHER && t.id === 'trainieren' ? `<span class="hm-chip grey" title="Einzeln teilen im Modus (Szenario wählen)">${AREAS[2].items.filter(i => shared(i.id)).length} von ${AREAS[2].items.length} geteilt</span>` : '';
+      const go = ok ? '<span class="hm-go">Los →</span>' : `<span class="lock">${LOCK_SVG}</span>`;
+      const free = t.id === 'b-frei';
+      return `<div class="tile hm-card${free ? ' hm-free' : ''} area-${t.area}${ok ? '' : ' locked'}" data-id="${t.id}" role="button" tabindex="0">
+        <div class="hm-scene">${SCENE[t.id] || ''}${num ? `<span class="hm-num">${num}</span>` : ''}</div>
+        <div class="hm-body"><span class="hm-kick">${esc(info.kick || '')}</span><h3>${esc(t.title)}</h3><p>${esc(t.text)}</p>
+          <div class="hm-foot">${chips}${note}${sub}${free ? '' : go}</div></div>
+        ${free ? go : ''}${share}
       </div>`;
-    }).join('') + '</div>';
+    };
+    const path = visible.filter(t => t.id !== 'b-frei');
+    const free = visible.find(t => t.id === 'b-frei');
+    box.className = 'hm';
+    box.innerHTML = visible.length ? `<div class="hm-hero">${HERO_NET}<div class="hm-hero-in"><h1>Neuro<span>Lab</span></h1>
+        <p>Wie lernt eine Maschine? In drei Schritten vom einzelnen Neuron zum Netz, das selbst lernt.</p></div></div>
+      <div class="hm-wrap"><div class="hm-path hm-n${path.length}">${path.map(t => card(t, HOME.indexOf(t) + 1)).join('')}</div>
+      ${free ? card(free, 0) : ''}</div>` : '';
     box.querySelectorAll('[data-share]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); toggleShare(b.dataset.share); }));
     box.querySelectorAll('[data-open]').forEach(b => b.addEventListener('click', e => { e.stopPropagation(); open(b.dataset.open); }));
     box.querySelectorAll('.tile').forEach(t => {

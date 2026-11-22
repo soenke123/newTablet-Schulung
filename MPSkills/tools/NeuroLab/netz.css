@@ -296,9 +296,109 @@ input.bad { border-color: var(--neg) !important; background: var(--neg-dim) !imp
 .rv-curve .d-old { fill: var(--accent); stroke: var(--surface); stroke-width: 2; } .rv-curve .d-new { fill: var(--neg); stroke: var(--surface); stroke-width: 2; }
 .rv-curve .c-old-t { fill: var(--accent-ink); } .rv-curve .c-new-t { fill: var(--neg); }
 
-/* Startseite: vier Kacheln (Neuronen · Wildkatzen · Lernen · Frei) */
-.tiles.tiles-four { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
-.tiles.tiles-four .tile { min-height: 190px; flex-direction: column; align-items: stretch; }
+/* ══ Startseite (22.11.2026, showroom-start.html): dunkler Kopf + Lernweg 1 → 2 → 3 + Spielwiese „Frei bauen“ ══
+   Karten bleiben .tile[data-id]; die alten .tile-Regeln aus start.css werden hier überschrieben (#areas.hm …). */
+#home.page { padding: 0 0 40px; }
+html[data-view="home"] header .brand { display: none; }          /* „NeuroLab“ steht groß im Kopf */
+html[data-view="home"] header { background: #070d1a; border-bottom-color: #070d1a; }   /* Kopfzeile geht in den dunklen Kopf über */
+#areas.hm { max-width: none; display: block; }
+.hm-hero { position: relative; overflow: hidden; color: #e8f1ff; padding: 30px 0 92px;
+  background: radial-gradient(1100px 380px at 72% -10%, #0e3a4a, #070d1a 70%); }
+.hm-net { position: absolute; right: 0; top: 0; height: 100%; width: min(60%, 640px); opacity: .55; }
+.hm-net-e { fill: none; stroke: #5cf2c4; stroke-opacity: .2; stroke-width: 1.5; }
+.hm-net-n circle { fill: #070d1a; stroke: #5cf2c4; stroke-width: 2.5; }
+.hm-net-o { fill: #5cf2c4; }
+.hm-hero-in { position: relative; max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+.hm-hero h1 { font-size: clamp(2rem, 4.5vw, 3.1rem); letter-spacing: -.03em; line-height: 1.02; font-weight: 700; }
+.hm-hero h1 span { color: #5cf2c4; }
+.hm-hero p { color: #a9bad6; margin-top: 10px; max-width: 46ch; font-size: 1.02rem; line-height: 1.45; }
+.hm-wrap { max-width: 1120px; margin: -64px auto 0; padding: 0 16px; position: relative; display: grid; gap: 22px; }
+.hm-path { position: relative; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; }
+.hm-path.hm-n2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.hm-path.hm-n1 { grid-template-columns: minmax(0, 520px); }
+.hm-path.hm-n0 { display: none; }
+.hm-path::before { content: ''; position: absolute; left: 10%; right: 10%; top: 120px; border-top: 3px dashed var(--accent-line); }
+.hm-path.hm-n1::before { display: none; }
+
+#areas.hm .hm-card { display: flex; flex-direction: column; gap: 0; padding: 0; min-height: 0; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow);
+  transition: transform .2s, border-color .2s; }
+#areas.hm .hm-card:hover { transform: translateY(-4px); border-color: var(--accent-line); }
+#areas.hm .hm-card.locked { opacity: .6; }
+#areas.hm .hm-card.locked:hover { transform: none; border-color: var(--line); }
+.hm-scene { position: relative; height: 184px; background: var(--surface-2); border-bottom: 1px solid var(--line-soft); }
+.hm-scene svg { display: block; width: 100%; height: 100%; }
+.hm-num { position: absolute; top: 14px; left: 14px; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: var(--on-accent); font: 700 1rem var(--mono); }
+.hm-body { padding: 16px 18px 18px; display: grid; gap: 6px; flex: 1; align-content: start; }
+.hm-kick { font: 700 .72rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); }
+.hm-body h3 { font-size: 1.25rem; color: var(--ink); }
+.hm-body p { color: var(--ink-soft); font-size: .92rem; line-height: 1.45; }
+.hm-foot { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.hm-foot .tile-sub { margin: 0; }
+.hm-chip { font-size: .78rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: var(--accent-dim); color: var(--accent-ink); }
+.hm-chip.grey { background: var(--surface-2); color: var(--ink-faint); border: 1px solid var(--line); }
+.hm-go { margin-left: auto; font-weight: 700; color: var(--accent-ink); }
+#areas.hm .lock { position: static; margin-left: auto; }
+#areas.hm .hm-card > .share { position: absolute; top: 14px; right: 14px; margin: 0; }
+#areas.hm .share.on { background: var(--in); border-color: var(--in); color: #fff; }
+
+/* Spielwiese „Frei bauen“: quer, orange, gestrichelt */
+#areas.hm .hm-free { display: grid; grid-template-columns: 260px minmax(0, 1fr) auto auto; align-items: center; gap: 22px;
+  background: var(--in-dim); border: 1px dashed var(--in-line); box-shadow: none; padding: 14px 22px 14px 14px; }
+#areas.hm .hm-free:hover { border-color: var(--in); }
+.hm-free .hm-scene { height: 120px; border-radius: 14px; border: 0; background: var(--surface); }
+.hm-free .hm-body { padding: 0; }
+.hm-free .hm-kick { color: var(--in-ink); }
+.hm-free .hm-body h3 { font-size: 1.15rem; }
+.hm-free .hm-foot:empty { display: none; }
+#areas.hm .hm-free > .share { position: static; grid-column: 4; grid-row: 1; align-self: center; }
+#areas.hm .hm-free > .hm-go, #areas.hm .hm-free > .lock { grid-column: 3; grid-row: 1; }
+.hm-free > .lock { margin: 0; }
+
+/* Bilder der Karten (SVG), Farben aus dem Thema */
+.hs-grid { stroke: var(--grid); stroke-width: 1; fill: none; }
+.hs-t { font: 700 11px var(--mono); fill: var(--ink-soft); }
+.hs-small { font-size: 10px; } .hs-tin { fill: var(--in-ink); }
+.hs-acc { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; }
+.hs-in { fill: none; stroke: var(--in); stroke-width: 3; stroke-linecap: round; }
+.hs-x { fill: var(--in-dim); stroke: var(--in); stroke-width: 2.5; }
+.hs-xt { font: 700 13px var(--mono); fill: var(--in-ink); }
+.hs-node { fill: var(--surface); stroke: var(--accent); stroke-width: 2.5; }
+.hs-nodeI { fill: var(--surface); stroke: var(--in); stroke-width: 2.5; }
+.hs-sig { font: 700 26px var(--font); fill: var(--ink); }
+.hs-hot { fill: var(--accent); }
+.hs-edge { fill: none; stroke: var(--line); stroke-width: 2; }
+.hs-axis { fill: none; stroke: var(--ink-faint); stroke-width: 2; }
+.hs-area { fill: var(--accent); opacity: .12; }
+.hs-box { fill: var(--surface); stroke: var(--line); }
+.hs-land { fill: var(--in-dim); }
+.hs-hill { fill: var(--accent); opacity: .14; }
+.hs-river { fill: none; stroke: var(--accent); stroke-width: 10; opacity: .22; }
+.hs-cat-tri { fill: var(--in); }
+.hs-cat-dot { fill: none; stroke: var(--ink-faint); stroke-width: 2.5; }
+.hs-cam { fill: var(--surface); stroke: var(--ink-soft); stroke-width: 2; }
+.hs-lens { fill: var(--ink-soft); } .hs-rec { fill: var(--neg); }
+.hs-sheet { fill: var(--surface); stroke: var(--in-line); stroke-width: 2; } .hs-sheet-h { fill: var(--in-dim); }
+.hs-pulse { animation: hs-pulse 2.4s ease-in-out infinite; }
+.hs-pulse.d2 { animation-delay: .6s; } .hs-pulse.d3 { animation-delay: 1.2s; }
+@keyframes hs-pulse { 0%, 100% { opacity: .3; } 50% { opacity: 1; } }
+.hs-flow { stroke-dasharray: 6 10; animation: hs-flow 1.6s linear infinite; }
+@keyframes hs-flow { to { stroke-dashoffset: -32; } }
+.hs-draw { stroke-dasharray: 340; stroke-dashoffset: 340; animation: hs-draw 3.5s ease-out infinite; }
+@keyframes hs-draw { 0% { stroke-dashoffset: 340; } 60%, 100% { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .hs-pulse, .hs-flow, .hs-draw { animation: none; opacity: 1; stroke-dashoffset: 0; } }
+html[data-motion="low"] .hs-pulse, html[data-motion="low"] .hs-flow, html[data-motion="low"] .hs-draw { animation: none !important; opacity: 1; stroke-dashoffset: 0; }
+
+@media (max-width: 860px) {
+  .hm-path, .hm-path.hm-n2 { grid-template-columns: minmax(0, 1fr); }
+  .hm-path::before { display: none; }
+  #areas.hm .hm-free { grid-template-columns: minmax(0, 1fr) auto; padding: 14px; }
+  #areas.hm .hm-free > .hm-scene, #areas.hm .hm-free > .hm-body { grid-column: 1 / -1; }
+  #areas.hm .hm-free > .share { grid-column: 1; grid-row: 3; justify-self: start; }
+  #areas.hm .hm-free > .hm-go, #areas.hm .hm-free > .lock { grid-column: 2; grid-row: 3; }
+  .hm-net { width: 100%; opacity: .3; }
+}
 
 /* ── Senden + Eingang (Stufe 2) ── */
 .send-btn[hidden], .inbox-btn[hidden], .inbox[hidden], .inbox-n[hidden] { display: none !important; }
