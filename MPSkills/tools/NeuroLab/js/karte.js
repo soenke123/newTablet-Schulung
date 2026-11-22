@@ -4,7 +4,7 @@
    Ein Tal von 12 × 10 km. x₁ = Osten, x₂ = Norden (km). Drei Grenzen
    gibt es in Wirklichkeit (NLKarte.TRUTH), die Kinder kennen sie nicht:
      Fluss       x₂ = ½·x₁ + 2       Revier liegt nördlich
-     Stadtrand   x₁ + x₂ = 15        Revier liegt diesseits (keine Stadt)
+     Stadtrand   x₁ + x₂ = 15        Revier liegt diesseits (Wildkatzen halten Abstand: die Stadt beginnt erst bei 17)
      Landstraße  x₂ = 3·x₁ − 3       Revier liegt östlich
    Die Kameras stehen auf ganzen Kilometern (leicht zu rechnen), keine
    genau auf einer Grenze. Gemalt wird die Landschaft erst, wenn das Revier
@@ -18,6 +18,9 @@
      at       [x₁, x₂]  Eingabe des Neurons (oranges Fadenkreuz wie in Teil 1)
      pencil   [{P, Q, color}]   Bleistiftlinie durch zwei gewählte Punkte
      pick     fn(p)  Gitterpunkt antippen (Punkte wählen)
+     handles  {P, Q, color, onMove(P, Q)}  zwei ziehbare Punkte (rasten auf ganzen km ein) mit Gerade dazwischen
+     tapCam   fn(p)  Kamera antippen
+     rings    [{p, r, color}]  gestrichelte Kreise (r in km)
      reveal   0 … 1
    ══════════════════════════════════════════════════════════════ */
 (function () {
@@ -33,8 +36,10 @@
 
   /* ── Kameras ─────────────────────────────────────────────── */
   const keep = (i, j) => ((i * 7 + j * 13 + i * j * 5) % 9) !== 0 && ((i * 3 + j * 11) % 13) !== 0;
-  const inRect = (i, j) => i >= 3 && i <= 7 && j >= 1 && j <= 6;          // Jahr 1: nur die Mitte des Tals
-  const OUTLIERS = [[6, 3, 'Diese Katze ist durch den Fluss geschwommen.'], [10, 8, 'Eine Katze hat sich bis an die Stadt gewagt.'],
+  /* Jahr 1: weit verteilt, aber locker (jede zweite Kreuzung), nur dort, wo Straße und Stadt noch keine Rolle spielen –
+     im Süden liegt ein Stück ohne Revier (hier fließt der Fluss) */
+  const inRect = (i, j) => (i + j) % 2 === 0 && i >= 2 && i <= 11 && j >= 1 && j <= 9 && 3 * i - j - 3 > 0.5 && i + j < 14.5;
+  const OUTLIERS = [[6, 3, 'Diese Katze ist durch den Fluss geschwommen.'], [10, 8, 'Eine Katze hat sich bis in die Stadt gewagt.'],
     [2, 7, 'Eine junge Katze war auf Wanderschaft.'], [5, 6, 'Hier hat die Kamera die Katze verpasst (Akku leer).'],
     [6, 7, 'Hier stand ein Busch vor der Kamera.']];
   const outOf = (i, j) => OUTLIERS.find(o => o[0] === i && o[1] === j);
@@ -99,8 +104,8 @@
       for (let q = 1; q < 6; q++) { c.beginPath(); c.moveTo(X(a), Y(b) - q * hh * s / 6); c.lineTo(X(a + w), Y(b) - q * hh * s / 6); c.stroke(); }
       c.globalAlpha = 1;
     });
-    // Stadt (x₁ + x₂ > 15)
-    const townPoly = [[15, 0], [12, 0], [12, 10], [5, 10]].map(P);
+    // Stadt (x₁ + x₂ > 17, zwei Kilometer hinter dem Revier)
+    const townPoly = [[17, 0], [12, 0], [12, 10], [7, 10]].map(P);
     c.beginPath(); townPoly.forEach((q, i) => i ? c.lineTo(...q) : c.moveTo(...q)); c.closePath();
     c.fillStyle = '#ddd6c8'; c.fill();
     // Häuser im Raster entlang des Stadtrands
@@ -108,8 +113,8 @@
     const roofs = ['#b85c4a', '#a24b3c', '#c7745a', '#8e8a84', '#9c6b4e'];
     for (let u = -9; u < 9; u += 0.62) for (let v = 0.62; v < 7; v += 0.58) {
       if (Math.round(v / 0.58) % 4 === 0 || Math.round(u / 0.62) % 5 === 0) continue;    // Straßen frei lassen
-      const cx = 7.5 + d[0] * u + n[0] * v, cy = 7.5 + d[1] * u + n[1] * v;
-      if (cx < 0 || cx > 12.4 || cy < -0.4 || cy > 10.4 || cx + cy < 15.55) continue;
+      const cx = 8.5 + d[0] * u + n[0] * v, cy = 8.5 + d[1] * u + n[1] * v;
+      if (cx < 0 || cx > 12.4 || cy < -0.4 || cy > 10.4 || cx + cy < 17.55) continue;
       if (R() < 0.12) continue;
       const w = (0.36 + R() * 0.1) * s, hh = (0.3 + R() * 0.08) * s;
       c.save(); c.translate(X(cx), Y(cy)); c.rotate(Math.PI / 4 + (R() - 0.5) * 0.06);
@@ -130,7 +135,7 @@
       c.strokeStyle = '#b9b6b0'; c.lineWidth = wid; c.stroke();
       c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1.3; c.setLineDash([6, 6]); c.stroke(); c.setLineDash([]);
     };
-    road([[5.2, 10.2], [12.2, 3.2]], 0.16 * s);
+    road([[6.2, 10.2], [12.2, 4.2]], 0.16 * s);
     // Fluss: leicht geschwungen, schmal
     const riv = [];
     for (let a = -0.2; a <= 12.2; a += 0.1) { const off = 0.08 * Math.sin(a * 1.7) + 0.04 * Math.sin(a * 4.1); riv.push([a - off * 0.45, a / 2 + 2 + off * 0.9]); }
@@ -151,7 +156,7 @@
     const trees = [];
     for (let k = 0; k < 1100; k++) {
       const p = [R() * 12.4 - 0.2, R() * 10.4 - 0.2];
-      if (p[0] + p[1] > 14.85) continue;
+      if (p[0] + p[1] > 16.3) continue;
       const fl = Math.abs(zOf(TRUTH[0], p)) / Math.hypot(0.5, 1), st = Math.abs(zOf(TRUTH[2], p)) / Math.hypot(3, 1);
       if (fl < 0.38 || st < 0.3) continue;
       if (p[0] < 1.9 && p[1] > 4.3) continue;                               // Felder
@@ -222,6 +227,7 @@
     const off = document.createElement('canvas');
 
     function draw() {
+      cv.style.touchAction = opts.handles ? 'none' : '';
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const Wc = cv.clientWidth || 480, Hc = cv.clientHeight || 420;
       cv.width = Math.round(Wc * dpr); cv.height = Math.round(Hc * dpr);
@@ -275,6 +281,30 @@
           c.font = '700 13px "JetBrains Mono", monospace'; c.fillStyle = pc.color || css('ink');
           c.lineWidth = 3; c.strokeStyle = css('surface'); c.strokeText(n, x + 8, y - 8); c.fillText(n, x + 8, y - 8);
         });
+      });
+      // Ziehbare Gerade (zwei Griffe)
+      if (opts.handles) {
+        const hd = opts.handles, col = hd.color || css('ink');
+        const [P, Q] = [hd.P, hd.Q], dx = Q[0] - P[0], dy = Q[1] - P[1], L = Math.hypot(dx, dy);
+        if (L > 0) {
+          c.strokeStyle = col; c.globalAlpha = 0.85; c.lineWidth = 2.4; c.setLineDash([7, 5]); c.lineCap = 'round';
+          c.beginPath(); c.moveTo(X(P[0] - dx / L * 30), Y(P[1] - dy / L * 30)); c.lineTo(X(P[0] + dx / L * 30), Y(P[1] + dy / L * 30)); c.stroke();
+          c.setLineDash([]); c.globalAlpha = 1;
+        }
+        [['P', P], ['Q', Q]].forEach(([n, q]) => {
+          const x = X(q[0]), y = Y(q[1]);
+          c.beginPath(); c.arc(x, y, 13, 0, Math.PI * 2); c.fillStyle = col; c.globalAlpha = 0.18; c.fill(); c.globalAlpha = 1;
+          c.beginPath(); c.arc(x, y, 8, 0, Math.PI * 2); c.fillStyle = col; c.fill(); c.lineWidth = 2.5; c.strokeStyle = css('surface'); c.stroke();
+          c.font = '700 13px "JetBrains Mono", monospace'; c.fillStyle = css('ink'); c.lineWidth = 3.5; c.strokeStyle = css('surface');
+          const t = `${n} (${q[0]} | ${q[1]})`, left = x > X(12) - 120;
+          c.textAlign = left ? 'right' : 'left';
+          c.strokeText(t, left ? x - 12 : x + 12, y - 12); c.fillText(t, left ? x - 12 : x + 12, y - 12); c.textAlign = 'left';
+        });
+      }
+      // Gestrichelte Kreise (z. B. gemerkte Ausreißer)
+      (opts.rings || []).forEach(rg => {
+        c.beginPath(); c.arc(X(rg.p[0]), Y(rg.p[1]), rg.r * s, 0, Math.PI * 2);
+        c.strokeStyle = rg.color || css('in'); c.lineWidth = 2; c.setLineDash([5, 4]); c.stroke(); c.setLineDash([]);
       });
       // Geraden
       (opts.lines || []).forEach(L => {
@@ -369,8 +399,31 @@
       cv.style.cursor = p ? 'pointer' : 'crosshair';
       if (String(p) !== String(hoverP)) { hoverP = p; draw(); }
     });
+    cv.addEventListener('pointermove', e => {
+      if (!drag || !opts.handles) return;
+      const p = km(e), hd = opts.handles, other = drag === 'P' ? hd.Q : hd.P;
+      if (p[0] === other[0] && p[1] === other[1]) return;                  // beide Griffe nie auf demselben Punkt
+      if (p[0] === hd[drag][0] && p[1] === hd[drag][1]) return;
+      hd[drag] = p; draw();
+      if (hd.onMove) hd.onMove(hd.P.slice(), hd.Q.slice());
+    });
+    ['pointerup', 'pointercancel'].forEach(ev => cv.addEventListener(ev, () => { drag = null; }));
     cv.addEventListener('pointerleave', () => { if (hoverP) { hoverP = null; draw(); } });
+    let drag = null;
+    const km = e => { const r = cv.getBoundingClientRect(); return [Math.max(0, Math.min(12, Math.round(G.iX(e.clientX - r.left)))), Math.max(0, Math.min(10, Math.round(G.iY(e.clientY - r.top))))]; };
+    const near = (e, q, rad) => { const r = cv.getBoundingClientRect(); return Math.hypot(G.X(q[0]) - (e.clientX - r.left), G.Y(q[1]) - (e.clientY - r.top)) < rad; };
     cv.addEventListener('pointerdown', e => {
+      if (!G) return;
+      const hd = opts.handles;
+      if (hd) {
+        const w = near(e, hd.P, 26) && (!near(e, hd.Q, 26) || false) ? 'P' : near(e, hd.Q, 26) ? 'Q' : near(e, hd.P, 26) ? 'P' : null;
+        if (w) { e.preventDefault(); drag = w; try { cv.setPointerCapture(e.pointerId); } catch (x) { /* egal */ } return; }
+      }
+      if (opts.tapCam) {
+        const rad = Math.max(14, G.s * 0.4);
+        const c = (opts.cams || []).find(cm => near(e, cm.p, rad));
+        if (c) { e.preventDefault(); opts.tapCam(c.p); return; }
+      }
       if (!opts.pick) return;
       const p = gridAt(e);
       if (p) { e.preventDefault(); hoverP = null; opts.pick(p); }

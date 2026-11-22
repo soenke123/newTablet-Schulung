@@ -175,55 +175,52 @@ await pg.click('.nn-next .nn-btn');
 ok(await pg.locator('.nt-card').count() === 5, 'Knopf führt zu „Alle Neuronen“');
 await pg.click('#btn-home');
 
-/* Revier der Wildkatzen */
+/* Revier der Wildkatzen (3. Fassung: Gerade ziehen, Gleichung, Neuron wie in Teil 1 einstellen, prüfen) */
 await pg.evaluate(() => { window.confirm = () => true; });
 await pg.click('.tile[data-id="v-revier"]');
-ok(await pg.locator('.rv-cam').count() === 3 && await pg.locator('.rv-map canvas').count() === 1 && await pg.locator('.rv-split .nw').count() === 1, 'Revier: drei Kameras prüfen, Neuron wie in Teil 1, Karte');
-ok(await pg.locator('.nw.is-secret').count() === 1, 'Ergebnis im Neuron verdeckt, bis selbst gerechnet');
-for (const [l, zz, f] of [['A', '-3', 0], ['B', '2', 1], ['C', '0', 0]]) {
-  ok(await pg.locator(`.rv-cam.on[data-l="${l}"]`).count() === 1, `Kamera ${l} ist dran`);
-  await pg.fill('.rv-zin', l === 'C' ? '1' : zz);
-  await pg.click(`[data-yn="${f}"]`);
-  await pg.click('.rv-chk');
-  if (l === 'C') {
-    ok(/nochmal/i.test(await pg.locator('.rv-ctl .rv-msg').textContent()), 'falsches z wird nicht angenommen');
-    await pg.fill('.rv-zin', '0'); await pg.click('[data-yn="1"]'); await pg.click('.rv-chk');
-    ok(/nicht größer/.test(await pg.locator('.rv-ctl .rv-msg').textContent()), 'z = 0 feuert nicht');
-    await pg.click('[data-yn="0"]'); await pg.click('.rv-chk');
-  }
-}
-ok(await pg.locator('.nw.is-secret').count() === 0, 'danach zeigt das Neuron sein Ergebnis');
-ok(/18 von 27/.test(await pg.locator('.rv-result').textContent()), 'Janas Neuron: 18 von 27 Kameras');
+ok(await pg.locator('.nn-step').count() === 3 && await pg.locator('.rv-map canvas').count() === 1 && await pg.locator('.nw-left > .nw').count() === 1, 'Revier: drei Schritte, Neuron wie in Teil 1, Karte');
+ok(await pg.locator('.rv-split input').count() === 0, 'keine eigenen Eingabefelder – Zahlen stehen im Neuron');
 const at = async (a, d) => pg.evaluate(([a, d]) => { const c = document.querySelector('.rv-map canvas'), r = c.getBoundingClientRect(); const W = c.clientWidth, H = c.clientHeight, s = Math.min((W - 58) / 12, (H - 50) / 10), ox = 46 + ((W - 58) - 12 * s) / 2; return [r.left + ox + a * s, r.top + 10 + (10 - d) * s]; }, [a, d]);
-await pg.click('.rv-next');
-await pg.mouse.click(...await at(2, 3)); await pg.mouse.click(...await at(8, 6));
-await pg.fill('[data-f="w1"]', '1/2'); await pg.fill('[data-f="w2"]', '-1'); await pg.fill('[data-f="b"]', '2');
+const dragTo = async (from, to) => { const f = await at(...from), t = await at(...to); await pg.mouse.move(...f); await pg.mouse.down(); await pg.mouse.move((f[0] + t[0]) / 2, (f[1] + t[1]) / 2, { steps: 3 }); await pg.mouse.move(...t, { steps: 3 }); await pg.mouse.up(); };
+const bump = async (k, d, n, scope = '') => { for (let i = 0; i < n; i++) await pg.locator(`${scope} .nw-val[data-v="${k}"] .nw-pm[data-d="${d}"]`).first().click(); };
+await dragTo([2, 2], [0, 2]); await dragTo([10, 6], [12, 8]);
+ok(/x2 = 1\/2 · x1 \+ 2/.test((await pg.locator('.rv-eq-m').textContent()).replace(/\s+/g, ' ')), 'Funktionsgleichung steht sofort neben der Gerade');
+await bump('w1', 1, 1); await bump('w2', -1, 2); await bump('b', 1, 2);       // 0,5 · −1 · 2: falsche Seite
 await pg.click('.rv-check');
 ok(/falschen Seite/.test(await pg.locator('.rv-result').textContent()), 'Fluss: falsche Seite wird erkannt');
-await pg.fill('[data-f="w1"]', '-0,5'); await pg.fill('[data-f="w2"]', '1'); await pg.fill('[data-f="b"]', '−2');
+ok(await pg.evaluate(() => !JSON.parse(localStorage.getItem('nl.revier')).s2.done), 'Gerade des Neurons wird nicht gezeichnet, solange die Werte falsch sind');
+await bump('w1', -1, 2); await bump('w2', 1, 4); await bump('b', -1, 4);       // −0,5 · 1 · −2
 await pg.click('.rv-check');
-ok(/27 von 27/.test(await pg.locator('.rv-result').textContent()) && /durch P und Q/.test(await pg.locator('.rv-result').textContent()), 'Fluss: Gerade durch P und Q, alle Kameras richtig');
+ok(/\d+ von \d+/.test(await pg.locator('.rv-result').textContent()) && await pg.evaluate(() => JSON.parse(localStorage.getItem('nl.revier')).s2.done), 'Fluss: Werte richtig → Gerade des Perzeptrons erscheint');
+await pg.click('.rv-help-b');
+ok(await pg.locator('.rv-help:not([hidden]) .nw').count() === 1, 'Hilfe zeigt ein Beispiel mit Neuron');
+await shot(pg, 'revier-fluss');
 await pg.click('.rv-next');
 ok(await pg.locator('.rv-hn:not(.rv-add)').count() === 1, 'Stadt: Fluss-Neuron ist schon im Netz');
-for (const v of [['3', '-1', '-3'], ['-1', '-1', '15']]) {
+for (const [P, Q, P0, Q0, w, n] of [[[5, 10], [12, 3], [1, 2], [3, 8], [-1, -1], 15], [[1, 0], [4, 9], [6, 10], [12, 4], [3, -1], -3]]) {
   await pg.click('.rv-add');
-  for (let k = 0; k < 3; k++) await pg.locator('.rv-hcard input').nth(k).fill(v[k]);
+  await dragTo(P0, P); await dragTo(Q0, Q);
+  await bump('w1', w[0] > 0 ? 1 : -1, Math.abs(w[0]) * 2, '.rv-hcard'); await bump('w2', w[1] > 0 ? 1 : -1, Math.abs(w[1]) * 2, '.rv-hcard');
+  for (let i = 0; i < Math.abs(n); i++) await pg.locator('.rv-hcard .nw-val[data-v="b"] .nw-pm').nth(n > 0 ? 0 : 1).click();
+  await pg.click('.rv-hcard .rv-check');
 }
-ok(await pg.locator('.rv-hn:not(.rv-add)').count() === 3 && await pg.locator('.rv-on').count() === 1, 'Perzeptrons dazu, Ausgang da');
+ok(await pg.locator('.rv-hn:not(.rv-add):not(.open)').count() === 3 && await pg.locator('.rv-on').count() === 1, 'drei Perzeptrons geprüft, Ausgang da');
 await pg.click('.rv-on');
-const oc = pg.locator('.rv-ocard input');
-for (const [k, v] of ['1', '1', '1', '-2,5'].entries()) await oc.nth(k).fill(v);
+for (let i = 0; i < 3; i++) await pg.locator('.rv-ocard .nw-val').nth(i).locator('.nw-pm').first().click();
+for (let i = 0; i < 5; i++) await pg.locator('.rv-ocard .nw-val').nth(3).locator('.nw-pm').nth(1).click();
 await pg.waitForTimeout(100);
-ok(/79 von 79/.test(await pg.locator('.rv-result').textContent()), 'Stadt: Netz aus drei Geraden findet das Revier');
+ok(/80 von 80/.test(await pg.locator('.rv-result').textContent()), 'Stadt: Netz aus drei Geraden findet das Revier');
 await pg.waitForTimeout(1600);
 ok(await pg.evaluate(() => JSON.parse(localStorage.getItem('nl.revier')).revealed), 'Karte wird aufgedeckt');
 await shot(pg, 'revier-karte');
 await pg.click('.rv-next');
-await pg.click('[data-c="kim"]'); await pg.click('.rv-run');
+for (let i = 0; i < 5; i++) await pg.locator('.rv-oc').nth(i).click();
+await pg.click('[data-c="schlecht"]'); await pg.click('.rv-run');
 const cards = await pg.locator('.rv-cmp .rv-big').allTextContents();
-const [mine, kimT] = cards.map(t => +t.split('/')[0]);
-ok(mine > kimT, `Overfitting: eigenes Netz ${mine}, Kims Netz ${kimT} bei neuen Kameras`);
-ok(await pg.locator('.rv-sum').isVisible(), 'Erklärung Overfitting');
+const [mine, memT] = cards.map(t => +t.split('/')[0]);
+ok(mine > memT, `Overfitting: Netz ${mine}, mit Merk-Neuronen ${memT} bei neuen Kameras`);
+ok(await pg.locator('.rv-sum').isVisible() && await pg.locator('.rv-curve svg').count() === 1, 'Erklärung Overfitting mit Kurve');
+await shot(pg, 'revier-overfitting');
 await pg.click('#btn-home');
 
 /* Netz durchrechnen */
