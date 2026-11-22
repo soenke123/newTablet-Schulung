@@ -422,3 +422,40 @@ html[data-motion="low"] .hs-pulse, html[data-motion="low"] .hs-flow, html[data-m
 .ib-show, .ib-del { font: 700 .82rem inherit; padding: 8px 14px; border-radius: 9px; cursor: pointer; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
 .ib-show { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
 .ib-empty { padding: 24px 8px; text-align: center; color: var(--ink-soft); }
+
+/* ── Revier, 4. Fassung (22.11.2026 abends): Gleichungen oben, Werte direkt im Netz, Brüche, Karte zudecken ── */
+.nw-pop.has-in { width: 74px; }
+.nw-pop-in { width: 62px; font: 700 13px var(--mono); text-align: center; color: var(--ink); background: var(--surface-2);
+  border: 1.5px solid var(--c); border-radius: 7px; padding: 3px 2px; }
+.nw-pop-in:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); }
+.rv-cover { justify-self: end; margin: 6px 2px 0 auto; display: block; font-size: .84rem; }
+.rv-cover[hidden] { display: none; }
+.rv-eqs { display: grid; gap: 6px; }
+.rv-eqs:empty { display: none; }
+.rv-eqs-l { font-size: .74rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); }
+.rv-eqrow { display: flex; align-items: center; gap: 10px; border: 1.5px solid color-mix(in srgb, var(--c) 45%, var(--line)); border-radius: 10px;
+  background: var(--surface); padding: 2px 10px 2px 2px; }
+.rv-eqrow.on { border-color: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 22%, transparent); background: color-mix(in srgb, var(--c) 6%, var(--surface)); }
+.rv-eqb { flex: 1; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; background: none; border: 0; padding: 6px 8px; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+.rv-eqb .m { font-size: 1.1rem; }
+.rv-eqb .rv-eq-s { flex-basis: 100%; padding-left: 34px; }
+.rv-eqrow .rv-del { color: var(--ink-faint); font-size: .82rem; }
+.rv-net2 { grid-template-columns: auto auto auto; justify-content: space-between; gap: 10px 26px; }
+.rv-hn2 { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 6px; border-radius: 12px;
+  border: 2px solid var(--c); background: var(--surface); box-shadow: var(--shadow); }
+.rv-hn2.open { border-style: dashed; }
+.rv-hn2.on { box-shadow: 0 0 0 4px color-mix(in srgb, var(--c) 30%, transparent); }
+.rv-hb { width: 28px; height: 28px; border-radius: 50%; border: 0; padding: 0; background: var(--c); color: #fff; font: 700 .85rem var(--mono); cursor: pointer; flex: none; }
+.rv-hv { display: inline-flex; align-items: center; gap: 3px; font-size: 1rem; white-space: nowrap; }
+.rv-hv.c-w > .xs { color: var(--accent-ink); } .rv-hv.c-b > i { color: var(--bias); }
+.rv-hok { width: 1em; font-weight: 700; color: var(--accent-ink); }
+.rv-on2 { display: grid; gap: 6px; padding: 8px 10px; border-radius: 12px; border: 2px solid var(--gold); background: var(--surface); box-shadow: var(--shadow); }
+.rv-on2.on { box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 30%, transparent); }
+.rv-ob { background: none; border: 0; padding: 0 0 2px; font: 700 .8rem var(--font); color: var(--gold); text-transform: uppercase; letter-spacing: .04em; cursor: pointer; text-align: left; }
+.rv-ov { display: inline-flex; align-items: center; gap: 4px; font-size: 1rem; white-space: nowrap; }
+.rv-ovb { border-top: 1px solid var(--line); padding-top: 6px; } .rv-ovb > i { color: var(--bias); }
+.rv-on2 .rv-recipe { max-width: 210px; }
+.rv-on2 .rv-recipe p { font-size: .8rem; }
+.rv-calc2 { font-size: 1rem; }
+.rv-ocalc { display: grid; gap: 4px; font-size: .95rem; color: var(--ink); text-align: left; }
+@media (max-width: 760px) { .rv-net2 { grid-template-columns: 1fr; justify-items: start; } .rv-net2 .rv-cin { grid-auto-flow: column; } .rv-net2 .rv-edges { display: none; } }

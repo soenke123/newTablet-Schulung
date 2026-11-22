@@ -109,18 +109,27 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      wegen preview/neurolab.js):
      **1 Der Fluss** (29 Kameras `YEAR1`: weit verteilt, locker = jede zweite Kreuzung, im Süden ohne Revier): ① Die Kinder ziehen
      die Griffe **P und Q** auf der Karte (karte.js `handles`, rasten auf ganzen km ein); die **Funktionsgleichung**
-     x₂ = m·x₁ + n steht sofort daneben (`eqOf`/`eqBox`, Brüche, senkrecht = x₁ = c). ② Umstellen → w₁, w₂, b im Neuron einstellen.
-     **Prüfen**: die Gerade des Perzeptrons (und gelb) wird NUR gezeichnet, wenn alle Kameras stimmen UND die Gerade durch P und Q
-     geht (Toleranz 0,45 km); Rückmeldung: durch P/Q?, Bleistiftlinie trennt?, falsche Seite → mal −1, x von 29. Werte oder Griffe
-     ändern = Gerade wieder weg. Kamera antippen = Neuron rechnet sie (`tapCam`). **Hilfe: Beispiel** (`helpPanel`): Gerade durch
-     (2|6) und (6|2) durchgerechnet mit festem Neuron w = (1, 1), b = −8.
+     x₂ = m·x₁ + n steht sofort daneben (`eqOf`/`eqBox`, Brüche, senkrecht = x₁ = c). ② Umstellen → w₁, w₂, b im Neuron einstellen;
+     **Brüche**: Modell mit `frac: true` → im Regler-Fenster von makeNeuron ein Eingabefeld `.nw-pop-in` (Zahl oder „3/4“, Wert
+     ungerundet, der Bruch bleibt als Text stehen, solange der Wert gleich ist: `m.txt`, `NLNeuron.parseNum`); „Wie arbeitet ein
+     Neuron?“ hat kein `frac` und bleibt unverändert. **Vorzeichen per Regel, nicht ausprobieren** (Sönke 22.11.2026): w₂ > 0 →
+     z wächst nach Norden → feuert oberhalb; Revier oberhalb: w₁ = −m, w₂ = 1, b = −n, unterhalb: alles mal −1 (`sideOf`).
+     **Prüfen**: die Gerade des Perzeptrons (und gelb) wird NUR gezeichnet, wenn alle Kameras stimmen – ob sie genau durch P und Q
+     geht, wird NICHT mehr geprüft und steht nirgends (Sönke 22.11.2026); Rückmeldung: falsche Seite (wo feuert es, wo liegt das
+     Revier) → mal −1, sonst Bleistiftlinie trennt nicht / Zahlen passen nicht zur Geraden, x von 29. Werte ändern = Gerade wieder
+     weg. Kamera antippen = Neuron rechnet sie (`tapCam`). **Hilfe: Beispiel** (`helpPanel`, gekürzt: kein „Gerade aufstellen“
+     mehr, nur Gleichung → umstellen → ablesen → Seite + Regel), festes Neuron w = (1, 1), b = −8.
      **2 Ein Jahr später** (80 Kameras `ALL`; Straße und Stadt kommen dazu, die Katzen halten 2 km Abstand: Stadt gemalt ab
-     x₁ + x₂ > 17, das Revier endet bei 15): dieselbe Aufgabe dreimal. Netz-Bild `.rv-net` (Eingänge → Perzeptrons → Ausgang,
-     „＋ Perzeptron“ antippen oder hineinziehen, max. 6); Perzeptron antippen = Kasten mit ① Gerade ziehen (Griffe in seiner Farbe)
-     + Gleichung, ② Neuron einstellen (EIN Neuron-Objekt, wird umgefüllt), **Prüfen** (`checkHid`: alle Dreiecke auf der gelben
-     Seite, ≥ 3 Kreise abgetrennt, durch P und Q) – erst dann ist es im Netz und seine Gerade eingezeichnet (`x.ok`). Das
-     Fluss-Neuron aus Schritt 1 ist schon dabei, wenn es auch hier passt. Ausgang: v₁…vₙ und b mit `miniVal` (Zahl wie im Neuron,
-     antippen = eintippen, + / −). Alle 80 richtig → Karte deckt sich auf (`paintLand`). „Musterlösung laden“ als kleiner Link.
+     x₁ + x₂ > 17, das Revier endet bei 15): dieselbe Aufgabe dreimal. **4. Fassung (22.11.2026 abends):** oben die Geraden aller
+     Perzeptrons als Gleichungen (`.rv-eqrow` in ihrer Farbe, antippen = auswählen → Griffe P/Q auf der Karte, Steigung/n + „entfernen“),
+     darunter das Netz `.rv-net2`: jedes Perzeptron `.rv-hn2` trägt w₁ w₂ b direkt als `miniVal` (antippen = eintippen, auch
+     Brüche, + / −), KEIN großes Neuron mehr in Schritt 2; der Ausgang `.rv-on2` zeigt v₁ … vₙ (je eine Leitung vom Perzeptron
+     zu seinem v) und b immer sichtbar + „Tipp“. EIN „Prüfen“ für alle (`checkHid`: alle Dreiecke auf der gelben Seite, ≥ 3 Kreise
+     abgetrennt; P/Q zählen nicht), Rückmeldung je Perzeptron. Kamera antippen: mit gewähltem Perzeptron rechnet es sie vor
+     (calcHTML), sonst rechnet der Ausgang (`.rv-ocalc`: welche 1/0 kommen an, z = Σ v·y + b). „＋ Perzeptron“ antippen oder
+     hineinziehen, max. 6. Das Fluss-Neuron aus Schritt 1 ist schon dabei, wenn es auch hier passt. Alle 80 richtig → Karte deckt
+     sich auf (`paintLand`); danach unter der Karte **„Karte wieder zudecken“ / „Karte aufdecken“** (`S.covered`, `coverBtn`, gilt
+     in allen Schritten). „Musterlösung laden“ als kleiner Link. Offen (Sönke): Karte wird neu skizziert, Overfitting soll anders werden.
      **3 Zu genau gelernt** (Overfitting zum Anfassen statt Kims Netz): fünf Ausreißer `OUTLIERS` (orange); jeder bekommt auf
      Antippen (Karte oder Chip) ein **Merk-Neuron** = Kreis r 0,85 km, in dem dessen Antwort gilt (`judgeWith`); Karten „Dein Netz“ /
      „Mit Merk-Neuronen“ (alte Kameras 75 → 80/80), Frage „Wird es auch bei neuen Kameras perfekt sein?“, „Neue Kameras aufstellen“

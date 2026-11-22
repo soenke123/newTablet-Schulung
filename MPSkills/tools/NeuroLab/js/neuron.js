@@ -90,7 +90,17 @@
   const limOf = (m, k) => m.lim[k[0] === 'x' ? k : k[0]];
   const clampK = (m, k, v) => { const L = limOf(m, k); return Math.max(L[0], Math.min(L[1], v)); };
   const getV = (m, k) => k === 'b' ? m.b : m[k[0]][+k[1] - 1];
-  const setV = (m, k, v) => { v = r2(clampK(m, k, v)); if (k === 'b') m.b = v; else m[k[0]][+k[1] - 1] = v; };
+  const setV = (m, k, v) => { v = clampK(m, k, v); if (!m.frac) v = r2(v); if (k === 'b') m.b = v; else m[k[0]][+k[1] - 1] = v; };
+  /* Zahl aus dem Eingabefeld: „0,75“, „−2“ oder ein Bruch „3/4“, „-1/2“ (null = unlesbar) */
+  function parseNum(s) {
+    s = String(s ?? '').trim().replace(/[−–]/g, '-').replace(/\s/g, '').replace(/,/g, '.');
+    if (!s) return null;
+    const fr = s.match(/^([-+]?\d+(?:\.\d+)?)\/([-+]?\d+(?:\.\d+)?)$/);
+    if (fr) { const d = parseFloat(fr[2]); return d ? parseFloat(fr[1]) / d : null; }
+    return /^[-+]?(\d+\.?\d*|\.\d+)$/.test(s) ? parseFloat(s) : null;
+  }
+  /* m.frac: ein eingetippter Bruch bleibt als Text stehen, solange der Wert gleich ist */
+  const shown = (m, k) => { const v = getV(m, k), t = m.txt && m.txt[k]; return t && Math.abs(t.v - v) < 1e-12 ? t.s : num(v); };
   const zOf = (m, x = m.x) => x[0] * m.w[0] + x[1] * m.w[1] + m.b;
   const yOf = (m, z) => activations[m.type].fn(z);
   const SUB = { x1: 'x<sub>1</sub>', x2: 'x<sub>2</sub>', w1: 'w<sub>1</sub>', w2: 'w<sub>2</sub>', b: 'b' };
@@ -152,17 +162,37 @@
     </div></div>`);
     const $ = s => root.querySelector(s), $$ = s => [...root.querySelectorAll(s)];
     const pop = $('.nw-pop'), vs = $('.nw-vs');
-    let popK = null, lastType = null;
+    let popK = null, lastType = null, pin = null;
+    // m.frac (Revier): im Regler-Fenster steht ein Eingabefeld – Zahl oder Bruch wie 3/4 eintippen
+    if (m.frac) {
+      pop.classList.add('has-in');
+      pin = document.createElement('input');
+      pin.type = 'text'; pin.className = 'nw-pop-in'; pin.autocomplete = 'off'; pin.spellcheck = false;
+      pin.setAttribute('aria-label', 'Zahl oder Bruch eintippen, z. B. 3/4');
+      pop.querySelector('.nw-pop-v').replaceWith(pin);
+      const take = () => {
+        if (!popK) return;
+        const v = parseNum(pin.value);
+        if (v === null) { pin.value = shown(m, popK); return; }
+        const t = pin.value.trim().replace(/\s/g, '').replace(/-/g, '−').replace(/\./g, ',');
+        m.txt = m.txt || {};
+        m.txt[popK] = /\//.test(t) ? { s: t, v: clampK(m, popK, v) } : null;
+        change(popK, v);
+      };
+      pin.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); take(); pin.blur(); } });
+      pin.addEventListener('change', take);
+    }
 
     function paintPop() {
       if (!popK) return;
       const L = limOf(m, popK), v = getV(m, popK), fr = (v - L[0]) / (L[1] - L[0]);
-      pop.querySelector('.nw-pop-v').textContent = num(v);
+      if (pin) { if (document.activeElement !== pin) pin.value = shown(m, popK); }
+      else pop.querySelector('.nw-pop-v').textContent = num(v);
       vs.querySelector('.nw-vs-th').style.bottom = vs.querySelector('.nw-vs-fill').style.height = (fr * 100) + '%';
       vs.setAttribute('aria-valuenow', v);
     }
     function update() {
-      $$('.nw-val').forEach(v => { v.querySelector('.nw-num').textContent = num(getV(m, v.dataset.v)); });
+      $$('.nw-val').forEach(v => { v.querySelector('.nw-num').textContent = shown(m, v.dataset.v); });
       const show = +root.dataset.show || 4, t = m.type, act = activations[t];
       if (t !== lastType) {
         lastType = t;
@@ -226,6 +256,7 @@
         pop.style.top = Math.max(-30, Math.min(rr.height - ph + 30, rv.top - rr.top + rv.height / 2 - ph / 2)) + 'px';
         $$('.nw-val').forEach(v => v.classList.toggle('is-open', v.dataset.v === k));
         update();
+        if (pin) pin.value = shown(m, k);
         vs.focus({ preventScroll: true });
       }));
       const fromY = cy => {
@@ -750,5 +781,5 @@
   }
 
   /* Bausteine auch für Bereich 2 (js/revier.js): dasselbe Neuron, dieselbe Rechnung */
-  window.NLNeuron = { render, makeNeuron, calcHTML, num };
+  window.NLNeuron = { render, makeNeuron, calcHTML, num, parseNum };
 })();
