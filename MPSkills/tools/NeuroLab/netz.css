@@ -299,3 +299,26 @@ input.bad { border-color: var(--neg) !important; background: var(--neg-dim) !imp
 /* Startseite: vier Kacheln (Neuronen · Wildkatzen · Lernen · Frei) */
 .tiles.tiles-four { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
 .tiles.tiles-four .tile { min-height: 190px; flex-direction: column; align-items: stretch; }
+
+/* ── Senden + Eingang (Stufe 2) ── */
+.send-btn[hidden], .inbox-btn[hidden], .inbox[hidden], .inbox-n[hidden] { display: none !important; }
+.send-btn { font: 700 .82rem var(--sans, inherit); padding: 7px 14px; border-radius: 10px; border: 1.5px solid var(--accent);
+  background: var(--accent); color: var(--on-accent, #fff); cursor: pointer; }
+.send-btn.is-sent { background: var(--surface); color: var(--accent); }
+.send-btn:disabled { opacity: .7; cursor: default; }
+.inbox-n { display: inline-block; min-width: 1.3em; padding: 0 6px; margin-left: 4px; border-radius: 99px;
+  background: var(--accent); color: var(--on-accent, #fff); font: 700 .75rem var(--mono); text-align: center; }
+.inbox { position: fixed; inset: 0; z-index: 2500; background: rgba(15, 23, 42, .45); display: flex; align-items: flex-start; justify-content: center; padding: 70px 16px 16px; }
+.ib-card { width: min(640px, 100%); max-height: 100%; display: flex; flex-direction: column; background: var(--surface);
+  border: 1.5px solid var(--line); border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden; }
+.ib-head { display: flex; justify-content: space-between; gap: 12px; padding: 16px 18px 10px; }
+.ib-head h2 { font-size: 1.1rem; margin: 0 0 2px; }
+.ib-head p { margin: 0; font-size: .82rem; color: var(--ink-soft); }
+.ib-list { overflow: auto; padding: 4px 12px 14px; display: grid; gap: 8px; }
+.ib-row { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.ib-who { flex: 1; display: grid; gap: 2px; min-width: 0; }
+.ib-who b { font-size: .98rem; color: var(--ink); }
+.ib-who span { font-size: .8rem; color: var(--ink-soft); }
+.ib-show, .ib-del { font: 700 .82rem inherit; padding: 8px 14px; border-radius: 9px; cursor: pointer; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); }
+.ib-show { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
+.ib-empty { padding: 24px 8px; text-align: center; color: var(--ink-soft); }

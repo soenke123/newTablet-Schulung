@@ -3283,9 +3283,11 @@ const storageKey = () => (state.area === 'lernen' ? STORAGE_KEY + '-sc-' + (scKe
    dieselbe Anwendung, und wer darin herumklickt, darf alles. */
 const DEMO = new URLSearchParams(location.search).has('demo');
 
-function saveState() {
-  if (DEMO || !state.area) return;
-  try { localStorage.setItem(storageKey(), JSON.stringify({
+/* viewOnly = die Lehrkraft schaut sich ein gesendetes Netz an (js/start.js,
+   „Zeigen“): es ist eine Kopie, nichts davon wird im Gerät gespeichert. */
+let viewOnly = false;
+function serializeState() {
+  return {
     phase: state.phase,
     numInputs: state.numInputs,
     inputs: state.inputs,
@@ -3319,12 +3321,18 @@ function saveState() {
         spacing: n.spacing || 0,
       })),
     })),
-  })); } catch (e) { /* Speicher voll oder gesperrt: dann eben nicht */ }
+  };
+}
+function saveState() {
+  if (DEMO || !state.area || viewOnly) return;
+  try { localStorage.setItem(storageKey(), JSON.stringify(serializeState())); } catch (e) { /* Speicher voll oder gesperrt: dann eben nicht */ }
 }
 
 function loadState() {
+  try { return applyData(JSON.parse(localStorage.getItem(storageKey()))); } catch (e) { return false; }
+}
+function applyData(data) {
   try {
-    const data = JSON.parse(localStorage.getItem(storageKey()));
     if (!data) return false;
     // Bauen kennt nur Build/Run, Lernen nur Lernen (alte Stände hatten alle drei).
     state.phase = data.phase === 'run' ? 'run' : (data.phase === 'learn' && state.area === 'lernen' ? 'learn' : 'build');
@@ -3763,6 +3771,8 @@ function renderHeader() {
   const bl = document.getElementById('btn-learn');
   bl.hidden = !isLearnArea();
   bl.classList.toggle('active', state.phase === 'learn');
+  const sb = document.getElementById('btn-send');
+  sb.hidden = !(isLearnArea() && state.phase !== 'build' && window.NLStart && window.NLStart.canSend && window.NLStart.canSend());
   const hints = { build: 'Netz bauen: Neuronen, Gewichte und Bias einstellen', run: 'Test: Eingaben ändern und das Ergebnis sehen', learn: 'Lernen: zusehen, wie das Netz mit den Daten trainiert' };
   document.getElementById('phase-hint-text').textContent = hints[state.phase] || '';
 }
@@ -5224,6 +5234,7 @@ function demoState() {
    wieder. app.js zeichnet nur, solange ein Bereich offen ist. */
 const demoMem = {};
 function enterArea(area, scenarioKey) {
+  viewOnly = false;
   stopTraining();
   closePopupSilently();
   state.area = area;
@@ -5255,13 +5266,33 @@ function leaveArea() {
   }
   saveState();
   state.area = null;
+  viewOnly = false;
 }
+
+/* Gesendetes Netz einer Schülerin ansehen (Lehrkraft). Kopie, nichts wird gespeichert. */
+function openShared(scenarioKey, payload) {
+  if (state.area) leaveArea();
+  stopTraining();
+  closePopupSilently();
+  state.area = 'lernen';
+  freeMode = scenarioKey === 'custom';
+  scKey = scenarioKey;
+  viewOnly = true;
+  view.touched = false;
+  resetState();
+  applyData(payload);
+  if (!['build', 'learn', 'run'].includes(state.phase)) state.phase = 'run';
+  render();
+}
+/* Das eigene Netz zum Senden: genau der gespeicherte Stand */
+function exportNet() { return JSON.parse(JSON.stringify(serializeState())); }
 function closePopupSilently() {
   document.getElementById('popup-overlay').classList.add('hidden');
   popupDirty = false;
 }
 window.NLApp = {
-  enterArea, leaveArea, render, startTraining, stopTraining, selectScenario,
+  enterArea, leaveArea, render, startTraining, stopTraining, selectScenario, openShared, exportNet,
+  get viewOnly() { return viewOnly; },
   get state() { return state; },
   scenarios: () => SCENARIO_LIST.filter(e => e.key === 'custom' || SCENARIOS[e.key]),
 };

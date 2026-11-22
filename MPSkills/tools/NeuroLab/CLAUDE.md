@@ -42,7 +42,13 @@ Lernen und Frei (Area `lernen`) haben jetzt dieselben drei Phasen: **Build** (Sc
 Feld mit − / + und Eintippen, keine Regler; `makePM`) · **Learn** (nur Training, Struktur gesperrt, Eingänge/Ausgänge vom Szenario) · **Test** (Eingaben mit
 `makePM`, Schritt 1). Kopf: `#btn-build/#btn-learn/#btn-run` (Run heißt „Test“). Kein Szenario-Menü mehr im Lernfenster; Wechsel nur über „Szenario wählen“
 (`start.js`: leaveArea + enterArea). Jedes Szenario hat sein Netz: `localStorage neuron-sim-v2-sc-<key>` (`scKey`, Frei = `custom`).
-**Stufe 2 (offen):** „An Lehrkraft senden“ + Eingang (Migration, RPCs, Brücke tool.js), Beamer-Ansicht, zeigen/löschen.
+**Stufe 2 (Migration 0301, Prüfstand `supabase/tests/0301_neurolab_eingang.mjs`, Browser `tests/eingang.e2e.mjs`):** Schüler: Knopf `#btn-send`
+„An Lehrkraft senden“ nur in Learn/Test (`canSend`, Raum + Szenario) → RPC `nl_send(p_token, p_scenario, p_payload)`; Tabelle `nl_inbox` je Teilnehmer + Szenario
+eine Zeile (erneut senden überschreibt), Payload = `exportNet()` = `serializeState()` (Netz, Gewichte, Bias, Eingaben, Szenario, CSV-Daten), ≤ 300 KB, 400/Raum.
+Lehrkraft: Knopf „Eingang“ `#btn-inbox` mit Zähler (Abfrage alle 6 s), Fenster `#inbox` mit Name · Szenario · Zeit, **Zeigen** (`nl_inbox_get` →
+`App.openShared`: Kopie mit `viewOnly`, nichts wird im Gerät gespeichert, Titel „Mia · Logik-Gatter“, alle drei Phasen bedienbar) und **Löschen**
+(`nl_inbox_delete`, nur aus ihrer Liste, Schüler behält sein Netz). Brücke: iframe ↔ `tool.js` mit `nl:rpc` / `nl:rpc:res` (nur die vier nl_*-Namen).
+Freigaben in `0225_rechte_freigaben.json` eingetragen.
 
 ## Drei Bereiche (alter Stand der Startseite, Übersicht neu 21.11.2026)
 

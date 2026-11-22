@@ -24,7 +24,7 @@
 (function () {
   'use strict';
 
-  const V = '20261121b';
+  const V = '20261122b';
 
   let root = null, frame = null, ctx = null, view = null;
   let onResize = null, onMsg = null;
@@ -32,6 +32,7 @@
   let parts = null;        // Lehrkraft: eigener Stand, bis der Server ihn bestätigt
 
   const DEFAULT = ['neuron', 'n-wie', 'n-typen'];
+  const NL_RPC = ['nl_send', 'nl_inbox_list', 'nl_inbox_get', 'nl_inbox_delete'];
   const isPresenter = () => !!ctx && ctx.role === 'presenter';
   function data() { return (view && view.state && view.state.data) || {}; }
   function serverParts() {
@@ -119,6 +120,13 @@
         if (!frame || e.source !== frame.contentWindow || e.origin !== location.origin) return;
         const m = e.data || {};
         if (m.type === 'nl:ready') { ready = true; lastSent = ''; post(); }
+        else if (m.type === 'nl:rpc' && NL_RPC.includes(m.fn) && !ctx.preview) {
+          /* Senden (Schüler) und Eingang (Lehrkraft): nur diese vier Aufrufe, der Server prüft Rolle und Raum. */
+          const id = m.id;
+          Promise.resolve(ctx.actions.call(m.fn, m.args || {}))
+            .then(res => res || { ok: false, error: 'network' }, () => ({ ok: false, error: 'network' }))
+            .then(res => { if (frame && frame.contentWindow) frame.contentWindow.postMessage({ type: 'nl:rpc:res', id, res }, location.origin); });
+        }
         else if (m.type === 'nl:parts' && isPresenter() && !ctx.preview && Array.isArray(m.parts)) {
           setParts(m.parts.map(String));
         }

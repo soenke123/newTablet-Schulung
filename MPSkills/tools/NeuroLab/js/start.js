@@ -124,7 +124,7 @@
     set(k, v) { if (DEMO) { mem[k] = v; return; } try { localStorage.setItem(k, v); } catch (e) { /* egal */ } },
   };
   let where = { view: 'home' };
-  function saveWhere() { store.set('nl.where', JSON.stringify(where)); }
+  function saveWhere() { if (where.viewing) return; store.set('nl.where', JSON.stringify(where)); }
 
   const SHARE_SVG = '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
   const LOCK_SVG = '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
@@ -249,6 +249,93 @@
   }
   $('btn-home').addEventListener('click', goHome);
 
+  /* ── Senden an die Lehrkraft + Eingang ───────────────────────
+     Der Rahmen (tool.js) leitet nur die vier nl_*-Aufrufe an den Raum
+     weiter: { type: 'nl:rpc', id, fn, args } ↔ { type: 'nl:rpc:res', id, res }. */
+  const HASROOM = !!ROOM && !DEMO && window.parent !== window;
+  const rpcWait = {};
+  let rpcId = 0;
+  function rpc(fn, args) {
+    return new Promise(resolve => {
+      const id = ++rpcId;
+      rpcWait[id] = resolve;
+      sendUp({ type: 'nl:rpc', id, fn, args });
+      setTimeout(() => { if (rpcWait[id]) { delete rpcWait[id]; resolve({ ok: false, error: 'network' }); } }, 15000);
+    });
+  }
+  const scName = key => key === 'custom' ? 'Frei' : ((App.scenarios().find(e => e.key === key) || {}).name || key);
+  const ERR = { network: 'Keine Verbindung.', payload_too_big: 'Das Netz ist zu groß zum Senden.', quota_exceeded: 'Der Eingang ist voll.',
+    room_gone: 'Der Raum ist beendet.', blocked: 'Du bist gesperrt.' };
+
+  // Schüler: Knopf „An Lehrkraft senden“
+  const canSend = () => STUDENT && HASROOM && !!App.state.learn.scenario;
+  let sendTimer = 0;
+  $('btn-send').addEventListener('click', async () => {
+    const b = $('btn-send'), key = App.state.learn.scenario;
+    if (!key || b.disabled) return;
+    b.disabled = true; b.textContent = 'Sende …';
+    const r = await rpc('nl_send', { p_scenario: key, p_payload: App.exportNet() });
+    b.disabled = false;
+    b.textContent = r && r.ok ? 'Gesendet ✓' : (ERR[r && r.error] || 'Senden hat nicht geklappt');
+    b.classList.toggle('is-sent', !!(r && r.ok));
+    clearTimeout(sendTimer);
+    sendTimer = setTimeout(() => { b.textContent = 'An Lehrkraft senden'; b.classList.remove('is-sent'); }, 3500);
+  });
+
+  // Lehrkraft: Eingang
+  let inbox = [], inboxOpen = false;
+  async function loadInbox() {
+    const r = await rpc('nl_inbox_list', {});
+    if (r && r.ok) { inbox = r.items || []; paintInboxBadge(); if (inboxOpen) paintInbox(); }
+  }
+  function paintInboxBadge() {
+    const n = $('inbox-n');
+    n.textContent = inbox.length; n.hidden = !inbox.length;
+  }
+  function paintInbox() {
+    const box = $('inbox');
+    const rows = inbox.map(i => `<div class="ib-row" data-id="${i.id}">
+        <div class="ib-who"><b>${esc(i.from || 'ohne Namen')}</b><span>${esc(scName(i.scenario))} · ${esc(i.at)}</span></div>
+        <button type="button" class="ib-show" data-show="${i.id}">Zeigen</button>
+        <button type="button" class="ib-del" data-del="${i.id}" title="Nur aus deiner Liste löschen">Löschen</button>
+      </div>`).join('');
+    box.innerHTML = `<div class="ib-card" role="dialog" aria-label="Eingang">
+      <div class="ib-head"><div><h2>Eingang</h2><p>Netze, die Schüler gesendet haben. Löschen entfernt sie nur aus dieser Liste.</p></div>
+        <button type="button" class="nn-btn ib-close" title="Schließen">×</button></div>
+      <div class="ib-list">${rows || '<p class="ib-empty">Noch nichts angekommen.</p>'}</div></div>`;
+    box.querySelector('.ib-close').addEventListener('click', closeInbox);
+    box.addEventListener('click', e => { if (e.target === box) closeInbox(); });
+    box.querySelectorAll('[data-show]').forEach(b => b.addEventListener('click', () => showSent(+b.dataset.show)));
+    box.querySelectorAll('[data-del]').forEach(b => b.addEventListener('click', async () => {
+      b.disabled = true;
+      await rpc('nl_inbox_delete', { p_id: +b.dataset.del });
+      await loadInbox();
+    }));
+  }
+  function closeInbox() { inboxOpen = false; $('inbox').hidden = true; }
+  async function showSent(id) {
+    const r = await rpc('nl_inbox_get', { p_id: id });
+    if (!r || !r.ok) return;
+    closeInbox();
+    const key = r.scenario;
+    App.openShared(key, r.payload);
+    where = { view: 'lab', area: 'lernen', id: key === 'custom' ? 'b-frei' : 'trainieren', sc: null, viewing: true };
+    setView('lab', `${r.from || 'Schüler'} · ${scName(key)}`);
+    $('btn-scen').hidden = true;
+    App.render();
+  }
+  if (TEACHER && HASROOM) {
+    $('btn-inbox').hidden = false;
+    $('btn-inbox').addEventListener('click', () => { inboxOpen = true; $('inbox').hidden = false; paintInbox(); loadInbox(); });
+    loadInbox();
+    setInterval(() => { if (!document.hidden) loadInbox(); }, 6000);
+  }
+  window.addEventListener('message', e => {
+    if (e.origin !== location.origin || e.source !== window.parent || !e.data || e.data.type !== 'nl:rpc:res') return;
+    const f = rpcWait[e.data.id];
+    if (f) { delete rpcWait[e.data.id]; f(e.data.res); }
+  });
+
   /* ── Start ───────────────────────────────────────────────── */
   let booted = false;
   function boot() {
@@ -268,7 +355,7 @@
     else if (where.view === 'lab') App.render();
   });
 
-  window.NLStart = { usable, goHome, open, get parts() { return parts; } };
+  window.NLStart = { usable, goHome, open, canSend, get parts() { return parts; } };
 
   setView('home');
   if (STUDENT) renderHome();            // erst einmal leer, bis die Freigaben da sind
