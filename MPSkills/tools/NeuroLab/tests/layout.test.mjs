@@ -55,6 +55,7 @@ const SETUPS = {
   '7-segment':    `${LE} applyScenario('seg7'); render();`,
   'zielscheibe':  `${LE} applyScenario('zielscheibe'); render();`,
   'voegel':       `${LE} applyScenario('voegel'); render();`,
+  'wildkatzen':   `${LE} applyScenario('wildkatzen'); render();`,
   'eigene-csv':   `${LE} state.learn.customData = parseCustomCSV(${JSON.stringify(CSV)});
                    state.learn.scenario = 'custom'; applyCustomScenarioInputsOnly(); render();`,
   'gross-run':    `${BU} state.numInputs = 10; (${FULL})([10, 10, 10, 10]); state.phase = 'run'; render();`,

@@ -47,15 +47,15 @@
     api.caption('Das Revier der Wildkatzen: Jede Grenze ist ein Neuron – erst rechnen, dann sehen');
     if (!await api.wait(3000)) return;
     api.click('.nn-step[data-step="jahr"]');
-    if (!await api.waitFor('.rv-need, .rv-cmp', 3000)) return;
-    api.caption('Aus Geraden wird ein Netz – und am Ende: Was ist Overfitting?');
+    if (!await api.waitFor('.rv-need, .rv-plans', 3000)) return;
+    api.caption('Aus Geraden wird ein Netz – und das Netz antwortet auch dort, wo keine Kamera hängt');
     if (!await api.wait(2400)) return;
 
     api.click('#btn-home');
     if (!await api.waitFor('.tile[data-id="trainieren"]', 3000)) return;
     api.click('.tile[data-id="trainieren"]');
-    if (!await api.waitFor('#scen-picker .tile[data-id="sc-gatter"]', 3000)) return;
-    api.caption('Lernen: erst das Szenario wählen');
+    if (!await api.waitFor('#scen-picker .tile[data-id="sc-katze"]', 3000)) return;
+    api.caption('Lernen: erst das Szenario wählen – Wildkatzen: das Netz findet seine Geraden selbst');
     if (!await api.wait(1800)) return;
     api.click('#btn-home');
     if (!await api.waitFor('.tile[data-id="b-frei"]', 3000)) return;

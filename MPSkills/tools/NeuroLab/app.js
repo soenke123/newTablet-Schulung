@@ -40,6 +40,8 @@ const state = {
     customData:     null,
     customError:    null,
     customFileName: null,
+    katzeNoisy:     false,   // Wildkatzen: + 4 Fehlmessungen
+    katzeTest:      false,   // Wildkatzen: neue Kameras auf der Karte zeigen
   },
   layers: [
     { count: 0, neurons: [] },
@@ -1693,9 +1695,37 @@ if (window.NLData && window.NLData.VOEGEL) {
   };
 }
 
+/* Wildkatzen (24.11.2026): dieselben 24 Kameras wie im „Revier der Wildkatzen“
+   (js/karte.js, wird VOR app.js geladen). Im Revier rechnen die Kinder jede
+   Gerade selbst aus – hier findet das Netz sie selbst. Jedes Neuron der ersten
+   Schicht ist eine Gerade auf der Karte (Info-Kasten). Eingänge auf −1 … 1
+   umgerechnet (mit km lernt das Netz kaum: tanh ist bei 12 sofort satt).
+   Overfitting: Mit den sauberen Kameras lernen auch 10 Neuronen die Regel
+   (neue Kameras ~95 %). Mit „+ 4 Fehlmessungen“ (Akku leer, Busch …) baut ein
+   großes Netz bei langem Training Inseln um sie herum: alte Kameras steigen,
+   neue Kameras (NLKarte.TEST, 74 Stück) fallen – die Kurve im Info-Kasten zeigt es. */
+const katzeNorm = p => [Math.round((p[0] - 6) / 6 * 1000) / 1000, Math.round((p[1] - 5) / 5 * 1000) / 1000];
+const KATZE = { clean: [], noisy: [], test: [], hist: [], histStep: 1 };
+if (window.NLKarte) {
+  const rows = cams => cams.map(c => ({ inputs: katzeNorm(c.p), targets: [c.soll], p: c.p, out: !!c.out }));
+  KATZE.clean = rows(window.NLKarte.ALL);
+  KATZE.noisy = rows(window.NLKarte.NOISY);
+  KATZE.test = rows(window.NLKarte.TEST);
+  SCENARIOS.wildkatzen = {
+    name: 'Wildkatzen',
+    numInputs: 2,
+    inputLabels:  ['Osten (−1…1)', 'Norden (−1…1)'],
+    outputLabels: ['Revier'],
+    hidden:  [{ count: 3, type: 'tanh' }],
+    outType: 'sigmoid',
+    get data() { return state.learn.katzeNoisy ? KATZE.noisy : KATZE.clean; },
+  };
+}
+
 /* Szenarien in der Reihenfolge der Auswahl. id = Freigabe im Raum
    (skill_room_state.data.parts) — nie umbenennen. */
 const SCENARIO_LIST = [
+  { key: 'wildkatzen',  id: 'sc-katze',  name: 'Wildkatzen' },
   { key: 'gates',       id: 'sc-gatter', name: 'Logik-Gatter' },
   { key: 'seg7',        id: 'sc-ziffer', name: '7-Segment-Ziffer' },
   { key: 'zielscheibe', id: 'sc-ziel',   name: 'Zielscheibe' },
@@ -2145,6 +2175,7 @@ function trainTick() {
       state.learn.sampleIdx = 0;
       state.learn.epoch++;
       computeAndStoreLoss();
+      if (state.learn.scenario === 'wildkatzen') katzeRecord();
       state.learn.shuffledData = sc.data.slice().sort(() => Math.random() - 0.5);
     }
   }
@@ -2152,6 +2183,7 @@ function trainTick() {
   updateLossGraph();
   updateNeuronDisplays();
   updateVoegelPlot();
+  updateKatzePlot();
 }
 
 // ── Scenario application ───────────────────────────────────────────────────
@@ -2170,6 +2202,7 @@ function resetLearnRun() {
   state.learn.lastPredictions = [];
   state.learn.shuffledData    = [];
   state.learn.topologyDirty   = false;
+  KATZE.hist = []; KATZE.histStep = 1;
 }
 
 function defaultOutType(sc) {
@@ -2331,6 +2364,7 @@ function renderLearnInfoPanel() {
   else if (state.learn.scenario === 'seg7') renderSeg7Info(panel);
   else if (state.learn.scenario === 'zielscheibe') renderZielscheibeInfo(panel);
   else if (state.learn.scenario === 'voegel') renderVoegelInfo(panel);
+  else if (state.learn.scenario === 'wildkatzen') renderKatzeInfo(panel);
   else if (state.learn.scenario === 'custom') renderCustomDataInfo(panel);
   return panel;
 }
@@ -2674,6 +2708,109 @@ function updateVoegelPlot() {
   }
   const acc = document.getElementById('vogel-acc');
   if (acc) acc.innerHTML = `Richtig erkannt: <b>${right} von ${sc.data.length}</b> (${Math.round(right / sc.data.length * 100)} %) · schwarzer Rand = falsch`;
+}
+
+// ── Wildkatzen: Karte mit einer Geraden je Neuron + alte/neue Kameras ───────
+const KATZE_COLS = ['#2f80ed', '#e5484d', '#8e44ad', '#0f9d58', '#e67e22', '#00838f', '#c2185b', '#6d4c41', '#7cb342', '#5c6bc0'];
+let katzeMap = null, katzePlotT = 0;
+// Genauigkeit (Anteil richtig) auf einer Liste von Zeilen
+function katzeAcc(rows) {
+  if (!rows.length) return 0;
+  return rows.filter(r => ((predictAt(r.inputs)[0] ?? 0) > 0.5 ? 1 : 0) === r.targets[0]).length / rows.length;
+}
+// je Epoche: alte (Trainings-) und neue (Test-)Kameras; lange Läufe werden ausgedünnt
+function katzeRecord() {
+  if (!shapeMatchesScenario()) return;
+  if (state.learn.epoch % KATZE.histStep) return;
+  KATZE.hist.push({ e: state.learn.epoch, a: katzeAcc(SCENARIOS.wildkatzen.data), t: katzeAcc(KATZE.test) });
+  if (KATZE.hist.length > 240) { KATZE.hist = KATZE.hist.filter((_, i) => i % 2 === 0); KATZE.histStep *= 2; }
+}
+function renderKatzeInfo(panel) {
+  const K = window.NLKarte;
+  const title = document.createElement('div');
+  title.className = 'learn-info-title';
+  title.textContent = 'Wildkatzen';
+  panel.appendChild(title);
+  const desc = document.createElement('div');
+  desc.className = 'learn-info-desc';
+  desc.innerHTML = `Janas Kameras aus dem Revier. Eingänge: die Lage auf der Karte, umgerechnet auf −1 … 1 (−1 = West- bzw. Südrand, 1 = Ost- bzw. Nordrand). `
+    + `Ausgang: <b>Revier?</b> Im Revier hast du jede Gerade selbst ausgerechnet – hier sucht das Netz sie <b>selbst</b>. Jedes Neuron der ersten Schicht ist eine Gerade.`;
+  panel.appendChild(desc);
+  const opts = document.createElement('div');
+  opts.className = 'katze-opts';
+  const mk = (txt, on, fn, id) => { const b = document.createElement('button'); b.type = 'button'; b.id = id; b.className = 'katze-chip' + (on ? ' on' : ''); b.textContent = txt; b.addEventListener('click', fn); return b; };
+  opts.append(
+    mk(`Janas ${KATZE.clean.length} Kameras`, !state.learn.katzeNoisy, () => katzeSetNoisy(false), 'katze-clean'),
+    mk('+ 4 Fehlmessungen', state.learn.katzeNoisy, () => katzeSetNoisy(true), 'katze-noisy'),
+    mk(state.learn.katzeTest ? 'Neue Kameras ausblenden' : `Neue Kameras zeigen (${KATZE.test.length})`, state.learn.katzeTest, () => { state.learn.katzeTest = !state.learn.katzeTest; saveState(); render(); }, 'katze-test'),
+  );
+  panel.appendChild(opts);
+  if (state.learn.katzeNoisy) {
+    const n = document.createElement('div');
+    n.className = 'learn-info-desc katze-note';
+    n.innerHTML = '<b>Fehlmessungen</b> (lila umkreist): Drei Kameras im Revier haben keine Katze gesehen (zu hoch gehängt, Akku leer, Busch), eine in der Stadt hat eine gesehen (verlaufen). Die Landschaft ist dieselbe.';
+    panel.appendChild(n);
+  }
+  if (K) {
+    katzeMap = K.makeMap();
+    katzeMap.el.classList.add('katze-map');
+    panel.appendChild(katzeMap.el);
+  }
+  const acc = document.createElement('div');
+  acc.className = 'vogel-acc'; acc.id = 'katze-acc';
+  panel.appendChild(acc);
+  const cv = document.createElementNS(SVG_NS, 'svg');
+  cv.id = 'katze-curve'; cv.setAttribute('class', 'katze-curve'); cv.setAttribute('viewBox', '0 0 300 120');
+  panel.appendChild(cv);
+  const tip = document.createElement('div');
+  tip.className = 'learn-info-desc';
+  tip.innerHTML = '<b>Probier:</b> Wie viele Neuronen braucht das Netz – und liegen seine Geraden da, wo du sie im Revier gezogen hast? '
+    + 'Dann <b>+ 4 Fehlmessungen</b>, 10 Neuronen, Lernrate 0,5, Geschwindigkeit hoch – und lange laufen lassen. Was passiert mit den <b>neuen Kameras</b>?';
+  panel.appendChild(tip);
+  katzePlotT = 0;
+  requestAnimationFrame(() => updateKatzePlot(true));
+}
+function katzeSetNoisy(on) {
+  if (!!state.learn.katzeNoisy === on) return;
+  state.learn.katzeNoisy = on;
+  resetWeightsOnly();          // neue Daten = neuer Versuch (Gewichte, Epoche und Kurve von vorn)
+  saveState(); render();
+}
+function updateKatzePlot(force) {
+  if (!katzeMap || !katzeMap.el.isConnected || state.learn.scenario !== 'wildkatzen' || !shapeMatchesScenario()) return;
+  const now = performance.now();
+  if (!force && now - katzePlotT < 150) return;
+  katzePlotT = now;
+  const K = window.NLKarte, sc = SCENARIOS.wildkatzen;
+  const judge = p => ((predictAt(katzeNorm(p))[0] ?? 0) > 0.5 ? 1 : 0);
+  // Erste Schicht mit Neuronen: Gerade w₁·x₁′ + w₂·x₂′ + b = 0 mit x′ = (x − 6)/6, (y − 5)/5 → in km
+  const li = nextActive(-1), lines = [];
+  if (li >= 0) state.layers[li].neurons.forEach((n, i) => {
+    const w1 = n.disabled?.[0] ? 0 : (n.weights[0] ?? 0), w2 = n.disabled?.[1] ? 0 : (n.weights[1] ?? 0);
+    if (Math.abs(w1) + Math.abs(w2) < 1e-6) return;
+    lines.push({ w: [w1 / 6, w2 / 5], b: n.bias - w1 - w2, color: KATZE_COLS[i % KATZE_COLS.length], width: 2.4, num: String(i + 1) });
+  });
+  const cams = (state.learn.katzeTest ? KATZE.test : sc.data).map(r => ({ p: r.p, soll: r.targets[0], mark: !!r.out, markColor: '#8e44ad' }));
+  katzeMap.set({ cams, lines, region: judge, judge, reveal: 0 });
+  const a = katzeAcc(sc.data), t = katzeAcc(KATZE.test);
+  const accEl = document.getElementById('katze-acc');
+  if (accEl) accEl.innerHTML = `Alte Kameras richtig: <b>${Math.round(a * sc.data.length)} von ${sc.data.length}</b> · neue Kameras: <b>${Math.round(t * KATZE.test.length)} von ${KATZE.test.length}</b> (${Math.round(t * 100)} %)`
+    + `<br><span class="katze-key">${state.learn.katzeTest ? 'Karte zeigt die neuen Kameras' : 'Karte zeigt die Trainings-Kameras'} · rot umkreist = Netz liegt falsch</span>`;
+  // Kurve: alte und neue Kameras je Epoche
+  const svg = document.getElementById('katze-curve');
+  if (!svg) return;
+  const Hs = KATZE.hist, W = 300, H = 120, L = 34, R = 8, T = 10, B = 22;
+  let inner = `<line class="ax" x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}"/><line class="ax" x1="${L}" y1="${T}" x2="${L}" y2="${H - B}"/>`;
+  const lo = 0.5, X = i => L + (Hs.length < 2 ? 0 : i / (Hs.length - 1)) * (W - L - R), Y = v => T + (1 - (Math.max(lo, v) - lo) / (1 - lo)) * (H - T - B);
+  inner += `<text class="tk" x="${L - 4}" y="${Y(1) + 3}" text-anchor="end">100 %</text><text class="tk" x="${L - 4}" y="${Y(lo) + 3}" text-anchor="end">50 %</text>`;
+  inner += `<text class="tk" x="${(L + W - R) / 2}" y="${H - 5}" text-anchor="middle">Epochen${Hs.length ? ' (bis ' + Hs[Hs.length - 1].e + ')' : ''}</text>`;
+  if (Hs.length >= 2) {
+    const path = k => Hs.map((h, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(h[k]).toFixed(1)).join('');
+    inner += `<path class="c-old" d="${path('a')}"/><path class="c-new" d="${path('t')}"/>`;
+    const last = Hs[Hs.length - 1];
+    inner += `<text class="lab c-old-t" x="${W - R}" y="${Y(last.a) - 5}" text-anchor="end">alte Kameras</text><text class="lab c-new-t" x="${W - R}" y="${Y(last.t) + 13}" text-anchor="end">neue Kameras</text>`;
+  } else inner += `<text class="tk" x="${(L + W - R) / 2}" y="${(T + H - B) / 2}" text-anchor="middle">Starte das Training – hier entsteht die Kurve.</text>`;
+  svg.innerHTML = inner;
 }
 
 function renderCustomDataInfo(panel) {
@@ -3310,6 +3447,8 @@ function serializeState() {
       infoPanelOpen: state.learn.infoPanelOpen,
       customData:     state.learn.customData,
       customFileName: state.learn.customFileName,
+      katzeNoisy:     !!state.learn.katzeNoisy,
+      katzeTest:      !!state.learn.katzeTest,
     },
     layers: state.layers.map(l => ({
       count: l.count,
@@ -3378,6 +3517,8 @@ function applyData(data) {
       state.learn.isTraining     = false;
       state.learn.intervalId     = null;
       state.learn.customData     = data.learn.customData     ?? null;
+      state.learn.katzeNoisy     = !!data.learn.katzeNoisy;
+      state.learn.katzeTest      = !!data.learn.katzeTest;
       state.learn.customFileName = data.learn.customFileName ?? null;
       state.learn.customError    = null;
     }

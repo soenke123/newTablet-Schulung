@@ -38,12 +38,14 @@
     'v-rechnen': '<svg viewBox="0 0 64 40"><rect x="4" y="6" width="14" height="8" rx="3"/><rect x="4" y="26" width="14" height="8" rx="3"/><path d="M18 10 L30 20 M18 30 L30 20"/><rect x="30" y="12" width="16" height="16" rx="5"/><path d="M46 20 H52"/><text x="56" y="25" font-size="13" font-weight="800" stroke="none" fill="currentColor">=</text></svg>',
   };
   const SC_ICON = {
+    wildkatzen: '<svg viewBox="0 0 60 40"><path d="M4 30 L56 22" class="hl"/><path d="M8 6 L30 36"/><path d="M58 8 L36 36"/><path class="fill" d="M30 13 l4 7 h-8 z"/><circle cx="14" cy="34" r="3"/><circle cx="50" cy="6" r="3"/></svg>',
     gates: '<b class="t-big">&amp; ≥1 ⊕</b>',
     seg7: '<svg viewBox="0 0 30 46"><path class="hl" d="M7 4 H23 M25 6 V21 M25 25 V40 M7 42 H23 M5 25 V40 M5 6 V21 M7 23 H23"/></svg>',
     zielscheibe: '<svg viewBox="0 0 46 46"><circle cx="23" cy="23" r="20"/><circle cx="23" cy="23" r="12"/><circle cx="23" cy="23" r="4" class="fill"/></svg>',
     voegel: '<svg viewBox="0 0 60 40"><path class="hl" d="M4 22 C14 10 22 12 30 20 C38 12 46 10 56 22 C46 18 38 20 30 28 C22 20 14 18 4 22 Z"/></svg>',
   };
   const SC_TEXT = {
+    wildkatzen: 'Janas Kameras aus dem Revier: Das Netz sucht seine Geraden selbst. Und was machen Fehlmessungen?',
     gates: 'AND, OR, NOT A und XOR gleichzeitig lernen – XOR geht nicht mit einer Schicht.',
     seg7: 'Welche Ziffer zeigt die 7-Segment-Anzeige? Sieben Eingänge, eine Zahl als Ausgabe.',
     zielscheibe: 'Wo trifft der Pfeil? Aus (x, y) die Punkte vorhersagen – 1500 Würfe.',

@@ -28,10 +28,12 @@
                         zeigt seine Werte v₁ … vₙ und b ebenfalls im Netz. Alles
                         richtig → Karte deckt sich auf (zu- und aufdeckbar). Der
                         Fluss ist leicht geschwungen, die Gerade nicht: Gesprächsanlass.
-     3 Zu genau gelernt Vier lila Kameras passen nicht zur Karte (drei im Revier
-                        ohne Katze, eine Katze in der Stadt). Kim will die Karte
-                        neu zeichnen: jede bekommt ein Merk-Neuron. Alte Kameras
-                        → 48/48, neue Kameras → schlechter. Kurve beider Werte.
+     3 Das Netz fragen  Dieselben Kameras, dasselbe Netz – jetzt Orte OHNE Kamera
+                        (karte.js PLANS): Baugebiet, Halle am Stadtrand, Radweg mit
+                        zwei Wegen (km im Revier), Grillplatz am Fluss. Das Netz
+                        rechnet vor, am Ende „Karte aufdecken – hatte das Netz
+                        recht?“ (am Fluss meist nicht). Overfitting gibt es hier
+                        nicht mehr, es kommt unter „Lernen“ → Wildkatzen.
    Keine UND/XOR-Begriffe hier (die stehen bei „Netze trainieren“).
    Stand je Gerät: localStorage nl.revier (Schaufenster: nur Arbeitsspeicher).
    Karte und Daten: js/karte.js (NLKarte).
@@ -44,19 +46,18 @@
   const STUDENT = Q.get('raum') === 'schueler';
   const COLS = ['#2f80ed', '#e5484d', '#8e44ad', '#0f9d58', '#e67e22', '#00838f'];
   const MAX_HID = 6;
-  const VERSION = 5;                                 // 5: Karte nach Sönkes Skizze, gedreht (23.11.2026)
+  const VERSION = 6;                                 // 6: weniger Kameras, Schritt 3 „Das Netz fragen“ (24.11.2026)
   /* nur fürs Arbeitsblatt: Janas Neuron und drei Kameras zum Nachrechnen */
   const JANA = { w: [1, 1], b: -8 };
-  const PROBE = [{ label: 'A', p: [6, 4] }, { label: 'B', p: [2, 2] }, { label: 'C', p: [4, 4] }];
+  const PROBE = [{ label: 'A', p: [6, 4] }, { label: 'B', p: [5, 2] }, { label: 'C', p: [2, 4] }];
   /* Hilfe-Beispiel: Gerade durch (2|6) und (6|2) */
   const EX = { P: [2, 6], Q: [6, 2], w: [1, 1], b: -8 };
   const DEF_PQ = [[[1, 3], [11, 8]], [[1, 2], [3, 8]], [[6, 10], [12, 4]], [[0, 5], [12, 5]], [[4, 0], [4, 10]], [[0, 0], [12, 10]]];
   const STEPS = [
     { id: 'fluss', kurz: 'Der Fluss', title: 'Die erste Grenze: der Fluss' },
     { id: 'stadt', kurz: 'Ein Jahr später', title: 'Ein Jahr später: mehr Kameras, mehr Grenzen' },
-    { id: 'jahr', kurz: 'Zu genau gelernt', title: 'Ein Netz, das sich alles merkt' },
+    { id: 'jahr', kurz: 'Das Netz fragen', title: 'Wo keine Kamera hängt: Das Netz fragen' },
   ];
-  const BUBBLE = 0.85;                       // Merk-Neuron: kleiner Kreis um den Ausreißer (km)
 
   /* ── Speicher ── */
   const mem = {};
@@ -70,7 +71,7 @@
     s2: { P: [2, 2], Q: [10, 6], w: [0, 0, 0], done: false },
     s3: { hid: [], out: { v: [], b: 0 }, done: false, seen: false },
     revealed: false, covered: false,
-    s4: { mem: [], view: 'mem', choice: null, tested: false },
+    s4: { asked: {}, route: null, sel: 'bau', shown: false },
   });
   let S = fresh();
   try { const x = JSON.parse(store.get('nl.revier') || 'null'); if (x && x.v === VERSION) S = Object.assign(fresh(), x); } catch (e) { /* egal */ }
@@ -196,7 +197,7 @@
     wrap.appendChild(card);
     root.appendChild(wrap);
     map = K.makeMap();
-    map.set({ reveal: S.revealed && !S.covered ? 1 : 0 });
+    map.set({ reveal: S.step !== 'jahr' && S.revealed && !S.covered ? 1 : 0 });
     ({ fluss: stepFluss, stadt: stepStadt, jahr: stepJahr })[S.step](card);
     const foot = h('<div class="nn-foot"></div>');
     if (i > 0) { const b = h(`<button type="button" class="nn-btn">‹ ${STEPS[i - 1].kurz}</button>`); b.onclick = () => go(STEPS[i - 1].id); foot.appendChild(b); }
@@ -211,10 +212,10 @@
   /* Wie Schritt 6/7 in Teil 1: links das Neuron, rechts die Karte */
   /* Unter der Karte: wieder zudecken / aufdecken, sobald sie einmal aufgedeckt war */
   let paintCover = () => {};
-  const revealOf = () => S.covered ? 0 : S.step === 'jahr' ? 0.45 : 1;
+  const revealOf = () => S.covered ? 0 : 1;
   function coverBtn() {
     const b = h('<button type="button" class="rv-link rv-cover"></button>');
-    paintCover = () => { b.hidden = !S.revealed; b.textContent = S.covered ? 'Karte aufdecken' : 'Karte wieder zudecken'; };
+    paintCover = () => { b.hidden = !S.revealed || S.step === 'jahr'; b.textContent = S.covered ? 'Karte aufdecken' : 'Karte wieder zudecken'; };
     b.addEventListener('click', () => { S.covered = !S.covered; save(); paintCover(); map.set({ reveal: revealOf() }); });
     paintCover();
     return b;
@@ -565,98 +566,97 @@
   }
   const revealText = () => `${CAT_IMG('steht')}<b>Jetzt siehst du die Landschaft:</b> Im Süden fließt der <b>Fluss</b>, im Nordwesten führt die <b>Landstraße</b> vorbei, oben rechts liegt die <b>Stadt</b> – und die Wildkatzen halten <b>Abstand</b> davon. Dazwischen ist Wald – das Revier. Jede Grenze ist ein Perzeptron, der Ausgang fasst sie zusammen: <b>Das ist ein neuronales Netz.</b> <br><b>Schau genau hin:</b> Der Fluss ist leicht geschwungen, die Gerade deines Fluss-Perzeptrons nicht. Alle Kameras stimmen – aber stimmt die Karte überall?`;
 
-  /* ── Schritt 3: Zu genau gelernt (Overfitting zum Anfassen) ── */
+  /* ── Schritt 3: Das Netz fragen (24.11.2026, statt Overfitting) ──
+     Dieselben 24 Kameras, dasselbe Netz. Jetzt kommen Pläne an Orten, wo KEINE
+     Kamera hängt: Dafür baut man ein Netz. Die Kinder fragen ihr Netz (es rechnet
+     vor), entscheiden beim Radweg zwischen zwei Wegen und decken zum Schluss die
+     Karte auf: Hatte das Netz recht? Beim Grillplatz am Fluss (zwischen Gerade und
+     geschwungenem Fluss) liegt es meist falsch – dort stand keine Kamera. */
   function stepJahr(card) {
     const st = S.s4;
     const n = S.s3.done ? netOf(S.s3) : null;
     if (!n) { needNet(card, 'stadt', '„Ein Jahr später“', () => { S.s3 = MUSTER(); S.revealed = true; }); return; }
-    if (!S.revealed) { S.revealed = true; S.covered = false; save(); paintCover(); }
-    const outs = K.NOISY.filter(c => c.out), N = K.NOISY.length, T = K.TEST.length;
-    /* das Netz mit k Merk-Neuronen: in einem kleinen Kreis um den Ausreißer gilt dessen Antwort */
-    const judgeWith = list => p => { for (const i of list) { const o = outs[i]; if (Math.hypot(o.p[0] - p[0], o.p[1] - p[1]) < BUBBLE) return o.soll; } return n.judge(p); };
-    const acc = (cams, j) => cams.filter(c => j(c.p) === c.soll).length;
-    const seqAll = () => st.mem.concat(outs.map((_, i) => i).filter(i => !st.mem.includes(i)));
-    card.appendChild(lead(`Jana hat <b>vier weitere Kameras</b> aufgestellt (umkreist). Drei stehen mitten im Revier – und haben <b>keine Katze</b> gesehen. Eine steht in der Stadt – und hat eine <b>Katze</b> gesehen! Dein Netz liegt bei allen vier falsch.
-      <b>Kim</b> vom Forstamt sagt: <i>„Die Karte stimmt nicht mehr. Wir zeichnen sie neu, bis jede Kamera passt!“</i> Probier es aus: Jede dieser Kameras bekommt ein <b>Merk-Neuron</b> – ein winziges Zusatz-Neuron, das nur diesen einen Ort kennt.`));
-    const cmp = h('<div class="rv-cmp"></div>');
-    const chips = h('<div class="rv-chips"></div>');
-    const why = h('<p class="rv-why"></p>');
-    const q = h(`<div class="rv-task rv-q" hidden><div class="rv-row on"><i>?</i><div><b>Und bei Kameras, die das Netz noch nie gesehen hat?</b><span>Ein Jahr später stellt Jana neue Kameras auf. Wird dein „perfektes“ Netz dort auch perfekt sein?</span>
-      <span class="rv-yn big"><button type="button" data-c="gut">Ja, auch dort</button><button type="button" data-c="schlecht">Nein, schlechter</button></span></div></div></div>`);
-    const test = h(`<div class="rv-task rv-test" hidden><div class="rv-row on"><i>!</i><div><b>Der Test</b><span>Jana stellt <b>${T} neue Kameras</b> auf – dort, wo noch keine stand. Das Revier ist dasselbe.</span>
-      <span><button type="button" class="nn-btn primary rv-run">Neue Kameras aufstellen</button></span></div></div></div>`);
-    const res = h('<p class="nn-task-msg rv-test-msg" hidden></p>');
-    const curve = h('<div class="rv-curve" hidden></div>');
-    const sum = h(`<div class="nn-summary rv-sum rv-sum-cat" hidden>${CAT_IMG('sitzt')}<b>Overfitting</b><ul>
-      <li>Mit jedem Merk-Neuron wird das Netz bei den <b>alten Kameras</b> besser – am Ende ist es perfekt.</li>
-      <li>Aber jedes Merk-Neuron hat nur einen <b>Einzelfall</b> auswendig gelernt. Bei <b>neuen Kameras</b> in der Nähe sagt es dasselbe – und liegt daneben.</li>
-      <li>Das heißt <b>Overfitting</b> (Überanpassung): Das Netz lernt die Beispiele auswendig statt der Regel dahinter.</li>
-      <li>Darum prüft man ein Netz immer mit <b>Testdaten</b>, die es beim Lernen nicht gesehen hat. Ein einfaches Netz ist oft das bessere.</li></ul></div>`);
-    split(card, [cmp, chips, why, q, test, res, curve], [h(legend('das gewählte Netz'))]);
+    const PL = K.PLANS, hid = S.s3.hid;
+    const truth = p => K.inRevier(p) ? 1 : 0;
+    const allAsked = () => PL.every(x => st.asked[x.id]) && !!st.route;
+    if (!PL.some(x => x.id === st.sel)) st.sel = PL[0].id;
+    card.appendChild(lead(`Dein Netz kennt jetzt das Revier – aber nur an <b>${K.ALL.length} Kameras</b>. Dafür baut man ein Netz: Es soll auch dort antworten, wo <b>keine Kamera</b> hängt.
+      Bei Jana gehen <b>Pläne</b> ein. Frag für jeden dein Netz: Liegt der Ort im Revier der Wildkatzen?`));
+    const list = h('<div class="rv-plans"></div>');
+    const calc = h('<div class="nw-calc m rv-calc2 rv-plan-calc" hidden></div>');
+    const end = h('<div class="rv-plan-end" hidden></div>');
+    split(card, [list, calc, end], [h(legend('dein Netz'))]);
+    const sum = h(`<div class="nn-summary rv-sum rv-sum-cat" hidden>${CAT_IMG('sitzt')}<b>Was ein Netz kann – und was nicht</b><ul>
+      <li>Ein Netz antwortet auch an Orten, an denen es <b>nie ein Beispiel</b> gesehen hat. Dafür trainiert man es.</li>
+      <li>Wo viele Kameras sind, ist es sich sicher. <b>Wo keine sind, rät es</b> – mit den Geraden, die es hat.</li>
+      <li>Am Fluss liegt der echte Rand nicht auf deiner Geraden. Keine Kamera hat das verraten. <b>Ein Netz ist nur so gut wie seine Daten.</b></li>
+      <li>Bisher hast du jede Gerade selbst ausgerechnet. Unter <b>„Lernen“ → Wildkatzen</b> findet ein Netz seine Geraden mit denselben Kameras <b>selbst</b>.</li></ul></div>`);
     card.querySelector('.rv-split').after(sum);
-    const judge = () => st.view === 'mine' ? n.judge : judgeWith(st.mem);
 
-    function drawCurve() {
-      const seq = seqAll(), W = 320, H = 160, L = 38, R = 12, Tt = 28, B = 30;
-      const NK = outs.length, ks = [...Array(NK + 1).keys()];
-      const pts = cams => ks.map(k => acc(cams, judgeWith(seq.slice(0, k))) / cams.length);
-      const a = pts(K.NOISY), b = pts(K.TEST);
-      const lo = Math.floor(Math.min(...a, ...b) * 20) / 20 - 0.05, hi = 1;
-      const X = k => L + k / NK * (W - L - R), Y = v => Tt + (1 - (v - lo) / (hi - lo)) * (H - Tt - B);
-      const path = arr => arr.map((v, k) => (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
-      const k = st.mem.length;
-      curve.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Alte und neue Kameras je Anzahl der Merk-Neuronen">
-        <line class="ax" x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}"/><line class="ax" x1="${L}" y1="${Tt}" x2="${L}" y2="${H - B}"/>
-        ${ks.map(i => `<text class="tk" x="${X(i)}" y="${H - B + 14}" text-anchor="middle">${i}</text>`).join('')}
-        <text class="tk" x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">Anzahl Merk-Neuronen</text>
-        <text class="tk" x="${L - 4}" y="${Y(1) + 4}" text-anchor="end">100 %</text><text class="tk" x="${L - 4}" y="${Y(lo) + 4}" text-anchor="end">${Math.round(lo * 100)} %</text>
-        <path class="c-old" d="${path(a)}"/><path class="c-new" d="${path(b)}"/>
-        ${[a, b].map((arr, j) => `<circle class="${j ? 'd-new' : 'd-old'}" cx="${X(k)}" cy="${Y(arr[k])}" r="5.5"/>`).join('')}
-        <text class="lab c-old-t" x="${X(NK)}" y="${Y(a[NK]) - 7}" text-anchor="end">alte Kameras</text><text class="lab c-new-t" x="${X(NK)}" y="${Y(b[NK]) + 15}" text-anchor="end">neue Kameras</text></svg>`;
+    /* Das Netz rechnet einen Ort vor: jedes Perzeptron 1/0, dann der Ausgang */
+    function calcAt(p) {
+      const ys = n.hid.map(q => fire(zOf(q, p)));
+      const z = ys.reduce((a2, y, i) => a2 + n.v[i] * y, 0) + n.b;
+      const rows = n.hid.map((q, i) => { const zz = zOf(q, p); const pn = v => v < 0 ? `(${num(v)})` : num(v);
+        return `<span style="color:${hid[i].col}"><b>${i + 1}</b>: <i>z</i> = ${pn(q.w[0])}·${num(p[0])} + ${pn(q.w[1])}·${num(p[1])} + ${pn(q.b)} ${[q.w[0], q.w[1], q.b].some(v => Math.abs(v * 100 - Math.round(v * 100)) > 1e-9) ? '≈' : '='} <b>${num(zz)}</b> → <b>${ys[i]}</b></span>`; }).join('');
+      return `<div class="rv-ocalc"><span>Ort <b>${pt(p)}</b></span>${rows}<span>Ausgang: <i>z</i> = ${ys.map((y, i) => `${num(n.v[i])}·<b style="color:${hid[i].col}">${y}</b>`).join(' + ')} + ${n.b < 0 ? `(${num(n.b)})` : num(n.b)} = <b>${num(z)}</b> → <b class="${fire(z) ? 't-y' : ''}">${fire(z) ? '1 Revier' : '0 kein Revier'}</b></span></div>`;
     }
-    function paint() {
-      const tested = st.tested, k = st.mem.length, jm = judgeWith(st.mem);
-      const mineOk = acc(K.NOISY, n.judge), memOk = acc(K.NOISY, jm), mineT = acc(K.TEST, n.judge), memT = acc(K.TEST, jm);
-      cmp.innerHTML = `<button type="button" class="rv-net-card${st.view === 'mine' ? ' on' : ''}" data-v="mine"><b>Dein Netz</b><span>${S.s3.hid.length} Perzeptrons + Ausgang</span>
-          <span class="rv-big">${tested ? mineT : mineOk} / ${tested ? T : N}</span><span>${tested ? 'neue' : 'alte'} Kameras richtig</span></button>
-        <button type="button" class="rv-net-card${st.view === 'mem' ? ' on' : ''}" data-v="mem"><b>Kims neue Karte</b><span>${k} Merk-${k === 1 ? 'Neuron' : 'Neuronen'}</span>
-          <span class="rv-big">${tested ? memT : memOk} / ${tested ? T : N}</span><span>${tested ? 'neue' : 'alte'} Kameras richtig</span></button>`;
-      cmp.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { st.view = b.dataset.v; save(); paint(); }));
-      chips.innerHTML = '<span class="rv-camsel-t">Merk-Neuron für:</span>' + outs.map((o, i) => `<button type="button" class="rv-cam rv-oc${st.mem.includes(i) ? ' on' : ''}" data-i="${i}"><b>${i + 1}</b><span class="m">${pt(o.p)}</span>${st.mem.includes(i) ? '<i>✓</i>' : ''}</button>`).join('');
-      chips.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', () => toggle(+b.dataset.i)));
-      q.hidden = !(k >= 1) || !!st.choice || tested;
-      test.hidden = !(k >= 1 && st.choice) || tested;
-      res.hidden = sum.hidden = curve.hidden = !tested;
-      why.hidden = tested;
-      q.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === st.choice));
-      if (tested) {
-        res.className = 'nn-task-msg rv-test-msg' + (memT < mineT ? ' ok' : '');
-        res.innerHTML = `Alte Kameras: mit ${k} Merk-Neuron${k === 1 ? '' : 'en'} <b>${memOk} von ${N}</b> (vorher ${mineOk}). Neue Kameras: nur noch <b>${memT} von ${T}</b> (dein Netz ohne Merk-Neuronen: ${mineT}). ${st.choice === 'schlecht' ? '<b>Gut eingeschätzt!</b>' : '<b>Überraschung!</b>'} Probier es aus: Nimm Merk-Neuronen weg oder dazu – die Punkte wandern auf den Kurven. Tippe auf „Kims neue Karte“: Wo hat sie Inseln gebaut?`;
-        drawCurve();
-      }
-      const lg = card.querySelector('.rv-lg-gold em');
-      if (lg) lg.textContent = st.view === 'mine' ? 'hier feuert dein Netz' : 'hier feuert dein Netz mit Merk-Neuronen';
-      map.set({
-        reveal: revealOf(),
-        cams: tested ? K.TEST : K.NOISY.map(c => c.out ? Object.assign({}, c, { mark: true }) : c),
-        judge: judge(), region: judge(),
-        lines: [], rings: st.view === 'mem' ? st.mem.map(i => ({ p: outs[i].p, r: BUBBLE, color: css('in') })) : [],
-        tapCam: tested ? null : p => { const i = outs.findIndex(o => eqP(o.p, p)); if (i >= 0) toggle(i); },
-        pick: null,
+    const km = v => num(Math.round(v * 10) / 10);
+    function paintList() {
+      list.innerHTML = '';
+      PL.forEach((x, i) => {
+        const asked = !!st.asked[x.id], on = st.sel === x.id;
+        let body = '', badge = '';
+        if (x.kind === 'point') {
+          const ans = n.judge(x.p), right = ans === truth(x.p);
+          if (asked) body = `<p class="rv-plan-ans ${ans ? 'is-yes' : 'is-no'}">Dein Netz sagt: <b>${ans ? 'Revier' : 'kein Revier'}</b>. ${ans ? x.yes : x.no}</p>`;
+          if (st.shown && asked) badge = right ? '<span class="rv-plan-ok">✓ Netz hatte recht</span>' : '<span class="rv-plan-bad">✗ Netz lag falsch</span>';
+          if (st.shown && asked && !right) body += `<p class="rv-plan-why">Auf der Karte ${truth(x.p) ? 'liegt der Ort <b>im Revier</b>' : 'ist hier <b>kein Revier</b>'}. ${x.tricky ? 'Der Fluss ist geschwungen, deine Gerade nicht – und genau hier stand keine Kamera.' : 'Hier stand keine Kamera in der Nähe.'}</p>`;
+          body += asked ? '' : `<button type="button" class="nn-btn primary rv-ask" data-id="${x.id}">Netz fragen</button>`;
+        } else {
+          const r = x.routes.map(rt => ({ rt, net: K.routeKm(rt.pts, n.judge), tru: K.routeKm(rt.pts, K.inRevier) }));
+          if (asked) body = `<div class="rv-routes">${r.map(({ rt, net }) => `<p><b>${rt.name}</b>: ${km(net.all)} km lang, davon <b>${km(net.hit)} km</b> im Revier (gold)</p>`).join('')}</div>
+            <p class="rv-plan-q"><b>Welchen Weg empfiehlst du Jana?</b></p><span class="rv-yn">${r.map(({ rt }) => `<button type="button" data-route="${rt.id}" class="${st.route === rt.id ? 'on' : ''}">${rt.id === 'A' ? 'Weg A' : 'Weg B'}</button>`).join('')}</span>`;
+          if (st.route) {
+            const best = r.slice().sort((p1, p2) => p1.net.hit - p2.net.hit)[0].rt.id;
+            body += `<p class="rv-plan-ans ${st.route === best ? 'is-no' : 'is-yes'}">${st.route === best ? 'Gute Wahl: Der Weg ist länger, führt aber fast nicht durchs Revier.' : 'Kürzer – aber laut deinem Netz fast ganz durchs Revier. Radfahrer, Hunde, Licht am Abend: Die Wildkatzen würden ausweichen.'}</p>`;
+          }
+          if (st.shown && asked) badge = r.every(({ net, tru }) => Math.abs(net.hit - tru.hit) < 0.8) ? '<span class="rv-plan-ok">✓ Netz hatte recht</span>' : '<span class="rv-plan-bad">✗ Netz lag daneben</span>';
+          body += asked ? '' : `<button type="button" class="nn-btn primary rv-ask" data-id="${x.id}">Netz fragen</button>`;
+        }
+        const el = h(`<div class="rv-plan${on ? ' on' : ''}${asked ? ' asked' : ''}" data-plan="${x.id}"><div class="rv-plan-h"><i>${i + 1}</i><b>${x.name}</b>${badge}</div>
+          <p class="rv-plan-t">${x.who} ${x.ask}</p>${body}</div>`);
+        el.addEventListener('click', e => {
+          const ask = e.target.closest('.rv-ask'), rb = e.target.closest('[data-route]');
+          if (ask) { st.asked[x.id] = true; st.sel = x.id; }
+          else if (rb) st.route = rb.dataset.route;
+          else st.sel = x.id;
+          save(); paint();
+        });
+        list.appendChild(el);
       });
     }
-    function toggle(i) {
-      const at = st.mem.indexOf(i);
-      if (at >= 0) st.mem.splice(at, 1); else st.mem.push(i);
-      st.view = 'mem';
-      const o = outs[i];
-      why.innerHTML = `<b>Kamera ${pt(o.p)}:</b> ${o.out} ${st.mem.includes(i) ? 'Das Merk-Neuron sagt jetzt für den kleinen Kreis um sie herum ' + (o.soll ? '„Revier“' : '„kein Revier“') + '.' : 'Das Merk-Neuron ist wieder weg.'}`;
-      if (!st.mem.length) { st.choice = null; st.tested = false; }
-      save(); paint();
+    function paint() {
+      paintList();
+      const cur = PL.find(x => x.id === st.sel);
+      calc.hidden = !(cur && cur.kind === 'point' && st.asked[cur.id]);
+      if (!calc.hidden) calc.innerHTML = calcAt(cur.p);
+      const done = allAsked();
+      end.hidden = !done;
+      end.innerHTML = done ? (st.shown ? `<p>${CAT_IMG('steht')}Die Karte ist aufgedeckt. Vergleich: Wo hatte dein Netz recht – und wo nicht?</p>`
+        : '<p><b>Alle Pläne geprüft.</b> Aber stimmt das auch? Jana schaut nach.</p><button type="button" class="nn-btn primary rv-show">Karte aufdecken – hatte das Netz recht?</button>') : '';
+      end.querySelector('.rv-show')?.addEventListener('click', () => { st.shown = true; S.revealed = true; save(); map.reveal(() => paint()); paint(); });
+      sum.hidden = !st.shown;
+      map.set({
+        reveal: st.shown ? 1 : 0,
+        cams: K.ALL, judge: null, region: n.judge,
+        lines: n.hid.map((q, i) => ({ w: q.w, b: q.b, color: hid[i].col, num: String(i + 1), width: 2, faint: true })),
+        places: PL.filter(x => x.kind === 'point').map(x => ({ p: x.p, label: x.short, on: st.sel === x.id, color: st.asked[x.id] ? (n.judge(x.p) ? css('gold') : css('accent')) : css('ink-soft') })),
+        paths: PL.filter(x => x.kind === 'route').flatMap(x => x.routes.map(rt => ({ pts: rt.pts, label: rt.id === 'A' ? 'A' : 'B', on: st.sel === x.id || st.route === rt.id, color: css('in'), hot: st.asked[x.id] ? n.judge : null }))),
+        at: cur && cur.kind === 'point' && st.asked[cur.id] ? cur.p.slice() : null,
+        tapCam: null, pick: null, handles: null, rings: [],
+      });
     }
-    q.querySelectorAll('[data-c]').forEach(b => b.addEventListener('click', () => { st.choice = b.dataset.c; save(); paint(); }));
-    test.querySelector('.rv-run').addEventListener('click', () => { st.tested = true; save(); paint(); });
-    why.innerHTML = 'Tippe auf der Karte eine <b>orange umkreiste</b> Kamera an (oder oben auf ihre Nummer): Was ist dort passiert – und bekommt sie ein Merk-Neuron?';
     paint();
   }
 
@@ -685,7 +685,7 @@
       Ein Neuron bekommt zwei Eingänge: x₁ = km nach Osten, x₂ = km nach Norden. Es rechnet <b>z = x₁·w₁ + x₂·w₂ + b</b> und feuert („Revier“), wenn z &gt; 0 ist.</p>
       <img src="${img1}" alt="Karte mit Kameras">
       <h2>1 · Ein Neuron prüft Kameras</h2>
-      <p>Janas Neuron: w₁ = 1, w₂ = 1, b = −8. Berechne z für die Kameras A (6|4), B (2|2) und C (4|4). Feuert das Neuron? Hat die Kamera wirklich eine Katze gesehen (▲)?</p>
+      <p>Janas Neuron: w₁ = 1, w₂ = 1, b = −8. Berechne z für die Kameras A (6|4), B (5|2) und C (2|4). Feuert das Neuron? Hat die Kamera wirklich eine Katze gesehen (▲)?</p>
       <table><tr><th>Kamera</th><th>Rechnung</th><th>z</th><th>feuert?</th><th>richtig?</th></tr>${['A', 'B', 'C'].map(line).join('')}</table>
       </section><section class="sheet">
       <h2>2 · Die Grenzen finden</h2>
@@ -700,7 +700,7 @@
       <div class="lines"></div>
       <h2>4 · Zum Nachdenken</h2>
       <p>a) Der echte Fluss ist leicht geschwungen, deine Gerade nicht. Wo könnte sich dein Netz irren, obwohl alle Kameras stimmen?</p>
-      <p>b) Drei neue Kameras im Revier sehen keine Katze, eine in der Stadt sieht eine. Kim will die Karte neu zeichnen, bis jede Kamera passt. Ist das eine gute Idee? Was passiert bei neuen Kameras?</p>
+      <p>b) Die Gemeinde will bei (6|8) Häuser bauen, der Angelverein bei (6|3,25) einen Grillplatz anlegen. Dort hängt keine Kamera. Was sagt dein Netz? Bei welchem Ort bist du dir unsicher – und warum?</p>
       <div class="lines"></div>
       </section><section class="sheet solution">
       <header><b>Lösung</b><span>(für die Lehrkraft)</span></header>
@@ -711,7 +711,7 @@
       Stadtrand durch (8|6) und (10|3): x₂ = −3/2·x₁ + 18, Revier unterhalb → w₁ = −3/2, w₂ = −1, b = 18. Andere Geraden sind richtig, wenn sie alle Kameras trennen.</p>
       <p><b>3:</b> Summe 3 → feuern, Summe 2 → nicht: −3 &lt; b ≤ −2, z. B. b = −2,5.</p>
       <p><b>4 a:</b> In dem schmalen Streifen zwischen Gerade und Fluss (dort stand keine Kamera). Ein Netz ist nur so gut wie seine Daten – mehr Kameras oder mehr Geraden würden helfen.<br>
-      <b>4 b:</b> Nein – Overfitting: Die neue Karte hätte Zufälle und Messfehler (Akku leer, Busch, verlaufene Katze) auswendig gelernt und läge bei neuen Kameras in deren Nähe falsch.</p></section>`;
+      <b>4 b:</b> Baugebiet (6|8): alle drei Perzeptrons 1 → Revier, nicht bauen. Grillplatz (6|3,25): mit der Musterlösung z = −1/12·6 + 3,25 − 3 = −0,25 → kein Revier. Unsicher, denn er liegt dicht an der Grenze und dort stand keine Kamera – auf der Karte liegt er tatsächlich im Revier.</p></section>`;
     document.documentElement.classList.add('rv-print-on');
     const done = () => { document.documentElement.classList.remove('rv-print-on'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);

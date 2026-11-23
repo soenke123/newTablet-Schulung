@@ -2,7 +2,7 @@
 //   node MPSkills/tools/NeuroLab/tests/raum.e2e.mjs        (FOTOS=1 legt Bilder in tests/fotos/ ab, nicht einchecken)
 // Prüft: Freigaben im Raum (Lehrkraft teilt → nl:parts, Klasse sieht nur Geteiltes,
 // Szenario-Auswahl nur Freigegebenes, „Alle Neuronen“ hängt an n-wie), Bereiche öffnen,
-// Revier der Wildkatzen (rechnen → Gerade → Netz → Karte → Overfitting), Netz durchrechnen,
+// Revier der Wildkatzen (rechnen → Gerade → Netz → Karte → Das Netz fragen), Netz durchrechnen,
 // Szenario-Wahl im Modus, Lernen mit festem Ausgang (Gatter inkl. XOR, Greifvögel),
 // Schicht dazu/weg, Druckansicht, keine Konsolenfehler.
 import { createRequire } from 'module';
@@ -215,7 +215,7 @@ ok(await pg.locator('.rv-vp .nw-val').count() === 3 && await pg.locator('.rv-obp
 for (let i = 0; i < 3; i++) await netIn(`.rv-vp[data-i="${i}"] .nw-val`, '1');
 await netIn('.rv-obp .nw-val', '-5/2');
 await pg.waitForTimeout(100);
-ok(/44 von 44/.test(await pg.locator('.rv-result').textContent()), 'Stadt: Netz aus drei Geraden findet das Revier');
+ok(/24 von 24/.test(await pg.locator('.rv-result').textContent()), 'Stadt: Netz aus drei Geraden findet das Revier');
 await pg.waitForTimeout(1600);
 ok(await pg.evaluate(() => JSON.parse(localStorage.getItem('nl.revier')).revealed), 'Karte wird aufgedeckt');
 await pg.click('.rv-cover');
@@ -223,13 +223,16 @@ ok(await pg.evaluate(() => JSON.parse(localStorage.getItem('nl.revier')).covered
 await pg.click('.rv-cover');
 await shot(pg, 'revier-karte');
 await pg.click('.rv-next');
-for (let i = 0; i < 4; i++) await pg.locator('.rv-oc').nth(i).click();
-await pg.click('[data-c="schlecht"]'); await pg.click('.rv-run');
-const cards = await pg.locator('.rv-cmp .rv-big').allTextContents();
-const [mine, memT] = cards.map(t => +t.split('/')[0]);
-ok(mine > memT, `Overfitting: Netz ${mine}, mit Merk-Neuronen ${memT} bei neuen Kameras`);
-ok(await pg.locator('.rv-sum').isVisible() && await pg.locator('.rv-curve svg').count() === 1, 'Erklärung Overfitting mit Kurve');
-await shot(pg, 'revier-overfitting');
+ok(await pg.locator('.rv-plan').count() === 4, 'Das Netz fragen: vier Pläne an Orten ohne Kamera');
+for (const id of ['bau', 'gewerbe', 'rad', 'grill']) await pg.click(`.rv-plan[data-plan="${id}"] .rv-ask`);
+ok(/Revier/.test(await pg.locator('.rv-plan[data-plan="bau"] .rv-plan-ans').textContent()) && await pg.locator('.rv-plan-calc .rv-ocalc').count() === 1, 'Baugebiet: Netz rechnet vor und sagt Revier');
+await pg.click('.rv-plan[data-plan="rad"] [data-route="B"]');
+ok(/Gute Wahl/.test(await pg.locator('.rv-plan[data-plan="rad"]').textContent()), 'Radweg: Weg B führt kaum durchs Revier');
+await pg.click('.rv-show');
+await pg.waitForTimeout(1600);
+ok(await pg.locator('.rv-plan[data-plan="grill"] .rv-plan-bad').count() === 1 && await pg.locator('.rv-plan[data-plan="bau"] .rv-plan-ok').count() === 1, 'Aufdecken: am Grillplatz lag das Netz falsch, beim Baugebiet richtig');
+ok(await pg.locator('.rv-sum').isVisible(), 'Zusammenfassung: Netz ist nur so gut wie seine Daten');
+await shot(pg, 'revier-fragen');
 await pg.click('#btn-home');
 
 /* Netz durchrechnen */

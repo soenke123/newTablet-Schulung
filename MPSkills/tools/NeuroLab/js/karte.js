@@ -12,11 +12,12 @@
      Stadtrand   Grenze x₂ = −3/2·x₁ + 18 (Nordosten), Revier liegt darunter;
                  die Stadt beginnt gut einen Kilometer weiter.
    Kameras (alle auf ganzen km, keine auf einer Grenze), wie in der Skizze:
-     YEAR1  Jahr 1: gelb (südlich des Flusses, keine Katze) + rot (Katze).
-     ALL    + rosa (Katze) und blau (keine): jetzt braucht es Straße und Stadt.
-     NOISY  ALL + vier lila Kameras, die NICHT zur Karte passen (OUTLIERS:
-            drei im Revier ohne Katze, eine Katze in der Stadt) – Overfitting
-     TEST   neue Kameras zwischen den alten (Testdaten)
+     YEAR1  Jahr 1: gelb (südlich des Flusses, keine Katze) + rot (Katze) = 12.
+     ALL    + rosa (Katze) und blau (keine) = 24: jetzt braucht es Straße und Stadt.
+     NOISY  ALL + vier Fehlmessungen, die NICHT zur Karte passen (OUTLIERS:
+            drei im Revier ohne Katze, eine Katze in der Stadt) – nur fürs Training
+     TEST   neue Kameras zwischen den alten (Testdaten fürs Training)
+     PLACES Orte ohne Kamera für Schritt 3 „Das Netz fragen“ (Baugebiet, Radweg …)
    Gemalt wird die Landschaft erst, wenn das Revier gefunden ist (reveal 0 … 1)
    – vorher ist es nur ein Gitter.
 
@@ -31,6 +32,8 @@
      handles  {P, Q, color, onMove(P, Q)}  zwei ziehbare Punkte (rasten auf ganzen km ein) mit Gerade dazwischen
      tapCam   fn(p)  Kamera antippen
      rings    [{p, r, color}]  gestrichelte Kreise (r in km)
+     places   [{p, label, color, on}]  Ort ohne Kamera (Fähnchen mit Beschriftung)
+     paths    [{pts, label, color, hot, on}]  Weg; hot(p) → 0|1 färbt Stücke im Revier gold
      reveal   0 … 1
    ══════════════════════════════════════════════════════════════ */
 (function () {
@@ -53,15 +56,16 @@
   };
 
   /* ── Kameras (wie in Sönkes Skizze, gedreht) ─────────────── */
-  const GELB = [[0, 1], [2, 2], [3, 0], [4, 1], [6, 2], [7, 0], [8, 1], [10, 2], [11, 0], [12, 3]];
-  const ROT = [[2, 4], [4, 4], [6, 4], [8, 4], [4, 5], [5, 5], [7, 6], [6, 8], [5, 7]];
-  const ROSA = [[3, 4], [4, 6], [6, 6], [8, 5]];
-  const BLAU = [[0, 4], [2, 6], [0, 7], [2, 8], [1, 10], [3, 9], [4, 10], [7, 10], [8, 7], [8, 9], [10, 6], [10, 4], [11, 8],
-    [12, 5], [12, 10], [10, 10], [1, 2], [5, 2], [9, 1], [12, 1], [11, 3]];
+  /* 24.11.2026 (Sönke): weniger Kameras – 12 im ersten Jahr, 24 nach einem Jahr */
+  const GELB = [[1, 1], [3, 0], [5, 2], [7, 1], [9, 2], [11, 0]];
+  const ROT = [[2, 4], [4, 5], [6, 4], [8, 4], [5, 7], [7, 6]];
+  const ROSA = [[3, 5], [4, 6], [6, 6], [8, 5]];
+  const BLAU = [[0, 4], [1, 7], [3, 9], [5, 10], [12, 5], [10, 6], [9, 8], [7, 10]];
   const cam = (p, k) => ({ p, soll: inRevier(p) ? 1 : 0, k });
   const YEAR1 = GELB.map(p => cam(p, 'gelb')).concat(ROT.map(p => cam(p, 'rot')));
   const ALL = YEAR1.concat(ROSA.map(p => cam(p, 'rosa')), BLAU.map(p => cam(p, 'blau')));
-  /* Overfitting: vier neue Kameras zeigen das Gegenteil von dem, was die Karte sagt */
+  /* Fehlmessungen (nur im Szenario „Wildkatzen“ unter „Netze trainieren“): vier Kameras zeigen das
+     Gegenteil von dem, was die Karte sagt – damit ein großes Netz Inseln lernt (Overfitting) */
   const OUTLIERS = [[3, 5, 'Mitten im Revier – aber keine Katze. Die Kamera hing zu hoch.'], [5, 6, 'Mitten im Revier – aber keine Katze. Der Akku war leer.'],
     [7, 5, 'Mitten im Revier – aber keine Katze. Ein Busch stand vor der Linse.'], [9, 6, 'Eine Katze in der Stadt! Sie hat sich einmal verlaufen.']];
   const NOISY = ALL.concat(OUTLIERS.map(([x, y, t]) => ({ p: [x, y], soll: inRevier([x, y]) ? 0 : 1, out: t, k: 'lila' })));
@@ -74,6 +78,33 @@
     const p = [i + 0.5 + (hash(j, i) - 0.5) * 0.3, j + 0.5 + (hash(i + 7, j + 3) - 0.5) * 0.3];
     if (nearEdge(p)) continue;
     TEST.push({ p: [Math.round(p[0] * 100) / 100, Math.round(p[1] * 100) / 100], soll: inRevier(p) ? 1 : 0, test: true });
+  }
+
+  /* Schritt 3 „Das Netz fragen“: Pläne an Orten, wo keine Kamera hängt.
+     Der Grillplatz liegt im schmalen Streifen zwischen Musterlösung (Gerade) und
+     echtem Fluss: Das Netz sagt „kein Revier“, die Karte sagt etwas anderes. */
+  const PLANS = [
+    { id: 'bau', kind: 'point', p: [6, 8], name: 'Neues Baugebiet', short: 'Baugebiet', who: 'Die Gemeinde',
+      ask: 'will am Hang <b>Wohnhäuser</b> bauen.', yes: 'Hier lebt die Wildkatze – Jana rät ab.', no: 'Kein Revier – von den Wildkatzen aus darf gebaut werden.' },
+    { id: 'gewerbe', kind: 'point', p: [10, 7.5], name: 'Neue Halle am Stadtrand', short: 'Halle', who: 'Eine Firma',
+      ask: 'möchte am <b>Stadtrand</b> eine Lagerhalle bauen.', yes: 'Hier lebt die Wildkatze – Jana rät ab.', no: 'Kein Revier – die Halle stört die Wildkatzen nicht.' },
+    { id: 'rad', kind: 'route', name: 'Radweg in die Stadt', short: 'Radweg', who: 'Der Landkreis',
+      ask: 'plant einen <b>Radweg</b> von der Brücke im Westen in die Stadt. Zwei Wege stehen zur Wahl.',
+      routes: [
+        { id: 'A', name: 'Weg A · quer durchs Tal', pts: [[1, 2.9], [4, 4.6], [7, 6.4], [9.6, 7.6]] },
+        { id: 'B', name: 'Weg B · am Fluss entlang', pts: [[1, 2.9], [3.5, 1.9], [8, 1.9], [10.6, 3.2], [11.2, 5.2]] },
+      ] },
+    { id: 'grill', kind: 'point', p: [6, 3.25], name: 'Grillplatz am Fluss', short: 'Grillplatz', who: 'Der Angelverein',
+      ask: 'möchte direkt <b>am Fluss</b> einen Grillplatz anlegen.', yes: 'Hier lebt die Wildkatze – Jana rät ab.', no: 'Kein Revier – der Grillplatz ist in Ordnung.', tricky: true },
+  ];
+  /* Länge eines Weges (km) und wie viel davon im Revier liegt – wahr: inRevier, sonst eine Funktion p → 0|1 */
+  function routeKm(pts, judge) {
+    let all = 0, hit = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const A = pts[i - 1], B = pts[i], L = Math.hypot(B[0] - A[0], B[1] - A[1]), n = Math.max(1, Math.ceil(L / 0.05));
+      for (let k = 0; k < n; k++) { const t = (k + 0.5) / n, p = [A[0] + t * (B[0] - A[0]), A[1] + t * (B[1] - A[1])]; all += L / n; if (judge(p)) hit += L / n; }
+    }
+    return { all, hit };
   }
 
   /* ── Malen ───────────────────────────────────────────────── */
@@ -306,6 +337,43 @@
         c.beginPath(); c.arc(X(rg.p[0]), Y(rg.p[1]), rg.r * s, 0, Math.PI * 2);
         c.strokeStyle = rg.color || css('in'); c.lineWidth = 2; c.setLineDash([5, 4]); c.stroke(); c.setLineDash([]);
       });
+      // Wege (Radweg): Stücke, auf denen hot(p) gilt, gold
+      (opts.paths || []).forEach(pa => {
+        const col = pa.color || css('ink'), wd = pa.on ? 6 : 4;
+        c.lineCap = 'round'; c.lineJoin = 'round';
+        const seg = (pts, color, w, dash) => { c.strokeStyle = color; c.lineWidth = w; c.setLineDash(dash || []); c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(X(q[0]), Y(q[1])) : c.moveTo(X(q[0]), Y(q[1]))); c.stroke(); c.setLineDash([]); };
+        seg(pa.pts, rv > 0.5 ? 'rgba(255,255,255,.9)' : css('surface'), wd + 4);
+        seg(pa.pts, col, wd, pa.on ? null : [8, 6]);
+        if (pa.hot) {
+          for (let i = 1; i < pa.pts.length; i++) {
+            const A = pa.pts[i - 1], B = pa.pts[i], n = Math.max(1, Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]) / 0.1));
+            for (let k = 0; k < n; k++) {
+              const t0 = k / n, t1 = (k + 1) / n;
+              const P0 = [A[0] + t0 * (B[0] - A[0]), A[1] + t0 * (B[1] - A[1])], P1 = [A[0] + t1 * (B[0] - A[0]), A[1] + t1 * (B[1] - A[1])];
+              if (pa.hot([(P0[0] + P1[0]) / 2, (P0[1] + P1[1]) / 2])) seg([P0, P1], css('gold'), wd - 1);
+            }
+          }
+        }
+        if (pa.label) {
+          const q = pa.pts[pa.pts.length - 1];
+          c.font = '800 13px "Space Grotesk", sans-serif'; c.lineWidth = 3.5; c.strokeStyle = css('surface'); c.fillStyle = col;
+          c.textAlign = 'left'; c.strokeText(pa.label, X(q[0]) + 8, Y(q[1]) + 4); c.fillText(pa.label, X(q[0]) + 8, Y(q[1]) + 4);
+        }
+      });
+      // Orte ohne Kamera: Fähnchen
+      (opts.places || []).forEach(pl => {
+        const x = X(pl.p[0]), y = Y(pl.p[1]), col = pl.color || css('accent');
+        if (pl.on) { c.beginPath(); c.arc(x, y, 16, 0, Math.PI * 2); c.fillStyle = col; c.globalAlpha = 0.18; c.fill(); c.globalAlpha = 1; }
+        c.strokeStyle = css('ink'); c.lineWidth = 2.2; c.beginPath(); c.moveTo(x, y); c.lineTo(x, y - 24); c.stroke();
+        c.fillStyle = col; c.beginPath(); c.moveTo(x, y - 24); c.lineTo(x + 15, y - 19); c.lineTo(x, y - 13); c.closePath(); c.fill();
+        c.lineWidth = 1.5; c.strokeStyle = css('surface'); c.stroke();
+        c.beginPath(); c.arc(x, y, 3.5, 0, Math.PI * 2); c.fillStyle = css('ink'); c.fill();
+        if (pl.label) {
+          c.font = '800 13px "Space Grotesk", sans-serif'; c.lineWidth = 3.5; c.strokeStyle = css('surface'); c.fillStyle = css('ink');
+          const left = x > X(12) - 110; c.textAlign = left ? 'right' : 'left';
+          c.strokeText(pl.label, left ? x - 6 : x + 18, y - 16); c.fillText(pl.label, left ? x - 6 : x + 18, y - 16); c.textAlign = 'left';
+        }
+      });
       // Geraden
       (opts.lines || []).forEach(L => {
         const [w1, w2] = L.w, b = L.b, pts = [];
@@ -459,5 +527,5 @@
     return (rgbCache[col] = [d[0], d[1], d[2]]);
   }
 
-  window.NLKarte = { DOM, TRUTH, LINES, zOf, riverY, inRevier, YEAR1, ALL, NOISY, TEST, OUTLIERS, makeMap };
+  window.NLKarte = { DOM, TRUTH, LINES, zOf, riverY, inRevier, YEAR1, ALL, NOISY, TEST, OUTLIERS, PLANS, routeKm, makeMap };
 })();

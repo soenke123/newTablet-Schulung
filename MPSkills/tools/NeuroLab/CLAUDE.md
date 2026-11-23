@@ -17,7 +17,7 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `js/start.js` | Startseite, Freigaben im Raum, Navigation (`html[data-view]` = home · neuron · lab) |
 | `js/neuron.js` | Bereich 1: „Wie arbeitet ein Neuron?“ (7 Schritte, `makeNeuron` mit + / − an jedem Wert, Rechnung `calcHTML`, Ebene `makePlane`, Modelle `ABS`/`PENG`) + „Alle Neuronen“ (Karten + Detail an den Pinguinen, nutzt `activations` aus app.js) |
 | `js/daten.js` | Greifvögel (echte Messwerte) |
-| `js/karte.js` | Bereich 2: Tal 12 × 10 km für „Das Revier der Wildkatzen“ (nach Sönkes Skizze 23.11.2026, gedreht: Stadt oben rechts) – Grenzen `TRUTH` (Fluss als sanfte Kurve `riverY`, Straße, Stadtrand), Musterlösungen `LINES`, Kameras `YEAR1`/`ALL`/`NOISY`/`TEST`, `makeMap` (Canvas: Gitter, Kameras als Dreieck/Kreis wie Teil 1, Geraden mit Nummer `num`, Fadenkreuz `at`, ziehbare Griffe `handles`, `tapCam`, `rings`, gelbe Fläche, gemalte Landschaft `reveal`) |
+| `js/karte.js` | Bereich 2: Tal 12 × 10 km für „Das Revier der Wildkatzen“ (nach Sönkes Skizze 23.11.2026, gedreht: Stadt oben rechts) – Grenzen `TRUTH` (Fluss als sanfte Kurve `riverY`, Straße, Stadtrand), Musterlösungen `LINES`, Kameras `YEAR1`/`ALL`/`NOISY`/`TEST` (seit 24.11.2026 12 / 24 Kameras), Pläne ohne Kamera `PLANS` + `routeKm`, `makeMap` (Canvas: Gitter, Kameras als Dreieck/Kreis wie Teil 1, Geraden mit Nummer `num`, Fadenkreuz `at`, ziehbare Griffe `handles`, `tapCam`, `rings`, Fähnchen `places`, Wege `paths` (Stücke im Revier gold), gelbe Fläche, gemalte Landschaft `reveal`) |
 | `js/revier.js` | Bereich 2: „Das Revier der Wildkatzen“ (Kachel `v-revier`, 3 Schritte, Arbeitsblatt; nutzt `NLNeuron.makeNeuron`/`calcHTML` aus neuron.js) |
 | `js/rechnen.js` | Bereich 2: „Netz durchrechnen“ (Kachel `v-rechnen`, wie Sönkes AB, Drucken) |
 | `netz.css` | Übersicht-Ergänzungen, Szenario-Wahl, Revier, Rechnen, Druck der Blätter |
@@ -27,7 +27,7 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `js/theme.js` | Hell/Dunkel für gezeichnete Teile: setzt feste SVG-Farben (fill/stroke-Attribute) per Beobachter auf `var(--…)` um, `NLTheme.c('#hex', rolle)` für Canvas, Ereignis `nl:theme-redraw` |
 | `showroom-optik.html` | Showroom der Optik (Heute · Vorschlag A · Vorschlag B, Zustände, Feld mit echtem XOR-Training) — A ist umgesetzt |
 | `showroom-start.html` | Showroom der Startseite (22.11.2026: A Lernweg · B Labor · C Netz als Menü) — umgesetzt ist A mit dem dunklen Kopf aus B |
-| `img/` | Sönkes Wildkatzen (`katze_steht/_sitzt/_laeuft.png` Original, `img/frei/*.webp` zugeschnitten); `katze_laeuft` auf der Startseite; im Revier (23.11.2026) `katze_sitzt` dreimal in der gemalten Karte (karte.js `CAT`/`CAT_SPOTS`, Lichtung ohne Bäume, nachgemalt sobald das Bild geladen ist) und neben den Einleitungen der drei Schritte und im Overfitting-Kasten (revier.js `lead`/`CAT_IMG`, CSS `.rv-lead`/`.rv-cat` in netz.css), `katze_steht` beim Aufdecken der Karte; nicht auf dem Arbeitsblatt |
+| `img/` | Sönkes Wildkatzen (`katze_steht/_sitzt/_laeuft.png` Original, `img/frei/*.webp` zugeschnitten); `katze_laeuft` auf der Startseite; im Revier (23.11.2026) `katze_sitzt` dreimal in der gemalten Karte (karte.js `CAT`/`CAT_SPOTS`, Lichtung ohne Bäume, nachgemalt sobald das Bild geladen ist) und neben den Einleitungen der drei Schritte und im Kasten am Ende von Schritt 3 (revier.js `lead`/`CAT_IMG`, CSS `.rv-lead`/`.rv-cat` in netz.css), `katze_steht` beim Aufdecken der Karte; nicht auf dem Arbeitsblatt |
 
 ## Startseite: vier Kacheln (22.11.2026, ersetzt die drei Bereiche unten)
 
@@ -111,10 +111,10 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      (`riverY`, Revier nördlich; eine Gerade trennt alle Kameras, passt aber nicht genau zum Fluss = Gesprächsanlass nach dem Aufdecken,
      bei den Testkameras liegt genau eine im Streifen dazwischen → Netz 73/74), Landstraße im Nordwesten (Grenze x₂ = 4/3·x₁ + 2, Revier
      darunter), Stadt oben rechts (Grenze x₂ = −3/2·x₁ + 18, Revier darunter). Kameras wie in der Skizze: Jahr 1 gelb (keine Katze,
-     südlich) + rot (Katze) = 19, Schritt 2 dazu rosa (Katze) + blau (keine) = 44. Muster: Fluss durch (0|3), (12|4): x₂ = 1/12·x₁ + 3
+     südlich) + rot (Katze) = 12, Schritt 2 dazu rosa (Katze) + blau (keine) = 24 (24.11.2026, Sönke: „da müssen ja nicht so viele sein“; vorher 19/44, `v: 6`). Muster: Fluss durch (0|3), (12|4): x₂ = 1/12·x₁ + 3
      (w = −1/12, 1, b = −3), Straße (4/3, −1, 2), Stadt (−3/2, −1, 18), Ausgang b = −2,5. Eine eigene Flussbiegungs-Aufgabe gab es am
      23.11.2026 kurz, Sönke wollte sie nicht.
-     **1 Der Fluss** (19 Kameras `YEAR1`, südlich des Flusses keine Katze): ① Die Kinder ziehen
+     **1 Der Fluss** (12 Kameras `YEAR1`, südlich des Flusses keine Katze): ① Die Kinder ziehen
      die Griffe **P und Q** auf der Karte (karte.js `handles`, rasten auf ganzen km ein); die **Funktionsgleichung**
      x₂ = m·x₁ + n steht sofort daneben (`eqOf`/`eqBox`, Brüche, senkrecht = x₁ = c). ② Umstellen → w₁, w₂, b im Neuron einstellen;
      **Brüche**: Modell mit `frac: true` → im Regler-Fenster von makeNeuron ein Eingabefeld `.nw-pop-in` (Zahl oder „3/4“, Wert
@@ -126,7 +126,7 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      Revier) → mal −1, sonst Bleistiftlinie trennt nicht / Zahlen passen nicht zur Geraden, x von 29. Werte ändern = Gerade wieder
      weg. Kamera antippen = Neuron rechnet sie (`tapCam`). **Hilfe: Beispiel** (`helpPanel`, gekürzt: kein „Gerade aufstellen“
      mehr, nur Gleichung → umstellen → ablesen → Seite + Regel), festes Neuron w = (1, 1), b = −8.
-     **2 Ein Jahr später** (44 Kameras `ALL`, neue mit hellem Hof `neu`; Straße und Stadt kommen dazu, die Katzen halten Abstand): dieselbe Aufgabe dreimal. **4. Fassung (22.11.2026 abends):** oben die Geraden aller
+     **2 Ein Jahr später** (24 Kameras `ALL`, neue mit hellem Hof `neu`; Straße und Stadt kommen dazu, die Katzen halten Abstand): dieselbe Aufgabe dreimal. **4. Fassung (22.11.2026 abends):** oben die Geraden aller
      Perzeptrons als Gleichungen (`.rv-eqrow` in ihrer Farbe, antippen = auswählen → Griffe P/Q auf der Karte, Steigung/n + „entfernen“),
      darunter das Netz **als Bild wie „Wie arbeitet ein Neuron?“** (5. Fassung, Sönke: „ein neuronales Netz zeichnen, Eingabe direkt
      an den Kanten“): `.nw.rv-nn` mit Fläche 760 × (36 + n·175), Eingänge x₁ x₂ → Leitungen mit Gewichts-Pille `.rv-wp` (w₁/w₂ als
@@ -136,23 +136,33 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      KEIN großes Neuron mehr in Schritt 2. „＋ Perzeptron“ + „Tipp zum Ausgang“ unter dem Bild (`.rv-addrow`). EIN „Prüfen“ für alle (`checkHid`: alle Dreiecke auf der gelben Seite, ≥ 3 Kreise
      abgetrennt; P/Q zählen nicht), Rückmeldung je Perzeptron. Kamera antippen: mit gewähltem Perzeptron rechnet es sie vor
      (calcHTML), sonst rechnet der Ausgang (`.rv-ocalc`: welche 1/0 kommen an, z = Σ v·y + b). „＋ Perzeptron“ antippen oder
-     hineinziehen, max. 6. Das Fluss-Neuron aus Schritt 1 ist schon dabei, wenn es auch hier passt. Alle 80 richtig → Karte deckt
+     hineinziehen, max. 6. Das Fluss-Neuron aus Schritt 1 ist schon dabei, wenn es auch hier passt. Alle 24 richtig → Karte deckt
      sich auf (`paintLand`); danach unter der Karte **„Karte wieder zudecken“ / „Karte aufdecken“** (`S.covered`, `coverBtn`, gilt
-     in allen Schritten). „Musterlösung laden“ als kleiner Link. Offen (Sönke): Karte wird neu skizziert, Overfitting soll anders werden.
-     **3 Zu genau gelernt** (Overfitting zum Anfassen): vier lila Kameras `OUTLIERS` kommen dazu und passen nicht zur Karte (drei im
-     Revier ohne Katze: zu hoch gehängt, Akku leer, Busch · eine Katze in der Stadt), Kim vom Forstamt will „die Karte neu zeichnen“; jede
-     bekommt auf Antippen (Karte oder Chip) ein **Merk-Neuron** = Kreis r 0,85 km, in dem deren Antwort gilt (`judgeWith`); Karten „Dein Netz“ /
-     „Kims neue Karte“ (alte Kameras 44 → 48/48), Frage „Wird es auch bei neuen Kameras perfekt sein?“, „Neue Kameras aufstellen“
-     (`TEST`: dein Netz 73/74, Kims Karte 63/74), Kurve alte/neue Kameras je Anzahl Merk-Neuronen (`drawCurve`, Punkt =
-     aktueller Stand), Kasten Overfitting. (`K.kim` ist entfernt.) Knopf **„Arbeitsblatt“** unten in
-     der Mitte (nicht Schüler): 3 Seiten (Karte ohne Landschaft + Aufgaben 1–4 + Lösungsseite), `#rv-print` + `html.rv-print-on`.
+     in allen Schritten). „Musterlösung laden“ als kleiner Link. 
+     **3 Das Netz fragen** (24.11.2026, Schritt-id bleibt `jahr`; ersetzt „Zu genau gelernt“ mit Merk-Neuronen – Sönke: Overfitting
+     gehört ans Training, nicht hierher): dieselben 24 Kameras, dasselbe Netz, jetzt **Orte ohne Kamera** (`K.PLANS`): ① Baugebiet (6|8),
+     ② Halle am Stadtrand (10|7,5), ③ Radweg mit zwei Wegen (A quer durchs Tal ~7 km im Revier, B am Fluss ~0 km, `routeKm`, Kind empfiehlt
+     einen), ④ Grillplatz am Fluss (6|3,25) – liegt im Streifen zwischen Musterlösung und geschwungenem Fluss. „Netz fragen“ = das Netz
+     rechnet den Ort vor (jedes Perzeptron z → 1/0, Ausgang); Karte bleibt in Schritt 3 zugedeckt, bis alle Pläne gefragt sind, dann
+     „Karte aufdecken – hatte das Netz recht?“ (✓/✗ je Plan, am Grillplatz meist ✗) und Kasten „Was ein Netz kann – und was nicht“
+     (nur so gut wie seine Daten; Verweis auf Lernen → Wildkatzen). Stand `S.s4 = {asked, route, sel, shown}`. Knopf **„Arbeitsblatt“** unten in
+     der Mitte (nicht Schüler): 3 Seiten (Karte ohne Landschaft + Aufgaben 1–4 + Lösungsseite; Kameras A (6|4), B (5|2), C (2|4); 4 b = Baugebiet/Grillplatz statt Kims Karte), `#rv-print` + `html.rv-print-on`.
    - `v-rechnen` **„Netz durchrechnen“** (`js/rechnen.js`, wie Sönkes AB): Stufen „Ein Neuron“ (3 Eingänge,
      Perzeptron/Linear/ReLU) · „Ein Netz“ (3 → 3 → 1: Perzeptron, Sigmoid, ReLU gemischt, Ausgang linear, manchmal
      fehlt eine Leitung) · „Rückwärts“ (lineares Neuron, z gegeben, ein Gewicht „?“). Ganze Zahlen; Sigmoid ± 0,01,
      Ausgang dahinter ± 0,02. Prüfen · Lösung zeigen · Neue Aufgabe · Drucken (nicht Schüler, leere Felder).
    - `b-frei` **Freies Bauen** — das freie Feld, **Build · Run**, keine Szenarien. Eingänge 0–10,
    beliebig viele Schichten (bis `MAX_LAYERS` = 8, Spalte „+ Schicht“, leere Schicht „× Schicht entfernen“).
-3. **Netze trainieren** — ein Knopf, Szenarien (`sc-gatter`, `sc-ziffer`, `sc-ziel`, `sc-vogel`, `sc-eigene`) in der Szenario-Wahl im Modus.
+3. **Netze trainieren** — ein Knopf, Szenarien (`sc-katze`, `sc-gatter`, `sc-ziffer`, `sc-ziel`, `sc-vogel`, `sc-eigene`) in der Szenario-Wahl im Modus.
+   **Wildkatzen** (`wildkatzen` / `sc-katze`, 24.11.2026, Übergang von Bereich 2): dieselben 24 Kameras aus `NLKarte.ALL`, Eingänge auf
+   −1 … 1 umgerechnet (`katzeNorm`: (x − 6)/6, (y − 5)/5 – mit km lernt tanh kaum), ein Ausgang „Revier“ (sigmoid), Bsp. Netz 3 tanh.
+   **karte.js wird VOR app.js geladen.** Info-Kasten (`renderKatzeInfo`, 320 px): Karte (`makeMap`, ohne Landschaft) mit **einer Geraden je
+   Neuron der ersten Schicht** (zurückgerechnet in km), gelb = Netz sagt Revier, rot umkreist = falsch; Schalter „Janas 24 Kameras“ /
+   „+ 4 Fehlmessungen“ (`state.learn.katzeNoisy`, Daten = `NLKarte.NOISY`, wechseln setzt Gewichte zurück) und „Neue Kameras zeigen“
+   (`katzeTest`, 74 Testkameras `NLKarte.TEST`); Zeile alte/neue Kameras richtig; Kurve beider Werte je Epoche (`KATZE.hist`, ab 240
+   Punkten ausgedünnt). **Overfitting nur mit Fehlmessungen** (gerechnet 24.11.2026): mit den sauberen Kameras lernen auch 10 Neuronen
+   die Regel (neue Kameras ~95 %); mit Fehlmessungen, 10 Neuronen, Lernrate 0,5 und ~2000 Epochen steigt „alte Kameras“ auf ~96 %,
+   „neue Kameras“ fällt von ~93 % auf ~79 % (Inseln um die Fehlmessungen).
    Nur Phase **Lernen**. Das Szenario legt **Eingänge** (Spalte links, gesperrt) und **Ausgänge** fest.
    **Ausgänge = eigene Spalte `.col-outputs` rechts** (2. Fassung 20.11.2026, Sönke: „ich will Input und Output haben und
    dazwischen die Schichten anlegen und dann ein Neuron an einen Out legen – AND aus Schicht 1, XOR aus Schicht 2“): je
@@ -264,8 +274,10 @@ Eingabewerte; „Ausblenden“ nimmt die Leiste fürs Bildschirmfoto weg.
 
 - `node MPSkills/tools/NeuroLab/tests/layout.test.mjs` — Kästen/Kanten/Lernfenster in 7 Größen × 17 Aufbauten
   (auch 6 Schichten, leere Spalte dazwischen, Greifvögel)
+- `node MPSkills/tools/NeuroLab/tests/wildkatzen.e2e.mjs` — Revier der Wildkatzen ganz durch (24 Kameras, Das Netz fragen, Aufdecken)
+  + Lernen → Wildkatzen (Bsp. Netz lernt, Kurve, Fehlmessungen, neue Kameras). Allein, ohne Raum; läuft grün (24.11.2026).
 - `node MPSkills/tools/NeuroLab/tests/raum.e2e.mjs` — Freigaben Lehrkraft/Klasse (n-typen hängt an n-wie, Szenario-Wahl
-  im Modus), Revier der Wildkatzen ganz durch (Griffe ziehen, Gleichung, Neuron einstellen, falsche Seite, Netz 44/44, Karte, Merk-Neuronen 73 > 63), Netz
+  im Modus), Revier der Wildkatzen ganz durch (Griffe ziehen, Gleichung, Neuron einstellen, falsche Seite, Netz 24/24, Karte, Das Netz fragen), Netz
   durchrechnen, Szenario-Auswahl gefiltert,
   Schicht dazu/weg, fester Ausgang, Gatter inkl. XOR lernen, Greifvögel ≥ 93 %, Druckauswahl, Speicher je Bereich
 

@@ -164,23 +164,35 @@
 .rv-need { display: grid; gap: 10px; padding: 14px; border: 1px dashed var(--line); border-radius: 14px; }
 .rv-need p { margin: 0; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
-/* Schritt 4 */
-.rv-cmp { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.rv-net-card { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px 14px; display: grid; gap: 1px;
-  text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
-.rv-net-card.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
-.rv-net-card span { font-size: .8rem; color: var(--ink-soft); }
-.rv-net-card .rv-big { font: 700 1.45rem var(--mono); color: var(--ink); margin-top: 4px; }
-.rv-why { font-size: .9rem; color: var(--ink); background: var(--in-dim); border-radius: 10px; padding: 8px 12px; margin: 0; }
-.rv-why[hidden], .rv-sum[hidden], .rv-test-msg[hidden] { display: none; }
-.rv-test-msg { margin: 0; }
-.rv-test-msg.ok { font-weight: 400; }
+/* Schritt 3 „Das Netz fragen“ (24.11.2026) */
+.rv-plans { display: grid; gap: 10px; }
+.rv-plan { border: 1px solid var(--line); background: var(--surface); border-radius: 14px; padding: 10px 14px; display: grid; gap: 6px; cursor: pointer; }
+.rv-plan.on { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.rv-plan-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rv-plan-h i { font: 700 .8rem var(--mono); font-style: normal; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--surface); }
+.rv-plan-h b { font-size: 1rem; }
+.rv-plan-t, .rv-plan-ans, .rv-plan-why, .rv-plan-q, .rv-routes p { margin: 0; font-size: .9rem; color: var(--ink); }
+.rv-plan-t { color: var(--ink-soft); }
+.rv-plan-ans { border-radius: 10px; padding: 6px 10px; }
+.rv-plan-ans.is-yes { background: var(--gold-dim); }
+.rv-plan-ans.is-no { background: var(--accent-dim); }
+.rv-plan-why { background: var(--neg-dim, var(--surface-2)); border-radius: 10px; padding: 6px 10px; }
+.rv-routes { display: grid; gap: 3px; }
+.rv-plan .rv-ask { justify-self: start; }
+.rv-plan .rv-yn { margin-left: 0; align-self: flex-start; }
+.rv-plan .rv-yn button { font-size: .85rem; }
+.rv-plan-ok, .rv-plan-bad { margin-left: auto; font: 700 .78rem var(--font); border-radius: 999px; padding: 2px 9px; }
+.rv-plan-ok { background: var(--accent-dim); color: var(--accent-ink); }
+.rv-plan-bad { background: var(--neg-dim, var(--surface-2)); color: var(--neg); }
+.rv-plan-calc[hidden], .rv-plan-end[hidden], .rv-sum[hidden] { display: none; }
+.rv-plan-end { display: grid; gap: 8px; justify-items: start; }
+.rv-plan-end p { margin: 0; font-size: .95rem; }
+.rv-plan-end .rv-cat-steht { float: left; height: 64px; margin: 0 10px 4px 0; }
 
 @media (max-width: 560px) {
   .rv-net { grid-template-columns: 1fr; gap: 14px; }
   .rv-cin { grid-auto-flow: column; }
   .rv-edges { display: none; }
-  .rv-cmp { grid-template-columns: 1fr; }
 }
 
 /* ── Netz durchrechnen ── */
@@ -281,20 +293,6 @@ input.bad { border-color: var(--neg) !important; background: var(--neg-dim) !imp
 .rv-f .nw-val { font-size: 1.05rem; }
 .rv-mini-in { width: 3.4em; font: 700 1.05em var(--mono); text-align: center; color: var(--ink); background: var(--surface); border: 1.5px solid var(--accent); border-radius: 8px; padding: .15em .2em; }
 .rv-mini-in:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
-.rv-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.rv-oc.on { border-color: var(--in); background: var(--in-dim); }
-.rv-oc.on b { background: var(--in); }
-.rv-q[hidden] { display: none; }
-.rv-curve { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; }
-.rv-curve[hidden] { display: none; }
-.rv-curve svg { width: 100%; max-width: 380px; display: block; margin: 0 auto; }
-.rv-curve .ax { stroke: var(--ink-faint); stroke-width: 1.2; }
-.rv-curve .tk { font: 10px var(--mono); fill: var(--ink-soft); }
-.rv-curve .lab { font: 700 11px var(--font); }
-.rv-curve .c-old, .rv-curve .c-new { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.rv-curve .c-old { stroke: var(--accent); } .rv-curve .c-new { stroke: var(--neg); }
-.rv-curve .d-old { fill: var(--accent); stroke: var(--surface); stroke-width: 2; } .rv-curve .d-new { fill: var(--neg); stroke: var(--surface); stroke-width: 2; }
-.rv-curve .c-old-t { fill: var(--accent-ink); } .rv-curve .c-new-t { fill: var(--neg); }
 
 /* ══ Startseite (22.11.2026, showroom-start.html): dunkler Kopf + Lernweg 1 → 2 → 3 + Spielwiese „Frei bauen“ ══
    Karten bleiben .tile[data-id]; die alten .tile-Regeln aus start.css werden hier überschrieben (#areas.hm …). */
@@ -490,3 +488,21 @@ html[data-motion="low"] .hs-pulse, html[data-motion="low"] .hs-flow, html[data-m
 .rv-sum-cat .rv-cat { position: absolute; left: 14px; top: 14px; height: 86px; }
 @media (max-width: 640px) { .rv-lead .rv-cat { height: 64px; } .rv-sum-cat { padding-left: 70px; } .rv-sum-cat .rv-cat { height: 60px; } }
 #rv-print .rv-cat { display: none; }
+
+/* ══ Netze trainieren · Wildkatzen (24.11.2026): Karte mit einer Geraden je Neuron, alte/neue Kameras ══ */
+#learn-info-panel:has(.katze-map) { width: 320px; }
+.katze-opts { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+.katze-chip { border: 1px solid var(--line); background: var(--surface); color: var(--ink-soft); border-radius: 999px; padding: 4px 10px; font: 600 .72rem var(--font); cursor: pointer; }
+.katze-chip.on { border-color: var(--accent); background: var(--accent-dim); color: var(--accent-ink); }
+#katze-noisy.on { border-color: #8e44ad; background: rgba(142, 68, 173, .12); color: #8e44ad; }
+.katze-note { background: rgba(142, 68, 173, .08); border-radius: 8px; padding: 6px 8px; }
+.katze-map { max-width: none; margin: 4px 0; }
+.katze-map canvas { touch-action: pan-y; }
+.katze-key { color: var(--ink-faint); font-size: .68rem; }
+.katze-curve { width: 100%; height: auto; display: block; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin-bottom: 6px; }
+.katze-curve .ax { stroke: var(--ink-faint); stroke-width: 1.2; }
+.katze-curve .tk { font: 9px var(--mono); fill: var(--ink-soft); }
+.katze-curve .lab { font: 700 10px var(--font); }
+.katze-curve .c-old, .katze-curve .c-new { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.katze-curve .c-old { stroke: var(--accent); } .katze-curve .c-new { stroke: var(--neg); }
+.katze-curve .c-old-t { fill: var(--accent-ink); } .katze-curve .c-new-t { fill: var(--neg); }
