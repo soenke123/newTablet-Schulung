@@ -27,7 +27,7 @@ weg vom Original; Hintergrund in `PLAN_NEUROLAB_NEU.md`).
 | `js/theme.js` | Hell/Dunkel für gezeichnete Teile: setzt feste SVG-Farben (fill/stroke-Attribute) per Beobachter auf `var(--…)` um, `NLTheme.c('#hex', rolle)` für Canvas, Ereignis `nl:theme-redraw` |
 | `showroom-optik.html` | Showroom der Optik (Heute · Vorschlag A · Vorschlag B, Zustände, Feld mit echtem XOR-Training) — A ist umgesetzt |
 | `showroom-start.html` | Showroom der Startseite (22.11.2026: A Lernweg · B Labor · C Netz als Menü) — umgesetzt ist A mit dem dunklen Kopf aus B |
-| `img/` | Sönkes Wildkatzen (`katze_steht/_sitzt/_laeuft.png` Original, `img/frei/*.webp` zugeschnitten); `katze_laeuft` auf der Startseite, die anderen für das Revier gedacht |
+| `img/` | Sönkes Wildkatzen (`katze_steht/_sitzt/_laeuft.png` Original, `img/frei/*.webp` zugeschnitten); `katze_laeuft` auf der Startseite; im Revier (23.11.2026) `katze_sitzt` dreimal in der gemalten Karte (karte.js `CAT`/`CAT_SPOTS`, Lichtung ohne Bäume, nachgemalt sobald das Bild geladen ist) und neben den Einleitungen der drei Schritte und im Overfitting-Kasten (revier.js `lead`/`CAT_IMG`, CSS `.rv-lead`/`.rv-cat` in netz.css), `katze_steht` beim Aufdecken der Karte; nicht auf dem Arbeitsblatt |
 
 ## Startseite: vier Kacheln (22.11.2026, ersetzt die drei Bereiche unten)
 

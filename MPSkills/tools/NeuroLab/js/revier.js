@@ -226,6 +226,9 @@
     card.appendChild(g);
     return g;
   }
+  /* Sönkes Wildkatze neben den Erklärungen (sitzt = erzählt, steht = „schau mal“) */
+  const CAT_IMG = pose => `<img class="rv-cat rv-cat-${pose}" src="img/frei/katze_${pose}.webp" alt="" aria-hidden="true">`;
+  const lead = html => h(`<div class="rv-lead">${CAT_IMG('sitzt')}<p class="nn-lead-p">${html}</p></div>`);
   const msgEl = () => h('<div class="nn-task-msg rv-result" hidden></div>');
   const setMsg = (el, html, ok) => { el.hidden = !html; el.className = 'nn-task-msg rv-result' + (ok ? ' ok' : ''); el.innerHTML = html || ''; };
   const row = (n, cls, inner) => h(`<div class="rv-row ${cls}"><i>${n}</i><div>${inner}</div></div>`);
@@ -254,8 +257,8 @@
   /* ── Schritt 1: Der Fluss ──────────────────────────────── */
   function stepFluss(card) {
     const st = S.s2;
-    card.appendChild(h(`<p class="nn-lead-p">Försterin <b>Jana</b> hat im Tal <b>Wildtierkameras</b> aufgestellt. Ein <b class="t-y">goldenes Dreieck</b> heißt: Diese Kamera hat eine <b>Wildkatze</b> gesehen. Ein Neuron soll für jeden Ort entscheiden: Revier oder nicht? Seine <b class="t-x">Eingänge</b> sind die Lage auf der Karte: ${xs('x', 1)} = km nach Osten, ${xs('x', 2)} = km nach Norden.
-      Im Süden sieht keine Kamera eine Katze – hier verläuft eine <b>Grenze</b>. Du ziehst sie ein und <b>rechnest</b> sie dann in ein Neuron um.</p>`));
+    card.appendChild(lead(`Försterin <b>Jana</b> hat im Tal <b>Wildtierkameras</b> aufgestellt. Ein <b class="t-y">goldenes Dreieck</b> heißt: Diese Kamera hat eine <b>Wildkatze</b> gesehen. Ein Neuron soll für jeden Ort entscheiden: Revier oder nicht? Seine <b class="t-x">Eingänge</b> sind die Lage auf der Karte: ${xs('x', 1)} = km nach Osten, ${xs('x', 2)} = km nach Norden.
+      Im Süden sieht keine Kamera eine Katze – hier verläuft eine <b>Grenze</b>. Du ziehst sie ein und <b>rechnest</b> sie dann in ein Neuron um.`));
     const m = model(st.w, [5, 5]);
     const N = NL().makeNeuron(m, { onChange: k => {
       if (k[0] === 'x') { paint(); return; }
@@ -338,7 +341,7 @@
   function netStep(card, cfg) {
     const st = S[cfg.key], CAMS = cfg.cams;
     if (!st.seen) { st.seen = true; cfg.init(st); save(); }
-    card.appendChild(h(`<p class="nn-lead-p">${cfg.lead}</p>`));
+    card.appendChild(lead(`${cfg.lead}`));
     const eqs = h('<div class="rv-eqs"></div>');
     // Das Netz als Bild wie „Wie arbeitet ein Neuron?“: Eingänge → Leitungen mit Gewicht → Perzeptrons (Bias darunter) → Ausgang
     const net = h('<div class="nw rv-nn"><div class="nw-in rv-nn-in"></div></div>');
@@ -560,7 +563,7 @@
     mu.querySelector('.rv-lsg').addEventListener('click', () => { if (!confirm('Dein Netz durch die Musterlösung ersetzen?')) return; S[cfg.key] = cfg.muster(); save(); render(page, api); });
     build();
   }
-  const revealText = () => `<b>Jetzt siehst du die Landschaft:</b> Im Süden fließt der <b>Fluss</b>, im Nordwesten führt die <b>Landstraße</b> vorbei, oben rechts liegt die <b>Stadt</b> – und die Wildkatzen halten <b>Abstand</b> davon. Dazwischen ist Wald – das Revier. Jede Grenze ist ein Perzeptron, der Ausgang fasst sie zusammen: <b>Das ist ein neuronales Netz.</b> <br><b>Schau genau hin:</b> Der Fluss ist leicht geschwungen, die Gerade deines Fluss-Perzeptrons nicht. Alle Kameras stimmen – aber stimmt die Karte überall?`;
+  const revealText = () => `${CAT_IMG('steht')}<b>Jetzt siehst du die Landschaft:</b> Im Süden fließt der <b>Fluss</b>, im Nordwesten führt die <b>Landstraße</b> vorbei, oben rechts liegt die <b>Stadt</b> – und die Wildkatzen halten <b>Abstand</b> davon. Dazwischen ist Wald – das Revier. Jede Grenze ist ein Perzeptron, der Ausgang fasst sie zusammen: <b>Das ist ein neuronales Netz.</b> <br><b>Schau genau hin:</b> Der Fluss ist leicht geschwungen, die Gerade deines Fluss-Perzeptrons nicht. Alle Kameras stimmen – aber stimmt die Karte überall?`;
 
   /* ── Schritt 3: Zu genau gelernt (Overfitting zum Anfassen) ── */
   function stepJahr(card) {
@@ -573,8 +576,8 @@
     const judgeWith = list => p => { for (const i of list) { const o = outs[i]; if (Math.hypot(o.p[0] - p[0], o.p[1] - p[1]) < BUBBLE) return o.soll; } return n.judge(p); };
     const acc = (cams, j) => cams.filter(c => j(c.p) === c.soll).length;
     const seqAll = () => st.mem.concat(outs.map((_, i) => i).filter(i => !st.mem.includes(i)));
-    card.appendChild(h(`<p class="nn-lead-p">Jana hat <b>vier weitere Kameras</b> aufgestellt (umkreist). Drei stehen mitten im Revier – und haben <b>keine Katze</b> gesehen. Eine steht in der Stadt – und hat eine <b>Katze</b> gesehen! Dein Netz liegt bei allen vier falsch.
-      <b>Kim</b> vom Forstamt sagt: <i>„Die Karte stimmt nicht mehr. Wir zeichnen sie neu, bis jede Kamera passt!“</i> Probier es aus: Jede dieser Kameras bekommt ein <b>Merk-Neuron</b> – ein winziges Zusatz-Neuron, das nur diesen einen Ort kennt.</p>`));
+    card.appendChild(lead(`Jana hat <b>vier weitere Kameras</b> aufgestellt (umkreist). Drei stehen mitten im Revier – und haben <b>keine Katze</b> gesehen. Eine steht in der Stadt – und hat eine <b>Katze</b> gesehen! Dein Netz liegt bei allen vier falsch.
+      <b>Kim</b> vom Forstamt sagt: <i>„Die Karte stimmt nicht mehr. Wir zeichnen sie neu, bis jede Kamera passt!“</i> Probier es aus: Jede dieser Kameras bekommt ein <b>Merk-Neuron</b> – ein winziges Zusatz-Neuron, das nur diesen einen Ort kennt.`));
     const cmp = h('<div class="rv-cmp"></div>');
     const chips = h('<div class="rv-chips"></div>');
     const why = h('<p class="rv-why"></p>');
@@ -584,7 +587,7 @@
       <span><button type="button" class="nn-btn primary rv-run">Neue Kameras aufstellen</button></span></div></div></div>`);
     const res = h('<p class="nn-task-msg rv-test-msg" hidden></p>');
     const curve = h('<div class="rv-curve" hidden></div>');
-    const sum = h(`<div class="nn-summary rv-sum" hidden><b>Overfitting</b><ul>
+    const sum = h(`<div class="nn-summary rv-sum rv-sum-cat" hidden>${CAT_IMG('sitzt')}<b>Overfitting</b><ul>
       <li>Mit jedem Merk-Neuron wird das Netz bei den <b>alten Kameras</b> besser – am Ende ist es perfekt.</li>
       <li>Aber jedes Merk-Neuron hat nur einen <b>Einzelfall</b> auswendig gelernt. Bei <b>neuen Kameras</b> in der Nähe sagt es dasselbe – und liegt daneben.</li>
       <li>Das heißt <b>Overfitting</b> (Überanpassung): Das Netz lernt die Beispiele auswendig statt der Regel dahinter.</li>

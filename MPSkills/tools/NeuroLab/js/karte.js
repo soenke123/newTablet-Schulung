@@ -77,6 +77,10 @@
   }
 
   /* ── Malen ───────────────────────────────────────────────── */
+  // Sönkes Wildkatze für die gemalte Landschaft (Pfad relativ zu index.html von NeuroLab)
+  const CAT = { img: new Image(), ok: false, wait: new Set() };
+  CAT.img.onload = () => { CAT.ok = true; CAT.wait.forEach(f => f()); CAT.wait.clear(); };
+  CAT.img.src = 'img/frei/katze_sitzt.webp';
   const css = n => (window.NLTheme && NLTheme.var(n)) || '#888';
   function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
@@ -160,10 +164,12 @@
     const segD = (p, A, B) => { const dx = B[0] - A[0], dy = B[1] - A[1], t = Math.max(0, Math.min(1, ((p[0] - A[0]) * dx + (p[1] - A[1]) * dy) / (dx * dx + dy * dy))); return Math.hypot(p[0] - A[0] - t * dx, p[1] - A[1] - t * dy); };
     const roadD = p => Math.min(...ROAD.slice(1).map((q, i) => segD(p, ROAD[i], q)));
     const inField = p => [[1.6, 0.2, 1.4, 1.1], [5.6, 0.3, 1.5, 1.0], [9.4, 0.4, 1.3, 1.1]].some(([a, b, w, hh]) => p[0] > a - 0.1 && p[0] < a + w + 0.1 && p[1] > b - 0.1 && p[1] < b + hh + 0.1);
+    const CAT_SPOTS = [[4.5, 4.45, 1.35, false], [6.5, 6.5, 1.15, true], [7.6, 4.4, 1.2, false]];   // Fuß der Katze, Höhe in km
+    const nearCat = p => CAT_SPOTS.some(([x, y, hKm]) => Math.hypot((p[0] - x) * 1.4, p[1] - y - hKm * 0.45) < hKm * 0.6);
     const trees = [];
     for (let k = 0; k < 1300; k++) {
       const p = [R() * 12.4 - 0.2, R() * 10.4 - 0.2];
-      if (inTown(p) || Math.abs(p[1] - riverY(p[0])) < 0.35 || roadD(p) < 0.3 || inField(p)) continue;
+      if (inTown(p) || Math.abs(p[1] - riverY(p[0])) < 0.35 || roadD(p) < 0.3 || inField(p) || nearCat(p)) continue;
       const dense = inRevier(p) ? 0.55 : (p[1] > riverY(p[0]) ? 0.05 : 0.035);
       if (R() > dense) continue;
       trees.push({ p, r: (0.17 + R() * 0.15) * s, t: R() });
@@ -177,26 +183,15 @@
       gr.addColorStop(0, dark[0]); gr.addColorStop(1, dark[1]);
       c.fillStyle = gr; c.beginPath(); c.arc(px, py, r, 0, Math.PI * 2); c.fill();
     });
-    // Wildkatzen (sitzend, Schwanz mit Ringen)
-    const cat = (p, k, flip) => {
-      const [px, py] = P(p); c.save(); c.translate(px, py); c.scale(flip ? -k : k, k);
-      c.fillStyle = 'rgba(40,30,20,.25)'; c.beginPath(); c.ellipse(2, 13, 11, 3, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#7a6650';
-      c.beginPath(); c.ellipse(0, 4, 7, 9, 0, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc(0, -8, 5.5, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.moveTo(-5, -10); c.lineTo(-4, -17); c.lineTo(-1, -12); c.closePath(); c.fill();
-      c.beginPath(); c.moveTo(5, -10); c.lineTo(4, -17); c.lineTo(1, -12); c.closePath(); c.fill();
-      c.strokeStyle = '#7a6650'; c.lineWidth = 4; c.lineCap = 'round';
-      c.beginPath(); c.moveTo(5, 11); c.quadraticCurveTo(16, 12, 15, 2); c.stroke();
-      c.strokeStyle = '#3d3226'; c.lineWidth = 4.2;
-      [[13.5, 9.5], [15.4, 6]].forEach(([a, b]) => { c.beginPath(); c.moveTo(a - 0.6, b - 0.6); c.lineTo(a + 0.6, b + 0.6); c.stroke(); });
-      c.beginPath(); c.arc(15, 2.2, 1.6, 0, Math.PI * 2); c.fillStyle = '#3d3226'; c.fill();
-      c.fillStyle = '#d6c7a2'; c.beginPath(); c.ellipse(0, 6, 3.5, 5, 0, 0, Math.PI * 2); c.fill();
-      c.fillStyle = '#e8d36a'; c.beginPath(); c.arc(-2.1, -8.6, 1.1, 0, Math.PI * 2); c.arc(2.1, -8.6, 1.1, 0, Math.PI * 2); c.fill();
-      c.restore();
+    // Wildkatzen: Sönkes sitzende Katze (img/frei/katze_sitzt.webp), Fuß auf p, mit Schatten; fehlt das Bild noch, wird später neu gemalt
+    const cat = (p, hKm, flip) => {
+      if (!CAT.ok) return;
+      const hh = hKm * s, w = hh * CAT.img.naturalWidth / CAT.img.naturalHeight, [px, py] = P(p);
+      c.fillStyle = 'rgba(40,30,20,.25)'; c.beginPath(); c.ellipse(px, py - hh * 0.02, w * 0.45, hh * 0.06, 0, 0, Math.PI * 2); c.fill();
+      c.save(); c.translate(px, py); if (flip) c.scale(-1, 1);
+      c.drawImage(CAT.img, -w / 2, -hh, w, hh); c.restore();
     };
-    const k = s / 36;
-    cat([4.6, 5.6], k, false); cat([6.6, 7.3], k * 0.9, true); cat([7.3, 4.6], k * 0.85, false);
+    CAT_SPOTS.forEach(([x, y, hKm, flip]) => cat([x, y], hKm, flip));
     // Beschriftungen
     const label = (txt, p, rot, size) => {
       c.save(); c.translate(...P(p)); c.rotate(rot);
@@ -228,6 +223,7 @@
     const cv = document.createElement('canvas');
     wrap.appendChild(cv);
     let opts = {}, G = null, hoverP = null, land = null, landKey = '';
+    if (!CAT.ok) CAT.wait.add(() => { landKey = ''; if (cv.isConnected && opts.reveal) draw(); });
     const off = document.createElement('canvas');
 
     function draw() {
