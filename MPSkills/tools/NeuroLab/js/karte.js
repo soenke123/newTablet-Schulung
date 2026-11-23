@@ -2,23 +2,20 @@
    NeuroLab · karte.js — die Landkarte für „Das Revier der Wildkatzen“
    ══════════════════════════════════════════════════════════════
    Ein Tal von 12 × 10 km. x₁ = Osten, x₂ = Norden (km). Nach Sönkes
-   Skizze (23.11.2026): Das Revier liegt zwischen drei Grenzen, die die
-   Kinder nicht kennen (NLKarte.TRUTH):
-     Fluss       im Westen, macht in der Mitte eine deutliche Biegung nach
-                 Westen (riverX(x₂) = Lage des Flusses) – Revier liegt östlich
-     Landstraße  x₂ = −¾·x₁ + 12   Revier liegt darunter (die Straße selbst
-                 verläuft knapp einen Kilometer weiter nordöstlich)
-     Stadtrand   x₂ = ⅔·x₁ − 2     Revier liegt darüber (die Stadt beginnt
-                 erst gut einen Kilometer weiter südöstlich)
+   Skizze (23.11.2026, um 90° gedreht: Stadt oben rechts). Das Revier liegt
+   zwischen drei Grenzen, die die Kinder nicht kennen (NLKarte.TRUTH):
+     Fluss       im Süden, sanft geschwungen (riverY(x₁)) – Revier liegt nördlich.
+                 Eine Gerade trennt alle Kameras, passt aber nicht genau zum
+                 Fluss: Gesprächsanlass, sobald die Karte aufgedeckt ist.
+     Landstraße  Grenze x₂ = 4/3·x₁ + 2 (Nordwesten), Revier liegt darunter;
+                 die Straße selbst verläuft knapp einen Kilometer weiter.
+     Stadtrand   Grenze x₂ = −3/2·x₁ + 18 (Nordosten), Revier liegt darunter;
+                 die Stadt beginnt gut einen Kilometer weiter.
    Kameras (alle auf ganzen km, keine auf einer Grenze), wie in der Skizze:
-     YEAR1  Jahr 1: gelb (westlich des Flusses, keine Katze) + rot (Katze).
-            Eine Gerade trennt sie, z. B. x₂ = −3·x₁ + 19 (LINES.fluss).
+     YEAR1  Jahr 1: gelb (südlich des Flusses, keine Katze) + rot (Katze).
      ALL    + rosa (Katze) und blau (keine): jetzt braucht es Straße und Stadt.
-     BEND   die zwei lila Kameras IN der Flussbiegung: Katze! Keine einzelne
-            Fluss-Gerade trennt sie von den Kameras westlich des Flusses
-            (sie liegen zwischen (3|8) und (4|2)) → zwei Geraden (LINES.oben/unten).
-     ALL2   ALL + BEND
-     NOISY  ALL2, fünf Kameras sagen etwas anderes (OUTLIERS) – Overfitting
+     NOISY  ALL + vier lila Kameras, die NICHT zur Karte passen (OUTLIERS:
+            drei im Revier ohne Katze, eine Katze in der Stadt) – Overfitting
      TEST   neue Kameras zwischen den alten (Testdaten)
    Gemalt wird die Landschaft erst, wenn das Revier gefunden ist (reveal 0 … 1)
    – vorher ist es nur ein Gitter.
@@ -39,57 +36,38 @@
 (function () {
   'use strict';
   const DOM = [[0, 12], [0, 10]];
-  /* Der Fluss: Stützpunkte [x₂, x₁] von Nord nach Süd, dazwischen Catmull-Rom */
-  const RIV = [[10.4, 3.3], [9, 3.5], [8, 3.5], [7, 3.0], [6, 2.3], [5, 2.0], [4, 2.3], [3, 3.6], [2, 5.0], [1, 5.8], [-0.4, 6.3]];
-  function riverX(y) {
-    const P = RIV;
-    if (y >= P[0][0]) return P[0][1];
-    for (let i = 0; i < P.length - 1; i++) {
-      const [y0, x0] = P[i], [y1, x1] = P[i + 1];
-      if (y <= y0 && y >= y1) {
-        const t = (y0 - y) / (y0 - y1), xm = P[i - 1] ? P[i - 1][1] : x0, xp = P[i + 2] ? P[i + 2][1] : x1;
-        const t2 = t * t, t3 = t2 * t;
-        return 0.5 * (2 * x0 + (-xm + x1) * t + (2 * xm - 5 * x0 + 4 * x1 - xp) * t2 + (-xm + 3 * x0 - 3 * x1 + xp) * t3);
-      }
-    }
-    return P[P.length - 1][1];
-  }
+  /* Der Fluss: von West nach Ost leicht steigend, mit einem flachen Bogen nach Süden */
+  const riverY = x => 0.1 * x + 2.8 - 0.45 * Math.sin(Math.PI * x / 12);
   const TRUTH = [
     { id: 'fluss', name: 'Fluss', river: true },
-    { id: 'strasse', name: 'Landstraße', w: [-0.75, -1], b: 12 },
-    { id: 'stadt', name: 'Stadtrand', w: [-2 / 3, 1], b: 2 },
+    { id: 'strasse', name: 'Landstraße', w: [4 / 3, -1], b: 2 },
+    { id: 'stadt', name: 'Stadtrand', w: [-1.5, -1], b: 18 },
   ];
   const zOf = (t, p) => t.w[0] * p[0] + t.w[1] * p[1] + t.b;
-  const inRevier = p => p[0] > riverX(p[1]) && TRUTH.every(t => t.river || zOf(t, p) > 0);
+  const inRevier = p => p[1] > riverY(p[0]) && TRUTH.every(t => t.river || zOf(t, p) > 0);
   /* Musterlösungen (Geraden durch ganze km, Zahlen im Bereich der Neuronen) */
   const LINES = {
-    fluss: { P: [3, 10], Q: [5, 4], w: [3, 1], b: -19 },            // x₂ = −3·x₁ + 19, Revier oberhalb (östlich)
-    strasse: { P: [4, 9], Q: [8, 6], w: [-0.75, -1], b: 12 },       // x₂ = −¾·x₁ + 12, Revier unterhalb
-    stadt: { P: [3, 0], Q: [6, 2], w: [-2 / 3, 1], b: 2 },          // x₂ = ⅔·x₁ − 2, Revier oberhalb
-    oben: { P: [2, 5], Q: [4, 9], w: [2, -1], b: 1 },               // x₂ = 2·x₁ + 1, Revier unterhalb (östlich)
-    unten: { P: [2, 4], Q: [6, 1], w: [0.75, 1], b: -5.5 },         // x₂ = −¾·x₁ + 5,5, Revier oberhalb
+    fluss: { P: [0, 3], Q: [12, 4], w: [-1 / 12, 1], b: -3 },        // x₂ = 1/12·x₁ + 3, Revier oberhalb
+    strasse: { P: [0, 2], Q: [3, 6], w: [4 / 3, -1], b: 2 },         // x₂ = 4/3·x₁ + 2, Revier unterhalb
+    stadt: { P: [8, 6], Q: [10, 3], w: [-1.5, -1], b: 18 },          // x₂ = −3/2·x₁ + 18, Revier unterhalb
   };
 
-  /* ── Kameras (wie in Sönkes Skizze) ──────────────────────── */
-  const GELB = [[2, 9], [3, 8], [1, 7], [1, 6], [1, 4], [2, 3], [3, 2], [4, 2], [1, 1], [5, 1]];
-  const ROT = [[5, 7], [6, 7], [5, 5], [6, 5], [7, 6], [8, 5], [6, 4], [7, 4], [6, 3], [4, 8]];
-  const ROSA = [[7, 5], [5, 6], [8, 4], [7, 3]];
-  const BLAU = [[1, 10], [4, 10], [6, 10], [8, 9], [10, 9], [7, 8], [11, 8], [9, 7], [11, 6], [11, 5], [0, 8], [0, 5], [0, 2],
-    [2, 0], [5, 0], [8, 0], [7, 1], [12, 1], [8, 2], [10, 2], [9, 3], [11, 3]];
-  const LILA = [[3, 6], [3, 4]];
+  /* ── Kameras (wie in Sönkes Skizze, gedreht) ─────────────── */
+  const GELB = [[0, 1], [2, 2], [3, 0], [4, 1], [6, 2], [7, 0], [8, 1], [10, 2], [11, 0], [12, 3]];
+  const ROT = [[2, 4], [4, 4], [6, 4], [8, 4], [4, 5], [5, 5], [7, 6], [6, 8], [5, 7]];
+  const ROSA = [[3, 4], [4, 6], [6, 6], [8, 5]];
+  const BLAU = [[0, 4], [2, 6], [0, 7], [2, 8], [1, 10], [3, 9], [4, 10], [7, 10], [8, 7], [8, 9], [10, 6], [10, 4], [11, 8],
+    [12, 5], [12, 10], [10, 10], [1, 2], [5, 2], [9, 1], [12, 1], [11, 3]];
   const cam = (p, k) => ({ p, soll: inRevier(p) ? 1 : 0, k });
   const YEAR1 = GELB.map(p => cam(p, 'gelb')).concat(ROT.map(p => cam(p, 'rot')));
   const ALL = YEAR1.concat(ROSA.map(p => cam(p, 'rosa')), BLAU.map(p => cam(p, 'blau')));
-  const BEND = LILA.map(p => Object.assign(cam(p, 'lila'), { bend: true }));
-  const ALL2 = ALL.concat(BEND);
-  const OUTLIERS = [[2, 9, 'Diese Katze ist durch den Fluss geschwommen.'], [8, 2, 'Eine Katze hat sich bis an die Stadt gewagt.'],
-    [9, 7, 'Eine junge Katze war auf Wanderschaft – über die Straße.'], [6, 5, 'Hier hat die Kamera die Katze verpasst (Akku leer).'],
-    [7, 4, 'Hier stand ein Busch vor der Kamera.']];
-  const outOf = (i, j) => OUTLIERS.find(o => o[0] === i && o[1] === j);
-  const NOISY = ALL2.map(c => { const o = outOf(c.p[0], c.p[1]); return o ? Object.assign({}, c, { soll: 1 - c.soll, out: o[2] }) : c; });
+  /* Overfitting: vier neue Kameras zeigen das Gegenteil von dem, was die Karte sagt */
+  const OUTLIERS = [[3, 5, 'Mitten im Revier – aber keine Katze. Die Kamera hing zu hoch.'], [5, 6, 'Mitten im Revier – aber keine Katze. Der Akku war leer.'],
+    [7, 5, 'Mitten im Revier – aber keine Katze. Ein Busch stand vor der Linse.'], [9, 6, 'Eine Katze in der Stadt! Sie hat sich einmal verlaufen.']];
+  const NOISY = ALL.concat(OUTLIERS.map(([x, y, t]) => ({ p: [x, y], soll: inRevier([x, y]) ? 0 : 1, out: t, k: 'lila' })));
   // Testdaten: neue Kameras zwischen den alten, nicht direkt an einer Grenze
   const hash = (a, b) => { const x = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return x - Math.floor(x); };
-  const nearEdge = p => Math.abs(p[0] - riverX(p[1])) < 0.3 || TRUTH.some(t => !t.river && Math.abs(zOf(t, p)) / Math.hypot(t.w[0], t.w[1]) < 0.15);
+  const nearEdge = p => Math.abs(p[1] - riverY(p[0])) < 0.25 || TRUTH.some(t => !t.river && Math.abs(zOf(t, p)) / Math.hypot(t.w[0], t.w[1]) < 0.15);
   const TEST = [];
   for (let i = 0; i < 12; i++) for (let j = 0; j < 10; j++) {
     if (hash(i, j) < 0.3) continue;
@@ -121,26 +99,26 @@
       c.fillStyle = R() < 0.5 ? 'rgba(110,150,60,.07)' : 'rgba(245,250,210,.08)';
       c.beginPath(); c.ellipse(px, py, r, r * (0.5 + R() * 0.4), R() * 3, 0, Math.PI * 2); c.fill();
     }
-    // Felder im Westen (jenseits des Flusses)
-    [[0.2, 6.6, 1.5, 1.2, '#e2d58e'], [0.3, 8.4, 1.4, 1.1, '#d9cf86'], [0.2, 2.2, 1.3, 1.1, '#c9d98a']].forEach(([a, b, w, hh, col]) => {
+    // Felder im Süden (jenseits des Flusses)
+    [[1.6, 0.2, 1.4, 1.1, '#e2d58e'], [5.6, 0.3, 1.5, 1.0, '#d9cf86'], [9.4, 0.4, 1.3, 1.1, '#c9d98a']].forEach(([a, b, w, hh, col]) => {
       c.fillStyle = col; c.globalAlpha = 0.75;
       c.fillRect(X(a), Y(b + hh), w * s, hh * s);
       c.strokeStyle = 'rgba(150,130,60,.35)'; c.lineWidth = 1;
       for (let q = 1; q < 6; q++) { c.beginPath(); c.moveTo(X(a), Y(b) - q * hh * s / 6); c.lineTo(X(a + w), Y(b) - q * hh * s / 6); c.stroke(); }
       c.globalAlpha = 1;
     });
-    // Stadt im Südosten: ausgefranster Rand gut einen Kilometer hinter dem Revier, bis an die Landstraße
-    const TOWN = [[5.9, -0.4], [6.3, 0.5], [7.3, 0.6], [7.8, 1.5], [8.9, 1.6], [9.4, 2.6], [10.5, 2.7], [10.9, 3.6], [12.4, 3.6], [12.4, -0.4]];
+    // Stadt oben rechts: ausgefranster Rand gut einen Kilometer hinter dem Revier
+    const TOWN = [[6.5, 10.4], [7.2, 9.6], [7.3, 8.7], [8.3, 8.3], [8.5, 7.2], [9.4, 6.8], [9.7, 5.7], [10.6, 5.4], [10.9, 4.7], [12.4, 4.7], [12.4, 10.4]];
     const inTown = p => { let ins = false; for (let i = 0, j = TOWN.length - 1; i < TOWN.length; j = i++) { const [xi, yi] = TOWN[i], [xj, yj] = TOWN[j]; if ((yi > p[1]) !== (yj > p[1]) && p[0] < (xj - xi) * (p[1] - yi) / (yj - yi) + xi) ins = !ins; } return ins; };
     c.beginPath(); TOWN.map(P).forEach((q, i) => i ? c.lineTo(...q) : c.moveTo(...q)); c.closePath();
     c.fillStyle = '#ddd6c8'; c.fill();
     // Häuser im Raster, schräg wie der Stadtrand
-    const ang = Math.atan2(2, 3), d = [Math.cos(ang), Math.sin(ang)], n = [Math.sin(ang), -Math.cos(ang)];
+    const ang = Math.atan2(3, 2), d = [Math.cos(ang), Math.sin(ang)], n = [Math.sin(ang), -Math.cos(ang)];
     const roofs = ['#b85c4a', '#a24b3c', '#c7745a', '#8e8a84', '#9c6b4e'];
-    for (let u = -2; u < 14; u += 0.62) for (let v = 0.3; v < 8; v += 0.58) {
+    for (let u = -8; u < 10; u += 0.62) for (let v = -8; v < 8; v += 0.58) {
       if (Math.round(v / 0.58) % 4 === 0 || Math.round(u / 0.62) % 5 === 0) continue;    // Straßen frei lassen
-      const cx = 6 + d[0] * u + n[0] * v, cy = 0.6 + d[1] * u + n[1] * v;
-      if (cx < -0.2 || cx > 12.4 || cy < -0.4 || cy > 10.4 || !inTown([cx, cy])) continue;
+      const cx = 10 + d[0] * u + n[0] * v, cy = 7.5 + d[1] * u + n[1] * v;
+      if (cx < -0.2 || cx > 12.4 || cy < -0.4 || cy > 10.4 || !inTown([cx, cy]) || cy < riverY(cx) + 0.5) continue;
       if (R() < 0.12) continue;
       const w = (0.36 + R() * 0.1) * s, hh = (0.3 + R() * 0.08) * s;
       c.save(); c.translate(X(cx), Y(cy)); c.rotate(-ang + (R() - 0.5) * 0.06);
@@ -152,34 +130,41 @@
       c.restore();
     }
     // Kirchturm
-    c.fillStyle = '#7d756b'; c.beginPath(); c.arc(X(10.3), Y(1.2), 0.22 * s, 0, Math.PI * 2); c.fill();
-    c.fillStyle = '#a99f92'; c.beginPath(); c.arc(X(10.25), Y(1.25), 0.12 * s, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#7d756b'; c.beginPath(); c.arc(X(10.9), Y(8.6), 0.22 * s, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#a99f92'; c.beginPath(); c.arc(X(10.85), Y(8.65), 0.12 * s, 0, Math.PI * 2); c.fill();
     const road = (pts, wid) => {
       c.lineCap = 'round'; c.lineJoin = 'round';
       c.strokeStyle = '#8c8a86'; c.lineWidth = wid + 3; c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(...P(q)) : c.moveTo(...P(q))); c.stroke();
       c.strokeStyle = '#b9b6b0'; c.lineWidth = wid; c.stroke();
       c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1.3; c.setLineDash([6, 6]); c.stroke(); c.setLineDash([]);
     };
-    // Fluss: von Norden nach Süden, mit der Biegung nach Westen
+    // Fluss: von West nach Ost, flacher Bogen nach Süden
     const riv = [];
-    for (let y = 10.4; y >= -0.4; y -= 0.08) { const off = 0.05 * Math.sin(y * 2.3) + 0.03 * Math.sin(y * 5.1); riv.push([riverX(y) + off, y]); }
+    for (let x = -0.4; x <= 12.4; x += 0.08) { const off = 0.05 * Math.sin(x * 2.3) + 0.03 * Math.sin(x * 5.1); riv.push([x, riverY(x) + off]); }
     const strokeP = (pts, col, wd) => { c.strokeStyle = col; c.lineWidth = wd; c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(...P(q)) : c.moveTo(...P(q))); c.stroke(); };
     c.lineCap = 'round'; c.lineJoin = 'round';
     strokeP(riv, '#8fb07a', 0.42 * s);
     strokeP(riv, '#4f8fc4', 0.26 * s);
     strokeP(riv, '#79b4e2', 0.15 * s);
-    c.globalAlpha = 0.5; strokeP(riv.map(q => [q[0] + 0.03, q[1]]), '#cfe8f8', 0.04 * s); c.globalAlpha = 1;
-    // Landstraße im Nordosten (knapp 1 km hinter der Reviergrenze), Ortsstraße in die Stadt
-    road([[3.9, 10.4], [12.4, 4.0]], 0.17 * s);
-    road([[11.2, 4.6], [10.4, 2.9], [9.6, 2.0]], 0.11 * s);
+    c.globalAlpha = 0.5; strokeP(riv.map(q => [q[0], q[1] + 0.03]), '#cfe8f8', 0.04 * s); c.globalAlpha = 1;
+    // Landstraße im Nordwesten (knapp 1 km hinter der Reviergrenze), kommt von Süden über eine Brücke; Ortsstraße in die Stadt
+    const ROAD = [[1.7, -0.4], [1.1, 1.6], [0.7, 3.4], [0.6, 4.15], [5.3, 10.4]];
+    road(ROAD, 0.17 * s);
+    road([[10.2, 4.2], [10.6, 6.2], [11.6, 7.4]], 0.11 * s);
+    const by = riverY(0.95), bang = Math.atan2(Y(3.4) - Y(1.6), X(0.7) - X(1.1));
+    c.save(); c.translate(X(0.92), Y(by)); c.rotate(bang);
+    c.fillStyle = '#b9b6b0'; c.fillRect(-0.42 * s, -0.16 * s, 0.84 * s, 0.32 * s);
+    c.fillStyle = '#6f5a45'; c.fillRect(-0.44 * s, -0.2 * s, 0.88 * s, 0.05 * s); c.fillRect(-0.44 * s, 0.15 * s, 0.88 * s, 0.05 * s);
+    c.restore();
     // Bäume: dicht im Revier (Wildkatzen leben im Wald), sonst vereinzelt
-    const roadD = p => Math.abs(0.75 * p[0] + p[1] - 12.9) / 1.25;
+    const segD = (p, A, B) => { const dx = B[0] - A[0], dy = B[1] - A[1], t = Math.max(0, Math.min(1, ((p[0] - A[0]) * dx + (p[1] - A[1]) * dy) / (dx * dx + dy * dy))); return Math.hypot(p[0] - A[0] - t * dx, p[1] - A[1] - t * dy); };
+    const roadD = p => Math.min(...ROAD.slice(1).map((q, i) => segD(p, ROAD[i], q)));
+    const inField = p => [[1.6, 0.2, 1.4, 1.1], [5.6, 0.3, 1.5, 1.0], [9.4, 0.4, 1.3, 1.1]].some(([a, b, w, hh]) => p[0] > a - 0.1 && p[0] < a + w + 0.1 && p[1] > b - 0.1 && p[1] < b + hh + 0.1);
     const trees = [];
     for (let k = 0; k < 1300; k++) {
       const p = [R() * 12.4 - 0.2, R() * 10.4 - 0.2];
-      if (inTown(p) || Math.abs(p[0] - riverX(p[1])) < 0.35 || roadD(p) < 0.3) continue;
-      if ((p[0] < 1.8 && ((p[1] > 6.5 && p[1] < 9.6) || (p[1] > 2.1 && p[1] < 3.4)))) continue;   // Felder
-      const dense = inRevier(p) ? 0.55 : (p[0] > riverX(p[1]) ? 0.05 : 0.035);
+      if (inTown(p) || Math.abs(p[1] - riverY(p[0])) < 0.35 || roadD(p) < 0.3 || inField(p)) continue;
+      const dense = inRevier(p) ? 0.55 : (p[1] > riverY(p[0]) ? 0.05 : 0.035);
       if (R() > dense) continue;
       trees.push({ p, r: (0.17 + R() * 0.15) * s, t: R() });
     }
@@ -211,7 +196,7 @@
       c.restore();
     };
     const k = s / 36;
-    cat([5.5, 6.4], k, false); cat([7.5, 4.5], k * 0.9, true); cat([3.4, 5.1], k * 0.8, false);     // eine sitzt in der Flussbiegung
+    cat([4.6, 5.6], k, false); cat([6.6, 7.3], k * 0.9, true); cat([7.3, 4.6], k * 0.85, false);
     // Beschriftungen
     const label = (txt, p, rot, size) => {
       c.save(); c.translate(...P(p)); c.rotate(rot);
@@ -220,9 +205,9 @@
       c.fillStyle = '#2f3b2a'; c.fillText(txt, 0, 0); c.restore();
     };
     const fs = Math.max(11, s * 0.36);
-    label('Fluss', [1.6, 5.0], -Math.PI / 2 + 0.25, fs);
-    label('Landstraße', [8.6, 7.95], Math.atan2(0.75, 1), fs * 0.85);
-    label('Stadt', [11.1, 0.9], 0, fs * 1.2);
+    label('Fluss', [9.6, riverY(9.6) - 0.55], -Math.atan2(0.17 * s, s), fs);
+    label('Landstraße', [2.75, 7.35], -Math.atan2(4, 3), fs * 0.85);
+    label('Stadt', [10.7, 9.6], 0, fs * 1.2);
     c.restore();
     return cv;
   }
@@ -371,7 +356,7 @@
         const x = X(cm.p[0]), y = Y(cm.p[1]);
         if (cm.neu) { c.beginPath(); c.arc(x, y, r * 1.9, 0, Math.PI * 2); c.fillStyle = css('accent'); c.globalAlpha = 0.2; c.fill(); c.globalAlpha = 1; }
         camGlyph(c, x, y, r, cm.soll, rv > 0.3);
-        if (opts.judge && (!cm.mark || cm.bend) && opts.judge(cm.p) !== cm.soll) { c.beginPath(); c.arc(x, y, r * 1.6, 0, Math.PI * 2); c.strokeStyle = css('neg'); c.lineWidth = 2.2; c.stroke(); }
+        if (opts.judge && !cm.mark && opts.judge(cm.p) !== cm.soll) { c.beginPath(); c.arc(x, y, r * 1.6, 0, Math.PI * 2); c.strokeStyle = css('neg'); c.lineWidth = 2.2; c.stroke(); }
         if (cm.mark) { c.beginPath(); c.arc(x, y, r * 2.1, 0, Math.PI * 2); c.strokeStyle = cm.markColor || css('in'); c.lineWidth = 3; c.stroke(); }
         if (cm.label) {
           c.font = '800 14px "Space Grotesk", sans-serif'; c.lineWidth = 3.5; c.strokeStyle = css('surface'); c.fillStyle = css('ink');
@@ -478,5 +463,5 @@
     return (rgbCache[col] = [d[0], d[1], d[2]]);
   }
 
-  window.NLKarte = { DOM, TRUTH, LINES, zOf, riverX, inRevier, YEAR1, ALL, BEND, ALL2, NOISY, TEST, OUTLIERS, makeMap };
+  window.NLKarte = { DOM, TRUTH, LINES, zOf, riverY, inRevier, YEAR1, ALL, NOISY, TEST, OUTLIERS, makeMap };
 })();

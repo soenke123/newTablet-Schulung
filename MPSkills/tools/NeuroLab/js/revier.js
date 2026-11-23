@@ -21,20 +21,17 @@
                         Gerade des Perzeptrons wird NUR eingezeichnet, wenn alle
                         Kameras stimmen (ob sie genau durch P und Q geht, ist
                         egal). „Hilfe“ = kurzes Beispiel: Gleichung → Neuron.
-     2 Ein Jahr später  Mehr Kameras: Straße (Nordosten) und Stadt (Südosten)
+     2 Ein Jahr später  Mehr Kameras: Straße (Nordwesten) und Stadt (Nordosten)
                         kommen dazu, die Katzen halten Abstand. Dasselbe dreimal:
                         Gerade ziehen (Gleichungen stehen oben), w₁ w₂ b DIREKT
                         in die Perzeptrons im Netz eintragen, prüfen; der Ausgang
                         zeigt seine Werte v₁ … vₙ und b ebenfalls im Netz. Alles
-                        richtig → Karte deckt sich auf (zu- und aufdeckbar).
-     3 Die Flussbiegung Zwei neue (lila) Kameras IN der Biegung sehen Katzen –
-                        das Netz sagt „kein Revier“. Eine Gerade für den Fluss
-                        reicht nicht: zwei Geraden, ein Perzeptron mehr, Ausgang
-                        anpassen. Kein Overfitting, sondern eine Lücke in den
-                        Trainingsdaten: bei neuen Kameras wird das Netz BESSER.
-     4 Zu genau gelernt Overfitting zum Anfassen: Jeder Ausreißer bekommt ein
-                        Zusatz-Neuron („Merk-Neuron“). Alte Kameras → 48/48,
-                        neue Kameras → schlechter. Kurve beider Werte.
+                        richtig → Karte deckt sich auf (zu- und aufdeckbar). Der
+                        Fluss ist leicht geschwungen, die Gerade nicht: Gesprächsanlass.
+     3 Zu genau gelernt Vier lila Kameras passen nicht zur Karte (drei im Revier
+                        ohne Katze, eine Katze in der Stadt). Kim will die Karte
+                        neu zeichnen: jede bekommt ein Merk-Neuron. Alte Kameras
+                        → 48/48, neue Kameras → schlechter. Kurve beider Werte.
    Keine UND/XOR-Begriffe hier (die stehen bei „Netze trainieren“).
    Stand je Gerät: localStorage nl.revier (Schaufenster: nur Arbeitsspeicher).
    Karte und Daten: js/karte.js (NLKarte).
@@ -47,17 +44,16 @@
   const STUDENT = Q.get('raum') === 'schueler';
   const COLS = ['#2f80ed', '#e5484d', '#8e44ad', '#0f9d58', '#e67e22', '#00838f'];
   const MAX_HID = 6;
-  const VERSION = 4;                                 // 4: Karte nach Sönkes Skizze (23.11.2026)
+  const VERSION = 5;                                 // 5: Karte nach Sönkes Skizze, gedreht (23.11.2026)
   /* nur fürs Arbeitsblatt: Janas Neuron und drei Kameras zum Nachrechnen */
   const JANA = { w: [1, 1], b: -8 };
-  const PROBE = [{ label: 'A', p: [5, 5] }, { label: 'B', p: [3, 2] }, { label: 'C', p: [8, 2] }];
+  const PROBE = [{ label: 'A', p: [6, 4] }, { label: 'B', p: [2, 2] }, { label: 'C', p: [4, 4] }];
   /* Hilfe-Beispiel: Gerade durch (2|6) und (6|2) */
   const EX = { P: [2, 6], Q: [6, 2], w: [1, 1], b: -8 };
   const DEF_PQ = [[[1, 3], [11, 8]], [[1, 2], [3, 8]], [[6, 10], [12, 4]], [[0, 5], [12, 5]], [[4, 0], [4, 10]], [[0, 0], [12, 10]]];
   const STEPS = [
     { id: 'fluss', kurz: 'Der Fluss', title: 'Die erste Grenze: der Fluss' },
     { id: 'stadt', kurz: 'Ein Jahr später', title: 'Ein Jahr später: mehr Kameras, mehr Grenzen' },
-    { id: 'biegung', kurz: 'Die Flussbiegung', title: 'Zwei neue Kameras in der Flussbiegung' },
     { id: 'jahr', kurz: 'Zu genau gelernt', title: 'Ein Netz, das sich alles merkt' },
   ];
   const BUBBLE = 0.85;                       // Merk-Neuron: kleiner Kreis um den Ausreißer (km)
@@ -73,7 +69,6 @@
     step: 'fluss',
     s2: { P: [2, 2], Q: [10, 6], w: [0, 0, 0], done: false },
     s3: { hid: [], out: { v: [], b: 0 }, done: false, seen: false },
-    s5: { hid: [], out: { v: [], b: 0 }, done: false, seen: false },
     revealed: false, covered: false,
     s4: { mem: [], view: 'mem', choice: null, tested: false },
   });
@@ -178,11 +173,9 @@
     const zero = !n.w[0] && !n.w[1];
     return { wrongTri, cut, tri: tri.length, zero, flip: !zero && wrongTri > tri.length / 2, pass: !zero && wrongTri === 0 && cut >= 3 };
   }
-  /* Musterlösungen aus karte.js (K.LINES): Schritt 2 = Fluss · Straße · Stadt, Schritt 3 = Fluss oben · Straße · Stadt · Fluss unten */
+  /* Musterlösung aus karte.js (K.LINES): Fluss · Straße · Stadt */
   const hidOf = (ks) => ks.map((k, i) => { const l = K.LINES[k]; return { P: l.P.slice(), Q: l.Q.slice(), w: [l.w[0], l.w[1], l.b], col: COLS[i], ok: true }; });
   const MUSTER = () => ({ hid: hidOf(['fluss', 'strasse', 'stadt']), out: { v: [1, 1, 1], b: -2.5 }, done: true, seen: true });
-  const MUSTER3 = () => ({ hid: hidOf(['oben', 'strasse', 'stadt', 'unten']), out: { v: [1, 1, 1, 1], b: -3.5 }, done: true, seen: true });
-  const clone = o => JSON.parse(JSON.stringify(o));
 
   /* ── Seite ── */
   let page = null, api = null, map = null;
@@ -204,7 +197,7 @@
     root.appendChild(wrap);
     map = K.makeMap();
     map.set({ reveal: S.revealed && !S.covered ? 1 : 0 });
-    ({ fluss: stepFluss, stadt: stepStadt, biegung: stepBiegung, jahr: stepJahr })[S.step](card);
+    ({ fluss: stepFluss, stadt: stepStadt, jahr: stepJahr })[S.step](card);
     const foot = h('<div class="nn-foot"></div>');
     if (i > 0) { const b = h(`<button type="button" class="nn-btn">‹ ${STEPS[i - 1].kurz}</button>`); b.onclick = () => go(STEPS[i - 1].id); foot.appendChild(b); }
     else foot.appendChild(h('<span></span>'));
@@ -262,7 +255,7 @@
   function stepFluss(card) {
     const st = S.s2;
     card.appendChild(h(`<p class="nn-lead-p">Försterin <b>Jana</b> hat im Tal <b>Wildtierkameras</b> aufgestellt. Ein <b class="t-y">goldenes Dreieck</b> heißt: Diese Kamera hat eine <b>Wildkatze</b> gesehen. Ein Neuron soll für jeden Ort entscheiden: Revier oder nicht? Seine <b class="t-x">Eingänge</b> sind die Lage auf der Karte: ${xs('x', 1)} = km nach Osten, ${xs('x', 2)} = km nach Norden.
-      Im Westen sieht keine Kamera eine Katze – hier verläuft eine <b>Grenze</b>. Du ziehst sie ein und <b>rechnest</b> sie dann in ein Neuron um.</p>`));
+      Im Süden sieht keine Kamera eine Katze – hier verläuft eine <b>Grenze</b>. Du ziehst sie ein und <b>rechnest</b> sie dann in ein Neuron um.</p>`));
     const m = model(st.w, [5, 5]);
     const N = NL().makeNeuron(m, { onChange: k => {
       if (k[0] === 'x') { paint(); return; }
@@ -329,33 +322,8 @@
       key: 's3', muster: MUSTER, reveal: true,
       cams: K.ALL.map(c => c.k === 'gelb' || c.k === 'rot' ? c : Object.assign({}, c, { neu: true })),
       init(st) { if (!st.hid.length && S.s2.done) { const x = { P: S.s2.P.slice(), Q: S.s2.Q.slice(), w: S.s2.w.slice(), col: COLS[0], ok: false }; x.ok = checkHid(x).pass; st.hid.push(x); st.out.v.push(0); } },
-      lead: `Ein Jahr später: Jana hat <b>mehr Kameras</b> aufgestellt (heller Hof = neu). Jetzt sieht auch im <b>Nordosten</b> und im <b>Südosten</b> keine Kamera eine Katze – dort gibt es eine <b>Straße</b> und eine <b>Stadt</b>. Die Wildkatzen halten <b>Abstand</b> zu beiden.
+      lead: `Ein Jahr später: Jana hat <b>mehr Kameras</b> aufgestellt (heller Hof = neu). Jetzt sieht auch im <b>Nordwesten</b> und im <b>Nordosten</b> keine Kamera eine Katze – dort gibt es eine <b>Straße</b> und eine <b>Stadt</b>. Die Wildkatzen halten <b>Abstand</b> zu beiden.
       Mit einer Geraden kommst du nicht mehr aus: Du brauchst <b>drei</b>. Für jede machst du dasselbe wie am Fluss – Gerade ziehen, umstellen, die Zahlen <b>direkt im Netz</b> in ihr Perzeptron eintragen, prüfen. Der <b>Ausgang</b> fasst sie zusammen.`,
-    });
-  }
-
-  /* ── Schritt 3: Die Flussbiegung ─────────────────────────
-     Dasselbe Netz-Bild wie in Schritt 2, weiter mit einer Kopie des Netzes aus Schritt 2.
-     Zwei lila Kameras in der Biegung sehen Katzen; eine Fluss-Gerade schafft das nicht
-     (sie liegen zwischen Kameras westlich des Flusses) → zwei Geraden für den Fluss. */
-  const VIOLET = '#8e44ad';
-  function stepBiegung(card) {
-    if (!S.s5.seen && !S.s3.done) { needNet(card, 'stadt', '„Ein Jahr später“', () => { S.s3 = MUSTER(); S.revealed = true; }); return; }
-    netStep(card, {
-      key: 's5', muster: MUSTER3,
-      cams: K.ALL2.map(c => c.bend ? Object.assign({}, c, { mark: true, markColor: VIOLET }) : c),
-      init(st) { if (!st.hid.length) { const n = clone(S.s3); st.hid = n.hid; st.out = n.out; } },     // geprüft bleibt geprüft: erst sehen, wo es falsch liegt
-      lead: `Jana will es genau wissen und stellt <b>zwei neue Kameras</b> auf – mitten in die <b>Biegung des Flusses</b> (<b style="color:${VIOLET}">lila</b> umkreist). Beide haben eine <b>Wildkatze</b> gesehen. Dein Netz sagt dort: kein Revier.
-      Dort stand vorher keine einzige Kamera – das Netz <b>konnte</b> die Biegung gar nicht kennen. Kannst du sie ihm beibringen? Tipp: Mit <b>einer</b> Geraden für den Fluss geht es nicht mehr. Nimm <b>zwei</b> – und denk an den Ausgang.`,
-      done: msg => {
-        const a = netOf(S.s3), b = netOf(S.s5), T = K.TEST, acc = j => T.filter(c => j(c.p) === c.soll).length;
-        msg.insertAdjacentHTML('beforeend', `<p><b>Die Biegung ist drin.</b> Und jetzt der Test: Jana stellt <b>${T.length} neue Kameras</b> auf, die das Netz noch nie gesehen hat.
-          Netz aus Schritt 2: <b>${a ? acc(a.judge) : '–'} von ${T.length}</b> richtig · dein neues Netz: <b>${acc(b.judge)} von ${T.length}</b>.</p>
-          <div class="nn-summary rv-sum"><b>Overfitting? Nein!</b><ul>
-            <li>Die lila Kameras zeigen etwas <b>Echtes</b>: Der Fluss macht dort wirklich eine Biegung. Vorher hatten die Trainingsdaten dort eine <b>Lücke</b>.</li>
-            <li>Mit nur einer Fluss-Geraden war das Netz für diese Grenze <b>zu einfach</b>. Das zusätzliche Perzeptron lernt die Regel besser – darum wird das Netz auch bei <b>neuen</b> Kameras besser.</li>
-            <li>Overfitting wäre das Gegenteil: Das Netz biegt sich um <b>Zufälle und Messfehler</b> herum und wird bei neuen Kameras <b>schlechter</b>. Das probierst du im nächsten Schritt aus.</li></ul></div>`);
-      },
     });
   }
 
@@ -560,10 +528,8 @@
       if (!n) { setMsg(msg, 'Alle Geraden stehen. Stell jetzt im Netz den <b>Ausgang</b> ein.'); return; }
       const ok = CAMS.filter(c => n.judge(c.p) === c.soll).length, all = ok === CAMS.length;
       if (st.done !== all) { st.done = all; save(); mu.hidden = all; }
-      const bendWrong = CAMS.filter(c => c.bend && n.judge(c.p) !== c.soll).length;
-      if (!all) { setMsg(msg, `<b>${ok} von ${CAMS.length}</b> Kameras richtig.${bendWrong ? ` Bei ${bendWrong === 1 ? 'einer lila Kamera' : 'den lila Kameras'} in der Flussbiegung liegt das Netz noch falsch.` : ''}${cur ? ' Tippe auf „Ausgang“, um das ganze Netz zu sehen.' : ' Rot umkreist liegt das Netz falsch. Tippe eine Kamera an – der Ausgang rechnet sie vor.'}`); return; }
+      if (!all) { setMsg(msg, `<b>${ok} von ${CAMS.length}</b> Kameras richtig.${cur ? ' Tippe auf „Ausgang“, um das ganze Netz zu sehen.' : ' Rot umkreist liegt das Netz falsch. Tippe eine Kamera an – der Ausgang rechnet sie vor.'}`); return; }
       setMsg(msg, `<p><b>${ok} von ${CAMS.length} Kameras richtig${cfg.reveal ? ' – das Revier ist gefunden!' : '!'}</b></p>`, true);
-      if (cfg.done) { cfg.done(msg); return; }
       if (!S.revealed) {
         S.revealed = true; S.covered = false; save();
         msg.insertAdjacentHTML('beforeend', '<p class="rv-reveal-msg">Die Karte deckt sich auf …</p>');
@@ -594,20 +560,21 @@
     mu.querySelector('.rv-lsg').addEventListener('click', () => { if (!confirm('Dein Netz durch die Musterlösung ersetzen?')) return; S[cfg.key] = cfg.muster(); save(); render(page, api); });
     build();
   }
-  const revealText = () => `<b>Jetzt siehst du die Landschaft:</b> Im Westen fließt der <b>Fluss</b>, im Nordosten führt die <b>Landstraße</b> vorbei, im Südosten liegt die <b>Stadt</b> – und die Wildkatzen halten <b>Abstand</b> davon. Dazwischen ist Wald – das Revier. Jede Grenze ist ein Perzeptron, der Ausgang fasst sie zusammen: <b>Das ist ein neuronales Netz.</b> Schau dir den Fluss genau an …`;
+  const revealText = () => `<b>Jetzt siehst du die Landschaft:</b> Im Süden fließt der <b>Fluss</b>, im Nordwesten führt die <b>Landstraße</b> vorbei, oben rechts liegt die <b>Stadt</b> – und die Wildkatzen halten <b>Abstand</b> davon. Dazwischen ist Wald – das Revier. Jede Grenze ist ein Perzeptron, der Ausgang fasst sie zusammen: <b>Das ist ein neuronales Netz.</b> <br><b>Schau genau hin:</b> Der Fluss ist leicht geschwungen, die Gerade deines Fluss-Perzeptrons nicht. Alle Kameras stimmen – aber stimmt die Karte überall?`;
 
   /* ── Schritt 3: Zu genau gelernt (Overfitting zum Anfassen) ── */
   function stepJahr(card) {
     const st = S.s4;
-    const n = S.s5.done ? netOf(S.s5) : null;
-    if (!n) { needNet(card, 'biegung', '„Die Flussbiegung“', () => { if (!S.s3.done) S.s3 = MUSTER(); S.s5 = MUSTER3(); S.revealed = true; }); return; }
+    const n = S.s3.done ? netOf(S.s3) : null;
+    if (!n) { needNet(card, 'stadt', '„Ein Jahr später“', () => { S.s3 = MUSTER(); S.revealed = true; }); return; }
     if (!S.revealed) { S.revealed = true; S.covered = false; save(); paintCover(); }
     const outs = K.NOISY.filter(c => c.out), N = K.NOISY.length, T = K.TEST.length;
     /* das Netz mit k Merk-Neuronen: in einem kleinen Kreis um den Ausreißer gilt dessen Antwort */
     const judgeWith = list => p => { for (const i of list) { const o = outs[i]; if (Math.hypot(o.p[0] - p[0], o.p[1] - p[1]) < BUBBLE) return o.soll; } return n.judge(p); };
     const acc = (cams, j) => cams.filter(c => j(c.p) === c.soll).length;
     const seqAll = () => st.mem.concat(outs.map((_, i) => i).filter(i => !st.mem.includes(i)));
-    card.appendChild(h(`<p class="nn-lead-p">Jana hat die Bilder noch einmal durchgesehen. <b>Fünf Kameras</b> passen nicht ins Bild – <b>Ausreißer</b> (orange umkreist). Dein Netz liegt dort falsch. Kannst du es <b>perfekt</b> machen? Jeder Ausreißer bekommt ein <b>Merk-Neuron</b>: ein winziges Zusatz-Neuron, das nur diesen einen Ort kennt.</p>`));
+    card.appendChild(h(`<p class="nn-lead-p">Jana hat <b>vier weitere Kameras</b> aufgestellt (umkreist). Drei stehen mitten im Revier – und haben <b>keine Katze</b> gesehen. Eine steht in der Stadt – und hat eine <b>Katze</b> gesehen! Dein Netz liegt bei allen vier falsch.
+      <b>Kim</b> vom Forstamt sagt: <i>„Die Karte stimmt nicht mehr. Wir zeichnen sie neu, bis jede Kamera passt!“</i> Probier es aus: Jede dieser Kameras bekommt ein <b>Merk-Neuron</b> – ein winziges Zusatz-Neuron, das nur diesen einen Ort kennt.</p>`));
     const cmp = h('<div class="rv-cmp"></div>');
     const chips = h('<div class="rv-chips"></div>');
     const why = h('<p class="rv-why"></p>');
@@ -628,27 +595,28 @@
 
     function drawCurve() {
       const seq = seqAll(), W = 320, H = 160, L = 38, R = 12, Tt = 28, B = 30;
-      const pts = cams => [0, 1, 2, 3, 4, 5].map(k => acc(cams, judgeWith(seq.slice(0, k))) / cams.length);
+      const NK = outs.length, ks = [...Array(NK + 1).keys()];
+      const pts = cams => ks.map(k => acc(cams, judgeWith(seq.slice(0, k))) / cams.length);
       const a = pts(K.NOISY), b = pts(K.TEST);
       const lo = Math.floor(Math.min(...a, ...b) * 20) / 20 - 0.05, hi = 1;
-      const X = k => L + k / 5 * (W - L - R), Y = v => Tt + (1 - (v - lo) / (hi - lo)) * (H - Tt - B);
+      const X = k => L + k / NK * (W - L - R), Y = v => Tt + (1 - (v - lo) / (hi - lo)) * (H - Tt - B);
       const path = arr => arr.map((v, k) => (k ? 'L' : 'M') + X(k).toFixed(1) + ' ' + Y(v).toFixed(1)).join('');
       const k = st.mem.length;
       curve.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Alte und neue Kameras je Anzahl der Merk-Neuronen">
         <line class="ax" x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}"/><line class="ax" x1="${L}" y1="${Tt}" x2="${L}" y2="${H - B}"/>
-        ${[0, 1, 2, 3, 4, 5].map(i => `<text class="tk" x="${X(i)}" y="${H - B + 14}" text-anchor="middle">${i}</text>`).join('')}
+        ${ks.map(i => `<text class="tk" x="${X(i)}" y="${H - B + 14}" text-anchor="middle">${i}</text>`).join('')}
         <text class="tk" x="${(L + W - R) / 2}" y="${H - 4}" text-anchor="middle">Anzahl Merk-Neuronen</text>
         <text class="tk" x="${L - 4}" y="${Y(1) + 4}" text-anchor="end">100 %</text><text class="tk" x="${L - 4}" y="${Y(lo) + 4}" text-anchor="end">${Math.round(lo * 100)} %</text>
         <path class="c-old" d="${path(a)}"/><path class="c-new" d="${path(b)}"/>
         ${[a, b].map((arr, j) => `<circle class="${j ? 'd-new' : 'd-old'}" cx="${X(k)}" cy="${Y(arr[k])}" r="5.5"/>`).join('')}
-        <text class="lab c-old-t" x="${X(5)}" y="${Y(a[5]) - 7}" text-anchor="end">alte Kameras</text><text class="lab c-new-t" x="${X(5)}" y="${Y(b[5]) + 15}" text-anchor="end">neue Kameras</text></svg>`;
+        <text class="lab c-old-t" x="${X(NK)}" y="${Y(a[NK]) - 7}" text-anchor="end">alte Kameras</text><text class="lab c-new-t" x="${X(NK)}" y="${Y(b[NK]) + 15}" text-anchor="end">neue Kameras</text></svg>`;
     }
     function paint() {
       const tested = st.tested, k = st.mem.length, jm = judgeWith(st.mem);
       const mineOk = acc(K.NOISY, n.judge), memOk = acc(K.NOISY, jm), mineT = acc(K.TEST, n.judge), memT = acc(K.TEST, jm);
-      cmp.innerHTML = `<button type="button" class="rv-net-card${st.view === 'mine' ? ' on' : ''}" data-v="mine"><b>Dein Netz</b><span>${S.s5.hid.length} Perzeptrons + Ausgang</span>
+      cmp.innerHTML = `<button type="button" class="rv-net-card${st.view === 'mine' ? ' on' : ''}" data-v="mine"><b>Dein Netz</b><span>${S.s3.hid.length} Perzeptrons + Ausgang</span>
           <span class="rv-big">${tested ? mineT : mineOk} / ${tested ? T : N}</span><span>${tested ? 'neue' : 'alte'} Kameras richtig</span></button>
-        <button type="button" class="rv-net-card${st.view === 'mem' ? ' on' : ''}" data-v="mem"><b>Mit Merk-Neuronen</b><span>${k} Zusatz-${k === 1 ? 'Neuron' : 'Neuronen'}</span>
+        <button type="button" class="rv-net-card${st.view === 'mem' ? ' on' : ''}" data-v="mem"><b>Kims neue Karte</b><span>${k} Merk-${k === 1 ? 'Neuron' : 'Neuronen'}</span>
           <span class="rv-big">${tested ? memT : memOk} / ${tested ? T : N}</span><span>${tested ? 'neue' : 'alte'} Kameras richtig</span></button>`;
       cmp.querySelectorAll('[data-v]').forEach(b => b.addEventListener('click', () => { st.view = b.dataset.v; save(); paint(); }));
       chips.innerHTML = '<span class="rv-camsel-t">Merk-Neuron für:</span>' + outs.map((o, i) => `<button type="button" class="rv-cam rv-oc${st.mem.includes(i) ? ' on' : ''}" data-i="${i}"><b>${i + 1}</b><span class="m">${pt(o.p)}</span>${st.mem.includes(i) ? '<i>✓</i>' : ''}</button>`).join('');
@@ -660,7 +628,7 @@
       q.querySelectorAll('[data-c]').forEach(b => b.classList.toggle('on', b.dataset.c === st.choice));
       if (tested) {
         res.className = 'nn-task-msg rv-test-msg' + (memT < mineT ? ' ok' : '');
-        res.innerHTML = `Alte Kameras: mit ${k} Merk-Neuron${k === 1 ? '' : 'en'} <b>${memOk} von ${N}</b> (vorher ${mineOk}). Neue Kameras: nur noch <b>${memT} von ${T}</b> (dein Netz ohne Merk-Neuronen: ${mineT}). ${st.choice === 'schlecht' ? '<b>Gut eingeschätzt!</b>' : '<b>Überraschung!</b>'} Probier es aus: Nimm Merk-Neuronen weg oder dazu – die Punkte wandern auf den Kurven. Tippe auf „Mit Merk-Neuronen“: Wo hat das Netz Inseln gebaut?`;
+        res.innerHTML = `Alte Kameras: mit ${k} Merk-Neuron${k === 1 ? '' : 'en'} <b>${memOk} von ${N}</b> (vorher ${mineOk}). Neue Kameras: nur noch <b>${memT} von ${T}</b> (dein Netz ohne Merk-Neuronen: ${mineT}). ${st.choice === 'schlecht' ? '<b>Gut eingeschätzt!</b>' : '<b>Überraschung!</b>'} Probier es aus: Nimm Merk-Neuronen weg oder dazu – die Punkte wandern auf den Kurven. Tippe auf „Kims neue Karte“: Wo hat sie Inseln gebaut?`;
         drawCurve();
       }
       const lg = card.querySelector('.rv-lg-gold em');
@@ -699,7 +667,7 @@
     de.setAttribute('data-theme', 'light');                        // Blatt immer hell
     tmp.set({ reveal: 0, cams: K.ALL.map(c => { const pr = PROBE.find(x => eqP(x.p, c.p)); return pr ? Object.assign({}, c, { label: pr.label }) : c; }) });
     const img1 = tmp.el.querySelector('canvas').toDataURL('image/png');
-    tmp.set({ reveal: 1, cams: K.ALL2, lines: ['oben', 'strasse', 'stadt', 'unten'].map((k, i) => ({ w: K.LINES[k].w, b: K.LINES[k].b, color: COLS[i], width: 2.6, num: String(i + 1) })), region: K.inRevier, judge: p => K.inRevier(p) ? 1 : 0 });
+    tmp.set({ reveal: 1, cams: K.ALL, lines: ['fluss', 'strasse', 'stadt'].map((k, i) => ({ w: K.LINES[k].w, b: K.LINES[k].b, color: COLS[i], width: 2.6, num: String(i + 1) })), region: K.inRevier, judge: p => K.inRevier(p) ? 1 : 0 });
     tmp.draw();
     const img2 = tmp.el.querySelector('canvas').toDataURL('image/png');
     tmp.el.remove();
@@ -714,34 +682,33 @@
       Ein Neuron bekommt zwei Eingänge: x₁ = km nach Osten, x₂ = km nach Norden. Es rechnet <b>z = x₁·w₁ + x₂·w₂ + b</b> und feuert („Revier“), wenn z &gt; 0 ist.</p>
       <img src="${img1}" alt="Karte mit Kameras">
       <h2>1 · Ein Neuron prüft Kameras</h2>
-      <p>Janas Neuron: w₁ = 1, w₂ = 1, b = −8. Berechne z für die Kameras A (3|3), B (5|5) und C (3|5). Feuert das Neuron? Hat die Kamera wirklich eine Katze gesehen (▲)?</p>
+      <p>Janas Neuron: w₁ = 1, w₂ = 1, b = −8. Berechne z für die Kameras A (6|4), B (2|2) und C (4|4). Feuert das Neuron? Hat die Kamera wirklich eine Katze gesehen (▲)?</p>
       <table><tr><th>Kamera</th><th>Rechnung</th><th>z</th><th>feuert?</th><th>richtig?</th></tr>${['A', 'B', 'C'].map(line).join('')}</table>
       </section><section class="sheet">
       <h2>2 · Die Grenzen finden</h2>
-      <p>Zeichne mit dem Lineal <b>drei Geraden</b> ein, die die Dreiecke von den Kreisen trennen (eine im Westen, eine im Nordosten, eine im Südosten).
+      <p>Zeichne mit dem Lineal <b>drei Geraden</b> ein, die die Dreiecke von den Kreisen trennen (eine im Süden, eine im Nordwesten, eine im Nordosten).
       Wähle auf jeder Geraden zwei Gitterpunkte P und Q.</p>
       <p class="tip"><b>So geht's:</b> Gerade x₂ = m·x₁ + n mit m = (q₂ − p₂) : (q₁ − p₁). Liegt das Revier <b>oberhalb</b> der Geraden:
       w₁ = −m, w₂ = 1, b = −n. Liegt es <b>unterhalb</b>: w₁ = m, w₂ = −1, b = n (denn mit w₂ &gt; 0 wird z nach oben hin größer).</p>
-      <table><tr><th>Perzeptron</th><th>P</th><th>Q</th><th>m und n</th><th>w₁ · w₂ · b</th></tr>${['1 (Westen)', '2 (Nordosten)', '3 (Südosten)'].map(line).join('')}</table>
+      <table><tr><th>Perzeptron</th><th>P</th><th>Q</th><th>m und n</th><th>w₁ · w₂ · b</th></tr>${['1 (Süden)', '2 (Nordwesten)', '3 (Nordosten)'].map(line).join('')}</table>
       <h2>3 · Der Ausgang</h2>
       <p>Das Ausgangsneuron bekommt von jedem der drei Perzeptrons 0 oder 1, alle Gewichte sind 1. Es soll nur feuern, wenn <b>alle drei</b> 1 sagen.
       Welchen Bias b braucht es? Begründe mit einer Tabelle (Summe der Eingänge 0, 1, 2, 3).</p>
       <div class="lines"></div>
       <h2>4 · Zum Nachdenken</h2>
-      <p>a) Jana stellt zwei neue Kameras in der Flussbiegung auf, bei (3|6) und (3|4). Beide sehen eine Katze. Was sagt dein Netz? Warum konnte es das nicht wissen – und wie reparierst du es?</p>
-      <p>b) Ein anderes Netz liegt bei allen Kameras richtig, auch bei einer Katze, die einmal durch den Fluss geschwommen ist. Ist es deshalb besser? Was passiert bei neuen Kameras?</p>
+      <p>a) Der echte Fluss ist leicht geschwungen, deine Gerade nicht. Wo könnte sich dein Netz irren, obwohl alle Kameras stimmen?</p>
+      <p>b) Drei neue Kameras im Revier sehen keine Katze, eine in der Stadt sieht eine. Kim will die Karte neu zeichnen, bis jede Kamera passt. Ist das eine gute Idee? Was passiert bei neuen Kameras?</p>
       <div class="lines"></div>
       </section><section class="sheet solution">
       <header><b>Lösung</b><span>(für die Lehrkraft)</span></header>
       <img src="${img2}" alt="Aufgelöste Karte">
       <p><b>1:</b> ${PROBE.map(pr => { const z = JANA.w[0] * pr.p[0] + JANA.w[1] * pr.p[1] + JANA.b, soll = K.ALL.find(c => eqP(c.p, pr.p)).soll; return `${pr.label}: z = ${pr.p[0]} + ${pr.p[1]} − 8 = ${num(z)} → ${z > 0 ? 'feuert' : 'feuert nicht' + (z === 0 ? ', denn 0 ist nicht größer als 0' : '')} (Kamera ${soll ? 'hat eine Katze gesehen' : 'hat keine Katze gesehen'} → ${fire(z) === soll ? 'richtig' : 'Janas Neuron irrt sich'})`; }).join(' · ')}.</p>
-      <p><b>2</b> (eine mögliche Lösung): Fluss durch (3|10) und (5|4): x₂ = −3x₁ + 19, Revier oberhalb → w₁ = 3, w₂ = 1, b = −19 ·
-      Landstraße durch (4|9) und (8|6): x₂ = −¾x₁ + 12, Revier unterhalb → w₁ = −¾, w₂ = −1, b = 12 ·
-      Stadtrand durch (3|0) und (6|2): x₂ = ⅔x₁ − 2, Revier oberhalb → w₁ = −⅔, w₂ = 1, b = 2. Andere Geraden sind richtig, wenn sie alle Kameras trennen.</p>
+      <p><b>2</b> (eine mögliche Lösung): Fluss durch (0|3) und (12|4): x₂ = 1/12·x₁ + 3, Revier oberhalb → w₁ = −1/12, w₂ = 1, b = −3 ·
+      Landstraße durch (0|2) und (3|6): x₂ = 4/3·x₁ + 2, Revier unterhalb → w₁ = 4/3, w₂ = −1, b = 2 ·
+      Stadtrand durch (8|6) und (10|3): x₂ = −3/2·x₁ + 18, Revier unterhalb → w₁ = −3/2, w₂ = −1, b = 18. Andere Geraden sind richtig, wenn sie alle Kameras trennen.</p>
       <p><b>3:</b> Summe 3 → feuern, Summe 2 → nicht: −3 &lt; b ≤ −2, z. B. b = −2,5.</p>
-      <p><b>4 a:</b> Das Netz sagt „kein Revier“ – in der Biegung stand vorher keine Kamera (Lücke in den Trainingsdaten), und eine Gerade kann keine Kurve. Reparatur: zwei Geraden für den Fluss,
-      z. B. x₂ = 2x₁ + 1 (w₁ = 2, w₂ = −1, b = 1) und x₂ = −¾x₁ + 5,5 (w₁ = ¾, w₂ = 1, b = −5,5), Ausgang mit vier Eingängen: b = −3,5 (siehe Karte oben). Das ist kein Overfitting: Die Biegung gibt es wirklich, das Netz wird auch bei neuen Kameras besser.<br>
-      <b>4 b:</b> Nein – Overfitting: Das Netz hat Ausreißer (Zufälle, Messfehler) auswendig gelernt und liegt bei neuen Kameras in deren Nähe falsch.</p></section>`;
+      <p><b>4 a:</b> In dem schmalen Streifen zwischen Gerade und Fluss (dort stand keine Kamera). Ein Netz ist nur so gut wie seine Daten – mehr Kameras oder mehr Geraden würden helfen.<br>
+      <b>4 b:</b> Nein – Overfitting: Die neue Karte hätte Zufälle und Messfehler (Akku leer, Busch, verlaufene Katze) auswendig gelernt und läge bei neuen Kameras in deren Nähe falsch.</p></section>`;
     document.documentElement.classList.add('rv-print-on');
     const done = () => { document.documentElement.classList.remove('rv-print-on'); window.removeEventListener('afterprint', done); };
     window.addEventListener('afterprint', done);
