@@ -8,7 +8,8 @@
 // Fake-Mail-Domain (<account>@<slug>.tablet-schulung.fake) benutzt
 // und muss lowercase, alphanumerisch mit optionalen Hyphens sein.
 //
-// Response: { ok: true, school: { id, slug, name } }
+// Response: { ok: true, school: { id, slug, name, active } }
+// (active muss mit, sonst zeigt der Schul-Umschalter bis zum Neuladen „inaktiv“)
 //
 // Env-Vars: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 // ══════════════════════════════════════════════════════════════
@@ -76,7 +77,7 @@ export default async function handler(req, res) {
   const { data: created, error: insErr } = await admin
     .from('schools')
     .insert({ slug, name, active: true })
-    .select('id, slug, name')
+    .select('id, slug, name, active')
     .maybeSingle();
   if (insErr) {
     if (insErr.code === '23505') {
