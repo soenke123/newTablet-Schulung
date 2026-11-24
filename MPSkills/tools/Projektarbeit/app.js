@@ -179,6 +179,10 @@ let tdOpen = false;         // … Auswahlliste offen?
 let hWho = null;            // Stundeneintrag: wer war dabei (null = noch nicht gewählt → ich)
 let hPhotos = [];           // … Fotos (data-URLs, höchstens 3)
 let reqFilter = 'all';
+// Angefangene Antworten der Lehrkraft je Antrag. Jede neue Fassung vom
+// Server zeichnet die Liste neu — ohne diesen Speicher wäre der getippte
+// Kommentar dann weg, bevor „Genehmigen“/„Ablehnen“ ihn mitnimmt.
+const reqAnswer = {};
 let phoneCol = 'doing';
 let goalTimer = null, goalDirty = false;
 let lastMode = null, lastGroup = null, pickTab = false;
@@ -1478,6 +1482,9 @@ function renderRequests() {
       </div>`;
     return;
   }
+  // Fokus und Cursor im Antwortfeld über das Neuzeichnen retten.
+  const fa = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.answer;
+  const sel = fa ? [document.activeElement.selectionStart, document.activeElement.selectionEnd] : null;
   $('#reqList').innerHTML = list.map(r => {
     const st = r.status || 'open';
     const rs = reqSt(r);
@@ -1489,7 +1496,7 @@ function renderRequests() {
     let foot = '';
     if (st === 'open' && PA.owner) {
       foot = `<div class="req-f">
-        <textarea data-answer="${esc(r.id)}" maxlength="1000" placeholder="Antwort an die Gruppe (freiwillig)"></textarea>
+        <textarea data-answer="${esc(r.id)}" maxlength="1000" placeholder="Antwort an die Gruppe (freiwillig)">${esc(reqAnswer[r.id] || '')}</textarea>
         <button class="btn danger" data-decide="rejected" data-id="${esc(r.id)}">Ablehnen</button>
         <button class="btn ok" data-decide="approved" data-id="${esc(r.id)}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg> Genehmigen</button>
@@ -1533,6 +1540,10 @@ function renderRequests() {
       ${foot}
     </div>`;
   }).join('');
+  if (fa) {
+    const ta = document.querySelector(`[data-answer="${CSS.escape(fa)}"]`);
+    if (ta) { ta.focus(); try { ta.setSelectionRange(sel[0], sel[1]); } catch (e) { /* egal */ } }
+  }
 }
 
 function openReq(id) {
@@ -1606,7 +1617,9 @@ function sectionOf(text, head, other) {
 function decide(id, status) {
   const r = PA.get('request', id); if (!r) return;
   const box = document.querySelector(`[data-answer="${CSS.escape(id)}"]`);
-  PA.put('request', id, Object.assign({}, r, { status, decision: box ? box.value.trim().slice(0, 1000) : '' }));
+  const text = String(box ? box.value : reqAnswer[id] || '').trim().slice(0, 1000);
+  PA.put('request', id, Object.assign({}, r, { status, decision: text }));
+  delete reqAnswer[id];
   toast(status === 'approved' ? 'Genehmigt' : 'Abgelehnt');
   renderAll();
 }
@@ -2113,6 +2126,7 @@ function wire() {
   // Kommentare
   $('#noteAdd').addEventListener('click', addNote);
   document.addEventListener('input', e => { const id = e.target.dataset && e.target.dataset.naskin; if (id) askDraft[id] = e.target.value; });
+  document.addEventListener('input', e => { const id = e.target.dataset && e.target.dataset.answer; if (id) reqAnswer[id] = e.target.value; });
   document.addEventListener('submit', e => {
     const f = e.target.closest && e.target.closest('[data-nask]');
     if (!f) return;
