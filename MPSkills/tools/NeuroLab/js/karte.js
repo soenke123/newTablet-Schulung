@@ -31,6 +31,7 @@
      pick     fn(p)  Gitterpunkt antippen (Punkte wählen)
      handles  {P, Q, color, onMove(P, Q)}  zwei ziehbare Punkte (rasten auf ganzen km ein) mit Gerade dazwischen
      tapCam   fn(p)  Kamera antippen
+     tapAny   fn(p)  irgendwo antippen (km, auf 0,1 gerundet; nach tapCam, statt pick)
      rings    [{p, r, color}]  gestrichelte Kreise (r in km)
      places   [{p, label, color, on}]  Ort ohne Kamera (Fähnchen mit Beschriftung)
      paths    [{pts, label, color, hot, on}]  Weg; hot(p) → 0|1 färbt Stücke im Revier gold
@@ -496,6 +497,13 @@
         const rad = Math.max(14, G.s * 0.4);
         const c = (opts.cams || []).find(cm => near(e, cm.p, rad));
         if (c) { e.preventDefault(); opts.tapCam(c.p); return; }
+      }
+      if (opts.tapAny) {
+        // irgendwo antippen: Ort in km (0,1 km genau), z. B. Lernen → Wildkatzen im Test
+        const r = cv.getBoundingClientRect();
+        const a = Math.round(G.iX(e.clientX - r.left) * 10) / 10, d = Math.round(G.iY(e.clientY - r.top) * 10) / 10;
+        if (a >= 0 && a <= 12 && d >= 0 && d <= 10) { e.preventDefault(); opts.tapAny([a, d]); }
+        return;
       }
       if (!opts.pick) return;
       const p = gridAt(e);

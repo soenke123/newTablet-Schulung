@@ -49,8 +49,32 @@ kennt noch die alte Startseite (v-rechnen, b-frei als Build/Run, sc-eigene) und 
 
 Lernen und Frei (Area `lernen`) haben jetzt dieselben drei Phasen: **Build** (Schichten/Neuronen, Typ; Gewicht an der Kante und Bias antippen = `openValuePop`,
 Feld mit − / + und Eintippen, keine Regler; `makePM`) · **Learn** (nur Training, Struktur gesperrt, Eingänge/Ausgänge vom Szenario) · **Test** (Eingaben mit
-`makePM`, Schritt 1). Kopf: `#btn-build/#btn-learn/#btn-run` (Run heißt „Test“). Kein Szenario-Menü mehr im Lernfenster; Wechsel nur über „Szenario wählen“
-(`start.js`: leaveArea + enterArea). Jedes Szenario hat sein Netz: `localStorage neuron-sim-v2-sc-<key>` (`scKey`, Frei = `custom`).
+`makePM`, Schritt 1). Kopf: `#btn-build/#btn-learn/#btn-run` (Run heißt „Test“). Kein Szenario-Menü im Lernfenster; Wechsel über die Knöpfe „Wechseln“
+(`start.js`: leaveArea + enterArea, siehe „Szenario-Karte“ unten). Jedes Szenario hat sein Netz: `localStorage neuron-sim-v2-sc-<key>` (`scKey`, Frei = `custom`).
+
+## Szenario-Karte und Ausgänge (24.11.2026, Sönke)
+
+- **Szenario-Karte = eigenes Fenster** (`renderScenCard`, `#scen-card` an `#network` wie das Lernfenster), unabhängig vom Lernfenster und
+  in **allen drei Phasen** (Build · Learn · Test), auch in „Frei“ (dort mit dem CSV-Hochladen). Kopf ziehen = verschieben, Griff unten rechts
+  `.sc-grip` = Größe (eigene Zeiger-Logik, CSS `resize` geht am iPad nicht), Lage/Größe in `state.learn.card {x, y, w, h}`; Vorgabe rechts,
+  im Learn links neben dem Lernfenster (`placeScenCard`, Breite je Szenario `CARD_W`). × = zu: sie fliegt hinter den **gelben Knopf
+  „Szenario · Name“** `#btn-scinfo` in der Kopfzeile (an der Stelle des alten „Szenario wählen“), dort wieder auf (`toggleScenCard`, ohne
+  Animation bei `data-motion="low"`/reduzierter Bewegung). Ein Szenario öffnen = Karte offen (`enterArea`, nicht im Schaufenster).
+  Offen/zu in `state.learn.infoPanelOpen` (alter Name bleibt). Der alte ◀/▶-Info-Kasten am Lernfenster ist weg.
+- **Szenario wechseln:** Knopf „Wechseln“ im Kopf der Karte (`.sc-switch`) und im Lernfenster neben dem Namen (`.learn-scen-switch`),
+  nur wenn `NLStart.canSwitch()` (Lernen, nicht Frei, nicht beim Ansehen eines gesendeten Netzes); öffnen `NLStart.showPicker()`.
+  `#btn-scen` gibt es nicht mehr.
+- **Testen über die Karte** (`testInputs`): Gatter = Tabellenzeile, Ziffer = Segment oder Beispielziffer, Zielscheibe = auf die Scheibe,
+  Greifvögel = ins Diagramm, Wildkatzen = auf die Karte (Kamera oder beliebiger Ort, `tapAny` in karte.js, 0,1 km). Aus Build/Learn heraus
+  wechselt das in den Test, während des Trainings nicht. Die Karte markiert die anliegende Eingabe (`updateScenCardMarks`: Zeile/Ziffer
+  `.is-cur`, Segmente, roter Punkt, Ring im Diagramm, Fadenkreuz `at` auf der Karte im Test).
+- **Bewertung an den AUSGÄNGEN, nicht am Neuron** (`updateOutSlots`): Wert = was das Neuron gerade liefert (auch im Test bei jeder
+  Eingabe), Soll = Trainingszeile mit genau diesen Eingaben, sonst aus der Regel (Zielscheibe `zielTarget`, Wildkatzen `NLKarte.inRevier`),
+  sonst „–“; Wert grün/rot zum Soll. Darunter Balken „x von n richtig“ über ALLE Daten (`outQuality`, gedrosselt ~7×/s), Rahmen nach Anteil
+  (`q-good` ≥ 95 % · `q-close` ≥ 75 % · `q-off` ≥ 50 % · `q-bad`). Richtig = Abstand zum Soll ≤ halbe Lücke zwischen den möglichen
+  Sollwerten, mindestens 5 % des Wertebereichs (`outTol`: 0/1 → 0,5 · Ziffer → 0,5 · Zielscheibe → 0,05). Das Wert-Kästchen am Neuron
+  zeigt nur noch den Wert, keine Fehlerfarbe.
+
 **Stufe 2 (Migration 0301, Prüfstand `supabase/tests/0301_neurolab_eingang.mjs`, Browser `tests/eingang.e2e.mjs`):** Schüler: Knopf `#btn-send`
 „An Lehrkraft senden“ nur in Learn/Test (`canSend`, Raum + Szenario) → RPC `nl_send(p_token, p_scenario, p_payload)`; Tabelle `nl_inbox` je Teilnehmer + Szenario
 eine Zeile (erneut senden überschreibt), Payload = `exportNet()` = `serializeState()` (Netz, Gewichte, Bias, Eingaben, Szenario, CSV-Daten), ≤ 300 KB, 400/Raum.
@@ -298,4 +322,4 @@ Eingabewerte; „Ausblenden“ nimmt die Leiste fürs Bildschirmfoto weg.
 `FOTOS=1` legt Bildschirmfotos in `tests/fotos/` ab (nicht einchecken).
 Schaufenster: `MPSkills/preview/neurolab.js` (klickt `.tile[data-id]`, `.tile-sub[data-open="n-typen"]`,
 `#scen-picker .tile[data-id]`, `.nn-step[data-step]`, `#btn-home`, `#btn-run`,
-`#learn-btn-start`/`-pause`, liest `#learn-loss-display` — diese ids nicht umbenennen).
+`#learn-btn-start`/`-pause`, liest `#learn-loss-display` — diese ids nicht umbenennen). Szenario-Karte: `#scen-card`, `#btn-scinfo`.

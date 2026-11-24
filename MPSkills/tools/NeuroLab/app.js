@@ -35,7 +35,8 @@ const state = {
     shuffledData:    [],
     panelX:        null,
     panelY:        null,
-    infoPanelOpen: true,
+    infoPanelOpen: true,     // Szenario-Karte offen (eigenes Fenster, gelber Knopf oben)
+    card:          null,     // { x, y, w, h } der Szenario-Karte, sonst Vorgabe
     topologyDirty: false,
     customData:     null,
     customError:    null,
@@ -2325,7 +2326,10 @@ function addLearnPanelFreeDrag(header) {
   header.addEventListener('pointercancel', () => { active = false; header.style.cursor = ''; });
 }
 
-// ── Learn group (wraps info panel + toggle + learn panel) ─────────────────
+// ── Learn group: nur noch das Lernfenster ─────────────────────────────────
+/* Die Szenario-Erklärung hing bis 24.11.2026 links am Lernfenster (◀/▶).
+   Jetzt ist sie ein eigenes Fenster (renderScenCard), unabhängig vom
+   Lernfenster und in allen drei Phasen da. */
 function renderLearnGroup() {
   const group = document.createElement('div');
   group.id = 'learn-group';
@@ -2333,40 +2337,262 @@ function renderLearnGroup() {
   const py = state.learn.panelY ?? 70;
   group.style.left = `${px}px`;
   group.style.top  = `${py}px`;
-
-  if (state.learn.scenario && state.learn.infoPanelOpen) {
-    group.appendChild(renderLearnInfoPanel());
-  }
-
-  if (state.learn.scenario) {
-    const toggleBtn = document.createElement('button');
-    toggleBtn.className = 'learn-info-toggle-btn';
-    toggleBtn.title = state.learn.infoPanelOpen ? 'Info einklappen' : 'Info ausklappen';
-    toggleBtn.textContent = state.learn.infoPanelOpen ? '◀' : '▶';
-    toggleBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      state.learn.infoPanelOpen = !state.learn.infoPanelOpen;
-      saveState();
-      render();
-    });
-    group.appendChild(toggleBtn);
-  }
-
   group.appendChild(renderLearnPanel());
   return group;
 }
 
-// ── Learn info panel ────────────────────────────────────────────────────────
-function renderLearnInfoPanel() {
-  const panel = document.createElement('div');
-  panel.id = 'learn-info-panel';
-  if (state.learn.scenario === 'gates') renderGatesInfo(panel);
-  else if (state.learn.scenario === 'seg7') renderSeg7Info(panel);
-  else if (state.learn.scenario === 'zielscheibe') renderZielscheibeInfo(panel);
-  else if (state.learn.scenario === 'voegel') renderVoegelInfo(panel);
-  else if (state.learn.scenario === 'wildkatzen') renderKatzeInfo(panel);
-  else if (state.learn.scenario === 'custom') renderCustomDataInfo(panel);
-  return panel;
+/* ── Szenario-Karte (24.11.2026, Sönke) ──
+   Eigenes Fenster am Feld (wie das Lernfenster an #network, nicht an der
+   Tafel): Kopf ziehen = verschieben, Griff unten rechts = Größe, × = zu.
+   Zu fliegt sie hinter den gelben Knopf „Szenario“ in der Kopfzeile, dort
+   öffnet man sie wieder. Beim Öffnen eines Szenarios ist sie offen.
+   Im Test (und von Build/Learn aus: wechselt in den Test) lassen sich über
+   die Karte Eingaben machen: Tabellenzeile, Segment, Ziffer, Zielscheibe,
+   Diagramm, Karte. Lage und Größe: state.learn.card. */
+const CARD_W = { gates: 290, seg7: 260, zielscheibe: 280, voegel: 340, wildkatzen: 360, custom: 300 };
+const CARD_TAP = { gates: 'Zeile antippen', seg7: 'Segment oder Ziffer antippen', zielscheibe: 'Auf die Scheibe tippen', voegel: 'Ins Diagramm tippen', wildkatzen: 'Auf die Karte tippen' };
+function scenName(key) { const e = SCENARIO_LIST.find(x => x.key === key); return e ? e.name : ''; }
+function canSwitchScenario() { return !!(window.NLStart && window.NLStart.canSwitch && window.NLStart.canSwitch()); }
+function openScenPicker() { stopTraining(); if (window.NLStart && window.NLStart.showPicker) window.NLStart.showPicker(); }
+const lowMotion = () => !!((window.LWMotion && window.LWMotion.low)
+  || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches));
+function netTop() { const n = document.getElementById('network'); return n ? n.getBoundingClientRect().top : 56; }
+
+function renderScenCard() {
+  const key = state.learn.scenario;
+  const card = document.createElement('div');
+  card.id = 'scen-card';
+  card.className = 'scen-card-win sc-' + key;
+  const head = document.createElement('div');
+  head.className = 'sc-head';
+  head.innerHTML = `<span class="sc-kicker">Szenario</span><b class="sc-title">${esc(scenName(key))}</b>`;
+  if (canSwitchScenario()) {
+    const sw = document.createElement('button');
+    sw.type = 'button'; sw.className = 'sc-switch'; sw.textContent = 'Wechseln';
+    sw.title = 'Anderes Szenario wählen';
+    sw.addEventListener('click', e => { e.stopPropagation(); openScenPicker(); });
+    head.appendChild(sw);
+  }
+  const x = document.createElement('button');
+  x.type = 'button'; x.className = 'sc-close'; x.title = 'Karte schließen (oben bei „Szenario“ wieder öffnen)'; x.textContent = '×';
+  x.addEventListener('click', e => { e.stopPropagation(); toggleScenCard(false); });
+  head.appendChild(x);
+  card.appendChild(head);
+  addScenCardDrag(card, head);
+
+  const body = document.createElement('div');
+  body.className = 'sc-body';
+  if (key === 'gates') renderGatesInfo(body);
+  else if (key === 'seg7') renderSeg7Info(body);
+  else if (key === 'zielscheibe') renderZielscheibeInfo(body);
+  else if (key === 'voegel') renderVoegelInfo(body);
+  else if (key === 'wildkatzen') renderKatzeInfo(body);
+  else if (key === 'custom') renderCustomDataInfo(body);
+  // Den Namen trägt der Kopf; die alte Überschrift im Inhalt fällt weg
+  const t0 = body.querySelector('.learn-info-title');
+  if (t0) t0.remove();
+  card.appendChild(body);
+  if (CARD_TAP[key]) {
+    const hint = document.createElement('div');
+    hint.className = 'sc-testhint' + (state.phase === 'run' ? ' on' : '');
+    hint.textContent = state.phase === 'run' ? `Test: ${CARD_TAP[key]} = Eingabe fürs Netz` : `${CARD_TAP[key]} = im Test ausprobieren`;
+    card.appendChild(hint);
+  }
+  const grip = document.createElement('div');
+  grip.className = 'sc-grip';
+  grip.title = 'Größe ändern';
+  card.appendChild(grip);
+  addScenCardResize(card, grip);
+  return card;
+}
+
+// Lage und Größe: gemerkt oder Vorgabe (rechts, im Lernen links neben dem Lernfenster), nie über den Rand
+function placeScenCard(card) {
+  const M = 8, W = window.innerWidth, H = window.innerHeight, top = netTop() + 6;
+  const c = state.learn.card || {};
+  const w = Math.max(220, Math.min(c.w || CARD_W[state.learn.scenario] || 290, W - 2 * M));
+  card.style.width = `${w}px`;
+  const maxH = H - top - M;
+  if (c.h) card.style.height = `${Math.max(140, Math.min(c.h, maxH))}px`;
+  else { card.style.height = ''; card.style.maxHeight = `${Math.max(140, maxH)}px`; }
+  const lg = document.getElementById('learn-group');
+  const lgW = lg ? lg.offsetWidth + 12 : 0;
+  let x = c.x ?? (W - w - 12 - lgW);
+  let y = c.y ?? top + 6;
+  const h = card.offsetHeight;
+  x = Math.max(M, Math.min(x, W - w - M));
+  y = Math.max(top, Math.min(y, H - h - M));
+  card.style.left = `${x}px`;
+  card.style.top  = `${y}px`;
+}
+function rememberCard(card, size) {
+  const c = Object.assign({}, state.learn.card || {});
+  c.x = parseFloat(card.style.left); c.y = parseFloat(card.style.top);
+  if (size) { c.w = card.offsetWidth; c.h = card.offsetHeight; }
+  state.learn.card = c;
+}
+function addScenCardDrag(card, head) {
+  let on = false, sx, sy, cx, cy;
+  head.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    const r = card.getBoundingClientRect();
+    on = true; sx = e.clientX; sy = e.clientY; cx = r.left; cy = r.top;
+    try { head.setPointerCapture(e.pointerId); } catch (x) { /* egal */ }
+    card.classList.add('is-moving');
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', e => {
+    if (!on) return;
+    state.learn.card = Object.assign({}, state.learn.card || {}, { x: cx + e.clientX - sx, y: cy + e.clientY - sy });
+    placeScenCard(card);
+  });
+  const end = () => { if (!on) return; on = false; card.classList.remove('is-moving'); rememberCard(card, false); saveState(); };
+  head.addEventListener('pointerup', end);
+  head.addEventListener('pointercancel', end);
+}
+function addScenCardResize(card, grip) {
+  let on = false, sx, sy, w0, h0;
+  grip.addEventListener('pointerdown', e => {
+    on = true; sx = e.clientX; sy = e.clientY; w0 = card.offsetWidth; h0 = card.offsetHeight;
+    try { grip.setPointerCapture(e.pointerId); } catch (x) { /* egal */ }
+    card.classList.add('is-moving');
+    e.preventDefault(); e.stopPropagation();
+  });
+  grip.addEventListener('pointermove', e => {
+    if (!on) return;
+    const r = card.getBoundingClientRect();
+    const w = Math.max(220, Math.min(w0 + e.clientX - sx, window.innerWidth - r.left - 8));
+    const h = Math.max(140, Math.min(h0 + e.clientY - sy, window.innerHeight - r.top - 8));
+    card.style.width = `${w}px`; card.style.height = `${h}px`; card.style.maxHeight = '';
+  });
+  const end = () => {
+    if (!on) return; on = false; card.classList.remove('is-moving');
+    rememberCard(card, true); saveState();
+    // Diagramme/Karte passen sich an die neue Breite an
+    updateVoegelPlot(true); updateKatzePlot(true);
+  };
+  grip.addEventListener('pointerup', end);
+  grip.addEventListener('pointercancel', end);
+}
+// Öffnen/Schließen: die Karte fliegt aus dem gelben Knopf heraus bzw. hinter ihn
+function toggleScenCard(open) {
+  const btn = document.getElementById('btn-scinfo');
+  const card = document.getElementById('scen-card');
+  const fly = (el, toBtn) => {
+    if (!btn || !el || lowMotion() || !el.animate) return null;
+    const b = btn.getBoundingClientRect(), c = el.getBoundingClientRect();
+    const dx = b.left + b.width / 2 - (c.left + c.width / 2), dy = b.top + b.height / 2 - (c.top + c.height / 2);
+    const away = { transform: `translate(${dx}px, ${dy}px) scale(0.06)`, opacity: 0 }, here = { transform: 'none', opacity: 1 };
+    return el.animate(toBtn ? [here, away] : [away, here], { duration: 300, easing: toBtn ? 'cubic-bezier(.5,0,.8,.4)' : 'cubic-bezier(.2,.7,.3,1)' });
+  };
+  const bump = () => { if (btn && !lowMotion() && btn.animate) btn.animate([{ transform: 'scale(1)' }, { transform: 'scale(1.12)' }, { transform: 'scale(1)' }], { duration: 260, delay: 230 }); };
+  state.learn.infoPanelOpen = !!open;
+  saveState();
+  if (!open) {
+    const a = fly(card, true);
+    if (a) { card.style.pointerEvents = 'none'; bump(); a.onfinish = () => { card.remove(); renderHeader(); }; }
+    else { if (card) card.remove(); renderHeader(); }
+    return;
+  }
+  render();
+  fly(document.getElementById('scen-card'), false);
+}
+
+/* ── Testen über die Karte ──
+   Eine Eingabe aus der Karte geht ans Netz; aus Build/Learn heraus wechselt
+   NeuroLab dafür in den Test. Während das Netz trainiert, nicht. */
+function testInputs(vals) {
+  if (state.learn.isTraining) return;
+  vals.forEach((v, i) => { if (i < state.numInputs) state.inputs[i] = Math.round(v * 1000) / 1000; });
+  if (state.phase !== 'run') { stopTraining(); state.phase = 'run'; }
+  render();
+}
+const sameInputs = (a, b) => a.length >= state.numInputs && b.length >= state.numInputs
+  && Array.from({ length: state.numInputs }, (_, i) => Math.abs((a[i] ?? 0) - (b[i] ?? 0)) < 1e-6).every(Boolean);
+// Sollwerte zu den gerade anliegenden Eingaben: Trainingszeile, sonst (wo es geht) aus der Regel des Szenarios
+function targetsForInputs(inp) {
+  const ls = state.learn.lastSample;
+  if (ls && ls.targets && ls.targets.length && sameInputs(inp, ls.inputs)) return ls.targets;
+  const sc = getScenarioData();
+  if (!sc) return null;
+  const row = sc.data.find(d => sameInputs(inp, d.inputs));
+  if (row) return row.targets;
+  if (state.learn.scenario === 'zielscheibe') return [zielTarget(inp[0], inp[1])];
+  if (state.learn.scenario === 'wildkatzen' && window.NLKarte) return [window.NLKarte.inRevier(katzeKm(inp)) ? 1 : 0];
+  return null;
+}
+const katzeKm = inp => [(inp[0] ?? 0) * 6 + 6, (inp[1] ?? 0) * 5 + 5];
+function zielTarget(nx, ny) {
+  const r = Math.sqrt(nx * nx + ny * ny);
+  if (r > 1.0) return 0;
+  if (r <= 0.1) return 1.0;
+  const norm = ((Math.atan2(ny, nx) * 180 / Math.PI + 90) % 360 + 360) % 360;
+  return [0.1, 0.2, 0.3, 0.4, 0.5][Math.min(Math.floor(norm / 72), 4)];
+}
+
+/* ── Wie gut ist das Netz? – an den AUSGÄNGEN ──
+   Je Ausgang: wie viele Datenzeilen das Netz „richtig“ trifft. Richtig =
+   näher am Soll als die halbe Lücke zwischen zwei möglichen Sollwerten
+   (0/1 → 0,5 · Ziffern 0–9 → 0,5 · Zielscheibe 0,1er-Schritte → 0,05),
+   mindestens 5 % des Wertebereichs. Gerechnet höchstens ~7× je Sekunde. */
+const tolCache = {};
+function outTol(sc, k) {
+  const id = (state.learn.scenario || '') + ':' + sc.data.length + ':' + k;
+  if (tolCache[id] !== undefined) return tolCache[id];
+  const vals = [...new Set(sc.data.map(d => d.targets[k] ?? 0))].sort((a, b) => a - b);
+  const range = vals.length > 1 ? vals[vals.length - 1] - vals[0] : Math.max(1, Math.abs(vals[0] || 0));
+  let gap = Infinity;
+  for (let i = 1; i < vals.length; i++) gap = Math.min(gap, vals[i] - vals[i - 1]);
+  const tol = Math.max(isFinite(gap) ? gap / 2 : range * 0.5, range * 0.05);
+  return (tolCache[id] = tol);
+}
+let outQ = { t: 0, acc: [] };
+function outQuality(force) {
+  const sc = getScenarioData();
+  if (!sc || !sc.data || !sc.data.length || !shapeMatchesScenario()) { outQ = { t: 0, acc: [] }; return outQ.acc; }
+  const now = performance.now();
+  if (!force && now - outQ.t < 150) return outQ.acc;
+  const n = state.outputLabels.length, right = new Array(n).fill(0);
+  const linked = new Set(getOutputNeurons().map(o => o.t));
+  const tol = Array.from({ length: n }, (_, k) => outTol(sc, k));
+  for (const d of sc.data) {
+    const p = predictAt(d.inputs);
+    for (let k = 0; k < n; k++) if (linked.has(k) && Math.abs((p[k] ?? 0) - (d.targets[k] ?? 0)) <= tol[k]) right[k]++;
+  }
+  outQ = { t: now, acc: right.map((r, k) => (linked.has(k) ? { r, n: sc.data.length } : null)) };
+  return outQ.acc;
+}
+const qClass = a => (!a ? '' : a.r / a.n >= 0.95 ? 'q-good' : a.r / a.n >= 0.75 ? 'q-close' : a.r / a.n >= 0.5 ? 'q-off' : 'q-bad');
+// Ausgänge auffrischen: Wert = was das Neuron JETZT liefert, Soll zur Eingabe, Treffer über alle Daten
+function updateOutSlots(force) {
+  const slots = document.querySelectorAll('.out-slot[data-slot]');
+  if (!slots.length) return;
+  const tg = targetsForInputs(state.inputs);
+  const acc = outQuality(force);
+  slots.forEach(slot => {
+    const t = +slot.dataset.slot, m = state.outMap[t];
+    const valEl = slot.querySelector('[data-slot-val]'), tgtEl = slot.querySelector('[data-target-idx]');
+    const v = m && state.layers[m.li] ? computeNeuronOutput(state.layers[m.li].neurons[m.ni], getLayerInputs(m.li)).y : undefined;
+    const soll = tg ? tg[t] : undefined;
+    if (valEl) {
+      valEl.textContent = v !== undefined ? fmtV(v) : '–';
+      valEl.className = '';
+      const sc = getScenarioData();
+      if (v !== undefined && soll !== undefined && sc) valEl.className = Math.abs(v - soll) <= outTol(sc, t) ? 'v-ok' : 'v-no';
+    }
+    if (tgtEl) tgtEl.textContent = soll !== undefined ? fmtV(soll) : '–';
+    const a = acc[t];
+    slot.classList.remove('q-good', 'q-close', 'q-off', 'q-bad');
+    if (a) slot.classList.add(qClass(a));
+    const q = slot.querySelector('.out-q');
+    if (q) {
+      q.hidden = !a;
+      if (a) {
+        q.querySelector('.out-qbar i').style.width = `${Math.round(a.r / a.n * 100)}%`;
+        q.querySelector('.out-qtxt').innerHTML = `<b>${a.r} von ${a.n}</b> richtig`;
+      }
+    }
+  });
 }
 
 function renderGatesInfo(panel) {
@@ -2392,16 +2618,13 @@ function renderGatesInfo(panel) {
     panel.appendChild(row);
   });
 
+  // Zeile antippen = diese Eingabe testen (testInputs); die anliegende Zeile ist markiert
   const table = document.createElement('table');
-  table.className = 'learn-info-table';
+  table.className = 'learn-info-table sc-tap-table';
   table.innerHTML = `
     <thead><tr><th>A</th><th>B</th><th>AND</th><th>OR</th><th>¬A</th><th>XOR</th></tr></thead>
-    <tbody>
-      <tr><td>0</td><td>0</td><td>0</td><td>0</td><td>1</td><td>0</td></tr>
-      <tr><td>0</td><td>1</td><td>0</td><td>1</td><td>1</td><td>1</td></tr>
-      <tr><td>1</td><td>0</td><td>0</td><td>1</td><td>0</td><td>1</td></tr>
-      <tr><td>1</td><td>1</td><td>1</td><td>1</td><td>0</td><td>0</td></tr>
-    </tbody>`;
+    <tbody>${SCENARIOS.gates.data.map(d => `<tr data-in="${d.inputs.join(',')}">${d.inputs.concat(d.targets).map(v => `<td>${v}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  table.querySelectorAll('tr[data-in]').forEach(tr => tr.addEventListener('click', () => testInputs(tr.dataset.in.split(',').map(Number))));
   panel.appendChild(table);
 }
 
@@ -2420,9 +2643,7 @@ function renderSeg7Info(panel) {
   const svgNS = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('viewBox', '0 0 90 80');
-  svg.setAttribute('width', '90');
-  svg.setAttribute('height', '80');
-  svg.style.cssText = 'display:block;margin:4px auto';
+  svg.setAttribute('class', 'sc-seg7');
 
   const SEG_ON = '#10b981', SEG_OFF = '#dde1e7', LBL = '#64748b';
   const x0 = 22, y0 = 13, W = 36, H = 52, sw = 5;
@@ -2463,11 +2684,9 @@ function renderSeg7Info(panel) {
     hit.setAttribute('stroke-linecap', 'round');
     hit.style.cursor = 'pointer';
     hit.addEventListener('click', () => {
-      if (state.learn.isTraining) return;
-      state.inputs[idx] = state.inputs[idx] > 0.5 ? 0 : 1;
-      state.learn.lastSample  = { inputs: [...state.inputs.slice(0, 7)], targets: [] };
-      state.learn.lastTargets = [];
-      updateNeuronDisplays();
+      const v = state.inputs.slice(0, 7).map(x => (x > 0.5 ? 1 : 0));
+      v[idx] = v[idx] ? 0 : 1;
+      testInputs(v);
     });
     svg.appendChild(hit);
   };
@@ -2501,6 +2720,9 @@ function renderSeg7Info(panel) {
   digits.forEach((segs, digit) => {
     const item = document.createElement('div');
     item.className = 'learn-info-seg-item';
+    item.dataset.in = segs.join(',');
+    item.title = `Ziffer ${digit} testen`;
+    item.addEventListener('click', () => testInputs(segs));
 
     const ms = document.createElementNS(svgNS, 'svg');
     ms.setAttribute('viewBox', '0 0 20 30');
@@ -2552,8 +2774,8 @@ function renderZielscheibeInfo(panel) {
   panel.appendChild(desc);
 
   const svgWrap = document.createElement('div');
-  svgWrap.style.cssText = 'text-align:center;margin:6px 0';
-  svgWrap.innerHTML = `<svg width="200" height="200" viewBox="8 8 264 264" xmlns="http://www.w3.org/2000/svg">
+  svgWrap.className = 'sc-ziel';
+  svgWrap.innerHTML = `<svg viewBox="8 8 264 264" xmlns="http://www.w3.org/2000/svg">
   <path d="M 140,140 L 140,20 A 120,120 0 0,1 254.12,102.92 Z" fill="#0B3948" stroke="#082d39" stroke-width="1"/>
   <path d="M 140,140 L 254.12,102.92 A 120,120 0 0,1 210.55,237.08 Z" fill="#1B6B8A" stroke="#082d39" stroke-width="1"/>
   <path d="M 140,140 L 210.55,237.08 A 120,120 0 0,1 69.45,237.08 Z" fill="#2A9D8F" stroke="#082d39" stroke-width="1"/>
@@ -2573,25 +2795,11 @@ function renderZielscheibeInfo(panel) {
   const svgEl2 = svgWrap.querySelector('svg');
   svgEl2.style.cursor = 'crosshair';
   svgEl2.addEventListener('click', e => {
-    if (state.learn.isTraining) return;
     const rect = svgEl2.getBoundingClientRect();
-    // viewBox "8 8 264 264" → SVG-Koordinaten berechnen
+    // viewBox "8 8 264 264" → SVG-Koordinaten → normiert (Scheibenrand = ±1)
     const nx = ((e.clientX - rect.left) / rect.width  * 264 + 8 - 140) / 120;
     const ny = ((e.clientY - rect.top)  / rect.height * 264 + 8 - 140) / 120;
-    state.inputs[0] = nx;
-    state.inputs[1] = ny;
-    // Richtiges Ziel anhand der Scheibengeometrie berechnen
-    const r = Math.sqrt(nx * nx + ny * ny);
-    let trueTarget;
-    if      (r > 1.0)  trueTarget = 0;
-    else if (r <= 0.1) trueTarget = 1.0;
-    else {
-      const norm = ((Math.atan2(ny, nx) * 180 / Math.PI + 90) % 360 + 360) % 360;
-      trueTarget = [0.1, 0.2, 0.3, 0.4, 0.5][Math.min(Math.floor(norm / 72), 4)];
-    }
-    state.learn.lastTargets = [trueTarget];
-    state.learn.lastSample  = { inputs: [nx, ny], targets: [trueTarget] };
-    updateNeuronDisplays();
+    testInputs([nx, ny]);
   });
 
   panel.appendChild(svgWrap);
@@ -2628,6 +2836,14 @@ function renderVoegelInfo(panel) {
   cv.id = 'vogel-plot';
   cv.width = 440; cv.height = 300;
   cv.className = 'vogel-plot';
+  // Ins Diagramm tippen = einen Vogel mit diesen Maßen testen (Umkehrung von px/py in updateVoegelPlot)
+  cv.addEventListener('click', e => {
+    const r = cv.getBoundingClientRect(), W = cv.width, H = cv.height, L = 34, B = 26, T = 6, R = 6;
+    const X = (e.clientX - r.left) / r.width * W, Y = (e.clientY - r.top) / r.height * H;
+    const { x0, x1, y0, y1 } = VOGEL_BOX;
+    const fx = x0 + (X - L) / (W - L - R) * (x1 - x0), fy = y0 + (H - B - Y) / (H - B - T) * (y1 - y0);
+    testInputs([Math.round(Math.max(x0, Math.min(x1, fx)) * 100) / 100, Math.round(Math.max(y0, Math.min(y1, fy)) * 100) / 100]);
+  });
   panel.appendChild(cv);
 
   const acc = document.createElement('div');
@@ -2659,11 +2875,11 @@ function predictAt(inputs) {
 const argmax = a => a.reduce((m, v, i) => (v > a[m] ? i : m), 0);
 
 let vogelPlotT = 0;
-function updateVoegelPlot() {
+function updateVoegelPlot(force) {
   const cv = document.getElementById('vogel-plot');
   if (!cv || state.learn.scenario !== 'voegel' || !shapeMatchesScenario()) return;
   const now = performance.now();
-  if (now - vogelPlotT < 120) return;          // höchstens ~8× je Sekunde
+  if (!force && now - vogelPlotT < 120) return;          // höchstens ~8× je Sekunde
   vogelPlotT = now;
   const sc = SCENARIOS.voegel;
   const g = cv.getContext('2d');
@@ -2701,8 +2917,9 @@ function updateVoegelPlot() {
     g.fillStyle = VOGEL_ARTEN[art].color; g.fill();
     g.lineWidth = ok ? 0.8 : 2; g.strokeStyle = ok ? NLTheme.c('#fff', 2) : NLTheme.c('#111', 2); g.stroke();
   }
-  const ls = state.learn.lastSample;
-  if (ls && ls.inputs) {
+  // Ring = die Eingabe, die gerade am Netz anliegt (beim Training der aktuelle Vogel, im Test die eigene)
+  const ls = { inputs: state.inputs };
+  if (ls.inputs[0] >= x0 && ls.inputs[0] <= x1 && ls.inputs[1] >= y0 && ls.inputs[1] <= y1) {
     g.beginPath(); g.arc(px(ls.inputs[0]), py(ls.inputs[1]), 7, 0, 7);
     g.lineWidth = 2; g.strokeStyle = NLTheme.c('#111', 2); g.stroke();
   }
@@ -2752,7 +2969,10 @@ function renderKatzeInfo(panel) {
     panel.appendChild(n);
   }
   if (K) {
+    // Auf die Karte tippen (Kamera oder irgendein Ort) = diesen Ort testen
+    const tap = p => testInputs(katzeNorm(p));
     katzeMap = K.makeMap();
+    katzeMap.set({ tapAny: tap, tapCam: tap });   // makeMap(o) nimmt keine Startoptionen
     katzeMap.el.classList.add('katze-map');
     panel.appendChild(katzeMap.el);
   }
@@ -2791,7 +3011,7 @@ function updateKatzePlot(force) {
     lines.push({ w: [w1 / 6, w2 / 5], b: n.bias - w1 - w2, color: KATZE_COLS[i % KATZE_COLS.length], width: 2.4, num: String(i + 1) });
   });
   const cams = (state.learn.katzeTest ? KATZE.test : sc.data).map(r => ({ p: r.p, soll: r.targets[0], mark: !!r.out, markColor: '#8e44ad' }));
-  katzeMap.set({ cams, lines, region: judge, judge, reveal: 0 });
+  katzeMap.set({ cams, lines, region: judge, judge, reveal: 0, at: state.phase === 'run' ? katzeKm(state.inputs) : null });
   const a = katzeAcc(sc.data), t = katzeAcc(KATZE.test);
   const accEl = document.getElementById('katze-acc');
   if (accEl) accEl.innerHTML = `Alte Kameras richtig: <b>${Math.round(a * sc.data.length)} von ${sc.data.length}</b> · neue Kameras: <b>${Math.round(t * KATZE.test.length)} von ${KATZE.test.length}</b> (${Math.round(t * 100)} %)`
@@ -2988,6 +3208,14 @@ function renderLearnPanel() {
   scName.className = 'learn-scenario-name';
   scName.textContent = scOptions.find(([v]) => v === scSel.value)?.[1] ?? '–';
   scRow.append(scLabel, scName);
+  // Hier wieder wechseln können (Sönke 24.11.2026) – öffnet die Szenario-Wahl
+  if (canSwitchScenario()) {
+    const sw = document.createElement('button');
+    sw.type = 'button'; sw.className = 'learn-scen-switch'; sw.textContent = 'Wechseln';
+    sw.title = 'Anderes Szenario wählen';
+    sw.addEventListener('click', e => { e.stopPropagation(); openScenPicker(); });
+    scRow.appendChild(sw);
+  }
   panel.appendChild(scRow);
 
   const btnRow = document.createElement('div');
@@ -3445,6 +3673,7 @@ function serializeState() {
       panelX:        state.learn.panelX,
       panelY:        state.learn.panelY,
       infoPanelOpen: state.learn.infoPanelOpen,
+      card:           state.learn.card,
       customData:     state.learn.customData,
       customFileName: state.learn.customFileName,
       katzeNoisy:     !!state.learn.katzeNoisy,
@@ -3513,6 +3742,7 @@ function applyData(data) {
       state.learn.panelX        = data.learn.panelX ?? null;
       state.learn.panelY        = data.learn.panelY ?? null;
       state.learn.infoPanelOpen  = data.learn.infoPanelOpen ?? true;
+      state.learn.card           = data.learn.card && typeof data.learn.card === 'object' ? data.learn.card : null;
       state.learn.shuffledData   = [];
       state.learn.isTraining     = false;
       state.learn.intervalId     = null;
@@ -3577,56 +3807,37 @@ function updateNeuronDisplays() {
     document.querySelectorAll('.node-run-input-field').forEach((field, i) => {
       field.value = state.inputs[i] ?? 0;
     });
-    document.querySelectorAll('[data-slot-val]').forEach(el => {
-      const t = +el.dataset.slotVal;
-      const m = state.outMap[t];
-      if (!m) return;
-      const v = state.learn.lastPredictions[t];
-      el.textContent = v !== undefined ? fmtV(v) : fmtV(computeNeuronOutput(state.layers[m.li].neurons[m.ni], getLayerInputs(m.li)).y);
-    });
-    document.querySelectorAll('[data-target-idx]').forEach(el => {
-      const ni = parseInt(el.dataset.targetIdx);
-      const tgt = state.learn.lastTargets[ni];
-      el.textContent = tgt !== undefined ? fmtV(tgt) : '–';
-    });
-    // 7-Segment-Anzeige aktualisieren
-    if (state.learn.scenario === 'seg7') {
-      const inp = state.learn.lastSample ? state.learn.lastSample.inputs : state.inputs.slice(0, 7);
-      document.querySelectorAll('[data-seg-line]').forEach(line => {
-        const i = parseInt(line.dataset.segLine);
-        line.setAttribute('stroke', (inp[i] ?? 0) > 0.5 ? '#10b981' : '#dde1e7');
-      });
-    }
-    // Zielscheiben-Dot aktualisieren
-    const dot = document.querySelector('[data-ziel-dot]');
-    if (dot && state.learn.scenario === 'zielscheibe' && state.learn.lastSample) {
-      const [nx, ny] = state.learn.lastSample.inputs;
-      dot.setAttribute('cx', String(140 + nx * 120));
-      dot.setAttribute('cy', String(140 + ny * 120));
-      dot.setAttribute('display', '');
-    } else if (dot) {
-      dot.setAttribute('display', 'none');
-    }
-    // Output-Box-Farben live anpassen
-    const sc = getScenarioData();
-    const maxT = sc ? Math.max(...sc.data.flatMap(d => d.targets).map(Math.abs), 1) : 1;
-    document.querySelectorAll('[data-out-rect]').forEach(rect => {
-      const ti   = parseInt(rect.dataset.outRect);
-      const pred = state.learn.lastPredictions[ti];
-      const tgt  = state.learn.lastTargets[ti];
-      if (pred === undefined || tgt === undefined) return;
-      const { color, fill } = errColor(Math.abs(pred - tgt) / maxT);
-      rect.setAttribute('stroke', color);
-      const svgN = rect.closest('svg');
-      const fr = svgN.querySelector('[data-out-fill]');
-      if (fr) fr.setAttribute('fill', fill);
-      svgN.querySelectorAll(`.neuron-out-name[data-out-color-el="${ti}"]`).forEach(el => {
-        el.setAttribute('fill', color);
-      });
-    });
+  }
+  if (isLearnArea()) {
+    // Ausgänge: Wert, Soll und Treffer – hier zeigt sich, wie gut das Netz ist (nicht am Neuron)
+    updateOutSlots();
+    updateScenCardMarks();
   }
   redrawEdges();
   saveState();
+}
+
+/* Szenario-Karte: zeigt, welche Eingabe gerade am Netz anliegt
+   (Gatter-Zeile, Segmente, Punkt auf der Scheibe; Vögel/Karte zeichnen selbst). */
+function updateScenCardMarks() {
+  const card = document.getElementById('scen-card');
+  if (!card) return;
+  const inp = state.inputs;
+  card.querySelectorAll('[data-in]').forEach(el => el.classList.toggle('is-cur', sameInputs(inp, el.dataset.in.split(',').map(Number))));
+  card.querySelectorAll('[data-seg-line]').forEach(line => {
+    const i = parseInt(line.dataset.segLine);
+    line.setAttribute('stroke', (inp[i] ?? 0) > 0.5 ? '#10b981' : '#dde1e7');
+  });
+  const dot = card.querySelector('[data-ziel-dot]');
+  if (dot && state.learn.scenario === 'zielscheibe') {
+    const [nx, ny] = inp;
+    const show = Math.hypot(nx || 0, ny || 0) <= 1.08;
+    dot.setAttribute('cx', String(140 + (nx || 0) * 120));
+    dot.setAttribute('cy', String(140 + (ny || 0) * 120));
+    dot.setAttribute('display', show && (state.phase === 'run' || state.learn.lastSample) ? '' : 'none');
+  }
+  updateVoegelPlot();
+  updateKatzePlot();
 }
 
 // ── Ansicht: verschieben & zoomen ──────────────────────────────────────────
@@ -3757,7 +3968,7 @@ function zoomBy(k) {
    behalten ihre eigene Geste. */
 function isFieldBackground(t) {
   return !t.closest('.col-header, .neuron-card, .input-node-row, .out-slot, ' +
-                    '.data-table-col, #learn-group, .net-zoom, .edge-label-edit, .bias-edit, ' +
+                    '.data-table-col, #learn-group, #scen-card, .net-zoom, .edge-label-edit, .bias-edit, ' +
                     'button, input, select, textarea, a');
 }
 
@@ -3914,6 +4125,14 @@ function renderHeader() {
   bl.classList.toggle('active', state.phase === 'learn');
   const sb = document.getElementById('btn-send');
   sb.hidden = !(isLearnArea() && state.phase !== 'build' && window.NLStart && window.NLStart.canSend && window.NLStart.canSend());
+  // Gelber Knopf „Szenario“: öffnet/schließt die Szenario-Karte
+  const si = document.getElementById('btn-scinfo');
+  if (si) {
+    si.hidden = !(isLearnArea() && state.learn.scenario) || printMode;
+    si.classList.toggle('is-open', !!state.learn.infoPanelOpen);
+    const nm = document.getElementById('scinfo-name');
+    if (nm) nm.textContent = scenName(state.learn.scenario);
+  }
   const hints = { build: 'Netz bauen: Neuronen, Gewichte und Bias einstellen', run: 'Test: Eingaben ändern und das Ergebnis sehen', learn: 'Lernen: zusehen, wie das Netz mit den Daten trainiert' };
   document.getElementById('phase-hint-text').textContent = hints[state.phase] || '';
 }
@@ -3989,7 +4208,7 @@ function renderNetwork() {
   const net = document.getElementById('network');
   /* Nur Tafel und Lernpanel neu bauen — die Lupenknöpfe stehen fest im
      HTML und gehören zum Fenster, nicht zum Inhalt. */
-  net.querySelectorAll('#net-stage, #learn-group').forEach(el => el.remove());
+  net.querySelectorAll('#net-stage, #learn-group, #scen-card').forEach(el => el.remove());
 
   const stage = document.createElement('div');
   stage.id = 'net-stage';
@@ -4026,6 +4245,13 @@ function renderNetwork() {
     net.appendChild(group);
     placeLearnGroup(group);
   }
+  // Szenario-Karte: eigenes Fenster, in allen drei Phasen (zu = hinter dem gelben Knopf oben)
+  if (isLearnArea() && state.learn.scenario && state.learn.infoPanelOpen && !printMode) {
+    const card = renderScenCard();
+    net.appendChild(card);
+    placeScenCard(card);
+  }
+  if (isLearnArea()) { updateOutSlots(true); updateScenCardMarks(); }
   observeLayout(net, stage);
 }
 
@@ -4049,6 +4275,8 @@ function relayout() {
   redrawEdges();
   const group = document.getElementById('learn-group');
   if (group) placeLearnGroup(group);
+  const card = document.getElementById('scen-card');
+  if (card) placeScenCard(card);
 }
 function observeLayout(port, stage) {
   if (typeof ResizeObserver === 'undefined') return;
@@ -4114,7 +4342,8 @@ function placeLearnGroup(group) {
   let y = state.learn.panelY ?? 70;
   x = Math.max(M, Math.min(x, W - w - M));
   // So weit hoch, dass alles passt; ist es höher als der Bildschirm, scrollt es.
-  y = Math.max(M, Math.min(y, H - h - M));
+  // nicht unter die Kopfzeile (die bricht am Tablet um und wird höher)
+  y = Math.max(netTop() + 6, Math.min(y, H - h - M));
   group.style.left = `${x}px`;
   group.style.top  = `${y}px`;
   group.style.setProperty('--lg-max', `${Math.max(120, H - y - M)}px`);
@@ -4384,12 +4613,11 @@ function renderOutputsCol() {
     slot.className = 'out-slot' + (m ? ' on' : ' empty') + (outPick && outPick.slot === t ? ' picking' : '')
       + (outPick && outPick.li != null ? ' target' : '');
     slot.dataset.slot = t;
-    let pred = state.learn.lastPredictions[t];
-    if (pred === undefined && m) pred = computeNeuronOutput(state.layers[m.li].neurons[m.ni], getLayerInputs(m.li)).y;
-    const tgt  = state.learn.lastTargets[t];
+    // Wert/Soll/Treffer füllt updateOutSlots (gleich nach dem Aufbau und bei jeder Änderung)
     slot.innerHTML = `<b class="out-name">${esc(label)}</b>`
       + (m ? `<span class="out-from">aus Schicht ${m.li + 1} · Neuron ${m.ni + 1}</span>` : '<span class="out-from">kein Neuron – antippen</span>')
-      + `<span class="out-vals"><span>Wert <i data-slot-val="${t}">${m && pred !== undefined ? fmtV(pred) : '–'}</i></span><span>Soll <i data-target-idx="${t}">${tgt !== undefined ? fmtV(tgt) : '–'}</i></span></span>`
+      + `<span class="out-vals"><span>Wert <i data-slot-val="${t}">–</i></span><span>Soll <i data-target-idx="${t}">–</i></span></span>`
+      + `<span class="out-q" hidden title="So viele Datenzeilen trifft das Netz an diesem Ausgang"><span class="out-qbar"><i></i></span><span class="out-qtxt"></span></span>`
       + (m ? '<button class="out-x" title="Verbindung lösen">×</button>' : '');
     slot.addEventListener('pointerdown', e => e.stopPropagation());
     slot.addEventListener('click', e => {
@@ -4574,17 +4802,10 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
     return rect;
   };
   if (isRun) {
-    const termIdx = state.phase === 'learn' ? slotOf(layerIdx, neuronIdx) : -1;
-    let outColor = null, outFill = null;
-    if (termIdx >= 0) {
-      const pred = state.learn.lastPredictions[termIdx];
-      const tgt  = state.learn.lastTargets[termIdx];
-      if (pred !== undefined && tgt !== undefined) {
-        const sc   = getScenarioData();
-        const maxT = sc ? Math.max(...sc.data.flatMap(d => d.targets).map(Math.abs), 1) : 1;
-        ({ color: outColor, fill: outFill } = errColor(Math.abs(pred - tgt) / maxT));
-      }
-    }
+    /* Die Bewertung (richtig/falsch) steht seit 24.11.2026 an den AUSGÄNGEN
+       (updateOutSlots), nicht mehr am Neuron – das zeigt nur seinen Wert. */
+    const termIdx = isLearnArea() ? slotOf(layerIdx, neuronIdx) : -1;
+    const outColor = null, outFill = null;
     if (isLearnArea() && !layerIsHidden) {
       /* Lernen: Wert-Kästchen; hängt das Neuron an einem Ausgang, steht dessen
          Name darüber und der Rahmen zeigt den Fehler. Antippen = mit einem
@@ -4593,8 +4814,8 @@ function buildNeuronSVG(neuron, layerIdx, neuronIdx, inputs, z, y) {
       const rect = valueBox({
         cls: 'out-port' + (on ? ' is-linked' : ''),
         stroke: on ? outColor : null, fillColor: on ? outFill : null,
-        attrs: { style: 'cursor:pointer', ...(on ? { 'data-out-rect': String(termIdx) } : {}) },
-        txtAttrs: { 'data-out-display': '', ...(on ? { 'data-out-color-el': String(termIdx) } : {}) },
+        attrs: { style: 'cursor:pointer' },
+        txtAttrs: { 'data-out-display': '' },
       });
       const pick = e => {
         e.stopPropagation();
@@ -5388,6 +5609,8 @@ function enterArea(area, scenarioKey) {
   if (area === 'lernen') {
     if (!['build', 'learn', 'run'].includes(state.phase)) state.phase = 'build';
     if (scenarioKey && scenarioKey !== state.learn.scenario) selectScenario(scenarioKey);
+    // Szenario geöffnet = Karte offen (Sönke 24.11.2026)
+    if (scenarioKey && !DEMO) state.learn.infoPanelOpen = true;
     else if (state.learn.scenario && !scenarioAllowed(state.learn.scenario)) resetState();
     else if (state.learn.scenario && state.learn.scenario !== 'custom' && !shapeMatchesScenario()) applyScenarioInputsOnly(state.learn.scenario);
     // Eigene Daten: Info-Kasten mit dem Hochladen gleich offen (nicht im Schaufenster, da verdeckt er das Netz)
@@ -5437,6 +5660,11 @@ window.NLApp = {
   get state() { return state; },
   scenarios: () => SCENARIO_LIST.filter(e => e.key === 'custom' || SCENARIOS[e.key]),
 };
+
+document.getElementById('btn-scinfo').addEventListener('click', () => {
+  if (!state.area) return;
+  toggleScenCard(!(state.learn.infoPanelOpen && document.getElementById('scen-card')));
+});
 
 // ── Init ───────────────────────────────────────────────────────────────────
 /* Kein render() beim Laden: zuerst kommt die Startseite (js/start.js). */

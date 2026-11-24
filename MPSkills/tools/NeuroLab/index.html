@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="../../../fonts/katex-math-3f1a2b.css">
   <link rel="stylesheet" href="style.css?v=20261120k">
   <link rel="stylesheet" href="start.css?v=20261121b">
-  <link rel="stylesheet" href="netz.css?v=20261124a">
+  <link rel="stylesheet" href="netz.css?v=20261124b">
 
 <!-- Sichtbarer Bereich (Tastatur, Adressleiste) als CSS-Variablen. -->
 <script src="../../../viewport.js?v=20260820"></script>
@@ -48,7 +48,8 @@
       <button id="btn-learn" class="phase-btn" hidden>Learn</button>
       <button id="btn-run" class="phase-btn">Test</button>
     </div>
-    <button id="btn-scen" class="home-btn scen-btn lab-only" hidden title="Anderes Szenario wählen">Szenario wählen</button>
+    <!-- Gelber Knopf: Szenario-Karte auf/zu (app.js toggleScenCard); Szenario wechseln steht in der Karte und im Lernfenster -->
+    <button id="btn-scinfo" class="scinfo-btn lab-only" hidden title="Szenario-Karte öffnen oder schließen"><span>Szenario</span> <b id="scinfo-name"></b></button>
     <span class="phase-hint-text lab-only" id="phase-hint-text"></span>
     <button id="btn-send" class="send-btn lab-only" hidden title="Dein Netz an die Lehrkraft schicken">An Lehrkraft senden</button>
     <button id="btn-inbox" class="home-btn inbox-btn" hidden title="Netze, die Schüler geschickt haben">Eingang <span id="inbox-n" class="inbox-n" hidden></span></button>
@@ -100,11 +101,11 @@
 
   <script src="js/theme.js?v=20261120k"></script>
   <script src="js/daten.js?v=20261120k"></script>
-  <script src="js/karte.js?v=20261124a"></script>
-  <script src="app.js?v=20261124a"></script>
+  <script src="js/karte.js?v=20261124b"></script>
+  <script src="app.js?v=20261124b"></script>
   <script src="js/neuron.js?v=20261121b"></script>
   <script src="js/revier.js?v=20261124a"></script>
   <script src="js/rechnen.js?v=20261121b"></script>
-  <script src="js/start.js?v=20261124a"></script>
+  <script src="js/start.js?v=20261124b"></script>
 </body>
 </html>

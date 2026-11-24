@@ -68,7 +68,7 @@ ok('Eingang zeigt Name + Szenario', row.includes('Mia') && row.includes('Logik-G
 await T.locator('[data-show]').first().click();
 await T.locator('#network .col').first().waitFor();
 ok('Zeigen: Titel nennt Schüler + Szenario', (await T.locator('#area-title').textContent()).includes('Mia'));
-ok('Zeigen: Szenario-Wechsel-Knopf weg', !(await T.locator('#btn-scen').isVisible()));
+ok('Zeigen: Szenario-Wechsel-Knopf weg', await T.locator('.sc-switch, .learn-scen-switch').count() === 0);
 await T.locator('#btn-home').click();
 await T.locator('#btn-inbox').click();
 await T.locator('[data-del]').first().click();

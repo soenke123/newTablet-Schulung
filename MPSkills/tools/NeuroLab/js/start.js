@@ -137,7 +137,6 @@
     document.documentElement.dataset.view = v;
     $('area-title').textContent = title || '';
     $('btn-print').hidden = STUDENT;
-    $('btn-scen').hidden = v !== 'lab' || !where || where.area !== 'lernen' || where.id === 'b-frei';
     if (v !== 'lab') document.body.className = DEMO ? 'demo-mode' : '';
   }
 
@@ -265,7 +264,6 @@
     if (cl) cl.addEventListener('click', () => { box.hidden = true; });
   }
   function showPicker() { $('scen-picker').hidden = false; renderPicker(); }
-  $('btn-scen').addEventListener('click', showPicker);
 
   function open(id, restore) {
     if (!usable(id)) return;
@@ -390,7 +388,6 @@
     App.openShared(key, r.payload);
     where = { view: 'lab', area: 'lernen', id: key === 'custom' ? 'b-frei' : 'trainieren', sc: null, viewing: true };
     setView('lab', `${r.from || 'Schüler'} · ${scName(key)}`);
-    $('btn-scen').hidden = true;
     App.render();
   }
   if (TEACHER && HASROOM) {
@@ -424,7 +421,9 @@
     else if (where.view === 'lab') App.render();
   });
 
-  window.NLStart = { usable, goHome, open, canSend, get parts() { return parts; } };
+  // Szenario wechseln (Knöpfe in der Szenario-Karte und im Lernfenster, app.js): nur unter „Lernen“, nicht in „Frei“ und nicht beim Ansehen
+  const canSwitch = () => where.view === 'lab' && where.area === 'lernen' && where.id !== 'b-frei' && !where.viewing;
+  window.NLStart = { usable, goHome, open, canSend, canSwitch, showPicker, get parts() { return parts; } };
 
   setView('home');
   if (STUDENT) renderHome();            // erst einmal leer, bis die Freigaben da sind
