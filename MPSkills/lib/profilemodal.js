@@ -13,6 +13,10 @@
      3) Profilbild wählen (Katalog aus ../avatars.js, beide Welten)
      4) Passwort ändern
 
+   Seit 24.11.2026 ist das das EINZIGE Profil: Landing, GameHub und
+   Admin-Bereich verlinken auf MPSkills/profil.html?von=…, die alte
+   /profil.html leitet dorthin weiter.
+
    profil.html bleibt als Adresse bestehen (Lesezeichen, installierte
    Web-App) und zeichnet denselben Inhalt per MPProfile.renderPage()
    in die Seite statt in ein Fenster.
@@ -114,12 +118,49 @@
     }
   }
 
+  /* ─── Rolle ──────────────────────────────────────────────────
+     Was das Konto IST: Schüler:in · Lehrkraft · Schuladmin ·
+     Volladmin (is_superadmin). Ein offener oder abgelehnter Antrag
+     steht als zweites Schild daneben, die Einzelheiten im Satz
+     darunter (roleState). */
+  function kindHTML(s) {
+    const b = (cls, t) => `<span class="prof-badge prof-badge--${cls}">${esc(t)}</span>`;
+    if (s.is_superadmin) return b('ok', 'Volladmin');
+    if (s.is_admin)      return b('ok', 'Schuladmin');
+    if (s.teacher_status === 'approved') return b('ok', 'Lehrkraft');
+    const extra = s.teacher_status === 'pending'  ? ' ' + b('wait', 'Lehrkraft beantragt')
+                : s.teacher_status === 'rejected' ? ' ' + b('no', 'Antrag abgelehnt')
+                : '';
+    return b('none', 'Schüler:in') + extra;
+  }
+
+  /* ─── Tablet-Schulung ───────────────────────────────────────
+     Kurs und Season gehören zur Schulung (GameHub), nicht zu
+     MPSkills — deshalb ein eigener Rahmen, und nur, wenn es dort
+     etwas gibt: Wer nie in einem Kurs war, sieht ihn nicht. */
+  function schulungHTML(s) {
+    const season = s.season ?? 0;
+    if (!s.cluster_id && !season) return '';
+    return `
+      <section class="card">
+        <h2 class="card-h">Tablet-Schulung</h2>
+        <dl class="prof-info">
+          <dt>Kurs</dt>   <dd>${esc(s.cluster_name || 'Kein Kurs zugewiesen')}</dd>
+          <dt>Season</dt> <dd>${esc(season)}</dd>
+        </dl>
+      </section>`;
+  }
+
   /* ─── Inhalt ────────────────────────────────────────────────
      Fenster und Seite zeigen denselben Inhalt; nur der Rahmen
      (Überschrift, Schließen) ist verschieden. */
   function bodyHTML(s) {
     const role = roleState(s);
     const isAdm  = !!(s.is_admin || s.is_superadmin);
+    // Schüler:in aus einem Kurs der Schulung (GameHub) ohne Lehrkraft-
+    // Antrag: der Satz „Lehrkraft-Rolle noch nicht beantragt" wäre für
+    // sie nur Rauschen — seit das Profil auch aus dem GameHub kommt.
+    const pupil  = !isAdm && !!s.cluster_id && (!s.teacher_status || s.teacher_status === 'none');
     const mailOk = isAdm || s.teacher_status === 'approved' || s.teacher_status === 'pending';
     const avatarSrc = window.getAvatarUrl
       ? window.getAvatarUrl(s.avatar_id || window.DEFAULT_AVATAR_ID, '../')
@@ -142,7 +183,7 @@
             </dd>
             <dt>Accountname</dt><dd>${esc(s.account_name || '–')}</dd>
             <dt>Schule</dt>     <dd>${esc(s.school_name || '–')}</dd>
-            <dt>MPSkills</dt>   <dd><span class="prof-badge prof-badge--${role.cls}">${esc(role.label)}</span></dd>
+            <dt>Rolle</dt>      <dd>${kindHTML(s)}</dd>
           </dl>
         </div>
         <form class="prof-form prof-nameform" id="nameForm" autocomplete="off" novalidate hidden>
@@ -156,8 +197,9 @@
             <button type="button" class="btn" id="nameCancel">Abbrechen</button>
           </div>
         </form>
-        <p class="prof-note">${role.text}</p>
+        ${pupil ? '' : `<p class="prof-note">${role.text}</p>`}
       </section>
+      ${schulungHTML(s)}
       <section class="card">
         <h2 class="card-h">Passwort</h2>
         <form class="prof-form" id="pwForm" novalidate>
@@ -707,7 +749,7 @@
   // getipptes Passwort soll dabei nicht verschwinden.
   let shownSig = '';
   const sigOf = (s) => s ? [s.id, s.display_name, s.avatar_id, s.teacher_status,
-    s.is_admin, s.is_superadmin, s.school_name].join('|') : '';
+    s.is_admin, s.is_superadmin, s.school_name, s.cluster_name, s.season].join('|') : '';
   window.addEventListener('lernwelt:session-changed', () => {
     const s = window.getSessionUser?.() ?? null;
     const sig = sigOf(s);

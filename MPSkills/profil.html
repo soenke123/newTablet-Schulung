@@ -37,6 +37,7 @@
       <h1>Profil</h1>
       <p class="page-sub">Dein Konto gilt für MPSkills und die Tablet-Schulung gleichermaßen.</p>
     </div>
+    <a class="btn" id="backLink" href="index.html" hidden>‹ Zurück</a>
   </div>
   <div id="profHost">
     <p class="booting">Lade …</p>
@@ -57,10 +58,24 @@
 <script src="../session.js?v=20260817"></script>
 <script src="../avatars.js?v=20261120a"></script>
 <script src="lib/userbar.js?v=20261115a"></script>
-<script src="lib/profilemodal.js?v=20261115c"></script>
+<script src="lib/profilemodal.js?v=20261124b"></script>
 <script>
   /* Die Seite ist nur noch die Adresse — Inhalt und Verhalten stehen
      in lib/profilemodal.js, dasselbe wie das Fenster im Menü. */
+  /* Seit 24.11.2026 das EINE Profil für alle Bereiche: Landing,
+     GameHub und Admin verlinken hierher mit ?von=…, „Zurück“ führt
+     dorthin. Nur feste Ziele, nie eine Adresse aus der URL. */
+  (function () {
+    const BACK = {
+      schulung: ['../index.html',         '‹ Zurück zur Startseite'],
+      gamehub:  ['../GameHub/index.html', '‹ Zurück zum GameHub'],
+      admin:    ['../admin/index.html',   '‹ Zurück zum Admin-Bereich']
+    };
+    const b = BACK[new URLSearchParams(location.search).get('von')];
+    if (!b) return;
+    const a = document.getElementById('backLink');
+    a.href = b[0]; a.textContent = b[1]; a.hidden = false;
+  })();
   (async function () {
     window.MPUserBar?.mount();
     await (window.waitForSession?.() ?? Promise.resolve());
