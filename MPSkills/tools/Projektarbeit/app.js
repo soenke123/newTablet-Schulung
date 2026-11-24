@@ -10,7 +10,7 @@
                             die Gruppen. Personen per Drag & Drop (oder
                             Antippen → Ziel antippen) zu Gruppen ziehen,
                             Planungsräume eröffnen, rote Zahl = offene
-                            Anträge. Am Namen die Einwilligung (✗/✓/✓✓,
+                            Anträge. Am Namen die Einwilligung (✗/3/2/1 Personen,
                             antippen = weiter); wer auf einem Antrag für
                             heute steht, hat mit den anderen dieses
                             Antrags einen Rahmen (gelb = nicht genehmigt,
@@ -67,8 +67,9 @@
    BEGRÜNDUNG (neue Anträge starten mit diesen beiden Überschriften). Offen und abgelehnt darf die Gruppe ändern (abgelehnt =
    überarbeiten und neu abschicken), genehmigt ist fest. Am Reiter
    steht, wie es um den nächsten Antrag (heute oder später) steht.
-   Im Team trägt die Lehrkraft die Einwilligungen ein (Stufe 1/2) —
-   die Haken (✓/✓✓) sehen Schüler nur dort, nicht bei den Anträgen.
+   Im Team trägt die Lehrkraft die Einwilligungen ein (0302: ✗ oder
+   mit 3/2/1 Personen) — die Zeichen sehen Schüler nur dort, nicht bei
+   den Anträgen.
 
    Stunden (0202): Ein Eintrag sagt, WER dabei war (who) — eine oder
    mehrere Personen der Gruppe; wer einträgt, muss nicht dabei sein.
@@ -212,13 +213,31 @@ const readEst = v => Math.max(0, Math.min(99, Math.round((parseFloat(String(v ||
 const RQ_WAY = 'WEG und VERKEHRSMITTEL:', RQ_WHY = 'BEGRÜNDUNG:';
 const RQ_TEMPLATE = RQ_WAY + '\n\n\n' + RQ_WHY + '\n';
 const COLORS = { yellow: '#fdf3a8', blue: '#cbe7f7', green: '#cdebd2', pink: '#f8d4e0', lilac: '#dfd8f3' };
-// Einwilligung der Eltern, das Schulgelände zu verlassen (0201).
+// Einwilligung der Eltern, das Schulgelände zu verlassen (0201, seit
+// 0302 vier Stufen): mit wie vielen Personen das Kind unterwegs sein
+// darf. n steigt mit der Erlaubnis; min = so viele müssen mindestens
+// zusammen unterwegs sein (das Kind selbst mitgezählt).
+const PERSON_SVG = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7" r="4.5"/><path d="M3.5 22c0-4.7 3.8-8.5 8.5-8.5s8.5 3.8 8.5 8.5z"/></svg>';
 const CONSENT = [
-  { n: 0, mark: '✗',  short: 'keine',   nm: 'Keine Einwilligung' },
-  { n: 1, mark: '✓',  short: 'Stufe 1', nm: 'Stufe 1 · in Kleingruppen, z. B. zu jemandem nach Hause' },
-  { n: 2, mark: '✓✓', short: 'Stufe 2', nm: 'Stufe 2 · auch an fremde Orte' }
+  { n: 0, min: 0, mark: '✗',                 short: 'nicht erlaubt', nm: 'Nichts abgegeben / nicht erlaubt' },
+  { n: 1, min: 3, mark: '3' + PERSON_SVG,    short: '3 Personen',    nm: 'Darf mit 3 Personen unterwegs sein' },
+  { n: 2, min: 2, mark: '2' + PERSON_SVG,    short: '2 Personen',    nm: 'Darf mit 2 Personen unterwegs sein' },
+  { n: 3, min: 1, mark: '1' + PERSON_SVG,    short: '1 Person',      nm: 'Darf mit 1 Person unterwegs sein' }
 ];
 const consentOf = p => { const n = +((p && p.consent) || 0); return CONSENT[n] || CONSENT[0]; };
+// Wer auf einem Antrag mit k Personen steht, aber dafür keine
+// Einwilligung hat: keine abgegeben, oder die Gruppe ist zu klein.
+const consentGaps = list => {
+  const k = list.length;
+  return {
+    none: list.filter(p => !consentOf(p).n),
+    few:  list.filter(p => { const c = consentOf(p); return c.n && k < c.min; })
+  };
+};
+const gapText = g => [
+  g.none.length ? `Ohne Einwilligung: ${g.none.map(p => p.name).join(', ')}` : '',
+  g.few.length ? `Zu wenige Personen für: ${g.few.map(p => `${p.name} (nur mit ${consentOf(p).min})`).join(', ')}` : ''
+].filter(Boolean).join(' · ');
 // ov = in der Klassenübersicht: dort nur änderbar, solange oben
 // „Einwilligungen ändern“ aufgeschlossen ist (consentEdit).
 const cmark = (p, cyc, ov) => {
@@ -599,7 +618,7 @@ function renderOverview() {
     helpBox('ov', [
       ['people', 'Gruppen bilden', 'Eine Person aus <b>„Schüler ohne Gruppe“</b> auf eine andere ziehen = neue Gruppe, auf eine Gruppe = dazu. Am Tablet: antippen, dann das Ziel antippen.'],
       ['target', 'Planungsraum', 'Mit dem <b>Kompass</b> eröffnet ihr den Planungsraum — für eine Gruppe oder eine Einzelperson.'],
-      ['check', 'Einwilligungen', 'Über den Schülern <b>„Einwilligungen ändern“</b> aufschließen, dann <b>✗ / ✓ / ✓✓</b> am Namen antippen = nächste Stufe. <b>„SuS-Codes anzeigen“</b> zeigt dort stattdessen die persönlichen Codes.'],
+      ['check', 'Einwilligungen', 'Über den Schülern <b>„Einwilligungen ändern“</b> aufschließen, dann am Namen antippen = nächste Stufe: <b>✗</b> nicht erlaubt · <b>3 / 2 / 1</b> = darf mit so vielen Personen unterwegs sein. <b>„SuS-Codes anzeigen“</b> zeigt dort stattdessen die persönlichen Codes.'],
       ['cal', 'Wer ist heute weg?', 'Wer heute einen Antrag hat, steht im <b>Rahmen</b>: <b>gelb</b> = nicht genehmigt, <b>grün</b> = genehmigt. Die rote Zahl = offene Anträge.'],
       ['book', 'Tätigkeitsbuch', 'Rechts haltet ihr fest, <b>was in der Stunde los war</b> — „Neu“, dann je Gruppe schreiben. So setzt die nächste Lehrkraft an. Schüler sehen es nicht.']
     ]);
@@ -1490,8 +1509,8 @@ function renderRequests() {
     const rs = reqSt(r);
     const legacy = !r.date && !r.place;
     const who = (r.who || []).map(id => person(id) || { id, name: '?' });
-    // Die Haken der Einwilligung sehen Schüler im Team, nicht hier.
-    const noConsent = PA.owner ? who.filter(p => p.name !== '?' && !+(p.consent || 0)) : [];
+    // Die Einwilligungen sehen Schüler im Team, nicht hier.
+    const gaps = PA.owner ? gapText(consentGaps(who.filter(p => p.name !== '?'))) : '';
     const past = r.date && r.date < today;
     let foot = '';
     if (st === 'open' && PA.owner) {
@@ -1533,7 +1552,7 @@ function renderRequests() {
         <div class="req-row"><span class="k">Wer</span><span class="req-who">${who.length ? who.map(p =>
           `<span class="mate">${avatar(p, 22)}${esc(p.name)}${PA.owner ? ' ' + cmark(p, false) : ''}</span>`).join('') : '—'}</span></div>
         <div class="req-row"><span class="k">Plan</span><span class="req-plan">${esc(r.activity || '—')}</span></div>
-        ${noConsent.length && st !== 'approved' ? `<div class="req-warn">${ICO.warn} Ohne Einwilligung: ${esc(noConsent.map(p => p.name).join(', '))}</div>` : ''}
+        ${gaps && st !== 'approved' ? `<div class="req-warn">${ICO.warn} ${esc(gaps)}</div>` : ''}
       </div>`}
       ${st === 'open' && r.prevDecision ? `<div class="req-d prev"><span class="k">Vorher abgelehnt, weil</span>${esc(r.prevDecision)}</div>` : ''}
       ${st !== 'open' ? `<div class="req-d ${st === 'approved' ? 'ok' : 'no'}"><span class="k">Antwort der Lehrkraft${r.decidedAt ? ' · ' + esc(deAt(r.decidedAt)) : ''}</span>${esc(r.decision || (st === 'approved' ? 'Genehmigt.' : 'Abgelehnt.'))}</div>` : ''}
@@ -1569,12 +1588,13 @@ function renderReqWho() {
   // Ohne Haken: die Einwilligungen stehen im Reiter Team.
   $('#rqWho').innerHTML = gm.map(m => `<button type="button" data-rqwho="${esc(m.id)}" aria-pressed="${rqWho.includes(m.id)}">${avatar(m, 22)}${esc(m.name)}</button>`).join('')
     || '<span class="hint">Noch niemand in der Gruppe.</span>';
-  const miss = gm.filter(m => rqWho.includes(m.id) && !+(m.consent || 0));
+  const g = consentGaps(gm.filter(m => rqWho.includes(m.id)));
   const hint = $('#rqWhoHint');
-  hint.classList.toggle('warn', miss.length > 0);
-  hint.innerHTML = miss.length
-    ? `${ICO.warn}<span>Für ${esc(miss.map(m => m.name).join(', '))} liegt noch <b>keine Einwilligung</b> vor.</span>`
-    : 'Tippt alle an, die mitfahren.';
+  hint.classList.toggle('warn', g.none.length + g.few.length > 0);
+  const out = [];
+  if (g.none.length) out.push(`Für ${esc(g.none.map(m => m.name).join(', '))} liegt noch <b>keine Einwilligung</b> vor.`);
+  if (g.few.length) out.push(`${esc(g.few.map(m => m.name).join(', '))} ${g.few.length > 1 ? 'dürfen' : 'darf'} nur mit <b>mehr Personen</b> unterwegs sein (${esc(g.few.map(m => m.name + ': ' + consentOf(m).min).join(', '))}).`);
+  hint.innerHTML = out.length ? `${ICO.warn}<span>${out.join(' ')}</span>` : 'Tippt alle an, die mitfahren.';
 }
 function saveReq() {
   if (!canWrite()) return;
@@ -1930,7 +1950,7 @@ function rulesHtml() {
   <div class="cards3">
     <div class="excard alt">${ic('<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>')}
       <h3>Lernen am anderen Ort</h3>
-      <p>Ihr wollt für euer Projekt das <b>Schulgelände verlassen</b> — in die Bibliothek, zu jemandem nach Hause, zu einem Betrieb? Das geht nur mit einem <b>genehmigten Antrag</b>: Datum, wer mitfährt, Ziel mit Adresse, Weg und Verkehrsmittel, Begründung. Und nur, wenn eure Eltern eingewilligt haben (Stufe 1: in Kleingruppen, z. B. zu jemandem nach Hause · Stufe 2: auch an fremde Orte).</p></div>
+      <p>Ihr wollt für euer Projekt das <b>Schulgelände verlassen</b> — in die Bibliothek, zu jemandem nach Hause, zu einem Betrieb? Das geht nur mit einem <b>genehmigten Antrag</b>: Datum, wer mitfährt, Ziel mit Adresse, Weg und Verkehrsmittel, Begründung. Und nur, wenn eure Eltern eingewilligt haben — darin steht, mit wie vielen Personen ihr mindestens unterwegs sein müsst (3, 2 oder auch allein).</p></div>
     <div class="excard">${ic('<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M8 7h8M8 11h6"/>')}
       <h3>Quellen &amp; Urheberrecht</h3>
       <p>Was ihr aus Büchern, dem Internet oder von KI übernehmt, kennzeichnet ihr mit <b>Quelle</b>. Bilder nur, wenn ihr sie benutzen dürft — am besten eigene.</p></div>
@@ -2252,7 +2272,7 @@ function wire() {
       if (!PA.owner) return;
       if (b.dataset.ov && !consentEdit) { toast('Zum Ändern der Einwilligungen über den Schülern „Einwilligungen ändern“ antippen.'); return; }
       const p = person(b.dataset.cyc); if (!p) return;
-      setConsent(p.id, ((+p.consent || 0) + 1) % 3, true); return;
+      setConsent(p.id, ((+p.consent || 0) + 1) % CONSENT.length, true); return;
     }
     if ((b = t.closest('[data-codeshow]'))) {
       codeShow = !codeShow;

@@ -410,8 +410,8 @@
     [['p1', 'g1'], ['p2', 'g1'], ['p3', 'g1'], ['p4', 'g2'], ['p5', 'g2'], ['p6', 'g3'], ['p7', 'g3']]
       .forEach(([p, g]) => { people.find(x => x.id === p).group = g; });
     let seq = 3, rev = 1, rules = 'Abgabe der Dokumentation: Freitag in drei Wochen.\nPro Stunde trägt jede Person ihren Eintrag ins Stundenprotokoll ein.';
-    // Einwilligungen: Stufe 0 (keine) bis 2 (auch fremde Orte).
-    [2, 1, 2, 0, 1, 1, 2, 0, 1, 2, 0, 1].forEach((c, i) => { people[i].consent = c; });
+    // Einwilligungen: 0 (keine) bis 3 (mit 1 Person, 0302).
+    [3, 1, 2, 0, 1, 3, 2, 0, 1, 2, 0, 3].forEach((c, i) => { people[i].consent = c; });
     const store = { g1: {}, g2: {}, g3: {} };
     const put = (g, kind, id, data) => { store[g][kind + ':' + id] = { kind, id, v: 1, data }; };
 
@@ -713,7 +713,7 @@
       }
       if (fn === 'pa_room_consent') {
         const p = people.find(x => x.id === a.p_participant); if (!p) return { ok: false, error: 'not_found' };
-        if (![0, 1, 2].includes(a.p_level)) return { ok: false, error: 'invalid_input' };
+        if (![0, 1, 2, 3].includes(a.p_level)) return { ok: false, error: 'invalid_input' };
         p.consent = a.p_level; bump(); return { ok: true, consent: p.consent };
       }
       // 0203: Mail bei neuen Anträgen. Im Schaufenster wird nichts

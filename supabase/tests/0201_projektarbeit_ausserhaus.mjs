@@ -156,7 +156,9 @@ ok('4  Stundeneinträge gehören weiter dem Urheber',
 /* ══ 5. Einwilligung ═════════════════════════════════════════════ */
 ok('5  Stufe 2 für Kind 1', (await call(`pa_room_consent('PRJEKT', $1, 2)`, [P[1]])).ok);
 ok('5  Stufe 1 für Kind 6 (noch nie geöffnet)', (await call(`pa_room_consent('PRJEKT', $1, 1)`, [P[6]])).ok);
-ok('5  Stufe 3 gibt es nicht', (await call(`pa_room_consent('PRJEKT', $1, 3)`, [P[1]])).error === 'invalid_input');
+ok('5  Stufe 4 gibt es nicht (0302: 0–3)', (await call(`pa_room_consent('PRJEKT', $1, 4)`, [P[1]])).error === 'invalid_input');
+ok('5  Stufe 3 = mit 1 Person (0302)', (await call(`pa_room_consent('PRJEKT', $1, 3)`, [P[2]])).ok);
+await call(`pa_room_consent('PRJEKT', $1, 0)`, [P[2]]);
 let v = await view('t2');
 ok('5  die Gruppe sieht die Stufen ihrer Mitglieder',
    v.group.members.find(m => m.id === P[1]).consent === 2 && v.group.members.find(m => m.id === P[2]).consent === 0);

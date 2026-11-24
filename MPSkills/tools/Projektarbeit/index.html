@@ -327,11 +327,13 @@ body.dragging .lobby.empty,body.picking .lobby.empty{display:flex}
 .tl-sec .tl-h small{margin-left:auto;font-size:11px;color:var(--ink-3)}
 .tl-sec.gen .tl-h b{color:var(--petrol)}
 .tl-sec textarea{width:100%;min-height:64px;resize:none;overflow:hidden;line-height:1.5}
-.cmark{display:inline-grid;place-items:center;min-width:26px;height:22px;padding:0 5px;border-radius:99px;font-size:12px;font-weight:800;line-height:1;flex:none;border:1px solid;letter-spacing:-.05em}
+.cmark{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:22px;padding:0 5px;border-radius:99px;font-size:12px;font-weight:800;line-height:1;flex:none;border:1px solid;letter-spacing:-.05em}
 button.cmark{cursor:pointer}
 .cmark.c0{color:var(--st-block);background:#fbe9e6;border-color:#eac3bd}
 .cmark.c1{color:var(--st-done);background:#e3f2e8;border-color:#bcdcc8}
-.cmark.c2{color:#fff;background:var(--st-done);border-color:#205a38}
+.cmark.c2{color:#1d5a35;background:#b9e0c6;border-color:#86c29c}
+.cmark.c3{color:#fff;background:var(--st-done);border-color:#205a38}
+.cmark svg,.cseg button svg{margin-left:1px;flex:none}
 .bg-grey{color:#5f5b52;background:#e7e5e0}
 
 /* Ziel beim Ziehen */
@@ -714,7 +716,8 @@ body.goallock .rte-bar, body.goallock #goalAdd, body.goallock #goalImgs .x{opaci
 .cseg button:hover{background:#fff}
 .cseg button.c0[aria-pressed="true"]{background:#fbe9e6;border-color:var(--st-block);color:var(--st-block)}
 .cseg button.c1[aria-pressed="true"]{background:#e3f2e8;border-color:var(--st-done);color:var(--st-done)}
-.cseg button.c2[aria-pressed="true"]{background:var(--st-done);border-color:#205a38;color:#fff}
+.cseg button.c2[aria-pressed="true"]{background:#b9e0c6;border-color:#4f9a6b;color:#1d5a35}
+.cseg button.c3[aria-pressed="true"]{background:var(--st-done);border-color:#205a38;color:#fff}
 .cread{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink-2)}
 .mkey{font-family:'JetBrains Mono',ui-monospace,Menlo,monospace;font-size:13px;letter-spacing:.05em;color:var(--petrol)}
 
@@ -1041,7 +1044,7 @@ body.ro .postit,body.ro .pchip{cursor:default}
           <div class="lobby-list" id="lobbyList"></div>
         </div>
         <div class="ggrid" id="groupGrid"></div>
-        <p class="ov-legend"><span class="cmark c0">✗</span> keine Einwilligung · <span class="cmark c1">✓</span> Stufe 1 · <span class="cmark c2">✓✓</span> Stufe 2
+        <p class="ov-legend"><span class="cmark c0">✗</span> nicht erlaubt · darf unterwegs sein mit <span class="cmark c1">3</span> <span class="cmark c2">2</span> <span class="cmark c3">1</span> Personen
           <span class="sw open"></span> Antrag für heute, nicht genehmigt · <span class="sw ok"></span> genehmigt</p>
       </div>
       <aside class="panel tbook" id="tbook">
