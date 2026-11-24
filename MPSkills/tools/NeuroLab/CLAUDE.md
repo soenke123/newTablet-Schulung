@@ -114,6 +114,14 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      südlich) + rot (Katze) = 12, Schritt 2 dazu rosa (Katze) + blau (keine) = 24 (24.11.2026, Sönke: „da müssen ja nicht so viele sein“; vorher 19/44, `v: 6`). Muster: Fluss durch (0|3), (12|4): x₂ = 1/12·x₁ + 3
      (w = −1/12, 1, b = −3), Straße (4/3, −1, 2), Stadt (−3/2, −1, 18), Ausgang b = −2,5. Eine eigene Flussbiegungs-Aufgabe gab es am
      23.11.2026 kurz, Sönke wollte sie nicht.
+     **Aufgeräumt 24.11.2026 (Sönke):** Schritt 1 heißt **„Die erste Grenze“** (id bleibt `fluss`; dass es der Fluss ist, zeigt erst das
+     Aufdecken), Schritt 2 „Ein Jahr später: Wie weit reicht das Revier nach Norden?“ – Straße und Stadt werden vorher NICHT genannt.
+     Unter der Geraden keine Erklärung zu m und n mehr (`eqOf().sub` leer, nur bei senkrechter Geraden ein Satz). Zahlen im Neuron von
+     Schritt 1 **direkt eintippen** (`makeNeuron(m, { direct: true })` → Eingabefeld `.nw-num-in` statt Regler, Brüche gehen; Teil 1
+     unverändert mit Regler). Hilfe-Beispiel: Gerade · Alles nach links · Vergleichen als Gitter `.rv-hcmp` (umgestellte Gleichung und
+     z = w₁·x₁ + w₂·x₂ + b untereinander, Spalten aufeinander), Regel in zwei Zeilen. Kürzere Aufgabentexte. **Ausgang fest**
+     (`outFix(n)`: alle v = 1, b = 0,5 − n, also −2,5 bei drei), im Netz nur angezeigt (`.rv-vp.is-fix`, `.rv-obp.is-fix`), „Warum ist der
+     Ausgang fest?“ unter dem Netz; `S.s3.out` wird nicht mehr gelesen.
      **1 Der Fluss** (12 Kameras `YEAR1`, südlich des Flusses keine Katze): ① Die Kinder ziehen
      die Griffe **P und Q** auf der Karte (karte.js `handles`, rasten auf ganzen km ein); die **Funktionsgleichung**
      x₂ = m·x₁ + n steht sofort daneben (`eqOf`/`eqBox`, Brüche, senkrecht = x₁ = c). ② Umstellen → w₁, w₂, b im Neuron einstellen;
@@ -146,7 +154,12 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      rechnet den Ort vor (jedes Perzeptron z → 1/0, Ausgang); Karte bleibt in Schritt 3 zugedeckt, bis alle Pläne gefragt sind, dann
      „Karte aufdecken – hatte das Netz recht?“ (✓/✗ je Plan, am Grillplatz meist ✗) und Kasten „Was ein Netz kann – und was nicht“
      (nur so gut wie seine Daten; Verweis auf Lernen → Wildkatzen). Stand `S.s4 = {asked, route, sel, shown}`. Knopf **„Arbeitsblatt“** unten in
-     der Mitte (nicht Schüler): 3 Seiten (Karte ohne Landschaft + Aufgaben 1–4 + Lösungsseite; Kameras A (6|4), B (5|2), C (2|4); 4 b = Baugebiet/Grillplatz statt Kims Karte), `#rv-print` + `html.rv-print-on`.
+     der Mitte (nicht Schüler), seit 24.11.2026 **„andersherum“** (Sönke: nicht dieselben Aufgaben wie am Tablet): Seite 1 = festes Netz
+     `AB_NET` (x₁ x₂ → Perzeptron · ReLU · Linear → Perzeptron, Leitungen je Neuron farbig, SVG `abNetSVG`) für vier Eingaben A–D
+     durchrechnen (Tabelle z/y je Neuron + Ausgang; A ergibt z = 0); Seite 2 = drei Perzeptrons mit festen w, b (`AB_TRI`, Ausgang fest
+     wie im Revier) → a) Punkte Q₁ (4|4), Q₂ (8|6), Q₃ (2|6) prüfen und ins Gitter (`abGridSVG`, 0–10) eintragen, b) Geraden über z = 0
+     finden, c) Dreieck (1|1), (9|3), (3|9) ausmalen; Seite 3 Lösung (vom Code gerechnet, Gitter mit Geraden + Fläche).
+     `#rv-print` + `html.rv-print-on`, keine Karte mehr auf dem Blatt.
    - `v-rechnen` **„Netz durchrechnen“** (`js/rechnen.js`, wie Sönkes AB): Stufen „Ein Neuron“ (3 Eingänge,
      Perzeptron/Linear/ReLU) · „Ein Netz“ (3 → 3 → 1: Perzeptron, Sigmoid, ReLU gemischt, Ausgang linear, manchmal
      fehlt eine Leitung) · „Rückwärts“ (lineares Neuron, z gegeben, ein Gewicht „?“). Ganze Zahlen; Sigmoid ± 0,01,

@@ -236,8 +236,29 @@
       });
       const closePop = () => { pop.hidden = true; popK = null; $$('.nw-val').forEach(v => v.classList.remove('is-open')); };
       // Zahl antippen → senkrechter Regler direkt neben dem Feld
+      // o.direct (Revier, Sönke 24.11.2026): Zahl antippen = direkt eintippen (Zahl oder Bruch wie 3/4), kein Regler
+      const typeAt = b => {
+        const k = b.closest('.nw-val').dataset.v;
+        const inp = document.createElement('input');
+        inp.type = 'text'; inp.className = 'nw-num-in'; inp.autocomplete = 'off'; inp.spellcheck = false;
+        inp.value = shown(m, k); inp.setAttribute('aria-label', 'Zahl oder Bruch eintippen, z. B. 3/4');
+        b.replaceWith(inp); inp.focus(); inp.select();
+        let esc = false;
+        inp.addEventListener('blur', () => {
+          const v = parseNum(inp.value);
+          inp.replaceWith(b);
+          if (v !== null && !esc) {
+            const t = inp.value.trim().replace(/\s/g, '').replace(/-/g, '−').replace(/\./g, ',');
+            m.txt = m.txt || {};
+            m.txt[k] = /\//.test(t) ? { s: t, v: clampK(m, k, v) } : null;
+            change(k, v);
+          } else update();
+        }, { once: true });
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } if (e.key === 'Escape') { esc = true; inp.blur(); } });
+      };
       $$('.nw-num').forEach(b => b.addEventListener('click', e => {
         e.stopPropagation();
+        if (o.direct) { typeAt(b); return; }
         const k = b.closest('.nw-val').dataset.v;
         if (popK === k && !pop.hidden) { closePop(); return; }
         popK = k;

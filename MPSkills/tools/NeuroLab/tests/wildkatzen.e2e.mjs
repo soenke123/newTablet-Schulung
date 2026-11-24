@@ -40,9 +40,11 @@ const at = async (a, d) => pg.evaluate(([a, d]) => { const c = document.querySel
 const dragTo = async (from, to) => { const f = await at(...from), t = await at(...to); await pg.mouse.move(...f); await pg.mouse.down(); await pg.mouse.move((f[0] + t[0]) / 2, (f[1] + t[1]) / 2, { steps: 3 }); await pg.mouse.move(...t, { steps: 3 }); await pg.mouse.up(); };
 const bump = async (k, d, n, scope = '') => { for (let i = 0; i < n; i++) await pg.locator(`${scope} .nw-val[data-v="${k}"] .nw-pm[data-d="${d}"]`).first().click(); };
 await dragTo([2, 2], [0, 3]); await dragTo([10, 6], [12, 4]);
-ok(/x2 = 1\/12 · x1 \+ 3/.test((await pg.locator('.rv-eq-m').textContent()).replace(/\s+/g, ' ')), 'Funktionsgleichung steht sofort neben der Gerade');
-const typeIn = async (k, v) => { await pg.click(`.nw-left > .nw .nw-val[data-v="${k}"] .nw-num`); await pg.fill('.nw-pop-in', v); await pg.press('.nw-pop-in', 'Enter'); };
+ok(/x2 = 1\/12 · x1 \+ 3/.test((await pg.locator('.rv-eq-m').textContent()).replace(/\s+/g, ' ')) && await pg.locator('.rv-eq .rv-eq-s').count() === 0, 'Gleichung steht sofort neben der Gerade, ohne Erklärung zu m und n');
+ok((await pg.locator('.nn-step').first().textContent()).indexOf('Fluss') < 0, 'Schritt 1 heißt nicht „Fluss“');
+const typeIn = async (k, v) => { await pg.click(`.nw-left > .nw .nw-val[data-v="${k}"] .nw-num`); await pg.fill('.nw-num-in', v); await pg.press('.nw-num-in', 'Enter'); };
 await typeIn('w1', '1/12'); await typeIn('w2', '-1'); await typeIn('b', '3');       // falsche Seite
+ok(await pg.locator('.nw-left > .nw .nw-pop:not([hidden])').count() === 0, 'Zahlen werden direkt eingetippt, kein Regler');
 await pg.click('.rv-check');
 ok(/falschen Seite/.test(await pg.locator('.rv-result').textContent()), 'Fluss: falsche Seite wird erkannt');
 ok(await pg.evaluate(() => !JSON.parse(localStorage.getItem('nl.revier')).s2.done), 'Gerade des Neurons wird nicht gezeichnet, solange die Werte falsch sind');
@@ -67,9 +69,7 @@ for (const [i, P, Q, P0, Q0, w] of [[1, [0, 2], [3, 6], [1, 2], [3, 8], ['4/3', 
 ok(/x2 = 4\/3 · x1 \+ 2/.test((await pg.locator('.rv-eqrow').nth(1).textContent()).replace(/\s+/g, ' ')), 'Gleichung des zweiten Perzeptrons steht oben');
 await pg.click('.rv-check');
 ok(await pg.locator('.rv-nb:not(.open)').count() === 3 && await pg.locator('.rv-ob2').count() === 1, 'drei Perzeptrons geprüft, Ausgang da');
-ok(await pg.locator('.rv-vp .nw-val').count() === 3 && await pg.locator('.rv-obp .nw-val').count() === 1 && await pg.locator('.rv-wires line').count() > 12, 'Netz als Bild: Gewichte an den Leitungen, v₁ … v₃ und b am Ausgang');
-for (let i = 0; i < 3; i++) await netIn(`.rv-vp[data-i="${i}"] .nw-val`, '1');
-await netIn('.rv-obp .nw-val', '-5/2');
+ok(await pg.locator('.rv-vp.is-fix').count() === 3 && (await pg.locator('.rv-obp.is-fix').textContent()).includes('−2,5') && await pg.locator('.rv-vp .nw-pm, .rv-obp .nw-pm').count() === 0 && await pg.locator('.rv-wires line').count() > 12, 'Netz als Bild: Gewichte an den Leitungen, Ausgang fest (v = 1, b = −2,5)');
 await pg.waitForTimeout(100);
 ok(/24 von 24/.test(await pg.locator('.rv-result').textContent()), 'Stadt: Netz aus drei Geraden findet das Revier');
 await pg.waitForTimeout(1600);

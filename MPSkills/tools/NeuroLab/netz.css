@@ -293,6 +293,8 @@ input.bad { border-color: var(--neg) !important; background: var(--neg-dim) !imp
 .rv-f .nw-val { font-size: 1.05rem; }
 .rv-mini-in { width: 3.4em; font: 700 1.05em var(--mono); text-align: center; color: var(--ink); background: var(--surface); border: 1.5px solid var(--accent); border-radius: 8px; padding: .15em .2em; }
 .rv-mini-in:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
+.nw-num-in { width: 3.6em; font: 700 1em var(--mono); text-align: center; color: var(--ink); background: var(--surface); border: 1.5px solid var(--accent); border-radius: 8px; padding: .1em .2em; }
+.nw-num-in:focus { outline: none; box-shadow: 0 0 0 3px var(--accent-dim); }
 
 /* ══ Startseite (22.11.2026, showroom-start.html): dunkler Kopf + Lernweg 1 → 2 → 3 + Spielwiese „Frei bauen“ ══
    Karten bleiben .tile[data-id]; die alten .tile-Regeln aus start.css werden hier überschrieben (#areas.hm …). */
@@ -506,3 +508,23 @@ html[data-motion="low"] .hs-pulse, html[data-motion="low"] .hs-flow, html[data-m
 .katze-curve .c-old, .katze-curve .c-new { fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 .katze-curve .c-old { stroke: var(--accent); } .katze-curve .c-new { stroke: var(--neg); }
 .katze-curve .c-old-t { fill: var(--accent-ink); } .katze-curve .c-new-t { fill: var(--neg); }
+
+/* ── Revier 24.11.2026: Hilfe untereinander, fester Ausgang ── */
+.rv-hsteps { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; align-items: baseline; }
+.rv-hl { font-size: .78rem; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.rv-hq { white-space: nowrap; font-size: 1.05rem; color: var(--ink); }
+.rv-hcmp { display: grid; grid-template-columns: repeat(6, auto); justify-content: start; justify-items: center; gap: 4px 8px;
+  white-space: nowrap; font-size: 1.05rem; color: var(--ink); padding: 4px 8px; border-radius: 8px; background: var(--surface); }
+.rv-hcmp > :nth-child(n+7) { border-top: 1px dashed var(--line); padding-top: 4px; width: 100%; text-align: center; }
+.rv-help-t { line-height: 1.55; }
+.rv-vp.is-fix .nw-num, .rv-obp.is-fix .nw-num { cursor: default; min-width: 0; padding: .15em .35em; display: inline-block; }
+.rv-vp.is-fix, .rv-obp.is-fix { opacity: .9; }
+@media print {
+  #rv-print svg.ab-net { width: 100%; max-height: 82mm; display: block; margin: 2mm auto; }
+  #rv-print .ab-row { display: flex; gap: 5mm; align-items: flex-start; }
+  #rv-print .ab-row > svg.ab-grid { width: 88mm; flex: none; }
+  #rv-print .ab-row > div { flex: 1; }
+  #rv-print table.ab-calc td, #rv-print table.ab-calc th { text-align: center; }
+  #rv-print table.ab-perc td { text-align: center; }
+  #rv-print .tip-i { color: #444; font-style: italic; }
+}
