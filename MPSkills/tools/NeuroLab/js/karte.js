@@ -39,8 +39,10 @@
 (function () {
   'use strict';
   const DOM = [[0, 12], [0, 10]];
-  /* Der Fluss: von West nach Ost leicht steigend, mit einem flachen Bogen nach Süden */
-  const riverY = x => 0.1 * x + 2.8 - 0.45 * Math.sin(Math.PI * x / 12);
+  /* Der Fluss: ein deutlicher Bogen nach Süden (24.11.2026, Sönke: Kurve „doller“). Die Kameras ohne Katze
+     bei (1|3) und (11|3) liegen südlich davon – jede Gerade über ihnen verläuft bei x₁ = 6 über 3 km,
+     also über dem Grillplatz (6|2,9), der knapp nördlich des Flusses im Revier liegt. */
+  const riverY = x => 3.6 - 0.95 * Math.sin(Math.PI * x / 12);
   const TRUTH = [
     { id: 'fluss', name: 'Fluss', river: true },
     { id: 'strasse', name: 'Landstraße', w: [4 / 3, -1], b: 2 },
@@ -57,7 +59,7 @@
 
   /* ── Kameras (wie in Sönkes Skizze, gedreht) ─────────────── */
   /* 24.11.2026 (Sönke): weniger Kameras – 12 im ersten Jahr, 24 nach einem Jahr */
-  const GELB = [[1, 1], [3, 0], [5, 2], [7, 1], [9, 2], [11, 0]];
+  const GELB = [[1, 3], [3, 0], [5, 2], [7, 1], [9, 2], [11, 3]];
   const ROT = [[2, 4], [4, 5], [6, 4], [8, 4], [5, 7], [7, 6]];
   const ROSA = [[3, 5], [4, 6], [6, 6], [8, 5]];
   const BLAU = [[0, 4], [1, 7], [3, 9], [5, 10], [12, 5], [10, 6], [9, 8], [7, 10]];
@@ -81,8 +83,8 @@
   }
 
   /* Schritt 3 „Das Netz fragen“: Pläne an Orten, wo keine Kamera hängt.
-     Der Grillplatz liegt im schmalen Streifen zwischen Musterlösung (Gerade) und
-     echtem Fluss: Das Netz sagt „kein Revier“, die Karte sagt etwas anderes. */
+     Der Grillplatz liegt knapp nördlich des Flusses (im Revier), aber innerhalb der Kameras
+     ohne Katze: JEDE Gerade, die alle Kameras trennt, sagt dort „kein Revier“. */
   const PLANS = [
     { id: 'bau', kind: 'point', p: [6, 8], name: 'Neues Baugebiet', short: 'Baugebiet', who: 'Die Gemeinde',
       ask: 'will am Hang <b>Wohnhäuser</b> bauen.', yes: 'Hier lebt die Wildkatze – Jana rät ab.', no: 'Kein Revier – von den Wildkatzen aus darf gebaut werden.' },
@@ -92,9 +94,9 @@
       ask: 'plant einen <b>Radweg</b> von der Brücke im Westen in die Stadt. Zwei Wege stehen zur Wahl.',
       routes: [
         { id: 'A', name: 'Weg A · quer durchs Tal', pts: [[1, 2.9], [4, 4.6], [7, 6.4], [9.6, 7.6]] },
-        { id: 'B', name: 'Weg B · am Fluss entlang', pts: [[1, 2.9], [3.5, 1.9], [8, 1.9], [10.6, 3.2], [11.2, 5.2]] },
+        { id: 'B', name: 'Weg B · am Fluss entlang', pts: [[1, 2.9], [3.5, 1.9], [8, 1.9], [10.4, 2.5], [11.2, 5.2]] },
       ] },
-    { id: 'grill', kind: 'point', p: [6, 3.25], name: 'Grillplatz am Fluss', short: 'Grillplatz', who: 'Der Angelverein',
+    { id: 'grill', kind: 'point', p: [6, 2.9], name: 'Grillplatz am Fluss', short: 'Grillplatz', who: 'Der Angelverein',
       ask: 'möchte direkt <b>am Fluss</b> einen Grillplatz anlegen.', yes: 'Hier lebt die Wildkatze – Jana rät ab.', no: 'Kein Revier – der Grillplatz ist in Ordnung.', tricky: true },
   ];
   /* Länge eines Weges (km) und wie viel davon im Revier liegt – wahr: inRevier, sonst eine Funktion p → 0|1 */
@@ -173,7 +175,7 @@
       c.strokeStyle = '#b9b6b0'; c.lineWidth = wid; c.stroke();
       c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1.3; c.setLineDash([6, 6]); c.stroke(); c.setLineDash([]);
     };
-    // Fluss: von West nach Ost, flacher Bogen nach Süden
+    // Fluss: von West nach Ost, deutlicher Bogen nach Süden
     const riv = [];
     for (let x = -0.4; x <= 12.4; x += 0.08) { const off = 0.05 * Math.sin(x * 2.3) + 0.03 * Math.sin(x * 5.1); riv.push([x, riverY(x) + off]); }
     const strokeP = (pts, col, wd) => { c.strokeStyle = col; c.lineWidth = wd; c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(...P(q)) : c.moveTo(...P(q))); c.stroke(); };
@@ -186,8 +188,10 @@
     const ROAD = [[1.7, -0.4], [1.1, 1.6], [0.7, 3.4], [0.6, 4.15], [5.3, 10.4]];
     road(ROAD, 0.17 * s);
     road([[10.2, 4.2], [10.6, 6.2], [11.6, 7.4]], 0.11 * s);
-    const by = riverY(0.95), bang = Math.atan2(Y(3.4) - Y(1.6), X(0.7) - X(1.1));
-    c.save(); c.translate(X(0.92), Y(by)); c.rotate(bang);
+    // Brücke dort, wo die Straße (1,1|1,6)–(0,7|3,4) den Fluss kreuzt
+    let bt = 0; for (let k = 0; k < 30; k++) { const t = bt + 1 / 30, x = 1.1 - 0.4 * t; if (1.6 + 1.8 * t < riverY(x)) bt = t; }
+    const bx = 1.1 - 0.4 * bt, bang = Math.atan2(Y(3.4) - Y(1.6), X(0.7) - X(1.1));
+    c.save(); c.translate(X(bx), Y(riverY(bx))); c.rotate(bang);
     c.fillStyle = '#b9b6b0'; c.fillRect(-0.42 * s, -0.16 * s, 0.84 * s, 0.32 * s);
     c.fillStyle = '#6f5a45'; c.fillRect(-0.44 * s, -0.2 * s, 0.88 * s, 0.05 * s); c.fillRect(-0.44 * s, 0.15 * s, 0.88 * s, 0.05 * s);
     c.restore();
@@ -231,7 +235,7 @@
       c.fillStyle = '#2f3b2a'; c.fillText(txt, 0, 0); c.restore();
     };
     const fs = Math.max(11, s * 0.36);
-    label('Fluss', [9.6, riverY(9.6) - 0.55], -Math.atan2(0.17 * s, s), fs);
+    label('Fluss', [9.6, riverY(9.6) - 0.55], -Math.atan2(riverY(10.1) - riverY(9.1), 1), fs);
     label('Landstraße', [2.75, 7.35], -Math.atan2(4, 3), fs * 0.85);
     label('Stadt', [10.7, 9.6], 0, fs * 1.2);
     c.restore();

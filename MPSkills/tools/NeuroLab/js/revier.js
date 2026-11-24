@@ -40,7 +40,7 @@
   const STUDENT = Q.get('raum') === 'schueler';
   const COLS = ['#2f80ed', '#e5484d', '#8e44ad', '#0f9d58', '#e67e22', '#00838f'];
   const MAX_HID = 6;
-  const VERSION = 6;                                 // 6: weniger Kameras, Schritt 3 „Das Netz fragen“ (24.11.2026)
+  const VERSION = 7;                                 // 6: weniger Kameras, Schritt 3 „Das Netz fragen“; 7: Fluss stärker gebogen, Kameras (1|3), (11|3) (24.11.2026)
   /* Hilfe-Beispiel: Gerade durch (2|6) und (6|2) */
   const EX = { P: [2, 6], Q: [6, 2], w: [1, 1], b: -8 };
   const DEF_PQ = [[[1, 3], [11, 8]], [[1, 2], [3, 8]], [[6, 10], [12, 4]], [[0, 5], [12, 5]], [[4, 0], [4, 10]], [[0, 0], [12, 10]]];
