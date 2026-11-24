@@ -10,7 +10,7 @@
                             die Gruppen. Personen per Drag & Drop (oder
                             Antippen → Ziel antippen) zu Gruppen ziehen,
                             Planungsräume eröffnen, rote Zahl = offene
-                            Anträge. Am Namen die Einwilligung (✗/3/2/1 Personen,
+                            Anträge. Am Namen die Einwilligung (✗ / Figuren: zu dritt, zu zweit, allein,
                             antippen = weiter); wer auf einem Antrag für
                             heute steht, hat mit den anderen dieses
                             Antrags einen Rahmen (gelb = nicht genehmigt,
@@ -68,7 +68,7 @@
    überarbeiten und neu abschicken), genehmigt ist fest. Am Reiter
    steht, wie es um den nächsten Antrag (heute oder später) steht.
    Im Team trägt die Lehrkraft die Einwilligungen ein (0302: ✗ oder
-   mit 3/2/1 Personen) — die Zeichen sehen Schüler nur dort, nicht bei
+   zu dritt/zu zweit/allein als 3/2/1 Figuren) — die Zeichen sehen Schüler nur dort, nicht bei
    den Anträgen.
 
    Stunden (0202): Ein Eintrag sagt, WER dabei war (who) — eine oder
@@ -217,13 +217,16 @@ const COLORS = { yellow: '#fdf3a8', blue: '#cbe7f7', green: '#cdebd2', pink: '#f
 // 0302 vier Stufen): mit wie vielen Personen das Kind unterwegs sein
 // darf. n steigt mit der Erlaubnis; min = so viele müssen mindestens
 // zusammen unterwegs sein (das Kind selbst mitgezählt).
-const PERSON_SVG = '<svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7" r="4.5"/><path d="M3.5 22c0-4.7 3.8-8.5 8.5-8.5s8.5 3.8 8.5 8.5z"/></svg>';
+// Symbol = so viele Figuren, wie zusammen unterwegs sein müssen.
+const PERSON_SVG = '<svg class="pfig" width="8" height="11" viewBox="0 0 16 22" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5" r="4.2"/><path d="M0.5 22c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z"/></svg>';
+const figs = k => PERSON_SVG.repeat(k);
 const CONSENT = [
-  { n: 0, min: 0, mark: '✗',                 short: 'nicht erlaubt', nm: 'Nichts abgegeben / nicht erlaubt' },
-  { n: 1, min: 3, mark: '3' + PERSON_SVG,    short: '3 Personen',    nm: 'Darf mit 3 Personen unterwegs sein' },
-  { n: 2, min: 2, mark: '2' + PERSON_SVG,    short: '2 Personen',    nm: 'Darf mit 2 Personen unterwegs sein' },
-  { n: 3, min: 1, mark: '1' + PERSON_SVG,    short: '1 Person',      nm: 'Darf mit 1 Person unterwegs sein' }
+  { n: 0, min: 0, mark: '✗',        short: 'nicht erlaubt', nm: 'Nichts abgegeben / nicht erlaubt' },
+  { n: 1, min: 3, mark: figs(3), short: 'zu dritt',      nm: 'Darf zu dritt unterwegs sein' },
+  { n: 2, min: 2, mark: figs(2), short: 'zu zweit',      nm: 'Darf zu zweit unterwegs sein' },
+  { n: 3, min: 1, mark: figs(1), short: 'allein',        nm: 'Darf allein unterwegs sein' }
 ];
+const MIN_WORD = { 3: 'zu dritt', 2: 'zu zweit', 1: 'allein' };
 const consentOf = p => { const n = +((p && p.consent) || 0); return CONSENT[n] || CONSENT[0]; };
 // Wer auf einem Antrag mit k Personen steht, aber dafür keine
 // Einwilligung hat: keine abgegeben, oder die Gruppe ist zu klein.
@@ -236,7 +239,7 @@ const consentGaps = list => {
 };
 const gapText = g => [
   g.none.length ? `Ohne Einwilligung: ${g.none.map(p => p.name).join(', ')}` : '',
-  g.few.length ? `Zu wenige Personen für: ${g.few.map(p => `${p.name} (nur mit ${consentOf(p).min})`).join(', ')}` : ''
+  g.few.length ? `Zu wenige Personen für: ${g.few.map(p => `${p.name} (nur ${MIN_WORD[consentOf(p).min]})`).join(', ')}` : ''
 ].filter(Boolean).join(' · ');
 // ov = in der Klassenübersicht: dort nur änderbar, solange oben
 // „Einwilligungen ändern“ aufgeschlossen ist (consentEdit).
@@ -618,7 +621,7 @@ function renderOverview() {
     helpBox('ov', [
       ['people', 'Gruppen bilden', 'Eine Person aus <b>„Schüler ohne Gruppe“</b> auf eine andere ziehen = neue Gruppe, auf eine Gruppe = dazu. Am Tablet: antippen, dann das Ziel antippen.'],
       ['target', 'Planungsraum', 'Mit dem <b>Kompass</b> eröffnet ihr den Planungsraum — für eine Gruppe oder eine Einzelperson.'],
-      ['check', 'Einwilligungen', 'Über den Schülern <b>„Einwilligungen ändern“</b> aufschließen, dann am Namen antippen = nächste Stufe: <b>✗</b> nicht erlaubt · <b>3 / 2 / 1</b> = darf mit so vielen Personen unterwegs sein. <b>„SuS-Codes anzeigen“</b> zeigt dort stattdessen die persönlichen Codes.'],
+      ['check', 'Einwilligungen', 'Über den Schülern <b>„Einwilligungen ändern“</b> aufschließen, dann am Namen antippen = nächste Stufe: <b>✗</b> nicht erlaubt · drei Figuren = zu dritt · zwei = zu zweit · eine = allein. <b>„SuS-Codes anzeigen“</b> zeigt dort stattdessen die persönlichen Codes.'],
       ['cal', 'Wer ist heute weg?', 'Wer heute einen Antrag hat, steht im <b>Rahmen</b>: <b>gelb</b> = nicht genehmigt, <b>grün</b> = genehmigt. Die rote Zahl = offene Anträge.'],
       ['book', 'Tätigkeitsbuch', 'Rechts haltet ihr fest, <b>was in der Stunde los war</b> — „Neu“, dann je Gruppe schreiben. So setzt die nächste Lehrkraft an. Schüler sehen es nicht.']
     ]);
@@ -1593,7 +1596,7 @@ function renderReqWho() {
   hint.classList.toggle('warn', g.none.length + g.few.length > 0);
   const out = [];
   if (g.none.length) out.push(`Für ${esc(g.none.map(m => m.name).join(', '))} liegt noch <b>keine Einwilligung</b> vor.`);
-  if (g.few.length) out.push(`${esc(g.few.map(m => m.name).join(', '))} ${g.few.length > 1 ? 'dürfen' : 'darf'} nur mit <b>mehr Personen</b> unterwegs sein (${esc(g.few.map(m => m.name + ': ' + consentOf(m).min).join(', '))}).`);
+  if (g.few.length) out.push(`${esc(g.few.map(m => m.name).join(', '))} ${g.few.length > 1 ? 'dürfen' : 'darf'} nur mit <b>mehr Personen</b> unterwegs sein (${esc(g.few.map(m => m.name + ': ' + MIN_WORD[consentOf(m).min]).join(', '))}).`);
   hint.innerHTML = out.length ? `${ICO.warn}<span>${out.join(' ')}</span>` : 'Tippt alle an, die mitfahren.';
 }
 function saveReq() {
