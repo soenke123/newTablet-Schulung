@@ -13,6 +13,10 @@
      3) Profilbild wählen (Katalog aus ../avatars.js, beide Welten)
      4) Passwort ändern
 
+   Seit 24.11.2026 ist das das EINZIGE Profil: Landing, GameHub und
+   Admin-Bereich verlinken auf MPSkills/profil.html?von=…, die alte
+   /profil.html leitet dorthin weiter.
+
    profil.html bleibt als Adresse bestehen (Lesezeichen, installierte
    Web-App) und zeichnet denselben Inhalt per MPProfile.renderPage()
    in die Seite statt in ein Fenster.
@@ -120,6 +124,10 @@
   function bodyHTML(s) {
     const role = roleState(s);
     const isAdm  = !!(s.is_admin || s.is_superadmin);
+    // Schüler:in aus einem Kurs der Schulung (GameHub) ohne Lehrkraft-
+    // Antrag: der Satz „Lehrkraft-Rolle noch nicht beantragt" wäre für
+    // sie nur Rauschen — seit das Profil auch aus dem GameHub kommt.
+    const pupil  = !isAdm && !!s.cluster_id && (!s.teacher_status || s.teacher_status === 'none');
     const mailOk = isAdm || s.teacher_status === 'approved' || s.teacher_status === 'pending';
     const avatarSrc = window.getAvatarUrl
       ? window.getAvatarUrl(s.avatar_id || window.DEFAULT_AVATAR_ID, '../')
@@ -142,7 +150,8 @@
             </dd>
             <dt>Accountname</dt><dd>${esc(s.account_name || '–')}</dd>
             <dt>Schule</dt>     <dd>${esc(s.school_name || '–')}</dd>
-            <dt>MPSkills</dt>   <dd><span class="prof-badge prof-badge--${role.cls}">${esc(role.label)}</span></dd>
+            ${s.cluster_name ? `<dt>Kurs</dt><dd>${esc(s.cluster_name)}</dd>` : ''}
+            ${pupil ? '' : `<dt>MPSkills</dt>   <dd><span class="prof-badge prof-badge--${role.cls}">${esc(role.label)}</span></dd>`}
           </dl>
         </div>
         <form class="prof-form prof-nameform" id="nameForm" autocomplete="off" novalidate hidden>
@@ -156,7 +165,7 @@
             <button type="button" class="btn" id="nameCancel">Abbrechen</button>
           </div>
         </form>
-        <p class="prof-note">${role.text}</p>
+        ${pupil ? '' : `<p class="prof-note">${role.text}</p>`}
       </section>
       <section class="card">
         <h2 class="card-h">Passwort</h2>
