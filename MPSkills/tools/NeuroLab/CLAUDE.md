@@ -107,8 +107,9 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      b ±30 (1 / 0,25), x₁/x₂ = Kamera), darunter `calcHTML`, rechts die Karte; KEINE eigenen Eingabefelder mehr. Drei Schritte
      (die frühere „Kameras prüfen“-Aufgabe ist im Hilfe-Beispiel aufgegangen; Schritt-ids `fluss` · `stadt` · `jahr`, `jahr` bleibt
      wegen preview/neurolab.js).
-     **Karte nach Sönkes Skizze (23.11.2026, `v: 5`, um 90° gedreht – Stadt oben rechts):** Fluss im Süden, nur sanft geschwungen
-     (`riverY`, Revier nördlich; eine Gerade trennt alle Kameras, passt aber nicht genau zum Fluss = Gesprächsanlass nach dem Aufdecken,
+     **Karte nach Sönkes Skizze (23.11.2026, `v: 5`, um 90° gedreht – Stadt oben rechts):** Fluss im Süden, seit 24.11.2026 (`v: 7`) deutlich nach Süden gebogen
+     (`riverY` = 3,6 − 0,95·sin(π·x₁/12), Revier nördlich; eine Gerade trennt alle Kameras, passt aber nicht genau zum Fluss = Gesprächsanlass nach dem Aufdecken;
+     die Kameras ohne Katze (1|3) und (11|3) liegen südlich der Flussenden, so dass JEDE trennende Gerade bei x₁ = 6 über 3 km bleibt – der Grillplatz liegt immer außerhalb;
      bei den Testkameras liegt genau eine im Streifen dazwischen → Netz 73/74), Landstraße im Nordwesten (Grenze x₂ = 4/3·x₁ + 2, Revier
      darunter), Stadt oben rechts (Grenze x₂ = −3/2·x₁ + 18, Revier darunter). Kameras wie in der Skizze: Jahr 1 gelb (keine Katze,
      südlich) + rot (Katze) = 12, Schritt 2 dazu rosa (Katze) + blau (keine) = 24 (24.11.2026, Sönke: „da müssen ja nicht so viele sein“; vorher 19/44, `v: 6`). Muster: Fluss durch (0|3), (12|4): x₂ = 1/12·x₁ + 3
@@ -150,7 +151,7 @@ Ansicht `netz` (`#netz-page`) für Revier und Rechnen.
      **3 Das Netz fragen** (24.11.2026, Schritt-id bleibt `jahr`; ersetzt „Zu genau gelernt“ mit Merk-Neuronen – Sönke: Overfitting
      gehört ans Training, nicht hierher): dieselben 24 Kameras, dasselbe Netz, jetzt **Orte ohne Kamera** (`K.PLANS`): ① Baugebiet (6|8),
      ② Halle am Stadtrand (10|7,5), ③ Radweg mit zwei Wegen (A quer durchs Tal ~7 km im Revier, B am Fluss ~0 km, `routeKm`, Kind empfiehlt
-     einen), ④ Grillplatz am Fluss (6|3,25) – liegt im Streifen zwischen Musterlösung und geschwungenem Fluss. „Netz fragen“ = das Netz
+     einen), ④ Grillplatz am Fluss (6|2,9) – knapp nördlich des Flusses (im Revier), aber innerhalb der Kameras ohne Katze: jede Gerade, die die Kameras trennt, sagt „kein Revier“. „Netz fragen“ = das Netz
      rechnet den Ort vor (jedes Perzeptron z → 1/0, Ausgang); Karte bleibt in Schritt 3 zugedeckt, bis alle Pläne gefragt sind, dann
      „Karte aufdecken – hatte das Netz recht?“ (✓/✗ je Plan, am Grillplatz meist ✗) und Kasten „Was ein Netz kann – und was nicht“
      (nur so gut wie seine Daten; Verweis auf Lernen → Wildkatzen). Stand `S.s4 = {asked, route, sel, shown}`. Knopf **„Arbeitsblatt“** unten in
