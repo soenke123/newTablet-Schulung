@@ -118,6 +118,39 @@
     }
   }
 
+  /* ─── Rolle ──────────────────────────────────────────────────
+     Was das Konto IST: Schüler:in · Lehrkraft · Schuladmin ·
+     Volladmin (is_superadmin). Ein offener oder abgelehnter Antrag
+     steht als zweites Schild daneben, die Einzelheiten im Satz
+     darunter (roleState). */
+  function kindHTML(s) {
+    const b = (cls, t) => `<span class="prof-badge prof-badge--${cls}">${esc(t)}</span>`;
+    if (s.is_superadmin) return b('ok', 'Volladmin');
+    if (s.is_admin)      return b('ok', 'Schuladmin');
+    if (s.teacher_status === 'approved') return b('ok', 'Lehrkraft');
+    const extra = s.teacher_status === 'pending'  ? ' ' + b('wait', 'Lehrkraft beantragt')
+                : s.teacher_status === 'rejected' ? ' ' + b('no', 'Antrag abgelehnt')
+                : '';
+    return b('none', 'Schüler:in') + extra;
+  }
+
+  /* ─── Tablet-Schulung ───────────────────────────────────────
+     Kurs und Season gehören zur Schulung (GameHub), nicht zu
+     MPSkills — deshalb ein eigener Rahmen, und nur, wenn es dort
+     etwas gibt: Wer nie in einem Kurs war, sieht ihn nicht. */
+  function schulungHTML(s) {
+    const season = s.season ?? 0;
+    if (!s.cluster_id && !season) return '';
+    return `
+      <section class="card">
+        <h2 class="card-h">Tablet-Schulung</h2>
+        <dl class="prof-info">
+          <dt>Kurs</dt>   <dd>${esc(s.cluster_name || 'Kein Kurs zugewiesen')}</dd>
+          <dt>Season</dt> <dd>${esc(season)}</dd>
+        </dl>
+      </section>`;
+  }
+
   /* ─── Inhalt ────────────────────────────────────────────────
      Fenster und Seite zeigen denselben Inhalt; nur der Rahmen
      (Überschrift, Schließen) ist verschieden. */
@@ -150,8 +183,7 @@
             </dd>
             <dt>Accountname</dt><dd>${esc(s.account_name || '–')}</dd>
             <dt>Schule</dt>     <dd>${esc(s.school_name || '–')}</dd>
-            ${s.cluster_name ? `<dt>Kurs</dt><dd>${esc(s.cluster_name)}</dd>` : ''}
-            ${pupil ? '' : `<dt>MPSkills</dt>   <dd><span class="prof-badge prof-badge--${role.cls}">${esc(role.label)}</span></dd>`}
+            <dt>Rolle</dt>      <dd>${kindHTML(s)}</dd>
           </dl>
         </div>
         <form class="prof-form prof-nameform" id="nameForm" autocomplete="off" novalidate hidden>
@@ -167,6 +199,7 @@
         </form>
         ${pupil ? '' : `<p class="prof-note">${role.text}</p>`}
       </section>
+      ${schulungHTML(s)}
       <section class="card">
         <h2 class="card-h">Passwort</h2>
         <form class="prof-form" id="pwForm" novalidate>
@@ -716,7 +749,7 @@
   // getipptes Passwort soll dabei nicht verschwinden.
   let shownSig = '';
   const sigOf = (s) => s ? [s.id, s.display_name, s.avatar_id, s.teacher_status,
-    s.is_admin, s.is_superadmin, s.school_name].join('|') : '';
+    s.is_admin, s.is_superadmin, s.school_name, s.cluster_name, s.season].join('|') : '';
   window.addEventListener('lernwelt:session-changed', () => {
     const s = window.getSessionUser?.() ?? null;
     const sig = sigOf(s);
