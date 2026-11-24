@@ -10,7 +10,7 @@
                             die Gruppen. Personen per Drag & Drop (oder
                             Antippen → Ziel antippen) zu Gruppen ziehen,
                             Planungsräume eröffnen, rote Zahl = offene
-                            Anträge. Am Namen die Einwilligung (✗ / Figuren: zu dritt, zu zweit, allein,
+                            Anträge. Am Namen die Einwilligung (grüne Haken: zu zweit, zu dritt, allein nach Hause,
                             antippen = weiter); wer auf einem Antrag für
                             heute steht, hat mit den anderen dieses
                             Antrags einen Rahmen (gelb = nicht genehmigt,
@@ -68,7 +68,7 @@
    überarbeiten und neu abschicken), genehmigt ist fest. Am Reiter
    steht, wie es um den nächsten Antrag (heute oder später) steht.
    Im Team trägt die Lehrkraft die Einwilligungen ein (0302: ✗ oder
-   zu dritt/zu zweit/allein als 3/2/1 Figuren) — die Zeichen sehen Schüler nur dort, nicht bei
+   seit 0303 drei einzelne Haken) — die Zeichen sehen Schüler nur dort, nicht bei
    den Anträgen.
 
    Stunden (0202): Ein Eintrag sagt, WER dabei war (who) — eine oder
@@ -213,41 +213,53 @@ const readEst = v => Math.max(0, Math.min(99, Math.round((parseFloat(String(v ||
 const RQ_WAY = 'WEG und VERKEHRSMITTEL:', RQ_WHY = 'BEGRÜNDUNG:';
 const RQ_TEMPLATE = RQ_WAY + '\n\n\n' + RQ_WHY + '\n';
 const COLORS = { yellow: '#fdf3a8', blue: '#cbe7f7', green: '#cdebd2', pink: '#f8d4e0', lilac: '#dfd8f3' };
-// Einwilligung der Eltern, das Schulgelände zu verlassen (0201, seit
-// 0302 vier Stufen): mit wie vielen Personen das Kind unterwegs sein
-// darf. n steigt mit der Erlaubnis; min = so viele müssen mindestens
-// zusammen unterwegs sein (das Kind selbst mitgezählt).
-// Symbol = so viele Figuren, wie zusammen unterwegs sein müssen.
+// Einwilligung der Eltern, das Schulgelände zu verlassen (0201; seit
+// 0303 drei einzelne Haken, als Summe in consent): 1 zu zweit unterwegs,
+// 2 zu dritt unterwegs, 4 allein nach Hause. Sie bauen nicht aufeinander
+// auf — „zu dritt“ + „allein nach Hause“ gibt es auch.
 const PERSON_SVG = '<svg class="pfig" width="8" height="11" viewBox="0 0 16 22" fill="currentColor" aria-hidden="true"><circle cx="8" cy="5" r="4.2"/><path d="M0.5 22c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z"/></svg>';
+const HOUSE_SVG = '<svg class="pfig" width="11" height="11" viewBox="0 0 22 22" fill="currentColor" aria-hidden="true"><path d="M11 1.5 0.8 10.6h3.2V21h5.4v-6.2h3.2V21H18V10.6h3.2z"/></svg>';
 const figs = k => PERSON_SVG.repeat(k);
 const CONSENT = [
-  { n: 0, min: 0, mark: '✗',        short: 'nicht erlaubt', nm: 'Nichts abgegeben / nicht erlaubt' },
-  { n: 1, min: 3, mark: figs(3), short: 'zu dritt',      nm: 'Darf zu dritt unterwegs sein' },
-  { n: 2, min: 2, mark: figs(2), short: 'zu zweit',      nm: 'Darf zu zweit unterwegs sein' },
-  { n: 3, min: 1, mark: figs(1), short: 'allein',        nm: 'Darf allein unterwegs sein' }
+  { bit: 1, mark: figs(2),            nm: 'zu zweit unterwegs' },
+  { bit: 2, mark: figs(3),            nm: 'zu dritt unterwegs' },
+  { bit: 4, mark: figs(1) + HOUSE_SVG, nm: 'allein nach Hause' }
 ];
-const MIN_WORD = { 3: 'zu dritt', 2: 'zu zweit', 1: 'allein' };
-const consentOf = p => { const n = +((p && p.consent) || 0); return CONSENT[n] || CONSENT[0]; };
+const consentBits = p => (+((p && p.consent) || 0)) & 7;
+const consentText = p => {
+  const b = consentBits(p), l = CONSENT.filter(k => b & k.bit).map(k => k.nm);
+  return l.length ? 'Einwilligung: ' + l.join(' · ') : 'Keine Einwilligung abgegeben';
+};
+// Welcher Haken passt zu einem Antrag mit k Personen?
+const needBit = k => k >= 3 ? 2 : k === 2 ? 1 : 4;
+const NEED_WORD = { 1: 'zu zweit', 2: 'zu dritt', 4: 'allein' };
 // Wer auf einem Antrag mit k Personen steht, aber dafür keine
-// Einwilligung hat: keine abgegeben, oder die Gruppe ist zu klein.
+// Einwilligung hat: gar keine, oder nicht den passenden Haken.
 const consentGaps = list => {
-  const k = list.length;
+  const need = needBit(list.length);
   return {
-    none: list.filter(p => !consentOf(p).n),
-    few:  list.filter(p => { const c = consentOf(p); return c.n && k < c.min; })
+    need,
+    none: list.filter(p => !consentBits(p)),
+    few:  list.filter(p => { const b = consentBits(p); return b && !(b & need); })
   };
 };
 const gapText = g => [
   g.none.length ? `Ohne Einwilligung: ${g.none.map(p => p.name).join(', ')}` : '',
-  g.few.length ? `Zu wenige Personen für: ${g.few.map(p => `${p.name} (nur ${MIN_WORD[consentOf(p).min]})`).join(', ')}` : ''
+  g.few.length ? `Nicht ${NEED_WORD[g.need]} erlaubt: ${g.few.map(p => p.name).join(', ')}` : ''
 ].filter(Boolean).join(' · ');
-// ov = in der Klassenübersicht: dort nur änderbar, solange oben
-// „Einwilligungen ändern“ aufgeschlossen ist (consentEdit).
-const cmark = (p, cyc, ov) => {
-  const c = consentOf(p);
-  return cyc
-    ? `<button class="cmark c${c.n}${ov && !consentEdit ? ' locked' : ''}" data-cyc="${esc(p.id)}"${ov ? ' data-ov="1"' : ''} title="${esc(c.nm)}${ov && !consentEdit ? '' : ' — antippen zum Ändern'}" aria-label="Einwilligung von ${esc(p.name)}: ${esc(c.nm)}">${c.mark}</button>`
-    : `<span class="cmark c${c.n}" title="${esc(c.nm)}">${c.mark}</span>`;
+// Am Namen: sonst nur die grünen Haken (keiner = ✗). Bearbeiten (can,
+// in der Klassenübersicht nur mit aufgeschlossenem consentEdit): alle
+// drei Symbole, grau oder grün, antippen = an/aus.
+const cmark = (p, can, ov) => {
+  const b = consentBits(p);
+  if (can && (!ov || consentEdit)) {
+    return `<span class="cmarks edit" role="group" aria-label="Einwilligung von ${esc(p.name)}">${CONSENT.map(k =>
+      `<button type="button" class="cm${b & k.bit ? ' on' : ''}" data-ctog="${esc(p.id)}:${k.bit}" aria-pressed="${!!(b & k.bit)}" title="${esc(k.nm)} — antippen zum Ändern">${k.mark}</button>`).join('')}</span>`;
+  }
+  const inner = b ? CONSENT.filter(k => b & k.bit).map(k => `<span class="cm on">${k.mark}</span>`).join('') : '<span class="cm no">✗</span>';
+  return can && ov
+    ? `<button type="button" class="cmarks locked" data-clocked title="${esc(consentText(p))}" aria-label="${esc(p.name)}: ${esc(consentText(p))}">${inner}</button>`
+    : `<span class="cmarks" title="${esc(consentText(p))}">${inner}</span>`;
 };
 const REQ_ST = {
   open:     { nm: 'offen',      cls: 'bg-open', ic: '•' },
@@ -569,7 +581,7 @@ function firstKey() {
 function pchip(p, withPlan) {
   return `<div class="pchip${picked === p.id ? ' picked' : ''}${p.blocked ? ' blk' : ''}" data-drag="p:${esc(p.id)}" data-drop="p:${esc(p.id)}">
     ${avatar(p, 26)}<span class="nm">${esc(p.name)}</span>
-    ${codeShow ? pcode(p) : cmark(p, canWrite(), true)}
+    ${codeShow ? pcode(p) : cmark(p, PA.owner && canWrite(), true)}
     ${withPlan ? `<button class="planbtn" data-plan-p="${esc(p.id)}" title="Planungsraum für ${esc(p.name)} eröffnen (Einzelarbeit)" aria-label="Planungsraum für ${esc(p.name)} eröffnen">${ICO.compass}</button>` : ''}
   </div>`;
 }
@@ -621,7 +633,7 @@ function renderOverview() {
     helpBox('ov', [
       ['people', 'Gruppen bilden', 'Eine Person aus <b>„Schüler ohne Gruppe“</b> auf eine andere ziehen = neue Gruppe, auf eine Gruppe = dazu. Am Tablet: antippen, dann das Ziel antippen.'],
       ['target', 'Planungsraum', 'Mit dem <b>Kompass</b> eröffnet ihr den Planungsraum — für eine Gruppe oder eine Einzelperson.'],
-      ['check', 'Einwilligungen', 'Über den Schülern <b>„Einwilligungen ändern“</b> aufschließen, dann am Namen antippen = nächste Stufe: <b>✗</b> nicht erlaubt · drei Figuren = zu dritt · zwei = zu zweit · eine = allein. <b>„SuS-Codes anzeigen“</b> zeigt dort stattdessen die persönlichen Codes.'],
+      ['check', 'Einwilligungen', 'Über den Schülern <b>„Einwilligungen ändern“</b> aufschließen, dann am Namen die drei Symbole an- und ausschalten (grün = Einwilligung liegt vor): zwei Figuren = zu zweit · drei Figuren = zu dritt · Figur mit Haus = allein nach Hause. <b>✗</b> = nichts abgegeben. <b>„SuS-Codes anzeigen“</b> zeigt dort stattdessen die persönlichen Codes.'],
       ['cal', 'Wer ist heute weg?', 'Wer heute einen Antrag hat, steht im <b>Rahmen</b>: <b>gelb</b> = nicht genehmigt, <b>grün</b> = genehmigt. Die rote Zahl = offene Anträge.'],
       ['book', 'Tätigkeitsbuch', 'Rechts haltet ihr fest, <b>was in der Stunde los war</b> — „Neu“, dann je Gruppe schreiben. So setzt die nächste Lehrkraft an. Schüler sehen es nicht.']
     ]);
@@ -1596,7 +1608,7 @@ function renderReqWho() {
   hint.classList.toggle('warn', g.none.length + g.few.length > 0);
   const out = [];
   if (g.none.length) out.push(`Für ${esc(g.none.map(m => m.name).join(', '))} liegt noch <b>keine Einwilligung</b> vor.`);
-  if (g.few.length) out.push(`${esc(g.few.map(m => m.name).join(', '))} ${g.few.length > 1 ? 'dürfen' : 'darf'} nur mit <b>mehr Personen</b> unterwegs sein (${esc(g.few.map(m => m.name + ': ' + MIN_WORD[consentOf(m).min]).join(', '))}).`);
+  if (g.few.length) out.push(`${esc(g.few.map(m => m.name).join(', '))} ${g.few.length > 1 ? 'dürfen' : 'darf'} nicht <b>${NEED_WORD[g.need]}</b> unterwegs sein.`);
   hint.innerHTML = out.length ? `${ICO.warn}<span>${out.join(' ')}</span>` : 'Tippt alle an, die mitfahren.';
 }
 function saveReq() {
@@ -1662,17 +1674,13 @@ function renderTeam() {
   if (document.activeElement !== nameIn) nameIn.value = (g && g.name) || '';
   nameIn.disabled = !canWrite();
   $('#teamGrid').innerHTML = gm.map(m => {
-    const c = consentOf(m);
-    // Nur das Zeichen — die Bedeutung steht im Tooltip (title).
-    const consent = PA.owner
-      ? `<div class="cseg" role="group" aria-label="Einwilligung von ${esc(m.name)}">${CONSENT.map(k =>
-          `<button type="button" class="c${k.n}" data-consent="${esc(m.id)}:${k.n}" aria-pressed="${c.n === k.n}" title="${esc(k.nm)}">${k.mark}</button>`).join('')}</div>`
-      : cmark(m, false);
+    // Nur die Zeichen — die Bedeutung steht im Tooltip (title).
+    const consent = cmark(m, PA.owner && canWrite(), false);
     return `<div class="mcard${m.me ? ' me' : ''}">
       ${avatar(m, 44)}
       <div class="mtxt">
         <div class="mname">${esc(m.name)}${m.me ? ' <span class="metag">du</span>' : ''}<span class="dot${m.online ? ' on' : ''}" title="${m.online ? 'gerade da' : 'nicht da'}"></span></div>
-        <div class="mconsent" title="${esc(c.nm)}">Einwilligung: ${consent}</div>
+        <div class="mconsent" title="${esc(consentText(m))}">Einwilligung: ${consent}</div>
         ${PA.owner ? `<div class="mcode">Code <b class="mkey">${esc(PA.fmtKey(m.key))}</b>
           <button class="btn ghost sm" data-rekey="${esc(m.id)}">neu</button></div>`
           : m.me && PA.me && PA.me.key ? `<div class="mcode" title="Dein persönlicher Code — nicht weitergeben">Dein Code <b class="mkey">${esc(PA.fmtKey(PA.me.key))}</b></div>` : ''}
@@ -2265,17 +2273,16 @@ function wire() {
     }
     // Backups (Lehrkraft)
     if ((b = t.closest('[data-bk]'))) { backupAction(b.dataset.bk, b.dataset.id); return; }
-    // Einwilligung (nur Lehrkraft): im Team gezielt, in der Klassenliste reihum
-    if ((b = t.closest('[data-consent]'))) {
+    // Einwilligung (nur Lehrkraft): jeder Haken einzeln an/aus
+    if ((b = t.closest('[data-ctog]'))) {
       if (!PA.owner) return;
-      const [id, n] = b.dataset.consent.split(':');
-      setConsent(id, +n); return;
+      const [id, bit] = b.dataset.ctog.split(':');
+      const p = person(id) || members().find(m => m.id === id); if (!p) return;
+      setConsent(id, consentBits(p) ^ +bit, true); return;
     }
-    if ((b = t.closest('[data-cyc]'))) {
-      if (!PA.owner) return;
-      if (b.dataset.ov && !consentEdit) { toast('Zum Ändern der Einwilligungen über den Schülern „Einwilligungen ändern“ antippen.'); return; }
-      const p = person(b.dataset.cyc); if (!p) return;
-      setConsent(p.id, ((+p.consent || 0) + 1) % CONSENT.length, true); return;
+    if ((b = t.closest('[data-clocked]'))) {
+      if (PA.owner) toast('Zum Ändern der Einwilligungen über den Schülern „Einwilligungen ändern“ antippen.');
+      return;
     }
     if ((b = t.closest('[data-codeshow]'))) {
       codeShow = !codeShow;
@@ -2285,7 +2292,7 @@ function wire() {
     if ((b = t.closest('[data-clock]'))) {
       consentEdit = !consentEdit;
       if (consentEdit) codeShow = false;
-      toast(consentEdit ? 'Einwilligungen lassen sich jetzt ändern (antippen = nächste Stufe).' : 'Einwilligungen gesperrt.');
+      toast(consentEdit ? 'Einwilligungen lassen sich jetzt ändern (Symbol antippen = an/aus).' : 'Einwilligungen gesperrt.');
       renderOverview(); return;
     }
     // Tätigkeitsbuch
@@ -2520,7 +2527,7 @@ async function setConsent(id, n, say) {
   [V().people || [], members()].forEach(list => list.forEach(p => { if (p.id === id) p.consent = n; }));
   renderAll();
   const r = await PA.act('pa_room_consent', { p_participant: id, p_level: n });
-  if (r && say) { const p = person(id); toast(`${p ? p.name : 'Einwilligung'}: ${CONSENT[n].nm}`); }
+  if (r && say) { const p = person(id) || members().find(m => m.id === id); toast(`${p ? p.name + ': ' : ''}${consentText({ consent: n })}`); }
 }
 
 /* ── Mail bei neuen Anträgen (0203) ──────────────────────────
