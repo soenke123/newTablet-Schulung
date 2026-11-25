@@ -157,17 +157,17 @@ html[data-view="lab"] .phase-hint-text { flex: 0 1 auto; }
   background: transparent;
   border: 2px dashed var(--line);
   box-shadow: none;
-  justify-content: center;
+  justify-content: flex-start;   /* „+ Schicht“ oben bei den Spaltenköpfen (25.11.2026) */
   align-items: center;
   min-width: 64px;
   flex-shrink: 0;
 }
 .addlayer-btn {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  display: flex; flex-direction: row; align-items: center; gap: 4px; margin-top: 6px; white-space: nowrap;
   border: none; background: transparent; color: var(--ink-soft);
   font: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer; padding: 10px;
 }
-.addlayer-btn span { font-size: 1.6rem; line-height: 1; }
+.addlayer-btn span { font-size: 1.25rem; line-height: 1; }
 .addlayer-btn:hover { color: var(--ink); }
 .col-remove-btn {
   margin-top: 6px;
@@ -721,3 +721,64 @@ i.m, .m i { font-family: 'KaTeX Math', 'Cambria Math', 'Times New Roman', serif;
 .nt-intro h2 { margin: 0 0 6px; }
 .nt-intro .nn-lead-p { margin: 0; }
 .phase-btn[hidden] { display: none; }
+
+/* ── Neuron-Fenster (25.11.2026, Sönke): kein Modal mehr, sondern ein verschiebbares
+   Fenster neben dem Neuron. Das Feld bleibt sichtbar und bedienbar. ── */
+#popup-overlay { background: transparent; backdrop-filter: none; pointer-events: none; padding: 0; overflow: visible; display: block; }
+#popup-overlay.hidden { display: none; }
+#popup { pointer-events: auto; position: fixed; margin: 0; width: min(94vw, 400px); padding: 0 0 14px;
+  max-height: calc(var(--vv-h, 100vh) - 24px); overflow: auto; overscroll-behavior: contain;
+  border-top: 4px solid var(--type-color, var(--accent)); box-shadow: 0 14px 40px rgba(0,0,0,.22); }
+#popup.dragging { opacity: .92; }
+#popup-title { margin: 0 0 10px; padding: 12px 84px 10px 16px; cursor: grab; touch-action: none; user-select: none;
+  border-bottom: 1px solid var(--line-soft); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+#popup-title::before { content: ''; display: inline-block; width: 14px; height: 8px; margin-right: 8px; vertical-align: middle; opacity: .5;
+  background: radial-gradient(circle, var(--ink-faint) 1.2px, transparent 1.5px) 0 0 / 4.6px 4px; }
+#popup.dragging #popup-title { cursor: grabbing; }
+#popup-close { top: 6px; right: 8px; width: 34px; height: 34px; z-index: 2; border-radius: 10px; }
+#popup-close:hover { background: var(--surface-2); }
+#popup-trash { position: absolute; top: 6px; right: 44px; width: 34px; height: 34px; z-index: 2; display: grid; place-items: center;
+  border: 0; border-radius: 10px; background: transparent; color: var(--ink-faint); cursor: pointer; }
+#popup-trash:hover { background: var(--neg-dim); color: var(--neg); }
+#popup-trash[hidden] { display: none; }
+#popup-content { padding: 0 16px; }
+#popup .popup-type-row { margin-bottom: 10px; }
+#popup .popup-type-btn { border: 1.5px solid var(--btn-color); color: var(--btn-color); background: var(--surface); }
+#popup .popup-type-btn.selected { background: var(--btn-color); color: #fff; }
+.nlp-wlist { display: grid; gap: 4px; margin-bottom: 12px; }
+.nlp-wrow { display: grid; grid-template-columns: 22px 1fr 112px; align-items: center; gap: 8px; padding: 3px 6px; border-radius: 10px; }
+.nlp-wrow:hover, .nlp-wrow:focus-within { background: var(--accent-dim); }
+.nlp-brow { border-top: 1px solid var(--line-soft); border-radius: 0 0 10px 10px; padding-top: 7px; margin-top: 2px; }
+.nlp-brow:hover, .nlp-brow:focus-within { background: var(--bias-dim, var(--surface-2)); }
+.nlp-wrow.is-off .nlp-wlbl, .nlp-wrow.is-off .nl-pm { opacity: .38; }
+.nlp-wrow.is-off .nl-pm { pointer-events: none; }
+.nlp-wlbl { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.nlp-wlbl .m { font-size: 1.25rem; }
+.nlp-wlbl small { font-size: .74rem; color: var(--ink-faint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nlp-pm { height: 34px; }
+.nlp-pm .nl-pm-val { font-size: 13px; }
+.nlp-pm-b .nl-pm-btn { background: var(--bias-dim, var(--surface-2)); color: var(--bias); }
+.nlp-pm-b .nl-pm-btn:hover { background: var(--bias); color: #fff; }
+.nlp-math { display: grid; gap: 10px; justify-items: center; padding: 12px; background: var(--surface-2); border-radius: 12px; }
+.nlp-mrow { font-size: 1.2rem; display: flex; align-items: center; flex-wrap: wrap; justify-content: center; gap: .15em; color: var(--ink); }
+.nlp-mrow sub { font-size: .7em; }
+.nlp-mact { color: var(--type-color, var(--ink)); }
+.nlp-mact sup { font-size: .65em; }
+.nlp-mact .mcl { font-size: .75em; }
+
+/* Bearbeitetes Gewicht leuchtet im Netz auf, die anderen treten zurück */
+.edge-overlay.has-hl .edge-line:not(.edge-hl) { stroke-opacity: .18; }
+.edge-overlay.has-hl .edge-label:not(.edge-hl) { opacity: .3; }
+.edge-line.edge-hl { stroke: var(--gold, #d4a017) !important; stroke-opacity: 1 !important; stroke-dasharray: none;
+  stroke-width: max(4px, calc(3px * var(--nl-inv, 1))) !important;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--gold, #d4a017) 70%, transparent)); }
+.edge-label.edge-hl rect { stroke: var(--gold, #d4a017) !important; stroke-width: 2 !important; }
+.neuron-card.is-editing .neuron-body { stroke-width: 3; stroke-dasharray: none; }
+.neuron-card.is-editing .neuron-svg { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--type-color) 55%, transparent)); }
+html[data-motion="low"] .edge-line.edge-hl, html[data-motion="low"] .neuron-card.is-editing .neuron-svg { filter: none; }
+
+/* Phasen-Knöpfe 1 Bauen · 2 Trainieren · 3 Testen (25.11.2026, statt Build/Learn/Test) */
+.phase-btn i { font-style: normal; font-family: var(--mono); font-size: .72em; font-weight: 800; display: inline-grid; place-items: center;
+  width: 1.45em; height: 1.45em; border-radius: 50%; margin-right: .4em; background: var(--surface-2); color: var(--ink-faint); vertical-align: .08em; }
+.phase-btn.active i { background: rgba(255,255,255,.28); color: inherit; }
+@media (max-width: 720px) { .phase-btn i { display: none; } }

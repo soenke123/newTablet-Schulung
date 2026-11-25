@@ -802,5 +802,5 @@
   }
 
   /* Bausteine auch für Bereich 2 (js/revier.js): dasselbe Neuron, dieselbe Rechnung */
-  window.NLNeuron = { render, makeNeuron, calcHTML, num, parseNum };
+  window.NLNeuron = { render, makeNeuron, calcHTML, num, parseNum, F_TXT };
 })();

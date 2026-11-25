@@ -2352,8 +2352,6 @@ function renderLearnGroup() {
 const CARD_W = { gates: 290, seg7: 260, zielscheibe: 280, voegel: 340, wildkatzen: 360, custom: 300 };
 const CARD_TAP = { gates: 'Zeile antippen', seg7: 'Segment oder Ziffer antippen', zielscheibe: 'Auf die Scheibe tippen', voegel: 'Ins Diagramm tippen', wildkatzen: 'Auf die Karte tippen' };
 function scenName(key) { const e = SCENARIO_LIST.find(x => x.key === key); return e ? e.name : ''; }
-function canSwitchScenario() { return !!(window.NLStart && window.NLStart.canSwitch && window.NLStart.canSwitch()); }
-function openScenPicker() { stopTraining(); if (window.NLStart && window.NLStart.showPicker) window.NLStart.showPicker(); }
 const lowMotion = () => !!((window.LWMotion && window.LWMotion.low)
   || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches));
 function netTop() { const n = document.getElementById('network'); return n ? n.getBoundingClientRect().top : 56; }
@@ -2366,13 +2364,7 @@ function renderScenCard() {
   const head = document.createElement('div');
   head.className = 'sc-head';
   head.innerHTML = `<span class="sc-kicker">Szenario</span><b class="sc-title">${esc(scenName(key))}</b>`;
-  if (canSwitchScenario()) {
-    const sw = document.createElement('button');
-    sw.type = 'button'; sw.className = 'sc-switch'; sw.textContent = 'Wechseln';
-    sw.title = 'Anderes Szenario wählen';
-    sw.addEventListener('click', e => { e.stopPropagation(); openScenPicker(); });
-    head.appendChild(sw);
-  }
+  // Kein „Wechseln“ mehr (Sönke 25.11.2026): ein anderes Szenario wählt man über die Übersicht.
   const x = document.createElement('button');
   x.type = 'button'; x.className = 'sc-close'; x.title = 'Karte schließen (oben bei „Szenario“ wieder öffnen)'; x.textContent = '×';
   x.addEventListener('click', e => { e.stopPropagation(); toggleScenCard(false); });
@@ -2395,7 +2387,7 @@ function renderScenCard() {
   if (CARD_TAP[key]) {
     const hint = document.createElement('div');
     hint.className = 'sc-testhint' + (state.phase === 'run' ? ' on' : '');
-    hint.textContent = state.phase === 'run' ? `Test: ${CARD_TAP[key]} = Eingabe fürs Netz` : `${CARD_TAP[key]} = im Test ausprobieren`;
+    hint.textContent = state.phase === 'run' ? `Testen: ${CARD_TAP[key]} = Eingabe fürs Netz` : `${CARD_TAP[key]} = beim Testen ausprobieren`;
     card.appendChild(hint);
   }
   const grip = document.createElement('div');
@@ -3154,7 +3146,7 @@ function renderLearnPanel() {
   dragHdr.className = 'col-header learn-panel-header';
   const titleEl = document.createElement('span');
   titleEl.className = 'col-name';
-  titleEl.textContent = 'Lernen';
+  titleEl.textContent = 'Trainieren';
   dragHdr.appendChild(titleEl);
   panel.appendChild(dragHdr);
   addLearnPanelFreeDrag(dragHdr);
@@ -3208,14 +3200,6 @@ function renderLearnPanel() {
   scName.className = 'learn-scenario-name';
   scName.textContent = scOptions.find(([v]) => v === scSel.value)?.[1] ?? '–';
   scRow.append(scLabel, scName);
-  // Hier wieder wechseln können (Sönke 24.11.2026) – öffnet die Szenario-Wahl
-  if (canSwitchScenario()) {
-    const sw = document.createElement('button');
-    sw.type = 'button'; sw.className = 'learn-scen-switch'; sw.textContent = 'Wechseln';
-    sw.title = 'Anderes Szenario wählen';
-    sw.addEventListener('click', e => { e.stopPropagation(); openScenPicker(); });
-    scRow.appendChild(sw);
-  }
   panel.appendChild(scRow);
 
   const btnRow = document.createElement('div');
@@ -3457,6 +3441,10 @@ function makePM(value, onCommit, opts = {}) {
     return b;
   };
   const minus = mk('−', 'weniger'), plus = mk('+', 'mehr');
+  /* + über − rechts neben der Zahl, wie am Neuron in „Wie arbeitet ein Neuron?“ */
+  const pms = document.createElement('span');
+  pms.className = 'nl-pm-pms';
+  pms.append(plus, minus);
   const inp = document.createElement('input');
   inp.type = 'text'; inp.inputMode = 'decimal'; inp.className = 'nl-pm-val';
   inp.value = pmFmt(value);
@@ -3472,7 +3460,7 @@ function makePM(value, onCommit, opts = {}) {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') inp.blur(); e.stopPropagation(); });
   inp.addEventListener('focus', () => inp.select());
   for (const ev of ['pointerdown', 'pointerup', 'click', 'dblclick']) box.addEventListener(ev, e => e.stopPropagation());
-  box.append(minus, inp, plus);
+  box.append(inp, pms);
   return box;
 }
 function makePMObject(x, y, w, h, value, onCommit, opts) {
@@ -3485,7 +3473,11 @@ function makePMObject(x, y, w, h, value, onCommit, opts) {
    und Eintippen. Es hängt am <body> des Rahmens, damit es beim Zoomen der
    Tafel nicht mitschrumpft. Es bleibt offen, bis man daneben tippt. */
 let vpop = null;
-function closeValuePop() { if (vpop) { vpop.remove(); vpop = null; document.removeEventListener('pointerdown', vpopAway, true); } }
+/* Neuron-Fenster (siehe showNeuronPopup) */
+let popupTarget = null;   // { li, ni } des offenen Fensters
+let popupMoved = null;    // { x, y }, sobald man das Fenster verschoben hat
+let edgeHL = null;        // { li, ni, si } = hervorgehobene Kante (si = -1: nur das Neuron)
+function closeValuePop() { if (vpop) { vpop.remove(); vpop = null; document.removeEventListener('pointerdown', vpopAway, true); if (edgeHL && !popupTarget) setEdgeHL(null); } }
 function vpopAway(e) { if (vpop && !vpop.contains(e.target)) closeValuePop(); }
 function openValuePop(anchor, title, value, onCommit, step = 0.1) {
   closeValuePop();
@@ -4133,7 +4125,7 @@ function renderHeader() {
     const nm = document.getElementById('scinfo-name');
     if (nm) nm.textContent = scenName(state.learn.scenario);
   }
-  const hints = { build: 'Netz bauen: Neuronen, Gewichte und Bias einstellen', run: 'Test: Eingaben ändern und das Ergebnis sehen', learn: 'Lernen: zusehen, wie das Netz mit den Daten trainiert' };
+  const hints = { build: 'Bauen: Schichten, Neuronen, Gewichte und Bias einstellen', run: 'Testen: Eingaben ändern und das Ergebnis sehen', learn: 'Trainieren: zusehen, wie das Netz aus den Daten lernt' };
   document.getElementById('phase-hint-text').textContent = hints[state.phase] || '';
 }
 
@@ -4993,7 +4985,7 @@ function drawEdgeOverlay(net) {
         /* Farbe = Vorzeichen (türkis +, rot −), Dicke = Stärke — wie überall
            in NeuroLab und Nebeltal. theme.js setzt die Farben fürs Thema um. */
         const w = neuron.weights[si] ?? 1;
-        edges.push({ neuron, si, src, tgt, w, color: Math.abs(w) < 0.01 ? '#94a3b8' : w < 0 ? '#dc2626' : '#10b981' });
+        edges.push({ neuron, li, ni, si, src, tgt, w, color: Math.abs(w) < 0.01 ? '#94a3b8' : w < 0 ? '#dc2626' : '#10b981' });
       });
     });
   }
@@ -5037,6 +5029,7 @@ function drawEdgeOverlay(net) {
       'stroke-opacity': zero ? '0.45' : '0.7',
       'stroke-linecap': 'round',
       class: 'edge-line' + (zero ? ' edge-zero' : ''),
+      'data-k': `${e.li}-${e.ni}-${e.si}`,
     };
     if (printMode) attrs['stroke-width'] = sw;
     else attrs.style = `stroke-width: max(${sw}px, calc(var(--nl-edge-min, 1px) * var(--nl-inv, 1)))`;
@@ -5070,11 +5063,13 @@ function drawEdgeOverlay(net) {
     });
   for (const p of (printMode && printOpts.weights === 'off' ? [] : placeEdgeLabels(edges, obstacles))) {
     const g = svgEl('g', { class: 'edge-label' });
+    if (p.edge) g.setAttribute('data-k', `${p.edge.li}-${p.edge.ni}-${p.edge.si}`);
     if (p.edge && state.phase === 'build' && !printMode) {
       g.setAttribute('class', 'edge-label edge-label-edit');
       g.addEventListener('click', ev => {
         ev.stopPropagation();
         const e = p.edge;
+        setEdgeHL({ li: e.li, ni: e.ni, si: e.si });
         openValuePop(g, 'Gewicht', e.neuron.weights[e.si] ?? 1, v => {
           e.neuron.weights[e.si] = v;
           updateNeuronDisplays();
@@ -5108,6 +5103,7 @@ function drawEdgeOverlay(net) {
   }
   overlaySvg.append(lineLayer, labelLayer);
   net.insertBefore(overlaySvg, net.firstChild);
+  if (edgeHL || popupTarget) applyEdgeHL();
 }
 
 // Die Kanten hängen an der Tafel — ein Aufrufer soll nicht wissen müssen,
@@ -5117,24 +5113,145 @@ function redrawEdges() { drawEdgeOverlay(stageEl()); }
 // ── Combined popup ─────────────────────────────────────────────────────────
 let popupDirty = false;
 
+/* Neuron-Fenster (25.11.2026, Sönke): KEIN Modal mehr – ein Fenster neben dem
+   Neuron, am Titel verschiebbar, das Feld bleibt sichtbar und bedienbar. Im Build
+   wirkt jede Änderung sofort; das bearbeitete Gewicht leuchtet im Netz auf
+   (edgeHL), das Neuron selbst trägt .is-editing; Mülltonne = Neuron löschen. */
+
+function setEdgeHL(hl) {
+  edgeHL = hl;
+  applyEdgeHL();
+}
+function applyEdgeHL() {
+  const st = stageEl();
+  if (!st) return;
+  const ov = st.querySelector('.edge-overlay');
+  st.querySelectorAll('.edge-hl').forEach(e => e.classList.remove('edge-hl'));
+  st.querySelectorAll('.neuron-card.is-editing').forEach(e => e.classList.remove('is-editing'));
+  if (ov) ov.classList.toggle('has-hl', !!(edgeHL && edgeHL.si >= 0));
+  const tgt = edgeHL || popupTarget;
+  if (tgt) {
+    const card = st.querySelector(`.neuron-card[data-li="${tgt.li}"][data-ni="${tgt.ni}"]`);
+    if (card) card.classList.add('is-editing');
+  }
+  if (!edgeHL || edgeHL.si < 0 || !ov) return;
+  ov.querySelectorAll(`[data-k="${edgeHL.li}-${edgeHL.ni}-${edgeHL.si}"]`).forEach(e => {
+    e.classList.add('edge-hl');
+    e.parentNode.appendChild(e);   // nach vorn
+  });
+}
+
 function showNeuronPopup(neuron, layerIdx, neuronIdx, inputs, z, y) {
   const act = activations[neuron.type];
+  const pop = document.getElementById('popup');
   const contentEl = document.getElementById('popup-content');
   contentEl.innerHTML = '';
   popupDirty = false;
+  popupTarget = { li: layerIdx, ni: neuronIdx };
+  pop.style.setProperty('--type-color', act.color);
 
   const outName = isLearnArea() && slotOf(layerIdx, neuronIdx) >= 0 ? state.outputLabels[slotOf(layerIdx, neuronIdx)] : '';
   document.getElementById('popup-title').textContent =
     `${layerName(layerIdx)} · ${outName ? 'Ausgang „' + outName + '“' : 'Neuron ' + (neuronIdx + 1)}`;
 
+  // Mülltonne oben rechts: nur im Build (sonst ist die Struktur gesperrt)
+  let trash = document.getElementById('popup-trash');
+  if (!trash) {
+    trash = document.createElement('button');
+    trash.id = 'popup-trash'; trash.type = 'button';
+    trash.title = 'Dieses Neuron löschen';
+    trash.setAttribute('aria-label', 'Dieses Neuron löschen');
+    trash.innerHTML = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>';
+    pop.insertBefore(trash, document.getElementById('popup-close'));
+    trash.addEventListener('click', e => {
+      e.stopPropagation();
+      if (popupTarget) deleteNeuron(popupTarget.li, popupTarget.ni);
+    });
+  }
+  trash.hidden = state.phase !== 'build' || viewOnly;
+
   if (state.phase === 'build') {
-    buildBuildPopupContent(contentEl, neuron, layerIdx);
+    buildBuildPopupContent(contentEl, neuron, layerIdx, neuronIdx);
   } else if (state.phase === 'learn') {
     buildLearnPopupContent(contentEl, neuron, layerIdx, neuronIdx);
   } else {
     buildRunPopupContent(contentEl, neuron, layerIdx, inputs, z, y, act);
   }
-  document.getElementById('popup-overlay').classList.remove('hidden');
+  const ov = document.getElementById('popup-overlay');
+  ov.classList.remove('hidden');
+  edgeHL = null;
+  applyEdgeHL();
+  placePopup();
+}
+
+// Neben das Neuron (rechts, sonst links), oder dahin, wo man es hingeschoben hat
+function placePopup() {
+  const pop = document.getElementById('popup');
+  const W = window.innerWidth, H = window.innerHeight;
+  const w = pop.offsetWidth, h = pop.offsetHeight;
+  let x, y;
+  if (popupMoved) ({ x, y } = popupMoved);
+  else {
+    const card = popupTarget && stageEl() && stageEl().querySelector(`.neuron-card[data-li="${popupTarget.li}"][data-ni="${popupTarget.ni}"] .neuron-svg`);
+    const r = card ? card.getBoundingClientRect() : { left: W / 2, right: W / 2, top: H / 3 };
+    x = r.right + 14;
+    if (x + w > W - 8) x = r.left - w - 14;
+    if (x < 8) x = W - w - 8;
+    y = r.top - 30;
+  }
+  x = Math.max(8, Math.min(W - w - 8, x));
+  y = Math.max(netTop() + 6, Math.min(H - h - 8, y));
+  pop.style.left = x + 'px'; pop.style.top = y + 'px';
+}
+
+// Am Titel verschieben (Zeiger: Maus, Finger, Stift)
+(function addPopupDrag() {
+  const pop = document.getElementById('popup');
+  const head = document.getElementById('popup-title');
+  let st = null;
+  head.addEventListener('pointerdown', e => {
+    const r = pop.getBoundingClientRect();
+    st = { id: e.pointerId, dx: e.clientX - r.left, dy: e.clientY - r.top };
+    head.setPointerCapture(e.pointerId);
+    pop.classList.add('dragging');
+    e.preventDefault();
+  });
+  head.addEventListener('pointermove', e => {
+    if (!st || e.pointerId !== st.id) return;
+    const w = pop.offsetWidth, h = pop.offsetHeight;
+    const x = Math.max(8 - w + 80, Math.min(window.innerWidth - 80, e.clientX - st.dx));
+    const y = Math.max(0, Math.min(window.innerHeight - 40, e.clientY - st.dy));
+    pop.style.left = x + 'px'; pop.style.top = y + 'px';
+    popupMoved = { x, y };
+  });
+  const end = e => { if (st && e.pointerId === st.id) { st = null; pop.classList.remove('dragging'); } };
+  head.addEventListener('pointerup', end);
+  head.addEventListener('pointercancel', end);
+})();
+
+/* Ein Neuron aus der Mitte einer Schicht löschen: die Gewichte der nächsten
+   Schicht, die von ihm kamen, gehen mit; Ausgänge dahinter rücken nach. */
+function deleteNeuron(li, ni) {
+  const layer = state.layers[li];
+  if (!layer || ni >= layer.neurons.length) return;
+  const nx = nextActive(li);
+  if (nx >= 0 && layer.count > 1) {
+    state.layers[nx].neurons.forEach(n => {
+      n.weights.splice(ni, 1);
+      if (n.disabled) n.disabled.splice(ni, 1);
+    });
+  }
+  layer.neurons.splice(ni, 1);
+  layer.count = layer.neurons.length;
+  (state.outMap || []).forEach((m, t) => {
+    if (!m || m.li !== li) return;
+    if (m.ni === ni) state.outMap[t] = null;
+    else if (m.ni > ni) m.ni--;
+  });
+  if (isLearnArea()) state.learn.topologyDirty = true;
+  resyncAll();
+  closePopupSilently();
+  render();
 }
 
 function buildLearnPopupContent(contentEl, neuron, layerIdx, neuronIdx) {
@@ -5221,130 +5338,114 @@ function buildLearnPopupContent(contentEl, neuron, layerIdx, neuronIdx) {
   contentEl.appendChild(grid);
 }
 
-function buildBuildPopupContent(contentEl, neuron, layerIdx) {
-  // Type selector row
+/* Formeln in Formel-Schrift (KaTeX, wie „Wie arbeitet ein Neuron?“), jede Größe
+   in ihrer Farbe: x orange · w türkis · b indigo. */
+function srcName(li, i) {
+  if (prevActive(li) < 0) return state.inputLabels[i] || `x${i + 1}`;
+  return `${layerName(prevActive(li))} · Neuron ${i + 1}`;
+}
+function sumMathHTML(li, neuron) {
+  const pre = prevActive(li) < 0 ? 'x' : 'y′';
+  const terms = neuron.weights.map((_, i) => i).filter(i => !neuron.disabled?.[i])
+    .map(i => `<span class="t-w"><i>w</i><sub>${i + 1}</sub></span>·<span class="t-x"><i>${pre === 'x' ? 'x' : 'y'}</i>${pre === 'x' ? '' : '′'}<sub>${i + 1}</sub></span>`);
+  return `<i>z</i> = ${terms.length ? terms.join(' + ') + ' + ' : ''}<span class="t-b"><i>b</i></span>`;
+}
+function actMathHTML(type) {
+  const F = window.NLNeuron && window.NLNeuron.F_TXT;
+  return F ? F[type] : activations[type].formula;
+}
+
+function buildBuildPopupContent(contentEl, neuron, layerIdx, neuronIdx) {
+  const li = layerIdx;
+  // Typ: Knöpfe in der Farbe des Typs (wie „Alle Neuronen“)
   const typeRow = document.createElement('div');
   typeRow.className = 'popup-type-row';
   Object.entries(activations).forEach(([key, a]) => {
     const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'popup-type-btn' + (neuron.type === key ? ' selected' : '');
     btn.style.setProperty('--btn-color', a.color);
     btn.textContent = a.fullName;
     btn.addEventListener('click', () => {
       neuron.type = key;
-      popupDirty = true;
-      typeRow.querySelectorAll('.popup-type-btn').forEach(b => b.classList.remove('selected'));
-      btn.classList.add('selected');
-      const actEl = contentEl.querySelector('.popup-act-formula');
-      if (actEl) actEl.innerHTML = activations[key].formula;
+      typeRow.querySelectorAll('.popup-type-btn').forEach(b => b.classList.toggle('selected', b === btn));
+      document.getElementById('popup').style.setProperty('--type-color', a.color);
+      fAct.innerHTML = actMathHTML(key);
+      render();
     });
     typeRow.appendChild(btn);
   });
   contentEl.appendChild(typeRow);
 
-  // 2-column grid
-  const grid = document.createElement('div');
-  grid.className = 'popup-grid';
-
-  // LEFT: editable weights + bias
-  const left = document.createElement('div');
-  left.className = 'popup-col';
-  const wtitle = document.createElement('div');
-  wtitle.className = 'popup-section-title';
-  wtitle.textContent = 'Gewichte';
-  left.appendChild(wtitle);
+  // Gewichte: je Verbindung eine Zeile, + über − wie überall; Zeile antippen/zeigen = Kante leuchtet
+  const wt = document.createElement('div');
+  wt.className = 'popup-section-title';
+  wt.textContent = 'Gewichte';
+  contentEl.appendChild(wt);
+  const list = document.createElement('div');
+  list.className = 'nlp-wlist';
   if (neuron.weights.length === 0) {
     const d = document.createElement('div');
     d.className = 'popup-muted';
-    d.textContent = 'Keine Inputs';
-    left.appendChild(d);
-  } else {
-    neuron.weights.forEach((w, i) => {
-      const row = document.createElement('div');
-      row.className = 'popup-weight-row';
-      const isDisabled = !!(neuron.disabled?.[i]);
-
-      const disBtn = document.createElement('button');
-      disBtn.className = 'popup-disconnect-btn' + (isDisabled ? ' disconnected' : '');
-      disBtn.title = isDisabled ? 'Verbindung wiederherstellen' : 'Verbindung trennen';
-      disBtn.textContent = '×';
-      disBtn.addEventListener('click', () => {
-        if (!neuron.disabled) neuron.disabled = Array(neuron.weights.length).fill(false);
-        neuron.disabled[i] = !neuron.disabled[i];
-        popupDirty = true;
-        const nowDisabled = neuron.disabled[i];
-        disBtn.classList.toggle('disconnected', nowDisabled);
-        disBtn.title = nowDisabled ? 'Verbindung wiederherstellen' : 'Verbindung trennen';
-        inp.disabled = nowDisabled;
-        inp.classList.toggle('grayed', nowDisabled);
-      });
-
-      const lbl = document.createElement('span');
-      lbl.className = 'popup-weight-label';
-      lbl.textContent = `w${i + 1}`;
-      const inp = document.createElement('input');
-      inp.type = 'number';
-      inp.value = w;
-      inp.step = '0.1';
-      inp.className = 'popup-weight-input' + (isDisabled ? ' grayed' : '');
-      inp.disabled = isDisabled;
-      inp.addEventListener('input', () => {
-        const v = parseFloat(inp.value);
-        if (!isNaN(v)) { neuron.weights[i] = v; popupDirty = true; }
-      });
-      row.append(disBtn, lbl, inp);
-      left.appendChild(row);
-    });
+    d.textContent = 'Keine Eingänge';
+    list.appendChild(d);
   }
-
-  // Bias row (cannot be disconnected)
-  const bDivider = document.createElement('div');
-  bDivider.className = 'popup-bias-divider';
-  left.appendChild(bDivider);
-  const biasRow = document.createElement('div');
-  biasRow.className = 'popup-weight-row';
-  const bSpacer = document.createElement('span');
-  bSpacer.className = 'popup-disconnect-spacer';
-  const bLbl = document.createElement('span');
-  bLbl.className = 'popup-weight-label';
-  bLbl.textContent = 'b';
-  const bInp = document.createElement('input');
-  bInp.type = 'number';
-  bInp.value = neuron.bias;
-  bInp.step = '0.1';
-  bInp.className = 'popup-weight-input';
-  bInp.addEventListener('input', () => {
-    const v = parseFloat(bInp.value);
-    if (!isNaN(v)) { neuron.bias = v; popupDirty = true; }
+  const hlOn = i => setEdgeHL({ li, ni: neuronIdx, si: i });
+  const hlOff = () => { if (!list.contains(document.activeElement)) setEdgeHL(null); };
+  neuron.weights.forEach((w, i) => {
+    const row = document.createElement('div');
+    const off = !!(neuron.disabled?.[i]);
+    row.className = 'nlp-wrow' + (off ? ' is-off' : '');
+    const dis = document.createElement('button');
+    dis.type = 'button';
+    dis.className = 'popup-disconnect-btn' + (off ? ' disconnected' : '');
+    dis.title = off ? 'Verbindung wiederherstellen' : 'Verbindung trennen';
+    dis.textContent = off ? '↺' : '×';
+    dis.addEventListener('click', () => {
+      if (!neuron.disabled) neuron.disabled = Array(neuron.weights.length).fill(false);
+      neuron.disabled[i] = !neuron.disabled[i];
+      render();
+      showNeuronPopup(neuron, li, neuronIdx);
+    });
+    const lbl = document.createElement('span');
+    lbl.className = 'nlp-wlbl';
+    lbl.innerHTML = `<span class="m t-w"><i>w</i><sub>${i + 1}</sub></span><small>${esc(srcName(li, i))}</small>`;
+    const pm = makePM(w, v => { neuron.weights[i] = v; updateNeuronDisplays(); applyEdgeHL(); }, { step: 0.1, cls: 'nlp-pm' });
+    row.append(dis, lbl, pm);
+    row.addEventListener('pointerenter', () => hlOn(i));
+    row.addEventListener('pointerleave', hlOff);
+    row.addEventListener('focusin', () => hlOn(i));
+    row.addEventListener('focusout', () => setTimeout(hlOff, 0));
+    list.appendChild(row);
   });
-  biasRow.append(bSpacer, bLbl, bInp);
-  left.appendChild(biasRow);
+  // Bias
+  const brow = document.createElement('div');
+  brow.className = 'nlp-wrow nlp-brow';
+  const bsp = document.createElement('span');
+  bsp.className = 'popup-disconnect-spacer';
+  const blbl = document.createElement('span');
+  blbl.className = 'nlp-wlbl';
+  blbl.innerHTML = '<span class="m t-b"><i>b</i></span><small>Bias</small>';
+  const bpm = makePM(neuron.bias, v => { neuron.bias = v; updateNeuronDisplays(); applyEdgeHL(); }, { step: 0.1, cls: 'nlp-pm nlp-pm-b' });
+  brow.append(bsp, blbl, bpm);
+  list.appendChild(brow);
+  contentEl.appendChild(list);
 
-  // RIGHT: general formulas
-  const right = document.createElement('div');
-  right.className = 'popup-col';
-
-  const stitle = document.createElement('div');
-  stitle.className = 'popup-section-title';
-  stitle.textContent = 'Summierung';
-  right.appendChild(stitle);
-  const sumEl = document.createElement('div');
-  sumEl.className = 'popup-formula';
-  sumEl.innerHTML = buildGeneralSumFormula(layerIdx, neuron.weights.length, neuron.disabled);
-  right.appendChild(sumEl);
-
-  const atitle = document.createElement('div');
-  atitle.className = 'popup-section-title';
-  atitle.style.marginTop = '14px';
-  atitle.textContent = 'Aktivierungsfunktion';
-  right.appendChild(atitle);
-  const actEl = document.createElement('div');
-  actEl.className = 'popup-formula popup-act-formula';
-  actEl.innerHTML = activations[neuron.type].formula;
-  right.appendChild(actEl);
-
-  grid.append(left, right);
-  contentEl.appendChild(grid);
+  // Rechnung in Formel-Schrift
+  const ft = document.createElement('div');
+  ft.className = 'popup-section-title';
+  ft.textContent = 'So rechnet das Neuron';
+  contentEl.appendChild(ft);
+  const fbox = document.createElement('div');
+  fbox.className = 'nlp-math';
+  const fSum = document.createElement('div');
+  fSum.className = 'm nlp-mrow';
+  fSum.innerHTML = sumMathHTML(li, neuron);
+  const fAct = document.createElement('div');
+  fAct.className = 'm nlp-mrow nlp-mact';
+  fAct.innerHTML = actMathHTML(neuron.type);
+  fbox.append(fSum, fAct);
+  contentEl.appendChild(fbox);
 }
 
 function buildRunPopupContent(contentEl, neuron, layerIdx, inputs, z, y, act) {
@@ -5430,19 +5531,23 @@ function buildGeneralSumFormula(layerIdx, count, disabled) {
 // ── Popup close ─────────────────────────────────────────────────────────────
 function closePopup() {
   document.getElementById('popup-overlay').classList.add('hidden');
-  if (popupDirty) { popupDirty = false; render(); }
+  popupTarget = null; popupMoved = null; edgeHL = null;
+  if (popupDirty) { popupDirty = false; render(); } else applyEdgeHL();
 }
 
 document.getElementById('popup-close').addEventListener('click', closePopup);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && !document.getElementById('popup-overlay').classList.contains('hidden') && !vpop) closePopup();
+});
 document.getElementById('popup-overlay').addEventListener('click', e => {
   if (e.target === document.getElementById('popup-overlay')) closePopup();
 });
 
 // ── Phase buttons ──────────────────────────────────────────────────────────
 // Nur im Bereich „Netze bauen“ sichtbar; beim Lernen gibt es nur „Lernen“.
-document.getElementById('btn-build').addEventListener('click', () => { stopTraining(); state.phase = 'build'; render(); });
-document.getElementById('btn-run').addEventListener('click', () => { stopTraining(); state.phase = 'run'; render(); });
-document.getElementById('btn-learn').addEventListener('click', () => { stopTraining(); state.phase = 'learn'; render(); });
+document.getElementById('btn-build').addEventListener('click', () => { stopTraining(); closePopupSilently(); state.phase = 'build'; render(); });
+document.getElementById('btn-run').addEventListener('click', () => { stopTraining(); closePopupSilently(); state.phase = 'run'; render(); });
+document.getElementById('btn-learn').addEventListener('click', () => { stopTraining(); closePopupSilently(); state.phase = 'learn'; render(); });
 
 // ── Reset ──────────────────────────────────────────────────────────────────
 function resetState() {
@@ -5653,6 +5758,7 @@ function exportNet() { return JSON.parse(JSON.stringify(serializeState())); }
 function closePopupSilently() {
   document.getElementById('popup-overlay').classList.add('hidden');
   popupDirty = false;
+  popupTarget = null; popupMoved = null; edgeHL = null;
 }
 window.NLApp = {
   enterArea, leaveArea, render, startTraining, stopTraining, selectScenario, openShared, exportNet,

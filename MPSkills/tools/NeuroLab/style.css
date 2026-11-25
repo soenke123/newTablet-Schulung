@@ -515,6 +515,14 @@ body.print-mode #net-stage.edge-labels-off .edge-label { display: inline; }
 .neuron-val     { font-family: var(--mono); font-size: 9.5px; letter-spacing: -.02em; font-weight: 700; fill: var(--ink-soft); user-select: none; }
 .neuron-type    { font-family: var(--mono); font-size: 9.5px; font-weight: 800; letter-spacing: .12em; fill: var(--ink-faint); user-select: none; }
 .neuron-func-label { font-weight: 700; fill: var(--type-color); user-select: none; }
+/* Typ-Farben wie in „Wie arbeitet ein Neuron?“ / „Alle Neuronen“ (25.11.2026, Sönke):
+   Name, Kurve und Rand in der Farbe des Typs, Rumpf leicht getönt (activations[t].color). */
+.neuron-svg .neuron-body  { stroke: var(--type-color, var(--line)); fill: color-mix(in srgb, var(--type-color, transparent) 9%, var(--surface)); }
+.neuron-svg.is-hot .neuron-body { stroke: var(--type-color, var(--accent)); stroke-width: 2.6; }
+.neuron-svg .neuron-curve { stroke: var(--type-color, var(--ink-soft)); }
+.neuron-svg .neuron-type  { fill: var(--type-color, var(--ink-faint)); }
+.neuron-svg .neuron-divider { stroke: color-mix(in srgb, var(--type-color, var(--line)) 35%, var(--line)); }
+body.print-mode .neuron-svg .neuron-body { fill: var(--surface); }
 .bias-line      { stroke: var(--ink-faint); stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 .bias-label     { font-family: var(--mono); font-size: 10.5px; fill: var(--ink-faint); font-weight: 700; }
 .bias-cap       { font-family: var(--mono); font-size: 8px; letter-spacing: .1em; fill: var(--ink-faint); font-weight: 800; }
@@ -1423,17 +1431,21 @@ body.demo-mode .data-table-col .col-body { overflow: hidden; max-height: none; }
 .nl-pm { display: flex; align-items: stretch; width: 100%; height: 100%; box-sizing: border-box;
   border: 1.5px solid var(--line); border-radius: 9px; background: var(--surface); overflow: hidden;
   font-family: var(--mono); }
-.nl-pm-btn { flex: 0 0 22px; border: 0; background: var(--surface-2); color: var(--ink); font: 700 13px/1 var(--mono);
-  padding: 0; cursor: pointer; touch-action: manipulation; }
+.nl-pm-pms { flex: 0 0 22px; display: grid; grid-template-rows: 1fr 1fr; gap: 1px; background: var(--line); border-left: 1px solid var(--line); }
+.nl-pm-btn { border: 0; background: var(--accent-dim, var(--surface-2)); color: var(--accent-ink, var(--ink)); font: 700 12px/1 var(--mono);
+  padding: 0; cursor: pointer; touch-action: manipulation; display: grid; place-items: center; min-height: 0; }
+.nl-pm-btn:hover { background: var(--accent); color: var(--surface); }
 .nl-pm-btn:active { background: var(--accent-dim, var(--line)); }
 .nl-pm-val { flex: 1 1 auto; min-width: 0; width: 100%; border: 0; background: transparent; color: var(--ink);
   text-align: center; font: 700 11px var(--mono); padding: 0; }
 .nl-pm-val:focus { outline: 2px solid var(--accent); outline-offset: -2px; }
 .nl-pm-edge { border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
-.nl-pm-edge .nl-pm-btn { flex-basis: 18px; font-size: 12px; }
+.nl-pm-edge .nl-pm-pms { flex-basis: 18px; } .nl-pm-edge .nl-pm-btn { font-size: 11px; }
 .nl-pm-edge .nl-pm-val { font-size: 10.5px; }
 .nl-pm-bias .nl-pm-val { font-size: 12px; }
-.nl-pm-in { height: 30px; min-width: 96px; }
+.nl-pm-in { height: 32px; width: 76px; flex: 0 0 76px; }
+.nl-pm-in .nl-pm-btn { background: var(--in-dim, var(--surface-2)); color: var(--in-ink, var(--ink)); }
+.nl-pm-in .nl-pm-btn:hover { background: var(--in); color: #fff; }
 .nl-pm-in .nl-pm-val { font-size: 13px; }
 .learn-scenario-name { font-weight: 700; color: var(--ink); }
 .edge-label-edit { cursor: pointer; }
@@ -1443,6 +1455,6 @@ body.demo-mode .data-table-col .col-body { overflow: hidden; max-height: none; }
 .nl-vpop { position: fixed; z-index: 3000; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 10px;
   background: var(--surface); border: 1.5px solid var(--accent); border-radius: 14px; box-shadow: 0 8px 24px rgba(0,0,0,.22); }
 .nl-vpop-title { font: 700 .68rem var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); }
-.nl-pm-big { width: 170px; height: 40px; border-radius: 10px; }
-.nl-pm-big .nl-pm-btn { flex-basis: 44px; font-size: 20px; }
+.nl-pm-big { width: 150px; height: 48px; border-radius: 10px; }
+.nl-pm-big .nl-pm-pms { flex-basis: 34px; } .nl-pm-big .nl-pm-btn { font-size: 16px; }
 .nl-pm-big .nl-pm-val { font-size: 16px; }

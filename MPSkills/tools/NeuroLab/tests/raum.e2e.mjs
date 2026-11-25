@@ -282,7 +282,7 @@ const L = await pg.evaluate(() => NLApp.state.learn.loss);
 ok(L < 0.01, 'Gatter (inkl. XOR) gelernt, Verlust ' + L.toFixed(4));
 await shot(pg, 'gatter');
 
-await pg.click('#scen-card .sc-switch');   // Szenario wechseln steht in der Szenario-Karte (24.11.2026)
+await pg.click('#btn-home'); await pg.click('.tile[data-id="trainieren"]');   // Szenario wechseln nur über die Übersicht (25.11.2026)
 await pg.click('#scen-picker .tile[data-id="sc-vogel"]');
 ok(await pg.evaluate(() => NLApp.state.learn.scenario) === 'voegel', 'Knopf „Szenario wählen“ im Modus wechselt das Szenario');
 await pg.click('#learn-apply-topology');

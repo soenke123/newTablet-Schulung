@@ -52,6 +52,23 @@ Feld mit − / + und Eintippen, keine Regler; `makePM`) · **Learn** (nur Traini
 `makePM`, Schritt 1). Kopf: `#btn-build/#btn-learn/#btn-run` (Run heißt „Test“). Kein Szenario-Menü im Lernfenster; Wechsel über die Knöpfe „Wechseln“
 (`start.js`: leaveArea + enterArea, siehe „Szenario-Karte“ unten). Jedes Szenario hat sein Netz: `localStorage neuron-sim-v2-sc-<key>` (`scKey`, Frei = `custom`).
 
+## Lernen und Frei angeglichen (25.11.2026, Sönke)
+
+- **Namen:** Startseite 1 „Wie arbeitet ein Neuron?“ · 2 **„Neuronen treffen Entscheidungen“** (Kicker „Das Revier der Wildkatzen“) ·
+  3 **„Ein Netz findet Lösungen“** (vorher „Lernen“) · „Frei bauen“. Kopfzeile zeigt diese Namen. Phasen heißen **1 Bauen · 2 Trainieren · 3 Testen**
+  (vorher Build/Learn/Test; ids `#btn-build/#btn-learn/#btn-run` und `state.phase` build/learn/run bleiben), Lernfenster-Titel „Trainieren“.
+- **+ über −** auch im Feld: `makePM` = Zahl links, rechts `.nl-pm-pms` mit + oben, − unten (Test-Eingaben, Wert-Fenster an Kante/Bias, Neuron-Fenster).
+- **Typ-Farben im Feld** wie in „Alle Neuronen“: Name, Kurve, Rand in `activations[t].color`, Rumpf 9 % getönt (CSS `.neuron-svg … var(--type-color)`).
+- **„+ Schicht“** steht oben in seiner Spalte (bei den Spaltenköpfen).
+- **Kein „Wechseln“** mehr in Szenario-Karte und Lernfenster; ein anderes Szenario nur über die Übersicht (`NLStart.canSwitch` bleibt, ungenutzt).
+- **Neuron-Fenster** (`showNeuronPopup`) ist kein Modal mehr: `#popup-overlay` ohne Abdunkeln und `pointer-events: none`, `#popup` fest neben dem
+  Neuron (`placePopup`, rechts sonst links), am Titel verschiebbar (`popupMoved`, bis zum Schließen gemerkt), × oder Esc schließt, anderes Neuron antippen
+  = dessen Fenster. Bauen: Typ-Knöpfe in Typ-Farbe, je Gewicht eine Zeile `w₁ · Quelle` mit `makePM` (wirkt sofort), Verbindung trennen ×/↺, Bias,
+  „So rechnet das Neuron“ in KaTeX-Schrift (`sumMathHTML`, Aktivierung aus `NLNeuron.F_TXT`). Zeile zeigen/antippen = **Kante leuchtet gold**
+  (`edgeHL {li, ni, si}`, Kanten/Beschriftungen tragen `data-k="li-ni-si"`, `applyEdgeHL` nach jedem `drawEdgeOverlay`), auch beim Antippen einer
+  Kanten-Zahl im Feld. Das offene Neuron trägt `.is-editing`. **Mülltonne** `#popup-trash` (nur Bauen) = `deleteNeuron(li, ni)`: Gewichte der nächsten
+  Schicht von diesem Neuron fallen weg, Ausgänge rücken nach.
+
 ## Szenario-Karte und Ausgänge (24.11.2026, Sönke)
 
 - **Szenario-Karte = eigenes Fenster** (`renderScenCard`, `#scen-card` an `#network` wie das Lernfenster), unabhängig vom Lernfenster und
@@ -61,9 +78,7 @@ Feld mit − / + und Eintippen, keine Regler; `makePM`) · **Learn** (nur Traini
   „Szenario · Name“** `#btn-scinfo` in der Kopfzeile (an der Stelle des alten „Szenario wählen“), dort wieder auf (`toggleScenCard`, ohne
   Animation bei `data-motion="low"`/reduzierter Bewegung). Ein Szenario öffnen = Karte offen (`enterArea`, nicht im Schaufenster).
   Offen/zu in `state.learn.infoPanelOpen` (alter Name bleibt). Der alte ◀/▶-Info-Kasten am Lernfenster ist weg.
-- **Szenario wechseln:** Knopf „Wechseln“ im Kopf der Karte (`.sc-switch`) und im Lernfenster neben dem Namen (`.learn-scen-switch`),
-  nur wenn `NLStart.canSwitch()` (Lernen, nicht Frei, nicht beim Ansehen eines gesendeten Netzes); öffnen `NLStart.showPicker()`.
-  `#btn-scen` gibt es nicht mehr.
+- **Szenario wechseln:** seit 25.11.2026 nur über die Übersicht (Knöpfe „Wechseln“ entfernt). `#btn-scen` gibt es nicht mehr.
 - **Testen über die Karte** (`testInputs`): Gatter = Tabellenzeile, Ziffer = Segment oder Beispielziffer, Zielscheibe = auf die Scheibe,
   Greifvögel = ins Diagramm, Wildkatzen = auf die Karte (Kamera oder beliebiger Ort, `tapAny` in karte.js, 0,1 km). Aus Build/Learn heraus
   wechselt das in den Test, während des Trainings nicht. Die Karte markiert die anliegende Eingabe (`updateScenCardMarks`: Zeile/Ziffer

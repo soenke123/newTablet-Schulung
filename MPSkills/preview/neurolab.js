@@ -32,7 +32,7 @@
 
   async function play(api) {
     if (!await api.waitFor('.tile-sub[data-open="n-typen"]', 6000)) return;
-    api.caption('Vier Kacheln: Neuronen · Wildkatzen · Lernen · Frei');
+    api.caption('Drei Schritte: Wie arbeitet ein Neuron? · Neuronen treffen Entscheidungen · Ein Netz findet Lösungen – und Frei bauen');
     if (!await api.wait(2600)) return;
 
     api.click('.tile-sub[data-open="n-typen"]');
@@ -55,7 +55,7 @@
     if (!await api.waitFor('.tile[data-id="trainieren"]', 3000)) return;
     api.click('.tile[data-id="trainieren"]');
     if (!await api.waitFor('#scen-picker .tile[data-id="sc-katze"]', 3000)) return;
-    api.caption('Lernen: erst das Szenario wählen – Wildkatzen: das Netz findet seine Geraden selbst');
+    api.caption('Ein Netz findet Lösungen: erst das Szenario wählen – Wildkatzen: das Netz findet seine Geraden selbst');
     if (!await api.wait(1800)) return;
     api.click('#btn-home');
     if (!await api.waitFor('.tile[data-id="b-frei"]', 3000)) return;

@@ -582,7 +582,7 @@
       <li>Ein Netz antwortet auch an Orten, an denen es <b>nie ein Beispiel</b> gesehen hat. Dafür trainiert man es.</li>
       <li>Wo viele Kameras sind, ist es sich sicher. <b>Wo keine sind, rät es</b> – mit den Geraden, die es hat.</li>
       <li>Am Fluss liegt der echte Rand nicht auf deiner Geraden. Keine Kamera hat das verraten. <b>Ein Netz ist nur so gut wie seine Daten.</b></li>
-      <li>Bisher hast du jede Gerade selbst ausgerechnet. Unter <b>„Lernen“ → Wildkatzen</b> findet ein Netz seine Geraden mit denselben Kameras <b>selbst</b>.</li></ul></div>`);
+      <li>Bisher hast du jede Gerade selbst ausgerechnet. Unter <b>„Ein Netz findet Lösungen“ → Wildkatzen</b> findet ein Netz seine Geraden mit denselben Kameras <b>selbst</b>.</li></ul></div>`);
     card.querySelector('.rv-split').after(sum);
 
     /* Das Netz rechnet einen Ort vor: jedes Perzeptron 1/0, dann der Ausgang */

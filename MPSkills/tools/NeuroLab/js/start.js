@@ -61,18 +61,18 @@
       ] },
     { id: 'bauen', title: 'Vom Neuron zum Netz', text: 'Aus Geraden wird ein Netz – und am Ende baust du frei.',
       items: [
-        { id: 'v-revier', title: 'Wildkatzen', text: 'Wildtierkameras im Tal: Jede Grenze ist ein Neuron – rechne die Geraden aus und schließ sie zu einem Netz zusammen.' },
+        { id: 'v-revier', title: 'Neuronen treffen Entscheidungen', text: 'Wildtierkameras im Tal: Jede Grenze ist ein Neuron – rechne die Geraden aus und schließ sie zu einem Netz zusammen.' },
         { id: 'b-frei', title: 'Frei', text: 'Alles selbst: Schichten und Neuronen setzen, eigene CSV-Tabelle hineinladen und das Netz lernen lassen.' },
       ] },
-    { id: 'trainieren', title: 'Lernen', text: 'Das Netz findet die Gewichte selbst. Das Szenario wählst du im Modus.',
+    { id: 'trainieren', title: 'Ein Netz findet Lösungen', text: 'Das Netz findet die Gewichte selbst. Das Szenario wählst du im Modus.',
       items: App.scenarios().filter(e => e.key !== 'custom').map(e => ({ id: e.id, key: e.key, title: e.name, text: SC_TEXT[e.key] || '' })) },
   ];
   const ALL_PARTS = AREAS.flatMap(a => [a.id, ...a.items.map(i => i.id)]);
   /* Startseite = vier Kacheln: Neuronen · Wildkatzen · Lernen · Frei */
   const HOME = [
-    { id: 'n-wie', area: 'neuron', title: 'Neuronen', text: 'Eingänge, Gewichte, Bias, Aktivierung – ein Neuron Stück für Stück aufgedeckt.', art: 'neuron' },
-    { id: 'v-revier', area: 'bauen', title: 'Wildkatzen', text: 'Wildtierkameras im Tal: Jede Grenze ist eine Gerade – erst rechnen, dann aufdecken.', art: 'v-revier' },
-    { id: 'trainieren', area: 'trainieren', title: 'Lernen', text: 'Szenario wählen, Schichten bauen – und zusehen, wie der Fehler fällt.', art: 'trainieren' },
+    { id: 'n-wie', area: 'neuron', title: 'Wie arbeitet ein Neuron?', text: 'Eingänge, Gewichte, Bias, Aktivierung – ein Neuron Stück für Stück aufgedeckt.', art: 'neuron' },
+    { id: 'v-revier', area: 'bauen', title: 'Neuronen treffen Entscheidungen', text: 'Wildtierkameras im Tal: Jede Grenze ist ein Neuron – erst rechnen, dann aufdecken.', art: 'v-revier' },
+    { id: 'trainieren', area: 'trainieren', title: 'Ein Netz findet Lösungen', text: 'Szenario wählen, Netz bauen, trainieren, testen – und zusehen, wie der Fehler fällt.', art: 'trainieren' },
     { id: 'b-frei', area: 'bauen', title: 'Frei bauen', text: 'Ohne Vorgaben: eigene Schichten, eigene CSV-Tabelle, eigenes Training.', art: 'frei' },
   ];
   const DEFAULT_PARTS = ['neuron', 'n-wie', 'n-typen'];
@@ -185,7 +185,7 @@
   };
   const HOME_INFO = {
     'n-wie': { kick: 'Ein Neuron', chips: ['7 Schritte'] },
-    'v-revier': { kick: 'Vom Neuron zum Netz', chips: ['3 Schritte'] },
+    'v-revier': { kick: 'Das Revier der Wildkatzen', chips: ['3 Schritte'] },
     trainieren: { kick: 'Das Netz lernt selbst', chips: [AREAS[2].items.length + ' Szenarien'] },
     'b-frei': { kick: 'Spielwiese', chips: [] },
   };
@@ -272,7 +272,7 @@
     $('scen-picker').hidden = true;
     if (a.id === 'neuron') { where = { view: 'neuron', id }; renderNeuron(); }
     else if (id === 'v-revier') { where = { view: 'netz', id }; renderNetz(); }
-    else if (id === 'b-frei') { where = { view: 'lab', area: 'lernen', id, sc: 'sc-eigene' }; setView('lab', 'Frei'); App.enterArea('lernen', 'custom'); }
+    else if (id === 'b-frei') { where = { view: 'lab', area: 'lernen', id, sc: 'sc-eigene' }; setView('lab', 'Frei bauen'); App.enterArea('lernen', 'custom'); }
     else if (a.id === 'bauen') return;
     else {
       // Kachel „Netze trainieren“ (id = Bereich) oder direkt ein Szenario
@@ -289,7 +289,7 @@
   }
 
   function renderNetz() {
-    setView('netz', 'Wildkatzen');
+    setView('netz', 'Neuronen treffen Entscheidungen');
     const pg = $('netz-page');
     window.NLRevier.render(pg, {});
     pg.scrollTop = 0;
