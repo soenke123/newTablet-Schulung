@@ -19,7 +19,7 @@ if (V === 'haupt') {
       columns: [c('Nr', 'INT', { pk: true }), c('Vorname', 'VARCHAR', fk('Kunde', 'Vorname')), c('ISBN', 'VARCHAR', fk('Buch', 'ISBN')), c('Zeitpunkt', 'DATETIME')] },
     { name: 'Buch', pk: ['ISBN'], fks: [], columns: [c('ISBN', 'VARCHAR', { pk: true }), c('Titel', 'VARCHAR'), c('Genre', 'VARCHAR'),
       c('Preis', 'DECIMAL(5,2)'), c('Verlag', 'VARCHAR'), c('Verlagsort', 'VARCHAR'),
-      c('Strasse', 'VARCHAR'), c('Hausnr', 'INT'), c('Telefon', 'VARCHAR'), c('Bestand', 'INT')] },
+      c('Verlagstel', 'INT'), c('Bestand', 'INT')] },
     { name: 'Buch_Autor', pk: ['ISBN', 'Autor_Id'], fks: [{ cols: ['ISBN'], ref: 'Buch', refCols: ['ISBN'] }, { cols: ['Autor_Id'], ref: 'Autor', refCols: ['Id'] }],
       columns: [c('ISBN', 'VARCHAR', Object.assign({ pk: true }, fk('Buch', 'ISBN'))), c('Autor_Id', 'INT', Object.assign({ pk: true }, fk('Autor', 'Id')))] },
     { name: 'Autor', pk: ['Id'], fks: [], columns: [c('Id', 'INT', { pk: true }), c('Name', 'VARCHAR'), c('Nationalitaet', 'VARCHAR')] }

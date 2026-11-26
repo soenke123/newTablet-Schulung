@@ -18,14 +18,14 @@
     ]
   },
   "Buch": {
-    "cols": ["ISBN", "Titel", "Genre", "Preis", "Verlag", "Verlagsort", "Strasse", "Hausnr", "Telefon", "Bestand"],
+    "cols": ["ISBN", "Titel", "Genre", "Preis", "Verlag", "Verlagsort", "Verlagstel", "Bestand"],
     "rows": [
-      ["978-3-522-20260-1", "Die unendliche Geschichte", "Fantasy, Jugendbuch, Klassiker", "22.00", "Thienemann", "Stuttgart", "Lindenweg", 12, "0711 5550123", 3],
-      ["978-3-522-20311-0", "Momo", "Fantasy, Kinderbuch", "15.00", "Thienemann", "Stuttgart", "Lindenweg", 12, "0711 5550123", 5],
-      ["978-3-551-55167-3", "Harry Potter und der Stein der Weisen", "Fantasy, Jugendbuch", "20.00", "Carlsen", "Hamburg", "Hafenstraße", 8, "040 5550188", 4],
-      ["978-3-551-55168-4", "Harry Potter und die Kammer des Schreckens", "Fantasy", "20.00", "Carlsen", "Hamburg", "Hafenstraße", 8, "040 5550188", 2],
-      ["978-3-7645-0567-7", "Der Ruf des Kuckucks", "Krimi", "14.00", "Blanvalet", "München", "Isarufer", 3, "089 5550170", 1],
-      ["978-3-7915-0465-5", "Tintenherz", "Fantasy", "24.00", "Dressler", "Hamburg", "Elbchaussee", 41, "040 5550145", 1]
+      ["978-3-522-20260-1", "Die unendliche Geschichte", "Fantasy, Jugendbuch, Klassiker", "22.00", "Thienemann", "Stuttgart", 711555012, 3],
+      ["978-3-522-20311-0", "Momo", "Fantasy, Kinderbuch", "15.00", "Thienemann", "Stuttgart", 711555012, 5],
+      ["978-3-551-55167-3", "Harry Potter und der Stein der Weisen", "Fantasy, Jugendbuch", "20.00", "Carlsen", "Hamburg", 405550188, 4],
+      ["978-3-551-55168-4", "Harry Potter und die Kammer des Schreckens", "Fantasy", "20.00", "Carlsen", "Hamburg", 405550188, 2],
+      ["978-3-7645-0567-7", "Der Ruf des Kuckucks", "Krimi", "14.00", "Blanvalet", "München", 895550170, 1],
+      ["978-3-7915-0465-5", "Tintenherz", "Fantasy", "24.00", "Dressler", "Hamburg", 405550145, 1]
     ]
   },
   "Buch_Autor": {
