@@ -1,0 +1,17 @@
+<!doctype html><html data-theme="light"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../../fonts/outfit-inter-jetbrainsmono-985fda.css">
+<link rel="stylesheet" href="../../MPSkills/tools/SQLStudio/css/app.css">
+<style>html,body{margin:0;background:#eef3f5}#h{position:relative;width:1060px;height:600px}</style></head>
+<body><div id="h" class="dg-host"></div>
+<script src="../../MPSkills/tools/SQLStudio/js/diagram.js"></script>
+<script>
+const c=(name,type,o={})=>Object.assign({name,type},o);
+const S={tables:[
+{name:'Kunde',pk:['Vorname','Nachname'],fks:[],columns:[c('Vorname','VARCHAR(30)',{pk:true}),c('Nachname','VARCHAR(30)',{pk:true}),c('Alter','INT'),c('Telefon','INT'),c('Wohnort','VARCHAR(40)')]},
+{name:'Kauf',pk:['Nr'],fks:[{cols:['Vorname','Nachname'],ref:'Kunde',refCols:['Vorname','Nachname']},{cols:['ISBN'],ref:'Buch',refCols:['ISBN']}],
+ columns:[c('Nr','INT',{pk:true}),c('Vorname','VARCHAR(30)',{fk:{table:'Kunde',col:'Vorname'}}),c('Nachname','VARCHAR(30)',{fk:{table:'Kunde',col:'Nachname'}}),c('ISBN','VARCHAR(17)',{fk:{table:'Buch',col:'ISBN'}}),c('Datum','DATE')]},
+{name:'Buch',pk:['ISBN'],fks:[{cols:['Autor_Id'],ref:'Autor',refCols:['Id']}],columns:[c('ISBN','VARCHAR(17)',{pk:true}),c('Titel','VARCHAR(80)'),c('Autor_Id','INT',{fk:{table:'Autor',col:'Id'}}),c('Genre','VARCHAR(60)'),c('Preis','DECIMAL(5,2)'),c('Verlag','VARCHAR(40)'),c('Verlagsort','VARCHAR(40)'),c('Bestand','INT')]},
+{name:'Autor',pk:['Id'],fks:[],columns:[c('Id','INT',{pk:true}),c('Name','VARCHAR(60)'),c('Nationalitaet','VARCHAR(30)')]}]};
+document.fonts.ready.then(()=>{const dg=SQLDiagram.create(document.getElementById('h'));
+dg.render(S,{showTypes:true,pos:{Kunde:{x:0,y:0},Kauf:{x:330,y:0},Buch:{x:660,y:0},Autor:{x:660,y:285}}});dg.fit();window.done=1;});
+</script></body></html>
