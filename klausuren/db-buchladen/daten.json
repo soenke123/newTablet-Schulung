@@ -1,0 +1,88 @@
+{
+  "Kunde": {
+    "cols": ["Vorname", "Nachname", "Geburtsdatum", "Telefon", "Wohnort"],
+    "rows": [
+      ["Bastian", "Bux", "2014-05-17", 1712233445, "Hamburg"],
+      ["Mia", "Kaya", "2009-08-02", 1523456789, "Kiel"],
+      ["Jonas", "Weber", "1992-01-23", 405123456, "Hamburg"],
+      ["Anna", "Schmidt", "1958-11-30", 451234567, "Lübeck"],
+      ["Leonie", "Park", "2011-03-09", 1605551234, "Hamburg"]
+    ]
+  },
+  "Autor": {
+    "cols": ["Id", "Name", "Nationalitaet"],
+    "rows": [
+      [1, "Michael Ende", "deutsch"],
+      [2, "J. K. Rowling", "britisch"],
+      [3, "Cornelia Funke", "deutsch"],
+      [4, "Terry Pratchett", "britisch"],
+      [5, "Robert Galbraith", "britisch"],
+      [6, "Kirsten Boie", "deutsch"]
+    ]
+  },
+  "Buch": {
+    "cols": ["ISBN", "Titel", "Genre", "Preis", "Verlag", "Verlagsort", "Bestand"],
+    "rows": [
+      ["978-3-522-20260-1", "Die unendliche Geschichte", "Fantasy, Jugendbuch", "22.00", "Thienemann", "Stuttgart", 3],
+      ["978-3-522-20311-0", "Momo", "Fantasy, Kinderbuch", "15.00", "Thienemann", "Stuttgart", 5],
+      ["978-3-551-55167-3", "Harry Potter und der Stein der Weisen", "Fantasy, Jugendbuch", "20.00", "Carlsen", "Hamburg", 4],
+      ["978-3-551-55168-4", "Harry Potter und die Kammer des Schreckens", "Fantasy", "20.00", "Carlsen", "Hamburg", 2],
+      ["978-3-7645-0567-7", "Der Ruf des Kuckucks", "Krimi", "14.00", "Blanvalet", "München", 1],
+      ["978-3-7891-0812-8", "Sommerby", "Kinderbuch", "15.00", "Oetinger", "Hamburg", 3],
+      ["978-3-7915-0465-5", "Tintenherz", "Fantasy, Jugendbuch", "24.00", "Dressler", "Hamburg", 1],
+      ["978-3-8025-1123-6", "Die Farben der Magie", "Fantasy, Humor", "12.00", "Piper", "München", 2]
+    ]
+  },
+  "Buch_Autor": {
+    "cols": ["ISBN", "Autor_Id"],
+    "rows": [
+      ["978-3-522-20260-1", 1],
+      ["978-3-522-20311-0", 1],
+      ["978-3-551-55167-3", 2],
+      ["978-3-551-55168-4", 2],
+      ["978-3-7645-0567-7", 5],
+      ["978-3-7891-0812-8", 6],
+      ["978-3-7915-0465-5", 3],
+      ["978-3-8025-1123-6", 4]
+    ]
+  },
+  "Kauf": {
+    "cols": ["Nr", "Vorname", "ISBN", "Zeitpunkt"],
+    "rows": [
+      [1, "Bastian", "978-3-522-20260-1", "2026-03-02 16:40"],
+      [2, "Bastian", "978-3-7915-0465-5", "2026-03-02 16:40"],
+      [3, "Mia", "978-3-551-55167-3", "2026-04-11 11:05"],
+      [4, "Anna", "978-3-522-20260-1", "2026-05-20 10:22"],
+      [5, "Mia", "978-3-8025-1123-6", "2026-06-01 17:31"],
+      [6, "Jonas", "978-3-7645-0567-7", "2026-06-01 18:02"],
+      [7, "Leonie", "978-3-551-55168-4", "2026-07-15 14:48"],
+      [8, "Bastian", "978-3-522-20311-0", "2026-09-03 15:12"],
+      [9, "Leonie", "978-3-7891-0812-8", "2026-09-03 15:18"]
+    ]
+  },
+  "Sensor": {
+    "cols": ["Id", "Ort"],
+    "rows": [
+      [1, "Eingang / Schaufenster"],
+      [2, "Fantasy-Ecke"],
+      [3, "Krimi-Regal"],
+      [4, "Kinderbuch-Ecke"],
+      [5, "Kasse"]
+    ]
+  },
+  "Bewegung": {
+    "cols": ["Nr", "Geraet", "Geraetename", "Sensor_Id", "Zeitpunkt"],
+    "rows": [
+      [1, "7C:D1:C3:4A:22:9F", "iPhone", 1, "2026-09-03 15:02"],
+      [2, "7C:D1:C3:4A:22:9F", "iPhone", 2, "2026-09-03 15:03"],
+      [3, "B2:09:E7:51:6D:10", "Galaxy A54", 3, "2026-09-03 15:04"],
+      [4, "E5:3F:60:8B:91:C2", "Leonies Pixel", 4, "2026-09-03 15:06"],
+      [5, "7C:D1:C3:4A:22:9F", "iPhone", 2, "2026-09-03 15:08"],
+      [6, "B2:09:E7:51:6D:10", "Galaxy A54", 3, "2026-09-03 15:09"],
+      [7, "7C:D1:C3:4A:22:9F", "iPhone", 5, "2026-09-03 15:11"],
+      [8, "B2:09:E7:51:6D:10", "Galaxy A54", 1, "2026-09-03 15:13"],
+      [9, "E5:3F:60:8B:91:C2", "Leonies Pixel", 2, "2026-09-03 15:14"],
+      [10, "E5:3F:60:8B:91:C2", "Leonies Pixel", 5, "2026-09-03 15:17"]
+    ]
+  }
+}

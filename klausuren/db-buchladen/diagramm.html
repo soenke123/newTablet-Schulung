@@ -1,17 +1,67 @@
 <!doctype html><html data-theme="light"><head><meta charset="utf-8">
+<!-- Klassendiagramme der Klausur mit dem Zeichencode von SQL Studio. bild.cjs öffnet ?v=haupt und ?v=tracking. -->
 <link rel="stylesheet" href="../../fonts/outfit-inter-jetbrainsmono-985fda.css">
 <link rel="stylesheet" href="../../MPSkills/tools/SQLStudio/css/app.css">
-<style>html,body{margin:0;background:#eef3f5}#h{position:relative;width:1060px;height:600px}</style></head>
+<style>html,body{margin:0;background:#eef3f5}#h{position:relative}</style></head>
 <body><div id="h" class="dg-host"></div>
 <script src="../../MPSkills/tools/SQLStudio/js/diagram.js"></script>
 <script>
-const c=(name,type,o={})=>Object.assign({name,type},o);
-const S={tables:[
-{name:'Kunde',pk:['Vorname','Nachname'],fks:[],columns:[c('Vorname','VARCHAR(30)',{pk:true}),c('Nachname','VARCHAR(30)',{pk:true}),c('Alter','INT'),c('Telefon','INT'),c('Wohnort','VARCHAR(40)')]},
-{name:'Kauf',pk:['Nr'],fks:[{cols:['Vorname','Nachname'],ref:'Kunde',refCols:['Vorname','Nachname']},{cols:['ISBN'],ref:'Buch',refCols:['ISBN']}],
- columns:[c('Nr','INT',{pk:true}),c('Vorname','VARCHAR(30)',{fk:{table:'Kunde',col:'Vorname'}}),c('Nachname','VARCHAR(30)',{fk:{table:'Kunde',col:'Nachname'}}),c('ISBN','VARCHAR(17)',{fk:{table:'Buch',col:'ISBN'}}),c('Datum','DATE')]},
-{name:'Buch',pk:['ISBN'],fks:[{cols:['Autor_Id'],ref:'Autor',refCols:['Id']}],columns:[c('ISBN','VARCHAR(17)',{pk:true}),c('Titel','VARCHAR(80)'),c('Autor_Id','INT',{fk:{table:'Autor',col:'Id'}}),c('Genre','VARCHAR(60)'),c('Preis','DECIMAL(5,2)'),c('Verlag','VARCHAR(40)'),c('Verlagsort','VARCHAR(40)'),c('Bestand','INT')]},
-{name:'Autor',pk:['Id'],fks:[],columns:[c('Id','INT',{pk:true}),c('Name','VARCHAR(60)'),c('Nationalitaet','VARCHAR(30)')]}]};
-document.fonts.ready.then(()=>{const dg=SQLDiagram.create(document.getElementById('h'));
-dg.render(S,{showTypes:true,pos:{Kunde:{x:0,y:0},Kauf:{x:330,y:0},Buch:{x:660,y:0},Autor:{x:660,y:285}}});dg.fit();window.done=1;});
+const c = (name, type, o = {}) => Object.assign({ name, type }, o);
+const fk = (table, col) => ({ fk: { table, col } });
+const KUNDE = { name: 'Kunde', pk: ['Vorname'], fks: [], columns: [c('Vorname', 'VARCHAR(30)', { pk: true }), c('Nachname', 'VARCHAR(30)'),
+  c('Geburtsdatum', 'DATE'), c('Telefon', 'INT'), c('Wohnort', 'VARCHAR(40)')] };
+const V = new URLSearchParams(location.search).get('v') || 'haupt';
+let S, pos, size, extra = null;
+if (V === 'haupt') {
+  S = { tables: [
+    KUNDE,
+    { name: 'Kauf', pk: ['Nr'], fks: [{ cols: ['Vorname'], ref: 'Kunde', refCols: ['Vorname'] }, { cols: ['ISBN'], ref: 'Buch', refCols: ['ISBN'] }],
+      columns: [c('Nr', 'INT', { pk: true }), c('Vorname', 'VARCHAR(30)', fk('Kunde', 'Vorname')), c('ISBN', 'VARCHAR(17)', fk('Buch', 'ISBN')), c('Zeitpunkt', 'DATETIME')] },
+    { name: 'Buch', pk: ['ISBN'], fks: [], columns: [c('ISBN', 'VARCHAR(17)', { pk: true }), c('Titel', 'VARCHAR(80)'), c('Genre', 'VARCHAR(60)'),
+      c('Preis', 'DECIMAL(5,2)'), c('Verlag', 'VARCHAR(40)'), c('Verlagsort', 'VARCHAR(40)'), c('Bestand', 'INT')] },
+    { name: 'Buch_Autor', pk: ['ISBN', 'Autor_Id'], fks: [{ cols: ['ISBN'], ref: 'Buch', refCols: ['ISBN'] }, { cols: ['Autor_Id'], ref: 'Autor', refCols: ['Id'] }],
+      columns: [c('ISBN', 'VARCHAR(17)', Object.assign({ pk: true }, fk('Buch', 'ISBN'))), c('Autor_Id', 'INT', Object.assign({ pk: true }, fk('Autor', 'Id')))] },
+    { name: 'Autor', pk: ['Id'], fks: [], columns: [c('Id', 'INT', { pk: true }), c('Name', 'VARCHAR(60)'), c('Nationalitaet', 'VARCHAR(30)')] }
+  ] };
+  pos = { Kunde: { x: 0, y: 0 }, Kauf: { x: 330, y: 0 }, Buch: { x: 660, y: 0 }, Autor: { x: 330, y: 270 }, Buch_Autor: { x: 660, y: 270 } };
+  size = [1060, 600];
+} else {
+  S = { tables: [
+    { name: 'Sensor', pk: ['Id'], fks: [], columns: [c('Id', 'INT', { pk: true }), c('Ort', 'VARCHAR(30)')] },
+    { name: 'Bewegung', pk: ['Nr'], fks: [{ cols: ['Sensor_Id'], ref: 'Sensor', refCols: ['Id'] }],
+      columns: [c('Nr', 'INT', { pk: true }), c('Geraet', 'VARCHAR(17)'), c('Geraetename', 'VARCHAR(40)'), c('Sensor_Id', 'INT', fk('Sensor', 'Id')), c('Zeitpunkt', 'DATETIME')] },
+    KUNDE
+  ] };
+  pos = { Sensor: { x: 0, y: 40 }, Bewegung: { x: 300, y: 0 }, Kunde: { x: 680, y: 0 } };
+  size = [1000, 250];
+  extra = 'tracking';
+}
+const h = document.getElementById('h');
+h.style.width = size[0] + 'px'; h.style.height = size[1] + 'px';
+document.fonts.ready.then(() => {
+  const dg = SQLDiagram.create(h);
+  dg.render(S, { showTypes: true, pos });
+  dg.fit();
+  if (extra === 'tracking') {
+    // gestrichelte, noch offene Verbindung Bewegung.Geraet → Kunde
+    const NS = 'http://www.w3.org/2000/svg';
+    const g = document.querySelector('.dg-links');
+    const bw = document.querySelector('[data-t="Bewegung"]').getBBox();
+    const ku = document.querySelector('[data-t="Kunde"]').getBBox();
+    const x1 = pos.Bewegung.x + bw.width, y1 = pos.Bewegung.y + 34 + 1 * 24 + 4 + 12;
+    const x2 = pos.Kunde.x, y2 = pos.Kunde.y + 34 + 4 + 12;
+    const p = document.createElementNS(NS, 'path');
+    const mx = (x1 + x2) / 2;
+    p.setAttribute('d', `M${x1} ${y1} L${mx} ${y1} L${mx} ${y2} L${x2} ${y2}`);
+    p.setAttribute('fill', 'none'); p.setAttribute('stroke', '#c93c2f'); p.setAttribute('stroke-width', 2);
+    p.setAttribute('stroke-dasharray', '7 5');
+    g.appendChild(p);
+    const t = document.createElementNS(NS, 'text');
+    t.setAttribute('x', mx + 30); t.setAttribute('y', y2 - 8);
+    t.setAttribute('font-family', 'Inter, sans-serif'); t.setAttribute('font-size', 22); t.setAttribute('font-weight', 700); t.setAttribute('fill', '#c93c2f');
+    t.textContent = '?';
+    g.appendChild(t);
+  }
+  window.done = 1;
+});
 </script></body></html>
