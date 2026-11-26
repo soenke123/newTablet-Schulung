@@ -20,12 +20,12 @@
   "Buch": {
     "cols": ["ISBN", "Titel", "Genre", "Preis", "Verlag", "Verlagsort", "Bestand"],
     "rows": [
-      ["978-3-522-20260-1", "Die unendliche Geschichte", "Fantasy, Jugendbuch", "22.00", "Thienemann", "Stuttgart", 3],
+      ["978-3-522-20260-1", "Die unendliche Geschichte", "Fantasy, Jugendbuch, Klassiker", "22.00", "Thienemann", "Stuttgart", 3],
       ["978-3-522-20311-0", "Momo", "Fantasy, Kinderbuch", "15.00", "Thienemann", "Stuttgart", 5],
       ["978-3-551-55167-3", "Harry Potter und der Stein der Weisen", "Fantasy, Jugendbuch", "20.00", "Carlsen", "Hamburg", 4],
       ["978-3-551-55168-4", "Harry Potter und die Kammer des Schreckens", "Fantasy", "20.00", "Carlsen", "Hamburg", 2],
       ["978-3-7645-0567-7", "Der Ruf des Kuckucks", "Krimi", "14.00", "Blanvalet", "München", 1],
-      ["978-3-7915-0465-5", "Tintenherz", "Fantasy, Jugendbuch", "24.00", "Dressler", "Hamburg", 1]
+      ["978-3-7915-0465-5", "Tintenherz", "Fantasy", "24.00", "Dressler", "Hamburg", 1]
     ]
   },
   "Buch_Autor": {
@@ -45,20 +45,21 @@
       [1, "Bastian", "978-3-522-20260-1", "2026-03-02 16:40"],
       [2, "Bastian", "978-3-7915-0465-5", "2026-03-02 16:40"],
       [3, "Mia", "978-3-551-55167-3", "2026-04-11 11:05"],
-      [4, "Anna", "978-3-522-20260-1", "2026-05-20 10:22"],
-      [5, "Leonie", "978-3-551-55168-4", "2026-07-15 14:48"],
-      [6, "Bastian", "978-3-522-20311-0", "2026-09-03 15:12"]
+      [4, "Leonie", "978-3-551-55168-4", "2026-07-15 14:48"],
+      [5, "Anna", "978-3-522-20260-1", "2026-11-30 10:22"],
+      [6, "Bastian", "978-3-522-20311-0", "2026-11-30 15:12"],
+      [7, "Bastian", "978-3-551-55167-3", "2026-11-30 15:12"]
     ]
   },
   "Bewegung": {
     "cols": ["Nr", "Geraet", "Geraetename", "Standort", "Zeitpunkt"],
     "rows": [
-      [1, "7C:D1:C3:4A:22:9F", "iPhone", "Eingang", "2026-09-03 15:02"],
-      [2, "7C:D1:C3:4A:22:9F", "iPhone", "Fantasy-Ecke", "2026-09-03 15:03"],
-      [3, "B2:09:E7:51:6D:10", "Galaxy A54", "Krimi-Regal", "2026-09-03 15:04"],
-      [4, "E5:3F:60:8B:91:C2", "Leonies Pixel", "Kinderbuch-Ecke", "2026-09-03 15:06"],
-      [5, "7C:D1:C3:4A:22:9F", "iPhone", "Kasse", "2026-09-03 15:11"],
-      [6, "B2:09:E7:51:6D:10", "Galaxy A54", "Eingang", "2026-09-03 15:13"]
+      [1, "7C:D1:C3:4A:22:9F", "iPhone", "Eingang", "2026-11-30 15:02"],
+      [2, "7C:D1:C3:4A:22:9F", "iPhone", "Fantasy-Ecke", "2026-11-30 15:03"],
+      [3, "B2:09:E7:51:6D:10", "Galaxy A54", "Krimi-Regal", "2026-11-30 15:04"],
+      [4, "E5:3F:60:8B:91:C2", "Leonies Pixel", "Kinderbuch-Ecke", "2026-11-30 15:06"],
+      [5, "7C:D1:C3:4A:22:9F", "iPhone", "Kasse", "2026-11-30 15:11"],
+      [6, "B2:09:E7:51:6D:10", "Galaxy A54", "Eingang", "2026-11-30 15:13"]
     ]
   }
 }

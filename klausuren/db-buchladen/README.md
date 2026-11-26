@@ -1,9 +1,9 @@
-# Klausur Q1 „Buchladen Koreander“ (Datenbanken und SQL)
+# Klausur Nr. 1 Q1 „Buchladen Koreander“ (Datenbanken und SQL)
 
 Nicht öffentlich (steht in `.vercelignore`).
 
 - `Klausur_DB_Buchladen.docx` – Klausur, Anlagen A1 (Klassendiagramm) und A2 (Beispieldaten) am Ende
-- `Erwartungshorizont_DB_Buchladen.docx` – Lösungen und Punkte (ca. 49)
+- `Erwartungshorizont_DB_Buchladen.docx` – Lösungen und Punkte (ca. 47)
 - `bauen.cjs` – erzeugt beide Word-Dateien (`node bauen.cjs`), alle Texte stehen dort
 - `daten.json` – Beispieldaten (Klausur UND `pruefen.py` lesen sie)
 - `diagramm.html` + `bild.cjs` – Klassendiagramm mit dem Zeichencode von SQL Studio → `diagramm-haupt.png`

@@ -8,20 +8,20 @@
 <script>
 const c = (name, type, o = {}) => Object.assign({ name, type }, o);
 const fk = (table, col) => ({ fk: { table, col } });
-const KUNDE = { name: 'Kunde', pk: ['Vorname'], fks: [], columns: [c('Vorname', 'VARCHAR(30)', { pk: true }), c('Nachname', 'VARCHAR(30)'),
-  c('Geburtsdatum', 'DATE'), c('Telefon', 'INT'), c('Wohnort', 'VARCHAR(40)')] };
+const KUNDE = { name: 'Kunde', pk: ['Vorname'], fks: [], columns: [c('Vorname', 'VARCHAR', { pk: true }), c('Nachname', 'VARCHAR'),
+  c('Geburtsdatum', 'DATE'), c('Telefon', 'INT'), c('Wohnort', 'VARCHAR')] };
 const V = new URLSearchParams(location.search).get('v') || 'haupt';
 let S, pos, size;
 if (V === 'haupt') {
   S = { tables: [
     KUNDE,
     { name: 'Kauf', pk: ['Nr'], fks: [{ cols: ['Vorname'], ref: 'Kunde', refCols: ['Vorname'] }, { cols: ['ISBN'], ref: 'Buch', refCols: ['ISBN'] }],
-      columns: [c('Nr', 'INT', { pk: true }), c('Vorname', 'VARCHAR(30)', fk('Kunde', 'Vorname')), c('ISBN', 'VARCHAR(17)', fk('Buch', 'ISBN')), c('Zeitpunkt', 'DATETIME')] },
-    { name: 'Buch', pk: ['ISBN'], fks: [], columns: [c('ISBN', 'VARCHAR(17)', { pk: true }), c('Titel', 'VARCHAR(80)'), c('Genre', 'VARCHAR(60)'),
-      c('Preis', 'DECIMAL(5,2)'), c('Verlag', 'VARCHAR(40)'), c('Verlagsort', 'VARCHAR(40)'), c('Bestand', 'INT')] },
+      columns: [c('Nr', 'INT', { pk: true }), c('Vorname', 'VARCHAR', fk('Kunde', 'Vorname')), c('ISBN', 'VARCHAR', fk('Buch', 'ISBN')), c('Zeitpunkt', 'DATETIME')] },
+    { name: 'Buch', pk: ['ISBN'], fks: [], columns: [c('ISBN', 'VARCHAR', { pk: true }), c('Titel', 'VARCHAR'), c('Genre', 'VARCHAR'),
+      c('Preis', 'DECIMAL(5,2)'), c('Verlag', 'VARCHAR'), c('Verlagsort', 'VARCHAR'), c('Bestand', 'INT')] },
     { name: 'Buch_Autor', pk: ['ISBN', 'Autor_Id'], fks: [{ cols: ['ISBN'], ref: 'Buch', refCols: ['ISBN'] }, { cols: ['Autor_Id'], ref: 'Autor', refCols: ['Id'] }],
-      columns: [c('ISBN', 'VARCHAR(17)', Object.assign({ pk: true }, fk('Buch', 'ISBN'))), c('Autor_Id', 'INT', Object.assign({ pk: true }, fk('Autor', 'Id')))] },
-    { name: 'Autor', pk: ['Id'], fks: [], columns: [c('Id', 'INT', { pk: true }), c('Name', 'VARCHAR(60)'), c('Nationalitaet', 'VARCHAR(30)')] }
+      columns: [c('ISBN', 'VARCHAR', Object.assign({ pk: true }, fk('Buch', 'ISBN'))), c('Autor_Id', 'INT', Object.assign({ pk: true }, fk('Autor', 'Id')))] },
+    { name: 'Autor', pk: ['Id'], fks: [], columns: [c('Id', 'INT', { pk: true }), c('Name', 'VARCHAR'), c('Nationalitaet', 'VARCHAR')] }
   ] };
   pos = { Kunde: { x: 0, y: 0 }, Kauf: { x: 330, y: 0 }, Buch: { x: 660, y: 0 }, Autor: { x: 330, y: 270 }, Buch_Autor: { x: 660, y: 270 } };
   size = [1060, 470];
