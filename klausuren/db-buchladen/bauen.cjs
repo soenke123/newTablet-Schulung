@@ -163,7 +163,7 @@ const T = {
   Buch_Autor: () => parts('Buch_Autor', [{ n: 'ISBN', pk: 1, fk: 1, mono: 1 }, { n: 'Autor_Id', pk: 1, fk: 1, num: 1 }], [1850, 1050], 16),
   Buch: () => parts('Buch', [{ n: 'ISBN', pk: 1 }, { n: 'Titel' }, { n: 'Genre' }, { n: 'Preis', num: 1 },
     { n: 'Verlag' }, { n: 'Verlagsort' }, { n: 'Verlagstel', num: 1, mono: 1 }, { n: 'Bestand', num: 1 }],
-    [1650, 1900, 1600, 600, 1050, 950, 1200, 680], 16),
+    [1650, 1780, 1600, 600, 1050, 950, 1200, 800], 16),
   Kauf: () => parts('Kauf', [{ n: 'Nr', pk: 1, num: 1 }, { n: 'Vorname', fk: 1 }, { n: 'ISBN', fk: 1, mono: 1 }, { n: 'Zeitpunkt', mono: 1 }],
     [450, 1050, 1850, 1750], 16),
   Bewegung: () => parts('Bewegung', [{ n: 'Nr', pk: 1, num: 1 }, { n: 'Geraet', mono: 1 }, { n: 'Geraetename' }, { n: 'Standort' }, { n: 'Zeitpunkt', mono: 1 }],
