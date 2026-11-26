@@ -11,8 +11,8 @@ Q = {
  '3c': "SELECT Autor.Name, COUNT(*) AS Anzahl_Buecher FROM Autor JOIN Buch_Autor ON Buch_Autor.Autor_Id = Autor.Id GROUP BY Autor.Name",
  '3d': "SELECT Kunde.Vorname, Kunde.Nachname, Buch.Titel FROM Kunde JOIN Kauf ON Kauf.Vorname = Kunde.Vorname JOIN Buch ON Buch.ISBN = Kauf.ISBN JOIN Buch_Autor ON Buch_Autor.ISBN = Buch.ISBN JOIN Autor ON Autor.Id = Buch_Autor.Autor_Id WHERE Autor.Name = 'Michael Ende'",
  '3e': "SELECT Kunde.Vorname, Kunde.Nachname, SUM(Buch.Preis) AS Umsatz FROM Kunde JOIN Kauf ON Kauf.Vorname = Kunde.Vorname JOIN Buch ON Buch.ISBN = Kauf.ISBN GROUP BY Kunde.Vorname, Kunde.Nachname ORDER BY Umsatz DESC",
- '5 Ecken': "SELECT Sensor.Ort, COUNT(DISTINCT Bewegung.Geraet) AS Geraete FROM Sensor LEFT JOIN Bewegung ON Bewegung.Sensor_Id = Sensor.Id GROUP BY Sensor.Ort ORDER BY Geraete DESC",
- '5 Kasse': "SELECT Bewegung.Geraet, Bewegung.Zeitpunkt, Kauf.Vorname FROM Bewegung JOIN Kauf ON substr(Kauf.Zeitpunkt,1,10) = substr(Bewegung.Zeitpunkt,1,10) AND Kauf.Zeitpunkt >= Bewegung.Zeitpunkt AND Kauf.Zeitpunkt <= datetime(Bewegung.Zeitpunkt, '+2 minutes') WHERE Bewegung.Sensor_Id = 5",
+ '5 Ecken': "SELECT Standort, COUNT(DISTINCT Geraet) AS Geraete FROM Bewegung GROUP BY Standort ORDER BY Geraete DESC",
+ '5 Kasse': "SELECT Bewegung.Geraet, Bewegung.Zeitpunkt, Kauf.Vorname FROM Bewegung JOIN Kauf ON Kauf.Zeitpunkt >= Bewegung.Zeitpunkt AND Kauf.Zeitpunkt <= datetime(Bewegung.Zeitpunkt, '+2 minutes') WHERE Bewegung.Standort = 'Kasse'",
 }
 for k, q in Q.items():
     print(k, db.execute(q).fetchall())
