@@ -161,8 +161,9 @@ const T = {
     [1100, 1050, 1350, 1300, 1000], 16),
   Autor: () => parts('Autor', [{ n: 'Id', pk: 1, num: 1 }, { n: 'Name' }, { n: 'Nationalitaet' }], [450, 1700, 1200], 16),
   Buch_Autor: () => parts('Buch_Autor', [{ n: 'ISBN', pk: 1, fk: 1, mono: 1 }, { n: 'Autor_Id', pk: 1, fk: 1, num: 1 }], [1850, 1050], 16),
-  Buch: () => parts('Buch', [{ n: 'ISBN', pk: 1, mono: 1 }, { n: 'Titel' }, { n: 'Genre' }, { n: 'Preis', num: 1 },
-    { n: 'Verlag' }, { n: 'Verlagsort' }, { n: 'Bestand', num: 1 }], [1800, 2300, 2100, 600, 1100, 950, 780], 16),
+  Buch: () => parts('Buch', [{ n: 'ISBN', pk: 1 }, { n: 'Titel' }, { n: 'Genre' }, { n: 'Preis', num: 1 },
+    { n: 'Verlag' }, { n: 'Verlagsort' }, { n: 'Strasse' }, { n: 'Hausnr', num: 1 }, { n: 'Telefon' }, { n: 'Bestand', num: 1 }],
+    [1480, 1230, 1150, 540, 950, 840, 950, 640, 1080, 770], 14),
   Kauf: () => parts('Kauf', [{ n: 'Nr', pk: 1, num: 1 }, { n: 'Vorname', fk: 1 }, { n: 'ISBN', fk: 1, mono: 1 }, { n: 'Zeitpunkt', mono: 1 }],
     [450, 1050, 1850, 1750], 16),
   Bewegung: () => parts('Bewegung', [{ n: 'Nr', pk: 1, num: 1 }, { n: 'Geraet', mono: 1 }, { n: 'Geraetename' }, { n: 'Standort' }, { n: 'Zeitpunkt', mono: 1 }],
@@ -187,12 +188,11 @@ const klausur = [
   item('a1', 'Erläutern Sie, was eine n:m-Beziehung bedeutet und warum zwischen Autor und Buch eine n:m-Beziehung nötig ist.', 1),
   item('a1', 'Benennen Sie die zweite n:m-Beziehung und Dateneinträge, die zu ihr gehören (A2).', 1),
 
-  h1('Aufgabe 2 – SQL', '(ca. 1 + 3 + 2 + 3 + 2 + 4 Pkt.)'),
+  h1('Aufgabe 2 – SQL', '(ca. 1 + 3 + 2 + 3 + 4 Pkt.)'),
   p('Erstellen Sie SQL-Befehle, welche die beschriebenen Tabellen ausgeben. Die Ausgaben sollen passende Attribute enthalten. Verwenden Sie die Datenbank so, wie Herr Koreander sie angelegt hat (A1).'),
   item('a2', 'Alle Bücher, die weniger als 20 € kosten.'),
   item('a2', 'Alle Fantasy-Bücher – auch die, die zusätzlich zu einem weiteren Genre gehören –, das teuerste zuerst.'),
   item('a2', 'Alle Bücher, deren Verlag in Hamburg sitzt und von denen weniger als 3 Exemplare vorrätig sind.'),
-  item('a2', [r('Eine Tabelle, aus der hervorgeht, wie viele Bücher jede Autorin und jeder Autor im Sortiment hat. '), attrs('Name, Anzahl_Buecher')]),
   item('a2', 'Alle Kundinnen und Kunden, die am 30.11.2026 ein Buch gekauft haben. Jede Person soll nur einmal erscheinen.'),
   item('a2', [r('Wie viel Geld jede Kundin und jeder Kunde bisher im Laden ausgegeben hat, nach Betrag absteigend sortiert. '), attrs('Vorname, Nachname, Umsatz')]),
 
@@ -221,7 +221,7 @@ const klausur = [
 
   pageBreak(),
   h1('Anlage A1 – Klassendiagramm (so hat Herr Koreander die Datenbank angelegt)', null, true),
-  bild('diagramm-haupt.png', 640, 284),
+  bild('diagramm-haupt.png', 600, 294),
   legende(),
   h1('Anlage A2 – Beispieldaten'),
   tables([T.Kunde(), T.Autor()], 400), gap(80),
@@ -236,7 +236,7 @@ const pk = s => r(' [' + s + ']', { bold: true, color: ACC });
 const erg = s => p(r(s, { size: 19, color: MUTED }), { indent: { left: 400 } });
 const eh = [
   ...kopf('Erwartungshorizont – Klausur Nr. 1 „Buchladen Koreander“'),
-  box([p([b('Hinweis. '), r('Gesamt ca. 47 Punkte. Die Datenbank enthält absichtlich mehr Schwachstellen, als in Aufgabe 2 verlangt sind; jede sachlich richtige ist zu werten. Die SQL-Lösungen sind gegen die Beispieldaten geprüft (pruefen.py). Andere korrekte Schreibweisen (Aliase, Join über WHERE, Unterabfragen) sind gleichwertig.')])]),
+  box([p([b('Hinweis. '), r('Gesamt ca. 45 Punkte. Die Datenbank enthält absichtlich mehr Schwachstellen, als in Aufgabe 2 verlangt sind; jede sachlich richtige ist zu werten. Die SQL-Lösungen sind gegen die Beispieldaten geprüft (pruefen.py). Andere korrekte Schreibweisen (Aliase, Join über WHERE, Unterabfragen) sind gleichwertig.')])]),
 
   h1('Aufgabe 1 – Beziehungen (AFB I/II)', '8 Pkt.'),
   item('e1', [b('Fremdschlüssel'), pk('2')]),
@@ -252,7 +252,7 @@ const eh = [
   dot('Bastian kauft „Die unendliche Geschichte“, „Tintenherz“, „Momo“ und „Harry Potter und der Stein der Weisen“ (Kauf 1, 2, 6, 7).'),
   dot('„Die unendliche Geschichte“ kaufen Bastian und Anna (Kauf 1, 5); „Stein der Weisen“ kaufen Mia und Bastian (Kauf 3, 7).'),
 
-  h1('Aufgabe 2 – SQL (AFB II)', '15 Pkt.'),
+  h1('Aufgabe 2 – SQL (AFB II)', '13 Pkt.'),
   item('e2', [b('Bücher unter 20 €'), pk('1')]),
   ...code(['SELECT Titel, Preis', 'FROM Buch', 'WHERE Preis < 20;']),
   erg('Ergebnis: Momo, Der Ruf des Kuckucks.'),
@@ -262,9 +262,7 @@ const eh = [
   item('e2', [b('Hamburger Verlage, weniger als 3 vorrätig'), pk('2'), r(' – zwei Bedingungen mit AND. Wer Verlagsort nicht erkennt oder Verlag = \'Hamburg\' schreibt: max. 1 Pkt.')]),
   ...code(['SELECT Titel, Verlag, Bestand', 'FROM Buch', "WHERE Verlagsort = 'Hamburg' AND Bestand < 3;"]),
   erg('Ergebnis: Harry Potter und die Kammer des Schreckens (2), Tintenherz (1).'),
-  item('e2', [b('Anzahl Bücher je Autor'), pk('3'), r(' – Join über Buch_Autor (1), COUNT mit Alias (1), GROUP BY (1). Ein zusätzlicher Join mit Buch ist ebenfalls richtig.')]),
-  ...code(['SELECT Autor.Name, COUNT(*) AS Anzahl_Buecher', 'FROM Autor', 'JOIN Buch_Autor ON Buch_Autor.Autor_Id = Autor.Id', 'GROUP BY Autor.Name;']),
-  item('e2', [b('Käufe am 30.11.2026, jede Person einmal'), pk('2'), r(' – Datum (1), DISTINCT (1). Ohne Nachnamen reicht auch Kauf allein ohne Join.')]),
+  item('e2', [b('Käufe am 30.11.2026, jede Person einmal'), pk('3'), r(' – Datum (1), DISTINCT (1), Join/Attribute (1). Ohne Nachnamen reicht auch Kauf allein ohne Join.')]),
   ...code(['SELECT DISTINCT Kunde.Vorname, Kunde.Nachname', 'FROM Kunde', 'JOIN Kauf ON Kauf.Vorname = Kunde.Vorname', "WHERE DATE(Kauf.Zeitpunkt) = '2026-11-30';"]),
   dot("Gleichwertig: WHERE Kauf.Zeitpunkt LIKE '2026-11-30%' oder BETWEEN '2026-11-30 00:00' AND '2026-11-30 23:59'; ohne Nachnamen: SELECT DISTINCT Vorname FROM Kauf WHERE …"),
   erg('Ergebnis: Anna Schmidt, Bastian Bux (Bastian hat zweimal gekauft und erscheint ohne DISTINCT doppelt).'),
@@ -295,7 +293,7 @@ const eh = [
   dot('Mit Telefonnummern wird nicht gerechnet – es sind Zeichenketten aus Ziffern. Korrektur: Telefon VARCHAR.'),
   item('e4', [b('Weiterer Fehler'), r(' – einer genügt'), pk('3')]),
   dot([b('Genre enthält mehrere Werte'), r(' („Fantasy, Jugendbuch, Klassiker“): nicht atomar, Suchen nur mit LIKE, Tippfehler erzeugen neue Genres. → Tabelle Genre(Id, Bezeichnung) und Zwischentabelle Buch_Genre(ISBN ↑, Genre_Id ↑).')]),
-  dot([b('Verlag und Verlagsort stehen in Buch'), r(': redundant (Carlsen, Hamburg mehrfach); zieht ein Verlag um, müssen mehrere Zeilen geändert werden, sonst widersprüchliche Daten (Änderungsanomalie). → Tabelle Verlag(Id, Name, Ort), Buch.Verlag_Id ↑.')]),
+  dot([b('Verlagsdaten stehen in Buch'), r(' (Verlag, Verlagsort, Strasse, Hausnr, Telefon): Sie hängen nur vom Verlag ab, nicht vom Buch, und stehen bei jedem Buch desselben Verlags erneut (Thienemann, Carlsen je zweimal). Redundanz: Zieht ein Verlag um oder ändert die Telefonnummer, müssen mehrere Zeilen geändert werden, sonst widersprüchliche Daten (Änderungsanomalie); ein Verlag ohne Buch kann nicht gespeichert werden. → eigene Tabelle Verlag(Id, Name, Ort, Strasse, Hausnr, Telefon), Buch.Verlag_Id ↑ – eine 1:n-Beziehung (ein Verlag, viele Bücher).')]),
   dot([b('Kauf speichert keinen Preis'), r(': ändert sich Buch.Preis (z. B. Aufgabe 3 a), ändern sich rückwirkend alle alten Umsätze. → Preis DECIMAL(5,2) in Kauf (Verkaufspreis zum Zeitpunkt des Kaufs).')]),
 
   h1('Aufgabe 5 – Kundschaft im Blick (AFB I/III)', '10 Pkt.'),

@@ -18,13 +18,14 @@ if (V === 'haupt') {
     { name: 'Kauf', pk: ['Nr'], fks: [{ cols: ['Vorname'], ref: 'Kunde', refCols: ['Vorname'] }, { cols: ['ISBN'], ref: 'Buch', refCols: ['ISBN'] }],
       columns: [c('Nr', 'INT', { pk: true }), c('Vorname', 'VARCHAR', fk('Kunde', 'Vorname')), c('ISBN', 'VARCHAR', fk('Buch', 'ISBN')), c('Zeitpunkt', 'DATETIME')] },
     { name: 'Buch', pk: ['ISBN'], fks: [], columns: [c('ISBN', 'VARCHAR', { pk: true }), c('Titel', 'VARCHAR'), c('Genre', 'VARCHAR'),
-      c('Preis', 'DECIMAL(5,2)'), c('Verlag', 'VARCHAR'), c('Verlagsort', 'VARCHAR'), c('Bestand', 'INT')] },
+      c('Preis', 'DECIMAL(5,2)'), c('Verlag', 'VARCHAR'), c('Verlagsort', 'VARCHAR'),
+      c('Strasse', 'VARCHAR'), c('Hausnr', 'INT'), c('Telefon', 'VARCHAR'), c('Bestand', 'INT')] },
     { name: 'Buch_Autor', pk: ['ISBN', 'Autor_Id'], fks: [{ cols: ['ISBN'], ref: 'Buch', refCols: ['ISBN'] }, { cols: ['Autor_Id'], ref: 'Autor', refCols: ['Id'] }],
       columns: [c('ISBN', 'VARCHAR', Object.assign({ pk: true }, fk('Buch', 'ISBN'))), c('Autor_Id', 'INT', Object.assign({ pk: true }, fk('Autor', 'Id')))] },
     { name: 'Autor', pk: ['Id'], fks: [], columns: [c('Id', 'INT', { pk: true }), c('Name', 'VARCHAR'), c('Nationalitaet', 'VARCHAR')] }
   ] };
-  pos = { Kunde: { x: 0, y: 0 }, Kauf: { x: 330, y: 0 }, Buch: { x: 660, y: 0 }, Autor: { x: 330, y: 270 }, Buch_Autor: { x: 660, y: 270 } };
-  size = [1060, 470];
+  pos = { Kunde: { x: 0, y: 0 }, Kauf: { x: 330, y: 0 }, Buch: { x: 660, y: 0 }, Autor: { x: 330, y: 330 }, Buch_Autor: { x: 660, y: 330 } };
+  size = [1060, 520];
 }
 const h = document.getElementById('h');
 h.style.width = size[0] + 'px'; h.style.height = size[1] + 'px';
