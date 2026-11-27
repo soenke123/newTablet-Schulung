@@ -47,7 +47,7 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
 ```
 
 - `x/y` = Mitte; Größe wird aus dem Text gerechnet (`measure`, nie gespeichert – `clean` schneidet `_…` ab).
-- `t` Text/Name, `a` Attribute, `o` Methoden, `k` Klasse eines Objekts, `c` Farbindex.
+- `t` Text/Name, `a` Attribute (beim Begriff `box` des Wirkungsgefüges: **Erklärung**, optional, seit 27.11.2026 – dann Karteikarte mit Farbstreifen links, Begriff fett in dunkler Randfarbe, Linie, Erklärtext 13,5 px; Textfenster „Begriff“ + „Erklärung (optional)“), `o` Methoden, `k` Klasse eines Objekts, `c` Farbindex.
 - Kanten: `branch` (Mindmap), `effect` (Wirkung, Farbe `f`: k schwarz · g grün · r rot – seit 03.11.2026 statt +/−; `sane()` übersetzt alte `s`: − → rot, sonst schwarz; der Skill deutet die Farben nicht), UML `assoc · directed · inherit · aggr ·
   comp · dep`, `link` (Objekte), `line/arrow`. Vererbung: Pfeil von Unter- zur Oberklasse;
   Aggregation/Komposition: Raute am Anfang (`a` = das Ganze). „Richtung umdrehen“ tauscht a/b.

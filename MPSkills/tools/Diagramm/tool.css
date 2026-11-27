@@ -291,6 +291,8 @@
   resize: vertical;
 }
 .dg-edit textarea[data-f="a"], .dg-edit textarea[data-f="o"] { font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace; font-size: 14px; }
+/* Erklärung am Begriff (Wirkungsgefüge): normaler Fließtext */
+.dg-edit-in.is-box textarea[data-f="a"] { font-family: inherit; font-size: 14px; }
 .dg-edit textarea:focus, .dg-edit input:focus { outline: none; border-color: var(--dg-sel); }
 .dg-ef { display: flex; flex-direction: column; gap: 3px; }
 .dg-ef > span { font-size: .75rem; font-weight: 700; color: var(--ink-faint); }

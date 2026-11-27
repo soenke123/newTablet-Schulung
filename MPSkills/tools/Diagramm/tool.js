@@ -79,6 +79,9 @@
   const MAXW = 240;            // ab hier wird umgebrochen (Zettel)
   const U_ROW = 24, U_HEAD = 34, U_MINW = 170;   // wie SQL Studio
   const PAPER = '#fffdf8';
+  const D_FS = 13.5, D_LH = 19, D_MAXW = 300;   // Erklärung am Begriff (Wirkungsgefüge)
+  // Etwas dunklere Fassung einer Randfarbe (Titel des Begriffs mit Erklärung).
+  const shade = hex => '#' + [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * 0.72).toString(16).padStart(2, '0')).join('');
   const isUml = kind => kind === 'klasse' || kind === 'objekt';
 
   const VARS_EXPORT = {
@@ -248,6 +251,18 @@
       n._m = { w, h: U_HEAD + ha + ho, title, a, o, ha, ho, empty: obj ? !n.t && !n.k : !n.t };
       return n._m;
     }
+    // Begriff mit Erklärung (Wirkungsgefüge, n.a optional): Titel fett
+    // links, Trennlinie, darunter der erklärende Text kleiner.
+    if (n.type === 'box' && (n.a || '').trim()) {
+      const tl = wrap(n.t || '', D_MAXW, FS, true);
+      const dl = wrap(n.a, D_MAXW, D_FS, false);
+      const tw = Math.max(...tl.map(l => textW(l, FS, true)), ...dl.map(l => textW(l, D_FS)), 120);
+      const th = tl.length * LH;
+      const w = Math.ceil(tw + 36);
+      const h = Math.ceil(14 + th + 17 + dl.length * D_LH + 14);
+      n._m = { w, h, lines: tl, dlines: dl, th, size: FS, lh: LH, desc: true };
+      return n._m;
+    }
     const big = n.type === 'center';
     const size = big ? 19 : FS;
     const lines = wrap(n.t || '', big ? 260 : MAXW, size, big);
@@ -327,6 +342,15 @@
       g += `<path d="M${b.x} ${b.y}H${b.x + b.w}V${b.y + b.h - f}L${b.x + b.w - f} ${b.y + b.h}H${b.x}Z" fill="#fdf3b8" filter="url(#${lift ? 'dgLift' : 'dgPaper'})"/>`;
       g += `<path d="M${b.x + b.w} ${b.y + b.h - f}L${b.x + b.w - f} ${b.y + b.h - f}V${b.y + b.h}Z" fill="#e9d98a"/>`;
       g += textLines(m.lines, b.x + 14, n.y - (m.lines.length - 1) * m.lh / 2, m.lh, { fill: '#3f3a2a' });
+    } else if (n.type === 'box' && m.desc) {
+      // Karteikarte mit Erklärung: Farbstreifen links, Begriff fett, Linie, Text
+      g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${PAPER}" stroke="#e4dccb" stroke-width="1" filter="url(#${lift ? 'dgLift' : 'dgPaper'})"/>`;
+      g += `<rect x="${b.x}" y="${b.y}" width="4" height="${b.h}" rx="1" fill="${stroke}"/>`;
+      const ty = b.y + 14 + LH / 2;
+      g += textLines(m.lines, b.x + 18, ty, LH, { bold: true, fill: shade(stroke) });
+      const ly = b.y + 14 + m.th + 8;
+      g += `<line x1="${b.x + 18}" y1="${ly}" x2="${b.x + b.w - 14}" y2="${ly}" stroke="#e4dccb" stroke-width="1"/>`;
+      g += textLines(m.dlines, b.x + 18, ly + 9 + D_LH / 2, D_LH, { size: D_FS, fill: '#3f3a2a' });
     } else if (n.type === 'box') {
       // Karteikarte mit farbigem Streifen oben
       g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${PAPER}" stroke="#e4dccb" stroke-width="1" filter="url(#${lift ? 'dgLift' : 'dgPaper'})"/>`;
@@ -337,7 +361,7 @@
       g += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="3" fill="${fill}" stroke="${stroke}" stroke-opacity=".28" stroke-width="1" filter="url(#${lift ? 'dgLift' : 'dgPaper'})"/>`;
       g += textLines(m.lines, n.x, n.y - (m.lines.length - 1) * m.lh / 2, m.lh, { anchor: 'middle' });
     }
-    if (!(n.t || '').trim() && n.type !== 'class' && n.type !== 'object') {
+    if (!(n.t || '').trim() && n.type !== 'class' && n.type !== 'object' && !m.desc) {
       g += `<text x="${n.x}" y="${n.y}" font-family="${FONT}" font-size="${FS}" fill="#a8a29e" text-anchor="middle" dominant-baseline="central">…</text>`;
     }
     if (sel) {
@@ -1253,7 +1277,8 @@
     mindmap: [['Thema', 'legt ein weiteres Thema an – eine Mindmap kann mehrere haben.'],
               ['Tastatur', 'Tab = neuer Ast, Enter = Nachbar-Ast, Entf = löschen.'], ['Ordnen', 'räumt die Mindmap auf.']],
     wirkung: [['Pfeilfarbe', 'Pfeil antippen und unten schwarz, grün oder rot wählen. Der nächste Pfeil bekommt dieselbe Farbe.'],
-              ['Beschriftung', 'Pfeil antippen und unten in das Feld über dem Pfeil schreiben.']],
+              ['Beschriftung', 'Pfeil antippen und unten in das Feld über dem Pfeil schreiben.'],
+              ['Erklärung', 'Begriff doppelt tippen: unter dem Begriff lässt sich ein erklärender Text eintragen (freiwillig).']],
     klasse:  [['Klasse', 'doppelt tippen: Name, Attribute (z. B. - name: String) und Methoden (z. B. + fahren(): void) eintragen, je Zeile eins.'],
               ['Beziehung', 'eine Verbindung antippen und unten die Art wählen: Assoziation, Vererbung, Aggregation …'],
               ['Linien', 'oben zwischen schräg und rechtwinklig umschalten.']],
@@ -1897,10 +1922,13 @@
     } else if (n.type === 'object') {
       h = f('t', 'Objektname', 'meinAuto') + f('k', 'Klasse', 'Auto')
         + f('a', 'Attributwerte (je Zeile eins)', 'marke = "VW"\nkmStand = 12000', true, 3);
+    } else if (n.type === 'box') {
+      h = `<textarea class="dg-etext" data-f="t" rows="2" placeholder="Begriff …" spellcheck="true">${esc(n.t || '')}</textarea>`
+        + `<label class="dg-ef"><span>Erklärung (optional)</span><textarea data-f="a" rows="3" placeholder="z. B. Chinesisches Apfelsaftkonzentrat wird sehr günstig angeboten." spellcheck="true">${esc(n.a || '')}</textarea></label>`;
     } else {
       h = `<textarea class="dg-etext" data-f="t" rows="2" placeholder="Text …" spellcheck="true">${esc(n.t || '')}</textarea>`;
     }
-    ed.innerHTML = `<div class="dg-edit-in${n.type === 'class' || n.type === 'object' ? ' is-form' : ''}">
+    ed.innerHTML = `<div class="dg-edit-in${n.type === 'class' || n.type === 'object' ? ' is-form' : n.type === 'box' ? ' is-form is-box' : ''}">
       <div class="dg-grip" data-grip title="Fenster verschieben (doppelt tippen: wieder an den Baustein)" aria-hidden="true"><i></i></div>${h}
       <button type="button" class="dg-ok" data-act="editok">Fertig</button></div>`;
     ed.hidden = false;

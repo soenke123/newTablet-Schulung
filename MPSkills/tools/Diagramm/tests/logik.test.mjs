@@ -54,6 +54,13 @@ ok('ortho fällt bei Mindmap weg', !('ortho' in D.sane({ kind: 'mindmap', ortho:
 ok('Andockpunkt begrenzt auf -1…1', JSON.stringify(ue.pa) === '[1,0.5]' && JSON.stringify(ue.pb) === '[1,-1]');
 ok('Beschriftung höchstens ±70 verschoben, Unsinn weg', JSON.stringify(ue.lo) === '[70,-10]' && ue.o1 === undefined && ue.o2 === undefined);
 
+// Begriff mit Erklärung (a): größer, Erklärung überlebt sane/clean
+const nd = { id: 'd', type: 'box', x: 0, y: 0, t: 'Apfelsaft', a: 'Wird sehr günstig auf dem Weltmarkt angeboten.' }; D.measure(nd);
+const n0 = { id: 'e', type: 'box', x: 0, y: 0, t: 'Apfelsaft' }; D.measure(n0);
+ok('Begriff mit Erklärung ist höher', nd._m.desc && nd._m.h > n0._m.h && !n0._m.desc);
+const sd = D.clean(D.sane({ kind: 'wirkung', nodes: [nd], edges: [] }));
+ok('Erklärung bleibt gespeichert', sd.nodes[0].a === nd.a && sd.nodes[0]._m === undefined);
+
 // Rand-Punkt: nächster Punkt auf dem Rand, Mitte rastet ein
 const nb = { id: 'n', type: 'box', x: 0, y: 0, t: 'Hallo' }; D.measure(nb);
 const bu = D.borderU(nb, 500, 1);
