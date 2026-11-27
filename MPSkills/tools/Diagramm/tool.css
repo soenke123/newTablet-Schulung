@@ -62,10 +62,29 @@
 .dg-bar-m { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .dg-bar-r { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .dg-kind {
+  display: inline-flex; align-items: center; gap: 6px;
   white-space: nowrap; font-weight: 700; font-size: .9rem;
-  padding: 5px 10px; border-radius: 999px;
+  padding: 4px 10px 4px 5px; border-radius: 999px;
   background: var(--paper-2); color: var(--ink-soft);
 }
+.dg-kind[class*="dg-kind--"] { background: color-mix(in srgb, var(--kc) 12%, var(--paper-2)); }
+
+/* Icon je Diagrammart: Strich-Zeichen + dezente eigene Farbe (--kc),
+   damit sich Arten in gemischten Listen unterscheiden lassen. */
+.dg { --kc-mindmap: #8b6fd6; --kc-wirkung: #c47f22; --kc-klasse: #2a90a8; --kc-objekt: #c95a85; }
+:root[data-theme="dark"] .dg { --kc-mindmap: #b19df0; --kc-wirkung: #e6a65a; --kc-klasse: #6cc4d8; --kc-objekt: #eb8fb2; }
+.dg-kic--mindmap, .dg-kind--mindmap { --kc: var(--kc-mindmap); }
+.dg-kic--wirkung, .dg-kind--wirkung { --kc: var(--kc-wirkung); }
+.dg-kic--klasse,  .dg-kind--klasse  { --kc: var(--kc-klasse); }
+.dg-kic--objekt,  .dg-kind--objekt  { --kc: var(--kc-objekt); }
+.dg-kic {
+  flex: none; display: inline-grid; place-items: center;
+  width: 1.6em; height: 1.6em; border-radius: 7px;
+  color: var(--kc);
+  background: color-mix(in srgb, var(--kc) 15%, transparent);
+  vertical-align: middle;
+}
+.dg-kic svg { width: 1.1em; height: 1.1em; display: block; }
 .dg-title {
   font: inherit; font-weight: 600;
   min-width: 110px; flex: 1 1 140px; max-width: 320px;
@@ -346,7 +365,7 @@
   transition: border-color .15s, transform .15s;
 }
 .dg-pcard:hover { border-color: var(--accent); transform: translateY(-2px); }
-.dg-pcard b { font-size: 1.05rem; }
+.dg-pcard b { font-size: 1.05rem; display: flex; align-items: center; gap: 8px; }
 .dg-pcard > span:last-child { color: var(--ink-soft); font-size: .86rem; line-height: 1.35; }
 .dg-pthumb {
   display: block; height: 130px;
@@ -430,7 +449,7 @@
   width: 22px; height: 22px; border-radius: 50%;
   background: var(--dg-sel); color: #fff; font-weight: 800; font-size: .78rem;
 }
-.dg-li-k { flex: none; font-size: 1.1rem; }
+.dg-li-k { flex: none; font-size: 1rem; display: inline-flex; }
 .dg-li-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .dg-li-t b, .dg-li-t small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .dg-li-t small { color: var(--ink-faint); font-size: .76rem; }

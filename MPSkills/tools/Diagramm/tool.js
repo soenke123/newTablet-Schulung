@@ -148,28 +148,28 @@
        im Klassendiagramm von SQL Studio statt schräg.                 */
   const KINDS = {
     mindmap: {
-      label: 'Mindmap', icon: '🧠',
+      label: 'Mindmap', color: '#8b6fd6',
       hint: 'Themen mit Gedanken als Äste drumherum – eins oder mehrere.',
       node: 'topic', edge: 'branch',
       add: [{ type: 'center', label: 'Thema' }, { type: 'topic', label: 'Ast' }, { type: 'note', label: 'Notiz' }],
       edges: ['branch', 'line', 'arrow']
     },
     wirkung: {
-      label: 'Wirkungsgefüge', icon: '🔄',
+      label: 'Wirkungsgefüge', color: '#d08a2e',
       hint: 'Begriffe mit Pfeilen verbinden – schwarz, grün oder rot – und beschriften.',
       node: 'box', edge: 'effect',
       add: [{ type: 'box', label: 'Begriff' }, { type: 'note', label: 'Notiz' }],
       edges: ['effect']
     },
     klasse: {
-      label: 'Klassendiagramm', icon: '🧩',
+      label: 'Klassendiagramm', color: '#2f9bb3',
       hint: 'Klassen mit Attributen und Methoden und ihre Beziehungen (UML).',
       node: 'class', edge: 'assoc',
       add: [{ type: 'class', label: 'Klasse' }, { type: 'note', label: 'Notiz' }],
       edges: ['assoc', 'directed', 'inherit', 'aggr', 'comp', 'dep']
     },
     objekt: {
-      label: 'Objektdiagramm', icon: '📦',
+      label: 'Objektdiagramm', color: '#d0668f',
       hint: 'Konkrete Objekte mit ihren Attributwerten und Verbindungen (UML).',
       node: 'object', edge: 'link',
       add: [{ type: 'object', label: 'Objekt' }, { type: 'note', label: 'Notiz' }],
@@ -185,6 +185,16 @@
     klasse:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M4 8.5h16M4 14.5h16M7 11.5h6M7 17.5h8"/></svg>',
     objekt:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="4.5" width="16" height="15" rx="2"/><path d="M4 9.5h16M8 7h8M7 13h4M13 13h4M7 16.5h4M13 16.5h4"/></svg>'
   };
+
+  /* Icon je Art: Strich-Zeichen in der Farbe der Art (KINDS[k].color),
+     damit man die Arten auch in gemischten Listen (Dateien, Klasse,
+     Speichern) an Zeichen UND Farbe auseinanderhält. Farbe = Klasse
+     dg-kic--<art> in tool.css (hell/dunkel); color nur für Stellen
+     außerhalb von tool.css (Kacheln im Raum-Formular). */
+  KIND_IDS.forEach(k => {
+    KINDS[k].icon = `<span class="dg-kic dg-kic--${k}" aria-hidden="true">${KIND_SVG[k]}</span>`;
+  });
+  const kindSvgColored = k => KIND_SVG[k].replace('stroke="currentColor"', `stroke="${KINDS[k].color}"`);
 
   const EDGE_LABEL = {
     branch: 'Ast', line: 'Linie', arrow: 'Pfeil', effect: 'Wirkung',
@@ -1838,7 +1848,8 @@
 
   Editor.prototype.paintBar = function () {
     const k = KINDS[this.cv.doc.kind];
-    this.$('kind').innerHTML = `<span aria-hidden="true">${k.icon}</span> ${esc(k.label)}`;
+    this.$('kind').innerHTML = `${k.icon}<span>${esc(k.label)}</span>`;
+    this.$('kind').className = `dg-kind dg-kind--${this.cv.doc.kind}`;
     this.$('kind').title = k.hint;
     let adds = k.add.map(a => `<button type="button" class="dg-add" data-act="add" data-type="${a.type}">${ICON.plus}<span>${esc(a.label)}</span></button>`).join('');
     adds += `<button type="button" class="dg-add dg-add--soft" data-act="import" title="${esc(IMP_WORD[this.cv.doc.kind][1])} aus Text einfügen – Copy &amp; Paste">${ICON.text}<span>Aus Text</span></button>`;
@@ -2583,7 +2594,7 @@
       <div class="dg-pick-grid">
         ${(kinds || KIND_IDS).map(k => `<button type="button" class="dg-pcard" data-pick="${k}">
           <span class="dg-pthumb ${isUml(k) ? 'k-uml' : 'k-paper'}">${thumb(k)}</span>
-          <b>${KINDS[k].icon} ${esc(KINDS[k].label)}</b><span>${esc(KINDS[k].hint)}</span></button>`).join('')}
+          <b>${KINDS[k].icon}<span>${esc(KINDS[k].label)}</span></b><span>${esc(KINDS[k].hint)}</span></button>`).join('')}
       </div></div>`;
   }
 
@@ -3214,7 +3225,7 @@
       default: KIND_IDS.slice(),
       legacy: cur => (cur && KIND_IDS.includes(cur.kind)) ? [cur.kind] : null,
       hint: 'Gilt nur für neue Diagramme. Was schon gezeichnet ist, bleibt, und Dateien jeder Art lassen sich weiter öffnen.',
-      options: KIND_IDS.map(k => ({ value: k, label: KINDS[k].label, svg: KIND_SVG[k] }))
+      options: KIND_IDS.map(k => ({ value: k, label: KINDS[k].label, svg: kindSvgColored(k) }))
     }],
 
     mount(el, context) {
