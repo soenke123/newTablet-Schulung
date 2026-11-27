@@ -1316,6 +1316,8 @@
     let m;
     while ((m = re.exec(src))) {
       const name = m[1];
+      // Oberklasse (extends, C# „: Basis", sonst erstes implements) – nur für die Anordnung
+      const sm = /\bextends\s+([A-Za-z_]\w*)/.exec(m[0]) || /\bclass\s+\w+\s*(?:<[^>]*>)?\s*:\s*([A-Za-z_]\w*)/.exec(m[0]) || /\bimplements\s+([A-Za-z_]\w*)/.exec(m[0]);
       let i = re.lastIndex, depth = 1, body = '';
       for (; i < src.length && depth; i++) {
         const ch = src[i];
@@ -1343,7 +1345,7 @@
         mm = /^([\w<>\[\],.? ]+?)\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s*(?:=.*)?$/.exec(s.replace(/\{$/, '').trim());
         if (mm) for (const nm of mm[2].split(',')) attrs.push(`${vis} ${nm.trim()}: ${mm[1].replace(/\s+/g, '')}`);
       }
-      out.push({ t: name, a: attrs.slice(0, 30).join('\n') || undefined, o: ops.slice(0, 30).join('\n') || undefined });
+      out.push({ t: name, a: attrs.slice(0, 30).join('\n') || undefined, o: ops.slice(0, 30).join('\n') || undefined, sup: sm ? sm[1] : undefined });
     }
     return out;
   }
@@ -1368,8 +1370,8 @@
     const lines = src.replace(/\r/g, '').split('\n');
     let cur = null, ind = 0;
     for (const l of lines) {
-      const m = /^(\s*)class\s+([A-Za-z_]\w*)/.exec(l);
-      if (m) { cur = { t: m[2], a: [], o: [] }; ind = m[1].length; out.push(cur); continue; }
+      const m = /^(\s*)class\s+([A-Za-z_]\w*)\s*(?:\(\s*([A-Za-z_][\w.]*))?/.exec(l);
+      if (m) { cur = { t: m[2], a: [], o: [], sup: m[3] && m[3] !== 'object' ? m[3].split('.').pop() : undefined }; ind = m[1].length; out.push(cur); continue; }
       if (!cur || !l.trim()) continue;
       if (indentOf(l) <= ind) { cur = null; continue; }
       let d = /^\s*def\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*([^:]+))?/.exec(l);
@@ -1385,7 +1387,7 @@
         if (!cur.a.includes(row)) cur.a.push(row);
       }
     }
-    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined }));
+    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined, sup: c.sup }));
   }
 
   // UML als Text: Name, darunter Attribute und Methoden (eingerückt
@@ -1407,13 +1409,14 @@
       if (isHead(raw, s)) {
         const name = s.replace(/^(?:<<\w+>>\s*)?(?:(?:public|abstract|final)\s+)*(?:klasse|class|interface)\s+/i, '')
           .replace(/\s*(?:extends|implements|erbt von)\b.*$/i, '').replace(/[{:]\s*$/, '').trim();
-        if (name) { cur = { t: name.slice(0, 80), a: [], o: [] }; out.push(cur); part = 'a'; continue; }
+        const sm = /\b(?:extends|erbt von|implements)\s+([A-Za-zÄÖÜäöüß_][\wäöüÄÖÜß]*)/i.exec(s);
+        if (name) { cur = { t: name.slice(0, 80), a: [], o: [], sup: sm ? sm[1] : undefined }; out.push(cur); part = 'a'; continue; }
       }
       if (!cur) continue;
       // Zeile mit Klammern = Methode, sonst Attribut (im Teil „Methoden" alles Methode)
       (/\(/.test(s) || part === 'o' ? cur.o : cur.a).push(s.slice(0, 120));
     }
-    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined }));
+    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined, sup: c.sup }));
   }
 
   /* ── Objekte ─────────────────────────────────────────────── */
@@ -1476,7 +1479,7 @@
   const IMP_EXAMPLE = {
     mindmap: 'Ernährung\nBewegung\nSchlaf\nStress\nFreunde',
     wirkung: 'Sonnenlicht: Energiequelle für Pflanzen\nPflanzen: erzeugen Sauerstoff\nPflanzenfresser\nRäuber – fressen Pflanzenfresser\nZersetzer: bauen tote Lebewesen ab',
-    klasse: 'public class Auto extends Fahrzeug {\n  private String marke;\n  private int ps;\n\n  public Auto(String marke, int ps) { this.marke = marke; this.ps = ps; }\n  public void fahren(int km) { }\n  public int getPs() { return ps; }\n}\n\nPerson\n- name: String\n- alter: int\n+ fahre(a: Auto): void',
+    klasse: 'public class Fahrzeug {\n  protected int raeder;\n  public void fahren(int km) { }\n}\n\npublic class Auto extends Fahrzeug {\n  private String marke;\n  private int ps;\n  public Auto(String marke, int ps) { this.marke = marke; this.ps = ps; }\n  public int getPs() { return ps; }\n}\n\nclass Fahrrad extends Fahrzeug {\n  private int gaenge;\n}\n\nPerson\n- name: String\n- alter: int\n+ fahre(f: Fahrzeug): void',
     objekt: 'meinAuto : Auto\nmarke = "VW"\nps = 90\n\nanna : Person\nname = "Anna"\nalter = 17\n\nPerson tom = new Person("Tom", 16);'
   };
   const IMP_WORD = { mindmap: ['Thema', 'Themen'], wirkung: ['Begriff', 'Begriffe'], klasse: ['Klasse', 'Klassen'], objekt: ['Objekt', 'Objekte'] };
@@ -1487,27 +1490,158 @@
     objekt: '„meinAuto : Auto“, darunter „marke = VW“. Oder Code: „Auto a = new Auto(…)“.'
   };
 
-  // Vorläufige Anordnung (Schritt 2 macht das schöner): Raster unter
-  // dem, was schon da ist.
-  function placeGrid(nodes, under) {
+  /* Anordnung der eingefügten Bausteine — je Art passend:
+       Mindmap        Themen in ausgewogenen Reihen, mittig
+       Wirkungsgefüge Begriffe im Kreis (Platz für Pfeile in alle Richtungen)
+       Klassen        Oberklassen oben, Unterklassen darunter (nach extends)
+       Objekte        je Klasse eine Reihe
+     Reihen werden auf eine Breite gepackt, die zum Bildschirm passt
+     (≈ 16:10), und mittig ausgerichtet. Alles landet unter dem, was
+     schon da ist (under = bounds des Vorhandenen). items[i] gehört zu
+     nodes[i] (sup = Oberklasse, nur hier gebraucht).                 */
+  const ASPECT = 1.6;
+  function shelfWidth(nodes, gx, gy) {
+    const area = nodes.reduce((s, n) => s + (n._m.w + gx) * (n._m.h + gy), 0);
+    return Math.max(Math.max(...nodes.map(n => n._m.w)), Math.sqrt(area * ASPECT));
+  }
+  // Reihen packen: so viele nebeneinander, wie in W passen
+  function shelves(nodes, W, gx) {
+    const rows = [];
+    let row = null;
+    for (const n of nodes) {
+      if (!row || row.w + gx + n._m.w > W + 1) { row = { nodes: [], w: -gx, h: 0 }; rows.push(row); }
+      row.nodes.push(n); row.w += gx + n._m.w; row.h = Math.max(row.h, n._m.h);
+    }
+    // letzte Reihe nicht verwaist: bei ganz wenigen lieber gleichmäßig verteilen
+    if (rows.length > 1) {
+      const last = rows[rows.length - 1], prev = rows[rows.length - 2];
+      while (last.nodes.length + 1 < prev.nodes.length) {
+        const n = prev.nodes.pop(); last.nodes.unshift(n);
+        prev.w -= gx + n._m.w; last.w += gx + n._m.w;
+        prev.h = Math.max(...prev.nodes.map(x => x._m.h)); last.h = Math.max(last.h, n._m.h);
+      }
+    }
+    return rows;
+  }
+  // Reihen ab y untereinander setzen, jede mittig um cx; gibt das neue y zurück
+  function placeRows(rows, cx, y, gx, gy, top) {
+    for (const r of rows) {
+      let x = cx - r.w / 2;
+      for (const n of r.nodes) {
+        n.x = Math.round(x + n._m.w / 2);
+        n.y = Math.round(top ? y + n._m.h / 2 : y + r.h / 2);
+        x += n._m.w + gx;
+      }
+      y += r.h + gy;
+    }
+    return y - gy;
+  }
+  function overlaps(nodes, pad) {
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const a = box(nodes[i]), b = box(nodes[j]);
+      if (a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad) return true;
+    }
+    return false;
+  }
+  function moveTop(nodes, cx, y0) {
+    const b = bounds({ nodes });
+    const dx = cx - (b.x + b.w / 2), dy = y0 - b.y;
+    for (const n of nodes) { n.x = Math.round(n.x + dx); n.y = Math.round(n.y + dy); }
+  }
+
+  /* Unterklassen (eine Reihe, schon nach Oberklasse sortiert) mittig unter
+     ihre Oberklasse schieben, ohne dass sie sich überlappen: jede Gruppe
+     will um parent.x stehen, dann von links nach rechts auseinanderschieben
+     und alles so verschieben, dass die Abweichung im Mittel 0 ist.      */
+  function underParents(pairs, gx) {
+    const groups = [];
+    for (const [n, p] of pairs) {
+      let g = groups[groups.length - 1];
+      if (!g || g.p !== p) { g = { p, ns: [], w: -gx }; groups.push(g); }
+      g.ns.push(n); g.w += gx + n._m.w;
+    }
+    let right = -Infinity;
+    for (const g of groups) {
+      g.x = Math.max(g.p.x - g.w / 2, right + gx * 1.5);
+      right = g.x + g.w;
+    }
+    const shift = groups.reduce((s, g) => s + (g.p.x - (g.x + g.w / 2)), 0) / groups.length;
+    for (const g of groups) {
+      let x = g.x + shift;
+      for (const n of g.ns) { n.x = Math.round(x + n._m.w / 2); x += n._m.w + gx; }
+    }
+  }
+
+  function layoutImport(nodes, items, kind, under) {
     if (!nodes.length) return;
     nodes.forEach(measure);
-    const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length * 1.4)));
-    const gap = 40;
-    const colW = [], rowH = [];
-    nodes.forEach((n, i) => {
-      const c = i % cols, r = Math.floor(i / cols);
-      colW[c] = Math.max(colW[c] || 0, n._m.w); rowH[r] = Math.max(rowH[r] || 0, n._m.h);
-    });
-    const totalW = colW.reduce((s, w) => s + w + gap, -gap);
-    const x0 = under ? under.x + under.w / 2 - totalW / 2 : -totalW / 2;
-    let y = under ? under.y + under.h + 80 : 0;
-    const xs = []; let x = x0;
-    colW.forEach((w, c) => { xs[c] = x + w / 2; x += w + gap; });
-    rowH.forEach((h, r) => {
-      nodes.slice(r * cols, r * cols + cols).forEach((n, c) => { n.x = Math.round(xs[c]); n.y = Math.round(y + h / 2); });
-      y += h + gap;
-    });
+    const cx = under ? under.x + under.w / 2 : 0;
+    const y0 = under ? under.y + under.h + 100 : 0;
+
+    if (kind === 'wirkung' && nodes.length >= 3 && nodes.length <= 14) {
+      // Kreis (etwas breiter als hoch), Radius wächst, bis sich nichts berührt
+      const n = nodes.length;
+      for (let R = 80; R < 3000; R += 15) {
+        nodes.forEach((nd, i) => {
+          const a = -Math.PI / 2 + (2 * Math.PI * i) / n;
+          nd.x = R * 1.45 * Math.cos(a); nd.y = R * Math.sin(a);
+        });
+        if (!overlaps(nodes, 46)) break;
+      }
+      return moveTop(nodes, cx, y0);
+    }
+
+    if (kind === 'klasse') {
+      // Ebenen nach Vererbung (nur unter den eingefügten Klassen)
+      const idx = new Map(items.map((it, i) => [String(it.t).toLowerCase(), i]));
+      const par = items.map(it => (it.sup && idx.has(it.sup.toLowerCase()) ? idx.get(it.sup.toLowerCase()) : -1));
+      const depth = items.map(() => -1);
+      const dOf = (i, seen = new Set()) => {
+        if (depth[i] >= 0) return depth[i];
+        if (par[i] < 0 || par[i] === i || seen.has(i)) return (depth[i] = 0);
+        seen.add(i);
+        return (depth[i] = dOf(par[i], seen) + 1);
+      };
+      items.forEach((_, i) => dOf(i));
+      const levels = [];
+      nodes.forEach((nd, i) => (levels[depth[i]] = levels[depth[i]] || []).push(i));
+      const gx = 60, gy = levels.length > 1 ? 110 : 60;
+      const W = shelfWidth(nodes, gx, gy);
+      let y = y0;
+      levels.forEach((lv, L) => {
+        // Unterklassen nach der Lage ihrer Oberklasse sortieren (stabil)
+        if (L > 0) lv = lv.slice().sort((a, b) => nodes[par[a]].x - nodes[par[b]].x || a - b);
+        // Ebene 0: Klassen mit Unterklassen zuerst nebeneinander, dann der Rest
+        else lv = lv.filter(i => par.includes(i)).concat(lv.filter(i => !par.includes(i)));
+        const rows = shelves(lv.map(i => nodes[i]), W, gx);
+        const yEnd = placeRows(rows, cx, y, gx, 50, true);
+        // passt die Ebene in eine Reihe: Unterklassen unter ihre Oberklasse rücken
+        if (L > 0 && rows.length === 1) underParents(lv.map(i => [nodes[i], nodes[par[i]]]), gx);
+        y = yEnd + gy;
+      });
+      return;
+    }
+
+    if (kind === 'objekt') {
+      // je Klasse eine Reihe (bei vielen Objekten umgebrochen)
+      const groups = new Map();
+      nodes.forEach((nd, i) => {
+        const k = String(items[i].k || '').toLowerCase();
+        if (!groups.has(k)) groups.set(k, []);
+        groups.get(k).push(nd);
+      });
+      const gx = 50;
+      // breit genug, dass die größte Gruppe (bis 5 Objekte) in eine Reihe passt
+      const big = [...groups.values()].sort((a, b) => b.length - a.length)[0].slice(0, 5);
+      const W = Math.max(shelfWidth(nodes, gx, 50), big.reduce((s, n) => s + n._m.w + gx, -gx));
+      let y = y0;
+      for (const g of groups.values()) y = placeRows(shelves(g, W, gx), cx, y, gx, 40, true) + 80;
+      return;
+    }
+
+    // Mindmap-Themen, viele Begriffe: ausgewogene Reihen, mittig
+    const gx = kind === 'mindmap' ? 80 : 60, gy = kind === 'mindmap' ? 70 : 50;
+    placeRows(shelves(nodes, shelfWidth(nodes, gx, gy), gx), cx, y0, gx, gy, false);
   }
 
   /* ════════════════════════════════════════════════════════════
@@ -2033,7 +2167,7 @@
     const sub = it => {
       if (kind === 'klasse') {
         const na = linesOf(it.a).length, no = linesOf(it.o).length;
-        return [na ? na + (na === 1 ? ' Attribut' : ' Attribute') : '', no ? no + (no === 1 ? ' Methode' : ' Methoden') : ''].filter(Boolean).join(' · ');
+        return [it.sup ? 'erbt von ' + it.sup : '', na ? na + (na === 1 ? ' Attribut' : ' Attribute') : '', no ? no + (no === 1 ? ' Methode' : ' Methoden') : ''].filter(Boolean).join(' · ');
       }
       if (kind === 'objekt') { const na = linesOf(it.a).length; return na ? na + (na === 1 ? ' Wert' : ' Werte') : ''; }
       return it.a || '';
@@ -2086,7 +2220,7 @@
       return { id: uid(), type, x: 0, y: 0, t: it.t || '', c, a: it.a, o: it.o, k: it.k };
     });
     const nodes = sane({ kind: doc.kind, nodes: raw, edges: [] }, doc.kind).nodes;
-    placeGrid(nodes, doc.nodes.length ? bounds(doc) : null);
+    layoutImport(nodes, items, doc.kind, doc.nodes.length ? bounds(doc) : null);
     doc.nodes.push(...nodes);
     cv.selectMany(nodes.map(n => n.id));
     cv.fit();
@@ -3125,5 +3259,5 @@
   });
 
   // Für Prüfstände und das Schaufenster.
-  window.MPDiagramm = { KINDS, SAMPLES, parseText, sane, clean, layoutMindmap, exportSVG, measure, orthoRoute, orthoEnds, borderU, docSVG };
+  window.MPDiagramm = { KINDS, SAMPLES, parseText, layoutImport, sane, clean, layoutMindmap, exportSVG, measure, orthoRoute, orthoEnds, borderU, docSVG };
 })();

@@ -107,5 +107,26 @@ const ob = PT('meinAuto : Auto\nmarke = "VW"\nps: 90\n\n:Fahrrad\n\nPerson tom =
 ok('Objekt: Text und Code', ob.length === 3 && ob.some(o => o.t === 'meinAuto' && o.k === 'Auto' && o.a === 'marke = "VW"\nps = 90') && ob.some(o => o.t === '' && o.k === 'Fahrrad') && ob.some(o => o.t === 'tom' && o.k === 'Person'));
 ok('leerer Text = nichts', PT('  \n ', 'klasse').length === 0);
 
+// Anordnung der eingefügten Bausteine (layoutImport)
+const mk = (items, type) => items.map((it, i) => ({ id: 'i' + i, type, x: 0, y: 0, t: it.t, a: it.a, o: it.o, k: it.k, c: 0 }));
+const clash = ns => { for (let i = 0; i < ns.length; i++) for (let j = i + 1; j < ns.length; j++) {
+  const A = ns[i], B = ns[j]; if (Math.abs(A.x - B.x) * 2 < A._m.w + B._m.w && Math.abs(A.y - B.y) * 2 < A._m.h + B._m.h) return true; } return false; };
+const ki = PT('class Fahrzeug {}\nclass Auto extends Fahrzeug { int ps; }\nclass Rad extends Fahrzeug {}\nclass Person {}\nclass Sportwagen extends Auto {}', 'klasse');
+const kn = mk(ki, 'class'); D.layoutImport(kn, ki, 'klasse', null);
+const kb = t => kn[ki.findIndex(x => x.t === t)];
+ok('Oberklasse gemerkt', ki.find(x => x.t === 'Sportwagen').sup === 'Auto');
+ok('Klassen: Unterklassen unter der Oberklasse', kb('Auto').y > kb('Fahrzeug').y && kb('Sportwagen').y > kb('Auto').y && kb('Person').y === kb('Fahrzeug').y);
+ok('Klassen: Kinder mittig unter Fahrzeug', Math.abs((kb('Auto').x + kb('Rad').x) / 2 - kb('Fahrzeug').x) < 40);
+ok('Klassen: nichts überlappt', !clash(kn));
+const wi = PT('A\nB\nC\nD\nE\nF', 'wirkung'), wn = mk(wi, 'box');
+D.layoutImport(wn, wi, 'wirkung', { x: 0, y: 0, w: 100, h: 100 });
+ok('Wirkung: Kreis unter dem Vorhandenen, ohne Überlappen', !clash(wn) && Math.min(...wn.map(n => n.y - n._m.h / 2)) >= 199 && new Set(wn.map(n => n.y)).size >= 4);
+const oi = PT('a : Auto\nb : Person\nc : Auto\nd : Person', 'objekt'), on = mk(oi, 'object');
+D.layoutImport(on, oi, 'objekt', null);
+ok('Objekte: je Klasse eine Reihe', on[0].y === on[2].y && on[1].y === on[3].y && on[1].y > on[0].y && !clash(on));
+const mi = PT('1\n2\n3\n4\n5\n6\n7\n8\n9', 'mindmap'), mn = mk(mi, 'center');
+D.layoutImport(mn, mi, 'mindmap', null);
+ok('Mindmap: mehrere Reihen, breiter als hoch', new Set(mn.map(n => n.y)).size >= 2 && !clash(mn));
+
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);

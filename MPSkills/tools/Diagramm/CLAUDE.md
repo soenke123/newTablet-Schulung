@@ -95,9 +95,13 @@ Klassen = UML-Text (Name, darunter Attribute, Zeilen mit Klammern = Methoden, �
 oder Code Java/C#/TS (`parseJavaClasses`, private/public/protected → -/+/#, sonst ~; innere Klassen eigene
 Kachel; gemischt mit UML-Text über `cutCodeBlocks`) bzw. Python (`parsePyClasses`) · Objekte = „name : Klasse“
 mit „attr = wert“ (auch „attr: wert“, „:Klasse“) oder Code `Klasse x = new Klasse(…)` (+ `x.attr = …`).
-Spiegelstriche, Nummern, Markdown stören nicht, Doppelte fallen weg, höchstens 80. Anordnung vorerst Raster
-unter dem Vorhandenen (`placeGrid`) – **Schritt 2: schöner anordnen** steht noch aus. Prüfstand in
-`tests/logik.test.mjs`.
+Spiegelstriche, Nummern, Markdown stören nicht, Doppelte fallen weg, höchstens 80. Anordnung (`layoutImport`,
+unter dem Vorhandenen, Reihen auf ≈ 16:10 gepackt und mittig, `shelves`/`placeRows`): Mindmap-Themen in
+ausgewogenen Reihen · Begriffe (3–14) im Kreis, etwas breiter als hoch, Radius wächst bis nichts sich berührt
+(mehr = Reihen) · Klassen in Ebenen nach Vererbung (`sup` aus extends / C# „:“ / implements / Python-Basis /
+„erbt von“, nur für die Anordnung, keine Pfeile), Unterklassen mittig unter ihrer Oberklasse (`underParents`),
+Ebene 0: Klassen mit Unterklassen zuerst · Objekte je Klasse eine Reihe (bis 5 nebeneinander). Danach alle
+neuen gewählt, „Alles zeigen“. Prüfstand in `tests/logik.test.mjs`.
 **Textfenster** lässt sich am Griff oben frei verschieben (`editPin`, gilt für die Sitzung des Editors;
 Griff doppelt antippen = wieder am Baustein).
 Die zuletzt gewählte Verbindungsart gilt für die nächste neue Verbindung.
