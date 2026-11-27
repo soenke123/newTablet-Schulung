@@ -86,6 +86,18 @@ Auswahl-Leiste holt beides wieder auf „von selbst“.
 Strg+C/X/V/A; die Zwischenablage `CLIP` gilt seitenweit, nur für dieselbe Diagrammart, Verbindungen
 zwischen kopierten Bausteinen kommen mit, jedes Einfügen 30 px versetzt; Knopf „Einfügen“ oben, solange
 etwas drin ist (für Tablets ohne Tastatur).
+**Aus Text** (seit 27.11.2026, für alle, Knopf neben den Bausteinen, Idee: „Aus Text“ in Knowledge Stack):
+Fenster links Text einfügen, rechts live die erkannten Bausteine (`Editor.importText`, `parseText(text, kind)`,
+`addImported`). Nur die Hauptbausteine, keine Verbindungen: Mindmap = Themen (`center`, je eine eigene
+Farbe; eingerückte Unterpunkte übersprungen, eine leere frische Mindmap verliert ihr „Thema“) ·
+Wirkungsgefüge = Begriffe („Begriff: Erklärung“, auch – / Tab / =; eingerückte Zeilen = Erklärung) ·
+Klassen = UML-Text (Name, darunter Attribute, Zeilen mit Klammern = Methoden, „Attribute:/Methoden:/---“)
+oder Code Java/C#/TS (`parseJavaClasses`, private/public/protected → -/+/#, sonst ~; innere Klassen eigene
+Kachel; gemischt mit UML-Text über `cutCodeBlocks`) bzw. Python (`parsePyClasses`) · Objekte = „name : Klasse“
+mit „attr = wert“ (auch „attr: wert“, „:Klasse“) oder Code `Klasse x = new Klasse(…)` (+ `x.attr = …`).
+Spiegelstriche, Nummern, Markdown stören nicht, Doppelte fallen weg, höchstens 80. Anordnung vorerst Raster
+unter dem Vorhandenen (`placeGrid`) – **Schritt 2: schöner anordnen** steht noch aus. Prüfstand in
+`tests/logik.test.mjs`.
 **Textfenster** lässt sich am Griff oben frei verschieben (`editPin`, gilt für die Sitzung des Editors;
 Griff doppelt antippen = wieder am Baustein).
 Die zuletzt gewählte Verbindungsart gilt für die nächste neue Verbindung.

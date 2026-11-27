@@ -1231,6 +1231,286 @@
   }
 
   /* ════════════════════════════════════════════════════════════
+     4b  Aus Text einfügen (wie „Aus Text" in Knowledge Stack)
+     ════════════════════════════════════════════════════════════
+     parseText(text, kind) → [{ t, a?, o?, k? }] — nur die Bausteine
+     (Themen · Begriffe · Klassen · Objekte), keine Verbindungen.
+     Kein Format ist Pflicht: Listen mit Spiegelstrichen/Nummern,
+     „Begriff: Erklärung", UML-Kästen als Text, Java/Python-Code,
+     `Auto a = new Auto(…)` … Anordnen kommt in einem 2. Schritt.  */
+  const IMP_MAX = 80;
+  const BULLET = /^\s*(?:[-–—*•·▪►>]+|\(?\d{1,3}[.)]|\(?[a-zA-Z][.)](?=\s))\s*/;
+  const stripMd = s => s.replace(/^#{1,6}\s*/, '').replace(/\*\*|__|`/g, '').trim();
+  const indentOf = l => { const m = /^[ \t]*/.exec(l)[0]; return m.replace(/\t/g, '    ').length; };
+
+  // Zeilen für Mindmap/Wirkungsgefüge: { ind, s } ohne Spiegelstrich
+  function plainLines(text) {
+    let raw = String(text || '').replace(/\r/g, '').split('\n');
+    const full = raw.filter(l => l.trim());
+    // nur eine Zeile mit Kommas/Semikolons → das sind die Einträge
+    if (full.length === 1 && /[;,]/.test(full[0]) && !/[:=]/.test(full[0])) raw = full[0].split(/[;,]/).map(x => x.trim());
+    const out = [];
+    for (const l of raw) {
+      if (!l.trim()) { out.push(null); continue; }
+      const s = stripMd(l.replace(BULLET, ''));
+      if (s) out.push({ ind: indentOf(l), s });
+    }
+    return out;
+  }
+
+  function parseList(text, kind) {
+    const lines = plainLines(text);
+    const real = lines.filter(Boolean);
+    if (!real.length) return [];
+    const top = Math.min(...real.map(l => l.ind));
+    const items = [];
+    for (const l of lines) {
+      if (!l) continue;
+      const sub = l.ind > top;
+      if (kind === 'mindmap') {
+        if (sub) continue;                      // nur die Hauptpunkte = Themen
+        items.push({ t: l.s.replace(/:$/, '').slice(0, 120) });
+        continue;
+      }
+      // Wirkungsgefüge: „Begriff: Erklärung" (auch – = Tab); eingerückte
+      // Zeilen darunter gehören zur Erklärung des Begriffs davor.
+      if (sub && items.length) {
+        const it = items[items.length - 1];
+        it.a = ((it.a ? it.a + ' ' : '') + l.s).slice(0, 600);
+        continue;
+      }
+      const m = /^(.{1,60}?)\s*(?:\t+|:\s+|\s[–—-]\s|\s=\s|:$)\s*(.*)$/.exec(l.s);
+      if (m && m[1].trim()) items.push({ t: m[1].trim(), a: m[2].trim() || undefined });
+      else items.push({ t: l.s.slice(0, 120) });
+    }
+    return dedupe(items);
+  }
+
+  function dedupe(items) {
+    const seen = new Set();
+    return items.filter(it => {
+      const key = (it.t + '|' + (it.k || '')).toLowerCase();
+      if (!(it.t || it.k) || seen.has(key)) return false;
+      seen.add(key); return true;
+    }).slice(0, IMP_MAX);
+  }
+
+  /* ── Klassen ─────────────────────────────────────────────── */
+  const VIS = { private: '-', public: '+', protected: '#' };
+  const MODS = /\b(?:public|private|protected|static|final|abstract|readonly|virtual|override|internal|const|transient|volatile|synchronized|native|sealed|async)\b\s*/g;
+  const visOf = s => { const m = /\b(private|public|protected)\b/.exec(s); return m ? VIS[m[1]] : '~'; };
+  // Java-Parameter „int km, String ziel" → „km: int, ziel: String"
+  function umlParams(p) {
+    return p.split(',').map(x => x.trim().replace(/\bfinal\s+/, '')).filter(Boolean).map(x => {
+      if (x.includes(':')) return x.replace(/\s*:\s*/, ': ');           // TS/Python: schon richtig
+      const m = /^(.+?)\s+(\w+)$/.exec(x);
+      return m ? `${m[2]}: ${m[1].replace(/\s+/g, '')}` : x;
+    }).join(', ');
+  }
+
+  // Code (Java/C#/TS/C++) mit „class X {…}"
+  function parseJavaClasses(src) {
+    src = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/"(?:\\.|[^"\\])*"/g, '""');
+    const out = [];
+    const re = /\b(?:class|interface|enum)\s+([A-Za-z_]\w*)[^{;]*\{/g;
+    let m;
+    while ((m = re.exec(src))) {
+      const name = m[1];
+      let i = re.lastIndex, depth = 1, body = '';
+      for (; i < src.length && depth; i++) {
+        const ch = src[i];
+        if (ch === '{') depth++;
+        else if (ch === '}') depth--;
+        // nur Ebene 1 behalten: Methodenrümpfe werden zu „{}"
+        if (depth === 1 && ch !== '}') body += ch;
+        else if (depth === 2 && ch === '{') body += '{';
+        else if (depth === 1 && ch === '}') body += '}';
+      }
+      // lastIndex bleibt hinter dem Kopf: innere Klassen werden auch gefunden
+      const attrs = [], ops = [];
+      for (let st of body.split(/;|\}/)) {
+        st = st.replace(/\s+/g, ' ').trim().replace(/^@\w+(\([^)]*\))?\s*/, '');
+        if (!st || /\b(?:class|interface|enum)\s/.test(st)) continue;
+        const vis = visOf(st);
+        const s = st.replace(MODS, '').trim();
+        let mm = /^(?:([\w<>\[\],.? ]+?)\s+)?([A-Za-z_]\w*)\s*\(([^)]*)\)/.exec(s);
+        if (mm) {
+          const ret = mm[1] && mm[1].trim();
+          if (['if', 'for', 'while', 'switch', 'return', 'new'].includes(mm[2])) continue;
+          ops.push(`${vis} ${mm[2]}(${umlParams(mm[3])})${ret && mm[2] !== name ? ': ' + ret.replace(/\s+/g, '') : ''}`);
+          continue;
+        }
+        mm = /^([\w<>\[\],.? ]+?)\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s*(?:=.*)?$/.exec(s.replace(/\{$/, '').trim());
+        if (mm) for (const nm of mm[2].split(',')) attrs.push(`${vis} ${nm.trim()}: ${mm[1].replace(/\s+/g, '')}`);
+      }
+      out.push({ t: name, a: attrs.slice(0, 30).join('\n') || undefined, o: ops.slice(0, 30).join('\n') || undefined });
+    }
+    return out;
+  }
+
+  // Text ohne die Code-Blöcke „… class X … { … }" (äußerste Ebene)
+  function cutCodeBlocks(src) {
+    let out = '', i = 0;
+    const re = /^[^\n]*\b(?:class|interface|enum)\s+\w+[^{;\n]*\{/gm;
+    let m;
+    while ((m = re.exec(src))) {
+      out += src.slice(i, m.index);
+      let j = m.index + m[0].length, depth = 1;
+      for (; j < src.length && depth; j++) { if (src[j] === '{') depth++; else if (src[j] === '}') depth--; }
+      i = j; re.lastIndex = j;
+    }
+    return out + src.slice(i);
+  }
+
+  // Python: „class X(Basis):" mit def … und self.x = …
+  function parsePyClasses(src) {
+    const out = [];
+    const lines = src.replace(/\r/g, '').split('\n');
+    let cur = null, ind = 0;
+    for (const l of lines) {
+      const m = /^(\s*)class\s+([A-Za-z_]\w*)/.exec(l);
+      if (m) { cur = { t: m[2], a: [], o: [] }; ind = m[1].length; out.push(cur); continue; }
+      if (!cur || !l.trim()) continue;
+      if (indentOf(l) <= ind) { cur = null; continue; }
+      let d = /^\s*def\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*([^:]+))?/.exec(l);
+      if (d) {
+        const ps = d[2].split(',').map(x => x.trim()).filter(x => x && x !== 'self' && x !== 'cls').join(', ');
+        const vis = d[1].startsWith('_') && d[1] !== '__init__' ? '-' : '+';
+        cur.o.push(`${vis} ${d[1] === '__init__' ? cur.t : d[1]}(${umlParams(ps)})${d[3] ? ': ' + d[3].trim() : ''}`);
+        continue;
+      }
+      d = /self\.(\w+)\s*(?::\s*([\w\[\], ]+))?\s*=/.exec(l) || /^\s{1,}(\w+)\s*:\s*([\w\[\], ]+)\s*(?:=|$)/.exec(l);
+      if (d) {
+        const row = `${d[1].startsWith('_') ? '-' : '+'} ${d[1].replace(/^_+/, '')}${d[2] ? ': ' + d[2].trim() : ''}`;
+        if (!cur.a.includes(row)) cur.a.push(row);
+      }
+    }
+    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined }));
+  }
+
+  // UML als Text: Name, darunter Attribute und Methoden (eingerückt
+  // oder nicht), Blöcke durch Leerzeilen; „Attribute:"/„Methoden:"/
+  // „---" trennen. Eine nackte Liste von Namen = je eine Klasse.
+  function parseUmlText(text) {
+    const lines = String(text).replace(/\r/g, '').split('\n');
+    const out = [];
+    let cur = null, part = 'a';
+    const isHead = (raw, s) => indentOf(raw) === 0 && !/^[+\-#~]\s*\w/.test(s) && !/[(=]/.test(s)
+      && !/:\s*\S/.test(s) && !/^(attribute?|methoden?|operationen?|eigenschaften|fields?|methods?)\s*:?$/i.test(s);
+    for (const raw of lines) {
+      let s = raw.replace(/^\s*[•*▪]\s*/, '').trim();
+      if (!s || s === '}' || s === '{') continue;
+      s = stripMd(s);
+      if (/^[-–—_=]{2,}$/.test(s)) { if (cur) part = 'o'; continue; }
+      if (/^(methoden?|operationen?|methods?)\s*:?$/i.test(s)) { part = 'o'; continue; }
+      if (/^(attribute?|eigenschaften|fields?)\s*:?$/i.test(s)) { part = 'a'; continue; }
+      if (isHead(raw, s)) {
+        const name = s.replace(/^(?:<<\w+>>\s*)?(?:(?:public|abstract|final)\s+)*(?:klasse|class|interface)\s+/i, '')
+          .replace(/\s*(?:extends|implements|erbt von)\b.*$/i, '').replace(/[{:]\s*$/, '').trim();
+        if (name) { cur = { t: name.slice(0, 80), a: [], o: [] }; out.push(cur); part = 'a'; continue; }
+      }
+      if (!cur) continue;
+      // Zeile mit Klammern = Methode, sonst Attribut (im Teil „Methoden" alles Methode)
+      (/\(/.test(s) || part === 'o' ? cur.o : cur.a).push(s.slice(0, 120));
+    }
+    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined }));
+  }
+
+  /* ── Objekte ─────────────────────────────────────────────── */
+  // „auto1 : Auto" / „auto1" / „:Auto" als Kopf, darunter „marke = VW"
+  // oder „marke: VW"; dazu Code: „Auto a = new Auto("VW", 5);"
+  function parseObjects(text) {
+    const src = String(text).replace(/\r/g, '');
+    const out = [];
+    const code = [...src.matchAll(/(?:\b([A-Z]\w*)(?:<[^>]*>)?\s+)?\b([a-zA-Z_]\w*)\s*=\s*new\s+([A-Z]\w*)\s*(?:<[^>]*>)?\(([^)]*)\)/g)];
+    if (code.length) {
+      for (const m of code) {
+        const args = m[4].split(',').map(x => x.trim()).filter(Boolean);
+        out.push({ t: m[2], k: m[3], a: args.map((v, i) => `wert${i + 1} = ${v}`).join('\n') || undefined });
+      }
+      // „a.marke = "VW";" ordnet Werte dem Objekt zu
+      for (const m of src.matchAll(/\b([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)\s*=\s*([^;\n]+)/g)) {
+        const o = out.find(x => x.t === m[1]);
+        if (o) o.a = (o.a ? o.a + '\n' : '') + `${m[2]} = ${m[3].trim()}`;
+      }
+      // Zeilen ohne Code (z. B. „anna : Person") wie Text lesen
+      const rest = src.split('\n').filter(l => !/=\s*new\s|^\s*\w+\.\w+\s*=|^\s*(?:\/\/|import\b|package\b)/.test(l)).join('\n');
+      return dedupe(out.concat(textObjects(rest)));
+    }
+    return textObjects(src);
+  }
+  function textObjects(src) {
+    const out = [];
+    let cur = null;
+    for (const raw of src.split('\n')) {
+      let s = stripMd(raw.replace(/^\s*[-–*•▪]\s*/, '').trim()).replace(/^_+|_+$/g, '');
+      if (!s || /^[{}();]+$/.test(s)) continue;
+      s = s.replace(/[{]\s*$/, '').trim();
+      const ind = indentOf(raw) > 0 || /^\s*[-–*•▪]/.test(raw);
+      const head = /^([A-Za-zÄÖÜäöüß_][\w.äöüÄÖÜß-]*)?\s*:\s*([A-ZÄÖÜ][\wäöüÄÖÜß]*)$/.exec(s);
+      if (!ind && head && (head[1] || head[2])) { cur = { t: head[1] || '', k: head[2], a: [] }; out.push(cur); continue; }
+      if (!ind && !/[=:]/.test(s) && !/\s{2,}/.test(s)) { cur = { t: s.slice(0, 80), k: '', a: [] }; out.push(cur); continue; }
+      if (!cur) { cur = { t: '', k: '', a: [] }; out.push(cur); }
+      const kv = /^([^=:]+?)\s*[=:]\s*(.+)$/.exec(s);
+      cur.a.push((kv ? `${kv[1].trim()} = ${kv[2].trim()}` : s).slice(0, 120));
+    }
+    return out.filter(o => o.t || o.k).map(o => ({ t: o.t, k: o.k || undefined, a: o.a.slice(0, 30).join('\n') || undefined })).slice(0, IMP_MAX);
+  }
+
+  function parseText(text, kind) {
+    const s = String(text || '').slice(0, 40000);
+    if (!s.trim()) return [];
+    if (kind === 'klasse') {
+      if (/^\s*class\s+\w+[^\n{]*:\s*$/m.test(s)) return dedupe(parsePyClasses(s));
+      if (/\b(?:class|interface|enum)\s+\w+[^{;\n]*\{/.test(s)) {
+        // Code und UML-Text gemischt: Code-Blöcke ausschneiden, Rest als Text
+        const rest = cutCodeBlocks(s);
+        return dedupe(parseJavaClasses(s).concat(rest.trim() ? parseUmlText(rest) : []));
+      }
+      return dedupe(parseUmlText(s));
+    }
+    if (kind === 'objekt') return parseObjects(s);
+    return parseList(s, kind);
+  }
+
+  const IMP_EXAMPLE = {
+    mindmap: 'Ernährung\nBewegung\nSchlaf\nStress\nFreunde',
+    wirkung: 'Sonnenlicht: Energiequelle für Pflanzen\nPflanzen: erzeugen Sauerstoff\nPflanzenfresser\nRäuber – fressen Pflanzenfresser\nZersetzer: bauen tote Lebewesen ab',
+    klasse: 'public class Auto extends Fahrzeug {\n  private String marke;\n  private int ps;\n\n  public Auto(String marke, int ps) { this.marke = marke; this.ps = ps; }\n  public void fahren(int km) { }\n  public int getPs() { return ps; }\n}\n\nPerson\n- name: String\n- alter: int\n+ fahre(a: Auto): void',
+    objekt: 'meinAuto : Auto\nmarke = "VW"\nps = 90\n\nanna : Person\nname = "Anna"\nalter = 17\n\nPerson tom = new Person("Tom", 16);'
+  };
+  const IMP_WORD = { mindmap: ['Thema', 'Themen'], wirkung: ['Begriff', 'Begriffe'], klasse: ['Klasse', 'Klassen'], objekt: ['Objekt', 'Objekte'] };
+  const IMP_HINT = {
+    mindmap: 'Jede Zeile wird ein Thema. Spiegelstriche, Nummern und Leerzeilen stören nicht; eingerückte Unterpunkte werden übersprungen.',
+    wirkung: 'Jede Zeile wird ein Begriff. „Begriff: Erklärung“ (auch mit – oder Tab) legt die Erklärung gleich mit an.',
+    klasse: 'Klassen als Text (Name, darunter „- name: String“, „+ fahren(): void“) oder als Code – Java, C#, TypeScript, Python.',
+    objekt: '„meinAuto : Auto“, darunter „marke = VW“. Oder Code: „Auto a = new Auto(…)“.'
+  };
+
+  // Vorläufige Anordnung (Schritt 2 macht das schöner): Raster unter
+  // dem, was schon da ist.
+  function placeGrid(nodes, under) {
+    if (!nodes.length) return;
+    nodes.forEach(measure);
+    const cols = Math.max(1, Math.ceil(Math.sqrt(nodes.length * 1.4)));
+    const gap = 40;
+    const colW = [], rowH = [];
+    nodes.forEach((n, i) => {
+      const c = i % cols, r = Math.floor(i / cols);
+      colW[c] = Math.max(colW[c] || 0, n._m.w); rowH[r] = Math.max(rowH[r] || 0, n._m.h);
+    });
+    const totalW = colW.reduce((s, w) => s + w + gap, -gap);
+    const x0 = under ? under.x + under.w / 2 - totalW / 2 : -totalW / 2;
+    let y = under ? under.y + under.h + 80 : 0;
+    const xs = []; let x = x0;
+    colW.forEach((w, c) => { xs[c] = x + w / 2; x += w + gap; });
+    rowH.forEach((h, r) => {
+      nodes.slice(r * cols, r * cols + cols).forEach((n, c) => { n.x = Math.round(xs[c]); n.y = Math.round(y + h / 2); });
+      y += h + gap;
+    });
+  }
+
+  /* ════════════════════════════════════════════════════════════
      5  Editor
      ════════════════════════════════════════════════════════════
      Werkzeugleiste oben, Zeichenfläche, Auswahl-Leiste unten (nur
@@ -1260,6 +1540,7 @@
     inbox: '<svg viewBox="0 0 24 24"><path d="M12 3v10M8 9l4 4 4-4M4 14h4l1 3h6l1-3h4v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     reset: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     swap:  '<svg viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    text:  '<svg viewBox="0 0 24 24"><path d="M9 4h6v3H9zM15 5h3a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h3M8.5 11.5h7M8.5 15h7M8.5 18.5h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     help:  '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
   };
 
@@ -1426,6 +1707,7 @@
     this.$('kind').innerHTML = `<span aria-hidden="true">${k.icon}</span> ${esc(k.label)}`;
     this.$('kind').title = k.hint;
     let adds = k.add.map(a => `<button type="button" class="dg-add" data-act="add" data-type="${a.type}">${ICON.plus}<span>${esc(a.label)}</span></button>`).join('');
+    adds += `<button type="button" class="dg-add dg-add--soft" data-act="import" title="${esc(IMP_WORD[this.cv.doc.kind][1])} aus Text einfügen – Copy &amp; Paste">${ICON.text}<span>Aus Text</span></button>`;
     if (this.cv.doc.kind === 'mindmap') adds += `<button type="button" class="dg-add dg-add--soft" data-act="tidy" title="Mindmap aufräumen">${ICON.tidy}<span>Ordnen</span></button>`;
     if (isUml(this.cv.doc.kind)) {
       const on = !!this.cv.doc.ortho;
@@ -1615,6 +1897,7 @@
       this.changed();
       return this.openEdit(n.id);
     }
+    if (a === 'import') return this.importText();
     if (a === 'tidy') {
       this.snap();
       layoutMindmap(cv.doc);
@@ -1720,6 +2003,99 @@
     this.paintBar();
     return true;
   };
+  /* Fenster „Aus Text": links Text einfügen, rechts live, was daraus wird. */
+  Editor.prototype.importText = function () {
+    const cv = this.cv, kind = cv.doc.kind;
+    this.closeEdit(true); this.menu(false);
+    const host = (root && root.querySelector('.dg')) || this.host;
+    const [one, many] = IMP_WORD[kind];
+    const type = kind === 'mindmap' ? 'center' : KINDS[kind].node;
+    modalOpen = true;
+    const el = document.createElement('div');
+    el.className = 'dg-modal-back';
+    el.innerHTML = `<div class="dg-modal dg-imp" role="dialog" aria-modal="true" aria-labelledby="dgImT">
+        <h3 id="dgImT">${esc(many)} aus Text</h3>
+        <p>${esc(IMP_HINT[kind])}</p>
+        <div class="dg-imp-grid">
+          <textarea class="dg-imp-ta" spellcheck="false" placeholder="Hier Text einfügen oder tippen …"></textarea>
+          <div class="dg-imp-out" aria-live="polite"></div>
+        </div>
+        <div class="dg-modal-btns dg-imp-btns">
+          <button type="button" class="dg-mb" data-im="ex">Beispiel</button>
+          <span class="dg-imp-sp"></span>
+          <button type="button" class="dg-mb" data-im="no">Abbrechen</button>
+          <button type="button" class="dg-mb is-pri" data-im="ok" disabled>Einfügen</button>
+        </div>
+      </div>`;
+    host.appendChild(el);
+    const ta = el.querySelector('.dg-imp-ta'), out = el.querySelector('.dg-imp-out'), ok = el.querySelector('[data-im="ok"]');
+    let items = [];
+    const sub = it => {
+      if (kind === 'klasse') {
+        const na = linesOf(it.a).length, no = linesOf(it.o).length;
+        return [na ? na + (na === 1 ? ' Attribut' : ' Attribute') : '', no ? no + (no === 1 ? ' Methode' : ' Methoden') : ''].filter(Boolean).join(' · ');
+      }
+      if (kind === 'objekt') { const na = linesOf(it.a).length; return na ? na + (na === 1 ? ' Wert' : ' Werte') : ''; }
+      return it.a || '';
+    };
+    const head = it => kind === 'objekt' ? `${esc(it.t || '')}<span class="dg-imp-k"> : ${esc(it.k || 'Klasse')}</span>` : esc(it.t);
+    const paint = () => {
+      items = parseText(ta.value, kind);
+      out.innerHTML = items.length
+        ? `<div class="dg-imp-n">${items.length} ${esc(items.length === 1 ? one : many)}</div>`
+          + items.map((it, i) => `<div class="dg-imp-it" style="--c:${COLORS[kind === 'mindmap' ? i % COLORS.length : 0][1]}"><b>${head(it)}</b>${sub(it) ? `<small>${esc(sub(it))}</small>` : ''}</div>`).join('')
+        : `<div class="dg-imp-empty">Hier erscheinen die ${esc(many)}.</div>`;
+      ok.disabled = !items.length;
+      ok.textContent = items.length ? `${items.length} ${items.length === 1 ? one : many} einfügen` : 'Einfügen';
+    };
+    let t = 0;
+    ta.addEventListener('input', () => { clearTimeout(t); t = setTimeout(paint, 120); });
+    paint();
+    const done = () => { clearTimeout(t); el.remove(); modalOpen = false; document.removeEventListener('keydown', key, true); };
+    const key = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); done(); } };
+    document.addEventListener('keydown', key, true);
+    el.addEventListener('click', ev => {
+      const b = ev.target.closest('[data-im]');
+      if (!b && ev.target === el && !ta.value.trim()) return done();
+      if (!b) return;
+      if (b.dataset.im === 'no') return done();
+      if (b.dataset.im === 'ex') { ta.value = IMP_EXAMPLE[kind]; paint(); ta.focus(); return; }
+      if (b.dataset.im === 'ok') {
+        paint();
+        if (!items.length) return;
+        done();
+        this.addImported(items, type);
+      }
+    });
+    setTimeout(() => ta.focus(), 30);
+  };
+
+  Editor.prototype.addImported = function (items, type) {
+    const cv = this.cv, doc = cv.doc;
+    this.snap();
+    // frische Mindmap: das leere „Thema" weicht den eingefügten
+    if (doc.kind === 'mindmap' && isEmptyDoc(doc)) doc.nodes = [];
+    let used = doc.nodes.filter(n => n.type === 'center').map(n => n.c || 0);
+    const raw = items.map((it, i) => {
+      let c = 0;
+      if (type === 'center') {
+        c = [0, 1, 2, 3, 4, 5, 6, 7].find(x => !used.includes(x));
+        if (c === undefined) { used = []; c = i % COLORS.length; }
+        used.push(c);
+      }
+      return { id: uid(), type, x: 0, y: 0, t: it.t || '', c, a: it.a, o: it.o, k: it.k };
+    });
+    const nodes = sane({ kind: doc.kind, nodes: raw, edges: [] }, doc.kind).nodes;
+    placeGrid(nodes, doc.nodes.length ? bounds(doc) : null);
+    doc.nodes.push(...nodes);
+    cv.selectMany(nodes.map(n => n.id));
+    cv.fit();
+    this.paintBar();
+    this.changed();
+    const [one, many] = IMP_WORD[doc.kind];
+    this.o.toast && this.o.toast(`${nodes.length} ${nodes.length === 1 ? one : many} eingefügt.`);
+  };
+
   Editor.prototype.paste = function () {
     const cv = this.cv;
     if (!CLIP) return;
@@ -2749,5 +3125,5 @@
   });
 
   // Für Prüfstände und das Schaufenster.
-  window.MPDiagramm = { KINDS, SAMPLES, sane, clean, layoutMindmap, exportSVG, measure, orthoRoute, orthoEnds, borderU, docSVG };
+  window.MPDiagramm = { KINDS, SAMPLES, parseText, sane, clean, layoutMindmap, exportSVG, measure, orthoRoute, orthoEnds, borderU, docSVG };
 })();

@@ -90,5 +90,22 @@ const by = id => M.nodes.find(n => n.id === id);
 ok('zwei Themen: erstes bei 0,0, zweites darunter', by('c1').x === 0 && by('c1').y === 0 && by('c2').y > 60, `${by('c2').y}`);
 ok('Ast bleibt bei seinem Thema', Math.abs(by('b').y - by('c2').y) < 5 && Math.abs(by('a').y) < 5);
 
+// Aus Text einfügen (parseText): nur Bausteine, keine Verbindungen
+const PT = D.parseText;
+const mm = PT('# Gesundheit\n- Ernährung\n  - Obst\n- Bewegung\n\n1. Schlaf\n2) Stress', 'mindmap');
+ok('Mindmap: Hauptpunkte = Themen, Unterpunkte übersprungen', mm.map(x => x.t).join() === 'Gesundheit,Ernährung,Bewegung,Schlaf,Stress', mm.map(x => x.t).join());
+ok('Mindmap: eine Zeile mit Kommas', PT('Hund, Katze; Maus', 'mindmap').length === 3);
+const wk = PT('Sonnenlicht: Energiequelle\nPflanzen – erzeugen Sauerstoff\n  und Zucker\nRäuber', 'wirkung');
+ok('Wirkung: Begriff + Erklärung', wk[0].t === 'Sonnenlicht' && wk[0].a === 'Energiequelle' && wk[1].a === 'erzeugen Sauerstoff und Zucker' && wk[2].t === 'Räuber' && !wk[2].a);
+const jv = PT('public class Auto extends Fahrzeug {\n private String marke;\n private int ps = 0;\n public Auto(String m) { this.marke = m; }\n public void fahren(int km) { if (km > 0) { } }\n}\n\nPerson\n- name: String\n+ gehe(): void', 'klasse');
+ok('Klasse: Java-Code wird UML', jv[0].t === 'Auto' && jv[0].a === '- marke: String\n- ps: int' && jv[0].o === '+ Auto(m: String)\n+ fahren(km: int): void', JSON.stringify(jv[0]));
+ok('Klasse: UML-Text daneben', jv[1] && jv[1].t === 'Person' && jv[1].a === '- name: String' && jv[1].o === '+ gehe(): void');
+const py = PT('class Tier:\n    def __init__(self, name):\n        self.name = name\n    def laut(self) -> str:\n        pass', 'klasse');
+ok('Klasse: Python', py[0].t === 'Tier' && py[0].a === '+ name' && py[0].o.includes('+ laut(): str'));
+ok('Klasse: nackte Liste = je eine Klasse', PT('Auto\nPerson\nFahrrad', 'klasse').length === 3);
+const ob = PT('meinAuto : Auto\nmarke = "VW"\nps: 90\n\n:Fahrrad\n\nPerson tom = new Person("Tom", 16);', 'objekt');
+ok('Objekt: Text und Code', ob.length === 3 && ob.some(o => o.t === 'meinAuto' && o.k === 'Auto' && o.a === 'marke = "VW"\nps = 90') && ob.some(o => o.t === '' && o.k === 'Fahrrad') && ob.some(o => o.t === 'tom' && o.k === 'Person'));
+ok('leerer Text = nichts', PT('  \n ', 'klasse').length === 0);
+
 console.log(fails ? `\n${fails} FEHLER` : '\nalles ok');
 process.exit(fails ? 1 : 0);
