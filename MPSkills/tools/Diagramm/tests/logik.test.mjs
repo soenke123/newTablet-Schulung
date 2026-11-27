@@ -105,6 +105,21 @@ ok('Klasse: Python', py[0].t === 'Tier' && py[0].a === '+ name' && py[0].o.inclu
 ok('Klasse: nackte Liste = je eine Klasse', PT('Auto\nPerson\nFahrrad', 'klasse').length === 3);
 const ob = PT('meinAuto : Auto\nmarke = "VW"\nps: 90\n\n:Fahrrad\n\nPerson tom = new Person("Tom", 16);', 'objekt');
 ok('Objekt: Text und Code', ob.length === 3 && ob.some(o => o.t === 'meinAuto' && o.k === 'Auto' && o.a === 'marke = "VW"\nps = 90') && ob.some(o => o.t === '' && o.k === 'Fahrrad') && ob.some(o => o.t === 'tom' && o.k === 'Person'));
+// Herkunft im Text (_r): Überschrift 'h' und Begleittext 'b' an der richtigen Stelle
+const part = (src, it, r) => (it._r || []).filter(x => x[2] === r).map(x => src.slice(x[0], x[1]));
+const wsrc = '- Sonnenlicht: Energiequelle\nPflanzen\n  und Zucker';
+const wr = PT(wsrc, 'wirkung');
+ok('Marken Wirkung: Begriff / Erklärung', part(wsrc, wr[0], 'h').join() === 'Sonnenlicht' && part(wsrc, wr[0], 'b').join() === 'Energiequelle' && part(wsrc, wr[1], 'b').join() === 'und Zucker', JSON.stringify(wr.map(x => x._r)));
+const msrc = 'Hund, Katze; Maus';
+ok('Marken Mindmap mit Kommas', PT(msrc, 'mindmap').map(x => part(msrc, x, 'h').join()).join('|') === 'Hund|Katze|Maus');
+const jsrc = 'public class Auto {\n  private int ps; // Kommentar\n}\nPerson\n- name: String';
+const jr = PT(jsrc, 'klasse');
+ok('Marken Java + UML-Text', part(jsrc, jr[0], 'h').join() === 'Auto' && part(jsrc, jr[0], 'b').includes('private int ps; // Kommentar'.replace(' // Kommentar', '')) && part(jsrc, jr[1], 'h').join() === 'Person' && part(jsrc, jr[1], 'b').join() === '- name: String', JSON.stringify(jr.map(x => part(jsrc, x, 'b'))));
+const osrc = 'a : Auto\nps = 90\nAuto b = new Auto(1);\nb.ps = 3;';
+const orr = PT(osrc, 'objekt');
+ok('Marken Objekte', part(osrc, orr.find(x => x.t === 'a'), 'b').join() === 'ps = 90' && part(osrc, orr.find(x => x.t === 'b'), 'h').join() === 'b' && part(osrc, orr.find(x => x.t === 'b'), 'b').length === 2);
+const psrc = 'class Tier:\n    def laut(self):\n        pass';
+ok('Marken Python', part(psrc, PT(psrc, 'klasse')[0], 'h').join() === 'Tier');
 ok('leerer Text = nichts', PT('  \n ', 'klasse').length === 0);
 
 // Anordnung der eingefügten Bausteine (layoutImport)

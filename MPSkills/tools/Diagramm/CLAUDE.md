@@ -95,7 +95,13 @@ Klassen = UML-Text (Name, darunter Attribute, Zeilen mit Klammern = Methoden, �
 oder Code Java/C#/TS (`parseJavaClasses`, private/public/protected → -/+/#, sonst ~; innere Klassen eigene
 Kachel; gemischt mit UML-Text über `cutCodeBlocks`) bzw. Python (`parsePyClasses`) · Objekte = „name : Klasse“
 mit „attr = wert“ (auch „attr: wert“, „:Klasse“) oder Code `Klasse x = new Klasse(…)` (+ `x.attr = …`).
-Spiegelstriche, Nummern, Markdown stören nicht, Doppelte fallen weg, höchstens 80. Anordnung (`layoutImport`,
+Spiegelstriche, Nummern, Markdown stören nicht, Doppelte fallen weg, höchstens 80. Farbmarken im Text:
+jeder Parser merkt je Baustein `it._r = [[von, bis, 'h'|'b']]` (Stellen im Originaltext – Ausgeschnittenes
+wird durch Leerzeichen ersetzt, nicht entfernt, sonst verrutschen die Stellen; `mark`/`markLines`/`markTrim`);
+`markHTML` malt sie in `.dg-imp-hl` HINTER das durchsichtige Textfeld (gleiche Schrift, Text unsichtbar):
+Überschrift (Name/Thema/Begriff) kräftig + unterstrichen, Begleittext (Erklärung/Attribute/Werte) zart,
+ohne Farbe = wird nicht übernommen; je Baustein eine Farbe (`impColor`, auch an der Karte rechts). Cursor im
+Text = passende Karte leuchtet, Karte antippen = ihre Stellen leuchten und der Text scrollt hin. Anordnung (`layoutImport`,
 unter dem Vorhandenen, Reihen auf ≈ 16:10 gepackt und mittig, `shelves`/`placeRows`): Mindmap-Themen in
 ausgewogenen Reihen · Begriffe (3–14) im Kreis, etwas breiter als hoch, Radius wächst bis nichts sich berührt
 (mehr = Reihen) · Klassen in Ebenen nach Vererbung (`sup` aus extends / C# „:“ / implements / Python-Basis /
@@ -121,7 +127,7 @@ Wirkungsgefüge die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr T
   in „Mein Diagramm“ immer alle Arten.
 - **Tablet**: `dg_mine_get` beim Start, `dg_mine_put` 1,5 s nach der letzten Änderung (bei Netzfehler
   alle 5 s nachholen), Anzeige „gespeichert ✓“ unten links. Ein Diagramm je Person.
-- **Teilen mit der Lehrkraft (0260)**: privat bis die Person oben „Mit Lehrkraft teilen“ tippt
+- **Teilen mit der Lehrkraft (0260)**: privat bis die Person oben „Mit Lehrkraft teilen“ tippt (Teilen-Knöpfe violett `.dg-sbtn--share`, Bausteine grün – etwas anderes)
   (`dg_mine_share`, vorher wird gespeichert); dann „Lehrkraft sieht mit“ + „Teilen beenden“. `dg_mine_poll`
   alle 5 s: `shared`, `ask`, `teacher`. Fragt die Lehrkraft (`ask = 'open'`), erscheint am Tablet ein Fenster
   „Deine Lehrkraft fragt“ (Ja = teilen, Nein = `declined`; `dg_mine_answer`).

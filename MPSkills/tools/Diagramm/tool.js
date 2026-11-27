@@ -1253,17 +1253,51 @@
   const stripMd = s => s.replace(/^#{1,6}\s*/, '').replace(/\*\*|__|`/g, '').trim();
   const indentOf = l => { const m = /^[ \t]*/.exec(l)[0]; return m.replace(/\t/g, '    ').length; };
 
-  // Zeilen für Mindmap/Wirkungsgefüge: { ind, s } ohne Spiegelstrich
+  /* Herkunft im Text: jeder Baustein merkt sich in it._r, welche
+     Stellen [von, bis, Rolle] zu ihm gehören – 'h' = Überschrift
+     (Name/Thema/Begriff), 'b' = Begleittext (Erklärung, Attribute,
+     Werte). Das Fenster „Aus Text" färbt damit den Text ein. Alle
+     Parser arbeiten deshalb mit Stellen im Originaltext (Ausgeschnittenes
+     wird durch Leerzeichen ersetzt, nicht entfernt).                  */
+  const mark = (it, a, b, r) => { if (it && b > a) (it._r || (it._r = [])).push([a, b, r]); };
+  const linesAt = src => { const out = []; let o = 0; for (const l of src.split('\n')) { out.push({ l, o }); o += l.length + 1; } return out; };
+  const blank = m => m.replace(/[^\n]/g, ' ');
+  // jede Zeile zwischen a und b einzeln, ohne Leerraum und ohne reine Klammerzeilen
+  function markLines(src, a, b, it, r) {
+    for (const { l, o } of linesAt(src)) {
+      const x = Math.max(a, o), y = Math.min(b, o + l.length);
+      if (y <= x) continue;
+      const seg = src.slice(x, y);
+      if (/^[\s{}();]*$/.test(seg)) continue;
+      const lead = seg.length - seg.trimStart().length;
+      mark(it, x + lead, x + seg.trimEnd().length, r);
+    }
+  }
+  const markTrim = (it, l, o, r) => { const lead = l.length - l.trimStart().length; mark(it, o + lead, o + l.trimEnd().length, r); };
+
+  // Zeilen für Mindmap/Wirkungsgefüge: { ind, s, c0, c1, raw } ohne Spiegelstrich
+  // (c0/c1 = Stelle des Inhalts im Text, raw = Inhalt wie er dasteht)
   function plainLines(text) {
-    let raw = String(text || '').replace(/\r/g, '').split('\n');
-    const full = raw.filter(l => l.trim());
+    let raw = linesAt(String(text || '').replace(/\r/g, ''));
+    const full = raw.filter(x => x.l.trim());
     // nur eine Zeile mit Kommas/Semikolons → das sind die Einträge
-    if (full.length === 1 && /[;,]/.test(full[0]) && !/[:=]/.test(full[0])) raw = full[0].split(/[;,]/).map(x => x.trim());
+    if (full.length === 1 && /[;,]/.test(full[0].l) && !/[:=]/.test(full[0].l)) {
+      const { l, o } = full[0];
+      let p = 0;
+      raw = l.split(/[;,]/).map(part => {
+        const lead = part.length - part.trimStart().length, x = { l: part.trim(), o: o + p + lead };
+        p += part.length + 1;
+        return x;
+      });
+    }
     const out = [];
-    for (const l of raw) {
+    for (const { l, o } of raw) {
       if (!l.trim()) { out.push(null); continue; }
-      const s = stripMd(l.replace(BULLET, ''));
-      if (s) out.push({ ind: indentOf(l), s });
+      const after = l.replace(BULLET, '').trimStart();
+      const md = /^#{1,6}\s*/.exec(after);
+      const cut = l.length - after.length + (md ? md[0].length : 0);
+      const s = stripMd(after);
+      if (s) out.push({ ind: indentOf(l), s, c0: o + cut, c1: o + l.trimEnd().length, raw: l.slice(cut).trimEnd() });
     }
     return out;
   }
@@ -1279,7 +1313,9 @@
       const sub = l.ind > top;
       if (kind === 'mindmap') {
         if (sub) continue;                      // nur die Hauptpunkte = Themen
-        items.push({ t: l.s.replace(/:$/, '').slice(0, 120) });
+        const it = { t: l.s.replace(/:$/, '').slice(0, 120) };
+        mark(it, l.c0, l.c1, 'h');
+        items.push(it);
         continue;
       }
       // Wirkungsgefüge: „Begriff: Erklärung" (auch – = Tab); eingerückte
@@ -1287,22 +1323,39 @@
       if (sub && items.length) {
         const it = items[items.length - 1];
         it.a = ((it.a ? it.a + ' ' : '') + l.s).slice(0, 600);
+        mark(it, l.c0, l.c1, 'b');
         continue;
       }
-      const m = /^(.{1,60}?)\s*(?:\t+|:\s+|\s[–—-]\s|\s=\s|:$)\s*(.*)$/.exec(l.s);
-      if (m && m[1].trim()) items.push({ t: m[1].trim(), a: m[2].trim() || undefined });
-      else items.push({ t: l.s.slice(0, 120) });
+      const SEP = /^(.{1,60}?)\s*(?:\t+|:\s+|\s[–—-]\s|\s=\s|:$)\s*(.*)$/;
+      const m = SEP.exec(l.s);
+      if (m && m[1].trim()) {
+        const it = { t: m[1].trim(), a: m[2].trim() || undefined };
+        const r = SEP.exec(l.raw);
+        if (r) {
+          mark(it, l.c0, l.c0 + r[1].length, 'h');
+          if (r[2].trim()) mark(it, l.c1 - r[2].length, l.c1, 'b');
+        } else mark(it, l.c0, l.c1, 'h');
+        items.push(it);
+      } else {
+        const it = { t: l.s.slice(0, 120) };
+        mark(it, l.c0, l.c1, 'h');
+        items.push(it);
+      }
     }
     return dedupe(items);
   }
 
+  // doppelte zusammenlegen: die Textstellen des Doppels gehören dann zum ersten
   function dedupe(items) {
-    const seen = new Set();
-    return items.filter(it => {
+    const seen = new Map(), out = [];
+    for (const it of items) {
       const key = (it.t + '|' + (it.k || '')).toLowerCase();
-      if (!(it.t || it.k) || seen.has(key)) return false;
-      seen.add(key); return true;
-    }).slice(0, IMP_MAX);
+      if (!(it.t || it.k)) continue;
+      const was = seen.get(key);
+      if (was) { for (const r of it._r || []) mark(was, r[0], r[1], r[2]); continue; }
+      seen.set(key, it); out.push(it);
+    }
+    return out.slice(0, IMP_MAX);
   }
 
   /* ── Klassen ─────────────────────────────────────────────── */
@@ -1320,7 +1373,8 @@
 
   // Code (Java/C#/TS/C++) mit „class X {…}"
   function parseJavaClasses(src) {
-    src = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '').replace(/"(?:\\.|[^"\\])*"/g, '""');
+    // Kommentare und Texte leeren, aber die Länge behalten (Stellen im Text bleiben gleich)
+    src = src.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/\/\/[^\n]*/g, blank).replace(/"(?:\\.|[^"\\])*"/g, m => '"' + blank(m.slice(1, -1)) + '"');
     const out = [];
     const re = /\b(?:class|interface|enum)\s+([A-Za-z_]\w*)[^{;]*\{/g;
     let m;
@@ -1355,12 +1409,16 @@
         mm = /^([\w<>\[\],.? ]+?)\s+([A-Za-z_]\w*(?:\s*,\s*[A-Za-z_]\w*)*)\s*(?:=.*)?$/.exec(s.replace(/\{$/, '').trim());
         if (mm) for (const nm of mm[2].split(',')) attrs.push(`${vis} ${nm.trim()}: ${mm[1].replace(/\s+/g, '')}`);
       }
-      out.push({ t: name, a: attrs.slice(0, 30).join('\n') || undefined, o: ops.slice(0, 30).join('\n') || undefined, sup: sm ? sm[1] : undefined });
+      const it = { t: name, a: attrs.slice(0, 30).join('\n') || undefined, o: ops.slice(0, 30).join('\n') || undefined, sup: sm ? sm[1] : undefined };
+      markLines(src, src.lastIndexOf('\n', m.index) + 1, i, it, 'b');
+      const hm = /\b(?:class|interface|enum)\s+/.exec(m[0]), at = m.index + hm.index + hm[0].length;
+      mark(it, at, at + name.length, 'h');
+      out.push(it);
     }
     return out;
   }
 
-  // Text ohne die Code-Blöcke „… class X … { … }" (äußerste Ebene)
+  // Text ohne die Code-Blöcke „… class X … { … }" (äußerste Ebene; durch Leerzeichen ersetzt)
   function cutCodeBlocks(src) {
     let out = '', i = 0;
     const re = /^[^\n]*\b(?:class|interface|enum)\s+\w+[^{;\n]*\{/gm;
@@ -1369,6 +1427,7 @@
       out += src.slice(i, m.index);
       let j = m.index + m[0].length, depth = 1;
       for (; j < src.length && depth; j++) { if (src[j] === '{') depth++; else if (src[j] === '}') depth--; }
+      out += blank(src.slice(m.index, j));
       i = j; re.lastIndex = j;
     }
     return out + src.slice(i);
@@ -1377,13 +1436,19 @@
   // Python: „class X(Basis):" mit def … und self.x = …
   function parsePyClasses(src) {
     const out = [];
-    const lines = src.replace(/\r/g, '').split('\n');
     let cur = null, ind = 0;
-    for (const l of lines) {
+    for (const { l, o } of linesAt(src.replace(/\r/g, ''))) {
       const m = /^(\s*)class\s+([A-Za-z_]\w*)\s*(?:\(\s*([A-Za-z_][\w.]*))?/.exec(l);
-      if (m) { cur = { t: m[2], a: [], o: [], sup: m[3] && m[3] !== 'object' ? m[3].split('.').pop() : undefined }; ind = m[1].length; out.push(cur); continue; }
+      if (m) {
+        cur = { t: m[2], a: [], o: [], sup: m[3] && m[3] !== 'object' ? m[3].split('.').pop() : undefined }; ind = m[1].length; out.push(cur);
+        markTrim(cur, l, o, 'b');
+        const at = o + m[0].indexOf(m[2], m[1].length + 5);
+        mark(cur, at, at + m[2].length, 'h');
+        continue;
+      }
       if (!cur || !l.trim()) continue;
       if (indentOf(l) <= ind) { cur = null; continue; }
+      markTrim(cur, l, o, 'b');
       let d = /^\s*def\s+(\w+)\s*\(([^)]*)\)\s*(?:->\s*([^:]+))?/.exec(l);
       if (d) {
         const ps = d[2].split(',').map(x => x.trim()).filter(x => x && x !== 'self' && x !== 'cls').join(', ');
@@ -1397,36 +1462,36 @@
         if (!cur.a.includes(row)) cur.a.push(row);
       }
     }
-    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined, sup: c.sup }));
+    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined, sup: c.sup, _r: c._r }));
   }
 
   // UML als Text: Name, darunter Attribute und Methoden (eingerückt
   // oder nicht), Blöcke durch Leerzeilen; „Attribute:"/„Methoden:"/
   // „---" trennen. Eine nackte Liste von Namen = je eine Klasse.
   function parseUmlText(text) {
-    const lines = String(text).replace(/\r/g, '').split('\n');
     const out = [];
     let cur = null, part = 'a';
     const isHead = (raw, s) => indentOf(raw) === 0 && !/^[+\-#~]\s*\w/.test(s) && !/[(=]/.test(s)
       && !/:\s*\S/.test(s) && !/^(attribute?|methoden?|operationen?|eigenschaften|fields?|methods?)\s*:?$/i.test(s);
-    for (const raw of lines) {
+    for (const { l: raw, o: off } of linesAt(String(text).replace(/\r/g, ''))) {
       let s = raw.replace(/^\s*[•*▪]\s*/, '').trim();
       if (!s || s === '}' || s === '{') continue;
       s = stripMd(s);
-      if (/^[-–—_=]{2,}$/.test(s)) { if (cur) part = 'o'; continue; }
-      if (/^(methoden?|operationen?|methods?)\s*:?$/i.test(s)) { part = 'o'; continue; }
-      if (/^(attribute?|eigenschaften|fields?)\s*:?$/i.test(s)) { part = 'a'; continue; }
+      if (/^[-–—_=]{2,}$/.test(s)) { if (cur) { part = 'o'; markTrim(cur, raw, off, 'b'); } continue; }
+      if (/^(methoden?|operationen?|methods?)\s*:?$/i.test(s)) { part = 'o'; markTrim(cur, raw, off, 'b'); continue; }
+      if (/^(attribute?|eigenschaften|fields?)\s*:?$/i.test(s)) { part = 'a'; markTrim(cur, raw, off, 'b'); continue; }
       if (isHead(raw, s)) {
         const name = s.replace(/^(?:<<\w+>>\s*)?(?:(?:public|abstract|final)\s+)*(?:klasse|class|interface)\s+/i, '')
           .replace(/\s*(?:extends|implements|erbt von)\b.*$/i, '').replace(/[{:]\s*$/, '').trim();
         const sm = /\b(?:extends|erbt von|implements)\s+([A-Za-zÄÖÜäöüß_][\wäöüÄÖÜß]*)/i.exec(s);
-        if (name) { cur = { t: name.slice(0, 80), a: [], o: [], sup: sm ? sm[1] : undefined }; out.push(cur); part = 'a'; continue; }
+        if (name) { cur = { t: name.slice(0, 80), a: [], o: [], sup: sm ? sm[1] : undefined }; out.push(cur); part = 'a'; markTrim(cur, raw, off, 'h'); continue; }
       }
       if (!cur) continue;
+      markTrim(cur, raw, off, 'b');
       // Zeile mit Klammern = Methode, sonst Attribut (im Teil „Methoden" alles Methode)
       (/\(/.test(s) || part === 'o' ? cur.o : cur.a).push(s.slice(0, 120));
     }
-    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined, sup: c.sup }));
+    return out.map(c => ({ t: c.t, a: c.a.slice(0, 30).join('\n') || undefined, o: c.o.slice(0, 30).join('\n') || undefined, sup: c.sup, _r: c._r }));
   }
 
   /* ── Objekte ─────────────────────────────────────────────── */
@@ -1439,15 +1504,19 @@
     if (code.length) {
       for (const m of code) {
         const args = m[4].split(',').map(x => x.trim()).filter(Boolean);
-        out.push({ t: m[2], k: m[3], a: args.map((v, i) => `wert${i + 1} = ${v}`).join('\n') || undefined });
+        const it = { t: m[2], k: m[3], a: args.map((v, i) => `wert${i + 1} = ${v}`).join('\n') || undefined };
+        mark(it, m.index, m.index + m[0].length, 'b');
+        const at = m.index + m[0].search(new RegExp('\\b' + m[2] + '\\s*='));
+        mark(it, at, at + m[2].length, 'h');
+        out.push(it);
       }
       // „a.marke = "VW";" ordnet Werte dem Objekt zu
       for (const m of src.matchAll(/\b([a-zA-Z_]\w*)\.([a-zA-Z_]\w*)\s*=\s*([^;\n]+)/g)) {
         const o = out.find(x => x.t === m[1]);
-        if (o) o.a = (o.a ? o.a + '\n' : '') + `${m[2]} = ${m[3].trim()}`;
+        if (o) { o.a = (o.a ? o.a + '\n' : '') + `${m[2]} = ${m[3].trim()}`; mark(o, m.index, m.index + m[0].length, 'b'); }
       }
       // Zeilen ohne Code (z. B. „anna : Person") wie Text lesen
-      const rest = src.split('\n').filter(l => !/=\s*new\s|^\s*\w+\.\w+\s*=|^\s*(?:\/\/|import\b|package\b)/.test(l)).join('\n');
+      const rest = src.split('\n').map(l => /=\s*new\s|^\s*\w+\.\w+\s*=|^\s*(?:\/\/|import\b|package\b)/.test(l) ? blank(l) : l).join('\n');
       return dedupe(out.concat(textObjects(rest)));
     }
     return textObjects(src);
@@ -1455,19 +1524,20 @@
   function textObjects(src) {
     const out = [];
     let cur = null;
-    for (const raw of src.split('\n')) {
+    for (const { l: raw, o: off } of linesAt(src)) {
       let s = stripMd(raw.replace(/^\s*[-–*•▪]\s*/, '').trim()).replace(/^_+|_+$/g, '');
       if (!s || /^[{}();]+$/.test(s)) continue;
       s = s.replace(/[{]\s*$/, '').trim();
       const ind = indentOf(raw) > 0 || /^\s*[-–*•▪]/.test(raw);
       const head = /^([A-Za-zÄÖÜäöüß_][\w.äöüÄÖÜß-]*)?\s*:\s*([A-ZÄÖÜ][\wäöüÄÖÜß]*)$/.exec(s);
-      if (!ind && head && (head[1] || head[2])) { cur = { t: head[1] || '', k: head[2], a: [] }; out.push(cur); continue; }
-      if (!ind && !/[=:]/.test(s) && !/\s{2,}/.test(s)) { cur = { t: s.slice(0, 80), k: '', a: [] }; out.push(cur); continue; }
+      if (!ind && head && (head[1] || head[2])) { cur = { t: head[1] || '', k: head[2], a: [] }; out.push(cur); markTrim(cur, raw, off, 'h'); continue; }
+      if (!ind && !/[=:]/.test(s) && !/\s{2,}/.test(s)) { cur = { t: s.slice(0, 80), k: '', a: [] }; out.push(cur); markTrim(cur, raw, off, 'h'); continue; }
       if (!cur) { cur = { t: '', k: '', a: [] }; out.push(cur); }
+      markTrim(cur, raw, off, 'b');
       const kv = /^([^=:]+?)\s*[=:]\s*(.+)$/.exec(s);
       cur.a.push((kv ? `${kv[1].trim()} = ${kv[2].trim()}` : s).slice(0, 120));
     }
-    return out.filter(o => o.t || o.k).map(o => ({ t: o.t, k: o.k || undefined, a: o.a.slice(0, 30).join('\n') || undefined })).slice(0, IMP_MAX);
+    return out.filter(o => o.t || o.k).map(o => ({ t: o.t, k: o.k || undefined, a: o.a.slice(0, 30).join('\n') || undefined, _r: o._r })).slice(0, IMP_MAX);
   }
 
   function parseText(text, kind) {
@@ -1493,6 +1563,27 @@
     objekt: 'meinAuto : Auto\nmarke = "VW"\nps = 90\n\nanna : Person\nname = "Anna"\nalter = 17\n\nPerson tom = new Person("Tom", 16);'
   };
   const IMP_WORD = { mindmap: ['Thema', 'Themen'], wirkung: ['Begriff', 'Begriffe'], klasse: ['Klasse', 'Klassen'], objekt: ['Objekt', 'Objekte'] };
+  const IMP_BODY = { mindmap: '', wirkung: 'Erklärung', klasse: 'Attribute und Methoden', objekt: 'Werte' };
+  const impColor = i => COLORS[i % 7][1];   // ohne Grau: jeder Baustein seine Farbe
+
+  /* Text mit Farbmarken für die Ebene hinter dem Textfeld: je Zeichen
+     der Baustein und die Rolle (Überschrift schlägt Begleittext, ein
+     später gefundener – z. B. eine innere Klasse – den früheren).     */
+  function markHTML(src, items) {
+    const n = src.length, who = new Int16Array(n).fill(-1), role = new Uint8Array(n);
+    for (const [pass, v] of [['b', 1], ['h', 2]]) items.forEach((it, i) => {
+      for (const [a, b, r] of it._r || []) if (r === pass) for (let k = Math.max(0, a); k < Math.min(b, n); k++) { who[k] = i; role[k] = v; }
+    });
+    let h = '';
+    for (let k = 0; k < n;) {
+      let j = k + 1;
+      while (j < n && who[j] === who[k] && role[j] === role[k]) j++;
+      const t = esc(src.slice(k, j));
+      h += who[k] < 0 ? t : `<mark class="${role[k] === 2 ? 'h' : 'b'}" data-i="${who[k]}" style="--c:${impColor(who[k])}">${t}</mark>`;
+      k = j;
+    }
+    return h + ' ';
+  }
   const IMP_HINT = {
     mindmap: 'Jede Zeile wird ein Thema. Spiegelstriche, Nummern und Leerzeilen stören nicht; eingerückte Unterpunkte werden übersprungen.',
     wirkung: 'Jede Zeile wird ein Begriff. „Begriff: Erklärung“ (auch mit – oder Tab) legt die Erklärung gleich mit an.',
@@ -2161,8 +2252,14 @@
     el.innerHTML = `<div class="dg-modal dg-imp" role="dialog" aria-modal="true" aria-labelledby="dgImT">
         <h3 id="dgImT">${esc(many)} aus Text</h3>
         <p>${esc(IMP_HINT[kind])}</p>
+        <div class="dg-imp-legend" aria-hidden="true">
+          <span class="lg-h">${esc(one)}</span>${IMP_BODY[kind] ? `<span class="lg-b">${esc(IMP_BODY[kind])}</span>` : ''}<span class="lg-x">ohne Farbe = wird nicht übernommen</span><span class="lg-tip">Antippen zeigt, was zusammengehört</span>
+        </div>
         <div class="dg-imp-grid">
-          <textarea class="dg-imp-ta" spellcheck="false" placeholder="Hier Text einfügen oder tippen …"></textarea>
+          <div class="dg-imp-ed">
+            <div class="dg-imp-hl" aria-hidden="true"></div>
+            <textarea class="dg-imp-ta" spellcheck="false" placeholder="Hier Text einfügen oder tippen …"></textarea>
+          </div>
           <div class="dg-imp-out" aria-live="polite"></div>
         </div>
         <div class="dg-modal-btns dg-imp-btns">
@@ -2174,7 +2271,32 @@
       </div>`;
     host.appendChild(el);
     const ta = el.querySelector('.dg-imp-ta'), out = el.querySelector('.dg-imp-out'), ok = el.querySelector('[data-im="ok"]');
-    let items = [];
+    const hl = el.querySelector('.dg-imp-hl');
+    let items = [], on = -1;
+    // Farbebene genau unter den Text legen (Breite ohne Scrollleiste, gleiche Scrollhöhe)
+    const fit = () => { hl.style.width = ta.clientWidth + 2 + 'px'; hl.style.height = ta.clientHeight + 2 + 'px'; hl.scrollTop = ta.scrollTop; };
+    ta.addEventListener('scroll', () => { hl.scrollTop = ta.scrollTop; });
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(fit) : null;
+    if (ro) ro.observe(ta);
+    // ein Baustein aktiv: seine Stellen im Text und seine Karte rechts leuchten
+    const setOn = (i, from) => {
+      on = i;
+      for (const m of hl.querySelectorAll('mark')) m.classList.toggle('is-on', +m.dataset.i === i);
+      for (const c of out.querySelectorAll('.dg-imp-it')) c.classList.toggle('is-on', +c.dataset.i === i);
+      if (i < 0) return;
+      if (from === 'ta') { const c = out.querySelector(`.dg-imp-it[data-i="${i}"]`); if (c) c.scrollIntoView({ block: 'nearest' }); }
+      if (from === 'out') {
+        const m = hl.querySelector(`mark.h[data-i="${i}"]`) || hl.querySelector(`mark[data-i="${i}"]`);
+        if (m && (m.offsetTop < ta.scrollTop || m.offsetTop + m.offsetHeight > ta.scrollTop + ta.clientHeight)) { ta.scrollTop = Math.max(0, m.offsetTop - 40); hl.scrollTop = ta.scrollTop; }
+      }
+    };
+    const atCaret = () => {
+      const p = ta.selectionStart;
+      let hit = -1;
+      items.forEach((it, i) => { for (const [a, b, r] of it._r || []) if (p >= a && p <= b && (hit < 0 || r === 'h')) hit = i; });
+      setOn(hit, 'ta');
+    };
+    for (const ev of ['click', 'keyup', 'select']) ta.addEventListener(ev, atCaret);
     const sub = it => {
       if (kind === 'klasse') {
         const na = linesOf(it.a).length, no = linesOf(it.o).length;
@@ -2188,15 +2310,20 @@
       items = parseText(ta.value, kind);
       out.innerHTML = items.length
         ? `<div class="dg-imp-n">${items.length} ${esc(items.length === 1 ? one : many)}</div>`
-          + items.map((it, i) => `<div class="dg-imp-it" style="--c:${COLORS[kind === 'mindmap' ? i % COLORS.length : 0][1]}"><b>${head(it)}</b>${sub(it) ? `<small>${esc(sub(it))}</small>` : ''}</div>`).join('')
+          + items.map((it, i) => `<div class="dg-imp-it" data-i="${i}" style="--c:${impColor(i)}"><b>${head(it)}</b>${sub(it) ? `<small>${esc(sub(it))}</small>` : ''}</div>`).join('')
         : `<div class="dg-imp-empty">Hier erscheinen die ${esc(many)}.</div>`;
+      hl.innerHTML = markHTML(ta.value, items);
+      fit();
+      if (document.activeElement === ta) atCaret(); else setOn(on < items.length ? on : -1);
       ok.disabled = !items.length;
       ok.textContent = items.length ? `${items.length} ${items.length === 1 ? one : many} einfügen` : 'Einfügen';
     };
     let t = 0;
     ta.addEventListener('input', () => { clearTimeout(t); t = setTimeout(paint, 120); });
     paint();
-    const done = () => { clearTimeout(t); el.remove(); modalOpen = false; document.removeEventListener('keydown', key, true); };
+    out.addEventListener('click', ev => { const c = ev.target.closest('.dg-imp-it'); if (c) setOn(+c.dataset.i, 'out'); });
+    out.addEventListener('pointerover', ev => { const c = ev.target.closest('.dg-imp-it'); if (c && ev.pointerType === 'mouse') setOn(+c.dataset.i); });
+    const done = () => { clearTimeout(t); if (ro) ro.disconnect(); el.remove(); modalOpen = false; document.removeEventListener('keydown', key, true); };
     const key = ev => { if (ev.key === 'Escape') { ev.stopPropagation(); done(); } };
     document.addEventListener('keydown', key, true);
     el.addEventListener('click', ev => {
@@ -2709,15 +2836,15 @@
     if (!ed) return;
     if (mode === 'participant') {
       ed.setShare(pShared
-        ? `<span class="dg-chip is-on" title="Deine Lehrkraft kann dein Diagramm ansehen">${ICON.eye}<span>Lehrkraft sieht mit</span></span>`
+        ? `<span class="dg-chip dg-chip--share is-on" title="Deine Lehrkraft kann dein Diagramm ansehen">${ICON.eye}<span>Lehrkraft sieht mit</span></span>`
           + `<button type="button" class="dg-sbtn dg-sbtn--soft" data-sact="unshare">Teilen beenden</button>`
-        : `<button type="button" class="dg-sbtn" data-sact="share" title="Deine Lehrkraft darf dein Diagramm ansehen">${ICON.share}<span>Mit Lehrkraft teilen</span></button>`);
+        : `<button type="button" class="dg-sbtn dg-sbtn--share" data-sact="share" title="Deine Lehrkraft darf dein Diagramm ansehen">${ICON.share}<span>Mit Lehrkraft teilen</span></button>`);
     } else {
       ed.setShare(tShare
-        ? `<span class="dg-chip is-on" title="„${esc(tShare.title || 'Diagramm')}“ ist an die Klasse gegeben">${ICON.share}<span>Mit Klasse geteilt</span></span>`
+        ? `<span class="dg-chip dg-chip--share is-on" title="„${esc(tShare.title || 'Diagramm')}“ ist an die Klasse gegeben">${ICON.share}<span>Mit Klasse geteilt</span></span>`
           + `<button type="button" class="dg-sbtn dg-sbtn--soft" data-sact="tupdate" title="Den jetzigen Stand noch einmal an die Klasse geben">Neu geben</button>`
           + `<button type="button" class="dg-sbtn dg-sbtn--soft" data-sact="tunshare">Zurücknehmen</button>`
-        : `<button type="button" class="dg-sbtn" data-sact="tshare" title="Die Klasse bekommt dein Diagramm als Kopie zum Weiterarbeiten">${ICON.share}<span>Mit Klasse teilen</span></button>`);
+        : `<button type="button" class="dg-sbtn dg-sbtn--share" data-sact="tshare" title="Die Klasse bekommt dein Diagramm als Kopie zum Weiterarbeiten">${ICON.share}<span>Mit Klasse teilen</span></button>`);
     }
   }
 
