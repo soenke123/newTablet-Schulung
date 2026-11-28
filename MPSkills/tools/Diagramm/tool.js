@@ -1772,6 +1772,7 @@
     down:  '<svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     open:  '<svg viewBox="0 0 24 24"><path d="M3 7a1 1 0 0 1 1-1h5l2 2h8a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
     pic:   '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="10" r="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 18l5-5 4 4 3-3 4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>',
+    tpl:   '<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 8h8M8 12h8M8 16h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
     inbox: '<svg viewBox="0 0 24 24"><path d="M12 3v10M8 9l4 4 4-4M4 14h4l1 3h6l1-3h4v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     reset: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     swap:  '<svg viewBox="0 0 24 24"><path d="M4 8h14l-4-4M20 16H6l4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -1895,13 +1896,38 @@
   Editor.prototype.menu = function (on) {
     const m = this.$('menu'), b = this.host.querySelector('[data-act="file"]');
     const show = on == null ? m.hidden : on;
-    if (!show) { if (!m.hidden) { m.hidden = true; b.setAttribute('aria-expanded', 'false'); } return; }
-    const it = (act, icon, label) => `<button type="button" role="menuitem" class="dg-mi" data-act="${act}">${icon}<span><b>${label}</b></span></button>`;
-    m.innerHTML = (this.o.onNew ? it('f-new', ICON.plus, 'Neu') : '')
-      + it('f-open', ICON.open, 'Öffnen …')
-      + it('f-save', ICON.img, 'Speichern')
-      + it('png', ICON.pic, 'Als Bild (PNG)')
-      + (this.o.teacherAvail && this.o.teacherAvail() ? '<span class="dg-msep"></span>' + it('f-teacher', ICON.inbox, 'Diagramm der Lehrkraft') : '');
+    if (!show) { if (!m.hidden) { m.hidden = true; this.dlOpen = false; b.setAttribute('aria-expanded', 'false'); } return; }
+    if (m.hidden && this.o.tpl) this.o.tpl.refresh().then(() => { if (!m.hidden) this.menu(true); });
+    const it = (act, icon, label, sub, extra) => `<button type="button" role="menuitem" class="dg-mi${extra || ''}" data-act="${act}">${icon}<span><b>${label}</b>${sub ? `<small>${sub}</small>` : ''}</span></button>`;
+    let h = (this.o.onNew ? it('f-new', ICON.plus, 'Neu') : '')
+      + it('f-open', ICON.open, 'Öffnen …', 'Datei vom Gerät')
+      + it('f-dl', ICON.img, 'Download', '', ' dg-mi--fold' + (this.dlOpen ? ' is-open' : ''))
+      + (this.dlOpen ? '<div class="dg-msub">'
+          + it('f-save', ICON.file, 'Diagramm', 'zum späteren Öffnen')
+          + it('png', ICON.pic, 'Bild (PNG)') + '</div>' : '');
+    const T = this.o.tpl;
+    if (T) {
+      const cur = T.current();
+      h += '<span class="dg-msep"></span>'
+        + it('f-tpl-save', ICON.tpl, cur ? 'Als neue Vorlage speichern' : 'Als Vorlage speichern', 'in deinem Konto');
+      const items = T.items();
+      h += '<div class="dg-mh">Meine Vorlagen</div>';
+      if (items == null) h += '<p class="dg-mnone">lädt …</p>';
+      else if (!items.length) h += '<p class="dg-mnone">Noch keine. „Als Vorlage speichern“ legt eine an – sie steht dann in all deinen Räumen.</p>';
+      else h += '<div class="dg-tpls">' + items.map(x => {
+        const k = KINDS[x.kind];
+        const on = x.id === cur;
+        return `<div class="dg-tpl${on ? ' is-on' : ''}">
+          <button type="button" role="menuitem" class="dg-tpl-o" data-act="tpl-open" data-id="${esc(x.id)}" title="Öffnen">
+            <span class="dg-tpl-k">${k ? k.icon : ''}</span>
+            <span><b>${esc(x.title || 'Ohne Titel')}</b><small>${on ? 'geöffnet · speichert mit' : esc(k ? k.label : '')}</small></span>
+          </button>
+          <button type="button" class="dg-tpl-d" data-act="tpl-del" data-id="${esc(x.id)}" title="Vorlage löschen" aria-label="Vorlage löschen">${ICON.trash}</button>
+        </div>`;
+      }).join('') + '</div>';
+    }
+    if (this.o.teacherAvail && this.o.teacherAvail()) h += '<span class="dg-msep"></span>' + it('f-teacher', ICON.inbox, 'Diagramm der Lehrkraft');
+    m.innerHTML = h;
     m.hidden = false;
     b.setAttribute('aria-expanded', 'true');
   };
@@ -2097,7 +2123,11 @@
     }
     if (a === 'f-new') { this.menu(false); return this.o.onNew && this.o.onNew(); }
     if (a === 'f-open') { this.menu(false); return this.$('fileinp').click(); }
+    if (a === 'f-dl') { this.dlOpen = !this.dlOpen; return this.menu(true); }
     if (a === 'f-save') { this.menu(false); this.closeEdit(true); return saveFile(cv.doc, this.title); }
+    if (a === 'f-tpl-save') { this.menu(false); this.closeEdit(true); return this.o.tpl && this.o.tpl.saveAs(); }
+    if (a === 'tpl-open') { this.menu(false); this.closeEdit(true); return this.o.tpl && this.o.tpl.open(btn.dataset.id); }
+    if (a === 'tpl-del') { this.menu(false); return this.o.tpl && this.o.tpl.del(btn.dataset.id); }
     if (a === 'f-teacher') { this.menu(false); return this.o.onTeacher && this.o.onTeacher(); }
     if (a === 'help') return this.toggleHelp();
     if (a === 'add') {
@@ -2737,6 +2767,9 @@
   let pShared = false, pAsk = null, tInfo = null, pollMT = null;   // Teilen (0260)
   // Lehrkraft
   let tab = 'class', classList = [], picked = [], panes = {}, pollT = null, listHidden = false, ownKey = null;
+  let tpl = null;           // geöffnete Vorlage der Lehrkraft (id) — Änderungen speichern mit (0304)
+  let tplItems = null, tplT = null, tplBusy = false, tplDirty = false, tplErr = '';
+  let demoTpls = [];
   let tShare = null;        // eigenes, an die Klasse gegebenes Diagramm: { rev, title, kind } | null
   let onVis = null;
   let modalOpen = false;
@@ -2755,11 +2788,14 @@
           ${o.icon ? `<span class="dg-modal-ic">${o.icon}</span>` : ''}
           <h3 id="dgMt">${esc(o.title)}</h3>
           ${o.text ? `<p>${esc(o.text)}</p>` : ''}${o.html || ''}
+          ${o.input != null ? `<input class="dg-modal-in" maxlength="80" value="${esc(o.input)}" placeholder="${esc(o.placeholder || '')}"/>` : ''}
           <div class="dg-modal-btns${o.stack ? ' is-stack' : ''}">${o.buttons.map(b =>
             `<button type="button" class="dg-mb${b.pri ? ' is-pri' : ''}" data-mv="${esc(b.v)}">${esc(b.label)}</button>`).join('')}</div>
         </div>`;
       host.appendChild(el);
-      const done = v => { el.remove(); modalOpen = false; document.removeEventListener('keydown', key, true); res(v); };
+      const inp = el.querySelector('.dg-modal-in');
+      if (inp) inp.addEventListener('keydown', ev => { if (ev.key === 'Enter') { ev.preventDefault(); const p = el.querySelector('.dg-mb.is-pri'); if (p) p.click(); } });
+      const done = v => { if (inp) o.value = inp.value; el.remove(); modalOpen = false; document.removeEventListener('keydown', key, true); res(v); };
       el.addEventListener('click', ev => {
         const b = ev.target.closest('[data-mv]');
         if (b) done(b.dataset.mv);
@@ -2768,7 +2804,8 @@
       const key = ev => { if (ev.key === 'Escape' && !o.sticky) { ev.stopPropagation(); done(null); } };
       document.addEventListener('keydown', key, true);
       const pri = el.querySelector('.dg-mb.is-pri') || el.querySelector('.dg-mb');
-      if (pri) setTimeout(() => pri.focus(), 30);
+      if (inp) setTimeout(() => { inp.focus(); inp.select(); }, 30);
+      else if (pri) setTimeout(() => pri.focus(), 30);
     });
   }
   const askYes = (title, text, yes) => modal({ title, text, buttons: [{ v: 'no', label: 'Abbrechen' }, { v: 'yes', label: yes, pri: true }] }).then(v => v === 'yes');
@@ -2956,10 +2993,14 @@
       onNew: () => newDiagram(),
       onOpen: (d, t) => openDoc(d, t),
       teacherAvail: () => mode === 'participant' && !!tInfo,
+      tpl: mode === 'presenter' ? {
+        items: () => tplItems, current: () => tpl,
+        refresh: refreshTpls, saveAs: saveAsTpl, open: openTpl, del: delTpl
+      } : null,
       onTeacher: () => teacherModal(false),
       onChange: () => {
         if (mode === 'participant') { dirty = true; saveSoon(); }
-        else saveOwn();
+        else { saveOwn(); if (tpl) tplSoon(); }
       }
     });
     ed.load(doc, title);
@@ -2978,20 +3019,24 @@
       else if (a === 'tunshare') unshareClass();
     };
     paintShare();
-    if (mode === 'participant') paintSave();
+    if (mode === 'participant') paintSave(); else paintTplSave();
   }
 
   // Datei → Öffnen: ersetzt das jetzige Diagramm (nach Rückfrage)
+  // Bei der Lehrkraft ist eine geöffnete Vorlage schon gespeichert — dann keine Rückfrage.
+  const mustAsk = () => ed && !isEmptyDoc(ed.cv.doc) && !tpl;
   async function openDoc(d, title) {
-    if (ed && !isEmptyDoc(ed.cv.doc)
-        && !await askYes('Datei öffnen?', 'Das jetzige Diagramm wird dabei ersetzt. Lade es vorher über Datei → Speichern herunter, wenn du es behalten willst.', 'Öffnen')) return;
+    if (mustAsk()
+        && !await askYes('Datei öffnen?', 'Das jetzige Diagramm wird dabei ersetzt. Lade es vorher über Datei → Download herunter, wenn du es behalten willst.', 'Öffnen')) return;
+    await leaveTpl();
     startEditor(d, title);
     if (mode === 'participant') { dirty = true; saveSoon(); } else saveOwn();
   }
 
   async function newDiagram() {
-    if (ed && !isEmptyDoc(ed.cv.doc)
-        && !await askYes('Neues Diagramm anfangen?', 'Das jetzige wird dabei gelöscht. Lade es vorher über Datei → Speichern herunter, wenn du es behalten willst.', 'Neu anfangen')) return;
+    if (mustAsk()
+        && !await askYes('Neues Diagramm anfangen?', 'Das jetzige wird dabei gelöscht. Lade es vorher über Datei → Download herunter, wenn du es behalten willst.', 'Neu anfangen')) return;
+    await leaveTpl();
     startNew();
   }
 
@@ -3067,6 +3112,7 @@
   function openOwn() {
     // Der Reiter trägt selbst die Klasse .dg-main — startEditor/showPick finden ihn.
     const saved = demo ? null : jget(ownKey || 'dg.own', null);
+    tpl = saved && saved.tpl && /^[0-9a-f-]{36}$/.test(saved.tpl) ? saved.tpl : null;
     if (saved && saved.doc) startEditor(sane(saved.doc, saved.doc.kind), saved.title || '');
     else showPick('Dein eigenes Diagramm liegt auf diesem Gerät. Mit „Mit Klasse teilen“ bekommt die Klasse eine Kopie.');
   }
@@ -3079,7 +3125,7 @@
     if (!ed) return;
     const ok = await askYes(again ? 'Jetzigen Stand neu geben?' : 'Mit der Klasse teilen?',
       again ? 'Die Klasse bekommt den jetzigen Stand noch einmal angeboten. Wer schon eine Kopie hat, wird gefragt, ob er sie ersetzen will.'
-            : 'Alle in der Klasse bekommen dein Diagramm angeboten und können es als eigene Kopie weiterbearbeiten. Was du danach änderst, geht erst mit „Neu geben“ hinaus.',
+            : `Alle in der Klasse bekommen das gerade geöffnete Diagramm${ed.title ? ` „${ed.title}“` : ''} angeboten und können es als eigene Kopie weiterbearbeiten. Was du danach änderst, geht erst mit „Neu geben“ hinaus.`,
       again ? 'Neu geben' : 'Teilen');
     if (!ok || !ed) return;
     const doc = clean(ed.cv.doc);
@@ -3118,7 +3164,130 @@
   function saveOwn() {
     if (demo || !ed) return;
     clearTimeout(ownT);
-    ownT = setTimeout(() => { if (ed) jset(ownKey || 'dg.own', { doc: clean(ed.cv.doc), title: ed.title || '' }); }, 600);
+    ownT = setTimeout(writeOwn, 600);
+  }
+  function writeOwn() {
+    clearTimeout(ownT); ownT = null;
+    if (ed && !demo) jset(ownKey || 'dg.own', { doc: clean(ed.cv.doc), title: ed.title || '', tpl: tpl || undefined });
+  }
+
+  /* ── Vorlagen der Lehrkraft (0304) ──────────────────────────
+     Am Konto, in jedem Raum. Geöffnete Vorlage = jede Änderung geht
+     1,5 s später mit dg_tpl_save hinein. Mit der Klasse geteilt wird
+     wie immer nur das, was gerade offen ist (dg_class_share). */
+  async function tplCall(fn, args) {
+    if (!demo) return ctx.actions.call(fn, args);
+    if (fn === 'dg_tpl_list') return { ok: true, items: demoTpls.map(t => ({ id: t.id, title: t.title, kind: t.kind, nodes: t.doc.nodes.length })) };
+    const t = demoTpls.find(x => x.id === args.p_id);
+    if (fn === 'dg_tpl_get') return t ? Object.assign({ ok: true }, JSON.parse(JSON.stringify(t))) : { ok: false, error: 'not_found' };
+    if (fn === 'dg_tpl_delete') { demoTpls = demoTpls.filter(x => x !== t); return { ok: !!t, error: t ? undefined : 'not_found' }; }
+    if (fn === 'dg_tpl_save') {
+      const v = { title: args.p_title, kind: args.p_kind, doc: args.p_doc };
+      if (args.p_id) { if (!t) return { ok: false, error: 'not_found' }; Object.assign(t, v); demoTpls = [t].concat(demoTpls.filter(x => x !== t)); return { ok: true, id: t.id }; }
+      const id = '00000000-0000-4000-8000-' + String(Date.now()).slice(-12).padStart(12, '0');
+      demoTpls.unshift(Object.assign({ id }, v));
+      return { ok: true, id, created: true };
+    }
+    return { ok: false, error: 'fn_missing' };
+  }
+  async function refreshTpls() {
+    const r = await tplCall('dg_tpl_list', {});
+    if (r && r.ok) tplItems = r.items || [];
+    else if (tplItems == null) tplItems = [];
+  }
+  function tplSoon() {
+    tplDirty = true;
+    clearTimeout(tplT);
+    paintTplSave();
+    tplT = setTimeout(tplNow, 1500);
+  }
+  async function tplNow() {
+    clearTimeout(tplT); tplT = null;
+    if (!ed || !tpl || !tplDirty || tplBusy) return;
+    tplBusy = true; tplDirty = false;
+    paintTplSave();
+    const id = tpl, doc = clean(ed.cv.doc);
+    const r = await tplCall('dg_tpl_save', { p_id: id, p_title: ed.title || '', p_kind: doc.kind, p_doc: doc });
+    tplBusy = false;
+    if (!r || !r.ok) {
+      tplErr = (r && r.error) || 'network';
+      if (tplErr === 'not_found') {
+        // Woanders gelöscht: das Diagramm bleibt offen, nur nicht mehr als Vorlage.
+        if (tpl === id) { tpl = null; tplErr = ''; writeOwn(); toast('Diese Vorlage gibt es nicht mehr. Das Diagramm bleibt hier offen – „Als Vorlage speichern“ legt sie neu an.', true); }
+      } else {
+        tplDirty = true;
+        if (tplErr === 'payload_too_big') toast('Das Diagramm ist zu groß für eine Vorlage. Lösche ein paar Bausteine.', true);
+        else if (root) tplT = setTimeout(tplNow, 5000);
+      }
+    } else {
+      tplErr = '';
+      const it = tplItems && tplItems.find(x => x.id === id);
+      if (it) { it.title = ed ? ed.title || '' : it.title; it.kind = doc.kind; }
+    }
+    if (tplDirty && !tplT && root && tpl) tplT = setTimeout(tplNow, 1500);
+    paintTplSave();
+  }
+  // Vor dem Wechsel: noch Offenes in die Vorlage schreiben, dann lösen.
+  async function leaveTpl() {
+    if (tpl && tplDirty) await tplNow();
+    clearTimeout(tplT); tplT = null;
+    tpl = null; tplDirty = false; tplErr = '';
+  }
+  function paintTplSave() {
+    if (!ed || mode !== 'presenter') return;
+    if (!tpl) return ed.status('');
+    if (tplErr && tplDirty) ed.status(tplErr === 'network' ? 'Vorlage: keine Verbindung – wird nachgeholt' : 'Vorlage: ' + errText(tplErr), 'err');
+    else if (tplDirty || tplBusy) ed.status('Vorlage speichert …', 'busy');
+    else ed.status('Vorlage gespeichert ✓', 'ok');
+  }
+  async function saveAsTpl() {
+    if (!ed) return;
+    const o = { title: tpl ? 'Als neue Vorlage speichern' : 'Als Vorlage speichern',
+      text: (tpl ? 'Es entsteht eine Kopie; ab dann speichern Änderungen in die neue Vorlage. ' : 'Ab dann speichert jede Änderung automatisch in die Vorlage. ')
+        + 'Deine Vorlagen stehen in all deinen Conceptogram-Räumen.',
+      icon: ICON.tpl, input: ed.title || '', placeholder: 'Name der Vorlage',
+      buttons: [{ v: 'no', label: 'Abbrechen' }, { v: 'yes', label: 'Speichern', pri: true }] };
+    if (await modal(o) !== 'yes' || !ed) return;
+    const name = String(o.value || '').trim().slice(0, 80);
+    if (!name) { toast('Gib der Vorlage einen Namen.', true); return; }
+    if (tpl && tplDirty) await tplNow();
+    const doc = clean(ed.cv.doc);
+    const r = await tplCall('dg_tpl_save', { p_id: null, p_title: name, p_kind: doc.kind, p_doc: doc });
+    if (!r || !r.ok) {
+      toast(r && r.error === 'quota_exceeded' ? 'Du hast schon 100 Vorlagen. Lösche erst eine.'
+        : r && r.error === 'payload_too_big' ? 'Das Diagramm ist zu groß für eine Vorlage.' : errText(r && r.error), true);
+      return;
+    }
+    clearTimeout(tplT); tplT = null; tplDirty = false; tplErr = '';
+    tpl = r.id;
+    ed.title = name; ed.$('title').value = name;
+    writeOwn();
+    await refreshTpls();
+    paintTplSave();
+    toast('Als Vorlage gespeichert. Änderungen landen ab jetzt automatisch darin.');
+  }
+  async function openTpl(id) {
+    if (!id || id === tpl) return;
+    if (mustAsk()
+        && !await askYes('Vorlage öffnen?', 'Das jetzige Diagramm wird dabei ersetzt. Speichere es vorher als Vorlage oder lade es über Datei → Download herunter, wenn du es behalten willst.', 'Öffnen')) return;
+    const r = await tplCall('dg_tpl_get', { p_id: id });
+    if (!r || !r.ok || !r.doc || !KIND_IDS.includes(r.doc.kind)) { toast(r && r.error === 'not_found' ? 'Diese Vorlage gibt es nicht mehr.' : errText(r && r.error), true); refreshTpls(); return; }
+    await leaveTpl();
+    tpl = id;
+    startEditor(sane(r.doc, r.doc.kind), r.title || '');
+    writeOwn();
+  }
+  async function delTpl(id) {
+    const it = tplItems && tplItems.find(x => x.id === id);
+    if (!await askYes('Vorlage löschen?', `„${(it && it.title) || 'Ohne Titel'}“ wird aus deinem Konto gelöscht.`
+        + (id === tpl ? ' Das Diagramm bleibt hier offen, speichert aber nicht mehr in eine Vorlage.' : '')
+        + ' Was du schon mit einer Klasse geteilt hast, bleibt dort.', 'Löschen')) return;
+    const r = await tplCall('dg_tpl_delete', { p_id: id });
+    if (!r || (!r.ok && r.error !== 'not_found')) { toast(errText(r && r.error), true); return; }
+    if (id === tpl) { clearTimeout(tplT); tplT = null; tpl = null; tplDirty = false; tplErr = ''; writeOwn(); paintTplSave(); }
+    tplItems = (tplItems || []).filter(x => x.id !== id);
+    refreshTpls();
+    toast('Vorlage gelöscht.');
   }
 
   const ago = iso => {
@@ -3362,6 +3531,10 @@
       ed = null; kind = null; loaded = false; saveT = null; saving = false; dirty = false; lastErr = '';
       tab = 'class'; classList = []; picked = []; panes = {}; pollT = null; listHidden = !!jget('dg.listmini', false); ownKey = null;
       pShared = false; pAsk = null; tInfo = null; pollMT = null; tShare = null; modalOpen = false; demoAsks = {};
+      tpl = null; tplItems = null; tplT = null; tplBusy = false; tplDirty = false; tplErr = '';
+      demoTpls = demo ? [
+        { id: '00000000-0000-4000-8000-000000000001', title: 'Räuber und Beute', kind: 'wirkung', doc: JSON.parse(JSON.stringify(SAMPLES.wirkung)) },
+        { id: '00000000-0000-4000-8000-000000000002', title: 'Fahrzeuge', kind: 'klasse', doc: JSON.parse(JSON.stringify(SAMPLES.klasse)) }] : [];
       demoT0 = Date.now();
       if (demo) picked = ['d1', 'd2'];
       if (mode === 'presenter') presenterMount();
@@ -3386,8 +3559,11 @@
         // letzter Stand noch hinaus, bevor alles abgeräumt wird
         ctx.actions.call('dg_mine_put', { p_doc: clean(ed.cv.doc), p_title: ed.title || '', p_kind: ed.cv.doc.kind });
       }
-      if (ed && mode === 'presenter' && !demo) jset(ownKey || 'dg.own', { doc: clean(ed.cv.doc), title: ed.title || '' });
-      clearTimeout(saveT);
+      if (ed && mode === 'presenter' && !demo) {
+        writeOwn();
+        if (tpl && tplDirty && ctx) { const d = clean(ed.cv.doc); ctx.actions.call('dg_tpl_save', { p_id: tpl, p_title: ed.title || '', p_kind: d.kind, p_doc: d }); }
+      }
+      clearTimeout(saveT); clearTimeout(tplT);
       if (onVis) document.removeEventListener('visibilitychange', onVis);
       if (root) root.removeEventListener('click', presenterClick);
       if (ed) ed.destroy();

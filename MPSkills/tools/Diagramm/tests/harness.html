@@ -7,7 +7,7 @@
 <style>body{padding:16px;background:var(--paper)}</style>
 </head><body>
 <!-- Prüfseite ohne Server: ?rolle=schueler|lehrer|demo, &arten=mindmap,klasse (erlaubte Arten) oder alt &art=wirkung.
-     window.__store spielt den Server nach (Teilen, Anfrage, Diagramm der Lehrkraft, Klasse mit Mia/Leon). -->
+     window.__store spielt den Server nach (Vorlagen store.tpls, Teilen, Anfrage, Diagramm der Lehrkraft, Klasse mit Mia/Leon). -->
 <div id="box"></div>
 <script src="../../../lib/tool.js"></script>
 <script src="../tool.js"></script>
@@ -34,6 +34,15 @@ const fake = (fn, args) => {
   if (fn === 'dg_class_ask') { const it = store.klasse.find(x => x.participant === args.p_participant); it.ask = 'open'; return ok({ ask: 'open' }); }
   if (fn === 'dg_class_share') { store.tshare = { rev: (store.tshare ? store.tshare.rev : 0) + 1, title: args.p_title, kind: args.p_kind }; store.tdoc = args.p_doc; return ok({ rev: store.tshare.rev }); }
   if (fn === 'dg_class_unshare') { store.tshare = null; return ok({}); }
+  // Vorlagen der Lehrkraft (0304)
+  store.tpls = store.tpls || [];
+  if (fn === 'dg_tpl_list') return ok({ items: store.tpls.map(t => ({ id: t.id, title: t.title, kind: t.kind, nodes: t.doc.nodes.length })) });
+  if (fn === 'dg_tpl_get') { const t = store.tpls.find(x => x.id === args.p_id); return t ? ok(JSON.parse(JSON.stringify(t))) : ok({ ok: false, error: 'not_found' }); }
+  if (fn === 'dg_tpl_save') {
+    if (args.p_id) { const t = store.tpls.find(x => x.id === args.p_id); if (!t) return ok({ ok: false, error: 'not_found' }); Object.assign(t, { title: args.p_title, kind: args.p_kind, doc: args.p_doc }); return ok({ id: t.id }); }
+    const id = crypto.randomUUID(); store.tpls.unshift({ id, title: args.p_title, kind: args.p_kind, doc: args.p_doc }); return ok({ id, created: true });
+  }
+  if (fn === 'dg_tpl_delete') { const n = store.tpls.length; store.tpls = store.tpls.filter(x => x.id !== args.p_id); return ok(n === store.tpls.length ? { ok: false, error: 'not_found' } : {}); }
   return Promise.resolve({ ok: false, error: 'fn_missing' });
 };
 const actions = { role: rolle === 'lehrer' ? 'presenter' : 'participant', call: fake };

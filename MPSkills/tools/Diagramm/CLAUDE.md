@@ -66,10 +66,11 @@ Zwei Kleider, umgeschaltet über die Klasse an der Zeichenfläche (`.dg-canvas.k
 
 ## Bedienung
 
-**Leisten**: oben links **Datei** (Menü: Neu · Öffnen … · Speichern · Als Bild (PNG) · bei Schülern
-„Diagramm der Lehrkraft“, solange eins geteilt ist), Art, Titel; Mitte Bausteine; rechts Teilen
+**Leisten**: oben links **Datei** (Menü seit 28.11.2026: Neu · Öffnen … (Datei vom Gerät) · Download (klappt auf:
+Diagramm = `.diagramm.json` · Bild (PNG)) · nur Lehrkraft: Als Vorlage speichern + darunter „Meine Vorlagen“ (siehe
+Raum) · bei Schülern „Diagramm der Lehrkraft“, solange eins geteilt ist), Art, Titel; Mitte Bausteine; rechts Teilen
 (`Editor.setShare`, `paintShare`). Rückgängig/Wiederholen/Zoom/Alles zeigen/Hilfe klein unten rechts auf
-der Fläche (`.dg-tools`). Speichern = Datei `<Titel>.diagramm.json` (`saveFile`: `{ app: 'mpskills-diagramm',
+der Fläche (`.dg-tools`). Download → Diagramm = Datei `<Titel>.diagramm.json` (`saveFile`: `{ app: 'mpskills-diagramm',
 v, title, doc }`), Öffnen liest sie (`readFile`, ≤ 1 MB, `sane`), ersetzt nach Rückfrage das jetzige
 Diagramm; Dateien jeder Art lassen sich öffnen, auch wenn die Art im Raum nicht freigegeben ist. Fragen stellt `modal()` (eigenes Fenster im Skill).
 Antippen = wählen · doppelt tippen = Text (auf leerer Fläche: neuer Baustein) · ziehen = verschieben
@@ -147,13 +148,24 @@ Wirkungsgefüge die Linie in der Pfeilfarbe — die Felder stehen dort, wo ihr T
   Tablets werden wieder gefragt) · „Zurücknehmen“ (`dg_class_unshare`; geöffnete Kopien bleiben).
   Wer das Teilen beendet, verschwindet vorne aus dem Vergleich. Ohne Migration 0260 (kein `shared` in der
   Liste) zeigt der Skill wie früher alles.
+- **Vorlagen der Lehrkraft (Migration 0304)**: Tabelle `dg_templates` am Konto (owner_id → profiles CASCADE, doc ≤
+  300 000 Byte, höchstens 100 je Person), steht in jedem ihrer Conceptogram-Räume. Datei → „Als Vorlage speichern“ fragt
+  den Namen (`modal({ input })`, Vorgabe = Titel) → `dg_tpl_save(p_id null)`; ist schon eine offen: „Als neue Vorlage
+  speichern“ (Kopie, die neue wird die offene). Darunter „Meine Vorlagen“ (`dg_tpl_list` bei jedem Öffnen des Menüs,
+  Editor-Option `tpl`): antippen = öffnen (`dg_tpl_get`), Mülltonne = löschen (`dg_tpl_delete`, Rückfrage). Ist eine
+  Vorlage offen (`tpl`, im Gerät mit `dg.own.<code>.tpl` gemerkt), geht jede Änderung samt Titel 1,5 s später per
+  `dg_tpl_save(p_id)` hinein (`tplSoon/tplNow`, Anzeige „Vorlage gespeichert ✓“ unten links, bei Netzfehler alle 5 s
+  nachholen; woanders gelöscht → `not_found` → bleibt offen, nur ohne Vorlage). Neu/Öffnen/andere Vorlage fragen dann
+  nicht nach (`mustAsk`), schreiben Offenes vorher hinein (`leaveTpl`). Mit der Klasse geteilt wird nur das gerade
+  Geöffnete (`dg_class_share` wie bisher). Schaufenster: zwei Vorlagen im Arbeitsspeicher (`demoTpls`, `tplCall`).
 
-## Server (Migrationen 0258, 0260)
+## Server (Migrationen 0258, 0260, 0304)
 
 Tabelle `dg_work` (eine Zeile je Teilnehmer, CASCADE an Raum und Teilnehmer, doc ≤ 300 000 Byte; seit
 0260 `shared`, `ask` open|declined, `ask_at`), Tabelle `dg_shared` (0260, eine Zeile je Raum, CASCADE),
 RPCs `dg_mine_get/put/poll/share/answer/teacher_get` (Token, anon), `dg_class_list/get/ask/share/unshare`
 (Lehrkraft des Raums inkl. eingeladener, `skill_room_is_teacher`). `dg_class_get` nur bei `shared`
 (sonst `not_shared`), `dg_class_list` verrät bei nicht geteilten nur Name, Art und Anfrage.
-Prüfstände `supabase/tests/0258_diagramm.mjs`, `0260_diagramm_teilen.mjs`, Freigaben in
+Tabelle `dg_templates` (0304) mit `dg_tpl_list/get/save/delete` (authenticated, can_teach, nur eigene).
+Prüfstände `supabase/tests/0258_diagramm.mjs`, `0260_diagramm_teilen.mjs`, `0304_diagramm_vorlagen.mjs`, Freigaben in
 `0225_rechte_freigaben.json`.

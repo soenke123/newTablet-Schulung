@@ -543,7 +543,11 @@
    "nl_send(p_token text, p_scenario text, p_payload jsonb)",
    "nl_inbox_list(p_code text)",
    "nl_inbox_get(p_code text, p_id bigint)",
-   "nl_inbox_delete(p_code text, p_id bigint)"
+   "nl_inbox_delete(p_code text, p_id bigint)",
+   "dg_tpl_delete(p_code text, p_id uuid)",
+   "dg_tpl_get(p_code text, p_id uuid)",
+   "dg_tpl_list(p_code text)",
+   "dg_tpl_save(p_code text, p_id uuid, p_title text, p_kind text, p_doc jsonb)"
   ],
   "tab": [
    "board_likes:select",
